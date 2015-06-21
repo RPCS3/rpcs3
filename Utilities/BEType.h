@@ -388,7 +388,7 @@ union u128
 	}
 };
 
-static_assert(__alignof(u128) == 16 && sizeof(u128) == 16, "Wrong u128 size or alignment");
+CHECK_SIZE_ALIGN(u128, 16, 16);
 
 static force_inline u128 sync_val_compare_and_swap(volatile u128* dest, u128 comp, u128 exch)
 {

@@ -1218,7 +1218,7 @@ s32 cellGcmCallback(vm::ptr<CellGcmContextData> context, u32 count)
 	context->end = newCommandBuffer.second;
 
 	// Wait for rsx to "release" the new command buffer
-	while (true)
+	while (!Emu.IsStopped())
 	{
 		u32 getPos = ctrl.get.read_sync().value();
 		if (isInCommandBufferExcept(getPos, newCommandBuffer.first, newCommandBuffer.second))
@@ -1232,24 +1232,24 @@ s32 cellGcmCallback(vm::ptr<CellGcmContextData> context, u32 count)
 
 	return CELL_OK;
 
-	if (0)
-	{
-		auto& ctrl = vm::get_ref<CellGcmControl>(gcm_info.control_addr);
-		be_t<u32> res = be_t<u32>::make(context->current - context->begin - ctrl.put.read_relaxed());
+	//if (0)
+	//{
+	//	auto& ctrl = vm::get_ref<CellGcmControl>(gcm_info.control_addr);
+	//	be_t<u32> res = be_t<u32>::make(context->current - context->begin - ctrl.put.read_relaxed());
 
-		if (res != 0)
-		{
-			GSLockCurrent gslock(GS_LOCK_WAIT_FLUSH);
-		}
+	//	if (res != 0)
+	//	{
+	//		GSLockCurrent gslock(GS_LOCK_WAIT_FLUSH);
+	//	}
 
-		memmove(vm::get_ptr<void>(context->begin), vm::get_ptr<void>(context->current - res), res);
+	//	memmove(vm::get_ptr<void>(context->begin), vm::get_ptr<void>(context->current - res), res);
 
-		context->current = context->begin + res;
-		ctrl.put.write_relaxed(res);
-		ctrl.get.write_relaxed(be_t<u32>::make(0));
+	//	context->current = context->begin + res;
+	//	ctrl.put.write_relaxed(res);
+	//	ctrl.get.write_relaxed(be_t<u32>::make(0));
 
-		return CELL_OK;
-	}
+	//	return CELL_OK;
+	//}
 
 	//auto& ctrl = vm::get_ref<CellGcmControl>(gcm_info.control_addr);
 
@@ -1261,23 +1261,23 @@ s32 cellGcmCallback(vm::ptr<CellGcmContextData> context, u32 count)
 	//cmd[3] = 0; // some incrementing by module value
 	//context->current += 0x10;
 
-	if (0)
-	{
-		const u32 address = context->begin;
-		const u32 upper = offsetTable.ioAddress[address >> 20]; // 12 bits
-		assert(upper != 0xFFFF);
-		const u32 offset = (upper << 20) | (address & 0xFFFFF);
-		vm::write32(context->current, CELL_GCM_METHOD_FLAG_JUMP | offset); // set JUMP cmd
+	//if (0)
+	//{
+	//	const u32 address = context->begin;
+	//	const u32 upper = offsetTable.ioAddress[address >> 20]; // 12 bits
+	//	assert(upper != 0xFFFF);
+	//	const u32 offset = (upper << 20) | (address & 0xFFFFF);
+	//	vm::write32(context->current, CELL_GCM_METHOD_FLAG_JUMP | offset); // set JUMP cmd
 
-		auto& ctrl = vm::get_ref<CellGcmControl>(gcm_info.control_addr);
-		ctrl.put.exchange(be_t<u32>::make(offset));
-	}
-	else
-	{
-		vm::write32(context->current, CELL_GCM_METHOD_FLAG_JUMP | CELL_GCM_METHOD_FLAG_NON_INCREMENT | (0));
-	}
+	//	auto& ctrl = vm::get_ref<CellGcmControl>(gcm_info.control_addr);
+	//	ctrl.put.exchange(be_t<u32>::make(offset));
+	//}
+	//else
+	//{
+	//	vm::write32(context->current, CELL_GCM_METHOD_FLAG_JUMP | CELL_GCM_METHOD_FLAG_NON_INCREMENT | (0));
+	//}
 	
-	context->current = context->begin; // rewind to the beginning
+	//context->current = context->begin; // rewind to the beginning
 	// TODO: something is missing
 	return CELL_OK;
 }

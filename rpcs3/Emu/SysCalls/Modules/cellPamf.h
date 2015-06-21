@@ -200,7 +200,7 @@ struct CellPamfAvcInfo
 	u8 maxMeanBitrate;
 };
 
-static_assert(sizeof(CellPamfAvcInfo) == 0x20, "Invalid CellPamfAvcInfo size");
+CHECK_SIZE(CellPamfAvcInfo, 0x20);
 
 // M2V (MPEG2 Video) Specific Information
 struct CellPamfM2vInfo
@@ -223,7 +223,7 @@ struct CellPamfM2vInfo
 	u8 matrixCoefficients;
 };
 
-static_assert(sizeof(CellPamfM2vInfo) == 0x18, "Invalid CellPamfM2vInfo size");
+CHECK_SIZE(CellPamfM2vInfo, 0x18);
 
 // ATRAC3+ Audio Specific Information
 struct CellPamfAtrac3plusInfo
@@ -232,7 +232,7 @@ struct CellPamfAtrac3plusInfo
 	u8 numberOfChannels;
 };
 
-static_assert(sizeof(CellPamfAtrac3plusInfo) == 8, "Invalid CellPamfAtrac3plusInfo size");
+CHECK_SIZE(CellPamfAtrac3plusInfo, 8);
 
 // AC3 Audio Specific Information
 struct CellPamfAc3Info
@@ -241,7 +241,7 @@ struct CellPamfAc3Info
 	u8 numberOfChannels;
 };
 
-static_assert(sizeof(CellPamfAc3Info) == 8, "Invalid CellPamfAc3Info size");
+CHECK_SIZE(CellPamfAc3Info, 8);
 
 // LPCM Audio Specific Information
 struct CellPamfLpcmInfo
@@ -337,7 +337,7 @@ struct PamfStreamHeader
 	};
 };
 
-static_assert(sizeof(PamfStreamHeader) == 48, "Invalid PamfStreamHeader size");
+CHECK_SIZE(PamfStreamHeader, 48);
 
 struct PamfHeader
 {
@@ -379,7 +379,7 @@ struct PamfEpHeader
 	be_t<u32> rpnOffset;
 };
 
-static_assert(sizeof(PamfEpHeader) == 12, "Invalid PamfEpHeader size");
+CHECK_SIZE(PamfEpHeader, 12);
 
 #pragma pack(pop)
 
@@ -392,6 +392,6 @@ struct CellPamfReader
 	u32 internalData[28];
 };
 
-static_assert(sizeof(CellPamfReader) == 128, "Invalid CellPamfReader size");
+CHECK_SIZE(CellPamfReader, 128);
 
 s32 cellPamfReaderInitialize(vm::ptr<CellPamfReader> pSelf, vm::ptr<const PamfHeader> pAddr, u64 fileSize, u32 attribute);

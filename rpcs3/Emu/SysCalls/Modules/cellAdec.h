@@ -1096,7 +1096,7 @@ struct OMAHeader // OMA Header
 	}
 };
 
-static_assert(sizeof(OMAHeader) == 96, "Wrong OMAHeader size");
+CHECK_SIZE(OMAHeader, 96);
 
 class AudioDecoder
 {

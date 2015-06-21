@@ -26,6 +26,12 @@
 #define force_inline __attribute__((always_inline))
 #endif
 
+#if defined(_MSC_VER)
+#define set_alignment(x) _CRT_ALIGN(x)
+#else
+#define set_alignment(x) __attribute__((aligned(x)))
+#endif
+
 template<size_t size>
 void strcpy_trunc(char(&dst)[size], const std::string& src)
 {

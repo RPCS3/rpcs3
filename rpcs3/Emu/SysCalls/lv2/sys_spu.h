@@ -99,7 +99,7 @@ struct sys_spu_segment
 	};
 };
 
-static_assert(sizeof(sys_spu_segment) == 0x18, "Wrong sys_spu_segment size");
+CHECK_SIZE(sys_spu_segment, 0x18);
 
 enum : u32
 {

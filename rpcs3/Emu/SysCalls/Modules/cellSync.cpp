@@ -26,7 +26,7 @@ s32 syncMutexInitialize(vm::ptr<CellSyncMutex> mutex)
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
 
-	if (mutex.addr() % 4)
+	if (!mutex.aligned())
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
@@ -52,7 +52,7 @@ s32 cellSyncMutexLock(vm::ptr<CellSyncMutex> mutex)
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
 
-	if (mutex.addr() % 4)
+	if (!mutex.aligned())
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
@@ -80,7 +80,7 @@ s32 cellSyncMutexTryLock(vm::ptr<CellSyncMutex> mutex)
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
 
-	if (mutex.addr() % 4)
+	if (!mutex.aligned())
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
@@ -100,7 +100,7 @@ s32 cellSyncMutexUnlock(vm::ptr<CellSyncMutex> mutex)
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
-	if (mutex.addr() % 4)
+	if (!mutex.aligned())
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
@@ -119,7 +119,7 @@ s32 syncBarrierInitialize(vm::ptr<CellSyncBarrier> barrier, u16 total_count)
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
-	if (barrier.addr() % 4)
+	if (!barrier.aligned())
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
@@ -169,7 +169,7 @@ s32 cellSyncBarrierNotify(vm::ptr<CellSyncBarrier> barrier)
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
-	if (barrier.addr() % 4)
+	if (!barrier.aligned())
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
@@ -192,7 +192,7 @@ s32 cellSyncBarrierTryNotify(vm::ptr<CellSyncBarrier> barrier)
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
-	if (barrier.addr() % 4)
+	if (!barrier.aligned())
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
@@ -235,7 +235,7 @@ s32 cellSyncBarrierWait(vm::ptr<CellSyncBarrier> barrier)
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
-	if (barrier.addr() % 4)
+	if (!barrier.aligned())
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
@@ -258,7 +258,7 @@ s32 cellSyncBarrierTryWait(vm::ptr<CellSyncBarrier> barrier)
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
-	if (barrier.addr() % 4)
+	if (!barrier.aligned())
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
@@ -279,7 +279,7 @@ s32 syncRwmInitialize(vm::ptr<CellSyncRwm> rwm, vm::ptr<void> buffer, u32 buffer
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
-	if (rwm.addr() % 16 || buffer.addr() % 128)
+	if (!rwm.aligned() || buffer % 128)
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
@@ -335,7 +335,7 @@ s32 cellSyncRwmRead(vm::ptr<CellSyncRwm> rwm, vm::ptr<void> buffer)
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
-	if (rwm.addr() % 16)
+	if (!rwm.aligned())
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
@@ -369,7 +369,7 @@ s32 cellSyncRwmTryRead(vm::ptr<CellSyncRwm> rwm, vm::ptr<void> buffer)
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
-	if (rwm.addr() % 16)
+	if (!rwm.aligned())
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
@@ -411,7 +411,7 @@ s32 cellSyncRwmWrite(vm::ptr<CellSyncRwm> rwm, vm::ptr<const void> buffer)
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
-	if (rwm.addr() % 16)
+	if (!rwm.aligned())
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
@@ -446,7 +446,7 @@ s32 cellSyncRwmTryWrite(vm::ptr<CellSyncRwm> rwm, vm::ptr<const void> buffer)
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
-	if (rwm.addr() % 16)
+	if (!rwm.aligned())
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
@@ -478,7 +478,7 @@ s32 syncQueueInitialize(vm::ptr<CellSyncQueue> queue, vm::ptr<u8> buffer, u32 si
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
-	if (queue.addr() % 32 || buffer.addr() % 16)
+	if (!queue.aligned() || buffer % 16)
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
@@ -533,7 +533,7 @@ s32 cellSyncQueuePush(vm::ptr<CellSyncQueue> queue, vm::ptr<const void> buffer)
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
-	if (queue.addr() % 32)
+	if (!queue.aligned())
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
@@ -571,7 +571,7 @@ s32 cellSyncQueueTryPush(vm::ptr<CellSyncQueue> queue, vm::ptr<const void> buffe
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
-	if (queue.addr() % 32)
+	if (!queue.aligned())
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
@@ -630,7 +630,7 @@ s32 cellSyncQueuePop(vm::ptr<CellSyncQueue> queue, vm::ptr<void> buffer)
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
-	if (queue.addr() % 32)
+	if (!queue.aligned())
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
@@ -668,7 +668,7 @@ s32 cellSyncQueueTryPop(vm::ptr<CellSyncQueue> queue, vm::ptr<void> buffer)
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
-	if (queue.addr() % 32)
+	if (!queue.aligned())
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
@@ -721,7 +721,7 @@ s32 cellSyncQueuePeek(vm::ptr<CellSyncQueue> queue, vm::ptr<void> buffer)
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
-	if (queue.addr() % 32)
+	if (!queue.aligned())
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
@@ -757,7 +757,7 @@ s32 cellSyncQueueTryPeek(vm::ptr<CellSyncQueue> queue, vm::ptr<void> buffer)
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
-	if (queue.addr() % 32)
+	if (!queue.aligned())
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
@@ -794,7 +794,7 @@ s32 cellSyncQueueSize(vm::ptr<CellSyncQueue> queue)
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
-	if (queue.addr() % 32)
+	if (!queue.aligned())
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
@@ -815,7 +815,7 @@ s32 cellSyncQueueClear(vm::ptr<CellSyncQueue> queue)
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
-	if (queue.addr() % 32)
+	if (!queue.aligned())
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
@@ -931,7 +931,7 @@ s32 syncLFQueueInitialize(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u8> buffer, u3
 	{
 		return CELL_SYNC_ERROR_INVAL;
 	}
-	if (queue.addr() % 128 || buffer.addr() % 16)
+	if (!queue.aligned() || buffer % 16)
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
@@ -1144,7 +1144,7 @@ s32 _cellSyncLFQueueGetPushPointer2(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u32>
 	return result;
 }
 
-s32 syncLFQueueCompletePushPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, const std::function<s32(u32 addr, u32 arg)> fpSendSignal)
+s32 syncLFQueueCompletePushPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, std::function<s32(u32 addr, u32 arg)> fpSendSignal)
 {
 	if (queue->m_direction != CELL_SYNC_QUEUE_PPU2SPU)
 	{
@@ -1285,7 +1285,7 @@ s32 _cellSyncLFQueueCompletePushPointer(vm::ptr<CellSyncLFQueue> queue, s32 poin
 	return syncLFQueueCompletePushPointer(queue, pointer, fpSendSignal);
 }
 
-s32 syncLFQueueCompletePushPointer2(vm::ptr<CellSyncLFQueue> queue, s32 pointer, const std::function<s32(u32 addr, u32 arg)> fpSendSignal)
+s32 syncLFQueueCompletePushPointer2(vm::ptr<CellSyncLFQueue> queue, s32 pointer, std::function<s32(u32 addr, u32 arg)> fpSendSignal)
 {
 	throw __FUNCTION__;
 }
@@ -1307,7 +1307,7 @@ s32 _cellSyncLFQueuePushBody(PPUThread& CPU, vm::ptr<CellSyncLFQueue> queue, vm:
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
-	if (queue.addr() % 128 || buffer.addr() % 16)
+	if (!queue.aligned() || buffer % 16)
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
@@ -1490,7 +1490,7 @@ s32 _cellSyncLFQueueGetPopPointer2(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u32> 
 	return result;
 }
 
-s32 syncLFQueueCompletePopPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, const std::function<s32(u32 addr, u32 arg)> fpSendSignal, u32 noQueueFull)
+s32 syncLFQueueCompletePopPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, std::function<s32(u32 addr, u32 arg)> fpSendSignal, u32 noQueueFull)
 {
 	if (queue->m_direction != CELL_SYNC_QUEUE_SPU2PPU)
 	{
@@ -1631,7 +1631,7 @@ s32 _cellSyncLFQueueCompletePopPointer(vm::ptr<CellSyncLFQueue> queue, s32 point
 	return syncLFQueueCompletePopPointer(queue, pointer, fpSendSignal, noQueueFull);
 }
 
-s32 syncLFQueueCompletePopPointer2(vm::ptr<CellSyncLFQueue> queue, s32 pointer, const std::function<s32(u32 addr, u32 arg)> fpSendSignal, u32 noQueueFull)
+s32 syncLFQueueCompletePopPointer2(vm::ptr<CellSyncLFQueue> queue, s32 pointer, std::function<s32(u32 addr, u32 arg)> fpSendSignal, u32 noQueueFull)
 {
 	throw __FUNCTION__;
 }
@@ -1653,7 +1653,7 @@ s32 _cellSyncLFQueuePopBody(PPUThread& CPU, vm::ptr<CellSyncLFQueue> queue, vm::
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
-	if (queue.addr() % 128 || buffer.addr() % 16)
+	if (!queue.aligned() || buffer % 16)
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
@@ -1717,7 +1717,7 @@ s32 cellSyncLFQueueClear(vm::ptr<CellSyncLFQueue> queue)
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
-	if (queue.addr() % 128)
+	if (!queue.aligned())
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
@@ -1767,7 +1767,7 @@ s32 cellSyncLFQueueSize(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u32> size)
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
-	if (queue.addr() % 128)
+	if (!queue.aligned())
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
@@ -1802,7 +1802,7 @@ s32 cellSyncLFQueueDepth(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u32> depth)
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
-	if (queue.addr() % 128)
+	if (!queue.aligned())
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
@@ -1819,7 +1819,7 @@ s32 _cellSyncLFQueueGetSignalAddress(vm::ptr<const CellSyncLFQueue> queue, vm::p
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
-	if (queue.addr() % 128)
+	if (!queue.aligned())
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
@@ -1837,7 +1837,7 @@ s32 cellSyncLFQueueGetDirection(vm::ptr<const CellSyncLFQueue> queue, vm::ptr<Ce
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
-	if (queue.addr() % 128)
+	if (!queue.aligned())
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
@@ -1854,7 +1854,7 @@ s32 cellSyncLFQueueGetEntrySize(vm::ptr<const CellSyncLFQueue> queue, vm::ptr<u3
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
-	if (queue.addr() % 128)
+	if (!queue.aligned())
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}

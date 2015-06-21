@@ -68,6 +68,16 @@ namespace vm
 			return m_addr != 0;
 		}
 
+		bool aligned() const
+		{
+			return m_addr % alignof32(T) == 0;
+		}
+
+		bool operator %(to_ne_t<AT> alignment)
+		{
+			return m_addr % alignment != 0;
+		}
+
 		_ptr_base& operator =(const _ptr_base&) = default;
 	};
 

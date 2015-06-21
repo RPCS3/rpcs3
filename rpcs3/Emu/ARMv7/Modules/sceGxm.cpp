@@ -453,15 +453,15 @@ s32 sceGxmDepthStencilSurfaceInitDisabled(vm::ptr<SceGxmDepthStencilSurface> sur
 	throw __FUNCTION__;
 }
 
-//float sceGxmDepthStencilSurfaceGetBackgroundDepth(vm::ptr<const SceGxmDepthStencilSurface> surface)
-//{
-//	throw __FUNCTION__;
-//}
+float sceGxmDepthStencilSurfaceGetBackgroundDepth(vm::ptr<const SceGxmDepthStencilSurface> surface)
+{
+	throw __FUNCTION__;
+}
 
-//void sceGxmDepthStencilSurfaceSetBackgroundDepth(vm::ptr<SceGxmDepthStencilSurface> surface, float backgroundDepth)
-//{
-//	throw __FUNCTION__;
-//}
+void sceGxmDepthStencilSurfaceSetBackgroundDepth(vm::ptr<SceGxmDepthStencilSurface> surface, float backgroundDepth)
+{
+	throw __FUNCTION__;
+}
 
 u8 sceGxmDepthStencilSurfaceGetBackgroundStencil(vm::ptr<const SceGxmDepthStencilSurface> surface)
 {

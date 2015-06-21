@@ -64,19 +64,24 @@ template<typename T, typename = std::enable_if_t<std::is_integral<T>::value>> in
 // return 32 bit sizeof() to avoid widening/narrowing conversions with size_t
 #define sizeof32(type) sizeof32_t<sizeof(type)>::value
 
+// return 32 bit alignof() to avoid widening/narrowing conversions with size_t
+#define alignof32(type) alignof32_t<__alignof(type)>::value
+
 template<std::size_t Size> struct sizeof32_t
 {
-	static_assert(Size <= UINT32_MAX, "sizeof32() error: sizeof() is too big");
+	static_assert(Size <= UINT32_MAX, "sizeof32() error: size is too big");
 
 	static const u32 value = static_cast<u32>(Size);
 };
 
+template<std::size_t Align> struct alignof32_t
+{
+	static_assert(Align <= UINT32_MAX, "alignof32() error: alignment is too big");
+
+	static const u32 value = static_cast<u32>(Align);
+};
+
 template<typename T> using func_def = T; // workaround for MSVC bug: `using X = func_def<void()>;` instead of `using X = void();`
-
-#include "Utilities/BEType.h"
-#include "Utilities/StrFmt.h"
-
-#include "Emu/Memory/atomic.h"
 
 template<typename T> struct ID_type;
 
@@ -89,3 +94,7 @@ template<typename T> struct ID_type;
 
 #define _PRGNAME_ "RPCS3"
 #define _PRGVER_ "0.0.0.5"
+
+#include "Utilities/BEType.h"
+#include "Utilities/StrFmt.h"
+#include "Emu/Memory/atomic.h"

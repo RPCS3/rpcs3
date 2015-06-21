@@ -867,7 +867,7 @@ s32 cellAudioAddData(u32 portNum, vm::ptr<float> src, u32 samples, float volume)
 		return CELL_AUDIO_ERROR_NOT_INIT;
 	}
 
-	if (portNum >= AUDIO_PORT_COUNT || !src || src.addr() % 4)
+	if (portNum >= AUDIO_PORT_COUNT || !src || !src.aligned())
 	{
 		return CELL_AUDIO_ERROR_PARAM;
 	}
@@ -900,7 +900,7 @@ s32 cellAudioAdd2chData(u32 portNum, vm::ptr<float> src, u32 samples, float volu
 		return CELL_AUDIO_ERROR_NOT_INIT;
 	}
 
-	if (portNum >= AUDIO_PORT_COUNT || !src || src.addr() % 4)
+	if (portNum >= AUDIO_PORT_COUNT || !src || !src.aligned())
 	{
 		return CELL_AUDIO_ERROR_PARAM;
 	}
@@ -963,7 +963,7 @@ s32 cellAudioAdd6chData(u32 portNum, vm::ptr<float> src, float volume)
 		return CELL_AUDIO_ERROR_NOT_INIT;
 	}
 
-	if (portNum >= AUDIO_PORT_COUNT || !src || src.addr() % 4)
+	if (portNum >= AUDIO_PORT_COUNT || !src || !src.aligned())
 	{
 		return CELL_AUDIO_ERROR_PARAM;
 	}

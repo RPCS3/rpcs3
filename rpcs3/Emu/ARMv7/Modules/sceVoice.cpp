@@ -79,10 +79,10 @@ s32 sceVoiceGetMuteFlag(u32 portId, vm::ptr<u16> bMuted)
 	throw __FUNCTION__;
 }
 
-//s32 sceVoiceSetVolume(u32 portId, float volume)
-//{
-//	throw __FUNCTION__;
-//}
+s32 sceVoiceSetVolume(u32 portId, float volume)
+{
+	throw __FUNCTION__;
+}
 
 s32 sceVoiceGetVolume(u32 portId, vm::ptr<float> volume)
 {
