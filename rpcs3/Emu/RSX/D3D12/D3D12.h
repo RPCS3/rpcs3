@@ -98,7 +98,7 @@ D3D12_RESOURCE_DESC getTexture2DResourceDesc(size_t width, size_t height, DXGI_F
 	result.Format = dxgiFormat;
 	result.DepthOrArraySize = 1;
 	result.SampleDesc.Count = 1;
-	result.MipLevels = mipmapLevels;
+	result.MipLevels = (UINT16)mipmapLevels;
 	return result;
 }
 
