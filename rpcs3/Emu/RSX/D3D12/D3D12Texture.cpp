@@ -592,6 +592,78 @@ ID3D12Resource *uploadSingleTexture(
 	return vramTexture;
 }
 
+/**
+ * Get number of bytes occupied by texture in RSX mem
+ */
+static
+size_t getTextureSize(const RSXTexture &texture)
+{
+	size_t w = texture.GetWidth(), h = texture.GetHeight();
+
+	int format = texture.GetFormat() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
+	// TODO: Take mipmaps into account
+	switch (format)
+	{
+	case CELL_GCM_TEXTURE_COMPRESSED_HILO8:
+	case CELL_GCM_TEXTURE_COMPRESSED_HILO_S8:
+	case ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN) & CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8:
+	case ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN) & CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8:
+	default:
+		LOG_ERROR(RSX, "Unimplemented Texture format : %x", format);
+		break;
+	case CELL_GCM_TEXTURE_B8:
+		return w * h;
+	case CELL_GCM_TEXTURE_A1R5G5B5:
+		return w * h * 2;
+	case CELL_GCM_TEXTURE_A4R4G4B4:
+		return w * h * 4;
+	case CELL_GCM_TEXTURE_R5G6B5:
+		return w * h * 2;
+	case CELL_GCM_TEXTURE_A8R8G8B8:
+		return w * h * 4;
+	case CELL_GCM_TEXTURE_COMPRESSED_DXT1:
+		return w * h / 6;
+	case CELL_GCM_TEXTURE_COMPRESSED_DXT23:
+		return w * h / 4;
+	case CELL_GCM_TEXTURE_COMPRESSED_DXT45:
+		return w * h / 4;
+	case CELL_GCM_TEXTURE_G8B8:
+		return w * h * 2;
+	case CELL_GCM_TEXTURE_R6G5B5:
+		return w * h * 2;
+	case CELL_GCM_TEXTURE_DEPTH24_D8:
+		return w * h * 4;
+	case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
+		return w * h * 4;
+	case CELL_GCM_TEXTURE_DEPTH16:
+		return w * h * 2;
+	case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
+		return w * h * 2;
+	case CELL_GCM_TEXTURE_X16:
+		return w * h * 2;
+	case CELL_GCM_TEXTURE_Y16_X16:
+		return w * h * 4;
+	case CELL_GCM_TEXTURE_R5G5B5A1:
+		return w * h * 2;
+	case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT:
+		return w * h * 8;
+	case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT:
+		return w * h * 16;
+	case CELL_GCM_TEXTURE_X32_FLOAT:
+		return w * h * 4;
+	case CELL_GCM_TEXTURE_D1R5G5B5:
+		return w * h * 2;
+	case CELL_GCM_TEXTURE_Y16_X16_FLOAT:
+		return w * h * 4;
+	case CELL_GCM_TEXTURE_D8R8G8B8:
+		return w * h * 4;
+	case CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8:
+		return w * h * 4;
+	case CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8:
+		return w * h * 4;
+	}
+}
+
 size_t D3D12GSRender::UploadTextures()
 {
 	std::lock_guard<std::mutex> lock(mut);
@@ -630,15 +702,15 @@ size_t D3D12GSRender::UploadTextures()
 
 			vramTexture = uploadSingleTexture(m_textures[i], m_device, commandList, m_textureUploadData);
 
-			commandList->Close();
+			check(commandList->Close());
 			m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**)&commandList);
 			getCurrentResourceStorage().m_inflightCommandList.push_back(commandList);
 			m_texturesCache[texaddr] = vramTexture;
 
-			u32 s = align(w * h * 4, 4096);
+			u32 s = align(getTextureSize(m_textures[i]), 4096);
 			LOG_WARNING(RSX, "PROTECTING %x of size %d", align(texaddr, 4096), s);
-			m_protectedTextures.push_back(std::make_tuple(texaddr, align(texaddr, 4096), s));
-			vm::page_protect(align(texaddr, 4096), s, 0, 0, vm::page_writable);
+//			m_protectedTextures.push_back(std::make_tuple(texaddr, align(texaddr, 4096), s));
+//			vm::page_protect(align(texaddr, 4096), s, 0, 0, vm::page_writable);
 		}
 
 		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
