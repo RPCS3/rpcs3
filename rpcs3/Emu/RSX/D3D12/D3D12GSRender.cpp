@@ -1057,6 +1057,7 @@ void D3D12GSRender::Flip()
 
 	// Flush
 	m_texturesRTTs.clear();
+	m_vertexCache.clear();
 
 	std::vector<std::function<void()> >  cleaningFunction =
 	{

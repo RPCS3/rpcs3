@@ -218,6 +218,10 @@ private:
 	std::unordered_map<u32, ID3D12Resource*> m_texturesCache;
 	//  std::vector<PostDrawObj> m_post_draw_objs;
 
+	// TODO: Use a tree structure to parse more efficiently
+	// Key is begin << 32 | end
+	std::unordered_map<u64, ID3D12Resource *> m_vertexCache;
+
 	PipelineStateObjectCache m_cachePSO;
 	std::pair<ID3D12PipelineState *, size_t> *m_PSO;
 	// m_rootSignatures[N] is RS with N texture/sample

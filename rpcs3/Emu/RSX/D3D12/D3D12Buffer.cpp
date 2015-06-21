@@ -264,6 +264,17 @@ ID3D12Resource *createVertexBuffer(const VertexBufferFormat &vbf, const RSXVerte
 	return vertexBuffer;
 }
 
+static bool
+isContained(const std::vector<std::pair<u32, u32> > &ranges, const std::pair<u32, u32> &range)
+{
+	for (auto &r : ranges)
+	{
+		if (r == range)
+			return true;
+	}
+	return false;
+}
+
 std::pair<std::vector<D3D12_VERTEX_BUFFER_VIEW>, D3D12_INDEX_BUFFER_VIEW> D3D12GSRender::UploadVertexBuffers(bool indexed_draw)
 {
 	std::pair<std::vector<D3D12_VERTEX_BUFFER_VIEW>, D3D12_INDEX_BUFFER_VIEW> result;
@@ -280,7 +291,19 @@ std::pair<std::vector<D3D12_VERTEX_BUFFER_VIEW>, D3D12_INDEX_BUFFER_VIEW> D3D12G
 		if (vbf.stride)
 			subBufferSize = ((subBufferSize + vbf.stride - 1) / vbf.stride) * vbf.stride;
 
-		ID3D12Resource *vertexBuffer = createVertexBuffer(vbf, m_vertex_data, m_device, m_vertexIndexData);
+		u64 key = vbf.range.first;
+		key = key << 32;
+		key = key | vbf.range.second;
+		auto It = m_vertexCache.find(key);
+
+		ID3D12Resource *vertexBuffer;
+		if (It != m_vertexCache.end())
+			vertexBuffer = It->second;
+		else
+		{
+			vertexBuffer = createVertexBuffer(vbf, m_vertex_data, m_device, m_vertexIndexData);
+			m_vertexCache[key] = vertexBuffer;
+		}
 
 		D3D12_VERTEX_BUFFER_VIEW vertexBufferView = {};
 		vertexBufferView.BufferLocation = vertexBuffer->GetGPUVirtualAddress();
