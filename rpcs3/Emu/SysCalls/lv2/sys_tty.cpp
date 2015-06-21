@@ -18,7 +18,7 @@ s32 sys_tty_read(s32 ch, vm::ptr<void> buf, u32 len, vm::ptr<u32> preadlen)
 	return CELL_OK;
 }
 
-s32 sys_tty_write(s32 ch, vm::ptr<const void> buf, u32 len, vm::ptr<u32> pwritelen)
+s32 sys_tty_write(s32 ch, vm::cptr<void> buf, u32 len, vm::ptr<u32> pwritelen)
 {
 	sys_tty.Log("sys_tty_write(ch=%d, buf_addr=0x%x, len=%d, preadlen_addr=0x%x)", ch, buf.addr(), len, pwritelen.addr());
 

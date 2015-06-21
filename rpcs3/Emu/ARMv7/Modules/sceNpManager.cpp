@@ -4,7 +4,7 @@
 
 #include "sceNpManager.h"
 
-s32 sceNpInit(vm::ptr<const SceNpCommunicationConfig> commConf, vm::ptr<SceNpOptParam> opt)
+s32 sceNpInit(vm::cptr<SceNpCommunicationConfig> commConf, vm::ptr<SceNpOptParam> opt)
 {
 	throw __FUNCTION__;
 }

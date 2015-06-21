@@ -827,7 +827,7 @@ struct SpursKernelContext
 	vm::bptr<CellSpurs, u64> spurs;                 // 0x1C0
 	be_t<u32> spuNum;                               // 0x1C8
 	be_t<u32> dmaTagId;                             // 0x1CC
-	vm::bptr<const void, u64> wklCurrentAddr;       // 0x1D0
+	vm::bcptr<void, u64> wklCurrentAddr;            // 0x1D0
 	be_t<u32> wklCurrentUniqueId;                   // 0x1D8
 	be_t<u32> wklCurrentId;                         // 0x1DC
 	be_t<u32> exitToKernelAddr;                     // 0x1E0

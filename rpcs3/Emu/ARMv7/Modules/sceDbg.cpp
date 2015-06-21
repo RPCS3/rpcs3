@@ -14,12 +14,12 @@ s32 sceDbgSetBreakOnErrorState(SceDbgBreakOnErrorState state)
 	throw __FUNCTION__;
 }
 
-s32 sceDbgAssertionHandler(vm::ptr<const char> pFile, s32 line, bool stop, vm::ptr<const char> pComponent, vm::ptr<const char> pMessage) // va_args...
+s32 sceDbgAssertionHandler(vm::cptr<char> pFile, s32 line, bool stop, vm::cptr<char> pComponent, vm::cptr<char> pMessage) // va_args...
 {
 	throw __FUNCTION__;
 }
 
-s32 sceDbgLoggingHandler(vm::ptr<const char> pFile, s32 line, s32 severity, vm::ptr<const char> pComponent, vm::ptr<const char> pMessage) // va_args...
+s32 sceDbgLoggingHandler(vm::cptr<char> pFile, s32 line, s32 severity, vm::cptr<char> pComponent, vm::cptr<char> pMessage) // va_args...
 {
 	throw __FUNCTION__;
 }

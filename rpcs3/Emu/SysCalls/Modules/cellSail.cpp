@@ -632,7 +632,7 @@ int cellSailPlayerAddDescriptor(vm::ptr<CellSailPlayer> pSelf, vm::ptr<CellSailD
 	return CELL_OK;
 }
 
-int cellSailPlayerCreateDescriptor(vm::ptr<CellSailPlayer> pSelf, s32 streamType, vm::ptr<u32> pMediaInfo, vm::ptr<const char> pUri, vm::ptr<u32> ppDesc)
+int cellSailPlayerCreateDescriptor(vm::ptr<CellSailPlayer> pSelf, s32 streamType, vm::ptr<u32> pMediaInfo, vm::cptr<char> pUri, vm::ptr<u32> ppDesc)
 {
 	cellSail.Warning("cellSailPlayerCreateDescriptor(pSelf_addr=0x%x, streamType=%d, pMediaInfo_addr=0x%x, pUri_addr=0x%x, ppDesc_addr=0x%x)", pSelf.addr(), streamType,
 					pMediaInfo.addr(), pUri.addr(), ppDesc.addr());
@@ -657,7 +657,7 @@ int cellSailPlayerCreateDescriptor(vm::ptr<CellSailPlayer> pSelf, s32 streamType
 				if (f.Open(path)) {
 					u64 size = f.GetSize();
 					u32 buf_ = Memory.Alloc(size, 1);
-					auto bufPtr = vm::ptr<const PamfHeader>::make(buf_);
+					auto bufPtr = vm::cptr<PamfHeader>::make(buf_);
 					PamfHeader *buf = const_cast<PamfHeader*>(bufPtr.get_ptr());
 					assert(f.Read(buf, size) == size);
 					u32 sp_ = Memory.Alloc(sizeof(CellPamfReader), 1);
@@ -944,7 +944,6 @@ Module cellSail("cellSail", []()
 	REG_FUNC(cellSail, cellSailSourceNotifyStreamOut);
 	REG_FUNC(cellSail, cellSailSourceNotifySessionError);
 	REG_FUNC(cellSail, cellSailSourceNotifyMediaStateChanged);
-	//cellSail.AddFunc(, cellSailSourceCheck);
 	REG_FUNC(cellSail, cellSailSourceNotifyOpenCompleted);
 	REG_FUNC(cellSail, cellSailSourceNotifyStartCompleted);
 	REG_FUNC(cellSail, cellSailSourceNotifyStopCompleted);
@@ -961,7 +960,6 @@ Module cellSail("cellSail", []()
 	REG_FUNC(cellSail, cellSailMp4TrackGetTrackInfo);
 	REG_FUNC(cellSail, cellSailMp4TrackGetTrackReferenceCount);
 	REG_FUNC(cellSail, cellSailMp4TrackGetTrackReference);
-	//cellSail.AddFunc(, cellSailMp4ConvertTimeScale);
 
 	REG_FUNC(cellSail, cellSailAviMovieGetMovieInfo);
 	REG_FUNC(cellSail, cellSailAviMovieGetStreamByIndex);

@@ -214,7 +214,7 @@ s32 cellPamfVerify(vm::ptr<PamfHeader> pAddr, u64 fileSize)
 	return CELL_OK;
 }
 
-s32 cellPamfReaderInitialize(vm::ptr<CellPamfReader> pSelf, vm::ptr<const PamfHeader> pAddr, u64 fileSize, u32 attribute)
+s32 cellPamfReaderInitialize(vm::ptr<CellPamfReader> pSelf, vm::cptr<PamfHeader> pAddr, u64 fileSize, u32 attribute)
 {
 	cellPamf.Warning("cellPamfReaderInitialize(pSelf=0x%x, pAddr=0x%x, fileSize=%d, attribute=0x%x)", pSelf.addr(), pAddr.addr(), fileSize, attribute);
 	

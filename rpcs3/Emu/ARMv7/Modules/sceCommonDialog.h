@@ -40,7 +40,7 @@ struct SceCommonDialogUpdateParam
 struct SceMsgDialogUserMessageParam
 {
 	le_t<s32> buttonType;
-	vm::lptr<const char> msg;
+	vm::lcptr<char> msg;
 	char reserved[32];
 };
 
@@ -61,7 +61,7 @@ struct SceMsgDialogProgressBarParam
 {
 	le_t<s32> barType;
 	SceMsgDialogSystemMessageParam sysMsgParam;
-	vm::lptr<const char> msg;
+	vm::lcptr<char> msg;
 	char reserved[32];
 };
 
@@ -107,18 +107,18 @@ struct SceSaveDataDialogFixedParam
 
 struct SceSaveDataDialogListParam
 {
-	vm::lptr<const u32> slotList;
+	vm::lcptr<u32> slotList;
 	le_t<u32> slotListSize;
 	le_t<s32> focusPos;
 	le_t<u32> focusId;
-	vm::lptr<const char> listTitle;
+	vm::lcptr<char> listTitle;
 	char reserved[32];
 };
 
 struct SceSaveDataDialogUserMessageParam
 {
 	le_t<s32> buttonType;
-	vm::lptr<const char> msg;
+	vm::lcptr<char> msg;
 	le_t<u32> targetSlot;
 	char reserved[32];
 };
@@ -142,15 +142,15 @@ struct SceSaveDataDialogProgressBarParam
 {
 	le_t<s32> barType;
 	SceSaveDataDialogSystemMessageParam sysMsgParam;
-	vm::lptr<const char> msg;
+	vm::lcptr<char> msg;
 	le_t<u32> targetSlot;
 	char reserved[32];
 };
 
 struct SceSaveDataDialogSlotConfigParam
 {
-	vm::lptr<const SceAppUtilSaveDataMountPoint> mountPoint;
-	vm::lptr<const char> appSubDir;
+	vm::lcptr<SceAppUtilSaveDataMountPoint> mountPoint;
+	vm::lcptr<char> appSubDir;
 	char reserved[32];
 };
 
@@ -207,7 +207,7 @@ struct SceImeDialogParam
 	vm::lptr<SceImeCharFilter> filter;
 	le_t<u32> dialogMode;
 	le_t<u32> textBoxMode;
-	vm::lptr<const u16> title;
+	vm::lcptr<u16> title;
 	le_t<u32> maxTextLength;
 	vm::lptr<u16> initialText;
 	vm::lptr<u16> inputTextBuffer;

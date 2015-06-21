@@ -80,7 +80,7 @@ int sceNpClansAbortRequest(vm::ptr<SceNpClansRequestHandle> handle)
 	return CELL_OK;
 }
 
-int sceNpClansCreateClan(vm::ptr<SceNpClansRequestHandle> handle, vm::ptr<const char> name, vm::ptr<const char> tag, vm::ptr<u32> clanId)
+int sceNpClansCreateClan(vm::ptr<SceNpClansRequestHandle> handle, vm::cptr<char> name, vm::cptr<char> tag, vm::ptr<u32> clanId)
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
@@ -100,7 +100,7 @@ int sceNpClansDisbandClan(vm::ptr<SceNpClansRequestHandle> handle, u32 clanId)
 	return CELL_OK;
 }
 
-int sceNpClansGetClanList(vm::ptr<SceNpClansRequestHandle> handle, vm::ptr<const SceNpClansPagingRequest> paging, vm::ptr<SceNpClansEntry> clanList, vm::ptr<SceNpClansPagingResult> pageResult)
+int sceNpClansGetClanList(vm::ptr<SceNpClansRequestHandle> handle, vm::cptr<SceNpClansPagingRequest> paging, vm::ptr<SceNpClansEntry> clanList, vm::ptr<SceNpClansPagingResult> pageResult)
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 

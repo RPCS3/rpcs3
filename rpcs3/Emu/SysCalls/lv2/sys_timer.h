@@ -40,7 +40,7 @@ struct lv2_timer_t
 
 REG_ID_TYPE(lv2_timer_t, 0x11); // SYS_TIMER_OBJECT
 
-s32 sys_timer_create(vm::ref<u32> timer_id);
+s32 sys_timer_create(vm::ptr<u32> timer_id);
 s32 sys_timer_destroy(u32 timer_id);
 s32 sys_timer_get_information(u32 timer_id, vm::ptr<sys_timer_information_t> info);
 s32 _sys_timer_start(u32 timer_id, u64 basetime, u64 period); // basetime type changed from s64

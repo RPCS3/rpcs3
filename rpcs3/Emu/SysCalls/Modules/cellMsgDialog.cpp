@@ -24,7 +24,7 @@ void MsgDialogInstance::Close()
 	wait_until = get_system_time();
 }
 
-s32 cellMsgDialogOpen2(u32 type, vm::ptr<const char> msgString, vm::ptr<CellMsgDialogCallback> callback, vm::ptr<void> userData, vm::ptr<void> extParam)
+s32 cellMsgDialogOpen2(u32 type, vm::cptr<char> msgString, vm::ptr<CellMsgDialogCallback> callback, vm::ptr<void> userData, vm::ptr<void> extParam)
 {
 	cellSysutil.Warning("cellMsgDialogOpen2(type=0x%x, msgString=*0x%x, callback=*0x%x, userData=*0x%x, extParam=*0x%x)", type, msgString, callback, userData, extParam);
 
@@ -293,7 +293,7 @@ s32 cellMsgDialogAbort()
 	return CELL_OK;
 }
 
-s32 cellMsgDialogProgressBarSetMsg(u32 progressBarIndex, vm::ptr<const char> msgString)
+s32 cellMsgDialogProgressBarSetMsg(u32 progressBarIndex, vm::cptr<char> msgString)
 {
 	cellSysutil.Warning("cellMsgDialogProgressBarSetMsg(progressBarIndex=%d, msgString=*0x%x)", progressBarIndex, msgString);
 

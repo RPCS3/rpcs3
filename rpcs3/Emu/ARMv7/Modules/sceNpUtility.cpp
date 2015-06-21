@@ -14,7 +14,7 @@ s32 sceNpLookupTerm(ARMv7Context&)
 	throw __FUNCTION__;
 }
 
-s32 sceNpLookupCreateTitleCtx(vm::ptr<const SceNpCommunicationId> titleId, vm::ptr<const SceNpId> selfNpId)
+s32 sceNpLookupCreateTitleCtx(vm::cptr<SceNpCommunicationId> titleId, vm::cptr<SceNpId> selfNpId)
 {
 	throw __FUNCTION__;
 }
@@ -54,12 +54,12 @@ s32 sceNpLookupPollAsync(s32 reqId, vm::ptr<s32> result)
 	throw __FUNCTION__;
 }
 
-s32 sceNpLookupNpId(s32 reqId, vm::ptr<const SceNpOnlineId> onlineId, vm::ptr<SceNpId> npId, vm::ptr<void> option)
+s32 sceNpLookupNpId(s32 reqId, vm::cptr<SceNpOnlineId> onlineId, vm::ptr<SceNpId> npId, vm::ptr<void> option)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceNpLookupNpIdAsync(s32 reqId, vm::ptr<const SceNpOnlineId> onlineId, vm::ptr<SceNpId> npId, vm::ptr<void> option)
+s32 sceNpLookupNpIdAsync(s32 reqId, vm::cptr<SceNpOnlineId> onlineId, vm::ptr<SceNpId> npId, vm::ptr<void> option)
 {
 	throw __FUNCTION__;
 }
@@ -67,7 +67,7 @@ s32 sceNpLookupNpIdAsync(s32 reqId, vm::ptr<const SceNpOnlineId> onlineId, vm::p
 s32 sceNpLookupUserProfile(
 	s32 reqId,
 	s32 avatarSizeType,
-	vm::ptr<const SceNpId> npId,
+	vm::cptr<SceNpId> npId,
 	vm::ptr<SceNpUserInformation> userInfo,
 	vm::ptr<SceNpAboutMe> aboutMe,
 	vm::ptr<SceNpMyLanguages> languages,
@@ -83,7 +83,7 @@ s32 sceNpLookupUserProfile(
 s32 sceNpLookupUserProfileAsync(
 	s32 reqId,
 	s32 avatarSizeType,
-	vm::ptr<const SceNpId> npId,
+	vm::cptr<SceNpId> npId,
 	vm::ptr<SceNpUserInformation> userInfo,
 	vm::ptr<SceNpAboutMe> aboutMe,
 	vm::ptr<SceNpMyLanguages> languages,
@@ -96,12 +96,12 @@ s32 sceNpLookupUserProfileAsync(
 	throw __FUNCTION__;
 }
 
-s32 sceNpLookupAvatarImage(s32 reqId, vm::ptr<const SceNpAvatarUrl> avatarUrl, vm::ptr<SceNpAvatarImage> avatarImage, vm::ptr<void> option)
+s32 sceNpLookupAvatarImage(s32 reqId, vm::cptr<SceNpAvatarUrl> avatarUrl, vm::ptr<SceNpAvatarImage> avatarImage, vm::ptr<void> option)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceNpLookupAvatarImageAsync(s32 reqId, vm::ptr<const SceNpAvatarUrl> avatarUrl, vm::ptr<SceNpAvatarImage> avatarImage, vm::ptr<void> option)
+s32 sceNpLookupAvatarImageAsync(s32 reqId, vm::cptr<SceNpAvatarUrl> avatarUrl, vm::ptr<SceNpAvatarImage> avatarImage, vm::ptr<void> option)
 {
 	throw __FUNCTION__;
 }

@@ -171,7 +171,7 @@ namespace sys_net_func
 		return CELL_OK;
 	}
 
-	s32 inet_addr(vm::ptr<const char> cp)
+	s32 inet_addr(vm::cptr<char> cp)
 	{
 		sys_net.Warning("inet_addr(cp_addr=0x%x['%s'])", cp.addr(), cp.get_ptr());
 		return htonl(::inet_addr(cp.get_ptr())); // return a big-endian IP address (WTF? function should return LITTLE-ENDIAN value)
@@ -219,7 +219,7 @@ namespace sys_net_func
 		return CELL_OK;
 	}
 
-	s32 inet_pton(s32 af, vm::ptr<const char> src, vm::ptr<char> dst)
+	s32 inet_pton(s32 af, vm::cptr<char> src, vm::ptr<char> dst)
 	{
 		sys_net.Warning("inet_pton(af=%d, src_addr=0x%x, dst_addr=0x%x)", af, src.addr(), dst.addr());
 
@@ -264,7 +264,7 @@ namespace sys_net_func
 		return CELL_OK;
 	}
 
-	s32 send(s32 s, vm::ptr<const char> buf, u32 len, s32 flags)
+	s32 send(s32 s, vm::cptr<char> buf, u32 len, s32 flags)
 	{
 		sys_net.Warning("send(s=%d, buf_addr=0x%x, len=%d, flags=0x%x)", s, buf.addr(), len, flags);
 
@@ -279,7 +279,7 @@ namespace sys_net_func
 		return CELL_OK;
 	}
 
-	s32 sendto(s32 s, vm::ptr<const char> buf, u32 len, s32 flags, vm::ptr<sys_net_sockaddr> addr, u32 addrlen)
+	s32 sendto(s32 s, vm::cptr<char> buf, u32 len, s32 flags, vm::ptr<sys_net_sockaddr> addr, u32 addrlen)
 	{
 		sys_net.Warning("sendto(s=%d, buf_addr=0x%x, len=%d, flags=0x%x, addr=0x%x, addrlen=%d)",
 			s, buf.addr(), len, flags, addr.addr(), addrlen);
@@ -292,7 +292,7 @@ namespace sys_net_func
 		return ret;
 	}
 
-	s32 setsockopt(s32 s, s32 level, s32 optname, vm::ptr<const char> optval, u32 optlen)
+	s32 setsockopt(s32 s, s32 level, s32 optname, vm::cptr<char> optval, u32 optlen)
 	{
 		sys_net.Warning("socket(s=%d, level=%d, optname=%d, optval_addr=0x%x, optlen=%d)", s, level, optname, optval.addr(), optlen);
 

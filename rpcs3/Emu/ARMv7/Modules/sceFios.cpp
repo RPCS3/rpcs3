@@ -4,7 +4,7 @@
 
 #include "sceFios.h"
 
-s32 sceFiosInitialize(vm::ptr<const SceFiosParams> pParameters)
+s32 sceFiosInitialize(vm::cptr<SceFiosParams> pParameters)
 {
 	throw __FUNCTION__;
 }
@@ -19,12 +19,12 @@ bool sceFiosIsInitialized(vm::ptr<SceFiosParams> pOutParameters)
 	throw __FUNCTION__;
 }
 
-void sceFiosUpdateParameters(vm::ptr<const SceFiosParams> pParameters)
+void sceFiosUpdateParameters(vm::cptr<SceFiosParams> pParameters)
 {
 	throw __FUNCTION__;
 }
 
-void sceFiosSetGlobalDefaultOpAttr(vm::ptr<const SceFiosOpAttr> pAttr)
+void sceFiosSetGlobalDefaultOpAttr(vm::cptr<SceFiosOpAttr> pAttr)
 {
 	throw __FUNCTION__;
 }
@@ -34,7 +34,7 @@ bool sceFiosGetGlobalDefaultOpAttr(vm::ptr<SceFiosOpAttr> pOutAttr)
 	throw __FUNCTION__;
 }
 
-void sceFiosSetThreadDefaultOpAttr(vm::ptr<const SceFiosOpAttr> pAttr)
+void sceFiosSetThreadDefaultOpAttr(vm::cptr<SceFiosOpAttr> pAttr)
 {
 	throw __FUNCTION__;
 }
@@ -109,292 +109,292 @@ bool sceFiosIsValidHandle(s32 h)
 	throw __FUNCTION__;
 }
 
-s32 sceFiosPathcmp(vm::ptr<const char> pA, vm::ptr<const char> pB)
+s32 sceFiosPathcmp(vm::cptr<char> pA, vm::cptr<char> pB)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceFiosPathncmp(vm::ptr<const char> pA, vm::ptr<const char> pB, u32 n)
+s32 sceFiosPathncmp(vm::cptr<char> pA, vm::cptr<char> pB, u32 n)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceFiosPrintf(vm::ptr<const char> pFormat) // va_args...
+s32 sceFiosPrintf(vm::cptr<char> pFormat) // va_args...
 {
 	throw __FUNCTION__;
 }
 
-s32 sceFiosVprintf(vm::ptr<const char> pFormat) // va_list
+s32 sceFiosVprintf(vm::cptr<char> pFormat) // va_list
 {
 	throw __FUNCTION__;
 }
 
-s32 sceFiosFileExists(vm::ptr<const SceFiosOpAttr> pAttr, vm::ptr<const char> pPath, vm::ptr<bool> pOutExists)
+s32 sceFiosFileExists(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath, vm::ptr<bool> pOutExists)
 {
 	throw __FUNCTION__;
 }
 
-bool sceFiosFileExistsSync(vm::ptr<const SceFiosOpAttr> pAttr, vm::ptr<const char> pPath)
+bool sceFiosFileExistsSync(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceFiosFileGetSize(vm::ptr<const SceFiosOpAttr> pAttr, vm::ptr<const char> pPath, vm::ptr<s64> pOutSize)
+s32 sceFiosFileGetSize(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath, vm::ptr<s64> pOutSize)
 {
 	throw __FUNCTION__;
 }
 
-s64 sceFiosFileGetSizeSync(vm::ptr<const SceFiosOpAttr> pAttr, vm::ptr<const char> pPath)
+s64 sceFiosFileGetSizeSync(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceFiosFileDelete(vm::ptr<const SceFiosOpAttr> pAttr, vm::ptr<const char> pPath)
+s32 sceFiosFileDelete(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceFiosFileDeleteSync(vm::ptr<const SceFiosOpAttr> pAttr, vm::ptr<const char> pPath)
+s32 sceFiosFileDeleteSync(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceFiosDirectoryExists(vm::ptr<const SceFiosOpAttr> pAttr, vm::ptr<const char> pPath, vm::ptr<bool> pOutExists)
+s32 sceFiosDirectoryExists(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath, vm::ptr<bool> pOutExists)
 {
 	throw __FUNCTION__;
 }
 
-bool sceFiosDirectoryExistsSync(vm::ptr<const SceFiosOpAttr> pAttr, vm::ptr<const char> pPath)
+bool sceFiosDirectoryExistsSync(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceFiosDirectoryCreate(vm::ptr<const SceFiosOpAttr> pAttr, vm::ptr<const char> pPath)
+s32 sceFiosDirectoryCreate(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceFiosDirectoryCreateSync(vm::ptr<const SceFiosOpAttr> pAttr, vm::ptr<const char> pPath)
+s32 sceFiosDirectoryCreateSync(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceFiosDirectoryDelete(vm::ptr<const SceFiosOpAttr> pAttr, vm::ptr<const char> pPath)
+s32 sceFiosDirectoryDelete(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceFiosDirectoryDeleteSync(vm::ptr<const SceFiosOpAttr> pAttr, vm::ptr<const char> pPath)
+s32 sceFiosDirectoryDeleteSync(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceFiosExists(vm::ptr<const SceFiosOpAttr> pAttr, vm::ptr<const char> pPath, vm::ptr<bool> pOutExists)
+s32 sceFiosExists(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath, vm::ptr<bool> pOutExists)
 {
 	throw __FUNCTION__;
 }
 
-bool sceFiosExistsSync(vm::ptr<const SceFiosOpAttr> pAttr, vm::ptr<const char> pPath)
+bool sceFiosExistsSync(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceFiosStat(vm::ptr<const SceFiosOpAttr> pAttr, vm::ptr<const char> pPath, vm::ptr<SceFiosStat> pOutStatus)
+s32 sceFiosStat(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath, vm::ptr<SceFiosStat> pOutStatus)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceFiosStatSync(vm::ptr<const SceFiosOpAttr> pAttr, vm::ptr<const char> pPath, vm::ptr<SceFiosStat> pOutStatus)
+s32 sceFiosStatSync(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath, vm::ptr<SceFiosStat> pOutStatus)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceFiosDelete(vm::ptr<const SceFiosOpAttr> pAttr, vm::ptr<const char> pPath)
+s32 sceFiosDelete(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceFiosDeleteSync(vm::ptr<const SceFiosOpAttr> pAttr, vm::ptr<const char> pPath)
+s32 sceFiosDeleteSync(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceFiosResolve(vm::ptr<const SceFiosOpAttr> pAttr, vm::ptr<const SceFiosTuple> pInTuple, vm::ptr<SceFiosTuple> pOutTuple)
+s32 sceFiosResolve(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<SceFiosTuple> pInTuple, vm::ptr<SceFiosTuple> pOutTuple)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceFiosResolveSync(vm::ptr<const SceFiosOpAttr> pAttr, vm::ptr<const SceFiosTuple> pInTuple, vm::ptr<SceFiosTuple> pOutTuple)
+s32 sceFiosResolveSync(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<SceFiosTuple> pInTuple, vm::ptr<SceFiosTuple> pOutTuple)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceFiosRename(vm::ptr<const SceFiosOpAttr> pAttr, vm::ptr<const char> pOldPath, vm::ptr<const char> pNewPath)
+s32 sceFiosRename(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pOldPath, vm::cptr<char> pNewPath)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceFiosRenameSync(vm::ptr<const SceFiosOpAttr> pAttr, vm::ptr<const char> pOldPath, vm::ptr<const char> pNewPath)
+s32 sceFiosRenameSync(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pOldPath, vm::cptr<char> pNewPath)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceFiosFileRead(vm::ptr<const SceFiosOpAttr> pAttr, vm::ptr<const char> pPath, vm::ptr<void> pBuf, s64 length, s64 offset)
+s32 sceFiosFileRead(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath, vm::ptr<void> pBuf, s64 length, s64 offset)
 {
 	throw __FUNCTION__;
 }
 
-s64 sceFiosFileReadSync(vm::ptr<const SceFiosOpAttr> pAttr, vm::ptr<const char> pPath, vm::ptr<void> pBuf, s64 length, s64 offset)
+s64 sceFiosFileReadSync(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath, vm::ptr<void> pBuf, s64 length, s64 offset)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceFiosFileWrite(vm::ptr<const SceFiosOpAttr> pAttr, vm::ptr<const char> pPath, vm::ptr<const void> pBuf, s64 length, s64 offset)
+s32 sceFiosFileWrite(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath, vm::cptr<void> pBuf, s64 length, s64 offset)
 {
 	throw __FUNCTION__;
 }
 
-s64 sceFiosFileWriteSync(vm::ptr<const SceFiosOpAttr> pAttr, vm::ptr<const char> pPath, vm::ptr<const void> pBuf, s64 length, s64 offset)
+s64 sceFiosFileWriteSync(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath, vm::cptr<void> pBuf, s64 length, s64 offset)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceFiosFileTruncate(vm::ptr<const SceFiosOpAttr> pAttr, vm::ptr<const char> pPath, s64 length)
+s32 sceFiosFileTruncate(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath, s64 length)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceFiosFileTruncateSync(vm::ptr<const SceFiosOpAttr> pAttr, vm::ptr<const char> pPath, s64 length)
+s32 sceFiosFileTruncateSync(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath, s64 length)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceFiosFHOpen(vm::ptr<const SceFiosOpAttr> pAttr, vm::ptr<s32> pOutFH, vm::ptr<const char> pPath, vm::ptr<const SceFiosOpenParams> pOpenParams)
+s32 sceFiosFHOpen(vm::cptr<SceFiosOpAttr> pAttr, vm::ptr<s32> pOutFH, vm::cptr<char> pPath, vm::cptr<SceFiosOpenParams> pOpenParams)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceFiosFHOpenSync(vm::ptr<const SceFiosOpAttr> pAttr, vm::ptr<s32> pOutFH, vm::ptr<const char> pPath, vm::ptr<const SceFiosOpenParams> pOpenParams)
+s32 sceFiosFHOpenSync(vm::cptr<SceFiosOpAttr> pAttr, vm::ptr<s32> pOutFH, vm::cptr<char> pPath, vm::cptr<SceFiosOpenParams> pOpenParams)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceFiosFHStat(vm::ptr<const SceFiosOpAttr> pAttr, s32 fh, vm::ptr<SceFiosStat> pOutStatus)
+s32 sceFiosFHStat(vm::cptr<SceFiosOpAttr> pAttr, s32 fh, vm::ptr<SceFiosStat> pOutStatus)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceFiosFHStatSync(vm::ptr<const SceFiosOpAttr> pAttr, s32 fh, vm::ptr<SceFiosStat> pOutStatus)
+s32 sceFiosFHStatSync(vm::cptr<SceFiosOpAttr> pAttr, s32 fh, vm::ptr<SceFiosStat> pOutStatus)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceFiosFHTruncate(vm::ptr<const SceFiosOpAttr> pAttr, s32 fh, s64 length)
+s32 sceFiosFHTruncate(vm::cptr<SceFiosOpAttr> pAttr, s32 fh, s64 length)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceFiosFHTruncateSync(vm::ptr<const SceFiosOpAttr> pAttr, s32 fh, s64 length)
+s32 sceFiosFHTruncateSync(vm::cptr<SceFiosOpAttr> pAttr, s32 fh, s64 length)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceFiosFHSync(vm::ptr<const SceFiosOpAttr> pAttr, s32 fh)
+s32 sceFiosFHSync(vm::cptr<SceFiosOpAttr> pAttr, s32 fh)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceFiosFHSyncSync(vm::ptr<const SceFiosOpAttr> pAttr, s32 fh)
+s32 sceFiosFHSyncSync(vm::cptr<SceFiosOpAttr> pAttr, s32 fh)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceFiosFHRead(vm::ptr<const SceFiosOpAttr> pAttr, s32 fh, vm::ptr<void> pBuf, s64 length)
+s32 sceFiosFHRead(vm::cptr<SceFiosOpAttr> pAttr, s32 fh, vm::ptr<void> pBuf, s64 length)
 {
 	throw __FUNCTION__;
 }
 
-s64 sceFiosFHReadSync(vm::ptr<const SceFiosOpAttr> pAttr, s32 fh, vm::ptr<void> pBuf, s64 length)
+s64 sceFiosFHReadSync(vm::cptr<SceFiosOpAttr> pAttr, s32 fh, vm::ptr<void> pBuf, s64 length)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceFiosFHWrite(vm::ptr<const SceFiosOpAttr> pAttr, s32 fh, vm::ptr<const void> pBuf, s64 length)
+s32 sceFiosFHWrite(vm::cptr<SceFiosOpAttr> pAttr, s32 fh, vm::cptr<void> pBuf, s64 length)
 {
 	throw __FUNCTION__;
 }
 
-s64 sceFiosFHWriteSync(vm::ptr<const SceFiosOpAttr> pAttr, s32 fh, vm::ptr<const void> pBuf, s64 length)
+s64 sceFiosFHWriteSync(vm::cptr<SceFiosOpAttr> pAttr, s32 fh, vm::cptr<void> pBuf, s64 length)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceFiosFHReadv(vm::ptr<const SceFiosOpAttr> pAttr, s32 fh, vm::ptr<const SceFiosBuffer> iov, s32 iovcnt)
+s32 sceFiosFHReadv(vm::cptr<SceFiosOpAttr> pAttr, s32 fh, vm::cptr<SceFiosBuffer> iov, s32 iovcnt)
 {
 	throw __FUNCTION__;
 }
 
-s64 sceFiosFHReadvSync(vm::ptr<const SceFiosOpAttr> pAttr, s32 fh, vm::ptr<const SceFiosBuffer> iov, s32 iovcnt)
+s64 sceFiosFHReadvSync(vm::cptr<SceFiosOpAttr> pAttr, s32 fh, vm::cptr<SceFiosBuffer> iov, s32 iovcnt)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceFiosFHWritev(vm::ptr<const SceFiosOpAttr> pAttr, s32 fh, vm::ptr<const SceFiosBuffer> iov, s32 iovcnt)
+s32 sceFiosFHWritev(vm::cptr<SceFiosOpAttr> pAttr, s32 fh, vm::cptr<SceFiosBuffer> iov, s32 iovcnt)
 {
 	throw __FUNCTION__;
 }
 
-s64 sceFiosFHWritevSync(vm::ptr<const SceFiosOpAttr> pAttr, s32 fh, vm::ptr<const SceFiosBuffer> iov, s32 iovcnt)
+s64 sceFiosFHWritevSync(vm::cptr<SceFiosOpAttr> pAttr, s32 fh, vm::cptr<SceFiosBuffer> iov, s32 iovcnt)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceFiosFHPread(vm::ptr<const SceFiosOpAttr> pAttr, s32 fh, vm::ptr<void> pBuf, s64 length, s64 offset)
+s32 sceFiosFHPread(vm::cptr<SceFiosOpAttr> pAttr, s32 fh, vm::ptr<void> pBuf, s64 length, s64 offset)
 {
 	throw __FUNCTION__;
 }
 
-s64 sceFiosFHPreadSync(vm::ptr<const SceFiosOpAttr> pAttr, s32 fh, vm::ptr<void> pBuf, s64 length, s64 offset)
+s64 sceFiosFHPreadSync(vm::cptr<SceFiosOpAttr> pAttr, s32 fh, vm::ptr<void> pBuf, s64 length, s64 offset)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceFiosFHPwrite(vm::ptr<const SceFiosOpAttr> pAttr, s32 fh, vm::ptr<const void> pBuf, s64 length, s64 offset)
+s32 sceFiosFHPwrite(vm::cptr<SceFiosOpAttr> pAttr, s32 fh, vm::cptr<void> pBuf, s64 length, s64 offset)
 {
 	throw __FUNCTION__;
 }
 
-s64 sceFiosFHPwriteSync(vm::ptr<const SceFiosOpAttr> pAttr, s32 fh, vm::ptr<const void> pBuf, s64 length, s64 offset)
+s64 sceFiosFHPwriteSync(vm::cptr<SceFiosOpAttr> pAttr, s32 fh, vm::cptr<void> pBuf, s64 length, s64 offset)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceFiosFHPreadv(vm::ptr<const SceFiosOpAttr> pAttr, s32 fh, vm::ptr<const SceFiosBuffer> iov, s32 iovcnt, s64 offset)
+s32 sceFiosFHPreadv(vm::cptr<SceFiosOpAttr> pAttr, s32 fh, vm::cptr<SceFiosBuffer> iov, s32 iovcnt, s64 offset)
 {
 	throw __FUNCTION__;
 }
 
-s64 sceFiosFHPreadvSync(vm::ptr<const SceFiosOpAttr> pAttr, s32 fh, vm::ptr<const SceFiosBuffer> iov, s32 iovcnt, s64 offset)
+s64 sceFiosFHPreadvSync(vm::cptr<SceFiosOpAttr> pAttr, s32 fh, vm::cptr<SceFiosBuffer> iov, s32 iovcnt, s64 offset)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceFiosFHPwritev(vm::ptr<const SceFiosOpAttr> pAttr, s32 fh, vm::ptr<const SceFiosBuffer> iov, s32 iovcnt, s64 offset)
+s32 sceFiosFHPwritev(vm::cptr<SceFiosOpAttr> pAttr, s32 fh, vm::cptr<SceFiosBuffer> iov, s32 iovcnt, s64 offset)
 {
 	throw __FUNCTION__;
 }
 
-s64 sceFiosFHPwritevSync(vm::ptr<const SceFiosOpAttr> pAttr, s32 fh, vm::ptr<const SceFiosBuffer> iov, s32 iovcnt, s64 offset)
+s64 sceFiosFHPwritevSync(vm::cptr<SceFiosOpAttr> pAttr, s32 fh, vm::cptr<SceFiosBuffer> iov, s32 iovcnt, s64 offset)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceFiosFHClose(vm::ptr<const SceFiosOpAttr> pAttr, s32 fh)
+s32 sceFiosFHClose(vm::cptr<SceFiosOpAttr> pAttr, s32 fh)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceFiosFHCloseSync(vm::ptr<const SceFiosOpAttr> pAttr, s32 fh)
+s32 sceFiosFHCloseSync(vm::cptr<SceFiosOpAttr> pAttr, s32 fh)
 {
 	throw __FUNCTION__;
 }
@@ -409,7 +409,7 @@ s64 sceFiosFHTell(s32 fh)
 	throw __FUNCTION__;
 }
 
-vm::ptr<const char> sceFiosFHGetPath(s32 fh)
+vm::cptr<char> sceFiosFHGetPath(s32 fh)
 {
 	throw __FUNCTION__;
 }
@@ -424,37 +424,37 @@ vm::ptr<SceFiosOpenParams> sceFiosFHGetOpenParams(s32 fh)
 	throw __FUNCTION__;
 }
 
-s32 sceFiosDHOpen(vm::ptr<const SceFiosOpAttr> pAttr, vm::ptr<s32> pOutDH, vm::ptr<const char> pPath, SceFiosBuffer buf)
+s32 sceFiosDHOpen(vm::cptr<SceFiosOpAttr> pAttr, vm::ptr<s32> pOutDH, vm::cptr<char> pPath, SceFiosBuffer buf)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceFiosDHOpenSync(vm::ptr<const SceFiosOpAttr> pAttr, vm::ptr<s32> pOutDH, vm::ptr<const char> pPath, SceFiosBuffer buf)
+s32 sceFiosDHOpenSync(vm::cptr<SceFiosOpAttr> pAttr, vm::ptr<s32> pOutDH, vm::cptr<char> pPath, SceFiosBuffer buf)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceFiosDHRead(vm::ptr<const SceFiosOpAttr> pAttr, s32 dh, vm::ptr<SceFiosDirEntry> pOutEntry)
+s32 sceFiosDHRead(vm::cptr<SceFiosOpAttr> pAttr, s32 dh, vm::ptr<SceFiosDirEntry> pOutEntry)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceFiosDHReadSync(vm::ptr<const SceFiosOpAttr> pAttr, s32 dh, vm::ptr<SceFiosDirEntry> pOutEntry)
+s32 sceFiosDHReadSync(vm::cptr<SceFiosOpAttr> pAttr, s32 dh, vm::ptr<SceFiosDirEntry> pOutEntry)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceFiosDHClose(vm::ptr<const SceFiosOpAttr> pAttr, s32 dh)
+s32 sceFiosDHClose(vm::cptr<SceFiosOpAttr> pAttr, s32 dh)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceFiosDHCloseSync(vm::ptr<const SceFiosOpAttr> pAttr, s32 dh)
+s32 sceFiosDHCloseSync(vm::cptr<SceFiosOpAttr> pAttr, s32 dh)
 {
 	throw __FUNCTION__;
 }
 
-vm::ptr<const char> sceFiosDHGetPath(s32 dh)
+vm::cptr<char> sceFiosDHGetPath(s32 dh)
 {
 	throw __FUNCTION__;
 }
@@ -504,12 +504,12 @@ bool sceFiosOpIsCancelled(s32 op)
 	throw __FUNCTION__;
 }
 
-vm::ptr<const SceFiosOpAttr> sceFiosOpGetAttr(s32 op)
+vm::cptr<SceFiosOpAttr> sceFiosOpGetAttr(s32 op)
 {
 	throw __FUNCTION__;
 }
 
-vm::ptr<const char> sceFiosOpGetPath(s32 op)
+vm::cptr<char> sceFiosOpGetPath(s32 op)
 {
 	throw __FUNCTION__;
 }
@@ -559,7 +559,7 @@ u64 sceFiosDateGetCurrent()
 	throw __FUNCTION__;
 }
 
-u64 sceFiosDateFromComponents(vm::ptr<const tm> pComponents)
+u64 sceFiosDateFromComponents(vm::cptr<tm> pComponents)
 {
 	throw __FUNCTION__;
 }
@@ -569,7 +569,7 @@ vm::ptr<tm> sceFiosDateToComponents(u64 date, vm::ptr<tm> pOutComponents)
 	throw __FUNCTION__;
 }
 
-u64 sceFiosDateFromSceDateTime(vm::ptr<const SceDateTime> pSceDateTime)
+u64 sceFiosDateFromSceDateTime(vm::cptr<SceDateTime> pSceDateTime)
 {
 	throw __FUNCTION__;
 }
@@ -579,7 +579,7 @@ vm::ptr<SceDateTime> sceFiosDateToSceDateTime(u64 date, vm::ptr<SceDateTime> pSc
 	throw __FUNCTION__;
 }
 
-s32 sceFiosOverlayAdd(vm::ptr<const SceFiosOverlay> pOverlay, vm::ptr<s32> pOutID)
+s32 sceFiosOverlayAdd(vm::cptr<SceFiosOverlay> pOverlay, vm::ptr<s32> pOutID)
 {
 	throw __FUNCTION__;
 }
@@ -594,7 +594,7 @@ s32 sceFiosOverlayGetInfo(s32 id, vm::ptr<SceFiosOverlay> pOutOverlay)
 	throw __FUNCTION__;
 }
 
-s32 sceFiosOverlayModify(s32 id, vm::ptr<const SceFiosOverlay> pNewValue)
+s32 sceFiosOverlayModify(s32 id, vm::cptr<SceFiosOverlay> pNewValue)
 {
 	throw __FUNCTION__;
 }
@@ -604,37 +604,37 @@ s32 sceFiosOverlayGetList(vm::ptr<s32> pOutIDs, u32 maxIDs, vm::ptr<u32> pActual
 	throw __FUNCTION__;
 }
 
-s32 sceFiosOverlayResolveSync(s32 resolveFlag, vm::ptr<const char> pInPath, vm::ptr<char> pOutPath, u32 maxPath)
+s32 sceFiosOverlayResolveSync(s32 resolveFlag, vm::cptr<char> pInPath, vm::ptr<char> pOutPath, u32 maxPath)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceFiosArchiveGetMountBufferSize(vm::ptr<const SceFiosOpAttr> pAttr, vm::ptr<const char> pArchivePath, vm::ptr<const SceFiosOpenParams> pOpenParams)
+s32 sceFiosArchiveGetMountBufferSize(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pArchivePath, vm::cptr<SceFiosOpenParams> pOpenParams)
 {
 	throw __FUNCTION__;
 }
 
-s64 sceFiosArchiveGetMountBufferSizeSync(vm::ptr<const SceFiosOpAttr> pAttr, vm::ptr<const char> pArchivePath, vm::ptr<const SceFiosOpenParams> pOpenParams)
+s64 sceFiosArchiveGetMountBufferSizeSync(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pArchivePath, vm::cptr<SceFiosOpenParams> pOpenParams)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceFiosArchiveMount(vm::ptr<const SceFiosOpAttr> pAttr, vm::ptr<s32> pOutFH, vm::ptr<const char> pArchivePath, vm::ptr<const char> pMountPoint, SceFiosBuffer mountBuffer, vm::ptr<const SceFiosOpenParams> pOpenParams)
+s32 sceFiosArchiveMount(vm::cptr<SceFiosOpAttr> pAttr, vm::ptr<s32> pOutFH, vm::cptr<char> pArchivePath, vm::cptr<char> pMountPoint, SceFiosBuffer mountBuffer, vm::cptr<SceFiosOpenParams> pOpenParams)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceFiosArchiveMountSync(vm::ptr<const SceFiosOpAttr> pAttr, vm::ptr<s32> pOutFH, vm::ptr<const char> pArchivePath, vm::ptr<const char> pMountPoint, SceFiosBuffer mountBuffer, vm::ptr<const SceFiosOpenParams> pOpenParams)
+s32 sceFiosArchiveMountSync(vm::cptr<SceFiosOpAttr> pAttr, vm::ptr<s32> pOutFH, vm::cptr<char> pArchivePath, vm::cptr<char> pMountPoint, SceFiosBuffer mountBuffer, vm::cptr<SceFiosOpenParams> pOpenParams)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceFiosArchiveUnmount(vm::ptr<const SceFiosOpAttr> pAttr, s32 fh)
+s32 sceFiosArchiveUnmount(vm::cptr<SceFiosOpAttr> pAttr, s32 fh)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceFiosArchiveUnmountSync(vm::ptr<const SceFiosOpAttr> pAttr, s32 fh)
+s32 sceFiosArchiveUnmountSync(vm::cptr<SceFiosOpAttr> pAttr, s32 fh)
 {
 	throw __FUNCTION__;
 }

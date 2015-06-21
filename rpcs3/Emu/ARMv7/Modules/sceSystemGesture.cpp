@@ -19,7 +19,7 @@ s32 sceSystemGestureResetPrimitiveTouchRecognizer()
 	throw __FUNCTION__;
 }
 
-s32 sceSystemGestureUpdatePrimitiveTouchRecognizer(vm::ptr<const SceTouchData> pFrontData, vm::ptr<const SceTouchData> pBackData)
+s32 sceSystemGestureUpdatePrimitiveTouchRecognizer(vm::cptr<SceTouchData> pFrontData, vm::cptr<SceTouchData> pBackData)
 {
 	throw __FUNCTION__;
 }
@@ -44,12 +44,12 @@ s32 sceSystemGestureGetPrimitiveTouchEventByPrimitiveID(const u16 primitiveID, v
 	throw __FUNCTION__;
 }
 
-s32 sceSystemGestureCreateTouchRecognizer(vm::ptr<SceSystemGestureTouchRecognizer> touchRecognizer, const SceSystemGestureType gestureType, const u8 touchPanelPortID, vm::ptr<const SceSystemGestureRectangle> rectangle, vm::ptr<const SceSystemGestureTouchRecognizerParameter> touchRecognizerParameter)
+s32 sceSystemGestureCreateTouchRecognizer(vm::ptr<SceSystemGestureTouchRecognizer> touchRecognizer, const SceSystemGestureType gestureType, const u8 touchPanelPortID, vm::cptr<SceSystemGestureRectangle> rectangle, vm::cptr<SceSystemGestureTouchRecognizerParameter> touchRecognizerParameter)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceSystemGestureGetTouchRecognizerInformation(vm::ptr<const SceSystemGestureTouchRecognizer> touchRecognizer, vm::ptr<SceSystemGestureTouchRecognizerInformation> information)
+s32 sceSystemGestureGetTouchRecognizerInformation(vm::cptr<SceSystemGestureTouchRecognizer> touchRecognizer, vm::ptr<SceSystemGestureTouchRecognizerInformation> information)
 {
 	throw __FUNCTION__;
 }
@@ -64,27 +64,27 @@ s32 sceSystemGestureUpdateTouchRecognizer(vm::ptr<SceSystemGestureTouchRecognize
 	throw __FUNCTION__;
 }
 
-s32 sceSystemGestureUpdateTouchRecognizerRectangle(vm::ptr<SceSystemGestureTouchRecognizer> touchRecognizer, vm::ptr<const SceSystemGestureRectangle> rectangle)
+s32 sceSystemGestureUpdateTouchRecognizerRectangle(vm::ptr<SceSystemGestureTouchRecognizer> touchRecognizer, vm::cptr<SceSystemGestureRectangle> rectangle)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceSystemGestureGetTouchEvents(vm::ptr<const SceSystemGestureTouchRecognizer> touchRecognizer, vm::ptr<SceSystemGestureTouchEvent> eventBuffer, const u32 capacityOfBuffer, vm::ptr<u32> numberOfEvent)
+s32 sceSystemGestureGetTouchEvents(vm::cptr<SceSystemGestureTouchRecognizer> touchRecognizer, vm::ptr<SceSystemGestureTouchEvent> eventBuffer, const u32 capacityOfBuffer, vm::ptr<u32> numberOfEvent)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceSystemGestureGetTouchEventsCount(vm::ptr<const SceSystemGestureTouchRecognizer> touchRecognizer)
+s32 sceSystemGestureGetTouchEventsCount(vm::cptr<SceSystemGestureTouchRecognizer> touchRecognizer)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceSystemGestureGetTouchEventByIndex(vm::ptr<const SceSystemGestureTouchRecognizer> touchRecognizer, const u32 index, vm::ptr<SceSystemGestureTouchEvent> touchEvent)
+s32 sceSystemGestureGetTouchEventByIndex(vm::cptr<SceSystemGestureTouchRecognizer> touchRecognizer, const u32 index, vm::ptr<SceSystemGestureTouchEvent> touchEvent)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceSystemGestureGetTouchEventByEventID(vm::ptr<const SceSystemGestureTouchRecognizer> touchRecognizer, const u32 eventID, vm::ptr<SceSystemGestureTouchEvent> touchEvent)
+s32 sceSystemGestureGetTouchEventByEventID(vm::cptr<SceSystemGestureTouchRecognizer> touchRecognizer, const u32 eventID, vm::ptr<SceSystemGestureTouchEvent> touchEvent)
 {
 	throw __FUNCTION__;
 }

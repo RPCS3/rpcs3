@@ -59,11 +59,11 @@ lv2_timer_t::~lv2_timer_t()
 	thread.join();
 }
 
-s32 sys_timer_create(vm::ref<u32> timer_id)
+s32 sys_timer_create(vm::ptr<u32> timer_id)
 {
 	sys_timer.Warning("sys_timer_create(timer_id=*0x%x)", timer_id);
 
-	timer_id = Emu.GetIdManager().make<lv2_timer_t>();
+	*timer_id = Emu.GetIdManager().make<lv2_timer_t>();
 
 	return CELL_OK;
 }

@@ -17,9 +17,9 @@ s32 sceNpMatching2Term()
 }
 
 s32 sceNpMatching2CreateContext(
-	vm::ptr<const SceNpId> npId,
-	vm::ptr<const SceNpCommunicationId> commId,
-	vm::ptr<const SceNpCommunicationPassphrase> passPhrase,
+	vm::cptr<SceNpId> npId,
+	vm::cptr<SceNpCommunicationId> commId,
+	vm::cptr<SceNpCommunicationPassphrase> passPhrase,
 	vm::ptr<u16> ctxId)
 {
 	throw __FUNCTION__;
@@ -45,7 +45,7 @@ s32 sceNpMatching2ContextStop(u16 ctxId)
 	throw __FUNCTION__;
 }
 
-s32 sceNpMatching2SetDefaultRequestOptParam(u16 ctxId, vm::ptr<const SceNpMatching2RequestOptParam> optParam)
+s32 sceNpMatching2SetDefaultRequestOptParam(u16 ctxId, vm::cptr<SceNpMatching2RequestOptParam> optParam)
 {
 	throw __FUNCTION__;
 }
@@ -87,8 +87,8 @@ s32 sceNpMatching2GetServerLocal(u16 ctxId, vm::ptr<SceNpMatching2Server> server
 
 s32 sceNpMatching2GetWorldInfoList(
 	u16 ctxId,
-	vm::ptr<const SceNpMatching2GetWorldInfoListRequest> reqParam,
-	vm::ptr<const SceNpMatching2RequestOptParam> optParam,
+	vm::cptr<SceNpMatching2GetWorldInfoListRequest> reqParam,
+	vm::cptr<SceNpMatching2RequestOptParam> optParam,
 	vm::ptr<u32> assignedReqId)
 {
 	throw __FUNCTION__;
@@ -96,8 +96,8 @@ s32 sceNpMatching2GetWorldInfoList(
 
 s32 sceNpMatching2CreateJoinRoom(
 	u16 ctxId,
-	vm::ptr<const SceNpMatching2CreateJoinRoomRequest> reqParam,
-	vm::ptr<const SceNpMatching2RequestOptParam> optParam,
+	vm::cptr<SceNpMatching2CreateJoinRoomRequest> reqParam,
+	vm::cptr<SceNpMatching2RequestOptParam> optParam,
 	vm::ptr<u32> assignedReqId)
 {
 	throw __FUNCTION__;
@@ -105,8 +105,8 @@ s32 sceNpMatching2CreateJoinRoom(
 
 s32 sceNpMatching2SearchRoom(
 	u16 ctxId,
-	vm::ptr<const SceNpMatching2SearchRoomRequest> reqParam,
-	vm::ptr<const SceNpMatching2RequestOptParam> optParam,
+	vm::cptr<SceNpMatching2SearchRoomRequest> reqParam,
+	vm::cptr<SceNpMatching2RequestOptParam> optParam,
 	vm::ptr<u32> assignedReqId)
 {
 	throw __FUNCTION__;
@@ -114,8 +114,8 @@ s32 sceNpMatching2SearchRoom(
 
 s32 sceNpMatching2JoinRoom(
 	u16 ctxId,
-	vm::ptr<const SceNpMatching2JoinRoomRequest> reqParam,
-	vm::ptr<const SceNpMatching2RequestOptParam> optParam,
+	vm::cptr<SceNpMatching2JoinRoomRequest> reqParam,
+	vm::cptr<SceNpMatching2RequestOptParam> optParam,
 	vm::ptr<u32> assignedReqId)
 {
 	throw __FUNCTION__;
@@ -123,8 +123,8 @@ s32 sceNpMatching2JoinRoom(
 
 s32 sceNpMatching2LeaveRoom(
 	u16 ctxId,
-	vm::ptr<const SceNpMatching2LeaveRoomRequest> reqParam,
-	vm::ptr<const SceNpMatching2RequestOptParam> optParam,
+	vm::cptr<SceNpMatching2LeaveRoomRequest> reqParam,
+	vm::cptr<SceNpMatching2RequestOptParam> optParam,
 	vm::ptr<u32> assignedReqId)
 {
 	throw __FUNCTION__;
@@ -140,8 +140,8 @@ s32 sceNpMatching2GetSignalingOptParamLocal(
 
 s32 sceNpMatching2SetRoomDataExternal(
 	u16 ctxId,
-	vm::ptr<const SceNpMatching2SetRoomDataExternalRequest> reqParam,
-	vm::ptr<const SceNpMatching2RequestOptParam> optParam,
+	vm::cptr<SceNpMatching2SetRoomDataExternalRequest> reqParam,
+	vm::cptr<SceNpMatching2RequestOptParam> optParam,
 	vm::ptr<u32> assignedReqId)
 {
 	throw __FUNCTION__;
@@ -149,8 +149,8 @@ s32 sceNpMatching2SetRoomDataExternal(
 
 s32 sceNpMatching2KickoutRoomMember(
 	u16 ctxId,
-	vm::ptr<const SceNpMatching2KickoutRoomMemberRequest> reqParam,
-	vm::ptr<const SceNpMatching2RequestOptParam> optParam,
+	vm::cptr<SceNpMatching2KickoutRoomMemberRequest> reqParam,
+	vm::cptr<SceNpMatching2RequestOptParam> optParam,
 	vm::ptr<u32> assignedReqId)
 {
 	throw __FUNCTION__;
@@ -158,8 +158,8 @@ s32 sceNpMatching2KickoutRoomMember(
 
 s32 sceNpMatching2SendRoomChatMessage(
 	u16 ctxId,
-	vm::ptr<const SceNpMatching2SendRoomChatMessageRequest> reqParam,
-	vm::ptr<const SceNpMatching2RequestOptParam> optParam,
+	vm::cptr<SceNpMatching2SendRoomChatMessageRequest> reqParam,
+	vm::cptr<SceNpMatching2RequestOptParam> optParam,
 	vm::ptr<u32> assignedReqId)
 {
 	throw __FUNCTION__;
@@ -167,8 +167,8 @@ s32 sceNpMatching2SendRoomChatMessage(
 
 s32 sceNpMatching2SendRoomMessage(
 	u16 ctxId,
-	vm::ptr<const SceNpMatching2SendRoomMessageRequest> reqParam,
-	vm::ptr<const SceNpMatching2RequestOptParam> optParam,
+	vm::cptr<SceNpMatching2SendRoomMessageRequest> reqParam,
+	vm::cptr<SceNpMatching2RequestOptParam> optParam,
 	vm::ptr<u32> assignedReqId)
 {
 	throw __FUNCTION__;

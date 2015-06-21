@@ -9,7 +9,7 @@ s32 sceDisplayGetRefreshRate(vm::ptr<float> pFps)
 	throw __FUNCTION__;
 }
 
-s32 sceDisplaySetFrameBuf(vm::ptr<const SceDisplayFrameBuf> pFrameBuf, s32 iUpdateTimingMode)
+s32 sceDisplaySetFrameBuf(vm::cptr<SceDisplayFrameBuf> pFrameBuf, s32 iUpdateTimingMode)
 {
 	throw __FUNCTION__;
 }

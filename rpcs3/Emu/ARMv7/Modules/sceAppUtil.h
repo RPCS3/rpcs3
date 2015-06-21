@@ -50,7 +50,7 @@ struct SceAppUtilSaveDataSlot
 
 struct SceAppUtilSaveDataFile
 {
-	vm::lptr<const char> filePath;
+	vm::lcptr<char> filePath;
 	vm::lptr<void> buf;
 	le_t<u32> bufSize;
 	le_t<s64> offset;

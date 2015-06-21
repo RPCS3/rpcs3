@@ -91,7 +91,7 @@ int sceNpTrophyInit(u32 pool_addr, u32 poolSize, u32 containerId, u64 options)
 	return CELL_OK;
 }
 
-int sceNpTrophyCreateContext(vm::ptr<u32> context, vm::ptr<const SceNpCommunicationId> commID, vm::ptr<const SceNpCommunicationSignature> commSign, u64 options)
+int sceNpTrophyCreateContext(vm::ptr<u32> context, vm::cptr<SceNpCommunicationId> commID, vm::cptr<SceNpCommunicationSignature> commSign, u64 options)
 {
 	sceNpTrophy.Warning("sceNpTrophyCreateContext(context=*0x%x, commID=*0x%x, commSign=*0x%x, options=0x%llx)", context, commID, commSign, options);
 

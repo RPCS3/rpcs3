@@ -83,7 +83,7 @@ int cellFontOpenFontMemory(vm::ptr<CellFontLibrary> library, u32 fontAddr, u32 f
 	return CELL_FONT_OK;
 }
 
-int cellFontOpenFontFile(vm::ptr<CellFontLibrary> library, vm::ptr<const char> fontPath, u32 subNum, s32 uniqueId, vm::ptr<CellFont> font)
+int cellFontOpenFontFile(vm::ptr<CellFontLibrary> library, vm::cptr<char> fontPath, u32 subNum, s32 uniqueId, vm::ptr<CellFont> font)
 {
 	std::string fp(fontPath.get_ptr());
 	cellFont.Warning("cellFontOpenFontFile(library_addr=0x%x, fontPath=\"%s\", subNum=%d, uniqueId=%d, font_addr=0x%x)",

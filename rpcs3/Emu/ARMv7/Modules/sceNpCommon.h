@@ -28,9 +28,9 @@ struct SceNpCommunicationSignature
 
 struct SceNpCommunicationConfig
 {
-	vm::lptr<const SceNpCommunicationId> commId;
-	vm::lptr<const SceNpCommunicationPassphrase> commPassphrase;
-	vm::lptr<const SceNpCommunicationSignature> commSignature;
+	vm::lcptr<SceNpCommunicationId> commId;
+	vm::lcptr<SceNpCommunicationPassphrase> commPassphrase;
+	vm::lcptr<SceNpCommunicationSignature> commSignature;
 };
 
 struct SceNpCountryCode
@@ -123,10 +123,10 @@ struct SceNpAuthRequestParameter
 {
 	le_t<u32> size;
 	SceNpTicketVersion version;
-	vm::lptr<const char> serviceId;
-	vm::lptr<const void> cookie;
+	vm::lcptr<char> serviceId;
+	vm::lcptr<void> cookie;
 	le_t<u32> cookieSize;
-	vm::lptr<const char> entitlementId;
+	vm::lcptr<char> entitlementId;
 	le_t<u32> consumedCount;
 	vm::lptr<SceNpAuthCallback> ticketCb;
 	vm::lptr<void> cbArg;

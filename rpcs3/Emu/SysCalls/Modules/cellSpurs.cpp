@@ -388,7 +388,7 @@ s32 cellSpursInitialize(vm::ptr<CellSpurs> spurs, s32 nSpus, s32 spuPriority, s3
 		0);
 }
 
-s32 cellSpursInitializeWithAttribute(vm::ptr<CellSpurs> spurs, vm::ptr<const CellSpursAttribute> attr)
+s32 cellSpursInitializeWithAttribute(vm::ptr<CellSpurs> spurs, vm::cptr<CellSpursAttribute> attr)
 {
 	cellSpurs.Warning("cellSpursInitializeWithAttribute(spurs_addr=0x%x, attr_addr=0x%x)", spurs.addr(), attr.addr());
 
@@ -421,7 +421,7 @@ s32 cellSpursInitializeWithAttribute(vm::ptr<CellSpurs> spurs, vm::ptr<const Cel
 		attr->swlIsPreem);
 }
 
-s32 cellSpursInitializeWithAttribute2(vm::ptr<CellSpurs> spurs, vm::ptr<const CellSpursAttribute> attr)
+s32 cellSpursInitializeWithAttribute2(vm::ptr<CellSpurs> spurs, vm::cptr<CellSpursAttribute> attr)
 {
 	cellSpurs.Warning("cellSpursInitializeWithAttribute2(spurs_addr=0x%x, attr_addr=0x%x)", spurs.addr(), attr.addr());
 
@@ -501,7 +501,7 @@ s32 cellSpursAttributeSetMemoryContainerForSpuThread(vm::ptr<CellSpursAttribute>
 	return CELL_OK;
 }
 
-s32 cellSpursAttributeSetNamePrefix(vm::ptr<CellSpursAttribute> attr, vm::ptr<const char> prefix, u32 size)
+s32 cellSpursAttributeSetNamePrefix(vm::ptr<CellSpursAttribute> attr, vm::cptr<char> prefix, u32 size)
 {
 	cellSpurs.Warning("cellSpursAttributeSetNamePrefix(attr_addr=0x%x, prefix_addr=0x%x, size=%d)", attr.addr(), prefix.addr(), size);
 
@@ -573,7 +573,7 @@ s32 cellSpursAttributeSetSpuThreadGroupType(vm::ptr<CellSpursAttribute> attr, s3
 	return CELL_OK;
 }
 
-s32 cellSpursAttributeEnableSystemWorkload(vm::ptr<CellSpursAttribute> attr, vm::ptr<const u8[8]> priority, u32 maxSpu, vm::ptr<const bool[8]> isPreemptible)
+s32 cellSpursAttributeEnableSystemWorkload(vm::ptr<CellSpursAttribute> attr, vm::cptr<u8[8]> priority, u32 maxSpu, vm::cptr<bool[8]> isPreemptible)
 {
 	cellSpurs.Warning("cellSpursAttributeEnableSystemWorkload(attr_addr=0x%x, priority_addr=0x%x, maxSpu=%d, isPreemptible_addr=0x%x)",
 		attr.addr(), priority.addr(), maxSpu, isPreemptible.addr());
@@ -794,13 +794,13 @@ s32 cellSpursSetMaxContention(vm::ptr<CellSpurs> spurs, u32 workloadId, u32 maxC
 	return CELL_OK;
 }
 
-s32 cellSpursSetPriorities(vm::ptr<CellSpurs> spurs, u32 workloadId, vm::ptr<const u8> priorities)
+s32 cellSpursSetPriorities(vm::ptr<CellSpurs> spurs, u32 workloadId, vm::cptr<u8> priorities)
 {
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
 }
 
-s32 cellSpursSetPreemptionVictimHints(vm::ptr<CellSpurs> spurs, vm::ptr<const bool> isPreemptible)
+s32 cellSpursSetPreemptionVictimHints(vm::ptr<CellSpurs> spurs, vm::cptr<bool> isPreemptible)
 {
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
@@ -874,14 +874,14 @@ s32 cellSpursWakeUp(PPUThread& CPU, vm::ptr<CellSpurs> spurs)
 s32 spursAddWorkload(
 	vm::ptr<CellSpurs> spurs,
 	vm::ptr<u32> wid,
-	vm::ptr<const void> pm,
+	vm::cptr<void> pm,
 	u32 size,
 	u64 data,
 	const u8 priorityTable[],
 	u32 minContention,
 	u32 maxContention,
-	vm::ptr<const char> nameClass,
-	vm::ptr<const char> nameInstance,
+	vm::cptr<char> nameClass,
+	vm::cptr<char> nameInstance,
 	vm::ptr<CellSpursShutdownCompletionEventHook> hook,
 	vm::ptr<void> hookArg)
 {
@@ -1039,10 +1039,10 @@ s32 spursAddWorkload(
 s32 cellSpursAddWorkload(
 	vm::ptr<CellSpurs> spurs,
 	vm::ptr<u32> wid,
-	vm::ptr<const void> pm,
+	vm::cptr<void> pm,
 	u32 size,
 	u64 data,
-	vm::ptr<const u8[8]> priorityTable,
+	vm::cptr<u8[8]> priorityTable,
 	u32 minContention,
 	u32 maxContention)
 {
@@ -1068,10 +1068,10 @@ s32 _cellSpursWorkloadAttributeInitialize(
 	vm::ptr<CellSpursWorkloadAttribute> attr,
 	u32 revision,
 	u32 sdkVersion,
-	vm::ptr<const void> pm,
+	vm::cptr<void> pm,
 	u32 size,
 	u64 data,
-	vm::ptr<const u8[8]> priorityTable,
+	vm::cptr<u8[8]> priorityTable,
 	u32 minContention,
 	u32 maxContention)
 {
@@ -1111,7 +1111,7 @@ s32 _cellSpursWorkloadAttributeInitialize(
 	return CELL_OK;
 }
 
-s32 cellSpursWorkloadAttributeSetName(vm::ptr<CellSpursWorkloadAttribute> attr, vm::ptr<const char> nameClass, vm::ptr<const char> nameInstance)
+s32 cellSpursWorkloadAttributeSetName(vm::ptr<CellSpursWorkloadAttribute> attr, vm::cptr<char> nameClass, vm::cptr<char> nameInstance)
 {
 	cellSpurs.Warning("%s(attr_addr=0x%x, nameClass_addr=0x%x, nameInstance_addr=0x%x)", __FUNCTION__, attr.addr(), nameClass.addr(), nameInstance.addr());
 
@@ -1147,7 +1147,7 @@ s32 cellSpursWorkloadAttributeSetShutdownCompletionEventHook(vm::ptr<CellSpursWo
 	return CELL_OK;
 }
 
-s32 cellSpursAddWorkloadWithAttribute(vm::ptr<CellSpurs> spurs, const vm::ptr<u32> wid, vm::ptr<const CellSpursWorkloadAttribute> attr)
+s32 cellSpursAddWorkloadWithAttribute(vm::ptr<CellSpurs> spurs, const vm::ptr<u32> wid, vm::cptr<CellSpursWorkloadAttribute> attr)
 {
 	cellSpurs.Warning("%s(spurs_addr=0x%x, wid_addr=0x%x, attr_addr=0x%x)", __FUNCTION__, spurs.addr(), wid.addr(), attr.addr());
 
@@ -1552,7 +1552,7 @@ s32 cellSpursEventFlagAttachLv2EventQueue(vm::ptr<CellSpursEventFlag> eventFlag)
 	if (eventFlag->direction == CELL_SPURS_EVENT_FLAG_ANY2ANY)
 	{
 		vm::var<be_t<u32>> eventPortId;
-		rc = sys_event_port_create(vm::ref<u32>::make(eventPortId.addr()), SYS_EVENT_PORT_LOCAL, 0);
+		rc = sys_event_port_create(vm::ptr<u32>::make(eventPortId.addr()), SYS_EVENT_PORT_LOCAL, 0);
 		if (rc == CELL_OK)
 		{
 			rc = sys_event_port_connect_local(eventPortId.value(), eventQueueId);
@@ -2160,8 +2160,8 @@ s32 cellSpursJobChainGetSpursAddress()
 	return CELL_OK;
 }
 
-s32 spursCreateTaskset(vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursTaskset> taskset, u64 args, vm::ptr<const u8[8]> priority,
-	u32 max_contention, vm::ptr<const char> name, u32 size, s32 enable_clear_ls)
+s32 spursCreateTaskset(vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursTaskset> taskset, u64 args, vm::cptr<u8[8]> priority,
+	u32 max_contention, vm::cptr<char> name, u32 size, s32 enable_clear_ls)
 {
 	if (!spurs || !taskset)
 	{
@@ -2181,7 +2181,7 @@ s32 spursCreateTaskset(vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursTaskset> tasks
 	taskset->size = size;
 
 	vm::var<CellSpursWorkloadAttribute> wkl_attr;
-	_cellSpursWorkloadAttributeInitialize(wkl_attr, 1 /*revision*/, 0x33 /*sdk_version*/, vm::ptr<const void>::make(SPURS_IMG_ADDR_TASKSET_PM), 0x1E40 /*pm_size*/,
+	_cellSpursWorkloadAttributeInitialize(wkl_attr, 1 /*revision*/, 0x33 /*sdk_version*/, vm::cptr<void>::make(SPURS_IMG_ADDR_TASKSET_PM), 0x1E40 /*pm_size*/,
 		taskset.addr(), priority, 8 /*min_contention*/, max_contention);
 	// TODO: Check return code
 
@@ -2222,8 +2222,8 @@ s32 cellSpursCreateTasksetWithAttribute(vm::ptr<CellSpurs> spurs, vm::ptr<CellSp
 		return CELL_SPURS_TASK_ERROR_INVAL;
 	}
 
-	auto rc = spursCreateTaskset(spurs, taskset, attr->args, vm::ptr<const u8[8]>::make(attr.addr() + offsetof(CellSpursTasksetAttribute, priority)),
-		attr->max_contention, vm::ptr<const char>::make(attr->name.addr()), attr->taskset_size, attr->enable_clear_ls);
+	auto rc = spursCreateTaskset(spurs, taskset, attr->args, vm::cptr<u8[8]>::make(attr.addr() + offsetof(CellSpursTasksetAttribute, priority)),
+		attr->max_contention, vm::cptr<char>::make(attr->name.addr()), attr->taskset_size, attr->enable_clear_ls);
 
 	if (attr->taskset_size >= sizeof32(CellSpursTaskset2))
 	{
@@ -2233,7 +2233,7 @@ s32 cellSpursCreateTasksetWithAttribute(vm::ptr<CellSpurs> spurs, vm::ptr<CellSp
 	return rc;
 }
 
-s32 cellSpursCreateTaskset(vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursTaskset> taskset, u64 args, vm::ptr<const u8[8]> priority, u32 maxContention)
+s32 cellSpursCreateTaskset(vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursTaskset> taskset, u64 args, vm::cptr<u8[8]> priority, u32 maxContention)
 {
 	cellSpurs.Warning("cellSpursCreateTaskset(spurs_addr=0x%x, taskset_addr=0x%x, args=0x%llx, priority_addr=0x%x, maxContention=%d)",
 		spurs.addr(), taskset.addr(), args, priority.addr(), maxContention);
@@ -2503,7 +2503,7 @@ s32 cellSpursCreateTaskWithAttribute()
 	return CELL_OK;
 }
 
-s32 cellSpursTasksetAttributeSetName(vm::ptr<CellSpursTasksetAttribute> attr, vm::ptr<const char> name)
+s32 cellSpursTasksetAttributeSetName(vm::ptr<CellSpursTasksetAttribute> attr, vm::cptr<char> name)
 {
 	cellSpurs.Warning("%s(attr=0x%x, name=0x%x)", __FUNCTION__, attr.addr(), name.addr());
 
@@ -2667,7 +2667,7 @@ s32 cellSpursCreateTaskset2(vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursTaskset2>
 	}
 
 	auto rc = spursCreateTaskset(spurs, vm::ptr<CellSpursTaskset>::make(taskset.addr()), attr->args,
-		vm::ptr<const u8[8]>::make(attr.addr() + offsetof(CellSpursTasksetAttribute, priority)),
+		vm::cptr<u8[8]>::make(attr.addr() + offsetof(CellSpursTasksetAttribute, priority)),
 		attr->max_contention, attr->name, sizeof32(CellSpursTaskset2), (u8)attr->enable_clear_ls);
 
 	if (rc != CELL_OK)
@@ -2788,7 +2788,7 @@ s32 cellSpursLookUpTasksetAddress(vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursTas
 	return CELL_OK;
 }
 
-s32 cellSpursTasksetGetSpursAddress(vm::ptr<const CellSpursTaskset> taskset, vm::ptr<u32> spurs)
+s32 cellSpursTasksetGetSpursAddress(vm::cptr<CellSpursTaskset> taskset, vm::ptr<u32> spurs)
 {
 	cellSpurs.Warning("%s(taskset=0x%x, spurs=0x%x)", __FUNCTION__, taskset.addr(), spurs.addr());
 
@@ -2817,7 +2817,7 @@ s32 cellSpursGetTasksetInfo()
 	return CELL_OK;
 }
 
-s32 _cellSpursTasksetAttributeInitialize(vm::ptr<CellSpursTasksetAttribute> attribute, u32 revision, u32 sdk_version, u64 args, vm::ptr<const u8> priority, u32 max_contention)
+s32 _cellSpursTasksetAttributeInitialize(vm::ptr<CellSpursTasksetAttribute> attribute, u32 revision, u32 sdk_version, u64 args, vm::cptr<u8> priority, u32 max_contention)
 {
 	cellSpurs.Warning("%s(attribute=0x%x, revision=%d, skd_version=%d, args=0x%llx, priority=0x%x, max_contention=%d)",
 		__FUNCTION__, attribute.addr(), revision, sdk_version, args, priority.addr(), max_contention);

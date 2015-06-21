@@ -14,7 +14,7 @@ enum
 	CELL_OVIS_ERROR_ALIGN = 0x80410410,
 };
 
-int cellOvisGetOverlayTableSize(vm::ptr<const char> elf)
+int cellOvisGetOverlayTableSize(vm::cptr<char> elf)
 {
 	cellOvis.Todo("cellOvisGetOverlayTableSize(elf_addr=0x%x)", elf.addr());
 	return CELL_OK;

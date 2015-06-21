@@ -22,7 +22,7 @@ s32 _cellSync2MutexAttributeInitialize(vm::ptr<CellSync2MutexAttribute> attr, u3
 	return CELL_OK;
 }
 
-s32 cellSync2MutexEstimateBufferSize(vm::ptr<const CellSync2MutexAttribute> attr, vm::ptr<u32> bufferSize)
+s32 cellSync2MutexEstimateBufferSize(vm::cptr<CellSync2MutexAttribute> attr, vm::ptr<u32> bufferSize)
 {
 	cellSync2.Todo("cellSync2MutexEstimateBufferSize(attr_addr=0x%x, bufferSize_addr=0x%x)", attr.addr(), bufferSize.addr());
 
@@ -73,7 +73,7 @@ s32 _cellSync2CondAttributeInitialize(vm::ptr<CellSync2CondAttribute> attr, u32 
 	return CELL_OK;
 }
 
-s32 cellSync2CondEstimateBufferSize(vm::ptr<const CellSync2CondAttribute> attr, vm::ptr<u32> bufferSize)
+s32 cellSync2CondEstimateBufferSize(vm::cptr<CellSync2CondAttribute> attr, vm::ptr<u32> bufferSize)
 {
 	cellSync2.Todo("cellSync2CondEstimateBufferSize(attr_addr=0x%x, bufferSize_addr=0x%x)", attr.addr(), bufferSize.addr());
 
@@ -127,7 +127,7 @@ s32 _cellSync2SemaphoreAttributeInitialize(vm::ptr<CellSync2SemaphoreAttribute> 
 	return CELL_OK;
 }
 
-s32 cellSync2SemaphoreEstimateBufferSize(vm::ptr<const CellSync2SemaphoreAttribute> attr, vm::ptr<u32> bufferSize)
+s32 cellSync2SemaphoreEstimateBufferSize(vm::cptr<CellSync2SemaphoreAttribute> attr, vm::ptr<u32> bufferSize)
 {
 	cellSync2.Todo("cellSync2SemaphoreEstimateBufferSize(attr_addr=0x%x, bufferSize_addr=0x%x)", attr.addr(), bufferSize.addr());
 
@@ -190,7 +190,7 @@ s32 _cellSync2QueueAttributeInitialize(vm::ptr<CellSync2QueueAttribute> attr, u3
 	return CELL_OK;
 }
 
-s32 cellSync2QueueEstimateBufferSize(vm::ptr<const CellSync2QueueAttribute> attr, vm::ptr<u32> bufferSize)
+s32 cellSync2QueueEstimateBufferSize(vm::cptr<CellSync2QueueAttribute> attr, vm::ptr<u32> bufferSize)
 {
 	cellSync2.Todo("cellSync2QueueEstimateBufferSize(attr_addr=0x%x, bufferSize_addr=0x%x)", attr.addr(), bufferSize.addr());
 

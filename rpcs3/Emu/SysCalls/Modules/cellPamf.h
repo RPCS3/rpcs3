@@ -386,7 +386,7 @@ CHECK_SIZE(PamfEpHeader, 12);
 // not directly accessed by virtual CPU, fields are unknown
 struct CellPamfReader
 {
-	vm::ptr<const PamfHeader> pAddr;
+	vm::cptr<PamfHeader> pAddr;
 	s32 stream;
 	u64 fileSize;
 	u32 internalData[28];
@@ -394,4 +394,4 @@ struct CellPamfReader
 
 CHECK_SIZE(CellPamfReader, 128);
 
-s32 cellPamfReaderInitialize(vm::ptr<CellPamfReader> pSelf, vm::ptr<const PamfHeader> pAddr, u64 fileSize, u32 attribute);
+s32 cellPamfReaderInitialize(vm::ptr<CellPamfReader> pSelf, vm::cptr<PamfHeader> pAddr, u64 fileSize, u32 attribute);

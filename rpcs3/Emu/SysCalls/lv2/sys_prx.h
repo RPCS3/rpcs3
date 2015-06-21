@@ -39,7 +39,7 @@ struct sys_stub
 	be_t<u16> s_imports;
 	be_t<u32> s_unk2; // = 0x0
 	be_t<u32> s_unk3; // = 0x0
-	vm::bptr<const char> s_modulename;
+	vm::bcptr<char> s_modulename;
 	vm::bptr<u32> s_nid;
 	vm::bptr<u32> s_text;
 	be_t<u32> s_unk4; // = 0x0
@@ -169,8 +169,8 @@ struct lv2_prx_t
 REG_ID_TYPE(lv2_prx_t, 0x23); // SYS_PRX_OBJECT
 
 // SysCalls
-s32 sys_prx_load_module(vm::ptr<const char> path, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt);
-s32 sys_prx_load_module_list(s32 count, vm::pptr<const char> path_list, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt, vm::ptr<u32> id_list);
+s32 sys_prx_load_module(vm::cptr<char> path, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt);
+s32 sys_prx_load_module_list(s32 count, vm::cpptr<char> path_list, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt, vm::ptr<u32> id_list);
 s32 sys_prx_load_module_on_memcontainer();
 s32 sys_prx_load_module_by_fd();
 s32 sys_prx_load_module_on_memcontainer_by_fd();

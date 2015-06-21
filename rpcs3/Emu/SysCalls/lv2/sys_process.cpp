@@ -54,7 +54,7 @@ s32 sys_process_exit(s32 status)
 	return CELL_OK;
 }
 
-void sys_game_process_exitspawn(vm::ptr<const char> path, u32 argv_addr, u32 envp_addr, u32 data_addr, u32 data_size, u32 prio, u64 flags)
+void sys_game_process_exitspawn(vm::cptr<char> path, u32 argv_addr, u32 envp_addr, u32 data_addr, u32 data_size, u32 prio, u64 flags)
 {
 	std::string _path = path.get_ptr();
 	const std::string& from = "//";
@@ -80,7 +80,7 @@ void sys_game_process_exitspawn(vm::ptr<const char> path, u32 argv_addr, u32 env
 
 	if (argv_addr)
 	{
-		auto argvp = vm::pptr<const char>::make(argv_addr);
+		auto argvp = vm::cpptr<char>::make(argv_addr);
 		while (argvp && *argvp)
 		{
 			argv.push_back(argvp[0].get_ptr());
@@ -94,7 +94,7 @@ void sys_game_process_exitspawn(vm::ptr<const char> path, u32 argv_addr, u32 env
 
 	if (envp_addr)
 	{
-		auto envp = vm::pptr<const char>::make(envp_addr);
+		auto envp = vm::cpptr<char>::make(envp_addr);
 		while (envp && *envp)
 		{
 			env.push_back(envp[0].get_ptr());
@@ -128,7 +128,7 @@ void sys_game_process_exitspawn(vm::ptr<const char> path, u32 argv_addr, u32 env
 	return;
 }
 
-void sys_game_process_exitspawn2(vm::ptr<const char> path, u32 argv_addr, u32 envp_addr, u32 data_addr, u32 data_size, u32 prio, u64 flags)
+void sys_game_process_exitspawn2(vm::cptr<char> path, u32 argv_addr, u32 envp_addr, u32 data_addr, u32 data_size, u32 prio, u64 flags)
 {
 	std::string _path = path.get_ptr();
 	const std::string& from = "//";
@@ -154,7 +154,7 @@ void sys_game_process_exitspawn2(vm::ptr<const char> path, u32 argv_addr, u32 en
 
 	if (argv_addr)
 	{
-		auto argvp = vm::pptr<const char>::make(argv_addr);
+		auto argvp = vm::cpptr<char>::make(argv_addr);
 		while (argvp && *argvp)
 		{
 			argv.push_back(argvp[0].get_ptr());
@@ -169,7 +169,7 @@ void sys_game_process_exitspawn2(vm::ptr<const char> path, u32 argv_addr, u32 en
 
 	if (envp_addr)
 	{
-		auto envp = vm::pptr<const char>::make(envp_addr);
+		auto envp = vm::cpptr<char>::make(envp_addr);
 		while (envp && *envp)
 		{
 			env.push_back(envp[0].get_ptr());

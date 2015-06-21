@@ -42,7 +42,7 @@ REG_ID_TYPE(lv2_cond_t, 0x86); // SYS_COND_OBJECT
 class PPUThread;
 
 // SysCalls
-s32 sys_cond_create(vm::ref<u32> cond_id, u32 mutex_id, vm::ptr<sys_cond_attribute_t> attr);
+s32 sys_cond_create(vm::ptr<u32> cond_id, u32 mutex_id, vm::ptr<sys_cond_attribute_t> attr);
 s32 sys_cond_destroy(u32 cond_id);
 s32 sys_cond_wait(PPUThread& CPU, u32 cond_id, u64 timeout);
 s32 sys_cond_signal(u32 cond_id);

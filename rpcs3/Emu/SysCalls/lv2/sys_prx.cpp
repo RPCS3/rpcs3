@@ -133,14 +133,14 @@ s32 prx_load_module(std::string path, u64 flags, vm::ptr<sys_prx_load_module_opt
 	return Emu.GetIdManager().add(std::move(prx));
 }
 
-s32 sys_prx_load_module(vm::ptr<const char> path, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt)
+s32 sys_prx_load_module(vm::cptr<char> path, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt)
 {
 	sys_prx.Warning("sys_prx_load_module(path=*0x%x, flags=0x%llx, pOpt=*0x%x)", path, flags, pOpt);
 
 	return prx_load_module(path.get_ptr(), flags, pOpt);
 }
 
-s32 sys_prx_load_module_list(s32 count, vm::pptr<const char> path_list, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt, vm::ptr<u32> id_list)
+s32 sys_prx_load_module_list(s32 count, vm::cpptr<char> path_list, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt, vm::ptr<u32> id_list)
 {
 	sys_prx.Warning("sys_prx_load_module_list(count=%d, path_list=*0x%x, flags=0x%llx, pOpt=*0x%x, id_list=*0x%x)", count, path_list, flags, pOpt, id_list);
 

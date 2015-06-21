@@ -4,7 +4,7 @@
 
 #include "sceVideodec.h"
 
-s32 sceVideodecInitLibrary(u32 codecType, vm::ptr<const SceVideodecQueryInitInfo> pInitInfo)
+s32 sceVideodecInitLibrary(u32 codecType, vm::cptr<SceVideodecQueryInitInfo> pInitInfo)
 {
 	throw __FUNCTION__;
 }
@@ -14,12 +14,12 @@ s32 sceVideodecTermLibrary(u32 codecType)
 	throw __FUNCTION__;
 }
 
-s32 sceAvcdecQueryDecoderMemSize(u32 codecType, vm::ptr<const SceAvcdecQueryDecoderInfo> pDecoderInfo, vm::ptr<SceAvcdecDecoderInfo> pMemInfo)
+s32 sceAvcdecQueryDecoderMemSize(u32 codecType, vm::cptr<SceAvcdecQueryDecoderInfo> pDecoderInfo, vm::ptr<SceAvcdecDecoderInfo> pMemInfo)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceAvcdecCreateDecoder(u32 codecType, vm::ptr<SceAvcdecCtrl> pCtrl, vm::ptr<const SceAvcdecQueryDecoderInfo> pDecoderInfo)
+s32 sceAvcdecCreateDecoder(u32 codecType, vm::ptr<SceAvcdecCtrl> pCtrl, vm::cptr<SceAvcdecQueryDecoderInfo> pDecoderInfo)
 {
 	throw __FUNCTION__;
 }
@@ -34,7 +34,7 @@ s32 sceAvcdecDecodeAvailableSize(vm::ptr<SceAvcdecCtrl> pCtrl)
 	throw __FUNCTION__;
 }
 
-s32 sceAvcdecDecode(vm::ptr<SceAvcdecCtrl> pCtrl, vm::ptr<const SceAvcdecAu> pAu, vm::ptr<SceAvcdecArrayPicture> pArrayPicture)
+s32 sceAvcdecDecode(vm::ptr<SceAvcdecCtrl> pCtrl, vm::cptr<SceAvcdecAu> pAu, vm::ptr<SceAvcdecArrayPicture> pArrayPicture)
 {
 	throw __FUNCTION__;
 }

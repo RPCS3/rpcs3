@@ -14,7 +14,7 @@ s32 sceNpScoreTerm(ARMv7Context&)
 	throw __FUNCTION__;
 }
 
-s32 sceNpScoreCreateTitleCtx(vm::ptr<const SceNpCommunicationId> titleId, vm::ptr<const SceNpCommunicationPassphrase> passphrase, vm::ptr<const SceNpId> selfNpId)
+s32 sceNpScoreCreateTitleCtx(vm::cptr<SceNpCommunicationId> titleId, vm::cptr<SceNpCommunicationPassphrase> passphrase, vm::cptr<SceNpId> selfNpId)
 {
 	throw __FUNCTION__;
 }
@@ -58,10 +58,10 @@ s32 sceNpScoreRecordScore(
 	s32 reqId,
 	u32 boardId,
 	s64 score,
-	vm::ptr<const SceNpScoreComment> scoreComment,
-	vm::ptr<const SceNpScoreGameInfo> gameInfo,
+	vm::cptr<SceNpScoreComment> scoreComment,
+	vm::cptr<SceNpScoreGameInfo> gameInfo,
 	vm::ptr<u32> tmpRank,
-	vm::ptr<const u64> compareDate,
+	vm::cptr<u64> compareDate,
 	vm::ptr<void> option)
 {
 	throw __FUNCTION__;
@@ -73,7 +73,7 @@ s32 sceNpScoreRecordGameData(
 	s64 score,
 	u32 totalSize,
 	u32 sendSize,
-	vm::ptr<const void> data,
+	vm::cptr<void> data,
 	vm::ptr<void> option)
 {
 	throw __FUNCTION__;
@@ -82,7 +82,7 @@ s32 sceNpScoreRecordGameData(
 s32 sceNpScoreGetGameData(
 	s32 reqId,
 	u32 boardId,
-	vm::ptr<const SceNpId> npId,
+	vm::cptr<SceNpId> npId,
 	vm::ptr<u32> totalSize,
 	u32 recvSize,
 	vm::ptr<void> data,
@@ -94,7 +94,7 @@ s32 sceNpScoreGetGameData(
 s32 sceNpScoreGetRankingByNpId(
 	s32 reqId,
 	u32 boardId,
-	vm::ptr<const SceNpId> npIdArray,
+	vm::cptr<SceNpId> npIdArray,
 	u32 npIdArraySize,
 	vm::ptr<SceNpScorePlayerRankData> rankArray,
 	u32 rankArraySize,
@@ -132,7 +132,7 @@ s32 sceNpScoreGetRankingByRange(
 s32 sceNpScoreGetRankingByNpIdPcId(
 	s32 reqId,
 	u32 boardId,
-	vm::ptr<const SceNpScoreNpIdPcId> idArray,
+	vm::cptr<SceNpScoreNpIdPcId> idArray,
 	u32 idArraySize,
 	vm::ptr<SceNpScorePlayerRankData> rankArray,
 	u32 rankArraySize,
@@ -148,12 +148,12 @@ s32 sceNpScoreGetRankingByNpIdPcId(
 	throw __FUNCTION__;
 }
 
-s32 sceNpScoreCensorComment(s32 reqId, vm::ptr<const char> comment, vm::ptr<void> option)
+s32 sceNpScoreCensorComment(s32 reqId, vm::cptr<char> comment, vm::ptr<void> option)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceNpScoreSanitizeComment(s32 reqId, vm::ptr<const char> comment, vm::ptr<char> sanitizedComment, vm::ptr<void> option)
+s32 sceNpScoreSanitizeComment(s32 reqId, vm::cptr<char> comment, vm::ptr<char> sanitizedComment, vm::ptr<void> option)
 {
 	throw __FUNCTION__;
 }
@@ -177,10 +177,10 @@ s32 sceNpScoreRecordScoreAsync(
 	s32 reqId,
 	u32 boardId,
 	s64 score,
-	vm::ptr<const SceNpScoreComment> scoreComment,
-	vm::ptr<const SceNpScoreGameInfo> gameInfo,
+	vm::cptr<SceNpScoreComment> scoreComment,
+	vm::cptr<SceNpScoreGameInfo> gameInfo,
 	vm::ptr<u32> tmpRank,
-	vm::ptr<const u64> compareDate,
+	vm::cptr<u64> compareDate,
 	vm::ptr<void> option)
 {
 	throw __FUNCTION__;
@@ -192,7 +192,7 @@ s32 sceNpScoreRecordGameDataAsync(
 	s64 score,
 	u32 totalSize,
 	u32 sendSize,
-	vm::ptr<const void> data,
+	vm::cptr<void> data,
 	vm::ptr<void> option)
 {
 	throw __FUNCTION__;
@@ -201,7 +201,7 @@ s32 sceNpScoreRecordGameDataAsync(
 s32 sceNpScoreGetGameDataAsync(
 	s32 reqId,
 	u32 boardId,
-	vm::ptr<const SceNpId> npId,
+	vm::cptr<SceNpId> npId,
 	vm::ptr<u32> totalSize,
 	u32 recvSize,
 	vm::ptr<void> data,
@@ -213,7 +213,7 @@ s32 sceNpScoreGetGameDataAsync(
 s32 sceNpScoreGetRankingByNpIdAsync(
 	s32 reqId,
 	u32 boardId,
-	vm::ptr<const SceNpId> npIdArray,
+	vm::cptr<SceNpId> npIdArray,
 	u32 npIdArraySize,
 	vm::ptr<SceNpScorePlayerRankData> rankArray,
 	u32 rankArraySize,
@@ -250,7 +250,7 @@ s32 sceNpScoreGetRankingByRangeAsync(
 s32 sceNpScoreGetRankingByNpIdPcIdAsync(
 	s32 reqId,
 	u32 boardId,
-	vm::ptr<const SceNpScoreNpIdPcId> idArray,
+	vm::cptr<SceNpScoreNpIdPcId> idArray,
 	u32 idArraySize,
 	vm::ptr<SceNpScorePlayerRankData> rankArray,
 	u32 rankArraySize,
@@ -266,12 +266,12 @@ s32 sceNpScoreGetRankingByNpIdPcIdAsync(
 	throw __FUNCTION__;
 }
 
-s32 sceNpScoreCensorCommentAsync(s32 reqId, vm::ptr<const char> comment, vm::ptr<void> option)
+s32 sceNpScoreCensorCommentAsync(s32 reqId, vm::cptr<char> comment, vm::ptr<void> option)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceNpScoreSanitizeCommentAsync(s32 reqId, vm::ptr<const char> comment, vm::ptr<char> sanitizedComment, vm::ptr<void> option)
+s32 sceNpScoreSanitizeCommentAsync(s32 reqId, vm::cptr<char> comment, vm::ptr<char> sanitizedComment, vm::ptr<void> option)
 {
 	throw __FUNCTION__;
 }

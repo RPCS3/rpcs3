@@ -4,17 +4,17 @@
 
 #include "sceSas.h"
 
-s32 sceSasGetNeededMemorySize(vm::ptr<const char> config, vm::ptr<u32> outSize)
+s32 sceSasGetNeededMemorySize(vm::cptr<char> config, vm::ptr<u32> outSize)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceSasInit(vm::ptr<const char> config, vm::ptr<void> buffer, u32 bufferSize)
+s32 sceSasInit(vm::cptr<char> config, vm::ptr<void> buffer, u32 bufferSize)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceSasInitWithGrain(vm::ptr<const char> config, u32 grain, vm::ptr<void> buffer, u32 bufferSize)
+s32 sceSasInitWithGrain(vm::cptr<char> config, u32 grain, vm::ptr<void> buffer, u32 bufferSize)
 {
 	throw __FUNCTION__;
 }
@@ -54,12 +54,12 @@ s32 sceSasCoreWithMix(vm::ptr<s16> inOut, s32 lvol, s32 rvol)
 	throw __FUNCTION__;
 }
 
-s32 sceSasSetVoice(s32 iVoiceNum, vm::ptr<const void> vagBuf, u32 size, u32 loopflag)
+s32 sceSasSetVoice(s32 iVoiceNum, vm::cptr<void> vagBuf, u32 size, u32 loopflag)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceSasSetVoicePCM(s32 iVoiceNum, vm::ptr<const void> pcmBuf, u32 size, s32 loopsize)
+s32 sceSasSetVoicePCM(s32 iVoiceNum, vm::cptr<void> pcmBuf, u32 size, s32 loopsize)
 {
 	throw __FUNCTION__;
 }

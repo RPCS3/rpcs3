@@ -37,7 +37,7 @@ never_inline s32 savedata_op(
 	PPUThread& CPU,
 	u32 operation,
 	u32 version,
-	vm::ptr<const char> dirName,
+	vm::cptr<char> dirName,
 	u32 errDialog,
 	vm::ptr<CellSaveDataSetList> setList,
 	vm::ptr<CellSaveDataSetBuf> setBuf,
@@ -685,7 +685,7 @@ s32 cellSaveDataFixedLoad2(
 s32 cellSaveDataAutoSave2(
 	PPUThread& CPU,
 	u32 version,
-	vm::ptr<const char> dirName,
+	vm::cptr<char> dirName,
 	u32 errDialog,
 	vm::ptr<CellSaveDataSetBuf> setBuf,
 	vm::ptr<CellSaveDataStatCallback> funcStat,
@@ -702,7 +702,7 @@ s32 cellSaveDataAutoSave2(
 s32 cellSaveDataAutoLoad2(
 	PPUThread& CPU,
 	u32 version,
-	vm::ptr<const char> dirName,
+	vm::cptr<char> dirName,
 	u32 errDialog,
 	vm::ptr<CellSaveDataSetBuf> setBuf,
 	vm::ptr<CellSaveDataStatCallback> funcStat,
@@ -850,7 +850,7 @@ s32 cellSaveDataUserAutoSave(
 	PPUThread& CPU,
 	u32 version,
 	u32 userId,
-	vm::ptr<const char> dirName,
+	vm::cptr<char> dirName,
 	u32 errDialog,
 	vm::ptr<CellSaveDataSetBuf> setBuf,
 	vm::ptr<CellSaveDataStatCallback> funcStat,
@@ -868,7 +868,7 @@ s32 cellSaveDataUserAutoLoad(
 	PPUThread& CPU,
 	u32 version,
 	u32 userId,
-	vm::ptr<const char> dirName,
+	vm::cptr<char> dirName,
 	u32 errDialog,
 	vm::ptr<CellSaveDataSetBuf> setBuf,
 	vm::ptr<CellSaveDataStatCallback> funcStat,
@@ -987,7 +987,7 @@ s32 cellSaveDataListExport(
 
 s32 cellSaveDataFixedImport(
 	PPUThread& CPU,
-	vm::ptr<const char> dirName,
+	vm::cptr<char> dirName,
 	u32 maxSizeKB,
 	vm::ptr<CellSaveDataDoneCallback> funcDone,
 	u32 container,
@@ -1000,7 +1000,7 @@ s32 cellSaveDataFixedImport(
 
 s32 cellSaveDataFixedExport(
 	PPUThread& CPU,
-	vm::ptr<const char> dirName,
+	vm::cptr<char> dirName,
 	u32 maxSizeKB,
 	vm::ptr<CellSaveDataDoneCallback> funcDone,
 	u32 container,
@@ -1012,7 +1012,7 @@ s32 cellSaveDataFixedExport(
 }
 
 s32 cellSaveDataGetListItem(
-	vm::ptr<const char> dirName,
+	vm::cptr<char> dirName,
 	vm::ptr<CellSaveDataDirStat> dir,
 	vm::ptr<CellSaveDataSystemFileParam> sysFileParam,
 	vm::ptr<u32> bind,
@@ -1069,7 +1069,7 @@ s32 cellSaveDataUserListExport(
 s32 cellSaveDataUserFixedImport(
 	PPUThread& CPU,
 	u32 userId,
-	vm::ptr<const char> dirName,
+	vm::cptr<char> dirName,
 	u32 maxSizeKB,
 	vm::ptr<CellSaveDataDoneCallback> funcDone,
 	u32 container,
@@ -1083,7 +1083,7 @@ s32 cellSaveDataUserFixedImport(
 s32 cellSaveDataUserFixedExport(
 	PPUThread& CPU,
 	u32 userId,
-	vm::ptr<const char> dirName,
+	vm::cptr<char> dirName,
 	u32 maxSizeKB,
 	vm::ptr<CellSaveDataDoneCallback> funcDone,
 	u32 container,
@@ -1096,7 +1096,7 @@ s32 cellSaveDataUserFixedExport(
 
 s32 cellSaveDataUserGetListItem(
 	u32 userId,
-	vm::ptr<const char> dirName,
+	vm::cptr<char> dirName,
 	vm::ptr<CellSaveDataDirStat> dir,
 	vm::ptr<CellSaveDataSystemFileParam> sysFileParam,
 	vm::ptr<u32> bind,

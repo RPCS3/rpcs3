@@ -171,6 +171,9 @@ namespace vm
 
 		// BE pointer to const BE data
 		template<typename T, typename AT = u32> using bcptr = bptr<const T, AT>;
+
+		template<typename T, typename AT = u32> using cpptr = pptr<const T, AT>;
+		template<typename T, typename AT = u32> using bcpptr = bpptr<const T, AT>;
 	}
 
 	namespace psv
@@ -192,6 +195,9 @@ namespace vm
 
 		// LE pointer to const LE data
 		template<typename T> using lcptr = lptr<const T>;
+
+		template<typename T> using cpptr = pptr<const T>;
+		template<typename T> using lcpptr = lpptr<const T>;
 	}
 
 	struct null_t
@@ -224,7 +230,7 @@ namespace vm
 		return{ other.m_addr };
 	}
 
-	// perform const_cast (for example, vm::ptr<const char> to vm::ptr<char>)
+	// perform const_cast (for example, vm::cptr<char> to vm::ptr<char>)
 	template<typename CT, typename T, typename AT, typename = decltype(const_cast<CT*>(std::declval<T*>()))> inline _ptr_base<CT, AT> const_ptr_cast(const _ptr_base<T, AT>& other)
 	{
 		return{ other.m_addr };

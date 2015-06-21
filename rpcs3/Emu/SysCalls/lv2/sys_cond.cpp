@@ -13,7 +13,7 @@
 
 SysCallBase sys_cond("sys_cond");
 
-s32 sys_cond_create(vm::ref<u32> cond_id, u32 mutex_id, vm::ptr<sys_cond_attribute_t> attr)
+s32 sys_cond_create(vm::ptr<u32> cond_id, u32 mutex_id, vm::ptr<sys_cond_attribute_t> attr)
 {
 	sys_cond.Warning("sys_cond_create(cond_id=*0x%x, mutex_id=0x%x, attr=*0x%x)", cond_id, mutex_id, attr);
 
@@ -37,7 +37,7 @@ s32 sys_cond_create(vm::ref<u32> cond_id, u32 mutex_id, vm::ptr<sys_cond_attribu
 		throw __FUNCTION__;
 	}
 
-	cond_id = Emu.GetIdManager().make<lv2_cond_t>(mutex, attr->name_u64);
+	*cond_id = Emu.GetIdManager().make<lv2_cond_t>(mutex, attr->name_u64);
 
 	return CELL_OK;
 }

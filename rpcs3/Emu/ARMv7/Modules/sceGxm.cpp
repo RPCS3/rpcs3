@@ -4,7 +4,7 @@
 
 #include "sceGxm.h"
 
-s32 sceGxmInitialize(vm::ptr<const SceGxmInitializeParams> params)
+s32 sceGxmInitialize(vm::cptr<SceGxmInitializeParams> params)
 {
 	throw __FUNCTION__;
 }
@@ -19,7 +19,7 @@ vm::ptr<volatile u32> sceGxmGetNotificationRegion()
 	throw __FUNCTION__;
 }
 
-s32 sceGxmNotificationWait(vm::ptr<const SceGxmNotification> notification)
+s32 sceGxmNotificationWait(vm::cptr<SceGxmNotification> notification)
 {
 	throw __FUNCTION__;
 }
@@ -54,7 +54,7 @@ s32 sceGxmUnmapFragmentUsseMemory(vm::ptr<void> base)
 	throw __FUNCTION__;
 }
 
-s32 sceGxmDisplayQueueAddEntry(vm::ptr<SceGxmSyncObject> oldBuffer, vm::ptr<SceGxmSyncObject> newBuffer, vm::ptr<const void> callbackData)
+s32 sceGxmDisplayQueueAddEntry(vm::ptr<SceGxmSyncObject> oldBuffer, vm::ptr<SceGxmSyncObject> newBuffer, vm::cptr<void> callbackData)
 {
 	throw __FUNCTION__;
 }
@@ -75,7 +75,7 @@ s32 sceGxmSyncObjectDestroy(vm::ptr<SceGxmSyncObject> syncObject)
 }
 
 
-s32 sceGxmCreateContext(vm::ptr<const SceGxmContextParams> params, vm::pptr<SceGxmContext> context)
+s32 sceGxmCreateContext(vm::cptr<SceGxmContextParams> params, vm::pptr<SceGxmContext> context)
 {
 	throw __FUNCTION__;
 }
@@ -91,12 +91,12 @@ void sceGxmSetValidationEnable(vm::ptr<SceGxmContext> context, bool enable)
 }
 
 
-void sceGxmSetVertexProgram(vm::ptr<SceGxmContext> context, vm::ptr<const SceGxmVertexProgram> vertexProgram)
+void sceGxmSetVertexProgram(vm::ptr<SceGxmContext> context, vm::cptr<SceGxmVertexProgram> vertexProgram)
 {
 	throw __FUNCTION__;
 }
 
-void sceGxmSetFragmentProgram(vm::ptr<SceGxmContext> context, vm::ptr<const SceGxmFragmentProgram> fragmentProgram)
+void sceGxmSetFragmentProgram(vm::ptr<SceGxmContext> context, vm::cptr<SceGxmFragmentProgram> fragmentProgram)
 {
 	throw __FUNCTION__;
 }
@@ -111,58 +111,58 @@ s32 sceGxmReserveFragmentDefaultUniformBuffer(vm::ptr<SceGxmContext> context, vm
 	throw __FUNCTION__;
 }
 
-s32 sceGxmSetVertexStream(vm::ptr<SceGxmContext> context, u32 streamIndex, vm::ptr<const void> streamData)
+s32 sceGxmSetVertexStream(vm::ptr<SceGxmContext> context, u32 streamIndex, vm::cptr<void> streamData)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceGxmSetVertexTexture(vm::ptr<SceGxmContext> context, u32 textureIndex, vm::ptr<const SceGxmTexture> texture)
+s32 sceGxmSetVertexTexture(vm::ptr<SceGxmContext> context, u32 textureIndex, vm::cptr<SceGxmTexture> texture)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceGxmSetFragmentTexture(vm::ptr<SceGxmContext> context, u32 textureIndex, vm::ptr<const SceGxmTexture> texture)
+s32 sceGxmSetFragmentTexture(vm::ptr<SceGxmContext> context, u32 textureIndex, vm::cptr<SceGxmTexture> texture)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceGxmSetVertexUniformBuffer(vm::ptr<SceGxmContext> context, u32 bufferIndex, vm::ptr<const void> bufferData)
+s32 sceGxmSetVertexUniformBuffer(vm::ptr<SceGxmContext> context, u32 bufferIndex, vm::cptr<void> bufferData)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceGxmSetFragmentUniformBuffer(vm::ptr<SceGxmContext> context, u32 bufferIndex, vm::ptr<const void> bufferData)
+s32 sceGxmSetFragmentUniformBuffer(vm::ptr<SceGxmContext> context, u32 bufferIndex, vm::cptr<void> bufferData)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceGxmSetAuxiliarySurface(vm::ptr<SceGxmContext> context, u32 surfaceIndex, vm::ptr<const SceGxmAuxiliarySurface> surface)
+s32 sceGxmSetAuxiliarySurface(vm::ptr<SceGxmContext> context, u32 surfaceIndex, vm::cptr<SceGxmAuxiliarySurface> surface)
 {
 	throw __FUNCTION__;
 }
 
 
-void sceGxmSetPrecomputedFragmentState(vm::ptr<SceGxmContext> context, vm::ptr<const SceGxmPrecomputedFragmentState> precomputedState)
+void sceGxmSetPrecomputedFragmentState(vm::ptr<SceGxmContext> context, vm::cptr<SceGxmPrecomputedFragmentState> precomputedState)
 {
 	throw __FUNCTION__;
 }
 
-void sceGxmSetPrecomputedVertexState(vm::ptr<SceGxmContext> context, vm::ptr<const SceGxmPrecomputedVertexState> precomputedState)
+void sceGxmSetPrecomputedVertexState(vm::ptr<SceGxmContext> context, vm::cptr<SceGxmPrecomputedVertexState> precomputedState)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceGxmDrawPrecomputed(vm::ptr<SceGxmContext> context, vm::ptr<const SceGxmPrecomputedDraw> precomputedDraw)
+s32 sceGxmDrawPrecomputed(vm::ptr<SceGxmContext> context, vm::cptr<SceGxmPrecomputedDraw> precomputedDraw)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceGxmDraw(vm::ptr<SceGxmContext> context, SceGxmPrimitiveType primType, SceGxmIndexFormat indexType, vm::ptr<const void> indexData, u32 indexCount)
+s32 sceGxmDraw(vm::ptr<SceGxmContext> context, SceGxmPrimitiveType primType, SceGxmIndexFormat indexType, vm::cptr<void> indexData, u32 indexCount)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceGxmDrawInstanced(vm::ptr<SceGxmContext> context, SceGxmPrimitiveType primType, SceGxmIndexFormat indexType, vm::ptr<const void> indexData, u32 indexCount, u32 indexWrap)
+s32 sceGxmDrawInstanced(vm::ptr<SceGxmContext> context, SceGxmPrimitiveType primType, SceGxmIndexFormat indexType, vm::cptr<void> indexData, u32 indexCount, u32 indexWrap)
 {
 	throw __FUNCTION__;
 }
@@ -172,17 +172,17 @@ s32 sceGxmSetVisibilityBuffer(vm::ptr<SceGxmContext> context, vm::ptr<void> buff
 	throw __FUNCTION__;
 }
 
-s32 sceGxmBeginScene(vm::ptr<SceGxmContext> context, u32 flags, vm::ptr<const SceGxmRenderTarget> renderTarget, vm::ptr<const SceGxmValidRegion> validRegion, vm::ptr<SceGxmSyncObject> vertexSyncObject, vm::ptr<SceGxmSyncObject> fragmentSyncObject, vm::ptr<const SceGxmColorSurface> colorSurface, vm::ptr<const SceGxmDepthStencilSurface> depthStencil)
+s32 sceGxmBeginScene(vm::ptr<SceGxmContext> context, u32 flags, vm::cptr<SceGxmRenderTarget> renderTarget, vm::cptr<SceGxmValidRegion> validRegion, vm::ptr<SceGxmSyncObject> vertexSyncObject, vm::ptr<SceGxmSyncObject> fragmentSyncObject, vm::cptr<SceGxmColorSurface> colorSurface, vm::cptr<SceGxmDepthStencilSurface> depthStencil)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceGxmMidSceneFlush(vm::ptr<SceGxmContext> context, u32 flags, vm::ptr<SceGxmSyncObject> vertexSyncObject, vm::ptr<const SceGxmNotification> vertexNotification)
+s32 sceGxmMidSceneFlush(vm::ptr<SceGxmContext> context, u32 flags, vm::ptr<SceGxmSyncObject> vertexSyncObject, vm::cptr<SceGxmNotification> vertexNotification)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceGxmEndScene(vm::ptr<SceGxmContext> context, vm::ptr<const SceGxmNotification> vertexNotification, vm::ptr<const SceGxmNotification> fragmentNotification)
+s32 sceGxmEndScene(vm::ptr<SceGxmContext> context, vm::cptr<SceGxmNotification> vertexNotification, vm::cptr<SceGxmNotification> fragmentNotification)
 {
 	throw __FUNCTION__;
 }
@@ -353,7 +353,7 @@ void sceGxmFinish(vm::ptr<SceGxmContext> context)
 	throw __FUNCTION__;
 }
 
-s32 sceGxmPushUserMarker(vm::ptr<SceGxmContext> context, vm::ptr<const char> tag)
+s32 sceGxmPushUserMarker(vm::ptr<SceGxmContext> context, vm::cptr<char> tag)
 {
 	throw __FUNCTION__;
 }
@@ -363,12 +363,12 @@ s32 sceGxmPopUserMarker(vm::ptr<SceGxmContext> context)
 	throw __FUNCTION__;
 }
 
-s32 sceGxmSetUserMarker(vm::ptr<SceGxmContext> context, vm::ptr<const char> tag)
+s32 sceGxmSetUserMarker(vm::ptr<SceGxmContext> context, vm::cptr<char> tag)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceGxmPadHeartbeat(vm::ptr<const SceGxmColorSurface> displaySurface, vm::ptr<SceGxmSyncObject> displaySyncObject)
+s32 sceGxmPadHeartbeat(vm::cptr<SceGxmColorSurface> displaySurface, vm::ptr<SceGxmSyncObject> displaySyncObject)
 {
 	throw __FUNCTION__;
 }
@@ -388,12 +388,12 @@ s32 sceGxmColorSurfaceInitDisabled(vm::ptr<SceGxmColorSurface> surface)
 	throw __FUNCTION__;
 }
 
-bool sceGxmColorSurfaceIsEnabled(vm::ptr<const SceGxmColorSurface> surface)
+bool sceGxmColorSurfaceIsEnabled(vm::cptr<SceGxmColorSurface> surface)
 {
 	throw __FUNCTION__;
 }
 
-void sceGxmColorSurfaceGetClip(vm::ptr<const SceGxmColorSurface> surface, vm::ptr<u32> xMin, vm::ptr<u32> yMin, vm::ptr<u32> xMax, vm::ptr<u32> yMax)
+void sceGxmColorSurfaceGetClip(vm::cptr<SceGxmColorSurface> surface, vm::ptr<u32> xMin, vm::ptr<u32> yMin, vm::ptr<u32> xMax, vm::ptr<u32> yMax)
 {
 	throw __FUNCTION__;
 }
@@ -403,7 +403,7 @@ void sceGxmColorSurfaceSetClip(vm::ptr<SceGxmColorSurface> surface, u32 xMin, u3
 	throw __FUNCTION__;
 }
 
-SceGxmColorSurfaceScaleMode sceGxmColorSurfaceGetScaleMode(vm::ptr<const SceGxmColorSurface> surface)
+SceGxmColorSurfaceScaleMode sceGxmColorSurfaceGetScaleMode(vm::cptr<SceGxmColorSurface> surface)
 {
 	throw __FUNCTION__;
 }
@@ -413,7 +413,7 @@ void sceGxmColorSurfaceSetScaleMode(vm::ptr<SceGxmColorSurface> surface, SceGxmC
 	throw __FUNCTION__;
 }
 
-vm::ptr<void> sceGxmColorSurfaceGetData(vm::ptr<const SceGxmColorSurface> surface)
+vm::ptr<void> sceGxmColorSurfaceGetData(vm::cptr<SceGxmColorSurface> surface)
 {
 	throw __FUNCTION__;
 }
@@ -423,7 +423,7 @@ s32 sceGxmColorSurfaceSetData(vm::ptr<SceGxmColorSurface> surface, vm::ptr<void>
 	throw __FUNCTION__;
 }
 
-SceGxmColorFormat sceGxmColorSurfaceGetFormat(vm::ptr<const SceGxmColorSurface> surface)
+SceGxmColorFormat sceGxmColorSurfaceGetFormat(vm::cptr<SceGxmColorSurface> surface)
 {
 	throw __FUNCTION__;
 }
@@ -433,12 +433,12 @@ s32 sceGxmColorSurfaceSetFormat(vm::ptr<SceGxmColorSurface> surface, SceGxmColor
 	throw __FUNCTION__;
 }
 
-SceGxmColorSurfaceType sceGxmColorSurfaceGetType(vm::ptr<const SceGxmColorSurface> surface)
+SceGxmColorSurfaceType sceGxmColorSurfaceGetType(vm::cptr<SceGxmColorSurface> surface)
 {
 	throw __FUNCTION__;
 }
 
-u32 sceGxmColorSurfaceGetStrideInPixels(vm::ptr<const SceGxmColorSurface> surface)
+u32 sceGxmColorSurfaceGetStrideInPixels(vm::cptr<SceGxmColorSurface> surface)
 {
 	throw __FUNCTION__;
 }
@@ -453,7 +453,7 @@ s32 sceGxmDepthStencilSurfaceInitDisabled(vm::ptr<SceGxmDepthStencilSurface> sur
 	throw __FUNCTION__;
 }
 
-float sceGxmDepthStencilSurfaceGetBackgroundDepth(vm::ptr<const SceGxmDepthStencilSurface> surface)
+float sceGxmDepthStencilSurfaceGetBackgroundDepth(vm::cptr<SceGxmDepthStencilSurface> surface)
 {
 	throw __FUNCTION__;
 }
@@ -463,7 +463,7 @@ void sceGxmDepthStencilSurfaceSetBackgroundDepth(vm::ptr<SceGxmDepthStencilSurfa
 	throw __FUNCTION__;
 }
 
-u8 sceGxmDepthStencilSurfaceGetBackgroundStencil(vm::ptr<const SceGxmDepthStencilSurface> surface)
+u8 sceGxmDepthStencilSurfaceGetBackgroundStencil(vm::cptr<SceGxmDepthStencilSurface> surface)
 {
 	throw __FUNCTION__;
 }
@@ -473,7 +473,7 @@ void sceGxmDepthStencilSurfaceSetBackgroundStencil(vm::ptr<SceGxmDepthStencilSur
 	throw __FUNCTION__;
 }
 
-bool sceGxmDepthStencilSurfaceIsEnabled(vm::ptr<const SceGxmDepthStencilSurface> surface)
+bool sceGxmDepthStencilSurfaceIsEnabled(vm::cptr<SceGxmDepthStencilSurface> surface)
 {
 	throw __FUNCTION__;
 }
@@ -483,7 +483,7 @@ void sceGxmDepthStencilSurfaceSetForceLoadMode(vm::ptr<SceGxmDepthStencilSurface
 	throw __FUNCTION__;
 }
 
-SceGxmDepthStencilForceLoadMode sceGxmDepthStencilSurfaceGetForceLoadMode(vm::ptr<const SceGxmDepthStencilSurface> surface)
+SceGxmDepthStencilForceLoadMode sceGxmDepthStencilSurfaceGetForceLoadMode(vm::cptr<SceGxmDepthStencilSurface> surface)
 {
 	throw __FUNCTION__;
 }
@@ -493,12 +493,12 @@ void sceGxmDepthStencilSurfaceSetForceStoreMode(vm::ptr<SceGxmDepthStencilSurfac
 	throw __FUNCTION__;
 }
 
-SceGxmDepthStencilForceStoreMode sceGxmDepthStencilSurfaceGetForceStoreMode(vm::ptr<const SceGxmDepthStencilSurface> surface)
+SceGxmDepthStencilForceStoreMode sceGxmDepthStencilSurfaceGetForceStoreMode(vm::cptr<SceGxmDepthStencilSurface> surface)
 {
 	throw __FUNCTION__;
 }
 
-SceGxmColorSurfaceGammaMode sceGxmColorSurfaceGetGammaMode(vm::ptr<const SceGxmColorSurface> surface)
+SceGxmColorSurfaceGammaMode sceGxmColorSurfaceGetGammaMode(vm::cptr<SceGxmColorSurface> surface)
 {
 	throw __FUNCTION__;
 }
@@ -508,7 +508,7 @@ s32 sceGxmColorSurfaceSetGammaMode(vm::ptr<SceGxmColorSurface> surface, SceGxmCo
 	throw __FUNCTION__;
 }
 
-SceGxmColorSurfaceDitherMode sceGxmColorSurfaceGetDitherMode(vm::ptr<const SceGxmColorSurface> surface)
+SceGxmColorSurfaceDitherMode sceGxmColorSurfaceGetDitherMode(vm::cptr<SceGxmColorSurface> surface)
 {
 	throw __FUNCTION__;
 }
@@ -518,139 +518,139 @@ s32 sceGxmColorSurfaceSetDitherMode(vm::ptr<SceGxmColorSurface> surface, SceGxmC
 	throw __FUNCTION__;
 }
 
-SceGxmDepthStencilFormat sceGxmDepthStencilSurfaceGetFormat(vm::ptr<const SceGxmDepthStencilSurface> surface)
+SceGxmDepthStencilFormat sceGxmDepthStencilSurfaceGetFormat(vm::cptr<SceGxmDepthStencilSurface> surface)
 {
 	throw __FUNCTION__;
 }
 
-u32 sceGxmDepthStencilSurfaceGetStrideInSamples(vm::ptr<const SceGxmDepthStencilSurface> surface)
-{
-	throw __FUNCTION__;
-}
-
-
-s32 sceGxmProgramCheck(vm::ptr<const SceGxmProgram> program)
-{
-	throw __FUNCTION__;
-}
-
-u32 sceGxmProgramGetSize(vm::ptr<const SceGxmProgram> program)
-{
-	throw __FUNCTION__;
-}
-
-SceGxmProgramType sceGxmProgramGetType(vm::ptr<const SceGxmProgram> program)
-{
-	throw __FUNCTION__;
-}
-
-bool sceGxmProgramIsDiscardUsed(vm::ptr<const SceGxmProgram> program)
-{
-	throw __FUNCTION__;
-}
-
-bool sceGxmProgramIsDepthReplaceUsed(vm::ptr<const SceGxmProgram> program)
-{
-	throw __FUNCTION__;
-}
-
-bool sceGxmProgramIsSpriteCoordUsed(vm::ptr<const SceGxmProgram> program)
-{
-	throw __FUNCTION__;
-}
-
-u32 sceGxmProgramGetDefaultUniformBufferSize(vm::ptr<const SceGxmProgram> program)
-{
-	throw __FUNCTION__;
-}
-
-u32 sceGxmProgramGetParameterCount(vm::ptr<const SceGxmProgram> program)
-{
-	throw __FUNCTION__;
-}
-
-vm::ptr<const SceGxmProgramParameter> sceGxmProgramGetParameter(vm::ptr<const SceGxmProgram> program, u32 index)
-{
-	throw __FUNCTION__;
-}
-
-vm::ptr<const SceGxmProgramParameter> sceGxmProgramFindParameterByName(vm::ptr<const SceGxmProgram> program, vm::ptr<const char> name)
-{
-	throw __FUNCTION__;
-}
-
-vm::ptr<const SceGxmProgramParameter> sceGxmProgramFindParameterBySemantic(vm::ptr<const SceGxmProgram> program, SceGxmParameterSemantic semantic, u32 index)
-{
-	throw __FUNCTION__;
-}
-
-u32 sceGxmProgramParameterGetIndex(vm::ptr<const SceGxmProgram> program, vm::ptr<const SceGxmProgramParameter> parameter)
-{
-	throw __FUNCTION__;
-}
-
-SceGxmParameterCategory sceGxmProgramParameterGetCategory(vm::ptr<const SceGxmProgramParameter> parameter)
-{
-	throw __FUNCTION__;
-}
-
-vm::ptr<const char> sceGxmProgramParameterGetName(vm::ptr<const SceGxmProgramParameter> parameter)
-{
-	throw __FUNCTION__;
-}
-
-SceGxmParameterSemantic sceGxmProgramParameterGetSemantic(vm::ptr<const SceGxmProgramParameter> parameter)
-{
-	throw __FUNCTION__;
-}
-
-u32 sceGxmProgramParameterGetSemanticIndex(vm::ptr<const SceGxmProgramParameter> parameter)
-{
-	throw __FUNCTION__;
-}
-
-SceGxmParameterType sceGxmProgramParameterGetType(vm::ptr<const SceGxmProgramParameter> parameter)
-{
-	throw __FUNCTION__;
-}
-
-u32 sceGxmProgramParameterGetComponentCount(vm::ptr<const SceGxmProgramParameter> parameter)
-{
-	throw __FUNCTION__;
-}
-
-u32 sceGxmProgramParameterGetArraySize(vm::ptr<const SceGxmProgramParameter> parameter)
-{
-	throw __FUNCTION__;
-}
-
-u32 sceGxmProgramParameterGetResourceIndex(vm::ptr<const SceGxmProgramParameter> parameter)
-{
-	throw __FUNCTION__;
-}
-
-u32 sceGxmProgramParameterGetContainerIndex(vm::ptr<const SceGxmProgramParameter> parameter)
-{
-	throw __FUNCTION__;
-}
-
-bool sceGxmProgramParameterIsSamplerCube(vm::ptr<const SceGxmProgramParameter> parameter)
-{
-	throw __FUNCTION__;
-}
-
-vm::ptr<const SceGxmProgram> sceGxmFragmentProgramGetProgram(vm::ptr<const SceGxmFragmentProgram> fragmentProgram)
-{
-	throw __FUNCTION__;
-}
-
-vm::ptr<const SceGxmProgram> sceGxmVertexProgramGetProgram(vm::ptr<const SceGxmVertexProgram> vertexProgram)
+u32 sceGxmDepthStencilSurfaceGetStrideInSamples(vm::cptr<SceGxmDepthStencilSurface> surface)
 {
 	throw __FUNCTION__;
 }
 
 
-s32 sceGxmShaderPatcherCreate(vm::ptr<const SceGxmShaderPatcherParams> params, vm::pptr<SceGxmShaderPatcher> shaderPatcher)
+s32 sceGxmProgramCheck(vm::cptr<SceGxmProgram> program)
+{
+	throw __FUNCTION__;
+}
+
+u32 sceGxmProgramGetSize(vm::cptr<SceGxmProgram> program)
+{
+	throw __FUNCTION__;
+}
+
+SceGxmProgramType sceGxmProgramGetType(vm::cptr<SceGxmProgram> program)
+{
+	throw __FUNCTION__;
+}
+
+bool sceGxmProgramIsDiscardUsed(vm::cptr<SceGxmProgram> program)
+{
+	throw __FUNCTION__;
+}
+
+bool sceGxmProgramIsDepthReplaceUsed(vm::cptr<SceGxmProgram> program)
+{
+	throw __FUNCTION__;
+}
+
+bool sceGxmProgramIsSpriteCoordUsed(vm::cptr<SceGxmProgram> program)
+{
+	throw __FUNCTION__;
+}
+
+u32 sceGxmProgramGetDefaultUniformBufferSize(vm::cptr<SceGxmProgram> program)
+{
+	throw __FUNCTION__;
+}
+
+u32 sceGxmProgramGetParameterCount(vm::cptr<SceGxmProgram> program)
+{
+	throw __FUNCTION__;
+}
+
+vm::cptr<SceGxmProgramParameter> sceGxmProgramGetParameter(vm::cptr<SceGxmProgram> program, u32 index)
+{
+	throw __FUNCTION__;
+}
+
+vm::cptr<SceGxmProgramParameter> sceGxmProgramFindParameterByName(vm::cptr<SceGxmProgram> program, vm::cptr<char> name)
+{
+	throw __FUNCTION__;
+}
+
+vm::cptr<SceGxmProgramParameter> sceGxmProgramFindParameterBySemantic(vm::cptr<SceGxmProgram> program, SceGxmParameterSemantic semantic, u32 index)
+{
+	throw __FUNCTION__;
+}
+
+u32 sceGxmProgramParameterGetIndex(vm::cptr<SceGxmProgram> program, vm::cptr<SceGxmProgramParameter> parameter)
+{
+	throw __FUNCTION__;
+}
+
+SceGxmParameterCategory sceGxmProgramParameterGetCategory(vm::cptr<SceGxmProgramParameter> parameter)
+{
+	throw __FUNCTION__;
+}
+
+vm::cptr<char> sceGxmProgramParameterGetName(vm::cptr<SceGxmProgramParameter> parameter)
+{
+	throw __FUNCTION__;
+}
+
+SceGxmParameterSemantic sceGxmProgramParameterGetSemantic(vm::cptr<SceGxmProgramParameter> parameter)
+{
+	throw __FUNCTION__;
+}
+
+u32 sceGxmProgramParameterGetSemanticIndex(vm::cptr<SceGxmProgramParameter> parameter)
+{
+	throw __FUNCTION__;
+}
+
+SceGxmParameterType sceGxmProgramParameterGetType(vm::cptr<SceGxmProgramParameter> parameter)
+{
+	throw __FUNCTION__;
+}
+
+u32 sceGxmProgramParameterGetComponentCount(vm::cptr<SceGxmProgramParameter> parameter)
+{
+	throw __FUNCTION__;
+}
+
+u32 sceGxmProgramParameterGetArraySize(vm::cptr<SceGxmProgramParameter> parameter)
+{
+	throw __FUNCTION__;
+}
+
+u32 sceGxmProgramParameterGetResourceIndex(vm::cptr<SceGxmProgramParameter> parameter)
+{
+	throw __FUNCTION__;
+}
+
+u32 sceGxmProgramParameterGetContainerIndex(vm::cptr<SceGxmProgramParameter> parameter)
+{
+	throw __FUNCTION__;
+}
+
+bool sceGxmProgramParameterIsSamplerCube(vm::cptr<SceGxmProgramParameter> parameter)
+{
+	throw __FUNCTION__;
+}
+
+vm::cptr<SceGxmProgram> sceGxmFragmentProgramGetProgram(vm::cptr<SceGxmFragmentProgram> fragmentProgram)
+{
+	throw __FUNCTION__;
+}
+
+vm::cptr<SceGxmProgram> sceGxmVertexProgramGetProgram(vm::cptr<SceGxmVertexProgram> vertexProgram)
+{
+	throw __FUNCTION__;
+}
+
+
+s32 sceGxmShaderPatcherCreate(vm::cptr<SceGxmShaderPatcherParams> params, vm::pptr<SceGxmShaderPatcher> shaderPatcher)
 {
 	throw __FUNCTION__;
 }
@@ -670,7 +670,7 @@ s32 sceGxmShaderPatcherDestroy(vm::ptr<SceGxmShaderPatcher> shaderPatcher)
 	throw __FUNCTION__;
 }
 
-s32 sceGxmShaderPatcherRegisterProgram(vm::ptr<SceGxmShaderPatcher> shaderPatcher, vm::ptr<const SceGxmProgram> programHeader, vm::pptr<SceGxmRegisteredProgram> programId)
+s32 sceGxmShaderPatcherRegisterProgram(vm::ptr<SceGxmShaderPatcher> shaderPatcher, vm::cptr<SceGxmProgram> programHeader, vm::pptr<SceGxmRegisteredProgram> programId)
 {
 	throw __FUNCTION__;
 }
@@ -680,22 +680,22 @@ s32 sceGxmShaderPatcherUnregisterProgram(vm::ptr<SceGxmShaderPatcher> shaderPatc
 	throw __FUNCTION__;
 }
 
-vm::ptr<const SceGxmProgram> sceGxmShaderPatcherGetProgramFromId(vm::ptr<SceGxmRegisteredProgram> programId)
+vm::cptr<SceGxmProgram> sceGxmShaderPatcherGetProgramFromId(vm::ptr<SceGxmRegisteredProgram> programId)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceGxmShaderPatcherSetAuxiliarySurface(vm::ptr<SceGxmShaderPatcher> shaderPatcher, u32 auxSurfaceIndex, vm::ptr<const SceGxmAuxiliarySurface> auxSurface)
+s32 sceGxmShaderPatcherSetAuxiliarySurface(vm::ptr<SceGxmShaderPatcher> shaderPatcher, u32 auxSurfaceIndex, vm::cptr<SceGxmAuxiliarySurface> auxSurface)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceGxmShaderPatcherCreateVertexProgram(vm::ptr<SceGxmShaderPatcher> shaderPatcher, vm::ptr<SceGxmRegisteredProgram> programId, vm::ptr<const SceGxmVertexAttribute> attributes, u32 attributeCount, vm::ptr<const SceGxmVertexStream> streams, u32 streamCount, vm::pptr<SceGxmVertexProgram> vertexProgram)
+s32 sceGxmShaderPatcherCreateVertexProgram(vm::ptr<SceGxmShaderPatcher> shaderPatcher, vm::ptr<SceGxmRegisteredProgram> programId, vm::cptr<SceGxmVertexAttribute> attributes, u32 attributeCount, vm::cptr<SceGxmVertexStream> streams, u32 streamCount, vm::pptr<SceGxmVertexProgram> vertexProgram)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceGxmShaderPatcherCreateFragmentProgram(vm::ptr<SceGxmShaderPatcher> shaderPatcher, vm::ptr<SceGxmRegisteredProgram> programId, SceGxmOutputRegisterFormat outputFormat, SceGxmMultisampleMode multisampleMode, vm::ptr<const SceGxmBlendInfo> blendInfo, vm::ptr<const SceGxmProgram> vertexProgram, vm::pptr<SceGxmFragmentProgram> fragmentProgram)
+s32 sceGxmShaderPatcherCreateFragmentProgram(vm::ptr<SceGxmShaderPatcher> shaderPatcher, vm::ptr<SceGxmRegisteredProgram> programId, SceGxmOutputRegisterFormat outputFormat, SceGxmMultisampleMode multisampleMode, vm::cptr<SceGxmBlendInfo> blendInfo, vm::cptr<SceGxmProgram> vertexProgram, vm::pptr<SceGxmFragmentProgram> fragmentProgram)
 {
 	throw __FUNCTION__;
 }
@@ -720,52 +720,52 @@ s32 sceGxmShaderPatcherReleaseFragmentProgram(vm::ptr<SceGxmShaderPatcher> shade
 	throw __FUNCTION__;
 }
 
-u32 sceGxmShaderPatcherGetHostMemAllocated(vm::ptr<const SceGxmShaderPatcher> shaderPatcher)
+u32 sceGxmShaderPatcherGetHostMemAllocated(vm::cptr<SceGxmShaderPatcher> shaderPatcher)
 {
 	throw __FUNCTION__;
 }
 
-u32 sceGxmShaderPatcherGetBufferMemAllocated(vm::ptr<const SceGxmShaderPatcher> shaderPatcher)
+u32 sceGxmShaderPatcherGetBufferMemAllocated(vm::cptr<SceGxmShaderPatcher> shaderPatcher)
 {
 	throw __FUNCTION__;
 }
 
-u32 sceGxmShaderPatcherGetVertexUsseMemAllocated(vm::ptr<const SceGxmShaderPatcher> shaderPatcher)
+u32 sceGxmShaderPatcherGetVertexUsseMemAllocated(vm::cptr<SceGxmShaderPatcher> shaderPatcher)
 {
 	throw __FUNCTION__;
 }
 
-u32 sceGxmShaderPatcherGetFragmentUsseMemAllocated(vm::ptr<const SceGxmShaderPatcher> shaderPatcher)
+u32 sceGxmShaderPatcherGetFragmentUsseMemAllocated(vm::cptr<SceGxmShaderPatcher> shaderPatcher)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceGxmTextureInitSwizzled(vm::ptr<SceGxmTexture> texture, vm::ptr<const void> data, SceGxmTextureFormat texFormat, u32 width, u32 height, u32 mipCount)
+s32 sceGxmTextureInitSwizzled(vm::ptr<SceGxmTexture> texture, vm::cptr<void> data, SceGxmTextureFormat texFormat, u32 width, u32 height, u32 mipCount)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceGxmTextureInitLinear(vm::ptr<SceGxmTexture> texture, vm::ptr<const void> data, SceGxmTextureFormat texFormat, u32 width, u32 height, u32 mipCount)
+s32 sceGxmTextureInitLinear(vm::ptr<SceGxmTexture> texture, vm::cptr<void> data, SceGxmTextureFormat texFormat, u32 width, u32 height, u32 mipCount)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceGxmTextureInitLinearStrided(vm::ptr<SceGxmTexture> texture, vm::ptr<const void> data, SceGxmTextureFormat texFormat, u32 width, u32 height, u32 byteStride)
+s32 sceGxmTextureInitLinearStrided(vm::ptr<SceGxmTexture> texture, vm::cptr<void> data, SceGxmTextureFormat texFormat, u32 width, u32 height, u32 byteStride)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceGxmTextureInitTiled(vm::ptr<SceGxmTexture> texture, vm::ptr<const void> data, SceGxmTextureFormat texFormat, u32 width, u32 height, u32 mipCount)
+s32 sceGxmTextureInitTiled(vm::ptr<SceGxmTexture> texture, vm::cptr<void> data, SceGxmTextureFormat texFormat, u32 width, u32 height, u32 mipCount)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceGxmTextureInitCube(vm::ptr<SceGxmTexture> texture, vm::ptr<const void> data, SceGxmTextureFormat texFormat, u32 width, u32 height, u32 mipCount)
+s32 sceGxmTextureInitCube(vm::ptr<SceGxmTexture> texture, vm::cptr<void> data, SceGxmTextureFormat texFormat, u32 width, u32 height, u32 mipCount)
 {
 	throw __FUNCTION__;
 }
 
-SceGxmTextureType sceGxmTextureGetType(vm::ptr<const SceGxmTexture> texture)
+SceGxmTextureType sceGxmTextureGetType(vm::cptr<SceGxmTexture> texture)
 {
 	throw __FUNCTION__;
 }
@@ -775,7 +775,7 @@ s32 sceGxmTextureSetMinFilter(vm::ptr<SceGxmTexture> texture, SceGxmTextureFilte
 	throw __FUNCTION__;
 }
 
-SceGxmTextureFilter sceGxmTextureGetMinFilter(vm::ptr<const SceGxmTexture> texture)
+SceGxmTextureFilter sceGxmTextureGetMinFilter(vm::cptr<SceGxmTexture> texture)
 {
 	throw __FUNCTION__;
 }
@@ -785,7 +785,7 @@ s32 sceGxmTextureSetMagFilter(vm::ptr<SceGxmTexture> texture, SceGxmTextureFilte
 	throw __FUNCTION__;
 }
 
-SceGxmTextureFilter sceGxmTextureGetMagFilter(vm::ptr<const SceGxmTexture> texture)
+SceGxmTextureFilter sceGxmTextureGetMagFilter(vm::cptr<SceGxmTexture> texture)
 {
 	throw __FUNCTION__;
 }
@@ -795,7 +795,7 @@ s32 sceGxmTextureSetMipFilter(vm::ptr<SceGxmTexture> texture, SceGxmTextureMipFi
 	throw __FUNCTION__;
 }
 
-SceGxmTextureMipFilter sceGxmTextureGetMipFilter(vm::ptr<const SceGxmTexture> texture)
+SceGxmTextureMipFilter sceGxmTextureGetMipFilter(vm::cptr<SceGxmTexture> texture)
 {
 	throw __FUNCTION__;
 }
@@ -805,7 +805,7 @@ s32 sceGxmTextureSetAnisoMode(vm::ptr<SceGxmTexture> texture, SceGxmTextureAniso
 	throw __FUNCTION__;
 }
 
-SceGxmTextureAnisoMode sceGxmTextureGetAnisoMode(vm::ptr<const SceGxmTexture> texture)
+SceGxmTextureAnisoMode sceGxmTextureGetAnisoMode(vm::cptr<SceGxmTexture> texture)
 {
 	throw __FUNCTION__;
 }
@@ -815,7 +815,7 @@ s32 sceGxmTextureSetUAddrMode(vm::ptr<SceGxmTexture> texture, SceGxmTextureAddrM
 	throw __FUNCTION__;
 }
 
-SceGxmTextureAddrMode sceGxmTextureGetUAddrMode(vm::ptr<const SceGxmTexture> texture)
+SceGxmTextureAddrMode sceGxmTextureGetUAddrMode(vm::cptr<SceGxmTexture> texture)
 {
 	throw __FUNCTION__;
 }
@@ -825,7 +825,7 @@ s32 sceGxmTextureSetVAddrMode(vm::ptr<SceGxmTexture> texture, SceGxmTextureAddrM
 	throw __FUNCTION__;
 }
 
-SceGxmTextureAddrMode sceGxmTextureGetVAddrMode(vm::ptr<const SceGxmTexture> texture)
+SceGxmTextureAddrMode sceGxmTextureGetVAddrMode(vm::cptr<SceGxmTexture> texture)
 {
 	throw __FUNCTION__;
 }
@@ -835,7 +835,7 @@ s32 sceGxmTextureSetFormat(vm::ptr<SceGxmTexture> texture, SceGxmTextureFormat t
 	throw __FUNCTION__;
 }
 
-SceGxmTextureFormat sceGxmTextureGetFormat(vm::ptr<const SceGxmTexture> texture)
+SceGxmTextureFormat sceGxmTextureGetFormat(vm::cptr<SceGxmTexture> texture)
 {
 	throw __FUNCTION__;
 }
@@ -845,7 +845,7 @@ s32 sceGxmTextureSetLodBias(vm::ptr<SceGxmTexture> texture, u32 bias)
 	throw __FUNCTION__;
 }
 
-u32 sceGxmTextureGetLodBias(vm::ptr<const SceGxmTexture> texture)
+u32 sceGxmTextureGetLodBias(vm::cptr<SceGxmTexture> texture)
 {
 	throw __FUNCTION__;
 }
@@ -855,7 +855,7 @@ s32 sceGxmTextureSetStride(vm::ptr<SceGxmTexture> texture, u32 byteStride)
 	throw __FUNCTION__;
 }
 
-u32 sceGxmTextureGetStride(vm::ptr<const SceGxmTexture> texture)
+u32 sceGxmTextureGetStride(vm::cptr<SceGxmTexture> texture)
 {
 	throw __FUNCTION__;
 }
@@ -865,7 +865,7 @@ s32 sceGxmTextureSetWidth(vm::ptr<SceGxmTexture> texture, u32 width)
 	throw __FUNCTION__;
 }
 
-u32 sceGxmTextureGetWidth(vm::ptr<const SceGxmTexture> texture)
+u32 sceGxmTextureGetWidth(vm::cptr<SceGxmTexture> texture)
 {
 	throw __FUNCTION__;
 }
@@ -875,17 +875,17 @@ s32 sceGxmTextureSetHeight(vm::ptr<SceGxmTexture> texture, u32 height)
 	throw __FUNCTION__;
 }
 
-u32 sceGxmTextureGetHeight(vm::ptr<const SceGxmTexture> texture)
+u32 sceGxmTextureGetHeight(vm::cptr<SceGxmTexture> texture)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceGxmTextureSetData(vm::ptr<SceGxmTexture> texture, vm::ptr<const void> data)
+s32 sceGxmTextureSetData(vm::ptr<SceGxmTexture> texture, vm::cptr<void> data)
 {
 	throw __FUNCTION__;
 }
 
-vm::ptr<void> sceGxmTextureGetData(vm::ptr<const SceGxmTexture> texture)
+vm::ptr<void> sceGxmTextureGetData(vm::cptr<SceGxmTexture> texture)
 {
 	throw __FUNCTION__;
 }
@@ -895,22 +895,22 @@ s32 sceGxmTextureSetMipmapCount(vm::ptr<SceGxmTexture> texture, u32 mipCount)
 	throw __FUNCTION__;
 }
 
-u32 sceGxmTextureGetMipmapCount(vm::ptr<const SceGxmTexture> texture)
+u32 sceGxmTextureGetMipmapCount(vm::cptr<SceGxmTexture> texture)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceGxmTextureSetPalette(vm::ptr<SceGxmTexture> texture, vm::ptr<const void> paletteData)
+s32 sceGxmTextureSetPalette(vm::ptr<SceGxmTexture> texture, vm::cptr<void> paletteData)
 {
 	throw __FUNCTION__;
 }
 
-vm::ptr<void> sceGxmTextureGetPalette(vm::ptr<const SceGxmTexture> texture)
+vm::ptr<void> sceGxmTextureGetPalette(vm::cptr<SceGxmTexture> texture)
 {
 	throw __FUNCTION__;
 }
 
-SceGxmTextureGammaMode sceGxmTextureGetGammaMode(vm::ptr<const SceGxmTexture> texture)
+SceGxmTextureGammaMode sceGxmTextureGetGammaMode(vm::cptr<SceGxmTexture> texture)
 {
 	throw __FUNCTION__;
 }
@@ -920,12 +920,12 @@ s32 sceGxmTextureSetGammaMode(vm::ptr<SceGxmTexture> texture, SceGxmTextureGamma
 	throw __FUNCTION__;
 }
 
-u32 sceGxmGetPrecomputedVertexStateSize(vm::ptr<const SceGxmVertexProgram> vertexProgram)
+u32 sceGxmGetPrecomputedVertexStateSize(vm::cptr<SceGxmVertexProgram> vertexProgram)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceGxmPrecomputedVertexStateInit(vm::ptr<SceGxmPrecomputedVertexState> precomputedState, vm::ptr<const SceGxmVertexProgram> vertexProgram, vm::ptr<void> memBlock)
+s32 sceGxmPrecomputedVertexStateInit(vm::ptr<SceGxmPrecomputedVertexState> precomputedState, vm::cptr<SceGxmVertexProgram> vertexProgram, vm::ptr<void> memBlock)
 {
 	throw __FUNCTION__;
 }
@@ -935,37 +935,37 @@ void sceGxmPrecomputedVertexStateSetDefaultUniformBuffer(vm::ptr<SceGxmPrecomput
 	throw __FUNCTION__;
 }
 
-vm::ptr<void> sceGxmPrecomputedVertexStateGetDefaultUniformBuffer(vm::ptr<const SceGxmPrecomputedVertexState> precomputedState)
+vm::ptr<void> sceGxmPrecomputedVertexStateGetDefaultUniformBuffer(vm::cptr<SceGxmPrecomputedVertexState> precomputedState)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceGxmPrecomputedVertexStateSetAllTextures(vm::ptr<SceGxmPrecomputedVertexState> precomputedState, vm::ptr<const SceGxmTexture> textures)
+s32 sceGxmPrecomputedVertexStateSetAllTextures(vm::ptr<SceGxmPrecomputedVertexState> precomputedState, vm::cptr<SceGxmTexture> textures)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceGxmPrecomputedVertexStateSetTexture(vm::ptr<SceGxmPrecomputedVertexState> precomputedState, u32 textureIndex, vm::ptr<const SceGxmTexture> texture)
+s32 sceGxmPrecomputedVertexStateSetTexture(vm::ptr<SceGxmPrecomputedVertexState> precomputedState, u32 textureIndex, vm::cptr<SceGxmTexture> texture)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceGxmPrecomputedVertexStateSetAllUniformBuffers(vm::ptr<SceGxmPrecomputedVertexState> precomputedState, vm::ptr<const vm::ptr<const void>> bufferDataArray)
+s32 sceGxmPrecomputedVertexStateSetAllUniformBuffers(vm::ptr<SceGxmPrecomputedVertexState> precomputedState, vm::cptr<vm::cptr<void>> bufferDataArray)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceGxmPrecomputedVertexStateSetUniformBuffer(vm::ptr<SceGxmPrecomputedVertexState> precomputedState, u32 bufferIndex, vm::ptr<const void> bufferData)
+s32 sceGxmPrecomputedVertexStateSetUniformBuffer(vm::ptr<SceGxmPrecomputedVertexState> precomputedState, u32 bufferIndex, vm::cptr<void> bufferData)
 {
 	throw __FUNCTION__;
 }
 
-u32 sceGxmGetPrecomputedFragmentStateSize(vm::ptr<const SceGxmFragmentProgram> fragmentProgram)
+u32 sceGxmGetPrecomputedFragmentStateSize(vm::cptr<SceGxmFragmentProgram> fragmentProgram)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceGxmPrecomputedFragmentStateInit(vm::ptr<SceGxmPrecomputedFragmentState> precomputedState, vm::ptr<const SceGxmFragmentProgram> fragmentProgram, vm::ptr<void> memBlock)
+s32 sceGxmPrecomputedFragmentStateInit(vm::ptr<SceGxmPrecomputedFragmentState> precomputedState, vm::cptr<SceGxmFragmentProgram> fragmentProgram, vm::ptr<void> memBlock)
 {
 	throw __FUNCTION__;
 }
@@ -975,83 +975,83 @@ void sceGxmPrecomputedFragmentStateSetDefaultUniformBuffer(vm::ptr<SceGxmPrecomp
 	throw __FUNCTION__;
 }
 
-vm::ptr<void> sceGxmPrecomputedFragmentStateGetDefaultUniformBuffer(vm::ptr<const SceGxmPrecomputedFragmentState> precomputedState)
+vm::ptr<void> sceGxmPrecomputedFragmentStateGetDefaultUniformBuffer(vm::cptr<SceGxmPrecomputedFragmentState> precomputedState)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceGxmPrecomputedFragmentStateSetAllTextures(vm::ptr<SceGxmPrecomputedFragmentState> precomputedState, vm::ptr<const SceGxmTexture> textureArray)
+s32 sceGxmPrecomputedFragmentStateSetAllTextures(vm::ptr<SceGxmPrecomputedFragmentState> precomputedState, vm::cptr<SceGxmTexture> textureArray)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceGxmPrecomputedFragmentStateSetTexture(vm::ptr<SceGxmPrecomputedFragmentState> precomputedState, u32 textureIndex, vm::ptr<const SceGxmTexture> texture)
+s32 sceGxmPrecomputedFragmentStateSetTexture(vm::ptr<SceGxmPrecomputedFragmentState> precomputedState, u32 textureIndex, vm::cptr<SceGxmTexture> texture)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceGxmPrecomputedFragmentStateSetAllUniformBuffers(vm::ptr<SceGxmPrecomputedFragmentState> precomputedState, vm::ptr<const vm::ptr<const void>> bufferDataArray)
+s32 sceGxmPrecomputedFragmentStateSetAllUniformBuffers(vm::ptr<SceGxmPrecomputedFragmentState> precomputedState, vm::cptr<vm::cptr<void>> bufferDataArray)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceGxmPrecomputedFragmentStateSetUniformBuffer(vm::ptr<SceGxmPrecomputedFragmentState> precomputedState, u32 bufferIndex, vm::ptr<const void> bufferData)
+s32 sceGxmPrecomputedFragmentStateSetUniformBuffer(vm::ptr<SceGxmPrecomputedFragmentState> precomputedState, u32 bufferIndex, vm::cptr<void> bufferData)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceGxmPrecomputedFragmentStateSetAllAuxiliarySurfaces(vm::ptr<SceGxmPrecomputedFragmentState> precomputedState, vm::ptr<const SceGxmAuxiliarySurface> auxSurfaceArray)
+s32 sceGxmPrecomputedFragmentStateSetAllAuxiliarySurfaces(vm::ptr<SceGxmPrecomputedFragmentState> precomputedState, vm::cptr<SceGxmAuxiliarySurface> auxSurfaceArray)
 {
 	throw __FUNCTION__;
 }
 
-u32 sceGxmGetPrecomputedDrawSize(vm::ptr<const SceGxmVertexProgram> vertexProgram)
+u32 sceGxmGetPrecomputedDrawSize(vm::cptr<SceGxmVertexProgram> vertexProgram)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceGxmPrecomputedDrawInit(vm::ptr<SceGxmPrecomputedDraw> precomputedDraw, vm::ptr<const SceGxmVertexProgram> vertexProgram, vm::ptr<void> memBlock)
+s32 sceGxmPrecomputedDrawInit(vm::ptr<SceGxmPrecomputedDraw> precomputedDraw, vm::cptr<SceGxmVertexProgram> vertexProgram, vm::ptr<void> memBlock)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceGxmPrecomputedDrawSetAllVertexStreams(vm::ptr<SceGxmPrecomputedDraw> precomputedDraw, vm::ptr<const vm::ptr<const void>> streamDataArray)
+s32 sceGxmPrecomputedDrawSetAllVertexStreams(vm::ptr<SceGxmPrecomputedDraw> precomputedDraw, vm::cptr<vm::cptr<void>> streamDataArray)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceGxmPrecomputedDrawSetVertexStream(vm::ptr<SceGxmPrecomputedDraw> precomputedDraw, u32 streamIndex, vm::ptr<const void> streamData)
+s32 sceGxmPrecomputedDrawSetVertexStream(vm::ptr<SceGxmPrecomputedDraw> precomputedDraw, u32 streamIndex, vm::cptr<void> streamData)
 {
 	throw __FUNCTION__;
 }
 
-void sceGxmPrecomputedDrawSetParams(vm::ptr<SceGxmPrecomputedDraw> precomputedDraw, SceGxmPrimitiveType primType, SceGxmIndexFormat indexType, vm::ptr<const void> indexData, u32 indexCount)
+void sceGxmPrecomputedDrawSetParams(vm::ptr<SceGxmPrecomputedDraw> precomputedDraw, SceGxmPrimitiveType primType, SceGxmIndexFormat indexType, vm::cptr<void> indexData, u32 indexCount)
 {
 	throw __FUNCTION__;
 }
 
-void sceGxmPrecomputedDrawSetParamsInstanced(vm::ptr<SceGxmPrecomputedDraw> precomputedDraw, SceGxmPrimitiveType primType, SceGxmIndexFormat indexType, vm::ptr<const void> indexData, u32 indexCount, u32 indexWrap)
+void sceGxmPrecomputedDrawSetParamsInstanced(vm::ptr<SceGxmPrecomputedDraw> precomputedDraw, SceGxmPrimitiveType primType, SceGxmIndexFormat indexType, vm::cptr<void> indexData, u32 indexCount, u32 indexWrap)
 {
 	throw __FUNCTION__;
 }
 
 
-s32 sceGxmGetRenderTargetMemSizes(vm::ptr<const SceGxmRenderTargetParams> params, vm::ptr<u32> hostMemSize, vm::ptr<u32> driverMemSize)
+s32 sceGxmGetRenderTargetMemSizes(vm::cptr<SceGxmRenderTargetParams> params, vm::ptr<u32> hostMemSize, vm::ptr<u32> driverMemSize)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceGxmCreateRenderTarget(vm::ptr<const SceGxmRenderTargetParams> params, vm::pptr<SceGxmRenderTarget> renderTarget)
+s32 sceGxmCreateRenderTarget(vm::cptr<SceGxmRenderTargetParams> params, vm::pptr<SceGxmRenderTarget> renderTarget)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceGxmRenderTargetGetHostMem(vm::ptr<const SceGxmRenderTarget> renderTarget, vm::pptr<void> hostMem)
+s32 sceGxmRenderTargetGetHostMem(vm::cptr<SceGxmRenderTarget> renderTarget, vm::pptr<void> hostMem)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceGxmRenderTargetGetDriverMemBlock(vm::ptr<const SceGxmRenderTarget> renderTarget, vm::ptr<s32> driverMemBlock)
+s32 sceGxmRenderTargetGetDriverMemBlock(vm::cptr<SceGxmRenderTarget> renderTarget, vm::ptr<s32> driverMemBlock)
 {
 	throw __FUNCTION__;
 }
@@ -1061,7 +1061,7 @@ s32 sceGxmDestroyRenderTarget(vm::ptr<SceGxmRenderTarget> renderTarget)
 	throw __FUNCTION__;
 }
 
-s32 sceGxmSetUniformDataF(vm::ptr<void> uniformBuffer, vm::ptr<const SceGxmProgramParameter> parameter, u32 componentOffset, u32 componentCount, vm::ptr<const float> sourceData)
+s32 sceGxmSetUniformDataF(vm::ptr<void> uniformBuffer, vm::cptr<SceGxmProgramParameter> parameter, u32 componentOffset, u32 componentCount, vm::cptr<float> sourceData)
 {
 	throw __FUNCTION__;
 }

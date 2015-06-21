@@ -4,12 +4,12 @@
 
 #include "sceRazorCapture.h"
 
-void sceRazorCaptureSetTrigger(u32 frameIndex, vm::ptr<const char> captureFilename)
+void sceRazorCaptureSetTrigger(u32 frameIndex, vm::cptr<char> captureFilename)
 {
 	throw __FUNCTION__;
 }
 
-void sceRazorCaptureSetTriggerNextFrame(vm::ptr<const char> captureFilename)
+void sceRazorCaptureSetTriggerNextFrame(vm::cptr<char> captureFilename)
 {
 	throw __FUNCTION__;
 }

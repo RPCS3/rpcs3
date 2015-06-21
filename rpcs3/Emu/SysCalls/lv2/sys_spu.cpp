@@ -58,7 +58,7 @@ s32 sys_spu_initialize(u32 max_usable_spu, u32 max_raw_spu)
 	return CELL_OK;
 }
 
-s32 sys_spu_image_open(vm::ptr<sys_spu_image> img, vm::ptr<const char> path)
+s32 sys_spu_image_open(vm::ptr<sys_spu_image> img, vm::cptr<char> path)
 {
 	sys_spu.Warning("sys_spu_image_open(img_addr=0x%x, path_addr=0x%x [%s])", img.addr(), path.addr(), path.get_ptr());
 

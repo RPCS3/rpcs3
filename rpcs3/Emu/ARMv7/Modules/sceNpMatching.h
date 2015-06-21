@@ -472,7 +472,7 @@ struct SceNpMatching2GetRoomDataExternalListRequest
 {
 	vm::lptr<u64> roomId;
 	le_t<u32> roomIdNum;
-	vm::lptr<const u16> attrId;
+	vm::lcptr<u16> attrId;
 	le_t<u32> attrIdNum;
 };
 
@@ -629,7 +629,7 @@ struct SceNpMatching2SendRoomChatMessageRequest
 	u8 castType;
 	u8 padding[3];
 	SceNpMatching2RoomMessageDestination dst;
-	vm::lptr<const void> msg;
+	vm::lcptr<void> msg;
 	le_t<u32> msgLen;
 	le_t<s32> option;
 };

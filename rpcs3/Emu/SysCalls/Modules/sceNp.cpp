@@ -80,7 +80,7 @@ int sceNp2Term()
 	return CELL_OK;
 }
 
-int npDrmIsAvailable(u32 k_licensee_addr, vm::ptr<const char> drm_path)
+int npDrmIsAvailable(u32 k_licensee_addr, vm::cptr<char> drm_path)
 {
 	if (!Emu.GetVFS().ExistsFile(drm_path.get_ptr()))
 	{
@@ -146,28 +146,28 @@ int npDrmIsAvailable(u32 k_licensee_addr, vm::ptr<const char> drm_path)
 	return CELL_OK;
 }
 
-int sceNpDrmIsAvailable(u32 k_licensee_addr, vm::ptr<const char> drm_path)
+int sceNpDrmIsAvailable(u32 k_licensee_addr, vm::cptr<char> drm_path)
 {
 	sceNp.Warning("sceNpDrmIsAvailable(k_licensee_addr=0x%x, drm_path_addr=0x%x('%s'))", k_licensee_addr, drm_path.addr(), drm_path.get_ptr());
 
 	return npDrmIsAvailable(k_licensee_addr, drm_path);
 }
 
-int sceNpDrmIsAvailable2(u32 k_licensee_addr, vm::ptr<const char> drm_path)
+int sceNpDrmIsAvailable2(u32 k_licensee_addr, vm::cptr<char> drm_path)
 {
 	sceNp.Warning("sceNpDrmIsAvailable2(k_licensee_addr=0x%x, drm_path_addr=0x%x('%s'))", k_licensee_addr, drm_path.addr(), drm_path.get_ptr());
 
 	return npDrmIsAvailable(k_licensee_addr, drm_path);
 }
 
-int sceNpDrmVerifyUpgradeLicense(vm::ptr<const char> content_id)
+int sceNpDrmVerifyUpgradeLicense(vm::cptr<char> content_id)
 {
 	sceNp.Todo("sceNpDrmVerifyUpgradeLicense(content_id_addr=0x%x)", content_id.addr());
 
 	return CELL_OK;
 }
 
-int sceNpDrmVerifyUpgradeLicense2(vm::ptr<const char> content_id)
+int sceNpDrmVerifyUpgradeLicense2(vm::cptr<char> content_id)
 {
 	sceNp.Todo("sceNpDrmVerifyUpgradeLicense2(content_id_addr=0x%x)", content_id.addr());
 
@@ -189,7 +189,7 @@ int sceNpDrmGetTimelimit(vm::ptr<const char> path, vm::ptr<u64> time_remain)
 	return CELL_OK;
 }
 
-int sceNpDrmProcessExitSpawn(vm::ptr<const char> path, u32 argv_addr, u32 envp_addr, u32 data_addr, u32 data_size, u32 prio, u64 flags)
+int sceNpDrmProcessExitSpawn(vm::cptr<char> path, u32 argv_addr, u32 envp_addr, u32 data_addr, u32 data_size, u32 prio, u64 flags)
 {
 	sceNp.Warning("sceNpDrmProcessExitSpawn()");
 	sceNp.Warning("path: %s", path.get_ptr());
@@ -205,7 +205,7 @@ int sceNpDrmProcessExitSpawn(vm::ptr<const char> path, u32 argv_addr, u32 envp_a
 	return CELL_OK;
 }
 
-int sceNpDrmProcessExitSpawn2(vm::ptr<const char> path, u32 argv_addr, u32 envp_addr, u32 data_addr, u32 data_size, u32 prio, u64 flags)
+int sceNpDrmProcessExitSpawn2(vm::cptr<char> path, u32 argv_addr, u32 envp_addr, u32 data_addr, u32 data_size, u32 prio, u64 flags)
 {
 	sceNp.Warning("sceNpDrmProcessExitSpawn2()");
 	sceNp.Warning("path: %s", path.get_ptr());

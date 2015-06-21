@@ -34,7 +34,7 @@ s32 sceCtrlReadBufferNegative(s32 port, vm::ptr<SceCtrlData> pData, s32 nBufs)
 	throw __FUNCTION__;
 }
 
-s32 sceCtrlSetRapidFire(s32 port, s32 idx, vm::ptr<const SceCtrlRapidFireRule> pRule)
+s32 sceCtrlSetRapidFire(s32 port, s32 idx, vm::cptr<SceCtrlRapidFireRule> pRule)
 {
 	throw __FUNCTION__;
 }

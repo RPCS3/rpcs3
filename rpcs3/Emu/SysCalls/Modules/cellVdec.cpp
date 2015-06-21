@@ -550,21 +550,21 @@ void vdecOpen(u32 vdec_id) // TODO: call from the constructor
 	});
 }
 
-s32 cellVdecQueryAttr(vm::ptr<const CellVdecType> type, vm::ptr<CellVdecAttr> attr)
+s32 cellVdecQueryAttr(vm::cptr<CellVdecType> type, vm::ptr<CellVdecAttr> attr)
 {
 	cellVdec.Warning("cellVdecQueryAttr(type=*0x%x, attr=*0x%x)", type, attr);
 
 	return vdecQueryAttr(type->codecType, type->profileLevel, 0, attr);
 }
 
-s32 cellVdecQueryAttrEx(vm::ptr<const CellVdecTypeEx> type, vm::ptr<CellVdecAttr> attr)
+s32 cellVdecQueryAttrEx(vm::cptr<CellVdecTypeEx> type, vm::ptr<CellVdecAttr> attr)
 {
 	cellVdec.Warning("cellVdecQueryAttrEx(type=*0x%x, attr=*0x%x)", type, attr);
 
 	return vdecQueryAttr(type->codecType, type->profileLevel, type->codecSpecificInfo_addr, attr);
 }
 
-s32 cellVdecOpen(vm::ptr<const CellVdecType> type, vm::ptr<const CellVdecResource> res, vm::ptr<const CellVdecCb> cb, vm::ptr<u32> handle)
+s32 cellVdecOpen(vm::cptr<CellVdecType> type, vm::cptr<CellVdecResource> res, vm::cptr<CellVdecCb> cb, vm::ptr<u32> handle)
 {
 	cellVdec.Warning("cellVdecOpen(type=*0x%x, res=*0x%x, cb=*0x%x, handle=*0x%x)", type, res, cb, handle);
 
@@ -573,7 +573,7 @@ s32 cellVdecOpen(vm::ptr<const CellVdecType> type, vm::ptr<const CellVdecResourc
 	return CELL_OK;
 }
 
-s32 cellVdecOpenEx(vm::ptr<const CellVdecTypeEx> type, vm::ptr<const CellVdecResourceEx> res, vm::ptr<const CellVdecCb> cb, vm::ptr<u32> handle)
+s32 cellVdecOpenEx(vm::cptr<CellVdecTypeEx> type, vm::cptr<CellVdecResourceEx> res, vm::cptr<CellVdecCb> cb, vm::ptr<u32> handle)
 {
 	cellVdec.Warning("cellVdecOpenEx(type=*0x%x, res=*0x%x, cb=*0x%x, handle=*0x%x)", type, res, cb, handle);
 
@@ -641,7 +641,7 @@ s32 cellVdecEndSeq(u32 handle)
 	return CELL_OK;
 }
 
-s32 cellVdecDecodeAu(u32 handle, CellVdecDecodeMode mode, vm::ptr<const CellVdecAuInfo> auInfo)
+s32 cellVdecDecodeAu(u32 handle, CellVdecDecodeMode mode, vm::cptr<CellVdecAuInfo> auInfo)
 {
 	cellVdec.Log("cellVdecDecodeAu(handle=0x%x, mode=%d, auInfo=*0x%x)", handle, mode, auInfo);
 
@@ -671,7 +671,7 @@ s32 cellVdecDecodeAu(u32 handle, CellVdecDecodeMode mode, vm::ptr<const CellVdec
 	return CELL_OK;
 }
 
-s32 cellVdecGetPicture(u32 handle, vm::ptr<const CellVdecPicFormat> format, vm::ptr<u8> outBuff)
+s32 cellVdecGetPicture(u32 handle, vm::cptr<CellVdecPicFormat> format, vm::ptr<u8> outBuff)
 {
 	cellVdec.Log("cellVdecGetPicture(handle=0x%x, format=*0x%x, outBuff=*0x%x)", handle, format, outBuff);
 
@@ -778,7 +778,7 @@ s32 cellVdecGetPicture(u32 handle, vm::ptr<const CellVdecPicFormat> format, vm::
 	return CELL_OK;
 }
 
-s32 _nid_a21aa896(PPUThread& CPU, u32 handle, vm::ptr<const CellVdecPicFormat2> format2, vm::ptr<u8> outBuff, u32 arg4)
+s32 _nid_a21aa896(PPUThread& CPU, u32 handle, vm::cptr<CellVdecPicFormat2> format2, vm::ptr<u8> outBuff, u32 arg4)
 {
 	cellVdec.Warning("_nid_a21aa896(handle=0x%x, format2=*0x%x, outBuff=*0x%x, arg4=*0x%x)", handle, format2, outBuff, arg4);
 

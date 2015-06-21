@@ -4,7 +4,7 @@
 
 #include "sceFiber.h"
 
-s32 _sceFiberInitializeImpl(vm::ptr<SceFiber> fiber, vm::ptr<const char> name, vm::ptr<SceFiberEntry> entry, u32 argOnInitialize, vm::ptr<void> addrContext, u32 sizeContext, vm::ptr<const SceFiberOptParam> optParam, u32 buildVersion)
+s32 _sceFiberInitializeImpl(vm::ptr<SceFiber> fiber, vm::cptr<char> name, vm::ptr<SceFiberEntry> entry, u32 argOnInitialize, vm::ptr<void> addrContext, u32 sizeContext, vm::cptr<SceFiberOptParam> optParam, u32 buildVersion)
 {
 	throw __FUNCTION__;
 }

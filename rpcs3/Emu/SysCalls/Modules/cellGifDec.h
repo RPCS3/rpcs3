@@ -92,7 +92,7 @@ struct CellGifDecExtThreadOutParam
 struct CellGifDecSrc
 {
 	be_t<s32> srcSelect; // CellGifDecStreamSrcSel
-	vm::bptr<const char> fileName;
+	vm::bcptr<char> fileName;
 	be_t<s64> fileOffset;
 	be_t<u32> fileSize;
 	vm::bptr<void> streamPtr;

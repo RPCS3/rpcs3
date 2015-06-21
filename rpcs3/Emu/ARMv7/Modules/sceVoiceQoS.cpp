@@ -54,7 +54,7 @@ s32 sceVoiceQoSGetRemoteEndpoint(s32 connectionId, vm::ptr<s32> pRemoteId)
 	throw __FUNCTION__;
 }
 
-s32 sceVoiceQoSSetLocalEndpointAttribute(s32 localId, SceVoiceQoSAttributeId attributeId, vm::ptr<const void> pAttributeValue, s32 attributeSize)
+s32 sceVoiceQoSSetLocalEndpointAttribute(s32 localId, SceVoiceQoSAttributeId attributeId, vm::cptr<void> pAttributeValue, s32 attributeSize)
 {
 	throw __FUNCTION__;
 }
@@ -64,7 +64,7 @@ s32 sceVoiceQoSGetLocalEndpointAttribute(s32 localId, SceVoiceQoSAttributeId att
 	throw __FUNCTION__;
 }
 
-s32 sceVoiceQoSSetConnectionAttribute(s32 connectionId, SceVoiceQoSAttributeId attributeId, vm::ptr<const void> pAttributeValue, s32 attributeSize)
+s32 sceVoiceQoSSetConnectionAttribute(s32 connectionId, SceVoiceQoSAttributeId attributeId, vm::cptr<void> pAttributeValue, s32 attributeSize)
 {
 	throw __FUNCTION__;
 }
@@ -79,7 +79,7 @@ s32 sceVoiceQoSGetStatus(s32 connectionId, SceVoiceQoSStatusId statusId, vm::ptr
 	throw __FUNCTION__;
 }
 
-s32 sceVoiceQoSWritePacket(s32 connectionId, vm::ptr<const void> pData, vm::ptr<u32> pSize)
+s32 sceVoiceQoSWritePacket(s32 connectionId, vm::cptr<void> pData, vm::ptr<u32> pSize)
 {
 	throw __FUNCTION__;
 }

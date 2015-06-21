@@ -46,7 +46,7 @@ struct SceNgsSystemInitParams
 
 struct SceNgsRackDescription
 {
-	vm::lptr<const SceNgsVoiceDefinition> pVoiceDefn;
+	vm::lcptr<SceNgsVoiceDefinition> pVoiceDefn;
 	le_t<s32> nVoices;
 	le_t<s32> nChannelsPerVoice;
 	le_t<s32> nMaxPatchesPerInput;

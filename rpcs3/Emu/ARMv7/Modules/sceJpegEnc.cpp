@@ -22,7 +22,7 @@ s32 sceJpegEncoderInit(
 
 s32 sceJpegEncoderEncode(
 	SceJpegEncoderContext context,
-	vm::ptr<const void> pYCbCr)
+	vm::cptr<void> pYCbCr)
 {
 	throw __FUNCTION__;
 }
@@ -65,7 +65,7 @@ s32 sceJpegEncoderSetOutputAddr(
 s32 sceJpegEncoderCsc(
 	SceJpegEncoderContext context,
 	vm::ptr<void> pYCbCr,
-	vm::ptr<const void> pRGBA,
+	vm::cptr<void> pRGBA,
 	s32 iFrameWidth,
 	s32 inputPixelFormat)
 {

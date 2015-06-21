@@ -629,7 +629,7 @@ s32 sys_lwcond_wait(PPUThread& CPU, vm::ptr<sys_lwcond_t> lwcond, u64 timeout)
 	return res;
 }
 
-std::string ps3_fmt(PPUThread& context, vm::ptr<const char> fmt, u32 g_count, u32 f_count, u32 v_count)
+std::string ps3_fmt(PPUThread& context, vm::cptr<char> fmt, u32 g_count, u32 f_count, u32 v_count)
 {
 	std::string result;
 
@@ -743,7 +743,7 @@ std::string ps3_fmt(PPUThread& context, vm::ptr<const char> fmt, u32 g_count, u3
 			case 's':
 			{
 				// string
-				auto string = vm::ptr<const char>::make(context.get_next_gpr_arg(g_count, f_count, v_count));
+				auto string = vm::cptr<char>::make(context.get_next_gpr_arg(g_count, f_count, v_count));
 
 				if (plus_sign || minus_sign || space_sign || number_sign || zero_padding || width || prec) break;
 
@@ -762,7 +762,7 @@ std::string ps3_fmt(PPUThread& context, vm::ptr<const char> fmt, u32 g_count, u3
 	return result;
 }
 
-u32 _sys_heap_create_heap(vm::ptr<const char> name, u32 arg2, u32 arg3, u32 arg4)
+u32 _sys_heap_create_heap(vm::cptr<char> name, u32 arg2, u32 arg3, u32 arg4)
 {
 	sysPrxForUser.Warning("_sys_heap_create_heap(name=*0x%x, arg2=0x%x, arg3=0x%x, arg4=0x%x)", name, arg2, arg3, arg4);
 
@@ -860,7 +860,7 @@ s32 sys_spu_image_close(vm::ptr<sys_spu_image> img)
 	return CELL_OK;
 }
 
-s32 sys_raw_spu_load(s32 id, vm::ptr<const char> path, vm::ptr<u32> entry)
+s32 sys_raw_spu_load(s32 id, vm::cptr<char> path, vm::ptr<u32> entry)
 {
 	sysPrxForUser.Warning("sys_raw_spu_load(id=%d, path=*0x%x, entry=*0x%x)", id, path, entry);
 	sysPrxForUser.Warning("*** path = '%s'", path.get_ptr());
@@ -938,7 +938,7 @@ vm::ptr<void> _sys_memset(vm::ptr<void> dst, s32 value, u32 size)
 	return dst;
 }
 
-vm::ptr<void> _sys_memcpy(vm::ptr<void> dst, vm::ptr<const void> src, u32 size)
+vm::ptr<void> _sys_memcpy(vm::ptr<void> dst, vm::cptr<void> src, u32 size)
 {
 	sysPrxForUser.Log("_sys_memcpy(dst=*0x%x, src=*0x%x, size=0x%x)", dst, src, size);
 
@@ -947,35 +947,35 @@ vm::ptr<void> _sys_memcpy(vm::ptr<void> dst, vm::ptr<const void> src, u32 size)
 	return dst;
 }
 
-s32 _sys_memcmp(vm::ptr<const void> buf1, vm::ptr<const void> buf2, u32 size)
+s32 _sys_memcmp(vm::cptr<void> buf1, vm::cptr<void> buf2, u32 size)
 {
 	sysPrxForUser.Log("_sys_memcmp(buf1=*0x%x, buf2=*0x%x, size=%d)", buf1, buf2, size);
 
 	return memcmp(buf1.get_ptr(), buf2.get_ptr(), size);
 }
 
-s64 _sys_strlen(vm::ptr<const char> str)
+s64 _sys_strlen(vm::cptr<char> str)
 {
 	sysPrxForUser.Log("_sys_strlen(str=*0x%x)", str);
 
 	return strlen(str.get_ptr());
 }
 
-s32 _sys_strcmp(vm::ptr<const char> str1, vm::ptr<const char> str2)
+s32 _sys_strcmp(vm::cptr<char> str1, vm::cptr<char> str2)
 {
 	sysPrxForUser.Log("_sys_strcmp(str1=*0x%x, str2=*0x%x)", str1, str2);
 
 	return strcmp(str1.get_ptr(), str2.get_ptr());
 }
 
-s32 _sys_strncmp(vm::ptr<const char> str1, vm::ptr<const char> str2, s32 max)
+s32 _sys_strncmp(vm::cptr<char> str1, vm::cptr<char> str2, s32 max)
 {
 	sysPrxForUser.Log("_sys_strncmp(str1=*0x%x, str2=*0x%x, max=%d)", str1, str2, max);
 
 	return strncmp(str1.get_ptr(), str2.get_ptr(), max);
 }
 
-vm::ptr<char> _sys_strcat(vm::ptr<char> dest, vm::ptr<const char> source)
+vm::ptr<char> _sys_strcat(vm::ptr<char> dest, vm::cptr<char> source)
 {
 	sysPrxForUser.Log("_sys_strcat(dest=*0x%x, source=*0x%x)", dest, source);
 
@@ -987,14 +987,14 @@ vm::ptr<char> _sys_strcat(vm::ptr<char> dest, vm::ptr<const char> source)
 	return dest;
 }
 
-vm::ptr<const char> _sys_strchr(vm::ptr<const char> str, s32 ch)
+vm::cptr<char> _sys_strchr(vm::cptr<char> str, s32 ch)
 {
 	sysPrxForUser.Log("_sys_strchr(str=*0x%x, ch=0x%x)", str, ch);
 
-	return vm::ptr<const char>::make(vm::get_addr(strchr(str.get_ptr(), ch)));
+	return vm::cptr<char>::make(vm::get_addr(strchr(str.get_ptr(), ch)));
 }
 
-vm::ptr<char> _sys_strncat(vm::ptr<char> dest, vm::ptr<const char> source, u32 len)
+vm::ptr<char> _sys_strncat(vm::ptr<char> dest, vm::cptr<char> source, u32 len)
 {
 	sysPrxForUser.Log("_sys_strncat(dest=*0x%x, source=*0x%x, len=%d)", dest, source, len);
 
@@ -1006,7 +1006,7 @@ vm::ptr<char> _sys_strncat(vm::ptr<char> dest, vm::ptr<const char> source, u32 l
 	return dest;
 }
 
-vm::ptr<char> _sys_strcpy(vm::ptr<char> dest, vm::ptr<const char> source)
+vm::ptr<char> _sys_strcpy(vm::ptr<char> dest, vm::cptr<char> source)
 {
 	sysPrxForUser.Log("_sys_strcpy(dest=*0x%x, source=*0x%x)", dest, source);
 
@@ -1018,7 +1018,7 @@ vm::ptr<char> _sys_strcpy(vm::ptr<char> dest, vm::ptr<const char> source)
 	return dest;
 }
 
-vm::ptr<char> _sys_strncpy(vm::ptr<char> dest, vm::ptr<const char> source, u32 len)
+vm::ptr<char> _sys_strncpy(vm::ptr<char> dest, vm::cptr<char> source, u32 len)
 {
 	sysPrxForUser.Log("_sys_strncpy(dest=*0x%x, source=*0x%x, len=%d)", dest, source, len);
 
@@ -1134,7 +1134,7 @@ s32 _sys_free(u32 addr)
 	return CELL_OK;
 }
 
-s32 _sys_snprintf(PPUThread& CPU, vm::ptr<char> dst, u32 count, vm::ptr<const char> fmt) // va_args...
+s32 _sys_snprintf(PPUThread& CPU, vm::ptr<char> dst, u32 count, vm::cptr<char> fmt) // va_args...
 {
 	sysPrxForUser.Warning("_sys_snprintf(dst=*0x%x, count=%d, fmt=*0x%x, ...)", dst, count, fmt);
 
@@ -1156,7 +1156,7 @@ s32 _sys_snprintf(PPUThread& CPU, vm::ptr<char> dst, u32 count, vm::ptr<const ch
 	}
 }
 
-s32 _sys_printf(vm::ptr<const char> fmt) // va_args...
+s32 _sys_printf(vm::cptr<char> fmt) // va_args...
 {
 	sysPrxForUser.Todo("_sys_printf(fmt=*0x%x, ...)", fmt);
 
@@ -1222,7 +1222,7 @@ void sys_spinlock_unlock(vm::ptr<atomic_be_t<u32>> lock)
 	g_sys_spinlock_wm.notify(lock.addr());
 }
 
-s32 sys_ppu_thread_create(PPUThread& CPU, vm::ptr<u64> thread_id, u32 entry, u64 arg, s32 prio, u32 stacksize, u64 flags, vm::ptr<const char> threadname)
+s32 sys_ppu_thread_create(PPUThread& CPU, vm::ptr<u64> thread_id, u32 entry, u64 arg, s32 prio, u32 stacksize, u64 flags, vm::cptr<char> threadname)
 {
 	sysPrxForUser.Warning("sys_ppu_thread_create(thread_id=*0x%x, entry=0x%x, arg=0x%llx, prio=%d, stacksize=0x%x, flags=0x%llx, threadname=*0x%x)", thread_id, entry, arg, prio, stacksize, flags, threadname);
 

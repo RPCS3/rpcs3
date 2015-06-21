@@ -14,12 +14,12 @@ s32 sceImeUpdate()
 	throw __FUNCTION__;
 }
 
-s32 sceImeSetCaret(vm::ptr<const SceImeCaret> caret)
+s32 sceImeSetCaret(vm::cptr<SceImeCaret> caret)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceImeSetPreeditGeometry(vm::ptr<const SceImePreeditGeometry> preedit)
+s32 sceImeSetPreeditGeometry(vm::cptr<SceImePreeditGeometry> preedit)
 {
 	throw __FUNCTION__;
 }

@@ -18,11 +18,11 @@ u32 sceUltWaitingQueueResourcePoolGetWorkAreaSize(u32 numThreads, u32 numSyncObj
 
 s32 _sceUltWaitingQueueResourcePoolCreate(
 	vm::ptr<SceUltWaitingQueueResourcePool> pool,
-	vm::ptr<const char> name,
+	vm::cptr<char> name,
 	u32 numThreads,
 	u32 numSyncObjects,
 	vm::ptr<void> workArea,
-	vm::ptr<const SceUltWaitingQueueResourcePoolOptParam> optParam,
+	vm::cptr<SceUltWaitingQueueResourcePoolOptParam> optParam,
 	u32 buildVersion)
 {
 	throw __FUNCTION__;
@@ -45,13 +45,13 @@ u32 sceUltQueueDataResourcePoolGetWorkAreaSize(u32 numData, u32 dataSize, u32 nu
 
 s32 _sceUltQueueDataResourcePoolCreate(
 	vm::ptr<SceUltQueueDataResourcePool> pool,
-	vm::ptr<const char> name,
+	vm::cptr<char> name,
 	u32 numData,
 	u32 dataSize,
 	u32 numQueueObject,
 	vm::ptr<SceUltWaitingQueueResourcePool> waitingQueueResourcePool,
 	vm::ptr<void> workArea,
-	vm::ptr<const SceUltQueueDataResourcePoolOptParam> optParam,
+	vm::cptr<SceUltQueueDataResourcePoolOptParam> optParam,
 	u32 buildVersion)
 {
 	throw __FUNCTION__;
@@ -74,9 +74,9 @@ s32 _sceUltMutexOptParamInitialize(vm::ptr<SceUltMutexOptParam> optParam, u32 bu
 
 s32 _sceUltMutexCreate(
 	vm::ptr<SceUltMutex> mutex,
-	vm::ptr<const char> name,
+	vm::cptr<char> name,
 	vm::ptr<SceUltWaitingQueueResourcePool> waitingQueueResourcePool,
-	vm::ptr<const SceUltMutexOptParam> optParam,
+	vm::cptr<SceUltMutexOptParam> optParam,
 	u32 buildVersion)
 {
 	throw __FUNCTION__;
@@ -84,11 +84,11 @@ s32 _sceUltMutexCreate(
 
 s32 _sceUltMutexCreateStandalone(
 	vm::ptr<SceUltMutex> mutex,
-	vm::ptr<const char> name,
+	vm::cptr<char> name,
 	u32 numConditionVariable,
 	u32 maxNumThreads,
 	vm::ptr<void> workArea,
-	vm::ptr<const SceUltMutexOptParam> optParam,
+	vm::cptr<SceUltMutexOptParam> optParam,
 	u32 buildVersion)
 {
 	throw __FUNCTION__;
@@ -121,9 +121,9 @@ s32 _sceUltConditionVariableOptParamInitialize(vm::ptr<SceUltConditionVariableOp
 
 s32 _sceUltConditionVariableCreate(
 	vm::ptr<SceUltConditionVariable> conditionVariable,
-	vm::ptr<const char> name,
+	vm::cptr<char> name,
 	vm::ptr<SceUltMutex> mutex,
-	vm::ptr<const SceUltConditionVariableOptParam> optParam,
+	vm::cptr<SceUltConditionVariableOptParam> optParam,
 	u32 buildVersion)
 {
 	throw __FUNCTION__;
@@ -163,11 +163,11 @@ u32 sceUltQueueGetStandaloneWorkAreaSize(u32 queueDepth,
 
 s32 _sceUltQueueCreate(
 	vm::ptr<SceUltQueue> queue,
-	vm::ptr<const char> _name,
+	vm::cptr<char> _name,
 	u32 dataSize,
 	vm::ptr<SceUltWaitingQueueResourcePool> resourcePool,
 	vm::ptr<SceUltQueueDataResourcePool> queueResourcePool,
-	vm::ptr<const SceUltQueueOptParam> optParam,
+	vm::cptr<SceUltQueueOptParam> optParam,
 	u32 buildVersion)
 {
 	throw __FUNCTION__;
@@ -175,23 +175,23 @@ s32 _sceUltQueueCreate(
 
 s32 _sceUltQueueCreateStandalone(
 	vm::ptr<SceUltQueue> queue,
-	vm::ptr<const char> name,
+	vm::cptr<char> name,
 	u32 queueDepth,
 	u32 dataSize,
 	u32 waitingQueueLength,
 	vm::ptr<void> workArea,
-	vm::ptr<const SceUltQueueOptParam> optParam,
+	vm::cptr<SceUltQueueOptParam> optParam,
 	u32 buildVersion)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceUltQueuePush(vm::ptr<SceUltQueue> queue, vm::ptr<const void> data)
+s32 sceUltQueuePush(vm::ptr<SceUltQueue> queue, vm::cptr<void> data)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceUltQueueTryPush(vm::ptr<SceUltQueue> queue, vm::ptr<const void> data)
+s32 sceUltQueueTryPush(vm::ptr<SceUltQueue> queue, vm::cptr<void> data)
 {
 	throw __FUNCTION__;
 }
@@ -218,9 +218,9 @@ s32 _sceUltReaderWriterLockOptParamInitialize(vm::ptr<SceUltReaderWriterLockOptP
 
 s32 _sceUltReaderWriterLockCreate(
 	vm::ptr<SceUltReaderWriterLock> rwlock,
-	vm::ptr<const char> name,
+	vm::cptr<char> name,
 	vm::ptr<SceUltWaitingQueueResourcePool> waitingQueueResourcePool,
-	vm::ptr<const SceUltReaderWriterLockOptParam> optParam,
+	vm::cptr<SceUltReaderWriterLockOptParam> optParam,
 	u32 buildVersion)
 {
 	throw __FUNCTION__;
@@ -228,10 +228,10 @@ s32 _sceUltReaderWriterLockCreate(
 
 s32 _sceUltReaderWriterLockCreateStandalone(
 	vm::ptr<SceUltReaderWriterLock> rwlock,
-	vm::ptr<const char> name,
+	vm::cptr<char> name,
 	u32 waitingQueueDepth,
 	vm::ptr<void> workArea,
-	vm::ptr<const SceUltReaderWriterLockOptParam> optParam,
+	vm::cptr<SceUltReaderWriterLockOptParam> optParam,
 	u32 buildVersion)
 {
 	throw __FUNCTION__;
@@ -284,10 +284,10 @@ s32 _sceUltSemaphoreOptParamInitialize(vm::ptr<SceUltSemaphoreOptParam> optParam
 
 s32 _sceUltSemaphoreCreate(
 	vm::ptr<SceUltSemaphore> semaphore,
-	vm::ptr<const char> name,
+	vm::cptr<char> name,
 	s32 numInitialResource,
 	vm::ptr<SceUltWaitingQueueResourcePool> waitingQueueResourcePool,
-	vm::ptr<const SceUltSemaphoreOptParam> optParam,
+	vm::cptr<SceUltSemaphoreOptParam> optParam,
 	u32 buildVersion)
 {
 	throw __FUNCTION__;
@@ -325,11 +325,11 @@ u32 sceUltUlthreadRuntimeGetWorkAreaSize(u32 numMaxUlthread, u32 numWorkerThread
 
 s32 _sceUltUlthreadRuntimeCreate(
 	vm::ptr<SceUltUlthreadRuntime> runtime,
-	vm::ptr<const char> name,
+	vm::cptr<char> name,
 	u32 numMaxUlthread,
 	u32 numWorkerThread,
 	vm::ptr<void> workArea,
-	vm::ptr<const SceUltUlthreadRuntimeOptParam> optParam,
+	vm::cptr<SceUltUlthreadRuntimeOptParam> optParam,
 	u32 buildVersion)
 {
 	throw __FUNCTION__;
@@ -347,13 +347,13 @@ s32 _sceUltUlthreadOptParamInitialize(vm::ptr<SceUltUlthreadOptParam> optParam, 
 
 s32 _sceUltUlthreadCreate(
 	vm::ptr<SceUltUlthread> ulthread,
-	vm::ptr<const char> name,
+	vm::cptr<char> name,
 	vm::ptr<SceUltUlthreadEntry> entry,
 	u32 arg,
 	vm::ptr<void> context,
 	u32 sizeContext,
 	vm::ptr<SceUltUlthreadRuntime> runtime,
-	vm::ptr<const SceUltUlthreadOptParam> optParam,
+	vm::cptr<SceUltUlthreadOptParam> optParam,
 	u32 buildVersion)
 {
 	throw __FUNCTION__;

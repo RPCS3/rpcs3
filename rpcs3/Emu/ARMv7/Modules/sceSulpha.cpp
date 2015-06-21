@@ -19,12 +19,12 @@ s32 sceSulphaGetDefaultConfig(vm::ptr<SceSulphaConfig> config)
 	throw __FUNCTION__;
 }
 
-s32 sceSulphaGetNeededMemory(vm::ptr<const SceSulphaConfig> config, vm::ptr<u32> sizeInBytes)
+s32 sceSulphaGetNeededMemory(vm::cptr<SceSulphaConfig> config, vm::ptr<u32> sizeInBytes)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceSulphaInit(vm::ptr<const SceSulphaConfig> config, vm::ptr<void> buffer, u32 sizeInBytes)
+s32 sceSulphaInit(vm::cptr<SceSulphaConfig> config, vm::ptr<void> buffer, u32 sizeInBytes)
 {
 	throw __FUNCTION__;
 }
@@ -39,7 +39,7 @@ s32 sceSulphaUpdate()
 	throw __FUNCTION__;
 }
 
-s32 sceSulphaFileConnect(vm::ptr<const char> filename)
+s32 sceSulphaFileConnect(vm::cptr<char> filename)
 {
 	throw __FUNCTION__;
 }
@@ -49,22 +49,22 @@ s32 sceSulphaFileDisconnect()
 	throw __FUNCTION__;
 }
 
-s32 sceSulphaSetBookmark(vm::ptr<const char> name, s32 id)
+s32 sceSulphaSetBookmark(vm::cptr<char> name, s32 id)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceSulphaAgentsGetNeededMemory(vm::ptr<const SceSulphaAgentsRegister> config, vm::ptr<u32> sizeInBytes)
+s32 sceSulphaAgentsGetNeededMemory(vm::cptr<SceSulphaAgentsRegister> config, vm::ptr<u32> sizeInBytes)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceSulphaAgentsRegister(vm::ptr<const SceSulphaAgentsRegister> config, vm::ptr<void> buffer, u32 sizeInBytes, vm::ptr<SceSulphaHandle> handles)
+s32 sceSulphaAgentsRegister(vm::cptr<SceSulphaAgentsRegister> config, vm::ptr<void> buffer, u32 sizeInBytes, vm::ptr<SceSulphaHandle> handles)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceSulphaAgentsUnregister(vm::ptr<const SceSulphaHandle> handles, u32 agentCount)
+s32 sceSulphaAgentsUnregister(vm::cptr<SceSulphaHandle> handles, u32 agentCount)
 {
 	throw __FUNCTION__;
 }

@@ -4,7 +4,7 @@
 
 #include "sceDeci4p.h"
 
-s32 sceKernelDeci4pOpen(vm::ptr<const char> protoname, u32 protonum, u32 bufsize)
+s32 sceKernelDeci4pOpen(vm::cptr<char> protoname, u32 protonum, u32 bufsize)
 {
 	throw __FUNCTION__;
 }
@@ -19,7 +19,7 @@ s32 sceKernelDeci4pRead(s32 socketid, vm::ptr<void> buffer, u32 size, u32 reserv
 	throw __FUNCTION__;
 }
 
-s32 sceKernelDeci4pWrite(s32 socketid, vm::ptr<const void> buffer, u32 size, u32 reserved)
+s32 sceKernelDeci4pWrite(s32 socketid, vm::cptr<void> buffer, u32 size, u32 reserved)
 {
 	throw __FUNCTION__;
 }

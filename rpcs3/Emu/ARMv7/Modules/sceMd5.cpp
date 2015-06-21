@@ -4,7 +4,7 @@
 
 #include "sceMd5.h"
 
-s32 sceMd5Digest(vm::ptr<const void> plain, u32 len, vm::ptr<u8> digest)
+s32 sceMd5Digest(vm::cptr<void> plain, u32 len, vm::ptr<u8> digest)
 {
 	throw __FUNCTION__;
 }
@@ -14,7 +14,7 @@ s32 sceMd5BlockInit(vm::ptr<SceMd5Context> pContext)
 	throw __FUNCTION__;
 }
 
-s32 sceMd5BlockUpdate(vm::ptr<SceMd5Context> pContext, vm::ptr<const void> plain, u32 len)
+s32 sceMd5BlockUpdate(vm::ptr<SceMd5Context> pContext, vm::cptr<void> plain, u32 len)
 {
 	throw __FUNCTION__;
 }

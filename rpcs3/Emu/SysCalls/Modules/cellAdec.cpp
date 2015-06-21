@@ -605,7 +605,7 @@ s32 cellAdecStartSeq(u32 handle, u32 param)
 	case CELL_ADEC_TYPE_ATRACX_6CH:
 	case CELL_ADEC_TYPE_ATRACX_8CH:
 	{
-		const auto atx = vm::ptr<const CellAdecParamAtracX>::make(param);
+		const auto atx = vm::cptr<CellAdecParamAtracX>::make(param);
 
 		task.at3p.sample_rate = atx->sampling_freq;
 		task.at3p.channel_config = atx->ch_config_idx;
@@ -621,7 +621,7 @@ s32 cellAdecStartSeq(u32 handle, u32 param)
 	}
 	case CELL_ADEC_TYPE_MP3:
 	{
-		const auto mp3 = vm::ptr<const CellAdecParamMP3>::make(param);
+		const auto mp3 = vm::cptr<CellAdecParamMP3>::make(param);
 
 		cellAdec.Todo("*** CellAdecParamMP3: bw_pcm=%d", mp3->bw_pcm);
 		break;

@@ -478,7 +478,7 @@ void hook_ppu_funcs(vm::ptr<u32> base, u32 size)
 
 bool patch_ppu_import(u32 addr, u32 index)
 {
-	const auto data = vm::ptr<const u32>::make(addr);
+	const auto data = vm::cptr<u32>::make(addr);
 
 	using namespace PPU_instr;
 
@@ -512,7 +512,7 @@ bool patch_ppu_import(u32 addr, u32 index)
 		(data[1] & 0xffff0000) == ORIS(r0, r0, 0) &&
 		(data[2] & 0xfc000003) == B(0, 0, 0))
 	{
-		const auto sub = vm::ptr<const u32>::make(addr + 8 + ((s32)data[2] << 6 >> 8 << 2));
+		const auto sub = vm::cptr<u32>::make(addr + 8 + ((s32)data[2] << 6 >> 8 << 2));
 
 		if (vm::check_addr(sub.addr(), 60) &&
 			sub[0x0] == STDU(r1, r1, -0x80) &&

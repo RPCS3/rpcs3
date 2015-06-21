@@ -4,12 +4,12 @@
 
 #include "sceScreenShot.h"
 
-s32 sceScreenShotSetParam(vm::ptr<const SceScreenShotParam> param)
+s32 sceScreenShotSetParam(vm::cptr<SceScreenShotParam> param)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceScreenShotSetOverlayImage(vm::ptr<const char> filePath, s32 offsetX, s32 offsetY)
+s32 sceScreenShotSetOverlayImage(vm::cptr<char> filePath, s32 offsetX, s32 offsetY)
 {
 	throw __FUNCTION__;
 }

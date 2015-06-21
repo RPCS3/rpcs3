@@ -29,12 +29,12 @@ s32 sceRtcGetCurrentNetworkTick(vm::ptr<u64> pTick)
 	throw __FUNCTION__;
 }
 
-s32 sceRtcConvertUtcToLocalTime(vm::ptr<const u64> pUtc, vm::ptr<u64> pLocalTime)
+s32 sceRtcConvertUtcToLocalTime(vm::cptr<u64> pUtc, vm::ptr<u64> pLocalTime)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceRtcConvertLocalTimeToUtc(vm::ptr<const u64> pLocalTime, vm::ptr<u64> pUtc)
+s32 sceRtcConvertLocalTimeToUtc(vm::cptr<u64> pLocalTime, vm::ptr<u64> pUtc)
 {
 	throw __FUNCTION__;
 }
@@ -54,7 +54,7 @@ s32 sceRtcGetDayOfWeek(s32 year, s32 month, s32 day)
 	throw __FUNCTION__;
 }
 
-s32 sceRtcCheckValid(vm::ptr<const SceDateTime> pTime)
+s32 sceRtcCheckValid(vm::cptr<SceDateTime> pTime)
 {
 	throw __FUNCTION__;
 }
@@ -69,12 +69,12 @@ s32 sceRtcSetTime64_t(vm::ptr<SceDateTime> pTime, u64 ullTime)
 	throw __FUNCTION__;
 }
 
-s32 sceRtcGetTime_t(vm::ptr<const SceDateTime> pTime, vm::ptr<u32> piTime)
+s32 sceRtcGetTime_t(vm::cptr<SceDateTime> pTime, vm::ptr<u32> piTime)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceRtcGetTime64_t(vm::ptr<const SceDateTime> pTime, vm::ptr<u64> pullTime)
+s32 sceRtcGetTime64_t(vm::cptr<SceDateTime> pTime, vm::ptr<u64> pullTime)
 {
 	throw __FUNCTION__;
 }
@@ -84,7 +84,7 @@ s32 sceRtcSetDosTime(vm::ptr<SceDateTime> pTime, u32 uiDosTime)
 	throw __FUNCTION__;
 }
 
-s32 sceRtcGetDosTime(vm::ptr<const SceDateTime> pTime, vm::ptr<u32> puiDosTime)
+s32 sceRtcGetDosTime(vm::cptr<SceDateTime> pTime, vm::ptr<u32> puiDosTime)
 {
 	throw __FUNCTION__;
 }
@@ -94,97 +94,97 @@ s32 sceRtcSetWin32FileTime(vm::ptr<SceDateTime> pTime, u64 ulWin32Time)
 	throw __FUNCTION__;
 }
 
-s32 sceRtcGetWin32FileTime(vm::ptr<const SceDateTime> pTime, vm::ptr<u64> ulWin32Time)
+s32 sceRtcGetWin32FileTime(vm::cptr<SceDateTime> pTime, vm::ptr<u64> ulWin32Time)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceRtcSetTick(vm::ptr<SceDateTime> pTime, vm::ptr<const u64> pTick)
+s32 sceRtcSetTick(vm::ptr<SceDateTime> pTime, vm::cptr<u64> pTick)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceRtcGetTick(vm::ptr<const SceDateTime> pTime, vm::ptr<u64> pTick)
+s32 sceRtcGetTick(vm::cptr<SceDateTime> pTime, vm::ptr<u64> pTick)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceRtcCompareTick(vm::ptr<const u64> pTick1, vm::ptr<const u64> pTick2)
+s32 sceRtcCompareTick(vm::cptr<u64> pTick1, vm::cptr<u64> pTick2)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceRtcTickAddTicks(vm::ptr<u64> pTick0, vm::ptr<const u64> pTick1, u64 lAdd)
+s32 sceRtcTickAddTicks(vm::ptr<u64> pTick0, vm::cptr<u64> pTick1, u64 lAdd)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceRtcTickAddMicroseconds(vm::ptr<u64> pTick0, vm::ptr<const u64> pTick1, u64 lAdd)
+s32 sceRtcTickAddMicroseconds(vm::ptr<u64> pTick0, vm::cptr<u64> pTick1, u64 lAdd)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceRtcTickAddSeconds(vm::ptr<u64> pTick0, vm::ptr<const u64> pTick1, u64 lAdd)
+s32 sceRtcTickAddSeconds(vm::ptr<u64> pTick0, vm::cptr<u64> pTick1, u64 lAdd)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceRtcTickAddMinutes(vm::ptr<u64> pTick0, vm::ptr<const u64> pTick1, u64 lAdd)
+s32 sceRtcTickAddMinutes(vm::ptr<u64> pTick0, vm::cptr<u64> pTick1, u64 lAdd)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceRtcTickAddHours(vm::ptr<u64> pTick0, vm::ptr<const u64> pTick1, s32 lAdd)
+s32 sceRtcTickAddHours(vm::ptr<u64> pTick0, vm::cptr<u64> pTick1, s32 lAdd)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceRtcTickAddDays(vm::ptr<u64> pTick0, vm::ptr<const u64> pTick1, s32 lAdd)
+s32 sceRtcTickAddDays(vm::ptr<u64> pTick0, vm::cptr<u64> pTick1, s32 lAdd)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceRtcTickAddWeeks(vm::ptr<u64> pTick0, vm::ptr<const u64> pTick1, s32 lAdd)
+s32 sceRtcTickAddWeeks(vm::ptr<u64> pTick0, vm::cptr<u64> pTick1, s32 lAdd)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceRtcTickAddMonths(vm::ptr<u64> pTick0, vm::ptr<const u64> pTick1, s32 lAdd)
+s32 sceRtcTickAddMonths(vm::ptr<u64> pTick0, vm::cptr<u64> pTick1, s32 lAdd)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceRtcTickAddYears(vm::ptr<u64> pTick0, vm::ptr<const u64> pTick1, s32 lAdd)
+s32 sceRtcTickAddYears(vm::ptr<u64> pTick0, vm::cptr<u64> pTick1, s32 lAdd)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceRtcFormatRFC2822(vm::ptr<char> pszDateTime, vm::ptr<const u64> pUtc, s32 iTimeZoneMinutes)
+s32 sceRtcFormatRFC2822(vm::ptr<char> pszDateTime, vm::cptr<u64> pUtc, s32 iTimeZoneMinutes)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceRtcFormatRFC2822LocalTime(vm::ptr<char> pszDateTime, vm::ptr<const u64> pUtc)
+s32 sceRtcFormatRFC2822LocalTime(vm::ptr<char> pszDateTime, vm::cptr<u64> pUtc)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceRtcFormatRFC3339(vm::ptr<char> pszDateTime, vm::ptr<const u64> pUtc, s32 iTimeZoneMinutes)
+s32 sceRtcFormatRFC3339(vm::ptr<char> pszDateTime, vm::cptr<u64> pUtc, s32 iTimeZoneMinutes)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceRtcFormatRFC3339LocalTime(vm::ptr<char> pszDateTime, vm::ptr<const u64> pUtc)
+s32 sceRtcFormatRFC3339LocalTime(vm::ptr<char> pszDateTime, vm::cptr<u64> pUtc)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceRtcParseDateTime(vm::ptr<u64> pUtc, vm::ptr<const char> pszDateTime)
+s32 sceRtcParseDateTime(vm::ptr<u64> pUtc, vm::cptr<char> pszDateTime)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceRtcParseRFC3339(vm::ptr<u64> pUtc, vm::ptr<const char> pszDateTime)
+s32 sceRtcParseRFC3339(vm::ptr<u64> pUtc, vm::cptr<char> pszDateTime)
 {
 	throw __FUNCTION__;
 }

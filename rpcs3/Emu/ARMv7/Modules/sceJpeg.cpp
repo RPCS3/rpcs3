@@ -15,7 +15,7 @@ s32 sceJpegFinishMJpeg()
 }
 
 s32 sceJpegDecodeMJpeg(
-	vm::ptr<const u8> pJpeg,
+	vm::cptr<u8> pJpeg,
 	u32 isize,
 	vm::ptr<void> pRGBA,
 	u32 osize,
@@ -29,7 +29,7 @@ s32 sceJpegDecodeMJpeg(
 }
 
 s32 sceJpegDecodeMJpegYCbCr(
-	vm::ptr<const u8> pJpeg,
+	vm::cptr<u8> pJpeg,
 	u32 isize,
 	vm::ptr<u8> pYCbCr,
 	u32 osize,
@@ -42,7 +42,7 @@ s32 sceJpegDecodeMJpegYCbCr(
 
 s32 sceJpegMJpegCsc(
 	vm::ptr<void> pRGBA,
-	vm::ptr<const u8> pYCbCr,
+	vm::cptr<u8> pYCbCr,
 	s32 xysize,
 	s32 iFrameWidth,
 	s32 colorOption,
@@ -52,7 +52,7 @@ s32 sceJpegMJpegCsc(
 }
 
 s32 sceJpegGetOutputInfo(
-	vm::ptr<const u8> pJpeg,
+	vm::cptr<u8> pJpeg,
 	u32 isize,
 	s32 outputFormat,
 	s32 decodeMode,

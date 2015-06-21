@@ -14,7 +14,7 @@ s32 sceNetClearDnsCache(s32 flags)
 	throw __FUNCTION__;
 }
 
-s32 sceNetDumpCreate(vm::ptr<const char> name, s32 len, s32 flags)
+s32 sceNetDumpCreate(vm::cptr<char> name, s32 len, s32 flags)
 {
 	throw __FUNCTION__;
 }
@@ -34,7 +34,7 @@ s32 sceNetDumpAbort(s32 id, s32 flags)
 	throw __FUNCTION__;
 }
 
-s32 sceNetEpollCreate(vm::ptr<const char> name, s32 flags)
+s32 sceNetEpollCreate(vm::cptr<char> name, s32 flags)
 {
 	throw __FUNCTION__;
 }
@@ -69,12 +69,12 @@ vm::ptr<s32> sceNetErrnoLoc()
 	throw __FUNCTION__;
 }
 
-s32 sceNetEtherStrton(vm::ptr<const char> str, vm::ptr<SceNetEtherAddr> n)
+s32 sceNetEtherStrton(vm::cptr<char> str, vm::ptr<SceNetEtherAddr> n)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceNetEtherNtostr(vm::ptr<const SceNetEtherAddr> n, vm::ptr<char> str, u32 len)
+s32 sceNetEtherNtostr(vm::cptr<SceNetEtherAddr> n, vm::ptr<char> str, u32 len)
 {
 	throw __FUNCTION__;
 }
@@ -84,12 +84,12 @@ s32 sceNetGetMacAddress(vm::ptr<SceNetEtherAddr> addr, s32 flags)
 	throw __FUNCTION__;
 }
 
-vm::ptr<const char> sceNetInetNtop(s32 af, vm::ptr<const void> src, vm::ptr<char> dst, SceNetSocklen_t size)
+vm::cptr<char> sceNetInetNtop(s32 af, vm::cptr<void> src, vm::ptr<char> dst, SceNetSocklen_t size)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceNetInetPton(s32 af, vm::ptr<const char> src, vm::ptr<void> dst)
+s32 sceNetInetPton(s32 af, vm::cptr<char> src, vm::ptr<void> dst)
 {
 	throw __FUNCTION__;
 }
@@ -159,17 +159,17 @@ s32 sceNetEmulationGet(vm::ptr<SceNetEmulationParam> param, s32 flags)
 	throw __FUNCTION__;
 }
 
-s32 sceNetResolverCreate(vm::ptr<const char> name, vm::ptr<SceNetResolverParam> param, s32 flags)
+s32 sceNetResolverCreate(vm::cptr<char> name, vm::ptr<SceNetResolverParam> param, s32 flags)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceNetResolverStartNtoa(s32 rid, vm::ptr<const char> hostname, vm::ptr<SceNetInAddr> addr, s32 timeout, s32 retry, s32 flags)
+s32 sceNetResolverStartNtoa(s32 rid, vm::cptr<char> hostname, vm::ptr<SceNetInAddr> addr, s32 timeout, s32 retry, s32 flags)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceNetResolverStartAton(s32 rid, vm::ptr<const SceNetInAddr> addr, vm::ptr<char> hostname, s32 len, s32 timeout, s32 retry, s32 flags)
+s32 sceNetResolverStartAton(s32 rid, vm::cptr<SceNetInAddr> addr, vm::ptr<char> hostname, s32 len, s32 timeout, s32 retry, s32 flags)
 {
 	throw __FUNCTION__;
 }
@@ -189,7 +189,7 @@ s32 sceNetResolverAbort(s32 rid, s32 flags)
 	throw __FUNCTION__;
 }
 
-s32 sceNetSocket(vm::ptr<const char> name, s32 domain, s32 type, s32 protocol)
+s32 sceNetSocket(vm::cptr<char> name, s32 domain, s32 type, s32 protocol)
 {
 	throw __FUNCTION__;
 }
@@ -199,12 +199,12 @@ s32 sceNetAccept(s32 s, vm::ptr<SceNetSockaddr> addr, vm::ptr<SceNetSocklen_t> a
 	throw __FUNCTION__;
 }
 
-s32 sceNetBind(s32 s, vm::ptr<const SceNetSockaddr> addr, SceNetSocklen_t addrlen)
+s32 sceNetBind(s32 s, vm::cptr<SceNetSockaddr> addr, SceNetSocklen_t addrlen)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceNetConnect(s32 s, vm::ptr<const SceNetSockaddr> name, SceNetSocklen_t namelen)
+s32 sceNetConnect(s32 s, vm::cptr<SceNetSockaddr> name, SceNetSocklen_t namelen)
 {
 	throw __FUNCTION__;
 }
@@ -244,22 +244,22 @@ s32 sceNetRecvmsg(s32 s, vm::ptr<SceNetMsghdr> msg, s32 flags)
 	throw __FUNCTION__;
 }
 
-s32 sceNetSend(s32 s, vm::ptr<const void> msg, u32 len, s32 flags)
+s32 sceNetSend(s32 s, vm::cptr<void> msg, u32 len, s32 flags)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceNetSendto(s32 s, vm::ptr<const void> msg, u32 len, s32 flags, vm::ptr<const SceNetSockaddr> to, SceNetSocklen_t tolen)
+s32 sceNetSendto(s32 s, vm::cptr<void> msg, u32 len, s32 flags, vm::cptr<SceNetSockaddr> to, SceNetSocklen_t tolen)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceNetSendmsg(s32 s, vm::ptr<const SceNetMsghdr> msg, s32 flags)
+s32 sceNetSendmsg(s32 s, vm::cptr<SceNetMsghdr> msg, s32 flags)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceNetSetsockopt(s32 s, s32 level, s32 optname, vm::ptr<const void> optval, SceNetSocklen_t optlen)
+s32 sceNetSetsockopt(s32 s, s32 level, s32 optname, vm::cptr<void> optval, SceNetSocklen_t optlen)
 {
 	throw __FUNCTION__;
 }

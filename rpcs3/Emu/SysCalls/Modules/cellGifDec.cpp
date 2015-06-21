@@ -20,7 +20,7 @@ extern Module cellGifDec;
 
 s32 cellGifDecCreate(
 	vm::ptr<CellGifDecMainHandle> mainHandle,
-	vm::ptr<const CellGifDecThreadInParam> threadInParam,
+	vm::cptr<CellGifDecThreadInParam> threadInParam,
 	vm::ptr<CellGifDecThreadOutParam> threadOutParam)
 {
 	UNIMPLEMENTED_FUNC(cellGifDec);
@@ -29,9 +29,9 @@ s32 cellGifDecCreate(
 
 s32 cellGifDecExtCreate(
 	vm::ptr<CellGifDecMainHandle> mainHandle,
-	vm::ptr<const CellGifDecThreadInParam> threadInParam,
+	vm::cptr<CellGifDecThreadInParam> threadInParam,
 	vm::ptr<CellGifDecThreadOutParam> threadOutParam,
-	vm::ptr<const CellGifDecExtThreadInParam> extThreadInParam,
+	vm::cptr<CellGifDecExtThreadInParam> extThreadInParam,
 	vm::ptr<CellGifDecExtThreadOutParam> extThreadOutParam)
 {
 	UNIMPLEMENTED_FUNC(cellGifDec);
@@ -41,7 +41,7 @@ s32 cellGifDecExtCreate(
 s32 cellGifDecOpen(
 	CellGifDecMainHandle mainHandle,
 	vm::ptr<CellGifDecSubHandle> subHandle,
-	vm::ptr<const CellGifDecSrc> src,
+	vm::cptr<CellGifDecSrc> src,
 	vm::ptr<CellGifDecOpnInfo> openInfo)
 {
 	cellGifDec.Warning("cellGifDecOpen(mainHandle=0x%x, subHandle=*0x%x, src=*0x%x, openInfo=*0x%x)", mainHandle, subHandle, src, openInfo);
@@ -134,7 +134,7 @@ s32 cellGifDecReadHeader(
 s32 cellGifDecSetParameter(
 	CellGifDecMainHandle mainHandle,
 	CellGifDecSubHandle subHandle,
-	vm::ptr<const CellGifDecInParam> inParam,
+	vm::cptr<CellGifDecInParam> inParam,
 	vm::ptr<CellGifDecOutParam> outParam)
 {
 	cellGifDec.Warning("cellGifDecSetParameter(mainHandle=0x%x, subHandle=0x%x, inParam=*0x%x, outParam=*0x%x)", mainHandle, subHandle, inParam, outParam);
@@ -171,7 +171,7 @@ s32 cellGifDecDecodeData(
 	CellGifDecMainHandle mainHandle,
 	CellGifDecSubHandle subHandle,
 	vm::ptr<u8> data,
-	vm::ptr<const CellGifDecDataCtrlParam> dataCtrlParam,
+	vm::cptr<CellGifDecDataCtrlParam> dataCtrlParam,
 	vm::ptr<CellGifDecDataOutInfo> dataOutInfo)
 {
 	cellGifDec.Warning("cellGifDecDecodeData(mainHandle=0x%x, subHandle=0x%x, data=*0x%x, dataCtrlParam=*0x%x, dataOutInfo=*0x%x)", mainHandle, subHandle, data, dataCtrlParam, dataOutInfo);

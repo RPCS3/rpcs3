@@ -19,7 +19,7 @@ s32 sceHttpGetMemoryPoolStats(vm::ptr<SceHttpMemoryPoolStats> currentStat)
 	throw __FUNCTION__;
 }
 
-s32 sceHttpCreateTemplate(vm::ptr<const char> userAgent, s32 httpVer, s32 autoProxyConf)
+s32 sceHttpCreateTemplate(vm::cptr<char> userAgent, s32 httpVer, s32 autoProxyConf)
 {
 	throw __FUNCTION__;
 }
@@ -29,12 +29,12 @@ s32 sceHttpDeleteTemplate(s32 tmplId)
 	throw __FUNCTION__;
 }
 
-s32 sceHttpCreateConnection(s32 tmplId, vm::ptr<const char> serverName, vm::ptr<const char> scheme, u16 port, s32 enableKeepalive)
+s32 sceHttpCreateConnection(s32 tmplId, vm::cptr<char> serverName, vm::cptr<char> scheme, u16 port, s32 enableKeepalive)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceHttpCreateConnectionWithURL(s32 tmplId, vm::ptr<const char> url, s32 enableKeepalive)
+s32 sceHttpCreateConnectionWithURL(s32 tmplId, vm::cptr<char> url, s32 enableKeepalive)
 {
 	throw __FUNCTION__;
 }
@@ -44,12 +44,12 @@ s32 sceHttpDeleteConnection(s32 connId)
 	throw __FUNCTION__;
 }
 
-s32 sceHttpCreateRequest(s32 connId, s32 method, vm::ptr<const char> path, u64 contentLength)
+s32 sceHttpCreateRequest(s32 connId, s32 method, vm::cptr<char> path, u64 contentLength)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceHttpCreateRequestWithURL(s32 connId, s32 method, vm::ptr<const char> url, u64 contentLength)
+s32 sceHttpCreateRequestWithURL(s32 connId, s32 method, vm::cptr<char> url, u64 contentLength)
 {
 	throw __FUNCTION__;
 }
@@ -74,7 +74,7 @@ s32 sceHttpSetRequestContentLength(s32 id, u64 contentLength)
 	throw __FUNCTION__;
 }
 
-s32 sceHttpSendRequest(s32 reqId, vm::ptr<const void> postData, u32 size)
+s32 sceHttpSendRequest(s32 reqId, vm::cptr<void> postData, u32 size)
 {
 	throw __FUNCTION__;
 }
@@ -104,22 +104,22 @@ s32 sceHttpReadData(s32 reqId, vm::ptr<void> data, u32 size)
 	throw __FUNCTION__;
 }
 
-s32 sceHttpAddRequestHeader(s32 id, vm::ptr<const char> name, vm::ptr<const char> value, u32 mode)
+s32 sceHttpAddRequestHeader(s32 id, vm::cptr<char> name, vm::cptr<char> value, u32 mode)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceHttpRemoveRequestHeader(s32 id, vm::ptr<const char> name)
+s32 sceHttpRemoveRequestHeader(s32 id, vm::cptr<char> name)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceHttpParseResponseHeader(vm::ptr<const char> header, u32 headerLen, vm::ptr<const char> fieldStr, vm::pptr<const char> fieldValue, vm::ptr<u32> valueLen)
+s32 sceHttpParseResponseHeader(vm::cptr<char> header, u32 headerLen, vm::cptr<char> fieldStr, vm::cpptr<char> fieldValue, vm::ptr<u32> valueLen)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceHttpParseStatusLine(vm::ptr<const char> statusLine, u32 lineLen, vm::ptr<s32> httpMajorVer, vm::ptr<s32> httpMinorVer, vm::ptr<s32> responseCode, vm::pptr<const char> reasonPhrase, vm::ptr<u32> phraseLen)
+s32 sceHttpParseStatusLine(vm::cptr<char> statusLine, u32 lineLen, vm::ptr<s32> httpMajorVer, vm::ptr<s32> httpMinorVer, vm::ptr<s32> responseCode, vm::cpptr<char> reasonPhrase, vm::ptr<u32> phraseLen)
 {
 	throw __FUNCTION__;
 }
@@ -179,32 +179,32 @@ s32 sceHttpSetRecvTimeOut(s32 id, u32 usec)
 	throw __FUNCTION__;
 }
 
-s32 sceHttpUriEscape(vm::ptr<char> out, vm::ptr<u32> require, u32 prepare, vm::ptr<const char> in)
+s32 sceHttpUriEscape(vm::ptr<char> out, vm::ptr<u32> require, u32 prepare, vm::cptr<char> in)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceHttpUriUnescape(vm::ptr<char> out, vm::ptr<u32> require, u32 prepare, vm::ptr<const char> in)
+s32 sceHttpUriUnescape(vm::ptr<char> out, vm::ptr<u32> require, u32 prepare, vm::cptr<char> in)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceHttpUriParse(vm::ptr<SceHttpUriElement> out, vm::ptr<const char> srcUrl, vm::ptr<void> pool, vm::ptr<u32> require, u32 prepare)
+s32 sceHttpUriParse(vm::ptr<SceHttpUriElement> out, vm::cptr<char> srcUrl, vm::ptr<void> pool, vm::ptr<u32> require, u32 prepare)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceHttpUriBuild(vm::ptr<char> out, vm::ptr<u32> require, u32 prepare, vm::ptr<const SceHttpUriElement> srcElement, u32 option)
+s32 sceHttpUriBuild(vm::ptr<char> out, vm::ptr<u32> require, u32 prepare, vm::cptr<SceHttpUriElement> srcElement, u32 option)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceHttpUriMerge(vm::ptr<char> mergedUrl, vm::ptr<const char> url, vm::ptr<const char> relativeUrl, vm::ptr<u32> require, u32 prepare, u32 option)
+s32 sceHttpUriMerge(vm::ptr<char> mergedUrl, vm::cptr<char> url, vm::cptr<char> relativeUrl, vm::ptr<u32> require, u32 prepare, u32 option)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceHttpUriSweepPath(vm::ptr<char> dst, vm::ptr<const char> src, u32 srcSize)
+s32 sceHttpUriSweepPath(vm::ptr<char> dst, vm::cptr<char> src, u32 srcSize)
 {
 	throw __FUNCTION__;
 }
@@ -219,12 +219,12 @@ s32 sceHttpGetCookieEnabled(s32 id, vm::ptr<s32> enable)
 	throw __FUNCTION__;
 }
 
-s32 sceHttpGetCookie(vm::ptr<const char> url, vm::ptr<char> cookie, vm::ptr<u32> cookieLength, u32 prepare, s32 secure)
+s32 sceHttpGetCookie(vm::cptr<char> url, vm::ptr<char> cookie, vm::ptr<u32> cookieLength, u32 prepare, s32 secure)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceHttpAddCookie(vm::ptr<const char> url, vm::ptr<const char> cookie, u32 cookieLength)
+s32 sceHttpAddCookie(vm::cptr<char> url, vm::cptr<char> cookie, u32 cookieLength)
 {
 	throw __FUNCTION__;
 }
@@ -239,7 +239,7 @@ s32 sceHttpSetCookieSendCallback(s32 id, vm::ptr<SceHttpCookieSendCallback> cbfu
 	throw __FUNCTION__;
 }
 
-s32 sceHttpsLoadCert(s32 caCertNum, vm::pptr<const SceHttpsData> caList, vm::ptr<const SceHttpsData> cert, vm::ptr<const SceHttpsData> privKey)
+s32 sceHttpsLoadCert(s32 caCertNum, vm::cpptr<SceHttpsData> caList, vm::cptr<SceHttpsData> cert, vm::cptr<SceHttpsData> privKey)
 {
 	throw __FUNCTION__;
 }

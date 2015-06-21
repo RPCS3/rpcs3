@@ -4,12 +4,12 @@
 
 #include "sceCommonDialog.h"
 
-s32 sceCommonDialogUpdate(vm::ptr<const SceCommonDialogUpdateParam> updateParam)
+s32 sceCommonDialogUpdate(vm::cptr<SceCommonDialogUpdateParam> updateParam)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceMsgDialogInit(vm::ptr<const SceMsgDialogParam> param)
+s32 sceMsgDialogInit(vm::cptr<SceMsgDialogParam> param)
 {
 	throw __FUNCTION__;
 }
@@ -74,7 +74,7 @@ s32 sceNetCheckDialogTerm()
 	throw __FUNCTION__;
 }
 
-s32 sceSaveDataDialogInit(vm::ptr<const SceSaveDataDialogParam> param)
+s32 sceSaveDataDialogInit(vm::cptr<SceSaveDataDialogParam> param)
 {
 	throw __FUNCTION__;
 }
@@ -109,12 +109,12 @@ s32 sceSaveDataDialogSubClose()
 	throw __FUNCTION__;
 }
 
-s32 sceSaveDataDialogContinue(vm::ptr<const SceSaveDataDialogParam> param)
+s32 sceSaveDataDialogContinue(vm::cptr<SceSaveDataDialogParam> param)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceSaveDataDialogFinish(vm::ptr<const SceSaveDataDialogFinishParam> param)
+s32 sceSaveDataDialogFinish(vm::cptr<SceSaveDataDialogFinishParam> param)
 {
 	throw __FUNCTION__;
 }
@@ -129,7 +129,7 @@ s32 sceSaveDataDialogProgressBarSetValue(s32 target, u32 rate)
 	throw __FUNCTION__;
 }
 
-s32 sceImeDialogInit(vm::ptr<const SceImeDialogParam> param)
+s32 sceImeDialogInit(vm::cptr<SceImeDialogParam> param)
 {
 	throw __FUNCTION__;
 }
@@ -154,7 +154,7 @@ s32 sceImeDialogTerm()
 	throw __FUNCTION__;
 }
 
-s32 scePhotoImportDialogInit(vm::ptr<const ScePhotoImportDialogParam> param)
+s32 scePhotoImportDialogInit(vm::cptr<ScePhotoImportDialogParam> param)
 {
 	throw __FUNCTION__;
 }
@@ -179,7 +179,7 @@ s32 scePhotoImportDialogAbort()
 	throw __FUNCTION__;
 }
 
-s32 scePhotoReviewDialogInit(vm::ptr<const ScePhotoReviewDialogParam> param)
+s32 scePhotoReviewDialogInit(vm::cptr<ScePhotoReviewDialogParam> param)
 {
 	throw __FUNCTION__;
 }

@@ -14,7 +14,7 @@ s32 sceNpBasicTerm(ARMv7Context&)
 	throw __FUNCTION__;
 }
 
-s32 sceNpBasicRegisterHandler(vm::ptr<const SceNpBasicEventHandlers> handlers, vm::ptr<const SceNpCommunicationId> context, vm::ptr<void> userdata)
+s32 sceNpBasicRegisterHandler(vm::cptr<SceNpBasicEventHandlers> handlers, vm::cptr<SceNpCommunicationId> context, vm::ptr<void> userdata)
 {
 	throw __FUNCTION__;
 }
@@ -29,12 +29,12 @@ s32 sceNpBasicCheckCallback()
 	throw __FUNCTION__;
 }
 
-s32 sceNpBasicGetFriendOnlineStatus(vm::ptr<const SceNpId> friendId, vm::ptr<SceNpBasicFriendOnlineStatus> status)
+s32 sceNpBasicGetFriendOnlineStatus(vm::cptr<SceNpId> friendId, vm::ptr<SceNpBasicFriendOnlineStatus> status)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceNpBasicGetGamePresenceOfFriend(vm::ptr<const SceNpId> friendId, vm::ptr<SceNpBasicGamePresence> presence)
+s32 sceNpBasicGetGamePresenceOfFriend(vm::cptr<SceNpId> friendId, vm::ptr<SceNpBasicGamePresence> presence)
 {
 	throw __FUNCTION__;
 }
@@ -59,12 +59,12 @@ s32 sceNpBasicGetBlockListEntries(u32 startIndex, vm::ptr<SceNpId> entries, u32 
 	throw __FUNCTION__;
 }
 
-s32 sceNpBasicCheckIfPlayerIsBlocked(vm::ptr<const SceNpId> player, vm::ptr<u8> playerIsBlocked)
+s32 sceNpBasicCheckIfPlayerIsBlocked(vm::cptr<SceNpId> player, vm::ptr<u8> playerIsBlocked)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceNpBasicSetInGamePresence(vm::ptr<const SceNpBasicInGamePresence> presence)
+s32 sceNpBasicSetInGamePresence(vm::cptr<SceNpBasicInGamePresence> presence)
 {
 	throw __FUNCTION__;
 }
@@ -74,12 +74,12 @@ s32 sceNpBasicUnsetInGamePresence()
 	throw __FUNCTION__;
 }
 
-s32 sceNpBasicSendInGameDataMessage(vm::ptr<const SceNpId> to, vm::ptr<const SceNpBasicInGameDataMessage> message)
+s32 sceNpBasicSendInGameDataMessage(vm::cptr<SceNpId> to, vm::cptr<SceNpBasicInGameDataMessage> message)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceNpBasicRecordPlaySessionLog(vm::ptr<const SceNpId> withWhom, vm::ptr<const SceNpBasicPlaySessionLogDescription> description)
+s32 sceNpBasicRecordPlaySessionLog(vm::cptr<SceNpId> withWhom, vm::cptr<SceNpBasicPlaySessionLogDescription> description)
 {
 	throw __FUNCTION__;
 }

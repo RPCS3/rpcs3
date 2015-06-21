@@ -133,7 +133,7 @@ int cellRtcFormatRfc3339LocalTime(vm::ptr<char> pszDateTime, vm::ptr<CellRtcTick
 	return CELL_OK;
 }
 
-int cellRtcParseDateTime(vm::ptr<CellRtcTick> pUtc, vm::ptr<const char> pszDateTime)
+int cellRtcParseDateTime(vm::ptr<CellRtcTick> pUtc, vm::cptr<char> pszDateTime)
 {
 	cellRtc.Log("cellRtcParseDateTime(pUtc=0x%x, pszDateTime_addr=0x%x)", pUtc.addr(), pszDateTime.addr());
 
@@ -146,7 +146,7 @@ int cellRtcParseDateTime(vm::ptr<CellRtcTick> pUtc, vm::ptr<const char> pszDateT
 	return CELL_OK;
 }
 
-int cellRtcParseRfc3339(vm::ptr<CellRtcTick> pUtc, vm::ptr<const char> pszDateTime)
+int cellRtcParseRfc3339(vm::ptr<CellRtcTick> pUtc, vm::cptr<char> pszDateTime)
 {
 	cellRtc.Log("cellRtcParseRfc3339(pUtc=0x%x, pszDateTime_addr=0x%x)", pUtc.addr(), pszDateTime.addr());
 

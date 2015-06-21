@@ -29,12 +29,12 @@ s32 sceVoiceResetPort(u32 portId)
 	throw __FUNCTION__;
 }
 
-s32 sceVoiceCreatePort(vm::ptr<u32> portId, vm::ptr<const SceVoicePortParam> pArg)
+s32 sceVoiceCreatePort(vm::ptr<u32> portId, vm::cptr<SceVoicePortParam> pArg)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceVoiceUpdatePort(u32 portId, vm::ptr<const SceVoicePortParam> pArg)
+s32 sceVoiceUpdatePort(u32 portId, vm::cptr<SceVoicePortParam> pArg)
 {
 	throw __FUNCTION__;
 }
@@ -54,7 +54,7 @@ s32 sceVoiceDeletePort(u32 portId)
 	throw __FUNCTION__;
 }
 
-s32 sceVoiceWriteToIPort(u32 ips, vm::ptr<const void> data, vm::ptr<u32> size, s16 frameGaps)
+s32 sceVoiceWriteToIPort(u32 ips, vm::cptr<void> data, vm::ptr<u32> size, s16 frameGaps)
 {
 	throw __FUNCTION__;
 }

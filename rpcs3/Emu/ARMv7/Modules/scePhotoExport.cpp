@@ -5,9 +5,9 @@
 #include "scePhotoExport.h"
 
 s32 scePhotoExportFromData(
-	vm::ptr<const void> photodata,
+	vm::cptr<void> photodata,
 	s32 photodataSize,
-	vm::ptr<const ScePhotoExportParam> param,
+	vm::cptr<ScePhotoExportParam> param,
 	vm::ptr<void> workMemory,
 	vm::ptr<ScePhotoExportCancelFunc> cancelFunc,
 	vm::ptr<void> userdata,
@@ -18,8 +18,8 @@ s32 scePhotoExportFromData(
 }
 
 s32 scePhotoExportFromFile(
-	vm::ptr<const char> photodataPath,
-	vm::ptr<const ScePhotoExportParam> param,
+	vm::cptr<char> photodataPath,
+	vm::cptr<ScePhotoExportParam> param,
 	vm::ptr<void> workMemory,
 	vm::ptr<ScePhotoExportCancelFunc> cancelFunc,
 	vm::ptr<void> userdata,

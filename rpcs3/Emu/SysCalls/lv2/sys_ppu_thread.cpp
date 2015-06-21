@@ -186,7 +186,7 @@ u32 ppu_thread_create(u32 entry, u64 arg, s32 prio, u32 stacksize, bool is_joina
 	return ppu.GetId();
 }
 
-s32 _sys_ppu_thread_create(vm::ptr<u64> thread_id, vm::ptr<ppu_thread_param_t> param, u64 arg, u64 unk, s32 prio, u32 stacksize, u64 flags, vm::ptr<const char> threadname)
+s32 _sys_ppu_thread_create(vm::ptr<u64> thread_id, vm::ptr<ppu_thread_param_t> param, u64 arg, u64 unk, s32 prio, u32 stacksize, u64 flags, vm::cptr<char> threadname)
 {
 	sys_ppu_thread.Warning("_sys_ppu_thread_create(thread_id=*0x%x, param=*0x%x, arg=0x%llx, unk=0x%llx, prio=%d, stacksize=0x%x, flags=0x%llx, threadname=*0x%x)",
 		thread_id, param, arg, unk, prio, stacksize, flags, threadname);
@@ -244,7 +244,7 @@ s32 sys_ppu_thread_start(u32 thread_id)
 	return CELL_OK;
 }
 
-s32 sys_ppu_thread_rename(u32 thread_id, vm::ptr<const char> name)
+s32 sys_ppu_thread_rename(u32 thread_id, vm::cptr<char> name)
 {
 	sys_ppu_thread.Error("sys_ppu_thread_rename(thread_id=0x%x, name=*0x%x)", thread_id, name);
 

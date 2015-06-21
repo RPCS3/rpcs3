@@ -284,7 +284,7 @@ void dmuxQueryAttr(u32 info_addr /* may be 0 */, vm::ptr<CellDmuxAttr> attr)
 	attr->memSize = 0x10000; // 0x3e8e6 from ps3
 }
 
-void dmuxQueryEsAttr(u32 info /* may be 0 */, vm::ptr<const CellCodecEsFilterId> esFilterId, u32 esSpecificInfo, vm::ptr<CellDmuxEsAttr> attr)
+void dmuxQueryEsAttr(u32 info /* may be 0 */, vm::cptr<CellCodecEsFilterId> esFilterId, u32 esSpecificInfo, vm::ptr<CellDmuxEsAttr> attr)
 {
 	if (esFilterId->filterIdMajor >= 0xe0)
 	{
@@ -772,7 +772,7 @@ void dmuxOpen(u32 dmux_id) // TODO: call from the constructor
 	});
 }
 
-s32 cellDmuxQueryAttr(vm::ptr<const CellDmuxType> type, vm::ptr<CellDmuxAttr> attr)
+s32 cellDmuxQueryAttr(vm::cptr<CellDmuxType> type, vm::ptr<CellDmuxAttr> attr)
 {
 	cellDmux.Warning("cellDmuxQueryAttr(type=*0x%x, attr=*0x%x)", type, attr);
 
@@ -785,7 +785,7 @@ s32 cellDmuxQueryAttr(vm::ptr<const CellDmuxType> type, vm::ptr<CellDmuxAttr> at
 	return CELL_OK;
 }
 
-s32 cellDmuxQueryAttr2(vm::ptr<const CellDmuxType2> type2, vm::ptr<CellDmuxAttr> attr)
+s32 cellDmuxQueryAttr2(vm::cptr<CellDmuxType2> type2, vm::ptr<CellDmuxAttr> attr)
 {
 	cellDmux.Warning("cellDmuxQueryAttr2(demuxerType2=*0x%x, demuxerAttr=*0x%x)", type2, attr);
 
@@ -798,7 +798,7 @@ s32 cellDmuxQueryAttr2(vm::ptr<const CellDmuxType2> type2, vm::ptr<CellDmuxAttr>
 	return CELL_OK;
 }
 
-s32 cellDmuxOpen(vm::ptr<const CellDmuxType> type, vm::ptr<const CellDmuxResource> res, vm::ptr<const CellDmuxCb> cb, vm::ptr<u32> handle)
+s32 cellDmuxOpen(vm::cptr<CellDmuxType> type, vm::cptr<CellDmuxResource> res, vm::cptr<CellDmuxCb> cb, vm::ptr<u32> handle)
 {
 	cellDmux.Warning("cellDmuxOpen(type=*0x%x, res=*0x%x, cb=*0x%x, handle=*0x%x)", type, res, cb, handle);
 
@@ -814,7 +814,7 @@ s32 cellDmuxOpen(vm::ptr<const CellDmuxType> type, vm::ptr<const CellDmuxResourc
 	return CELL_OK;
 }
 
-s32 cellDmuxOpenEx(vm::ptr<const CellDmuxType> type, vm::ptr<const CellDmuxResourceEx> resEx, vm::ptr<const CellDmuxCb> cb, vm::ptr<u32> handle)
+s32 cellDmuxOpenEx(vm::cptr<CellDmuxType> type, vm::cptr<CellDmuxResourceEx> resEx, vm::cptr<CellDmuxCb> cb, vm::ptr<u32> handle)
 {
 	cellDmux.Warning("cellDmuxOpenEx(type=*0x%x, resEx=*0x%x, cb=*0x%x, handle=*0x%x)", type, resEx, cb, handle);
 
@@ -830,12 +830,12 @@ s32 cellDmuxOpenEx(vm::ptr<const CellDmuxType> type, vm::ptr<const CellDmuxResou
 	return CELL_OK;
 }
 
-s32 _nid_e075fabc(vm::ptr<const CellDmuxType> type, vm::ptr<const CellDmuxResourceEx> resEx, vm::ptr<const CellDmuxCb> cb, vm::ptr<u32> handle)
+s32 _nid_e075fabc(vm::cptr<CellDmuxType> type, vm::cptr<CellDmuxResourceEx> resEx, vm::cptr<CellDmuxCb> cb, vm::ptr<u32> handle)
 {
 	return cellDmuxOpenEx(type, resEx, cb, handle);
 }
 
-s32 cellDmuxOpen2(vm::ptr<const CellDmuxType2> type2, vm::ptr<const CellDmuxResource2> res2, vm::ptr<const CellDmuxCb> cb, vm::ptr<u32> handle)
+s32 cellDmuxOpen2(vm::cptr<CellDmuxType2> type2, vm::cptr<CellDmuxResource2> res2, vm::cptr<CellDmuxCb> cb, vm::ptr<u32> handle)
 {
 	cellDmux.Warning("cellDmuxOpen2(type2=*0x%x, res2=*0x%x, cb=*0x%x, handle=*0x%x)", type2, res2, cb, handle);
 
@@ -957,7 +957,7 @@ s32 cellDmuxResetStreamAndWaitDone(u32 handle)
 	return CELL_OK;
 }
 
-s32 cellDmuxQueryEsAttr(vm::ptr<const CellDmuxType> type, vm::ptr<const CellCodecEsFilterId> esFilterId, u32 esSpecificInfo, vm::ptr<CellDmuxEsAttr> esAttr)
+s32 cellDmuxQueryEsAttr(vm::cptr<CellDmuxType> type, vm::cptr<CellCodecEsFilterId> esFilterId, u32 esSpecificInfo, vm::ptr<CellDmuxEsAttr> esAttr)
 {
 	cellDmux.Warning("cellDmuxQueryEsAttr(demuxerType=*0x%x, esFilterId=*0x%x, esSpecificInfo=*0x%x, esAttr=*0x%x)", type, esFilterId, esSpecificInfo, esAttr);
 
@@ -971,7 +971,7 @@ s32 cellDmuxQueryEsAttr(vm::ptr<const CellDmuxType> type, vm::ptr<const CellCode
 	return CELL_OK;
 }
 
-s32 cellDmuxQueryEsAttr2(vm::ptr<const CellDmuxType2> type2, vm::ptr<const CellCodecEsFilterId> esFilterId, u32 esSpecificInfo, vm::ptr<CellDmuxEsAttr> esAttr)
+s32 cellDmuxQueryEsAttr2(vm::cptr<CellDmuxType2> type2, vm::cptr<CellCodecEsFilterId> esFilterId, u32 esSpecificInfo, vm::ptr<CellDmuxEsAttr> esAttr)
 {
 	cellDmux.Warning("cellDmuxQueryEsAttr2(type2=*0x%x, esFilterId=*0x%x, esSpecificInfo=*0x%x, esAttr=*0x%x)", type2, esFilterId, esSpecificInfo, esAttr);
 
@@ -985,7 +985,7 @@ s32 cellDmuxQueryEsAttr2(vm::ptr<const CellDmuxType2> type2, vm::ptr<const CellC
 	return CELL_OK;
 }
 
-s32 cellDmuxEnableEs(u32 handle, vm::ptr<const CellCodecEsFilterId> esFilterId, vm::ptr<const CellDmuxEsResource> esResourceInfo, vm::ptr<const CellDmuxEsCb> esCb, u32 esSpecificInfo, vm::ptr<u32> esHandle)
+s32 cellDmuxEnableEs(u32 handle, vm::cptr<CellCodecEsFilterId> esFilterId, vm::cptr<CellDmuxEsResource> esResourceInfo, vm::cptr<CellDmuxEsCb> esCb, u32 esSpecificInfo, vm::ptr<u32> esHandle)
 {
 	cellDmux.Warning("cellDmuxEnableEs(handle=0x%x, esFilterId=*0x%x, esResourceInfo=*0x%x, esCb=*0x%x, esSpecificInfo=*0x%x, esHandle=*0x%x)", handle, esFilterId, esResourceInfo, esCb, esSpecificInfo, esHandle);
 

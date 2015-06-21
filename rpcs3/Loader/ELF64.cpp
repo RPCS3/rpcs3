@@ -365,7 +365,7 @@ namespace loader
 							{
 								for (auto &e : m.second.exports)
 								{
-									auto code = vm::ptr<const u32>::make(vm::check_addr(e.second, 8) ? vm::read32(e.second) : 0);
+									auto code = vm::cptr<u32>::make(vm::check_addr(e.second, 8) ? vm::read32(e.second) : 0);
 
 									bool is_empty = !code || (code[0] == 0x38600000 && code[1] == BLR());
 

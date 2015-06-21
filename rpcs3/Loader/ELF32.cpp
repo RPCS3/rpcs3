@@ -299,7 +299,7 @@ namespace loader
 
 						u32 data = 0;
 
-						for (auto code = vm::ptr<const u32>::make(shdr.data_le.sh_addr); code.addr() < shdr.data_le.sh_addr + shdr.data_le.sh_size; code++)
+						for (auto code = vm::cptr<u32>::make(shdr.data_le.sh_addr); code.addr() < shdr.data_le.sh_addr + shdr.data_le.sh_size; code++)
 						{
 							switch (*code)
 							{
