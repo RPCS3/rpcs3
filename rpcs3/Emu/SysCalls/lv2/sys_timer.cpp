@@ -72,14 +72,14 @@ s32 sys_timer_destroy(u32 timer_id)
 {
 	sys_timer.Warning("sys_timer_destroy(timer_id=0x%x)", timer_id);
 
+	LV2_LOCK;
+
 	const auto timer = Emu.GetIdManager().get<lv2_timer_t>(timer_id);
 
 	if (!timer)
 	{
 		return CELL_ESRCH;
 	}
-
-	LV2_LOCK;
 
 	if (!timer->port.expired())
 	{
@@ -88,6 +88,8 @@ s32 sys_timer_destroy(u32 timer_id)
 
 	Emu.GetIdManager().remove<lv2_timer_t>(timer_id);
 
+	lv2_lock.unlock();
+
 	return CELL_OK;
 }
 
@@ -95,14 +97,14 @@ s32 sys_timer_get_information(u32 timer_id, vm::ptr<sys_timer_information_t> inf
 {
 	sys_timer.Warning("sys_timer_get_information(timer_id=0x%x, info=*0x%x)", timer_id, info);
 
+	LV2_LOCK;
+
 	const auto timer = Emu.GetIdManager().get<lv2_timer_t>(timer_id);
 
 	if (!timer)
 	{
 		return CELL_ESRCH;
 	}
-
-	LV2_LOCK;
 
 	info->next_expiration_time = timer->start;
 
@@ -118,14 +120,14 @@ s32 _sys_timer_start(u32 timer_id, u64 base_time, u64 period)
 
 	const u64 start_time = get_system_time();
 
+	LV2_LOCK;
+
 	const auto timer = Emu.GetIdManager().get<lv2_timer_t>(timer_id);
 
 	if (!timer)
 	{
 		return CELL_ESRCH;
 	}
-
-	LV2_LOCK;
 
 	if (timer->state != SYS_TIMER_STATE_STOP)
 	{
@@ -170,14 +172,14 @@ s32 sys_timer_stop(u32 timer_id)
 {
 	sys_timer.Warning("sys_timer_stop()");
 
+	LV2_LOCK;
+
 	const auto timer = Emu.GetIdManager().get<lv2_timer_t>(timer_id);
 
 	if (!timer)
 	{
 		return CELL_ESRCH;
 	}
-
-	LV2_LOCK;
 
 	timer->state = SYS_TIMER_STATE_STOP; // stop timer
 
@@ -188,6 +190,8 @@ s32 sys_timer_connect_event_queue(u32 timer_id, u32 queue_id, u64 name, u64 data
 {
 	sys_timer.Warning("sys_timer_connect_event_queue(timer_id=0x%x, queue_id=0x%x, name=0x%llx, data1=0x%llx, data2=0x%llx)", timer_id, queue_id, name, data1, data2);
 
+	LV2_LOCK;
+
 	const auto timer = Emu.GetIdManager().get<lv2_timer_t>(timer_id);
 	const auto queue = Emu.GetIdManager().get<lv2_event_queue_t>(queue_id);
 
@@ -195,8 +199,6 @@ s32 sys_timer_connect_event_queue(u32 timer_id, u32 queue_id, u64 name, u64 data
 	{
 		return CELL_ESRCH;
 	}
-
-	LV2_LOCK;
 
 	if (!timer->port.expired())
 	{
@@ -215,14 +217,14 @@ s32 sys_timer_disconnect_event_queue(u32 timer_id)
 {
 	sys_timer.Warning("sys_timer_disconnect_event_queue(timer_id=0x%x)", timer_id);
 
+	LV2_LOCK;
+
 	const auto timer = Emu.GetIdManager().get<lv2_timer_t>(timer_id);
 
 	if (!timer)
 	{
 		return CELL_ESRCH;
 	}
-
-	LV2_LOCK;
 
 	if (timer->port.expired())
 	{

@@ -79,6 +79,28 @@ struct SceVoiceBasePortInfo
 
 struct SceVoicePortParam
 {
+	// aux structs
+
+	struct _voice_t
+	{
+		le_t<s32> bitrate; // SceVoiceBitRate
+	};
+
+	struct _pcmaudio_t
+	{
+		using _format_t = SceVoicePCMFormat;
+
+		le_t<u32> bufSize;
+		_format_t format;
+	};
+
+	struct _device_t
+	{
+		le_t<u32> playerId;
+	};
+
+	// struct members
+
 	le_t<s32> portType; // SceVoicePortType
 	le_t<u16> threshold;
 	le_t<u16> bMute;
@@ -86,29 +108,9 @@ struct SceVoicePortParam
 
 	union
 	{
-		struct _voice_t
-		{
-			le_t<s32> bitrate; // SceVoiceBitRate
-		};
-
-		_voice_t voice;
-
-		struct _pcmaudio_t
-		{
-			using _format_t = SceVoicePCMFormat;
-
-			le_t<u32> bufSize;
-			_format_t format;
-		};
-		
 		_pcmaudio_t pcmaudio;
-
-		struct _device_t
-		{
-			le_t<u32> playerId;
-		};
-
 		_device_t device;
+		_voice_t voice;
 	};
 };
 

@@ -106,7 +106,7 @@ s32 sys_cond_signal_all(u32 cond_id)
 		return CELL_ESRCH;
 	}
 
-	if (const u32 count = cond->waiters.size())
+	if (const u64 count = cond->waiters.size())
 	{
 		cond->signaled += count;
 		cond->waiters.clear();

@@ -43,7 +43,7 @@ s32 sys_semaphore_create(vm::ptr<u32> sem, vm::ptr<sys_semaphore_attribute_t> at
 		return CELL_EINVAL;
 	}
 
-	*sem = Emu.GetIdManager().make<lv2_sema_t>(initial_val, max_val, protocol, attr->name_u64);
+	*sem = Emu.GetIdManager().make<lv2_sema_t>(protocol, max_val, attr->name_u64, initial_val);
 
 	return CELL_OK;
 }

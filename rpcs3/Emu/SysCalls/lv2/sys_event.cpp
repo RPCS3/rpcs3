@@ -118,8 +118,13 @@ s32 sys_event_queue_tryreceive(u32 equeue_id, vm::ptr<sys_event_t> event_array, 
 
 	while (!queue->waiters && count < size && queue->events.size())
 	{
+		auto& dest = event_array[count++];
+
 		auto& event = queue->events.front();
-		event_array[count++] = { be_t<u64>::make(event.source), be_t<u64>::make(event.data1), be_t<u64>::make(event.data2), be_t<u64>::make(event.data3) };
+		dest.source = event.source;
+		dest.data1 = event.data1;
+		dest.data2 = event.data2;
+		dest.data3 = event.data3;
 
 		queue->events.pop_front();
 	}

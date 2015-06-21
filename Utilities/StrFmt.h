@@ -243,6 +243,17 @@ namespace fmt
 	};
 
 	template<typename T>
+	struct unveil<le_t<T>, false>
+	{
+		using result_type = typename unveil<T>::result_type;
+
+		force_inline static result_type get_value(const le_t<T>& arg)
+		{
+			return unveil<T>::get_value(arg.value());
+		}
+	};
+
+	template<typename T>
 	force_inline typename unveil<T>::result_type do_unveil(const T& arg)
 	{
 		return unveil<T>::get_value(arg);

@@ -764,9 +764,9 @@ cpu_thread& ppu_thread::args(std::initializer_list<std::string> values)
 
 	assert(argc == 0);
 
-	envp.set(vm::alloc(align(sizeof32(u64), stack_align), vm::main));
+	envp.set(vm::alloc(align(sizeof32(*envp), stack_align), vm::main));
 	*envp = 0;
-	argv.set(vm::alloc(sizeof32(u64) * (u32)values.size(), vm::main));
+	argv.set(vm::alloc(sizeof32(*argv) * (u32)values.size(), vm::main));
 
 	for (auto &arg : values)
 	{

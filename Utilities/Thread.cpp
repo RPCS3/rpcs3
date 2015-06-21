@@ -109,6 +109,7 @@ enum x64_op_t : u32
 	X64OP_NONE,
 	X64OP_LOAD, // obtain and put the value into x64 register
 	X64OP_STORE, // take the value from x64 register or an immediate and use it
+
 	// example: add eax,[rax] -> X64OP_LOAD_ADD (add the value to x64 register)
 	// example: add [rax],eax -> X64OP_LOAD_ADD_STORE (this will probably never happen for MMIO registers)
 
@@ -116,7 +117,7 @@ enum x64_op_t : u32
 	X64OP_STOS,
 	X64OP_XCHG,
 	X64OP_CMPXCHG,
-	X64OP_LOAD_AND_STORE,
+	X64OP_LOAD_AND_STORE, // lock and [mem],reg
 };
 
 void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, size_t& out_size, size_t& out_length)

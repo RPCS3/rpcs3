@@ -19,7 +19,6 @@ struct sys_timer_information_t
 	be_t<u32> pad;
 };
 
-// "timer_t" conflicts with some definition
 struct lv2_timer_t
 {
 	std::weak_ptr<lv2_event_queue_t> port; // event queue

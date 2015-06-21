@@ -131,7 +131,7 @@ s32 _sys_lwcond_signal_all(u32 lwcond_id, u32 lwmutex_id, u32 mode)
 		sys_lwcond.Error("_sys_lwcond_signal_all(%d): invalid mode (%d)", lwcond_id, mode);
 	}
 
-	const u32 count = cond->waiters.size();
+	const u32 count = (u32)cond->waiters.size();
 
 	if (count)
 	{

@@ -22,7 +22,7 @@ struct lv2_cond_t
 	const u64 name;
 	const std::shared_ptr<lv2_mutex_t> mutex; // associated mutex
 
-	std::atomic<u32> signaled;
+	std::atomic<u64> signaled;
 
 	// TODO: use sleep queue, possibly remove condition variable
 	std::condition_variable cv;
