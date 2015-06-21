@@ -243,12 +243,11 @@ namespace sce_libc_func
 		::memset(dst.get_ptr(), value, size);
 	}
 
-	void _Assert(ARMv7Context& context, vm::cptr<char> text, vm::cptr<char> func)
+	void _Assert(vm::cptr<char> text, vm::cptr<char> func)
 	{
 		sceLibc.Error("_Assert(text=*0x%x, func=*0x%x)", text, func);
 
 		LOG_ERROR(TTY, "%s : %s\n", func.get_ptr(), text.get_ptr());
-		LOG_NOTICE(ARMv7, context.thread.RegsToString());
 		Emu.Pause();
 	}
 }

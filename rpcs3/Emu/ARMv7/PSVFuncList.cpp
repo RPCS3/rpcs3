@@ -70,8 +70,10 @@ void execute_psv_func_by_index(ARMv7Context& context, u32 index)
 {
 	if (auto func = get_psv_func_by_index(index))
 	{
-		auto old_last_syscall = context.thread.m_last_syscall;
-		context.thread.m_last_syscall = func->nid;
+		ARMv7Thread& CPU = static_cast<ARMv7Thread&>(context);
+
+		auto old_last_syscall = CPU.m_last_syscall;
+		CPU.m_last_syscall = func->nid;
 
 		if (func->func)
 		{
@@ -88,7 +90,7 @@ void execute_psv_func_by_index(ARMv7Context& context, u32 index)
 			func->module->on_error(context.GPR[0], func);
 		}
 
-		context.thread.m_last_syscall = old_last_syscall;
+		CPU.m_last_syscall = old_last_syscall;
 	}
 	else
 	{
@@ -231,7 +233,7 @@ void initialize_psv_modules()
 	hle_return.name = "HLE_RETURN";
 	hle_return.func = [](ARMv7Context& context)
 	{
-		context.thread.FastStop();
+		static_cast<ARMv7Thread&>(context).FastStop();
 	};
 
 	// load functions

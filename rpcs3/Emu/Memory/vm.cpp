@@ -659,7 +659,7 @@ namespace vm
 
 		case CPU_THREAD_ARMv7:
 		{
-			ARMv7Context& context = static_cast<ARMv7Thread&>(CPU).context;
+			ARMv7Context& context = static_cast<ARMv7Thread&>(CPU);
 
 			old_pos = context.SP;
 			context.SP -= align(size, 4); // room minimal possible size
@@ -711,7 +711,7 @@ namespace vm
 
 		case CPU_THREAD_ARMv7:
 		{
-			ARMv7Context& context = static_cast<ARMv7Thread&>(CPU).context;
+			ARMv7Context& context = static_cast<ARMv7Thread&>(CPU);
 
 			if (context.SP != addr && !Emu.IsStopped())
 			{

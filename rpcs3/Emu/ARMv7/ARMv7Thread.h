@@ -2,11 +2,9 @@
 #include "Emu/CPU/CPUThread.h"
 #include "ARMv7Context.h"
 
-class ARMv7Thread : public CPUThread
+class ARMv7Thread : public CPUThread, public ARMv7Context
 {
 public:
-	ARMv7Context context;
-
 	ARMv7Thread();
 	~ARMv7Thread();
 

@@ -1,7 +1,5 @@
 #pragma once
 
-class ARMv7Thread;
-
 enum ARMv7InstructionSet
 {
 	ARM,
@@ -122,12 +120,8 @@ struct ARMv7Context
 
 	std::array<perf_counter, 6> counters;
 
-	ARMv7Thread& thread;
-
-	u32 debug; // debug flags
+	u32 debug;
 	std::string debug_str;
-
-	ARMv7Context(ARMv7Thread& thread) : thread(thread), debug(/*DF_DISASM | DF_PRINT*/ 0) {}
 
 	void write_pc(u32 value);
 	u32 read_pc();

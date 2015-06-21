@@ -287,17 +287,19 @@ namespace ARMv7_instrs
 	{
 		if (context.debug & DF_PRINT)
 		{
+			ARMv7Thread& CPU = static_cast<ARMv7Thread&>(context);
+
 			auto pos = context.debug_str.find(' ');
 			if (pos != std::string::npos && pos < 8)
 			{
 				context.debug_str.insert(pos, 8 - pos, ' ');
 			}
 
-			context.fmt_debug_str("0x%08x: %s", context.thread.PC, context.debug_str);
+			context.fmt_debug_str("0x%08x: %s", CPU.PC, context.debug_str);
 
 			LV2_LOCK;
 
-			auto found = g_armv7_dump.find(context.thread.PC);
+			auto found = g_armv7_dump.find(CPU.PC);
 			if (found != g_armv7_dump.end())
 			{
 				if (found->second != context.debug_str)
@@ -307,7 +309,7 @@ namespace ARMv7_instrs
 			}
 			else
 			{
-				g_armv7_dump[context.thread.PC] = context.debug_str;
+				g_armv7_dump[CPU.PC] = context.debug_str;
 			}
 		}
 
@@ -1258,7 +1260,7 @@ void ARMv7_instrs::B(ARMv7Context& context, const ARMv7Code code, const ARMv7_en
 
 	if (ConditionPassed(context, cond))
 	{
-		context.thread.SetBranch(context.read_pc() + imm32);
+		static_cast<ARMv7Thread&>(context).SetBranch(context.read_pc() + imm32);
 	}
 }
 
@@ -1438,12 +1440,14 @@ void ARMv7_instrs::BL(ARMv7Context& context, const ARMv7Code code, const ARMv7_e
 	if (ConditionPassed(context, cond))
 	{
 		context.LR = lr;
-		context.thread.SetBranch(pc);
+		static_cast<ARMv7Thread&>(context).SetBranch(pc);
 	}
 }
 
 void ARMv7_instrs::BLX(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
+	ARMv7Thread& thread = static_cast<ARMv7Thread&>(context);
+
 	u32 cond, target, newLR;
 
 	switch (type)
@@ -1451,7 +1455,7 @@ void ARMv7_instrs::BLX(ARMv7Context& context, const ARMv7Code code, const ARMv7_
 	case T1:
 	{
 		cond = context.ITSTATE.advance();
-		newLR = (context.thread.PC + 2) | 1;
+		newLR = (thread.PC + 2) | 1;
 		{
 			const u32 m = (code.data >> 3) & 0xf;
 			reject(m == 15, "UNPREDICTABLE");
@@ -1464,12 +1468,12 @@ void ARMv7_instrs::BLX(ARMv7Context& context, const ARMv7Code code, const ARMv7_
 	case T2:
 	{
 		cond = context.ITSTATE.advance();
-		newLR = (context.thread.PC + 4) | 1;
+		newLR = (thread.PC + 4) | 1;
 		{
 			const u32 s = (code.data >> 26) & 0x1;
 			const u32 i1 = (code.data >> 13) & 0x1 ^ s ^ 1;
 			const u32 i2 = (code.data >> 11) & 0x1 ^ s ^ 1;
-			target = ~3 & context.thread.PC + 4 + sign<25, u32>(s << 24 | i2 << 23 | i1 << 22 | (code.data & 0x3ff0000) >> 4 | (code.data & 0x7ff) << 1);
+			target = ~3 & thread.PC + 4 + sign<25, u32>(s << 24 | i2 << 23 | i1 << 22 | (code.data & 0x3ff0000) >> 4 | (code.data & 0x7ff) << 1);
 		}
 
 		reject(context.ITSTATE, "UNPREDICTABLE");
@@ -1478,15 +1482,15 @@ void ARMv7_instrs::BLX(ARMv7Context& context, const ARMv7Code code, const ARMv7_
 	case A1:
 	{
 		cond = code.data >> 28;
-		newLR = context.thread.PC + 4;
+		newLR = thread.PC + 4;
 		target = context.read_gpr(code.data & 0xf);
 		break;
 	}
 	case A2:
 	{
 		cond = 0xe; // always true
-		newLR = context.thread.PC + 4;
-		target = 1 | context.thread.PC + 8 + sign<25, u32>((code.data & 0xffffff) << 2 | (code.data & 0x1000000) >> 23);
+		newLR = thread.PC + 4;
+		target = 1 | thread.PC + 8 + sign<25, u32>((code.data & 0xffffff) << 2 | (code.data & 0x1000000) >> 23);
 		break;
 	}
 	default: throw __FUNCTION__;
@@ -1577,7 +1581,7 @@ void ARMv7_instrs::CB_Z(ARMv7Context& context, const ARMv7Code code, const ARMv7
 
 	if ((context.read_gpr(n) == 0) ^ nonzero)
 	{
-		context.thread.SetBranch(context.read_pc() + imm32);
+		static_cast<ARMv7Thread&>(context).SetBranch(context.read_pc() + imm32);
 	}
 }
 

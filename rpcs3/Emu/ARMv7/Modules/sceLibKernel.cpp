@@ -79,12 +79,12 @@ s32 sceKernelStartThread(s32 threadId, u32 argSize, vm::ptr<const void> pArgBloc
 	ARMv7Thread& thread = static_cast<ARMv7Thread&>(*t);
 
 	// push arg block onto the stack
-	const u32 pos = (thread.context.SP -= argSize);
+	const u32 pos = (thread.SP -= argSize);
 	memcpy(vm::get_ptr<void>(pos), pArgBlock.get_ptr(), argSize);
 
 	// set SceKernelThreadEntry function arguments
-	thread.context.GPR[0] = argSize;
-	thread.context.GPR[1] = pos;
+	thread.GPR[0] = argSize;
+	thread.GPR[1] = pos;
 
 	thread.Exec();
 	return SCE_OK;
@@ -95,7 +95,7 @@ s32 sceKernelExitThread(ARMv7Context& context, s32 exitStatus)
 	sceLibKernel.Warning("sceKernelExitThread(exitStatus=0x%x)", exitStatus);
 
 	// exit status is stored in r0
-	context.thread.Stop();
+	static_cast<ARMv7Thread&>(context).Stop();
 
 	return SCE_OK;
 }
@@ -127,10 +127,10 @@ s32 sceKernelExitDeleteThread(ARMv7Context& context, s32 exitStatus)
 	sceLibKernel.Warning("sceKernelExitDeleteThread(exitStatus=0x%x)", exitStatus);
 
 	// exit status is stored in r0
-	context.thread.Stop();
+	static_cast<ARMv7Thread&>(context).Stop();
 
 	// current thread should be deleted
-	const u32 id = context.thread.GetId();
+	const u32 id = static_cast<ARMv7Thread&>(context).GetId();
 	CallAfter([id]()
 	{
 		Emu.GetCPU().RemoveThread(id);
@@ -171,7 +171,7 @@ u32 sceKernelGetThreadId(ARMv7Context& context)
 {
 	sceLibKernel.Log("sceKernelGetThreadId()");
 
-	return context.thread.GetId();
+	return static_cast<ARMv7Thread&>(context).GetId();
 }
 
 s32 sceKernelChangeCurrentThreadAttr(u32 clearAttr, u32 setAttr)
@@ -287,7 +287,7 @@ s32 sceKernelWaitThreadEnd(s32 threadId, vm::ptr<s32> pExitStatus, vm::ptr<u32> 
 
 	if (pExitStatus)
 	{
-		*pExitStatus = thread.context.GPR[0];
+		*pExitStatus = thread.GPR[0];
 	}
 
 	return SCE_OK;

@@ -12,12 +12,16 @@
 
 void ARMv7Context::write_pc(u32 value)
 {
+	ARMv7Thread& thread = *static_cast<ARMv7Thread*>(this);
+
 	ISET = value & 1 ? Thumb : ARM;
 	thread.SetBranch(value & ~1);
 }
 
 u32 ARMv7Context::read_pc()
 {
+	ARMv7Thread& thread = *static_cast<ARMv7Thread*>(this);
+
 	return ISET == ARM ? thread.PC + 8 : thread.PC + 4;
 }
 
@@ -28,7 +32,7 @@ u32 ARMv7Context::get_stack_arg(u32 pos)
 
 void ARMv7Context::fast_call(u32 addr)
 {
-	return thread.FastCall(addr);
+	return static_cast<ARMv7Thread*>(this)->FastCall(addr);
 }
 
 #define TLS_MAX 128
@@ -96,7 +100,6 @@ void armv7_free_tls(u32 thread)
 
 ARMv7Thread::ARMv7Thread()
 	: CPUThread(CPU_THREAD_ARMv7)
-	, context(*this)
 	//, m_arg(0)
 	//, m_last_instr_size(0)
 	//, m_last_instr_name("UNK")
@@ -110,15 +113,15 @@ ARMv7Thread::~ARMv7Thread()
 
 void ARMv7Thread::InitRegs()
 {
-	memset(context.GPR, 0, sizeof(context.GPR));
-	context.APSR.APSR = 0;
-	context.IPSR.IPSR = 0;
-	context.ISET = PC & 1 ? Thumb : ARM; // select instruction set
-	context.thread.SetPc(PC & ~1); // and fix PC
-	context.ITSTATE.IT = 0;
-	context.SP = m_stack_addr + m_stack_size;
-	context.TLS = armv7_get_tls(GetId());
-	context.debug |= DF_DISASM | DF_PRINT;
+	memset(GPR, 0, sizeof(GPR));
+	APSR.APSR = 0;
+	IPSR.IPSR = 0;
+	ISET = PC & 1 ? Thumb : ARM; // select instruction set
+	SetPc(PC & ~1); // and fix PC
+	ITSTATE.IT = 0;
+	SP = m_stack_addr + m_stack_size;
+	TLS = armv7_get_tls(GetId());
+	debug = DF_DISASM | DF_PRINT;
 }
 
 void ARMv7Thread::InitStack()
@@ -144,16 +147,16 @@ std::string ARMv7Thread::RegsToString()
 	std::string result = "Registers:\n=========\n";
 	for(int i=0; i<15; ++i)
 	{
-		result += fmt::Format("%s\t= 0x%08x\n", g_arm_reg_name[i], context.GPR[i]);
+		result += fmt::Format("%s\t= 0x%08x\n", g_arm_reg_name[i], GPR[i]);
 	}
 
 	result += fmt::Format("APSR\t= 0x%08x [N: %d, Z: %d, C: %d, V: %d, Q: %d]\n", 
-		context.APSR.APSR,
-		fmt::by_value(context.APSR.N),
-		fmt::by_value(context.APSR.Z),
-		fmt::by_value(context.APSR.C),
-		fmt::by_value(context.APSR.V),
-		fmt::by_value(context.APSR.Q));
+		APSR.APSR,
+		fmt::by_value(APSR.N),
+		fmt::by_value(APSR.Z),
+		fmt::by_value(APSR.C),
+		fmt::by_value(APSR.V),
+		fmt::by_value(APSR.Q));
 	
 	return result;
 }
@@ -180,7 +183,7 @@ void ARMv7Thread::DoRun()
 	{
 	case 0:
 	case 1:
-		m_dec = new ARMv7Decoder(context);
+		m_dec = new ARMv7Decoder(*this);
 		break;
 	default:
 		LOG_ERROR(PPU, "Invalid CPU decoder mode: %d", Ini.CPUDecoderMode.GetValue());
@@ -208,21 +211,21 @@ void ARMv7Thread::FastCall(u32 addr)
 {
 	auto old_status = m_status;
 	auto old_PC = PC;
-	auto old_stack = context.SP;
-	auto old_LR = context.LR;
+	auto old_stack = SP;
+	auto old_LR = LR;
 	auto old_thread = GetCurrentNamedThread();
 
 	m_status = Running;
 	PC = addr;
-	context.LR = Emu.GetCPUThreadStop();
+	LR = Emu.GetCPUThreadStop();
 	SetCurrentNamedThread(this);
 
 	CPUThread::Task();
 
 	m_status = old_status;
 	PC = old_PC;
-	context.SP = old_stack;
-	context.LR = old_LR;
+	SP = old_stack;
+	LR = old_LR;
 	SetCurrentNamedThread(old_thread);
 }
 
@@ -284,8 +287,8 @@ cpu_thread& armv7_thread::run()
 	armv7.Run();
 
 	// set arguments
-	armv7.context.GPR[0] = argc;
-	armv7.context.GPR[1] = argv;
+	armv7.GPR[0] = argc;
+	armv7.GPR[1] = argv;
 
 	return *this;
 }
