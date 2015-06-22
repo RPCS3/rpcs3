@@ -341,7 +341,7 @@ s32 cellGameDataCheckCreate2(PPUThread& CPU, u32 version, vm::cptr<char> dirName
 	strcpy_trunc(cbGet->getParam.title, psf.GetString("TITLE"));
 	// TODO: write lang titles
 
-	funcStat(cbResult, cbGet, cbSet);
+	funcStat(CPU, cbResult, cbGet, cbSet);
 
 	if (cbSet->setParam)
 	{

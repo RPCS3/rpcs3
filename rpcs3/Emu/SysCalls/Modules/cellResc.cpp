@@ -17,7 +17,7 @@ extern void cellGcmSetFlipHandler(vm::ptr<void(u32)> handler);
 extern void cellGcmSetVBlankHandler(vm::ptr<void(u32)> handler);
 extern s32 cellGcmAddressToOffset(u32 address, vm::ptr<u32> offset);
 extern s32 cellGcmSetDisplayBuffer(u32 id, u32 offset, u32 pitch, u32 width, u32 height);
-extern s32 cellGcmSetPrepareFlip(vm::ptr<CellGcmContextData> ctx, u32 id);
+extern s32 cellGcmSetPrepareFlip(PPUThread& CPU, vm::ptr<CellGcmContextData> ctx, u32 id);
 extern s32 cellGcmSetSecondVFrequency(u32 freq);
 extern u32 cellGcmGetLabelAddress(u8 index);
 extern u32 cellGcmGetTiledPitchSize(u32 size);
@@ -984,7 +984,7 @@ int cellRescSetSrc(s32 idx, vm::ptr<CellRescSrc> src)
 	return 0;
 }
 
-int cellRescSetConvertAndFlip(vm::ptr<CellGcmContextData> cntxt, s32 idx)
+int cellRescSetConvertAndFlip(PPUThread& CPU, vm::ptr<CellGcmContextData> cntxt, s32 idx)
 {
 	cellResc.Log("cellRescSetConvertAndFlip(cntxt_addr=0x%x, indx=0x%x)", cntxt.addr(), idx);
 
@@ -1017,7 +1017,7 @@ int cellRescSetConvertAndFlip(vm::ptr<CellGcmContextData> cntxt, s32 idx)
 
 	//TODO: ?
 
-	cellGcmSetPrepareFlip(cntxt, idx);
+	cellGcmSetPrepareFlip(CPU, cntxt, idx);
 
 	return CELL_OK;
 }

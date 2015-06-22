@@ -823,8 +823,6 @@ protected:
 	virtual void DoStop() override;
 };
 
-PPUThread& GetCurrentPPUThread();
-
 class ppu_thread : cpu_thread
 {
 	static const u32 stack_align = 0x10;

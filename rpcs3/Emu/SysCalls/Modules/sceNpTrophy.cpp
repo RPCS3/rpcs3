@@ -148,7 +148,7 @@ int sceNpTrophyCreateHandle(vm::ptr<u32> handle)
 	return CELL_OK;
 }
 
-int sceNpTrophyRegisterContext(u32 context, u32 handle, vm::ptr<SceNpTrophyStatusCallback> statusCb, u32 arg_addr, u64 options)
+int sceNpTrophyRegisterContext(PPUThread& CPU, u32 context, u32 handle, vm::ptr<SceNpTrophyStatusCallback> statusCb, u32 arg_addr, u64 options)
 {
 	sceNpTrophy.Warning("sceNpTrophyRegisterContext(context=0x%x, handle=0x%x, statusCb_addr=0x%x, arg_addr=0x%x, options=0x%llx)",
 		context, handle, statusCb.addr(), arg_addr, options);
@@ -209,8 +209,8 @@ int sceNpTrophyRegisterContext(u32 context, u32 handle, vm::ptr<SceNpTrophyStatu
 	ctxt.tropusr.reset(tropusr);
 
 	// TODO: Callbacks
-	statusCb(context, SCE_NP_TROPHY_STATUS_INSTALLED, 100, 100, arg_addr);
-	statusCb(context, SCE_NP_TROPHY_STATUS_PROCESSING_COMPLETE, 100, 100, arg_addr);
+	statusCb(CPU, context, SCE_NP_TROPHY_STATUS_INSTALLED, 100, 100, arg_addr);
+	statusCb(CPU, context, SCE_NP_TROPHY_STATUS_PROCESSING_COMPLETE, 100, 100, arg_addr);
 	
 	return CELL_OK;
 }

@@ -5,10 +5,23 @@ struct ARMv7Context;
 
 namespace vm
 {
+	// helper SFINAE type for vm::_ptr_base comparison operators (enables comparison between equal types and between any type and void*)
+	template<typename T1, typename T2, typename RT = void> using if_comparable_t = std::enable_if_t<
+		std::is_void<T1>::value ||
+		std::is_void<T2>::value ||
+		std::is_same<std::remove_cv_t<T1>, std::remove_cv_t<T2>>::value,
+		RT>;
+
+	// helper SFINAE type for vm::_ptr_base pointer arithmetic operators and indirection (disabled for void and function pointers)
+	template<typename T, typename RT = void> using if_arithmetical_ptr_t = std::enable_if_t<
+		!std::is_void<T>::value &&
+		!std::is_function<T>::value,
+		RT>;
+
 	template<typename T, typename AT = u32>
 	struct _ptr_base
 	{
-		AT m_addr;
+		AT m_addr; // don't access directly
 
 		using type = T;
 
@@ -19,13 +32,27 @@ namespace vm
 		{
 			return m_addr;
 		}
+
+		// get vm pointer to member
+		template<typename MT, typename T2, typename = if_comparable_t<T, T2>> _ptr_base<MT> of(MT T2::*const member) const
+		{
+			const u32 offset = static_cast<u32>(reinterpret_cast<std::ptrdiff_t>(&(reinterpret_cast<T*>(0ull)->*member)));
+			return{ vm::cast(m_addr + offset) };
+		}
+
+		// get vm pointer to array member with array subscribtion
+		template<typename MT, typename T2, typename = if_comparable_t<T, T2>> _ptr_base<std::remove_extent_t<MT>> of(MT T2::*const member, u32 index) const
+		{
+			const u32 offset = static_cast<u32>(reinterpret_cast<std::ptrdiff_t>(&(reinterpret_cast<T*>(0ull)->*member)));
+			return{ vm::cast(m_addr + offset + sizeof32(T) * index) };
+		}
 		
 		template<typename CT> std::enable_if_t<std::is_assignable<AT&, CT>::value> set(const CT& value)
 		{
 			m_addr = value;
 		}
 
-		template<typename AT2 = AT> static _ptr_base make(const AT2& addr)
+		template<typename AT2 = AT> static std::enable_if_t<std::is_assignable<AT&, AT2>::value, _ptr_base> make(const AT2& addr)
 		{
 			return{ convert_le_be<AT>(addr) };
 		}
@@ -105,14 +132,11 @@ namespace vm
 			return{ convert_le_be<AT>(addr) };
 		}
 
-		// defined in CB_FUNC.h, call using specified PPU thread context
+		// defined in CB_FUNC.h, passing context is mandatory
 		RT operator()(PPUThread& CPU, T... args) const;
 
 		// defined in ARMv7Callback.h, passing context is mandatory
 		RT operator()(ARMv7Context& context, T... args) const;
-
-		// defined in CB_FUNC.h, call using current PPU thread context
-		RT operator()(T... args) const;
 
 		// conversion to another function pointer
 		template<typename AT2> operator _ptr_base<type, AT2>() const
@@ -212,19 +236,6 @@ namespace vm
 
 	// vm::null is convertible to any vm::ptr type as null pointer in virtual memory
 	static null_t null;
-
-	// helper SFINAE type for vm::_ptr_base comparison operators (enables comparison between equal types and between any type and void*)
-	template<typename T1, typename T2, typename RT> using if_comparable_t = std::enable_if_t<
-		std::is_void<T1>::value ||
-		std::is_void<T2>::value ||
-		std::is_same<std::remove_cv_t<T1>, std::remove_cv_t<T2>>::value,
-		RT>;
-
-	// helper SFINAE type for vm::_ptr_base pointer arithmetic operators and indirection (disabled for void and function pointers)
-	template<typename T, typename RT> using if_arithmetical_ptr_t = std::enable_if_t<
-		!std::is_void<T>::value &&
-		!std::is_function<T>::value,
-		RT>;
 
 	// perform static_cast (for example, vm::ptr<void> to vm::ptr<char>)
 	template<typename CT, typename T, typename AT, typename = decltype(static_cast<CT*>(std::declval<T*>()))> inline _ptr_base<CT, AT> static_ptr_cast(const _ptr_base<T, AT>& other)

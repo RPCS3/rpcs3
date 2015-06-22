@@ -489,15 +489,6 @@ void fill_ppu_exec_map(u32 addr, u32 size)
 	}
 }
 
-PPUThread& GetCurrentPPUThread()
-{
-	CPUThread* thread = GetCurrentCPUThread();
-
-	if(!thread || thread->GetType() != CPU_THREAD_PPU) throw std::string("GetCurrentPPUThread: bad thread");
-
-	return *(PPUThread*)thread;
-}
-
 PPUThread::PPUThread() : CPUThread(CPU_THREAD_PPU)
 {
 	Reset();

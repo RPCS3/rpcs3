@@ -170,12 +170,6 @@ namespace vm
 
 		return cb_detail::_func_caller<RT, T...>::call(CPU, pc, rtoc, args...);
 	}
-
-	template<typename AT, typename RT, typename... T>
-	force_inline RT _ptr_base<RT(T...), AT>::operator()(T... args) const
-	{
-		return operator()(GetCurrentPPUThread(), args...);
-	}
 }
 
 template<typename RT, typename... T>

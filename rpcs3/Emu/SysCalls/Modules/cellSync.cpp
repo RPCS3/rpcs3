@@ -1018,7 +1018,7 @@ s32 cellSyncLFQueueInitialize(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u8> buffer
 	return syncLFQueueInitialize(queue, buffer, size, depth, direction, eaSignal);
 }
 
-s32 syncLFQueueGetPushPointer(vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32 isBlocking, u32 useEventQueue)
+s32 syncLFQueueGetPushPointer(PPUThread& CPU, vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32 isBlocking, u32 useEventQueue)
 {
 	if (queue->m_direction != CELL_SYNC_QUEUE_PPU2SPU)
 	{
@@ -1106,45 +1106,45 @@ s32 syncLFQueueGetPushPointer(vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32 
 			}
 		}
 
-		if (s32 res = sys_event_queue_receive(GetCurrentPPUThread(), queue->m_eq_id, vm::null, 0))
+		if (s32 res = sys_event_queue_receive(CPU, queue->m_eq_id, vm::null, 0))
 		{
-			assert(!"sys_event_queue_receive() failed");
+			throw __FUNCTION__;
 		}
 		var1 = 1;
 	}
 }
 
-s32 _cellSyncLFQueueGetPushPointer(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u32> pointer, u32 isBlocking, u32 useEventQueue)
+s32 _cellSyncLFQueueGetPushPointer(PPUThread& CPU, vm::ptr<CellSyncLFQueue> queue, vm::ptr<u32> pointer, u32 isBlocking, u32 useEventQueue)
 {
 	cellSync.Warning("_cellSyncLFQueueGetPushPointer(queue=*0x%x, pointer=*0x%x, isBlocking=%d, useEventQueue=%d)", queue, pointer, isBlocking, useEventQueue);
 
 	s32 pointer_value;
-	s32 result = syncLFQueueGetPushPointer(queue, pointer_value, isBlocking, useEventQueue);
+	s32 result = syncLFQueueGetPushPointer(CPU, queue, pointer_value, isBlocking, useEventQueue);
 
 	*pointer = pointer_value;
 
 	return result;
 }
 
-s32 syncLFQueueGetPushPointer2(vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32 isBlocking, u32 useEventQueue)
+s32 syncLFQueueGetPushPointer2(PPUThread& CPU, vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32 isBlocking, u32 useEventQueue)
 {
 	throw __FUNCTION__;
 }
 
-s32 _cellSyncLFQueueGetPushPointer2(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u32> pointer, u32 isBlocking, u32 useEventQueue)
+s32 _cellSyncLFQueueGetPushPointer2(PPUThread& CPU, vm::ptr<CellSyncLFQueue> queue, vm::ptr<u32> pointer, u32 isBlocking, u32 useEventQueue)
 {
 	// arguments copied from _cellSyncLFQueueGetPushPointer
 	cellSync.Todo("_cellSyncLFQueueGetPushPointer2(queue=*0x%x, pointer=*0x%x, isBlocking=%d, useEventQueue=%d)", queue, pointer, isBlocking, useEventQueue);
 
 	s32 pointer_value;
-	s32 result = syncLFQueueGetPushPointer2(queue, pointer_value, isBlocking, useEventQueue);
+	s32 result = syncLFQueueGetPushPointer2(CPU,queue, pointer_value, isBlocking, useEventQueue);
 
 	*pointer = pointer_value;
 
 	return result;
 }
 
-s32 syncLFQueueCompletePushPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, std::function<s32(u32 addr, u32 arg)> fpSendSignal)
+s32 syncLFQueueCompletePushPointer(PPUThread& CPU, vm::ptr<CellSyncLFQueue> queue, s32 pointer, std::function<s32(PPUThread& CPU, u32 addr, u32 arg)> fpSendSignal)
 {
 	if (queue->m_direction != CELL_SYNC_QUEUE_PPU2SPU)
 	{
@@ -1260,7 +1260,7 @@ s32 syncLFQueueCompletePushPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, 
 				if (exch)
 				{
 					assert(fpSendSignal);
-					return fpSendSignal((u32)queue->m_eaSignal.addr(), var6);
+					return fpSendSignal(CPU, (u32)queue->m_eaSignal.addr(), var6);
 				}
 			}
 			else
@@ -1278,24 +1278,24 @@ s32 syncLFQueueCompletePushPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, 
 	}
 }
 
-s32 _cellSyncLFQueueCompletePushPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, vm::ptr<s32(u32 addr, u32 arg)> fpSendSignal)
+s32 _cellSyncLFQueueCompletePushPointer(PPUThread& CPU, vm::ptr<CellSyncLFQueue> queue, s32 pointer, vm::ptr<s32(u32 addr, u32 arg)> fpSendSignal)
 {
 	cellSync.Warning("_cellSyncLFQueueCompletePushPointer(queue=*0x%x, pointer=%d, fpSendSignal=*0x%x)", queue, pointer, fpSendSignal);
 
-	return syncLFQueueCompletePushPointer(queue, pointer, fpSendSignal);
+	return syncLFQueueCompletePushPointer(CPU, queue, pointer, fpSendSignal);
 }
 
-s32 syncLFQueueCompletePushPointer2(vm::ptr<CellSyncLFQueue> queue, s32 pointer, std::function<s32(u32 addr, u32 arg)> fpSendSignal)
+s32 syncLFQueueCompletePushPointer2(PPUThread& CPU, vm::ptr<CellSyncLFQueue> queue, s32 pointer, std::function<s32(PPUThread& CPU, u32 addr, u32 arg)> fpSendSignal)
 {
 	throw __FUNCTION__;
 }
 
-s32 _cellSyncLFQueueCompletePushPointer2(vm::ptr<CellSyncLFQueue> queue, s32 pointer, vm::ptr<s32(u32 addr, u32 arg)> fpSendSignal)
+s32 _cellSyncLFQueueCompletePushPointer2(PPUThread& CPU, vm::ptr<CellSyncLFQueue> queue, s32 pointer, vm::ptr<s32(u32 addr, u32 arg)> fpSendSignal)
 {
 	// arguments copied from _cellSyncLFQueueCompletePushPointer
 	cellSync.Todo("_cellSyncLFQueueCompletePushPointer2(queue=*0x%x, pointer=%d, fpSendSignal=*0x%x)", queue, pointer, fpSendSignal);
 
-	return syncLFQueueCompletePushPointer2(queue, pointer, fpSendSignal);
+	return syncLFQueueCompletePushPointer2(CPU, queue, pointer, fpSendSignal);
 }
 
 s32 _cellSyncLFQueuePushBody(PPUThread& CPU, vm::ptr<CellSyncLFQueue> queue, vm::cptr<void> buffer, u32 isBlocking)
@@ -1320,11 +1320,11 @@ s32 _cellSyncLFQueuePushBody(PPUThread& CPU, vm::ptr<CellSyncLFQueue> queue, vm:
 
 		if (queue->m_direction != CELL_SYNC_QUEUE_ANY2ANY)
 		{
-			res = syncLFQueueGetPushPointer(queue, position, isBlocking, 0);
+			res = syncLFQueueGetPushPointer(CPU, queue, position, isBlocking, 0);
 		}
 		else
 		{
-			res = syncLFQueueGetPushPointer2(queue, position, isBlocking, 0);
+			res = syncLFQueueGetPushPointer2(CPU, queue, position, isBlocking, 0);
 		}
 
 		if (!isBlocking || res != CELL_SYNC_ERROR_AGAIN)
@@ -1354,17 +1354,17 @@ s32 _cellSyncLFQueuePushBody(PPUThread& CPU, vm::ptr<CellSyncLFQueue> queue, vm:
 
 	if (queue->m_direction != CELL_SYNC_QUEUE_ANY2ANY)
 	{
-		res = syncLFQueueCompletePushPointer(queue, position, nullptr);
+		res = syncLFQueueCompletePushPointer(CPU, queue, position, nullptr);
 	}
 	else
 	{
-		res = syncLFQueueCompletePushPointer2(queue, position, nullptr);
+		res = syncLFQueueCompletePushPointer2(CPU, queue, position, nullptr);
 	}
 
 	return res;
 }
 
-s32 syncLFQueueGetPopPointer(vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32 isBlocking, u32, u32 useEventQueue)
+s32 syncLFQueueGetPopPointer(PPUThread& CPU, vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32 isBlocking, u32, u32 useEventQueue)
 {
 	if (queue->m_direction != CELL_SYNC_QUEUE_SPU2PPU)
 	{
@@ -1452,45 +1452,45 @@ s32 syncLFQueueGetPopPointer(vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32 i
 			}
 		}
 
-		if (s32 res = sys_event_queue_receive(GetCurrentPPUThread(), queue->m_eq_id, vm::null, 0))
+		if (s32 res = sys_event_queue_receive(CPU, queue->m_eq_id, vm::null, 0))
 		{
-			assert(!"sys_event_queue_receive() failed");
+			throw __FUNCTION__;
 		}
 		var1 = 1;
 	}
 }
 
-s32 _cellSyncLFQueueGetPopPointer(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u32> pointer, u32 isBlocking, u32 arg4, u32 useEventQueue)
+s32 _cellSyncLFQueueGetPopPointer(PPUThread& CPU, vm::ptr<CellSyncLFQueue> queue, vm::ptr<u32> pointer, u32 isBlocking, u32 arg4, u32 useEventQueue)
 {
 	cellSync.Warning("_cellSyncLFQueueGetPopPointer(queue=*0x%x, pointer=*0x%x, isBlocking=%d, arg4=%d, useEventQueue=%d)", queue, pointer, isBlocking, arg4, useEventQueue);
 
 	s32 pointer_value;
-	s32 result = syncLFQueueGetPopPointer(queue, pointer_value, isBlocking, arg4, useEventQueue);
+	s32 result = syncLFQueueGetPopPointer(CPU, queue, pointer_value, isBlocking, arg4, useEventQueue);
 
 	*pointer = pointer_value;
 
 	return result;
 }
 
-s32 syncLFQueueGetPopPointer2(vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32 isBlocking, u32 useEventQueue)
+s32 syncLFQueueGetPopPointer2(PPUThread& CPU, vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32 isBlocking, u32 useEventQueue)
 {
 	throw __FUNCTION__;
 }
 
-s32 _cellSyncLFQueueGetPopPointer2(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u32> pointer, u32 isBlocking, u32 useEventQueue)
+s32 _cellSyncLFQueueGetPopPointer2(PPUThread& CPU, vm::ptr<CellSyncLFQueue> queue, vm::ptr<u32> pointer, u32 isBlocking, u32 useEventQueue)
 {
 	// arguments copied from _cellSyncLFQueueGetPopPointer
 	cellSync.Todo("_cellSyncLFQueueGetPopPointer2(queue=*0x%x, pointer=*0x%x, isBlocking=%d, useEventQueue=%d)", queue, pointer, isBlocking, useEventQueue);
 
 	s32 pointer_value;
-	s32 result = syncLFQueueGetPopPointer2(queue, pointer_value, isBlocking, useEventQueue);
+	s32 result = syncLFQueueGetPopPointer2(CPU, queue, pointer_value, isBlocking, useEventQueue);
 
 	*pointer = pointer_value;
 
 	return result;
 }
 
-s32 syncLFQueueCompletePopPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, std::function<s32(u32 addr, u32 arg)> fpSendSignal, u32 noQueueFull)
+s32 syncLFQueueCompletePopPointer(PPUThread& CPU, vm::ptr<CellSyncLFQueue> queue, s32 pointer, std::function<s32(PPUThread& CPU, u32 addr, u32 arg)> fpSendSignal, u32 noQueueFull)
 {
 	if (queue->m_direction != CELL_SYNC_QUEUE_SPU2PPU)
 	{
@@ -1605,7 +1605,7 @@ s32 syncLFQueueCompletePopPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, s
 				if (exch)
 				{
 					assert(fpSendSignal);
-					return fpSendSignal((u32)queue->m_eaSignal.addr(), var6);
+					return fpSendSignal(CPU, (u32)queue->m_eaSignal.addr(), var6);
 				}
 			}
 			else
@@ -1623,25 +1623,25 @@ s32 syncLFQueueCompletePopPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, s
 	}
 }
 
-s32 _cellSyncLFQueueCompletePopPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, vm::ptr<s32(u32 addr, u32 arg)> fpSendSignal, u32 noQueueFull)
+s32 _cellSyncLFQueueCompletePopPointer(PPUThread& CPU, vm::ptr<CellSyncLFQueue> queue, s32 pointer, vm::ptr<s32(u32 addr, u32 arg)> fpSendSignal, u32 noQueueFull)
 {
 	// arguments copied from _cellSyncLFQueueCompletePushPointer + unknown argument (noQueueFull taken from LFQueue2CompletePopPointer)
 	cellSync.Warning("_cellSyncLFQueueCompletePopPointer(queue=*0x%x, pointer=%d, fpSendSignal=*0x%x, noQueueFull=%d)", queue, pointer, fpSendSignal, noQueueFull);
 
-	return syncLFQueueCompletePopPointer(queue, pointer, fpSendSignal, noQueueFull);
+	return syncLFQueueCompletePopPointer(CPU, queue, pointer, fpSendSignal, noQueueFull);
 }
 
-s32 syncLFQueueCompletePopPointer2(vm::ptr<CellSyncLFQueue> queue, s32 pointer, std::function<s32(u32 addr, u32 arg)> fpSendSignal, u32 noQueueFull)
+s32 syncLFQueueCompletePopPointer2(PPUThread& CPU, vm::ptr<CellSyncLFQueue> queue, s32 pointer, std::function<s32(PPUThread& CPU, u32 addr, u32 arg)> fpSendSignal, u32 noQueueFull)
 {
 	throw __FUNCTION__;
 }
 
-s32 _cellSyncLFQueueCompletePopPointer2(vm::ptr<CellSyncLFQueue> queue, s32 pointer, vm::ptr<s32(u32 addr, u32 arg)> fpSendSignal, u32 noQueueFull)
+s32 _cellSyncLFQueueCompletePopPointer2(PPUThread& CPU, vm::ptr<CellSyncLFQueue> queue, s32 pointer, vm::ptr<s32(u32 addr, u32 arg)> fpSendSignal, u32 noQueueFull)
 {
 	// arguments copied from _cellSyncLFQueueCompletePopPointer
 	cellSync.Todo("_cellSyncLFQueueCompletePopPointer2(queue=*0x%x, pointer=%d, fpSendSignal=*0x%x, noQueueFull=%d)", queue, pointer, fpSendSignal, noQueueFull);
 
-	return syncLFQueueCompletePopPointer2(queue, pointer, fpSendSignal, noQueueFull);
+	return syncLFQueueCompletePopPointer2(CPU, queue, pointer, fpSendSignal, noQueueFull);
 }
 
 s32 _cellSyncLFQueuePopBody(PPUThread& CPU, vm::ptr<CellSyncLFQueue> queue, vm::ptr<void> buffer, u32 isBlocking)
@@ -1665,11 +1665,11 @@ s32 _cellSyncLFQueuePopBody(PPUThread& CPU, vm::ptr<CellSyncLFQueue> queue, vm::
 		s32 res;
 		if (queue->m_direction != CELL_SYNC_QUEUE_ANY2ANY)
 		{
-			res = syncLFQueueGetPopPointer(queue, position, isBlocking, 0, 0);
+			res = syncLFQueueGetPopPointer(CPU, queue, position, isBlocking, 0, 0);
 		}
 		else
 		{
-			res = syncLFQueueGetPopPointer2(queue, position, isBlocking, 0);
+			res = syncLFQueueGetPopPointer2(CPU, queue, position, isBlocking, 0);
 		}
 
 		if (!isBlocking || res != CELL_SYNC_ERROR_AGAIN)
@@ -1699,11 +1699,11 @@ s32 _cellSyncLFQueuePopBody(PPUThread& CPU, vm::ptr<CellSyncLFQueue> queue, vm::
 
 	if (queue->m_direction != CELL_SYNC_QUEUE_ANY2ANY)
 	{
-		res = syncLFQueueCompletePopPointer(queue, position, nullptr, 0);
+		res = syncLFQueueCompletePopPointer(CPU, queue, position, nullptr, 0);
 	}
 	else
 	{
-		res = syncLFQueueCompletePopPointer2(queue, position, nullptr, 0);
+		res = syncLFQueueCompletePopPointer2(CPU, queue, position, nullptr, 0);
 	}
 
 	return res;

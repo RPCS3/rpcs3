@@ -10,11 +10,6 @@
 #include "CPUDecoder.h"
 #include "CPUThread.h"
 
-CPUThread* GetCurrentCPUThread()
-{
-	return dynamic_cast<CPUThread*>(GetCurrentNamedThread());
-}
-
 CPUThread::CPUThread(CPUThreadType type)
 	: ThreadBase("CPUThread")
 	, m_events(0)

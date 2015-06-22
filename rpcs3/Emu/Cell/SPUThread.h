@@ -698,8 +698,6 @@ protected:
 	virtual void DoClose();
 };
 
-SPUThread& GetCurrentSPUThread();
-
 class spu_thread : cpu_thread
 {
 public:

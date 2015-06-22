@@ -28,5 +28,3 @@ public:
 private:
 	virtual void Task();
 };
-
-SPUThread& GetCurrentSPUThread();

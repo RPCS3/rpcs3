@@ -480,7 +480,7 @@ void cellGcmSetFlipStatus()
 	Emu.GetGSManager().GetRender().m_flip_status = 0;
 }
 
-s32 cellGcmSetPrepareFlip(vm::ptr<CellGcmContextData> ctxt, u32 id)
+s32 cellGcmSetPrepareFlip(PPUThread& CPU, vm::ptr<CellGcmContextData> ctxt, u32 id)
 {
 	cellGcmSys.Log("cellGcmSetPrepareFlip(ctx=0x%x, id=0x%x)", ctxt.addr(), id);
 
@@ -503,7 +503,7 @@ s32 cellGcmSetPrepareFlip(vm::ptr<CellGcmContextData> ctxt, u32 id)
 	if (current + 8 >= ctxt->end)
 	{
 		cellGcmSys.Error("Bad flip!");
-		if (s32 res = ctxt->callback(ctxt, 8 /* ??? */))
+		if (s32 res = ctxt->callback(CPU, ctxt, 8 /* ??? */))
 		{
 			cellGcmSys.Error("cellGcmSetPrepareFlip : callback failed (0x%08x)", res);
 			return res;
@@ -527,11 +527,11 @@ s32 cellGcmSetPrepareFlip(vm::ptr<CellGcmContextData> ctxt, u32 id)
 	return id;
 }
 
-s32 cellGcmSetFlip(vm::ptr<CellGcmContextData> ctxt, u32 id)
+s32 cellGcmSetFlip(PPUThread& CPU, vm::ptr<CellGcmContextData> ctxt, u32 id)
 {
 	cellGcmSys.Log("cellGcmSetFlip(ctx=0x%x, id=0x%x)", ctxt.addr(), id);
 
-	s32 res = cellGcmSetPrepareFlip(ctxt, id);
+	s32 res = cellGcmSetPrepareFlip(CPU, ctxt, id);
 	return res < 0 ? CELL_GCM_ERROR_FAILURE : CELL_OK;
 }
 
@@ -1096,19 +1096,19 @@ void cellGcmSetDefaultCommandBuffer()
 // Other
 //------------------------------------------------------------------------
 
-s32 _cellGcmSetFlipCommand(vm::ptr<CellGcmContextData> ctx, u32 id)
+s32 _cellGcmSetFlipCommand(PPUThread& CPU, vm::ptr<CellGcmContextData> ctx, u32 id)
 {
 	cellGcmSys.Log("cellGcmSetFlipCommand(ctx_addr=0x%x, id=0x%x)", ctx.addr(), id);
 
-	return cellGcmSetPrepareFlip(ctx, id);
+	return cellGcmSetPrepareFlip(CPU, ctx, id);
 }
 
-s32 _cellGcmSetFlipCommandWithWaitLabel(vm::ptr<CellGcmContextData> ctx, u32 id, u32 label_index, u32 label_value)
+s32 _cellGcmSetFlipCommandWithWaitLabel(PPUThread& CPU, vm::ptr<CellGcmContextData> ctx, u32 id, u32 label_index, u32 label_value)
 {
 	cellGcmSys.Log("cellGcmSetFlipCommandWithWaitLabel(ctx_addr=0x%x, id=0x%x, label_index=0x%x, label_value=0x%x)",
 		ctx.addr(), id, label_index, label_value);
 
-	s32 res = cellGcmSetPrepareFlip(ctx, id);
+	s32 res = cellGcmSetPrepareFlip(CPU, ctx, id);
 	vm::write32(gcm_info.label_addr + 0x10 * label_index, label_value);
 	return res < 0 ? CELL_GCM_ERROR_FAILURE : CELL_OK;
 }

@@ -539,7 +539,7 @@ namespace vm
 		CPUThread& m_thread;
 
 	public:
-		stackvar(CPUThread& CPU, u32 size = sizeof(T), u32 align = __alignof(T))
+		stackvar(CPUThread& CPU, u32 size = sizeof32(T), u32 align = alignof32(T))
 			: m_data(CPU, size, align)
 			, m_thread(CPU)
 		{
@@ -595,6 +595,16 @@ namespace vm
 		const T& value() const
 		{
 			return *m_data.ptr;
+		}
+
+		T& operator [](u32 index)
+		{
+			return m_data.ptr[index];
+		}
+
+		const T& operator [](u32 index) const
+		{
+			return m_data.ptr[index];
 		}
 
 		u32 addr() const

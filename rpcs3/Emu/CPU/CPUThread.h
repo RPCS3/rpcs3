@@ -229,8 +229,6 @@ protected:
 	virtual void Task();
 };
 
-CPUThread* GetCurrentCPUThread();
-
 class cpu_thread
 {
 protected:

@@ -57,18 +57,6 @@ public:
 }
 g_spu_inter_func_list;
 
-SPUThread& GetCurrentSPUThread()
-{
-	CPUThread* thread = GetCurrentCPUThread();
-
-	if(!thread || (thread->GetType() != CPU_THREAD_SPU && thread->GetType() != CPU_THREAD_RAW_SPU))
-	{
-		throw std::string("GetCurrentSPUThread: bad thread");
-	}
-
-	return *(SPUThread*)thread;
-}
-
 SPUThread::SPUThread(CPUThreadType type) : CPUThread(type)
 {
 	assert(type == CPU_THREAD_SPU || type == CPU_THREAD_RAW_SPU);
