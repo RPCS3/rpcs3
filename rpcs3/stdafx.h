@@ -61,6 +61,22 @@ template<typename T, typename = std::enable_if_t<std::is_integral<T>::value>> in
 	return static_cast<T>((value + (align - 1)) & ~(align - 1));
 }
 
+// bool wrapper for restricting bool result conversions
+struct explicit_bool_t
+{
+	const bool value;
+
+	explicit_bool_t(bool value)
+		: value(value)
+	{
+	}
+
+	explicit operator bool() const
+	{
+		return value;
+	}
+};
+
 // return 32 bit sizeof() to avoid widening/narrowing conversions with size_t
 #define sizeof32(type) sizeof32_t<sizeof(type)>::value
 

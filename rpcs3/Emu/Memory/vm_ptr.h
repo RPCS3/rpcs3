@@ -68,14 +68,16 @@ namespace vm
 			return m_addr != 0;
 		}
 
+		// test address alignment using alignof(T)
 		bool aligned() const
 		{
 			return m_addr % alignof32(T) == 0;
 		}
 
-		bool operator %(to_ne_t<AT> alignment)
+		// test address for arbitrary alignment or something
+		force_inline explicit_bool_t operator %(to_ne_t<AT> right) const
 		{
-			return m_addr % alignment != 0;
+			return m_addr % right;
 		}
 
 		_ptr_base& operator =(const _ptr_base&) = default;
