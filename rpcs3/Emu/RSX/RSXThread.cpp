@@ -101,17 +101,17 @@ void RSXVertexData::Load(u32 start, u32 count, u32 baseOffset, u32 baseIndex = 0
 
 		case 2:
 		{
-			const u16* c_src = (const u16*)src;
-			u16* c_dst = (u16*)dst;
-			for (u32 j = 0; j < size; ++j) *c_dst++ = re16(*c_src++);
+			auto c_src = (const be_t<u16>*)src;
+			auto c_dst = (u16*)dst;
+			for (u32 j = 0; j < size; ++j) *c_dst++ = *c_src++;
 			break;
 		}
 
 		case 4:
 		{
-			const u32* c_src = (const u32*)src;
-			u32* c_dst = (u32*)dst;
-			for (u32 j = 0; j < size; ++j) *c_dst++ = re32(*c_src++);
+			auto c_src = (const be_t<u32>*)src;
+			auto c_dst = (u32*)dst;
+			for (u32 j = 0; j < size; ++j) *c_dst++ = *c_src++;
 			break;
 		}
 		}

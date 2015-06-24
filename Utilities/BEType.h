@@ -443,34 +443,16 @@ static force_inline u128 sync_fetch_and_xor(volatile u128* dest, u128 value)
 	}
 }
 
-#define re16(val) _byteswap_ushort(val)
-#define re32(val) _byteswap_ulong(val)
-#define re64(val) _byteswap_uint64(val)
-#define re128(val) u128::byteswap(val)
-
 template<typename T, int size = sizeof(T)> struct se_t;
-
-template<typename T> struct se_t<T, 1>
-{
-	static force_inline u8 to_be(const T& src)
-	{
-		return (u8&)src;
-	}
-
-	static force_inline T from_be(const u8 src)
-	{
-		return (T&)src;
-	}
-};
 
 template<typename T> struct se_t<T, 2>
 {
-	static force_inline u16 to_be(const T& src)
+	static force_inline u16 to(const T& src)
 	{
 		return _byteswap_ushort((u16&)src);
 	}
 
-	static force_inline T from_be(const u16 src)
+	static force_inline T from(const u16 src)
 	{
 		const u16 res = _byteswap_ushort(src);
 		return (T&)res;
@@ -479,12 +461,12 @@ template<typename T> struct se_t<T, 2>
 
 template<typename T> struct se_t<T, 4>
 {
-	static force_inline u32 to_be(const T& src)
+	static force_inline u32 to(const T& src)
 	{
 		return _byteswap_ulong((u32&)src);
 	}
 
-	static force_inline T from_be(const u32 src)
+	static force_inline T from(const u32 src)
 	{
 		const u32 res = _byteswap_ulong(src);
 		return (T&)res;
@@ -493,12 +475,12 @@ template<typename T> struct se_t<T, 4>
 
 template<typename T> struct se_t<T, 8>
 {
-	static force_inline u64 to_be(const T& src)
+	static force_inline u64 to(const T& src)
 	{
 		return _byteswap_uint64((u64&)src);
 	}
 
-	static force_inline T from_be(const u64 src)
+	static force_inline T from(const u64 src)
 	{
 		const u64 res = _byteswap_uint64(src);
 		return (T&)res;
@@ -507,12 +489,12 @@ template<typename T> struct se_t<T, 8>
 
 template<typename T> struct se_t<T, 16>
 {
-	static force_inline u128 to_be(const T& src)
+	static force_inline u128 to(const T& src)
 	{
 		return u128::byteswap((u128&)src);
 	}
 
-	static force_inline T from_be(const u128& src)
+	static force_inline T from(const u128& src)
 	{
 		const u128 res = u128::byteswap(src);
 		return (T&)res;
@@ -582,6 +564,7 @@ template<typename T> using be_storage_t = typename be_storage<T>::type;
 
 template<typename T> class be_t
 {
+	// TODO (complicated cases like int-float conversions are not handled correctly)
 	template<typename Tto, typename Tfrom, int mode>
 	struct _convert
 	{
@@ -634,9 +617,9 @@ public:
 
 	be_t(const be_t&) = default;
 
-	template<typename CT, typename = std::enable_if_t<std::is_constructible<type, CT>::value>> be_t(const CT& value)
+	template<typename = std::enable_if_t<std::is_constructible<type, type>::value>> be_t(const type& value)
 #ifdef IS_LE_MACHINE
-		: m_data(se_t<type, sizeof(stype)>::to_be(value))
+		: m_data(se_t<type, sizeof(stype)>::to(value))
 #else
 		: m_data(value)
 #endif
@@ -647,7 +630,7 @@ public:
 	force_inline type value() const
 	{
 #ifdef IS_LE_MACHINE
-		return se_t<type, sizeof(stype)>::from_be(m_data);
+		return se_t<type, sizeof(stype)>::from(m_data);
 #else
 		return m_data;
 #endif
@@ -667,7 +650,11 @@ public:
 
 	template<typename CT> std::enable_if_t<std::is_assignable<type&, CT>::value, be_t&> operator =(const CT& value)
 	{
-		m_data = se_t<type, sizeof(stype)>::to_be(value);
+#ifdef IS_LE_MACHINE
+		m_data = se_t<type, sizeof(stype)>::to(value);
+#else
+		m_data = value;
+#endif
 
 		return *this;
 	}
@@ -683,13 +670,11 @@ public:
 	}
 
 	// conversion to another be_t type
-	template<typename T1> operator be_t<T1>() const
-	{
-		return value();
-
-		// TODO (complicated cases like int-float conversions are not handled correctly)
-		//return _convert<T1, T, ((sizeof(T1) > sizeof(T)) ? 1 : (sizeof(T1) < sizeof(T) ? 2 : 0))>::func(m_data);
-	}
+	//template<typename T1> operator be_t<T1>() const
+	//{
+	//	return value();
+	//	//return _convert<T1, T, ((sizeof(T1) > sizeof(T)) ? 1 : (sizeof(T1) < sizeof(T) ? 2 : 0))>::func(m_data);
+	//}
 
 	template<typename T1> be_t& operator +=(const T1& right) { return *this = value() + right; }
 	template<typename T1> be_t& operator -=(const T1& right) { return *this = value() - right; }
@@ -791,11 +776,6 @@ template<> struct to_be<char> { using type = char; };
 template<> struct to_be<u8> { using type = u8; };
 template<> struct to_be<s8> { using type = s8; };
 
-template<typename T, typename T1, T1 value> struct _se : public const_se_t<T, value> {};
-template<typename T, typename T1, T1 value> struct _se<be_t<T>, T1, value> : public const_se_t<T, value> {};
-
-#define se32(x) _se<u32, decltype(x), x>::value
-
 template<typename T> class le_t
 {
 public:
@@ -816,7 +796,7 @@ public:
 
 	le_t(const le_t&) = default;
 
-	template<typename CT, typename = std::enable_if_t<std::is_constructible<type, CT>::value>> le_t(const CT& value)
+	template<typename = std::enable_if_t<std::is_constructible<type, type>::value>> le_t(const type& value)
 		: m_data(value)
 	{
 	}
@@ -845,10 +825,10 @@ public:
 	}
 
 	// conversion to another le_t type
-	template<typename T1> operator le_t<T1>() const
-	{
-		return value();
-	}
+	//template<typename T1> operator le_t<T1>() const
+	//{
+	//	return value();
+	//}
 
 	template<typename T1> le_t& operator +=(const T1& right) { return *this = value() + right; }
 	template<typename T1> le_t& operator -=(const T1& right) { return *this = value() - right; }

@@ -555,7 +555,7 @@ never_inline s32 savedata_op(
 		}
 		}
 
-		psf.SetInteger("*" + file_path, fileSet->fileType.data() == se32(CELL_SAVEDATA_FILETYPE_SECUREFILE));
+		psf.SetInteger("*" + file_path, fileSet->fileType == CELL_SAVEDATA_FILETYPE_SECUREFILE);
 
 		std::string local_path;
 

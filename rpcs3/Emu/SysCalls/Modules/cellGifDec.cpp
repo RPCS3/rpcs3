@@ -50,13 +50,13 @@ s32 cellGifDecOpen(
 	current_subHandle->fd = 0;
 	current_subHandle->src = *src;
 
-	switch(src->srcSelect.data())
+	switch (src->srcSelect.value())
 	{
-	case se32(CELL_GIFDEC_BUFFER):
+	case CELL_GIFDEC_BUFFER:
 		current_subHandle->fileSize = src->streamSize;
 		break;
 
-	case se32(CELL_GIFDEC_FILE):
+	case CELL_GIFDEC_FILE:
 	{
 		// Get file descriptor and size
 		std::shared_ptr<vfsStream> file_s(Emu.GetVFS().OpenFile(src->fileName.get_ptr(), vfsRead));
@@ -95,13 +95,13 @@ s32 cellGifDecReadHeader(
 	//Write the header to buffer
 	vm::var<u8[13]> buffer; // Alloc buffer for GIF header
 
-	switch(subHandle_data->src.srcSelect.data())
+	switch(subHandle_data->src.srcSelect.value())
 	{
-	case se32(CELL_GIFDEC_BUFFER):
+	case CELL_GIFDEC_BUFFER:
 		memmove(buffer.begin(), subHandle_data->src.streamPtr.get_ptr(), buffer.size());
 		break;
 
-	case se32(CELL_GIFDEC_FILE):
+	case CELL_GIFDEC_FILE:
 	{
 		auto file = Emu.GetIdManager().get<lv2_file_t>(fd);
 		file->file->Seek(0);
@@ -192,13 +192,13 @@ s32 cellGifDecDecodeData(
 	//Copy the GIF file to a buffer
 	vm::var<unsigned char[]> gif((u32)fileSize);
 
-	switch(subHandle_data->src.srcSelect.data())
+	switch(subHandle_data->src.srcSelect.value())
 	{
-	case se32(CELL_GIFDEC_BUFFER):
+	case CELL_GIFDEC_BUFFER:
 		memmove(gif.begin(), subHandle_data->src.streamPtr.get_ptr(), gif.size());
 		break;
 
-	case se32(CELL_GIFDEC_FILE):
+	case CELL_GIFDEC_FILE:
 	{
 		auto file = Emu.GetIdManager().get<lv2_file_t>(fd);
 		file->file->Seek(0);

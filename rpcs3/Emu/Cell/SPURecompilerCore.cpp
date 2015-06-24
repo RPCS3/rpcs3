@@ -95,9 +95,9 @@ void SPURecompilerCore::Compile(u16 pos)
 
 	while (true)
 	{
-		const u32 opcode = vm::ps3::read32(CPU.offset + pos * 4);
+		const be_t<u32> opcode = vm::ps3::read32(CPU.offset + pos * 4);
 		m_enc->do_finalize = false;
-		if (opcode)
+		if (opcode.data())
 		{
 			//const u64 stamp1 = get_system_time();
 			// disasm for logging:
@@ -120,11 +120,11 @@ void SPURecompilerCore::Compile(u16 pos)
 			m_enc->do_finalize = true;
 		}
 		bool fin = m_enc->do_finalize;
-		//if (entry[pos].valid == re32(opcode))
+		//if (entry[pos]._valid == opcode)
 		//{
 		//	excess++;
 		//}
-		entry[pos].valid = re32(opcode);
+		entry[pos]._valid = opcode;
 
 		if (fin) break;
 		CPU.PC += 4;
@@ -169,7 +169,7 @@ void SPURecompilerCore::Compile(u16 pos)
 u32 SPURecompilerCore::DecodeMemory(const u32 address)
 {
 	const u32 pos = CPU.PC >> 2; // 0x0..0xffff
-	const auto ls = vm::get_ptr<u32>(CPU.offset);
+	const auto _ls = vm::get_ptr<be_t<u32>>(CPU.offset);
 
 	assert(CPU.offset == address - CPU.PC && pos < 0x10000);
 
@@ -182,7 +182,7 @@ u32 SPURecompilerCore::DecodeMemory(const u32 address)
 		{
 			for (u32 i = 0; i < 0x10000; i++)
 			{
-				if (entry[i].valid && entry[i].valid != ls[i])
+				if (entry[i]._valid.data() && entry[i]._valid != _ls[i])
 				{
 					is_valid = false;
 					break;
@@ -199,14 +199,14 @@ u32 SPURecompilerCore::DecodeMemory(const u32 address)
 			{
 				if (!entry[i].pointer) continue;
 
-				if (!entry[i].valid || entry[i].valid != ls[i] || (i + entry[i].count > pos && i < pos + entry[pos].count))
+				if (!entry[i]._valid.data() || entry[i]._valid != _ls[i] || (i + entry[i].count > pos && i < pos + entry[pos].count))
 				{
 					m_jit->release(entry[i].pointer);
 					entry[i].pointer = nullptr;
 
 					for (u32 j = i; j < i + entry[i].count; j++)
 					{
-						entry[j].valid = 0;
+						entry[j]._valid = 0;
 					}
 
 					//need_check = true;
@@ -225,9 +225,9 @@ u32 SPURecompilerCore::DecodeMemory(const u32 address)
 		return 0;
 	}
 
-	const auto func = asmjit_cast<u32(*)(SPUThread& _cpu, u32* _ls, const void* _imm, const void* _g_imm)>(entry[pos].pointer);
+	const auto func = asmjit_cast<u32(*)(SPUThread& _cpu, be_t<u32>* _ls, const void* _imm, const void* _g_imm)>(entry[pos].pointer);
 
-	u32 res = func(CPU, ls, imm_table.data(), &g_spu_imm);
+	u32 res = func(CPU, _ls, imm_table.data(), &g_spu_imm);
 
 	if (res & 0x1000000)
 	{

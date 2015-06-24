@@ -2311,7 +2311,7 @@ s32 spursAddWorkload(
 			v &= ~0xf;
 			v |= (maxContention > 8 ? 8 : maxContention);
 		});
-		spurs->wklSignal1._and_not({ 0x8000 >> index }); // clear bit in wklFlag1
+		spurs->wklSignal1._and_not(0x8000 >> index); // clear bit in wklFlag1
 	}
 	else
 	{
@@ -2320,7 +2320,7 @@ s32 spursAddWorkload(
 			v &= ~0xf0;
 			v |= (maxContention > 8 ? 8 : maxContention) << 4;
 		});
-		spurs->wklSignal2._and_not({ 0x8000 >> index }); // clear bit in wklFlag2
+		spurs->wklSignal2._and_not(0x8000 >> index); // clear bit in wklFlag2
 	}
 
 	spurs->wklFlagReceiver.compare_and_swap(wnum, 0xff);
@@ -2386,7 +2386,7 @@ s32 cellSpursAddWorkloadWithAttribute(vm::ptr<CellSpurs> spurs, vm::ptr<u32> wid
 		return CELL_SPURS_POLICY_MODULE_ERROR_ALIGN;
 	}
 
-	if (attr->revision.data() != se32(1))
+	if (attr->revision != 1)
 	{
 		return CELL_SPURS_POLICY_MODULE_ERROR_INVAL;
 	}

@@ -179,7 +179,7 @@ bool UnpackEntry(const fs::file& dec_pkg_f, const PKGEntry& entry, std::string d
 	dec_pkg_f.read(buf, entry.name_size);
 	buf[entry.name_size] = 0;
 	
-	switch (entry.type.data() >> 24)
+	switch (entry.type & 0xff)
 	{
 	case PKG_FILE_ENTRY_NPDRM:
 	case PKG_FILE_ENTRY_NPDRMEDAT:

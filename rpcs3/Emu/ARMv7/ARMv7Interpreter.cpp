@@ -3699,7 +3699,7 @@ void ARMv7_instrs::REV(ARMv7Context& context, const ARMv7Code code, const ARMv7_
 
 	if (ConditionPassed(context, cond))
 	{
-		context.write_gpr(d, re32(context.read_gpr(m)));
+		context.write_gpr(d, _byteswap_ulong(context.read_gpr(m)));
 	}
 }
 

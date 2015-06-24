@@ -148,7 +148,7 @@ Executable Compiler::Compile(const std::string & name, const ControlFlowGraph & 
         }
 
         if (instr_bb->empty()) {
-            u32 instr = re32(vm::get_ref<u32>(m_state.current_instruction_address));
+            u32 instr = vm::ps3::read32(m_state.current_instruction_address);
             Decode(instr);
             if (!m_state.hit_branch_instruction) {
                 m_ir_builder->CreateBr(GetBasicBlockFromAddress(m_state.current_instruction_address + 4));
@@ -6025,7 +6025,7 @@ u32 ppu_recompiler_llvm::ExecutionEngine::ExecuteTillReturn(PPUThread * ppu_stat
             }
         } else {
             execution_engine->m_tracer.Trace(Tracer::TraceType::Instruction, ppu_state->PC, 0);
-            auto instruction = re32(vm::get_ref<u32>(ppu_state->PC));
+            u32 instruction = vm::ps3::read32(ppu_state->PC);
             execution_engine->m_decoder.Decode(instruction);
             branch_type = ppu_state->m_is_branch ? GetBranchTypeFromInstruction(instruction) : BranchType::NonBranch;
             ppu_state->NextPc(4);

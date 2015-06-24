@@ -315,7 +315,7 @@ s32 cellFsStReadInit(u32 fd, vm::cptr<CellFsRingBuffer> ringbuf)
 {
 	cellFs.Warning("cellFsStReadInit(fd=0x%x, ringbuf=*0x%x)", fd, ringbuf);
 
-	if (ringbuf->copy.data() & ~se32(CELL_FS_ST_COPYLESS))
+	if (ringbuf->copy & ~CELL_FS_ST_COPYLESS)
 	{
 		return CELL_FS_EINVAL;
 	}
@@ -352,7 +352,7 @@ s32 cellFsStReadInit(u32 fd, vm::cptr<CellFsRingBuffer> ringbuf)
 	file->st_ringbuf_size = ringbuf->ringbuf_size;
 	file->st_block_size = ringbuf->ringbuf_size;
 	file->st_trans_rate = ringbuf->transfer_rate;
-	file->st_copyless = ringbuf->copy.data() == se32(CELL_FS_ST_COPYLESS);
+	file->st_copyless = ringbuf->copy == CELL_FS_ST_COPYLESS;
 
 	const u64 alloc_size = align(file->st_ringbuf_size, file->st_ringbuf_size < 1024 * 1024 ? 64 * 1024 : 1024 * 1024);
 
@@ -776,17 +776,17 @@ int sdata_unpack(const std::string& packed_file, const std::string& unpacked_fil
 
 	char buffer[10200];
 	packed_stream->Read(buffer, 256);
-	u32 format = re32(*(u32*)&buffer[0]);
+	u32 format = *(be_t<u32>*)&buffer[0];
 	if (format != 0x4E504400) // "NPD\x00"
 	{
 		cellFs.Error("Illegal format. Expected 0x4E504400, but got 0x%08x", format);
 		return CELL_EFSSPECIFIC;
 	}
 
-	u32 version = re32(*(u32*)&buffer[0x04]);
-	u32 flags = re32(*(u32*)&buffer[0x80]);
-	u32 blockSize = re32(*(u32*)&buffer[0x84]);
-	u64 filesizeOutput = re64(*(u64*)&buffer[0x88]);
+	u32 version = *(be_t<u32>*)&buffer[0x04];
+	u32 flags = *(be_t<u32>*)&buffer[0x80];
+	u32 blockSize = *(be_t<u32>*)&buffer[0x84];
+	u64 filesizeOutput = *(be_t<u64>*)&buffer[0x88];
 	u64 filesizeInput = packed_stream->GetSize();
 	u32 blockCount = (u32)((filesizeOutput + blockSize - 1) / blockSize);
 

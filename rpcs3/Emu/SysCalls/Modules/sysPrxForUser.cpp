@@ -94,9 +94,9 @@ s32 sys_lwmutex_create(vm::ptr<sys_lwmutex_t> lwmutex, vm::ptr<sys_lwmutex_attri
 {
 	sysPrxForUser.Warning("sys_lwmutex_create(lwmutex=*0x%x, attr=*0x%x)", lwmutex, attr);
 
-	const bool recursive = attr->recursive.data() == se32(SYS_SYNC_RECURSIVE);
+	const bool recursive = attr->recursive == SYS_SYNC_RECURSIVE;
 
-	if (!recursive && attr->recursive.data() != se32(SYS_SYNC_NOT_RECURSIVE))
+	if (!recursive && attr->recursive != SYS_SYNC_NOT_RECURSIVE)
 	{
 		sysPrxForUser.Error("sys_lwmutex_create(): invalid recursive attribute (0x%x)", attr->recursive);
 		return CELL_EINVAL;
@@ -160,7 +160,7 @@ s32 sys_lwmutex_lock(PPUThread& CPU, vm::ptr<sys_lwmutex_t> lwmutex, u64 timeout
 	// try to lock lightweight mutex
 	const be_t<u32> old_owner = lwmutex->vars.owner.compare_and_swap(lwmutex_free, tid);
 
-	if (old_owner.data() == se32(lwmutex_free))
+	if (old_owner == lwmutex_free)
 	{
 		// locking succeeded
 		return CELL_OK;
@@ -170,7 +170,7 @@ s32 sys_lwmutex_lock(PPUThread& CPU, vm::ptr<sys_lwmutex_t> lwmutex, u64 timeout
 	{
 		// recursive locking
 
-		if ((lwmutex->attribute.data() & se32(SYS_SYNC_RECURSIVE)) == 0)
+		if ((lwmutex->attribute & SYS_SYNC_RECURSIVE) == 0)
 		{
 			// if not recursive
 			return CELL_EDEADLK;
@@ -189,7 +189,7 @@ s32 sys_lwmutex_lock(PPUThread& CPU, vm::ptr<sys_lwmutex_t> lwmutex, u64 timeout
 		return CELL_OK;
 	}
 
-	if (old_owner.data() == se32(lwmutex_dead))
+	if (old_owner == lwmutex_dead)
 	{
 		// invalid or deleted mutex
 		return CELL_EINVAL;
@@ -197,7 +197,7 @@ s32 sys_lwmutex_lock(PPUThread& CPU, vm::ptr<sys_lwmutex_t> lwmutex, u64 timeout
 
 	for (u32 i = 0; i < 300; i++)
 	{
-		if (lwmutex->vars.owner.read_relaxed().data() == se32(lwmutex_free))
+		if (lwmutex->vars.owner.read_relaxed() == lwmutex_free)
 		{
 			if (lwmutex->vars.owner.compare_and_swap_test(lwmutex_free, tid))
 			{
@@ -228,7 +228,7 @@ s32 sys_lwmutex_lock(PPUThread& CPU, vm::ptr<sys_lwmutex_t> lwmutex, u64 timeout
 		// locking succeeded
 		auto old = lwmutex->vars.owner.exchange(tid);
 
-		if (old.data() != se32(lwmutex_reserved) && !Emu.IsStopped())
+		if (old != lwmutex_reserved && !Emu.IsStopped())
 		{
 			sysPrxForUser.Fatal("sys_lwmutex_lock(lwmutex=*0x%x): locking failed (owner=0x%x)", lwmutex, old);
 		}
@@ -236,7 +236,7 @@ s32 sys_lwmutex_lock(PPUThread& CPU, vm::ptr<sys_lwmutex_t> lwmutex, u64 timeout
 		return CELL_OK;
 	}
 
-	if (res == CELL_EBUSY && lwmutex->attribute.data() & se32(SYS_SYNC_RETRY))
+	if (res == CELL_EBUSY && lwmutex->attribute & SYS_SYNC_RETRY)
 	{
 		// TODO (protocol is ignored in current implementation)
 		throw __FUNCTION__;
@@ -254,7 +254,7 @@ s32 sys_lwmutex_trylock(PPUThread& CPU, vm::ptr<sys_lwmutex_t> lwmutex)
 	// try to lock lightweight mutex
 	const be_t<u32> old_owner = lwmutex->vars.owner.compare_and_swap(lwmutex_free, tid);
 
-	if (old_owner.data() == se32(lwmutex_free))
+	if (old_owner == lwmutex_free)
 	{
 		// locking succeeded
 		return CELL_OK;
@@ -264,7 +264,7 @@ s32 sys_lwmutex_trylock(PPUThread& CPU, vm::ptr<sys_lwmutex_t> lwmutex)
 	{
 		// recursive locking
 
-		if ((lwmutex->attribute.data() & se32(SYS_SYNC_RECURSIVE)) == 0)
+		if ((lwmutex->attribute & SYS_SYNC_RECURSIVE) == 0)
 		{
 			// if not recursive
 			return CELL_EDEADLK;
@@ -283,13 +283,13 @@ s32 sys_lwmutex_trylock(PPUThread& CPU, vm::ptr<sys_lwmutex_t> lwmutex)
 		return CELL_OK;
 	}
 
-	if (old_owner.data() == se32(lwmutex_dead))
+	if (old_owner == lwmutex_dead)
 	{
 		// invalid or deleted mutex
 		return CELL_EINVAL;
 	}
 
-	if (old_owner.data() == se32(lwmutex_reserved))
+	if (old_owner == lwmutex_reserved)
 	{
 		// should be locked by the syscall
 		const s32 res = _sys_lwmutex_trylock(lwmutex->sleep_queue);
@@ -299,7 +299,7 @@ s32 sys_lwmutex_trylock(PPUThread& CPU, vm::ptr<sys_lwmutex_t> lwmutex)
 			// locking succeeded
 			auto old = lwmutex->vars.owner.exchange(tid);
 
-			if (old.data() != se32(lwmutex_reserved) && !Emu.IsStopped())
+			if (old != lwmutex_reserved && !Emu.IsStopped())
 			{
 				sysPrxForUser.Fatal("sys_lwmutex_trylock(lwmutex=*0x%x): locking failed (owner=0x%x)", lwmutex, old);
 			}
@@ -339,7 +339,7 @@ s32 sys_lwmutex_unlock(PPUThread& CPU, vm::ptr<sys_lwmutex_t> lwmutex)
 		return CELL_OK;
 	}
 
-	if (lwmutex->attribute.data() & se32(SYS_SYNC_RETRY))
+	if (lwmutex->attribute & SYS_SYNC_RETRY)
 	{
 		// TODO (protocol is ignored in current implementation)
 	}
@@ -386,7 +386,7 @@ s32 sys_lwcond_signal(PPUThread& CPU, vm::ptr<sys_lwcond_t> lwcond)
 
 	const vm::ptr<sys_lwmutex_t> lwmutex = lwcond->lwmutex;
 
-	if ((lwmutex->attribute.data() & se32(SYS_SYNC_ATTR_PROTOCOL_MASK)) == se32(SYS_SYNC_RETRY))
+	if ((lwmutex->attribute & SYS_SYNC_ATTR_PROTOCOL_MASK) == SYS_SYNC_RETRY)
 	{
 		// TODO (protocol ignored)
 		//return _sys_lwcond_signal(lwcond->lwcond_queue, 0, -1, 2);
@@ -444,7 +444,7 @@ s32 sys_lwcond_signal_all(PPUThread& CPU, vm::ptr<sys_lwcond_t> lwcond)
 
 	const vm::ptr<sys_lwmutex_t> lwmutex = lwcond->lwmutex;
 
-	if ((lwmutex->attribute.data() & se32(SYS_SYNC_ATTR_PROTOCOL_MASK)) == se32(SYS_SYNC_RETRY))
+	if ((lwmutex->attribute & SYS_SYNC_ATTR_PROTOCOL_MASK) == SYS_SYNC_RETRY)
 	{
 		// TODO (protocol ignored)
 		//return _sys_lwcond_signal_all(lwcond->lwcond_queue, lwmutex->sleep_queue, 2);
@@ -501,7 +501,7 @@ s32 sys_lwcond_signal_to(PPUThread& CPU, vm::ptr<sys_lwcond_t> lwcond, u32 ppu_t
 
 	const vm::ptr<sys_lwmutex_t> lwmutex = lwcond->lwmutex;
 
-	if ((lwmutex->attribute.data() & se32(SYS_SYNC_ATTR_PROTOCOL_MASK)) == se32(SYS_SYNC_RETRY))
+	if ((lwmutex->attribute & SYS_SYNC_ATTR_PROTOCOL_MASK) == SYS_SYNC_RETRY)
 	{
 		// TODO (protocol ignored)
 		//return _sys_lwcond_signal(lwcond->lwcond_queue, 0, ppu_thread_id, 2);
@@ -588,7 +588,7 @@ s32 sys_lwcond_wait(PPUThread& CPU, vm::ptr<sys_lwcond_t> lwcond, u64 timeout)
 		const auto old = lwmutex->vars.owner.exchange(tid);
 		lwmutex->recursive_count = recursive_value;
 
-		if (old.data() != se32(lwmutex_reserved) && !Emu.IsStopped())
+		if (old != lwmutex_reserved && !Emu.IsStopped())
 		{
 			sysPrxForUser.Fatal("sys_lwcond_wait(lwcond=*0x%x): locking failed (lwmutex->owner=0x%x)", lwcond, old);
 		}
@@ -617,7 +617,7 @@ s32 sys_lwcond_wait(PPUThread& CPU, vm::ptr<sys_lwcond_t> lwcond, u64 timeout)
 		const auto old = lwmutex->vars.owner.exchange(tid);
 		lwmutex->recursive_count = recursive_value;
 
-		if (old.data() != se32(lwmutex_reserved) && !Emu.IsStopped())
+		if (old != lwmutex_reserved && !Emu.IsStopped())
 		{
 			sysPrxForUser.Fatal("sys_lwcond_wait(lwcond=*0x%x): locking failed after timeout (lwmutex->owner=0x%x)", lwcond, old);
 		}

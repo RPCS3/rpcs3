@@ -31,9 +31,9 @@ s32 sys_mutex_create(vm::ptr<u32> mutex_id, vm::ptr<sys_mutex_attribute_t> attr)
 	default: sys_mutex.Error("sys_mutex_create(): unknown protocol (0x%x)", protocol); return CELL_EINVAL;
 	}
 
-	const bool recursive = attr->recursive.data() == se32(SYS_SYNC_RECURSIVE);
+	const bool recursive = attr->recursive == SYS_SYNC_RECURSIVE;
 
-	if ((!recursive && attr->recursive.data() != se32(SYS_SYNC_NOT_RECURSIVE)) || attr->pshared.data() != se32(0x200) || attr->adaptive.data() != se32(0x2000) || attr->ipc_key.data() || attr->flags.data())
+	if ((!recursive && attr->recursive != SYS_SYNC_NOT_RECURSIVE) || attr->pshared.data() != SYS_SYNC_NOT_PROCESS_SHARED || attr->adaptive != SYS_SYNC_NOT_ADAPTIVE || attr->ipc_key.data() || attr->flags.data())
 	{
 		sys_mutex.Error("sys_mutex_create(): unknown attributes (recursive=0x%x, pshared=0x%x, adaptive=0x%x, ipc_key=0x%llx, flags=0x%x)",
 			attr->recursive, attr->pshared, attr->adaptive, attr->ipc_key, attr->flags);

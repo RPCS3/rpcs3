@@ -31,7 +31,14 @@ enum
 // attr_pshared
 enum
 {
-	SYS_SYNC_NOT_PROCESS_SHARED = 0x200
+	SYS_SYNC_NOT_PROCESS_SHARED = 0x200,
+};
+
+// attr_adaptive
+enum
+{
+	SYS_SYNC_ADAPTIVE     = 0x1000,
+	SYS_SYNC_NOT_ADAPTIVE = 0x2000,
 };
 
 class sleep_queue_t

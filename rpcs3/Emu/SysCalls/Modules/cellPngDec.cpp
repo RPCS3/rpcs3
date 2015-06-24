@@ -76,13 +76,13 @@ s32 pngDecOpen(
 	stream->fd = 0;
 	stream->src = *src;
 
-	switch (src->srcSelect.data())
+	switch (src->srcSelect.value())
 	{
-	case se32(CELL_PNGDEC_BUFFER):
+	case CELL_PNGDEC_BUFFER:
 		stream->fileSize = src->streamSize;
 		break;
 
-	case se32(CELL_PNGDEC_FILE):
+	case CELL_PNGDEC_FILE:
 	{
 		// Get file descriptor and size
 		std::shared_ptr<vfsStream> file_s(Emu.GetVFS().OpenFile(src->fileName.get_ptr(), vfsRead));
@@ -141,12 +141,12 @@ s32 pngReadHeader(
 	vm::var<u8[34]> buffer; // Alloc buffer for PNG header
 	auto buffer_32 = buffer.To<be_t<u32>>();
 
-	switch (stream->src.srcSelect.data())
+	switch (stream->src.srcSelect.value())
 	{
-	case se32(CELL_PNGDEC_BUFFER):
+	case CELL_PNGDEC_BUFFER:
 		memmove(buffer.begin(), stream->src.streamPtr.get_ptr(), buffer.size());
 		break;
-	case se32(CELL_PNGDEC_FILE):
+	case CELL_PNGDEC_FILE:
 	{
 		auto file = Emu.GetIdManager().get<lv2_file_t>(stream->fd);
 		file->file->Seek(0);
@@ -155,9 +155,9 @@ s32 pngReadHeader(
 	}
 	}
 
-	if (buffer_32[0].data() != se32(0x89504E47) ||
-		buffer_32[1].data() != se32(0x0D0A1A0A) ||  // Error: The first 8 bytes are not a valid PNG signature
-		buffer_32[3].data() != se32(0x49484452))   // Error: The PNG file does not start with an IHDR chunk
+	if (buffer_32[0] != 0x89504E47 ||
+		buffer_32[1] != 0x0D0A1A0A ||  // Error: The first 8 bytes are not a valid PNG signature
+		buffer_32[3] != 0x49484452)   // Error: The PNG file does not start with an IHDR chunk
 	{
 		return CELL_PNGDEC_ERROR_HEADER;
 	}
@@ -205,20 +205,20 @@ s32 pngDecSetParameter(
 	current_outParam.outputHeight = current_info.imageHeight;
 	current_outParam.outputColorSpace = inParam->outputColorSpace;
 
-	switch (current_outParam.outputColorSpace.data())
+	switch (current_outParam.outputColorSpace.value())
 	{
-	case se32(CELL_PNGDEC_PALETTE):
-	case se32(CELL_PNGDEC_GRAYSCALE):
+	case CELL_PNGDEC_PALETTE:
+	case CELL_PNGDEC_GRAYSCALE:
 		current_outParam.outputComponents = 1; break;
 
-	case se32(CELL_PNGDEC_GRAYSCALE_ALPHA):
+	case CELL_PNGDEC_GRAYSCALE_ALPHA:
 		current_outParam.outputComponents = 2; break;
 
-	case se32(CELL_PNGDEC_RGB):
+	case CELL_PNGDEC_RGB:
 		current_outParam.outputComponents = 3; break;
 
-	case se32(CELL_PNGDEC_RGBA):
-	case se32(CELL_PNGDEC_ARGB):
+	case CELL_PNGDEC_RGBA:
+	case CELL_PNGDEC_ARGB:
 		current_outParam.outputComponents = 4; break;
 
 	default:
@@ -252,13 +252,13 @@ s32 pngDecodeData(
 	//Copy the PNG file to a buffer
 	vm::var<unsigned char[]> png((u32)fileSize);
 
-	switch (stream->src.srcSelect.data())
+	switch (stream->src.srcSelect.value())
 	{
-	case se32(CELL_PNGDEC_BUFFER):
+	case CELL_PNGDEC_BUFFER:
 		memmove(png.begin(), stream->src.streamPtr.get_ptr(), png.size());
 		break;
 
-	case se32(CELL_PNGDEC_FILE):
+	case CELL_PNGDEC_FILE:
 	{
 		auto file = Emu.GetIdManager().get<lv2_file_t>(stream->fd);
 		file->file->Seek(0);
@@ -284,10 +284,10 @@ s32 pngDecodeData(
 	const int bytesPerLine = (u32)dataCtrlParam->outputBytesPerLine;
 	uint image_size = width * height;
 
-	switch (current_outParam.outputColorSpace.data())
+	switch (current_outParam.outputColorSpace.value())
 	{
-	case se32(CELL_PNGDEC_RGB):
-	case se32(CELL_PNGDEC_RGBA):
+	case CELL_PNGDEC_RGB:
+	case CELL_PNGDEC_RGBA:
 	{
 		const char nComponents = current_outParam.outputColorSpace == CELL_PNGDEC_RGBA ? 4 : 3;
 		image_size *= nComponents;
@@ -308,7 +308,7 @@ s32 pngDecodeData(
 		break;
 	}
 
-	case se32(CELL_PNGDEC_ARGB):
+	case CELL_PNGDEC_ARGB:
 	{
 		const int nComponents = 4;
 		image_size *= nComponents;
@@ -350,9 +350,9 @@ s32 pngDecodeData(
 		break;
 	}
 
-	case se32(CELL_PNGDEC_GRAYSCALE):
-	case se32(CELL_PNGDEC_PALETTE):
-	case se32(CELL_PNGDEC_GRAYSCALE_ALPHA):
+	case CELL_PNGDEC_GRAYSCALE:
+	case CELL_PNGDEC_PALETTE:
+	case CELL_PNGDEC_GRAYSCALE_ALPHA:
 		cellPngDec.Error("pngDecodeData: Unsupported color space (%d)", current_outParam.outputColorSpace);
 		break;
 

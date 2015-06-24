@@ -32,7 +32,7 @@ s32 sys_event_flag_create(vm::ptr<u32> id, vm::ptr<sys_event_flag_attr> attr, u6
 	default: sys_event_flag.Error("sys_event_flag_create(): unknown protocol (0x%x)", attr->protocol); return CELL_EINVAL;
 	}
 
-	if (attr->pshared.data() != se32(0x200) || attr->ipc_key.data() || attr->flags.data())
+	if (attr->pshared != SYS_SYNC_NOT_PROCESS_SHARED || attr->ipc_key.data() || attr->flags.data())
 	{
 		sys_event_flag.Error("sys_event_flag_create(): unknown attributes (pshared=0x%x, ipc_key=0x%llx, flags=0x%x)", attr->pshared, attr->ipc_key, attr->flags);
 		return CELL_EINVAL;

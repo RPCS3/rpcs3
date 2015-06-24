@@ -59,8 +59,8 @@ u32 add_ppu_func_sub(const char group[8], const SearchPatternEntry ops[], const 
 	{
 		SearchPatternEntry op;
 		op.type = ops[i].type;
-		op.data = re32(ops[i].data);
-		op.mask = re32(ops[i].mask);
+		op.data = _byteswap_ulong(ops[i].data); // TODO: use be_t<>
+		op.mask = _byteswap_ulong(ops[i].mask);
 		op.num = ops[i].num;
 		assert(!op.mask || (op.data & ~op.mask) == 0);
 		sf.ops.push_back(op);
@@ -250,7 +250,7 @@ void hook_ppu_func(vm::ptr<u32> base, u32 pos, u32 size)
 			}
 
 			// skip NOP
-			if (base[k].data() == se32(0x60000000))
+			if (base[k] == 0x60000000)
 			{
 				x--;
 				continue;
@@ -308,7 +308,7 @@ void hook_ppu_func(vm::ptr<u32> base, u32 pos, u32 size)
 					break;
 				}
 
-				const auto addr = (base[k].data() & se32(2) ? 0 : (base + k).addr()) + ((s32)base[k] << cntlz32(mask) >> (cntlz32(mask) + 2));
+				const auto addr = (base[k] & 2 ? 0 : (base + k).addr()) + ((s32)base[k] << cntlz32(mask) >> (cntlz32(mask) + 2));
 				const auto lnum = sub.ops[x].num;
 				const auto label = sub.labels.find(lnum);
 
@@ -331,7 +331,7 @@ void hook_ppu_func(vm::ptr<u32> base, u32 pos, u32 size)
 			//		break;
 			//	}
 
-			//	const auto addr = (base[k].data() & se32(2) ? 0 : (base + k).addr()) + ((s32)base[k] << cntlz32(mask) >> (cntlz32(mask) + 2));
+			//	const auto addr = (base[k] & 2 ? 0 : (base + k).addr()) + ((s32)base[k] << cntlz32(mask) >> (cntlz32(mask) + 2));
 			//	const auto nid = sub.ops[x].num;
 			//	// TODO: recursive call
 			//}
@@ -376,7 +376,7 @@ void hook_ppu_funcs(vm::ptr<u32> base, u32 size)
 	for (u32 i = 0; i < size; i++)
 	{
 		// skip NOP
-		if (base[i].data() == se32(0x60000000))
+		if (base[i] == 0x60000000)
 		{
 			continue;
 		}

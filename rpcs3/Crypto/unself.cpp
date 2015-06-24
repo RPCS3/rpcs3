@@ -102,34 +102,34 @@ force_inline void Write64LE(const fs::file& f, const u64 data)
 	f.write(&data, sizeof(data));
 }
 
-force_inline void Write16(vfsStream& f, const u16 data)
+force_inline void Write16(vfsStream& f, const be_t<u16> data)
 {
-	Write16LE(f, re16(data));
+	f.Write(&data, sizeof(data));
 }
 
-force_inline void Write16(const fs::file& f, const u16 data)
+force_inline void Write16(const fs::file& f, const be_t<u16> data)
 {
-	Write16LE(f, re16(data));
+	f.write(&data, sizeof(data));
 }
 
-force_inline void Write32(vfsStream& f, const u32 data)
+force_inline void Write32(vfsStream& f, const be_t<u32> data)
 {
-	Write32LE(f, re32(data));
+	f.Write(&data, sizeof(data));
 }
 
-force_inline void Write32(const fs::file& f, const u32 data)
+force_inline void Write32(const fs::file& f, const be_t<u32> data)
 {
-	Write32LE(f, re32(data));
+	f.write(&data, sizeof(data));
 }
 
-force_inline void Write64(vfsStream& f, const u64 data)
+force_inline void Write64(vfsStream& f, const be_t<u64> data)
 {
-	Write64LE(f, re64(data));
+	f.Write(&data, sizeof(data));
 }
 
-force_inline void Write64(const fs::file& f, const u64 data)
+force_inline void Write64(const fs::file& f, const be_t<u64> data)
 {
-	Write64LE(f, re64(data));
+	f.write(&data, sizeof(data));
 }
 
 void WriteEhdr(const fs::file& f, Elf64_Ehdr& ehdr)
