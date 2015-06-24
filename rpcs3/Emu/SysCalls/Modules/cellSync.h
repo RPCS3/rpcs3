@@ -35,15 +35,16 @@ union set_alignment(4) CellSyncMutex
 {
 	struct sync_t
 	{
-		be_t<u16> release_count; // increased when mutex is unlocked
-		be_t<u16> acquire_count; // increased when mutex is locked
+		be_t<u16> cnt_rel; // increased when mutex is unlocked
+		be_t<u16> cnt_acq; // increased when mutex is locked
 	};
 
 	struct
 	{
-		atomic_be_t<u16> release_count;
-		atomic_be_t<u16> acquire_count;
-	};
+		atomic_be_t<u16> rel;
+		atomic_be_t<u16> acq;
+	}
+	cnt;
 
 	atomic_be_t<sync_t> sync_var;
 };
@@ -157,9 +158,9 @@ struct set_alignment(128) CellSyncLFQueue
 
 	be_t<u32> m_size;              // 0x10
 	be_t<u32> m_depth;             // 0x14
-	vm::bptr<u8, u64> m_buffer; // 0x18
+	vm::bptr<u8, u64> m_buffer;    // 0x18
 	u8 m_bs[4];                    // 0x20
-	be_t<CellSyncQueueDirection> m_direction; // 0x24
+	be_t<u32> m_direction;         // 0x24 CellSyncQueueDirection
 	be_t<u32> m_v1;                // 0x28
 	atomic_be_t<u32> init;         // 0x2C
 	atomic_be_t<push2_t> push2;    // 0x30

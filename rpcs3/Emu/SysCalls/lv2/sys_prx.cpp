@@ -192,7 +192,7 @@ s32 sys_prx_start_module(s32 id, u64 flags, vm::ptr<sys_prx_start_module_option_
 	//	return CELL_PRX_ERROR_ALREADY_STARTED;
 
 	//prx->is_started = true;
-	pOpt->entry_point.set(be_t<u64>::make(prx->start ? prx->start.addr() : ~0ull));
+	pOpt->entry_point.set(prx->start ? prx->start.addr() : ~0ull);
 
 	return CELL_OK;
 }
@@ -212,7 +212,7 @@ s32 sys_prx_stop_module(s32 id, u64 flags, vm::ptr<sys_prx_stop_module_option_t>
 	//	return CELL_PRX_ERROR_ALREADY_STOPPED;
 
 	//prx->is_started = false;
-	pOpt->entry_point.set(be_t<u64>::make(prx->stop ? prx->stop.addr() : -1));
+	pOpt->entry_point.set(prx->stop ? prx->stop.addr() : -1);
 
 	return CELL_OK;
 }

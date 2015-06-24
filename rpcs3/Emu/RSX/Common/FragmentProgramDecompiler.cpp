@@ -114,7 +114,7 @@ std::string FragmentProgramDecompiler::AddConst()
 		return name;
 	}
 
-	auto data = vm::ps3::ptr<u32>::make(m_addr + m_size + 4 * sizeof(u32));
+	auto data = vm::ps3::ptr<u32>::make(m_addr + m_size + 4 * sizeof32(u32));
 
 	m_offset = 2 * 4 * sizeof(u32);
 	u32 x = GetData(data[0]);

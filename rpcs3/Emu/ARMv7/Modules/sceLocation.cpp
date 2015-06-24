@@ -19,7 +19,7 @@ s32 sceLocationReopen(u8 handle, SceLocationLocationMethod lmethod, SceLocationH
 	throw __FUNCTION__;
 }
 
-s32 sceLocationGetMethod(u8 handle, vm::ptr<SceLocationLocationMethod> lmethod, vm::ptr<SceLocationHeadingMethod> hmethod)
+s32 sceLocationGetMethod(u8 handle, vm::ptr<s32> lmethod, vm::ptr<s32> hmethod)
 {
 	throw __FUNCTION__;
 }
@@ -64,12 +64,12 @@ s32 sceLocationConfirm(u8 handle)
 	throw __FUNCTION__;
 }
 
-s32 sceLocationConfirmGetStatus(u8 handle, vm::ptr<SceLocationDialogStatus> status)
+s32 sceLocationConfirmGetStatus(u8 handle, vm::ptr<s32> status)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceLocationConfirmGetResult(u8 handle, vm::ptr<SceLocationDialogResult> result)
+s32 sceLocationConfirmGetResult(u8 handle, vm::ptr<s32> result)
 {
 	throw __FUNCTION__;
 }

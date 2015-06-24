@@ -2080,7 +2080,7 @@ void ppu_interpreter::STWCX_(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? CPU.GPR[op.ra] + CPU.GPR[op.rb] : CPU.GPR[op.rb];
 
-	const be_t<u32> value = be_t<u32>::make((u32)CPU.GPR[op.rs]);
+	const be_t<u32> value = (u32)CPU.GPR[op.rs];
 	CPU.SetCR_EQ(0, vm::reservation_update(vm::cast(addr), &value, sizeof(value)));
 }
 
@@ -2140,7 +2140,7 @@ void ppu_interpreter::STDCX_(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? CPU.GPR[op.ra] + CPU.GPR[op.rb] : CPU.GPR[op.rb];
 
-	const be_t<u64> value = be_t<u64>::make(CPU.GPR[op.rs]);
+	const be_t<u64> value = CPU.GPR[op.rs];
 	CPU.SetCR_EQ(0, vm::reservation_update(vm::cast(addr), &value, sizeof(value)));
 }
 

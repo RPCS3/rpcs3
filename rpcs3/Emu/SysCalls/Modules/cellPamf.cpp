@@ -486,8 +486,8 @@ s32 cellPamfReaderGetStreamInfo(vm::ptr<CellPamfReader> pSelf, u32 pInfo_addr, u
 
 		if (header.AVC.aspectRatioIdc == 0xff)
 		{
-			info->sarWidth = header.AVC.sarWidth;
-			info->sarHeight = header.AVC.sarHeight;
+			info->sarWidth = header.AVC.sarInfo.width;
+			info->sarHeight = header.AVC.sarInfo.height;
 		}
 		else
 		{

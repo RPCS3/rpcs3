@@ -23,7 +23,7 @@ extern Module cellVdec;
 
 #define VDEC_ERROR(...) { cellVdec.Error(__VA_ARGS__); Emu.Pause(); return; } // only for decoder thread
 
-VideoDecoder::VideoDecoder(CellVdecCodecType type, u32 profile, u32 addr, u32 size, vm::ptr<CellVdecCbMsg> func, u32 arg)
+VideoDecoder::VideoDecoder(s32 type, u32 profile, u32 addr, u32 size, vm::ptr<CellVdecCbMsg> func, u32 arg)
 	: type(type)
 	, profile(profile)
 	, memAddr(addr)
@@ -189,7 +189,7 @@ next:
 	}
 }
 
-u32 vdecQueryAttr(CellVdecCodecType type, u32 profile, u32 spec_addr /* may be 0 */, vm::ptr<CellVdecAttr> attr)
+u32 vdecQueryAttr(s32 type, u32 profile, u32 spec_addr /* may be 0 */, vm::ptr<CellVdecAttr> attr)
 {
 	switch (type) // TODO: check profile levels
 	{
@@ -827,23 +827,23 @@ s32 cellVdecGetPicItem(u32 handle, vm::pptr<CellVdecPicItem> picItem)
 	info->startAddr = 0x00000123; // invalid value (no address for picture)
 	info->size = align(av_image_get_buffer_size(vdec->ctx->pix_fmt, vdec->ctx->width, vdec->ctx->height, 1), 128);
 	info->auNum = 1;
-	info->auPts[0].lower = (u32)vf.pts;
-	info->auPts[0].upper = vf.pts >> 32;
+	info->auPts[0].lower = (u32)(vf.pts);
+	info->auPts[0].upper = (u32)(vf.pts >> 32);
 	info->auPts[1].lower = (u32)CODEC_TS_INVALID;
 	info->auPts[1].upper = (u32)CODEC_TS_INVALID;
-	info->auDts[0].lower = (u32)vf.dts;
-	info->auDts[0].upper = vf.dts >> 32;
+	info->auDts[0].lower = (u32)(vf.dts);
+	info->auDts[0].upper = (u32)(vf.dts >> 32);
 	info->auDts[1].lower = (u32)CODEC_TS_INVALID;
 	info->auDts[1].upper = (u32)CODEC_TS_INVALID;
 	info->auUserData[0] = vf.userdata;
 	info->auUserData[1] = 0;
 	info->status = CELL_OK;
 	info->attr = CELL_VDEC_PICITEM_ATTR_NORMAL;
-	info->picInfo_addr = info.addr() + sizeof(CellVdecPicItem);
+	info->picInfo_addr = info.addr() + sizeof32(CellVdecPicItem);
 
 	if (vdec->type == CELL_VDEC_CODEC_TYPE_AVC)
 	{
-		auto avc = vm::ptr<CellVdecAvcInfo>::make(info.addr() + sizeof(CellVdecPicItem));
+		auto avc = vm::ptr<CellVdecAvcInfo>::make(info.addr() + sizeof32(CellVdecPicItem));
 
 		avc->horizontalSize = frame.width;
 		avc->verticalSize = frame.height;
@@ -897,7 +897,7 @@ s32 cellVdecGetPicItem(u32 handle, vm::pptr<CellVdecPicItem> picItem)
 	}
 	else if (vdec->type == CELL_VDEC_CODEC_TYPE_DIVX)
 	{
-		auto dvx = vm::ptr<CellVdecDivxInfo>::make(info.addr() + sizeof(CellVdecPicItem));
+		auto dvx = vm::ptr<CellVdecDivxInfo>::make(info.addr() + sizeof32(CellVdecPicItem));
 
 		switch (frame.pict_type)
 		{
@@ -931,7 +931,7 @@ s32 cellVdecGetPicItem(u32 handle, vm::pptr<CellVdecPicItem> picItem)
 	}
 	else if (vdec->type == CELL_VDEC_CODEC_TYPE_MPEG2)
 	{
-		auto mp2 = vm::ptr<CellVdecMpeg2Info>::make(info.addr() + sizeof(CellVdecPicItem));
+		auto mp2 = vm::ptr<CellVdecMpeg2Info>::make(info.addr() + sizeof32(CellVdecPicItem));
 
 		cellVdec.Fatal("cellVdecGetPicItem(MPEG2)");
 	}

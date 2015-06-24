@@ -194,7 +194,7 @@ enum
 };
 
 // Camera types
-enum CellCameraType
+enum CellCameraType : s32
 {
 	CELL_CAMERA_TYPE_UNKNOWN,
 	CELL_CAMERA_EYETOY,
@@ -203,7 +203,7 @@ enum CellCameraType
 };
 
 // Image format
-enum CellCameraFormat
+enum CellCameraFormat : s32
 {
 	CELL_CAMERA_FORMAT_UNKNOWN,
 	CELL_CAMERA_JPG,
@@ -217,7 +217,7 @@ enum CellCameraFormat
 };
 
 // Image resolution
-enum CellCameraResolution
+enum CellCameraResolution : s32
 {
 	CELL_CAMERA_RESOLUTION_UNKNOWN,
 	CELL_CAMERA_VGA,
@@ -227,7 +227,7 @@ enum CellCameraResolution
 };
 
 // Camera attributes
-enum CellCameraAttribute
+enum CellCameraAttribute : s32
 {
 	CELL_CAMERA_GAIN,
 	CELL_CAMERA_REDBLUEGAIN,
@@ -286,84 +286,21 @@ enum CellCameraAttribute
 
 struct CellCameraInfoEx
 {
-	CellCameraFormat format;
-	CellCameraResolution resolution;
+	be_t<s32> format; // CellCameraFormat
+	be_t<s32> resolution; // CellCameraResolution
 	be_t<s32> framerate;
-	be_t<u32> buffer;
+
+	vm::bptr<u8> buffer;
 	be_t<s32> bytesize;
 	be_t<s32> width;
 	be_t<s32> height;
 	be_t<s32> dev_num;
 	be_t<s32> guid;
+
 	be_t<s32> info_ver;
 	be_t<u32> container;
 	be_t<s32> read_mode;
-	be_t<u32> pbuf[2];
-};
-
-// Custom struct for keeping track of camera attributes
-struct CellCameraAttributes
-{
-	u32 GAIN;
-	u32 REDBLUEGAIN;
-	u32 SATURATION;
-	u32 EXPOSURE;
-	u32 BRIGHTNESS;
-	u32 AEC;
-	u32 AGC;
-	u32 AWB;
-	u32 ABC;
-	u32 LED;
-	u32 AUDIOGAIN;
-	u32 QS;
-	u32 NONZEROCOEFFS[2];
-	u32 YUVFLAG;
-	u32 JPEGFLAG;
-	u32 BACKLIGHTCOMP;
-	u32 MIRRORFLAG;
-	u32 MEASUREDQS;
-	u32 _422FLAG;
-	u32 USBLOAD;
-	u32 GAMMA;
-	u32 GREENGAIN;
-	u32 AGCLIMIT;
-	u32 DENOISE;
-	u32 FRAMERATEADJUST;
-	u32 PIXELOUTLIERFILTER;
-	u32 AGCLOW;
-	u32 AGCHIGH;
-	u32 DEVICELOCATION;
-
-	u32 FORMATCAP         = 100;
-	u32 FORMATINDEX;
-	u32 NUMFRAME;
-	u32 FRAMEINDEX;
-	u32 FRAMESIZE;
-	u32 INTERVALTYPE;
-	u32 INTERVALINDEX;
-	u32 INTERVALVALUE;
-	u32 COLORMATCHING;
-	u32 PLFREQ;
-	u32 DEVICEID;
-	u32 DEVICECAP;
-	u32 DEVICESPEED;
-	u32 UVCREQCODE;
-	u32 UVCREQDATA;
-	u32 DEVICEID2;
-
-	u32 READMODE          = 300;
-	u32 GAMEPID;
-	u32 PBUFFER;
-	u32 READFINISH;
-
-	u32 ATTRIBUTE_UNKNOWN = 500;
-};
-
-// Custom struct to keep track of cameras
-struct CellCamera
-{
-	CellCameraAttributes attributes;
-	CellCameraInfoEx info;
+	vm::bptr<u8> pbuf[2];
 };
 
 struct CellCameraReadEx
@@ -371,6 +308,13 @@ struct CellCameraReadEx
 	be_t<s32> version;
 	be_t<u32> frame;
 	be_t<u32> bytesread;
-	//system_time_t timestamp; // TODO: Replace this with something
-	be_t<u32> pbuf;
+	be_t<s64> timestamp;
+	vm::bptr<u8> pbuf;
+};
+
+// Custom struct to keep track of cameras
+struct Camera
+{
+	u32 attr[512];
+	//CellCameraInfoEx info;
 };

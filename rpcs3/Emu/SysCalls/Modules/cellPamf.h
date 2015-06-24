@@ -284,13 +284,16 @@ struct PamfStreamHeader
 			be_t<u16> frameCropRightOffset;
 			be_t<u16> frameCropTopOffset;
 			be_t<u16> frameCropBottomOffset;
+
 			union
 			{
 				struct
 				{
-					be_t<u16> sarWidth;
-					be_t<u16> sarHeight;
-				};
+					be_t<u16> width;
+					be_t<u16> height;
+				}
+				sarInfo;
+
 				struct
 				{
 					u8 x14; // contains videoFormat and videoFullRangeFlag
@@ -299,10 +302,11 @@ struct PamfStreamHeader
 					u8 matrixCoefficients;
 				};
 			};
+
 			u8 x18; // contains entropyCodingModeFlag, deblockingFilterFlag, minNumSlicePerPictureIdc, nfwIdc
 			u8 maxMeanBitrate;
-
-		} AVC;
+		}
+		AVC;
 
 		// M2V specific information
 		struct
@@ -322,8 +326,8 @@ struct PamfStreamHeader
 			u8 colourPrimaries;
 			u8 transferCharacteristics;
 			u8 matrixCoefficients;
-
-		} M2V;
+		}
+		M2V;
 
 		// Audio specific information
 		struct
@@ -332,8 +336,8 @@ struct PamfStreamHeader
 			u8 channels; // number of channels (1, 2, 6, 8)
 			u8 freq; // 1 (always 48000)
 			u8 bps; // LPCM only
-
-		} audio;
+		}
+		audio;
 	};
 };
 

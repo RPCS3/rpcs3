@@ -58,12 +58,12 @@ s32 cellSyncMutexLock(vm::ptr<CellSyncMutex> mutex)
 	}
 
 	// prx: increase acquire_count and remember its old value
-	const auto order = mutex->acquire_count++;
+	const auto order = mutex->cnt.acq++;
 
 	// prx: wait until release_count is equal to old acquire_count
 	g_sync_mutex_wm.wait_op(mutex.addr(), [mutex, order]()
 	{
-		return order == mutex->release_count.read_relaxed();
+		return order == mutex->cnt.rel.read_relaxed();
 	});
 
 	mutex->sync_var.read_sync();
@@ -88,7 +88,7 @@ s32 cellSyncMutexTryLock(vm::ptr<CellSyncMutex> mutex)
 	// prx: lock only if acquire_count and release_count are equal
 	return mutex->sync_var.atomic_op(CELL_OK, [](CellSyncMutex::sync_t& mutex) -> s32
 	{
-		return (mutex.acquire_count++ != mutex.release_count) ? CELL_SYNC_ERROR_BUSY : CELL_OK;
+		return (mutex.cnt_acq++ != mutex.cnt_rel) ? CELL_SYNC_ERROR_BUSY : CELL_OK;
 	});
 }
 
@@ -106,7 +106,7 @@ s32 cellSyncMutexUnlock(vm::ptr<CellSyncMutex> mutex)
 	}
 
 	// prx: increase release count
-	mutex->release_count++;
+	mutex->cnt.rel++;
 
 	g_sync_mutex_wm.notify(mutex.addr());
 
@@ -129,7 +129,7 @@ s32 syncBarrierInitialize(vm::ptr<CellSyncBarrier> barrier, u16 total_count)
 	}
 
 	// prx: zeroize first u16, write total_count in second u16 and sync
-	barrier->data.exchange({ be_t<s16>::make(0), be_t<s16>::make(total_count) });
+	barrier->data.exchange({ 0, total_count });
 
 	return CELL_OK;
 }
@@ -452,7 +452,7 @@ s32 cellSyncRwmTryWrite(vm::ptr<CellSyncRwm> rwm, vm::cptr<void> buffer)
 	}
 
 	// prx: compare m_readers | m_writers with 0, return if not zero, set m_writers to 1
-	if (!rwm->data.compare_and_swap_test({}, { be_t<u16>::make(0), be_t<u16>::make(1) }))
+	if (!rwm->data.compare_and_swap_test({ 0, 0 }, { 0, 1 }))
 	{
 		return CELL_SYNC_ERROR_BUSY;
 	}
@@ -556,7 +556,7 @@ s32 cellSyncQueuePush(vm::ptr<CellSyncQueue> queue, vm::cptr<void> buffer)
 	memcpy(&queue->m_buffer[position * size], buffer.get_ptr(), size);
 
 	// prx: atomically insert 0 in 5th u8
-	queue->data &= { be_t<u32>::make(~0), be_t<u32>::make(0xffffff) };
+	queue->data &= { 0xffffffffu, 0x00ffffff };
 
 	g_sync_queue_wm.notify(queue.addr());
 
@@ -593,7 +593,7 @@ s32 cellSyncQueueTryPush(vm::ptr<CellSyncQueue> queue, vm::cptr<void> buffer)
 
 	memcpy(&queue->m_buffer[position * size], buffer.get_ptr(), size);
 
-	queue->data &= { be_t<u32>::make(~0), be_t<u32>::make(0xffffff) };
+	queue->data &= { 0xffffffffu, 0x00ffffff };
 
 	g_sync_queue_wm.notify(queue.addr());
 
@@ -653,7 +653,7 @@ s32 cellSyncQueuePop(vm::ptr<CellSyncQueue> queue, vm::ptr<void> buffer)
 	memcpy(buffer.get_ptr(), &queue->m_buffer[position * size], size);
 
 	// prx: atomically insert 0 in first u8
-	queue->data &= { be_t<u32>::make(0xffffff), be_t<u32>::make(~0) };
+	queue->data &= { 0x00ffffff, 0xffffffffu };
 
 	g_sync_queue_wm.notify(queue.addr());
 
@@ -690,7 +690,7 @@ s32 cellSyncQueueTryPop(vm::ptr<CellSyncQueue> queue, vm::ptr<void> buffer)
 
 	memcpy(buffer.get_ptr(), &queue->m_buffer[position * size], size);
 
-	queue->data &= { be_t<u32>::make(0xffffff), be_t<u32>::make(~0) };
+	queue->data &= { 0x00ffffff, 0xffffffffu };
 
 	g_sync_queue_wm.notify(queue.addr());
 
@@ -742,7 +742,7 @@ s32 cellSyncQueuePeek(vm::ptr<CellSyncQueue> queue, vm::ptr<void> buffer)
 
 	memcpy(buffer.get_ptr(), &queue->m_buffer[position * size], size);
 
-	queue->data &= { be_t<u32>::make(0xffffff), be_t<u32>::make(~0) };
+	queue->data &= { 0x00ffffff, 0xffffffffu };
 
 	g_sync_queue_wm.notify(queue.addr());
 
@@ -779,7 +779,7 @@ s32 cellSyncQueueTryPeek(vm::ptr<CellSyncQueue> queue, vm::ptr<void> buffer)
 
 	memcpy(buffer.get_ptr(), &queue->m_buffer[position * size], size);
 
-	queue->data &= { be_t<u32>::make(0xffffff), be_t<u32>::make(~0) };
+	queue->data &= { 0x00ffffff, 0xffffffffu };
 
 	g_sync_queue_wm.notify(queue.addr());
 
@@ -890,13 +890,13 @@ void syncLFQueueInit(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u8> buffer, u32 siz
 		//m_bs[2]
 		//m_bs[3]
 		queue->m_v1 = -1;
-		queue->push2 = { { be_t<u16>::make(-1) } };
-		queue->pop2 = { { be_t<u16>::make(-1) } };
+		queue->push2 = { { 0xffff } };
+		queue->pop2 = { { 0xffff } };
 	}
 	else
 	{
-		queue->pop1 = { { be_t<u16>::make(0), be_t<u16>::make(0), queue->pop1.read_relaxed().m_h3, be_t<u16>::make(0) } };
-		queue->push1 = { { be_t<u16>::make(0), be_t<u16>::make(0), queue->push1.read_relaxed().m_h7, be_t<u16>::make(0) } };
+		queue->pop1 = { { 0, 0, queue->pop1.read_relaxed().m_h3, 0 } };
+		queue->push1 = { { 0, 0, queue->push1.read_relaxed().m_h7, 0 } };
 		queue->m_bs[0] = -1; // written as u32
 		queue->m_bs[1] = -1;
 		queue->m_bs[2] = -1;
@@ -1829,7 +1829,7 @@ s32 _cellSyncLFQueueGetSignalAddress(vm::cptr<CellSyncLFQueue> queue, vm::pptr<v
 	return CELL_OK;
 }
 
-s32 cellSyncLFQueueGetDirection(vm::cptr<CellSyncLFQueue> queue, vm::ptr<CellSyncQueueDirection> direction)
+s32 cellSyncLFQueueGetDirection(vm::cptr<CellSyncLFQueue> queue, vm::ptr<u32> direction)
 {
 	cellSync.Log("cellSyncLFQueueGetDirection(queue=*0x%x, direction=*0x%x)", queue, direction);
 

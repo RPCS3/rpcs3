@@ -271,7 +271,8 @@ union SceKernelSysClock
 	{
 		le_t<u32> low;
 		le_t<u32> hi;
-	};
+	}
+	u;
 
 	le_t<u64> quad;
 };

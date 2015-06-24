@@ -140,20 +140,8 @@ bool TROPUSRLoader::Generate(const std::string& filepath, const std::string& con
 			default: trophy_grade = 0;
 			}
 
-			TROPUSREntry4 entry4 = {
-				be_t<u32>::make(4),
-				be_t<u32>::make(sizeof(TROPUSREntry4) - 0x10),
-				be_t<u32>::make((u32)m_table4.size()),
-				be_t<u32>::make(0),
-				be_t<u32>::make(trophy_id),
-				be_t<u32>::make(trophy_grade),
-				be_t<u32>::make(0xFFFFFFFF) };
-			TROPUSREntry6 entry6 = {
-				be_t<u32>::make(6),
-				be_t<u32>::make(sizeof(TROPUSREntry6) - 0x10),
-				be_t<u32>::make((u32)m_table6.size()),
-				be_t<u32>::make(0),
-				be_t<u32>::make(trophy_id) };
+			TROPUSREntry4 entry4 = { 4, sizeof32(TROPUSREntry4) - 0x10, (u32)m_table4.size(), 0, trophy_id, trophy_grade, 0xFFFFFFFF };
+			TROPUSREntry6 entry6 = { 6, sizeof32(TROPUSREntry6) - 0x10, (u32)m_table6.size(), 0, trophy_id };
 
 			m_table4.push_back(entry4);
 			m_table6.push_back(entry6);
@@ -161,19 +149,9 @@ bool TROPUSRLoader::Generate(const std::string& filepath, const std::string& con
 	}
 
 	u64 offset = sizeof(TROPUSRHeader) + 2 * sizeof(TROPUSRTableHeader);
-	TROPUSRTableHeader table4header = {
-		be_t<u32>::make(4),
-		be_t<u32>::make(sizeof(TROPUSREntry4) - 0x10),
-		be_t<u32>::make(1),
-		be_t<u32>::make((u32)m_table4.size()),
-		be_t<u64>::make(offset) };
+	TROPUSRTableHeader table4header = { 4, sizeof32(TROPUSREntry4) - 0x10, 1, (u32)m_table4.size(), offset };
 	offset += m_table4.size() * sizeof(TROPUSREntry4);
-	TROPUSRTableHeader table6header = {
-		be_t<u32>::make(6),
-		be_t<u32>::make(sizeof(TROPUSREntry6) - 0x10),
-		be_t<u32>::make(1),
-		be_t<u32>::make((u32)m_table6.size()),
-		be_t<u64>::make(offset) };
+	TROPUSRTableHeader table6header = { 6, sizeof32(TROPUSREntry6) - 0x10, 1, (u32)m_table6.size(), offset };
 	offset += m_table6.size() * sizeof(TROPUSREntry6);
 
 	m_tableHeaders.clear();

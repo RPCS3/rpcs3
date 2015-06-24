@@ -881,7 +881,7 @@ s32 cellAudioAddData(u32 portNum, vm::ptr<float> src, u32 samples, float volume)
 
 	const AudioPortConfig& port = g_audio.ports[portNum];
 
-	const auto dst = vm::ptr<float>::make(port.addr + (port.tag % port.block) * port.channel * 256 * sizeof(float));
+	const auto dst = vm::ptr<float>::make(port.addr + u32(port.tag % port.block) * port.channel * 256 * sizeof32(float));
 
 	for (u32 i = 0; i < samples * port.channel; i++)
 	{
@@ -914,7 +914,7 @@ s32 cellAudioAdd2chData(u32 portNum, vm::ptr<float> src, u32 samples, float volu
 
 	const AudioPortConfig& port = g_audio.ports[portNum];
 
-	const auto dst = vm::ptr<float>::make(port.addr + (port.tag % port.block) * port.channel * 256 * sizeof(float));
+	const auto dst = vm::ptr<float>::make(port.addr + s32(port.tag % port.block) * port.channel * 256 * sizeof32(float));
 
 	if (port.channel == 2)
 	{
@@ -970,7 +970,7 @@ s32 cellAudioAdd6chData(u32 portNum, vm::ptr<float> src, float volume)
 
 	const AudioPortConfig& port = g_audio.ports[portNum];
 
-	const auto dst = vm::ptr<float>::make(port.addr + (port.tag % port.block) * port.channel * 256 * sizeof(float));
+	const auto dst = vm::ptr<float>::make(port.addr + s32(port.tag % port.block) * port.channel * 256 * sizeof32(float));
 
 	if (port.channel == 2 || port.channel == 6)
 	{

@@ -16,28 +16,10 @@ struct sys_lwmutex_attribute_t
 
 enum : u32
 {
-	lwmutex_zero     = 0u,
-	lwmutex_free     = 0u - 1u,
-	lwmutex_dead     = 0u - 2u,
-	lwmutex_reserved = 0u - 3u,
+	lwmutex_free     = 0xffffffffu,
+	lwmutex_dead     = 0xfffffffeu,
+	lwmutex_reserved = 0xfffffffdu,
 };
-
-namespace lwmutex
-{
-	template<u32 _value>
-	struct const_be_u32_t
-	{
-		operator const be_t<u32>() const
-		{
-			return be_t<u32>::make(_value);
-		}
-	};
-
-	static const_be_u32_t<lwmutex_zero> zero;
-	static const_be_u32_t<lwmutex_free> free;
-	static const_be_u32_t<lwmutex_dead> dead;
-	static const_be_u32_t<lwmutex_reserved> reserved;
-}
 
 struct sys_lwmutex_t
 {
@@ -55,7 +37,8 @@ struct sys_lwmutex_t
 		{
 			atomic_be_t<u32> owner;
 			atomic_be_t<u32> waiter;
-		};
+		}
+		vars;
 
 		atomic_be_t<u64> all_info;
 	};

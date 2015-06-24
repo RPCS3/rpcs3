@@ -355,7 +355,7 @@ void SPUThread::do_dma_list_cmd(u32 cmd, spu_mfc_arg_t args)
 			args.lsa += std::max<u32>(size, 16);
 		}
 
-		if (rec->sb.data() & se16(0x8000))
+		if (rec->sb & 0x8000)
 		{
 			ch_stall_stat.push_bit_or(1 << args.tag);
 

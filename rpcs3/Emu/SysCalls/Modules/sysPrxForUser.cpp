@@ -112,7 +112,7 @@ s32 sys_lwmutex_create(vm::ptr<sys_lwmutex_t> lwmutex, vm::ptr<sys_lwmutex_attri
 	default: sysPrxForUser.Error("sys_lwmutex_create(): invalid protocol (0x%x)", protocol); return CELL_EINVAL;
 	}
 
-	lwmutex->lock_var = { { lwmutex::free, lwmutex::zero } };
+	lwmutex->lock_var = { { lwmutex_free, 0 } };
 	lwmutex->attribute = attr->recursive | attr->protocol;
 	lwmutex->recursive_count = 0;
 	lwmutex->sleep_queue = Emu.GetIdManager().make<lv2_lwmutex_t>(protocol, attr->name_u64);
@@ -125,7 +125,7 @@ s32 sys_lwmutex_destroy(PPUThread& CPU, vm::ptr<sys_lwmutex_t> lwmutex)
 	sysPrxForUser.Log("sys_lwmutex_destroy(lwmutex=*0x%x)", lwmutex);
 
 	// check to prevent recursive locking in the next call
-	if (lwmutex->owner.read_relaxed() == CPU.GetId())
+	if (lwmutex->vars.owner.read_relaxed() == CPU.GetId())
 	{
 		return CELL_EBUSY;
 	}
@@ -146,7 +146,7 @@ s32 sys_lwmutex_destroy(PPUThread& CPU, vm::ptr<sys_lwmutex_t> lwmutex)
 	}
 
 	// deleting succeeded
-	lwmutex->owner.exchange(lwmutex::dead);
+	lwmutex->vars.owner.exchange(lwmutex_dead);
 
 	return CELL_OK;
 }
@@ -155,10 +155,10 @@ s32 sys_lwmutex_lock(PPUThread& CPU, vm::ptr<sys_lwmutex_t> lwmutex, u64 timeout
 {
 	sysPrxForUser.Log("sys_lwmutex_lock(lwmutex=*0x%x, timeout=0x%llx)", lwmutex, timeout);
 
-	const be_t<u32> tid = be_t<u32>::make(CPU.GetId());
+	const be_t<u32> tid = CPU.GetId();
 
 	// try to lock lightweight mutex
-	const be_t<u32> old_owner = lwmutex->owner.compare_and_swap(lwmutex::free, tid);
+	const be_t<u32> old_owner = lwmutex->vars.owner.compare_and_swap(lwmutex_free, tid);
 
 	if (old_owner.data() == se32(lwmutex_free))
 	{
@@ -197,9 +197,9 @@ s32 sys_lwmutex_lock(PPUThread& CPU, vm::ptr<sys_lwmutex_t> lwmutex, u64 timeout
 
 	for (u32 i = 0; i < 300; i++)
 	{
-		if (lwmutex->owner.read_relaxed().data() == se32(lwmutex_free))
+		if (lwmutex->vars.owner.read_relaxed().data() == se32(lwmutex_free))
 		{
-			if (lwmutex->owner.compare_and_swap_test(lwmutex::free, tid))
+			if (lwmutex->vars.owner.compare_and_swap_test(lwmutex_free, tid))
 			{
 				// locking succeeded
 				return CELL_OK;
@@ -210,7 +210,7 @@ s32 sys_lwmutex_lock(PPUThread& CPU, vm::ptr<sys_lwmutex_t> lwmutex, u64 timeout
 	// atomically increment waiter value using 64 bit op
 	lwmutex->all_info++;
 
-	if (lwmutex->owner.compare_and_swap_test(lwmutex::free, tid))
+	if (lwmutex->vars.owner.compare_and_swap_test(lwmutex_free, tid))
 	{
 		// locking succeeded
 		lwmutex->all_info--;
@@ -226,7 +226,7 @@ s32 sys_lwmutex_lock(PPUThread& CPU, vm::ptr<sys_lwmutex_t> lwmutex, u64 timeout
 	if (res == CELL_OK)
 	{
 		// locking succeeded
-		auto old = lwmutex->owner.exchange(tid);
+		auto old = lwmutex->vars.owner.exchange(tid);
 
 		if (old.data() != se32(lwmutex_reserved) && !Emu.IsStopped())
 		{
@@ -249,10 +249,10 @@ s32 sys_lwmutex_trylock(PPUThread& CPU, vm::ptr<sys_lwmutex_t> lwmutex)
 {
 	sysPrxForUser.Log("sys_lwmutex_trylock(lwmutex=*0x%x)", lwmutex);
 
-	const be_t<u32> tid = be_t<u32>::make(CPU.GetId());
+	const be_t<u32> tid = CPU.GetId();
 
 	// try to lock lightweight mutex
-	const be_t<u32> old_owner = lwmutex->owner.compare_and_swap(lwmutex::free, tid);
+	const be_t<u32> old_owner = lwmutex->vars.owner.compare_and_swap(lwmutex_free, tid);
 
 	if (old_owner.data() == se32(lwmutex_free))
 	{
@@ -297,7 +297,7 @@ s32 sys_lwmutex_trylock(PPUThread& CPU, vm::ptr<sys_lwmutex_t> lwmutex)
 		if (res == CELL_OK)
 		{
 			// locking succeeded
-			auto old = lwmutex->owner.exchange(tid);
+			auto old = lwmutex->vars.owner.exchange(tid);
 
 			if (old.data() != se32(lwmutex_reserved) && !Emu.IsStopped())
 			{
@@ -316,10 +316,10 @@ s32 sys_lwmutex_unlock(PPUThread& CPU, vm::ptr<sys_lwmutex_t> lwmutex)
 {
 	sysPrxForUser.Log("sys_lwmutex_unlock(lwmutex=*0x%x)", lwmutex);
 
-	const be_t<u32> tid = be_t<u32>::make(CPU.GetId());
+	const be_t<u32> tid = CPU.GetId();
 
 	// check owner
-	if (lwmutex->owner.read_relaxed() != tid)
+	if (lwmutex->vars.owner.read_relaxed() != tid)
 	{
 		return CELL_EPERM;
 	}
@@ -333,7 +333,7 @@ s32 sys_lwmutex_unlock(PPUThread& CPU, vm::ptr<sys_lwmutex_t> lwmutex)
 	}
 
 	// ensure that waiter is zero
-	if (lwmutex->lock_var.compare_and_swap_test({ tid, lwmutex::zero }, { lwmutex::free, lwmutex::zero }))
+	if (lwmutex->lock_var.compare_and_swap_test({ tid, 0 }, { lwmutex_free, 0 }))
 	{
 		// unlocking succeeded
 		return CELL_OK;
@@ -345,7 +345,7 @@ s32 sys_lwmutex_unlock(PPUThread& CPU, vm::ptr<sys_lwmutex_t> lwmutex)
 	}
 
 	// set special value
-	lwmutex->owner.exchange(lwmutex::reserved);
+	lwmutex->vars.owner.exchange(lwmutex_reserved);
 
 	// call the syscall
 	if (_sys_lwmutex_unlock(lwmutex->sleep_queue) == CELL_ESRCH)
@@ -392,7 +392,7 @@ s32 sys_lwcond_signal(PPUThread& CPU, vm::ptr<sys_lwcond_t> lwcond)
 		//return _sys_lwcond_signal(lwcond->lwcond_queue, 0, -1, 2);
 	}
 
-	if (lwmutex->owner.read_relaxed() == CPU.GetId())
+	if (lwmutex->vars.owner.read_relaxed() == CPU.GetId())
 	{
 		// if owns the mutex
 		lwmutex->all_info++;
@@ -450,7 +450,7 @@ s32 sys_lwcond_signal_all(PPUThread& CPU, vm::ptr<sys_lwcond_t> lwcond)
 		//return _sys_lwcond_signal_all(lwcond->lwcond_queue, lwmutex->sleep_queue, 2);
 	}
 
-	if (lwmutex->owner.read_relaxed() == CPU.GetId())
+	if (lwmutex->vars.owner.read_relaxed() == CPU.GetId())
 	{
 		// if owns the mutex, call the syscall
 		const s32 res = _sys_lwcond_signal_all(lwcond->lwcond_queue, lwmutex->sleep_queue, 1);
@@ -507,7 +507,7 @@ s32 sys_lwcond_signal_to(PPUThread& CPU, vm::ptr<sys_lwcond_t> lwcond, u32 ppu_t
 		//return _sys_lwcond_signal(lwcond->lwcond_queue, 0, ppu_thread_id, 2);
 	}
 
-	if (lwmutex->owner.read_relaxed() == CPU.GetId())
+	if (lwmutex->vars.owner.read_relaxed() == CPU.GetId())
 	{
 		// if owns the mutex
 		lwmutex->all_info++;
@@ -557,11 +557,11 @@ s32 sys_lwcond_wait(PPUThread& CPU, vm::ptr<sys_lwcond_t> lwcond, u64 timeout)
 {
 	sysPrxForUser.Log("sys_lwcond_wait(lwcond=*0x%x, timeout=0x%llx)", lwcond, timeout);
 
-	const be_t<u32> tid = be_t<u32>::make(CPU.GetId());
+	const be_t<u32> tid = CPU.GetId();
 
 	const vm::ptr<sys_lwmutex_t> lwmutex = lwcond->lwmutex;
 
-	if (lwmutex->owner.read_relaxed() != tid)
+	if (lwmutex->vars.owner.read_relaxed() != tid)
 	{
 		// if not owner of the mutex
 		return CELL_EPERM;
@@ -571,7 +571,7 @@ s32 sys_lwcond_wait(PPUThread& CPU, vm::ptr<sys_lwcond_t> lwcond, u64 timeout)
 	const be_t<u32> recursive_value = lwmutex->recursive_count;
 
 	// set special value
-	lwmutex->owner = { lwmutex::reserved };
+	lwmutex->vars.owner = { lwmutex_reserved };
 	lwmutex->recursive_count = 0;
 
 	// call the syscall
@@ -585,7 +585,7 @@ s32 sys_lwcond_wait(PPUThread& CPU, vm::ptr<sys_lwcond_t> lwcond, u64 timeout)
 		}
 
 		// restore owner and recursive value
-		const auto old = lwmutex->owner.exchange(tid);
+		const auto old = lwmutex->vars.owner.exchange(tid);
 		lwmutex->recursive_count = recursive_value;
 
 		if (old.data() != se32(lwmutex_reserved) && !Emu.IsStopped())
@@ -614,7 +614,7 @@ s32 sys_lwcond_wait(PPUThread& CPU, vm::ptr<sys_lwcond_t> lwcond, u64 timeout)
 	if (res == CELL_EDEADLK)
 	{
 		// restore owner and recursive value
-		const auto old = lwmutex->owner.exchange(tid);
+		const auto old = lwmutex->vars.owner.exchange(tid);
 		lwmutex->recursive_count = recursive_value;
 
 		if (old.data() != se32(lwmutex_reserved) && !Emu.IsStopped())
@@ -743,7 +743,7 @@ std::string ps3_fmt(PPUThread& context, vm::cptr<char> fmt, u32 g_count, u32 f_c
 			case 's':
 			{
 				// string
-				auto string = vm::cptr<char>::make(context.get_next_gpr_arg(g_count, f_count, v_count));
+				auto string = vm::cptr<char, u64>::make(context.get_next_gpr_arg(g_count, f_count, v_count));
 
 				if (plus_sign || minus_sign || space_sign || number_sign || zero_padding || width || prec) break;
 
@@ -904,7 +904,7 @@ s32 sys_raw_spu_image_load(s32 id, vm::ptr<sys_spu_image> img)
 
 	const auto stamp1 = get_system_time();
 
-	vm::write32(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * id + RAW_SPU_PROB_OFFSET + SPU_NPC_offs, img->entry_point | be_t<u32>::make(1));
+	vm::write32(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * id + RAW_SPU_PROB_OFFSET + SPU_NPC_offs, img->entry_point | 1);
 
 	const auto stamp2 = get_system_time();
 
@@ -1179,7 +1179,7 @@ void sys_spinlock_initialize(vm::ptr<atomic_be_t<u32>> lock)
 	sysPrxForUser.Log("sys_spinlock_initialize(lock=*0x%x)", lock);
 
 	// prx: set 0 and sync
-	lock->exchange(be_t<u32>::make(0));
+	lock->exchange(0);
 }
 
 void sys_spinlock_lock(vm::ptr<atomic_be_t<u32>> lock)
@@ -1187,7 +1187,7 @@ void sys_spinlock_lock(vm::ptr<atomic_be_t<u32>> lock)
 	sysPrxForUser.Log("sys_spinlock_lock(lock=*0x%x)", lock);
 
 	// prx: exchange with 0xabadcafe, repeat until exchanged with 0
-	while (lock->exchange(be_t<u32>::make(0xabadcafe)).data())
+	while (lock->exchange(0xabadcafe).data())
 	{
 		g_sys_spinlock_wm.wait_op(lock.addr(), [lock](){ return lock->read_relaxed().data() == 0; });
 
@@ -1204,7 +1204,7 @@ s32 sys_spinlock_trylock(vm::ptr<atomic_be_t<u32>> lock)
 	sysPrxForUser.Log("sys_spinlock_trylock(lock=*0x%x)", lock);
 
 	// prx: exchange with 0xabadcafe, translate exchanged value
-	if (lock->exchange(be_t<u32>::make(0xabadcafe)).data())
+	if (lock->exchange(0xabadcafe).data())
 	{
 		return CELL_EBUSY;
 	}
@@ -1217,7 +1217,7 @@ void sys_spinlock_unlock(vm::ptr<atomic_be_t<u32>> lock)
 	sysPrxForUser.Log("sys_spinlock_unlock(lock=*0x%x)", lock);
 
 	// prx: sync and set 0
-	lock->exchange(be_t<u32>::make(0));
+	lock->exchange(0);
 
 	g_sys_spinlock_wm.notify(lock.addr());
 }
@@ -1274,7 +1274,7 @@ void sys_ppu_thread_once(PPUThread& CPU, vm::ptr<atomic_be_t<u32>> once_ctrl, vm
 
 	std::lock_guard<std::mutex> lock(g_once_mutex);
 
-	if (once_ctrl->compare_and_swap_test(be_t<u32>::make(SYS_PPU_THREAD_ONCE_INIT), be_t<u32>::make(SYS_PPU_THREAD_DONE_INIT)))
+	if (once_ctrl->compare_and_swap_test(SYS_PPU_THREAD_ONCE_INIT, SYS_PPU_THREAD_DONE_INIT))
 	{
 		// call init function using current thread context
 		init(CPU);

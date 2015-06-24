@@ -36,23 +36,23 @@ namespace loader
 				return bad_file;
 			}
 
-			if (m_ehdr.data_le.e_phnum && (m_ehdr.is_le() ? m_ehdr.data_le.e_phentsize : m_ehdr.data_be.e_phentsize) != sizeof(phdr))
+			if (m_ehdr.data_le.e_phnum && (m_ehdr.is_le() ? m_ehdr.data_le.e_phentsize != sizeof(phdr) : m_ehdr.data_be.e_phentsize != sizeof(phdr)))
 			{
 				return broken_file;
 			}
 
-			if (m_ehdr.data_le.e_shnum && (m_ehdr.is_le() ? m_ehdr.data_le.e_shentsize : m_ehdr.data_be.e_shentsize) != sizeof(shdr))
+			if (m_ehdr.data_le.e_shnum && (m_ehdr.is_le() ? m_ehdr.data_le.e_shentsize != sizeof(shdr) : m_ehdr.data_be.e_shentsize != sizeof(shdr)))
 			{
 				return broken_file;
 			}
 
-			LOG_WARNING(LOADER, "m_ehdr.e_type = 0x%x", (u16)(m_ehdr.is_le() ? m_ehdr.data_le.e_type : m_ehdr.data_be.e_type));
+			LOG_WARNING(LOADER, "m_ehdr.e_type = 0x%x", m_ehdr.is_le() ? m_ehdr.data_le.e_type : m_ehdr.data_be.e_type.value());
 
 			if (m_ehdr.data_le.e_phnum)
 			{
-				m_phdrs.resize(m_ehdr.is_le() ? m_ehdr.data_le.e_phnum : m_ehdr.data_be.e_phnum);
-				m_stream->Seek(handler::get_stream_offset() + (m_ehdr.is_le() ? m_ehdr.data_le.e_phoff : m_ehdr.data_be.e_phoff));
-				size_t size = (m_ehdr.is_le() ? m_ehdr.data_le.e_phnum : m_ehdr.data_be.e_phnum) * sizeof(phdr);
+				m_phdrs.resize(m_ehdr.is_le() ? m_ehdr.data_le.e_phnum : m_ehdr.data_be.e_phnum.value());
+				m_stream->Seek(handler::get_stream_offset() + (m_ehdr.is_le() ? m_ehdr.data_le.e_phoff : m_ehdr.data_be.e_phoff.value()));
+				size_t size = (m_ehdr.is_le() ? m_ehdr.data_le.e_phnum : m_ehdr.data_be.e_phnum.value()) * sizeof(phdr);
 
 				if (m_stream->Read(m_phdrs.data(), size) != size)
 					return broken_file;
@@ -60,9 +60,9 @@ namespace loader
 
 			if (m_ehdr.data_le.e_shnum)
 			{
-				m_shdrs.resize(m_ehdr.is_le() ? m_ehdr.data_le.e_shnum : m_ehdr.data_be.e_shnum);
-				m_stream->Seek(handler::get_stream_offset() + (m_ehdr.is_le() ? m_ehdr.data_le.e_shoff : m_ehdr.data_be.e_shoff));
-				size_t size = (m_ehdr.is_le() ? m_ehdr.data_le.e_shnum : m_ehdr.data_be.e_shnum) * sizeof(shdr);
+				m_shdrs.resize(m_ehdr.is_le() ? m_ehdr.data_le.e_shnum : m_ehdr.data_be.e_shnum.value());
+				m_stream->Seek(handler::get_stream_offset() + (m_ehdr.is_le() ? m_ehdr.data_le.e_shoff : m_ehdr.data_be.e_shoff.value()));
+				size_t size = (m_ehdr.is_le() ? m_ehdr.data_le.e_shnum : m_ehdr.data_be.e_shnum.value()) * sizeof(shdr);
 
 				if (m_stream->Read(m_shdrs.data(), size) != size)
 					return broken_file;
@@ -74,7 +74,7 @@ namespace loader
 		handler::error_code elf32::load()
 		{
 			Elf_Machine machine;
-			switch (machine = (Elf_Machine)(u16)(m_ehdr.is_le() ? m_ehdr.data_le.e_machine : m_ehdr.data_be.e_machine))
+			switch (machine = (Elf_Machine)(u16)(m_ehdr.is_le() ? m_ehdr.data_le.e_machine : m_ehdr.data_be.e_machine.value()))
 			{
 			case MACHINE_MIPS: vm::psp::init(); break;
 			case MACHINE_ARM: vm::psv::init(); break;
@@ -401,13 +401,13 @@ namespace loader
 				armv7_decoder_initialize(code_start, code_end);
 
 				const std::string& thread_name = proc_param->sceUserMainThreadName ? proc_param->sceUserMainThreadName.get_ptr() : "main_thread";
-				const u32 stack_size = proc_param->sceUserMainThreadStackSize ? *proc_param->sceUserMainThreadStackSize : 256 * 1024;
-				const u32 priority = proc_param->sceUserMainThreadPriority ? *proc_param->sceUserMainThreadPriority : 160;
+				const u32 stack_size = proc_param->sceUserMainThreadStackSize ? proc_param->sceUserMainThreadStackSize->value() : 256 * 1024;
+				const u32 priority = proc_param->sceUserMainThreadPriority ? proc_param->sceUserMainThreadPriority->value() : 160;
 
 				armv7_thread(entry, thread_name, stack_size, priority).args({ Emu.GetPath(), "-emu" }).run();
 				break;
 			}
-			case MACHINE_SPU: spu_thread(m_ehdr.is_le() ? m_ehdr.data_le.e_entry : m_ehdr.data_be.e_entry, "main_thread").args({ Emu.GetPath()/*, "-emu"*/ }).run(); break;
+			case MACHINE_SPU: spu_thread(m_ehdr.is_le() ? m_ehdr.data_le.e_entry : m_ehdr.data_be.e_entry.value(), "main_thread").args({ Emu.GetPath()/*, "-emu"*/ }).run(); break;
 			}
 
 			return ok;
@@ -415,16 +415,16 @@ namespace loader
 
 		handler::error_code elf32::load_data(u32 offset, bool skip_writeable)
 		{
-			Elf_Machine machine = (Elf_Machine)(u16)(m_ehdr.is_le() ? m_ehdr.data_le.e_machine : m_ehdr.data_be.e_machine);
+			Elf_Machine machine = (Elf_Machine)(u16)(m_ehdr.is_le() ? m_ehdr.data_le.e_machine : m_ehdr.data_be.e_machine.value());
 
 			for (auto &phdr : m_phdrs)
 			{
-				u32 memsz = m_ehdr.is_le() ? phdr.data_le.p_memsz : phdr.data_be.p_memsz;
-				u32 filesz = m_ehdr.is_le() ? phdr.data_le.p_filesz : phdr.data_be.p_filesz;
-				u32 vaddr = offset + (m_ehdr.is_le() ? phdr.data_le.p_vaddr : phdr.data_be.p_vaddr);
-				u32 offset = m_ehdr.is_le() ? phdr.data_le.p_offset : phdr.data_be.p_offset;
+				u32 memsz = m_ehdr.is_le() ? phdr.data_le.p_memsz : phdr.data_be.p_memsz.value();
+				u32 filesz = m_ehdr.is_le() ? phdr.data_le.p_filesz : phdr.data_be.p_filesz.value();
+				u32 vaddr = offset + (m_ehdr.is_le() ? phdr.data_le.p_vaddr : phdr.data_be.p_vaddr.value());
+				u32 offset = m_ehdr.is_le() ? phdr.data_le.p_offset : phdr.data_be.p_offset.value();
 
-				switch (m_ehdr.is_le() ? phdr.data_le.p_type : phdr.data_be.p_type)
+				switch (m_ehdr.is_le() ? phdr.data_le.p_type : phdr.data_be.p_type.value())
 				{
 				case 0x00000001: //LOAD
 					if (phdr.data_le.p_memsz)

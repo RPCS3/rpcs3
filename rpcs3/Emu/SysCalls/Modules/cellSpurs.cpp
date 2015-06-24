@@ -144,7 +144,7 @@ s32 cellSpursTasksetAttributeSetName(vm::ptr<CellSpursTasksetAttribute> attr, vm
 s32 cellSpursTasksetAttributeSetTasksetSize(vm::ptr<CellSpursTasksetAttribute> attr, u32 size);
 s32 cellSpursTasksetAttributeEnableClearLS(vm::ptr<CellSpursTasksetAttribute> attr, s32 enable);
 s32 _cellSpursTasksetAttribute2Initialize(vm::ptr<CellSpursTasksetAttribute2> attribute, u32 revision);
-s32 cellSpursCreateTaskset2(PPUThread& CPU, vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursTaskset2> taskset, vm::ptr<CellSpursTasksetAttribute2> attr);
+s32 cellSpursCreateTaskset2(PPUThread& CPU, vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursTaskset> taskset, vm::ptr<CellSpursTasksetAttribute2> attr);
 s32 cellSpursDestroyTaskset2();
 s32 cellSpursTasksetSetExceptionEventHandler(vm::ptr<CellSpursTaskset> taskset, vm::ptr<CellSpursTasksetExceptionEventHandler> handler, vm::ptr<u64> arg);
 s32 cellSpursTasksetUnsetExceptionEventHandler(vm::ptr<CellSpursTaskset> taskset);
@@ -376,7 +376,7 @@ s32 spursAttachLv2EventQueue(PPUThread& CPU, vm::ptr<CellSpurs> spurs, u32 queue
 	*port = connectedPort;
 	if (!spursCreated)
 	{
-		spurs->spuPortBits |= be_t<u64>::make(1ull << connectedPort);
+		spurs->spuPortBits |= 1ull << connectedPort;
 	}
 
 	return CELL_OK;
@@ -417,7 +417,7 @@ s32 spursDetachLv2EventQueue(vm::ptr<CellSpurs> spurs, u8 spuPort, bool spursCre
 			}
 		}
 
-		spurs->spuPortBits &= be_t<u64>::make(~mask);
+		spurs->spuPortBits &= ~mask;
 	}
 
 	return CELL_OK;
@@ -578,7 +578,7 @@ s32 spursCreateHandler(vm::ptr<CellSpurs> spurs, u32 ppuPriority)
 /// Invoke event handlers
 s32 spursInvokeEventHandlers(PPUThread& CPU, vm::ptr<CellSpurs::EventPortMux> eventPortMux)
 {
-	if (eventPortMux->reqPending.exchange(be_t<u32>::make(0)).data())
+	if (eventPortMux->reqPending.exchange(0).data())
 	{
 		const vm::ptr<CellSpurs::EventHandlerListNode> handlerList = eventPortMux->handlerList.exchange(vm::null);
 
@@ -1028,7 +1028,7 @@ s32 spursInit(
 
 	if (!isSecond)
 	{
-		spurs->wklEnabled.write_relaxed(be_t<u32>::make(0xffff));
+		spurs->wklEnabled.write_relaxed(0xffff);
 	}
 
 	// Initialise trace
@@ -1044,7 +1044,6 @@ s32 spursInit(
 	spurs->wklInfoSysSrv.size = 0x2200;
 	spurs->wklInfoSysSrv.arg  = 0;
 	spurs->wklInfoSysSrv.uniqueId.write_relaxed(0xff);
-
 
 	auto sys_semaphore_attribute_initialize = [](vm::ptr<sys_semaphore_attribute_t> attr)
 	{
@@ -1223,7 +1222,7 @@ s32 spursInit(
 
 	spurs->flags1 = (flags & SAF_EXIT_IF_NO_WORK ? SF1_EXIT_IF_NO_WORK : 0) | (isSecond ? SF1_32_WORKLOADS : 0);
 	spurs->wklFlagReceiver.write_relaxed(0xff);
-	spurs->wklFlag.flag.write_relaxed(be_t<u32>::make(-1));
+	spurs->wklFlag.flag.write_relaxed(-1);
 	spurs->handlerDirty.write_relaxed(0);
 	spurs->handlerWaiting.write_relaxed(0);
 	spurs->handlerExiting.write_relaxed(0);
@@ -1809,7 +1808,7 @@ s32 cellSpursEnableExceptionEventHandler(vm::ptr<CellSpurs> spurs, bool flag)
 	}
 
 	s32  rc          = CELL_OK;
-	auto oldEnableEH = spurs->enableEH.exchange(be_t<u32>::make(flag ? 1u : 0u));
+	auto oldEnableEH = spurs->enableEH.exchange(flag ? 1u : 0u);
 	if (flag)
 	{
 		if (oldEnableEH == 0)
@@ -1848,14 +1847,14 @@ s32 cellSpursSetGlobalExceptionEventHandler(vm::ptr<CellSpurs> spurs, vm::ptr<Ce
 		return CELL_SPURS_CORE_ERROR_STAT;
 	}
 
-	auto handler = spurs->globalSpuExceptionHandler.compare_and_swap(be_t<u64>::make(0), be_t<u64>::make(1));
+	auto handler = spurs->globalSpuExceptionHandler.compare_and_swap(0, 1);
 	if (handler)
 	{
 		return CELL_SPURS_CORE_ERROR_BUSY;
 	}
 
 	spurs->globalSpuExceptionHandlerArgs = arg.addr();
-	spurs->globalSpuExceptionHandler.exchange(be_t<u64>::make(eaHandler.addr()));
+	spurs->globalSpuExceptionHandler.exchange(eaHandler.addr());
 	return CELL_OK;
 }
 
@@ -1866,7 +1865,7 @@ s32 cellSpursUnsetGlobalExceptionEventHandler(vm::ptr<CellSpurs> spurs)
 	cellSpurs.Warning("cellSpursUnsetGlobalExceptionEventHandler(spurs=*0x%x)", spurs);
 
 	spurs->globalSpuExceptionHandlerArgs = 0;
-	spurs->globalSpuExceptionHandler.exchange(be_t<u64>::make(0));
+	spurs->globalSpuExceptionHandler.exchange(0);
 	return CELL_OK;
 }
 
@@ -2312,7 +2311,7 @@ s32 spursAddWorkload(
 			v &= ~0xf;
 			v |= (maxContention > 8 ? 8 : maxContention);
 		});
-		spurs->wklSignal1._and_not({ be_t<u16>::make(0x8000 >> index) }); // clear bit in wklFlag1
+		spurs->wklSignal1._and_not({ 0x8000 >> index }); // clear bit in wklFlag1
 	}
 	else
 	{
@@ -2321,7 +2320,7 @@ s32 spursAddWorkload(
 			v &= ~0xf0;
 			v |= (maxContention > 8 ? 8 : maxContention) << 4;
 		});
-		spurs->wklSignal2._and_not({ be_t<u16>::make(0x8000 >> index) }); // clear bit in wklFlag2
+		spurs->wklSignal2._and_not({ 0x8000 >> index }); // clear bit in wklFlag2
 	}
 
 	spurs->wklFlagReceiver.compare_and_swap(wnum, 0xff);
@@ -2483,11 +2482,11 @@ s32 cellSpursSendWorkloadSignal(vm::ptr<CellSpurs> spurs, u32 wid)
 
 	if (wid >= CELL_SPURS_MAX_WORKLOAD)
 	{
-		spurs->wklSignal2 |= be_t<u16>::make(0x8000 >> (wid & 0x0F));
+		spurs->wklSignal2 |= 0x8000 >> (wid & 0x0F);
 	}
 	else
 	{
-		spurs->wklSignal1 |= be_t<u16>::make(0x8000 >> wid);
+		spurs->wklSignal1 |= 0x8000 >> wid;
 	}
 
 	return CELL_OK;
@@ -2787,7 +2786,7 @@ s32 cellSpursEventFlagClear(vm::ptr<CellSpursEventFlag> eventFlag, u16 bits)
 		return CELL_SPURS_TASK_ERROR_ALIGN;
 	}
 
-	eventFlag->events &= be_t<u16>::make(~bits);
+	eventFlag->events &= ~bits;
 	return CELL_OK;
 }
 
@@ -3299,7 +3298,7 @@ s32 cellSpursEventFlagGetTasksetAddress(vm::ptr<CellSpursEventFlag> eventFlag, v
 		return CELL_SPURS_TASK_ERROR_ALIGN;
 	}
 
-	taskset->set(eventFlag->isIwl ? 0 : eventFlag->addr);
+	taskset->set(eventFlag->isIwl ? 0u : vm::cast(eventFlag->addr));
 	return CELL_OK;
 }
 
@@ -3691,17 +3690,17 @@ s32 _cellSpursSendSignal(PPUThread& CPU, vm::ptr<CellSpursTaskset> taskset, u32 
 		return CELL_SPURS_TASK_ERROR_INVAL;
 	}
 
-	auto _0       = be_t<u128>::make(u128::from32(0));
-	auto disabled = taskset->enabled.value()._bit[taskId] ? false : true;
+    be_t<u128> _0(u128::from32(0));
+	bool disabled = taskset->enabled.value()._bit[taskId];
 	auto invalid  = (taskset->ready & taskset->pending_ready) != _0 || (taskset->running & taskset->waiting) != _0 || disabled ||
-					((taskset->running | taskset->ready | taskset->pending_ready | taskset->waiting | taskset->signalled) & be_t<u128>::make(~taskset->enabled.value())) != _0;
+					((taskset->running | taskset->ready | taskset->pending_ready | taskset->waiting | taskset->signalled) & ~taskset->enabled) != _0;
 
 	if (invalid)
 	{
 		return CELL_SPURS_TASK_ERROR_SRCH;
 	}
 
-	auto shouldSignal      = (taskset->waiting & be_t<u128>::make(~taskset->signalled.value()) & be_t<u128>::make(u128::fromBit(taskId))) != _0 ? true : false;
+	auto shouldSignal      = ((taskset->waiting & ~taskset->signalled) & be_t<u128>(u128::fromBit(taskId))) != _0 ? true : false;
 	auto signalled         = taskset->signalled.value();
 	signalled._bit[taskId] = true;
 	taskset->signalled   = signalled;
@@ -3880,23 +3879,19 @@ s32 cellSpursTaskGetContextSaveAreaSize()
 	return CELL_OK;
 }
 
-s32 cellSpursCreateTaskset2(PPUThread& CPU, vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursTaskset2> taskset, vm::ptr<CellSpursTasksetAttribute2> attr)
+s32 cellSpursCreateTaskset2(PPUThread& CPU, vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursTaskset> taskset, vm::ptr<CellSpursTasksetAttribute2> attr)
 {
-	cellSpurs.Warning("%s(spurs=0x%x, taskset=0x%x, attr=0x%x)", __FUNCTION__, spurs.addr(), taskset.addr(), attr.addr());
+	cellSpurs.Warning("cellSpursCreateTaskset2(spurs=*0x%x, taskset=*0x%x, attr=*0x%x)", spurs, taskset, attr);
 
-	vm::ptr<CellSpursTasksetAttribute2> tmp_attr;
+	vm::stackvar<CellSpursTasksetAttribute2> tmp_attr(CPU);
 
 	if (!attr)
 	{
-		attr.set(tmp_attr.addr());
+		attr = tmp_attr;
 		_cellSpursTasksetAttribute2Initialize(attr, 0);
 	}
 
-	auto rc = spursCreateTaskset(CPU, spurs, vm::ptr<CellSpursTaskset>::make(taskset.addr()), attr->args,
-		vm::cptr<u8[8]>::make(attr.addr() + offsetof(CellSpursTasksetAttribute, priority)),
-		attr->max_contention, attr->name, sizeof32(CellSpursTaskset2), (u8)attr->enable_clear_ls);
-
-	if (rc != CELL_OK)
+	if (s32 rc = spursCreateTaskset(CPU, spurs, taskset, attr->args, attr.of(&CellSpursTasksetAttribute2::priority), attr->max_contention, attr->name, sizeof32(CellSpursTaskset2), attr->enable_clear_ls))
 	{
 		return rc;
 	}

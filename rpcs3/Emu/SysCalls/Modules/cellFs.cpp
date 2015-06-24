@@ -320,7 +320,7 @@ s32 cellFsStReadInit(u32 fd, vm::cptr<CellFsRingBuffer> ringbuf)
 		return CELL_FS_EINVAL;
 	}
 
-	if (ringbuf->block_size.data() & se64(0xfff)) // check if a multiple of sector size
+	if (ringbuf->block_size & 0xfff) // check if a multiple of sector size
 	{
 		return CELL_FS_EINVAL;
 	}

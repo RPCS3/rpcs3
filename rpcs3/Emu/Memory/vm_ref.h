@@ -17,9 +17,9 @@ namespace vm
 			return m_addr;
 		}
 
-		template<typename AT2 = AT> static _ref_base make(const AT2& addr)
+		template<typename AT2 = AT> static std::enable_if_t<std::is_constructible<AT, AT2>::value, _ref_base> make(const AT2& addr)
 		{
-			return{ convert_le_be<AT>(addr) };
+			return{ addr };
 		}
 
 		T& get_ref() const

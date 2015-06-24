@@ -22,7 +22,7 @@ extern Module cellAdec;
 
 #define ADEC_ERROR(...) { cellAdec.Error(__VA_ARGS__); Emu.Pause(); return; } // only for decoder thread
 
-AudioDecoder::AudioDecoder(AudioCodecType type, u32 addr, u32 size, vm::ptr<CellAdecCbMsg> func, u32 arg)
+AudioDecoder::AudioDecoder(s32 type, u32 addr, u32 size, vm::ptr<CellAdecCbMsg> func, u32 arg)
 	: type(type)
 	, memAddr(addr)
 	, memSize(size)
@@ -478,7 +478,7 @@ void adecOpen(u32 adec_id) // TODO: call from the constructor
 	});
 }
 
-bool adecCheckType(AudioCodecType type)
+bool adecCheckType(s32 type)
 {
 	switch (type)
 	{
@@ -825,8 +825,8 @@ s32 cellAdecGetPcmItem(u32 handle, vm::pptr<CellAdecPcmItem> pcmItem)
 	pcm->startAddr = 0x00000312; // invalid address (no output)
 	pcm->size = af.size;
 	pcm->status = CELL_OK;
-	pcm->auInfo.pts.lower = (u32)af.pts;
-	pcm->auInfo.pts.upper = af.pts >> 32;
+	pcm->auInfo.pts.lower = (u32)(af.pts);
+	pcm->auInfo.pts.upper = (u32)(af.pts >> 32);
 	pcm->auInfo.size = af.auSize;
 	pcm->auInfo.startAddr = af.auAddr;
 	pcm->auInfo.userData = af.userdata;
@@ -836,7 +836,7 @@ s32 cellAdecGetPcmItem(u32 handle, vm::pptr<CellAdecPcmItem> pcmItem)
 		auto atx = vm::ptr<CellAdecAtracXInfo>::make(pcm.addr() + sizeof32(CellAdecPcmItem));
 
 		atx->samplingFreq = frame->sample_rate;
-		atx->nbytes = frame->nb_samples * sizeof(float);
+		atx->nbytes = frame->nb_samples * sizeof32(float);
 		if (frame->channels == 1)
 		{
 			atx->channelConfigIndex = 1;

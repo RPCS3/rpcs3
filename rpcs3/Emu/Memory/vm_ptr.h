@@ -52,9 +52,9 @@ namespace vm
 			m_addr = value;
 		}
 
-		template<typename AT2 = AT> static std::enable_if_t<std::is_assignable<AT&, AT2>::value, _ptr_base> make(const AT2& addr)
+		template<typename AT2 = AT> static std::enable_if_t<std::is_constructible<AT, AT2>::value, _ptr_base> make(const AT2& addr)
 		{
-			return{ convert_le_be<AT>(addr) };
+			return{ addr };
 		}
 
 		T* get_ptr() const
@@ -82,7 +82,7 @@ namespace vm
 		// enable only the conversions which are originally possible between pointer types
 		template<typename T2, typename AT2, typename = std::enable_if_t<std::is_convertible<T*, T2*>::value>> operator _ptr_base<T2, AT2>() const
 		{
-			return{ convert_le_be<AT2>(vm::cast(m_addr)) };
+			return{ vm::cast(m_addr) };
 		}
 
 		template<typename T2, typename = std::enable_if_t<std::is_convertible<T*, T2*>::value>> explicit operator T2*() const
@@ -127,9 +127,9 @@ namespace vm
 			m_addr = value;
 		}
 
-		template<typename AT2 = AT> static _ptr_base make(const AT2& addr)
+		template<typename AT2 = AT> static std::enable_if_t<std::is_constructible<AT, AT2>::value, _ptr_base> make(const AT2& addr)
 		{
-			return{ convert_le_be<AT>(addr) };
+			return{ addr };
 		}
 
 		// defined in CB_FUNC.h, passing context is mandatory
@@ -141,7 +141,7 @@ namespace vm
 		// conversion to another function pointer
 		template<typename AT2> operator _ptr_base<type, AT2>() const
 		{
-			return{ convert_le_be<AT2>(vm::cast(m_addr)) };
+			return{ vm::cast(m_addr) };
 		}
 
 		explicit operator bool() const
@@ -315,19 +315,19 @@ template<typename T, typename AT> inline vm::if_arithmetical_ptr_t<T, vm::_ptr_b
 // addition operator for vm::_ptr_base (pointer + integer)
 template<typename T, typename AT> inline vm::if_arithmetical_ptr_t<T, vm::_ptr_base<T, AT>> operator +(const vm::_ptr_base<T, AT>& ptr, to_ne_t<AT> count)
 {
-	return{ convert_le_be<AT>(ptr.m_addr + count * sizeof32(T)) };
+	return{ ptr.m_addr + count * sizeof32(T) };
 }
 
 // addition operator for vm::_ptr_base (integer + pointer)
 template<typename T, typename AT> inline vm::if_arithmetical_ptr_t<T, vm::_ptr_base<T, AT>> operator +(to_ne_t<AT> count, const vm::_ptr_base<T, AT>& ptr)
 {
-	return{ convert_le_be<AT>(ptr.m_addr + count * sizeof32(T)) };
+	return{ ptr.m_addr + count * sizeof32(T) };
 }
 
 // subtraction operator for vm::_ptr_base (pointer - integer)
 template<typename T, typename AT> inline vm::if_arithmetical_ptr_t<T, vm::_ptr_base<T, AT>> operator -(const vm::_ptr_base<T, AT>& ptr, to_ne_t<AT> count)
 {
-	return{ convert_le_be<AT>(ptr.m_addr - count * sizeof32(T)) };
+	return{ ptr.m_addr - count * sizeof32(T) };
 }
 
 // pointer difference operator for vm::_ptr_base

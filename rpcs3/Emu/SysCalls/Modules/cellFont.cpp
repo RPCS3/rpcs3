@@ -417,11 +417,11 @@ int cellFontGetCharGlyphMetrics(vm::ptr<CellFont> font, u32 code, vm::ptr<CellFo
 	metrics->width = (x1-x0) * scale;
 	metrics->height = (y1-y0) * scale;
 	metrics->Horizontal.bearingX = (float)leftSideBearing * scale;
-	metrics->Horizontal.bearingY = 0;
+	metrics->Horizontal.bearingY = 0.f;
 	metrics->Horizontal.advance = (float)advanceWidth * scale;
-	metrics->Vertical.bearingX = 0;
-	metrics->Vertical.bearingY = 0;
-	metrics->Vertical.advance = 0;
+	metrics->Vertical.bearingX = 0.f;
+	metrics->Vertical.bearingY = 0.f;
+	metrics->Vertical.advance = 0.f;
 	return CELL_FONT_OK;
 }
 

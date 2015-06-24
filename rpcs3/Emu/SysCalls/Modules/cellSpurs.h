@@ -143,7 +143,7 @@ enum SpursFlags1 : u8
 	SF1_EXIT_IF_NO_WORK = 0x80,
 };
 
-enum SpursWorkloadConstants : u64
+enum SpursWorkloadConstants : u32
 {
 	// Workload states
 	SPURS_WKL_STATE_NON_EXISTENT    = 0,
@@ -153,13 +153,16 @@ enum SpursWorkloadConstants : u64
 	SPURS_WKL_STATE_REMOVABLE       = 4,
 	SPURS_WKL_STATE_INVALID         = 5,
 
-	// GUID
-	SPURS_GUID_SYS_WKL              = 0x1BB841BF38F89D33ull,
-	SPURS_GUID_TASKSET_PM           = 0x836E915B2E654143ull,
-
 	// Image addresses
 	SPURS_IMG_ADDR_SYS_SRV_WORKLOAD = 0x100,
 	SPURS_IMG_ADDR_TASKSET_PM       = 0x200,
+};
+
+enum SpursWorkloadGUIDs : u64
+{
+	// GUID
+	SPURS_GUID_SYS_WKL    = 0x1BB841BF38F89D33ull,
+	SPURS_GUID_TASKSET_PM = 0x836E915B2E654143ull,
 };
 
 enum CellSpursModulePollStatus
@@ -617,8 +620,8 @@ struct set_alignment(128) CellSpursEventFlag
 
 	union
 	{
-		atomic_be_t<ControlSyncVar> ctrl;// 0x00
-		atomic_be_t<u16> events;         // 0x00
+		atomic_be_t<ControlSyncVar> ctrl; // 0x00
+		atomic_be_t<u16> events;          // 0x00
 	};
 
 	be_t<u16> spuTaskUsedWaitSlots;      // 0x08 A bit is set to 1 if the wait slot corresponding to the bit is used by an SPU task and 0 otherwise

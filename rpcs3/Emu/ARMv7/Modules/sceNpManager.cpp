@@ -19,7 +19,7 @@ s32 sceNpCheckCallback()
 	throw __FUNCTION__;
 }
 
-s32 sceNpGetServiceState(vm::ptr<SceNpServiceState> state)
+s32 sceNpGetServiceState(vm::ptr<s32> state)
 {
 	throw __FUNCTION__;
 }

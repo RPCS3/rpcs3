@@ -520,8 +520,8 @@ void PPUThread::DoReset()
 
 void PPUThread::InitRegs()
 {
-	const u32 pc = entry ? vm::read32(entry) : 0;
-	const u32 rtoc = entry ? vm::read32(entry + 4) : 0;
+	const u32 pc = entry ? vm::read32(entry).value() : 0;
+	const u32 rtoc = entry ? vm::read32(entry + 4).value() : 0;
 
 	SetPc(pc);
 
@@ -764,7 +764,7 @@ cpu_thread& ppu_thread::args(std::initializer_list<std::string> values)
 		const u32 arg_size = align(u32(arg.size() + 1), stack_align);
 		const u32 arg_addr = vm::alloc(arg_size, vm::main);
 
-		std::strcpy(vm::get_ptr<char>(arg_addr), arg.c_str());
+		std::memcpy(vm::get_ptr(arg_addr), arg.c_str(), arg.size() + 1);
 
 		argv[argc++] = arg_addr;
 	}

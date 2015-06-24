@@ -169,7 +169,7 @@ void ElementaryStream::push_au(u32 size, u64 dts, u64 pts, u64 userdata, bool ra
 		info->reserved = 0;
 		info->userData = userdata;
 
-		auto spec = vm::ptr<u32>::make(put + sizeof(CellDmuxAuInfoEx));
+		auto spec = vm::ptr<u32>::make(put + sizeof32(CellDmuxAuInfoEx));
 		*spec = specific;
 
 		auto inf = vm::ptr<CellDmuxAuInfo>::make(put + 64);

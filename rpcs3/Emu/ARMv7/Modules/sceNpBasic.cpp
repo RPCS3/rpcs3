@@ -29,7 +29,7 @@ s32 sceNpBasicCheckCallback()
 	throw __FUNCTION__;
 }
 
-s32 sceNpBasicGetFriendOnlineStatus(vm::cptr<SceNpId> friendId, vm::ptr<SceNpBasicFriendOnlineStatus> status)
+s32 sceNpBasicGetFriendOnlineStatus(vm::cptr<SceNpId> friendId, vm::ptr<s32> status)
 {
 	throw __FUNCTION__;
 }

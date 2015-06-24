@@ -117,7 +117,7 @@ namespace loader
 							return loading_error;
 						}
 
-						segment.initial_addr.set(phdr.p_vaddr.addr());
+						segment.initial_addr = phdr.p_vaddr;
 						LOG_WARNING(LOADER, "segment addr=0x%x, initial addr = 0x%x", segment.begin.addr(), segment.initial_addr.addr());
 
 						if (phdr.p_filesz)
@@ -365,7 +365,7 @@ namespace loader
 							{
 								for (auto &e : m.second.exports)
 								{
-									auto code = vm::cptr<u32>::make(vm::check_addr(e.second, 8) ? vm::read32(e.second) : 0);
+									auto code = vm::cptr<u32>::make(vm::check_addr(e.second, 8) ? vm::read32(e.second).value() : 0);
 
 									bool is_empty = !code || (code[0] == 0x38600000 && code[1] == BLR());
 

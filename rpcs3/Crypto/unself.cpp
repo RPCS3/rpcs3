@@ -935,9 +935,9 @@ bool SELFDecrypter::DecryptNPDRM(u8 *metadata, u32 metadata_size)
 bool SELFDecrypter::LoadMetadata()
 {
 	aes_context aes;
-	u32 metadata_info_size = sizeof(meta_info);
+	u32 metadata_info_size = sizeof32(meta_info);
 	u8 *metadata_info = (u8 *)malloc(metadata_info_size);
-	u32 metadata_headers_size = sce_hdr.se_hsize - (sizeof(sce_hdr) + sce_hdr.se_meta + sizeof(meta_info));
+	u32 metadata_headers_size = sce_hdr.se_hsize - (sizeof32(sce_hdr) + sce_hdr.se_meta + sizeof32(meta_info));
 	u8 *metadata_headers = (u8 *)malloc(metadata_headers_size);
 
 	// Locate and read the encrypted metadata info.

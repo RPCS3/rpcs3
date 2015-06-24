@@ -188,7 +188,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	// NV406E
 	case NV406E_SET_REFERENCE:
 	{
-		m_ctrl->ref.exchange(be_t<u32>::make(ARGS(0)));
+		m_ctrl->ref.exchange(ARGS(0));
 		break;
 	}
 
@@ -2523,7 +2523,7 @@ void RSXThread::Task()
 		{
 			u32 offs = cmd & 0x1fffffff;
 			//LOG_WARNING(RSX, "rsx jump(0x%x) #addr=0x%x, cmd=0x%x, get=0x%x, put=0x%x", offs, m_ioAddress + get, cmd, get, put);
-			m_ctrl->get.exchange(be_t<u32>::make(offs));
+			m_ctrl->get.exchange(offs);
 			continue;
 		}
 		if (cmd & CELL_GCM_METHOD_FLAG_CALL)
@@ -2531,7 +2531,7 @@ void RSXThread::Task()
 			m_call_stack.push(get + 4);
 			u32 offs = cmd & ~3;
 			//LOG_WARNING(RSX, "rsx call(0x%x) #0x%x - 0x%x", offs, cmd, get);
-			m_ctrl->get.exchange(be_t<u32>::make(offs));
+			m_ctrl->get.exchange(offs);
 			continue;
 		}
 		if (cmd == CELL_GCM_METHOD_FLAG_RETURN)
@@ -2539,7 +2539,7 @@ void RSXThread::Task()
 			u32 get = m_call_stack.top();
 			m_call_stack.pop();
 			//LOG_WARNING(RSX, "rsx return(0x%x)", get);
-			m_ctrl->get.exchange(be_t<u32>::make(get));
+			m_ctrl->get.exchange(get);
 			continue;
 		}
 		if (cmd & CELL_GCM_METHOD_FLAG_NON_INCREMENT)

@@ -138,19 +138,19 @@ bool spursDma(SPUThread & spu, u32 cmd, u64 ea, u32 lsa, u32 size, u32 tag) {
 u32 spursDmaGetCompletionStatus(SPUThread & spu, u32 tagMask) {
     spu.set_ch_value(MFC_WrTagMask, tagMask);
     spu.set_ch_value(MFC_WrTagUpdate, MFC_TAG_UPDATE_IMMEDIATE);
-	return spu.get_ch_value(MFC_RdTagStat);
+    return spu.get_ch_value(MFC_RdTagStat);
 }
 
 /// Wait for DMA operations to complete
 u32 spursDmaWaitForCompletion(SPUThread & spu, u32 tagMask, bool waitForAll) {
     spu.set_ch_value(MFC_WrTagMask, tagMask);
     spu.set_ch_value(MFC_WrTagUpdate, waitForAll ? MFC_TAG_UPDATE_ALL : MFC_TAG_UPDATE_ANY);
-	return spu.get_ch_value(MFC_RdTagStat);
+    return spu.get_ch_value(MFC_RdTagStat);
 }
 
 /// Halt the SPU
 void spursHalt(SPUThread & spu) {
-	spu.halt();
+    spu.halt();
 }
 
 //----------------------------------------------------------------------------
@@ -253,12 +253,12 @@ bool spursKernel1SelectWorkload(SPUThread & spu) {
 
             if (!isPoll || wklSelectedId == ctxt->wklCurrentId) {
                 // Clear workload signal for the selected workload
-                spurs->wklSignal1.write_relaxed(be_t<u16>::make(spurs->wklSignal1.read_relaxed() & ~(0x8000 >> wklSelectedId)));
-                spurs->wklSignal2.write_relaxed(be_t<u16>::make(spurs->wklSignal1.read_relaxed() & ~(0x80000000u >> wklSelectedId)));
+                spurs->wklSignal1.write_relaxed(spurs->wklSignal1.read_relaxed() & ~(0x8000 >> wklSelectedId));
+                spurs->wklSignal2.write_relaxed(spurs->wklSignal1.read_relaxed() & ~(0x80000000u >> wklSelectedId));
 
                 // If the selected workload is the wklFlag workload then pull the wklFlag to all 1s
                 if (wklSelectedId == spurs->wklFlagReceiver.read_relaxed()) {
-                    spurs->wklFlag.flag.write_relaxed(be_t<u32>::make(0xFFFFFFFF));
+                    spurs->wklFlag.flag.write_relaxed(0xFFFFFFFF);
                 }
             }
         }
@@ -405,12 +405,12 @@ bool spursKernel2SelectWorkload(SPUThread & spu) {
 
             if (!isPoll || wklSelectedId == ctxt->wklCurrentId) {
                 // Clear workload signal for the selected workload
-                spurs->wklSignal1.write_relaxed(be_t<u16>::make(spurs->wklSignal1.read_relaxed() & ~(0x8000 >> wklSelectedId)));
-                spurs->wklSignal2.write_relaxed(be_t<u16>::make(spurs->wklSignal1.read_relaxed() & ~(0x80000000u >> wklSelectedId)));
+                spurs->wklSignal1.write_relaxed(spurs->wklSignal1.read_relaxed() & ~(0x8000 >> wklSelectedId));
+                spurs->wklSignal2.write_relaxed(spurs->wklSignal1.read_relaxed() & ~(0x80000000u >> wklSelectedId));
 
                 // If the selected workload is the wklFlag workload then pull the wklFlag to all 1s
                 if (wklSelectedId == spurs->wklFlagReceiver.read_relaxed()) {
-                    spurs->wklFlag.flag.write_relaxed(be_t<u32>::make(0xFFFFFFFF));
+                    spurs->wklFlag.flag.write_relaxed(0xFFFFFFFF);
                 }
             }
         }
@@ -1179,15 +1179,15 @@ s32 spursTasksetProcessRequest(SPUThread & spu, s32 request, u32 * taskId, u32 *
         auto taskset = ctxt->taskset.priv_ptr();
 
         // Verify taskset state is valid
-        auto _0 = be_t<u128>::make(u128::from32(0));
+        be_t<u128> _0(u128::from32(0));
         if ((taskset->waiting & taskset->running) != _0 || (taskset->ready & taskset->pending_ready) != _0 ||
-            ((taskset->running | taskset->ready | taskset->pending_ready | taskset->signalled | taskset->waiting) & be_t<u128>::make(~taskset->enabled.value())) != _0) {
+            ((taskset->running | taskset->ready | taskset->pending_ready | taskset->signalled | taskset->waiting) & ~taskset->enabled) != _0) {
             assert(!"Invalid taskset state");
             spursHalt(spu);
         }
 
         // Find the number of tasks that have become ready since the last iteration
-        auto newlyReadyTasks = (taskset->signalled | taskset->pending_ready).value() & ~taskset->ready.value();
+        auto newlyReadyTasks = (taskset->signalled | taskset->pending_ready) & ~taskset->ready.value();
         numNewlyReadyTasks   = 0;
         for (auto i = 0; i < 128; i++) {
             if (newlyReadyTasks._bit[i]) {
@@ -1197,11 +1197,11 @@ s32 spursTasksetProcessRequest(SPUThread & spu, s32 request, u32 * taskId, u32 *
 
         u128 readyButNotRunning;
         u8   selectedTaskId;
-        auto running   = taskset->running.value();
-        auto waiting   = taskset->waiting.value();
-        auto enabled   = taskset->enabled.value();
-        auto signalled = (taskset->signalled & (taskset->ready | taskset->pending_ready)).value();
-        auto ready     = (taskset->signalled | taskset->ready | taskset->pending_ready).value();
+        u128 running   = taskset->running.value();
+        u128 waiting   = taskset->waiting.value();
+        u128 enabled   = taskset->enabled.value();
+        u128 signalled = (taskset->signalled & (taskset->ready | taskset->pending_ready));
+        u128 ready     = (taskset->signalled | taskset->ready | taskset->pending_ready);
 
         switch (request) {
         case SPURS_TASKSET_REQUEST_POLL_SIGNAL:
@@ -1420,8 +1420,8 @@ s32 spursTasketSaveTaskContext(SPUThread & spu) {
     u128 r;
     spu.FPSCR.Read(r);
     ctxt->savedContextFpscr = r;
-	ctxt->savedSpuWriteEventMask = spu.get_ch_value(SPU_RdEventMask);
-	ctxt->savedWriteTagGroupQueryMask = spu.get_ch_value(MFC_RdTagMask);
+    ctxt->savedSpuWriteEventMask = spu.get_ch_value(SPU_RdEventMask);
+    ctxt->savedWriteTagGroupQueryMask = spu.get_ch_value(MFC_RdTagMask);
 
     // Store the processor context
     const u32 contextSaveStorage = vm::cast(taskInfo->context_save_storage_and_alloc_ls_blocks & -0x80);
@@ -1577,8 +1577,8 @@ s32 spursTasksetProcessSyscall(SPUThread & spu, u32 syscallNum, u32 args) {
                 spursTasksetProcessRequest(spu, SPURS_TASKSET_REQUEST_DESTROY_TASK, nullptr, nullptr);
             }
 
-            auto addr = ctxt->x2FD4 == 4 ? taskset->x78 : ctxt->x2FC0;
-            auto args = ctxt->x2FD4 == 4 ? 0 : ctxt->x2FC8;
+            const u64 addr = ctxt->x2FD4 == 4 ? taskset->x78 : ctxt->x2FC0;
+            const u64 args = ctxt->x2FD4 == 4 ? 0 : ctxt->x2FC8.value();
             spursTasksetOnTaskExit(spu, addr, ctxt->taskId, ctxt->taskExitCode, args);
         }
 
@@ -1695,7 +1695,7 @@ s32 spursTasksetLoadElf(SPUThread & spu, u32 * entryPoint, u32 * lowestLoadAddr,
                     return CELL_SPURS_TASK_ERROR_FAULT;
                 }
 
-                _lowestLoadAddr = _lowestLoadAddr > phdr.data_be.p_vaddr ? phdr.data_be.p_vaddr : _lowestLoadAddr;
+                _lowestLoadAddr > phdr.data_be.p_vaddr ? _lowestLoadAddr = phdr.data_be.p_vaddr : _lowestLoadAddr;
             }
         }
     }

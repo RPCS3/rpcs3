@@ -2754,7 +2754,7 @@ private:
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
 
-		const be_t<u32> value = be_t<u32>::make((u32)CPU.GPR[rs]);
+		const be_t<u32> value = (u32)CPU.GPR[rs];
 		CPU.SetCR_EQ(0, vm::reservation_update(vm::cast(addr), &value, sizeof(value)));
 	}
 	void STWX(u32 rs, u32 ra, u32 rb)
@@ -2806,7 +2806,7 @@ private:
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
 
-		const be_t<u64> value = be_t<u64>::make(CPU.GPR[rs]);
+		const be_t<u64> value = CPU.GPR[rs];
 		CPU.SetCR_EQ(0, vm::reservation_update(vm::cast(addr), &value, sizeof(value)));
 	}
 	void STBX(u32 rs, u32 ra, u32 rb)

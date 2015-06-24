@@ -75,7 +75,7 @@ s32 cellPadPeriphGetInfo(vm::ptr<CellPadPeriphInfo> info)
 	sys_io.Warning("cellPadPeriphGetInfo(info_addr=0x%x)", info.addr());
 
 	// TODO: Support other types of controllers
-	for (int i = 0; i < info->now_connect; i++)
+	for (u32 i = 0; i < info->now_connect; i++)
 	{
 		info->pclass_type[i] = CELL_PAD_PCLASS_TYPE_STANDARD;
 	}

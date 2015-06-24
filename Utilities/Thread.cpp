@@ -1060,9 +1060,9 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 
 			switch (d_size)
 			{
-			case 1: value = vm::priv_ref<atomic<u8>>(addr) &= value; break;
-			case 2: value = vm::priv_ref<atomic<u16>>(addr) &= value; break;
-			case 4: value = vm::priv_ref<atomic<u32>>(addr) &= value; break;
+			case 1: value = vm::priv_ref<atomic<u8>>(addr) &= static_cast<u8>(value); break;
+			case 2: value = vm::priv_ref<atomic<u16>>(addr) &= static_cast<u16>(value); break;
+			case 4: value = vm::priv_ref<atomic<u32>>(addr) &= static_cast<u32>(value); break;
 			case 8: value = vm::priv_ref<atomic<u64>>(addr) &= value; break;
 			default: return false;
 			}
