@@ -138,7 +138,7 @@ struct DataHeap
 	bool canAlloc(size_t size)
 	{
 		size_t putPos = m_putPos, getPos = m_getPos;
-		size_t allocSize = powerOf2Align(size, Alignment);
+		size_t allocSize = align(size, Alignment);
 		if (putPos + allocSize < m_size)
 		{
 			// range before get
@@ -168,12 +168,12 @@ struct DataHeap
 		size_t putPos = m_putPos;
 		if (putPos + size < m_size)
 		{
-			m_putPos += powerOf2Align(size, Alignment);
+			m_putPos += align(size, Alignment);
 			return putPos;
 		}
 		else
 		{
-			m_putPos = powerOf2Align(size, Alignment);
+			m_putPos = align(size, Alignment);
 			return 0;
 		}
 	}

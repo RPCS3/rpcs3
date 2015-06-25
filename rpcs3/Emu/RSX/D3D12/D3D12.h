@@ -19,17 +19,6 @@ void check(HRESULT hr)
 }
 
 /**
- * Get next value that is aligned by the corresponding power of 2
- */
-inline
-size_t powerOf2Align(size_t unalignedVal, size_t powerOf2)
-{
-	// check that powerOf2 is power of 2
-	assert(!(powerOf2 & (powerOf2 - 1)));
-	return (unalignedVal + powerOf2 - 1) & ~(powerOf2 - 1);
-}
-
-/**
  * Send data to dst pointer without polluting cache.
  * Usefull to write to mapped memory from upload heap.
  */

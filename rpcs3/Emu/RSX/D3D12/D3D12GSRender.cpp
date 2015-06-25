@@ -1113,11 +1113,11 @@ ID3D12Resource * D3D12GSRender::writeColorBuffer(ID3D12Resource * RTT, ID3D12Gra
 	{
 	case CELL_GCM_SURFACE_A8R8G8B8:
 		dxgiFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
-		rowPitch = powerOf2Align(w * 4, 256);
+		rowPitch = align(w * 4, 256);
 		break;
 	case CELL_GCM_SURFACE_F_W16Z16Y16X16:
 		dxgiFormat = DXGI_FORMAT_R16G16B16A16_FLOAT;
-		rowPitch = powerOf2Align(w * 8, 256);
+		rowPitch = align(w * 8, 256);
 		break;
 	}
 
@@ -1406,11 +1406,11 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 		switch (m_surface_color_format)
 		{
 		case CELL_GCM_SURFACE_A8R8G8B8:
-			srcPitch = powerOf2Align(m_surface_clip_w * 4, 256);
+			srcPitch = align(m_surface_clip_w * 4, 256);
 			dstPitch = m_surface_clip_w * 4;
 			break;
 		case CELL_GCM_SURFACE_F_W16Z16Y16X16:
-			srcPitch = powerOf2Align(m_surface_clip_w * 8, 256);
+			srcPitch = align(m_surface_clip_w * 8, 256);
 			dstPitch = m_surface_clip_w * 8;
 			break;
 		}

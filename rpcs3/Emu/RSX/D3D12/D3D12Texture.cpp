@@ -157,7 +157,7 @@ writeTexelsGeneric(const char *src, char *dst, size_t widthInBlock, size_t heigh
 	size_t currentHeight = heightInBlock, currentWidth = widthInBlock;
 	for (unsigned mipLevel = 0; mipLevel < mipmapCount; mipLevel++)
 	{
-		size_t rowPitch = powerOf2Align(currentWidth * blockSize, 256);
+		size_t rowPitch = align(currentWidth * blockSize, 256);
 
 		MipmapLevelInfo currentMipmapLevelInfo = {};
 		currentMipmapLevelInfo.offset = offsetInDst;
@@ -188,7 +188,7 @@ writeTexelsSwizzled(const char *src, char *dst, size_t widthInBlock, size_t heig
 	size_t currentHeight = heightInBlock, currentWidth = widthInBlock;
 	for (unsigned mipLevel = 0; mipLevel < mipmapCount; mipLevel++)
 	{
-		size_t rowPitch = powerOf2Align(currentWidth * blockSize, 256);
+		size_t rowPitch = align(currentWidth * blockSize, 256);
 
 		MipmapLevelInfo currentMipmapLevelInfo = {};
 		currentMipmapLevelInfo.offset = offsetInDst;
@@ -231,7 +231,7 @@ writeCompressedTexel(const char *src, char *dst, size_t widthInBlock, size_t blo
 	size_t currentHeight = heightInBlock, currentWidth = widthInBlock;
 	for (unsigned mipLevel = 0; mipLevel < mipmapCount; mipLevel++)
 	{
-		size_t rowPitch = powerOf2Align(currentWidth * blockSize, 256);
+		size_t rowPitch = align(currentWidth * blockSize, 256);
 
 		MipmapLevelInfo currentMipmapLevelInfo = {};
 		currentMipmapLevelInfo.offset = offsetInDst;
@@ -244,7 +244,7 @@ writeCompressedTexel(const char *src, char *dst, size_t widthInBlock, size_t blo
 			memcpy((char*)dst + offsetInDst + row * rowPitch, (char*)src + offsetInSrc + row * currentWidth * blockSize, currentWidth * blockSize);
 
 		offsetInDst += currentHeight * rowPitch;
-		offsetInDst = powerOf2Align(offsetInDst, 512);
+		offsetInDst = align(offsetInDst, 512);
 		offsetInSrc += currentHeight * currentWidth * blockSize;
 		currentHeight = MAX2(currentHeight / 2, 1);
 		currentWidth = MAX2(currentWidth / 2, 1);
@@ -264,7 +264,7 @@ write16bTexelsGeneric(const char *src, char *dst, size_t widthInBlock, size_t he
 	size_t srcPitch = widthInBlock * blockSize;
 	for (unsigned mipLevel = 0; mipLevel < mipmapCount; mipLevel++)
 	{
-		size_t rowPitch = powerOf2Align(currentWidth * blockSize, 256);
+		size_t rowPitch = align(currentWidth * blockSize, 256);
 
 		MipmapLevelInfo currentMipmapLevelInfo = {};
 		currentMipmapLevelInfo.offset = offsetInDst;
@@ -302,7 +302,7 @@ write16bX4TexelsGeneric(const char *src, char *dst, size_t widthInBlock, size_t 
 	size_t srcPitch = widthInBlock * blockSize;
 	for (unsigned mipLevel = 0; mipLevel < mipmapCount; mipLevel++)
 	{
-		size_t rowPitch = powerOf2Align(currentWidth * blockSize, 256);
+		size_t rowPitch = align(currentWidth * blockSize, 256);
 
 		MipmapLevelInfo currentMipmapLevelInfo = {};
 		currentMipmapLevelInfo.offset = offsetInDst;
@@ -490,7 +490,7 @@ ID3D12Resource *uploadSingleTexture(
 	size_t heightInBlocks = (h + blockHeightInPixel - 1) / blockHeightInPixel;
 	size_t widthInBlocks = (w + blockWidthInPixel - 1) / blockWidthInPixel;
 	// Multiple of 256
-	size_t rowPitch = powerOf2Align(blockSizeInByte * widthInBlocks, 256);
+	size_t rowPitch = align(blockSizeInByte * widthInBlocks, 256);
 
 	ID3D12Resource *Texture;
 	size_t textureSize = rowPitch * heightInBlocks * 2; // * 4 for mipmap levels
@@ -610,7 +610,7 @@ size_t getTextureSize(const RSXTexture &texture)
 	case ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN) & CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8:
 	default:
 		LOG_ERROR(RSX, "Unimplemented Texture format : %x", format);
-		break;
+		return 0;
 	case CELL_GCM_TEXTURE_B8:
 		return w * h;
 	case CELL_GCM_TEXTURE_A1R5G5B5:
@@ -707,7 +707,7 @@ size_t D3D12GSRender::UploadTextures()
 			getCurrentResourceStorage().m_inflightCommandList.push_back(commandList);
 			m_texturesCache[texaddr] = vramTexture;
 
-			u32 s = align(getTextureSize(m_textures[i]), 4096);
+			u32 s = (u32)align(getTextureSize(m_textures[i]), 4096);
 			LOG_WARNING(RSX, "PROTECTING %x of size %d", align(texaddr, 4096), s);
 			m_protectedTextures.push_back(std::make_tuple(texaddr, align(texaddr, 4096), s));
 			vm::page_protect(align(texaddr, 4096), s, 0, 0, vm::page_writable);

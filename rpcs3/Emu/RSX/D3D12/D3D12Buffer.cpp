@@ -365,7 +365,7 @@ std::pair<std::vector<D3D12_VERTEX_BUFFER_VIEW>, D3D12_INDEX_BUFFER_VIEW> D3D12G
 			indexCount = 6 * m_indexed_array.m_data.size() / (4 * indexSize);
 		else
 			indexCount = m_draw_array_count * 6 / 4;
-		size_t subBufferSize = powerOf2Align(indexCount * indexSize, 64);
+		size_t subBufferSize = align(indexCount * indexSize, 64);
 
 		assert(m_vertexIndexData.canAlloc(subBufferSize));
 		size_t heapOffset = m_vertexIndexData.alloc(subBufferSize);
