@@ -749,7 +749,7 @@ size_t get_x64_access_size(x64_context* context, x64_op_t op, x64_reg_t reg, siz
 	if (op == X64OP_CMPXCHG)
 	{
 		// detect whether this instruction can't actually modify memory to avoid breaking reservation;
-		// this may theoretically cause endless loop, but it shouldn't be a problem if only read_sync() generates such instruction
+		// this may theoretically cause endless loop, but it shouldn't be a problem if only load_sync() generates such instruction
 		u64 cmp, exch;
 		if (!get_x64_reg_value(context, reg, d_size, i_size, cmp) || !get_x64_reg_value(context, X64R_RAX, d_size, i_size, exch))
 		{
@@ -1480,14 +1480,20 @@ bool thread_t::joinable() const
 	return m_state == TS_JOINABLE;
 }
 
-bool waiter_map_t::is_stopped(u64 signal_id)
+bool waiter_map_t::is_stopped(u32 addr)
 {
 	if (Emu.IsStopped())
 	{
-		LOG_WARNING(Log::HLE, "%s: waiter_op() aborted (signal_id=0x%llx)", name.c_str(), signal_id);
+		LOG_WARNING(Log::HLE, "%s: waiter_op() aborted (addr=0x%x)", name.c_str(), addr);
 		return true;
 	}
 	return false;
+}
+
+void waiter_map_t::notify(u32 addr)
+{
+	// signal appropriate condition variable
+	cv[get_hash(addr)].notify_all();
 }
 
 const std::function<bool()> SQUEUE_ALWAYS_EXIT = [](){ return true; };

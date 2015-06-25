@@ -88,7 +88,7 @@ s32 sys_interrupt_thread_establish(vm::ptr<u32> ih, u32 intrtag, u64 intrthread,
 			return CELL_EAGAIN;
 		}
 
-		if (s32 res = tag.assigned.atomic_op<s32>(CELL_OK, [](s32& value) -> s32
+		if (s32 res = tag.assigned.atomic_op([](s32& value) -> s32
 		{
 			if (value < 0)
 			{
@@ -113,7 +113,7 @@ s32 sys_interrupt_thread_establish(vm::ptr<u32> ih, u32 intrtag, u64 intrthread,
 			while (!Emu.IsStopped())
 			{
 				// call interrupt handler until int status is clear
-				if (tag.stat.read_relaxed())
+				if (tag.stat.load())
 				{
 					//func(CPU, arg);
 					CPU.GPR[3] = arg;

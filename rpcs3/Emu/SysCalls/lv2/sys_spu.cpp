@@ -566,7 +566,7 @@ s32 sys_spu_thread_group_join(u32 id, vm::ptr<u32> cause, vm::ptr<u32> status)
 			{
 				auto& spu = static_cast<SPUThread&>(*t);
 
-				if (!(spu.status.read_relaxed() & SPU_STATUS_STOPPED_BY_STOP))
+				if (!(spu.status.load() & SPU_STATUS_STOPPED_BY_STOP))
 				{
 					stopped = false;
 					break;
@@ -1253,7 +1253,7 @@ s32 sys_raw_spu_get_int_mask(u32 id, u32 class_id, vm::ptr<u64> mask)
 
 	auto& spu = static_cast<RawSPUThread&>(*t);
 
-	*mask = (class_id ? spu.int2 : spu.int0).mask.read_sync();
+	*mask = (class_id ? spu.int2 : spu.int0).mask.load();
 
 	return CELL_OK;
 }
@@ -1299,7 +1299,7 @@ s32 sys_raw_spu_get_int_stat(u32 id, u32 class_id, vm::ptr<u64> stat)
 
 	auto& spu = static_cast<RawSPUThread&>(*t);
 
-	*stat = (class_id ? spu.int2 : spu.int0).stat.read_sync();
+	*stat = (class_id ? spu.int2 : spu.int0).stat.load();
 
 	return CELL_OK;
 }

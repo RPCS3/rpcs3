@@ -165,13 +165,6 @@ union u128
 
 	} _bit;
 
-	//operator u64() const { return _u64[0]; }
-	//operator u32() const { return _u32[0]; }
-	//operator u16() const { return _u16[0]; }
-	//operator u8()  const { return _u8[0]; }
-
-	//operator bool() const { return _u64[0] != 0 || _u64[1] != 0; }
-
 	static u128 from64(u64 _0, u64 _1 = 0)
 	{
 		u128 ret;
@@ -443,7 +436,7 @@ static force_inline u128 sync_fetch_and_xor(volatile u128* dest, u128 value)
 	}
 }
 
-template<typename T, int size = sizeof(T)> struct se_t;
+template<typename T, std::size_t Size = sizeof(T)> struct se_t;
 
 template<typename T> struct se_t<T, 2>
 {
@@ -501,16 +494,13 @@ template<typename T> struct se_t<T, 16>
 	}
 };
 
-template<typename T, T _value, size_t size = sizeof(T)> struct const_se_t;
-
-template<u8 _value> struct const_se_t<u8, _value, 1>
-{
-	static const u8 value = _value;
-};
+template<typename T, T _value, std::size_t size = sizeof(T)> struct const_se_t;
 
 template<u16 _value> struct const_se_t<u16, _value, 2>
 {
-	static const u16 value = ((_value >> 8) & 0xff) | ((_value << 8) & 0xff00);
+	static const u16 value =
+		((_value >> 8) & 0x00ff) |
+		((_value << 8) & 0xff00);
 };
 
 template<u32 _value> struct const_se_t<u32, _value, 4>
@@ -600,9 +590,9 @@ public:
 	using stype = be_storage_t<std::remove_cv_t<T>>;
 
 #ifdef IS_LE_MACHINE
-	stype m_data;
+	stype m_data; // don't access directly
 #else
-	type m_data;
+	type m_data; // don't access directly
 #endif
 
 	static_assert(!std::is_class<type>::value, "be_t<> error: invalid type (class or structure)");
@@ -695,41 +685,41 @@ public:
 	be_t& operator --() { *this -= 1; return *this; }
 };
 
-template<typename T1, typename T2> inline std::enable_if_t<std::is_same<T1, T2>::value, bool> operator ==(const be_t<T1>& left, const be_t<T2>& right)
+template<typename T1, typename T2> inline std::enable_if_t<std::is_same<T1, T2>::value && std::is_integral<T1>::value, bool> operator ==(const be_t<T1>& left, const be_t<T2>& right)
 {
 	return left.data() == right.data();
 }
 
-template<typename T1, typename T2> inline std::enable_if_t<std::is_same<T1, T2>::value, bool> operator !=(const be_t<T1>& left, const be_t<T2>& right)
+template<typename T1, typename T2> inline std::enable_if_t<std::is_same<T1, T2>::value && std::is_integral<T1>::value, bool> operator !=(const be_t<T1>& left, const be_t<T2>& right)
 {
 	return left.data() != right.data();
 }
 
-template<typename T1, typename T2> inline std::enable_if_t<std::is_same<T1, T2>::value, be_t<T1>> operator &(const be_t<T1>& left, const be_t<T2>& right)
+template<typename T1, typename T2> inline std::enable_if_t<std::is_same<T1, T2>::value && std::is_integral<T1>::value, be_t<T1>> operator &(const be_t<T1>& left, const be_t<T2>& right)
 {
 	be_t<T1> result;
 	result.m_data = left.data() & right.data();
 	return result;
 }
 
-template<typename T1, typename T2> inline std::enable_if_t<std::is_same<T1, T2>::value, be_t<T1>> operator |(const be_t<T1>& left, const be_t<T2>& right)
+template<typename T1, typename T2> inline std::enable_if_t<std::is_same<T1, T2>::value && std::is_integral<T1>::value, be_t<T1>> operator |(const be_t<T1>& left, const be_t<T2>& right)
 {
 	be_t<T1> result;
 	result.m_data = left.data() | right.data();
 	return result;
 }
 
-template<typename T1, typename T2> inline std::enable_if_t<std::is_same<T1, T2>::value, be_t<T1>> operator ^(const be_t<T1>& left, const be_t<T2>& right)
+template<typename T1, typename T2> inline std::enable_if_t<std::is_same<T1, T2>::value && std::is_integral<T1>::value, be_t<T1>> operator ^(const be_t<T1>& left, const be_t<T2>& right)
 {
 	be_t<T1> result;
 	result.m_data = left.data() ^ right.data();
 	return result;
 }
 
-template<typename T1> inline std::enable_if_t<true, be_t<T1>> operator ~(const be_t<T1>& other)
+template<typename T1> inline std::enable_if_t<std::is_integral<T1>::value, be_t<T1>> operator ~(const be_t<T1>& arg)
 {
 	be_t<T1> result;
-	result.m_data = ~other.data();
+	result.m_data = ~arg.data();
 	return result;
 }
 
@@ -782,7 +772,7 @@ public:
 	using type = std::remove_cv_t<T>;
 	using stype = be_storage_t<std::remove_cv_t<T>>;
 
-	type m_data;
+	type m_data; // don't access directly
 
 	static_assert(!std::is_class<type>::value, "le_t<> error: invalid type (class or structure)");
 	static_assert(!std::is_union<type>::value || std::is_same<type, u128>::value, "le_t<> error: invalid type (union)");

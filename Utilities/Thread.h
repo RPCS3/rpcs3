@@ -103,7 +103,7 @@ class slw_shared_mutex_t
 
 struct waiter_map_t
 {
-	static const size_t size = 32;
+	static const size_t size = 16;
 
 	std::array<std::mutex, size> mutex;
 	std::array<std::condition_variable, size> cv;
@@ -115,40 +115,43 @@ struct waiter_map_t
 	{
 	}
 
-	bool is_stopped(u64 signal_id);
+	// generate simple "hash" for mutex/cv distribution
+	u32 get_hash(u32 addr)
+	{
+		addr ^= addr >> 16;
+		addr ^= addr >> 24;
+		addr ^= addr >> 28;
+		return addr % size;
+	}
+
+	// check emu status
+	bool is_stopped(u32 addr);
 
 	// wait until waiter_func() returns true, signal_id is an arbitrary number
-	template<typename S, typename WT> force_inline safe_buffers void wait_op(const S& signal_id, const WT waiter_func)
+	template<typename F, typename... Args> safe_buffers auto wait_op(u32 addr, F pred, Args&&... args) -> decltype(static_cast<void>(pred(args...)))
 	{
-		// generate hash
-		const auto hash = std::hash<S>()(signal_id) % size;
+		const u32 hash = get_hash(addr);
 
 		// set mutex locker
-		std::unique_lock<std::mutex> locker(mutex[hash], std::defer_lock);
+		std::unique_lock<std::mutex> lock(mutex[hash], std::defer_lock);
 
-		// check the condition or if the emulator is stopped
-		while (!waiter_func() && !is_stopped(signal_id))
+		while (true)
 		{
+			// check the condition
+			if (pred(args...)) return;
+
 			// lock the mutex and initialize waiter (only once)
-			if (!locker.owns_lock())
-			{
-				locker.lock();
-			}
+			if (!lock) lock.lock();
 			
 			// wait on appropriate condition variable for 1 ms or until signal arrived
-			cv[hash].wait_for(locker, std::chrono::milliseconds(1));
+			cv[hash].wait_for(lock, std::chrono::milliseconds(1));
+
+			if (is_stopped(addr)) return;
 		}
 	}
 
 	// signal all threads waiting on waiter_op() with the same signal_id (signaling only hints those threads that corresponding conditions are *probably* met)
-	template<typename S> force_inline void notify(const S& signal_id)
-	{
-		// generate hash
-		const auto hash = std::hash<S>()(signal_id) % size;
-
-		// signal appropriate condition variable
-		cv[hash].notify_all();
-	}
+	void notify(u32 addr);
 };
 
 extern const std::function<bool()> SQUEUE_ALWAYS_EXIT;
@@ -209,7 +212,7 @@ public:
 	{
 		u32 pos = 0;
 
-		while (u32 res = m_sync.atomic_op_sync(SQSVR_OK, [&pos](squeue_sync_var_t& sync) -> u32
+		while (u32 res = m_sync.atomic_op([&pos](squeue_sync_var_t& sync) -> u32
 		{
 			assert(sync.count <= sq_size);
 			assert(sync.position < sq_size);
@@ -272,7 +275,7 @@ public:
 	{
 		u32 pos = 0;
 
-		while (u32 res = m_sync.atomic_op_sync(SQSVR_OK, [&pos](squeue_sync_var_t& sync) -> u32
+		while (u32 res = m_sync.atomic_op([&pos](squeue_sync_var_t& sync) -> u32
 		{
 			assert(sync.count <= sq_size);
 			assert(sync.position < sq_size);
@@ -341,7 +344,7 @@ public:
 		assert(start_pos < sq_size);
 		u32 pos = 0;
 
-		while (u32 res = m_sync.atomic_op_sync(SQSVR_OK, [&pos, start_pos](squeue_sync_var_t& sync) -> u32
+		while (u32 res = m_sync.atomic_op([&pos, start_pos](squeue_sync_var_t& sync) -> u32
 		{
 			assert(sync.count <= sq_size);
 			assert(sync.position < sq_size);
@@ -425,7 +428,7 @@ public:
 	{
 		u32 pos, count;
 
-		while (m_sync.atomic_op_sync(SQSVR_OK, [&pos, &count](squeue_sync_var_t& sync) -> u32
+		while (m_sync.atomic_op([&pos, &count](squeue_sync_var_t& sync) -> u32
 		{
 			assert(sync.count <= sq_size);
 			assert(sync.position < sq_size);
@@ -463,7 +466,7 @@ public:
 
 	void clear()
 	{
-		while (m_sync.atomic_op_sync(SQSVR_OK, [](squeue_sync_var_t& sync) -> u32
+		while (m_sync.atomic_op([](squeue_sync_var_t& sync) -> u32
 		{
 			assert(sync.count <= sq_size);
 			assert(sync.position < sq_size);

@@ -343,7 +343,7 @@ int cellSurMixerCreate(vm::cptr<CellSurMixerConfig> config)
 		ppu.InitRegs();
 		ppu.DoRun();
 
-		while (port.state.read_relaxed() != AUDIO_PORT_STATE_CLOSED && !Emu.IsStopped())
+		while (port.state.load() != AUDIO_PORT_STATE_CLOSED && !Emu.IsStopped())
 		{
 			if (mixcount > (port.tag + 0)) // adding positive value (1-15): preemptive buffer filling (hack)
 			{
@@ -351,7 +351,7 @@ int cellSurMixerCreate(vm::cptr<CellSurMixerConfig> config)
 				continue;
 			}
 
-			if (port.state.read_relaxed() == AUDIO_PORT_STATE_STARTED)
+			if (port.state.load() == AUDIO_PORT_STATE_STARTED)
 			{
 				//u64 stamp0 = get_system_time();
 

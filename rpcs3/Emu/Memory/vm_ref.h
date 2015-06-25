@@ -5,7 +5,7 @@ namespace vm
 	template<typename T, typename AT = u32>
 	struct _ref_base
 	{
-		AT m_addr;
+		AT m_addr; // don't access directly
 
 		static_assert(!std::is_pointer<T>::value, "vm::_ref_base<> error: invalid type (pointer)");
 		static_assert(!std::is_reference<T>::value, "vm::_ref_base<> error: invalid type (reference)");

@@ -76,7 +76,7 @@ bool RawSPUThread::ReadReg(const u32 addr, u32& value)
 		
 	case SPU_Status_offs:
 	{
-		value = status.read_relaxed();
+		value = status.load();
 		return true;
 	}
 	}
@@ -185,7 +185,7 @@ bool RawSPUThread::WriteReg(const u32 addr, const u32 value)
 			break;
 		}
 
-		run_ctrl.write_relaxed(value);
+		run_ctrl.store(value);
 		return true;
 	}
 
@@ -196,7 +196,7 @@ bool RawSPUThread::WriteReg(const u32 addr, const u32 value)
 			break;
 		}
 
-		npc.write_relaxed(value);
+		npc.store(value);
 		return true;
 	}
 
@@ -223,5 +223,5 @@ void RawSPUThread::Task()
 
 	SPUThread::Task();
 
-	npc.write_relaxed(PC | 1);
+	npc.store(PC | 1);
 }

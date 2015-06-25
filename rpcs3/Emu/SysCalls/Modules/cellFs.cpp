@@ -398,7 +398,7 @@ s32 cellFsStReadGetRingBuf(u32 fd, vm::ptr<CellFsRingBuffer> ringbuf)
 		return CELL_FS_EBADF;
 	}
 
-	if (file->st_status.read_sync() == SSS_NOT_INITIALIZED)
+	if (file->st_status.load() == SSS_NOT_INITIALIZED)
 	{
 		return CELL_FS_ENXIO;
 	}
@@ -422,7 +422,7 @@ s32 cellFsStReadGetStatus(u32 fd, vm::ptr<u64> status)
 		return CELL_FS_EBADF;
 	}
 
-	switch (file->st_status.read_sync())
+	switch (file->st_status.load())
 	{
 	case SSS_INITIALIZED:
 	case SSS_STOPPED:
@@ -456,7 +456,7 @@ s32 cellFsStReadGetRegid(u32 fd, vm::ptr<u64> regid)
 		return CELL_FS_EBADF;
 	}
 
-	if (file->st_status.read_sync() == SSS_NOT_INITIALIZED)
+	if (file->st_status.load() == SSS_NOT_INITIALIZED)
 	{
 		return CELL_FS_ENXIO;
 	}
@@ -500,7 +500,7 @@ s32 cellFsStReadStart(u32 fd, u64 offset, u64 size)
 	{
 		std::unique_lock<std::mutex> lock(file->mutex);
 
-		while (file->st_status.read_relaxed() == SSS_STARTED && !Emu.IsStopped())
+		while (file->st_status.load() == SSS_STARTED && !Emu.IsStopped())
 		{
 			// check free space in buffer and available data in stream
 			if (file->st_total_read - file->st_copied <= file->st_ringbuf_size - file->st_block_size && file->st_total_read < file->st_read_size)
@@ -590,7 +590,7 @@ s32 cellFsStRead(u32 fd, vm::ptr<u8> buf, u64 size, vm::ptr<u64> rsize)
 		return CELL_FS_EBADF;
 	}
 
-	if (file->st_status.read_sync() == SSS_NOT_INITIALIZED || file->st_copyless)
+	if (file->st_status.load() == SSS_NOT_INITIALIZED || file->st_copyless)
 	{
 		return CELL_FS_ENXIO;
 	}
@@ -624,7 +624,7 @@ s32 cellFsStReadGetCurrentAddr(u32 fd, vm::ptr<u32> addr, vm::ptr<u64> size)
 		return CELL_FS_EBADF;
 	}
 
-	if (file->st_status.read_sync() == SSS_NOT_INITIALIZED || !file->st_copyless)
+	if (file->st_status.load() == SSS_NOT_INITIALIZED || !file->st_copyless)
 	{
 		return CELL_FS_ENXIO;
 	}
@@ -657,7 +657,7 @@ s32 cellFsStReadPutCurrentAddr(u32 fd, vm::ptr<u8> addr, u64 size)
 		return CELL_FS_EBADF;
 	}
 
-	if (file->st_status.read_sync() == SSS_NOT_INITIALIZED || !file->st_copyless)
+	if (file->st_status.load() == SSS_NOT_INITIALIZED || !file->st_copyless)
 	{
 		return CELL_FS_ENXIO;
 	}
@@ -684,7 +684,7 @@ s32 cellFsStReadWait(u32 fd, u64 size)
 		return CELL_FS_EBADF;
 	}
 
-	if (file->st_status.read_sync() == SSS_NOT_INITIALIZED)
+	if (file->st_status.load() == SSS_NOT_INITIALIZED)
 	{
 		return CELL_FS_ENXIO;
 	}
@@ -718,7 +718,7 @@ s32 cellFsStReadWaitCallback(u32 fd, u64 size, fs_st_cb_t func)
 		return CELL_FS_EBADF;
 	}
 
-	if (file->st_status.read_sync() == SSS_NOT_INITIALIZED)
+	if (file->st_status.load() == SSS_NOT_INITIALIZED)
 	{
 		return CELL_FS_ENXIO;
 	}

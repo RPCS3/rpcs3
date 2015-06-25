@@ -208,7 +208,7 @@ namespace vm
 		{
 			std::lock_guard<reservation_mutex_t> lock(g_reservation_mutex);
 
-			u8 flags = g_page_info[addr >> 12].read_relaxed();
+			u8 flags = g_page_info[addr >> 12].load();
 			if (!(flags & page_writable) || !(flags & page_allocated) || (flags & page_no_reservations))
 			{
 				throw fmt::format("vm::reservation_acquire(addr=0x%x, size=0x%x) failed (invalid page flags: 0x%x)", addr, size, flags);
@@ -355,7 +355,7 @@ namespace vm
 
 		for (u32 i = addr / 4096; i < addr / 4096 + size / 4096; i++)
 		{
-			if (g_page_info[i].read_relaxed())
+			if (g_page_info[i].load())
 			{
 				throw fmt::format("vm::page_map(addr=0x%x, size=0x%x, flags=0x%x) failed (already mapped at 0x%x)", addr, size, flags, i * 4096);
 			}
@@ -398,7 +398,7 @@ namespace vm
 
 		for (u32 i = addr / 4096; i < addr / 4096 + size / 4096; i++)
 		{
-			if ((g_page_info[i].read_relaxed() & flags_test) != (flags_test | page_allocated))
+			if ((g_page_info[i].load() & flags_test) != (flags_test | page_allocated))
 			{
 				return false;
 			}
@@ -447,7 +447,7 @@ namespace vm
 
 		for (u32 i = addr / 4096; i < addr / 4096 + size / 4096; i++)
 		{
-			if (!(g_page_info[i].read_relaxed() & page_allocated))
+			if (!(g_page_info[i].load() & page_allocated))
 			{
 				throw fmt::format("vm::page_unmap(addr=0x%x, size=0x%x) failed (not mapped at 0x%x)", addr, size, i * 4096);
 			}
@@ -491,7 +491,7 @@ namespace vm
 
 		for (u32 i = addr / 4096; i <= (addr + size - 1) / 4096; i++)
 		{
-			if ((g_page_info[i].read_sync() & page_allocated) != page_allocated)
+			if ((g_page_info[i].load() & page_allocated) != page_allocated)
 			{
 				return false;
 			}

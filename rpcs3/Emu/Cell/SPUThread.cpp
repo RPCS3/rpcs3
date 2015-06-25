@@ -495,7 +495,7 @@ u32 SPUThread::get_ch_count(u32 ch)
 	case SPU_RdSigNotify1:    return ch_snr1.get_count(); break;
 	case SPU_RdSigNotify2:    return ch_snr2.get_count(); break;
 	case MFC_RdAtomicStat:    return ch_atomic_stat.get_count(); break;
-	case SPU_RdEventStat:     return ch_event_stat.read_relaxed() & ch_event_mask ? 1 : 0; break;
+	case SPU_RdEventStat:     return ch_event_stat.load() & ch_event_mask ? 1 : 0; break;
 	}
 
 	LOG_ERROR(SPU, "get_ch_count(ch=%d [%s]): unknown/illegal channel", ch, ch < 128 ? spu_ch_name[ch] : "???");
@@ -603,7 +603,7 @@ u32 SPUThread::get_ch_value(u32 ch)
 	case SPU_RdEventStat:
 	{
 		u32 result;
-		while (!(result = ch_event_stat.read_relaxed() & ch_event_mask) && !Emu.IsStopped())
+		while (!(result = ch_event_stat.load() & ch_event_mask) && !Emu.IsStopped())
 		{
 			std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 		}

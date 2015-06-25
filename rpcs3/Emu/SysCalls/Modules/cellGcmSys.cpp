@@ -379,9 +379,9 @@ s32 _cellGcmInitBody(vm::ptr<CellGcmContextData> context, u32 cmdSize, u32 ioSiz
 	vm::write32(context.addr(), gcm_info.context_addr);
 
 	auto& ctrl = vm::get_ref<CellGcmControl>(gcm_info.control_addr);
-	ctrl.put.write_relaxed(0);
-	ctrl.get.write_relaxed(0);
-	ctrl.ref.write_relaxed(-1);
+	ctrl.put.store(0);
+	ctrl.get.store(0);
+	ctrl.ref.store(-1);
 
 	auto& render = Emu.GetGSManager().GetRender();
 	render.m_ctxt_addr = context.addr();
@@ -1220,7 +1220,7 @@ s32 cellGcmCallback(vm::ptr<CellGcmContextData> context, u32 count)
 	// Wait for rsx to "release" the new command buffer
 	while (!Emu.IsStopped())
 	{
-		u32 getPos = ctrl.get.read_sync().value();
+		u32 getPos = ctrl.get.load().value();
 		if (isInCommandBufferExcept(getPos, newCommandBuffer.first, newCommandBuffer.second))
 			break;
 		std::chrono::time_point<std::chrono::system_clock> waitPoint = std::chrono::system_clock::now();
@@ -1235,7 +1235,7 @@ s32 cellGcmCallback(vm::ptr<CellGcmContextData> context, u32 count)
 	//if (0)
 	//{
 	//	auto& ctrl = vm::get_ref<CellGcmControl>(gcm_info.control_addr);
-	//	be_t<u32> res = context->current - context->begin - ctrl.put.read_relaxed();
+	//	be_t<u32> res = context->current - context->begin - ctrl.put.load();
 
 	//	if (res != 0)
 	//	{
@@ -1245,8 +1245,8 @@ s32 cellGcmCallback(vm::ptr<CellGcmContextData> context, u32 count)
 	//	memmove(vm::get_ptr<void>(context->begin), vm::get_ptr<void>(context->current - res), res);
 
 	//	context->current = context->begin + res;
-	//	ctrl.put.write_relaxed(res);
-	//	ctrl.get.write_relaxed(0);
+	//	ctrl.put.store(res);
+	//	ctrl.get.store(0);
 
 	//	return CELL_OK;
 	//}

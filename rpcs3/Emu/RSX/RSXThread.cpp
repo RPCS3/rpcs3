@@ -2494,8 +2494,8 @@ void RSXThread::Task()
 
 		inc = 1;
 
-		u32 get = m_ctrl->get.read_sync();
-		u32 put = m_ctrl->put.read_sync();
+		u32 put = m_ctrl->put.load();
+		u32 get = m_ctrl->get.load();
 
 		if (put == get || !Emu.IsRunning())
 		{

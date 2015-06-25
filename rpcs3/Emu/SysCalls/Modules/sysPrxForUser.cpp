@@ -125,7 +125,7 @@ s32 sys_lwmutex_destroy(PPUThread& CPU, vm::ptr<sys_lwmutex_t> lwmutex)
 	sysPrxForUser.Log("sys_lwmutex_destroy(lwmutex=*0x%x)", lwmutex);
 
 	// check to prevent recursive locking in the next call
-	if (lwmutex->vars.owner.read_relaxed() == CPU.GetId())
+	if (lwmutex->vars.owner.load() == CPU.GetId())
 	{
 		return CELL_EBUSY;
 	}
@@ -184,7 +184,7 @@ s32 sys_lwmutex_lock(PPUThread& CPU, vm::ptr<sys_lwmutex_t> lwmutex, u64 timeout
 
 		// recursive locking succeeded
 		lwmutex->recursive_count++;
-		lwmutex->lock_var.read_sync();
+		_mm_mfence();
 
 		return CELL_OK;
 	}
@@ -197,7 +197,7 @@ s32 sys_lwmutex_lock(PPUThread& CPU, vm::ptr<sys_lwmutex_t> lwmutex, u64 timeout
 
 	for (u32 i = 0; i < 300; i++)
 	{
-		if (lwmutex->vars.owner.read_relaxed() == lwmutex_free)
+		if (lwmutex->vars.owner.load() == lwmutex_free)
 		{
 			if (lwmutex->vars.owner.compare_and_swap_test(lwmutex_free, tid))
 			{
@@ -278,7 +278,7 @@ s32 sys_lwmutex_trylock(PPUThread& CPU, vm::ptr<sys_lwmutex_t> lwmutex)
 
 		// recursive locking succeeded
 		lwmutex->recursive_count++;
-		lwmutex->lock_var.read_sync();
+		_mm_mfence();
 
 		return CELL_OK;
 	}
@@ -319,7 +319,7 @@ s32 sys_lwmutex_unlock(PPUThread& CPU, vm::ptr<sys_lwmutex_t> lwmutex)
 	const be_t<u32> tid = CPU.GetId();
 
 	// check owner
-	if (lwmutex->vars.owner.read_relaxed() != tid)
+	if (lwmutex->vars.owner.load() != tid)
 	{
 		return CELL_EPERM;
 	}
@@ -392,7 +392,7 @@ s32 sys_lwcond_signal(PPUThread& CPU, vm::ptr<sys_lwcond_t> lwcond)
 		//return _sys_lwcond_signal(lwcond->lwcond_queue, 0, -1, 2);
 	}
 
-	if (lwmutex->vars.owner.read_relaxed() == CPU.GetId())
+	if (lwmutex->vars.owner.load() == CPU.GetId())
 	{
 		// if owns the mutex
 		lwmutex->all_info++;
@@ -450,7 +450,7 @@ s32 sys_lwcond_signal_all(PPUThread& CPU, vm::ptr<sys_lwcond_t> lwcond)
 		//return _sys_lwcond_signal_all(lwcond->lwcond_queue, lwmutex->sleep_queue, 2);
 	}
 
-	if (lwmutex->vars.owner.read_relaxed() == CPU.GetId())
+	if (lwmutex->vars.owner.load() == CPU.GetId())
 	{
 		// if owns the mutex, call the syscall
 		const s32 res = _sys_lwcond_signal_all(lwcond->lwcond_queue, lwmutex->sleep_queue, 1);
@@ -507,7 +507,7 @@ s32 sys_lwcond_signal_to(PPUThread& CPU, vm::ptr<sys_lwcond_t> lwcond, u32 ppu_t
 		//return _sys_lwcond_signal(lwcond->lwcond_queue, 0, ppu_thread_id, 2);
 	}
 
-	if (lwmutex->vars.owner.read_relaxed() == CPU.GetId())
+	if (lwmutex->vars.owner.load() == CPU.GetId())
 	{
 		// if owns the mutex
 		lwmutex->all_info++;
@@ -561,7 +561,7 @@ s32 sys_lwcond_wait(PPUThread& CPU, vm::ptr<sys_lwcond_t> lwcond, u64 timeout)
 
 	const vm::ptr<sys_lwmutex_t> lwmutex = lwcond->lwmutex;
 
-	if (lwmutex->vars.owner.read_relaxed() != tid)
+	if (lwmutex->vars.owner.load() != tid)
 	{
 		// if not owner of the mutex
 		return CELL_EPERM;
@@ -1189,7 +1189,7 @@ void sys_spinlock_lock(vm::ptr<atomic_be_t<u32>> lock)
 	// prx: exchange with 0xabadcafe, repeat until exchanged with 0
 	while (lock->exchange(0xabadcafe).data())
 	{
-		g_sys_spinlock_wm.wait_op(lock.addr(), [lock](){ return lock->read_relaxed().data() == 0; });
+		g_sys_spinlock_wm.wait_op(lock.addr(), [lock](){ return lock->load().data() == 0; });
 
 		if (Emu.IsStopped())
 		{

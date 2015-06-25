@@ -199,7 +199,7 @@ public:
 
 	void set_value(u32 value, u32 count = 1)
 	{
-		sync_var.write_relaxed({ count, value });
+		sync_var.store({ count, value });
 	}
 
 	u32 get_value() volatile
@@ -254,7 +254,7 @@ public:
 	{
 		bool out_result;
 
-		const u32 last_value = value3.read_sync();
+		const u32 last_value = value3.load_sync();
 
 		sync_var.atomic_op([&out_result, &out_value, &out_count, last_value](sync_var_t& data)
 		{
@@ -292,7 +292,7 @@ public:
 	void set(u64 ints)
 	{
 		// leave only enabled interrupts
-		ints &= mask.read_relaxed();
+		ints &= mask.load();
 
 		if (ints && ~stat._or(ints) & ints)
 		{

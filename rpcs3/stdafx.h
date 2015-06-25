@@ -108,6 +108,8 @@ template<typename T> struct ID_type;
 #define CHECK_MAX_SIZE(type, size) static_assert(sizeof(type) <= size, #type " type size is too big")
 #define CHECK_SIZE_ALIGN(type, size, align) CHECK_SIZE(type, size); CHECK_ALIGN(type, align)
 
+#define WRAP_EXPR(expr) [&]{ return (expr); }
+
 #define _PRGNAME_ "RPCS3"
 #define _PRGVER_ "0.0.0.5"
 
