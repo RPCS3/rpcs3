@@ -342,6 +342,10 @@ private:
 
 	std::vector<D3D12_INPUT_ELEMENT_DESC> m_IASet;
 	ID3D12Device* m_device;
+	size_t g_descriptorStrideSRVCBVUAV;
+	size_t g_descriptorStrideDSV;
+	size_t g_descriptorStrideRTV;
+	size_t g_descriptorStrideSamplers;
 	ID3D12CommandQueue *m_commandQueueCopy;
 	ID3D12CommandQueue *m_commandQueueGraphic;
 

@@ -288,4 +288,20 @@ inline DXGI_FORMAT getTextureDXGIFormat(int format)
 	}
 }
 
+inline
+D3D12_CPU_DESCRIPTOR_HANDLE getCPUDescriptorHandle(ID3D12DescriptorHeap *descriptors, size_t offset)
+{
+	D3D12_CPU_DESCRIPTOR_HANDLE result = descriptors->GetCPUDescriptorHandleForHeapStart();
+	result.ptr += offset;
+	return result;
+}
+
+inline
+D3D12_GPU_DESCRIPTOR_HANDLE getGPUDescriptorHandle(ID3D12DescriptorHeap *descriptors, size_t offset)
+{
+	D3D12_GPU_DESCRIPTOR_HANDLE result = descriptors->GetGPUDescriptorHandleForHeapStart();
+	result.ptr += offset;
+	return result;
+}
+
 #endif

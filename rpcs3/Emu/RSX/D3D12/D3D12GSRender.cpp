@@ -456,6 +456,11 @@ D3D12GSRender::D3D12GSRender()
 	check(m_device->CreateCommandQueue(&copyQueueDesc, IID_PPV_ARGS(&m_commandQueueCopy)));
 	check(m_device->CreateCommandQueue(&graphicQueueDesc, IID_PPV_ARGS(&m_commandQueueGraphic)));
 
+	g_descriptorStrideSRVCBVUAV = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	size_t g_descriptorStrideDSV = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+	size_t g_descriptorStrideRTV = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+	size_t g_descriptorStrideSamplers = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
+
 	m_frame = GetGSFrame();
 	DXGI_ADAPTER_DESC adaptaterDesc;
 	adaptater->GetDesc(&adaptaterDesc);
@@ -692,28 +697,26 @@ void D3D12GSRender::ExecCMD(u32 cmd)
 
 			case CELL_GCM_SURFACE_TARGET_0:
 			case CELL_GCM_SURFACE_TARGET_1:
-				commandList->ClearRenderTargetView(handle, clearColor, 0, nullptr);
+				commandList->ClearRenderTargetView(getCPUDescriptorHandle(m_rtts.m_renderTargetsDescriptorsHeap, 0), clearColor, 0, nullptr);
 				break;
 			case CELL_GCM_SURFACE_TARGET_MRT1:
-				commandList->ClearRenderTargetView(handle, clearColor, 0, nullptr);
-				handle.ptr += g_RTTIncrement;
-				commandList->ClearRenderTargetView(handle, clearColor, 0, nullptr);
+				commandList->ClearRenderTargetView(getCPUDescriptorHandle(m_rtts.m_renderTargetsDescriptorsHeap, 0), clearColor, 0, nullptr);
+				commandList->ClearRenderTargetView(getCPUDescriptorHandle(m_rtts.m_renderTargetsDescriptorsHeap, g_descriptorStrideRTV), clearColor, 0, nullptr);
 				break;
 			case CELL_GCM_SURFACE_TARGET_MRT2:
-				commandList->ClearRenderTargetView(handle, clearColor, 0, nullptr);
+				commandList->ClearRenderTargetView(getCPUDescriptorHandle(m_rtts.m_renderTargetsDescriptorsHeap, 0), clearColor, 0, nullptr);
+				commandList->ClearRenderTargetView(getCPUDescriptorHandle(m_rtts.m_renderTargetsDescriptorsHeap, g_descriptorStrideRTV), clearColor, 0, nullptr);
 				handle.ptr += g_RTTIncrement;
-				commandList->ClearRenderTargetView(handle, clearColor, 0, nullptr);
-				handle.ptr += g_RTTIncrement;
-				commandList->ClearRenderTargetView(handle, clearColor, 0, nullptr);
+				commandList->ClearRenderTargetView(getCPUDescriptorHandle(m_rtts.m_renderTargetsDescriptorsHeap, 2 * g_descriptorStrideRTV), clearColor, 0, nullptr);
 				break;
 			case CELL_GCM_SURFACE_TARGET_MRT3:
-				commandList->ClearRenderTargetView(handle, clearColor, 0, nullptr);
+				commandList->ClearRenderTargetView(getCPUDescriptorHandle(m_rtts.m_renderTargetsDescriptorsHeap, 0), clearColor, 0, nullptr);
 				handle.ptr += g_RTTIncrement;
-				commandList->ClearRenderTargetView(handle, clearColor, 0, nullptr);
+				commandList->ClearRenderTargetView(getCPUDescriptorHandle(m_rtts.m_renderTargetsDescriptorsHeap, g_descriptorStrideRTV), clearColor, 0, nullptr);
 				handle.ptr += g_RTTIncrement;
-				commandList->ClearRenderTargetView(handle, clearColor, 0, nullptr);
+				commandList->ClearRenderTargetView(getCPUDescriptorHandle(m_rtts.m_renderTargetsDescriptorsHeap, 2 * g_descriptorStrideRTV), clearColor, 0, nullptr);
 				handle.ptr += g_RTTIncrement;
-				commandList->ClearRenderTargetView(handle, clearColor, 0, nullptr);
+				commandList->ClearRenderTargetView(getCPUDescriptorHandle(m_rtts.m_renderTargetsDescriptorsHeap, 3 * g_descriptorStrideRTV), clearColor, 0, nullptr);
 				break;
 			default:
 				LOG_ERROR(RSX, "Bad surface color target: %d", m_surface_color_target);
@@ -782,9 +785,10 @@ void D3D12GSRender::ExecCMD()
 	// Constants
 	setScaleOffset();
 	commandList->SetDescriptorHeaps(1, &getCurrentResourceStorage().m_scaleOffsetDescriptorHeap);
-	D3D12_GPU_DESCRIPTOR_HANDLE Handle = getCurrentResourceStorage().m_scaleOffsetDescriptorHeap->GetGPUDescriptorHandleForHeapStart();
-	Handle.ptr += getCurrentResourceStorage().m_currentScaleOffsetBufferIndex * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-	commandList->SetGraphicsRootDescriptorTable(0, Handle);
+	commandList->SetGraphicsRootDescriptorTable(0,
+		getGPUDescriptorHandle(getCurrentResourceStorage().m_scaleOffsetDescriptorHeap,
+			getCurrentResourceStorage().m_currentScaleOffsetBufferIndex * g_descriptorStrideSRVCBVUAV)
+		);
 	getCurrentResourceStorage().m_currentScaleOffsetBufferIndex++;
 
 	size_t currentBufferIndex = getCurrentResourceStorage().m_constantsBufferIndex;
@@ -794,9 +798,10 @@ void D3D12GSRender::ExecCMD()
 	getCurrentResourceStorage().m_constantsBufferIndex++;
 
 	commandList->SetDescriptorHeaps(1, &getCurrentResourceStorage().m_constantsBufferDescriptorsHeap);
-	Handle = getCurrentResourceStorage().m_constantsBufferDescriptorsHeap->GetGPUDescriptorHandleForHeapStart();
-	Handle.ptr += currentBufferIndex * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-	commandList->SetGraphicsRootDescriptorTable(1, Handle);
+	commandList->SetGraphicsRootDescriptorTable(1,
+		getGPUDescriptorHandle(getCurrentResourceStorage().m_constantsBufferDescriptorsHeap,
+			currentBufferIndex * g_descriptorStrideSRVCBVUAV)
+		);
 	commandList->SetPipelineState(m_PSO->first);
 
 	if (m_PSO->second > 0)
@@ -807,8 +812,6 @@ void D3D12GSRender::ExecCMD()
 		// Fill empty slots
 		for (; usedTexture < m_PSO->second; usedTexture++)
 		{
-			D3D12_CPU_DESCRIPTOR_HANDLE Handle = getCurrentResourceStorage().m_textureDescriptorsHeap->GetCPUDescriptorHandleForHeapStart();
-			Handle.ptr += (getCurrentResourceStorage().m_currentTextureIndex + usedTexture) * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 			D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 			srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 			srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
@@ -818,27 +821,33 @@ void D3D12GSRender::ExecCMD()
 				D3D12_SHADER_COMPONENT_MAPPING_FORCE_VALUE_0,
 				D3D12_SHADER_COMPONENT_MAPPING_FORCE_VALUE_0,
 				D3D12_SHADER_COMPONENT_MAPPING_FORCE_VALUE_0);
-			m_device->CreateShaderResourceView(m_dummyTexture, &srvDesc, Handle);
+			m_device->CreateShaderResourceView(m_dummyTexture, &srvDesc, 
+				getCPUDescriptorHandle(getCurrentResourceStorage().m_textureDescriptorsHeap,
+					(getCurrentResourceStorage().m_currentTextureIndex + usedTexture) * g_descriptorStrideSRVCBVUAV)
+				);
 
 			D3D12_SAMPLER_DESC samplerDesc = {};
 			samplerDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
 			samplerDesc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
 			samplerDesc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
 			samplerDesc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-			Handle = getCurrentResourceStorage().m_samplerDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
-			Handle.ptr += (getCurrentResourceStorage().m_currentTextureIndex + usedTexture) * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
-			m_device->CreateSampler(&samplerDesc, Handle);
+			m_device->CreateSampler(&samplerDesc,
+				getCPUDescriptorHandle(getCurrentResourceStorage().m_samplerDescriptorHeap,
+					(getCurrentResourceStorage().m_currentTextureIndex + usedTexture) * g_descriptorStrideSamplers)
+				);
 		}
 
-		Handle = getCurrentResourceStorage().m_textureDescriptorsHeap->GetGPUDescriptorHandleForHeapStart();
-		Handle.ptr += getCurrentResourceStorage().m_currentTextureIndex * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 		commandList->SetDescriptorHeaps(1, &getCurrentResourceStorage().m_textureDescriptorsHeap);
-		commandList->SetGraphicsRootDescriptorTable(2, Handle);
+		commandList->SetGraphicsRootDescriptorTable(2,
+			getGPUDescriptorHandle(getCurrentResourceStorage().m_textureDescriptorsHeap,
+				getCurrentResourceStorage().m_currentTextureIndex * g_descriptorStrideSRVCBVUAV)
+			);
 
-		Handle = getCurrentResourceStorage().m_samplerDescriptorHeap->GetGPUDescriptorHandleForHeapStart();
-		Handle.ptr += getCurrentResourceStorage().m_currentTextureIndex * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
 		commandList->SetDescriptorHeaps(1, &getCurrentResourceStorage().m_samplerDescriptorHeap);
-		commandList->SetGraphicsRootDescriptorTable(3, Handle);
+		commandList->SetGraphicsRootDescriptorTable(3,
+			getGPUDescriptorHandle(getCurrentResourceStorage().m_samplerDescriptorHeap,
+				getCurrentResourceStorage().m_currentTextureIndex * g_descriptorStrideSamplers)
+			);
 
 		getCurrentResourceStorage().m_currentTextureIndex += usedTexture;
 		std::chrono::time_point<std::chrono::system_clock> endTextureTime = std::chrono::system_clock::now();
@@ -866,8 +875,8 @@ void D3D12GSRender::ExecCMD()
 		LOG_ERROR(RSX, "Bad surface color target: %d", m_surface_color_target);
 	}
 
-	D3D12_CPU_DESCRIPTOR_HANDLE *DepthStencilHandle = &m_rtts.m_depthStencilDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
-	commandList->OMSetRenderTargets((UINT)numRTT, &m_rtts.m_renderTargetsDescriptorsHeap->GetCPUDescriptorHandleForHeapStart(), true, DepthStencilHandle);
+	commandList->OMSetRenderTargets((UINT)numRTT, &m_rtts.m_renderTargetsDescriptorsHeap->GetCPUDescriptorHandleForHeapStart(), true,
+		&getCPUDescriptorHandle(m_rtts.m_depthStencilDescriptorHeap, 0));
 
 	D3D12_VIEWPORT viewport =
 	{
