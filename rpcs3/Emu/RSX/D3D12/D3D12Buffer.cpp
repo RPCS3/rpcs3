@@ -473,8 +473,7 @@ void D3D12GSRender::FillVertexShaderConstantsBuffer()
 	for (const RSXTransformConstant& c : m_transform_constants)
 	{
 		size_t offset = c.id * 4 * sizeof(float);
-		float vector[] = { c.x, c.y, c.z, c.w };
-		memcpy((char*)vertexConstantShadowCopy + offset, vector, 4 * sizeof(float));
+		m_vertexConstants[offset] = c;
 	}
 
 	size_t bufferSize = 512 * 4 * sizeof(float);
@@ -486,7 +485,16 @@ void D3D12GSRender::FillVertexShaderConstantsBuffer()
 
 	void *constantsBufferMap;
 	check(m_constantsData.m_heap->Map(0, &range, &constantsBufferMap));
-	streamBuffer((char*)constantsBufferMap + heapOffset, vertexConstantShadowCopy, bufferSize);
+	for (auto vertexConstants : m_vertexConstants)
+	{
+		float data[4] = {
+			vertexConstants.second.x,
+			vertexConstants.second.y,
+			vertexConstants.second.z,
+			vertexConstants.second.w
+		};
+		memcpy((char*)constantsBufferMap + heapOffset + vertexConstants.first, data, 4 * sizeof(float));
+	}
 	m_constantsData.m_heap->Unmap(0, &range);
 
 	D3D12_CONSTANT_BUFFER_VIEW_DESC constantBufferViewDesc = {};

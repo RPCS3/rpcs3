@@ -545,8 +545,6 @@ D3D12GSRender::D3D12GSRender()
 	m_perFrameStorage[1].Init(m_device);
 	m_perFrameStorage[1].Reset();
 
-	vertexConstantShadowCopy = new float[512 * 4];
-
 	// Convert shader
 	auto p = compileF32toU8CS();
 	check(
@@ -620,7 +618,6 @@ D3D12GSRender::~D3D12GSRender()
 	m_swapChain->Release();
 	m_outputScalingPass.Release();
 	m_device->Release();
-	delete[] vertexConstantShadowCopy;
 	unloadD3D12FunctionPointers();
 }
 
@@ -1058,6 +1055,7 @@ void D3D12GSRender::Flip()
 	// Flush
 	m_texturesRTTs.clear();
 	m_vertexCache.clear();
+	m_vertexConstants.clear();
 
 	std::vector<std::function<void()> >  cleaningFunction =
 	{
