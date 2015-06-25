@@ -709,8 +709,8 @@ size_t D3D12GSRender::UploadTextures()
 
 			u32 s = align(getTextureSize(m_textures[i]), 4096);
 			LOG_WARNING(RSX, "PROTECTING %x of size %d", align(texaddr, 4096), s);
-//			m_protectedTextures.push_back(std::make_tuple(texaddr, align(texaddr, 4096), s));
-//			vm::page_protect(align(texaddr, 4096), s, 0, 0, vm::page_writable);
+			m_protectedTextures.push_back(std::make_tuple(texaddr, align(texaddr, 4096), s));
+			vm::page_protect(align(texaddr, 4096), s, 0, 0, vm::page_writable);
 		}
 
 		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
