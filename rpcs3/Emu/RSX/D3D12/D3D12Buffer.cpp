@@ -485,7 +485,7 @@ void D3D12GSRender::FillVertexShaderConstantsBuffer()
 
 	void *constantsBufferMap;
 	check(m_constantsData.m_heap->Map(0, &range, &constantsBufferMap));
-	for (auto vertexConstants : m_vertexConstants)
+	for (const auto &vertexConstants : m_vertexConstants)
 	{
 		float data[4] = {
 			vertexConstants.second.x,

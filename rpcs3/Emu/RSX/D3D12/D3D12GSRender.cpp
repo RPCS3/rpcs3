@@ -79,13 +79,13 @@ void D3D12GSRender::ResourceStorage::Reset()
 	m_frameFinishedFence = nullptr;
 	m_frameFinishedHandle = 0;
 
-	for (auto tmp : m_inUseConstantsBuffers)
+	for (auto &tmp : m_inUseConstantsBuffers)
 		SAFE_RELEASE(std::get<2>(tmp));
-	for (auto tmp : m_inUseVertexIndexBuffers)
+	for (auto &tmp : m_inUseVertexIndexBuffers)
 		SAFE_RELEASE(std::get<2>(tmp));
-	for (auto tmp : m_inUseTextureUploadBuffers)
+	for (auto &tmp : m_inUseTextureUploadBuffers)
 		SAFE_RELEASE(std::get<2>(tmp));
-	for (auto tmp : m_inUseTexture2D)
+	for (auto &tmp : m_inUseTexture2D)
 		SAFE_RELEASE(std::get<2>(tmp));
 	m_inUseConstantsBuffers.clear();
 	m_inUseVertexIndexBuffers.clear();
@@ -138,22 +138,22 @@ void D3D12GSRender::ResourceStorage::Init(ID3D12Device *device)
 void D3D12GSRender::ResourceStorage::Release()
 {
 	// NOTE: Should be released only if no command are in flight !
-	for (auto tmp : m_inUseConstantsBuffers)
+	for (auto &tmp : m_inUseConstantsBuffers)
 		SAFE_RELEASE(std::get<2>(tmp));
-	for (auto tmp : m_inUseVertexIndexBuffers)
+	for (auto &tmp : m_inUseVertexIndexBuffers)
 		SAFE_RELEASE(std::get<2>(tmp));
-	for (auto tmp : m_inUseTextureUploadBuffers)
+	for (auto &tmp : m_inUseTextureUploadBuffers)
 		SAFE_RELEASE(std::get<2>(tmp));
-	for (auto tmp : m_inUseTexture2D)
+	for (auto &tmp : m_inUseTexture2D)
 		SAFE_RELEASE(std::get<2>(tmp));
 
 	m_constantsBufferDescriptorsHeap->Release();
 	m_scaleOffsetDescriptorHeap->Release();
-	for (auto tmp : m_inflightResources)
+	for (auto &tmp : m_inflightResources)
 		tmp->Release();
 	m_textureDescriptorsHeap->Release();
 	m_samplerDescriptorHeap->Release();
-	for (auto tmp : m_inflightCommandList)
+	for (auto &tmp : m_inflightCommandList)
 		tmp->Release();
 	m_commandAllocator->Release();
 	m_textureUploadCommandAllocator->Release();
@@ -546,7 +546,7 @@ D3D12GSRender::D3D12GSRender()
 	m_perFrameStorage[1].Reset();
 
 	// Convert shader
-	auto p = compileF32toU8CS();
+	const auto &p = compileF32toU8CS();
 	check(
 		m_device->CreateRootSignature(0, p.second->GetBufferPointer(), p.second->GetBufferSize(), IID_PPV_ARGS(&m_convertRootSignature))
 		);
@@ -609,9 +609,9 @@ D3D12GSRender::~D3D12GSRender()
 	m_rtts.Release();
 	for (unsigned i = 0; i < 17; i++)
 		m_rootSignatures[i]->Release();
-	for (auto tmp : m_texToClean)
+	for (auto &tmp : m_texToClean)
 		tmp->Release();
-	for (auto tmp : m_texturesCache)
+	for (auto &tmp : m_texturesCache)
 		tmp.second->Release();
 	m_swapChain->Release();
 	m_outputScalingPass.Release();
@@ -1072,8 +1072,8 @@ void D3D12GSRender::Flip()
 		CloseHandle(storage.m_frameFinishedHandle);
 		storage.m_frameFinishedFence->Release();
 
-		for (unsigned i = 0; i < 4; i++)
-			cleaningFunction[i]();
+		for (auto &cleanFunc : cleaningFunction)
+			cleanFunc();
 		storage.Reset();
 
 		for (auto tmp : textoclean)
