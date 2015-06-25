@@ -457,9 +457,9 @@ D3D12GSRender::D3D12GSRender()
 	check(m_device->CreateCommandQueue(&graphicQueueDesc, IID_PPV_ARGS(&m_commandQueueGraphic)));
 
 	g_descriptorStrideSRVCBVUAV = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-	size_t g_descriptorStrideDSV = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
-	size_t g_descriptorStrideRTV = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-	size_t g_descriptorStrideSamplers = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
+	g_descriptorStrideDSV = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+	g_descriptorStrideRTV = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+	g_descriptorStrideSamplers = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
 
 	m_frame = GetGSFrame();
 	DXGI_ADAPTER_DESC adaptaterDesc;
@@ -1044,7 +1044,7 @@ void D3D12GSRender::Flip()
 		barriers[1].Transition.StateBefore = D3D12_RESOURCE_STATE_GENERIC_READ;
 		barriers[1].Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
 		commandList->ResourceBarrier(2, barriers);
-		commandList->Close();
+		check(commandList->Close());
 		m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**)&commandList);
 	}
 	}
@@ -1303,7 +1303,7 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 		convertCommandList->ResourceBarrier(2, barriers);
 		convertCommandList->ResourceBarrier(1, &getResourceBarrierTransition(depthConverted, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COPY_SOURCE));
 
-		convertCommandList->Close();
+		check(convertCommandList->Close());
 		m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**)&convertCommandList);
 	}
 
@@ -1369,7 +1369,7 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 	}
 	if (needTransfer)
 	{
-		downloadCommandList->Close();
+		check(downloadCommandList->Close());
 		m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**)&downloadCommandList);
 	}
 
