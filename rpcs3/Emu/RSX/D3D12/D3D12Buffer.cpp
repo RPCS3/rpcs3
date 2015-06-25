@@ -297,7 +297,8 @@ std::pair<std::vector<D3D12_VERTEX_BUFFER_VIEW>, D3D12_INDEX_BUFFER_VIEW> D3D12G
 		auto It = m_vertexCache.find(key);
 
 		ID3D12Resource *vertexBuffer;
-		if (It != m_vertexCache.end())
+		if (vbf.range.first != 0 && // Attribute is stored in a buffer, not inline in command buffer
+			It != m_vertexCache.end())
 			vertexBuffer = It->second;
 		else
 		{
