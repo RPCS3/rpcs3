@@ -17,6 +17,32 @@
 // Some constants are the same between RSX and GL
 #include <GL\GL.h>
 
+
+/**
+ * TODO: If you want to improve this backend, a small list of things that are unimplemented atm :
+ * - Vertex texture
+ * It requires adding the reading command in D3D12FragmentProgramDecompiler,
+ * generates corresponding root signatures and descriptor heap binding, and ensure that code in
+ * D3D12Textures.cpp doesn't contain pixel shader specific code.
+ * - MSAA
+ * There is no support in the gl backend for MSAA textures atm so it needs to be implemented from scratch.
+ * - Depth buffer read
+ * The depth buffer can be currently properly read, but for some reasons it needs a conversion from depth16/24
+ * format to rgba8 format, which doesn't make sense since the PS3 doesn't make such conversion implicitly afaik.
+ * - Improve caching of vertex buffers and texture
+ * Vertex buffers are cached by range. This works but in some rare situation it may be wrong, for instance if 2
+ * draw call use the same buffer, but the first one doesn't use all the attribute ; then the second one will use
+ * the cached version and not have updated attributes. Same for texture, if format/size does change, the caching
+ * system is ignoring it.
+ * - Fix vertex buffer in The Guided Paradox
+ * The vertex info in the guided paradox are wrong, leading to missing character parts ingame (like leg or torso).
+ * It's because some vertex position are incorrect.
+ * - Improve sync between cell and RSX
+ * A lot of optimisation can be gained from using Cell and RSX latency. Cell can't read RSX generated data without
+ * synchronisation. We currently only cover semaphore sync, but there are more (like implicit sync at flip) that
+ * are not currently correctly signaled which leads to deadlock.
+ */
+
 class GSFrameBase2
 {
 public:
