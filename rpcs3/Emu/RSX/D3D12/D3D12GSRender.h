@@ -306,7 +306,6 @@ private:
 	DataHeap<ID3D12Heap, 65536> m_vertexIndexData;
 	// Texture storage
 	DataHeap<ID3D12Heap, 65536> m_textureUploadData;
-	DataHeap<ID3D12Heap, 65536> m_textureData;
 	DataHeap<ID3D12Heap, 65536> m_UAVHeap;
 	DataHeap<ID3D12Heap, 65536> m_readbackResources;
 

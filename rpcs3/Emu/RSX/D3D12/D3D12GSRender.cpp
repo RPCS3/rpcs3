@@ -585,7 +585,6 @@ D3D12GSRender::D3D12GSRender()
 	m_constantsData.Init(m_device, 1024 * 1024 * 64, D3D12_HEAP_TYPE_UPLOAD, D3D12_HEAP_FLAG_NONE);
 	m_vertexIndexData.Init(m_device, 1024 * 1024 * 384, D3D12_HEAP_TYPE_UPLOAD, D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS);
 	m_textureUploadData.Init(m_device, 1024 * 1024 * 256, D3D12_HEAP_TYPE_UPLOAD, D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS);
-	m_textureData.Init(m_device, 1024 * 1024 * 512, D3D12_HEAP_TYPE_DEFAULT, D3D12_HEAP_FLAG_ALLOW_ONLY_NON_RT_DS_TEXTURES);
 }
 
 D3D12GSRender::~D3D12GSRender()
@@ -593,7 +592,6 @@ D3D12GSRender::~D3D12GSRender()
 	m_constantsData.Release();
 	m_vertexIndexData.Release();
 	m_textureUploadData.Release();
-	m_textureData.Release();
 	m_UAVHeap.m_heap->Release();
 	m_readbackResources.m_heap->Release();
 	m_texturesRTTs.clear();
@@ -1062,7 +1060,6 @@ void D3D12GSRender::Flip()
 		m_constantsData.getCleaningFunction(),
 		m_vertexIndexData.getCleaningFunction(),
 		m_textureUploadData.getCleaningFunction(),
-		m_textureData.getCleaningFunction()
 	};
 
 	std::lock_guard<std::mutex> lock(mut);
