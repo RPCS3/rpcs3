@@ -493,7 +493,7 @@ void D3D12GSRender::FillVertexShaderConstantsBuffer()
 			vertexConstants.second.z,
 			vertexConstants.second.w
 		};
-		memcpy((char*)constantsBufferMap + heapOffset + vertexConstants.first, data, 4 * sizeof(float));
+		streamToBuffer((char*)constantsBufferMap + heapOffset + vertexConstants.first, data, 4 * sizeof(float));
 	}
 	m_constantsData.m_heap->Unmap(0, &range);
 
