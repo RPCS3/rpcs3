@@ -28,10 +28,10 @@ s32 cellHddGameCheck(PPUThread& CPU, u32 version, vm::cptr<char> dirName, u32 er
 		return CELL_HDDGAME_ERROR_PARAM;
 	}
 
-	vm::var<CellHddGameSystemFileParam> param;
-	vm::var<CellHddGameCBResult> result;
-	vm::var<CellHddGameStatGet> get;
-	vm::var<CellHddGameStatSet> set;
+	vm::stackvar<CellHddGameSystemFileParam> param(CPU);
+	vm::stackvar<CellHddGameCBResult> result(CPU);
+	vm::stackvar<CellHddGameStatGet> get(CPU);
+	vm::stackvar<CellHddGameStatSet> set(CPU);
 
 	get->hddFreeSizeKB = 40 * 1024 * 1024; // 40 GB, TODO: Use the free space of the computer's HDD where RPCS3 is being run.
 	get->isNewData = CELL_HDDGAME_ISNEWDATA_EXIST;

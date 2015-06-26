@@ -137,20 +137,19 @@ s32 pngReadHeader(
 		return CELL_PNGDEC_ERROR_HEADER; // The file is smaller than the length of a PNG header
 	}
 
-	//Write the header to buffer
-	vm::var<u8[34]> buffer; // Alloc buffer for PNG header
-	auto buffer_32 = buffer.To<be_t<u32>>();
+	// Write the header to buffer
+	u8 buffer[34]; be_t<u32>* buffer_32 = reinterpret_cast<be_t<u32>*>(buffer);
 
 	switch (stream->src.srcSelect.value())
 	{
 	case CELL_PNGDEC_BUFFER:
-		memmove(buffer.begin(), stream->src.streamPtr.get_ptr(), buffer.size());
+		std::memcpy(buffer, stream->src.streamPtr.get_ptr(), sizeof(buffer));
 		break;
 	case CELL_PNGDEC_FILE:
 	{
 		auto file = Emu.GetIdManager().get<lv2_file_t>(stream->fd);
 		file->file->Seek(0);
-		file->file->Read(buffer.begin(), buffer.size());
+		file->file->Read(buffer, sizeof(buffer));
 		break;
 	}
 	}
@@ -249,20 +248,20 @@ s32 pngDecodeData(
 	const u64& fileSize = stream->fileSize;
 	const CellPngDecOutParam& current_outParam = stream->outParam;
 
-	//Copy the PNG file to a buffer
-	vm::var<unsigned char[]> png((u32)fileSize);
+	// Copy the PNG file to a buffer
+	std::unique_ptr<u8[]> png(new u8[fileSize]);
 
 	switch (stream->src.srcSelect.value())
 	{
 	case CELL_PNGDEC_BUFFER:
-		memmove(png.begin(), stream->src.streamPtr.get_ptr(), png.size());
+		std::memcpy(png.get(), stream->src.streamPtr.get_ptr(), fileSize);
 		break;
 
 	case CELL_PNGDEC_FILE:
 	{
 		auto file = Emu.GetIdManager().get<lv2_file_t>(stream->fd);
 		file->file->Seek(0);
-		file->file->Read(png.ptr(), png.size());
+		file->file->Read(png.get(), fileSize);
 		break;
 	}
 	}
@@ -271,7 +270,7 @@ s32 pngDecodeData(
 	int width, height, actual_components;
 	auto image = std::unique_ptr<unsigned char, decltype(&::free)>
 		(
-		stbi_load_from_memory(png.ptr(), (s32)fileSize, &width, &height, &actual_components, 4),
+		stbi_load_from_memory(png.get(), (s32)fileSize, &width, &height, &actual_components, 4),
 		&::free
 		);
 	if (!image)

@@ -100,26 +100,26 @@ s32 cellJpgDecReadHeader(u32 mainHandle, u32 subHandle, vm::ptr<CellJpgDecInfo> 
 	const u64& fileSize = subHandle_data->fileSize;
 	CellJpgDecInfo& current_info = subHandle_data->info;
 
-	//Write the header to buffer
-	vm::var<u8[]> buffer((u32)fileSize);
+	// Write the header to buffer
+	std::unique_ptr<u8[]> buffer(new u8[fileSize]);
 
 	switch(subHandle_data->src.srcSelect.value())
 	{
 	case CELL_JPGDEC_BUFFER:
-		memmove(buffer.begin(), vm::get_ptr<void>(subHandle_data->src.streamPtr), buffer.size());
+		std::memcpy(buffer.get(), vm::get_ptr(subHandle_data->src.streamPtr), fileSize);
 		break;
 
 	case CELL_JPGDEC_FILE:
 	{
 		auto file = Emu.GetIdManager().get<lv2_file_t>(fd);
 		file->file->Seek(0);
-		file->file->Read(buffer.ptr(), buffer.size());
+		file->file->Read(buffer.get(), fileSize);
 		break;
 	}
 	}
 
-	if (*buffer.To<u32>(0) != 0xE0FFD8FF || // Error: Not a valid SOI header
-		*buffer.To<u32>(6) != 0x4649464A)   // Error: Not a valid JFIF string
+	if ((le_t<u32>&)(buffer[0]) != 0xE0FFD8FF || // Error: Not a valid SOI header
+		(le_t<u32>&)(buffer[6]) != 0x4649464A)   // Error: Not a valid JFIF string
 	{
 		return CELL_JPGDEC_ERROR_HEADER; 
 	}
@@ -175,19 +175,19 @@ s32 cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, vm::cp
 	const CellJpgDecOutParam& current_outParam = subHandle_data->outParam; 
 
 	//Copy the JPG file to a buffer
-	vm::var<unsigned char[]> jpg((u32)fileSize);
+	std::unique_ptr<u8[]> jpg(new u8[fileSize]);
 
 	switch(subHandle_data->src.srcSelect.value())
 	{
 	case CELL_JPGDEC_BUFFER:
-		memmove(jpg.begin(), vm::get_ptr<void>(subHandle_data->src.streamPtr), jpg.size());
+		std::memcpy(jpg.get(), vm::get_ptr(subHandle_data->src.streamPtr), fileSize);
 		break;
 
 	case CELL_JPGDEC_FILE:
 	{
 		auto file = Emu.GetIdManager().get<lv2_file_t>(fd);
 		file->file->Seek(0);
-		file->file->Read(jpg.ptr(), jpg.size());
+		file->file->Read(jpg.get(), fileSize);
 		break;
 	}
 	}
@@ -196,7 +196,7 @@ s32 cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, vm::cp
 	int width, height, actual_components;
 	auto image = std::unique_ptr<unsigned char,decltype(&::free)>
 		(
-			stbi_load_from_memory(jpg.ptr(), (s32)fileSize, &width, &height, &actual_components, 4),
+			stbi_load_from_memory(jpg.get(), (s32)fileSize, &width, &height, &actual_components, 4),
 			&::free
 		);
 

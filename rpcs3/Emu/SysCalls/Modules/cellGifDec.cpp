@@ -92,26 +92,26 @@ s32 cellGifDecReadHeader(
 	const u64& fileSize = subHandle_data->fileSize;
 	CellGifDecInfo& current_info = subHandle_data->info;
 	
-	//Write the header to buffer
-	vm::var<u8[13]> buffer; // Alloc buffer for GIF header
+	// Write the header to buffer
+	u8 buffer[13];
 
 	switch(subHandle_data->src.srcSelect.value())
 	{
 	case CELL_GIFDEC_BUFFER:
-		memmove(buffer.begin(), subHandle_data->src.streamPtr.get_ptr(), buffer.size());
+		std::memcpy(buffer, subHandle_data->src.streamPtr.get_ptr(), sizeof(buffer));
 		break;
 
 	case CELL_GIFDEC_FILE:
 	{
 		auto file = Emu.GetIdManager().get<lv2_file_t>(fd);
 		file->file->Seek(0);
-		file->file->Read(buffer.begin(), buffer.size());
+		file->file->Read(buffer, sizeof(buffer));
 		break;
 	}
 	}
 
-	if (*buffer.To<be_t<u32>>(0) != 0x47494638 ||
-		(*buffer.To<u16>(4) != 0x6139 && *buffer.To<u16>(4) != 0x6137)) // Error: The first 6 bytes are not a valid GIF signature
+	if (*(be_t<u32>*)buffer != 0x47494638 ||
+		(*(le_t<u16>*)(buffer + 4) != 0x6139 && *(le_t<u16>*)(buffer + 4) != 0x6137)) // Error: The first 6 bytes are not a valid GIF signature
 	{
 		return CELL_GIFDEC_ERROR_STREAM_FORMAT; // Surprisingly there is no error code related with headerss
 	}
@@ -190,19 +190,19 @@ s32 cellGifDecDecodeData(
 	const CellGifDecOutParam& current_outParam = subHandle_data->outParam; 
 
 	//Copy the GIF file to a buffer
-	vm::var<unsigned char[]> gif((u32)fileSize);
+	std::unique_ptr<u8[]> gif(new u8[fileSize]);
 
 	switch(subHandle_data->src.srcSelect.value())
 	{
 	case CELL_GIFDEC_BUFFER:
-		memmove(gif.begin(), subHandle_data->src.streamPtr.get_ptr(), gif.size());
+		std::memcpy(gif.get(), subHandle_data->src.streamPtr.get_ptr(), fileSize);
 		break;
 
 	case CELL_GIFDEC_FILE:
 	{
 		auto file = Emu.GetIdManager().get<lv2_file_t>(fd);
 		file->file->Seek(0);
-		file->file->Read(gif.ptr(), gif.size());
+		file->file->Read(gif.get(), fileSize);
 		break;
 	}
 	}
@@ -211,7 +211,7 @@ s32 cellGifDecDecodeData(
 	int width, height, actual_components;
 	auto image = std::unique_ptr<unsigned char,decltype(&::free)>
 		(
-			stbi_load_from_memory(gif.ptr(), (s32)fileSize, &width, &height, &actual_components, 4),
+			stbi_load_from_memory(gif.get(), (s32)fileSize, &width, &height, &actual_components, 4),
 			&::free
 		);
 

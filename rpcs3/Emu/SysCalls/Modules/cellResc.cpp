@@ -714,7 +714,7 @@ void SetFlipHandler(vm::ptr<void(u32)> handler)
 	}
 }
 
-int cellRescSetDisplayMode(u32 displayMode)
+int cellRescSetDisplayMode(PPUThread& CPU, u32 displayMode)
 {
 	cellResc.Warning("cellRescSetDisplayMode(displayMode=%d)", displayMode);
 
@@ -765,7 +765,7 @@ int cellRescSetDisplayMode(u32 displayMode)
 		else			  m_pCFragmentShader = m_pCFragmentShaderArray[RESC_SHADER_DEFAULT_BILINEAR];
 	}*/
 
-	vm::var<CellVideoOutConfiguration> videocfg;
+	vm::stackvar<CellVideoOutConfiguration> videocfg(CPU);
 	videocfg->resolutionId = RescBufferMode2SysutilResolutionId(s_rescInternalInstance->m_dstMode);
 	videocfg->format       = RescDstFormat2SysutilFormat(s_rescInternalInstance->m_pRescDsts->format );
 	videocfg->aspect       = CELL_VIDEO_OUT_ASPECT_AUTO;
@@ -1030,7 +1030,7 @@ int cellRescSetWaitFlip()
 	return CELL_OK;
 }
 
-int cellRescSetBufferAddress(vm::ptr<u32> colorBuffers, vm::ptr<u32> vertexArray, vm::ptr<u32> fragmentShader)
+int cellRescSetBufferAddress(PPUThread& CPU, vm::ptr<u32> colorBuffers, vm::ptr<u32> vertexArray, vm::ptr<u32> fragmentShader)
 {
 	cellResc.Warning("cellRescSetBufferAddress(colorBuffers_addr=0x%x, vertexArray_addr=0x%x, fragmentShader_addr=0x%x)", colorBuffers.addr(), vertexArray.addr(), fragmentShader.addr());
 
@@ -1050,7 +1050,7 @@ int cellRescSetBufferAddress(vm::ptr<u32> colorBuffers, vm::ptr<u32> vertexArray
 	s_rescInternalInstance->m_vertexArrayEA   = vertexArray.addr();
 	s_rescInternalInstance->m_fragmentUcodeEA = fragmentShader.addr();
 
-	vm::var<be_t<u32>> dstOffset;
+	vm::stackvar<be_t<u32>> dstOffset(CPU);
 	cellGcmAddressToOffset(s_rescInternalInstance->m_colorBuffersEA, dstOffset);
 
 	for (int i=0; i<GetNumColorBuffers(); i++)

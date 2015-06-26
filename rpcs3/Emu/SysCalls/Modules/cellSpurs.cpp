@@ -148,7 +148,7 @@ s32 cellSpursCreateTaskset2(PPUThread& CPU, vm::ptr<CellSpurs> spurs, vm::ptr<Ce
 s32 cellSpursDestroyTaskset2();
 s32 cellSpursTasksetSetExceptionEventHandler(vm::ptr<CellSpursTaskset> taskset, vm::ptr<CellSpursTasksetExceptionEventHandler> handler, vm::ptr<u64> arg);
 s32 cellSpursTasksetUnsetExceptionEventHandler(vm::ptr<CellSpursTaskset> taskset);
-s32 cellSpursLookUpTasksetAddress(vm::ptr<CellSpurs> spurs, vm::pptr<CellSpursTaskset> taskset, u32 id);
+s32 cellSpursLookUpTasksetAddress(PPUThread& CPU, vm::ptr<CellSpurs> spurs, vm::pptr<CellSpursTaskset> taskset, u32 id);
 s32 cellSpursTasksetGetSpursAddress(vm::cptr<CellSpursTaskset> taskset, vm::ptr<u32> spurs);
 s32 cellSpursGetTasksetInfo();
 s32 _cellSpursTasksetAttributeInitialize(vm::ptr<CellSpursTasksetAttribute> attribute, u32 revision, u32 sdk_version, u64 args, vm::cptr<u8> priority, u32 max_contention);
@@ -2902,7 +2902,7 @@ s32 cellSpursEventFlagSet(PPUThread& CPU, vm::ptr<CellSpursEventFlag> eventFlag,
 				vm::stackvar<vm::bptr<CellSpursTaskset>> taskset(CPU);
 				if (eventFlag->isIwl)
 				{
-					cellSpursLookUpTasksetAddress(vm::ptr<CellSpurs>::make((u32)eventFlag->addr), taskset, eventFlag->waitingTaskWklId[i]);
+					cellSpursLookUpTasksetAddress(CPU, vm::ptr<CellSpurs>::make((u32)eventFlag->addr), taskset, eventFlag->waitingTaskWklId[i]);
 				}
 				else
 				{
@@ -3658,7 +3658,7 @@ s32 cellSpursCreateTask(PPUThread& CPU, vm::ptr<CellSpursTaskset> taskset, vm::p
 		return CELL_SPURS_TASK_ERROR_ALIGN;
 	}
 
-	vm::var<be_t<u32>> tmpTaskId;
+	vm::stackvar<be_t<u32>> tmpTaskId(CPU);
 	auto rc = spursCreateTask(taskset, tmpTaskId, vm::ptr<u32>::make(elf_addr), vm::ptr<u32>::make(context_addr), context_size, lsPattern, argument);
 	if (rc != CELL_OK) 
 	{
@@ -3990,7 +3990,7 @@ s32 cellSpursTasksetUnsetExceptionEventHandler(vm::ptr<CellSpursTaskset> taskset
 	return CELL_OK;
 }
 
-s32 cellSpursLookUpTasksetAddress(vm::ptr<CellSpurs> spurs, vm::pptr<CellSpursTaskset> taskset, u32 id)
+s32 cellSpursLookUpTasksetAddress(PPUThread& CPU, vm::ptr<CellSpurs> spurs, vm::pptr<CellSpursTaskset> taskset, u32 id)
 {
 	cellSpurs.Warning("cellSpursLookUpTasksetAddress(spurs=*0x%x, taskset=**0x%x, id=0x%x)", spurs, taskset, id);
 
@@ -3999,7 +3999,7 @@ s32 cellSpursLookUpTasksetAddress(vm::ptr<CellSpurs> spurs, vm::pptr<CellSpursTa
 		return CELL_SPURS_TASK_ERROR_NULL_POINTER;
 	}
 
-	vm::var<be_t<u64>> data;
+	vm::stackvar<be_t<u64>> data(CPU);
 	if (s32 rc = cellSpursGetWorkloadData(spurs, data, id))
 	{
 		// Convert policy module error code to a task error code
