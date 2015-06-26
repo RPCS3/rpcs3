@@ -79,28 +79,12 @@ void D3D12GSRender::ResourceStorage::Reset()
 	m_frameFinishedFence = nullptr;
 	m_frameFinishedHandle = 0;
 
-	for (auto &tmp : m_inUseConstantsBuffers)
-		SAFE_RELEASE(std::get<2>(tmp));
-	for (auto &tmp : m_inUseVertexIndexBuffers)
-		SAFE_RELEASE(std::get<2>(tmp));
-	for (auto &tmp : m_inUseTextureUploadBuffers)
-		SAFE_RELEASE(std::get<2>(tmp));
-	for (auto &tmp : m_inUseTexture2D)
-		SAFE_RELEASE(std::get<2>(tmp));
-	m_inUseConstantsBuffers.clear();
-	m_inUseVertexIndexBuffers.clear();
-	m_inUseTextureUploadBuffers.clear();
-	m_inUseTexture2D.clear();
-
 	m_commandAllocator->Reset();
 	m_textureUploadCommandAllocator->Reset();
 	m_downloadCommandAllocator->Reset();
 	for (ID3D12GraphicsCommandList *gfxCommandList : m_inflightCommandList)
 		gfxCommandList->Release();
 	m_inflightCommandList.clear();
-	for (ID3D12Resource *vertexBuffer : m_inflightResources)
-		vertexBuffer->Release();
-	m_inflightResources.clear();
 }
 
 void D3D12GSRender::ResourceStorage::Init(ID3D12Device *device)
@@ -138,19 +122,8 @@ void D3D12GSRender::ResourceStorage::Init(ID3D12Device *device)
 void D3D12GSRender::ResourceStorage::Release()
 {
 	// NOTE: Should be released only if no command are in flight !
-	for (auto &tmp : m_inUseConstantsBuffers)
-		SAFE_RELEASE(std::get<2>(tmp));
-	for (auto &tmp : m_inUseVertexIndexBuffers)
-		SAFE_RELEASE(std::get<2>(tmp));
-	for (auto &tmp : m_inUseTextureUploadBuffers)
-		SAFE_RELEASE(std::get<2>(tmp));
-	for (auto &tmp : m_inUseTexture2D)
-		SAFE_RELEASE(std::get<2>(tmp));
-
 	m_constantsBufferDescriptorsHeap->Release();
 	m_scaleOffsetDescriptorHeap->Release();
-	for (auto &tmp : m_inflightResources)
-		tmp->Release();
 	m_textureDescriptorsHeap->Release();
 	m_samplerDescriptorHeap->Release();
 	for (auto &tmp : m_inflightCommandList)

@@ -299,13 +299,6 @@ private:
 		ID3D12CommandAllocator *m_downloadCommandAllocator;
 		std::list<ID3D12GraphicsCommandList *> m_inflightCommandList;
 
-		std::vector<ID3D12Resource *> m_inflightResources;
-
-		std::vector<std::tuple<size_t, size_t, ID3D12Resource *> > m_inUseConstantsBuffers;
-		std::vector<std::tuple<size_t, size_t, ID3D12Resource *> > m_inUseVertexIndexBuffers;
-		std::vector<std::tuple<size_t, size_t, ID3D12Resource *> > m_inUseTextureUploadBuffers;
-		std::vector<std::tuple<size_t, size_t, ID3D12Resource *> > m_inUseTexture2D;
-
 		// Constants storage
 		ID3D12DescriptorHeap *m_constantsBufferDescriptorsHeap;
 		size_t m_constantsBufferIndex;
