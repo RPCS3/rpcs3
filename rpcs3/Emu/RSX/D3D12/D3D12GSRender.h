@@ -120,8 +120,8 @@ struct DataHeap
 {
 	T *m_heap;
 	size_t m_size;
-	size_t m_putPos, // Start of free space
-		m_getPos; // End of free space
+	size_t m_putPos; // Start of free space
+	std::atomic<size_t> m_getPos; // End of free space
 	std::vector<std::tuple<size_t, size_t, ID3D12Resource *> > m_resourceStoredSinceLastSync;
 
 	void Init(ID3D12Device *device, size_t heapSize, D3D12_HEAP_TYPE type, D3D12_HEAP_FLAGS flags)
@@ -138,6 +138,7 @@ struct DataHeap
 	bool canAlloc(size_t size) const
 	{
 		size_t allocSize = align(size, Alignment);
+		size_t currentGetPos = m_getPos.load();
 		if (m_putPos + allocSize < m_size)
 		{
 			// range before get
@@ -193,14 +194,14 @@ struct DataHeap
 	 */
 	std::function<void()> getCleaningFunction()
 	{
-		size_t& getPointer = m_getPos;
+		std::atomic<size_t>& getPointer = m_getPos;
 		auto duplicatem_resourceStoredSinceLastSync = m_resourceStoredSinceLastSync;
 		m_resourceStoredSinceLastSync.clear();
 		return [=, &getPointer]() {
 			for (auto tmp : duplicatem_resourceStoredSinceLastSync)
 			{
 				SAFE_RELEASE(std::get<2>(tmp));
-				getPointer = std::get<0>(tmp);
+				getPointer.exchange(std::get<0>(tmp));
 			}
 		};
 	}
