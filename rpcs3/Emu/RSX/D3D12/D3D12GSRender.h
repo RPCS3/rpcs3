@@ -135,7 +135,7 @@ struct DataHeap
 	/**
 	* Does alloc cross get position ?
 	*/
-	bool canAlloc(size_t size)
+	bool canAlloc(size_t size) const
 	{
 		size_t allocSize = align(size, Alignment);
 		if (m_putPos + allocSize < m_size)
