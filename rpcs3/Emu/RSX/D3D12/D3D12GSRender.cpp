@@ -39,7 +39,7 @@ GarbageCollectionThread::GarbageCollectionThread()
 		while (true)
 		{
 			std::unique_lock<std::mutex> lock(m_mutex);
-			if (m_queue.empty())
+			while (m_queue.empty())
 				cv.wait(lock);
 			m_queue.front()();
 			m_queue.pop();
