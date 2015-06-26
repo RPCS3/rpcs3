@@ -1066,6 +1066,10 @@ void D3D12GSRender::Flip()
 		std::this_thread::yield();
 	m_frame->Flip(nullptr);
 
+	// FIXME: Without this call Voodoo Chronicles + Warp trigger an error because 
+	// index/vertex resources are released before being used.
+	m_GC.waitForCompletion();
+
 	ResetTimer();
 }
 
