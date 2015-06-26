@@ -137,26 +137,25 @@ struct DataHeap
 	*/
 	bool canAlloc(size_t size)
 	{
-		size_t putPos = m_putPos, getPos = m_getPos;
 		size_t allocSize = align(size, Alignment);
-		if (putPos + allocSize < m_size)
+		if (m_putPos + allocSize < m_size)
 		{
 			// range before get
-			if (putPos + allocSize < getPos)
+			if (m_putPos + allocSize < m_getPos)
 				return true;
 			// range after get
-			if (putPos > getPos)
+			if (m_putPos > m_getPos)
 				return true;
 			return false;
 		}
 		else
 		{
 			// ..]....[..get..
-			if (putPos < getPos)
+			if (m_putPos < m_getPos)
 				return false;
 			// ..get..]...[...
 			// Actually all resources extending beyond heap space starts at 0
-			if (allocSize > getPos)
+			if (allocSize > m_getPos)
 				return false;
 			return true;
 		}
@@ -165,15 +164,16 @@ struct DataHeap
 	size_t alloc(size_t size)
 	{
 		assert(canAlloc(size));
-		size_t putPos = m_putPos;
-		if (putPos + size < m_size)
+		size_t allocSize = align(size, Alignment);
+		if (m_putPos + allocSize < m_size)
 		{
-			m_putPos += align(size, Alignment);
-			return putPos;
+			size_t oldPutPos = m_putPos;
+			m_putPos += allocSize;
+			return oldPutPos;
 		}
 		else
 		{
-			m_putPos = align(size, Alignment);
+			m_putPos = allocSize;
 			return 0;
 		}
 	}
