@@ -170,6 +170,7 @@ writeTexelsGeneric(const char *src, char *dst, size_t widthInBlock, size_t heigh
 			memcpy((char*)dst + offsetInDst + row * rowPitch, (char*)src + offsetInSrc + row * widthInBlock * blockSize, currentWidth * blockSize);
 
 		offsetInDst += currentHeight * rowPitch;
+		offsetInDst = align(offsetInDst, 512);
 		offsetInSrc += currentHeight * widthInBlock * blockSize;
 		currentHeight = MAX2(currentHeight / 2, 1);
 		currentWidth = MAX2(currentWidth / 2, 1);
