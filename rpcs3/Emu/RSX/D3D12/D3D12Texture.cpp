@@ -566,6 +566,7 @@ ID3D12Resource *uploadSingleTexture(
 			mipInfos = writeTexelsGeneric((char*)pixels, (char*)textureData, w, h, 4, texture.GetMipmap());
 		break;
 	}
+	case CELL_GCM_TEXTURE_A1R5G5B5:
 	case CELL_GCM_TEXTURE_A4R4G4B4:
 	case CELL_GCM_TEXTURE_R5G6B5:
 	{
