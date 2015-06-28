@@ -47,6 +47,7 @@
     <ClCompile Include="Emu\RSX\D3D12\D3D12PipelineState.cpp" />
     <ClCompile Include="Emu\RSX\D3D12\D3D12RenderTargetSets.cpp" />
     <ClCompile Include="Emu\RSX\D3D12\D3D12Texture.cpp" />
+    <ClCompile Include="Emu\RSX\D3D12\D3D12Utils.cpp" />
     <ClCompile Include="Emu\RSX\D3D12\D3D12VertexProgramDecompiler.cpp" />
     <ClCompile Include="Emu\RSX\D3D12\D3D12CommonDecompiler.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLCommonDecompiler.cpp" />

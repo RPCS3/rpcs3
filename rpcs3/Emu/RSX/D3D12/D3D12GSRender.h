@@ -284,6 +284,7 @@ private:
 	 */
 	ID3D12PipelineState *m_convertPSO;
 	ID3D12RootSignature *m_convertRootSignature;
+	void initConvertShader();
 
 
 	/**
