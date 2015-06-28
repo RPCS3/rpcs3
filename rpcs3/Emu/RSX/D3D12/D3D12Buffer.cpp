@@ -313,7 +313,7 @@ std::pair<std::vector<D3D12_VERTEX_BUFFER_VIEW>, D3D12_INDEX_BUFFER_VIEW> D3D12G
 		result.first.push_back(vertexBufferView);
 	}
 
-	// Only handle quads now
+	// Only handle quads and triangle fan now
 	switch (m_draw_mode - 1)
 	{
 	default:
@@ -323,11 +323,11 @@ std::pair<std::vector<D3D12_VERTEX_BUFFER_VIEW>, D3D12_INDEX_BUFFER_VIEW> D3D12G
 	case GL_LINE_STRIP:
 	case GL_TRIANGLES:
 	case GL_TRIANGLE_STRIP:
-	case GL_TRIANGLE_FAN:
 	case GL_QUAD_STRIP:
 	case GL_POLYGON:
 		m_forcedIndexBuffer = false;
 		break;
+	case GL_TRIANGLE_FAN:
 	case GL_QUADS:
 		m_forcedIndexBuffer = true;
 		break;
@@ -364,7 +364,17 @@ std::pair<std::vector<D3D12_VERTEX_BUFFER_VIEW>, D3D12_INDEX_BUFFER_VIEW> D3D12G
 		else if (indexed_draw && m_forcedIndexBuffer)
 			indexCount = 6 * m_indexed_array.m_data.size() / (4 * indexSize);
 		else
-			indexCount = m_draw_array_count * 6 / 4;
+		{
+			switch (m_draw_mode - 1)
+			{
+			case GL_TRIANGLE_FAN:
+				indexCount = (m_draw_array_count - 2) * 3;
+				break;
+			case GL_QUADS:
+				indexCount = m_draw_array_count * 6 / 4;
+				break;
+			}
+		}
 		size_t subBufferSize = align(indexCount * indexSize, 64);
 
 		assert(m_vertexIndexData.canAlloc(subBufferSize));
@@ -386,6 +396,7 @@ std::pair<std::vector<D3D12_VERTEX_BUFFER_VIEW>, D3D12_INDEX_BUFFER_VIEW> D3D12G
 			streamBuffer(bufferMap, m_indexed_array.m_data.data(), subBufferSize);
 		else if (indexed_draw && m_forcedIndexBuffer)
 		{
+			// Only quads supported now
 			switch (m_indexed_array.m_type)
 			{
 			case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_32:
@@ -399,17 +410,31 @@ std::pair<std::vector<D3D12_VERTEX_BUFFER_VIEW>, D3D12_INDEX_BUFFER_VIEW> D3D12G
 		else
 		{
 			unsigned short *typedDst = static_cast<unsigned short *>(bufferMap);
-			for (unsigned i = 0; i < m_draw_array_count / 4; i++)
+			switch (m_draw_mode - 1)
 			{
-				// First triangle
-				typedDst[6 * i] = 4 * i;
-				typedDst[6 * i + 1] = 4 * i + 1;
-				typedDst[6 * i + 2] = 4 * i + 2;
-				// Second triangle
-				typedDst[6 * i + 3] = 4 * i + 2;
-				typedDst[6 * i + 4] = 4 * i + 3;
-				typedDst[6 * i + 5] = 4 * i;
+			case GL_TRIANGLE_FAN:
+				for (unsigned i = 0; i < (m_draw_array_count - 2); i++)
+				{
+					typedDst[3 * i] = 0;
+					typedDst[3 * i + 1] = i + 2 - 1;
+					typedDst[3 * i + 2] = i + 2;
+				}
+				break;
+			case GL_QUADS:
+				for (unsigned i = 0; i < m_draw_array_count / 4; i++)
+				{
+					// First triangle
+					typedDst[6 * i] = 4 * i;
+					typedDst[6 * i + 1] = 4 * i + 1;
+					typedDst[6 * i + 2] = 4 * i + 2;
+					// Second triangle
+					typedDst[6 * i + 3] = 4 * i + 2;
+					typedDst[6 * i + 4] = 4 * i + 3;
+					typedDst[6 * i + 5] = 4 * i;
+				}
+				break;
 			}
+
 		}
 		indexBuffer->Unmap(0, nullptr);
 		m_vertexIndexData.m_resourceStoredSinceLastSync.push_back(std::make_tuple(heapOffset, subBufferSize, indexBuffer));

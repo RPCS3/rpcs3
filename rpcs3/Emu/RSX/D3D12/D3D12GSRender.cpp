@@ -664,7 +664,8 @@ void D3D12GSRender::ExecCMD()
 		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 		break;
 	case GL_TRIANGLE_FAN:
-		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST_ADJ);
+		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		requireIndexBuffer = true;
 		break;
 	case GL_QUADS:
 		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -680,7 +681,7 @@ void D3D12GSRender::ExecCMD()
 	// Indexed quad
 	if (m_forcedIndexBuffer && m_indexed_array.m_count)
 		commandList->DrawIndexedInstanced((UINT)indexCount, 1, 0, 0, 0);
-	// Non indexed quad
+	// Non indexed quad/triangle fan
 	else if (m_forcedIndexBuffer && !m_indexed_array.m_count)
 		commandList->DrawIndexedInstanced((UINT)indexCount, 1, 0, (UINT)m_draw_array_first, 0);
 	// Indexed triangles
