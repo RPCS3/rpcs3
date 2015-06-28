@@ -237,6 +237,7 @@ private:
 	std::mutex mut;
 	std::list <std::tuple<u32, u32, u32> > m_protectedTextures; // Texaddress, start of protected range, size of protected range
 	std::vector<ID3D12Resource *> m_texToClean;
+	bool invalidateTexture(u32 addr);
 
 	GarbageCollectionThread m_GC;
 	// Copy of RTT to be used as texture

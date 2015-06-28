@@ -149,34 +149,40 @@ void D3D12GSRender::Shader::Release()
 
 extern std::function<bool(u32 addr)> gfxHandler;
 
+bool D3D12GSRender::invalidateTexture(u32 addr)
+{
+	bool handled = false;
+	auto It = m_protectedTextures.begin(), E = m_protectedTextures.end();
+	for (; It != E;)
+	{
+		auto currentIt = It;
+		++It;
+		auto protectedTexture = *currentIt;
+		u32 protectedRangeStart = std::get<1>(protectedTexture), protectedRangeSize = std::get<2>(protectedTexture);
+		if (addr - protectedRangeStart < protectedRangeSize)
+		{
+			std::lock_guard<std::mutex> lock(mut);
+			u32 texadrr = std::get<0>(protectedTexture);
+			ID3D12Resource *texToErase = m_texturesCache[texadrr];
+			m_texturesCache.erase(texadrr);
+			m_texToClean.push_back(texToErase);
+
+			vm::page_protect(protectedRangeStart, protectedRangeSize, 0, vm::page_writable, 0);
+			m_protectedTextures.erase(currentIt);
+			handled = true;
+		}
+	}
+	return handled;
+}
+
 D3D12GSRender::D3D12GSRender()
 	: GSRender(), m_PSO(nullptr)
 {
-
 	gfxHandler = [this](u32 addr) {
-		bool handled = false;
-		auto It = m_protectedTextures.begin(), E = m_protectedTextures.end();
-		for (; It != E;)
-		{
-			auto currentIt = It;
-			++It;
-			auto protectedTexture = *currentIt;
-			u32 protectedRangeStart = std::get<1>(protectedTexture), protectedRangeSize = std::get<2>(protectedTexture);
-			if (addr - protectedRangeStart < protectedRangeSize)
-			{
-				std::lock_guard<std::mutex> lock(mut);
-				u32 texadrr = std::get<0>(protectedTexture);
-				LOG_WARNING(RSX, "Modified %x, starting again", texadrr);
-				ID3D12Resource *texToErase = m_texturesCache[texadrr];
-				m_texturesCache.erase(texadrr);
-				m_texToClean.push_back(texToErase);
-
-				vm::page_protect(protectedRangeStart, protectedRangeSize, 0, vm::page_writable, 0);
-				m_protectedTextures.erase(currentIt);
-				handled = true;
-			}
-		}
-		return handled;
+		bool result = invalidateTexture(addr);
+		if (result)
+				LOG_WARNING(RSX, "Reporting Cell writing to %x", addr);
+		return result;
 	};
 	loadD3D12FunctionPointers();
 	if (Ini.GSDebugOutputEnable.GetValue())
@@ -1072,6 +1078,8 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 		dst.PlacedFootprint.Footprint.Width = m_surface_clip_w;
 		dst.PlacedFootprint.Footprint.RowPitch = (UINT)depthRowPitch;
 		downloadCommandList->CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
+
+		invalidateTexture(GetAddress(m_surface_offset_z, m_context_dma_z - 0xfeed0000));
 	}
 
 	ID3D12Resource *rtt0, *rtt1, *rtt2, *rtt3;
@@ -1108,6 +1116,11 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 			if (m_context_dma_color_d) rtt3 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[3], downloadCommandList);
 			break;
 		}
+
+		invalidateTexture(GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000));
+		invalidateTexture(GetAddress(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000));
+		invalidateTexture(GetAddress(m_surface_offset_c, m_context_dma_color_c - 0xfeed0000));
+		invalidateTexture(GetAddress(m_surface_offset_d, m_context_dma_color_d - 0xfeed0000));
 	}
 	if (needTransfer)
 	{
