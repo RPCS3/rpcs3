@@ -676,9 +676,9 @@ void D3D12GSRender::ExecCMD()
 	}
 
 	if (m_renderingInfo.m_indexed)
-		commandList->DrawIndexedInstanced((UINT)m_renderingInfo.m_count, 1, 0, m_renderingInfo.m_baseVertex, 0);
+		commandList->DrawIndexedInstanced((UINT)m_renderingInfo.m_count, 1, 0, (UINT)m_renderingInfo.m_baseVertex, 0);
 	else
-		commandList->DrawInstanced((UINT)m_renderingInfo.m_count, 1, m_renderingInfo.m_baseVertex, 0);
+		commandList->DrawInstanced((UINT)m_renderingInfo.m_count, 1, (UINT)m_renderingInfo.m_baseVertex, 0);
 
 	check(commandList->Close());
 	m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**)&commandList);
