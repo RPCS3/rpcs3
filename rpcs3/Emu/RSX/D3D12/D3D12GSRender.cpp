@@ -816,7 +816,15 @@ void D3D12GSRender::Flip()
 	srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 	srvDesc.Texture2D.MipLevels = 1;
-	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	if (isFlipSurfaceInLocalMemory(m_surface_color_target))
+		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	else
+		srvDesc.Shader4ComponentMapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(
+			D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_1,
+			D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_2,
+			D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_3,
+			D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_0,
+			);
 	m_device->CreateShaderResourceView(resourceToFlip, &srvDesc, CPUHandle);
 
 	D3D12_SAMPLER_DESC samplerDesc = {};
