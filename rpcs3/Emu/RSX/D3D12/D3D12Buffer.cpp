@@ -275,9 +275,9 @@ isContained(const std::vector<std::pair<u32, u32> > &ranges, const std::pair<u32
 	return false;
 }
 
-std::pair<std::vector<D3D12_VERTEX_BUFFER_VIEW>, D3D12_INDEX_BUFFER_VIEW> D3D12GSRender::UploadVertexBuffers(bool indexed_draw)
+std::vector<D3D12_VERTEX_BUFFER_VIEW> D3D12GSRender::UploadVertexBuffers(bool indexed_draw)
 {
-	std::pair<std::vector<D3D12_VERTEX_BUFFER_VIEW>, D3D12_INDEX_BUFFER_VIEW> result;
+	std::vector<D3D12_VERTEX_BUFFER_VIEW> result;
 	const std::vector<VertexBufferFormat> &vertexBufferFormat = FormatVertexData(m_vertex_data);
 	m_IASet = getIALayout(m_device, vertexBufferFormat, m_vertex_data);
 
@@ -310,10 +310,17 @@ std::pair<std::vector<D3D12_VERTEX_BUFFER_VIEW>, D3D12_INDEX_BUFFER_VIEW> D3D12G
 		vertexBufferView.BufferLocation = vertexBuffer->GetGPUVirtualAddress();
 		vertexBufferView.SizeInBytes = (UINT)subBufferSize;
 		vertexBufferView.StrideInBytes = (UINT)vbf.stride;
-		result.first.push_back(vertexBufferView);
+		result.push_back(vertexBufferView);
 	}
 
+	return result;
+}
+
+D3D12_INDEX_BUFFER_VIEW D3D12GSRender::uploadIndexBuffers(bool indexed_draw)
+{
+	D3D12_INDEX_BUFFER_VIEW indexBufferView = {};
 	// Only handle quads and triangle fan now
+	bool forcedIndexBuffer = false;
 	switch (m_draw_mode - 1)
 	{
 	default:
@@ -325,126 +332,140 @@ std::pair<std::vector<D3D12_VERTEX_BUFFER_VIEW>, D3D12_INDEX_BUFFER_VIEW> D3D12G
 	case GL_TRIANGLE_STRIP:
 	case GL_QUAD_STRIP:
 	case GL_POLYGON:
-		m_forcedIndexBuffer = false;
+		forcedIndexBuffer = false;
 		break;
 	case GL_TRIANGLE_FAN:
 	case GL_QUADS:
-		m_forcedIndexBuffer = true;
+		forcedIndexBuffer = true;
 		break;
 	}
 
-	if (indexed_draw || m_forcedIndexBuffer)
+	// No need for index buffer
+	if (!indexed_draw && !forcedIndexBuffer)
 	{
-		D3D12_INDEX_BUFFER_VIEW indexBufferView = {};
-		size_t indexSize;
+		m_renderingInfo.m_indexed = false;
+		m_renderingInfo.m_count = m_draw_array_count;
+		m_renderingInfo.m_baseVertex = m_draw_array_first;
+		return indexBufferView;
+	}
 
-		if (!indexed_draw)
+	m_renderingInfo.m_indexed = true;
+
+	// Index type
+	size_t indexSize;
+	if (!indexed_draw)
+	{
+		indexBufferView.Format = DXGI_FORMAT_R16_UINT;
+		indexSize = 2;
+	}
+	else
+	{
+		switch (m_indexed_array.m_type)
 		{
+		default: abort();
+		case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_16:
 			indexBufferView.Format = DXGI_FORMAT_R16_UINT;
 			indexSize = 2;
+			break;
+		case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_32:
+			indexBufferView.Format = DXGI_FORMAT_R32_UINT;
+			indexSize = 4;
+			break;
 		}
-		else
-		{
-			switch (m_indexed_array.m_type)
-			{
-			default: abort();
-			case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_16:
-				indexBufferView.Format = DXGI_FORMAT_R16_UINT;
-				indexSize = 2;
-				break;
-			case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_32:
-				indexBufferView.Format = DXGI_FORMAT_R32_UINT;
-				indexSize = 4;
-				break;
-			}
-		}
-
-		if (indexed_draw && !m_forcedIndexBuffer)
-			indexCount = m_indexed_array.m_data.size() / indexSize;
-		else if (indexed_draw && m_forcedIndexBuffer)
-			indexCount = 6 * m_indexed_array.m_data.size() / (4 * indexSize);
-		else
-		{
-			switch (m_draw_mode - 1)
-			{
-			case GL_TRIANGLE_FAN:
-				indexCount = (m_draw_array_count - 2) * 3;
-				break;
-			case GL_QUADS:
-				indexCount = m_draw_array_count * 6 / 4;
-				break;
-			}
-		}
-		size_t subBufferSize = align(indexCount * indexSize, 64);
-
-		assert(m_vertexIndexData.canAlloc(subBufferSize));
-		size_t heapOffset = m_vertexIndexData.alloc(subBufferSize);
-
-		ID3D12Resource *indexBuffer;
-		check(m_device->CreatePlacedResource(
-			m_vertexIndexData.m_heap,
-			heapOffset,
-			&getBufferResourceDesc(subBufferSize),
-			D3D12_RESOURCE_STATE_GENERIC_READ,
-			nullptr,
-			IID_PPV_ARGS(&indexBuffer)
-			));
-
-		void *bufferMap;
-		check(indexBuffer->Map(0, nullptr, (void**)&bufferMap));
-		if (indexed_draw && !m_forcedIndexBuffer)
-			streamBuffer(bufferMap, m_indexed_array.m_data.data(), subBufferSize);
-		else if (indexed_draw && m_forcedIndexBuffer)
-		{
-			// Only quads supported now
-			switch (m_indexed_array.m_type)
-			{
-			case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_32:
-				expandIndexedQuads<unsigned int>(bufferMap, m_indexed_array.m_data.data(), m_indexed_array.m_data.size() / 4);
-				break;
-			case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_16:
-				expandIndexedQuads<unsigned short>(bufferMap, m_indexed_array.m_data.data(), m_indexed_array.m_data.size() / 2);
-				break;
-			}
-		}
-		else
-		{
-			unsigned short *typedDst = static_cast<unsigned short *>(bufferMap);
-			switch (m_draw_mode - 1)
-			{
-			case GL_TRIANGLE_FAN:
-				for (unsigned i = 0; i < (m_draw_array_count - 2); i++)
-				{
-					typedDst[3 * i] = 0;
-					typedDst[3 * i + 1] = i + 2 - 1;
-					typedDst[3 * i + 2] = i + 2;
-				}
-				break;
-			case GL_QUADS:
-				for (unsigned i = 0; i < m_draw_array_count / 4; i++)
-				{
-					// First triangle
-					typedDst[6 * i] = 4 * i;
-					typedDst[6 * i + 1] = 4 * i + 1;
-					typedDst[6 * i + 2] = 4 * i + 2;
-					// Second triangle
-					typedDst[6 * i + 3] = 4 * i + 2;
-					typedDst[6 * i + 4] = 4 * i + 3;
-					typedDst[6 * i + 5] = 4 * i;
-				}
-				break;
-			}
-
-		}
-		indexBuffer->Unmap(0, nullptr);
-		m_vertexIndexData.m_resourceStoredSinceLastSync.push_back(std::make_tuple(heapOffset, subBufferSize, indexBuffer));
-
-		indexBufferView.SizeInBytes = (UINT)subBufferSize;
-		indexBufferView.BufferLocation = indexBuffer->GetGPUVirtualAddress();
-
-		result.second = indexBufferView;
 	}
-	return result;
+
+	// Index count
+	if (indexed_draw && !forcedIndexBuffer)
+		m_renderingInfo.m_count = m_indexed_array.m_data.size() / indexSize;
+	else if (indexed_draw && forcedIndexBuffer)
+		m_renderingInfo.m_count = 6 * m_indexed_array.m_data.size() / (4 * indexSize);
+	else
+	{
+		switch (m_draw_mode - 1)
+		{
+		case GL_TRIANGLE_FAN:
+			m_renderingInfo.m_count = (m_draw_array_count - 2) * 3;
+			break;
+		case GL_QUADS:
+			m_renderingInfo.m_count = m_draw_array_count * 6 / 4;
+			break;
+		}
+	}
+
+	// Base vertex
+	if (!indexed_draw && forcedIndexBuffer)
+		m_renderingInfo.m_baseVertex = m_draw_array_first;
+	else
+		m_renderingInfo.m_baseVertex = 0;
+
+	// Alloc
+	size_t subBufferSize = align(m_renderingInfo.m_count * indexSize, 64);
+
+	assert(m_vertexIndexData.canAlloc(subBufferSize));
+	size_t heapOffset = m_vertexIndexData.alloc(subBufferSize);
+
+	ID3D12Resource *indexBuffer;
+	check(m_device->CreatePlacedResource(
+		m_vertexIndexData.m_heap,
+		heapOffset,
+		&getBufferResourceDesc(subBufferSize),
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		IID_PPV_ARGS(&indexBuffer)
+		));
+
+	void *bufferMap;
+	check(indexBuffer->Map(0, nullptr, (void**)&bufferMap));
+	if (indexed_draw && !forcedIndexBuffer)
+		streamBuffer(bufferMap, m_indexed_array.m_data.data(), subBufferSize);
+	else if (indexed_draw && forcedIndexBuffer)
+	{
+		// Only quads supported now
+		switch (m_indexed_array.m_type)
+		{
+		case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_32:
+			expandIndexedQuads<unsigned int>(bufferMap, m_indexed_array.m_data.data(), m_indexed_array.m_data.size() / 4);
+			break;
+		case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_16:
+			expandIndexedQuads<unsigned short>(bufferMap, m_indexed_array.m_data.data(), m_indexed_array.m_data.size() / 2);
+			break;
+		}
+	}
+	else
+	{
+		unsigned short *typedDst = static_cast<unsigned short *>(bufferMap);
+		switch (m_draw_mode - 1)
+		{
+		case GL_TRIANGLE_FAN:
+			for (unsigned i = 0; i < (m_draw_array_count - 2); i++)
+			{
+				typedDst[3 * i] = 0;
+				typedDst[3 * i + 1] = i + 2 - 1;
+				typedDst[3 * i + 2] = i + 2;
+			}
+			break;
+		case GL_QUADS:
+			for (unsigned i = 0; i < m_draw_array_count / 4; i++)
+			{
+				// First triangle
+				typedDst[6 * i] = 4 * i;
+				typedDst[6 * i + 1] = 4 * i + 1;
+				typedDst[6 * i + 2] = 4 * i + 2;
+				// Second triangle
+				typedDst[6 * i + 3] = 4 * i + 2;
+				typedDst[6 * i + 4] = 4 * i + 3;
+				typedDst[6 * i + 5] = 4 * i;
+			}
+			break;
+		}
+
+	}
+	indexBuffer->Unmap(0, nullptr);
+	m_vertexIndexData.m_resourceStoredSinceLastSync.push_back(std::make_tuple(heapOffset, subBufferSize, indexBuffer));
+
+	indexBufferView.SizeInBytes = (UINT)subBufferSize;
+	indexBufferView.BufferLocation = indexBuffer->GetGPUVirtualAddress();
+	return indexBufferView;
 }
 
 void D3D12GSRender::setScaleOffset()

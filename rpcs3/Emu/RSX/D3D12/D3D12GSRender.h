@@ -331,8 +331,12 @@ private:
 	DataHeap<ID3D12Heap, 65536> m_UAVHeap;
 	DataHeap<ID3D12Heap, 65536> m_readbackResources;
 
-	bool m_forcedIndexBuffer;
-	size_t indexCount;
+	struct
+	{
+		bool m_indexed;
+		size_t m_count;
+		size_t m_baseVertex;
+	} m_renderingInfo;
 
 	RenderTargets m_rtts;
 
@@ -372,7 +376,8 @@ private:
 	virtual void Close() override;
 
 	bool LoadProgram();
-	std::pair<std::vector<D3D12_VERTEX_BUFFER_VIEW>, D3D12_INDEX_BUFFER_VIEW> UploadVertexBuffers(bool indexed_draw = false);
+	std::vector<D3D12_VERTEX_BUFFER_VIEW> UploadVertexBuffers(bool indexed_draw = false);
+	D3D12_INDEX_BUFFER_VIEW uploadIndexBuffers(bool indexed_draw = false);
 	void setScaleOffset();
 	void FillVertexShaderConstantsBuffer();
 	void FillPixelShaderConstantsBuffer();

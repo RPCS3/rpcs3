@@ -508,10 +508,11 @@ void D3D12GSRender::ExecCMD()
 	std::chrono::time_point<std::chrono::system_clock> startVertexTime = std::chrono::system_clock::now();
 	if (m_indexed_array.m_count || m_draw_array_count)
 	{
-		const std::pair<std::vector<D3D12_VERTEX_BUFFER_VIEW>, D3D12_INDEX_BUFFER_VIEW> &vertexIndexBufferViews = UploadVertexBuffers(m_indexed_array.m_count ? true : false);
-		commandList->IASetVertexBuffers(0, (UINT)vertexIndexBufferViews.first.size(), vertexIndexBufferViews.first.data());
-		if (m_forcedIndexBuffer || m_indexed_array.m_count)
-			commandList->IASetIndexBuffer(&vertexIndexBufferViews.second);
+		const std::vector<D3D12_VERTEX_BUFFER_VIEW> &vertexBufferViews = UploadVertexBuffers(m_indexed_array.m_count ? true : false);
+		const D3D12_INDEX_BUFFER_VIEW &indexBufferView = uploadIndexBuffers(m_indexed_array.m_count ? true : false);
+		commandList->IASetVertexBuffers(0, (UINT)vertexBufferViews.size(), vertexBufferViews.data());
+		if (m_renderingInfo.m_indexed)
+			commandList->IASetIndexBuffer(&indexBufferView);
 	}
 	std::chrono::time_point<std::chrono::system_clock> endVertexTime = std::chrono::system_clock::now();
 	m_timers.m_vertexUploadDuration += std::chrono::duration_cast<std::chrono::microseconds>(endVertexTime - startVertexTime).count();
@@ -635,14 +636,13 @@ void D3D12GSRender::ExecCMD()
 
 	D3D12_RECT box =
 	{
-		0, 
+		0,
 		0,
 		(LONG)m_surface_clip_w,
 		(LONG)m_surface_clip_h,
 	};
 	commandList->RSSetScissorRects(1, &box);
 
-	bool requireIndexBuffer = false;
 	switch (m_draw_mode - 1)
 	{
 	case GL_POINTS:
@@ -664,31 +664,21 @@ void D3D12GSRender::ExecCMD()
 		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 		break;
 	case GL_TRIANGLE_FAN:
-		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		requireIndexBuffer = true;
-		break;
 	case GL_QUADS:
 		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		requireIndexBuffer = true;
+		break;
 	case GL_QUAD_STRIP:
 	case GL_POLYGON:
 	default:
 		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-//		LOG_ERROR(RSX, "Unsupported primitive type");
+		LOG_ERROR(RSX, "Unsupported primitive type");
 		break;
 	}
 
-	// Indexed quad
-	if (m_forcedIndexBuffer && m_indexed_array.m_count)
-		commandList->DrawIndexedInstanced((UINT)indexCount, 1, 0, 0, 0);
-	// Non indexed quad/triangle fan
-	else if (m_forcedIndexBuffer && !m_indexed_array.m_count)
-		commandList->DrawIndexedInstanced((UINT)indexCount, 1, 0, (UINT)m_draw_array_first, 0);
-	// Indexed triangles
-	else if (m_indexed_array.m_count)
-		commandList->DrawIndexedInstanced((UINT)m_indexed_array.m_data.size() / ((m_indexed_array.m_type == CELL_GCM_DRAW_INDEX_ARRAY_TYPE_16) ? 2 : 4), 1, 0, 0, 0);
-	else if (m_draw_array_count)
-		commandList->DrawInstanced(m_draw_array_count, 1, m_draw_array_first, 0);
+	if (m_renderingInfo.m_indexed)
+		commandList->DrawIndexedInstanced((UINT)m_renderingInfo.m_count, 1, 0, m_renderingInfo.m_baseVertex, 0);
+	else
+		commandList->DrawInstanced((UINT)m_renderingInfo.m_count, 1, m_renderingInfo.m_baseVertex, 0);
 
 	check(commandList->Close());
 	m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**)&commandList);
