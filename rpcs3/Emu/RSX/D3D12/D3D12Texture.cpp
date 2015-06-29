@@ -80,11 +80,8 @@ D3D12_TEXTURE_ADDRESS_MODE getSamplerWrap(size_t wrap)
 	case CELL_GCM_TEXTURE_MIRROR_ONCE_BORDER: return D3D12_TEXTURE_ADDRESS_MODE_MIRROR_ONCE;
 	case CELL_GCM_TEXTURE_MIRROR_ONCE_CLAMP: return D3D12_TEXTURE_ADDRESS_MODE_MIRROR_ONCE;
 	}
-
 	return D3D12_TEXTURE_ADDRESS_MODE_WRAP;
 }
-
-
 
 static
 D3D12_FILTER getSamplerFilter(u32 minFilter, u32 magFilter)
@@ -134,6 +131,23 @@ D3D12_FILTER getSamplerFilter(u32 minFilter, u32 magFilter)
 	}
 
 	return D3D12_ENCODE_BASIC_FILTER(min, mag, mip, D3D12_FILTER_REDUCTION_TYPE_STANDARD);
+}
+
+static
+D3D12_SAMPLER_DESC getSamplerDesc(const RSXTexture &texture)
+{
+	D3D12_SAMPLER_DESC samplerDesc = {};
+	samplerDesc.Filter = getSamplerFilter(texture.GetMinFilter(), texture.GetMagFilter());
+	samplerDesc.AddressU = getSamplerWrap(texture.GetWrapS());
+	samplerDesc.AddressV = getSamplerWrap(texture.GetWrapT());
+	samplerDesc.AddressW = getSamplerWrap(texture.GetWrapR());
+	samplerDesc.ComparisonFunc = getSamplerCompFunc[texture.GetZfunc()];
+	samplerDesc.MaxAnisotropy = (UINT)getSamplerMaxAniso(texture.GetMaxAniso());
+	samplerDesc.MipLODBias = texture.GetBias();
+	samplerDesc.BorderColor[4] = (FLOAT)texture.GetBorderColor();
+	samplerDesc.MinLOD = (FLOAT)(texture.GetMinLOD() >> 8);
+	samplerDesc.MaxLOD = (FLOAT)(texture.GetMaxLOD() >> 8);
+	return samplerDesc;
 }
 
 struct MipmapLevelInfo
@@ -866,20 +880,10 @@ size_t D3D12GSRender::UploadTextures()
 		Handle.ptr += (getCurrentResourceStorage().m_currentTextureIndex + usedTexture) * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 		m_device->CreateShaderResourceView(vramTexture, &srvDesc, Handle);
 
-		D3D12_SAMPLER_DESC samplerDesc = {};
-		samplerDesc.Filter = getSamplerFilter(m_textures[i].GetMinFilter(), m_textures[i].GetMagFilter());
-		samplerDesc.AddressU = getSamplerWrap(m_textures[i].GetWrapS());
-		samplerDesc.AddressV = getSamplerWrap(m_textures[i].GetWrapT());
-		samplerDesc.AddressW = getSamplerWrap(m_textures[i].GetWrapR());
-		samplerDesc.ComparisonFunc = getSamplerCompFunc[m_textures[i].GetZfunc()];
-		samplerDesc.MaxAnisotropy = (UINT)getSamplerMaxAniso(m_textures[i].GetMaxAniso());
-		samplerDesc.MipLODBias = m_textures[i].GetBias();
-		samplerDesc.BorderColor[4] = (FLOAT)m_textures[i].GetBorderColor();
-		samplerDesc.MinLOD = (FLOAT)(m_textures[i].GetMinLOD() >> 8);
-		samplerDesc.MaxLOD = (FLOAT)(m_textures[i].GetMaxLOD() >> 8);
+
 		Handle = getCurrentResourceStorage().m_samplerDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
 		Handle.ptr += (getCurrentResourceStorage().m_currentTextureIndex + usedTexture) * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
-		m_device->CreateSampler(&samplerDesc, Handle);
+		m_device->CreateSampler(&getSamplerDesc(m_textures[i]), Handle);
 
 		usedTexture++;
 	}
