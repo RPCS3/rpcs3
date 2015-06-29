@@ -313,6 +313,8 @@ private:
 		ID3D12DescriptorHeap *m_samplerDescriptorHeap;
 		size_t m_currentTextureIndex;
 
+		ID3D12Resource *m_RAMFramebuffer;
+
 		void Reset();
 		void Init(ID3D12Device *device);
 		void Release();
