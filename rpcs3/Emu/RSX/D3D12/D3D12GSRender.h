@@ -333,9 +333,9 @@ private:
 
 	struct
 	{
-		bool m_indexed;
-		size_t m_count;
-		size_t m_baseVertex;
+		bool m_indexed; /*<! is draw call using an index buffer */
+		size_t m_count; /*<! draw call vertex count */
+		size_t m_baseVertex; /*<! Starting vertex for draw call */
 	} m_renderingInfo;
 
 	RenderTargets m_rtts;
