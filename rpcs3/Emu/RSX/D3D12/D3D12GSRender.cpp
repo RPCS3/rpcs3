@@ -772,7 +772,7 @@ void D3D12GSRender::Flip()
 		src.PlacedFootprint.Footprint.Width = (UINT)w;
 		src.PlacedFootprint.Footprint.Height = (UINT)h;
 		src.PlacedFootprint.Footprint.Depth = (UINT)1;
-		src.PlacedFootprint.Footprint.RowPitch = rowPitch;
+		src.PlacedFootprint.Footprint.RowPitch = (UINT)rowPitch;
 		commandList->CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
 
 		commandList->ResourceBarrier(1, &getResourceBarrierTransition(storage.m_RAMFramebuffer, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ));
