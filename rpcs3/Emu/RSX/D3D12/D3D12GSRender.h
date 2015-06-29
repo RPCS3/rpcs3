@@ -376,8 +376,22 @@ private:
 	virtual void Close() override;
 
 	bool LoadProgram();
+
+	/**
+	 * Create as little vertex buffer as possible to hold all vertex info (in upload heap),
+	 * create corresponding IA layout that can be used for load program and
+	 * returns a vector of vertex buffer view that can be passed to IASetVertexBufferView().
+	 */
 	std::vector<D3D12_VERTEX_BUFFER_VIEW> UploadVertexBuffers(bool indexed_draw = false);
+
+	/**
+	 * Create index buffer for indexed rendering and non native primitive format if nedded, and
+	 * update m_renderingInfo member accordingly. If m_renderingInfo::m_indexed is true,
+	 * returns an index buffer view that can be passed to a command list.
+	 */
 	D3D12_INDEX_BUFFER_VIEW uploadIndexBuffers(bool indexed_draw = false);
+
+
 	void setScaleOffset();
 	void FillVertexShaderConstantsBuffer();
 	void FillPixelShaderConstantsBuffer();
