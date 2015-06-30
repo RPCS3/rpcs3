@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Emu/System.h"
+#include "Emu/IdManager.h"
 #include "Emu/ARMv7/PSVFuncList.h"
 #include "Emu/ARMv7/PSVObjectList.h"
 
@@ -45,48 +46,43 @@ s32 sceKernelCreateThread(
 	sceLibKernel.Warning("sceKernelCreateThread(pName=*0x%x, entry=*0x%x, initPriority=%d, stackSize=0x%x, attr=0x%x, cpuAffinityMask=0x%x, pOptParam=*0x%x)",
 		pName, entry, initPriority, stackSize, attr, cpuAffinityMask, pOptParam);
 
-	auto t = Emu.GetCPU().AddThread(CPU_THREAD_ARMv7);
+	auto armv7 = Emu.GetIdManager().make_ptr<ARMv7Thread>(pName.get_ptr());
 
-	auto& armv7 = static_cast<ARMv7Thread&>(*t);
+	armv7->PC = entry.addr();
+	armv7->prio = initPriority;
+	armv7->stack_size = stackSize;
+	armv7->Run();
 
-	armv7.SetEntry(entry.addr());
-	armv7.SetPrio(initPriority);
-	armv7.SetStackSize(stackSize);
-	armv7.SetName(pName.get_ptr());
-	armv7.Run();
-
-	return armv7.GetId();
+	return armv7->GetId();
 }
 
 s32 sceKernelStartThread(s32 threadId, u32 argSize, vm::cptr<void> pArgBlock)
 {
 	sceLibKernel.Warning("sceKernelStartThread(threadId=0x%x, argSize=0x%x, pArgBlock=*0x%x)", threadId, argSize, pArgBlock);
 
-	const auto t = Emu.GetCPU().GetThread(threadId, CPU_THREAD_ARMv7);
+	const auto thread = Emu.GetIdManager().get<ARMv7Thread>(threadId);
 
-	if (!t)
+	if (!thread)
 	{
 		return SCE_KERNEL_ERROR_INVALID_UID;
 	}
 
 	// thread should be in DORMANT state, but it's not possible to check it correctly atm
 
-	if (t->IsAlive())
-	{
-		return SCE_KERNEL_ERROR_NOT_DORMANT;
-	}
-
-	ARMv7Thread& thread = static_cast<ARMv7Thread&>(*t);
+	//if (thread->IsAlive())
+	//{
+	//	return SCE_KERNEL_ERROR_NOT_DORMANT;
+	//}
 
 	// push arg block onto the stack
-	const u32 pos = (thread.SP -= argSize);
+	const u32 pos = (thread->SP -= argSize);
 	memcpy(vm::get_ptr<void>(pos), pArgBlock.get_ptr(), argSize);
 
 	// set SceKernelThreadEntry function arguments
-	thread.GPR[0] = argSize;
-	thread.GPR[1] = pos;
+	thread->GPR[0] = argSize;
+	thread->GPR[1] = pos;
 
-	thread.Exec();
+	thread->Exec();
 	return SCE_OK;
 }
 
@@ -104,21 +100,21 @@ s32 sceKernelDeleteThread(s32 threadId)
 {
 	sceLibKernel.Warning("sceKernelDeleteThread(threadId=0x%x)", threadId);
 
-	const auto t = Emu.GetCPU().GetThread(threadId, CPU_THREAD_ARMv7);
+	const auto thread = Emu.GetIdManager().get<ARMv7Thread>(threadId);
 
-	if (!t)
+	if (!thread)
 	{
 		return SCE_KERNEL_ERROR_INVALID_UID;
 	}
 
 	// thread should be in DORMANT state, but it's not possible to check it correctly atm
 
-	if (t->IsAlive())
-	{
-		return SCE_KERNEL_ERROR_NOT_DORMANT;
-	}
+	//if (thread->IsAlive())
+	//{
+	//	return SCE_KERNEL_ERROR_NOT_DORMANT;
+	//}
 
-	Emu.GetCPU().RemoveThread(threadId);
+	Emu.GetIdManager().remove<ARMv7Thread>(threadId);
 	return SCE_OK;
 }
 
@@ -131,9 +127,10 @@ s32 sceKernelExitDeleteThread(ARMv7Context& context, s32 exitStatus)
 
 	// current thread should be deleted
 	const u32 id = static_cast<ARMv7Thread&>(context).GetId();
+
 	CallAfter([id]()
 	{
-		Emu.GetCPU().RemoveThread(id);
+		Emu.GetIdManager().remove<ARMv7Thread>(id);
 	});
 
 	return SCE_OK;
@@ -262,32 +259,27 @@ s32 sceKernelWaitThreadEnd(s32 threadId, vm::ptr<s32> pExitStatus, vm::ptr<u32> 
 {
 	sceLibKernel.Warning("sceKernelWaitThreadEnd(threadId=0x%x, pExitStatus=*0x%x, pTimeout=*0x%x)", threadId, pExitStatus, pTimeout);
 
-	const auto t = Emu.GetCPU().GetThread(threadId, CPU_THREAD_ARMv7);
+	const auto thread = Emu.GetIdManager().get<ARMv7Thread>(threadId);
 
-	if (!t)
+	if (!thread)
 	{
 		return SCE_KERNEL_ERROR_INVALID_UID;
 	}
-
-	ARMv7Thread& thread = static_cast<ARMv7Thread&>(*t);
 
 	if (pTimeout)
 	{
 	}
 
-	while (thread.IsAlive())
+	while (thread->IsActive())
 	{
-		if (Emu.IsStopped())
-		{
-			sceLibKernel.Warning("sceKernelWaitThreadEnd(0x%x) aborted", threadId);
-			return SCE_OK;
-		}
+		CHECK_EMU_STATUS;
+
 		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 	}
 
 	if (pExitStatus)
 	{
-		*pExitStatus = thread.GPR[0];
+		*pExitStatus = thread->GPR[0];
 	}
 
 	return SCE_OK;

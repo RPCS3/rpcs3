@@ -2,11 +2,6 @@
 
 #include "MemoryBlock.h"
 
-using std::nullptr_t;
-
-#define safe_delete(x) do {delete (x);(x)=nullptr;} while(0)
-#define safe_free(x) do {free(x);(x)=nullptr;} while(0)
-
 enum MemoryType
 {
 	Memory_PS3,

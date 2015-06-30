@@ -2,6 +2,11 @@
 
 #include <emmintrin.h>
 
+// temporarily (until noexcept is available); use `noexcept(true)` instead of `noexcept` if necessary
+#if defined(_MSC_VER) && _MSC_VER <= 1800
+#define noexcept _NOEXCEPT_OP
+#endif
+
 #if defined(_MSC_VER)
 #define thread_local __declspec(thread)
 #elif __APPLE__

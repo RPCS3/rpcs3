@@ -13,8 +13,7 @@
 	#include "define_new_memleakdetect.h"
 #endif
 
-// This header should be frontend-agnostic, so don't assume wx includes everything
-#pragma warning( disable : 4800 )
+#pragma warning( disable : 4351 )
 
 #include <cstdio>
 #include <cstring>
@@ -52,6 +51,8 @@ using s8 = std::int8_t;
 using s16 = std::int16_t;
 using s32 = std::int32_t;
 using s64 = std::int64_t;
+
+using b8 = std::uint8_t;
 
 using f32 = float;
 using f64 = double;
@@ -109,6 +110,7 @@ template<typename T> struct ID_type;
 #define CHECK_SIZE_ALIGN(type, size, align) CHECK_SIZE(type, size); CHECK_ALIGN(type, align)
 
 #define WRAP_EXPR(expr) [&]{ return (expr); }
+#define EXCEPTION(text, ...) fmt::exception(__FILE__, __LINE__, __FUNCTION__, text, ##__VA_ARGS__)
 
 #define _PRGNAME_ "RPCS3"
 #define _PRGVER_ "0.0.0.5"

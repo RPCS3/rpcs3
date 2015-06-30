@@ -3,32 +3,14 @@
 #include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
+#include "Emu/IdManager.h"
 #include "Emu/CPU/CPUThreadManager.h"
+#include "Emu/ARMv7/PSVFuncList.h"
 
 #include "ARMv7Thread.h"
 #include "ARMv7Decoder.h"
 #include "ARMv7DisAsm.h"
 #include "ARMv7Interpreter.h"
-
-void ARMv7Context::write_pc(u32 value)
-{
-	ARMv7Thread& thread = *static_cast<ARMv7Thread*>(this);
-
-	ISET = value & 1 ? Thumb : ARM;
-	thread.SetBranch(value & ~1);
-}
-
-u32 ARMv7Context::read_pc()
-{
-	ARMv7Thread& thread = *static_cast<ARMv7Thread*>(this);
-
-	return ISET == ARM ? thread.PC + 8 : thread.PC + 4;
-}
-
-u32 ARMv7Context::get_stack_arg(u32 pos)
-{
-	return vm::psv::read32(SP + sizeof(u32) * (pos - 5));
-}
 
 void ARMv7Context::fast_call(u32 addr)
 {
@@ -98,17 +80,30 @@ void armv7_free_tls(u32 thread)
 	}
 }
 
-ARMv7Thread::ARMv7Thread()
-	: CPUThread(CPU_THREAD_ARMv7)
-	//, m_arg(0)
-	//, m_last_instr_size(0)
-	//, m_last_instr_name("UNK")
+ARMv7Thread::ARMv7Thread(const std::string& name)
+	: CPUThread(CPU_THREAD_ARMv7, name, [this]{ return fmt::format("%s[0x%x] Thread (%s)[0x%08x]", GetTypeString(), GetId(), GetName(), PC); })
+	, ARMv7Context({})
 {
 }
 
 ARMv7Thread::~ARMv7Thread()
 {
+	cv.notify_one();
+	join();
+
 	armv7_free_tls(GetId());
+}
+
+void ARMv7Thread::DumpInformation() const
+{
+	if (hle_func)
+	{
+		const auto func = get_psv_func_by_nid(hle_func);
+		
+		LOG_SUCCESS(HLE, "Information: function 0x%x (%s)", hle_func, func ? func->name : "?????????");
+	}
+
+	CPUThread::DumpInformation();
 }
 
 void ARMv7Thread::InitRegs()
@@ -117,32 +112,41 @@ void ARMv7Thread::InitRegs()
 	APSR.APSR = 0;
 	IPSR.IPSR = 0;
 	ISET = PC & 1 ? Thumb : ARM; // select instruction set
-	SetPc(PC & ~1); // and fix PC
+	PC = PC & ~1; // and fix PC
 	ITSTATE.IT = 0;
-	SP = m_stack_addr + m_stack_size;
+	SP = stack_addr + stack_size;
 	TLS = armv7_get_tls(GetId());
 	debug = DF_DISASM | DF_PRINT;
 }
 
 void ARMv7Thread::InitStack()
 {
-	if (!m_stack_addr)
+	if (!stack_addr)
 	{
-		assert(m_stack_size);
-		m_stack_addr = Memory.Alloc(m_stack_size, 4096);
+		if (!stack_size)
+		{
+			throw EXCEPTION("Invalid stack size");
+		}
+
+		stack_addr = Memory.Alloc(stack_size, 4096);
+
+		if (!stack_addr)
+		{
+			throw EXCEPTION("Out of stack memory");
+		}
 	}
 }
 
 void ARMv7Thread::CloseStack()
 {
-	if (m_stack_addr)
+	if (stack_addr)
 	{
-		Memory.Free(m_stack_addr);
-		m_stack_addr = 0;
+		Memory.Free(stack_addr);
+		stack_addr = 0;
 	}
 }
 
-std::string ARMv7Thread::RegsToString()
+std::string ARMv7Thread::RegsToString() const
 {
 	std::string result = "Registers:\n=========\n";
 	for(int i=0; i<15; ++i)
@@ -161,7 +165,7 @@ std::string ARMv7Thread::RegsToString()
 	return result;
 }
 
-std::string ARMv7Thread::ReadRegString(const std::string& reg)
+std::string ARMv7Thread::ReadRegString(const std::string& reg) const
 {
 	return "";
 }
@@ -171,19 +175,15 @@ bool ARMv7Thread::WriteRegString(const std::string& reg, std::string value)
 	return true;
 }
 
-void ARMv7Thread::DoReset()
-{
-}
-
 void ARMv7Thread::DoRun()
 {
-	m_dec = nullptr;
+	m_dec.reset();
 
 	switch(Ini.CPUDecoderMode.GetValue())
 	{
 	case 0:
 	case 1:
-		m_dec = new ARMv7Decoder(*this);
+		m_dec.reset(new ARMv7Decoder(*this));
 		break;
 	default:
 		LOG_ERROR(PPU, "Invalid CPU decoder mode: %d", Ini.CPUDecoderMode.GetValue());
@@ -191,58 +191,70 @@ void ARMv7Thread::DoRun()
 	}
 }
 
-void ARMv7Thread::DoPause()
+void ARMv7Thread::Task()
 {
-}
+	if (custom_task)
+	{
+		if (m_state.load() && CheckStatus()) return;
 
-void ARMv7Thread::DoResume()
-{
-}
+		return custom_task(*this);
+	}
 
-void ARMv7Thread::DoStop()
-{
-}
+	while (true)
+	{
+		if (m_state.load() && CheckStatus()) return;
 
-void ARMv7Thread::DoCode()
-{
+		// decode instruction using specified decoder
+		PC += m_dec->DecodeMemory(PC);
+	}
 }
 
 void ARMv7Thread::FastCall(u32 addr)
 {
-	auto old_status = m_status;
+	if (!is_current())
+	{
+		throw EXCEPTION("Called from the wrong thread");
+	}
+
 	auto old_PC = PC;
 	auto old_stack = SP;
 	auto old_LR = LR;
-	auto old_thread = GetCurrentNamedThread();
 
-	m_status = Running;
 	PC = addr;
 	LR = Emu.GetCPUThreadStop();
-	SetCurrentNamedThread(this);
 
-	CPUThread::Task();
+	try
+	{
+		Task();
+	}
+	catch (CPUThreadReturn)
+	{
+	}
 
-	m_status = old_status;
 	PC = old_PC;
-	SP = old_stack;
+
+	if (SP != old_stack) // SP shouldn't change
+	{
+		throw EXCEPTION("Stack inconsistency (addr=0x%x, SP=0x%x, old=0x%x)", addr, SP, old_stack);
+	}
+
 	LR = old_LR;
-	SetCurrentNamedThread(old_thread);
 }
 
 void ARMv7Thread::FastStop()
 {
-	m_status = Stopped;
-	m_events |= CPU_EVENT_STOP;
+	throw CPUThreadReturn{};
 }
 
 armv7_thread::armv7_thread(u32 entry, const std::string& name, u32 stack_size, s32 prio)
 {
-	thread = Emu.GetCPU().AddThread(CPU_THREAD_ARMv7);
+	std::shared_ptr<ARMv7Thread> armv7 = Emu.GetIdManager().make_ptr<ARMv7Thread>(name);
 
-	thread->SetName(name);
-	thread->SetEntry(entry);
-	thread->SetStackSize(stack_size);
-	thread->SetPrio(prio);
+	armv7->PC = entry;
+	armv7->stack_size = stack_size;
+	armv7->prio = prio;
+
+	thread = std::move(armv7);
 
 	argc = 0;
 }

@@ -214,8 +214,6 @@ u32 LoadSpuImage(vfsStream& stream, u32& spu_ep);
 
 // Aux
 s32 spu_image_import(sys_spu_image& img, u32 src, u32 type);
-u32 spu_thread_group_create(const std::string& name, u32 num, s32 prio, s32 type, u32 container);
-u32 spu_thread_initialize(u32 group, u32 spu_num, vm::ptr<sys_spu_image> img, const std::string& name, u32 option, u64 a1, u64 a2, u64 a3, u64 a4, std::function<void(SPUThread&)> task = nullptr);
 
 // SysCalls
 s32 sys_spu_initialize(u32 max_usable_spu, u32 max_raw_spu);

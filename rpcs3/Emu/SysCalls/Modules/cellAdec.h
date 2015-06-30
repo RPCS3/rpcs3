@@ -1145,7 +1145,7 @@ public:
 	u32 sample_rate;
 	bool use_ats_headers;
 
-	PPUThread* adecCb;
+	std::shared_ptr<PPUThread> adecCb;
 
 	AudioDecoder(s32 type, u32 addr, u32 size, vm::ptr<CellAdecCbMsg> func, u32 arg);
 

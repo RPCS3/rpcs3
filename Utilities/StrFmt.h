@@ -277,6 +277,39 @@ namespace fmt
 		return Format(fmt, do_unveil(args)...);
 	}
 
+	struct exception
+	{
+		std::unique_ptr<char[]> message;
+
+		template<typename... Args> never_inline safe_buffers exception(const char* file, int line, const char* func, const char* text, Args... args)
+		{
+			const std::string data = format(text, args...) + format("\n(in file %s:%d, in function %s)", file, line, func);
+
+			message = std::make_unique<char[]>(data.size() + 1);
+
+			std::memcpy(message.get(), data.c_str(), data.size() + 1);
+		}
+
+		exception(const exception& other)
+		{
+			const std::size_t size = std::strlen(other);
+
+			message = std::make_unique<char[]>(size + 1);
+
+			std::memcpy(message.get(), other, size + 1);
+		}
+
+		exception(exception&& other)
+		{
+			message = std::move(other.message);
+		}
+
+		operator const char*() const
+		{
+			return message.get();
+		}
+	};
+
 	//convert a wxString to a std::string encoded in utf8
 	//CAUTION, only use this to interface with wxWidgets classes
 	std::string ToUTF8(const wxString& right);

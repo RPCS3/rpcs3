@@ -95,7 +95,7 @@ s32 sys_mutex_lock(PPUThread& CPU, u32 mutex_id, u64 timeout)
 		return CELL_ESRCH;
 	}
 
-	const auto thread = Emu.GetCPU().GetThread(CPU.GetId(), CPU_THREAD_PPU);
+	const auto thread = Emu.GetIdManager().get<PPUThread>(CPU.GetId());
 
 	if (!mutex->owner.owner_before(thread) && !thread.owner_before(mutex->owner)) // check equality
 	{
@@ -153,7 +153,7 @@ s32 sys_mutex_trylock(PPUThread& CPU, u32 mutex_id)
 		return CELL_ESRCH;
 	}
 
-	const auto thread = Emu.GetCPU().GetThread(CPU.GetId());
+	const auto thread = Emu.GetIdManager().get<PPUThread>(CPU.GetId());
 
 	if (!mutex->owner.owner_before(thread) && !thread.owner_before(mutex->owner)) // check equality
 	{
@@ -195,7 +195,7 @@ s32 sys_mutex_unlock(PPUThread& CPU, u32 mutex_id)
 		return CELL_ESRCH;
 	}
 
-	const auto thread = Emu.GetCPU().GetThread(CPU.GetId());
+	const auto thread = Emu.GetIdManager().get<PPUThread>(CPU.GetId());
 
 	if (mutex->owner.owner_before(thread) || thread.owner_before(mutex->owner)) // check inequality
 	{

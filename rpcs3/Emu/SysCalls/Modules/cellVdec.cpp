@@ -39,7 +39,6 @@ VideoDecoder::VideoDecoder(s32 type, u32 profile, u32 addr, u32 size, vm::ptr<Ce
 	, codec(nullptr)
 	, input_format(nullptr)
 	, ctx(nullptr)
-	, vdecCb(nullptr)
 {
 	av_register_all();
 	avcodec_register_all();
@@ -215,16 +214,10 @@ void vdecOpen(u32 vdec_id) // TODO: call from the constructor
 
 	vdec.id = vdec_id;
 
-	vdec.vdecCb = static_cast<PPUThread*>(Emu.GetCPU().AddThread(CPU_THREAD_PPU).get());
-	vdec.vdecCb->SetName(fmt::format("VideoDecoder[0x%x] Callback", vdec_id));
-	vdec.vdecCb->SetEntry(0);
-	vdec.vdecCb->SetPrio(1001);
-	vdec.vdecCb->SetStackSize(0x10000);
-	vdec.vdecCb->InitStack();
-	vdec.vdecCb->InitRegs();
-	vdec.vdecCb->DoRun();
-
-	thread_t t(fmt::format("VideoDecoder[0x%x] Thread", vdec_id), [sptr]()
+	vdec.vdecCb = Emu.GetIdManager().make_ptr<PPUThread>(fmt::format("VideoDecoder[0x%x] Thread", vdec_id));
+	vdec.vdecCb->prio = 1001;
+	vdec.vdecCb->stack_size = 0x10000;
+	vdec.vdecCb->custom_task = [sptr](PPUThread& CPU)
 	{
 		VideoDecoder& vdec = *sptr;
 		VdecTask& task = vdec.task;
@@ -547,7 +540,10 @@ void vdecOpen(u32 vdec_id) // TODO: call from the constructor
 		}
 
 		vdec.is_finished = true;
-	});
+	};
+
+	vdec.vdecCb->Run();
+	vdec.vdecCb->Exec();
 }
 
 s32 cellVdecQueryAttr(vm::cptr<CellVdecType> type, vm::ptr<CellVdecAttr> attr)
@@ -606,7 +602,7 @@ s32 cellVdecClose(u32 handle)
 		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 	}
 
-	if (vdec->vdecCb) Emu.GetCPU().RemoveThread(vdec->vdecCb->GetId());
+	Emu.GetIdManager().remove<PPUThread>(vdec->vdecCb->GetId());
 	Emu.GetIdManager().remove<VideoDecoder>(handle);
 	return CELL_OK;
 }

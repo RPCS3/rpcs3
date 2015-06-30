@@ -92,26 +92,21 @@ s32 sys_spu_image_open(vm::ptr<sys_spu_image> img, vm::cptr<char> path)
 	return CELL_OK;
 }
 
-u32 spu_thread_initialize(u32 group_id, u32 spu_num, vm::ptr<sys_spu_image> img, const std::string& name, u32 option, u64 a1, u64 a2, u64 a3, u64 a4, std::function<void(SPUThread&)> task)
+u32 spu_thread_initialize(u32 group_id, u32 spu_num, vm::ptr<sys_spu_image> img, const std::string& name, u32 option, u64 a1, u64 a2, u64 a3, u64 a4, std::function<void(SPUThread&)> task = nullptr)
 {
 	if (option)
 	{
 		sys_spu.Todo("Unsupported SPU Thread options (0x%x)", option);
 	}
 
-	const auto t = Emu.GetCPU().AddThread(CPU_THREAD_SPU);
+	const auto spu = Emu.GetIdManager().make_ptr<SPUThread>(name, spu_num, Memory.MainMem.AllocAlign(0x40000));
 
-	auto& spu = static_cast<SPUThread&>(*t);
-
-	spu.index = spu_num;
-	spu.offset = Memory.MainMem.AllocAlign(256 * 1024);
-	spu.SetName(name);
-	spu.m_custom_task = task;
+	spu->m_custom_task = task;
 
 	const auto group = Emu.GetIdManager().get<spu_group_t>(group_id);
 
-	spu.tg = group;
-	group->threads[spu_num] = t;
+	spu->tg = group;
+	group->threads[spu_num] = spu;
 	group->args[spu_num] = { a1, a2, a3, a4 };
 	group->images[spu_num] = img;
 
@@ -131,7 +126,7 @@ u32 spu_thread_initialize(u32 group_id, u32 spu_num, vm::ptr<sys_spu_image> img,
 		group->state = SPU_THREAD_GROUP_STATUS_INITIALIZED;
 	}
 	
-	return spu.GetId();
+	return spu->GetId();
 }
 
 s32 sys_spu_thread_initialize(vm::ptr<u32> thread, u32 group_id, u32 spu_num, vm::ptr<sys_spu_image> img, vm::ptr<sys_spu_thread_attribute> attr, vm::ptr<sys_spu_thread_argument> arg)
@@ -167,23 +162,21 @@ s32 sys_spu_thread_set_argument(u32 id, vm::ptr<sys_spu_thread_argument> arg)
 
 	LV2_LOCK;
 
-	const auto t = Emu.GetCPU().GetThread(id, CPU_THREAD_SPU);
+	const auto thread = Emu.GetIdManager().get<SPUThread>(id);
 
-	if (!t)
+	if (!thread)
 	{
 		return CELL_ESRCH;
 	}
 
-	auto& spu = static_cast<SPUThread&>(*t);
+	const auto group = thread->tg.lock();
 
-	const auto group = spu.tg.lock();
+	assert(thread->index < group->threads.size());
 
-	assert(spu.index < group->threads.size());
-
-	group->args[spu.index].arg1 = arg->arg1;
-	group->args[spu.index].arg2 = arg->arg2;
-	group->args[spu.index].arg3 = arg->arg3;
-	group->args[spu.index].arg4 = arg->arg4;
+	group->args[thread->index].arg1 = arg->arg1;
+	group->args[thread->index].arg2 = arg->arg2;
+	group->args[thread->index].arg3 = arg->arg3;
+	group->args[thread->index].arg4 = arg->arg4;
 
 	return CELL_OK;
 }
@@ -194,34 +187,18 @@ s32 sys_spu_thread_get_exit_status(u32 id, vm::ptr<u32> status)
 
 	LV2_LOCK;
 
-	const auto t = Emu.GetCPU().GetThread(id, CPU_THREAD_SPU);
+	const auto thread = Emu.GetIdManager().get<SPUThread>(id);
 
-	if (!t)
+	if (!thread)
 	{
 		return CELL_ESRCH;
 	}
 
-	auto& spu = static_cast<SPUThread&>(*t);
+	// TODO: check CELL_ESTAT condition
 
-	u32 res;
-	if (!spu.IsStopped() || !spu.ch_out_mbox.pop(res)) // TODO: Is it possible to get the same status twice? If so, we shouldn't use destructive read
-	{
-		return CELL_ESTAT;
-	}
-
-	*status = res;
+	*status = thread->ch_out_mbox.pop_uncond();
 
 	return CELL_OK;
-}
-
-u32 spu_thread_group_create(const std::string& name, u32 num, s32 prio, s32 type, u32 container)
-{
-	if (type)
-	{
-		sys_spu.Todo("Unsupported SPU Thread Group type (0x%x)", type);
-	}
-
-	return Emu.GetIdManager().make<spu_group_t>(name, num, prio, type, container);
 }
 
 s32 sys_spu_thread_group_create(vm::ptr<u32> id, u32 num, s32 prio, vm::ptr<sys_spu_thread_group_attribute> attr)
@@ -235,7 +212,13 @@ s32 sys_spu_thread_group_create(vm::ptr<u32> id, u32 num, s32 prio, vm::ptr<sys_
 		return CELL_EINVAL;
 	}
 
-	*id = spu_thread_group_create(std::string(attr->name.get_ptr(), attr->nsize - 1), num, prio, attr->type, attr->ct);
+	if (attr->type.data())
+	{
+		sys_spu.Todo("Unsupported SPU Thread Group type (0x%x)", attr->type);
+	}
+
+	*id = Emu.GetIdManager().make<spu_group_t>(std::string{ attr->name.get_ptr(), attr->nsize - 1 }, num, prio, attr->type, attr->ct);
+
 	return CELL_OK;
 }
 
@@ -265,7 +248,7 @@ s32 sys_spu_thread_group_destroy(u32 id)
 			auto& spu = static_cast<SPUThread&>(*t);
 
 			Memory.MainMem.Free(spu.offset);
-			Emu.GetCPU().RemoveThread(spu.GetId());
+			Emu.GetIdManager().remove<SPUThread>(spu.GetId());
 
 			t.reset();
 		}
@@ -314,8 +297,8 @@ s32 sys_spu_thread_group_start(u32 id)
 			// TODO: use segment info
 			memcpy(vm::get_ptr<void>(spu.offset), vm::get_ptr<void>(image->addr), 256 * 1024);
 
-			spu.SetEntry(image->entry_point);
 			spu.Run();
+			spu.PC = image->entry_point;
 			spu.GPR[3] = u128::from64(0, args.arg1);
 			spu.GPR[4] = u128::from64(0, args.arg2);
 			spu.GPR[5] = u128::from64(0, args.arg3);
@@ -386,9 +369,7 @@ s32 sys_spu_thread_group_suspend(u32 id)
 	{
 		if (t)
 		{
-			auto& spu = static_cast<SPUThread&>(*t);
-
-			spu.FastStop();
+			t->Sleep(); // trigger m_state check
 		}
 	}
 
@@ -433,9 +414,7 @@ s32 sys_spu_thread_group_resume(u32 id)
 	{
 		if (t)
 		{
-			auto& spu = static_cast<SPUThread&>(*t);
-
-			spu.FastRun();
+			t->Awake(); // trigger m_state check
 		}
 	}
 
@@ -472,7 +451,7 @@ s32 sys_spu_thread_group_terminate(u32 id, s32 value)
 	LV2_LOCK;
 
 	// seems the id can be either SPU Thread Group or SPU Thread
-	auto thread = Emu.GetCPU().GetThread(id, CPU_THREAD_SPU);
+	const auto thread = Emu.GetIdManager().get<SPUThread>(id);
 	auto group = Emu.GetIdManager().get<spu_group_t>(id);
 
 	if (!group && !thread)
@@ -520,7 +499,7 @@ s32 sys_spu_thread_group_terminate(u32 id, s32 value)
 			auto& spu = static_cast<SPUThread&>(*t);
 
 			spu.status.exchange(SPU_STATUS_STOPPED);
-			spu.FastStop();
+			spu.Stop();
 		}
 	}
 
@@ -566,7 +545,7 @@ s32 sys_spu_thread_group_join(u32 id, vm::ptr<u32> cause, vm::ptr<u32> status)
 			{
 				auto& spu = static_cast<SPUThread&>(*t);
 
-				if (!(spu.status.load() & SPU_STATUS_STOPPED_BY_STOP))
+				if ((spu.status.load() & SPU_STATUS_STOPPED_BY_STOP) == 0)
 				{
 					stopped = false;
 					break;
@@ -622,16 +601,13 @@ s32 sys_spu_thread_write_ls(u32 id, u32 address, u64 value, u32 type)
 {
 	sys_spu.Log("sys_spu_thread_write_ls(id=0x%x, address=0x%x, value=0x%llx, type=%d)", id, address, value, type);
 
-	const auto t = Emu.GetCPU().GetThread(id, CPU_THREAD_SPU);
+	LV2_LOCK;
 
-	if (!t)
+	const auto thread = Emu.GetIdManager().get<SPUThread>(id);
+
+	if (!thread)
 	{
 		return CELL_ESRCH;
-	}
-
-	if (!t->IsRunning())
-	{
-		return CELL_ESTAT;
 	}
 
 	if (address >= 0x40000 || address + type > 0x40000 || address % type) // check range and alignment
@@ -639,14 +615,19 @@ s32 sys_spu_thread_write_ls(u32 id, u32 address, u64 value, u32 type)
 		return CELL_EINVAL;
 	}
 
-	auto& spu = static_cast<SPUThread&>(*t);
+	const auto group = thread->tg.lock();
+
+	if ((group->state < SPU_THREAD_GROUP_STATUS_WAITING) || (group->state > SPU_THREAD_GROUP_STATUS_RUNNING))
+	{
+		return CELL_ESTAT;
+	}
 
 	switch (type)
 	{
-	case 1: spu.write8(address, (u8)value); break;
-	case 2: spu.write16(address, (u16)value); break;
-	case 4: spu.write32(address, (u32)value); break;
-	case 8: spu.write64(address, value); break;
+	case 1: thread->write8(address, (u8)value); break;
+	case 2: thread->write16(address, (u16)value); break;
+	case 4: thread->write32(address, (u32)value); break;
+	case 8: thread->write64(address, value); break;
 	default: return CELL_EINVAL;
 	}
 
@@ -657,16 +638,13 @@ s32 sys_spu_thread_read_ls(u32 id, u32 address, vm::ptr<u64> value, u32 type)
 {
 	sys_spu.Log("sys_spu_thread_read_ls(id=0x%x, address=0x%x, value=*0x%x, type=%d)", id, address, value, type);
 
-	const auto t = Emu.GetCPU().GetThread(id, CPU_THREAD_SPU);
+	LV2_LOCK;
 
-	if (!t)
+	const auto thread = Emu.GetIdManager().get<SPUThread>(id);
+
+	if (!thread)
 	{
 		return CELL_ESRCH;
-	}
-
-	if (!t->IsRunning())
-	{
-		return CELL_ESTAT;
 	}
 
 	if (address >= 0x40000 || address + type > 0x40000 || address % type) // check range and alignment
@@ -674,14 +652,19 @@ s32 sys_spu_thread_read_ls(u32 id, u32 address, vm::ptr<u64> value, u32 type)
 		return CELL_EINVAL;
 	}
 
-	auto& spu = static_cast<SPUThread&>(*t);
+	const auto group = thread->tg.lock();
+
+	if ((group->state < SPU_THREAD_GROUP_STATUS_WAITING) || (group->state > SPU_THREAD_GROUP_STATUS_RUNNING))
+	{
+		return CELL_ESTAT;
+	}
 
 	switch (type)
 	{
-	case 1: *value = spu.read8(address); break;
-	case 2: *value = spu.read16(address); break;
-	case 4: *value = spu.read32(address); break;
-	case 8: *value = spu.read64(address); break;
+	case 1: *value = thread->read8(address); break;
+	case 2: *value = thread->read16(address); break;
+	case 4: *value = thread->read32(address); break;
+	case 8: *value = thread->read64(address); break;
 	default: return CELL_EINVAL;
 	}
 
@@ -692,16 +675,23 @@ s32 sys_spu_thread_write_spu_mb(u32 id, u32 value)
 {
 	sys_spu.Warning("sys_spu_thread_write_spu_mb(id=0x%x, value=0x%x)", id, value);
 
-	const auto t = Emu.GetCPU().GetThread(id, CPU_THREAD_SPU);
+	LV2_LOCK;
 
-	if (!t)
+	const auto thread = Emu.GetIdManager().get<SPUThread>(id);
+
+	if (!thread)
 	{
 		return CELL_ESRCH;
 	}
 
-	auto& spu = static_cast<SPUThread&>(*t);
+	const auto group = thread->tg.lock();
 
-	spu.ch_in_mbox.push_uncond(value);
+	if ((group->state < SPU_THREAD_GROUP_STATUS_WAITING) || (group->state > SPU_THREAD_GROUP_STATUS_RUNNING))
+	{
+		return CELL_ESTAT;
+	}
+
+	thread->ch_in_mbox.push_uncond(value);
 
 	return CELL_OK;
 }
@@ -710,9 +700,11 @@ s32 sys_spu_thread_set_spu_cfg(u32 id, u64 value)
 {
 	sys_spu.Warning("sys_spu_thread_set_spu_cfg(id=0x%x, value=0x%x)", id, value);
 
-	const auto t = Emu.GetCPU().GetThread(id, CPU_THREAD_SPU);
+	LV2_LOCK;
 
-	if (!t)
+	const auto thread = Emu.GetIdManager().get<SPUThread>(id);
+
+	if (!thread)
 	{
 		return CELL_ESRCH;
 	}
@@ -722,9 +714,7 @@ s32 sys_spu_thread_set_spu_cfg(u32 id, u64 value)
 		return CELL_EINVAL;
 	}
 
-	auto& spu = static_cast<SPUThread&>(*t);
-
-	spu.snr_config = value;
+	thread->snr_config = value;
 
 	return CELL_OK;
 }
@@ -733,16 +723,16 @@ s32 sys_spu_thread_get_spu_cfg(u32 id, vm::ptr<u64> value)
 {
 	sys_spu.Warning("sys_spu_thread_get_spu_cfg(id=0x%x, value=*0x%x)", id, value);
 
-	const auto t = Emu.GetCPU().GetThread(id, CPU_THREAD_SPU);
+	LV2_LOCK;
 
-	if (!t)
+	const auto thread = Emu.GetIdManager().get<SPUThread>(id);
+
+	if (!thread)
 	{
 		return CELL_ESRCH;
 	}
 
-	auto& spu = static_cast<SPUThread&>(*t);
-
-	*value = spu.snr_config;
+	*value = thread->snr_config;
 
 	return CELL_OK;
 }
@@ -751,9 +741,11 @@ s32 sys_spu_thread_write_snr(u32 id, u32 number, u32 value)
 {
 	sys_spu.Log("sys_spu_thread_write_snr(id=0x%x, number=%d, value=0x%x)", id, number, value);
 
-	const auto t = Emu.GetCPU().GetThread(id, CPU_THREAD_SPU);
+	LV2_LOCK;
 
-	if (!t)
+	const auto thread = Emu.GetIdManager().get<SPUThread>(id);
+
+	if (!thread)
 	{
 		return CELL_ESRCH;
 	}
@@ -763,9 +755,14 @@ s32 sys_spu_thread_write_snr(u32 id, u32 number, u32 value)
 		return CELL_EINVAL;
 	}
 
-	auto& spu = static_cast<SPUThread&>(*t);
+	const auto group = thread->tg.lock();
 
-	spu.write_snr(number ? true : false, value);
+	if ((group->state < SPU_THREAD_GROUP_STATUS_WAITING) || (group->state > SPU_THREAD_GROUP_STATUS_RUNNING))
+	{
+		return CELL_ESTAT;
+	}
+
+	thread->write_snr(number, value);
 
 	return CELL_OK;
 }
@@ -895,15 +892,13 @@ s32 sys_spu_thread_connect_event(u32 id, u32 eq, u32 et, u8 spup)
 
 	LV2_LOCK;
 
-	const auto t = Emu.GetCPU().GetThread(id, CPU_THREAD_SPU);
+	const auto thread = Emu.GetIdManager().get<SPUThread>(id);
 	const auto queue = Emu.GetIdManager().get<lv2_event_queue_t>(eq);
 
-	if (!t || !queue)
+	if (!thread || !queue)
 	{
 		return CELL_ESRCH;
 	}
-
-	auto& spu = static_cast<SPUThread&>(*t);
 
 	if (et != SYS_SPU_THREAD_EVENT_USER || spup > 63 || queue->type != SYS_PPU_QUEUE)
 	{
@@ -911,7 +906,7 @@ s32 sys_spu_thread_connect_event(u32 id, u32 eq, u32 et, u8 spup)
 		return CELL_EINVAL;
 	}
 
-	auto& port = spu.spup[spup];
+	auto& port = thread->spup[spup];
 
 	if (!port.expired())
 	{
@@ -929,14 +924,12 @@ s32 sys_spu_thread_disconnect_event(u32 id, u32 et, u8 spup)
 
 	LV2_LOCK;
 
-	const auto t = Emu.GetCPU().GetThread(id, CPU_THREAD_SPU);
+	const auto thread = Emu.GetIdManager().get<SPUThread>(id);
 
-	if (!t)
+	if (!thread)
 	{
 		return CELL_ESRCH;
 	}
-
-	auto& spu = static_cast<SPUThread&>(*t);
 
 	if (et != SYS_SPU_THREAD_EVENT_USER || spup > 63)
 	{
@@ -944,7 +937,7 @@ s32 sys_spu_thread_disconnect_event(u32 id, u32 et, u8 spup)
 		return CELL_EINVAL;
 	}
 
-	auto& port = spu.spup[spup];
+	auto& port = thread->spup[spup];
 
 	if (port.expired())
 	{
@@ -962,22 +955,20 @@ s32 sys_spu_thread_bind_queue(u32 id, u32 spuq, u32 spuq_num)
 
 	LV2_LOCK;
 
-	const auto t = Emu.GetCPU().GetThread(id, CPU_THREAD_SPU);
+	const auto thread = Emu.GetIdManager().get<SPUThread>(id);
 	const auto queue = Emu.GetIdManager().get<lv2_event_queue_t>(spuq);
 
-	if (!t || !queue)
+	if (!thread || !queue)
 	{
 		return CELL_ESRCH;
 	}
-
-	auto& spu = static_cast<SPUThread&>(*t);
 
 	if (queue->type != SYS_SPU_QUEUE)
 	{
 		return CELL_EINVAL;
 	}
 
-	for (auto& v : spu.spuq)
+	for (auto& v : thread->spuq)
 	{
 		if (auto q = v.second.lock())
 		{
@@ -988,7 +979,7 @@ s32 sys_spu_thread_bind_queue(u32 id, u32 spuq, u32 spuq_num)
 		}
 	}
 
-	for (auto& v : spu.spuq)
+	for (auto& v : thread->spuq)
 	{
 		if (v.second.expired())
 		{
@@ -1008,16 +999,14 @@ s32 sys_spu_thread_unbind_queue(u32 id, u32 spuq_num)
 
 	LV2_LOCK;
 
-	const auto t = Emu.GetCPU().GetThread(id, CPU_THREAD_SPU);
+	const auto thread = Emu.GetIdManager().get<SPUThread>(id);
 
-	if (!t)
+	if (!thread)
 	{
 		return CELL_ESRCH;
 	}
 
-	auto& spu = static_cast<SPUThread&>(*t);
-
-	for (auto& v : spu.spuq)
+	for (auto& v : thread->spuq)
 	{
 		if (v.first == spuq_num && !v.second.expired())
 		{
@@ -1142,18 +1131,16 @@ s32 sys_raw_spu_create(vm::ptr<u32> id, vm::ptr<void> attr)
 
 	LV2_LOCK;
 
-	const auto t = Emu.GetCPU().AddThread(CPU_THREAD_RAW_SPU);
+	const auto thread = Emu.GetCPU().NewRawSPUThread();
 
-	if (!t)
+	if (!thread)
 	{
 		return CELL_EAGAIN;
 	}
 
-	Memory.Map(t->offset = RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * t->index, 0x40000);
+	thread->Run();
 
-	t->Run();
-
-	*id = t->index;
+	*id = thread->index;
 
 	return CELL_OK;
 }
@@ -1164,20 +1151,16 @@ s32 sys_raw_spu_destroy(u32 id)
 
 	LV2_LOCK;
 
-	const auto t = Emu.GetCPU().GetRawSPUThread(id);
+	const auto thread = Emu.GetCPU().GetRawSPUThread(id);
 
-	if (!t)
+	if (!thread)
 	{
 		return CELL_ESRCH;
 	}
 
-	auto& spu = static_cast<RawSPUThread&>(*t);
-
 	// TODO: check if busy
 
-	Memory.Unmap(spu.offset);
-
-	Emu.GetCPU().RemoveThread(t->GetId());
+	Emu.GetIdManager().remove<RawSPUThread>(thread->GetId());
 
 	return CELL_OK;
 }

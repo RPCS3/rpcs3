@@ -1,8 +1,7 @@
 #pragma once
 #include "Emu/RSX/GSRender.h"
 
-class NullGSRender
-	: public GSRender
+class NullGSRender final : public GSRender
 {
 public:
 
@@ -10,8 +9,10 @@ public:
 	{
 	}
 
-	virtual ~NullGSRender()
+	virtual ~NullGSRender() override
 	{
+		cv.notify_one();
+		join();
 	}
 
 private:

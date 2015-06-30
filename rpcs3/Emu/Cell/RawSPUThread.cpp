@@ -8,13 +8,18 @@
 
 thread_local spu_mfc_arg_t raw_spu_mfc[8] = {};
 
-RawSPUThread::RawSPUThread(CPUThreadType type)
-	: SPUThread(type)
+RawSPUThread::RawSPUThread(const std::string& name, u32 index)
+	: SPUThread(CPU_THREAD_RAW_SPU, name, index, RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * index)
 {
+	Memory.Map(offset, 0x40000);
 }
 
 RawSPUThread::~RawSPUThread()
 {
+	cv.notify_one();
+	join();
+
+	Memory.Unmap(offset);
 }
 
 void RawSPUThread::start()
@@ -36,11 +41,7 @@ void RawSPUThread::start()
 
 	if (do_start)
 	{
-		// starting thread directly in SIGSEGV handler may cause problems
-		Emu.GetCallbackManager().Async([this](PPUThread& PPU)
-		{
-			FastRun();
-		});
+		Exec();
 	}
 }
 
@@ -178,7 +179,7 @@ bool RawSPUThread::WriteReg(const u32 addr, const u32 value)
 		else if (value == SPU_RUNCNTL_STOP_REQUEST)
 		{
 			status &= ~SPU_STATUS_RUNNING;
-			FastStop();
+			Stop();
 		}
 		else
 		{

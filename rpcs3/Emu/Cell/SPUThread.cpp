@@ -50,22 +50,56 @@ public:
 		}
 	}
 
-	force_inline spu_inter_func_t operator [] (u32 opcode) const
+	force_inline spu_inter_func_t operator [](u32 opcode) const
 	{
 		return funcs[opcode >> 21];
 	}
 }
 g_spu_inter_func_list;
 
-SPUThread::SPUThread(CPUThreadType type) : CPUThread(type)
+SPUThread::SPUThread(CPUThreadType type, const std::string& name, u32 index, u32 offset)
+	: CPUThread(type, name, [this]{ return fmt::format("%s[0x%x] Thread (%s)[0x%08x]", GetTypeString(), GetId(), GetName(), PC); })
+	, index(index)
+	, offset(offset)
 {
-	assert(type == CPU_THREAD_SPU || type == CPU_THREAD_RAW_SPU);
+}
 
-	Reset();
+SPUThread::SPUThread(const std::string& name, u32 index, u32 offset)
+	: CPUThread(CPU_THREAD_SPU, name, [this]{ return fmt::format("%s[0x%x] Thread (%s)[0x%08x]", GetTypeString(), GetId(), GetName(), PC); })
+	, index(index)
+	, offset(offset)
+{
 }
 
 SPUThread::~SPUThread()
 {
+	if (m_type == CPU_THREAD_SPU)
+	{
+		cv.notify_one();
+		join();
+	}
+	else if (joinable())
+	{
+		throw EXCEPTION("Thread not joined");
+	}
+}
+
+bool SPUThread::IsPaused() const
+{
+	if (const auto group = tg.lock())
+	{
+		if (group->state == SPU_THREAD_GROUP_STATUS_WAITING || group->state == SPU_THREAD_GROUP_STATUS_SUSPENDED)
+		{
+			return true;
+		}
+	}
+
+	return CPUThread::IsPaused();
+}
+
+void SPUThread::DumpInformation() const
+{
+	CPUThread::DumpInformation();
 }
 
 void SPUThread::Task()
@@ -74,49 +108,43 @@ void SPUThread::Task()
 
 	if (m_custom_task)
 	{
-		return m_custom_task(*this);
+		if (CheckStatus()) return;
+
+		m_custom_task(*this);
 	}
 	
 	if (m_dec)
 	{
-		return CPUThread::Task();
-	}
-	
-	while (true)
-	{
-		// read opcode
-		const spu_opcode_t opcode = { vm::read32(PC + offset) };
-
-		// get interpreter function
-		const auto func = g_spu_inter_func_list[opcode.opcode];
-
-		if (m_events)
+		while (true)
 		{
-			// process events
-			if (Emu.IsStopped())
-			{
-				return;
-			}
+			if (m_state.load() && CheckStatus()) return;
 
-			if (m_events & CPU_EVENT_STOP && (IsStopped() || IsPaused()))
-			{
-				m_events &= ~CPU_EVENT_STOP;
-				return;
-			}
+			// decode instruction using specified decoder
+			m_dec->DecodeMemory(PC + offset);
+
+			// next instruction
+			PC += 4;
 		}
-
-		// call interpreter function
-		func(*this, opcode);
-
-		// next instruction
-		//PC += 4;
-		NextPc(4);
 	}
-}
+	else
+	{
+		while (true)
+		{
+			if (m_state.load() && CheckStatus()) return;
 
-void SPUThread::DoReset()
-{
-	InitRegs();
+			// read opcode
+			const spu_opcode_t opcode = { vm::read32(PC + offset) };
+
+			// get interpreter function
+			const auto func = g_spu_inter_func_list[opcode.opcode];
+
+			// call interpreter function
+			func(*this, opcode);
+
+			// next instruction
+			PC += 4;
+		}
+	}
 }
 
 void SPUThread::InitRegs()
@@ -160,8 +188,7 @@ void SPUThread::InitRegs()
 
 void SPUThread::InitStack()
 {
-	m_stack_size = 0x2000; // this value is wrong
-	m_stack_addr = offset + 0x40000 - m_stack_size; // stack is the part of SPU Local Storage
+	// nothing to do
 }
 
 void SPUThread::CloseStack()
@@ -177,7 +204,7 @@ void SPUThread::DoRun()
 	{
 	case 0: // original interpreter
 	{
-		m_dec = new SPUDecoder(*new SPUInterpreter(*this));
+		m_dec.reset(new SPUDecoder(*new SPUInterpreter(*this)));
 		break;
 	}
 		
@@ -189,7 +216,7 @@ void SPUThread::DoRun()
 
 	case 2:
 	{
-		m_dec = new SPURecompilerCore(*this);
+		m_dec.reset(new SPURecompilerCore(*this));
 		break;
 	}
 
@@ -201,27 +228,13 @@ void SPUThread::DoRun()
 	}
 }
 
-void SPUThread::DoResume()
-{
-}
-
-void SPUThread::DoPause()
-{
-}
-
-void SPUThread::DoStop()
-{
-	delete m_dec;
-	m_dec = nullptr;
-}
-
-void SPUThread::DoClose()
-{
-}
-
 void SPUThread::FastCall(u32 ls_addr)
 {
-	// can't be called from another thread (because it doesn't make sense)
+	if (!is_current())
+	{
+		throw EXCEPTION("Called from the wrong thread");
+	}
+
 	write32(0x0, 2);
 
 	auto old_PC = PC;
@@ -229,29 +242,22 @@ void SPUThread::FastCall(u32 ls_addr)
 	auto old_stack = GPR[1]._u32[3]; // only saved and restored (may be wrong)
 	auto old_task = decltype(m_custom_task)();
 
-	m_status = Running;
 	PC = ls_addr;
 	GPR[0]._u32[3] = 0x0;
 	m_custom_task.swap(old_task);
 
-	SPUThread::Task();
+	try
+	{
+		Task();
+	}
+	catch (CPUThreadReturn)
+	{
+	}
 
 	PC = old_PC;
 	GPR[0]._u32[3] = old_LR;
 	GPR[1]._u32[3] = old_stack;
 	m_custom_task.swap(old_task);
-}
-
-void SPUThread::FastStop()
-{
-	m_status = Stopped;
-	m_events |= CPU_EVENT_STOP;
-}
-
-void SPUThread::FastRun()
-{
-	m_status = Running;
-	Exec();
 }
 
 void SPUThread::do_dma_transfer(u32 cmd, spu_mfc_arg_t args)
@@ -418,7 +424,7 @@ void SPUThread::process_mfc_cmd(u32 cmd)
 		vm::reservation_acquire(vm::get_ptr(offset + ch_mfc_args.lsa), vm::cast(ch_mfc_args.ea), 128, [this]()
 		{
 			ch_event_stat |= SPU_EVENT_LR;
-			Notify();
+			cv.notify_one();
 		});
 
 		ch_atomic_stat.push_uncond(MFC_GETLLAR_SUCCESS);
@@ -517,6 +523,7 @@ u32 SPUThread::get_ch_value(u32 ch)
 	case SPU_RdInMbox:
 	{
 		u32 result, count;
+
 		while (!ch_in_mbox.pop(result, count) && !Emu.IsStopped())
 		{
 			std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
@@ -985,10 +992,9 @@ void SPUThread::stop_and_signal(u32 code)
 			status &= ~SPU_STATUS_RUNNING;
 		});
 
-		FastStop();
-
 		int2.set(SPU_INT2_STAT_SPU_STOP_AND_SIGNAL_INT);
-		return;
+
+		return Stop();
 	}
 
 	switch (code)
@@ -1001,8 +1007,7 @@ void SPUThread::stop_and_signal(u32 code)
 
 	case 0x002:
 	{
-		FastStop();
-		return;
+		throw CPUThreadReturn{};
 	}
 
 	case 0x003:
@@ -1013,7 +1018,7 @@ void SPUThread::stop_and_signal(u32 code)
 		auto return_to_caller = iter->second(*this);
 		if (return_to_caller)
 		{
-			SetBranch(GPR[0]._u32[3] & 0x3fffc);
+			PC = (GPR[0]._u32[3] & 0x3fffc) - 4;
 		}
 		return;
 	}
@@ -1072,7 +1077,9 @@ void SPUThread::stop_and_signal(u32 code)
 				return ch_in_mbox.push_uncond(CELL_ECANCELED);
 			}
 
-			if (Emu.IsStopped())
+			CHECK_EMU_STATUS;
+
+			if (IsStopped())
 			{
 				LOG_WARNING(SPU, "sys_spu_thread_receive_event(spuq=0x%x) aborted", spuq);
 				return;
@@ -1126,11 +1133,9 @@ void SPUThread::stop_and_signal(u32 code)
 
 		for (auto t : group->threads)
 		{
-			if (t)
+			if (t && t.get() != this)
 			{
-				auto& spu = static_cast<SPUThread&>(*t);
-
-				spu.FastStop();
+				t->Stop();
 			}
 		}
 
@@ -1138,7 +1143,8 @@ void SPUThread::stop_and_signal(u32 code)
 		group->exit_status = value;
 		group->join_state |= SPU_TGJSF_GROUP_EXIT;
 		group->join_cv.notify_one();
-		return;
+
+		return Stop();
 	}
 
 	case 0x102:
@@ -1159,8 +1165,8 @@ void SPUThread::stop_and_signal(u32 code)
 		LV2_LOCK;
 
 		status |= SPU_STATUS_STOPPED_BY_STOP;
-		FastStop();
-		return;
+
+		return Stop();
 	}
 	}
 
@@ -1191,10 +1197,9 @@ void SPUThread::halt()
 			status &= ~SPU_STATUS_RUNNING;
 		});
 
-		FastStop();
-
 		int2.set(SPU_INT2_STAT_SPU_HALT_OR_STEP_INT);
-		return;
+
+		return Stop();
 	}
 
 	status |= SPU_STATUS_STOPPED_BY_HALT;
@@ -1203,10 +1208,9 @@ void SPUThread::halt()
 
 spu_thread::spu_thread(u32 entry, const std::string& name, u32 stack_size, u32 prio)
 {
-	thread = Emu.GetCPU().AddThread(CPU_THREAD_SPU);
+	auto spu = Emu.GetIdManager().make_ptr<SPUThread>(name, 0, 0x10000);
 
-	thread->SetName(name);
-	thread->SetEntry(entry);
-	thread->SetStackSize(stack_size ? stack_size : Emu.GetPrimaryStackSize());
-	thread->SetPrio(prio ? prio : Emu.GetPrimaryPrio());
+	spu->PC = entry;
+
+	thread = std::move(spu);
 }

@@ -735,7 +735,7 @@ struct set_alignment(128) CellSpursTaskset
 	struct TaskInfo
 	{
 		CellSpursTaskArgument args;                         // 0x00
-		vm::bptr<u64, u64> elf_addr;                        // 0x10
+		vm::bcptr<void, u64> elf;                           // 0x10
 		be_t<u64> context_save_storage_and_alloc_ls_blocks; // 0x18 This is (context_save_storage_addr | allocated_ls_blocks)
 		CellSpursTaskLsPattern ls_pattern;                  // 0x20
 	};

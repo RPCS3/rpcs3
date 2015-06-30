@@ -229,7 +229,7 @@ s32 sys_process_get_number_of_object(u32 object, vm::ptr<u32> nump)
 	case SYS_LWCOND_OBJECT:
 	case SYS_EVENT_FLAG_OBJECT:
 	{
-		*nump = Emu.GetIdManager().get_count_by_type(object);
+		*nump = Emu.GetIdManager().get_count(object);
 		return CELL_OK;
 	}	
 	}
@@ -262,7 +262,7 @@ s32 sys_process_get_id(u32 object, vm::ptr<u32> buffer, u32 size, vm::ptr<u32> s
 	case SYS_LWCOND_OBJECT:
 	case SYS_EVENT_FLAG_OBJECT:
 	{
-		const auto objects = Emu.GetIdManager().get_IDs_by_type(object);
+		const auto objects = Emu.GetIdManager().get_IDs(object);
 
 		u32 i = 0;
 

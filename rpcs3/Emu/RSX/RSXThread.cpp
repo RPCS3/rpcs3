@@ -2456,13 +2456,13 @@ void RSXThread::Task()
 
 	m_last_flip_time = get_system_time() - 1000000;
 
-	thread_t vblank("VBlank thread", true /* autojoin */, [this]()
+	thread_t vblank(WRAP_EXPR("VBlank thread"), [this]()
 	{
 		const u64 start_time = get_system_time();
 
 		m_vblank_count = 0;
 
-		while (!TestDestroy() && !Emu.IsStopped())
+		while (joinable() && !Emu.IsStopped())
 		{
 			if (get_system_time() - start_time > m_vblank_count * 1000000 / 60)
 			{
@@ -2483,13 +2483,8 @@ void RSXThread::Task()
 		}
 	});
 
-	while (!TestDestroy()) try
+	while (joinable() && !Emu.IsStopped())
 	{
-		if (Emu.IsStopped())
-		{
-			LOG_WARNING(RSX, "RSX thread aborted");
-			break;
-		}
 		std::lock_guard<std::mutex> lock(m_cs_main);
 
 		inc = 1;
@@ -2571,16 +2566,6 @@ void RSXThread::Task()
 			value += (count + 1) * 4;
 		});
 	}
-	catch (const std::string& e)
-	{
-		LOG_ERROR(RSX, "Exception: %s", e.c_str());
-		Emu.Pause();
-	}
-	catch (const char* e)
-	{
-		LOG_ERROR(RSX, "Exception: %s", e);
-		Emu.Pause();
-	}
 
 	LOG_NOTICE(RSX, "RSX thread ended");
 
@@ -2602,7 +2587,8 @@ void RSXThread::Init(const u32 ioAddress, const u32 ioSize, const u32 ctrlAddres
 	m_used_gcm_commands.clear();
 
 	OnInit();
-	ThreadBase::Start();
+
+	start(WRAP_EXPR("RSXThread"), WRAP_EXPR(Task()));
 }
 
 u32 RSXThread::ReadIO32(u32 addr)

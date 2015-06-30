@@ -29,7 +29,6 @@ AudioDecoder::AudioDecoder(s32 type, u32 addr, u32 size, vm::ptr<CellAdecCbMsg> 
 	, memBias(0)
 	, cbFunc(func)
 	, cbArg(arg)
-	, adecCb(nullptr)
 	, is_closed(false)
 	, is_finished(false)
 	, just_started(false)
@@ -223,16 +222,10 @@ void adecOpen(u32 adec_id) // TODO: call from the constructor
 
 	adec.id = adec_id;
 
-	adec.adecCb = static_cast<PPUThread*>(Emu.GetCPU().AddThread(CPU_THREAD_PPU).get());
-	adec.adecCb->SetName(fmt::format("AudioDecoder[0x%x] Callback", adec_id));
-	adec.adecCb->SetEntry(0);
-	adec.adecCb->SetPrio(1001);
-	adec.adecCb->SetStackSize(0x10000);
-	adec.adecCb->InitStack();
-	adec.adecCb->InitRegs();
-	adec.adecCb->DoRun();
-
-	thread_t t(fmt::format("AudioDecoder[0x%x] Thread", adec_id), [sptr]()
+	adec.adecCb = Emu.GetIdManager().make_ptr<PPUThread>(fmt::format("Demuxer[0x%x] Thread", adec_id));
+	adec.adecCb->prio = 1001;
+	adec.adecCb->stack_size = 0x10000;
+	adec.adecCb->custom_task = [sptr](PPUThread& CPU)
 	{
 		AudioDecoder& adec = *sptr;
 		AdecTask& task = adec.task;
@@ -277,7 +270,7 @@ void adecOpen(u32 adec_id) // TODO: call from the constructor
 			{
 				// TODO: finalize
 				cellAdec.Warning("adecEndSeq:");
-				adec.cbFunc(*adec.adecCb, adec.id, CELL_ADEC_MSG_TYPE_SEQDONE, CELL_OK, adec.cbArg);
+				adec.cbFunc(CPU, adec.id, CELL_ADEC_MSG_TYPE_SEQDONE, CELL_OK, adec.cbArg);
 
 				adec.just_finished = true;
 				break;
@@ -453,12 +446,12 @@ void adecOpen(u32 adec_id) // TODO: call from the constructor
 						if (adec.frames.push(frame, &adec.is_closed))
 						{
 							frame.data = nullptr; // to prevent destruction
-							adec.cbFunc(*adec.adecCb, adec.id, CELL_ADEC_MSG_TYPE_PCMOUT, CELL_OK, adec.cbArg);
+							adec.cbFunc(CPU, adec.id, CELL_ADEC_MSG_TYPE_PCMOUT, CELL_OK, adec.cbArg);
 						}
 					}
 				}
 
-				adec.cbFunc(*adec.adecCb, adec.id, CELL_ADEC_MSG_TYPE_AUDONE, task.au.auInfo_addr, adec.cbArg);
+				adec.cbFunc(CPU, adec.id, CELL_ADEC_MSG_TYPE_AUDONE, task.au.auInfo_addr, adec.cbArg);
 				break;
 			}
 
@@ -475,7 +468,11 @@ void adecOpen(u32 adec_id) // TODO: call from the constructor
 		}
 
 		adec.is_finished = true;
-	});
+
+	};
+
+	adec.adecCb->Run();
+	adec.adecCb->Exec();
 }
 
 bool adecCheckType(s32 type)
@@ -580,7 +577,7 @@ s32 cellAdecClose(u32 handle)
 		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 	}
 
-	if (adec->adecCb) Emu.GetCPU().RemoveThread(adec->adecCb->GetId());
+	Emu.GetIdManager().remove<PPUThread>(adec->adecCb->GetId());
 	Emu.GetIdManager().remove<AudioDecoder>(handle);
 	return CELL_OK;
 }

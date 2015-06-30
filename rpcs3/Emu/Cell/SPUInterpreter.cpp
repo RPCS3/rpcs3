@@ -279,7 +279,7 @@ void spu_interpreter::BIZ(SPUThread& CPU, spu_opcode_t op)
 
 	if (CPU.GPR[op.rt]._u32[3] == 0)
 	{
-		CPU.SetBranch(SPUOpcodes::branchTarget(CPU.GPR[op.ra]._u32[3], 0));
+		CPU.PC = SPUOpcodes::branchTarget(CPU.GPR[op.ra]._u32[3], 0) - 4;
 	}
 }
 
@@ -292,7 +292,7 @@ void spu_interpreter::BINZ(SPUThread& CPU, spu_opcode_t op)
 
 	if (CPU.GPR[op.rt]._u32[3] != 0)
 	{
-		CPU.SetBranch(SPUOpcodes::branchTarget(CPU.GPR[op.ra]._u32[3], 0));
+		CPU.PC = SPUOpcodes::branchTarget(CPU.GPR[op.ra]._u32[3], 0) - 4;
 	}
 }
 
@@ -305,7 +305,7 @@ void spu_interpreter::BIHZ(SPUThread& CPU, spu_opcode_t op)
 
 	if (CPU.GPR[op.rt]._u16[6] == 0)
 	{
-		CPU.SetBranch(SPUOpcodes::branchTarget(CPU.GPR[op.ra]._u32[3], 0));
+		CPU.PC = SPUOpcodes::branchTarget(CPU.GPR[op.ra]._u32[3], 0) - 4;
 	}
 }
 
@@ -318,7 +318,7 @@ void spu_interpreter::BIHNZ(SPUThread& CPU, spu_opcode_t op)
 
 	if (CPU.GPR[op.rt]._u16[6] != 0)
 	{
-		CPU.SetBranch(SPUOpcodes::branchTarget(CPU.GPR[op.ra]._u32[3], 0));
+		CPU.PC = SPUOpcodes::branchTarget(CPU.GPR[op.ra]._u32[3], 0) - 4;
 	}
 }
 
@@ -339,7 +339,7 @@ void spu_interpreter::BI(SPUThread& CPU, spu_opcode_t op)
 		throw __FUNCTION__;
 	}
 
-	CPU.SetBranch(SPUOpcodes::branchTarget(CPU.GPR[op.ra]._u32[3], 0));
+	CPU.PC = SPUOpcodes::branchTarget(CPU.GPR[op.ra]._u32[3], 0) - 4;
 }
 
 void spu_interpreter::BISL(SPUThread& CPU, spu_opcode_t op)
@@ -351,7 +351,7 @@ void spu_interpreter::BISL(SPUThread& CPU, spu_opcode_t op)
 
 	const u32 target = SPUOpcodes::branchTarget(CPU.GPR[op.ra]._u32[3], 0);
 	CPU.GPR[op.rt] = u128::from32r(CPU.PC + 4);
-	CPU.SetBranch(target);
+	CPU.PC = target - 4;
 }
 
 void spu_interpreter::IRET(SPUThread& CPU, spu_opcode_t op)
@@ -931,7 +931,7 @@ void spu_interpreter::BRZ(SPUThread& CPU, spu_opcode_t op)
 {
 	if (CPU.GPR[op.rt]._u32[3] == 0)
 	{
-		CPU.SetBranch(SPUOpcodes::branchTarget(CPU.PC, op.i16));
+		CPU.PC = SPUOpcodes::branchTarget(CPU.PC, op.i16) - 4;
 	}
 }
 
@@ -944,7 +944,7 @@ void spu_interpreter::BRNZ(SPUThread& CPU, spu_opcode_t op)
 {
 	if (CPU.GPR[op.rt]._u32[3] != 0)
 	{
-		CPU.SetBranch(SPUOpcodes::branchTarget(CPU.PC, op.i16));
+		CPU.PC = SPUOpcodes::branchTarget(CPU.PC, op.i16) - 4;
 	}
 }
 
@@ -952,7 +952,7 @@ void spu_interpreter::BRHZ(SPUThread& CPU, spu_opcode_t op)
 {
 	if (CPU.GPR[op.rt]._u16[6] == 0)
 	{
-		CPU.SetBranch(SPUOpcodes::branchTarget(CPU.PC, op.i16));
+		CPU.PC = SPUOpcodes::branchTarget(CPU.PC, op.i16) - 4;
 	}
 }
 
@@ -960,7 +960,7 @@ void spu_interpreter::BRHNZ(SPUThread& CPU, spu_opcode_t op)
 {
 	if (CPU.GPR[op.rt]._u16[6] != 0)
 	{
-		CPU.SetBranch(SPUOpcodes::branchTarget(CPU.PC, op.i16));
+		CPU.PC = SPUOpcodes::branchTarget(CPU.PC, op.i16) - 4;
 	}
 }
 
@@ -971,7 +971,7 @@ void spu_interpreter::STQR(SPUThread& CPU, spu_opcode_t op)
 
 void spu_interpreter::BRA(SPUThread& CPU, spu_opcode_t op)
 {
-	CPU.SetBranch(SPUOpcodes::branchTarget(0, op.i16));
+	CPU.PC = SPUOpcodes::branchTarget(0, op.i16) - 4;
 }
 
 void spu_interpreter::LQA(SPUThread& CPU, spu_opcode_t op)
@@ -983,12 +983,12 @@ void spu_interpreter::BRASL(SPUThread& CPU, spu_opcode_t op)
 {
 	const u32 target = SPUOpcodes::branchTarget(0, op.i16);
 	CPU.GPR[op.rt] = u128::from32r(CPU.PC + 4);
-	CPU.SetBranch(target);
+	CPU.PC = target - 4;
 }
 
 void spu_interpreter::BR(SPUThread& CPU, spu_opcode_t op)
 {
-	CPU.SetBranch(SPUOpcodes::branchTarget(CPU.PC, op.i16));
+	CPU.PC = SPUOpcodes::branchTarget(CPU.PC, op.i16) - 4;
 }
 
 void spu_interpreter::FSMBI(SPUThread& CPU, spu_opcode_t op)
@@ -1000,7 +1000,7 @@ void spu_interpreter::BRSL(SPUThread& CPU, spu_opcode_t op)
 {
 	const u32 target = SPUOpcodes::branchTarget(CPU.PC, op.i16);
 	CPU.GPR[op.rt] = u128::from32r(CPU.PC + 4);
-	CPU.SetBranch(target);
+	CPU.PC = target - 4;
 }
 
 void spu_interpreter::LQR(SPUThread& CPU, spu_opcode_t op)

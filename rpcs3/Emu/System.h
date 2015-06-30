@@ -2,7 +2,7 @@
 
 #include "Loader/Loader.h"
 
-enum Status
+enum Status : u32
 {
 	Running,
 	Paused,
@@ -34,7 +34,7 @@ private:
 	u32 m_sdk_version = 0x360001;
 	u32 m_malloc_pagesize = 0x100000;
 	u32 m_primary_stacksize = 0x100000;
-	u32 m_primary_prio = 0x50;
+	s32 m_primary_prio = 0x50;
 
 public:
 	EmuInfo()
@@ -51,7 +51,7 @@ class Emulator
 		Interpreter,
 	};
 		
-	volatile uint m_status;
+	volatile u32 m_status;
 	uint m_mode;
 
 	u32 m_rsx_callback;
@@ -146,7 +146,7 @@ public:
 		m_info.m_tls_memsz = memsz;
 	}
 
-	void SetParams(u32 sdk_ver, u32 malloc_pagesz, u32 stacksz, u32 prio)
+	void SetParams(u32 sdk_ver, u32 malloc_pagesz, u32 stacksz, s32 prio)
 	{
 		m_info.m_sdk_version = sdk_ver;
 		m_info.m_malloc_pagesize = malloc_pagesz;
@@ -171,12 +171,11 @@ public:
 	u32 GetMallocPageSize() { return m_info.m_malloc_pagesize; }
 	u32 GetSDKVersion() { return m_info.m_sdk_version; }
 	u32 GetPrimaryStackSize() { return m_info.m_primary_stacksize; }
-	u32 GetPrimaryPrio() { return m_info.m_primary_prio; }
+	s32 GetPrimaryPrio() { return m_info.m_primary_prio; }
 
 	u32 GetRSXCallback() const { return m_rsx_callback; }
 	u32 GetCPUThreadStop() const { return m_cpu_thr_stop; }
 
-	void CheckStatus();
 	bool BootGame(const std::string& path, bool direct = false);
 
 	void Load();
@@ -197,7 +196,9 @@ public:
 using lv2_lock_type = std::unique_lock<std::mutex>;
 
 #define LV2_LOCK lv2_lock_type lv2_lock(Emu.GetCoreMutex())
-#define CHECK_LV2_LOCK(x) assert((x).owns_lock() && (x).mutex() == &Emu.GetCoreMutex())
+#define LV2_DEFER_LOCK lv2_lock_type lv2_lock
+#define CHECK_LV2_LOCK(x) if (!(x).owns_lock() || (x).mutex() != &Emu.GetCoreMutex()) throw EXCEPTION("Invalid LV2_LOCK (locked=%d)", (x).owns_lock())
+#define CHECK_EMU_STATUS if (Emu.IsStopped()) throw EXCEPTION("Aborted (emulation stopped)")
 
 extern Emulator Emu;
 

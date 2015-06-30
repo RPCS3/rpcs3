@@ -544,6 +544,10 @@ public:
 	std::array<std::pair<u32, std::weak_ptr<lv2_event_queue_t>>, 32> spuq; // Event Queue Keys for SPU Thread
 	std::weak_ptr<lv2_event_queue_t> spup[64]; // SPU Ports
 
+	u32 PC = 0;
+	const u32 index; // SPU index
+	const u32 offset; // SPU LS offset
+
 	void write_snr(bool number, u32 value)
 	{
 		if (!number)
@@ -626,11 +630,28 @@ public:
 
 	std::function<void(SPUThread& SPU)> m_custom_task;
 
-public:
-	SPUThread(CPUThreadType type = CPU_THREAD_SPU);
-	virtual ~SPUThread();
+protected:
+	SPUThread(CPUThreadType type, const std::string& name, u32 index, u32 offset);
 
-	virtual std::string RegsToString()
+public:
+	SPUThread(const std::string& name, u32 index, u32 offset);
+	virtual ~SPUThread() override;
+
+	virtual bool IsPaused() const override;
+
+	virtual void DumpInformation() const override;
+	virtual u32 GetPC() const override { return PC; }
+	virtual u32 GetOffset() const override { return offset; }
+	virtual void DoRun() override;
+	virtual void Task() override;
+
+	virtual void InitRegs() override;
+	virtual void InitStack() override;
+	virtual void CloseStack() override;
+
+	void FastCall(u32 ls_addr);
+
+	virtual std::string RegsToString() const
 	{
 		std::string ret = "Registers:\n=========\n";
 
@@ -639,7 +660,7 @@ public:
 		return ret;
 	}
 
-	virtual std::string ReadRegString(const std::string& reg)
+	virtual std::string ReadRegString(const std::string& reg) const
 	{
 		std::string::size_type first_brk = reg.find('[');
 		if (first_brk != std::string::npos)
@@ -679,23 +700,6 @@ public:
 		}
 		return false;
 	}
-
-public:
-	virtual void InitRegs();
-	virtual void InitStack();
-	virtual void CloseStack();
-	virtual void Task();
-	void FastCall(u32 ls_addr);
-	void FastStop();
-	void FastRun();
-
-protected:
-	virtual void DoReset();
-	virtual void DoRun();
-	virtual void DoPause();
-	virtual void DoResume();
-	virtual void DoStop();
-	virtual void DoClose();
 };
 
 class spu_thread : cpu_thread

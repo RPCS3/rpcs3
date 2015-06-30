@@ -123,9 +123,8 @@ struct AudioPortConfig
 
 struct AudioConfig  //custom structure
 {
-	std::mutex mutex;
 	atomic<AudioState> state;
-	thread_t audio_thread;
+	thread_t thread;
 
 	AudioPortConfig ports[AUDIO_PORT_COUNT];
 	u32 buffer; // 1 MB memory for audio ports
@@ -134,9 +133,7 @@ struct AudioConfig  //custom structure
 	u64 start_time;
 	std::vector<u64> keys;
 
-	AudioConfig() : audio_thread("Audio Thread")
-	{
-	}
+	AudioConfig() = default;
 
 	u32 open_port()
 	{

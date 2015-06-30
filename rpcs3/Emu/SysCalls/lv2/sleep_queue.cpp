@@ -145,13 +145,13 @@ u32 sleep_queue_t::signal(u32 protocol)
 	{
 		std::lock_guard<std::mutex> lock(m_mutex);
 
-		u64 highest_prio = ~0ull;
+		s32 highest_prio = INT32_MAX;
 		u64 sel = ~0ull;
 		for (auto& v : m_waiting)
 		{
-			if (const auto t = Emu.GetCPU().GetThread(v))
+			if (const auto t = Emu.GetIdManager().get<PPUThread>(v))
 			{
-				const u64 prio = t->GetPrio();
+				const s32 prio = t->prio;
 				if (prio < highest_prio)
 				{
 					highest_prio = prio;

@@ -897,12 +897,11 @@ void SysCalls::DoSyscall(PPUThread& CPU, u64 code)
 {
 	if (code >= 1024)
 	{
-		CPU.m_last_syscall = code;
-		throw "Invalid syscall number";
+		throw EXCEPTION("Invalid syscall number (0x%llx)", code);
 	}
 	
-	auto old_last_syscall = CPU.m_last_syscall;
-	CPU.m_last_syscall = ~code;
+	auto last_code = CPU.hle_code;
+	CPU.hle_code = ~code;
 
 	if (Ini.HLELogging.GetValue())
 	{
@@ -916,5 +915,5 @@ void SysCalls::DoSyscall(PPUThread& CPU, u64 code)
 		LOG_NOTICE(PPU, "Syscall %lld finished: %s -> 0x%llx", code, SysCalls::GetFuncName(~code), CPU.GPR[3]);
 	}
 
-	CPU.m_last_syscall = old_last_syscall;
+	CPU.hle_code = last_code;
 }

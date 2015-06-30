@@ -228,7 +228,7 @@ s32 sys_lwmutex_lock(PPUThread& CPU, vm::ptr<sys_lwmutex_t> lwmutex, u64 timeout
 		// locking succeeded
 		auto old = lwmutex->vars.owner.exchange(tid);
 
-		if (old != lwmutex_reserved && !Emu.IsStopped())
+		if (old != lwmutex_reserved)
 		{
 			sysPrxForUser.Fatal("sys_lwmutex_lock(lwmutex=*0x%x): locking failed (owner=0x%x)", lwmutex, old);
 		}
@@ -299,7 +299,7 @@ s32 sys_lwmutex_trylock(PPUThread& CPU, vm::ptr<sys_lwmutex_t> lwmutex)
 			// locking succeeded
 			auto old = lwmutex->vars.owner.exchange(tid);
 
-			if (old != lwmutex_reserved && !Emu.IsStopped())
+			if (old != lwmutex_reserved)
 			{
 				sysPrxForUser.Fatal("sys_lwmutex_trylock(lwmutex=*0x%x): locking failed (owner=0x%x)", lwmutex, old);
 			}
@@ -588,7 +588,7 @@ s32 sys_lwcond_wait(PPUThread& CPU, vm::ptr<sys_lwcond_t> lwcond, u64 timeout)
 		const auto old = lwmutex->vars.owner.exchange(tid);
 		lwmutex->recursive_count = recursive_value;
 
-		if (old != lwmutex_reserved && !Emu.IsStopped())
+		if (old != lwmutex_reserved)
 		{
 			sysPrxForUser.Fatal("sys_lwcond_wait(lwcond=*0x%x): locking failed (lwmutex->owner=0x%x)", lwcond, old);
 		}
@@ -617,7 +617,7 @@ s32 sys_lwcond_wait(PPUThread& CPU, vm::ptr<sys_lwcond_t> lwcond, u64 timeout)
 		const auto old = lwmutex->vars.owner.exchange(tid);
 		lwmutex->recursive_count = recursive_value;
 
-		if (old != lwmutex_reserved && !Emu.IsStopped())
+		if (old != lwmutex_reserved)
 		{
 			sysPrxForUser.Fatal("sys_lwcond_wait(lwcond=*0x%x): locking failed after timeout (lwmutex->owner=0x%x)", lwcond, old);
 		}
@@ -1189,13 +1189,9 @@ void sys_spinlock_lock(vm::ptr<atomic_be_t<u32>> lock)
 	// prx: exchange with 0xabadcafe, repeat until exchanged with 0
 	while (lock->exchange(0xabadcafe).data())
 	{
-		g_sys_spinlock_wm.wait_op(lock.addr(), [lock](){ return lock->load().data() == 0; });
+		g_sys_spinlock_wm.wait_op(lock.addr(), WRAP_EXPR(!lock->load().data()));
 
-		if (Emu.IsStopped())
-		{
-			sysPrxForUser.Warning("sys_spinlock_lock(lock=*0x%x) aborted", lock);
-			break;
-		}
+		CHECK_EMU_STATUS;
 	}
 }
 

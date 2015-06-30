@@ -108,9 +108,8 @@ void InterpreterDisAsmFrame::UpdateUnitList()
 {
 	m_choice_units->Freeze();
 	m_choice_units->Clear();
-	auto thrs = Emu.GetCPU().GetThreads();
 
-	for (auto& t : thrs)
+	for (auto& t : Emu.GetCPU().GetAllThreads())
 	{
 		m_choice_units->Append(t->GetFName(), t.get());
 	}
@@ -248,10 +247,10 @@ void InterpreterDisAsmFrame::ShowAddr(const u64 addr)
 	}
 	else
 	{
-		disasm->offset = vm::get_ptr<u8>(CPU->offset);
+		disasm->offset = vm::get_ptr<u8>(CPU->GetOffset());
 		for(uint i=0, count = 4; i<m_item_count; ++i, PC += count)
 		{
-			if(!vm::check_addr(CPU->offset + PC, 4))
+			if(!vm::check_addr(CPU->GetOffset() + PC, 4))
 			{
 				m_list->SetItem(i, 0, wxString(IsBreakPoint(PC) ? ">>> " : "    ") + wxString::Format("[%08llx] illegal address", PC));
 				count = 4;
@@ -259,7 +258,7 @@ void InterpreterDisAsmFrame::ShowAddr(const u64 addr)
 			}
 
 			disasm->dump_pc = PC;
-			count = decoder->DecodeMemory(CPU->offset + PC);
+			count = decoder->DecodeMemory(CPU->GetOffset() + PC);
 
 			if(IsBreakPoint(PC))
 			{
@@ -272,7 +271,7 @@ void InterpreterDisAsmFrame::ShowAddr(const u64 addr)
 
 			wxColour colour;
 
-			if((!CPU->IsRunning() || !Emu.IsRunning()) && PC == CPU->PC)
+			if(CPU->IsPaused() && PC == CPU->GetPC())
 			{
 				colour = wxColour("Green");
 			}
@@ -456,11 +455,11 @@ void InterpreterDisAsmFrame::Show_Val(wxCommandEvent& WXUNUSED(event))
 
 	diag->SetSizerAndFit( s_panel );
 
-	if(CPU) p_pc->SetValue(wxString::Format("%x", CPU->PC));
+	if(CPU) p_pc->SetValue(wxString::Format("%x", CPU->GetPC()));
 
 	if(diag->ShowModal() == wxID_OK)
 	{
-		unsigned long pc = CPU ? CPU->PC : 0x0;
+		unsigned long pc = CPU ? CPU->GetPC() : 0x0;
 		p_pc->GetValue().ToULong(&pc, 16);
 		Emu.GetMarkedPoints().push_back(pc);
 		remove_markedPC.push_back(Emu.GetMarkedPoints().size()-1);
@@ -470,10 +469,9 @@ void InterpreterDisAsmFrame::Show_Val(wxCommandEvent& WXUNUSED(event))
 
 void InterpreterDisAsmFrame::Show_PC(wxCommandEvent& WXUNUSED(event))
 {
-	if(CPU) ShowAddr(CentrePc(CPU->PC));
+	if(CPU) ShowAddr(CentrePc(CPU->GetPC()));
 }
 
-extern bool dump_enable;
 void InterpreterDisAsmFrame::DoRun(wxCommandEvent& WXUNUSED(event))
 {
 	if(!CPU) return;
@@ -496,7 +494,7 @@ void InterpreterDisAsmFrame::DoPause(wxCommandEvent& WXUNUSED(event))
 
 void InterpreterDisAsmFrame::DoStep(wxCommandEvent& WXUNUSED(event))
 {
-	if(CPU) CPU->ExecOnce();
+	if(CPU) CPU->Step();
 }
 
 void InterpreterDisAsmFrame::InstrKey(wxListEvent& event)

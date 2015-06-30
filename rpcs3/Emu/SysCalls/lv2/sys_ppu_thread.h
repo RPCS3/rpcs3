@@ -35,7 +35,7 @@ u32 ppu_thread_create(u32 entry, u64 arg, s32 prio, u32 stacksize, bool is_joina
 // SysCalls
 void _sys_ppu_thread_exit(PPUThread& CPU, u64 errorcode);
 void sys_ppu_thread_yield();
-s32 sys_ppu_thread_join(u32 thread_id, vm::ptr<u64> vptr);
+s32 sys_ppu_thread_join(PPUThread& CPU, u32 thread_id, vm::ptr<u64> vptr);
 s32 sys_ppu_thread_detach(u32 thread_id);
 void sys_ppu_thread_get_join_state(PPUThread& CPU, vm::ptr<s32> isjoinable);
 s32 sys_ppu_thread_set_priority(u32 thread_id, s32 prio);

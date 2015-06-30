@@ -4,7 +4,7 @@
 #include "Utilities/Thread.h"
 #include "OpenGL.h"
 
-struct GLVertexDecompilerThread : public ThreadBase, public VertexProgramDecompiler
+struct GLVertexDecompilerThread : public VertexProgramDecompiler
 {
 	std::string &m_shader;
 protected:
@@ -20,11 +20,12 @@ protected:
 	virtual void insertMainEnd(std::stringstream &OS) override;
 public:
 	GLVertexDecompilerThread(std::vector<u32>& data, std::string& shader, ParamArray& parr)
-		: ThreadBase("Vertex Shader Decompiler Thread"), VertexProgramDecompiler(data), m_shader(shader)
+		: VertexProgramDecompiler(data)
+		, m_shader(shader)
 	{
 	}
 
-	virtual void Task() override;
+	void Task();
 };
 
 class GLVertexProgram
@@ -34,15 +35,12 @@ public:
 	~GLVertexProgram();
 
 	ParamArray parr;
-	u32 id;
+	u32 id = 0;
 	std::string shader;
 
 	void Decompile(RSXVertexProgram& prog);
-	void DecompileAsync(RSXVertexProgram& prog);
-	void Wait();
 	void Compile();
 
 private:
-	GLVertexDecompilerThread* m_decompiler_thread;
 	void Delete();
 };

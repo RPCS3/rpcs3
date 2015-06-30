@@ -163,7 +163,7 @@ s32 sys_cond_wait(PPUThread& CPU, u32 cond_id, u64 timeout)
 		return CELL_ESRCH;
 	}
 
-	const auto thread = Emu.GetCPU().GetThread(CPU.GetId());
+	const auto thread = Emu.GetIdManager().get<PPUThread>(CPU.GetId());
 
 	if (cond->mutex->owner.owner_before(thread) || thread.owner_before(cond->mutex->owner)) // check equality
 	{

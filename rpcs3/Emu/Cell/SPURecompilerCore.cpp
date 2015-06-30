@@ -225,9 +225,9 @@ u32 SPURecompilerCore::DecodeMemory(const u32 address)
 		return 0;
 	}
 
-	const auto func = asmjit_cast<u32(*)(SPUThread& _cpu, be_t<u32>* _ls, const void* _imm, const void* _g_imm)>(entry[pos].pointer);
+	const auto func = asmjit_cast<u32(*)(SPUThread* _cpu, be_t<u32>* _ls, const void* _imm, const void* _g_imm)>(entry[pos].pointer);
 
-	u32 res = func(CPU, _ls, imm_table.data(), &g_spu_imm);
+	u32 res = func(&CPU, _ls, imm_table.data(), &g_spu_imm);
 
 	if (res & 0x1000000)
 	{
@@ -247,7 +247,7 @@ u32 SPURecompilerCore::DecodeMemory(const u32 address)
 	}
 	else
 	{
-		CPU.SetBranch((u64)res << 2);
+		CPU.PC = (res << 2) - 4;
 		return 0;
 	}
 }
@@ -272,24 +272,22 @@ u32 SPURecompilerCore::DecodeMemory(const u32 address)
 
 #define LOG4_OPCODE(...) //c.addComment(fmt::Format("SPU info: "__FUNCTION__"(): "__VA_ARGS__).c_str())
 
-#define WRAPPER_BEGIN(a0, a1, a2, a3) struct opwr_##a0 \
+#define WRAPPER_BEGIN(a0, a1, a2) struct opwr_##a0 \
 { \
-	static void opcode(u32 a0, u32 a1, u32 a2, u32 a3) \
-{ \
-	SPUThread& CPU = *(SPUThread*)GetCurrentNamedThread();
+	static void opcode(SPUThread* CPU, u32 a0, u32 a1, u32 a2) \
+{
 
-#define WRAPPER_END(a0, a1, a2, a3) /*LOG2_OPCODE();*/ } \
+#define WRAPPER_END(a0, a1, a2) /*LOG2_OPCODE();*/ } \
 }; \
 	/*XmmRelease();*/ \
 	if (#a0[0] == 'r') XmmInvalidate(a0); \
 	if (#a1[0] == 'r') XmmInvalidate(a1); \
 	if (#a2[0] == 'r') XmmInvalidate(a2); \
-	if (#a3[0] == 'r') XmmInvalidate(a3); \
-	X86CallNode* call##a0 = c.call(imm_ptr(reinterpret_cast<void*>(&opwr_##a0::opcode)), kFuncConvHost, FuncBuilder4<void, u32, u32, u32, u32>()); \
-	call##a0->setArg(0, imm_u(a0)); \
-	call##a0->setArg(1, imm_u(a1)); \
-	call##a0->setArg(2, imm_u(a2)); \
-	call##a0->setArg(3, imm_u(a3)); \
+	X86CallNode* call##a0 = c.call(imm_ptr(reinterpret_cast<void*>(&opwr_##a0::opcode)), kFuncConvHost, FuncBuilder4<void, SPUThread*, u32, u32, u32>()); \
+	call##a0->setArg(0, *cpu_var); \
+	call##a0->setArg(1, imm_u(a0)); \
+	call##a0->setArg(2, imm_u(a1)); \
+	call##a0->setArg(3, imm_u(a2)); \
 	LOG3_OPCODE(/*#a0"=%d, "#a1"=%d, "#a2"=%d, "#a3"=%d", a0, a1, a2, a3*/);
 
 const SPURecompiler::XmmLink& SPURecompiler::XmmAlloc(s8 pref) // get empty xmm register
@@ -505,16 +503,16 @@ void SPURecompiler::STOP(u32 code)
 {
 	struct STOP_wrapper
 	{
-		static void STOP(u32 code)
+		static void STOP(SPUThread* CPU, u32 code)
 		{
-			SPUThread& CPU = *(SPUThread*)GetCurrentNamedThread();
-			CPU.stop_and_signal(code);
+			CPU->stop_and_signal(code);
 			LOG2_OPCODE();
 		}
 	};
 	c.mov(cpu_dword(PC), CPU.PC);
-	X86CallNode* call = c.call(imm_ptr(reinterpret_cast<void*>(&STOP_wrapper::STOP)), kFuncConvHost, FuncBuilder1<void, u32>());
-	call->setArg(0, imm_u(code));
+	X86CallNode* call = c.call(imm_ptr(reinterpret_cast<void*>(&STOP_wrapper::STOP)), kFuncConvHost, FuncBuilder2<void, SPUThread*, u32>());
+	call->setArg(0, *cpu_var);
+	call->setArg(1, imm_u(code));
 	c.mov(*pos_var, (CPU.PC >> 2) + 1);
 	do_finalize = true;
 	LOG_OPCODE();
@@ -550,18 +548,18 @@ void SPURecompiler::MFSPR(u32 rt, u32 sa)
 void SPURecompiler::RDCH(u32 rt, u32 ra)
 {
 	c.mov(cpu_dword(PC), CPU.PC);
-	WRAPPER_BEGIN(rt, ra, yy, zz);
-	CPU.GPR[rt] = u128::from32r(CPU.get_ch_value(ra));
-	WRAPPER_END(rt, ra, 0, 0);
+	WRAPPER_BEGIN(rt, ra, zz);
+	CPU->GPR[rt] = u128::from32r(CPU->get_ch_value(ra));
+	WRAPPER_END(rt, ra, 0);
 	// TODO
 }
 
 void SPURecompiler::RCHCNT(u32 rt, u32 ra)
 {
 	c.mov(cpu_dword(PC), CPU.PC);
-	WRAPPER_BEGIN(rt, ra, yy, zz);
-	CPU.GPR[rt] = u128::from32r(CPU.get_ch_count(ra));
-	WRAPPER_END(rt, ra, 0, 0);
+	WRAPPER_BEGIN(rt, ra, zz);
+	CPU->GPR[rt] = u128::from32r(CPU->get_ch_count(ra));
+	WRAPPER_END(rt, ra, 0);
 	// TODO
 }
 
@@ -964,9 +962,9 @@ void SPURecompiler::MTSPR(u32 rt, u32 sa)
 void SPURecompiler::WRCH(u32 ra, u32 rt)
 {
 	c.mov(cpu_dword(PC), CPU.PC);
-	WRAPPER_BEGIN(ra, rt, yy, zz);
-	CPU.set_ch_value(ra, CPU.GPR[rt]._u32[3]);
-	WRAPPER_END(ra, rt, 0, 0);
+	WRAPPER_BEGIN(ra, rt, yy);
+	CPU->set_ch_value(ra, CPU->GPR[rt]._u32[3]);
+	WRAPPER_END(ra, rt, 0);
 	// TODO
 
 	/*XmmInvalidate(rt);
@@ -2208,23 +2206,23 @@ void SPURecompiler::SFX(u32 rt, u32 ra, u32 rb)
 
 void SPURecompiler::CGX(u32 rt, u32 ra, u32 rb) //nf
 {
-	WRAPPER_BEGIN(rt, ra, rb, zz);
+	WRAPPER_BEGIN(rt, ra, rb);
 	for (int w = 0; w < 4; w++)
-		CPU.GPR[rt]._u32[w] = ((u64)CPU.GPR[ra]._u32[w] + (u64)CPU.GPR[rb]._u32[w] + (u64)(CPU.GPR[rt]._u32[w] & 1)) >> 32;
-	WRAPPER_END(rt, ra, rb, 0);
+		CPU->GPR[rt]._u32[w] = ((u64)CPU->GPR[ra]._u32[w] + (u64)CPU->GPR[rb]._u32[w] + (u64)(CPU->GPR[rt]._u32[w] & 1)) >> 32;
+	WRAPPER_END(rt, ra, rb);
 }
 
 void SPURecompiler::BGX(u32 rt, u32 ra, u32 rb) //nf
 {
-	WRAPPER_BEGIN(rt, ra, rb, zz);
+	WRAPPER_BEGIN(rt, ra, rb);
 	s64 nResult;
 
 	for (int w = 0; w < 4; w++)
 	{
-		nResult = (u64)CPU.GPR[rb]._u32[w] - (u64)CPU.GPR[ra]._u32[w] - (u64)(1 - (CPU.GPR[rt]._u32[w] & 1));
-		CPU.GPR[rt]._u32[w] = nResult < 0 ? 0 : 1;
+		nResult = (u64)CPU->GPR[rb]._u32[w] - (u64)CPU->GPR[ra]._u32[w] - (u64)(1 - (CPU->GPR[rt]._u32[w] & 1));
+		CPU->GPR[rt]._u32[w] = nResult < 0 ? 0 : 1;
 	}
-	WRAPPER_END(rt, ra, rb, 0);
+	WRAPPER_END(rt, ra, rb);
 }
 
 void SPURecompiler::MPYHHA(u32 rt, u32 ra, u32 rb)

@@ -93,10 +93,6 @@ public:
 		case DID_RESUME_EMU:
 			m_btn_run->SetLabel("Pause");
 		break;
-
-		case DID_EXIT_THR_SYSCALL:
-			Emu.GetCPU().RemoveThread(((CPUThread*)event.GetClientData())->GetId());
-		break;
 		}
 
 		UpdateUI();

@@ -24,9 +24,10 @@ class CallbackManager
 	std::vector<PauseResumeCBS> m_pause_cb_list;
 
 public:
-	void Register(const std::function<s32(PPUThread& CPU)>& func); // register callback (called in Check() method)
+	void Register(std::function<s32(PPUThread& CPU)> func); // register callback (called in Check() method)
 
-	void Async(const std::function<void(PPUThread& CPU)>& func); // register callback for callback thread (called immediately)
+	void Async(std::function<void(PPUThread& CPU)> func); // register callback for callback thread (called immediately)
+	//void Async(std::function<void(ARMv7Context& context)> func);
 
 	bool Check(CPUThread& CPU, s32& result); // call one callback registered by Register() method
 
@@ -34,7 +35,7 @@ public:
 
 	void Clear();
 
-	u64 AddPauseCallback(const std::function<PauseResumeCB>& func); // register callback for pausing/resuming emulation events
+	u64 AddPauseCallback(std::function<PauseResumeCB> func); // register callback for pausing/resuming emulation events
 	void RemovePauseCallback(const u64 tag); // unregister callback (uses the result of AddPauseCallback() function)
 	void RunPauseCallbacks(const bool is_paused);
 };

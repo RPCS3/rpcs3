@@ -25,5 +25,5 @@ class SysCalls
 {
 public:
 	static void DoSyscall(PPUThread& CPU, u64 code);
-	static std::string GetFuncName(const u64 fid);
+	static std::string GetFuncName(const s64 fid);
 };

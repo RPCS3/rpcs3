@@ -134,9 +134,7 @@ typedef GSFrameBase*(*GetGSFrameCb)();
 
 void SetGetGSFrameCallback(GetGSFrameCb value);
 
-class GLGSRender //TODO: find out why this used to inherit from wxWindow
-	: //public wxWindow
-	/*,*/ public GSRender
+class GLGSRender final : public GSRender
 {
 private:
 	std::vector<u8> m_vdata;
@@ -167,7 +165,7 @@ public:
 	bool is_intel_vendor;
 	
 	GLGSRender();
-	virtual ~GLGSRender();
+	virtual ~GLGSRender() override;
 
 private:
 	void EnableVertexData(bool indexed_draw = false);

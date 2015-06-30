@@ -1,112 +1,95 @@
 #pragma once
 
-class NamedThreadBase
+const class thread_ctrl_t* get_current_thread_ctrl();
+
+// named thread control class
+class thread_ctrl_t final
 {
-	std::string m_name;
-	std::condition_variable m_signal_cv;
-	std::mutex m_signal_mtx;
+	friend class thread_t;
+
+	// thread handler
+	std::thread m_thread;
+
+	// name getter
+	const std::function<std::string()> name;
+
+	// condition variable, notified before thread exit
+	std::condition_variable join_cv;
+
+	// thread status (set to false after execution)
+	std::atomic<bool> joinable{ true };
+
+	// true if TLS of some thread points to owner
+	std::atomic<bool> assigned{ false };
+
+	// assign TLS
+	void set_current();
 
 public:
-	std::atomic<bool> m_tls_assigned;
-
-	NamedThreadBase(const std::string& name) : m_name(name), m_tls_assigned(false)
+	thread_ctrl_t(std::function<std::string()> name)
+		: name(std::move(name))
 	{
 	}
 
-	NamedThreadBase() : m_tls_assigned(false)
-	{
-	}
-
-	virtual std::string GetThreadName() const;
-	virtual void SetThreadName(const std::string& name);
-
-	void WaitForAnySignal(u64 time = 1);
-	void Notify();
-
-	virtual void DumpInformation() {}
-};
-
-NamedThreadBase* GetCurrentNamedThread();
-void SetCurrentNamedThread(NamedThreadBase* value);
-
-class ThreadBase : public NamedThreadBase
-{
-protected:
-	std::atomic<bool> m_destroy;
-	std::atomic<bool> m_alive;
-	std::thread* m_executor;
-
-	mutable std::mutex m_main_mutex;
-
-	ThreadBase(const std::string& name);
-	~ThreadBase();
-
-public:
-	void Start();
-	void Stop(bool wait = true, bool send_destroy = true);
-
-	bool Join() const;
-	bool IsAlive() const;
-	bool TestDestroy() const;
-
-	virtual void Task() = 0;
+	// get thread name
+	std::string get_name() const;
 };
 
 class thread_t
 {
-	enum thread_state_t
-	{
-		TS_NON_EXISTENT,
-		TS_JOINABLE,
-	};
-
-	std::atomic<thread_state_t> m_state;
-	std::string m_name;
-	std::thread m_thr;
-	bool m_autojoin;
+	// pointer to managed resource (shared with actual thread)
+	std::shared_ptr<thread_ctrl_t> m_thread;
 
 public:
-	thread_t(const std::string& name, bool autojoin, std::function<void()> func);
-	thread_t(const std::string& name, std::function<void()> func);
-	thread_t(const std::string& name);
-	thread_t();
-	~thread_t();
+	// thread mutex for external use
+	std::mutex mutex;
 
-	thread_t(const thread_t& right) = delete;
-	thread_t(thread_t&& right) = delete;
-
-	thread_t& operator =(const thread_t& right) = delete;
-	thread_t& operator =(thread_t&& right) = delete;
+	// thread condition variable for external use
+	std::condition_variable cv;
 
 public:
-	void set_name(const std::string& name);
-	void start(std::function<void()> func);
+	// initialize in empty state
+	thread_t() = default;
+
+	// create named thread
+	thread_t(std::function<std::string()> name, std::function<void()> func);
+
+	// destructor, joins automatically
+	virtual ~thread_t();
+
+	thread_t(const thread_t&) = delete;
+
+	thread_t& operator =(const thread_t&) = delete;
+
+public:
+	// get thread name
+	std::string get_name() const;
+
+	// create named thread (current state must be empty)
+	void start(std::function<std::string()> name, std::function<void()> func);
+
+	// detach thread -> empty state
 	void detach();
+
+	// join thread (provide locked unique_lock, for example, lv2_lock, for interruptibility) -> empty state
+	void join(std::unique_lock<std::mutex>& lock);
+
+	// join thread -> empty state
 	void join();
-	bool joinable() const;
-};
 
-class slw_mutex_t
-{
+	// check if not empty
+	bool joinable() const { return m_thread.operator bool(); }
 
-};
-
-class slw_recursive_mutex_t
-{
-
-};
-
-class slw_shared_mutex_t
-{
-
+	// check whether it is the current running thread
+	bool is_current() const;
 };
 
 struct waiter_map_t
 {
 	static const size_t size = 16;
 
-	std::array<std::mutex, size> mutex;
-	std::array<std::condition_variable, size> cv;
+	std::array<std::mutex, size> mutexes;
+	std::array<std::condition_variable, size> cvs;
 
 	const std::string name;
 
@@ -124,33 +107,32 @@ struct waiter_map_t
 		return addr % size;
 	}
 
-	// check emu status
-	bool is_stopped(u32 addr);
+	void check_emu_status(u32 addr);
 
-	// wait until waiter_func() returns true, signal_id is an arbitrary number
+	// wait until pred() returns true, `addr` is an arbitrary number
 	template<typename F, typename... Args> safe_buffers auto wait_op(u32 addr, F pred, Args&&... args) -> decltype(static_cast<void>(pred(args...)))
 	{
 		const u32 hash = get_hash(addr);
 
 		// set mutex locker
-		std::unique_lock<std::mutex> lock(mutex[hash], std::defer_lock);
+		std::unique_lock<std::mutex> lock(mutexes[hash], std::defer_lock);
 
 		while (true)
 		{
 			// check the condition
 			if (pred(args...)) return;
 
+			check_emu_status(addr);
+
 			// lock the mutex and initialize waiter (only once)
 			if (!lock) lock.lock();
 			
-			// wait on appropriate condition variable for 1 ms or until signal arrived
-			cv[hash].wait_for(lock, std::chrono::milliseconds(1));
-
-			if (is_stopped(addr)) return;
+			// wait on an appropriate cond var for 1 ms or until a signal arrived
+			cvs[hash].wait_for(lock, std::chrono::milliseconds(1));
 		}
 	}
 
-	// signal all threads waiting on waiter_op() with the same signal_id (signaling only hints those threads that corresponding conditions are *probably* met)
+	// signal all threads waiting on wait_op() with the same `addr` (signaling only hints those threads that corresponding conditions are *probably* met)
 	void notify(u32 addr);
 };
 

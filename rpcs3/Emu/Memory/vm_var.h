@@ -554,9 +554,12 @@ namespace vm
 
 		stackvar(stackvar&& r) = delete;
 
-		~stackvar()
+		~stackvar() noexcept(false) // allow exceptions
 		{
-			stack_pop(m_thread, m_data.addr, m_data.old_pos);
+			if (!std::uncaught_exception()) // don't call during stack unwinding
+			{
+				stack_pop(m_thread, m_data.addr, m_data.old_pos);
+			}
 		}
 
 		stackvar& operator = (const stackvar& r)

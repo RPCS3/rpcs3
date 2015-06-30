@@ -179,24 +179,25 @@ namespace sce_libc_func
 
 		std::lock_guard<std::mutex> lock(g_atexit_mutex);
 
-		if (!Emu.IsStopped())
+		CHECK_EMU_STATUS;
+
+		for (auto func : decltype(g_atexit)(std::move(g_atexit)))
 		{
-			for (auto func : decltype(g_atexit)(std::move(g_atexit)))
-			{
-				func(context);
-			}
+			func(context);
+		}
 
-			sceLibc.Success("Process finished");
+		sceLibc.Success("Process finished");
 
-			CallAfter([]()
-			{
-				Emu.Stop();
-			});
+		CallAfter([]()
+		{
+			Emu.Stop();
+		});
 
-			while (!Emu.IsStopped())
-			{
-				std::this_thread::sleep_for(std::chrono::milliseconds(1));
-			}
+		while (true)
+		{
+			CHECK_EMU_STATUS;
+
+			std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		}
 	}
 

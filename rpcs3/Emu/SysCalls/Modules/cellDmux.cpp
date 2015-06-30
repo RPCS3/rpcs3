@@ -305,16 +305,10 @@ void dmuxOpen(u32 dmux_id) // TODO: call from the constructor
 
 	dmux.id = dmux_id;
 
-	dmux.dmuxCb = static_cast<PPUThread*>(Emu.GetCPU().AddThread(CPU_THREAD_PPU).get());
-	dmux.dmuxCb->SetName(fmt::format("Demuxer[0x%x] Callback", dmux_id));
-	dmux.dmuxCb->SetEntry(0);
-	dmux.dmuxCb->SetPrio(1001);
-	dmux.dmuxCb->SetStackSize(0x10000);
-	dmux.dmuxCb->InitStack();
-	dmux.dmuxCb->InitRegs();
-	dmux.dmuxCb->DoRun();
-
-	thread_t t(fmt::format("Demuxer[0x%x] Thread", dmux_id), [sptr]()
+	dmux.dmuxCb = Emu.GetIdManager().make_ptr<PPUThread>(fmt::format("Demuxer[0x%x] Thread", dmux_id));
+	dmux.dmuxCb->prio = 1001;
+	dmux.dmuxCb->stack_size = 0x10000;
+	dmux.dmuxCb->custom_task = [sptr](PPUThread& CPU)
 	{
 		Demuxer& dmux = *sptr;
 
@@ -352,7 +346,7 @@ void dmuxOpen(u32 dmux_id) // TODO: call from the constructor
 					auto dmuxMsg = vm::ptr<CellDmuxMsg>::make(dmux.memAddr + (cb_add ^= 16));
 					dmuxMsg->msgType = CELL_DMUX_MSG_TYPE_DEMUX_DONE;
 					dmuxMsg->supplementalInfo = stream.userdata;
-					dmux.cbFunc(*dmux.dmuxCb, dmux.id, dmuxMsg, dmux.cbArg);
+					dmux.cbFunc(CPU, dmux.id, dmuxMsg, dmux.cbArg);
 
 					dmux.is_working = false;
 
@@ -505,7 +499,7 @@ void dmuxOpen(u32 dmux_id) // TODO: call from the constructor
 							auto esMsg = vm::ptr<CellDmuxEsMsg>::make(dmux.memAddr + (cb_add ^= 16));
 							esMsg->msgType = CELL_DMUX_ES_MSG_TYPE_AU_FOUND;
 							esMsg->supplementalInfo = stream.userdata;
-							es.cbFunc(*dmux.dmuxCb, dmux.id, es.id, esMsg, es.cbArg);
+							es.cbFunc(CPU, dmux.id, es.id, esMsg, es.cbArg);
 						}
 					}
 					else
@@ -570,7 +564,7 @@ void dmuxOpen(u32 dmux_id) // TODO: call from the constructor
 							auto esMsg = vm::ptr<CellDmuxEsMsg>::make(dmux.memAddr + (cb_add ^= 16));
 							esMsg->msgType = CELL_DMUX_ES_MSG_TYPE_AU_FOUND;
 							esMsg->supplementalInfo = stream.userdata;
-							es.cbFunc(*dmux.dmuxCb, dmux.id, es.id, esMsg, es.cbArg);
+							es.cbFunc(CPU, dmux.id, es.id, esMsg, es.cbArg);
 						}
 						
 						if (pes.has_ts)
@@ -646,7 +640,7 @@ void dmuxOpen(u32 dmux_id) // TODO: call from the constructor
 					auto dmuxMsg = vm::ptr<CellDmuxMsg>::make(dmux.memAddr + (cb_add ^= 16));
 					dmuxMsg->msgType = CELL_DMUX_MSG_TYPE_DEMUX_DONE;
 					dmuxMsg->supplementalInfo = stream.userdata;
-					dmux.cbFunc(*dmux.dmuxCb, dmux.id, dmuxMsg, dmux.cbArg);
+					dmux.cbFunc(CPU, dmux.id, dmuxMsg, dmux.cbArg);
 
 					stream = {};
 
@@ -734,7 +728,7 @@ void dmuxOpen(u32 dmux_id) // TODO: call from the constructor
 					auto esMsg = vm::ptr<CellDmuxEsMsg>::make(dmux.memAddr + (cb_add ^= 16));
 					esMsg->msgType = CELL_DMUX_ES_MSG_TYPE_AU_FOUND;
 					esMsg->supplementalInfo = stream.userdata;
-					es.cbFunc(*dmux.dmuxCb, dmux.id, es.id, esMsg, es.cbArg);
+					es.cbFunc(CPU, dmux.id, es.id, esMsg, es.cbArg);
 				}
 				
 				if (es.raw_data.size())
@@ -746,7 +740,7 @@ void dmuxOpen(u32 dmux_id) // TODO: call from the constructor
 				auto esMsg = vm::ptr<CellDmuxEsMsg>::make(dmux.memAddr + (cb_add ^= 16));
 				esMsg->msgType = CELL_DMUX_ES_MSG_TYPE_FLUSH_DONE;
 				esMsg->supplementalInfo = stream.userdata;
-				es.cbFunc(*dmux.dmuxCb, dmux.id, es.id, esMsg, es.cbArg);
+				es.cbFunc(CPU, dmux.id, es.id, esMsg, es.cbArg);
 				break;
 			}
 
@@ -769,7 +763,10 @@ void dmuxOpen(u32 dmux_id) // TODO: call from the constructor
 		}
 
 		dmux.is_finished = true;
-	});
+	};
+
+	dmux.dmuxCb->Run();
+	dmux.dmuxCb->Exec();
 }
 
 s32 cellDmuxQueryAttr(vm::cptr<CellDmuxType> type, vm::ptr<CellDmuxAttr> attr)
@@ -876,7 +873,7 @@ s32 cellDmuxClose(u32 handle)
 		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 	}
 
-	if (dmux->dmuxCb) Emu.GetCPU().RemoveThread(dmux->dmuxCb->GetId());
+	Emu.GetIdManager().remove<PPUThread>(dmux->dmuxCb->GetId());
 	Emu.GetIdManager().remove<Demuxer>(handle);
 	return CELL_OK;
 }

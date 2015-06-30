@@ -110,28 +110,28 @@ void execute_ppu_func_by_index(PPUThread& CPU, u32 index)
 		}
 
 		// save old syscall/NID value
-		auto old_last_syscall = CPU.m_last_syscall;
+		const auto last_code = CPU.hle_code;
 
 		// branch directly to the LLE function
 		if (index & EIF_USE_BRANCH)
 		{
 			// for example, FastCall2 can't work with functions which do user level context switch
 
-			if (old_last_syscall)
+			if (last_code)
 			{
-				CPU.m_last_syscall = func->id;
+				CPU.hle_code = func->id;
 				throw "Unfortunately, this function cannot be called from the callback.";
 			}
 
 			if (!func->lle_func)
 			{
-				CPU.m_last_syscall = func->id;
+				CPU.hle_code = func->id;
 				throw "Wrong usage: LLE function not set.";
 			}
 
 			if (func->flags & MFF_FORCED_HLE)
 			{
-				CPU.m_last_syscall = func->id;
+				CPU.hle_code = func->id;
 				throw "Wrong usage: Forced HLE enabled.";
 			}
 
@@ -142,20 +142,20 @@ void execute_ppu_func_by_index(PPUThread& CPU, u32 index)
 
 			if (index & EIF_PERFORM_BLR)
 			{
-				CPU.m_last_syscall = func->id;
-				throw "TODO: Branch with link";
+				CPU.hle_code = func->id;
+				throw EXCEPTION("TODO: Branch with link (%s)", SysCalls::GetFuncName(func->id));
 				// CPU.LR = CPU.PC + 4;
 			}
 
 			const auto data = vm::get_ptr<be_t<u32>>(func->lle_func.addr());
-			CPU.SetBranch(data[0]);
+			CPU.PC = data[0] - 4;
 			CPU.GPR[2] = data[1]; // set rtoc
 
 			return;
 		}
 		
 		// change current syscall/NID value
-		CPU.m_last_syscall = func->id;
+		CPU.hle_code = func->id;
 
 		if (func->lle_func && !(func->flags & MFF_FORCED_HLE))
 		{
@@ -200,10 +200,10 @@ void execute_ppu_func_by_index(PPUThread& CPU, u32 index)
 		if (index & EIF_PERFORM_BLR)
 		{
 			// return if necessary
-			CPU.SetBranch(vm::cast(CPU.LR & ~3), true);
+			CPU.PC = vm::cast(CPU.LR & ~3) - 4;
 		}
 
-		CPU.m_last_syscall = old_last_syscall;
+		CPU.hle_code = last_code;
 	}
 	else
 	{

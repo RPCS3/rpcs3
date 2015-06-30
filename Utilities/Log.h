@@ -5,10 +5,10 @@
 
 //first parameter is of type Log::LogType and text is of type std::string
 
-#define LOG_SUCCESS(logType, text, ...)           log_message(logType, Log::LogSeveritySuccess, text, ##__VA_ARGS__)
-#define LOG_NOTICE(logType, text, ...)            log_message(logType, Log::LogSeverityNotice,  text, ##__VA_ARGS__) 
-#define LOG_WARNING(logType, text, ...)           log_message(logType, Log::LogSeverityWarning, text, ##__VA_ARGS__) 
-#define LOG_ERROR(logType, text, ...)             log_message(logType, Log::LogSeverityError,   text, ##__VA_ARGS__)
+#define LOG_SUCCESS(logType, text, ...)           log_message(logType, Log::Severity::Success, text, ##__VA_ARGS__)
+#define LOG_NOTICE(logType, text, ...)            log_message(logType, Log::Severity::Notice,  text, ##__VA_ARGS__) 
+#define LOG_WARNING(logType, text, ...)           log_message(logType, Log::Severity::Warning, text, ##__VA_ARGS__) 
+#define LOG_ERROR(logType, text, ...)             log_message(logType, Log::Severity::Error,   text, ##__VA_ARGS__)
 
 namespace Log
 {
@@ -48,19 +48,19 @@ namespace Log
 			{ TTY, "TTY: " }
 			} };
 
-	enum LogSeverity : u32
+	enum class Severity : u32
 	{
-		LogSeverityNotice = 0,
-		LogSeverityWarning,
-		LogSeveritySuccess,
-		LogSeverityError,
+		Notice = 0,
+		Warning,
+		Success,
+		Error,
 	};
 
 	struct LogMessage
 	{
 		using size_type = u32;
 		LogType mType;
-		LogSeverity mServerity;
+		Severity mServerity;
 		std::string mText;
 
 		u32 size() const;
@@ -86,7 +86,7 @@ namespace Log
 		std::string name;
 	private:
 		bool mEnabled;
-		LogSeverity mLogLevel;
+		Severity mLogLevel;
 		std::mutex mListenerLock;
 		std::set<std::shared_ptr<LogListener>> mListeners;
 	};
@@ -126,10 +126,10 @@ static struct { inline operator Log::LogType() { return Log::LogType::SPU; } } S
 static struct { inline operator Log::LogType() { return Log::LogType::ARMv7; } } ARMv7;
 static struct { inline operator Log::LogType() { return Log::LogType::TTY; } } TTY;
 
-void log_message(Log::LogType type, Log::LogSeverity sev, const char* text);
-void log_message(Log::LogType type, Log::LogSeverity sev, std::string text);
+void log_message(Log::LogType type, Log::Severity sev, const char* text);
+void log_message(Log::LogType type, Log::Severity sev, std::string text);
 
-template<typename... Args> never_inline void log_message(Log::LogType type, Log::LogSeverity sev, const char* fmt, Args... args)
+template<typename... Args> never_inline void log_message(Log::LogType type, Log::Severity sev, const char* fmt, Args... args)
 {
 	log_message(type, sev, fmt::Format(fmt, fmt::do_unveil(args)...));
 }

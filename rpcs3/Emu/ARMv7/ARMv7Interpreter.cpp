@@ -287,19 +287,17 @@ namespace ARMv7_instrs
 	{
 		if (context.debug & DF_PRINT)
 		{
-			ARMv7Thread& CPU = static_cast<ARMv7Thread&>(context);
-
 			auto pos = context.debug_str.find(' ');
 			if (pos != std::string::npos && pos < 8)
 			{
 				context.debug_str.insert(pos, 8 - pos, ' ');
 			}
 
-			context.fmt_debug_str("0x%08x: %s", CPU.PC, context.debug_str);
+			context.fmt_debug_str("0x%08x: %s", context.PC, context.debug_str);
 
 			LV2_LOCK;
 
-			auto found = g_armv7_dump.find(CPU.PC);
+			auto found = g_armv7_dump.find(context.PC);
 			if (found != g_armv7_dump.end())
 			{
 				if (found->second != context.debug_str)
@@ -309,7 +307,7 @@ namespace ARMv7_instrs
 			}
 			else
 			{
-				g_armv7_dump[CPU.PC] = context.debug_str;
+				g_armv7_dump[context.PC] = context.debug_str;
 			}
 		}
 
@@ -640,7 +638,7 @@ void ARMv7_instrs::ADC_IMM(ARMv7Context& context, const ARMv7Code code, const AR
 	{
 		bool carry, overflow;
 		const u32 result = AddWithCarry(context.read_gpr(n), imm32, context.APSR.C, carry, overflow);
-		context.write_gpr(d, result);
+		context.write_gpr(d, result, 4);
 
 		if (set_flags)
 		{
@@ -695,7 +693,7 @@ void ARMv7_instrs::ADC_REG(ARMv7Context& context, const ARMv7Code code, const AR
 		bool carry, overflow;
 		const u32 shifted = Shift(context.read_gpr(m), shift_t, shift_n, context.APSR.C);
 		const u32 result = AddWithCarry(context.read_gpr(n), shifted, context.APSR.C, carry, overflow);
-		context.write_gpr(d, result);
+		context.write_gpr(d, result, type == T1 ? 2 : 4);
 
 		if (set_flags)
 		{
@@ -779,7 +777,7 @@ void ARMv7_instrs::ADD_IMM(ARMv7Context& context, const ARMv7Code code, const AR
 	{
 		bool carry, overflow;
 		const u32 result = AddWithCarry(context.read_gpr(n), imm32, false, carry, overflow);
-		context.write_gpr(d, result);
+		context.write_gpr(d, result, type < T3 ? 2 : 4);
 
 		if (set_flags)
 		{
@@ -851,7 +849,7 @@ void ARMv7_instrs::ADD_REG(ARMv7Context& context, const ARMv7Code code, const AR
 		bool carry, overflow;
 		const u32 shifted = Shift(context.read_gpr(m), shift_t, shift_n, true);
 		const u32 result = AddWithCarry(context.read_gpr(n), shifted, false, carry, overflow);
-		context.write_gpr(d, result);
+		context.write_gpr(d, result, type < T3 ? 2 : 4);
 
 		if (set_flags)
 		{
@@ -930,7 +928,7 @@ void ARMv7_instrs::ADD_SPI(ARMv7Context& context, const ARMv7Code code, const AR
 	{
 		bool carry, overflow;
 		const u32 result = AddWithCarry(context.SP, imm32, false, carry, overflow);
-		context.write_gpr(d, result);
+		context.write_gpr(d, result, type < T3 ? 2 : 4);
 
 		if (set_flags)
 		{
@@ -997,7 +995,7 @@ void ARMv7_instrs::ADD_SPR(ARMv7Context& context, const ARMv7Code code, const AR
 		bool carry, overflow;
 		const u32 shifted = Shift(context.read_gpr(m), shift_t, shift_n, context.APSR.C);
 		const u32 result = AddWithCarry(context.SP, shifted, false, carry, overflow);
-		context.write_gpr(d, result);
+		context.write_gpr(d, result, type < T3 ? 2 : 4);
 
 		if (set_flags)
 		{
@@ -1060,7 +1058,7 @@ void ARMv7_instrs::ADR(ARMv7Context& context, const ARMv7Code code, const ARMv7_
 
 	if (ConditionPassed(context, cond))
 	{
-		context.write_gpr(d, result);
+		context.write_gpr(d, result, type == T1 ? 2 : 4);
 	}
 }
 
@@ -1097,7 +1095,7 @@ void ARMv7_instrs::AND_IMM(ARMv7Context& context, const ARMv7Code code, const AR
 	if (ConditionPassed(context, cond))
 	{
 		const u32 result = context.read_gpr(n) & imm32;
-		context.write_gpr(d, result);
+		context.write_gpr(d, result, 4);
 
 		if (set_flags)
 		{
@@ -1152,7 +1150,7 @@ void ARMv7_instrs::AND_REG(ARMv7Context& context, const ARMv7Code code, const AR
 		bool carry;
 		const u32 shifted = Shift_C(context.read_gpr(m), shift_t, shift_n, context.APSR.C, carry);
 		const u32 result = context.read_gpr(n) & shifted;
-		context.write_gpr(d, result);
+		context.write_gpr(d, result, type == T1 ? 2 : 4);
 
 		if (set_flags)
 		{
@@ -1260,7 +1258,7 @@ void ARMv7_instrs::B(ARMv7Context& context, const ARMv7Code code, const ARMv7_en
 
 	if (ConditionPassed(context, cond))
 	{
-		static_cast<ARMv7Thread&>(context).SetBranch(context.read_pc() + imm32);
+		context.PC = context.read_pc() + imm32 - (type < T3 ? 2 : 4);
 	}
 }
 
@@ -1315,7 +1313,7 @@ void ARMv7_instrs::BIC_IMM(ARMv7Context& context, const ARMv7Code code, const AR
 	if (ConditionPassed(context, cond))
 	{
 		const u32 result = context.read_gpr(n) & ~imm32;
-		context.write_gpr(d, result);
+		context.write_gpr(d, result, 4);
 
 		if (set_flags)
 		{
@@ -1369,7 +1367,7 @@ void ARMv7_instrs::BIC_REG(ARMv7Context& context, const ARMv7Code code, const AR
 		bool carry;
 		const u32 shifted = Shift_C(context.read_gpr(m), shift_t, shift_n, context.APSR.C, carry);
 		const u32 result = context.read_gpr(n) & ~shifted;
-		context.write_gpr(d, result);
+		context.write_gpr(d, result, type == T1 ? 2 : 4);
 
 		if (set_flags)
 		{
@@ -1440,14 +1438,12 @@ void ARMv7_instrs::BL(ARMv7Context& context, const ARMv7Code code, const ARMv7_e
 	if (ConditionPassed(context, cond))
 	{
 		context.LR = lr;
-		static_cast<ARMv7Thread&>(context).SetBranch(pc);
+		context.PC = pc - 4;
 	}
 }
 
 void ARMv7_instrs::BLX(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
-	ARMv7Thread& thread = static_cast<ARMv7Thread&>(context);
-
 	u32 cond, target, newLR;
 
 	switch (type)
@@ -1455,7 +1451,7 @@ void ARMv7_instrs::BLX(ARMv7Context& context, const ARMv7Code code, const ARMv7_
 	case T1:
 	{
 		cond = context.ITSTATE.advance();
-		newLR = (thread.PC + 2) | 1;
+		newLR = (context.PC + 2) | 1;
 		{
 			const u32 m = (code.data >> 3) & 0xf;
 			reject(m == 15, "UNPREDICTABLE");
@@ -1468,12 +1464,12 @@ void ARMv7_instrs::BLX(ARMv7Context& context, const ARMv7Code code, const ARMv7_
 	case T2:
 	{
 		cond = context.ITSTATE.advance();
-		newLR = (thread.PC + 4) | 1;
+		newLR = (context.PC + 4) | 1;
 		{
 			const u32 s = (code.data >> 26) & 0x1;
 			const u32 i1 = (code.data >> 13) & 0x1 ^ s ^ 1;
 			const u32 i2 = (code.data >> 11) & 0x1 ^ s ^ 1;
-			target = ~3 & thread.PC + 4 + sign<25, u32>(s << 24 | i2 << 23 | i1 << 22 | (code.data & 0x3ff0000) >> 4 | (code.data & 0x7ff) << 1);
+			target = ~3 & context.PC + 4 + sign<25, u32>(s << 24 | i2 << 23 | i1 << 22 | (code.data & 0x3ff0000) >> 4 | (code.data & 0x7ff) << 1);
 		}
 
 		reject(context.ITSTATE, "UNPREDICTABLE");
@@ -1482,15 +1478,15 @@ void ARMv7_instrs::BLX(ARMv7Context& context, const ARMv7Code code, const ARMv7_
 	case A1:
 	{
 		cond = code.data >> 28;
-		newLR = thread.PC + 4;
+		newLR = context.PC + 4;
 		target = context.read_gpr(code.data & 0xf);
 		break;
 	}
 	case A2:
 	{
 		cond = 0xe; // always true
-		newLR = thread.PC + 4;
-		target = 1 | thread.PC + 8 + sign<25, u32>((code.data & 0xffffff) << 2 | (code.data & 0x1000000) >> 23);
+		newLR = context.PC + 4;
+		target = 1 | context.PC + 8 + sign<25, u32>((code.data & 0xffffff) << 2 | (code.data & 0x1000000) >> 23);
 		break;
 	}
 	default: throw __FUNCTION__;
@@ -1514,7 +1510,7 @@ void ARMv7_instrs::BLX(ARMv7Context& context, const ARMv7Code code, const ARMv7_
 	if (ConditionPassed(context, cond))
 	{
 		context.LR = newLR;
-		context.write_pc(target);
+		context.write_pc(target, type == T1 ? 2 : 4);
 	}
 }
 
@@ -1549,7 +1545,7 @@ void ARMv7_instrs::BX(ARMv7Context& context, const ARMv7Code code, const ARMv7_e
 
 	if (ConditionPassed(context, cond))
 	{
-		context.write_pc(context.read_gpr(m));
+		context.write_pc(context.read_gpr(m), type == T1 ? 2 : 4);
 	}
 }
 
@@ -1581,7 +1577,7 @@ void ARMv7_instrs::CB_Z(ARMv7Context& context, const ARMv7Code code, const ARMv7
 
 	if ((context.read_gpr(n) == 0) ^ nonzero)
 	{
-		static_cast<ARMv7Thread&>(context).SetBranch(context.read_pc() + imm32);
+		context.PC = context.read_pc() + imm32 - 2;
 	}
 }
 
@@ -1614,7 +1610,7 @@ void ARMv7_instrs::CLZ(ARMv7Context& context, const ARMv7Code code, const ARMv7_
 
 	if (ConditionPassed(context, cond))
 	{
-		context.write_gpr(d, cntlz32(context.read_gpr(m)));
+		context.write_gpr(d, cntlz32(context.read_gpr(m)), type == T1 ? 2 : 4);
 	}
 }
 
@@ -1826,7 +1822,7 @@ void ARMv7_instrs::EOR_IMM(ARMv7Context& context, const ARMv7Code code, const AR
 	if (ConditionPassed(context, cond))
 	{
 		const u32 result = context.read_gpr(n) ^ imm32;
-		context.write_gpr(d, result);
+		context.write_gpr(d, result, 4);
 
 		if (set_flags)
 		{
@@ -1881,7 +1877,7 @@ void ARMv7_instrs::EOR_REG(ARMv7Context& context, const ARMv7Code code, const AR
 		bool carry;
 		const u32 shifted = Shift_C(context.read_gpr(m), shift_t, shift_n, context.APSR.C, carry);
 		const u32 result = context.read_gpr(n) ^ shifted;
-		context.write_gpr(d, result);
+		context.write_gpr(d, result, type == T1 ? 2 : 4);
 
 		if (set_flags)
 		{
@@ -1978,13 +1974,13 @@ void ARMv7_instrs::LDM(ARMv7Context& context, const ARMv7Code code, const ARMv7_
 		{
 			if (reg_list & (1 << i))
 			{
-				context.write_gpr(i, *memory++);
+				context.write_gpr(i, *memory++, type == T1 ? 2 : 4);
 			}
 		}
 
 		if (wback)
 		{
-			context.write_gpr(n, memory.addr());
+			context.write_gpr(n, memory.addr(), type == T1 ? 2 : 4);
 		}
 	}
 }
@@ -2091,11 +2087,11 @@ void ARMv7_instrs::LDR_IMM(ARMv7Context& context, const ARMv7Code code, const AR
 	{
 		const u32 offset_addr = add ? context.read_gpr(n) + imm32 : context.read_gpr(n) - imm32;
 		const u32 addr = index ? offset_addr : context.read_gpr(n);
-		context.write_gpr(t, vm::read32(addr));
+		context.write_gpr(t, vm::read32(addr), type < T3 ? 2 : 4);
 
 		if (wback)
 		{
-			context.write_gpr(n, offset_addr);
+			context.write_gpr(n, offset_addr, type < T3 ? 2 : 4);
 		}
 	}
 }
@@ -2141,7 +2137,7 @@ void ARMv7_instrs::LDR_LIT(ARMv7Context& context, const ARMv7Code code, const AR
 	if (ConditionPassed(context, cond))
 	{
 		const u32 data = vm::read32(addr);
-		context.write_gpr(t, data);
+		context.write_gpr(t, data, type == T1 ? 2 : 4);
 	}
 }
 
@@ -2197,11 +2193,11 @@ void ARMv7_instrs::LDR_REG(ARMv7Context& context, const ARMv7Code code, const AR
 		const u32 offset = Shift(context.read_gpr(m), shift_t, shift_n, context.APSR.C);
 		const u32 offset_addr = add ? context.read_gpr(n) + offset : context.read_gpr(n) - offset;
 		const u32 addr = index ? offset_addr : context.read_gpr(n);
-		context.write_gpr(t, vm::read32(addr));
+		context.write_gpr(t, vm::read32(addr), type == T1 ? 2 : 4);
 
 		if (wback)
 		{
-			context.write_gpr(n, offset_addr);
+			context.write_gpr(n, offset_addr, type == T1 ? 2 : 4);
 		}
 	}
 }
@@ -2271,11 +2267,11 @@ void ARMv7_instrs::LDRB_IMM(ARMv7Context& context, const ARMv7Code code, const A
 	{
 		const u32 offset_addr = add ? context.read_gpr(n) + imm32 : context.read_gpr(n) - imm32;
 		const u32 addr = index ? offset_addr : context.read_gpr(n);
-		context.write_gpr(t, vm::read8(addr));
+		context.write_gpr(t, vm::read8(addr), type == T1 ? 2 : 4);
 
 		if (wback)
 		{
-			context.write_gpr(n, offset_addr);
+			context.write_gpr(n, offset_addr, type == T1 ? 2 : 4);
 		}
 	}
 }
@@ -2341,11 +2337,11 @@ void ARMv7_instrs::LDRB_REG(ARMv7Context& context, const ARMv7Code code, const A
 		const u32 offset = Shift(context.read_gpr(m), shift_t, shift_n, context.APSR.C);
 		const u32 offset_addr = add ? context.read_gpr(n) + offset : context.read_gpr(n) - offset;
 		const u32 addr = index ? offset_addr : context.read_gpr(n);
-		context.write_gpr(t, vm::read8(addr));
+		context.write_gpr(t, vm::read8(addr), type == T1 ? 2 : 4);
 
 		if (wback)
 		{
-			context.write_gpr(n, offset_addr);
+			context.write_gpr(n, offset_addr, type == T1 ? 2 : 4);
 		}
 	}
 }
@@ -2390,12 +2386,12 @@ void ARMv7_instrs::LDRD_IMM(ARMv7Context& context, const ARMv7Code code, const A
 		const u32 offset_addr = add ? context.read_gpr(n) + imm32 : context.read_gpr(n) - imm32;
 		const u32 addr = index ? offset_addr : context.read_gpr(n);
 		const u64 value = vm::read64(addr);
-		context.write_gpr(t, (u32)(value));
-		context.write_gpr(t2, (u32)(value >> 32));
+		context.write_gpr(t, (u32)(value), 4);
+		context.write_gpr(t2, (u32)(value >> 32), 4);
 
 		if (wback)
 		{
-			context.write_gpr(n, offset_addr);
+			context.write_gpr(n, offset_addr, 4);
 		}
 	}
 }
@@ -2435,8 +2431,8 @@ void ARMv7_instrs::LDRD_LIT(ARMv7Context& context, const ARMv7Code code, const A
 	if (ConditionPassed(context, cond))
 	{
 		const u64 value = vm::read64(addr);
-		context.write_gpr(t, (u32)(value));
-		context.write_gpr(t2, (u32)(value >> 32));
+		context.write_gpr(t, (u32)(value), 4);
+		context.write_gpr(t2, (u32)(value >> 32), 4);
 	}
 }
 
@@ -2514,11 +2510,11 @@ void ARMv7_instrs::LDRH_IMM(ARMv7Context& context, const ARMv7Code code, const A
 	{
 		const u32 offset_addr = add ? context.read_gpr(n) + imm32 : context.read_gpr(n) - imm32;
 		const u32 addr = index ? offset_addr : context.read_gpr(n);
-		context.write_gpr(t, vm::read16(addr));
+		context.write_gpr(t, vm::read16(addr), type == T1 ? 2 : 4);
 
 		if (wback)
 		{
-			context.write_gpr(n, offset_addr);
+			context.write_gpr(n, offset_addr, type == T1 ? 2 : 4);
 		}
 	}
 }
@@ -2596,11 +2592,11 @@ void ARMv7_instrs::LDRSB_IMM(ARMv7Context& context, const ARMv7Code code, const 
 		const u32 offset_addr = add ? context.read_gpr(n) + imm32 : context.read_gpr(n) - imm32;
 		const u32 addr = index ? offset_addr : context.read_gpr(n);
 		const s8 value = vm::read8(addr);
-		context.write_gpr(t, value); // sign-extend
+		context.write_gpr(t, value, 4); // sign-extend
 
 		if (wback)
 		{
-			context.write_gpr(n, offset_addr);
+			context.write_gpr(n, offset_addr, 4);
 		}
 	}
 }
@@ -2685,7 +2681,7 @@ void ARMv7_instrs::LDREX(ARMv7Context& context, const ARMv7Code code, const ARMv
 		u32 value;
 		vm::reservation_acquire(&value, addr, sizeof(value));
 
-		context.write_gpr(t, value);
+		context.write_gpr(t, value, 4);
 	}
 }
 
@@ -2760,7 +2756,7 @@ void ARMv7_instrs::LSL_IMM(ARMv7Context& context, const ARMv7Code code, const AR
 	{
 		bool carry;
 		const u32 result = Shift_C(context.read_gpr(m), SRType_LSL, shift_n, context.APSR.C, carry);
-		context.write_gpr(d, result);
+		context.write_gpr(d, result, type == T1 ? 2 : 4);
 
 		if (set_flags)
 		{
@@ -2810,7 +2806,7 @@ void ARMv7_instrs::LSL_REG(ARMv7Context& context, const ARMv7Code code, const AR
 	{
 		bool carry;
 		const u32 result = Shift_C(context.read_gpr(n), SRType_LSL, (context.read_gpr(m) & 0xff), context.APSR.C, carry);
-		context.write_gpr(d, result);
+		context.write_gpr(d, result, type == T1 ? 2 : 4);
 
 		if (set_flags)
 		{
@@ -2862,7 +2858,7 @@ void ARMv7_instrs::LSR_IMM(ARMv7Context& context, const ARMv7Code code, const AR
 	{
 		bool carry;
 		const u32 result = Shift_C(context.read_gpr(m), SRType_LSR, shift_n, context.APSR.C, carry);
-		context.write_gpr(d, result);
+		context.write_gpr(d, result, type == T1 ? 2 : 4);
 
 		if (set_flags)
 		{
@@ -2956,7 +2952,7 @@ void ARMv7_instrs::MOV_IMM(ARMv7Context& context, const ARMv7Code code, const AR
 	if (ConditionPassed(context, cond))
 	{
 		const u32 result = imm32;
-		context.write_gpr(d, result);
+		context.write_gpr(d, result, type == T1 ? 2 : 4);
 
 		if (set_flags)
 		{
@@ -3018,7 +3014,7 @@ void ARMv7_instrs::MOV_REG(ARMv7Context& context, const ARMv7Code code, const AR
 	if (ConditionPassed(context, cond))
 	{
 		const u32 result = context.read_gpr(m);
-		context.write_gpr(d, result);
+		context.write_gpr(d, result, type < T3 ? 2 : 4);
 
 		if (set_flags)
 		{
@@ -3056,7 +3052,7 @@ void ARMv7_instrs::MOVT(ARMv7Context& context, const ARMv7Code code, const ARMv7
 
 	if (ConditionPassed(context, cond))
 	{
-		context.write_gpr(d, (context.read_gpr(d) & 0xffff) | (imm16 << 16));
+		context.write_gpr(d, (context.read_gpr(d) & 0xffff) | (imm16 << 16), 4);
 	}
 }
 
@@ -3131,7 +3127,7 @@ void ARMv7_instrs::MUL(ARMv7Context& context, const ARMv7Code code, const ARMv7_
 		const u32 op1 = context.read_gpr(n);
 		const u32 op2 = context.read_gpr(m);
 		const u32 result = op1 * op2;
-		context.write_gpr(d, result);
+		context.write_gpr(d, result, type == T1 ? 2 : 4);
 
 		if (set_flags)
 		{
@@ -3172,7 +3168,7 @@ void ARMv7_instrs::MVN_IMM(ARMv7Context& context, const ARMv7Code code, const AR
 	if (ConditionPassed(context, cond))
 	{
 		const u32 result = ~imm32;
-		context.write_gpr(d, result);
+		context.write_gpr(d, result, 4);
 
 		if (set_flags)
 		{
@@ -3225,7 +3221,7 @@ void ARMv7_instrs::MVN_REG(ARMv7Context& context, const ARMv7Code code, const AR
 		bool carry;
 		const u32 shifted = Shift_C(context.read_gpr(m), shift_t, shift_n, context.APSR.C, carry);
 		const u32 result = ~shifted;
-		context.write_gpr(d, result);
+		context.write_gpr(d, result, type == T1 ? 2 : 4);
 
 		if (set_flags)
 		{
@@ -3333,7 +3329,7 @@ void ARMv7_instrs::ORR_IMM(ARMv7Context& context, const ARMv7Code code, const AR
 	if (ConditionPassed(context, cond))
 	{
 		const u32 result = context.read_gpr(n) | imm32;
-		context.write_gpr(d, result);
+		context.write_gpr(d, result, 4);
 
 		if (set_flags)
 		{
@@ -3388,7 +3384,7 @@ void ARMv7_instrs::ORR_REG(ARMv7Context& context, const ARMv7Code code, const AR
 		bool carry;
 		const u32 shifted = Shift_C(context.read_gpr(m), shift_t, shift_n, context.APSR.C, carry);
 		const u32 result = context.read_gpr(n) | shifted;
-		context.write_gpr(d, result);
+		context.write_gpr(d, result, type == T1 ? 2 : 4);
 
 		if (set_flags)
 		{
@@ -3484,7 +3480,7 @@ void ARMv7_instrs::POP(ARMv7Context& context, const ARMv7Code code, const ARMv7_
 		{
 			if (reg_list & (1 << i))
 			{
-				context.write_gpr(i, *stack++);
+				context.write_gpr(i, *stack++, type < A1 ? 2 : 4);
 			}
 		}
 
@@ -3699,7 +3695,7 @@ void ARMv7_instrs::REV(ARMv7Context& context, const ARMv7Code code, const ARMv7_
 
 	if (ConditionPassed(context, cond))
 	{
-		context.write_gpr(d, _byteswap_ulong(context.read_gpr(m)));
+		context.write_gpr(d, _byteswap_ulong(context.read_gpr(m)), type == T1 ? 2 : 4);
 	}
 }
 
@@ -3755,7 +3751,7 @@ void ARMv7_instrs::ROR_IMM(ARMv7Context& context, const ARMv7Code code, const AR
 	{
 		bool carry;
 		const u32 result = Shift_C(context.read_gpr(m), SRType_ROR, shift_n, context.APSR.C, carry);
-		context.write_gpr(d, result);
+		context.write_gpr(d, result, 4);
 
 		if (set_flags)
 		{
@@ -3806,7 +3802,7 @@ void ARMv7_instrs::ROR_REG(ARMv7Context& context, const ARMv7Code code, const AR
 		bool carry;
 		const u32 shift_n = context.read_gpr(m) & 0xff;
 		const u32 result = Shift_C(context.read_gpr(n), SRType_ROR, shift_n, context.APSR.C, carry);
-		context.write_gpr(d, result);
+		context.write_gpr(d, result, type == T1 ? 2 : 4);
 
 		if (set_flags)
 		{
@@ -3868,7 +3864,7 @@ void ARMv7_instrs::RSB_IMM(ARMv7Context& context, const ARMv7Code code, const AR
 	{
 		bool carry, overflow;
 		const u32 result = AddWithCarry(~context.read_gpr(n), imm32, true, carry, overflow);
-		context.write_gpr(d, result);
+		context.write_gpr(d, result, type == T1 ? 2 : 4);
 
 		if (set_flags)
 		{
@@ -4311,7 +4307,7 @@ void ARMv7_instrs::STM(ARMv7Context& context, const ARMv7Code code, const ARMv7_
 
 		if (wback)
 		{
-			context.write_gpr(n, memory.addr());
+			context.write_gpr(n, memory.addr(), type == T1 ? 2 : 4);
 		}
 	}
 }
@@ -4421,7 +4417,7 @@ void ARMv7_instrs::STR_IMM(ARMv7Context& context, const ARMv7Code code, const AR
 
 		if (wback)
 		{
-			context.write_gpr(n, offset_addr);
+			context.write_gpr(n, offset_addr, type < T3 ? 2 : 4);
 		}
 	}
 }
@@ -4481,7 +4477,7 @@ void ARMv7_instrs::STR_REG(ARMv7Context& context, const ARMv7Code code, const AR
 
 		if (wback)
 		{
-			context.write_gpr(n, offset_addr);
+			context.write_gpr(n, offset_addr, type == T1 ? 2 : 4);
 		}
 	}
 }
@@ -4552,7 +4548,7 @@ void ARMv7_instrs::STRB_IMM(ARMv7Context& context, const ARMv7Code code, const A
 
 		if (wback)
 		{
-			context.write_gpr(n, offset_addr);
+			context.write_gpr(n, offset_addr, type == T1 ? 2 : 4);
 		}
 	}
 }
@@ -4612,7 +4608,7 @@ void ARMv7_instrs::STRB_REG(ARMv7Context& context, const ARMv7Code code, const A
 
 		if (wback)
 		{
-			context.write_gpr(n, offset_addr);
+			context.write_gpr(n, offset_addr, type == T1 ? 2 : 4);
 		}
 	}
 }
@@ -4660,7 +4656,7 @@ void ARMv7_instrs::STRD_IMM(ARMv7Context& context, const ARMv7Code code, const A
 
 		if (wback)
 		{
-			context.write_gpr(n, offset);
+			context.write_gpr(n, offset, 4);
 		}
 	}
 }
@@ -4740,7 +4736,7 @@ void ARMv7_instrs::STRH_IMM(ARMv7Context& context, const ARMv7Code code, const A
 
 		if (wback)
 		{
-			context.write_gpr(n, offset_addr);
+			context.write_gpr(n, offset_addr, type == T1 ? 2 : 4);
 		}
 	}
 }
@@ -4800,7 +4796,7 @@ void ARMv7_instrs::STRH_REG(ARMv7Context& context, const ARMv7Code code, const A
 
 		if (wback)
 		{
-			context.write_gpr(n, offset_addr);
+			context.write_gpr(n, offset_addr, type == T1 ? 2 : 4);
 		}
 	}
 }
@@ -4838,7 +4834,7 @@ void ARMv7_instrs::STREX(ARMv7Context& context, const ARMv7Code code, const ARMv
 	{
 		const u32 addr = context.read_gpr(n) + imm32;
 		const u32 value = context.read_gpr(t);
-		context.write_gpr(d, !vm::reservation_update(addr, &value, sizeof(value)));
+		context.write_gpr(d, !vm::reservation_update(addr, &value, sizeof(value)), 4);
 	}
 }
 
@@ -4932,7 +4928,7 @@ void ARMv7_instrs::SUB_IMM(ARMv7Context& context, const ARMv7Code code, const AR
 	{
 		bool carry, overflow;
 		const u32 result = AddWithCarry(context.read_gpr(n), ~imm32, true, carry, overflow);
-		context.write_gpr(d, result);
+		context.write_gpr(d, result, type < T3 ? 2 : 4);
 
 		if (set_flags)
 		{
@@ -4990,7 +4986,7 @@ void ARMv7_instrs::SUB_REG(ARMv7Context& context, const ARMv7Code code, const AR
 		bool carry, overflow;
 		const u32 shifted = Shift(context.read_gpr(m), shift_t, shift_n, context.APSR.C);
 		const u32 result = AddWithCarry(context.read_gpr(n), ~shifted, true, carry, overflow);
-		context.write_gpr(d, result);
+		context.write_gpr(d, result, type == T1 ? 2 : 4);
 
 		if (set_flags)
 		{
@@ -5061,7 +5057,7 @@ void ARMv7_instrs::SUB_SPI(ARMv7Context& context, const ARMv7Code code, const AR
 	{
 		bool carry, overflow;
 		const u32 result = AddWithCarry(context.SP, ~imm32, true, carry, overflow);
-		context.write_gpr(d, result);
+		context.write_gpr(d, result, type == T1 ? 2 : 4);
 
 		if (set_flags)
 		{
@@ -5390,8 +5386,8 @@ void ARMv7_instrs::UMULL(ARMv7Context& context, const ARMv7Code code, const ARMv
 	if (ConditionPassed(context, cond))
 	{
 		const u64 result = (u64)context.read_gpr(n) * (u64)context.read_gpr(m);
-		context.write_gpr(d1, (u32)(result >> 32));
-		context.write_gpr(d0, (u32)(result));
+		context.write_gpr(d1, (u32)(result >> 32), 4);
+		context.write_gpr(d0, (u32)(result), 4);
 
 		if (set_flags)
 		{
@@ -5581,7 +5577,7 @@ void ARMv7_instrs::UXTB(ARMv7Context& context, const ARMv7Code code, const ARMv7
 
 	if (ConditionPassed(context, cond))
 	{
-		context.write_gpr(d, (context.read_gpr(m) >> rot) & 0xff);
+		context.write_gpr(d, (context.read_gpr(m) >> rot) & 0xff, type < A1 ? 2 : 4);
 	}
 }
 

@@ -1462,7 +1462,7 @@ void ppu_interpreter::BC(PPUThread& CPU, ppu_opcode_t op)
 	if (ctr_ok && cond_ok)
 	{
 		const u32 nextLR = CPU.PC + 4;
-		CPU.SetBranch(PPUOpcodes::branchTarget((op.aa ? 0 : CPU.PC), op.simm16), op.lk);
+		CPU.PC = PPUOpcodes::branchTarget((op.aa ? 0 : CPU.PC), op.simm16) - 4;
 		if (op.lk) CPU.LR = nextLR;
 	}
 }
@@ -1485,7 +1485,7 @@ void ppu_interpreter::SC(PPUThread& CPU, ppu_opcode_t op)
 void ppu_interpreter::B(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u32 nextLR = CPU.PC + 4;
-	CPU.SetBranch(PPUOpcodes::branchTarget(op.aa ? 0 : CPU.PC, op.ll), op.lk);
+	CPU.PC = PPUOpcodes::branchTarget(op.aa ? 0 : CPU.PC, op.ll) - 4;
 	if (op.lk) CPU.LR = nextLR;
 }
 
@@ -1509,7 +1509,7 @@ void ppu_interpreter::BCLR(PPUThread& CPU, ppu_opcode_t op)
 	if (ctr_ok && cond_ok)
 	{
 		const u32 nextLR = CPU.PC + 4;
-		CPU.SetBranch(PPUOpcodes::branchTarget(0, (u32)CPU.LR), true);
+		CPU.PC = PPUOpcodes::branchTarget(0, (u32)CPU.LR) - 4;
 		if (op.lk) CPU.LR = nextLR;
 	}
 }
@@ -1572,7 +1572,7 @@ void ppu_interpreter::BCCTR(PPUThread& CPU, ppu_opcode_t op)
 	if (op.bo & 0x10 || CPU.IsCR(op.bi) == ((op.bo & 0x8) != 0))
 	{
 		const u32 nextLR = CPU.PC + 4;
-		CPU.SetBranch(PPUOpcodes::branchTarget(0, (u32)CPU.CTR), true);
+		CPU.PC = PPUOpcodes::branchTarget(0, (u32)CPU.CTR) - 4;
 		if (op.lk) CPU.LR = nextLR;
 	}
 }

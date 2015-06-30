@@ -109,7 +109,7 @@ u32 cellSpursModulePollStatus(SPUThread & spu, u32 * status) {
 /// Exit current workload
 void cellSpursModuleExit(SPUThread & spu) {
     auto ctxt = vm::get_ptr<SpursKernelContext>(spu.offset + 0x100);
-    spu.SetBranch(ctxt->exitToKernelAddr);
+    spu.PC = ctxt->exitToKernelAddr - 4;
     throw SpursModuleExit();
 }
 
@@ -506,7 +506,7 @@ void spursKernelDispatchWorkload(SPUThread & spu, u64 widAndPollStatus) {
     spu.GPR[3]._u32[3] = 0x100;
     spu.GPR[4]._u64[1] = wklInfo->arg;
     spu.GPR[5]._u32[3] = pollStatus;
-    spu.SetBranch(0xA00);
+    spu.PC = 0xA00 - 4;
 }
 
 /// SPURS kernel workload exit
@@ -606,8 +606,10 @@ bool spursSysServiceEntry(SPUThread & spu) {
 void spursSysServiceIdleHandler(SPUThread & spu, SpursKernelContext * ctxt) {
     bool shouldExit;
 
+	std::unique_lock<std::mutex> lock(spu.mutex, std::defer_lock);
+
     while (true) {
-        vm::reservation_acquire(vm::get_ptr(spu.offset + 0x100), vm::cast(ctxt->spurs.addr()), 128, [&spu](){ spu.Notify(); });
+        vm::reservation_acquire(vm::get_ptr(spu.offset + 0x100), vm::cast(ctxt->spurs.addr()), 128, [&spu](){ spu.cv.notify_one(); });
         auto spurs = vm::get_ptr<CellSpurs>(spu.offset + 0x100);
 
         // Find the number of SPUs that are idling in this SPURS instance
@@ -674,8 +676,10 @@ void spursSysServiceIdleHandler(SPUThread & spu, SpursKernelContext * ctxt) {
         // If all SPUs are idling and the exit_if_no_work flag is set then the SPU thread group must exit. Otherwise wait for external events.
         if (spuIdling && shouldExit == false && foundReadyWorkload == false) {
             // The system service blocks by making a reservation and waiting on the lock line reservation lost event.
-            spu.WaitForAnySignal(1);
             if (Emu.IsStopped()) throw SpursModuleExit();
+			if (!lock) lock.lock();
+			spu.cv.wait_for(lock, std::chrono::milliseconds(1));
+			continue;
         }
 
         if (vm::reservation_update(vm::cast(ctxt->spurs.addr()), vm::get_ptr(spu.offset + 0x100), 128) && (shouldExit || foundReadyWorkload)) {
@@ -1127,9 +1131,10 @@ bool spursTasksetSyscallEntry(SPUThread & spu) {
         spu.GPR[3]._u32[3] = spursTasksetProcessSyscall(spu, spu.GPR[3]._u32[3], spu.GPR[4]._u32[3]);
 
         // Resume the previously executing task if the syscall did not cause a context switch
-        if (spu.m_is_branch == false) {
-            spursTasksetResumeTask(spu);
-        }
+		throw __FUNCTION__;
+        //if (spu.m_is_branch == false) {
+        //    spursTasksetResumeTask(spu);
+        //}
     }
 
     catch (SpursModuleExit) {
@@ -1149,7 +1154,7 @@ void spursTasksetResumeTask(SPUThread & spu) {
         spu.GPR[80 + i] = ctxt->savedContextR80ToR127[i];
     }
 
-    spu.SetBranch(spu.GPR[0]._u32[3]);
+    spu.PC = spu.GPR[0]._u32[3] - 4;
 }
 
 /// Start a task
@@ -1165,7 +1170,7 @@ void spursTasksetStartTask(SPUThread & spu, CellSpursTaskArgument & taskArgs) {
         spu.GPR[i].clear();
     }
 
-    spu.SetBranch(ctxt->savedContextLr.value()._u32[3]);
+    spu.PC = ctxt->savedContextLr.value()._u32[3] - 4;
 }
 
 /// Process a request and update the state of the taskset
@@ -1457,8 +1462,8 @@ void spursTasksetDispatch(SPUThread & spu) {
     // DMA in the task info for the selected task
     memcpy(vm::get_ptr(spu.offset + 0x2780), &ctxt->taskset->task_info[taskId], sizeof(CellSpursTaskset::TaskInfo));
     auto taskInfo = vm::get_ptr<CellSpursTaskset::TaskInfo>(spu.offset + 0x2780);
-    auto elfAddr  = taskInfo->elf_addr.addr().value();
-    taskInfo->elf_addr.set(taskInfo->elf_addr.addr() & 0xFFFFFFFFFFFFFFF8ull);
+    auto elfAddr  = taskInfo->elf.addr().value();
+    taskInfo->elf.set(taskInfo->elf.addr() & 0xFFFFFFFFFFFFFFF8ull);
 
     // Trace - Task: Incident=dispatch
     CellSpursTracePacket pkt;
@@ -1475,7 +1480,7 @@ void spursTasksetDispatch(SPUThread & spu) {
 
         u32 entryPoint;
         u32 lowestLoadAddr;
-        if (spursTasksetLoadElf(spu, &entryPoint, &lowestLoadAddr, taskInfo->elf_addr.addr(), false) != CELL_OK) {
+        if (spursTasksetLoadElf(spu, &entryPoint, &lowestLoadAddr, taskInfo->elf.addr(), false) != CELL_OK) {
             assert(!"spursTaskLoadElf() failed");
             spursHalt(spu);
         }
@@ -1516,7 +1521,7 @@ void spursTasksetDispatch(SPUThread & spu) {
         if (ls_pattern != u128::from64r(0x03FFFFFFFFFFFFFFull, 0xFFFFFFFFFFFFFFFFull)) {
             // Load the ELF
             u32 entryPoint;
-            if (spursTasksetLoadElf(spu, &entryPoint, nullptr, taskInfo->elf_addr.addr(), true) != CELL_OK) {
+            if (spursTasksetLoadElf(spu, &entryPoint, nullptr, taskInfo->elf.addr(), true) != CELL_OK) {
                 assert(!"spursTasksetLoadElf() failed");
                 spursHalt(spu);
             }

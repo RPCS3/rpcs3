@@ -30,7 +30,6 @@ struct lv2_timer_t
 	u64 period; // period (oneshot if 0)
 
 	std::atomic<u32> state; // timer state
-	std::condition_variable cv;
 
 	thread_t thread; // timer thread
 

@@ -161,7 +161,6 @@ s32 sys_event_queue_receive(PPUThread& CPU, u32 equeue_id, vm::ptr<sys_event_t> 
 	{
 		if (queue->cancelled)
 		{
-			queue->waiters--;
 			return CELL_ECANCELED;
 		}
 

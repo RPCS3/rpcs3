@@ -48,9 +48,17 @@ s32 cellAudioInit()
 	memset(vm::get_ptr<void>(g_audio.buffer), 0, AUDIO_PORT_OFFSET * AUDIO_PORT_COUNT);
 	memset(vm::get_ptr<void>(g_audio.indexes), 0, sizeof(u64) * AUDIO_PORT_COUNT);
 
-	// start audio thread
-	g_audio.audio_thread.start([]()
+	// check thread status
+	if (g_audio.thread.joinable())
 	{
+		g_audio.thread.join();
+	}
+
+	// start audio thread
+	g_audio.thread.start(WRAP_EXPR("Audio Thread"), []()
+	{
+		std::unique_lock<std::mutex> lock(g_audio.thread.mutex);
+
 		const bool do_dump = Ini.AudioDumpToFile.GetValue();
 
 		AudioDumper m_dump;
@@ -73,7 +81,7 @@ s32 cellAudioInit()
 
 		squeue_t<float*, BUFFER_NUM - 1> out_queue;
 
-		thread_t iat("Internal Audio Thread", true /* autojoin */, [&out_queue]()
+		thread_t iat(WRAP_EXPR("Internal Audio Thread"), [&out_queue]()
 		{
 			const bool use_u16 = Ini.AudioConvertToU16.GetValue();
 
@@ -131,9 +139,8 @@ s32 cellAudioInit()
 
 		u64 last_pause_time;
 		std::atomic<u64> added_time(0);
-		NamedThreadBase* audio_thread = GetCurrentNamedThread();
 
-		PauseCallbackRegisterer pcb(Emu.GetCallbackManager(), [&last_pause_time, &added_time, audio_thread](bool is_paused)
+		PauseCallbackRegisterer pcb(Emu.GetCallbackManager(), [&last_pause_time, &added_time](bool is_paused)
 		{
 			if (is_paused)
 			{
@@ -142,7 +149,7 @@ s32 cellAudioInit()
 			else
 			{
 				added_time += get_system_time() - last_pause_time;
-				audio_thread->Notify();
+				g_audio.thread.cv.notify_one();
 			}
 		});
 
@@ -150,7 +157,7 @@ s32 cellAudioInit()
 		{
 			if (Emu.IsPaused())
 			{
-				GetCurrentNamedThread()->WaitForAnySignal();
+				g_audio.thread.cv.wait_for(lock, std::chrono::milliseconds(1));
 				continue;
 			}
 
@@ -167,7 +174,7 @@ s32 cellAudioInit()
 			const u64 expected_time = g_audio.counter * AUDIO_SAMPLES * MHZ / 48000;
 			if (expected_time >= stamp0 - g_audio.start_time)
 			{
-				std::this_thread::sleep_for(std::chrono::milliseconds(1));
+				g_audio.thread.cv.wait_for(lock, std::chrono::milliseconds(1));
 				continue;
 			}
 			
@@ -365,8 +372,6 @@ s32 cellAudioInit()
 			//const u64 stamp2 = get_system_time();
 
 			{
-				std::lock_guard<std::mutex> lock(g_audio.mutex);
-
 				// update indices:
 
 				auto indexes = vm::ptr<u64>::make(g_audio.indexes);
@@ -438,7 +443,8 @@ s32 cellAudioQuit()
 		return CELL_AUDIO_ERROR_NOT_INIT;
 	}
 
-	g_audio.audio_thread.join();
+	g_audio.thread.cv.notify_one();
+	g_audio.thread.join();
 	g_audio.state.exchange(AUDIO_STATE_NOT_INITIALIZED);
 	return CELL_OK;
 }
@@ -672,7 +678,7 @@ s32 cellAudioGetPortTimestamp(u32 portNum, u64 tag, vm::ptr<u64> stamp)
 
 	// TODO: check tag (CELL_AUDIO_ERROR_TAG_NOT_FOUND error)
 
-	std::lock_guard<std::mutex> lock(g_audio.mutex);
+	std::lock_guard<std::mutex> lock(g_audio.thread.mutex);
 
 	*stamp = g_audio.start_time + (port.counter + (tag - port.tag)) * 256000000 / 48000;
 
@@ -705,7 +711,7 @@ s32 cellAudioGetPortBlockTag(u32 portNum, u64 blockNo, vm::ptr<u64> tag)
 		return CELL_AUDIO_ERROR_PARAM;
 	}
 
-	std::lock_guard<std::mutex> lock(g_audio.mutex);
+	std::lock_guard<std::mutex> lock(g_audio.thread.mutex);
 
 	u64 tag_base = port.tag;
 	if (tag_base % port.block > blockNo)
@@ -801,7 +807,7 @@ s32 cellAudioSetNotifyEventQueue(u64 key)
 		return CELL_AUDIO_ERROR_NOT_INIT;
 	}
 
-	std::lock_guard<std::mutex> lock(g_audio.mutex);
+	std::lock_guard<std::mutex> lock(g_audio.thread.mutex);
 
 	for (auto k : g_audio.keys) // check for duplicates
 	{
@@ -834,7 +840,7 @@ s32 cellAudioRemoveNotifyEventQueue(u64 key)
 		return CELL_AUDIO_ERROR_NOT_INIT;
 	}
 
-	std::lock_guard<std::mutex> lock(g_audio.mutex);
+	std::lock_guard<std::mutex> lock(g_audio.thread.mutex);
 
 	for (auto i = g_audio.keys.begin(); i != g_audio.keys.end(); i++)
 	{

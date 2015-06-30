@@ -97,46 +97,6 @@ void Emulator::SetTitle(const std::string& title)
 	m_title = title;
 }
 
-void Emulator::CheckStatus()
-{
-	//auto threads = GetCPU().GetThreads();
-
-	//if (!threads.size())
-	//{
-	//	Stop();
-	//	return;	
-	//}
-
-	//bool AllPaused = true;
-
-	//for (auto& t : threads)
-	//{
-	//	if (t->IsPaused()) continue;
-	//	AllPaused = false;
-	//	break;
-	//}
-
-	//if (AllPaused)
-	//{
-	//	Pause();
-	//	return;
-	//}
-
-	//bool AllStopped = true;
-
-	//for (auto& t : threads)
-	//{
-	//	if (t->IsStopped()) continue;
-	//	AllStopped = false;
-	//	break;
-	//}
-
-	//if (AllStopped)
-	//{
-	//	Pause();
-	//}
-}
-
 bool Emulator::BootGame(const std::string& path, bool direct)
 {
 	static const char* elf_path[6] =
@@ -180,6 +140,8 @@ bool Emulator::BootGame(const std::string& path, bool direct)
 
 void Emulator::Load()
 {
+	m_status = Ready;
+
 	GetModuleManager().Init();
 
 	if (!fs::is_file(m_path)) return;
@@ -288,8 +250,6 @@ void Emulator::Load()
 	
 	LoadPoints(BreakPointsDBName);
 
-	m_status = Ready;
-
 	GetGSManager().Init();
 	GetCallbackManager().Init();
 	GetAudioManager().Init();
@@ -327,8 +287,13 @@ void Emulator::Pause()
 	if (!IsRunning()) return;
 	SendDbgCommand(DID_PAUSE_EMU);
 
-	if (sync_bool_compare_and_swap((volatile u32*)&m_status, Running, Paused))
+	if (sync_bool_compare_and_swap(&m_status, Running, Paused))
 	{
+		for (auto& t : GetCPU().GetAllThreads())
+		{
+			t->Sleep(); // trigger status check
+		}
+
 		SendDbgCommand(DID_PAUSED_EMU);
 
 		GetCallbackManager().RunPauseCallbacks(true);
@@ -342,7 +307,10 @@ void Emulator::Resume()
 
 	m_status = Running;
 
-	CheckStatus();
+	for (auto& t : GetCPU().GetAllThreads())
+	{
+		t->Awake(); // trigger status check
+	}
 
 	SendDbgCommand(DID_RESUMED_EMU);
 
@@ -359,13 +327,9 @@ void Emulator::Stop()
 
 	m_status = Stopped;
 
+	for (auto& t : GetCPU().GetAllThreads())
 	{
-		auto threads = GetCPU().GetThreads();
-
-		for (auto& t : threads)
-		{
-			t->AddEvent(CPU_EVENT_STOP);
-		}
+		t->Pause(); // trigger status check
 	}
 
 	while (g_thread_count)

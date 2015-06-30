@@ -729,7 +729,7 @@ public:
 	u32 frc_set; // frame rate overwriting
 	AVRational rfr, afr;
 
-	PPUThread* vdecCb;
+	std::shared_ptr<PPUThread> vdecCb;
 
 	VideoDecoder(s32 type, u32 profile, u32 addr, u32 size, vm::ptr<CellVdecCbMsg> func, u32 arg);
 

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Emu/Memory/Memory.h"
+
 enum ARMv7InstructionSet
 {
 	ARM,
@@ -120,15 +122,34 @@ struct ARMv7Context
 
 	std::array<perf_counter, 6> counters;
 
+	u32 PC;
+	s32 prio;
+	u32 stack_addr;
+	u32 stack_size;
+	u32 hle_func; // current function ID
+
 	u32 debug;
 	std::string debug_str;
 
-	void write_pc(u32 value);
-	u32 read_pc();
-	u32 get_stack_arg(u32 pos);
+	void write_pc(u32 value, u32 size)
+	{
+		ISET = value & 1 ? Thumb : ARM;
+		PC = (value & ~1) - size;
+	}
+
+	u32 read_pc()
+	{
+		return ISET == ARM ? PC + 8 : PC + 4;
+	}
+
+	u32 get_stack_arg(u32 pos)
+	{
+		return vm::psv::read32(SP + sizeof(u32) * (pos - 5));
+	}
+
 	void fast_call(u32 addr);
 
-	void write_gpr(u32 n, u32 value)
+	void write_gpr(u32 n, u32 value, u32 size)
 	{
 		assert(n < 16);
 
@@ -138,7 +159,7 @@ struct ARMv7Context
 		}
 		else
 		{
-			write_pc(value);
+			write_pc(value, size);
 		}
 	}
 
@@ -301,4 +322,3 @@ force_inline T cast_from_armv7_gpr(const u32 reg)
 {
 	return cast_armv7_gpr<T>::from_gpr(reg);
 }
-

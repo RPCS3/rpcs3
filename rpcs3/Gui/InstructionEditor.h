@@ -73,7 +73,7 @@ InstructionEditorDialog::InstructionEditorDialog(wxPanel *parent, u64 _pc, CPUTh
 	s_panel_margin_x->AddSpacer(12);
 
 	this->Connect(wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler(InstructionEditorDialog::updatePreview));
-	t2_instr->SetValue(wxString::Format("%08x",	vm::ps3::read32(CPU->offset + pc).value()));
+	t2_instr->SetValue(wxString::Format("%08x",	vm::ps3::read32(CPU->GetOffset() + pc).value()));
 
 	this->SetSizerAndFit(s_panel_margin_x);
 
@@ -83,7 +83,7 @@ InstructionEditorDialog::InstructionEditorDialog(wxPanel *parent, u64 _pc, CPUTh
 		if (!t2_instr->GetValue().ToULong(&opcode, 16))
 			wxMessageBox("This instruction could not be parsed.\nNo changes were made.","Error");
 		else
-			vm::ps3::write32(CPU->offset + pc, (u32)opcode);
+			vm::ps3::write32(CPU->GetOffset() + pc, (u32)opcode);
 	}
 }
 

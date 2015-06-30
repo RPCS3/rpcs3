@@ -2226,7 +2226,7 @@ private:
 		if (CheckCondition(bo, bi))
 		{
 			const u32 nextLR = CPU.PC + 4;
-			CPU.SetBranch(branchTarget((aa ? 0 : CPU.PC), bd), lk);
+			CPU.PC = branchTarget((aa ? 0 : CPU.PC), bd) - 4;
 			if(lk) CPU.LR = nextLR;
 		}
 	}
@@ -2247,7 +2247,7 @@ private:
 	void B(s32 ll, u32 aa, u32 lk)
 	{
 		const u32 nextLR = CPU.PC + 4;
-		CPU.SetBranch(branchTarget(aa ? 0 : CPU.PC, ll), lk);
+		CPU.PC = branchTarget(aa ? 0 : CPU.PC, ll) - 4;
 		if(lk) CPU.LR = nextLR;
 	}
 	void MCRF(u32 crfd, u32 crfs)
@@ -2259,7 +2259,7 @@ private:
 		if (CheckCondition(bo, bi))
 		{
 			const u32 nextLR = CPU.PC + 4;
-			CPU.SetBranch(branchTarget(0, (u32)CPU.LR), true);
+			CPU.PC = branchTarget(0, (u32)CPU.LR) - 4;
 			if(lk) CPU.LR = nextLR;
 		}
 	}
@@ -2312,7 +2312,7 @@ private:
 		if(bo & 0x10 || CPU.IsCR(bi) == ((bo & 0x8) != 0))
 		{
 			const u32 nextLR = CPU.PC + 4;
-			CPU.SetBranch(branchTarget(0, (u32)CPU.CTR), true);
+			CPU.PC = branchTarget(0, (u32)CPU.CTR) - 4;
 			if(lk) CPU.LR = nextLR;
 		}
 	}	

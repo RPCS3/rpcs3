@@ -105,7 +105,7 @@ s32 cellMsgDialogOpen2(u32 type, vm::cptr<char> msgString, vm::ptr<CellMsgDialog
 
 	std::string msg = msgString.get_ptr();
 
-	thread_t t("MsgDialog Thread", [type, msg, callback, userData, extParam]()
+	thread_t(WRAP_EXPR("MsgDialog Thread"), [type, msg, callback, userData, extParam]()
 	{
 		switch (type & CELL_MSGDIALOG_TYPE_SE_TYPE)
 		{
@@ -161,7 +161,8 @@ s32 cellMsgDialogOpen2(u32 type, vm::cptr<char> msgString, vm::ptr<CellMsgDialog
 			g_msg_dialog->Destroy();
 			g_msg_dialog->state = msgDialogNone;
 		});
-	});
+
+	}).detach();
 
 	return CELL_OK;
 }

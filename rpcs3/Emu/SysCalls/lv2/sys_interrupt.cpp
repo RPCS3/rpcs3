@@ -47,9 +47,9 @@ s32 sys_interrupt_tag_destroy(u32 intrtag)
 	return CELL_OK;
 }
 
-s32 sys_interrupt_thread_establish(vm::ptr<u32> ih, u32 intrtag, u64 intrthread, u64 arg)
+s32 sys_interrupt_thread_establish(vm::ptr<u32> ih, u32 intrtag, u32 intrthread, u64 arg)
 {
-	sys_interrupt.Warning("sys_interrupt_thread_establish(ih=*0x%x, intrtag=0x%x, intrthread=%lld, arg=0x%llx)", ih, intrtag, intrthread, arg);
+	sys_interrupt.Warning("sys_interrupt_thread_establish(ih=*0x%x, intrtag=0x%x, intrthread=0x%x, arg=0x%llx)", ih, intrtag, intrthread, arg);
 
 	const u32 class_id = intrtag >> 8;
 
@@ -71,7 +71,7 @@ s32 sys_interrupt_thread_establish(vm::ptr<u32> ih, u32 intrtag, u64 intrthread,
 
 	// CELL_ESTAT is not returned (can't detect exact condition)
 
-	const auto it = Emu.GetCPU().GetThread((u32)intrthread);
+	const auto it = Emu.GetIdManager().get<PPUThread>(intrthread);
 
 	if (!it)
 	{
@@ -104,9 +104,8 @@ s32 sys_interrupt_thread_establish(vm::ptr<u32> ih, u32 intrtag, u64 intrthread,
 
 		ppu.custom_task = [t, &tag, arg](PPUThread& CPU)
 		{
-			const auto func = vm::ptr<void(u64 arg)>::make(CPU.entry);
-			const auto pc   = vm::read32(func.addr());
-			const auto rtoc = vm::read32(func.addr() + 4);
+			const auto pc   = CPU.PC;
+			const auto rtoc = CPU.GPR[2];
 
 			std::unique_lock<std::mutex> cond_lock(tag.handler_mutex);
 
@@ -115,9 +114,14 @@ s32 sys_interrupt_thread_establish(vm::ptr<u32> ih, u32 intrtag, u64 intrthread,
 				// call interrupt handler until int status is clear
 				if (tag.stat.load())
 				{
-					//func(CPU, arg);
-					CPU.GPR[3] = arg;
-					CPU.FastCall2(pc, rtoc);
+					try
+					{
+						CPU.GPR[3] = arg;
+						CPU.FastCall2(pc, rtoc);
+					}
+					catch (CPUThreadReturn)
+					{
+					}
 				}
 
 				tag.cond.wait_for(cond_lock, std::chrono::milliseconds(1));
@@ -156,7 +160,7 @@ void sys_interrupt_thread_eoi(PPUThread& CPU)
 	sys_interrupt.Log("sys_interrupt_thread_eoi()");
 
 	// TODO: maybe it should actually unwind the stack (ensure that all the automatic objects are finalized)?
-	CPU.GPR[1] = align(CPU.GetStackAddr() + CPU.GetStackSize(), 0x200) - 0x200; // supercrutch (just to hide error messages)
+	CPU.GPR[1] = align(CPU.stack_addr + CPU.stack_size, 0x200) - 0x200; // supercrutch (just to hide error messages)
 
 	CPU.FastStop();
 }

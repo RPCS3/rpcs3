@@ -2,6 +2,7 @@
 #include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
+#include "Emu/IdManager.h"
 #include "Emu/SysCalls/Modules.h"
 #include "Emu/SysCalls/CB_FUNC.h"
 #include "Emu/Cell/PPUInstrTable.h"
@@ -328,20 +329,12 @@ int cellSurMixerCreate(vm::cptr<CellSurMixerConfig> config)
 
 	libmixer.Warning("*** surMixer created (ch1=%d, ch2=%d, ch6=%d, ch8=%d)", config->chStrips1, config->chStrips2, config->chStrips6, config->chStrips8);
 
-	thread_t t("Surmixer Thread", []()
+	auto ppu = Emu.GetIdManager().make_ptr<PPUThread>("Surmixer Thread");
+	ppu->prio = 1001;
+	ppu->stack_size = 0x10000;
+	ppu->custom_task = [](PPUThread& CPU)
 	{
 		AudioPortConfig& port = g_audio.ports[g_surmx.audio_port];
-
-		auto cb_thread = Emu.GetCPU().AddThread(CPU_THREAD_PPU);
-
-		auto& ppu = static_cast<PPUThread&>(*cb_thread);
-		ppu.SetName("Surmixer Callback Thread");
-		ppu.SetEntry(0);
-		ppu.SetPrio(1001);
-		ppu.SetStackSize(0x10000);
-		ppu.InitStack();
-		ppu.InitRegs();
-		ppu.DoRun();
 
 		while (port.state.load() != AUDIO_PORT_STATE_CLOSED && !Emu.IsStopped())
 		{
@@ -358,7 +351,7 @@ int cellSurMixerCreate(vm::cptr<CellSurMixerConfig> config)
 				memset(mixdata, 0, sizeof(mixdata));
 				if (surMixerCb)
 				{
-					surMixerCb(ppu, surMixerCbArg, (u32)mixcount, 256);
+					surMixerCb(CPU, surMixerCbArg, (u32)mixcount, 256);
 				}
 
 				//u64 stamp1 = get_system_time();
@@ -463,9 +456,15 @@ int cellSurMixerCreate(vm::cptr<CellSurMixerConfig> config)
 			ssp.clear();
 		}
 		
-		Emu.GetCPU().RemoveThread(ppu.GetId());
 		surMixerCb.set(0);
-	});
+
+		const u32 id = CPU.GetId();
+
+		CallAfter([id]()
+		{
+			Emu.GetIdManager().remove<PPUThread>(id);
+		});
+	};
 
 	return CELL_OK;
 }

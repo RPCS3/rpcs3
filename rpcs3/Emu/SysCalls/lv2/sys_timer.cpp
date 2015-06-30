@@ -16,16 +16,21 @@ lv2_timer_t::lv2_timer_t()
 	: start(0)
 	, period(0)
 	, state(SYS_TIMER_STATE_STOP)
-	, thread(fmt::format("Timer[0x%x] Thread", Emu.GetIdManager().get_current_id()))
 {
-	thread.start([this]()
-	{
-		LV2_LOCK;
+	auto name = fmt::format("Timer[0x%x] Thread", Emu.GetIdManager().get_current_id());
 
-		while (thread.joinable() && !Emu.IsStopped())
+	thread.start([name]{ return name; }, [this]()
+	{
+		std::unique_lock<std::mutex> lock(thread.mutex);
+
+		while (thread.joinable())
 		{
+			CHECK_EMU_STATUS;
+
 			if (state == SYS_TIMER_STATE_RUN)
 			{
+				LV2_LOCK;
+
 				if (get_system_time() >= start)
 				{
 					const auto queue = port.lock();
@@ -48,14 +53,14 @@ lv2_timer_t::lv2_timer_t()
 				}
 			}
 
-			cv.wait_for(lv2_lock, std::chrono::milliseconds(1));
+			thread.cv.wait_for(lock, std::chrono::milliseconds(1));
 		}
 	});
 }
 
 lv2_timer_t::~lv2_timer_t()
 {
-	cv.notify_all();
+	thread.cv.notify_one();
 	thread.join();
 }
 
@@ -88,8 +93,6 @@ s32 sys_timer_destroy(u32 timer_id)
 
 	Emu.GetIdManager().remove<lv2_timer_t>(timer_id);
 
-	lv2_lock.unlock();
-
 	return CELL_OK;
 }
 
@@ -108,7 +111,7 @@ s32 sys_timer_get_information(u32 timer_id, vm::ptr<sys_timer_information_t> inf
 
 	info->next_expiration_time = timer->start;
 
-	info->period = timer->period;
+	info->period      = timer->period;
 	info->timer_state = timer->state;
 
 	return CELL_OK;
@@ -160,10 +163,11 @@ s32 _sys_timer_start(u32 timer_id, u64 base_time, u64 period)
 
 	// sys_timer_start_periodic() will use current time (TODO: is it correct?)
 
-	timer->start = base_time ? base_time : start_time + period;
+	timer->start  = base_time ? base_time : start_time + period;
 	timer->period = period;
-	timer->state = SYS_TIMER_STATE_RUN;
-	timer->cv.notify_one();
+	timer->state  = SYS_TIMER_STATE_RUN;
+
+	timer->thread.cv.notify_one();
 
 	return CELL_OK;
 }
@@ -205,10 +209,10 @@ s32 sys_timer_connect_event_queue(u32 timer_id, u32 queue_id, u64 name, u64 data
 		return CELL_EISCONN;
 	}
 
-	timer->port = queue; // connect event queue
+	timer->port   = queue; // connect event queue
 	timer->source = name ? name : ((u64)process_getpid() << 32) | timer_id;
-	timer->data1 = data1;
-	timer->data2 = data2;
+	timer->data1  = data1;
+	timer->data2  = data2;
 
 	return CELL_OK;
 }

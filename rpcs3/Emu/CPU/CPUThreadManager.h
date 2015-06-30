@@ -1,14 +1,13 @@
 #pragma once
 
 class CPUThread;
-enum CPUThreadType : unsigned char;
+class RawSPUThread;
 
-class CPUThreadManager
+class CPUThreadManager final
 {
 	std::mutex m_mutex;
 
-	std::vector<std::shared_ptr<CPUThread>> m_threads;
-	std::array<std::shared_ptr<CPUThread>, 5> m_raw_spu;
+	std::array<std::weak_ptr<RawSPUThread>, 5> m_raw_spu;
 
 public:
 	CPUThreadManager();
@@ -16,16 +15,11 @@ public:
 
 	void Close();
 
-	std::shared_ptr<CPUThread> AddThread(CPUThreadType type);
+	std::vector<std::shared_ptr<CPUThread>> GetAllThreads() const;
 
-	void RemoveThread(u32 id);
+	void Exec() const;
 
-	std::vector<std::shared_ptr<CPUThread>> GetThreads() { std::lock_guard<std::mutex> lock(m_mutex); return m_threads; }
+	std::shared_ptr<RawSPUThread> NewRawSPUThread();
 
-	std::shared_ptr<CPUThread> GetThread(u32 id);
-	std::shared_ptr<CPUThread> GetThread(u32 id, CPUThreadType type);
-	std::shared_ptr<CPUThread> GetRawSPUThread(u32 index);
-
-	void Exec();
-	void Task();
+	std::shared_ptr<RawSPUThread> GetRawSPUThread(u32 index);
 };

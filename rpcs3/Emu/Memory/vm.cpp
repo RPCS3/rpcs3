@@ -79,13 +79,12 @@ namespace vm
 
 	class reservation_mutex_t
 	{
-		std::atomic<NamedThreadBase*> m_owner;
+		atomic<const thread_ctrl_t*> m_owner{};
 		std::condition_variable m_cv;
 		std::mutex m_cv_mutex;
 
 	public:
 		reservation_mutex_t()
-			: m_owner(nullptr)
 		{
 		}
 
@@ -93,10 +92,9 @@ namespace vm
 
 		never_inline void lock()
 		{
-			NamedThreadBase* owner = GetCurrentNamedThread();
-			NamedThreadBase* old = nullptr;
+			auto owner = get_current_thread_ctrl();
 
-			while (!m_owner.compare_exchange_strong(old, owner))
+			while (auto old = m_owner.compare_and_swap(nullptr, owner))
 			{
 				std::unique_lock<std::mutex> cv_lock(m_cv_mutex);
 
@@ -115,9 +113,9 @@ namespace vm
 
 		never_inline void unlock()
 		{
-			NamedThreadBase* owner = GetCurrentNamedThread();
+			auto owner = get_current_thread_ctrl();
 
-			if (!m_owner.compare_exchange_strong(owner, nullptr))
+			if (!m_owner.compare_and_swap_test(owner, nullptr))
 			{
 				throw __FUNCTION__;
 			}
@@ -131,7 +129,7 @@ namespace vm
 	};
 
 	std::function<void()> g_reservation_cb = nullptr;
-	NamedThreadBase* g_reservation_owner = nullptr;
+	const thread_ctrl_t* g_reservation_owner = nullptr;
 
 	u32 g_reservation_addr = 0;
 	u32 g_reservation_size = 0;
@@ -232,7 +230,7 @@ namespace vm
 			// set additional information
 			g_reservation_addr = addr;
 			g_reservation_size = size;
-			g_reservation_owner = GetCurrentNamedThread();
+			g_reservation_owner = get_current_thread_ctrl();
 			g_reservation_cb = callback;
 
 			// copy data
@@ -254,7 +252,7 @@ namespace vm
 
 		std::lock_guard<reservation_mutex_t> lock(g_reservation_mutex);
 
-		if (g_reservation_owner != GetCurrentNamedThread() || g_reservation_addr != addr || g_reservation_size != size)
+		if (g_reservation_owner != get_current_thread_ctrl() || g_reservation_addr != addr || g_reservation_size != size)
 		{
 			// atomic update failed
 			return false;
@@ -306,7 +304,7 @@ namespace vm
 	{
 		std::lock_guard<reservation_mutex_t> lock(g_reservation_mutex);
 
-		if (g_reservation_owner == GetCurrentNamedThread())
+		if (g_reservation_owner == get_current_thread_ctrl())
 		{
 			_reservation_break(g_reservation_addr);
 		}
@@ -320,7 +318,7 @@ namespace vm
 		std::lock_guard<reservation_mutex_t> lock(g_reservation_mutex);
 
 		// break previous reservation
-		if (g_reservation_owner != GetCurrentNamedThread() || g_reservation_addr != addr || g_reservation_size != size)
+		if (g_reservation_owner != get_current_thread_ctrl() || g_reservation_addr != addr || g_reservation_size != size)
 		{
 			if (g_reservation_owner)
 			{
@@ -334,7 +332,7 @@ namespace vm
 		// set additional information
 		g_reservation_addr = addr;
 		g_reservation_size = size;
-		g_reservation_owner = GetCurrentNamedThread();
+		g_reservation_owner = get_current_thread_ctrl();
 		g_reservation_cb = nullptr;
 
 		// may not be necessary
@@ -638,9 +636,9 @@ namespace vm
 			context.GPR[1] -= align(size, 8); // room minimal possible size
 			context.GPR[1] &= ~(align_v - 1); // fix stack alignment
 
-			if (context.GPR[1] < CPU.GetStackAddr())
+			if (context.GPR[1] < context.stack_addr)
 			{
-				LOG_ERROR(PPU, "vm::stack_push(0x%x,%d): stack overflow (SP=0x%llx, stack=*0x%x)", size, align_v, context.GPR[1], CPU.GetStackAddr());
+				LOG_ERROR(PPU, "vm::stack_push(0x%x,%d): stack overflow (SP=0x%llx, stack=*0x%x)", size, align_v, context.GPR[1], context.stack_addr);
 				context.GPR[1] = old_pos;
 				return 0;
 			}
@@ -665,9 +663,9 @@ namespace vm
 			context.SP -= align(size, 4); // room minimal possible size
 			context.SP &= ~(align_v - 1); // fix stack alignment
 
-			if (context.SP < CPU.GetStackAddr())
+			if (context.SP < context.stack_addr)
 			{
-				LOG_ERROR(ARMv7, "vm::stack_push(0x%x,%d): stack overflow (SP=0x%x, stack=*0x%x)", size, align_v, context.SP, CPU.GetStackAddr());
+				LOG_ERROR(ARMv7, "vm::stack_push(0x%x,%d): stack overflow (SP=0x%x, stack=*0x%x)", size, align_v, context.SP, context.stack_addr);
 				context.SP = old_pos;
 				return 0;
 			}
