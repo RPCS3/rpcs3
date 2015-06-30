@@ -206,5 +206,9 @@
     <ClInclude Include="Gui\SaveDataDialog.h">
       <Filter>Gui</Filter>
     </ClInclude>
+    <ClInclude Include="resource.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="rpcs3.ico" />
   </ItemGroup>
 </Project>
