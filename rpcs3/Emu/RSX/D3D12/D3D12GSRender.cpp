@@ -78,6 +78,8 @@ void D3D12GSRender::ResourceStorage::Reset()
 	m_currentTextureIndex = 0;
 	m_frameFinishedFence = nullptr;
 	m_frameFinishedHandle = 0;
+	m_currentSamplerIndex = 0;
+	m_samplerDescriptorHeapIndex = 0;
 
 	m_commandAllocator->Reset();
 	m_textureUploadCommandAllocator->Reset();
@@ -117,7 +119,8 @@ void D3D12GSRender::ResourceStorage::Init(ID3D12Device *device)
 
 	textureDescriptorDesc.NumDescriptors = 2048; // For safety
 	textureDescriptorDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
-	check(device->CreateDescriptorHeap(&textureDescriptorDesc, IID_PPV_ARGS(&m_samplerDescriptorHeap)));
+	check(device->CreateDescriptorHeap(&textureDescriptorDesc, IID_PPV_ARGS(&m_samplerDescriptorHeap[0])));
+	check(device->CreateDescriptorHeap(&textureDescriptorDesc, IID_PPV_ARGS(&m_samplerDescriptorHeap[1])));
 }
 
 void D3D12GSRender::ResourceStorage::Release()
@@ -126,7 +129,8 @@ void D3D12GSRender::ResourceStorage::Release()
 	m_constantsBufferDescriptorsHeap->Release();
 	m_scaleOffsetDescriptorHeap->Release();
 	m_textureDescriptorsHeap->Release();
-	m_samplerDescriptorHeap->Release();
+	m_samplerDescriptorHeap[0]->Release();
+	m_samplerDescriptorHeap[1]->Release();
 	for (auto &tmp : m_inflightCommandList)
 		tmp->Release();
 	m_commandAllocator->Release();
@@ -578,8 +582,8 @@ void D3D12GSRender::ExecCMD()
 			samplerDesc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
 			samplerDesc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
 			m_device->CreateSampler(&samplerDesc,
-				getCPUDescriptorHandle(getCurrentResourceStorage().m_samplerDescriptorHeap,
-					(getCurrentResourceStorage().m_currentTextureIndex + usedTexture) * g_descriptorStrideSamplers)
+				getCPUDescriptorHandle(getCurrentResourceStorage().m_samplerDescriptorHeap[getCurrentResourceStorage().m_samplerDescriptorHeapIndex],
+					(getCurrentResourceStorage().m_currentSamplerIndex + usedTexture) * g_descriptorStrideSamplers)
 				);
 		}
 
@@ -589,13 +593,14 @@ void D3D12GSRender::ExecCMD()
 				getCurrentResourceStorage().m_currentTextureIndex * g_descriptorStrideSRVCBVUAV)
 			);
 
-		commandList->SetDescriptorHeaps(1, &getCurrentResourceStorage().m_samplerDescriptorHeap);
+		commandList->SetDescriptorHeaps(1, &getCurrentResourceStorage().m_samplerDescriptorHeap[getCurrentResourceStorage().m_samplerDescriptorHeapIndex]);
 		commandList->SetGraphicsRootDescriptorTable(3,
-			getGPUDescriptorHandle(getCurrentResourceStorage().m_samplerDescriptorHeap,
+			getGPUDescriptorHandle(getCurrentResourceStorage().m_samplerDescriptorHeap[getCurrentResourceStorage().m_samplerDescriptorHeapIndex],
 				getCurrentResourceStorage().m_currentTextureIndex * g_descriptorStrideSamplers)
 			);
 
 		getCurrentResourceStorage().m_currentTextureIndex += usedTexture;
+		getCurrentResourceStorage().m_currentSamplerIndex += usedTexture;
 		std::chrono::time_point<std::chrono::system_clock> endTextureTime = std::chrono::system_clock::now();
 		m_timers.m_textureUploadDuration += std::chrono::duration_cast<std::chrono::microseconds>(endTextureTime - startTextureTime).count();
 	}

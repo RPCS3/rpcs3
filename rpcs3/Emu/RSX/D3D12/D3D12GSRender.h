@@ -310,7 +310,9 @@ private:
 		// Texture storage
 		ID3D12CommandAllocator *m_textureUploadCommandAllocator;
 		ID3D12DescriptorHeap *m_textureDescriptorsHeap;
-		ID3D12DescriptorHeap *m_samplerDescriptorHeap;
+		ID3D12DescriptorHeap *m_samplerDescriptorHeap[2];
+		size_t m_samplerDescriptorHeapIndex;
+		size_t m_currentSamplerIndex;
 		size_t m_currentTextureIndex;
 
 		ID3D12Resource *m_RAMFramebuffer;

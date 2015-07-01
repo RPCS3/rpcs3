@@ -876,13 +876,19 @@ size_t D3D12GSRender::UploadTextures()
 			srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 			break;
 		}
+
 		D3D12_CPU_DESCRIPTOR_HANDLE Handle = getCurrentResourceStorage().m_textureDescriptorsHeap->GetCPUDescriptorHandleForHeapStart();
 		Handle.ptr += (getCurrentResourceStorage().m_currentTextureIndex + usedTexture) * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 		m_device->CreateShaderResourceView(vramTexture, &srvDesc, Handle);
 
+		if (getCurrentResourceStorage().m_currentSamplerIndex + 16 > 2048)
+		{
+			getCurrentResourceStorage().m_samplerDescriptorHeapIndex = 1;
+			getCurrentResourceStorage().m_currentSamplerIndex = 0;
+		}
 
-		Handle = getCurrentResourceStorage().m_samplerDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
-		Handle.ptr += (getCurrentResourceStorage().m_currentTextureIndex + usedTexture) * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
+		Handle = getCurrentResourceStorage().m_samplerDescriptorHeap[getCurrentResourceStorage().m_samplerDescriptorHeapIndex]->GetCPUDescriptorHandleForHeapStart();
+		Handle.ptr += (getCurrentResourceStorage().m_currentSamplerIndex + usedTexture) * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
 		m_device->CreateSampler(&getSamplerDesc(m_textures[i]), Handle);
 
 		usedTexture++;
