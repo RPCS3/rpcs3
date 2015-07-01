@@ -6,22 +6,22 @@
 
 s32 sceScreenShotSetParam(vm::cptr<SceScreenShotParam> param)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceScreenShotSetOverlayImage(vm::cptr<char> filePath, s32 offsetX, s32 offsetY)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceScreenShotDisable()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceScreenShotEnable()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 

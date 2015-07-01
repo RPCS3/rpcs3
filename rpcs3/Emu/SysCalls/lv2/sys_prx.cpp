@@ -18,6 +18,11 @@ SysCallBase sys_prx("sys_prx");
 
 extern void fill_ppu_exec_map(u32 addr, u32 size);
 
+lv2_prx_t::lv2_prx_t()
+	: id(Emu.GetIdManager().get_current_id())
+{
+}
+
 s32 prx_load_module(std::string path, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt)
 {
 	sys_prx.Warning("prx_load_module(path='%s', flags=0x%llx, pOpt=*0x%x)", path.c_str(), flags, pOpt);
@@ -34,7 +39,7 @@ s32 prx_load_module(std::string path, u64 flags, vm::ptr<sys_prx_load_module_opt
 	loader::handlers::elf64::sprx_info info;
 	loader.load_sprx(info);
 
-	auto prx = std::make_shared<lv2_prx_t>();
+	auto prx = Emu.GetIdManager().make_ptr<lv2_prx_t>();
 
 	auto meta = info.modules[""];
 	prx->start.set(meta.exports[0xBC9A0086]);
@@ -130,7 +135,7 @@ s32 prx_load_module(std::string path, u64 flags, vm::ptr<sys_prx_load_module_opt
 		}
 	}
 
-	return Emu.GetIdManager().add(std::move(prx));
+	return prx->id;
 }
 
 s32 sys_prx_load_module(vm::cptr<char> path, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt)

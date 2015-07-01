@@ -91,6 +91,7 @@ ARMv7Thread::~ARMv7Thread()
 	cv.notify_one();
 	join();
 
+	CloseStack();
 	armv7_free_tls(GetId());
 }
 
@@ -202,7 +203,7 @@ void ARMv7Thread::Task()
 
 	while (true)
 	{
-		if (m_state.load() && CheckStatus()) return;
+		if (m_state.load() && CheckStatus()) break;
 
 		// decode instruction using specified decoder
 		PC += m_dec->DecodeMemory(PC);
@@ -219,9 +220,11 @@ void ARMv7Thread::FastCall(u32 addr)
 	auto old_PC = PC;
 	auto old_stack = SP;
 	auto old_LR = LR;
+	auto old_task = decltype(custom_task)();
 
 	PC = addr;
 	LR = Emu.GetCPUThreadStop();
+	custom_task.swap(old_task);
 
 	try
 	{
@@ -231,6 +234,8 @@ void ARMv7Thread::FastCall(u32 addr)
 	{
 	}
 
+	m_state &= ~CPU_STATE_RETURN;
+
 	PC = old_PC;
 
 	if (SP != old_stack) // SP shouldn't change
@@ -239,11 +244,12 @@ void ARMv7Thread::FastCall(u32 addr)
 	}
 
 	LR = old_LR;
+	custom_task.swap(old_task);
 }
 
 void ARMv7Thread::FastStop()
 {
-	throw CPUThreadReturn{};
+	m_state |= CPU_STATE_RETURN;
 }
 
 armv7_thread::armv7_thread(u32 entry, const std::string& name, u32 stack_size, s32 prio)

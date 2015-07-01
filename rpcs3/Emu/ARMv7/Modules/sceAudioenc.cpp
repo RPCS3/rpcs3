@@ -6,42 +6,42 @@
 
 s32 sceAudioencInitLibrary(u32 codecType, vm::ptr<SceAudioencInitParam> pInitParam)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceAudioencTermLibrary(u32 codecType)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceAudioencCreateEncoder(vm::ptr<SceAudioencCtrl> pCtrl, u32 codecType)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceAudioencDeleteEncoder(vm::ptr<SceAudioencCtrl> pCtrl)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceAudioencEncode(vm::ptr<SceAudioencCtrl> pCtrl)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceAudioencClearContext(vm::ptr<SceAudioencCtrl> pCtrl)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceAudioencGetOptInfo(vm::ptr<SceAudioencCtrl> pCtrl)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceAudioencGetInternalError(vm::ptr<SceAudioencCtrl> pCtrl, vm::ptr<s32> pInternalError)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 

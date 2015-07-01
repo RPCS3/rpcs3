@@ -200,7 +200,7 @@ s32 _sys_lwcond_queue_wait(PPUThread& CPU, u32 lwcond_id, u32 lwmutex_id, u64 ti
 				}
 				else
 				{
-					throw __FUNCTION__;
+					throw EXCEPTION("Unexpected values");
 				}
 			}
 

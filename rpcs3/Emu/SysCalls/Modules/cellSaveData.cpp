@@ -329,7 +329,7 @@ never_inline s32 savedata_op(
 			}
 			else
 			{
-				throw __FUNCTION__;
+				throw EXCEPTION("Invalid savedata selected");
 			}
 		}
 	}

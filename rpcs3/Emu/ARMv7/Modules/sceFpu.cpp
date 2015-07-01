@@ -6,73 +6,73 @@
 
 float sceFpuSinf(float x)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 float sceFpuCosf(float x)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 float sceFpuTanf(float x)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 float sceFpuAtanf(float x)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 float sceFpuAtan2f(float y, float x)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 float sceFpuAsinf(float x)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 float sceFpuAcosf(float x)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 
 float sceFpuLogf(float x)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 float sceFpuLog2f(float fs)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 float sceFpuLog10f(float fs)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 float sceFpuExpf(float x)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 float sceFpuExp2f(float x)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 float sceFpuExp10f(float x)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 float sceFpuPowf(float x, float y)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 

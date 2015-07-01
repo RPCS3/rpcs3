@@ -14,6 +14,8 @@ class MemoryBase
 	std::vector<MemoryBlock*> MemoryBlocks;
 
 public:
+	std::mutex mutex;
+
 	MemoryBlock* UserMemory;
 
 	DynamicMemoryBlock MainMem;

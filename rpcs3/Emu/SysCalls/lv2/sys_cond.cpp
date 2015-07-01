@@ -34,7 +34,7 @@ s32 sys_cond_create(vm::ptr<u32> cond_id, u32 mutex_id, vm::ptr<sys_cond_attribu
 
 	if (!++mutex->cond_count)
 	{
-		throw __FUNCTION__;
+		throw EXCEPTION("Unexpected cond_count");
 	}
 
 	*cond_id = Emu.GetIdManager().make<lv2_cond_t>(mutex, attr->name_u64);
@@ -62,7 +62,7 @@ s32 sys_cond_destroy(u32 cond_id)
 
 	if (!cond->mutex->cond_count--)
 	{
-		throw __FUNCTION__;
+		throw EXCEPTION("Unexpected cond_count");
 	}
 
 	Emu.GetIdManager().remove<lv2_cond_t>(cond_id);
@@ -197,7 +197,7 @@ s32 sys_cond_wait(PPUThread& CPU, u32 cond_id, u64 timeout)
 
 			if (!cond->waiters.erase(CPU.GetId()))
 			{
-				throw __FUNCTION__;
+				throw EXCEPTION("Unexpected");
 			}
 
 			return CELL_ETIMEDOUT;

@@ -6,27 +6,27 @@
 
 s32 sceKernelDeci4pOpen(vm::cptr<char> protoname, u32 protonum, u32 bufsize)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceKernelDeci4pClose(s32 socketid)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceKernelDeci4pRead(s32 socketid, vm::ptr<void> buffer, u32 size, u32 reserved)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceKernelDeci4pWrite(s32 socketid, vm::cptr<void> buffer, u32 size, u32 reserved)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceKernelDeci4pRegisterCallback(s32 socketid, s32 cbid)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 

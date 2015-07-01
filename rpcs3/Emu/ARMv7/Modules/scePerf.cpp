@@ -12,7 +12,7 @@ s32 scePerfArmPmonReset(ARMv7Context& context, s32 threadId)
 
 	if (threadId != SCE_PERF_ARM_PMON_THREAD_ID_SELF)
 	{
-		throw __FUNCTION__;
+		throw EXCEPTION("Unexpected thread");
 	}
 
 	context.counters = {};
@@ -26,7 +26,7 @@ s32 scePerfArmPmonSelectEvent(ARMv7Context& context, s32 threadId, u32 counter, 
 
 	if (threadId != SCE_PERF_ARM_PMON_THREAD_ID_SELF)
 	{
-		throw __FUNCTION__;
+		throw EXCEPTION("Unexpected thread");
 	}
 
 	if (counter >= 6)
@@ -75,7 +75,7 @@ s32 scePerfArmPmonStart(ARMv7Context& context, s32 threadId)
 
 	if (threadId != SCE_PERF_ARM_PMON_THREAD_ID_SELF)
 	{
-		throw __FUNCTION__;
+		throw EXCEPTION("Unexpected thread");
 	}
 
 	return SCE_OK;
@@ -87,7 +87,7 @@ s32 scePerfArmPmonStop(ARMv7Context& context, s32 threadId)
 
 	if (threadId != SCE_PERF_ARM_PMON_THREAD_ID_SELF)
 	{
-		throw __FUNCTION__;
+		throw EXCEPTION("Unexpected thread");
 	}
 
 	return SCE_OK;
@@ -99,7 +99,7 @@ s32 scePerfArmPmonGetCounterValue(ARMv7Context& context, s32 threadId, u32 count
 
 	if (threadId != SCE_PERF_ARM_PMON_THREAD_ID_SELF)
 	{
-		throw __FUNCTION__;
+		throw EXCEPTION("Unexpected thread");
 	}
 
 	if (counter >= 6 && counter != SCE_PERF_ARM_PMON_CYCLE_COUNTER)
@@ -113,7 +113,7 @@ s32 scePerfArmPmonGetCounterValue(ARMv7Context& context, s32 threadId, u32 count
 	}
 	else
 	{
-		throw "scePerfArmPmonGetCounterValue(): cycle counter requested";
+		throw EXCEPTION("Cycle counter requested");
 	}
 
 	return SCE_OK;
@@ -155,22 +155,22 @@ u32 scePerfGetTimebaseFrequency()
 
 s32 _sceRazorCpuInit(vm::cptr<void> pBufferBase, u32 bufferSize, u32 numPerfCounters, vm::pptr<u32> psceRazorVars)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceRazorCpuPushMarker(vm::cptr<char> szLabel)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceRazorCpuPopMarker()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceRazorCpuSync()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 #define REG_FUNC(nid, name) reg_psv_func(nid, &scePerf, #name, name)

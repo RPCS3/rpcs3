@@ -6,147 +6,147 @@
 
 s32 sceSasGetNeededMemorySize(vm::cptr<char> config, vm::ptr<u32> outSize)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceSasInit(vm::cptr<char> config, vm::ptr<void> buffer, u32 bufferSize)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceSasInitWithGrain(vm::cptr<char> config, u32 grain, vm::ptr<void> buffer, u32 bufferSize)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceSasExit(vm::pptr<void> outBuffer, vm::ptr<u32> outBufferSize)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceSasSetGrain(u32 grain)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceSasGetGrain()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceSasSetOutputmode(u32 outputmode)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceSasGetOutputmode()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceSasCore(vm::ptr<s16> out)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceSasCoreWithMix(vm::ptr<s16> inOut, s32 lvol, s32 rvol)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceSasSetVoice(s32 iVoiceNum, vm::cptr<void> vagBuf, u32 size, u32 loopflag)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceSasSetVoicePCM(s32 iVoiceNum, vm::cptr<void> pcmBuf, u32 size, s32 loopsize)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceSasSetNoise(s32 iVoiceNum, u32 uClk)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceSasSetVolume(s32 iVoiceNum, s32 l, s32 r, s32 wl, s32 wr)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceSasSetPitch(s32 iVoiceNum, s32 pitch)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceSasSetADSR(s32 iVoiceNum, u32 flag, u32 ar, u32 dr, u32 sr, u32 rr)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceSasSetADSRmode(s32 iVoiceNum, u32 flag, u32 am, u32 dm, u32 sm, u32 rm)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceSasSetSL(s32 iVoiceNum, u32 sl)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceSasSetSimpleADSR(s32 iVoiceNum, u16 adsr1, u16 adsr2)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceSasSetKeyOn(s32 iVoiceNum)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceSasSetKeyOff(s32 iVoiceNum)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceSasSetPause(s32 iVoiceNum, u32 pauseFlag)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceSasGetPauseState(s32 iVoiceNum)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceSasGetEndState(s32 iVoiceNum)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceSasGetEnvelope(s32 iVoiceNum)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceSasSetEffect(s32 drySwitch, s32 wetSwitch)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceSasSetEffectType(s32 type)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceSasSetEffectVolume(s32 valL, s32 valR)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceSasSetEffectParam(u32 delayTime, u32 feedback)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 

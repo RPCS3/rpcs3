@@ -6,72 +6,72 @@
 
 s32 sceDisplayGetRefreshRate(vm::ptr<float> pFps)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceDisplaySetFrameBuf(vm::cptr<SceDisplayFrameBuf> pFrameBuf, s32 iUpdateTimingMode)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceDisplayGetFrameBuf(vm::ptr<SceDisplayFrameBuf> pFrameBuf, s32 iUpdateTimingMode)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceDisplayGetVcount()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceDisplayWaitVblankStart()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceDisplayWaitVblankStartCB()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceDisplayWaitVblankStartMulti(u32 vcount)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceDisplayWaitVblankStartMultiCB(u32 vcount)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceDisplayWaitSetFrameBuf()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceDisplayWaitSetFrameBufCB()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceDisplayWaitSetFrameBufMulti(u32 vcount)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceDisplayWaitSetFrameBufMultiCB(u32 vcount)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceDisplayRegisterVblankStartCallback(s32 uid)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceDisplayUnregisterVblankStartCallback(s32 uid)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 

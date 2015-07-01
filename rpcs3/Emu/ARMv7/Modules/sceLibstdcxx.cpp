@@ -8,17 +8,17 @@ namespace sce_libstdcxx_func
 {
 	void __aeabi_unwind_cpp_pr0()
 	{
-		throw __FUNCTION__;
+		throw EXCEPTION("");
 	}
 
 	void __aeabi_unwind_cpp_pr1()
 	{
-		throw __FUNCTION__;
+		throw EXCEPTION("");
 	}
 
 	void __aeabi_unwind_cpp_pr2()
 	{
-		throw __FUNCTION__;
+		throw EXCEPTION("");
 	}
 }
 

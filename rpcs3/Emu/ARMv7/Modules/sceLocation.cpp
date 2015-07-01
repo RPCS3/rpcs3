@@ -6,87 +6,87 @@
 
 s32 sceLocationOpen(vm::ptr<u8> handle, SceLocationLocationMethod lmethod, SceLocationHeadingMethod hmethod)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceLocationClose(u8 handle)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceLocationReopen(u8 handle, SceLocationLocationMethod lmethod, SceLocationHeadingMethod hmethod)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceLocationGetMethod(u8 handle, vm::ptr<s32> lmethod, vm::ptr<s32> hmethod)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceLocationGetLocation(u8 handle, vm::ptr<SceLocationLocationInfo> linfo)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceLocationCancelGetLocation(u8 handle)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceLocationStartLocationCallback(u8 handle, u32 distance, vm::ptr<SceLocationLocationInfoCallback> callback, vm::ptr<void> userdata)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceLocationStopLocationCallback(u8 handle)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceLocationGetHeading(u8 handle, vm::ptr<SceLocationHeadingInfo> hinfo)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceLocationStartHeadingCallback(u8 handle, u32 difference, vm::ptr<SceLocationHeadingInfoCallback> callback, vm::ptr<void> userdata)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceLocationStopHeadingCallback(u8 handle)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceLocationConfirm(u8 handle)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceLocationConfirmGetStatus(u8 handle, vm::ptr<s32> status)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceLocationConfirmGetResult(u8 handle, vm::ptr<s32> result)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceLocationConfirmAbort(u8 handle)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceLocationGetPermission(u8 handle, vm::ptr<SceLocationPermissionInfo> info)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceLocationSetGpsEmulationFile(vm::ptr<char> filename)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 

@@ -6,7 +6,7 @@
 
 s32 sceJpegEncoderGetContextSize()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceJpegEncoderInit(
@@ -17,19 +17,19 @@ s32 sceJpegEncoderInit(
 	vm::ptr<void> pJpeg,
 	u32 oJpegbufSize)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceJpegEncoderEncode(
 	SceJpegEncoderContext context,
 	vm::cptr<void> pYCbCr)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceJpegEncoderEnd(SceJpegEncoderContext context)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceJpegEncoderSetValidRegion(
@@ -37,21 +37,21 @@ s32 sceJpegEncoderSetValidRegion(
 	s32 iFrameWidth,
 	s32 iFrameHeight)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceJpegEncoderSetCompressionRatio(
 	SceJpegEncoderContext context,
 	s32 compratio)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceJpegEncoderSetHeaderMode(
 	SceJpegEncoderContext context,
 	s32 headerMode)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceJpegEncoderSetOutputAddr(
@@ -59,7 +59,7 @@ s32 sceJpegEncoderSetOutputAddr(
 	vm::ptr<void> pJpeg,
 	u32 oJpegbufSize)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceJpegEncoderCsc(
@@ -69,7 +69,7 @@ s32 sceJpegEncoderCsc(
 	s32 iFrameWidth,
 	s32 inputPixelFormat)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 

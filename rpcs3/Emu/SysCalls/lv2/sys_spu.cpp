@@ -463,11 +463,6 @@ s32 sys_spu_thread_group_terminate(u32 id, s32 value)
 
 	if (thread)
 	{
-		if (group)
-		{
-			throw __FUNCTION__;
-		}
-
 		group = spu.tg.lock();
 
 		for (auto& t : group->threads)
@@ -584,7 +579,10 @@ s32 sys_spu_thread_group_join(u32 id, vm::ptr<u32> cause, vm::ptr<u32> status)
 		if (cause) *cause = SYS_SPU_THREAD_GROUP_JOIN_TERMINATED;
 		break;
 	}
-	default: throw __FUNCTION__;
+	default:
+	{
+		throw EXCEPTION("Unexpected join_state");
+	}
 	}
 
 	if (status)

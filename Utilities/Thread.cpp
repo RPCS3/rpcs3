@@ -1222,7 +1222,7 @@ thread_t::~thread_t()
 		}
 		else
 		{
-			m_thread->m_thread.detach();
+			throw EXCEPTION("Deadlock");
 		}
 	}
 }
@@ -1310,11 +1310,7 @@ void thread_t::start(std::function<std::string()> name, std::function<void()> fu
 			error(e);
 		}
 
-		if (Emu.IsStopped())
-		{
-			LOG_NOTICE(GENERAL, "Thread aborted");
-		}
-		else if (Ini.HLELogging.GetValue())
+		if (Ini.HLELogging.GetValue())
 		{
 			LOG_NOTICE(GENERAL, "Thread ended");
 		}

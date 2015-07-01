@@ -239,7 +239,7 @@ s32 sys_lwmutex_lock(PPUThread& CPU, vm::ptr<sys_lwmutex_t> lwmutex, u64 timeout
 	if (res == CELL_EBUSY && lwmutex->attribute & SYS_SYNC_RETRY)
 	{
 		// TODO (protocol is ignored in current implementation)
-		throw __FUNCTION__;
+		throw EXCEPTION("");
 	}
 
 	return res;
@@ -892,7 +892,7 @@ s32 sys_raw_spu_load(s32 id, vm::cptr<char> path, vm::ptr<u32> entry)
 	return CELL_OK;
 }
 
-s32 sys_raw_spu_image_load(s32 id, vm::ptr<sys_spu_image> img)
+s32 sys_raw_spu_image_load(PPUThread& CPU, s32 id, vm::ptr<sys_spu_image> img)
 {
 	sysPrxForUser.Warning("sys_raw_spu_image_load(id=%d, img=*0x%x)", id, img);
 

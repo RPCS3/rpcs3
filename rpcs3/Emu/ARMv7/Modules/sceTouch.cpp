@@ -6,27 +6,27 @@
 
 s32 sceTouchGetPanelInfo(u32 port, vm::ptr<SceTouchPanelInfo> pPanelInfo)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceTouchRead(u32 port, vm::ptr<SceTouchData> pData, u32 nBufs)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceTouchPeek(u32 port, vm::ptr<SceTouchData> pData, u32 nBufs)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceTouchSetSamplingState(u32 port, u32 state)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceTouchGetSamplingState(u32 port, vm::ptr<u32> pState)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 

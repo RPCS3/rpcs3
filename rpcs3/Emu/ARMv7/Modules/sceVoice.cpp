@@ -6,127 +6,127 @@
 
 s32 sceVoiceInit(vm::ptr<SceVoiceInitParam> pArg, SceVoiceVersion version)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceVoiceEnd()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceVoiceStart(vm::ptr<SceVoiceStartParam> pArg)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceVoiceStop()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceVoiceResetPort(u32 portId)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceVoiceCreatePort(vm::ptr<u32> portId, vm::cptr<SceVoicePortParam> pArg)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceVoiceUpdatePort(u32 portId, vm::cptr<SceVoicePortParam> pArg)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceVoiceConnectIPortToOPort(u32 ips, u32 ops)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceVoiceDisconnectIPortFromOPort(u32 ips, u32 ops)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceVoiceDeletePort(u32 portId)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceVoiceWriteToIPort(u32 ips, vm::cptr<void> data, vm::ptr<u32> size, s16 frameGaps)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceVoiceReadFromOPort(u32 ops, vm::ptr<void> data, vm::ptr<u32> size)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceVoiceSetMuteFlagAll(u16 bMuted)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceVoiceSetMuteFlag(u32 portId, u16 bMuted)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceVoiceGetMuteFlag(u32 portId, vm::ptr<u16> bMuted)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceVoiceSetVolume(u32 portId, float volume)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceVoiceGetVolume(u32 portId, vm::ptr<float> volume)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceVoiceSetBitRate(u32 portId, SceVoiceBitRate bitrate)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceVoiceGetBitRate(u32 portId, vm::ptr<u32> bitrate)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceVoiceGetPortInfo(u32 portId, vm::ptr<SceVoiceBasePortInfo> pInfo)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceVoicePausePort(u32 portId)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceVoiceResumePort(u32 portId)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceVoicePausePortAll()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceVoiceResumePortAll()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceVoiceGetResourceInfo(vm::ptr<SceVoiceResourceInfo> pInfo)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 

@@ -6,52 +6,52 @@
 
 s32 sceNpScoreInit(s32 threadPriority, s32 cpuAffinityMask, vm::ptr<void> option)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpScoreTerm(ARMv7Context&)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpScoreCreateTitleCtx(vm::cptr<SceNpCommunicationId> titleId, vm::cptr<SceNpCommunicationPassphrase> passphrase, vm::cptr<SceNpId> selfNpId)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpScoreDeleteTitleCtx(s32 titleCtxId)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpScoreCreateRequest(s32 titleCtxId)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpScoreDeleteRequest(s32 reqId)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpScoreAbortRequest(s32 reqId)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpScoreSetTimeout(s32 id, s32 resolveRetry, s32 resolveTimeout, s32 connTimeout, s32 sendTimeout, s32 recvTimeout)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpScoreSetPlayerCharacterId(s32 id, s32 pcId)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpScoreGetBoardInfo(s32 reqId, u32 boardId, vm::ptr<SceNpScoreBoardInfo> boardInfo, vm::ptr<void> option)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpScoreRecordScore(
@@ -64,7 +64,7 @@ s32 sceNpScoreRecordScore(
 	vm::cptr<u64> compareDate,
 	vm::ptr<void> option)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpScoreRecordGameData(
@@ -76,7 +76,7 @@ s32 sceNpScoreRecordGameData(
 	vm::cptr<void> data,
 	vm::ptr<void> option)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpScoreGetGameData(
@@ -88,7 +88,7 @@ s32 sceNpScoreGetGameData(
 	vm::ptr<void> data,
 	vm::ptr<void> option)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpScoreGetRankingByNpId(
@@ -107,7 +107,7 @@ s32 sceNpScoreGetRankingByNpId(
 	vm::ptr<u32> totalRecord,
 	vm::ptr<void> option)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpScoreGetRankingByRange(
@@ -125,7 +125,7 @@ s32 sceNpScoreGetRankingByRange(
 	vm::ptr<u32> totalRecord,
 	vm::ptr<void> option)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 
@@ -145,32 +145,32 @@ s32 sceNpScoreGetRankingByNpIdPcId(
 	vm::ptr<u32> totalRecord,
 	vm::ptr<void> option)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpScoreCensorComment(s32 reqId, vm::cptr<char> comment, vm::ptr<void> option)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpScoreSanitizeComment(s32 reqId, vm::cptr<char> comment, vm::ptr<char> sanitizedComment, vm::ptr<void> option)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpScoreWaitAsync(s32 id, vm::ptr<s32> result)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpScorePollAsync(s32 reqId, vm::ptr<s32> result)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpScoreGetBoardInfoAsync(s32 reqId, u32 boardId, vm::ptr<SceNpScoreBoardInfo> boardInfo, vm::ptr<void> option)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpScoreRecordScoreAsync(
@@ -183,7 +183,7 @@ s32 sceNpScoreRecordScoreAsync(
 	vm::cptr<u64> compareDate,
 	vm::ptr<void> option)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpScoreRecordGameDataAsync(
@@ -195,7 +195,7 @@ s32 sceNpScoreRecordGameDataAsync(
 	vm::cptr<void> data,
 	vm::ptr<void> option)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpScoreGetGameDataAsync(
@@ -207,7 +207,7 @@ s32 sceNpScoreGetGameDataAsync(
 	vm::ptr<void> data,
 	vm::ptr<void> option)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpScoreGetRankingByNpIdAsync(
@@ -226,7 +226,7 @@ s32 sceNpScoreGetRankingByNpIdAsync(
 	vm::ptr<u32> totalRecord,
 	vm::ptr<void> option)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpScoreGetRankingByRangeAsync(
@@ -244,7 +244,7 @@ s32 sceNpScoreGetRankingByRangeAsync(
 	vm::ptr<u32> totalRecord,
 	vm::ptr<void> option)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpScoreGetRankingByNpIdPcIdAsync(
@@ -263,17 +263,17 @@ s32 sceNpScoreGetRankingByNpIdPcIdAsync(
 	vm::ptr<u32> totalRecord,
 	vm::ptr<void> option)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpScoreCensorCommentAsync(s32 reqId, vm::cptr<char> comment, vm::ptr<void> option)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpScoreSanitizeCommentAsync(s32 reqId, vm::cptr<char> comment, vm::ptr<char> sanitizedComment, vm::ptr<void> option)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 #define REG_FUNC(nid, name) reg_psv_func(nid, &sceNpScore, #name, name)

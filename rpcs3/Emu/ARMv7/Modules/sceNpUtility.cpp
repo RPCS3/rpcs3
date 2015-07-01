@@ -6,62 +6,62 @@
 
 s32 sceNpLookupInit(s32 usesAsync, s32 threadPriority, s32 cpuAffinityMask, vm::ptr<void> option)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpLookupTerm(ARMv7Context&)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpLookupCreateTitleCtx(vm::cptr<SceNpCommunicationId> titleId, vm::cptr<SceNpId> selfNpId)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpLookupDeleteTitleCtx(s32 titleCtxId)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpLookupCreateRequest(s32 titleCtxId)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpLookupDeleteRequest(s32 reqId)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpLookupAbortRequest(s32 reqId)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpLookupSetTimeout(s32 id, s32 resolveRetry, u32 resolveTimeout, u32 connTimeout, u32 sendTimeout, u32 recvTimeout)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpLookupWaitAsync(s32 reqId, vm::ptr<s32> result)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpLookupPollAsync(s32 reqId, vm::ptr<s32> result)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpLookupNpId(s32 reqId, vm::cptr<SceNpOnlineId> onlineId, vm::ptr<SceNpId> npId, vm::ptr<void> option)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpLookupNpIdAsync(s32 reqId, vm::cptr<SceNpOnlineId> onlineId, vm::ptr<SceNpId> npId, vm::ptr<void> option)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpLookupUserProfile(
@@ -77,7 +77,7 @@ s32 sceNpLookupUserProfile(
 	vm::ptr<u32> avatarImageDataSize,
 	vm::ptr<void> option)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpLookupUserProfileAsync(
@@ -93,37 +93,37 @@ s32 sceNpLookupUserProfileAsync(
 	vm::ptr<u32> avatarImageDataSize,
 	vm::ptr<void> option)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpLookupAvatarImage(s32 reqId, vm::cptr<SceNpAvatarUrl> avatarUrl, vm::ptr<SceNpAvatarImage> avatarImage, vm::ptr<void> option)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpLookupAvatarImageAsync(s32 reqId, vm::cptr<SceNpAvatarUrl> avatarUrl, vm::ptr<SceNpAvatarImage> avatarImage, vm::ptr<void> option)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpBandwidthTestInitStart(s32 initPriority, s32 cpuAffinityMask)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpBandwidthTestGetStatus()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpBandwidthTestShutdown(vm::ptr<SceNpBandwidthTestResult> result)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpBandwidthTestAbort()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 #define REG_FUNC(nid, name) reg_psv_func(nid, &sceNpUtility, #name, name)

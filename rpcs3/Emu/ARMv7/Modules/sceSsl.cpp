@@ -6,57 +6,57 @@
 
 s32 sceSslInit(u32 poolSize)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceSslTerm()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceSslGetMemoryPoolStats(vm::ptr<SceSslMemoryPoolStats> currentStat)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceSslGetSerialNumber(vm::ptr<SceSslCert> sslCert, vm::cpptr<u8> sboData, vm::ptr<u32> sboLen)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 vm::ptr<SceSslCertName> sceSslGetSubjectName(vm::ptr<SceSslCert> sslCert)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 vm::ptr<SceSslCertName> sceSslGetIssuerName(vm::ptr<SceSslCert> sslCert)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceSslGetNotBefore(vm::ptr<SceSslCert> sslCert, vm::ptr<u64> begin)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceSslGetNotAfter(vm::ptr<SceSslCert> sslCert, vm::ptr<u64> limit)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceSslGetNameEntryCount(vm::ptr<SceSslCertName> certName)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceSslGetNameEntryInfo(vm::ptr<SceSslCertName> certName, s32 entryNum, vm::ptr<char> oidname, u32 maxOidnameLen, vm::ptr<u8> value, u32 maxValueLen, vm::ptr<u32> valueLen)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceSslFreeSslCertName(vm::ptr<SceSslCertName> certName)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 

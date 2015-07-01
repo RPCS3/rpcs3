@@ -114,7 +114,7 @@ s32 sys_fs_open(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, s32 mode, vm::c
 		return CELL_FS_ENOENT;
 	}
 	
-	*fd = Emu.GetIdManager().make<lv2_file_t>(file, mode, flags);
+	*fd = Emu.GetIdManager().make<lv2_file_t>(std::move(file), mode, flags);
 
 	return CELL_OK;
 }
@@ -180,15 +180,15 @@ s32 sys_fs_opendir(vm::cptr<char> path, vm::ptr<u32> fd)
 	sys_fs.Warning("sys_fs_opendir(path=*0x%x, fd=*0x%x)", path, fd);
 	sys_fs.Warning("*** path = '%s'", path.get_ptr());
 
-	std::shared_ptr<lv2_dir_t> directory(Emu.GetVFS().OpenDir(path.get_ptr()));
+	std::shared_ptr<vfsDirBase> dir(Emu.GetVFS().OpenDir(path.get_ptr()));
 
-	if (!directory || !directory->IsOpened())
+	if (!dir || !dir->IsOpened())
 	{
 		sys_fs.Error("sys_fs_opendir('%s'): failed to open directory", path.get_ptr());
 		return CELL_FS_ENOENT;
 	}
 
-	*fd = Emu.GetIdManager().add(std::move(directory));
+	*fd = Emu.GetIdManager().make<lv2_dir_t>(std::move(dir));
 
 	return CELL_OK;
 }
@@ -204,7 +204,7 @@ s32 sys_fs_readdir(u32 fd, vm::ptr<CellFsDirent> dir, vm::ptr<u64> nread)
 		return CELL_FS_EBADF;
 	}
 
-	const DirEntryInfo* info = directory->Read();
+	const DirEntryInfo* info = directory->dir->Read();
 
 	if (info)
 	{

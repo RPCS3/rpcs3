@@ -6,52 +6,52 @@
 
 s32 sceNpInit(vm::cptr<SceNpCommunicationConfig> commConf, vm::ptr<SceNpOptParam> opt)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpTerm(ARMv7Context&)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpCheckCallback()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpGetServiceState(vm::ptr<s32> state)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpRegisterServiceStateCallback(vm::ptr<SceNpServiceStateCallback> callback, vm::ptr<void> userdata)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpUnregisterServiceStateCallback()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpManagerGetNpId(vm::ptr<SceNpId> npId)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpManagerGetAccountRegion(vm::ptr<SceNpCountryCode> countryCode, vm::ptr<s32> languageCode)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpManagerGetContentRatingFlag(vm::ptr<s32> isRestricted, vm::ptr<s32> age)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpManagerGetChatRestrictionFlag(vm::ptr<s32> isRestricted)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 #define REG_FUNC(nid, name) reg_psv_func(nid, &sceNpManager, #name, name)

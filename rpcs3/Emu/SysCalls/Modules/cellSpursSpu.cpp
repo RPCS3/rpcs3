@@ -606,7 +606,7 @@ bool spursSysServiceEntry(SPUThread & spu) {
 void spursSysServiceIdleHandler(SPUThread & spu, SpursKernelContext * ctxt) {
     bool shouldExit;
 
-	std::unique_lock<std::mutex> lock(spu.mutex, std::defer_lock);
+    std::unique_lock<std::mutex> lock(spu.mutex, std::defer_lock);
 
     while (true) {
         vm::reservation_acquire(vm::get_ptr(spu.offset + 0x100), vm::cast(ctxt->spurs.addr()), 128, [&spu](){ spu.cv.notify_one(); });
@@ -677,9 +677,9 @@ void spursSysServiceIdleHandler(SPUThread & spu, SpursKernelContext * ctxt) {
         if (spuIdling && shouldExit == false && foundReadyWorkload == false) {
             // The system service blocks by making a reservation and waiting on the lock line reservation lost event.
             if (Emu.IsStopped()) throw SpursModuleExit();
-			if (!lock) lock.lock();
-			spu.cv.wait_for(lock, std::chrono::milliseconds(1));
-			continue;
+            if (!lock) lock.lock();
+            spu.cv.wait_for(lock, std::chrono::milliseconds(1));
+            continue;
         }
 
         if (vm::reservation_update(vm::cast(ctxt->spurs.addr()), vm::get_ptr(spu.offset + 0x100), 128) && (shouldExit || foundReadyWorkload)) {
@@ -1131,7 +1131,7 @@ bool spursTasksetSyscallEntry(SPUThread & spu) {
         spu.GPR[3]._u32[3] = spursTasksetProcessSyscall(spu, spu.GPR[3]._u32[3], spu.GPR[4]._u32[3]);
 
         // Resume the previously executing task if the syscall did not cause a context switch
-		throw __FUNCTION__;
+        throw EXCEPTION("Broken (TODO)");
         //if (spu.m_is_branch == false) {
         //    spursTasksetResumeTask(spu);
         //}

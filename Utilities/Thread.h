@@ -54,8 +54,8 @@ public:
 	// create named thread
 	thread_t(std::function<std::string()> name, std::function<void()> func);
 
-	// destructor, joins automatically
-	virtual ~thread_t();
+	// destructor, joins automatically (questionable, don't rely on this functionality in derived destructors)
+	virtual ~thread_t() noexcept(false);
 
 	thread_t(const thread_t&) = delete;
 

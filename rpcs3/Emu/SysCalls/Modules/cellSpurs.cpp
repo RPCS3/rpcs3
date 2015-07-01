@@ -272,9 +272,9 @@ u32 spursGetSdkVersion()
 {
 	s32 version;
 
-	if (process_get_sdk_version(process_getpid(), version) != CELL_OK)
+	if (s32 rc = process_get_sdk_version(process_getpid(), version))
 	{
-		throw __FUNCTION__;
+		throw EXCEPTION("process_get_sdk_version() failed (0x%x)", rc);
 	}
 
 	return version == -1 ? 0x465000 : version;
@@ -426,7 +426,7 @@ void spursHandlerWaitReady(PPUThread& CPU, vm::ptr<CellSpurs> spurs)
 {
 	if (s32 rc = sys_lwmutex_lock(CPU, spurs.of(&CellSpurs::mutex), 0))
 	{
-		throw __FUNCTION__;
+		throw EXCEPTION("sys_lwmutex_lock() failed (0x%x)", rc);
 	}
 
 	while (true)
@@ -440,7 +440,7 @@ void spursHandlerWaitReady(PPUThread& CPU, vm::ptr<CellSpurs> spurs)
 		{
 			if (s32 rc = sys_lwmutex_unlock(CPU, spurs.of(&CellSpurs::mutex)))
 			{
-				throw __FUNCTION__;
+				throw EXCEPTION("sys_lwmutex_unlock() failed (0x%x)", rc);
 			}
 
 			spursPpuThreadExit(CPU, 0);
@@ -500,7 +500,7 @@ void spursHandlerWaitReady(PPUThread& CPU, vm::ptr<CellSpurs> spurs)
 		{
 			if (s32 rc = sys_lwcond_wait(CPU, spurs.of(&CellSpurs::cond), 0))
 			{
-				throw __FUNCTION__;
+				throw EXCEPTION("sys_lwcond_wait() failed (0x%x)", rc);
 			}
 		}
 
@@ -510,7 +510,7 @@ void spursHandlerWaitReady(PPUThread& CPU, vm::ptr<CellSpurs> spurs)
 	// If we reach here then a runnable workload was found
 	if (s32 rc = sys_lwmutex_unlock(CPU, spurs.of(&CellSpurs::mutex)))
 	{
-		throw __FUNCTION__;
+		throw EXCEPTION("sys_lwmutex_unlock() failed (0x%x)", rc);
 	}
 }
 
@@ -535,7 +535,7 @@ void spursHandlerEntry(PPUThread& CPU)
 
 			if (s32 rc = sys_spu_thread_group_start(spurs->spuTG))
 			{
-				throw __FUNCTION__;
+				throw EXCEPTION("sys_spu_thread_group_start() failed (0x%x)", rc);
 			}
 
 			if (s32 rc = sys_spu_thread_group_join(spurs->spuTG, vm::null, vm::null))
@@ -545,7 +545,7 @@ void spursHandlerEntry(PPUThread& CPU)
 					spursPpuThreadExit(CPU, 0);
 				}
 
-				throw __FUNCTION__;
+				throw EXCEPTION("sys_spu_thread_group_join() failed (0x%x)", rc);
 			}
 
 			if (Emu.IsStopped())
@@ -658,7 +658,7 @@ void spursEventHelperEntry(PPUThread& CPU)
 	{
 		if (s32 rc = sys_event_queue_receive(CPU, spurs->eventQueue, vm::null, 0 /*timeout*/))
 		{
-			throw __FUNCTION__;
+			throw EXCEPTION("sys_event_queue_receive() failed (0x%x)", rc);
 		}
 
 		const u64 event_src   = CPU.GPR[4];
@@ -709,7 +709,7 @@ void spursEventHelperEntry(PPUThread& CPU)
 					{
 						if (s32 rc = spursWakeUpShutdownCompletionWaiter(CPU, spurs, wid))
 						{
-							throw __FUNCTION__;
+							throw EXCEPTION("spursWakeUpShutdownCompletionWaiter() failed (0x%x)", rc);
 						}
 					}
 
@@ -717,7 +717,7 @@ void spursEventHelperEntry(PPUThread& CPU)
 					{
 						if (s32 rc = spursWakeUpShutdownCompletionWaiter(CPU, spurs, wid + 0x10))
 						{
-							throw __FUNCTION__;
+							throw EXCEPTION("spursWakeUpShutdownCompletionWaiter() failed (0x%x)", rc);
 						}
 					}
 				}
@@ -726,19 +726,19 @@ void spursEventHelperEntry(PPUThread& CPU)
 			{
 				if (s32 rc = sys_semaphore_post((u32)spurs->semPrv, 1))
 				{
-					throw __FUNCTION__;
+					throw EXCEPTION("sys_semaphore_post() failed (0x%x)", rc);
 				}
 			}
 			else if (data0 == 3)
 			{
 				if (s32 rc = spursInvokeEventHandlers(CPU, spurs.of(&CellSpurs::eventPortMux)))
 				{
-					throw __FUNCTION__;
+					throw EXCEPTION("spursInvokeEventHandlers() failed (0x%x)", rc);
 				}
 			}
 			else
 			{
-				throw __FUNCTION__;
+				throw EXCEPTION("Unexpected value (data0=0x%x)", data0);
 			}
 		}
 	}
@@ -826,14 +826,14 @@ s32 spursFinalizeSpu(vm::ptr<CellSpurs> spurs)
 		{
 			if (s32 rc = sys_spu_thread_group_join(spurs->spuTG, vm::null, vm::null))
 			{
-				throw __FUNCTION__;
+				throw EXCEPTION("sys_spu_thread_group_join() failed (0x%x)", rc);
 			}
 
 			if (s32 rc = sys_spu_thread_group_destroy(spurs->spuTG))
 			{
 				if (rc != CELL_EBUSY)
 				{
-					throw __FUNCTION__;
+					throw EXCEPTION("sys_spu_thread_group_destroy() failed (0x%x)", rc);
 				}
 
 				continue;
@@ -852,7 +852,7 @@ s32 spursFinalizeSpu(vm::ptr<CellSpurs> spurs)
 
 	if (s32 rc = sys_spu_image_close(spurs.of(&CellSpurs::spuImg)))
 	{
-		throw __FUNCTION__;
+		throw EXCEPTION("sys_spu_image_close() failed (0x%x)", rc);
 	}
 
 	return CELL_OK;
@@ -880,22 +880,22 @@ s32 spursStopEventHelper(PPUThread& CPU, vm::ptr<CellSpurs> spurs)
 
 	if (s32 rc = sys_event_port_disconnect(spurs->eventPort))
 	{
-		throw __FUNCTION__;
+		throw EXCEPTION("sys_event_port_disconnect() failed (0x%x)", rc);
 	}
 
 	if (s32 rc = sys_event_port_destroy(spurs->eventPort))
 	{
-		throw __FUNCTION__;
+		throw EXCEPTION("sys_event_port_destroy() failed (0x%x)", rc);
 	}
 
 	if (s32 rc = spursDetachLv2EventQueue(spurs, spurs->spuPort, true /*spursCreated*/))
 	{
-		throw __FUNCTION__;
+		throw EXCEPTION("spursDetachLv2EventQueue() failed (0x%x)", rc);
 	}
 
 	if (s32 rc = sys_event_queue_destroy(spurs->eventQueue, SYS_EVENT_QUEUE_DESTROY_FORCE))
 	{
-		throw __FUNCTION__;
+		throw EXCEPTION("sys_event_queue_destroy() failed (0x%x)", rc);
 	}
 
 	return CELL_OK;
@@ -906,17 +906,17 @@ s32 spursSignalToHandlerThread(PPUThread& CPU, vm::ptr<CellSpurs> spurs)
 {
 	if (s32 rc = sys_lwmutex_lock(CPU, spurs.of(&CellSpurs::mutex), 0 /* forever */))
 	{
-		throw __FUNCTION__;
+		throw EXCEPTION("sys_lwmutex_lock() failed (0x%x)", rc);
 	}
 
 	if (s32 rc = sys_lwcond_signal(CPU, spurs.of(&CellSpurs::cond)))
 	{
-		throw __FUNCTION__;
+		throw EXCEPTION("sys_lwcond_signal() failed (0x%x)", rc);
 	}
 
 	if (s32 rc = sys_lwmutex_unlock(CPU, spurs.of(&CellSpurs::mutex)))
 	{
-		throw __FUNCTION__;
+		throw EXCEPTION("sys_lwmutex_unlock() failed (0x%x)", rc);
 	}
 
 	return CELL_OK;
@@ -932,7 +932,7 @@ s32 spursJoinHandlerThread(PPUThread& CPU, vm::ptr<CellSpurs> spurs)
 
 	if (s32 rc = sys_ppu_thread_join(CPU, spurs->ppu0, vm::stackvar<be_t<u64>>(CPU)))
 	{
-		throw __FUNCTION__;
+		throw EXCEPTION("sys_ppu_thread_join() failed (0x%x)", rc);
 	}
 
 	spurs->ppu0 = 0xFFFFFFFF;
@@ -1268,7 +1268,7 @@ s32 spursInit(
 	{
 		if (s32 rc = spursAddDefaultSystemWorkload(spurs, swlPriority, swlMaxSpu, swlIsPreem))
 		{
-			throw __FUNCTION__;
+			throw EXCEPTION("spursAddDefaultSystemWorkload() failed (0x%x)", rc);
 		}
 		
 		return CELL_OK;
@@ -1895,7 +1895,7 @@ void spursTraceStatusUpdate(vm::ptr<CellSpurs> spurs)
 
 		if (s32 rc = sys_semaphore_wait((u32)spurs->semPrv, 0))
 		{
-			throw __FUNCTION__;
+			throw EXCEPTION("sys_semaphore_wait() failed (0x%x)", rc);
 		}
 	}
 }
@@ -2871,7 +2871,7 @@ s32 cellSpursEventFlagSet(PPUThread& CPU, vm::ptr<CellSpursEventFlag> eventFlag,
 		eventFlag->pendingRecvTaskEvents[ppuWaitSlot] = ppuEvents;
 		if (s32 rc = sys_event_port_send(eventFlag->eventPortId, 0, 0, 0))
 		{
-			throw __FUNCTION__;
+			throw EXCEPTION("sys_event_port_send() failed (0x%x)", rc);
 		}
 	}
 
@@ -2901,7 +2901,7 @@ s32 cellSpursEventFlagSet(PPUThread& CPU, vm::ptr<CellSpursEventFlag> eventFlag,
 
 				if (rc != CELL_OK)
 				{
-					throw __FUNCTION__;
+					throw EXCEPTION("");
 				}
 			}
 		}
@@ -3051,7 +3051,7 @@ s32 spursEventFlagWait(PPUThread& CPU, vm::ptr<CellSpursEventFlag> eventFlag, vm
 		// Block till something happens
 		if (s32 rc = sys_event_queue_receive(CPU, eventFlag->eventQueueId, vm::null, 0))
 		{
-			throw __FUNCTION__;
+			throw EXCEPTION("sys_event_queue_receive() failed (0x%x)", rc);
 		}
 
 		int i = 0;
@@ -3619,7 +3619,7 @@ s32 spursTaskStart(PPUThread& CPU, vm::ptr<CellSpursTaskset> taskset, u32 taskId
 		}
 		else
 		{
-			throw __FUNCTION__;
+			throw EXCEPTION("cellSpursWakeUp() failed (0x%x)", rc);
 		}
 	}
 

@@ -6,82 +6,82 @@
 
 s32 sceNetCtlInit()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 void sceNetCtlTerm()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNetCtlCheckCallback()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNetCtlInetGetResult(s32 eventType, vm::ptr<s32> errorCode)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNetCtlAdhocGetResult(s32 eventType, vm::ptr<s32> errorCode)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNetCtlInetGetInfo(s32 code, vm::ptr<SceNetCtlInfo> info)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNetCtlInetGetState(vm::ptr<s32> state)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNetCtlGetNatInfo(vm::ptr<SceNetCtlNatInfo> natinfo)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNetCtlInetRegisterCallback(vm::ptr<SceNetCtlCallback> func, vm::ptr<void> arg, vm::ptr<s32> cid)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNetCtlInetUnregisterCallback(s32 cid)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNetCtlAdhocRegisterCallback(vm::ptr<SceNetCtlCallback> func, vm::ptr<void> arg, vm::ptr<s32> cid)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNetCtlAdhocUnregisterCallback(s32 cid)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNetCtlAdhocGetState(vm::ptr<s32> state)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNetCtlAdhocDisconnect()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNetCtlAdhocGetPeerList(vm::ptr<u32> buflen, vm::ptr<void> buf)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNetCtlAdhocGetInAddr(vm::ptr<SceNetInAddr> inaddr)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 #define REG_FUNC(nid, name) reg_psv_func(nid, &sceNetCtl, #name, name)

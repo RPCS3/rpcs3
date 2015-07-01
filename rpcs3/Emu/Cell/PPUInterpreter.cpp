@@ -53,7 +53,7 @@ void ppu_interpreter::TDI(PPUThread& CPU, ppu_opcode_t op)
 		((op.bo & 0x2) && a_ < b_) ||
 		((op.bo & 0x1) && a_ > b_))
 	{
-		throw __FUNCTION__;
+		throw EXCEPTION("");
 	}
 }
 
@@ -68,14 +68,14 @@ void ppu_interpreter::TWI(PPUThread& CPU, ppu_opcode_t op)
 		((op.bo & 0x2) && a_ < b_) ||
 		((op.bo & 0x1) && a_ > b_))
 	{
-		throw __FUNCTION__;
+		throw EXCEPTION("");
 	}
 }
 
 
 void ppu_interpreter::MFVSCR(PPUThread& CPU, ppu_opcode_t op)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 void ppu_interpreter::MTVSCR(PPUThread& CPU, ppu_opcode_t op)
@@ -1478,7 +1478,7 @@ void ppu_interpreter::SC(PPUThread& CPU, ppu_opcode_t op)
 	{
 	case 0x0: SysCalls::DoSyscall(CPU, CPU.GPR[11]); break;
 	case 0x3: CPU.FastStop(); break;
-	default: throw __FUNCTION__;
+	default: throw EXCEPTION("");
 	}
 }
 
@@ -1698,7 +1698,7 @@ void ppu_interpreter::TW(PPUThread& CPU, ppu_opcode_t op)
 		((u32)a < (u32)b && (op.bo & 0x2)) ||
 		((u32)a >(u32)b && (op.bo & 0x1)))
 	{
-		throw __FUNCTION__;
+		throw EXCEPTION("");
 	}
 }
 
@@ -1923,7 +1923,7 @@ void ppu_interpreter::ANDC(PPUThread& CPU, ppu_opcode_t op)
 
 void ppu_interpreter::TD(PPUThread& CPU, ppu_opcode_t op)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 void ppu_interpreter::LVEWX(PPUThread& CPU, ppu_opcode_t op)
@@ -2233,7 +2233,7 @@ void ppu_interpreter::EQV(PPUThread& CPU, ppu_opcode_t op)
 
 void ppu_interpreter::ECIWX(PPUThread& CPU, ppu_opcode_t op)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 void ppu_interpreter::LHZUX(PPUThread& CPU, ppu_opcode_t op)
@@ -2274,7 +2274,7 @@ void ppu_interpreter::MFSPR(PPUThread& CPU, ppu_opcode_t op)
 	case 0x117: CPU.GPR[op.rd] = CPU.SPRG[n - 0x110]; return;
 	}
 
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 void ppu_interpreter::LWAX(PPUThread& CPU, ppu_opcode_t op)
@@ -2308,7 +2308,7 @@ void ppu_interpreter::MFTB(PPUThread& CPU, ppu_opcode_t op)
 	{
 	case 0x10C: CPU.GPR[op.rd] = CPU.TB; break;
 	case 0x10D: CPU.GPR[op.rd] = CPU.TB >> 32; break;
-	default: throw __FUNCTION__;
+	default: throw EXCEPTION("");
 	}
 }
 
@@ -2344,7 +2344,7 @@ void ppu_interpreter::ORC(PPUThread& CPU, ppu_opcode_t op)
 
 void ppu_interpreter::ECOWX(PPUThread& CPU, ppu_opcode_t op)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 void ppu_interpreter::STHUX(PPUThread& CPU, ppu_opcode_t op)
@@ -2419,7 +2419,7 @@ void ppu_interpreter::MTSPR(PPUThread& CPU, ppu_opcode_t op)
 	case 0x117: CPU.SPRG[n - 0x110] = CPU.GPR[op.rs]; return;
 	}
 
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 void ppu_interpreter::DCBI(PPUThread& CPU, ppu_opcode_t op)
@@ -3324,5 +3324,5 @@ void ppu_interpreter::FCFID(PPUThread& CPU, ppu_opcode_t op)
 
 void ppu_interpreter::UNK(PPUThread& CPU, ppu_opcode_t op)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }

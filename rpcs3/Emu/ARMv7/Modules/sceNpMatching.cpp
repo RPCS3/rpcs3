@@ -8,12 +8,12 @@
 
 s32 sceNpMatching2Init(u32 poolSize, s32 threadPriority, s32 cpuAffinityMask, u32 threadStackSize)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpMatching2Term()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpMatching2CreateContext(
@@ -22,67 +22,67 @@ s32 sceNpMatching2CreateContext(
 	vm::cptr<SceNpCommunicationPassphrase> passPhrase,
 	vm::ptr<u16> ctxId)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpMatching2DestroyContext(u16 ctxId)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpMatching2ContextStart(u16 ctxId, u64 timeout)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpMatching2AbortContextStart(u16 ctxId)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpMatching2ContextStop(u16 ctxId)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpMatching2SetDefaultRequestOptParam(u16 ctxId, vm::cptr<SceNpMatching2RequestOptParam> optParam)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpMatching2RegisterRoomEventCallback(u16 ctxId, vm::ptr<SceNpMatching2RoomEventCallback> cbFunc, vm::ptr<void> cbFuncArg)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpMatching2RegisterRoomMessageCallback(u16 ctxId, vm::ptr<SceNpMatching2RoomMessageCallback> cbFunc, vm::ptr<void> cbFuncArg)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpMatching2RegisterSignalingCallback(u16 ctxId, vm::ptr<SceNpMatching2SignalingCallback> cbFunc, vm::ptr<void> cbFuncArg)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpMatching2RegisterContextCallback(vm::ptr<SceNpMatching2ContextCallback> cbFunc, vm::ptr<void> cbFuncArg)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpMatching2AbortRequest(u16 ctxId, u32 reqId)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpMatching2GetMemoryInfo(vm::ptr<SceNpMatching2MemoryInfo> memInfo)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpMatching2GetServerLocal(u16 ctxId, vm::ptr<SceNpMatching2Server> server)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpMatching2GetWorldInfoList(
@@ -91,7 +91,7 @@ s32 sceNpMatching2GetWorldInfoList(
 	vm::cptr<SceNpMatching2RequestOptParam> optParam,
 	vm::ptr<u32> assignedReqId)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpMatching2CreateJoinRoom(
@@ -100,7 +100,7 @@ s32 sceNpMatching2CreateJoinRoom(
 	vm::cptr<SceNpMatching2RequestOptParam> optParam,
 	vm::ptr<u32> assignedReqId)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpMatching2SearchRoom(
@@ -109,7 +109,7 @@ s32 sceNpMatching2SearchRoom(
 	vm::cptr<SceNpMatching2RequestOptParam> optParam,
 	vm::ptr<u32> assignedReqId)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpMatching2JoinRoom(
@@ -118,7 +118,7 @@ s32 sceNpMatching2JoinRoom(
 	vm::cptr<SceNpMatching2RequestOptParam> optParam,
 	vm::ptr<u32> assignedReqId)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpMatching2LeaveRoom(
@@ -127,7 +127,7 @@ s32 sceNpMatching2LeaveRoom(
 	vm::cptr<SceNpMatching2RequestOptParam> optParam,
 	vm::ptr<u32> assignedReqId)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpMatching2GetSignalingOptParamLocal(
@@ -135,7 +135,7 @@ s32 sceNpMatching2GetSignalingOptParamLocal(
 	u64 roomId,
 	vm::ptr<SceNpMatching2SignalingOptParam> signalingOptParam)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpMatching2SetRoomDataExternal(
@@ -144,7 +144,7 @@ s32 sceNpMatching2SetRoomDataExternal(
 	vm::cptr<SceNpMatching2RequestOptParam> optParam,
 	vm::ptr<u32> assignedReqId)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpMatching2KickoutRoomMember(
@@ -153,7 +153,7 @@ s32 sceNpMatching2KickoutRoomMember(
 	vm::cptr<SceNpMatching2RequestOptParam> optParam,
 	vm::ptr<u32> assignedReqId)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpMatching2SendRoomChatMessage(
@@ -162,7 +162,7 @@ s32 sceNpMatching2SendRoomChatMessage(
 	vm::cptr<SceNpMatching2RequestOptParam> optParam,
 	vm::ptr<u32> assignedReqId)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpMatching2SendRoomMessage(
@@ -171,7 +171,7 @@ s32 sceNpMatching2SendRoomMessage(
 	vm::cptr<SceNpMatching2RequestOptParam> optParam,
 	vm::ptr<u32> assignedReqId)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpMatching2SignalingGetConnectionStatus(
@@ -182,7 +182,7 @@ s32 sceNpMatching2SignalingGetConnectionStatus(
 	vm::ptr<SceNetInAddr> peerAddr,
 	vm::ptr<u16> peerPort)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpMatching2SignalingGetConnectionInfo(
@@ -192,12 +192,12 @@ s32 sceNpMatching2SignalingGetConnectionInfo(
 	s32 code,
 	vm::ptr<SceNpMatching2SignalingConnectionInfo> info)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpMatching2SignalingGetLocalNetInfo(vm::ptr<SceNpMatching2SignalingNetInfo> netinfo)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpMatching2SignalingGetPeerNetInfo(
@@ -206,14 +206,14 @@ s32 sceNpMatching2SignalingGetPeerNetInfo(
 	u16 memberId,
 	vm::ptr<u32> reqId)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpMatching2SignalingCancelPeerNetInfo(
 	u16 ctxId,
 	u32 reqId)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpMatching2SignalingGetPeerNetInfoResult(
@@ -221,7 +221,7 @@ s32 sceNpMatching2SignalingGetPeerNetInfoResult(
 	u32 reqId,
 	vm::ptr<SceNpMatching2SignalingNetInfo> netinfo)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 #define REG_FUNC(nid, name) reg_psv_func(nid, &sceNpMatching, #name, name)

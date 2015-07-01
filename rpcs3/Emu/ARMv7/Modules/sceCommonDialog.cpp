@@ -6,202 +6,202 @@
 
 s32 sceCommonDialogUpdate(vm::cptr<SceCommonDialogUpdateParam> updateParam)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceMsgDialogInit(vm::cptr<SceMsgDialogParam> param)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 SceCommonDialogStatus sceMsgDialogGetStatus()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceMsgDialogAbort()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceMsgDialogGetResult(vm::ptr<SceMsgDialogResult> result)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceMsgDialogTerm()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceMsgDialogClose()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceMsgDialogProgressBarInc(s32 target, u32 delta)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceMsgDialogProgressBarSetValue(s32 target, u32 rate)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNetCheckDialogInit(vm::ptr<SceNetCheckDialogParam> param)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 SceCommonDialogStatus sceNetCheckDialogGetStatus()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNetCheckDialogAbort()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNetCheckDialogGetResult(vm::ptr<SceNetCheckDialogResult> result)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNetCheckDialogTerm()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceSaveDataDialogInit(vm::cptr<SceSaveDataDialogParam> param)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 SceCommonDialogStatus sceSaveDataDialogGetStatus()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceSaveDataDialogAbort()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceSaveDataDialogGetResult(vm::ptr<SceSaveDataDialogResult> result)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceSaveDataDialogTerm()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 SceCommonDialogStatus sceSaveDataDialogGetSubStatus()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceSaveDataDialogSubClose()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceSaveDataDialogContinue(vm::cptr<SceSaveDataDialogParam> param)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceSaveDataDialogFinish(vm::cptr<SceSaveDataDialogFinishParam> param)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceSaveDataDialogProgressBarInc(s32 target, u32 delta)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceSaveDataDialogProgressBarSetValue(s32 target, u32 rate)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceImeDialogInit(vm::cptr<SceImeDialogParam> param)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 SceCommonDialogStatus sceImeDialogGetStatus()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceImeDialogAbort()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceImeDialogGetResult(vm::ptr<SceImeDialogResult> result)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceImeDialogTerm()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 scePhotoImportDialogInit(vm::cptr<ScePhotoImportDialogParam> param)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 SceCommonDialogStatus scePhotoImportDialogGetStatus()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 scePhotoImportDialogGetResult(vm::ptr<ScePhotoImportDialogResult> result)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 scePhotoImportDialogTerm()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 scePhotoImportDialogAbort()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 scePhotoReviewDialogInit(vm::cptr<ScePhotoReviewDialogParam> param)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 SceCommonDialogStatus scePhotoReviewDialogGetStatus()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 scePhotoReviewDialogGetResult(vm::ptr<ScePhotoReviewDialogResult> result)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 scePhotoReviewDialogTerm()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 scePhotoReviewDialogAbort()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 

@@ -2886,7 +2886,7 @@ private:
 	}
 	void ECIWX(u32 rd, u32 ra, u32 rb)
 	{
-		throw __FUNCTION__;
+		throw EXCEPTION("Privileged instruction");
 	}
 	void LHZUX(u32 rd, u32 ra, u32 rb)
 	{
@@ -2960,7 +2960,7 @@ private:
 	}
 	void ECOWX(u32 rs, u32 ra, u32 rb)
 	{
-		throw __FUNCTION__;
+		throw EXCEPTION("Privileged instruction");
 	}
 	void STHUX(u32 rs, u32 ra, u32 rb)
 	{

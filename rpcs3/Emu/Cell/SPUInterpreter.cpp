@@ -274,7 +274,7 @@ void spu_interpreter::BIZ(SPUThread& CPU, spu_opcode_t op)
 {
 	if (op.d || op.e)
 	{
-		throw __FUNCTION__;
+		throw EXCEPTION("Unimplemented interrupt flags (d=%d, e=%d)", op.d, op.e);
 	}
 
 	if (CPU.GPR[op.rt]._u32[3] == 0)
@@ -287,7 +287,7 @@ void spu_interpreter::BINZ(SPUThread& CPU, spu_opcode_t op)
 {
 	if (op.d || op.e)
 	{
-		throw __FUNCTION__;
+		throw EXCEPTION("Unimplemented interrupt flags (d=%d, e=%d)", op.d, op.e);
 	}
 
 	if (CPU.GPR[op.rt]._u32[3] != 0)
@@ -300,7 +300,7 @@ void spu_interpreter::BIHZ(SPUThread& CPU, spu_opcode_t op)
 {
 	if (op.d || op.e)
 	{
-		throw __FUNCTION__;
+		throw EXCEPTION("Unimplemented interrupt flags (d=%d, e=%d)", op.d, op.e);
 	}
 
 	if (CPU.GPR[op.rt]._u16[6] == 0)
@@ -313,7 +313,7 @@ void spu_interpreter::BIHNZ(SPUThread& CPU, spu_opcode_t op)
 {
 	if (op.d || op.e)
 	{
-		throw __FUNCTION__;
+		throw EXCEPTION("Unimplemented interrupt flags (d=%d, e=%d)", op.d, op.e);
 	}
 
 	if (CPU.GPR[op.rt]._u16[6] != 0)
@@ -324,7 +324,7 @@ void spu_interpreter::BIHNZ(SPUThread& CPU, spu_opcode_t op)
 
 void spu_interpreter::STOPD(SPUThread& CPU, spu_opcode_t op)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("Unexpected instruction");
 }
 
 void spu_interpreter::STQX(SPUThread& CPU, spu_opcode_t op)
@@ -336,7 +336,7 @@ void spu_interpreter::BI(SPUThread& CPU, spu_opcode_t op)
 {
 	if (op.d || op.e)
 	{
-		throw __FUNCTION__;
+		throw EXCEPTION("Unimplemented interrupt flags (d=%d, e=%d)", op.d, op.e);
 	}
 
 	CPU.PC = SPUOpcodes::branchTarget(CPU.GPR[op.ra]._u32[3], 0) - 4;
@@ -346,7 +346,7 @@ void spu_interpreter::BISL(SPUThread& CPU, spu_opcode_t op)
 {
 	if (op.d || op.e)
 	{
-		throw __FUNCTION__;
+		throw EXCEPTION("Unimplemented interrupt flags (d=%d, e=%d)", op.d, op.e);
 	}
 
 	const u32 target = SPUOpcodes::branchTarget(CPU.GPR[op.ra]._u32[3], 0);
@@ -356,12 +356,12 @@ void spu_interpreter::BISL(SPUThread& CPU, spu_opcode_t op)
 
 void spu_interpreter::IRET(SPUThread& CPU, spu_opcode_t op)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("Unexpected instruction");
 }
 
 void spu_interpreter::BISLED(SPUThread& CPU, spu_opcode_t op)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("Unexpected instruction");
 }
 
 void spu_interpreter::HBR(SPUThread& CPU, spu_opcode_t op)
@@ -656,7 +656,7 @@ void spu_interpreter::FCGT(SPUThread& CPU, spu_opcode_t op)
 
 void spu_interpreter::DFCGT(SPUThread& CPU, spu_opcode_t op)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("Unexpected instruction");
 }
 
 void spu_interpreter::FA(SPUThread& CPU, spu_opcode_t op)
@@ -692,7 +692,7 @@ void spu_interpreter::FCMGT(SPUThread& CPU, spu_opcode_t op)
 
 void spu_interpreter::DFCMGT(SPUThread& CPU, spu_opcode_t op)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("Unexpected instruction");
 }
 
 void spu_interpreter::DFA(SPUThread& CPU, spu_opcode_t op)
@@ -818,7 +818,7 @@ void spu_interpreter::FSCRWR(SPUThread& CPU, spu_opcode_t op)
 
 void spu_interpreter::DFTSV(SPUThread& CPU, spu_opcode_t op)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("Unexpected instruction");
 }
 
 void spu_interpreter::FCEQ(SPUThread& CPU, spu_opcode_t op)
@@ -828,7 +828,7 @@ void spu_interpreter::FCEQ(SPUThread& CPU, spu_opcode_t op)
 
 void spu_interpreter::DFCEQ(SPUThread& CPU, spu_opcode_t op)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("Unexpected instruction");
 }
 
 void spu_interpreter::MPY(SPUThread& CPU, spu_opcode_t op)
@@ -865,7 +865,7 @@ void spu_interpreter::FCMEQ(SPUThread& CPU, spu_opcode_t op)
 
 void spu_interpreter::DFCMEQ(SPUThread& CPU, spu_opcode_t op)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("Unexpected instruction");
 }
 
 void spu_interpreter::MPYU(SPUThread& CPU, spu_opcode_t op)
@@ -1250,5 +1250,5 @@ void spu_interpreter::FMS(SPUThread& CPU, spu_opcode_t op)
 
 void spu_interpreter::UNK(SPUThread& CPU, spu_opcode_t op)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("Unknown instruction (op=0x%08x)", op.opcode);
 }

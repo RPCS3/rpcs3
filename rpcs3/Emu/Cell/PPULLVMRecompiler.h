@@ -948,9 +948,9 @@ namespace ppu_recompiler_llvm {
         static void InitRotateMask();
     };
 
-    class RecompilationEngine : public ThreadBase {
+    class RecompilationEngine final : protected thread_t {
     public:
-        virtual ~RecompilationEngine();
+        virtual ~RecompilationEngine() override;
 
         /// Allocate an ordinal
         u32 AllocateOrdinal(u32 address, bool is_function);
@@ -970,7 +970,7 @@ namespace ppu_recompiler_llvm {
         /// Log
         llvm::raw_fd_ostream & Log();
 
-        void Task() override;
+        void Task();
 
         /// Get a pointer to the instance of this class
         static std::shared_ptr<RecompilationEngine> GetInstance();

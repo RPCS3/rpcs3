@@ -223,7 +223,7 @@ s32 cellFsGetDirectoryEntries(u32 fd, vm::ptr<CellFsDirectoryEntry> entries, u32
 
 	for (; count < entries_size; count++)
 	{
-		if (const auto info = directory->Read())
+		if (const auto info = directory->dir->Read())
 		{
 			entries[count].attribute.mode = info->flags & DirEntry_TypeDir ? CELL_FS_S_IFDIR | 0777 : CELL_FS_S_IFREG | 0666;
 			entries[count].attribute.uid = 1; // ???

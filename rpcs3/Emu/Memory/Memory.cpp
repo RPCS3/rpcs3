@@ -4,8 +4,6 @@
 
 MemoryBase Memory;
 
-std::mutex g_memory_mutex;
-
 void MemoryBase::Init(MemoryType type)
 {
 	if (m_inited) return;
@@ -70,7 +68,7 @@ bool MemoryBase::Map(const u32 addr, const u32 size)
 {
 	assert(size && (size | addr) % 4096 == 0);
 
-	std::lock_guard<std::mutex> lock(g_memory_mutex);
+	std::lock_guard<std::mutex> lock(Memory.mutex);
 
 	for (u32 i = addr / 4096; i < addr / 4096 + size / 4096; i++)
 	{
@@ -88,7 +86,7 @@ bool MemoryBase::Map(const u32 addr, const u32 size)
 
 bool MemoryBase::Unmap(const u32 addr)
 {
-	std::lock_guard<std::mutex> lock(g_memory_mutex);
+	std::lock_guard<std::mutex> lock(Memory.mutex);
 
 	for (u32 i = 0; i < MemoryBlocks.size(); i++)
 	{
@@ -175,7 +173,7 @@ DynamicMemoryBlockBase::DynamicMemoryBlockBase()
 
 const u32 DynamicMemoryBlockBase::GetUsedSize() const
 {
-	std::lock_guard<std::mutex> lock(g_memory_mutex);
+	std::lock_guard<std::mutex> lock(Memory.mutex);
 
 	u32 size = 0;
 
@@ -194,7 +192,7 @@ bool DynamicMemoryBlockBase::IsInMyRange(const u32 addr, const u32 size)
 
 MemoryBlock* DynamicMemoryBlockBase::SetRange(const u32 start, const u32 size)
 {
-	std::lock_guard<std::mutex> lock(g_memory_mutex);
+	std::lock_guard<std::mutex> lock(Memory.mutex);
 
 	m_max_size = PAGE_4K(size);
 	if (!MemoryBlock::SetRange(start, 0))
@@ -208,7 +206,7 @@ MemoryBlock* DynamicMemoryBlockBase::SetRange(const u32 start, const u32 size)
 
 void DynamicMemoryBlockBase::Delete()
 {
-	std::lock_guard<std::mutex> lock(g_memory_mutex);
+	std::lock_guard<std::mutex> lock(Memory.mutex);
 
 	m_allocated.clear();
 	m_max_size = 0;
@@ -230,7 +228,7 @@ bool DynamicMemoryBlockBase::AllocFixed(u32 addr, u32 size)
 		return false;
 	}
 
-	std::lock_guard<std::mutex> lock(g_memory_mutex);
+	std::lock_guard<std::mutex> lock(Memory.mutex);
 
 	for (u32 i = 0; i<m_allocated.size(); ++i)
 	{
@@ -271,7 +269,7 @@ u32 DynamicMemoryBlockBase::AllocAlign(u32 size, u32 align)
 		exsize = size + align - 1;
 	}
 
-	std::lock_guard<std::mutex> lock(g_memory_mutex);
+	std::lock_guard<std::mutex> lock(Memory.mutex);
 
 	for (u32 addr = MemoryBlock::GetStartAddr(); addr <= MemoryBlock::GetEndAddr() - exsize;)
 	{
@@ -312,7 +310,7 @@ bool DynamicMemoryBlockBase::Alloc()
 
 bool DynamicMemoryBlockBase::Free(u32 addr)
 {
-	std::lock_guard<std::mutex> lock(g_memory_mutex);
+	std::lock_guard<std::mutex> lock(Memory.mutex);
 
 	for (u32 num = 0; num < m_allocated.size(); num++)
 	{

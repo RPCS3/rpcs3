@@ -6,22 +6,22 @@
 
 s32 sceCodecEnginePmonStart()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceCodecEnginePmonStop()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceCodecEnginePmonGetProcessorLoad(vm::ptr<SceCodecEnginePmonProcessorLoad> pProcessorLoad)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceCodecEnginePmonReset()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 

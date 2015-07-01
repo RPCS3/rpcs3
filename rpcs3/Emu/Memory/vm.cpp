@@ -102,7 +102,7 @@ namespace vm
 
 				if (old == owner)
 				{
-					throw __FUNCTION__;
+					throw EXCEPTION("Deadlock");
 				}
 
 				old = nullptr;
@@ -117,7 +117,7 @@ namespace vm
 
 			if (!m_owner.compare_and_swap_test(owner, nullptr))
 			{
-				throw __FUNCTION__;
+				throw EXCEPTION("Lost lock");
 			}
 
 			if (do_notify)

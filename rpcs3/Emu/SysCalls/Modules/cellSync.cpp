@@ -905,7 +905,7 @@ s32 _cellSyncLFQueueGetPushPointer(PPUThread& CPU, vm::ptr<CellSyncLFQueue> queu
 
 		if (s32 res = sys_event_queue_receive(CPU, queue->m_eq_id, vm::null, 0))
 		{
-			throw __FUNCTION__;
+			throw EXCEPTION("");
 		}
 		var1 = 1;
 	}
@@ -916,7 +916,7 @@ s32 _cellSyncLFQueueGetPushPointer2(PPUThread& CPU, vm::ptr<CellSyncLFQueue> que
 	// arguments copied from _cellSyncLFQueueGetPushPointer
 	cellSync.Todo("_cellSyncLFQueueGetPushPointer2(queue=*0x%x, pointer=*0x%x, isBlocking=%d, useEventQueue=%d)", queue, pointer, isBlocking, useEventQueue);
 
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 _cellSyncLFQueueCompletePushPointer(PPUThread& CPU, vm::ptr<CellSyncLFQueue> queue, s32 pointer, vm::ptr<s32(u32 addr, u32 arg)> fpSendSignal)
@@ -1060,7 +1060,7 @@ s32 _cellSyncLFQueueCompletePushPointer2(PPUThread& CPU, vm::ptr<CellSyncLFQueue
 	// arguments copied from _cellSyncLFQueueCompletePushPointer
 	cellSync.Todo("_cellSyncLFQueueCompletePushPointer2(queue=*0x%x, pointer=%d, fpSendSignal=*0x%x)", queue, pointer, fpSendSignal);
 
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 _cellSyncLFQueuePushBody(PPUThread& CPU, vm::ptr<CellSyncLFQueue> queue, vm::cptr<void> buffer, u32 isBlocking)
@@ -1218,7 +1218,7 @@ s32 _cellSyncLFQueueGetPopPointer(PPUThread& CPU, vm::ptr<CellSyncLFQueue> queue
 
 		if (s32 res = sys_event_queue_receive(CPU, queue->m_eq_id, vm::null, 0))
 		{
-			throw __FUNCTION__;
+			throw EXCEPTION("");
 		}
 		var1 = 1;
 	}
@@ -1229,7 +1229,7 @@ s32 _cellSyncLFQueueGetPopPointer2(PPUThread& CPU, vm::ptr<CellSyncLFQueue> queu
 	// arguments copied from _cellSyncLFQueueGetPopPointer
 	cellSync.Todo("_cellSyncLFQueueGetPopPointer2(queue=*0x%x, pointer=*0x%x, isBlocking=%d, useEventQueue=%d)", queue, pointer, isBlocking, useEventQueue);
 
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 _cellSyncLFQueueCompletePopPointer(PPUThread& CPU, vm::ptr<CellSyncLFQueue> queue, s32 pointer, vm::ptr<s32(u32 addr, u32 arg)> fpSendSignal, u32 noQueueFull)
@@ -1373,7 +1373,7 @@ s32 _cellSyncLFQueueCompletePopPointer2(PPUThread& CPU, vm::ptr<CellSyncLFQueue>
 	// arguments copied from _cellSyncLFQueueCompletePopPointer
 	cellSync.Todo("_cellSyncLFQueueCompletePopPointer2(queue=*0x%x, pointer=%d, fpSendSignal=*0x%x, noQueueFull=%d)", queue, pointer, fpSendSignal, noQueueFull);
 
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 _cellSyncLFQueuePopBody(PPUThread& CPU, vm::ptr<CellSyncLFQueue> queue, vm::ptr<void> buffer, u32 isBlocking)
@@ -1606,14 +1606,14 @@ s32 _cellSyncLFQueueAttachLv2EventQueue(vm::ptr<u32> spus, u32 num, vm::ptr<Cell
 {
 	cellSync.Todo("_cellSyncLFQueueAttachLv2EventQueue(spus=*0x%x, num=%d, queue=*0x%x)", spus, num, queue);
 
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 _cellSyncLFQueueDetachLv2EventQueue(vm::ptr<u32> spus, u32 num, vm::ptr<CellSyncLFQueue> queue)
 {
 	cellSync.Todo("_cellSyncLFQueueDetachLv2EventQueue(spus=*0x%x, num=%d, queue=*0x%x)", spus, num, queue);
 
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 Module cellSync("cellSync", []()

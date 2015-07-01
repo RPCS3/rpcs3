@@ -125,6 +125,9 @@ void CallbackManager::Clear()
 
 	m_cb_list.clear();
 	m_async_list.clear();
+	m_pause_cb_list.clear();
+
+	m_cb_thread.reset();
 }
 
 u64 CallbackManager::AddPauseCallback(std::function<PauseResumeCB> func)

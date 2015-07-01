@@ -6,22 +6,22 @@
 
 s32 sceMd5Digest(vm::cptr<void> plain, u32 len, vm::ptr<u8> digest)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceMd5BlockInit(vm::ptr<SceMd5Context> pContext)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceMd5BlockUpdate(vm::ptr<SceMd5Context> pContext, vm::cptr<void> plain, u32 len)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceMd5BlockResult(vm::ptr<SceMd5Context> pContext, vm::ptr<u8> digest)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 #define REG_FUNC(nid, name) reg_psv_func(nid, &sceMd5, #name, name)

@@ -6,12 +6,12 @@
 
 s32 sceMt19937Init(vm::ptr<SceMt19937Context> pCtx, u32 seed)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 u32 sceMt19937UInt(vm::ptr<SceMt19937Context> pCtx)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 

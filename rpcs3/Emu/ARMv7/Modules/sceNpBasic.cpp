@@ -6,92 +6,92 @@
 
 s32 sceNpBasicInit(vm::ptr<void> opt)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpBasicTerm(ARMv7Context&)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpBasicRegisterHandler(vm::cptr<SceNpBasicEventHandlers> handlers, vm::cptr<SceNpCommunicationId> context, vm::ptr<void> userdata)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpBasicUnregisterHandler(ARMv7Context&)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpBasicCheckCallback()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpBasicGetFriendOnlineStatus(vm::cptr<SceNpId> friendId, vm::ptr<s32> status)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpBasicGetGamePresenceOfFriend(vm::cptr<SceNpId> friendId, vm::ptr<SceNpBasicGamePresence> presence)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpBasicGetFriendListEntryCount(vm::ptr<u32> count)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpBasicGetFriendListEntries(u32 startIndex, vm::ptr<SceNpId> entries, u32 numEntries, vm::ptr<u32> retrieved)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpBasicGetBlockListEntryCount(vm::ptr<u32> count)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpBasicGetBlockListEntries(u32 startIndex, vm::ptr<SceNpId> entries, u32 numEntries, vm::ptr<u32> retrieved)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpBasicCheckIfPlayerIsBlocked(vm::cptr<SceNpId> player, vm::ptr<u8> playerIsBlocked)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpBasicSetInGamePresence(vm::cptr<SceNpBasicInGamePresence> presence)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpBasicUnsetInGamePresence()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpBasicSendInGameDataMessage(vm::cptr<SceNpId> to, vm::cptr<SceNpBasicInGameDataMessage> message)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpBasicRecordPlaySessionLog(vm::cptr<SceNpId> withWhom, vm::cptr<SceNpBasicPlaySessionLogDescription> description)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpBasicGetPlaySessionLogSize(SceNpBasicPlaySessionLogType type, vm::ptr<u32> size)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpBasicGetPlaySessionLog(SceNpBasicPlaySessionLogType type, u32 index, vm::ptr<SceNpBasicPlaySessionLog> log)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 #define REG_FUNC(nid, name) reg_psv_func(nid, &sceNpBasic, #name, name)

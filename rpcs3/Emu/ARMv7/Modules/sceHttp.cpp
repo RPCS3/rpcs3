@@ -6,277 +6,277 @@
 
 s32 sceHttpInit(u32 poolSize)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceHttpTerm()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceHttpGetMemoryPoolStats(vm::ptr<SceHttpMemoryPoolStats> currentStat)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceHttpCreateTemplate(vm::cptr<char> userAgent, s32 httpVer, s32 autoProxyConf)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceHttpDeleteTemplate(s32 tmplId)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceHttpCreateConnection(s32 tmplId, vm::cptr<char> serverName, vm::cptr<char> scheme, u16 port, s32 enableKeepalive)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceHttpCreateConnectionWithURL(s32 tmplId, vm::cptr<char> url, s32 enableKeepalive)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceHttpDeleteConnection(s32 connId)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceHttpCreateRequest(s32 connId, s32 method, vm::cptr<char> path, u64 contentLength)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceHttpCreateRequestWithURL(s32 connId, s32 method, vm::cptr<char> url, u64 contentLength)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceHttpDeleteRequest(s32 reqId)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceHttpSetResponseHeaderMaxSize(s32 id, u32 headerSize)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceHttpSetRecvBlockSize(s32 id, u32 blockSize)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceHttpSetRequestContentLength(s32 id, u64 contentLength)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceHttpSendRequest(s32 reqId, vm::cptr<void> postData, u32 size)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceHttpAbortRequest(s32 reqId)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceHttpGetResponseContentLength(s32 reqId, vm::ptr<u64> contentLength)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceHttpGetStatusCode(s32 reqId, vm::ptr<s32> statusCode)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceHttpGetAllResponseHeaders(s32 reqId, vm::pptr<char> header, vm::ptr<u32> headerSize)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceHttpReadData(s32 reqId, vm::ptr<void> data, u32 size)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceHttpAddRequestHeader(s32 id, vm::cptr<char> name, vm::cptr<char> value, u32 mode)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceHttpRemoveRequestHeader(s32 id, vm::cptr<char> name)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceHttpParseResponseHeader(vm::cptr<char> header, u32 headerLen, vm::cptr<char> fieldStr, vm::cpptr<char> fieldValue, vm::ptr<u32> valueLen)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceHttpParseStatusLine(vm::cptr<char> statusLine, u32 lineLen, vm::ptr<s32> httpMajorVer, vm::ptr<s32> httpMinorVer, vm::ptr<s32> responseCode, vm::cpptr<char> reasonPhrase, vm::ptr<u32> phraseLen)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceHttpSetAuthInfoCallback(s32 id, vm::ptr<SceHttpAuthInfoCallback> cbfunc, vm::ptr<void> userArg)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceHttpSetAuthEnabled(s32 id, s32 enable)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceHttpGetAuthEnabled(s32 id, vm::ptr<s32> enable)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceHttpSetRedirectCallback(s32 id, vm::ptr<SceHttpRedirectCallback> cbfunc, vm::ptr<void> userArg)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceHttpSetAutoRedirect(s32 id, s32 enable)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceHttpGetAutoRedirect(s32 id, vm::ptr<s32> enable)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceHttpSetResolveTimeOut(s32 id, u32 usec)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceHttpSetResolveRetry(s32 id, s32 retry)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceHttpSetConnectTimeOut(s32 id, u32 usec)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceHttpSetSendTimeOut(s32 id, u32 usec)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceHttpSetRecvTimeOut(s32 id, u32 usec)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceHttpUriEscape(vm::ptr<char> out, vm::ptr<u32> require, u32 prepare, vm::cptr<char> in)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceHttpUriUnescape(vm::ptr<char> out, vm::ptr<u32> require, u32 prepare, vm::cptr<char> in)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceHttpUriParse(vm::ptr<SceHttpUriElement> out, vm::cptr<char> srcUrl, vm::ptr<void> pool, vm::ptr<u32> require, u32 prepare)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceHttpUriBuild(vm::ptr<char> out, vm::ptr<u32> require, u32 prepare, vm::cptr<SceHttpUriElement> srcElement, u32 option)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceHttpUriMerge(vm::ptr<char> mergedUrl, vm::cptr<char> url, vm::cptr<char> relativeUrl, vm::ptr<u32> require, u32 prepare, u32 option)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceHttpUriSweepPath(vm::ptr<char> dst, vm::cptr<char> src, u32 srcSize)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceHttpSetCookieEnabled(s32 id, s32 enable)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceHttpGetCookieEnabled(s32 id, vm::ptr<s32> enable)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceHttpGetCookie(vm::cptr<char> url, vm::ptr<char> cookie, vm::ptr<u32> cookieLength, u32 prepare, s32 secure)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceHttpAddCookie(vm::cptr<char> url, vm::cptr<char> cookie, u32 cookieLength)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceHttpSetCookieRecvCallback(s32 id, vm::ptr<SceHttpCookieRecvCallback> cbfunc, vm::ptr<void> userArg)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceHttpSetCookieSendCallback(s32 id, vm::ptr<SceHttpCookieSendCallback> cbfunc, vm::ptr<void> userArg)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceHttpsLoadCert(s32 caCertNum, vm::cpptr<SceHttpsData> caList, vm::cptr<SceHttpsData> cert, vm::cptr<SceHttpsData> privKey)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceHttpsUnloadCert()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceHttpsEnableOption(u32 sslFlags)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceHttpsDisableOption(u32 sslFlags)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceHttpsGetSslError(s32 id, vm::ptr<s32> errNum, vm::ptr<u32> detail)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceHttpsSetSslCallback(s32 id, vm::ptr<SceHttpsCallback> cbfunc, vm::ptr<void> userArg)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceHttpsGetCaList(vm::ptr<SceHttpsCaList> caList)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceHttpsFreeCaList(vm::ptr<SceHttpsCaList> caList)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 

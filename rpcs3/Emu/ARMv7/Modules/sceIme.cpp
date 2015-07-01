@@ -6,27 +6,27 @@
 
 s32 sceImeOpen(vm::ptr<SceImeParam> param)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceImeUpdate()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceImeSetCaret(vm::cptr<SceImeCaret> caret)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceImeSetPreeditGeometry(vm::cptr<SceImePreeditGeometry> preedit)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceImeClose()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 

@@ -819,8 +819,11 @@ extern CellGcmContextData current_context;
 
 void GLGSRender::Close()
 {
-	cv.notify_one();
-	join();
+	if (joinable())
+	{
+		cv.notify_one();
+		join();
+	}
 
 	if (m_frame->IsShown())
 	{

@@ -84,6 +84,7 @@ PesHeader::PesHeader(DemuxerStream& stream)
 
 ElementaryStream::ElementaryStream(Demuxer* dmux, u32 addr, u32 size, u32 fidMajor, u32 fidMinor, u32 sup1, u32 sup2, vm::ptr<CellDmuxCbEsMsg> cbFunc, u32 cbArg, u32 spec)
 	: dmux(dmux)
+	, id(Emu.GetIdManager().get_current_id())
 	, memAddr(align(addr, 128))
 	, memSize(size - (addr - memAddr))
 	, fidMajor(fidMajor)
@@ -995,19 +996,17 @@ s32 cellDmuxEnableEs(u32 handle, vm::cptr<CellCodecEsFilterId> esFilterId, vm::c
 
 	// TODO: check esFilterId, esResourceInfo, esCb and esSpecificInfo correctly
 
-	auto es = std::make_shared<ElementaryStream>(dmux.get(), esResourceInfo->memAddr, esResourceInfo->memSize,
+	const auto es = Emu.GetIdManager().make_ptr<ElementaryStream>(dmux.get(), esResourceInfo->memAddr, esResourceInfo->memSize,
 		esFilterId->filterIdMajor, esFilterId->filterIdMinor, esFilterId->supplementalInfo1, esFilterId->supplementalInfo2,
 		esCb->cbEsMsgFunc, esCb->cbArg, esSpecificInfo);
 
-	u32 id = Emu.GetIdManager().add(es);
-	es->id = id;
-	*esHandle = id;
+	*esHandle = es->id;
 
-	cellDmux.Warning("*** New ES(dmux=0x%x, addr=0x%x, size=0x%x, filter={0x%x, 0x%x, 0x%x, 0x%x}, cb=0x%x, arg=0x%x, spec=0x%x): id = %d",
-		handle, es->memAddr, es->memSize, es->fidMajor, es->fidMinor, es->sup1, es->sup2, es->cbFunc, es->cbArg, es->spec, id);
+	cellDmux.Warning("*** New ES(dmux=0x%x, addr=0x%x, size=0x%x, filter={0x%x, 0x%x, 0x%x, 0x%x}, cb=0x%x, arg=0x%x, spec=0x%x): id = 0x%x",
+		handle, es->memAddr, es->memSize, es->fidMajor, es->fidMinor, es->sup1, es->sup2, es->cbFunc, es->cbArg, es->spec, es->id);
 
 	DemuxerTask task(dmuxEnableEs);
-	task.es.es = id;
+	task.es.es = es->id;
 	task.es.es_ptr = es.get();
 
 	dmux->job.push(task, &dmux->is_closed);

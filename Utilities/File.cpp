@@ -13,14 +13,13 @@ std::unique_ptr<wchar_t[]> to_wchar(const std::string& source)
 {
 	const auto length = source.size() + 1; // size + null terminator
 
-	const int size = source.size() < INT_MAX ? static_cast<int>(length) : throw std::length_error(__FUNCTION__);
+	const int size = source.size() < INT_MAX ? static_cast<int>(length) : throw EXCEPTION("Invalid source length (0x%llx)", source.size());
 
 	std::unique_ptr<wchar_t[]> buffer(new wchar_t[length]); // allocate buffer assuming that length is the max possible size
 
 	if (!MultiByteToWideChar(CP_UTF8, 0, source.c_str(), size, buffer.get(), size))
 	{
-		LOG_ERROR(GENERAL, "ConvertUTF8ToWChar(source='%s') failed: 0x%llx", source, GET_API_ERROR);
-		throw __FUNCTION__;
+		throw EXCEPTION("Conversion failed (0x%llx)", GET_API_ERROR);
 	}
 
 	return buffer;
@@ -39,15 +38,14 @@ void to_utf8(std::string& result, const wchar_t* source)
 
 	if (size <= 0)
 	{
-		LOG_ERROR(GENERAL, "ConvertWCharToUTF8(length=%d) failed: 0x%llx", length, GET_API_ERROR);
-		throw __FUNCTION__;
+		throw EXCEPTION("Conversion failed (0x%llx)", GET_API_ERROR);
 	}
 
 	result.resize(size);
 
 	if (!WideCharToMultiByte(CP_UTF8, 0, source, length, &result.front(), size, NULL, NULL))
 	{
-		throw __FUNCTION__;
+		throw EXCEPTION("Conversion failed (0x%llx)", GET_API_ERROR);
 	}
 }
 
@@ -532,7 +530,7 @@ bool fs::file::close()
 
 u64 fs::file::read(void* buffer, u64 count) const
 {
-	const int size = count <= INT_MAX ? static_cast<int>(count) : throw std::length_error(__FUNCTION__);
+	const int size = count <= INT_MAX ? static_cast<int>(count) : throw EXCEPTION("Invalid count (0x%llx)", count);
 
 #ifdef _WIN32
 	DWORD nread;
@@ -549,7 +547,7 @@ u64 fs::file::read(void* buffer, u64 count) const
 
 u64 fs::file::write(const void* buffer, u64 count) const
 {
-	const int size = count <= INT_MAX ? static_cast<int>(count) : throw std::length_error(__FUNCTION__);
+	const int size = count <= INT_MAX ? static_cast<int>(count) : throw EXCEPTION("Invalid count (0x%llx)", count);
 
 #ifdef _WIN32
 	DWORD nwritten;

@@ -501,6 +501,7 @@ PPUThread::~PPUThread()
 	cv.notify_one();
 	join();
 
+	CloseStack();
 	ppu_free_tls(m_id);
 }
 
@@ -578,7 +579,6 @@ void PPUThread::DoRun()
 	case 2:
 	{
 #ifdef PPU_LLVM_RECOMPILER
-		SetCallStackTracing(false);
 		m_dec.reset(new ppu_recompiler_llvm::ExecutionEngine(*this));
 #else
 		LOG_ERROR(PPU, "This image does not include PPU JIT (LLVM)");
@@ -663,6 +663,8 @@ void PPUThread::FastCall2(u32 addr, u32 rtoc)
 	{
 	}
 
+	m_state &= ~CPU_STATE_RETURN;
+
 	PC = old_PC;
 
 	if (GPR[1] != old_stack) // GPR[1] shouldn't change
@@ -677,7 +679,7 @@ void PPUThread::FastCall2(u32 addr, u32 rtoc)
 
 void PPUThread::FastStop()
 {
-	throw CPUThreadReturn{};
+	m_state |= CPU_STATE_RETURN;
 }
 
 void PPUThread::Task()
@@ -695,7 +697,7 @@ void PPUThread::Task()
 	{
 		while (true)
 		{
-			if (m_state.load() && CheckStatus()) return;
+			if (m_state.load() && CheckStatus()) break;
 
 			// decode instruction using specified decoder
 			m_dec->DecodeMemory(PC);
@@ -708,7 +710,7 @@ void PPUThread::Task()
 	{
 		while (true)
 		{
-			if (m_state.load() && CheckStatus()) return;
+			if (m_state.load() && CheckStatus()) break;
 
 			// get interpreter function
 			const auto func = g_ppu_inter_func_list[*(u32*)((u8*)g_ppu_exec_map + PC)];

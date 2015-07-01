@@ -206,7 +206,7 @@ s32 sys_mutex_unlock(PPUThread& CPU, u32 mutex_id)
 	{
 		if (!mutex->recursive)
 		{
-			throw __FUNCTION__;
+			throw EXCEPTION("Unexpected recursive_count");
 		}
 		
 		mutex->recursive_count--;

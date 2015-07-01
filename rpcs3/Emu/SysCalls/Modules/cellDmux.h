@@ -440,7 +440,7 @@ public:
 	ElementaryStream(Demuxer* dmux, u32 addr, u32 size, u32 fidMajor, u32 fidMinor, u32 sup1, u32 sup2, vm::ptr<CellDmuxCbEsMsg> cbFunc, u32 cbArg, u32 spec);
 
 	Demuxer* dmux;
-	u32 id;
+	const u32 id;
 	const u32 memAddr;
 	const u32 memSize;
 	const u32 fidMajor;

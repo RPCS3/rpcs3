@@ -155,15 +155,15 @@ struct sys_prx_unload_module_option_t
 // Auxiliary data types
 struct lv2_prx_t
 {
+	const u32 id;
+
 	bool is_started = false;
 
 	vm::ptr<s32(int argc, vm::ptr<void> argv)> start = vm::null;
 	vm::ptr<s32(int argc, vm::ptr<void> argv)> stop = vm::null;
 	vm::ptr<s32()> exit = vm::null;
 
-	lv2_prx_t()
-	{
-	}
+	lv2_prx_t();
 };
 
 REG_ID_TYPE(lv2_prx_t, 0x23); // SYS_PRX_OBJECT

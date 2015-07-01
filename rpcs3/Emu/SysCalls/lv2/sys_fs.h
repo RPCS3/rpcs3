@@ -193,8 +193,8 @@ struct lv2_file_t
 
 	atomic<fs_st_cb_rec_t> st_callback;
 
-	lv2_file_t(const std::shared_ptr<vfsStream>& file, s32 mode, s32 flags)
-		: file(file)
+	lv2_file_t(std::shared_ptr<vfsStream> file, s32 mode, s32 flags)
+		: file(std::move(file))
 		, mode(mode)
 		, flags(flags)
 		, st_status({ SSS_NOT_INITIALIZED })
@@ -207,7 +207,15 @@ REG_ID_TYPE(lv2_file_t, 0x73); // SYS_FS_FD_OBJECT
 
 class vfsDirBase;
 
-using lv2_dir_t = vfsDirBase;
+struct lv2_dir_t
+{
+	const std::shared_ptr<vfsDirBase> dir;
+
+	lv2_dir_t(std::shared_ptr<vfsDirBase> dir)
+		: dir(std::move(dir))
+	{
+	}
+};
 
 REG_ID_TYPE(lv2_dir_t, 0x73); // SYS_FS_FD_OBJECT
 

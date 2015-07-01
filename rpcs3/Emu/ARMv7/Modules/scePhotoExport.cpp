@@ -14,7 +14,7 @@ s32 scePhotoExportFromData(
 	vm::ptr<char> exportedPath,
 	s32 exportedPathLength)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 scePhotoExportFromFile(
@@ -26,7 +26,7 @@ s32 scePhotoExportFromFile(
 	vm::ptr<char> exportedPath,
 	s32 exportedPathLength)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 #define REG_FUNC(nid, name) reg_psv_func(nid, &scePhotoExport, #name, name)

@@ -6,57 +6,57 @@
 
 s32 sceNpAuthInit()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpAuthTerm()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpAuthCreateStartRequest(vm::cptr<SceNpAuthRequestParameter> param)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpAuthDestroyRequest(s32 id)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpAuthAbortRequest(s32 id)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpAuthGetTicket(s32 id, vm::ptr<void> buf, u32 len)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpAuthGetTicketParam(vm::cptr<u8> ticket, u32 ticketSize, s32 paramId, vm::ptr<SceNpTicketParam> param)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpAuthGetEntitlementIdList(vm::cptr<u8> ticket, u32 ticketSize, vm::ptr<SceNpEntitlementId> entIdList, u32 entIdListNum)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpAuthGetEntitlementById(vm::cptr<u8> ticket, u32 ticketSize, vm::cptr<char> entId, vm::ptr<SceNpEntitlement> ent)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpCmpNpId(vm::cptr<SceNpId> npid1, vm::cptr<SceNpId> npid2)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpCmpNpIdInOrder(vm::cptr<SceNpId> npid1, vm::cptr<SceNpId> npid2, vm::ptr<s32> order)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 #define REG_FUNC(nid, name) reg_psv_func(nid, &sceNpCommon, #name, name)

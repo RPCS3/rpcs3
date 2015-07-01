@@ -6,12 +6,12 @@
 
 s32 sceLiveAreaResourceReplaceAll(vm::cptr<char> dirpath)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceLiveAreaResourceGetStatus()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 #define REG_FUNC(nid, name) reg_psv_func(nid, &sceLiveArea, #name, name)

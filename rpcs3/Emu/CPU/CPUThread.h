@@ -13,11 +13,12 @@ enum CPUThreadType
 // CPU Thread State Flags
 enum : u64
 {
-	CPU_STATE_STOP  = (1ull << 0), // basic execution state (stopped by default), removed by Exec()
-	CPU_STATE_PAUSE = (1ull << 1), // paused by debugger (manually or after step execution)
-	CPU_STATE_SLEEP = (1ull << 2),
-	CPU_STATE_STEP  = (1ull << 3),
-	CPU_STATE_DEAD  = (1ull << 4),
+	CPU_STATE_STOPPED = (1ull << 0), // basic execution state (stopped by default), removed by Exec()
+	CPU_STATE_PAUSED  = (1ull << 1), // paused by debugger (manually or after step execution)
+	CPU_STATE_SLEEP   = (1ull << 2),
+	CPU_STATE_STEP    = (1ull << 3),
+	CPU_STATE_DEAD    = (1ull << 4),
+	CPU_STATE_RETURN  = (1ull << 5),
 };
 
 // "HLE return" exception event
@@ -57,7 +58,7 @@ public:
 	std::string GetName() const { return m_name; }
 
 	bool IsActive() const { return (m_state.load() & CPU_STATE_DEAD) == 0; }
-	bool IsStopped() const { return (m_state.load() & CPU_STATE_STOP) != 0; }
+	bool IsStopped() const { return (m_state.load() & CPU_STATE_STOPPED) != 0; }
 	virtual bool IsPaused() const;
 
 	virtual void DumpInformation() const;
@@ -79,7 +80,7 @@ public:
 	void Step(); // set STEP status, don't use
 	void Sleep(); // flip SLEEP status, don't use
 	void Awake(); // flip SLEEP status, don't use
-	bool CheckStatus(); // process m_state flags, returns true if must return from Task()
+	bool CheckStatus(); // process m_state flags, returns true if the checker must return
 
 	std::string GetFName() const
 	{

@@ -260,7 +260,7 @@ struct set_alignment(32) CellSyncQueue
 
 		if ((data.m_v1 & 0xffffff) > depth || (data.m_v2 & 0xffffff) > depth)
 		{
-			throw __FUNCTION__;
+			throw EXCEPTION("Invalid queue pointers");
 		}
 
 		return depth;

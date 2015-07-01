@@ -13,6 +13,18 @@
 
 SysCallBase sys_event("sys_event");
 
+lv2_event_queue_t::lv2_event_queue_t(u32 protocol, s32 type, u64 name, u64 key, s32 size)
+	: id(Emu.GetIdManager().get_current_id())
+	, protocol(protocol)
+	, type(type)
+	, name(name)
+	, key(key)
+	, size(size)
+	, cancelled(false)
+	, waiters(0)
+{
+}
+
 s32 sys_event_queue_create(vm::ptr<u32> equeue_id, vm::ptr<sys_event_queue_attr> attr, u64 event_queue_key, s32 size)
 {
 	sys_event.Warning("sys_event_queue_create(equeue_id=*0x%x, attr=*0x%x, event_queue_key=0x%llx, size=%d)", equeue_id, attr, event_queue_key, size);
@@ -40,14 +52,14 @@ s32 sys_event_queue_create(vm::ptr<u32> equeue_id, vm::ptr<sys_event_queue_attr>
 	default: sys_event.Error("sys_event_queue_create(): unknown type (0x%x)", type); return CELL_EINVAL;
 	}
 
-	auto queue = Emu.GetEventManager().MakeEventQueue(protocol, type, attr->name_u64, event_queue_key, size);
+	const auto queue = Emu.GetEventManager().MakeEventQueue(event_queue_key, protocol, type, attr->name_u64, event_queue_key, size);
 
 	if (!queue)
 	{
 		return CELL_EEXIST;
 	}
 
-	*equeue_id = Emu.GetIdManager().add(std::move(queue));
+	*equeue_id = queue->id;
 	
 	return CELL_OK;
 }
@@ -77,7 +89,7 @@ s32 sys_event_queue_destroy(u32 equeue_id, s32 mode)
 
 	if (queue->cancelled.exchange(true))
 	{
-		throw __FUNCTION__;
+		throw EXCEPTION("Unexpected value");
 	}
 
 	if (queue->waiters)
@@ -106,7 +118,7 @@ s32 sys_event_queue_tryreceive(u32 equeue_id, vm::ptr<sys_event_t> event_array, 
 
 	if (size < 0)
 	{
-		throw __FUNCTION__;
+		throw EXCEPTION("Negative size");
 	}
 
 	if (queue->type != SYS_PPU_QUEUE)

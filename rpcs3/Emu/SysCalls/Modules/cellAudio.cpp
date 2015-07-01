@@ -769,12 +769,10 @@ s32 cellAudioCreateNotifyEventQueue(vm::ptr<u32> id, vm::ptr<u64> key)
 	{
 		const u64 key_value = 0x80004d494f323221ull + k;
 
-		auto queue = std::make_shared<lv2_event_queue_t>(SYS_SYNC_FIFO, SYS_PPU_QUEUE, 0, key_value, 32);
-
 		// register key if not used yet
-		if (Emu.GetEventManager().RegisterKey(queue))
+		if (const auto queue = Emu.GetEventManager().MakeEventQueue(key_value, SYS_SYNC_FIFO, SYS_PPU_QUEUE, 0, key_value, 32))
 		{
-			*id = Emu.GetIdManager().add(std::move(queue));
+			*id = queue->id;
 			*key = key_value;
 
 			return CELL_OK;

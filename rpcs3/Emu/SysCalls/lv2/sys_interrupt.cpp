@@ -114,14 +114,8 @@ s32 sys_interrupt_thread_establish(vm::ptr<u32> ih, u32 intrtag, u32 intrthread,
 				// call interrupt handler until int status is clear
 				if (tag.stat.load())
 				{
-					try
-					{
-						CPU.GPR[3] = arg;
-						CPU.FastCall2(pc, rtoc);
-					}
-					catch (CPUThreadReturn)
-					{
-					}
+					CPU.GPR[3] = arg;
+					CPU.FastCall2(pc, rtoc);
 				}
 
 				tag.cond.wait_for(cond_lock, std::chrono::milliseconds(1));

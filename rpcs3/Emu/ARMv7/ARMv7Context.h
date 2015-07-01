@@ -107,7 +107,7 @@ struct ARMv7Context
 
 		operator bool() const
 		{
-			return check_state;
+			return check_state != 0;
 		}
 
 	} ITSTATE;

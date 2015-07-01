@@ -5596,15 +5596,15 @@ std::mutex                           RecompilationEngine::s_mutex;
 std::shared_ptr<RecompilationEngine> RecompilationEngine::s_the_instance = nullptr;
 
 RecompilationEngine::RecompilationEngine()
-    : ThreadBase("PPU Recompilation Engine")
-    , m_log(nullptr)
+    : m_log(nullptr)
     , m_next_ordinal(0)
     , m_compiler(*this, ExecutionEngine::ExecuteFunction, ExecutionEngine::ExecuteTillReturn, ExecutionEngine::PollStatus) {
     m_compiler.RunAllTests();
 }
 
 RecompilationEngine::~RecompilationEngine() {
-    Stop();
+    cv.notify_one();
+    join();
 }
 
 u32 RecompilationEngine::AllocateOrdinal(u32 address, bool is_function) {
@@ -5648,11 +5648,11 @@ void RecompilationEngine::NotifyTrace(ExecutionTrace * execution_trace) {
         m_pending_execution_traces.push_back(execution_trace);
     }
 
-    if (!IsAlive()) {
-        Start();
+    if (!joinable()) {
+        start(WRAP_EXPR("PPU Recompilation Engine"), WRAP_EXPR(Task()));
     }
 
-    Notify();
+    cv.notify_one();
     // TODO: Increase the priority of the recompilation engine thread
 }
 
@@ -5672,7 +5672,7 @@ void RecompilationEngine::Task() {
     std::chrono::nanoseconds recompiling_time(0);
 
     auto start = std::chrono::high_resolution_clock::now();
-    while (!TestDestroy() && !Emu.IsStopped()) {
+    while (joinable() && !Emu.IsStopped()) {
         bool             work_done_this_iteration = false;
         ExecutionTrace * execution_trace          = nullptr;
 
@@ -5729,7 +5729,8 @@ void RecompilationEngine::Task() {
 
             // Wait a few ms for something to happen
             auto idling_start = std::chrono::high_resolution_clock::now();
-            WaitForAnySignal(250);
+            std::unique_lock<std::mutex> lock(mutex);
+            cv.wait_for(lock, std::chrono::milliseconds(250));
             auto idling_end  = std::chrono::high_resolution_clock::now();
             idling_time     += std::chrono::duration_cast<std::chrono::nanoseconds>(idling_end - idling_start);
         }
@@ -6027,8 +6028,8 @@ u32 ppu_recompiler_llvm::ExecutionEngine::ExecuteTillReturn(PPUThread * ppu_stat
             execution_engine->m_tracer.Trace(Tracer::TraceType::Instruction, ppu_state->PC, 0);
             u32 instruction = vm::ps3::read32(ppu_state->PC);
             execution_engine->m_decoder.Decode(instruction);
-            branch_type = ppu_state->m_is_branch ? GetBranchTypeFromInstruction(instruction) : BranchType::NonBranch;
-            ppu_state->NextPc(4);
+            branch_type = GetBranchTypeFromInstruction(instruction);
+            ppu_state->PC += 4;
 
             switch (branch_type) {
             case BranchType::Return:
@@ -6055,15 +6056,7 @@ u32 ppu_recompiler_llvm::ExecutionEngine::ExecuteTillReturn(PPUThread * ppu_stat
 }
 
 bool ppu_recompiler_llvm::ExecutionEngine::PollStatus(PPUThread * ppu_state) {
-    while (Emu.IsPaused() || ppu_state->IsPaused()) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(50));
-    }
-
-    if (Emu.IsStopped() || ppu_state->IsStopped()) {
-        return true;
-    }
-
-    return false;
+    return ppu_state->CheckStatus();
 }
 
 BranchType ppu_recompiler_llvm::GetBranchTypeFromInstruction(u32 instruction) {

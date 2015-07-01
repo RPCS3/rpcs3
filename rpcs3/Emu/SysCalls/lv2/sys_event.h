@@ -86,6 +86,7 @@ struct event_t
 
 struct lv2_event_queue_t
 {
+	const u32 id;
 	const u32 protocol;
 	const s32 type;
 	const u64 name;
@@ -99,16 +100,7 @@ struct lv2_event_queue_t
 	std::condition_variable cv;
 	std::atomic<u32> waiters;
 
-	lv2_event_queue_t(u32 protocol, s32 type, u64 name, u64 key, s32 size)
-		: protocol(protocol)
-		, type(type)
-		, name(name)
-		, key(key)
-		, size(size)
-		, cancelled(false)
-		, waiters(0)
-	{
-	}
+	lv2_event_queue_t(u32 protocol, s32 type, u64 name, u64 key, s32 size);
 
 	void push(lv2_lock_type& lv2_lock, u64 source, u64 data1, u64 data2, u64 data3)
 	{

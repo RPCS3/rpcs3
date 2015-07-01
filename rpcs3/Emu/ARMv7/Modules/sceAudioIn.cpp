@@ -6,17 +6,17 @@
 
 s32 sceAudioInOpenPort(s32 portType, s32 grain, s32 freq, s32 param)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceAudioInReleasePort(s32 port)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceAudioInInput(s32 port, vm::ptr<void> destPtr)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 

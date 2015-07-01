@@ -6,12 +6,12 @@
 
 s32 sceJpegInitMJpeg(s32 maxSplitDecoder)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceJpegFinishMJpeg()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceJpegDecodeMJpeg(
@@ -25,7 +25,7 @@ s32 sceJpegDecodeMJpeg(
 	vm::ptr<void> pCoefBuffer,
 	u32 coefBufferSize)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceJpegDecodeMJpegYCbCr(
@@ -37,7 +37,7 @@ s32 sceJpegDecodeMJpegYCbCr(
 	vm::ptr<void> pCoefBuffer,
 	u32 coefBufferSize)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceJpegMJpegCsc(
@@ -48,7 +48,7 @@ s32 sceJpegMJpegCsc(
 	s32 colorOption,
 	s32 sampling)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceJpegGetOutputInfo(
@@ -58,22 +58,22 @@ s32 sceJpegGetOutputInfo(
 	s32 decodeMode,
 	vm::ptr<SceJpegOutputInfo> pOutputInfo)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceJpegCreateSplitDecoder(vm::ptr<SceJpegSplitDecodeCtrl> pCtrl)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceJpegDeleteSplitDecoder(vm::ptr<SceJpegSplitDecodeCtrl> pCtrl)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceJpegSplitDecodeMJpeg(vm::ptr<SceJpegSplitDecodeCtrl> pCtrl)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 

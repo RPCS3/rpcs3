@@ -6,17 +6,17 @@
 
 void sceRazorCaptureSetTrigger(u32 frameIndex, vm::cptr<char> captureFilename)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 void sceRazorCaptureSetTriggerNextFrame(vm::cptr<char> captureFilename)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 bool sceRazorCaptureIsInProgress()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 #define REG_FUNC(nid, name) reg_psv_func(nid, &sceRazorCapture, #name, name)

@@ -6,22 +6,22 @@
 
 s32 sceDbgSetMinimumLogLevel(s32 minimumLogLevel)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceDbgSetBreakOnErrorState(SceDbgBreakOnErrorState state)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceDbgAssertionHandler(vm::cptr<char> pFile, s32 line, bool stop, vm::cptr<char> pComponent, vm::cptr<char> pMessage) // va_args...
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceDbgLoggingHandler(vm::cptr<char> pFile, s32 line, s32 severity, vm::cptr<char> pComponent, vm::cptr<char> pMessage) // va_args...
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 

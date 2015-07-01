@@ -11,13 +11,15 @@
 #include "CPUThread.h"
 
 CPUThread::CPUThread(CPUThreadType type, const std::string& name, std::function<std::string()> thread_name)
-	: m_state({ CPU_STATE_STOP })
+	: m_state({ CPU_STATE_STOPPED })
 	, m_id(Emu.GetIdManager().get_current_id())
 	, m_type(type)
 	, m_name(name)
 {
 	start(thread_name, [this]
 	{
+		SendDbgCommand(DID_CREATE_THREAD, this);
+
 		std::unique_lock<std::mutex> lock(mutex);
 
 		// check thread status
@@ -39,7 +41,7 @@ CPUThread::CPUThread(CPUThreadType type, const std::string& name, std::function<
 				}
 				catch (CPUThreadStop)
 				{
-					m_state |= CPU_STATE_STOP;
+					m_state |= CPU_STATE_STOPPED;
 				}
 				catch (CPUThreadExit)
 				{
@@ -47,6 +49,7 @@ CPUThread::CPUThread(CPUThreadType type, const std::string& name, std::function<
 					break;
 				}
 
+				m_state &= ~CPU_STATE_RETURN;
 				cv.notify_one();
 				continue;
 			}
@@ -58,8 +61,6 @@ CPUThread::CPUThread(CPUThreadType type, const std::string& name, std::function<
 
 		cv.notify_all();
 	});
-
-	SendDbgCommand(DID_CREATE_THREAD, this);
 }
 
 CPUThread::~CPUThread()
@@ -74,7 +75,7 @@ CPUThread::~CPUThread()
 
 bool CPUThread::IsPaused() const
 {
-	return (m_state.load() & CPU_STATE_PAUSE) != 0 || Emu.IsPaused();
+	return (m_state.load() & CPU_STATE_PAUSED) != 0 || Emu.IsPaused();
 }
 
 void CPUThread::DumpInformation() const
@@ -97,7 +98,7 @@ void CPUThread::Resume()
 {
 	SendDbgCommand(DID_RESUME_THREAD, this);
 
-	m_state &= ~CPU_STATE_PAUSE;
+	m_state &= ~CPU_STATE_PAUSED;
 
 	cv.notify_one();
 
@@ -108,7 +109,7 @@ void CPUThread::Pause()
 {
 	SendDbgCommand(DID_PAUSE_THREAD, this);
 
-	m_state |= CPU_STATE_PAUSE;
+	m_state |= CPU_STATE_PAUSED;
 
 	cv.notify_one();
 
@@ -125,7 +126,7 @@ void CPUThread::Stop()
 	}
 	else
 	{
-		m_state |= CPU_STATE_STOP;
+		m_state |= CPU_STATE_STOPPED;
 
 		cv.notify_one();
 	}
@@ -137,7 +138,7 @@ void CPUThread::Exec()
 {
 	SendDbgCommand(DID_EXEC_THREAD, this);
 
-	m_state &= ~CPU_STATE_STOP;
+	m_state &= ~CPU_STATE_STOPPED;
 
 	cv.notify_one();
 }
@@ -159,7 +160,7 @@ void CPUThread::Step()
 	m_state.atomic_op([](u64& state)
 	{
 		state |= CPU_STATE_STEP;
-		state &= ~CPU_STATE_PAUSE;
+		state &= ~CPU_STATE_PAUSED;
 	});
 
 	cv.notify_one();
@@ -194,7 +195,7 @@ bool CPUThread::CheckStatus()
 		cv.wait_for(lock, std::chrono::milliseconds(1));
 	}
 
-	if (IsStopped())
+	if (m_state.load() & CPU_STATE_RETURN || IsStopped())
 	{
 		return true;
 	}
@@ -202,7 +203,7 @@ bool CPUThread::CheckStatus()
 	if (m_state.load() & CPU_STATE_STEP)
 	{
 		// set PAUSE, but allow to execute once
-		m_state |= CPU_STATE_PAUSE;
+		m_state |= CPU_STATE_PAUSED;
 		m_state &= ~CPU_STATE_STEP;
 	}
 

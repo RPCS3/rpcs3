@@ -6,82 +6,82 @@
 
 s32 sceMotionGetState(vm::ptr<SceMotionState> motionState)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceMotionGetSensorState(vm::ptr<SceMotionSensorState> sensorState, s32 numRecords)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceMotionGetBasicOrientation(vm::ptr<SceFVector3> basicOrientation)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceMotionRotateYaw(const float radians)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceMotionGetTiltCorrection()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceMotionSetTiltCorrection(s32 setValue)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceMotionGetDeadband()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceMotionSetDeadband(s32 setValue)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceMotionSetAngleThreshold(const float angle)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 float sceMotionGetAngleThreshold()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceMotionReset()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceMotionMagnetometerOn()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceMotionMagnetometerOff()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceMotionGetMagnetometerState()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceMotionStartSampling()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceMotionStopSampling()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 #define REG_FUNC(nid, name) reg_psv_func(nid, &sceMotion, #name, name)

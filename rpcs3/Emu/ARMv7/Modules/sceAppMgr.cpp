@@ -6,22 +6,22 @@
 
 s32 sceAppMgrReceiveEventNum(vm::ptr<s32> eventNum)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceAppMgrReceiveEvent(vm::ptr<SceAppMgrEvent> appEvent)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceAppMgrAcquireBgmPort()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceAppMgrReleaseBgmPort()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 

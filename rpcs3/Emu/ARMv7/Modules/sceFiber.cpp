@@ -6,42 +6,42 @@
 
 s32 _sceFiberInitializeImpl(vm::ptr<SceFiber> fiber, vm::cptr<char> name, vm::ptr<SceFiberEntry> entry, u32 argOnInitialize, vm::ptr<void> addrContext, u32 sizeContext, vm::cptr<SceFiberOptParam> optParam, u32 buildVersion)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceFiberOptParamInitialize(vm::ptr<SceFiberOptParam> optParam)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceFiberFinalize(vm::ptr<SceFiber> fiber)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceFiberRun(vm::ptr<SceFiber> fiber, u32 argOnRunTo, vm::ptr<u32> argOnReturn)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceFiberSwitch(vm::ptr<SceFiber> fiber, u32 argOnRunTo, vm::ptr<u32> argOnRun)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceFiberGetSelf(vm::pptr<SceFiber> fiber)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceFiberReturnToThread(u32 argOnReturn, vm::ptr<u32> argOnRun)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceFiberGetInfo(vm::ptr<SceFiber> fiber, vm::ptr<SceFiberInfo> fiberInfo)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 

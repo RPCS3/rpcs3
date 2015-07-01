@@ -6,292 +6,292 @@
 
 s32 sceNetSetDnsInfo(vm::ptr<SceNetDnsInfo> info, s32 flags)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNetClearDnsCache(s32 flags)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNetDumpCreate(vm::cptr<char> name, s32 len, s32 flags)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNetDumpRead(s32 id, vm::ptr<void> buf, s32 len, vm::ptr<s32> pflags)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNetDumpDestroy(s32 id)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNetDumpAbort(s32 id, s32 flags)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNetEpollCreate(vm::cptr<char> name, s32 flags)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNetEpollControl(s32 eid, s32 op, s32 id, vm::ptr<SceNetEpollEvent> event)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNetEpollWait(s32 eid, vm::ptr<SceNetEpollEvent> events, s32 maxevents, s32 timeout)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNetEpollWaitCB(s32 eid, vm::ptr<SceNetEpollEvent> events, s32 maxevents, s32 timeout)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNetEpollDestroy(s32 eid)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNetEpollAbort(s32 eid, s32 flags)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 vm::ptr<s32> sceNetErrnoLoc()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNetEtherStrton(vm::cptr<char> str, vm::ptr<SceNetEtherAddr> n)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNetEtherNtostr(vm::cptr<SceNetEtherAddr> n, vm::ptr<char> str, u32 len)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNetGetMacAddress(vm::ptr<SceNetEtherAddr> addr, s32 flags)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 vm::cptr<char> sceNetInetNtop(s32 af, vm::cptr<void> src, vm::ptr<char> dst, SceNetSocklen_t size)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNetInetPton(s32 af, vm::cptr<char> src, vm::ptr<void> dst)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 u64 sceNetHtonll(u64 host64)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 u32 sceNetHtonl(u32 host32)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 u16 sceNetHtons(u16 host16)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 u64 sceNetNtohll(u64 net64)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 u32 sceNetNtohl(u32 net32)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 u16 sceNetNtohs(u16 net16)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNetInit(vm::ptr<SceNetInitParam> param)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNetTerm()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNetShowIfconfig()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNetShowRoute()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNetShowNetstat()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNetEmulationSet(vm::ptr<SceNetEmulationParam> param, s32 flags)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNetEmulationGet(vm::ptr<SceNetEmulationParam> param, s32 flags)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNetResolverCreate(vm::cptr<char> name, vm::ptr<SceNetResolverParam> param, s32 flags)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNetResolverStartNtoa(s32 rid, vm::cptr<char> hostname, vm::ptr<SceNetInAddr> addr, s32 timeout, s32 retry, s32 flags)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNetResolverStartAton(s32 rid, vm::cptr<SceNetInAddr> addr, vm::ptr<char> hostname, s32 len, s32 timeout, s32 retry, s32 flags)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNetResolverGetError(s32 rid, vm::ptr<s32> result)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNetResolverDestroy(s32 rid)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNetResolverAbort(s32 rid, s32 flags)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNetSocket(vm::cptr<char> name, s32 domain, s32 type, s32 protocol)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNetAccept(s32 s, vm::ptr<SceNetSockaddr> addr, vm::ptr<SceNetSocklen_t> addrlen)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNetBind(s32 s, vm::cptr<SceNetSockaddr> addr, SceNetSocklen_t addrlen)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNetConnect(s32 s, vm::cptr<SceNetSockaddr> name, SceNetSocklen_t namelen)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNetGetpeername(s32 s, vm::ptr<SceNetSockaddr> name, vm::ptr<SceNetSocklen_t> namelen)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNetGetsockname(s32 s, vm::ptr<SceNetSockaddr> name, vm::ptr<SceNetSocklen_t> namelen)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNetGetsockopt(s32 s, s32 level, s32 optname, vm::ptr<void> optval, vm::ptr<SceNetSocklen_t> optlen)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNetListen(s32 s, s32 backlog)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNetRecv(s32 s, vm::ptr<void> buf, u32 len, s32 flags)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNetRecvfrom(s32 s, vm::ptr<void> buf, u32 len, s32 flags, vm::ptr<SceNetSockaddr> from, vm::ptr<SceNetSocklen_t> fromlen)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNetRecvmsg(s32 s, vm::ptr<SceNetMsghdr> msg, s32 flags)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNetSend(s32 s, vm::cptr<void> msg, u32 len, s32 flags)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNetSendto(s32 s, vm::cptr<void> msg, u32 len, s32 flags, vm::cptr<SceNetSockaddr> to, SceNetSocklen_t tolen)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNetSendmsg(s32 s, vm::cptr<SceNetMsghdr> msg, s32 flags)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNetSetsockopt(s32 s, s32 level, s32 optname, vm::cptr<void> optval, SceNetSocklen_t optlen)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNetShutdown(s32 s, s32 how)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNetSocketClose(s32 s)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNetSocketAbort(s32 s, s32 flags)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNetGetSockInfo(s32 s, vm::ptr<SceNetSockInfo> info, s32 n, s32 flags)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNetGetSockIdInfo(vm::ptr<SceNetFdSet> fds, s32 sockinfoflags, s32 flags)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNetGetStatisticsInfo(vm::ptr<SceNetStatisticsInfo> info, s32 flags)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 

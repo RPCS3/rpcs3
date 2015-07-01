@@ -46,14 +46,14 @@ s32 cellGifDecOpen(
 {
 	cellGifDec.Warning("cellGifDecOpen(mainHandle=0x%x, subHandle=*0x%x, src=*0x%x, openInfo=*0x%x)", mainHandle, subHandle, src, openInfo);
 
-	auto current_subHandle = std::make_shared<GifStream>();
-	current_subHandle->fd = 0;
-	current_subHandle->src = *src;
+	GifStream current_subHandle;
+	current_subHandle.fd = 0;
+	current_subHandle.src = *src;
 
 	switch (src->srcSelect.value())
 	{
 	case CELL_GIFDEC_BUFFER:
-		current_subHandle->fileSize = src->streamSize;
+		current_subHandle.fileSize = src->streamSize;
 		break;
 
 	case CELL_GIFDEC_FILE:
@@ -62,14 +62,14 @@ s32 cellGifDecOpen(
 		std::shared_ptr<vfsStream> file_s(Emu.GetVFS().OpenFile(src->fileName.get_ptr(), vfsRead));
 		if (!file_s) return CELL_GIFDEC_ERROR_OPEN_FILE;
 
-		current_subHandle->fd = Emu.GetIdManager().make<lv2_file_t>(file_s, 0, 0);
-		current_subHandle->fileSize = file_s->GetSize();
+		current_subHandle.fd = Emu.GetIdManager().make<lv2_file_t>(file_s, 0, 0);
+		current_subHandle.fileSize = file_s->GetSize();
 		break;
 	}
 	}
 
 	// From now, every u32 subHandle argument is a pointer to a CellGifDecSubHandle struct.
-	*subHandle = Emu.GetIdManager().add(std::move(current_subHandle));
+	*subHandle = Emu.GetIdManager().make<GifStream>(current_subHandle);
 
 	return CELL_OK;
 }

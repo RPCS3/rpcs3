@@ -6,207 +6,207 @@
 
 s32 sceCameraOpen(s32 devnum, vm::ptr<SceCameraInfo> pInfo)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceCameraClose(s32 devnum)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceCameraStart(s32 devnum)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceCameraStop(s32 devnum)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceCameraRead(s32 devnum, vm::ptr<SceCameraRead> pRead)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceCameraIsActive(s32 devnum)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceCameraGetSaturation(s32 devnum, vm::ptr<s32> pLevel)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceCameraSetSaturation(s32 devnum, s32 level)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceCameraGetBrightness(s32 devnum, vm::ptr<s32> pLevel)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceCameraSetBrightness(s32 devnum, s32 level)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceCameraGetContrast(s32 devnum, vm::ptr<s32> pLevel)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceCameraSetContrast(s32 devnum, s32 level)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceCameraGetSharpness(s32 devnum, vm::ptr<s32> pLevel)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceCameraSetSharpness(s32 devnum, s32 level)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceCameraGetReverse(s32 devnum, vm::ptr<s32> pMode)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceCameraSetReverse(s32 devnum, s32 mode)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceCameraGetEffect(s32 devnum, vm::ptr<s32> pMode)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceCameraSetEffect(s32 devnum, s32 mode)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceCameraGetEV(s32 devnum, vm::ptr<s32> pLevel)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceCameraSetEV(s32 devnum, s32 level)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceCameraGetZoom(s32 devnum, vm::ptr<s32> pLevel)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceCameraSetZoom(s32 devnum, s32 level)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceCameraGetAntiFlicker(s32 devnum, vm::ptr<s32> pMode)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceCameraSetAntiFlicker(s32 devnum, s32 mode)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceCameraGetISO(s32 devnum, vm::ptr<s32> pMode)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceCameraSetISO(s32 devnum, s32 mode)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceCameraGetGain(s32 devnum, vm::ptr<s32> pMode)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceCameraSetGain(s32 devnum, s32 mode)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceCameraGetWhiteBalance(s32 devnum, vm::ptr<s32> pMode)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceCameraSetWhiteBalance(s32 devnum, s32 mode)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceCameraGetBacklight(s32 devnum, vm::ptr<s32> pMode)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceCameraSetBacklight(s32 devnum, s32 mode)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceCameraGetNightmode(s32 devnum, vm::ptr<s32> pMode)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceCameraSetNightmode(s32 devnum, s32 mode)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceCameraLedSwitch(s32 devnum, s32 iSwitch)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceCameraLedBlink(s32 devnum, s32 iOnCount, s32 iOffCount, s32 iBlinkCount)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceCameraGetNoiseReductionForDebug(s32 devnum, vm::ptr<s32> pLevel)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceCameraSetNoiseReductionForDebug(s32 devnum, s32 level)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceCameraGetSharpnessOffForDebug(s32 devnum, vm::ptr<s32> pLevel)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceCameraSetSharpnessOffForDebug(s32 devnum, s32 level)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 void sceCameraUseCacheMemoryForTrial(s32 isCache)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 
