@@ -646,8 +646,22 @@ protected:
 	virtual void OnInitThread() = 0;
 	virtual void OnExitThread() = 0;
 	virtual void OnReset() = 0;
-	virtual void ExecCMD() = 0;
-	virtual void ExecCMD(u32 cmd) = 0;
+
+	/**
+	 * This member is called when the backend is expected to render a draw call, either
+	 * indexed or not.
+	 */
+	virtual void Draw() = 0;
+
+	/**
+	* This member is called when the backend is expected to clear a target surface.
+	*/
+	virtual void Clear(u32 cmd) = 0;
+
+	/**
+	* This member is called when the backend is expected to present a target surface in
+	* either local or main memory.
+	*/
 	virtual void Flip() = 0;
 
 	/**

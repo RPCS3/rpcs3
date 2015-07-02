@@ -1599,7 +1599,7 @@ void GLGSRender::InitDrawBuffers()
 	}
 }
 
-void GLGSRender::ExecCMD(u32 cmd)
+void GLGSRender::Clear(u32 cmd)
 {
 	assert(cmd == NV4097_CLEAR_SURFACE);
 
@@ -1653,7 +1653,7 @@ void GLGSRender::ExecCMD(u32 cmd)
 	WriteBuffers();
 }
 
-void GLGSRender::ExecCMD()
+void GLGSRender::Draw()
 {
 	//return;
 	if (!LoadProgram())

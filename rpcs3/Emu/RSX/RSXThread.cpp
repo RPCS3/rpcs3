@@ -847,7 +847,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		if (a0 & 0x80) m_clear_surface_color_a = m_clear_color_a;
 
 		m_clear_surface_mask = a0;
-		ExecCMD(NV4097_CLEAR_SURFACE);
+		Clear(NV4097_CLEAR_SURFACE);
 		break;
 	}
 
@@ -2416,7 +2416,7 @@ void RSXThread::Begin(u32 draw_mode)
 
 void RSXThread::End()
 {
-	ExecCMD();
+	Draw();
 
 	for (auto &vdata : m_vertex_data)
 	{

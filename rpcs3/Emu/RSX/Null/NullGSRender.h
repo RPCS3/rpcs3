@@ -31,11 +31,11 @@ private:
 	{
 	}
 
-	virtual void ExecCMD(u32 cmd)
+	virtual void Clear(u32 cmd) override
 	{
 	}
 
-	virtual void ExecCMD()
+	virtual void Draw() override
 	{
 	}
 
