@@ -39,7 +39,7 @@ u32 GetAddress(u32 offset, u32 location)
 		res = (u32)Memory.RSXIOMem.RealAddr(offset); // TODO: Error Check?
 		if (res == 0)
 		{
-			throw fmt::format("GetAddress(offset=0x%x, location=0x%x): RSXIO memory not mapped", offset, location);
+			throw EXCEPTION("RSXIO memory not mapped (offset=0x%x)", offset);
 		}
 
 		if (Emu.GetGSManager().GetRender().m_strict_ordering[offset >> 20])
@@ -51,7 +51,7 @@ u32 GetAddress(u32 offset, u32 location)
 	}
 	default:
 	{
-		throw fmt::format("GetAddress(offset=0x%x, location=0x%x): invalid location", offset, location);
+		throw EXCEPTION("Invalid location (offset=0x%x, location=0x%x)", offset, location);
 	}
 	}
 
@@ -2594,10 +2594,12 @@ void RSXThread::Init(const u32 ioAddress, const u32 ioSize, const u32 ctrlAddres
 u32 RSXThread::ReadIO32(u32 addr)
 {
 	u32 value;
+
 	if (!Memory.RSXIOMem.Read32(addr, &value))
 	{
-		throw fmt::Format("%s(addr=0x%x): RSXIO memory not mapped", __FUNCTION__, addr);
+		throw EXCEPTION("RSXIO memory not mapped (addr=0x%x)", addr);
 	}
+
 	return value;
 }
 
@@ -2605,6 +2607,6 @@ void RSXThread::WriteIO32(u32 addr, u32 value)
 {
 	if (!Memory.RSXIOMem.Write32(addr, value))
 	{
-		throw fmt::Format("%s(addr=0x%x): RSXIO memory not mapped", __FUNCTION__, addr);
+		throw EXCEPTION("RSXIO memory not mapped (addr=0x%x)", addr);
 	}
 }

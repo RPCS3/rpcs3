@@ -303,6 +303,7 @@ const SPURecompiler::XmmLink& SPURecompiler::XmmAlloc(s8 pref) // get empty xmm 
 			return xmm_var[i];
 		}
 	}
+
 	for (u32 i = 0; i < 16; i++)
 	{
 		if ((xmm_var[i].reg == -1) && !xmm_var[i].taken)
@@ -314,6 +315,7 @@ const SPURecompiler::XmmLink& SPURecompiler::XmmAlloc(s8 pref) // get empty xmm 
 			return xmm_var[i];
 		}
 	}
+
 	int last = -1, max = -1;
 	for (u32 i = 0; i < 16; i++)
 	{
@@ -326,6 +328,7 @@ const SPURecompiler::XmmLink& SPURecompiler::XmmAlloc(s8 pref) // get empty xmm 
 			}
 		}
 	}
+
 	if (last >= 0)
 	{
 		// (saving cached data?)
@@ -337,7 +340,8 @@ const SPURecompiler::XmmLink& SPURecompiler::XmmAlloc(s8 pref) // get empty xmm 
 		xmm_var[last].access = 0;
 		return xmm_var[last];
 	}
-	throw "XmmAlloc() failed";
+
+	throw EXCEPTION("Failure");
 }
 
 const SPURecompiler::XmmLink* SPURecompiler::XmmRead(const s8 reg) const // get xmm register with specific SPU reg or nullptr
@@ -348,7 +352,7 @@ const SPURecompiler::XmmLink* SPURecompiler::XmmRead(const s8 reg) const // get 
 		if (xmm_var[i].reg == reg)
 		{
 			//assert(!xmm_var[i].got);
-			//if (xmm_var[i].got) throw "XmmRead(): wrong reuse";
+			//if (xmm_var[i].got) throw EXCEPTION("Wrong reuse");
 			LOG4_OPCODE("GPR[%d] has been read (i=%d)", reg, i);
 			xmm_var[i].access++;
 			return &xmm_var[i];
@@ -369,13 +373,13 @@ const SPURecompiler::XmmLink& SPURecompiler::XmmGet(s8 reg, s8 target) // get xm
 			if (xmm_var[i].reg == reg)
 			{
 				res = &xmm_var[i];
-				if (xmm_var[i].taken) throw "XmmGet(): xmm_var is taken";
+				if (xmm_var[i].taken) throw EXCEPTION("xmm_var is taken");
 				xmm_var[i].taken = true;
 				xmm_var[i].got = false;
 				//xmm_var[i].reg = -1;
 				for (u32 j = i + 1; j < 16; j++)
 				{
-					if (xmm_var[j].reg == reg) throw "XmmGet(): xmm_var duplicate";
+					if (xmm_var[j].reg == reg) throw EXCEPTION("xmm_var duplicate");
 				}
 				LOG4_OPCODE("cached GPR[%d] used (i=%d)", reg, i);
 				break;
@@ -422,7 +426,7 @@ void SPURecompiler::XmmInvalidate(const s8 reg) // invalidate cached register
 	{
 		if (xmm_var[i].reg == reg)
 		{
-			if (xmm_var[i].taken) throw "XmmInvalidate(): xmm_var is taken";
+			if (xmm_var[i].taken) throw EXCEPTION("xmm_var is taken");
 			LOG4_OPCODE("GPR[%d] invalidated (i=%d)", reg, i);
 			xmm_var[i].reg = -1;
 			xmm_var[i].access = 0;
@@ -3324,10 +3328,6 @@ void SPURecompiler::FMA(u32 rt, u32 ra, u32 rb, u32 rc)
 		XmmFinalize(va, rt);
 		XmmFinalize(vc);
 	}
-	else
-	{
-		throw "FMA: invalid case"; // should never happen
-	}
 	LOG_OPCODE();
 }
 
@@ -3409,10 +3409,6 @@ void SPURecompiler::FMS(u32 rt, u32 ra, u32 rb, u32 rc)
 		c.subps(va.get(), vc.get());
 		XmmFinalize(va, rt);
 		XmmFinalize(vc);
-	}
-	else
-	{
-		throw "FMS: invalid case"; // should never happen
 	}
 	LOG_OPCODE();
 }

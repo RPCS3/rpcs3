@@ -109,7 +109,7 @@ private:
 
 	void NULL_OP()
 	{
-		throw "Null operation";
+		throw EXCEPTION("Null operation");
 	}
 
 	void NOP()
@@ -173,7 +173,7 @@ private:
 		case 0x117: return CPU.SPRG[n - 0x110];
 		}
 
-		throw fmt::Format("ReadSPR(0x%x) error: unknown SPR (0x%x)", spr, n);
+		throw EXCEPTION("Unknown SPR (spr=0x%x, n=0x%x)", spr, n);
 	}
 
 	void WriteSPR(u32 spr, u64 value)
@@ -186,10 +186,10 @@ private:
 		case 0x008: CPU.LR = value; return;
 		case 0x009: CPU.CTR = value; return;
 		case 0x100: CPU.VRSAVE = (u32)value; return;
-		case 0x103: throw fmt::Format("WriteSPR(0x103, 0x%llx): Write to read-only SPR", value);
+		case 0x103: throw EXCEPTION("WriteSPR(0x103, 0x%llx): Write to read-only SPR", value);
 
-		case 0x10C: throw fmt::Format("WriteSPR(0x10C, 0x%llx): Write to time-based SPR", value);
-		case 0x10D: throw fmt::Format("WriteSPR(0x10D, 0x%llx): Write to time-based SPR", value);
+		case 0x10C: throw EXCEPTION("WriteSPR(0x10C, 0x%llx): Write to time-based SPR", value);
+		case 0x10D: throw EXCEPTION("WriteSPR(0x10D, 0x%llx): Write to time-based SPR", value);
 
 		case 0x110:
 		case 0x111:
@@ -201,7 +201,7 @@ private:
 		case 0x117: CPU.SPRG[n - 0x110] = value; return;
 		}
 
-		throw fmt::Format("WriteSPR(0x%x, 0x%llx) error: unknown SPR (0x%x)", spr, value, n);
+		throw EXCEPTION("Unknown SPR (spr=0x%x, n=0x%x, value=0x%llx)", spr, n, value);
 	}
 	
 	void TDI(u32 to, u32 ra, s32 simm16)
@@ -214,7 +214,7 @@ private:
 			((u64)a < (u64)simm16 && (to & 0x2)) ||
 			((u64)a > (u64)simm16 && (to & 0x1)) )
 		{
-			throw fmt::Format("Trap! (tdi 0x%x, r%d, 0x%x)", to, ra, simm16);
+			throw EXCEPTION("Trap! (tdi 0x%x, r%d, 0x%x)", to, ra, simm16);
 		}
 	}
 
@@ -228,7 +228,7 @@ private:
 			((u32)a < (u32)simm16 && (to & 0x2)) ||
 			((u32)a > (u32)simm16 && (to & 0x1)) )
 		{
-			throw fmt::Format("Trap! (twi 0x%x, r%d, 0x%x)", to, ra, simm16);
+			throw EXCEPTION("Trap! (twi 0x%x, r%d, 0x%x)", to, ra, simm16);
 		}
 	}
 
@@ -2239,9 +2239,9 @@ private:
 		switch (lev)
 		{
 		case 0x0: SysCalls::DoSyscall(CPU, CPU.GPR[11]); break;
-		case 0x1: throw "SC(): HyperCall LV1";
+		case 0x1: throw EXCEPTION("HyperCall LV1");
 		case 0x3: CPU.FastStop(); break;
-		default: throw fmt::Format("SC(): unknown level (0x%x)", lev);
+		default: throw EXCEPTION("Unknown level (0x%x)", lev);
 		}
 	}
 	void B(s32 ll, u32 aa, u32 lk)
@@ -2405,7 +2405,7 @@ private:
 			((u32)a < (u32)b && (to & 0x2)) ||
 			((u32)a > (u32)b && (to & 0x1)) )
 		{
-			throw fmt::Format("Trap! (tw 0x%x, r%d, r%d)", to, ra, rb);
+			throw EXCEPTION("Trap! (tw 0x%x, r%d, r%d)", to, ra, rb);
 		}
 	}
 	void LVSL(u32 vd, u32 ra, u32 rb)
@@ -2608,7 +2608,7 @@ private:
 	}
 	void TD(u32 to, u32 ra, u32 rb)
 	{
-		throw "TD()";
+		throw EXCEPTION("");
 	}
 	void LVEWX(u32 vd, u32 ra, u32 rb)
 	{
@@ -2661,8 +2661,6 @@ private:
 	}
 	void LBZUX(u32 rd, u32 ra, u32 rb)
 	{
-		//if(ra == 0 || ra == rd) throw "Bad instruction [LBZUX]";
-
 		const u64 addr = CPU.GPR[ra] + CPU.GPR[rb];
 		CPU.GPR[rd] = vm::read8(vm::cast(addr));
 		CPU.GPR[ra] = addr;
@@ -2930,7 +2928,7 @@ private:
 		{
 		case 0x10C: CPU.GPR[rd] = CPU.TB; break;
 		case 0x10D: CPU.GPR[rd] = CPU.TB >> 32; break;
-		default: throw fmt::Format("mftb r%d, %d", rd, spr);
+		default: throw EXCEPTION("mftb r%d, %d", rd, spr);
 		}
 	}
 	void LWAUX(u32 rd, u32 ra, u32 rb)
@@ -4403,6 +4401,6 @@ private:
 
 	void UNK(const u32 code, const u32 opcode, const u32 gcode)
 	{
-		throw fmt::Format("Unknown/Illegal opcode! (0x%08x : 0x%x : 0x%x)", code, opcode, gcode);
+		throw EXCEPTION("Unknown/Illegal opcode! (0x%08x : 0x%x : 0x%x)", code, opcode, gcode);
 	}
 };

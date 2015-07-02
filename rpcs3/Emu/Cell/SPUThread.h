@@ -452,8 +452,7 @@ public:
 			return this->_u32[3] >> 10 & 0x3;
 
 		default:
-			throw fmt::Format("Unexpected slice value in FPSCR::checkSliceRounding(): %d", slice);
-			return 0;
+			throw EXCEPTION("Unexpected slice value (%d)", slice);
 		}
 	}
 

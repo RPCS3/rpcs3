@@ -64,7 +64,7 @@ s32 cellAudioInit()
 		AudioDumper m_dump;
 		if (do_dump && !m_dump.Init(2)) // Init AudioDumper for 2 channels
 		{
-			throw "AudioDumper::Init() failed";
+			throw EXCEPTION("AudioDumper::Init() failed");
 		}
 
 		float buf2ch[2 * BUFFER_SIZE]; // intermediate buffer for 2 channels
@@ -335,7 +335,7 @@ s32 cellAudioInit()
 				}
 				else
 				{
-					throw fmt::format("Unknown channel count (port=%d, channel=%d)", &port - g_audio.ports, port.channel);
+					throw EXCEPTION("Unknown channel count (port=%lld, channel=%d)", &port - g_audio.ports, port.channel);
 				}
 
 				memset(buf, 0, block_size * sizeof(float));
@@ -410,19 +410,19 @@ s32 cellAudioInit()
 				{
 					if (m_dump.WriteData(&buf8ch, sizeof(buf8ch)) != sizeof(buf8ch)) // write file data (8 ch)
 					{
-						throw "AudioDumper::WriteData() failed (8 ch)";
+						throw EXCEPTION("AudioDumper::WriteData() failed (8 ch)");
 					}
 				}
 				else if (m_dump.GetCh() == 2)
 				{
 					if (m_dump.WriteData(&buf2ch, sizeof(buf2ch)) != sizeof(buf2ch)) // write file data (2 ch)
 					{
-						throw "AudioDumper::WriteData() failed (2 ch)";
+						throw EXCEPTION("AudioDumper::WriteData() failed (2 ch)");
 					}
 				}
 				else
 				{
-					throw fmt::format("AudioDumper::GetCh() returned unknown value (%d)", m_dump.GetCh());
+					throw EXCEPTION("AudioDumper::GetCh() returned unknown value (%d)", m_dump.GetCh());
 				}
 			}
 
@@ -576,7 +576,7 @@ s32 cellAudioGetPortConfig(u32 portNum, vm::ptr<CellAudioPortConfig> portConfig)
 	case AUDIO_PORT_STATE_CLOSED: portConfig->status = CELL_AUDIO_STATUS_CLOSE; break;
 	case AUDIO_PORT_STATE_OPENED: portConfig->status = CELL_AUDIO_STATUS_READY; break;
 	case AUDIO_PORT_STATE_STARTED: portConfig->status = CELL_AUDIO_STATUS_RUN; break;
-	default: throw fmt::format("cellAudioGetPortConfig(%d): invalid port state (%d)", portNum, state);
+	default: throw EXCEPTION("Invalid port state (%d: %d)", portNum, state);
 	}
 
 	portConfig->nChannel = port.channel;
@@ -605,7 +605,7 @@ s32 cellAudioPortStart(u32 portNum)
 	case AUDIO_PORT_STATE_CLOSED: return CELL_AUDIO_ERROR_PORT_NOT_OPEN;
 	case AUDIO_PORT_STATE_STARTED: return CELL_AUDIO_ERROR_PORT_ALREADY_RUN;
 	case AUDIO_PORT_STATE_OPENED: return CELL_OK;
-	default: throw fmt::format("cellAudioPortStart(%d): invalid port state (%d)", portNum, state);
+	default: throw EXCEPTION("Invalid port state (%d: %d)", portNum, state);
 	}
 }
 
@@ -628,7 +628,7 @@ s32 cellAudioPortClose(u32 portNum)
 	case AUDIO_PORT_STATE_CLOSED: return CELL_AUDIO_ERROR_PORT_NOT_OPEN;
 	case AUDIO_PORT_STATE_STARTED: return CELL_OK;
 	case AUDIO_PORT_STATE_OPENED: return CELL_OK;
-	default: throw fmt::format("cellAudioPortClose(%d): invalid port state (%d)", portNum, state);
+	default: throw EXCEPTION("Invalid port state (%d: %d)", portNum, state);
 	}
 }
 
@@ -651,7 +651,7 @@ s32 cellAudioPortStop(u32 portNum)
 	case AUDIO_PORT_STATE_CLOSED: return CELL_AUDIO_ERROR_PORT_NOT_RUN;
 	case AUDIO_PORT_STATE_STARTED: return CELL_OK;
 	case AUDIO_PORT_STATE_OPENED: return CELL_AUDIO_ERROR_PORT_NOT_RUN;
-	default: throw fmt::format("cellAudioPortStop(%d): invalid port state (%d)", portNum, state);
+	default: throw EXCEPTION("Invalid port state (%d: %d)", portNum, state);
 	}
 }
 

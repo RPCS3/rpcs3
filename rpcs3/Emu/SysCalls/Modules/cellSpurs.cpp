@@ -38,7 +38,6 @@ bool spursKernelEntry(SPUThread & spu);
 //
 // SPURS utility functions
 //
-void spursPpuThreadExit(PPUThread& CPU, u64 errorStatus);
 u32 spursGetSdkVersion();
 bool spursIsLibProfLoaded();
 
@@ -260,13 +259,6 @@ s32 cellSpursAddUrgentCall();
 // SPURS utility functions
 //----------------------------------------------------------------------------
 
-/// Terminate a SPURS PPU thread
-void spursPpuThreadExit(PPUThread& CPU, u64 errorStatus)
-{
-	sys_ppu_thread_exit(CPU, errorStatus);
-	throw SpursModuleExit();
-}
-
 /// Get the version of SDK used by this process
 u32 spursGetSdkVersion()
 {
@@ -433,7 +425,7 @@ void spursHandlerWaitReady(PPUThread& CPU, vm::ptr<CellSpurs> spurs)
 	{
 		if (Emu.IsStopped())
 		{
-			spursPpuThreadExit(CPU, 0);
+			sys_ppu_thread_exit(CPU, 0);
 		}
 
 		if (spurs->handlerExiting.load())
@@ -443,7 +435,7 @@ void spursHandlerWaitReady(PPUThread& CPU, vm::ptr<CellSpurs> spurs)
 				throw EXCEPTION("sys_lwmutex_unlock() failed (0x%x)", rc);
 			}
 
-			spursPpuThreadExit(CPU, 0);
+			sys_ppu_thread_exit(CPU, 0);
 		}
 
 		// Find a runnable workload
@@ -519,49 +511,43 @@ void spursHandlerEntry(PPUThread& CPU)
 {
 	auto spurs = vm::ptr<CellSpurs>::make(vm::cast(CPU.GPR[3]));
 
-	try
+	if (spurs->flags & SAF_UNKNOWN_FLAG_30)
 	{
-		if (spurs->flags & SAF_UNKNOWN_FLAG_30)
-		{
-			spursPpuThreadExit(CPU, 0);
-		}
-
-		while (true)
-		{
-			if (spurs->flags1 & SF1_EXIT_IF_NO_WORK)
-			{
-				spursHandlerWaitReady(CPU, spurs);
-			}
-
-			if (s32 rc = sys_spu_thread_group_start(spurs->spuTG))
-			{
-				throw EXCEPTION("sys_spu_thread_group_start() failed (0x%x)", rc);
-			}
-
-			if (s32 rc = sys_spu_thread_group_join(spurs->spuTG, vm::null, vm::null))
-			{
-				if (rc == CELL_ESTAT)
-				{
-					spursPpuThreadExit(CPU, 0);
-				}
-
-				throw EXCEPTION("sys_spu_thread_group_join() failed (0x%x)", rc);
-			}
-
-			if (Emu.IsStopped())
-			{
-				continue;
-			}
-
-			if ((spurs->flags1 & SF1_EXIT_IF_NO_WORK) == 0)
-			{
-				assert(spurs->handlerExiting.load() == 1 || Emu.IsStopped());
-				spursPpuThreadExit(CPU, 0);
-			}
-		}
+		sys_ppu_thread_exit(CPU, 0);
 	}
-	catch(SpursModuleExit)
+
+	while (true)
 	{
+		if (spurs->flags1 & SF1_EXIT_IF_NO_WORK)
+		{
+			spursHandlerWaitReady(CPU, spurs);
+		}
+
+		if (s32 rc = sys_spu_thread_group_start(spurs->spuTG))
+		{
+			throw EXCEPTION("sys_spu_thread_group_start() failed (0x%x)", rc);
+		}
+
+		if (s32 rc = sys_spu_thread_group_join(spurs->spuTG, vm::null, vm::null))
+		{
+			if (rc == CELL_ESTAT)
+			{
+				sys_ppu_thread_exit(CPU, 0);
+			}
+
+			throw EXCEPTION("sys_spu_thread_group_join() failed (0x%x)", rc);
+		}
+
+		if (Emu.IsStopped())
+		{
+			continue;
+		}
+
+		if ((spurs->flags1 & SF1_EXIT_IF_NO_WORK) == 0)
+		{
+			assert(spurs->handlerExiting.load() == 1 || Emu.IsStopped());
+			sys_ppu_thread_exit(CPU, 0);
+		}
 	}
 }
 

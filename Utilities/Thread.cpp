@@ -1097,7 +1097,7 @@ void _se_translator(unsigned int u, EXCEPTION_POINTERS* pExp)
 
 	if (u == EXCEPTION_ACCESS_VIOLATION && (u32)addr64 == addr64)
 	{
-		throw fmt::format("Access violation %s location 0x%llx", is_writing ? "writing" : "reading", addr64);
+		throw EXCEPTION("Access violation %s location 0x%llx", is_writing ? "writing" : "reading", addr64);
 	}
 }
 
@@ -1146,7 +1146,7 @@ void signal_handler(int sig, siginfo_t* info, void* uct)
 		}
 
 		// TODO: this may be wrong
-		throw fmt::format("Access violation %s location 0x%llx", is_writing ? "writing" : "reading", addr64);
+		throw EXCEPTION("Access violation %s location 0x%llx", is_writing ? "writing" : "reading", addr64);
 	}
 
 	// else some fatal error
@@ -1297,11 +1297,11 @@ void thread_t::start(std::function<std::string()> name, std::function<void()> fu
 
 			func();
 		}
-		catch (const char* e)
+		catch (const char* e) // obsolete
 		{
 			error(e);
 		}
-		catch (const std::string& e)
+		catch (const std::string& e) // obsolete
 		{
 			error(e.c_str());
 		}

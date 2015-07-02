@@ -75,7 +75,7 @@ u32 ppu_get_tls(u32 thread)
 		}
 	}
 
-	throw "Out of TLS memory";
+	throw EXCEPTION("Out of TLS memory");
 }
 
 void ppu_free_tls(u32 thread)
@@ -752,7 +752,7 @@ std::string ps3_fmt(PPUThread& context, vm::cptr<char> fmt, u32 g_count, u32 f_c
 			}
 			}
 
-			throw fmt::format("ps3_fmt(): unknown formatting: '%s'", start.get_ptr());
+			throw EXCEPTION("Unknown formatting: '%s'", start.get_ptr());
 		}
 		}
 
@@ -981,7 +981,7 @@ vm::ptr<char> _sys_strcat(vm::ptr<char> dest, vm::cptr<char> source)
 
 	if (strcat(dest.get_ptr(), source.get_ptr()) != dest.get_ptr())
 	{
-		throw "_sys_strcat() failed: unexpected strcat() result";
+		throw EXCEPTION("Unexpected strcat() result");
 	}
 
 	return dest;
@@ -1000,7 +1000,7 @@ vm::ptr<char> _sys_strncat(vm::ptr<char> dest, vm::cptr<char> source, u32 len)
 
 	if (strncat(dest.get_ptr(), source.get_ptr(), len) != dest.get_ptr())
 	{
-		throw "_sys_strncat() failed: unexpected strncat() result";
+		throw EXCEPTION("Unexpected strncat() result");
 	}
 
 	return dest;
@@ -1012,7 +1012,7 @@ vm::ptr<char> _sys_strcpy(vm::ptr<char> dest, vm::cptr<char> source)
 
 	if (strcpy(dest.get_ptr(), source.get_ptr()) != dest.get_ptr())
 	{
-		throw "_sys_strcpy() failed: unexpected strcpy() result";
+		throw EXCEPTION("Unexpected strcpy() result");
 	}
 
 	return dest;
@@ -1029,7 +1029,7 @@ vm::ptr<char> _sys_strncpy(vm::ptr<char> dest, vm::cptr<char> source, u32 len)
 
 	if (strncpy(dest.get_ptr(), source.get_ptr(), len) != dest.get_ptr())
 	{
-		throw "_sys_strncpy() failed: unexpected strncpy() result";
+		throw EXCEPTION("Unexpected strncpy() result");
 	}
 
 	return dest;

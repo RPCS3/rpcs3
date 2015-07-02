@@ -137,7 +137,7 @@ std::string armv7_fmt(ARMv7Context& context, vm::cptr<char> fmt, u32 g_count, u3
 			}
 			}
 
-			throw fmt::format("armv7_fmt(): unknown formatting: '%s'", start.get_ptr());
+			throw EXCEPTION("Unknown formatting '%s'", start.get_ptr());
 		}
 		}
 

@@ -73,19 +73,3 @@ public:
 		LogPrepare(LogTodo, fmt, fmt::do_unveil(args)...);
 	}
 };
-
-namespace hle
-{
-	struct error
-	{
-		const s32 code;
-		const LogBase* const base;
-		const std::string text;
-
-		error(s32 errorCode, const char* errorText = nullptr);
-		error(s32 errorCode, const LogBase& base, const char* errorText = nullptr);
-		error(s32 errorCode, const LogBase* base, const char* errorText = nullptr);
-
-		void print(const char* func = nullptr);
-	};
-}

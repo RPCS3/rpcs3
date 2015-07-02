@@ -147,7 +147,7 @@ namespace vm
 		if (mprotect(vm::get_ptr(addr & ~0xfff), 4096, no_access ? PROT_NONE : PROT_READ))
 #endif
 		{
-			throw fmt::format("vm::_reservation_set() failed (addr=0x%x)", addr);
+			throw EXCEPTION("System failure (addr=0x%x)", addr);
 		}
 
 		//LOG_NOTICE(MEMORY, "VirtualProtect: %f us", (get_time() - stamp0) / 80.f);
@@ -166,7 +166,7 @@ namespace vm
 			if (mprotect(vm::get_ptr(addr & ~0xfff), 4096, PROT_READ | PROT_WRITE))
 #endif
 			{
-				throw fmt::format("vm::_reservation_break() failed (addr=0x%x)", addr);
+				throw EXCEPTION("System failure (addr=0x%x)", addr);
 			}
 
 			//LOG_NOTICE(MEMORY, "VirtualAlloc: %f us", (get_time() - stamp0) / 80.f);
@@ -209,7 +209,7 @@ namespace vm
 			u8 flags = g_page_info[addr >> 12].load();
 			if (!(flags & page_writable) || !(flags & page_allocated) || (flags & page_no_reservations))
 			{
-				throw fmt::format("vm::reservation_acquire(addr=0x%x, size=0x%x) failed (invalid page flags: 0x%x)", addr, size, flags);
+				throw EXCEPTION("Invalid page flags (addr=0x%x, size=0x%x, flags=0x%x)", addr, size, flags);
 			}
 
 			// silent unlocking to prevent priority boost for threads going to break reservation
@@ -355,7 +355,7 @@ namespace vm
 		{
 			if (g_page_info[i].load())
 			{
-				throw fmt::format("vm::page_map(addr=0x%x, size=0x%x, flags=0x%x) failed (already mapped at 0x%x)", addr, size, flags, i * 4096);
+				throw EXCEPTION("Memory already mapped (addr=0x%x, size=0x%x, flags=0x%x, current_addr=0x%x)", addr, size, flags, i * 4096);
 			}
 		}
 
@@ -370,14 +370,14 @@ namespace vm
 		if (mprotect(priv_addr, size, PROT_READ | PROT_WRITE) || mprotect(real_addr, size, protection))
 #endif
 		{
-			throw fmt::format("vm::page_map(addr=0x%x, size=0x%x, flags=0x%x) failed (API)", addr, size, flags);
+			throw EXCEPTION("System failure (addr=0x%x, size=0x%x, flags=0x%x)", addr, size, flags);
 		}
 
 		for (u32 i = addr / 4096; i < addr / 4096 + size / 4096; i++)
 		{
 			if (g_page_info[i].exchange(flags | page_allocated))
 			{
-				throw fmt::format("vm::page_map(addr=0x%x, size=0x%x, flags=0x%x) failed (concurrent access at 0x%x)", addr, size, flags, i * 4096);
+				throw EXCEPTION("Concurrent access (addr=0x%x, size=0x%x, flags=0x%x, current_addr=0x%x)", addr, size, flags, i * 4096);
 			}
 		}
 
@@ -429,7 +429,7 @@ namespace vm
 				if (mprotect(real_addr, 4096, protection))
 #endif
 				{
-					throw fmt::format("vm::page_protect(addr=0x%x, size=0x%x, flags_test=0x%x, flags_set=0x%x, flags_clear=0x%x) failed (API)", addr, size, flags_test, flags_set, flags_clear);
+					throw EXCEPTION("System failure (addr=0x%x, size=0x%x, flags_test=0x%x, flags_set=0x%x, flags_clear=0x%x)", addr, size, flags_test, flags_set, flags_clear);
 				}
 			}
 		}
@@ -447,7 +447,7 @@ namespace vm
 		{
 			if (!(g_page_info[i].load() & page_allocated))
 			{
-				throw fmt::format("vm::page_unmap(addr=0x%x, size=0x%x) failed (not mapped at 0x%x)", addr, size, i * 4096);
+				throw EXCEPTION("Memory not mapped (addr=0x%x, size=0x%x, current_addr=0x%x)", addr, size, i * 4096);
 			}
 		}
 
@@ -457,7 +457,7 @@ namespace vm
 
 			if (!(g_page_info[i].exchange(0) & page_allocated))
 			{
-				throw fmt::format("vm::page_unmap(addr=0x%x, size=0x%x) failed (concurrent access at 0x%x)", addr, size, i * 4096);
+				throw EXCEPTION("Concurrent access (addr=0x%x, size=0x%x, current_addr=0x%x)", addr, size, i * 4096);
 			}
 		}
 
@@ -472,7 +472,7 @@ namespace vm
 		if (mprotect(real_addr, size, PROT_NONE) || mprotect(priv_addr, size, PROT_NONE))
 #endif
 		{
-			throw fmt::format("vm::page_unmap(addr=0x%x, size=0x%x) failed (API)", addr, size);
+			throw EXCEPTION("System failure (addr=0x%x, size=0x%x)", addr, size);
 		}
 	}
 
@@ -522,29 +522,6 @@ namespace vm
 	void dealloc(u32 addr, memory_location location)
 	{
 		return g_locations[location].deallocator(addr);
-	}
-
-	u32 get_addr(const void* real_pointer)
-	{
-		const u64 diff = (u64)real_pointer - (u64)g_base_addr;
-		const u32 res = (u32)diff;
-
-		if (res == diff)
-		{
-			return res;
-		}
-
-		if (real_pointer)
-		{
-			throw fmt::format("vm::get_addr(0x%016llx) failed: not a part of virtual memory", (u64)real_pointer);
-		}
-
-		return 0;
-	}
-
-	void error(const u64 addr, const char* func)
-	{
-		throw fmt::format("%s(): failed to cast 0x%llx (too big value)", func, addr);
 	}
 
 	namespace ps3

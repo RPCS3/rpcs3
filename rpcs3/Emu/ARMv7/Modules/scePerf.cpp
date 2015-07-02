@@ -60,7 +60,10 @@ s32 scePerfArmPmonSelectEvent(ARMv7Context& context, s32 threadId, u32 counter, 
 		break;
 	}
 
-	default: throw "scePerfArmPmonSelectEvent(): unknown event requested";
+	default:
+	{
+		throw EXCEPTION("Unknown event requested");
+	}
 	}
 
 	context.counters[counter].event = eventCode;

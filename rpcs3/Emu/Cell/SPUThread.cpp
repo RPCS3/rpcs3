@@ -1184,7 +1184,7 @@ void SPUThread::halt()
 	}
 
 	status |= SPU_STATUS_STOPPED_BY_HALT;
-	throw "HALT";
+	throw EXCEPTION("Halt");
 }
 
 spu_thread::spu_thread(u32 entry, const std::string& name, u32 stack_size, u32 prio)

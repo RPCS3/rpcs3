@@ -99,7 +99,7 @@ enum
 	SCE_NP_COMMUNITY_ERROR_TOO_MANY_SLOTID              = 0x8002a1b1,
 };
 
-typedef int(*SceNpBasicEventHandler)(s32 event, s32 retCode, u32 reqId, vm::ptr<void> arg);
+using SceNpBasicEventHandler = func_def<s32(s32 event, s32 retCode, u32 reqId, vm::ptr<void> arg)>;
 
 // NP Manager Utility statuses
 enum
@@ -692,41 +692,41 @@ enum
 // NP communication ID structure
 struct SceNpCommunicationId
 {
-	s8 data[9];
-	s8 term;
+	char data[9];
+	char term;
 	u8 num;
-	//s8 dummy;
+	char dummy;
 };
 
 // OnlineId structure
 struct SceNpOnlineId
 {
-	s8 data[16];
-	s8 term;
-	//s8 dummy[3];
+	char data[16];
+	char term;
+	char dummy[3];
 };
 
 // NP ID structure
 struct SceNpId
 {
 	SceNpOnlineId handle;
-	//u8 opt[8];
-	//u8 reserved[8];
+	u8 opt[8];
+	u8 reserved[8];
 };
 
 // Online Name structure
 struct SceNpOnlineName
 {
-	s8 data[48];
-	s8 term;
-	s8 padding[3];
+	char data[48];
+	char term;
+	char padding[3];
 };
 
 // Avatar structure
 struct SceNpAvatarUrl
 {
-	s8 data[127];
-	s8 term;
+	char data[127];
+	char term;
 };
 
 // Avatar image structure
@@ -734,14 +734,14 @@ struct SceNpAvatarImage
 {
 	u8 data[SCE_NET_NP_AVATAR_IMAGE_MAX_SIZE];
 	be_t<u32> size;
-	//u8 reserved[12];
+	u8 reserved[12];
 };
 
 // Self introduction structure
 struct SceNpAboutMe
 {
-	s8 data[SCE_NET_NP_ABOUT_ME_MAX_LENGTH];
-	s8 term;
+	char data[SCE_NET_NP_ABOUT_ME_MAX_LENGTH];
+	char term;
 };
 
 // User information structure
@@ -752,12 +752,12 @@ struct SceNpUserInfo
 	SceNpAvatarUrl icon;
 };
 
-// User information structure (pointer version)
+// User information structure
 struct SceNpUserInfo2
 {
 	SceNpId npId;
-	SceNpOnlineName onlineName;
-	SceNpAvatarUrl avatarUrl;
+	vm::bptr<SceNpOnlineName> onlineName;
+	vm::bptr<SceNpAvatarUrl> avatarUrl;
 };
 
 // Often used languages structure
@@ -784,6 +784,7 @@ struct SceNpCommunicationSignature
 // NP cache information structure
 struct SceNpManagerCacheParam
 {
+	be_t<u32> size;
 	SceNpOnlineId onlineId;
 	SceNpId npId;
 	SceNpOnlineName onlineName;
@@ -793,7 +794,7 @@ struct SceNpManagerCacheParam
 // Message attachment data
 struct SceNpBasicAttachmentData
 {
-	be_t<u32> id;
+	be_t<u32> id; // SceNpBasicAttachmentDataId
 	be_t<u32> size;
 };
 

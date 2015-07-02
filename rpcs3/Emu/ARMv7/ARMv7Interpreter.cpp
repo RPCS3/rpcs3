@@ -108,7 +108,7 @@ namespace ARMv7_instrs
 	u32 LSL_C(u32 x, s32 shift, bool& carry_out)
 	{
 		assert(shift > 0);
-		carry_out = shift <= 32 ? x & (1 << (32 - shift)) : false;
+		carry_out = shift <= 32 ? (x & (1 << (32 - shift))) != 0 : false;
 		return shift < 32 ? x << shift : 0;
 	}
 
@@ -121,7 +121,7 @@ namespace ARMv7_instrs
 	u32 LSR_C(u32 x, s32 shift, bool& carry_out)
 	{
 		assert(shift > 0);
-		carry_out = shift <= 32 ? x & (1 << (shift - 1)) : false;
+		carry_out = shift <= 32 ? (x & (1 << (shift - 1))) != 0 : false;
 		return shift < 32 ? x >> shift : 0;
 	}
 
@@ -134,7 +134,7 @@ namespace ARMv7_instrs
 	s32 ASR_C(s32 x, s32 shift, bool& carry_out)
 	{
 		assert(shift > 0);
-		carry_out = shift <= 32 ? x & (1 << (shift - 1)) : x < 0;
+		carry_out = shift <= 32 ? (x & (1 << (shift - 1))) != 0 : x < 0;
 		return shift < 32 ? x >> shift : x >> 31;
 	}
 
@@ -148,7 +148,7 @@ namespace ARMv7_instrs
 	{
 		assert(shift);
 		const u32 result = x >> shift | x << (32 - shift);
-		carry_out = result >> 31;
+		carry_out = (result >> 31) != 0;
 		return result;
 	}
 
@@ -200,8 +200,8 @@ namespace ARMv7_instrs
 		const T sign_mask = (T)1 << (sizeof(T) * 8 - 1);
 
 		T result = x + y;
-		carry_out = ((x & y) | ((x ^ y) & ~result)) & sign_mask;
-		overflow = (x ^ result) & (y ^ result) & sign_mask;
+		carry_out = (((x & y) | ((x ^ y) & ~result)) & sign_mask) != 0;
+		overflow = ((x ^ result) & (y ^ result) & sign_mask) != 0;
 		if (carry_in)
 		{
 			result += 1;
@@ -283,7 +283,7 @@ namespace ARMv7_instrs
 			{
 				if (found->second != context.debug_str)
 				{
-					throw context.debug_str;
+					throw EXCEPTION("Disasm inconsistency: '%s' != '%s'", found->second.c_str(), context.debug_str.c_str());
 				}
 			}
 			else
@@ -487,11 +487,11 @@ void ARMv7_instrs::UNK(ARMv7Context& context, const ARMv7Code code)
 {
 	if (context.ISET == Thumb)
 	{
-		throw fmt::format("Unknown/illegal opcode: 0x%04X 0x%04X", code.code1, code.code0);
+		throw EXCEPTION("Unknown/illegal opcode: 0x%04X 0x%04X", code.code1, code.code0);
 	}
 	else
 	{
-		throw fmt::format("Unknown/illegal opcode: 0x%08X", code.data);
+		throw EXCEPTION("Unknown/illegal opcode: 0x%08X", code.data);
 	}
 }
 
@@ -613,7 +613,7 @@ void ARMv7_instrs::ADC_IMM(ARMv7Context& context, const ARMv7Code code, const AR
 		cond = context.ITSTATE.advance();
 		d = (code.data & 0xf00) >> 8;
 		n = (code.data & 0xf0000) >> 16;
-		set_flags = (code.data & 0x100000);
+		set_flags = (code.data & 0x100000) != 0;
 		imm32 = ThumbExpandImm((code.data & 0x4000000) >> 15 | (code.data & 0x7000) >> 4 | (code.data & 0xff));
 
 		reject(d == 13 || d == 15 || n == 13 || n == 15, "UNPREDICTABLE");
@@ -667,7 +667,7 @@ void ARMv7_instrs::ADC_REG(ARMv7Context& context, const ARMv7Code code, const AR
 		d = (code.data & 0xf00) >> 8;
 		n = (code.data & 0xf0000) >> 16;
 		m = (code.data & 0xf);
-		set_flags = (code.data & 0x100000);
+		set_flags = (code.data & 0x100000) != 0;
 		shift_t = DecodeImmShift((code.data & 0x30) >> 4, (code.data & 0x7000) >> 10 | (code.data & 0xc0) >> 6, &shift_n);
 
 		reject(d == 13 || d == 15 || n == 13 || n == 15 || m == 13 || m == 15, "UNPREDICTABLE");
@@ -737,7 +737,7 @@ void ARMv7_instrs::ADD_IMM(ARMv7Context& context, const ARMv7Code code, const AR
 		cond = context.ITSTATE.advance();
 		d = (code.data & 0xf00) >> 8;
 		n = (code.data & 0xf0000) >> 16;
-		set_flags = (code.data & 0x100000);
+		set_flags = (code.data & 0x100000) != 0;
 		imm32 = ThumbExpandImm((code.data & 0x4000000) >> 15 | (code.data & 0x7000) >> 4 | (code.data & 0xff));
 
 		reject(d == 15 && set_flags, "CMN (immediate)");
@@ -821,7 +821,7 @@ void ARMv7_instrs::ADD_REG(ARMv7Context& context, const ARMv7Code code, const AR
 		d = (code.data & 0xf00) >> 8;
 		n = (code.data & 0xf0000) >> 16;
 		m = (code.data & 0xf);
-		set_flags = (code.data & 0x100000);
+		set_flags = (code.data & 0x100000) != 0;
 		shift_t = DecodeImmShift((code.data & 0x30) >> 4, (code.data & 0x7000) >> 10 | (code.data & 0xc0) >> 6, &shift_n);
 
 		reject(d == 15 && set_flags, "CMN (register)");
@@ -892,7 +892,7 @@ void ARMv7_instrs::ADD_SPI(ARMv7Context& context, const ARMv7Code code, const AR
 	{
 		cond = context.ITSTATE.advance();
 		d = (code.data & 0xf00) >> 8;
-		set_flags = (code.data & 0x100000);
+		set_flags = (code.data & 0x100000) != 0;
 		imm32 = ThumbExpandImm((code.data & 0x4000000) >> 15 | (code.data & 0x7000) >> 4 | (code.data & 0xff));
 
 		reject(d == 15 && set_flags, "CMN (immediate)");
@@ -968,7 +968,7 @@ void ARMv7_instrs::ADD_SPR(ARMv7Context& context, const ARMv7Code code, const AR
 		cond = context.ITSTATE.advance();
 		d = (code.data & 0xf00) >> 8;
 		m = (code.data & 0xf);
-		set_flags = (code.data & 0x100000);
+		set_flags = (code.data & 0x100000) != 0;
 		shift_t = DecodeImmShift((code.data & 0x30) >> 4, (code.data & 0x7000) >> 10 | (code.data & 0xc0) >> 6, &shift_n);
 
 		reject(d == 13 && (shift_t != SRType_LSL || shift_n > 3), "UNPREDICTABLE");
@@ -1070,7 +1070,7 @@ void ARMv7_instrs::AND_IMM(ARMv7Context& context, const ARMv7Code code, const AR
 		cond = context.ITSTATE.advance();
 		d = (code.data & 0xf00) >> 8;
 		n = (code.data & 0xf0000) >> 16;
-		set_flags = (code.data & 0x100000);
+		set_flags = (code.data & 0x100000) != 0;
 		imm32 = ThumbExpandImm_C((code.data & 0x4000000) >> 15 | (code.data & 0x7000) >> 4 | (code.data & 0xff), carry, carry);
 
 		reject(d == 15 && set_flags, "TST (immediate)");
@@ -1123,7 +1123,7 @@ void ARMv7_instrs::AND_REG(ARMv7Context& context, const ARMv7Code code, const AR
 		d = (code.data & 0xf00) >> 8;
 		n = (code.data & 0xf0000) >> 16;
 		m = (code.data & 0xf);
-		set_flags = (code.data & 0x100000);
+		set_flags = (code.data & 0x100000) != 0;
 		shift_t = DecodeImmShift((code.data & 0x30) >> 4, (code.data & 0x7000) >> 10 | (code.data & 0xc0) >> 6, &shift_n);
 
 		reject(d == 15 && set_flags, "TST (register)");
@@ -1289,7 +1289,7 @@ void ARMv7_instrs::BIC_IMM(ARMv7Context& context, const ARMv7Code code, const AR
 		cond = context.ITSTATE.advance();
 		d = (code.data & 0xf00) >> 8;
 		n = (code.data & 0xf0000) >> 16;
-		set_flags = (code.data & 0x100000);
+		set_flags = (code.data & 0x100000) != 0;
 		imm32 = ThumbExpandImm_C((code.data & 0x4000000) >> 15 | (code.data & 0x7000) >> 4 | (code.data & 0xff), carry, carry);
 
 		reject(d == 13 || d == 15 || n == 13 || n == 15, "UNPREDICTABLE");
@@ -1341,7 +1341,7 @@ void ARMv7_instrs::BIC_REG(ARMv7Context& context, const ARMv7Code code, const AR
 		d = (code.data & 0xf00) >> 8;
 		n = (code.data & 0xf0000) >> 16;
 		m = (code.data & 0xf);
-		set_flags = (code.data & 0x100000);
+		set_flags = (code.data & 0x100000) != 0;
 		shift_t = DecodeImmShift((code.data & 0x30) >> 4, (code.data & 0x7000) >> 10 | (code.data & 0xc0) >> 6, &shift_n);
 
 		reject(d == 13 || d == 15 || n == 13 || n == 15 || m == 13 || m == 15, "UNPREDICTABLE");
@@ -1556,7 +1556,7 @@ void ARMv7_instrs::CB_Z(ARMv7Context& context, const ARMv7Code code, const ARMv7
 	{
 		n = code.data & 0x7;
 		imm32 = (code.data & 0xf8) >> 2 | (code.data & 0x200) >> 3;
-		nonzero = (code.data & 0x800);
+		nonzero = (code.data & 0x800) != 0;
 
 		reject(context.ITSTATE, "UNPREDICTABLE");
 		break;
@@ -1797,7 +1797,7 @@ void ARMv7_instrs::EOR_IMM(ARMv7Context& context, const ARMv7Code code, const AR
 		cond = context.ITSTATE.advance();
 		d = (code.data & 0xf00) >> 8;
 		n = (code.data & 0xf0000) >> 16;
-		set_flags = (code.data & 0x100000);
+		set_flags = (code.data & 0x100000) != 0;
 		imm32 = ThumbExpandImm_C((code.data & 0x4000000) >> 15 | (code.data & 0x7000) >> 4 | (code.data & 0xff), carry, carry);
 
 		reject(d == 15 && set_flags, "TEQ (immediate)");
@@ -1850,7 +1850,7 @@ void ARMv7_instrs::EOR_REG(ARMv7Context& context, const ARMv7Code code, const AR
 		d = (code.data & 0xf00) >> 8;
 		n = (code.data & 0xf0000) >> 16;
 		m = (code.data & 0xf);
-		set_flags = (code.data & 0x100000);
+		set_flags = (code.data & 0x100000) != 0;
 		shift_t = DecodeImmShift((code.data & 0x30) >> 4, (code.data & 0x7000) >> 10 | (code.data & 0xc0) >> 6, &shift_n);
 
 		reject(d == 15 && set_flags, "TEQ (register)");
@@ -1943,7 +1943,7 @@ void ARMv7_instrs::LDM(ARMv7Context& context, const ARMv7Code code, const ARMv7_
 		cond = context.ITSTATE.advance();
 		n = (code.data & 0xf0000) >> 16;
 		reg_list = (code.data & 0xdfff);
-		wback = (code.data & 0x200000);
+		wback = (code.data & 0x200000) != 0;
 
 		reject(wback && n == 13, "POP");
 		reject(n == 15 || BitCount(reg_list, 16) < 2 || reg_list >= 0xc000, "UNPREDICTABLE");
@@ -2057,9 +2057,9 @@ void ARMv7_instrs::LDR_IMM(ARMv7Context& context, const ARMv7Code code, const AR
 		t = (code.data & 0xf000) >> 12;
 		n = (code.data & 0xf0000) >> 16;
 		imm32 = (code.data & 0xff);
-		index = (code.data & 0x400);
-		add = (code.data & 0x200);
-		wback = (code.data & 0x100);
+		index = (code.data & 0x400) != 0;
+		add = (code.data & 0x200) != 0;
+		wback = (code.data & 0x100) != 0;
 
 		reject(n == 15, "LDR (literal)");
 		reject(index && add && !wback, "LDRT");
@@ -2111,7 +2111,7 @@ void ARMv7_instrs::LDR_LIT(ARMv7Context& context, const ARMv7Code code, const AR
 		cond = context.ITSTATE.advance();
 		t = (code.data & 0xf000) >> 12;
 		imm32 = (code.data & 0xfff);
-		add = (code.data & 0x800000);
+		add = (code.data & 0x800000) != 0;
 
 		reject(t == 15 && context.ITSTATE, "UNPREDICTABLE");
 		break;
@@ -2237,9 +2237,9 @@ void ARMv7_instrs::LDRB_IMM(ARMv7Context& context, const ARMv7Code code, const A
 		t = (code.data & 0xf000) >> 12;
 		n = (code.data & 0xf0000) >> 16;
 		imm32 = (code.data & 0xff);
-		index = (code.data & 0x400);
-		add = (code.data & 0x200);
-		wback = (code.data & 0x100);
+		index = (code.data & 0x400) != 0;
+		add = (code.data & 0x200) != 0;
+		wback = (code.data & 0x100) != 0;
 
 		reject(t == 15 && index && !add && !wback, "PLD");
 		reject(n == 15, "LDRB (literal)");
@@ -2356,9 +2356,9 @@ void ARMv7_instrs::LDRD_IMM(ARMv7Context& context, const ARMv7Code code, const A
 		t2 = (code.data & 0xf00) >> 8;
 		n = (code.data & 0xf0000) >> 16;
 		imm32 = (code.data & 0xff) << 2;
-		index = (code.data & 0x1000000);
-		add = (code.data & 0x800000);
-		wback = (code.data & 0x200000);
+		index = (code.data & 0x1000000) != 0;
+		add = (code.data & 0x800000) != 0;
+		wback = (code.data & 0x200000) != 0;
 
 		reject(!index && !wback, "Related encodings");
 		reject(n == 15, "LDRD (literal)");
@@ -2404,7 +2404,7 @@ void ARMv7_instrs::LDRD_LIT(ARMv7Context& context, const ARMv7Code code, const A
 		t = (code.data & 0xf000) >> 12;
 		t2 = (code.data & 0xf00) >> 8;
 		imm32 = (code.data & 0xff) << 2;
-		add = (code.data & 0x800000);
+		add = (code.data & 0x800000) != 0;
 
 		reject(!(code.data & 0x1000000), "Related encodings"); // ???
 		reject(t == 13 || t == 15 || t2 == 13 || t2 == 15 || t == t2, "UNPREDICTABLE");
@@ -2480,9 +2480,9 @@ void ARMv7_instrs::LDRH_IMM(ARMv7Context& context, const ARMv7Code code, const A
 		t = (code.data & 0xf000) >> 12;
 		n = (code.data & 0xf0000) >> 16;
 		imm32 = (code.data & 0xff);
-		index = (code.data & 0x400);
-		add = (code.data & 0x200);
-		wback = (code.data & 0x100);
+		index = (code.data & 0x400) != 0;
+		add = (code.data & 0x200) != 0;
+		wback = (code.data & 0x100) != 0;
 
 		reject(n == 15, "LDRH (literal)");
 		reject(t == 15 && index && !add && !wback, "Unallocated memory hints");
@@ -2561,9 +2561,9 @@ void ARMv7_instrs::LDRSB_IMM(ARMv7Context& context, const ARMv7Code code, const 
 		t = (code.data & 0xf000) >> 12;
 		n = (code.data & 0xf0000) >> 16;
 		imm32 = (code.data & 0xff);
-		index = (code.data & 0x400);
-		add = (code.data & 0x200);
-		wback = (code.data & 0x100);
+		index = (code.data & 0x400) != 0;
+		add = (code.data & 0x200) != 0;
+		wback = (code.data & 0x100) != 0;
 
 		reject(t == 15 && index && !add && !wback, "PLI");
 		reject(n == 15, "LDRSB (literal)");
@@ -2730,7 +2730,7 @@ void ARMv7_instrs::LSL_IMM(ARMv7Context& context, const ARMv7Code code, const AR
 		cond = context.ITSTATE.advance();
 		d = (code.data & 0xf00) >> 8;
 		m = (code.data & 0xf);
-		set_flags = (code.data & 0x100000);
+		set_flags = (code.data & 0x100000) != 0;
 		DecodeImmShift(0, (code.data & 0x7000) >> 10 | (code.data & 0xc0) >> 6, &shift_n);
 
 		reject(!shift_n, "MOV (register)");
@@ -2782,7 +2782,7 @@ void ARMv7_instrs::LSL_REG(ARMv7Context& context, const ARMv7Code code, const AR
 		d = (code.data & 0xf00) >> 8;
 		n = (code.data & 0xf0000) >> 16;
 		m = (code.data & 0xf);
-		set_flags = (code.data & 0x100000);
+		set_flags = (code.data & 0x100000) != 0;
 
 		reject(d == 13 || d == 15 || n == 13 || n == 15 || m == 13 || m == 15, "UNPREDICTABLE");
 		break;
@@ -2833,7 +2833,7 @@ void ARMv7_instrs::LSR_IMM(ARMv7Context& context, const ARMv7Code code, const AR
 		cond = context.ITSTATE.advance();
 		d = (code.data & 0xf00) >> 8;
 		m = (code.data & 0xf);
-		set_flags = (code.data & 0x100000);
+		set_flags = (code.data & 0x100000) != 0;
 		DecodeImmShift(1, (code.data & 0x7000) >> 10 | (code.data & 0xc0) >> 6, &shift_n);
 
 		reject(d == 13 || d == 15 || m == 13 || m == 15, "UNPREDICTABLE");
@@ -2911,7 +2911,7 @@ void ARMv7_instrs::MOV_IMM(ARMv7Context& context, const ARMv7Code code, const AR
 	case T2:
 	{
 		cond = context.ITSTATE.advance();
-		set_flags = (code.data & 0x100000);
+		set_flags = (code.data & 0x100000) != 0;
 		d = (code.data >> 8) & 0xf;
 		imm32 = ThumbExpandImm_C((code.data & 0x4000000) >> 15 | (code.data & 0x7000) >> 4 | (code.data & 0xff), carry, carry);
 
@@ -2990,7 +2990,7 @@ void ARMv7_instrs::MOV_REG(ARMv7Context& context, const ARMv7Code code, const AR
 		cond = context.ITSTATE.advance();
 		d = (code.data & 0xf00) >> 8;
 		m = (code.data & 0xf);
-		set_flags = (code.data & 0x100000);
+		set_flags = (code.data & 0x100000) != 0;
 
 		reject((d == 13 || m == 13 || m == 15) && set_flags, "UNPREDICTABLE");
 		reject((d == 13 && (m == 13 || m == 15)) || d == 15, "UNPREDICTABLE");
@@ -3144,7 +3144,7 @@ void ARMv7_instrs::MVN_IMM(ARMv7Context& context, const ARMv7Code code, const AR
 	{
 		cond = context.ITSTATE.advance();
 		d = (code.data & 0xf00) >> 8;
-		set_flags = (code.data & 0x100000);
+		set_flags = (code.data & 0x100000) != 0;
 		imm32 = ThumbExpandImm_C((code.data & 0x4000000) >> 15 | (code.data & 0x7000) >> 4 | (code.data & 0xff), context.APSR.C, carry);
 
 		reject(d == 13 || d == 15, "UNPREDICTABLE");
@@ -3195,7 +3195,7 @@ void ARMv7_instrs::MVN_REG(ARMv7Context& context, const ARMv7Code code, const AR
 		cond = context.ITSTATE.advance();
 		d = (code.data & 0xf00) >> 8;
 		m = (code.data & 0xf);
-		set_flags = (code.data & 0x100000);
+		set_flags = (code.data & 0x100000) != 0;
 		shift_t = DecodeImmShift((code.data & 0x30) >> 4, (code.data & 0x7000) >> 10 | (code.data & 0xc0) >> 6, &shift_n);
 
 		reject(d == 13 || d == 15 || m == 13 || m == 15, "UNPREDICTABLE");
@@ -3304,7 +3304,7 @@ void ARMv7_instrs::ORR_IMM(ARMv7Context& context, const ARMv7Code code, const AR
 		cond = context.ITSTATE.advance();
 		d = (code.data & 0xf00) >> 8;
 		n = (code.data & 0xf0000) >> 16;
-		set_flags = (code.data & 0x100000);
+		set_flags = (code.data & 0x100000) != 0;
 		imm32 = ThumbExpandImm_C((code.data & 0x4000000) >> 15 | (code.data & 0x7000) >> 4 | (code.data & 0xff), carry, carry);
 
 		reject(n == 15, "MOV (immediate)");
@@ -3357,7 +3357,7 @@ void ARMv7_instrs::ORR_REG(ARMv7Context& context, const ARMv7Code code, const AR
 		d = (code.data & 0xf00) >> 8;
 		n = (code.data & 0xf0000) >> 16;
 		m = (code.data & 0xf);
-		set_flags = (code.data & 0x100000);
+		set_flags = (code.data & 0x100000) != 0;
 		shift_t = DecodeImmShift((code.data & 0x30) >> 4, (code.data & 0x7000) >> 10 | (code.data & 0xc0) >> 6, &shift_n);
 
 		reject(n == 15, "ROR (immediate)");
@@ -3725,7 +3725,7 @@ void ARMv7_instrs::ROR_IMM(ARMv7Context& context, const ARMv7Code code, const AR
 		cond = context.ITSTATE.advance();
 		d = (code.data & 0xf00) >> 8;
 		m = (code.data & 0xf);
-		set_flags = (code.data & 0x100000);
+		set_flags = (code.data & 0x100000) != 0;
 		const u32 shift_t = DecodeImmShift(3, (code.data & 0x7000) >> 10 | (code.data & 0xc0) >> 6, &shift_n);
 
 		reject(shift_t == SRType_RRX, "RRX");
@@ -3777,7 +3777,7 @@ void ARMv7_instrs::ROR_REG(ARMv7Context& context, const ARMv7Code code, const AR
 		d = (code.data & 0xf00) >> 8;
 		n = (code.data & 0xf0000) >> 16;
 		m = (code.data & 0xf);
-		set_flags = (code.data & 0x100000);
+		set_flags = (code.data & 0x100000) != 0;
 
 		reject(d == 13 || d == 15 || n == 13 || n == 15 || m == 13 || m == 15, "UNPREDICTABLE");
 		break;
@@ -3839,7 +3839,7 @@ void ARMv7_instrs::RSB_IMM(ARMv7Context& context, const ARMv7Code code, const AR
 		cond = context.ITSTATE.advance();
 		d = (code.data & 0xf00) >> 8;
 		n = (code.data & 0xf0000) >> 16;
-		set_flags = (code.data & 0x100000);
+		set_flags = (code.data & 0x100000) != 0;
 		imm32 = ThumbExpandImm((code.data & 0x4000000) >> 15 | (code.data & 0x7000) >> 4 | (code.data & 0xff));
 
 		reject(d == 13 || d == 15 || n == 13 || n == 15, "UNPREDICTABLE");
@@ -4272,7 +4272,7 @@ void ARMv7_instrs::STM(ARMv7Context& context, const ARMv7Code code, const ARMv7_
 		cond = context.ITSTATE.advance();
 		n = (code.data & 0xf0000) >> 16;
 		reg_list = (code.data & 0x5fff);
-		wback = (code.data & 0x200000);
+		wback = (code.data & 0x200000) != 0;
 
 		reject(n == 15 || BitCount(reg_list, 16) < 2, "UNPREDICTABLE");
 		reject(wback && reg_list & (1 << n), "UNPREDICTABLE");
@@ -4384,9 +4384,9 @@ void ARMv7_instrs::STR_IMM(ARMv7Context& context, const ARMv7Code code, const AR
 		t = (code.data & 0xf000) >> 12;
 		n = (code.data & 0xf0000) >> 16;
 		imm32 = (code.data & 0xff);
-		index = (code.data & 0x400);
-		add = (code.data & 0x200);
-		wback = (code.data & 0x100);
+		index = (code.data & 0x400) != 0;
+		add = (code.data & 0x200) != 0;
+		wback = (code.data & 0x100) != 0;
 
 		reject(index && add && !wback, "STRT");
 		reject(n == 13 && index && !add && wback && imm32 == 4, "PUSH");
@@ -4516,9 +4516,9 @@ void ARMv7_instrs::STRB_IMM(ARMv7Context& context, const ARMv7Code code, const A
 		t = (code.data & 0xf000) >> 12;
 		n = (code.data & 0xf0000) >> 16;
 		imm32 = (code.data & 0xff);
-		index = (code.data & 0x400);
-		add = (code.data & 0x200);
-		wback = (code.data & 0x100);
+		index = (code.data & 0x400) != 0;
+		add = (code.data & 0x200) != 0;
+		wback = (code.data & 0x100) != 0;
 
 		reject(index && add && !wback, "STRBT");
 		reject(n == 15 || (!index && !wback), "UNDEFINED");
@@ -4623,9 +4623,9 @@ void ARMv7_instrs::STRD_IMM(ARMv7Context& context, const ARMv7Code code, const A
 		t2 = (code.data & 0xf00) >> 8;
 		n = (code.data & 0xf0000) >> 16;
 		imm32 = (code.data & 0xff) << 2;
-		index = (code.data & 0x1000000);
-		add = (code.data & 0x800000);
-		wback = (code.data & 0x200000);
+		index = (code.data & 0x1000000) != 0;
+		add = (code.data & 0x800000) != 0;
+		wback = (code.data & 0x200000) != 0;
 
 		reject(!index && !wback, "Related encodings");
 		reject(wback && (n == t || n == t2), "UNPREDICTABLE");
@@ -4704,9 +4704,9 @@ void ARMv7_instrs::STRH_IMM(ARMv7Context& context, const ARMv7Code code, const A
 		t = (code.data & 0xf000) >> 12;
 		n = (code.data & 0xf0000) >> 16;
 		imm32 = (code.data & 0xff);
-		index = (code.data & 0x400);
-		add = (code.data & 0x200);
-		wback = (code.data & 0x100);
+		index = (code.data & 0x400) != 0;
+		add = (code.data & 0x200) != 0;
+		wback = (code.data & 0x100) != 0;
 
 		reject(index && add && !wback, "STRHT");
 		reject(n == 15 || (!index && !wback), "UNDEFINED");
@@ -4888,7 +4888,7 @@ void ARMv7_instrs::SUB_IMM(ARMv7Context& context, const ARMv7Code code, const AR
 		cond = context.ITSTATE.advance();
 		d = (code.data & 0xf00) >> 8;
 		n = (code.data & 0xf0000) >> 16;
-		set_flags = (code.data & 0x100000);
+		set_flags = (code.data & 0x100000) != 0;
 		imm32 = ThumbExpandImm((code.data & 0x4000000) >> 15 | (code.data & 0x7000) >> 4 | (code.data & 0xff));
 
 		reject(d == 15 && set_flags, "CMP (immediate)");
@@ -4958,7 +4958,7 @@ void ARMv7_instrs::SUB_REG(ARMv7Context& context, const ARMv7Code code, const AR
 		d = (code.data & 0xf00) >> 8;
 		n = (code.data & 0xf0000) >> 16;
 		m = (code.data & 0xf);
-		set_flags = (code.data & 0x100000);
+		set_flags = (code.data & 0x100000) != 0;
 		shift_t = DecodeImmShift((code.data & 0x30) >> 4, (code.data & 0x7000) >> 10 | (code.data & 0xc0) >> 6, &shift_n);
 
 		reject(d == 15 && set_flags, "CMP (register)");
@@ -5021,7 +5021,7 @@ void ARMv7_instrs::SUB_SPI(ARMv7Context& context, const ARMv7Code code, const AR
 	{
 		cond = context.ITSTATE.advance();
 		d = (code.data & 0xf00) >> 8;
-		set_flags = (code.data & 0x100000);
+		set_flags = (code.data & 0x100000) != 0;
 		imm32 = ThumbExpandImm((code.data & 0x4000000) >> 15 | (code.data & 0x7000) >> 4 | (code.data & 0xff));
 
 		reject(d == 15 && set_flags, "CMP (immediate)");

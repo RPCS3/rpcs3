@@ -79,7 +79,7 @@ void execute_psv_func_by_index(ARMv7Context& context, u32 index)
 		}
 		else
 		{
-			throw "Unimplemented function";
+			throw EXCEPTION("Unimplemented function");
 		}
 
 		// rough error code processing
@@ -92,7 +92,7 @@ void execute_psv_func_by_index(ARMv7Context& context, u32 index)
 	}
 	else
 	{
-		throw "Invalid function index";
+		throw EXCEPTION("Invalid function index");
 	}
 }
 

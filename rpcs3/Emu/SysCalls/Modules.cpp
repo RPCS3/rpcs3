@@ -119,31 +119,27 @@ void execute_ppu_func_by_index(PPUThread& CPU, u32 index)
 
 			if (last_code)
 			{
-				CPU.hle_code = func->id;
-				throw "Unfortunately, this function cannot be called from the callback.";
+				throw EXCEPTION("This function cannot be called from the callback: %s (0x%llx)", SysCalls::GetFuncName(func->id), func->id);
 			}
 
 			if (!func->lle_func)
 			{
-				CPU.hle_code = func->id;
-				throw "Wrong usage: LLE function not set.";
+				throw EXCEPTION("LLE function not set: %s (0x%llx)", SysCalls::GetFuncName(func->id), func->id);
 			}
 
 			if (func->flags & MFF_FORCED_HLE)
 			{
-				CPU.hle_code = func->id;
-				throw "Wrong usage: Forced HLE enabled.";
+				throw EXCEPTION("Forced HLE enabled: %s (0x%llx)", SysCalls::GetFuncName(func->id), func->id);
 			}
 
 			if (Ini.HLELogging.GetValue())
 			{
-				LOG_NOTICE(HLE, "Branch to LLE function: %s", SysCalls::GetFuncName(func->id));
+				LOG_NOTICE(HLE, "Branch to LLE function: %s (0x%llx)", SysCalls::GetFuncName(func->id), func->id);
 			}
 
 			if (index & EIF_PERFORM_BLR)
 			{
-				CPU.hle_code = func->id;
-				throw EXCEPTION("TODO: Branch with link (%s)", SysCalls::GetFuncName(func->id));
+				throw EXCEPTION("TODO: Branch with link: %s (0x%llx)", SysCalls::GetFuncName(func->id), func->id);
 				// CPU.LR = CPU.PC + 4;
 			}
 
@@ -207,7 +203,7 @@ void execute_ppu_func_by_index(PPUThread& CPU, u32 index)
 	}
 	else
 	{
-		throw "Invalid function index";
+		throw EXCEPTION("Invalid function index (0x%x)", index);
 	}
 }
 

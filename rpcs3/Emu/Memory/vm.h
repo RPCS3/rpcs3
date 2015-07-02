@@ -64,36 +64,45 @@ namespace vm
 	u32 alloc(u32 addr, u32 size, memory_location location = user_space);
 	void dealloc(u32 addr, memory_location location = user_space);
 	
-	template<typename T = void>
-	T* get_ptr(u32 addr)
+	template<typename T = void> T* get_ptr(u32 addr)
 	{
 		return reinterpret_cast<T*>(static_cast<u8*>(g_base_addr) + addr);
 	}
 
-	template<typename T>
-	T& get_ref(u32 addr)
+	template<typename T> T& get_ref(u32 addr)
 	{
 		return *get_ptr<T>(addr);
 	}
 
-	template<typename T = void>
-	T* priv_ptr(u32 addr)
+	template<typename T = void> T* priv_ptr(u32 addr)
 	{
 		return reinterpret_cast<T*>(static_cast<u8*>(g_priv_addr) + addr);
 	}
 
-	template<typename T>
-	T& priv_ref(u32 addr)
+	template<typename T> T& priv_ref(u32 addr)
 	{
 		return *priv_ptr<T>(addr);
 	}
 
-	u32 get_addr(const void* real_pointer);
+	inline u32 get_addr(const void* real_pointer)
+	{
+		const uintptr_t diff = reinterpret_cast<uintptr_t>(real_pointer) - reinterpret_cast<uintptr_t>(g_base_addr);
+		const u32 res = static_cast<u32>(diff);
 
-	never_inline void error(const u64 addr, const char* func);
+		if (res == diff)
+		{
+			return res;
+		}
 
-	template<typename T>
-	struct cast_ptr
+		if (real_pointer)
+		{
+			throw EXCEPTION("Not a virtual memory pointer (%p)", real_pointer);
+		}
+
+		return 0;
+	}
+
+	template<typename T> struct cast_ptr
 	{
 		static_assert(std::is_same<T, u32>::value, "Unsupported vm::cast() type");
 
@@ -103,8 +112,7 @@ namespace vm
 		}
 	};
 
-	template<>
-	struct cast_ptr<u32>
+	template<> struct cast_ptr<u32>
 	{
 		force_inline static u32 cast(const u32 addr, const char* func)
 		{
@@ -112,23 +120,22 @@ namespace vm
 		}
 	};
 
-	template<>
-	struct cast_ptr<u64>
+	template<> struct cast_ptr<u64>
 	{
 		force_inline static u32 cast(const u64 addr, const char* func)
 		{
 			const u32 res = static_cast<u32>(addr);
+
 			if (res != addr)
 			{
-				vm::error(addr, func);
+				throw EXCEPTION("%s(): failed to cast 0x%llx (too big value)", func, addr);
 			}
 
 			return res;
 		}
 	};
 
-	template<typename T>
-	struct cast_ptr<be_t<T>>
+	template<typename T> struct cast_ptr<be_t<T>>
 	{
 		force_inline static u32 cast(const be_t<T>& addr, const char* func)
 		{
@@ -136,8 +143,7 @@ namespace vm
 		}
 	};
 
-	template<typename T>
-	struct cast_ptr<le_t<T>>
+	template<typename T> struct cast_ptr<le_t<T>>
 	{
 		force_inline static u32 cast(const le_t<T>& addr, const char* func)
 		{
@@ -145,8 +151,7 @@ namespace vm
 		}
 	};
 
-	template<typename T>
-	force_inline static u32 cast(const T& addr, const char* func = "vm::cast")
+	template<typename T> force_inline static u32 cast(const T& addr, const char* func = "vm::cast")
 	{
 		return cast_ptr<T>::cast(addr, func);
 	}

@@ -509,12 +509,12 @@ void PPUThread::DumpInformation() const
 {
 	if (hle_code < 0)
 	{
-		LOG_SUCCESS(HLE, "Information: syscall %lld (%s)", ~hle_code, SysCalls::GetFuncName(hle_code));
+		LOG_SUCCESS(HLE, "Last function: syscall %lld (%s)", ~hle_code, SysCalls::GetFuncName(hle_code));
 	}
 
 	if (hle_code > 0)
 	{
-		LOG_SUCCESS(HLE, "Information: function 0x%llx (%s)", hle_code, SysCalls::GetFuncName(hle_code));
+		LOG_SUCCESS(HLE, "Last function: %s (0x%llx)", SysCalls::GetFuncName(hle_code), hle_code);
 	}
 
 	CPUThread::DumpInformation();

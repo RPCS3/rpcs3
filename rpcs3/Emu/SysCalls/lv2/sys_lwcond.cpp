@@ -13,12 +13,6 @@
 
 SysCallBase sys_lwcond("sys_lwcond");
 
-void lwcond_create(sys_lwcond_t& lwcond, sys_lwmutex_t& lwmutex, u64 name)
-{
-	lwcond.lwmutex.set(vm::get_addr(&lwmutex));
-	lwcond.lwcond_queue = Emu.GetIdManager().make<lv2_lwcond_t>(name);
-}
-
 s32 _sys_lwcond_create(vm::ptr<u32> lwcond_id, u32 lwmutex_id, vm::ptr<sys_lwcond_t> control, u64 name, u32 arg5)
 {
 	sys_lwcond.Warning("_sys_lwcond_create(lwcond_id=*0x%x, lwmutex_id=0x%x, control=*0x%x, name=0x%llx, arg5=0x%x)", lwcond_id, lwmutex_id, control, name, arg5);

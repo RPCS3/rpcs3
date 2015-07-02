@@ -199,7 +199,7 @@ public:
 	//u64 join()
 	//{
 	//	if (!joinable())
-	//		throw "thread must be joinable for join";
+	//		throw EXCEPTION("thread must be joinable for join");
 
 	//	thread->SetJoinable(false);
 

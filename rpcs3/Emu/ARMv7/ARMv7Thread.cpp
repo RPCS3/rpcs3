@@ -60,7 +60,7 @@ u32 armv7_get_tls(u32 thread)
 		}
 	}
 
-	throw "Out of TLS memory";
+	throw EXCEPTION("Out of TLS memory");
 }
 
 void armv7_free_tls(u32 thread)

@@ -91,16 +91,6 @@ public:
 		m_id_map.clear();
 		m_cur_id = 1; // first ID
 	}
-	
-	//// add new ID using existing std::shared_ptr (not recommended, use make() instead)
-	//template<typename T> u32 add(std::shared_ptr<T> data, u32 type = ID_type<T>::type)
-	//{
-	//	std::lock_guard<std::mutex> lock(m_mutex);
-
-	//	m_id_map.emplace(m_cur_id, ID_data_t(std::move(data), type));
-
-	//	return m_cur_id++;
-	//}
 
 	// add new ID of specified type with specified constructor arguments (returns object)
 	template<typename T, typename... Args, typename = std::enable_if_t<std::is_constructible<T, Args...>::value>> std::shared_ptr<T> make_ptr(Args&&... args)
