@@ -5,10 +5,6 @@
       <Configuration>Debug - LLVM</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
-    <ProjectConfiguration Include="Debug - MemLeak|Win32">
-      <Configuration>Debug - MemLeak</Configuration>
-      <Platform>Win32</Platform>
-    </ProjectConfiguration>
     <ProjectConfiguration Include="Debug - MemLeak|x64">
       <Configuration>Debug - MemLeak</Configuration>
       <Platform>x64</Platform>
