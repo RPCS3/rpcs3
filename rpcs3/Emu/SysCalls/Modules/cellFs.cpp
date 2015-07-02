@@ -505,7 +505,7 @@ s32 cellFsStReadStart(u32 fd, u64 offset, u64 size)
 			if (file->st_total_read - file->st_copied <= file->st_ringbuf_size - file->st_block_size && file->st_total_read < file->st_read_size)
 			{
 				// get buffer position
-				const u32 position = vm::cast(file->st_buffer + file->st_total_read % file->st_ringbuf_size);
+				const u32 position = VM_CAST(file->st_buffer + file->st_total_read % file->st_ringbuf_size);
 
 				// read data
 				auto old = file->file->Tell();
@@ -595,7 +595,7 @@ s32 cellFsStRead(u32 fd, vm::ptr<u8> buf, u64 size, vm::ptr<u64> rsize)
 	}
 
 	const u64 copied = file->st_copied.load();
-	const u32 position = vm::cast(file->st_buffer + copied % file->st_ringbuf_size);
+	const u32 position = VM_CAST(file->st_buffer + copied % file->st_ringbuf_size);
 	const u64 total_read = file->st_total_read.load();
 	const u64 copy_size = (*rsize = std::min<u64>(size, total_read - copied)); // write rsize
 	
@@ -629,7 +629,7 @@ s32 cellFsStReadGetCurrentAddr(u32 fd, vm::ptr<u32> addr, vm::ptr<u64> size)
 	}
 
 	const u64 copied = file->st_copied.load();
-	const u32 position = vm::cast(file->st_buffer + copied % file->st_ringbuf_size);
+	const u32 position = VM_CAST(file->st_buffer + copied % file->st_ringbuf_size);
 	const u64 total_read = file->st_total_read.load();
 
 	if ((*size = std::min<u64>(file->st_ringbuf_size - (position - file->st_buffer), total_read - copied)).data())

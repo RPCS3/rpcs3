@@ -24,12 +24,12 @@ namespace vm
 
 		T& get_ref() const
 		{
-			return vm::get_ref<T>(vm::cast(m_addr));
+			return vm::get_ref<T>(VM_CAST(m_addr));
 		}
 
 		T& priv_ref() const
 		{
-			return vm::priv_ref<T>(vm::cast(m_addr));
+			return vm::priv_ref<T>(VM_CAST(m_addr));
 		}
 
 		// TODO: conversion operator (seems hard to define it correctly)

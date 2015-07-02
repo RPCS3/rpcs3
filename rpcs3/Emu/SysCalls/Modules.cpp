@@ -106,7 +106,7 @@ void execute_ppu_func_by_index(PPUThread& CPU, u32 index)
 		// save RTOC if necessary
 		if (index & EIF_SAVE_RTOC)
 		{
-			vm::write64(vm::cast(CPU.GPR[1] + 0x28), CPU.GPR[2]);
+			vm::write64(VM_CAST(CPU.GPR[1] + 0x28), CPU.GPR[2]);
 		}
 
 		// save old syscall/NID value
@@ -196,7 +196,7 @@ void execute_ppu_func_by_index(PPUThread& CPU, u32 index)
 		if (index & EIF_PERFORM_BLR)
 		{
 			// return if necessary
-			CPU.PC = vm::cast(CPU.LR & ~3) - 4;
+			CPU.PC = VM_CAST(CPU.LR & ~3) - 4;
 		}
 
 		CPU.hle_code = last_code;

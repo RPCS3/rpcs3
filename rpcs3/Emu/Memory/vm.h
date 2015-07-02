@@ -86,7 +86,7 @@ namespace vm
 
 	inline u32 get_addr(const void* real_pointer)
 	{
-		const uintptr_t diff = reinterpret_cast<uintptr_t>(real_pointer) - reinterpret_cast<uintptr_t>(g_base_addr);
+		const std::uintptr_t diff = reinterpret_cast<std::uintptr_t>(real_pointer) - reinterpret_cast<std::uintptr_t>(g_base_addr);
 		const u32 res = static_cast<u32>(diff);
 
 		if (res == diff)
@@ -104,9 +104,9 @@ namespace vm
 
 	template<typename T> struct cast_ptr
 	{
-		static_assert(std::is_same<T, u32>::value, "Unsupported vm::cast() type");
+		static_assert(std::is_same<T, u32>::value, "Unsupported VM_CAST() type");
 
-		force_inline static u32 cast(const T& addr, const char* func)
+		force_inline static u32 cast(const T& addr, const char* file, int line, const char* func)
 		{
 			return 0;
 		}
@@ -114,7 +114,7 @@ namespace vm
 
 	template<> struct cast_ptr<u32>
 	{
-		force_inline static u32 cast(const u32 addr, const char* func)
+		force_inline static u32 cast(const u32 addr, const char* file, int line, const char* func)
 		{
 			return addr;
 		}
@@ -122,13 +122,13 @@ namespace vm
 
 	template<> struct cast_ptr<u64>
 	{
-		force_inline static u32 cast(const u64 addr, const char* func)
+		force_inline static u32 cast(const u64 addr, const char* file, int line, const char* func)
 		{
 			const u32 res = static_cast<u32>(addr);
 
 			if (res != addr)
 			{
-				throw EXCEPTION("%s(): failed to cast 0x%llx (too big value)", func, addr);
+				throw fmt::exception(file, line, func, "VM_CAST failed (addr=0x%llx)", addr);
 			}
 
 			return res;
@@ -137,23 +137,24 @@ namespace vm
 
 	template<typename T> struct cast_ptr<be_t<T>>
 	{
-		force_inline static u32 cast(const be_t<T>& addr, const char* func)
+		force_inline static u32 cast(const be_t<T>& addr, const char* file, int line, const char* func)
 		{
-			return cast_ptr<T>::cast(addr.value(), func);
+			return cast_ptr<T>::cast(addr.value(), file, line, func);
 		}
 	};
 
 	template<typename T> struct cast_ptr<le_t<T>>
 	{
-		force_inline static u32 cast(const le_t<T>& addr, const char* func)
+		force_inline static u32 cast(const le_t<T>& addr, const char* file, int line, const char* func)
 		{
-			return cast_ptr<T>::cast(addr.value(), func);
+			return cast_ptr<T>::cast(addr.value(), file, line, func);
 		}
 	};
 
-	template<typename T> force_inline static u32 cast(const T& addr, const char* func = "vm::cast")
+	// function for VM_CAST
+	template<typename T> force_inline static u32 impl_cast(const T& addr, const char* file, int line, const char* func)
 	{
-		return cast_ptr<T>::cast(addr, func);
+		return cast_ptr<T>::cast(addr, file, line, func);
 	}
 
 	static u8 read8(u32 addr)

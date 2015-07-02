@@ -111,6 +111,7 @@ template<typename T> struct ID_type;
 
 #define WRAP_EXPR(expr) [&]{ return (expr); }
 #define EXCEPTION(text, ...) fmt::exception(__FILE__, __LINE__, __FUNCTION__, text, ##__VA_ARGS__)
+#define VM_CAST(value) vm::impl_cast(value, __FILE__, __LINE__, __FUNCTION__)
 
 #define _PRGNAME_ "RPCS3"
 #define _PRGVER_ "0.0.0.5"

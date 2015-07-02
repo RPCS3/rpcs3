@@ -609,7 +609,7 @@ namespace vm
 		{
 			PPUThread& context = static_cast<PPUThread&>(CPU);
 
-			old_pos = vm::cast(context.GPR[1], "SP");
+			old_pos = VM_CAST(context.GPR[1]);
 			context.GPR[1] -= align(size, 8); // room minimal possible size
 			context.GPR[1] &= ~(align_v - 1); // fix stack alignment
 

@@ -509,7 +509,7 @@ void spursHandlerWaitReady(PPUThread& CPU, vm::ptr<CellSpurs> spurs)
 /// Entry point of the SPURS handler thread. This thread is responsible for starting the SPURS SPU thread group.
 void spursHandlerEntry(PPUThread& CPU)
 {
-	auto spurs = vm::ptr<CellSpurs>::make(vm::cast(CPU.GPR[3]));
+	auto spurs = vm::ptr<CellSpurs>::make(VM_CAST(CPU.GPR[3]));
 
 	if (spurs->flags & SAF_UNKNOWN_FLAG_30)
 	{
@@ -631,7 +631,7 @@ s32 spursWakeUpShutdownCompletionWaiter(PPUThread& CPU, vm::ptr<CellSpurs> spurs
 /// Entry point of the SPURS event helper thread
 void spursEventHelperEntry(PPUThread& CPU)
 {
-	const auto spurs = vm::ptr<CellSpurs>::make(vm::cast(CPU.GPR[3]));
+	const auto spurs = vm::ptr<CellSpurs>::make(VM_CAST(CPU.GPR[3]));
 
 	bool terminate = false;
 
@@ -3270,7 +3270,7 @@ s32 cellSpursEventFlagGetTasksetAddress(vm::ptr<CellSpursEventFlag> eventFlag, v
 		return CELL_SPURS_TASK_ERROR_ALIGN;
 	}
 
-	taskset->set(eventFlag->isIwl ? 0u : vm::cast(eventFlag->addr));
+	taskset->set(eventFlag->isIwl ? 0u : VM_CAST(eventFlag->addr));
 	return CELL_OK;
 }
 

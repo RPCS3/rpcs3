@@ -269,7 +269,7 @@ void SPUThread::do_dma_transfer(u32 cmd, spu_mfc_arg_t args)
 		_mm_mfence();
 	}
 
-	u32 eal = vm::cast(args.ea, "ea");
+	u32 eal = VM_CAST(args.ea);
 
 	if (eal >= SYS_SPU_THREAD_BASE_LOW && m_type == CPU_THREAD_SPU) // SPU Thread Group MMIO (LS and SNR)
 	{
@@ -419,7 +419,7 @@ void SPUThread::process_mfc_cmd(u32 cmd)
 			break;
 		}
 
-		vm::reservation_acquire(vm::get_ptr(offset + ch_mfc_args.lsa), vm::cast(ch_mfc_args.ea), 128, [this]()
+		vm::reservation_acquire(vm::get_ptr(offset + ch_mfc_args.lsa), VM_CAST(ch_mfc_args.ea), 128, [this]()
 		{
 			ch_event_stat |= SPU_EVENT_LR;
 			cv.notify_one();
@@ -436,7 +436,7 @@ void SPUThread::process_mfc_cmd(u32 cmd)
 			break;
 		}
 
-		if (vm::reservation_update(vm::cast(ch_mfc_args.ea), vm::get_ptr(offset + ch_mfc_args.lsa), 128))
+		if (vm::reservation_update(VM_CAST(ch_mfc_args.ea), vm::get_ptr(offset + ch_mfc_args.lsa), 128))
 		{
 			ch_atomic_stat.push_uncond(MFC_PUTLLC_SUCCESS);
 		}
@@ -456,9 +456,9 @@ void SPUThread::process_mfc_cmd(u32 cmd)
 			break;
 		}
 
-		vm::reservation_op(vm::cast(ch_mfc_args.ea), 128, [this]()
+		vm::reservation_op(VM_CAST(ch_mfc_args.ea), 128, [this]()
 		{
-			memcpy(vm::priv_ptr(vm::cast(ch_mfc_args.ea)), vm::get_ptr(offset + ch_mfc_args.lsa), 128);
+			memcpy(vm::priv_ptr(VM_CAST(ch_mfc_args.ea)), vm::get_ptr(offset + ch_mfc_args.lsa), 128);
 		});
 
 		if (cmd == MFC_PUTLLUC_CMD)

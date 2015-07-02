@@ -634,7 +634,7 @@ int FPRdouble::Cmp(PPCdouble a, PPCdouble b)
 
 u64 PPUThread::GetStackArg(s32 i)
 {
-	return vm::read64(vm::cast(GPR[1] + 0x70 + 0x8 * (i - 9)));
+	return vm::read64(VM_CAST(GPR[1] + 0x70 + 0x8 * (i - 9)));
 }
 
 void PPUThread::FastCall2(u32 addr, u32 rtoc)

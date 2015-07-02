@@ -37,14 +37,14 @@ namespace vm
 		template<typename MT, typename T2, typename = if_comparable_t<T, T2>> _ptr_base<MT> of(MT T2::*const member) const
 		{
 			const u32 offset = static_cast<u32>(reinterpret_cast<std::ptrdiff_t>(&(reinterpret_cast<T*>(0ull)->*member)));
-			return{ vm::cast(m_addr + offset) };
+			return{ VM_CAST(m_addr + offset) };
 		}
 
 		// get vm pointer to array member with array subscribtion
 		template<typename MT, typename T2, typename = if_comparable_t<T, T2>> _ptr_base<std::remove_extent_t<MT>> of(MT T2::*const member, u32 index) const
 		{
 			const u32 offset = static_cast<u32>(reinterpret_cast<std::ptrdiff_t>(&(reinterpret_cast<T*>(0ull)->*member)));
-			return{ vm::cast(m_addr + offset + sizeof32(T) * index) };
+			return{ VM_CAST(m_addr + offset + sizeof32(T) * index) };
 		}
 		
 		template<typename CT> std::enable_if_t<std::is_assignable<AT&, CT>::value> set(const CT& value)
@@ -59,12 +59,12 @@ namespace vm
 
 		T* get_ptr() const
 		{
-			return vm::get_ptr<T>(vm::cast(m_addr));
+			return vm::get_ptr<T>(VM_CAST(m_addr));
 		}
 
 		T* priv_ptr() const
 		{
-			return vm::priv_ptr<T>(vm::cast(m_addr));
+			return vm::priv_ptr<T>(VM_CAST(m_addr));
 		}
 
 		T* operator ->() const
@@ -76,13 +76,13 @@ namespace vm
 		{
 			static_assert(!std::is_void<T>::value, "vm::_ptr_base<> error: operator[] is not available for void pointers");
 
-			return vm::get_ref<T>(vm::cast(m_addr + sizeof32(T) * index));
+			return vm::get_ref<T>(VM_CAST(m_addr + sizeof32(T) * index));
 		}
 
 		// enable only the conversions which are originally possible between pointer types
 		template<typename T2, typename AT2, typename = std::enable_if_t<std::is_convertible<T*, T2*>::value>> operator _ptr_base<T2, AT2>() const
 		{
-			return{ vm::cast(m_addr) };
+			return{ VM_CAST(m_addr) };
 		}
 
 		template<typename T2, typename = std::enable_if_t<std::is_convertible<T*, T2*>::value>> explicit operator T2*() const
@@ -141,7 +141,7 @@ namespace vm
 		// conversion to another function pointer
 		template<typename AT2> operator _ptr_base<type, AT2>() const
 		{
-			return{ vm::cast(m_addr) };
+			return{ VM_CAST(m_addr) };
 		}
 
 		explicit operator bool() const
@@ -265,7 +265,7 @@ template<typename T, typename AT> inline vm::_ptr_base<T, AT> operator +(const v
 // indirection operator for vm::_ptr_base
 template<typename T, typename AT> inline vm::if_arithmetical_ptr_t<T, T&> operator *(const vm::_ptr_base<T, AT>& ptr)
 {
-	return vm::get_ref<T>(vm::cast(ptr.m_addr));
+	return vm::get_ref<T>(VM_CAST(ptr.m_addr));
 }
 
 // postfix increment operator for vm::_ptr_base
