@@ -765,6 +765,14 @@ size_t get_x64_access_size(x64_context* context, x64_op_t op, x64_reg_t reg, siz
 	return d_size;
 }
 
+/**
+ * Callback that can be customised by GSRender backends to track memory access.
+ * Backends can protect memory pages and get this callback called when an access
+ * violation is met.
+ * Should return true if the backend handles the access violation.
+ */
+std::function<bool(u32 addr)> gfxHandler = [](u32) { return false; };
+
 bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 {
 	auto code = (const u8*)RIP(context);
@@ -773,6 +781,9 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 	x64_reg_t reg;
 	size_t d_size;
 	size_t i_size;
+
+	if (gfxHandler(addr))
+		return true;
 
 	// decode single x64 instruction that causes memory access
 	decode_x64_reg_op(code, op, reg, d_size, i_size);
