@@ -527,9 +527,9 @@ s32 cellFsStReadStart(u32 fd, u64 offset, u64 size)
 				{
 					const auto func = file->st_callback.exchange({}).func;
 
-					Emu.GetCallbackManager().Async([=](PPUThread& CPU)
+					Emu.GetCallbackManager().Async([=](CPUThread& CPU)
 					{
-						func(CPU, fd, available);
+						func(static_cast<PPUThread&>(CPU), fd, available);
 					});
 				}
 			}
@@ -898,9 +898,9 @@ void fsAio(vm::ptr<CellFsAio> aio, bool write, s32 xid, fs_aio_cb_t func)
 	}
 
 	// should be executed directly by FS AIO thread
-	Emu.GetCallbackManager().Async([=](PPUThread& CPU)
+	Emu.GetCallbackManager().Async([=](CPUThread& CPU)
 	{
-		func(CPU, aio, error, xid, result);
+		func(static_cast<PPUThread&>(CPU), aio, error, xid, result);
 	});
 }
 

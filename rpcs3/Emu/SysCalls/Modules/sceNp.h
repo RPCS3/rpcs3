@@ -1067,10 +1067,13 @@ struct SceNpMatching2LobbyDataInternal
 union SceNpMatching2LobbyMessageDestination
 {
 	be_t<u16> unicastTarget;
-	struct multicastTarget {
-		be_t<u16> *memberId;
+
+	struct
+	{
+		vm::bptr<u16> memberId;
 		be_t<u32> memberIdNum;
-	};
+	}
+	multicastTarget;
 };
 
 // Group label
@@ -1973,7 +1976,8 @@ struct SceNpScoreClanIdRankData
 };
 
 // Union for connection information
-union SceNpSignalingConnectionInfo {
+union SceNpSignalingConnectionInfo
+{
 	be_t<u32> rtt;
 	be_t<u32> bandwidth;
 	SceNpId npId;

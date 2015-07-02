@@ -20,31 +20,17 @@ void CallbackManager::Register(std::function<s32(PPUThread& PPU)> func)
 	});
 }
 
-void CallbackManager::Async(std::function<void(PPUThread& PPU)> func)
+void CallbackManager::Async(std::function<void(CPUThread& CPU)> func)
 {
 	std::lock_guard<std::mutex> lock(m_mutex);
 
 	m_async_list.push_back([=](CPUThread& CPU)
 	{
-		if (CPU.GetType() != CPU_THREAD_PPU) throw EXCEPTION("PPU thread expected");
-		func(static_cast<PPUThread&>(CPU));
+		func(CPU);
 	});
 
 	m_cv.notify_one();
 }
-
-//void CallbackManager::Async(std::function<void(ARMv7Context& context)> func)
-//{
-//	std::lock_guard<std::mutex> lock(m_mutex);
-//
-//	m_async_list.push_back([=](CPUThread& CPU)
-//	{
-//		if (CPU.GetType() != CPU_THREAD_ARMv7) throw EXCEPTION("ARMv7 thread expected");
-//		func(static_cast<ARMv7Thread&>(CPU));
-//	});
-//
-//	m_cv.notify_one();
-//}
 
 bool CallbackManager::Check(CPUThread& CPU, s32& result)
 {

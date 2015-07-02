@@ -1605,7 +1605,7 @@ void ARMv7_instrs::CLZ(ARMv7Context& context, const ARMv7Code code, const ARMv7_
 
 	if (ConditionPassed(context, cond))
 	{
-		context.write_gpr(d, cntlz32(context.read_gpr(m)), type == T1 ? 2 : 4);
+		context.write_gpr(d, cntlz32(context.read_gpr(m)), 4);
 	}
 }
 
@@ -3475,7 +3475,7 @@ void ARMv7_instrs::POP(ARMv7Context& context, const ARMv7Code code, const ARMv7_
 		{
 			if (reg_list & (1 << i))
 			{
-				context.write_gpr(i, *stack++, type < A1 ? 2 : 4);
+				context.write_gpr(i, *stack++, type == T1 ? 2 : 4);
 			}
 		}
 
@@ -5572,7 +5572,7 @@ void ARMv7_instrs::UXTB(ARMv7Context& context, const ARMv7Code code, const ARMv7
 
 	if (ConditionPassed(context, cond))
 	{
-		context.write_gpr(d, (context.read_gpr(m) >> rot) & 0xff, type < A1 ? 2 : 4);
+		context.write_gpr(d, (context.read_gpr(m) >> rot) & 0xff, type == T1 ? 2 : 4);
 	}
 }
 

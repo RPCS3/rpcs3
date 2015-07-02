@@ -91,7 +91,7 @@ s32 sceKernelExitThread(ARMv7Context& context, s32 exitStatus)
 	sceLibKernel.Warning("sceKernelExitThread(exitStatus=0x%x)", exitStatus);
 
 	// exit status is stored in r0
-	static_cast<ARMv7Thread&>(context).Stop();
+	static_cast<ARMv7Thread&>(context).Exit();
 
 	return SCE_OK;
 }
