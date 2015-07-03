@@ -309,7 +309,7 @@ void Emulator::Resume()
 
 	for (auto& t : GetCPU().GetAllThreads())
 	{
-		t->Awake(); // trigger status check
+		t->Awake(); // untrigger status check
 	}
 
 	SendDbgCommand(DID_RESUMED_EMU);
@@ -327,9 +327,11 @@ void Emulator::Stop()
 
 	m_status = Stopped;
 
+	LOG_NOTICE(GENERAL, "Stopping emulator...");
+
 	for (auto& t : GetCPU().GetAllThreads())
 	{
-		t->Pause(); // trigger status check
+		t->Sleep(); // trigger status check
 	}
 
 	while (g_thread_count)
@@ -337,7 +339,7 @@ void Emulator::Stop()
 		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}
 
-	LOG_NOTICE(HLE, "All threads stopped...");
+	LOG_NOTICE(GENERAL, "All threads stopped...");
 
 	finalize_psv_modules();
 	clear_all_psv_objects();

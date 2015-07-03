@@ -140,7 +140,7 @@ union spu_channel_t
 	atomic<sync_var_t> sync_var; // atomic variable
 
 public:
-	bool push(u32 value)
+	bool try_push(u32 value)
 	{
 		bool out_result;
 
@@ -166,7 +166,7 @@ public:
 		sync_var.exchange({ 1, value });
 	}
 
-	bool pop(u32& out_value)
+	bool try_pop(u32& out_value)
 	{
 		bool out_result;
 
@@ -250,7 +250,7 @@ public:
 	}
 
 	// out_count: count after removing first element
-	bool pop(u32& out_value, u32& out_count)
+	bool try_pop(u32& out_value, u32& out_count)
 	{
 		bool out_result;
 
@@ -633,7 +633,7 @@ protected:
 	SPUThread(CPUThreadType type, const std::string& name, u32 index, u32 offset);
 
 public:
-	SPUThread(const std::string& name, u32 index, u32 offset);
+	SPUThread(const std::string& name, u32 index);
 	virtual ~SPUThread() override;
 
 	virtual bool IsPaused() const override;

@@ -102,7 +102,7 @@ s32 prx_load_module(std::string path, u64 flags, vm::ptr<sys_prx_load_module_opt
 
 			if (!func)
 			{
-				sys_prx.Error("Unimplemented function '%s' in '%s' module (0x%x)", SysCalls::GetFuncName(nid), module_.first);
+				sys_prx.Error("Unknown function '%s' in '%s' module (0x%x)", SysCalls::GetFuncName(nid), module_.first);
 
 				index = add_ppu_func(ModuleFunc(nid, 0, module, nullptr, nullptr));
 			}

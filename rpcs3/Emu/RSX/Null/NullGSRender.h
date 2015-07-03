@@ -11,8 +11,10 @@ public:
 
 	virtual ~NullGSRender() override
 	{
-		cv.notify_one();
-		join();
+		if (joinable())
+		{
+			throw EXCEPTION("Thread not joined");
+		}
 	}
 
 private:
@@ -46,6 +48,10 @@ private:
 
 	virtual void Close()
 	{
+		if (joinable())
+		{
+			join();
+		}
 	}
 
 	virtual void semaphorePGRAPHTextureReadRelease(u32 offset, u32 value) override

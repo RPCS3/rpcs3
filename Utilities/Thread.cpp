@@ -807,9 +807,9 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 	// check if address is RawSPU MMIO register
 	if (addr - RAW_SPU_BASE_ADDR < (6 * RAW_SPU_OFFSET) && (addr % RAW_SPU_OFFSET) >= RAW_SPU_PROB_OFFSET)
 	{
-		auto t = Emu.GetCPU().GetRawSPUThread((addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET);
+		auto thread = Emu.GetCPU().GetRawSPUThread((addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET);
 
-		if (!t)
+		if (!thread)
 		{
 			return false;
 		}
@@ -820,14 +820,12 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 			return false;
 		}
 
-		auto& spu = static_cast<RawSPUThread&>(*t);
-
 		switch (op)
 		{
 		case X64OP_LOAD:
 		{
 			u32 value;
-			if (is_writing || !spu.ReadReg(addr, value) || !put_x64_reg_value(context, reg, d_size, _byteswap_ulong(value)))
+			if (is_writing || !thread->ReadReg(addr, value) || !put_x64_reg_value(context, reg, d_size, _byteswap_ulong(value)))
 			{
 				return false;
 			}
@@ -837,7 +835,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 		case X64OP_STORE:
 		{
 			u64 reg_value;
-			if (!is_writing || !get_x64_reg_value(context, reg, d_size, i_size, reg_value) || !spu.WriteReg(addr, _byteswap_ulong((u32)reg_value)))
+			if (!is_writing || !get_x64_reg_value(context, reg, d_size, i_size, reg_value) || !thread->WriteReg(addr, _byteswap_ulong((u32)reg_value)))
 			{
 				return false;
 			}
@@ -1251,11 +1249,11 @@ void thread_t::start(std::function<std::string()> name, std::function<void()> fu
 		throw EXCEPTION("Thread already exists");
 	}
 
-	// create new ctrl and assign it
-	auto ctrl = std::make_shared<thread_ctrl_t>(std::move(name));
+	// create new thread control variable
+	m_thread = std::make_shared<thread_ctrl_t>(std::move(name));
 
 	// start thread
-	ctrl->m_thread = std::thread([ctrl, func]()
+	m_thread->m_thread = std::thread([](std::shared_ptr<thread_ctrl_t> ctrl, std::function<void()> func)
 	{
 		g_thread_count++;
 
@@ -1326,10 +1324,7 @@ void thread_t::start(std::function<std::string()> name, std::function<void()> fu
 #if defined(_MSC_VER)
 		_set_se_translator(old_se_translator);
 #endif
-	});
-
-	// set
-	m_thread = std::move(ctrl);
+	}, m_thread, std::move(func));
 }
 
 void thread_t::detach()
@@ -1339,7 +1334,10 @@ void thread_t::detach()
 		throw EXCEPTION("Invalid thread");
 	}
 
+	// +clear m_thread
 	const auto ctrl = std::move(m_thread);
+
+	cv.notify_all();
 
 	ctrl->m_thread.detach();
 }
@@ -1356,7 +1354,10 @@ void thread_t::join(std::unique_lock<std::mutex>& lock)
 		throw EXCEPTION("Deadlock");
 	}
 
+	// +clear m_thread
 	const auto ctrl = std::move(m_thread);
+
+	cv.notify_all();
 
 	// wait for completion
 	while (ctrl->joinable)
@@ -1381,7 +1382,10 @@ void thread_t::join()
 		throw EXCEPTION("Deadlock");
 	}
 
+	// +clear m_thread
 	const auto ctrl = std::move(m_thread);
+
+	cv.notify_all();
 
 	ctrl->m_thread.join();
 }

@@ -821,7 +821,6 @@ void GLGSRender::Close()
 {
 	if (joinable())
 	{
-		cv.notify_one();
 		join();
 	}
 

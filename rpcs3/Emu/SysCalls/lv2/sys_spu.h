@@ -141,6 +141,8 @@ enum : u32
 	SPU_TGJSF_GROUP_EXIT = (1 << 2), // set if SPU Thread Group is terminated by sys_spu_thread_group_exit
 };
 
+class SPUThread;
+
 struct spu_group_t
 {
 	const std::string name;
@@ -148,16 +150,16 @@ struct spu_group_t
 	const s32 type; // SPU Thread Group Type
 	const u32 ct; // Memory Container Id
 
-	std::array<std::shared_ptr<CPUThread>, 256> threads; // SPU Threads
+	std::array<std::shared_ptr<SPUThread>, 256> threads; // SPU Threads
 	std::array<vm::ptr<sys_spu_image>, 256> images; // SPU Images
 	std::array<spu_arg_t, 256> args; // SPU Thread Arguments
 
 	s32 prio; // SPU Thread Group Priority
-	u32 state; // SPU Thread Group State
+	volatile u32 state; // SPU Thread Group State
 	s32 exit_status; // SPU Thread Group Exit Status
 
 	std::atomic<u32> join_state; // flags used to detect exit cause
-	std::condition_variable join_cv; // used to signal waiting PPU thread
+	std::condition_variable cv; // used to signal waiting PPU thread
 
 	std::weak_ptr<lv2_event_queue_t> ep_run; // port for SYS_SPU_THREAD_GROUP_EVENT_RUN events
 	std::weak_ptr<lv2_event_queue_t> ep_exception; // TODO: SYS_SPU_THREAD_GROUP_EVENT_EXCEPTION
@@ -206,7 +208,6 @@ struct spu_group_t
 	}
 };
 
-class SPUThread;
 struct vfsStream;
 
 void LoadSpuImage(vfsStream& stream, u32& spu_ep, u32 addr);

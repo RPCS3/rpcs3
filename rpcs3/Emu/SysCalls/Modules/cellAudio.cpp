@@ -443,7 +443,6 @@ s32 cellAudioQuit()
 		return CELL_AUDIO_ERROR_NOT_INIT;
 	}
 
-	g_audio.thread.cv.notify_one();
 	g_audio.thread.join();
 	g_audio.state.exchange(AUDIO_STATE_NOT_INITIALIZED);
 	return CELL_OK;

@@ -498,7 +498,6 @@ PPUThread::PPUThread(const std::string& name)
 
 PPUThread::~PPUThread()
 {
-	cv.notify_one();
 	join();
 
 	CloseStack();
@@ -507,7 +506,7 @@ PPUThread::~PPUThread()
 
 void PPUThread::DumpInformation() const
 {
-	if (hle_code < 0)
+	if (~hle_code < 1024)
 	{
 		LOG_SUCCESS(HLE, "Last function: syscall %lld (%s)", ~hle_code, SysCalls::GetFuncName(hle_code));
 	}

@@ -924,7 +924,7 @@ s32 cellFsAioFinish(vm::cptr<char> mount_point)
 	return CELL_OK;
 }
 
-std::atomic<s32> g_fs_aio_id(0);
+std::atomic<s32> g_fs_aio_id;
 
 s32 cellFsAioRead(vm::ptr<CellFsAio> aio, vm::ptr<s32> id, fs_aio_cb_t func)
 {
@@ -984,6 +984,8 @@ s32 cellFsSetIoBufferFromDefaultContainer(u32 fd, u32 buffer_size, u32 page_type
 
 Module cellFs("cellFs", []()
 {
+	g_fs_aio_id = 1;
+
 	REG_FUNC(cellFs, cellFsOpen);
 	REG_FUNC(cellFs, cellFsSdataOpen);
 	REG_FUNC(cellFs, cellFsSdataOpenByFd);

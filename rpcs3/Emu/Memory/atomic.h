@@ -208,40 +208,69 @@ public:
 	}
 };
 
-template<typename T, typename T2 = T> using if_integral_le_t = std::enable_if_t<std::is_integral<T>::value && std::is_integral<T2>::value, le_t<T>>;
-template<typename T, typename T2 = T> using if_integral_be_t = std::enable_if_t<std::is_integral<T>::value && std::is_integral<T2>::value, be_t<T>>;
+template<typename T> using if_integral_t = std::enable_if_t<std::is_integral<T>::value>;
 
-template<typename T> inline if_integral_le_t<T> operator ++(_atomic_base<le_t<T>>& left)
+template<typename T, typename = if_integral_t<T>> inline T operator ++(_atomic_base<T>& left)
 {
 	return left.from_subtype(sync_fetch_and_add(&left.sub_data, 1) + 1);
 }
 
-template<typename T> inline if_integral_le_t<T> operator --(_atomic_base<le_t<T>>& left)
+template<typename T, typename = if_integral_t<T>> inline T operator --(_atomic_base<T>& left)
 {
 	return left.from_subtype(sync_fetch_and_sub(&left.sub_data, 1) - 1);
 }
 
-template<typename T> inline if_integral_le_t<T> operator ++(_atomic_base<le_t<T>>& left, int)
+template<typename T, typename = if_integral_t<T>> inline T operator ++(_atomic_base<T>& left, int)
 {
 	return left.from_subtype(sync_fetch_and_add(&left.sub_data, 1));
 }
 
-template<typename T> inline if_integral_le_t<T> operator --(_atomic_base<le_t<T>>& left, int)
+template<typename T, typename = if_integral_t<T>> inline T operator --(_atomic_base<T>& left, int)
 {
 	return left.from_subtype(sync_fetch_and_sub(&left.sub_data, 1));
 }
 
-template<typename T, typename T2> inline if_integral_le_t<T, T2> operator +=(_atomic_base<le_t<T>>& left, T2 right)
+template<typename T, typename T2, typename = if_integral_t<T>> inline auto operator +=(_atomic_base<T>& left, T2 right) -> decltype(std::declval<T>() + std::declval<T2>())
 {
 	return left.from_subtype(sync_fetch_and_add(&left.sub_data, right) + right);
 }
 
-template<typename T, typename T2> inline if_integral_le_t<T, T2> operator -=(_atomic_base<le_t<T>>& left, T2 right)
+template<typename T, typename T2, typename = if_integral_t<T>> inline auto operator -=(_atomic_base<T>& left, T2 right) -> decltype(std::declval<T>() - std::declval<T2>())
 {
 	return left.from_subtype(sync_fetch_and_sub(&left.sub_data, right) - right);
 }
 
-template<typename T> inline if_integral_be_t<T> operator ++(_atomic_base<be_t<T>>& left)
+template<typename T, typename = if_integral_t<T>> inline le_t<T> operator ++(_atomic_base<le_t<T>>& left)
+{
+	return left.from_subtype(sync_fetch_and_add(&left.sub_data, 1) + 1);
+}
+
+template<typename T, typename = if_integral_t<T>> inline le_t<T> operator --(_atomic_base<le_t<T>>& left)
+{
+	return left.from_subtype(sync_fetch_and_sub(&left.sub_data, 1) - 1);
+}
+
+template<typename T, typename = if_integral_t<T>> inline le_t<T> operator ++(_atomic_base<le_t<T>>& left, int)
+{
+	return left.from_subtype(sync_fetch_and_add(&left.sub_data, 1));
+}
+
+template<typename T, typename = if_integral_t<T>> inline le_t<T> operator --(_atomic_base<le_t<T>>& left, int)
+{
+	return left.from_subtype(sync_fetch_and_sub(&left.sub_data, 1));
+}
+
+template<typename T, typename T2, typename = if_integral_t<T>> inline auto operator +=(_atomic_base<le_t<T>>& left, T2 right) -> decltype(std::declval<T>() + std::declval<T2>())
+{
+	return left.from_subtype(sync_fetch_and_add(&left.sub_data, right) + right);
+}
+
+template<typename T, typename T2, typename = if_integral_t<T>> inline auto operator -=(_atomic_base<le_t<T>>& left, T2 right) -> decltype(std::declval<T>() - std::declval<T2>())
+{
+	return left.from_subtype(sync_fetch_and_sub(&left.sub_data, right) - right);
+}
+
+template<typename T, typename = if_integral_t<T>> inline be_t<T> operator ++(_atomic_base<be_t<T>>& left)
 {
 	return left.atomic_op([](be_t<T>& value) -> be_t<T>
 	{
@@ -249,7 +278,7 @@ template<typename T> inline if_integral_be_t<T> operator ++(_atomic_base<be_t<T>
 	});
 }
 
-template<typename T> inline if_integral_be_t<T> operator --(_atomic_base<be_t<T>>& left)
+template<typename T, typename = if_integral_t<T>> inline be_t<T> operator --(_atomic_base<be_t<T>>& left)
 {
 	return left.atomic_op([](be_t<T>& value) -> be_t<T>
 	{
@@ -257,7 +286,7 @@ template<typename T> inline if_integral_be_t<T> operator --(_atomic_base<be_t<T>
 	});
 }
 
-template<typename T> inline if_integral_be_t<T> operator ++(_atomic_base<be_t<T>>& left, int)
+template<typename T, typename = if_integral_t<T>> inline be_t<T> operator ++(_atomic_base<be_t<T>>& left, int)
 {
 	return left.atomic_op([](be_t<T>& value) -> be_t<T>
 	{
@@ -265,7 +294,7 @@ template<typename T> inline if_integral_be_t<T> operator ++(_atomic_base<be_t<T>
 	});
 }
 
-template<typename T> inline if_integral_be_t<T> operator --(_atomic_base<be_t<T>>& left, int)
+template<typename T, typename = if_integral_t<T>> inline be_t<T> operator --(_atomic_base<be_t<T>>& left, int)
 {
 	return left.atomic_op([](be_t<T>& value) -> be_t<T>
 	{
@@ -273,7 +302,7 @@ template<typename T> inline if_integral_be_t<T> operator --(_atomic_base<be_t<T>
 	});
 }
 
-template<typename T, typename T2> inline if_integral_be_t<T, T2> operator +=(_atomic_base<be_t<T>>& left, T2 right)
+template<typename T, typename T2, typename = if_integral_t<T>> inline auto operator +=(_atomic_base<be_t<T>>& left, T2 right) -> be_t<decltype(std::declval<T>() + std::declval<T2>())>
 {
 	return left.atomic_op([right](be_t<T>& value) -> be_t<T>
 	{
@@ -281,7 +310,7 @@ template<typename T, typename T2> inline if_integral_be_t<T, T2> operator +=(_at
 	});
 }
 
-template<typename T, typename T2> inline if_integral_be_t<T, T2> operator -=(_atomic_base<be_t<T>>& left, T2 right)
+template<typename T, typename T2, typename = if_integral_t<T>> inline auto operator -=(_atomic_base<be_t<T>>& left, T2 right) -> be_t<decltype(std::declval<T>() - std::declval<T2>())>
 {
 	return left.atomic_op([right](be_t<T>& value) -> be_t<T>
 	{

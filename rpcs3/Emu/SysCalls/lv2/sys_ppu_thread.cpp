@@ -33,8 +33,8 @@ void _sys_ppu_thread_exit(PPUThread& CPU, u64 errorcode)
 void sys_ppu_thread_yield()
 {
 	sys_ppu_thread.Log("sys_ppu_thread_yield()");
-	// Note: Or do we actually want to yield?
-	std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
+
+	std::this_thread::yield();
 }
 
 s32 sys_ppu_thread_join(PPUThread& CPU, u32 thread_id, vm::ptr<u64> vptr)

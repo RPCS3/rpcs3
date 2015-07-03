@@ -464,7 +464,7 @@ namespace loader
 
 								if (!func)
 								{
-									LOG_ERROR(LOADER, "Unimplemented function '%s' (0x%x)", SysCalls::GetFuncName(nid), addr);
+									LOG_ERROR(LOADER, "Unknown function '%s' (0x%x)", SysCalls::GetFuncName(nid), addr);
 
 									index = add_ppu_func(ModuleFunc(nid, 0, module, nullptr, nullptr));
 								}
@@ -695,7 +695,7 @@ namespace loader
 
 								if (!func)
 								{
-									LOG_ERROR(LOADER, "Unimplemented function '%s' in '%s' module (0x%x)", SysCalls::GetFuncName(nid), module_name, addr);
+									LOG_ERROR(LOADER, "Unknown function '%s' in '%s' module (0x%x)", SysCalls::GetFuncName(nid), module_name, addr);
 
 									index = add_ppu_func(ModuleFunc(nid, 0, module, nullptr, nullptr));
 								}

@@ -543,7 +543,7 @@ public:
 	bool is_joinable = true;
 	bool is_joining = false;
 
-	s64 hle_code = 0; // current syscall (inverted value) or function id (positive value)
+	u64 hle_code = 0; // current syscall (~0..~1023) or function id (1..UINT32_MAX)
 
 	std::function<void(PPUThread& CPU)> custom_task;
 

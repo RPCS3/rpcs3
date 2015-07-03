@@ -2,7 +2,7 @@
 #include "Modules.h"
 #include "SysCalls.h"
 
-std::string SysCalls::GetFuncName(const s64 fid)
+std::string SysCalls::GetFuncName(const u64 fid)
 {
 	// check syscalls
 	switch (~fid)

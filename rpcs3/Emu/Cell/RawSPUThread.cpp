@@ -16,7 +16,6 @@ RawSPUThread::RawSPUThread(const std::string& name, u32 index)
 
 RawSPUThread::~RawSPUThread()
 {
-	cv.notify_one();
 	join();
 
 	Memory.Unmap(offset);

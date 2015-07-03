@@ -168,14 +168,28 @@ void CPUThread::Step()
 
 void CPUThread::Sleep()
 {
-	m_state ^= CPU_STATE_SLEEP;
+	m_state += CPU_STATE_MAX;
+	m_state |= CPU_STATE_SLEEP;
 
 	cv.notify_one();
 }
 
 void CPUThread::Awake()
 {
-	m_state ^= CPU_STATE_SLEEP;
+	// must be called after the corresponding Sleep() call
+
+	m_state.atomic_op([](u64& state)
+	{
+		if (state < CPU_STATE_MAX)
+		{
+			throw EXCEPTION("Sleep()/Awake() inconsistency");
+		}
+
+		if ((state -= CPU_STATE_MAX) < CPU_STATE_MAX)
+		{
+			state &= ~CPU_STATE_SLEEP;
+		}
+	});
 
 	cv.notify_one();
 }

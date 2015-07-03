@@ -14,11 +14,13 @@ enum CPUThreadType
 enum : u64
 {
 	CPU_STATE_STOPPED = (1ull << 0), // basic execution state (stopped by default), removed by Exec()
-	CPU_STATE_PAUSED  = (1ull << 1), // paused by debugger (manually or after step execution)
-	CPU_STATE_SLEEP   = (1ull << 2),
-	CPU_STATE_STEP    = (1ull << 3),
-	CPU_STATE_DEAD    = (1ull << 4),
-	CPU_STATE_RETURN  = (1ull << 5),
+	CPU_STATE_PAUSED  = (1ull << 1), // pauses thread execution, set by the debugger (manually or after step execution)
+	CPU_STATE_SLEEP   = (1ull << 2), // shouldn't affect thread execution, set by Sleep() call, removed by the latest Awake() call, may possibly indicate waiting state of the thread
+	CPU_STATE_STEP    = (1ull << 3), // forces the thread to pause after executing just one instruction or something appropriate, set by the debugger
+	CPU_STATE_DEAD    = (1ull << 4), // indicates irreversible exit of the thread
+	CPU_STATE_RETURN  = (1ull << 5), // used for callback return
+
+	CPU_STATE_MAX     = (1ull << 6), // added to (subtracted from) m_state by Sleep()/Awake() calls to trigger status check
 };
 
 // "HLE return" exception event
@@ -71,16 +73,35 @@ public:
 	virtual void InitStack() = 0;
 	virtual void CloseStack() = 0;
 
+	// initialize thread
 	void Run();
+
+	// called by the debugger, don't use
 	void Pause();
+
+	// called by the debugger, don't use
 	void Resume();
+
+	// stop thread execution
 	void Stop();
+
+	// start thread execution (removing STOP status)
 	void Exec();
+
+	// exit thread execution
 	void Exit();
-	void Step(); // set STEP status, don't use
-	void Sleep(); // flip SLEEP status, don't use
-	void Awake(); // flip SLEEP status, don't use
-	bool CheckStatus(); // process m_state flags, returns true if the checker must return
+
+	// called by the debugger, don't use
+	void Step();
+
+	// trigger thread status check
+	void Sleep();
+
+	// untrigger thread status check
+	void Awake();
+
+	// process m_state flags, returns true if the checker must return
+	bool CheckStatus();
 
 	std::string GetFName() const
 	{

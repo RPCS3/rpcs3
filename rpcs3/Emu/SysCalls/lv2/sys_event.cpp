@@ -171,6 +171,8 @@ s32 sys_event_queue_receive(PPUThread& CPU, u32 equeue_id, vm::ptr<sys_event_t> 
 
 	while (queue->events.empty())
 	{
+		CHECK_EMU_STATUS;
+
 		if (queue->cancelled)
 		{
 			return CELL_ECANCELED;
@@ -180,12 +182,6 @@ s32 sys_event_queue_receive(PPUThread& CPU, u32 equeue_id, vm::ptr<sys_event_t> 
 		{
 			queue->waiters--;
 			return CELL_ETIMEDOUT;
-		}
-
-		if (Emu.IsStopped())
-		{
-			sys_event.Warning("sys_event_queue_receive(equeue_id=0x%x) aborted", equeue_id);
-			return CELL_OK;
 		}
 
 		queue->cv.wait_for(lv2_lock, std::chrono::milliseconds(1));

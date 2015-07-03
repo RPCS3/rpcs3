@@ -6,10 +6,10 @@ class PPUThread;
 
 struct lv2_int_handler_t
 {
-	std::shared_ptr<CPUThread> handler;
+	const std::shared_ptr<PPUThread> thread;
 
-	lv2_int_handler_t(const std::shared_ptr<CPUThread>& handler)
-		: handler(handler)
+	lv2_int_handler_t(const std::shared_ptr<PPUThread>& thread)
+		: thread(thread)
 	{
 	}
 };
