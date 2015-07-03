@@ -569,11 +569,8 @@ s32 cellAdecClose(u32 handle)
 
 	while (!adec->is_finished)
 	{
-		if (Emu.IsStopped())
-		{
-			cellAdec.Warning("cellAdecClose(%d) aborted", handle);
-			break;
-		}
+		CHECK_EMU_STATUS;
+
 		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 	}
 

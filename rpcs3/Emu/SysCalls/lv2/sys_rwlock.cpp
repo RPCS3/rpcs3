@@ -84,16 +84,12 @@ s32 sys_rwlock_rlock(u32 rw_lock_id, u64 timeout)
 
 	while (rwlock->writer || rwlock->wwaiters)
 	{
+		CHECK_EMU_STATUS;
+
 		if (timeout && get_system_time() - start_time > timeout)
 		{
 			rwlock->rwaiters--;
 			return CELL_ETIMEDOUT;
-		}
-
-		if (Emu.IsStopped())
-		{
-			sys_rwlock.Warning("sys_rwlock_rlock(rw_lock_id=0x%x) aborted", rw_lock_id);
-			return CELL_OK;
 		}
 
 		rwlock->rcv.wait_for(lv2_lock, std::chrono::milliseconds(1));
@@ -179,16 +175,12 @@ s32 sys_rwlock_wlock(PPUThread& CPU, u32 rw_lock_id, u64 timeout)
 
 	while (rwlock->readers || rwlock->writer)
 	{
+		CHECK_EMU_STATUS;
+
 		if (timeout && get_system_time() - start_time > timeout)
 		{
 			rwlock->wwaiters--;
 			return CELL_ETIMEDOUT;
-		}
-
-		if (Emu.IsStopped())
-		{
-			sys_rwlock.Warning("sys_rwlock_wlock(rw_lock_id=0x%x) aborted", rw_lock_id);
-			return CELL_OK;
 		}
 
 		rwlock->wcv.wait_for(lv2_lock, std::chrono::milliseconds(1));

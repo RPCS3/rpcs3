@@ -84,6 +84,28 @@ public:
 	bool is_current() const;
 };
 
+class autojoin_thread_t final : private thread_t
+{
+public:
+	using thread_t::mutex;
+	using thread_t::cv;
+
+public:
+	autojoin_thread_t() = delete;
+
+	autojoin_thread_t(std::function<std::string()> name, std::function<void()> func)
+	{
+		start(std::move(name), std::move(func));
+	}
+
+	virtual ~autojoin_thread_t() override
+	{
+		join();
+	}
+
+	using thread_t::is_current;
+};
+
 struct waiter_map_t
 {
 	static const size_t size = 16;

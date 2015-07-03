@@ -186,6 +186,8 @@ s32 sys_cond_wait(PPUThread& CPU, u32 cond_id, u64 timeout)
 
 	while (!cond->mutex->owner.expired() || !cond->signaled || cond->waiters.count(CPU.GetId()))
 	{
+		CHECK_EMU_STATUS;
+		
 		const bool is_timedout = timeout && get_system_time() - start_time > timeout;
 
 		// check timeout
@@ -201,12 +203,6 @@ s32 sys_cond_wait(PPUThread& CPU, u32 cond_id, u64 timeout)
 			}
 
 			return CELL_ETIMEDOUT;
-		}
-
-		if (Emu.IsStopped())
-		{
-			sys_cond.Warning("sys_cond_wait(id=0x%x) aborted", cond_id);
-			return CELL_OK;
 		}
 
 		// wait on appropriate condition variable

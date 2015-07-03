@@ -60,7 +60,6 @@ lv2_timer_t::lv2_timer_t()
 
 lv2_timer_t::~lv2_timer_t()
 {
-	thread.cv.notify_one();
 	thread.join();
 }
 
@@ -253,13 +252,9 @@ s32 sys_timer_sleep(u32 sleep_time)
 
 	while (useconds > (passed = get_system_time() - start_time) + 1000)
 	{
-		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		CHECK_EMU_STATUS;
 
-		if (Emu.IsStopped())
-		{
-			sys_timer.Warning("sys_timer_sleep(sleep_time=%d) aborted", sleep_time);
-			return CELL_OK;
-		}
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}
 	
 	if (useconds > passed)
@@ -280,13 +275,9 @@ s32 sys_timer_usleep(u64 sleep_time)
 
 	while (sleep_time > (passed = get_system_time() - start_time) + 1000)
 	{
-		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		CHECK_EMU_STATUS;
 
-		if (Emu.IsStopped())
-		{
-			sys_timer.Warning("sys_timer_usleep(sleep_time=0x%llx) aborted", sleep_time);
-			return CELL_OK;
-		}
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}
 
 	if (sleep_time > passed)

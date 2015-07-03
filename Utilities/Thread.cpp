@@ -1214,14 +1214,7 @@ thread_t::~thread_t() noexcept(false)
 {
 	if (m_thread)
 	{
-		if (g_tls_this_thread != m_thread.get())
-		{
-			m_thread->m_thread.join();
-		}
-		else
-		{
-			throw EXCEPTION("Deadlock");
-		}
+		throw EXCEPTION("Neither joined nor detached");
 	}
 }
 

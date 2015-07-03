@@ -77,16 +77,12 @@ s32 _sys_lwmutex_lock(u32 lwmutex_id, u64 timeout)
 
 	while (!mutex->signaled)
 	{
+		CHECK_EMU_STATUS;
+
 		if (timeout && get_system_time() - start_time > timeout)
 		{
 			mutex->waiters--;
 			return CELL_ETIMEDOUT;
-		}
-
-		if (Emu.IsStopped())
-		{
-			sys_lwmutex.Warning("_sys_lwmutex_lock(lwmutex_id=0x%x) aborted", lwmutex_id);
-			return CELL_OK;
 		}
 
 		mutex->cv.wait_for(lv2_lock, std::chrono::milliseconds(1));

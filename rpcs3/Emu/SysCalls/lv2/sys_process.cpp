@@ -36,19 +36,20 @@ s32 sys_process_exit(s32 status)
 
 	LV2_LOCK;
 
-	if (!Emu.IsStopped())
+	CHECK_EMU_STATUS;
+	
+	sys_process.Success("Process finished");
+
+	CallAfter([]()
 	{
-		sys_process.Success("Process finished");
+		Emu.Stop();
+	});
 
-		CallAfter([]()
-		{
-			Emu.Stop();
-		});
+	while (true)
+	{
+		CHECK_EMU_STATUS;
 
-		while (!Emu.IsStopped())
-		{
-			std::this_thread::sleep_for(std::chrono::milliseconds(1));
-		}
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}
 
 	return CELL_OK;

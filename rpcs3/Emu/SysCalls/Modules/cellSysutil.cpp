@@ -330,13 +330,9 @@ s32 cellSysutilCheckCallback(PPUThread& CPU)
 
 	while (Emu.GetCallbackManager().Check(CPU, res))
 	{
-		count++;
+		CHECK_EMU_STATUS;
 
-		if (Emu.IsStopped())
-		{
-			cellSysutil.Warning("cellSysutilCheckCallback() aborted");
-			return CELL_OK;
-		}
+		count++;
 
 		if (res)
 		{

@@ -81,7 +81,7 @@ s32 cellAudioInit()
 
 		squeue_t<float*, BUFFER_NUM - 1> out_queue;
 
-		thread_t iat(WRAP_EXPR("Internal Audio Thread"), [&out_queue]()
+		autojoin_thread_t iat(WRAP_EXPR("Internal Audio Thread"), [&out_queue]()
 		{
 			const bool use_u16 = Ini.AudioConvertToU16.GetValue();
 

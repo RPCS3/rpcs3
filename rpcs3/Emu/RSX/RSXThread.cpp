@@ -2456,14 +2456,16 @@ void RSXThread::Task()
 
 	m_last_flip_time = get_system_time() - 1000000;
 
-	thread_t vblank(WRAP_EXPR("VBlank thread"), [this]()
+	autojoin_thread_t vblank(WRAP_EXPR("VBlank Thread"), [this]()
 	{
 		const u64 start_time = get_system_time();
 
 		m_vblank_count = 0;
 
-		while (joinable() && !Emu.IsStopped())
+		while (joinable())
 		{
+			CHECK_EMU_STATUS;
+
 			if (get_system_time() - start_time > m_vblank_count * 1000000 / 60)
 			{
 				m_vblank_count++;
@@ -2566,8 +2568,6 @@ void RSXThread::Task()
 			value += (count + 1) * 4;
 		});
 	}
-
-	LOG_NOTICE(RSX, "RSX thread ended");
 
 	OnExitThread();
 }

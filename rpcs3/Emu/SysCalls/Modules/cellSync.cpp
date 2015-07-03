@@ -829,10 +829,7 @@ s32 _cellSyncLFQueueGetPushPointer(PPUThread& CPU, vm::ptr<CellSyncLFQueue> queu
 	{
 		while (true)
 		{
-			if (Emu.IsStopped())
-			{
-				return -1;
-			}
+			CHECK_EMU_STATUS;
 
 			const auto old = queue->push1.load_sync();
 			auto push = old;
@@ -1082,6 +1079,8 @@ s32 _cellSyncLFQueuePushBody(PPUThread& CPU, vm::ptr<CellSyncLFQueue> queue, vm:
 
 	while (true)
 	{
+		CHECK_EMU_STATUS;
+
 		s32 res;
 
 		if (queue->m_direction != CELL_SYNC_QUEUE_ANY2ANY)
@@ -1101,12 +1100,6 @@ s32 _cellSyncLFQueuePushBody(PPUThread& CPU, vm::ptr<CellSyncLFQueue> queue, vm:
 		}
 
 		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
-
-		if (Emu.IsStopped())
-		{
-			cellSync.Warning("_cellSyncLFQueuePushBody(queue=*0x%x) aborted", queue);
-			return CELL_OK;
-		}
 	}
 
 	const s32 depth = queue->m_depth;
@@ -1142,10 +1135,7 @@ s32 _cellSyncLFQueueGetPopPointer(PPUThread& CPU, vm::ptr<CellSyncLFQueue> queue
 	{
 		while (true)
 		{
-			if (Emu.IsStopped())
-			{
-				return -1;
-			}
+			CHECK_EMU_STATUS;
 
 			const auto old = queue->pop1.load_sync();
 			auto pop = old;
@@ -1395,6 +1385,8 @@ s32 _cellSyncLFQueuePopBody(PPUThread& CPU, vm::ptr<CellSyncLFQueue> queue, vm::
 
 	while (true)
 	{
+		CHECK_EMU_STATUS;
+
 		s32 res;
 
 		if (queue->m_direction != CELL_SYNC_QUEUE_ANY2ANY)
@@ -1414,12 +1406,6 @@ s32 _cellSyncLFQueuePopBody(PPUThread& CPU, vm::ptr<CellSyncLFQueue> queue, vm::
 		}
 
 		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
-
-		if (Emu.IsStopped())
-		{
-			cellSync.Warning("_cellSyncLFQueuePopBody(queue=*0x%x) aborted", queue);
-			return CELL_OK;
-		}
 	}
 
 	const s32 depth = queue->m_depth;

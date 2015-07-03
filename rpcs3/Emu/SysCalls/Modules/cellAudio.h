@@ -121,7 +121,7 @@ struct AudioPortConfig
 	atomic<level_set_t> level_set;
 };
 
-struct AudioConfig  //custom structure
+struct AudioConfig final // custom structure
 {
 	atomic<AudioState> state;
 	thread_t thread;
@@ -134,6 +134,14 @@ struct AudioConfig  //custom structure
 	std::vector<u64> keys;
 
 	AudioConfig() = default;
+
+	~AudioConfig()
+	{
+		if (thread.joinable())
+		{
+			thread.join();
+		}
+	}
 
 	u32 open_port()
 	{

@@ -141,6 +141,8 @@ s32 sys_event_flag_wait(u32 id, u64 bitptn, u32 mode, vm::ptr<u64> result, u64 t
 			break;
 		}
 
+		CHECK_EMU_STATUS;
+
 		if (ef->cancelled)
 		{
 			if (!--ef->cancelled)
@@ -155,12 +157,6 @@ s32 sys_event_flag_wait(u32 id, u64 bitptn, u32 mode, vm::ptr<u64> result, u64 t
 		{
 			ef->waiters--;
 			return CELL_ETIMEDOUT;
-		}
-
-		if (Emu.IsStopped())
-		{
-			sys_event_flag.Warning("sys_event_flag_wait(id=0x%x) aborted", id);
-			return CELL_OK;
 		}
 
 		ef->cv.wait_for(lv2_lock, std::chrono::milliseconds(1));

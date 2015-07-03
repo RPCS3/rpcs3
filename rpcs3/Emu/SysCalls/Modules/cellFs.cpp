@@ -690,15 +690,10 @@ s32 cellFsStReadWait(u32 fd, u64 size)
 
 	std::unique_lock<std::mutex> lock(file->mutex);
 
+	// wait for size availability or stream end
 	while (file->st_total_read - file->st_copied < size && file->st_total_read < file->st_read_size)
 	{
-		// wait for size availability or stream end
-
-		if (Emu.IsStopped())
-		{
-			cellFs.Warning("cellFsStReadWait(0x%x) aborted", fd);
-			return CELL_OK;
-		}
+		CHECK_EMU_STATUS;
 
 		file->cv.wait_for(lock, std::chrono::milliseconds(1));
 	}

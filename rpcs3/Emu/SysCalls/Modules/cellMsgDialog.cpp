@@ -105,7 +105,7 @@ s32 cellMsgDialogOpen2(u32 type, vm::cptr<char> msgString, vm::ptr<CellMsgDialog
 
 	std::string msg = msgString.get_ptr();
 
-	thread_t(WRAP_EXPR("MsgDialog Thread"), [type, msg, callback, userData, extParam]()
+	thread_t(WRAP_EXPR("MsgDialog Thread"), [=]()
 	{
 		switch (type & CELL_MSGDIALOG_TYPE_SE_TYPE)
 		{
@@ -127,11 +127,8 @@ s32 cellMsgDialogOpen2(u32 type, vm::cptr<char> msgString, vm::ptr<CellMsgDialog
 
 		while (!m_signal)
 		{
-			if (Emu.IsStopped())
-			{
-				cellSysutil.Warning("MsgDialog thread aborted");
-				return;
-			}
+			CHECK_EMU_STATUS;
+
 			std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 		}
 

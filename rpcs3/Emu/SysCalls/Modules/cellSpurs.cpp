@@ -423,10 +423,7 @@ void spursHandlerWaitReady(PPUThread& CPU, vm::ptr<CellSpurs> spurs)
 
 	while (true)
 	{
-		if (Emu.IsStopped())
-		{
-			sys_ppu_thread_exit(CPU, 0);
-		}
+		CHECK_EMU_STATUS;
 
 		if (spurs->handlerExiting.load())
 		{
@@ -518,6 +515,8 @@ void spursHandlerEntry(PPUThread& CPU)
 
 	while (true)
 	{
+		CHECK_EMU_STATUS;
+
 		if (spurs->flags1 & SF1_EXIT_IF_NO_WORK)
 		{
 			spursHandlerWaitReady(CPU, spurs);
@@ -538,14 +537,13 @@ void spursHandlerEntry(PPUThread& CPU)
 			throw EXCEPTION("sys_spu_thread_group_join() failed (0x%x)", rc);
 		}
 
-		if (Emu.IsStopped())
-		{
-			continue;
-		}
-
 		if ((spurs->flags1 & SF1_EXIT_IF_NO_WORK) == 0)
 		{
-			assert(spurs->handlerExiting.load() == 1 || Emu.IsStopped());
+			if (spurs->handlerExiting.load() != 1)
+			{
+				throw EXCEPTION("Unexpected handlerExiting value (false)");
+			}
+
 			sys_ppu_thread_exit(CPU, 0);
 		}
 	}

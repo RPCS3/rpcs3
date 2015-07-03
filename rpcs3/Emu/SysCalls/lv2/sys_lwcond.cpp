@@ -180,6 +180,8 @@ s32 _sys_lwcond_queue_wait(PPUThread& CPU, u32 lwcond_id, u32 lwmutex_id, u64 ti
 
 	while ((!(cond->signaled1 && mutex->signaled) && !cond->signaled2) || cond->waiters.count(CPU.GetId()))
 	{
+		CHECK_EMU_STATUS;
+
 		const bool is_timedout = timeout && get_system_time() - start_time > timeout;
 
 		// check timeout
@@ -208,12 +210,6 @@ s32 _sys_lwcond_queue_wait(PPUThread& CPU, u32 lwcond_id, u32 lwmutex_id, u64 ti
 			{
 				return CELL_ETIMEDOUT;
 			}
-		}
-
-		if (Emu.IsStopped())
-		{
-			sys_lwcond.Warning("_sys_lwcond_queue_wait(lwcond_id=0x%x) aborted", lwcond_id);
-			return CELL_OK;
 		}
 
 		(cond->signaled1 ? mutex->cv : cond->cv).wait_for(lv2_lock, std::chrono::milliseconds(1));

@@ -609,10 +609,19 @@ u32 SPUThread::get_ch_value(u32 ch)
 
 	case SPU_RdEventStat:
 	{
+		std::unique_lock<std::mutex> lock(mutex, std::defer_lock);
+
 		u32 result;
-		while (!(result = ch_event_stat.load() & ch_event_mask) && !Emu.IsStopped())
+
+		while ((result = ch_event_stat.load() & ch_event_mask) == 0)
 		{
-			std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
+			CHECK_EMU_STATUS;
+
+			if (IsStopped()) throw CPUThreadStop{};
+
+			if (!lock) lock.lock();
+
+			cv.wait_for(lock, std::chrono::milliseconds(1));
 		}
 		
 		return result;

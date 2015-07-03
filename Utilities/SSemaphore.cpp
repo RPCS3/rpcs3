@@ -19,10 +19,7 @@ void SSemaphore::wait()
 	
 	while (true)
 	{
-		if (Emu.IsStopped())
-		{
-			return;
-		}
+		CHECK_EMU_STATUS;
 
 		m_cond.wait_for(cv_lock, std::chrono::milliseconds(1));
 		

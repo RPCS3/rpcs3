@@ -546,11 +546,7 @@ s32 sys_spu_thread_group_join(u32 id, vm::ptr<u32> cause, vm::ptr<u32> status)
 			break;
 		}
 
-		if (Emu.IsStopped())
-		{
-			sys_spu.Warning("sys_spu_thread_group_join(id=0x%x) aborted", id);
-			return CELL_OK;
-		}
+		CHECK_EMU_STATUS;
 
 		group->cv.wait_for(lv2_lock, std::chrono::milliseconds(1));
 	}

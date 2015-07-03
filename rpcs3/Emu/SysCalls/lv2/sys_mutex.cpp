@@ -119,16 +119,12 @@ s32 sys_mutex_lock(PPUThread& CPU, u32 mutex_id, u64 timeout)
 
 	while (!mutex->owner.expired())
 	{
+		CHECK_EMU_STATUS;
+
 		if (timeout && get_system_time() - start_time > timeout)
 		{
 			mutex->waiters--;
 			return CELL_ETIMEDOUT;
-		}
-
-		if (Emu.IsStopped())
-		{
-			sys_mutex.Warning("sys_mutex_lock(mutex_id=0x%x) aborted", mutex_id);
-			return CELL_OK;
 		}
 
 		mutex->cv.wait_for(lv2_lock, std::chrono::milliseconds(1));

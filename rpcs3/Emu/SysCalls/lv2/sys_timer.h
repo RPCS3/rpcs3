@@ -19,7 +19,7 @@ struct sys_timer_information_t
 	be_t<u32> pad;
 };
 
-struct lv2_timer_t
+struct lv2_timer_t final
 {
 	std::weak_ptr<lv2_event_queue_t> port; // event queue
 	u64 source; // event source

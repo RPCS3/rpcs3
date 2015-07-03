@@ -103,8 +103,10 @@ s32 sys_interrupt_thread_establish(vm::ptr<u32> ih, u32 intrtag, u32 intrthread,
 
 			std::unique_lock<std::mutex> cond_lock(tag.handler_mutex);
 
-			while (!Emu.IsStopped())
+			while (!CPU.IsStopped())
 			{
+				CHECK_EMU_STATUS;
+
 				// call interrupt handler until int status is clear
 				if (tag.stat.load())
 				{

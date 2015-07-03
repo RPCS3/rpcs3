@@ -530,9 +530,7 @@ bool spursKernelWorkloadExit(SPUThread & spu) {
 bool spursKernelEntry(SPUThread & spu) {
     while (true) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        if (Emu.IsStopped()) {
-            return false;
-        }
+        CHECK_EMU_STATUS;
     }
 
     auto ctxt = vm::get_ptr<SpursKernelContext>(spu.offset + 0x100);
@@ -676,7 +674,7 @@ void spursSysServiceIdleHandler(SPUThread & spu, SpursKernelContext * ctxt) {
         // If all SPUs are idling and the exit_if_no_work flag is set then the SPU thread group must exit. Otherwise wait for external events.
         if (spuIdling && shouldExit == false && foundReadyWorkload == false) {
             // The system service blocks by making a reservation and waiting on the lock line reservation lost event.
-            if (Emu.IsStopped()) throw SpursModuleExit();
+            CHECK_EMU_STATUS;
             if (!lock) lock.lock();
             spu.cv.wait_for(lock, std::chrono::milliseconds(1));
             continue;
@@ -744,6 +742,7 @@ void spursSysServiceMain(SPUThread & spu, u32 pollStatus) {
     cellSpursModulePutTrace(&pkt, ctxt->dmaTagId);
 
     while (true) {
+        CHECK_EMU_STATUS;
         // Process requests for the system service
         spursSysServiceProcessRequests(spu, ctxt);
 
@@ -784,7 +783,7 @@ poll:
         cellSpursModulePutTrace(&pkt, ctxt->dmaTagId);
 
         spursSysServiceIdleHandler(spu, ctxt);
-        if (Emu.IsStopped()) return;
+        CHECK_EMU_STATUS;
 
         goto poll;
     }

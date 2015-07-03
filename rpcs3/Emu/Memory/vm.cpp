@@ -4,6 +4,7 @@
 #include "Emu/System.h"
 #include "Emu/CPU/CPUThread.h"
 #include "Emu/Cell/PPUThread.h"
+#include "Emu/Cell/SPUThread.h"
 #include "Emu/ARMv7/ARMv7Thread.h"
 
 #include "Emu/SysCalls/lv2/sys_time.h"
@@ -615,9 +616,7 @@ namespace vm
 
 			if (context.GPR[1] < context.stack_addr)
 			{
-				LOG_ERROR(PPU, "vm::stack_push(0x%x,%d): stack overflow (SP=0x%llx, stack=*0x%x)", size, align_v, context.GPR[1], context.stack_addr);
-				context.GPR[1] = old_pos;
-				return 0;
+				throw EXCEPTION("Stack overflow (size=0x%x, align=0x%x, SP=0x%llx, stack=*0x%x)", size, align_v, old_pos, context.stack_addr);
 			}
 			else
 			{
@@ -628,8 +627,20 @@ namespace vm
 		case CPU_THREAD_SPU:
 		case CPU_THREAD_RAW_SPU:
 		{
-			assert(!"stack_push(): SPU not supported");
-			return 0;
+			SPUThread& context = static_cast<SPUThread&>(CPU);
+
+			old_pos = context.GPR[1]._u32[3];
+			context.GPR[1]._u32[3] -= align(size, 16);
+			context.GPR[1]._u32[3] &= ~(align_v - 1);
+
+			if (context.GPR[1]._u32[3] >= 0x40000) // extremely rough
+			{
+				throw EXCEPTION("Stack overflow (size=0x%x, align=0x%x, SP=LS:0x%05x)", size, align_v, old_pos);
+			}
+			else
+			{
+				return context.GPR[1]._u32[3] + context.offset;
+			}
 		}
 
 		case CPU_THREAD_ARMv7:
@@ -642,9 +653,7 @@ namespace vm
 
 			if (context.SP < context.stack_addr)
 			{
-				LOG_ERROR(ARMv7, "vm::stack_push(0x%x,%d): stack overflow (SP=0x%x, stack=*0x%x)", size, align_v, context.SP, context.stack_addr);
-				context.SP = old_pos;
-				return 0;
+				throw EXCEPTION("Stack overflow (size=0x%x, align=0x%x, SP=0x%x, stack=*0x%x)", size, align_v, context.SP, context.stack_addr);
 			}
 			else
 			{
@@ -654,8 +663,7 @@ namespace vm
 
 		default:
 		{
-			assert(!"stack_push(): invalid thread type");
-			return 0;
+			throw EXCEPTION("Invalid thread type (%d)", CPU.GetId());
 		}
 		}
 	}
@@ -668,9 +676,9 @@ namespace vm
 		{
 			PPUThread& context = static_cast<PPUThread&>(CPU);
 
-			if (context.GPR[1] != addr && !Emu.IsStopped())
+			if (context.GPR[1] != addr)
 			{
-				LOG_ERROR(PPU, "vm::stack_pop(*0x%x,*0x%x): stack inconsistency (SP=0x%llx)", addr, old_pos, context.GPR[1]);
+				throw EXCEPTION("Stack inconsistency (addr=0x%x, SP=0x%llx, old_pos=0x%x)", addr, context.GPR[1], old_pos);
 			}
 
 			context.GPR[1] = old_pos;
@@ -680,7 +688,14 @@ namespace vm
 		case CPU_THREAD_SPU:
 		case CPU_THREAD_RAW_SPU:
 		{
-			assert(!"stack_pop(): SPU not supported");
+			SPUThread& context = static_cast<SPUThread&>(CPU);
+
+			if (context.GPR[1]._u32[3] + context.offset != addr)
+			{
+				throw EXCEPTION("Stack inconsistency (addr=0x%x, SP=LS:0x%05x, old_pos=LS:0x%05x)", addr, context.GPR[1]._u32[3], old_pos);
+			}
+
+			context.GPR[1]._u32[3] = old_pos;
 			return;
 		}
 
@@ -688,9 +703,9 @@ namespace vm
 		{
 			ARMv7Context& context = static_cast<ARMv7Thread&>(CPU);
 
-			if (context.SP != addr && !Emu.IsStopped())
+			if (context.SP != addr)
 			{
-				LOG_ERROR(ARMv7, "vm::stack_pop(*0x%x,*0x%x): stack inconsistency (SP=0x%x)", addr, old_pos, context.SP);
+				throw EXCEPTION("Stack inconsistency (addr=0x%x, SP=0x%x, old_pos=0x%x)", addr, context.SP, old_pos);
 			}
 
 			context.SP = old_pos;
@@ -699,8 +714,7 @@ namespace vm
 
 		default:
 		{
-			assert(!"stack_pop(): invalid thread type");
-			return;
+			throw EXCEPTION("Invalid thread type (%d)", CPU.GetType());
 		}
 		}
 	}

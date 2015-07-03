@@ -91,16 +91,12 @@ s32 sys_semaphore_wait(u32 sem, u64 timeout)
 
 	while (semaphore->value <= 0)
 	{
+		CHECK_EMU_STATUS;
+
 		if (timeout && get_system_time() - start_time > timeout)
 		{
 			semaphore->waiters--;
 			return CELL_ETIMEDOUT;
-		}
-
-		if (Emu.IsStopped())
-		{
-			sys_semaphore.Warning("sys_semaphore_wait(%d) aborted", sem);
-			return CELL_OK;
 		}
 
 		semaphore->cv.wait_for(lv2_lock, std::chrono::milliseconds(1));
