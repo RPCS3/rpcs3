@@ -1599,7 +1599,7 @@ void GLGSRender::InitDrawBuffers()
 	}
 }
 
-void GLGSRender::ExecCMD(u32 cmd)
+void GLGSRender::Clear(u32 cmd)
 {
 	assert(cmd == NV4097_CLEAR_SURFACE);
 
@@ -1653,7 +1653,7 @@ void GLGSRender::ExecCMD(u32 cmd)
 	WriteBuffers();
 }
 
-void GLGSRender::ExecCMD()
+void GLGSRender::Draw()
 {
 	//return;
 	if (!LoadProgram())
@@ -1966,9 +1966,9 @@ void GLGSRender::ExecCMD()
 	m_vao.Bind();
 
 	if (m_indexed_array.m_count)
-	{
 		LoadVertexData(m_indexed_array.index_min, m_indexed_array.index_max - m_indexed_array.index_min + 1);
-	}
+	else
+		LoadVertexData(m_draw_array_first, m_draw_array_count);
 
 	if (m_indexed_array.m_count || m_draw_array_count)
 	{
@@ -2140,6 +2140,21 @@ void GLGSRender::Flip()
 		glScissor(m_scissor_x, m_scissor_y, m_scissor_w, m_scissor_h);
 		checkForGlError("glScissor");
 	}
+
+}
+
+void GLGSRender::semaphorePGRAPHTextureReadRelease(u32 offset, u32 value)
+{
+	vm::write32(m_label_addr + offset, value);
+}
+
+void GLGSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
+{
+	vm::write32(m_label_addr + offset, value);
+}
+
+void GLGSRender::semaphorePFIFOAcquire(u32 offset, u32 value)
+{
 
 }
 

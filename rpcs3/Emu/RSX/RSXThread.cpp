@@ -201,43 +201,40 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	}
 
 	case NV4097_SET_SEMAPHORE_OFFSET:
+	{
+		m_PGRAPH_semaphore_offset = ARGS(0);
+		break;
+	}
+
 	case NV406E_SEMAPHORE_OFFSET:
 	{
-		m_set_semaphore_offset = true;
-		m_semaphore_offset = ARGS(0);
+		m_PFIFO_semaphore_offset = ARGS(0);
 		break;
 	}
 
 	case NV406E_SEMAPHORE_ACQUIRE:
 	{
-		if (ARGS(0))
-		{
-			LOG_WARNING(RSX, "TODO: NV406E_SEMAPHORE_ACQUIRE: 0x%x", ARGS(0));
-		}
+		semaphorePFIFOAcquire(m_PFIFO_semaphore_offset, ARGS(0));
 		break;
 	}
 
 	case NV406E_SEMAPHORE_RELEASE:
+	{
+		m_PFIFO_semaphore_release_value = ARGS(0);
+		break;
+	}
+
 	case NV4097_TEXTURE_READ_SEMAPHORE_RELEASE:
 	{
-		if (m_set_semaphore_offset)
-		{
-			m_set_semaphore_offset = false;
-			vm::write32(m_label_addr + m_semaphore_offset, ARGS(0));
-		}
+		semaphorePGRAPHTextureReadRelease(m_PGRAPH_semaphore_offset, ARGS(0));
 		break;
 	}
 
 	case NV4097_BACK_END_WRITE_SEMAPHORE_RELEASE:
 	{
-		if (m_set_semaphore_offset)
-		{
-			m_set_semaphore_offset = false;
-			u32 value = ARGS(0);
-			value = (value & 0xff00ff00) | ((value & 0xff) << 16) | ((value >> 16) & 0xff);
-
-			vm::write32(m_label_addr + m_semaphore_offset, value);
-		}
+		u32 value = ARGS(0);
+		value = (value & 0xff00ff00) | ((value & 0xff) << 16) | ((value >> 16) & 0xff);
+		semaphorePGRAPHBackendRelease(m_PGRAPH_semaphore_offset, value);
 		break;
 	}
 
@@ -850,7 +847,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		if (a0 & 0x80) m_clear_surface_color_a = m_clear_color_a;
 
 		m_clear_surface_mask = a0;
-		ExecCMD(NV4097_CLEAR_SURFACE);
+		Clear(NV4097_CLEAR_SURFACE);
 		break;
 	}
 
@@ -910,8 +907,6 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 
 			//LOG_WARNING(RSX, "NV4097_DRAW_ARRAYS: %d - %d", first, _count);
 
-			LoadVertexData(first, _count);
-
 			if (first < m_draw_array_first)
 			{
 				m_draw_array_first = first;
@@ -942,10 +937,10 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 
 			switch (m_indexed_array.m_type)
 			{
-			case 0:
+			case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_32:
 				m_indexed_array.m_data.resize(pos + 4 * _count);
 				break;
-			case 1:
+			case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_16:
 				m_indexed_array.m_data.resize(pos + 2 * _count);
 				break;
 			}
@@ -955,12 +950,12 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 				u32 index;
 				switch(m_indexed_array.m_type)
 				{
-				case 0:
+				case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_32:
 					index = vm::read32(m_indexed_array.m_addr + i * 4);
 					*(u32*)&m_indexed_array.m_data[i * 4] = index;
 					break;
 
-				case 1:
+				case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_16:
 					index = vm::read16(m_indexed_array.m_addr + i * 2);
 					*(u16*)&m_indexed_array.m_data[i * 2] = index;
 					break;
@@ -1174,6 +1169,12 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		{
 			LOG_WARNING(RSX, "TODO: NV4097_INVALIDATE_L2: 0x%x", value);
 		}
+		break;
+	}
+
+	case NV4097_SET_NO_PARANOID_TEXTURE_FETCHES:
+	{
+		// Nothing to do here
 		break;
 	}
 
@@ -2415,7 +2416,7 @@ void RSXThread::Begin(u32 draw_mode)
 
 void RSXThread::End()
 {
-	ExecCMD();
+	Draw();
 
 	for (auto &vdata : m_vertex_data)
 	{

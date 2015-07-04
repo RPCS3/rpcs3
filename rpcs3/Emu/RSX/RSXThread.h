@@ -343,8 +343,11 @@ public:
 	s32 m_color_conv_dtdy;
 
 	// Semaphore
-	bool m_set_semaphore_offset;
-	u32 m_semaphore_offset;
+	// PGRAPH
+	u32 m_PGRAPH_semaphore_offset;
+	//PFIFO
+	u32 m_PFIFO_semaphore_offset;
+	u32 m_PFIFO_semaphore_release_value;
 
 	// Fog
 	bool m_set_fog_mode;
@@ -597,7 +600,6 @@ protected:
 		m_set_line_width = false;
 		m_set_line_smooth = false;
 		m_set_shade_mode = false;
-		m_set_semaphore_offset = false;
 		m_set_fog_mode = false;
 		m_set_fog_params = false;
 		m_set_clip_plane = false;
@@ -644,9 +646,45 @@ protected:
 	virtual void OnInitThread() = 0;
 	virtual void OnExitThread() = 0;
 	virtual void OnReset() = 0;
-	virtual void ExecCMD() = 0;
-	virtual void ExecCMD(u32 cmd) = 0;
+
+	/**
+	 * This member is called when the backend is expected to render a draw call, either
+	 * indexed or not.
+	 */
+	virtual void Draw() = 0;
+
+	/**
+	* This member is called when the backend is expected to clear a target surface.
+	*/
+	virtual void Clear(u32 cmd) = 0;
+
+	/**
+	* This member is called when the backend is expected to present a target surface in
+	* either local or main memory.
+	*/
 	virtual void Flip() = 0;
+
+	/**
+	 * This member is called when RSXThread parse a TEXTURE_READ_SEMAPHORE_RELEASE
+	 * command.
+	 * Backend is expected to write value at offset when current draw textures aren't
+	 * needed anymore by the GPU and can be modified.
+	 */
+	virtual void semaphorePGRAPHTextureReadRelease(u32 offset, u32 value) = 0;
+	/**
+	* This member is called when RSXThread parse a BACK_END_WRITE_SEMAPHORE_RELEASE
+	* command.
+	* Backend is expected to write value at offset when current draw call has completed
+	* and render surface can be used.
+	*/
+	virtual void semaphorePGRAPHBackendRelease(u32 offset, u32 value) = 0;
+	/**
+	* This member is called when RSXThread parse a SEMAPHORE_ACQUIRE command.
+	* Backend and associated GPU is expected to wait that memory at offset is the same
+	* as value. In particular buffer/texture buffers value can change while backend is
+	* waiting.
+	*/
+	virtual void semaphorePFIFOAcquire(u32 offset, u32 value) = 0;
 
 	void LoadVertexData(u32 first, u32 count)
 	{
