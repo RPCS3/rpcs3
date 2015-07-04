@@ -22,11 +22,13 @@ public:
 	const std::shared_ptr<void> data;
 	const std::type_info& info;
 	const u32 type;
+	const u32 id;
 
-	template<typename T> force_inline ID_data_t(std::shared_ptr<T> data, u32 type)
+	template<typename T> force_inline ID_data_t(std::shared_ptr<T> data, u32 type, u32 id)
 		: data(std::move(data))
 		, info(typeid(T))
 		, type(type)
+		, id(id)
 	{
 	}
 
@@ -34,6 +36,7 @@ public:
 		: data(right.data)
 		, info(right.info)
 		, type(right.type)
+		, id(right.id)
 	{
 	}
 
@@ -43,6 +46,7 @@ public:
 		: data(std::move(const_cast<std::shared_ptr<void>&>(right.data)))
 		, info(right.info)
 		, type(right.type)
+		, id(right.id)
 	{
 	}
 
@@ -101,9 +105,9 @@ public:
 
 		auto ptr = std::make_shared<T>(std::forward<Args>(args)...);
 
-		m_id_map.emplace(m_cur_id++, ID_data_t(ptr, type));
+		m_id_map.emplace(m_cur_id, ID_data_t(ptr, type, m_cur_id));
 
-		return std::move(ptr);
+		return m_cur_id++, std::move(ptr);
 	}
 
 	// add new ID of specified type with specified constructor arguments (returns id)
@@ -113,7 +117,7 @@ public:
 
 		const u32 type = ID_type<T>::type;
 
-		m_id_map.emplace(m_cur_id, ID_data_t(std::make_shared<T>(std::forward<Args>(args)...), type));
+		m_id_map.emplace(m_cur_id, ID_data_t(std::make_shared<T>(std::forward<Args>(args)...), type, m_cur_id));
 
 		return m_cur_id++;
 	}

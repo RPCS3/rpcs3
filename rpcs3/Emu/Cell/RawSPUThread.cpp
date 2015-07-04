@@ -9,7 +9,7 @@
 thread_local spu_mfc_arg_t raw_spu_mfc[8] = {};
 
 RawSPUThread::RawSPUThread(const std::string& name, u32 index)
-	: SPUThread(CPU_THREAD_RAW_SPU, name, index, RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * index)
+	: SPUThread(CPU_THREAD_RAW_SPU, name, WRAP_EXPR(fmt::format("RawSPU[0x%x] Thread (%s)[0x%08x]", GetId(), GetName(), PC)), index, RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * index)
 {
 	Memory.Map(offset, 0x40000);
 }
@@ -23,18 +23,16 @@ RawSPUThread::~RawSPUThread()
 
 void RawSPUThread::start()
 {
-	bool do_start;
-
-	status.atomic_op([&do_start](u32& status)
+	const bool do_start = status.atomic_op([](u32& status) -> bool
 	{
 		if (status & SPU_STATUS_RUNNING)
 		{
-			do_start = false;
+			return false;
 		}
 		else
 		{
 			status = SPU_STATUS_RUNNING;
-			do_start = true;
+			return true;
 		}
 	});
 
@@ -166,6 +164,7 @@ bool RawSPUThread::WriteReg(const u32 addr, const u32 value)
 	case SPU_In_MBox_offs:
 	{
 		ch_in_mbox.push_uncond(value); 
+		cv.notify_one();
 		return true;
 	}
 

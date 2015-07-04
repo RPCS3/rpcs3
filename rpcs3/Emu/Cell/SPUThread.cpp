@@ -57,15 +57,15 @@ public:
 }
 g_spu_inter_func_list;
 
-SPUThread::SPUThread(CPUThreadType type, const std::string& name, u32 index, u32 offset)
-	: CPUThread(type, name, [this]{ return fmt::format("%s[0x%x] Thread (%s)[0x%08x]", GetTypeString(), GetId(), GetName(), PC); })
+SPUThread::SPUThread(CPUThreadType type, const std::string& name, std::function<std::string()> thread_name, u32 index, u32 offset)
+	: CPUThread(type, name, std::move(thread_name))
 	, index(index)
 	, offset(offset)
 {
 }
 
 SPUThread::SPUThread(const std::string& name, u32 index)
-	: CPUThread(CPU_THREAD_SPU, name, [this]{ return fmt::format("%s[0x%x] Thread (%s)[0x%08x]", GetTypeString(), GetId(), GetName(), PC); })
+	: CPUThread(CPU_THREAD_SPU, name, WRAP_EXPR(fmt::format("SPU[0x%x] Thread (%s)[0x%08x]", GetId(), GetName(), PC)))
 	, index(index)
 	, offset(Memory.MainMem.AllocAlign(0x40000))
 {

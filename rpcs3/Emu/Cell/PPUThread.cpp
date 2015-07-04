@@ -491,7 +491,7 @@ void fill_ppu_exec_map(u32 addr, u32 size)
 }
 
 PPUThread::PPUThread(const std::string& name)
-	: CPUThread(CPU_THREAD_PPU, name, [this]{ return fmt::format("%s[0x%x] Thread (%s)[0x%08x]", GetTypeString(), GetId(), GetName(), PC); })
+	: CPUThread(CPU_THREAD_PPU, name, WRAP_EXPR(fmt::format("PPU[0x%x] Thread (%s)[0x%08x]", GetId(), GetName(), PC)))
 {
 	InitRotateMask();
 }

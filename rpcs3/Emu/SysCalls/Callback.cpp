@@ -9,44 +9,36 @@
 #include "Emu/CPU/CPUThreadManager.h"
 #include "Callback.h"
 
-void CallbackManager::Register(std::function<s32(PPUThread& PPU)> func)
+void CallbackManager::Register(check_cb_t func)
 {
 	std::lock_guard<std::mutex> lock(m_mutex);
 
-	m_cb_list.push_back([=](CPUThread& CPU) -> s32
-	{
-		if (CPU.GetType() != CPU_THREAD_PPU) throw EXCEPTION("PPU thread expected");
-		return func(static_cast<PPUThread&>(CPU));
-	});
+	m_check_cb.emplace(std::move(func));
 }
 
-void CallbackManager::Async(std::function<void(CPUThread& CPU)> func)
+void CallbackManager::Async(async_cb_t func)
 {
 	std::lock_guard<std::mutex> lock(m_mutex);
 
-	m_async_list.push_back([=](CPUThread& CPU)
-	{
-		func(CPU);
-	});
+	m_async_cb.emplace(std::move(func));
 
 	m_cv.notify_one();
 }
 
-bool CallbackManager::Check(CPUThread& CPU, s32& result)
+CallbackManager::check_cb_t CallbackManager::Check()
 {
-	std::function<s32(CPUThread& CPU)> func;
+	std::lock_guard<std::mutex> lock(m_mutex);
 
+	if (m_check_cb.size())
 	{
-		std::lock_guard<std::mutex> lock(m_mutex);
+		check_cb_t func = std::move(m_check_cb.front());
 
-		if (m_cb_list.size())
-		{
-			func = std::move(m_cb_list.front());
-			m_cb_list.erase(m_cb_list.begin());
-		}
+		m_check_cb.pop();
+
+		return func;
 	}
-	
-	return func ? result = func(CPU), true : false;
+
+	return nullptr;
 }
 
 void CallbackManager::Init()
@@ -57,25 +49,24 @@ void CallbackManager::Init()
 	{
 		std::unique_lock<std::mutex> lock(m_mutex);
 
-		while (!CPU.CheckStatus())
+		while (true)
 		{
-			std::function<void(CPUThread& CPU)> func;
-
-			if (m_async_list.size())
-			{
-				func = std::move(m_async_list.front());
-				m_async_list.erase(m_async_list.begin());
-			}
-
-			if (func)
-			{
-				if (lock) lock.unlock();
-
-				func(*m_cb_thread);
-				continue;
-			}
+			CHECK_EMU_STATUS;
 
 			if (!lock) lock.lock();
+
+			if (m_async_cb.size())
+			{
+				async_cb_t func = std::move(m_async_cb.front());
+
+				m_async_cb.pop();
+
+				if (lock) lock.unlock();
+
+				func(CPU);
+
+				continue;
+			}
 
 			m_cv.wait_for(lock, std::chrono::milliseconds(1));
 		}
@@ -109,46 +100,9 @@ void CallbackManager::Clear()
 {
 	std::lock_guard<std::mutex> lock(m_mutex);
 
-	m_cb_list.clear();
-	m_async_list.clear();
-	m_pause_cb_list.clear();
+	m_check_cb = {};
+	m_async_cb = {};
 
 	m_cb_thread.reset();
 }
 
-u64 CallbackManager::AddPauseCallback(std::function<PauseResumeCB> func)
-{
-	std::lock_guard<std::mutex> lock(m_mutex);
-
-	m_pause_cb_list.push_back({ func, next_tag });
-	return next_tag++;
-}
-
-void CallbackManager::RemovePauseCallback(const u64 tag)
-{
-	std::lock_guard<std::mutex> lock(m_mutex);
-	
-	for (auto& data : m_pause_cb_list)
-	{
-		if (data.tag == tag)
-		{
-			m_pause_cb_list.erase(m_pause_cb_list.begin() + (&data - m_pause_cb_list.data()));
-			return;
-		}
-	}
-
-	assert(!"CallbackManager()::RemovePauseCallback(): tag not found");
-}
-
-void CallbackManager::RunPauseCallbacks(const bool is_paused)
-{
-	std::lock_guard<std::mutex> lock(m_mutex);
-
-	for (auto& data : m_pause_cb_list)
-	{
-		if (data.cb)
-		{
-			data.cb(is_paused);
-		}
-	}
-}

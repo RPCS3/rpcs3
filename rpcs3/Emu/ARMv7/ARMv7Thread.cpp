@@ -81,7 +81,7 @@ void armv7_free_tls(u32 thread)
 }
 
 ARMv7Thread::ARMv7Thread(const std::string& name)
-	: CPUThread(CPU_THREAD_ARMv7, name, [this]{ return fmt::format("%s[0x%x] Thread (%s)[0x%08x]", GetTypeString(), GetId(), GetName(), PC); })
+	: CPUThread(CPU_THREAD_ARMv7, name, WRAP_EXPR(fmt::format("ARMv7[0x%x] Thread (%s)[0x%08x]", GetId(), GetName(), PC)))
 	, ARMv7Context({})
 {
 }

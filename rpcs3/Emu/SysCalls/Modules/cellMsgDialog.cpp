@@ -146,9 +146,9 @@ s32 cellMsgDialogOpen2(u32 type, vm::cptr<char> msgString, vm::ptr<CellMsgDialog
 		{
 			const s32 status = g_msg_dialog->status;
 
-			Emu.GetCallbackManager().Register([=](PPUThread& PPU) -> s32
+			Emu.GetCallbackManager().Register([=](CPUThread& CPU) -> s32
 			{
-				callback(PPU, status, userData);
+				callback(static_cast<PPUThread&>(CPU), status, userData);
 				return CELL_OK;
 			});
 		}

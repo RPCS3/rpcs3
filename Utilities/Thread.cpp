@@ -1307,6 +1307,7 @@ void thread_t::start(std::function<std::string()> name, std::function<void()> fu
 		}
 
 		//ctrl->set_current(false);
+		vm::reservation_free();
 
 		g_thread_count--;
 

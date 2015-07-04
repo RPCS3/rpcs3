@@ -82,7 +82,7 @@ namespace vm
 	{
 		atomic<const thread_ctrl_t*> m_owner{};
 		std::condition_variable m_cv;
-		std::mutex m_cv_mutex;
+		std::mutex m_mutex;
 
 	public:
 		reservation_mutex_t()
@@ -95,18 +95,18 @@ namespace vm
 		{
 			auto owner = get_current_thread_ctrl();
 
+			std::unique_lock<std::mutex> lock(m_mutex, std::defer_lock);
+
 			while (auto old = m_owner.compare_and_swap(nullptr, owner))
 			{
-				std::unique_lock<std::mutex> cv_lock(m_cv_mutex);
-
-				m_cv.wait_for(cv_lock, std::chrono::milliseconds(1));
-
 				if (old == owner)
 				{
 					throw EXCEPTION("Deadlock");
 				}
 
-				old = nullptr;
+				if (!lock) lock.lock();
+
+				m_cv.wait_for(lock, std::chrono::milliseconds(1));
 			}
 
 			do_notify = true;
@@ -195,7 +195,7 @@ namespace vm
 		return _reservation_break(addr);
 	}
 
-	bool reservation_acquire(void* data, u32 addr, u32 size, const std::function<void()>& callback)
+	bool reservation_acquire(void* data, u32 addr, u32 size, std::function<void()> callback)
 	{
 		//const auto stamp0 = get_time();
 
@@ -232,7 +232,7 @@ namespace vm
 			g_reservation_addr = addr;
 			g_reservation_size = size;
 			g_reservation_owner = get_current_thread_ctrl();
-			g_reservation_cb = callback;
+			g_reservation_cb = std::move(callback);
 
 			// copy data
 			memcpy(data, vm::get_ptr(addr), size);
@@ -243,7 +243,7 @@ namespace vm
 
 	bool reservation_acquire_no_cb(void* data, u32 addr, u32 size)
 	{
-		return reservation_acquire(data, addr, size);
+		return reservation_acquire(data, addr, size, nullptr);
 	}
 
 	bool reservation_update(u32 addr, const void* data, u32 size)
@@ -303,10 +303,10 @@ namespace vm
 
 	void reservation_free()
 	{
-		std::lock_guard<reservation_mutex_t> lock(g_reservation_mutex);
-
 		if (g_reservation_owner == get_current_thread_ctrl())
 		{
+			std::lock_guard<reservation_mutex_t> lock(g_reservation_mutex);
+
 			_reservation_break(g_reservation_addr);
 		}
 	}

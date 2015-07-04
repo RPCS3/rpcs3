@@ -302,8 +302,8 @@ struct sys_callback
 {
 	vm::ptr<CellSysutilCallback> func;
 	vm::ptr<void> arg;
-
-} g_sys_callback[4];
+}
+g_sys_callback[4];
 
 void sysutilSendSystemCommand(u64 status, u64 param)
 {
@@ -312,9 +312,9 @@ void sysutilSendSystemCommand(u64 status, u64 param)
 	{
 		if (cb.func)
 		{
-			Emu.GetCallbackManager().Register([=](PPUThread& PPU) -> s32
+			Emu.GetCallbackManager().Register([=](CPUThread& CPU) -> s32
 			{
-				cb.func(PPU, status, param, cb.arg);
+				cb.func(static_cast<PPUThread&>(CPU), status, param, cb.arg);
 				return CELL_OK;
 			});
 		}
@@ -325,24 +325,14 @@ s32 cellSysutilCheckCallback(PPUThread& CPU)
 {
 	cellSysutil.Log("cellSysutilCheckCallback()");
 
-	s32 res;
-	u32 count = 0;
-
-	while (Emu.GetCallbackManager().Check(CPU, res))
+	while (auto func = Emu.GetCallbackManager().Check())
 	{
 		CHECK_EMU_STATUS;
 
-		count++;
-
-		if (res)
+		if (s32 res = func(CPU))
 		{
 			return res;
 		}
-	}
-
-	if (!count && !g_sys_callback[0].func && !g_sys_callback[1].func && !g_sys_callback[2].func && !g_sys_callback[3].func)
-	{
-		LOG_WARNING(TTY, "System warning: no callback registered\n");
 	}
 
 	return CELL_OK;

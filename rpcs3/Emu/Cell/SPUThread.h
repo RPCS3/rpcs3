@@ -571,6 +571,8 @@ public:
 				ch_snr2.push_uncond(value);
 			}
 		}
+
+		cv.notify_one();
 	}
 
 	void do_dma_transfer(u32 cmd, spu_mfc_arg_t args);
@@ -630,7 +632,7 @@ public:
 	std::function<void(SPUThread& SPU)> m_custom_task;
 
 protected:
-	SPUThread(CPUThreadType type, const std::string& name, u32 index, u32 offset);
+	SPUThread(CPUThreadType type, const std::string& name, std::function<std::string()> thread_name, u32 index, u32 offset);
 
 public:
 	SPUThread(const std::string& name, u32 index);

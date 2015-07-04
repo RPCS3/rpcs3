@@ -16,7 +16,7 @@ CPUThread::CPUThread(CPUThreadType type, const std::string& name, std::function<
 	, m_type(type)
 	, m_name(name)
 {
-	start(thread_name, [this]
+	start(std::move(thread_name), [this]
 	{
 		SendDbgCommand(DID_CREATE_THREAD, this);
 

@@ -35,7 +35,6 @@ s32 cellAudioInit()
 	}
 
 	// reset variables
-	g_audio.start_time = 0;
 	g_audio.counter = 0;
 	g_audio.keys.clear();
 	g_audio.start_time = get_system_time();
@@ -137,22 +136,6 @@ s32 cellAudioInit()
 			Emu.GetAudioManager().GetAudioOut().Quit();
 		});
 
-		u64 last_pause_time;
-		std::atomic<u64> added_time(0);
-
-		PauseCallbackRegisterer pcb(Emu.GetCallbackManager(), [&last_pause_time, &added_time](bool is_paused)
-		{
-			if (is_paused)
-			{
-				last_pause_time = get_system_time();
-			}
-			else
-			{
-				added_time += get_system_time() - last_pause_time;
-				g_audio.thread.cv.notify_one();
-			}
-		});
-
 		while (g_audio.state.load() == AUDIO_STATE_INITIALIZED && !Emu.IsStopped())
 		{
 			if (Emu.IsPaused())
@@ -161,39 +144,31 @@ s32 cellAudioInit()
 				continue;
 			}
 
-			if (added_time)
-			{
-				g_audio.start_time += added_time.exchange(0);
-			}
-
 			const u64 stamp0 = get_system_time();
+
+			const u64 time_pos = stamp0 - g_audio.start_time - Emu.GetPauseTime();
 
 			// TODO: send beforemix event (in ~2,6 ms before mixing)
 
 			// precise time of sleeping: 5,(3) ms (or 256/48000 sec)
 			const u64 expected_time = g_audio.counter * AUDIO_SAMPLES * MHZ / 48000;
-			if (expected_time >= stamp0 - g_audio.start_time)
+			if (expected_time >= time_pos)
 			{
 				g_audio.thread.cv.wait_for(lock, std::chrono::milliseconds(1));
 				continue;
 			}
 			
-			// crutch to hide giant lags caused by debugger
-			const u64 missed_time = stamp0 - g_audio.start_time - expected_time;
-			if (missed_time > AUDIO_SAMPLES * MHZ / 48000)
-			{
-				cellAudio.Notice("%f ms adjusted", (float)missed_time / 1000);
-				g_audio.start_time += missed_time;
-			}
+			//// crutch to hide giant lags caused by debugger
+			//const u64 missed_time = time_pos - expected_time;
+			//if (missed_time > AUDIO_SAMPLES * MHZ / 48000)
+			//{
+			//	cellAudio.Notice("%f ms adjusted", (float)missed_time / 1000);
+			//	g_audio.start_time += missed_time;
+			//}
 
 			g_audio.counter++;
 
 			const u32 out_pos = g_audio.counter % BUFFER_NUM;
-
-			//if (Emu.IsPaused())
-			//{
-			//	continue;
-			//}
 
 			bool first_mix = true;
 
@@ -427,7 +402,7 @@ s32 cellAudioInit()
 			}
 
 			//LOG_NOTICE(HLE, "Audio perf: start=%d (access=%d, AddData=%d, events=%d, dump=%d)",
-			//stamp0 - m_config.start_time, stamp1 - stamp0, stamp2 - stamp1, stamp3 - stamp2, get_system_time() - stamp3);
+			//time_pos, stamp1 - stamp0, stamp2 - stamp1, stamp3 - stamp2, get_system_time() - stamp3);
 		}
 	});
 
@@ -679,7 +654,7 @@ s32 cellAudioGetPortTimestamp(u32 portNum, u64 tag, vm::ptr<u64> stamp)
 
 	std::lock_guard<std::mutex> lock(g_audio.thread.mutex);
 
-	*stamp = g_audio.start_time + (port.counter + (tag - port.tag)) * 256000000 / 48000;
+	*stamp = g_audio.start_time + Emu.GetPauseTime() + (port.counter + (tag - port.tag)) * 256000000 / 48000;
 
 	return CELL_OK;
 }

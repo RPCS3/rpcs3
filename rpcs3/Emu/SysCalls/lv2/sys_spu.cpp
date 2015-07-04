@@ -694,6 +694,7 @@ s32 sys_spu_thread_write_spu_mb(u32 id, u32 value)
 	}
 
 	thread->ch_in_mbox.push_uncond(value);
+	thread->cv.notify_one();
 
 	return CELL_OK;
 }

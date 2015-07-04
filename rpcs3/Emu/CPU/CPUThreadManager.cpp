@@ -78,7 +78,7 @@ std::shared_ptr<RawSPUThread> CPUThreadManager::NewRawSPUThread()
 	{
 		if (m_raw_spu[i].expired())
 		{
-			m_raw_spu[i] = result = Emu.GetIdManager().make_ptr<RawSPUThread>("RawSPU " + std::to_string(i), i);
+			m_raw_spu[i] = result = Emu.GetIdManager().make_ptr<RawSPUThread>(std::to_string(i), i);
 			break;
 		}
 	}

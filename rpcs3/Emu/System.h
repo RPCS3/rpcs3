@@ -54,6 +54,9 @@ class Emulator
 	volatile u32 m_status;
 	uint m_mode;
 
+	std::atomic<u64> m_pause_start_time; // set when paused
+	std::atomic<u64> m_pause_amend_time; // increased when resumed
+
 	u32 m_rsx_callback;
 	u32 m_cpu_thr_stop;
 
@@ -62,17 +65,17 @@ class Emulator
 
 	std::mutex m_core_mutex;
 
-	CPUThreadManager* m_thread_manager;
-	PadManager* m_pad_manager;
-	KeyboardManager* m_keyboard_manager;
-	MouseManager* m_mouse_manager;
-	ID_manager* m_id_manager;
-	GSManager* m_gs_manager;
-	AudioManager* m_audio_manager;
-	CallbackManager* m_callback_manager;
-	EventManager* m_event_manager;
-	ModuleManager* m_module_manager;
-	VFS* m_vfs;
+	std::unique_ptr<CPUThreadManager> m_thread_manager;
+	std::unique_ptr<PadManager>       m_pad_manager;
+	std::unique_ptr<KeyboardManager>  m_keyboard_manager;
+	std::unique_ptr<MouseManager>     m_mouse_manager;
+	std::unique_ptr<ID_manager>       m_id_manager;
+	std::unique_ptr<GSManager>        m_gs_manager;
+	std::unique_ptr<AudioManager>     m_audio_manager;
+	std::unique_ptr<CallbackManager>  m_callback_manager;
+	std::unique_ptr<EventManager>     m_event_manager;
+	std::unique_ptr<ModuleManager>    m_module_manager;
+	std::unique_ptr<VFS>              m_vfs;
 
 	EmuInfo m_info;
 	loader::loader m_loader;
@@ -117,8 +120,12 @@ public:
 		m_emu_path = path;
 	}
 
-	std::mutex&       GetCoreMutex()       { return m_core_mutex; }
+	u64 GetPauseTime()
+	{
+		return m_pause_amend_time;
+	}
 
+	std::mutex&       GetCoreMutex()       { return m_core_mutex; }
 	CPUThreadManager& GetCPU()             { return *m_thread_manager; }
 	PadManager&       GetPadManager()      { return *m_pad_manager; }
 	KeyboardManager&  GetKeyboardManager() { return *m_keyboard_manager; }
