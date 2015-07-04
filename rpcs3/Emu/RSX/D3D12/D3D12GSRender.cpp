@@ -1006,6 +1006,10 @@ void copyToCellRamAndRelease(void *dstAddress, ID3D12Resource *res, size_t dstPi
 	res->Release();
 }
 
+void D3D12GSRender::semaphorePGRAPHTextureReadRelease(u32 offset, u32 value)
+{
+	semaphorePGRAPHBackendRelease(offset, value);
+}
 
 void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 {
