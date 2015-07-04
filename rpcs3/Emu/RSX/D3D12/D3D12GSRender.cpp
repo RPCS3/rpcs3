@@ -396,7 +396,7 @@ void D3D12GSRender::OnReset()
 {
 }
 
-void D3D12GSRender::ExecCMD(u32 cmd)
+void D3D12GSRender::Clear(u32 cmd)
 {
 	assert(cmd == NV4097_CLEAR_SURFACE);
 
@@ -476,7 +476,7 @@ void D3D12GSRender::ExecCMD(u32 cmd)
 	m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**) &commandList);
 }
 
-void D3D12GSRender::ExecCMD()
+void D3D12GSRender::Draw()
 {
 	PrepareRenderTargets();
 

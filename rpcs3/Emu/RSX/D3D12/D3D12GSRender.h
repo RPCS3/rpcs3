@@ -411,8 +411,8 @@ protected:
 	virtual void OnInitThread() override;
 	virtual void OnExitThread() override;
 	virtual void OnReset() override;
-	virtual void ExecCMD(u32 cmd) override;
-	virtual void ExecCMD() override;
+	virtual void Clear(u32 cmd) override;
+	virtual void Draw() override;
 	virtual void Flip() override;
 };
 
