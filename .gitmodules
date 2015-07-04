@@ -7,7 +7,7 @@
 	url = https://github.com/hrydgard/ppsspp-ffmpeg
 [submodule "asmjit"]
 	path = asmjit
-	url = https://github.com/kobalicekp/asmjit
+	url = https://github.com/kobalicek/asmjit
 [submodule "llvm"]
 	path = llvm
 	url = https://github.com/llvm-mirror/llvm.git
