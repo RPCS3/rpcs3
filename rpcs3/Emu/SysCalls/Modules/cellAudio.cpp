@@ -7,7 +7,6 @@
 
 #include "rpcs3/Ini.h"
 #include "Emu/SysCalls/lv2/sleep_queue.h"
-#include "Emu/SysCalls/lv2/sys_time.h"
 #include "Emu/SysCalls/lv2/sys_event.h"
 #include "Emu/Event.h"
 #include "Emu/Audio/AudioManager.h"
@@ -16,6 +15,8 @@
 #include "cellAudio.h"
 
 extern Module cellAudio;
+
+extern u64 get_system_time();
 
 AudioConfig g_audio;
 
@@ -151,7 +152,7 @@ s32 cellAudioInit()
 			// TODO: send beforemix event (in ~2,6 ms before mixing)
 
 			// precise time of sleeping: 5,(3) ms (or 256/48000 sec)
-			const u64 expected_time = g_audio.counter * AUDIO_SAMPLES * MHZ / 48000;
+			const u64 expected_time = g_audio.counter * AUDIO_SAMPLES * 1000000 / 48000;
 			if (expected_time >= time_pos)
 			{
 				g_audio.thread.cv.wait_for(lock, std::chrono::milliseconds(1));

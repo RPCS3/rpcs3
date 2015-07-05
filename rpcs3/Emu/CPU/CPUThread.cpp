@@ -56,7 +56,7 @@ CPUThread::CPUThread(CPUThreadType type, const std::string& name, std::function<
 
 			if (!lock) lock.lock();
 
-			cv.wait_for(lock, std::chrono::milliseconds(1));
+			cv.wait(lock);
 		}
 
 		cv.notify_all();

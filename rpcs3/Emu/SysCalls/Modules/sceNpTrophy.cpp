@@ -3,7 +3,6 @@
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/SysCalls/Modules.h"
-#include "Emu/SysCalls/CB_FUNC.h"
 
 #include "rpcs3/Ini.h"
 #include "Utilities/rXml.h"
@@ -12,7 +11,6 @@
 #include "Emu/FS/VFS.h"
 #include "Emu/FS/vfsDir.h"
 #include "Emu/FS/vfsFileBase.h"
-#include "Emu/SysCalls/lv2/sys_time.h"
 #include "sceNp.h"
 #include "sceNpTrophy.h"
 
@@ -331,9 +329,7 @@ s32 sceNpTrophyUnlockTrophy(u32 context, u32 handle, s32 trophyId, vm::ptr<u32> 
 	if (ctxt->tropusr->GetTrophyUnlockState(trophyId))
 		return SCE_NP_TROPHY_ERROR_ALREADY_UNLOCKED;
 
-	u64 timestamp1 = get_system_time(); // TODO: Either timestamp1 or timestamp2 is wrong
-	u64 timestamp2 = get_system_time(); // TODO: Either timestamp1 or timestamp2 is wrong
-	ctxt->tropusr->UnlockTrophy(trophyId, timestamp1, timestamp2);
+	ctxt->tropusr->UnlockTrophy(trophyId, 0, 0); // TODO
 	std::string trophyPath = "/dev_hdd0/home/00000001/trophy/" + ctxt->trp_name + "/TROPUSR.DAT";
 	ctxt->tropusr->Save(trophyPath);
 

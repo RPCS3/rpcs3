@@ -5,12 +5,13 @@
 #include "Emu/SysCalls/SysCalls.h"
 
 #include "Utilities/Thread.h"
-#include "sys_time.h"
 #include "sys_event.h"
 #include "sys_process.h"
 #include "sys_timer.h"
 
 SysCallBase sys_timer("sys_timer");
+
+extern u64 get_system_time();
 
 lv2_timer_t::lv2_timer_t()
 	: start(0)

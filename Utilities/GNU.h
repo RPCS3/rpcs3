@@ -37,22 +37,6 @@
 #define set_alignment(x) __attribute__((aligned(x)))
 #endif
 
-template<size_t size>
-void strcpy_trunc(char(&dst)[size], const std::string& src)
-{
-	const size_t count = (src.size() >= size) ? size - 1 /* truncation */ : src.size();
-	memcpy(dst, src.c_str(), count);
-	dst[count] = 0;
-}
-
-template<size_t size, size_t rsize>
-void strcpy_trunc(char(&dst)[size], const char(&src)[rsize])
-{
-	const size_t count = (rsize >= size) ? size - 1 /* truncation */ : rsize;
-	memcpy(dst, src, count);
-	dst[count] = 0;
-}
-
 #if defined(__GNUG__)
 
 #include <stdlib.h>
@@ -93,42 +77,42 @@ int clock_gettime(int foo, struct timespec *ts);
 
 #endif /* __APPLE__ */
 
-template<typename T, typename T2> static inline std::enable_if_t<std::is_arithmetic<T>::value, T> sync_val_compare_and_swap(volatile T* dest, T2 comp, T2 exch)
+template<typename T, typename T2> inline std::enable_if_t<std::is_arithmetic<T>::value, T> sync_val_compare_and_swap(volatile T* dest, T2 comp, T2 exch)
 {
 	return __sync_val_compare_and_swap(dest, comp, exch);
 }
 
-template<typename T, typename T2> static inline std::enable_if_t<std::is_arithmetic<T>::value, bool> sync_bool_compare_and_swap(volatile T* dest, T2 comp, T2 exch)
+template<typename T, typename T2> inline std::enable_if_t<std::is_arithmetic<T>::value, bool> sync_bool_compare_and_swap(volatile T* dest, T2 comp, T2 exch)
 {
 	return __sync_bool_compare_and_swap(dest, comp, exch);
 }
 
-template<typename T, typename T2> static inline std::enable_if_t<std::is_arithmetic<T>::value, T> sync_lock_test_and_set(volatile T* dest, T2 value)
+template<typename T, typename T2> inline std::enable_if_t<std::is_arithmetic<T>::value, T> sync_lock_test_and_set(volatile T* dest, T2 value)
 {
 	return __sync_lock_test_and_set(dest, value);
 }
 
-template<typename T, typename T2> static inline std::enable_if_t<std::is_arithmetic<T>::value, T> sync_fetch_and_add(volatile T* dest, T2 value)
+template<typename T, typename T2> inline std::enable_if_t<std::is_arithmetic<T>::value, T> sync_fetch_and_add(volatile T* dest, T2 value)
 {
 	return __sync_fetch_and_add(dest, value);
 }
 
-template<typename T, typename T2> static inline std::enable_if_t<std::is_arithmetic<T>::value, T> sync_fetch_and_sub(volatile T* dest, T2 value)
+template<typename T, typename T2> inline std::enable_if_t<std::is_arithmetic<T>::value, T> sync_fetch_and_sub(volatile T* dest, T2 value)
 {
 	return __sync_fetch_and_sub(dest, value);
 }
 
-template<typename T, typename T2> static inline std::enable_if_t<std::is_arithmetic<T>::value, T> sync_fetch_and_or(volatile T* dest, T2 value)
+template<typename T, typename T2> inline std::enable_if_t<std::is_arithmetic<T>::value, T> sync_fetch_and_or(volatile T* dest, T2 value)
 {
 	return __sync_fetch_and_or(dest, value);
 }
 
-template<typename T, typename T2> static inline std::enable_if_t<std::is_arithmetic<T>::value, T> sync_fetch_and_and(volatile T* dest, T2 value)
+template<typename T, typename T2> inline std::enable_if_t<std::is_arithmetic<T>::value, T> sync_fetch_and_and(volatile T* dest, T2 value)
 {
 	return __sync_fetch_and_and(dest, value);
 }
 
-template<typename T, typename T2> static inline std::enable_if_t<std::is_arithmetic<T>::value, T> sync_fetch_and_xor(volatile T* dest, T2 value)
+template<typename T, typename T2> inline std::enable_if_t<std::is_arithmetic<T>::value, T> sync_fetch_and_xor(volatile T* dest, T2 value)
 {
 	return __sync_fetch_and_xor(dest, value);
 }
@@ -139,181 +123,181 @@ template<typename T, typename T2> static inline std::enable_if_t<std::is_arithme
 
 // atomic compare and swap functions
 
-static force_inline uint8_t sync_val_compare_and_swap(volatile uint8_t* dest, uint8_t comp, uint8_t exch)
+inline uint8_t sync_val_compare_and_swap(volatile uint8_t* dest, uint8_t comp, uint8_t exch)
 {
 	return _InterlockedCompareExchange8((volatile char*)dest, exch, comp);
 }
 
-static force_inline uint16_t sync_val_compare_and_swap(volatile uint16_t* dest, uint16_t comp, uint16_t exch)
+inline uint16_t sync_val_compare_and_swap(volatile uint16_t* dest, uint16_t comp, uint16_t exch)
 {
 	return _InterlockedCompareExchange16((volatile short*)dest, exch, comp);
 }
 
-static force_inline uint32_t sync_val_compare_and_swap(volatile uint32_t* dest, uint32_t comp, uint32_t exch)
+inline uint32_t sync_val_compare_and_swap(volatile uint32_t* dest, uint32_t comp, uint32_t exch)
 {
 	return _InterlockedCompareExchange((volatile long*)dest, exch, comp);
 }
 
-static force_inline uint64_t sync_val_compare_and_swap(volatile uint64_t* dest, uint64_t comp, uint64_t exch)
+inline uint64_t sync_val_compare_and_swap(volatile uint64_t* dest, uint64_t comp, uint64_t exch)
 {
 	return _InterlockedCompareExchange64((volatile long long*)dest, exch, comp);
 }
 
-static force_inline bool sync_bool_compare_and_swap(volatile uint8_t* dest, uint8_t comp, uint8_t exch)
+inline bool sync_bool_compare_and_swap(volatile uint8_t* dest, uint8_t comp, uint8_t exch)
 {
 	return (uint8_t)_InterlockedCompareExchange8((volatile char*)dest, exch, comp) == comp;
 }
 
-static force_inline bool sync_bool_compare_and_swap(volatile uint16_t* dest, uint16_t comp, uint16_t exch)
+inline bool sync_bool_compare_and_swap(volatile uint16_t* dest, uint16_t comp, uint16_t exch)
 {
 	return (uint16_t)_InterlockedCompareExchange16((volatile short*)dest, exch, comp) == comp;
 }
 
-static force_inline bool sync_bool_compare_and_swap(volatile uint32_t* dest, uint32_t comp, uint32_t exch)
+inline bool sync_bool_compare_and_swap(volatile uint32_t* dest, uint32_t comp, uint32_t exch)
 {
 	return (uint32_t)_InterlockedCompareExchange((volatile long*)dest, exch, comp) == comp;
 }
 
-static force_inline bool sync_bool_compare_and_swap(volatile uint64_t* dest, uint64_t comp, uint64_t exch)
+inline bool sync_bool_compare_and_swap(volatile uint64_t* dest, uint64_t comp, uint64_t exch)
 {
 	return (uint64_t)_InterlockedCompareExchange64((volatile long long*)dest, exch, comp) == comp;
 }
 
 // atomic exchange functions
 
-static force_inline uint8_t sync_lock_test_and_set(volatile uint8_t* dest, uint8_t value)
+inline uint8_t sync_lock_test_and_set(volatile uint8_t* dest, uint8_t value)
 {
 	return _InterlockedExchange8((volatile char*)dest, value);
 }
 
-static force_inline uint16_t sync_lock_test_and_set(volatile uint16_t* dest, uint16_t value)
+inline uint16_t sync_lock_test_and_set(volatile uint16_t* dest, uint16_t value)
 {
 	return _InterlockedExchange16((volatile short*)dest, value);
 }
 
-static force_inline uint32_t sync_lock_test_and_set(volatile uint32_t* dest, uint32_t value)
+inline uint32_t sync_lock_test_and_set(volatile uint32_t* dest, uint32_t value)
 {
 	return _InterlockedExchange((volatile long*)dest, value);
 }
 
-static force_inline uint64_t sync_lock_test_and_set(volatile uint64_t* dest, uint64_t value)
+inline uint64_t sync_lock_test_and_set(volatile uint64_t* dest, uint64_t value)
 {
 	return _InterlockedExchange64((volatile long long*)dest, value);
 }
 
 // atomic add functions
 
-static force_inline uint8_t sync_fetch_and_add(volatile uint8_t* dest, uint8_t value)
+inline uint8_t sync_fetch_and_add(volatile uint8_t* dest, uint8_t value)
 {
 	return _InterlockedExchangeAdd8((volatile char*)dest, value);
 }
 
-static force_inline uint16_t sync_fetch_and_add(volatile uint16_t* dest, uint16_t value)
+inline uint16_t sync_fetch_and_add(volatile uint16_t* dest, uint16_t value)
 {
 	return _InterlockedExchangeAdd16((volatile short*)dest, value);
 }
 
-static force_inline uint32_t sync_fetch_and_add(volatile uint32_t* dest, uint32_t value)
+inline uint32_t sync_fetch_and_add(volatile uint32_t* dest, uint32_t value)
 {
 	return _InterlockedExchangeAdd((volatile long*)dest, value);
 }
 
-static force_inline uint64_t sync_fetch_and_add(volatile uint64_t* dest, uint64_t value)
+inline uint64_t sync_fetch_and_add(volatile uint64_t* dest, uint64_t value)
 {
 	return _InterlockedExchangeAdd64((volatile long long*)dest, value);
 }
 
 // atomic sub functions
 
-static force_inline uint8_t sync_fetch_and_sub(volatile uint8_t* dest, uint8_t value)
+inline uint8_t sync_fetch_and_sub(volatile uint8_t* dest, uint8_t value)
 {
 	return _InterlockedExchangeAdd8((volatile char*)dest, -(char)value);
 }
 
-static force_inline uint16_t sync_fetch_and_sub(volatile uint16_t* dest, uint16_t value)
+inline uint16_t sync_fetch_and_sub(volatile uint16_t* dest, uint16_t value)
 {
 	return _InterlockedExchangeAdd16((volatile short*)dest, -(short)value);
 }
 
-static force_inline uint32_t sync_fetch_and_sub(volatile uint32_t* dest, uint32_t value)
+inline uint32_t sync_fetch_and_sub(volatile uint32_t* dest, uint32_t value)
 {
 	return _InterlockedExchangeAdd((volatile long*)dest, -(long)value);
 }
 
-static force_inline uint64_t sync_fetch_and_sub(volatile uint64_t* dest, uint64_t value)
+inline uint64_t sync_fetch_and_sub(volatile uint64_t* dest, uint64_t value)
 {
 	return _InterlockedExchangeAdd64((volatile long long*)dest, -(long long)value);
 }
 
-// atomic bitwise or functions
+// atomic `bitwise or` functions
 
-static force_inline uint8_t sync_fetch_and_or(volatile uint8_t* dest, uint8_t value)
+inline uint8_t sync_fetch_and_or(volatile uint8_t* dest, uint8_t value)
 {
 	return _InterlockedOr8((volatile char*)dest, value);
 }
 
-static force_inline uint16_t sync_fetch_and_or(volatile uint16_t* dest, uint16_t value)
+inline uint16_t sync_fetch_and_or(volatile uint16_t* dest, uint16_t value)
 {
 	return _InterlockedOr16((volatile short*)dest, value);
 }
 
-static force_inline uint32_t sync_fetch_and_or(volatile uint32_t* dest, uint32_t value)
+inline uint32_t sync_fetch_and_or(volatile uint32_t* dest, uint32_t value)
 {
 	return _InterlockedOr((volatile long*)dest, value);
 }
 
-static force_inline uint64_t sync_fetch_and_or(volatile uint64_t* dest, uint64_t value)
+inline uint64_t sync_fetch_and_or(volatile uint64_t* dest, uint64_t value)
 {
 	return _InterlockedOr64((volatile long long*)dest, value);
 }
 
-// atomic bitwise and functions
+// atomic `bitwise and` functions
 
-static force_inline uint8_t sync_fetch_and_and(volatile uint8_t* dest, uint8_t value)
+inline uint8_t sync_fetch_and_and(volatile uint8_t* dest, uint8_t value)
 {
 	return _InterlockedAnd8((volatile char*)dest, value);
 }
 
-static force_inline uint16_t sync_fetch_and_and(volatile uint16_t* dest, uint16_t value)
+inline uint16_t sync_fetch_and_and(volatile uint16_t* dest, uint16_t value)
 {
 	return _InterlockedAnd16((volatile short*)dest, value);
 }
 
-static force_inline uint32_t sync_fetch_and_and(volatile uint32_t* dest, uint32_t value)
+inline uint32_t sync_fetch_and_and(volatile uint32_t* dest, uint32_t value)
 {
 	return _InterlockedAnd((volatile long*)dest, value);
 }
 
-static force_inline uint64_t sync_fetch_and_and(volatile uint64_t* dest, uint64_t value)
+inline uint64_t sync_fetch_and_and(volatile uint64_t* dest, uint64_t value)
 {
 	return _InterlockedAnd64((volatile long long*)dest, value);
 }
 
-// atomic bitwise xor functions
+// atomic `bitwise xor` functions
 
-static force_inline uint8_t sync_fetch_and_xor(volatile uint8_t* dest, uint8_t value)
+inline uint8_t sync_fetch_and_xor(volatile uint8_t* dest, uint8_t value)
 {
 	return _InterlockedXor8((volatile char*)dest, value);
 }
 
-static force_inline uint16_t sync_fetch_and_xor(volatile uint16_t* dest, uint16_t value)
+inline uint16_t sync_fetch_and_xor(volatile uint16_t* dest, uint16_t value)
 {
 	return _InterlockedXor16((volatile short*)dest, value);
 }
 
-static force_inline uint32_t sync_fetch_and_xor(volatile uint32_t* dest, uint32_t value)
+inline uint32_t sync_fetch_and_xor(volatile uint32_t* dest, uint32_t value)
 {
 	return _InterlockedXor((volatile long*)dest, value);
 }
 
-static force_inline uint64_t sync_fetch_and_xor(volatile uint64_t* dest, uint64_t value)
+inline uint64_t sync_fetch_and_xor(volatile uint64_t* dest, uint64_t value)
 {
 	return _InterlockedXor64((volatile long long*)dest, value);
 }
 
 #endif /* _MSC_VER */
 
-static force_inline uint32_t cntlz32(uint32_t arg)
+inline uint32_t cntlz32(uint32_t arg)
 {
 #if defined(_MSC_VER)
 	unsigned long res;
@@ -337,7 +321,7 @@ static force_inline uint32_t cntlz32(uint32_t arg)
 #endif
 }
 
-static force_inline uint64_t cntlz64(uint64_t arg)
+inline uint64_t cntlz64(uint64_t arg)
 {
 #if defined(_MSC_VER)
 	unsigned long res;

@@ -104,7 +104,7 @@ namespace vm
 		// test address for arbitrary alignment or something
 		force_inline explicit_bool_t operator %(to_ne_t<AT> right) const
 		{
-			return m_addr % right;
+			return m_addr % right != 0;
 		}
 
 		_ptr_base& operator =(const _ptr_base&) = default;

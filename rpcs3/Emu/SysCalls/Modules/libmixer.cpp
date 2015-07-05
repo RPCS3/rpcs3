@@ -4,7 +4,6 @@
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/SysCalls/Modules.h"
-#include "Emu/SysCalls/CB_FUNC.h"
 #include "Emu/Cell/PPUInstrTable.h"
 
 #include "Emu/CPU/CPUThreadManager.h"

@@ -7,10 +7,11 @@
 #include "Emu/CPU/CPUThreadManager.h"
 #include "Emu/Cell/PPUThread.h"
 #include "sleep_queue.h"
-#include "sys_time.h"
 #include "sys_semaphore.h"
 
 SysCallBase sys_semaphore("sys_semaphore");
+
+extern u64 get_system_time();
 
 s32 sys_semaphore_create(vm::ptr<u32> sem, vm::ptr<sys_semaphore_attribute_t> attr, s32 initial_val, s32 max_val)
 {

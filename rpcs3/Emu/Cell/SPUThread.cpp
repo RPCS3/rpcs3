@@ -11,7 +11,6 @@
 #include "Emu/SysCalls/lv2/sys_spu.h"
 #include "Emu/SysCalls/lv2/sys_event_flag.h"
 #include "Emu/SysCalls/lv2/sys_event.h"
-#include "Emu/SysCalls/lv2/sys_time.h"
 
 #include "Emu/Cell/SPUDisAsm.h"
 #include "Emu/Cell/SPUThread.h"
@@ -21,6 +20,8 @@
 #include "Emu/Cell/SPURecompiler.h"
 
 #include <cfenv>
+
+extern u64 get_timebased_time();
 
 const g_spu_imm_table_t g_spu_imm;
 
@@ -179,7 +180,7 @@ void SPUThread::InitRegs()
 	ch_event_mask = 0;
 	ch_event_stat = {};
 
-	ch_dec_start_timestamp = get_time(); // ???
+	ch_dec_start_timestamp = get_timebased_time(); // ???
 	ch_dec_value = 0;
 
 	run_ctrl = {};
@@ -599,7 +600,7 @@ u32 SPUThread::get_ch_value(u32 ch)
 
 	case SPU_RdDec:
 	{
-		return ch_dec_value - (u32)(get_time() - ch_dec_start_timestamp);
+		return ch_dec_value - (u32)(get_timebased_time() - ch_dec_start_timestamp);
 	}
 
 	case SPU_RdEventMask:
@@ -965,7 +966,7 @@ void SPUThread::set_ch_value(u32 ch, u32 value)
 
 	case SPU_WrDec:
 	{
-		ch_dec_start_timestamp = get_time();
+		ch_dec_start_timestamp = get_timebased_time();
 		ch_dec_value = value;
 		return;
 	}

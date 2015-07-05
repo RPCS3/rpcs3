@@ -4,7 +4,6 @@
 #include "Emu/IdManager.h"
 #include "Emu/SysCalls/Modules.h"
 #include "Emu/SysCalls/Callback.h"
-#include "Emu/SysCalls/CB_FUNC.h"
 
 #include "Emu/FS/VFS.h"
 #include "Emu/FS/vfsFile.h"

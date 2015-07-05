@@ -7,11 +7,12 @@
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/SysCalls/Modules/sysPrxForUser.h"
 #include "sleep_queue.h"
-#include "sys_time.h"
 #include "sys_lwmutex.h"
 #include "sys_lwcond.h"
 
 SysCallBase sys_lwcond("sys_lwcond");
+
+extern u64 get_system_time();
 
 s32 _sys_lwcond_create(vm::ptr<u32> lwcond_id, u32 lwmutex_id, vm::ptr<sys_lwcond_t> control, u64 name, u32 arg5)
 {

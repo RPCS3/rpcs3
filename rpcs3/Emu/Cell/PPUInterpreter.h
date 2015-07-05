@@ -5,7 +5,6 @@
 #include "rpcs3/Ini.h"
 #include "Emu/SysCalls/Modules.h"
 #include "Emu/Memory/Memory.h"
-#include "Emu/SysCalls/lv2/sys_time.h"
 
 #include <stdint.h>
 #ifdef _MSC_VER
@@ -18,6 +17,7 @@
 #include <fenv.h>
 
 extern u64 rotate_mask[64][64]; // defined in PPUThread.cpp, static didn't work correctly in GCC 4.9 for some reason
+extern u64 get_timebased_time();
 
 inline void InitRotateMask()
 {
@@ -160,8 +160,8 @@ private:
 		case 0x100: return CPU.VRSAVE;
 		case 0x103: return CPU.SPRG[3];
 
-		case 0x10C: CPU.TB = get_time(); return CPU.TB;
-		case 0x10D: CPU.TB = get_time(); return CPU.TB >> 32;
+		case 0x10C: CPU.TB = get_timebased_time(); return CPU.TB;
+		case 0x10D: CPU.TB = get_timebased_time(); return CPU.TB >> 32;
 
 		case 0x110:
 		case 0x111:
@@ -2923,7 +2923,7 @@ private:
 	{
 		const u32 n = (spr >> 5) | ((spr & 0x1f) << 5);
 
-		CPU.TB = get_time();
+		CPU.TB = get_timebased_time();
 		switch(n)
 		{
 		case 0x10C: CPU.GPR[rd] = CPU.TB; break;

@@ -308,17 +308,20 @@ void Emulator::Pause()
 
 void Emulator::Resume()
 {
+	const u64 time = m_pause_start_time.exchange(0);
+
+	if (time)
+	{
+		m_pause_amend_time += get_system_time() - time;
+	}
+
 	// try to resume
 	if (!sync_bool_compare_and_swap(&m_status, Paused, Running))
 	{
 		return;
 	}
 
-	if (const u64 time = m_pause_start_time.exchange(0))
-	{
-		m_pause_amend_time += get_system_time() - time;
-	}
-	else
+	if (!time)
 	{
 		LOG_ERROR(GENERAL, "Resume(): Concurrent access");
 	}
@@ -337,16 +340,14 @@ extern std::map<u32, std::string> g_armv7_dump;
 
 void Emulator::Stop()
 {
+	LOG_NOTICE(GENERAL, "Stopping emulator...");
+
 	if (sync_lock_test_and_set(&m_status, Stopped) == Stopped)
 	{
 		return;
 	}
 
 	SendDbgCommand(DID_STOP_EMU);
-
-	m_status = Stopped;
-
-	LOG_NOTICE(GENERAL, "Stopping emulator...");
 
 	for (auto& t : GetCPU().GetAllThreads())
 	{

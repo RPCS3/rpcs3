@@ -1,4 +1,5 @@
 #pragma once
+
 #include "Emu/Cell/PPUThread.h"
 
 namespace cb_detail
@@ -172,15 +173,7 @@ namespace vm
 	}
 }
 
-template<typename RT, typename... T>
-force_inline RT cb_call(PPUThread& CPU, u32 pc, u32 rtoc, T... args)
+template<typename RT, typename... T> inline RT cb_call(PPUThread& CPU, u32 pc, u32 rtoc, T... args)
 {
 	return cb_detail::_func_caller<RT, T...>::call(CPU, pc, rtoc, args...);
 }
-
-// Something is wrong with it (but cb_call<void, ...>() should work anyway)
-//template<typename... T>
-//void cb_call(PPUThread& CPU, u32 pc, u32 rtoc, T... args)
-//{
-//	cb_detail::_func_caller<void, T...>::call(CPU, pc, rtoc, args...);
-//}

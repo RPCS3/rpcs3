@@ -62,6 +62,22 @@ template<typename T, typename = std::enable_if_t<std::is_integral<T>::value>> in
 	return static_cast<T>((value + (align - 1)) & ~(align - 1));
 }
 
+// copy null-terminated string from std::string to char array with truncation
+template<std::size_t N> inline void strcpy_trunc(char(&dst)[N], const std::string& src)
+{
+	const std::size_t count = src.size() >= N ? N - 1 : src.size();
+	std::memcpy(dst, src.c_str(), count);
+	dst[count] = '\0';
+}
+
+// copy null-terminated string from char array to char array with truncation
+template<std::size_t N, std::size_t N2> inline void strcpy_trunc(char(&dst)[N], const char(&src)[N2])
+{
+	const std::size_t count = N2 >= N ? N - 1 : N2;
+	std::memcpy(dst, src, count);
+	dst[count] = '\0';
+}
+
 // bool wrapper for restricting bool result conversions
 struct explicit_bool_t
 {

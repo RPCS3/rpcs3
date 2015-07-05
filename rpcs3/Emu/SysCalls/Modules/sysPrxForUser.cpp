@@ -4,7 +4,6 @@
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/SysCalls/Modules.h"
-#include "Emu/SysCalls/CB_FUNC.h"
 
 #include "Emu/FS/vfsFile.h"
 #include "Emu/SysCalls/lv2/sleep_queue.h"
@@ -14,7 +13,6 @@
 #include "Emu/SysCalls/lv2/sys_prx.h"
 #include "Emu/SysCalls/lv2/sys_ppu_thread.h"
 #include "Emu/SysCalls/lv2/sys_process.h"
-#include "Emu/SysCalls/lv2/sys_time.h"
 #include "Emu/SysCalls/lv2/sys_mmapper.h"
 #include "Emu/SysCalls/lv2/sys_lwcond.h"
 #include "Loader/ELF32.h"
@@ -23,6 +21,8 @@
 #include "sysPrxForUser.h"
 
 extern Module sysPrxForUser;
+
+extern u64 get_system_time();
 
 #define TLS_MAX 128
 #define TLS_SYS 0x30
@@ -627,6 +627,13 @@ s32 sys_lwcond_wait(PPUThread& CPU, vm::ptr<sys_lwcond_t> lwcond, u64 timeout)
 
 	sysPrxForUser.Fatal("sys_lwcond_wait(lwcond=*0x%x): unexpected syscall result (0x%x)", lwcond, res);
 	return res;
+}
+
+s64 sys_time_get_system_time()
+{
+	sysPrxForUser.Log("sys_time_get_system_time()");
+
+	return get_system_time();
 }
 
 std::string ps3_fmt(PPUThread& context, vm::cptr<char> fmt, u32 g_count, u32 f_count, u32 v_count)
@@ -1277,6 +1284,8 @@ void sys_ppu_thread_once(PPUThread& CPU, vm::ptr<atomic_be_t<u32>> once_ctrl, vm
 	}
 }
 
+u32 g_ppu_func_index__sys_lwmutex_unlock; // test
+
 Module sysPrxForUser("sysPrxForUser", []()
 {
 	g_tls_start = 0;
@@ -1299,7 +1308,7 @@ Module sysPrxForUser("sysPrxForUser", []()
 	REG_FUNC(sysPrxForUser, sys_lwmutex_destroy);
 	REG_FUNC(sysPrxForUser, sys_lwmutex_lock);
 	REG_FUNC(sysPrxForUser, sys_lwmutex_trylock);
-	REG_FUNC(sysPrxForUser, sys_lwmutex_unlock);
+	g_ppu_func_index__sys_lwmutex_unlock = REG_FUNC(sysPrxForUser, sys_lwmutex_unlock); // test
 
 	REG_FUNC(sysPrxForUser, sys_lwcond_create);
 	REG_FUNC(sysPrxForUser, sys_lwcond_destroy);

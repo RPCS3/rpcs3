@@ -7,8 +7,6 @@
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/ARMv7/ARMv7Thread.h"
 
-#include "Emu/SysCalls/lv2/sys_time.h"
-
 #ifdef _WIN32
 #include <Windows.h>
 #else
@@ -139,8 +137,6 @@ namespace vm
 
 	void _reservation_set(u32 addr, bool no_access = false)
 	{
-		//const auto stamp0 = get_time();
-
 #ifdef _WIN32
 		DWORD old;
 		if (!VirtualProtect(vm::get_ptr(addr & ~0xfff), 4096, no_access ? PAGE_NOACCESS : PAGE_READONLY, &old))
@@ -150,16 +146,12 @@ namespace vm
 		{
 			throw EXCEPTION("System failure (addr=0x%x)", addr);
 		}
-
-		//LOG_NOTICE(MEMORY, "VirtualProtect: %f us", (get_time() - stamp0) / 80.f);
 	}
 
 	bool _reservation_break(u32 addr)
 	{
 		if (g_reservation_addr >> 12 == addr >> 12)
 		{
-			//const auto stamp0 = get_time();
-
 #ifdef _WIN32
 			DWORD old;
 			if (!VirtualProtect(vm::get_ptr(addr & ~0xfff), 4096, PAGE_READWRITE, &old))
@@ -169,8 +161,6 @@ namespace vm
 			{
 				throw EXCEPTION("System failure (addr=0x%x)", addr);
 			}
-
-			//LOG_NOTICE(MEMORY, "VirtualAlloc: %f us", (get_time() - stamp0) / 80.f);
 
 			if (g_reservation_cb)
 			{
@@ -197,8 +187,6 @@ namespace vm
 
 	bool reservation_acquire(void* data, u32 addr, u32 size, std::function<void()> callback)
 	{
-		//const auto stamp0 = get_time();
-
 		bool broken = false;
 
 		assert(size == 1 || size == 2 || size == 4 || size == 8 || size == 128);

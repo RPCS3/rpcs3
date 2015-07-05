@@ -7,11 +7,12 @@
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Event.h"
 #include "sleep_queue.h"
-#include "sys_time.h"
 #include "sys_process.h"
 #include "sys_event.h"
 
 SysCallBase sys_event("sys_event");
+
+extern u64 get_system_time();
 
 lv2_event_queue_t::lv2_event_queue_t(u32 protocol, s32 type, u64 name, u64 key, s32 size)
 	: id(Emu.GetIdManager().get_current_id())

@@ -20,9 +20,14 @@ void CallbackManager::Async(async_cb_t func)
 {
 	std::lock_guard<std::mutex> lock(m_mutex);
 
+	if (!m_cb_thread)
+	{
+		throw EXCEPTION("Callback thread not found");
+	}
+
 	m_async_cb.emplace(std::move(func));
 
-	m_cv.notify_one();
+	m_cb_thread->cv.notify_one();
 }
 
 CallbackManager::check_cb_t CallbackManager::Check()
@@ -45,7 +50,7 @@ void CallbackManager::Init()
 {
 	std::lock_guard<std::mutex> lock(m_mutex);
 
-	auto task = [this](CPUThread& CPU)
+	auto task = [this](CPUThread& cpu)
 	{
 		std::unique_lock<std::mutex> lock(m_mutex);
 
@@ -63,12 +68,12 @@ void CallbackManager::Init()
 
 				if (lock) lock.unlock();
 
-				func(CPU);
+				func(cpu);
 
 				continue;
 			}
 
-			m_cv.wait_for(lock, std::chrono::milliseconds(1));
+			cpu.cv.wait(lock);
 		}
 	};
 
@@ -100,8 +105,8 @@ void CallbackManager::Clear()
 {
 	std::lock_guard<std::mutex> lock(m_mutex);
 
-	m_check_cb = {};
-	m_async_cb = {};
+	m_check_cb = decltype(m_check_cb){};
+	m_async_cb = decltype(m_async_cb){};
 
 	m_cb_thread.reset();
 }

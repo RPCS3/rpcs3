@@ -11,8 +11,7 @@ namespace vm
 	}
 }
 
-template<typename RT, typename... T>
-force_inline RT cb_call(ARMv7Context& context, u32 addr, T... args)
+template<typename RT, typename... T> inline RT cb_call(ARMv7Context& context, u32 addr, T... args)
 {
 	return psv_func_detail::func_caller<RT, T...>::call(context, addr, args...);
 }

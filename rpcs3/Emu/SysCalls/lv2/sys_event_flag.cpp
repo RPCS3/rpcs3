@@ -7,10 +7,11 @@
 #include "Emu/CPU/CPUThreadManager.h"
 #include "Emu/Cell/PPUThread.h"
 #include "sleep_queue.h"
-#include "sys_time.h"
 #include "sys_event_flag.h"
 
 SysCallBase sys_event_flag("sys_event_flag");
+
+extern u64 get_system_time();
 
 s32 sys_event_flag_create(vm::ptr<u32> id, vm::ptr<sys_event_flag_attr> attr, u64 init)
 {

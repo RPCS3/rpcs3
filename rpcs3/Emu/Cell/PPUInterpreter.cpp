@@ -2261,8 +2261,8 @@ void ppu_interpreter::MFSPR(PPUThread& CPU, ppu_opcode_t op)
 	case 0x100: CPU.GPR[op.rd] = CPU.VRSAVE; return;
 	case 0x103: CPU.GPR[op.rd] = CPU.SPRG[3]; return;
 
-	case 0x10C: CPU.TB = get_time(); CPU.GPR[op.rd] = CPU.TB; return;
-	case 0x10D: CPU.TB = get_time(); CPU.GPR[op.rd] = CPU.TB >> 32; return;
+	case 0x10C: CPU.TB = get_timebased_time(); CPU.GPR[op.rd] = CPU.TB; return;
+	case 0x10D: CPU.TB = get_timebased_time(); CPU.GPR[op.rd] = CPU.TB >> 32; return;
 
 	case 0x110:
 	case 0x111:
@@ -2303,7 +2303,7 @@ void ppu_interpreter::MFTB(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u32 n = (op.spr >> 5) | ((op.spr & 0x1f) << 5);
 
-	CPU.TB = get_time();
+	CPU.TB = get_timebased_time();
 	switch (n)
 	{
 	case 0x10C: CPU.GPR[op.rd] = CPU.TB; break;

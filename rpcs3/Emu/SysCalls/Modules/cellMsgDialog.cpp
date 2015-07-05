@@ -3,13 +3,13 @@
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
 #include "Emu/SysCalls/Callback.h"
-#include "Emu/SysCalls/CB_FUNC.h"
 
-#include "Emu/SysCalls/lv2/sys_time.h"
 #include "cellSysutil.h"
 #include "cellMsgDialog.h"
 
 extern Module cellSysutil;
+
+extern u64 get_system_time();
 
 std::unique_ptr<MsgDialogInstance> g_msg_dialog;
 

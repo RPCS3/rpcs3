@@ -1,4 +1,5 @@
 #pragma once
+
 #include "Emu/Cell/PPUThread.h"
 
 using ppu_func_caller = void(*)(PPUThread&);

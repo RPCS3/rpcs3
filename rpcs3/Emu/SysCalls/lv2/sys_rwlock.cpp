@@ -6,10 +6,11 @@
 
 #include "Emu/Cell/PPUThread.h"
 #include "sleep_queue.h"
-#include "sys_time.h"
 #include "sys_rwlock.h"
 
 SysCallBase sys_rwlock("sys_rwlock");
+
+extern u64 get_system_time();
 
 s32 sys_rwlock_create(vm::ptr<u32> rw_lock_id, vm::ptr<sys_rwlock_attribute_t> attr)
 {

@@ -182,7 +182,7 @@ const ppu_func_caller sc_table[1024] =
 	bind_func(sys_time_get_current_time),                   //145 (0x091)
 	null_func,//bind_func(sys_time_get_system_time),        //146 (0x092)  ROOT
 	bind_func(sys_time_get_timebase_frequency),             //147 (0x093)
-	null_func,//bind_func(sys_rwlock_trywlock)              //148 (0x094)
+	null_func,//bind_func(_sys_rwlock_trywlock)             //148 (0x094)
 	null_func,                                              //149 (0x095)  UNS
 	bind_func(sys_raw_spu_create_interrupt_tag),            //150 (0x096)
 	bind_func(sys_raw_spu_set_int_mask),                    //151 (0x097)

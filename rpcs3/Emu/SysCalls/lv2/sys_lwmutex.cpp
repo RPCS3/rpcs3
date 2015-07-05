@@ -7,10 +7,11 @@
 #include "Emu/CPU/CPUThreadManager.h"
 #include "Emu/Cell/PPUThread.h"
 #include "sleep_queue.h"
-#include "sys_time.h"
 #include "sys_lwmutex.h"
 
 SysCallBase sys_lwmutex("sys_lwmutex");
+
+extern u64 get_system_time();
 
 s32 _sys_lwmutex_create(vm::ptr<u32> lwmutex_id, u32 protocol, vm::ptr<sys_lwmutex_t> control, u32 arg4, u64 name, u32 arg6)
 {

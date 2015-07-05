@@ -7,11 +7,12 @@
 #include "Emu/CPU/CPUThreadManager.h"
 #include "Emu/Cell/PPUThread.h"
 #include "sleep_queue.h"
-#include "sys_time.h"
 #include "sys_mutex.h"
 #include "sys_cond.h"
 
 SysCallBase sys_cond("sys_cond");
+
+extern u64 get_system_time();
 
 s32 sys_cond_create(vm::ptr<u32> cond_id, u32 mutex_id, vm::ptr<sys_cond_attribute_t> attr)
 {

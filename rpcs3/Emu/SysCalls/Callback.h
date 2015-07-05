@@ -8,7 +8,6 @@ class CallbackManager
 	using async_cb_t = std::function<void(CPUThread&)>;
 
 	std::mutex m_mutex;
-	std::condition_variable m_cv;
 
 	std::queue<check_cb_t> m_check_cb;
 	std::queue<async_cb_t> m_async_cb;

@@ -2,7 +2,6 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
-#include "Emu/SysCalls/CB_FUNC.h"
 #include "Emu/IdManager.h"
 #include "Emu/Event.h"
 
@@ -427,7 +426,9 @@ void spursHandlerWaitReady(PPUThread& CPU, vm::ptr<CellSpurs> spurs)
 
 		if (spurs->handlerExiting.load())
 		{
-			if (s32 rc = sys_lwmutex_unlock(CPU, spurs.of(&CellSpurs::mutex)))
+			extern u32 g_ppu_func_index__sys_lwmutex_unlock; // test
+
+			if (s32 rc = CALL_FUNC(sys_lwmutex_unlock, CPU, spurs.of(&CellSpurs::mutex)))
 			{
 				throw EXCEPTION("sys_lwmutex_unlock() failed (0x%x)", rc);
 			}
@@ -685,7 +686,7 @@ void spursEventHelperEntry(PPUThread& CPU)
 			}
 			else if (data0 < 1)
 			{
-				const u32 shutdownMask = event_data3;
+				const u32 shutdownMask = (u32)event_data3;
 
 				for (auto wid = 0; wid < CELL_SPURS_MAX_WORKLOAD; wid++)
 				{
@@ -855,7 +856,7 @@ s32 spursStopEventHelper(PPUThread& CPU, vm::ptr<CellSpurs> spurs)
 		return CELL_SPURS_CORE_ERROR_STAT;
 	}
 
-	if (sys_ppu_thread_join(CPU, spurs->ppu1, vm::stackvar<be_t<u64>>(CPU)) != CELL_OK)
+	if (sys_ppu_thread_join(CPU, (u32)spurs->ppu1, vm::stackvar<be_t<u64>>(CPU)) != CELL_OK)
 	{
 		return CELL_SPURS_CORE_ERROR_STAT;
 	}
@@ -914,7 +915,7 @@ s32 spursJoinHandlerThread(PPUThread& CPU, vm::ptr<CellSpurs> spurs)
 		return CELL_SPURS_CORE_ERROR_STAT;
 	}
 
-	if (s32 rc = sys_ppu_thread_join(CPU, spurs->ppu0, vm::stackvar<be_t<u64>>(CPU)))
+	if (s32 rc = sys_ppu_thread_join(CPU, (u32)spurs->ppu0, vm::stackvar<be_t<u64>>(CPU)))
 	{
 		throw EXCEPTION("sys_ppu_thread_join() failed (0x%x)", rc);
 	}
