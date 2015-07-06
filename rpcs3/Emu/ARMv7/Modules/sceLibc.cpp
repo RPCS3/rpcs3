@@ -181,7 +181,7 @@ namespace sce_libc_func
 
 		CHECK_EMU_STATUS;
 
-		for (auto func : decltype(g_atexit)(std::move(g_atexit)))
+		for (auto& func : decltype(g_atexit)(std::move(g_atexit)))
 		{
 			func(context);
 		}

@@ -1133,6 +1133,8 @@ s32 sys_raw_spu_create(vm::ptr<u32> id, vm::ptr<void> attr)
 
 	LV2_LOCK;
 
+	// TODO: check number set by sys_spu_initialize()
+
 	const auto thread = Emu.GetCPU().NewRawSPUThread();
 
 	if (!thread)

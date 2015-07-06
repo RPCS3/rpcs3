@@ -110,4 +110,3 @@ void CallbackManager::Clear()
 
 	m_cb_thread.reset();
 }
-

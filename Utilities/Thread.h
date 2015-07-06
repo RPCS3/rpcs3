@@ -13,12 +13,6 @@ class thread_ctrl_t final
 	// name getter
 	const std::function<std::string()> name;
 
-	// condition variable, notified before thread exit
-	std::condition_variable join_cv;
-
-	// thread status (set to false after execution)
-	std::atomic<bool> joinable{ true };
-
 	// true if TLS of some thread points to owner
 	std::atomic<bool> assigned{ false };
 
@@ -70,9 +64,6 @@ public:
 
 	// detach thread -> empty state
 	void detach();
-
-	// join thread (provide locked unique_lock, for example, lv2_lock, for interruptibility) -> empty state
-	void join(std::unique_lock<std::mutex>& lock);
 
 	// join thread -> empty state
 	void join();

@@ -24,8 +24,8 @@ u32 add_ppu_func(ModuleFunc func)
 	{
 		if (f.id == func.id)
 		{
-			// TODO: if NIDs overlap or if the same function is added twice
-			assert(!"add_ppu_func(): NID already exists");
+			// if NIDs overlap or if the same function is added twice
+			throw EXCEPTION("NID already exists: 0x%08x (%s)", f.id, f.name);
 		}
 	}
 
@@ -332,9 +332,7 @@ void hook_ppu_func(vm::ptr<u32> base, u32 pos, u32 size)
 			//}
 			default:
 			{
-				LOG_ERROR(LOADER, "Unknown search pattern type (%d)", sub.ops[x].type);
-				assert(0);
-				return;
+				throw EXCEPTION("Unknown search pattern type (%d)", sub.ops[x].type);
 			}
 			}
 
@@ -392,12 +390,13 @@ void hook_ppu_funcs(vm::ptr<u32> base, u32 size)
 				continue;
 			}
 
-			enum GroupSearchResult : u32
+			enum : u32
 			{
 				GSR_SUCCESS = 0, // every function from this group has been found once
 				GSR_MISSING = 1, // (error) some function not found
 				GSR_EXCESS = 2, // (error) some function found twice or more
 			};
+
 			u32 res = GSR_SUCCESS;
 
 			// analyse

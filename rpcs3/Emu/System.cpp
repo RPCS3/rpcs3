@@ -293,7 +293,7 @@ void Emulator::Pause()
 	// update pause start time
 	if (m_pause_start_time.exchange(start))
 	{
-		LOG_ERROR(GENERAL, "Pause(): Concurrent access");
+		LOG_ERROR(GENERAL, "Emulator::Pause() error: concurrent access");
 	}
 
 	SendDbgCommand(DID_PAUSE_EMU);
@@ -308,8 +308,10 @@ void Emulator::Pause()
 
 void Emulator::Resume()
 {
+	// get pause start time
 	const u64 time = m_pause_start_time.exchange(0);
 
+	// try to increment summary pause time
 	if (time)
 	{
 		m_pause_amend_time += get_system_time() - time;
@@ -323,14 +325,14 @@ void Emulator::Resume()
 
 	if (!time)
 	{
-		LOG_ERROR(GENERAL, "Resume(): Concurrent access");
+		LOG_ERROR(GENERAL, "Emulator::Resume() error: concurrent access");
 	}
 
 	SendDbgCommand(DID_RESUME_EMU);
 
 	for (auto& t : GetCPU().GetAllThreads())
 	{
-		t->Awake(); // untrigger status check
+		t->Awake(); // untrigger status check and signal
 	}
 
 	SendDbgCommand(DID_RESUMED_EMU);
@@ -349,9 +351,14 @@ void Emulator::Stop()
 
 	SendDbgCommand(DID_STOP_EMU);
 
-	for (auto& t : GetCPU().GetAllThreads())
 	{
-		t->Sleep(); // trigger status check
+		LV2_LOCK;
+
+		// notify all threads
+		for (auto& t : GetCPU().GetAllThreads())
+		{
+			t->Stop(); // signal / trigger status check
+		}
 	}
 
 	while (g_thread_count)

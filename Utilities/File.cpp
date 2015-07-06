@@ -19,7 +19,7 @@ std::unique_ptr<wchar_t[]> to_wchar(const std::string& source)
 
 	if (!MultiByteToWideChar(CP_UTF8, 0, source.c_str(), size, buffer.get(), size))
 	{
-		throw EXCEPTION("Conversion failed (0x%llx)", GET_API_ERROR);
+		throw EXCEPTION("System error 0x%x", GetLastError());
 	}
 
 	return buffer;
@@ -38,14 +38,14 @@ void to_utf8(std::string& result, const wchar_t* source)
 
 	if (size <= 0)
 	{
-		throw EXCEPTION("Conversion failed (0x%llx)", GET_API_ERROR);
+		throw EXCEPTION("System error 0x%x", GetLastError());
 	}
 
 	result.resize(size);
 
 	if (!WideCharToMultiByte(CP_UTF8, 0, source, length, &result.front(), size, NULL, NULL))
 	{
-		throw EXCEPTION("Conversion failed (0x%llx)", GET_API_ERROR);
+		throw EXCEPTION("System error 0x%x", GetLastError());
 	}
 }
 

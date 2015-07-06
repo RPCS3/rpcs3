@@ -50,7 +50,6 @@ CPUThread::CPUThread(CPUThreadType type, const std::string& name, std::function<
 				}
 
 				m_state &= ~CPU_STATE_RETURN;
-				cv.notify_one();
 				continue;
 			}
 
@@ -94,26 +93,29 @@ void CPUThread::Run()
 	SendDbgCommand(DID_STARTED_THREAD, this);
 }
 
-void CPUThread::Resume()
-{
-	SendDbgCommand(DID_RESUME_THREAD, this);
-
-	m_state &= ~CPU_STATE_PAUSED;
-
-	cv.notify_one();
-
-	SendDbgCommand(DID_RESUMED_THREAD, this);
-}
-
 void CPUThread::Pause()
 {
 	SendDbgCommand(DID_PAUSE_THREAD, this);
 
 	m_state |= CPU_STATE_PAUSED;
 
-	cv.notify_one();
-
 	SendDbgCommand(DID_PAUSED_THREAD, this);
+}
+
+void CPUThread::Resume()
+{
+	SendDbgCommand(DID_RESUME_THREAD, this);
+
+	{
+		// lock for reliable notification
+		std::lock_guard<std::mutex> lock(mutex);
+
+		m_state &= ~CPU_STATE_PAUSED;
+
+		cv.notify_one();
+	}
+
+	SendDbgCommand(DID_RESUMED_THREAD, this);
 }
 
 void CPUThread::Stop()
@@ -126,6 +128,9 @@ void CPUThread::Stop()
 	}
 	else
 	{
+		// lock for reliable notification
+		std::lock_guard<std::mutex> lock(mutex);
+
 		m_state |= CPU_STATE_STOPPED;
 
 		cv.notify_one();
@@ -138,9 +143,14 @@ void CPUThread::Exec()
 {
 	SendDbgCommand(DID_EXEC_THREAD, this);
 
-	m_state &= ~CPU_STATE_STOPPED;
+	{
+		// lock for reliable notification
+		std::lock_guard<std::mutex> lock(mutex);
 
-	cv.notify_one();
+		m_state &= ~CPU_STATE_STOPPED;
+
+		cv.notify_one();
+	}
 }
 
 void CPUThread::Exit()
@@ -162,21 +172,17 @@ void CPUThread::Step()
 		state |= CPU_STATE_STEP;
 		state &= ~CPU_STATE_PAUSED;
 	});
-
-	cv.notify_one();
 }
 
 void CPUThread::Sleep()
 {
 	m_state += CPU_STATE_MAX;
 	m_state |= CPU_STATE_SLEEP;
-
-	cv.notify_one();
 }
 
 void CPUThread::Awake()
 {
-	// must be called after the corresponding Sleep() call
+	// must be called after the balanced Sleep() call
 
 	m_state.atomic_op([](u64& state)
 	{
@@ -190,6 +196,9 @@ void CPUThread::Awake()
 			state &= ~CPU_STATE_SLEEP;
 		}
 	});
+
+	// lock for reliable notification because the condition being checked is probably externally set
+	std::lock_guard<std::mutex> lock(mutex);
 
 	cv.notify_one();
 }
@@ -206,7 +215,7 @@ bool CPUThread::CheckStatus()
 
 		if (!lock) lock.lock();
 
-		cv.wait_for(lock, std::chrono::milliseconds(1));
+		cv.wait(lock);
 	}
 
 	if (m_state.load() & CPU_STATE_RETURN || IsStopped())

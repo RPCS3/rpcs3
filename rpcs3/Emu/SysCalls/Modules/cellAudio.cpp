@@ -42,11 +42,11 @@ s32 cellAudioInit()
 
 	// alloc memory (only once until the emulator is stopped)
 	g_audio.buffer = g_audio.buffer ? g_audio.buffer : Memory.MainMem.AllocAlign(AUDIO_PORT_OFFSET * AUDIO_PORT_COUNT, 4096);
-	g_audio.indexes = g_audio.indexes ? g_audio.indexes : Memory.MainMem.AllocAlign(sizeof(u64) * AUDIO_PORT_COUNT, __alignof(u64));
+	g_audio.indexes = g_audio.indexes ? g_audio.indexes : Memory.MainMem.AllocAlign(sizeof32(u64) * AUDIO_PORT_COUNT, alignof32(u64));
 
 	// clear memory
 	memset(vm::get_ptr<void>(g_audio.buffer), 0, AUDIO_PORT_OFFSET * AUDIO_PORT_COUNT);
-	memset(vm::get_ptr<void>(g_audio.indexes), 0, sizeof(u64) * AUDIO_PORT_COUNT);
+	memset(vm::get_ptr<void>(g_audio.indexes), 0, sizeof32(u64) * AUDIO_PORT_COUNT);
 
 	// check thread status
 	if (g_audio.thread.joinable())

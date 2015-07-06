@@ -1307,13 +1307,10 @@ void thread_t::start(std::function<std::string()> name, std::function<void()> fu
 		}
 
 		//ctrl->set_current(false);
+
 		vm::reservation_free();
 
 		g_thread_count--;
-
-		ctrl->joinable = false;
-
-		ctrl->join_cv.notify_all();
 
 #if defined(_MSC_VER)
 		_set_se_translator(old_se_translator);
@@ -1331,37 +1328,14 @@ void thread_t::detach()
 	// +clear m_thread
 	const auto ctrl = std::move(m_thread);
 
-	cv.notify_all();
+	{
+		// lock for reliable notification
+		std::lock_guard<std::mutex> lock(mutex);
+
+		cv.notify_all();
+	}
 
 	ctrl->m_thread.detach();
-}
-
-void thread_t::join(std::unique_lock<std::mutex>& lock)
-{
-	if (!m_thread)
-	{
-		throw EXCEPTION("Invalid thread");
-	}
-
-	if (g_tls_this_thread == m_thread.get())
-	{
-		throw EXCEPTION("Deadlock");
-	}
-
-	// +clear m_thread
-	const auto ctrl = std::move(m_thread);
-
-	cv.notify_all();
-
-	// wait for completion
-	while (ctrl->joinable)
-	{
-		CHECK_EMU_STATUS;
-
-		ctrl->join_cv.wait_for(lock, std::chrono::milliseconds(1));
-	}
-
-	ctrl->m_thread.join();
 }
 
 void thread_t::join()
@@ -1379,7 +1353,12 @@ void thread_t::join()
 	// +clear m_thread
 	const auto ctrl = std::move(m_thread);
 
-	cv.notify_all();
+	{
+		// lock for reliable notification
+		std::lock_guard<std::mutex> lock(mutex);
+
+		cv.notify_all();
+	}
 
 	ctrl->m_thread.join();
 }
