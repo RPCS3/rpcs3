@@ -346,6 +346,18 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		break;
 	}
 
+	case_range(16, NV4097_SET_TEXTURE_CONTROL2, 4);
+	{
+		LOG_WARNING(RSX, "TODO: NV4097_SET_TEXTURE_CONTROL2");
+		const u32 a0 = ARGS(0);
+		// TODO: Use these
+		u8 unknown = (a0 >> 8) & 0xFF;
+		u8 iso = (a0 >> 6) & 1;
+		u8 aniso = (a0 >> 7) & 1;
+		u8 slope = a0 & 0x1F;
+		break;
+	}
+
 	case_range(16, NV4097_SET_TEXTURE_CONTROL3, 4);
 	{
 		RSXTexture& tex = m_textures[index];
