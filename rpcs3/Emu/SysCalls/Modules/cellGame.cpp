@@ -106,10 +106,11 @@ s32 cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr<CellGa
 
 	vfsFile f("/app_home/../PARAM.SFO");
 	const PSFLoader psf(f);
+
 	if (!psf)
 	{
-		cellGame.Error("cellGameBootCheck(): CELL_GAME_ERROR_ACCESS_ERROR (cannot read PARAM.SFO)");
-		return CELL_GAME_ERROR_ACCESS_ERROR;
+		// According to testing (in debug mode) cellGameBootCheck doesn't return an error code, when PARAM.SFO doesn't exsist.
+		cellGame.Error("cellGameBootCheck(): Cannot read PARAM.SFO)");
 	}
 
 	std::string category = psf.GetString("CATEGORY");
@@ -142,10 +143,9 @@ s32 cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr<CellGa
 		usrdir = "/dev_bdvd/PS3_GAME/USRDIR";
 		path_set = true;
 	}
-	else
+	else if (psf)
 	{
-		cellGame.Error("cellGameBootCheck(): CELL_GAME_ERROR_FAILURE (unknown CATEGORY)");
-		return CELL_GAME_ERROR_FAILURE;
+		cellGame.Error("cellGameBootCheck(): Unknown CATEGORY.");
 	}
 
 	return CELL_GAME_RET_OK;
