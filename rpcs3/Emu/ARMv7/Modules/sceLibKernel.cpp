@@ -4,7 +4,6 @@
 #include "Emu/ARMv7/PSVFuncList.h"
 #include "Emu/ARMv7/PSVObjectList.h"
 
-#include "Emu/CPU/CPUThreadManager.h"
 #include "Emu/SysCalls/Callback.h"
 #include "Emu/ARMv7/ARMv7Thread.h"
 

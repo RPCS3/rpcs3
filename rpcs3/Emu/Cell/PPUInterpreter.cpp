@@ -9,7 +9,6 @@
 #include "PPUInstrTable.h"
 #include "PPUInterpreter.h"
 #include "PPUInterpreter2.h"
-#include "Emu/CPU/CPUThreadManager.h"
 
 class ppu_scale_table_t
 {

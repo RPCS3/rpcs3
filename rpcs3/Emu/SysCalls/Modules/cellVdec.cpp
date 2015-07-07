@@ -14,7 +14,6 @@ extern "C"
 #include "libswscale/swscale.h"
 }
 
-#include "Emu/CPU/CPUThreadManager.h"
 #include "cellPamf.h"
 #include "cellVdec.h"
 

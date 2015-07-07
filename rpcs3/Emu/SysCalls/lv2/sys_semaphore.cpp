@@ -4,7 +4,6 @@
 #include "Emu/IdManager.h"
 #include "Emu/SysCalls/SysCalls.h"
 
-#include "Emu/CPU/CPUThreadManager.h"
 #include "Emu/Cell/PPUThread.h"
 #include "sleep_queue.h"
 #include "sys_semaphore.h"

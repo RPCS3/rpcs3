@@ -357,7 +357,11 @@ void Emulator::Stop()
 		// notify all threads
 		for (auto& t : GetCPU().GetAllThreads())
 		{
-			t->Stop(); // signal / trigger status check
+			std::lock_guard<std::mutex> lock(t->mutex);
+
+			t->Sleep(); // trigger status check
+
+			t->cv.notify_one(); // signal
 		}
 	}
 

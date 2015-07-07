@@ -13,7 +13,6 @@ extern "C"
 #include "libswresample/swresample.h"
 }
 
-#include "Emu/CPU/CPUThreadManager.h"
 #include "cellPamf.h"
 #include "cellAdec.h"
 

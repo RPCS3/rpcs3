@@ -102,7 +102,11 @@ namespace vm
 					throw EXCEPTION("Deadlock");
 				}
 
-				if (!lock) lock.lock();
+				if (!lock)
+				{
+					lock.lock();
+					continue;
+				}
 
 				m_cv.wait_for(lock, std::chrono::milliseconds(1));
 			}

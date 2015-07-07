@@ -6,7 +6,6 @@
 
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/ARMv7/ARMv7Thread.h"
-#include "Emu/CPU/CPUThreadManager.h"
 #include "Callback.h"
 
 void CallbackManager::Register(check_cb_t func)

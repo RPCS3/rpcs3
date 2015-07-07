@@ -5,21 +5,39 @@
 #include "Emu/IdManager.h"
 #include "Emu/DbgCommand.h"
 
-#include "Emu/CPU/CPUThreadManager.h"
 #include "Emu/Cell/PPUThread.h"
+#include "sys_mutex.h"
 #include "sys_ppu_thread.h"
 
 SysCallBase sys_ppu_thread("sys_ppu_thread");
 
-void _sys_ppu_thread_exit(PPUThread& CPU, u64 errorcode)
+void _sys_ppu_thread_exit(PPUThread& ppu, u64 errorcode)
 {
 	sys_ppu_thread.Log("_sys_ppu_thread_exit(errorcode=0x%llx)", errorcode);
 
 	LV2_LOCK;
 
-	if (!CPU.is_joinable)
+	// get all sys_mutex objects
+	for (auto& _id : Emu.GetIdManager().get_data<lv2_mutex_t>())
 	{
-		const u32 id = CPU.GetId();
+		const auto mutex = std::static_pointer_cast<lv2_mutex_t>(_id.data);
+
+		// unlock mutex if locked by this thread
+		if (mutex->owner.get() == &ppu)
+		{
+			mutex->owner.reset();
+			
+			if (mutex->sq.size())
+			{
+				mutex->owner = mutex->sq.front();
+				mutex->owner->Signal();
+			}
+		}
+	}
+
+	if (!ppu.is_joinable)
+	{
+		const u32 id = ppu.GetId();
 
 		CallAfter([id]()
 		{
@@ -27,7 +45,7 @@ void _sys_ppu_thread_exit(PPUThread& CPU, u64 errorcode)
 		});
 	}
 
-	CPU.Exit();
+	ppu.Exit();
 }
 
 void sys_ppu_thread_yield()
@@ -37,7 +55,7 @@ void sys_ppu_thread_yield()
 	std::this_thread::yield();
 }
 
-s32 sys_ppu_thread_join(PPUThread& CPU, u32 thread_id, vm::ptr<u64> vptr)
+s32 sys_ppu_thread_join(PPUThread& ppu, u32 thread_id, vm::ptr<u64> vptr)
 {
 	sys_ppu_thread.Warning("sys_ppu_thread_join(thread_id=0x%x, vptr=*0x%x)", thread_id, vptr);
 
@@ -55,7 +73,7 @@ s32 sys_ppu_thread_join(PPUThread& CPU, u32 thread_id, vm::ptr<u64> vptr)
 		return CELL_EINVAL;
 	}
 
-	if (&CPU == thread.get())
+	if (&ppu == thread.get())
 	{
 		return CELL_EDEADLK;
 	}
@@ -68,7 +86,7 @@ s32 sys_ppu_thread_join(PPUThread& CPU, u32 thread_id, vm::ptr<u64> vptr)
 	{
 		CHECK_EMU_STATUS;
 
-		thread->cv.wait_for(lv2_lock, std::chrono::milliseconds(1));
+		ppu.cv.wait_for(lv2_lock, std::chrono::milliseconds(1));
 	}
 
 	// get exit status from the register
@@ -109,13 +127,13 @@ s32 sys_ppu_thread_detach(u32 thread_id)
 	return CELL_OK;
 }
 
-void sys_ppu_thread_get_join_state(PPUThread& CPU, vm::ptr<s32> isjoinable)
+void sys_ppu_thread_get_join_state(PPUThread& ppu, vm::ptr<s32> isjoinable)
 {
 	sys_ppu_thread.Warning("sys_ppu_thread_get_join_state(isjoinable=*0x%x)", isjoinable);
 
 	LV2_LOCK;
 
-	*isjoinable = CPU.is_joinable;
+	*isjoinable = ppu.is_joinable;
 }
 
 s32 sys_ppu_thread_set_priority(u32 thread_id, s32 prio)
@@ -159,12 +177,12 @@ s32 sys_ppu_thread_get_priority(u32 thread_id, vm::ptr<s32> priop)
 	return CELL_OK;
 }
 
-s32 sys_ppu_thread_get_stack_information(PPUThread& CPU, vm::ptr<sys_ppu_thread_stack_t> sp)
+s32 sys_ppu_thread_get_stack_information(PPUThread& ppu, vm::ptr<sys_ppu_thread_stack_t> sp)
 {
 	sys_ppu_thread.Log("sys_ppu_thread_get_stack_information(sp=*0x%x)", sp);
 
-	sp->pst_addr = CPU.stack_addr;
-	sp->pst_size = CPU.stack_size;
+	sp->pst_addr = ppu.stack_addr;
+	sp->pst_size = ppu.stack_size;
 
 	return CELL_OK;
 }

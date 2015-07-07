@@ -6,7 +6,6 @@
 #include "Emu/IdManager.h"
 #include "Emu/DbgCommand.h"
 
-#include "CPUThreadManager.h"
 #include "CPUDecoder.h"
 #include "CPUThread.h"
 
@@ -57,8 +56,6 @@ CPUThread::CPUThread(CPUThreadType type, const std::string& name, std::function<
 
 			cv.wait(lock);
 		}
-
-		cv.notify_all();
 	});
 }
 
@@ -167,11 +164,23 @@ void CPUThread::Exit()
 
 void CPUThread::Step()
 {
-	m_state.atomic_op([](u64& state)
+	if (m_state.atomic_op([](u64& state) -> bool
 	{
+		const bool was_paused = (state & CPU_STATE_PAUSED) != 0;
+
 		state |= CPU_STATE_STEP;
 		state &= ~CPU_STATE_PAUSED;
-	});
+
+		return was_paused;
+	}))
+	{
+		if (is_current()) return;
+
+		// lock for reliable notification (only if PAUSE was removed)
+		std::lock_guard<std::mutex> lock(mutex);
+
+		cv.notify_one();
+	}
 }
 
 void CPUThread::Sleep()
@@ -184,7 +193,7 @@ void CPUThread::Awake()
 {
 	// must be called after the balanced Sleep() call
 
-	m_state.atomic_op([](u64& state)
+	if (m_state.atomic_op([](u64& state) -> bool
 	{
 		if (state < CPU_STATE_MAX)
 		{
@@ -194,13 +203,43 @@ void CPUThread::Awake()
 		if ((state -= CPU_STATE_MAX) < CPU_STATE_MAX)
 		{
 			state &= ~CPU_STATE_SLEEP;
+
+			// notify the condition variable as well
+			return true;
 		}
-	});
 
-	// lock for reliable notification because the condition being checked is probably externally set
-	std::lock_guard<std::mutex> lock(mutex);
+		return false;
+	}))
+	{
+		if (is_current()) return;
 
-	cv.notify_one();
+		// lock for reliable notification; the condition being checked is probably externally set
+		std::lock_guard<std::mutex> lock(mutex);
+
+		cv.notify_one();
+	}
+}
+
+bool CPUThread::Signal()
+{
+	// try to set SIGNAL
+	if (m_state._or(CPU_STATE_SIGNAL) & CPU_STATE_SIGNAL)
+	{
+		return false;
+	}
+	else
+	{
+		// not truly responsible for signal delivery, requires additional measures like LV2_LOCK
+		cv.notify_one();
+
+		return true;
+	}
+}
+
+bool CPUThread::Signaled()
+{
+	// remove SIGNAL and return its old value
+	return (m_state._and_not(CPU_STATE_SIGNAL) & CPU_STATE_SIGNAL) != 0;
 }
 
 bool CPUThread::CheckStatus()
@@ -213,7 +252,11 @@ bool CPUThread::CheckStatus()
 
 		if (!IsPaused()) break;
 
-		if (!lock) lock.lock();
+		if (!lock)
+		{
+			lock.lock();
+			continue;
+		}
 
 		cv.wait(lock);
 	}

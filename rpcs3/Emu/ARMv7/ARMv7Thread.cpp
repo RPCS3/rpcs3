@@ -4,7 +4,6 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
-#include "Emu/CPU/CPUThreadManager.h"
 #include "Emu/ARMv7/PSVFuncList.h"
 
 #include "ARMv7Thread.h"

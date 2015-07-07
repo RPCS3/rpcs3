@@ -6,7 +6,6 @@
 #include "Emu/SysCalls/Modules.h"
 #include "Emu/Cell/PPUInstrTable.h"
 
-#include "Emu/CPU/CPUThreadManager.h"
 #include "cellAudio.h"
 #include "libmixer.h"
 

@@ -5,7 +5,6 @@
 #include "Emu/System.h"
 
 #include "Emu/IdManager.h"
-#include "Emu/CPU/CPUThreadManager.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/SysCalls/ErrorCodes.h"
 #include "Emu/SysCalls/lv2/sys_spu.h"
@@ -530,7 +529,11 @@ u32 SPUThread::get_ch_value(u32 ch)
 
 			if (IsStopped()) throw CPUThreadStop{};
 
-			if (!lock) lock.lock();
+			if (!lock)
+			{
+				lock.lock();
+				continue;
+			}
 
 			cv.wait_for(lock, std::chrono::milliseconds(1));
 		}
@@ -555,7 +558,11 @@ u32 SPUThread::get_ch_value(u32 ch)
 
 			if (IsStopped()) throw CPUThreadStop{};
 
-			if (!lock) lock.lock();
+			if (!lock)
+			{
+				lock.lock();
+				continue;
+			}
 
 			cv.wait_for(lock, std::chrono::milliseconds(1));
 		}
@@ -620,7 +627,11 @@ u32 SPUThread::get_ch_value(u32 ch)
 
 			if (IsStopped()) throw CPUThreadStop{};
 
-			if (!lock) lock.lock();
+			if (!lock)
+			{
+				lock.lock();
+				continue;
+			}
 
 			cv.wait_for(lock, std::chrono::milliseconds(1));
 		}
@@ -661,7 +672,11 @@ void SPUThread::set_ch_value(u32 ch, u32 value)
 
 				if (IsStopped()) throw CPUThreadStop{};
 
-				if (!lock) lock.lock();
+				if (!lock)
+				{
+					lock.lock();
+					continue;
+				}
 
 				cv.wait_for(lock, std::chrono::milliseconds(1));
 			}
@@ -857,7 +872,11 @@ void SPUThread::set_ch_value(u32 ch, u32 value)
 
 			if (IsStopped()) throw CPUThreadStop{};
 
-			if (!lock) lock.lock();
+			if (!lock)
+			{
+				lock.lock();
+				continue;
+			}
 
 			cv.wait_for(lock, std::chrono::milliseconds(1));
 		}

@@ -12,7 +12,6 @@
 #include "Emu/Cell/PPUInterpreter2.h"
 #include "Emu/Cell/PPULLVMRecompiler.h"
 //#include "Emu/Cell/PPURecompiler.h"
-#include "Emu/CPU/CPUThreadManager.h"
 
 #ifdef _WIN32
 #include <Windows.h>

@@ -137,8 +137,11 @@ struct waiter_map_t
 
 			check_emu_status(addr);
 
-			// lock the mutex and initialize waiter (only once)
-			if (!lock) lock.lock();
+			if (!lock)
+			{
+				lock.lock();
+				continue;
+			}
 			
 			// wait on an appropriate cond var for 1 ms or until a signal arrived
 			cvs[hash].wait_for(lock, std::chrono::milliseconds(1));

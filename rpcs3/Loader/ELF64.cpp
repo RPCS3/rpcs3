@@ -10,7 +10,6 @@
 #include "Emu/SysCalls/ModuleManager.h"
 #include "Emu/SysCalls/lv2/sys_prx.h"
 #include "Emu/Cell/PPUInstrTable.h"
-#include "Emu/CPU/CPUThreadManager.h"
 #include "ELF64.h"
 #include "Ini.h"
 

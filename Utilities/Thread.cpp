@@ -1290,10 +1290,12 @@ void thread_t::start(std::function<std::string()> name, std::function<void()> fu
 		}
 		catch (const char* e) // obsolete
 		{
+			LOG_ERROR(GENERAL, "Deprecated exception type (const char*)");
 			error(e);
 		}
 		catch (const std::string& e) // obsolete
 		{
+			LOG_ERROR(GENERAL, "Deprecated exception type (std::string)");
 			error(e.c_str());
 		}
 		catch (const fmt::exception& e)

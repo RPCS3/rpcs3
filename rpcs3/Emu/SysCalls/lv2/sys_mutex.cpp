@@ -4,9 +4,7 @@
 #include "Emu/IdManager.h"
 #include "Emu/SysCalls/SysCalls.h"
 
-#include "Emu/CPU/CPUThreadManager.h"
 #include "Emu/Cell/PPUThread.h"
-#include "sleep_queue.h"
 #include "sys_mutex.h"
 
 SysCallBase sys_mutex("sys_mutex");
@@ -36,8 +34,7 @@ s32 sys_mutex_create(vm::ptr<u32> mutex_id, vm::ptr<sys_mutex_attribute_t> attr)
 
 	if ((!recursive && attr->recursive != SYS_SYNC_NOT_RECURSIVE) || attr->pshared != SYS_SYNC_NOT_PROCESS_SHARED || attr->adaptive != SYS_SYNC_NOT_ADAPTIVE || attr->ipc_key.data() || attr->flags.data())
 	{
-		sys_mutex.Error("sys_mutex_create(): unknown attributes (recursive=0x%x, pshared=0x%x, adaptive=0x%x, ipc_key=0x%llx, flags=0x%x)",
-			attr->recursive, attr->pshared, attr->adaptive, attr->ipc_key, attr->flags);
+		sys_mutex.Error("sys_mutex_create(): unknown attributes (recursive=0x%x, pshared=0x%x, adaptive=0x%x, ipc_key=0x%llx, flags=0x%x)", attr->recursive, attr->pshared, attr->adaptive, attr->ipc_key, attr->flags);
 
 		return CELL_EINVAL;
 	}
@@ -60,13 +57,8 @@ s32 sys_mutex_destroy(u32 mutex_id)
 		return CELL_ESRCH;
 	}
 
-	if (!mutex->owner.expired())
-	{
-		return CELL_EBUSY;
-	}
-
 	// assuming that the mutex is locked immediately by another waiting thread when unlocked
-	if (mutex->waiters)
+	if (!mutex->owner || !mutex->sq.empty())
 	{
 		return CELL_EBUSY;
 	}
@@ -81,7 +73,7 @@ s32 sys_mutex_destroy(u32 mutex_id)
 	return CELL_OK;
 }
 
-s32 sys_mutex_lock(PPUThread& CPU, u32 mutex_id, u64 timeout)
+s32 sys_mutex_lock(PPUThread& ppu, u32 mutex_id, u64 timeout)
 {
 	sys_mutex.Log("sys_mutex_lock(mutex_id=0x%x, timeout=0x%llx)", mutex_id, timeout);
 
@@ -96,9 +88,8 @@ s32 sys_mutex_lock(PPUThread& CPU, u32 mutex_id, u64 timeout)
 		return CELL_ESRCH;
 	}
 
-	const auto thread = Emu.GetIdManager().get<PPUThread>(CPU.GetId());
-
-	if (!mutex->owner.owner_before(thread) && !thread.owner_before(mutex->owner)) // check equality
+	// check current ownership
+	if (mutex->owner.get() == &ppu)
 	{
 		if (mutex->recursive)
 		{
@@ -115,29 +106,46 @@ s32 sys_mutex_lock(PPUThread& CPU, u32 mutex_id, u64 timeout)
 		return CELL_EDEADLK;
 	}
 
-	// protocol is ignored in current implementation
-	mutex->waiters++;
+	// lock immediately if not locked
+	if (!mutex->owner)
+	{
+		mutex->owner = std::move(ppu.shared_from_this());
 
-	while (!mutex->owner.expired())
+		return CELL_OK;
+	}
+
+	// add waiter; protocol is ignored in current implementation
+	sleep_queue_entry_t waiter(ppu, mutex->sq);
+
+	while (!ppu.Signaled())
 	{
 		CHECK_EMU_STATUS;
 
-		if (timeout && get_system_time() - start_time > timeout)
+		if (timeout)
 		{
-			mutex->waiters--;
-			return CELL_ETIMEDOUT;
-		}
+			const u64 passed = get_system_time() - start_time;
 
-		mutex->cv.wait_for(lv2_lock, std::chrono::milliseconds(1));
+			if (passed >= timeout || ppu.cv.wait_for(lv2_lock, std::chrono::microseconds(timeout - passed)) == std::cv_status::timeout)
+			{
+				return CELL_ETIMEDOUT;
+			}
+		}
+		else
+		{
+			ppu.cv.wait(lv2_lock);
+		}
 	}
 
-	mutex->owner = thread;
-	mutex->waiters--;
+	// new owner must be set when unlocked
+	if (mutex->owner.get() != &ppu)
+	{
+		throw EXCEPTION("Unexpected mutex owner");
+	}
 
 	return CELL_OK;
 }
 
-s32 sys_mutex_trylock(PPUThread& CPU, u32 mutex_id)
+s32 sys_mutex_trylock(PPUThread& ppu, u32 mutex_id)
 {
 	sys_mutex.Log("sys_mutex_trylock(mutex_id=0x%x)", mutex_id);
 
@@ -150,9 +158,8 @@ s32 sys_mutex_trylock(PPUThread& CPU, u32 mutex_id)
 		return CELL_ESRCH;
 	}
 
-	const auto thread = Emu.GetIdManager().get<PPUThread>(CPU.GetId());
-
-	if (!mutex->owner.owner_before(thread) && !thread.owner_before(mutex->owner)) // check equality
+	// check current ownership
+	if (mutex->owner.get() == &ppu)
 	{
 		if (mutex->recursive)
 		{
@@ -169,17 +176,18 @@ s32 sys_mutex_trylock(PPUThread& CPU, u32 mutex_id)
 		return CELL_EDEADLK;
 	}
 
-	if (!mutex->owner.expired())
+	if (mutex->owner)
 	{
 		return CELL_EBUSY;
 	}
 
-	mutex->owner = thread;
+	// own the mutex if free
+	mutex->owner = std::move(ppu.shared_from_this());
 
 	return CELL_OK;
 }
 
-s32 sys_mutex_unlock(PPUThread& CPU, u32 mutex_id)
+s32 sys_mutex_unlock(PPUThread& ppu, u32 mutex_id)
 {
 	sys_mutex.Log("sys_mutex_unlock(mutex_id=0x%x)", mutex_id);
 
@@ -192,9 +200,8 @@ s32 sys_mutex_unlock(PPUThread& CPU, u32 mutex_id)
 		return CELL_ESRCH;
 	}
 
-	const auto thread = Emu.GetIdManager().get<PPUThread>(CPU.GetId());
-
-	if (mutex->owner.owner_before(thread) || thread.owner_before(mutex->owner)) // check inequality
+	// check current ownership
+	if (mutex->owner.get() != &ppu)
 	{
 		return CELL_EPERM;
 	}
@@ -210,11 +217,18 @@ s32 sys_mutex_unlock(PPUThread& CPU, u32 mutex_id)
 	}
 	else
 	{
+		// free the mutex
 		mutex->owner.reset();
 
-		if (mutex->waiters)
+		if (mutex->sq.size())
 		{
-			mutex->cv.notify_one();
+			// pick another owner; protocol is ignored in current implementation
+			mutex->owner = mutex->sq.front();
+
+			if (!mutex->owner->Signal())
+			{
+				throw EXCEPTION("Mutex owner not signaled");
+			}
 		}
 	}
 

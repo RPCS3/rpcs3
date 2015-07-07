@@ -19,8 +19,9 @@ enum : u64
 	CPU_STATE_STEP    = (1ull << 3), // forces the thread to pause after executing just one instruction or something appropriate, set by the debugger
 	CPU_STATE_DEAD    = (1ull << 4), // indicates irreversible exit of the thread
 	CPU_STATE_RETURN  = (1ull << 5), // used for callback return
+	CPU_STATE_SIGNAL  = (1ull << 6),
 
-	CPU_STATE_MAX     = (1ull << 6), // added to (subtracted from) m_state by Sleep()/Awake() calls to trigger status check
+	CPU_STATE_MAX     = (1ull << 7), // added to (subtracted from) m_state by Sleep()/Awake() calls to trigger status check
 };
 
 // "HLE return" exception event
@@ -34,7 +35,7 @@ class CPUThreadExit{};
 
 class CPUDecoder;
 
-class CPUThread : protected thread_t
+class CPUThread : protected thread_t, public std::enable_shared_from_this<CPUThread>
 {
 protected:
 	atomic<u64> m_state; // thread state flags
@@ -99,6 +100,12 @@ public:
 
 	// untrigger thread status check
 	void Awake();
+
+	// set SIGNAL and notify (returns true if set)
+	bool Signal();
+
+	// test SIGNAL and reset
+	bool Signaled();
 
 	// process m_state flags, returns true if the checker must return
 	bool CheckStatus();

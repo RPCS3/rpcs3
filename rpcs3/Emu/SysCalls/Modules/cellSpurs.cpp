@@ -5,7 +5,6 @@
 #include "Emu/IdManager.h"
 #include "Emu/Event.h"
 
-#include "Emu/CPU/CPUThreadManager.h"
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/SysCalls/lv2/sleep_queue.h"
 #include "Emu/SysCalls/lv2/sys_lwmutex.h"
