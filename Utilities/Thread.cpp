@@ -1012,10 +1012,10 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 
 			switch (d_size)
 			{
-			case 1: reg_value = vm::priv_ref<atomic<u8>>(addr).exchange((u8)reg_value); break;
-			case 2: reg_value = vm::priv_ref<atomic<u16>>(addr).exchange((u16)reg_value); break;
-			case 4: reg_value = vm::priv_ref<atomic<u32>>(addr).exchange((u32)reg_value); break;
-			case 8: reg_value = vm::priv_ref<atomic<u64>>(addr).exchange((u64)reg_value); break;
+			case 1: reg_value = vm::priv_ref<atomic_t<u8>>(addr).exchange((u8)reg_value); break;
+			case 2: reg_value = vm::priv_ref<atomic_t<u16>>(addr).exchange((u16)reg_value); break;
+			case 4: reg_value = vm::priv_ref<atomic_t<u32>>(addr).exchange((u32)reg_value); break;
+			case 8: reg_value = vm::priv_ref<atomic_t<u64>>(addr).exchange((u64)reg_value); break;
 			default: return false;
 			}
 
@@ -1035,10 +1035,10 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 
 			switch (d_size)
 			{
-			case 1: old_value = vm::priv_ref<atomic<u8>>(addr).compare_and_swap((u8)cmp_value, (u8)reg_value); break;
-			case 2: old_value = vm::priv_ref<atomic<u16>>(addr).compare_and_swap((u16)cmp_value, (u16)reg_value); break;
-			case 4: old_value = vm::priv_ref<atomic<u32>>(addr).compare_and_swap((u32)cmp_value, (u32)reg_value); break;
-			case 8: old_value = vm::priv_ref<atomic<u64>>(addr).compare_and_swap((u64)cmp_value, (u64)reg_value); break;
+			case 1: old_value = vm::priv_ref<atomic_t<u8>>(addr).compare_and_swap((u8)cmp_value, (u8)reg_value); break;
+			case 2: old_value = vm::priv_ref<atomic_t<u16>>(addr).compare_and_swap((u16)cmp_value, (u16)reg_value); break;
+			case 4: old_value = vm::priv_ref<atomic_t<u32>>(addr).compare_and_swap((u32)cmp_value, (u32)reg_value); break;
+			case 8: old_value = vm::priv_ref<atomic_t<u64>>(addr).compare_and_swap((u64)cmp_value, (u64)reg_value); break;
 			default: return false;
 			}
 
@@ -1058,10 +1058,10 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 
 			switch (d_size)
 			{
-			case 1: value = vm::priv_ref<atomic<u8>>(addr) &= static_cast<u8>(value); break;
-			case 2: value = vm::priv_ref<atomic<u16>>(addr) &= static_cast<u16>(value); break;
-			case 4: value = vm::priv_ref<atomic<u32>>(addr) &= static_cast<u32>(value); break;
-			case 8: value = vm::priv_ref<atomic<u64>>(addr) &= value; break;
+			case 1: value = vm::priv_ref<atomic_t<u8>>(addr) &= (u8)value; break;
+			case 2: value = vm::priv_ref<atomic_t<u16>>(addr) &= (u16)value; break;
+			case 4: value = vm::priv_ref<atomic_t<u32>>(addr) &= (u32)value; break;
+			case 8: value = vm::priv_ref<atomic_t<u64>>(addr) &= value; break;
 			default: return false;
 			}
 

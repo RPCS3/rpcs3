@@ -39,6 +39,8 @@ struct lv2_mutex_t
 		, name(name)
 	{
 	}
+
+	void unlock(lv2_lock_type& lv2_lock);
 };
 
 REG_ID_TYPE(lv2_mutex_t, 0x85); // SYS_MUTEX_OBJECT

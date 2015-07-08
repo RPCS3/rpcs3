@@ -34,14 +34,19 @@
 
 #include "SysCalls.h"
 
-void null_func(PPUThread& CPU);
+void null_func(PPUThread& ppu)
+{
+	const auto code = ppu.GPR[11];
+	LOG_ERROR(HLE, "Unimplemented syscall %lld: %s -> CELL_OK", code, SysCalls::GetFuncName(~code));
+	ppu.GPR[3] = 0;
+}
 
 // UNS = Unused
 // ROOT = Root
 // DBG = Debug
 // PM = Product Mode
 // AuthID = Authentication ID
-const ppu_func_caller sc_table[1024] =
+const ppu_func_caller g_sc_table[1024] =
 {
 	null_func,
 	bind_func(sys_process_getpid),                          //1   (0x001)
@@ -886,13 +891,6 @@ const ppu_func_caller sc_table[1024] =
 	null_func, null_func, null_func, bind_func(cellGcmCallback), //1023  UNS
 };
 
-void null_func(PPUThread& CPU)
-{
-	const auto code = CPU.GPR[11];
-	LOG_ERROR(HLE, "Unimplemented syscall %lld: %s -> CELL_OK", code, SysCalls::GetFuncName(~code));
-	CPU.GPR[3] = 0;
-}
-
 void SysCalls::DoSyscall(PPUThread& CPU, u64 code)
 {
 	if (code >= 1024)
@@ -908,7 +906,7 @@ void SysCalls::DoSyscall(PPUThread& CPU, u64 code)
 		LOG_NOTICE(PPU, "Syscall %lld called: %s", code, SysCalls::GetFuncName(~code));
 	}
 
-	sc_table[code](CPU);
+	g_sc_table[code](CPU);
 
 	if (Ini.HLELogging.GetValue())
 	{

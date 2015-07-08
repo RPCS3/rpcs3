@@ -18,22 +18,16 @@ void _sys_ppu_thread_exit(PPUThread& ppu, u64 errorcode)
 	LV2_LOCK;
 
 	// get all sys_mutex objects
-	for (auto& _id : Emu.GetIdManager().get_data<lv2_mutex_t>())
+	for (auto& mutex : Emu.GetIdManager().get_all<lv2_mutex_t>())
 	{
-		const auto mutex = std::static_pointer_cast<lv2_mutex_t>(_id.data);
-
 		// unlock mutex if locked by this thread
 		if (mutex->owner.get() == &ppu)
 		{
-			mutex->owner.reset();
-			
-			if (mutex->sq.size())
-			{
-				mutex->owner = mutex->sq.front();
-				mutex->owner->Signal();
-			}
+			mutex->unlock(lv2_lock);
 		}
 	}
+
+	const auto thread = ppu.shared_from_this();
 
 	if (!ppu.is_joinable)
 	{
@@ -260,8 +254,8 @@ s32 _sys_ppu_thread_create(vm::ptr<u64> thread_id, vm::ptr<ppu_thread_param_t> p
 		return CELL_EINVAL;
 	}
 
-	const bool is_joinable = flags & SYS_PPU_THREAD_CREATE_JOINABLE;
-	const bool is_interrupt = flags & SYS_PPU_THREAD_CREATE_INTERRUPT;
+	const bool is_joinable = (flags & SYS_PPU_THREAD_CREATE_JOINABLE) != 0;
+	const bool is_interrupt = (flags & SYS_PPU_THREAD_CREATE_INTERRUPT) != 0;
 
 	if (is_joinable && is_interrupt)
 	{

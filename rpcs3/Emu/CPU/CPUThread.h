@@ -38,7 +38,7 @@ class CPUDecoder;
 class CPUThread : protected thread_t, public std::enable_shared_from_this<CPUThread>
 {
 protected:
-	atomic<u64> m_state; // thread state flags
+	atomic_t<u64> m_state; // thread state flags
 
 	std::unique_ptr<CPUDecoder> m_dec;
 

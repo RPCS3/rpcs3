@@ -87,14 +87,6 @@ s32 sys_cond_signal(u32 cond_id)
 		// signal one waiting thread; protocol is ignored in current implementation
 		if (thread->Signal())
 		{
-			cond->sent++;
-
-			if (!cond->mutex->owner)
-			{
-				// set the appropriate mutex owner if free; protocol is ignored in current implementation
-				cond->mutex->owner = thread;
-			}
-
 			return CELL_OK;
 		}
 	}
@@ -120,13 +112,7 @@ s32 sys_cond_signal_all(u32 cond_id)
 		// signal all waiting threads; protocol is ignored in current implementation
 		if (thread->Signal())
 		{
-			cond->sent++;
-
-			if (!cond->mutex->owner)
-			{
-				// set the appropriate mutex owner if free; protocol is ignored in current implementation
-				cond->mutex->owner = thread;
-			}
+			;
 		}
 	}
 
@@ -153,14 +139,6 @@ s32 sys_cond_signal_to(u32 cond_id, u32 thread_id)
 		// signal specified thread
 		if (thread->GetId() == thread_id && thread->Signal())
 		{
-			cond->sent++;
-
-			if (!cond->mutex->owner)
-			{
-				// set the appropriate mutex owner if free; protocol is ignored in current implementation
-				cond->mutex->owner = thread;
-			}
-
 			return CELL_OK;
 		}
 	}
@@ -228,8 +206,6 @@ s32 sys_cond_wait(PPUThread& ppu, u32 cond_id, u64 timeout)
 
 			CHECK_EMU_STATUS;
 		}
-
-		cond->recv++;
 	}
 
 	// reown the mutex (could be set when notified)

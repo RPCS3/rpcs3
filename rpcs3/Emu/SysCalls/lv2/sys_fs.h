@@ -177,7 +177,7 @@ struct lv2_file_t
 	std::mutex mutex;
 	std::condition_variable cv;
 
-	atomic<u32> st_status;
+	atomic_t<u32> st_status;
 	
 	u64 st_ringbuf_size;
 	u64 st_block_size;
@@ -191,7 +191,7 @@ struct lv2_file_t
 	std::atomic<u64> st_total_read;
 	std::atomic<u64> st_copied;
 
-	atomic<fs_st_cb_rec_t> st_callback;
+	atomic_t<fs_st_cb_rec_t> st_callback;
 
 	lv2_file_t(std::shared_ptr<vfsStream> file, s32 mode, s32 flags)
 		: file(std::move(file))

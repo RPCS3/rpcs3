@@ -137,7 +137,7 @@ union spu_channel_t
 		u32 value;
 	};
 
-	atomic<sync_var_t> sync_var; // atomic variable
+	atomic_t<sync_var_t> sync_var; // atomic variable
 
 public:
 	bool try_push(u32 value)
@@ -223,8 +223,8 @@ struct spu_channel_4_t
 		u32 value2;
 	};
 
-	atomic<sync_var_t> sync_var;
-	atomic<u32> value3;
+	atomic_t<sync_var_t> sync_var;
+	atomic_t<u32> value3;
 
 public:
 	void clear()
@@ -280,10 +280,10 @@ public:
 
 struct spu_interrupt_tag_t
 {
-	atomic<u64> mask;
-	atomic<u64> stat;
+	atomic_t<u64> mask;
+	atomic_t<u64> stat;
 
-	atomic<s32> assigned;
+	atomic_t<s32> assigned;
 
 	std::mutex handler_mutex;
 	std::condition_variable cond;
@@ -526,14 +526,14 @@ public:
 	spu_channel_t ch_snr2; // SPU Signal Notification Register 2
 
 	u32 ch_event_mask;
-	atomic<u32> ch_event_stat;
+	atomic_t<u32> ch_event_stat;
 
 	u64 ch_dec_start_timestamp; // timestamp of writing decrementer value
 	u32 ch_dec_value; // written decrementer value
 
-	atomic<u32> run_ctrl; // SPU Run Control register (only provided to get latest data written)
-	atomic<u32> status; // SPU Status register
-	atomic<u32> npc; // SPU Next Program Counter register
+	atomic_t<u32> run_ctrl; // SPU Run Control register (only provided to get latest data written)
+	atomic_t<u32> status; // SPU Status register
+	atomic_t<u32> npc; // SPU Next Program Counter register
 
 	spu_interrupt_tag_t int0; // SPU Class 0 Interrupt Management
 	spu_interrupt_tag_t int2; // SPU Class 2 Interrupt Management

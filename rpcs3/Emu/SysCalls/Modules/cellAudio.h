@@ -100,7 +100,7 @@ enum AudioPortState : u32
 struct AudioPortConfig
 {
 	std::mutex mutex;
-	atomic<AudioPortState> state;
+	atomic_t<AudioPortState> state;
 
 	u32 channel;
 	u32 block;
@@ -118,12 +118,12 @@ struct AudioPortConfig
 	};
 
 	float level;	
-	atomic<level_set_t> level_set;
+	atomic_t<level_set_t> level_set;
 };
 
 struct AudioConfig final // custom structure
 {
-	atomic<AudioState> state;
+	atomic_t<AudioState> state;
 	thread_t thread;
 
 	AudioPortConfig ports[AUDIO_PORT_COUNT];

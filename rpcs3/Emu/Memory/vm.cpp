@@ -74,11 +74,11 @@ namespace vm
 	void* g_base_addr = (atexit(finalize), initialize());
 	void* g_priv_addr;
 
-	std::array<atomic<u8>, 0x100000000ull / 4096> g_page_info = {}; // information about every page
+	std::array<atomic_t<u8>, 0x100000000ull / 4096> g_page_info = {}; // information about every page
 
 	class reservation_mutex_t
 	{
-		atomic<const thread_ctrl_t*> m_owner{};
+		atomic_t<const thread_ctrl_t*> m_owner{};
 		std::condition_variable m_cv;
 		std::mutex m_mutex;
 

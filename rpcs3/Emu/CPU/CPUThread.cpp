@@ -37,6 +37,7 @@ CPUThread::CPUThread(CPUThreadType type, const std::string& name, std::function<
 				}
 				catch (CPUThreadReturn)
 				{
+					;
 				}
 				catch (CPUThreadStop)
 				{
@@ -47,12 +48,21 @@ CPUThread::CPUThread(CPUThreadType type, const std::string& name, std::function<
 					m_state |= CPU_STATE_DEAD;
 					break;
 				}
+				catch (const fmt::exception&)
+				{
+					DumpInformation();
+					throw;
+				}
 
 				m_state &= ~CPU_STATE_RETURN;
 				continue;
 			}
 
-			if (!lock) lock.lock();
+			if (!lock)
+			{
+				lock.lock();
+				continue;
+			}
 
 			cv.wait(lock);
 		}

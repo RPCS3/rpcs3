@@ -13,10 +13,10 @@ class thread_ctrl_t final
 	// name getter
 	const std::function<std::string()> name;
 
-	// true if TLS of some thread points to owner
+	// true if assigned somewhere in TLS
 	std::atomic<bool> assigned{ false };
 
-	// assign TLS
+	// assign TLS (must be assigned only once)
 	void set_current();
 
 public:
@@ -174,7 +174,7 @@ class squeue_t
 		};
 	};
 
-	atomic<squeue_sync_var_t> m_sync;
+	atomic_t<squeue_sync_var_t> m_sync;
 
 	mutable std::mutex m_rcv_mutex;
 	mutable std::mutex m_wcv_mutex;

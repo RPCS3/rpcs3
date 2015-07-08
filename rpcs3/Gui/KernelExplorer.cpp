@@ -4,8 +4,9 @@
 #include "Emu/System.h"
 
 #include "Emu/IdManager.h"
-#include "Emu/CPU/CPUThreadManager.h"
-#include "Emu/CPU/CPUThread.h"
+#include "Emu/Cell/PPUThread.h"
+#include "Emu/Cell/SPUThread.h"
+#include "Emu/Cell/RawSPUThread.h"
 #include "Emu/SysCalls/lv2/sleep_queue.h"
 #include "Emu/SysCalls/lv2/sys_lwmutex.h"
 #include "Emu/SysCalls/lv2/sys_lwcond.h"
@@ -81,6 +82,7 @@ void KernelExplorer::Update()
 	{
 		sprintf(name, "Semaphores (%d)", count);
 		const auto& node = m_tree->AppendItem(root, name);
+
 		for (const auto id : Emu.GetIdManager().get_IDs(SYS_SEMAPHORE_OBJECT))
 		{
 			const auto sem = Emu.GetIdManager().get<lv2_sema_t>(id);
@@ -94,6 +96,7 @@ void KernelExplorer::Update()
 	{
 		sprintf(name, "Mutexes (%d)", count);
 		const auto& node = m_tree->AppendItem(root, name);
+
 		for (const auto id : Emu.GetIdManager().get_IDs(SYS_MUTEX_OBJECT))
 		{
 			const auto mutex = Emu.GetIdManager().get<lv2_mutex_t>(id);
@@ -107,6 +110,7 @@ void KernelExplorer::Update()
 	{
 		sprintf(name, "Lightweight Mutexes (%d)", count);
 		const auto& node = m_tree->AppendItem(root, name);
+
 		for (const auto id : Emu.GetIdManager().get_IDs(SYS_LWMUTEX_OBJECT))
 		{
 			const auto lwm = Emu.GetIdManager().get<lv2_lwmutex_t>(id);
@@ -120,6 +124,7 @@ void KernelExplorer::Update()
 	{
 		sprintf(name, "Condition Variables (%d)", count);
 		const auto& node = m_tree->AppendItem(root, name);
+
 		for (const auto id : Emu.GetIdManager().get_IDs(SYS_COND_OBJECT))
 		{
 			const auto cond = Emu.GetIdManager().get<lv2_cond_t>(id);
@@ -133,6 +138,7 @@ void KernelExplorer::Update()
 	{
 		sprintf(name, "Lightweight Condition Variables (%d)", count);
 		const auto& node = m_tree->AppendItem(root, name);
+
 		for (const auto id : Emu.GetIdManager().get_IDs(SYS_LWCOND_OBJECT))
 		{
 			const auto lwc = Emu.GetIdManager().get<lv2_lwcond_t>(id);
@@ -146,6 +152,7 @@ void KernelExplorer::Update()
 	{
 		sprintf(name, "Event Queues (%d)", count);
 		const auto& node = m_tree->AppendItem(root, name);
+
 		for (const auto id : Emu.GetIdManager().get_IDs(SYS_EVENT_QUEUE_OBJECT))
 		{
 			const auto queue = Emu.GetIdManager().get<lv2_event_queue_t>(id);
@@ -159,6 +166,7 @@ void KernelExplorer::Update()
 	{
 		sprintf(name, "Event Ports (%d)", count);
 		const auto& node = m_tree->AppendItem(root, name);
+
 		for (const auto id : Emu.GetIdManager().get_IDs(SYS_EVENT_PORT_OBJECT))
 		{
 			const auto port = Emu.GetIdManager().get<lv2_event_port_t>(id);
@@ -174,6 +182,7 @@ void KernelExplorer::Update()
 		const auto& node = m_tree->AppendItem(root, name);
 		//sprintf(name, "Segment List (%l)", 2 * objects.size()); // TODO: Assuming 2 segments per PRX file is not good
 		//m_tree->AppendItem(node, name);
+
 		for (const auto& id : Emu.GetIdManager().get_IDs(SYS_PRX_OBJECT))
 		{
 			sprintf(name, "PRX: ID = 0x%x", id);
@@ -186,6 +195,7 @@ void KernelExplorer::Update()
 	{
 		sprintf(name, "Memory Containers (%d)", count);
 		const auto& node = m_tree->AppendItem(root, name);
+
 		for (const auto& id : Emu.GetIdManager().get_IDs(SYS_MEM_OBJECT))
 		{
 			sprintf(name, "Memory Container: ID = 0x%x", id);
@@ -198,6 +208,7 @@ void KernelExplorer::Update()
 	{
 		sprintf(name, "Event Flags (%d)", count);
 		const auto& node = m_tree->AppendItem(root, name);
+
 		for (const auto& id : Emu.GetIdManager().get_IDs(SYS_EVENT_FLAG_OBJECT))
 		{
 			sprintf(name, "Event Flag: ID = 0x%x", id);
@@ -205,71 +216,47 @@ void KernelExplorer::Update()
 		}
 	}
 
-	// PPU / SPU / RawSPU threads
+	// PPU Threads
+	if (u32 count = Emu.GetIdManager().get_count<PPUThread>())
 	{
-		// TODO: add mutexes owners
+		sprintf(name, "PPU Threads (%d)", count);
+		const auto& node = m_tree->AppendItem(root, name);
 
-		//const auto& objects = Emu.GetCPU().GetThreads();
-		u32 ppu_threads_count = 0;
-		u32 spu_threads_count = 0;
-		u32 raw_spu_threads_count = 0;
-		//for (const auto& thread : objects)
-		//{
-		//	if (thread->GetType() == CPU_THREAD_PPU)
-		//		ppu_threads_count++;
+		for (const auto& thread : Emu.GetIdManager().get_all<PPUThread>())
+		{
+			sprintf(name, "Thread: ID = 0x%08x '%s', - %s", thread->GetId(), thread->GetName().c_str(), thread->ThreadStatusToString());
+			m_tree->AppendItem(node, name);
+		}
+	}
 
-		//	if (thread->GetType() == CPU_THREAD_SPU)
-		//		spu_threads_count++;
+	if (u32 count = Emu.GetIdManager().get_count<SPUThread>())
+	{
+		sprintf(name, "SPU Threads (%d)", count);
+		const auto& node = m_tree->AppendItem(root, name);
 
-		//	if (thread->GetType() == CPU_THREAD_RAW_SPU)
-		//		raw_spu_threads_count++;
-		//}
+		for (const auto& thread : Emu.GetIdManager().get_all<SPUThread>())
+		{
+			if (thread->GetType() == CPU_THREAD_SPU)
+			{
+				sprintf(name, "Thread: ID = 0x%08x '%s', - %s", thread->GetId(), thread->GetName().c_str(), thread->ThreadStatusToString());
+				m_tree->AppendItem(node, name);
+			}
+		}
+	}
 
-		//if (ppu_threads_count)
-		//{
-		//	sprintf(name, "PPU Threads (%d)", ppu_threads_count);
-		//	const auto& node = m_tree->AppendItem(root, name);
+	if (u32 count = Emu.GetIdManager().get_count<RawSPUThread>())
+	{
+		sprintf(name, "RawSPU Threads (%d)", count);
+		const auto& node = m_tree->AppendItem(root, name);
 
-		//	for (const auto& thread : objects)
-		//	{
-		//		if (thread->GetType() == CPU_THREAD_PPU)
-		//		{
-		//			sprintf(name, "Thread: ID = 0x%08x '%s', - %s", thread->GetId(), thread->GetName().c_str(), thread->ThreadStatusToString().c_str());
-		//			m_tree->AppendItem(node, name);
-		//		}
-		//	}
-		//}
-
-		//if (spu_threads_count)
-		//{
-		//	sprintf(name, "SPU Threads (%d)", spu_threads_count);
-		//	const auto& node = m_tree->AppendItem(root, name);
-
-		//	for (const auto& thread : objects)
-		//	{
-		//		if (thread->GetType() == CPU_THREAD_SPU)
-		//		{
-		//			sprintf(name, "Thread: ID = 0x%08x '%s', - %s", thread->GetId(), thread->GetName().c_str(), thread->ThreadStatusToString().c_str());
-		//			m_tree->AppendItem(node, name);
-		//		}
-		//	}
-		//}
-
-		//if (raw_spu_threads_count)
-		//{
-		//	sprintf(name, "RawSPU Threads (%d)", raw_spu_threads_count);
-		//	const auto& node = m_tree->AppendItem(root, name);
-
-		//	for (const auto& thread : objects)
-		//	{
-		//		if (thread->GetType() == CPU_THREAD_RAW_SPU)
-		//		{
-		//			sprintf(name, "Thread: ID = 0x%08x '%s', - %s", thread->GetId(), thread->GetName().c_str(), thread->ThreadStatusToString().c_str());
-		//			m_tree->AppendItem(node, name);
-		//		}
-		//	}
-		//}
-
+		for (const auto& thread : Emu.GetIdManager().get_all<RawSPUThread>())
+		{
+			if (thread->GetType() == CPU_THREAD_RAW_SPU)
+			{
+				sprintf(name, "Thread: ID = 0x%08x '%s', - %s", thread->GetId(), thread->GetName().c_str(), thread->ThreadStatusToString());
+				m_tree->AppendItem(node, name);
+			}
+		}
 	}
 
 	m_tree->Expand(root);

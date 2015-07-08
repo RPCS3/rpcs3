@@ -98,10 +98,10 @@ s32 sys_interrupt_thread_establish(vm::ptr<u32> ih, u32 intrtag, u32 intrthread,
 
 		it->custom_task = [thread, &tag, arg](PPUThread& CPU)
 		{
-			const auto pc   = CPU.PC;
-			const auto rtoc = CPU.GPR[2];
+			const u32 pc   = CPU.PC;
+			const u32 rtoc = CPU.GPR[2];
 
-			std::unique_lock<std::mutex> cond_lock(tag.handler_mutex);
+			std::unique_lock<std::mutex> lock(tag.handler_mutex);
 
 			while (!CPU.IsStopped())
 			{
@@ -114,7 +114,7 @@ s32 sys_interrupt_thread_establish(vm::ptr<u32> ih, u32 intrtag, u32 intrthread,
 					CPU.FastCall2(pc, rtoc);
 				}
 
-				tag.cond.wait_for(cond_lock, std::chrono::milliseconds(1));
+				tag.cond.wait_for(lock, std::chrono::milliseconds(1));
 			}
 		};
 	}
@@ -149,7 +149,7 @@ void sys_interrupt_thread_eoi(PPUThread& CPU)
 
 	// TODO: maybe it should actually unwind the stack of PPU thread?
 
-	CPU.GPR[1] = align(CPU.stack_addr + CPU.stack_size, 0x200) - 0x200; // supercrutch to avoid stack check
+	CPU.GPR[1] = align(CPU.stack_addr + CPU.stack_size, 0x200) - 0x200; // supercrutch to bypass stack check
 
 	CPU.FastStop();
 }

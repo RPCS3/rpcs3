@@ -26,9 +26,6 @@ struct lv2_cond_t
 
 	sleep_queue_t sq;
 
-	std::atomic<u32> sent{ 0 };
-	std::atomic<u32> recv{ 0 };
-
 	lv2_cond_t(const std::shared_ptr<lv2_mutex_t>& mutex, u64 name)
 		: mutex(mutex)
 		, name(name)

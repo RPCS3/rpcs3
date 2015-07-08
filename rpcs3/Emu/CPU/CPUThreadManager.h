@@ -15,9 +15,9 @@ public:
 
 	void Close();
 
-	std::vector<std::shared_ptr<CPUThread>> GetAllThreads() const;
+	static std::vector<std::shared_ptr<CPUThread>> GetAllThreads();
 
-	void Exec() const;
+	static void Exec();
 
 	std::shared_ptr<RawSPUThread> NewRawSPUThread();
 

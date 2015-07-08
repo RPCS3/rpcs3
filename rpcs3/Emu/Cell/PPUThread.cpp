@@ -507,10 +507,9 @@ void PPUThread::DumpInformation() const
 {
 	if (~hle_code < 1024)
 	{
-		LOG_SUCCESS(HLE, "Last function: syscall %lld (%s)", ~hle_code, SysCalls::GetFuncName(hle_code));
+		LOG_SUCCESS(HLE, "Last syscall: %lld (%s)", ~hle_code, SysCalls::GetFuncName(hle_code));
 	}
-
-	if (hle_code > 0)
+	else if (hle_code)
 	{
 		LOG_SUCCESS(HLE, "Last function: %s (0x%llx)", SysCalls::GetFuncName(hle_code), hle_code);
 	}

@@ -318,7 +318,7 @@ template<typename T, typename T2, typename = if_integral_t<T>> inline auto opera
 	});
 }
 
-template<typename T> using atomic = _atomic_base<T>; // Atomic Type with native endianness (for emulator memory)
+template<typename T> using atomic_t = _atomic_base<T>; // Atomic Type with native endianness (for emulator memory)
 
 template<typename T> using atomic_be_t = _atomic_base<to_be_t<T>>; // Atomic BE Type (for PS3 virtual memory)
 

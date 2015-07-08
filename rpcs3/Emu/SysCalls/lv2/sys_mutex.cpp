@@ -11,6 +11,24 @@ SysCallBase sys_mutex("sys_mutex");
 
 extern u64 get_system_time();
 
+void lv2_mutex_t::unlock(lv2_lock_type& lv2_lock)
+{
+	CHECK_LV2_LOCK(lv2_lock);
+
+	owner.reset();
+
+	if (sq.size())
+	{
+		// pick new owner; protocol is ignored in current implementation
+		owner = sq.front();
+
+		if (!owner->Signal())
+		{
+			throw EXCEPTION("Mutex owner not signaled");
+		}
+	}
+}
+
 s32 sys_mutex_create(vm::ptr<u32> mutex_id, vm::ptr<sys_mutex_attribute_t> attr)
 {
 	sys_mutex.Warning("sys_mutex_create(mutex_id=*0x%x, attr=*0x%x)", mutex_id, attr);
@@ -217,19 +235,7 @@ s32 sys_mutex_unlock(PPUThread& ppu, u32 mutex_id)
 	}
 	else
 	{
-		// free the mutex
-		mutex->owner.reset();
-
-		if (mutex->sq.size())
-		{
-			// pick another owner; protocol is ignored in current implementation
-			mutex->owner = mutex->sq.front();
-
-			if (!mutex->owner->Signal())
-			{
-				throw EXCEPTION("Mutex owner not signaled");
-			}
-		}
+		mutex->unlock(lv2_lock);
 	}
 
 	return CELL_OK;

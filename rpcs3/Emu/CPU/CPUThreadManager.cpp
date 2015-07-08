@@ -28,43 +28,43 @@ void CPUThreadManager::Close()
 	}
 }
 
-std::vector<std::shared_ptr<CPUThread>> CPUThreadManager::GetAllThreads() const
+std::vector<std::shared_ptr<CPUThread>> CPUThreadManager::GetAllThreads()
 {
 	std::vector<std::shared_ptr<CPUThread>> result;
 
-	for (auto& v : Emu.GetIdManager().get_data<PPUThread>())
+	for (auto& t : Emu.GetIdManager().get_all<PPUThread>())
 	{
-		result.emplace_back(std::static_pointer_cast<CPUThread>(v.data));
+		result.emplace_back(t);
 	}
 
-	for (auto& v : Emu.GetIdManager().get_data<SPUThread>())
+	for (auto& t : Emu.GetIdManager().get_all<SPUThread>())
 	{
-		result.emplace_back(std::static_pointer_cast<CPUThread>(v.data));
+		result.emplace_back(t);
 	}
 
-	for (auto& v : Emu.GetIdManager().get_data<RawSPUThread>())
+	for (auto& t : Emu.GetIdManager().get_all<RawSPUThread>())
 	{
-		result.emplace_back(std::static_pointer_cast<CPUThread>(v.data));
+		result.emplace_back(t);
 	}
 
-	for (auto& v : Emu.GetIdManager().get_data<ARMv7Thread>())
+	for (auto& t : Emu.GetIdManager().get_all<ARMv7Thread>())
 	{
-		result.emplace_back(std::static_pointer_cast<CPUThread>(v.data));
+		result.emplace_back(t);
 	}
 
 	return result;
 }
 
-void CPUThreadManager::Exec() const
+void CPUThreadManager::Exec()
 {
-	for (auto& v : Emu.GetIdManager().get_data<PPUThread>())
+	for (auto& t : Emu.GetIdManager().get_all<PPUThread>())
 	{
-		static_cast<CPUThread*>(v.data.get())->Exec();
+		t->Exec();
 	}
 
-	for (auto& v : Emu.GetIdManager().get_data<ARMv7Thread>())
+	for (auto& t : Emu.GetIdManager().get_all<ARMv7Thread>())
 	{
-		static_cast<CPUThread*>(v.data.get())->Exec();
+		t->Exec();
 	}
 }
 
