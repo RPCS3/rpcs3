@@ -57,7 +57,11 @@ void CallbackManager::Init()
 		{
 			CHECK_EMU_STATUS;
 
-			if (!lock) lock.lock();
+			if (!lock)
+			{
+				lock.lock();
+				continue;
+			}
 
 			if (m_async_cb.size())
 			{

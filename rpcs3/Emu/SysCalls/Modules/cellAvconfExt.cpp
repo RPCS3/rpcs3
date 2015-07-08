@@ -8,7 +8,7 @@ namespace vm { using namespace ps3; }
 
 extern Module cellAvconfExt;
 
-s32 cellVideoOutConvertCursorColor()
+s32 cellVideoOutConvertCursorColor(PPUThread& CPU)
 {
 	UNIMPLEMENTED_FUNC(cellAvconfExt);
 	return CELL_OK;

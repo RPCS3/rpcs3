@@ -416,7 +416,7 @@ namespace loader
 
 							if (!module)
 							{
-								LOG_WARNING(LOADER, "Unknown module '%s' in '%s' library", m.first.c_str(), info.name.c_str());
+								LOG_ERROR(LOADER, "Unknown module '%s' in '%s' library", m.first.c_str(), info.name.c_str());
 							}
 
 							for (auto& f : m.second.exports)
@@ -680,7 +680,7 @@ namespace loader
 
 							if (!module)
 							{
-								LOG_WARNING(LOADER, "Unknown module '%s'", module_name.c_str());
+								LOG_ERROR(LOADER, "Unknown module '%s'", module_name.c_str());
 							}
 
 							for (u32 i = 0; i < stub->s_imports; ++i)
