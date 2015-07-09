@@ -119,7 +119,7 @@ s32 sceFiosPathncmp(vm::cptr<char> pA, vm::cptr<char> pB, u32 n)
 	throw EXCEPTION("");
 }
 
-s32 sceFiosPrintf(vm::cptr<char> pFormat) // va_args...
+s32 sceFiosPrintf(vm::cptr<char> pFormat, armv7_va_args_t va_args)
 {
 	throw EXCEPTION("");
 }

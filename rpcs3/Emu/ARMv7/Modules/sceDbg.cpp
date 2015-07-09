@@ -14,12 +14,12 @@ s32 sceDbgSetBreakOnErrorState(SceDbgBreakOnErrorState state)
 	throw EXCEPTION("");
 }
 
-s32 sceDbgAssertionHandler(vm::cptr<char> pFile, s32 line, bool stop, vm::cptr<char> pComponent, vm::cptr<char> pMessage) // va_args...
+s32 sceDbgAssertionHandler(vm::cptr<char> pFile, s32 line, bool stop, vm::cptr<char> pComponent, vm::cptr<char> pMessage, armv7_va_args_t va_args)
 {
 	throw EXCEPTION("");
 }
 
-s32 sceDbgLoggingHandler(vm::cptr<char> pFile, s32 line, s32 severity, vm::cptr<char> pComponent, vm::cptr<char> pMessage) // va_args...
+s32 sceDbgLoggingHandler(vm::cptr<char> pFile, s32 line, s32 severity, vm::cptr<char> pComponent, vm::cptr<char> pMessage, armv7_va_args_t va_args)
 {
 	throw EXCEPTION("");
 }

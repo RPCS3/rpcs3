@@ -125,20 +125,8 @@ void hook_ppu_funcs(vm::ptr<u32> base, u32 size);
 
 bool patch_ppu_import(u32 addr, u32 index);
 
-// don't use directly
-template<typename RT, typename... T, typename... Args> inline auto _call_ppu(RT(*func)(PPUThread&, T...), PPUThread& CPU, Args&&... args) -> decltype(func(CPU, args...))
-{
-	return func(CPU, args...);
-}
-
-// don't use directly
-template<typename RT, typename... T, typename... Args> inline auto _call_ppu(RT(*func)(T...), PPUThread& CPU, Args&&... args) -> decltype(func(args...))
-{
-	return func(args...);
-}
-
 // call specified function directly if LLE is not available, call LLE equivalent in callback style otherwise
-template<typename T, typename... Args> inline auto hle_call_func(T func, u32 index, PPUThread& CPU, Args... args) -> decltype(_call_ppu(func, CPU, args...))
+template<typename T, typename... Args> inline auto hle_call_func(PPUThread& CPU, T func, u32 index, Args&&... args) -> decltype(func(std::forward<Args>(args)...))
 {
 	const auto mfunc = get_ppu_func_by_index(index);
 
@@ -147,15 +135,15 @@ template<typename T, typename... Args> inline auto hle_call_func(T func, u32 ind
 		const u32 pc = vm::read32(mfunc->lle_func.addr());
 		const u32 rtoc = vm::read32(mfunc->lle_func.addr() + 4);
 
-		return cb_call<decltype(_call_ppu(func, CPU, args...)), Args...>(CPU, pc, rtoc, args...);
+		return cb_call<decltype(func(std::forward<Args>(args)...)), Args...>(CPU, pc, rtoc, std::forward<Args>(args)...);
 	}
 	else
 	{
-		return _call_ppu(func, CPU, args...);
+		return func(std::forward<Args>(args)...);
 	}
 }
 
-#define CALL_FUNC(func, ...) hle_call_func(func, g_ppu_func_index__##func, __VA_ARGS__)
+#define CALL_FUNC(cpu, func, ...) hle_call_func(cpu, func, g_ppu_func_index__##func, __VA_ARGS__)
 
 #define REG_FUNC(module, name) add_ppu_func(ModuleFunc(get_function_id(#name), 0, &module, #name, bind_func(name)))
 #define REG_FUNC_FH(module, name) add_ppu_func(ModuleFunc(get_function_id(#name), MFF_FORCED_HLE, &module, #name, bind_func(name)))

@@ -427,7 +427,7 @@ void spursHandlerWaitReady(PPUThread& CPU, vm::ptr<CellSpurs> spurs)
 		{
 			extern u32 g_ppu_func_index__sys_lwmutex_unlock; // test
 
-			if (s32 rc = CALL_FUNC(sys_lwmutex_unlock, CPU, spurs.of(&CellSpurs::mutex)))
+			if (s32 rc = CALL_FUNC(CPU, sys_lwmutex_unlock, CPU, spurs.of(&CellSpurs::mutex)))
 			{
 				throw EXCEPTION("sys_lwmutex_unlock() failed (0x%x)", rc);
 			}

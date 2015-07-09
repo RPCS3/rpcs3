@@ -201,23 +201,23 @@ namespace sce_libc_func
 		}
 	}
 
-	void printf(ARMv7Context& context, vm::cptr<char> fmt) // va_args...
+	void printf(ARMv7Context& context, vm::cptr<char> fmt, armv7_va_args_t va_args)
 	{
 		sceLibc.Warning("printf(fmt=*0x%x)", fmt);
 		sceLibc.Log("*** *fmt = '%s'", fmt.get_ptr());
 
-		const std::string& result = armv7_fmt(context, fmt, 1, 0, 0);
+		const std::string& result = armv7_fmt(context, fmt, va_args.g_count, va_args.f_count, va_args.v_count);
 		sceLibc.Log("***     -> '%s'", result);
 
 		LOG_NOTICE(TTY, result);
 	}
 
-	void sprintf(ARMv7Context& context, vm::ptr<char> str, vm::cptr<char> fmt) // va_args...
+	void sprintf(ARMv7Context& context, vm::ptr<char> str, vm::cptr<char> fmt, armv7_va_args_t va_args)
 	{
 		sceLibc.Warning("sprintf(str=*0x%x, fmt=*0x%x)", str, fmt);
 		sceLibc.Log("*** *fmt = '%s'", fmt.get_ptr());
 
-		const std::string& result = armv7_fmt(context, fmt, 2, 0, 0);
+		const std::string& result = armv7_fmt(context, fmt, va_args.g_count, va_args.f_count, va_args.v_count);
 		sceLibc.Log("***     -> '%s'", result);
 
 		::memcpy(str.get_ptr(), result.c_str(), result.size() + 1);

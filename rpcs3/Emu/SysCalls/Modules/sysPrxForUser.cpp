@@ -1141,11 +1141,11 @@ s32 _sys_free(u32 addr)
 	return CELL_OK;
 }
 
-s32 _sys_snprintf(PPUThread& CPU, vm::ptr<char> dst, u32 count, vm::cptr<char> fmt) // va_args...
+s32 _sys_snprintf(PPUThread& CPU, vm::ptr<char> dst, u32 count, vm::cptr<char> fmt, ppu_va_args_t va_args)
 {
 	sysPrxForUser.Warning("_sys_snprintf(dst=*0x%x, count=%d, fmt=*0x%x, ...)", dst, count, fmt);
 
-	std::string result = ps3_fmt(CPU, fmt, 3, 0, 0);
+	std::string result = ps3_fmt(CPU, fmt, va_args.g_count, va_args.f_count, va_args.v_count);
 
 	sysPrxForUser.Warning("*** '%s' -> '%s'", fmt.get_ptr(), result);
 
@@ -1163,7 +1163,7 @@ s32 _sys_snprintf(PPUThread& CPU, vm::ptr<char> dst, u32 count, vm::cptr<char> f
 	}
 }
 
-s32 _sys_printf(vm::cptr<char> fmt) // va_args...
+s32 _sys_printf(vm::cptr<char> fmt, ppu_va_args_t va_args)
 {
 	sysPrxForUser.Todo("_sys_printf(fmt=*0x%x, ...)", fmt);
 
