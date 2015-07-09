@@ -41,6 +41,7 @@
     <ClCompile Include="Emu\RSX\Common\ShaderParam.cpp" />
     <ClCompile Include="Emu\RSX\Common\VertexProgramDecompiler.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLCommonDecompiler.cpp" />
+    <ClCompile Include="Emu\SysCalls\lv2\sys_dbg.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\sys_fs.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellFs.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellSpursSpu.cpp" />
@@ -225,7 +226,6 @@
     <ClCompile Include="Emu\SysCalls\Modules\cellJpgEnc.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellKey2char.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellL10n.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellLv2dbg.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellMic.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellMsgDialog.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellMusicDecode.cpp" />
@@ -276,6 +276,7 @@
     <ClCompile Include="Emu\SysCalls\Modules\cellMouse.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellPad.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\sysPrxForUser.cpp" />
+    <ClCompile Include="Emu\SysCalls\Modules\sys_lv2dbg.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\sys_http.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\sys_io.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\sys_libc.cpp" />
@@ -494,6 +495,7 @@
     <ClInclude Include="Emu\SysCalls\LogBase.h" />
     <ClInclude Include="Emu\SysCalls\lv2\sleep_queue.h" />
     <ClInclude Include="Emu\SysCalls\lv2\sys_cond.h" />
+    <ClInclude Include="Emu\SysCalls\lv2\sys_dbg.h" />
     <ClInclude Include="Emu\SysCalls\lv2\sys_event.h" />
     <ClInclude Include="Emu\SysCalls\lv2\sys_event_flag.h" />
     <ClInclude Include="Emu\SysCalls\lv2\sys_fs.h" />
@@ -570,6 +572,7 @@
     <ClInclude Include="Emu\SysCalls\Modules\cellKb.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellMouse.h" />
     <ClInclude Include="Emu\SysCalls\Modules\sysPrxForUser.h" />
+    <ClInclude Include="Emu\SysCalls\Modules\sys_lv2dbg.h" />
     <ClInclude Include="Emu\SysCalls\Modules\sys_net.h" />
     <ClInclude Include="Emu\SysCalls\SC_FUNC.h" />
     <ClInclude Include="Emu\SysCalls\SysCalls.h" />

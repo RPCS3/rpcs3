@@ -59,7 +59,7 @@ CHECK_SIZE_ALIGN(CellSyncMutex, 4, 4);
 struct set_alignment(4) sync_barrier_t // CellSyncBarrier sync var
 {
 	be_t<s16> value;
-	be_t<s16> count;
+	be_t<u16> count;
 
 	bool try_notify()
 	{

@@ -29,6 +29,7 @@
 #include "lv2/sys_tty.h"
 #include "lv2/sys_vm.h"
 #include "lv2/sys_fs.h"
+#include "lv2/sys_dbg.h"
 
 #include "Emu/SysCalls/Modules/cellGcmSys.h"
 

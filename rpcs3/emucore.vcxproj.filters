@@ -431,9 +431,6 @@
     <ClCompile Include="Emu\SysCalls\Modules\cellKey2char.cpp">
       <Filter>Emu\SysCalls\currently_unused</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\SysCalls\Modules\cellLv2dbg.cpp">
-      <Filter>Emu\SysCalls\currently_unused</Filter>
-    </ClCompile>
     <ClCompile Include="Emu\SysCalls\Modules\cellMusicDecode.cpp">
       <Filter>Emu\SysCalls\currently_unused</Filter>
     </ClCompile>
@@ -871,6 +868,12 @@
     </ClCompile>
     <ClCompile Include="Emu\RSX\GL\GLCommonDecompiler.cpp">
       <Filter>Emu\GPU\RSX\GL</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\lv2\sys_dbg.cpp">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\sys_lv2dbg.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1716,6 +1719,12 @@
     </ClInclude>
     <ClInclude Include="Emu\ARMv7\Modules\sceXml.h">
       <Filter>Emu\CPU\ARMv7\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\lv2\sys_dbg.h">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\Modules\sys_lv2dbg.h">
+      <Filter>Emu\SysCalls\Modules</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

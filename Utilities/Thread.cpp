@@ -1330,11 +1330,13 @@ void thread_t::detach()
 	// +clear m_thread
 	const auto ctrl = std::move(m_thread);
 
+	// notify if detached by another thread
+	if (g_tls_this_thread != m_thread.get())
 	{
 		// lock for reliable notification
 		std::lock_guard<std::mutex> lock(mutex);
 
-		cv.notify_all();
+		cv.notify_one();
 	}
 
 	ctrl->m_thread.detach();
@@ -1359,7 +1361,7 @@ void thread_t::join()
 		// lock for reliable notification
 		std::lock_guard<std::mutex> lock(mutex);
 
-		cv.notify_all();
+		cv.notify_one();
 	}
 
 	ctrl->m_thread.join();

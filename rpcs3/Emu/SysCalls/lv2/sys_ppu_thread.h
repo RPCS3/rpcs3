@@ -29,6 +29,18 @@ struct ppu_thread_param_t
 	be_t<u32> tls; // vm::bptr<void>
 };
 
+enum : u32
+{
+	PPU_THREAD_STATUS_IDLE,
+	PPU_THREAD_STATUS_RUNNABLE,
+	PPU_THREAD_STATUS_ONPROC,
+	PPU_THREAD_STATUS_SLEEP,
+	PPU_THREAD_STATUS_STOP,
+	PPU_THREAD_STATUS_ZOMBIE,
+	PPU_THREAD_STATUS_DELETED,
+	PPU_THREAD_STATUS_UNKNOWN,
+};
+
 // Aux
 u32 ppu_thread_create(u32 entry, u64 arg, s32 prio, u32 stacksize, bool is_joinable, bool is_interrupt, std::string name, std::function<void(PPUThread&)> task = nullptr);
 

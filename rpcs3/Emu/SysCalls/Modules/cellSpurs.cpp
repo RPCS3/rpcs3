@@ -283,9 +283,9 @@ bool spursIsLibProfLoaded()
 /// Create an LV2 event queue and attach it to the SPURS instance
 s32 spursCreateLv2EventQueue(PPUThread& CPU, vm::ptr<CellSpurs> spurs, vm::ptr<u32> queueId, vm::ptr<u8> port, s32 size, vm::cptr<char> name)
 {
-	vm::stackvar<sys_event_queue_attr> attr(CPU);
+	vm::stackvar<sys_event_queue_attribute_t> attr(CPU);
 
-	auto sys_event_queue_attribute_initialize = [](vm::ptr<sys_event_queue_attr> attr)
+	auto sys_event_queue_attribute_initialize = [](vm::ptr<sys_event_queue_attribute_t> attr)
 	{
 		attr->protocol = SYS_SYNC_PRIORITY;
 		attr->type     = SYS_PPU_QUEUE;
@@ -1718,7 +1718,7 @@ s32 cellSpursSetPriorities(vm::ptr<CellSpurs> spurs, u32 wid, vm::cptr<u8> prior
 	}
 
 	u64 prio = 0;
-	for (int i = 0; i < CELL_SPURS_MAX_SPU; i++)
+	for (s32 i = 0; i < CELL_SPURS_MAX_SPU; i++)
 	{
 		if (priorities[i] >= CELL_SPURS_MAX_PRIORITY)
 		{
@@ -2812,8 +2812,8 @@ s32 cellSpursEventFlagSet(PPUThread& CPU, vm::ptr<CellSpursEventFlag> eventFlag,
 			}
 		}
 
-		int i                 = CELL_SPURS_EVENT_FLAG_MAX_WAIT_SLOTS - 1;
-		int j                 = 0;
+		s32 i                 = CELL_SPURS_EVENT_FLAG_MAX_WAIT_SLOTS - 1;
+		s32 j                 = 0;
 		u16 relevantWaitSlots = eventFlag->spuTaskUsedWaitSlots & ~ctrl.spuTaskPendingRecv;
 		while (relevantWaitSlots)
 		{
@@ -2862,7 +2862,7 @@ s32 cellSpursEventFlagSet(PPUThread& CPU, vm::ptr<CellSpursEventFlag> eventFlag,
 	if (pendingRecv)
 	{
 		// Signal each SPU task whose conditions have been met to be woken up
-		for (int i = 0; i < CELL_SPURS_EVENT_FLAG_MAX_WAIT_SLOTS; i++)
+		for (s32 i = 0; i < CELL_SPURS_EVENT_FLAG_MAX_WAIT_SLOTS; i++)
 		{
 			if (pendingRecv & (0x8000 >> i))
 			{
@@ -2951,7 +2951,7 @@ s32 spursEventFlagWait(PPUThread& CPU, vm::ptr<CellSpursEventFlag> eventFlag, vm
 				relevantWaitSlots &= eventFlag->spuTaskWaitMode;
 			}
 
-			int i = CELL_SPURS_EVENT_FLAG_MAX_WAIT_SLOTS - 1;
+			s32 i = CELL_SPURS_EVENT_FLAG_MAX_WAIT_SLOTS - 1;
 			while (relevantWaitSlots)
 			{
 				if (relevantWaitSlots & 0x0001)
@@ -2995,7 +2995,7 @@ s32 spursEventFlagWait(PPUThread& CPU, vm::ptr<CellSpursEventFlag> eventFlag, vm
 			if (eventFlag->direction == CELL_SPURS_EVENT_FLAG_ANY2ANY)
 			{
 				// Find an unsed wait slot
-				int i                    = 0;
+				s32 i                    = 0;
 				u16 spuTaskUsedWaitSlots = eventFlag->spuTaskUsedWaitSlots;
 				while (spuTaskUsedWaitSlots & 0x0001)
 				{
@@ -3038,7 +3038,7 @@ s32 spursEventFlagWait(PPUThread& CPU, vm::ptr<CellSpursEventFlag> eventFlag, vm
 			throw EXCEPTION("sys_event_queue_receive() failed (0x%x)", rc);
 		}
 
-		int i = 0;
+		s32 i = 0;
 		if (eventFlag->direction == CELL_SPURS_EVENT_FLAG_ANY2ANY)
 		{
 			i = eventFlag->ctrl.data.ppuWaitSlotAndMode >> 4;

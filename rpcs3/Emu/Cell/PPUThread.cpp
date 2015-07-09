@@ -497,7 +497,14 @@ PPUThread::PPUThread(const std::string& name)
 
 PPUThread::~PPUThread()
 {
-	join();
+	if (is_current())
+	{
+		detach();
+	}
+	else
+	{
+		join();
+	}
 
 	CloseStack();
 	ppu_free_tls(m_id);

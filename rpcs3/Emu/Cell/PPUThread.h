@@ -19,18 +19,6 @@ enum
 	CR_SO = 0x1,
 };
 
-enum
-{
-	PPU_THREAD_STATUS_IDLE      = (1 << 0),
-	PPU_THREAD_STATUS_RUNNABLE  = (1 << 1),
-	PPU_THREAD_STATUS_ONPROC    = (1 << 2),
-	PPU_THREAD_STATUS_SLEEP     = (1 << 3),
-	PPU_THREAD_STATUS_STOP      = (1 << 4),
-	PPU_THREAD_STATUS_ZOMBIE    = (1 << 5),
-	PPU_THREAD_STATUS_DELETED   = (1 << 6),
-	PPU_THREAD_STATUS_UNKNOWN   = (1 << 7),
-};
-
 enum FPSCR_EXP
 {
 	FPSCR_FX        = 0x80000000,

@@ -750,7 +750,7 @@ bool sdata_check(u32 version, u32 flags, u64 filesizeInput, u64 filesizeTmp)
 	return true;
 }
 
-int sdata_unpack(const std::string& packed_file, const std::string& unpacked_file)
+s32 sdata_unpack(const std::string& packed_file, const std::string& unpacked_file)
 {
 	std::shared_ptr<vfsFileBase> packed_stream(Emu.GetVFS().OpenFile(packed_file, vfsRead));
 	std::shared_ptr<vfsFileBase> unpacked_stream(Emu.GetVFS().OpenFile(unpacked_file, vfsWriteNew));
@@ -845,7 +845,7 @@ s32 cellFsSdataOpen(PPUThread& CPU, vm::cptr<char> path, s32 flags, vm::ptr<u32>
 	std::string::size_type last_slash = path.rfind('/'); //TODO: use a filesystem library to solve this more robustly
 	last_slash = last_slash == std::string::npos ? 0 : last_slash+1;
 	std::string unpacked_path = "/dev_hdd1/"+path.substr(last_slash,path.length()-last_slash)+".unpacked";
-	int ret = sdata_unpack(path, unpacked_path);
+	s32 ret = sdata_unpack(path, unpacked_path);
 	if (ret) return ret;
 
 	fd = Emu.GetIdManager().GetNewID(Emu.GetVFS().OpenFile(unpacked_path, vfsRead), TYPE_FS_FILE);

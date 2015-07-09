@@ -32,7 +32,7 @@ struct sceNpInternal
 
 sceNpInternal sceNpInstance;
 
-int sceNpInit(u32 mem_size, u32 mem_addr)
+s32 sceNpInit(u32 mem_size, u32 mem_addr)
 {
 	sceNp.Warning("sceNpInit(mem_size=0x%x, mem_addr=0x%x)", mem_size, mem_addr);
 
@@ -44,7 +44,7 @@ int sceNpInit(u32 mem_size, u32 mem_addr)
 	return CELL_OK;
 }
 
-int sceNp2Init(u32 mem_size, u32 mem_addr)
+s32 sceNp2Init(u32 mem_size, u32 mem_addr)
 {
 	sceNp.Warning("sceNp2Init(mem_size=0x%x, mem_addr=0x%x)", mem_size, mem_addr);
 
@@ -56,7 +56,7 @@ int sceNp2Init(u32 mem_size, u32 mem_addr)
 	return CELL_OK;
 }
 
-int sceNpTerm()
+s32 sceNpTerm()
 {
 	sceNp.Warning("sceNpTerm()");
 
@@ -68,7 +68,7 @@ int sceNpTerm()
 	return CELL_OK;
 }
 
-int sceNp2Term()
+s32 sceNp2Term()
 {
 	sceNp.Warning("sceNp2Term()");
 
@@ -80,7 +80,7 @@ int sceNp2Term()
 	return CELL_OK;
 }
 
-int npDrmIsAvailable(u32 k_licensee_addr, vm::cptr<char> drm_path)
+s32 npDrmIsAvailable(u32 k_licensee_addr, vm::cptr<char> drm_path)
 {
 	if (!Emu.GetVFS().ExistsFile(drm_path.get_ptr()))
 	{
@@ -93,7 +93,7 @@ int npDrmIsAvailable(u32 k_licensee_addr, vm::cptr<char> drm_path)
 
 	if (k_licensee_addr)
 	{
-		for (int i = 0; i < 0x10; i++)
+		for (s32 i = 0; i < 0x10; i++)
 		{
 			k_licensee[i] = vm::read8(k_licensee_addr + i);
 			k_licensee_str += fmt::Format("%02x", k_licensee[i]);
@@ -146,41 +146,41 @@ int npDrmIsAvailable(u32 k_licensee_addr, vm::cptr<char> drm_path)
 	return CELL_OK;
 }
 
-int sceNpDrmIsAvailable(u32 k_licensee_addr, vm::cptr<char> drm_path)
+s32 sceNpDrmIsAvailable(u32 k_licensee_addr, vm::cptr<char> drm_path)
 {
 	sceNp.Warning("sceNpDrmIsAvailable(k_licensee_addr=0x%x, drm_path_addr=0x%x('%s'))", k_licensee_addr, drm_path.addr(), drm_path.get_ptr());
 
 	return npDrmIsAvailable(k_licensee_addr, drm_path);
 }
 
-int sceNpDrmIsAvailable2(u32 k_licensee_addr, vm::cptr<char> drm_path)
+s32 sceNpDrmIsAvailable2(u32 k_licensee_addr, vm::cptr<char> drm_path)
 {
 	sceNp.Warning("sceNpDrmIsAvailable2(k_licensee_addr=0x%x, drm_path_addr=0x%x('%s'))", k_licensee_addr, drm_path.addr(), drm_path.get_ptr());
 
 	return npDrmIsAvailable(k_licensee_addr, drm_path);
 }
 
-int sceNpDrmVerifyUpgradeLicense(vm::cptr<char> content_id)
+s32 sceNpDrmVerifyUpgradeLicense(vm::cptr<char> content_id)
 {
 	sceNp.Todo("sceNpDrmVerifyUpgradeLicense(content_id_addr=0x%x)", content_id.addr());
 
 	return CELL_OK;
 }
 
-int sceNpDrmVerifyUpgradeLicense2(vm::cptr<char> content_id)
+s32 sceNpDrmVerifyUpgradeLicense2(vm::cptr<char> content_id)
 {
 	sceNp.Todo("sceNpDrmVerifyUpgradeLicense2(content_id_addr=0x%x)", content_id.addr());
 
 	return CELL_OK;
 }
 
-int sceNpDrmExecuteGamePurchase()
+s32 sceNpDrmExecuteGamePurchase()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpDrmGetTimelimit(vm::ptr<const char> path, vm::ptr<u64> time_remain)
+s32 sceNpDrmGetTimelimit(vm::ptr<const char> path, vm::ptr<u64> time_remain)
 {
 	sceNp.Warning("sceNpDrmGetTimelimit(path_addr=0x%x, time_remain=0x%x)", path.addr(), time_remain.addr());
 
@@ -189,7 +189,7 @@ int sceNpDrmGetTimelimit(vm::ptr<const char> path, vm::ptr<u64> time_remain)
 	return CELL_OK;
 }
 
-int sceNpDrmProcessExitSpawn(vm::cptr<char> path, u32 argv_addr, u32 envp_addr, u32 data_addr, u32 data_size, u32 prio, u64 flags)
+s32 sceNpDrmProcessExitSpawn(vm::cptr<char> path, u32 argv_addr, u32 envp_addr, u32 data_addr, u32 data_size, u32 prio, u64 flags)
 {
 	sceNp.Warning("sceNpDrmProcessExitSpawn()");
 	sceNp.Warning("path: %s", path.get_ptr());
@@ -205,7 +205,7 @@ int sceNpDrmProcessExitSpawn(vm::cptr<char> path, u32 argv_addr, u32 envp_addr, 
 	return CELL_OK;
 }
 
-int sceNpDrmProcessExitSpawn2(vm::cptr<char> path, u32 argv_addr, u32 envp_addr, u32 data_addr, u32 data_size, u32 prio, u64 flags)
+s32 sceNpDrmProcessExitSpawn2(vm::cptr<char> path, u32 argv_addr, u32 envp_addr, u32 data_addr, u32 data_size, u32 prio, u64 flags)
 {
 	sceNp.Warning("sceNpDrmProcessExitSpawn2()");
 	sceNp.Warning("path: %s", path.get_ptr());
@@ -221,97 +221,97 @@ int sceNpDrmProcessExitSpawn2(vm::cptr<char> path, u32 argv_addr, u32 envp_addr,
 	return CELL_OK;
 }
 
-int sceNpBasicRegisterHandler()
+s32 sceNpBasicRegisterHandler()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpBasicRegisterContextSensitiveHandler()
+s32 sceNpBasicRegisterContextSensitiveHandler()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpBasicUnregisterHandler()
+s32 sceNpBasicUnregisterHandler()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpBasicSetPresence()
+s32 sceNpBasicSetPresence()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpBasicSetPresenceDetails()
+s32 sceNpBasicSetPresenceDetails()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpBasicSetPresenceDetails2()
+s32 sceNpBasicSetPresenceDetails2()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpBasicSendMessage()
+s32 sceNpBasicSendMessage()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpBasicSendMessageGui()
+s32 sceNpBasicSendMessageGui()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpBasicSendMessageAttachment()
+s32 sceNpBasicSendMessageAttachment()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpBasicRecvMessageAttachment()
+s32 sceNpBasicRecvMessageAttachment()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpBasicRecvMessageAttachmentLoad()
+s32 sceNpBasicRecvMessageAttachmentLoad()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpBasicRecvMessageCustom()
+s32 sceNpBasicRecvMessageCustom()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpBasicMarkMessageAsUsed()
+s32 sceNpBasicMarkMessageAsUsed()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpBasicAbortGui()
+s32 sceNpBasicAbortGui()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpBasicAddFriend()
+s32 sceNpBasicAddFriend()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpBasicGetFriendListEntryCount(vm::ptr<u32> count)
+s32 sceNpBasicGetFriendListEntryCount(vm::ptr<u32> count)
 {
 	sceNp.Warning("sceNpBasicGetFriendListEntryCount(count_addr=0x%x)", count.addr());
 
@@ -324,49 +324,49 @@ int sceNpBasicGetFriendListEntryCount(vm::ptr<u32> count)
 	return CELL_OK;
 }
 
-int sceNpBasicGetFriendListEntry()
+s32 sceNpBasicGetFriendListEntry()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpBasicGetFriendPresenceByIndex()
+s32 sceNpBasicGetFriendPresenceByIndex()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpBasicGetFriendPresenceByIndex2()
+s32 sceNpBasicGetFriendPresenceByIndex2()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpBasicGetFriendPresenceByNpId()
+s32 sceNpBasicGetFriendPresenceByNpId()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpBasicGetFriendPresenceByNpId2()
+s32 sceNpBasicGetFriendPresenceByNpId2()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpBasicAddPlayersHistory()
+s32 sceNpBasicAddPlayersHistory()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpBasicAddPlayersHistoryAsync()
+s32 sceNpBasicAddPlayersHistoryAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpBasicGetPlayersHistoryEntryCount(u32 options, vm::ptr<u32> count)
+s32 sceNpBasicGetPlayersHistoryEntryCount(u32 options, vm::ptr<u32> count)
 {
 	sceNp.Todo("sceNpBasicGetPlayersHistoryEntryCount(options=%d, count_addr=0x%x)", options, count.addr());
 
@@ -376,19 +376,19 @@ int sceNpBasicGetPlayersHistoryEntryCount(u32 options, vm::ptr<u32> count)
 	return CELL_OK;
 }
 
-int sceNpBasicGetPlayersHistoryEntry()
+s32 sceNpBasicGetPlayersHistoryEntry()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpBasicAddBlockListEntry()
+s32 sceNpBasicAddBlockListEntry()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpBasicGetBlockListEntryCount(u32 count)
+s32 sceNpBasicGetBlockListEntryCount(u32 count)
 {
 	sceNp.Todo("sceNpBasicGetBlockListEntryCount(count=%d)", count);
 
@@ -398,13 +398,13 @@ int sceNpBasicGetBlockListEntryCount(u32 count)
 	return CELL_OK;
 }
 
-int sceNpBasicGetBlockListEntry()
+s32 sceNpBasicGetBlockListEntry()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpBasicGetMessageAttachmentEntryCount(vm::ptr<u32> count)
+s32 sceNpBasicGetMessageAttachmentEntryCount(vm::ptr<u32> count)
 {
 	sceNp.Todo("sceNpBasicGetMessageAttachmentEntryCount(count_addr=0x%x)", count.addr());
 
@@ -414,7 +414,7 @@ int sceNpBasicGetMessageAttachmentEntryCount(vm::ptr<u32> count)
 	return CELL_OK;
 }
 
-int sceNpBasicGetMessageAttachmentEntry(u32 index, vm::ptr<SceNpUserInfo> from)
+s32 sceNpBasicGetMessageAttachmentEntry(u32 index, vm::ptr<SceNpUserInfo> from)
 {
 	sceNp.Todo("sceNpBasicGetMessageAttachmentEntry(index=%d, from_addr=0x%x)", index, from.addr());
 
@@ -424,19 +424,19 @@ int sceNpBasicGetMessageAttachmentEntry(u32 index, vm::ptr<SceNpUserInfo> from)
 	return CELL_OK;
 }
 
-int sceNpBasicGetCustomInvitationEntryCount()
+s32 sceNpBasicGetCustomInvitationEntryCount()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpBasicGetCustomInvitationEntry()
+s32 sceNpBasicGetCustomInvitationEntry()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpBasicGetMatchingInvitationEntryCount(vm::ptr<u32> count)
+s32 sceNpBasicGetMatchingInvitationEntryCount(vm::ptr<u32> count)
 {
 	sceNp.Todo("sceNpBasicGetMatchingInvitationEntryCount(count_addr=0x%x)", count.addr());
 
@@ -446,7 +446,7 @@ int sceNpBasicGetMatchingInvitationEntryCount(vm::ptr<u32> count)
 	return CELL_OK;
 }
 
-int sceNpBasicGetMatchingInvitationEntry(u32 index, vm::ptr<SceNpUserInfo> from)
+s32 sceNpBasicGetMatchingInvitationEntry(u32 index, vm::ptr<SceNpUserInfo> from)
 {
 	sceNp.Todo("sceNpBasicGetMatchingInvitationEntry(index=%d, from_addr=0x%x)", index, from.addr());
 
@@ -456,7 +456,7 @@ int sceNpBasicGetMatchingInvitationEntry(u32 index, vm::ptr<SceNpUserInfo> from)
 	return CELL_OK;
 }
 
-int sceNpBasicGetClanMessageEntryCount(vm::ptr<u32> count)
+s32 sceNpBasicGetClanMessageEntryCount(vm::ptr<u32> count)
 {
 	sceNp.Todo("sceNpBasicGetClanMessageEntryCount(count_addr=0x%x)", count.addr());
 
@@ -466,7 +466,7 @@ int sceNpBasicGetClanMessageEntryCount(vm::ptr<u32> count)
 	return CELL_OK;
 }
 
-int sceNpBasicGetClanMessageEntry(u32 index, vm::ptr<SceNpUserInfo> from)
+s32 sceNpBasicGetClanMessageEntry(u32 index, vm::ptr<SceNpUserInfo> from)
 {
 	sceNp.Todo("sceNpBasicGetClanMessageEntry(index=%d, from_addr=0x%x)", index, from.addr());
 
@@ -476,7 +476,7 @@ int sceNpBasicGetClanMessageEntry(u32 index, vm::ptr<SceNpUserInfo> from)
 	return CELL_OK;
 }
 
-int sceNpBasicGetMessageEntryCount(u32 type, vm::ptr<u32> count)
+s32 sceNpBasicGetMessageEntryCount(u32 type, vm::ptr<u32> count)
 {
 	sceNp.Warning("sceNpBasicGetMessageEntryCount(type=%d, count_addr=0x%x)", type, count.addr());
 
@@ -489,7 +489,7 @@ int sceNpBasicGetMessageEntryCount(u32 type, vm::ptr<u32> count)
 	return CELL_OK;
 }
 
-int sceNpBasicGetMessageEntry(u32 type, u32 index, vm::ptr<SceNpUserInfo> from)
+s32 sceNpBasicGetMessageEntry(u32 type, u32 index, vm::ptr<SceNpUserInfo> from)
 {
 	sceNp.Todo("sceNpBasicGetMessageEntry(type=%d, index=%d, from_addr=0x%x)", type, index, from.addr());
 
@@ -499,7 +499,7 @@ int sceNpBasicGetMessageEntry(u32 type, u32 index, vm::ptr<SceNpUserInfo> from)
 	return CELL_OK;
 }
 
-int sceNpBasicGetEvent(vm::ptr<s32> event, vm::ptr<SceNpUserInfo> from, vm::ptr<s32> data, vm::ptr<u32> size)
+s32 sceNpBasicGetEvent(vm::ptr<s32> event, vm::ptr<SceNpUserInfo> from, vm::ptr<s32> data, vm::ptr<u32> size)
 {
 	sceNp.Warning("sceNpBasicGetEvent(event_addr=0x%x, from_addr=0x%x, data_addr=0x%x, size_addr=0x%x)", event.addr(), from.addr(), data.addr(), size.addr());
 
@@ -512,259 +512,259 @@ int sceNpBasicGetEvent(vm::ptr<s32> event, vm::ptr<SceNpUserInfo> from, vm::ptr<
 	return CELL_OK;
 }
 
-int sceNpCommerceCreateCtx()
+s32 sceNpCommerceCreateCtx()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpCommerceDestroyCtx()
+s32 sceNpCommerceDestroyCtx()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpCommerceInitProductCategory()
+s32 sceNpCommerceInitProductCategory()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpCommerceDestroyProductCategory()
+s32 sceNpCommerceDestroyProductCategory()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpCommerceGetProductCategoryStart()
+s32 sceNpCommerceGetProductCategoryStart()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpCommerceGetProductCategoryFinish()
+s32 sceNpCommerceGetProductCategoryFinish()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpCommerceGetProductCategoryResult()
+s32 sceNpCommerceGetProductCategoryResult()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpCommerceGetProductCategoryAbort()
+s32 sceNpCommerceGetProductCategoryAbort()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpCommerceGetProductId()
+s32 sceNpCommerceGetProductId()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpCommerceGetProductName()
+s32 sceNpCommerceGetProductName()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpCommerceGetCategoryDescription()
+s32 sceNpCommerceGetCategoryDescription()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpCommerceGetCategoryId()
+s32 sceNpCommerceGetCategoryId()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpCommerceGetCategoryImageURL()
+s32 sceNpCommerceGetCategoryImageURL()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpCommerceGetCategoryInfo()
+s32 sceNpCommerceGetCategoryInfo()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpCommerceGetCategoryName()
+s32 sceNpCommerceGetCategoryName()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpCommerceGetCurrencyCode()
+s32 sceNpCommerceGetCurrencyCode()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpCommerceGetCurrencyDecimals()
+s32 sceNpCommerceGetCurrencyDecimals()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpCommerceGetCurrencyInfo()
+s32 sceNpCommerceGetCurrencyInfo()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpCommerceGetNumOfChildCategory()
+s32 sceNpCommerceGetNumOfChildCategory()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpCommerceGetNumOfChildProductSku()
+s32 sceNpCommerceGetNumOfChildProductSku()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpCommerceGetSkuDescription()
+s32 sceNpCommerceGetSkuDescription()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpCommerceGetSkuId()
+s32 sceNpCommerceGetSkuId()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpCommerceGetSkuImageURL()
+s32 sceNpCommerceGetSkuImageURL()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpCommerceGetSkuName()
+s32 sceNpCommerceGetSkuName()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpCommerceGetSkuPrice()
+s32 sceNpCommerceGetSkuPrice()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpCommerceGetSkuUserData()
+s32 sceNpCommerceGetSkuUserData()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpCommerceSetDataFlagStart()
+s32 sceNpCommerceSetDataFlagStart()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpCommerceGetDataFlagStart()
+s32 sceNpCommerceGetDataFlagStart()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpCommerceSetDataFlagFinish()
+s32 sceNpCommerceSetDataFlagFinish()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpCommerceGetDataFlagFinish()
+s32 sceNpCommerceGetDataFlagFinish()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpCommerceGetDataFlagState()
+s32 sceNpCommerceGetDataFlagState()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpCommerceGetDataFlagAbort()
+s32 sceNpCommerceGetDataFlagAbort()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpCommerceGetChildCategoryInfo()
+s32 sceNpCommerceGetChildCategoryInfo()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpCommerceGetChildProductSkuInfo()
+s32 sceNpCommerceGetChildProductSkuInfo()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpCommerceDoCheckoutStartAsync()
+s32 sceNpCommerceDoCheckoutStartAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpCommerceDoCheckoutFinishAsync()
+s32 sceNpCommerceDoCheckoutFinishAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpCustomMenuRegisterActions()
+s32 sceNpCustomMenuRegisterActions()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpCustomMenuActionSetActivation()
+s32 sceNpCustomMenuActionSetActivation()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpCustomMenuRegisterExceptionList()
+s32 sceNpCustomMenuRegisterExceptionList()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpFriendlist()
+s32 sceNpFriendlist()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpFriendlistCustom()
+s32 sceNpFriendlistCustom()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpFriendlistAbortGui()
+s32 sceNpFriendlistAbortGui()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpLookupInit()
+s32 sceNpLookupInit()
 {
 	sceNp.Warning("sceNpLookupInit()");
 
@@ -778,7 +778,7 @@ int sceNpLookupInit()
 	return CELL_OK;
 }
 
-int sceNpLookupTerm()
+s32 sceNpLookupTerm()
 {
 	sceNp.Warning("sceNpLookupTerm()");
 
@@ -790,140 +790,140 @@ int sceNpLookupTerm()
 	return CELL_OK;
 }
 
-int sceNpLookupCreateTitleCtx()
+s32 sceNpLookupCreateTitleCtx()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpLookupDestroyTitleCtx()
+s32 sceNpLookupDestroyTitleCtx()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpLookupCreateTransactionCtx()
+s32 sceNpLookupCreateTransactionCtx()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpLookupDestroyTransactionCtx()
+s32 sceNpLookupDestroyTransactionCtx()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpLookupSetTimeout()
+s32 sceNpLookupSetTimeout()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpLookupAbortTransaction()
+s32 sceNpLookupAbortTransaction()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpLookupWaitAsync()
+s32 sceNpLookupWaitAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpLookupPollAsync()
+s32 sceNpLookupPollAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpLookupNpId()
+s32 sceNpLookupNpId()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpLookupNpIdAsync()
+s32 sceNpLookupNpIdAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpLookupUserProfile()
+s32 sceNpLookupUserProfile()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpLookupUserProfileAsync()
+s32 sceNpLookupUserProfileAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpLookupUserProfileWithAvatarSize()
+s32 sceNpLookupUserProfileWithAvatarSize()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpLookupUserProfileWithAvatarSizeAsync()
+s32 sceNpLookupUserProfileWithAvatarSizeAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpLookupAvatarImage()
+s32 sceNpLookupAvatarImage()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpLookupAvatarImageAsync()
+s32 sceNpLookupAvatarImageAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpLookupTitleStorage()
+s32 sceNpLookupTitleStorage()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpLookupTitleStorageAsync()
+s32 sceNpLookupTitleStorageAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 
 	return CELL_OK;
 }
 
-int sceNpLookupTitleSmallStorage()
+s32 sceNpLookupTitleSmallStorage()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpLookupTitleSmallStorageAsync()
+s32 sceNpLookupTitleSmallStorageAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpManagerRegisterCallback()
+s32 sceNpManagerRegisterCallback()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpManagerUnregisterCallback()
+s32 sceNpManagerUnregisterCallback()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpManagerGetStatus(vm::ptr<u32> status)
+s32 sceNpManagerGetStatus(vm::ptr<u32> status)
 {
 	sceNp.Log("sceNpManagerGetStatus(status_addr=0x%x)", status.addr());
 
@@ -936,55 +936,55 @@ int sceNpManagerGetStatus(vm::ptr<u32> status)
 	return CELL_OK;
 }
 
-int sceNpManagerGetNetworkTime()
+s32 sceNpManagerGetNetworkTime()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpManagerGetOnlineId()
+s32 sceNpManagerGetOnlineId()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpManagerGetNpId()
+s32 sceNpManagerGetNpId()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpManagerGetOnlineName()
+s32 sceNpManagerGetOnlineName()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpManagerGetAvatarUrl()
+s32 sceNpManagerGetAvatarUrl()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpManagerGetMyLanguages()
+s32 sceNpManagerGetMyLanguages()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpManagerGetAccountRegion()
+s32 sceNpManagerGetAccountRegion()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpManagerGetAccountAge()
+s32 sceNpManagerGetAccountAge()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpManagerGetContentRatingFlag(vm::ptr<u32> isRestricted, vm::ptr<u32> age)
+s32 sceNpManagerGetContentRatingFlag(vm::ptr<u32> isRestricted, vm::ptr<u32> age)
 {
 	sceNp.Warning("sceNpManagerGetContentRatingFlag(isRestricted_addr=0x%x, age_addr=0x%x)", isRestricted.addr(), age.addr());
 
@@ -998,223 +998,223 @@ int sceNpManagerGetContentRatingFlag(vm::ptr<u32> isRestricted, vm::ptr<u32> age
 	return CELL_OK;
 }
 
-int sceNpManagerGetChatRestrictionFlag()
+s32 sceNpManagerGetChatRestrictionFlag()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpManagerGetCachedInfo()
+s32 sceNpManagerGetCachedInfo()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpManagerGetPsHandle()
+s32 sceNpManagerGetPsHandle()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpManagerRequestTicket()
+s32 sceNpManagerRequestTicket()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpManagerRequestTicket2()
+s32 sceNpManagerRequestTicket2()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpManagerGetTicket()
+s32 sceNpManagerGetTicket()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpManagerGetTicketParam()
+s32 sceNpManagerGetTicketParam()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpManagerGetEntitlementIdList()
+s32 sceNpManagerGetEntitlementIdList()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpManagerGetEntitlementById()
+s32 sceNpManagerGetEntitlementById()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpManagerSubSignin()
+s32 sceNpManagerSubSignin()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpManagerSubSigninAbortGui()
+s32 sceNpManagerSubSigninAbortGui()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpManagerSubSignout()
+s32 sceNpManagerSubSignout()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpMatchingCreateCtx()
+s32 sceNpMatchingCreateCtx()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpMatchingDestroyCtx()
+s32 sceNpMatchingDestroyCtx()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpMatchingGetResult()
+s32 sceNpMatchingGetResult()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpMatchingGetResultGUI()
+s32 sceNpMatchingGetResultGUI()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpMatchingSetRoomInfo()
+s32 sceNpMatchingSetRoomInfo()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpMatchingSetRoomInfoNoLimit()
+s32 sceNpMatchingSetRoomInfoNoLimit()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpMatchingGetRoomInfo()
+s32 sceNpMatchingGetRoomInfo()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpMatchingGetRoomInfoNoLimit()
+s32 sceNpMatchingGetRoomInfoNoLimit()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpMatchingSetRoomSearchFlag()
+s32 sceNpMatchingSetRoomSearchFlag()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpMatchingGetRoomSearchFlag()
+s32 sceNpMatchingGetRoomSearchFlag()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpMatchingGetRoomMemberListLocal()
+s32 sceNpMatchingGetRoomMemberListLocal()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpMatchingGetRoomListLimitGUI()
+s32 sceNpMatchingGetRoomListLimitGUI()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpMatchingKickRoomMember()
+s32 sceNpMatchingKickRoomMember()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpMatchingKickRoomMemberWithOpt()
+s32 sceNpMatchingKickRoomMemberWithOpt()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpMatchingQuickMatchGUI()
+s32 sceNpMatchingQuickMatchGUI()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpMatchingSendInvitationGUI()
+s32 sceNpMatchingSendInvitationGUI()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpMatchingAcceptInvitationGUI()
+s32 sceNpMatchingAcceptInvitationGUI()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpMatchingCreateRoomGUI()
+s32 sceNpMatchingCreateRoomGUI()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpMatchingJoinRoomGUI()
+s32 sceNpMatchingJoinRoomGUI()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpMatchingLeaveRoom()
+s32 sceNpMatchingLeaveRoom()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpMatchingSearchJoinRoomGUI()
+s32 sceNpMatchingSearchJoinRoomGUI()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpMatchingGrantOwnership()
+s32 sceNpMatchingGrantOwnership()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpProfileCallGui()
+s32 sceNpProfileCallGui()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpProfileAbortGui()
+s32 sceNpProfileAbortGui()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpScoreInit()
+s32 sceNpScoreInit()
 {
 	sceNp.Warning("sceNpScoreInit()");
 
@@ -1226,7 +1226,7 @@ int sceNpScoreInit()
 	return CELL_OK;
 }
 
-int sceNpScoreTerm()
+s32 sceNpScoreTerm()
 {
 	sceNp.Warning("sceNpScoreTerm()");
 
@@ -1238,349 +1238,349 @@ int sceNpScoreTerm()
 	return CELL_OK;
 }
 
-int sceNpScoreCreateTitleCtx()
+s32 sceNpScoreCreateTitleCtx()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpScoreDestroyTitleCtx()
+s32 sceNpScoreDestroyTitleCtx()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpScoreCreateTransactionCtx()
+s32 sceNpScoreCreateTransactionCtx()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpScoreDestroyTransactionCtx()
+s32 sceNpScoreDestroyTransactionCtx()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpScoreSetTimeout()
+s32 sceNpScoreSetTimeout()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpScoreSetPlayerCharacterId()
+s32 sceNpScoreSetPlayerCharacterId()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpScoreWaitAsync()
+s32 sceNpScoreWaitAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpScorePollAsync()
+s32 sceNpScorePollAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpScoreGetBoardInfo()
+s32 sceNpScoreGetBoardInfo()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpScoreGetBoardInfoAsync()
+s32 sceNpScoreGetBoardInfoAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpScoreRecordScore()
+s32 sceNpScoreRecordScore()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpScoreRecordScoreAsync()
+s32 sceNpScoreRecordScoreAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpScoreRecordGameData()
+s32 sceNpScoreRecordGameData()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpScoreRecordGameDataAsync()
+s32 sceNpScoreRecordGameDataAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpScoreGetGameData()
+s32 sceNpScoreGetGameData()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpScoreGetGameDataAsync()
+s32 sceNpScoreGetGameDataAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpScoreGetRankingByNpId()
+s32 sceNpScoreGetRankingByNpId()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpScoreGetRankingByNpIdAsync()
+s32 sceNpScoreGetRankingByNpIdAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpScoreGetRankingByRange()
+s32 sceNpScoreGetRankingByRange()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpScoreGetRankingByRangeAsync()
+s32 sceNpScoreGetRankingByRangeAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpScoreCensorComment()
+s32 sceNpScoreCensorComment()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpScoreCensorCommentAsync()
+s32 sceNpScoreCensorCommentAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpScoreSanitizeComment()
+s32 sceNpScoreSanitizeComment()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpScoreSanitizeCommentAsync()
+s32 sceNpScoreSanitizeCommentAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpScoreGetRankingByNpIdPcId()
+s32 sceNpScoreGetRankingByNpIdPcId()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpScoreGetRankingByNpIdPcIdAsync()
+s32 sceNpScoreGetRankingByNpIdPcIdAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpScoreAbortTransaction()
+s32 sceNpScoreAbortTransaction()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpScoreGetClansMembersRankingByNpId()
+s32 sceNpScoreGetClansMembersRankingByNpId()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpScoreGetClansMembersRankingByNpIdAsync()
+s32 sceNpScoreGetClansMembersRankingByNpIdAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpScoreGetClansMembersRankingByNpIdPcId()
+s32 sceNpScoreGetClansMembersRankingByNpIdPcId()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpScoreGetClansMembersRankingByNpIdPcIdAsync()
+s32 sceNpScoreGetClansMembersRankingByNpIdPcIdAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpScoreGetClansRankingByRange()
+s32 sceNpScoreGetClansRankingByRange()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpScoreGetClansRankingByRangeAsync()
+s32 sceNpScoreGetClansRankingByRangeAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpScoreGetClanMemberGameData()
+s32 sceNpScoreGetClanMemberGameData()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpScoreGetClanMemberGameDataAsync()
+s32 sceNpScoreGetClanMemberGameDataAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpScoreGetClansRankingByClanId()
+s32 sceNpScoreGetClansRankingByClanId()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpScoreGetClansRankingByClanIdAsync()
+s32 sceNpScoreGetClansRankingByClanIdAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpScoreGetClansMembersRankingByRange()
+s32 sceNpScoreGetClansMembersRankingByRange()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpScoreGetClansMembersRankingByRangeAsync()
+s32 sceNpScoreGetClansMembersRankingByRangeAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpSignalingCreateCtx()
+s32 sceNpSignalingCreateCtx()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpSignalingDestroyCtx()
+s32 sceNpSignalingDestroyCtx()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpSignalingAddExtendedHandler()
+s32 sceNpSignalingAddExtendedHandler()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpSignalingSetCtxOpt()
+s32 sceNpSignalingSetCtxOpt()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpSignalingGetCtxOpt()
+s32 sceNpSignalingGetCtxOpt()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpSignalingActivateConnection()
+s32 sceNpSignalingActivateConnection()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpSignalingDeactivateConnection()
+s32 sceNpSignalingDeactivateConnection()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpSignalingTerminateConnection()
+s32 sceNpSignalingTerminateConnection()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpSignalingGetConnectionStatus()
+s32 sceNpSignalingGetConnectionStatus()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpSignalingGetConnectionInfo()
+s32 sceNpSignalingGetConnectionInfo()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpSignalingGetConnectionFromNpId()
+s32 sceNpSignalingGetConnectionFromNpId()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpSignalingGetConnectionFromPeerAddress()
+s32 sceNpSignalingGetConnectionFromPeerAddress()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpSignalingGetLocalNetInfo()
+s32 sceNpSignalingGetLocalNetInfo()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpSignalingGetPeerNetInfo()
+s32 sceNpSignalingGetPeerNetInfo()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpSignalingCancelPeerNetInfo()
+s32 sceNpSignalingCancelPeerNetInfo()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpSignalingGetPeerNetInfoResult()
+s32 sceNpSignalingGetPeerNetInfoResult()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpUtilCmpNpId()
+s32 sceNpUtilCmpNpId()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpUtilCmpNpIdInOrder()
+s32 sceNpUtilCmpNpIdInOrder()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpUtilBandwidthTestInitStart(u32 prio, size_t stack)
+s32 sceNpUtilBandwidthTestInitStart(u32 prio, size_t stack)
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 
@@ -1592,7 +1592,7 @@ int sceNpUtilBandwidthTestInitStart(u32 prio, size_t stack)
 	return CELL_OK;
 }
 
-int sceNpUtilBandwidthTestGetStatus()
+s32 sceNpUtilBandwidthTestGetStatus()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 
@@ -1602,7 +1602,7 @@ int sceNpUtilBandwidthTestGetStatus()
 	return CELL_OK;
 }
 
-int sceNpUtilBandwidthTestShutdown()
+s32 sceNpUtilBandwidthTestShutdown()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 
@@ -1614,7 +1614,7 @@ int sceNpUtilBandwidthTestShutdown()
 	return CELL_OK;
 }
 
-int sceNpUtilBandwidthTestAbort()
+s32 sceNpUtilBandwidthTestAbort()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 
@@ -1624,13 +1624,13 @@ int sceNpUtilBandwidthTestAbort()
 	return CELL_OK;
 }
 
-int	_sceNpSysutilClientMalloc()
+s32 _sceNpSysutilClientMalloc()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int	_sceNpSysutilClientFree()
+s32 _sceNpSysutilClientFree()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;

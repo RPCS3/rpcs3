@@ -21,7 +21,7 @@ struct cellNetCtlInternal
 
 cellNetCtlInternal cellNetCtlInstance;
 
-int cellNetCtlInit()
+s32 cellNetCtlInit()
 {
 	cellNetCtl.Log("cellNetCtlInit()");
 
@@ -33,7 +33,7 @@ int cellNetCtlInit()
 	return CELL_OK;
 }
 
-int cellNetCtlTerm()
+s32 cellNetCtlTerm()
 {
 	cellNetCtl.Log("cellNetCtlTerm()");
 
@@ -45,7 +45,7 @@ int cellNetCtlTerm()
 	return CELL_OK;
 }
 
-int cellNetCtlGetState(vm::ptr<u32> state)
+s32 cellNetCtlGetState(vm::ptr<u32> state)
 {
 	cellNetCtl.Log("cellNetCtlGetState(state_addr=0x%x)", state.addr());
 
@@ -69,21 +69,21 @@ int cellNetCtlGetState(vm::ptr<u32> state)
 	return CELL_OK;
 }
 
-int cellNetCtlAddHandler(vm::ptr<cellNetCtlHandler> handler, vm::ptr<void> arg, vm::ptr<s32> hid)
+s32 cellNetCtlAddHandler(vm::ptr<cellNetCtlHandler> handler, vm::ptr<void> arg, vm::ptr<s32> hid)
 {
 	cellNetCtl.Todo("cellNetCtlAddHandler(handler_addr=0x%x, arg_addr=0x%x, hid_addr=0x%x)", handler.addr(), arg.addr(), hid.addr());
 
 	return CELL_OK;
 }
 
-int cellNetCtlDelHandler(s32 hid)
+s32 cellNetCtlDelHandler(s32 hid)
 {
 	cellNetCtl.Todo("cellNetCtlDelHandler(hid=0x%x)", hid);
 
 	return CELL_OK;
 }
 
-int cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
+s32 cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 {
 	cellNetCtl.Todo("cellNetCtlGetInfo(code=0x%x, info_addr=0x%x)", code, info.addr());
 
@@ -95,7 +95,7 @@ int cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 	return CELL_OK;
 }
 
-int cellNetCtlNetStartDialogLoadAsync(vm::ptr<CellNetCtlNetStartDialogParam> param)
+s32 cellNetCtlNetStartDialogLoadAsync(vm::ptr<CellNetCtlNetStartDialogParam> param)
 {
 	cellNetCtl.Warning("cellNetCtlNetStartDialogLoadAsync(param_addr=0x%x)", param.addr());
 
@@ -105,14 +105,14 @@ int cellNetCtlNetStartDialogLoadAsync(vm::ptr<CellNetCtlNetStartDialogParam> par
 	return CELL_OK;
 }
 
-int cellNetCtlNetStartDialogAbortAsync()
+s32 cellNetCtlNetStartDialogAbortAsync()
 {
 	cellNetCtl.Todo("cellNetCtlNetStartDialogAbortAsync()");
 
 	return CELL_OK;
 }
 
-int cellNetCtlNetStartDialogUnloadAsync(vm::ptr<CellNetCtlNetStartDialogResult> result)
+s32 cellNetCtlNetStartDialogUnloadAsync(vm::ptr<CellNetCtlNetStartDialogResult> result)
 {
 	cellNetCtl.Warning("cellNetCtlNetStartDialogUnloadAsync(result_addr=0x%x)", result.addr());
 
@@ -121,7 +121,7 @@ int cellNetCtlNetStartDialogUnloadAsync(vm::ptr<CellNetCtlNetStartDialogResult> 
 	return CELL_OK;
 }
 
-int cellNetCtlGetNatInfo(vm::ptr<CellNetCtlNatInfo> natInfo)
+s32 cellNetCtlGetNatInfo(vm::ptr<CellNetCtlNatInfo> natInfo)
 {
 	cellNetCtl.Todo("cellNetCtlGetNatInfo(natInfo_addr=0x%x)", natInfo.addr());
 

@@ -14,25 +14,25 @@ enum
 	CELL_OVIS_ERROR_ALIGN = 0x80410410,
 };
 
-int cellOvisGetOverlayTableSize(vm::cptr<char> elf)
+s32 cellOvisGetOverlayTableSize(vm::cptr<char> elf)
 {
 	cellOvis.Todo("cellOvisGetOverlayTableSize(elf_addr=0x%x)", elf.addr());
 	return CELL_OK;
 }
 
-int cellOvisInitializeOverlayTable()
+s32 cellOvisInitializeOverlayTable()
 {
 	UNIMPLEMENTED_FUNC(cellOvis);
 	return CELL_OK;
 }
 
-int cellOvisFixSpuSegments()
+s32 cellOvisFixSpuSegments()
 {
 	UNIMPLEMENTED_FUNC(cellOvis);
 	return CELL_OK;
 }
 
-int cellOvisInvalidateOverlappedSegments()
+s32 cellOvisInvalidateOverlappedSegments()
 {
 	UNIMPLEMENTED_FUNC(cellOvis);
 	return CELL_OK;

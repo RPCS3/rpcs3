@@ -9,7 +9,7 @@
 
 extern Module cellUserInfo;
 
-int cellUserInfoGetStat(u32 id, vm::ptr<CellUserInfoUserStat> stat)
+s32 cellUserInfoGetStat(u32 id, vm::ptr<CellUserInfoUserStat> stat)
 {
 	cellUserInfo.Warning("cellUserInfoGetStat(id=%d, stat_addr=0x%x)", id, stat.addr());
 
@@ -37,25 +37,25 @@ int cellUserInfoGetStat(u32 id, vm::ptr<CellUserInfoUserStat> stat)
 	return CELL_OK;
 }
 
-int cellUserInfoSelectUser_ListType()
+s32 cellUserInfoSelectUser_ListType()
 {
 	UNIMPLEMENTED_FUNC(cellUserInfo);
 	return CELL_OK;
 }
 
-int cellUserInfoSelectUser_SetList()
+s32 cellUserInfoSelectUser_SetList()
 {
 	UNIMPLEMENTED_FUNC(cellUserInfo);
 	return CELL_OK;
 }
 
-int cellUserInfoEnableOverlay()
+s32 cellUserInfoEnableOverlay()
 {
 	UNIMPLEMENTED_FUNC(cellUserInfo);
 	return CELL_OK;
 }
 
-int cellUserInfoGetList(vm::ptr<u32> listNum, vm::ptr<CellUserInfoUserList> listBuf, vm::ptr<u32> currentUserId)
+s32 cellUserInfoGetList(vm::ptr<u32> listNum, vm::ptr<CellUserInfoUserList> listBuf, vm::ptr<u32> currentUserId)
 {
 	cellUserInfo.Warning("cellUserInfoGetList(listNum_addr=0x%x, listBuf_addr=0x%x, currentUserId_addr=0x%x)",
 		listNum.addr(), listBuf.addr(), currentUserId.addr());

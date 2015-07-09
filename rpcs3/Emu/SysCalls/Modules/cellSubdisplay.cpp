@@ -6,19 +6,19 @@
 
 extern Module cellSubdisplay;
 
-int cellSubDisplayInit()
+s32 cellSubDisplayInit()
 {
 	UNIMPLEMENTED_FUNC(cellSubdisplay);
 	return CELL_OK;
 }
 
-int cellSubDisplayEnd()
+s32 cellSubDisplayEnd()
 {
 	UNIMPLEMENTED_FUNC(cellSubdisplay);
 	return CELL_OK;
 }
 
-int cellSubDisplayGetRequiredMemory(vm::ptr<CellSubDisplayParam> pParam)
+s32 cellSubDisplayGetRequiredMemory(vm::ptr<CellSubDisplayParam> pParam)
 {
 	cellSubdisplay.Warning("cellSubDisplayGetRequiredMemory(pParam_addr=0x%x)", pParam.addr());
 
@@ -32,43 +32,43 @@ int cellSubDisplayGetRequiredMemory(vm::ptr<CellSubDisplayParam> pParam)
 	}
 }
 
-int cellSubDisplayStart()
+s32 cellSubDisplayStart()
 {
 	UNIMPLEMENTED_FUNC(cellSubdisplay);
 	return CELL_OK;
 }
 
-int cellSubDisplayStop()
+s32 cellSubDisplayStop()
 {
 	UNIMPLEMENTED_FUNC(cellSubdisplay);
 	return CELL_OK;
 }
 
-int cellSubDisplayGetVideoBuffer()
+s32 cellSubDisplayGetVideoBuffer()
 {
 	UNIMPLEMENTED_FUNC(cellSubdisplay);
 	return CELL_OK;
 }
 
-int cellSubDisplayAudioOutBlocking()
+s32 cellSubDisplayAudioOutBlocking()
 {
 	UNIMPLEMENTED_FUNC(cellSubdisplay);
 	return CELL_OK;
 }
 
-int cellSubDisplayAudioOutNonBlocking()
+s32 cellSubDisplayAudioOutNonBlocking()
 {
 	UNIMPLEMENTED_FUNC(cellSubdisplay);
 	return CELL_OK;
 }
 
-int cellSubDisplayGetPeerNum()
+s32 cellSubDisplayGetPeerNum()
 {
 	UNIMPLEMENTED_FUNC(cellSubdisplay);
 	return CELL_OK;
 }
 
-int cellSubDisplayGetPeerList()
+s32 cellSubDisplayGetPeerList()
 {
 	UNIMPLEMENTED_FUNC(cellSubdisplay);
 	return CELL_OK;

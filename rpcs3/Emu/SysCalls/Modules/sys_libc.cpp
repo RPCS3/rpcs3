@@ -12,7 +12,7 @@ namespace sys_libc_func
 {
 	void memcpy(vm::ptr<void> dst, vm::cptr<void> src, u32 size)
 	{
-		sys_libc.Log("memcpy(dst=0x%x, src=0x%x, size=0x%x)", dst, src, size);
+		sys_libc.Log("memcpy(dst=*0x%x, src=*0x%x, size=0x%x)", dst, src, size);
 
 		::memcpy(dst.get_ptr(), src.get_ptr(), size);
 	}

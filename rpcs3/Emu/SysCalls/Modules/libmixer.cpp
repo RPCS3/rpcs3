@@ -20,7 +20,7 @@ u64 mixcount;
 
 std::vector<SSPlayer> ssp;
 
-int cellAANAddData(u32 aan_handle, u32 aan_port, u32 offset, vm::ptr<float> addr, u32 samples)
+s32 cellAANAddData(u32 aan_handle, u32 aan_port, u32 offset, vm::ptr<float> addr, u32 samples)
 {
 	libmixer.Log("cellAANAddData(handle=0x%x, port=0x%x, offset=0x%x, addr_addr=0x%x, samples=%d)", aan_handle, aan_port, offset, addr.addr(), samples);
 
@@ -101,7 +101,7 @@ int cellAANAddData(u32 aan_handle, u32 aan_port, u32 offset, vm::ptr<float> addr
 	return CELL_OK; 
 }
 
-int cellAANConnect(u32 receive, u32 receivePortNo, u32 source, u32 sourcePortNo)
+s32 cellAANConnect(u32 receive, u32 receivePortNo, u32 source, u32 sourcePortNo)
 {
 	libmixer.Warning("cellAANConnect(receive=0x%x, receivePortNo=0x%x, source=0x%x, sourcePortNo=0x%x)",
 		receive, receivePortNo, source, sourcePortNo);
@@ -119,7 +119,7 @@ int cellAANConnect(u32 receive, u32 receivePortNo, u32 source, u32 sourcePortNo)
 	return CELL_OK;
 }
 
-int cellAANDisconnect(u32 receive, u32 receivePortNo, u32 source, u32 sourcePortNo)
+s32 cellAANDisconnect(u32 receive, u32 receivePortNo, u32 source, u32 sourcePortNo)
 {
 	libmixer.Warning("cellAANDisconnect(receive=0x%x, receivePortNo=0x%x, source=0x%x, sourcePortNo=0x%x)",
 		receive, receivePortNo, source, sourcePortNo);
@@ -137,7 +137,7 @@ int cellAANDisconnect(u32 receive, u32 receivePortNo, u32 source, u32 sourcePort
 	return CELL_OK;
 }
  
-int cellSSPlayerCreate(vm::ptr<u32> handle, vm::ptr<CellSSPlayerConfig> config)
+s32 cellSSPlayerCreate(vm::ptr<u32> handle, vm::ptr<CellSSPlayerConfig> config)
 {
 	libmixer.Warning("cellSSPlayerCreate(handle_addr=0x%x, config_addr=0x%x)",
 		handle.addr(), config.addr());
@@ -162,7 +162,7 @@ int cellSSPlayerCreate(vm::ptr<u32> handle, vm::ptr<CellSSPlayerConfig> config)
 	return CELL_OK;
 }
 
-int cellSSPlayerRemove(u32 handle)
+s32 cellSSPlayerRemove(u32 handle)
 {
 	libmixer.Warning("cellSSPlayerRemove(handle=0x%x)", handle);
 
@@ -181,7 +181,7 @@ int cellSSPlayerRemove(u32 handle)
 	return CELL_OK;
 }
 
-int cellSSPlayerSetWave(u32 handle, vm::ptr<CellSSPlayerWaveParam> waveInfo, vm::ptr<CellSSPlayerCommonParam> commonInfo)
+s32 cellSSPlayerSetWave(u32 handle, vm::ptr<CellSSPlayerWaveParam> waveInfo, vm::ptr<CellSSPlayerCommonParam> commonInfo)
 {
 	libmixer.Warning("cellSSPlayerSetWave(handle=0x%x, waveInfo_addr=0x%x, commonInfo_addr=0x%x)",
 		handle, waveInfo.addr(), commonInfo.addr());
@@ -205,7 +205,7 @@ int cellSSPlayerSetWave(u32 handle, vm::ptr<CellSSPlayerWaveParam> waveInfo, vm:
 	return CELL_OK;
 }
 
-int cellSSPlayerPlay(u32 handle, vm::ptr<CellSSPlayerRuntimeInfo> info)
+s32 cellSSPlayerPlay(u32 handle, vm::ptr<CellSSPlayerRuntimeInfo> info)
 {
 	libmixer.Warning("cellSSPlayerPlay(handle=0x%x, info_addr=0x%x)", handle, info.addr());
 
@@ -229,7 +229,7 @@ int cellSSPlayerPlay(u32 handle, vm::ptr<CellSSPlayerRuntimeInfo> info)
 	return CELL_OK;
 }
 
-int cellSSPlayerStop(u32 handle, u32 mode)
+s32 cellSSPlayerStop(u32 handle, u32 mode)
 {
 	libmixer.Warning("cellSSPlayerStop(handle=0x%x, mode=0x%x)", handle, mode);
 
@@ -248,7 +248,7 @@ int cellSSPlayerStop(u32 handle, u32 mode)
 	return CELL_OK;
 }
 
-int cellSSPlayerSetParam(u32 handle, vm::ptr<CellSSPlayerRuntimeInfo> info)
+s32 cellSSPlayerSetParam(u32 handle, vm::ptr<CellSSPlayerRuntimeInfo> info)
 {
 	libmixer.Warning("cellSSPlayerSetParam(handle=0x%x, info_addr=0x%x)", handle, info.addr());
 
@@ -271,7 +271,7 @@ int cellSSPlayerSetParam(u32 handle, vm::ptr<CellSSPlayerRuntimeInfo> info)
 	return CELL_OK;
 }
  
-int cellSSPlayerGetState(u32 handle)
+s32 cellSSPlayerGetState(u32 handle)
 {
 	libmixer.Warning("cellSSPlayerGetState(handle=0x%x)", handle);
 
@@ -291,7 +291,7 @@ int cellSSPlayerGetState(u32 handle)
 	return CELL_SSPLAYER_STATE_OFF;
 }
 
-int cellSurMixerCreate(vm::cptr<CellSurMixerConfig> config)
+s32 cellSurMixerCreate(vm::cptr<CellSurMixerConfig> config)
 {
 	libmixer.Warning("cellSurMixerCreate(config_addr=0x%x)", config.addr());
 
@@ -364,10 +364,10 @@ int cellSurMixerCreate(vm::cptr<CellSurMixerConfig> config)
 						float right = 0.0f;
 						float speed = fabs(p.m_speed);
 						float fpos = 0.0f;
-						for (int i = 0; i < 256; i++) if (p.m_active)
+						for (s32 i = 0; i < 256; i++) if (p.m_active)
 						{
 							u32 pos = p.m_position;
-							int pos_inc = 0;
+							s32 pos_inc = 0;
 							if (p.m_speed > 0.0f) // select direction
 							{
 								pos_inc = 1;
@@ -376,7 +376,7 @@ int cellSurMixerCreate(vm::cptr<CellSurMixerConfig> config)
 							{
 								pos_inc = -1;
 							}
-							int shift = i - (int)fpos; // change playback speed (simple and rough)
+							s32 shift = i - (int)fpos; // change playback speed (simple and rough)
 							if (shift > 0)
 							{
 								// slow playback
@@ -467,21 +467,21 @@ int cellSurMixerCreate(vm::cptr<CellSurMixerConfig> config)
 	return CELL_OK;
 }
 
-int cellSurMixerGetAANHandle(vm::ptr<u32> handle)
+s32 cellSurMixerGetAANHandle(vm::ptr<u32> handle)
 {
 	libmixer.Warning("cellSurMixerGetAANHandle(handle_addr=0x%x) -> %d", handle.addr(), 0x11111111);
 	*handle = 0x11111111;
 	return CELL_OK;
 }
 
-int cellSurMixerChStripGetAANPortNo(vm::ptr<u32> port, u32 type, u32 index)
+s32 cellSurMixerChStripGetAANPortNo(vm::ptr<u32> port, u32 type, u32 index)
 {
 	libmixer.Warning("cellSurMixerChStripGetAANPortNo(port_addr=0x%x, type=0x%x, index=0x%x) -> 0x%x", port.addr(), type, index, (type << 16) | index);
 	*port = (type << 16) | index;
 	return CELL_OK;
 }
 
-int cellSurMixerSetNotifyCallback(vm::ptr<CellSurMixerNotifyCallbackFunction> func, vm::ptr<void> arg)
+s32 cellSurMixerSetNotifyCallback(vm::ptr<CellSurMixerNotifyCallbackFunction> func, vm::ptr<void> arg)
 {
 	libmixer.Warning("cellSurMixerSetNotifyCallback(func_addr=0x%x, arg=0x%x)", func.addr(), arg.addr());
 
@@ -494,7 +494,7 @@ int cellSurMixerSetNotifyCallback(vm::ptr<CellSurMixerNotifyCallbackFunction> fu
 	return CELL_OK;
 }
 
-int cellSurMixerRemoveNotifyCallback(vm::ptr<CellSurMixerNotifyCallbackFunction> func)
+s32 cellSurMixerRemoveNotifyCallback(vm::ptr<CellSurMixerNotifyCallbackFunction> func)
 {
 	libmixer.Warning("cellSurMixerRemoveNotifyCallback(func_addr=0x%x)", func.addr());
 
@@ -509,7 +509,7 @@ int cellSurMixerRemoveNotifyCallback(vm::ptr<CellSurMixerNotifyCallbackFunction>
 	return CELL_OK;
 }
 
-int cellSurMixerStart()
+s32 cellSurMixerStart()
 {
 	libmixer.Warning("cellSurMixerStart()");
 
@@ -523,13 +523,13 @@ int cellSurMixerStart()
 	return CELL_OK;
 }
 
-int cellSurMixerSetParameter(u32 param, float value)
+s32 cellSurMixerSetParameter(u32 param, float value)
 {
 	libmixer.Todo("cellSurMixerSetParameter(param=0x%x, value=%f)", param, value);
 	return CELL_OK;
 }
 
-int cellSurMixerFinalize()
+s32 cellSurMixerFinalize()
 {
 	libmixer.Warning("cellSurMixerFinalize()");
 
@@ -543,7 +543,7 @@ int cellSurMixerFinalize()
 	return CELL_OK;
 }
 
-int cellSurMixerSurBusAddData(u32 busNo, u32 offset, vm::ptr<float> addr, u32 samples)
+s32 cellSurMixerSurBusAddData(u32 busNo, u32 offset, vm::ptr<float> addr, u32 samples)
 {
 	if (busNo < 8 && samples == 256 && offset == 0)
 	{
@@ -566,13 +566,13 @@ int cellSurMixerSurBusAddData(u32 busNo, u32 offset, vm::ptr<float> addr, u32 sa
 	return CELL_OK;
 }
 
-int cellSurMixerChStripSetParameter(u32 type, u32 index, vm::ptr<CellSurMixerChStripParam> param)
+s32 cellSurMixerChStripSetParameter(u32 type, u32 index, vm::ptr<CellSurMixerChStripParam> param)
 {
 	libmixer.Todo("cellSurMixerChStripSetParameter(type=%d, index=%d, param_addr=0x%x)", type, index, param.addr());
 	return CELL_OK;
 }
 
-int cellSurMixerPause(u32 type)
+s32 cellSurMixerPause(u32 type)
 {
 	libmixer.Warning("cellSurMixerPause(type=%d)", type);
 
@@ -586,7 +586,7 @@ int cellSurMixerPause(u32 type)
 	return CELL_OK;
 }
 
-int cellSurMixerGetCurrentBlockTag(vm::ptr<u64> tag)
+s32 cellSurMixerGetCurrentBlockTag(vm::ptr<u64> tag)
 {
 	libmixer.Log("cellSurMixerGetCurrentBlockTag(tag_addr=0x%x)", tag.addr());
 
@@ -594,7 +594,7 @@ int cellSurMixerGetCurrentBlockTag(vm::ptr<u64> tag)
 	return CELL_OK;
 }
 
-int cellSurMixerGetTimestamp(u64 tag, vm::ptr<u64> stamp)
+s32 cellSurMixerGetTimestamp(u64 tag, vm::ptr<u64> stamp)
 {
 	libmixer.Log("cellSurMixerGetTimestamp(tag=0x%llx, stamp_addr=0x%x)", tag, stamp.addr());
 
