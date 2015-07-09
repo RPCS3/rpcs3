@@ -54,7 +54,8 @@ namespace vm
 
 		template<typename AT2 = AT> static std::enable_if_t<std::is_constructible<AT, AT2>::value, _ptr_base> make(const AT2& addr)
 		{
-			return{ addr };
+			const AT value = addr;
+			return{ value };
 		}
 
 		T* get_ptr() const
@@ -129,7 +130,8 @@ namespace vm
 
 		template<typename AT2 = AT> static std::enable_if_t<std::is_constructible<AT, AT2>::value, _ptr_base> make(const AT2& addr)
 		{
-			return{ addr };
+			const AT value = addr;
+			return{ value };
 		}
 
 		// defined in CB_FUNC.h, passing context is mandatory

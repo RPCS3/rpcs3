@@ -20,13 +20,15 @@ class ID_data_t final
 {
 public:
 	const std::shared_ptr<void> data;
-	const std::size_t info;
+	const std::type_info& info;
+	const std::size_t hash;
 	const u32 type;
 	const u32 id;
 
 	template<typename T> force_inline ID_data_t(std::shared_ptr<T> data, u32 type, u32 id)
 		: data(std::move(data))
-		, info(typeid(T).hash_code())
+		, info(typeid(T))
+		, hash(typeid(T).hash_code())
 		, type(type)
 		, id(id)
 	{
@@ -35,6 +37,7 @@ public:
 	ID_data_t(const ID_data_t& right)
 		: data(right.data)
 		, info(right.info)
+		, hash(right.hash)
 		, type(right.type)
 		, id(right.id)
 	{
@@ -45,6 +48,7 @@ public:
 	ID_data_t(ID_data_t&& right)
 		: data(std::move(const_cast<std::shared_ptr<void>&>(right.data)))
 		, info(right.info)
+		, hash(right.hash)
 		, type(right.type)
 		, id(right.id)
 	{
@@ -68,7 +72,7 @@ public:
 
 		auto f = m_id_map.find(id);
 
-		return f != m_id_map.end() && f->second.info == typeid(T).hash_code();
+		return f != m_id_map.end() && f->second.info == typeid(T);
 	}
 
 	// check if ID exists and has specified type
@@ -139,7 +143,7 @@ public:
 
 		auto f = m_id_map.find(id);
 
-		if (f == m_id_map.end() || f->second.info != typeid(Orig).hash_code())
+		if (f == m_id_map.end() || f->second.info != typeid(Orig))
 		{
 			return nullptr;
 		}
@@ -158,7 +162,7 @@ public:
 
 		for (auto& v : m_id_map)
 		{
-			if (v.second.info == hash)
+			if (v.second.hash == hash && v.second.info == typeid(Orig))
 			{
 				result.emplace_back(std::static_pointer_cast<T>(v.second.data));
 			}
@@ -173,7 +177,7 @@ public:
 
 		auto item = m_id_map.find(id);
 
-		if (item == m_id_map.end() || item->second.info != typeid(T).hash_code())
+		if (item == m_id_map.end() || item->second.info != typeid(T))
 		{
 			return false;
 		}
@@ -193,7 +197,7 @@ public:
 
 		for (auto& v : m_id_map)
 		{
-			if (v.second.info == hash)
+			if (v.second.hash == hash && v.second.info == typeid(T))
 			{
 				result++;
 			}
@@ -230,7 +234,7 @@ public:
 
 		for (auto& v : m_id_map)
 		{
-			if (v.second.info == hash)
+			if (v.second.hash == hash && v.second.info == typeid(T))
 			{
 				result.insert(v.first);
 			}
@@ -267,7 +271,7 @@ public:
 
 		for (auto& v : m_id_map)
 		{
-			if (v.second.info == hash)
+			if (v.second.hash == hash && v.second.info == typeid(T))
 			{
 				result.emplace_back(v.second);
 			}

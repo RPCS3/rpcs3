@@ -606,7 +606,7 @@ namespace loader
 						{
 							m_stream->Seek(handler::get_stream_offset() + phdr.p_offset);
 							m_stream->Read(phdr.p_vaddr.get_ptr(), phdr.p_filesz);
-							hook_ppu_funcs(vm::ptr<u32>::make(phdr.p_vaddr.addr()), phdr.p_filesz / 4);
+							hook_ppu_funcs(vm::static_ptr_cast<be_t<u32>>(phdr.p_vaddr), phdr.p_filesz / 4);
 						}
 					}
 					break;
