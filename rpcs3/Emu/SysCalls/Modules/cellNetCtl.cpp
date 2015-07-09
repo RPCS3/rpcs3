@@ -23,7 +23,7 @@ cellNetCtlInternal cellNetCtlInstance;
 
 int cellNetCtlInit()
 {
-	cellNetCtl.Warning("cellNetCtlInit()");
+	cellNetCtl.Log("cellNetCtlInit()");
 
 	if (cellNetCtlInstance.m_bInitialized)
 		return CELL_NET_CTL_ERROR_NOT_TERMINATED;
@@ -35,7 +35,7 @@ int cellNetCtlInit()
 
 int cellNetCtlTerm()
 {
-	cellNetCtl.Warning("cellNetCtlTerm()");
+	cellNetCtl.Log("cellNetCtlTerm()");
 
 	if (!cellNetCtlInstance.m_bInitialized)
 		return CELL_NET_CTL_ERROR_NOT_INITIALIZED;
@@ -47,12 +47,19 @@ int cellNetCtlTerm()
 
 int cellNetCtlGetState(vm::ptr<u32> state)
 {
-	cellNetCtl.Warning("cellNetCtlGetState(state_addr=0x%x)", state.addr());
+	cellNetCtl.Log("cellNetCtlGetState(state_addr=0x%x)", state.addr());
 
-	// Do we need to allow any other connection states?
-	if (Ini.Connected.GetValue())
+	if (Ini.NETStatus.GetValue() == 0)
 	{
 		*state = CELL_NET_CTL_STATE_IPObtained;
+	}
+	else if (Ini.NETStatus.GetValue() == 1)
+	{
+		*state = CELL_NET_CTL_STATE_IPObtaining;
+	}
+	else if (Ini.NETStatus.GetValue() == 2)
+	{
+		*state = CELL_NET_CTL_STATE_Connecting;
 	}
 	else
 	{
@@ -92,7 +99,7 @@ int cellNetCtlNetStartDialogLoadAsync(vm::ptr<CellNetCtlNetStartDialogParam> par
 {
 	cellNetCtl.Warning("cellNetCtlNetStartDialogLoadAsync(param_addr=0x%x)", param.addr());
 
-	// TODO: Actually sign into PSN
+	// TODO: Actually sign into PSN or an emulated network similar to PSN
 	sysutilSendSystemCommand(CELL_SYSUTIL_NET_CTL_NETSTART_FINISHED, 0);
 
 	return CELL_OK;

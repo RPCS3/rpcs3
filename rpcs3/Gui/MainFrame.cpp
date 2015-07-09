@@ -395,6 +395,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 
 	// HLE / Misc.
 	wxStaticBoxSizer* s_round_hle_log_lvl = new wxStaticBoxSizer(wxVERTICAL, p_hle, _("Log Level"));
+	wxStaticBoxSizer* s_round_net_status  = new wxStaticBoxSizer(wxVERTICAL, p_hle, _("Connection status"));
 
 	// System
 	wxStaticBoxSizer* s_round_sys_lang = new wxStaticBoxSizer(wxVERTICAL, p_system, _("Language"));
@@ -412,6 +413,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	wxComboBox* cbox_camera           = new wxComboBox(p_camera, wxID_ANY);
 	wxComboBox* cbox_camera_type      = new wxComboBox(p_camera, wxID_ANY);
 	wxComboBox* cbox_hle_loglvl       = new wxComboBox(p_hle, wxID_ANY);
+	wxComboBox* cbox_net_status       = new wxComboBox(p_hle, wxID_ANY);
 	wxComboBox* cbox_sys_lang         = new wxComboBox(p_system, wxID_ANY);
 
 	wxCheckBox* chbox_gs_log_prog         = new wxCheckBox(p_graphics, wxID_ANY, "Log vertex/fragment programs");
@@ -495,6 +497,11 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	cbox_hle_loglvl->Append("Errors");
 	cbox_hle_loglvl->Append("Nothing");
 
+	cbox_net_status->Append("IP Obtained");
+	cbox_net_status->Append("Obtaining IP");
+	cbox_net_status->Append("Connecting");
+	cbox_net_status->Append("Disconnected");
+
 	cbox_sys_lang->Append("Japanese");
 	cbox_sys_lang->Append("English (US)");
 	cbox_sys_lang->Append("French");
@@ -551,6 +558,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	cbox_camera          ->SetSelection(Ini.Camera.GetValue());
 	cbox_camera_type     ->SetSelection(Ini.CameraType.GetValue());
 	cbox_hle_loglvl      ->SetSelection(Ini.HLELogLvl.GetValue());
+	cbox_net_status      ->SetSelection(Ini.NETStatus.GetValue());
 	cbox_sys_lang        ->SetSelection(Ini.SysLanguage.GetValue());
 	
 	s_round_cpu_decoder->Add(cbox_cpu_decoder, wxSizerFlags().Border(wxALL, 5).Expand());
@@ -571,6 +579,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	s_round_camera_type->Add(cbox_camera_type, wxSizerFlags().Border(wxALL, 5).Expand());
 
 	s_round_hle_log_lvl->Add(cbox_hle_loglvl, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_round_net_status->Add(cbox_net_status, wxSizerFlags().Border(wxALL, 5).Expand());
 
 	s_round_sys_lang->Add(cbox_sys_lang, wxSizerFlags().Border(wxALL, 5).Expand());
 
@@ -606,6 +615,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 
 	// HLE / Misc.
 	s_subpanel_hle->Add(s_round_hle_log_lvl, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_subpanel_hle->Add(s_round_net_status, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_hle->Add(chbox_hle_logging, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_hle->Add(chbox_rsx_logging, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_hle->Add(chbox_hle_hook_stfunc, wxSizerFlags().Border(wxALL, 5).Expand());
@@ -669,6 +679,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 		Ini.HLESaveTTY.SetValue(chbox_hle_savetty->GetValue());
 		Ini.HLEExitOnStop.SetValue(chbox_hle_exitonstop->GetValue());
 		Ini.HLELogLvl.SetValue(cbox_hle_loglvl->GetSelection());
+		Ini.NETStatus.SetValue(cbox_net_status->GetSelection());
 		Ini.SysLanguage.SetValue(cbox_sys_lang->GetSelection());
 		Ini.HLEAlwaysStart.SetValue(chbox_hle_always_start->GetValue());
 
@@ -825,15 +836,15 @@ void MainFrame::UpdateUI(wxCommandEvent& event)
 	wxMenuBar& menubar( *GetMenuBar() );
 
 	// Emulation
-	wxMenuItem& pause = *menubar.FindItem( id_sys_pause );
-	wxMenuItem& stop  = *menubar.FindItem( id_sys_stop );
+	wxMenuItem& pause = *menubar.FindItem(id_sys_pause);
+	wxMenuItem& stop  = *menubar.FindItem(id_sys_stop);
 	pause.SetItemLabel(is_running ? "&Pause\tCtrl + P" : is_ready ? "&Start\tCtrl + E" : "&Resume\tCtrl + E");
 	pause.Enable(!is_stopped);
 	stop.Enable(!is_stopped);
 
 	// PS3 Commands
-	wxMenuItem& send_exit = *menubar.FindItem( id_sys_send_exit );
-	wxMenuItem& send_open_menu = *menubar.FindItem( id_sys_send_open_menu );
+	wxMenuItem& send_exit = *menubar.FindItem(id_sys_send_exit);
+	wxMenuItem& send_open_menu = *menubar.FindItem(id_sys_send_open_menu);
 	bool enable_commands = !is_stopped;
 	send_open_menu.SetItemLabel(wxString::Format("Send &%s system menu cmd", (m_sys_menu_opened ? "close" : "open")));
 	send_open_menu.Enable(enable_commands);

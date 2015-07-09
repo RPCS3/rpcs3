@@ -146,7 +146,7 @@ public:
 
 	// HLE/Miscs
 	IniEntry<u8>   HLELogLvl;
-	IniEntry<bool> Connected;
+	IniEntry<u8>   NETStatus;
 	IniEntry<bool> HLELogging;
 	IniEntry<bool> RSXLogging;
 	IniEntry<bool> HLEHookStFunc;
@@ -229,7 +229,7 @@ public:
 		// HLE/Misc
 		HLELogging.Init("HLE_HLELogging", path);
 		RSXLogging.Init("RSX_Logging", path);
-		Connected.Init("NET_Connected", path);
+		NETStatus.Init("NET_Status", path);
 		HLEHookStFunc.Init("HLE_HLEHookStFunc", path);
 		HLESaveTTY.Init("HLE_HLESaveTTY", path);
 		HLEExitOnStop.Init("HLE_HLEExitOnStop", path);
@@ -307,7 +307,7 @@ public:
 		// HLE/Miscs
 		HLELogging.Load(false);
 		RSXLogging.Load(false);
-		Connected.Load(true);
+		NETStatus.Load(0);
 		HLEHookStFunc.Load(false);
 		HLESaveTTY.Load(false);
 		HLEExitOnStop.Load(false);
@@ -385,7 +385,7 @@ public:
 		// HLE/Miscs
 		HLELogging.Save();
 		RSXLogging.Save();
-		Connected.Save();
+		NETStatus.Save();
 		HLEHookStFunc.Save();
 		HLESaveTTY.Save();
 		HLEExitOnStop.Save();
