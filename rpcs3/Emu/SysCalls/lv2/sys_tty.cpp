@@ -22,7 +22,17 @@ s32 sys_tty_write(s32 ch, vm::ptr<const void> buf, u32 len, vm::ptr<u32> pwritel
 {
 	sys_tty.Log("sys_tty_write(ch=%d, buf_addr=0x%x, len=%d, preadlen_addr=0x%x)", ch, buf.addr(), len, pwritelen.addr());
 
-	if(ch > 15 || (s32)len <= 0) return CELL_EINVAL;
+	if (ch > 15)
+	{
+		sys_tty.Error("sys_tty_write(): specified channel was higher than 15.");
+		return CELL_EINVAL;
+	}
+
+	if ((s32) len <= 0)
+	{
+		sys_tty.Error("sys_tty_write(): specified length was 0.");
+		return CELL_OK;
+	}
 
 	const std::string data((const char*)buf.get_ptr(), len);
 	

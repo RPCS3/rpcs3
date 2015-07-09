@@ -109,8 +109,8 @@ s32 cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr<CellGa
 
 	if (!psf)
 	{
-		// According to testing (in debug mode) cellGameBootCheck doesn't return an error code, when PARAM.SFO doesn't exsist.
-		cellGame.Error("cellGameBootCheck(): Cannot read PARAM.SFO)");
+		// According to testing (in debug mode) cellGameBootCheck doesn't return an error code, when PARAM.SFO doesn't exist.
+		cellGame.Error("cellGameBootCheck(): Cannot read PARAM.SFO.");
 	}
 
 	std::string category = psf.GetString("CATEGORY");

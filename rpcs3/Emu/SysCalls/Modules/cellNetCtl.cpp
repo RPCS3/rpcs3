@@ -3,6 +3,7 @@
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
 
+#include "rpcs3/Ini.h"
 #include "cellSysutil.h"
 #include "cellNetCtl.h"
 
@@ -48,7 +49,15 @@ int cellNetCtlGetState(vm::ptr<u32> state)
 {
 	cellNetCtl.Warning("cellNetCtlGetState(state_addr=0x%x)", state.addr());
 
-	*state = CELL_NET_CTL_STATE_Disconnected; // TODO: Allow other states
+	// Do we need to allow any other connection states?
+	if (Ini.Connected.GetValue())
+	{
+		*state = CELL_NET_CTL_STATE_IPObtained;
+	}
+	else
+	{
+		*state = CELL_NET_CTL_STATE_Disconnected;
+	}
 
 	return CELL_OK;
 }

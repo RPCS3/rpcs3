@@ -180,9 +180,12 @@ int sceNpDrmExecuteGamePurchase()
 	return CELL_OK;
 }
 
-int sceNpDrmGetTimelimit(u32 drm_path_addr, vm::ptr<u64> time_remain_usec)
+int sceNpDrmGetTimelimit(vm::ptr<const char> path, vm::ptr<u64> time_remain)
 {
-	UNIMPLEMENTED_FUNC(sceNp);
+	sceNp.Warning("sceNpDrmGetTimelimit(path_addr=0x%x, time_remain=0x%x)", path.addr(), time_remain.addr());
+
+	*time_remain = 0x7FFFFFFFFFFFFFFFULL;
+
 	return CELL_OK;
 }
 
