@@ -57,7 +57,7 @@ s32 UTF16stoUTF8s(vm::cptr<char16_t> utf16, vm::ref<u32> utf16_len, vm::ptr<char
 
 s32 jstrchk(vm::cptr<char> jstr)
 {
-	cellL10n.Warning("jstrchk(jstr_addr=0x%x) -> utf8", jstr.addr());
+	cellL10n.Warning("jstrchk(jstr=*0x%x) -> utf8", jstr);
 
 	return L10N_STR_UTF8;
 }
@@ -299,8 +299,7 @@ s32 _L10nConvertStr(s32 src_code, const void* src, size_t * src_len, s32 dst_cod
 //TODO: Check the code in emulation. If support for UTF8/UTF16/UTF32/UCS2/UCS4 should use wider chars.. awful.
 s32 L10nConvertStr(s32 src_code, vm::cptr<void> src, vm::ptr<u32> src_len, s32 dst_code, vm::ptr<void> dst, vm::ptr<u32> dst_len)
 {
-	cellL10n.Error("L10nConvertStr(src_code=%d, srca_addr=0x%x, src_len_addr=0x%x, dst_code=%d, dst_addr=0x%x, dst_len_addr=0x%x)",
-		src_code, src.addr(), src_len.addr(), dst_code, dst.addr(), dst_len.addr());
+	cellL10n.Error("L10nConvertStr(src_code=%d, srca=*0x%x, src_len=*0x%x, dst_code=%d, dst=*0x%x, dst_len=*0x%x)", src_code, src, src_len, dst_code, dst, dst_len);
 	//cellL10n.Todo("L10nConvertStr: 1st char at dst: 0x%x", *((char*)src.get_ptr()));
 #ifdef _MSC_VER
 	u32 srcCode = 0, dstCode = 0;	//OEM code pages

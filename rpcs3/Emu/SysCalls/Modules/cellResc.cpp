@@ -570,7 +570,7 @@ void SetupSurfaces(vm::ptr<CellGcmContextData>& cntxt)
 // Module Functions
 s32 cellRescInit(vm::ptr<CellRescInitConfig> initConfig)
 {
-	cellResc.Warning("cellRescInit(initConfig_addr=0x%x)", initConfig.addr());
+	cellResc.Warning("cellRescInit(initConfig=*0x%x)", initConfig);
 
 	if (s_rescInternalInstance->m_bInitialized)
 	{
@@ -623,7 +623,7 @@ void cellRescExit()
 
 s32 cellRescVideoOutResolutionId2RescBufferMode(u32 resolutionId, vm::ptr<u32> bufferMode)
 {
-	cellResc.Log("cellRescVideoOutResolutionId2RescBufferMode(resolutionId=%d, bufferMode_addr=0x%x)", resolutionId, bufferMode.addr());
+	cellResc.Log("cellRescVideoOutResolutionId2RescBufferMode(resolutionId=%d, bufferMode=*0x%x)", resolutionId, bufferMode);
 
 	switch (resolutionId)
 	{
@@ -649,7 +649,7 @@ s32 cellRescVideoOutResolutionId2RescBufferMode(u32 resolutionId, vm::ptr<u32> b
 
 s32 cellRescSetDsts(u32 dstsMode, vm::ptr<CellRescDsts> dsts)
 {
-	cellResc.Log("cellRescSetDsts(dstsMode=%d, CellRescDsts_addr=0x%x)", dstsMode, dsts.addr());
+	cellResc.Log("cellRescSetDsts(dstsMode=%d, dsts=*0x%x)", dstsMode, dsts);
 
 	if (!s_rescInternalInstance->m_bInitialized)
 	{
@@ -861,8 +861,7 @@ s32 cellRescSetPalInterpolateDropFlexRatio(float ratio)
 
 s32 cellRescGetBufferSize(vm::ptr<u32> colorBuffers, vm::ptr<u32> vertexArray, vm::ptr<u32> fragmentShader)
 {
-	cellResc.Warning("cellRescGetBufferSize(colorBuffers_addr=0x%x, vertexArray_addr=0x%x, fragmentShader_addr=0x%x)",
-		colorBuffers.addr(), vertexArray.addr(), fragmentShader.addr());
+	cellResc.Warning("cellRescGetBufferSize(colorBuffers=*0x%x, vertexArray=*0x%x, fragmentShader=*0x%x)", colorBuffers, vertexArray, fragmentShader);
 
 	if (!s_rescInternalInstance->m_bInitialized)
 	{
@@ -926,7 +925,7 @@ s32 cellRescGetNumColorBuffers(u32 dstMode, u32 palTemporalMode, u32 reserved)
 
 s32 cellRescGcmSurface2RescSrc(vm::ptr<CellGcmSurface> gcmSurface, vm::ptr<CellRescSrc> rescSrc)
 {
-	cellResc.Log("cellRescGcmSurface2RescSrc(gcmSurface_addr=0x%x, rescSrc_addr=0x%x)", gcmSurface.addr(), rescSrc.addr());
+	cellResc.Log("cellRescGcmSurface2RescSrc(gcmSurface=*0x%x, rescSrc=*0x%x)", gcmSurface, rescSrc);
 
 	u8 textureFormat = GcmSurfaceFormat2GcmTextureFormat(gcmSurface->colorFormat, gcmSurface->type);
 	s32 xW = 1, xH = 1;
@@ -957,7 +956,7 @@ s32 cellRescGcmSurface2RescSrc(vm::ptr<CellGcmSurface> gcmSurface, vm::ptr<CellR
 
 s32 cellRescSetSrc(s32 idx, vm::ptr<CellRescSrc> src)
 {
-	cellResc.Log("cellRescSetSrc(idx=0x%x, src_addr=0x%x)", idx, src.addr());
+	cellResc.Log("cellRescSetSrc(idx=0x%x, src=*0x%x)", idx, src);
 
 	if(!s_rescInternalInstance->m_bInitialized)
 	{
@@ -986,7 +985,7 @@ s32 cellRescSetSrc(s32 idx, vm::ptr<CellRescSrc> src)
 
 s32 cellRescSetConvertAndFlip(PPUThread& CPU, vm::ptr<CellGcmContextData> cntxt, s32 idx)
 {
-	cellResc.Log("cellRescSetConvertAndFlip(cntxt_addr=0x%x, indx=0x%x)", cntxt.addr(), idx);
+	cellResc.Log("cellRescSetConvertAndFlip(cntxt=*0x%x, idx=0x%x)", cntxt, idx);
 
 	if(!s_rescInternalInstance->m_bInitialized)
 	{
@@ -1032,7 +1031,7 @@ s32 cellRescSetWaitFlip()
 
 s32 cellRescSetBufferAddress(PPUThread& CPU, vm::ptr<u32> colorBuffers, vm::ptr<u32> vertexArray, vm::ptr<u32> fragmentShader)
 {
-	cellResc.Warning("cellRescSetBufferAddress(colorBuffers_addr=0x%x, vertexArray_addr=0x%x, fragmentShader_addr=0x%x)", colorBuffers.addr(), vertexArray.addr(), fragmentShader.addr());
+	cellResc.Warning("cellRescSetBufferAddress(colorBuffers=*0x%x, vertexArray=*0x%x, fragmentShader=*0x%x)", colorBuffers, vertexArray, fragmentShader);
 
 	if(!s_rescInternalInstance->m_bInitialized)
 	{
@@ -1076,7 +1075,7 @@ s32 cellRescSetBufferAddress(PPUThread& CPU, vm::ptr<u32> colorBuffers, vm::ptr<
 
 void cellRescSetFlipHandler(vm::ptr<void(u32)> handler)
 {
-	cellResc.Warning("cellRescSetFlipHandler(handler_addr=0x%x)", handler.addr());
+	cellResc.Warning("cellRescSetFlipHandler(handler=*0x%x)", handler);
 
 	Emu.GetGSManager().GetRender().m_flip_handler = handler;
 }
@@ -1116,7 +1115,7 @@ s32 cellRescSetRegisterCount()
 
 void cellRescSetVBlankHandler(vm::ptr<void(u32)> handler)
 {
-	cellResc.Warning("cellRescSetVBlankHandler(handler_addr=0x%x)", handler.addr());
+	cellResc.Warning("cellRescSetVBlankHandler(handler=*0x%x)", handler);
 
 	Emu.GetGSManager().GetRender().m_vblank_handler = handler;
 }

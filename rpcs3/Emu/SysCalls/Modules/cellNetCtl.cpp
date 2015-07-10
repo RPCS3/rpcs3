@@ -47,7 +47,7 @@ s32 cellNetCtlTerm()
 
 s32 cellNetCtlGetState(vm::ptr<u32> state)
 {
-	cellNetCtl.Log("cellNetCtlGetState(state_addr=0x%x)", state.addr());
+	cellNetCtl.Log("cellNetCtlGetState(state=*0x%x)", state);
 
 	if (Ini.NETStatus.GetValue() == 0)
 	{
@@ -71,7 +71,7 @@ s32 cellNetCtlGetState(vm::ptr<u32> state)
 
 s32 cellNetCtlAddHandler(vm::ptr<cellNetCtlHandler> handler, vm::ptr<void> arg, vm::ptr<s32> hid)
 {
-	cellNetCtl.Todo("cellNetCtlAddHandler(handler_addr=0x%x, arg_addr=0x%x, hid_addr=0x%x)", handler.addr(), arg.addr(), hid.addr());
+	cellNetCtl.Todo("cellNetCtlAddHandler(handler=*0x%x, arg=*0x%x, hid=*0x%x)", handler, arg, hid);
 
 	return CELL_OK;
 }
@@ -85,7 +85,7 @@ s32 cellNetCtlDelHandler(s32 hid)
 
 s32 cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 {
-	cellNetCtl.Todo("cellNetCtlGetInfo(code=0x%x, info_addr=0x%x)", code, info.addr());
+	cellNetCtl.Todo("cellNetCtlGetInfo(code=0x%x, info=*0x%x)", code, info);
 
 	if (code == CELL_NET_CTL_INFO_IP_ADDRESS)
 	{
@@ -97,7 +97,7 @@ s32 cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 
 s32 cellNetCtlNetStartDialogLoadAsync(vm::ptr<CellNetCtlNetStartDialogParam> param)
 {
-	cellNetCtl.Warning("cellNetCtlNetStartDialogLoadAsync(param_addr=0x%x)", param.addr());
+	cellNetCtl.Warning("cellNetCtlNetStartDialogLoadAsync(param=*0x%x)", param);
 
 	// TODO: Actually sign into PSN or an emulated network similar to PSN
 	sysutilSendSystemCommand(CELL_SYSUTIL_NET_CTL_NETSTART_FINISHED, 0);
@@ -114,7 +114,7 @@ s32 cellNetCtlNetStartDialogAbortAsync()
 
 s32 cellNetCtlNetStartDialogUnloadAsync(vm::ptr<CellNetCtlNetStartDialogResult> result)
 {
-	cellNetCtl.Warning("cellNetCtlNetStartDialogUnloadAsync(result_addr=0x%x)", result.addr());
+	cellNetCtl.Warning("cellNetCtlNetStartDialogUnloadAsync(result=*0x%x)", result);
 
 	sysutilSendSystemCommand(CELL_SYSUTIL_NET_CTL_NETSTART_UNLOADED, 0);
 
@@ -123,7 +123,7 @@ s32 cellNetCtlNetStartDialogUnloadAsync(vm::ptr<CellNetCtlNetStartDialogResult> 
 
 s32 cellNetCtlGetNatInfo(vm::ptr<CellNetCtlNatInfo> natInfo)
 {
-	cellNetCtl.Todo("cellNetCtlGetNatInfo(natInfo_addr=0x%x)", natInfo.addr());
+	cellNetCtl.Todo("cellNetCtlGetNatInfo(natInfo=*0x%x)", natInfo);
 
 	if (natInfo->size == 0)
 	{

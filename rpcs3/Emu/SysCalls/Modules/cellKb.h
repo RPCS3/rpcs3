@@ -40,14 +40,3 @@ struct CellKbConfig
 	be_t<u32> read_mode;
 	be_t<u32> code_type;
 };
-
-int cellKbInit(u32 max_connect);
-int cellKbEnd();
-int cellKbClearBuf(u32 port_no);
-u16 cellKbCnvRawCode(u32 arrange, u32 mkey, u32 led, u16 rawcode);
-int cellKbGetInfo(vm::ptr<CellKbInfo> info);
-int cellKbRead(u32 port_no, vm::ptr<CellKbData> data);
-int cellKbSetCodeType(u32 port_no, u32 type);
-int cellKbSetLEDStatus(u32 port_no, u8 led);
-int cellKbSetReadMode(u32 port_no, u32 rmode);
-int cellKbGetConfiguration(u32 port_no, vm::ptr<CellKbConfig> config);

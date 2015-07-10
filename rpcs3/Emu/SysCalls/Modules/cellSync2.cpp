@@ -9,7 +9,7 @@ extern Module cellSync2;
 
 s32 _cellSync2MutexAttributeInitialize(vm::ptr<CellSync2MutexAttribute> attr, u32 sdkVersion)
 {
-	cellSync2.Warning("_cellSync2MutexAttributeInitialize(attr_addr=0x%x, sdkVersion=0x%x)", attr.addr(), sdkVersion);
+	cellSync2.Warning("_cellSync2MutexAttributeInitialize(attr=*0x%x, sdkVersion=0x%x)", attr, sdkVersion);
 
 	attr->sdkVersion = sdkVersion;
 	attr->threadTypes = CELL_SYNC2_THREAD_TYPE_PPU_THREAD | CELL_SYNC2_THREAD_TYPE_PPU_FIBER |
@@ -24,7 +24,7 @@ s32 _cellSync2MutexAttributeInitialize(vm::ptr<CellSync2MutexAttribute> attr, u3
 
 s32 cellSync2MutexEstimateBufferSize(vm::cptr<CellSync2MutexAttribute> attr, vm::ptr<u32> bufferSize)
 {
-	cellSync2.Todo("cellSync2MutexEstimateBufferSize(attr_addr=0x%x, bufferSize_addr=0x%x)", attr.addr(), bufferSize.addr());
+	cellSync2.Todo("cellSync2MutexEstimateBufferSize(attr=*0x%x, bufferSize=*0x%x)", attr, bufferSize);
 
 	if (attr->maxWaiters > 32768)
 		return CELL_SYNC2_ERROR_INVAL;
@@ -64,7 +64,7 @@ s32 cellSync2MutexUnlock()
 
 s32 _cellSync2CondAttributeInitialize(vm::ptr<CellSync2CondAttribute> attr, u32 sdkVersion)
 {
-	cellSync2.Warning("_cellSync2CondAttributeInitialize(attr_addr=0x%x, sdkVersion=0x%x)", attr.addr(), sdkVersion);
+	cellSync2.Warning("_cellSync2CondAttributeInitialize(attr=*0x%x, sdkVersion=0x%x)", attr, sdkVersion);
 
 	attr->sdkVersion = sdkVersion;
 	attr->maxWaiters = 15;
@@ -75,7 +75,7 @@ s32 _cellSync2CondAttributeInitialize(vm::ptr<CellSync2CondAttribute> attr, u32 
 
 s32 cellSync2CondEstimateBufferSize(vm::cptr<CellSync2CondAttribute> attr, vm::ptr<u32> bufferSize)
 {
-	cellSync2.Todo("cellSync2CondEstimateBufferSize(attr_addr=0x%x, bufferSize_addr=0x%x)", attr.addr(), bufferSize.addr());
+	cellSync2.Todo("cellSync2CondEstimateBufferSize(attr=*0x%x, bufferSize=*0x%x)", attr, bufferSize);
 
 	if (attr->maxWaiters == 0 || attr->maxWaiters > 32768)
 		return CELL_SYNC2_ERROR_INVAL;
@@ -115,7 +115,7 @@ s32 cellSync2CondSignalAll()
 
 s32 _cellSync2SemaphoreAttributeInitialize(vm::ptr<CellSync2SemaphoreAttribute> attr, u32 sdkVersion)
 {
-	cellSync2.Warning("_cellSync2SemaphoreAttributeInitialize(attr_addr=0x%x, sdkVersion=0x%x)", attr.addr(), sdkVersion);
+	cellSync2.Warning("_cellSync2SemaphoreAttributeInitialize(attr=*0x%x, sdkVersion=0x%x)", attr, sdkVersion);
 
 	attr->sdkVersion = sdkVersion;
 	attr->threadTypes = CELL_SYNC2_THREAD_TYPE_PPU_THREAD | CELL_SYNC2_THREAD_TYPE_PPU_FIBER |
@@ -129,7 +129,7 @@ s32 _cellSync2SemaphoreAttributeInitialize(vm::ptr<CellSync2SemaphoreAttribute> 
 
 s32 cellSync2SemaphoreEstimateBufferSize(vm::cptr<CellSync2SemaphoreAttribute> attr, vm::ptr<u32> bufferSize)
 {
-	cellSync2.Todo("cellSync2SemaphoreEstimateBufferSize(attr_addr=0x%x, bufferSize_addr=0x%x)", attr.addr(), bufferSize.addr());
+	cellSync2.Todo("cellSync2SemaphoreEstimateBufferSize(attr=*0x%x, bufferSize=*0x%x)", attr, bufferSize);
 
 	if (attr->maxWaiters == 0 || attr->maxWaiters > 32768)
 		return CELL_SYNC2_ERROR_INVAL;
@@ -175,7 +175,7 @@ s32 cellSync2SemaphoreGetCount()
 
 s32 _cellSync2QueueAttributeInitialize(vm::ptr<CellSync2QueueAttribute> attr, u32 sdkVersion)
 {
-	cellSync2.Warning("_cellSync2QueueAttributeInitialize(attr_addr=0x%x, sdkVersion=0x%x)", attr.addr(), sdkVersion);
+	cellSync2.Warning("_cellSync2QueueAttributeInitialize(attr=*0x%x, sdkVersion=0x%x)", attr, sdkVersion);
 
 	attr->sdkVersion = sdkVersion;
 	attr->threadTypes = CELL_SYNC2_THREAD_TYPE_PPU_THREAD | CELL_SYNC2_THREAD_TYPE_PPU_FIBER |
@@ -192,7 +192,7 @@ s32 _cellSync2QueueAttributeInitialize(vm::ptr<CellSync2QueueAttribute> attr, u3
 
 s32 cellSync2QueueEstimateBufferSize(vm::cptr<CellSync2QueueAttribute> attr, vm::ptr<u32> bufferSize)
 {
-	cellSync2.Todo("cellSync2QueueEstimateBufferSize(attr_addr=0x%x, bufferSize_addr=0x%x)", attr.addr(), bufferSize.addr());
+	cellSync2.Todo("cellSync2QueueEstimateBufferSize(attr=*0x%x, bufferSize=*0x%x)", attr, bufferSize);
 
 	if (attr->elementSize == 0 || attr->elementSize > 16384 || attr->elementSize % 16 || attr->depth == 0 || attr->depth > 4294967292 ||
 		attr->maxPushWaiters > 32768 || attr->maxPopWaiters > 32768)

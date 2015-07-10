@@ -22,7 +22,7 @@ sceNpClansInternal sceNpClansInstance;
 
 s32 sceNpClansInit(vm::ptr<SceNpCommunicationId> commId, vm::ptr<SceNpCommunicationPassphrase> passphrase, vm::ptr<void> pool, vm::ptr<u32> poolSize, u32 flags)
 {
-	sceNpClans.Warning("sceNpClansInit(commId_addr=0x%x, passphrase_addr=0x%x, pool_addr=0x%x,poolSize_addr=0x%x, flags=%d)", commId.addr(), passphrase.addr(), pool.addr(), poolSize.addr(), flags);
+	sceNpClans.Warning("sceNpClansInit(commId=*0x%x, passphrase=*0x%x, pool=*0x%x, poolSize=*0x%x, flags=0x%x)", commId, passphrase, pool, poolSize, flags);
 
 	if (sceNpClansInstance.m_bSceNpClansInitialized)
 		return SCE_NP_CLANS_ERROR_ALREADY_INITIALIZED;
@@ -47,9 +47,9 @@ s32 sceNpClansTerm()
 	return CELL_OK;
 }
 
-s32 sceNpClansCreateRequest(vm::ptr<SceNpClansRequestHandle> handle,u64 flags)
+s32 sceNpClansCreateRequest(vm::ptr<SceNpClansRequestHandle> handle, u64 flags)
 {
-	sceNpClans.Todo("sceNpClansCreateRequest(handle_addr=0x%x, flags=0x%llx)", handle.addr(), flags);
+	sceNpClans.Todo("sceNpClansCreateRequest(handle=*0x%x, flags=0x%llx)", handle, flags);
 
 	if (!sceNpClansInstance.m_bSceNpClansInitialized)
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;

@@ -40,7 +40,7 @@ s32 cellMouseEnd()
 
 s32 cellMouseGetInfo(vm::ptr<CellMouseInfo> info)
 {
-	sys_io.Log("cellMouseGetInfo(info_addr=0x%x)", info.addr());
+	sys_io.Log("cellMouseGetInfo(info=*0x%x)", info);
 	if(!Emu.GetMouseManager().IsInited()) return CELL_MOUSE_ERROR_UNINITIALIZED;
 
 	const MouseInfo& current_info = Emu.GetMouseManager().GetInfo();
@@ -56,7 +56,7 @@ s32 cellMouseGetInfo(vm::ptr<CellMouseInfo> info)
 
 s32 cellMouseInfoTabletMode(u32 port_no, vm::ptr<CellMouseInfoTablet> info)
 {
-	sys_io.Log("cellMouseInfoTabletMode(port_no=%d,info_addr=0x%x)", port_no, info.addr());
+	sys_io.Log("cellMouseInfoTabletMode(port_no=%d, info=*0x%x)", port_no, info);
 	if(!Emu.GetMouseManager().IsInited()) return CELL_MOUSE_ERROR_UNINITIALIZED;
 	if(port_no >= Emu.GetMouseManager().GetMice().size()) return CELL_MOUSE_ERROR_INVALID_PARAMETER;
 
@@ -68,7 +68,7 @@ s32 cellMouseInfoTabletMode(u32 port_no, vm::ptr<CellMouseInfoTablet> info)
 
 s32 cellMouseGetData(u32 port_no, vm::ptr<CellMouseData> data)
 {
-	sys_io.Log("cellMouseGetData(port_no=%d,data_addr=0x%x)", port_no, data.addr());
+	sys_io.Log("cellMouseGetData(port_no=%d, data=*0x%x)", port_no, data);
 	if(!Emu.GetMouseManager().IsInited()) return CELL_MOUSE_ERROR_UNINITIALIZED;
 	if(port_no >= Emu.GetMouseManager().GetMice().size()) return CELL_MOUSE_ERROR_NO_DEVICE;
 	
@@ -109,12 +109,10 @@ s32 cellMouseGetTabletDataList(u32 port_no, u32 data_addr)
 	return CELL_OK;
 }
 
-s32 cellMouseGetRawData(u32 port_no, u32 data_addr)
+s32 cellMouseGetRawData(u32 port_no, vm::ptr<struct CellMouseRawData> data)
 {
-	UNIMPLEMENTED_FUNC(sys_io);
-
-	/*sys_io.Log("cellMouseGetRawData(port_no=%d,data_addr=0x%x)", port_no, data.addr());
-	if(!Emu.GetMouseManager().IsInited()) return CELL_MOUSE_ERROR_UNINITIALIZED;
+	sys_io.Todo("cellMouseGetRawData(port_no=%d, data=*0x%x)", port_no, data);
+	/*if(!Emu.GetMouseManager().IsInited()) return CELL_MOUSE_ERROR_UNINITIALIZED;
 	if(port_no >= Emu.GetMouseManager().GetMice().size()) return CELL_MOUSE_ERROR_NO_DEVICE;
 
 	CellMouseRawData& current_rawdata = Emu.GetMouseManager().GetRawData(port_no);

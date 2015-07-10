@@ -71,7 +71,7 @@ s32 cellRtcGetCurrentClockLocalTime(vm::ptr<CellRtcDateTime> pClock)
 
 s32 cellRtcFormatRfc2822(vm::ptr<char> pszDateTime, vm::ptr<CellRtcTick> pUtc, s32 iTimeZone)
 {
-	cellRtc.Log("cellRtcFormatRfc2822(pszDateTime_addr=0x%x, pUtc=0x%x, time_zone=%d)", pszDateTime.addr(), pUtc.addr(), iTimeZone);
+	cellRtc.Log("cellRtcFormatRfc2822(pszDateTime=*0x%x, pUtc=*0x%x, time_zone=%d)", pszDateTime, pUtc, iTimeZone);
 
 	// Add time_zone as offset in minutes.
 	rTimeSpan tz = rTimeSpan(0, (long) iTimeZone, 0, 0);
@@ -89,7 +89,7 @@ s32 cellRtcFormatRfc2822(vm::ptr<char> pszDateTime, vm::ptr<CellRtcTick> pUtc, s
 
 s32 cellRtcFormatRfc2822LocalTime(vm::ptr<char> pszDateTime, vm::ptr<CellRtcTick> pUtc)
 {
-	cellRtc.Log("cellRtcFormatRfc2822LocalTime(pszDateTime_addr=0x%x, pUtc=0x%x)", pszDateTime.addr(), pUtc.addr());
+	cellRtc.Log("cellRtcFormatRfc2822LocalTime(pszDateTime=*0x%x, pUtc=*0x%x)", pszDateTime, pUtc);
 
 	// Get date from ticks.
 	rDateTime date = rDateTime((time_t)pUtc->tick);
@@ -103,7 +103,7 @@ s32 cellRtcFormatRfc2822LocalTime(vm::ptr<char> pszDateTime, vm::ptr<CellRtcTick
 
 s32 cellRtcFormatRfc3339(vm::ptr<char> pszDateTime, vm::ptr<CellRtcTick> pUtc, s32 iTimeZone)
 {
-	cellRtc.Log("cellRtcFormatRfc3339(pszDateTime_addr=0x%x, pUtc=0x%x, iTimeZone=%d)", pszDateTime.addr(), pUtc.addr(), iTimeZone);
+	cellRtc.Log("cellRtcFormatRfc3339(pszDateTime=*0x%x, pUtc=*0x%x, iTimeZone=%d)", pszDateTime, pUtc, iTimeZone);
 	
 	// Add time_zone as offset in minutes.
 	rTimeSpan tz = rTimeSpan(0, (long) iTimeZone, 0, 0);
@@ -121,7 +121,7 @@ s32 cellRtcFormatRfc3339(vm::ptr<char> pszDateTime, vm::ptr<CellRtcTick> pUtc, s
 
 s32 cellRtcFormatRfc3339LocalTime(vm::ptr<char> pszDateTime, vm::ptr<CellRtcTick> pUtc)
 {
-	cellRtc.Log("cellRtcFormatRfc3339LocalTime(pszDateTime_addr=0x%x, pUtc=0x%x)", pszDateTime.addr(), pUtc.addr());
+	cellRtc.Log("cellRtcFormatRfc3339LocalTime(pszDateTime=*0x%x, pUtc=*0x%x)", pszDateTime, pUtc);
 	
 	// Get date from ticks.
 	rDateTime date = rDateTime((time_t) pUtc->tick);
@@ -135,7 +135,7 @@ s32 cellRtcFormatRfc3339LocalTime(vm::ptr<char> pszDateTime, vm::ptr<CellRtcTick
 
 s32 cellRtcParseDateTime(vm::ptr<CellRtcTick> pUtc, vm::cptr<char> pszDateTime)
 {
-	cellRtc.Log("cellRtcParseDateTime(pUtc=0x%x, pszDateTime_addr=0x%x)", pUtc.addr(), pszDateTime.addr());
+	cellRtc.Log("cellRtcParseDateTime(pUtc=*0x%x, pszDateTime=*0x%x)", pUtc, pszDateTime);
 
 	// Get date from formatted string.
 	rDateTime date;
@@ -148,7 +148,7 @@ s32 cellRtcParseDateTime(vm::ptr<CellRtcTick> pUtc, vm::cptr<char> pszDateTime)
 
 s32 cellRtcParseRfc3339(vm::ptr<CellRtcTick> pUtc, vm::cptr<char> pszDateTime)
 {
-	cellRtc.Log("cellRtcParseRfc3339(pUtc=0x%x, pszDateTime_addr=0x%x)", pUtc.addr(), pszDateTime.addr());
+	cellRtc.Log("cellRtcParseRfc3339(pUtc=*0x%x, pszDateTime=*0x%x)", pUtc, pszDateTime);
 
 	// Get date from RFC3339 formatted string.
 	rDateTime date;
@@ -382,7 +382,7 @@ s32 cellRtcSetTime_t(vm::ptr<CellRtcDateTime> pDateTime, u64 iTime)
 
 s32 cellRtcSetWin32FileTime(vm::ptr<CellRtcDateTime> pDateTime, u64 ulWin32FileTime)
 {
-	cellRtc.Log("cellRtcSetWin32FileTime(pDateTime_addr=0x%x, ulWin32FileTime=0x%llx)", pDateTime.addr(), ulWin32FileTime);
+	cellRtc.Log("cellRtcSetWin32FileTime(pDateTime=*0x%x, ulWin32FileTime=0x%llx)", pDateTime, ulWin32FileTime);
 
 	rDateTime date_time = rDateTime((time_t)ulWin32FileTime);
 	

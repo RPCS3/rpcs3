@@ -265,7 +265,7 @@ s32 cellGemHSVtoRGB()
 
 s32 cellGemInit(vm::ptr<CellGemAttribute> attribute)
 {
-	cellGem.Warning("cellGemInit(attribute_addr=0x%x)", attribute.addr());
+	cellGem.Warning("cellGemInit(attribute=*0x%x)", attribute);
 
 	if (cellGemInstance.m_bInitialized)
 		return CELL_GEM_ERROR_ALREADY_INITIALIZED;
