@@ -1311,7 +1311,7 @@ s32 sys_raw_spu_set_spu_cfg(u32 id, u32 value)
 
 	if (value > 3)
 	{
-		sys_spu.Fatal("sys_raw_spu_set_spu_cfg(id=%d, value=0x%x)", id, value);
+		throw EXCEPTION("Unexpected value (0x%x)", value);
 	}
 
 	const auto thread = Emu.GetCPU().GetRawSPUThread(id);

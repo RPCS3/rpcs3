@@ -97,7 +97,7 @@ s32 sys_fs_open(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, s32 mode, vm::c
 
 	if (!open_mode)
 	{
-		sys_fs.Fatal("sys_fs_open('%s'): invalid or unimplemented flags (%#o)", path.get_ptr(), flags);
+		throw EXCEPTION("Invalid or unimplemented flags (%#o): '%s'", flags, path.get_ptr());
 	}
 
 	std::shared_ptr<vfsStream> file(Emu.GetVFS().OpenFile(path.get_ptr(), open_mode));

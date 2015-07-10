@@ -133,7 +133,7 @@ s32 _sys_lwmutex_unlock(u32 lwmutex_id)
 
 	if (mutex->signaled)
 	{
-		sys_lwmutex.Fatal("_sys_lwmutex_unlock(lwmutex_id=0x%x): already signaled", lwmutex_id);
+		throw EXCEPTION("Already signaled (lwmutex_id=0x%x)", lwmutex_id);
 	}
 
 	mutex->signaled++;

@@ -3292,10 +3292,10 @@ void Compiler::MFSPR(u32 rd, u32 spr) {
         rd_i64 = GetVrsave();
         break;
     case 0x10C:
-		rd_i64 = Call<u64>("get_timebased_time", get_timebased_time);
+        rd_i64 = Call<u64>("get_timebased_time", get_timebased_time);
         break;
     case 0x10D:
-		rd_i64 = Call<u64>("get_timebased_time", get_timebased_time);
+        rd_i64 = Call<u64>("get_timebased_time", get_timebased_time);
         rd_i64 = m_ir_builder->CreateLShr(rd_i64, 32);
         break;
     default:
@@ -3340,7 +3340,7 @@ void Compiler::LVXL(u32 vd, u32 ra, u32 rb) {
 }
 
 void Compiler::MFTB(u32 rd, u32 spr) {
-	auto tb_i64 = Call<u64>("get_timebased_time", get_timebased_time);
+    auto tb_i64 = Call<u64>("get_timebased_time", get_timebased_time);
 
     u32 n = (spr >> 5) | ((spr & 0x1f) << 5);
     if (n == 0x10D) {

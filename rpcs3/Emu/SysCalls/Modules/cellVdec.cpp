@@ -645,7 +645,7 @@ s32 cellVdecDecodeAu(u32 handle, CellVdecDecodeMode mode, vm::cptr<CellVdecAuInf
 
 	if (mode != CELL_VDEC_DEC_MODE_NORMAL)
 	{
-		cellVdec.Fatal("cellVdecDecodeAu(): unsupported decoding mode (%d)", mode);
+		throw EXCEPTION("Unsupported decoding mode (%d)", mode);
 	}
 
 	// TODO: check info
@@ -711,13 +711,13 @@ s32 cellVdecGetPicture(u32 handle, vm::cptr<CellVdecPicFormat> format, vm::ptr<u
 
 		default:
 		{
-			cellVdec.Fatal("cellVdecGetPicture: unknown formatType(%d)", type);
+			throw EXCEPTION("Unknown formatType(%d)", type);
 		}
 		}
 
 		if (format->colorMatrixType != CELL_VDEC_COLOR_MATRIX_TYPE_BT709)
 		{
-			cellVdec.Fatal("cellVdecGetPicture: unknown colorMatrixType(%d)", format->colorMatrixType);
+			throw EXCEPTION("Unknown colorMatrixType(%d)", format->colorMatrixType);
 		}
 
 		if (alpha_plane)
@@ -733,7 +733,7 @@ s32 cellVdecGetPicture(u32 handle, vm::cptr<CellVdecPicFormat> format, vm::ptr<u
 
 		default:
 		{
-			cellVdec.Fatal("cellVdecGetPicture: unknown pix_fmt(%d)", f);
+			throw EXCEPTION("Unknown pix_fmt(%d)", f);
 		}
 		}
 
@@ -775,7 +775,7 @@ s32 _nid_a21aa896(PPUThread& CPU, u32 handle, vm::cptr<CellVdecPicFormat2> forma
 
 	if (arg4 || format2->unk0 || format2->unk1)
 	{
-		cellVdec.Fatal("_nid_a21aa896(): unknown arguments (arg4=*0x%x, unk0=0x%x, unk1=0x%x)", arg4, format2->unk0, format2->unk1);
+		throw EXCEPTION("Unknown arguments (arg4=*0x%x, unk0=0x%x, unk1=0x%x)", arg4, format2->unk0, format2->unk1);
 	}
 
 	vm::stackvar<CellVdecPicFormat> format(CPU);
@@ -924,7 +924,7 @@ s32 cellVdecGetPicItem(u32 handle, vm::pptr<CellVdecPicItem> picItem)
 	{
 		auto mp2 = vm::ptr<CellVdecMpeg2Info>::make(info.addr() + sizeof32(CellVdecPicItem));
 
-		cellVdec.Fatal("cellVdecGetPicItem(MPEG2)");
+		throw EXCEPTION("MPEG2");
 	}
 
 	*picItem = info;

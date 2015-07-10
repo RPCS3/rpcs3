@@ -230,7 +230,7 @@ s32 sys_lwmutex_lock(PPUThread& CPU, vm::ptr<sys_lwmutex_t> lwmutex, u64 timeout
 
 		if (old != lwmutex_reserved)
 		{
-			sysPrxForUser.Fatal("sys_lwmutex_lock(lwmutex=*0x%x): locking failed (owner=0x%x)", lwmutex, old);
+			throw EXCEPTION("Locking failed (lwmutex=*0x%x, owner=0x%x)", lwmutex, old);
 		}
 
 		return CELL_OK;
@@ -301,7 +301,7 @@ s32 sys_lwmutex_trylock(PPUThread& CPU, vm::ptr<sys_lwmutex_t> lwmutex)
 
 			if (old != lwmutex_reserved)
 			{
-				sysPrxForUser.Fatal("sys_lwmutex_trylock(lwmutex=*0x%x): locking failed (owner=0x%x)", lwmutex, old);
+				throw EXCEPTION("Locking failed (lwmutex=*0x%x, owner=0x%x)", lwmutex, old);
 			}
 		}
 
@@ -590,7 +590,7 @@ s32 sys_lwcond_wait(PPUThread& CPU, vm::ptr<sys_lwcond_t> lwcond, u64 timeout)
 
 		if (old != lwmutex_reserved)
 		{
-			sysPrxForUser.Fatal("sys_lwcond_wait(lwcond=*0x%x): locking failed (lwmutex->owner=0x%x)", lwcond, old);
+			throw EXCEPTION("Locking failed (lwmutex=*0x%x, owner=0x%x)", lwmutex, old);
 		}
 
 		return res;
@@ -619,14 +619,13 @@ s32 sys_lwcond_wait(PPUThread& CPU, vm::ptr<sys_lwcond_t> lwcond, u64 timeout)
 
 		if (old != lwmutex_reserved)
 		{
-			sysPrxForUser.Fatal("sys_lwcond_wait(lwcond=*0x%x): locking failed after timeout (lwmutex->owner=0x%x)", lwcond, old);
+			throw EXCEPTION("Locking failed (lwmutex=*0x%x, owner=0x%x)", lwmutex, old);
 		}
 
 		return CELL_ETIMEDOUT;
 	}
 
-	sysPrxForUser.Fatal("sys_lwcond_wait(lwcond=*0x%x): unexpected syscall result (0x%x)", lwcond, res);
-	return res;
+	throw EXCEPTION("Unexpected syscall result (lwcond=*0x%x, result=0x%x)", lwcond, res);
 }
 
 s64 sys_time_get_system_time()
@@ -1168,9 +1167,7 @@ s32 _sys_printf(vm::cptr<char> fmt, ppu_va_args_t va_args)
 	sysPrxForUser.Todo("_sys_printf(fmt=*0x%x, ...)", fmt);
 
 	// probably, assertion failed
-	sysPrxForUser.Fatal("_sys_printf: \n%s", fmt.get_ptr());
-	Emu.Pause();
-	return CELL_OK;
+	throw EXCEPTION("%s", fmt.get_ptr());
 }
 
 s32 sys_process_get_paramsfo(vm::ptr<char> buffer)

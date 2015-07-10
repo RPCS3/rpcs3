@@ -120,7 +120,9 @@ MainFrame::MainFrame()
 	menu_help->Append(id_help_about, "&About...");
 
 	SetMenuBar(menubar);
+#ifdef _WIN32
 	SetIcon(wxICON(frame_icon));
+#endif
 
 	// Panels
 	m_log_frame = new LogFrame(this);

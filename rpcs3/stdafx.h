@@ -95,30 +95,30 @@ struct explicit_bool_t
 };
 
 // return 32 bit sizeof() to avoid widening/narrowing conversions with size_t
-#define sizeof32(type) sizeof32_t<sizeof(type)>::value
+#define sizeof32(type) static_cast<u32>(sizeof32_t<sizeof(type)>::value)
 
 // return 32 bit alignof() to avoid widening/narrowing conversions with size_t
-#define alignof32(type) alignof32_t<__alignof(type)>::value
+#define alignof32(type) static_cast<u32>(alignof32_t<__alignof(type)>::value)
 
 template<std::size_t Size> struct sizeof32_t
 {
 	static_assert(Size <= UINT32_MAX, "sizeof32() error: size is too big");
 
-	static const u32 value = static_cast<u32>(Size);
+	enum : u32 { value = static_cast<u32>(Size) };
 };
 
 template<std::size_t Align> struct alignof32_t
 {
 	static_assert(Align <= UINT32_MAX, "alignof32() error: alignment is too big");
 
-	static const u32 value = static_cast<u32>(Align);
+	enum : u32 { value = static_cast<u32>(Align) };
 };
 
 template<typename T> using func_def = T; // workaround for MSVC bug: `using X = func_def<void()>;` instead of `using X = void();`
 
 template<typename T> struct ID_type;
 
-#define REG_ID_TYPE(t, id) template<> struct ID_type<t> { static const u32 type = id; }
+#define REG_ID_TYPE(t, id) template<> struct ID_type<t> { enum : u32 { type = id }; }
 
 #define CHECK_SIZE(type, size) static_assert(sizeof(type) == size, "Invalid " #type " type size")
 #define CHECK_ALIGN(type, align) static_assert(__alignof(type) == align, "Invalid " #type " type alignment")

@@ -66,9 +66,25 @@ void MemoryBase::Close()
 
 bool MemoryBase::Map(const u32 addr, const u32 size)
 {
-	assert(size && (size | addr) % 4096 == 0);
+	if (!size || (size | addr) % 4096)
+	{
+		throw EXCEPTION("Invalid arguments (addr=0x%x, size=0x%x)", addr, size);
+	}
 
 	std::lock_guard<std::mutex> lock(Memory.mutex);
+
+	for (auto& block : MemoryBlocks)
+	{
+		if (block->GetStartAddr() >= addr && block->GetStartAddr() <= addr + size - 1)
+		{
+			return false;
+		}
+
+		if (addr >= block->GetStartAddr() && addr <= block->GetEndAddr())
+		{
+			return false;
+		}
+	}
 
 	for (u32 i = addr / 4096; i < addr / 4096 + size / 4096; i++)
 	{
@@ -78,9 +94,8 @@ bool MemoryBase::Map(const u32 addr, const u32 size)
 		}
 	}
 
-	MemoryBlocks.push_back((new MemoryBlock())->SetRange(addr, size));
+	MemoryBlocks.push_back((new DynamicMemoryBlock())->SetRange(addr, size));
 
-	LOG_WARNING(MEMORY, "Memory mapped at 0x%x: size=0x%x", addr, size);
 	return true;
 }
 
@@ -97,7 +112,23 @@ bool MemoryBase::Unmap(const u32 addr)
 			return true;
 		}
 	}
+
 	return false;
+}
+
+MemoryBlock* MemoryBase::Get(const u32 addr)
+{
+	std::lock_guard<std::mutex> lock(Memory.mutex);
+
+	for (auto& block : MemoryBlocks)
+	{
+		if (block->GetStartAddr() == addr)
+		{
+			return block;
+		}
+	}
+
+	return nullptr;
 }
 
 MemBlockInfo::MemBlockInfo(u32 addr, u32 size)

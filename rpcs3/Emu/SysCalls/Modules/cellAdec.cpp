@@ -777,7 +777,7 @@ s32 cellAdecGetPcm(u32 handle, vm::ptr<float> outBuffer)
 		}
 		else
 		{
-			cellAdec.Fatal("cellAdecGetPcm(): unsupported frame format (channels=%d, format=%d)", frame->channels, frame->format);
+			throw EXCEPTION("Unsupported frame format (channels=%d, format=%d)", frame->channels, frame->format);
 		}
 	}
 

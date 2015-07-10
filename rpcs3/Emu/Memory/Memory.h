@@ -28,7 +28,8 @@ public:
 	{
 		DynamicMemoryBlock RAM;
 		DynamicMemoryBlock Userspace;
-	} PSV;
+	}
+	PSV;
 
 	struct
 	{
@@ -37,7 +38,8 @@ public:
 		DynamicMemoryBlock RAM;
 		DynamicMemoryBlock Kernel;
 		DynamicMemoryBlock Userspace;
-	} PSP;
+	}
+	PSP;
 
 	bool m_inited;
 
@@ -50,10 +52,6 @@ public:
 	{
 		Close();
 	}
-
-	void RegisterPages(u32 addr, u32 size);
-
-	void UnregisterPages(u32 addr, u32 size);
 
 	void Init(MemoryType type);
 
@@ -82,6 +80,8 @@ public:
 	bool Map(const u32 addr, const u32 size);
 
 	bool Unmap(const u32 addr);
+
+	MemoryBlock* Get(const u32 addr);
 };
 
 extern MemoryBase Memory;
