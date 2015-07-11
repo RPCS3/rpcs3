@@ -5,7 +5,7 @@
 #include "rpcs3.h"
 #include "MainFrame.h"
 
-#ifndef __WINDOWS__
+#ifndef _WIN32
 #include "frame_icon.xpm"
 #endif
 
