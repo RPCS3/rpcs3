@@ -23,7 +23,7 @@ s32 pngDecCreate(
 	vm::cptr<CellPngDecExtThreadInParam> ext = vm::null)
 {
 	// alloc memory (should probably use param->cbCtrlMallocFunc)
-	auto dec = CellPngDecMainHandle::make(Memory.Alloc(sizeof(PngDecoder), 128));
+	auto dec = CellPngDecMainHandle::make(vm::alloc(sizeof(PngDecoder), vm::main));
 
 	if (!dec)
 	{
@@ -48,7 +48,7 @@ s32 pngDecCreate(
 
 s32 pngDecDestroy(CellPngDecMainHandle dec)
 {
-	if (!Memory.Free(dec.addr()))
+	if (!vm::dealloc(dec.addr(), vm::main))
 	{
 		return CELL_PNGDEC_ERROR_FATAL;
 	}
@@ -65,7 +65,7 @@ s32 pngDecOpen(
 	vm::cptr<CellPngDecOpnParam> param = vm::null)
 {
 	// alloc memory (should probably use dec->malloc)
-	auto stream = CellPngDecSubHandle::make(Memory.Alloc(sizeof(PngStream), 128));
+	auto stream = CellPngDecSubHandle::make(vm::alloc(sizeof(PngStream), vm::main));
 
 	if (!stream)
 	{
@@ -117,7 +117,7 @@ s32 pngDecClose(CellPngDecSubHandle stream)
 {
 	Emu.GetIdManager().remove<lv2_file_t>(stream->fd);
 
-	if (!Memory.Free(stream.addr()))
+	if (!vm::dealloc(stream.addr(), vm::main))
 	{
 		return CELL_PNGDEC_ERROR_FATAL;
 	}

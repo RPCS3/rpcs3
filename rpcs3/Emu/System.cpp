@@ -402,7 +402,7 @@ void Emulator::Stop()
 	GetModuleManager().Close();
 
 	CurGameInfo.Reset();
-	Memory.Close();
+	vm::close();
 	
 	finalize_ppu_exec_map();
 

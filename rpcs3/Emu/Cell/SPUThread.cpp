@@ -67,8 +67,12 @@ SPUThread::SPUThread(CPUThreadType type, const std::string& name, std::function<
 SPUThread::SPUThread(const std::string& name, u32 index)
 	: CPUThread(CPU_THREAD_SPU, name, WRAP_EXPR(fmt::format("SPU[0x%x] Thread (%s)[0x%08x]", GetId(), GetName(), PC)))
 	, index(index)
-	, offset(Memory.MainMem.AllocAlign(0x40000))
+	, offset(vm::alloc(0x40000, vm::main))
 {
+	if (!offset)
+	{
+		throw EXCEPTION("Failed to allocate SPU local storage");
+	}
 }
 
 SPUThread::~SPUThread()
@@ -77,7 +81,10 @@ SPUThread::~SPUThread()
 	{
 		join();
 
-		Memory.MainMem.Free(offset);
+		if (!vm::dealloc(offset, vm::main))
+		{
+			throw EXCEPTION("Failed to deallocate SPU local storage");
+		}
 	}
 	else if (joinable())
 	{
@@ -425,11 +432,7 @@ void SPUThread::process_mfc_cmd(u32 cmd)
 			break;
 		}
 
-		vm::reservation_acquire(vm::get_ptr(offset + ch_mfc_args.lsa), VM_CAST(ch_mfc_args.ea), 128, [this]()
-		{
-			ch_event_stat |= SPU_EVENT_LR;
-			cv.notify_one();
-		});
+		vm::reservation_acquire(vm::get_ptr(offset + ch_mfc_args.lsa), VM_CAST(ch_mfc_args.ea), 128);
 
 		ch_atomic_stat.push_uncond(MFC_GETLLAR_SUCCESS);
 		return;

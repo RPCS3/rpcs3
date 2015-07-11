@@ -42,7 +42,7 @@ s32 sys_mmapper_allocate_address(u64 size, u64 flags, u64 alignment, vm::ptr<u32
 	{
 		for (u32 addr = ::align(0x30000000, alignment); addr < 0xC0000000; addr += static_cast<u32>(alignment))
 		{
-			if (Memory.Map(addr, static_cast<u32>(size)))
+			if (const auto area = vm::map(addr, static_cast<u32>(size), 0))
 			{
 				*alloc_addr = addr;
 
@@ -63,7 +63,7 @@ s32 sys_mmapper_allocate_fixed_address()
 
 	LV2_LOCK;
 
-	if (!Memory.Map(0xB0000000, 0x10000000))
+	if (!vm::map(0xB0000000, 0x10000000, 0))
 	{
 		return CELL_EEXIST;
 	}
@@ -166,7 +166,7 @@ s32 sys_mmapper_allocate_memory_from_container(u32 size, u32 cid, u64 flags, vm:
 	}
 	}
 
-	if (ct->size - ct->taken < size)
+	if (ct->size - ct->used < size)
 	{
 		return CELL_ENOMEM;
 	}
@@ -176,7 +176,7 @@ s32 sys_mmapper_allocate_memory_from_container(u32 size, u32 cid, u64 flags, vm:
 		flags & SYS_MEMORY_PAGE_SIZE_64K ? 0x10000 :
 		throw EXCEPTION("Unexpected");
 
-	ct->taken += size;
+	ct->used += size;
 
 	// Generate a new mem ID
 	*mem_id = Emu.GetIdManager().make<lv2_memory_t>(size, align, flags, ct);
@@ -197,19 +197,19 @@ s32 sys_mmapper_free_address(u32 addr)
 
 	LV2_LOCK;
 
-	const auto area = Memory.Get(addr);
+	const auto area = vm::get(vm::any, addr);
 
-	if (!area)
+	if (!area || addr != area->addr)
 	{
 		return CELL_EINVAL;
 	}
 
-	if (area->GetUsedSize())
+	if (area->used.load())
 	{
 		return CELL_EBUSY;
 	}
 
-	if (Memory.Unmap(addr))
+	if (!vm::unmap(addr))
 	{
 		throw EXCEPTION("Unexpected (failed to unmap memory ad 0x%x)", addr);
 	}
@@ -239,7 +239,7 @@ s32 sys_mmapper_free_memory(u32 mem_id)
 	// Return physical memory to the container if necessary
 	if (mem->ct)
 	{
-		mem->ct->taken -= mem->size;
+		mem->ct->used -= mem->size;
 	}
 
 	// Release the allocated memory and remove the ID
@@ -254,7 +254,7 @@ s32 sys_mmapper_map_memory(u32 addr, u32 mem_id, u64 flags)
 
 	LV2_LOCK;
 
-	const auto area = Memory.Get(addr & 0xf0000000);
+	const auto area = vm::get(vm::any, addr);
 
 	if (!area || addr < 0x30000000 || addr >= 0xC0000000)
 	{
@@ -278,7 +278,7 @@ s32 sys_mmapper_map_memory(u32 addr, u32 mem_id, u64 flags)
 		throw EXCEPTION("Already mapped (mem_id=0x%x, addr=0x%x)", mem_id, mem->addr.load());
 	}
 
-	if (!area->AllocFixed(addr, mem->size))
+	if (!area->falloc(addr, mem->size))
 	{
 		return CELL_EBUSY;
 	}
@@ -294,9 +294,9 @@ s32 sys_mmapper_search_and_map(u32 start_addr, u32 mem_id, u64 flags, vm::ptr<u3
 
 	LV2_LOCK;
 
-	const auto area = Memory.Get(start_addr);
+	const auto area = vm::get(vm::any, start_addr);
 
-	if (!area || start_addr < 0x30000000 || start_addr >= 0xC0000000)
+	if (!area || start_addr != area->addr || start_addr < 0x30000000 || start_addr >= 0xC0000000)
 	{
 		return CELL_EINVAL;
 	}
@@ -308,7 +308,7 @@ s32 sys_mmapper_search_and_map(u32 start_addr, u32 mem_id, u64 flags, vm::ptr<u3
 		return CELL_ESRCH;
 	}
 
-	const u32 addr = area->AllocAlign(mem->size, mem->align);
+	const u32 addr = area->alloc(mem->size, mem->align);
 
 	if (!addr)
 	{
@@ -326,9 +326,9 @@ s32 sys_mmapper_unmap_memory(u32 addr, vm::ptr<u32> mem_id)
 
 	LV2_LOCK;
 
-	const auto area = Memory.Get(addr);
+	const auto area = vm::get(vm::any, addr);
 
-	if (!area || addr < 0x30000000 || addr >= 0xC0000000)
+	if (!area || addr != area->addr || addr < 0x30000000 || addr >= 0xC0000000)
 	{
 		return CELL_EINVAL;
 	}
@@ -337,7 +337,7 @@ s32 sys_mmapper_unmap_memory(u32 addr, vm::ptr<u32> mem_id)
 	{
 		if (mem->addr == addr)
 		{
-			if (!area->Free(addr))
+			if (!area->dealloc(addr))
 			{
 				throw EXCEPTION("Not mapped (mem_id=0x%x, addr=0x%x)", mem->id, addr);
 			}

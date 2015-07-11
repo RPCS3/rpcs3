@@ -2502,7 +2502,7 @@ void Compiler::LWARX(u32 rd, u32 ra, u32 rb) {
     auto addr_i32    = m_ir_builder->CreateTrunc(addr_i64, m_ir_builder->getInt32Ty());
     auto val_i32_ptr = m_ir_builder->CreateAlloca(m_ir_builder->getInt32Ty());
     val_i32_ptr->setAlignment(4);
-    Call<bool>("vm.reservation_acquire_no_cb", vm::reservation_acquire_no_cb, m_ir_builder->CreateBitCast(val_i32_ptr, m_ir_builder->getInt8PtrTy()), addr_i32, m_ir_builder->getInt32(4));
+    Call<bool>("vm.reservation_acquire", vm::reservation_acquire, m_ir_builder->CreateBitCast(val_i32_ptr, m_ir_builder->getInt8PtrTy()), addr_i32, m_ir_builder->getInt32(4));
     auto val_i32 = (Value *)m_ir_builder->CreateLoad(val_i32_ptr);
     val_i32      = m_ir_builder->CreateCall(Intrinsic::getDeclaration(m_module, Intrinsic::bswap, m_ir_builder->getInt32Ty()), val_i32);
     auto val_i64 = m_ir_builder->CreateZExt(val_i32, m_ir_builder->getInt64Ty());
@@ -2773,7 +2773,7 @@ void Compiler::LDARX(u32 rd, u32 ra, u32 rb) {
     auto addr_i32    = m_ir_builder->CreateTrunc(addr_i64, m_ir_builder->getInt32Ty());
     auto val_i64_ptr = m_ir_builder->CreateAlloca(m_ir_builder->getInt64Ty());
     val_i64_ptr->setAlignment(8);
-    Call<bool>("vm.reservation_acquire_no_cb", vm::reservation_acquire_no_cb, m_ir_builder->CreateBitCast(val_i64_ptr, m_ir_builder->getInt8PtrTy()), addr_i32, m_ir_builder->getInt32(8));
+    Call<bool>("vm.reservation_acquire", vm::reservation_acquire, m_ir_builder->CreateBitCast(val_i64_ptr, m_ir_builder->getInt8PtrTy()), addr_i32, m_ir_builder->getInt32(8));
     auto val_i64 = (Value *)m_ir_builder->CreateLoad(val_i64_ptr);
     val_i64      = m_ir_builder->CreateCall(Intrinsic::getDeclaration(m_module, Intrinsic::bswap, m_ir_builder->getInt64Ty()), val_i64);
     SetGpr(rd, val_i64);

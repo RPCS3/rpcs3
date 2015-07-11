@@ -607,7 +607,7 @@ void spursSysServiceIdleHandler(SPUThread & spu, SpursKernelContext * ctxt) {
     std::unique_lock<std::mutex> lock(spu.mutex, std::defer_lock);
 
     while (true) {
-        vm::reservation_acquire(vm::get_ptr(spu.offset + 0x100), VM_CAST(ctxt->spurs.addr()), 128, [&spu](){ spu.cv.notify_one(); });
+        vm::reservation_acquire(vm::get_ptr(spu.offset + 0x100), VM_CAST(ctxt->spurs.addr()), 128);
         auto spurs = vm::get_ptr<CellSpurs>(spu.offset + 0x100);
 
         // Find the number of SPUs that are idling in this SPURS instance

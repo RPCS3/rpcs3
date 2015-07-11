@@ -333,7 +333,7 @@ void RSXDebugger::GoToGet(wxCommandEvent& event)
 	if (!RSXReady()) return;
 	auto ctrl = vm::get_ptr<CellGcmControl>(Emu.GetGSManager().GetRender().m_ctrlAddress);
 	u32 realAddr;
-	if (Memory.RSXIOMem.getRealAddr(ctrl->get.load(), realAddr)) {
+	if (RSXIOMem.getRealAddr(ctrl->get.load(), realAddr)) {
 		m_addr = realAddr;
 		t_addr->SetValue(wxString::Format("%08x", m_addr));
 		UpdateInformation();
@@ -347,7 +347,7 @@ void RSXDebugger::GoToPut(wxCommandEvent& event)
 	if (!RSXReady()) return;
 	auto ctrl = vm::get_ptr<CellGcmControl>(Emu.GetGSManager().GetRender().m_ctrlAddress);
 	u32 realAddr;
-	if (Memory.RSXIOMem.getRealAddr(ctrl->put.load(), realAddr)) {
+	if (RSXIOMem.getRealAddr(ctrl->put.load(), realAddr)) {
 		m_addr = realAddr;
 		t_addr->SetValue(wxString::Format("%08x", m_addr));
 		UpdateInformation();

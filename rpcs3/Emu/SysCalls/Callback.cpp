@@ -80,7 +80,7 @@ void CallbackManager::Init()
 		}
 	};
 
-	if (Memory.PSV.RAM.GetStartAddr())
+	if (vm::get(vm::main)->addr != 0x10000)
 	{
 		auto thread = Emu.GetIdManager().make_ptr<ARMv7Thread>("Callback Thread");
 

@@ -638,7 +638,7 @@ s32 cellSailPlayerCreateDescriptor(vm::ptr<CellSailPlayer> pSelf, s32 streamType
 	cellSail.Warning("cellSailPlayerCreateDescriptor(pSelf_addr=0x%x, streamType=%d, pMediaInfo_addr=0x%x, pUri_addr=0x%x, ppDesc_addr=0x%x)", pSelf.addr(), streamType,
 					pMediaInfo.addr(), pUri.addr(), ppDesc.addr());
 	
-	u32 descriptorAddress = Memory.Alloc(sizeof(CellSailDescriptor), 1);
+	u32 descriptorAddress = vm::alloc(sizeof(CellSailDescriptor), vm::main);
 	auto descriptor = vm::ptr<CellSailDescriptor>::make(descriptorAddress);
 	*ppDesc = descriptorAddress;
 	descriptor->streamType = streamType;
@@ -657,11 +657,11 @@ s32 cellSailPlayerCreateDescriptor(vm::ptr<CellSailPlayer> pSelf, s32 streamType
 				vfsFile f;
 				if (f.Open(path)) {
 					u64 size = f.GetSize();
-					u32 buf_ = Memory.Alloc(size, 1);
+					u32 buf_ = vm::alloc(size, vm::main);
 					auto bufPtr = vm::cptr<PamfHeader>::make(buf_);
 					PamfHeader *buf = const_cast<PamfHeader*>(bufPtr.get_ptr());
 					assert(f.Read(buf, size) == size);
-					u32 sp_ = Memory.Alloc(sizeof(CellPamfReader), 1);
+					u32 sp_ = vm::alloc(sizeof(CellPamfReader), vm::main);
 					auto sp = vm::ptr<CellPamfReader>::make(sp_);
 					u32 r = cellPamfReaderInitialize(sp, bufPtr, size, 0);
 

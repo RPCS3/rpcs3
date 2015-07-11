@@ -90,7 +90,7 @@ s32 cellFontOpenFontFile(vm::ptr<CellFontLibrary> library, vm::cptr<char> fontPa
 		return CELL_FONT_ERROR_FONT_OPEN_FAILED;
 
 	u32 fileSize = (u32)f.GetSize();
-	u32 bufferAddr = (u32)Memory.Alloc(fileSize, 1); // Freed in cellFontCloseFont
+	u32 bufferAddr = vm::alloc(fileSize, vm::main); // Freed in cellFontCloseFont
 	f.Read(vm::get_ptr<void>(bufferAddr), fileSize);
 	s32 ret = cellFontOpenFontMemory(library, bufferAddr, fileSize, subNum, uniqueId, font);
 	font->origin = CELL_FONT_OPEN_FONT_FILE;
@@ -222,7 +222,7 @@ void cellFontRenderSurfaceInit(vm::ptr<CellFontRenderSurface> surface, vm::ptr<v
 	surface->height			= h;
 
 	if (!buffer)
-		surface->buffer_addr = (u32)Memory.Alloc(bufferWidthByte * h, 1); // TODO: Huge memory leak
+		surface->buffer_addr = vm::alloc(bufferWidthByte * h, vm::main); // TODO: Huge memory leak
 }
 
 void cellFontRenderSurfaceSetScissor(vm::ptr<CellFontRenderSurface> surface, s32 x0, s32 y0, s32 w, s32 h)
@@ -385,7 +385,7 @@ s32 cellFontCloseFont(vm::ptr<CellFont> font)
 	if (font->origin == CELL_FONT_OPEN_FONTSET ||
 		font->origin == CELL_FONT_OPEN_FONT_FILE ||
 		font->origin == CELL_FONT_OPEN_MEMORY)
-		Memory.Free(font->fontdata_addr);
+		vm::dealloc(font->fontdata_addr, vm::main);
 
 	return CELL_OK;
 }

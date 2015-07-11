@@ -86,11 +86,7 @@ s32 getLastError()
 #endif
 }
 
-#ifdef _WIN32
-using pck_len_t = s32;
-#else
 using pck_len_t = u32;
-#endif
 
 namespace sys_net_func
 {
@@ -108,7 +104,7 @@ namespace sys_net_func
 			sockaddr _addr;
 			memcpy(&_addr, addr.get_ptr(), sizeof(sockaddr));
 			_addr.sa_family = addr->sa_family;
-			pck_len_t _paddrlen;
+			int _paddrlen;
 			s32 ret = ::accept(s, &_addr, &_paddrlen);
 			*paddrlen = _paddrlen;
 			*g_lastError = getLastError();
@@ -257,7 +253,7 @@ namespace sys_net_func
 		sockaddr _addr;
 		memcpy(&_addr, addr.get_ptr(), sizeof(sockaddr));
 		_addr.sa_family = addr->sa_family;
-		pck_len_t _paddrlen;
+		int _paddrlen;
 		s32 ret = ::recvfrom(s, buf.get_ptr(), len, flags, &_addr, &_paddrlen);
 		*paddrlen = _paddrlen;
 		*g_lastError = getLastError();
@@ -417,7 +413,7 @@ namespace sys_net_func
 s32 sys_net_initialize_network_ex(vm::ptr<sys_net_initialize_parameter> param)
 {
 	sys_net.Warning("sys_net_initialize_network_ex(param=*0x%x)", param);
-	g_lastError = vm::ptr<s32>::make((u32)Memory.Alloc(4, 1));
+	g_lastError = vm::ptr<s32>::make(vm::alloc(4, vm::main));
 #ifdef _WIN32
 	WSADATA wsaData;
 	WORD wVersionRequested = MAKEWORD(1, 1);
@@ -549,7 +545,7 @@ s32 sys_net_show_ifconfig()
 s32 sys_net_finalize_network()
 {
 	sys_net.Warning("sys_net_initialize_network_ex()");
-	Memory.Free(g_lastError.addr());
+	vm::dealloc(g_lastError.addr(), vm::main);
 	g_lastError = vm::null;
 #ifdef _WIN32
 	WSACleanup();

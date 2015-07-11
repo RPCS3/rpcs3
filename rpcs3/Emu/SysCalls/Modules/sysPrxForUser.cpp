@@ -44,7 +44,7 @@ u32 ppu_get_tls(u32 thread)
 	if (!g_tls_start)
 	{
 		g_tls_size = Emu.GetTLSMemsz() + TLS_SYS;
-		g_tls_start = Memory.MainMem.AllocAlign(g_tls_size * TLS_MAX, 4096); // memory for up to TLS_MAX threads
+		g_tls_start = vm::alloc(g_tls_size * TLS_MAX, vm::main); // memory for up to TLS_MAX threads
 		sysPrxForUser.Notice("Thread Local Storage initialized (g_tls_start=0x%x, user_size=0x%x)\n*** TLS segment addr: 0x%08x\n*** TLS segment size: 0x%08x",
 			g_tls_start, Emu.GetTLSMemsz(), Emu.GetTLSAddr(), Emu.GetTLSFilesz());
 	}
@@ -788,21 +788,21 @@ u32 _sys_heap_malloc(u32 heap, u32 size)
 {
 	sysPrxForUser.Warning("_sys_heap_malloc(heap=0x%x, size=0x%x)", heap, size);
 
-	return Memory.MainMem.AllocAlign(size, 1);
+	return vm::alloc(size, vm::main);
 }
 
 u32 _sys_heap_memalign(u32 heap, u32 align, u32 size)
 {
 	sysPrxForUser.Warning("_sys_heap_memalign(heap=0x%x, align=0x%x, size=0x%x)", heap, align, size);
 
-	return Memory.MainMem.AllocAlign(size, align);
+	return vm::alloc(size, vm::main, std::max<u32>(align, 4096));
 }
 
 s32 _sys_heap_free(u32 heap, u32 addr)
 {
 	sysPrxForUser.Warning("_sys_heap_free(heap=0x%x, addr=0x%x)", heap, addr);
 
-	Memory.MainMem.Free(addr);
+	vm::dealloc(addr, vm::main);
 
 	return CELL_OK;
 }
@@ -831,7 +831,7 @@ s32 sys_process_is_stack(u32 p)
 	sysPrxForUser.Log("sys_process_is_stack(p=0x%x)", p);
 
 	// prx: compare high 4 bits with "0xD"
-	return (p >= Memory.StackMem.GetStartAddr() && p <= Memory.StackMem.GetEndAddr()) ? 1 : 0;
+	return (p >> 28) == 0xD;
 }
 
 s64 sys_prx_exitspawn_with_level()
@@ -1121,21 +1121,21 @@ u32 _sys_malloc(u32 size)
 {
 	sysPrxForUser.Warning("_sys_malloc(size=0x%x)", size);
 
-	return Memory.MainMem.AllocAlign(size, 1);
+	return vm::alloc(size, vm::main);
 }
 
 u32 _sys_memalign(u32 align, u32 size)
 {
 	sysPrxForUser.Warning("_sys_memalign(align=0x%x, size=0x%x)", align, size);
 
-	return Memory.MainMem.AllocAlign(size, align);
+	return vm::alloc(size, vm::main, std::max<u32>(align, 4096));
 }
 
 s32 _sys_free(u32 addr)
 {
 	sysPrxForUser.Warning("_sys_free(addr=0x%x)", addr);
 
-	Memory.MainMem.Free(addr);
+	vm::dealloc(addr, vm::main);
 
 	return CELL_OK;
 }

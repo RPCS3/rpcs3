@@ -317,7 +317,7 @@ public:
 
 					size_t size = f.size();
 					vm::ps3::init();
-					ptr = vm::alloc(size);
+					ptr = vm::alloc(size, vm::main);
 					f.read(vm::get_ptr(ptr), size);
 				}
 				

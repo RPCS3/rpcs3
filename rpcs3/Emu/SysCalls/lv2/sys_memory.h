@@ -48,7 +48,7 @@ struct lv2_memory_container_t
 	const u32 id;
 
 	// amount of memory allocated
-	std::atomic<u32> taken{ 0 };
+	std::atomic<u32> used{ 0 };
 	
 	// allocations (addr -> size)
 	std::map<u32, u32> allocs;

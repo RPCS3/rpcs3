@@ -1,20 +1,23 @@
 #pragma once
-#include "Memory.h"
+
+#include "stdafx.h"
 
 class CPUThread;
 
 namespace vm
 {
-	extern void* g_base_addr; // base address of ps3/psv virtual memory for common access
+	extern void* const g_base_addr; // base address of ps3/psv virtual memory for common access
 	extern void* g_priv_addr; // base address of ps3/psv virtual memory for privileged access
 
-	enum memory_location : uint
+	enum memory_location_t : uint
 	{
 		main,
 		user_space,
+		video,
 		stack,
-
-		memory_location_count
+		
+		memory_location_max,
+		any = 0xffffffff,
 	};
 
 	enum page_info_t : u8
@@ -29,40 +32,82 @@ namespace vm
 		page_allocated          = (1 << 7),
 	};
 
-	static void set_stack_size(u32 size) {}
-	static void initialize_stack() {}
+	// Unconditionally break the reservation at specified address
+	void reservation_break(u32 addr);
 
-	// break the reservation, return true if it was successfully broken
-	bool reservation_break(u32 addr);
-	// read memory and reserve it for further atomic update, return true if the previous reservation was broken
-	bool reservation_acquire(void* data, u32 addr, u32 size, std::function<void()> callback = nullptr);
-	// same as reservation_acquire but does not have the callback argument
-	// used by the PPU LLVM JIT since creating a std::function object in LLVM IR is too complicated
-	bool reservation_acquire_no_cb(void* data, u32 addr, u32 size);
-	// attempt to atomically update reserved memory
+	// Reserve memory at the specified address for further atomic update
+	void reservation_acquire(void* data, u32 addr, u32 size);
+
+	// Attempt to atomically update previously reserved memory
 	bool reservation_update(u32 addr, const void* data, u32 size);
-	// for internal use
+
+	// Process a memory access error if it's caused by the reservation
 	bool reservation_query(u32 addr, u32 size, bool is_writing, std::function<bool()> callback);
-	// for internal use
+
+	// Break all reservations created by the current thread
 	void reservation_free();
-	// perform complete operation
+
+	// Perform atomic operation unconditionally
 	void reservation_op(u32 addr, u32 size, std::function<void()> proc);
 
-	// for internal use
-	void page_map(u32 addr, u32 size, u8 flags);
-	// for internal use
+	// Change memory protection of specified memory region
 	bool page_protect(u32 addr, u32 size, u8 flags_test = 0, u8 flags_set = 0, u8 flags_clear = 0);
-	// for internal use
-	void page_unmap(u32 addr, u32 size);
 
-	// unsafe address check
+	// Check if existing memory range is allocated. Checking address before using it is very unsafe.
+	// Return value may be wrong. Even if it's true and correct, actual memory protection may be read-only and no-access.
 	bool check_addr(u32 addr, u32 size = 1);
 
-	bool map(u32 addr, u32 size, u32 flags);
-	bool unmap(u32 addr, u32 size = 0, u32 flags = 0);
-	u32 alloc(u32 size, memory_location location = user_space);
-	u32 alloc(u32 addr, u32 size, memory_location location = user_space);
-	void dealloc(u32 addr, memory_location location = user_space);
+	// Search and map memory in specified memory location (don't pass alignment smaller than 4096)
+	u32 alloc(u32 size, memory_location_t location, u32 align = 4096);
+
+	// Map memory at specified address (in optionally specified memory location)
+	u32 falloc(u32 addr, u32 size, memory_location_t location = any);
+
+	// Unmap memory at specified address (in optionally specified memory location)
+	bool dealloc(u32 addr, memory_location_t location = any);
+
+	class block_t
+	{
+		std::map<u32, u32> m_map; // addr -> size mapping of mapped locations
+		std::mutex m_mutex;
+
+		bool try_alloc(u32 addr, u32 size);
+
+	public:
+		block_t() = delete;
+
+		block_t(u32 addr, u32 size)
+			: addr(addr)
+			, size(size)
+		{
+		}
+
+		~block_t();
+
+	public:
+		const u32 addr; // start address
+		const u32 size; // total size
+
+		atomic_t<u32> used{}; // amount of memory used, may be increased manually prevent some memory from allocating
+
+		// Search and map memory (don't pass alignment smaller than 4096)
+		u32 alloc(u32 size, u32 align = 4096);
+
+		// Try to map memory at fixed location
+		u32 falloc(u32 addr, u32 size);
+
+		// Unmap memory at specified location previously returned by alloc()
+		bool dealloc(u32 addr);
+	};
+
+	// create new memory block with specified parameters and return it
+	std::shared_ptr<block_t> map(u32 addr, u32 size, u32 flags);
+
+	// delete existing memory block with specified start address
+	std::shared_ptr<block_t> unmap(u32 addr);
+
+	// get memory block associated with optionally specified memory location or optionally specified address
+	std::shared_ptr<block_t> get(memory_location_t location, u32 addr = 0);
 	
 	template<typename T = void> T* get_ptr(u32 addr)
 	{
@@ -316,39 +361,6 @@ namespace vm
 
 namespace vm
 {
-	struct location_info
-	{
-		u32 addr_offset;
-		u32 size;
-
-		u32(*allocator)(u32 size);
-		u32(*fixed_allocator)(u32 addr, u32 size);
-		void(*deallocator)(u32 addr);
-
-		u32 alloc_offset;
-
-		template<typename T = char>
-		_ptr_base<T> alloc(u32 count = 1) const
-		{
-			return{ allocator(count * sizeof32(T)) };
-		}
-
-		template<typename T = char>
-		_ptr_base<T> fixed_alloc(u32 addr, u32 count = 1) const
-		{
-			return{ fixed_allocator(addr, count * sizeof32(T)) };
-		}
-	};
-
-	extern location_info g_locations[memory_location_count];
-
-	template<memory_location location = main>
-	location_info& get()
-	{
-		assert(location < memory_location_count);
-		return g_locations[location];
-	}
-
 	class stack
 	{
 		u32 m_begin;

@@ -545,7 +545,7 @@ void PPUThread::InitStack()
 			throw EXCEPTION("Invalid stack size");
 		}
 
-		stack_addr = Memory.StackMem.AllocAlign(stack_size, 4096);
+		stack_addr = vm::alloc(stack_size, vm::stack);
 
 		if (!stack_addr)
 		{
@@ -558,7 +558,7 @@ void PPUThread::CloseStack()
 {
 	if (stack_addr)
 	{
-		Memory.StackMem.Free(stack_addr);
+		vm::dealloc(stack_addr, vm::stack);
 		stack_addr = 0;
 	}
 }

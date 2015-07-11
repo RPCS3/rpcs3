@@ -40,13 +40,13 @@ namespace vm
 
 		if (memory_handle == -1)
 		{
-			printf("shm_open('/rpcs3_vm') failed\n");
+			std::printf("shm_open('/rpcs3_vm') failed\n");
 			return (void*)-1;
 		}
 
 		if (ftruncate(memory_handle, 0x100000000) == -1)
 		{
-			printf("ftruncate(memory_handle) failed\n");
+			std::printf("ftruncate(memory_handle) failed\n");
 			shm_unlink("/rpcs3_vm");
 			return (void*)-1;
 		}
@@ -55,6 +55,8 @@ namespace vm
 		g_priv_addr = mmap(nullptr, 0x100000000, PROT_NONE, MAP_SHARED, memory_handle, 0);
 
 		shm_unlink("/rpcs3_vm");
+
+		std::printf("/rpcs3_vm: g_base_addr = %p, g_priv_addr = %p\n", base_addr, g_priv_addr);
 
 		return base_addr;
 #endif
@@ -71,10 +73,10 @@ namespace vm
 #endif
 	}
 
-	void* g_base_addr = (atexit(finalize), initialize());
+	void* const g_base_addr = (atexit(finalize), initialize());
 	void* g_priv_addr;
 
-	std::array<atomic_t<u8>, 0x100000000ull / 4096> g_page_info = {}; // information about every page
+	std::array<atomic_t<u8>, 0x100000000ull / 4096> g_pages = {}; // information about every page
 
 	class reservation_mutex_t
 	{
@@ -131,7 +133,6 @@ namespace vm
 
 	};
 
-	std::function<void()> g_reservation_cb = nullptr;
 	const thread_ctrl_t* g_reservation_owner = nullptr;
 
 	u32 g_reservation_addr = 0;
@@ -152,7 +153,7 @@ namespace vm
 		}
 	}
 
-	bool _reservation_break(u32 addr)
+	void _reservation_break(u32 addr)
 	{
 		if (g_reservation_addr >> 12 == addr >> 12)
 		{
@@ -166,84 +167,63 @@ namespace vm
 				throw EXCEPTION("System failure (addr=0x%x)", addr);
 			}
 
-			if (g_reservation_cb)
-			{
-				g_reservation_cb();
-				g_reservation_cb = nullptr;
-			}
-
 			g_reservation_owner = nullptr;
 			g_reservation_addr = 0;
 			g_reservation_size = 0;
-
-			return true;
 		}
-
-		return false;
 	}
 
-	bool reservation_break(u32 addr)
+	void reservation_break(u32 addr)
 	{
 		std::lock_guard<reservation_mutex_t> lock(g_reservation_mutex);
 
-		return _reservation_break(addr);
+		_reservation_break(addr);
 	}
 
-	bool reservation_acquire(void* data, u32 addr, u32 size, std::function<void()> callback)
+	void reservation_acquire(void* data, u32 addr, u32 size)
 	{
-		bool broken = false;
+		std::lock_guard<reservation_mutex_t> lock(g_reservation_mutex);
 
 		assert(size == 1 || size == 2 || size == 4 || size == 8 || size == 128);
 		assert((addr + size - 1 & ~0xfff) == (addr & ~0xfff));
 
+		const u8 flags = g_pages[addr >> 12].load();
+
+		if (!(flags & page_writable) || !(flags & page_allocated) || (flags & page_no_reservations))
 		{
-			std::lock_guard<reservation_mutex_t> lock(g_reservation_mutex);
-
-			u8 flags = g_page_info[addr >> 12].load();
-			if (!(flags & page_writable) || !(flags & page_allocated) || (flags & page_no_reservations))
-			{
-				throw EXCEPTION("Invalid page flags (addr=0x%x, size=0x%x, flags=0x%x)", addr, size, flags);
-			}
-
-			// silent unlocking to prevent priority boost for threads going to break reservation
-			//g_reservation_mutex.do_notify = false;
-
-			// break previous reservation
-			if (g_reservation_owner)
-			{
-				broken = _reservation_break(g_reservation_addr);
-			}
-
-			// change memory protection to read-only
-			_reservation_set(addr);
-
-			// may not be necessary
-			_mm_mfence();
-
-			// set additional information
-			g_reservation_addr = addr;
-			g_reservation_size = size;
-			g_reservation_owner = get_current_thread_ctrl();
-			g_reservation_cb = std::move(callback);
-
-			// copy data
-			memcpy(data, vm::get_ptr(addr), size);
+			throw EXCEPTION("Invalid page flags (addr=0x%x, size=0x%x, flags=0x%x)", addr, size, flags);
 		}
 
-		return broken;
-	}
+		// silent unlocking to prevent priority boost for threads going to break reservation
+		//g_reservation_mutex.do_notify = false;
 
-	bool reservation_acquire_no_cb(void* data, u32 addr, u32 size)
-	{
-		return reservation_acquire(data, addr, size, nullptr);
+		// break previous reservation
+		if (g_reservation_owner)
+		{
+			_reservation_break(g_reservation_addr);
+		}
+
+		// change memory protection to read-only
+		_reservation_set(addr);
+
+		// may not be necessary
+		_mm_mfence();
+
+		// set additional information
+		g_reservation_addr = addr;
+		g_reservation_size = size;
+		g_reservation_owner = get_current_thread_ctrl();
+
+		// copy data
+		memcpy(data, vm::get_ptr(addr), size);
 	}
 
 	bool reservation_update(u32 addr, const void* data, u32 size)
 	{
+		std::lock_guard<reservation_mutex_t> lock(g_reservation_mutex);
+
 		assert(size == 1 || size == 2 || size == 4 || size == 8 || size == 128);
 		assert((addr + size - 1 & ~0xfff) == (addr & ~0xfff));
-
-		std::lock_guard<reservation_mutex_t> lock(g_reservation_mutex);
 
 		if (g_reservation_owner != get_current_thread_ctrl() || g_reservation_addr != addr || g_reservation_size != size)
 		{
@@ -256,9 +236,6 @@ namespace vm
 
 		// update memory using privileged access
 		memcpy(vm::priv_ptr(addr), data, size);
-
-		// remove callback to not call it on successful update
-		g_reservation_cb = nullptr;
 
 		// free the reservation and restore memory protection
 		_reservation_break(addr);
@@ -295,7 +272,7 @@ namespace vm
 
 	void reservation_free()
 	{
-		if (g_reservation_owner == get_current_thread_ctrl())
+		if (g_reservation_owner && g_reservation_owner == get_current_thread_ctrl())
 		{
 			std::lock_guard<reservation_mutex_t> lock(g_reservation_mutex);
 
@@ -305,10 +282,10 @@ namespace vm
 
 	void reservation_op(u32 addr, u32 size, std::function<void()> proc)
 	{
+		std::lock_guard<reservation_mutex_t> lock(g_reservation_mutex);
+
 		assert(size == 1 || size == 2 || size == 4 || size == 8 || size == 128);
 		assert((addr + size - 1 & ~0xfff) == (addr & ~0xfff));
-
-		std::lock_guard<reservation_mutex_t> lock(g_reservation_mutex);
 
 		// break previous reservation
 		if (g_reservation_owner != get_current_thread_ctrl() || g_reservation_addr != addr || g_reservation_size != size)
@@ -326,7 +303,6 @@ namespace vm
 		g_reservation_addr = addr;
 		g_reservation_size = size;
 		g_reservation_owner = get_current_thread_ctrl();
-		g_reservation_cb = nullptr;
 
 		// may not be necessary
 		_mm_mfence();
@@ -338,15 +314,13 @@ namespace vm
 		_reservation_break(addr);
 	}
 
-	void page_map(u32 addr, u32 size, u8 flags)
+	void _page_map(u32 addr, u32 size, u8 flags)
 	{
 		assert(size && (size | addr) % 4096 == 0 && flags < page_allocated);
 
-		std::lock_guard<reservation_mutex_t> lock(g_reservation_mutex);
-
 		for (u32 i = addr / 4096; i < addr / 4096 + size / 4096; i++)
 		{
-			if (g_page_info[i].load())
+			if (g_pages[i].load())
 			{
 				throw EXCEPTION("Memory already mapped (addr=0x%x, size=0x%x, flags=0x%x, current_addr=0x%x)", addr, size, flags, i * 4096);
 			}
@@ -368,7 +342,7 @@ namespace vm
 
 		for (u32 i = addr / 4096; i < addr / 4096 + size / 4096; i++)
 		{
-			if (g_page_info[i].exchange(flags | page_allocated))
+			if (g_pages[i].exchange(flags | page_allocated))
 			{
 				throw EXCEPTION("Concurrent access (addr=0x%x, size=0x%x, flags=0x%x, current_addr=0x%x)", addr, size, flags, i * 4096);
 			}
@@ -379,17 +353,17 @@ namespace vm
 
 	bool page_protect(u32 addr, u32 size, u8 flags_test, u8 flags_set, u8 flags_clear)
 	{
+		std::lock_guard<reservation_mutex_t> lock(g_reservation_mutex);
+
 		u8 flags_inv = flags_set & flags_clear;
 
 		assert(size && (size | addr) % 4096 == 0);
 
 		flags_test |= page_allocated;
 
-		std::lock_guard<reservation_mutex_t> lock(g_reservation_mutex);
-
 		for (u32 i = addr / 4096; i < addr / 4096 + size / 4096; i++)
 		{
-			if ((g_page_info[i].load() & flags_test) != (flags_test | page_allocated))
+			if ((g_pages[i].load() & flags_test) != (flags_test | page_allocated))
 			{
 				return false;
 			}
@@ -404,9 +378,9 @@ namespace vm
 		{
 			_reservation_break(i * 4096);
 
-			const u8 f1 = g_page_info[i]._or(flags_set & ~flags_inv) & (page_writable | page_readable);
-			g_page_info[i]._and_not(flags_clear & ~flags_inv);
-			const u8 f2 = (g_page_info[i] ^= flags_inv) & (page_writable | page_readable);
+			const u8 f1 = g_pages[i]._or(flags_set & ~flags_inv) & (page_writable | page_readable);
+			g_pages[i]._and_not(flags_clear & ~flags_inv);
+			const u8 f2 = (g_pages[i] ^= flags_inv) & (page_writable | page_readable);
 
 			if (f1 != f2)
 			{
@@ -432,13 +406,13 @@ namespace vm
 
 	void page_unmap(u32 addr, u32 size)
 	{
-		assert(size && (size | addr) % 4096 == 0);
-
 		std::lock_guard<reservation_mutex_t> lock(g_reservation_mutex);
+
+		assert(size && (size | addr) % 4096 == 0);
 
 		for (u32 i = addr / 4096; i < addr / 4096 + size / 4096; i++)
 		{
-			if (!(g_page_info[i].load() & page_allocated))
+			if (!(g_pages[i].load() & page_allocated))
 			{
 				throw EXCEPTION("Memory not mapped (addr=0x%x, size=0x%x, current_addr=0x%x)", addr, size, i * 4096);
 			}
@@ -448,7 +422,7 @@ namespace vm
 		{
 			_reservation_break(i * 4096);
 
-			if (!(g_page_info[i].exchange(0) & page_allocated))
+			if (!(g_pages[i].exchange(0) & page_allocated))
 			{
 				throw EXCEPTION("Concurrent access (addr=0x%x, size=0x%x, current_addr=0x%x)", addr, size, i * 4096);
 			}
@@ -469,8 +443,6 @@ namespace vm
 		}
 	}
 
-	// Not checked if address is writable/readable. Checking address before using it is unsafe.
-	// The only safe way to check it is to protect both actions (checking and using) with mutex that is used for mapping/allocation.
 	bool check_addr(u32 addr, u32 size)
 	{
 		assert(size);
@@ -482,7 +454,7 @@ namespace vm
 
 		for (u32 i = addr / 4096; i <= (addr + size - 1) / 4096; i++)
 		{
-			if ((g_page_info[i].load() & page_allocated) != page_allocated)
+			if ((g_pages[i].load() & page_allocated) != page_allocated)
 			{
 				return false;
 			}
@@ -491,78 +463,266 @@ namespace vm
 		return true;
 	}
 
-	//TODO
-	bool map(u32 addr, u32 size, u32 flags)
+	std::vector<std::shared_ptr<block_t>> g_locations;
+
+	u32 alloc(u32 size, memory_location_t location, u32 align)
 	{
-		return Memory.Map(addr, size);
+		const auto block = get(location);
+
+		if (!block)
+		{
+			throw EXCEPTION("Invalid memory location (%d)", location);
+		}
+
+		return block->alloc(size, align);
 	}
 
-	bool unmap(u32 addr, u32 size, u32 flags)
+	u32 falloc(u32 addr, u32 size, memory_location_t location)
 	{
-		return Memory.Unmap(addr);
+		const auto block = get(location, addr);
+
+		if (!block)
+		{
+			throw EXCEPTION("Invalid memory location (%d, addr=0x%x)", location, addr);
+		}
+
+		return block->falloc(addr, size);
 	}
 
-	u32 alloc(u32 addr, u32 size, memory_location location)
+	bool dealloc(u32 addr, memory_location_t location)
 	{
-		return g_locations[location].fixed_allocator(addr, size);
+		const auto block = get(location, addr);
+
+		if (!block)
+		{
+			throw EXCEPTION("Invalid memory location (%d, addr=0x%x)", location, addr);
+		}
+
+		return block->dealloc(addr);
 	}
 
-	u32 alloc(u32 size, memory_location location)
+	bool block_t::try_alloc(u32 addr, u32 size)
 	{
-		return g_locations[location].allocator(size);
+		// check if memory area is already mapped
+		for (u32 i = addr / 4096; i <= (addr + size - 1) / 4096; i++)
+		{
+			if (g_pages[i].load())
+			{
+				return false;
+			}
+		}
+
+		// try to reserve "physical" memory
+		if (!used.atomic_op([=](u32& used) -> bool
+		{
+			if (used > this->size)
+			{
+				throw EXCEPTION("Unexpected memory amount used (0x%x)", used);
+			}
+
+			if (used + size > this->size)
+			{
+				return false;
+			}
+
+			used += size;
+
+			return true;
+		}))
+		{
+			return false;
+		}
+
+		// map memory pages
+		_page_map(addr, size, page_readable | page_writable);
+
+		// add entry
+		m_map[addr] = size;
+
+		return true;
 	}
 
-	void dealloc(u32 addr, memory_location location)
+	block_t::~block_t()
 	{
-		return g_locations[location].deallocator(addr);
+		// deallocate all memory
+		for (auto& entry : m_map)
+		{
+			// unmap memory pages
+			vm::page_unmap(entry.first, entry.second);
+		}
+	}
+
+	u32 block_t::alloc(u32 size, u32 align)
+	{
+		std::lock_guard<std::mutex> lock(m_mutex);
+
+		// align to minimal page size
+		size = ::align(size, 4096);
+
+		// check alignment (it's page allocation, so passing small values there is just silly)
+		if (align < 4096 || align != (0x80000000u >> cntlz32(align)))
+		{
+			throw EXCEPTION("Invalid alignment (size=0x%x, align=0x%x)", size, align);
+		}
+
+		// return if size is invalid
+		if (!size || size > this->size)
+		{
+			return false;
+		}
+
+		// search for an appropriate place (unoptimized)
+		for (u32 addr = ::align(this->addr, align); addr < this->addr + this->size - 1; addr += align)
+		{
+			if (try_alloc(addr, size))
+			{
+				return addr;
+			}
+		}
+
+		return false;
+	}
+
+	u32 block_t::falloc(u32 addr, u32 size)
+	{
+		std::lock_guard<std::mutex> lock(m_mutex);
+
+		// align to minimal page size
+		size = ::align(size, 4096);
+
+		// return if addr or size is invalid
+		if (!size || size > this->size || addr < this->addr || addr + size - 1 >= this->addr + this->size - 1)
+		{
+			return false;
+		}
+
+		if (!try_alloc(addr, size))
+		{
+			return false;
+		}
+
+		return addr;
+	}
+
+	bool block_t::dealloc(u32 addr)
+	{
+		std::lock_guard<std::mutex> lock(m_mutex);
+
+		const auto found = m_map.find(addr);
+
+		if (found != m_map.end())
+		{
+			const u32 size = found->second;
+
+			// unmap memory pages
+			vm::page_unmap(addr, size);
+
+			// remove entry
+			m_map.erase(found);
+
+			// return "physical" memory
+			used -= size;
+
+			return true;
+		}
+
+		return false;
+	}
+
+	std::shared_ptr<block_t> map(u32 addr, u32 size, u32 flags)
+	{
+		std::lock_guard<reservation_mutex_t> lock(g_reservation_mutex);
+
+		if (!size || (size | addr) % 4096 || flags)
+		{
+			throw EXCEPTION("Invalid arguments (addr=0x%x, size=0x%x, flags=0x%x)", addr, size, flags);
+		}
+
+		for (auto& block : g_locations)
+		{
+			if (block->addr >= addr && block->addr <= addr + size - 1)
+			{
+				return nullptr;
+			}
+
+			if (addr >= block->addr && addr <= block->addr + block->size - 1)
+			{
+				return nullptr;
+			}
+		}
+
+		for (u32 i = addr / 4096; i < addr / 4096 + size / 4096; i++)
+		{
+			if (g_pages[i].load())
+			{
+				throw EXCEPTION("Unexpected memory usage");
+			}
+		}
+
+		auto block = std::make_shared<block_t>(addr, size);
+
+		g_locations.emplace_back(block);
+
+		return block;
+	}
+
+	std::shared_ptr<block_t> unmap(u32 addr)
+	{
+		std::lock_guard<reservation_mutex_t> lock(g_reservation_mutex);
+
+		for (auto it = g_locations.begin(); it != g_locations.end(); it++)
+		{
+			if (*it && (*it)->addr == addr)
+			{
+				auto block = std::move(*it);
+				g_locations.erase(it);
+				return block;
+			}
+		}
+
+		return nullptr;
+	}
+
+	std::shared_ptr<block_t> get(memory_location_t location, u32 addr)
+	{
+		std::lock_guard<reservation_mutex_t> lock(g_reservation_mutex);
+
+		if (location != any)
+		{
+			// return selected location
+			if (location < g_locations.size())
+			{
+				return g_locations[location];
+			}
+
+			return nullptr;
+		}
+		
+		// search location by address
+		for (auto& block : g_locations)
+		{
+			if (addr >= block->addr && addr <= block->addr + block->size - 1)
+			{
+				return block;
+			}
+		}
+
+		return nullptr;
 	}
 
 	namespace ps3
 	{
-		u32 main_alloc(u32 size)
-		{
-			return Memory.MainMem.AllocAlign(size, 1);
-		}
-		u32 main_fixed_alloc(u32 addr, u32 size)
-		{
-			return Memory.MainMem.AllocFixed(addr, size) ? addr : 0;
-		}
-		void main_dealloc(u32 addr)
-		{
-			Memory.MainMem.Free(addr);
-		}
-
-		u32 user_space_alloc(u32 size)
-		{
-			return Memory.Userspace.AllocAlign(size, 1);
-		}
-		u32 user_space_fixed_alloc(u32 addr, u32 size)
-		{
-			return Memory.Userspace.AllocFixed(addr, size) ? addr : 0;
-		}
-		void user_space_dealloc(u32 addr)
-		{
-			Memory.Userspace.Free(addr);
-		}
-
-		u32 g_stack_offset = 0;
-
-		u32 stack_alloc(u32 size)
-		{
-			return Memory.StackMem.AllocAlign(size, 0x10);
-		}
-		u32 stack_fixed_alloc(u32 addr, u32 size)
-		{
-			return Memory.StackMem.AllocFixed(addr, size) ? addr : 0;
-		}
-		void stack_dealloc(u32 addr)
-		{
-			Memory.StackMem.Free(addr);
-		}
-
 		void init()
 		{
-			Memory.Init(Memory_PS3);
+			g_locations =
+			{
+				std::make_shared<block_t>(0x00010000, 0x1FFF0000), // main
+				std::make_shared<block_t>(0x20000000, 0x10000000), // user
+				std::make_shared<block_t>(0xC0000000, 0x10000000), // video
+				std::make_shared<block_t>(0xD0000000, 0x10000000), // stack
+
+				std::make_shared<block_t>(0xE0000000, 0x20000000), // RawSPU
+			};
 		}
 	}
 
@@ -570,7 +730,13 @@ namespace vm
 	{
 		void init()
 		{
-			Memory.Init(Memory_PSV);
+			g_locations = 
+			{
+				std::make_shared<block_t>(0x81000000, 0x10000000), // RAM
+				std::make_shared<block_t>(0x91000000, 0x2F000000), // user
+				nullptr, // video
+				nullptr, // stack
+			};
 		}
 	}
 
@@ -578,20 +744,22 @@ namespace vm
 	{
 		void init()
 		{
-			Memory.Init(Memory_PSP);
+			g_locations =
+			{
+				std::make_shared<block_t>(0x08000000, 0x02000000), // RAM
+				std::make_shared<block_t>(0x08800000, 0x01800000), // user
+				std::make_shared<block_t>(0x04000000, 0x00200000), // VRAM
+				nullptr, // stack
+
+				std::make_shared<block_t>(0x00010000, 0x00004000), // scratchpad
+				std::make_shared<block_t>(0x88000000, 0x00800000), // kernel
+			};
 		}
 	}
 
-	location_info g_locations[memory_location_count] =
-	{
-		{ 0x00010000, 0x1FFF0000, ps3::main_alloc, ps3::main_fixed_alloc, ps3::main_dealloc },
-		{ 0x20000000, 0x10000000, ps3::user_space_alloc, ps3::user_space_fixed_alloc, ps3::user_space_dealloc },
-		{ 0xD0000000, 0x10000000, ps3::stack_alloc, ps3::stack_fixed_alloc, ps3::stack_dealloc },
-	};
-
 	void close()
 	{
-		Memory.Close();
+		g_locations.clear();
 	}
 
 	u32 stack_push(CPUThread& CPU, u32 size, u32 align_v, u32& old_pos)

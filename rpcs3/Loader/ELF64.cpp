@@ -487,7 +487,7 @@ namespace loader
 				return res;
 
 			//initialize process
-			auto rsx_callback_data = vm::ptr<u32>::make(Memory.MainMem.AllocAlign(4 * 4));
+			auto rsx_callback_data = vm::ptr<u32>::make(vm::alloc(4 * 4, vm::main));
 			*rsx_callback_data++ = (rsx_callback_data + 1).addr();
 			Emu.SetRSXCallback(rsx_callback_data.addr());
 
@@ -495,7 +495,7 @@ namespace loader
 			rsx_callback_data[1] = SC(0);
 			rsx_callback_data[2] = BLR();
 
-			auto ppu_thr_stop_data = vm::ptr<u32>::make(Memory.MainMem.AllocAlign(2 * 4));
+			auto ppu_thr_stop_data = vm::ptr<u32>::make(vm::alloc(2 * 4, vm::main));
 			ppu_thr_stop_data[0] = SC(3);
 			ppu_thr_stop_data[1] = BLR();
 			Emu.SetCPUThreadStop(ppu_thr_stop_data.addr());
@@ -577,7 +577,7 @@ namespace loader
 				{
 					if (phdr.p_memsz)
 					{
-						if (!vm::alloc(phdr.p_vaddr.addr(), phdr.p_memsz, vm::main))
+						if (!vm::falloc(phdr.p_vaddr.addr(), phdr.p_memsz, vm::main))
 						{
 							LOG_ERROR(LOADER, "%s(): AllocFixed(0x%llx, 0x%llx) failed", __FUNCTION__, phdr.p_vaddr.addr(), phdr.p_memsz);
 

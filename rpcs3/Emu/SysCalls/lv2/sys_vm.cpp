@@ -19,7 +19,10 @@ s32 sys_vm_memory_map(u32 vsize, u32 psize, u32 cid, u64 flag, u64 policy, vm::p
 	const u32 new_addr = vm::check_addr(0x60000000) ? 0x70000000 : 0x60000000;
 
 	// Map memory
-	if (!Memory.Map(new_addr, vsize))
+	const auto area = vm::map(new_addr, vsize, 0);
+
+	// Alloc memory
+	if (!area || !area->alloc(vsize))
 	{
 		return CELL_ENOMEM;
 	}
@@ -36,7 +39,7 @@ s32 sys_vm_unmap(u32 addr)
 
 	LV2_LOCK;
 
-	if (!Memory.Unmap(addr))
+	if (!vm::unmap(addr))
 	{
 		return CELL_EINVAL;
 	}

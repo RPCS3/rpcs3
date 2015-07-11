@@ -16,7 +16,7 @@ s32 cellFontInitLibraryFreeTypeWithRevision(u64 revisionFlags, vm::ptr<CellFontL
 	//if (s_fontInternalInstance->m_bInitialized)
 		//return CELL_FONT_ERROR_UNINITIALIZED;
 
-	lib->set(Memory.Alloc(sizeof(CellFontLibrary), 1));
+	lib->set(vm::alloc(sizeof(CellFontLibrary), vm::main));
 
 	return CELL_OK;
 }

@@ -131,7 +131,7 @@ namespace loader
 
 				initialize_psv_modules();
 
-				auto armv7_thr_stop_data = vm::ptr<u32>::make(Memory.PSV.RAM.AllocAlign(3 * 4));
+				auto armv7_thr_stop_data = vm::ptr<u32>::make(vm::alloc(3 * 4, vm::main));
 				armv7_thr_stop_data[0] = 0xf870; // HACK instruction (Thumb)
 				armv7_thr_stop_data[1] = SFI_HLE_RETURN;
 				Emu.SetCPUThreadStop(armv7_thr_stop_data.addr());
@@ -429,7 +429,7 @@ namespace loader
 				case 0x00000001: //LOAD
 					if (phdr.data_le.p_memsz)
 					{
-						if (machine == MACHINE_ARM && !Memory.PSV.RAM.AllocFixed(vaddr, memsz))
+						if (machine == MACHINE_ARM && !vm::falloc(vaddr, memsz, vm::main))
 						{
 							LOG_ERROR(LOADER, "%s(): AllocFixed(0x%llx, 0x%x) failed", __FUNCTION__, vaddr, memsz);
 

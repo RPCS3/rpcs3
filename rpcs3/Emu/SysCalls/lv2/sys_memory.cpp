@@ -55,19 +55,21 @@ s32 sys_memory_allocate(u32 size, u64 flags, vm::ptr<u32> alloc_addr)
 	// Check all containers
 	for (auto& ct : Emu.GetIdManager().get_all<lv2_memory_container_t>())
 	{
-		available += ct->size - ct->taken;
+		available += ct->size - ct->used;
 	}
 
+	const auto area = vm::get(vm::user_space);
+
 	// Check available memory
-	if (Memory.GetUserMemAvailSize() < available + size)
+	if (area->size < area->used.load() + available + size)
 	{
 		return CELL_ENOMEM;
 	}
 
 	// Allocate memory
 	const u32 addr =
-		flags == SYS_MEMORY_PAGE_SIZE_1M ? Memory.Alloc(size, 0x100000) :
-		flags == SYS_MEMORY_PAGE_SIZE_64K ? Memory.Alloc(size, 0x10000) :
+		flags == SYS_MEMORY_PAGE_SIZE_1M ? area->alloc(size, 0x100000) :
+		flags == SYS_MEMORY_PAGE_SIZE_64K ? area->alloc(size, 0x10000) :
 		throw EXCEPTION("Unexpected flags");
 
 	if (!addr)
@@ -124,21 +126,21 @@ s32 sys_memory_allocate_from_container(u32 size, u32 cid, u64 flags, vm::ptr<u32
 	}
 	}
 
-	if (ct->taken > ct->size)
+	if (ct->used > ct->size)
 	{
-		throw EXCEPTION("Unexpected amount of memory taken (0x%x, size=0x%x)", ct->taken.load(), ct->size);
+		throw EXCEPTION("Unexpected amount of memory taken (0x%x, size=0x%x)", ct->used.load(), ct->size);
 	}
 
 	// Check memory availability
-	if (size > ct->size - ct->taken)
+	if (size > ct->size - ct->used)
 	{
 		return CELL_ENOMEM;
 	}
 
 	// Allocate memory
 	const u32 addr =
-		flags == SYS_MEMORY_PAGE_SIZE_1M ? Memory.Alloc(size, 0x100000) :
-		flags == SYS_MEMORY_PAGE_SIZE_64K ? Memory.Alloc(size, 0x10000) :
+		flags == SYS_MEMORY_PAGE_SIZE_1M ? vm::alloc(size, vm::user_space, 0x100000) :
+		flags == SYS_MEMORY_PAGE_SIZE_64K ? vm::alloc(size, vm::user_space, 0x10000) :
 		throw EXCEPTION("Unexpected flags");
 
 	if (!addr)
@@ -148,7 +150,7 @@ s32 sys_memory_allocate_from_container(u32 size, u32 cid, u64 flags, vm::ptr<u32
 
 	// Store the address and size in the container
 	ct->allocs.emplace(addr, size);
-	ct->taken += size;
+	ct->used += size;
 
 	// Write back the start address of the allocated area.
 	*alloc_addr = addr;
@@ -169,20 +171,20 @@ s32 sys_memory_free(u32 addr)
 
 		if (found != ct->allocs.end())
 		{
-			if (!Memory.Free(addr))
+			if (!vm::dealloc(addr, vm::user_space))
 			{
 				throw EXCEPTION("Memory not deallocated (cid=0x%x, addr=0x%x, size=0x%x)", ct->id, addr, found->second);
 			}
 
 			// Return memory size
-			ct->taken -= found->second;
+			ct->used -= found->second;
 			ct->allocs.erase(found);
 
 			return CELL_OK;
 		}
 	}
 
-	if (!Memory.Free(addr))
+	if (!vm::dealloc(addr, vm::user_space))
 	{
 		return CELL_EINVAL;
 	}
@@ -217,12 +219,14 @@ s32 sys_memory_get_user_memory_size(vm::ptr<sys_memory_info_t> mem_info)
 	for (auto& ct : Emu.GetIdManager().get_all<lv2_memory_container_t>())
 	{
 		reserved += ct->size;
-		available += ct->size - ct->taken;
+		available += ct->size - ct->used;
 	}
+
+	const auto area = vm::get(vm::user_space);
 	
 	// Fetch the user memory available
-	mem_info->total_user_memory = Memory.GetUserMemTotalSize() - reserved;
-	mem_info->available_user_memory = Memory.GetUserMemAvailSize() - available;
+	mem_info->total_user_memory = area->size - reserved;
+	mem_info->available_user_memory = area->size - area->used.load() - available;
 
 	return CELL_OK;
 }
@@ -248,11 +252,13 @@ s32 sys_memory_container_create(vm::ptr<u32> cid, u32 size)
 	for (auto& ct : Emu.GetIdManager().get_all<lv2_memory_container_t>())
 	{
 		reserved += ct->size;
-		available += ct->size - ct->taken;
+		available += ct->size - ct->used;
 	}
 
-	if (Memory.GetUserMemTotalSize() < reserved + size ||
-		Memory.GetUserMemAvailSize() < available + size)
+	const auto area = vm::get(vm::user_space);
+
+	if (area->size < reserved + size ||
+		area->size - area->used.load() < available + size)
 	{
 		return CELL_ENOMEM;
 	}
@@ -277,7 +283,7 @@ s32 sys_memory_container_destroy(u32 cid)
 	}
 
 	// Check if some memory is not deallocated (the container cannot be destroyed in this case)
-	if (ct->taken)
+	if (ct->used.load())
 	{
 		return CELL_EBUSY;
 	}
@@ -301,7 +307,7 @@ s32 sys_memory_container_get_size(vm::ptr<sys_memory_info_t> mem_info, u32 cid)
 	}
 
 	mem_info->total_user_memory = ct->size; // total container memory
-	mem_info->available_user_memory = ct->size - ct->taken; // available container memory
+	mem_info->available_user_memory = ct->size - ct->used.load(); // available container memory
 
 	return CELL_OK;
 }

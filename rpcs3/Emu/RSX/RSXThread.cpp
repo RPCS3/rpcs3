@@ -31,12 +31,12 @@ u32 GetAddress(u32 offset, u32 location)
 	{
 	case CELL_GCM_LOCATION_LOCAL:
 	{
-		res = (u32)Memory.RSXFBMem.GetStartAddr() + offset;
+		res = 0xC0000000 + offset;
 		break;
 	}
 	case CELL_GCM_LOCATION_MAIN:
 	{
-		res = (u32)Memory.RSXIOMem.RealAddr(offset); // TODO: Error Check?
+		res = RSXIOMem.RealAddr(offset); // TODO: Error Check?
 		if (res == 0)
 		{
 			throw EXCEPTION("RSXIO memory not mapped (offset=0x%x)", offset);
@@ -2554,7 +2554,7 @@ void RSXThread::Task()
 			continue;
 		}
 
-		auto args = vm::ptr<u32>::make((u32)Memory.RSXIOMem.RealAddr(get + 4));
+		auto args = vm::ptr<u32>::make((u32)RSXIOMem.RealAddr(get + 4));
 
 		for (u32 i = 0; i < count; i++)
 		{
@@ -2595,7 +2595,7 @@ u32 RSXThread::ReadIO32(u32 addr)
 {
 	u32 value;
 
-	if (!Memory.RSXIOMem.Read32(addr, &value))
+	if (!RSXIOMem.Read32(addr, &value))
 	{
 		throw EXCEPTION("RSXIO memory not mapped (addr=0x%x)", addr);
 	}
@@ -2605,7 +2605,7 @@ u32 RSXThread::ReadIO32(u32 addr)
 
 void RSXThread::WriteIO32(u32 addr, u32 value)
 {
-	if (!Memory.RSXIOMem.Write32(addr, value))
+	if (!RSXIOMem.Write32(addr, value))
 	{
 		throw EXCEPTION("RSXIO memory not mapped (addr=0x%x)", addr);
 	}

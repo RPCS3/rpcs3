@@ -11,14 +11,20 @@ thread_local spu_mfc_arg_t raw_spu_mfc[8] = {};
 RawSPUThread::RawSPUThread(const std::string& name, u32 index)
 	: SPUThread(CPU_THREAD_RAW_SPU, name, COPY_EXPR(fmt::format("RawSPU_%d[0x%x] Thread (%s)[0x%08x]", index, GetId(), GetName(), PC)), index, RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * index)
 {
-	vm::page_map(offset, 0x40000, vm::page_readable | vm::page_writable);
+	if (!vm::falloc(offset, 0x40000))
+	{
+		throw EXCEPTION("Failed to allocate RawSPU local storage");
+	}
 }
 
 RawSPUThread::~RawSPUThread()
 {
 	join();
 
-	vm::page_unmap(offset, 0x40000);
+	if (!vm::dealloc(offset))
+	{
+		throw EXCEPTION("Failed to deallocate RawSPU local storage");
+	}
 }
 
 void RawSPUThread::start()

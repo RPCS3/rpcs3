@@ -24,7 +24,7 @@ std::array<std::atomic<u32>, TLS_MAX> g_armv7_tls_owners;
 
 void armv7_init_tls()
 {
-	g_armv7_tls_start = Emu.GetTLSMemsz() ? Memory.PSV.RAM.AllocAlign(Emu.GetTLSMemsz() * TLS_MAX, 4096) : 0;
+	g_armv7_tls_start = Emu.GetTLSMemsz() ? vm::alloc(Emu.GetTLSMemsz() * TLS_MAX, vm::main) : 0;
 
 	for (auto& v : g_armv7_tls_owners)
 	{
@@ -128,7 +128,7 @@ void ARMv7Thread::InitStack()
 			throw EXCEPTION("Invalid stack size");
 		}
 
-		stack_addr = Memory.Alloc(stack_size, 4096);
+		stack_addr = vm::alloc(stack_size, vm::main);
 
 		if (!stack_addr)
 		{
@@ -141,7 +141,7 @@ void ARMv7Thread::CloseStack()
 {
 	if (stack_addr)
 	{
-		Memory.Free(stack_addr);
+		vm::dealloc(stack_addr, vm::main);
 		stack_addr = 0;
 	}
 }
@@ -291,7 +291,7 @@ cpu_thread& armv7_thread::args(std::initializer_list<std::string> values)
 		argc++;
 	}
 
-	argv = Memory.PSV.RAM.AllocAlign(argv_size, 4096); // allocate arg list
+	argv = vm::alloc(argv_size, vm::main); // allocate arg list
 	memcpy(vm::get_ptr(argv), argv_data.data(), argv_size); // copy arg list
 	
 	return *this;

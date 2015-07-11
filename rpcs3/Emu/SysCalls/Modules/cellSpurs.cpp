@@ -1078,7 +1078,7 @@ s32 spursInit(
 
 	// Import SPURS kernel
 	spurs->spuImg.type        = SYS_SPU_IMAGE_TYPE_USER;
-	spurs->spuImg.addr        = (u32)Memory.Alloc(0x40000, 4096);
+	spurs->spuImg.addr        = vm::alloc(0x40000, vm::main);
 	spurs->spuImg.entry_point = isSecond ? CELL_SPURS_KERNEL2_ENTRY_ADDR : CELL_SPURS_KERNEL1_ENTRY_ADDR;
 	spurs->spuImg.nsegs       = 1;
 

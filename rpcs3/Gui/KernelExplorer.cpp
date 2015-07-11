@@ -55,7 +55,7 @@ void KernelExplorer::Update()
 	char name[4096];
 
 	m_tree->DeleteAllItems();
-	const u32 total_memory_usage = Memory.GetUserMemTotalSize() - Memory.GetUserMemAvailSize();
+	const u32 total_memory_usage = vm::get(vm::user_space)->used.load();
 
 	const auto& root = m_tree->AddRoot(fmt::Format("Process, ID = 0x00000001, Total Memory Usage = 0x%x (%0.2f MB)", total_memory_usage, (float)total_memory_usage / (1024 * 1024)));
 
