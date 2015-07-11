@@ -4,29 +4,29 @@
 
 #include "sceTouch.h"
 
-s32 sceTouchGetPanelInfo(u32 port, vm::psv::ptr<SceTouchPanelInfo> pPanelInfo)
+s32 sceTouchGetPanelInfo(u32 port, vm::ptr<SceTouchPanelInfo> pPanelInfo)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceTouchRead(u32 port, vm::psv::ptr<SceTouchData> pData, u32 nBufs)
+s32 sceTouchRead(u32 port, vm::ptr<SceTouchData> pData, u32 nBufs)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceTouchPeek(u32 port, vm::psv::ptr<SceTouchData> pData, u32 nBufs)
+s32 sceTouchPeek(u32 port, vm::ptr<SceTouchData> pData, u32 nBufs)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceTouchSetSamplingState(u32 port, u32 state)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceTouchGetSamplingState(u32 port, vm::psv::ptr<u32> pState)
+s32 sceTouchGetSamplingState(u32 port, vm::ptr<u32> pState)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 
@@ -37,6 +37,7 @@ psv_log_base sceTouch("SceTouch", []()
 	sceTouch.on_load = nullptr;
 	sceTouch.on_unload = nullptr;
 	sceTouch.on_stop = nullptr;
+	sceTouch.on_error = nullptr;
 
 	REG_FUNC(0x169A1D58, sceTouchRead);
 	REG_FUNC(0xFF082DF0, sceTouchPeek);

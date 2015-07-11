@@ -1,5 +1,7 @@
 #pragma once
 
+namespace vm { using namespace ps3; }
+
 // TTY channels
 enum
 {
@@ -24,4 +26,4 @@ enum
 
 // SysCalls
 s32 sys_tty_read(s32 ch, vm::ptr<void> buf, u32 len, vm::ptr<u32> preadlen);
-s32 sys_tty_write(s32 ch, vm::ptr<const void> buf, u32 len, vm::ptr<u32> pwritelen);
+s32 sys_tty_write(s32 ch, vm::cptr<void> buf, u32 len, vm::ptr<u32> pwritelen);

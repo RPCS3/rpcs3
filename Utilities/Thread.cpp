@@ -109,6 +109,7 @@ enum x64_op_t : u32
 	X64OP_NONE,
 	X64OP_LOAD, // obtain and put the value into x64 register
 	X64OP_STORE, // take the value from x64 register or an immediate and use it
+
 	// example: add eax,[rax] -> X64OP_LOAD_ADD (add the value to x64 register)
 	// example: add [rax],eax -> X64OP_LOAD_ADD_STORE (this will probably never happen for MMIO registers)
 
@@ -116,7 +117,7 @@ enum x64_op_t : u32
 	X64OP_STOS,
 	X64OP_XCHG,
 	X64OP_CMPXCHG,
-	X64OP_LOAD_AND_STORE,
+	X64OP_LOAD_AND_STORE, // lock and [mem],reg
 };
 
 void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, size_t& out_size, size_t& out_length)
@@ -748,7 +749,7 @@ size_t get_x64_access_size(x64_context* context, x64_op_t op, x64_reg_t reg, siz
 	if (op == X64OP_CMPXCHG)
 	{
 		// detect whether this instruction can't actually modify memory to avoid breaking reservation;
-		// this may theoretically cause endless loop, but it shouldn't be a problem if only read_sync() generates such instruction
+		// this may theoretically cause endless loop, but it shouldn't be a problem if only load_sync() generates such instruction
 		u64 cmp, exch;
 		if (!get_x64_reg_value(context, reg, d_size, i_size, cmp) || !get_x64_reg_value(context, X64R_RAX, d_size, i_size, exch))
 		{
@@ -806,9 +807,9 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 	// check if address is RawSPU MMIO register
 	if (addr - RAW_SPU_BASE_ADDR < (6 * RAW_SPU_OFFSET) && (addr % RAW_SPU_OFFSET) >= RAW_SPU_PROB_OFFSET)
 	{
-		auto t = Emu.GetCPU().GetRawSPUThread((addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET);
+		auto thread = Emu.GetCPU().GetRawSPUThread((addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET);
 
-		if (!t)
+		if (!thread)
 		{
 			return false;
 		}
@@ -819,14 +820,12 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 			return false;
 		}
 
-		auto& spu = static_cast<RawSPUThread&>(*t);
-
 		switch (op)
 		{
 		case X64OP_LOAD:
 		{
 			u32 value;
-			if (is_writing || !spu.ReadReg(addr, value) || !put_x64_reg_value(context, reg, d_size, re32(value)))
+			if (is_writing || !thread->ReadReg(addr, value) || !put_x64_reg_value(context, reg, d_size, _byteswap_ulong(value)))
 			{
 				return false;
 			}
@@ -836,7 +835,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 		case X64OP_STORE:
 		{
 			u64 reg_value;
-			if (!is_writing || !get_x64_reg_value(context, reg, d_size, i_size, reg_value) || !spu.WriteReg(addr, re32((u32)reg_value)))
+			if (!is_writing || !get_x64_reg_value(context, reg, d_size, i_size, reg_value) || !thread->WriteReg(addr, _byteswap_ulong((u32)reg_value)))
 			{
 				return false;
 			}
@@ -1013,10 +1012,10 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 
 			switch (d_size)
 			{
-			case 1: reg_value = vm::priv_ref<atomic<u8>>(addr).exchange((u8)reg_value); break;
-			case 2: reg_value = vm::priv_ref<atomic<u16>>(addr).exchange((u16)reg_value); break;
-			case 4: reg_value = vm::priv_ref<atomic<u32>>(addr).exchange((u32)reg_value); break;
-			case 8: reg_value = vm::priv_ref<atomic<u64>>(addr).exchange((u64)reg_value); break;
+			case 1: reg_value = vm::priv_ref<atomic_t<u8>>(addr).exchange((u8)reg_value); break;
+			case 2: reg_value = vm::priv_ref<atomic_t<u16>>(addr).exchange((u16)reg_value); break;
+			case 4: reg_value = vm::priv_ref<atomic_t<u32>>(addr).exchange((u32)reg_value); break;
+			case 8: reg_value = vm::priv_ref<atomic_t<u64>>(addr).exchange((u64)reg_value); break;
 			default: return false;
 			}
 
@@ -1036,10 +1035,10 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 
 			switch (d_size)
 			{
-			case 1: old_value = vm::priv_ref<atomic<u8>>(addr).compare_and_swap((u8)cmp_value, (u8)reg_value); break;
-			case 2: old_value = vm::priv_ref<atomic<u16>>(addr).compare_and_swap((u16)cmp_value, (u16)reg_value); break;
-			case 4: old_value = vm::priv_ref<atomic<u32>>(addr).compare_and_swap((u32)cmp_value, (u32)reg_value); break;
-			case 8: old_value = vm::priv_ref<atomic<u64>>(addr).compare_and_swap((u64)cmp_value, (u64)reg_value); break;
+			case 1: old_value = vm::priv_ref<atomic_t<u8>>(addr).compare_and_swap((u8)cmp_value, (u8)reg_value); break;
+			case 2: old_value = vm::priv_ref<atomic_t<u16>>(addr).compare_and_swap((u16)cmp_value, (u16)reg_value); break;
+			case 4: old_value = vm::priv_ref<atomic_t<u32>>(addr).compare_and_swap((u32)cmp_value, (u32)reg_value); break;
+			case 8: old_value = vm::priv_ref<atomic_t<u64>>(addr).compare_and_swap((u64)cmp_value, (u64)reg_value); break;
 			default: return false;
 			}
 
@@ -1059,10 +1058,10 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 
 			switch (d_size)
 			{
-			case 1: value = vm::priv_ref<atomic<u8>>(addr) &= value; break;
-			case 2: value = vm::priv_ref<atomic<u16>>(addr) &= value; break;
-			case 4: value = vm::priv_ref<atomic<u32>>(addr) &= value; break;
-			case 8: value = vm::priv_ref<atomic<u64>>(addr) &= value; break;
+			case 1: value = vm::priv_ref<atomic_t<u8>>(addr) &= (u8)value; break;
+			case 2: value = vm::priv_ref<atomic_t<u16>>(addr) &= (u16)value; break;
+			case 4: value = vm::priv_ref<atomic_t<u32>>(addr) &= (u32)value; break;
+			case 8: value = vm::priv_ref<atomic_t<u64>>(addr) &= value; break;
 			default: return false;
 			}
 
@@ -1096,7 +1095,7 @@ void _se_translator(unsigned int u, EXCEPTION_POINTERS* pExp)
 
 	if (u == EXCEPTION_ACCESS_VIOLATION && (u32)addr64 == addr64)
 	{
-		throw fmt::format("Access violation %s location 0x%llx", is_writing ? "writing" : "reading", addr64);
+		throw EXCEPTION("Access violation %s location 0x%llx", is_writing ? "writing" : "reading", addr64);
 	}
 }
 
@@ -1107,7 +1106,7 @@ const PVOID exception_handler = (atexit([]{ RemoveVectoredExceptionHandler(excep
 
 	if (pExp->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION &&
 		(u32)addr64 == addr64 &&
-		GetCurrentNamedThread() &&
+		get_current_thread_ctrl() &&
 		handle_access_violation((u32)addr64, is_writing, pExp->ContextRecord))
 	{
 		return EXCEPTION_CONTINUE_EXECUTION;
@@ -1117,6 +1116,13 @@ const PVOID exception_handler = (atexit([]{ RemoveVectoredExceptionHandler(excep
 		return EXCEPTION_CONTINUE_SEARCH;
 	}
 }));
+
+const auto exception_filter = SetUnhandledExceptionFilter([](PEXCEPTION_POINTERS pExp) -> LONG
+{
+	_se_translator(pExp->ExceptionRecord->ExceptionCode, pExp);
+
+	return EXCEPTION_CONTINUE_SEARCH;
+});
 
 #else
 
@@ -1130,7 +1136,7 @@ void signal_handler(int sig, siginfo_t* info, void* uct)
 	const bool is_writing = ((ucontext_t*)uct)->uc_mcontext.gregs[REG_ERR] & 0x2;
 #endif
 
-	if ((u32)addr64 == addr64 && GetCurrentNamedThread())
+	if ((u32)addr64 == addr64 && get_current_thread_ctrl())
 	{
 		if (handle_access_violation((u32)addr64, is_writing, (ucontext_t*)uct))
 		{
@@ -1138,7 +1144,7 @@ void signal_handler(int sig, siginfo_t* info, void* uct)
 		}
 
 		// TODO: this may be wrong
-		throw fmt::format("Access violation %s location 0x%llx", is_writing ? "writing" : "reading", addr64);
+		throw EXCEPTION("Access violation %s location 0x%llx", is_writing ? "writing" : "reading", addr64);
 	}
 
 	// else some fatal error
@@ -1157,19 +1163,23 @@ const int sigaction_result = []() -> int
 
 #endif
 
-thread_local NamedThreadBase* g_tls_this_thread = nullptr;
-std::atomic<u32> g_thread_count(0);
+thread_local thread_ctrl_t* g_tls_this_thread = nullptr;
 
-NamedThreadBase* GetCurrentNamedThread()
+const thread_ctrl_t* get_current_thread_ctrl()
 {
 	return g_tls_this_thread;
 }
 
-void SetCurrentNamedThread(NamedThreadBase* value)
+std::string thread_ctrl_t::get_name() const
+{
+	return name();
+}
+
+void thread_ctrl_t::set_current()
 {
 	const auto old_value = g_tls_this_thread;
 
-	if (old_value == value)
+	if (old_value == this)
 	{
 		return;
 	}
@@ -1179,76 +1189,75 @@ void SetCurrentNamedThread(NamedThreadBase* value)
 		vm::reservation_free();
 	}
 
-	if (value && value->m_tls_assigned.exchange(true))
+	if (true && assigned.exchange(true))
 	{
-		LOG_ERROR(GENERAL, "Thread '%s' was already assigned to g_tls_this_thread of another thread", value->GetThreadName());
+		LOG_ERROR(GENERAL, "Thread '%s' was already assigned to g_tls_this_thread of another thread", get_name());
 		g_tls_this_thread = nullptr;
 	}
 	else
 	{
-		g_tls_this_thread = value;
+		g_tls_this_thread = this;
 	}
 
 	if (old_value)
 	{
-		old_value->m_tls_assigned = false;
+		old_value->assigned = false;
 	}
 }
 
-std::string NamedThreadBase::GetThreadName() const
+thread_t::thread_t(std::function<std::string()> name, std::function<void()> func)
 {
-	return m_name;
+	start(std::move(name), func);
 }
 
-void NamedThreadBase::SetThreadName(const std::string& name)
+thread_t::~thread_t() noexcept(false)
 {
-	m_name = name;
-}
-
-void NamedThreadBase::WaitForAnySignal(u64 time) // wait for Notify() signal or sleep
-{
-	std::unique_lock<std::mutex> lock(m_signal_mtx);
-	m_signal_cv.wait_for(lock, std::chrono::milliseconds(time));
-}
-
-void NamedThreadBase::Notify() // wake up waiting thread or nothing
-{
-	m_signal_cv.notify_one();
-}
-
-ThreadBase::ThreadBase(const std::string& name)
-	: NamedThreadBase(name)
-	, m_executor(nullptr)
-	, m_destroy(false)
-	, m_alive(false)
-{
-}
-
-ThreadBase::~ThreadBase()
-{
-	if(IsAlive())
-		Stop(false);
-
-	delete m_executor;
-	m_executor = nullptr;
-}
-
-void ThreadBase::Start()
-{
-	if(m_executor) Stop();
-
-	std::lock_guard<std::mutex> lock(m_main_mutex);
-
-	m_destroy = false;
-	m_alive = true;
-
-	m_executor = new std::thread([this]()
+	if (m_thread)
 	{
-		SetCurrentThreadDebugName(GetThreadName().c_str());
+		throw EXCEPTION("Neither joined nor detached");
+	}
+}
+
+std::string thread_t::get_name() const
+{
+	if (!m_thread)
+	{
+		throw EXCEPTION("Invalid thread");
+	}
+
+	if (!m_thread->name)
+	{
+		throw EXCEPTION("Invalid name getter");
+	}
+
+	return m_thread->name();
+}
+
+std::atomic<u32> g_thread_count{ 0 };
+
+void thread_t::start(std::function<std::string()> name, std::function<void()> func)
+{
+	if (m_thread)
+	{
+		throw EXCEPTION("Thread already exists");
+	}
+
+	// create new thread control variable
+	m_thread = std::make_shared<thread_ctrl_t>(std::move(name));
+
+	// start thread
+	m_thread->m_thread = std::thread([](std::shared_ptr<thread_ctrl_t> ctrl, std::function<void()> func)
+	{
+		g_thread_count++;
+
+		SetCurrentThreadDebugName(ctrl->get_name().c_str());
+
+#if defined(_MSC_VER)
+		auto old_se_translator = _set_se_translator(_se_translator);
+#endif
 
 #ifdef _WIN32
-		auto old_se_translator = _set_se_translator(_se_translator);
-		if (!exception_handler)
+		if (!exception_handler || !exception_filter)
 		{
 			LOG_ERROR(GENERAL, "exception_handler not set");
 			return;
@@ -1261,232 +1270,125 @@ void ThreadBase::Start()
 		}
 #endif
 
-		SetCurrentNamedThread(this);
-		g_thread_count++;
+		// error handler
+		const auto error = [&](const char* text)
+		{
+			log_message(GENERAL, Emu.IsStopped() ? Log::Severity::Warning : Log::Severity::Error, "Exception: %s", text);
+			Emu.Pause();
+		};
 
 		try
 		{
-			Task();
+			ctrl->set_current();
+
+			if (Ini.HLELogging.GetValue())
+			{
+				LOG_NOTICE(GENERAL, "Thread started");
+			}
+
+			func();
 		}
-		catch (const char* e)
+		catch (const char* e) // obsolete
 		{
-			LOG_ERROR(GENERAL, "Exception: %s", e);
-			DumpInformation();
-			Emu.Pause();
+			LOG_ERROR(GENERAL, "Deprecated exception type (const char*)");
+			error(e);
 		}
-		catch (const std::string& e)
+		catch (const std::string& e) // obsolete
 		{
-			LOG_ERROR(GENERAL, "Exception: %s", e);
-			DumpInformation();
-			Emu.Pause();
+			LOG_ERROR(GENERAL, "Deprecated exception type (std::string)");
+			error(e.c_str());
 		}
-
-		m_alive = false;
-		SetCurrentNamedThread(nullptr);
-		g_thread_count--;
-
-#ifdef _WIN32
-		_set_se_translator(old_se_translator);
-#endif
-	});
-}
-
-void ThreadBase::Stop(bool wait, bool send_destroy)
-{
-	std::lock_guard<std::mutex> lock(m_main_mutex);
-
-	if (send_destroy)
-		m_destroy = true;
-
-	if(!m_executor)
-		return;
-
-	if(wait && m_executor->joinable() && m_alive)
-	{
-		m_executor->join();
-	}
-	else
-	{
-		m_executor->detach();
-	}
-
-	delete m_executor;
-	m_executor = nullptr;
-}
-
-bool ThreadBase::Join() const
-{
-	std::lock_guard<std::mutex> lock(m_main_mutex);
-	if(m_executor->joinable() && m_alive && m_executor != nullptr)
-	{
-		m_executor->join();
-		return true;
-	}
-
-	return false;
-}
-
-bool ThreadBase::IsAlive() const
-{
-	std::lock_guard<std::mutex> lock(m_main_mutex);
-	return m_alive;
-}
-
-bool ThreadBase::TestDestroy() const
-{
-	return m_destroy;
-}
-
-thread_t::thread_t(const std::string& name, bool autojoin, std::function<void()> func)
-	: m_name(name)
-	, m_state(TS_NON_EXISTENT)
-	, m_autojoin(autojoin)
-{
-	start(func);
-}
-
-thread_t::thread_t(const std::string& name, std::function<void()> func)
-	: m_name(name)
-	, m_state(TS_NON_EXISTENT)
-	, m_autojoin(false)
-{
-	start(func);
-}
-
-thread_t::thread_t(const std::string& name)
-	: m_name(name)
-	, m_state(TS_NON_EXISTENT)
-	, m_autojoin(false)
-{
-}
-
-thread_t::thread_t()
-	: m_state(TS_NON_EXISTENT)
-	, m_autojoin(false)
-{
-}
-
-void thread_t::set_name(const std::string& name)
-{
-	m_name = name;
-}
-
-thread_t::~thread_t()
-{
-	if (m_state == TS_JOINABLE)
-	{
-		if (m_autojoin)
+		catch (const fmt::exception& e)
 		{
-			m_thr.join();
+			error(e);
 		}
-		else
-		{
-			m_thr.detach();
-		}
-	}
-}
-
-void thread_t::start(std::function<void()> func)
-{
-	if (m_state.exchange(TS_NON_EXISTENT) == TS_JOINABLE)
-	{
-		m_thr.join(); // forcefully join previously created thread
-	}
-
-	std::string name = m_name;
-	m_thr = std::thread([func, name]()
-	{
-		SetCurrentThreadDebugName(name.c_str());
-
-#ifdef _WIN32
-		auto old_se_translator = _set_se_translator(_se_translator);
-#endif
-
-		NamedThreadBase info(name);
-		SetCurrentNamedThread(&info);
-		g_thread_count++;
 
 		if (Ini.HLELogging.GetValue())
 		{
-			LOG_NOTICE(HLE, name + " started");
+			LOG_NOTICE(GENERAL, "Thread ended");
 		}
 
-		try
-		{
-			func();
-		}
-		catch (const char* e)
-		{
-			LOG_ERROR(GENERAL, "Exception: %s", e);
-			Emu.Pause();
-		}
-		catch (const std::string& e)
-		{
-			LOG_ERROR(GENERAL, "Exception: %s", e.c_str());
-			Emu.Pause();
-		}
+		//ctrl->set_current(false);
 
-		if (Emu.IsStopped())
-		{
-			LOG_NOTICE(HLE, name + " aborted");
-		}
-		else if (Ini.HLELogging.GetValue())
-		{
-			LOG_NOTICE(HLE, name + " ended");
-		}
+		vm::reservation_free();
 
-		SetCurrentNamedThread(nullptr);
 		g_thread_count--;
 
-#ifdef _WIN32
+#if defined(_MSC_VER)
 		_set_se_translator(old_se_translator);
 #endif
-	});
-
-	if (m_state.exchange(TS_JOINABLE) == TS_JOINABLE)
-	{
-		assert(!"thread_t::start() failed"); // probably started from another thread
-	}
+	}, m_thread, std::move(func));
 }
 
 void thread_t::detach()
 {
-	if (m_state.exchange(TS_NON_EXISTENT) == TS_JOINABLE)
+	if (!m_thread)
 	{
-		m_thr.detach();
+		throw EXCEPTION("Invalid thread");
 	}
-	else
+
+	// +clear m_thread
+	const auto ctrl = std::move(m_thread);
+
+	// notify if detached by another thread
+	if (g_tls_this_thread != m_thread.get())
 	{
-		assert(!"thread_t::detach() failed"); // probably joined or detached
+		// lock for reliable notification
+		std::lock_guard<std::mutex> lock(mutex);
+
+		cv.notify_one();
 	}
+
+	ctrl->m_thread.detach();
 }
 
 void thread_t::join()
 {
-	if (m_state.exchange(TS_NON_EXISTENT) == TS_JOINABLE)
+	if (!m_thread)
 	{
-		m_thr.join();
+		throw EXCEPTION("Invalid thread");
 	}
-	else
+
+	if (g_tls_this_thread == m_thread.get())
 	{
-		assert(!"thread_t::join() failed"); // probably joined or detached
+		throw EXCEPTION("Deadlock");
 	}
+
+	// +clear m_thread
+	const auto ctrl = std::move(m_thread);
+
+	{
+		// lock for reliable notification
+		std::lock_guard<std::mutex> lock(mutex);
+
+		cv.notify_one();
+	}
+
+	ctrl->m_thread.join();
 }
 
-bool thread_t::joinable() const
+bool thread_t::is_current() const
 {
-	//return m_thr.joinable();
-	return m_state == TS_JOINABLE;
+	if (!m_thread)
+	{
+		throw EXCEPTION("Invalid thread");
+	}
+
+	return g_tls_this_thread == m_thread.get();
 }
 
-bool waiter_map_t::is_stopped(u64 signal_id)
+void waiter_map_t::check_emu_status(u32 addr)
 {
 	if (Emu.IsStopped())
 	{
-		LOG_WARNING(Log::HLE, "%s: waiter_op() aborted (signal_id=0x%llx)", name.c_str(), signal_id);
-		return true;
+		throw EXCEPTION("Aborted (emulation stopped) (%s, addr=0x%x)", name, addr);
 	}
-	return false;
+}
+
+void waiter_map_t::notify(u32 addr)
+{
+	// signal an appropriate condition variable
+	cvs[get_hash(addr)].notify_all();
 }
 
 const std::function<bool()> SQUEUE_ALWAYS_EXIT = [](){ return true; };

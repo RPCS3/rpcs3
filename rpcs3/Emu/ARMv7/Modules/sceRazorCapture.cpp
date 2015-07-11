@@ -2,21 +2,21 @@
 #include "Emu/System.h"
 #include "Emu/ARMv7/PSVFuncList.h"
 
-extern psv_log_base sceRazorCapture;
+#include "sceRazorCapture.h"
 
-void sceRazorCaptureSetTrigger(u32 frameIndex, vm::psv::ptr<const char> captureFilename)
+void sceRazorCaptureSetTrigger(u32 frameIndex, vm::cptr<char> captureFilename)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-void sceRazorCaptureSetTriggerNextFrame(vm::psv::ptr<const char> captureFilename)
+void sceRazorCaptureSetTriggerNextFrame(vm::cptr<char> captureFilename)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 bool sceRazorCaptureIsInProgress()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 #define REG_FUNC(nid, name) reg_psv_func(nid, &sceRazorCapture, #name, name)
@@ -26,6 +26,7 @@ psv_log_base sceRazorCapture("SceRazorCapture", []()
 	sceRazorCapture.on_load = nullptr;
 	sceRazorCapture.on_unload = nullptr;
 	sceRazorCapture.on_stop = nullptr;
+	sceRazorCapture.on_error = nullptr;
 
 	REG_FUNC(0x911E0AA0, sceRazorCaptureIsInProgress);
 	REG_FUNC(0xE916B538, sceRazorCaptureSetTrigger);

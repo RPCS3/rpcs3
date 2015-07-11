@@ -1,5 +1,7 @@
 #pragma once
 
+namespace vm { using namespace ps3; }
+
 // Return Codes
 enum
 {
@@ -53,26 +55,24 @@ enum
 };
 
 // Remain Frame
-enum
+enum : s32
 {
-	CELL_ATRAC_ALLDATA_IS_ON_MEMORY = -1,
+	CELL_ATRAC_ALLDATA_IS_ON_MEMORY             = -1,
 	CELL_ATRAC_NONLOOP_STREAM_DATA_IS_ON_MEMORY = -2,
-	CELL_ATRAC_LOOP_STREAM_DATA_IS_ON_MEMORY = -3,
+	CELL_ATRAC_LOOP_STREAM_DATA_IS_ON_MEMORY    = -3,
 };
 
 union CellAtracHandle
 {
-	u8 uiWorkMem[512];
-
-	struct AtracHandle
-	{
-		u32 pucWorkMem_addr;
-	} data;
+	vm::ptr<u8> pucWorkMem;
+	// ...
 };
+
+CHECK_MAX_SIZE(CellAtracHandle, 512);
 
 struct CellAtracBufferInfo
 {
-	be_t<u32> pucWriteAddr;
+	vm::ptr<u8> pucWriteAddr;
 	be_t<u32> uiWritableByte;
 	be_t<u32> uiMinWriteByte;
 	be_t<u32> uiReadPosition;
@@ -80,6 +80,6 @@ struct CellAtracBufferInfo
 
 struct CellAtracExtRes
 {
-	be_t<u32> pSpurs_addr;
+	vm::ptr<struct CellSpurs> pSpurs;
 	u8 priority[8];
 };

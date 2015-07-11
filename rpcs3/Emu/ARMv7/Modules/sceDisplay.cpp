@@ -2,86 +2,76 @@
 #include "Emu/System.h"
 #include "Emu/ARMv7/PSVFuncList.h"
 
-extern psv_log_base sceDisplay;
+#include "sceDisplay.h"
 
-struct SceDisplayFrameBuf
+s32 sceDisplayGetRefreshRate(vm::ptr<float> pFps)
 {
-	u32 size;
-	vm::psv::ptr<void> base;
-	u32 pitch;
-	u32 pixelformat;
-	u32 width;
-	u32 height;
-};
-
-s32 sceDisplayGetRefreshRate(vm::psv::ptr<float> pFps)
-{
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceDisplaySetFrameBuf(vm::psv::ptr<const SceDisplayFrameBuf> pFrameBuf, s32 iUpdateTimingMode)
+s32 sceDisplaySetFrameBuf(vm::cptr<SceDisplayFrameBuf> pFrameBuf, s32 iUpdateTimingMode)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceDisplayGetFrameBuf(vm::psv::ptr<SceDisplayFrameBuf> pFrameBuf, s32 iUpdateTimingMode)
+s32 sceDisplayGetFrameBuf(vm::ptr<SceDisplayFrameBuf> pFrameBuf, s32 iUpdateTimingMode)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceDisplayGetVcount()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceDisplayWaitVblankStart()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceDisplayWaitVblankStartCB()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceDisplayWaitVblankStartMulti(u32 vcount)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceDisplayWaitVblankStartMultiCB(u32 vcount)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceDisplayWaitSetFrameBuf()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceDisplayWaitSetFrameBufCB()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceDisplayWaitSetFrameBufMulti(u32 vcount)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceDisplayWaitSetFrameBufMultiCB(u32 vcount)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceDisplayRegisterVblankStartCallback(s32 uid)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceDisplayUnregisterVblankStartCallback(s32 uid)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 
@@ -92,6 +82,7 @@ psv_log_base sceDisplay("SceDisplay", []()
 	sceDisplay.on_load = nullptr;
 	sceDisplay.on_unload = nullptr;
 	sceDisplay.on_stop = nullptr;
+	sceDisplay.on_error = nullptr;
 
 	// SceDisplayUser
 	REG_FUNC(0x7A410B64, sceDisplaySetFrameBuf);

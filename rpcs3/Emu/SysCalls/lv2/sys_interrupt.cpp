@@ -23,16 +23,14 @@ s32 sys_interrupt_tag_destroy(u32 intrtag)
 		return CELL_ESRCH;
 	}
 
-	const auto t = Emu.GetCPU().GetRawSPUThread(intrtag & 0xff);
+	const auto thread = Emu.GetCPU().GetRawSPUThread(intrtag & 0xff);
 
-	if (!t)
+	if (!thread)
 	{
 		return CELL_ESRCH;
 	}
 
-	RawSPUThread& spu = static_cast<RawSPUThread&>(*t);
-
-	auto& tag = class_id ? spu.int2 : spu.int0;
+	auto& tag = class_id ? thread->int2 : thread->int0;
 
 	if (s32 old = tag.assigned.compare_and_swap(0, -1))
 	{
@@ -47,9 +45,9 @@ s32 sys_interrupt_tag_destroy(u32 intrtag)
 	return CELL_OK;
 }
 
-s32 sys_interrupt_thread_establish(vm::ptr<u32> ih, u32 intrtag, u64 intrthread, u64 arg)
+s32 sys_interrupt_thread_establish(vm::ptr<u32> ih, u32 intrtag, u32 intrthread, u64 arg)
 {
-	sys_interrupt.Warning("sys_interrupt_thread_establish(ih=*0x%x, intrtag=0x%x, intrthread=%lld, arg=0x%llx)", ih, intrtag, intrthread, arg);
+	sys_interrupt.Warning("sys_interrupt_thread_establish(ih=*0x%x, intrtag=0x%x, intrthread=0x%x, arg=0x%llx)", ih, intrtag, intrthread, arg);
 
 	const u32 class_id = intrtag >> 8;
 
@@ -58,37 +56,33 @@ s32 sys_interrupt_thread_establish(vm::ptr<u32> ih, u32 intrtag, u64 intrthread,
 		return CELL_ESRCH;
 	}
 
-	const auto t = Emu.GetCPU().GetRawSPUThread(intrtag & 0xff);
+	const auto thread = Emu.GetCPU().GetRawSPUThread(intrtag & 0xff);
 
-	if (!t)
+	if (!thread)
 	{
 		return CELL_ESRCH;
 	}
 
-	RawSPUThread& spu = static_cast<RawSPUThread&>(*t);
-
-	auto& tag = class_id ? spu.int2 : spu.int0;
+	auto& tag = class_id ? thread->int2 : thread->int0;
 
 	// CELL_ESTAT is not returned (can't detect exact condition)
 
-	const auto it = Emu.GetCPU().GetThread((u32)intrthread);
+	const auto it = Emu.GetIdManager().get<PPUThread>(intrthread);
 
 	if (!it)
 	{
 		return CELL_ESRCH;
 	}
 
-	PPUThread& ppu = static_cast<PPUThread&>(*it);
-
 	{
 		LV2_LOCK;
 
-		if (ppu.custom_task)
+		if (it->custom_task)
 		{
 			return CELL_EAGAIN;
 		}
 
-		if (s32 res = tag.assigned.atomic_op<s32>(CELL_OK, [](s32& value) -> s32
+		if (s32 res = tag.assigned.atomic_op([](s32& value) -> s32
 		{
 			if (value < 0)
 			{
@@ -102,31 +96,31 @@ s32 sys_interrupt_thread_establish(vm::ptr<u32> ih, u32 intrtag, u64 intrthread,
 			return res;
 		}
 
-		ppu.custom_task = [t, &tag, arg](PPUThread& CPU)
+		it->custom_task = [thread, &tag, arg](PPUThread& CPU)
 		{
-			const auto func = vm::ptr<void(u64 arg)>::make(CPU.entry);
-			const auto pc   = vm::read32(func.addr());
-			const auto rtoc = vm::read32(func.addr() + 4);
+			const u32 pc   = CPU.PC;
+			const u32 rtoc = CPU.GPR[2];
 
-			std::unique_lock<std::mutex> cond_lock(tag.handler_mutex);
+			std::unique_lock<std::mutex> lock(tag.handler_mutex);
 
-			while (!Emu.IsStopped())
+			while (!CPU.IsStopped())
 			{
+				CHECK_EMU_STATUS;
+
 				// call interrupt handler until int status is clear
-				if (tag.stat.read_relaxed())
+				if (tag.stat.load())
 				{
-					//func(CPU, arg);
 					CPU.GPR[3] = arg;
 					CPU.FastCall2(pc, rtoc);
 				}
 
-				tag.cond.wait_for(cond_lock, std::chrono::milliseconds(1));
+				tag.cond.wait_for(lock, std::chrono::milliseconds(1));
 			}
 		};
 	}
 
 	*ih = Emu.GetIdManager().make<lv2_int_handler_t>(it);
-	ppu.Exec();
+	it->Exec();
 
 	return CELL_OK;
 }
@@ -142,11 +136,9 @@ s32 _sys_interrupt_thread_disestablish(u32 ih, vm::ptr<u64> r13)
 		return CELL_ESRCH;
 	}
 
-	PPUThread& ppu = static_cast<PPUThread&>(*handler->handler);
-
 	// TODO: wait for sys_interrupt_thread_eoi() and destroy interrupt thread
 
-	*r13 = ppu.GPR[13];
+	*r13 = handler->thread->GPR[13];
 
 	return CELL_OK;
 }
@@ -155,8 +147,9 @@ void sys_interrupt_thread_eoi(PPUThread& CPU)
 {
 	sys_interrupt.Log("sys_interrupt_thread_eoi()");
 
-	// TODO: maybe it should actually unwind the stack (ensure that all the automatic objects are finalized)?
-	CPU.GPR[1] = align(CPU.GetStackAddr() + CPU.GetStackSize(), 0x200) - 0x200; // supercrutch (just to hide error messages)
+	// TODO: maybe it should actually unwind the stack of PPU thread?
+
+	CPU.GPR[1] = align(CPU.stack_addr + CPU.stack_size, 0x200) - 0x200; // supercrutch to bypass stack check
 
 	CPU.FastStop();
 }

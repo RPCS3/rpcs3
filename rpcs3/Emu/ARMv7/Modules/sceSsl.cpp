@@ -6,57 +6,57 @@
 
 s32 sceSslInit(u32 poolSize)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceSslTerm()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceSslGetMemoryPoolStats(vm::psv::ptr<SceSslMemoryPoolStats> currentStat)
+s32 sceSslGetMemoryPoolStats(vm::ptr<SceSslMemoryPoolStats> currentStat)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceSslGetSerialNumber(vm::psv::ptr<SceSslCert> sslCert, vm::psv::pptr<const u8> sboData, vm::psv::ptr<u32> sboLen)
+s32 sceSslGetSerialNumber(vm::ptr<SceSslCert> sslCert, vm::cpptr<u8> sboData, vm::ptr<u32> sboLen)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-vm::psv::ptr<SceSslCertName> sceSslGetSubjectName(vm::psv::ptr<SceSslCert> sslCert)
+vm::ptr<SceSslCertName> sceSslGetSubjectName(vm::ptr<SceSslCert> sslCert)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-vm::psv::ptr<SceSslCertName> sceSslGetIssuerName(vm::psv::ptr<SceSslCert> sslCert)
+vm::ptr<SceSslCertName> sceSslGetIssuerName(vm::ptr<SceSslCert> sslCert)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceSslGetNotBefore(vm::psv::ptr<SceSslCert> sslCert, vm::psv::ptr<u64> begin)
+s32 sceSslGetNotBefore(vm::ptr<SceSslCert> sslCert, vm::ptr<u64> begin)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceSslGetNotAfter(vm::psv::ptr<SceSslCert> sslCert, vm::psv::ptr<u64> limit)
+s32 sceSslGetNotAfter(vm::ptr<SceSslCert> sslCert, vm::ptr<u64> limit)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceSslGetNameEntryCount(vm::psv::ptr<SceSslCertName> certName)
+s32 sceSslGetNameEntryCount(vm::ptr<SceSslCertName> certName)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceSslGetNameEntryInfo(vm::psv::ptr<SceSslCertName> certName, s32 entryNum, vm::psv::ptr<char> oidname, u32 maxOidnameLen, vm::psv::ptr<u8> value, u32 maxValueLen, vm::psv::ptr<u32> valueLen)
+s32 sceSslGetNameEntryInfo(vm::ptr<SceSslCertName> certName, s32 entryNum, vm::ptr<char> oidname, u32 maxOidnameLen, vm::ptr<u8> value, u32 maxValueLen, vm::ptr<u32> valueLen)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceSslFreeSslCertName(vm::psv::ptr<SceSslCertName> certName)
+s32 sceSslFreeSslCertName(vm::ptr<SceSslCertName> certName)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 
@@ -67,6 +67,7 @@ psv_log_base sceSsl("SceSsl", []()
 	sceSsl.on_load = nullptr;
 	sceSsl.on_unload = nullptr;
 	sceSsl.on_stop = nullptr;
+	sceSsl.on_error = nullptr;
 
 	REG_FUNC(0x3C733316, sceSslInit);
 	REG_FUNC(0x03CE6E3A, sceSslTerm);

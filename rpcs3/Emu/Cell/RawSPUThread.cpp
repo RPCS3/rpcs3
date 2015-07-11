@@ -8,39 +8,37 @@
 
 thread_local spu_mfc_arg_t raw_spu_mfc[8] = {};
 
-RawSPUThread::RawSPUThread(CPUThreadType type)
-	: SPUThread(type)
+RawSPUThread::RawSPUThread(const std::string& name, u32 index)
+	: SPUThread(CPU_THREAD_RAW_SPU, name, COPY_EXPR(fmt::format("RawSPU_%d[0x%x] Thread (%s)[0x%08x]", index, GetId(), GetName(), PC)), index, RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * index)
 {
+	vm::page_map(offset, 0x40000, vm::page_readable | vm::page_writable);
 }
 
 RawSPUThread::~RawSPUThread()
 {
+	join();
+
+	vm::page_unmap(offset, 0x40000);
 }
 
 void RawSPUThread::start()
 {
-	bool do_start;
-
-	status.atomic_op([&do_start](u32& status)
+	const bool do_start = status.atomic_op([](u32& status) -> bool
 	{
 		if (status & SPU_STATUS_RUNNING)
 		{
-			do_start = false;
+			return false;
 		}
 		else
 		{
 			status = SPU_STATUS_RUNNING;
-			do_start = true;
+			return true;
 		}
 	});
 
 	if (do_start)
 	{
-		// starting thread directly in SIGSEGV handler may cause problems
-		Emu.GetCallbackManager().Async([this](PPUThread& PPU)
-		{
-			FastRun();
-		});
+		Exec();
 	}
 }
 
@@ -76,7 +74,7 @@ bool RawSPUThread::ReadReg(const u32 addr, u32& value)
 		
 	case SPU_Status_offs:
 	{
-		value = status.read_relaxed();
+		value = status.load();
 		return true;
 	}
 	}
@@ -166,6 +164,7 @@ bool RawSPUThread::WriteReg(const u32 addr, const u32 value)
 	case SPU_In_MBox_offs:
 	{
 		ch_in_mbox.push_uncond(value); 
+		cv.notify_one();
 		return true;
 	}
 
@@ -178,14 +177,14 @@ bool RawSPUThread::WriteReg(const u32 addr, const u32 value)
 		else if (value == SPU_RUNCNTL_STOP_REQUEST)
 		{
 			status &= ~SPU_STATUS_RUNNING;
-			FastStop();
+			Stop();
 		}
 		else
 		{
 			break;
 		}
 
-		run_ctrl.write_relaxed(value);
+		run_ctrl.store(value);
 		return true;
 	}
 
@@ -196,7 +195,7 @@ bool RawSPUThread::WriteReg(const u32 addr, const u32 value)
 			break;
 		}
 
-		npc.write_relaxed(value);
+		npc.store(value);
 		return true;
 	}
 
@@ -223,5 +222,5 @@ void RawSPUThread::Task()
 
 	SPUThread::Task();
 
-	npc.write_relaxed(PC | 1);
+	npc.store(PC | 1);
 }

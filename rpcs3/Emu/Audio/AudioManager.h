@@ -1,31 +1,16 @@
 #pragma once
-#include "sysutil_audio.h"
+
 #include "AudioThread.h"
 
+// it cannot be configured currently, and it must NOT use cellSysutil definitions
 struct AudioInfo
 {
-	struct
-	{
-		u8 type;
-		u8 channel;
-		u8 encoder;
-		u8 fs;
-		u32 layout;
-		u32 downMixer;
-	} mode;
-
 	AudioInfo()
 	{
 	}
 
 	void Init()
 	{
-		mode.type = CELL_AUDIO_OUT_CODING_TYPE_LPCM;
-		mode.channel = CELL_AUDIO_OUT_CHNUM_8;
-		mode.fs = CELL_AUDIO_OUT_FS_48KHZ;
-		mode.layout = CELL_AUDIO_OUT_SPEAKER_LAYOUT_8CH_LREClrxy;
-		mode.encoder = CELL_AUDIO_OUT_CODING_TYPE_LPCM;
-		mode.downMixer = CELL_AUDIO_OUT_DOWNMIXER_NONE;
 	}
 };
 
@@ -42,6 +27,4 @@ public:
 
 	AudioThread& GetAudioOut() { assert(m_audio_out); return *m_audio_out; }
 	AudioInfo& GetInfo() { return m_audio_info; }
-
-	u8 GetState();
 };

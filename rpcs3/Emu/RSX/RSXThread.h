@@ -90,7 +90,7 @@ struct RSXTransformConstant
 	}
 };
 
-class RSXThread : public ThreadBase
+class RSXThread : protected thread_t
 {
 public:
 	static const uint m_textures_count = 16;
@@ -449,8 +449,7 @@ public:
 
 protected:
 	RSXThread()
-		: ThreadBase("RSXThread")
-		, m_ctrl(nullptr)
+		: m_ctrl(nullptr)
 		, m_shader_ctrl(0x40)
 		, m_flip_status(0)
 		, m_flip_mode(CELL_GCM_DISPLAY_VSYNC)
@@ -551,7 +550,13 @@ protected:
 		Reset();
 	}
 
-	virtual ~RSXThread() {}
+	virtual ~RSXThread() override
+	{
+		if (joinable())
+		{
+			throw EXCEPTION("Thread not joined");
+		}
+	}
 
 	void Reset()
 	{

@@ -2,103 +2,46 @@
 #include "Emu/System.h"
 #include "Emu/ARMv7/PSVFuncList.h"
 
-extern psv_log_base sceAudioenc;
+#include "sceAudioenc.h"
 
-struct SceAudioencInitStreamParam
+s32 sceAudioencInitLibrary(u32 codecType, vm::ptr<SceAudioencInitParam> pInitParam)
 {
-	u32 size;
-	u32 totalStreams;
-};
-
-struct SceAudioencInfoCelp
-{
-	u32 size;
-	u32 excitationMode;
-	u32 samplingRate;
-	u32 bitRate;
-};
-
-struct SceAudioencOptInfoCelp
-{
-	u32 size;
-	u8 header[32];
-	u32 headerSize;
-	u32 encoderVersion;
-};
-
-
-union SceAudioencInitParam
-{
-	u32 size;
-	SceAudioencInitStreamParam celp;
-};
-
-union SceAudioencInfo
-{
-	u32 size;
-	SceAudioencInfoCelp celp;
-};
-
-union SceAudioencOptInfo
-{
-	u32 size;
-	SceAudioencOptInfoCelp celp;
-};
-
-struct SceAudioencCtrl
-{
-	u32 size;
-	s32 handle;
-	vm::psv::ptr<u8> pInputPcm;
-	u32 inputPcmSize;
-	u32 maxPcmSize;
-	vm::psv::ptr<void> pOutputEs;
-	u32 outputEsSize;
-	u32 maxEsSize;
-	u32 wordLength;
-	vm::psv::ptr<SceAudioencInfo> pInfo;
-	vm::psv::ptr<SceAudioencOptInfo> pOptInfo;
-};
-
-
-s32 sceAudioencInitLibrary(u32 codecType, vm::psv::ptr<SceAudioencInitParam> pInitParam)
-{
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceAudioencTermLibrary(u32 codecType)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceAudioencCreateEncoder(vm::psv::ptr<SceAudioencCtrl> pCtrl, u32 codecType)
+s32 sceAudioencCreateEncoder(vm::ptr<SceAudioencCtrl> pCtrl, u32 codecType)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceAudioencDeleteEncoder(vm::psv::ptr<SceAudioencCtrl> pCtrl)
+s32 sceAudioencDeleteEncoder(vm::ptr<SceAudioencCtrl> pCtrl)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceAudioencEncode(vm::psv::ptr<SceAudioencCtrl> pCtrl)
+s32 sceAudioencEncode(vm::ptr<SceAudioencCtrl> pCtrl)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceAudioencClearContext(vm::psv::ptr<SceAudioencCtrl> pCtrl)
+s32 sceAudioencClearContext(vm::ptr<SceAudioencCtrl> pCtrl)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceAudioencGetOptInfo(vm::psv::ptr<SceAudioencCtrl> pCtrl)
+s32 sceAudioencGetOptInfo(vm::ptr<SceAudioencCtrl> pCtrl)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceAudioencGetInternalError(vm::psv::ptr<SceAudioencCtrl> pCtrl, vm::psv::ptr<s32> pInternalError)
+s32 sceAudioencGetInternalError(vm::ptr<SceAudioencCtrl> pCtrl, vm::ptr<s32> pInternalError)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 
@@ -109,6 +52,7 @@ psv_log_base sceAudioenc("SceAudioenc", []()
 	sceAudioenc.on_load = nullptr;
 	sceAudioenc.on_unload = nullptr;
 	sceAudioenc.on_stop = nullptr;
+	sceAudioenc.on_error = nullptr;
 
 	REG_FUNC(0x76EE4DC6, sceAudioencInitLibrary);
 	REG_FUNC(0xAB32D022, sceAudioencTermLibrary);

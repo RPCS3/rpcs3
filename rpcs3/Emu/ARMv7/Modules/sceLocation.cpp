@@ -2,173 +2,91 @@
 #include "Emu/System.h"
 #include "Emu/ARMv7/PSVFuncList.h"
 
-extern psv_log_base sceLocation;
+#include "sceLocation.h"
 
-typedef u8 SceLocationHandle;
-
-enum SceLocationLocationMethod : s32
+s32 sceLocationOpen(vm::ptr<u8> handle, SceLocationLocationMethod lmethod, SceLocationHeadingMethod hmethod)
 {
-	SCE_LOCATION_LMETHOD_NONE = 0,
-	SCE_LOCATION_LMETHOD_AGPS_AND_3G_AND_WIFI = 1,
-	SCE_LOCATION_LMETHOD_GPS_AND_WIFI = 2,
-	SCE_LOCATION_LMETHOD_WIFI = 3,
-	SCE_LOCATION_LMETHOD_3G = 4,
-	SCE_LOCATION_LMETHOD_GPS = 5
-};
-
-enum SceLocationHeadingMethod : s32
-{
-	SCE_LOCATION_HMETHOD_NONE = 0,
-	SCE_LOCATION_HMETHOD_AUTO = 1,
-	SCE_LOCATION_HMETHOD_VERTICAL = 2,
-	SCE_LOCATION_HMETHOD_HORIZONTAL = 3,
-	SCE_LOCATION_HMETHOD_CAMERA = 4
-};
-
-enum SceLocationDialogStatus : s32
-{
-	SCE_LOCATION_DIALOG_STATUS_IDLE = 0,
-	SCE_LOCATION_DIALOG_STATUS_RUNNING = 1,
-	SCE_LOCATION_DIALOG_STATUS_FINISHED = 2
-};
-
-enum SceLocationDialogResult : s32
-{
-	SCE_LOCATION_DIALOG_RESULT_NONE = 0,
-	SCE_LOCATION_DIALOG_RESULT_DISABLE = 1,
-	SCE_LOCATION_DIALOG_RESULT_ENABLE = 2
-};
-
-enum SceLocationPermissionApplicationStatus : s32
-{
-	SCE_LOCATION_PERMISSION_APPLICATION_NONE = 0,
-	SCE_LOCATION_PERMISSION_APPLICATION_INIT = 1,
-	SCE_LOCATION_PERMISSION_APPLICATION_DENY = 2,
-	SCE_LOCATION_PERMISSION_APPLICATION_ALLOW = 3
-};
-
-enum SceLocationPermissionStatus : s32
-{
-	SCE_LOCATION_PERMISSION_DENY = 0,
-	SCE_LOCATION_PERMISSION_ALLOW = 1
-};
-
-struct SceLocationLocationInfo
-{
-	double latitude;
-	double longitude;
-	double altitude;
-	float accuracy;
-	float reserve;
-	float direction;
-	float speed;
-	u64 timestamp;
-};
-
-struct SceLocationHeadingInfo
-{
-	float trueHeading;
-	float headingVectorX;
-	float headingVectorY;
-	float headingVectorZ;
-	float reserve;
-	float reserve2;
-	u64 timestamp;
-};
-
-typedef vm::psv::ptr<void(s32 result, SceLocationHandle handle, vm::psv::ptr<const SceLocationLocationInfo> location, vm::psv::ptr<void> userdata)> SceLocationLocationInfoCallback;
-typedef vm::psv::ptr<void(s32 result, SceLocationHandle handle, vm::psv::ptr<const SceLocationHeadingInfo> heading, vm::psv::ptr<void> userdata)> SceLocationHeadingInfoCallback;
-
-struct SceLocationPermissionInfo
-{
-	SceLocationPermissionStatus parentalstatus;
-	SceLocationPermissionStatus mainstatus;
-	SceLocationPermissionApplicationStatus applicationstatus;
-};
-
-s32 sceLocationOpen(vm::psv::ptr<SceLocationHandle> handle, SceLocationLocationMethod lmethod, SceLocationHeadingMethod hmethod)
-{
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceLocationClose(SceLocationHandle handle)
+s32 sceLocationClose(u8 handle)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceLocationReopen(SceLocationHandle handle, SceLocationLocationMethod lmethod, SceLocationHeadingMethod hmethod)
+s32 sceLocationReopen(u8 handle, SceLocationLocationMethod lmethod, SceLocationHeadingMethod hmethod)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceLocationGetMethod(SceLocationHandle handle, vm::psv::ptr<SceLocationLocationMethod> lmethod, vm::psv::ptr<SceLocationHeadingMethod> hmethod)
+s32 sceLocationGetMethod(u8 handle, vm::ptr<s32> lmethod, vm::ptr<s32> hmethod)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceLocationGetLocation(SceLocationHandle handle, vm::psv::ptr<SceLocationLocationInfo> linfo)
+s32 sceLocationGetLocation(u8 handle, vm::ptr<SceLocationLocationInfo> linfo)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceLocationCancelGetLocation(SceLocationHandle handle)
+s32 sceLocationCancelGetLocation(u8 handle)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceLocationStartLocationCallback(SceLocationHandle handle, u32 distance, SceLocationLocationInfoCallback callback, vm::psv::ptr<void> userdata)
+s32 sceLocationStartLocationCallback(u8 handle, u32 distance, vm::ptr<SceLocationLocationInfoCallback> callback, vm::ptr<void> userdata)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceLocationStopLocationCallback(SceLocationHandle handle)
+s32 sceLocationStopLocationCallback(u8 handle)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceLocationGetHeading(SceLocationHandle handle, vm::psv::ptr<SceLocationHeadingInfo> hinfo)
+s32 sceLocationGetHeading(u8 handle, vm::ptr<SceLocationHeadingInfo> hinfo)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceLocationStartHeadingCallback(SceLocationHandle handle, u32 difference, SceLocationHeadingInfoCallback callback, vm::psv::ptr<void> userdata)
+s32 sceLocationStartHeadingCallback(u8 handle, u32 difference, vm::ptr<SceLocationHeadingInfoCallback> callback, vm::ptr<void> userdata)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceLocationStopHeadingCallback(SceLocationHandle handle)
+s32 sceLocationStopHeadingCallback(u8 handle)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceLocationConfirm(SceLocationHandle handle)
+s32 sceLocationConfirm(u8 handle)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceLocationConfirmGetStatus(SceLocationHandle handle, vm::psv::ptr<SceLocationDialogStatus> status)
+s32 sceLocationConfirmGetStatus(u8 handle, vm::ptr<s32> status)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceLocationConfirmGetResult(SceLocationHandle handle, vm::psv::ptr<SceLocationDialogResult> result)
+s32 sceLocationConfirmGetResult(u8 handle, vm::ptr<s32> result)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceLocationConfirmAbort(SceLocationHandle handle)
+s32 sceLocationConfirmAbort(u8 handle)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceLocationGetPermission(SceLocationHandle handle, vm::psv::ptr<SceLocationPermissionInfo> info)
+s32 sceLocationGetPermission(u8 handle, vm::ptr<SceLocationPermissionInfo> info)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceLocationSetGpsEmulationFile(vm::psv::ptr<char> filename)
+s32 sceLocationSetGpsEmulationFile(vm::ptr<char> filename)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 
@@ -179,6 +97,7 @@ psv_log_base sceLocation("SceLibLocation", []()
 	sceLocation.on_load = nullptr;
 	sceLocation.on_unload = nullptr;
 	sceLocation.on_stop = nullptr;
+	sceLocation.on_error = nullptr;
 
 	REG_FUNC(0xDD271661, sceLocationOpen);
 	REG_FUNC(0x14FE76E8, sceLocationClose);

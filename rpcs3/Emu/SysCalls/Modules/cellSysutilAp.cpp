@@ -2,6 +2,8 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/SysCalls/Modules.h"
 
+namespace vm { using namespace ps3; }
+
 extern Module cellSysutilAp;
 
 // Return Codes
@@ -23,13 +25,13 @@ s32 cellSysutilApGetRequiredMemSize()
 	return 1024*1024; // Return 1 MB as required size
 }
 
-int cellSysutilApOn()
+s32 cellSysutilApOn()
 {
 	UNIMPLEMENTED_FUNC(cellSysutilAp);
 	return CELL_OK;
 }
 
-int cellSysutilApOff()
+s32 cellSysutilApOff()
 {
 	UNIMPLEMENTED_FUNC(cellSysutilAp);
 	return CELL_OK;

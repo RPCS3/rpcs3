@@ -2,7 +2,7 @@
 #include "Emu/System.h"
 #include "Emu/ARMv7/PSVFuncList.h"
 
-extern psv_log_base sceXml;
+#include "sceXml.h"
 
 #define REG_FUNC(nid, name) reg_psv_func(nid, &sceXml, #name, name)
 
@@ -11,6 +11,7 @@ psv_log_base sceXml("SceXml", []()
 	sceXml.on_load = nullptr;
 	sceXml.on_unload = nullptr;
 	sceXml.on_stop = nullptr;
+	sceXml.on_error = nullptr;
 
 	//REG_FUNC(0x57400A1A, _ZN3sce3Xml10SimpleDataC1EPKcj);
 	//REG_FUNC(0x7E582075, _ZN3sce3Xml10SimpleDataC1Ev);

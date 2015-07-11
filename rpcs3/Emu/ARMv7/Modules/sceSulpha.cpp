@@ -2,83 +2,71 @@
 #include "Emu/System.h"
 #include "Emu/ARMv7/PSVFuncList.h"
 
-extern psv_log_base sceSulpha;
-
-typedef vm::psv::ptr<void(vm::psv::ptr<void> arg)> SceSulphaCallback;
-
-struct SceSulphaConfig
-{
-	SceSulphaCallback notifyCallback;
-	u32 port;
-	u32 bookmarkCount;
-};
-
-struct SceSulphaAgentsRegister;
-typedef void SceSulphaHandle;
+#include "sceSulpha.h"
 
 s32 sceSulphaNetworkInit()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceSulphaNetworkShutdown()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceSulphaGetDefaultConfig(vm::psv::ptr<SceSulphaConfig> config)
+s32 sceSulphaGetDefaultConfig(vm::ptr<SceSulphaConfig> config)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceSulphaGetNeededMemory(vm::psv::ptr<const SceSulphaConfig> config, vm::psv::ptr<u32> sizeInBytes)
+s32 sceSulphaGetNeededMemory(vm::cptr<SceSulphaConfig> config, vm::ptr<u32> sizeInBytes)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceSulphaInit(vm::psv::ptr<const SceSulphaConfig> config, vm::psv::ptr<void> buffer, u32 sizeInBytes)
+s32 sceSulphaInit(vm::cptr<SceSulphaConfig> config, vm::ptr<void> buffer, u32 sizeInBytes)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceSulphaShutdown()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceSulphaUpdate()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceSulphaFileConnect(vm::psv::ptr<const char> filename)
+s32 sceSulphaFileConnect(vm::cptr<char> filename)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceSulphaFileDisconnect()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceSulphaSetBookmark(vm::psv::ptr<const char> name, s32 id)
+s32 sceSulphaSetBookmark(vm::cptr<char> name, s32 id)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceSulphaAgentsGetNeededMemory(vm::psv::ptr<const SceSulphaAgentsRegister> config, vm::psv::ptr<u32> sizeInBytes)
+s32 sceSulphaAgentsGetNeededMemory(vm::cptr<SceSulphaAgentsRegister> config, vm::ptr<u32> sizeInBytes)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceSulphaAgentsRegister(vm::psv::ptr<const SceSulphaAgentsRegister> config, vm::psv::ptr<void> buffer, u32 sizeInBytes, vm::psv::ptr<SceSulphaHandle> handles)
+s32 sceSulphaAgentsRegister(vm::cptr<SceSulphaAgentsRegister> config, vm::ptr<void> buffer, u32 sizeInBytes, vm::ptr<SceSulphaHandle> handles)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceSulphaAgentsUnregister(vm::psv::ptr<const SceSulphaHandle> handles, u32 agentCount)
+s32 sceSulphaAgentsUnregister(vm::cptr<SceSulphaHandle> handles, u32 agentCount)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 
@@ -89,6 +77,7 @@ psv_log_base sceSulpha("SceSulpha", []()
 	sceSulpha.on_load = nullptr;
 	sceSulpha.on_unload = nullptr;
 	sceSulpha.on_stop = nullptr;
+	sceSulpha.on_error = nullptr;
 
 	REG_FUNC(0xB4668AEA, sceSulphaNetworkInit);
 	REG_FUNC(0x0FC71B72, sceSulphaNetworkShutdown);

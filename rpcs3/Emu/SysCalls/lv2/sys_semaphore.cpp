@@ -4,13 +4,13 @@
 #include "Emu/IdManager.h"
 #include "Emu/SysCalls/SysCalls.h"
 
-#include "Emu/CPU/CPUThreadManager.h"
 #include "Emu/Cell/PPUThread.h"
 #include "sleep_queue.h"
-#include "sys_time.h"
 #include "sys_semaphore.h"
 
 SysCallBase sys_semaphore("sys_semaphore");
+
+extern u64 get_system_time();
 
 s32 sys_semaphore_create(vm::ptr<u32> sem, vm::ptr<sys_semaphore_attribute_t> attr, s32 initial_val, s32 max_val)
 {
@@ -37,13 +37,13 @@ s32 sys_semaphore_create(vm::ptr<u32> sem, vm::ptr<sys_semaphore_attribute_t> at
 	default: sys_semaphore.Error("sys_semaphore_create(): unknown protocol (0x%x)", protocol); return CELL_EINVAL;
 	}
 
-	if (attr->pshared.data() != se32(0x200) || attr->ipc_key.data() || attr->flags.data())
+	if (attr->pshared != SYS_SYNC_NOT_PROCESS_SHARED || attr->ipc_key.data() || attr->flags.data())
 	{
 		sys_semaphore.Error("sys_semaphore_create(): unknown attributes (pshared=0x%x, ipc_key=0x%x, flags=0x%x)", attr->pshared, attr->ipc_key, attr->flags);
 		return CELL_EINVAL;
 	}
 
-	*sem = Emu.GetIdManager().make<lv2_sema_t>(initial_val, max_val, protocol, attr->name_u64);
+	*sem = Emu.GetIdManager().make<lv2_sema_t>(protocol, max_val, attr->name_u64, initial_val);
 
 	return CELL_OK;
 }
@@ -91,16 +91,12 @@ s32 sys_semaphore_wait(u32 sem, u64 timeout)
 
 	while (semaphore->value <= 0)
 	{
+		CHECK_EMU_STATUS;
+
 		if (timeout && get_system_time() - start_time > timeout)
 		{
 			semaphore->waiters--;
 			return CELL_ETIMEDOUT;
-		}
-
-		if (Emu.IsStopped())
-		{
-			sys_semaphore.Warning("sys_semaphore_wait(%d) aborted", sem);
-			return CELL_OK;
 		}
 
 		semaphore->cv.wait_for(lv2_lock, std::chrono::milliseconds(1));

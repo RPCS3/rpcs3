@@ -325,7 +325,7 @@ private:
 		if (CPU.GPR[rt]._u32[3] == 0)
 		{
 			LOG5_OPCODE("taken (0x%x)", target);
-			CPU.SetBranch(target);
+			CPU.PC = target - 4;
 		}
 		else
 		{
@@ -344,7 +344,7 @@ private:
 		if (CPU.GPR[rt]._u32[3] != 0)
 		{
 			LOG5_OPCODE("taken (0x%x)", target);
-			CPU.SetBranch(target);
+			CPU.PC = target - 4;
 		}
 		else
 		{
@@ -363,7 +363,7 @@ private:
 		if (CPU.GPR[rt]._u16[6] == 0)
 		{
 			LOG5_OPCODE("taken (0x%x)", target);
-			CPU.SetBranch(target);
+			CPU.PC = target - 4;
 		}
 		else
 		{
@@ -382,7 +382,7 @@ private:
 		if (CPU.GPR[rt]._u16[6] != 0)
 		{
 			LOG5_OPCODE("taken (0x%x)", target);
-			CPU.SetBranch(target);
+			CPU.PC = target - 4;
 		}
 		else
 		{
@@ -409,7 +409,7 @@ private:
 
 		u32 target = branchTarget(CPU.GPR[ra]._u32[3], 0);
 		LOG5_OPCODE("branch (0x%x)", target);
-		CPU.SetBranch(target);
+		CPU.PC = target - 4;
 	}
 	void BISL(u32 intr, u32 rt, u32 ra)
 	{
@@ -422,7 +422,7 @@ private:
 		u32 target = branchTarget(CPU.GPR[ra]._u32[3], 0);
 		CPU.GPR[rt] = u128::from32r(CPU.PC + 4);
 		LOG5_OPCODE("branch (0x%x)", target);
-		CPU.SetBranch(target);
+		CPU.PC = target - 4;
 	}
 	void IRET(u32 ra)
 	{
@@ -1536,7 +1536,7 @@ private:
 		if (CPU.GPR[rt]._u32[3] == 0)
 		{
 			LOG5_OPCODE("taken (0x%x)", target);
-			CPU.SetBranch(target);
+			CPU.PC = target - 4;
 		}
 		else
 		{
@@ -1555,7 +1555,7 @@ private:
 		if (CPU.GPR[rt]._u32[3] != 0)
 		{
 			LOG5_OPCODE("taken (0x%x)", target);
-			CPU.SetBranch(target);
+			CPU.PC = target - 4;
 		}
 		else
 		{
@@ -1568,7 +1568,7 @@ private:
 		if (CPU.GPR[rt]._u16[6] == 0)
 		{
 			LOG5_OPCODE("taken (0x%x)", target);
-			CPU.SetBranch(target);
+			CPU.PC = target - 4;
 		}
 		else
 		{
@@ -1581,7 +1581,7 @@ private:
 		if (CPU.GPR[rt]._u16[6] != 0)
 		{
 			LOG5_OPCODE("taken (0x%x)", target);
-			CPU.SetBranch(target);
+			CPU.PC = target - 4;
 		}
 		else
 		{
@@ -1598,7 +1598,7 @@ private:
 	{
 		u32 target = branchTarget(0, i16);
 		LOG5_OPCODE("branch (0x%x)", target);
-		CPU.SetBranch(target);
+		CPU.PC = target - 4;
 	}
 	void LQA(u32 rt, s32 i16)
 	{
@@ -1611,13 +1611,13 @@ private:
 		u32 target = branchTarget(0, i16);
 		CPU.GPR[rt] = u128::from32r(CPU.PC + 4);
 		LOG5_OPCODE("branch (0x%x)", target);
-		CPU.SetBranch(target);
+		CPU.PC = target - 4;
 	}
 	void BR(s32 i16)
 	{
 		u32 target = branchTarget(CPU.PC, i16);
 		LOG5_OPCODE("branch (0x%x)", target);
-		CPU.SetBranch(target);
+		CPU.PC = target - 4;
 	}
 	void FSMBI(u32 rt, s32 i16)
 	{
@@ -1640,7 +1640,7 @@ private:
 		u32 target = branchTarget(CPU.PC, i16);
 		CPU.GPR[rt] = u128::from32r(CPU.PC + 4);
 		LOG5_OPCODE("branch (0x%x)", target);
-		CPU.SetBranch(target);
+		CPU.PC = target - 4;
 	}
 	void LQR(u32 rt, s32 i16)
 	{

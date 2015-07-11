@@ -2,32 +2,26 @@
 #include "Emu/System.h"
 #include "Emu/ARMv7/PSVFuncList.h"
 
-extern psv_log_base sceCodecEngine;
-
-struct SceCodecEnginePmonProcessorLoad
-{
-	u32 size;
-	u32 average;
-};
+#include "sceCodecEngine.h"
 
 s32 sceCodecEnginePmonStart()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceCodecEnginePmonStop()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceCodecEnginePmonGetProcessorLoad(vm::psv::ptr<SceCodecEnginePmonProcessorLoad> pProcessorLoad)
+s32 sceCodecEnginePmonGetProcessorLoad(vm::ptr<SceCodecEnginePmonProcessorLoad> pProcessorLoad)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceCodecEnginePmonReset()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 
@@ -38,6 +32,7 @@ psv_log_base sceCodecEngine("SceCodecEngine", []()
 	sceCodecEngine.on_load = nullptr;
 	sceCodecEngine.on_unload = nullptr;
 	sceCodecEngine.on_stop = nullptr;
+	sceCodecEngine.on_error = nullptr;
 
 	REG_FUNC(0x3E718890, sceCodecEnginePmonStart);
 	REG_FUNC(0x268B1EF5, sceCodecEnginePmonStop);

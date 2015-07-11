@@ -9,7 +9,6 @@
 #include "PPUInstrTable.h"
 #include "PPUInterpreter.h"
 #include "PPUInterpreter2.h"
-#include "Emu/CPU/CPUThreadManager.h"
 
 class ppu_scale_table_t
 {
@@ -53,7 +52,7 @@ void ppu_interpreter::TDI(PPUThread& CPU, ppu_opcode_t op)
 		((op.bo & 0x2) && a_ < b_) ||
 		((op.bo & 0x1) && a_ > b_))
 	{
-		throw __FUNCTION__;
+		throw EXCEPTION("");
 	}
 }
 
@@ -68,14 +67,14 @@ void ppu_interpreter::TWI(PPUThread& CPU, ppu_opcode_t op)
 		((op.bo & 0x2) && a_ < b_) ||
 		((op.bo & 0x1) && a_ > b_))
 	{
-		throw __FUNCTION__;
+		throw EXCEPTION("");
 	}
 }
 
 
 void ppu_interpreter::MFVSCR(PPUThread& CPU, ppu_opcode_t op)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 void ppu_interpreter::MTVSCR(PPUThread& CPU, ppu_opcode_t op)
@@ -1462,7 +1461,7 @@ void ppu_interpreter::BC(PPUThread& CPU, ppu_opcode_t op)
 	if (ctr_ok && cond_ok)
 	{
 		const u32 nextLR = CPU.PC + 4;
-		CPU.SetBranch(PPUOpcodes::branchTarget((op.aa ? 0 : CPU.PC), op.simm16), op.lk);
+		CPU.PC = PPUOpcodes::branchTarget((op.aa ? 0 : CPU.PC), op.simm16) - 4;
 		if (op.lk) CPU.LR = nextLR;
 	}
 }
@@ -1478,14 +1477,14 @@ void ppu_interpreter::SC(PPUThread& CPU, ppu_opcode_t op)
 	{
 	case 0x0: SysCalls::DoSyscall(CPU, CPU.GPR[11]); break;
 	case 0x3: CPU.FastStop(); break;
-	default: throw __FUNCTION__;
+	default: throw EXCEPTION("");
 	}
 }
 
 void ppu_interpreter::B(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u32 nextLR = CPU.PC + 4;
-	CPU.SetBranch(PPUOpcodes::branchTarget(op.aa ? 0 : CPU.PC, op.ll), op.lk);
+	CPU.PC = PPUOpcodes::branchTarget(op.aa ? 0 : CPU.PC, op.ll) - 4;
 	if (op.lk) CPU.LR = nextLR;
 }
 
@@ -1509,7 +1508,7 @@ void ppu_interpreter::BCLR(PPUThread& CPU, ppu_opcode_t op)
 	if (ctr_ok && cond_ok)
 	{
 		const u32 nextLR = CPU.PC + 4;
-		CPU.SetBranch(PPUOpcodes::branchTarget(0, (u32)CPU.LR), true);
+		CPU.PC = PPUOpcodes::branchTarget(0, (u32)CPU.LR) - 4;
 		if (op.lk) CPU.LR = nextLR;
 	}
 }
@@ -1572,7 +1571,7 @@ void ppu_interpreter::BCCTR(PPUThread& CPU, ppu_opcode_t op)
 	if (op.bo & 0x10 || CPU.IsCR(op.bi) == ((op.bo & 0x8) != 0))
 	{
 		const u32 nextLR = CPU.PC + 4;
-		CPU.SetBranch(PPUOpcodes::branchTarget(0, (u32)CPU.CTR), true);
+		CPU.PC = PPUOpcodes::branchTarget(0, (u32)CPU.CTR) - 4;
 		if (op.lk) CPU.LR = nextLR;
 	}
 }
@@ -1698,7 +1697,7 @@ void ppu_interpreter::TW(PPUThread& CPU, ppu_opcode_t op)
 		((u32)a < (u32)b && (op.bo & 0x2)) ||
 		((u32)a >(u32)b && (op.bo & 0x1)))
 	{
-		throw __FUNCTION__;
+		throw EXCEPTION("");
 	}
 }
 
@@ -1733,7 +1732,7 @@ void ppu_interpreter::LVSL(PPUThread& CPU, ppu_opcode_t op)
 void ppu_interpreter::LVEBX(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? CPU.GPR[op.ra] + CPU.GPR[op.rb] : CPU.GPR[op.rb];
-	CPU.VPR[op.vd]._u8[15 - (addr & 0xf)] = vm::read8(vm::cast(addr));
+	CPU.VPR[op.vd]._u8[15 - (addr & 0xf)] = vm::read8(VM_CAST(addr));
 }
 
 void ppu_interpreter::SUBFC(PPUThread& CPU, ppu_opcode_t op)
@@ -1780,7 +1779,7 @@ void ppu_interpreter::LWARX(PPUThread& CPU, ppu_opcode_t op)
 	const u64 addr = op.ra ? CPU.GPR[op.ra] + CPU.GPR[op.rb] : CPU.GPR[op.rb];
 
 	be_t<u32> value;
-	vm::reservation_acquire(&value, vm::cast(addr), sizeof(value));
+	vm::reservation_acquire(&value, VM_CAST(addr), sizeof32(value));
 
 	CPU.GPR[op.rd] = value;
 }
@@ -1788,13 +1787,13 @@ void ppu_interpreter::LWARX(PPUThread& CPU, ppu_opcode_t op)
 void ppu_interpreter::LDX(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? CPU.GPR[op.ra] + CPU.GPR[op.rb] : CPU.GPR[op.rb];
-	CPU.GPR[op.rd] = vm::read64(vm::cast(addr));
+	CPU.GPR[op.rd] = vm::read64(VM_CAST(addr));
 }
 
 void ppu_interpreter::LWZX(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? CPU.GPR[op.ra] + CPU.GPR[op.rb] : CPU.GPR[op.rb];
-	CPU.GPR[op.rd] = vm::read32(vm::cast(addr));
+	CPU.GPR[op.rd] = vm::read32(VM_CAST(addr));
 }
 
 void ppu_interpreter::SLW(PPUThread& CPU, ppu_opcode_t op)
@@ -1873,7 +1872,7 @@ void ppu_interpreter::LVSR(PPUThread& CPU, ppu_opcode_t op)
 void ppu_interpreter::LVEHX(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = (op.ra ? CPU.GPR[op.ra] + CPU.GPR[op.rb] : CPU.GPR[op.rb]) & ~1ULL;
-	CPU.VPR[op.vd]._u16[7 - ((addr >> 1) & 0x7)] = vm::read16(vm::cast(addr));
+	CPU.VPR[op.vd]._u16[7 - ((addr >> 1) & 0x7)] = vm::read16(VM_CAST(addr));
 }
 
 void ppu_interpreter::SUBF(PPUThread& CPU, ppu_opcode_t op)
@@ -1888,7 +1887,7 @@ void ppu_interpreter::SUBF(PPUThread& CPU, ppu_opcode_t op)
 void ppu_interpreter::LDUX(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = CPU.GPR[op.ra] + CPU.GPR[op.rb];
-	CPU.GPR[op.rd] = vm::read64(vm::cast(addr));
+	CPU.GPR[op.rd] = vm::read64(VM_CAST(addr));
 	CPU.GPR[op.ra] = addr;
 }
 
@@ -1899,7 +1898,7 @@ void ppu_interpreter::DCBST(PPUThread& CPU, ppu_opcode_t op)
 void ppu_interpreter::LWZUX(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = CPU.GPR[op.ra] + CPU.GPR[op.rb];
-	CPU.GPR[op.rd] = vm::read32(vm::cast(addr));
+	CPU.GPR[op.rd] = vm::read32(VM_CAST(addr));
 	CPU.GPR[op.ra] = addr;
 }
 
@@ -1923,13 +1922,13 @@ void ppu_interpreter::ANDC(PPUThread& CPU, ppu_opcode_t op)
 
 void ppu_interpreter::TD(PPUThread& CPU, ppu_opcode_t op)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 void ppu_interpreter::LVEWX(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = (op.ra ? CPU.GPR[op.ra] + CPU.GPR[op.rb] : CPU.GPR[op.rb]) & ~3ULL;
-	CPU.VPR[op.vd]._u32[3 - ((addr >> 2) & 0x3)] = vm::read32(vm::cast(addr));
+	CPU.VPR[op.vd]._u32[3 - ((addr >> 2) & 0x3)] = vm::read32(VM_CAST(addr));
 }
 
 void ppu_interpreter::MULHD(PPUThread& CPU, ppu_opcode_t op)
@@ -1951,7 +1950,7 @@ void ppu_interpreter::LDARX(PPUThread& CPU, ppu_opcode_t op)
 	const u64 addr = op.ra ? CPU.GPR[op.ra] + CPU.GPR[op.rb] : CPU.GPR[op.rb];
 
 	be_t<u64> value;
-	vm::reservation_acquire(&value, vm::cast(addr), sizeof(value));
+	vm::reservation_acquire(&value, VM_CAST(addr), sizeof32(value));
 
 	CPU.GPR[op.rd] = value;
 }
@@ -1963,13 +1962,13 @@ void ppu_interpreter::DCBF(PPUThread& CPU, ppu_opcode_t op)
 void ppu_interpreter::LBZX(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? CPU.GPR[op.ra] + CPU.GPR[op.rb] : CPU.GPR[op.rb];
-	CPU.GPR[op.rd] = vm::read8(vm::cast(addr));
+	CPU.GPR[op.rd] = vm::read8(VM_CAST(addr));
 }
 
 void ppu_interpreter::LVX(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = (op.ra ? CPU.GPR[op.ra] + CPU.GPR[op.rb] : CPU.GPR[op.rb]) & ~0xfull;
-	CPU.VPR[op.vd] = vm::read128(vm::cast(addr));
+	CPU.VPR[op.vd] = vm::read128(VM_CAST(addr));
 }
 
 void ppu_interpreter::NEG(PPUThread& CPU, ppu_opcode_t op)
@@ -1983,7 +1982,7 @@ void ppu_interpreter::NEG(PPUThread& CPU, ppu_opcode_t op)
 void ppu_interpreter::LBZUX(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = CPU.GPR[op.ra] + CPU.GPR[op.rb];
-	CPU.GPR[op.rd] = vm::read8(vm::cast(addr));
+	CPU.GPR[op.rd] = vm::read8(VM_CAST(addr));
 	CPU.GPR[op.ra] = addr;
 }
 
@@ -1997,7 +1996,7 @@ void ppu_interpreter::STVEBX(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? CPU.GPR[op.ra] + CPU.GPR[op.rb] : CPU.GPR[op.rb];
 	const u8 eb = addr & 0xf;
-	vm::write8(vm::cast(addr), CPU.VPR[op.vs]._u8[15 - eb]);
+	vm::write8(VM_CAST(addr), CPU.VPR[op.vs]._u8[15 - eb]);
 }
 
 void ppu_interpreter::SUBFE(PPUThread& CPU, ppu_opcode_t op)
@@ -2073,41 +2072,41 @@ void ppu_interpreter::MTOCRF(PPUThread& CPU, ppu_opcode_t op)
 void ppu_interpreter::STDX(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? CPU.GPR[op.ra] + CPU.GPR[op.rb] : CPU.GPR[op.rb];
-	vm::write64(vm::cast(addr), CPU.GPR[op.rs]);
+	vm::write64(VM_CAST(addr), CPU.GPR[op.rs]);
 }
 
 void ppu_interpreter::STWCX_(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? CPU.GPR[op.ra] + CPU.GPR[op.rb] : CPU.GPR[op.rb];
 
-	const be_t<u32> value = be_t<u32>::make((u32)CPU.GPR[op.rs]);
-	CPU.SetCR_EQ(0, vm::reservation_update(vm::cast(addr), &value, sizeof(value)));
+	const be_t<u32> value = (u32)CPU.GPR[op.rs];
+	CPU.SetCR_EQ(0, vm::reservation_update(VM_CAST(addr), &value, sizeof32(value)));
 }
 
 void ppu_interpreter::STWX(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? CPU.GPR[op.ra] + CPU.GPR[op.rb] : CPU.GPR[op.rb];
-	vm::write32(vm::cast(addr), (u32)CPU.GPR[op.rs]);
+	vm::write32(VM_CAST(addr), (u32)CPU.GPR[op.rs]);
 }
 
 void ppu_interpreter::STVEHX(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = (op.ra ? CPU.GPR[op.ra] + CPU.GPR[op.rb] : CPU.GPR[op.rb]) & ~1ULL;
 	const u8 eb = (addr & 0xf) >> 1;
-	vm::write16(vm::cast(addr), CPU.VPR[op.vs]._u16[7 - eb]);
+	vm::write16(VM_CAST(addr), CPU.VPR[op.vs]._u16[7 - eb]);
 }
 
 void ppu_interpreter::STDUX(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = CPU.GPR[op.ra] + CPU.GPR[op.rb];
-	vm::write64(vm::cast(addr), CPU.GPR[op.rs]);
+	vm::write64(VM_CAST(addr), CPU.GPR[op.rs]);
 	CPU.GPR[op.ra] = addr;
 }
 
 void ppu_interpreter::STWUX(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = CPU.GPR[op.ra] + CPU.GPR[op.rb];
-	vm::write32(vm::cast(addr), (u32)CPU.GPR[op.rs]);
+	vm::write32(VM_CAST(addr), (u32)CPU.GPR[op.rs]);
 	CPU.GPR[op.ra] = addr;
 }
 
@@ -2115,7 +2114,7 @@ void ppu_interpreter::STVEWX(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = (op.ra ? CPU.GPR[op.ra] + CPU.GPR[op.rb] : CPU.GPR[op.rb]) & ~3ULL;
 	const u8 eb = (addr & 0xf) >> 2;
-	vm::write32(vm::cast(addr), CPU.VPR[op.vs]._u32[3 - eb]);
+	vm::write32(VM_CAST(addr), CPU.VPR[op.vs]._u32[3 - eb]);
 }
 
 void ppu_interpreter::SUBFZE(PPUThread& CPU, ppu_opcode_t op)
@@ -2140,20 +2139,20 @@ void ppu_interpreter::STDCX_(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? CPU.GPR[op.ra] + CPU.GPR[op.rb] : CPU.GPR[op.rb];
 
-	const be_t<u64> value = be_t<u64>::make(CPU.GPR[op.rs]);
-	CPU.SetCR_EQ(0, vm::reservation_update(vm::cast(addr), &value, sizeof(value)));
+	const be_t<u64> value = CPU.GPR[op.rs];
+	CPU.SetCR_EQ(0, vm::reservation_update(VM_CAST(addr), &value, sizeof32(value)));
 }
 
 void ppu_interpreter::STBX(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? CPU.GPR[op.ra] + CPU.GPR[op.rb] : CPU.GPR[op.rb];
-	vm::write8(vm::cast(addr), (u8)CPU.GPR[op.rs]);
+	vm::write8(VM_CAST(addr), (u8)CPU.GPR[op.rs]);
 }
 
 void ppu_interpreter::STVX(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = (op.ra ? CPU.GPR[op.ra] + CPU.GPR[op.rb] : CPU.GPR[op.rb]) & ~0xfull;
-	vm::write128(vm::cast(addr), CPU.VPR[op.vs]);
+	vm::write128(VM_CAST(addr), CPU.VPR[op.vs]);
 }
 
 void ppu_interpreter::MULLD(PPUThread& CPU, ppu_opcode_t op)
@@ -2202,7 +2201,7 @@ void ppu_interpreter::DCBTST(PPUThread& CPU, ppu_opcode_t op)
 void ppu_interpreter::STBUX(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = CPU.GPR[op.ra] + CPU.GPR[op.rb];
-	vm::write8(vm::cast(addr), (u8)CPU.GPR[op.rs]);
+	vm::write8(VM_CAST(addr), (u8)CPU.GPR[op.rs]);
 	CPU.GPR[op.ra] = addr;
 }
 
@@ -2222,7 +2221,7 @@ void ppu_interpreter::DCBT(PPUThread& CPU, ppu_opcode_t op)
 void ppu_interpreter::LHZX(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? CPU.GPR[op.ra] + CPU.GPR[op.rb] : CPU.GPR[op.rb];
-	CPU.GPR[op.rd] = vm::read16(vm::cast(addr));
+	CPU.GPR[op.rd] = vm::read16(VM_CAST(addr));
 }
 
 void ppu_interpreter::EQV(PPUThread& CPU, ppu_opcode_t op)
@@ -2233,13 +2232,13 @@ void ppu_interpreter::EQV(PPUThread& CPU, ppu_opcode_t op)
 
 void ppu_interpreter::ECIWX(PPUThread& CPU, ppu_opcode_t op)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 void ppu_interpreter::LHZUX(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? CPU.GPR[op.ra] + CPU.GPR[op.rb] : CPU.GPR[op.rb];
-	CPU.GPR[op.rd] = vm::read16(vm::cast(addr));
+	CPU.GPR[op.rd] = vm::read16(VM_CAST(addr));
 	CPU.GPR[op.ra] = addr;
 }
 
@@ -2261,8 +2260,8 @@ void ppu_interpreter::MFSPR(PPUThread& CPU, ppu_opcode_t op)
 	case 0x100: CPU.GPR[op.rd] = CPU.VRSAVE; return;
 	case 0x103: CPU.GPR[op.rd] = CPU.SPRG[3]; return;
 
-	case 0x10C: CPU.TB = get_time(); CPU.GPR[op.rd] = CPU.TB; return;
-	case 0x10D: CPU.TB = get_time(); CPU.GPR[op.rd] = CPU.TB >> 32; return;
+	case 0x10C: CPU.TB = get_timebased_time(); CPU.GPR[op.rd] = CPU.TB; return;
+	case 0x10D: CPU.TB = get_timebased_time(); CPU.GPR[op.rd] = CPU.TB >> 32; return;
 
 	case 0x110:
 	case 0x111:
@@ -2274,13 +2273,13 @@ void ppu_interpreter::MFSPR(PPUThread& CPU, ppu_opcode_t op)
 	case 0x117: CPU.GPR[op.rd] = CPU.SPRG[n - 0x110]; return;
 	}
 
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 void ppu_interpreter::LWAX(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? CPU.GPR[op.ra] + CPU.GPR[op.rb] : CPU.GPR[op.rb];
-	CPU.GPR[op.rd] = (s64)(s32)vm::read32(vm::cast(addr));
+	CPU.GPR[op.rd] = (s64)(s32)vm::read32(VM_CAST(addr));
 }
 
 void ppu_interpreter::DST(PPUThread& CPU, ppu_opcode_t op)
@@ -2290,32 +2289,32 @@ void ppu_interpreter::DST(PPUThread& CPU, ppu_opcode_t op)
 void ppu_interpreter::LHAX(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? CPU.GPR[op.ra] + CPU.GPR[op.rb] : CPU.GPR[op.rb];
-	CPU.GPR[op.rd] = (s64)(s16)vm::read16(vm::cast(addr));
+	CPU.GPR[op.rd] = (s64)(s16)vm::read16(VM_CAST(addr));
 }
 
 void ppu_interpreter::LVXL(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = (op.ra ? CPU.GPR[op.ra] + CPU.GPR[op.rb] : CPU.GPR[op.rb]) & ~0xfull;
-	CPU.VPR[op.vd] = vm::read128(vm::cast(addr));
+	CPU.VPR[op.vd] = vm::read128(VM_CAST(addr));
 }
 
 void ppu_interpreter::MFTB(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u32 n = (op.spr >> 5) | ((op.spr & 0x1f) << 5);
 
-	CPU.TB = get_time();
+	CPU.TB = get_timebased_time();
 	switch (n)
 	{
 	case 0x10C: CPU.GPR[op.rd] = CPU.TB; break;
 	case 0x10D: CPU.GPR[op.rd] = CPU.TB >> 32; break;
-	default: throw __FUNCTION__;
+	default: throw EXCEPTION("");
 	}
 }
 
 void ppu_interpreter::LWAUX(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? CPU.GPR[op.ra] + CPU.GPR[op.rb] : CPU.GPR[op.rb];
-	CPU.GPR[op.rd] = (s64)(s32)vm::read32(vm::cast(addr));
+	CPU.GPR[op.rd] = (s64)(s32)vm::read32(VM_CAST(addr));
 	CPU.GPR[op.ra] = addr;
 }
 
@@ -2326,14 +2325,14 @@ void ppu_interpreter::DSTST(PPUThread& CPU, ppu_opcode_t op)
 void ppu_interpreter::LHAUX(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? CPU.GPR[op.ra] + CPU.GPR[op.rb] : CPU.GPR[op.rb];
-	CPU.GPR[op.rd] = (s64)(s16)vm::read16(vm::cast(addr));
+	CPU.GPR[op.rd] = (s64)(s16)vm::read16(VM_CAST(addr));
 	CPU.GPR[op.ra] = addr;
 }
 
 void ppu_interpreter::STHX(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? CPU.GPR[op.ra] + CPU.GPR[op.rb] : CPU.GPR[op.rb];
-	vm::write16(vm::cast(addr), (u16)CPU.GPR[op.rs]);
+	vm::write16(VM_CAST(addr), (u16)CPU.GPR[op.rs]);
 }
 
 void ppu_interpreter::ORC(PPUThread& CPU, ppu_opcode_t op)
@@ -2344,13 +2343,13 @@ void ppu_interpreter::ORC(PPUThread& CPU, ppu_opcode_t op)
 
 void ppu_interpreter::ECOWX(PPUThread& CPU, ppu_opcode_t op)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 void ppu_interpreter::STHUX(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = CPU.GPR[op.ra] + CPU.GPR[op.rb];
-	vm::write16(vm::cast(addr), (u16)CPU.GPR[op.rs]);
+	vm::write16(VM_CAST(addr), (u16)CPU.GPR[op.rs]);
 	CPU.GPR[op.ra] = addr;
 }
 
@@ -2419,7 +2418,7 @@ void ppu_interpreter::MTSPR(PPUThread& CPU, ppu_opcode_t op)
 	case 0x117: CPU.SPRG[n - 0x110] = CPU.GPR[op.rs]; return;
 	}
 
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 void ppu_interpreter::DCBI(PPUThread& CPU, ppu_opcode_t op)
@@ -2436,7 +2435,7 @@ void ppu_interpreter::NAND(PPUThread& CPU, ppu_opcode_t op)
 void ppu_interpreter::STVXL(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = (op.ra ? CPU.GPR[op.ra] + CPU.GPR[op.rb] : CPU.GPR[op.rb]) & ~0xfull;
-	vm::write128(vm::cast(addr), CPU.VPR[op.vs]);
+	vm::write128(VM_CAST(addr), CPU.VPR[op.vs]);
 }
 
 void ppu_interpreter::DIVD(PPUThread& CPU, ppu_opcode_t op)
@@ -2483,13 +2482,13 @@ void ppu_interpreter::LVLX(PPUThread& CPU, ppu_opcode_t op)
 	const u32 eb = addr & 0xf;
 
 	CPU.VPR[op.vd].clear();
-	for (u32 i = 0; i < 16u - eb; ++i) CPU.VPR[op.vd]._u8[15 - i] = vm::read8(vm::cast(addr + i));
+	for (u32 i = 0; i < 16u - eb; ++i) CPU.VPR[op.vd]._u8[15 - i] = vm::read8(VM_CAST(addr + i));
 }
 
 void ppu_interpreter::LDBRX(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? CPU.GPR[op.ra] + CPU.GPR[op.rb] : CPU.GPR[op.rb];
-	CPU.GPR[op.rd] = vm::get_ref<u64>(vm::cast(addr));
+	CPU.GPR[op.rd] = vm::get_ref<u64>(VM_CAST(addr));
 }
 
 void ppu_interpreter::LSWX(PPUThread& CPU, ppu_opcode_t op)
@@ -2498,14 +2497,14 @@ void ppu_interpreter::LSWX(PPUThread& CPU, ppu_opcode_t op)
 	u32 count = CPU.XER.XER & 0x7F;
 	for (; count >= 4; count -= 4, addr += 4, op.rd = (op.rd + 1) & 31)
 	{
-		CPU.GPR[op.rd] = vm::get_ref<be_t<u32>>(vm::cast(addr));
+		CPU.GPR[op.rd] = vm::get_ref<be_t<u32>>(VM_CAST(addr));
 	}
 	if (count)
 	{
 		u32 value = 0;
 		for (u32 byte = 0; byte < count; byte++)
 		{
-			u32 byte_value = vm::get_ref<u8>(vm::cast(addr + byte));
+			u32 byte_value = vm::get_ref<u8>(VM_CAST(addr + byte));
 			value |= byte_value << ((3 ^ byte) * 8);
 		}
 		CPU.GPR[op.rd] = value;
@@ -2515,13 +2514,13 @@ void ppu_interpreter::LSWX(PPUThread& CPU, ppu_opcode_t op)
 void ppu_interpreter::LWBRX(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? CPU.GPR[op.ra] + CPU.GPR[op.rb] : CPU.GPR[op.rb];
-	CPU.GPR[op.rd] = vm::get_ref<u32>(vm::cast(addr));
+	CPU.GPR[op.rd] = vm::get_ref<u32>(VM_CAST(addr));
 }
 
 void ppu_interpreter::LFSX(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? CPU.GPR[op.ra] + CPU.GPR[op.rb] : CPU.GPR[op.rb];
-	CPU.FPR[op.frd]._double = vm::get_ref<be_t<float>>(vm::cast(addr)).value();
+	CPU.FPR[op.frd]._double = vm::get_ref<be_t<float>>(VM_CAST(addr)).value();
 }
 
 void ppu_interpreter::SRW(PPUThread& CPU, ppu_opcode_t op)
@@ -2550,7 +2549,7 @@ void ppu_interpreter::LVRX(PPUThread& CPU, ppu_opcode_t op)
 	const u8 eb = addr & 0xf;
 
 	CPU.VPR[op.vd].clear();
-	for (u32 i = 16 - eb; i < 16; ++i) CPU.VPR[op.vd]._u8[15 - i] = vm::read8(vm::cast(addr + i - 16));
+	for (u32 i = 16 - eb; i < 16; ++i) CPU.VPR[op.vd]._u8[15 - i] = vm::read8(VM_CAST(addr + i - 16));
 }
 
 void ppu_interpreter::LSWI(PPUThread& CPU, ppu_opcode_t op)
@@ -2563,7 +2562,7 @@ void ppu_interpreter::LSWI(PPUThread& CPU, ppu_opcode_t op)
 	{
 		if (N > 3)
 		{
-			CPU.GPR[reg] = vm::read32(vm::cast(addr));
+			CPU.GPR[reg] = vm::read32(VM_CAST(addr));
 			addr += 4;
 			N -= 4;
 		}
@@ -2574,7 +2573,7 @@ void ppu_interpreter::LSWI(PPUThread& CPU, ppu_opcode_t op)
 			while (N > 0)
 			{
 				N = N - 1;
-				buf |= vm::read8(vm::cast(addr)) << (i * 8);
+				buf |= vm::read8(VM_CAST(addr)) << (i * 8);
 				addr++;
 				i--;
 			}
@@ -2587,7 +2586,7 @@ void ppu_interpreter::LSWI(PPUThread& CPU, ppu_opcode_t op)
 void ppu_interpreter::LFSUX(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = CPU.GPR[op.ra] + CPU.GPR[op.rb];
-	CPU.FPR[op.frd]._double = vm::get_ref<be_t<float>>(vm::cast(addr)).value();
+	CPU.FPR[op.frd]._double = vm::get_ref<be_t<float>>(VM_CAST(addr)).value();
 	CPU.GPR[op.ra] = addr;
 }
 
@@ -2599,13 +2598,13 @@ void ppu_interpreter::SYNC(PPUThread& CPU, ppu_opcode_t op)
 void ppu_interpreter::LFDX(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? CPU.GPR[op.ra] + CPU.GPR[op.rb] : CPU.GPR[op.rb];
-	CPU.FPR[op.frd]._double = vm::get_ref<be_t<double>>(vm::cast(addr)).value();
+	CPU.FPR[op.frd]._double = vm::get_ref<be_t<double>>(VM_CAST(addr)).value();
 }
 
 void ppu_interpreter::LFDUX(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = CPU.GPR[op.ra] + CPU.GPR[op.rb];
-	CPU.FPR[op.frd]._double = vm::get_ref<be_t<double>>(vm::cast(addr)).value();
+	CPU.FPR[op.frd]._double = vm::get_ref<be_t<double>>(VM_CAST(addr)).value();
 	CPU.GPR[op.ra] = addr;
 }
 
@@ -2614,13 +2613,13 @@ void ppu_interpreter::STVLX(PPUThread& CPU, ppu_opcode_t op)
 	const u64 addr = op.ra ? CPU.GPR[op.ra] + CPU.GPR[op.rb] : CPU.GPR[op.rb];
 	const u32 eb = addr & 0xf;
 
-	for (u32 i = 0; i < 16u - eb; ++i) vm::write8(vm::cast(addr + i), CPU.VPR[op.vs]._u8[15 - i]);
+	for (u32 i = 0; i < 16u - eb; ++i) vm::write8(VM_CAST(addr + i), CPU.VPR[op.vs]._u8[15 - i]);
 }
 
 void ppu_interpreter::STDBRX(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? CPU.GPR[op.ra] + CPU.GPR[op.rb] : CPU.GPR[op.rb];
-	vm::get_ref<u64>(vm::cast(addr)) = CPU.GPR[op.rs];
+	vm::get_ref<u64>(VM_CAST(addr)) = CPU.GPR[op.rs];
 }
 
 void ppu_interpreter::STSWX(PPUThread& CPU, ppu_opcode_t op)
@@ -2629,7 +2628,7 @@ void ppu_interpreter::STSWX(PPUThread& CPU, ppu_opcode_t op)
 	u32 count = CPU.XER.XER & 0x7F;
 	for (; count >= 4; count -= 4, addr += 4, op.rs = (op.rs + 1) & 31)
 	{
-		vm::write32(vm::cast(addr), (u32)CPU.GPR[op.rs]);
+		vm::write32(VM_CAST(addr), (u32)CPU.GPR[op.rs]);
 	}
 	if (count)
 	{
@@ -2637,7 +2636,7 @@ void ppu_interpreter::STSWX(PPUThread& CPU, ppu_opcode_t op)
 		for (u32 byte = 0; byte < count; byte++)
 		{
 			u32 byte_value = (u8)(value >> ((3 ^ byte) * 8));
-			vm::write8(vm::cast(addr + byte), byte_value);
+			vm::write8(VM_CAST(addr + byte), byte_value);
 		}
 	}
 }
@@ -2645,13 +2644,13 @@ void ppu_interpreter::STSWX(PPUThread& CPU, ppu_opcode_t op)
 void ppu_interpreter::STWBRX(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? CPU.GPR[op.ra] + CPU.GPR[op.rb] : CPU.GPR[op.rb];
-	vm::get_ref<u32>(vm::cast(addr)) = (u32)CPU.GPR[op.rs];
+	vm::get_ref<u32>(VM_CAST(addr)) = (u32)CPU.GPR[op.rs];
 }
 
 void ppu_interpreter::STFSX(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? CPU.GPR[op.ra] + CPU.GPR[op.rb] : CPU.GPR[op.rb];
-	vm::get_ref<be_t<float>>(vm::cast(addr)) = static_cast<float>(CPU.FPR[op.frs]);
+	vm::get_ref<be_t<float>>(VM_CAST(addr)) = static_cast<float>(CPU.FPR[op.frs]);
 }
 
 void ppu_interpreter::STVRX(PPUThread& CPU, ppu_opcode_t op)
@@ -2659,13 +2658,13 @@ void ppu_interpreter::STVRX(PPUThread& CPU, ppu_opcode_t op)
 	const u64 addr = op.ra ? CPU.GPR[op.ra] + CPU.GPR[op.rb] : CPU.GPR[op.rb];
 	const u8 eb = addr & 0xf;
 
-	for (u32 i = 16 - eb; i < 16; ++i) vm::write8(vm::cast(addr + i - 16), CPU.VPR[op.vs]._u8[15 - i]);
+	for (u32 i = 16 - eb; i < 16; ++i) vm::write8(VM_CAST(addr + i - 16), CPU.VPR[op.vs]._u8[15 - i]);
 }
 
 void ppu_interpreter::STFSUX(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = CPU.GPR[op.ra] + CPU.GPR[op.rb];
-	vm::get_ref<be_t<float>>(vm::cast(addr)) = static_cast<float>(CPU.FPR[op.frs]);
+	vm::get_ref<be_t<float>>(VM_CAST(addr)) = static_cast<float>(CPU.FPR[op.frs]);
 	CPU.GPR[op.ra] = addr;
 }
 
@@ -2679,7 +2678,7 @@ void ppu_interpreter::STSWI(PPUThread& CPU, ppu_opcode_t op)
 	{
 		if (N > 3)
 		{
-			vm::write32(vm::cast(addr), (u32)CPU.GPR[reg]);
+			vm::write32(VM_CAST(addr), (u32)CPU.GPR[reg]);
 			addr += 4;
 			N -= 4;
 		}
@@ -2689,7 +2688,7 @@ void ppu_interpreter::STSWI(PPUThread& CPU, ppu_opcode_t op)
 			while (N > 0)
 			{
 				N = N - 1;
-				vm::write8(vm::cast(addr), (0xFF000000 & buf) >> 24);
+				vm::write8(VM_CAST(addr), (0xFF000000 & buf) >> 24);
 				buf <<= 8;
 				addr++;
 			}
@@ -2701,13 +2700,13 @@ void ppu_interpreter::STSWI(PPUThread& CPU, ppu_opcode_t op)
 void ppu_interpreter::STFDX(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? CPU.GPR[op.ra] + CPU.GPR[op.rb] : CPU.GPR[op.rb];
-	vm::get_ref<be_t<double>>(vm::cast(addr)) = CPU.FPR[op.frs];
+	vm::get_ref<be_t<double>>(VM_CAST(addr)) = CPU.FPR[op.frs];
 }
 
 void ppu_interpreter::STFDUX(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = CPU.GPR[op.ra] + CPU.GPR[op.rb];
-	vm::get_ref<be_t<double>>(vm::cast(addr)) = CPU.FPR[op.frs];
+	vm::get_ref<be_t<double>>(VM_CAST(addr)) = CPU.FPR[op.frs];
 	CPU.GPR[op.ra] = addr;
 }
 
@@ -2717,13 +2716,13 @@ void ppu_interpreter::LVLXL(PPUThread& CPU, ppu_opcode_t op)
 	const u32 eb = addr & 0xf;
 
 	CPU.VPR[op.vd].clear();
-	for (u32 i = 0; i < 16u - eb; ++i) CPU.VPR[op.vd]._u8[15 - i] = vm::read8(vm::cast(addr + i));
+	for (u32 i = 0; i < 16u - eb; ++i) CPU.VPR[op.vd]._u8[15 - i] = vm::read8(VM_CAST(addr + i));
 }
 
 void ppu_interpreter::LHBRX(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? CPU.GPR[op.ra] + CPU.GPR[op.rb] : CPU.GPR[op.rb];
-	CPU.GPR[op.rd] = vm::get_ref<u16>(vm::cast(addr));
+	CPU.GPR[op.rd] = vm::get_ref<u16>(VM_CAST(addr));
 }
 
 void ppu_interpreter::SRAW(PPUThread& CPU, ppu_opcode_t op)
@@ -2768,7 +2767,7 @@ void ppu_interpreter::LVRXL(PPUThread& CPU, ppu_opcode_t op)
 	const u8 eb = addr & 0xf;
 
 	CPU.VPR[op.vd].clear();
-	for (u32 i = 16 - eb; i < 16; ++i) CPU.VPR[op.vd]._u8[15 - i] = vm::read8(vm::cast(addr + i - 16));
+	for (u32 i = 16 - eb; i < 16; ++i) CPU.VPR[op.vd]._u8[15 - i] = vm::read8(VM_CAST(addr + i - 16));
 }
 
 void ppu_interpreter::DSS(PPUThread& CPU, ppu_opcode_t op)
@@ -2804,13 +2803,13 @@ void ppu_interpreter::STVLXL(PPUThread& CPU, ppu_opcode_t op)
 	const u64 addr = op.ra ? CPU.GPR[op.ra] + CPU.GPR[op.rb] : CPU.GPR[op.rb];
 	const u32 eb = addr & 0xf;
 
-	for (u32 i = 0; i < 16u - eb; ++i) vm::write8(vm::cast(addr + i), CPU.VPR[op.vs]._u8[15 - i]);
+	for (u32 i = 0; i < 16u - eb; ++i) vm::write8(VM_CAST(addr + i), CPU.VPR[op.vs]._u8[15 - i]);
 }
 
 void ppu_interpreter::STHBRX(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? CPU.GPR[op.ra] + CPU.GPR[op.rb] : CPU.GPR[op.rb];
-	vm::get_ref<u16>(vm::cast(addr)) = (u16)CPU.GPR[op.rs];
+	vm::get_ref<u16>(VM_CAST(addr)) = (u16)CPU.GPR[op.rs];
 }
 
 void ppu_interpreter::EXTSH(PPUThread& CPU, ppu_opcode_t op)
@@ -2824,7 +2823,7 @@ void ppu_interpreter::STVRXL(PPUThread& CPU, ppu_opcode_t op)
 	const u64 addr = op.ra ? CPU.GPR[op.ra] + CPU.GPR[op.rb] : CPU.GPR[op.rb];
 	const u8 eb = addr & 0xf;
 
-	for (u32 i = 16 - eb; i < 16; ++i) vm::write8(vm::cast(addr + i - 16), CPU.VPR[op.vs]._u8[15 - i]);
+	for (u32 i = 16 - eb; i < 16; ++i) vm::write8(VM_CAST(addr + i - 16), CPU.VPR[op.vs]._u8[15 - i]);
 }
 
 void ppu_interpreter::EXTSB(PPUThread& CPU, ppu_opcode_t op)
@@ -2836,7 +2835,7 @@ void ppu_interpreter::EXTSB(PPUThread& CPU, ppu_opcode_t op)
 void ppu_interpreter::STFIWX(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? CPU.GPR[op.ra] + CPU.GPR[op.rb] : CPU.GPR[op.rb];
-	vm::write32(vm::cast(addr), (u32&)CPU.FPR[op.frs]);
+	vm::write32(VM_CAST(addr), (u32&)CPU.FPR[op.frs]);
 }
 
 void ppu_interpreter::EXTSW(PPUThread& CPU, ppu_opcode_t op)
@@ -2853,97 +2852,97 @@ void ppu_interpreter::DCBZ(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? CPU.GPR[op.ra] + CPU.GPR[op.rb] : CPU.GPR[op.rb];
 
-	memset(vm::get_ptr<u8>(vm::cast(addr) & ~127), 0, 128);
+	memset(vm::get_ptr<u8>(VM_CAST(addr) & ~127), 0, 128);
 }
 
 void ppu_interpreter::LWZ(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? CPU.GPR[op.ra] + op.simm16 : op.simm16;
-	CPU.GPR[op.rd] = vm::read32(vm::cast(addr));
+	CPU.GPR[op.rd] = vm::read32(VM_CAST(addr));
 }
 
 void ppu_interpreter::LWZU(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = CPU.GPR[op.ra] + op.simm16;
-	CPU.GPR[op.rd] = vm::read32(vm::cast(addr));
+	CPU.GPR[op.rd] = vm::read32(VM_CAST(addr));
 	CPU.GPR[op.ra] = addr;
 }
 
 void ppu_interpreter::LBZ(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? CPU.GPR[op.ra] + op.simm16 : op.simm16;
-	CPU.GPR[op.rd] = vm::read8(vm::cast(addr));
+	CPU.GPR[op.rd] = vm::read8(VM_CAST(addr));
 }
 
 void ppu_interpreter::LBZU(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = CPU.GPR[op.ra] + op.simm16;
-	CPU.GPR[op.rd] = vm::read8(vm::cast(addr));
+	CPU.GPR[op.rd] = vm::read8(VM_CAST(addr));
 	CPU.GPR[op.ra] = addr;
 }
 
 void ppu_interpreter::STW(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? CPU.GPR[op.ra] + op.simm16 : op.simm16;
-	vm::write32(vm::cast(addr), (u32)CPU.GPR[op.rs]);
+	vm::write32(VM_CAST(addr), (u32)CPU.GPR[op.rs]);
 }
 
 void ppu_interpreter::STWU(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = CPU.GPR[op.ra] + op.simm16;
-	vm::write32(vm::cast(addr), (u32)CPU.GPR[op.rs]);
+	vm::write32(VM_CAST(addr), (u32)CPU.GPR[op.rs]);
 	CPU.GPR[op.ra] = addr;
 }
 
 void ppu_interpreter::STB(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? CPU.GPR[op.ra] + op.simm16 : op.simm16;
-	vm::write8(vm::cast(addr), (u8)CPU.GPR[op.rs]);
+	vm::write8(VM_CAST(addr), (u8)CPU.GPR[op.rs]);
 }
 
 void ppu_interpreter::STBU(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = CPU.GPR[op.ra] + op.simm16;
-	vm::write8(vm::cast(addr), (u8)CPU.GPR[op.rs]);
+	vm::write8(VM_CAST(addr), (u8)CPU.GPR[op.rs]);
 	CPU.GPR[op.ra] = addr;
 }
 
 void ppu_interpreter::LHZ(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? CPU.GPR[op.ra] + op.simm16 : op.simm16;
-	CPU.GPR[op.rd] = vm::read16(vm::cast(addr));
+	CPU.GPR[op.rd] = vm::read16(VM_CAST(addr));
 }
 
 void ppu_interpreter::LHZU(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = CPU.GPR[op.ra] + op.simm16;
-	CPU.GPR[op.rd] = vm::read16(vm::cast(addr));
+	CPU.GPR[op.rd] = vm::read16(VM_CAST(addr));
 	CPU.GPR[op.ra] = addr;
 }
 
 void ppu_interpreter::LHA(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? CPU.GPR[op.ra] + op.simm16 : op.simm16;
-	CPU.GPR[op.rd] = (s64)(s16)vm::read16(vm::cast(addr));
+	CPU.GPR[op.rd] = (s64)(s16)vm::read16(VM_CAST(addr));
 }
 
 void ppu_interpreter::LHAU(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = CPU.GPR[op.ra] + op.simm16;
-	CPU.GPR[op.rd] = (s64)(s16)vm::read16(vm::cast(addr));
+	CPU.GPR[op.rd] = (s64)(s16)vm::read16(VM_CAST(addr));
 	CPU.GPR[op.ra] = addr;
 }
 
 void ppu_interpreter::STH(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? CPU.GPR[op.ra] + op.simm16 : op.simm16;
-	vm::write16(vm::cast(addr), (u16)CPU.GPR[op.rs]);
+	vm::write16(VM_CAST(addr), (u16)CPU.GPR[op.rs]);
 }
 
 void ppu_interpreter::STHU(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = CPU.GPR[op.ra] + op.simm16;
-	vm::write16(vm::cast(addr), (u16)CPU.GPR[op.rs]);
+	vm::write16(VM_CAST(addr), (u16)CPU.GPR[op.rs]);
 	CPU.GPR[op.ra] = addr;
 }
 
@@ -2952,7 +2951,7 @@ void ppu_interpreter::LMW(PPUThread& CPU, ppu_opcode_t op)
 	u64 addr = op.ra ? CPU.GPR[op.ra] + op.simm16 : op.simm16;
 	for (u32 i = op.rd; i<32; ++i, addr += 4)
 	{
-		CPU.GPR[i] = vm::read32(vm::cast(addr));
+		CPU.GPR[i] = vm::read32(VM_CAST(addr));
 	}
 }
 
@@ -2961,79 +2960,79 @@ void ppu_interpreter::STMW(PPUThread& CPU, ppu_opcode_t op)
 	u64 addr = op.ra ? CPU.GPR[op.ra] + op.simm16 : op.simm16;
 	for (u32 i = op.rs; i<32; ++i, addr += 4)
 	{
-		vm::write32(vm::cast(addr), (u32)CPU.GPR[i]);
+		vm::write32(VM_CAST(addr), (u32)CPU.GPR[i]);
 	}
 }
 
 void ppu_interpreter::LFS(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? CPU.GPR[op.ra] + op.simm16 : op.simm16;
-	CPU.FPR[op.frd]._double = vm::get_ref<be_t<float>>(vm::cast(addr)).value();
+	CPU.FPR[op.frd]._double = vm::get_ref<be_t<float>>(VM_CAST(addr)).value();
 }
 
 void ppu_interpreter::LFSU(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = CPU.GPR[op.ra] + op.simm16;
-	CPU.FPR[op.frd]._double = vm::get_ref<be_t<float>>(vm::cast(addr)).value();
+	CPU.FPR[op.frd]._double = vm::get_ref<be_t<float>>(VM_CAST(addr)).value();
 	CPU.GPR[op.ra] = addr;
 }
 
 void ppu_interpreter::LFD(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? CPU.GPR[op.ra] + op.simm16 : op.simm16;
-	CPU.FPR[op.frd]._double = vm::get_ref<be_t<double>>(vm::cast(addr)).value();
+	CPU.FPR[op.frd]._double = vm::get_ref<be_t<double>>(VM_CAST(addr)).value();
 }
 
 void ppu_interpreter::LFDU(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = CPU.GPR[op.ra] + op.simm16;
-	CPU.FPR[op.frd]._double = vm::get_ref<be_t<double>>(vm::cast(addr)).value();
+	CPU.FPR[op.frd]._double = vm::get_ref<be_t<double>>(VM_CAST(addr)).value();
 	CPU.GPR[op.ra] = addr;
 }
 
 void ppu_interpreter::STFS(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? CPU.GPR[op.ra] + op.simm16 : op.simm16;
-	vm::get_ref<be_t<float>>(vm::cast(addr)) = static_cast<float>(CPU.FPR[op.frs]);
+	vm::get_ref<be_t<float>>(VM_CAST(addr)) = static_cast<float>(CPU.FPR[op.frs]);
 }
 
 void ppu_interpreter::STFSU(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = CPU.GPR[op.ra] + op.simm16;
-	vm::get_ref<be_t<float>>(vm::cast(addr)) = static_cast<float>(CPU.FPR[op.frs]);
+	vm::get_ref<be_t<float>>(VM_CAST(addr)) = static_cast<float>(CPU.FPR[op.frs]);
 	CPU.GPR[op.ra] = addr;
 }
 
 void ppu_interpreter::STFD(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? CPU.GPR[op.ra] + op.simm16 : op.simm16;
-	vm::get_ref<be_t<double>>(vm::cast(addr)) = CPU.FPR[op.frs];
+	vm::get_ref<be_t<double>>(VM_CAST(addr)) = CPU.FPR[op.frs];
 }
 
 void ppu_interpreter::STFDU(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = CPU.GPR[op.ra] + op.simm16;
-	vm::get_ref<be_t<double>>(vm::cast(addr)) = CPU.FPR[op.frs];
+	vm::get_ref<be_t<double>>(VM_CAST(addr)) = CPU.FPR[op.frs];
 	CPU.GPR[op.ra] = addr;
 }
 
 void ppu_interpreter::LD(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = (op.simm16 & ~3) + (op.ra ? CPU.GPR[op.ra] : 0);
-	CPU.GPR[op.rd] = vm::read64(vm::cast(addr));
+	CPU.GPR[op.rd] = vm::read64(VM_CAST(addr));
 }
 
 void ppu_interpreter::LDU(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = CPU.GPR[op.ra] + (op.simm16 & ~3);
-	CPU.GPR[op.rd] = vm::read64(vm::cast(addr));
+	CPU.GPR[op.rd] = vm::read64(VM_CAST(addr));
 	CPU.GPR[op.ra] = addr;
 }
 
 void ppu_interpreter::LWA(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = (op.simm16 & ~3) + (op.ra ? CPU.GPR[op.ra] : 0);
-	CPU.GPR[op.rd] = (s64)(s32)vm::read32(vm::cast(addr));
+	CPU.GPR[op.rd] = (s64)(s32)vm::read32(VM_CAST(addr));
 }
 
 void ppu_interpreter::FDIVS(PPUThread& CPU, ppu_opcode_t op)
@@ -3099,13 +3098,13 @@ void ppu_interpreter::FNMADDS(PPUThread& CPU, ppu_opcode_t op)
 void ppu_interpreter::STD(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = (op.simm16 & ~3) + (op.ra ? CPU.GPR[op.ra] : 0);
-	vm::write64(vm::cast(addr), CPU.GPR[op.rs]);
+	vm::write64(VM_CAST(addr), CPU.GPR[op.rs]);
 }
 
 void ppu_interpreter::STDU(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = CPU.GPR[op.ra] + (op.simm16 & ~3);
-	vm::write64(vm::cast(addr), CPU.GPR[op.rs]);
+	vm::write64(VM_CAST(addr), CPU.GPR[op.rs]);
 	CPU.GPR[op.ra] = addr;
 }
 
@@ -3324,5 +3323,5 @@ void ppu_interpreter::FCFID(PPUThread& CPU, ppu_opcode_t op)
 
 void ppu_interpreter::UNK(PPUThread& CPU, ppu_opcode_t op)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }

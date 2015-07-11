@@ -1,16 +1,8 @@
 #pragma once
 
-enum : u32
-{
-	MHZ = 1000000,
-};
-
-// Auxiliary functions
-u64 get_time();
-u64 get_system_time();
+namespace vm { using namespace ps3; }
 
 // SysCalls
-s32 sys_time_get_timezone(vm::ptr<u32> timezone, vm::ptr<u32> summertime);
-s32 sys_time_get_current_time(u32 sec_addr, u32 nsec_addr);
-s64 sys_time_get_system_time();
+s32 sys_time_get_timezone(vm::ptr<s32> timezone, vm::ptr<s32> summertime);
+s32 sys_time_get_current_time(vm::ptr<s64> sec, vm::ptr<s64> nsec);
 u64 sys_time_get_timebase_frequency();

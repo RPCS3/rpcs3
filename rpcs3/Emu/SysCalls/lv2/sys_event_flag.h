@@ -1,5 +1,7 @@
 #pragma once
 
+namespace vm { using namespace ps3; }
+
 enum
 {
 	SYS_SYNC_WAITER_SINGLE = 0x10000,
@@ -12,7 +14,7 @@ enum
 	SYS_EVENT_FLAG_WAIT_CLEAR_ALL = 0x20,
 };
 
-struct sys_event_flag_attr
+struct sys_event_flag_attribute_t
 {
 	be_t<u32> protocol;
 	be_t<u32> pshared;
@@ -53,7 +55,7 @@ struct lv2_event_flag_t
 
 REG_ID_TYPE(lv2_event_flag_t, 0x98); // SYS_EVENT_FLAG_OBJECT
 
-s32 sys_event_flag_create(vm::ptr<u32> id, vm::ptr<sys_event_flag_attr> attr, u64 init);
+s32 sys_event_flag_create(vm::ptr<u32> id, vm::ptr<sys_event_flag_attribute_t> attr, u64 init);
 s32 sys_event_flag_destroy(u32 id);
 s32 sys_event_flag_wait(u32 id, u64 bitptn, u32 mode, vm::ptr<u64> result, u64 timeout);
 s32 sys_event_flag_trywait(u32 id, u64 bitptn, u32 mode, vm::ptr<u64> result);

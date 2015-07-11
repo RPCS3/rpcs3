@@ -7,17 +7,12 @@
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/SysCalls/Modules/sysPrxForUser.h"
 #include "sleep_queue.h"
-#include "sys_time.h"
 #include "sys_lwmutex.h"
 #include "sys_lwcond.h"
 
 SysCallBase sys_lwcond("sys_lwcond");
 
-void lwcond_create(sys_lwcond_t& lwcond, sys_lwmutex_t& lwmutex, u64 name)
-{
-	lwcond.lwmutex.set(vm::get_addr(&lwmutex));
-	lwcond.lwcond_queue = Emu.GetIdManager().make<lv2_lwcond_t>(name);
-}
+extern u64 get_system_time();
 
 s32 _sys_lwcond_create(vm::ptr<u32> lwcond_id, u32 lwmutex_id, vm::ptr<sys_lwcond_t> control, u64 name, u32 arg5)
 {
@@ -131,7 +126,7 @@ s32 _sys_lwcond_signal_all(u32 lwcond_id, u32 lwmutex_id, u32 mode)
 		sys_lwcond.Error("_sys_lwcond_signal_all(%d): invalid mode (%d)", lwcond_id, mode);
 	}
 
-	const u32 count = cond->waiters.size();
+	const u32 count = (u32)cond->waiters.size();
 
 	if (count)
 	{
@@ -186,6 +181,8 @@ s32 _sys_lwcond_queue_wait(PPUThread& CPU, u32 lwcond_id, u32 lwmutex_id, u64 ti
 
 	while ((!(cond->signaled1 && mutex->signaled) && !cond->signaled2) || cond->waiters.count(CPU.GetId()))
 	{
+		CHECK_EMU_STATUS;
+
 		const bool is_timedout = timeout && get_system_time() - start_time > timeout;
 
 		// check timeout
@@ -200,7 +197,7 @@ s32 _sys_lwcond_queue_wait(PPUThread& CPU, u32 lwcond_id, u32 lwmutex_id, u64 ti
 				}
 				else
 				{
-					throw __FUNCTION__;
+					throw EXCEPTION("Unexpected values");
 				}
 			}
 
@@ -214,12 +211,6 @@ s32 _sys_lwcond_queue_wait(PPUThread& CPU, u32 lwcond_id, u32 lwmutex_id, u64 ti
 			{
 				return CELL_ETIMEDOUT;
 			}
-		}
-
-		if (Emu.IsStopped())
-		{
-			sys_lwcond.Warning("_sys_lwcond_queue_wait(lwcond_id=0x%x) aborted", lwcond_id);
-			return CELL_OK;
 		}
 
 		(cond->signaled1 ? mutex->cv : cond->cv).wait_for(lv2_lock, std::chrono::milliseconds(1));

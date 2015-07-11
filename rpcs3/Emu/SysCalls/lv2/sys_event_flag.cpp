@@ -4,15 +4,15 @@
 #include "Emu/IdManager.h"
 #include "Emu/SysCalls/SysCalls.h"
 
-#include "Emu/CPU/CPUThreadManager.h"
 #include "Emu/Cell/PPUThread.h"
 #include "sleep_queue.h"
-#include "sys_time.h"
 #include "sys_event_flag.h"
 
 SysCallBase sys_event_flag("sys_event_flag");
 
-s32 sys_event_flag_create(vm::ptr<u32> id, vm::ptr<sys_event_flag_attr> attr, u64 init)
+extern u64 get_system_time();
+
+s32 sys_event_flag_create(vm::ptr<u32> id, vm::ptr<sys_event_flag_attribute_t> attr, u64 init)
 {
 	sys_event_flag.Warning("sys_event_flag_create(id=*0x%x, attr=*0x%x, init=0x%llx)", id, attr, init);
 
@@ -32,7 +32,7 @@ s32 sys_event_flag_create(vm::ptr<u32> id, vm::ptr<sys_event_flag_attr> attr, u6
 	default: sys_event_flag.Error("sys_event_flag_create(): unknown protocol (0x%x)", attr->protocol); return CELL_EINVAL;
 	}
 
-	if (attr->pshared.data() != se32(0x200) || attr->ipc_key.data() || attr->flags.data())
+	if (attr->pshared != SYS_SYNC_NOT_PROCESS_SHARED || attr->ipc_key.data() || attr->flags.data())
 	{
 		sys_event_flag.Error("sys_event_flag_create(): unknown attributes (pshared=0x%x, ipc_key=0x%llx, flags=0x%x)", attr->pshared, attr->ipc_key, attr->flags);
 		return CELL_EINVAL;
@@ -141,6 +141,8 @@ s32 sys_event_flag_wait(u32 id, u64 bitptn, u32 mode, vm::ptr<u64> result, u64 t
 			break;
 		}
 
+		CHECK_EMU_STATUS;
+
 		if (ef->cancelled)
 		{
 			if (!--ef->cancelled)
@@ -155,12 +157,6 @@ s32 sys_event_flag_wait(u32 id, u64 bitptn, u32 mode, vm::ptr<u64> result, u64 t
 		{
 			ef->waiters--;
 			return CELL_ETIMEDOUT;
-		}
-
-		if (Emu.IsStopped())
-		{
-			sys_event_flag.Warning("sys_event_flag_wait(id=0x%x) aborted", id);
-			return CELL_OK;
 		}
 
 		ef->cv.wait_for(lv2_lock, std::chrono::milliseconds(1));

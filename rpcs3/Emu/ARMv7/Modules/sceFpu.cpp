@@ -2,7 +2,79 @@
 #include "Emu/System.h"
 #include "Emu/ARMv7/PSVFuncList.h"
 
-extern psv_log_base sceFpu;
+#include "sceFpu.h"
+
+float sceFpuSinf(float x)
+{
+	throw EXCEPTION("");
+}
+
+float sceFpuCosf(float x)
+{
+	throw EXCEPTION("");
+}
+
+float sceFpuTanf(float x)
+{
+	throw EXCEPTION("");
+}
+
+float sceFpuAtanf(float x)
+{
+	throw EXCEPTION("");
+}
+
+float sceFpuAtan2f(float y, float x)
+{
+	throw EXCEPTION("");
+}
+
+float sceFpuAsinf(float x)
+{
+	throw EXCEPTION("");
+}
+
+float sceFpuAcosf(float x)
+{
+	throw EXCEPTION("");
+}
+
+
+float sceFpuLogf(float x)
+{
+	throw EXCEPTION("");
+}
+
+float sceFpuLog2f(float fs)
+{
+	throw EXCEPTION("");
+}
+
+float sceFpuLog10f(float fs)
+{
+	throw EXCEPTION("");
+}
+
+float sceFpuExpf(float x)
+{
+	throw EXCEPTION("");
+}
+
+float sceFpuExp2f(float x)
+{
+	throw EXCEPTION("");
+}
+
+float sceFpuExp10f(float x)
+{
+	throw EXCEPTION("");
+}
+
+float sceFpuPowf(float x, float y)
+{
+	throw EXCEPTION("");
+}
+
 
 #define REG_FUNC(nid, name) reg_psv_func(nid, &sceFpu, #name, name)
 
@@ -11,6 +83,7 @@ psv_log_base sceFpu("SceFpu", []()
 	sceFpu.on_load = nullptr;
 	sceFpu.on_unload = nullptr;
 	sceFpu.on_stop = nullptr;
+	sceFpu.on_error = nullptr;
 
 	//REG_FUNC(0x33E1AC14, sceFpuSinf);
 	//REG_FUNC(0xDB66BA89, sceFpuCosf);

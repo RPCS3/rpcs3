@@ -1,5 +1,7 @@
 #pragma once
 
+namespace vm { using namespace ps3; }
+
 struct sys_lwmutex_t;
 
 struct sys_lwcond_attribute_t
@@ -40,8 +42,6 @@ struct lv2_lwcond_t
 REG_ID_TYPE(lv2_lwcond_t, 0x97); // SYS_LWCOND_OBJECT
 
 // Aux
-void lwcond_create(sys_lwcond_t& lwcond, sys_lwmutex_t& lwmutex, u64 name);
-
 class PPUThread;
 
 // SysCalls

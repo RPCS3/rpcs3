@@ -1,5 +1,7 @@
 #pragma once
 
+namespace vm { using namespace ps3; }
+
 struct CellFontLibraryConfigFT
 {
 	u32 library_addr; //void*

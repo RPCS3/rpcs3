@@ -4,7 +4,7 @@
 #include "Utilities/AutoPause.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
-#include "ModuleManager.h"
+#include "Modules.h"
 
 #include "lv2/sleep_queue.h"
 #include "lv2/sys_lwmutex.h"
@@ -29,19 +29,25 @@
 #include "lv2/sys_tty.h"
 #include "lv2/sys_vm.h"
 #include "lv2/sys_fs.h"
+#include "lv2/sys_dbg.h"
 
 #include "Emu/SysCalls/Modules/cellGcmSys.h"
 
 #include "SysCalls.h"
 
-void null_func(PPUThread& CPU);
+void null_func(PPUThread& ppu)
+{
+	const auto code = ppu.GPR[11];
+	LOG_ERROR(HLE, "Unimplemented syscall %lld: %s -> CELL_OK", code, SysCalls::GetFuncName(~code));
+	ppu.GPR[3] = 0;
+}
 
 // UNS = Unused
 // ROOT = Root
 // DBG = Debug
 // PM = Product Mode
 // AuthID = Authentication ID
-const ppu_func_caller sc_table[1024] =
+const ppu_func_caller g_sc_table[1024] =
 {
 	null_func,
 	bind_func(sys_process_getpid),                          //1   (0x001)
@@ -182,7 +188,7 @@ const ppu_func_caller sc_table[1024] =
 	bind_func(sys_time_get_current_time),                   //145 (0x091)
 	null_func,//bind_func(sys_time_get_system_time),        //146 (0x092)  ROOT
 	bind_func(sys_time_get_timebase_frequency),             //147 (0x093)
-	null_func,//bind_func(sys_rwlock_trywlock)              //148 (0x094)
+	null_func,//bind_func(_sys_rwlock_trywlock)             //148 (0x094)
 	null_func,                                              //149 (0x095)  UNS
 	bind_func(sys_raw_spu_create_interrupt_tag),            //150 (0x096)
 	bind_func(sys_raw_spu_set_int_mask),                    //151 (0x097)
@@ -886,35 +892,27 @@ const ppu_func_caller sc_table[1024] =
 	null_func, null_func, null_func, bind_func(cellGcmCallback), //1023  UNS
 };
 
-void null_func(PPUThread& CPU)
-{
-	const auto code = CPU.GPR[11];
-	LOG_ERROR(HLE, "Unimplemented syscall %lld: %s -> CELL_OK", code, SysCalls::GetFuncName(~code));
-	CPU.GPR[3] = 0;
-}
-
 void SysCalls::DoSyscall(PPUThread& CPU, u64 code)
 {
 	if (code >= 1024)
 	{
-		CPU.m_last_syscall = code;
-		throw "Invalid syscall number";
+		throw EXCEPTION("Invalid syscall number (0x%llx)", code);
 	}
 	
-	auto old_last_syscall = CPU.m_last_syscall;
-	CPU.m_last_syscall = ~code;
+	auto last_code = CPU.hle_code;
+	CPU.hle_code = ~code;
 
 	if (Ini.HLELogging.GetValue())
 	{
 		LOG_NOTICE(PPU, "Syscall %lld called: %s", code, SysCalls::GetFuncName(~code));
 	}
 
-	sc_table[code](CPU);
+	g_sc_table[code](CPU);
 
 	if (Ini.HLELogging.GetValue())
 	{
 		LOG_NOTICE(PPU, "Syscall %lld finished: %s -> 0x%llx", code, SysCalls::GetFuncName(~code), CPU.GPR[3]);
 	}
 
-	CPU.m_last_syscall = old_last_syscall;
+	CPU.hle_code = last_code;
 }

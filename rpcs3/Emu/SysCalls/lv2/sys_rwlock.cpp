@@ -6,10 +6,11 @@
 
 #include "Emu/Cell/PPUThread.h"
 #include "sleep_queue.h"
-#include "sys_time.h"
 #include "sys_rwlock.h"
 
 SysCallBase sys_rwlock("sys_rwlock");
+
+extern u64 get_system_time();
 
 s32 sys_rwlock_create(vm::ptr<u32> rw_lock_id, vm::ptr<sys_rwlock_attribute_t> attr)
 {
@@ -30,7 +31,7 @@ s32 sys_rwlock_create(vm::ptr<u32> rw_lock_id, vm::ptr<sys_rwlock_attribute_t> a
 	default: sys_rwlock.Error("sys_rwlock_create(): unknown protocol (0x%x)", protocol); return CELL_EINVAL;
 	}
 
-	if (attr->pshared.data() != se32(0x200) || attr->ipc_key.data() || attr->flags.data())
+	if (attr->pshared != SYS_SYNC_NOT_PROCESS_SHARED || attr->ipc_key.data() || attr->flags.data())
 	{
 		sys_rwlock.Error("sys_rwlock_create(): unknown attributes (pshared=0x%x, ipc_key=0x%llx, flags=0x%x)", attr->pshared, attr->ipc_key, attr->flags);
 		return CELL_EINVAL;
@@ -84,16 +85,12 @@ s32 sys_rwlock_rlock(u32 rw_lock_id, u64 timeout)
 
 	while (rwlock->writer || rwlock->wwaiters)
 	{
+		CHECK_EMU_STATUS;
+
 		if (timeout && get_system_time() - start_time > timeout)
 		{
 			rwlock->rwaiters--;
 			return CELL_ETIMEDOUT;
-		}
-
-		if (Emu.IsStopped())
-		{
-			sys_rwlock.Warning("sys_rwlock_rlock(rw_lock_id=0x%x) aborted", rw_lock_id);
-			return CELL_OK;
 		}
 
 		rwlock->rcv.wait_for(lv2_lock, std::chrono::milliseconds(1));
@@ -179,16 +176,12 @@ s32 sys_rwlock_wlock(PPUThread& CPU, u32 rw_lock_id, u64 timeout)
 
 	while (rwlock->readers || rwlock->writer)
 	{
+		CHECK_EMU_STATUS;
+
 		if (timeout && get_system_time() - start_time > timeout)
 		{
 			rwlock->wwaiters--;
 			return CELL_ETIMEDOUT;
-		}
-
-		if (Emu.IsStopped())
-		{
-			sys_rwlock.Warning("sys_rwlock_wlock(rw_lock_id=0x%x) aborted", rw_lock_id);
-			return CELL_OK;
 		}
 
 		rwlock->wcv.wait_for(lv2_lock, std::chrono::milliseconds(1));

@@ -1,5 +1,7 @@
 #pragma once
 
+namespace vm { using namespace ps3; }
+
 enum
 {
 	CELL_MSGDIALOG_ERROR_PARAM             = 0x8002b301,

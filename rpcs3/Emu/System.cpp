@@ -5,8 +5,6 @@
 #include "Emu/System.h"
 
 #include "Emu/GameInfo.h"
-#include "Emu/ARMv7/PSVFuncList.h"
-#include "Emu/ARMv7/PSVObjectList.h"
 #include "Emu/SysCalls/ModuleManager.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/SPUThread.h"
@@ -39,7 +37,10 @@ static const std::string& BreakPointsDBName = "BreakPoints.dat";
 static const u16 bpdb_version = 0x1000;
 extern std::atomic<u32> g_thread_count;
 
+extern u64 get_system_time();
 extern void finalize_ppu_exec_map();
+extern void finalize_psv_modules();
+extern void clear_all_psv_objects();
 
 Emulator::Emulator()
 	: m_status(Stopped)
@@ -63,17 +64,6 @@ Emulator::Emulator()
 
 Emulator::~Emulator()
 {
-	delete m_thread_manager;
-	delete m_pad_manager;
-	delete m_keyboard_manager;
-	delete m_mouse_manager;
-	delete m_id_manager;
-	delete m_gs_manager;
-	delete m_audio_manager;
-	delete m_callback_manager;
-	delete m_event_manager;
-	delete m_module_manager;
-	delete m_vfs;
 }
 
 void Emulator::Init()
@@ -94,46 +84,6 @@ void Emulator::SetTitleID(const std::string& id)
 void Emulator::SetTitle(const std::string& title)
 {
 	m_title = title;
-}
-
-void Emulator::CheckStatus()
-{
-	//auto threads = GetCPU().GetThreads();
-
-	//if (!threads.size())
-	//{
-	//	Stop();
-	//	return;	
-	//}
-
-	//bool AllPaused = true;
-
-	//for (auto& t : threads)
-	//{
-	//	if (t->IsPaused()) continue;
-	//	AllPaused = false;
-	//	break;
-	//}
-
-	//if (AllPaused)
-	//{
-	//	Pause();
-	//	return;
-	//}
-
-	//bool AllStopped = true;
-
-	//for (auto& t : threads)
-	//{
-	//	if (t->IsStopped()) continue;
-	//	AllStopped = false;
-	//	break;
-	//}
-
-	//if (AllStopped)
-	//{
-	//	Pause();
-	//}
 }
 
 bool Emulator::BootGame(const std::string& path, bool direct)
@@ -179,9 +129,15 @@ bool Emulator::BootGame(const std::string& path, bool direct)
 
 void Emulator::Load()
 {
+	m_status = Ready;
+
 	GetModuleManager().Init();
 
-	if (!fs::is_file(m_path)) return;
+	if (!fs::is_file(m_path))
+	{
+		m_status = Stopped;
+		return;
+	}
 
 	const std::string elf_dir = m_path.substr(0, m_path.find_last_of("/\\", std::string::npos, 2) + 1);
 
@@ -214,12 +170,13 @@ void Emulator::Load()
 
 		if (!DecryptSelf(m_path, elf_dir + full_name))
 		{
+			m_status = Stopped;
 			return;
 		}
 	}
 
 	LOG_NOTICE(LOADER, "Loading '%s'...", m_path.c_str());
-	GetInfo().Reset();
+	ResetInfo();
 	GetVFS().Init(elf_dir);
 
 	// /dev_bdvd/ mounting
@@ -275,19 +232,19 @@ void Emulator::Load()
 	if (!f.IsOpened())
 	{
 		LOG_ERROR(LOADER, "Opening '%s' failed", m_path.c_str());
+		m_status = Stopped;
 		return;
 	}
 
 	if (!m_loader.load(f))
 	{
 		LOG_ERROR(LOADER, "Loading '%s' failed", m_path.c_str());
+		m_status = Stopped;
 		vm::close();
 		return;
 	}
 	
 	LoadPoints(BreakPointsDBName);
-
-	m_status = Ready;
 
 	GetGSManager().Init();
 	GetCallbackManager().Init();
@@ -315,6 +272,8 @@ void Emulator::Run()
 
 	SendDbgCommand(DID_START_EMU);
 
+	m_pause_start_time = 0;
+	m_pause_amend_time = 0;
 	m_status = Running;
 
 	GetCPU().Exec();
@@ -323,47 +282,86 @@ void Emulator::Run()
 
 void Emulator::Pause()
 {
-	if (!IsRunning()) return;
+	const u64 start = get_system_time();
+
+	// try to set Paused status
+	if (!sync_bool_compare_and_swap(&m_status, Running, Paused))
+	{
+		return;
+	}
+
+	// update pause start time
+	if (m_pause_start_time.exchange(start))
+	{
+		LOG_ERROR(GENERAL, "Emulator::Pause() error: concurrent access");
+	}
+
 	SendDbgCommand(DID_PAUSE_EMU);
 
-	if (sync_bool_compare_and_swap((volatile u32*)&m_status, Running, Paused))
+	for (auto& t : GetCPU().GetAllThreads())
 	{
-		SendDbgCommand(DID_PAUSED_EMU);
-
-		GetCallbackManager().RunPauseCallbacks(true);
+		t->Sleep(); // trigger status check
 	}
+
+	SendDbgCommand(DID_PAUSED_EMU);
 }
 
 void Emulator::Resume()
 {
-	if (!IsPaused()) return;
+	// get pause start time
+	const u64 time = m_pause_start_time.exchange(0);
+
+	// try to increment summary pause time
+	if (time)
+	{
+		m_pause_amend_time += get_system_time() - time;
+	}
+
+	// try to resume
+	if (!sync_bool_compare_and_swap(&m_status, Paused, Running))
+	{
+		return;
+	}
+
+	if (!time)
+	{
+		LOG_ERROR(GENERAL, "Emulator::Resume() error: concurrent access");
+	}
+
 	SendDbgCommand(DID_RESUME_EMU);
 
-	m_status = Running;
-
-	CheckStatus();
+	for (auto& t : GetCPU().GetAllThreads())
+	{
+		t->Awake(); // untrigger status check and signal
+	}
 
 	SendDbgCommand(DID_RESUMED_EMU);
-
-	GetCallbackManager().RunPauseCallbacks(false);
 }
 
 extern std::map<u32, std::string> g_armv7_dump;
 
 void Emulator::Stop()
 {
-	if(IsStopped()) return;
+	LOG_NOTICE(GENERAL, "Stopping emulator...");
+
+	if (sync_lock_test_and_set(&m_status, Stopped) == Stopped)
+	{
+		return;
+	}
 
 	SendDbgCommand(DID_STOP_EMU);
 
-	m_status = Stopped;
-
 	{
-		auto threads = GetCPU().GetThreads();
+		LV2_LOCK;
 
-		for (auto& t : threads)
+		// notify all threads
+		for (auto& t : GetCPU().GetAllThreads())
 		{
-			t->AddEvent(CPU_EVENT_STOP);
+			std::lock_guard<std::mutex> lock(t->mutex);
+
+			t->Sleep(); // trigger status check
+
+			t->cv.notify_one(); // signal
 		}
 	}
 
@@ -372,7 +370,7 @@ void Emulator::Stop()
 		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}
 
-	LOG_NOTICE(HLE, "All threads stopped...");
+	LOG_NOTICE(GENERAL, "All threads stopped...");
 
 	finalize_psv_modules();
 	clear_all_psv_objects();

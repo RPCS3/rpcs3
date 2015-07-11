@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "Modules.h"
 #include "ModuleManager.h"
 
 extern Module cellAdec;
@@ -54,6 +55,7 @@ extern Module sys_io;
 extern Module sys_net;
 extern Module sysPrxForUser;
 extern Module sys_libc;
+extern Module sys_lv2dbg;
 
 struct ModuleInfo
 {
@@ -106,7 +108,7 @@ static const g_module_list[] =
 	{ 0x0028, "cellAdecAtx", nullptr },
 	{ 0x0029, "cellAdecAt3", nullptr },
 	{ 0x002a, "cellDmuxPamf", nullptr },
-	{ 0x002e, "cellLv2dbg", nullptr },
+	{ 0x002e, "sys_lv2dbg", &sys_lv2dbg },
 	{ 0x0030, "cellUsbpspcm", nullptr },
 	{ 0x0031, "cellAvconfExt", &cellAvconfExt },
 	{ 0x0032, "cellUserInfo", &cellUserInfo },

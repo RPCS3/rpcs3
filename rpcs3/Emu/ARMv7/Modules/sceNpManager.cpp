@@ -2,65 +2,56 @@
 #include "Emu/System.h"
 #include "Emu/ARMv7/PSVFuncList.h"
 
-#include "sceNpCommon.h"
+#include "sceNpManager.h"
 
-extern psv_log_base sceNpManager;
-
-struct SceNpOptParam
+s32 sceNpInit(vm::cptr<SceNpCommunicationConfig> commConf, vm::ptr<SceNpOptParam> opt)
 {
-	u32 optParamSize;
-};
-
-typedef vm::psv::ptr<void(SceNpServiceState state, vm::psv::ptr<void> userdata)> SceNpServiceStateCallback;
-
-s32 sceNpInit(vm::psv::ptr<const SceNpCommunicationConfig> commConf, vm::psv::ptr<SceNpOptParam> opt)
-{
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpTerm(ARMv7Context&)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpCheckCallback()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceNpGetServiceState(vm::psv::ptr<SceNpServiceState> state)
+s32 sceNpGetServiceState(vm::ptr<s32> state)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceNpRegisterServiceStateCallback(SceNpServiceStateCallback callback, vm::psv::ptr<void> userdata)
+s32 sceNpRegisterServiceStateCallback(vm::ptr<SceNpServiceStateCallback> callback, vm::ptr<void> userdata)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpUnregisterServiceStateCallback()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceNpManagerGetNpId(vm::psv::ptr<SceNpId> npId)
+s32 sceNpManagerGetNpId(vm::ptr<SceNpId> npId)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceNpManagerGetAccountRegion(vm::psv::ptr<SceNpCountryCode> countryCode, vm::psv::ptr<s32> languageCode)
+s32 sceNpManagerGetAccountRegion(vm::ptr<SceNpCountryCode> countryCode, vm::ptr<s32> languageCode)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceNpManagerGetContentRatingFlag(vm::psv::ptr<s32> isRestricted, vm::psv::ptr<s32> age)
+s32 sceNpManagerGetContentRatingFlag(vm::ptr<s32> isRestricted, vm::ptr<s32> age)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceNpManagerGetChatRestrictionFlag(vm::psv::ptr<s32> isRestricted)
+s32 sceNpManagerGetChatRestrictionFlag(vm::ptr<s32> isRestricted)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 #define REG_FUNC(nid, name) reg_psv_func(nid, &sceNpManager, #name, name)
@@ -70,6 +61,7 @@ psv_log_base sceNpManager("SceNpManager", []()
 	sceNpManager.on_load = nullptr;
 	sceNpManager.on_unload = nullptr;
 	sceNpManager.on_stop = nullptr;
+	sceNpManager.on_error = nullptr;
 
 	REG_FUNC(0x04D9F484, sceNpInit);
 	REG_FUNC(0x19E40AE1, sceNpTerm);

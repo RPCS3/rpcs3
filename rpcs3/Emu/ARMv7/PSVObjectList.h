@@ -28,11 +28,6 @@ class psv_object_list_t // Class for managing object data
 	std::atomic<u32> m_hint; // guessing next free position
 	std::mutex m_mutex;
 
-	void error(s32 uid)
-	{
-		throw fmt::format("Invalid UID requested (type=0x%x, uid=0x%x)", uid_class, uid);
-	}
-
 public:
 	psv_object_list_t()
 		: m_hint(0)

@@ -1,5 +1,6 @@
 #pragma once
-#include "Modules.h"
+
+class Module;
 
 class ModuleManager
 {

@@ -1,6 +1,6 @@
 #pragma once
 
-class ARMv7Thread;
+#include "Emu/Memory/Memory.h"
 
 enum ARMv7InstructionSet
 {
@@ -107,7 +107,7 @@ struct ARMv7Context
 
 		operator bool() const
 		{
-			return check_state;
+			return check_state != 0;
 		}
 
 	} ITSTATE;
@@ -122,19 +122,34 @@ struct ARMv7Context
 
 	std::array<perf_counter, 6> counters;
 
-	ARMv7Thread& thread;
+	u32 PC;
+	s32 prio;
+	u32 stack_addr;
+	u32 stack_size;
+	u32 hle_func; // current function ID
 
-	u32 debug; // debug flags
+	u32 debug;
 	std::string debug_str;
 
-	ARMv7Context(ARMv7Thread& thread) : thread(thread), debug(/*DF_DISASM | DF_PRINT*/ 0) {}
+	void write_pc(u32 value, u32 size)
+	{
+		ISET = value & 1 ? Thumb : ARM;
+		PC = (value & ~1) - size;
+	}
 
-	void write_pc(u32 value);
-	u32 read_pc();
-	u32 get_stack_arg(u32 pos);
+	u32 read_pc()
+	{
+		return ISET == ARM ? PC + 8 : PC + 4;
+	}
+
+	u32 get_stack_arg(u32 pos)
+	{
+		return vm::psv::read32(SP + sizeof(u32) * (pos - 5));
+	}
+
 	void fast_call(u32 addr);
 
-	void write_gpr(u32 n, u32 value)
+	void write_gpr(u32 n, u32 value, u32 size)
 	{
 		assert(n < 16);
 
@@ -144,7 +159,7 @@ struct ARMv7Context
 		}
 		else
 		{
-			write_pc(value);
+			write_pc(value, size);
 		}
 	}
 
@@ -307,4 +322,3 @@ force_inline T cast_from_armv7_gpr(const u32 reg)
 {
 	return cast_armv7_gpr<T>::from_gpr(reg);
 }
-

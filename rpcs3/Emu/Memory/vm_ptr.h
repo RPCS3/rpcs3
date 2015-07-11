@@ -5,10 +5,23 @@ struct ARMv7Context;
 
 namespace vm
 {
+	// helper SFINAE type for vm::_ptr_base comparison operators (enables comparison between equal types and between any type and void*)
+	template<typename T1, typename T2, typename RT = void> using if_comparable_t = std::enable_if_t<
+		std::is_void<T1>::value ||
+		std::is_void<T2>::value ||
+		std::is_same<std::remove_cv_t<T1>, std::remove_cv_t<T2>>::value,
+		RT>;
+
+	// helper SFINAE type for vm::_ptr_base pointer arithmetic operators and indirection (disabled for void and function pointers)
+	template<typename T, typename RT = void> using if_arithmetical_ptr_t = std::enable_if_t<
+		!std::is_void<T>::value &&
+		!std::is_function<T>::value,
+		RT>;
+
 	template<typename T, typename AT = u32>
 	struct _ptr_base
 	{
-		AT m_addr;
+		AT m_addr; // don't access directly
 
 		using type = T;
 
@@ -19,25 +32,40 @@ namespace vm
 		{
 			return m_addr;
 		}
+
+		// get vm pointer to member
+		template<typename MT, typename T2, typename = if_comparable_t<T, T2>> _ptr_base<MT> of(MT T2::*const member) const
+		{
+			const u32 offset = static_cast<u32>(reinterpret_cast<std::ptrdiff_t>(&(reinterpret_cast<T*>(0ull)->*member)));
+			return{ VM_CAST(m_addr + offset) };
+		}
+
+		// get vm pointer to array member with array subscribtion
+		template<typename MT, typename T2, typename = if_comparable_t<T, T2>> _ptr_base<std::remove_extent_t<MT>> of(MT T2::*const member, u32 index) const
+		{
+			const u32 offset = static_cast<u32>(reinterpret_cast<std::ptrdiff_t>(&(reinterpret_cast<T*>(0ull)->*member)));
+			return{ VM_CAST(m_addr + offset + sizeof32(T) * index) };
+		}
 		
 		template<typename CT> std::enable_if_t<std::is_assignable<AT&, CT>::value> set(const CT& value)
 		{
 			m_addr = value;
 		}
 
-		template<typename AT2 = AT> static _ptr_base make(const AT2& addr)
+		template<typename AT2 = AT> static std::enable_if_t<std::is_constructible<AT, AT2>::value, _ptr_base> make(const AT2& addr)
 		{
-			return{ convert_le_be<AT>(addr) };
+			const AT value = addr;
+			return{ value };
 		}
 
 		T* get_ptr() const
 		{
-			return vm::get_ptr<T>(vm::cast(m_addr));
+			return vm::get_ptr<T>(VM_CAST(m_addr));
 		}
 
 		T* priv_ptr() const
 		{
-			return vm::priv_ptr<T>(vm::cast(m_addr));
+			return vm::priv_ptr<T>(VM_CAST(m_addr));
 		}
 
 		T* operator ->() const
@@ -49,16 +77,16 @@ namespace vm
 		{
 			static_assert(!std::is_void<T>::value, "vm::_ptr_base<> error: operator[] is not available for void pointers");
 
-			return vm::get_ref<T>(vm::cast(m_addr + sizeof32(T) * index));
+			return vm::get_ref<T>(VM_CAST(m_addr + sizeof32(T) * index));
 		}
 
 		// enable only the conversions which are originally possible between pointer types
-		template<typename T2, typename AT2, typename dummy = std::enable_if_t<std::is_convertible<T*, T2*>::value>> operator _ptr_base<T2, AT2>() const
+		template<typename T2, typename AT2, typename = std::enable_if_t<std::is_convertible<T*, T2*>::value>> operator _ptr_base<T2, AT2>() const
 		{
-			return{ convert_le_be<AT2>(vm::cast(m_addr)) };
+			return{ VM_CAST(m_addr) };
 		}
 
-		template<typename T2, typename dummy = std::enable_if_t<std::is_convertible<T*, T2*>::value>> explicit operator T2*() const
+		template<typename T2, typename = std::enable_if_t<std::is_convertible<T*, T2*>::value>> explicit operator T2*() const
 		{
 			return get_ptr();
 		}
@@ -68,10 +96,22 @@ namespace vm
 			return m_addr != 0;
 		}
 
+		// test address alignment using alignof(T)
+		bool aligned() const
+		{
+			return m_addr % alignof32(T) == 0;
+		}
+
+		// test address for arbitrary alignment or something
+		force_inline explicit_bool_t operator %(to_ne_t<AT> right) const
+		{
+			return m_addr % right != 0;
+		}
+
 		_ptr_base& operator =(const _ptr_base&) = default;
 	};
 
-	template<typename AT, typename RT, typename ...T>
+	template<typename AT, typename RT, typename... T>
 	struct _ptr_base<RT(T...), AT>
 	{
 		AT m_addr;
@@ -88,35 +128,22 @@ namespace vm
 			m_addr = value;
 		}
 
-		template<typename AT2 = AT> static _ptr_base make(const AT2& addr)
+		template<typename AT2 = AT> static std::enable_if_t<std::is_constructible<AT, AT2>::value, _ptr_base> make(const AT2& addr)
 		{
-			return{ convert_le_be<AT>(addr) };
+			const AT value = addr;
+			return{ value };
 		}
 
-		// defined in CB_FUNC.h, call using specified PPU thread context
+		// defined in CB_FUNC.h, passing context is mandatory
 		RT operator()(PPUThread& CPU, T... args) const;
 
 		// defined in ARMv7Callback.h, passing context is mandatory
 		RT operator()(ARMv7Context& context, T... args) const;
 
-		// defined in CB_FUNC.h, call using current PPU thread context
-		RT operator()(T... args) const;
-
-		// conversion to function object
-		operator std::function<type>() const
-		{
-			const u32 addr = vm::cast(m_addr);
-
-			return [addr](T... args) -> RT
-			{
-				return _ptr_base<RT(T...)>{ addr }(args...);
-			};
-		}
-
 		// conversion to another function pointer
 		template<typename AT2> operator _ptr_base<type, AT2>() const
 		{
-			return{ convert_le_be<AT2>(vm::cast(m_addr)) };
+			return{ VM_CAST(m_addr) };
 		}
 
 		explicit operator bool() const
@@ -127,7 +154,7 @@ namespace vm
 		_ptr_base& operator =(const _ptr_base&) = default;
 	};
 
-	template<typename AT, typename RT, typename ...T>
+	template<typename AT, typename RT, typename... T>
 	struct _ptr_base<RT(*)(T...), AT>
 	{
 		AT m_addr;
@@ -166,6 +193,15 @@ namespace vm
 
 		// default pointer to pointer for PS3 HLE structures (BE pointer to BE pointer to BE data)
 		template<typename T, typename AT = u32, typename AT2 = u32> using bpptr = bptr<ptr<T, AT2>, AT>;
+
+		// native endianness pointer to const BE data
+		template<typename T, typename AT = u32> using cptr = ptr<const T, AT>;
+
+		// BE pointer to const BE data
+		template<typename T, typename AT = u32> using bcptr = bptr<const T, AT>;
+
+		template<typename T, typename AT = u32> using cpptr = pptr<const T, AT>;
+		template<typename T, typename AT = u32> using bcpptr = bpptr<const T, AT>;
 	}
 
 	namespace psv
@@ -181,10 +217,16 @@ namespace vm
 
 		// default pointer to pointer for PSV HLE structures (LE pointer to LE pointer to LE data)
 		template<typename T> using lpptr = lptr<ptr<T>>;
-	}
 
-	// PS3 emulation is main now, so lets it be as default
-	using namespace ps3;
+		// native endianness pointer to const LE data
+		template<typename T> using cptr = ptr<const T>;
+
+		// LE pointer to const LE data
+		template<typename T> using lcptr = lptr<const T>;
+
+		template<typename T> using cpptr = pptr<const T>;
+		template<typename T> using lcpptr = lpptr<const T>;
+	}
 
 	struct null_t
 	{
@@ -197,17 +239,23 @@ namespace vm
 	// vm::null is convertible to any vm::ptr type as null pointer in virtual memory
 	static null_t null;
 
-	// helper SFINAE type for vm::_ptr_base comparison operators (enables comparison between equal types and between any type and void*)
-	template<typename T1, typename T2, typename RT> using if_comparable_t = std::enable_if_t<
-		std::is_void<T1>::value ||
-		std::is_void<T2>::value ||
-		std::is_same<std::remove_cv_t<T1>, std::remove_cv_t<T2>>::value,
-		RT>;
+	// perform static_cast (for example, vm::ptr<void> to vm::ptr<char>)
+	template<typename CT, typename T, typename AT, typename = decltype(static_cast<CT*>(std::declval<T*>()))> inline _ptr_base<CT, AT> static_ptr_cast(const _ptr_base<T, AT>& other)
+	{
+		return{ other.m_addr };
+	}
 
-	// helper SFINAE type for vm::_ptr_base pointer arithmetic operators and indirection (disabled for void and function pointers)
-	template<typename T, typename RT> using if_arithmetical_t = std::enable_if_t<
-		!std::is_void<T>::value && !std::is_function<T>::value,
-		RT>;
+	// perform const_cast (for example, vm::cptr<char> to vm::ptr<char>)
+	template<typename CT, typename T, typename AT, typename = decltype(const_cast<CT*>(std::declval<T*>()))> inline _ptr_base<CT, AT> const_ptr_cast(const _ptr_base<T, AT>& other)
+	{
+		return{ other.m_addr };
+	}
+
+	// perform reinterpret_cast (for example, vm::ptr<char> to vm::ptr<u32>)
+	template<typename CT, typename T, typename AT, typename = decltype(reinterpret_cast<CT*>(std::declval<T*>()))> inline _ptr_base<CT, AT> reinterpret_ptr_cast(const _ptr_base<T, AT>& other)
+	{
+		return{ other.m_addr };
+	}
 }
 
 // unary plus operator for vm::_ptr_base (always available)
@@ -217,13 +265,13 @@ template<typename T, typename AT> inline vm::_ptr_base<T, AT> operator +(const v
 }
 
 // indirection operator for vm::_ptr_base
-template<typename T, typename AT> inline vm::if_arithmetical_t<T, T&> operator *(const vm::_ptr_base<T, AT>& ptr)
+template<typename T, typename AT> inline vm::if_arithmetical_ptr_t<T, T&> operator *(const vm::_ptr_base<T, AT>& ptr)
 {
-	return vm::get_ref<T>(vm::cast(ptr.m_addr));
+	return vm::get_ref<T>(VM_CAST(ptr.m_addr));
 }
 
 // postfix increment operator for vm::_ptr_base
-template<typename T, typename AT> inline vm::if_arithmetical_t<T, vm::_ptr_base<T, AT>> operator ++(vm::_ptr_base<T, AT>& ptr, int)
+template<typename T, typename AT> inline vm::if_arithmetical_ptr_t<T, vm::_ptr_base<T, AT>> operator ++(vm::_ptr_base<T, AT>& ptr, int)
 {
 	const AT result = ptr.m_addr;
 	ptr.m_addr += sizeof32(T);
@@ -231,14 +279,14 @@ template<typename T, typename AT> inline vm::if_arithmetical_t<T, vm::_ptr_base<
 }
 
 // prefix increment operator for vm::_ptr_base
-template<typename T, typename AT> inline vm::if_arithmetical_t<T, vm::_ptr_base<T, AT>&> operator ++(vm::_ptr_base<T, AT>& ptr)
+template<typename T, typename AT> inline vm::if_arithmetical_ptr_t<T, vm::_ptr_base<T, AT>&> operator ++(vm::_ptr_base<T, AT>& ptr)
 {
 	ptr.m_addr += sizeof32(T);
 	return ptr;
 }
 
 // postfix decrement operator for vm::_ptr_base
-template<typename T, typename AT> inline vm::if_arithmetical_t<T, vm::_ptr_base<T, AT>> operator --(vm::_ptr_base<T, AT>& ptr, int)
+template<typename T, typename AT> inline vm::if_arithmetical_ptr_t<T, vm::_ptr_base<T, AT>> operator --(vm::_ptr_base<T, AT>& ptr, int)
 {
 	const AT result = ptr.m_addr;
 	ptr.m_addr -= sizeof32(T);
@@ -246,42 +294,42 @@ template<typename T, typename AT> inline vm::if_arithmetical_t<T, vm::_ptr_base<
 }
 
 // prefix decrement operator for vm::_ptr_base
-template<typename T, typename AT> inline vm::if_arithmetical_t<T, vm::_ptr_base<T, AT>&> operator --(vm::_ptr_base<T, AT>& ptr)
+template<typename T, typename AT> inline vm::if_arithmetical_ptr_t<T, vm::_ptr_base<T, AT>&> operator --(vm::_ptr_base<T, AT>& ptr)
 {
 	ptr.m_addr -= sizeof32(T);
 	return ptr;
 }
 
 // addition assignment operator for vm::_ptr_base (pointer += integer)
-template<typename T, typename AT> inline vm::if_arithmetical_t<T, vm::_ptr_base<T, AT>&> operator +=(vm::_ptr_base<T, AT>& ptr, to_ne_t<AT> count)
+template<typename T, typename AT> inline vm::if_arithmetical_ptr_t<T, vm::_ptr_base<T, AT>&> operator +=(vm::_ptr_base<T, AT>& ptr, to_ne_t<AT> count)
 {
 	ptr.m_addr += count * sizeof32(T);
 	return ptr;
 }
 
 // subtraction assignment operator for vm::_ptr_base (pointer -= integer)
-template<typename T, typename AT> inline vm::if_arithmetical_t<T, vm::_ptr_base<T, AT>&> operator -=(vm::_ptr_base<T, AT>& ptr, to_ne_t<AT> count)
+template<typename T, typename AT> inline vm::if_arithmetical_ptr_t<T, vm::_ptr_base<T, AT>&> operator -=(vm::_ptr_base<T, AT>& ptr, to_ne_t<AT> count)
 {
 	ptr.m_addr -= count * sizeof32(T);
 	return ptr;
 }
 
 // addition operator for vm::_ptr_base (pointer + integer)
-template<typename T, typename AT> inline vm::if_arithmetical_t<T, vm::_ptr_base<T, AT>> operator +(const vm::_ptr_base<T, AT>& ptr, to_ne_t<AT> count)
+template<typename T, typename AT> inline vm::if_arithmetical_ptr_t<T, vm::_ptr_base<T, AT>> operator +(const vm::_ptr_base<T, AT>& ptr, to_ne_t<AT> count)
 {
-	return{ convert_le_be<AT>(ptr.m_addr + count * sizeof32(T)) };
+	return{ ptr.m_addr + count * sizeof32(T) };
 }
 
 // addition operator for vm::_ptr_base (integer + pointer)
-template<typename T, typename AT> inline vm::if_arithmetical_t<T, vm::_ptr_base<T, AT>> operator +(to_ne_t<AT> count, const vm::_ptr_base<T, AT>& ptr)
+template<typename T, typename AT> inline vm::if_arithmetical_ptr_t<T, vm::_ptr_base<T, AT>> operator +(to_ne_t<AT> count, const vm::_ptr_base<T, AT>& ptr)
 {
-	return{ convert_le_be<AT>(ptr.m_addr + count * sizeof32(T)) };
+	return{ ptr.m_addr + count * sizeof32(T) };
 }
 
 // subtraction operator for vm::_ptr_base (pointer - integer)
-template<typename T, typename AT> inline vm::if_arithmetical_t<T, vm::_ptr_base<T, AT>> operator -(const vm::_ptr_base<T, AT>& ptr, to_ne_t<AT> count)
+template<typename T, typename AT> inline vm::if_arithmetical_ptr_t<T, vm::_ptr_base<T, AT>> operator -(const vm::_ptr_base<T, AT>& ptr, to_ne_t<AT> count)
 {
-	return{ convert_le_be<AT>(ptr.m_addr - count * sizeof32(T)) };
+	return{ ptr.m_addr - count * sizeof32(T) };
 }
 
 // pointer difference operator for vm::_ptr_base
@@ -291,9 +339,9 @@ template<typename T1, typename AT1, typename T2, typename AT2> inline std::enabl
 	!std::is_function<T1>::value &&
 	!std::is_function<T2>::value &&
 	std::is_same<std::remove_cv_t<T1>, std::remove_cv_t<T2>>::value,
-	u32> operator -(const vm::_ptr_base<T1, AT1>& left, const vm::_ptr_base<T2, AT2>& right)
+	s32> operator -(const vm::_ptr_base<T1, AT1>& left, const vm::_ptr_base<T2, AT2>& right)
 {
-	return static_cast<u32>((left.m_addr - right.m_addr) / sizeof32(T1));
+	return static_cast<s32>(left.m_addr - right.m_addr) / sizeof32(T1);
 }
 
 // comparison operator for vm::_ptr_base (pointer1 == pointer2)
@@ -302,10 +350,30 @@ template<typename T1, typename AT1, typename T2, typename AT2> vm::if_comparable
 	return left.m_addr == right.m_addr;
 }
 
+template<typename T, typename AT> bool operator ==(const vm::null_t&, const vm::_ptr_base<T, AT>& ptr)
+{
+	return ptr.m_addr == 0;
+}
+
+template<typename T, typename AT> bool operator ==(const vm::_ptr_base<T, AT>& ptr, const vm::null_t&)
+{
+	return ptr.m_addr == 0;
+}
+
 // comparison operator for vm::_ptr_base (pointer1 != pointer2)
 template<typename T1, typename AT1, typename T2, typename AT2> vm::if_comparable_t<T1, T2, bool> operator !=(const vm::_ptr_base<T1, AT1>& left, const vm::_ptr_base<T2, AT2>& right)
 {
 	return left.m_addr != right.m_addr;
+}
+
+template<typename T, typename AT> bool operator !=(const vm::null_t&, const vm::_ptr_base<T, AT>& ptr)
+{
+	return ptr.m_addr != 0;
+}
+
+template<typename T, typename AT> bool operator !=(const vm::_ptr_base<T, AT>& ptr, const vm::null_t&)
+{
+	return ptr.m_addr != 0;
 }
 
 // comparison operator for vm::_ptr_base (pointer1 < pointer2)
@@ -314,10 +382,30 @@ template<typename T1, typename AT1, typename T2, typename AT2> vm::if_comparable
 	return left.m_addr < right.m_addr;
 }
 
+template<typename T, typename AT> bool operator <(const vm::null_t&, const vm::_ptr_base<T, AT>& ptr)
+{
+	return ptr.m_addr != 0;
+}
+
+template<typename T, typename AT> bool operator <(const vm::_ptr_base<T, AT>&, const vm::null_t&)
+{
+	return false;
+}
+
 // comparison operator for vm::_ptr_base (pointer1 <= pointer2)
 template<typename T1, typename AT1, typename T2, typename AT2> vm::if_comparable_t<T1, T2, bool> operator <=(const vm::_ptr_base<T1, AT1>& left, const vm::_ptr_base<T2, AT2>& right)
 {
 	return left.m_addr <= right.m_addr;
+}
+
+template<typename T, typename AT> bool operator <=(const vm::null_t&, const vm::_ptr_base<T, AT>&)
+{
+	return true;
+}
+
+template<typename T, typename AT> bool operator <=(const vm::_ptr_base<T, AT>& ptr, const vm::null_t&)
+{
+	return ptr.m_addr == 0;
 }
 
 // comparison operator for vm::_ptr_base (pointer1 > pointer2)
@@ -326,10 +414,30 @@ template<typename T1, typename AT1, typename T2, typename AT2> vm::if_comparable
 	return left.m_addr > right.m_addr;
 }
 
+template<typename T, typename AT> bool operator >(const vm::null_t&, const vm::_ptr_base<T, AT>&)
+{
+	return false;
+}
+
+template<typename T, typename AT> bool operator >(const vm::_ptr_base<T, AT>& ptr, const vm::null_t&)
+{
+	return ptr.m_addr != 0;
+}
+
 // comparison operator for vm::_ptr_base (pointer1 >= pointer2)
 template<typename T1, typename AT1, typename T2, typename AT2> vm::if_comparable_t<T1, T2, bool> operator >=(const vm::_ptr_base<T1, AT1>& left, const vm::_ptr_base<T2, AT2>& right)
 {
 	return left.m_addr >= right.m_addr;
+}
+
+template<typename T, typename AT> bool operator >=(const vm::null_t&, const vm::_ptr_base<T, AT>& ptr)
+{
+	return ptr.m_addr == 0;
+}
+
+template<typename T, typename AT> bool operator >=(const vm::_ptr_base<T, AT>&, const vm::null_t&)
+{
+	return true;
 }
 
 // external specialization for is_be_t<> (true if AT is be_t<>)

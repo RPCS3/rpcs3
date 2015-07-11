@@ -2,67 +2,46 @@
 #include "Emu/System.h"
 #include "Emu/ARMv7/PSVFuncList.h"
 
-extern psv_log_base sceCtrl;
-
-struct SceCtrlData
-{
-	u64 timeStamp;
-	u32 buttons;
-	u8 lx;
-	u8 ly;
-	u8 rx;
-	u8 ry;
-	u8 rsrv[16];
-};
-
-struct SceCtrlRapidFireRule
-{
-	u32 uiMask;
-	u32 uiTrigger;
-	u32 uiTarget;
-	u32 uiDelay;
-	u32 uiMake;
-	u32 uiBreak;
-};
+#include "sceCtrl.h"
 
 s32 sceCtrlSetSamplingMode(u32 uiMode)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceCtrlGetSamplingMode(vm::psv::ptr<u32> puiMode)
+s32 sceCtrlGetSamplingMode(vm::ptr<u32> puiMode)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceCtrlPeekBufferPositive(s32 port, vm::psv::ptr<SceCtrlData> pData, s32 nBufs)
+s32 sceCtrlPeekBufferPositive(s32 port, vm::ptr<SceCtrlData> pData, s32 nBufs)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceCtrlPeekBufferNegative(s32 port, vm::psv::ptr<SceCtrlData> pData, s32 nBufs)
+s32 sceCtrlPeekBufferNegative(s32 port, vm::ptr<SceCtrlData> pData, s32 nBufs)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceCtrlReadBufferPositive(s32 port, vm::psv::ptr<SceCtrlData> pData, s32 nBufs)
+s32 sceCtrlReadBufferPositive(s32 port, vm::ptr<SceCtrlData> pData, s32 nBufs)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceCtrlReadBufferNegative(s32 port, vm::psv::ptr<SceCtrlData> pData, s32 nBufs)
+s32 sceCtrlReadBufferNegative(s32 port, vm::ptr<SceCtrlData> pData, s32 nBufs)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceCtrlSetRapidFire(s32 port, s32 idx, vm::psv::ptr<const SceCtrlRapidFireRule> pRule)
+s32 sceCtrlSetRapidFire(s32 port, s32 idx, vm::cptr<SceCtrlRapidFireRule> pRule)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceCtrlClearRapidFire(s32 port, s32 idx)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 
@@ -73,6 +52,7 @@ psv_log_base sceCtrl("SceCtrl", []()
 	sceCtrl.on_load = nullptr;
 	sceCtrl.on_unload = nullptr;
 	sceCtrl.on_stop = nullptr;
+	sceCtrl.on_error = nullptr;
 
 	REG_FUNC(0xA497B150, sceCtrlSetSamplingMode);
 	REG_FUNC(0xEC752AAF, sceCtrlGetSamplingMode);

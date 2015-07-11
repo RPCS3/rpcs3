@@ -120,7 +120,9 @@ MainFrame::MainFrame()
 	menu_help->Append(id_help_about, "&About...");
 
 	SetMenuBar(menubar);
+#ifdef _WIN32
 	SetIcon(wxICON(frame_icon));
+#endif
 
 	// Panels
 	m_log_frame = new LogFrame(this);
@@ -424,7 +426,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	wxCheckBox* chbox_gs_3dmonitor        = new wxCheckBox(p_graphics, wxID_ANY, "3D Monitor");
 	wxCheckBox* chbox_audio_dump          = new wxCheckBox(p_audio, wxID_ANY, "Dump to file");
 	wxCheckBox* chbox_audio_conv          = new wxCheckBox(p_audio, wxID_ANY, "Convert to 16 bit");
-	wxCheckBox* chbox_hle_logging         = new wxCheckBox(p_hle, wxID_ANY, "Log all SysCalls");
+	wxCheckBox* chbox_hle_logging         = new wxCheckBox(p_hle, wxID_ANY, "Log everything");
 	wxCheckBox* chbox_rsx_logging         = new wxCheckBox(p_hle, wxID_ANY, "RSX Logging");
 	wxCheckBox* chbox_hle_hook_stfunc     = new wxCheckBox(p_hle, wxID_ANY, "Hook static functions");
 	wxCheckBox* chbox_hle_savetty         = new wxCheckBox(p_hle, wxID_ANY, "Save TTY output to file");

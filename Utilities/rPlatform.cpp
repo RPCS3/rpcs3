@@ -35,7 +35,7 @@ void rImage::SaveFile(const std::string& name, rImageType type)
 	}
 	else
 	{
-		throw std::string("unsupported type");
+		throw EXCEPTION("unsupported type");
 	}
 }
 

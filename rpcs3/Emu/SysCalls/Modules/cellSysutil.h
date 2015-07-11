@@ -1,5 +1,7 @@
 #pragma once
 
+namespace vm { using namespace ps3; }
+
 enum
 {
 	CELL_SYSUTIL_ERROR_TYPE   = 0x8002b101,
@@ -32,8 +34,8 @@ enum
 	CELL_SYSUTIL_SYSTEMPARAM_ID_PAD_AUTOOFF                     = 0x0156,
 
 	// Strings
-	CELL_SYSUTIL_SYSTEMPARAM_ID_NICKNAME                        = 0x113,
-	CELL_SYSUTIL_SYSTEMPARAM_ID_CURRENT_USERNAME                = 0x131,
+	CELL_SYSUTIL_SYSTEMPARAM_ID_NICKNAME                        = 0x0113,
+	CELL_SYSUTIL_SYSTEMPARAM_ID_CURRENT_USERNAME                = 0x0131,
 };
 
 enum
@@ -78,7 +80,7 @@ enum
 	CELL_SYSUTIL_SYSCHAT_VOICE_STREAMING_PAUSED  = 0x0164,
 };
 
-typedef void(CellSysutilCallback)(u64 status, u64 param, vm::ptr<void> userdata);
+using CellSysutilCallback = func_def<void(u64 status, u64 param, vm::ptr<void> userdata)>;
 
 void sysutilSendSystemCommand(u64 status, u64 param);
 
@@ -152,22 +154,20 @@ enum
 	CELL_SYSCACHE_ERROR_NOTMOUNTED    = 0x8002bc04, // We don't really need to simulate the mounting, so this is probably useless
 };
 
-typedef s32 CellWebBrowserId;
-typedef vm::ptr<void> CellWebBrowserClientSession;
-typedef void(CellWebBrowserCallback)(s32 cb_type, CellWebBrowserClientSession, vm::ptr<void> usrdata);
-typedef void(CellWebComponentCallback)(CellWebBrowserId, s32 cb_type, CellWebBrowserClientSession, vm::ptr<void> usrdata);
-typedef void(CellWebBrowserSystemCallback)(s32 cb_type, vm::ptr<void> usrdata);
+using CellWebBrowserCallback = func_def<void(s32 cb_type, vm::ptr<void> client_session, vm::ptr<void> usrdata)>;
+using CellWebComponentCallback = func_def<void(s32 web_browser_id, s32 cb_type, vm::ptr<void> client_session, vm::ptr<void> usrdata)>;
+using CellWebBrowserSystemCallback = func_def<void(s32 cb_type, vm::ptr<void> usrdata)>;
 
-typedef void(CellWebBrowserMIMETypeCallback)(vm::ptr<const char> mimetype, vm::ptr<const char> url, vm::ptr<void> usrdata);
-typedef void(CellWebBrowserErrorCallback)(s32 err_type, vm::ptr<void> usrdata);
-typedef void(CellWebBrowserStatusCallback)(s32 err_type, vm::ptr<void> usrdata);
-typedef void(CellWebBrowserNotify)(vm::ptr<const char> message, vm::ptr<void> usrdata);
-typedef void(CellWebBrowserUsrdata)(vm::ptr<void> usrdata);
+using CellWebBrowserMIMETypeCallback = func_def<void(vm::cptr<char> mimetype, vm::cptr<char> url, vm::ptr<void> usrdata)>;
+using CellWebBrowserErrorCallback = func_def<void(s32 err_type, vm::ptr<void> usrdata)>;
+using CellWebBrowserStatusCallback = func_def<void(s32 err_type, vm::ptr<void> usrdata)>;
+using CellWebBrowserNotify = func_def<void(vm::cptr<char> message, vm::ptr<void> usrdata)>;
+using CellWebBrowserUsrdata = func_def<void(vm::ptr<void> usrdata)>;
 
 struct CellWebBrowserMimeSet
 {
-	const vm::bptr<const char> type;
-	const vm::bptr<const char> directory;
+	vm::bcptr<char> type;
+	vm::bcptr<char> directory;
 };
 
 struct CellWebBrowserPos
@@ -192,7 +192,7 @@ struct CellWebBrowserConfig
 {
 	be_t<s32> version;
 	be_t<s32> heap_size;
-	vm::bptr<const CellWebBrowserMimeSet> mimesets;
+	vm::bcptr<CellWebBrowserMimeSet> mimesets;
 	be_t<s32> mimeset_num;
 	be_t<s32> functions;
 	be_t<s32> tab_count;
@@ -217,4 +217,40 @@ struct CellWebBrowserConfig2
 	CellWebBrowserRect rect;
 	be_t<float> resolution_factor;
 	be_t<s32> magic_number_;
+};
+
+enum CellSysutilBgmPlaybackStatusState
+{
+	CELL_SYSUTIL_BGMPLAYBACK_STATUS_PLAY = 0,
+	CELL_SYSUTIL_BGMPLAYBACK_STATUS_STOP = 1
+};
+
+enum CellSysutilBgmPlaybackStatusEnabled
+{
+	CELL_SYSUTIL_BGMPLAYBACK_STATUS_ENABLE = 0,
+	CELL_SYSUTIL_BGMPLAYBACK_STATUS_DISABLE = 1
+};
+
+struct CellSysutilBgmPlaybackStatus
+{
+	u8 playerState;
+	u8 enableState;
+	char contentId[16];
+	u8 currentFadeRatio;
+	char reserved[13];
+};
+
+struct CellSysutilBgmPlaybackStatus2
+{
+	u8 playerState;
+	char reserved[7];
+};
+
+struct CellSysutilBgmPlaybackExtraParam
+{
+	be_t<s32> systemBgmFadeInTime;
+	be_t<s32> systemBgmFadeOutTime;
+	be_t<s32> gameBgmFadeInTime;
+	be_t<s32> gameBgmFadeOutTime;
+	char reserved[8];
 };

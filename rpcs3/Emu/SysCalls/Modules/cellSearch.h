@@ -1,7 +1,10 @@
+#pragma once
+
+namespace vm { using namespace ps3; }
+
 // Error Codes
 enum
 {
-	CELL_SEARCH_OK                          = 0,
 	CELL_SEARCH_CANCELED                    = 1,
 	CELL_SEARCH_ERROR_PARAM                 = 0x8002C801,
 	CELL_SEARCH_ERROR_BUSY                  = 0x8002C802,
@@ -37,7 +40,7 @@ enum
 };
 
 // Sort keys
-enum
+enum : s32
 {
 	CELL_SEARCH_SORTKEY_NONE         = 0,
 	CELL_SEARCH_SORTKEY_DEFAULT      = 1,
@@ -53,7 +56,7 @@ enum
 };
 
 // Sort order
-enum
+enum : s32
 {
 	CELL_SEARCH_SORTORDER_NONE       = 0,
 	CELL_SEARCH_SORTORDER_ASCENDING  = 1,
@@ -61,7 +64,7 @@ enum
 };
 
 // Content types
-enum
+enum : s32
 {
 	CELL_SEARCH_CONTENTTYPE_NONE      = 0,
 	CELL_SEARCH_CONTENTTYPE_MUSIC     = 1,
@@ -74,7 +77,7 @@ enum
 };
 
 // Codecs
-enum CellSearchCodec
+enum CellSearchCodec : s32
 {
 	CELL_SEARCH_CODEC_UNKNOWN      = 0,
 	CELL_SEARCH_CODEC_MPEG2        = 1,
@@ -108,7 +111,7 @@ enum CellSearchCodec
 };
 
 // Scene types
-enum CellSearchSceneType
+enum CellSearchSceneType : s32
 {
 	CELL_SEARCH_SCENETYPE_NONE           = 0,
 	CELL_SEARCH_SCENETYPE_CHAPTER        = 1,
@@ -117,7 +120,7 @@ enum CellSearchSceneType
 };
 
 // List types
-enum CellSearchListType
+enum CellSearchListType : s32
 {
 	CELL_SEARCH_LISTTYPE_MUSIC_ALBUM    = 1,
 	CELL_SEARCH_LISTTYPE_MUSIC_GENRE    = 2,
@@ -126,7 +129,7 @@ enum CellSearchListType
 };
 
 // Content status
-enum CellSearchContentStatus
+enum CellSearchContentStatus : s32
 {
 	CELL_SEARCH_CONTENTSTATUS_AVAILABLE,
 	CELL_SEARCH_CONTENTSTATUS_NOT_SUPPORTED,
@@ -134,7 +137,7 @@ enum CellSearchContentStatus
 };
 
 // Search orientation
-enum CellSearchOrientation
+enum CellSearchOrientation : s32
 {
 	CELL_SEARCH_ORIENTATION_UNKNOWN,
 	CELL_SEARCH_ORIENTATION_TOP_LEFT,
@@ -144,13 +147,13 @@ enum CellSearchOrientation
 };
 
 // Search modes
-enum CellSearchMode
+enum CellSearchMode : s32
 {
 	CELL_SEARCH_MODE_NORMAL = 0,
 };
 
 // Search events
-enum CellSearchEvent
+enum CellSearchEvent : s32
 {
 	CELL_SEARCH_EVENT_NOTIFICATION = 0,
 	CELL_SEARCH_EVENT_INITIALIZE_RESULT,
@@ -162,7 +165,7 @@ enum CellSearchEvent
 	CELL_SEARCH_EVENT_SCENESEARCH_RESULT,
 };
 
-typedef void(CellSearchSystemCallback)(CellSearchEvent event, s32 result, vm::ptr<const u32> param, vm::ptr<u32> userData);
+using CellSearchSystemCallback = func_def<void(CellSearchEvent event, s32 result, vm::cptr<u32> param, vm::ptr<u32> userData)>;
 
 struct CellSearchContentId
 {
@@ -177,7 +180,7 @@ struct CellSearchResultParam
 
 struct CellSearchMusicListInfo
 {
-	be_t<CellSearchListType> listType;
+	be_t<s32> listType; // CellSearchListType
 	be_t<u32> numOfItems;
 	be_t<s64> duration;
 	char title[CELL_SEARCH_TITLE_LEN_MAX + 1];
@@ -188,7 +191,7 @@ struct CellSearchMusicListInfo
 
 struct CellSearchPhotoListInfo
 {
-	be_t<CellSearchListType> listType;
+	be_t<s32> listType; // CellSearchListType
 	be_t<u32> numOfItems;
 	char title[CELL_SEARCH_TITLE_LEN_MAX + 1];
 	char reserved[3];
@@ -196,7 +199,7 @@ struct CellSearchPhotoListInfo
 
 struct CellSearchVideoListInfo
 {
-	be_t<CellSearchListType> listType;
+	be_t<s32> listType; // CellSearchListType
 	be_t<u32> numOfItems;
 	be_t<s64> duration;
 	char title[CELL_SEARCH_TITLE_LEN_MAX + 1];
@@ -216,8 +219,8 @@ struct CellSearchMusicInfo
 	be_t<s32> quantizationBitrate;
 	be_t<s32> playCount;
 	be_t<s32> drmEncrypted;
-	be_t<CellSearchCodec> codec;
-	be_t<CellSearchContentStatus> status;
+	be_t<s32> codec; // CellSearchCodec
+	be_t<s32> status; // CellSearchContentStatus
 	char diskNumber[8];
 	char title[CELL_SEARCH_TITLE_LEN_MAX + 1];
 	char reserved[3];
@@ -236,9 +239,9 @@ struct CellSearchPhotoInfo
 	be_t<s64> takenDate;
 	be_t<s32> width;
 	be_t<s32> height;
-	be_t<CellSearchOrientation> orientation;
-	be_t<CellSearchCodec> codec;
-	be_t<CellSearchContentStatus> status;
+	be_t<s32> orientation; // CellSearchOrientation
+	be_t<s32> codec; // CellSearchCodec
+	be_t<s32> status; // CellSearchContentStatus
 	char title[CELL_SEARCH_TITLE_LEN_MAX + 1];
 	char reserved[3];
 	char albumTitle[CELL_SEARCH_TITLE_LEN_MAX + 1];
@@ -255,9 +258,9 @@ struct CellSearchVideoInfo
 	be_t<s32> audioBitrate;
 	be_t<s32> playCount;
 	be_t<s32> drmEncrypted;
-	be_t<CellSearchCodec> videoCodec;
-	be_t<CellSearchCodec> audioCodec;
-	be_t<CellSearchContentStatus> status;
+	be_t<s32> videoCodec; // CellSearchCodec
+	be_t<s32> audioCodec; // CellSearchCodec
+	be_t<s32> status; // CellSearchContentStatus
 	char title[CELL_SEARCH_TITLE_LEN_MAX + 1];
 	char reserved[3];
 	char albumTitle[CELL_SEARCH_TITLE_LEN_MAX + 1];
@@ -266,7 +269,7 @@ struct CellSearchVideoInfo
 
 struct CellSearchVideoSceneInfo
 {
-	be_t<CellSearchSceneType> sceneType;
+	be_t<s32> sceneType; // CellSearchSceneType
 	be_t<s64> startTime_ms;
 	be_t<s64> endTime_ms;
 	CellSearchContentId videoId;

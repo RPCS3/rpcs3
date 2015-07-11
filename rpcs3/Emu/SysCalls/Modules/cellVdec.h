@@ -1,5 +1,7 @@
 #pragma once
 
+namespace vm { using namespace ps3; }
+
 // Error Codes
 enum
 {
@@ -12,15 +14,15 @@ enum
 	CELL_VDEC_ERROR_FATAL = 0x80610180,
 };
 
-enum CellVdecCodecType : u32
+enum CellVdecCodecType : s32
 {
-	CELL_VDEC_CODEC_TYPE_MPEG2 = 0x00000000,
-	CELL_VDEC_CODEC_TYPE_AVC   = 0x00000001,
-	CELL_VDEC_CODEC_TYPE_DIVX  = 0x00000005,
+	CELL_VDEC_CODEC_TYPE_MPEG2 = 0,
+	CELL_VDEC_CODEC_TYPE_AVC   = 1,
+	CELL_VDEC_CODEC_TYPE_DIVX  = 5,
 };
 
 // Callback Messages
-enum CellVdecMsgType : u32
+enum CellVdecMsgType : s32
 {
 	CELL_VDEC_MSG_TYPE_AUDONE, // decoding finished
 	CELL_VDEC_MSG_TYPE_PICOUT, // picture done
@@ -29,7 +31,7 @@ enum CellVdecMsgType : u32
 };
 
 // Decoder Operation Mode
-enum CellVdecDecodeMode : u32
+enum CellVdecDecodeMode : s32
 {
 	CELL_VDEC_DEC_MODE_NORMAL,
 	CELL_VDEC_DEC_MODE_B_SKIP,
@@ -37,7 +39,7 @@ enum CellVdecDecodeMode : u32
 };
 
 // Output Picture Format Type
-enum CellVdecPicFormatType : u32
+enum CellVdecPicFormatType : s32
 {
 	CELL_VDEC_PICFMT_ARGB32_ILV,
 	CELL_VDEC_PICFMT_RGBA32_ILV,
@@ -46,13 +48,13 @@ enum CellVdecPicFormatType : u32
 };
 
 // Output Color Matrix Coef
-enum CellVdecColorMatrixType : u32
+enum CellVdecColorMatrixType : s32
 {
 	CELL_VDEC_COLOR_MATRIX_TYPE_BT601,
 	CELL_VDEC_COLOR_MATRIX_TYPE_BT709,
 };
 
-enum CellVdecPicAttr : u32
+enum CellVdecPicAttr : s32
 {
 	CELL_VDEC_PICITEM_ATTR_NORMAL,
 	CELL_VDEC_PICITEM_ATTR_SKIPPED,
@@ -74,14 +76,14 @@ enum CellVdecFrameRate : u8
 // Codec Type Information
 struct CellVdecType
 {
-	be_t<CellVdecCodecType> codecType;
+	be_t<s32> codecType; // CellVdecCodecType
 	be_t<u32> profileLevel;
 };
 
 // Extended Codec Type Information
 struct CellVdecTypeEx
 {
-	be_t<CellVdecCodecType> codecType;
+	be_t<s32> codecType; // CellVdecCodecType
 	be_t<u32> profileLevel;
 	be_t<u32> codecSpecificInfo_addr;
 };
@@ -126,9 +128,6 @@ struct CellVdecResourceEx
 	be_t<u32> spursResource_addr;
 };
 
-// Presentation Time Stamp
-typedef CellCodecTimeStamp CellVdecTimeStamp;
-
 // Access Unit Information
 struct CellVdecAuInfo 
 {
@@ -143,7 +142,7 @@ struct CellVdecAuInfo
 // Output Picture Information
 struct CellVdecPicItem
 {
-	be_t<CellVdecCodecType> codecType;
+	be_t<s32> codecType; // CellVdecCodecType
 	be_t<u32> startAddr;
 	be_t<u32> size;
 	u8 auNum;
@@ -151,28 +150,28 @@ struct CellVdecPicItem
 	CellCodecTimeStamp auDts[2];
 	be_t<u64> auUserData[2];
 	be_t<s32> status;
-	be_t<CellVdecPicAttr> attr;
+	be_t<s32> attr; // CellVdecPicAttr
 	be_t<u32> picInfo_addr;
 };
 
 // Output Picture Format
 struct CellVdecPicFormat
 {
-	be_t<CellVdecPicFormatType> formatType;
-	be_t<CellVdecColorMatrixType> colorMatrixType;
+	be_t<s32> formatType; // CellVdecPicFormatType
+	be_t<s32> colorMatrixType; // CellVdecColorMatrixType
 	u8 alpha;
 };
 
 struct CellVdecPicFormat2
 {
-	be_t<CellVdecPicFormatType> formatType;
-	be_t<CellVdecColorMatrixType> colorMatrixType;
+	be_t<s32> formatType; // CellVdecPicFormatType
+	be_t<s32> colorMatrixType; // CellVdecColorMatrixType
 	be_t<u32> unk0;
 	u8 alpha;
 	be_t<u32> unk1;
 };
 
-typedef u32(CellVdecCbMsg)(u32 handle, CellVdecMsgType msgType, s32 msgData, u32 cbArg);
+using CellVdecCbMsg = func_def<u32(u32 handle, CellVdecMsgType msgType, s32 msgData, u32 cbArg)>;
 
 // Callback Function Information
 struct CellVdecCb
@@ -468,7 +467,7 @@ struct CellVdecDivxInfo
 	DIVX_transferCharacteristics transferCharacteristics;
 	DIVX_matrixCoefficients matrixCoefficients;
 	DIVX_pictureStruct pictureStruct;
-	be_t<DIVX_frameRateCode> frameRateCode;
+	be_t<u16> frameRateCode; // DIVX_frameRateCode
 };
 
 enum MPEG2_level
@@ -638,8 +637,8 @@ struct CellVdecMpeg2Info
 	u8  number_of_frame_centre_offsets[2];
 	be_t<u16> frame_centre_horizontal_offset[2][3];
 	be_t<u16> frame_centre_vertical_offset[2][3];
-	be_t<MPEG2_headerFlags> headerPresentFlags;
-	be_t<MPEG2_headerFlags> headerRetentionFlags;
+	be_t<u32> headerPresentFlags; // MPEG2_headerFlags
+	be_t<u32> headerRetentionFlags; // MPEG2_headerFlags
 	bool mpeg1Flag;
 	u8 ccDataLength[2];
 	u8 ccData[2][128];
@@ -717,7 +716,7 @@ public:
 
 	squeue_t<VdecFrame> frames;
 
-	const CellVdecCodecType type;
+	const s32 type;
 	const u32 profile;
 	const u32 memAddr;
 	const u32 memSize;
@@ -730,9 +729,9 @@ public:
 	u32 frc_set; // frame rate overwriting
 	AVRational rfr, afr;
 
-	PPUThread* vdecCb;
+	std::shared_ptr<PPUThread> vdecCb;
 
-	VideoDecoder(CellVdecCodecType type, u32 profile, u32 addr, u32 size, vm::ptr<CellVdecCbMsg> func, u32 arg);
+	VideoDecoder(s32 type, u32 profile, u32 addr, u32 size, vm::ptr<CellVdecCbMsg> func, u32 arg);
 
 	~VideoDecoder();
 };

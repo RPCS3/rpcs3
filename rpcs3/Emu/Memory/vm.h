@@ -35,7 +35,7 @@ namespace vm
 	// break the reservation, return true if it was successfully broken
 	bool reservation_break(u32 addr);
 	// read memory and reserve it for further atomic update, return true if the previous reservation was broken
-	bool reservation_acquire(void* data, u32 addr, u32 size, const std::function<void()>& callback = nullptr);
+	bool reservation_acquire(void* data, u32 addr, u32 size, std::function<void()> callback = nullptr);
 	// same as reservation_acquire but does not have the callback argument
 	// used by the PPU LLVM JIT since creating a std::function object in LLVM IR is too complicated
 	bool reservation_acquire_no_cb(void* data, u32 addr, u32 size);
@@ -64,149 +64,169 @@ namespace vm
 	u32 alloc(u32 addr, u32 size, memory_location location = user_space);
 	void dealloc(u32 addr, memory_location location = user_space);
 	
-	template<typename T = void>
-	T* get_ptr(u32 addr)
+	template<typename T = void> T* get_ptr(u32 addr)
 	{
 		return reinterpret_cast<T*>(static_cast<u8*>(g_base_addr) + addr);
 	}
 
-	template<typename T>
-	T& get_ref(u32 addr)
+	template<typename T> T& get_ref(u32 addr)
 	{
 		return *get_ptr<T>(addr);
 	}
 
-	template<typename T = void>
-	T* priv_ptr(u32 addr)
+	template<typename T = void> T* priv_ptr(u32 addr)
 	{
 		return reinterpret_cast<T*>(static_cast<u8*>(g_priv_addr) + addr);
 	}
 
-	template<typename T>
-	T& priv_ref(u32 addr)
+	template<typename T> T& priv_ref(u32 addr)
 	{
 		return *priv_ptr<T>(addr);
 	}
 
-	u32 get_addr(const void* real_pointer);
-
-	never_inline void error(const u64 addr, const char* func);
-
-	template<typename T>
-	struct cast_ptr
+	inline u32 get_addr(const void* real_pointer)
 	{
-		static_assert(std::is_same<T, u32>::value, "Unsupported vm::cast() type");
+		const std::uintptr_t diff = reinterpret_cast<std::uintptr_t>(real_pointer) - reinterpret_cast<std::uintptr_t>(g_base_addr);
+		const u32 res = static_cast<u32>(diff);
 
-		force_inline static u32 cast(const T& addr, const char* func)
+		if (res == diff)
+		{
+			return res;
+		}
+
+		if (real_pointer)
+		{
+			throw EXCEPTION("Not a virtual memory pointer (%p)", real_pointer);
+		}
+
+		return 0;
+	}
+
+	template<typename T> struct cast_ptr
+	{
+		static_assert(std::is_same<T, u32>::value, "Unsupported VM_CAST() type");
+
+		force_inline static u32 cast(const T& addr, const char* file, int line, const char* func)
 		{
 			return 0;
 		}
 	};
 
-	template<>
-	struct cast_ptr<u32>
+	template<> struct cast_ptr<u32>
 	{
-		force_inline static u32 cast(const u32 addr, const char* func)
+		force_inline static u32 cast(const u32 addr, const char* file, int line, const char* func)
 		{
 			return addr;
 		}
 	};
 
-	template<>
-	struct cast_ptr<u64>
+	template<> struct cast_ptr<u64>
 	{
-		force_inline static u32 cast(const u64 addr, const char* func)
+		force_inline static u32 cast(const u64 addr, const char* file, int line, const char* func)
 		{
 			const u32 res = static_cast<u32>(addr);
+
 			if (res != addr)
 			{
-				vm::error(addr, func);
+				throw fmt::exception(file, line, func, "VM_CAST failed (addr=0x%llx)", addr);
 			}
 
 			return res;
 		}
 	};
 
-	template<typename T>
-	struct cast_ptr<be_t<T>>
+	template<typename T> struct cast_ptr<be_t<T>>
 	{
-		force_inline static u32 cast(const be_t<T>& addr, const char* func)
+		force_inline static u32 cast(const be_t<T>& addr, const char* file, int line, const char* func)
 		{
-			return cast_ptr<T>::cast(addr.value(), func);
+			return cast_ptr<T>::cast(addr.value(), file, line, func);
 		}
 	};
 
-	template<typename T>
-	force_inline static u32 cast(const T& addr, const char* func = "vm::cast")
+	template<typename T> struct cast_ptr<le_t<T>>
 	{
-		return cast_ptr<T>::cast(addr, func);
+		force_inline static u32 cast(const le_t<T>& addr, const char* file, int line, const char* func)
+		{
+			return cast_ptr<T>::cast(addr.value(), file, line, func);
+		}
+	};
+
+	// function for VM_CAST
+	template<typename T> force_inline static u32 impl_cast(const T& addr, const char* file, int line, const char* func)
+	{
+		return cast_ptr<T>::cast(addr, file, line, func);
+	}
+
+	static u8 read8(u32 addr)
+	{
+		return get_ref<u8>(addr);
+	}
+
+	static void write8(u32 addr, u8 value)
+	{
+		get_ref<u8>(addr) = value;
 	}
 
 	namespace ps3
 	{
 		void init();
 
-		static u8 read8(u32 addr)
+		inline const be_t<u16>& read16(u32 addr)
 		{
-			return get_ref<u8>(addr);
+			return get_ref<const be_t<u16>>(addr);
 		}
 
-		static void write8(u32 addr, u8 value)
-		{
-			get_ref<u8>(addr) = value;
-		}
-
-		static u16 read16(u32 addr)
-		{
-			return get_ref<be_t<u16>>(addr);
-		}
-
-		static void write16(u32 addr, be_t<u16> value)
+		inline void write16(u32 addr, be_t<u16> value)
 		{
 			get_ref<be_t<u16>>(addr) = value;
 		}
 
-		static u32 read32(u32 addr)
+		inline void write16(u32 addr, u16 value)
 		{
-			return get_ref<be_t<u32>>(addr);
+			get_ref<be_t<u16>>(addr) = value;
 		}
 
-		static void write32(u32 addr, be_t<u32> value)
+		inline const be_t<u32>& read32(u32 addr)
+		{
+			return get_ref<const be_t<u32>>(addr);
+		}
+
+		inline void write32(u32 addr, be_t<u32> value)
 		{
 			get_ref<be_t<u32>>(addr) = value;
 		}
 
-		static u64 read64(u32 addr)
+		inline void write32(u32 addr, u32 value)
 		{
-			return get_ref<be_t<u64>>(addr);
+			get_ref<be_t<u32>>(addr) = value;
 		}
 
-		static void write64(u32 addr, be_t<u64> value)
+		inline const be_t<u64>& read64(u32 addr)
+		{
+			return get_ref<const be_t<u64>>(addr);
+		}
+
+		inline void write64(u32 addr, be_t<u64> value)
 		{
 			get_ref<be_t<u64>>(addr) = value;
 		}
 
-		static void write16(u32 addr, u16 value)
+		inline void write64(u32 addr, u64 value)
 		{
-			write16(addr, be_t<u16>::make(value));
+			get_ref<be_t<u64>>(addr) = value;
 		}
 
-		static void write32(u32 addr, u32 value)
+		inline const be_t<u128>& read128(u32 addr)
 		{
-			write32(addr, be_t<u32>::make(value));
+			return get_ref<const be_t<u128>>(addr);
 		}
 
-		static void write64(u32 addr, u64 value)
+		inline void write128(u32 addr, be_t<u128> value)
 		{
-			write64(addr, be_t<u64>::make(value));
+			get_ref<be_t<u128>>(addr) = value;
 		}
 
-		static u128 read128(u32 addr)
-		{
-			return get_ref<be_t<u128>>(addr);
-		}
-
-		static void write128(u32 addr, u128 value)
+		inline void write128(u32 addr, u128 value)
 		{
 			get_ref<be_t<u128>>(addr) = value;
 		}
@@ -216,54 +236,64 @@ namespace vm
 	{
 		void init();
 
-		static u8 read8(u32 addr)
+		inline const le_t<u16>& read16(u32 addr)
 		{
-			return get_ref<u8>(addr);
+			return get_ref<const le_t<u16>>(addr);
 		}
 
-		static void write8(u32 addr, u8 value)
+		inline void write16(u32 addr, le_t<u16> value)
 		{
-			get_ref<u8>(addr) = value;
+			get_ref<le_t<u16>>(addr) = value;
 		}
 
-		static u16 read16(u32 addr)
+		inline void write16(u32 addr, u16 value)
 		{
-			return get_ref<u16>(addr);
+			get_ref<le_t<u16>>(addr) = value;
 		}
 
-		static void write16(u32 addr, u16 value)
+		inline const le_t<u32>& read32(u32 addr)
 		{
-			get_ref<u16>(addr) = value;
+			return get_ref<const le_t<u32>>(addr);
 		}
 
-		static u32 read32(u32 addr)
+		inline void write32(u32 addr, le_t<u32> value)
 		{
-			return get_ref<u32>(addr);
+			get_ref<le_t<u32>>(addr) = value;
 		}
 
-		static void write32(u32 addr, u32 value)
+		inline void write32(u32 addr, u32 value)
 		{
-			get_ref<u32>(addr) = value;
+			get_ref<le_t<u32>>(addr) = value;
 		}
 
-		static u64 read64(u32 addr)
+		inline const le_t<u64>& read64(u32 addr)
 		{
-			return get_ref<u64>(addr);
+			return get_ref<const le_t<u64>>(addr);
 		}
 
-		static void write64(u32 addr, u64 value)
+		inline void write64(u32 addr, le_t<u64> value)
 		{
-			get_ref<u64>(addr) = value;
+			get_ref<le_t<u64>>(addr) = value;
 		}
 
-		static u128 read128(u32 addr)
+		inline void write64(u32 addr, u64 value)
 		{
-			return get_ref<u128>(addr);
+			get_ref<le_t<u64>>(addr) = value;
 		}
 
-		static void write128(u32 addr, u128 value)
+		inline const le_t<u128>& read128(u32 addr)
 		{
-			get_ref<u128>(addr) = value;
+			return get_ref<const le_t<u128>>(addr);
+		}
+
+		inline void write128(u32 addr, le_t<u128> value)
+		{
+			get_ref<le_t<u128>>(addr) = value;
+		}
+
+		inline void write128(u32 addr, u128 value)
+		{
+			get_ref<le_t<u128>>(addr) = value;
 		}
 	}
 
@@ -298,15 +328,15 @@ namespace vm
 		u32 alloc_offset;
 
 		template<typename T = char>
-		ptr<T> alloc(u32 count = 1) const
+		_ptr_base<T> alloc(u32 count = 1) const
 		{
-			return ptr<T>::make(allocator(count * sizeof(T)));
+			return{ allocator(count * sizeof32(T)) };
 		}
 
 		template<typename T = char>
-		ptr<T> fixed_alloc(u32 addr, u32 count = 1) const
+		_ptr_base<T> fixed_alloc(u32 addr, u32 count = 1) const
 		{
-			return ptr<T>::make(fixed_allocator(addr, count * sizeof(T)));
+			return{ fixed_allocator(addr, count * sizeof32(T)) };
 		}
 	};
 

@@ -2,138 +2,128 @@
 #include "Emu/System.h"
 #include "Emu/ARMv7/PSVFuncList.h"
 
-#include "sceNpCommon.h"
+#include "sceNpUtility.h"
 
-extern psv_log_base sceNpUtility;
-
-struct SceNpBandwidthTestResult
+s32 sceNpLookupInit(s32 usesAsync, s32 threadPriority, s32 cpuAffinityMask, vm::ptr<void> option)
 {
-	double uploadBps;
-	double downloadBps;
-	s32 result;
-	char padding[4];
-};
-
-s32 sceNpLookupInit(s32 usesAsync, s32 threadPriority, s32 cpuAffinityMask, vm::psv::ptr<void> option)
-{
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpLookupTerm(ARMv7Context&)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceNpLookupCreateTitleCtx(vm::psv::ptr<const SceNpCommunicationId> titleId, vm::psv::ptr<const SceNpId> selfNpId)
+s32 sceNpLookupCreateTitleCtx(vm::cptr<SceNpCommunicationId> titleId, vm::cptr<SceNpId> selfNpId)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpLookupDeleteTitleCtx(s32 titleCtxId)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpLookupCreateRequest(s32 titleCtxId)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpLookupDeleteRequest(s32 reqId)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpLookupAbortRequest(s32 reqId)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpLookupSetTimeout(s32 id, s32 resolveRetry, u32 resolveTimeout, u32 connTimeout, u32 sendTimeout, u32 recvTimeout)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceNpLookupWaitAsync(s32 reqId, vm::psv::ptr<s32> result)
+s32 sceNpLookupWaitAsync(s32 reqId, vm::ptr<s32> result)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceNpLookupPollAsync(s32 reqId, vm::psv::ptr<s32> result)
+s32 sceNpLookupPollAsync(s32 reqId, vm::ptr<s32> result)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceNpLookupNpId(s32 reqId, vm::psv::ptr<const SceNpOnlineId> onlineId, vm::psv::ptr<SceNpId> npId, vm::psv::ptr<void> option)
+s32 sceNpLookupNpId(s32 reqId, vm::cptr<SceNpOnlineId> onlineId, vm::ptr<SceNpId> npId, vm::ptr<void> option)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceNpLookupNpIdAsync(s32 reqId, vm::psv::ptr<const SceNpOnlineId> onlineId, vm::psv::ptr<SceNpId> npId, vm::psv::ptr<void> option)
+s32 sceNpLookupNpIdAsync(s32 reqId, vm::cptr<SceNpOnlineId> onlineId, vm::ptr<SceNpId> npId, vm::ptr<void> option)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpLookupUserProfile(
 	s32 reqId,
 	s32 avatarSizeType,
-	vm::psv::ptr<const SceNpId> npId,
-	vm::psv::ptr<SceNpUserInformation> userInfo,
-	vm::psv::ptr<SceNpAboutMe> aboutMe,
-	vm::psv::ptr<SceNpMyLanguages> languages,
-	vm::psv::ptr<SceNpCountryCode> countryCode,
-	vm::psv::ptr<void> avatarImageData,
+	vm::cptr<SceNpId> npId,
+	vm::ptr<SceNpUserInformation> userInfo,
+	vm::ptr<SceNpAboutMe> aboutMe,
+	vm::ptr<SceNpMyLanguages> languages,
+	vm::ptr<SceNpCountryCode> countryCode,
+	vm::ptr<void> avatarImageData,
 	u32 avatarImageDataMaxSize,
-	vm::psv::ptr<u32> avatarImageDataSize,
-	vm::psv::ptr<void> option)
+	vm::ptr<u32> avatarImageDataSize,
+	vm::ptr<void> option)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpLookupUserProfileAsync(
 	s32 reqId,
 	s32 avatarSizeType,
-	vm::psv::ptr<const SceNpId> npId,
-	vm::psv::ptr<SceNpUserInformation> userInfo,
-	vm::psv::ptr<SceNpAboutMe> aboutMe,
-	vm::psv::ptr<SceNpMyLanguages> languages,
-	vm::psv::ptr<SceNpCountryCode> countryCode,
-	vm::psv::ptr<void> avatarImageData,
+	vm::cptr<SceNpId> npId,
+	vm::ptr<SceNpUserInformation> userInfo,
+	vm::ptr<SceNpAboutMe> aboutMe,
+	vm::ptr<SceNpMyLanguages> languages,
+	vm::ptr<SceNpCountryCode> countryCode,
+	vm::ptr<void> avatarImageData,
 	u32 avatarImageDataMaxSize,
-	vm::psv::ptr<u32> avatarImageDataSize,
-	vm::psv::ptr<void> option)
+	vm::ptr<u32> avatarImageDataSize,
+	vm::ptr<void> option)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceNpLookupAvatarImage(s32 reqId, vm::psv::ptr<const SceNpAvatarUrl> avatarUrl, vm::psv::ptr<SceNpAvatarImage> avatarImage, vm::psv::ptr<void> option)
+s32 sceNpLookupAvatarImage(s32 reqId, vm::cptr<SceNpAvatarUrl> avatarUrl, vm::ptr<SceNpAvatarImage> avatarImage, vm::ptr<void> option)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceNpLookupAvatarImageAsync(s32 reqId, vm::psv::ptr<const SceNpAvatarUrl> avatarUrl, vm::psv::ptr<SceNpAvatarImage> avatarImage, vm::psv::ptr<void> option)
+s32 sceNpLookupAvatarImageAsync(s32 reqId, vm::cptr<SceNpAvatarUrl> avatarUrl, vm::ptr<SceNpAvatarImage> avatarImage, vm::ptr<void> option)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpBandwidthTestInitStart(s32 initPriority, s32 cpuAffinityMask)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpBandwidthTestGetStatus()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceNpBandwidthTestShutdown(vm::psv::ptr<SceNpBandwidthTestResult> result)
+s32 sceNpBandwidthTestShutdown(vm::ptr<SceNpBandwidthTestResult> result)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceNpBandwidthTestAbort()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 #define REG_FUNC(nid, name) reg_psv_func(nid, &sceNpUtility, #name, name)
@@ -143,6 +133,7 @@ psv_log_base sceNpUtility("SceNpUtility", []()
 	sceNpUtility.on_load = nullptr;
 	sceNpUtility.on_unload = nullptr;
 	sceNpUtility.on_stop = nullptr;
+	sceNpUtility.on_error = nullptr;
 
 	REG_FUNC(0x9246A673, sceNpLookupInit);
 	REG_FUNC(0x0158B61B, sceNpLookupTerm);

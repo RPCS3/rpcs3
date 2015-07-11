@@ -4,69 +4,69 @@
 
 #include "sceAppUtil.h"
 
-s32 sceAppUtilInit(vm::psv::ptr<const SceAppUtilInitParam> initParam, vm::psv::ptr<SceAppUtilBootParam> bootParam)
+s32 sceAppUtilInit(vm::cptr<SceAppUtilInitParam> initParam, vm::ptr<SceAppUtilBootParam> bootParam)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceAppUtilShutdown()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceAppUtilSaveDataSlotCreate(u32 slotId, vm::psv::ptr<const SceAppUtilSaveDataSlotParam> param, vm::psv::ptr<const SceAppUtilSaveDataMountPoint> mountPoint)
+s32 sceAppUtilSaveDataSlotCreate(u32 slotId, vm::cptr<SceAppUtilSaveDataSlotParam> param, vm::cptr<SceAppUtilSaveDataMountPoint> mountPoint)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceAppUtilSaveDataSlotDelete(u32 slotId, vm::psv::ptr<const SceAppUtilSaveDataMountPoint> mountPoint)
+s32 sceAppUtilSaveDataSlotDelete(u32 slotId, vm::cptr<SceAppUtilSaveDataMountPoint> mountPoint)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceAppUtilSaveDataSlotSetParam(u32 slotId, vm::psv::ptr<const SceAppUtilSaveDataSlotParam> param, vm::psv::ptr<const SceAppUtilSaveDataMountPoint> mountPoint)
+s32 sceAppUtilSaveDataSlotSetParam(u32 slotId, vm::cptr<SceAppUtilSaveDataSlotParam> param, vm::cptr<SceAppUtilSaveDataMountPoint> mountPoint)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceAppUtilSaveDataSlotGetParam(u32 slotId, vm::psv::ptr<SceAppUtilSaveDataSlotParam> param, vm::psv::ptr<const SceAppUtilSaveDataMountPoint> mountPoint)
+s32 sceAppUtilSaveDataSlotGetParam(u32 slotId, vm::ptr<SceAppUtilSaveDataSlotParam> param, vm::cptr<SceAppUtilSaveDataMountPoint> mountPoint)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceAppUtilSaveDataFileSave(vm::psv::ptr<const SceAppUtilSaveDataFileSlot> slot, vm::psv::ptr<const SceAppUtilSaveDataFile> files, u32 fileNum, vm::psv::ptr<const SceAppUtilSaveDataMountPoint> mountPoint, vm::psv::ptr<u32> requiredSizeKB)
+s32 sceAppUtilSaveDataFileSave(vm::cptr<SceAppUtilSaveDataFileSlot> slot, vm::cptr<SceAppUtilSaveDataFile> files, u32 fileNum, vm::cptr<SceAppUtilSaveDataMountPoint> mountPoint, vm::ptr<u32> requiredSizeKB)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceAppUtilPhotoMount()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceAppUtilPhotoUmount()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceAppUtilSystemParamGetInt(u32 paramId, vm::psv::ptr<s32> value)
+s32 sceAppUtilSystemParamGetInt(u32 paramId, vm::ptr<s32> value)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceAppUtilSystemParamGetString(u32 paramId, vm::psv::ptr<char> buf, u32 bufSize)
+s32 sceAppUtilSystemParamGetString(u32 paramId, vm::ptr<char> buf, u32 bufSize)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceAppUtilSaveSafeMemory(vm::psv::ptr<const void> buf, u32 bufSize, s64 offset)
+s32 sceAppUtilSaveSafeMemory(vm::cptr<void> buf, u32 bufSize, s64 offset)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceAppUtilLoadSafeMemory(vm::psv::ptr<void> buf, u32 bufSize, s64 offset)
+s32 sceAppUtilLoadSafeMemory(vm::ptr<void> buf, u32 bufSize, s64 offset)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 
@@ -77,6 +77,7 @@ psv_log_base sceAppUtil("SceAppUtil", []()
 	sceAppUtil.on_load = nullptr;
 	sceAppUtil.on_unload = nullptr;
 	sceAppUtil.on_stop = nullptr;
+	sceAppUtil.on_error = nullptr;
 
 	REG_FUNC(0xDAFFE671, sceAppUtilInit);
 	REG_FUNC(0xB220B00B, sceAppUtilShutdown);

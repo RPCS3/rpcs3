@@ -3,9 +3,7 @@
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/SysCalls/Modules.h"
-#include "Emu/SysCalls/CB_FUNC.h"
 
-#include "Emu/CPU/CPUThreadManager.h"
 #include "cellPamf.h"
 #include "cellDmux.h"
 
@@ -84,6 +82,7 @@ PesHeader::PesHeader(DemuxerStream& stream)
 
 ElementaryStream::ElementaryStream(Demuxer* dmux, u32 addr, u32 size, u32 fidMajor, u32 fidMinor, u32 sup1, u32 sup2, vm::ptr<CellDmuxCbEsMsg> cbFunc, u32 cbArg, u32 spec)
 	: dmux(dmux)
+	, id(Emu.GetIdManager().get_current_id())
 	, memAddr(align(addr, 128))
 	, memSize(size - (addr - memAddr))
 	, fidMajor(fidMajor)
@@ -169,7 +168,7 @@ void ElementaryStream::push_au(u32 size, u64 dts, u64 pts, u64 userdata, bool ra
 		info->reserved = 0;
 		info->userData = userdata;
 
-		auto spec = vm::ptr<u32>::make(put + sizeof(CellDmuxAuInfoEx));
+		auto spec = vm::ptr<u32>::make(put + sizeof32(CellDmuxAuInfoEx));
 		*spec = specific;
 
 		auto inf = vm::ptr<CellDmuxAuInfo>::make(put + 64);
@@ -284,7 +283,7 @@ void dmuxQueryAttr(u32 info_addr /* may be 0 */, vm::ptr<CellDmuxAttr> attr)
 	attr->memSize = 0x10000; // 0x3e8e6 from ps3
 }
 
-void dmuxQueryEsAttr(u32 info /* may be 0 */, vm::ptr<const CellCodecEsFilterId> esFilterId, u32 esSpecificInfo, vm::ptr<CellDmuxEsAttr> attr)
+void dmuxQueryEsAttr(u32 info /* may be 0 */, vm::cptr<CellCodecEsFilterId> esFilterId, u32 esSpecificInfo, vm::ptr<CellDmuxEsAttr> attr)
 {
 	if (esFilterId->filterIdMajor >= 0xe0)
 	{
@@ -305,16 +304,10 @@ void dmuxOpen(u32 dmux_id) // TODO: call from the constructor
 
 	dmux.id = dmux_id;
 
-	dmux.dmuxCb = static_cast<PPUThread*>(Emu.GetCPU().AddThread(CPU_THREAD_PPU).get());
-	dmux.dmuxCb->SetName(fmt::format("Demuxer[0x%x] Callback", dmux_id));
-	dmux.dmuxCb->SetEntry(0);
-	dmux.dmuxCb->SetPrio(1001);
-	dmux.dmuxCb->SetStackSize(0x10000);
-	dmux.dmuxCb->InitStack();
-	dmux.dmuxCb->InitRegs();
-	dmux.dmuxCb->DoRun();
-
-	thread_t t(fmt::format("Demuxer[0x%x] Thread", dmux_id), [sptr]()
+	dmux.dmuxCb = Emu.GetIdManager().make_ptr<PPUThread>(fmt::format("Demuxer[0x%x] Thread", dmux_id));
+	dmux.dmuxCb->prio = 1001;
+	dmux.dmuxCb->stack_size = 0x10000;
+	dmux.dmuxCb->custom_task = [sptr](PPUThread& CPU)
 	{
 		Demuxer& dmux = *sptr;
 
@@ -352,7 +345,7 @@ void dmuxOpen(u32 dmux_id) // TODO: call from the constructor
 					auto dmuxMsg = vm::ptr<CellDmuxMsg>::make(dmux.memAddr + (cb_add ^= 16));
 					dmuxMsg->msgType = CELL_DMUX_MSG_TYPE_DEMUX_DONE;
 					dmuxMsg->supplementalInfo = stream.userdata;
-					dmux.cbFunc(*dmux.dmuxCb, dmux.id, dmuxMsg, dmux.cbArg);
+					dmux.cbFunc(CPU, dmux.id, dmuxMsg, dmux.cbArg);
 
 					dmux.is_working = false;
 
@@ -505,7 +498,7 @@ void dmuxOpen(u32 dmux_id) // TODO: call from the constructor
 							auto esMsg = vm::ptr<CellDmuxEsMsg>::make(dmux.memAddr + (cb_add ^= 16));
 							esMsg->msgType = CELL_DMUX_ES_MSG_TYPE_AU_FOUND;
 							esMsg->supplementalInfo = stream.userdata;
-							es.cbFunc(*dmux.dmuxCb, dmux.id, es.id, esMsg, es.cbArg);
+							es.cbFunc(CPU, dmux.id, es.id, esMsg, es.cbArg);
 						}
 					}
 					else
@@ -570,7 +563,7 @@ void dmuxOpen(u32 dmux_id) // TODO: call from the constructor
 							auto esMsg = vm::ptr<CellDmuxEsMsg>::make(dmux.memAddr + (cb_add ^= 16));
 							esMsg->msgType = CELL_DMUX_ES_MSG_TYPE_AU_FOUND;
 							esMsg->supplementalInfo = stream.userdata;
-							es.cbFunc(*dmux.dmuxCb, dmux.id, es.id, esMsg, es.cbArg);
+							es.cbFunc(CPU, dmux.id, es.id, esMsg, es.cbArg);
 						}
 						
 						if (pes.has_ts)
@@ -646,7 +639,7 @@ void dmuxOpen(u32 dmux_id) // TODO: call from the constructor
 					auto dmuxMsg = vm::ptr<CellDmuxMsg>::make(dmux.memAddr + (cb_add ^= 16));
 					dmuxMsg->msgType = CELL_DMUX_MSG_TYPE_DEMUX_DONE;
 					dmuxMsg->supplementalInfo = stream.userdata;
-					dmux.cbFunc(*dmux.dmuxCb, dmux.id, dmuxMsg, dmux.cbArg);
+					dmux.cbFunc(CPU, dmux.id, dmuxMsg, dmux.cbArg);
 
 					stream = {};
 
@@ -734,7 +727,7 @@ void dmuxOpen(u32 dmux_id) // TODO: call from the constructor
 					auto esMsg = vm::ptr<CellDmuxEsMsg>::make(dmux.memAddr + (cb_add ^= 16));
 					esMsg->msgType = CELL_DMUX_ES_MSG_TYPE_AU_FOUND;
 					esMsg->supplementalInfo = stream.userdata;
-					es.cbFunc(*dmux.dmuxCb, dmux.id, es.id, esMsg, es.cbArg);
+					es.cbFunc(CPU, dmux.id, es.id, esMsg, es.cbArg);
 				}
 				
 				if (es.raw_data.size())
@@ -746,7 +739,7 @@ void dmuxOpen(u32 dmux_id) // TODO: call from the constructor
 				auto esMsg = vm::ptr<CellDmuxEsMsg>::make(dmux.memAddr + (cb_add ^= 16));
 				esMsg->msgType = CELL_DMUX_ES_MSG_TYPE_FLUSH_DONE;
 				esMsg->supplementalInfo = stream.userdata;
-				es.cbFunc(*dmux.dmuxCb, dmux.id, es.id, esMsg, es.cbArg);
+				es.cbFunc(CPU, dmux.id, es.id, esMsg, es.cbArg);
 				break;
 			}
 
@@ -769,10 +762,13 @@ void dmuxOpen(u32 dmux_id) // TODO: call from the constructor
 		}
 
 		dmux.is_finished = true;
-	});
+	};
+
+	dmux.dmuxCb->Run();
+	dmux.dmuxCb->Exec();
 }
 
-s32 cellDmuxQueryAttr(vm::ptr<const CellDmuxType> type, vm::ptr<CellDmuxAttr> attr)
+s32 cellDmuxQueryAttr(vm::cptr<CellDmuxType> type, vm::ptr<CellDmuxAttr> attr)
 {
 	cellDmux.Warning("cellDmuxQueryAttr(type=*0x%x, attr=*0x%x)", type, attr);
 
@@ -785,7 +781,7 @@ s32 cellDmuxQueryAttr(vm::ptr<const CellDmuxType> type, vm::ptr<CellDmuxAttr> at
 	return CELL_OK;
 }
 
-s32 cellDmuxQueryAttr2(vm::ptr<const CellDmuxType2> type2, vm::ptr<CellDmuxAttr> attr)
+s32 cellDmuxQueryAttr2(vm::cptr<CellDmuxType2> type2, vm::ptr<CellDmuxAttr> attr)
 {
 	cellDmux.Warning("cellDmuxQueryAttr2(demuxerType2=*0x%x, demuxerAttr=*0x%x)", type2, attr);
 
@@ -798,7 +794,7 @@ s32 cellDmuxQueryAttr2(vm::ptr<const CellDmuxType2> type2, vm::ptr<CellDmuxAttr>
 	return CELL_OK;
 }
 
-s32 cellDmuxOpen(vm::ptr<const CellDmuxType> type, vm::ptr<const CellDmuxResource> res, vm::ptr<const CellDmuxCb> cb, vm::ptr<u32> handle)
+s32 cellDmuxOpen(vm::cptr<CellDmuxType> type, vm::cptr<CellDmuxResource> res, vm::cptr<CellDmuxCb> cb, vm::ptr<u32> handle)
 {
 	cellDmux.Warning("cellDmuxOpen(type=*0x%x, res=*0x%x, cb=*0x%x, handle=*0x%x)", type, res, cb, handle);
 
@@ -814,7 +810,7 @@ s32 cellDmuxOpen(vm::ptr<const CellDmuxType> type, vm::ptr<const CellDmuxResourc
 	return CELL_OK;
 }
 
-s32 cellDmuxOpenEx(vm::ptr<const CellDmuxType> type, vm::ptr<const CellDmuxResourceEx> resEx, vm::ptr<const CellDmuxCb> cb, vm::ptr<u32> handle)
+s32 cellDmuxOpenEx(vm::cptr<CellDmuxType> type, vm::cptr<CellDmuxResourceEx> resEx, vm::cptr<CellDmuxCb> cb, vm::ptr<u32> handle)
 {
 	cellDmux.Warning("cellDmuxOpenEx(type=*0x%x, resEx=*0x%x, cb=*0x%x, handle=*0x%x)", type, resEx, cb, handle);
 
@@ -830,12 +826,12 @@ s32 cellDmuxOpenEx(vm::ptr<const CellDmuxType> type, vm::ptr<const CellDmuxResou
 	return CELL_OK;
 }
 
-s32 _nid_e075fabc(vm::ptr<const CellDmuxType> type, vm::ptr<const CellDmuxResourceEx> resEx, vm::ptr<const CellDmuxCb> cb, vm::ptr<u32> handle)
+s32 _nid_e075fabc(vm::cptr<CellDmuxType> type, vm::cptr<CellDmuxResourceEx> resEx, vm::cptr<CellDmuxCb> cb, vm::ptr<u32> handle)
 {
 	return cellDmuxOpenEx(type, resEx, cb, handle);
 }
 
-s32 cellDmuxOpen2(vm::ptr<const CellDmuxType2> type2, vm::ptr<const CellDmuxResource2> res2, vm::ptr<const CellDmuxCb> cb, vm::ptr<u32> handle)
+s32 cellDmuxOpen2(vm::cptr<CellDmuxType2> type2, vm::cptr<CellDmuxResource2> res2, vm::cptr<CellDmuxCb> cb, vm::ptr<u32> handle)
 {
 	cellDmux.Warning("cellDmuxOpen2(type2=*0x%x, res2=*0x%x, cb=*0x%x, handle=*0x%x)", type2, res2, cb, handle);
 
@@ -876,7 +872,7 @@ s32 cellDmuxClose(u32 handle)
 		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 	}
 
-	if (dmux->dmuxCb) Emu.GetCPU().RemoveThread(dmux->dmuxCb->GetId());
+	Emu.GetIdManager().remove<PPUThread>(dmux->dmuxCb->GetId());
 	Emu.GetIdManager().remove<Demuxer>(handle);
 	return CELL_OK;
 }
@@ -957,7 +953,7 @@ s32 cellDmuxResetStreamAndWaitDone(u32 handle)
 	return CELL_OK;
 }
 
-s32 cellDmuxQueryEsAttr(vm::ptr<const CellDmuxType> type, vm::ptr<const CellCodecEsFilterId> esFilterId, u32 esSpecificInfo, vm::ptr<CellDmuxEsAttr> esAttr)
+s32 cellDmuxQueryEsAttr(vm::cptr<CellDmuxType> type, vm::cptr<CellCodecEsFilterId> esFilterId, u32 esSpecificInfo, vm::ptr<CellDmuxEsAttr> esAttr)
 {
 	cellDmux.Warning("cellDmuxQueryEsAttr(demuxerType=*0x%x, esFilterId=*0x%x, esSpecificInfo=*0x%x, esAttr=*0x%x)", type, esFilterId, esSpecificInfo, esAttr);
 
@@ -971,7 +967,7 @@ s32 cellDmuxQueryEsAttr(vm::ptr<const CellDmuxType> type, vm::ptr<const CellCode
 	return CELL_OK;
 }
 
-s32 cellDmuxQueryEsAttr2(vm::ptr<const CellDmuxType2> type2, vm::ptr<const CellCodecEsFilterId> esFilterId, u32 esSpecificInfo, vm::ptr<CellDmuxEsAttr> esAttr)
+s32 cellDmuxQueryEsAttr2(vm::cptr<CellDmuxType2> type2, vm::cptr<CellCodecEsFilterId> esFilterId, u32 esSpecificInfo, vm::ptr<CellDmuxEsAttr> esAttr)
 {
 	cellDmux.Warning("cellDmuxQueryEsAttr2(type2=*0x%x, esFilterId=*0x%x, esSpecificInfo=*0x%x, esAttr=*0x%x)", type2, esFilterId, esSpecificInfo, esAttr);
 
@@ -985,7 +981,7 @@ s32 cellDmuxQueryEsAttr2(vm::ptr<const CellDmuxType2> type2, vm::ptr<const CellC
 	return CELL_OK;
 }
 
-s32 cellDmuxEnableEs(u32 handle, vm::ptr<const CellCodecEsFilterId> esFilterId, vm::ptr<const CellDmuxEsResource> esResourceInfo, vm::ptr<const CellDmuxEsCb> esCb, u32 esSpecificInfo, vm::ptr<u32> esHandle)
+s32 cellDmuxEnableEs(u32 handle, vm::cptr<CellCodecEsFilterId> esFilterId, vm::cptr<CellDmuxEsResource> esResourceInfo, vm::cptr<CellDmuxEsCb> esCb, u32 esSpecificInfo, vm::ptr<u32> esHandle)
 {
 	cellDmux.Warning("cellDmuxEnableEs(handle=0x%x, esFilterId=*0x%x, esResourceInfo=*0x%x, esCb=*0x%x, esSpecificInfo=*0x%x, esHandle=*0x%x)", handle, esFilterId, esResourceInfo, esCb, esSpecificInfo, esHandle);
 
@@ -998,19 +994,17 @@ s32 cellDmuxEnableEs(u32 handle, vm::ptr<const CellCodecEsFilterId> esFilterId, 
 
 	// TODO: check esFilterId, esResourceInfo, esCb and esSpecificInfo correctly
 
-	auto es = std::make_shared<ElementaryStream>(dmux.get(), esResourceInfo->memAddr, esResourceInfo->memSize,
+	const auto es = Emu.GetIdManager().make_ptr<ElementaryStream>(dmux.get(), esResourceInfo->memAddr, esResourceInfo->memSize,
 		esFilterId->filterIdMajor, esFilterId->filterIdMinor, esFilterId->supplementalInfo1, esFilterId->supplementalInfo2,
 		esCb->cbEsMsgFunc, esCb->cbArg, esSpecificInfo);
 
-	u32 id = Emu.GetIdManager().add(es);
-	es->id = id;
-	*esHandle = id;
+	*esHandle = es->id;
 
-	cellDmux.Warning("*** New ES(dmux=0x%x, addr=0x%x, size=0x%x, filter={0x%x, 0x%x, 0x%x, 0x%x}, cb=0x%x, arg=0x%x, spec=0x%x): id = %d",
-		handle, es->memAddr, es->memSize, es->fidMajor, es->fidMinor, es->sup1, es->sup2, es->cbFunc, es->cbArg, es->spec, id);
+	cellDmux.Warning("*** New ES(dmux=0x%x, addr=0x%x, size=0x%x, filter={0x%x, 0x%x, 0x%x, 0x%x}, cb=0x%x, arg=0x%x, spec=0x%x): id = 0x%x",
+		handle, es->memAddr, es->memSize, es->fidMajor, es->fidMinor, es->sup1, es->sup2, es->cbFunc, es->cbArg, es->spec, es->id);
 
 	DemuxerTask task(dmuxEnableEs);
-	task.es.es = id;
+	task.es.es = es->id;
 	task.es.es_ptr = es.get();
 
 	dmux->job.push(task, &dmux->is_closed);

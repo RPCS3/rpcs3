@@ -28,9 +28,9 @@ struct SceNpCommunicationSignature
 
 struct SceNpCommunicationConfig
 {
-	vm::psv::ptr<const SceNpCommunicationId> commId;
-	vm::psv::ptr<const SceNpCommunicationPassphrase> commPassphrase;
-	vm::psv::ptr<const SceNpCommunicationSignature> commSignature;
+	vm::lcptr<SceNpCommunicationId> commId;
+	vm::lcptr<SceNpCommunicationPassphrase> commPassphrase;
+	vm::lcptr<SceNpCommunicationSignature> commSignature;
 };
 
 struct SceNpCountryCode
@@ -69,16 +69,16 @@ struct SceNpUserInformation
 
 struct SceNpMyLanguages
 {
-	s32 language1;
-	s32 language2;
-	s32 language3;
+	le_t<s32> language1;
+	le_t<s32> language2;
+	le_t<s32> language3;
 	u8 padding[4];
 };
 
 struct SceNpAvatarImage
 {
 	u8 data[200 * 1024];
-	u32 size;
+	le_t<u32> size;
 	u8 reserved[12];
 };
 
@@ -94,45 +94,42 @@ struct SceNpAboutMe
 	char data[64];
 };
 
-typedef s32 SceNpAuthRequestId;
-typedef u64 SceNpTime;
-
 struct SceNpDate
 {
-	u16 year;
+	le_t<u16> year;
 	u8 month;
 	u8 day;
 };
 
 union SceNpTicketParam
 {
-	s32 _s32;
-	s64 _s64;
-	u32 _u32;
-	u64 _u64;
+	le_t<s32> _s32;
+	le_t<s64> _s64;
+	le_t<u32> _u32;
+	le_t<u64> _u64;
 	SceNpDate date;
 	u8 data[256];
 };
 
 struct SceNpTicketVersion
 {
-	u16 major;
-	u16 minor;
+	le_t<u16> major;
+	le_t<u16> minor;
 };
 
-typedef vm::psv::ptr<s32(SceNpAuthRequestId id, s32 result, vm::psv::ptr<void> arg)> SceNpAuthCallback;
+using SceNpAuthCallback = func_def<s32(s32 id, s32 result, vm::ptr<void> arg)>;
 
 struct SceNpAuthRequestParameter
 {
-	u32 size;
+	le_t<u32> size;
 	SceNpTicketVersion version;
-	vm::psv::ptr<const char> serviceId;
-	vm::psv::ptr<const void> cookie;
-	u32 cookieSize;
-	vm::psv::ptr<const char> entitlementId;
-	u32 consumedCount;
-	SceNpAuthCallback ticketCb;
-	vm::psv::ptr<void> cbArg;
+	vm::lcptr<char> serviceId;
+	vm::lcptr<void> cookie;
+	le_t<u32> cookieSize;
+	vm::lcptr<char> entitlementId;
+	le_t<u32> consumedCount;
+	vm::lptr<SceNpAuthCallback> ticketCb;
+	vm::lptr<void> cbArg;
 };
 
 struct SceNpEntitlementId
@@ -143,11 +140,11 @@ struct SceNpEntitlementId
 struct SceNpEntitlement
 {
 	SceNpEntitlementId id;
-	SceNpTime createdDate;
-	SceNpTime expireDate;
-	u32 type;
-	s32 remainingCount;
-	u32 consumedCount;
+	le_t<u64> createdDate;
+	le_t<u64> expireDate;
+	le_t<u32> type;
+	le_t<s32> remainingCount;
+	le_t<u32> consumedCount;
 	char padding[4];
 };
 

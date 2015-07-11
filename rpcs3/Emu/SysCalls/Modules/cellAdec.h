@@ -1,5 +1,7 @@
 #pragma once
 
+namespace vm { using namespace ps3; }
+
 // Error Codes
 enum
 {
@@ -246,7 +248,7 @@ enum
 };
 
 // Audio Codec Type
-enum AudioCodecType
+enum AudioCodecType : s32
 {
 	CELL_ADEC_TYPE_RESERVED1,
 	CELL_ADEC_TYPE_LPCM_PAMF,
@@ -282,7 +284,7 @@ enum AudioCodecType
 	CELL_ADEC_TYPE_RESERVED25,
 };
 
-static bool adecIsAtracX(const AudioCodecType type)
+inline bool adecIsAtracX(s32 type)
 {
 	return type == CELL_ADEC_TYPE_ATRACX
 		|| type == CELL_ADEC_TYPE_ATRACX_2CH
@@ -291,7 +293,7 @@ static bool adecIsAtracX(const AudioCodecType type)
 }
 
 // Output Channel Number
-enum CellAdecChannel
+enum CellAdecChannel : s32
 {
 	CELL_ADEC_CH_RESERVED1,
 	CELL_ADEC_CH_MONO,
@@ -309,7 +311,7 @@ enum CellAdecChannel
 };	
 
 // Sampling Rate
-enum CellAdecSampleRate
+enum CellAdecSampleRate : s32
 {
 	CELL_ADEC_FS_RESERVED1 = 0,
 	CELL_ADEC_FS_48kHz = 1,
@@ -317,7 +319,7 @@ enum CellAdecSampleRate
 	CELL_ADEC_FS_8kHz = 5,
 };
 
-enum CellAdecBitLength
+enum CellAdecBitLength : s32
 {
 	CELL_ADEC_BIT_LENGTH_RESERVED1,
 	CELL_ADEC_BIT_LENGTH_16,
@@ -327,7 +329,7 @@ enum CellAdecBitLength
 
 struct CellAdecType
 {
-	be_t<AudioCodecType> audioCodecType;
+	be_t<s32> audioCodecType; // AudioCodecType
 };
 
 struct CellAdecAttr
@@ -358,7 +360,7 @@ struct CellAdecResourceEx
 };
 
 // Callback Messages
-enum CellAdecMsgType
+enum CellAdecMsgType : s32
 {
 	CELL_ADEC_MSG_TYPE_AUDONE,
 	CELL_ADEC_MSG_TYPE_PCMOUT,
@@ -366,15 +368,13 @@ enum CellAdecMsgType
 	CELL_ADEC_MSG_TYPE_SEQDONE,
 };
 
-typedef s32(CellAdecCbMsg)(u32 handle, CellAdecMsgType msgType, s32 msgData, u32 cbArg);
+using CellAdecCbMsg = func_def<s32(u32 handle, CellAdecMsgType msgType, s32 msgData, u32 cbArg)>;
 
 struct CellAdecCb
 {
 	vm::bptr<CellAdecCbMsg> cbFunc;
 	be_t<u32> cbArg;
 };
-
-typedef CellCodecTimeStamp CellAdecTimeStamp;
 
 // AU Info
 struct CellAdecAuInfo
@@ -418,13 +418,13 @@ struct CellAdecLpcmInfo
 };
 
 // CELP Excitation Mode
-enum CELP_ExcitationMode
+enum CELP_ExcitationMode : s32
 {
 	CELL_ADEC_CELP_EXCITATION_MODE_RPE = 1,
 };
 
 // CELP RPE Configuration
-enum CELP_RPEConfig
+enum CELP_RPEConfig : s32
 {
 	CELL_ADEC_CELP_RPE_CONFIG_0,
 	CELL_ADEC_CELP_RPE_CONFIG_1,
@@ -433,7 +433,7 @@ enum CELP_RPEConfig
 };
 
 // CELP Word Size
-enum CELP_WordSize
+enum CELP_WordSize : s32
 {
 	CELL_ADEC_CELP_WORD_SZ_INT16_LE,
 	CELL_ADEC_CELP_WORD_SZ_FLOAT,
@@ -458,13 +458,13 @@ struct CellAdecCelpInfo
 };
 
 // CELP8 Excitation Mode
-enum CELP8_ExcitationMode
+enum CELP8_ExcitationMode : s32
 {
 	CELL_ADEC_CELP8_EXCITATION_MODE_MPE = 0,
 };
 
 // CELP8 MPE Configuration
-enum CELP8_MPEConfig
+enum CELP8_MPEConfig : s32
 {
 	CELL_ADEC_CELP8_MPE_CONFIG_0  = 0,
 	CELL_ADEC_CELP8_MPE_CONFIG_2  = 2,
@@ -479,7 +479,7 @@ enum CELP8_MPEConfig
 };
 
 // CELP8 Word Size
-enum CELP8_WordSize
+enum CELP8_WordSize : s32
 {
 	CELL_ADEC_CELP8_WORD_SZ_FLOAT,
 };
@@ -502,14 +502,14 @@ struct CellAdecCelp8Info
 	be_t<u32> wordSize;
 };
 
-enum MPEG4AAC_ConfigType
+enum MPEG4AAC_ConfigType : s32
 {
 	ADIFHeader = 0,
 	ADTSHeader = 1,
 	RawDataBlockOnly = 2,
 };
 
-enum MPEG4AAC_SamplingFreq
+enum MPEG4AAC_SamplingFreq : s32
 {
 	SF_96000 = 0,
 	SF_88200 = 1,
@@ -528,26 +528,30 @@ enum MPEG4AAC_SamplingFreq
 // MPEG4 AAC Parameters
 struct CellAdecParamM4Aac
 {
-	be_t<MPEG4AAC_ConfigType> configNumber;
+	be_t<s32> configNumber; // MPEG4AAC_ConfigType
 
-	union {
-		struct mp { struct mp2
+	union
+	{
+		struct 
 		{
-			be_t<u32> adifProgramNumber; // 0
-		} adifConfig; };
+			be_t<u32> programNumber;
+		}
+		adifConfig;
 
-		struct mp3 { struct mp4
+		struct 
 		{
-			be_t<MPEG4AAC_SamplingFreq> samplingFreqIndex;
+			be_t<s32> samplingFreqIndex; // MPEG4AAC_SamplingFreq
 			be_t<u32> profile; // LC profile (1)
-		} rawDataBlockConfig; };
-	} configInfo;
+		}
+		rawDataBlockConfig;
+	}
+	configInfo;
 
 	be_t<u32> enableDownmix; // enable downmix to 2.0 (if (enableDownmix))
 };
 
 // MPEG4 AAC BSI
-struct CellAdecM4AacInfo
+struct set_alignment(16) CellAdecM4AacInfo
 {
 	be_t<u32> samplingFreq; // [Hz]
 	be_t<u32> numberOfChannels;
@@ -559,55 +563,52 @@ struct CellAdecM4AacInfo
 	be_t<u32> enableSBR;
 	be_t<u32> SBRUpsamplingFactor;
 	be_t<u32> isBsiValid;
-	be_t<MPEG4AAC_ConfigType> configNumber;
-	
-	be_t<u32> pad1; // TODO: check alignment
+	be_t<s32> configNumber; // MPEG4AAC_ConfigType
 
-	union {
-		struct mp5 {
-			struct m6
-			{
-				be_t<u32> copyrightIdPresent;
-				char copyrightId[9];
-				be_t<u32> originalCopy;
-				be_t<u32> home;
-				be_t<u32> bitstreamType;
-				be_t<u32> bitrate;
-				be_t<u32> numberOfProgramConfigElements;
-				be_t<u32> bufferFullness;
-			} adif;
-		};
+	union
+	{
+		struct
+		{
+			be_t<u32> copyrightIdPresent;
+			char copyrightId[9];
+			be_t<u32> originalCopy;
+			be_t<u32> home;
+			be_t<u32> bitstreamType;
+			be_t<u32> bitrate;
+			be_t<u32> numberOfProgramConfigElements;
+			be_t<u32> bufferFullness;
+		}
+		adif;
 
-		struct mp7 {
-			struct mp8
-			{
-				be_t<u32> id;
-				be_t<u32> layer;
-				be_t<u32> protectionAbsent;
-				be_t<u32> profile;
-				be_t<u32> samplingFreqIndex;
-				be_t<u32> privateBit;
-				be_t<u32> channelConfiguration;
-				be_t<u32> originalCopy;
-				be_t<u32> home;
-				be_t<u32> copyrightIdBit;
-				be_t<u32> copyrightIdStart;
-				be_t<u32> frameLength;
-				be_t<u32> bufferFullness;
-				be_t<u32> numberOfRawDataBlocks;
-				be_t<u32> crcCheck;
-			} adts;
-		};
-	} bsi;
+		struct mp8
+		{
+			be_t<u32> id;
+			be_t<u32> layer;
+			be_t<u32> protectionAbsent;
+			be_t<u32> profile;
+			be_t<u32> samplingFreqIndex;
+			be_t<u32> privateBit;
+			be_t<u32> channelConfiguration;
+			be_t<u32> originalCopy;
+			be_t<u32> home;
+			be_t<u32> copyrightIdBit;
+			be_t<u32> copyrightIdStart;
+			be_t<u32> frameLength;
+			be_t<u32> bufferFullness;
+			be_t<u32> numberOfRawDataBlocks;
+			be_t<u32> crcCheck;
+		}
+		adts;
+	}
+	bsi;
 
-	be_t<u32> pad2; // TODO: check alignment
-
-	struct mp9
+	struct
 	{
 		be_t<u32> matrixMixdownPresent;
 		be_t<u32> mixdownIndex;
 		be_t<u32> pseudoSurroundEnable;
-	} matrixMixdown;
+	}
+	matrixMixdown;
 
 	be_t<u32> reserved;
 };
@@ -758,15 +759,15 @@ enum ATRAC3_JointType : s32
 struct CellAdecParamAtrac3
 {
 	be_t<s32> nch; // channel count
-	be_t<ATRAC3_JointType> isJoint;
+	be_t<s32> isJoint; // ATRAC3_JointType
 	be_t<s32> nbytes; // byte count of single AU (???)
-	be_t<ATRAC3_WordSize> bw_pcm; // bit length of output PCM sample
+	be_t<s32> bw_pcm; // ATRAC3_WordSize, bit length of output PCM sample
 };
 
 struct CellAdecAtrac3Info
 {
 	be_t<s32> nch;
-	be_t<ATRAC3_JointType> isJoint;
+	be_t<s32> isJoint; // ATRAC3_JointType
 	be_t<s32> nbytes;
 };
 
@@ -797,7 +798,7 @@ struct CellAdecParamAtracX
 	be_t<s32> nch_out;
 	be_t<s32> nbytes;
 	std::array<u8, 4> extra_config_data; // downmix coefficients
-	be_t<ATRACX_WordSize> bw_pcm;
+	be_t<s32> bw_pcm; // ATRACX_WordSize
 	ATRACX_DownmixFlag downmix_flag;
 	ATRACX_ATSHeaderInclude au_includes_ats_hdr_flg;
 };
@@ -831,7 +832,7 @@ enum MP3_CRCMode : u8
 
 struct CellAdecParamMP3
 {
-	be_t<MP3_WordSize> bw_pcm;
+	be_t<s32> bw_pcm; // MP3_WordSize
 };
 
 struct CellAdecMP3Info
@@ -850,20 +851,20 @@ struct CellAdecMP3Info
 	be_t<s32> i_error_code;
 };
 
-enum M2BC_SampleFrequency
+enum M2BC_SampleFrequency : s32
 {
 	CELL_ADEC_BSI_M2BC_SAMPLE_FREQUENCY_44 = 0,
 	CELL_ADEC_BSI_M2BC_SAMPLE_FREQUENCY_48 = 1,
 	CELL_ADEC_BSI_M2BC_SAMPLE_FREQUENCY_32 = 2,
 };
 
-enum M2BC_ErrorProtection
+enum M2BC_ErrorProtection : s32
 {
 	CELL_ADEC_BSI_M2BC_ERROR_PROTECTION_NONE = 0,
 	CELL_ADEC_BSI_M2BC_ERROR_PROTECTION_EXIST = 1,
 };
 
-enum M2BC_BitrateIndex
+enum M2BC_BitrateIndex : s32
 {
 	CELL_ADEC_BSI_M2BC_BITRATE_32 = 1,
 	CELL_ADEC_BSI_M2BC_BITRATE_48 = 2,
@@ -881,7 +882,7 @@ enum M2BC_BitrateIndex
 	CELL_ADEC_BSI_M2BC_BITRATE_384 = 14,
 };
 
-enum M2BC_StereoMode
+enum M2BC_StereoMode : s32
 {
 	CELL_ADEC_BSI_M2BC_STEREO_MODE_STERO = 0,
 	CELL_ADEC_BSI_M2BC_STEREO_MODE_JOINTSTERO = 1,
@@ -889,7 +890,7 @@ enum M2BC_StereoMode
 	CELL_ADEC_BSI_M2BC_STEREO_MODE_MONO = 3,
 };
 
-enum M2BC_StereoModeEx
+enum M2BC_StereoModeEx : s32
 {
 	CELL_ADEC_BSI_M2BC_STEREO_EXMODE_0 = 0,
 	CELL_ADEC_BSI_M2BC_STEREO_EXMODE_1 = 1,
@@ -897,26 +898,26 @@ enum M2BC_StereoModeEx
 	CELL_ADEC_BSI_M2BC_STEREO_EXMODE_3 = 3,
 };
 
-enum M2BC_Emphasis
+enum M2BC_Emphasis : s32
 {
 	CELL_ADEC_BSI_M2BC_EMPHASIS_NONE = 0,
 	CELL_ADEC_BSI_M2BC_EMPHASIS_50_15 = 1,
 	CELL_ADEC_BSI_M2BC_EMPHASIS_CCITT = 3,
 };
 
-enum M2BC_CopyrightBit
+enum M2BC_CopyrightBit : s32
 {
 	CELL_ADEC_BSI_M2BC_COPYRIGHT_NONE = 0,
 	CELL_ADEC_BSI_M2BC_COPYRIGHT_ON = 1,
 };
 
-enum M2BC_OriginalBit
+enum M2BC_OriginalBit : s32
 {
 	CELL_ADEC_BSI_M2BC_ORIGINAL_COPY = 0,
 	CELL_ADEC_BSI_M2BC_ORIGINAL_ORIGINAL = 1,
 };
 
-enum M2BC_SurroundMode
+enum M2BC_SurroundMode : s32
 {
 	CELL_ADEC_BSI_M2BC_SURROUND_NONE = 0,
 	CELL_ADEC_BSI_M2BC_SURROUND_MONO = 1,
@@ -924,33 +925,33 @@ enum M2BC_SurroundMode
 	CELL_ADEC_BSI_M2BC_SURROUND_SECOND = 3,
 };
 
-enum M2BC_CenterMode
+enum M2BC_CenterMode : s32
 {
 	CELL_ADEC_BSI_M2BC_CENTER_NONE = 0,
 	CELL_ADEC_BSI_M2BC_CENTER_EXIST = 1,
 	CELL_ADEC_BSI_M2BC_CENTER_PHANTOM = 3,
 };
 
-enum M2BC_LFE
+enum M2BC_LFE : s32
 {
 	CELL_ADEC_BSI_M2BC_LFE_NONE = 0,
 	CELL_ADEC_BSI_M2BC_LFE_EXIST = 1,
 };
 
-enum M2BC_AudioMixMode
+enum M2BC_AudioMixMode : s32
 {
 	CELL_ADEC_BSI_M2BC_AUDIOMIX_LARGE = 0,
 	CELL_ADEC_BSI_M2BC_AUDIOMIX_SMALLE = 1,
 };
 
-enum M2BC_MCExtension
+enum M2BC_MCExtension : s32
 {
 	CELL_ADEC_BSI_M2BC_MCEXTENSION_2CH = 0,
 	CELL_ADEC_BSI_M2BC_MCEXTENSION_5CH = 1,
 	CELL_ADEC_BSI_M2BC_MCEXTENSION_7CH = 2,
 };
 
-enum M2BC_ChannelConfig
+enum M2BC_ChannelConfig : s32
 {
 	CELL_ADEC_BSI_M2BC_CH_CONFIG_MONO = 0,
 	CELL_ADEC_BSI_M2BC_CH_CONFIG_DUAL = 1,
@@ -1094,7 +1095,7 @@ struct OMAHeader // OMA Header
 	}
 };
 
-static_assert(sizeof(OMAHeader) == 96, "Wrong OMAHeader size");
+CHECK_SIZE(OMAHeader, 96);
 
 class AudioDecoder
 {
@@ -1128,7 +1129,7 @@ public:
 
 	squeue_t<AdecFrame> frames;
 
-	const AudioCodecType type;
+	const s32 type;
 	const u32 memAddr;
 	const u32 memSize;
 	const vm::ptr<CellAdecCbMsg> cbFunc;
@@ -1144,9 +1145,9 @@ public:
 	u32 sample_rate;
 	bool use_ats_headers;
 
-	PPUThread* adecCb;
+	std::shared_ptr<PPUThread> adecCb;
 
-	AudioDecoder(AudioCodecType type, u32 addr, u32 size, vm::ptr<CellAdecCbMsg> func, u32 arg);
+	AudioDecoder(s32 type, u32 addr, u32 size, vm::ptr<CellAdecCbMsg> func, u32 arg);
 
 	~AudioDecoder();
 };

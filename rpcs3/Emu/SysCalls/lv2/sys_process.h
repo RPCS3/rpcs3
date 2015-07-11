@@ -1,5 +1,7 @@
 #pragma once
 
+namespace vm { using namespace ps3; }
+
 // Process Local Object Type
 enum : u32
 {
@@ -42,7 +44,5 @@ s32 sys_process_kill(u32 pid);
 s32 sys_process_wait_for_child(u32 pid, vm::ptr<u32> status, u64 unk);
 s32 sys_process_wait_for_child2(u64 unk1, u64 unk2, u64 unk3, u64 unk4, u64 unk5, u64 unk6);
 s32 sys_process_detach_child(u64 unk);
-void sys_game_process_exitspawn(vm::ptr<const char> path, u32 argv_addr, u32 envp_addr,
-								u32 data_addr, u32 data_size, u32 prio, u64 flags);
-void sys_game_process_exitspawn2(vm::ptr<const char> path, u32 argv_addr, u32 envp_addr,
-								u32 data_addr, u32 data_size, u32 prio, u64 flags);
+void sys_game_process_exitspawn(vm::cptr<char> path, u32 argv_addr, u32 envp_addr, u32 data_addr, u32 data_size, u32 prio, u64 flags);
+void sys_game_process_exitspawn2(vm::cptr<char> path, u32 argv_addr, u32 envp_addr, u32 data_addr, u32 data_size, u32 prio, u64 flags);

@@ -9,26 +9,25 @@ extern Module cellFontFT;
 
 CCellFontFTInternal* s_fontFtInternalInstance = nullptr;
 
-int cellFontInitLibraryFreeTypeWithRevision(u64 revisionFlags, vm::ptr<CellFontLibraryConfigFT> config, u32 lib_addr_addr)
+s32 cellFontInitLibraryFreeTypeWithRevision(u64 revisionFlags, vm::ptr<CellFontLibraryConfigFT> config, vm::pptr<CellFontLibrary> lib)
 {
-	cellFontFT.Warning("cellFontInitLibraryFreeTypeWithRevision(revisionFlags=0x%llx, config_addr=0x%x, lib_addr_addr=0x%x",
-		revisionFlags, config.addr(), lib_addr_addr);
+	cellFontFT.Warning("cellFontInitLibraryFreeTypeWithRevision(revisionFlags=0x%llx, config=*0x%x, lib=**0x%x)", revisionFlags, config, lib);
 
 	//if (s_fontInternalInstance->m_bInitialized)
 		//return CELL_FONT_ERROR_UNINITIALIZED;
 
-	vm::write32(lib_addr_addr, (u32)Memory.Alloc(sizeof(CellFontLibrary), 1));
+	lib->set(Memory.Alloc(sizeof(CellFontLibrary), 1));
 
 	return CELL_OK;
 }
 
-int cellFontFTGetRevisionFlags()
+s32 cellFontFTGetRevisionFlags()
 {
 	UNIMPLEMENTED_FUNC(cellFontFT);
 	return CELL_OK;
 }
 
-int cellFontFTGetInitializedRevisionFlags()
+s32 cellFontFTGetInitializedRevisionFlags()
 {
 	UNIMPLEMENTED_FUNC(cellFontFT);
 	return CELL_OK;

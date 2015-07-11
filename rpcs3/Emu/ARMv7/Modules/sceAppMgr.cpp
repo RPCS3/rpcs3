@@ -2,33 +2,26 @@
 #include "Emu/System.h"
 #include "Emu/ARMv7/PSVFuncList.h"
 
-extern psv_log_base sceAppMgr;
+#include "sceAppMgr.h"
 
-struct SceAppMgrEvent
+s32 sceAppMgrReceiveEventNum(vm::ptr<s32> eventNum)
 {
-	s32 event;
-	s32 appId;
-	char param[56];
-};
-
-s32 sceAppMgrReceiveEventNum(vm::psv::ptr<s32> eventNum)
-{
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceAppMgrReceiveEvent(vm::psv::ptr<SceAppMgrEvent> appEvent)
+s32 sceAppMgrReceiveEvent(vm::ptr<SceAppMgrEvent> appEvent)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceAppMgrAcquireBgmPort()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceAppMgrReleaseBgmPort()
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 
@@ -39,6 +32,7 @@ psv_log_base sceAppMgr("SceAppMgr", []()
 	sceAppMgr.on_load = nullptr;
 	sceAppMgr.on_unload = nullptr;
 	sceAppMgr.on_stop = nullptr;
+	sceAppMgr.on_error = nullptr;
 
 	REG_FUNC(0x47E5DD7D, sceAppMgrReceiveEventNum);
 	REG_FUNC(0xCFAD5A3A, sceAppMgrReceiveEvent);

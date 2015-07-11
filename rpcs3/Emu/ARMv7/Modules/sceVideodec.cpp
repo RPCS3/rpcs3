@@ -2,177 +2,51 @@
 #include "Emu/System.h"
 #include "Emu/ARMv7/PSVFuncList.h"
 
-extern psv_log_base sceVideodec;
+#include "sceVideodec.h"
 
-struct SceVideodecQueryInitInfoHwAvcdec
+s32 sceVideodecInitLibrary(u32 codecType, vm::cptr<SceVideodecQueryInitInfo> pInitInfo)
 {
-	u32 size;
-	u32 horizontal;
-	u32 vertical;
-	u32 numOfRefFrames;
-	u32 numOfStreams;
-};
-
-union SceVideodecQueryInitInfo
-{
-	u8 reserved[32];
-	SceVideodecQueryInitInfoHwAvcdec hwAvc;
-};
-
-struct SceVideodecTimeStamp
-{
-	u32 upper;
-	u32 lower;
-};
-
-struct SceAvcdecQueryDecoderInfo
-{
-	u32 horizontal;
-	u32 vertical;
-	u32 numOfRefFrames;
-
-};
-
-struct SceAvcdecDecoderInfo
-{
-	u32 frameMemSize;
-
-};
-
-struct SceAvcdecBuf
-{
-	vm::psv::ptr<void> pBuf;
-	u32 size;
-};
-
-struct SceAvcdecCtrl
-{
-	u32 handle;
-	SceAvcdecBuf frameBuf;
-};
-
-struct SceAvcdecAu
-{
-	SceVideodecTimeStamp pts;
-	SceVideodecTimeStamp dts;
-	SceAvcdecBuf es;
-};
-
-struct SceAvcdecInfo
-{
-	u32 numUnitsInTick;
-	u32 timeScale;
-	u8 fixedFrameRateFlag;
-
-	u8 aspectRatioIdc;
-	u16 sarWidth;
-	u16 sarHeight;
-
-	u8 colourPrimaries;
-	u8 transferCharacteristics;
-	u8 matrixCoefficients;
-
-	u8 videoFullRangeFlag;
-
-	u8 picStruct[2];
-	u8 ctType;
-
-	u8 padding[3];
-};
-
-struct SceAvcdecFrameOptionRGBA
-{
-	u8 alpha;
-	u8 cscCoefficient;
-	u8 reserved[14];
-};
-
-union SceAvcdecFrameOption
-{
-	u8 reserved[16];
-	SceAvcdecFrameOptionRGBA rgba;
-};
-
-
-struct SceAvcdecFrame
-{
-	u32 pixelType;
-	u32 framePitch;
-	u32 frameWidth;
-	u32 frameHeight;
-
-	u32 horizontalSize;
-	u32 verticalSize;
-
-	u32 frameCropLeftOffset;
-	u32 frameCropRightOffset;
-	u32 frameCropTopOffset;
-	u32 frameCropBottomOffset;
-
-	SceAvcdecFrameOption opt;
-
-	vm::psv::ptr<void> pPicture[2];
-};
-
-
-struct SceAvcdecPicture
-{
-	u32 size;
-	SceAvcdecFrame frame;
-	SceAvcdecInfo info;
-};
-
-struct SceAvcdecArrayPicture
-{
-	u32 numOfOutput;
-	u32 numOfElm;
-	vm::psv::lpptr<SceAvcdecPicture> pPicture;
-};
-
-
-s32 sceVideodecInitLibrary(u32 codecType, vm::psv::ptr<const SceVideodecQueryInitInfo> pInitInfo)
-{
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 s32 sceVideodecTermLibrary(u32 codecType)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceAvcdecQueryDecoderMemSize(u32 codecType, vm::psv::ptr<const SceAvcdecQueryDecoderInfo> pDecoderInfo, vm::psv::ptr<SceAvcdecDecoderInfo> pMemInfo)
+s32 sceAvcdecQueryDecoderMemSize(u32 codecType, vm::cptr<SceAvcdecQueryDecoderInfo> pDecoderInfo, vm::ptr<SceAvcdecDecoderInfo> pMemInfo)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceAvcdecCreateDecoder(u32 codecType, vm::psv::ptr<SceAvcdecCtrl> pCtrl, vm::psv::ptr<const SceAvcdecQueryDecoderInfo> pDecoderInfo)
+s32 sceAvcdecCreateDecoder(u32 codecType, vm::ptr<SceAvcdecCtrl> pCtrl, vm::cptr<SceAvcdecQueryDecoderInfo> pDecoderInfo)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceAvcdecDeleteDecoder(vm::psv::ptr<SceAvcdecCtrl> pCtrl)
+s32 sceAvcdecDeleteDecoder(vm::ptr<SceAvcdecCtrl> pCtrl)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceAvcdecDecodeAvailableSize(vm::psv::ptr<SceAvcdecCtrl> pCtrl)
+s32 sceAvcdecDecodeAvailableSize(vm::ptr<SceAvcdecCtrl> pCtrl)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceAvcdecDecode(vm::psv::ptr<SceAvcdecCtrl> pCtrl, vm::psv::ptr<const SceAvcdecAu> pAu, vm::psv::ptr<SceAvcdecArrayPicture> pArrayPicture)
+s32 sceAvcdecDecode(vm::ptr<SceAvcdecCtrl> pCtrl, vm::cptr<SceAvcdecAu> pAu, vm::ptr<SceAvcdecArrayPicture> pArrayPicture)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceAvcdecDecodeStop(vm::psv::ptr<SceAvcdecCtrl> pCtrl, vm::psv::ptr<SceAvcdecArrayPicture> pArrayPicture)
+s32 sceAvcdecDecodeStop(vm::ptr<SceAvcdecCtrl> pCtrl, vm::ptr<SceAvcdecArrayPicture> pArrayPicture)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
-s32 sceAvcdecDecodeFlush(vm::psv::ptr<SceAvcdecCtrl> pCtrl)
+s32 sceAvcdecDecodeFlush(vm::ptr<SceAvcdecCtrl> pCtrl)
 {
-	throw __FUNCTION__;
+	throw EXCEPTION("");
 }
 
 
@@ -183,6 +57,7 @@ psv_log_base sceVideodec("SceVideodec", []()
 	sceVideodec.on_load = nullptr;
 	sceVideodec.on_unload = nullptr;
 	sceVideodec.on_stop = nullptr;
+	sceVideodec.on_error = nullptr;
 
 	REG_FUNC(0xF1AF65A3, sceVideodecInitLibrary);
 	REG_FUNC(0x3A5F4924, sceVideodecTermLibrary);

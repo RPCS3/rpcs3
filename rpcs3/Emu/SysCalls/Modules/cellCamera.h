@@ -1,21 +1,23 @@
 #pragma once
 
+namespace vm { using namespace ps3; }
+
 // Error Codes
 enum
 {
-	CELL_CAMERA_ERROR_ALREADY_INIT = 0x80140801,
-	CELL_CAMERA_ERROR_NOT_INIT = 0x80140803,
-	CELL_CAMERA_ERROR_PARAM = 0x80140804,
-	CELL_CAMERA_ERROR_ALREADY_OPEN = 0x80140805,
-	CELL_CAMERA_ERROR_NOT_OPEN = 0x80140806,
-	CELL_CAMERA_ERROR_DEVICE_NOT_FOUND = 0x80140807,
+	CELL_CAMERA_ERROR_ALREADY_INIT       = 0x80140801,
+	CELL_CAMERA_ERROR_NOT_INIT           = 0x80140803,
+	CELL_CAMERA_ERROR_PARAM              = 0x80140804,
+	CELL_CAMERA_ERROR_ALREADY_OPEN       = 0x80140805,
+	CELL_CAMERA_ERROR_NOT_OPEN           = 0x80140806,
+	CELL_CAMERA_ERROR_DEVICE_NOT_FOUND   = 0x80140807,
 	CELL_CAMERA_ERROR_DEVICE_DEACTIVATED = 0x80140808,
-	CELL_CAMERA_ERROR_NOT_STARTED = 0x80140809,
-	CELL_CAMERA_ERROR_FORMAT_UNKNOWN = 0x8014080a,
+	CELL_CAMERA_ERROR_NOT_STARTED        = 0x80140809,
+	CELL_CAMERA_ERROR_FORMAT_UNKNOWN     = 0x8014080a,
 	CELL_CAMERA_ERROR_RESOLUTION_UNKNOWN = 0x8014080b,
-	CELL_CAMERA_ERROR_BAD_FRAMERATE = 0x8014080c,
-	CELL_CAMERA_ERROR_TIMEOUT = 0x8014080d,
-	CELL_CAMERA_ERROR_FATAL = 0x8014080f,
+	CELL_CAMERA_ERROR_BAD_FRAMERATE      = 0x8014080c,
+	CELL_CAMERA_ERROR_TIMEOUT            = 0x8014080d,
+	CELL_CAMERA_ERROR_FATAL              = 0x8014080f,
 };
 
 // Event types
@@ -192,7 +194,7 @@ enum
 };
 
 // Camera types
-enum CellCameraType
+enum CellCameraType : s32
 {
 	CELL_CAMERA_TYPE_UNKNOWN,
 	CELL_CAMERA_EYETOY,
@@ -201,7 +203,7 @@ enum CellCameraType
 };
 
 // Image format
-enum CellCameraFormat
+enum CellCameraFormat : s32
 {
 	CELL_CAMERA_FORMAT_UNKNOWN,
 	CELL_CAMERA_JPG,
@@ -215,7 +217,7 @@ enum CellCameraFormat
 };
 
 // Image resolution
-enum CellCameraResolution
+enum CellCameraResolution : s32
 {
 	CELL_CAMERA_RESOLUTION_UNKNOWN,
 	CELL_CAMERA_VGA,
@@ -225,7 +227,7 @@ enum CellCameraResolution
 };
 
 // Camera attributes
-enum CellCameraAttribute
+enum CellCameraAttribute : s32
 {
 	CELL_CAMERA_GAIN,
 	CELL_CAMERA_REDBLUEGAIN,
@@ -284,84 +286,21 @@ enum CellCameraAttribute
 
 struct CellCameraInfoEx
 {
-	CellCameraFormat format;
-	CellCameraResolution resolution;
+	be_t<s32> format; // CellCameraFormat
+	be_t<s32> resolution; // CellCameraResolution
 	be_t<s32> framerate;
-	be_t<u32> buffer;
+
+	vm::bptr<u8> buffer;
 	be_t<s32> bytesize;
 	be_t<s32> width;
 	be_t<s32> height;
 	be_t<s32> dev_num;
 	be_t<s32> guid;
+
 	be_t<s32> info_ver;
 	be_t<u32> container;
 	be_t<s32> read_mode;
-	be_t<u32> pbuf[2];
-};
-
-// Custom struct for keeping track of camera attributes
-struct CellCameraAttributes
-{
-	u32 GAIN;
-	u32 REDBLUEGAIN;
-	u32 SATURATION;
-	u32 EXPOSURE;
-	u32 BRIGHTNESS;
-	u32 AEC;
-	u32 AGC;
-	u32 AWB;
-	u32 ABC;
-	u32 LED;
-	u32 AUDIOGAIN;
-	u32 QS;
-	u32 NONZEROCOEFFS[2];
-	u32 YUVFLAG;
-	u32 JPEGFLAG;
-	u32 BACKLIGHTCOMP;
-	u32 MIRRORFLAG;
-	u32 MEASUREDQS;
-	u32 _422FLAG;
-	u32 USBLOAD;
-	u32 GAMMA;
-	u32 GREENGAIN;
-	u32 AGCLIMIT;
-	u32 DENOISE;
-	u32 FRAMERATEADJUST;
-	u32 PIXELOUTLIERFILTER;
-	u32 AGCLOW;
-	u32 AGCHIGH;
-	u32 DEVICELOCATION;
-
-	u32 FORMATCAP         = 100;
-	u32 FORMATINDEX;
-	u32 NUMFRAME;
-	u32 FRAMEINDEX;
-	u32 FRAMESIZE;
-	u32 INTERVALTYPE;
-	u32 INTERVALINDEX;
-	u32 INTERVALVALUE;
-	u32 COLORMATCHING;
-	u32 PLFREQ;
-	u32 DEVICEID;
-	u32 DEVICECAP;
-	u32 DEVICESPEED;
-	u32 UVCREQCODE;
-	u32 UVCREQDATA;
-	u32 DEVICEID2;
-
-	u32 READMODE          = 300;
-	u32 GAMEPID;
-	u32 PBUFFER;
-	u32 READFINISH;
-
-	u32 ATTRIBUTE_UNKNOWN = 500;
-};
-
-// Custom struct to keep track of cameras
-struct CellCamera
-{
-	CellCameraAttributes attributes;
-	CellCameraInfoEx info;
+	vm::bptr<u8> pbuf[2];
 };
 
 struct CellCameraReadEx
@@ -369,6 +308,77 @@ struct CellCameraReadEx
 	be_t<s32> version;
 	be_t<u32> frame;
 	be_t<u32> bytesread;
-	//system_time_t timestamp; // TODO: Replace this with something
-	be_t<u32> pbuf;
+	be_t<s64> timestamp;
+	vm::bptr<u8> pbuf;
+};
+
+// Custom struct to keep track of cameras
+struct camera_t
+{
+	struct attr_t
+	{
+		u32 v1, v2;
+	};
+
+	std::atomic<bool> init{ false };
+
+	attr_t attr[500]{};
+
+	static const char* get_attr_name(s32 value)
+	{
+		switch (value)
+		{
+		case CELL_CAMERA_GAIN: return "CELL_CAMERA_GAIN";
+		case CELL_CAMERA_REDBLUEGAIN: return "CELL_CAMERA_REDBLUEGAIN";
+		case CELL_CAMERA_SATURATION: return "CELL_CAMERA_SATURATION";
+		case CELL_CAMERA_EXPOSURE: return "CELL_CAMERA_EXPOSURE";
+		case CELL_CAMERA_BRIGHTNESS: return "CELL_CAMERA_BRIGHTNESS";
+		case CELL_CAMERA_AEC: return "CELL_CAMERA_AEC";
+		case CELL_CAMERA_AGC: return "CELL_CAMERA_AGC";
+		case CELL_CAMERA_AWB: return "CELL_CAMERA_AWB";
+		case CELL_CAMERA_ABC: return "CELL_CAMERA_ABC";
+		case CELL_CAMERA_LED: return "CELL_CAMERA_LED";
+		case CELL_CAMERA_AUDIOGAIN: return "CELL_CAMERA_AUDIOGAIN";
+		case CELL_CAMERA_QS: return "CELL_CAMERA_QS";
+		case CELL_CAMERA_NONZEROCOEFFS: return "CELL_CAMERA_NONZEROCOEFFS";
+		case CELL_CAMERA_YUVFLAG: return "CELL_CAMERA_YUVFLAG";
+		case CELL_CAMERA_JPEGFLAG: return "CELL_CAMERA_JPEGFLAG";
+		case CELL_CAMERA_BACKLIGHTCOMP: return "CELL_CAMERA_BACKLIGHTCOMP";
+		case CELL_CAMERA_MIRRORFLAG: return "CELL_CAMERA_MIRRORFLAG";
+		case CELL_CAMERA_MEASUREDQS: return "CELL_CAMERA_MEASUREDQS";
+		case CELL_CAMERA_422FLAG: return "CELL_CAMERA_422FLAG";
+		case CELL_CAMERA_USBLOAD: return "CELL_CAMERA_USBLOAD";
+		case CELL_CAMERA_GAMMA: return "CELL_CAMERA_GAMMA";
+		case CELL_CAMERA_GREENGAIN: return "CELL_CAMERA_GREENGAIN";
+		case CELL_CAMERA_AGCLIMIT: return "CELL_CAMERA_AGCLIMIT";
+		case CELL_CAMERA_DENOISE: return "CELL_CAMERA_DENOISE";
+		case CELL_CAMERA_FRAMERATEADJUST: return "CELL_CAMERA_FRAMERATEADJUST";
+		case CELL_CAMERA_PIXELOUTLIERFILTER: return "CELL_CAMERA_PIXELOUTLIERFILTER";
+		case CELL_CAMERA_AGCLOW: return "CELL_CAMERA_AGCLOW";
+		case CELL_CAMERA_AGCHIGH: return "CELL_CAMERA_AGCHIGH";
+		case CELL_CAMERA_DEVICELOCATION: return "CELL_CAMERA_DEVICELOCATION";
+		case CELL_CAMERA_FORMATCAP: return "CELL_CAMERA_FORMATCAP";
+		case CELL_CAMERA_FORMATINDEX: return "CELL_CAMERA_FORMATINDEX";
+		case CELL_CAMERA_NUMFRAME: return "CELL_CAMERA_NUMFRAME";
+		case CELL_CAMERA_FRAMEINDEX: return "CELL_CAMERA_FRAMEINDEX";
+		case CELL_CAMERA_FRAMESIZE: return "CELL_CAMERA_FRAMESIZE";
+		case CELL_CAMERA_INTERVALTYPE: return "CELL_CAMERA_INTERVALTYPE";
+		case CELL_CAMERA_INTERVALINDEX: return "CELL_CAMERA_INTERVALINDEX";
+		case CELL_CAMERA_INTERVALVALUE: return "CELL_CAMERA_INTERVALVALUE";
+		case CELL_CAMERA_COLORMATCHING: return "CELL_CAMERA_COLORMATCHING";
+		case CELL_CAMERA_PLFREQ: return "CELL_CAMERA_PLFREQ";
+		case CELL_CAMERA_DEVICEID: return "CELL_CAMERA_DEVICEID";
+		case CELL_CAMERA_DEVICECAP: return "CELL_CAMERA_DEVICECAP";
+		case CELL_CAMERA_DEVICESPEED: return "CELL_CAMERA_DEVICESPEED";
+		case CELL_CAMERA_UVCREQCODE: return "CELL_CAMERA_UVCREQCODE";
+		case CELL_CAMERA_UVCREQDATA: return "CELL_CAMERA_UVCREQDATA";
+		case CELL_CAMERA_DEVICEID2: return "CELL_CAMERA_DEVICEID2";
+		case CELL_CAMERA_READMODE: return "CELL_CAMERA_READMODE";
+		case CELL_CAMERA_GAMEPID: return "CELL_CAMERA_GAMEPID";
+		case CELL_CAMERA_PBUFFER: return "CELL_CAMERA_PBUFFER";
+		case CELL_CAMERA_READFINISH: return "CELL_CAMERA_READFINISH";
+		}
+
+		return nullptr;
+	}
 };

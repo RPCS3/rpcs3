@@ -5,7 +5,6 @@
 #include "rpcs3/Ini.h"
 #include "Emu/SysCalls/Modules.h"
 #include "Emu/Memory/Memory.h"
-#include "Emu/SysCalls/lv2/sys_time.h"
 
 #include <stdint.h>
 #ifdef _MSC_VER
@@ -18,6 +17,7 @@
 #include <fenv.h>
 
 extern u64 rotate_mask[64][64]; // defined in PPUThread.cpp, static didn't work correctly in GCC 4.9 for some reason
+extern u64 get_timebased_time();
 
 inline void InitRotateMask()
 {
@@ -109,7 +109,7 @@ private:
 
 	void NULL_OP()
 	{
-		throw "Null operation";
+		throw EXCEPTION("Null operation");
 	}
 
 	void NOP()
@@ -160,8 +160,8 @@ private:
 		case 0x100: return CPU.VRSAVE;
 		case 0x103: return CPU.SPRG[3];
 
-		case 0x10C: CPU.TB = get_time(); return CPU.TB;
-		case 0x10D: CPU.TB = get_time(); return CPU.TB >> 32;
+		case 0x10C: CPU.TB = get_timebased_time(); return CPU.TB;
+		case 0x10D: CPU.TB = get_timebased_time(); return CPU.TB >> 32;
 
 		case 0x110:
 		case 0x111:
@@ -173,7 +173,7 @@ private:
 		case 0x117: return CPU.SPRG[n - 0x110];
 		}
 
-		throw fmt::Format("ReadSPR(0x%x) error: unknown SPR (0x%x)", spr, n);
+		throw EXCEPTION("Unknown SPR (spr=0x%x, n=0x%x)", spr, n);
 	}
 
 	void WriteSPR(u32 spr, u64 value)
@@ -186,10 +186,10 @@ private:
 		case 0x008: CPU.LR = value; return;
 		case 0x009: CPU.CTR = value; return;
 		case 0x100: CPU.VRSAVE = (u32)value; return;
-		case 0x103: throw fmt::Format("WriteSPR(0x103, 0x%llx): Write to read-only SPR", value);
+		case 0x103: throw EXCEPTION("WriteSPR(0x103, 0x%llx): Write to read-only SPR", value);
 
-		case 0x10C: throw fmt::Format("WriteSPR(0x10C, 0x%llx): Write to time-based SPR", value);
-		case 0x10D: throw fmt::Format("WriteSPR(0x10D, 0x%llx): Write to time-based SPR", value);
+		case 0x10C: throw EXCEPTION("WriteSPR(0x10C, 0x%llx): Write to time-based SPR", value);
+		case 0x10D: throw EXCEPTION("WriteSPR(0x10D, 0x%llx): Write to time-based SPR", value);
 
 		case 0x110:
 		case 0x111:
@@ -201,7 +201,7 @@ private:
 		case 0x117: CPU.SPRG[n - 0x110] = value; return;
 		}
 
-		throw fmt::Format("WriteSPR(0x%x, 0x%llx) error: unknown SPR (0x%x)", spr, value, n);
+		throw EXCEPTION("Unknown SPR (spr=0x%x, n=0x%x, value=0x%llx)", spr, n, value);
 	}
 	
 	void TDI(u32 to, u32 ra, s32 simm16)
@@ -214,7 +214,7 @@ private:
 			((u64)a < (u64)simm16 && (to & 0x2)) ||
 			((u64)a > (u64)simm16 && (to & 0x1)) )
 		{
-			throw fmt::Format("Trap! (tdi 0x%x, r%d, 0x%x)", to, ra, simm16);
+			throw EXCEPTION("Trap! (tdi 0x%x, r%d, 0x%x)", to, ra, simm16);
 		}
 	}
 
@@ -228,7 +228,7 @@ private:
 			((u32)a < (u32)simm16 && (to & 0x2)) ||
 			((u32)a > (u32)simm16 && (to & 0x1)) )
 		{
-			throw fmt::Format("Trap! (twi 0x%x, r%d, 0x%x)", to, ra, simm16);
+			throw EXCEPTION("Trap! (twi 0x%x, r%d, 0x%x)", to, ra, simm16);
 		}
 	}
 
@@ -466,7 +466,7 @@ private:
 			CPU.VPR[vd]._f[w] = ((float)CPU.VPR[vb]._u32[w]) / scale;
 		}
 	}
-	void VCMPBFP(u32 vd, u32 va, u32 vb, bool rc)
+	void VCMPBFP(u32 vd, u32 va, u32 vb, u32 rc)
 	{
 		bool allInBounds = true;
 
@@ -495,7 +495,7 @@ private:
 	}
 	void VCMPBFP(u32 vd, u32 va, u32 vb) {VCMPBFP(vd, va, vb, false);}
 	void VCMPBFP_(u32 vd, u32 va, u32 vb) {VCMPBFP(vd, va, vb, true);}
-	void VCMPEQFP(u32 vd, u32 va, u32 vb, bool rc)
+	void VCMPEQFP(u32 vd, u32 va, u32 vb, u32 rc)
 	{
 		int all_equal = 0x8;
 		int none_equal = 0x2;
@@ -518,7 +518,7 @@ private:
 	}
 	void VCMPEQFP(u32 vd, u32 va, u32 vb) {VCMPEQFP(vd, va, vb, false);}
 	void VCMPEQFP_(u32 vd, u32 va, u32 vb) {VCMPEQFP(vd, va, vb, true);}
-	void VCMPEQUB(u32 vd, u32 va, u32 vb, bool rc)
+	void VCMPEQUB(u32 vd, u32 va, u32 vb, u32 rc)
 	{
 		int all_equal = 0x8;
 		int none_equal = 0x2;
@@ -541,7 +541,7 @@ private:
 	}
 	void VCMPEQUB(u32 vd, u32 va, u32 vb) {VCMPEQUB(vd, va, vb, false);}
 	void VCMPEQUB_(u32 vd, u32 va, u32 vb) {VCMPEQUB(vd, va, vb, true);}
-	void VCMPEQUH(u32 vd, u32 va, u32 vb, bool rc) //nf
+	void VCMPEQUH(u32 vd, u32 va, u32 vb, u32 rc) //nf
 	{
 		int all_equal = 0x8;
 		int none_equal = 0x2;
@@ -564,7 +564,7 @@ private:
 	}
 	void VCMPEQUH(u32 vd, u32 va, u32 vb) {VCMPEQUH(vd, va, vb, false);}
 	void VCMPEQUH_(u32 vd, u32 va, u32 vb) {VCMPEQUH(vd, va, vb, true);}
-	void VCMPEQUW(u32 vd, u32 va, u32 vb, bool rc)
+	void VCMPEQUW(u32 vd, u32 va, u32 vb, u32 rc)
 	{
 		int all_equal = 0x8;
 		int none_equal = 0x2;
@@ -587,7 +587,7 @@ private:
 	}
 	void VCMPEQUW(u32 vd, u32 va, u32 vb) {VCMPEQUW(vd, va, vb, false);}
 	void VCMPEQUW_(u32 vd, u32 va, u32 vb) {VCMPEQUW(vd, va, vb, true);}
-	void VCMPGEFP(u32 vd, u32 va, u32 vb, bool rc)
+	void VCMPGEFP(u32 vd, u32 va, u32 vb, u32 rc)
 	{
 		int all_ge = 0x8;
 		int none_ge = 0x2;
@@ -610,7 +610,7 @@ private:
 	}
 	void VCMPGEFP(u32 vd, u32 va, u32 vb) {VCMPGEFP(vd, va, vb, false);}
 	void VCMPGEFP_(u32 vd, u32 va, u32 vb) {VCMPGEFP(vd, va, vb, true);}
-	void VCMPGTFP(u32 vd, u32 va, u32 vb, bool rc)
+	void VCMPGTFP(u32 vd, u32 va, u32 vb, u32 rc)
 	{
 		int all_ge = 0x8;
 		int none_ge = 0x2;
@@ -633,7 +633,7 @@ private:
 	}
 	void VCMPGTFP(u32 vd, u32 va, u32 vb) {VCMPGTFP(vd, va, vb, false);}
 	void VCMPGTFP_(u32 vd, u32 va, u32 vb) {VCMPGTFP(vd, va, vb, true);}
-	void VCMPGTSB(u32 vd, u32 va, u32 vb, bool rc) //nf
+	void VCMPGTSB(u32 vd, u32 va, u32 vb, u32 rc) //nf
 	{
 		int all_gt = 0x8;
 		int none_gt = 0x2;
@@ -656,7 +656,7 @@ private:
 	}
 	void VCMPGTSB(u32 vd, u32 va, u32 vb) {VCMPGTSB(vd, va, vb, false);}
 	void VCMPGTSB_(u32 vd, u32 va, u32 vb) {VCMPGTSB(vd, va, vb, true);}
-	void VCMPGTSH(u32 vd, u32 va, u32 vb, bool rc)
+	void VCMPGTSH(u32 vd, u32 va, u32 vb, u32 rc)
 	{
 		int all_gt = 0x8;
 		int none_gt = 0x2;
@@ -679,7 +679,7 @@ private:
 	}
 	void VCMPGTSH(u32 vd, u32 va, u32 vb) {VCMPGTSH(vd, va, vb, false);}
 	void VCMPGTSH_(u32 vd, u32 va, u32 vb) {VCMPGTSH(vd, va, vb, true);}
-	void VCMPGTSW(u32 vd, u32 va, u32 vb, bool rc)
+	void VCMPGTSW(u32 vd, u32 va, u32 vb, u32 rc)
 	{
 		int all_gt = 0x8;
 		int none_gt = 0x2;
@@ -702,7 +702,7 @@ private:
 	}
 	void VCMPGTSW(u32 vd, u32 va, u32 vb) {VCMPGTSW(vd, va, vb, false);}
 	void VCMPGTSW_(u32 vd, u32 va, u32 vb) {VCMPGTSW(vd, va, vb, true);}
-	void VCMPGTUB(u32 vd, u32 va, u32 vb, bool rc)
+	void VCMPGTUB(u32 vd, u32 va, u32 vb, u32 rc)
 	{
 		int all_gt = 0x8;
 		int none_gt = 0x2;
@@ -725,7 +725,7 @@ private:
 	}
 	void VCMPGTUB(u32 vd, u32 va, u32 vb) {VCMPGTUB(vd, va, vb, false);}
 	void VCMPGTUB_(u32 vd, u32 va, u32 vb) {VCMPGTUB(vd, va, vb, true);}
-	void VCMPGTUH(u32 vd, u32 va, u32 vb, bool rc)
+	void VCMPGTUH(u32 vd, u32 va, u32 vb, u32 rc)
 	{
 		int all_gt = 0x8;
 		int none_gt = 0x2;
@@ -748,7 +748,7 @@ private:
 	}
 	void VCMPGTUH(u32 vd, u32 va, u32 vb) {VCMPGTUH(vd, va, vb, false);}
 	void VCMPGTUH_(u32 vd, u32 va, u32 vb) {VCMPGTUH(vd, va, vb, true);}
-	void VCMPGTUW(u32 vd, u32 va, u32 vb, bool rc)
+	void VCMPGTUW(u32 vd, u32 va, u32 vb, u32 rc)
 	{
 		int all_gt = 0x8;
 		int none_gt = 0x2;
@@ -2226,7 +2226,7 @@ private:
 		if (CheckCondition(bo, bi))
 		{
 			const u32 nextLR = CPU.PC + 4;
-			CPU.SetBranch(branchTarget((aa ? 0 : CPU.PC), bd), lk);
+			CPU.PC = branchTarget((aa ? 0 : CPU.PC), bd) - 4;
 			if(lk) CPU.LR = nextLR;
 		}
 	}
@@ -2239,15 +2239,15 @@ private:
 		switch (lev)
 		{
 		case 0x0: SysCalls::DoSyscall(CPU, CPU.GPR[11]); break;
-		case 0x1: throw "SC(): HyperCall LV1";
+		case 0x1: throw EXCEPTION("HyperCall LV1");
 		case 0x3: CPU.FastStop(); break;
-		default: throw fmt::Format("SC(): unknown level (0x%x)", lev);
+		default: throw EXCEPTION("Unknown level (0x%x)", lev);
 		}
 	}
 	void B(s32 ll, u32 aa, u32 lk)
 	{
 		const u32 nextLR = CPU.PC + 4;
-		CPU.SetBranch(branchTarget(aa ? 0 : CPU.PC, ll), lk);
+		CPU.PC = branchTarget(aa ? 0 : CPU.PC, ll) - 4;
 		if(lk) CPU.LR = nextLR;
 	}
 	void MCRF(u32 crfd, u32 crfs)
@@ -2259,7 +2259,7 @@ private:
 		if (CheckCondition(bo, bi))
 		{
 			const u32 nextLR = CPU.PC + 4;
-			CPU.SetBranch(branchTarget(0, (u32)CPU.LR), true);
+			CPU.PC = branchTarget(0, (u32)CPU.LR) - 4;
 			if(lk) CPU.LR = nextLR;
 		}
 	}
@@ -2312,22 +2312,22 @@ private:
 		if(bo & 0x10 || CPU.IsCR(bi) == ((bo & 0x8) != 0))
 		{
 			const u32 nextLR = CPU.PC + 4;
-			CPU.SetBranch(branchTarget(0, (u32)CPU.CTR), true);
+			CPU.PC = branchTarget(0, (u32)CPU.CTR) - 4;
 			if(lk) CPU.LR = nextLR;
 		}
 	}	
-	void RLWIMI(u32 ra, u32 rs, u32 sh, u32 mb, u32 me, bool rc)
+	void RLWIMI(u32 ra, u32 rs, u32 sh, u32 mb, u32 me, u32 rc)
 	{
 		const u64 mask = rotate_mask[32 + mb][32 + me];
 		CPU.GPR[ra] = (CPU.GPR[ra] & ~mask) | (rotl32(CPU.GPR[rs], sh) & mask);
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[ra]);
 	}
-	void RLWINM(u32 ra, u32 rs, u32 sh, u32 mb, u32 me, bool rc)
+	void RLWINM(u32 ra, u32 rs, u32 sh, u32 mb, u32 me, u32 rc)
 	{
 		CPU.GPR[ra] = rotl32(CPU.GPR[rs], sh) & rotate_mask[32 + mb][32 + me];
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[ra]);
 	}
-	void RLWNM(u32 ra, u32 rs, u32 rb, u32 mb, u32 me, bool rc)
+	void RLWNM(u32 ra, u32 rs, u32 rb, u32 mb, u32 me, u32 rc)
 	{
 		CPU.GPR[ra] = rotl32(CPU.GPR[rs], CPU.GPR[rb] & 0x1f) & rotate_mask[32 + mb][32 + me];
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[ra]);
@@ -2358,28 +2358,28 @@ private:
 		CPU.GPR[ra] = CPU.GPR[rs] & ((u64)uimm16 << 16);
 		CPU.UpdateCR0<s64>(CPU.GPR[ra]);
 	}
-	void RLDICL(u32 ra, u32 rs, u32 sh, u32 mb, bool rc)
+	void RLDICL(u32 ra, u32 rs, u32 sh, u32 mb, u32 rc)
 	{
 		CPU.GPR[ra] = rotl64(CPU.GPR[rs], sh) & rotate_mask[mb][63];
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[ra]);
 	}
-	void RLDICR(u32 ra, u32 rs, u32 sh, u32 me, bool rc)
+	void RLDICR(u32 ra, u32 rs, u32 sh, u32 me, u32 rc)
 	{
 		CPU.GPR[ra] = rotl64(CPU.GPR[rs], sh) & rotate_mask[0][me];
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[ra]);
 	}
-	void RLDIC(u32 ra, u32 rs, u32 sh, u32 mb, bool rc)
+	void RLDIC(u32 ra, u32 rs, u32 sh, u32 mb, u32 rc)
 	{
 		CPU.GPR[ra] = rotl64(CPU.GPR[rs], sh) & rotate_mask[mb][63-sh];
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[ra]);
 	}
-	void RLDIMI(u32 ra, u32 rs, u32 sh, u32 mb, bool rc)
+	void RLDIMI(u32 ra, u32 rs, u32 sh, u32 mb, u32 rc)
 	{
 		const u64 mask = rotate_mask[mb][63-sh];
 		CPU.GPR[ra] = (CPU.GPR[ra] & ~mask) | (rotl64(CPU.GPR[rs], sh) & mask);
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[ra]);
 	}
-	void RLDC_LR(u32 ra, u32 rs, u32 rb, u32 m_eb, bool is_r, bool rc)
+	void RLDC_LR(u32 ra, u32 rs, u32 rb, u32 m_eb, u32 is_r, u32 rc)
 	{
 		if (is_r) // rldcr
 		{
@@ -2405,7 +2405,7 @@ private:
 			((u32)a < (u32)b && (to & 0x2)) ||
 			((u32)a > (u32)b && (to & 0x1)) )
 		{
-			throw fmt::Format("Trap! (tw 0x%x, r%d, r%d)", to, ra, rb);
+			throw EXCEPTION("Trap! (tw 0x%x, r%d, r%d)", to, ra, rb);
 		}
 	}
 	void LVSL(u32 vd, u32 ra, u32 rb)
@@ -2438,10 +2438,10 @@ private:
 	void LVEBX(u32 vd, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		CPU.VPR[vd]._u8[15 - (addr & 0xf)] = vm::read8(vm::cast(addr));
+		CPU.VPR[vd]._u8[15 - (addr & 0xf)] = vm::read8(VM_CAST(addr));
 		// check LVEWX comments
 	}
-	void SUBFC(u32 rd, u32 ra, u32 rb, u32 oe, bool rc)
+	void SUBFC(u32 rd, u32 ra, u32 rb, u32 oe, u32 rc)
 	{
 		const u64 RA = CPU.GPR[ra];
 		const u64 RB = CPU.GPR[rb];
@@ -2450,12 +2450,12 @@ private:
 		if(oe) CPU.SetOV((~RA>>63 == RB>>63) && (~RA>>63 != CPU.GPR[rd]>>63));
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
 	}
-	void MULHDU(u32 rd, u32 ra, u32 rb, bool rc)
+	void MULHDU(u32 rd, u32 ra, u32 rb, u32 rc)
 	{
 		CPU.GPR[rd] = __umulh(CPU.GPR[ra], CPU.GPR[rb]);
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
 	}
-	void ADDC(u32 rd, u32 ra, u32 rb, u32 oe, bool rc)
+	void ADDC(u32 rd, u32 ra, u32 rb, u32 oe, u32 rc)
 	{
 		const u64 RA = CPU.GPR[ra];
 		const u64 RB = CPU.GPR[rb];
@@ -2464,7 +2464,7 @@ private:
 		if(oe) CPU.SetOV((RA>>63 == RB>>63) && (RA>>63 != CPU.GPR[rd]>>63));
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
 	}
-	void MULHWU(u32 rd, u32 ra, u32 rb, bool rc)
+	void MULHWU(u32 rd, u32 ra, u32 rb, u32 rc)
 	{
 		u32 a = (u32)CPU.GPR[ra];
 		u32 b = (u32)CPU.GPR[rb];
@@ -2480,21 +2480,21 @@ private:
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
 
 		be_t<u32> value;
-		vm::reservation_acquire(&value, vm::cast(addr), sizeof(value));
+		vm::reservation_acquire(&value, VM_CAST(addr), sizeof(value));
 
 		CPU.GPR[rd] = value;
 	}
 	void LDX(u32 rd, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		CPU.GPR[rd] = vm::read64(vm::cast(addr));
+		CPU.GPR[rd] = vm::read64(VM_CAST(addr));
 	}
 	void LWZX(u32 rd, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		CPU.GPR[rd] = vm::read32(vm::cast(addr));
+		CPU.GPR[rd] = vm::read32(VM_CAST(addr));
 	}
-	void SLW(u32 ra, u32 rs, u32 rb, bool rc)
+	void SLW(u32 ra, u32 rs, u32 rb, u32 rc)
 	{
 		u32 n = CPU.GPR[rb] & 0x1f;
 		u32 r = (u32)rotl32((u32)CPU.GPR[rs], n);
@@ -2504,7 +2504,7 @@ private:
 
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[ra]);
 	}
-	void CNTLZW(u32 ra, u32 rs, bool rc)
+	void CNTLZW(u32 ra, u32 rs, u32 rc)
 	{
 		u32 i;
 		for(i=0; i < 32; i++)
@@ -2515,7 +2515,7 @@ private:
 		CPU.GPR[ra] = i;
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[ra]);
 	}
-	void SLD(u32 ra, u32 rs, u32 rb, bool rc)
+	void SLD(u32 ra, u32 rs, u32 rb, u32 rc)
 	{
 		u32 n = CPU.GPR[rb] & 0x3f;
 		u64 r = rotl64(CPU.GPR[rs], n);
@@ -2525,7 +2525,7 @@ private:
 
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[ra]);
 	}
-	void AND(u32 ra, u32 rs, u32 rb, bool rc)
+	void AND(u32 ra, u32 rs, u32 rb, u32 rc)
 	{
 		CPU.GPR[ra] = CPU.GPR[rs] & CPU.GPR[rb];
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[ra]);
@@ -2564,10 +2564,10 @@ private:
 	void LVEHX(u32 vd, u32 ra, u32 rb)
 	{
 		const u64 addr = (ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~1ULL;
-		CPU.VPR[vd]._u16[7 - ((addr >> 1) & 0x7)] = vm::read16(vm::cast(addr));
+		CPU.VPR[vd]._u16[7 - ((addr >> 1) & 0x7)] = vm::read16(VM_CAST(addr));
 		// check LVEWX comments
 	}
-	void SUBF(u32 rd, u32 ra, u32 rb, u32 oe, bool rc)
+	void SUBF(u32 rd, u32 ra, u32 rb, u32 oe, u32 rc)
 	{
 		const u64 RA = CPU.GPR[ra];
 		const u64 RB = CPU.GPR[rb];
@@ -2578,7 +2578,7 @@ private:
 	void LDUX(u32 rd, u32 ra, u32 rb)
 	{
 		const u64 addr = CPU.GPR[ra] + CPU.GPR[rb];
-		CPU.GPR[rd] = vm::read64(vm::cast(addr));
+		CPU.GPR[rd] = vm::read64(VM_CAST(addr));
 		CPU.GPR[ra] = addr;
 	}
 	void DCBST(u32 ra, u32 rb)
@@ -2587,10 +2587,10 @@ private:
 	void LWZUX(u32 rd, u32 ra, u32 rb)
 	{
 		const u64 addr = CPU.GPR[ra] + CPU.GPR[rb];
-		CPU.GPR[rd] = vm::read32(vm::cast(addr));
+		CPU.GPR[rd] = vm::read32(VM_CAST(addr));
 		CPU.GPR[ra] = addr;
 	}
-	void CNTLZD(u32 ra, u32 rs, bool rc)
+	void CNTLZD(u32 ra, u32 rs, u32 rc)
 	{
 		u32 i;
 		for(i=0; i < 64; i++)
@@ -2601,29 +2601,29 @@ private:
 		CPU.GPR[ra] = i;
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[ra]);
 	}
-	void ANDC(u32 ra, u32 rs, u32 rb, bool rc)
+	void ANDC(u32 ra, u32 rs, u32 rb, u32 rc)
 	{
 		CPU.GPR[ra] = CPU.GPR[rs] & ~CPU.GPR[rb];
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[ra]);
 	}
 	void TD(u32 to, u32 ra, u32 rb)
 	{
-		throw "TD()";
+		throw EXCEPTION("");
 	}
 	void LVEWX(u32 vd, u32 ra, u32 rb)
 	{
 		const u64 addr = (ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~3ULL;
-		CPU.VPR[vd]._u32[3 - ((addr >> 2) & 0x3)] = vm::read32(vm::cast(addr));
+		CPU.VPR[vd]._u32[3 - ((addr >> 2) & 0x3)] = vm::read32(VM_CAST(addr));
 		// It's not very good idea to implement it using read128(),
 		// because it can theoretically read RawSPU 32-bit MMIO register (read128() will fail)
 		//CPU.VPR[vd] = vm::read128((ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~0xfULL);
 	}
-	void MULHD(u32 rd, u32 ra, u32 rb, bool rc)
+	void MULHD(u32 rd, u32 ra, u32 rb, u32 rc)
 	{
 		CPU.GPR[rd] = __mulh(CPU.GPR[ra], CPU.GPR[rb]);
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
 	}
-	void MULHW(u32 rd, u32 ra, u32 rb, bool rc)
+	void MULHW(u32 rd, u32 ra, u32 rb, u32 rc)
 	{
 		s32 a = (s32)CPU.GPR[ra];
 		s32 b = (s32)CPU.GPR[rb];
@@ -2635,7 +2635,7 @@ private:
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
 
 		be_t<u64> value;
-		vm::reservation_acquire(&value, vm::cast(addr), sizeof(value));
+		vm::reservation_acquire(&value, VM_CAST(addr), sizeof(value));
 
 		CPU.GPR[rd] = value;
 	}
@@ -2645,14 +2645,14 @@ private:
 	void LBZX(u32 rd, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		CPU.GPR[rd] = vm::read8(vm::cast(addr));
+		CPU.GPR[rd] = vm::read8(VM_CAST(addr));
 	}
 	void LVX(u32 vd, u32 ra, u32 rb)
 	{
 		const u64 addr = (ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~0xfull;
-		CPU.VPR[vd] = vm::read128(vm::cast(addr));
+		CPU.VPR[vd] = vm::read128(VM_CAST(addr));
 	}
-	void NEG(u32 rd, u32 ra, u32 oe, bool rc)
+	void NEG(u32 rd, u32 ra, u32 oe, u32 rc)
 	{
 		const u64 RA = CPU.GPR[ra];
 		CPU.GPR[rd] = 0 - RA;
@@ -2661,13 +2661,11 @@ private:
 	}
 	void LBZUX(u32 rd, u32 ra, u32 rb)
 	{
-		//if(ra == 0 || ra == rd) throw "Bad instruction [LBZUX]";
-
 		const u64 addr = CPU.GPR[ra] + CPU.GPR[rb];
-		CPU.GPR[rd] = vm::read8(vm::cast(addr));
+		CPU.GPR[rd] = vm::read8(VM_CAST(addr));
 		CPU.GPR[ra] = addr;
 	}
-	void NOR(u32 ra, u32 rs, u32 rb, bool rc)
+	void NOR(u32 ra, u32 rs, u32 rb, u32 rc)
 	{
 		CPU.GPR[ra] = ~(CPU.GPR[rs] | CPU.GPR[rb]);
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[ra]);
@@ -2676,9 +2674,9 @@ private:
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
 		const u8 eb = addr & 0xf;
-		vm::write8(vm::cast(addr), CPU.VPR[vs]._u8[15 - eb]);
+		vm::write8(VM_CAST(addr), CPU.VPR[vs]._u8[15 - eb]);
 	}
-	void SUBFE(u32 rd, u32 ra, u32 rb, u32 oe, bool rc)
+	void SUBFE(u32 rd, u32 ra, u32 rb, u32 oe, u32 rc)
 	{
 		const u64 RA = CPU.GPR[ra];
 		const u64 RB = CPU.GPR[rb];
@@ -2687,7 +2685,7 @@ private:
 		if(oe) CPU.SetOV((~RA>>63 == RB>>63) && (~RA>>63 != CPU.GPR[rd]>>63));
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
 	}
-	void ADDE(u32 rd, u32 ra, u32 rb, u32 oe, bool rc)
+	void ADDE(u32 rd, u32 ra, u32 rb, u32 oe, u32 rc)
 	{
 		const u64 RA = CPU.GPR[ra];
 		const u64 RB = CPU.GPR[rb];
@@ -2748,45 +2746,45 @@ private:
 	void STDX(u32 rs, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		vm::write64(vm::cast(addr), CPU.GPR[rs]);
+		vm::write64(VM_CAST(addr), CPU.GPR[rs]);
 	}
 	void STWCX_(u32 rs, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
 
-		const be_t<u32> value = be_t<u32>::make((u32)CPU.GPR[rs]);
-		CPU.SetCR_EQ(0, vm::reservation_update(vm::cast(addr), &value, sizeof(value)));
+		const be_t<u32> value = (u32)CPU.GPR[rs];
+		CPU.SetCR_EQ(0, vm::reservation_update(VM_CAST(addr), &value, sizeof(value)));
 	}
 	void STWX(u32 rs, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		vm::write32(vm::cast(addr), (u32)CPU.GPR[rs]);
+		vm::write32(VM_CAST(addr), (u32)CPU.GPR[rs]);
 	}
 	void STVEHX(u32 vs, u32 ra, u32 rb)
 	{
 		const u64 addr = (ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~1ULL;
 		const u8 eb = (addr & 0xf) >> 1;
-		vm::write16(vm::cast(addr), CPU.VPR[vs]._u16[7 - eb]);
+		vm::write16(VM_CAST(addr), CPU.VPR[vs]._u16[7 - eb]);
 	}
 	void STDUX(u32 rs, u32 ra, u32 rb)
 	{
 		const u64 addr = CPU.GPR[ra] + CPU.GPR[rb];
-		vm::write64(vm::cast(addr), CPU.GPR[rs]);
+		vm::write64(VM_CAST(addr), CPU.GPR[rs]);
 		CPU.GPR[ra] = addr;
 	}
 	void STWUX(u32 rs, u32 ra, u32 rb)
 	{
 		const u64 addr = CPU.GPR[ra] + CPU.GPR[rb];
-		vm::write32(vm::cast(addr), (u32)CPU.GPR[rs]);
+		vm::write32(VM_CAST(addr), (u32)CPU.GPR[rs]);
 		CPU.GPR[ra] = addr;
 	}
 	void STVEWX(u32 vs, u32 ra, u32 rb)
 	{
 		const u64 addr = (ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~3ULL;
 		const u8 eb = (addr & 0xf) >> 2;
-		vm::write32(vm::cast(addr), CPU.VPR[vs]._u32[3 - eb]);
+		vm::write32(VM_CAST(addr), CPU.VPR[vs]._u32[3 - eb]);
 	}
-	void SUBFZE(u32 rd, u32 ra, u32 oe, bool rc)
+	void SUBFZE(u32 rd, u32 ra, u32 oe, u32 rc)
 	{
 		const u64 RA = CPU.GPR[ra];
 		CPU.GPR[rd] = ~RA + CPU.XER.CA;
@@ -2794,7 +2792,7 @@ private:
 		if(oe) CPU.SetOV((~RA>>63 == 0) && (~RA>>63 != CPU.GPR[rd]>>63));
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
 	}
-	void ADDZE(u32 rd, u32 ra, u32 oe, bool rc)
+	void ADDZE(u32 rd, u32 ra, u32 oe, u32 rc)
 	{
 		const u64 RA = CPU.GPR[ra];
 		CPU.GPR[rd] = RA + CPU.XER.CA;
@@ -2806,20 +2804,20 @@ private:
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
 
-		const be_t<u64> value = be_t<u64>::make(CPU.GPR[rs]);
-		CPU.SetCR_EQ(0, vm::reservation_update(vm::cast(addr), &value, sizeof(value)));
+		const be_t<u64> value = CPU.GPR[rs];
+		CPU.SetCR_EQ(0, vm::reservation_update(VM_CAST(addr), &value, sizeof(value)));
 	}
 	void STBX(u32 rs, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		vm::write8(vm::cast(addr), (u8)CPU.GPR[rs]);
+		vm::write8(VM_CAST(addr), (u8)CPU.GPR[rs]);
 	}
 	void STVX(u32 vs, u32 ra, u32 rb)
 	{
 		const u64 addr = (ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~0xfull;
-		vm::write128(vm::cast(addr), CPU.VPR[vs]);
+		vm::write128(VM_CAST(addr), CPU.VPR[vs]);
 	}
-	void MULLD(u32 rd, u32 ra, u32 rb, u32 oe, bool rc)
+	void MULLD(u32 rd, u32 ra, u32 rb, u32 oe, u32 rc)
 	{
 		const s64 RA = CPU.GPR[ra];
 		const s64 RB = CPU.GPR[rb];
@@ -2831,7 +2829,7 @@ private:
 		}
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
 	}
-	void SUBFME(u32 rd, u32 ra, u32 oe, bool rc)
+	void SUBFME(u32 rd, u32 ra, u32 oe, u32 rc)
 	{
 		const u64 RA = CPU.GPR[ra];
 		CPU.GPR[rd] = ~RA + CPU.XER.CA + ~0ULL;
@@ -2839,7 +2837,7 @@ private:
 		if(oe) CPU.SetOV((~RA>>63 == 1) && (~RA>>63 != CPU.GPR[rd]>>63));
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
 	}
-	void ADDME(u32 rd, u32 ra, u32 oe, bool rc)
+	void ADDME(u32 rd, u32 ra, u32 oe, u32 rc)
 	{
 		const s64 RA = CPU.GPR[ra];
 		CPU.GPR[rd] = RA + CPU.XER.CA - 1;
@@ -2848,7 +2846,7 @@ private:
 		if(oe) CPU.SetOV((u64(RA)>>63 == 1) && (u64(RA)>>63 != CPU.GPR[rd]>>63));
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
 	}
-	void MULLW(u32 rd, u32 ra, u32 rb, u32 oe, bool rc)
+	void MULLW(u32 rd, u32 ra, u32 rb, u32 oe, u32 rc)
 	{
 		CPU.GPR[rd] = (s64)((s64)(s32)CPU.GPR[ra] * (s64)(s32)CPU.GPR[rb]);
 		if(oe) CPU.SetOV(s64(CPU.GPR[rd]) < s64(-1)<<31 || s64(CPU.GPR[rd]) >= s64(1)<<31);
@@ -2860,10 +2858,10 @@ private:
 	void STBUX(u32 rs, u32 ra, u32 rb)
 	{
 		const u64 addr = CPU.GPR[ra] + CPU.GPR[rb];
-		vm::write8(vm::cast(addr), (u8)CPU.GPR[rs]);
+		vm::write8(VM_CAST(addr), (u8)CPU.GPR[rs]);
 		CPU.GPR[ra] = addr;
 	}
-	void ADD(u32 rd, u32 ra, u32 rb, u32 oe, bool rc)
+	void ADD(u32 rd, u32 ra, u32 rb, u32 oe, u32 rc)
 	{
 		const u64 RA = CPU.GPR[ra];
 		const u64 RB = CPU.GPR[rb];
@@ -2877,24 +2875,24 @@ private:
 	void LHZX(u32 rd, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		CPU.GPR[rd] = vm::read16(vm::cast(addr));
+		CPU.GPR[rd] = vm::read16(VM_CAST(addr));
 	}
-	void EQV(u32 ra, u32 rs, u32 rb, bool rc)
+	void EQV(u32 ra, u32 rs, u32 rb, u32 rc)
 	{
 		CPU.GPR[ra] = ~(CPU.GPR[rs] ^ CPU.GPR[rb]);
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[ra]);
 	}
 	void ECIWX(u32 rd, u32 ra, u32 rb)
 	{
-		throw __FUNCTION__;
+		throw EXCEPTION("Privileged instruction");
 	}
 	void LHZUX(u32 rd, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		CPU.GPR[rd] = vm::read16(vm::cast(addr));
+		CPU.GPR[rd] = vm::read16(VM_CAST(addr));
 		CPU.GPR[ra] = addr;
 	}
-	void XOR(u32 ra, u32 rs, u32 rb, bool rc)
+	void XOR(u32 ra, u32 rs, u32 rb, u32 rc)
 	{
 		CPU.GPR[ra] = CPU.GPR[rs] ^ CPU.GPR[rb];
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[ra]);
@@ -2906,7 +2904,7 @@ private:
 	void LWAX(u32 rd, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		CPU.GPR[rd] = (s64)(s32)vm::read32(vm::cast(addr));
+		CPU.GPR[rd] = (s64)(s32)vm::read32(VM_CAST(addr));
 	}
 	void DST(u32 ra, u32 rb, u32 strm, u32 t)
 	{
@@ -2914,29 +2912,29 @@ private:
 	void LHAX(u32 rd, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		CPU.GPR[rd] = (s64)(s16)vm::read16(vm::cast(addr));
+		CPU.GPR[rd] = (s64)(s16)vm::read16(VM_CAST(addr));
 	}
 	void LVXL(u32 vd, u32 ra, u32 rb)
 	{
 		const u64 addr = (ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~0xfull;
-		CPU.VPR[vd] = vm::read128(vm::cast(addr));
+		CPU.VPR[vd] = vm::read128(VM_CAST(addr));
 	}
 	void MFTB(u32 rd, u32 spr)
 	{
 		const u32 n = (spr >> 5) | ((spr & 0x1f) << 5);
 
-		CPU.TB = get_time();
+		CPU.TB = get_timebased_time();
 		switch(n)
 		{
 		case 0x10C: CPU.GPR[rd] = CPU.TB; break;
 		case 0x10D: CPU.GPR[rd] = CPU.TB >> 32; break;
-		default: throw fmt::Format("mftb r%d, %d", rd, spr);
+		default: throw EXCEPTION("mftb r%d, %d", rd, spr);
 		}
 	}
 	void LWAUX(u32 rd, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		CPU.GPR[rd] = (s64)(s32)vm::read32(vm::cast(addr));
+		CPU.GPR[rd] = (s64)(s32)vm::read32(VM_CAST(addr));
 		CPU.GPR[ra] = addr;
 	}
 	void DSTST(u32 ra, u32 rb, u32 strm, u32 t)
@@ -2945,35 +2943,35 @@ private:
 	void LHAUX(u32 rd, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		CPU.GPR[rd] = (s64)(s16)vm::read16(vm::cast(addr));
+		CPU.GPR[rd] = (s64)(s16)vm::read16(VM_CAST(addr));
 		CPU.GPR[ra] = addr;
 	}
 	void STHX(u32 rs, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		vm::write16(vm::cast(addr), (u16)CPU.GPR[rs]);
+		vm::write16(VM_CAST(addr), (u16)CPU.GPR[rs]);
 	}
-	void ORC(u32 ra, u32 rs, u32 rb, bool rc)
+	void ORC(u32 ra, u32 rs, u32 rb, u32 rc)
 	{
 		CPU.GPR[ra] = CPU.GPR[rs] | ~CPU.GPR[rb];
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[ra]);
 	}
 	void ECOWX(u32 rs, u32 ra, u32 rb)
 	{
-		throw __FUNCTION__;
+		throw EXCEPTION("Privileged instruction");
 	}
 	void STHUX(u32 rs, u32 ra, u32 rb)
 	{
 		const u64 addr = CPU.GPR[ra] + CPU.GPR[rb];
-		vm::write16(vm::cast(addr), (u16)CPU.GPR[rs]);
+		vm::write16(VM_CAST(addr), (u16)CPU.GPR[rs]);
 		CPU.GPR[ra] = addr;
 	}
-	void OR(u32 ra, u32 rs, u32 rb, bool rc)
+	void OR(u32 ra, u32 rs, u32 rb, u32 rc)
 	{
 		CPU.GPR[ra] = CPU.GPR[rs] | CPU.GPR[rb];
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[ra]);
 	}
-	void DIVDU(u32 rd, u32 ra, u32 rb, u32 oe, bool rc)
+	void DIVDU(u32 rd, u32 ra, u32 rb, u32 oe, u32 rc)
 	{
 		const u64 RA = CPU.GPR[ra];
 		const u64 RB = CPU.GPR[rb];
@@ -2991,7 +2989,7 @@ private:
 
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
 	}
-	void DIVWU(u32 rd, u32 ra, u32 rb, u32 oe, bool rc)
+	void DIVWU(u32 rd, u32 ra, u32 rb, u32 oe, u32 rc)
 	{
 		const u32 RA = (u32)CPU.GPR[ra];
 		const u32 RB = (u32)CPU.GPR[rb];
@@ -3016,7 +3014,7 @@ private:
 	void DCBI(u32 ra, u32 rb)
 	{
 	}
-	void NAND(u32 ra, u32 rs, u32 rb, bool rc)
+	void NAND(u32 ra, u32 rs, u32 rb, u32 rc)
 	{
 		CPU.GPR[ra] = ~(CPU.GPR[rs] & CPU.GPR[rb]);
 
@@ -3025,9 +3023,9 @@ private:
 	void STVXL(u32 vs, u32 ra, u32 rb)
 	{
 		const u64 addr = (ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~0xfull;
-		vm::write128(vm::cast(addr), CPU.VPR[vs]);
+		vm::write128(VM_CAST(addr), CPU.VPR[vs]);
 	}
-	void DIVD(u32 rd, u32 ra, u32 rb, u32 oe, bool rc)
+	void DIVD(u32 rd, u32 ra, u32 rb, u32 oe, u32 rc)
 	{
 		const s64 RA = CPU.GPR[ra];
 		const s64 RB = CPU.GPR[rb];
@@ -3045,7 +3043,7 @@ private:
 
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
 	}
-	void DIVW(u32 rd, u32 ra, u32 rb, u32 oe, bool rc)
+	void DIVW(u32 rd, u32 ra, u32 rb, u32 oe, u32 rc)
 	{
 		const s32 RA = (s32)CPU.GPR[ra];
 		const s32 RB = (s32)CPU.GPR[rb];
@@ -3069,12 +3067,12 @@ private:
 		const u32 eb = addr & 0xf;
 
 		CPU.VPR[vd].clear();
-		for (u32 i = 0; i < 16u - eb; ++i) CPU.VPR[vd]._u8[15 - i] = vm::read8(vm::cast(addr + i));
+		for (u32 i = 0; i < 16u - eb; ++i) CPU.VPR[vd]._u8[15 - i] = vm::read8(VM_CAST(addr + i));
 	}
 	void LDBRX(u32 rd, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		CPU.GPR[rd] = vm::get_ref<u64>(vm::cast(addr));
+		CPU.GPR[rd] = vm::get_ref<u64>(VM_CAST(addr));
 	}
 	void LSWX(u32 rd, u32 ra, u32 rb)
 	{
@@ -3082,14 +3080,14 @@ private:
 		u32 count = CPU.XER.XER & 0x7F;
 		for (; count >= 4; count -= 4, addr += 4, rd = (rd+1) & 31)
 		{
-			CPU.GPR[rd] = vm::get_ref<be_t<u32>>(vm::cast(addr));
+			CPU.GPR[rd] = vm::get_ref<be_t<u32>>(VM_CAST(addr));
 		}
 		if (count)
 		{
 			u32 value = 0;
 			for (u32 byte = 0; byte < count; byte++)
 			{
-				u32 byte_value = vm::get_ref<u8>(vm::cast(addr+byte));
+				u32 byte_value = vm::get_ref<u8>(VM_CAST(addr+byte));
 				value |= byte_value << ((3^byte)*8);
 			}
 			CPU.GPR[rd] = value;
@@ -3098,12 +3096,12 @@ private:
 	void LWBRX(u32 rd, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		CPU.GPR[rd] = vm::get_ref<u32>(vm::cast(addr));
+		CPU.GPR[rd] = vm::get_ref<u32>(VM_CAST(addr));
 	}
 	void LFSX(u32 frd, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		float val = vm::get_ref<be_t<float>>(vm::cast(addr)).value();
+		float val = vm::get_ref<be_t<float>>(VM_CAST(addr)).value();
 		if (!FPRdouble::IsNaN(val))
 		{
 			CPU.FPR[frd] = val;
@@ -3114,7 +3112,7 @@ private:
 			(u64&)CPU.FPR[frd] = (bits & 0x80000000) << 32 | 7ULL << 60 | (bits & 0x7fffffff) << 29;
 		}
 	}
-	void SRW(u32 ra, u32 rs, u32 rb, bool rc)
+	void SRW(u32 ra, u32 rs, u32 rb, u32 rc)
 	{
 		u32 n = CPU.GPR[rb] & 0x1f;
 		u32 r = (u32)rotl32((u32)CPU.GPR[rs], 64 - n);
@@ -3123,7 +3121,7 @@ private:
 		
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[ra]);
 	}
-	void SRD(u32 ra, u32 rs, u32 rb, bool rc)
+	void SRD(u32 ra, u32 rs, u32 rb, u32 rc)
 	{
 		u32 n = CPU.GPR[rb] & 0x3f;
 		u64 r = rotl64(CPU.GPR[rs], 64 - n);
@@ -3138,7 +3136,7 @@ private:
 		const u8 eb = addr & 0xf;
 
 		CPU.VPR[vd].clear();
-		for (u32 i = 16 - eb; i < 16; ++i) CPU.VPR[vd]._u8[15 - i] = vm::read8(vm::cast(addr + i - 16));
+		for (u32 i = 16 - eb; i < 16; ++i) CPU.VPR[vd]._u8[15 - i] = vm::read8(VM_CAST(addr + i - 16));
 	}
 	void LSWI(u32 rd, u32 ra, u32 nb)
 	{
@@ -3150,7 +3148,7 @@ private:
 		{
 			if (N > 3)
 			{
-				CPU.GPR[reg] = vm::read32(vm::cast(addr));
+				CPU.GPR[reg] = vm::read32(VM_CAST(addr));
 				addr += 4;
 				N -= 4;
 			}
@@ -3161,7 +3159,7 @@ private:
 				while (N > 0)
 				{
 					N = N - 1;
-					buf |= vm::read8(vm::cast(addr)) << (i * 8);
+					buf |= vm::read8(VM_CAST(addr)) << (i * 8);
 					addr++;
 					i--;
 				}
@@ -3173,7 +3171,7 @@ private:
 	void LFSUX(u32 frd, u32 ra, u32 rb)
 	{
 		const u64 addr = CPU.GPR[ra] + CPU.GPR[rb];
-		float val = vm::get_ref<be_t<float>>(vm::cast(addr)).value();
+		float val = vm::get_ref<be_t<float>>(VM_CAST(addr)).value();
 		if (!FPRdouble::IsNaN(val))
 		{
 			CPU.FPR[frd] = val;
@@ -3192,12 +3190,12 @@ private:
 	void LFDX(u32 frd, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		CPU.FPR[frd] = vm::get_ref<be_t<double>>(vm::cast(addr)).value();
+		CPU.FPR[frd] = vm::get_ref<be_t<double>>(VM_CAST(addr)).value();
 	}
 	void LFDUX(u32 frd, u32 ra, u32 rb)
 	{
 		const u64 addr = CPU.GPR[ra] + CPU.GPR[rb];
-		CPU.FPR[frd] = vm::get_ref<be_t<double>>(vm::cast(addr)).value();
+		CPU.FPR[frd] = vm::get_ref<be_t<double>>(VM_CAST(addr)).value();
 		CPU.GPR[ra] = addr;
 	}
 	void STVLX(u32 vs, u32 ra, u32 rb)
@@ -3205,12 +3203,12 @@ private:
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
 		const u32 eb = addr & 0xf;
 
-		for (u32 i = 0; i < 16u - eb; ++i) vm::write8(vm::cast(addr + i), CPU.VPR[vs]._u8[15 - i]);
+		for (u32 i = 0; i < 16u - eb; ++i) vm::write8(VM_CAST(addr + i), CPU.VPR[vs]._u8[15 - i]);
 	}
 	void STDBRX(u32 rs, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		vm::get_ref<u64>(vm::cast(addr)) = CPU.GPR[rs];
+		vm::get_ref<u64>(VM_CAST(addr)) = CPU.GPR[rs];
 	}
 	void STSWX(u32 rs, u32 ra, u32 rb)
 	{
@@ -3218,7 +3216,7 @@ private:
 		u32 count = CPU.XER.XER & 0x7F;
 		for (; count >= 4; count -= 4, addr += 4, rs = (rs+1) & 31)
 		{
-			vm::write32(vm::cast(addr), (u32)CPU.GPR[rs]);
+			vm::write32(VM_CAST(addr), (u32)CPU.GPR[rs]);
 		}
 		if (count)
 		{
@@ -3226,14 +3224,14 @@ private:
 			for (u32 byte = 0; byte < count; byte++)
 			{
 				u32 byte_value = (u8)(value >> ((3^byte)*8));
-				vm::write8(vm::cast(addr+byte), byte_value);
+				vm::write8(VM_CAST(addr+byte), byte_value);
 			}
 		}
 	}
 	void STWBRX(u32 rs, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		vm::get_ref<u32>(vm::cast(addr)) = (u32)CPU.GPR[rs];
+		vm::get_ref<u32>(VM_CAST(addr)) = (u32)CPU.GPR[rs];
 	}
 	void STFSX(u32 frs, u32 ra, u32 rb)
 	{
@@ -3241,13 +3239,13 @@ private:
 		double val = CPU.FPR[frs];
 		if (!FPRdouble::IsNaN(val))
 		{
-			vm::get_ref<be_t<float>>(vm::cast(addr)) = (float)val;
+			vm::get_ref<be_t<float>>(VM_CAST(addr)) = (float)val;
 		}
 		else
 		{
 			u64 bits = (u64&)val;
 			u32 bits32 = (bits>>32 & 0x80000000) | (bits>>29 & 0x7fffffff);
-			vm::get_ref<be_t<u32>>(vm::cast(addr)) = bits32;
+			vm::get_ref<be_t<u32>>(VM_CAST(addr)) = bits32;
 		}
 	}
 	void STVRX(u32 vs, u32 ra, u32 rb)
@@ -3255,7 +3253,7 @@ private:
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
 		const u8 eb = addr & 0xf;
 
-		for (u32 i = 16 - eb; i < 16; ++i) vm::write8(vm::cast(addr + i - 16), CPU.VPR[vs]._u8[15 - i]);
+		for (u32 i = 16 - eb; i < 16; ++i) vm::write8(VM_CAST(addr + i - 16), CPU.VPR[vs]._u8[15 - i]);
 	}
 	void STFSUX(u32 frs, u32 ra, u32 rb)
 	{
@@ -3263,13 +3261,13 @@ private:
 		double val = CPU.FPR[frs];
 		if (!FPRdouble::IsNaN(val))
 		{
-			vm::get_ref<be_t<float>>(vm::cast(addr)) = (float)val;
+			vm::get_ref<be_t<float>>(VM_CAST(addr)) = (float)val;
 		}
 		else
 		{
 			u64 bits = (u64&)val;
 			u32 bits32 = (bits>>32 & 0x80000000) | (bits>>29 & 0x7fffffff);
-			vm::get_ref<be_t<u32>>(vm::cast(addr)) = bits32;
+			vm::get_ref<be_t<u32>>(VM_CAST(addr)) = bits32;
 		}
 		CPU.GPR[ra] = addr;
 	}
@@ -3283,7 +3281,7 @@ private:
 		{
 			if (N > 3)
 			{
-				vm::write32(vm::cast(addr), (u32)CPU.GPR[reg]);
+				vm::write32(VM_CAST(addr), (u32)CPU.GPR[reg]);
 				addr += 4;
 				N -= 4;
 			}
@@ -3293,7 +3291,7 @@ private:
 				while (N > 0)
 				{
 					N = N - 1;
-					vm::write8(vm::cast(addr), (0xFF000000 & buf) >> 24);
+					vm::write8(VM_CAST(addr), (0xFF000000 & buf) >> 24);
 					buf <<= 8;
 					addr++;
 				}
@@ -3304,12 +3302,12 @@ private:
 	void STFDX(u32 frs, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		vm::get_ref<be_t<double>>(vm::cast(addr)) = CPU.FPR[frs];
+		vm::get_ref<be_t<double>>(VM_CAST(addr)) = CPU.FPR[frs];
 	}
 	void STFDUX(u32 frs, u32 ra, u32 rb)
 	{
 		const u64 addr = CPU.GPR[ra] + CPU.GPR[rb];
-		vm::get_ref<be_t<double>>(vm::cast(addr)) = CPU.FPR[frs];
+		vm::get_ref<be_t<double>>(VM_CAST(addr)) = CPU.FPR[frs];
 		CPU.GPR[ra] = addr;
 	}
 	void LVLXL(u32 vd, u32 ra, u32 rb)
@@ -3318,14 +3316,14 @@ private:
 		const u32 eb = addr & 0xf;
 
 		CPU.VPR[vd].clear();
-		for (u32 i = 0; i < 16u - eb; ++i) CPU.VPR[vd]._u8[15 - i] = vm::read8(vm::cast(addr + i));
+		for (u32 i = 0; i < 16u - eb; ++i) CPU.VPR[vd]._u8[15 - i] = vm::read8(VM_CAST(addr + i));
 	}
 	void LHBRX(u32 rd, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		CPU.GPR[rd] = vm::get_ref<u16>(vm::cast(addr));
+		CPU.GPR[rd] = vm::get_ref<u16>(VM_CAST(addr));
 	}
-	void SRAW(u32 ra, u32 rs, u32 rb, bool rc)
+	void SRAW(u32 ra, u32 rs, u32 rb, u32 rc)
 	{
 		s32 RS = (s32)CPU.GPR[rs];
 		u8 shift = CPU.GPR[rb] & 63;
@@ -3342,7 +3340,7 @@ private:
 
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[ra]);
 	}
-	void SRAD(u32 ra, u32 rs, u32 rb, bool rc)
+	void SRAD(u32 ra, u32 rs, u32 rb, u32 rc)
 	{
 		s64 RS = CPU.GPR[rs];
 		u8 shift = CPU.GPR[rb] & 127;
@@ -3365,12 +3363,12 @@ private:
 		const u8 eb = addr & 0xf;
 
 		CPU.VPR[vd].clear();
-		for (u32 i = 16 - eb; i < 16; ++i) CPU.VPR[vd]._u8[15 - i] = vm::read8(vm::cast(addr + i - 16));
+		for (u32 i = 16 - eb; i < 16; ++i) CPU.VPR[vd]._u8[15 - i] = vm::read8(VM_CAST(addr + i - 16));
 	}
 	void DSS(u32 strm, u32 a)
 	{
 	}
-	void SRAWI(u32 ra, u32 rs, u32 sh, bool rc)
+	void SRAWI(u32 ra, u32 rs, u32 sh, u32 rc)
 	{
 		s32 RS = (u32)CPU.GPR[rs];
 		CPU.GPR[ra] = RS >> sh;
@@ -3378,7 +3376,7 @@ private:
 
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[ra]);
 	}
-	void SRADI1(u32 ra, u32 rs, u32 sh, bool rc)
+	void SRADI1(u32 ra, u32 rs, u32 sh, u32 rc)
 	{
 		s64 RS = CPU.GPR[rs];
 		CPU.GPR[ra] = RS >> sh;
@@ -3386,7 +3384,7 @@ private:
 
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[ra]);
 	}
-	void SRADI2(u32 ra, u32 rs, u32 sh, bool rc)
+	void SRADI2(u32 ra, u32 rs, u32 sh, u32 rc)
 	{
 		SRADI1(ra, rs, sh, rc);
 	}
@@ -3399,14 +3397,14 @@ private:
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
 		const u32 eb = addr & 0xf;
 
-		for (u32 i = 0; i < 16u - eb; ++i) vm::write8(vm::cast(addr + i), CPU.VPR[vs]._u8[15 - i]);
+		for (u32 i = 0; i < 16u - eb; ++i) vm::write8(VM_CAST(addr + i), CPU.VPR[vs]._u8[15 - i]);
 	}
 	void STHBRX(u32 rs, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		vm::get_ref<u16>(vm::cast(addr)) = (u16)CPU.GPR[rs];
+		vm::get_ref<u16>(VM_CAST(addr)) = (u16)CPU.GPR[rs];
 	}
-	void EXTSH(u32 ra, u32 rs, bool rc)
+	void EXTSH(u32 ra, u32 rs, u32 rc)
 	{
 		CPU.GPR[ra] = (s64)(s16)CPU.GPR[rs];
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[ra]);
@@ -3416,9 +3414,9 @@ private:
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
 		const u8 eb = addr & 0xf;
 
-		for (u32 i = 16 - eb; i < 16; ++i) vm::write8(vm::cast(addr + i - 16), CPU.VPR[vs]._u8[15 - i]);
+		for (u32 i = 16 - eb; i < 16; ++i) vm::write8(VM_CAST(addr + i - 16), CPU.VPR[vs]._u8[15 - i]);
 	}
-	void EXTSB(u32 ra, u32 rs, bool rc)
+	void EXTSB(u32 ra, u32 rs, u32 rc)
 	{
 		CPU.GPR[ra] = (s64)(s8)CPU.GPR[rs];
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[ra]);
@@ -3426,9 +3424,9 @@ private:
 	void STFIWX(u32 frs, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		vm::write32(vm::cast(addr), (u32&)CPU.FPR[frs]);
+		vm::write32(VM_CAST(addr), (u32&)CPU.FPR[frs]);
 	}
-	void EXTSW(u32 ra, u32 rs, bool rc)
+	void EXTSW(u32 ra, u32 rs, u32 rc)
 	{
 		CPU.GPR[ra] = (s64)(s32)CPU.GPR[rs];
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[ra]);
@@ -3441,83 +3439,83 @@ private:
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
 
-		memset(vm::get_ptr<u8>(vm::cast(addr) & ~127), 0, 128);
+		memset(vm::get_ptr<u8>(VM_CAST(addr) & ~127), 0, 128);
 	}
 	void LWZ(u32 rd, u32 ra, s32 d)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + d : d;
-		CPU.GPR[rd] = vm::read32(vm::cast(addr));
+		CPU.GPR[rd] = vm::read32(VM_CAST(addr));
 	}
 	void LWZU(u32 rd, u32 ra, s32 d)
 	{
 		const u64 addr = CPU.GPR[ra] + d;
-		CPU.GPR[rd] = vm::read32(vm::cast(addr));
+		CPU.GPR[rd] = vm::read32(VM_CAST(addr));
 		CPU.GPR[ra] = addr;
 	}
 	void LBZ(u32 rd, u32 ra, s32 d)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + d : d;
-		CPU.GPR[rd] = vm::read8(vm::cast(addr));
+		CPU.GPR[rd] = vm::read8(VM_CAST(addr));
 	}
 	void LBZU(u32 rd, u32 ra, s32 d)
 	{
 		const u64 addr = CPU.GPR[ra] + d;
-		CPU.GPR[rd] = vm::read8(vm::cast(addr));
+		CPU.GPR[rd] = vm::read8(VM_CAST(addr));
 		CPU.GPR[ra] = addr;
 	}
 	void STW(u32 rs, u32 ra, s32 d)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + d : d;
-		vm::write32(vm::cast(addr), (u32)CPU.GPR[rs]);
+		vm::write32(VM_CAST(addr), (u32)CPU.GPR[rs]);
 	}
 	void STWU(u32 rs, u32 ra, s32 d)
 	{
 		const u64 addr = CPU.GPR[ra] + d;
-		vm::write32(vm::cast(addr), (u32)CPU.GPR[rs]);
+		vm::write32(VM_CAST(addr), (u32)CPU.GPR[rs]);
 		CPU.GPR[ra] = addr;
 	}
 	void STB(u32 rs, u32 ra, s32 d)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + d : d;
-		vm::write8(vm::cast(addr), (u8)CPU.GPR[rs]);
+		vm::write8(VM_CAST(addr), (u8)CPU.GPR[rs]);
 	}
 	void STBU(u32 rs, u32 ra, s32 d)
 	{
 		const u64 addr = CPU.GPR[ra] + d;
-		vm::write8(vm::cast(addr), (u8)CPU.GPR[rs]);
+		vm::write8(VM_CAST(addr), (u8)CPU.GPR[rs]);
 		CPU.GPR[ra] = addr;
 	}
 	void LHZ(u32 rd, u32 ra, s32 d)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + d : d;
-		CPU.GPR[rd] = vm::read16(vm::cast(addr));
+		CPU.GPR[rd] = vm::read16(VM_CAST(addr));
 	}
 	void LHZU(u32 rd, u32 ra, s32 d)
 	{
 		const u64 addr = CPU.GPR[ra] + d;
-		CPU.GPR[rd] = vm::read16(vm::cast(addr));
+		CPU.GPR[rd] = vm::read16(VM_CAST(addr));
 		CPU.GPR[ra] = addr;
 	}
 	void LHA(u32 rd, u32 ra, s32 d)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + d : d;
-		CPU.GPR[rd] = (s64)(s16)vm::read16(vm::cast(addr));
+		CPU.GPR[rd] = (s64)(s16)vm::read16(VM_CAST(addr));
 	}
 	void LHAU(u32 rd, u32 ra, s32 d)
 	{
 		const u64 addr = CPU.GPR[ra] + d;
-		CPU.GPR[rd] = (s64)(s16)vm::read16(vm::cast(addr));
+		CPU.GPR[rd] = (s64)(s16)vm::read16(VM_CAST(addr));
 		CPU.GPR[ra] = addr;
 	}
 	void STH(u32 rs, u32 ra, s32 d)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + d : d;
-		vm::write16(vm::cast(addr), (u16)CPU.GPR[rs]);
+		vm::write16(VM_CAST(addr), (u16)CPU.GPR[rs]);
 	}
 	void STHU(u32 rs, u32 ra, s32 d)
 	{
 		const u64 addr = CPU.GPR[ra] + d;
-		vm::write16(vm::cast(addr), (u16)CPU.GPR[rs]);
+		vm::write16(VM_CAST(addr), (u16)CPU.GPR[rs]);
 		CPU.GPR[ra] = addr;
 	}
 	void LMW(u32 rd, u32 ra, s32 d)
@@ -3525,7 +3523,7 @@ private:
 		u64 addr = ra ? CPU.GPR[ra] + d : d;
 		for(u32 i=rd; i<32; ++i, addr += 4)
 		{
-			CPU.GPR[i] = vm::read32(vm::cast(addr));
+			CPU.GPR[i] = vm::read32(VM_CAST(addr));
 		}
 	}
 	void STMW(u32 rs, u32 ra, s32 d)
@@ -3533,13 +3531,13 @@ private:
 		u64 addr = ra ? CPU.GPR[ra] + d : d;
 		for(u32 i=rs; i<32; ++i, addr += 4)
 		{
-			vm::write32(vm::cast(addr), (u32)CPU.GPR[i]);
+			vm::write32(VM_CAST(addr), (u32)CPU.GPR[i]);
 		}
 	}
 	void LFS(u32 frd, u32 ra, s32 d)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + d : d;
-		float val = vm::get_ref<be_t<float>>(vm::cast(addr)).value();
+		float val = vm::get_ref<be_t<float>>(VM_CAST(addr)).value();
 		if (!FPRdouble::IsNaN(val))
 		{
 			CPU.FPR[frd] = val;
@@ -3553,7 +3551,7 @@ private:
 	void LFSU(u32 frd, u32 ra, s32 ds)
 	{
 		const u64 addr = CPU.GPR[ra] + ds;
-		float val = vm::get_ref<be_t<float>>(vm::cast(addr)).value();
+		float val = vm::get_ref<be_t<float>>(VM_CAST(addr)).value();
 		if (!FPRdouble::IsNaN(val))
 		{
 			CPU.FPR[frd] = val;
@@ -3568,12 +3566,12 @@ private:
 	void LFD(u32 frd, u32 ra, s32 d)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + d : d;
-		CPU.FPR[frd] = vm::get_ref<be_t<double>>(vm::cast(addr)).value();
+		CPU.FPR[frd] = vm::get_ref<be_t<double>>(VM_CAST(addr)).value();
 	}
 	void LFDU(u32 frd, u32 ra, s32 ds)
 	{
 		const u64 addr = CPU.GPR[ra] + ds;
-		CPU.FPR[frd] = vm::get_ref<be_t<double>>(vm::cast(addr)).value();
+		CPU.FPR[frd] = vm::get_ref<be_t<double>>(VM_CAST(addr)).value();
 		CPU.GPR[ra] = addr;
 	}
 	void STFS(u32 frs, u32 ra, s32 d)
@@ -3582,13 +3580,13 @@ private:
 		double val = CPU.FPR[frs];
 		if (!FPRdouble::IsNaN(val))
 		{
-			vm::get_ref<be_t<float>>(vm::cast(addr)) = (float)val;
+			vm::get_ref<be_t<float>>(VM_CAST(addr)) = (float)val;
 		}
 		else
 		{
 			u64 bits = (u64&)val;
 			u32 bits32 = (bits>>32 & 0x80000000) | (bits>>29 & 0x7fffffff);
-			vm::get_ref<be_t<u32>>(vm::cast(addr)) = bits32;
+			vm::get_ref<be_t<u32>>(VM_CAST(addr)) = bits32;
 		}
 	}
 	void STFSU(u32 frs, u32 ra, s32 d)
@@ -3597,48 +3595,48 @@ private:
 		double val = CPU.FPR[frs];
 		if (!FPRdouble::IsNaN(val))
 		{
-			vm::get_ref<be_t<float>>(vm::cast(addr)) = (float)val;
+			vm::get_ref<be_t<float>>(VM_CAST(addr)) = (float)val;
 		}
 		else
 		{
 			u64 bits = (u64&)val;
 			u32 bits32 = (bits>>32 & 0x80000000) | (bits>>29 & 0x7fffffff);
-			vm::get_ref<be_t<u32>>(vm::cast(addr)) = bits32;
+			vm::get_ref<be_t<u32>>(VM_CAST(addr)) = bits32;
 		}
 		CPU.GPR[ra] = addr;
 	}
 	void STFD(u32 frs, u32 ra, s32 d)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + d : d;
-		vm::get_ref<be_t<double>>(vm::cast(addr)) = CPU.FPR[frs];
+		vm::get_ref<be_t<double>>(VM_CAST(addr)) = CPU.FPR[frs];
 	}
 	void STFDU(u32 frs, u32 ra, s32 d)
 	{
 		const u64 addr = CPU.GPR[ra] + d;
-		vm::get_ref<be_t<double>>(vm::cast(addr)) = CPU.FPR[frs];
+		vm::get_ref<be_t<double>>(VM_CAST(addr)) = CPU.FPR[frs];
 		CPU.GPR[ra] = addr;
 	}
 	void LD(u32 rd, u32 ra, s32 ds)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + ds : ds;
-		CPU.GPR[rd] = vm::read64(vm::cast(addr));
+		CPU.GPR[rd] = vm::read64(VM_CAST(addr));
 	}
 	void LDU(u32 rd, u32 ra, s32 ds)
 	{
 		const u64 addr = CPU.GPR[ra] + ds;
-		CPU.GPR[rd] = vm::read64(vm::cast(addr));
+		CPU.GPR[rd] = vm::read64(VM_CAST(addr));
 		CPU.GPR[ra] = addr;
 	}
 	void LWA(u32 rd, u32 ra, s32 ds)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + ds : ds;
-		CPU.GPR[rd] = (s64)(s32)vm::read32(vm::cast(addr));
+		CPU.GPR[rd] = (s64)(s32)vm::read32(VM_CAST(addr));
 	}
-	void FDIVS(u32 frd, u32 fra, u32 frb, bool rc) {FDIV(frd, fra, frb, rc, true);}
-	void FSUBS(u32 frd, u32 fra, u32 frb, bool rc) {FSUB(frd, fra, frb, rc, true);}
-	void FADDS(u32 frd, u32 fra, u32 frb, bool rc) {FADD(frd, fra, frb, rc, true);}
-	void FSQRTS(u32 frd, u32 frb, bool rc) {FSQRT(frd, frb, rc, true);}
-	void FRES(u32 frd, u32 frb, bool rc)
+	void FDIVS(u32 frd, u32 fra, u32 frb, u32 rc) {FDIV(frd, fra, frb, rc, true);}
+	void FSUBS(u32 frd, u32 fra, u32 frb, u32 rc) {FSUB(frd, fra, frb, rc, true);}
+	void FADDS(u32 frd, u32 fra, u32 frb, u32 rc) {FADD(frd, fra, frb, rc, true);}
+	void FSQRTS(u32 frd, u32 frb, u32 rc) {FSQRT(frd, frb, rc, true);}
+	void FRES(u32 frd, u32 frb, u32 rc)
 	{
 		SetHostRoundingMode(CPU.FPSCR.RN);
 		const double b = CPU.FPR[frb];
@@ -3678,23 +3676,23 @@ private:
 		CPU.FPSCR.FPRF = CPU.FPR[frd].GetType();
 		if(rc) CPU.UpdateCR1();
 	}
-	void FMULS(u32 frd, u32 fra, u32 frc, bool rc) {FMUL(frd, fra, frc, rc, true);}
-	void FMADDS(u32 frd, u32 fra, u32 frc, u32 frb, bool rc) {FMADD(frd, fra, frc, frb, rc, false, false, true);}
-	void FMSUBS(u32 frd, u32 fra, u32 frc, u32 frb, bool rc) {FMADD(frd, fra, frc, frb, rc, false, true, true);}
-	void FNMSUBS(u32 frd, u32 fra, u32 frc, u32 frb, bool rc) {FMADD(frd, fra, frc, frb, rc, true, true, true);}
-	void FNMADDS(u32 frd, u32 fra, u32 frc, u32 frb, bool rc) {FMADD(frd, fra, frc, frb, rc, true, false, true);}
+	void FMULS(u32 frd, u32 fra, u32 frc, u32 rc) {FMUL(frd, fra, frc, rc, true);}
+	void FMADDS(u32 frd, u32 fra, u32 frc, u32 frb, u32 rc) {FMADD(frd, fra, frc, frb, rc, false, false, true);}
+	void FMSUBS(u32 frd, u32 fra, u32 frc, u32 frb, u32 rc) {FMADD(frd, fra, frc, frb, rc, false, true, true);}
+	void FNMSUBS(u32 frd, u32 fra, u32 frc, u32 frb, u32 rc) {FMADD(frd, fra, frc, frb, rc, true, true, true);}
+	void FNMADDS(u32 frd, u32 fra, u32 frc, u32 frb, u32 rc) {FMADD(frd, fra, frc, frb, rc, true, false, true);}
 	void STD(u32 rs, u32 ra, s32 d)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + d : d;
-		vm::write64(vm::cast(addr), CPU.GPR[rs]);
+		vm::write64(VM_CAST(addr), CPU.GPR[rs]);
 	}
 	void STDU(u32 rs, u32 ra, s32 ds)
 	{
 		const u64 addr = CPU.GPR[ra] + ds;
-		vm::write64(vm::cast(addr), CPU.GPR[rs]);
+		vm::write64(VM_CAST(addr), CPU.GPR[rs]);
 		CPU.GPR[ra] = addr;
 	}
-	void MTFSB1(u32 crbd, bool rc)
+	void MTFSB1(u32 crbd, u32 rc)
 	{
 		u32 mask = 1 << (31 - crbd);
 		if ((crbd >= 3 && crbd <= 6) && !(CPU.FPSCR.FPSCR & mask)) mask |= 1 << 31;  //FPSCR.FX
@@ -3709,7 +3707,7 @@ private:
 		const u32 exceptions_mask = 0x9FF80700;
 		CPU.SetFPSCR(CPU.FPSCR.FPSCR & ~(exceptions_mask & 0xf << ((7 - crbs) * 4)));
 	}
-	void MTFSB0(u32 crbd, bool rc)
+	void MTFSB0(u32 crbd, u32 rc)
 	{
 		u32 mask = 1 << (31 - crbd);
 		if ((crbd == 29) && !CPU.FPSCR.NI) LOG_WARNING(PPU, "Non-IEEE mode disabled");
@@ -3717,7 +3715,7 @@ private:
 
 		if(rc) CPU.UpdateCR1();
 	}
-	void MTFSFI(u32 crfd, u32 i, bool rc)
+	void MTFSFI(u32 crfd, u32 i, u32 rc)
 	{
 		u32 mask = 0xF0000000 >> (crfd * 4);
 		u32 val  = (i & 0xF) << ((7 - crfd) * 4);
@@ -3734,12 +3732,12 @@ private:
 
 		if(rc) CPU.UpdateCR1();
 	}
-	void MFFS(u32 frd, bool rc)
+	void MFFS(u32 frd, u32 rc)
 	{
 		(u64&)CPU.FPR[frd] = CPU.FPSCR.FPSCR;
 		if(rc) CPU.UpdateCR1();
 	}
-	void MTFSF(u32 flm, u32 frb, bool rc)
+	void MTFSF(u32 flm, u32 frb, u32 rc)
 	{
 		u32 mask = 0;
 		for(u32 i=0; i<8; ++i)
@@ -3774,7 +3772,7 @@ private:
 		CPU.FPSCR.FPRF = cmp_res;
 		CPU.SetCR(crfd, cmp_res);
 	}
-	void FRSP(u32 frd, u32 frb, bool rc)
+	void FRSP(u32 frd, u32 frb, u32 rc)
 	{
 		SetHostRoundingMode(CPU.FPSCR.RN);
 		const double b = CPU.FPR[frb];
@@ -3813,8 +3811,8 @@ private:
 		CPU.FPR[frd] = r;
 		if(rc) CPU.UpdateCR1();
 	}
-	void FCTIW(u32 frd, u32 frb, bool rc) {FCTIW(frd, frb, rc, false);}
-	void FCTIW(u32 frd, u32 frb, bool rc, bool truncate)
+	void FCTIW(u32 frd, u32 frb, u32 rc) {FCTIW(frd, frb, rc, false);}
+	void FCTIW(u32 frd, u32 frb, u32 rc, bool truncate)
 	{
 		const double b = CPU.FPR[frb];
 		u32 r;
@@ -3880,9 +3878,9 @@ private:
 		(u64&)CPU.FPR[frd] = r;
 		if(rc) CPU.UpdateCR1();
 	}
-	void FCTIWZ(u32 frd, u32 frb, bool rc) {FCTIW(frd, frb, rc, true);}
-	void FDIV(u32 frd, u32 fra, u32 frb, bool rc) {FDIV(frd, fra, frb, rc, false);}
-	void FDIV(u32 frd, u32 fra, u32 frb, bool rc, bool single)
+	void FCTIWZ(u32 frd, u32 frb, u32 rc) {FCTIW(frd, frb, rc, true);}
+	void FDIV(u32 frd, u32 fra, u32 frb, u32 rc) {FDIV(frd, fra, frb, rc, false);}
+	void FDIV(u32 frd, u32 fra, u32 frb, u32 rc, bool single)
 	{
 		SetHostRoundingMode(CPU.FPSCR.RN);
 		const double a = CPU.FPR[fra];
@@ -3953,8 +3951,8 @@ private:
 		CPU.FPSCR.FPRF = CPU.FPR[frd].GetType();
 		if(rc) CPU.UpdateCR1();
 	}
-	void FSUB(u32 frd, u32 fra, u32 frb, bool rc) {FSUB(frd, fra, frb, rc, false);}
-	void FSUB(u32 frd, u32 fra, u32 frb, bool rc, bool single)
+	void FSUB(u32 frd, u32 fra, u32 frb, u32 rc) {FSUB(frd, fra, frb, rc, false);}
+	void FSUB(u32 frd, u32 fra, u32 frb, u32 rc, bool single)
 	{
 		SetHostRoundingMode(CPU.FPSCR.RN);
 		const double a = CPU.FPR[fra];
@@ -4001,8 +3999,8 @@ private:
 		CPU.FPSCR.FPRF = CPU.FPR[frd].GetType();
 		if(rc) CPU.UpdateCR1();
 	}
-	void FADD(u32 frd, u32 fra, u32 frb, bool rc) {FADD(frd, fra, frb, rc, false);}
-	void FADD(u32 frd, u32 fra, u32 frb, bool rc, bool single)
+	void FADD(u32 frd, u32 fra, u32 frb, u32 rc) {FADD(frd, fra, frb, rc, false);}
+	void FADD(u32 frd, u32 fra, u32 frb, u32 rc, bool single)
 	{
 		SetHostRoundingMode(CPU.FPSCR.RN);
 		const double a = CPU.FPR[fra];
@@ -4049,8 +4047,8 @@ private:
 		CPU.FPSCR.FPRF = CPU.FPR[frd].GetType();
 		if(rc) CPU.UpdateCR1();
 	}
-	void FSQRT(u32 frd, u32 frb, bool rc) {FSQRT(frd, frb, rc, false);}
-	void FSQRT(u32 frd, u32 frb, bool rc, bool single)
+	void FSQRT(u32 frd, u32 frb, u32 rc) {FSQRT(frd, frb, rc, false);}
+	void FSQRT(u32 frd, u32 frb, u32 rc, bool single)
 	{
 		SetHostRoundingMode(CPU.FPSCR.RN);
 		const double b = CPU.FPR[frb];
@@ -4092,13 +4090,13 @@ private:
 		CPU.FPSCR.FPRF = CPU.FPR[frd].GetType();
 		if(rc) CPU.UpdateCR1();
 	}
-	void FSEL(u32 frd, u32 fra, u32 frc, u32 frb, bool rc)
+	void FSEL(u32 frd, u32 fra, u32 frc, u32 frb, u32 rc)
 	{
 		CPU.FPR[frd] = CPU.FPR[fra] >= 0.0 ? CPU.FPR[frc] : CPU.FPR[frb];
 		if(rc) CPU.UpdateCR1();
 	}
-	void FMUL(u32 frd, u32 fra, u32 frc, bool rc) {FMUL(frd, fra, frc, rc, false);}
-	void FMUL(u32 frd, u32 fra, u32 frc, bool rc, bool single)
+	void FMUL(u32 frd, u32 fra, u32 frc, u32 rc) {FMUL(frd, fra, frc, rc, false);}
+	void FMUL(u32 frd, u32 fra, u32 frc, u32 rc, bool single)
 	{
 		SetHostRoundingMode(CPU.FPSCR.RN);
 		const double a = CPU.FPR[fra];
@@ -4145,7 +4143,7 @@ private:
 		CPU.FPSCR.FPRF = CPU.FPR[frd].GetType();
 		if(rc) CPU.UpdateCR1();
 	}
-	void FRSQRTE(u32 frd, u32 frb, bool rc)
+	void FRSQRTE(u32 frd, u32 frb, u32 rc)
 	{
 		SetHostRoundingMode(CPU.FPSCR.RN);
 		const double b = CPU.FPR[frb];
@@ -4197,9 +4195,9 @@ private:
 		CPU.FPSCR.FPRF = CPU.FPR[frd].GetType();
 		if(rc) CPU.UpdateCR1();
 	}
-	void FMSUB(u32 frd, u32 fra, u32 frc, u32 frb, bool rc) {FMADD(frd, fra, frc, frb, rc, false, true, false);}
-	void FMADD(u32 frd, u32 fra, u32 frc, u32 frb, bool rc) {FMADD(frd, fra, frc, frb, rc, false, false, false);}
-	void FMADD(u32 frd, u32 fra, u32 frc, u32 frb, bool rc, bool neg, bool sub, bool single)
+	void FMSUB(u32 frd, u32 fra, u32 frc, u32 frb, u32 rc) {FMADD(frd, fra, frc, frb, rc, false, true, false);}
+	void FMADD(u32 frd, u32 fra, u32 frc, u32 frb, u32 rc) {FMADD(frd, fra, frc, frb, rc, false, false, false);}
+	void FMADD(u32 frd, u32 fra, u32 frc, u32 frb, u32 rc, bool neg, bool sub, bool single)
 	{
 		SetHostRoundingMode(CPU.FPSCR.RN);
 		const double a = CPU.FPR[fra];
@@ -4266,8 +4264,8 @@ private:
 		CPU.FPSCR.FPRF = CPU.FPR[frd].GetType();
 		if(rc) CPU.UpdateCR1();
 	}
-	void FNMSUB(u32 frd, u32 fra, u32 frc, u32 frb, bool rc) {FMADD(frd, fra, frc, frb, rc, true, true, false);}
-	void FNMADD(u32 frd, u32 fra, u32 frc, u32 frb, bool rc) {FMADD(frd, fra, frc, frb, rc, true, false, false);}
+	void FNMSUB(u32 frd, u32 fra, u32 frc, u32 frb, u32 rc) {FMADD(frd, fra, frc, frb, rc, true, true, false);}
+	void FNMADD(u32 frd, u32 fra, u32 frc, u32 frb, u32 rc) {FMADD(frd, fra, frc, frb, rc, true, false, false);}
 	void FCMPO(u32 crfd, u32 fra, u32 frb)
 	{
 		int cmp_res = FPRdouble::Cmp(CPU.FPR[fra], CPU.FPR[frb]);
@@ -4290,28 +4288,28 @@ private:
 		CPU.FPSCR.FPRF = cmp_res;
 		CPU.SetCR(crfd, cmp_res);
 	}
-	void FNEG(u32 frd, u32 frb, bool rc)
+	void FNEG(u32 frd, u32 frb, u32 rc)
 	{
 		CPU.FPR[frd] = -CPU.FPR[frb];
 		if(rc) CPU.UpdateCR1();
 	}
-	void FMR(u32 frd, u32 frb, bool rc)
+	void FMR(u32 frd, u32 frb, u32 rc)
 	{
 		CPU.FPR[frd] = CPU.FPR[frb];
 		if(rc) CPU.UpdateCR1();
 	}
-	void FNABS(u32 frd, u32 frb, bool rc)
+	void FNABS(u32 frd, u32 frb, u32 rc)
 	{
 		CPU.FPR[frd] = -fabs(CPU.FPR[frb]);
 		if(rc) CPU.UpdateCR1();
 	}
-	void FABS(u32 frd, u32 frb, bool rc)
+	void FABS(u32 frd, u32 frb, u32 rc)
 	{
 		CPU.FPR[frd] = fabs(CPU.FPR[frb]);
 		if(rc) CPU.UpdateCR1();
 	}
-	void FCTID(u32 frd, u32 frb, bool rc) {FCTID(frd, frb, rc, false);}
-	void FCTID(u32 frd, u32 frb, bool rc, bool truncate)
+	void FCTID(u32 frd, u32 frb, u32 rc) {FCTID(frd, frb, rc, false);}
+	void FCTID(u32 frd, u32 frb, u32 rc, bool truncate)
 	{
 		const double b = CPU.FPR[frb];
 		u64 r;
@@ -4377,8 +4375,8 @@ private:
 		(u64&)CPU.FPR[frd] = r;
 		if(rc) CPU.UpdateCR1();
 	}
-	void FCTIDZ(u32 frd, u32 frb, bool rc) {FCTID(frd, frb, rc, true);}
-	void FCFID(u32 frd, u32 frb, bool rc)
+	void FCTIDZ(u32 frd, u32 frb, u32 rc) {FCTID(frd, frb, rc, true);}
+	void FCFID(u32 frd, u32 frb, u32 rc)
 	{
 		s64 bi = (s64&)CPU.FPR[frb];
 		double bf = (double)bi;
@@ -4403,6 +4401,6 @@ private:
 
 	void UNK(const u32 code, const u32 opcode, const u32 gcode)
 	{
-		throw fmt::Format("Unknown/Illegal opcode! (0x%08x : 0x%x : 0x%x)", code, opcode, gcode);
+		throw EXCEPTION("Unknown/Illegal opcode! (0x%08x : 0x%x : 0x%x)", code, opcode, gcode);
 	}
 };
