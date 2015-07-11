@@ -7,7 +7,6 @@ compiler:
 env:
   global:
    - secure: "jA29KvTCTR7q4BMzPPUBGazjJwrIWa7k4fo5ZSMlyxh2NbztZTKQYwodgDcXBoptCd1KJ9H3FXwBnNdMNVnTkvoPL9uWnN4K/3D1D20FCag1kmlBwnaVqVei5cRiZ9TOMuaxhjkdg8pcrQLTlXEEdMZf6A2OW0VgoBGDVSX9nYc="
-
 branches:
   only:
     - master
@@ -16,6 +15,16 @@ git:
   submodules: false
 
 before_install:
+# shutdown services on Travis, which may have a memory impact
+# show memory usage before and after shutdown of services
+  - sudo service --status-all
+  - sudo free -m -t
+  - sudo /etc/init.d/mysql stop
+  - sudo /etc/init.d/postgresql stop
+  - sudo /etc/init.d/couchdb stop
+  - sudo /etc/init.d/redis-server stop
+  - sudo free -m -t
+
   - echo "yes" | sudo apt-key adv --fetch-keys http://repos.codelite.org/CodeLite.asc
   - echo "yes" | sudo apt-add-repository 'deb http://repos.codelite.org/wx3.0/ubuntu/ precise universe'
 # Add later version of Clang, apt from llvm.org. the repository link is for development version.
@@ -75,4 +84,8 @@ script:
  - if [ "$COVERITY_SCAN_BRANCH" != 1 ]; then make -j 4; fi
 after_success:
  - if [ "$COVERITY_SCAN_BRANCH" != 1 ]; then coveralls --extension .c --extension .cpp --extension .h; fi
-
+after_failure:
+# show memory usage again
+ - sudo free -m -t
+# show actions of the OOM killer
+ - sudo dmesg

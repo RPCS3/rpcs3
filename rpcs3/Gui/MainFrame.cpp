@@ -5,6 +5,10 @@
 #include "rpcs3.h"
 #include "MainFrame.h"
 
+#ifndef __WINDOWS__
+#include "frame_icon.xpm"
+#endif
+
 #include "git-version.h"
 #include "Ini.h"
 #include "Emu/SysCalls/Modules/cellSysutil.h"
