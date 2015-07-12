@@ -42,7 +42,7 @@ s32 sys_mmapper_allocate_address(u64 size, u64 flags, u64 alignment, vm::ptr<u32
 	{
 		for (u32 addr = ::align(0x30000000, alignment); addr < 0xC0000000; addr += static_cast<u32>(alignment))
 		{
-			if (const auto area = vm::map(addr, static_cast<u32>(size), 0))
+			if (const auto area = vm::map(addr, static_cast<u32>(size), flags))
 			{
 				*alloc_addr = addr;
 
@@ -63,7 +63,7 @@ s32 sys_mmapper_allocate_fixed_address()
 
 	LV2_LOCK;
 
-	if (!vm::map(0xB0000000, 0x10000000, 0))
+	if (!vm::map(0xB0000000, 0x10000000)) // TODO: set correct flags (they aren't used currently though)
 	{
 		return CELL_EEXIST;
 	}

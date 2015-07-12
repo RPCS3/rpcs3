@@ -18,7 +18,7 @@ s32 sys_cond_create(vm::ptr<u32> cond_id, u32 mutex_id, vm::ptr<sys_cond_attribu
 
 	LV2_LOCK;
 
-	const auto mutex = std::move(Emu.GetIdManager().get<lv2_mutex_t>(mutex_id));
+	const auto mutex = Emu.GetIdManager().get<lv2_mutex_t>(mutex_id);
 
 	if (!mutex)
 	{
@@ -211,7 +211,7 @@ s32 sys_cond_wait(PPUThread& ppu, u32 cond_id, u64 timeout)
 	// reown the mutex (could be set when notified)
 	if (!cond->mutex->owner)
 	{
-		cond->mutex->owner = std::move(ppu.shared_from_this());
+		cond->mutex->owner = ppu.shared_from_this();
 	}
 
 	if (cond->mutex->owner.get() != &ppu)

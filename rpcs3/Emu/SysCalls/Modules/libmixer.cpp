@@ -324,15 +324,17 @@ s32 cellSurMixerCreate(vm::cptr<CellSurMixerConfig> config)
 
 	libmixer.Warning("*** surMixer created (ch1=%d, ch2=%d, ch6=%d, ch8=%d)", config->chStrips1, config->chStrips2, config->chStrips6, config->chStrips8);
 
-	auto ppu = Emu.GetIdManager().make_ptr<PPUThread>("Surmixer Thread");
+	const auto ppu = Emu.GetIdManager().make_ptr<PPUThread>("Surmixer Thread");
 	ppu->prio = 1001;
 	ppu->stack_size = 0x10000;
-	ppu->custom_task = [](PPUThread& CPU)
+	ppu->custom_task = [](PPUThread& ppu)
 	{
 		AudioPortConfig& port = g_audio.ports[g_surmx.audio_port];
 
-		while (port.state.load() != AUDIO_PORT_STATE_CLOSED && !Emu.IsStopped())
+		while (port.state.load() != AUDIO_PORT_STATE_CLOSED)
 		{
+			CHECK_EMU_STATUS;
+
 			if (mixcount > (port.tag + 0)) // adding positive value (1-15): preemptive buffer filling (hack)
 			{
 				std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
@@ -346,7 +348,7 @@ s32 cellSurMixerCreate(vm::cptr<CellSurMixerConfig> config)
 				memset(mixdata, 0, sizeof(mixdata));
 				if (surMixerCb)
 				{
-					surMixerCb(CPU, surMixerCbArg, (u32)mixcount, 256);
+					surMixerCb(ppu, surMixerCbArg, (u32)mixcount, 256);
 				}
 
 				//u64 stamp1 = get_system_time();
@@ -453,13 +455,11 @@ s32 cellSurMixerCreate(vm::cptr<CellSurMixerConfig> config)
 		
 		surMixerCb.set(0);
 
-		const u32 id = CPU.GetId();
-
-		CallAfter([id]()
-		{
-			Emu.GetIdManager().remove<PPUThread>(id);
-		});
+		Emu.GetIdManager().remove<PPUThread>(ppu.GetId());
 	};
+
+	ppu->Run();
+	ppu->Exec();
 
 	return CELL_OK;
 }

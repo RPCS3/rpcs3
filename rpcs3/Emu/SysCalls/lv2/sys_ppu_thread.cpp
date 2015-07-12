@@ -31,12 +31,7 @@ void _sys_ppu_thread_exit(PPUThread& ppu, u64 errorcode)
 
 	if (!ppu.is_joinable)
 	{
-		const u32 id = ppu.GetId();
-
-		CallAfter([id]()
-		{
-			Emu.GetIdManager().remove<PPUThread>(id);
-		});
+		Emu.GetIdManager().remove<PPUThread>(ppu.GetId());
 	}
 
 	ppu.Exit();

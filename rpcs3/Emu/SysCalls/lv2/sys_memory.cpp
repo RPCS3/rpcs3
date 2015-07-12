@@ -49,27 +49,10 @@ s32 sys_memory_allocate(u32 size, u64 flags, vm::ptr<u32> alloc_addr)
 	}
 	}
 
-	// Available memory reserved for containers
-	u32 available = 0;
-
-	// Check all containers
-	for (auto& ct : Emu.GetIdManager().get_all<lv2_memory_container_t>())
-	{
-		available += ct->size - ct->used;
-	}
-
-	const auto area = vm::get(vm::user_space);
-
-	// Check available memory
-	if (area->size < area->used.load() + available + size)
-	{
-		return CELL_ENOMEM;
-	}
-
 	// Allocate memory
 	const u32 addr =
-		flags == SYS_MEMORY_PAGE_SIZE_1M ? area->alloc(size, 0x100000) :
-		flags == SYS_MEMORY_PAGE_SIZE_64K ? area->alloc(size, 0x10000) :
+		flags == SYS_MEMORY_PAGE_SIZE_1M ? vm::alloc(size, vm::user_space, 0x100000) :
+		flags == SYS_MEMORY_PAGE_SIZE_64K ? vm::alloc(size, vm::user_space, 0x10000) :
 		throw EXCEPTION("Unexpected flags");
 
 	if (!addr)
@@ -137,10 +120,15 @@ s32 sys_memory_allocate_from_container(u32 size, u32 cid, u64 flags, vm::ptr<u32
 		return CELL_ENOMEM;
 	}
 
+	const auto area = vm::get(vm::user_space);
+
+	// Return "physical" memory required for allocation
+	area->used -= size;
+
 	// Allocate memory
 	const u32 addr =
-		flags == SYS_MEMORY_PAGE_SIZE_1M ? vm::alloc(size, vm::user_space, 0x100000) :
-		flags == SYS_MEMORY_PAGE_SIZE_64K ? vm::alloc(size, vm::user_space, 0x10000) :
+		flags == SYS_MEMORY_PAGE_SIZE_1M ? area->alloc(size, 0x100000) :
+		flags == SYS_MEMORY_PAGE_SIZE_64K ? area->alloc(size, 0x10000) :
 		throw EXCEPTION("Unexpected flags");
 
 	if (!addr)
@@ -164,6 +152,8 @@ s32 sys_memory_free(u32 addr)
 
 	LV2_LOCK;
 
+	const auto area = vm::get(vm::user_space);
+
 	// Check all memory containers
 	for (auto& ct : Emu.GetIdManager().get_all<lv2_memory_container_t>())
 	{
@@ -171,20 +161,25 @@ s32 sys_memory_free(u32 addr)
 
 		if (found != ct->allocs.end())
 		{
-			if (!vm::dealloc(addr, vm::user_space))
+			const u32 size = found->second;
+
+			if (!area->dealloc(addr))
 			{
-				throw EXCEPTION("Memory not deallocated (cid=0x%x, addr=0x%x, size=0x%x)", ct->id, addr, found->second);
+				throw EXCEPTION("Memory not deallocated (cid=0x%x, addr=0x%x, size=0x%x)", ct->id, addr, size);
 			}
 
-			// Return memory size
-			ct->used -= found->second;
+			// Return memory
+			ct->used -= size;
 			ct->allocs.erase(found);
+
+			// Fix "physical" memory
+			area->used += size;
 
 			return CELL_OK;
 		}
 	}
 
-	if (!vm::dealloc(addr, vm::user_space))
+	if (!area->dealloc(addr))
 	{
 		return CELL_EINVAL;
 	}
@@ -213,20 +208,18 @@ s32 sys_memory_get_user_memory_size(vm::ptr<sys_memory_info_t> mem_info)
 	LV2_LOCK;
 
 	u32 reserved = 0;
-	u32 available = 0;
 
 	// Check all memory containers
 	for (auto& ct : Emu.GetIdManager().get_all<lv2_memory_container_t>())
 	{
 		reserved += ct->size;
-		available += ct->size - ct->used;
 	}
 
 	const auto area = vm::get(vm::user_space);
 	
 	// Fetch the user memory available
 	mem_info->total_user_memory = area->size - reserved;
-	mem_info->available_user_memory = area->size - area->used.load() - available;
+	mem_info->available_user_memory = area->size - area->used.load();
 
 	return CELL_OK;
 }
@@ -246,19 +239,17 @@ s32 sys_memory_container_create(vm::ptr<u32> cid, u32 size)
 	}
 
 	u32 reserved = 0;
-	u32 available = 0;
 
 	// Check all memory containers
 	for (auto& ct : Emu.GetIdManager().get_all<lv2_memory_container_t>())
 	{
 		reserved += ct->size;
-		available += ct->size - ct->used;
 	}
 
 	const auto area = vm::get(vm::user_space);
 
 	if (area->size < reserved + size ||
-		area->size - area->used.load() < available + size)
+		area->size - area->used.load() < size)
 	{
 		return CELL_ENOMEM;
 	}

@@ -44,6 +44,9 @@ namespace vm
 	// Process a memory access error if it's caused by the reservation
 	bool reservation_query(u32 addr, u32 size, bool is_writing, std::function<bool()> callback);
 
+	// Returns true if the current thread owns reservation
+	bool reservation_test();
+
 	// Break all reservations created by the current thread
 	void reservation_free();
 
@@ -66,7 +69,8 @@ namespace vm
 	// Unmap memory at specified address (in optionally specified memory location)
 	bool dealloc(u32 addr, memory_location_t location = any);
 
-	class block_t
+	// Object that handles memory allocations inside specific constant bounds ("location"), currently non-virtual
+	class block_t final
 	{
 		std::map<u32, u32> m_map; // addr -> size mapping of mapped locations
 		std::mutex m_mutex;
@@ -76,9 +80,10 @@ namespace vm
 	public:
 		block_t() = delete;
 
-		block_t(u32 addr, u32 size)
+		block_t(u32 addr, u32 size, u64 flags = 0)
 			: addr(addr)
 			, size(size)
+			, flags(flags)
 		{
 		}
 
@@ -87,6 +92,7 @@ namespace vm
 	public:
 		const u32 addr; // start address
 		const u32 size; // total size
+		const u64 flags; // currently unused
 
 		atomic_t<u32> used{}; // amount of memory used, may be increased manually prevent some memory from allocating
 
@@ -101,7 +107,7 @@ namespace vm
 	};
 
 	// create new memory block with specified parameters and return it
-	std::shared_ptr<block_t> map(u32 addr, u32 size, u32 flags);
+	std::shared_ptr<block_t> map(u32 addr, u32 size, u64 flags = 0);
 
 	// delete existing memory block with specified start address
 	std::shared_ptr<block_t> unmap(u32 addr);

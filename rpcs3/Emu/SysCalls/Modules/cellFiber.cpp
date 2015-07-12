@@ -307,7 +307,7 @@ Module cellFiber("cellFiber", []()
 	REG_FUNC_NR(cellFiber, cellFiberPpuExit);
 	REG_FUNC_NR(cellFiber, cellFiberPpuYield);
 	REG_FUNC_NR(cellFiber, cellFiberPpuJoinFiber);
-	REG_FUNC_NR(cellFiber, cellFiberPpuSelf);
+	REG_FUNC(cellFiber, cellFiberPpuSelf);
 	REG_FUNC_NR(cellFiber, cellFiberPpuSendSignal);
 	REG_FUNC_NR(cellFiber, cellFiberPpuWaitSignal);
 	REG_FUNC_NR(cellFiber, cellFiberPpuWaitFlag);

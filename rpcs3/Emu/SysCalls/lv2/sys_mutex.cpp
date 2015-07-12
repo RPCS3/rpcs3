@@ -76,7 +76,7 @@ s32 sys_mutex_destroy(u32 mutex_id)
 	}
 
 	// assuming that the mutex is locked immediately by another waiting thread when unlocked
-	if (!mutex->owner || !mutex->sq.empty())
+	if (mutex->owner || mutex->sq.size())
 	{
 		return CELL_EBUSY;
 	}
@@ -127,7 +127,7 @@ s32 sys_mutex_lock(PPUThread& ppu, u32 mutex_id, u64 timeout)
 	// lock immediately if not locked
 	if (!mutex->owner)
 	{
-		mutex->owner = std::move(ppu.shared_from_this());
+		mutex->owner = ppu.shared_from_this();
 
 		return CELL_OK;
 	}
@@ -200,7 +200,7 @@ s32 sys_mutex_trylock(PPUThread& ppu, u32 mutex_id)
 	}
 
 	// own the mutex if free
-	mutex->owner = std::move(ppu.shared_from_this());
+	mutex->owner = ppu.shared_from_this();
 
 	return CELL_OK;
 }

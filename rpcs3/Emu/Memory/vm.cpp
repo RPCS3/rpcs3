@@ -85,9 +85,7 @@ namespace vm
 		std::mutex m_mutex;
 
 	public:
-		reservation_mutex_t()
-		{
-		}
+		reservation_mutex_t() = default;
 
 		bool do_notify;
 
@@ -130,10 +128,9 @@ namespace vm
 				m_cv.notify_one();
 			}
 		}
-
 	};
 
-	const thread_ctrl_t* g_reservation_owner = nullptr;
+	const thread_ctrl_t* volatile g_reservation_owner = nullptr;
 
 	u32 g_reservation_addr = 0;
 	u32 g_reservation_size = 0;
@@ -167,9 +164,9 @@ namespace vm
 				throw EXCEPTION("System failure (addr=0x%x)", addr);
 			}
 
-			g_reservation_owner = nullptr;
 			g_reservation_addr = 0;
 			g_reservation_size = 0;
+			g_reservation_owner = nullptr;
 		}
 	}
 
@@ -270,9 +267,16 @@ namespace vm
 		return true;
 	}
 
+	bool reservation_test()
+	{
+		const auto owner = g_reservation_owner;
+
+		return owner && owner == get_current_thread_ctrl();
+	}
+
 	void reservation_free()
 	{
-		if (g_reservation_owner && g_reservation_owner == get_current_thread_ctrl())
+		if (reservation_test())
 		{
 			std::lock_guard<reservation_mutex_t> lock(g_reservation_mutex);
 
@@ -404,10 +408,8 @@ namespace vm
 		return true;
 	}
 
-	void page_unmap(u32 addr, u32 size)
+	void _page_unmap(u32 addr, u32 size)
 	{
-		std::lock_guard<reservation_mutex_t> lock(g_reservation_mutex);
-
 		assert(size && (size | addr) % 4096 == 0);
 
 		for (u32 i = addr / 4096; i < addr / 4096 + size / 4096; i++)
@@ -544,11 +546,13 @@ namespace vm
 
 	block_t::~block_t()
 	{
+		std::lock_guard<reservation_mutex_t> lock(g_reservation_mutex);
+
 		// deallocate all memory
 		for (auto& entry : m_map)
 		{
 			// unmap memory pages
-			vm::page_unmap(entry.first, entry.second);
+			vm::_page_unmap(entry.first, entry.second);
 		}
 	}
 
@@ -568,7 +572,7 @@ namespace vm
 		// return if size is invalid
 		if (!size || size > this->size)
 		{
-			return false;
+			return 0;
 		}
 
 		// search for an appropriate place (unoptimized)
@@ -578,9 +582,14 @@ namespace vm
 			{
 				return addr;
 			}
+
+			if (used.load() + size > this->size)
+			{
+				return 0;
+			}
 		}
 
-		return false;
+		return 0;
 	}
 
 	u32 block_t::falloc(u32 addr, u32 size)
@@ -593,12 +602,12 @@ namespace vm
 		// return if addr or size is invalid
 		if (!size || size > this->size || addr < this->addr || addr + size - 1 >= this->addr + this->size - 1)
 		{
-			return false;
+			return 0;
 		}
 
 		if (!try_alloc(addr, size))
 		{
-			return false;
+			return 0;
 		}
 
 		return addr;
@@ -614,14 +623,14 @@ namespace vm
 		{
 			const u32 size = found->second;
 
-			// unmap memory pages
-			vm::page_unmap(addr, size);
-
 			// remove entry
 			m_map.erase(found);
 
 			// return "physical" memory
 			used -= size;
+
+			// unmap memory pages
+			std::lock_guard<reservation_mutex_t>{ g_reservation_mutex }, vm::_page_unmap(addr, size);
 
 			return true;
 		}
@@ -629,13 +638,13 @@ namespace vm
 		return false;
 	}
 
-	std::shared_ptr<block_t> map(u32 addr, u32 size, u32 flags)
+	std::shared_ptr<block_t> map(u32 addr, u32 size, u64 flags)
 	{
 		std::lock_guard<reservation_mutex_t> lock(g_reservation_mutex);
 
-		if (!size || (size | addr) % 4096 || flags)
+		if (!size || (size | addr) % 4096)
 		{
-			throw EXCEPTION("Invalid arguments (addr=0x%x, size=0x%x, flags=0x%x)", addr, size, flags);
+			throw EXCEPTION("Invalid arguments (addr=0x%x, size=0x%x)", addr, size);
 		}
 
 		for (auto& block : g_locations)
@@ -659,7 +668,7 @@ namespace vm
 			}
 		}
 
-		auto block = std::make_shared<block_t>(addr, size);
+		auto block = std::make_shared<block_t>(addr, size, flags);
 
 		g_locations.emplace_back(block);
 

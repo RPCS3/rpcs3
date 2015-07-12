@@ -137,23 +137,23 @@ union spu_channel_t
 		u32 value;
 	};
 
-	atomic_t<sync_var_t> sync_var; // atomic variable
+	atomic_t<sync_var_t> sync_var;
 
 public:
 	bool try_push(u32 value)
 	{
-		bool out_result;
-
-		sync_var.atomic_op([&out_result, value](sync_var_t& data)
+		return sync_var.atomic_op([=](sync_var_t& data) -> bool
 		{
-			if ((out_result = data.count == 0))
+			if (data.count == 0)
 			{
 				data.count = 1;
 				data.value = value;
-			}
-		});
 
-		return out_result;
+				return true;
+			}
+
+			return false;
+		});
 	}
 
 	void push_bit_or(u32 value)
@@ -168,33 +168,31 @@ public:
 
 	bool try_pop(u32& out_value)
 	{
-		bool out_result;
-
-		sync_var.atomic_op([&out_result, &out_value](sync_var_t& data)
+		return sync_var.atomic_op([&](sync_var_t& data) -> bool
 		{
-			if ((out_result = data.count != 0))
+			if (data.count != 0)
 			{
 				out_value = data.value;
+
 				data.count = 0;
 				data.value = 0;
-			}
-		});
 
-		return out_result;
+				return true;
+			}
+
+			return false;
+		});
 	}
 
 	u32 pop_uncond()
 	{
-		u32 out_value;
-
-		sync_var.atomic_op([&out_value](sync_var_t& data)
+		return sync_var.atomic_op([](sync_var_t& data) -> u32
 		{
-			out_value = data.value;
 			data.count = 0;
-			// value is not cleared and may be read again
-		});
 
-		return out_value;
+			// value is not cleared and may be read again
+			return data.value;
+		});
 	}
 
 	void set_value(u32 value, u32 count = 1)

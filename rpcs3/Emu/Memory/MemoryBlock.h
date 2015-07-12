@@ -46,6 +46,7 @@ public:
 	VirtualMemoryBlock() = default;
 
 	VirtualMemoryBlock* SetRange(const u32 start, const u32 size);
+	void Clear() { m_mapped_memory.clear(); m_reserve_size = 0; m_range_start = 0; m_range_size = 0; }
 	u32 GetStartAddr() const { return m_range_start; }
 	u32 GetSize() const { return m_range_size; }
 	bool IsInMyRange(const u32 addr, const u32 size);
