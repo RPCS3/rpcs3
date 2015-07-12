@@ -6,6 +6,7 @@
 
 struct lv2_event_queue_t;
 struct spu_group_t;
+struct lv2_int_tag_t;
 
 // SPU Channels
 enum : u32
@@ -276,41 +277,16 @@ public:
 	}
 };
 
-struct spu_interrupt_tag_t
+struct spu_int_ctrl_t
 {
 	atomic_t<u64> mask;
 	atomic_t<u64> stat;
 
-	atomic_t<s32> assigned;
+	std::shared_ptr<struct lv2_int_tag_t> tag;
 
-	std::mutex handler_mutex;
-	std::condition_variable cond;
+	void set(u64 ints);
 
-public:
-	void set(u64 ints)
-	{
-		// leave only enabled interrupts
-		ints &= mask.load();
-
-		if (ints && ~stat._or(ints) & ints)
-		{
-			// notify if at least 1 bit was set
-			cond.notify_all();
-		}
-	}
-
-	void clear(u64 ints)
-	{
-		stat &= ~ints;
-	}
-
-	void clear()
-	{
-		mask = {};
-		stat = {};
-
-		assigned = { -1 };
-	}
+	void clear(u64 ints);
 };
 
 struct g_spu_imm_table_t
@@ -533,8 +509,7 @@ public:
 	atomic_t<u32> status; // SPU Status register
 	atomic_t<u32> npc; // SPU Next Program Counter register
 
-	spu_interrupt_tag_t int0; // SPU Class 0 Interrupt Management
-	spu_interrupt_tag_t int2; // SPU Class 2 Interrupt Management
+	std::array<spu_int_ctrl_t, 3> int_ctrl; // SPU Class 0, 1, 2 Interrupt Management
 
 	std::weak_ptr<spu_group_t> tg; // SPU Thread Group
 

@@ -10,6 +10,7 @@
 #include "Emu/SysCalls/lv2/sys_spu.h"
 #include "Emu/SysCalls/lv2/sys_event_flag.h"
 #include "Emu/SysCalls/lv2/sys_event.h"
+#include "Emu/SysCalls/lv2/sys_interrupt.h"
 
 #include "Emu/Cell/SPUDisAsm.h"
 #include "Emu/Cell/SPUThread.h"
@@ -21,6 +22,30 @@
 #include <cfenv>
 
 extern u64 get_timebased_time();
+
+void spu_int_ctrl_t::set(u64 ints)
+{
+	// leave only enabled interrupts
+	ints &= mask.load();
+
+	// notify if at least 1 bit was set
+	if (ints && ~stat._or(ints) & ints && tag)
+	{
+		LV2_LOCK;
+
+		if (tag && tag->handler)
+		{
+			tag->handler->signal++;
+
+			tag->handler->thread->cv.notify_one();
+		}
+	}
+}
+
+void spu_int_ctrl_t::clear(u64 ints)
+{
+	stat &= ~ints;
+}
 
 const g_spu_imm_table_t g_spu_imm;
 
@@ -193,8 +218,7 @@ void SPUThread::InitRegs()
 	status = {};
 	npc = {};
 
-	int0.clear();
-	int2.clear();
+	int_ctrl = {};
 
 	GPR[1]._u32[3] = 0x3FFF0; // initial stack frame pointer
 }
@@ -572,7 +596,7 @@ u32 SPUThread::get_ch_value(u32 ch)
 		
 		if (count + 1 == 4 /* SPU_IN_MBOX_THRESHOLD */) // TODO: check this
 		{
-			int2.set(SPU_INT2_STAT_SPU_MAILBOX_THRESHOLD_INT);
+			int_ctrl[2].set(SPU_INT2_STAT_SPU_MAILBOX_THRESHOLD_INT);
 		}
 		
 		return result;
@@ -684,7 +708,7 @@ void SPUThread::set_ch_value(u32 ch, u32 value)
 				cv.wait_for(lock, std::chrono::milliseconds(1));
 			}
 
-			int2.set(SPU_INT2_STAT_MAILBOX_INT);
+			int_ctrl[2].set(SPU_INT2_STAT_MAILBOX_INT);
 			return;
 		}
 		else
@@ -1030,7 +1054,7 @@ void SPUThread::stop_and_signal(u32 code)
 			status &= ~SPU_STATUS_RUNNING;
 		});
 
-		int2.set(SPU_INT2_STAT_SPU_STOP_AND_SIGNAL_INT);
+		int_ctrl[2].set(SPU_INT2_STAT_SPU_STOP_AND_SIGNAL_INT);
 
 		return Stop();
 	}
@@ -1295,7 +1319,7 @@ void SPUThread::halt()
 			status &= ~SPU_STATUS_RUNNING;
 		});
 
-		int2.set(SPU_INT2_STAT_SPU_HALT_OR_STEP_INT);
+		int_ctrl[2].set(SPU_INT2_STAT_SPU_HALT_OR_STEP_INT);
 
 		return Stop();
 	}

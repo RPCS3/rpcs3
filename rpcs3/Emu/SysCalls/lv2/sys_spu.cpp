@@ -10,6 +10,7 @@
 #include "Emu/FS/vfsFile.h"
 #include "Loader/ELF32.h"
 #include "Crypto/unself.h"
+#include "sys_interrupt.h"
 #include "sys_event.h"
 #include "sys_spu.h"
 
@@ -609,7 +610,7 @@ s32 sys_spu_thread_write_ls(u32 id, u32 address, u64 value, u32 type)
 		throw EXCEPTION("Invalid SPU thread group");
 	}
 
-	if ((group->state < SPU_THREAD_GROUP_STATUS_WAITING) || (group->state > SPU_THREAD_GROUP_STATUS_RUNNING))
+	if (group->state < SPU_THREAD_GROUP_STATUS_WAITING || group->state > SPU_THREAD_GROUP_STATUS_RUNNING)
 	{
 		return CELL_ESTAT;
 	}
@@ -651,7 +652,7 @@ s32 sys_spu_thread_read_ls(u32 id, u32 address, vm::ptr<u64> value, u32 type)
 		throw EXCEPTION("Invalid SPU thread group");
 	}
 
-	if ((group->state < SPU_THREAD_GROUP_STATUS_WAITING) || (group->state > SPU_THREAD_GROUP_STATUS_RUNNING))
+	if (group->state < SPU_THREAD_GROUP_STATUS_WAITING || group->state > SPU_THREAD_GROUP_STATUS_RUNNING)
 	{
 		return CELL_ESTAT;
 	}
@@ -688,7 +689,7 @@ s32 sys_spu_thread_write_spu_mb(u32 id, u32 value)
 		throw EXCEPTION("Invalid SPU thread group");
 	}
 
-	if ((group->state < SPU_THREAD_GROUP_STATUS_WAITING) || (group->state > SPU_THREAD_GROUP_STATUS_RUNNING))
+	if (group->state < SPU_THREAD_GROUP_STATUS_WAITING || group->state > SPU_THREAD_GROUP_STATUS_RUNNING)
 	{
 		return CELL_ESTAT;
 	}
@@ -765,7 +766,7 @@ s32 sys_spu_thread_write_snr(u32 id, u32 number, u32 value)
 		throw EXCEPTION("Invalid SPU thread group");
 	}
 
-	//if ((group->state < SPU_THREAD_GROUP_STATUS_WAITING) || (group->state > SPU_THREAD_GROUP_STATUS_RUNNING)) // ???
+	//if (group->state < SPU_THREAD_GROUP_STATUS_WAITING || group->state > SPU_THREAD_GROUP_STATUS_RUNNING) // ???
 	//{
 	//	return CELL_ESTAT;
 	//}
@@ -1149,7 +1150,7 @@ s32 sys_raw_spu_create(vm::ptr<u32> id, vm::ptr<void> attr)
 	return CELL_OK;
 }
 
-s32 sys_raw_spu_destroy(u32 id)
+s32 sys_raw_spu_destroy(PPUThread& ppu, u32 id)
 {
 	sys_spu.Warning("sys_raw_spu_destroy(id=%d)", id);
 
@@ -1162,7 +1163,24 @@ s32 sys_raw_spu_destroy(u32 id)
 		return CELL_ESRCH;
 	}
 
-	// TODO: check if busy
+	// TODO: CELL_EBUSY is not returned
+
+	// Stop thread
+	thread->Stop();
+
+	// Clear interrupt handlers
+	for (auto& intr : thread->int_ctrl)
+	{
+		if (intr.tag)
+		{
+			if (intr.tag->handler)
+			{
+				intr.tag->handler->join(ppu, lv2_lock);
+			}
+
+			Emu.GetIdManager().remove<lv2_int_tag_t>(intr.tag->id);
+		}
+	}
 
 	Emu.GetIdManager().remove<RawSPUThread>(thread->GetId());
 
@@ -1173,10 +1191,7 @@ s32 sys_raw_spu_create_interrupt_tag(u32 id, u32 class_id, u32 hwthread, vm::ptr
 {
 	sys_spu.Warning("sys_raw_spu_create_interrupt_tag(id=%d, class_id=%d, hwthread=0x%x, intrtag=*0x%x)", id, class_id, hwthread, intrtag);
 
-	if (class_id != 0 && class_id != 2)
-	{
-		return CELL_EINVAL;
-	}
+	LV2_LOCK;
 
 	const auto thread = Emu.GetCPU().GetRawSPUThread(id);
 
@@ -1185,14 +1200,21 @@ s32 sys_raw_spu_create_interrupt_tag(u32 id, u32 class_id, u32 hwthread, vm::ptr
 		return CELL_ESRCH;
 	}
 
-	auto& tag = class_id ? thread->int2 : thread->int0;
+	if (class_id != 0 && class_id != 2)
+	{
+		return CELL_EINVAL;
+	}
 
-	if (!tag.assigned.compare_and_swap_test(-1, 0))
+	auto& int_ctrl = thread->int_ctrl[class_id];
+
+	if (int_ctrl.tag)
 	{
 		return CELL_EAGAIN;
 	}
 
-	*intrtag = (id & 0xff) | (class_id << 8);
+	int_ctrl.tag = Emu.GetIdManager().make_ptr<lv2_int_tag_t>();
+
+	*intrtag = int_ctrl.tag->id;
 
 	return CELL_OK;
 }
@@ -1213,9 +1235,7 @@ s32 sys_raw_spu_set_int_mask(u32 id, u32 class_id, u64 mask)
 		return CELL_ESRCH;
 	}
 
-	auto& tag = class_id ? thread->int2 : thread->int0;
-
-	tag.mask.exchange(mask);
+	thread->int_ctrl[class_id].mask.exchange(mask);
 
 	return CELL_OK;
 }
@@ -1236,9 +1256,7 @@ s32 sys_raw_spu_get_int_mask(u32 id, u32 class_id, vm::ptr<u64> mask)
 		return CELL_ESRCH;
 	}
 
-	auto& tag = class_id ? thread->int2 : thread->int0;
-
-	*mask = tag.mask.load();
+	*mask = thread->int_ctrl[class_id].mask.load();
 
 	return CELL_OK;
 }
@@ -1259,9 +1277,7 @@ s32 sys_raw_spu_set_int_stat(u32 id, u32 class_id, u64 stat)
 		return CELL_ESRCH;
 	}
 
-	auto& tag = class_id ? thread->int2 : thread->int0;
-
-	tag.clear(stat);
+	thread->int_ctrl[class_id].clear(stat);
 
 	return CELL_OK;
 }
@@ -1282,9 +1298,7 @@ s32 sys_raw_spu_get_int_stat(u32 id, u32 class_id, vm::ptr<u64> stat)
 		return CELL_ESRCH;
 	}
 
-	auto& tag = class_id ? thread->int2 : thread->int0;
-
-	*stat = tag.stat.load();
+	*stat = thread->int_ctrl[class_id].stat.load();
 
 	return CELL_OK;
 }

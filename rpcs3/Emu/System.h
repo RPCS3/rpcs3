@@ -200,10 +200,10 @@ public:
 	force_inline bool IsReady()   const { return m_status == Ready; }
 };
 
-using lv2_lock_type = std::unique_lock<std::mutex>;
+using lv2_lock_t = std::unique_lock<std::mutex>;
 
-#define LV2_LOCK lv2_lock_type lv2_lock(Emu.GetCoreMutex())
-#define LV2_DEFER_LOCK lv2_lock_type lv2_lock
+#define LV2_LOCK lv2_lock_t lv2_lock(Emu.GetCoreMutex())
+#define LV2_DEFER_LOCK lv2_lock_t lv2_lock
 #define CHECK_LV2_LOCK(x) if (!(x).owns_lock() || (x).mutex() != &Emu.GetCoreMutex()) throw EXCEPTION("Invalid LV2_LOCK (locked=%d)", (x).owns_lock())
 #define CHECK_EMU_STATUS if (Emu.IsStopped()) throw EXCEPTION("Aborted (emulation stopped)")
 

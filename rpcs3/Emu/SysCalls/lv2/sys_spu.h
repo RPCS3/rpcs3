@@ -177,7 +177,7 @@ struct spu_group_t
 	{
 	}
 
-	void send_run_event(lv2_lock_type& lv2_lock, u64 data1, u64 data2, u64 data3)
+	void send_run_event(lv2_lock_t& lv2_lock, u64 data1, u64 data2, u64 data3)
 	{
 		CHECK_LV2_LOCK(lv2_lock);
 
@@ -187,7 +187,7 @@ struct spu_group_t
 		}
 	}
 
-	void send_exception_event(lv2_lock_type& lv2_lock, u64 data1, u64 data2, u64 data3)
+	void send_exception_event(lv2_lock_t& lv2_lock, u64 data1, u64 data2, u64 data3)
 	{
 		CHECK_LV2_LOCK(lv2_lock);
 
@@ -197,7 +197,7 @@ struct spu_group_t
 		}
 	}
 
-	void send_sysmodule_event(lv2_lock_type& lv2_lock, u64 data1, u64 data2, u64 data3)
+	void send_sysmodule_event(lv2_lock_t& lv2_lock, u64 data1, u64 data2, u64 data3)
 	{
 		CHECK_LV2_LOCK(lv2_lock);
 
@@ -209,6 +209,7 @@ struct spu_group_t
 };
 
 struct vfsStream;
+class PPUThread;
 
 void LoadSpuImage(vfsStream& stream, u32& spu_ep, u32 addr);
 u32 LoadSpuImage(vfsStream& stream, u32& spu_ep);
@@ -247,7 +248,7 @@ s32 sys_spu_thread_unbind_queue(u32 id, u32 spuq_num);
 s32 sys_spu_thread_get_exit_status(u32 id, vm::ptr<u32> status);
 
 s32 sys_raw_spu_create(vm::ptr<u32> id, vm::ptr<void> attr);
-s32 sys_raw_spu_destroy(u32 id);
+s32 sys_raw_spu_destroy(PPUThread& ppu, u32 id);
 s32 sys_raw_spu_create_interrupt_tag(u32 id, u32 class_id, u32 hwthread, vm::ptr<u32> intrtag);
 s32 sys_raw_spu_set_int_mask(u32 id, u32 class_id, u64 mask);
 s32 sys_raw_spu_get_int_mask(u32 id, u32 class_id, vm::ptr<u64> mask);

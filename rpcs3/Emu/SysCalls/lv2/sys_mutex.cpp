@@ -11,7 +11,7 @@ SysCallBase sys_mutex("sys_mutex");
 
 extern u64 get_system_time();
 
-void lv2_mutex_t::unlock(lv2_lock_type& lv2_lock)
+void lv2_mutex_t::unlock(lv2_lock_t& lv2_lock)
 {
 	CHECK_LV2_LOCK(lv2_lock);
 

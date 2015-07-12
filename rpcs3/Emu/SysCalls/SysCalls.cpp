@@ -124,7 +124,7 @@ const ppu_func_caller g_sc_table[1024] =
 	bind_func(sys_interrupt_tag_destroy),                   //81  (0x051)
 	bind_func(sys_event_flag_create),                       //82  (0x052)
 	bind_func(sys_event_flag_destroy),                      //83  (0x053)
-	bind_func(sys_interrupt_thread_establish),              //84  (0x054)
+	bind_func(_sys_interrupt_thread_establish),             //84  (0x054)
 	bind_func(sys_event_flag_wait),                         //85  (0x055)
 	bind_func(sys_event_flag_trywait),                      //86  (0x056)
 	bind_func(sys_event_flag_set),                          //87  (0x057)

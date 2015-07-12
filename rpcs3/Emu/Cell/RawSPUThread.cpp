@@ -155,7 +155,7 @@ bool RawSPUThread::WriteReg(const u32 addr, const u32 value)
 
 		if (value)
 		{
-			int2.set(SPU_INT2_STAT_DMA_TAG_GROUP_COMPLETION_INT); // TODO
+			int_ctrl[2].set(SPU_INT2_STAT_DMA_TAG_GROUP_COMPLETION_INT); // TODO
 		}
 
 		return true;

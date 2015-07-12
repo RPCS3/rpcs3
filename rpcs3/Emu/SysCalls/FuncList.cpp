@@ -63,7 +63,7 @@ std::string SysCalls::GetFuncName(const u64 fid)
 	case 81: return "sys_interrupt_tag_destroy";
 	case 82: return "sys_event_flag_create";
 	case 83: return "sys_event_flag_destroy";
-	case 84: return "sys_interrupt_thread_establish";
+	case 84: return "_sys_interrupt_thread_establish";
 	case 85: return "sys_event_flag_wait";
 	case 86: return "sys_event_flag_trywait";
 	case 87: return "sys_event_flag_set";

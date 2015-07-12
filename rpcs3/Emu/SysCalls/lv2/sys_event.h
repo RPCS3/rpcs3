@@ -102,7 +102,7 @@ struct lv2_event_queue_t
 
 	lv2_event_queue_t(u32 protocol, s32 type, u64 name, u64 key, s32 size);
 
-	void push(lv2_lock_type& lv2_lock, u64 source, u64 data1, u64 data2, u64 data3)
+	void push(lv2_lock_t& lv2_lock, u64 source, u64 data1, u64 data2, u64 data3)
 	{
 		CHECK_LV2_LOCK(lv2_lock);
 
