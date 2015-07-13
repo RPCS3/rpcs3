@@ -1,10 +1,9 @@
 #pragma once
 
-namespace vm { using namespace ps3; }
-
 // Error codes
 enum
 {
+	CELL_FONT_OK                               = 0, 
 	CELL_FONT_ERROR_FATAL                      = 0x80540001,
 	CELL_FONT_ERROR_INVALID_PARAMETER          = 0x80540002,
 	CELL_FONT_ERROR_UNINITIALIZED              = 0x80540003,

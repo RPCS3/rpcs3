@@ -1,8 +1,5 @@
 #pragma once
-
 #include "Utilities/Thread.h"
-
-namespace vm { using namespace ps3; }
 
 #pragma pack(push, 4)
 
@@ -177,7 +174,7 @@ struct lv2_file_t
 	std::mutex mutex;
 	std::condition_variable cv;
 
-	atomic_t<u32> st_status;
+	atomic<u32> st_status;
 	
 	u64 st_ringbuf_size;
 	u64 st_block_size;
@@ -191,10 +188,10 @@ struct lv2_file_t
 	std::atomic<u64> st_total_read;
 	std::atomic<u64> st_copied;
 
-	atomic_t<fs_st_cb_rec_t> st_callback;
+	atomic<fs_st_cb_rec_t> st_callback;
 
-	lv2_file_t(std::shared_ptr<vfsStream> file, s32 mode, s32 flags)
-		: file(std::move(file))
+	lv2_file_t(const std::shared_ptr<vfsStream>& file, s32 mode, s32 flags)
+		: file(file)
 		, mode(mode)
 		, flags(flags)
 		, st_status({ SSS_NOT_INITIALIZED })
@@ -207,37 +204,29 @@ REG_ID_TYPE(lv2_file_t, 0x73); // SYS_FS_FD_OBJECT
 
 class vfsDirBase;
 
-struct lv2_dir_t
-{
-	const std::shared_ptr<vfsDirBase> dir;
-
-	lv2_dir_t(std::shared_ptr<vfsDirBase> dir)
-		: dir(std::move(dir))
-	{
-	}
-};
+using lv2_dir_t = vfsDirBase;
 
 REG_ID_TYPE(lv2_dir_t, 0x73); // SYS_FS_FD_OBJECT
 
 // SysCalls
 s32 sys_fs_test(u32 arg1, u32 arg2, vm::ptr<u32> arg3, u32 arg4, vm::ptr<char> arg5, u32 arg6);
-s32 sys_fs_open(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, s32 mode, vm::cptr<void> arg, u64 size);
+s32 sys_fs_open(vm::ptr<const char> path, s32 flags, vm::ptr<u32> fd, s32 mode, vm::ptr<const void> arg, u64 size);
 s32 sys_fs_read(u32 fd, vm::ptr<void> buf, u64 nbytes, vm::ptr<u64> nread);
-s32 sys_fs_write(u32 fd, vm::cptr<void> buf, u64 nbytes, vm::ptr<u64> nwrite);
+s32 sys_fs_write(u32 fd, vm::ptr<const void> buf, u64 nbytes, vm::ptr<u64> nwrite);
 s32 sys_fs_close(u32 fd);
-s32 sys_fs_opendir(vm::cptr<char> path, vm::ptr<u32> fd);
+s32 sys_fs_opendir(vm::ptr<const char> path, vm::ptr<u32> fd);
 s32 sys_fs_readdir(u32 fd, vm::ptr<CellFsDirent> dir, vm::ptr<u64> nread);
 s32 sys_fs_closedir(u32 fd);
-s32 sys_fs_stat(vm::cptr<char> path, vm::ptr<CellFsStat> sb);
+s32 sys_fs_stat(vm::ptr<const char> path, vm::ptr<CellFsStat> sb);
 s32 sys_fs_fstat(u32 fd, vm::ptr<CellFsStat> sb);
-s32 sys_fs_mkdir(vm::cptr<char> path, s32 mode);
-s32 sys_fs_rename(vm::cptr<char> from, vm::cptr<char> to);
-s32 sys_fs_rmdir(vm::cptr<char> path);
-s32 sys_fs_unlink(vm::cptr<char> path);
+s32 sys_fs_mkdir(vm::ptr<const char> path, s32 mode);
+s32 sys_fs_rename(vm::ptr<const char> from, vm::ptr<const char> to);
+s32 sys_fs_rmdir(vm::ptr<const char> path);
+s32 sys_fs_unlink(vm::ptr<const char> path);
 s32 sys_fs_fcntl(u32 fd, s32 flags, u32 addr, u32 arg4, u32 arg5, u32 arg6);
 s32 sys_fs_lseek(u32 fd, s64 offset, s32 whence, vm::ptr<u64> pos);
 s32 sys_fs_fget_block_size(u32 fd, vm::ptr<u64> sector_size, vm::ptr<u64> block_size, vm::ptr<u64> arg4, vm::ptr<u64> arg5);
-s32 sys_fs_get_block_size(vm::cptr<char> path, vm::ptr<u64> sector_size, vm::ptr<u64> block_size, vm::ptr<u64> arg4);
-s32 sys_fs_truncate(vm::cptr<char> path, u64 size);
+s32 sys_fs_get_block_size(vm::ptr<const char> path, vm::ptr<u64> sector_size, vm::ptr<u64> block_size, vm::ptr<u64> arg4);
+s32 sys_fs_truncate(vm::ptr<const char> path, u64 size);
 s32 sys_fs_ftruncate(u32 fd, u64 size);
-s32 sys_fs_chmod(vm::cptr<char> path, s32 mode);
+s32 sys_fs_chmod(vm::ptr<const char> path, s32 mode);

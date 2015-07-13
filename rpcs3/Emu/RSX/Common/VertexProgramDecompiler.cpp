@@ -1,8 +1,7 @@
 #include "stdafx.h"
+#include "VertexProgramDecompiler.h"
 #include "Utilities/Log.h"
 #include "Emu/System.h"
-
-#include "VertexProgramDecompiler.h"
 
 std::string VertexProgramDecompiler::GetMask(bool is_sca)
 {

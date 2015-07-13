@@ -8,7 +8,7 @@
 
 extern Module cellSail;
 
-s32 cellSailMemAllocatorInitialize(vm::ptr<CellSailMemAllocator> pSelf, vm::ptr<CellSailMemAllocatorFuncs> pCallbacks)
+int cellSailMemAllocatorInitialize(vm::ptr<CellSailMemAllocator> pSelf, vm::ptr<CellSailMemAllocatorFuncs> pCallbacks)
 {
 	cellSail.Warning("cellSailMemAllocatorInitialize(pSelf_addr=0x%x, pCallbacks_addr=0x%x)", pSelf.addr(), pCallbacks.addr());
 
@@ -18,61 +18,61 @@ s32 cellSailMemAllocatorInitialize(vm::ptr<CellSailMemAllocator> pSelf, vm::ptr<
 	return CELL_OK;
 }
 
-s32 cellSailFutureInitialize()
+int cellSailFutureInitialize()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailFutureFinalize()
+int cellSailFutureFinalize()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailFutureReset()
+int cellSailFutureReset()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailFutureSet()
+int cellSailFutureSet()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailFutureGet()
+int cellSailFutureGet()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailFutureIsDone()
+int cellSailFutureIsDone()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailDescriptorGetStreamType()
+int cellSailDescriptorGetStreamType()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailDescriptorGetUri()
+int cellSailDescriptorGetUri()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailDescriptorGetMediaInfo()
+int cellSailDescriptorGetMediaInfo()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailDescriptorSetAutoSelection(vm::ptr<CellSailDescriptor> pSelf, bool autoSelection)
+int cellSailDescriptorSetAutoSelection(vm::ptr<CellSailDescriptor> pSelf, bool autoSelection)
 {
 	cellSail.Warning("cellSailDescriptorSetAutoSelection(pSelf_addr=0x%x, autoSelection=%s)", pSelf.addr(), autoSelection ? "true" : "false");
 
@@ -84,7 +84,7 @@ s32 cellSailDescriptorSetAutoSelection(vm::ptr<CellSailDescriptor> pSelf, bool a
 	return CELL_OK;
 }
 
-s32 cellSailDescriptorIsAutoSelection(vm::ptr<CellSailDescriptor> pSelf)
+int cellSailDescriptorIsAutoSelection(vm::ptr<CellSailDescriptor> pSelf)
 {
 	cellSail.Warning("cellSailDescriptorIsAutoSelection(pSelf_addr=0x%x)", pSelf.addr());
 	
@@ -94,7 +94,7 @@ s32 cellSailDescriptorIsAutoSelection(vm::ptr<CellSailDescriptor> pSelf)
 	return CELL_OK;
 }
 
-s32 cellSailDescriptorCreateDatabase(vm::ptr<CellSailDescriptor> pSelf, vm::ptr<void> pDatabase, u32 size, u64 arg)
+int cellSailDescriptorCreateDatabase(vm::ptr<CellSailDescriptor> pSelf, vm::ptr<void> pDatabase, u32 size, u64 arg)
 {
 	cellSail.Warning("cellSailDescriptorCreateDatabase(pSelf=0x%x, pDatabase=0x%x, size=0x%x, arg=0x%x", pSelf.addr(), pDatabase.addr(), size, arg);
 
@@ -113,409 +113,409 @@ s32 cellSailDescriptorCreateDatabase(vm::ptr<CellSailDescriptor> pSelf, vm::ptr<
 	return CELL_OK;
 }
 
-s32 cellSailDescriptorDestroyDatabase()
+int cellSailDescriptorDestroyDatabase()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailDescriptorOpen()
+int cellSailDescriptorOpen()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailDescriptorClose()
+int cellSailDescriptorClose()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailDescriptorSetEs()
+int cellSailDescriptorSetEs()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailDescriptorClearEs()
+int cellSailDescriptorClearEs()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailDescriptorGetCapabilities()
+int cellSailDescriptorGetCapabilities()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailDescriptorInquireCapability()
+int cellSailDescriptorInquireCapability()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailDescriptorSetParameter()
+int cellSailDescriptorSetParameter()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailSoundAdapterInitialize()
+int cellSailSoundAdapterInitialize()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailSoundAdapterFinalize()
+int cellSailSoundAdapterFinalize()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailSoundAdapterSetPreferredFormat()
+int cellSailSoundAdapterSetPreferredFormat()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailSoundAdapterGetFrame()
+int cellSailSoundAdapterGetFrame()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailSoundAdapterGetFormat()
+int cellSailSoundAdapterGetFormat()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailSoundAdapterUpdateAvSync()
+int cellSailSoundAdapterUpdateAvSync()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailSoundAdapterPtsToTimePosition()
+int cellSailSoundAdapterPtsToTimePosition()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailGraphicsAdapterInitialize()
+int cellSailGraphicsAdapterInitialize()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailGraphicsAdapterFinalize()
+int cellSailGraphicsAdapterFinalize()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailGraphicsAdapterSetPreferredFormat()
+int cellSailGraphicsAdapterSetPreferredFormat()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailGraphicsAdapterGetFrame()
+int cellSailGraphicsAdapterGetFrame()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailGraphicsAdapterGetFrame2()
+int cellSailGraphicsAdapterGetFrame2()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailGraphicsAdapterGetFormat()
+int cellSailGraphicsAdapterGetFormat()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailGraphicsAdapterUpdateAvSync()
+int cellSailGraphicsAdapterUpdateAvSync()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailGraphicsAdapterPtsToTimePosition()
+int cellSailGraphicsAdapterPtsToTimePosition()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailAuReceiverInitialize()
+int cellSailAuReceiverInitialize()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailAuReceiverFinalize()
+int cellSailAuReceiverFinalize()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailAuReceiverGet()
+int cellSailAuReceiverGet()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailRendererAudioInitialize()
+int cellSailRendererAudioInitialize()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailRendererAudioFinalize()
+int cellSailRendererAudioFinalize()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailRendererAudioNotifyCallCompleted()
+int cellSailRendererAudioNotifyCallCompleted()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailRendererAudioNotifyFrameDone()
+int cellSailRendererAudioNotifyFrameDone()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailRendererAudioNotifyOutputEos()
+int cellSailRendererAudioNotifyOutputEos()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailRendererVideoInitialize()
+int cellSailRendererVideoInitialize()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailRendererVideoFinalize()
+int cellSailRendererVideoFinalize()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailRendererVideoNotifyCallCompleted()
+int cellSailRendererVideoNotifyCallCompleted()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailRendererVideoNotifyFrameDone()
+int cellSailRendererVideoNotifyFrameDone()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailRendererVideoNotifyOutputEos()
+int cellSailRendererVideoNotifyOutputEos()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailSourceInitialize()
+int cellSailSourceInitialize()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailSourceFinalize()
+int cellSailSourceFinalize()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailSourceNotifyCallCompleted()
+int cellSailSourceNotifyCallCompleted()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailSourceNotifyInputEos()
+int cellSailSourceNotifyInputEos()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailSourceNotifyStreamOut()
+int cellSailSourceNotifyStreamOut()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailSourceNotifySessionError()
+int cellSailSourceNotifySessionError()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailSourceNotifyMediaStateChanged()
+int cellSailSourceNotifyMediaStateChanged()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailSourceCheck()
+int cellSailSourceCheck()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailSourceNotifyOpenCompleted()
+int cellSailSourceNotifyOpenCompleted()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailSourceNotifyStartCompleted()
+int cellSailSourceNotifyStartCompleted()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailSourceNotifyStopCompleted()
+int cellSailSourceNotifyStopCompleted()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailSourceNotifyReadCompleted()
+int cellSailSourceNotifyReadCompleted()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailSourceSetDiagHandler()
+int cellSailSourceSetDiagHandler()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailSourceNotifyCloseCompleted()
+int cellSailSourceNotifyCloseCompleted()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailMp4MovieGetBrand()
+int cellSailMp4MovieGetBrand()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailMp4MovieIsCompatibleBrand()
+int cellSailMp4MovieIsCompatibleBrand()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailMp4MovieGetMovieInfo()
+int cellSailMp4MovieGetMovieInfo()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailMp4MovieGetTrackByIndex()
+int cellSailMp4MovieGetTrackByIndex()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailMp4MovieGetTrackById()
+int cellSailMp4MovieGetTrackById()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailMp4MovieGetTrackByTypeAndIndex()
+int cellSailMp4MovieGetTrackByTypeAndIndex()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailMp4TrackGetTrackInfo()
+int cellSailMp4TrackGetTrackInfo()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailMp4TrackGetTrackReferenceCount()
+int cellSailMp4TrackGetTrackReferenceCount()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailMp4TrackGetTrackReference()
+int cellSailMp4TrackGetTrackReference()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailMp4ConvertTimeScale()
+int cellSailMp4ConvertTimeScale()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailAviMovieGetMovieInfo()
+int cellSailAviMovieGetMovieInfo()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailAviMovieGetStreamByIndex()
+int cellSailAviMovieGetStreamByIndex()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailAviMovieGetStreamByTypeAndIndex()
+int cellSailAviMovieGetStreamByTypeAndIndex()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailAviMovieGetHeader()
+int cellSailAviMovieGetHeader()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailAviStreamGetMediaType()
+int cellSailAviStreamGetMediaType()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailAviStreamGetHeader()
+int cellSailAviStreamGetHeader()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailPlayerInitialize()
+int cellSailPlayerInitialize()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailPlayerInitialize2(vm::ptr<CellSailPlayer> pSelf, vm::ptr<CellSailMemAllocator> pAllocator, vm::ptr<CellSailPlayerFuncNotified> pCallback, u64 callbackArg,
+int cellSailPlayerInitialize2(vm::ptr<CellSailPlayer> pSelf, vm::ptr<CellSailMemAllocator> pAllocator, vm::ptr<CellSailPlayerFuncNotified> pCallback, u64 callbackArg,
 	                          vm::ptr<CellSailPlayerAttribute> pAttribute, vm::ptr<CellSailPlayerResource> pResource)
 {
 	cellSail.Warning("cellSailPlayerInitialize2(pSelf_addr=0x%x, pAllocator_addr=0x%x, pCallback=0x%x, callbackArg=%d, pAttribute_addr=0x%x, pResource=0x%x)", pSelf.addr(),
@@ -530,91 +530,91 @@ s32 cellSailPlayerInitialize2(vm::ptr<CellSailPlayer> pSelf, vm::ptr<CellSailMem
 	return CELL_OK;
 }
 
-s32 cellSailPlayerFinalize()
+int cellSailPlayerFinalize()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailPlayerRegisterSource()
+int cellSailPlayerRegisterSource()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailPlayerGetRegisteredProtocols()
+int cellSailPlayerGetRegisteredProtocols()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailPlayerSetSoundAdapter()
+int cellSailPlayerSetSoundAdapter()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailPlayerSetGraphicsAdapter()
+int cellSailPlayerSetGraphicsAdapter()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailPlayerSetAuReceiver()
+int cellSailPlayerSetAuReceiver()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailPlayerSetRendererAudio()
+int cellSailPlayerSetRendererAudio()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailPlayerSetRendererVideo()
+int cellSailPlayerSetRendererVideo()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailPlayerSetParameter()
+int cellSailPlayerSetParameter()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailPlayerGetParameter()
+int cellSailPlayerGetParameter()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailPlayerSubscribeEvent()
+int cellSailPlayerSubscribeEvent()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailPlayerUnsubscribeEvent()
+int cellSailPlayerUnsubscribeEvent()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailPlayerReplaceEventHandler()
+int cellSailPlayerReplaceEventHandler()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailPlayerBoot()
+int cellSailPlayerBoot()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailPlayerAddDescriptor(vm::ptr<CellSailPlayer> pSelf, vm::ptr<CellSailDescriptor> pDesc)
+int cellSailPlayerAddDescriptor(vm::ptr<CellSailPlayer> pSelf, vm::ptr<CellSailDescriptor> pDesc)
 {
 	cellSail.Warning("cellSailPlayerAddDescriptor(pSelf_addr=0x%x, pDesc_addr=0x%x)", pSelf.addr(), pDesc.addr());
 
@@ -632,7 +632,7 @@ s32 cellSailPlayerAddDescriptor(vm::ptr<CellSailPlayer> pSelf, vm::ptr<CellSailD
 	return CELL_OK;
 }
 
-s32 cellSailPlayerCreateDescriptor(vm::ptr<CellSailPlayer> pSelf, s32 streamType, vm::ptr<u32> pMediaInfo, vm::cptr<char> pUri, vm::ptr<u32> ppDesc)
+int cellSailPlayerCreateDescriptor(vm::ptr<CellSailPlayer> pSelf, s32 streamType, vm::ptr<u32> pMediaInfo, vm::ptr<const char> pUri, vm::ptr<u32> ppDesc)
 {
 	cellSail.Warning("cellSailPlayerCreateDescriptor(pSelf_addr=0x%x, streamType=%d, pMediaInfo_addr=0x%x, pUri_addr=0x%x, ppDesc_addr=0x%x)", pSelf.addr(), streamType,
 					pMediaInfo.addr(), pUri.addr(), ppDesc.addr());
@@ -657,7 +657,7 @@ s32 cellSailPlayerCreateDescriptor(vm::ptr<CellSailPlayer> pSelf, s32 streamType
 				if (f.Open(path)) {
 					u64 size = f.GetSize();
 					u32 buf_ = Memory.Alloc(size, 1);
-					auto bufPtr = vm::cptr<PamfHeader>::make(buf_);
+					auto bufPtr = vm::ptr<const PamfHeader>::make(buf_);
 					PamfHeader *buf = const_cast<PamfHeader*>(bufPtr.get_ptr());
 					assert(f.Read(buf, size) == size);
 					u32 sp_ = Memory.Alloc(sizeof(CellPamfReader), 1);
@@ -685,7 +685,7 @@ s32 cellSailPlayerCreateDescriptor(vm::ptr<CellSailPlayer> pSelf, s32 streamType
 	return CELL_OK;
 }
 
-s32 cellSailPlayerDestroyDescriptor(vm::ptr<CellSailPlayer> pSelf, vm::ptr<CellSailDescriptor> pDesc)
+int cellSailPlayerDestroyDescriptor(vm::ptr<CellSailPlayer> pSelf, vm::ptr<CellSailDescriptor> pDesc)
 {
 	cellSail.Todo("cellSailPlayerAddDescriptor(pSelf_addr=0x%x, pDesc_addr=0x%x)", pSelf.addr(), pDesc.addr());
 
@@ -695,7 +695,7 @@ s32 cellSailPlayerDestroyDescriptor(vm::ptr<CellSailPlayer> pSelf, vm::ptr<CellS
 	return CELL_OK;
 }
 
-s32 cellSailPlayerRemoveDescriptor(vm::ptr<CellSailPlayer> pSelf, vm::ptr<CellSailDescriptor> ppDesc)
+int cellSailPlayerRemoveDescriptor(vm::ptr<CellSailPlayer> pSelf, vm::ptr<CellSailDescriptor> ppDesc)
 {
 	cellSail.Warning("cellSailPlayerAddDescriptor(pSelf_addr=0x%x, pDesc_addr=0x%x)", pSelf.addr(), ppDesc.addr());
 
@@ -709,121 +709,121 @@ s32 cellSailPlayerRemoveDescriptor(vm::ptr<CellSailPlayer> pSelf, vm::ptr<CellSa
 	return pSelf->descriptors;
 }
 
-s32 cellSailPlayerGetDescriptorCount(vm::ptr<CellSailPlayer> pSelf)
+int cellSailPlayerGetDescriptorCount(vm::ptr<CellSailPlayer> pSelf)
 {
 	cellSail.Warning("cellSailPlayerGetDescriptorCount(pSelf_addr=0x%x)", pSelf.addr());
 	return pSelf->descriptors;
 }
 
-s32 cellSailPlayerGetCurrentDescriptor()
+int cellSailPlayerGetCurrentDescriptor()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailPlayerOpenStream()
+int cellSailPlayerOpenStream()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailPlayerCloseStream()
+int cellSailPlayerCloseStream()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailPlayerOpenEsAudio()
+int cellSailPlayerOpenEsAudio()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailPlayerOpenEsVideo()
+int cellSailPlayerOpenEsVideo()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailPlayerOpenEsUser()
+int cellSailPlayerOpenEsUser()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailPlayerReopenEsAudio()
+int cellSailPlayerReopenEsAudio()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailPlayerReopenEsVideo()
+int cellSailPlayerReopenEsVideo()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailPlayerReopenEsUser()
+int cellSailPlayerReopenEsUser()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailPlayerCloseEsAudio()
+int cellSailPlayerCloseEsAudio()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailPlayerCloseEsVideo()
+int cellSailPlayerCloseEsVideo()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailPlayerCloseEsUser()
+int cellSailPlayerCloseEsUser()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailPlayerStart()
+int cellSailPlayerStart()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailPlayerStop()
+int cellSailPlayerStop()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailPlayerNext()
+int cellSailPlayerNext()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailPlayerCancel()
+int cellSailPlayerCancel()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailPlayerSetPaused(vm::ptr<CellSailPlayer> pSelf, bool paused)
+int cellSailPlayerSetPaused(vm::ptr<CellSailPlayer> pSelf, bool paused)
 {
 	cellSail.Todo("cellSailPlayerSetPaused(pSelf_addr=0x%x, paused=%d)", pSelf.addr(), paused);
 	return CELL_OK;
 }
 
-s32 cellSailPlayerIsPaused(vm::ptr<CellSailPlayer> pSelf)
+int cellSailPlayerIsPaused(vm::ptr<CellSailPlayer> pSelf)
 {
 	cellSail.Warning("cellSailPlayerIsPaused(pSelf_addr=0x%x)", pSelf.addr());
 	return pSelf->paused;
 }
 
-s32 cellSailPlayerSetRepeatMode(vm::ptr<CellSailPlayer> pSelf, s32 repeatMode, vm::ptr<CellSailStartCommand> pCommand)
+int cellSailPlayerSetRepeatMode(vm::ptr<CellSailPlayer> pSelf, s32 repeatMode, vm::ptr<CellSailStartCommand> pCommand)
 {
 	cellSail.Warning("cellSailPlayerSetRepeatMode(pSelf_addr=0x%x, repeatMode=%d, pCommand_addr=0x%x)", pSelf.addr(), repeatMode, pCommand.addr());
 
@@ -833,7 +833,7 @@ s32 cellSailPlayerSetRepeatMode(vm::ptr<CellSailPlayer> pSelf, s32 repeatMode, v
 	return pSelf->repeatMode;
 }
 
-s32 cellSailPlayerGetRepeatMode(vm::ptr<CellSailPlayer> pSelf, vm::ptr<CellSailStartCommand> pCommand)
+int cellSailPlayerGetRepeatMode(vm::ptr<CellSailPlayer> pSelf, vm::ptr<CellSailStartCommand> pCommand)
 {
 	cellSail.Warning("cellSailPlayerGetRepeatMode(pSelf_addr=0x%x, pCommand_addr=0x%x)", pSelf.addr(), pCommand.addr());
 
@@ -842,37 +842,37 @@ s32 cellSailPlayerGetRepeatMode(vm::ptr<CellSailPlayer> pSelf, vm::ptr<CellSailS
 	return pSelf->repeatMode;
 }
 
-s32 cellSailPlayerSetEsAudioMuted()
+int cellSailPlayerSetEsAudioMuted()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailPlayerSetEsVideoMuted()
+int cellSailPlayerSetEsVideoMuted()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailPlayerIsEsAudioMuted()
+int cellSailPlayerIsEsAudioMuted()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailPlayerIsEsVideoMuted()
+int cellSailPlayerIsEsVideoMuted()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailPlayerDumpImage()
+int cellSailPlayerDumpImage()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
 }
 
-s32 cellSailPlayerUnregisterSource()
+int cellSailPlayerUnregisterSource()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
@@ -944,6 +944,7 @@ Module cellSail("cellSail", []()
 	REG_FUNC(cellSail, cellSailSourceNotifyStreamOut);
 	REG_FUNC(cellSail, cellSailSourceNotifySessionError);
 	REG_FUNC(cellSail, cellSailSourceNotifyMediaStateChanged);
+	//cellSail.AddFunc(, cellSailSourceCheck);
 	REG_FUNC(cellSail, cellSailSourceNotifyOpenCompleted);
 	REG_FUNC(cellSail, cellSailSourceNotifyStartCompleted);
 	REG_FUNC(cellSail, cellSailSourceNotifyStopCompleted);
@@ -960,6 +961,7 @@ Module cellSail("cellSail", []()
 	REG_FUNC(cellSail, cellSailMp4TrackGetTrackInfo);
 	REG_FUNC(cellSail, cellSailMp4TrackGetTrackReferenceCount);
 	REG_FUNC(cellSail, cellSailMp4TrackGetTrackReference);
+	//cellSail.AddFunc(, cellSailMp4ConvertTimeScale);
 
 	REG_FUNC(cellSail, cellSailAviMovieGetMovieInfo);
 	REG_FUNC(cellSail, cellSailAviMovieGetStreamByIndex);

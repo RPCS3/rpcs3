@@ -1,7 +1,5 @@
 #pragma once
 
-namespace vm { using namespace ps3; }
-
 enum CELL_PAD_ERROR_CODE
 {
 	CELL_PAD_ERROR_FATAL = 0x80121101,
@@ -71,3 +69,18 @@ struct CellCapabilityInfo
 {
 	be_t<u32> info[CELL_PAD_MAX_CAPABILITY_INFO];
 };
+
+int cellPadInit(u32 max_connect);
+int cellPadEnd();
+int cellPadClearBuf(u32 port_no);
+int cellPadGetData(u32 port_no, vm::ptr<CellPadData> data);
+int cellPadGetDataExtra(u32 port_no, u32 device_type_addr, u32 data_addr);
+int cellPadSetActDirect(u32 port_no, u32 param_addr);
+int cellPadGetInfo(vm::ptr<CellPadInfo> info);
+int cellPadGetInfo2(vm::ptr<CellPadInfo2> info);
+int cellPadGetCapabilityInfo(u32 port_no, vm::ptr<CellCapabilityInfo> info);
+int cellPadSetPortSetting(u32 port_no, u32 port_setting);
+int cellPadInfoPressMode(u32 port_no);
+int cellPadInfoSensorMode(u32 port_no);
+int cellPadSetPressMode(u32 port_no, u32 mode);
+int cellPadSetSensorMode(u32 port_no, u32 mode);

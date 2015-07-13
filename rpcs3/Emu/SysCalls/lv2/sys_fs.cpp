@@ -20,7 +20,7 @@ s32 sys_fs_test(u32 arg1, u32 arg2, vm::ptr<u32> arg3, u32 arg4, vm::ptr<char> a
 	return CELL_OK;
 }
 
-s32 sys_fs_open(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, s32 mode, vm::cptr<void> arg, u64 size)
+s32 sys_fs_open(vm::ptr<const char> path, s32 flags, vm::ptr<u32> fd, s32 mode, vm::ptr<const void> arg, u64 size)
 {
 	sys_fs.Warning("sys_fs_open(path=*0x%x, flags=%#o, fd=*0x%x, mode=%#o, arg=*0x%x, size=0x%llx)", path, flags, fd, mode, arg, size);
 	sys_fs.Warning("*** path = '%s'", path.get_ptr());
@@ -68,11 +68,6 @@ s32 sys_fs_open(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, s32 mode, vm::c
 		open_mode |= o_trunc;
 	}
 
-	if (flags & CELL_FS_O_APPEND)
-	{
-		open_mode |= o_append;
-	}
-
 	if (flags & CELL_FS_O_EXCL)
 	{
 		if (flags & CELL_FS_O_CREAT)
@@ -85,7 +80,7 @@ s32 sys_fs_open(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, s32 mode, vm::c
 		}
 	}
 
-	if (flags & ~(CELL_FS_O_ACCMODE | CELL_FS_O_CREAT | CELL_FS_O_TRUNC | CELL_FS_O_APPEND | CELL_FS_O_EXCL))
+	if (flags & ~(CELL_FS_O_ACCMODE | CELL_FS_O_CREAT | CELL_FS_O_TRUNC | CELL_FS_O_EXCL))
 	{
 		open_mode = 0; // error
 	}
@@ -97,7 +92,7 @@ s32 sys_fs_open(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, s32 mode, vm::c
 
 	if (!open_mode)
 	{
-		throw EXCEPTION("Invalid or unimplemented flags (%#o): '%s'", flags, path.get_ptr());
+		sys_fs.Fatal("sys_fs_open('%s'): invalid or unimplemented flags (%#o)", path.get_ptr(), flags);
 	}
 
 	std::shared_ptr<vfsStream> file(Emu.GetVFS().OpenFile(path.get_ptr(), open_mode));
@@ -114,7 +109,7 @@ s32 sys_fs_open(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, s32 mode, vm::c
 		return CELL_FS_ENOENT;
 	}
 	
-	*fd = Emu.GetIdManager().make<lv2_file_t>(std::move(file), mode, flags);
+	*fd = Emu.GetIdManager().make<lv2_file_t>(file, mode, flags);
 
 	return CELL_OK;
 }
@@ -137,7 +132,7 @@ s32 sys_fs_read(u32 fd, vm::ptr<void> buf, u64 nbytes, vm::ptr<u64> nread)
 	return CELL_OK;
 }
 
-s32 sys_fs_write(u32 fd, vm::cptr<void> buf, u64 nbytes, vm::ptr<u64> nwrite)
+s32 sys_fs_write(u32 fd, vm::ptr<const void> buf, u64 nbytes, vm::ptr<u64> nwrite)
 {
 	sys_fs.Log("sys_fs_write(fd=0x%x, buf=*0x%x, nbytes=0x%llx, nwrite=*0x%x)", fd, buf, nbytes, nwrite);
 
@@ -175,20 +170,20 @@ s32 sys_fs_close(u32 fd)
 	return CELL_OK;
 }
 
-s32 sys_fs_opendir(vm::cptr<char> path, vm::ptr<u32> fd)
+s32 sys_fs_opendir(vm::ptr<const char> path, vm::ptr<u32> fd)
 {
 	sys_fs.Warning("sys_fs_opendir(path=*0x%x, fd=*0x%x)", path, fd);
 	sys_fs.Warning("*** path = '%s'", path.get_ptr());
 
-	std::shared_ptr<vfsDirBase> dir(Emu.GetVFS().OpenDir(path.get_ptr()));
+	std::shared_ptr<lv2_dir_t> directory(Emu.GetVFS().OpenDir(path.get_ptr()));
 
-	if (!dir || !dir->IsOpened())
+	if (!directory || !directory->IsOpened())
 	{
 		sys_fs.Error("sys_fs_opendir('%s'): failed to open directory", path.get_ptr());
 		return CELL_FS_ENOENT;
 	}
 
-	*fd = Emu.GetIdManager().make<lv2_dir_t>(std::move(dir));
+	*fd = Emu.GetIdManager().add(std::move(directory));
 
 	return CELL_OK;
 }
@@ -204,7 +199,7 @@ s32 sys_fs_readdir(u32 fd, vm::ptr<CellFsDirent> dir, vm::ptr<u64> nread)
 		return CELL_FS_EBADF;
 	}
 
-	const DirEntryInfo* info = directory->dir->Read();
+	const DirEntryInfo* info = directory->Read();
 
 	if (info)
 	{
@@ -237,7 +232,7 @@ s32 sys_fs_closedir(u32 fd)
 	return CELL_OK;
 }
 
-s32 sys_fs_stat(vm::cptr<char> path, vm::ptr<CellFsStat> sb)
+s32 sys_fs_stat(vm::ptr<const char> path, vm::ptr<CellFsStat> sb)
 {
 	sys_fs.Warning("sys_fs_stat(path=*0x%x, sb=*0x%x)", path, sb);
 	sys_fs.Warning("*** path = '%s'", path.get_ptr());
@@ -310,7 +305,7 @@ s32 sys_fs_fstat(u32 fd, vm::ptr<CellFsStat> sb)
 	return CELL_OK;
 }
 
-s32 sys_fs_mkdir(vm::cptr<char> path, s32 mode)
+s32 sys_fs_mkdir(vm::ptr<const char> path, s32 mode)
 {
 	sys_fs.Warning("sys_fs_mkdir(path=*0x%x, mode=%#o)", path, mode);
 	sys_fs.Warning("*** path = '%s'", path.get_ptr());
@@ -331,7 +326,7 @@ s32 sys_fs_mkdir(vm::cptr<char> path, s32 mode)
 	return CELL_OK;
 }
 
-s32 sys_fs_rename(vm::cptr<char> from, vm::cptr<char> to)
+s32 sys_fs_rename(vm::ptr<const char> from, vm::ptr<const char> to)
 {
 	sys_fs.Warning("sys_fs_rename(from=*0x%x, to=*0x%x)", from, to);
 	sys_fs.Warning("*** from = '%s'", from.get_ptr());
@@ -364,7 +359,7 @@ s32 sys_fs_rename(vm::cptr<char> from, vm::cptr<char> to)
 	return CELL_FS_ENOENT;
 }
 
-s32 sys_fs_rmdir(vm::cptr<char> path)
+s32 sys_fs_rmdir(vm::ptr<const char> path)
 {
 	sys_fs.Warning("sys_fs_rmdir(path=*0x%x)", path);
 	sys_fs.Warning("*** path = '%s'", path.get_ptr());
@@ -385,7 +380,7 @@ s32 sys_fs_rmdir(vm::cptr<char> path)
 	return CELL_OK;
 }
 
-s32 sys_fs_unlink(vm::cptr<char> path)
+s32 sys_fs_unlink(vm::ptr<const char> path)
 {
 	sys_fs.Warning("sys_fs_unlink(path=*0x%x)", path);
 	sys_fs.Warning("*** path = '%s'", path.get_ptr());
@@ -454,7 +449,7 @@ s32 sys_fs_fget_block_size(u32 fd, vm::ptr<u64> sector_size, vm::ptr<u64> block_
 	return CELL_OK;
 }
 
-s32 sys_fs_get_block_size(vm::cptr<char> path, vm::ptr<u64> sector_size, vm::ptr<u64> block_size, vm::ptr<u64> arg4)
+s32 sys_fs_get_block_size(vm::ptr<const char> path, vm::ptr<u64> sector_size, vm::ptr<u64> block_size, vm::ptr<u64> arg4)
 {
 	sys_fs.Todo("sys_fs_get_block_size(path=*0x%x, sector_size=*0x%x, block_size=*0x%x, arg4=*0x%x, arg5=*0x%x)", path, sector_size, block_size, arg4);
 	sys_fs.Todo("*** path = '%s'", path.get_ptr());
@@ -465,7 +460,7 @@ s32 sys_fs_get_block_size(vm::cptr<char> path, vm::ptr<u64> sector_size, vm::ptr
 	return CELL_OK;
 }
 
-s32 sys_fs_truncate(vm::cptr<char> path, u64 size)
+s32 sys_fs_truncate(vm::ptr<const char> path, u64 size)
 {
 	sys_fs.Warning("sys_fs_truncate(path=*0x%x, size=0x%llx)", path, size);
 	sys_fs.Warning("*** path = '%s'", path.get_ptr());
@@ -514,7 +509,7 @@ s32 sys_fs_ftruncate(u32 fd, u64 size)
 	return CELL_OK;
 }
 
-s32 sys_fs_chmod(vm::cptr<char> path, s32 mode)
+s32 sys_fs_chmod(vm::ptr<const char> path, s32 mode)
 {
 	sys_fs.Todo("sys_fs_chmod(path=*0x%x, mode=%#o) -> CELL_OK", path, mode);
 	sys_fs.Todo("*** path = '%s'", path.get_ptr());

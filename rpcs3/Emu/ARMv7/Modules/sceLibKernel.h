@@ -269,338 +269,339 @@ union SceKernelSysClock
 {
 	struct
 	{
-		le_t<u32> low;
-		le_t<u32> hi;
-	}
-	u;
+		u32 low;
+		u32 hi;
+	};
 
-	le_t<u64> quad;
+	u64 quad;
 };
 
 struct SceKernelCallFrame
 {
-	le_t<u32> sp;
-	le_t<u32> pc;
+	u32 sp;
+	u32 pc;
 };
 
 // Memory Manager definitions
 
+typedef s32 SceKernelMemoryType;
+
 struct SceKernelMemBlockInfo
 {
-	le_t<u32> size;
-	vm::lptr<void> mappedBase;
-	le_t<u32> mappedSize;
-	le_t<s32> memoryType; // SceKernelMemoryType
-	le_t<u32> access;
+	u32 size;
+	vm::psv::ptr<void> mappedBase;
+	u32 mappedSize;
+	SceKernelMemoryType memoryType;
+	u32 access;
 };
 
 struct SceKernelAllocMemBlockOpt
 {
-	le_t<u32> size;
-	le_t<u32> attr;
-	le_t<u32> alignment;
-	le_t<s32> uidBaseBlock;
-	vm::lcptr<char> strBaseBlockName;
+	u32 size;
+	u32 attr;
+	u32 alignment;
+	s32 uidBaseBlock;
+	vm::psv::ptr<const char> strBaseBlockName;
 };
 
 // Thread Manager definitions (threads)
 
-using SceKernelThreadEntry = func_def<s32(u32 argSize, vm::ptr<void> pArgBlock)>;
+typedef s32(SceKernelThreadEntry)(u32 argSize, vm::psv::ptr<void> pArgBlock);
 
 struct SceKernelThreadOptParam
 {
-	le_t<u32> size;
-	le_t<u32> attr;
+	u32 size;
+	u32 attr;
 };
 
 struct SceKernelThreadInfo
 {
-	le_t<u32> size;
-	le_t<s32> processId;
+	u32 size;
+	s32 processId;
 	char name[32];
-	le_t<u32> attr;
-	le_t<u32> status;
-	vm::lptr<SceKernelThreadEntry> entry;
-	vm::lptr<void> pStack;
-	le_t<u32> stackSize;
-	le_t<s32> initPriority;
-	le_t<s32> currentPriority;
-	le_t<s32> initCpuAffinityMask;
-	le_t<s32> currentCpuAffinityMask;
-	le_t<s32> currentCpuId;
-	le_t<s32> lastExecutedCpuId;
-	le_t<u32> waitType;
-	le_t<s32> waitId;
-	le_t<s32> exitStatus;
+	u32 attr;
+	u32 status;
+	vm::psv::ptr<SceKernelThreadEntry> entry;
+	vm::psv::ptr<void> pStack;
+	u32 stackSize;
+	s32 initPriority;
+	s32 currentPriority;
+	s32 initCpuAffinityMask;
+	s32 currentCpuAffinityMask;
+	s32 currentCpuId;
+	s32 lastExecutedCpuId;
+	u32 waitType;
+	s32 waitId;
+	s32 exitStatus;
 	SceKernelSysClock runClocks;
-	le_t<u32> intrPreemptCount;
-	le_t<u32> threadPreemptCount;
-	le_t<u32> threadReleaseCount;
-	le_t<s32> changeCpuCount;
-	le_t<s32> fNotifyCallback;
-	le_t<s32> reserved;
+	u32 intrPreemptCount;
+	u32 threadPreemptCount;
+	u32 threadReleaseCount;
+	s32 changeCpuCount;
+	s32 fNotifyCallback;
+	s32 reserved;
 };
 
 struct SceKernelThreadRunStatus
 {
-	le_t<u32> size;
+	u32 size;
 
 	struct
 	{
-		le_t<s32> processId;
-		le_t<s32> threadId;
-		le_t<s32> priority;
+		s32 processId;
+		s32 threadId;
+		s32 priority;
 
 	} cpuInfo[4];
 };
 
 struct SceKernelSystemInfo
 {
-	le_t<u32> size;
-	le_t<u32> activeCpuMask;
+	u32 size;
+	u32 activeCpuMask;
 
 	struct
 	{
 		SceKernelSysClock idleClock;
-		le_t<u32> comesOutOfIdleCount;
-		le_t<u32> threadSwitchCount;
+		u32 comesOutOfIdleCount;
+		u32 threadSwitchCount;
 
 	} cpuInfo[4];
 };
 
 // Thread Manager definitions (callbacks)
 
-using SceKernelCallbackFunction = func_def<s32(s32 notifyId, s32 notifyCount, s32 notifyArg, vm::ptr<void> pCommon)>;
+typedef s32(SceKernelCallbackFunction)(s32 notifyId, s32 notifyCount, s32 notifyArg, vm::psv::ptr<void> pCommon);
 
 struct SceKernelCallbackInfo
 {
-	le_t<u32> size;
-	le_t<s32> callbackId;
+	u32 size;
+	s32 callbackId;
 	char name[32];
-	le_t<u32> attr;
-	le_t<s32> threadId;
-	vm::lptr<SceKernelCallbackFunction> callbackFunc;
-	le_t<s32> notifyId;
-	le_t<s32> notifyCount;
-	le_t<s32> notifyArg;
-	vm::lptr<void> pCommon;
+	u32 attr;
+	s32 threadId;
+	vm::psv::ptr<SceKernelCallbackFunction> callbackFunc;
+	s32 notifyId;
+	s32 notifyCount;
+	s32 notifyArg;
+	vm::psv::ptr<void> pCommon;
 };
 
 // Thread Manager definitions (events)
 
-using SceKernelThreadEventHandler = func_def<s32(s32 type, s32 threadId, s32 arg, vm::ptr<void> pCommon)>;
+typedef s32(SceKernelThreadEventHandler)(s32 type, s32 threadId, s32 arg, vm::psv::ptr<void> pCommon);
 
 struct SceKernelEventInfo
 {
-	le_t<u32> size;
-	le_t<s32> eventId;
+	u32 size;
+	s32 eventId;
 	char name[32];
-	le_t<u32> attr;
-	le_t<u32> eventPattern;
-	le_t<u64> userData;
-	le_t<u32> numWaitThreads;
-	le_t<s32> reserved[1];
+	u32 attr;
+	u32 eventPattern;
+	u64 userData;
+	u32 numWaitThreads;
+	s32 reserved[1];
 };
 
 struct SceKernelWaitEvent
 {
-	le_t<s32> eventId;
-	le_t<u32> eventPattern;
+	s32 eventId;
+	u32 eventPattern;
 };
 
 struct SceKernelResultEvent
 {
-	le_t<s32> eventId;
-	le_t<s32> result;
-	le_t<u32> resultPattern;
-	le_t<s32> reserved[1];
-	le_t<u64> userData;
+	s32 eventId;
+	s32 result;
+	u32 resultPattern;
+	s32 reserved[1];
+	u64 userData;
 };
 
 // Thread Manager definitions (event flags)
 
 struct SceKernelEventFlagOptParam
 {
-	le_t<u32> size;
+	u32 size;
 };
 
 struct SceKernelEventFlagInfo
 {
-	le_t<u32> size;
-	le_t<s32> evfId;
+	u32 size;
+	s32 evfId;
 	char name[32];
-	le_t<u32> attr;
-	le_t<u32> initPattern;
-	le_t<u32> currentPattern;
-	le_t<s32> numWaitThreads;
+	u32 attr;
+	u32 initPattern;
+	u32 currentPattern;
+	s32 numWaitThreads;
 };
 
 // Thread Manager definitions (semaphores)
 
 struct SceKernelSemaOptParam
 {
-	le_t<u32> size;
+	u32 size;
 };
 
 struct SceKernelSemaInfo
 {
-	le_t<u32> size;
-	le_t<s32> semaId;
+	u32 size;
+	s32 semaId;
 	char name[32];
-	le_t<u32> attr;
-	le_t<s32> initCount;
-	le_t<s32> currentCount;
-	le_t<s32> maxCount;
-	le_t<s32> numWaitThreads;
+	u32 attr;
+	s32 initCount;
+	s32 currentCount;
+	s32 maxCount;
+	s32 numWaitThreads;
 };
 
 // Thread Manager definitions (mutexes)
 
 struct SceKernelMutexOptParam
 {
-	le_t<u32> size;
-	le_t<s32> ceilingPriority;
+	u32 size;
+	s32 ceilingPriority;
 };
 
 struct SceKernelMutexInfo
 {
-	le_t<u32> size;
-	le_t<s32> mutexId;
+	u32 size;
+	s32 mutexId;
 	char name[32];
-	le_t<u32> attr;
-	le_t<s32> initCount;
-	le_t<s32> currentCount;
-	le_t<s32> currentOwnerId;
-	le_t<s32> numWaitThreads;
+	u32 attr;
+	s32 initCount;
+	s32 currentCount;
+	s32 currentOwnerId;
+	s32 numWaitThreads;
 };
 
 // Thread Manager definitions (lightweight mutexes)
 
 struct SceKernelLwMutexWork
 {
-	le_t<s32> data[4];
+	s32 data[4];
 };
 
 struct SceKernelLwMutexOptParam
 {
-	le_t<u32> size;
+	u32 size;
 };
 
 struct SceKernelLwMutexInfo
 {
-	le_t<u32> size;
-	le_t<s32> uid;
+	u32 size;
+	s32 uid;
 	char name[32];
-	le_t<u32> attr;
-	vm::lptr<SceKernelLwMutexWork> pWork;
-	le_t<s32> initCount;
-	le_t<s32> currentCount;
-	le_t<s32> currentOwnerId;
-	le_t<s32> numWaitThreads;
+	u32 attr;
+	vm::psv::ptr<SceKernelLwMutexWork> pWork;
+	s32 initCount;
+	s32 currentCount;
+	s32 currentOwnerId;
+	s32 numWaitThreads;
 };
 
 // Thread Manager definitions (condition variables)
 
 struct SceKernelCondOptParam
 {
-	le_t<u32> size;
+	u32 size;
 };
 
 struct SceKernelCondInfo
 {
-	le_t<u32> size;
-	le_t<s32> condId;
+	u32 size;
+	s32 condId;
 	char name[32];
-	le_t<u32> attr;
-	le_t<s32> mutexId;
-	le_t<u32> numWaitThreads;
+	u32 attr;
+	s32 mutexId;
+	u32 numWaitThreads;
 };
 
 // Thread Manager definitions (lightweight condition variables)
 
 struct SceKernelLwCondWork
 {
-	le_t<s32> data[4];
+	s32 data[4];
 };
 
 struct SceKernelLwCondOptParam
 {
-	le_t<u32> size;
+	u32 size;
 };
 
 struct SceKernelLwCondInfo
 {
-	le_t<u32> size;
-	le_t<s32> uid;
+	u32 size;
+	s32 uid;
 	char name[32];
-	le_t<u32> attr;
-	vm::lptr<SceKernelLwCondWork> pWork;
-	vm::lptr<SceKernelLwMutexWork> pLwMutex;
-	le_t<u32> numWaitThreads;
+	u32 attr;
+	vm::psv::ptr<SceKernelLwCondWork> pWork;
+	vm::psv::ptr<SceKernelLwMutexWork> pLwMutex;
+	u32 numWaitThreads;
 };
 
 // Thread Manager definitions (timers)
 
 struct SceKernelTimerOptParam
 {
-	le_t<u32> size;
+	u32 size;
 };
 
 struct SceKernelTimerInfo
 {
-	le_t<u32> size;
-	le_t<s32> timerId;
+	u32 size;
+	s32 timerId;
 	char name[32];
-	le_t<u32> attr;
-	le_t<s32> fActive;
+	u32 attr;
+	s32 fActive;
 	SceKernelSysClock baseTime;
 	SceKernelSysClock currentTime;
 	SceKernelSysClock schedule;
 	SceKernelSysClock interval;
-	le_t<s32> type;
-	le_t<s32> fRepeat;
-	le_t<s32> numWaitThreads;
-	le_t<s32> reserved[1];
+	s32 type;
+	s32 fRepeat;
+	s32 numWaitThreads;
+	s32 reserved[1];
 };
 
 // Thread Manager definitions (reader/writer locks)
 
 struct SceKernelRWLockOptParam
 {
-	le_t<u32> size;
+	u32 size;
 };
 
 struct SceKernelRWLockInfo
 {
-	le_t<u32> size;
-	le_t<s32> rwLockId;
+	u32 size;
+	s32 rwLockId;
 	char name[32];
-	le_t<u32> attr;
-	le_t<s32> lockCount;
-	le_t<s32> writeOwnerId;
-	le_t<s32> numReadWaitThreads;
-	le_t<s32> numWriteWaitThreads;
+	u32 attr;
+	s32 lockCount;
+	s32 writeOwnerId;
+	s32 numReadWaitThreads;
+	s32 numWriteWaitThreads;
 };
 
 // IO/File Manager definitions
 
 struct SceIoStat
 {
-	le_t<s32> mode;
-	le_t<u32> attr;
-	le_t<s64> size;
+	s32 mode;
+	u32 attr;
+	s64 size;
 	SceDateTime ctime;
 	SceDateTime atime;
 	SceDateTime mtime;
-	le_t<u64> _private[6];
+	u64 _private[6];
 };
 
 struct SceIoDirent
 {
 	SceIoStat d_stat;
 	char d_name[256];
-	vm::lptr<void> d_private;
-	le_t<s32> dummy;
+	vm::psv::ptr<void> d_private;
+	s32 dummy;
 };
 
 // Module

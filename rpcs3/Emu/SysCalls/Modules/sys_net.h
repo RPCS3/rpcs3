@@ -1,7 +1,5 @@
 #pragma once
 
-namespace vm { using namespace ps3; }
-
 struct sys_net_initialize_parameter
 {
 	be_t<u32> memory_addr;

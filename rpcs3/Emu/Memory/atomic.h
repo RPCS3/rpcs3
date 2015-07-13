@@ -32,35 +32,6 @@ template<typename T> struct _to_atomic_subtype<T, 16>
 
 template<typename T> using atomic_subtype_t = typename _to_atomic_subtype<T>::type;
 
-// result wrapper to deal with void result type
-template<typename RT> struct atomic_op_result_t
-{
-	RT result;
-
-	template<typename T, typename... Args> inline atomic_op_result_t(T func, Args&&... args)
-		: result(std::move(func(std::forward<Args>(args)...)))
-	{
-	}
-
-	inline RT move()
-	{
-		return std::move(result);
-	}
-};
-
-// void specialization
-template<> struct atomic_op_result_t<void>
-{
-	template<typename T, typename... Args> inline atomic_op_result_t(T func, Args&&... args)
-	{
-		func(std::forward<Args>(args)...);
-	}
-
-	inline void move()
-	{
-	}
-};
-
 template<typename T> union _atomic_base
 {
 	using type = std::remove_cv_t<T>;
@@ -84,27 +55,6 @@ template<typename T> union _atomic_base
 		return reinterpret_cast<type&>(value);
 	}
 
-private:
-	template<typename T2> force_inline static void write_relaxed(volatile T2& data, const T2& value)
-	{
-		data = value;
-	}
-
-	force_inline static void write_relaxed(volatile u128& data, const u128& value)
-	{
-		sync_lock_test_and_set(&data, value);
-	}
-
-	template<typename T2> force_inline static T2 read_relaxed(const volatile T2& data)
-	{
-		return data;
-	}
-
-	force_inline static u128 read_relaxed(const volatile u128& value)
-	{
-		return sync_val_compare_and_swap(const_cast<volatile u128*>(&value), {}, {});
-	}
-
 public:
 	// atomically compare data with cmp, replace with exch if equal, return previous data value anyway
 	force_inline const type compare_and_swap(const type& cmp, const type& exch) volatile
@@ -119,7 +69,7 @@ public:
 	}
 
 	// read data with memory barrier
-	force_inline const type load_sync() const volatile
+	force_inline const type read_sync() const volatile
 	{
 		const subtype zero = {};
 		return from_subtype(sync_val_compare_and_swap(const_cast<subtype*>(&sub_data), zero, zero));
@@ -131,41 +81,73 @@ public:
 		return from_subtype(sync_lock_test_and_set(&sub_data, to_subtype(exch)));
 	}
 
-	// read data without memory barrier (works as load_sync() for 128 bit)
-	force_inline const type load() const volatile
+	// read data without memory barrier
+	force_inline const type read_relaxed() const volatile
 	{
-		return from_subtype(read_relaxed(sub_data));
+		const subtype value = const_cast<const subtype&>(sub_data);
+		return from_subtype(value);
 	}
 
-	// write data without memory barrier (works as exchange() for 128 bit, discarding result)
-	force_inline void store(const type& value) volatile
+	// write data without memory barrier
+	force_inline void write_relaxed(const type& value) volatile
 	{
-		write_relaxed(sub_data, to_subtype(value));
+		const_cast<subtype&>(sub_data) = to_subtype(value);
 	}
 
-	// perform an atomic operation on data (callable object version, first arg is a reference to atomic type)
-	template<typename F, typename... Args> auto atomic_op(F func, Args&&... args) volatile -> decltype(func(std::declval<T&>(), args...))
+	// perform atomic operation on data
+	template<typename FT> force_inline void atomic_op(const FT atomic_proc) volatile
 	{
 		while (true)
 		{
-			// read the old value from memory
-			const subtype old = read_relaxed(sub_data);
-
-			// copy the old value
+			const subtype old = const_cast<const subtype&>(sub_data);
 			subtype _new = old;
-
-			// call atomic op for the local copy of the old value and save the return value of the function
-			atomic_op_result_t<std::result_of_t<F(T&, Args...)>> result(func, to_type(_new), args...);
-
-			// atomically compare value with `old`, replace with `_new` and return on success
-			if (sync_bool_compare_and_swap(&sub_data, old, _new)) return result.move();
+			atomic_proc(to_type(_new)); // function should accept reference to T type
+			if (sync_bool_compare_and_swap(&sub_data, old, _new)) return;
 		}
 	}
 
-	// perform an atomic operation on data (member function version)
-	template<typename RT, typename... FArgs, typename CT, typename... Args, typename = std::enable_if_t<std::is_same<T, CT>::value>> auto atomic_op(RT(CT::* func)(FArgs...), Args&&... args) volatile -> decltype((std::declval<T&>().*func)(args...))
+	// perform atomic operation on data with special exit condition (if intermediate result != proceed_value)
+	template<typename RT, typename FT> force_inline RT atomic_op(const RT proceed_value, const FT atomic_proc) volatile
 	{
-		return atomic_op(std::mem_fn(func), std::forward<Args>(args)...);
+		while (true)
+		{
+			const subtype old = const_cast<const subtype&>(sub_data);
+			subtype _new = old;
+			auto res = static_cast<RT>(atomic_proc(to_type(_new))); // function should accept reference to T type and return some value
+			if (res != proceed_value) return res;
+			if (sync_bool_compare_and_swap(&sub_data, old, _new)) return proceed_value;
+		}
+	}
+
+	// perform atomic operation on data with additional memory barrier
+	template<typename FT> force_inline void atomic_op_sync(const FT atomic_proc) volatile
+	{
+		const subtype zero = {};
+		subtype old = sync_val_compare_and_swap(&sub_data, zero, zero);
+		while (true)
+		{
+			subtype _new = old;
+			atomic_proc(to_type(_new)); // function should accept reference to T type
+			const subtype val = sync_val_compare_and_swap(&sub_data, old, _new);
+			if (val == old) return;
+			old = val;
+		}
+	}
+
+	// perform atomic operation on data with additional memory barrier and special exit condition (if intermediate result != proceed_value)
+	template<typename RT, typename FT> force_inline RT atomic_op_sync(const RT proceed_value, const FT atomic_proc) volatile
+	{
+		const subtype zero = {};
+		subtype old = sync_val_compare_and_swap(&sub_data, zero, zero);
+		while (true)
+		{
+			subtype _new = old;
+			auto res = static_cast<RT>(atomic_proc(to_type(_new))); // function should accept reference to T type and return some value
+			if (res != proceed_value) return res;
+			const subtype val = sync_val_compare_and_swap(&sub_data, old, _new);
+			if (val == old) return proceed_value;
+			old = val;
+		}
 	}
 
 	// atomic bitwise OR, returns previous data
@@ -192,133 +174,128 @@ public:
 		return from_subtype(sync_fetch_and_xor(&sub_data, to_subtype(right)));
 	}
 
-	force_inline const type operator |=(const type& right) volatile
+	force_inline const type operator |= (const type& right) volatile
 	{
 		return from_subtype(sync_fetch_and_or(&sub_data, to_subtype(right)) | to_subtype(right));
 	}
 
-	force_inline const type operator &=(const type& right) volatile
+	force_inline const type operator &= (const type& right) volatile
 	{
 		return from_subtype(sync_fetch_and_and(&sub_data, to_subtype(right)) & to_subtype(right));
 	}
 
-	force_inline const type operator ^=(const type& right) volatile
+	force_inline const type operator ^= (const type& right) volatile
 	{
 		return from_subtype(sync_fetch_and_xor(&sub_data, to_subtype(right)) ^ to_subtype(right));
 	}
 };
 
-template<typename T> using if_integral_t = std::enable_if_t<std::is_integral<T>::value>;
+template<typename T, typename T2 = T> using if_integral_le_t = std::enable_if_t<std::is_integral<T>::value && std::is_integral<T2>::value, le_t<T>>;
+template<typename T, typename T2 = T> using if_integral_be_t = std::enable_if_t<std::is_integral<T>::value && std::is_integral<T2>::value, be_t<T>>;
 
-template<typename T, typename = if_integral_t<T>> inline T operator ++(_atomic_base<T>& left)
+template<typename T> inline if_integral_le_t<T> operator ++(_atomic_base<le_t<T>>& left)
 {
 	return left.from_subtype(sync_fetch_and_add(&left.sub_data, 1) + 1);
 }
 
-template<typename T, typename = if_integral_t<T>> inline T operator --(_atomic_base<T>& left)
+template<typename T> inline if_integral_le_t<T> operator --(_atomic_base<le_t<T>>& left)
 {
 	return left.from_subtype(sync_fetch_and_sub(&left.sub_data, 1) - 1);
 }
 
-template<typename T, typename = if_integral_t<T>> inline T operator ++(_atomic_base<T>& left, int)
+template<typename T> inline if_integral_le_t<T> operator ++(_atomic_base<le_t<T>>& left, int)
 {
 	return left.from_subtype(sync_fetch_and_add(&left.sub_data, 1));
 }
 
-template<typename T, typename = if_integral_t<T>> inline T operator --(_atomic_base<T>& left, int)
+template<typename T> inline if_integral_le_t<T> operator --(_atomic_base<le_t<T>>& left, int)
 {
 	return left.from_subtype(sync_fetch_and_sub(&left.sub_data, 1));
 }
 
-template<typename T, typename T2, typename = if_integral_t<T>> inline auto operator +=(_atomic_base<T>& left, T2 right) -> decltype(std::declval<T>() + std::declval<T2>())
+template<typename T, typename T2> inline if_integral_le_t<T, T2> operator +=(_atomic_base<le_t<T>>& left, T2 right)
 {
 	return left.from_subtype(sync_fetch_and_add(&left.sub_data, right) + right);
 }
 
-template<typename T, typename T2, typename = if_integral_t<T>> inline auto operator -=(_atomic_base<T>& left, T2 right) -> decltype(std::declval<T>() - std::declval<T2>())
+template<typename T, typename T2> inline if_integral_le_t<T, T2> operator -=(_atomic_base<le_t<T>>& left, T2 right)
 {
 	return left.from_subtype(sync_fetch_and_sub(&left.sub_data, right) - right);
 }
 
-template<typename T, typename = if_integral_t<T>> inline le_t<T> operator ++(_atomic_base<le_t<T>>& left)
+template<typename T> inline if_integral_be_t<T> operator ++(_atomic_base<be_t<T>>& left)
 {
-	return left.from_subtype(sync_fetch_and_add(&left.sub_data, 1) + 1);
-}
+	be_t<T> result;
 
-template<typename T, typename = if_integral_t<T>> inline le_t<T> operator --(_atomic_base<le_t<T>>& left)
-{
-	return left.from_subtype(sync_fetch_and_sub(&left.sub_data, 1) - 1);
-}
-
-template<typename T, typename = if_integral_t<T>> inline le_t<T> operator ++(_atomic_base<le_t<T>>& left, int)
-{
-	return left.from_subtype(sync_fetch_and_add(&left.sub_data, 1));
-}
-
-template<typename T, typename = if_integral_t<T>> inline le_t<T> operator --(_atomic_base<le_t<T>>& left, int)
-{
-	return left.from_subtype(sync_fetch_and_sub(&left.sub_data, 1));
-}
-
-template<typename T, typename T2, typename = if_integral_t<T>> inline auto operator +=(_atomic_base<le_t<T>>& left, T2 right) -> decltype(std::declval<T>() + std::declval<T2>())
-{
-	return left.from_subtype(sync_fetch_and_add(&left.sub_data, right) + right);
-}
-
-template<typename T, typename T2, typename = if_integral_t<T>> inline auto operator -=(_atomic_base<le_t<T>>& left, T2 right) -> decltype(std::declval<T>() - std::declval<T2>())
-{
-	return left.from_subtype(sync_fetch_and_sub(&left.sub_data, right) - right);
-}
-
-template<typename T, typename = if_integral_t<T>> inline be_t<T> operator ++(_atomic_base<be_t<T>>& left)
-{
-	return left.atomic_op([](be_t<T>& value) -> be_t<T>
+	left.atomic_op([&result](be_t<T>& value)
 	{
-		return ++value;
+		result = ++value;
 	});
+
+	return result;
 }
 
-template<typename T, typename = if_integral_t<T>> inline be_t<T> operator --(_atomic_base<be_t<T>>& left)
+template<typename T> inline if_integral_be_t<T> operator --(_atomic_base<be_t<T>>& left)
 {
-	return left.atomic_op([](be_t<T>& value) -> be_t<T>
+	be_t<T> result;
+
+	left.atomic_op([&result](be_t<T>& value)
 	{
-		return --value;
+		result = --value;
 	});
+
+	return result;
 }
 
-template<typename T, typename = if_integral_t<T>> inline be_t<T> operator ++(_atomic_base<be_t<T>>& left, int)
+template<typename T> inline if_integral_be_t<T> operator ++(_atomic_base<be_t<T>>& left, int)
 {
-	return left.atomic_op([](be_t<T>& value) -> be_t<T>
+	be_t<T> result;
+
+	left.atomic_op([&result](be_t<T>& value)
 	{
-		return value++;
+		result = value++;
 	});
+
+	return result;
 }
 
-template<typename T, typename = if_integral_t<T>> inline be_t<T> operator --(_atomic_base<be_t<T>>& left, int)
+template<typename T> inline if_integral_be_t<T> operator --(_atomic_base<be_t<T>>& left, int)
 {
-	return left.atomic_op([](be_t<T>& value) -> be_t<T>
+	be_t<T> result;
+
+	left.atomic_op([&result](be_t<T>& value)
 	{
-		return value--;
+		result = value--;
 	});
+
+	return result;
 }
 
-template<typename T, typename T2, typename = if_integral_t<T>> inline auto operator +=(_atomic_base<be_t<T>>& left, T2 right) -> be_t<decltype(std::declval<T>() + std::declval<T2>())>
+template<typename T, typename T2> inline if_integral_be_t<T, T2> operator +=(_atomic_base<be_t<T>>& left, T2 right)
 {
-	return left.atomic_op([right](be_t<T>& value) -> be_t<T>
+	be_t<T> result;
+
+	left.atomic_op([&result, right](be_t<T>& value)
 	{
-		return value += right;
+		result = (value += right);
 	});
+
+	return result;
 }
 
-template<typename T, typename T2, typename = if_integral_t<T>> inline auto operator -=(_atomic_base<be_t<T>>& left, T2 right) -> be_t<decltype(std::declval<T>() - std::declval<T2>())>
+template<typename T, typename T2> inline if_integral_be_t<T, T2> operator -=(_atomic_base<be_t<T>>& left, T2 right)
 {
-	return left.atomic_op([right](be_t<T>& value) -> be_t<T>
+	be_t<T> result;
+
+	left.atomic_op([&result, right](be_t<T>& value)
 	{
-		return value -= right;
+		result = (value -= right);
 	});
+
+	return result;
 }
 
-template<typename T> using atomic_t = _atomic_base<T>; // Atomic Type with native endianness (for emulator memory)
+template<typename T> using atomic = _atomic_base<T>; // Atomic Type with native endianness (for emulator memory)
 
 template<typename T> using atomic_be_t = _atomic_base<to_be_t<T>>; // Atomic BE Type (for PS3 virtual memory)
 

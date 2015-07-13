@@ -2,206 +2,506 @@
 #include "Emu/System.h"
 #include "Emu/ARMv7/PSVFuncList.h"
 
-#include "sceCommonDialog.h"
+#include "sceGxm.h"
+#include "sceAppUtil.h"
+#include "sceIme.h"
 
-s32 sceCommonDialogUpdate(vm::cptr<SceCommonDialogUpdateParam> updateParam)
+extern psv_log_base sceCommonDialog;
+
+enum SceCommonDialogStatus : s32
 {
-	throw EXCEPTION("");
+	SCE_COMMON_DIALOG_STATUS_NONE = 0,
+	SCE_COMMON_DIALOG_STATUS_RUNNING = 1,
+	SCE_COMMON_DIALOG_STATUS_FINISHED = 2
+};
+
+enum SceCommonDialogResult : s32
+{
+	SCE_COMMON_DIALOG_RESULT_OK,
+	SCE_COMMON_DIALOG_RESULT_USER_CANCELED,
+	SCE_COMMON_DIALOG_RESULT_ABORTED
+};
+
+struct SceCommonDialogRenderTargetInfo
+{
+	vm::psv::ptr<void> depthSurfaceData;
+	vm::psv::ptr<void> colorSurfaceData;
+	SceGxmColorSurfaceType surfaceType;
+	SceGxmColorFormat colorFormat;
+	u32 width;
+	u32 height;
+	u32 strideInPixels;
+	u8 reserved[32];
+};
+
+struct SceCommonDialogUpdateParam
+{
+	SceCommonDialogRenderTargetInfo renderTarget;
+	vm::psv::ptr<SceGxmSyncObject> displaySyncObject;
+	u8 reserved[32];
+};
+
+struct SceMsgDialogUserMessageParam
+{
+	s32 buttonType;
+	vm::psv::ptr<const char> msg;
+	char reserved[32];
+};
+
+struct SceMsgDialogSystemMessageParam
+{
+	s32 sysMsgType;
+	s32 value;
+	char reserved[32];
+};
+
+struct SceMsgDialogErrorCodeParam
+{
+	s32 errorCode;
+	char reserved[32];
+};
+
+struct SceMsgDialogProgressBarParam
+{
+	s32 barType;
+	SceMsgDialogSystemMessageParam sysMsgParam;
+	vm::psv::ptr<const char> msg;
+	char reserved[32];
+};
+
+struct SceMsgDialogParam
+{
+	u32 sdkVersion;
+	s32 mode;
+	vm::psv::ptr<SceMsgDialogUserMessageParam> userMsgParam;
+	vm::psv::ptr<SceMsgDialogSystemMessageParam> sysMsgParam;
+	vm::psv::ptr<SceMsgDialogErrorCodeParam> errorCodeParam;
+	vm::psv::ptr<SceMsgDialogProgressBarParam> progBarParam;
+	u32 flag;
+	char reserved[32];
+};
+
+struct SceMsgDialogResult
+{
+	s32 mode;
+	s32 result;
+	s32 buttonId;
+	u8 reserved[32];
+};
+
+
+struct SceNetCheckDialogParam
+{
+	u32 sdkVersion;
+	s32 mode;
+	u8 reserved[128];
+};
+
+struct SceNetCheckDialogResult
+{
+	s32 result;
+	u8 reserved[128];
+};
+
+struct SceSaveDataDialogFixedParam
+{
+	u32 targetSlot;
+	char reserved[32];
+};
+
+struct SceSaveDataDialogListParam
+{
+	vm::psv::ptr<const u32> slotList;
+	u32 slotListSize;
+	s32 focusPos;
+	u32 focusId;
+	vm::psv::ptr<const char> listTitle;
+	char reserved[32];
+};
+
+struct SceSaveDataDialogUserMessageParam
+{
+	s32 buttonType;
+	vm::psv::ptr<const char> msg;
+	u32 targetSlot;
+	char reserved[32];
+};
+
+struct SceSaveDataDialogSystemMessageParam
+{
+	s32 sysMsgType;
+	s32 value;
+	u32 targetSlot;
+	char reserved[32];
+};
+
+struct SceSaveDataDialogErrorCodeParam
+{
+	s32 errorCode;
+	u32 targetSlot;
+	char reserved[32];
+};
+
+struct SceSaveDataDialogProgressBarParam
+{
+	s32 barType;
+	SceSaveDataDialogSystemMessageParam sysMsgParam;
+	vm::psv::ptr<const char> msg;
+	u32 targetSlot;
+	char reserved[32];
+};
+
+struct SceSaveDataDialogSlotConfigParam
+{
+	vm::psv::ptr<const SceAppUtilSaveDataMountPoint> mountPoint;
+	vm::psv::ptr<const char> appSubDir;
+	char reserved[32];
+};
+
+struct SceSaveDataDialogParam
+{
+	u32 sdkVersion;
+	s32 mode;
+	s32 dispType;
+	vm::psv::ptr<SceSaveDataDialogFixedParam> fixedParam;
+	vm::psv::ptr<SceSaveDataDialogListParam> listParam;
+	vm::psv::ptr<SceSaveDataDialogUserMessageParam> userMsgParam;
+	vm::psv::ptr<SceSaveDataDialogSystemMessageParam> sysMsgParam;
+	vm::psv::ptr<SceSaveDataDialogErrorCodeParam> errorCodeParam;
+	vm::psv::ptr<SceSaveDataDialogProgressBarParam> progBarParam;
+	vm::psv::ptr<SceSaveDataDialogSlotConfigParam> slotConfParam;
+	u32 flag;
+	vm::psv::ptr<void> userdata;
+	char reserved[32];
+};
+
+struct SceSaveDataDialogFinishParam
+{
+	u32 flag;
+	char reserved[32];
+};
+
+struct SceSaveDataDialogSlotInfo
+{
+	u32 isExist;
+	vm::psv::ptr<SceAppUtilSaveDataSlotParam> slotParam;
+	u8 reserved[32];
+};
+
+struct SceSaveDataDialogResult
+{
+	s32 mode;
+	s32 result;
+	s32 buttonId;
+	u32 slotId;
+	vm::psv::ptr<SceSaveDataDialogSlotInfo> slotInfo;
+	vm::psv::ptr<void> userdata;
+	char reserved[32];
+};
+
+
+struct SceImeDialogParam
+{
+	u32 sdkVersion;
+	u32 inputMethod;
+	u64 supportedLanguages;
+	s32 languagesForced;
+	u32 type;
+	u32 option;
+	vm::psv::ptr<SceImeCharFilter> filter;
+	u32 dialogMode;
+	u32 textBoxMode;
+	vm::psv::ptr<const u16> title;
+	u32 maxTextLength;
+	vm::psv::ptr<u16> initialText;
+	vm::psv::ptr<u16> inputTextBuffer;
+	char reserved[32];
+};
+
+struct SceImeDialogResult
+{
+	s32 result;
+	char reserved[32];
+};
+
+enum ScePhotoImportDialogFormatType : s32
+{
+	SCE_PHOTOIMPORT_DIALOG_FORMAT_TYPE_UNKNOWN = 0,
+	SCE_PHOTOIMPORT_DIALOG_FORMAT_TYPE_JPEG,
+	SCE_PHOTOIMPORT_DIALOG_FORMAT_TYPE_PNG,
+	SCE_PHOTOIMPORT_DIALOG_FORMAT_TYPE_GIF,
+	SCE_PHOTOIMPORT_DIALOG_FORMAT_TYPE_BMP,
+	SCE_PHOTOIMPORT_DIALOG_FORMAT_TYPE_TIFF
+};
+
+enum ScePhotoImportDialogOrientation : s32
+{
+	SCE_PHOTOIMPORT_DIALOG_ORIENTATION_UNKNOWN = 0,
+	SCE_PHOTOIMPORT_DIALOG_ORIENTATION_TOP_LEFT,
+	SCE_PHOTOIMPORT_DIALOG_ORIENTATION_TOP_RIGHT,
+	SCE_PHOTOIMPORT_DIALOG_ORIENTATION_BOTTOM_RIGHT,
+	SCE_PHOTOIMPORT_DIALOG_ORIENTATION_BOTTOM_LEFT,
+	SCE_PHOTOIMPORT_DIALOG_ORIENTATION_LEFT_TOP,
+	SCE_PHOTOIMPORT_DIALOG_ORIENTATION_RIGHT_TOP,
+	SCE_PHOTOIMPORT_DIALOG_ORIENTATION_RIGHT_BOTTOM,
+	SCE_PHOTOIMPORT_DIALOG_ORIENTATION_LEFT_BOTTOM
+};
+
+struct ScePhotoImportDialogFileDataSub
+{
+	u32 width;
+	u32 height;
+	ScePhotoImportDialogFormatType format;
+	ScePhotoImportDialogOrientation orientation;
+	char reserved[32];
+};
+
+struct ScePhotoImportDialogFileData
+{
+	char fileName[1024];
+	char photoTitle[256];
+	char reserved[32];
+};
+
+struct ScePhotoImportDialogItemData
+{
+	ScePhotoImportDialogFileData fileData;
+	ScePhotoImportDialogFileDataSub dataSub;
+	char reserved[32];
+};
+
+struct ScePhotoImportDialogResult
+{
+	s32 result;
+	u32 importedItemNum;
+	char reserved[32];
+};
+
+struct ScePhotoImportDialogParam
+{
+	u32 sdkVersion;
+	s32 mode;
+	u32 visibleCategory;
+	u32 itemCount;
+	vm::psv::ptr<ScePhotoImportDialogItemData> itemData;
+	char reserved[32];
+};
+
+struct ScePhotoReviewDialogParam
+{
+	u32 sdkVersion;
+	s32 mode;
+	char fileName[1024];
+	vm::psv::ptr<void> workMemory;
+	u32 workMemorySize;
+	char reserved[32];
+};
+
+struct ScePhotoReviewDialogResult
+{
+	s32 result;
+	char reserved[32];
+};
+
+
+s32 sceCommonDialogUpdate(vm::psv::ptr<const SceCommonDialogUpdateParam> updateParam)
+{
+	throw __FUNCTION__;
 }
 
-s32 sceMsgDialogInit(vm::cptr<SceMsgDialogParam> param)
+s32 sceMsgDialogInit(vm::psv::ptr<const SceMsgDialogParam> param)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 SceCommonDialogStatus sceMsgDialogGetStatus()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceMsgDialogAbort()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceMsgDialogGetResult(vm::ptr<SceMsgDialogResult> result)
+s32 sceMsgDialogGetResult(vm::psv::ptr<SceMsgDialogResult> result)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceMsgDialogTerm()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceMsgDialogClose()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceMsgDialogProgressBarInc(s32 target, u32 delta)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceMsgDialogProgressBarSetValue(s32 target, u32 rate)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceNetCheckDialogInit(vm::ptr<SceNetCheckDialogParam> param)
+s32 sceNetCheckDialogInit(vm::psv::ptr<SceNetCheckDialogParam> param)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 SceCommonDialogStatus sceNetCheckDialogGetStatus()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceNetCheckDialogAbort()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceNetCheckDialogGetResult(vm::ptr<SceNetCheckDialogResult> result)
+s32 sceNetCheckDialogGetResult(vm::psv::ptr<SceNetCheckDialogResult> result)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceNetCheckDialogTerm()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceSaveDataDialogInit(vm::cptr<SceSaveDataDialogParam> param)
+s32 sceSaveDataDialogInit(vm::psv::ptr<const SceSaveDataDialogParam> param)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 SceCommonDialogStatus sceSaveDataDialogGetStatus()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceSaveDataDialogAbort()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceSaveDataDialogGetResult(vm::ptr<SceSaveDataDialogResult> result)
+s32 sceSaveDataDialogGetResult(vm::psv::ptr<SceSaveDataDialogResult> result)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceSaveDataDialogTerm()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 SceCommonDialogStatus sceSaveDataDialogGetSubStatus()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceSaveDataDialogSubClose()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceSaveDataDialogContinue(vm::cptr<SceSaveDataDialogParam> param)
+s32 sceSaveDataDialogContinue(vm::psv::ptr<const SceSaveDataDialogParam> param)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceSaveDataDialogFinish(vm::cptr<SceSaveDataDialogFinishParam> param)
+s32 sceSaveDataDialogFinish(vm::psv::ptr<const SceSaveDataDialogFinishParam> param)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceSaveDataDialogProgressBarInc(s32 target, u32 delta)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceSaveDataDialogProgressBarSetValue(s32 target, u32 rate)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceImeDialogInit(vm::cptr<SceImeDialogParam> param)
+s32 sceImeDialogInit(vm::psv::ptr<const SceImeDialogParam> param)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 SceCommonDialogStatus sceImeDialogGetStatus()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceImeDialogAbort()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceImeDialogGetResult(vm::ptr<SceImeDialogResult> result)
+s32 sceImeDialogGetResult(vm::psv::ptr<SceImeDialogResult> result)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceImeDialogTerm()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 scePhotoImportDialogInit(vm::cptr<ScePhotoImportDialogParam> param)
+s32 scePhotoImportDialogInit(vm::psv::ptr<const ScePhotoImportDialogParam> param)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 SceCommonDialogStatus scePhotoImportDialogGetStatus()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 scePhotoImportDialogGetResult(vm::ptr<ScePhotoImportDialogResult> result)
+s32 scePhotoImportDialogGetResult(vm::psv::ptr<ScePhotoImportDialogResult> result)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 scePhotoImportDialogTerm()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 scePhotoImportDialogAbort()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 scePhotoReviewDialogInit(vm::cptr<ScePhotoReviewDialogParam> param)
+s32 scePhotoReviewDialogInit(vm::psv::ptr<const ScePhotoReviewDialogParam> param)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 SceCommonDialogStatus scePhotoReviewDialogGetStatus()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 scePhotoReviewDialogGetResult(vm::ptr<ScePhotoReviewDialogResult> result)
+s32 scePhotoReviewDialogGetResult(vm::psv::ptr<ScePhotoReviewDialogResult> result)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 scePhotoReviewDialogTerm()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 scePhotoReviewDialogAbort()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 
@@ -212,7 +512,6 @@ psv_log_base sceCommonDialog("SceCommonDialog", []()
 	sceCommonDialog.on_load = nullptr;
 	sceCommonDialog.on_unload = nullptr;
 	sceCommonDialog.on_stop = nullptr;
-	sceCommonDialog.on_error = nullptr;
 
 	REG_FUNC(0x90530F2F, sceCommonDialogUpdate);
 	REG_FUNC(0x755FF270, sceMsgDialogInit);

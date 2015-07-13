@@ -19,7 +19,7 @@ struct sceNpTusInternal
 
 sceNpTusInternal sceNpTusInstance;
 
-s32 sceNpTusInit()
+int sceNpTusInit()
 {
 	sceNpTus.Warning("sceNpTusInit()");
 
@@ -31,7 +31,7 @@ s32 sceNpTusInit()
 	return CELL_OK;
 }
 
-s32 sceNpTusTerm()
+int sceNpTusTerm()
 {
 	sceNpTus.Warning("sceNpTusTerm()");
 	
@@ -43,7 +43,7 @@ s32 sceNpTusTerm()
 	return CELL_OK;
 }
 
-s32 sceNpTusCreateTitleCtx()
+int sceNpTusCreateTitleCtx()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 
@@ -53,7 +53,7 @@ s32 sceNpTusCreateTitleCtx()
 	return CELL_OK;
 }
 
-s32 sceNpTusDestroyTitleCtx()
+int sceNpTusDestroyTitleCtx()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 
@@ -63,7 +63,7 @@ s32 sceNpTusDestroyTitleCtx()
 	return CELL_OK;
 }
 
-s32 sceNpTusCreateTransactionCtx()
+int sceNpTusCreateTransactionCtx()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 
@@ -73,7 +73,7 @@ s32 sceNpTusCreateTransactionCtx()
 	return CELL_OK;
 }
 
-s32 sceNpTusDestroyTransactionCtx()
+int sceNpTusDestroyTransactionCtx()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 
@@ -83,7 +83,7 @@ s32 sceNpTusDestroyTransactionCtx()
 	return CELL_OK;
 }
 
-s32 sceNpTusSetTimeout()
+int sceNpTusSetTimeout()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 
@@ -93,7 +93,7 @@ s32 sceNpTusSetTimeout()
 	return CELL_OK;
 }
 
-s32 sceNpTusAbortTransaction()
+int sceNpTusAbortTransaction()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 
@@ -103,7 +103,7 @@ s32 sceNpTusAbortTransaction()
 	return CELL_OK;
 }
 
-s32 sceNpTusWaitAsync()
+int sceNpTusWaitAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 
@@ -113,7 +113,7 @@ s32 sceNpTusWaitAsync()
 	return CELL_OK;
 }
 
-s32 sceNpTusPollAsync()
+int sceNpTusPollAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 
@@ -123,7 +123,7 @@ s32 sceNpTusPollAsync()
 	return CELL_OK;
 }
 
-s32 sceNpTusSetMultiSlotVariable()
+int sceNpTusSetMultiSlotVariable()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
@@ -133,7 +133,7 @@ s32 sceNpTusSetMultiSlotVariable()
 	return CELL_OK;
 }
 
-s32 sceNpTusSetMultiSlotVariableVUser()
+int sceNpTusSetMultiSlotVariableVUser()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
@@ -143,7 +143,7 @@ s32 sceNpTusSetMultiSlotVariableVUser()
 	return CELL_OK;
 }
 
-s32 sceNpTusSetMultiSlotVariableAsync()
+int sceNpTusSetMultiSlotVariableAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
@@ -153,7 +153,7 @@ s32 sceNpTusSetMultiSlotVariableAsync()
 	return CELL_OK;
 }
 
-s32 sceNpTusSetMultiSlotVariableVUserAsync()
+int sceNpTusSetMultiSlotVariableVUserAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
@@ -163,7 +163,7 @@ s32 sceNpTusSetMultiSlotVariableVUserAsync()
 	return CELL_OK;
 }
 
-s32 sceNpTusGetMultiSlotVariable()
+int sceNpTusGetMultiSlotVariable()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
@@ -173,7 +173,7 @@ s32 sceNpTusGetMultiSlotVariable()
 	return CELL_OK;
 }
 
-s32 sceNpTusGetMultiSlotVariableVUser()
+int sceNpTusGetMultiSlotVariableVUser()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
@@ -183,7 +183,7 @@ s32 sceNpTusGetMultiSlotVariableVUser()
 	return CELL_OK;
 }
 
-s32 sceNpTusGetMultiSlotVariableAsync()
+int sceNpTusGetMultiSlotVariableAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
@@ -193,7 +193,7 @@ s32 sceNpTusGetMultiSlotVariableAsync()
 	return CELL_OK;
 }
 
-s32 sceNpTusGetMultiSlotVariableVUserAsync()
+int sceNpTusGetMultiSlotVariableVUserAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
@@ -203,7 +203,7 @@ s32 sceNpTusGetMultiSlotVariableVUserAsync()
 	return CELL_OK;
 }
 
-s32 sceNpTusGetMultiUserVariable()
+int sceNpTusGetMultiUserVariable()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
@@ -213,7 +213,7 @@ s32 sceNpTusGetMultiUserVariable()
 	return CELL_OK;
 }
 
-s32 sceNpTusGetMultiUserVariableVUser()
+int sceNpTusGetMultiUserVariableVUser()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
@@ -223,7 +223,7 @@ s32 sceNpTusGetMultiUserVariableVUser()
 	return CELL_OK;
 }
 
-s32 sceNpTusGetMultiUserVariableAsync()
+int sceNpTusGetMultiUserVariableAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
@@ -233,7 +233,7 @@ s32 sceNpTusGetMultiUserVariableAsync()
 	return CELL_OK;
 }
 
-s32 sceNpTusGetMultiUserVariableVUserAsync()
+int sceNpTusGetMultiUserVariableVUserAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
@@ -243,7 +243,7 @@ s32 sceNpTusGetMultiUserVariableVUserAsync()
 	return CELL_OK;
 }
 
-s32 sceNpTusAddAndGetVariable()
+int sceNpTusAddAndGetVariable()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
@@ -253,7 +253,7 @@ s32 sceNpTusAddAndGetVariable()
 	return CELL_OK;
 }
 
-s32 sceNpTusAddAndGetVariableVUser()
+int sceNpTusAddAndGetVariableVUser()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
@@ -263,7 +263,7 @@ s32 sceNpTusAddAndGetVariableVUser()
 	return CELL_OK;
 }
 
-s32 sceNpTusAddAndGetVariableAsync()
+int sceNpTusAddAndGetVariableAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
@@ -273,7 +273,7 @@ s32 sceNpTusAddAndGetVariableAsync()
 	return CELL_OK;
 }
 
-s32 sceNpTusAddAndGetVariableVUserAsync()
+int sceNpTusAddAndGetVariableVUserAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
@@ -283,7 +283,7 @@ s32 sceNpTusAddAndGetVariableVUserAsync()
 	return CELL_OK;
 }
 
-s32 sceNpTusTryAndSetVariable()
+int sceNpTusTryAndSetVariable()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
@@ -293,7 +293,7 @@ s32 sceNpTusTryAndSetVariable()
 	return CELL_OK;
 }
 
-s32 sceNpTusTryAndSetVariableVUser()
+int sceNpTusTryAndSetVariableVUser()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
@@ -303,7 +303,7 @@ s32 sceNpTusTryAndSetVariableVUser()
 	return CELL_OK;
 }
 
-s32 sceNpTusTryAndSetVariableAsync()
+int sceNpTusTryAndSetVariableAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
@@ -313,7 +313,7 @@ s32 sceNpTusTryAndSetVariableAsync()
 	return CELL_OK;
 }
 
-s32 sceNpTusTryAndSetVariableVUserAsync()
+int sceNpTusTryAndSetVariableVUserAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
@@ -323,7 +323,7 @@ s32 sceNpTusTryAndSetVariableVUserAsync()
 	return CELL_OK;
 }
 
-s32 sceNpTusDeleteMultiSlotVariable()
+int sceNpTusDeleteMultiSlotVariable()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
@@ -333,7 +333,7 @@ s32 sceNpTusDeleteMultiSlotVariable()
 	return CELL_OK;
 }
 
-s32 sceNpTusDeleteMultiSlotVariableVUser()
+int sceNpTusDeleteMultiSlotVariableVUser()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
@@ -343,7 +343,7 @@ s32 sceNpTusDeleteMultiSlotVariableVUser()
 	return CELL_OK;
 }
 
-s32 sceNpTusDeleteMultiSlotVariableAsync()
+int sceNpTusDeleteMultiSlotVariableAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
@@ -353,7 +353,7 @@ s32 sceNpTusDeleteMultiSlotVariableAsync()
 	return CELL_OK;
 }
 
-s32 sceNpTusDeleteMultiSlotVariableVUserAsync()
+int sceNpTusDeleteMultiSlotVariableVUserAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
@@ -363,7 +363,7 @@ s32 sceNpTusDeleteMultiSlotVariableVUserAsync()
 	return CELL_OK;
 }
 
-s32 sceNpTusSetData()
+int sceNpTusSetData()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
@@ -373,7 +373,7 @@ s32 sceNpTusSetData()
 	return CELL_OK;
 }
 
-s32 sceNpTusSetDataVUser()
+int sceNpTusSetDataVUser()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
@@ -383,7 +383,7 @@ s32 sceNpTusSetDataVUser()
 	return CELL_OK;
 }
 
-s32 sceNpTusSetDataAsync()
+int sceNpTusSetDataAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
@@ -393,7 +393,7 @@ s32 sceNpTusSetDataAsync()
 	return CELL_OK;
 }
 
-s32 sceNpTusSetDataVUserAsync()
+int sceNpTusSetDataVUserAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
@@ -403,7 +403,7 @@ s32 sceNpTusSetDataVUserAsync()
 	return CELL_OK;
 }
 
-s32 sceNpTusGetData()
+int sceNpTusGetData()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
@@ -413,7 +413,7 @@ s32 sceNpTusGetData()
 	return CELL_OK;
 }
 
-s32 sceNpTusGetDataVUser()
+int sceNpTusGetDataVUser()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
@@ -423,7 +423,7 @@ s32 sceNpTusGetDataVUser()
 	return CELL_OK;
 }
 
-s32 sceNpTusGetDataAsync()
+int sceNpTusGetDataAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
@@ -433,7 +433,7 @@ s32 sceNpTusGetDataAsync()
 	return CELL_OK;
 }
 
-s32 sceNpTusGetDataVUserAsync()
+int sceNpTusGetDataVUserAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
@@ -443,7 +443,7 @@ s32 sceNpTusGetDataVUserAsync()
 	return CELL_OK;
 }
 
-s32 sceNpTusGetMultiSlotDataStatus()
+int sceNpTusGetMultiSlotDataStatus()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
@@ -453,7 +453,7 @@ s32 sceNpTusGetMultiSlotDataStatus()
 	return CELL_OK;
 }
 
-s32 sceNpTusGetMultiSlotDataStatusVUser()
+int sceNpTusGetMultiSlotDataStatusVUser()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
@@ -463,7 +463,7 @@ s32 sceNpTusGetMultiSlotDataStatusVUser()
 	return CELL_OK;
 }
 
-s32 sceNpTusGetMultiSlotDataStatusAsync()
+int sceNpTusGetMultiSlotDataStatusAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
@@ -473,7 +473,7 @@ s32 sceNpTusGetMultiSlotDataStatusAsync()
 	return CELL_OK;
 }
 
-s32 sceNpTusGetMultiSlotDataStatusVUserAsync()
+int sceNpTusGetMultiSlotDataStatusVUserAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
@@ -483,7 +483,7 @@ s32 sceNpTusGetMultiSlotDataStatusVUserAsync()
 	return CELL_OK;
 }
 
-s32 sceNpTusGetMultiUserDataStatus()
+int sceNpTusGetMultiUserDataStatus()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
@@ -493,7 +493,7 @@ s32 sceNpTusGetMultiUserDataStatus()
 	return CELL_OK;
 }
 
-s32 sceNpTusGetMultiUserDataStatusVUser()
+int sceNpTusGetMultiUserDataStatusVUser()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
@@ -503,7 +503,7 @@ s32 sceNpTusGetMultiUserDataStatusVUser()
 	return CELL_OK;
 }
 
-s32 sceNpTusGetMultiUserDataStatusAsync()
+int sceNpTusGetMultiUserDataStatusAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
@@ -513,7 +513,7 @@ s32 sceNpTusGetMultiUserDataStatusAsync()
 	return CELL_OK;
 }
 
-s32 sceNpTusGetMultiUserDataStatusVUserAsync()
+int sceNpTusGetMultiUserDataStatusVUserAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
@@ -523,7 +523,7 @@ s32 sceNpTusGetMultiUserDataStatusVUserAsync()
 	return CELL_OK;
 }
 
-s32 sceNpTusDeleteMultiSlotData()
+int sceNpTusDeleteMultiSlotData()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
@@ -533,7 +533,7 @@ s32 sceNpTusDeleteMultiSlotData()
 	return CELL_OK;
 }
 
-s32 sceNpTusDeleteMultiSlotDataVUser()
+int sceNpTusDeleteMultiSlotDataVUser()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
@@ -543,7 +543,7 @@ s32 sceNpTusDeleteMultiSlotDataVUser()
 	return CELL_OK;
 }
 
-s32 sceNpTusDeleteMultiSlotDataAsync()
+int sceNpTusDeleteMultiSlotDataAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
@@ -553,7 +553,7 @@ s32 sceNpTusDeleteMultiSlotDataAsync()
 	return CELL_OK;
 }
 
-s32 sceNpTusDeleteMultiSlotDataVUserAsync()
+int sceNpTusDeleteMultiSlotDataVUserAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	

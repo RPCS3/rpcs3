@@ -2,191 +2,191 @@
 #include "Emu/System.h"
 #include "Emu/ARMv7/PSVFuncList.h"
 
-#include "sceRtc.h"
+extern psv_log_base sceRtc;
 
 u32 sceRtcGetTickResolution()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceRtcGetCurrentTick(vm::ptr<u64> pTick)
+s32 sceRtcGetCurrentTick(vm::psv::ptr<u64> pTick)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceRtcGetCurrentClock(vm::ptr<SceDateTime> pTime, s32 iTimeZone)
+s32 sceRtcGetCurrentClock(vm::psv::ptr<SceDateTime> pTime, s32 iTimeZone)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceRtcGetCurrentClockLocalTime(vm::ptr<SceDateTime> pTime)
+s32 sceRtcGetCurrentClockLocalTime(vm::psv::ptr<SceDateTime> pTime)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceRtcGetCurrentNetworkTick(vm::ptr<u64> pTick)
+s32 sceRtcGetCurrentNetworkTick(vm::psv::ptr<u64> pTick)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceRtcConvertUtcToLocalTime(vm::cptr<u64> pUtc, vm::ptr<u64> pLocalTime)
+s32 sceRtcConvertUtcToLocalTime(vm::psv::ptr<const u64> pUtc, vm::psv::ptr<u64> pLocalTime)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceRtcConvertLocalTimeToUtc(vm::cptr<u64> pLocalTime, vm::ptr<u64> pUtc)
+s32 sceRtcConvertLocalTimeToUtc(vm::psv::ptr<const u64> pLocalTime, vm::psv::ptr<u64> pUtc)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceRtcIsLeapYear(s32 year)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceRtcGetDaysInMonth(s32 year, s32 month)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceRtcGetDayOfWeek(s32 year, s32 month, s32 day)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceRtcCheckValid(vm::cptr<SceDateTime> pTime)
+s32 sceRtcCheckValid(vm::psv::ptr<const SceDateTime> pTime)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceRtcSetTime_t(vm::ptr<SceDateTime> pTime, u32 iTime)
+s32 sceRtcSetTime_t(vm::psv::ptr<SceDateTime> pTime, u32 iTime)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceRtcSetTime64_t(vm::ptr<SceDateTime> pTime, u64 ullTime)
+s32 sceRtcSetTime64_t(vm::psv::ptr<SceDateTime> pTime, u64 ullTime)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceRtcGetTime_t(vm::cptr<SceDateTime> pTime, vm::ptr<u32> piTime)
+s32 sceRtcGetTime_t(vm::psv::ptr<const SceDateTime> pTime, vm::psv::ptr<u32> piTime)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceRtcGetTime64_t(vm::cptr<SceDateTime> pTime, vm::ptr<u64> pullTime)
+s32 sceRtcGetTime64_t(vm::psv::ptr<const SceDateTime> pTime, vm::psv::ptr<u64> pullTime)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceRtcSetDosTime(vm::ptr<SceDateTime> pTime, u32 uiDosTime)
+s32 sceRtcSetDosTime(vm::psv::ptr<SceDateTime> pTime, u32 uiDosTime)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceRtcGetDosTime(vm::cptr<SceDateTime> pTime, vm::ptr<u32> puiDosTime)
+s32 sceRtcGetDosTime(vm::psv::ptr<const SceDateTime> pTime, vm::psv::ptr<u32> puiDosTime)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceRtcSetWin32FileTime(vm::ptr<SceDateTime> pTime, u64 ulWin32Time)
+s32 sceRtcSetWin32FileTime(vm::psv::ptr<SceDateTime> pTime, u64 ulWin32Time)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceRtcGetWin32FileTime(vm::cptr<SceDateTime> pTime, vm::ptr<u64> ulWin32Time)
+s32 sceRtcGetWin32FileTime(vm::psv::ptr<const SceDateTime> pTime, vm::psv::ptr<u64> ulWin32Time)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceRtcSetTick(vm::ptr<SceDateTime> pTime, vm::cptr<u64> pTick)
+s32 sceRtcSetTick(vm::psv::ptr<SceDateTime> pTime, vm::psv::ptr<const u64> pTick)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceRtcGetTick(vm::cptr<SceDateTime> pTime, vm::ptr<u64> pTick)
+s32 sceRtcGetTick(vm::psv::ptr<const SceDateTime> pTime, vm::psv::ptr<u64> pTick)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceRtcCompareTick(vm::cptr<u64> pTick1, vm::cptr<u64> pTick2)
+s32 sceRtcCompareTick(vm::psv::ptr<const u64> pTick1, vm::psv::ptr<const u64> pTick2)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceRtcTickAddTicks(vm::ptr<u64> pTick0, vm::cptr<u64> pTick1, u64 lAdd)
+s32 sceRtcTickAddTicks(vm::psv::ptr<u64> pTick0, vm::psv::ptr<const u64> pTick1, u64 lAdd)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceRtcTickAddMicroseconds(vm::ptr<u64> pTick0, vm::cptr<u64> pTick1, u64 lAdd)
+s32 sceRtcTickAddMicroseconds(vm::psv::ptr<u64> pTick0, vm::psv::ptr<const u64> pTick1, u64 lAdd)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceRtcTickAddSeconds(vm::ptr<u64> pTick0, vm::cptr<u64> pTick1, u64 lAdd)
+s32 sceRtcTickAddSeconds(vm::psv::ptr<u64> pTick0, vm::psv::ptr<const u64> pTick1, u64 lAdd)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceRtcTickAddMinutes(vm::ptr<u64> pTick0, vm::cptr<u64> pTick1, u64 lAdd)
+s32 sceRtcTickAddMinutes(vm::psv::ptr<u64> pTick0, vm::psv::ptr<const u64> pTick1, u64 lAdd)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceRtcTickAddHours(vm::ptr<u64> pTick0, vm::cptr<u64> pTick1, s32 lAdd)
+s32 sceRtcTickAddHours(vm::psv::ptr<u64> pTick0, vm::psv::ptr<const u64> pTick1, s32 lAdd)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceRtcTickAddDays(vm::ptr<u64> pTick0, vm::cptr<u64> pTick1, s32 lAdd)
+s32 sceRtcTickAddDays(vm::psv::ptr<u64> pTick0, vm::psv::ptr<const u64> pTick1, s32 lAdd)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceRtcTickAddWeeks(vm::ptr<u64> pTick0, vm::cptr<u64> pTick1, s32 lAdd)
+s32 sceRtcTickAddWeeks(vm::psv::ptr<u64> pTick0, vm::psv::ptr<const u64> pTick1, s32 lAdd)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceRtcTickAddMonths(vm::ptr<u64> pTick0, vm::cptr<u64> pTick1, s32 lAdd)
+s32 sceRtcTickAddMonths(vm::psv::ptr<u64> pTick0, vm::psv::ptr<const u64> pTick1, s32 lAdd)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceRtcTickAddYears(vm::ptr<u64> pTick0, vm::cptr<u64> pTick1, s32 lAdd)
+s32 sceRtcTickAddYears(vm::psv::ptr<u64> pTick0, vm::psv::ptr<const u64> pTick1, s32 lAdd)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceRtcFormatRFC2822(vm::ptr<char> pszDateTime, vm::cptr<u64> pUtc, s32 iTimeZoneMinutes)
+s32 sceRtcFormatRFC2822(vm::psv::ptr<char> pszDateTime, vm::psv::ptr<const u64> pUtc, s32 iTimeZoneMinutes)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceRtcFormatRFC2822LocalTime(vm::ptr<char> pszDateTime, vm::cptr<u64> pUtc)
+s32 sceRtcFormatRFC2822LocalTime(vm::psv::ptr<char> pszDateTime, vm::psv::ptr<const u64> pUtc)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceRtcFormatRFC3339(vm::ptr<char> pszDateTime, vm::cptr<u64> pUtc, s32 iTimeZoneMinutes)
+s32 sceRtcFormatRFC3339(vm::psv::ptr<char> pszDateTime, vm::psv::ptr<const u64> pUtc, s32 iTimeZoneMinutes)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceRtcFormatRFC3339LocalTime(vm::ptr<char> pszDateTime, vm::cptr<u64> pUtc)
+s32 sceRtcFormatRFC3339LocalTime(vm::psv::ptr<char> pszDateTime, vm::psv::ptr<const u64> pUtc)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceRtcParseDateTime(vm::ptr<u64> pUtc, vm::cptr<char> pszDateTime)
+s32 sceRtcParseDateTime(vm::psv::ptr<u64> pUtc, vm::psv::ptr<const char> pszDateTime)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceRtcParseRFC3339(vm::ptr<u64> pUtc, vm::cptr<char> pszDateTime)
+s32 sceRtcParseRFC3339(vm::psv::ptr<u64> pUtc, vm::psv::ptr<const char> pszDateTime)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 
@@ -197,7 +197,6 @@ psv_log_base sceRtc("SceRtc", []()
 	sceRtc.on_load = nullptr;
 	sceRtc.on_unload = nullptr;
 	sceRtc.on_stop = nullptr;
-	sceRtc.on_error = nullptr;
 
 	REG_FUNC(0x23F79274, sceRtcGetCurrentTick);
 	REG_FUNC(0xCDDD25FE, sceRtcGetCurrentNetworkTick);

@@ -1,7 +1,5 @@
 #pragma once
 
-namespace vm { using namespace ps3; }
-
 // Return Codes
 enum
 {
@@ -41,7 +39,7 @@ struct CellSync2MutexAttribute
 	u8 reserved[86];
 };
 
-CHECK_SIZE(CellSync2MutexAttribute, 128);
+static_assert(sizeof(CellSync2MutexAttribute) == 128, "Wrong CellSync2MutexAttribute size");
 
 struct CellSync2CondAttribute
 {
@@ -51,7 +49,7 @@ struct CellSync2CondAttribute
 	u8 reserved[90];
 };
 
-CHECK_SIZE(CellSync2CondAttribute, 128);
+static_assert(sizeof(CellSync2CondAttribute) == 128, "Wrong CellSync2CondAttribute size");
 
 struct CellSync2SemaphoreAttribute
 {
@@ -62,7 +60,7 @@ struct CellSync2SemaphoreAttribute
 	u8 reserved[88];
 };
 
-CHECK_SIZE(CellSync2SemaphoreAttribute, 128);
+static_assert(sizeof(CellSync2SemaphoreAttribute) == 128, "Wrong CellSync2SemaphoreAttribute size");
 
 struct CellSync2QueueAttribute
 {
@@ -76,4 +74,4 @@ struct CellSync2QueueAttribute
 	u8 reserved[76];
 };
 
-CHECK_SIZE(CellSync2QueueAttribute, 128);
+static_assert(sizeof(CellSync2QueueAttribute) == 128, "Wrong CellSync2QueueAttribute size");

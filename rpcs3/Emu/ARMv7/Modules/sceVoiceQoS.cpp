@@ -2,91 +2,113 @@
 #include "Emu/System.h"
 #include "Emu/ARMv7/PSVFuncList.h"
 
-#include "sceVoiceQoS.h"
+extern psv_log_base sceVoiceQoS;
+
+typedef s32 SceVoiceQoSLocalId;
+typedef s32 SceVoiceQoSRemoteId;
+typedef s32 SceVoiceQoSConnectionId;
+
+enum SceVoiceQoSAttributeId : s32
+{
+	SCE_VOICE_QOS_ATTR_MIC_VOLUME,
+	SCE_VOICE_QOS_ATTR_MIC_MUTE,
+	SCE_VOICE_QOS_ATTR_SPEAKER_VOLUME,
+	SCE_VOICE_QOS_ATTR_SPEAKER_MUTE,
+	SCE_VOICE_QOS_ATTR_DESIRED_OUT_BIT_RATE
+};
+
+enum SceVoiceQoSStatusId : s32
+{
+	SCE_VOICE_QOS_IN_BITRATE,
+	SCE_VOICE_QOS_OUT_BITRATE,
+	SCE_VOICE_QOS_OUT_READ_BITRATE,
+	SCE_VOICE_QOS_IN_FRAME_RECEIVED_RATIO,
+	SCE_VOICE_QOS_HEARTBEAT_FLAG
+};
 
 s32 sceVoiceQoSInit()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceVoiceQoSEnd()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceVoiceQoSCreateLocalEndpoint(vm::ptr<s32> pLocalId)
+s32 sceVoiceQoSCreateLocalEndpoint(vm::psv::ptr<SceVoiceQoSLocalId> pLocalId)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceVoiceQoSDeleteLocalEndpoint(s32 localId)
+s32 sceVoiceQoSDeleteLocalEndpoint(SceVoiceQoSLocalId localId)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceVoiceQoSCreateRemoteEndpoint(vm::ptr<s32> pRemoteId)
+s32 sceVoiceQoSCreateRemoteEndpoint(vm::psv::ptr<SceVoiceQoSRemoteId> pRemoteId)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceVoiceQoSDeleteRemoteEndpoint(s32 remoteId)
+s32 sceVoiceQoSDeleteRemoteEndpoint(SceVoiceQoSRemoteId remoteId)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceVoiceQoSConnect(vm::ptr<s32> pConnectionId, s32 localId, s32 remoteId)
+s32 sceVoiceQoSConnect(vm::psv::ptr<SceVoiceQoSConnectionId> pConnectionId, SceVoiceQoSLocalId localId, SceVoiceQoSRemoteId remoteId)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceVoiceQoSDisconnect(s32 connectionId)
+s32 sceVoiceQoSDisconnect(SceVoiceQoSConnectionId connectionId)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceVoiceQoSGetLocalEndpoint(s32 connectionId, vm::ptr<s32> pLocalId)
+s32 sceVoiceQoSGetLocalEndpoint(SceVoiceQoSConnectionId connectionId, vm::psv::ptr<SceVoiceQoSLocalId> pLocalId)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceVoiceQoSGetRemoteEndpoint(s32 connectionId, vm::ptr<s32> pRemoteId)
+s32 sceVoiceQoSGetRemoteEndpoint(SceVoiceQoSConnectionId connectionId, vm::psv::ptr<SceVoiceQoSRemoteId> pRemoteId)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceVoiceQoSSetLocalEndpointAttribute(s32 localId, SceVoiceQoSAttributeId attributeId, vm::cptr<void> pAttributeValue, s32 attributeSize)
+s32 sceVoiceQoSSetLocalEndpointAttribute(SceVoiceQoSLocalId localId, SceVoiceQoSAttributeId attributeId, vm::psv::ptr<const void> pAttributeValue, s32 attributeSize)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceVoiceQoSGetLocalEndpointAttribute(s32 localId, SceVoiceQoSAttributeId attributeId, vm::ptr<void> pAttributeValue, s32 attributeSize)
+s32 sceVoiceQoSGetLocalEndpointAttribute(SceVoiceQoSLocalId localId, SceVoiceQoSAttributeId attributeId, vm::psv::ptr<void> pAttributeValue, s32 attributeSize)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceVoiceQoSSetConnectionAttribute(s32 connectionId, SceVoiceQoSAttributeId attributeId, vm::cptr<void> pAttributeValue, s32 attributeSize)
+s32 sceVoiceQoSSetConnectionAttribute(SceVoiceQoSConnectionId connectionId, SceVoiceQoSAttributeId attributeId, vm::psv::ptr<const void> pAttributeValue, s32 attributeSize)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceVoiceQoSGetConnectionAttribute(s32 connectionId, SceVoiceQoSAttributeId attributeId, vm::ptr<void> pAttributeValue, s32 attributeSize)
+s32 sceVoiceQoSGetConnectionAttribute(SceVoiceQoSConnectionId connectionId, SceVoiceQoSAttributeId attributeId, vm::psv::ptr<void> pAttributeValue, s32 attributeSize)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceVoiceQoSGetStatus(s32 connectionId, SceVoiceQoSStatusId statusId, vm::ptr<void> pStatusValue, s32 statusSize)
+s32 sceVoiceQoSGetStatus(SceVoiceQoSConnectionId connectionId, SceVoiceQoSStatusId statusId, vm::psv::ptr<void> pStatusValue, s32 statusSize)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceVoiceQoSWritePacket(s32 connectionId, vm::cptr<void> pData, vm::ptr<u32> pSize)
+s32 sceVoiceQoSWritePacket(SceVoiceQoSConnectionId connectionId, vm::psv::ptr<const void> pData, vm::psv::ptr<u32> pSize)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceVoiceQoSReadPacket(s32 connectionId, vm::ptr<void> pData, vm::ptr<u32> pSize)
+s32 sceVoiceQoSReadPacket(SceVoiceQoSConnectionId connectionId, vm::psv::ptr<void> pData, vm::psv::ptr<u32> pSize)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 
@@ -97,7 +119,6 @@ psv_log_base sceVoiceQoS("SceVoiceQos", []()
 	sceVoiceQoS.on_load = nullptr;
 	sceVoiceQoS.on_unload = nullptr;
 	sceVoiceQoS.on_stop = nullptr;
-	sceVoiceQoS.on_error = nullptr;
 
 	REG_FUNC(0x4B5FFF1C, sceVoiceQoSInit);
 	REG_FUNC(0xFB0B747B, sceVoiceQoSEnd);

@@ -50,7 +50,7 @@ private:
 	{
 		Write(fmt::Format("%s v%d,r%d,r%d", FixOp(op).c_str(), v0, r1, r2));
 	}
-	void DisAsm_CR1_F2_RC(const std::string& op, u32 cr0, u32 f0, u32 f1, u32 rc)
+	void DisAsm_CR1_F2_RC(const std::string& op, u32 cr0, u32 f0, u32 f1, bool rc)
 	{
 		Write(fmt::Format("%s%s cr%d,f%d,f%d", FixOp(op).c_str(), (rc ? "." : ""), cr0, f0, f1));
 	}
@@ -66,7 +66,7 @@ private:
 	{
 		Write(fmt::Format("%s %d,r%d,%d #%x", FixOp(op).c_str(), i0, r0, imm0, imm0));
 	}
-	void DisAsm_INT1_R1_RC(const std::string& op, u32 i0, u32 r0, u32 rc)
+	void DisAsm_INT1_R1_RC(const std::string& op, u32 i0, u32 r0, bool rc)
 	{
 		Write(fmt::Format("%s%s %d,r%d", FixOp(op).c_str(), (rc ? "." : ""), i0, r0));
 	}
@@ -74,11 +74,11 @@ private:
 	{
 		DisAsm_INT1_R1_RC(op, i0, r0, false);
 	}
-	void DisAsm_F4_RC(const std::string& op, u32 f0, u32 f1, u32 f2, u32 f3, u32 rc)
+	void DisAsm_F4_RC(const std::string& op, u32 f0, u32 f1, u32 f2, u32 f3, bool rc)
 	{
 		Write(fmt::Format("%s%s f%d,f%d,f%d,f%d", FixOp(op).c_str(), (rc ? "." : ""), f0, f1, f2, f3));
 	}
-	void DisAsm_F3_RC(const std::string& op, u32 f0, u32 f1, u32 f2, u32 rc)
+	void DisAsm_F3_RC(const std::string& op, u32 f0, u32 f1, u32 f2, bool rc)
 	{
 		Write(fmt::Format("%s%s f%d,f%d,f%d", FixOp(op).c_str(), (rc ? "." : ""), f0, f1, f2));
 	}
@@ -86,7 +86,7 @@ private:
 	{
 		DisAsm_F3_RC(op, f0, f1, f2, false);
 	}
-	void DisAsm_F2_RC(const std::string& op, u32 f0, u32 f1, u32 rc)
+	void DisAsm_F2_RC(const std::string& op, u32 f0, u32 f1, bool rc)
 	{
 		Write(fmt::Format("%s%s f%d,f%d", FixOp(op).c_str(), (rc ? "." : ""), f0, f1));
 	}
@@ -104,7 +104,7 @@ private:
 
 		Write(fmt::Format("%s f%d,r%d(r%d)", FixOp(op).c_str(), f0, r0, r1));
 	}
-	void DisAsm_F1_IMM_R1_RC(const std::string& op, u32 f0, s32 imm0, u32 r0, u32 rc)
+	void DisAsm_F1_IMM_R1_RC(const std::string& op, u32 f0, s32 imm0, u32 r0, bool rc)
 	{
 		if(m_mode == CPUDisAsm_CompilerElfMode)
 		{
@@ -118,11 +118,11 @@ private:
 	{
 		DisAsm_F1_IMM_R1_RC(op, f0, imm0, r0, false);
 	}
-	void DisAsm_F1_RC(const std::string& op, u32 f0, u32 rc)
+	void DisAsm_F1_RC(const std::string& op, u32 f0, bool rc)
 	{
 		Write(fmt::Format("%s%s f%d", FixOp(op).c_str(), (rc ? "." : ""), f0));
 	}
-	void DisAsm_R1_RC(const std::string& op, u32 r0, u32 rc)
+	void DisAsm_R1_RC(const std::string& op, u32 r0, bool rc)
 	{
 		Write(fmt::Format("%s%s r%d", FixOp(op).c_str(), (rc ? "." : ""), r0));
 	}
@@ -130,11 +130,11 @@ private:
 	{
 		DisAsm_R1_RC(op, r0, false);
 	}
-	void DisAsm_R2_OE_RC(const std::string& op, u32 r0, u32 r1, u32 oe, u32 rc)
+	void DisAsm_R2_OE_RC(const std::string& op, u32 r0, u32 r1, u32 oe, bool rc)
 	{
 		Write(fmt::Format("%s%s%s r%d,r%d", FixOp(op).c_str(), (oe ? "o" : ""), (rc ? "." : ""), r0, r1));
 	}
-	void DisAsm_R2_RC(const std::string& op, u32 r0, u32 r1, u32 rc)
+	void DisAsm_R2_RC(const std::string& op, u32 r0, u32 r1, bool rc)
 	{
 		DisAsm_R2_OE_RC(op, r0, r1, false, rc);
 	}
@@ -142,15 +142,15 @@ private:
 	{
 		DisAsm_R2_RC(op, r0, r1, false);
 	}
-	void DisAsm_R3_OE_RC(const std::string& op, u32 r0, u32 r1, u32 r2, u32 oe, u32 rc)
+	void DisAsm_R3_OE_RC(const std::string& op, u32 r0, u32 r1, u32 r2, u32 oe, bool rc)
 	{
 		Write(fmt::Format("%s%s%s r%d,r%d,r%d", FixOp(op).c_str(), (oe ? "o" : ""), (rc ? "." : ""), r0, r1, r2));
 	}
-	void DisAsm_R3_INT2_RC(const std::string& op, u32 r0, u32 r1, u32 r2, s32 i0, s32 i1, u32 rc)
+	void DisAsm_R3_INT2_RC(const std::string& op, u32 r0, u32 r1, u32 r2, s32 i0, s32 i1, bool rc)
 	{
 		Write(fmt::Format("%s%s r%d,r%d,r%d,%d,%d", FixOp(op).c_str(), (rc ? "." : ""), r0, r1, r2, i0, i1));
 	}
-	void DisAsm_R3_RC(const std::string& op, u32 r0, u32 r1, u32 r2, u32 rc)
+	void DisAsm_R3_RC(const std::string& op, u32 r0, u32 r1, u32 r2, bool rc)
 	{
 		DisAsm_R3_OE_RC(op, r0, r1, r2, false, rc);
 	}
@@ -158,7 +158,7 @@ private:
 	{
 		DisAsm_R3_RC(op, r0, r1, r2, false);
 	}
-	void DisAsm_R2_INT3_RC(const std::string& op, u32 r0, u32 r1, s32 i0, s32 i1, s32 i2, u32 rc)
+	void DisAsm_R2_INT3_RC(const std::string& op, u32 r0, u32 r1, s32 i0, s32 i1, s32 i2, bool rc)
 	{
 		Write(fmt::Format("%s%s r%d,r%d,%d,%d,%d", FixOp(op).c_str(), (rc ? "." : ""), r0, r1, i0, i1, i2));
 	}
@@ -166,7 +166,7 @@ private:
 	{
 		DisAsm_R2_INT3_RC(op, r0, r1, i0, i1, i2, false);
 	}
-	void DisAsm_R2_INT2_RC(const std::string& op, u32 r0, u32 r1, s32 i0, s32 i1, u32 rc)
+	void DisAsm_R2_INT2_RC(const std::string& op, u32 r0, u32 r1, s32 i0, s32 i1, bool rc)
 	{
 		Write(fmt::Format("%s%s r%d,r%d,%d,%d", FixOp(op).c_str(), (rc ? "." : ""), r0, r1, i0, i1));
 	}
@@ -174,7 +174,7 @@ private:
 	{
 		DisAsm_R2_INT2_RC(op, r0, r1, i0, i1, false);
 	}
-	void DisAsm_R2_INT1_RC(const std::string& op, u32 r0, u32 r1, s32 i0, u32 rc)
+	void DisAsm_R2_INT1_RC(const std::string& op, u32 r0, u32 r1, s32 i0, bool rc)
 	{
 		Write(fmt::Format("%s%s r%d,r%d,%d", FixOp(op).c_str(), (rc ? "." : ""), r0, r1, i0));
 	}
@@ -204,7 +204,7 @@ private:
 	{
 		Write(fmt::Format("%s cr%d,r%d,%d  #%x", FixOp(op).c_str(), cr0, r0, imm0, imm0));
 	}
-	void DisAsm_CR1_R2_RC(const std::string& op, u32 cr0, u32 r0, u32 r1, u32 rc)
+	void DisAsm_CR1_R2_RC(const std::string& op, u32 cr0, u32 r0, u32 r1, bool rc)
 	{
 		Write(fmt::Format("%s%s cr%d,r%d,r%d", FixOp(op).c_str(), (rc ? "." : ""), cr0, r0, r1));
 	}
@@ -1128,15 +1128,15 @@ private:
 			case 1: DisAsm_INT3("bcctrl", bo, bi, bh); break;
 		}
 	}
-	void RLWIMI(u32 ra, u32 rs, u32 sh, u32 mb, u32 me, u32 rc)
+	void RLWIMI(u32 ra, u32 rs, u32 sh, u32 mb, u32 me, bool rc)
 	{
 		DisAsm_R2_INT3_RC("rlwimi", ra, rs, sh, mb, me, rc);
 	}
-	void RLWINM(u32 ra, u32 rs, u32 sh, u32 mb, u32 me, u32 rc)
+	void RLWINM(u32 ra, u32 rs, u32 sh, u32 mb, u32 me, bool rc)
 	{
 		DisAsm_R2_INT3_RC("rlwinm", ra, rs, sh, mb, me, rc);
 	}
-	void RLWNM(u32 ra, u32 rs, u32 rb, u32 MB, u32 ME, u32 rc)
+	void RLWNM(u32 ra, u32 rs, u32 rb, u32 MB, u32 ME, bool rc)
 	{
 		DisAsm_R3_INT2_RC("rlwnm", ra, rs, rb, MB, ME, rc);
 	}
@@ -1174,7 +1174,7 @@ private:
 	{
 		DisAsm_R2_IMM("andis.", ra, rs, uimm16);
 	}
-	void RLDICL(u32 ra, u32 rs, u32 sh, u32 mb, u32 rc)
+	void RLDICL(u32 ra, u32 rs, u32 sh, u32 mb, bool rc)
 	{
 		if(sh == 0)
 		{
@@ -1193,19 +1193,19 @@ private:
 			DisAsm_R2_INT2_RC("rldicl", ra, rs, sh, mb, rc);
 		}
 	}
-	void RLDICR(u32 ra, u32 rs, u32 sh, u32 me, u32 rc)
+	void RLDICR(u32 ra, u32 rs, u32 sh, u32 me, bool rc)
 	{
 		DisAsm_R2_INT2_RC("rldicr", ra, rs, sh, me, rc);
 	}
-	void RLDIC(u32 ra, u32 rs, u32 sh, u32 mb, u32 rc)
+	void RLDIC(u32 ra, u32 rs, u32 sh, u32 mb, bool rc)
 	{
 		DisAsm_R2_INT2_RC("rldic", ra, rs, sh, mb, rc);
 	}
-	void RLDIMI(u32 ra, u32 rs, u32 sh, u32 mb, u32 rc)
+	void RLDIMI(u32 ra, u32 rs, u32 sh, u32 mb, bool rc)
 	{
 		DisAsm_R2_INT2_RC("rldimi", ra, rs, sh, mb, rc);
 	}
-	void RLDC_LR(u32 ra, u32 rs, u32 rb, u32 m_eb, u32 is_r, u32 rc)
+	void RLDC_LR(u32 ra, u32 rs, u32 rb, u32 m_eb, bool is_r, bool rc)
 	{
 		if (is_r)
 			DisAsm_R3_INT2_RC("rldcr", ra, rs, rb, m_eb, 0, rc);
@@ -1228,19 +1228,19 @@ private:
 	{
 		DisAsm_V1_R2("lvebx", vd, ra, rb);
 	}
-	void SUBFC(u32 rd, u32 ra, u32 rb, u32 oe, u32 rc)
+	void SUBFC(u32 rd, u32 ra, u32 rb, u32 oe, bool rc)
 	{
 		DisAsm_R3_OE_RC("subfc", rd, ra, rb, oe, rc);
 	}
-	void ADDC(u32 rd, u32 ra, u32 rb, u32 oe, u32 rc)
+	void ADDC(u32 rd, u32 ra, u32 rb, u32 oe, bool rc)
 	{
 		DisAsm_R3_OE_RC("addc", rd, ra, rb, oe, rc);
 	}
-	void MULHDU(u32 rd, u32 ra, u32 rb, u32 rc)
+	void MULHDU(u32 rd, u32 ra, u32 rb, bool rc)
 	{
 		DisAsm_R3_RC("mulhdu", rd, ra, rb, rc);
 	}
-	void MULHWU(u32 rd, u32 ra, u32 rb, u32 rc)
+	void MULHWU(u32 rd, u32 ra, u32 rb, bool rc)
 	{
 		DisAsm_R3_RC("mulhwu", rd, ra, rb, rc);
 	}
@@ -1267,19 +1267,19 @@ private:
 	{
 		DisAsm_R3("lwzx", rd, ra, rb);
 	}
-	void SLW(u32 ra, u32 rs, u32 rb, u32 rc)
+	void SLW(u32 ra, u32 rs, u32 rb, bool rc)
 	{
 		DisAsm_R3_RC("slw", ra, rs, rb, rc);
 	}
-	void CNTLZW(u32 ra, u32 rs, u32 rc)
+	void CNTLZW(u32 ra, u32 rs, bool rc)
 	{
 		DisAsm_R2_RC("cntlzw", ra, rs, rc);
 	}
-	void SLD(u32 ra, u32 rs, u32 rb, u32 rc)
+	void SLD(u32 ra, u32 rs, u32 rb, bool rc)
 	{
 		DisAsm_R3_RC("sld", ra, rs, rb, rc);
 	}
-	void AND(u32 ra, u32 rs, u32 rb, u32 rc)
+	void AND(u32 ra, u32 rs, u32 rb, bool rc)
 	{
 		DisAsm_R3_RC("and", ra, rs, rb, rc);
 	}
@@ -1295,7 +1295,7 @@ private:
 	{
 		DisAsm_V1_R2("lvehx", vd, ra, rb);
 	}
-	void SUBF(u32 rd, u32 ra, u32 rb, u32 oe, u32 rc)
+	void SUBF(u32 rd, u32 ra, u32 rb, u32 oe, bool rc)
 	{
 		DisAsm_R3_OE_RC("subf", rd, ra, rb, oe, rc);
 	}
@@ -1311,11 +1311,11 @@ private:
 	{
 		DisAsm_R3("lwzux", rd, ra, rb);
 	}
-	void CNTLZD(u32 ra, u32 rs, u32 rc)
+	void CNTLZD(u32 ra, u32 rs, bool rc)
 	{
 		DisAsm_R2_RC("cntlzd", ra, rs, rc);
 	}
-	void ANDC(u32 ra, u32 rs, u32 rb, u32 rc)
+	void ANDC(u32 ra, u32 rs, u32 rb, bool rc)
 	{
 		DisAsm_R3_RC("andc", ra, rs, rb, rc);
 	}
@@ -1327,11 +1327,11 @@ private:
 	{
 		DisAsm_V1_R2("lvewx", vd, ra, rb);
 	}
-	void MULHD(u32 rd, u32 ra, u32 rb, u32 rc)
+	void MULHD(u32 rd, u32 ra, u32 rb, bool rc)
 	{
 		DisAsm_R3_RC("mulhd", rd, ra, rb, rc);
 	}
-	void MULHW(u32 rd, u32 ra, u32 rb, u32 rc)
+	void MULHW(u32 rd, u32 ra, u32 rb, bool rc)
 	{
 		DisAsm_R3_RC("mulhw", rd, ra, rb, rc);
 	}
@@ -1351,7 +1351,7 @@ private:
 	{
 		DisAsm_V1_R2("lvx", vd, ra, rb);
 	}
-	void NEG(u32 rd, u32 ra, u32 oe, u32 rc)
+	void NEG(u32 rd, u32 ra, u32 oe, bool rc)
 	{
 		DisAsm_R2_OE_RC("neg", rd, ra, oe, rc);
 	}
@@ -1359,7 +1359,7 @@ private:
 	{
 		DisAsm_R3("lbzux", rd, ra, rb);
 	}
-	void NOR(u32 ra, u32 rs, u32 rb, u32 rc)
+	void NOR(u32 ra, u32 rs, u32 rb, bool rc)
 	{
 		if(rs == rb)
 		{
@@ -1374,11 +1374,11 @@ private:
 	{
 		DisAsm_V1_R2("stvebx", vs, ra, rb);
 	}
-	void SUBFE(u32 rd, u32 ra, u32 rb, u32 oe, u32 rc)
+	void SUBFE(u32 rd, u32 ra, u32 rb, u32 oe, bool rc)
 	{
 		DisAsm_R3_OE_RC("subfe", rd, ra, rb, oe, rc);
 	}
-	void ADDE(u32 rd, u32 ra, u32 rb, u32 oe, u32 rc)
+	void ADDE(u32 rd, u32 ra, u32 rb, u32 oe, bool rc)
 	{
 		DisAsm_R3_OE_RC("adde", rd, ra, rb, oe, rc);
 	}
@@ -1421,11 +1421,11 @@ private:
 	{
 		DisAsm_V1_R2("stvewx", vs, ra, rb);
 	}
-	void SUBFZE(u32 rd, u32 ra, u32 oe, u32 rc)
+	void SUBFZE(u32 rd, u32 ra, u32 oe, bool rc)
 	{
 		DisAsm_R2_OE_RC("subfze", rd, ra, oe, rc);
 	}
-	void ADDZE(u32 rd, u32 ra, u32 oe, u32 rc)
+	void ADDZE(u32 rd, u32 ra, u32 oe, bool rc)
 	{
 		DisAsm_R2_OE_RC("addze", rd, ra, oe, rc);
 	}
@@ -1441,19 +1441,19 @@ private:
 	{
 		DisAsm_V1_R2("stvx", vd, ra, rb);
 	}
-	void SUBFME(u32 rd, u32 ra, u32 oe, u32 rc)
+	void SUBFME(u32 rd, u32 ra, u32 oe, bool rc)
 	{
 		DisAsm_R2_OE_RC("subfme", rd, ra, oe, rc);
 	}
-	void MULLD(u32 rd, u32 ra, u32 rb, u32 oe, u32 rc)
+	void MULLD(u32 rd, u32 ra, u32 rb, u32 oe, bool rc)
 	{
 		DisAsm_R3_OE_RC("mulld", rd, ra, rb, oe, rc);
 	}
-	void ADDME(u32 rd, u32 ra, u32 oe, u32 rc)
+	void ADDME(u32 rd, u32 ra, u32 oe, bool rc)
 	{
 		DisAsm_R2_OE_RC("addme", rd, ra, oe, rc);
 	}
-	void MULLW(u32 rd, u32 ra, u32 rb, u32 oe, u32 rc)
+	void MULLW(u32 rd, u32 ra, u32 rb, u32 oe, bool rc)
 	{
 		DisAsm_R3_OE_RC("mullw", rd, ra, rb, oe, rc);
 	}
@@ -1465,7 +1465,7 @@ private:
 	{
 		DisAsm_R3("stbux", rs, ra, rb);
 	}
-	void ADD(u32 rd, u32 ra, u32 rb, u32 oe, u32 rc)
+	void ADD(u32 rd, u32 ra, u32 rb, u32 oe, bool rc)
 	{
 		DisAsm_R3_OE_RC("add", rd, ra, rb, oe, rc);
 	}
@@ -1477,7 +1477,7 @@ private:
 	{
 		DisAsm_R3("lhzx", rd, ra, rb);
 	}
-	void EQV(u32 ra, u32 rs, u32 rb, u32 rc)
+	void EQV(u32 ra, u32 rs, u32 rb, bool rc)
 	{
 		DisAsm_R3_RC("eqv", ra, rs, rb, rc);
 	}
@@ -1489,7 +1489,7 @@ private:
 	{
 		DisAsm_R3("lhzux", rd, ra, rb);
 	}
-	void XOR(u32 ra, u32 rs, u32 rb, u32 rc)
+	void XOR(u32 ra, u32 rs, u32 rb, bool rc)
 	{
 		DisAsm_R3_RC("xor", ra, rs, rb, rc);
 	}
@@ -1560,7 +1560,7 @@ private:
 	{
 		DisAsm_R3("sthx", rs, ra, rb);
 	}
-	void ORC(u32 ra, u32 rs, u32 rb, u32 rc)
+	void ORC(u32 ra, u32 rs, u32 rb, bool rc)
 	{
 		DisAsm_R3_RC("orc", ra, rs, rb, rc);
 	}
@@ -1572,7 +1572,7 @@ private:
 	{
 		DisAsm_R3("sthux", rs, ra, rb);
 	}
-	void OR(u32 ra, u32 rs, u32 rb, u32 rc)
+	void OR(u32 ra, u32 rs, u32 rb, bool rc)
 	{
 		if(rs==rb)
 		{
@@ -1583,11 +1583,11 @@ private:
 			DisAsm_R3_RC("or", ra, rs, rb, rc);
 		}
 	}
-	void DIVDU(u32 rd, u32 ra, u32 rb, u32 oe, u32 rc)
+	void DIVDU(u32 rd, u32 ra, u32 rb, u32 oe, bool rc)
 	{
 		DisAsm_R3_OE_RC("divdu", rd, ra, rb, oe, rc);
 	}
-	void DIVWU(u32 rd, u32 ra, u32 rb, u32 oe, u32 rc)
+	void DIVWU(u32 rd, u32 ra, u32 rb, u32 oe, bool rc)
 	{
 		DisAsm_R3_OE_RC("divwu", rd, ra, rb, oe, rc);
 	}
@@ -1607,7 +1607,7 @@ private:
 	{
 		DisAsm_R2("dcbi", ra, rb);
 	}
-	void NAND(u32 ra, u32 rs, u32 rb, u32 rc)
+	void NAND(u32 ra, u32 rs, u32 rb, bool rc)
 	{
 		DisAsm_R3_RC("nand", ra, rs, rb, rc);
 	}
@@ -1615,11 +1615,11 @@ private:
 	{
 		DisAsm_V1_R2("stvxl", vs, ra, rb);
 	}
-	void DIVD(u32 rd, u32 ra, u32 rb, u32 oe, u32 rc)
+	void DIVD(u32 rd, u32 ra, u32 rb, u32 oe, bool rc)
 	{
 		DisAsm_R3_OE_RC("divd", rd, ra, rb, oe, rc);
 	}
-	void DIVW(u32 rd, u32 ra, u32 rb, u32 oe, u32 rc)
+	void DIVW(u32 rd, u32 ra, u32 rb, u32 oe, bool rc)
 	{
 		DisAsm_R3_OE_RC("divw", rd, ra, rb, oe, rc);
 	}
@@ -1643,11 +1643,11 @@ private:
 	{
 		DisAsm_F1_R2("lfsx", frd, ra, rb);
 	}
-	void SRW(u32 ra, u32 rs, u32 rb, u32 rc)
+	void SRW(u32 ra, u32 rs, u32 rb, bool rc)
 	{
 		DisAsm_R3_RC("srw", ra, rs, rb, rc);
 	}
-	void SRD(u32 ra, u32 rs, u32 rb, u32 rc)
+	void SRD(u32 ra, u32 rs, u32 rb, bool rc)
 	{
 		DisAsm_R3_RC("srd", ra, rs, rb, rc);
 	}
@@ -1723,11 +1723,11 @@ private:
 	{
 		DisAsm_R3("lhbrx", rd, ra, rb);
 	}
-	void SRAW(u32 ra, u32 rs, u32 rb, u32 rc)
+	void SRAW(u32 ra, u32 rs, u32 rb, bool rc)
 	{
 		DisAsm_R3_RC("sraw", ra, rs, rb, rc);
 	}
-	void SRAD(u32 ra, u32 rs, u32 rb, u32 rc)
+	void SRAD(u32 ra, u32 rs, u32 rb, bool rc)
 	{
 		DisAsm_R3_RC("srad", ra, rs, rb, rc);
 	}
@@ -1746,15 +1746,15 @@ private:
 			DisAsm_INT1("dss", strm);
 		}
 	}
-	void SRAWI(u32 ra, u32 rs, u32 sh, u32 rc)
+	void SRAWI(u32 ra, u32 rs, u32 sh, bool rc)
 	{
 		DisAsm_R2_INT1_RC("srawi", ra, rs, sh, rc);
 	}
-	void SRADI1(u32 ra, u32 rs, u32 sh, u32 rc)
+	void SRADI1(u32 ra, u32 rs, u32 sh, bool rc)
 	{
 		DisAsm_R2_INT1_RC("sradi", ra, rs, sh, rc);
 	}
-	void SRADI2(u32 ra, u32 rs, u32 sh, u32 rc)
+	void SRADI2(u32 ra, u32 rs, u32 sh, bool rc)
 	{
 		DisAsm_R2_INT1_RC("sradi", ra, rs, sh, rc);
 	}
@@ -1770,7 +1770,7 @@ private:
 	{
 		DisAsm_R3("sthbrx", rs, ra, rb);
 	}
-	void EXTSH(u32 ra, u32 rs, u32 rc)
+	void EXTSH(u32 ra, u32 rs, bool rc)
 	{
 		DisAsm_R2_RC("extsh", ra, rs, rc);
 	}
@@ -1778,7 +1778,7 @@ private:
 	{
 		DisAsm_V1_R2("stvrxl", sd, ra, rb);
 	}
-	void EXTSB(u32 ra, u32 rs, u32 rc)
+	void EXTSB(u32 ra, u32 rs, bool rc)
 	{
 		DisAsm_R2_RC("extsb", ra, rs, rc);
 	}
@@ -1786,7 +1786,7 @@ private:
 	{
 		DisAsm_F1_R2("stfiwx", frs, ra, rb);
 	}
-	void EXTSW(u32 ra, u32 rs, u32 rc)
+	void EXTSW(u32 ra, u32 rs, bool rc)
 	{
 		DisAsm_R2_RC("extsw", ra, rs, rc);
 	}
@@ -1906,43 +1906,43 @@ private:
 	{
 		DisAsm_R2_IMM("lwa", rd, ra, ds);
 	}
-	void FDIVS(u32 frd, u32 fra, u32 frb, u32 rc)
+	void FDIVS(u32 frd, u32 fra, u32 frb, bool rc)
 	{
 		DisAsm_F3_RC("fdivs", frd, fra, frb, rc);
 	}
-	void FSUBS(u32 frd, u32 fra, u32 frb, u32 rc)
+	void FSUBS(u32 frd, u32 fra, u32 frb, bool rc)
 	{
 		DisAsm_F3_RC("fsubs", frd, fra, frb, rc);
 	}
-	void FADDS(u32 frd, u32 fra, u32 frb, u32 rc)
+	void FADDS(u32 frd, u32 fra, u32 frb, bool rc)
 	{
 		DisAsm_F3_RC("fadds", frd, fra, frb, rc);
 	}
-	void FSQRTS(u32 frd, u32 frb, u32 rc)
+	void FSQRTS(u32 frd, u32 frb, bool rc)
 	{
 		DisAsm_F2_RC("fsqrts", frd, frb, rc);
 	}
-	void FRES(u32 frd, u32 frb, u32 rc)
+	void FRES(u32 frd, u32 frb, bool rc)
 	{
 		DisAsm_F2_RC("fres", frd, frb, rc);
 	}
-	void FMULS(u32 frd, u32 fra, u32 frc, u32 rc)
+	void FMULS(u32 frd, u32 fra, u32 frc, bool rc)
 	{
 		DisAsm_F3_RC("fmuls", frd, fra, frc, rc);
 	}
-	void FMADDS(u32 frd, u32 fra, u32 frc, u32 frb, u32 rc)
+	void FMADDS(u32 frd, u32 fra, u32 frc, u32 frb, bool rc)
 	{
 		DisAsm_F4_RC("fmadds", frd, fra, frc, frb, rc);
 	}
-	void FMSUBS(u32 frd, u32 fra, u32 frc, u32 frb, u32 rc)
+	void FMSUBS(u32 frd, u32 fra, u32 frc, u32 frb, bool rc)
 	{
 		DisAsm_F4_RC("fmsubs", frd, fra, frc, frb, rc);
 	}
-	void FNMSUBS(u32 frd, u32 fra, u32 frc, u32 frb, u32 rc)
+	void FNMSUBS(u32 frd, u32 fra, u32 frc, u32 frb, bool rc)
 	{
 		DisAsm_F4_RC("fnmsubs", frd, fra, frc, frb, rc);
 	}
-	void FNMADDS(u32 frd, u32 fra, u32 frc, u32 frb, u32 rc)
+	void FNMADDS(u32 frd, u32 fra, u32 frc, u32 frb, bool rc)
 	{
 		DisAsm_F4_RC("fnmadds", frd, fra, frc, frb, rc);
 	}
@@ -1954,7 +1954,7 @@ private:
 	{
 		DisAsm_R2_IMM("stdu", rs, ra, ds);
 	}
-	void MTFSB1(u32 bt, u32 rc)
+	void MTFSB1(u32 bt, bool rc)
 	{
 		DisAsm_F1_RC("mtfsb1", bt, rc);
 	}
@@ -1962,19 +1962,19 @@ private:
 	{
 		DisAsm_F2("mcrfs", bf, bfa);
 	}
-	void MTFSB0(u32 bt, u32 rc)
+	void MTFSB0(u32 bt, bool rc)
 	{
 		DisAsm_F1_RC("mtfsb0", bt, rc);
 	}
-	void MTFSFI(u32 crfd, u32 i, u32 rc)
+	void MTFSFI(u32 crfd, u32 i, bool rc)
 	{
 		DisAsm_F2_RC("mtfsfi", crfd, i, rc);
 	}
-	void MFFS(u32 frd, u32 rc)
+	void MFFS(u32 frd, bool rc)
 	{
 		DisAsm_F1_RC("mffs", frd, rc);
 	}
-	void MTFSF(u32 flm, u32 frb, u32 rc)
+	void MTFSF(u32 flm, u32 frb, bool rc)
 	{
 		DisAsm_F2_RC("mtfsf", flm, frb, rc);
 	}
@@ -1982,59 +1982,59 @@ private:
 	{
 		DisAsm_CR1_F2("fcmpu", crfd, fra, frb);
 	}
-	void FRSP(u32 frd, u32 frb, u32 rc)
+	void FRSP(u32 frd, u32 frb, bool rc)
 	{
 		DisAsm_F2_RC("frsp", frd, frb, rc);
 	}
-	void FCTIW(u32 frd, u32 frb, u32 rc)
+	void FCTIW(u32 frd, u32 frb, bool rc)
 	{
 		DisAsm_F2_RC("fctiw", frd, frb, rc);
 	}
-	void FCTIWZ(u32 frd, u32 frb, u32 rc)
+	void FCTIWZ(u32 frd, u32 frb, bool rc)
 	{
 		DisAsm_F2_RC("fctiwz", frd, frb, rc);
 	}
-	void FDIV(u32 frd, u32 fra, u32 frb, u32 rc)
+	void FDIV(u32 frd, u32 fra, u32 frb, bool rc)
 	{
 		DisAsm_F3_RC("fdiv", frd, fra, frb, rc);
 	}
-	void FSUB(u32 frd, u32 fra, u32 frb, u32 rc)
+	void FSUB(u32 frd, u32 fra, u32 frb, bool rc)
 	{
 		DisAsm_F3_RC("fsub", frd, fra, frb, rc);
 	}
-	void FADD(u32 frd, u32 fra, u32 frb, u32 rc)
+	void FADD(u32 frd, u32 fra, u32 frb, bool rc)
 	{
 		DisAsm_F3_RC("fadd", frd, fra, frb, rc);
 	}
-	void FSQRT(u32 frd, u32 frb, u32 rc)
+	void FSQRT(u32 frd, u32 frb, bool rc)
 	{
 		DisAsm_F2_RC("fsqrt", frd, frb, rc);
 	}
-	void FSEL(u32 frd, u32 fra, u32 frc, u32 frb, u32 rc)
+	void FSEL(u32 frd, u32 fra, u32 frc, u32 frb, bool rc)
 	{
 		DisAsm_F4_RC("fsel", frd, fra, frc, frb, rc);
 	}
-	void FMUL(u32 frd, u32 fra, u32 frc, u32 rc)
+	void FMUL(u32 frd, u32 fra, u32 frc, bool rc)
 	{
 		DisAsm_F3_RC("fmul", frd, fra, frc, rc);
 	}
-	void FRSQRTE(u32 frd, u32 frb, u32 rc)
+	void FRSQRTE(u32 frd, u32 frb, bool rc)
 	{
 		DisAsm_F2_RC("frsqrte", frd, frb, rc);
 	}
-	void FMSUB(u32 frd, u32 fra, u32 frc, u32 frb, u32 rc)
+	void FMSUB(u32 frd, u32 fra, u32 frc, u32 frb, bool rc)
 	{
 		DisAsm_F4_RC("fmsub", frd, fra, frc, frb, rc);
 	}
-	void FMADD(u32 frd, u32 fra, u32 frc, u32 frb, u32 rc)
+	void FMADD(u32 frd, u32 fra, u32 frc, u32 frb, bool rc)
 	{
 		DisAsm_F4_RC("fmadd", frd, fra, frc, frb, rc);
 	}
-	void FNMSUB(u32 frd, u32 fra, u32 frc, u32 frb, u32 rc)
+	void FNMSUB(u32 frd, u32 fra, u32 frc, u32 frb, bool rc)
 	{
 		DisAsm_F4_RC("fnmsub", frd, fra, frc, frb, rc);
 	}
-	void FNMADD(u32 frd, u32 fra, u32 frc, u32 frb, u32 rc)
+	void FNMADD(u32 frd, u32 fra, u32 frc, u32 frb, bool rc)
 	{
 		DisAsm_F4_RC("fnmadd", frd, fra, frc, frb, rc);
 	}
@@ -2042,31 +2042,31 @@ private:
 	{
 		DisAsm_F3("fcmpo", crfd, fra, frb);
 	}
-	void FNEG(u32 frd, u32 frb, u32 rc)
+	void FNEG(u32 frd, u32 frb, bool rc)
 	{
 		DisAsm_F2_RC("fneg", frd, frb, rc);
 	}
-	void FMR(u32 frd, u32 frb, u32 rc)
+	void FMR(u32 frd, u32 frb, bool rc)
 	{
 		DisAsm_F2_RC("fmr", frd, frb, rc);
 	}
-	void FNABS(u32 frd, u32 frb, u32 rc)
+	void FNABS(u32 frd, u32 frb, bool rc)
 	{
 		DisAsm_F2_RC("fnabs", frd, frb, rc);
 	}
-	void FABS(u32 frd, u32 frb, u32 rc)
+	void FABS(u32 frd, u32 frb, bool rc)
 	{
 		DisAsm_F2_RC("fabs", frd, frb, rc);
 	}
-	void FCTID(u32 frd, u32 frb, u32 rc)
+	void FCTID(u32 frd, u32 frb, bool rc)
 	{
 		DisAsm_F2_RC("fctid", frd, frb, rc);
 	}
-	void FCTIDZ(u32 frd, u32 frb, u32 rc)
+	void FCTIDZ(u32 frd, u32 frb, bool rc)
 	{
 		DisAsm_F2_RC("fctidz", frd, frb, rc);
 	}
-	void FCFID(u32 frd, u32 frb, u32 rc)
+	void FCFID(u32 frd, u32 frb, bool rc)
 	{
 		DisAsm_F2_RC("fcfid", frd, frb, rc);
 	}

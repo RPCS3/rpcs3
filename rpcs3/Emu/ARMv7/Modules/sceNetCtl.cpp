@@ -2,86 +2,130 @@
 #include "Emu/System.h"
 #include "Emu/ARMv7/PSVFuncList.h"
 
-#include "sceNetCtl.h"
+#include "sceNet.h"
+
+extern psv_log_base sceNetCtl;
+
+union SceNetCtlInfo
+{
+	char cnf_name[65];
+	u32 device;
+	SceNetEtherAddr ether_addr;
+	u32 mtu;
+	u32 link;
+	SceNetEtherAddr bssid;
+	char ssid[33];
+	u32 wifi_security;
+	u32 rssi_dbm;
+	u32 rssi_percentage;
+	u32 channel;
+	u32 ip_config;
+	char dhcp_hostname[256];
+	char pppoe_auth_name[128];
+	char ip_address[16];
+	char netmask[16];
+	char default_route[16];
+	char primary_dns[16];
+	char secondary_dns[16];
+	u32 http_proxy_config;
+	char http_proxy_server[256];
+	u32 http_proxy_port;
+};
+
+struct SceNetCtlNatInfo
+{
+	u32 size;
+	s32 stun_status;
+	s32 nat_type;
+	SceNetInAddr mapped_addr;
+};
+
+struct SceNetCtlAdhocPeerInfo
+{
+	vm::psv::ptr<SceNetCtlAdhocPeerInfo> next;
+	SceNetInAddr inet_addr;
+};
+
+typedef vm::psv::ptr<void(s32 event_type, vm::psv::ptr<void> arg)> SceNetCtlCallback;
 
 s32 sceNetCtlInit()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 void sceNetCtlTerm()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceNetCtlCheckCallback()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceNetCtlInetGetResult(s32 eventType, vm::ptr<s32> errorCode)
+s32 sceNetCtlInetGetResult(s32 eventType, vm::psv::ptr<s32> errorCode)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceNetCtlAdhocGetResult(s32 eventType, vm::ptr<s32> errorCode)
+s32 sceNetCtlAdhocGetResult(s32 eventType, vm::psv::ptr<s32> errorCode)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceNetCtlInetGetInfo(s32 code, vm::ptr<SceNetCtlInfo> info)
+s32 sceNetCtlInetGetInfo(s32 code, vm::psv::ptr<SceNetCtlInfo> info)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceNetCtlInetGetState(vm::ptr<s32> state)
+s32 sceNetCtlInetGetState(vm::psv::ptr<s32> state)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceNetCtlGetNatInfo(vm::ptr<SceNetCtlNatInfo> natinfo)
+s32 sceNetCtlGetNatInfo(vm::psv::ptr<SceNetCtlNatInfo> natinfo)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceNetCtlInetRegisterCallback(vm::ptr<SceNetCtlCallback> func, vm::ptr<void> arg, vm::ptr<s32> cid)
+s32 sceNetCtlInetRegisterCallback(SceNetCtlCallback func, vm::psv::ptr<void> arg, vm::psv::ptr<s32> cid)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceNetCtlInetUnregisterCallback(s32 cid)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceNetCtlAdhocRegisterCallback(vm::ptr<SceNetCtlCallback> func, vm::ptr<void> arg, vm::ptr<s32> cid)
+s32 sceNetCtlAdhocRegisterCallback(SceNetCtlCallback func, vm::psv::ptr<void> arg, vm::psv::ptr<s32> cid)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceNetCtlAdhocUnregisterCallback(s32 cid)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceNetCtlAdhocGetState(vm::ptr<s32> state)
+s32 sceNetCtlAdhocGetState(vm::psv::ptr<s32> state)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceNetCtlAdhocDisconnect()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceNetCtlAdhocGetPeerList(vm::ptr<u32> buflen, vm::ptr<void> buf)
+s32 sceNetCtlAdhocGetPeerList(vm::psv::ptr<u32> buflen, vm::psv::ptr<void> buf)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceNetCtlAdhocGetInAddr(vm::ptr<SceNetInAddr> inaddr)
+s32 sceNetCtlAdhocGetInAddr(vm::psv::ptr<SceNetInAddr> inaddr)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 #define REG_FUNC(nid, name) reg_psv_func(nid, &sceNetCtl, #name, name)
@@ -91,7 +135,6 @@ psv_log_base sceNetCtl("SceNetCtl", []()
 	sceNetCtl.on_load = nullptr;
 	sceNetCtl.on_unload = nullptr;
 	sceNetCtl.on_stop = nullptr;
-	sceNetCtl.on_error = nullptr;
 
 	REG_FUNC(0x495CA1DB, sceNetCtlInit);
 	REG_FUNC(0xCD188648, sceNetCtlTerm);

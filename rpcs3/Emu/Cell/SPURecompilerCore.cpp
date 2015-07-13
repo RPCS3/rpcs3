@@ -4,6 +4,8 @@
 #include "Emu/System.h"
 #include "Utilities/File.h"
 
+#include "Emu/SysCalls/lv2/sys_time.h"
+
 #include "SPUInstrTable.h"
 #include "SPUDisAsm.h"
 
@@ -17,8 +19,6 @@
 
 using namespace asmjit;
 using namespace asmjit::host;
-
-extern u64 get_system_time();
 
 SPURecompilerCore::SPURecompilerCore(SPUThread& cpu)
 	: m_enc(new SPURecompiler(cpu, *this))
@@ -95,9 +95,9 @@ void SPURecompilerCore::Compile(u16 pos)
 
 	while (true)
 	{
-		const be_t<u32> opcode = vm::ps3::read32(CPU.offset + pos * 4);
+		const u32 opcode = vm::read32(CPU.offset + pos * 4);
 		m_enc->do_finalize = false;
-		if (opcode.data())
+		if (opcode)
 		{
 			//const u64 stamp1 = get_system_time();
 			// disasm for logging:
@@ -120,11 +120,11 @@ void SPURecompilerCore::Compile(u16 pos)
 			m_enc->do_finalize = true;
 		}
 		bool fin = m_enc->do_finalize;
-		//if (entry[pos]._valid == opcode)
+		//if (entry[pos].valid == re32(opcode))
 		//{
 		//	excess++;
 		//}
-		entry[pos]._valid = opcode;
+		entry[pos].valid = re32(opcode);
 
 		if (fin) break;
 		CPU.PC += 4;
@@ -169,7 +169,7 @@ void SPURecompilerCore::Compile(u16 pos)
 u32 SPURecompilerCore::DecodeMemory(const u32 address)
 {
 	const u32 pos = CPU.PC >> 2; // 0x0..0xffff
-	const auto _ls = vm::get_ptr<be_t<u32>>(CPU.offset);
+	const auto ls = vm::get_ptr<u32>(CPU.offset);
 
 	assert(CPU.offset == address - CPU.PC && pos < 0x10000);
 
@@ -182,7 +182,7 @@ u32 SPURecompilerCore::DecodeMemory(const u32 address)
 		{
 			for (u32 i = 0; i < 0x10000; i++)
 			{
-				if (entry[i]._valid.data() && entry[i]._valid != _ls[i])
+				if (entry[i].valid && entry[i].valid != ls[i])
 				{
 					is_valid = false;
 					break;
@@ -199,14 +199,14 @@ u32 SPURecompilerCore::DecodeMemory(const u32 address)
 			{
 				if (!entry[i].pointer) continue;
 
-				if (!entry[i]._valid.data() || entry[i]._valid != _ls[i] || (i + entry[i].count > pos && i < pos + entry[pos].count))
+				if (!entry[i].valid || entry[i].valid != ls[i] || (i + entry[i].count > pos && i < pos + entry[pos].count))
 				{
 					m_jit->release(entry[i].pointer);
 					entry[i].pointer = nullptr;
 
 					for (u32 j = i; j < i + entry[i].count; j++)
 					{
-						entry[j]._valid = 0;
+						entry[j].valid = 0;
 					}
 
 					//need_check = true;
@@ -225,9 +225,9 @@ u32 SPURecompilerCore::DecodeMemory(const u32 address)
 		return 0;
 	}
 
-	const auto func = asmjit_cast<u32(*)(SPUThread* _cpu, be_t<u32>* _ls, const void* _imm, const void* _g_imm)>(entry[pos].pointer);
+	const auto func = asmjit_cast<u32(*)(SPUThread& _cpu, u32* _ls, const void* _imm, const void* _g_imm)>(entry[pos].pointer);
 
-	u32 res = func(&CPU, _ls, imm_table.data(), &g_spu_imm);
+	u32 res = func(CPU, ls, imm_table.data(), &g_spu_imm);
 
 	if (res & 0x1000000)
 	{
@@ -247,7 +247,7 @@ u32 SPURecompilerCore::DecodeMemory(const u32 address)
 	}
 	else
 	{
-		CPU.PC = (res << 2) - 4;
+		CPU.SetBranch((u64)res << 2);
 		return 0;
 	}
 }
@@ -272,22 +272,24 @@ u32 SPURecompilerCore::DecodeMemory(const u32 address)
 
 #define LOG4_OPCODE(...) //c.addComment(fmt::Format("SPU info: "__FUNCTION__"(): "__VA_ARGS__).c_str())
 
-#define WRAPPER_BEGIN(a0, a1, a2) struct opwr_##a0 \
+#define WRAPPER_BEGIN(a0, a1, a2, a3) struct opwr_##a0 \
 { \
-	static void opcode(SPUThread* CPU, u32 a0, u32 a1, u32 a2) \
-{
+	static void opcode(u32 a0, u32 a1, u32 a2, u32 a3) \
+{ \
+	SPUThread& CPU = *(SPUThread*)GetCurrentNamedThread();
 
-#define WRAPPER_END(a0, a1, a2) /*LOG2_OPCODE();*/ } \
+#define WRAPPER_END(a0, a1, a2, a3) /*LOG2_OPCODE();*/ } \
 }; \
 	/*XmmRelease();*/ \
 	if (#a0[0] == 'r') XmmInvalidate(a0); \
 	if (#a1[0] == 'r') XmmInvalidate(a1); \
 	if (#a2[0] == 'r') XmmInvalidate(a2); \
-	X86CallNode* call##a0 = c.call(imm_ptr(reinterpret_cast<void*>(&opwr_##a0::opcode)), kFuncConvHost, FuncBuilder4<void, SPUThread*, u32, u32, u32>()); \
-	call##a0->setArg(0, *cpu_var); \
-	call##a0->setArg(1, imm_u(a0)); \
-	call##a0->setArg(2, imm_u(a1)); \
-	call##a0->setArg(3, imm_u(a2)); \
+	if (#a3[0] == 'r') XmmInvalidate(a3); \
+	X86CallNode* call##a0 = c.call(imm_ptr(reinterpret_cast<void*>(&opwr_##a0::opcode)), kFuncConvHost, FuncBuilder4<void, u32, u32, u32, u32>()); \
+	call##a0->setArg(0, imm_u(a0)); \
+	call##a0->setArg(1, imm_u(a1)); \
+	call##a0->setArg(2, imm_u(a2)); \
+	call##a0->setArg(3, imm_u(a3)); \
 	LOG3_OPCODE(/*#a0"=%d, "#a1"=%d, "#a2"=%d, "#a3"=%d", a0, a1, a2, a3*/);
 
 const SPURecompiler::XmmLink& SPURecompiler::XmmAlloc(s8 pref) // get empty xmm register
@@ -303,7 +305,6 @@ const SPURecompiler::XmmLink& SPURecompiler::XmmAlloc(s8 pref) // get empty xmm 
 			return xmm_var[i];
 		}
 	}
-
 	for (u32 i = 0; i < 16; i++)
 	{
 		if ((xmm_var[i].reg == -1) && !xmm_var[i].taken)
@@ -315,7 +316,6 @@ const SPURecompiler::XmmLink& SPURecompiler::XmmAlloc(s8 pref) // get empty xmm 
 			return xmm_var[i];
 		}
 	}
-
 	int last = -1, max = -1;
 	for (u32 i = 0; i < 16; i++)
 	{
@@ -328,7 +328,6 @@ const SPURecompiler::XmmLink& SPURecompiler::XmmAlloc(s8 pref) // get empty xmm 
 			}
 		}
 	}
-
 	if (last >= 0)
 	{
 		// (saving cached data?)
@@ -340,8 +339,7 @@ const SPURecompiler::XmmLink& SPURecompiler::XmmAlloc(s8 pref) // get empty xmm 
 		xmm_var[last].access = 0;
 		return xmm_var[last];
 	}
-
-	throw EXCEPTION("Failure");
+	throw "XmmAlloc() failed";
 }
 
 const SPURecompiler::XmmLink* SPURecompiler::XmmRead(const s8 reg) const // get xmm register with specific SPU reg or nullptr
@@ -352,7 +350,7 @@ const SPURecompiler::XmmLink* SPURecompiler::XmmRead(const s8 reg) const // get 
 		if (xmm_var[i].reg == reg)
 		{
 			//assert(!xmm_var[i].got);
-			//if (xmm_var[i].got) throw EXCEPTION("Wrong reuse");
+			//if (xmm_var[i].got) throw "XmmRead(): wrong reuse";
 			LOG4_OPCODE("GPR[%d] has been read (i=%d)", reg, i);
 			xmm_var[i].access++;
 			return &xmm_var[i];
@@ -373,13 +371,13 @@ const SPURecompiler::XmmLink& SPURecompiler::XmmGet(s8 reg, s8 target) // get xm
 			if (xmm_var[i].reg == reg)
 			{
 				res = &xmm_var[i];
-				if (xmm_var[i].taken) throw EXCEPTION("xmm_var is taken");
+				if (xmm_var[i].taken) throw "XmmGet(): xmm_var is taken";
 				xmm_var[i].taken = true;
 				xmm_var[i].got = false;
 				//xmm_var[i].reg = -1;
 				for (u32 j = i + 1; j < 16; j++)
 				{
-					if (xmm_var[j].reg == reg) throw EXCEPTION("xmm_var duplicate");
+					if (xmm_var[j].reg == reg) throw "XmmGet(): xmm_var duplicate";
 				}
 				LOG4_OPCODE("cached GPR[%d] used (i=%d)", reg, i);
 				break;
@@ -426,7 +424,7 @@ void SPURecompiler::XmmInvalidate(const s8 reg) // invalidate cached register
 	{
 		if (xmm_var[i].reg == reg)
 		{
-			if (xmm_var[i].taken) throw EXCEPTION("xmm_var is taken");
+			if (xmm_var[i].taken) throw "XmmInvalidate(): xmm_var is taken";
 			LOG4_OPCODE("GPR[%d] invalidated (i=%d)", reg, i);
 			xmm_var[i].reg = -1;
 			xmm_var[i].access = 0;
@@ -507,16 +505,16 @@ void SPURecompiler::STOP(u32 code)
 {
 	struct STOP_wrapper
 	{
-		static void STOP(SPUThread* CPU, u32 code)
+		static void STOP(u32 code)
 		{
-			CPU->stop_and_signal(code);
+			SPUThread& CPU = *(SPUThread*)GetCurrentNamedThread();
+			CPU.stop_and_signal(code);
 			LOG2_OPCODE();
 		}
 	};
 	c.mov(cpu_dword(PC), CPU.PC);
-	X86CallNode* call = c.call(imm_ptr(reinterpret_cast<void*>(&STOP_wrapper::STOP)), kFuncConvHost, FuncBuilder2<void, SPUThread*, u32>());
-	call->setArg(0, *cpu_var);
-	call->setArg(1, imm_u(code));
+	X86CallNode* call = c.call(imm_ptr(reinterpret_cast<void*>(&STOP_wrapper::STOP)), kFuncConvHost, FuncBuilder1<void, u32>());
+	call->setArg(0, imm_u(code));
 	c.mov(*pos_var, (CPU.PC >> 2) + 1);
 	do_finalize = true;
 	LOG_OPCODE();
@@ -552,18 +550,18 @@ void SPURecompiler::MFSPR(u32 rt, u32 sa)
 void SPURecompiler::RDCH(u32 rt, u32 ra)
 {
 	c.mov(cpu_dword(PC), CPU.PC);
-	WRAPPER_BEGIN(rt, ra, zz);
-	CPU->GPR[rt] = u128::from32r(CPU->get_ch_value(ra));
-	WRAPPER_END(rt, ra, 0);
+	WRAPPER_BEGIN(rt, ra, yy, zz);
+	CPU.GPR[rt] = u128::from32r(CPU.get_ch_value(ra));
+	WRAPPER_END(rt, ra, 0, 0);
 	// TODO
 }
 
 void SPURecompiler::RCHCNT(u32 rt, u32 ra)
 {
 	c.mov(cpu_dword(PC), CPU.PC);
-	WRAPPER_BEGIN(rt, ra, zz);
-	CPU->GPR[rt] = u128::from32r(CPU->get_ch_count(ra));
-	WRAPPER_END(rt, ra, 0);
+	WRAPPER_BEGIN(rt, ra, yy, zz);
+	CPU.GPR[rt] = u128::from32r(CPU.get_ch_count(ra));
+	WRAPPER_END(rt, ra, 0, 0);
 	// TODO
 }
 
@@ -966,9 +964,9 @@ void SPURecompiler::MTSPR(u32 rt, u32 sa)
 void SPURecompiler::WRCH(u32 ra, u32 rt)
 {
 	c.mov(cpu_dword(PC), CPU.PC);
-	WRAPPER_BEGIN(ra, rt, yy);
-	CPU->set_ch_value(ra, CPU->GPR[rt]._u32[3]);
-	WRAPPER_END(ra, rt, 0);
+	WRAPPER_BEGIN(ra, rt, yy, zz);
+	CPU.set_ch_value(ra, CPU.GPR[rt]._u32[3]);
+	WRAPPER_END(ra, rt, 0, 0);
 	// TODO
 
 	/*XmmInvalidate(rt);
@@ -2210,23 +2208,23 @@ void SPURecompiler::SFX(u32 rt, u32 ra, u32 rb)
 
 void SPURecompiler::CGX(u32 rt, u32 ra, u32 rb) //nf
 {
-	WRAPPER_BEGIN(rt, ra, rb);
+	WRAPPER_BEGIN(rt, ra, rb, zz);
 	for (int w = 0; w < 4; w++)
-		CPU->GPR[rt]._u32[w] = ((u64)CPU->GPR[ra]._u32[w] + (u64)CPU->GPR[rb]._u32[w] + (u64)(CPU->GPR[rt]._u32[w] & 1)) >> 32;
-	WRAPPER_END(rt, ra, rb);
+		CPU.GPR[rt]._u32[w] = ((u64)CPU.GPR[ra]._u32[w] + (u64)CPU.GPR[rb]._u32[w] + (u64)(CPU.GPR[rt]._u32[w] & 1)) >> 32;
+	WRAPPER_END(rt, ra, rb, 0);
 }
 
 void SPURecompiler::BGX(u32 rt, u32 ra, u32 rb) //nf
 {
-	WRAPPER_BEGIN(rt, ra, rb);
+	WRAPPER_BEGIN(rt, ra, rb, zz);
 	s64 nResult;
 
 	for (int w = 0; w < 4; w++)
 	{
-		nResult = (u64)CPU->GPR[rb]._u32[w] - (u64)CPU->GPR[ra]._u32[w] - (u64)(1 - (CPU->GPR[rt]._u32[w] & 1));
-		CPU->GPR[rt]._u32[w] = nResult < 0 ? 0 : 1;
+		nResult = (u64)CPU.GPR[rb]._u32[w] - (u64)CPU.GPR[ra]._u32[w] - (u64)(1 - (CPU.GPR[rt]._u32[w] & 1));
+		CPU.GPR[rt]._u32[w] = nResult < 0 ? 0 : 1;
 	}
-	WRAPPER_END(rt, ra, rb);
+	WRAPPER_END(rt, ra, rb, 0);
 }
 
 void SPURecompiler::MPYHHA(u32 rt, u32 ra, u32 rb)
@@ -3328,6 +3326,10 @@ void SPURecompiler::FMA(u32 rt, u32 ra, u32 rb, u32 rc)
 		XmmFinalize(va, rt);
 		XmmFinalize(vc);
 	}
+	else
+	{
+		throw "FMA: invalid case"; // should never happen
+	}
 	LOG_OPCODE();
 }
 
@@ -3409,6 +3411,10 @@ void SPURecompiler::FMS(u32 rt, u32 ra, u32 rb, u32 rc)
 		c.subps(va.get(), vc.get());
 		XmmFinalize(va, rt);
 		XmmFinalize(vc);
+	}
+	else
+	{
+		throw "FMS: invalid case"; // should never happen
 	}
 	LOG_OPCODE();
 }

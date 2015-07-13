@@ -2,386 +2,543 @@
 #include "Emu/System.h"
 #include "Emu/ARMv7/PSVFuncList.h"
 
-#include "sceUlt.h"
+#include "sceLibKernel.h"
+
+extern psv_log_base sceUlt;
+
+#define CHECK_SIZE(type, size) static_assert(sizeof(type) == size, "Invalid " #type " size")
+
+struct _SceUltOptParamHeader
+{
+	s64 reserved[2];
+};
+
+struct SceUltWaitingQueueResourcePoolOptParam
+{
+	_SceUltOptParamHeader header;
+	u64 reserved[14];
+};
+
+CHECK_SIZE(SceUltWaitingQueueResourcePoolOptParam, 128);
+
+struct SceUltWaitingQueueResourcePool
+{
+	u64 reserved[32];
+};
+
+CHECK_SIZE(SceUltWaitingQueueResourcePool, 256);
+
+struct SceUltQueueDataResourcePoolOptParam
+{
+	_SceUltOptParamHeader header;
+	u64 reserved[14];
+};
+
+CHECK_SIZE(SceUltQueueDataResourcePoolOptParam, 128);
+
+struct SceUltQueueDataResourcePool
+{
+	u64 reserved[32];
+};
+
+CHECK_SIZE(SceUltQueueDataResourcePool, 256);
+
+struct SceUltMutexOptParam
+{
+	_SceUltOptParamHeader header;
+	u32 attribute;
+	u32 reserved_0;
+	u64 reserved[13];
+};
+
+CHECK_SIZE(SceUltMutexOptParam, 128);
+
+struct SceUltMutex
+{
+	u64 reserved[32];
+};
+
+CHECK_SIZE(SceUltMutex, 256);
+
+struct SceUltConditionVariableOptParam
+{
+	_SceUltOptParamHeader header;
+	u64 reserved[14];
+};
+
+CHECK_SIZE(SceUltConditionVariableOptParam, 128);
+
+struct SceUltConditionVariable
+{
+	u64 reserved[32];
+};
+
+CHECK_SIZE(SceUltConditionVariable, 256);
+
+struct SceUltQueueOptParam
+{
+	_SceUltOptParamHeader header;
+	u64 reserved[14];
+};
+
+CHECK_SIZE(SceUltQueueOptParam, 128);
+
+struct SceUltQueue
+{
+	u64 reserved[32];
+};
+
+CHECK_SIZE(SceUltQueue, 256);
+
+struct SceUltReaderWriterLockOptParam
+{
+	_SceUltOptParamHeader header;
+	u64 reserved[14];
+};
+
+CHECK_SIZE(SceUltReaderWriterLockOptParam, 128);
+
+struct SceUltReaderWriterLock
+{
+	u64 reserved[32];
+};
+
+CHECK_SIZE(SceUltReaderWriterLock, 256);
+
+struct SceUltSemaphoreOptParam
+{
+	_SceUltOptParamHeader header;
+	u64 reserved[14];
+};
+
+CHECK_SIZE(SceUltSemaphoreOptParam, 128);
+
+struct SceUltSemaphore
+{
+	u64 reserved[32];
+};
+
+CHECK_SIZE(SceUltSemaphore, 256);
+
+struct SceUltUlthreadRuntimeOptParam
+{
+	_SceUltOptParamHeader header;
+
+	u32 oneShotThreadStackSize;
+	s32 workerThreadPriority;
+	u32 workerThreadCpuAffinityMask;
+	u32 workerThreadAttr;
+	vm::psv::ptr<const SceKernelThreadOptParam> workerThreadOptParam;
+
+	u64 reserved[11];
+};
+
+CHECK_SIZE(SceUltUlthreadRuntimeOptParam, 128);
+
+struct SceUltUlthreadRuntime
+{
+	u64 reserved[128];
+};
+
+CHECK_SIZE(SceUltUlthreadRuntime, 1024);
+
+struct SceUltUlthreadOptParam
+{
+	_SceUltOptParamHeader header;
+	u32 attribute;
+	u32 reserved_0;
+	u64 reserved[13];
+};
+
+CHECK_SIZE(SceUltUlthreadOptParam, 128);
+
+struct SceUltUlthread
+{
+	u64 reserved[32];
+};
+
+CHECK_SIZE(SceUltUlthread, 256);
+
+typedef vm::psv::ptr<s32(u32 arg)> SceUltUlthreadEntry;
 
 // Functions
 
-s32 _sceUltWaitingQueueResourcePoolOptParamInitialize(vm::ptr<SceUltWaitingQueueResourcePoolOptParam> optParam, u32 buildVersion)
+s32 _sceUltWaitingQueueResourcePoolOptParamInitialize(vm::psv::ptr<SceUltWaitingQueueResourcePoolOptParam> optParam, u32 buildVersion)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 u32 sceUltWaitingQueueResourcePoolGetWorkAreaSize(u32 numThreads, u32 numSyncObjects)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 _sceUltWaitingQueueResourcePoolCreate(
-	vm::ptr<SceUltWaitingQueueResourcePool> pool,
-	vm::cptr<char> name,
+	vm::psv::ptr<SceUltWaitingQueueResourcePool> pool,
+	vm::psv::ptr<const char> name,
 	u32 numThreads,
 	u32 numSyncObjects,
-	vm::ptr<void> workArea,
-	vm::cptr<SceUltWaitingQueueResourcePoolOptParam> optParam,
+	vm::psv::ptr<void> workArea,
+	vm::psv::ptr<const SceUltWaitingQueueResourcePoolOptParam> optParam,
 	u32 buildVersion)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceUltWaitingQueueResourcePoolDestroy(vm::ptr<SceUltWaitingQueueResourcePool> pool)
+s32 sceUltWaitingQueueResourcePoolDestroy(vm::psv::ptr<SceUltWaitingQueueResourcePool> pool)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 _sceUltQueueDataResourcePoolOptParamInitialize(vm::ptr<SceUltQueueDataResourcePoolOptParam> optParam, u32 buildVersion)
+s32 _sceUltQueueDataResourcePoolOptParamInitialize(vm::psv::ptr<SceUltQueueDataResourcePoolOptParam> optParam, u32 buildVersion)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 u32 sceUltQueueDataResourcePoolGetWorkAreaSize(u32 numData, u32 dataSize, u32 numQueueObject)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 _sceUltQueueDataResourcePoolCreate(
-	vm::ptr<SceUltQueueDataResourcePool> pool,
-	vm::cptr<char> name,
+	vm::psv::ptr<SceUltQueueDataResourcePool> pool,
+	vm::psv::ptr<const char> name,
 	u32 numData,
 	u32 dataSize,
 	u32 numQueueObject,
-	vm::ptr<SceUltWaitingQueueResourcePool> waitingQueueResourcePool,
-	vm::ptr<void> workArea,
-	vm::cptr<SceUltQueueDataResourcePoolOptParam> optParam,
+	vm::psv::ptr<SceUltWaitingQueueResourcePool> waitingQueueResourcePool,
+	vm::psv::ptr<void> workArea,
+	vm::psv::ptr<const SceUltQueueDataResourcePoolOptParam> optParam,
 	u32 buildVersion)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceUltQueueDataResourcePoolDestroy(vm::ptr<SceUltQueueDataResourcePool> pool)
+s32 sceUltQueueDataResourcePoolDestroy(vm::psv::ptr<SceUltQueueDataResourcePool> pool)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 u32 sceUltMutexGetStandaloneWorkAreaSize(u32 waitingQueueDepth, u32 numConditionVariable)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 _sceUltMutexOptParamInitialize(vm::ptr<SceUltMutexOptParam> optParam, u32 buildVersion)
+s32 _sceUltMutexOptParamInitialize(vm::psv::ptr<SceUltMutexOptParam> optParam, u32 buildVersion)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 _sceUltMutexCreate(
-	vm::ptr<SceUltMutex> mutex,
-	vm::cptr<char> name,
-	vm::ptr<SceUltWaitingQueueResourcePool> waitingQueueResourcePool,
-	vm::cptr<SceUltMutexOptParam> optParam,
+	vm::psv::ptr<SceUltMutex> mutex,
+	vm::psv::ptr<const char> name,
+	vm::psv::ptr<SceUltWaitingQueueResourcePool> waitingQueueResourcePool,
+	vm::psv::ptr<const SceUltMutexOptParam> optParam,
 	u32 buildVersion)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 _sceUltMutexCreateStandalone(
-	vm::ptr<SceUltMutex> mutex,
-	vm::cptr<char> name,
+	vm::psv::ptr<SceUltMutex> mutex,
+	vm::psv::ptr<const char> name,
 	u32 numConditionVariable,
 	u32 maxNumThreads,
-	vm::ptr<void> workArea,
-	vm::cptr<SceUltMutexOptParam> optParam,
+	vm::psv::ptr<void> workArea,
+	vm::psv::ptr<const SceUltMutexOptParam> optParam,
 	u32 buildVersion)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceUltMutexLock(vm::ptr<SceUltMutex> mutex)
+s32 sceUltMutexLock(vm::psv::ptr<SceUltMutex> mutex)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceUltMutexTryLock(vm::ptr<SceUltMutex> mutex)
+s32 sceUltMutexTryLock(vm::psv::ptr<SceUltMutex> mutex)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceUltMutexUnlock(vm::ptr<SceUltMutex> mutex)
+s32 sceUltMutexUnlock(vm::psv::ptr<SceUltMutex> mutex)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceUltMutexDestroy(vm::ptr<SceUltMutex> mutex)
+s32 sceUltMutexDestroy(vm::psv::ptr<SceUltMutex> mutex)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 _sceUltConditionVariableOptParamInitialize(vm::ptr<SceUltConditionVariableOptParam> optParam, u32 buildVersion)
+s32 _sceUltConditionVariableOptParamInitialize(vm::psv::ptr<SceUltConditionVariableOptParam> optParam, u32 buildVersion)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 _sceUltConditionVariableCreate(
-	vm::ptr<SceUltConditionVariable> conditionVariable,
-	vm::cptr<char> name,
-	vm::ptr<SceUltMutex> mutex,
-	vm::cptr<SceUltConditionVariableOptParam> optParam,
+	vm::psv::ptr<SceUltConditionVariable> conditionVariable,
+	vm::psv::ptr<const char> name,
+	vm::psv::ptr<SceUltMutex> mutex,
+	vm::psv::ptr<const SceUltConditionVariableOptParam> optParam,
 	u32 buildVersion)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceUltConditionVariableSignal(vm::ptr<SceUltConditionVariable> conditionVariable)
+s32 sceUltConditionVariableSignal(vm::psv::ptr<SceUltConditionVariable> conditionVariable)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceUltConditionVariableSignalAll(vm::ptr<SceUltConditionVariable> conditionVariable)
+s32 sceUltConditionVariableSignalAll(vm::psv::ptr<SceUltConditionVariable> conditionVariable)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceUltConditionVariableWait(vm::ptr<SceUltConditionVariable> conditionVariable)
+s32 sceUltConditionVariableWait(vm::psv::ptr<SceUltConditionVariable> conditionVariable)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceUltConditionVariableDestroy(vm::ptr<SceUltConditionVariable> conditionVariable)
+s32 sceUltConditionVariableDestroy(vm::psv::ptr<SceUltConditionVariable> conditionVariable)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 _sceUltQueueOptParamInitialize(vm::ptr<SceUltQueueOptParam> optParam, u32 buildVersion)
+s32 _sceUltQueueOptParamInitialize(vm::psv::ptr<SceUltQueueOptParam> optParam, u32 buildVersion)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 u32 sceUltQueueGetStandaloneWorkAreaSize(u32 queueDepth,
 	u32 dataSize,
 	u32 waitingQueueLength)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 _sceUltQueueCreate(
-	vm::ptr<SceUltQueue> queue,
-	vm::cptr<char> _name,
+	vm::psv::ptr<SceUltQueue> queue,
+	vm::psv::ptr<const char> _name,
 	u32 dataSize,
-	vm::ptr<SceUltWaitingQueueResourcePool> resourcePool,
-	vm::ptr<SceUltQueueDataResourcePool> queueResourcePool,
-	vm::cptr<SceUltQueueOptParam> optParam,
+	vm::psv::ptr<SceUltWaitingQueueResourcePool> resourcePool,
+	vm::psv::ptr<SceUltQueueDataResourcePool> queueResourcePool,
+	vm::psv::ptr<const SceUltQueueOptParam> optParam,
 	u32 buildVersion)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 _sceUltQueueCreateStandalone(
-	vm::ptr<SceUltQueue> queue,
-	vm::cptr<char> name,
+	vm::psv::ptr<SceUltQueue> queue,
+	vm::psv::ptr<const char> name,
 	u32 queueDepth,
 	u32 dataSize,
 	u32 waitingQueueLength,
-	vm::ptr<void> workArea,
-	vm::cptr<SceUltQueueOptParam> optParam,
+	vm::psv::ptr<void> workArea,
+	vm::psv::ptr<const SceUltQueueOptParam> optParam,
 	u32 buildVersion)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceUltQueuePush(vm::ptr<SceUltQueue> queue, vm::cptr<void> data)
+s32 sceUltQueuePush(vm::psv::ptr<SceUltQueue> queue, vm::psv::ptr<const void> data)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceUltQueueTryPush(vm::ptr<SceUltQueue> queue, vm::cptr<void> data)
+s32 sceUltQueueTryPush(vm::psv::ptr<SceUltQueue> queue, vm::psv::ptr<const void> data)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceUltQueuePop(vm::ptr<SceUltQueue> queue, vm::ptr<void> data)
+s32 sceUltQueuePop(vm::psv::ptr<SceUltQueue> queue, vm::psv::ptr<void> data)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceUltQueueTryPop(vm::ptr<SceUltQueue> queue, vm::ptr<void> data)
+s32 sceUltQueueTryPop(vm::psv::ptr<SceUltQueue> queue, vm::psv::ptr<void> data)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceUltQueueDestroy(vm::ptr<SceUltQueue> queue)
+s32 sceUltQueueDestroy(vm::psv::ptr<SceUltQueue> queue)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 _sceUltReaderWriterLockOptParamInitialize(vm::ptr<SceUltReaderWriterLockOptParam> optParam, u32 buildVersion)
+s32 _sceUltReaderWriterLockOptParamInitialize(vm::psv::ptr<SceUltReaderWriterLockOptParam> optParam, u32 buildVersion)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 _sceUltReaderWriterLockCreate(
-	vm::ptr<SceUltReaderWriterLock> rwlock,
-	vm::cptr<char> name,
-	vm::ptr<SceUltWaitingQueueResourcePool> waitingQueueResourcePool,
-	vm::cptr<SceUltReaderWriterLockOptParam> optParam,
+	vm::psv::ptr<SceUltReaderWriterLock> rwlock,
+	vm::psv::ptr<const char> name,
+	vm::psv::ptr<SceUltWaitingQueueResourcePool> waitingQueueResourcePool,
+	vm::psv::ptr<const SceUltReaderWriterLockOptParam> optParam,
 	u32 buildVersion)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 _sceUltReaderWriterLockCreateStandalone(
-	vm::ptr<SceUltReaderWriterLock> rwlock,
-	vm::cptr<char> name,
+	vm::psv::ptr<SceUltReaderWriterLock> rwlock,
+	vm::psv::ptr<const char> name,
 	u32 waitingQueueDepth,
-	vm::ptr<void> workArea,
-	vm::cptr<SceUltReaderWriterLockOptParam> optParam,
+	vm::psv::ptr<void> workArea,
+	vm::psv::ptr<const SceUltReaderWriterLockOptParam> optParam,
 	u32 buildVersion)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 u32 sceUltReaderWriterLockGetStandaloneWorkAreaSize(u32 waitingQueueDepth)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceUltReaderWriterLockLockRead(vm::ptr<SceUltReaderWriterLock> rwlock)
+s32 sceUltReaderWriterLockLockRead(vm::psv::ptr<SceUltReaderWriterLock> rwlock)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceUltReaderWriterLockTryLockRead(vm::ptr<SceUltReaderWriterLock> rwlock)
+s32 sceUltReaderWriterLockTryLockRead(vm::psv::ptr<SceUltReaderWriterLock> rwlock)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceUltReaderWriterLockUnlockRead(vm::ptr<SceUltReaderWriterLock> rwlock)
+s32 sceUltReaderWriterLockUnlockRead(vm::psv::ptr<SceUltReaderWriterLock> rwlock)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceUltReaderWriterLockLockWrite(vm::ptr<SceUltReaderWriterLock> rwlock)
+s32 sceUltReaderWriterLockLockWrite(vm::psv::ptr<SceUltReaderWriterLock> rwlock)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceUltReaderWriterLockTryLockWrite(vm::ptr<SceUltReaderWriterLock> rwlock)
+s32 sceUltReaderWriterLockTryLockWrite(vm::psv::ptr<SceUltReaderWriterLock> rwlock)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceUltReaderWriterLockUnlockWrite(vm::ptr<SceUltReaderWriterLock> rwlock)
+s32 sceUltReaderWriterLockUnlockWrite(vm::psv::ptr<SceUltReaderWriterLock> rwlock)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceUltReaderWriterLockDestroy(vm::ptr<SceUltReaderWriterLock> rwlock)
+s32 sceUltReaderWriterLockDestroy(vm::psv::ptr<SceUltReaderWriterLock> rwlock)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 _sceUltSemaphoreOptParamInitialize(vm::ptr<SceUltSemaphoreOptParam> optParam, u32 buildVersion)
+s32 _sceUltSemaphoreOptParamInitialize(vm::psv::ptr<SceUltSemaphoreOptParam> optParam, u32 buildVersion)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 _sceUltSemaphoreCreate(
-	vm::ptr<SceUltSemaphore> semaphore,
-	vm::cptr<char> name,
+	vm::psv::ptr<SceUltSemaphore> semaphore,
+	vm::psv::ptr<const char> name,
 	s32 numInitialResource,
-	vm::ptr<SceUltWaitingQueueResourcePool> waitingQueueResourcePool,
-	vm::cptr<SceUltSemaphoreOptParam> optParam,
+	vm::psv::ptr<SceUltWaitingQueueResourcePool> waitingQueueResourcePool,
+	vm::psv::ptr<const SceUltSemaphoreOptParam> optParam,
 	u32 buildVersion)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceUltSemaphoreAcquire(vm::ptr<SceUltSemaphore> semaphore, s32 numResource)
+s32 sceUltSemaphoreAcquire(vm::psv::ptr<SceUltSemaphore> semaphore, s32 numResource)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceUltSemaphoreTryAcquire(vm::ptr<SceUltSemaphore> semaphore, s32 numResource)
+s32 sceUltSemaphoreTryAcquire(vm::psv::ptr<SceUltSemaphore> semaphore, s32 numResource)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceUltSemaphoreRelease(vm::ptr<SceUltSemaphore> semaphore, s32 numResource)
+s32 sceUltSemaphoreRelease(vm::psv::ptr<SceUltSemaphore> semaphore, s32 numResource)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceUltSemaphoreDestroy(vm::ptr<SceUltSemaphore> semaphore)
+s32 sceUltSemaphoreDestroy(vm::psv::ptr<SceUltSemaphore> semaphore)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 _sceUltUlthreadRuntimeOptParamInitialize(vm::ptr<SceUltUlthreadRuntimeOptParam> optParam, u32 buildVersion)
+s32 _sceUltUlthreadRuntimeOptParamInitialize(vm::psv::ptr<SceUltUlthreadRuntimeOptParam> optParam, u32 buildVersion)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 u32 sceUltUlthreadRuntimeGetWorkAreaSize(u32 numMaxUlthread, u32 numWorkerThread)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 _sceUltUlthreadRuntimeCreate(
-	vm::ptr<SceUltUlthreadRuntime> runtime,
-	vm::cptr<char> name,
+	vm::psv::ptr<SceUltUlthreadRuntime> runtime,
+	vm::psv::ptr<const char> name,
 	u32 numMaxUlthread,
 	u32 numWorkerThread,
-	vm::ptr<void> workArea,
-	vm::cptr<SceUltUlthreadRuntimeOptParam> optParam,
+	vm::psv::ptr<void> workArea,
+	vm::psv::ptr<const SceUltUlthreadRuntimeOptParam> optParam,
 	u32 buildVersion)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceUltUlthreadRuntimeDestroy(vm::ptr<SceUltUlthreadRuntime> runtime)
+s32 sceUltUlthreadRuntimeDestroy(vm::psv::ptr<SceUltUlthreadRuntime> runtime)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 _sceUltUlthreadOptParamInitialize(vm::ptr<SceUltUlthreadOptParam> optParam, u32 buildVersion)
+s32 _sceUltUlthreadOptParamInitialize(vm::psv::ptr<SceUltUlthreadOptParam> optParam, u32 buildVersion)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 _sceUltUlthreadCreate(
-	vm::ptr<SceUltUlthread> ulthread,
-	vm::cptr<char> name,
-	vm::ptr<SceUltUlthreadEntry> entry,
+	vm::psv::ptr<SceUltUlthread> ulthread,
+	vm::psv::ptr<const char> name,
+	SceUltUlthreadEntry entry,
 	u32 arg,
-	vm::ptr<void> context,
+	vm::psv::ptr<void> context,
 	u32 sizeContext,
-	vm::ptr<SceUltUlthreadRuntime> runtime,
-	vm::cptr<SceUltUlthreadOptParam> optParam,
+	vm::psv::ptr<SceUltUlthreadRuntime> runtime,
+	vm::psv::ptr<const SceUltUlthreadOptParam> optParam,
 	u32 buildVersion)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceUltUlthreadYield()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceUltUlthreadExit(s32 status)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceUltUlthreadJoin(vm::ptr<SceUltUlthread> ulthread, vm::ptr<s32> status)
+s32 sceUltUlthreadJoin(vm::psv::ptr<SceUltUlthread> ulthread, vm::psv::ptr<s32> status)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceUltUlthreadTryJoin(vm::ptr<SceUltUlthread> ulthread, vm::ptr<s32> status)
+s32 sceUltUlthreadTryJoin(vm::psv::ptr<SceUltUlthread> ulthread, vm::psv::ptr<s32> status)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceUltUlthreadGetSelf(vm::pptr<SceUltUlthread> ulthread)
+s32 sceUltUlthreadGetSelf(vm::psv::pptr<SceUltUlthread> ulthread)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 #define REG_FUNC(nid, name) reg_psv_func(nid, &sceUlt, #name, name)
@@ -391,7 +548,6 @@ psv_log_base sceUlt("SceUlt", []()
 	sceUlt.on_load = nullptr;
 	sceUlt.on_unload = nullptr;
 	sceUlt.on_stop = nullptr;
-	sceUlt.on_error = nullptr;
 
 	REG_FUNC(0xEF094E35, _sceUltWaitingQueueResourcePoolOptParamInitialize);
 	REG_FUNC(0x644DA029, sceUltWaitingQueueResourcePoolGetWorkAreaSize);

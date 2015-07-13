@@ -1,8 +1,7 @@
 #pragma once
 
-namespace vm { using namespace ps3; }
-
-static const float CELL_GEM_SPHERE_RADIUS_MM = 22.5f;
+// Had to use define, since enum doesn't allow floats
+#define CELL_GEM_SPHERE_RADIUS_MM = 22.5f;
 
 // Error Codes
 enum

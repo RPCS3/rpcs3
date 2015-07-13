@@ -2,686 +2,804 @@
 #include "Emu/System.h"
 #include "Emu/ARMv7/PSVFuncList.h"
 
-#include "sceFios.h"
+extern psv_log_base sceFios;
 
-s32 sceFiosInitialize(vm::cptr<SceFiosParams> pParameters)
+typedef s64 SceFiosOffset;
+typedef s64 SceFiosSize;
+typedef u8 SceFiosOpEvent;
+typedef s32 SceFiosHandle;
+typedef SceFiosHandle SceFiosOp;
+typedef SceFiosHandle SceFiosFH;
+typedef SceFiosHandle SceFiosDH;
+typedef s64 SceFiosTime;
+typedef s8 SceFiosPriority;
+typedef SceFiosTime SceFiosTimeInterval;
+typedef u64 SceFiosDate;
+typedef s32 SceFiosOverlayID;
+
+typedef vm::psv::ptr<s32(vm::psv::ptr<void> pContext, SceFiosOp op, SceFiosOpEvent event, s32 err)> SceFiosOpCallback;
+typedef vm::psv::ptr<s32(vm::psv::ptr<const char> fmt, va_list ap)> SceFiosVprintfCallback;
+typedef vm::psv::ptr<vm::psv::ptr<void>(vm::psv::ptr<void> dst, vm::psv::ptr<const void> src, u32 len)> SceFiosMemcpyCallback;
+
+enum SceFiosWhence : s32
 {
-	throw EXCEPTION("");
+	SCE_FIOS_SEEK_SET = 0,
+	SCE_FIOS_SEEK_CUR = 1,
+	SCE_FIOS_SEEK_END = 2
+};
+
+struct SceFiosBuffer
+{
+	vm::psv::ptr<void> pPtr;
+	u32 length;
+};
+
+struct SceFiosOpAttr
+{
+	SceFiosTime deadline;
+	SceFiosOpCallback pCallback;
+	vm::psv::ptr<void> pCallbackContext;
+	s32 priority : 8;
+	u32 opflags : 24;
+	u32 userTag;
+	vm::psv::ptr<void> userPtr;
+	vm::psv::ptr<void> pReserved;
+};
+
+struct SceFiosDirEntry
+{
+	SceFiosOffset fileSize;
+	u32 statFlags;
+	u16 nameLength;
+	u16 fullPathLength;
+	u16 offsetToName;
+	u16 reserved[3];
+	char fullPath[1024];
+};
+
+struct SceFiosStat
+{
+	SceFiosOffset fileSize;
+	SceFiosDate accessDate;
+	SceFiosDate modificationDate;
+	SceFiosDate creationDate;
+	u32 statFlags;
+	u32 reserved;
+	s64 uid;
+	s64 gid;
+	s64 dev;
+	s64 ino;
+	s64 mode;
+};
+
+struct SceFiosOpenParams
+{
+	u32 openFlags;
+	u32 reserved;
+	SceFiosBuffer buffer;
+};
+
+struct SceFiosTuple
+{
+	SceFiosOffset offset;
+	SceFiosSize size;
+	char path[1024];
+};
+
+struct SceFiosParams
+{
+	u32 initialized : 1;
+	u32 paramsSize : 14;
+	u32 pathMax : 16;
+	u32 profiling;
+	SceFiosBuffer opStorage;
+	SceFiosBuffer fhStorage;
+	SceFiosBuffer dhStorage;
+	SceFiosBuffer chunkStorage;
+	SceFiosVprintfCallback pVprintf;
+	SceFiosMemcpyCallback pMemcpy;
+	s32 threadPriority[2];
+	s32 threadAffinity[2];
+};
+
+struct SceFiosOverlay
+{
+	u8 type;
+	u8 order;
+	u8 reserved[10];
+	SceFiosOverlayID id;
+	char dst[292];
+	char src[292];
+};
+
+typedef vm::psv::ptr<void()> SceFiosIOFilterCallback;
+
+struct SceFiosPsarcDearchiverContext
+{
+	u32 sizeOfContext;
+	u32 workBufferSize;
+	vm::psv::ptr<void> pWorkBuffer;
+	s32 reserved[4];
+};
+
+s32 sceFiosInitialize(vm::psv::ptr<const SceFiosParams> pParameters)
+{
+	throw __FUNCTION__;
 }
 
 void sceFiosTerminate()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-bool sceFiosIsInitialized(vm::ptr<SceFiosParams> pOutParameters)
+bool sceFiosIsInitialized(vm::psv::ptr<SceFiosParams> pOutParameters)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-void sceFiosUpdateParameters(vm::cptr<SceFiosParams> pParameters)
+void sceFiosUpdateParameters(vm::psv::ptr<const SceFiosParams> pParameters)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-void sceFiosSetGlobalDefaultOpAttr(vm::cptr<SceFiosOpAttr> pAttr)
+void sceFiosSetGlobalDefaultOpAttr(vm::psv::ptr<const SceFiosOpAttr> pAttr)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-bool sceFiosGetGlobalDefaultOpAttr(vm::ptr<SceFiosOpAttr> pOutAttr)
+bool sceFiosGetGlobalDefaultOpAttr(vm::psv::ptr<SceFiosOpAttr> pOutAttr)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-void sceFiosSetThreadDefaultOpAttr(vm::cptr<SceFiosOpAttr> pAttr)
+void sceFiosSetThreadDefaultOpAttr(vm::psv::ptr<const SceFiosOpAttr> pAttr)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-bool sceFiosGetThreadDefaultOpAttr(vm::ptr<SceFiosOpAttr> pOutAttr)
+bool sceFiosGetThreadDefaultOpAttr(vm::psv::ptr<SceFiosOpAttr> pOutAttr)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-void sceFiosGetDefaultOpAttr(vm::ptr<SceFiosOpAttr> pOutAttr)
+void sceFiosGetDefaultOpAttr(vm::psv::ptr<SceFiosOpAttr> pOutAttr)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 void sceFiosSuspend()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 u32 sceFiosGetSuspendCount()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 bool sceFiosIsSuspended()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 void sceFiosResume()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 void sceFiosShutdownAndCancelOps()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 void sceFiosCancelAllOps()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 void sceFiosCloseAllFiles()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 bool sceFiosIsIdle()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-u32 sceFiosGetAllFHs(vm::ptr<s32> pOutArray, u32 arraySize)
+u32 sceFiosGetAllFHs(vm::psv::ptr<SceFiosFH> pOutArray, u32 arraySize)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-u32 sceFiosGetAllDHs(vm::ptr<s32> pOutArray, u32 arraySize)
+u32 sceFiosGetAllDHs(vm::psv::ptr<SceFiosDH> pOutArray, u32 arraySize)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-u32 sceFiosGetAllOps(vm::ptr<s32> pOutArray, u32 arraySize)
+u32 sceFiosGetAllOps(vm::psv::ptr<SceFiosOp> pOutArray, u32 arraySize)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-bool sceFiosIsValidHandle(s32 h)
+bool sceFiosIsValidHandle(SceFiosHandle h)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceFiosPathcmp(vm::cptr<char> pA, vm::cptr<char> pB)
+s32 sceFiosPathcmp(vm::psv::ptr<const char> pA, vm::psv::ptr<const char> pB)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceFiosPathncmp(vm::cptr<char> pA, vm::cptr<char> pB, u32 n)
+s32 sceFiosPathncmp(vm::psv::ptr<const char> pA, vm::psv::ptr<const char> pB, u32 n)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceFiosPrintf(vm::cptr<char> pFormat, armv7_va_args_t va_args)
+s32 sceFiosPrintf(vm::psv::ptr<const char> pFormat) // va_args...
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceFiosVprintf(vm::cptr<char> pFormat) // va_list
+s32 sceFiosVprintf(vm::psv::ptr<const char> pFormat) // va_list
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceFiosFileExists(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath, vm::ptr<bool> pOutExists)
+SceFiosOp sceFiosFileExists(vm::psv::ptr<const SceFiosOpAttr> pAttr, vm::psv::ptr<const char> pPath, vm::psv::ptr<bool> pOutExists)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-bool sceFiosFileExistsSync(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath)
+bool sceFiosFileExistsSync(vm::psv::ptr<const SceFiosOpAttr> pAttr, vm::psv::ptr<const char> pPath)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceFiosFileGetSize(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath, vm::ptr<s64> pOutSize)
+SceFiosOp sceFiosFileGetSize(vm::psv::ptr<const SceFiosOpAttr> pAttr, vm::psv::ptr<const char> pPath, vm::psv::ptr<SceFiosSize> pOutSize)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s64 sceFiosFileGetSizeSync(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath)
+SceFiosSize sceFiosFileGetSizeSync(vm::psv::ptr<const SceFiosOpAttr> pAttr, vm::psv::ptr<const char> pPath)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceFiosFileDelete(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath)
+SceFiosOp sceFiosFileDelete(vm::psv::ptr<const SceFiosOpAttr> pAttr, vm::psv::ptr<const char> pPath)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceFiosFileDeleteSync(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath)
+s32 sceFiosFileDeleteSync(vm::psv::ptr<const SceFiosOpAttr> pAttr, vm::psv::ptr<const char> pPath)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceFiosDirectoryExists(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath, vm::ptr<bool> pOutExists)
+SceFiosOp sceFiosDirectoryExists(vm::psv::ptr<const SceFiosOpAttr> pAttr, vm::psv::ptr<const char> pPath, vm::psv::ptr<bool> pOutExists)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-bool sceFiosDirectoryExistsSync(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath)
+bool sceFiosDirectoryExistsSync(vm::psv::ptr<const SceFiosOpAttr> pAttr, vm::psv::ptr<const char> pPath)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceFiosDirectoryCreate(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath)
+SceFiosOp sceFiosDirectoryCreate(vm::psv::ptr<const SceFiosOpAttr> pAttr, vm::psv::ptr<const char> pPath)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceFiosDirectoryCreateSync(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath)
+s32 sceFiosDirectoryCreateSync(vm::psv::ptr<const SceFiosOpAttr> pAttr, vm::psv::ptr<const char> pPath)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceFiosDirectoryDelete(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath)
+SceFiosOp sceFiosDirectoryDelete(vm::psv::ptr<const SceFiosOpAttr> pAttr, vm::psv::ptr<const char> pPath)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceFiosDirectoryDeleteSync(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath)
+s32 sceFiosDirectoryDeleteSync(vm::psv::ptr<const SceFiosOpAttr> pAttr, vm::psv::ptr<const char> pPath)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceFiosExists(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath, vm::ptr<bool> pOutExists)
+SceFiosOp sceFiosExists(vm::psv::ptr<const SceFiosOpAttr> pAttr, vm::psv::ptr<const char> pPath, vm::psv::ptr<bool> pOutExists)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-bool sceFiosExistsSync(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath)
+bool sceFiosExistsSync(vm::psv::ptr<const SceFiosOpAttr> pAttr, vm::psv::ptr<const char> pPath)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceFiosStat(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath, vm::ptr<SceFiosStat> pOutStatus)
+SceFiosOp sceFiosStat(vm::psv::ptr<const SceFiosOpAttr> pAttr, vm::psv::ptr<const char> pPath, vm::psv::ptr<SceFiosStat> pOutStatus)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceFiosStatSync(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath, vm::ptr<SceFiosStat> pOutStatus)
+s32 sceFiosStatSync(vm::psv::ptr<const SceFiosOpAttr> pAttr, vm::psv::ptr<const char> pPath, vm::psv::ptr<SceFiosStat> pOutStatus)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceFiosDelete(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath)
+SceFiosOp sceFiosDelete(vm::psv::ptr<const SceFiosOpAttr> pAttr, vm::psv::ptr<const char> pPath)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceFiosDeleteSync(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath)
+s32 sceFiosDeleteSync(vm::psv::ptr<const SceFiosOpAttr> pAttr, vm::psv::ptr<const char> pPath)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceFiosResolve(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<SceFiosTuple> pInTuple, vm::ptr<SceFiosTuple> pOutTuple)
+SceFiosOp sceFiosResolve(vm::psv::ptr<const SceFiosOpAttr> pAttr, vm::psv::ptr<const SceFiosTuple> pInTuple, vm::psv::ptr<SceFiosTuple> pOutTuple)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceFiosResolveSync(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<SceFiosTuple> pInTuple, vm::ptr<SceFiosTuple> pOutTuple)
+s32 sceFiosResolveSync(vm::psv::ptr<const SceFiosOpAttr> pAttr, vm::psv::ptr<const SceFiosTuple> pInTuple, vm::psv::ptr<SceFiosTuple> pOutTuple)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceFiosRename(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pOldPath, vm::cptr<char> pNewPath)
+SceFiosOp sceFiosRename(vm::psv::ptr<const SceFiosOpAttr> pAttr, vm::psv::ptr<const char> pOldPath, vm::psv::ptr<const char> pNewPath)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceFiosRenameSync(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pOldPath, vm::cptr<char> pNewPath)
+s32 sceFiosRenameSync(vm::psv::ptr<const SceFiosOpAttr> pAttr, vm::psv::ptr<const char> pOldPath, vm::psv::ptr<const char> pNewPath)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceFiosFileRead(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath, vm::ptr<void> pBuf, s64 length, s64 offset)
+SceFiosOp sceFiosFileRead(vm::psv::ptr<const SceFiosOpAttr> pAttr, vm::psv::ptr<const char> pPath, vm::psv::ptr<void> pBuf, SceFiosSize length, SceFiosOffset offset)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s64 sceFiosFileReadSync(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath, vm::ptr<void> pBuf, s64 length, s64 offset)
+SceFiosSize sceFiosFileReadSync(vm::psv::ptr<const SceFiosOpAttr> pAttr, vm::psv::ptr<const char> pPath, vm::psv::ptr<void> pBuf, SceFiosSize length, SceFiosOffset offset)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceFiosFileWrite(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath, vm::cptr<void> pBuf, s64 length, s64 offset)
+SceFiosOp sceFiosFileWrite(vm::psv::ptr<const SceFiosOpAttr> pAttr, vm::psv::ptr<const char> pPath, vm::psv::ptr<const void> pBuf, SceFiosSize length, SceFiosOffset offset)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s64 sceFiosFileWriteSync(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath, vm::cptr<void> pBuf, s64 length, s64 offset)
+SceFiosSize sceFiosFileWriteSync(vm::psv::ptr<const SceFiosOpAttr> pAttr, vm::psv::ptr<const char> pPath, vm::psv::ptr<const void> pBuf, SceFiosSize length, SceFiosOffset offset)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceFiosFileTruncate(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath, s64 length)
+SceFiosOp sceFiosFileTruncate(vm::psv::ptr<const SceFiosOpAttr> pAttr, vm::psv::ptr<const char> pPath, SceFiosSize length)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceFiosFileTruncateSync(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath, s64 length)
+s32 sceFiosFileTruncateSync(vm::psv::ptr<const SceFiosOpAttr> pAttr, vm::psv::ptr<const char> pPath, SceFiosSize length)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceFiosFHOpen(vm::cptr<SceFiosOpAttr> pAttr, vm::ptr<s32> pOutFH, vm::cptr<char> pPath, vm::cptr<SceFiosOpenParams> pOpenParams)
+SceFiosOp sceFiosFHOpen(vm::psv::ptr<const SceFiosOpAttr> pAttr, vm::psv::ptr<SceFiosFH> pOutFH, vm::psv::ptr<const char> pPath, vm::psv::ptr<const SceFiosOpenParams> pOpenParams)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceFiosFHOpenSync(vm::cptr<SceFiosOpAttr> pAttr, vm::ptr<s32> pOutFH, vm::cptr<char> pPath, vm::cptr<SceFiosOpenParams> pOpenParams)
+s32 sceFiosFHOpenSync(vm::psv::ptr<const SceFiosOpAttr> pAttr, vm::psv::ptr<SceFiosFH> pOutFH, vm::psv::ptr<const char> pPath, vm::psv::ptr<const SceFiosOpenParams> pOpenParams)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceFiosFHStat(vm::cptr<SceFiosOpAttr> pAttr, s32 fh, vm::ptr<SceFiosStat> pOutStatus)
+SceFiosOp sceFiosFHStat(vm::psv::ptr<const SceFiosOpAttr> pAttr, SceFiosFH fh, vm::psv::ptr<SceFiosStat> pOutStatus)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceFiosFHStatSync(vm::cptr<SceFiosOpAttr> pAttr, s32 fh, vm::ptr<SceFiosStat> pOutStatus)
+s32 sceFiosFHStatSync(vm::psv::ptr<const SceFiosOpAttr> pAttr, SceFiosFH fh, vm::psv::ptr<SceFiosStat> pOutStatus)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceFiosFHTruncate(vm::cptr<SceFiosOpAttr> pAttr, s32 fh, s64 length)
+SceFiosOp sceFiosFHTruncate(vm::psv::ptr<const SceFiosOpAttr> pAttr, SceFiosFH fh, SceFiosSize length)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceFiosFHTruncateSync(vm::cptr<SceFiosOpAttr> pAttr, s32 fh, s64 length)
+s32 sceFiosFHTruncateSync(vm::psv::ptr<const SceFiosOpAttr> pAttr, SceFiosFH fh, SceFiosSize length)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceFiosFHSync(vm::cptr<SceFiosOpAttr> pAttr, s32 fh)
+SceFiosOp sceFiosFHSync(vm::psv::ptr<const SceFiosOpAttr> pAttr, SceFiosFH fh)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceFiosFHSyncSync(vm::cptr<SceFiosOpAttr> pAttr, s32 fh)
+s32 sceFiosFHSyncSync(vm::psv::ptr<const SceFiosOpAttr> pAttr, SceFiosFH fh)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceFiosFHRead(vm::cptr<SceFiosOpAttr> pAttr, s32 fh, vm::ptr<void> pBuf, s64 length)
+SceFiosOp sceFiosFHRead(vm::psv::ptr<const SceFiosOpAttr> pAttr, SceFiosFH fh, vm::psv::ptr<void> pBuf, SceFiosSize length)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s64 sceFiosFHReadSync(vm::cptr<SceFiosOpAttr> pAttr, s32 fh, vm::ptr<void> pBuf, s64 length)
+SceFiosSize sceFiosFHReadSync(vm::psv::ptr<const SceFiosOpAttr> pAttr, SceFiosFH fh, vm::psv::ptr<void> pBuf, SceFiosSize length)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceFiosFHWrite(vm::cptr<SceFiosOpAttr> pAttr, s32 fh, vm::cptr<void> pBuf, s64 length)
+SceFiosOp sceFiosFHWrite(vm::psv::ptr<const SceFiosOpAttr> pAttr, SceFiosFH fh, vm::psv::ptr<const void> pBuf, SceFiosSize length)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s64 sceFiosFHWriteSync(vm::cptr<SceFiosOpAttr> pAttr, s32 fh, vm::cptr<void> pBuf, s64 length)
+SceFiosSize sceFiosFHWriteSync(vm::psv::ptr<const SceFiosOpAttr> pAttr, SceFiosFH fh, vm::psv::ptr<const void> pBuf, SceFiosSize length)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceFiosFHReadv(vm::cptr<SceFiosOpAttr> pAttr, s32 fh, vm::cptr<SceFiosBuffer> iov, s32 iovcnt)
+SceFiosOp sceFiosFHReadv(vm::psv::ptr<const SceFiosOpAttr> pAttr, SceFiosFH fh, vm::psv::ptr<const SceFiosBuffer> iov, s32 iovcnt)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s64 sceFiosFHReadvSync(vm::cptr<SceFiosOpAttr> pAttr, s32 fh, vm::cptr<SceFiosBuffer> iov, s32 iovcnt)
+SceFiosSize sceFiosFHReadvSync(vm::psv::ptr<const SceFiosOpAttr> pAttr, SceFiosFH fh, vm::psv::ptr<const SceFiosBuffer> iov, s32 iovcnt)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceFiosFHWritev(vm::cptr<SceFiosOpAttr> pAttr, s32 fh, vm::cptr<SceFiosBuffer> iov, s32 iovcnt)
+SceFiosOp sceFiosFHWritev(vm::psv::ptr<const SceFiosOpAttr> pAttr, SceFiosFH fh, vm::psv::ptr<const SceFiosBuffer> iov, s32 iovcnt)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s64 sceFiosFHWritevSync(vm::cptr<SceFiosOpAttr> pAttr, s32 fh, vm::cptr<SceFiosBuffer> iov, s32 iovcnt)
+SceFiosSize sceFiosFHWritevSync(vm::psv::ptr<const SceFiosOpAttr> pAttr, SceFiosFH fh, vm::psv::ptr<const SceFiosBuffer> iov, s32 iovcnt)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceFiosFHPread(vm::cptr<SceFiosOpAttr> pAttr, s32 fh, vm::ptr<void> pBuf, s64 length, s64 offset)
+SceFiosOp sceFiosFHPread(vm::psv::ptr<const SceFiosOpAttr> pAttr, SceFiosFH fh, vm::psv::ptr<void> pBuf, SceFiosSize length, SceFiosOffset offset)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s64 sceFiosFHPreadSync(vm::cptr<SceFiosOpAttr> pAttr, s32 fh, vm::ptr<void> pBuf, s64 length, s64 offset)
+SceFiosSize sceFiosFHPreadSync(vm::psv::ptr<const SceFiosOpAttr> pAttr, SceFiosFH fh, vm::psv::ptr<void> pBuf, SceFiosSize length, SceFiosOffset offset)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceFiosFHPwrite(vm::cptr<SceFiosOpAttr> pAttr, s32 fh, vm::cptr<void> pBuf, s64 length, s64 offset)
+SceFiosOp sceFiosFHPwrite(vm::psv::ptr<const SceFiosOpAttr> pAttr, SceFiosFH fh, vm::psv::ptr<const void> pBuf, SceFiosSize length, SceFiosOffset offset)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s64 sceFiosFHPwriteSync(vm::cptr<SceFiosOpAttr> pAttr, s32 fh, vm::cptr<void> pBuf, s64 length, s64 offset)
+SceFiosSize sceFiosFHPwriteSync(vm::psv::ptr<const SceFiosOpAttr> pAttr, SceFiosFH fh, vm::psv::ptr<const void> pBuf, SceFiosSize length, SceFiosOffset offset)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceFiosFHPreadv(vm::cptr<SceFiosOpAttr> pAttr, s32 fh, vm::cptr<SceFiosBuffer> iov, s32 iovcnt, s64 offset)
+SceFiosOp sceFiosFHPreadv(vm::psv::ptr<const SceFiosOpAttr> pAttr, SceFiosFH fh, vm::psv::ptr<const SceFiosBuffer> iov, s32 iovcnt, SceFiosOffset offset)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s64 sceFiosFHPreadvSync(vm::cptr<SceFiosOpAttr> pAttr, s32 fh, vm::cptr<SceFiosBuffer> iov, s32 iovcnt, s64 offset)
+SceFiosSize sceFiosFHPreadvSync(vm::psv::ptr<const SceFiosOpAttr> pAttr, SceFiosFH fh, vm::psv::ptr<const SceFiosBuffer> iov, s32 iovcnt, SceFiosOffset offset)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceFiosFHPwritev(vm::cptr<SceFiosOpAttr> pAttr, s32 fh, vm::cptr<SceFiosBuffer> iov, s32 iovcnt, s64 offset)
+SceFiosOp sceFiosFHPwritev(vm::psv::ptr<const SceFiosOpAttr> pAttr, SceFiosFH fh, vm::psv::ptr<const SceFiosBuffer> iov, s32 iovcnt, SceFiosOffset offset)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s64 sceFiosFHPwritevSync(vm::cptr<SceFiosOpAttr> pAttr, s32 fh, vm::cptr<SceFiosBuffer> iov, s32 iovcnt, s64 offset)
+SceFiosSize sceFiosFHPwritevSync(vm::psv::ptr<const SceFiosOpAttr> pAttr, SceFiosFH fh, vm::psv::ptr<const SceFiosBuffer> iov, s32 iovcnt, SceFiosOffset offset)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceFiosFHClose(vm::cptr<SceFiosOpAttr> pAttr, s32 fh)
+SceFiosOp sceFiosFHClose(vm::psv::ptr<const SceFiosOpAttr> pAttr, SceFiosFH fh)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceFiosFHCloseSync(vm::cptr<SceFiosOpAttr> pAttr, s32 fh)
+s32 sceFiosFHCloseSync(vm::psv::ptr<const SceFiosOpAttr> pAttr, SceFiosFH fh)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s64 sceFiosFHSeek(s32 fh, s64 offset, SceFiosWhence whence)
+SceFiosOffset sceFiosFHSeek(SceFiosFH fh, SceFiosOffset offset, SceFiosWhence whence)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s64 sceFiosFHTell(s32 fh)
+SceFiosOffset sceFiosFHTell(SceFiosFH fh)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-vm::cptr<char> sceFiosFHGetPath(s32 fh)
+vm::psv::ptr<const char> sceFiosFHGetPath(SceFiosFH fh)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s64 sceFiosFHGetSize(s32 fh)
+SceFiosSize sceFiosFHGetSize(SceFiosFH fh)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-vm::ptr<SceFiosOpenParams> sceFiosFHGetOpenParams(s32 fh)
+vm::psv::ptr<SceFiosOpenParams> sceFiosFHGetOpenParams(SceFiosFH fh)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceFiosDHOpen(vm::cptr<SceFiosOpAttr> pAttr, vm::ptr<s32> pOutDH, vm::cptr<char> pPath, SceFiosBuffer buf)
-{
-	throw EXCEPTION("");
-}
-
-s32 sceFiosDHOpenSync(vm::cptr<SceFiosOpAttr> pAttr, vm::ptr<s32> pOutDH, vm::cptr<char> pPath, SceFiosBuffer buf)
-{
-	throw EXCEPTION("");
-}
+//SceFiosOp sceFiosDHOpen(vm::psv::ptr<const SceFiosOpAttr> pAttr, vm::psv::ptr<SceFiosDH> pOutDH, vm::psv::ptr<const char> pPath, SceFiosBuffer buf)
+//{
+//	throw __FUNCTION__;
+//}
+//
+//s32 sceFiosDHOpenSync(vm::psv::ptr<const SceFiosOpAttr> pAttr, vm::psv::ptr<SceFiosDH> pOutDH, vm::psv::ptr<const char> pPath, SceFiosBuffer buf)
+//{
+//	throw __FUNCTION__;
+//}
 
-s32 sceFiosDHRead(vm::cptr<SceFiosOpAttr> pAttr, s32 dh, vm::ptr<SceFiosDirEntry> pOutEntry)
+SceFiosOp sceFiosDHRead(vm::psv::ptr<const SceFiosOpAttr> pAttr, SceFiosDH dh, vm::psv::ptr<SceFiosDirEntry> pOutEntry)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceFiosDHReadSync(vm::cptr<SceFiosOpAttr> pAttr, s32 dh, vm::ptr<SceFiosDirEntry> pOutEntry)
+s32 sceFiosDHReadSync(vm::psv::ptr<const SceFiosOpAttr> pAttr, SceFiosDH dh, vm::psv::ptr<SceFiosDirEntry> pOutEntry)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceFiosDHClose(vm::cptr<SceFiosOpAttr> pAttr, s32 dh)
+SceFiosOp sceFiosDHClose(vm::psv::ptr<const SceFiosOpAttr> pAttr, SceFiosDH dh)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceFiosDHCloseSync(vm::cptr<SceFiosOpAttr> pAttr, s32 dh)
+s32 sceFiosDHCloseSync(vm::psv::ptr<const SceFiosOpAttr> pAttr, SceFiosDH dh)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-vm::cptr<char> sceFiosDHGetPath(s32 dh)
+vm::psv::ptr<const char> sceFiosDHGetPath(SceFiosDH dh)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-bool sceFiosOpIsDone(s32 op)
+bool sceFiosOpIsDone(SceFiosOp op)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceFiosOpWait(s32 op)
+s32 sceFiosOpWait(SceFiosOp op)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceFiosOpWaitUntil(s32 op, s64 deadline)
+s32 sceFiosOpWaitUntil(SceFiosOp op, SceFiosTime deadline)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-void sceFiosOpDelete(s32 op)
+void sceFiosOpDelete(SceFiosOp op)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceFiosOpSyncWait(s32 op)
+s32 sceFiosOpSyncWait(SceFiosOp op)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s64 sceFiosOpSyncWaitForIO(s32 op)
+SceFiosSize sceFiosOpSyncWaitForIO(SceFiosOp op)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceFiosOpGetError(s32 op)
+s32 sceFiosOpGetError(SceFiosOp op)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-void sceFiosOpCancel(s32 op)
+void sceFiosOpCancel(SceFiosOp op)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-bool sceFiosOpIsCancelled(s32 op)
+bool sceFiosOpIsCancelled(SceFiosOp op)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-vm::cptr<SceFiosOpAttr> sceFiosOpGetAttr(s32 op)
+vm::psv::ptr<const SceFiosOpAttr> sceFiosOpGetAttr(SceFiosOp op)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-vm::cptr<char> sceFiosOpGetPath(s32 op)
+vm::psv::ptr<const char> sceFiosOpGetPath(SceFiosOp op)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-vm::ptr<void> sceFiosOpGetBuffer(s32 op)
+vm::psv::ptr<void> sceFiosOpGetBuffer(SceFiosOp op)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s64 sceFiosOpGetOffset(s32 op)
+SceFiosOffset sceFiosOpGetOffset(SceFiosOp op)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s64 sceFiosOpGetRequestCount(s32 op)
+SceFiosSize sceFiosOpGetRequestCount(SceFiosOp op)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s64 sceFiosOpGetActualCount(s32 op)
+SceFiosSize sceFiosOpGetActualCount(SceFiosOp op)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-void sceFiosOpReschedule(s32 op, s64 newDeadline)
+void sceFiosOpReschedule(SceFiosOp op, SceFiosTime newDeadline)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s64 sceFiosTimeGetCurrent()
+SceFiosTime sceFiosTimeGetCurrent()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s64 sceFiosTimeIntervalToNanoseconds(s64 interval)
+s64 sceFiosTimeIntervalToNanoseconds(SceFiosTimeInterval interval)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s64 sceFiosTimeIntervalFromNanoseconds(s64 ns)
+SceFiosTimeInterval sceFiosTimeIntervalFromNanoseconds(s64 ns)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-u64 sceFiosDateGetCurrent()
+SceFiosDate sceFiosDateGetCurrent()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-u64 sceFiosDateFromComponents(vm::cptr<tm> pComponents)
+SceFiosDate sceFiosDateFromComponents(vm::psv::ptr<const tm> pComponents)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-vm::ptr<tm> sceFiosDateToComponents(u64 date, vm::ptr<tm> pOutComponents)
+vm::psv::ptr<tm> sceFiosDateToComponents(SceFiosDate date, vm::psv::ptr<tm> pOutComponents)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-u64 sceFiosDateFromSceDateTime(vm::cptr<SceDateTime> pSceDateTime)
+SceFiosDate sceFiosDateFromSceDateTime(vm::psv::ptr<const SceDateTime> pSceDateTime)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-vm::ptr<SceDateTime> sceFiosDateToSceDateTime(u64 date, vm::ptr<SceDateTime> pSceDateTime)
+vm::psv::ptr<SceDateTime> sceFiosDateToSceDateTime(SceFiosDate date, vm::psv::ptr<SceDateTime> pSceDateTime)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceFiosOverlayAdd(vm::cptr<SceFiosOverlay> pOverlay, vm::ptr<s32> pOutID)
+s32 sceFiosOverlayAdd(vm::psv::ptr<const SceFiosOverlay> pOverlay, vm::psv::ptr<SceFiosOverlayID> pOutID)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceFiosOverlayRemove(s32 id)
+s32 sceFiosOverlayRemove(SceFiosOverlayID id)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceFiosOverlayGetInfo(s32 id, vm::ptr<SceFiosOverlay> pOutOverlay)
+s32 sceFiosOverlayGetInfo(SceFiosOverlayID id, vm::psv::ptr<SceFiosOverlay> pOutOverlay)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceFiosOverlayModify(s32 id, vm::cptr<SceFiosOverlay> pNewValue)
+s32 sceFiosOverlayModify(SceFiosOverlayID id, vm::psv::ptr<const SceFiosOverlay> pNewValue)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceFiosOverlayGetList(vm::ptr<s32> pOutIDs, u32 maxIDs, vm::ptr<u32> pActualIDs)
+s32 sceFiosOverlayGetList(vm::psv::ptr<SceFiosOverlayID> pOutIDs, u32 maxIDs, vm::psv::ptr<u32> pActualIDs)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceFiosOverlayResolveSync(s32 resolveFlag, vm::cptr<char> pInPath, vm::ptr<char> pOutPath, u32 maxPath)
+s32 sceFiosOverlayResolveSync(s32 resolveFlag, vm::psv::ptr<const char> pInPath, vm::psv::ptr<char> pOutPath, u32 maxPath)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceFiosArchiveGetMountBufferSize(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pArchivePath, vm::cptr<SceFiosOpenParams> pOpenParams)
+SceFiosOp sceFiosArchiveGetMountBufferSize(vm::psv::ptr<const SceFiosOpAttr> pAttr, vm::psv::ptr<const char> pArchivePath, vm::psv::ptr<const SceFiosOpenParams> pOpenParams)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s64 sceFiosArchiveGetMountBufferSizeSync(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pArchivePath, vm::cptr<SceFiosOpenParams> pOpenParams)
+SceFiosSize sceFiosArchiveGetMountBufferSizeSync(vm::psv::ptr<const SceFiosOpAttr> pAttr, vm::psv::ptr<const char> pArchivePath, vm::psv::ptr<const SceFiosOpenParams> pOpenParams)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceFiosArchiveMount(vm::cptr<SceFiosOpAttr> pAttr, vm::ptr<s32> pOutFH, vm::cptr<char> pArchivePath, vm::cptr<char> pMountPoint, SceFiosBuffer mountBuffer, vm::cptr<SceFiosOpenParams> pOpenParams)
-{
-	throw EXCEPTION("");
-}
-
-s32 sceFiosArchiveMountSync(vm::cptr<SceFiosOpAttr> pAttr, vm::ptr<s32> pOutFH, vm::cptr<char> pArchivePath, vm::cptr<char> pMountPoint, SceFiosBuffer mountBuffer, vm::cptr<SceFiosOpenParams> pOpenParams)
-{
-	throw EXCEPTION("");
-}
+//SceFiosOp sceFiosArchiveMount(vm::psv::ptr<const SceFiosOpAttr> pAttr, vm::psv::ptr<SceFiosFH> pOutFH, vm::psv::ptr<const char> pArchivePath, vm::psv::ptr<const char> pMountPoint, SceFiosBuffer mountBuffer, vm::psv::ptr<const SceFiosOpenParams> pOpenParams)
+//{
+//	throw __FUNCTION__;
+//}
+//
+//s32 sceFiosArchiveMountSync(vm::psv::ptr<const SceFiosOpAttr> pAttr, vm::psv::ptr<SceFiosFH> pOutFH, vm::psv::ptr<const char> pArchivePath, vm::psv::ptr<const char> pMountPoint, SceFiosBuffer mountBuffer, vm::psv::ptr<const SceFiosOpenParams> pOpenParams)
+//{
+//	throw __FUNCTION__;
+//}
 
-s32 sceFiosArchiveUnmount(vm::cptr<SceFiosOpAttr> pAttr, s32 fh)
+SceFiosOp sceFiosArchiveUnmount(vm::psv::ptr<const SceFiosOpAttr> pAttr, SceFiosFH fh)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceFiosArchiveUnmountSync(vm::cptr<SceFiosOpAttr> pAttr, s32 fh)
+s32 sceFiosArchiveUnmountSync(vm::psv::ptr<const SceFiosOpAttr> pAttr, SceFiosFH fh)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-vm::ptr<char> sceFiosDebugDumpError(s32 err, vm::ptr<char> pBuffer, u32 bufferSize)
+vm::psv::ptr<char> sceFiosDebugDumpError(s32 err, vm::psv::ptr<char> pBuffer, u32 bufferSize)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-vm::ptr<char> sceFiosDebugDumpOp(s32 op, vm::ptr<char> pBuffer, u32 bufferSize)
+vm::psv::ptr<char> sceFiosDebugDumpOp(SceFiosOp op, vm::psv::ptr<char> pBuffer, u32 bufferSize)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-vm::ptr<char> sceFiosDebugDumpFH(s32 fh, vm::ptr<char> pBuffer, u32 bufferSize)
+vm::psv::ptr<char> sceFiosDebugDumpFH(SceFiosFH fh, vm::psv::ptr<char> pBuffer, u32 bufferSize)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-vm::ptr<char> sceFiosDebugDumpDH(s32 dh, vm::ptr<char> pBuffer, u32 bufferSize)
+vm::psv::ptr<char> sceFiosDebugDumpDH(SceFiosDH dh, vm::psv::ptr<char> pBuffer, u32 bufferSize)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-vm::ptr<char> sceFiosDebugDumpDate(u64 date, vm::ptr<char> pBuffer, u32 bufferSize)
+vm::psv::ptr<char> sceFiosDebugDumpDate(SceFiosDate date, vm::psv::ptr<char> pBuffer, u32 bufferSize)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceFiosIOFilterAdd(s32 index, vm::ptr<SceFiosIOFilterCallback> pFilterCallback, vm::ptr<void> pFilterContext)
+s32 sceFiosIOFilterAdd(s32 index, SceFiosIOFilterCallback pFilterCallback, vm::psv::ptr<void> pFilterContext)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceFiosIOFilterGetInfo(s32 index, vm::pptr<SceFiosIOFilterCallback> pOutFilterCallback, vm::pptr<void> pOutFilterContext)
+s32 sceFiosIOFilterGetInfo(s32 index, vm::psv::ptr<SceFiosIOFilterCallback> pOutFilterCallback, vm::psv::pptr<void> pOutFilterContext)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceFiosIOFilterRemove(s32 index)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 void sceFiosIOFilterPsarcDearchiver()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 #define REG_FUNC(nid, name) reg_psv_func(nid, &sceFios, #name, name)
@@ -691,7 +809,6 @@ psv_log_base sceFios("SceFios2", []()
 	sceFios.on_load = nullptr;
 	sceFios.on_unload = nullptr;
 	sceFios.on_stop = nullptr;
-	sceFios.on_error = nullptr;
 
 	REG_FUNC(0x15857180, sceFiosArchiveGetMountBufferSize);
 	REG_FUNC(0xDF3352FC, sceFiosArchiveGetMountBufferSizeSync);

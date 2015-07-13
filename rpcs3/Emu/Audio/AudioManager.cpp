@@ -36,3 +36,8 @@ void AudioManager::Close()
 	delete m_audio_out;
 	m_audio_out = nullptr;
 }
+
+u8 AudioManager::GetState()
+{
+	return CELL_AUDIO_OUT_OUTPUT_STATE_ENABLED;
+}

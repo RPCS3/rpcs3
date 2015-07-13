@@ -28,7 +28,7 @@ public:
 	struct SPURecEntry
 	{
 		u32 count; // count of instructions compiled from current point (and to be checked)
-		be_t<u32> _valid; // copy of valid opcode for validation
+		u32 valid; // copy of valid opcode for validation
 		void* pointer; // pointer to executable memory object
 	};
 
@@ -69,16 +69,26 @@ public:
 
 	struct XmmLink
 	{
-		asmjit::X86XmmVar* data = nullptr;
-		s8 reg = -1;
-		bool taken = false;
-		mutable bool got = false;
-		mutable u32 access = 0;
+		asmjit::X86XmmVar* data;
+		s8 reg;
+		bool taken;
+		mutable bool got;
+		mutable u32 access;
+
+		XmmLink()
+			: data(nullptr)
+			, reg(-1)
+			, taken(false)
+			, got(false)
+			, access(0)
+		{
+		}
 
 		const asmjit::X86XmmVar& get() const
 		{
 			assert(data);
-			if (!taken) throw EXCEPTION("Register not taken");
+			assert(taken);
+			if (!taken) throw "XmmLink::get(): wrong use";
 			got = true;
 			return *data;
 		}

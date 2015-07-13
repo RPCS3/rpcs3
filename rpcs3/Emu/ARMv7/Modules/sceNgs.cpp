@@ -2,321 +2,430 @@
 #include "Emu/System.h"
 #include "Emu/ARMv7/PSVFuncList.h"
 
-#include "sceNgs.h"
+extern psv_log_base sceNgs;
 
-s32 sceNgsSystemGetRequiredMemorySize(vm::cptr<SceNgsSystemInitParams> pSynthParams, vm::ptr<u32> pnSize)
+struct SceNgsVoiceDefinition;
+
+typedef u32 SceNgsModuleID;
+typedef u32 SceNgsParamsID;
+typedef vm::psv::ptr<void> SceNgsHVoice;
+typedef vm::psv::ptr<void> SceNgsHPatch;
+typedef vm::psv::ptr<void> SceNgsHSynSystem;
+typedef vm::psv::ptr<void> SceNgsHRack;
+
+struct SceNgsModuleParamHeader
 {
-	throw EXCEPTION("");
+	s32 moduleId;
+	s32 chan;
+};
+
+struct SceNgsParamsDescriptor
+{
+	SceNgsParamsID id;
+	u32 size;
+};
+
+struct SceNgsBufferInfo
+{
+	vm::psv::ptr<void> data;
+	u32 size;
+};
+
+struct SceNgsVoicePreset
+{
+	s32 nNameOffset;
+	u32 uNameLength;
+	s32 nPresetDataOffset;
+	u32 uSizePresetData;
+	s32 nBypassFlagsOffset;
+	u32 uNumBypassFlags;
+};
+
+struct SceNgsSystemInitParams
+{
+	s32 nMaxRacks;
+	s32 nMaxVoices;
+	s32 nGranularity;
+	s32 nSampleRate;
+	s32 nMaxModules;
+};
+
+struct SceNgsRackDescription
+{
+	vm::psv::ptr<const SceNgsVoiceDefinition> pVoiceDefn;
+	s32 nVoices;
+	s32 nChannelsPerVoice;
+	s32 nMaxPatchesPerInput;
+	s32 nPatchesPerOutput;
+	vm::psv::ptr<void> pUserReleaseData;
+};
+
+struct SceNgsPatchSetupInfo
+{
+	SceNgsHVoice hVoiceSource;
+	s32 nSourceOutputIndex;
+	s32 nSourceOutputSubIndex;
+	SceNgsHVoice hVoiceDestination;
+	s32 nTargetInputIndex;
+};
+
+struct SceNgsVolumeMatrix
+{
+	float m[2][2];
+};
+
+struct SceNgsPatchRouteInfo
+{
+	s32 nOutputChannels;
+	s32 nInputChannels;
+	SceNgsVolumeMatrix vols;
+};
+
+struct SceNgsVoiceInfo
+{
+	u32 uVoiceState;
+	u32 uNumModules;
+	u32 uNumInputs;
+	u32 uNumOutputs;
+	u32 uNumPatchesPerOutput;
+};
+
+struct SceNgsCallbackInfo
+{
+	SceNgsHVoice hVoiceHandle;
+	SceNgsHRack hRackHandle;
+	SceNgsModuleID uModuleID;
+	s32 nCallbackData;
+	s32 nCallbackData2;
+	vm::psv::ptr<void> pCallbackPtr;
+	vm::psv::ptr<void> pUserData;
+};
+
+typedef vm::psv::ptr<void(vm::psv::ptr<const SceNgsCallbackInfo> pCallbackInfo)> SceNgsCallbackFunc;
+
+typedef SceNgsCallbackFunc SceNgsRackReleaseCallbackFunc;
+typedef SceNgsCallbackFunc SceNgsModuleCallbackFunc;
+typedef SceNgsCallbackFunc SceNgsParamsErrorCallbackFunc;
+
+struct SceSulphaNgsConfig
+{
+	u32 maxNamedObjects;
+	u32 maxTraceBufferBytes;
+};
+
+s32 sceNgsSystemGetRequiredMemorySize(vm::psv::ptr<const SceNgsSystemInitParams> pSynthParams, vm::psv::ptr<u32> pnSize)
+{
+	throw __FUNCTION__;
 }
 
-s32 sceNgsSystemInit(vm::ptr<void> pSynthSysMemory, const u32 uMemSize, vm::cptr<SceNgsSystemInitParams> pSynthParams, vm::ptr<SceNgsHSynSystem> pSystemHandle)
+s32 sceNgsSystemInit(vm::psv::ptr<void> pSynthSysMemory, const u32 uMemSize, vm::psv::ptr<const SceNgsSystemInitParams> pSynthParams, vm::psv::ptr<SceNgsHSynSystem> pSystemHandle)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceNgsSystemUpdate(SceNgsHSynSystem hSystemHandle)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceNgsSystemRelease(SceNgsHSynSystem hSystemHandle)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceNgsSystemLock(SceNgsHSynSystem hSystemHandle)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceNgsSystemUnlock(SceNgsHSynSystem hSystemHandle)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceNgsSystemSetParamErrorCallback(SceNgsHSynSystem hSystemHandle, vm::ptr<SceNgsCallbackFunc> callbackFuncPtr)
+s32 sceNgsSystemSetParamErrorCallback(SceNgsHSynSystem hSystemHandle, const SceNgsParamsErrorCallbackFunc callbackFuncPtr)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceNgsSystemSetFlags(SceNgsHSynSystem hSystemHandle, const u32 uSystemFlags)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceNgsRackGetRequiredMemorySize(SceNgsHSynSystem hSystemHandle, vm::cptr<SceNgsRackDescription> pRackDesc, vm::ptr<u32> pnSize)
+s32 sceNgsRackGetRequiredMemorySize(SceNgsHSynSystem hSystemHandle, vm::psv::ptr<const SceNgsRackDescription> pRackDesc, vm::psv::ptr<u32> pnSize)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceNgsRackInit(SceNgsHSynSystem hSystemHandle, vm::ptr<SceNgsBufferInfo> pRackBuffer, vm::cptr<SceNgsRackDescription> pRackDesc, vm::ptr<SceNgsHRack> pRackHandle)
+s32 sceNgsRackInit(SceNgsHSynSystem hSystemHandle, vm::psv::ptr<SceNgsBufferInfo> pRackBuffer, vm::psv::ptr<const SceNgsRackDescription> pRackDesc, vm::psv::ptr<SceNgsHRack> pRackHandle)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceNgsRackGetVoiceHandle(SceNgsHRack hRackHandle, const u32 uIndex, vm::ptr<SceNgsHVoice> pVoiceHandle)
+s32 sceNgsRackGetVoiceHandle(SceNgsHRack hRackHandle, const u32 uIndex, vm::psv::ptr<SceNgsHVoice> pVoiceHandle)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceNgsRackRelease(SceNgsHRack hRackHandle, vm::ptr<SceNgsCallbackFunc> callbackFuncPtr)
+s32 sceNgsRackRelease(SceNgsHRack hRackHandle, const SceNgsRackReleaseCallbackFunc callbackFuncPtr)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceNgsRackSetParamErrorCallback(SceNgsHRack hRackHandle, vm::ptr<SceNgsCallbackFunc> callbackFuncPtr)
+s32 sceNgsRackSetParamErrorCallback(SceNgsHRack hRackHandle, const SceNgsParamsErrorCallbackFunc callbackFuncPtr)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceNgsVoiceInit(SceNgsHVoice hVoiceHandle, vm::cptr<SceNgsVoicePreset> pPreset, const u32 uInitFlags)
+s32 sceNgsVoiceInit(SceNgsHVoice hVoiceHandle, vm::psv::ptr<const SceNgsVoicePreset> pPreset, const u32 uInitFlags)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceNgsVoicePlay(SceNgsHVoice hVoiceHandle)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceNgsVoiceKeyOff(SceNgsHVoice hVoiceHandle)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceNgsVoiceKill(SceNgsHVoice hVoiceHandle)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceNgsVoicePause(SceNgsHVoice hVoiceHandle)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceNgsVoiceResume(SceNgsHVoice hVoiceHandle)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceNgsVoiceSetPreset(SceNgsHVoice hVoiceHandle, vm::cptr<SceNgsVoicePreset> pVoicePreset)
+s32 sceNgsVoiceSetPreset(SceNgsHVoice hVoiceHandle, vm::psv::ptr<const SceNgsVoicePreset> pVoicePreset)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceNgsVoiceLockParams(SceNgsHVoice hVoiceHandle, const u32 uModule, const u32 uParamsInterfaceId, vm::ptr<SceNgsBufferInfo> pParamsBuffer)
+s32 sceNgsVoiceLockParams(SceNgsHVoice hVoiceHandle, const u32 uModule, const SceNgsParamsID uParamsInterfaceId, vm::psv::ptr<SceNgsBufferInfo> pParamsBuffer)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceNgsVoiceUnlockParams(SceNgsHVoice hVoiceHandle, const u32 uModule)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceNgsVoiceSetParamsBlock(SceNgsHVoice hVoiceHandle, vm::cptr<SceNgsModuleParamHeader> pParamData, const u32 uSize, vm::ptr<s32> pnErrorCount)
+s32 sceNgsVoiceSetParamsBlock(SceNgsHVoice hVoiceHandle, vm::psv::ptr<const SceNgsModuleParamHeader> pParamData, const u32 uSize, vm::psv::ptr<s32> pnErrorCount)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceNgsVoiceBypassModule(SceNgsHVoice hVoiceHandle, const u32 uModule, const u32 uBypassFlag)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceNgsVoiceSetModuleCallback(SceNgsHVoice hVoiceHandle, const u32 uModule, vm::ptr<SceNgsCallbackFunc> callbackFuncPtr, vm::ptr<void> pUserData)
+s32 sceNgsVoiceSetModuleCallback(SceNgsHVoice hVoiceHandle, const u32 uModule, const SceNgsModuleCallbackFunc callbackFuncPtr, vm::psv::ptr<void> pUserData)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceNgsVoiceSetFinishedCallback(SceNgsHVoice hVoiceHandle, vm::ptr<SceNgsCallbackFunc> callbackFuncPtr, vm::ptr<void> pUserData)
+s32 sceNgsVoiceSetFinishedCallback(SceNgsHVoice hVoiceHandle, const SceNgsCallbackFunc callbackFuncPtr, vm::psv::ptr<void> pUserData)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceNgsVoiceGetStateData(SceNgsHVoice hVoiceHandle, const u32 uModule, vm::ptr<void> pMem, const u32 uMemSize)
+s32 sceNgsVoiceGetStateData(SceNgsHVoice hVoiceHandle, const u32 uModule, vm::psv::ptr<void> pMem, const u32 uMemSize)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceNgsVoiceGetInfo(SceNgsHVoice hVoiceHandle, vm::ptr<SceNgsVoiceInfo> pInfo)
+s32 sceNgsVoiceGetInfo(SceNgsHVoice hVoiceHandle, vm::psv::ptr<SceNgsVoiceInfo> pInfo)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceNgsVoiceGetModuleType(SceNgsHVoice hVoiceHandle, const u32 uModule, vm::ptr<u32> pModuleType)
+s32 sceNgsVoiceGetModuleType(SceNgsHVoice hVoiceHandle, const u32 uModule, vm::psv::ptr<SceNgsModuleID> pModuleType)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceNgsVoiceGetModuleBypass(SceNgsHVoice hVoiceHandle, const u32 uModule, vm::ptr<u32> puBypassFlag)
+s32 sceNgsVoiceGetModuleBypass(SceNgsHVoice hVoiceHandle, const u32 uModule, vm::psv::ptr<u32> puBypassFlag)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceNgsVoiceGetParamsOutOfRange(SceNgsHVoice hVoiceHandle, const u32 uModule, vm::ptr<char> pszMessageBuffer)
+s32 sceNgsVoiceGetParamsOutOfRange(SceNgsHVoice hVoiceHandle, const u32 uModule, vm::psv::ptr<char> pszMessageBuffer)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceNgsPatchCreateRouting(vm::cptr<SceNgsPatchSetupInfo> pPatchInfo, vm::ptr<SceNgsHPatch> pPatchHandle)
+s32 sceNgsPatchCreateRouting(vm::psv::ptr<const SceNgsPatchSetupInfo> pPatchInfo, vm::psv::ptr<SceNgsHPatch> pPatchHandle)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceNgsPatchGetInfo(SceNgsHPatch hPatchHandle, vm::ptr<SceNgsPatchRouteInfo> pRouteInfo, vm::ptr<SceNgsPatchSetupInfo> pSetup)
+s32 sceNgsPatchGetInfo(SceNgsHPatch hPatchHandle, vm::psv::ptr<SceNgsPatchRouteInfo> pRouteInfo, vm::psv::ptr<SceNgsPatchSetupInfo> pSetup)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceNgsVoiceGetOutputPatch(SceNgsHVoice hVoiceHandle, const s32 nOutputIndex, const s32 nSubIndex, vm::ptr<SceNgsHPatch> pPatchHandle)
+s32 sceNgsVoiceGetOutputPatch(SceNgsHVoice hVoiceHandle, const s32 nOutputIndex, const s32 nSubIndex, vm::psv::ptr<SceNgsHPatch> pPatchHandle)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceNgsPatchRemoveRouting(SceNgsHPatch hPatchHandle)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceNgsVoicePatchSetVolume(SceNgsHPatch hPatchHandle, const s32 nOutputChannel, const s32 nInputChannel, const float fVol)
+//s32 sceNgsVoicePatchSetVolume(SceNgsHPatch hPatchHandle, const s32 nOutputChannel, const s32 nInputChannel, const float fVol)
+//{
+//	throw __FUNCTION__;
+//}
+
+s32 sceNgsVoicePatchSetVolumes(SceNgsHPatch hPatchHandle, const s32 nOutputChannel, vm::psv::ptr<const float> pVolumes, const s32 nVols)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceNgsVoicePatchSetVolumes(SceNgsHPatch hPatchHandle, const s32 nOutputChannel, vm::cptr<float> pVolumes, const s32 nVols)
+s32 sceNgsVoicePatchSetVolumesMatrix(SceNgsHPatch hPatchHandle, vm::psv::ptr<const SceNgsVolumeMatrix> pMatrix)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceNgsVoicePatchSetVolumesMatrix(SceNgsHPatch hPatchHandle, vm::cptr<SceNgsVolumeMatrix> pMatrix)
+s32 sceNgsModuleGetNumPresets(SceNgsHSynSystem hSystemHandle, const SceNgsModuleID uModuleID, vm::psv::ptr<u32> puNumPresets)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceNgsModuleGetNumPresets(SceNgsHSynSystem hSystemHandle, const u32 uModuleID, vm::ptr<u32> puNumPresets)
+s32 sceNgsModuleGetPreset(SceNgsHSynSystem hSystemHandle, const SceNgsModuleID uModuleID, const u32 uPresetIndex, vm::psv::ptr<SceNgsBufferInfo> pParamsBuffer)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceNgsModuleGetPreset(SceNgsHSynSystem hSystemHandle, const u32 uModuleID, const u32 uPresetIndex, vm::ptr<SceNgsBufferInfo> pParamsBuffer)
+vm::psv::ptr<const SceNgsVoiceDefinition> sceNgsVoiceDefGetCompressorBuss()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-vm::cptr<SceNgsVoiceDefinition> sceNgsVoiceDefGetCompressorBuss()
+vm::psv::ptr<const SceNgsVoiceDefinition> sceNgsVoiceDefGetCompressorSideChainBuss()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-vm::cptr<SceNgsVoiceDefinition> sceNgsVoiceDefGetCompressorSideChainBuss()
+vm::psv::ptr<const SceNgsVoiceDefinition> sceNgsVoiceDefGetDelayBuss()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-vm::cptr<SceNgsVoiceDefinition> sceNgsVoiceDefGetDelayBuss()
+vm::psv::ptr<const SceNgsVoiceDefinition> sceNgsVoiceDefGetDistortionBuss()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-vm::cptr<SceNgsVoiceDefinition> sceNgsVoiceDefGetDistortionBuss()
+vm::psv::ptr<const SceNgsVoiceDefinition> sceNgsVoiceDefGetEnvelopeBuss()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-vm::cptr<SceNgsVoiceDefinition> sceNgsVoiceDefGetEnvelopeBuss()
+vm::psv::ptr<const SceNgsVoiceDefinition> sceNgsVoiceDefGetEqBuss()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-vm::cptr<SceNgsVoiceDefinition> sceNgsVoiceDefGetEqBuss()
+vm::psv::ptr<const SceNgsVoiceDefinition> sceNgsVoiceDefGetMasterBuss()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-vm::cptr<SceNgsVoiceDefinition> sceNgsVoiceDefGetMasterBuss()
+vm::psv::ptr<const SceNgsVoiceDefinition> sceNgsVoiceDefGetMixerBuss()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-vm::cptr<SceNgsVoiceDefinition> sceNgsVoiceDefGetMixerBuss()
+vm::psv::ptr<const SceNgsVoiceDefinition> sceNgsVoiceDefGetPauserBuss()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-vm::cptr<SceNgsVoiceDefinition> sceNgsVoiceDefGetPauserBuss()
+vm::psv::ptr<const SceNgsVoiceDefinition> sceNgsVoiceDefGetReverbBuss()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-vm::cptr<SceNgsVoiceDefinition> sceNgsVoiceDefGetReverbBuss()
+vm::psv::ptr<const SceNgsVoiceDefinition> sceNgsVoiceDefGetSasEmuVoice()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-vm::cptr<SceNgsVoiceDefinition> sceNgsVoiceDefGetSasEmuVoice()
+vm::psv::ptr<const SceNgsVoiceDefinition> sceNgsVoiceDefGetSimpleVoice()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-vm::cptr<SceNgsVoiceDefinition> sceNgsVoiceDefGetSimpleVoice()
+vm::psv::ptr<const SceNgsVoiceDefinition> sceNgsVoiceDefGetTemplate1()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-vm::cptr<SceNgsVoiceDefinition> sceNgsVoiceDefGetTemplate1()
+vm::psv::ptr<const SceNgsVoiceDefinition> sceNgsVoiceDefGetAtrac9Voice()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-vm::cptr<SceNgsVoiceDefinition> sceNgsVoiceDefGetAtrac9Voice()
+s32 sceSulphaNgsGetDefaultConfig(vm::psv::ptr<SceSulphaNgsConfig> config)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceSulphaNgsGetDefaultConfig(vm::ptr<SceSulphaNgsConfig> config)
+s32 sceSulphaNgsGetNeededMemory(vm::psv::ptr<const SceSulphaNgsConfig> config, vm::psv::ptr<u32> sizeInBytes)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceSulphaNgsGetNeededMemory(vm::cptr<SceSulphaNgsConfig> config, vm::ptr<u32> sizeInBytes)
+s32 sceSulphaNgsInit(vm::psv::ptr<const SceSulphaNgsConfig> config, vm::psv::ptr<void> buffer, u32 sizeInBytes)
 {
-	throw EXCEPTION("");
-}
-
-s32 sceSulphaNgsInit(vm::cptr<SceSulphaNgsConfig> config, vm::ptr<void> buffer, u32 sizeInBytes)
-{
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceSulphaNgsShutdown()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceSulphaNgsSetSynthName(SceNgsHSynSystem synthHandle, vm::cptr<char> name)
+s32 sceSulphaNgsSetSynthName(SceNgsHSynSystem synthHandle, vm::psv::ptr<const char> name)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceSulphaNgsSetRackName(SceNgsHRack rackHandle, vm::cptr<char> name)
+s32 sceSulphaNgsSetRackName(SceNgsHRack rackHandle, vm::psv::ptr<const char> name)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceSulphaNgsSetVoiceName(SceNgsHVoice voiceHandle, vm::cptr<char> name)
+s32 sceSulphaNgsSetVoiceName(SceNgsHVoice voiceHandle, vm::psv::ptr<const char> name)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceSulphaNgsSetSampleName(vm::cptr<void> location, u32 length, vm::cptr<char> name)
+s32 sceSulphaNgsSetSampleName(vm::psv::ptr<const void> location, u32 length, vm::psv::ptr<const char> name)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceSulphaNgsTrace(vm::cptr<char> message)
+s32 sceSulphaNgsTrace(vm::psv::ptr<const char> message)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 
@@ -327,7 +436,6 @@ psv_log_base sceNgs("SceNgs", []()
 	sceNgs.on_load = nullptr;
 	sceNgs.on_unload = nullptr;
 	sceNgs.on_stop = nullptr;
-	sceNgs.on_error = nullptr;
 
 	REG_FUNC(0x6CE8B36F, sceNgsSystemGetRequiredMemorySize);
 	REG_FUNC(0xED14CF4A, sceNgsSystemInit);

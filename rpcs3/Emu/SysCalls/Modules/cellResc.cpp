@@ -6,7 +6,6 @@
 #include "cellSysutil.h"
 #include "Emu/RSX/sysutil_video.h"
 #include "Emu/RSX/GSManager.h"
-#include "Emu/RSX/GSRender.h"
 #include "cellResc.h"
 
 extern Module cellResc;
@@ -17,7 +16,7 @@ extern void cellGcmSetFlipHandler(vm::ptr<void(u32)> handler);
 extern void cellGcmSetVBlankHandler(vm::ptr<void(u32)> handler);
 extern s32 cellGcmAddressToOffset(u32 address, vm::ptr<u32> offset);
 extern s32 cellGcmSetDisplayBuffer(u32 id, u32 offset, u32 pitch, u32 width, u32 height);
-extern s32 cellGcmSetPrepareFlip(PPUThread& CPU, vm::ptr<CellGcmContextData> ctx, u32 id);
+extern s32 cellGcmSetPrepareFlip(vm::ptr<CellGcmContextData> ctx, u32 id);
 extern s32 cellGcmSetSecondVFrequency(u32 freq);
 extern u32 cellGcmGetLabelAddress(u8 index);
 extern u32 cellGcmGetTiledPitchSize(u32 size);
@@ -25,7 +24,7 @@ extern u32 cellGcmGetTiledPitchSize(u32 size);
 CCellRescInternal* s_rescInternalInstance = nullptr;
 
 // Local Functions
-s32 cellRescGetNumColorBuffers(u32 dstMode, u32 palTemporalMode, u32 reserved);
+int cellRescGetNumColorBuffers(u32 dstMode, u32 palTemporalMode, u32 reserved);
 
 // Help Functions
 inline bool IsPal()            { return s_rescInternalInstance->m_dstMode == CELL_RESC_720x576; }
@@ -44,7 +43,7 @@ inline bool IsGcmFlip()  {
 	return (IsNotPal() || (IsPal() && (s_rescInternalInstance->m_initConfig.palTemporalMode == CELL_RESC_PAL_50
 		|| s_rescInternalInstance->m_initConfig.palTemporalMode == CELL_RESC_PAL_60_FOR_HSYNC)));
 }
-inline s32 GetNumColorBuffers(){ return IsPalInterpolate() ? 6 : (IsPalDrop() ? 3 : 2); }
+inline int GetNumColorBuffers(){ return IsPalInterpolate() ? 6 : (IsPalDrop() ? 3 : 2); }
 inline bool IsInterlace()      { return s_rescInternalInstance->m_initConfig.interlaceMode == CELL_RESC_INTERLACE_FILTER; }
 inline bool IsTextureNR()      { return !IsInterlace(); }
 
@@ -209,7 +208,7 @@ UN_PANSCAN:
 	return;
 }
 
-inline s32 InternalVersion(vm::ptr<CellRescInitConfig> conf)
+inline int InternalVersion(vm::ptr<CellRescInitConfig> conf)
 {
 	switch ((u32)conf->size)
 	{
@@ -223,7 +222,7 @@ inline s32 InternalVersion(vm::ptr<CellRescInitConfig> conf)
 	}
 }
 
-inline s32 InternalVersion() {
+inline int InternalVersion() {
 	switch ((u32)s_rescInternalInstance->m_initConfig.size)
 	{
 		case 20: 
@@ -296,7 +295,7 @@ u8 GcmSurfaceFormat2GcmTextureFormat(u8 surfaceFormat, u8 surfaceType)
 	return result;
 }
 
-s32 GetRescDestsIndex(u32 dstMode)
+int GetRescDestsIndex(u32 dstMode)
 {
 	switch(dstMode)
 	{
@@ -335,14 +334,14 @@ void GetScreenSize(u32 mode, s32 *width, s32 *height)
 	}
 }
 
-s32 CalculateSurfaceByteSize(u32 mode, CellRescDsts *dsts)
+int CalculateSurfaceByteSize(u32 mode, CellRescDsts *dsts)
 {
 	s32 width, height;
 	GetScreenSize(mode, &width, &height);
 	return dsts->pitch * roundup(height, dsts->heightAlign);
 }
 
-s32 CalculateMaxColorBuffersSize()
+int CalculateMaxColorBuffersSize()
 {
 	s32 oneBufSize, bufNum, totalBufSize, maxBufSize;
 	maxBufSize = 0;
@@ -433,7 +432,7 @@ void InitMembers()
 
 	//s_rescInternalInstance->m_feedback.interval60 = 1;
 
-	for (s32 i = 0; i<SRC_BUFFER_NUM; i++) {
+	for (int i = 0; i<SRC_BUFFER_NUM; i++) {
 		s_rescInternalInstance->m_rescSrc[i].format = 0;
 		s_rescInternalInstance->m_rescSrc[i].pitch = 0;
 		s_rescInternalInstance->m_rescSrc[i].width = 0;
@@ -441,11 +440,11 @@ void InitMembers()
 		s_rescInternalInstance->m_rescSrc[i].offset = 0;
 	}
 
-	for (s32 i = 0; i<MAX_DST_BUFFER_NUM; i++) {
+	for (int i = 0; i<MAX_DST_BUFFER_NUM; i++) {
 		s_rescInternalInstance->m_dstOffsets[i] = 0;
 	}
 
-	for (s32 i = 0; i<RESC_PARAM_NUM; i++) {
+	for (int i = 0; i<RESC_PARAM_NUM; i++) {
 		s_rescInternalInstance->m_cgParamIndex[i] = 0xFF;
 	}
 	{
@@ -568,9 +567,9 @@ void SetupSurfaces(vm::ptr<CellGcmContextData>& cntxt)
 }
 
 // Module Functions
-s32 cellRescInit(vm::ptr<CellRescInitConfig> initConfig)
+int cellRescInit(vm::ptr<CellRescInitConfig> initConfig)
 {
-	cellResc.Warning("cellRescInit(initConfig=*0x%x)", initConfig);
+	cellResc.Warning("cellRescInit(initConfig_addr=0x%x)", initConfig.addr());
 
 	if (s_rescInternalInstance->m_bInitialized)
 	{
@@ -610,7 +609,7 @@ void cellRescExit()
 		if (IsPalInterpolate())
 		{
 			// TODO: ExitSystemResource()
-			//s32 ret = ExitSystemResource();
+			//int ret = ExitSystemResource();
 			//if (ret != CELL_OK)
 			//{
 			//	cellResc.Error("failed to clean up system resources.. continue. 0x%x\n", ret);
@@ -621,9 +620,9 @@ void cellRescExit()
 	s_rescInternalInstance->m_bInitialized = false;
 }
 
-s32 cellRescVideoOutResolutionId2RescBufferMode(u32 resolutionId, vm::ptr<u32> bufferMode)
+int cellRescVideoOutResolutionId2RescBufferMode(u32 resolutionId, vm::ptr<u32> bufferMode)
 {
-	cellResc.Log("cellRescVideoOutResolutionId2RescBufferMode(resolutionId=%d, bufferMode=*0x%x)", resolutionId, bufferMode);
+	cellResc.Log("cellRescVideoOutResolutionId2RescBufferMode(resolutionId=%d, bufferMode_addr=0x%x)", resolutionId, bufferMode.addr());
 
 	switch (resolutionId)
 	{
@@ -647,9 +646,9 @@ s32 cellRescVideoOutResolutionId2RescBufferMode(u32 resolutionId, vm::ptr<u32> b
 	return CELL_OK;
 }
 
-s32 cellRescSetDsts(u32 dstsMode, vm::ptr<CellRescDsts> dsts)
+int cellRescSetDsts(u32 dstsMode, vm::ptr<CellRescDsts> dsts)
 {
-	cellResc.Log("cellRescSetDsts(dstsMode=%d, dsts=*0x%x)", dstsMode, dsts);
+	cellResc.Log("cellRescSetDsts(dstsMode=%d, CellRescDsts_addr=0x%x)", dstsMode, dsts.addr());
 
 	if (!s_rescInternalInstance->m_bInitialized)
 	{
@@ -714,7 +713,7 @@ void SetFlipHandler(vm::ptr<void(u32)> handler)
 	}
 }
 
-s32 cellRescSetDisplayMode(PPUThread& CPU, u32 displayMode)
+int cellRescSetDisplayMode(u32 displayMode)
 {
 	cellResc.Warning("cellRescSetDisplayMode(displayMode=%d)", displayMode);
 
@@ -765,7 +764,7 @@ s32 cellRescSetDisplayMode(PPUThread& CPU, u32 displayMode)
 		else			  m_pCFragmentShader = m_pCFragmentShaderArray[RESC_SHADER_DEFAULT_BILINEAR];
 	}*/
 
-	vm::stackvar<CellVideoOutConfiguration> videocfg(CPU);
+	vm::var<CellVideoOutConfiguration> videocfg;
 	videocfg->resolutionId = RescBufferMode2SysutilResolutionId(s_rescInternalInstance->m_dstMode);
 	videocfg->format       = RescDstFormat2SysutilFormat(s_rescInternalInstance->m_pRescDsts->format );
 	videocfg->aspect       = CELL_VIDEO_OUT_ASPECT_AUTO;
@@ -775,7 +774,7 @@ s32 cellRescSetDisplayMode(PPUThread& CPU, u32 displayMode)
 
 	if (IsPalInterpolate())
 	{
-		//s32 ret = InitSystemResource();
+		//int ret = InitSystemResource();
 		//if (ret) return ret;
 		//InitLabels();
 		cellGcmSetSecondVFrequency(CELL_GCM_DISPLAY_FREQUENCY_59_94HZ);
@@ -804,7 +803,7 @@ s32 cellRescSetDisplayMode(PPUThread& CPU, u32 displayMode)
 	return CELL_OK;
 }
 
-s32 cellRescAdjustAspectRatio(float horizontal, float vertical)
+int cellRescAdjustAspectRatio(float horizontal, float vertical)
 {
 	cellResc.Warning("cellRescAdjustAspectRatio(horizontal=%f, vertical=%f)", horizontal, vertical);
 
@@ -838,7 +837,7 @@ s32 cellRescAdjustAspectRatio(float horizontal, float vertical)
 	return CELL_OK;
 }
 
-s32 cellRescSetPalInterpolateDropFlexRatio(float ratio)
+int cellRescSetPalInterpolateDropFlexRatio(float ratio)
 {
 	cellResc.Warning("cellRescSetPalInterpolateDropFlexRatio(ratio=%f)", ratio);
 
@@ -859,9 +858,10 @@ s32 cellRescSetPalInterpolateDropFlexRatio(float ratio)
 	return CELL_OK;
 }
 
-s32 cellRescGetBufferSize(vm::ptr<u32> colorBuffers, vm::ptr<u32> vertexArray, vm::ptr<u32> fragmentShader)
+int cellRescGetBufferSize(vm::ptr<u32> colorBuffers, vm::ptr<u32> vertexArray, vm::ptr<u32> fragmentShader)
 {
-	cellResc.Warning("cellRescGetBufferSize(colorBuffers=*0x%x, vertexArray=*0x%x, fragmentShader=*0x%x)", colorBuffers, vertexArray, fragmentShader);
+	cellResc.Warning("cellRescGetBufferSize(colorBuffers_addr=0x%x, vertexArray_addr=0x%x, fragmentShader_addr=0x%x)",
+		colorBuffers.addr(), vertexArray.addr(), fragmentShader.addr());
 
 	if (!s_rescInternalInstance->m_bInitialized)
 	{
@@ -902,7 +902,7 @@ s32 cellRescGetBufferSize(vm::ptr<u32> colorBuffers, vm::ptr<u32> vertexArray, v
 	return CELL_OK;
 }
 
-s32 cellRescGetNumColorBuffers(u32 dstMode, u32 palTemporalMode, u32 reserved)
+int cellRescGetNumColorBuffers(u32 dstMode, u32 palTemporalMode, u32 reserved)
 {
 	cellResc.Log("cellRescGetNumColorBuffers(dstMode=%d, palTemporalMode=%d, reserved=%d)", dstMode, palTemporalMode, reserved);
 
@@ -923,9 +923,9 @@ s32 cellRescGetNumColorBuffers(u32 dstMode, u32 palTemporalMode, u32 reserved)
 		: 2;
 }
 
-s32 cellRescGcmSurface2RescSrc(vm::ptr<CellGcmSurface> gcmSurface, vm::ptr<CellRescSrc> rescSrc)
+int cellRescGcmSurface2RescSrc(vm::ptr<CellGcmSurface> gcmSurface, vm::ptr<CellRescSrc> rescSrc)
 {
-	cellResc.Log("cellRescGcmSurface2RescSrc(gcmSurface=*0x%x, rescSrc=*0x%x)", gcmSurface, rescSrc);
+	cellResc.Log("cellRescGcmSurface2RescSrc(gcmSurface_addr=0x%x, rescSrc_addr=0x%x)", gcmSurface.addr(), rescSrc.addr());
 
 	u8 textureFormat = GcmSurfaceFormat2GcmTextureFormat(gcmSurface->colorFormat, gcmSurface->type);
 	s32 xW = 1, xH = 1;
@@ -954,9 +954,9 @@ s32 cellRescGcmSurface2RescSrc(vm::ptr<CellGcmSurface> gcmSurface, vm::ptr<CellR
 	return CELL_OK;
 }
 
-s32 cellRescSetSrc(s32 idx, vm::ptr<CellRescSrc> src)
+int cellRescSetSrc(s32 idx, vm::ptr<CellRescSrc> src)
 {
-	cellResc.Log("cellRescSetSrc(idx=0x%x, src=*0x%x)", idx, src);
+	cellResc.Log("cellRescSetSrc(idx=0x%x, src_addr=0x%x)", idx, src.addr());
 
 	if(!s_rescInternalInstance->m_bInitialized)
 	{
@@ -983,9 +983,9 @@ s32 cellRescSetSrc(s32 idx, vm::ptr<CellRescSrc> src)
 	return 0;
 }
 
-s32 cellRescSetConvertAndFlip(PPUThread& CPU, vm::ptr<CellGcmContextData> cntxt, s32 idx)
+int cellRescSetConvertAndFlip(vm::ptr<CellGcmContextData> cntxt, s32 idx)
 {
-	cellResc.Log("cellRescSetConvertAndFlip(cntxt=*0x%x, idx=0x%x)", cntxt, idx);
+	cellResc.Log("cellRescSetConvertAndFlip(cntxt_addr=0x%x, indx=0x%x)", cntxt.addr(), idx);
 
 	if(!s_rescInternalInstance->m_bInitialized)
 	{
@@ -1016,12 +1016,12 @@ s32 cellRescSetConvertAndFlip(PPUThread& CPU, vm::ptr<CellGcmContextData> cntxt,
 
 	//TODO: ?
 
-	cellGcmSetPrepareFlip(CPU, cntxt, idx);
+	cellGcmSetPrepareFlip(cntxt, idx);
 
 	return CELL_OK;
 }
 
-s32 cellRescSetWaitFlip()
+int cellRescSetWaitFlip()
 {
 	cellResc.Log("cellRescSetWaitFlip()");
 	GSLockCurrent lock(GS_LOCK_WAIT_FLIP);
@@ -1029,9 +1029,9 @@ s32 cellRescSetWaitFlip()
 	return CELL_OK;
 }
 
-s32 cellRescSetBufferAddress(PPUThread& CPU, vm::ptr<u32> colorBuffers, vm::ptr<u32> vertexArray, vm::ptr<u32> fragmentShader)
+int cellRescSetBufferAddress(vm::ptr<u32> colorBuffers, vm::ptr<u32> vertexArray, vm::ptr<u32> fragmentShader)
 {
-	cellResc.Warning("cellRescSetBufferAddress(colorBuffers=*0x%x, vertexArray=*0x%x, fragmentShader=*0x%x)", colorBuffers, vertexArray, fragmentShader);
+	cellResc.Warning("cellRescSetBufferAddress(colorBuffers_addr=0x%x, vertexArray_addr=0x%x, fragmentShader_addr=0x%x)", colorBuffers.addr(), vertexArray.addr(), fragmentShader.addr());
 
 	if(!s_rescInternalInstance->m_bInitialized)
 	{
@@ -1049,17 +1049,17 @@ s32 cellRescSetBufferAddress(PPUThread& CPU, vm::ptr<u32> colorBuffers, vm::ptr<
 	s_rescInternalInstance->m_vertexArrayEA   = vertexArray.addr();
 	s_rescInternalInstance->m_fragmentUcodeEA = fragmentShader.addr();
 
-	vm::stackvar<be_t<u32>> dstOffset(CPU);
+	vm::var<be_t<u32>> dstOffset;
 	cellGcmAddressToOffset(s_rescInternalInstance->m_colorBuffersEA, dstOffset);
 
-	for (s32 i=0; i<GetNumColorBuffers(); i++)
+	for (int i=0; i<GetNumColorBuffers(); i++)
 	{
 		s_rescInternalInstance->m_dstOffsets[i] = dstOffset.value() + i * s_rescInternalInstance->m_dstBufInterval;
 	}
 
-	for (s32 i=0; i<GetNumColorBuffers(); i++)
+	for (int i=0; i<GetNumColorBuffers(); i++)
 	{
-		s32 ret = cellGcmSetDisplayBuffer(i, s_rescInternalInstance->m_dstOffsets[i], s_rescInternalInstance->m_dstPitch, s_rescInternalInstance->m_dstWidth, s_rescInternalInstance->m_dstHeight);
+		int ret = cellGcmSetDisplayBuffer(i, s_rescInternalInstance->m_dstOffsets[i], s_rescInternalInstance->m_dstPitch, s_rescInternalInstance->m_dstWidth, s_rescInternalInstance->m_dstHeight);
 		if (ret) return ret;
 	}
 
@@ -1075,7 +1075,7 @@ s32 cellRescSetBufferAddress(PPUThread& CPU, vm::ptr<u32> colorBuffers, vm::ptr<
 
 void cellRescSetFlipHandler(vm::ptr<void(u32)> handler)
 {
-	cellResc.Warning("cellRescSetFlipHandler(handler=*0x%x)", handler);
+	cellResc.Warning("cellRescSetFlipHandler(handler_addr=0x%x)", handler.addr());
 
 	Emu.GetGSManager().GetRender().m_flip_handler = handler;
 }
@@ -1087,14 +1087,14 @@ void cellRescResetFlipStatus()
 	Emu.GetGSManager().GetRender().m_flip_status = 1;
 }
 
-s32 cellRescGetFlipStatus()
+int cellRescGetFlipStatus()
 {
 	cellResc.Log("cellRescGetFlipStatus()");
 
 	return Emu.GetGSManager().GetRender().m_flip_status;
 }
 
-s32 cellRescGetRegisterCount()
+int cellRescGetRegisterCount()
 {
 	UNIMPLEMENTED_FUNC(cellResc);
 	return CELL_OK;
@@ -1107,7 +1107,7 @@ u64 cellRescGetLastFlipTime()
 	return Emu.GetGSManager().GetRender().m_last_flip_time;
 }
 
-s32 cellRescSetRegisterCount()
+int cellRescSetRegisterCount()
 {
 	UNIMPLEMENTED_FUNC(cellResc);
 	return CELL_OK;
@@ -1115,7 +1115,7 @@ s32 cellRescSetRegisterCount()
 
 void cellRescSetVBlankHandler(vm::ptr<void(u32)> handler)
 {
-	cellResc.Warning("cellRescSetVBlankHandler(handler=*0x%x)", handler);
+	cellResc.Warning("cellRescSetVBlankHandler(handler_addr=0x%x)", handler.addr());
 
 	Emu.GetGSManager().GetRender().m_vblank_handler = handler;
 }
@@ -1162,7 +1162,7 @@ static void blackman(float window[])
 	window[3] = ((100.f - SEVIRITY) / 100.f + SEVIRITY / 100.f*a3);
 }
 
-s32 CreateInterlaceTable(u32 ea_addr, float srcH, float dstH, CellRescTableElement depth, s32 length)
+int CreateInterlaceTable(u32 ea_addr, float srcH, float dstH, CellRescTableElement depth, int length)
 {
 	float phi[4], transient[4];
 	float y_fraction;
@@ -1174,7 +1174,7 @@ s32 CreateInterlaceTable(u32 ea_addr, float srcH, float dstH, CellRescTableEleme
 
 	blackman(window);
 
-	for (s32 i = 0; i<length; i++) 
+	for (int i = 0; i<length; i++) 
 	{
 		y_fraction = (float)i / (float)length;
 
@@ -1210,7 +1210,7 @@ s32 CreateInterlaceTable(u32 ea_addr, float srcH, float dstH, CellRescTableEleme
 	return CELL_OK;
 }
 
-s32 cellRescCreateInterlaceTable(u32 ea_addr, float srcH, CellRescTableElement depth, s32 length)
+int cellRescCreateInterlaceTable(u32 ea_addr, float srcH, CellRescTableElement depth, int length)
 {
 	cellResc.Warning("cellRescCreateInterlaceTable(ea_addr=0x%x, srcH=%f, depth=%d, length=%d)", ea_addr, srcH, depth, length);
 
@@ -1235,16 +1235,16 @@ s32 cellRescCreateInterlaceTable(u32 ea_addr, float srcH, CellRescTableElement d
 	float ratioModeCoefficient = (s_rescInternalInstance->m_initConfig.ratioMode != CELL_RESC_LETTERBOX) ? 1.f : (1.f - 2.f * XY_DELTA_LB);
 	float dstH = s_rescInternalInstance->m_dstHeight * ratioModeCoefficient * s_rescInternalInstance->m_ratioAdjY;
 
-	if (s32 retValue = CreateInterlaceTable(ea_addr, srcH, dstH, depth, length))
-	{
-		return retValue;
-	}
-	else 
+	if (int retValue = CreateInterlaceTable(ea_addr, srcH, dstH, depth, length) == CELL_OK)
 	{
 		s_rescInternalInstance->m_interlaceTableEA = ea_addr;
 		s_rescInternalInstance->m_interlaceElement = depth;
 		s_rescInternalInstance->m_interlaceTableLength = length;
 		return CELL_OK;
+	}
+	else 
+	{
+		return retValue;
 	}
 }
 

@@ -1,7 +1,5 @@
 #pragma once
 
-namespace vm { using namespace ps3; }
-
 struct sys_lwmutex_attribute_t
 {
 	be_t<u32> protocol;
@@ -16,10 +14,28 @@ struct sys_lwmutex_attribute_t
 
 enum : u32
 {
-	lwmutex_free     = 0xffffffffu,
-	lwmutex_dead     = 0xfffffffeu,
-	lwmutex_reserved = 0xfffffffdu,
+	lwmutex_zero     = 0u,
+	lwmutex_free     = 0u - 1u,
+	lwmutex_dead     = 0u - 2u,
+	lwmutex_reserved = 0u - 3u,
 };
+
+namespace lwmutex
+{
+	template<u32 _value>
+	struct const_be_u32_t
+	{
+		operator const be_t<u32>() const
+		{
+			return be_t<u32>::make(_value);
+		}
+	};
+
+	static const_be_u32_t<lwmutex_zero> zero;
+	static const_be_u32_t<lwmutex_free> free;
+	static const_be_u32_t<lwmutex_dead> dead;
+	static const_be_u32_t<lwmutex_reserved> reserved;
+}
 
 struct sys_lwmutex_t
 {
@@ -37,8 +53,7 @@ struct sys_lwmutex_t
 		{
 			atomic_be_t<u32> owner;
 			atomic_be_t<u32> waiter;
-		}
-		vars;
+		};
 
 		atomic_be_t<u64> all_info;
 	};
@@ -71,6 +86,11 @@ struct lv2_lwmutex_t
 };
 
 REG_ID_TYPE(lv2_lwmutex_t, 0x95); // SYS_LWMUTEX_OBJECT
+
+// Aux
+void lwmutex_create(sys_lwmutex_t& lwmutex, bool recursive, u32 protocol, u64 name);
+
+class PPUThread;
 
 // SysCalls
 s32 _sys_lwmutex_create(vm::ptr<u32> lwmutex_id, u32 protocol, vm::ptr<sys_lwmutex_t> control, u32 arg4, u64 name, u32 arg6);

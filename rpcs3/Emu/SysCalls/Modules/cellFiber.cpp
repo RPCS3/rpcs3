@@ -7,73 +7,73 @@
 
 extern Module cellFiber;
 
-s32 _cellFiberPpuInitialize()
+int _cellFiberPpuInitialize()
 {
 	UNIMPLEMENTED_FUNC(cellFiber);
 	return CELL_OK;
 }
 
-s32 _cellFiberPpuSchedulerAttributeInitialize()
+int _cellFiberPpuSchedulerAttributeInitialize()
 {
 	UNIMPLEMENTED_FUNC(cellFiber);
 	return CELL_OK;
 }
 
-s32 cellFiberPpuInitializeScheduler()
+int cellFiberPpuInitializeScheduler()
 {
 	UNIMPLEMENTED_FUNC(cellFiber);
 	return CELL_OK;
 }
 
-s32 cellFiberPpuFinalizeScheduler()
+int cellFiberPpuFinalizeScheduler()
 {
 	UNIMPLEMENTED_FUNC(cellFiber);
 	return CELL_OK;
 }
 
-s32 cellFiberPpuRunFibers()
+int cellFiberPpuRunFibers()
 {
 	UNIMPLEMENTED_FUNC(cellFiber);
 	return CELL_OK;
 }
 
-s32 cellFiberPpuCheckFlags()
+int cellFiberPpuCheckFlags()
 {
 	UNIMPLEMENTED_FUNC(cellFiber);
 	return CELL_OK;
 }
 
-s32 cellFiberPpuHasRunnableFiber()
+int cellFiberPpuHasRunnableFiber()
 {
 	UNIMPLEMENTED_FUNC(cellFiber);
 	return CELL_OK;
 }
 
-s32 _cellFiberPpuAttributeInitialize()
+int _cellFiberPpuAttributeInitialize()
 {
 	UNIMPLEMENTED_FUNC(cellFiber);
 	return CELL_OK;
 }
 
-s32 cellFiberPpuCreateFiber()
+int cellFiberPpuCreateFiber()
 {
 	UNIMPLEMENTED_FUNC(cellFiber);
 	return CELL_OK;
 }
 
-s32 cellFiberPpuExit()
+int cellFiberPpuExit()
 {
 	UNIMPLEMENTED_FUNC(cellFiber);
 	return CELL_OK;
 }
 
-s32 cellFiberPpuYield()
+int cellFiberPpuYield()
 {
 	UNIMPLEMENTED_FUNC(cellFiber);
 	return CELL_OK;
 }
 
-s32 cellFiberPpuJoinFiber()
+int cellFiberPpuJoinFiber()
 {
 	UNIMPLEMENTED_FUNC(cellFiber);
 	return CELL_OK;
@@ -87,205 +87,205 @@ vm::ptr<void> cellFiberPpuSelf()
 	return vm::null;
 }
 
-s32 cellFiberPpuSendSignal()
+int cellFiberPpuSendSignal()
 {
 	UNIMPLEMENTED_FUNC(cellFiber);
 	return CELL_OK;
 }
 
-s32 cellFiberPpuWaitSignal()
+int cellFiberPpuWaitSignal()
 {
 	UNIMPLEMENTED_FUNC(cellFiber);
 	return CELL_OK;
 }
 
-s32 cellFiberPpuWaitFlag()
+int cellFiberPpuWaitFlag()
 {
 	UNIMPLEMENTED_FUNC(cellFiber);
 	return CELL_OK;
 }
 
-s32 cellFiberPpuGetScheduler()
+int cellFiberPpuGetScheduler()
 {
 	UNIMPLEMENTED_FUNC(cellFiber);
 	return CELL_OK;
 }
 
-s32 cellFiberPpuSetPriority()
+int cellFiberPpuSetPriority()
 {
 	UNIMPLEMENTED_FUNC(cellFiber);
 	return CELL_OK;
 }
 
-s32 cellFiberPpuCheckStackLimit()
+int cellFiberPpuCheckStackLimit()
 {
 	UNIMPLEMENTED_FUNC(cellFiber);
 	return CELL_OK;
 }
 
-s32 _cellFiberPpuContextAttributeInitialize()
+int _cellFiberPpuContextAttributeInitialize()
 {
 	UNIMPLEMENTED_FUNC(cellFiber);
 	return CELL_OK;
 }
 
-s32 cellFiberPpuContextInitialize()
+int cellFiberPpuContextInitialize()
 {
 	UNIMPLEMENTED_FUNC(cellFiber);
 	return CELL_OK;
 }
 
-s32 cellFiberPpuContextFinalize()
+int cellFiberPpuContextFinalize()
 {
 	UNIMPLEMENTED_FUNC(cellFiber);
 	return CELL_OK;
 }
 
-s32 cellFiberPpuContextRun()
+int cellFiberPpuContextRun()
 {
 	UNIMPLEMENTED_FUNC(cellFiber);
 	return CELL_OK;
 }
 
-s32 cellFiberPpuContextSwitch()
+int cellFiberPpuContextSwitch()
 {
 	UNIMPLEMENTED_FUNC(cellFiber);
 	return CELL_OK;
 }
 
-s32 cellFiberPpuContextSelf()
+int cellFiberPpuContextSelf()
 {
 	UNIMPLEMENTED_FUNC(cellFiber);
 	return CELL_OK;
 }
 
-s32 cellFiberPpuContextReturnToThread()
+int cellFiberPpuContextReturnToThread()
 {
 	UNIMPLEMENTED_FUNC(cellFiber);
 	return CELL_OK;
 }
 
-s32 cellFiberPpuContextCheckStackLimit()
+int cellFiberPpuContextCheckStackLimit()
 {
 	UNIMPLEMENTED_FUNC(cellFiber);
 	return CELL_OK;
 }
 
-s32 cellFiberPpuContextRunScheduler()
+int cellFiberPpuContextRunScheduler()
 {
 	UNIMPLEMENTED_FUNC(cellFiber);
 	return CELL_OK;
 }
 
-s32 cellFiberPpuContextEnterScheduler()
+int cellFiberPpuContextEnterScheduler()
 {
 	UNIMPLEMENTED_FUNC(cellFiber);
 	return CELL_OK;
 }
 
-s32 cellFiberPpuSchedulerTraceInitialize()
+int cellFiberPpuSchedulerTraceInitialize()
 {
 	UNIMPLEMENTED_FUNC(cellFiber);
 	return CELL_OK;
 }
 
-s32 cellFiberPpuSchedulerTraceFinalize()
+int cellFiberPpuSchedulerTraceFinalize()
 {
 	UNIMPLEMENTED_FUNC(cellFiber);
 	return CELL_OK;
 }
 
-s32 cellFiberPpuSchedulerTraceStart()
+int cellFiberPpuSchedulerTraceStart()
 {
 	UNIMPLEMENTED_FUNC(cellFiber);
 	return CELL_OK;
 }
 
-s32 cellFiberPpuSchedulerTraceStop()
+int cellFiberPpuSchedulerTraceStop()
 {
 	UNIMPLEMENTED_FUNC(cellFiber);
 	return CELL_OK;
 }
 
-s32 _cellFiberPpuUtilWorkerControlAttributeInitialize()
+int _cellFiberPpuUtilWorkerControlAttributeInitialize()
 {
 	UNIMPLEMENTED_FUNC(cellFiber);
 	return CELL_OK;
 }
 
-s32 cellFiberPpuUtilWorkerControlRunFibers()
+int cellFiberPpuUtilWorkerControlRunFibers()
 {
 	UNIMPLEMENTED_FUNC(cellFiber);
 	return CELL_OK;
 }
 
-s32 cellFiberPpuUtilWorkerControlInitialize()
+int cellFiberPpuUtilWorkerControlInitialize()
 {
 	UNIMPLEMENTED_FUNC(cellFiber);
 	return CELL_OK;
 }
 
-s32 cellFiberPpuUtilWorkerControlSetPollingMode()
+int cellFiberPpuUtilWorkerControlSetPollingMode()
 {
 	UNIMPLEMENTED_FUNC(cellFiber);
 	return CELL_OK;
 }
 
-s32 cellFiberPpuUtilWorkerControlJoinFiber()
+int cellFiberPpuUtilWorkerControlJoinFiber()
 {
 	UNIMPLEMENTED_FUNC(cellFiber);
 	return CELL_OK;
 }
 
-s32 cellFiberPpuUtilWorkerControlDisconnectEventQueue()
+int cellFiberPpuUtilWorkerControlDisconnectEventQueue()
 {
 	UNIMPLEMENTED_FUNC(cellFiber);
 	return CELL_OK;
 }
 
-s32 cellFiberPpuUtilWorkerControlSendSignal()
+int cellFiberPpuUtilWorkerControlSendSignal()
 {
 	UNIMPLEMENTED_FUNC(cellFiber);
 	return CELL_OK;
 }
 
-s32 cellFiberPpuUtilWorkerControlConnectEventQueueToSpurs()
+int cellFiberPpuUtilWorkerControlConnectEventQueueToSpurs()
 {
 	UNIMPLEMENTED_FUNC(cellFiber);
 	return CELL_OK;
 }
 
-s32 cellFiberPpuUtilWorkerControlFinalize()
+int cellFiberPpuUtilWorkerControlFinalize()
 {
 	UNIMPLEMENTED_FUNC(cellFiber);
 	return CELL_OK;
 }
 
-s32 cellFiberPpuUtilWorkerControlWakeup()
+int cellFiberPpuUtilWorkerControlWakeup()
 {
 	UNIMPLEMENTED_FUNC(cellFiber);
 	return CELL_OK;
 }
 
-s32 cellFiberPpuUtilWorkerControlCreateFiber()
+int cellFiberPpuUtilWorkerControlCreateFiber()
 {
 	UNIMPLEMENTED_FUNC(cellFiber);
 	return CELL_OK;
 }
 
-s32 cellFiberPpuUtilWorkerControlShutdown()
+int cellFiberPpuUtilWorkerControlShutdown()
 {
 	UNIMPLEMENTED_FUNC(cellFiber);
 	return CELL_OK;
 }
 
-s32 cellFiberPpuUtilWorkerControlCheckFlags()
+int cellFiberPpuUtilWorkerControlCheckFlags()
 {
 	UNIMPLEMENTED_FUNC(cellFiber);
 	return CELL_OK;
 }
 
-s32 cellFiberPpuUtilWorkerControlInitializeWithAttribute()
+int cellFiberPpuUtilWorkerControlInitializeWithAttribute()
 {
 	UNIMPLEMENTED_FUNC(cellFiber);
 	return CELL_OK;

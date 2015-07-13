@@ -18,11 +18,6 @@ SysCallBase sys_prx("sys_prx");
 
 extern void fill_ppu_exec_map(u32 addr, u32 size);
 
-lv2_prx_t::lv2_prx_t()
-	: id(Emu.GetIdManager().get_current_id())
-{
-}
-
 s32 prx_load_module(std::string path, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt)
 {
 	sys_prx.Warning("prx_load_module(path='%s', flags=0x%llx, pOpt=*0x%x)", path.c_str(), flags, pOpt);
@@ -39,7 +34,7 @@ s32 prx_load_module(std::string path, u64 flags, vm::ptr<sys_prx_load_module_opt
 	loader::handlers::elf64::sprx_info info;
 	loader.load_sprx(info);
 
-	auto prx = Emu.GetIdManager().make_ptr<lv2_prx_t>();
+	auto prx = std::make_shared<lv2_prx_t>();
 
 	auto meta = info.modules[""];
 	prx->start.set(meta.exports[0xBC9A0086]);
@@ -102,7 +97,7 @@ s32 prx_load_module(std::string path, u64 flags, vm::ptr<sys_prx_load_module_opt
 
 			if (!func)
 			{
-				sys_prx.Error("Unknown function '%s' in '%s' module (0x%x)", SysCalls::GetFuncName(nid), module_.first);
+				sys_prx.Error("Unimplemented function '%s' in '%s' module (0x%x)", SysCalls::GetFuncName(nid), module_.first);
 
 				index = add_ppu_func(ModuleFunc(nid, 0, module, nullptr, nullptr));
 			}
@@ -135,17 +130,17 @@ s32 prx_load_module(std::string path, u64 flags, vm::ptr<sys_prx_load_module_opt
 		}
 	}
 
-	return prx->id;
+	return Emu.GetIdManager().add(std::move(prx));
 }
 
-s32 sys_prx_load_module(vm::cptr<char> path, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt)
+s32 sys_prx_load_module(vm::ptr<const char> path, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt)
 {
 	sys_prx.Warning("sys_prx_load_module(path=*0x%x, flags=0x%llx, pOpt=*0x%x)", path, flags, pOpt);
 
 	return prx_load_module(path.get_ptr(), flags, pOpt);
 }
 
-s32 sys_prx_load_module_list(s32 count, vm::cpptr<char> path_list, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt, vm::ptr<u32> id_list)
+s32 sys_prx_load_module_list(s32 count, vm::pptr<const char> path_list, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt, vm::ptr<u32> id_list)
 {
 	sys_prx.Warning("sys_prx_load_module_list(count=%d, path_list=*0x%x, flags=0x%llx, pOpt=*0x%x, id_list=*0x%x)", count, path_list, flags, pOpt, id_list);
 
@@ -197,7 +192,7 @@ s32 sys_prx_start_module(s32 id, u64 flags, vm::ptr<sys_prx_start_module_option_
 	//	return CELL_PRX_ERROR_ALREADY_STARTED;
 
 	//prx->is_started = true;
-	pOpt->entry_point.set(prx->start ? prx->start.addr() : ~0ull);
+	pOpt->entry_point.set(be_t<u64>::make(prx->start ? prx->start.addr() : ~0ull));
 
 	return CELL_OK;
 }
@@ -217,7 +212,7 @@ s32 sys_prx_stop_module(s32 id, u64 flags, vm::ptr<sys_prx_stop_module_option_t>
 	//	return CELL_PRX_ERROR_ALREADY_STOPPED;
 
 	//prx->is_started = false;
-	pOpt->entry_point.set(prx->stop ? prx->stop.addr() : -1);
+	pOpt->entry_point.set(be_t<u64>::make(prx->stop ? prx->stop.addr() : -1));
 
 	return CELL_OK;
 }

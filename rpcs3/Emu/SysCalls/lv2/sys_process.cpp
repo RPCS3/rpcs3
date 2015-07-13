@@ -36,26 +36,25 @@ s32 sys_process_exit(s32 status)
 
 	LV2_LOCK;
 
-	CHECK_EMU_STATUS;
-	
-	sys_process.Success("Process finished");
-
-	CallAfter([]()
+	if (!Emu.IsStopped())
 	{
-		Emu.Stop();
-	});
+		sys_process.Success("Process finished");
 
-	while (true)
-	{
-		CHECK_EMU_STATUS;
+		CallAfter([]()
+		{
+			Emu.Stop();
+		});
 
-		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		while (!Emu.IsStopped())
+		{
+			std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		}
 	}
 
 	return CELL_OK;
 }
 
-void sys_game_process_exitspawn(vm::cptr<char> path, u32 argv_addr, u32 envp_addr, u32 data_addr, u32 data_size, u32 prio, u64 flags)
+void sys_game_process_exitspawn(vm::ptr<const char> path, u32 argv_addr, u32 envp_addr, u32 data_addr, u32 data_size, u32 prio, u64 flags)
 {
 	std::string _path = path.get_ptr();
 	const std::string& from = "//";
@@ -81,7 +80,7 @@ void sys_game_process_exitspawn(vm::cptr<char> path, u32 argv_addr, u32 envp_add
 
 	if (argv_addr)
 	{
-		auto argvp = vm::cpptr<char>::make(argv_addr);
+		auto argvp = vm::pptr<const char>::make(argv_addr);
 		while (argvp && *argvp)
 		{
 			argv.push_back(argvp[0].get_ptr());
@@ -95,7 +94,7 @@ void sys_game_process_exitspawn(vm::cptr<char> path, u32 argv_addr, u32 envp_add
 
 	if (envp_addr)
 	{
-		auto envp = vm::cpptr<char>::make(envp_addr);
+		auto envp = vm::pptr<const char>::make(envp_addr);
 		while (envp && *envp)
 		{
 			env.push_back(envp[0].get_ptr());
@@ -129,7 +128,7 @@ void sys_game_process_exitspawn(vm::cptr<char> path, u32 argv_addr, u32 envp_add
 	return;
 }
 
-void sys_game_process_exitspawn2(vm::cptr<char> path, u32 argv_addr, u32 envp_addr, u32 data_addr, u32 data_size, u32 prio, u64 flags)
+void sys_game_process_exitspawn2(vm::ptr<const char> path, u32 argv_addr, u32 envp_addr, u32 data_addr, u32 data_size, u32 prio, u64 flags)
 {
 	std::string _path = path.get_ptr();
 	const std::string& from = "//";
@@ -155,7 +154,7 @@ void sys_game_process_exitspawn2(vm::cptr<char> path, u32 argv_addr, u32 envp_ad
 
 	if (argv_addr)
 	{
-		auto argvp = vm::cpptr<char>::make(argv_addr);
+		auto argvp = vm::pptr<const char>::make(argv_addr);
 		while (argvp && *argvp)
 		{
 			argv.push_back(argvp[0].get_ptr());
@@ -170,7 +169,7 @@ void sys_game_process_exitspawn2(vm::cptr<char> path, u32 argv_addr, u32 envp_ad
 
 	if (envp_addr)
 	{
-		auto envp = vm::cpptr<char>::make(envp_addr);
+		auto envp = vm::pptr<const char>::make(envp_addr);
 		while (envp && *envp)
 		{
 			env.push_back(envp[0].get_ptr());
@@ -230,7 +229,7 @@ s32 sys_process_get_number_of_object(u32 object, vm::ptr<u32> nump)
 	case SYS_LWCOND_OBJECT:
 	case SYS_EVENT_FLAG_OBJECT:
 	{
-		*nump = Emu.GetIdManager().get_count(object);
+		*nump = Emu.GetIdManager().get_count_by_type(object);
 		return CELL_OK;
 	}	
 	}
@@ -263,7 +262,7 @@ s32 sys_process_get_id(u32 object, vm::ptr<u32> buffer, u32 size, vm::ptr<u32> s
 	case SYS_LWCOND_OBJECT:
 	case SYS_EVENT_FLAG_OBJECT:
 	{
-		const auto objects = Emu.GetIdManager().get_IDs(object);
+		const auto objects = Emu.GetIdManager().get_IDs_by_type(object);
 
 		u32 i = 0;
 

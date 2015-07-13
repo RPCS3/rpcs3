@@ -1,7 +1,5 @@
 #pragma once
 
-namespace vm { using namespace ps3; }
-
 // Error codes
 enum
 {
@@ -100,7 +98,7 @@ enum AudioPortState : u32
 struct AudioPortConfig
 {
 	std::mutex mutex;
-	atomic_t<AudioPortState> state;
+	atomic<AudioPortState> state;
 
 	u32 channel;
 	u32 block;
@@ -118,13 +116,14 @@ struct AudioPortConfig
 	};
 
 	float level;	
-	atomic_t<level_set_t> level_set;
+	atomic<level_set_t> level_set;
 };
 
-struct AudioConfig final // custom structure
+struct AudioConfig  //custom structure
 {
-	atomic_t<AudioState> state;
-	thread_t thread;
+	std::mutex mutex;
+	atomic<AudioState> state;
+	thread_t audio_thread;
 
 	AudioPortConfig ports[AUDIO_PORT_COUNT];
 	u32 buffer; // 1 MB memory for audio ports
@@ -133,14 +132,8 @@ struct AudioConfig final // custom structure
 	u64 start_time;
 	std::vector<u64> keys;
 
-	AudioConfig() = default;
-
-	~AudioConfig()
+	AudioConfig() : audio_thread("Audio Thread")
 	{
-		if (thread.joinable())
-		{
-			thread.join();
-		}
 	}
 
 	u32 open_port()

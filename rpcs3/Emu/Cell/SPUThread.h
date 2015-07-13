@@ -137,10 +137,10 @@ union spu_channel_t
 		u32 value;
 	};
 
-	atomic_t<sync_var_t> sync_var; // atomic variable
+	atomic<sync_var_t> sync_var; // atomic variable
 
 public:
-	bool try_push(u32 value)
+	bool push(u32 value)
 	{
 		bool out_result;
 
@@ -166,7 +166,7 @@ public:
 		sync_var.exchange({ 1, value });
 	}
 
-	bool try_pop(u32& out_value)
+	bool pop(u32& out_value)
 	{
 		bool out_result;
 
@@ -199,7 +199,7 @@ public:
 
 	void set_value(u32 value, u32 count = 1)
 	{
-		sync_var.store({ count, value });
+		sync_var.write_relaxed({ count, value });
 	}
 
 	u32 get_value() volatile
@@ -223,8 +223,8 @@ struct spu_channel_4_t
 		u32 value2;
 	};
 
-	atomic_t<sync_var_t> sync_var;
-	atomic_t<u32> value3;
+	atomic<sync_var_t> sync_var;
+	atomic<u32> value3;
 
 public:
 	void clear()
@@ -250,11 +250,11 @@ public:
 	}
 
 	// out_count: count after removing first element
-	bool try_pop(u32& out_value, u32& out_count)
+	bool pop(u32& out_value, u32& out_count)
 	{
 		bool out_result;
 
-		const u32 last_value = value3.load_sync();
+		const u32 last_value = value3.read_sync();
 
 		sync_var.atomic_op([&out_result, &out_value, &out_count, last_value](sync_var_t& data)
 		{
@@ -280,10 +280,10 @@ public:
 
 struct spu_interrupt_tag_t
 {
-	atomic_t<u64> mask;
-	atomic_t<u64> stat;
+	atomic<u64> mask;
+	atomic<u64> stat;
 
-	atomic_t<s32> assigned;
+	atomic<s32> assigned;
 
 	std::mutex handler_mutex;
 	std::condition_variable cond;
@@ -292,7 +292,7 @@ public:
 	void set(u64 ints)
 	{
 		// leave only enabled interrupts
-		ints &= mask.load();
+		ints &= mask.read_relaxed();
 
 		if (ints && ~stat._or(ints) & ints)
 		{
@@ -452,7 +452,8 @@ public:
 			return this->_u32[3] >> 10 & 0x3;
 
 		default:
-			throw EXCEPTION("Unexpected slice value (%d)", slice);
+			throw fmt::Format("Unexpected slice value in FPSCR::checkSliceRounding(): %d", slice);
+			return 0;
 		}
 	}
 
@@ -526,14 +527,14 @@ public:
 	spu_channel_t ch_snr2; // SPU Signal Notification Register 2
 
 	u32 ch_event_mask;
-	atomic_t<u32> ch_event_stat;
+	atomic<u32> ch_event_stat;
 
 	u64 ch_dec_start_timestamp; // timestamp of writing decrementer value
 	u32 ch_dec_value; // written decrementer value
 
-	atomic_t<u32> run_ctrl; // SPU Run Control register (only provided to get latest data written)
-	atomic_t<u32> status; // SPU Status register
-	atomic_t<u32> npc; // SPU Next Program Counter register
+	atomic<u32> run_ctrl; // SPU Run Control register (only provided to get latest data written)
+	atomic<u32> status; // SPU Status register
+	atomic<u32> npc; // SPU Next Program Counter register
 
 	spu_interrupt_tag_t int0; // SPU Class 0 Interrupt Management
 	spu_interrupt_tag_t int2; // SPU Class 2 Interrupt Management
@@ -542,10 +543,6 @@ public:
 
 	std::array<std::pair<u32, std::weak_ptr<lv2_event_queue_t>>, 32> spuq; // Event Queue Keys for SPU Thread
 	std::weak_ptr<lv2_event_queue_t> spup[64]; // SPU Ports
-
-	u32 PC = 0;
-	const u32 index; // SPU index
-	const u32 offset; // SPU LS offset
 
 	void write_snr(bool number, u32 value)
 	{
@@ -571,8 +568,6 @@ public:
 				ch_snr2.push_uncond(value);
 			}
 		}
-
-		cv.notify_one();
 	}
 
 	void do_dma_transfer(u32 cmd, spu_mfc_arg_t args);
@@ -587,21 +582,21 @@ public:
 	void halt();
 
 	u8 read8(u32 lsa) const { return vm::read8(lsa + offset); }
-	u16 read16(u32 lsa) const { return vm::ps3::read16(lsa + offset); }
-	u32 read32(u32 lsa) const { return vm::ps3::read32(lsa + offset); }
-	u64 read64(u32 lsa) const { return vm::ps3::read64(lsa + offset); }
-	u128 read128(u32 lsa) const { return vm::ps3::read128(lsa + offset); }
+	u16 read16(u32 lsa) const { return vm::read16(lsa + offset); }
+	u32 read32(u32 lsa) const { return vm::read32(lsa + offset); }
+	u64 read64(u32 lsa) const { return vm::read64(lsa + offset); }
+	u128 read128(u32 lsa) const { return vm::read128(lsa + offset); }
 
 	void write8(u32 lsa, u8 data) const { vm::write8(lsa + offset, data); }
-	void write16(u32 lsa, u16 data) const { vm::ps3::write16(lsa + offset, data); }
-	void write32(u32 lsa, u32 data) const { vm::ps3::write32(lsa + offset, data); }
-	void write64(u32 lsa, u64 data) const { vm::ps3::write64(lsa + offset, data); }
-	void write128(u32 lsa, u128 data) const { vm::ps3::write128(lsa + offset, data); }
+	void write16(u32 lsa, u16 data) const { vm::write16(lsa + offset, data); }
+	void write32(u32 lsa, u32 data) const { vm::write32(lsa + offset, data); }
+	void write64(u32 lsa, u64 data) const { vm::write64(lsa + offset, data); }
+	void write128(u32 lsa, u128 data) const { vm::write128(lsa + offset, data); }
 
-	void write16(u32 lsa, be_t<u16> data) const { vm::ps3::write16(lsa + offset, data); }
-	void write32(u32 lsa, be_t<u32> data) const { vm::ps3::write32(lsa + offset, data); }
-	void write64(u32 lsa, be_t<u64> data) const { vm::ps3::write64(lsa + offset, data); }
-	void write128(u32 lsa, be_t<u128> data) const { vm::ps3::write128(lsa + offset, data); }
+	void write16(u32 lsa, be_t<u16> data) const { vm::write16(lsa + offset, data); }
+	void write32(u32 lsa, be_t<u32> data) const { vm::write32(lsa + offset, data); }
+	void write64(u32 lsa, be_t<u64> data) const { vm::write64(lsa + offset, data); }
+	void write128(u32 lsa, be_t<u128> data) const { vm::write128(lsa + offset, data); }
 
 	void RegisterHleFunction(u32 addr, std::function<bool(SPUThread & SPU)> function)
 	{
@@ -631,28 +626,11 @@ public:
 
 	std::function<void(SPUThread& SPU)> m_custom_task;
 
-protected:
-	SPUThread(CPUThreadType type, const std::string& name, std::function<std::string()> thread_name, u32 index, u32 offset);
-
 public:
-	SPUThread(const std::string& name, u32 index);
-	virtual ~SPUThread() override;
+	SPUThread(CPUThreadType type = CPU_THREAD_SPU);
+	virtual ~SPUThread();
 
-	virtual bool IsPaused() const override;
-
-	virtual void DumpInformation() const override;
-	virtual u32 GetPC() const override { return PC; }
-	virtual u32 GetOffset() const override { return offset; }
-	virtual void DoRun() override;
-	virtual void Task() override;
-
-	virtual void InitRegs() override;
-	virtual void InitStack() override;
-	virtual void CloseStack() override;
-
-	void FastCall(u32 ls_addr);
-
-	virtual std::string RegsToString() const
+	virtual std::string RegsToString()
 	{
 		std::string ret = "Registers:\n=========\n";
 
@@ -661,7 +639,7 @@ public:
 		return ret;
 	}
 
-	virtual std::string ReadRegString(const std::string& reg) const
+	virtual std::string ReadRegString(const std::string& reg)
 	{
 		std::string::size_type first_brk = reg.find('[');
 		if (first_brk != std::string::npos)
@@ -701,15 +679,58 @@ public:
 		}
 		return false;
 	}
+
+public:
+	virtual void InitRegs();
+	virtual void InitStack();
+	virtual void CloseStack();
+	virtual void Task();
+	void FastCall(u32 ls_addr);
+	void FastStop();
+	void FastRun();
+
+protected:
+	virtual void DoReset();
+	virtual void DoRun();
+	virtual void DoPause();
+	virtual void DoResume();
+	virtual void DoStop();
+	virtual void DoClose();
 };
+
+SPUThread& GetCurrentSPUThread();
 
 class spu_thread : cpu_thread
 {
+	static const u32 stack_align = 0x10;
+	vm::ptr<u64> argv;
+	u32 argc;
+	vm::ptr<u64> envp;
+
 public:
 	spu_thread(u32 entry, const std::string& name = "", u32 stack_size = 0, u32 prio = 0);
 
 	cpu_thread& args(std::initializer_list<std::string> values) override
 	{
+		if (!values.size())
+			return *this;
+
+		assert(argc == 0);
+
+		envp.set(Memory.MainMem.AllocAlign((u32)sizeof(envp), stack_align));
+		*envp = 0;
+		argv.set(Memory.MainMem.AllocAlign(u32(sizeof(argv)* values.size()), stack_align));
+
+		for (auto &arg : values)
+		{
+			u32 arg_size = align(u32(arg.size() + 1), stack_align);
+			u32 arg_addr = (u32)Memory.MainMem.AllocAlign(arg_size, stack_align);
+
+			std::strcpy(vm::get_ptr<char>(arg_addr), arg.c_str());
+
+			argv[argc++] = arg_addr;
+		}
+
 		return *this;
 	}
 
@@ -718,6 +739,10 @@ public:
 		auto& spu = static_cast<SPUThread&>(*thread);
 
 		spu.Run();
+
+		spu.GPR[3].from64(argc);
+		spu.GPR[4].from64(argv.addr());
+		spu.GPR[5].from64(envp.addr());
 
 		return *this;
 	}

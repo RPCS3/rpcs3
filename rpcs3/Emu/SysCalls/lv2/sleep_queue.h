@@ -1,7 +1,5 @@
 #pragma once
 
-namespace vm { using namespace ps3; }
-
 // attr_protocol (waiting scheduling policy)
 enum
 {
@@ -28,31 +26,30 @@ enum
 	SYS_SYNC_ATTR_RECURSIVE_MASK = 0xF0, //???
 };
 
-// attr_pshared
-enum
+class sleep_queue_t
 {
-	SYS_SYNC_NOT_PROCESS_SHARED = 0x200,
-};
-
-// attr_adaptive
-enum
-{
-	SYS_SYNC_ADAPTIVE     = 0x1000,
-	SYS_SYNC_NOT_ADAPTIVE = 0x2000,
-};
-
-using sleep_queue_t = std::deque<std::shared_ptr<CPUThread>>;
-
-// automatic object handling adding threads to the sleep queue
-class sleep_queue_entry_t final
-{
-	CPUThread& m_thread;
-	sleep_queue_t& m_queue;
+	std::vector<u32> m_waiting;
+	std::vector<u32> m_signaled;
+	std::mutex m_mutex;
+	std::string m_name;
 
 public:
-	// adds specified thread to the sleep queue
-	sleep_queue_entry_t(CPUThread& cpu, sleep_queue_t& queue);
+	const u64 name;
 
-	// removes specified thread from the sleep queue
-	~sleep_queue_entry_t() noexcept(false);
+	sleep_queue_t(u64 name = 0)
+		: name(name)
+	{
+	}
+
+	~sleep_queue_t();
+
+	void set_full_name(const std::string& name) { m_name = name; }
+	const std::string& get_full_name() { return m_name; }
+
+	void push(u32 tid, u32 protocol);
+	bool pop(u32 tid, u32 protocol);
+	u32 signal(u32 protocol);
+	bool signal_selected(u32 tid);
+	bool invalidate(u32 tid, u32 protocol);
+	u32 count();
 };

@@ -2,26 +2,34 @@
 #include "Emu/System.h"
 #include "Emu/ARMv7/PSVFuncList.h"
 
-#include "sceScreenShot.h"
+extern psv_log_base sceScreenShot;
 
-s32 sceScreenShotSetParam(vm::cptr<SceScreenShotParam> param)
+struct SceScreenShotParam
 {
-	throw EXCEPTION("");
+	vm::psv::ptr<const char> photoTitle;
+	vm::psv::ptr<const char> gameTitle;
+	vm::psv::ptr<const char> gameComment;
+	vm::psv::ptr<void> reserved;
+};
+
+s32 sceScreenShotSetParam(vm::psv::ptr<const SceScreenShotParam> param)
+{
+	throw __FUNCTION__;
 }
 
-s32 sceScreenShotSetOverlayImage(vm::cptr<char> filePath, s32 offsetX, s32 offsetY)
+s32 sceScreenShotSetOverlayImage(vm::psv::ptr<const char> filePath, s32 offsetX, s32 offsetY)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceScreenShotDisable()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceScreenShotEnable()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 
@@ -32,7 +40,6 @@ psv_log_base sceScreenShot("SceScreenShot", []()
 	sceScreenShot.on_load = nullptr;
 	sceScreenShot.on_unload = nullptr;
 	sceScreenShot.on_stop = nullptr;
-	sceScreenShot.on_error = nullptr;
 
 	REG_FUNC(0x05DB59C7, sceScreenShotSetParam);
 	REG_FUNC(0x7061665B, sceScreenShotSetOverlayImage);

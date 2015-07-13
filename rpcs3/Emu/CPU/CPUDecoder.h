@@ -59,7 +59,7 @@ public:
 
 	virtual void operator ()(TO* op, u32 code) const
 	{
-		(op->*m_func)(static_cast<T1>(m_arg_func_1(code)));
+		(op->*m_func)((T1)m_arg_func_1(code));
 	}
 };
 
@@ -83,8 +83,8 @@ public:
 	virtual void operator ()(TO* op, u32 code) const
 	{
 		(op->*m_func)(
-			static_cast<T1>(m_arg_func_1(code)),
-			static_cast<T2>(m_arg_func_2(code))
+			(T1)m_arg_func_1(code),
+			(T2)m_arg_func_2(code)
 		);
 	}
 };
@@ -114,9 +114,9 @@ public:
 	virtual void operator ()(TO* op, u32 code) const
 	{
 		(op->*m_func)(
-			static_cast<T1>(m_arg_func_1(code)),
-			static_cast<T2>(m_arg_func_2(code)),
-			static_cast<T3>(m_arg_func_3(code))
+			(T1)m_arg_func_1(code),
+			(T2)m_arg_func_2(code),
+			(T3)m_arg_func_3(code)
 		);
 	}
 };
@@ -149,10 +149,10 @@ public:
 	virtual void operator ()(TO* op, u32 code) const
 	{
 		(op->*m_func)(
-			static_cast<T1>(m_arg_func_1(code)),
-			static_cast<T2>(m_arg_func_2(code)),
-			static_cast<T3>(m_arg_func_3(code)),
-			static_cast<T4>(m_arg_func_4(code))
+			(T1)m_arg_func_1(code),
+			(T2)m_arg_func_2(code),
+			(T3)m_arg_func_3(code),
+			(T4)m_arg_func_4(code)
 		);
 	}
 };
@@ -188,11 +188,11 @@ public:
 	virtual void operator ()(TO* op, u32 code) const
 	{
 		(op->*m_func)(
-			static_cast<T1>(m_arg_func_1(code)),
-			static_cast<T2>(m_arg_func_2(code)),
-			static_cast<T3>(m_arg_func_3(code)),
-			static_cast<T4>(m_arg_func_4(code)),
-			static_cast<T5>(m_arg_func_5(code))
+			(T1)m_arg_func_1(code),
+			(T2)m_arg_func_2(code),
+			(T3)m_arg_func_3(code),
+			(T4)m_arg_func_4(code),
+			(T5)m_arg_func_5(code)
 		);
 	}
 };
@@ -231,12 +231,12 @@ public:
 	virtual void operator ()(TO* op, u32 code) const
 	{
 		(op->*m_func)(
-			static_cast<T1>(m_arg_func_1(code)),
-			static_cast<T2>(m_arg_func_2(code)),
-			static_cast<T3>(m_arg_func_3(code)),
-			static_cast<T4>(m_arg_func_4(code)),
-			static_cast<T5>(m_arg_func_5(code)),
-			static_cast<T6>(m_arg_func_6(code))
+			(T1)m_arg_func_1(code),
+			(T2)m_arg_func_2(code),
+			(T3)m_arg_func_3(code),
+			(T4)m_arg_func_4(code),
+			(T5)m_arg_func_5(code),
+			(T6)m_arg_func_6(code)
 		);
 	}
 };

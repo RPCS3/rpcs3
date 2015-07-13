@@ -102,34 +102,34 @@ force_inline void Write64LE(const fs::file& f, const u64 data)
 	f.write(&data, sizeof(data));
 }
 
-force_inline void Write16(vfsStream& f, const be_t<u16> data)
+force_inline void Write16(vfsStream& f, const u16 data)
 {
-	f.Write(&data, sizeof(data));
+	Write16LE(f, re16(data));
 }
 
-force_inline void Write16(const fs::file& f, const be_t<u16> data)
+force_inline void Write16(const fs::file& f, const u16 data)
 {
-	f.write(&data, sizeof(data));
+	Write16LE(f, re16(data));
 }
 
-force_inline void Write32(vfsStream& f, const be_t<u32> data)
+force_inline void Write32(vfsStream& f, const u32 data)
 {
-	f.Write(&data, sizeof(data));
+	Write32LE(f, re32(data));
 }
 
-force_inline void Write32(const fs::file& f, const be_t<u32> data)
+force_inline void Write32(const fs::file& f, const u32 data)
 {
-	f.write(&data, sizeof(data));
+	Write32LE(f, re32(data));
 }
 
-force_inline void Write64(vfsStream& f, const be_t<u64> data)
+force_inline void Write64(vfsStream& f, const u64 data)
 {
-	f.Write(&data, sizeof(data));
+	Write64LE(f, re64(data));
 }
 
-force_inline void Write64(const fs::file& f, const be_t<u64> data)
+force_inline void Write64(const fs::file& f, const u64 data)
 {
-	f.write(&data, sizeof(data));
+	Write64LE(f, re64(data));
 }
 
 void WriteEhdr(const fs::file& f, Elf64_Ehdr& ehdr)
@@ -935,9 +935,9 @@ bool SELFDecrypter::DecryptNPDRM(u8 *metadata, u32 metadata_size)
 bool SELFDecrypter::LoadMetadata()
 {
 	aes_context aes;
-	u32 metadata_info_size = sizeof32(meta_info);
+	u32 metadata_info_size = sizeof(meta_info);
 	u8 *metadata_info = (u8 *)malloc(metadata_info_size);
-	u32 metadata_headers_size = sce_hdr.se_hsize - (sizeof32(sce_hdr) + sce_hdr.se_meta + sizeof32(meta_info));
+	u32 metadata_headers_size = sce_hdr.se_hsize - (sizeof(sce_hdr) + sce_hdr.se_meta + sizeof(meta_info));
 	u8 *metadata_headers = (u8 *)malloc(metadata_headers_size);
 
 	// Locate and read the encrypted metadata info.

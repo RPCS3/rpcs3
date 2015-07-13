@@ -2,281 +2,354 @@
 #include "Emu/System.h"
 #include "Emu/ARMv7/PSVFuncList.h"
 
-#include "sceHttp.h"
+#include "sceSsl.h"
+
+extern psv_log_base sceHttp;
+
+enum SceHttpHttpVersion : s32
+{
+	SCE_HTTP_VERSION_1_0 = 1,
+	SCE_HTTP_VERSION_1_1
+};
+
+enum SceHttpProxyMode : s32
+{
+	SCE_HTTP_PROXY_AUTO,
+	SCE_HTTP_PROXY_MANUAL
+};
+
+enum SceHttpAddHeaderMode : s32
+{
+	SCE_HTTP_HEADER_OVERWRITE,
+	SCE_HTTP_HEADER_ADD
+};
+
+enum SceHttpAuthType : s32
+{
+	SCE_HTTP_AUTH_BASIC,
+	SCE_HTTP_AUTH_DIGEST,
+	SCE_HTTP_AUTH_RESERVED0,
+	SCE_HTTP_AUTH_RESERVED1,
+	SCE_HTTP_AUTH_RESERVED2
+};
+
+typedef vm::psv::ptr<s32(s32 request, SceHttpAuthType authType, vm::psv::ptr<const char> realm, vm::psv::ptr<char> username, vm::psv::ptr<char> password, s32 needEntity, vm::psv::pptr<u8> entityBody, vm::psv::ptr<u32> entitySize, vm::psv::ptr<s32> save, vm::psv::ptr<void> userArg)> SceHttpAuthInfoCallback;
+
+typedef vm::psv::ptr<s32(s32 request, s32 statusCode, vm::psv::ptr<s32> method, vm::psv::ptr<const char> location, vm::psv::ptr<void> userArg)> SceHttpRedirectCallback;
+
+struct SceHttpMemoryPoolStats
+{
+	u32 poolSize;
+	u32 maxInuseSize;
+	u32 currentInuseSize;
+	s32 reserved;
+};
+
+struct SceHttpUriElement
+{
+	s32 opaque;
+	vm::psv::ptr<char> scheme;
+	vm::psv::ptr<char> username;
+	vm::psv::ptr<char> password;
+	vm::psv::ptr<char> hostname;
+	vm::psv::ptr<char> path;
+	vm::psv::ptr<char> query;
+	vm::psv::ptr<char> fragment;
+	u16 port;
+	u8 reserved[10];
+};
+
+typedef vm::psv::ptr<s32(s32 request, vm::psv::ptr<const char> url, vm::psv::ptr<const char> cookieHeader, u32 headerLen, vm::psv::ptr<void> userArg)> SceHttpCookieRecvCallback;
+
+typedef vm::psv::ptr<s32(s32 request, vm::psv::ptr<const char> url, vm::psv::ptr<const char> cookieHeader, vm::psv::ptr<void> userArg)> SceHttpCookieSendCallback;
+
+struct SceHttpsData
+{
+	vm::psv::ptr<char> ptr;
+	u32 size;
+};
+
+struct SceHttpsCaList
+{
+	vm::psv::lpptr<SceSslCert> caCerts;
+	s32 caNum;
+};
+
+typedef vm::psv::ptr<s32(u32 verifyEsrr, vm::psv::ptr<const vm::psv::ptr<SceSslCert>> sslCert, s32 certNum, vm::psv::ptr<void> userArg)> SceHttpsCallback;
 
 s32 sceHttpInit(u32 poolSize)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceHttpTerm()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceHttpGetMemoryPoolStats(vm::ptr<SceHttpMemoryPoolStats> currentStat)
+s32 sceHttpGetMemoryPoolStats(vm::psv::ptr<SceHttpMemoryPoolStats> currentStat)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceHttpCreateTemplate(vm::cptr<char> userAgent, s32 httpVer, s32 autoProxyConf)
+s32 sceHttpCreateTemplate(vm::psv::ptr<const char> userAgent, s32 httpVer, s32 autoProxyConf)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceHttpDeleteTemplate(s32 tmplId)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceHttpCreateConnection(s32 tmplId, vm::cptr<char> serverName, vm::cptr<char> scheme, u16 port, s32 enableKeepalive)
+s32 sceHttpCreateConnection(s32 tmplId, vm::psv::ptr<const char> serverName, vm::psv::ptr<const char> scheme, u16 port, s32 enableKeepalive)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceHttpCreateConnectionWithURL(s32 tmplId, vm::cptr<char> url, s32 enableKeepalive)
+s32 sceHttpCreateConnectionWithURL(s32 tmplId, vm::psv::ptr<const char> url, s32 enableKeepalive)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceHttpDeleteConnection(s32 connId)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceHttpCreateRequest(s32 connId, s32 method, vm::cptr<char> path, u64 contentLength)
+s32 sceHttpCreateRequest(s32 connId, s32 method, vm::psv::ptr<const char> path, u64 contentLength)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceHttpCreateRequestWithURL(s32 connId, s32 method, vm::cptr<char> url, u64 contentLength)
+s32 sceHttpCreateRequestWithURL(s32 connId, s32 method, vm::psv::ptr<const char> url, u64 contentLength)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceHttpDeleteRequest(s32 reqId)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceHttpSetResponseHeaderMaxSize(s32 id, u32 headerSize)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceHttpSetRecvBlockSize(s32 id, u32 blockSize)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceHttpSetRequestContentLength(s32 id, u64 contentLength)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceHttpSendRequest(s32 reqId, vm::cptr<void> postData, u32 size)
+s32 sceHttpSendRequest(s32 reqId, vm::psv::ptr<const void> postData, u32 size)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceHttpAbortRequest(s32 reqId)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceHttpGetResponseContentLength(s32 reqId, vm::ptr<u64> contentLength)
+s32 sceHttpGetResponseContentLength(s32 reqId, vm::psv::ptr<u64> contentLength)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceHttpGetStatusCode(s32 reqId, vm::ptr<s32> statusCode)
+s32 sceHttpGetStatusCode(s32 reqId, vm::psv::ptr<s32> statusCode)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceHttpGetAllResponseHeaders(s32 reqId, vm::pptr<char> header, vm::ptr<u32> headerSize)
+s32 sceHttpGetAllResponseHeaders(s32 reqId, vm::psv::pptr<char> header, vm::psv::ptr<u32> headerSize)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceHttpReadData(s32 reqId, vm::ptr<void> data, u32 size)
+s32 sceHttpReadData(s32 reqId, vm::psv::ptr<void> data, u32 size)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceHttpAddRequestHeader(s32 id, vm::cptr<char> name, vm::cptr<char> value, u32 mode)
+s32 sceHttpAddRequestHeader(s32 id, vm::psv::ptr<const char> name, vm::psv::ptr<const char> value, u32 mode)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceHttpRemoveRequestHeader(s32 id, vm::cptr<char> name)
+s32 sceHttpRemoveRequestHeader(s32 id, vm::psv::ptr<const char> name)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceHttpParseResponseHeader(vm::cptr<char> header, u32 headerLen, vm::cptr<char> fieldStr, vm::cpptr<char> fieldValue, vm::ptr<u32> valueLen)
+s32 sceHttpParseResponseHeader(vm::psv::ptr<const char> header, u32 headerLen, vm::psv::ptr<const char> fieldStr, vm::psv::pptr<const char> fieldValue, vm::psv::ptr<u32> valueLen)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceHttpParseStatusLine(vm::cptr<char> statusLine, u32 lineLen, vm::ptr<s32> httpMajorVer, vm::ptr<s32> httpMinorVer, vm::ptr<s32> responseCode, vm::cpptr<char> reasonPhrase, vm::ptr<u32> phraseLen)
+s32 sceHttpParseStatusLine(vm::psv::ptr<const char> statusLine, u32 lineLen, vm::psv::ptr<s32> httpMajorVer, vm::psv::ptr<s32> httpMinorVer, vm::psv::ptr<s32> responseCode, vm::psv::pptr<const char> reasonPhrase, vm::psv::ptr<u32> phraseLen)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceHttpSetAuthInfoCallback(s32 id, vm::ptr<SceHttpAuthInfoCallback> cbfunc, vm::ptr<void> userArg)
+s32 sceHttpSetAuthInfoCallback(s32 id, SceHttpAuthInfoCallback cbfunc, vm::psv::ptr<void> userArg)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceHttpSetAuthEnabled(s32 id, s32 enable)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceHttpGetAuthEnabled(s32 id, vm::ptr<s32> enable)
+s32 sceHttpGetAuthEnabled(s32 id, vm::psv::ptr<s32> enable)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceHttpSetRedirectCallback(s32 id, vm::ptr<SceHttpRedirectCallback> cbfunc, vm::ptr<void> userArg)
+s32 sceHttpSetRedirectCallback(s32 id, SceHttpRedirectCallback cbfunc, vm::psv::ptr<void> userArg)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceHttpSetAutoRedirect(s32 id, s32 enable)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceHttpGetAutoRedirect(s32 id, vm::ptr<s32> enable)
+s32 sceHttpGetAutoRedirect(s32 id, vm::psv::ptr<s32> enable)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceHttpSetResolveTimeOut(s32 id, u32 usec)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceHttpSetResolveRetry(s32 id, s32 retry)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceHttpSetConnectTimeOut(s32 id, u32 usec)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceHttpSetSendTimeOut(s32 id, u32 usec)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceHttpSetRecvTimeOut(s32 id, u32 usec)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceHttpUriEscape(vm::ptr<char> out, vm::ptr<u32> require, u32 prepare, vm::cptr<char> in)
+s32 sceHttpUriEscape(vm::psv::ptr<char> out, vm::psv::ptr<u32> require, u32 prepare, vm::psv::ptr<const char> in)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceHttpUriUnescape(vm::ptr<char> out, vm::ptr<u32> require, u32 prepare, vm::cptr<char> in)
+s32 sceHttpUriUnescape(vm::psv::ptr<char> out, vm::psv::ptr<u32> require, u32 prepare, vm::psv::ptr<const char> in)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceHttpUriParse(vm::ptr<SceHttpUriElement> out, vm::cptr<char> srcUrl, vm::ptr<void> pool, vm::ptr<u32> require, u32 prepare)
+s32 sceHttpUriParse(vm::psv::ptr<SceHttpUriElement> out, vm::psv::ptr<const char> srcUrl, vm::psv::ptr<void> pool, vm::psv::ptr<u32> require, u32 prepare)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceHttpUriBuild(vm::ptr<char> out, vm::ptr<u32> require, u32 prepare, vm::cptr<SceHttpUriElement> srcElement, u32 option)
+s32 sceHttpUriBuild(vm::psv::ptr<char> out, vm::psv::ptr<u32> require, u32 prepare, vm::psv::ptr<const SceHttpUriElement> srcElement, u32 option)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceHttpUriMerge(vm::ptr<char> mergedUrl, vm::cptr<char> url, vm::cptr<char> relativeUrl, vm::ptr<u32> require, u32 prepare, u32 option)
+s32 sceHttpUriMerge(vm::psv::ptr<char> mergedUrl, vm::psv::ptr<const char> url, vm::psv::ptr<const char> relativeUrl, vm::psv::ptr<u32> require, u32 prepare, u32 option)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceHttpUriSweepPath(vm::ptr<char> dst, vm::cptr<char> src, u32 srcSize)
+s32 sceHttpUriSweepPath(vm::psv::ptr<char> dst, vm::psv::ptr<const char> src, u32 srcSize)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceHttpSetCookieEnabled(s32 id, s32 enable)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceHttpGetCookieEnabled(s32 id, vm::ptr<s32> enable)
+s32 sceHttpGetCookieEnabled(s32 id, vm::psv::ptr<s32> enable)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceHttpGetCookie(vm::cptr<char> url, vm::ptr<char> cookie, vm::ptr<u32> cookieLength, u32 prepare, s32 secure)
+s32 sceHttpGetCookie(vm::psv::ptr<const char> url, vm::psv::ptr<char> cookie, vm::psv::ptr<u32> cookieLength, u32 prepare, s32 secure)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceHttpAddCookie(vm::cptr<char> url, vm::cptr<char> cookie, u32 cookieLength)
+s32 sceHttpAddCookie(vm::psv::ptr<const char> url, vm::psv::ptr<const char> cookie, u32 cookieLength)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceHttpSetCookieRecvCallback(s32 id, vm::ptr<SceHttpCookieRecvCallback> cbfunc, vm::ptr<void> userArg)
+s32 sceHttpSetCookieRecvCallback(s32 id, SceHttpCookieRecvCallback cbfunc, vm::psv::ptr<void> userArg)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceHttpSetCookieSendCallback(s32 id, vm::ptr<SceHttpCookieSendCallback> cbfunc, vm::ptr<void> userArg)
+s32 sceHttpSetCookieSendCallback(s32 id, SceHttpCookieSendCallback cbfunc, vm::psv::ptr<void> userArg)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceHttpsLoadCert(s32 caCertNum, vm::cpptr<SceHttpsData> caList, vm::cptr<SceHttpsData> cert, vm::cptr<SceHttpsData> privKey)
+s32 sceHttpsLoadCert(s32 caCertNum, vm::psv::pptr<const SceHttpsData> caList, vm::psv::ptr<const SceHttpsData> cert, vm::psv::ptr<const SceHttpsData> privKey)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceHttpsUnloadCert()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceHttpsEnableOption(u32 sslFlags)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceHttpsDisableOption(u32 sslFlags)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceHttpsGetSslError(s32 id, vm::ptr<s32> errNum, vm::ptr<u32> detail)
+s32 sceHttpsGetSslError(s32 id, vm::psv::ptr<s32> errNum, vm::psv::ptr<u32> detail)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceHttpsSetSslCallback(s32 id, vm::ptr<SceHttpsCallback> cbfunc, vm::ptr<void> userArg)
+s32 sceHttpsSetSslCallback(s32 id, SceHttpsCallback cbfunc, vm::psv::ptr<void> userArg)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceHttpsGetCaList(vm::ptr<SceHttpsCaList> caList)
+s32 sceHttpsGetCaList(vm::psv::ptr<SceHttpsCaList> caList)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceHttpsFreeCaList(vm::ptr<SceHttpsCaList> caList)
+s32 sceHttpsFreeCaList(vm::psv::ptr<SceHttpsCaList> caList)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 
@@ -287,7 +360,6 @@ psv_log_base sceHttp("SceHttp", []()
 	sceHttp.on_load = nullptr;
 	sceHttp.on_unload = nullptr;
 	sceHttp.on_stop = nullptr;
-	sceHttp.on_error = nullptr;
 
 	REG_FUNC(0x214926D9, sceHttpInit);
 	REG_FUNC(0xC9076666, sceHttpTerm);

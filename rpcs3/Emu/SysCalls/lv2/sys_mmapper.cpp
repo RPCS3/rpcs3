@@ -4,133 +4,91 @@
 #include "Emu/IdManager.h"
 #include "Emu/SysCalls/SysCalls.h"
 
+#include "sys_memory.h"
 #include "sys_mmapper.h"
+#include <map>
 
 SysCallBase sys_mmapper("sys_mmapper");
+std::map<u32, u32> mmapper_info_map;
 
-lv2_memory_t::lv2_memory_t(u32 size, u32 align, u64 flags, const std::shared_ptr<lv2_memory_container_t> ct)
-	: size(size)
-	, align(align)
-	, id(Emu.GetIdManager().get_current_id())
-	, flags(flags)
-	, ct(ct)
+s32 sys_mmapper_allocate_address(u32 size, u64 flags, u32 alignment, u32 alloc_addr)
 {
-}
+	sys_mmapper.Warning("sys_mmapper_allocate_address(size=0x%x, flags=0x%llx, alignment=0x%x, alloc_addr=0x%x)", 
+		size, flags, alignment, alloc_addr);
 
-s32 sys_mmapper_allocate_address(u64 size, u64 flags, u64 alignment, vm::ptr<u32> alloc_addr)
-{
-	sys_mmapper.Error("sys_mmapper_allocate_address(size=0x%llx, flags=0x%llx, alignment=0x%llx, alloc_addr=*0x%x)", size, flags, alignment, alloc_addr);
-
-	LV2_LOCK;
-
-	if (size % 0x10000000)
-	{
+	// Check for valid alignment.
+	if(alignment > 0x80000000)
 		return CELL_EALIGN;
-	}
 
-	if (size > UINT32_MAX)
+	// Check page size.
+	u32 addr;
+	switch(flags & (SYS_MEMORY_PAGE_SIZE_1M | SYS_MEMORY_PAGE_SIZE_64K))
 	{
-		return CELL_ENOMEM;
+	default:
+	case SYS_MEMORY_PAGE_SIZE_1M:
+		if(align(size, alignment) & 0xfffff)
+			return CELL_EALIGN;
+		addr = (u32)Memory.Alloc(size, 0x100000);
+	break;
+
+	case SYS_MEMORY_PAGE_SIZE_64K:
+		if (align(size, alignment) & 0xffff)
+			return CELL_EALIGN;
+		addr = (u32)Memory.Alloc(size, 0x10000);
+	break;
 	}
 
-	switch (alignment)
-	{
-	case 0x10000000:
-	case 0x20000000:
-	case 0x40000000:
-	case 0x80000000:
-	{
-		for (u32 addr = ::align(0x30000000, alignment); addr < 0xC0000000; addr += static_cast<u32>(alignment))
-		{
-			if (Memory.Map(addr, static_cast<u32>(size)))
-			{
-				*alloc_addr = addr;
+	// Write back the start address of the allocated area.
+	vm::write32(alloc_addr, addr);
 
-				return CELL_OK;
-			}
-		}
-
-		return CELL_ENOMEM;
-	}
-	}
-
-	return CELL_EALIGN;
+	return CELL_OK;
 }
 
 s32 sys_mmapper_allocate_fixed_address()
 {
-	sys_mmapper.Error("sys_mmapper_allocate_fixed_address()");
+	sys_mmapper.Warning("sys_mmapper_allocate_fixed_address");
 
-	LV2_LOCK;
-
-	if (!Memory.Map(0xB0000000, 0x10000000))
-	{
+	// Allocate a fixed size from user memory.
+	if (!Memory.Alloc(SYS_MMAPPER_FIXED_SIZE, 0x100000))
 		return CELL_EEXIST;
-	}
 	
 	return CELL_OK;
 }
 
-// Allocate physical memory (create lv2_memory_t object)
-s32 sys_mmapper_allocate_memory(u64 size, u64 flags, vm::ptr<u32> mem_id)
+s32 sys_mmapper_allocate_memory(u32 size, u64 flags, vm::ptr<u32> mem_id)
 {
-	sys_mmapper.Warning("sys_mmapper_allocate_memory(size=0x%llx, flags=0x%llx, mem_id=*0x%x)", size, flags, mem_id);
+	sys_mmapper.Warning("sys_mmapper_allocate_memory(size=0x%x, flags=0x%llx, mem_id_addr=0x%x)", size, flags, mem_id.addr());
 
-	LV2_LOCK;
-
-	// Check page granularity
-	switch (flags & SYS_MEMORY_PAGE_SIZE_MASK)
+	// Check page granularity.
+	switch(flags & (SYS_MEMORY_PAGE_SIZE_1M | SYS_MEMORY_PAGE_SIZE_64K))
 	{
 	case SYS_MEMORY_PAGE_SIZE_1M:
-	{
-		if (size % 0x100000)
-		{
+		if(size & 0xfffff)
 			return CELL_EALIGN;
-		}
-
-		break;
-	}
+	break;
 
 	case SYS_MEMORY_PAGE_SIZE_64K:
-	{
-		if (size % 0x10000)
-		{
+		if(size & 0xffff)
 			return CELL_EALIGN;
-		}
-
-		break;
-	}
+	break;
 
 	default:
-	{
 		return CELL_EINVAL;
 	}
-	}
 
-	if (size > UINT32_MAX)
-	{
-		return CELL_ENOMEM;
-	}
-
-	const u32 align =
-		flags & SYS_MEMORY_PAGE_SIZE_1M ? 0x100000 :
-		flags & SYS_MEMORY_PAGE_SIZE_64K ? 0x10000 :
-		throw EXCEPTION("Unexpected");
-
-	// Generate a new mem ID
-	*mem_id = Emu.GetIdManager().make<lv2_memory_t>(static_cast<u32>(size), align, flags, nullptr);
+	// Generate a new mem ID.
+	*mem_id = Emu.GetIdManager().make<mmapper_info>(size, flags);
 
 	return CELL_OK;
 }
 
 s32 sys_mmapper_allocate_memory_from_container(u32 size, u32 cid, u64 flags, vm::ptr<u32> mem_id)
 {
-	sys_mmapper.Error("sys_mmapper_allocate_memory_from_container(size=0x%x, cid=0x%x, flags=0x%llx, mem_id=*0x%x)", size, cid, flags, mem_id);
-
-	LV2_LOCK;
+	sys_mmapper.Warning("sys_mmapper_allocate_memory_from_container(size=0x%x, cid=0x%x, flags=0x%llx, mem_id_addr=0x%x)", 
+		size, cid, flags, mem_id.addr());
 
 	// Check if this container ID is valid.
-	const auto ct = Emu.GetIdManager().get<lv2_memory_container_t>(cid);
+	const auto ct = Emu.GetIdManager().get<MemoryContainerInfo>(cid);
 
 	if (!ct)
 	{
@@ -138,82 +96,45 @@ s32 sys_mmapper_allocate_memory_from_container(u32 size, u32 cid, u64 flags, vm:
 	}
 
 	// Check page granularity.
-	switch (flags & SYS_MEMORY_PAGE_SIZE_MASK)
+	switch(flags & (SYS_MEMORY_PAGE_SIZE_1M | SYS_MEMORY_PAGE_SIZE_64K))
 	{
 	case SYS_MEMORY_PAGE_SIZE_1M:
-	{
-		if (size % 0x100000)
-		{
+		if(size & 0xfffff)
 			return CELL_EALIGN;
-		}
-		
-		break;
-	}
+	break;
 
 	case SYS_MEMORY_PAGE_SIZE_64K:
-	{
-		if (size % 0x10000)
-		{
+		if(size & 0xffff)
 			return CELL_EALIGN;
-		}
-
-		break;
-	}
+	break;
 
 	default:
-	{
 		return CELL_EINVAL;
 	}
-	}
 
-	if (ct->size - ct->taken < size)
-	{
-		return CELL_ENOMEM;
-	}
+	ct->size = size;
 
-	const u32 align =
-		flags & SYS_MEMORY_PAGE_SIZE_1M ? 0x100000 :
-		flags & SYS_MEMORY_PAGE_SIZE_64K ? 0x10000 :
-		throw EXCEPTION("Unexpected");
-
-	ct->taken += size;
-
-	// Generate a new mem ID
-	*mem_id = Emu.GetIdManager().make<lv2_memory_t>(size, align, flags, ct);
+	// Generate a new mem ID.
+	*mem_id = Emu.GetIdManager().make<mmapper_info>(ct->size, flags);
 
 	return CELL_OK;
 }
 
-s32 sys_mmapper_change_address_access_right(u32 addr, u64 flags)
+s32 sys_mmapper_change_address_access_right(u32 start_addr, u64 flags)
 {
-	sys_mmapper.Todo("sys_mmapper_change_address_access_right(addr=0x%x, flags=0x%llx)", addr, flags);
+	sys_mmapper.Warning("sys_mmapper_change_address_access_right(start_addr=0x%x, flags=0x%llx)", start_addr, flags);
+
+	// TODO
 
 	return CELL_OK;
 }
 
-s32 sys_mmapper_free_address(u32 addr)
+s32 sys_mmapper_free_address(u32 start_addr)
 {
-	sys_mmapper.Error("sys_mmapper_free_address(addr=0x%x)", addr);
+	sys_mmapper.Warning("sys_mmapper_free_address(start_addr=0x%x)", start_addr);
 
-	LV2_LOCK;
-
-	const auto area = Memory.Get(addr);
-
-	if (!area)
-	{
-		return CELL_EINVAL;
-	}
-
-	if (area->GetUsedSize())
-	{
-		return CELL_EBUSY;
-	}
-
-	if (Memory.Unmap(addr))
-	{
-		throw EXCEPTION("Unexpected (failed to unmap memory ad 0x%x)", addr);
-	}
-
+	// Free the address.
+	Memory.Free(start_addr);
 	return CELL_OK;
 }
 
@@ -221,141 +142,97 @@ s32 sys_mmapper_free_memory(u32 mem_id)
 {
 	sys_mmapper.Warning("sys_mmapper_free_memory(mem_id=0x%x)", mem_id);
 
-	LV2_LOCK;
+	// Check if this mem ID is valid.
+	const auto info = Emu.GetIdManager().get<mmapper_info>(mem_id);
+
+	if (!info)
+	{
+		return CELL_ESRCH;
+	}
+
+	// Release the allocated memory and remove the ID.
+	Emu.GetIdManager().remove<mmapper_info>(mem_id);
+
+	return CELL_OK;
+}
+
+s32 sys_mmapper_map_memory(u32 start_addr, u32 mem_id, u64 flags)
+{
+	sys_mmapper.Warning("sys_mmapper_map_memory(start_addr=0x%x, mem_id=0x%x, flags=0x%llx)", start_addr, mem_id, flags);
 
 	// Check if this mem ID is valid.
-	const auto mem = Emu.GetIdManager().get<lv2_memory_t>(mem_id);
+	const auto info = Emu.GetIdManager().get<mmapper_info>(mem_id);
 
-	if (!mem)
+	if (!info)
 	{
 		return CELL_ESRCH;
 	}
 
-	if (mem->addr)
-	{
-		return CELL_EBUSY;
-	}
+	// Map the memory into the process address.
+	if(!Memory.Map(start_addr, info->size))
+		sys_mmapper.Error("sys_mmapper_map_memory failed!");
 
-	// Return physical memory to the container if necessary
-	if (mem->ct)
-	{
-		mem->ct->taken -= mem->size;
-	}
-
-	// Release the allocated memory and remove the ID
-	Emu.GetIdManager().remove<lv2_memory_t>(mem_id);
+	// Keep track of mapped addresses.
+	mmapper_info_map[start_addr] = mem_id;
 
 	return CELL_OK;
 }
 
-s32 sys_mmapper_map_memory(u32 addr, u32 mem_id, u64 flags)
+s32 sys_mmapper_search_and_map(u32 start_addr, u32 mem_id, u64 flags, u32 alloc_addr)
 {
-	sys_mmapper.Error("sys_mmapper_map_memory(addr=0x%x, mem_id=0x%x, flags=0x%llx)", addr, mem_id, flags);
+	sys_mmapper.Warning("sys_mmapper_search_and_map(start_addr=0x%x, mem_id=0x%x, flags=0x%llx, alloc_addr=0x%x)",
+		start_addr, mem_id, flags, alloc_addr);
 
-	LV2_LOCK;
+	// Check if this mem ID is valid.
+	const auto info = Emu.GetIdManager().get<mmapper_info>(mem_id);
 
-	const auto area = Memory.Get(addr & 0xf0000000);
-
-	if (!area || addr < 0x30000000 || addr >= 0xC0000000)
-	{
-		return CELL_EINVAL;
-	}
-
-	const auto mem = Emu.GetIdManager().get<lv2_memory_t>(mem_id);
-
-	if (!mem)
+	if (!info)
 	{
 		return CELL_ESRCH;
 	}
-
-	if (addr % mem->align)
+	
+	// Search for a mappable address.
+	u32 addr;
+	bool found;
+	for (int i = 0; i < SYS_MMAPPER_FIXED_SIZE; i += 0x100000)
 	{
-		return CELL_EALIGN;
-	}
-
-	if (mem->addr)
-	{
-		throw EXCEPTION("Already mapped (mem_id=0x%x, addr=0x%x)", mem_id, mem->addr.load());
-	}
-
-	if (!area->AllocFixed(addr, mem->size))
-	{
-		return CELL_EBUSY;
-	}
-
-	mem->addr = addr;
-
-	return CELL_OK;
-}
-
-s32 sys_mmapper_search_and_map(u32 start_addr, u32 mem_id, u64 flags, vm::ptr<u32> alloc_addr)
-{
-	sys_mmapper.Error("sys_mmapper_search_and_map(start_addr=0x%x, mem_id=0x%x, flags=0x%llx, alloc_addr=*0x%x)", start_addr, mem_id, flags, alloc_addr);
-
-	LV2_LOCK;
-
-	const auto area = Memory.Get(start_addr);
-
-	if (!area || start_addr < 0x30000000 || start_addr >= 0xC0000000)
-	{
-		return CELL_EINVAL;
-	}
-
-	const auto mem = Emu.GetIdManager().get<lv2_memory_t>(mem_id);
-
-	if (!mem)
-	{
-		return CELL_ESRCH;
-	}
-
-	const u32 addr = area->AllocAlign(mem->size, mem->align);
-
-	if (!addr)
-	{
-		return CELL_ENOMEM;
-	}
-
-	*alloc_addr = addr;
-
-	return CELL_ENOMEM;
-}
-
-s32 sys_mmapper_unmap_memory(u32 addr, vm::ptr<u32> mem_id)
-{
-	sys_mmapper.Todo("sys_mmapper_unmap_memory(addr=0x%x, mem_id=*0x%x)", addr, mem_id);
-
-	LV2_LOCK;
-
-	const auto area = Memory.Get(addr);
-
-	if (!area || addr < 0x30000000 || addr >= 0xC0000000)
-	{
-		return CELL_EINVAL;
-	}
-
-	for (auto& mem : Emu.GetIdManager().get_all<lv2_memory_t>())
-	{
-		if (mem->addr == addr)
+		addr = start_addr + i;
+		found = Memory.Map(addr, info->size);
+		if(found)
 		{
-			if (!area->Free(addr))
-			{
-				throw EXCEPTION("Not mapped (mem_id=0x%x, addr=0x%x)", mem->id, addr);
-			}
-
-			mem->addr = 0;
-
-			*mem_id = mem->id;
-
-			return CELL_OK;
+			sys_mmapper.Warning("Found and mapped address 0x%x", addr);
+			break;
 		}
 	}
 
-	return CELL_EINVAL;
+	if (!found)
+		return CELL_ENOMEM;
+	
+	// Write back the start address of the allocated area.
+	vm::write32(alloc_addr, addr);
+
+	// Keep track of mapped addresses.
+	mmapper_info_map[addr] = mem_id;
+
+	return CELL_OK;
 }
 
-s32 sys_mmapper_enable_page_fault_notification(u32 addr, u32 eq)
+s32 sys_mmapper_unmap_memory(u32 start_addr, u32 mem_id_addr)
 {
-	sys_mmapper.Todo("sys_mmapper_enable_page_fault_notification(addr=0x%x, eq=0x%x)", addr, eq);
+	sys_mmapper.Warning("sys_mmapper_unmap_memory(start_addr=0x%x, mem_id_addr=0x%x)", start_addr, mem_id_addr);
+
+	// Write back the mem ID of the unmapped area.
+	u32 mem_id = mmapper_info_map.find(start_addr)->second;
+	vm::write32(mem_id_addr, mem_id);
+
+	return CELL_OK;
+}
+
+s32 sys_mmapper_enable_page_fault_notification(u32 start_addr, u32 q_id)
+{
+	sys_mmapper.Warning("sys_mmapper_enable_page_fault_notification(start_addr=0x%x, q_id=0x%x)", start_addr, q_id);
+
+	// TODO
 
 	return CELL_OK;
 }

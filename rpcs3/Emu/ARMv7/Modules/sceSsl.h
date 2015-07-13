@@ -1,14 +1,14 @@
 #pragma once
 
-using SceSslCert = void;
-using SceSslCertName = void;
+typedef void SceSslCert;
+typedef void SceSslCertName;
 
 struct SceSslMemoryPoolStats
 {
-	le_t<u32> poolSize;
-	le_t<u32> maxInuseSize;
-	le_t<u32> currentInuseSize;
-	le_t<s32> reserved;
+	u32 poolSize;
+	u32 maxInuseSize;
+	u32 currentInuseSize;
+	s32 reserved;
 };
 
 extern psv_log_base sceSsl;

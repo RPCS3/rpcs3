@@ -1,7 +1,4 @@
 #pragma once
-
-namespace vm { using namespace ps3; }
-
 #include "cellRtc.h"
 
 // Error Codes
@@ -99,7 +96,7 @@ enum
 	SCE_NP_COMMUNITY_ERROR_TOO_MANY_SLOTID              = 0x8002a1b1,
 };
 
-using SceNpBasicEventHandler = func_def<s32(s32 event, s32 retCode, u32 reqId, vm::ptr<void> arg)>;
+typedef int(*SceNpBasicEventHandler)(s32 event, s32 retCode, u32 reqId, vm::ptr<void> arg);
 
 // NP Manager Utility statuses
 enum
@@ -692,41 +689,41 @@ enum
 // NP communication ID structure
 struct SceNpCommunicationId
 {
-	char data[9];
-	char term;
+	s8 data[9];
+	s8 term;
 	u8 num;
-	char dummy;
+	//s8 dummy;
 };
 
 // OnlineId structure
 struct SceNpOnlineId
 {
-	char data[16];
-	char term;
-	char dummy[3];
+	s8 data[16];
+	s8 term;
+	//s8 dummy[3];
 };
 
 // NP ID structure
 struct SceNpId
 {
 	SceNpOnlineId handle;
-	u8 opt[8];
-	u8 reserved[8];
+	//u8 opt[8];
+	//u8 reserved[8];
 };
 
 // Online Name structure
 struct SceNpOnlineName
 {
-	char data[48];
-	char term;
-	char padding[3];
+	s8 data[48];
+	s8 term;
+	s8 padding[3];
 };
 
 // Avatar structure
 struct SceNpAvatarUrl
 {
-	char data[127];
-	char term;
+	s8 data[127];
+	s8 term;
 };
 
 // Avatar image structure
@@ -734,14 +731,14 @@ struct SceNpAvatarImage
 {
 	u8 data[SCE_NET_NP_AVATAR_IMAGE_MAX_SIZE];
 	be_t<u32> size;
-	u8 reserved[12];
+	//u8 reserved[12];
 };
 
 // Self introduction structure
 struct SceNpAboutMe
 {
-	char data[SCE_NET_NP_ABOUT_ME_MAX_LENGTH];
-	char term;
+	s8 data[SCE_NET_NP_ABOUT_ME_MAX_LENGTH];
+	s8 term;
 };
 
 // User information structure
@@ -752,12 +749,12 @@ struct SceNpUserInfo
 	SceNpAvatarUrl icon;
 };
 
-// User information structure
+// User information structure (pointer version)
 struct SceNpUserInfo2
 {
 	SceNpId npId;
-	vm::bptr<SceNpOnlineName> onlineName;
-	vm::bptr<SceNpAvatarUrl> avatarUrl;
+	SceNpOnlineName onlineName;
+	SceNpAvatarUrl avatarUrl;
 };
 
 // Often used languages structure
@@ -784,7 +781,6 @@ struct SceNpCommunicationSignature
 // NP cache information structure
 struct SceNpManagerCacheParam
 {
-	be_t<u32> size;
 	SceNpOnlineId onlineId;
 	SceNpId npId;
 	SceNpOnlineName onlineName;
@@ -794,7 +790,7 @@ struct SceNpManagerCacheParam
 // Message attachment data
 struct SceNpBasicAttachmentData
 {
-	be_t<u32> id; // SceNpBasicAttachmentDataId
+	be_t<u32> id;
 	be_t<u32> size;
 };
 
@@ -1067,13 +1063,10 @@ struct SceNpMatching2LobbyDataInternal
 union SceNpMatching2LobbyMessageDestination
 {
 	be_t<u16> unicastTarget;
-
-	struct
-	{
-		vm::bptr<u16> memberId;
+	struct multicastTarget {
+		be_t<u16> *memberId;
 		be_t<u32> memberIdNum;
-	}
-	multicastTarget;
+	};
 };
 
 // Group label
@@ -1976,8 +1969,7 @@ struct SceNpScoreClanIdRankData
 };
 
 // Union for connection information
-union SceNpSignalingConnectionInfo
-{
+union SceNpSignalingConnectionInfo {
 	be_t<u32> rtt;
 	be_t<u32> bandwidth;
 	SceNpId npId;

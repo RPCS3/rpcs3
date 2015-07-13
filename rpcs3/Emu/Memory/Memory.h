@@ -2,6 +2,11 @@
 
 #include "MemoryBlock.h"
 
+using std::nullptr_t;
+
+#define safe_delete(x) do {delete (x);(x)=nullptr;} while(0)
+#define safe_free(x) do {free(x);(x)=nullptr;} while(0)
+
 enum MemoryType
 {
 	Memory_PS3,
@@ -14,8 +19,6 @@ class MemoryBase
 	std::vector<MemoryBlock*> MemoryBlocks;
 
 public:
-	std::mutex mutex;
-
 	MemoryBlock* UserMemory;
 
 	DynamicMemoryBlock MainMem;
@@ -28,8 +31,7 @@ public:
 	{
 		DynamicMemoryBlock RAM;
 		DynamicMemoryBlock Userspace;
-	}
-	PSV;
+	} PSV;
 
 	struct
 	{
@@ -38,8 +40,7 @@ public:
 		DynamicMemoryBlock RAM;
 		DynamicMemoryBlock Kernel;
 		DynamicMemoryBlock Userspace;
-	}
-	PSP;
+	} PSP;
 
 	bool m_inited;
 
@@ -52,6 +53,10 @@ public:
 	{
 		Close();
 	}
+
+	void RegisterPages(u32 addr, u32 size);
+
+	void UnregisterPages(u32 addr, u32 size);
 
 	void Init(MemoryType type);
 
@@ -80,8 +85,6 @@ public:
 	bool Map(const u32 addr, const u32 size);
 
 	bool Unmap(const u32 addr);
-
-	MemoryBlock* Get(const u32 addr);
 };
 
 extern MemoryBase Memory;

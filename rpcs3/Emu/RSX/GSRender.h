@@ -3,12 +3,8 @@
 
 struct GSRender : public RSXThread
 {
-	virtual ~GSRender() override
+	virtual ~GSRender()
 	{
-		if (joinable())
-		{
-			throw EXCEPTION("Thread not joined");
-		}
 	}
 
 	virtual void Close()=0;

@@ -2,6 +2,7 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
+#include "Emu/SysCalls/CB_FUNC.h"
 
 #include "Utilities/rMsgBox.h"
 #include "Emu/FS/VFS.h"
@@ -16,7 +17,7 @@ std::string contentInfo;
 std::string usrdir;
 bool path_set = false;
 
-s32 cellHddGameCheck(PPUThread& CPU, u32 version, vm::cptr<char> dirName, u32 errDialog, vm::ptr<CellHddGameStatCallback> funcStat, u32 container)
+s32 cellHddGameCheck(PPUThread& CPU, u32 version, vm::ptr<const char> dirName, u32 errDialog, vm::ptr<CellHddGameStatCallback> funcStat, u32 container)
 {
 	cellGame.Warning("cellHddGameCheck(version=%d, dirName=*0x%x, errDialog=%d, funcStat=*0x%x, container=%d)", version, dirName, errDialog, funcStat, container);
 
@@ -27,10 +28,10 @@ s32 cellHddGameCheck(PPUThread& CPU, u32 version, vm::cptr<char> dirName, u32 er
 		return CELL_HDDGAME_ERROR_PARAM;
 	}
 
-	vm::stackvar<CellHddGameSystemFileParam> param(CPU);
-	vm::stackvar<CellHddGameCBResult> result(CPU);
-	vm::stackvar<CellHddGameStatGet> get(CPU);
-	vm::stackvar<CellHddGameStatSet> set(CPU);
+	vm::var<CellHddGameSystemFileParam> param;
+	vm::var<CellHddGameCBResult> result;
+	vm::var<CellHddGameStatGet> get;
+	vm::var<CellHddGameStatSet> set;
 
 	get->hddFreeSizeKB = 40 * 1024 * 1024; // 40 GB, TODO: Use the free space of the computer's HDD where RPCS3 is being run.
 	get->isNewData = CELL_HDDGAME_ISNEWDATA_EXIST;
@@ -187,7 +188,7 @@ s32 cellGamePatchCheck(vm::ptr<CellGameContentSize> size, vm::ptr<void> reserved
 	return CELL_GAME_RET_OK;
 }
 
-s32 cellGameDataCheck(u32 type, vm::cptr<char> dirName, vm::ptr<CellGameContentSize> size)
+s32 cellGameDataCheck(u32 type, vm::ptr<const char> dirName, vm::ptr<CellGameContentSize> size)
 {
 	cellGame.Warning("cellGameDataCheck(type=%d, dirName=*0x%x, size=*0x%x)", type, dirName, size);
 
@@ -282,7 +283,7 @@ s32 cellGameContentPermit(vm::ptr<char[CELL_GAME_PATH_MAX]> contentInfoPath, vm:
 	return CELL_GAME_RET_OK;
 }
 
-s32 cellGameDataCheckCreate2(PPUThread& CPU, u32 version, vm::cptr<char> dirName, u32 errDialog, vm::ptr<CellGameDataStatCallback> funcStat, u32 container)
+s32 cellGameDataCheckCreate2(PPUThread& CPU, u32 version, vm::ptr<const char> dirName, u32 errDialog, vm::ptr<CellGameDataStatCallback> funcStat, u32 container)
 {
 	cellGame.Warning("cellGameDataCheckCreate2(version=0x%x, dirName=*0x%x, errDialog=0x%x, funcStat=*0x%x, container=%d)", version, dirName, errDialog, funcStat, container);
 
@@ -340,7 +341,7 @@ s32 cellGameDataCheckCreate2(PPUThread& CPU, u32 version, vm::cptr<char> dirName
 	strcpy_trunc(cbGet->getParam.title, psf.GetString("TITLE"));
 	// TODO: write lang titles
 
-	funcStat(CPU, cbResult, cbGet, cbSet);
+	funcStat(cbResult, cbGet, cbSet);
 
 	if (cbSet->setParam)
 	{
@@ -379,7 +380,7 @@ s32 cellGameDataCheckCreate2(PPUThread& CPU, u32 version, vm::cptr<char> dirName
 	}
 }
 
-s32 cellGameDataCheckCreate(PPUThread& CPU, u32 version, vm::cptr<char> dirName, u32 errDialog, vm::ptr<CellGameDataStatCallback> funcStat, u32 container)
+s32 cellGameDataCheckCreate(PPUThread& CPU, u32 version, vm::ptr<const char> dirName, u32 errDialog, vm::ptr<CellGameDataStatCallback> funcStat, u32 container)
 {
 	cellGame.Warning("cellGameDataCheckCreate(version=0x%x, dirName=*0x%x, errDialog=0x%x, funcStat=*0x%x, container=%d)", version, dirName, errDialog, funcStat, container);
 
@@ -527,7 +528,7 @@ s32 cellGameGetLocalWebContentPath()
 	return CELL_OK;
 }
 
-s32 cellGameContentErrorDialog(s32 type, s32 errNeedSizeKB, vm::cptr<char> dirName)
+s32 cellGameContentErrorDialog(s32 type, s32 errNeedSizeKB, vm::ptr<const char> dirName)
 {
 	cellGame.Warning("cellGameContentErrorDialog(type=%d, errNeedSizeKB=%d, dirName=*0x%x)", type, errNeedSizeKB, dirName);
 

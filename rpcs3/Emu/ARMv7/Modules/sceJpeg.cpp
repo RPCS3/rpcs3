@@ -2,78 +2,107 @@
 #include "Emu/System.h"
 #include "Emu/ARMv7/PSVFuncList.h"
 
-#include "sceJpeg.h"
+extern psv_log_base sceJpeg;
+
+struct SceJpegOutputInfo
+{
+	s32 colorSpace;
+	u16 imageWidth;
+	u16 imageHeight;
+	u32 outputBufferSize;
+	u32 tempBufferSize;
+	u32 coefBufferSize;
+
+	struct { u32 x, y; } pitch[4];
+};
+
+struct SceJpegSplitDecodeCtrl
+{
+	vm::psv::ptr<u8> pStreamBuffer;
+	u32 streamBufferSize;
+	vm::psv::ptr<u8> pWriteBuffer;
+	u32 writeBufferSize;
+	s32 isEndOfStream;
+	s32 decodeMode;
+
+	SceJpegOutputInfo outputInfo;
+
+	vm::psv::ptr<void> pOutputBuffer;
+	vm::psv::ptr<void> pCoefBuffer;
+
+	u32 internalData[3];
+};
 
 s32 sceJpegInitMJpeg(s32 maxSplitDecoder)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceJpegFinishMJpeg()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceJpegDecodeMJpeg(
-	vm::cptr<u8> pJpeg,
+	vm::psv::ptr<const u8> pJpeg,
 	u32 isize,
-	vm::ptr<void> pRGBA,
+	vm::psv::ptr<void> pRGBA,
 	u32 osize,
 	s32 decodeMode,
-	vm::ptr<void> pTempBuffer,
+	vm::psv::ptr<void> pTempBuffer,
 	u32 tempBufferSize,
-	vm::ptr<void> pCoefBuffer,
+	vm::psv::ptr<void> pCoefBuffer,
 	u32 coefBufferSize)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceJpegDecodeMJpegYCbCr(
-	vm::cptr<u8> pJpeg,
+	vm::psv::ptr<const u8> pJpeg,
 	u32 isize,
-	vm::ptr<u8> pYCbCr,
+	vm::psv::ptr<u8> pYCbCr,
 	u32 osize,
 	s32 decodeMode,
-	vm::ptr<void> pCoefBuffer,
+	vm::psv::ptr<void> pCoefBuffer,
 	u32 coefBufferSize)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceJpegMJpegCsc(
-	vm::ptr<void> pRGBA,
-	vm::cptr<u8> pYCbCr,
+	vm::psv::ptr<void> pRGBA,
+	vm::psv::ptr<const u8> pYCbCr,
 	s32 xysize,
 	s32 iFrameWidth,
 	s32 colorOption,
 	s32 sampling)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceJpegGetOutputInfo(
-	vm::cptr<u8> pJpeg,
+	vm::psv::ptr<const u8> pJpeg,
 	u32 isize,
 	s32 outputFormat,
 	s32 decodeMode,
-	vm::ptr<SceJpegOutputInfo> pOutputInfo)
+	vm::psv::ptr<SceJpegOutputInfo> pOutputInfo)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceJpegCreateSplitDecoder(vm::ptr<SceJpegSplitDecodeCtrl> pCtrl)
+s32 sceJpegCreateSplitDecoder(vm::psv::ptr<SceJpegSplitDecodeCtrl> pCtrl)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceJpegDeleteSplitDecoder(vm::ptr<SceJpegSplitDecodeCtrl> pCtrl)
+s32 sceJpegDeleteSplitDecoder(vm::psv::ptr<SceJpegSplitDecodeCtrl> pCtrl)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceJpegSplitDecodeMJpeg(vm::ptr<SceJpegSplitDecodeCtrl> pCtrl)
+s32 sceJpegSplitDecodeMJpeg(vm::psv::ptr<SceJpegSplitDecodeCtrl> pCtrl)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 
@@ -84,7 +113,6 @@ psv_log_base sceJpeg("SceJpeg", []()
 	sceJpeg.on_load = nullptr;
 	sceJpeg.on_unload = nullptr;
 	sceJpeg.on_stop = nullptr;
-	sceJpeg.on_error = nullptr;
 
 	REG_FUNC(0xB030773B, sceJpegInitMJpeg);
 	REG_FUNC(0x62842598, sceJpegFinishMJpeg);

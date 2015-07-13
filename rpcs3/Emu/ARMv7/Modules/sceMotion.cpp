@@ -2,86 +2,113 @@
 #include "Emu/System.h"
 #include "Emu/ARMv7/PSVFuncList.h"
 
-#include "sceMotion.h"
+extern psv_log_base sceMotion;
 
-s32 sceMotionGetState(vm::ptr<SceMotionState> motionState)
+struct SceMotionState
 {
-	throw EXCEPTION("");
+	u32 timestamp;
+	SceFVector3 acceleration;
+	SceFVector3 angularVelocity;
+	u8 reserve1[12];
+	SceFQuaternion deviceQuat;
+	SceUMatrix4 rotationMatrix;
+	SceUMatrix4 nedMatrix;
+	u8 reserve2[4];
+	SceFVector3 basicOrientation;
+	u64 hostTimestamp;
+	u8 reserve3[40];
+};
+
+struct SceMotionSensorState
+{
+	SceFVector3 accelerometer;
+	SceFVector3 gyro;
+	u8 reserve1[12];
+	u32 timestamp;
+	u32 counter;
+	u8 reserve2[4];
+	u64 hostTimestamp;
+	u8 reserve3[8];
+};
+
+s32 sceMotionGetState(vm::psv::ptr<SceMotionState> motionState)
+{
+	throw __FUNCTION__;
 }
 
-s32 sceMotionGetSensorState(vm::ptr<SceMotionSensorState> sensorState, s32 numRecords)
+s32 sceMotionGetSensorState(vm::psv::ptr<SceMotionSensorState> sensorState, s32 numRecords)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceMotionGetBasicOrientation(vm::ptr<SceFVector3> basicOrientation)
+s32 sceMotionGetBasicOrientation(vm::psv::ptr<SceFVector3> basicOrientation)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceMotionRotateYaw(const float radians)
-{
-	throw EXCEPTION("");
-}
+//s32 sceMotionRotateYaw(const float radians)
+//{
+//	throw __FUNCTION__;
+//}
 
 s32 sceMotionGetTiltCorrection()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceMotionSetTiltCorrection(s32 setValue)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceMotionGetDeadband()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceMotionSetDeadband(s32 setValue)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceMotionSetAngleThreshold(const float angle)
-{
-	throw EXCEPTION("");
-}
+//s32 sceMotionSetAngleThreshold(const float angle)
+//{
+//	throw __FUNCTION__;
+//}
 
-float sceMotionGetAngleThreshold()
-{
-	throw EXCEPTION("");
-}
+//float sceMotionGetAngleThreshold()
+//{
+//	throw __FUNCTION__;
+//}
 
 s32 sceMotionReset()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceMotionMagnetometerOn()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceMotionMagnetometerOff()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceMotionGetMagnetometerState()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceMotionStartSampling()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceMotionStopSampling()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 #define REG_FUNC(nid, name) reg_psv_func(nid, &sceMotion, #name, name)
@@ -91,7 +118,6 @@ psv_log_base sceMotion("SceMotion", []()
 	sceMotion.on_load = nullptr;
 	sceMotion.on_unload = nullptr;
 	sceMotion.on_stop = nullptr;
-	sceMotion.on_error = nullptr;
 
 	REG_FUNC(0xBDB32767, sceMotionGetState);
 	REG_FUNC(0x47D679EA, sceMotionGetSensorState);

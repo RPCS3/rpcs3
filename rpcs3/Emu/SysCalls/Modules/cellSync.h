@@ -1,7 +1,5 @@
 #pragma once
 
-namespace vm { using namespace ps3; }
-
 // Return Codes
 enum
 {
@@ -31,243 +29,69 @@ enum
 	CELL_SYNC_ERROR_NO_SPU_CONTEXT_STORAGE = 0x80410114, // ???
 };
 
-struct set_alignment(4) sync_mutex_t // CellSyncMutex sync var
+union CellSyncMutex
 {
-	be_t<u16> rel;
-	be_t<u16> acq;
-
-	be_t<u16> acquire()
+	struct sync_t
 	{
-		return acq++;
-	}
-
-	bool try_lock()
-	{
-		return acq++ == rel;
-	}
-
-	void unlock()
-	{
-		rel++;
-	}
-};
-
-using CellSyncMutex = atomic_be_t<sync_mutex_t>;
-
-CHECK_SIZE_ALIGN(CellSyncMutex, 4, 4);
-
-struct set_alignment(4) sync_barrier_t // CellSyncBarrier sync var
-{
-	be_t<s16> value;
-	be_t<u16> count;
-
-	bool try_notify()
-	{
-		// extract m_value (repeat if < 0), increase, compare with second s16, set sign bit if equal, insert it back
-		s16 v = value;
-
-		if (v < 0)
-		{
-			return false;
-		}
-
-		if (++v == count)
-		{
-			v |= 0x8000;
-		}
-
-		value = v;
-
-		return true;
+		be_t<u16> release_count; // increased when mutex is unlocked
+		be_t<u16> acquire_count; // increased when mutex is locked
 	};
 
-	bool try_wait()
+	struct
 	{
-		// extract m_value (repeat if >= 0), decrease it, set 0 if == 0x8000, insert it back
-		s16 v = value;
+		atomic_be_t<u16> release_count;
+		atomic_be_t<u16> acquire_count;
+	};
 
-		if (v >= 0)
-		{
-			return false;
-		}
-
-		if (--v == -0x8000)
-		{
-			v = 0;
-		}
-
-		value = v;
-
-		return true;
-	}
+	atomic_be_t<sync_t> sync_var;
 };
 
-using CellSyncBarrier = atomic_be_t<sync_barrier_t>;
+static_assert(sizeof(CellSyncMutex) == 4, "CellSyncMutex: wrong size");
 
-CHECK_SIZE_ALIGN(CellSyncBarrier, 4, 4);
-
-struct sync_rwm_t // CellSyncRwm sync var
+struct CellSyncBarrier
 {
-	be_t<u16> readers;
-	be_t<u16> writers;
-
-	bool try_read_begin()
+	struct data_t
 	{
-		if (writers.data())
-		{
-			return false;
-		}
+		be_t<s16> m_value;
+		be_t<s16> m_count;
+	};
 
-		readers++;
-		return true;
-	}
-
-	bool try_read_end()
-	{
-		if (!readers.data())
-		{
-			return false;
-		}
-
-		readers--;
-		return true;
-	}
-
-	bool try_write_begin()
-	{
-		if (writers.data())
-		{
-			return false;
-		}
-
-		writers = 1;
-		return true;
-	}
+	atomic_be_t<data_t> data;
 };
 
-struct set_alignment(16) CellSyncRwm
-{
-	atomic_be_t<sync_rwm_t> ctrl; // sync var
+static_assert(sizeof(CellSyncBarrier) == 4, "CellSyncBarrier: wrong size");
 
-	be_t<u32> size;
-	vm::bptr<void, u64> buffer;
+struct CellSyncRwm
+{
+	struct data_t
+	{
+		be_t<u16> m_readers;
+		be_t<u16> m_writers;
+	};
+
+	atomic_be_t<data_t> data;
+	be_t<u32> m_size;
+	vm::bptr<void, u64> m_buffer;
 };
 
-CHECK_SIZE_ALIGN(CellSyncRwm, 16, 16);
+static_assert(sizeof(CellSyncRwm) == 16, "CellSyncRwm: wrong size");
 
-struct sync_queue_t // CellSyncQueue sync var
+struct CellSyncQueue
 {
-	be_t<u32> m_v1;
-	be_t<u32> m_v2;
-
-	bool try_push_begin(u32 depth, u32& position)
+	struct data_t
 	{
-		const u32 v1 = m_v1;
-		const u32 v2 = m_v2;
+		be_t<u32> m_v1;
+		be_t<u32> m_v2;
+	};
 
-		// compare 5th byte with zero (break if not zero)
-		// compare (second u32 (u24) + first byte) with depth (break if greater or equal)
-		if ((v2 >> 24) || ((v2 & 0xffffff) + (v1 >> 24)) >= depth)
-		{
-			return false;
-		}
-
-		// extract first u32 (u24) (-> position), calculate (position + 1) % depth, insert it back
-		// insert 1 in 5th u8
-		// extract second u32 (u24), increase it, insert it back
-		position = (v1 & 0xffffff);
-		m_v1 = (v1 & 0xff000000) | ((position + 1) % depth);
-		m_v2 = (1 << 24) | ((v2 & 0xffffff) + 1);
-
-		return true;
-	}
-
-	bool try_pop_begin(u32 depth, u32& position)
-	{
-		const u32 v1 = m_v1;
-		const u32 v2 = m_v2;
-
-		// extract first u8, repeat if not zero
-		// extract second u32 (u24), subtract 5th u8, compare with zero, repeat if less or equal
-		if ((v1 >> 24) || ((v2 & 0xffffff) <= (v2 >> 24)))
-		{
-			return false;
-		}
-
-		// insert 1 in first u8
-		// extract first u32 (u24), add depth, subtract second u32 (u24), calculate (% depth), save to position
-		// extract second u32 (u24), decrease it, insert it back
-		m_v1 = 0x1000000 | v1;
-		position = ((v1 & 0xffffff) + depth - (v2 & 0xffffff)) % depth;
-		m_v2 = (v2 & 0xff000000) | ((v2 & 0xffffff) - 1);
-
-		return true;
-	}
-
-	bool try_peek_begin(u32 depth, u32& position)
-	{
-		const u32 v1 = m_v1;
-		const u32 v2 = m_v2;
-
-		if ((v1 >> 24) || ((v2 & 0xffffff) <= (v2 >> 24)))
-		{
-			return false;
-		}
-
-		m_v1 = 0x1000000 | v1;
-		position = ((v1 & 0xffffff) + depth - (v2 & 0xffffff)) % depth;
-
-		return true;
-	}
-
-	bool try_clear_begin_1()
-	{
-		if (m_v1 & 0xff000000)
-		{
-			return false;
-		}
-
-		m_v1 |= 0x1000000;
-
-		return true;
-	}
-
-	bool try_clear_begin_2()
-	{
-		if (m_v2 & 0xff000000)
-		{
-			return false;
-		}
-
-		m_v2 |= 0x1000000;
-
-		return true;
-	}
-};
-
-struct set_alignment(32) CellSyncQueue
-{
-	atomic_be_t<sync_queue_t> ctrl;
-
-	be_t<u32> size;
-	be_t<u32> depth;
-	vm::bptr<u8, u64> buffer;
+	atomic_be_t<data_t> data;
+	be_t<u32> m_size;
+	be_t<u32> m_depth;
+	vm::bptr<u8, u64> m_buffer;
 	be_t<u64> reserved;
-
-	u32 check_depth()
-	{
-		const auto data = ctrl.load();
-
-		if ((data.m_v1 & 0xffffff) > depth || (data.m_v2 & 0xffffff) > depth)
-		{
-			throw EXCEPTION("Invalid queue pointers");
-		}
-
-		return depth;
-	}
 };
 
-CHECK_SIZE_ALIGN(CellSyncQueue, 32, 32);
+static_assert(sizeof(CellSyncQueue) == 32, "CellSyncQueue: wrong size");
 
 enum CellSyncQueueDirection : u32 // CellSyncLFQueueDirection
 {
@@ -277,7 +101,7 @@ enum CellSyncQueueDirection : u32 // CellSyncLFQueueDirection
 	CELL_SYNC_QUEUE_ANY2ANY = 3, // SPU/PPU to SPU/PPU
 };
 
-struct set_alignment(128) CellSyncLFQueue
+struct CellSyncLFQueue
 {
 	struct pop1_t
 	{
@@ -331,11 +155,11 @@ struct set_alignment(128) CellSyncLFQueue
 
 	be_t<u32> m_size;              // 0x10
 	be_t<u32> m_depth;             // 0x14
-	vm::bptr<u8, u64> m_buffer;    // 0x18
+	vm::bptr<u8, u64> m_buffer; // 0x18
 	u8 m_bs[4];                    // 0x20
-	be_t<u32> m_direction;         // 0x24 CellSyncQueueDirection
+	be_t<CellSyncQueueDirection> m_direction; // 0x24
 	be_t<u32> m_v1;                // 0x28
-	atomic_be_t<s32> init;         // 0x2C
+	atomic_be_t<u32> init;         // 0x2C
 	atomic_be_t<push2_t> push2;    // 0x30
 	be_t<u16> m_hs1[15];           // 0x32
 	atomic_be_t<pop2_t> pop2;      // 0x50
@@ -362,4 +186,24 @@ struct set_alignment(128) CellSyncLFQueue
 	}
 };
 
-CHECK_SIZE_ALIGN(CellSyncLFQueue, 128, 128);
+static_assert(sizeof(CellSyncLFQueue) == 128, "CellSyncLFQueue: wrong size");
+
+s32 syncMutexInitialize(vm::ptr<CellSyncMutex> mutex);
+
+s32 syncBarrierInitialize(vm::ptr<CellSyncBarrier> barrier, u16 total_count);
+
+s32 syncRwmInitialize(vm::ptr<CellSyncRwm> rwm, vm::ptr<void> buffer, u32 buffer_size);
+
+s32 syncQueueInitialize(vm::ptr<CellSyncQueue> queue, vm::ptr<u8> buffer, u32 size, u32 depth);
+
+s32 syncLFQueueInitialize(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u8> buffer, u32 size, u32 depth, CellSyncQueueDirection direction, vm::ptr<void> eaSignal);
+s32 syncLFQueueGetPushPointer(vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32 isBlocking, u32 useEventQueue);
+s32 syncLFQueueGetPushPointer2(vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32 isBlocking, u32 useEventQueue);
+s32 syncLFQueueCompletePushPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, const std::function<s32(u32 addr, u32 arg)> fpSendSignal);
+s32 syncLFQueueCompletePushPointer2(vm::ptr<CellSyncLFQueue> queue, s32 pointer, const std::function<s32(u32 addr, u32 arg)> fpSendSignal);
+s32 syncLFQueueGetPopPointer(vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32 isBlocking, u32, u32 useEventQueue);
+s32 syncLFQueueGetPopPointer2(vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32 isBlocking, u32 useEventQueue);
+s32 syncLFQueueCompletePopPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, const std::function<s32(u32 addr, u32 arg)> fpSendSignal, u32 noQueueFull);
+s32 syncLFQueueCompletePopPointer2(vm::ptr<CellSyncLFQueue> queue, s32 pointer, const std::function<s32(u32 addr, u32 arg)> fpSendSignal, u32 noQueueFull);
+s32 syncLFQueueAttachLv2EventQueue(vm::ptr<u32> spus, u32 num, vm::ptr<CellSyncLFQueue> queue);
+s32 syncLFQueueDetachLv2EventQueue(vm::ptr<u32> spus, u32 num, vm::ptr<CellSyncLFQueue> queue);
