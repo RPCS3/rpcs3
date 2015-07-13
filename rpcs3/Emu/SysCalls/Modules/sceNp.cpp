@@ -191,14 +191,7 @@ s32 sceNpDrmGetTimelimit(vm::ptr<const char> path, vm::ptr<u64> time_remain)
 
 s32 sceNpDrmProcessExitSpawn(vm::cptr<char> path, u32 argv_addr, u32 envp_addr, u32 data_addr, u32 data_size, u32 prio, u64 flags)
 {
-	sceNp.Warning("sceNpDrmProcessExitSpawn()");
-	sceNp.Warning("path: %s", path.get_ptr());
-	sceNp.Warning("argv: 0x%x", argv_addr);
-	sceNp.Warning("envp: 0x%x", envp_addr);
-	sceNp.Warning("data: 0x%x", data_addr);
-	sceNp.Warning("data_size: 0x%x", data_size);
-	sceNp.Warning("prio: %d", prio);
-	sceNp.Warning("flags: %d", flags);
+	sceNp.Warning("sceNpDrmProcessExitSpawn() -> sys_game_process_exitspawn");
 
 	sys_game_process_exitspawn(path, argv_addr, envp_addr, data_addr, data_size, prio, flags);
 
@@ -207,14 +200,7 @@ s32 sceNpDrmProcessExitSpawn(vm::cptr<char> path, u32 argv_addr, u32 envp_addr, 
 
 s32 sceNpDrmProcessExitSpawn2(vm::cptr<char> path, u32 argv_addr, u32 envp_addr, u32 data_addr, u32 data_size, u32 prio, u64 flags)
 {
-	sceNp.Warning("sceNpDrmProcessExitSpawn2()");
-	sceNp.Warning("path: %s", path.get_ptr());
-	sceNp.Warning("argv: 0x%x", argv_addr);
-	sceNp.Warning("envp: 0x%x", envp_addr);
-	sceNp.Warning("data: 0x%x", data_addr);
-	sceNp.Warning("data_size: 0x%x", data_size);
-	sceNp.Warning("prio: %d", prio);
-	sceNp.Warning("flags: %d", flags);
+	sceNp.Warning("sceNpDrmProcessExitSpawn2() -> sys_game_process_exitspawn2");
 
 	sys_game_process_exitspawn2(path, argv_addr, envp_addr, data_addr, data_size, prio, flags);
 

@@ -57,6 +57,7 @@ never_inline s32 savedata_op(
 
 	if (!lock)
 	{
+		cellSysutil.Error("savedata_op(): failed to lock the mutex.");
 		return CELL_SAVEDATA_ERROR_BUSY;
 	}
 
@@ -191,6 +192,7 @@ never_inline s32 savedata_op(
 
 			if (result->result < 0)
 			{
+				cellSysutil.Error("savedata_op(): funcList returned result < 0.");
 				return CELL_SAVEDATA_ERROR_CBRESULT;
 			}
 
@@ -302,6 +304,7 @@ never_inline s32 savedata_op(
 
 			if (result->result < 0)
 			{
+				cellSysutil.Error("savedata_op(): funcFixed returned result < 0.");
 				return CELL_SAVEDATA_ERROR_CBRESULT;
 			}
 
@@ -343,10 +346,39 @@ never_inline s32 savedata_op(
 
 	PSFLoader psf;
 
+	// Create save directory if necessary
+	if (save_entry.isNew)
+	{
+		if (!Emu.GetVFS().ExistsDir(dir_path) && !Emu.GetVFS().CreateDir(dir_path))
+		{
+			// Let's ignore this error for now
+		}
+		else
+		{
+			std::string rSfo_path = "/dev_hdd0/game/" + save_entry.dirName.substr(0, 9) + "/PS3_GAME/PARAM.SFO"; // The real SFO path
+			if (!Emu.GetVFS().ExistsFile(rSfo_path))
+			{
+				rSfo_path = "/dev_hdd0/game/" + save_entry.dirName.substr(0, 9) + "/PARAM.SFO";
+			}
+
+			vfsFile rSfo(rSfo_path);
+			PSFLoader rPsf(rSfo);
+			psf.Clear();
+			psf.SetInteger("ATTRIBUTE", rPsf.GetInteger("ATTRIBUTE"));
+			psf.SetString("TITLE", rPsf.GetString("TITLE"));
+			psf.SetString("SUB_TITLE", rPsf.GetString("SUB_TITLE"));
+			psf.SetString("DETAIL", rPsf.GetString("DETAIL"));
+			psf.SetString("SAVEDATA_LIST_PARAM", rPsf.GetString("SAVEDATA_LIST_PARAM"));
+		}
+	}
+
 	// Load PARAM.SFO
 	{
-		vfsFile f(sfo_path);
-		psf.Load(f);
+		if (!save_entry.isNew)
+		{
+			vfsFile f(sfo_path);
+			psf.Load(f);
+		}
 	}
 
 	// Get save stats
@@ -436,6 +468,7 @@ never_inline s32 savedata_op(
 
 		if (result->result < 0)
 		{
+			cellSysutil.Error("savedata_op(): funcStat returned result < 0.");
 			return CELL_SAVEDATA_ERROR_CBRESULT;
 		}
 
@@ -485,12 +518,6 @@ never_inline s32 savedata_op(
 		}
 	}
 
-	// Create save directory if necessary
-	if (save_entry.isNew && !Emu.GetVFS().CreateDir(dir_path))
-	{
-		// Let's ignore this error for now
-	}
-
 	// Enter the loop where the save files are read/created/deleted
 	vm::stackvar<CellSaveDataFileGet> fileGet(CPU);
 	vm::stackvar<CellSaveDataFileSet> fileSet(CPU);
@@ -504,6 +531,7 @@ never_inline s32 savedata_op(
 
 		if (result->result < 0)
 		{
+			cellSysutil.Error("savedata_op(): funcFile returned result < 0.");
 			return CELL_SAVEDATA_ERROR_CBRESULT;
 		}
 
@@ -605,6 +633,7 @@ never_inline s32 savedata_op(
 	// Write PARAM.SFO
 	if (psf)
 	{
+		cellSysutil.Error("psf: true");
 		vfsFile f(sfo_path, vfsWriteNew);
 		psf.Save(f);
 	}
