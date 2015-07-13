@@ -1,5 +1,4 @@
 #pragma once
-
 #include "Emu/Cell/Common.h"
 #include "Emu/CPU/CPUThread.h"
 #include "Emu/Memory/vm.h"
@@ -17,6 +16,18 @@ enum
 	CR_GT = 0x4,
 	CR_EQ = 0x2,
 	CR_SO = 0x1,
+};
+
+enum
+{
+	PPU_THREAD_STATUS_IDLE      = (1 << 0),
+	PPU_THREAD_STATUS_RUNNABLE  = (1 << 1),
+	PPU_THREAD_STATUS_ONPROC    = (1 << 2),
+	PPU_THREAD_STATUS_SLEEP     = (1 << 3),
+	PPU_THREAD_STATUS_STOP      = (1 << 4),
+	PPU_THREAD_STATUS_ZOMBIE    = (1 << 5),
+	PPU_THREAD_STATUS_DELETED   = (1 << 6),
+	PPU_THREAD_STATUS_UNKNOWN   = (1 << 7),
 };
 
 enum FPSCR_EXP
@@ -352,7 +363,7 @@ struct PPCdouble
 		case _FPCLASS_PD:    return FPR_PD;
 		case _FPCLASS_PN:    return FPR_PN;
 		case _FPCLASS_PINF:  return FPR_PINF;
-		default: throw EXCEPTION("Unknown fpclass (0x%04x)", fpc);
+		default: throw fmt::Format("PPCdouble::UpdateType() -> unknown fpclass (0x%04x).", fpc);
 		}
 #else
 		switch (fpc)
@@ -456,16 +467,16 @@ struct FPRdouble
 	static int Cmp(PPCdouble a, PPCdouble b);
 };
 
-class PPUThread final : public CPUThread
+class PPUThread : public CPUThread
 {
 public:
-	PPCdouble FPR[32]{}; //Floating Point Register
-	FPSCRhdr FPSCR{}; //Floating Point Status and Control Register
-	u64 GPR[32]{}; //General-Purpose Register
-	u128 VPR[32]{};
-	u32 vpcr = 0;
+	PPCdouble FPR[32]; //Floating Point Register
+	FPSCRhdr FPSCR; //Floating Point Status and Control Register
+	u64 GPR[32]; //General-Purpose Register
+	u128 VPR[32];
+	u32 vpcr;
 
-	CRhdr CR{}; //Condition Register
+	CRhdr CR; //Condition Register
 	//CR0
 	// 0 : LT - Negative (is negative)
 	// : 0 - Result is not negative
@@ -496,7 +507,7 @@ public:
 
 	//SPR : Special-Purpose Registers
 
-	XERhdr XER{}; //SPR 0x001 : Fixed-Point Expection Register
+	XERhdr XER; //SPR 0x001 : Fixed-Point Expection Register
 	// 0 : SO - Summary overflow
 	// : 0 - No overflow occurred
 	// : 1 - Overflow occurred
@@ -510,45 +521,26 @@ public:
 	// 25 - 31 : TBC
 	// Transfer-byte count
 
-	MSRhdr MSR{}; //Machine State Register
-	PVRhdr PVR{}; //Processor Version Register
+	MSRhdr MSR; //Machine State Register
+	PVRhdr PVR; //Processor Version Register
 
-	VSCRhdr VSCR{}; // Vector Status and Control Register
+	VSCRhdr VSCR; // Vector Status and Control Register
 
-	u64 LR = 0;     //SPR 0x008 : Link Register
-	u64 CTR = 0;    //SPR 0x009 : Count Register
+	u64 LR;     //SPR 0x008 : Link Register
+	u64 CTR;    //SPR 0x009 : Count Register
 
-	u32 VRSAVE = 0; //SPR 0x100: VR Save/Restore Register (32 bits)
+	u32 VRSAVE; //SPR 0x100: VR Save/Restore Register (32 bits)
 
-	u64 SPRG[8]{}; //SPR 0x110 - 0x117 : SPR General-Purpose Registers
+	u64 SPRG[8]; //SPR 0x110 - 0x117 : SPR General-Purpose Registers
 
 	//TBR : Time-Base Registers
-	u64 TB = 0; //TBR 0x10C - 0x10D
-
-	u32 PC = 0;
-	s32 prio = 0; // thread priority
-	u32 stack_addr = 0; // stack address
-	u32 stack_size = 0; // stack size
-	bool is_joinable = true;
-	bool is_joining = false;
-
-	u64 hle_code = 0; // current syscall (~0..~1023) or function id (1..UINT32_MAX)
+	u64 TB;	//TBR 0x10C - 0x10D
 
 	std::function<void(PPUThread& CPU)> custom_task;
 
 public:
-	PPUThread(const std::string& name);
-	virtual ~PPUThread() override;
-
-	virtual void DumpInformation() const override;
-	virtual u32 GetPC() const override { return PC; }
-	virtual u32 GetOffset() const override { return 0; }
-	virtual void DoRun() override;
-	virtual void Task() override;
-
-	virtual void InitRegs() override;
-	virtual void InitStack() override;
-	virtual void CloseStack() override;
+	PPUThread();
+	virtual ~PPUThread();
 
 	inline u8 GetCR(const u8 n) const
 	{
@@ -701,7 +693,7 @@ public:
 		FPSCR.FI = val;
 	}
 
-	virtual std::string RegsToString() const
+	virtual std::string RegsToString()
 	{
 		std::string ret = "Registers:\n=========\n";
 
@@ -729,7 +721,7 @@ public:
 		return ret;
 	}
 
-	virtual std::string ReadRegString(const std::string& reg) const
+	virtual std::string ReadRegString(const std::string& reg)
 	{
 		std::string::size_type first_brk = reg.find('[');
 		if (first_brk != std::string::npos)
@@ -815,20 +807,33 @@ public:
 	}
 
 public:
+	virtual void InitRegs() override;
+	virtual void InitStack() override;
+	virtual void CloseStack() override;
+	virtual void Task() override;
 	u64 GetStackArg(s32 i);
 	void FastCall2(u32 addr, u32 rtoc);
 	void FastStop();
+	virtual void DoRun() override;
+
+protected:
+	virtual void DoReset() override;
+	virtual void DoPause() override;
+	virtual void DoResume() override;
+	virtual void DoStop() override;
 };
+
+PPUThread& GetCurrentPPUThread();
 
 class ppu_thread : cpu_thread
 {
 	static const u32 stack_align = 0x10;
-	vm::_ptr_base<be_t<u64>> argv;
+	vm::ptr<u64> argv;
 	u32 argc;
-	vm::_ptr_base<be_t<u64>> envp;
+	vm::ptr<u64> envp;
 
 public:
-	ppu_thread(u32 entry, const std::string& name = "", u32 stack_size = 0, s32 prio = 0);
+	ppu_thread(u32 entry, const std::string& name = "", u32 stack_size = 0, u32 prio = 0);
 
 	cpu_thread& args(std::initializer_list<std::string> values) override;
 	cpu_thread& run() override;

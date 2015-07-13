@@ -11,7 +11,6 @@ psv_log_base sceSha("SceSha", []()
 	sceSha.on_load = nullptr;
 	sceSha.on_unload = nullptr;
 	sceSha.on_stop = nullptr;
-	sceSha.on_error = nullptr;
 
 	//REG_FUNC(0xD19A9AA8, sceSha0Digest);
 	//REG_FUNC(0xBCF6DB3A, sceSha0BlockInit);

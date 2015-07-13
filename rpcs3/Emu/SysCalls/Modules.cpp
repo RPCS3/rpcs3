@@ -5,6 +5,7 @@
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
 #include "Emu/SysCalls/SysCalls.h"
+#include "Emu/SysCalls/CB_FUNC.h"
 #include "Crypto/sha1.h"
 #include "ModuleManager.h"
 #include "Emu/Cell/PPUInstrTable.h"
@@ -24,8 +25,8 @@ u32 add_ppu_func(ModuleFunc func)
 	{
 		if (f.id == func.id)
 		{
-			// if NIDs overlap or if the same function is added twice
-			throw EXCEPTION("NID already exists: 0x%08x (%s)", f.id, f.name);
+			// TODO: if NIDs overlap or if the same function is added twice
+			assert(!"add_ppu_func(): NID already exists");
 		}
 	}
 
@@ -58,8 +59,8 @@ u32 add_ppu_func_sub(const char group[8], const SearchPatternEntry ops[], const 
 	{
 		SearchPatternEntry op;
 		op.type = ops[i].type;
-		op.data = _byteswap_ulong(ops[i].data); // TODO: use be_t<>
-		op.mask = _byteswap_ulong(ops[i].mask);
+		op.data = re32(ops[i].data);
+		op.mask = re32(ops[i].mask);
 		op.num = ops[i].num;
 		assert(!op.mask || (op.data & ~op.mask) == 0);
 		sf.ops.push_back(op);
@@ -105,52 +106,56 @@ void execute_ppu_func_by_index(PPUThread& CPU, u32 index)
 		// save RTOC if necessary
 		if (index & EIF_SAVE_RTOC)
 		{
-			vm::write64(VM_CAST(CPU.GPR[1] + 0x28), CPU.GPR[2]);
+			vm::write64(vm::cast(CPU.GPR[1] + 0x28), CPU.GPR[2]);
 		}
 
 		// save old syscall/NID value
-		const auto last_code = CPU.hle_code;
+		auto old_last_syscall = CPU.m_last_syscall;
 
 		// branch directly to the LLE function
 		if (index & EIF_USE_BRANCH)
 		{
 			// for example, FastCall2 can't work with functions which do user level context switch
 
-			if (last_code)
+			if (old_last_syscall)
 			{
-				throw EXCEPTION("This function cannot be called from the callback: %s (0x%llx)", SysCalls::GetFuncName(func->id), func->id);
+				CPU.m_last_syscall = func->id;
+				throw "Unfortunately, this function cannot be called from the callback.";
 			}
 
 			if (!func->lle_func)
 			{
-				throw EXCEPTION("LLE function not set: %s (0x%llx)", SysCalls::GetFuncName(func->id), func->id);
+				CPU.m_last_syscall = func->id;
+				throw "Wrong usage: LLE function not set.";
 			}
 
 			if (func->flags & MFF_FORCED_HLE)
 			{
-				throw EXCEPTION("Forced HLE enabled: %s (0x%llx)", SysCalls::GetFuncName(func->id), func->id);
+				CPU.m_last_syscall = func->id;
+				throw "Wrong usage: Forced HLE enabled.";
 			}
 
 			if (Ini.HLELogging.GetValue())
 			{
-				LOG_NOTICE(HLE, "Branch to LLE function: %s (0x%llx)", SysCalls::GetFuncName(func->id), func->id);
+				LOG_NOTICE(HLE, "Branch to LLE function: %s", SysCalls::GetFuncName(func->id));
 			}
 
 			if (index & EIF_PERFORM_BLR)
 			{
-				throw EXCEPTION("TODO: Branch with link: %s (0x%llx)", SysCalls::GetFuncName(func->id), func->id);
+				CPU.m_last_syscall = func->id;
+				throw "TODO: Branch with link";
 				// CPU.LR = CPU.PC + 4;
 			}
 
 			const auto data = vm::get_ptr<be_t<u32>>(func->lle_func.addr());
-			CPU.PC = data[0] - 4;
+			CPU.SetBranch(data[0]);
 			CPU.GPR[2] = data[1]; // set rtoc
 
 			return;
 		}
 		
 		// change current syscall/NID value
-		CPU.hle_code = func->id;
+		CPU.m_last_syscall = func->id;
 
 		if (func->lle_func && !(func->flags & MFF_FORCED_HLE))
 		{
@@ -195,14 +200,14 @@ void execute_ppu_func_by_index(PPUThread& CPU, u32 index)
 		if (index & EIF_PERFORM_BLR)
 		{
 			// return if necessary
-			CPU.PC = VM_CAST(CPU.LR & ~3) - 4;
+			CPU.SetBranch(vm::cast(CPU.LR & ~3), true);
 		}
 
-		CPU.hle_code = last_code;
+		CPU.m_last_syscall = old_last_syscall;
 	}
 	else
 	{
-		throw EXCEPTION("Invalid function index (0x%x)", index);
+		throw "Invalid function index";
 	}
 }
 
@@ -245,7 +250,7 @@ void hook_ppu_func(vm::ptr<u32> base, u32 pos, u32 size)
 			}
 
 			// skip NOP
-			if (base[k] == 0x60000000)
+			if (base[k].data() == se32(0x60000000))
 			{
 				x--;
 				continue;
@@ -303,7 +308,7 @@ void hook_ppu_func(vm::ptr<u32> base, u32 pos, u32 size)
 					break;
 				}
 
-				const auto addr = (base[k] & 2 ? 0 : (base + k).addr()) + ((s32)base[k] << cntlz32(mask) >> (cntlz32(mask) + 2));
+				const auto addr = (base[k].data() & se32(2) ? 0 : (base + k).addr()) + ((s32)base[k] << cntlz32(mask) >> (cntlz32(mask) + 2));
 				const auto lnum = sub.ops[x].num;
 				const auto label = sub.labels.find(lnum);
 
@@ -326,13 +331,15 @@ void hook_ppu_func(vm::ptr<u32> base, u32 pos, u32 size)
 			//		break;
 			//	}
 
-			//	const auto addr = (base[k] & 2 ? 0 : (base + k).addr()) + ((s32)base[k] << cntlz32(mask) >> (cntlz32(mask) + 2));
+			//	const auto addr = (base[k].data() & se32(2) ? 0 : (base + k).addr()) + ((s32)base[k] << cntlz32(mask) >> (cntlz32(mask) + 2));
 			//	const auto nid = sub.ops[x].num;
 			//	// TODO: recursive call
 			//}
 			default:
 			{
-				throw EXCEPTION("Unknown search pattern type (%d)", sub.ops[x].type);
+				LOG_ERROR(LOADER, "Unknown search pattern type (%d)", sub.ops[x].type);
+				assert(0);
+				return;
 			}
 			}
 
@@ -369,7 +376,7 @@ void hook_ppu_funcs(vm::ptr<u32> base, u32 size)
 	for (u32 i = 0; i < size; i++)
 	{
 		// skip NOP
-		if (base[i] == 0x60000000)
+		if (base[i].data() == se32(0x60000000))
 		{
 			continue;
 		}
@@ -390,13 +397,12 @@ void hook_ppu_funcs(vm::ptr<u32> base, u32 size)
 				continue;
 			}
 
-			enum : u32
+			enum GroupSearchResult : u32
 			{
 				GSR_SUCCESS = 0, // every function from this group has been found once
 				GSR_MISSING = 1, // (error) some function not found
 				GSR_EXCESS = 2, // (error) some function found twice or more
 			};
-
 			u32 res = GSR_SUCCESS;
 
 			// analyse
@@ -472,7 +478,7 @@ void hook_ppu_funcs(vm::ptr<u32> base, u32 size)
 
 bool patch_ppu_import(u32 addr, u32 index)
 {
-	const auto data = vm::cptr<u32>::make(addr);
+	const auto data = vm::ptr<const u32>::make(addr);
 
 	using namespace PPU_instr;
 
@@ -506,7 +512,7 @@ bool patch_ppu_import(u32 addr, u32 index)
 		(data[1] & 0xffff0000) == ORIS(r0, r0, 0) &&
 		(data[2] & 0xfc000003) == B(0, 0, 0))
 	{
-		const auto sub = vm::cptr<u32>::make(addr + 8 + ((s32)data[2] << 6 >> 8 << 2));
+		const auto sub = vm::ptr<const u32>::make(addr + 8 + ((s32)data[2] << 6 >> 8 << 2));
 
 		if (vm::check_addr(sub.addr(), 60) &&
 			sub[0x0] == STDU(r1, r1, -0x80) &&

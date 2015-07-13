@@ -20,9 +20,9 @@ struct sceNpClansInternal
 
 sceNpClansInternal sceNpClansInstance;
 
-s32 sceNpClansInit(vm::ptr<SceNpCommunicationId> commId, vm::ptr<SceNpCommunicationPassphrase> passphrase, vm::ptr<void> pool, vm::ptr<u32> poolSize, u32 flags)
+int sceNpClansInit(vm::ptr<SceNpCommunicationId> commId, vm::ptr<SceNpCommunicationPassphrase> passphrase, vm::ptr<void> pool, vm::ptr<u32> poolSize, u32 flags)
 {
-	sceNpClans.Warning("sceNpClansInit(commId=*0x%x, passphrase=*0x%x, pool=*0x%x, poolSize=*0x%x, flags=0x%x)", commId, passphrase, pool, poolSize, flags);
+	sceNpClans.Warning("sceNpClansInit(commId_addr=0x%x, passphrase_addr=0x%x, pool_addr=0x%x,poolSize_addr=0x%x, flags=%d)", commId.addr(), passphrase.addr(), pool.addr(), poolSize.addr(), flags);
 
 	if (sceNpClansInstance.m_bSceNpClansInitialized)
 		return SCE_NP_CLANS_ERROR_ALREADY_INITIALIZED;
@@ -35,7 +35,7 @@ s32 sceNpClansInit(vm::ptr<SceNpCommunicationId> commId, vm::ptr<SceNpCommunicat
 	return CELL_OK;
 }
 
-s32 sceNpClansTerm()
+int sceNpClansTerm()
 {
 	sceNpClans.Warning("sceNpClansTerm()");
 
@@ -47,9 +47,9 @@ s32 sceNpClansTerm()
 	return CELL_OK;
 }
 
-s32 sceNpClansCreateRequest(vm::ptr<SceNpClansRequestHandle> handle, u64 flags)
+int sceNpClansCreateRequest(vm::ptr<SceNpClansRequestHandle> handle,u64 flags)
 {
-	sceNpClans.Todo("sceNpClansCreateRequest(handle=*0x%x, flags=0x%llx)", handle, flags);
+	sceNpClans.Todo("sceNpClansCreateRequest(handle_addr=0x%x, flags=0x%llx)", handle.addr(), flags);
 
 	if (!sceNpClansInstance.m_bSceNpClansInitialized)
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
@@ -60,7 +60,7 @@ s32 sceNpClansCreateRequest(vm::ptr<SceNpClansRequestHandle> handle, u64 flags)
 	return CELL_OK;
 }
 
-s32 sceNpClansDestroyRequest(vm::ptr<SceNpClansRequestHandle> handle)
+int sceNpClansDestroyRequest(vm::ptr<SceNpClansRequestHandle> handle)
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
@@ -70,7 +70,7 @@ s32 sceNpClansDestroyRequest(vm::ptr<SceNpClansRequestHandle> handle)
 	return CELL_OK;
 }
 
-s32 sceNpClansAbortRequest(vm::ptr<SceNpClansRequestHandle> handle)
+int sceNpClansAbortRequest(vm::ptr<SceNpClansRequestHandle> handle)
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
@@ -80,7 +80,7 @@ s32 sceNpClansAbortRequest(vm::ptr<SceNpClansRequestHandle> handle)
 	return CELL_OK;
 }
 
-s32 sceNpClansCreateClan(vm::ptr<SceNpClansRequestHandle> handle, vm::cptr<char> name, vm::cptr<char> tag, vm::ptr<u32> clanId)
+int sceNpClansCreateClan(vm::ptr<SceNpClansRequestHandle> handle, vm::ptr<const char> name, vm::ptr<const char> tag, vm::ptr<u32> clanId)
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
@@ -90,7 +90,7 @@ s32 sceNpClansCreateClan(vm::ptr<SceNpClansRequestHandle> handle, vm::cptr<char>
 	return CELL_OK;
 }
 
-s32 sceNpClansDisbandClan(vm::ptr<SceNpClansRequestHandle> handle, u32 clanId)
+int sceNpClansDisbandClan(vm::ptr<SceNpClansRequestHandle> handle, u32 clanId)
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
@@ -100,7 +100,7 @@ s32 sceNpClansDisbandClan(vm::ptr<SceNpClansRequestHandle> handle, u32 clanId)
 	return CELL_OK;
 }
 
-s32 sceNpClansGetClanList(vm::ptr<SceNpClansRequestHandle> handle, vm::cptr<SceNpClansPagingRequest> paging, vm::ptr<SceNpClansEntry> clanList, vm::ptr<SceNpClansPagingResult> pageResult)
+int sceNpClansGetClanList(vm::ptr<SceNpClansRequestHandle> handle, vm::ptr<const SceNpClansPagingRequest> paging, vm::ptr<SceNpClansEntry> clanList, vm::ptr<SceNpClansPagingResult> pageResult)
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
@@ -110,7 +110,7 @@ s32 sceNpClansGetClanList(vm::ptr<SceNpClansRequestHandle> handle, vm::cptr<SceN
 	return CELL_OK;
 }
 
-s32 sceNpClansGetClanListByNpId()
+int sceNpClansGetClanListByNpId()
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
@@ -120,7 +120,7 @@ s32 sceNpClansGetClanListByNpId()
 	return CELL_OK;
 }
 
-s32 sceNpClansSearchByProfile()
+int sceNpClansSearchByProfile()
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
@@ -130,7 +130,7 @@ s32 sceNpClansSearchByProfile()
 	return CELL_OK;
 }
 
-s32 sceNpClansSearchByName()
+int sceNpClansSearchByName()
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
@@ -140,7 +140,7 @@ s32 sceNpClansSearchByName()
 	return CELL_OK;
 }
 
-s32 sceNpClansGetClanInfo()
+int sceNpClansGetClanInfo()
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
@@ -150,7 +150,7 @@ s32 sceNpClansGetClanInfo()
 	return CELL_OK;
 }
 
-s32 sceNpClansUpdateClanInfo()
+int sceNpClansUpdateClanInfo()
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
@@ -160,7 +160,7 @@ s32 sceNpClansUpdateClanInfo()
 	return CELL_OK;
 }
 
-s32 sceNpClansGetMemberList()
+int sceNpClansGetMemberList()
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
@@ -170,7 +170,7 @@ s32 sceNpClansGetMemberList()
 	return CELL_OK;
 }
 
-s32 sceNpClansGetMemberInfo()
+int sceNpClansGetMemberInfo()
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
@@ -180,7 +180,7 @@ s32 sceNpClansGetMemberInfo()
 	return CELL_OK;
 }
 
-s32 sceNpClansUpdateMemberInfo()
+int sceNpClansUpdateMemberInfo()
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
@@ -190,7 +190,7 @@ s32 sceNpClansUpdateMemberInfo()
 	return CELL_OK;
 }
 
-s32 sceNpClansChangeMemberRole()
+int sceNpClansChangeMemberRole()
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
@@ -200,7 +200,7 @@ s32 sceNpClansChangeMemberRole()
 	return CELL_OK;
 }
 
-s32 sceNpClansGetAutoAcceptStatus()
+int sceNpClansGetAutoAcceptStatus()
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
@@ -210,7 +210,7 @@ s32 sceNpClansGetAutoAcceptStatus()
 	return CELL_OK;
 }
 
-s32 sceNpClansUpdateAutoAcceptStatus()
+int sceNpClansUpdateAutoAcceptStatus()
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
@@ -220,7 +220,7 @@ s32 sceNpClansUpdateAutoAcceptStatus()
 	return CELL_OK;
 }
 
-s32 sceNpClansJoinClan()
+int sceNpClansJoinClan()
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
@@ -230,7 +230,7 @@ s32 sceNpClansJoinClan()
 	return CELL_OK;
 }
 
-s32 sceNpClansLeaveClan()
+int sceNpClansLeaveClan()
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
@@ -240,7 +240,7 @@ s32 sceNpClansLeaveClan()
 	return CELL_OK;
 }
 
-s32 sceNpClansKickMember(vm::ptr<SceNpClansRequestHandle> handle, u32 clanId, vm::ptr<u32> npid, vm::ptr<SceNpClansMessage> message)
+int sceNpClansKickMember(vm::ptr<SceNpClansRequestHandle> handle, u32 clanId, vm::ptr<u32> npid, vm::ptr<SceNpClansMessage> message)
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
@@ -250,7 +250,7 @@ s32 sceNpClansKickMember(vm::ptr<SceNpClansRequestHandle> handle, u32 clanId, vm
 	return CELL_OK;
 }
 
-s32 sceNpClansSendInvitation(vm::ptr<SceNpClansRequestHandle> handle, u32 clanId, vm::ptr<u32> npid, vm::ptr<SceNpClansMessage> message)
+int sceNpClansSendInvitation(vm::ptr<SceNpClansRequestHandle> handle, u32 clanId, vm::ptr<u32> npid, vm::ptr<SceNpClansMessage> message)
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
@@ -260,7 +260,7 @@ s32 sceNpClansSendInvitation(vm::ptr<SceNpClansRequestHandle> handle, u32 clanId
 	return CELL_OK;
 }
 
-s32 sceNpClansCancelInvitation()
+int sceNpClansCancelInvitation()
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
@@ -270,7 +270,7 @@ s32 sceNpClansCancelInvitation()
 	return CELL_OK;
 }
 
-s32 sceNpClansSendInvitationResponse(vm::ptr<SceNpClansRequestHandle> handle, u32 clanId, vm::ptr<SceNpClansMessage> message, bool accept)
+int sceNpClansSendInvitationResponse(vm::ptr<SceNpClansRequestHandle> handle, u32 clanId, vm::ptr<SceNpClansMessage> message, bool accept)
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
@@ -280,7 +280,7 @@ s32 sceNpClansSendInvitationResponse(vm::ptr<SceNpClansRequestHandle> handle, u3
 	return CELL_OK;
 }
 
-s32 sceNpClansSendMembershipRequest(vm::ptr<SceNpClansRequestHandle> handle, u32 clanId, vm::ptr<SceNpClansMessage> message)
+int sceNpClansSendMembershipRequest(vm::ptr<SceNpClansRequestHandle> handle, u32 clanId, vm::ptr<SceNpClansMessage> message)
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
@@ -290,7 +290,7 @@ s32 sceNpClansSendMembershipRequest(vm::ptr<SceNpClansRequestHandle> handle, u32
 	return CELL_OK;
 }
 
-s32 sceNpClansCancelMembershipRequest()
+int sceNpClansCancelMembershipRequest()
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
@@ -300,7 +300,7 @@ s32 sceNpClansCancelMembershipRequest()
 	return CELL_OK;
 }
 
-s32 sceNpClansSendMembershipResponse()
+int sceNpClansSendMembershipResponse()
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
@@ -310,7 +310,7 @@ s32 sceNpClansSendMembershipResponse()
 	return CELL_OK;
 }
 
-s32 sceNpClansGetBlacklist()
+int sceNpClansGetBlacklist()
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
@@ -320,7 +320,7 @@ s32 sceNpClansGetBlacklist()
 	return CELL_OK;
 }
 
-s32 sceNpClansAddBlacklistEntry()
+int sceNpClansAddBlacklistEntry()
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
@@ -330,7 +330,7 @@ s32 sceNpClansAddBlacklistEntry()
 	return CELL_OK;
 }
 
-s32 sceNpClansRemoveBlacklistEntry()
+int sceNpClansRemoveBlacklistEntry()
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
@@ -340,7 +340,7 @@ s32 sceNpClansRemoveBlacklistEntry()
 	return CELL_OK;
 }
 
-s32 sceNpClansRetrieveAnnouncements()
+int sceNpClansRetrieveAnnouncements()
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
@@ -350,7 +350,7 @@ s32 sceNpClansRetrieveAnnouncements()
 	return CELL_OK;
 }
 
-s32 sceNpClansPostAnnouncement()
+int sceNpClansPostAnnouncement()
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
@@ -360,7 +360,7 @@ s32 sceNpClansPostAnnouncement()
 	return CELL_OK;
 }
 
-s32 sceNpClansRemoveAnnouncement()
+int sceNpClansRemoveAnnouncement()
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
@@ -370,7 +370,7 @@ s32 sceNpClansRemoveAnnouncement()
 	return CELL_OK;
 }
 
-s32 sceNpClansPostChallenge(vm::ptr<SceNpClansRequestHandle> handle, u32 clanId, u32 targetClan, vm::ptr<SceNpClansMessage> message, vm::ptr<SceNpClansMessageData> data, u32 duration, vm::ptr<u32> mId)
+int sceNpClansPostChallenge(vm::ptr<SceNpClansRequestHandle> handle, u32 clanId, u32 targetClan, vm::ptr<SceNpClansMessage> message, vm::ptr<SceNpClansMessageData> data, u32 duration, vm::ptr<u32> mId)
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
@@ -385,7 +385,7 @@ s32 sceNpClansPostChallenge(vm::ptr<SceNpClansRequestHandle> handle, u32 clanId,
 	return CELL_OK;
 }
 
-s32 sceNpClansRetrievePostedChallenges()
+int sceNpClansRetrievePostedChallenges()
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
@@ -397,7 +397,7 @@ s32 sceNpClansRetrievePostedChallenges()
 	return CELL_OK;
 }
 
-s32 sceNpClansRemovePostedChallenge()
+int sceNpClansRemovePostedChallenge()
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
@@ -407,7 +407,7 @@ s32 sceNpClansRemovePostedChallenge()
 	return CELL_OK;
 }
 
-s32 sceNpClansRetrieveChallenges()
+int sceNpClansRetrieveChallenges()
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
@@ -417,7 +417,7 @@ s32 sceNpClansRetrieveChallenges()
 	return CELL_OK;
 }
 
-s32 sceNpClansRemoveChallenge()
+int sceNpClansRemoveChallenge()
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 

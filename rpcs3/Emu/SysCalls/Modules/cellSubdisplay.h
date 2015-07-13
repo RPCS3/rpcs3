@@ -1,7 +1,5 @@
 #pragma once
 
-namespace vm { using namespace ps3; }
-
 // Return Codes
 enum
 {
@@ -60,8 +58,8 @@ struct CellSubDisplayParam
 	be_t<s32> mode;
 	be_t<s32> nGroup;
 	be_t<s32> nPeer;
-	vm::bptr<CellSubDisplayVideoParam> videoParam;
-	vm::bptr<CellSubDisplayAudioParam> audioParam;
+	vm::ptr<CellSubDisplayVideoParam> videoParam;
+	vm::ptr<CellSubDisplayAudioParam> audioParam;
 };
 
 struct CellSubDisplayPSPId
@@ -82,4 +80,4 @@ struct CellSubDisplayPeerInfo
 	CellSubDisplayNickname pspNickname;
 };
 
-using CellSubDisplayHandler = func_def<void(s32 cbMsg, u64 cbParam, vm::ptr<void> userdata)>;
+typedef void(*CellSubDisplayHandler)(s32 cbMsg, u64 cbParam, u32 *userdata);

@@ -5,7 +5,7 @@ namespace vm
 	template<typename T, typename AT = u32>
 	struct _ref_base
 	{
-		AT m_addr; // don't access directly
+		AT m_addr;
 
 		static_assert(!std::is_pointer<T>::value, "vm::_ref_base<> error: invalid type (pointer)");
 		static_assert(!std::is_reference<T>::value, "vm::_ref_base<> error: invalid type (reference)");
@@ -17,19 +17,19 @@ namespace vm
 			return m_addr;
 		}
 
-		template<typename AT2 = AT> static std::enable_if_t<std::is_constructible<AT, AT2>::value, _ref_base> make(const AT2& addr)
+		template<typename AT2 = AT> static _ref_base make(const AT2& addr)
 		{
-			return{ addr };
+			return{ convert_le_be<AT>(addr) };
 		}
 
 		T& get_ref() const
 		{
-			return vm::get_ref<T>(VM_CAST(m_addr));
+			return vm::get_ref<T>(vm::cast(m_addr));
 		}
 
 		T& priv_ref() const
 		{
-			return vm::priv_ref<T>(VM_CAST(m_addr));
+			return vm::priv_ref<T>(vm::cast(m_addr));
 		}
 
 		// TODO: conversion operator (seems hard to define it correctly)
@@ -103,6 +103,9 @@ namespace vm
 		// default reference for PSV HLE structures (LE reference to LE data)
 		template<typename T> using lref = lrefl<T>;
 	}
+
+	//PS3 emulation is main now, so lets it be as default
+	using namespace ps3;
 }
 
 // postfix increment operator for vm::_ref_base

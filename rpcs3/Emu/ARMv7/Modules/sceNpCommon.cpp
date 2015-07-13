@@ -6,57 +6,57 @@
 
 s32 sceNpAuthInit()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceNpAuthTerm()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceNpAuthCreateStartRequest(vm::cptr<SceNpAuthRequestParameter> param)
+s32 sceNpAuthCreateStartRequest(vm::psv::ptr<const SceNpAuthRequestParameter> param)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceNpAuthDestroyRequest(s32 id)
+s32 sceNpAuthDestroyRequest(SceNpAuthRequestId id)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceNpAuthAbortRequest(s32 id)
+s32 sceNpAuthAbortRequest(SceNpAuthRequestId id)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceNpAuthGetTicket(s32 id, vm::ptr<void> buf, u32 len)
+s32 sceNpAuthGetTicket(SceNpAuthRequestId id, vm::psv::ptr<void> buf, u32 len)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceNpAuthGetTicketParam(vm::cptr<u8> ticket, u32 ticketSize, s32 paramId, vm::ptr<SceNpTicketParam> param)
+s32 sceNpAuthGetTicketParam(vm::psv::ptr<const u8> ticket, u32 ticketSize, s32 paramId, vm::psv::ptr<SceNpTicketParam> param)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceNpAuthGetEntitlementIdList(vm::cptr<u8> ticket, u32 ticketSize, vm::ptr<SceNpEntitlementId> entIdList, u32 entIdListNum)
+s32 sceNpAuthGetEntitlementIdList(vm::psv::ptr<const u8> ticket, u32 ticketSize, vm::psv::ptr<SceNpEntitlementId> entIdList, u32 entIdListNum)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceNpAuthGetEntitlementById(vm::cptr<u8> ticket, u32 ticketSize, vm::cptr<char> entId, vm::ptr<SceNpEntitlement> ent)
+s32 sceNpAuthGetEntitlementById(vm::psv::ptr<const u8> ticket, u32 ticketSize, vm::psv::ptr<const char> entId, vm::psv::ptr<SceNpEntitlement> ent)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceNpCmpNpId(vm::cptr<SceNpId> npid1, vm::cptr<SceNpId> npid2)
+s32 sceNpCmpNpId(vm::psv::ptr<const SceNpId> npid1, vm::psv::ptr<const SceNpId> npid2)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceNpCmpNpIdInOrder(vm::cptr<SceNpId> npid1, vm::cptr<SceNpId> npid2, vm::ptr<s32> order)
+s32 sceNpCmpNpIdInOrder(vm::psv::ptr<const SceNpId> npid1, vm::psv::ptr<const SceNpId> npid2, vm::psv::ptr<s32> order)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 #define REG_FUNC(nid, name) reg_psv_func(nid, &sceNpCommon, #name, name)
@@ -66,7 +66,6 @@ psv_log_base sceNpCommon("SceNpCommon", []()
 	sceNpCommon.on_load = nullptr;
 	sceNpCommon.on_unload = nullptr;
 	sceNpCommon.on_stop = nullptr;
-	sceNpCommon.on_error = nullptr;
 
 	REG_FUNC(0x441D8B4E, sceNpAuthInit);
 	REG_FUNC(0x6093B689, sceNpAuthTerm);

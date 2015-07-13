@@ -3,13 +3,13 @@
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
 #include "Emu/SysCalls/Callback.h"
+#include "Emu/SysCalls/CB_FUNC.h"
 
+#include "Emu/SysCalls/lv2/sys_time.h"
 #include "cellSysutil.h"
 #include "cellMsgDialog.h"
 
 extern Module cellSysutil;
-
-extern u64 get_system_time();
 
 std::unique_ptr<MsgDialogInstance> g_msg_dialog;
 
@@ -24,7 +24,7 @@ void MsgDialogInstance::Close()
 	wait_until = get_system_time();
 }
 
-s32 cellMsgDialogOpen2(u32 type, vm::cptr<char> msgString, vm::ptr<CellMsgDialogCallback> callback, vm::ptr<void> userData, vm::ptr<void> extParam)
+s32 cellMsgDialogOpen2(u32 type, vm::ptr<const char> msgString, vm::ptr<CellMsgDialogCallback> callback, vm::ptr<void> userData, vm::ptr<void> extParam)
 {
 	cellSysutil.Warning("cellMsgDialogOpen2(type=0x%x, msgString=*0x%x, callback=*0x%x, userData=*0x%x, extParam=*0x%x)", type, msgString, callback, userData, extParam);
 
@@ -105,7 +105,7 @@ s32 cellMsgDialogOpen2(u32 type, vm::cptr<char> msgString, vm::ptr<CellMsgDialog
 
 	std::string msg = msgString.get_ptr();
 
-	thread_t(WRAP_EXPR("MsgDialog Thread"), [=]()
+	thread_t t("MsgDialog Thread", [type, msg, callback, userData, extParam]()
 	{
 		switch (type & CELL_MSGDIALOG_TYPE_SE_TYPE)
 		{
@@ -127,8 +127,11 @@ s32 cellMsgDialogOpen2(u32 type, vm::cptr<char> msgString, vm::ptr<CellMsgDialog
 
 		while (!m_signal)
 		{
-			CHECK_EMU_STATUS;
-
+			if (Emu.IsStopped())
+			{
+				cellSysutil.Warning("MsgDialog thread aborted");
+				return;
+			}
 			std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 		}
 
@@ -146,9 +149,9 @@ s32 cellMsgDialogOpen2(u32 type, vm::cptr<char> msgString, vm::ptr<CellMsgDialog
 		{
 			const s32 status = g_msg_dialog->status;
 
-			Emu.GetCallbackManager().Register([=](CPUThread& CPU) -> s32
+			Emu.GetCallbackManager().Register([=](PPUThread& PPU) -> s32
 			{
-				callback(static_cast<PPUThread&>(CPU), status, userData);
+				callback(PPU, status, userData);
 				return CELL_OK;
 			});
 		}
@@ -158,8 +161,7 @@ s32 cellMsgDialogOpen2(u32 type, vm::cptr<char> msgString, vm::ptr<CellMsgDialog
 			g_msg_dialog->Destroy();
 			g_msg_dialog->state = msgDialogNone;
 		});
-
-	}).detach();
+	});
 
 	return CELL_OK;
 }
@@ -291,7 +293,7 @@ s32 cellMsgDialogAbort()
 	return CELL_OK;
 }
 
-s32 cellMsgDialogProgressBarSetMsg(u32 progressBarIndex, vm::cptr<char> msgString)
+s32 cellMsgDialogProgressBarSetMsg(u32 progressBarIndex, vm::ptr<const char> msgString)
 {
 	cellSysutil.Warning("cellMsgDialogProgressBarSetMsg(progressBarIndex=%d, msgString=*0x%x)", progressBarIndex, msgString);
 

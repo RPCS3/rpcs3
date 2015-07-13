@@ -1,7 +1,3 @@
-#pragma once
-
-namespace vm { using namespace ps3; }
-
 // Return Codes
 enum
 {
@@ -46,11 +42,11 @@ enum
 	CELL_RUDP_ERROR_KEEP_ALIVE_FAILURE           = 0x80770026,
 };
 
-using CellRudpAllocatorFuncAlloc = func_def<vm::ptr<u32>(u32 size)>;
-using CellRudpAllocatorFuncFree = func_def<u32(vm::ptr<u32> ptr)>;
+typedef vm::ptr<u32>(CellRudpAllocatorFuncAlloc)(u32 size);
+typedef u32(CellRudpAllocatorFuncFree)(vm::ptr<u32> ptr);
 
 struct CellRudpAllocator
 {
-	vm::bptr<CellRudpAllocatorFuncAlloc> app_malloc;
-	vm::bptr<CellRudpAllocatorFuncFree> app_free;
+	vm::ptr<CellRudpAllocatorFuncAlloc> app_malloc;
+	vm::ptr<CellRudpAllocatorFuncFree> app_free;
 };

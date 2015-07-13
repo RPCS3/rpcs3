@@ -1,7 +1,5 @@
 #pragma once
 
-namespace vm { using namespace ps3; }
-
 // Error codes
 enum
 {
@@ -82,8 +80,8 @@ struct SceNpTrophyGameDetails
 	be_t<u32> numGold;
 	be_t<u32> numSilver;
 	be_t<u32> numBronze;
-	char title[SCE_NP_TROPHY_TITLE_MAX_SIZE];
-	char description[SCE_NP_TROPHY_GAME_DESCR_MAX_SIZE];
+	u8 title[SCE_NP_TROPHY_TITLE_MAX_SIZE];
+	u8 description[SCE_NP_TROPHY_GAME_DESCR_MAX_SIZE];
 	u8 reserved[4];
 };
 
@@ -100,17 +98,17 @@ struct SceNpTrophyDetails
 {
 	be_t<s32> trophyId;     // SceNpTrophyId
 	be_t<u32> trophyGrade;  // SceNpTrophyGrade
-	char name[SCE_NP_TROPHY_NAME_MAX_SIZE];
-	char description[SCE_NP_TROPHY_DESCR_MAX_SIZE];
-	b8 hidden;
+	u8 name[SCE_NP_TROPHY_NAME_MAX_SIZE];
+	u8 description[SCE_NP_TROPHY_DESCR_MAX_SIZE];
+	bool hidden;
 	u8 reserved[3];
 };
 
 struct SceNpTrophyData
 {
-	be_t<u64> timestamp;    // CellRtcTick
+	CellRtcTick timestamp;
 	be_t<s32> trophyId;     // SceNpTrophyId
-	b8 unlocked;
+	bool unlocked;
 	u8 reserved[3];
 };
 
@@ -136,4 +134,4 @@ enum
 	SCE_NP_TROPHY_STATUS_CHANGES_DETECTED    = 9,
 };
 
-using SceNpTrophyStatusCallback = func_def<s32(u32 context, u32 status, s32 completed, s32 total, vm::ptr<void> arg)>;
+typedef s32 (SceNpTrophyStatusCallback)(u32 context, u32 status, s32 completed, s32 total, u32 arg_addr);

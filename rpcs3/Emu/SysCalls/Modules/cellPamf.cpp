@@ -173,7 +173,7 @@ u8 pamfGetStreamChannel(vm::ptr<CellPamfReader> pSelf, u32 stream)
 
 s32 cellPamfGetHeaderSize(vm::ptr<PamfHeader> pAddr, u64 fileSize, vm::ptr<u64> pSize)
 {
-	cellPamf.Warning("cellPamfGetHeaderSize(pAddr=*0x%x, fileSize=0x%llx, pSize=*0x%x)", pAddr, fileSize, pSize);
+	cellPamf.Warning("cellPamfGetHeaderSize(pAddr=0x%x, fileSize=%d, pSize_addr=0x%x)", pAddr.addr(), fileSize, pSize.addr());
 
 	//if ((u32)pAddr->magic != 0x464d4150) return CELL_PAMF_ERROR_UNKNOWN_TYPE;
 
@@ -184,7 +184,7 @@ s32 cellPamfGetHeaderSize(vm::ptr<PamfHeader> pAddr, u64 fileSize, vm::ptr<u64> 
 
 s32 cellPamfGetHeaderSize2(vm::ptr<PamfHeader> pAddr, u64 fileSize, u32 attribute, vm::ptr<u64> pSize)
 {
-	cellPamf.Warning("cellPamfGetHeaderSize2(pAddr=*0x%x, fileSize=0x%llx, attribute=0x%x, pSize=*0x%x)", pAddr, fileSize, attribute, pSize);
+	cellPamf.Warning("cellPamfGetHeaderSize2(pAddr=0x%x, fileSize=%d, attribute=0x%x, pSize_addr=0x%x)", pAddr.addr(), fileSize, attribute, pSize.addr());
 
 	//if ((u32)pAddr->magic != 0x464d4150) return CELL_PAMF_ERROR_UNKNOWN_TYPE;
 
@@ -195,7 +195,7 @@ s32 cellPamfGetHeaderSize2(vm::ptr<PamfHeader> pAddr, u64 fileSize, u32 attribut
 
 s32 cellPamfGetStreamOffsetAndSize(vm::ptr<PamfHeader> pAddr, u64 fileSize, vm::ptr<u64> pOffset, vm::ptr<u64> pSize)
 {
-	cellPamf.Warning("cellPamfGetStreamOffsetAndSize(pAddr=*0x%x, fileSize=0x%llx, pOffset=*0x%x, pSize=*0x%x)", pAddr, fileSize, pOffset, pSize);
+	cellPamf.Warning("cellPamfGetStreamOffsetAndSize(pAddr=0x%x, fileSize=%d, pOffset_addr=0x%x, pSize_addr=0x%x)", pAddr.addr(), fileSize, pOffset.addr(), pSize.addr());
 
 	//if ((u32)pAddr->magic != 0x464d4150) return CELL_PAMF_ERROR_UNKNOWN_TYPE;
 
@@ -208,15 +208,15 @@ s32 cellPamfGetStreamOffsetAndSize(vm::ptr<PamfHeader> pAddr, u64 fileSize, vm::
 
 s32 cellPamfVerify(vm::ptr<PamfHeader> pAddr, u64 fileSize)
 {
-	cellPamf.Todo("cellPamfVerify(pAddr=*0x%x, fileSize=0x%llx)", pAddr, fileSize);
+	cellPamf.Todo("cellPamfVerify(pAddr=0x%x, fileSize=%d)", pAddr.addr(), fileSize);
 
 	// TODO
 	return CELL_OK;
 }
 
-s32 cellPamfReaderInitialize(vm::ptr<CellPamfReader> pSelf, vm::cptr<PamfHeader> pAddr, u64 fileSize, u32 attribute)
+s32 cellPamfReaderInitialize(vm::ptr<CellPamfReader> pSelf, vm::ptr<const PamfHeader> pAddr, u64 fileSize, u32 attribute)
 {
-	cellPamf.Warning("cellPamfReaderInitialize(pSelf=*0x%x, pAddr=*0x%x, fileSize=0x%llx, attribute=0x%x)", pSelf, pAddr, fileSize, attribute);
+	cellPamf.Warning("cellPamfReaderInitialize(pSelf=0x%x, pAddr=0x%x, fileSize=%d, attribute=0x%x)", pSelf.addr(), pAddr.addr(), fileSize, attribute);
 	
 	if (fileSize)
 	{
@@ -240,7 +240,7 @@ s32 cellPamfReaderInitialize(vm::ptr<CellPamfReader> pSelf, vm::cptr<PamfHeader>
 
 s32 cellPamfReaderGetPresentationStartTime(vm::ptr<CellPamfReader> pSelf, vm::ptr<CellCodecTimeStamp> pTimeStamp)
 {
-	cellPamf.Warning("cellPamfReaderGetPresentationStartTime(pSelf=*0x%x, pTimeStamp=*0x%x)", pSelf, pTimeStamp);
+	cellPamf.Warning("cellPamfReaderGetPresentationStartTime(pSelf=0x%x, pTimeStamp_addr=0x%x)", pSelf.addr(), pTimeStamp.addr());
 
 	// always returns CELL_OK
 
@@ -251,7 +251,7 @@ s32 cellPamfReaderGetPresentationStartTime(vm::ptr<CellPamfReader> pSelf, vm::pt
 
 s32 cellPamfReaderGetPresentationEndTime(vm::ptr<CellPamfReader> pSelf, vm::ptr<CellCodecTimeStamp> pTimeStamp)
 {
-	cellPamf.Warning("cellPamfReaderGetPresentationEndTime(pSelf=*0x%x, pTimeStamp=*0x%x)", pSelf, pTimeStamp);
+	cellPamf.Warning("cellPamfReaderGetPresentationEndTime(pSelf=0x%x, pTimeStamp_addr=0x%x)", pSelf.addr(), pTimeStamp.addr());
 
 	// always returns CELL_OK
 
@@ -262,7 +262,7 @@ s32 cellPamfReaderGetPresentationEndTime(vm::ptr<CellPamfReader> pSelf, vm::ptr<
 
 u32 cellPamfReaderGetMuxRateBound(vm::ptr<CellPamfReader> pSelf)
 {
-	cellPamf.Warning("cellPamfReaderGetMuxRateBound(pSelf=*0x%x)", pSelf);
+	cellPamf.Warning("cellPamfReaderGetMuxRateBound(pSelf=0x%x)", pSelf.addr());
 
 	// cannot return error code
 	return pSelf->pAddr->mux_rate_max;
@@ -270,7 +270,7 @@ u32 cellPamfReaderGetMuxRateBound(vm::ptr<CellPamfReader> pSelf)
 
 u8 cellPamfReaderGetNumberOfStreams(vm::ptr<CellPamfReader> pSelf)
 {
-	cellPamf.Warning("cellPamfReaderGetNumberOfStreams(pSelf=*0x%x)", pSelf);
+	cellPamf.Warning("cellPamfReaderGetNumberOfStreams(pSelf=0x%x)", pSelf.addr());
 
 	// cannot return error code
 	return pSelf->pAddr->stream_count;
@@ -278,7 +278,7 @@ u8 cellPamfReaderGetNumberOfStreams(vm::ptr<CellPamfReader> pSelf)
 
 u8 cellPamfReaderGetNumberOfSpecificStreams(vm::ptr<CellPamfReader> pSelf, u8 streamType)
 {
-	cellPamf.Warning("cellPamfReaderGetNumberOfSpecificStreams(pSelf=*0x%x, streamType=%d)", pSelf, streamType);
+	cellPamf.Warning("cellPamfReaderGetNumberOfSpecificStreams(pSelf=0x%x, streamType=%d)", pSelf.addr(), streamType);
 	
 	// cannot return error code
 
@@ -319,7 +319,7 @@ u8 cellPamfReaderGetNumberOfSpecificStreams(vm::ptr<CellPamfReader> pSelf, u8 st
 
 s32 cellPamfReaderSetStreamWithIndex(vm::ptr<CellPamfReader> pSelf, u8 streamIndex)
 {
-	cellPamf.Warning("cellPamfReaderSetStreamWithIndex(pSelf=*0x%x, streamIndex=%d)", pSelf, streamIndex);
+	cellPamf.Warning("cellPamfReaderSetStreamWithIndex(pSelf=0x%x, streamIndex=%d)", pSelf.addr(), streamIndex);
 
 	if (streamIndex >= pSelf->pAddr->stream_count)
 	{
@@ -332,7 +332,7 @@ s32 cellPamfReaderSetStreamWithIndex(vm::ptr<CellPamfReader> pSelf, u8 streamInd
 
 s32 cellPamfReaderSetStreamWithTypeAndChannel(vm::ptr<CellPamfReader> pSelf, u8 streamType, u8 ch)
 {
-	cellPamf.Warning("cellPamfReaderSetStreamWithTypeAndChannel(pSelf=*0x%x, streamType=%d, ch=%d)", pSelf, streamType, ch);
+	cellPamf.Warning("cellPamfReaderSetStreamWithTypeAndChannel(pSelf=0x%x, streamType=%d, ch=%d)", pSelf.addr(), streamType, ch);
 
 	// it probably doesn't support "any audio" or "any video" argument
 	if (streamType > 5 || ch >= 16)
@@ -359,7 +359,7 @@ s32 cellPamfReaderSetStreamWithTypeAndChannel(vm::ptr<CellPamfReader> pSelf, u8 
 
 s32 cellPamfReaderSetStreamWithTypeAndIndex(vm::ptr<CellPamfReader> pSelf, u8 streamType, u8 streamIndex)
 {
-	cellPamf.Warning("cellPamfReaderSetStreamWithTypeAndIndex(pSelf=*0x%x, streamType=%d, streamIndex=%d)", pSelf, streamType, streamIndex);
+	cellPamf.Warning("cellPamfReaderSetStreamWithTypeAndIndex(pSelf=0x%x, streamType=%d, streamIndex=%d)", pSelf.addr(), streamType, streamIndex);
 
 	u32 found = 0;
 
@@ -412,7 +412,7 @@ s32 cellPamfReaderSetStreamWithTypeAndIndex(vm::ptr<CellPamfReader> pSelf, u8 st
 
 s32 cellPamfStreamTypeToEsFilterId(u8 type, u8 ch, vm::ptr<CellCodecEsFilterId> pEsFilterId)
 {
-	cellPamf.Warning("cellPamfStreamTypeToEsFilterId(type=%d, ch=%d, pEsFilterId=*0x%x)", type, ch, pEsFilterId);
+	cellPamf.Warning("cellPamfStreamTypeToEsFilterId(type=%d, ch=%d, pEsFilterId_addr=0x%x)", type, ch, pEsFilterId.addr());
 
 	if (!pEsFilterId)
 	{
@@ -424,7 +424,7 @@ s32 cellPamfStreamTypeToEsFilterId(u8 type, u8 ch, vm::ptr<CellCodecEsFilterId> 
 
 s32 cellPamfReaderGetStreamIndex(vm::ptr<CellPamfReader> pSelf)
 {
-	cellPamf.Log("cellPamfReaderGetStreamIndex(pSelf=*0x%x)", pSelf);
+	cellPamf.Log("cellPamfReaderGetStreamIndex(pSelf=0x%x)", pSelf.addr());
 
 	// seems that CELL_PAMF_ERROR_INVALID_PAMF must be already written in pSelf->stream if it's the case
 	return pSelf->stream;
@@ -432,7 +432,8 @@ s32 cellPamfReaderGetStreamIndex(vm::ptr<CellPamfReader> pSelf)
 
 s32 cellPamfReaderGetStreamTypeAndChannel(vm::ptr<CellPamfReader> pSelf, vm::ptr<u8> pType, vm::ptr<u8> pCh)
 {
-	cellPamf.Warning("cellPamfReaderGetStreamTypeAndChannel(pSelf=*0x%x, pType=*0x%x, pCh=*0x%x", pSelf, pType, pCh);
+	cellPamf.Warning("cellPamfReaderGetStreamTypeAndChannel(pSelf=0x%x (stream=%d), pType_addr=0x%x, pCh_addr=0x%x",
+		pSelf.addr(), pSelf->stream, pType.addr(), pCh.addr());
 
 	// unclear
 
@@ -443,7 +444,7 @@ s32 cellPamfReaderGetStreamTypeAndChannel(vm::ptr<CellPamfReader> pSelf, vm::ptr
 
 s32 cellPamfReaderGetEsFilterId(vm::ptr<CellPamfReader> pSelf, vm::ptr<CellCodecEsFilterId> pEsFilterId)
 {
-	cellPamf.Warning("cellPamfReaderGetEsFilterId(pSelf=*0x%x, pEsFilterId=*0x%x)", pSelf, pEsFilterId);
+	cellPamf.Warning("cellPamfReaderGetEsFilterId(pSelf=0x%x (stream=%d), pEsFilterId_addr=0x%x)", pSelf.addr(), pSelf->stream, pEsFilterId.addr());
 
 	// always returns CELL_OK
 
@@ -456,9 +457,9 @@ s32 cellPamfReaderGetEsFilterId(vm::ptr<CellPamfReader> pSelf, vm::ptr<CellCodec
 	return CELL_OK;
 }
 
-s32 cellPamfReaderGetStreamInfo(vm::ptr<CellPamfReader> pSelf, vm::ptr<void> pInfo, u32 size)
+s32 cellPamfReaderGetStreamInfo(vm::ptr<CellPamfReader> pSelf, u32 pInfo_addr, u32 size)
 {
-	cellPamf.Warning("cellPamfReaderGetStreamInfo(pSelf=*0x%x, pInfo_addr=0x%x, size=%d)", pSelf, pInfo, size);
+	cellPamf.Warning("cellPamfReaderGetStreamInfo(pSelf=0x%x, stream=%d, pInfo_addr=0x%x, size=%d)", pSelf.addr(), pSelf->stream, pInfo_addr, size);
 
 	assert((u32)pSelf->stream < (u32)pSelf->pAddr->stream_count);
 	auto& header = pSelf->pAddr->stream_headers[pSelf->stream];
@@ -474,7 +475,7 @@ s32 cellPamfReaderGetStreamInfo(vm::ptr<CellPamfReader> pSelf, vm::ptr<void> pIn
 			return CELL_PAMF_ERROR_INVALID_ARG;
 		}
 
-		auto info = vm::static_ptr_cast<CellPamfAvcInfo>(pInfo);
+		auto info = vm::ptr<CellPamfAvcInfo>::make(pInfo_addr);
 
 		info->profileIdc = header.AVC.profileIdc;
 		info->levelIdc = header.AVC.levelIdc;
@@ -485,8 +486,8 @@ s32 cellPamfReaderGetStreamInfo(vm::ptr<CellPamfReader> pSelf, vm::ptr<void> pIn
 
 		if (header.AVC.aspectRatioIdc == 0xff)
 		{
-			info->sarWidth = header.AVC.sarInfo.width;
-			info->sarHeight = header.AVC.sarInfo.height;
+			info->sarWidth = header.AVC.sarWidth;
+			info->sarHeight = header.AVC.sarHeight;
 		}
 		else
 		{
@@ -535,7 +536,7 @@ s32 cellPamfReaderGetStreamInfo(vm::ptr<CellPamfReader> pSelf, vm::ptr<void> pIn
 			return CELL_PAMF_ERROR_INVALID_ARG;
 		}
 
-		auto info = vm::static_ptr_cast<CellPamfM2vInfo>(pInfo);
+		auto info = vm::ptr<CellPamfM2vInfo>::make(pInfo_addr);
 
 		switch (header.M2V.x0)
 		{
@@ -593,7 +594,7 @@ s32 cellPamfReaderGetStreamInfo(vm::ptr<CellPamfReader> pSelf, vm::ptr<void> pIn
 			return CELL_PAMF_ERROR_INVALID_ARG;
 		}
 
-		auto info = vm::static_ptr_cast<CellPamfAtrac3plusInfo>(pInfo);
+		auto info = vm::ptr<CellPamfAtrac3plusInfo>::make(pInfo_addr);
 
 		info->samplingFrequency = header.audio.freq & 0xf;
 		info->numberOfChannels = header.audio.channels & 0xf;
@@ -609,7 +610,7 @@ s32 cellPamfReaderGetStreamInfo(vm::ptr<CellPamfReader> pSelf, vm::ptr<void> pIn
 			return CELL_PAMF_ERROR_INVALID_ARG;
 		}
 
-		auto info = vm::static_ptr_cast<CellPamfLpcmInfo>(pInfo);
+		auto info = vm::ptr<CellPamfLpcmInfo>::make(pInfo_addr);
 
 		info->samplingFrequency = header.audio.freq & 0xf;
 		info->numberOfChannels = header.audio.channels & 0xf;
@@ -626,7 +627,7 @@ s32 cellPamfReaderGetStreamInfo(vm::ptr<CellPamfReader> pSelf, vm::ptr<void> pIn
 			return CELL_PAMF_ERROR_INVALID_ARG;
 		}
 
-		auto info = vm::static_ptr_cast<CellPamfAc3Info>(pInfo);
+		auto info = vm::ptr<CellPamfAc3Info>::make(pInfo_addr);
 
 		info->samplingFrequency = header.audio.freq & 0xf;
 		info->numberOfChannels = header.audio.channels & 0xf;
@@ -693,7 +694,7 @@ s32 cellPamfReaderGetStreamInfo(vm::ptr<CellPamfReader> pSelf, vm::ptr<void> pIn
 
 u32 cellPamfReaderGetNumberOfEp(vm::ptr<CellPamfReader> pSelf)
 {
-	cellPamf.Todo("cellPamfReaderGetNumberOfEp(pSelf=*0x%x)", pSelf);
+	cellPamf.Todo("cellPamfReaderGetNumberOfEp(pSelf=0x%x, stream=%d)", pSelf.addr(), pSelf->stream);
 
 	// cannot return error code
 	return 0; //pSelf->pAddr->stream_headers[pSelf->stream].ep_num;
@@ -701,7 +702,7 @@ u32 cellPamfReaderGetNumberOfEp(vm::ptr<CellPamfReader> pSelf)
 
 s32 cellPamfReaderGetEpIteratorWithIndex(vm::ptr<CellPamfReader> pSelf, u32 epIndex, vm::ptr<CellPamfEpIterator> pIt)
 {
-	cellPamf.Todo("cellPamfReaderGetEpIteratorWithIndex(pSelf=*0x%x, epIndex=%d, pIt=*0x%x)", pSelf, epIndex, pIt);
+	cellPamf.Todo("cellPamfReaderGetEpIteratorWithIndex(pSelf=0x%x, stream=%d, epIndex=%d, pIt_addr=0x%x)", pSelf.addr(), pSelf->stream, epIndex, pIt.addr());
 
 	// TODO
 	return CELL_OK;
@@ -709,7 +710,7 @@ s32 cellPamfReaderGetEpIteratorWithIndex(vm::ptr<CellPamfReader> pSelf, u32 epIn
 
 s32 cellPamfReaderGetEpIteratorWithTimeStamp(vm::ptr<CellPamfReader> pSelf, vm::ptr<CellCodecTimeStamp> pTimeStamp, vm::ptr<CellPamfEpIterator> pIt)
 {
-	cellPamf.Todo("cellPamfReaderGetEpIteratorWithTimeStamp(pSelf=*0x%x, pTimeStamp=*0x%x, pIt=*0x%x)", pSelf, pTimeStamp, pIt);
+	cellPamf.Todo("cellPamfReaderGetEpIteratorWithTimeStamp(pSelf=0x%x, pTimeStamp_addr=0x%x, pIt_addr=0x%x)", pSelf.addr(), pTimeStamp.addr(), pIt.addr());
 
 	// TODO
 	return CELL_OK;
@@ -717,7 +718,7 @@ s32 cellPamfReaderGetEpIteratorWithTimeStamp(vm::ptr<CellPamfReader> pSelf, vm::
 
 s32 cellPamfEpIteratorGetEp(vm::ptr<CellPamfEpIterator> pIt, vm::ptr<CellPamfEp> pEp)
 {
-	cellPamf.Todo("cellPamfEpIteratorGetEp(pIt=*0x%x, pEp=*0x%x)", pIt, pEp);
+	cellPamf.Todo("cellPamfEpIteratorGetEp(pIt_addr=0x%x, pEp_addr=0x%x)", pIt.addr(), pEp.addr());
 
 	// always returns CELL_OK
 	// TODO
@@ -726,7 +727,7 @@ s32 cellPamfEpIteratorGetEp(vm::ptr<CellPamfEpIterator> pIt, vm::ptr<CellPamfEp>
 
 s32 cellPamfEpIteratorMove(vm::ptr<CellPamfEpIterator> pIt, s32 steps, vm::ptr<CellPamfEp> pEp)
 {
-	cellPamf.Todo("cellPamfEpIteratorMove(pIt=*0x%x, steps=%d, pEp=*0x%x)", pIt, steps, pEp);
+	cellPamf.Todo("cellPamfEpIteratorMove(pIt_addr=0x%x, steps=%d, pEp_addr=0x%x)", pIt.addr(), steps, pEp.addr());
 
 	// cannot return error code
 	// TODO

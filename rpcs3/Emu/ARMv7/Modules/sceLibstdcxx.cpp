@@ -2,23 +2,23 @@
 #include "Emu/System.h"
 #include "Emu/ARMv7/PSVFuncList.h"
 
-#include "sceLibstdcxx.h"
+extern psv_log_base sceLibstdcxx;
 
 namespace sce_libstdcxx_func
 {
 	void __aeabi_unwind_cpp_pr0()
 	{
-		throw EXCEPTION("");
+		throw __FUNCTION__;
 	}
 
 	void __aeabi_unwind_cpp_pr1()
 	{
-		throw EXCEPTION("");
+		throw __FUNCTION__;
 	}
 
 	void __aeabi_unwind_cpp_pr2()
 	{
-		throw EXCEPTION("");
+		throw __FUNCTION__;
 	}
 }
 
@@ -30,7 +30,6 @@ psv_log_base sceLibstdcxx("SceLibstdcxx", []()
 	sceLibstdcxx.on_load = nullptr;
 	sceLibstdcxx.on_unload = nullptr;
 	sceLibstdcxx.on_stop = nullptr;
-	sceLibstdcxx.on_error = nullptr;
 
 	//REG_FUNC(0x52B0C625, std::bad_typeid::what() const);
 	//REG_FUNC(0x64D7D074, std::bad_typeid::_Doraise() const);

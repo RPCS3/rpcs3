@@ -1,21 +1,6 @@
 #include "stdafx.h"
-#include "Emu/System.h"
 #include "ARMv7Thread.h"
 #include "PSVFuncList.h"
-
-psv_log_base::psv_log_base(const std::string& name, init_func_t init)
-	: m_name(name)
-	, m_init(init)
-{
-	on_error = [this](s32 code, psv_func* func)
-	{
-		if (code < 0)
-		{
-			Error("%s() failed: 0x%08X", func->name, code);
-			Emu.Pause();
-		}
-	};
-}
 
 std::vector<psv_func> g_psv_func_list;
 std::vector<psv_log_base*> g_psv_modules;
@@ -70,8 +55,8 @@ void execute_psv_func_by_index(ARMv7Context& context, u32 index)
 {
 	if (auto func = get_psv_func_by_index(index))
 	{
-		const u32 old_func = context.hle_func;
-		context.hle_func = func->nid;
+		auto old_last_syscall = context.thread.m_last_syscall;
+		context.thread.m_last_syscall = func->nid;
 
 		if (func->func)
 		{
@@ -79,20 +64,14 @@ void execute_psv_func_by_index(ARMv7Context& context, u32 index)
 		}
 		else
 		{
-			throw EXCEPTION("Unimplemented function");
+			throw "Unimplemented function";
 		}
 
-		// rough error code processing
-		if (context.GPR[0] && func->module && func->module->on_error)
-		{
-			func->module->on_error(context.GPR[0], func);
-		}
-
-		context.hle_func = old_func;
+		context.thread.m_last_syscall = old_last_syscall;
 	}
 	else
 	{
-		throw EXCEPTION("Invalid function index");
+		throw "Invalid function index";
 	}
 }
 
@@ -231,7 +210,7 @@ void initialize_psv_modules()
 	hle_return.name = "HLE_RETURN";
 	hle_return.func = [](ARMv7Context& context)
 	{
-		static_cast<ARMv7Thread&>(context).FastStop();
+		context.thread.FastStop();
 	};
 
 	// load functions

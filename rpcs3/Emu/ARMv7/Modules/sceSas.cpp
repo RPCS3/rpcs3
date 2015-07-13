@@ -2,151 +2,151 @@
 #include "Emu/System.h"
 #include "Emu/ARMv7/PSVFuncList.h"
 
-#include "sceSas.h"
+extern psv_log_base sceSas;
 
-s32 sceSasGetNeededMemorySize(vm::cptr<char> config, vm::ptr<u32> outSize)
+s32 sceSasGetNeededMemorySize(vm::psv::ptr<const char> config, vm::psv::ptr<u32> outSize)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceSasInit(vm::cptr<char> config, vm::ptr<void> buffer, u32 bufferSize)
+s32 sceSasInit(vm::psv::ptr<const char> config, vm::psv::ptr<void> buffer, u32 bufferSize)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceSasInitWithGrain(vm::cptr<char> config, u32 grain, vm::ptr<void> buffer, u32 bufferSize)
+s32 sceSasInitWithGrain(vm::psv::ptr<const char> config, u32 grain, vm::psv::ptr<void> buffer, u32 bufferSize)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceSasExit(vm::pptr<void> outBuffer, vm::ptr<u32> outBufferSize)
+s32 sceSasExit(vm::psv::pptr<void> outBuffer, vm::psv::ptr<u32> outBufferSize)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceSasSetGrain(u32 grain)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceSasGetGrain()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceSasSetOutputmode(u32 outputmode)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceSasGetOutputmode()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceSasCore(vm::ptr<s16> out)
+s32 sceSasCore(vm::psv::ptr<s16> out)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceSasCoreWithMix(vm::ptr<s16> inOut, s32 lvol, s32 rvol)
+s32 sceSasCoreWithMix(vm::psv::ptr<s16> inOut, s32 lvol, s32 rvol)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceSasSetVoice(s32 iVoiceNum, vm::cptr<void> vagBuf, u32 size, u32 loopflag)
+s32 sceSasSetVoice(s32 iVoiceNum, vm::psv::ptr<const void> vagBuf, u32 size, u32 loopflag)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceSasSetVoicePCM(s32 iVoiceNum, vm::cptr<void> pcmBuf, u32 size, s32 loopsize)
+s32 sceSasSetVoicePCM(s32 iVoiceNum, vm::psv::ptr<const void> pcmBuf, u32 size, s32 loopsize)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceSasSetNoise(s32 iVoiceNum, u32 uClk)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceSasSetVolume(s32 iVoiceNum, s32 l, s32 r, s32 wl, s32 wr)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceSasSetPitch(s32 iVoiceNum, s32 pitch)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceSasSetADSR(s32 iVoiceNum, u32 flag, u32 ar, u32 dr, u32 sr, u32 rr)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceSasSetADSRmode(s32 iVoiceNum, u32 flag, u32 am, u32 dm, u32 sm, u32 rm)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceSasSetSL(s32 iVoiceNum, u32 sl)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceSasSetSimpleADSR(s32 iVoiceNum, u16 adsr1, u16 adsr2)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceSasSetKeyOn(s32 iVoiceNum)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceSasSetKeyOff(s32 iVoiceNum)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceSasSetPause(s32 iVoiceNum, u32 pauseFlag)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceSasGetPauseState(s32 iVoiceNum)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceSasGetEndState(s32 iVoiceNum)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceSasGetEnvelope(s32 iVoiceNum)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceSasSetEffect(s32 drySwitch, s32 wetSwitch)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceSasSetEffectType(s32 type)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceSasSetEffectVolume(s32 valL, s32 valR)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceSasSetEffectParam(u32 delayTime, u32 feedback)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 
@@ -157,7 +157,6 @@ psv_log_base sceSas("SceSas", []()
 	sceSas.on_load = nullptr;
 	sceSas.on_unload = nullptr;
 	sceSas.on_stop = nullptr;
-	sceSas.on_error = nullptr;
 
 	//REG_FUNC(0xA2209C58, sceAsSetRegisterReportHandler);
 	//REG_FUNC(0xBB635544, sceAsSetUnregisterReportHandler);

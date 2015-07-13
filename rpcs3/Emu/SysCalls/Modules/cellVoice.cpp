@@ -3,8 +3,6 @@
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
 
-namespace vm { using namespace ps3; }
-
 extern Module cellVoice;
 
 // Error Codes

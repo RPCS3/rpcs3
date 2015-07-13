@@ -2,11 +2,13 @@
 #include "Emu/System.h"
 #include "Emu/ARMv7/PSVFuncList.h"
 
-#include "sceJpegEnc.h"
+extern psv_log_base sceJpegEnc;
+
+typedef vm::psv::ptr<void> SceJpegEncoderContext;
 
 s32 sceJpegEncoderGetContextSize()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceJpegEncoderInit(
@@ -14,22 +16,22 @@ s32 sceJpegEncoderInit(
 	s32 iFrameWidth,
 	s32 iFrameHeight,
 	s32 pixelFormat,
-	vm::ptr<void> pJpeg,
+	vm::psv::ptr<void> pJpeg,
 	u32 oJpegbufSize)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceJpegEncoderEncode(
 	SceJpegEncoderContext context,
-	vm::cptr<void> pYCbCr)
+	vm::psv::ptr<const void> pYCbCr)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceJpegEncoderEnd(SceJpegEncoderContext context)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceJpegEncoderSetValidRegion(
@@ -37,39 +39,39 @@ s32 sceJpegEncoderSetValidRegion(
 	s32 iFrameWidth,
 	s32 iFrameHeight)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceJpegEncoderSetCompressionRatio(
 	SceJpegEncoderContext context,
 	s32 compratio)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceJpegEncoderSetHeaderMode(
 	SceJpegEncoderContext context,
 	s32 headerMode)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceJpegEncoderSetOutputAddr(
 	SceJpegEncoderContext context,
-	vm::ptr<void> pJpeg,
+	vm::psv::ptr<void> pJpeg,
 	u32 oJpegbufSize)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceJpegEncoderCsc(
 	SceJpegEncoderContext context,
-	vm::ptr<void> pYCbCr,
-	vm::cptr<void> pRGBA,
+	vm::psv::ptr<void> pYCbCr,
+	vm::psv::ptr<const void> pRGBA,
 	s32 iFrameWidth,
 	s32 inputPixelFormat)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 
@@ -80,7 +82,6 @@ psv_log_base sceJpegEnc("SceJpegEnc", []()
 	sceJpegEnc.on_load = nullptr;
 	sceJpegEnc.on_unload = nullptr;
 	sceJpegEnc.on_stop = nullptr;
-	sceJpegEnc.on_error = nullptr;
 
 	REG_FUNC(0x2B55844D, sceJpegEncoderGetContextSize);
 	REG_FUNC(0x88DA92B4, sceJpegEncoderInit);

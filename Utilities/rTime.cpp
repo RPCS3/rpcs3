@@ -133,7 +133,7 @@ wxDateTime::TimeZone convertTZ(rDateTime::rTimeZone tz)
 	case rDateTime::UTC:
 		return wxDateTime::UTC;
 	default:
-		throw EXCEPTION("WRONG DATETIME");
+		throw std::string("WRONG DATETIME");
 	}
 }
 

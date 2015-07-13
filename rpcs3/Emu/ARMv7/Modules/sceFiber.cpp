@@ -2,46 +2,82 @@
 #include "Emu/System.h"
 #include "Emu/ARMv7/PSVFuncList.h"
 
-#include "sceFiber.h"
+extern psv_log_base sceFiber;
 
-s32 _sceFiberInitializeImpl(vm::ptr<SceFiber> fiber, vm::cptr<char> name, vm::ptr<SceFiberEntry> entry, u32 argOnInitialize, vm::ptr<void> addrContext, u32 sizeContext, vm::cptr<SceFiberOptParam> optParam, u32 buildVersion)
+typedef vm::psv::ptr<void(u32 argOnInitialize, u32 argOnRun)> SceFiberEntry;
+
+struct SceFiber
 {
-	throw EXCEPTION("");
+	static const uint size = 128;
+	static const uint align = 8;
+	u64 padding[size / sizeof(u64)];
+};
+
+struct SceFiberOptParam 
+{
+	static const uint size = 128;
+	static const uint align = 8;
+	u64 padding[size / sizeof(u64)];
+};
+
+struct SceFiberInfo
+{
+	static const uint size = 128;
+	static const uint align = 8;
+
+	union
+	{
+		u64 padding[size / sizeof(u64)];
+
+		struct
+		{
+			SceFiberEntry entry;
+			u32 argOnInitialize;
+			vm::psv::ptr<void> addrContext;
+			s32 sizeContext;
+			char name[32];
+		};
+	};
+};
+
+s32 _sceFiberInitializeImpl(vm::psv::ptr<SceFiber> fiber, vm::psv::ptr<const char> name, SceFiberEntry entry, u32 argOnInitialize, vm::psv::ptr<void> addrContext, u32 sizeContext, vm::psv::ptr<const SceFiberOptParam> optParam, u32 buildVersion)
+{
+	throw __FUNCTION__;
 }
 
-s32 sceFiberOptParamInitialize(vm::ptr<SceFiberOptParam> optParam)
+s32 sceFiberOptParamInitialize(vm::psv::ptr<SceFiberOptParam> optParam)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceFiberFinalize(vm::ptr<SceFiber> fiber)
+s32 sceFiberFinalize(vm::psv::ptr<SceFiber> fiber)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceFiberRun(vm::ptr<SceFiber> fiber, u32 argOnRunTo, vm::ptr<u32> argOnReturn)
+s32 sceFiberRun(vm::psv::ptr<SceFiber> fiber, u32 argOnRunTo, vm::psv::ptr<u32> argOnReturn)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceFiberSwitch(vm::ptr<SceFiber> fiber, u32 argOnRunTo, vm::ptr<u32> argOnRun)
+s32 sceFiberSwitch(vm::psv::ptr<SceFiber> fiber, u32 argOnRunTo, vm::psv::ptr<u32> argOnRun)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceFiberGetSelf(vm::pptr<SceFiber> fiber)
+s32 sceFiberGetSelf(vm::psv::pptr<SceFiber> fiber)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceFiberReturnToThread(u32 argOnReturn, vm::ptr<u32> argOnRun)
+s32 sceFiberReturnToThread(u32 argOnReturn, vm::psv::ptr<u32> argOnRun)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceFiberGetInfo(vm::ptr<SceFiber> fiber, vm::ptr<SceFiberInfo> fiberInfo)
+s32 sceFiberGetInfo(vm::psv::ptr<SceFiber> fiber, vm::psv::ptr<SceFiberInfo> fiberInfo)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 
@@ -52,7 +88,6 @@ psv_log_base sceFiber("SceFiber", []()
 	sceFiber.on_load = nullptr;
 	sceFiber.on_unload = nullptr;
 	sceFiber.on_stop = nullptr;
-	sceFiber.on_error = nullptr;
 
 	REG_FUNC(0xF24A298C, _sceFiberInitializeImpl);
 	//REG_FUNC(0xC6A3F9BB, _sceFiberInitializeWithInternalOptionImpl);

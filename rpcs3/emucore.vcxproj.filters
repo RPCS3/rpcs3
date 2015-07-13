@@ -353,6 +353,9 @@
     <ClCompile Include="Emu\Cell\SPURecompilerCore.cpp">
       <Filter>Emu\CPU\Cell</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Cell\SPURSManager.cpp">
+      <Filter>Emu\CPU\Cell</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\Cell\SPUThread.cpp">
       <Filter>Emu\CPU\Cell</Filter>
     </ClCompile>
@@ -429,6 +432,9 @@
       <Filter>Emu\SysCalls\currently_unused</Filter>
     </ClCompile>
     <ClCompile Include="Emu\SysCalls\Modules\cellKey2char.cpp">
+      <Filter>Emu\SysCalls\currently_unused</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellLv2dbg.cpp">
       <Filter>Emu\SysCalls\currently_unused</Filter>
     </ClCompile>
     <ClCompile Include="Emu\SysCalls\Modules\cellMusicDecode.cpp">
@@ -567,6 +573,9 @@
       <Filter>Emu\GPU\RSX</Filter>
     </ClCompile>
     <ClCompile Include="Emu\RSX\GSRender.cpp">
+      <Filter>Emu\GPU\RSX</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\RSXDMA.cpp">
       <Filter>Emu\GPU\RSX</Filter>
     </ClCompile>
     <ClCompile Include="Emu\RSX\RSXTexture.cpp">
@@ -869,12 +878,6 @@
     <ClCompile Include="Emu\RSX\GL\GLCommonDecompiler.cpp">
       <Filter>Emu\GPU\RSX\GL</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\SysCalls\lv2\sys_dbg.cpp">
-      <Filter>Emu\SysCalls\lv2</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\SysCalls\Modules\sys_lv2dbg.cpp">
-      <Filter>Emu\SysCalls\Modules</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -1159,6 +1162,9 @@
     <ClInclude Include="Emu\Cell\SPURecompiler.h">
       <Filter>Emu\CPU\Cell</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\Cell\SPURSManager.h">
+      <Filter>Emu\CPU\Cell</Filter>
+    </ClInclude>
     <ClInclude Include="Emu\Cell\SPUThread.h">
       <Filter>Emu\CPU\Cell</Filter>
     </ClInclude>
@@ -1358,6 +1364,9 @@
       <Filter>Emu\GPU\RSX</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\GSRender.h">
+      <Filter>Emu\GPU\RSX</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\RSXDMA.h">
       <Filter>Emu\GPU\RSX</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\RSXFragmentProgram.h">
@@ -1563,168 +1572,6 @@
     </ClInclude>
     <ClInclude Include="Emu\RSX\GL\GLCommonDecompiler.h">
       <Filter>Emu\GPU\RSX\GL</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\SysCalls\Modules\cellAudioIn.h">
-      <Filter>Emu\SysCalls\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\SysCalls\Modules\cellAudioOut.h">
-      <Filter>Emu\SysCalls\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\ARMv7\Modules\sceNpMatching.h">
-      <Filter>Emu\CPU\ARMv7\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\ARMv7\Modules\sceAppMgr.h">
-      <Filter>Emu\CPU\ARMv7\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\ARMv7\Modules\sceAudio.h">
-      <Filter>Emu\CPU\ARMv7\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\ARMv7\Modules\sceAudiodec.h">
-      <Filter>Emu\CPU\ARMv7\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\ARMv7\Modules\sceAudioenc.h">
-      <Filter>Emu\CPU\ARMv7\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\ARMv7\Modules\sceAudioIn.h">
-      <Filter>Emu\CPU\ARMv7\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\ARMv7\Modules\sceCamera.h">
-      <Filter>Emu\CPU\ARMv7\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\ARMv7\Modules\sceCodecEngine.h">
-      <Filter>Emu\CPU\ARMv7\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\ARMv7\Modules\sceCommonDialog.h">
-      <Filter>Emu\CPU\ARMv7\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\ARMv7\Modules\sceCtrl.h">
-      <Filter>Emu\CPU\ARMv7\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\ARMv7\Modules\sceDbg.h">
-      <Filter>Emu\CPU\ARMv7\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\ARMv7\Modules\sceDeci4p.h">
-      <Filter>Emu\CPU\ARMv7\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\ARMv7\Modules\sceDeflt.h">
-      <Filter>Emu\CPU\ARMv7\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\ARMv7\Modules\sceDisplay.h">
-      <Filter>Emu\CPU\ARMv7\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\ARMv7\Modules\sceFiber.h">
-      <Filter>Emu\CPU\ARMv7\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\ARMv7\Modules\sceFios.h">
-      <Filter>Emu\CPU\ARMv7\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\ARMv7\Modules\sceFpu.h">
-      <Filter>Emu\CPU\ARMv7\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\ARMv7\Modules\sceHttp.h">
-      <Filter>Emu\CPU\ARMv7\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\ARMv7\Modules\sceJpeg.h">
-      <Filter>Emu\CPU\ARMv7\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\ARMv7\Modules\sceJpegEnc.h">
-      <Filter>Emu\CPU\ARMv7\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\ARMv7\Modules\sceLibc.h">
-      <Filter>Emu\CPU\ARMv7\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\ARMv7\Modules\sceLibm.h">
-      <Filter>Emu\CPU\ARMv7\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\ARMv7\Modules\sceLibstdcxx.h">
-      <Filter>Emu\CPU\ARMv7\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\ARMv7\Modules\sceLiveArea.h">
-      <Filter>Emu\CPU\ARMv7\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\ARMv7\Modules\sceLocation.h">
-      <Filter>Emu\CPU\ARMv7\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\ARMv7\Modules\sceMd5.h">
-      <Filter>Emu\CPU\ARMv7\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\ARMv7\Modules\sceMotion.h">
-      <Filter>Emu\CPU\ARMv7\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\ARMv7\Modules\sceMt19937.h">
-      <Filter>Emu\CPU\ARMv7\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\ARMv7\Modules\sceNetCtl.h">
-      <Filter>Emu\CPU\ARMv7\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\ARMv7\Modules\sceNgs.h">
-      <Filter>Emu\CPU\ARMv7\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\ARMv7\Modules\sceNpBasic.h">
-      <Filter>Emu\CPU\ARMv7\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\ARMv7\Modules\sceNpManager.h">
-      <Filter>Emu\CPU\ARMv7\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\ARMv7\Modules\sceNpScore.h">
-      <Filter>Emu\CPU\ARMv7\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\ARMv7\Modules\sceNpUtility.h">
-      <Filter>Emu\CPU\ARMv7\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\ARMv7\Modules\scePerf.h">
-      <Filter>Emu\CPU\ARMv7\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\ARMv7\Modules\scePgf.h">
-      <Filter>Emu\CPU\ARMv7\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\ARMv7\Modules\scePhotoExport.h">
-      <Filter>Emu\CPU\ARMv7\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\ARMv7\Modules\sceRazorCapture.h">
-      <Filter>Emu\CPU\ARMv7\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\ARMv7\Modules\sceRtc.h">
-      <Filter>Emu\CPU\ARMv7\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\ARMv7\Modules\sceSas.h">
-      <Filter>Emu\CPU\ARMv7\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\ARMv7\Modules\sceScreenShot.h">
-      <Filter>Emu\CPU\ARMv7\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\ARMv7\Modules\sceSqlite.h">
-      <Filter>Emu\CPU\ARMv7\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\ARMv7\Modules\sceSulpha.h">
-      <Filter>Emu\CPU\ARMv7\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\ARMv7\Modules\sceSysmodule.h">
-      <Filter>Emu\CPU\ARMv7\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\ARMv7\Modules\sceSystemGesture.h">
-      <Filter>Emu\CPU\ARMv7\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\ARMv7\Modules\sceUlt.h">
-      <Filter>Emu\CPU\ARMv7\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\ARMv7\Modules\sceVideodec.h">
-      <Filter>Emu\CPU\ARMv7\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\ARMv7\Modules\sceVoice.h">
-      <Filter>Emu\CPU\ARMv7\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\ARMv7\Modules\sceVoiceQoS.h">
-      <Filter>Emu\CPU\ARMv7\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\ARMv7\Modules\sceXml.h">
-      <Filter>Emu\CPU\ARMv7\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\SysCalls\lv2\sys_dbg.h">
-      <Filter>Emu\SysCalls\lv2</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\SysCalls\Modules\sys_lv2dbg.h">
-      <Filter>Emu\SysCalls\Modules</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

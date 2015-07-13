@@ -3,285 +3,351 @@
 #include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
-#include "Emu/IdManager.h"
 #include "Emu/DbgCommand.h"
+#include "Emu/SysCalls/SysCalls.h"
+#include "Emu/ARMv7/PSVFuncList.h"
 
 #include "CPUDecoder.h"
 #include "CPUThread.h"
 
-CPUThread::CPUThread(CPUThreadType type, const std::string& name, std::function<std::string()> thread_name)
-	: m_state({ CPU_STATE_STOPPED })
-	, m_id(Emu.GetIdManager().get_current_id())
-	, m_type(type)
-	, m_name(name)
+CPUThread* GetCurrentCPUThread()
 {
-	start(std::move(thread_name), [this]
-	{
-		SendDbgCommand(DID_CREATE_THREAD, this);
+	return dynamic_cast<CPUThread*>(GetCurrentNamedThread());
+}
 
-		std::unique_lock<std::mutex> lock(mutex);
-
-		// check thread status
-		while (joinable() && IsActive())
-		{
-			CHECK_EMU_STATUS;
-
-			// check stop status
-			if (!IsStopped())
-			{
-				if (lock) lock.unlock();
-
-				try
-				{
-					Task();
-				}
-				catch (CPUThreadReturn)
-				{
-					;
-				}
-				catch (CPUThreadStop)
-				{
-					m_state |= CPU_STATE_STOPPED;
-				}
-				catch (CPUThreadExit)
-				{
-					m_state |= CPU_STATE_DEAD;
-					break;
-				}
-				catch (const fmt::exception&)
-				{
-					DumpInformation();
-					throw;
-				}
-
-				m_state &= ~CPU_STATE_RETURN;
-				continue;
-			}
-
-			if (!lock)
-			{
-				lock.lock();
-				continue;
-			}
-
-			cv.wait(lock);
-		}
-	});
+CPUThread::CPUThread(CPUThreadType type)
+	: ThreadBase("CPUThread")
+	, m_events(0)
+	, m_type(type)
+	, m_stack_size(0)
+	, m_stack_addr(0)
+	, m_prio(0)
+	, m_dec(nullptr)
+	, m_is_step(false)
+	, m_is_branch(false)
+	, m_status(Stopped)
+	, m_last_syscall(0)
+	, m_trace_enabled(false)
+	, m_trace_call_stack(true)
+{
+	offset = 0;
 }
 
 CPUThread::~CPUThread()
 {
-	if (joinable())
+	safe_delete(m_dec);
+}
+
+void CPUThread::DumpInformation()
+{
+	auto get_syscall_name = [this](u64 syscall) -> std::string
 	{
-		throw EXCEPTION("Thread not joined");
+		switch (GetType())
+		{
+		case CPU_THREAD_ARMv7:
+		{
+			if ((u32)syscall == syscall)
+			{
+				if (syscall)
+				{
+					if (auto func = get_psv_func_by_nid((u32)syscall))
+					{
+						return func->name;
+					}
+				}
+				else
+				{
+					return{};
+				}
+			}
+
+			return "unknown function";
+		}
+
+		case CPU_THREAD_PPU:
+		{
+			if (syscall)
+			{
+				return SysCalls::GetFuncName(syscall);
+			}
+			else
+			{
+				return{};
+			}
+		}
+
+		case CPU_THREAD_SPU:
+		case CPU_THREAD_RAW_SPU:
+		default:
+		{
+			if (!syscall)
+			{
+				return{};
+			}
+
+			return "unknown function";
+		}
+		}
+	};
+
+	LOG_ERROR(GENERAL, "Information: is_alive=%d, m_last_syscall=0x%llx (%s)", IsAlive(), m_last_syscall, get_syscall_name(m_last_syscall));
+	LOG_WARNING(GENERAL, RegsToString());
+}
+
+bool CPUThread::IsRunning() const { return m_status == Running; }
+bool CPUThread::IsPaused() const { return m_status == Paused; }
+bool CPUThread::IsStopped() const { return m_status == Stopped; }
+
+void CPUThread::Close()
+{
+	ThreadBase::Stop(false);
+	DoStop();
+
+	delete m_dec;
+	m_dec = nullptr;
+}
+
+void CPUThread::Reset()
+{
+	CloseStack();
+
+	SetPc(0);
+	m_is_branch = false;
+
+	m_status = Stopped;
+	
+	DoReset();
+}
+
+void CPUThread::SetId(const u32 id)
+{
+	m_id = id;
+}
+
+void CPUThread::SetName(const std::string& name)
+{
+	NamedThreadBase::SetThreadName(name);
+}
+
+int CPUThread::ThreadStatus()
+{
+	if(Emu.IsStopped() || IsStopped() || IsPaused())
+	{
+		return CPUThread_Stopped;
 	}
 
-	SendDbgCommand(DID_REMOVE_THREAD, this);
+	if(TestDestroy())
+	{
+		return CPUThread_Break;
+	}
+
+	if(m_is_step)
+	{
+		return CPUThread_Step;
+	}
+
+	if (Emu.IsPaused())
+	{
+		return CPUThread_Sleeping;
+	}
+
+	return CPUThread_Running;
 }
 
-bool CPUThread::IsPaused() const
+void CPUThread::SetEntry(const u32 pc)
 {
-	return (m_state.load() & CPU_STATE_PAUSED) != 0 || Emu.IsPaused();
+	entry = pc;
 }
 
-void CPUThread::DumpInformation() const
+void CPUThread::NextPc(u32 instr_size)
 {
-	LOG_WARNING(GENERAL, RegsToString());
+	if(m_is_branch)
+	{
+		m_is_branch = false;
+
+		SetPc(nPC);
+	}
+	else
+	{
+		PC += instr_size;
+	}
+}
+
+void CPUThread::SetBranch(const u32 pc, bool record_branch)
+{
+	m_is_branch = true;
+	nPC = pc;
+
+	if(m_trace_call_stack && record_branch)
+		CallStackBranch(pc);
+}
+
+void CPUThread::SetPc(const u32 pc)
+{
+	PC = pc;
 }
 
 void CPUThread::Run()
 {
+	if(!IsStopped())
+		Stop();
+
+	Reset();
+	
 	SendDbgCommand(DID_START_THREAD, this);
 
+	m_status = Running;
+
+	SetPc(entry);
 	InitStack();
 	InitRegs();
 	DoRun();
+	Emu.CheckStatus();
 
 	SendDbgCommand(DID_STARTED_THREAD, this);
 }
 
-void CPUThread::Pause()
-{
-	SendDbgCommand(DID_PAUSE_THREAD, this);
-
-	m_state |= CPU_STATE_PAUSED;
-
-	SendDbgCommand(DID_PAUSED_THREAD, this);
-}
-
 void CPUThread::Resume()
 {
+	if(!IsPaused()) return;
+
 	SendDbgCommand(DID_RESUME_THREAD, this);
 
-	{
-		// lock for reliable notification
-		std::lock_guard<std::mutex> lock(mutex);
+	m_status = Running;
+	DoResume();
+	Emu.CheckStatus();
 
-		m_state &= ~CPU_STATE_PAUSED;
-
-		cv.notify_one();
-	}
+	ThreadBase::Start();
 
 	SendDbgCommand(DID_RESUMED_THREAD, this);
 }
 
+void CPUThread::Pause()
+{
+	if(!IsRunning()) return;
+
+	SendDbgCommand(DID_PAUSE_THREAD, this);
+
+	m_status = Paused;
+	DoPause();
+	Emu.CheckStatus();
+
+	// ThreadBase::Stop(); // "Abort() called" exception
+	SendDbgCommand(DID_PAUSED_THREAD, this);
+}
+
 void CPUThread::Stop()
 {
+	if(IsStopped()) return;
+
 	SendDbgCommand(DID_STOP_THREAD, this);
 
-	if (is_current())
-	{
-		throw CPUThreadStop{};
-	}
-	else
-	{
-		// lock for reliable notification
-		std::lock_guard<std::mutex> lock(mutex);
+	m_status = Stopped;
+	m_events |= CPU_EVENT_STOP;
 
-		m_state |= CPU_STATE_STOPPED;
-
-		cv.notify_one();
+	if(static_cast<NamedThreadBase*>(this) != GetCurrentNamedThread())
+	{
+		ThreadBase::Stop();
 	}
+
+	Emu.CheckStatus();
 
 	SendDbgCommand(DID_STOPED_THREAD, this);
 }
 
 void CPUThread::Exec()
 {
+	m_is_step = false;
 	SendDbgCommand(DID_EXEC_THREAD, this);
 
-	{
-		// lock for reliable notification
-		std::lock_guard<std::mutex> lock(mutex);
-
-		m_state &= ~CPU_STATE_STOPPED;
-
-		cv.notify_one();
-	}
+	if(IsRunning())
+		ThreadBase::Start();
 }
 
-void CPUThread::Exit()
+void CPUThread::ExecOnce()
 {
-	if (is_current())
-	{
-		throw CPUThreadExit{};
-	}
-	else
-	{
-		throw EXCEPTION("Unable to exit another thread");
-	}
+	m_is_step = true;
+	SendDbgCommand(DID_EXEC_THREAD, this);
+
+	m_status = Running;
+	ThreadBase::Start();
+	ThreadBase::Stop(true,false);
+	m_status = Paused;
+	SendDbgCommand(DID_PAUSE_THREAD, this);
+	SendDbgCommand(DID_PAUSED_THREAD, this);
 }
 
-void CPUThread::Step()
+void CPUThread::Task()
 {
-	if (m_state.atomic_op([](u64& state) -> bool
+	if (Ini.HLELogging.GetValue()) LOG_NOTICE(GENERAL, "%s enter", CPUThread::GetFName().c_str());
+
+	const std::vector<u64>& bp = Emu.GetBreakPoints();
+
+	for (uint i = 0; i<bp.size(); ++i)
 	{
-		const bool was_paused = (state & CPU_STATE_PAUSED) != 0;
-
-		state |= CPU_STATE_STEP;
-		state &= ~CPU_STATE_PAUSED;
-
-		return was_paused;
-	}))
-	{
-		if (is_current()) return;
-
-		// lock for reliable notification (only if PAUSE was removed)
-		std::lock_guard<std::mutex> lock(mutex);
-
-		cv.notify_one();
-	}
-}
-
-void CPUThread::Sleep()
-{
-	m_state += CPU_STATE_MAX;
-	m_state |= CPU_STATE_SLEEP;
-}
-
-void CPUThread::Awake()
-{
-	// must be called after the balanced Sleep() call
-
-	if (m_state.atomic_op([](u64& state) -> bool
-	{
-		if (state < CPU_STATE_MAX)
+		if (bp[i] == offset + PC)
 		{
-			throw EXCEPTION("Sleep()/Awake() inconsistency");
+			Emu.Pause();
+			break;
 		}
-
-		if ((state -= CPU_STATE_MAX) < CPU_STATE_MAX)
-		{
-			state &= ~CPU_STATE_SLEEP;
-
-			// notify the condition variable as well
-			return true;
-		}
-
-		return false;
-	}))
-	{
-		if (is_current()) return;
-
-		// lock for reliable notification; the condition being checked is probably externally set
-		std::lock_guard<std::mutex> lock(mutex);
-
-		cv.notify_one();
 	}
-}
 
-bool CPUThread::Signal()
-{
-	// try to set SIGNAL
-	if (m_state._or(CPU_STATE_SIGNAL) & CPU_STATE_SIGNAL)
-	{
-		return false;
-	}
-	else
-	{
-		// not truly responsible for signal delivery, requires additional measures like LV2_LOCK
-		cv.notify_one();
-
-		return true;
-	}
-}
-
-bool CPUThread::Signaled()
-{
-	// remove SIGNAL and return its old value
-	return (m_state._and_not(CPU_STATE_SIGNAL) & CPU_STATE_SIGNAL) != 0;
-}
-
-bool CPUThread::CheckStatus()
-{
-	std::unique_lock<std::mutex> lock(mutex, std::defer_lock);
+	std::vector<u32> trace;
 
 	while (true)
 	{
-		CHECK_EMU_STATUS; // check at least once
+		int status = ThreadStatus();
 
-		if (!IsPaused()) break;
-
-		if (!lock)
+		if (status == CPUThread_Stopped || status == CPUThread_Break)
 		{
-			lock.lock();
+			break;
+		}
+
+		if (status == CPUThread_Sleeping)
+		{
+			std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 			continue;
 		}
 
-		cv.wait(lock);
+		Step();
+		//if (m_trace_enabled)
+		//trace.push_back(PC);
+		NextPc(m_dec->DecodeMemory(PC + offset));
+
+		if (status == CPUThread_Step)
+		{
+			m_is_step = false;
+			break;
+		}
+
+		for (uint i = 0; i < bp.size(); ++i)
+		{
+			if (bp[i] == PC)
+			{
+				Emu.Pause();
+				break;
+			}
+		}
 	}
 
-	if (m_state.load() & CPU_STATE_RETURN || IsStopped())
+	if (trace.size())
 	{
-		return true;
+		LOG_NOTICE(GENERAL, "Trace begin (%d elements)", trace.size());
+
+		u32 start = trace[0], prev = trace[0] - 4;
+
+		for (auto& v : trace) //LOG_NOTICE(GENERAL, "PC = 0x%x", v);
+		{
+			if (v - prev != 4 && v - prev != 2)
+			{
+				LOG_NOTICE(GENERAL, "Trace: 0x%08x .. 0x%08x", start, prev);
+				start = v;
+			}
+			prev = v;
+		}
+
+		LOG_NOTICE(GENERAL, "Trace end: 0x%08x .. 0x%08x", start, prev);
 	}
 
-	if (m_state.load() & CPU_STATE_STEP)
-	{
-		// set PAUSE, but allow to execute once
-		m_state |= CPU_STATE_PAUSED;
-		m_state &= ~CPU_STATE_STEP;
-	}
-
-	return false;
+	if (Ini.HLELogging.GetValue()) LOG_NOTICE(GENERAL, "%s leave", CPUThread::GetFName().c_str());
 }

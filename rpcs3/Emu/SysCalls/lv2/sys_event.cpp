@@ -7,26 +7,13 @@
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Event.h"
 #include "sleep_queue.h"
+#include "sys_time.h"
 #include "sys_process.h"
 #include "sys_event.h"
 
 SysCallBase sys_event("sys_event");
 
-extern u64 get_system_time();
-
-lv2_event_queue_t::lv2_event_queue_t(u32 protocol, s32 type, u64 name, u64 key, s32 size)
-	: id(Emu.GetIdManager().get_current_id())
-	, protocol(protocol)
-	, type(type)
-	, name(name)
-	, key(key)
-	, size(size)
-	, cancelled(false)
-	, waiters(0)
-{
-}
-
-s32 sys_event_queue_create(vm::ptr<u32> equeue_id, vm::ptr<sys_event_queue_attribute_t> attr, u64 event_queue_key, s32 size)
+s32 sys_event_queue_create(vm::ptr<u32> equeue_id, vm::ptr<sys_event_queue_attr> attr, u64 event_queue_key, s32 size)
 {
 	sys_event.Warning("sys_event_queue_create(equeue_id=*0x%x, attr=*0x%x, event_queue_key=0x%llx, size=%d)", equeue_id, attr, event_queue_key, size);
 
@@ -53,14 +40,14 @@ s32 sys_event_queue_create(vm::ptr<u32> equeue_id, vm::ptr<sys_event_queue_attri
 	default: sys_event.Error("sys_event_queue_create(): unknown type (0x%x)", type); return CELL_EINVAL;
 	}
 
-	const auto queue = Emu.GetEventManager().MakeEventQueue(event_queue_key, protocol, type, attr->name_u64, event_queue_key, size);
+	auto queue = Emu.GetEventManager().MakeEventQueue(protocol, type, attr->name_u64, event_queue_key, size);
 
 	if (!queue)
 	{
 		return CELL_EEXIST;
 	}
 
-	*equeue_id = queue->id;
+	*equeue_id = Emu.GetIdManager().add(std::move(queue));
 	
 	return CELL_OK;
 }
@@ -90,7 +77,7 @@ s32 sys_event_queue_destroy(u32 equeue_id, s32 mode)
 
 	if (queue->cancelled.exchange(true))
 	{
-		throw EXCEPTION("Unexpected value");
+		throw __FUNCTION__;
 	}
 
 	if (queue->waiters)
@@ -119,7 +106,7 @@ s32 sys_event_queue_tryreceive(u32 equeue_id, vm::ptr<sys_event_t> event_array, 
 
 	if (size < 0)
 	{
-		throw EXCEPTION("Negative size");
+		throw __FUNCTION__;
 	}
 
 	if (queue->type != SYS_PPU_QUEUE)
@@ -131,13 +118,8 @@ s32 sys_event_queue_tryreceive(u32 equeue_id, vm::ptr<sys_event_t> event_array, 
 
 	while (!queue->waiters && count < size && queue->events.size())
 	{
-		auto& dest = event_array[count++];
-
 		auto& event = queue->events.front();
-		dest.source = event.source;
-		dest.data1 = event.data1;
-		dest.data2 = event.data2;
-		dest.data3 = event.data3;
+		event_array[count++] = { be_t<u64>::make(event.source), be_t<u64>::make(event.data1), be_t<u64>::make(event.data2), be_t<u64>::make(event.data3) };
 
 		queue->events.pop_front();
 	}
@@ -172,10 +154,9 @@ s32 sys_event_queue_receive(PPUThread& CPU, u32 equeue_id, vm::ptr<sys_event_t> 
 
 	while (queue->events.empty())
 	{
-		CHECK_EMU_STATUS;
-
 		if (queue->cancelled)
 		{
+			queue->waiters--;
 			return CELL_ECANCELED;
 		}
 
@@ -183,6 +164,12 @@ s32 sys_event_queue_receive(PPUThread& CPU, u32 equeue_id, vm::ptr<sys_event_t> 
 		{
 			queue->waiters--;
 			return CELL_ETIMEDOUT;
+		}
+
+		if (Emu.IsStopped())
+		{
+			sys_event.Warning("sys_event_queue_receive(equeue_id=0x%x) aborted", equeue_id);
+			return CELL_OK;
 		}
 
 		queue->cv.wait_for(lv2_lock, std::chrono::milliseconds(1));

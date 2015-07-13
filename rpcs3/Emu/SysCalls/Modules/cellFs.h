@@ -1,7 +1,5 @@
 #pragma once
 
-namespace vm { using namespace ps3; }
-
 struct CellFsDirectoryEntry
 {
 	CellFsStat attribute;

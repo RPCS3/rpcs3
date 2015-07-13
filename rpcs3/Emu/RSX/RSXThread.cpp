@@ -4,19 +4,18 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/RSX/GSManager.h"
-#include "Emu/RSX/GSRender.h"
+#include "Emu/RSX/RSXDMA.h"
 #include "Emu/RSX/sysutil_video.h"
 #include "RSXThread.h"
 
 #include "Emu/SysCalls/Callback.h"
 #include "Emu/SysCalls/CB_FUNC.h"
+#include "Emu/SysCalls/lv2/sys_time.h"
 
 extern "C"
 {
 #include "libswscale/swscale.h"
 }
-
-extern u64 get_system_time();
 
 #define ARGS(x) (x >= count ? OutOfArgsCount(x, cmd, count, args.addr()) : args[x].value())
 #define CMD_DEBUG 0
@@ -39,7 +38,7 @@ u32 GetAddress(u32 offset, u32 location)
 		res = (u32)Memory.RSXIOMem.RealAddr(offset); // TODO: Error Check?
 		if (res == 0)
 		{
-			throw EXCEPTION("RSXIO memory not mapped (offset=0x%x)", offset);
+			throw fmt::format("GetAddress(offset=0x%x, location=0x%x): RSXIO memory not mapped", offset, location);
 		}
 
 		if (Emu.GetGSManager().GetRender().m_strict_ordering[offset >> 20])
@@ -51,7 +50,7 @@ u32 GetAddress(u32 offset, u32 location)
 	}
 	default:
 	{
-		throw EXCEPTION("Invalid location (offset=0x%x, location=0x%x)", offset, location);
+		throw fmt::format("GetAddress(offset=0x%x, location=0x%x): invalid location", offset, location);
 	}
 	}
 
@@ -101,17 +100,17 @@ void RSXVertexData::Load(u32 start, u32 count, u32 baseOffset, u32 baseIndex = 0
 
 		case 2:
 		{
-			auto c_src = (const be_t<u16>*)src;
-			auto c_dst = (u16*)dst;
-			for (u32 j = 0; j < size; ++j) *c_dst++ = *c_src++;
+			const u16* c_src = (const u16*)src;
+			u16* c_dst = (u16*)dst;
+			for (u32 j = 0; j < size; ++j) *c_dst++ = re16(*c_src++);
 			break;
 		}
 
 		case 4:
 		{
-			auto c_src = (const be_t<u32>*)src;
-			auto c_dst = (u32*)dst;
-			for (u32 j = 0; j < size; ++j) *c_dst++ = *c_src++;
+			const u32* c_src = (const u32*)src;
+			u32* c_dst = (u32*)dst;
+			for (u32 j = 0; j < size; ++j) *c_dst++ = re32(*c_src++);
 			break;
 		}
 		}
@@ -188,7 +187,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	// NV406E
 	case NV406E_SET_REFERENCE:
 	{
-		m_ctrl->ref.exchange(ARGS(0));
+		m_ctrl->ref.exchange(be_t<u32>::make(ARGS(0)));
 		break;
 	}
 
@@ -252,9 +251,9 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		if (m_flip_handler)
 		{
 			auto cb = m_flip_handler;
-			Emu.GetCallbackManager().Async([=](CPUThread& CPU)
+			Emu.GetCallbackManager().Async([cb](PPUThread& CPU)
 			{
-				cb(static_cast<PPUThread&>(CPU), 1);
+				cb(CPU, 1);
 			});
 		}
 
@@ -2307,9 +2306,9 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	{
 		const u32 cause = ARGS(0);
 		auto cb = m_user_handler;
-		Emu.GetCallbackManager().Async([=](CPUThread& CPU)
+		Emu.GetCallbackManager().Async([cb, cause](PPUThread& CPU)
 		{
-			cb(static_cast<PPUThread&>(CPU), cause);
+			cb(CPU, cause);
 		});
 		break;
 	}
@@ -2456,25 +2455,23 @@ void RSXThread::Task()
 
 	m_last_flip_time = get_system_time() - 1000000;
 
-	autojoin_thread_t vblank(WRAP_EXPR("VBlank Thread"), [this]()
+	thread_t vblank("VBlank thread", true /* autojoin */, [this]()
 	{
 		const u64 start_time = get_system_time();
 
 		m_vblank_count = 0;
 
-		while (joinable())
+		while (!TestDestroy() && !Emu.IsStopped())
 		{
-			CHECK_EMU_STATUS;
-
 			if (get_system_time() - start_time > m_vblank_count * 1000000 / 60)
 			{
 				m_vblank_count++;
 
 				if (auto cb = m_vblank_handler)
 				{
-					Emu.GetCallbackManager().Async([=](CPUThread& CPU)
+					Emu.GetCallbackManager().Async([=](PPUThread& CPU)
 					{
-						cb(static_cast<PPUThread&>(CPU), 1);
+						cb(CPU, 1);
 					});
 				}
 			}
@@ -2485,14 +2482,19 @@ void RSXThread::Task()
 		}
 	});
 
-	while (joinable() && !Emu.IsStopped())
+	while (!TestDestroy()) try
 	{
+		if (Emu.IsStopped())
+		{
+			LOG_WARNING(RSX, "RSX thread aborted");
+			break;
+		}
 		std::lock_guard<std::mutex> lock(m_cs_main);
 
 		inc = 1;
 
-		u32 put = m_ctrl->put.load();
-		u32 get = m_ctrl->get.load();
+		u32 get = m_ctrl->get.read_sync();
+		u32 put = m_ctrl->put.read_sync();
 
 		if (put == get || !Emu.IsRunning())
 		{
@@ -2520,7 +2522,7 @@ void RSXThread::Task()
 		{
 			u32 offs = cmd & 0x1fffffff;
 			//LOG_WARNING(RSX, "rsx jump(0x%x) #addr=0x%x, cmd=0x%x, get=0x%x, put=0x%x", offs, m_ioAddress + get, cmd, get, put);
-			m_ctrl->get.exchange(offs);
+			m_ctrl->get.exchange(be_t<u32>::make(offs));
 			continue;
 		}
 		if (cmd & CELL_GCM_METHOD_FLAG_CALL)
@@ -2528,7 +2530,7 @@ void RSXThread::Task()
 			m_call_stack.push(get + 4);
 			u32 offs = cmd & ~3;
 			//LOG_WARNING(RSX, "rsx call(0x%x) #0x%x - 0x%x", offs, cmd, get);
-			m_ctrl->get.exchange(offs);
+			m_ctrl->get.exchange(be_t<u32>::make(offs));
 			continue;
 		}
 		if (cmd == CELL_GCM_METHOD_FLAG_RETURN)
@@ -2536,7 +2538,7 @@ void RSXThread::Task()
 			u32 get = m_call_stack.top();
 			m_call_stack.pop();
 			//LOG_WARNING(RSX, "rsx return(0x%x)", get);
-			m_ctrl->get.exchange(get);
+			m_ctrl->get.exchange(be_t<u32>::make(get));
 			continue;
 		}
 		if (cmd & CELL_GCM_METHOD_FLAG_NON_INCREMENT)
@@ -2568,6 +2570,18 @@ void RSXThread::Task()
 			value += (count + 1) * 4;
 		});
 	}
+	catch (const std::string& e)
+	{
+		LOG_ERROR(RSX, "Exception: %s", e.c_str());
+		Emu.Pause();
+	}
+	catch (const char* e)
+	{
+		LOG_ERROR(RSX, "Exception: %s", e);
+		Emu.Pause();
+	}
+
+	LOG_NOTICE(RSX, "RSX thread ended");
 
 	OnExitThread();
 }
@@ -2587,19 +2601,16 @@ void RSXThread::Init(const u32 ioAddress, const u32 ioSize, const u32 ctrlAddres
 	m_used_gcm_commands.clear();
 
 	OnInit();
-
-	start(WRAP_EXPR("RSXThread"), WRAP_EXPR(Task()));
+	ThreadBase::Start();
 }
 
 u32 RSXThread::ReadIO32(u32 addr)
 {
 	u32 value;
-
 	if (!Memory.RSXIOMem.Read32(addr, &value))
 	{
-		throw EXCEPTION("RSXIO memory not mapped (addr=0x%x)", addr);
+		throw fmt::Format("%s(addr=0x%x): RSXIO memory not mapped", __FUNCTION__, addr);
 	}
-
 	return value;
 }
 
@@ -2607,6 +2618,6 @@ void RSXThread::WriteIO32(u32 addr, u32 value)
 {
 	if (!Memory.RSXIOMem.Write32(addr, value))
 	{
-		throw EXCEPTION("RSXIO memory not mapped (addr=0x%x)", addr);
+		throw fmt::Format("%s(addr=0x%x): RSXIO memory not mapped", __FUNCTION__, addr);
 	}
 }

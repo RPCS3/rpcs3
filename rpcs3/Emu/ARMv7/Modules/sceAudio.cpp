@@ -2,46 +2,46 @@
 #include "Emu/System.h"
 #include "Emu/ARMv7/PSVFuncList.h"
 
-#include "sceAudio.h"
+extern psv_log_base sceAudio;
 
 s32 sceAudioOutOpenPort(s32 portType, s32 len, s32 freq, s32 param)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceAudioOutReleasePort(s32 port)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceAudioOutOutput(s32 port, vm::ptr<void> ptr)
+s32 sceAudioOutOutput(s32 port, vm::psv::ptr<void> ptr)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceAudioOutSetVolume(s32 port, s32 flag, vm::ptr<s32> vol)
+s32 sceAudioOutSetVolume(s32 port, s32 flag, vm::psv::ptr<s32> vol)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceAudioOutSetConfig(s32 port, s32 len, s32 freq, s32 param)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceAudioOutGetConfig(s32 port, s32 configType)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceAudioOutGetRestSample(s32 port)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceAudioOutGetAdopt(s32 portType)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 
@@ -52,7 +52,6 @@ psv_log_base sceAudio("SceAudio", []()
 	sceAudio.on_load = nullptr;
 	sceAudio.on_unload = nullptr;
 	sceAudio.on_stop = nullptr;
-	sceAudio.on_error = nullptr;
 
 	REG_FUNC(0x5BC341E4, sceAudioOutOpenPort);
 	REG_FUNC(0x69E2E6B5, sceAudioOutReleasePort);

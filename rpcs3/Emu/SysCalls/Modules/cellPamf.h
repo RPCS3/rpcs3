@@ -1,7 +1,5 @@
 #pragma once
 
-namespace vm { using namespace ps3; }
-
 // Error Codes
 enum
 {
@@ -200,7 +198,7 @@ struct CellPamfAvcInfo
 	u8 maxMeanBitrate;
 };
 
-CHECK_SIZE(CellPamfAvcInfo, 0x20);
+static_assert(sizeof(CellPamfAvcInfo) == 0x20, "Invalid CellPamfAvcInfo size");
 
 // M2V (MPEG2 Video) Specific Information
 struct CellPamfM2vInfo
@@ -223,7 +221,7 @@ struct CellPamfM2vInfo
 	u8 matrixCoefficients;
 };
 
-CHECK_SIZE(CellPamfM2vInfo, 0x18);
+static_assert(sizeof(CellPamfM2vInfo) == 0x18, "Invalid CellPamfM2vInfo size");
 
 // ATRAC3+ Audio Specific Information
 struct CellPamfAtrac3plusInfo
@@ -232,7 +230,7 @@ struct CellPamfAtrac3plusInfo
 	u8 numberOfChannels;
 };
 
-CHECK_SIZE(CellPamfAtrac3plusInfo, 8);
+static_assert(sizeof(CellPamfAtrac3plusInfo) == 8, "Invalid CellPamfAtrac3plusInfo size");
 
 // AC3 Audio Specific Information
 struct CellPamfAc3Info
@@ -241,7 +239,7 @@ struct CellPamfAc3Info
 	u8 numberOfChannels;
 };
 
-CHECK_SIZE(CellPamfAc3Info, 8);
+static_assert(sizeof(CellPamfAc3Info) == 8, "Invalid CellPamfAc3Info size");
 
 // LPCM Audio Specific Information
 struct CellPamfLpcmInfo
@@ -284,16 +282,13 @@ struct PamfStreamHeader
 			be_t<u16> frameCropRightOffset;
 			be_t<u16> frameCropTopOffset;
 			be_t<u16> frameCropBottomOffset;
-
 			union
 			{
 				struct
 				{
-					be_t<u16> width;
-					be_t<u16> height;
-				}
-				sarInfo;
-
+					be_t<u16> sarWidth;
+					be_t<u16> sarHeight;
+				};
 				struct
 				{
 					u8 x14; // contains videoFormat and videoFullRangeFlag
@@ -302,11 +297,10 @@ struct PamfStreamHeader
 					u8 matrixCoefficients;
 				};
 			};
-
 			u8 x18; // contains entropyCodingModeFlag, deblockingFilterFlag, minNumSlicePerPictureIdc, nfwIdc
 			u8 maxMeanBitrate;
-		}
-		AVC;
+
+		} AVC;
 
 		// M2V specific information
 		struct
@@ -326,8 +320,8 @@ struct PamfStreamHeader
 			u8 colourPrimaries;
 			u8 transferCharacteristics;
 			u8 matrixCoefficients;
-		}
-		M2V;
+
+		} M2V;
 
 		// Audio specific information
 		struct
@@ -336,12 +330,12 @@ struct PamfStreamHeader
 			u8 channels; // number of channels (1, 2, 6, 8)
 			u8 freq; // 1 (always 48000)
 			u8 bps; // LPCM only
-		}
-		audio;
+
+		} audio;
 	};
 };
 
-CHECK_SIZE(PamfStreamHeader, 48);
+static_assert(sizeof(PamfStreamHeader) == 48, "Invalid PamfStreamHeader size");
 
 struct PamfHeader
 {
@@ -383,19 +377,19 @@ struct PamfEpHeader
 	be_t<u32> rpnOffset;
 };
 
-CHECK_SIZE(PamfEpHeader, 12);
+static_assert(sizeof(PamfEpHeader) == 12, "Invalid PamfEpHeader size");
 
 #pragma pack(pop)
 
 // not directly accessed by virtual CPU, fields are unknown
 struct CellPamfReader
 {
-	vm::cptr<PamfHeader> pAddr;
+	vm::ptr<const PamfHeader> pAddr;
 	s32 stream;
 	u64 fileSize;
 	u32 internalData[28];
 };
 
-CHECK_SIZE(CellPamfReader, 128);
+static_assert(sizeof(CellPamfReader) == 128, "Invalid CellPamfReader size");
 
-s32 cellPamfReaderInitialize(vm::ptr<CellPamfReader> pSelf, vm::cptr<PamfHeader> pAddr, u64 fileSize, u32 attribute);
+s32 cellPamfReaderInitialize(vm::ptr<CellPamfReader> pSelf, vm::ptr<const PamfHeader> pAddr, u64 fileSize, u32 attribute);

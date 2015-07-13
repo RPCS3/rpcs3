@@ -1,8 +1,6 @@
 #pragma once
 
-namespace vm { using namespace ps3; }
-
-enum CellPngTxtType : s32
+enum CellPngTxtType
 {
 	CELL_PNG_TEXT = 0,
 	CELL_PNG_ZTXT = 1,
@@ -33,7 +31,7 @@ struct CellPngSPLTentry
 	be_t<u32> paletteEntriesNumber;
 };
 
-enum CellPngUnknownLocation : s32
+enum CellPngUnknownLocation
 {
 	CELL_PNG_BEFORE_PLTE = 1,
 	CELL_PNG_BEFORE_IDAT = 2,
@@ -42,7 +40,7 @@ enum CellPngUnknownLocation : s32
 
 struct CellPngTextInfo
 {
-	be_t<s32> txtType; // CellPngTxtType
+	be_t<CellPngTxtType> txtType;
 	vm::bptr<char> keyword;
 	vm::bptr<char> text;
 	be_t<u32> textLength;
@@ -172,5 +170,5 @@ struct CellPngUnknownChunk
 	char chunkType[5];
 	vm::bptr<char> chunkData;
 	be_t<u32> length;
-	be_t<s32> location; // CellPngUnknownLocation
+	be_t<CellPngUnknownLocation> location;
 };

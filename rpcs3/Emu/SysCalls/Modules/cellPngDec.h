@@ -1,7 +1,4 @@
 #pragma once
-
-namespace vm { using namespace ps3; }
-
 #include "cellPng.h"
 
 enum : u32
@@ -123,7 +120,7 @@ struct CellPngDecExtThreadOutParam
 struct CellPngDecSrc
 {
 	be_t<s32> srcSelect; // CellPngDecStreamSrcSel
-	vm::bcptr<char> fileName;
+	vm::bptr<const char> fileName;
 	be_t<s64> fileOffset;
 	be_t<u32> fileSize;
 	vm::bptr<void> streamPtr;

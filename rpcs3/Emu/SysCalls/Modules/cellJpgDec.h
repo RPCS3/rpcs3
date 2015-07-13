@@ -1,7 +1,5 @@
 #pragma once
 
-namespace vm { using namespace ps3; }
-
 //Return Codes
 enum
 {
@@ -58,7 +56,7 @@ struct CellJpgDecInfo
 struct CellJpgDecSrc
 {
 	be_t<u32> srcSelect;       // CellJpgDecStreamSrcSel
-	vm::bcptr<char> fileName;
+	vm::bptr<const char> fileName;
 	be_t<u64> fileOffset;      // int64_t
 	be_t<u32> fileSize;
 	be_t<u32> streamPtr;

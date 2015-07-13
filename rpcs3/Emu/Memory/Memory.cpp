@@ -4,6 +4,8 @@
 
 MemoryBase Memory;
 
+std::mutex g_memory_mutex;
+
 void MemoryBase::Init(MemoryType type)
 {
 	if (m_inited) return;
@@ -66,25 +68,9 @@ void MemoryBase::Close()
 
 bool MemoryBase::Map(const u32 addr, const u32 size)
 {
-	if (!size || (size | addr) % 4096)
-	{
-		throw EXCEPTION("Invalid arguments (addr=0x%x, size=0x%x)", addr, size);
-	}
+	assert(size && (size | addr) % 4096 == 0);
 
-	std::lock_guard<std::mutex> lock(Memory.mutex);
-
-	for (auto& block : MemoryBlocks)
-	{
-		if (block->GetStartAddr() >= addr && block->GetStartAddr() <= addr + size - 1)
-		{
-			return false;
-		}
-
-		if (addr >= block->GetStartAddr() && addr <= block->GetEndAddr())
-		{
-			return false;
-		}
-	}
+	std::lock_guard<std::mutex> lock(g_memory_mutex);
 
 	for (u32 i = addr / 4096; i < addr / 4096 + size / 4096; i++)
 	{
@@ -94,14 +80,15 @@ bool MemoryBase::Map(const u32 addr, const u32 size)
 		}
 	}
 
-	MemoryBlocks.push_back((new DynamicMemoryBlock())->SetRange(addr, size));
+	MemoryBlocks.push_back((new MemoryBlock())->SetRange(addr, size));
 
+	LOG_WARNING(MEMORY, "Memory mapped at 0x%x: size=0x%x", addr, size);
 	return true;
 }
 
 bool MemoryBase::Unmap(const u32 addr)
 {
-	std::lock_guard<std::mutex> lock(Memory.mutex);
+	std::lock_guard<std::mutex> lock(g_memory_mutex);
 
 	for (u32 i = 0; i < MemoryBlocks.size(); i++)
 	{
@@ -112,23 +99,7 @@ bool MemoryBase::Unmap(const u32 addr)
 			return true;
 		}
 	}
-
 	return false;
-}
-
-MemoryBlock* MemoryBase::Get(const u32 addr)
-{
-	std::lock_guard<std::mutex> lock(Memory.mutex);
-
-	for (auto& block : MemoryBlocks)
-	{
-		if (block->GetStartAddr() == addr)
-		{
-			return block;
-		}
-	}
-
-	return nullptr;
 }
 
 MemBlockInfo::MemBlockInfo(u32 addr, u32 size)
@@ -204,7 +175,7 @@ DynamicMemoryBlockBase::DynamicMemoryBlockBase()
 
 const u32 DynamicMemoryBlockBase::GetUsedSize() const
 {
-	std::lock_guard<std::mutex> lock(Memory.mutex);
+	std::lock_guard<std::mutex> lock(g_memory_mutex);
 
 	u32 size = 0;
 
@@ -223,7 +194,7 @@ bool DynamicMemoryBlockBase::IsInMyRange(const u32 addr, const u32 size)
 
 MemoryBlock* DynamicMemoryBlockBase::SetRange(const u32 start, const u32 size)
 {
-	std::lock_guard<std::mutex> lock(Memory.mutex);
+	std::lock_guard<std::mutex> lock(g_memory_mutex);
 
 	m_max_size = PAGE_4K(size);
 	if (!MemoryBlock::SetRange(start, 0))
@@ -237,7 +208,7 @@ MemoryBlock* DynamicMemoryBlockBase::SetRange(const u32 start, const u32 size)
 
 void DynamicMemoryBlockBase::Delete()
 {
-	std::lock_guard<std::mutex> lock(Memory.mutex);
+	std::lock_guard<std::mutex> lock(g_memory_mutex);
 
 	m_allocated.clear();
 	m_max_size = 0;
@@ -259,7 +230,7 @@ bool DynamicMemoryBlockBase::AllocFixed(u32 addr, u32 size)
 		return false;
 	}
 
-	std::lock_guard<std::mutex> lock(Memory.mutex);
+	std::lock_guard<std::mutex> lock(g_memory_mutex);
 
 	for (u32 i = 0; i<m_allocated.size(); ++i)
 	{
@@ -300,7 +271,7 @@ u32 DynamicMemoryBlockBase::AllocAlign(u32 size, u32 align)
 		exsize = size + align - 1;
 	}
 
-	std::lock_guard<std::mutex> lock(Memory.mutex);
+	std::lock_guard<std::mutex> lock(g_memory_mutex);
 
 	for (u32 addr = MemoryBlock::GetStartAddr(); addr <= MemoryBlock::GetEndAddr() - exsize;)
 	{
@@ -341,7 +312,7 @@ bool DynamicMemoryBlockBase::Alloc()
 
 bool DynamicMemoryBlockBase::Free(u32 addr)
 {
-	std::lock_guard<std::mutex> lock(Memory.mutex);
+	std::lock_guard<std::mutex> lock(g_memory_mutex);
 
 	for (u32 num = 0; num < m_allocated.size(); num++)
 	{
@@ -465,7 +436,7 @@ bool VirtualMemoryBlock::Read32(const u32 addr, u32* value)
 	u32 realAddr;
 	if (!getRealAddr(addr, realAddr))
 		return false;
-	*value = vm::ps3::read32(realAddr);
+	*value = vm::read32(realAddr);
 	return true;
 }
 
@@ -474,7 +445,7 @@ bool VirtualMemoryBlock::Write32(const u32 addr, const u32 value)
 	u32 realAddr;
 	if (!getRealAddr(addr, realAddr))
 		return false;
-	vm::ps3::write32(realAddr, value);
+	vm::write32(realAddr, value);
 	return true;
 }
 

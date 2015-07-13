@@ -1,7 +1,4 @@
 #pragma once
-
-namespace vm { using namespace ps3; }
-
 #include "Emu/RSX/GCM.h"
 
 enum

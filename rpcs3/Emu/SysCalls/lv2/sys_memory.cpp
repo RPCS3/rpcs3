@@ -5,196 +5,95 @@
 #include "Emu/SysCalls/SysCalls.h"
 
 #include "sys_memory.h"
+#include <map>
 
 SysCallBase sys_memory("sys_memory");
 
-lv2_memory_container_t::lv2_memory_container_t(u32 size)
-	: size(size)
-	, id(Emu.GetIdManager().get_current_id())
+s32 sys_memory_allocate(u32 size, u32 flags, u32 alloc_addr_addr)
 {
-}
-
-s32 sys_memory_allocate(u32 size, u64 flags, vm::ptr<u32> alloc_addr)
-{
-	sys_memory.Warning("sys_memory_allocate(size=0x%x, flags=0x%llx, alloc_addr=*0x%x)", size, flags, alloc_addr);
-
-	LV2_LOCK;
-
-	// Check allocation size
+	sys_memory.Log("sys_memory_allocate(size=0x%x, flags=0x%x)", size, flags);
+	
+	// Check page size.
+	u32 addr;
 	switch(flags)
 	{
 	case SYS_MEMORY_PAGE_SIZE_1M:
-	{
-		if (size % 0x100000)
-		{
-			return CELL_EALIGN;
-		}
+		if(size & 0xfffff) return CELL_EALIGN;
+		addr = (u32)Memory.Alloc(size, 0x100000);
+	break;
 
-		break;
-	}
-		
 	case SYS_MEMORY_PAGE_SIZE_64K:
-	{
-		if (size % 0x10000)
-		{
-			return CELL_EALIGN;
-		}
+		if(size & 0xffff) return CELL_EALIGN;
+		addr = (u32)Memory.Alloc(size, 0x10000);
+	break;
 
-		break;
+	default: return CELL_EINVAL;
 	}
-
-	default:
-	{
-		return CELL_EINVAL;
-	}
-	}
-
-	// Available memory reserved for containers
-	u32 available = 0;
-
-	// Check all containers
-	for (auto& ct : Emu.GetIdManager().get_all<lv2_memory_container_t>())
-	{
-		available += ct->size - ct->taken;
-	}
-
-	// Check available memory
-	if (Memory.GetUserMemAvailSize() < available + size)
-	{
-		return CELL_ENOMEM;
-	}
-
-	// Allocate memory
-	const u32 addr =
-		flags == SYS_MEMORY_PAGE_SIZE_1M ? Memory.Alloc(size, 0x100000) :
-		flags == SYS_MEMORY_PAGE_SIZE_64K ? Memory.Alloc(size, 0x10000) :
-		throw EXCEPTION("Unexpected flags");
 
 	if (!addr)
-	{
 		return CELL_ENOMEM;
-	}
 	
-	// Write back the start address of the allocated area
-	*alloc_addr = addr;
+	// Write back the start address of the allocated area.
+	sys_memory.Log("Memory allocated! [addr: 0x%x, size: 0x%x]", addr, size);
+	vm::write32(alloc_addr_addr, addr);
 
 	return CELL_OK;
 }
 
-s32 sys_memory_allocate_from_container(u32 size, u32 cid, u64 flags, vm::ptr<u32> alloc_addr)
+s32 sys_memory_allocate_from_container(u32 size, u32 cid, u32 flags, u32 alloc_addr_addr)
 {
-	sys_memory.Warning("sys_memory_allocate_from_container(size=0x%x, cid=0x%x, flags=0x%llx, alloc_addr=*0x%x)", size, cid, flags, alloc_addr);
+	sys_memory.Log("sys_memory_allocate_from_container(size=0x%x, cid=0x%x, flags=0x%x)", size, cid, flags);
 
-	LV2_LOCK;
-
-	// Check if this container ID is valid
-	const auto ct = Emu.GetIdManager().get<lv2_memory_container_t>(cid);
+	// Check if this container ID is valid.
+	const auto ct = Emu.GetIdManager().get<MemoryContainerInfo>(cid);
 
 	if (!ct)
 	{
 		return CELL_ESRCH;
 	}
 	
-	// Check allocation size
-	switch (flags)
+	// Check page size.
+	switch(flags)
 	{
 	case SYS_MEMORY_PAGE_SIZE_1M:
-	{
-		if (size % 0x100000)
-		{
-			return CELL_EALIGN;
-		}
-
-		break;
-	}
+		if(size & 0xfffff) return CELL_EALIGN;
+		ct->addr = (u32)Memory.Alloc(size, 0x100000);
+	break;
 
 	case SYS_MEMORY_PAGE_SIZE_64K:
-	{
-		if (size % 0x10000)
-		{
-			return CELL_EALIGN;
-		}
+		if(size & 0xffff) return CELL_EALIGN;
+		ct->addr = (u32)Memory.Alloc(size, 0x10000);
+	break;
 
-		break;
+	default: return CELL_EINVAL;
 	}
 
-	default:
-	{
-		return CELL_EINVAL;
-	}
-	}
-
-	if (ct->taken > ct->size)
-	{
-		throw EXCEPTION("Unexpected amount of memory taken (0x%x, size=0x%x)", ct->taken.load(), ct->size);
-	}
-
-	// Check memory availability
-	if (size > ct->size - ct->taken)
-	{
+	// Store the address and size in the container.
+	if(!ct->addr)
 		return CELL_ENOMEM;
-	}
-
-	// Allocate memory
-	const u32 addr =
-		flags == SYS_MEMORY_PAGE_SIZE_1M ? Memory.Alloc(size, 0x100000) :
-		flags == SYS_MEMORY_PAGE_SIZE_64K ? Memory.Alloc(size, 0x10000) :
-		throw EXCEPTION("Unexpected flags");
-
-	if (!addr)
-	{
-		throw EXCEPTION("Memory not allocated (ct=0x%x, size=0x%x)", cid, size);
-	}
-
-	// Store the address and size in the container
-	ct->allocs.emplace(addr, size);
-	ct->taken += size;
+	ct->size = size;
 
 	// Write back the start address of the allocated area.
-	*alloc_addr = addr;
+	sys_memory.Log("Memory allocated! [addr: 0x%x, size: 0x%x]", ct->addr, ct->size);
+	vm::write32(alloc_addr_addr, ct->addr);
 
 	return CELL_OK;
 }
 
-s32 sys_memory_free(u32 addr)
+s32 sys_memory_free(u32 start_addr)
 {
-	sys_memory.Warning("sys_memory_free(addr=0x%x)", addr);
+	sys_memory.Log("sys_memory_free(start_addr=0x%x)", start_addr);
 
-	LV2_LOCK;
-
-	// Check all memory containers
-	for (auto& ct : Emu.GetIdManager().get_all<lv2_memory_container_t>())
-	{
-		auto found = ct->allocs.find(addr);
-
-		if (found != ct->allocs.end())
-		{
-			if (!Memory.Free(addr))
-			{
-				throw EXCEPTION("Memory not deallocated (cid=0x%x, addr=0x%x, size=0x%x)", ct->id, addr, found->second);
-			}
-
-			// Return memory size
-			ct->taken -= found->second;
-			ct->allocs.erase(found);
-
-			return CELL_OK;
-		}
-	}
-
-	if (!Memory.Free(addr))
-	{
+	// Release the allocated memory.
+	if(!Memory.Free(start_addr))
 		return CELL_EINVAL;
-	}
 
 	return CELL_OK;
 }
 
 s32 sys_memory_get_page_attribute(u32 addr, vm::ptr<sys_page_attr_t> attr)
 {
-	sys_memory.Error("sys_memory_get_page_attribute(addr=0x%x, attr=*0x%x)", addr, attr);
-
-	LV2_LOCK;
+	sys_memory.Warning("sys_memory_get_page_attribute(addr=0x%x, attr_addr=0x%x)", addr, attr.addr());
 
 	// TODO: Implement per thread page attribute setting.
 	attr->attribute = 0x40000ull; // SYS_MEMORY_PROT_READ_WRITE
@@ -206,59 +105,26 @@ s32 sys_memory_get_page_attribute(u32 addr, vm::ptr<sys_page_attr_t> attr)
 
 s32 sys_memory_get_user_memory_size(vm::ptr<sys_memory_info_t> mem_info)
 {
-	sys_memory.Warning("sys_memory_get_user_memory_size(mem_info=*0x%x)", mem_info);
-
-	LV2_LOCK;
-
-	u32 reserved = 0;
-	u32 available = 0;
-
-	// Check all memory containers
-	for (auto& ct : Emu.GetIdManager().get_all<lv2_memory_container_t>())
-	{
-		reserved += ct->size;
-		available += ct->size - ct->taken;
-	}
+	sys_memory.Warning("sys_memory_get_user_memory_size(mem_info_addr=0x%x)", mem_info.addr());
 	
-	// Fetch the user memory available
-	mem_info->total_user_memory = Memory.GetUserMemTotalSize() - reserved;
-	mem_info->available_user_memory = Memory.GetUserMemAvailSize() - available;
-
+	// Fetch the user memory available.
+	mem_info->total_user_memory = Memory.GetUserMemTotalSize();
+	mem_info->available_user_memory = Memory.GetUserMemAvailSize();
 	return CELL_OK;
 }
 
-s32 sys_memory_container_create(vm::ptr<u32> cid, u32 size)
+s32 sys_memory_container_create(vm::ptr<u32> cid, u32 yield_size)
 {
-	sys_memory.Warning("sys_memory_container_create(cid=*0x%x, size=0x%x)", cid, size);
+	sys_memory.Warning("sys_memory_container_create(cid_addr=0x%x, yield_size=0x%x)", cid.addr(), yield_size);
 
-	LV2_LOCK;
+	yield_size &= ~0xfffff; //round down to 1 MB granularity
+	u32 addr = (u32)Memory.Alloc(yield_size, 0x100000); //1 MB alignment
 
-	// Round down to 1 MB granularity
-	size &= ~0xfffff;
-
-	if (!size)
-	{
+	if(!addr)
 		return CELL_ENOMEM;
-	}
 
-	u32 reserved = 0;
-	u32 available = 0;
-
-	// Check all memory containers
-	for (auto& ct : Emu.GetIdManager().get_all<lv2_memory_container_t>())
-	{
-		reserved += ct->size;
-		available += ct->size - ct->taken;
-	}
-
-	if (Memory.GetUserMemTotalSize() < reserved + size ||
-		Memory.GetUserMemAvailSize() < available + size)
-	{
-		return CELL_ENOMEM;
-	}
-
-	// Create the memory container
-	*cid = Emu.GetIdManager().make<lv2_memory_container_t>(size);
+	// Wrap the allocated memory in a memory container.
+	*cid = Emu.GetIdManager().make<MemoryContainerInfo>(addr, yield_size);
 
 	return CELL_OK;
 }
@@ -267,41 +133,35 @@ s32 sys_memory_container_destroy(u32 cid)
 {
 	sys_memory.Warning("sys_memory_container_destroy(cid=0x%x)", cid);
 
-	LV2_LOCK;
-
-	const auto ct = Emu.GetIdManager().get<lv2_memory_container_t>(cid);
+	// Check if this container ID is valid.
+	const auto ct = Emu.GetIdManager().get<MemoryContainerInfo>(cid);
 
 	if (!ct)
 	{
 		return CELL_ESRCH;
 	}
 
-	// Check if some memory is not deallocated (the container cannot be destroyed in this case)
-	if (ct->taken)
-	{
-		return CELL_EBUSY;
-	}
-
-	Emu.GetIdManager().remove<lv2_memory_container_t>(cid);
+	// Release the allocated memory and remove the ID.
+	Memory.Free(ct->addr);
+	Emu.GetIdManager().remove<MemoryContainerInfo>(cid);
 
 	return CELL_OK;
 }
 
 s32 sys_memory_container_get_size(vm::ptr<sys_memory_info_t> mem_info, u32 cid)
 {
-	sys_memory.Warning("sys_memory_container_get_size(mem_info=*0x%x, cid=0x%x)", mem_info, cid);
+	sys_memory.Warning("sys_memory_container_get_size(mem_info_addr=0x%x, cid=0x%x)", mem_info.addr(), cid);
 
-	LV2_LOCK;
-
-	const auto ct = Emu.GetIdManager().get<lv2_memory_container_t>(cid);
+	// Check if this container ID is valid.
+	const auto ct = Emu.GetIdManager().get<MemoryContainerInfo>(cid);
 
 	if (!ct)
 	{
 		return CELL_ESRCH;
 	}
 
-	mem_info->total_user_memory = ct->size; // total container memory
-	mem_info->available_user_memory = ct->size - ct->taken; // available container memory
-
+	// HACK: Return all memory.
+	mem_info->total_user_memory = ct->size;
+	mem_info->available_user_memory = ct->size;
 	return CELL_OK;
 }

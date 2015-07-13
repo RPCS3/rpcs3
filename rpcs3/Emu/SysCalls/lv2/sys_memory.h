@@ -1,7 +1,5 @@
 #pragma once
 
-namespace vm { using namespace ps3; }
-
 enum : u32
 {
 	SYS_MEMORY_CONTAINER_ID_INVALID = 0xFFFFFFFF,
@@ -20,11 +18,10 @@ enum : u64
 	SYS_MEMORY_ATTR_READ_WRITE      = 0x0000000000040000ULL,
 };
 
-enum : u64
+enum
 {
-	SYS_MEMORY_PAGE_SIZE_1M   = 0x400ull,
-	SYS_MEMORY_PAGE_SIZE_64K  = 0x200ull,
-	SYS_MEMORY_PAGE_SIZE_MASK = 0xf00ull,
+	SYS_MEMORY_PAGE_SIZE_1M = 0x400,
+	SYS_MEMORY_PAGE_SIZE_64K = 0x200,
 };
 
 struct sys_memory_info_t
@@ -42,26 +39,24 @@ struct sys_page_attr_t
 	be_t<u32> pad;
 };
 
-struct lv2_memory_container_t
+struct MemoryContainerInfo
 {
-	const u32 size;	// amount of "physical" memory in this container
-	const u32 id;
+	u32 addr;
+	u32 size;
 
-	// amount of memory allocated
-	std::atomic<u32> taken{ 0 };
-	
-	// allocations (addr -> size)
-	std::map<u32, u32> allocs;
-
-	lv2_memory_container_t(u32 size);
+	MemoryContainerInfo(u32 addr, u32 size)
+		: addr(addr)
+		, size(size)
+	{
+	}
 };
 
 // SysCalls
-s32 sys_memory_allocate(u32 size, u64 flags, vm::ptr<u32> alloc_addr);
-s32 sys_memory_allocate_from_container(u32 size, u32 cid, u64 flags, vm::ptr<u32> alloc_addr);
+s32 sys_memory_allocate(u32 size, u32 flags, u32 alloc_addr_addr);
+s32 sys_memory_allocate_from_container(u32 size, u32 cid, u32 flags, u32 alloc_addr_addr);
 s32 sys_memory_free(u32 start_addr);
 s32 sys_memory_get_page_attribute(u32 addr, vm::ptr<sys_page_attr_t> attr);
 s32 sys_memory_get_user_memory_size(vm::ptr<sys_memory_info_t> mem_info);
-s32 sys_memory_container_create(vm::ptr<u32> cid, u32 size);
+s32 sys_memory_container_create(vm::ptr<u32> cid, u32 yield_size);
 s32 sys_memory_container_destroy(u32 cid);
 s32 sys_memory_container_get_size(vm::ptr<sys_memory_info_t> mem_info, u32 cid);

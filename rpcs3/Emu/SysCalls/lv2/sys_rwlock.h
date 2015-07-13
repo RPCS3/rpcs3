@@ -1,7 +1,5 @@
 #pragma once
 
-namespace vm { using namespace ps3; }
-
 struct sys_rwlock_attribute_t
 {
 	be_t<u32> protocol;

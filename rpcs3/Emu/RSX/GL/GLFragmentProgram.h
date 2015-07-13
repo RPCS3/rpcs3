@@ -4,17 +4,16 @@
 #include "Utilities/Thread.h"
 #include "OpenGL.h"
 
-struct GLFragmentDecompilerThread : public FragmentProgramDecompiler
+struct GLFragmentDecompilerThread : public ThreadBase, public FragmentProgramDecompiler
 {
 	std::string& m_shader;
 	ParamArray& m_parrDummy;
 public:
 	GLFragmentDecompilerThread(std::string& shader, ParamArray& parr, u32 addr, u32& size, u32 ctrl)
-		: FragmentProgramDecompiler(addr, size, ctrl)
+		: ThreadBase("Fragment Shader Decompiler Thread"), FragmentProgramDecompiler(addr, size, ctrl)
 		, m_shader(shader)
 		, m_parrDummy(parr)
-	{
-	}
+	{}
 
 	void Task();
 
@@ -42,7 +41,7 @@ public:
 	~GLFragmentProgram();
 
 	ParamArray parr;
-	u32 id = 0;
+	u32 id;
 	std::string shader;
 	std::vector<size_t> FragmentConstantOffsetCache;
 
@@ -52,10 +51,23 @@ public:
 	 */
 	void Decompile(RSXFragmentProgram& prog);
 
+	/**
+	* Asynchronously decompile a fragment shader located in the PS3's Memory.
+	* When this function is called you must call Wait() before GetShaderText() will return valid data.
+	* @param prog RSXShaderProgram specifying the location and size of the shader in memory
+	*/
+	void DecompileAsync(RSXFragmentProgram& prog);
+
+	/** Wait for the decompiler task to complete decompilation. */
+	void Wait();
+
 	/** Compile the decompiled fragment shader into a format we can use with OpenGL. */
 	void Compile();
 
 private:
+	/** Threaded fragment shader decompiler responsible for decompiling this program */
+	GLFragmentDecompilerThread* m_decompiler_thread;
+
 	/** Deletes the shader and any stored information */
 	void Delete();
 };

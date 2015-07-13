@@ -19,7 +19,7 @@ struct cellGemInternal
 
 cellGemInternal cellGemInstance;
 
-s32 cellGemCalibrate()
+int cellGemCalibrate()
 {
 	UNIMPLEMENTED_FUNC(cellGem);
 
@@ -29,7 +29,7 @@ s32 cellGemCalibrate()
 	return CELL_OK;
 }
 
-s32 cellGemClearStatusFlags()
+int cellGemClearStatusFlags()
 {
 	UNIMPLEMENTED_FUNC(cellGem);
 
@@ -39,7 +39,7 @@ s32 cellGemClearStatusFlags()
 	return CELL_OK;
 }
 
-s32 cellGemConvertVideoFinish()
+int cellGemConvertVideoFinish()
 {
 	UNIMPLEMENTED_FUNC(cellGem);
 
@@ -49,7 +49,7 @@ s32 cellGemConvertVideoFinish()
 	return CELL_OK;
 }
 
-s32 cellGemConvertVideoStart()
+int cellGemConvertVideoStart()
 {
 	UNIMPLEMENTED_FUNC(cellGem);
 
@@ -59,7 +59,7 @@ s32 cellGemConvertVideoStart()
 	return CELL_OK;
 }
 
-s32 cellGemEnableCameraPitchAngleCorrection()
+int cellGemEnableCameraPitchAngleCorrection()
 {
 	UNIMPLEMENTED_FUNC(cellGem);
 
@@ -69,7 +69,7 @@ s32 cellGemEnableCameraPitchAngleCorrection()
 	return CELL_OK;
 }
 
-s32 cellGemEnableMagnetometer()
+int cellGemEnableMagnetometer()
 {
 	UNIMPLEMENTED_FUNC(cellGem);
 
@@ -79,7 +79,7 @@ s32 cellGemEnableMagnetometer()
 	return CELL_OK;
 }
 
-s32 cellGemEnd()
+int cellGemEnd()
 {
 	cellGem.Warning("cellGemEnd()");
 
@@ -91,7 +91,7 @@ s32 cellGemEnd()
 	return CELL_OK;
 }
 
-s32 cellGemFilterState()
+int cellGemFilterState()
 {
 	UNIMPLEMENTED_FUNC(cellGem);
 
@@ -101,7 +101,7 @@ s32 cellGemFilterState()
 	return CELL_OK;
 }
 
-s32 cellGemForceRGB()
+int cellGemForceRGB()
 {
 	UNIMPLEMENTED_FUNC(cellGem);
 
@@ -111,7 +111,7 @@ s32 cellGemForceRGB()
 	return CELL_OK;
 }
 
-s32 cellGemGetAccelerometerPositionInDevice()
+int cellGemGetAccelerometerPositionInDevice()
 {
 	UNIMPLEMENTED_FUNC(cellGem);
 
@@ -121,7 +121,7 @@ s32 cellGemGetAccelerometerPositionInDevice()
 	return CELL_OK;
 }
 
-s32 cellGemGetAllTrackableHues()
+int cellGemGetAllTrackableHues()
 {
 	UNIMPLEMENTED_FUNC(cellGem);
 
@@ -131,7 +131,7 @@ s32 cellGemGetAllTrackableHues()
 	return CELL_OK;
 }
 
-s32 cellGemGetCameraState()
+int cellGemGetCameraState()
 {
 	UNIMPLEMENTED_FUNC(cellGem);
 
@@ -141,7 +141,7 @@ s32 cellGemGetCameraState()
 	return CELL_OK;
 }
 
-s32 cellGemGetEnvironmentLightingColor()
+int cellGemGetEnvironmentLightingColor()
 {
 	UNIMPLEMENTED_FUNC(cellGem);
 
@@ -151,7 +151,7 @@ s32 cellGemGetEnvironmentLightingColor()
 	return CELL_OK;
 }
 
-s32 cellGemGetHuePixels()
+int cellGemGetHuePixels()
 {
 	UNIMPLEMENTED_FUNC(cellGem);
 
@@ -161,7 +161,7 @@ s32 cellGemGetHuePixels()
 	return CELL_OK;
 }
 
-s32 cellGemGetImageState()
+int cellGemGetImageState()
 {
 	UNIMPLEMENTED_FUNC(cellGem);
 
@@ -171,7 +171,7 @@ s32 cellGemGetImageState()
 	return CELL_OK;
 }
 
-s32 cellGemGetInertialState()
+int cellGemGetInertialState()
 {
 	UNIMPLEMENTED_FUNC(cellGem);
 
@@ -181,7 +181,7 @@ s32 cellGemGetInertialState()
 	return CELL_OK;
 }
 
-s32 cellGemGetInfo(vm::ptr<CellGemInfo> info)
+int cellGemGetInfo(vm::ptr<CellGemInfo> info)
 {
 	cellGem.Warning("cellGemGetInfo(info=0x%x)", info.addr());
 
@@ -207,7 +207,7 @@ s32 cellGemGetMemorySize(s32 max_connect)
 	return 1024 * 1024 * max_connect; // 1 MB * max_connect
 }
 
-s32 cellGemGetRGB()
+int cellGemGetRGB()
 {
 	UNIMPLEMENTED_FUNC(cellGem);
 
@@ -217,7 +217,7 @@ s32 cellGemGetRGB()
 	return CELL_OK;
 }
 
-s32 cellGemGetRumble()
+int cellGemGetRumble()
 {
 	UNIMPLEMENTED_FUNC(cellGem);
 
@@ -227,7 +227,7 @@ s32 cellGemGetRumble()
 	return CELL_OK;
 }
 
-s32 cellGemGetState()
+int cellGemGetState()
 {
 	UNIMPLEMENTED_FUNC(cellGem);
 
@@ -237,7 +237,7 @@ s32 cellGemGetState()
 	return CELL_OK;
 }
 
-s32 cellGemGetStatusFlags()
+int cellGemGetStatusFlags()
 {
 	UNIMPLEMENTED_FUNC(cellGem);
 
@@ -247,7 +247,7 @@ s32 cellGemGetStatusFlags()
 	return CELL_OK;
 }
 
-s32 cellGemGetTrackerHue()
+int cellGemGetTrackerHue()
 {
 	UNIMPLEMENTED_FUNC(cellGem);
 
@@ -257,15 +257,15 @@ s32 cellGemGetTrackerHue()
 	return CELL_OK;
 }
 
-s32 cellGemHSVtoRGB()
+int cellGemHSVtoRGB()
 {
 	UNIMPLEMENTED_FUNC(cellGem);
 	return CELL_OK;
 }
 
-s32 cellGemInit(vm::ptr<CellGemAttribute> attribute)
+int cellGemInit(vm::ptr<CellGemAttribute> attribute)
 {
-	cellGem.Warning("cellGemInit(attribute=*0x%x)", attribute);
+	cellGem.Warning("cellGemInit(attribute_addr=0x%x)", attribute.addr());
 
 	if (cellGemInstance.m_bInitialized)
 		return CELL_GEM_ERROR_ALREADY_INITIALIZED;
@@ -276,7 +276,7 @@ s32 cellGemInit(vm::ptr<CellGemAttribute> attribute)
 	return CELL_OK;
 }
 
-s32 cellGemInvalidateCalibration()
+int cellGemInvalidateCalibration()
 {
 	UNIMPLEMENTED_FUNC(cellGem);
 
@@ -286,23 +286,13 @@ s32 cellGemInvalidateCalibration()
 	return CELL_OK;
 }
 
-s32 cellGemIsTrackableHue()
+int cellGemIsTrackableHue()
 {
 	UNIMPLEMENTED_FUNC(cellGem);
 	return CELL_OK;
 }
 
-s32 cellGemPrepareCamera()
-{
-	UNIMPLEMENTED_FUNC(cellGem);
-
-	if (!cellGemInstance.m_bInitialized)
-		return CELL_GEM_ERROR_UNINITIALIZED;
-
-	return CELL_OK;
-}
-
-s32 cellGemPrepareVideoConvert()
+int cellGemPrepareCamera()
 {
 	UNIMPLEMENTED_FUNC(cellGem);
 
@@ -312,7 +302,7 @@ s32 cellGemPrepareVideoConvert()
 	return CELL_OK;
 }
 
-s32 cellGemReset()
+int cellGemPrepareVideoConvert()
 {
 	UNIMPLEMENTED_FUNC(cellGem);
 
@@ -322,7 +312,7 @@ s32 cellGemReset()
 	return CELL_OK;
 }
 
-s32 cellGemSetRumble()
+int cellGemReset()
 {
 	UNIMPLEMENTED_FUNC(cellGem);
 
@@ -332,7 +322,7 @@ s32 cellGemSetRumble()
 	return CELL_OK;
 }
 
-s32 cellGemSetYaw()
+int cellGemSetRumble()
 {
 	UNIMPLEMENTED_FUNC(cellGem);
 
@@ -342,7 +332,7 @@ s32 cellGemSetYaw()
 	return CELL_OK;
 }
 
-s32 cellGemTrackHues()
+int cellGemSetYaw()
 {
 	UNIMPLEMENTED_FUNC(cellGem);
 
@@ -352,7 +342,7 @@ s32 cellGemTrackHues()
 	return CELL_OK;
 }
 
-s32 cellGemUpdateFinish()
+int cellGemTrackHues()
 {
 	UNIMPLEMENTED_FUNC(cellGem);
 
@@ -362,7 +352,7 @@ s32 cellGemUpdateFinish()
 	return CELL_OK;
 }
 
-s32 cellGemUpdateStart()
+int cellGemUpdateFinish()
 {
 	UNIMPLEMENTED_FUNC(cellGem);
 
@@ -372,7 +362,17 @@ s32 cellGemUpdateStart()
 	return CELL_OK;
 }
 
-s32 cellGemWriteExternalPort()
+int cellGemUpdateStart()
+{
+	UNIMPLEMENTED_FUNC(cellGem);
+
+	if (!cellGemInstance.m_bInitialized)
+		return CELL_GEM_ERROR_UNINITIALIZED;
+
+	return CELL_OK;
+}
+
+int cellGemWriteExternalPort()
 {
 	UNIMPLEMENTED_FUNC(cellGem);
 

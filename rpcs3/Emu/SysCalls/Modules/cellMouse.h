@@ -1,7 +1,5 @@
 #pragma once
 
-namespace vm { using namespace ps3; }
-
 enum CELL_MOUSE_ERROR_CODE
 {
 	CELL_MOUSE_ERROR_FATAL = 0x80121201,
@@ -51,3 +49,14 @@ struct CellMouseDataList
 };
 
 static const u32 CELL_MOUSE_MAX_CODES = 64;
+
+int cellMouseInit(u32 max_connect);
+int cellMouseClearBuf(u32 port_no);
+int cellMouseEnd();
+int cellMouseGetInfo(vm::ptr<CellMouseInfo> info);
+int cellMouseInfoTabletMode(u32 port_no, vm::ptr<CellMouseInfoTablet> info);
+int cellMouseGetData(u32 port_no, vm::ptr<CellMouseData> data);
+int cellMouseGetDataList(u32 port_no, vm::ptr<CellMouseDataList> data);
+int cellMouseSetTabletMode(u32 port_no, u32 mode);
+int cellMouseGetTabletDataList(u32 port_no, u32 data_addr);
+int cellMouseGetRawData(u32 port_no, u32 data_addr);

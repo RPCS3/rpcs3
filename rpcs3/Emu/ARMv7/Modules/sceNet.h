@@ -1,19 +1,22 @@
 #pragma once
 
+typedef u32 SceNetInAddr_t;
+typedef u16 SceNetInPort_t;
+typedef u8 SceNetSaFamily_t;
 typedef u32 SceNetSocklen_t;
 
 struct SceNetInAddr
 {
-	le_t<u32> s_addr;
+	SceNetInAddr_t s_addr;
 };
 
 struct SceNetSockaddrIn
 {
 	u8 sin_len;
-	u8 sin_family;
-	le_t<u16> sin_port;
+	SceNetSaFamily_t sin_family;
+	SceNetInPort_t sin_port;
 	SceNetInAddr sin_addr;
-	le_t<u16> sin_vport;
+	SceNetInPort_t sin_vport;
 	char sin_zero[6];
 };
 
@@ -25,34 +28,34 @@ struct SceNetDnsInfo
 struct SceNetSockaddr
 {
 	u8 sa_len;
-	u8 sa_family;
+	SceNetSaFamily_t sa_family;
 	char sa_data[14];
 };
 
 struct SceNetEpollDataExt
 {
-	le_t<s32> id;
-	le_t<u32> data;
+	s32 id;
+	u32 data;
 };
 
 union SceNetEpollData
 {
-	vm::lptr<void> ptr;
-	le_t<s32> fd;
-	le_t<u32> _u32;
-	le_t<u64> _u64;
+	vm::psv::ptr<void> ptr;
+	s32 fd;
+	u32 _u32;
+	u64 _u64;
 	SceNetEpollDataExt ext;
 };
 
 struct SceNetEpollSystemData
 {
-	le_t<u32> system[4];
+	u32 system[4];
 };
 
 struct SceNetEpollEvent
 {
-	le_t<u32> events;
-	le_t<u32> reserved;
+	u32 events;
+	u32 reserved;
 	SceNetEpollSystemData system;
 	SceNetEpollData data;
 };
@@ -77,106 +80,108 @@ struct SceNetIpMreq
 
 struct SceNetInitParam
 {
-	vm::lptr<void> memory;
-	le_t<s32> size;
-	le_t<s32> flags;
+	vm::psv::ptr<void> memory;
+	s32 size;
+	s32 flags;
 };
 
 struct SceNetEmulationData
 {
-	le_t<u16> drop_rate;
-	le_t<u16> drop_duration;
-	le_t<u16> pass_duration;
-	le_t<u16> delay_time;
-	le_t<u16> delay_jitter;
-	le_t<u16> order_rate;
-	le_t<u16> order_delay_time;
-	le_t<u16> duplication_rate;
-	le_t<u32> bps_limit;
-	le_t<u16> lower_size_limit;
-	le_t<u16> upper_size_limit;
-	le_t<u32> system_policy_pattern;
-	le_t<u32> game_policy_pattern;
-	le_t<u16> policy_flags[64];
+	u16 drop_rate;
+	u16 drop_duration;
+	u16 pass_duration;
+	u16 delay_time;
+	u16 delay_jitter;
+	u16 order_rate;
+	u16 order_delay_time;
+	u16 duplication_rate;
+	u32 bps_limit;
+	u16 lower_size_limit;
+	u16 upper_size_limit;
+	u32 system_policy_pattern;
+	u32 game_policy_pattern;
+	u16 policy_flags[64];
 	u8 reserved[64];
 };
 
 struct SceNetEmulationParam
 {
-	le_t<u16> version;
-	le_t<u16> option_number;
-	le_t<u16> current_version;
-	le_t<u16> result;
-	le_t<u32> flags;
-	le_t<u32> reserved1;
+	u16 version;
+	u16 option_number;
+	u16 current_version;
+	u16 result;
+	u32 flags;
+	u32 reserved1;
 	SceNetEmulationData send;
 	SceNetEmulationData recv;
-	le_t<u32> seed;
+	u32 seed;
 	u8 reserved[44];
 };
 
-using SceNetResolverFunctionAllocate = func_def<vm::ptr<void>(u32 size, s32 rid, vm::cptr<char> name, vm::ptr<void> user)>;
-using SceNetResolverFunctionFree = func_def<void(vm::ptr<void> ptr, s32 rid, vm::cptr<char> name, vm::ptr<void> user)>;
+typedef vm::psv::ptr<vm::psv::ptr<void>(u32 size, s32 rid, vm::psv::ptr<const char> name, vm::psv::ptr<void> user)> SceNetResolverFunctionAllocate;
+
+typedef vm::psv::ptr<void(vm::psv::ptr<void> ptr, s32 rid, vm::psv::ptr<const char> name, vm::psv::ptr<void> user)> SceNetResolverFunctionFree;
 
 struct SceNetResolverParam
 {
-	vm::lptr<SceNetResolverFunctionAllocate> allocate;
-	vm::lptr<SceNetResolverFunctionFree> free;
-	vm::lptr<void> user;
+	SceNetResolverFunctionAllocate allocate;
+	SceNetResolverFunctionFree free;
+	vm::psv::ptr<void> user;
 };
 
 struct SceNetLinger
 {
-	le_t<s32> l_onoff;
-	le_t<s32> l_linger;
+	s32 l_onoff;
+	s32 l_linger;
 };
 
 struct SceNetIovec
 {
-	vm::lptr<void> iov_base;
-	le_t<u32> iov_len;
+	vm::psv::ptr<void> iov_base;
+	u32 iov_len;
 };
 
 struct SceNetMsghdr
 {
-	vm::lptr<void> msg_name;
-	le_t<u32> msg_namelen;
-	vm::lptr<SceNetIovec> msg_iov;
-	le_t<s32> msg_iovlen;
-	vm::lptr<void> msg_control;
-	le_t<u32> msg_controllen;
-	le_t<s32> msg_flags;
+	vm::psv::ptr<void> msg_name;
+	SceNetSocklen_t msg_namelen;
+	vm::psv::ptr<SceNetIovec> msg_iov;
+	s32 msg_iovlen;
+	vm::psv::ptr<void> msg_control;
+	SceNetSocklen_t msg_controllen;
+	s32 msg_flags;
 };
 
 struct SceNetSockInfo
 {
 	char name[32];
-	le_t<s32> pid;
-	le_t<s32> s;
+	s32 pid;
+	s32 s;
 	s8 socket_type;
 	s8 policy;
-	le_t<s16> reserved16;
-	le_t<s32> recv_queue_length;
-	le_t<s32> send_queue_length;
+	s16 reserved16;
+	s32 recv_queue_length;
+	s32 send_queue_length;
 	SceNetInAddr local_adr;
 	SceNetInAddr remote_adr;
-	le_t<u16> local_port;
-	le_t<u16> remote_port;
-	le_t<u16> local_vport;
-	le_t<u16> remote_vport;
-	le_t<s32> state;
-	le_t<s32> flags;
-	le_t<s32> reserved[8];
+	SceNetInPort_t local_port;
+	SceNetInPort_t remote_port;
+	SceNetInPort_t local_vport;
+	SceNetInPort_t remote_vport;
+	s32 state;
+	s32 flags;
+	s32 reserved[8];
 };
 
 struct SceNetStatisticsInfo
 {
-	le_t<s32> kernel_mem_free_size;
-	le_t<s32> kernel_mem_free_min;
-	le_t<s32> packet_count;
-	le_t<s32> packet_qos_count;
-	le_t<s32> libnet_mem_free_size;
-	le_t<s32> libnet_mem_free_min;
+	s32 kernel_mem_free_size;
+	s32 kernel_mem_free_min;
+	s32 packet_count;
+	s32 packet_qos_count;
+	s32 libnet_mem_free_size;
+	s32 libnet_mem_free_min;
 };
+
 
 extern psv_log_base sceNet;

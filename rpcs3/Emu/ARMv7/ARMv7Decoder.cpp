@@ -1183,7 +1183,7 @@ struct ARMv7_op4t_table_t
 			}
 		}
 
-		throw EXCEPTION("HACK instruction not found");
+		throw "HACK instruction not found";
 	}
 	
 } g_op4t;
@@ -1220,8 +1220,6 @@ void armv7_decoder_initialize(u32 addr, u32 end_addr, bool dump)
 
 	//g_opct.clear();
 	//g_opct.reserve(end_addr - addr);
-
-	const auto hack = g_op4t.HACK();
 
 	while (addr < end_addr)
 	{
@@ -1282,7 +1280,7 @@ void armv7_decoder_initialize(u32 addr, u32 end_addr, bool dump)
 			const u32 i2 = (code.data >> 11) & 0x1 ^ s ^ 1;
 			const u32 target = (addr + 4 & ~3) + sign<25, u32>(s << 24 | i2 << 23 | i1 << 22 | (code.data & 0x3ff0000) >> 4 | (code.data & 0x7ff) << 1);
 
-			const u32 instr = vm::check_addr(target, 4) ? vm::psv::read32(target).value() : 0;
+			const u32 instr = vm::check_addr(target, 4) ? vm::psv::read32(target) : 0;
 
 			// possibly a call to imported function:
 			if (target >= end_addr && ((target - end_addr) % 16) == 0 && (instr & 0xfff000f0) == 0xe0700090)
@@ -1290,7 +1288,7 @@ void armv7_decoder_initialize(u32 addr, u32 end_addr, bool dump)
 				// replace BLX with "HACK" instruction directly (in Thumb form), it can help to see where it was called from
 				const u32 index = (instr & 0xfff00) >> 4 | (instr & 0xf);
 				vm::psv::write32(addr, 0xf870 | index << 16);
-				g_opct[0xf8700000 | index] = hack;
+				g_opct[0xf8700000 | index] = g_op4t.HACK();
 			}
 			else
 			{
@@ -1357,7 +1355,7 @@ u32 ARMv7Decoder::DecodeMemory(const u32 address)
 	}
 	else
 	{
-		throw EXCEPTION("Invalid instruction set");
+		throw "ARMv7Decoder::DecodeMemory() failed (invalid instruction set set)";
 	}
 	
 	ARMv7_instrs::UNK(m_ctx, code);

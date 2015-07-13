@@ -1,9 +1,9 @@
 #include "stdafx.h"
+#include "FragmentProgramDecompiler.h"
+
 #include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
-
-#include "FragmentProgramDecompiler.h"
 
 FragmentProgramDecompiler::FragmentProgramDecompiler(u32 addr, u32& size, u32 ctrl) :
 	m_addr(addr),
@@ -114,7 +114,7 @@ std::string FragmentProgramDecompiler::AddConst()
 		return name;
 	}
 
-	auto data = vm::ps3::ptr<u32>::make(m_addr + m_size + 4 * sizeof32(u32));
+	auto data = vm::ptr<u32>::make(m_addr + m_size + 4 * sizeof(u32));
 
 	m_offset = 2 * 4 * sizeof(u32);
 	u32 x = GetData(data[0]);
@@ -335,7 +335,7 @@ std::string FragmentProgramDecompiler::BuildCode()
 
 std::string FragmentProgramDecompiler::Decompile()
 {
-	auto data = vm::ps3::ptr<u32>::make(m_addr);
+	auto data = vm::ptr<u32>::make(m_addr);
 	m_size = 0;
 	m_location = 0;
 	m_loop_count = 0;

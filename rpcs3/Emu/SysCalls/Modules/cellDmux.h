@@ -1,7 +1,5 @@
 #pragma once
 
-namespace vm { using namespace ps3; }
-
 // Error Codes
 enum
 {
@@ -12,27 +10,27 @@ enum
 	CELL_DMUX_ERROR_FATAL   = 0x80610205,
 };
 
-enum CellDmuxStreamType : s32
+enum CellDmuxStreamType 
 {
 	CELL_DMUX_STREAM_TYPE_UNDEF = 0,
 	CELL_DMUX_STREAM_TYPE_PAMF = 1,
 	CELL_DMUX_STREAM_TYPE_TERMINATOR = 2,
 };
 
-enum CellDmuxMsgType : s32
+enum CellDmuxMsgType
 {
 	CELL_DMUX_MSG_TYPE_DEMUX_DONE = 0,
 	CELL_DMUX_MSG_TYPE_FATAL_ERR = 1,
 	CELL_DMUX_MSG_TYPE_PROG_END_CODE = 2,
 };
 
-enum CellDmuxEsMsgType : s32
+enum CellDmuxEsMsgType
 {
 	CELL_DMUX_ES_MSG_TYPE_AU_FOUND = 0,
 	CELL_DMUX_ES_MSG_TYPE_FLUSH_DONE = 1,
 };
 
-enum CellDmuxPamfM2vLevel : s32
+enum CellDmuxPamfM2vLevel
 {
 	CELL_DMUX_PAMF_M2V_MP_LL = 0,
 	CELL_DMUX_PAMF_M2V_MP_ML,
@@ -40,7 +38,7 @@ enum CellDmuxPamfM2vLevel : s32
 	CELL_DMUX_PAMF_M2V_MP_HL,
 };
 
-enum CellDmuxPamfAvcLevel : s32
+enum CellDmuxPamfAvcLevel
 {
 	CELL_DMUX_PAMF_AVC_LEVEL_2P1 = 21,
 	CELL_DMUX_PAMF_AVC_LEVEL_3P0 = 30,
@@ -114,18 +112,18 @@ struct CellDmuxPamfEsSpecificInfoUserData
 	be_t<u32> reserved1;
 };
 
-enum CellDmuxPamfSamplingFrequency : s32
+enum CellDmuxPamfSamplingFrequency
 {
 	CELL_DMUX_PAMF_FS_48K = 48000,
 };
 
-enum CellDmuxPamfBitsPerSample : s32
+enum CellDmuxPamfBitsPerSample
 {
 	CELL_DMUX_PAMF_BITS_PER_SAMPLE_16 = 16,
 	CELL_DMUX_PAMF_BITS_PER_SAMPLE_24 = 24,
 };
 
-enum CellDmuxPamfLpcmChannelAssignmentInfo : s32
+enum CellDmuxPamfLpcmChannelAssignmentInfo
 {
 	CELL_DMUX_PAMF_LPCM_CH_M1 = 1,
 	CELL_DMUX_PAMF_LPCM_CH_LR = 3,
@@ -133,12 +131,12 @@ enum CellDmuxPamfLpcmChannelAssignmentInfo : s32
 	CELL_DMUX_PAMF_LPCM_CH_LRCLSCS1CS2RSLFE = 11,
 };
 
-enum CellDmuxPamfLpcmFs : s32
+enum CellDmuxPamfLpcmFs
 {
 	CELL_DMUX_PAMF_LPCM_FS_48K = 1,
 };
 
-enum CellDmuxPamfLpcmBitsPerSamples : s32
+enum CellDmuxPamfLpcmBitsPerSamples
 {
 	CELL_DMUX_PAMF_LPCM_BITS_PER_SAMPLE_16 = 1,
 	CELL_DMUX_PAMF_LPCM_BITS_PER_SAMPLE_24 = 3,
@@ -146,20 +144,20 @@ enum CellDmuxPamfLpcmBitsPerSamples : s32
 
 struct CellDmuxMsg
 {
-	be_t<s32> msgType; // CellDmuxMsgType
+	be_t<CellDmuxMsgType> msgType; //CellDmuxMsgType enum
 	be_t<u64> supplementalInfo;
 };
 
 struct CellDmuxEsMsg
 {
-	be_t<s32> msgType; // CellDmuxEsMsgType
+	be_t<CellDmuxEsMsgType> msgType; //CellDmuxEsMsgType enum
 	be_t<u64> supplementalInfo;
 };
 
 struct CellDmuxType 
 {
-	be_t<s32> streamType; // CellDmuxStreamType
-	be_t<u32> reserved[2];
+	be_t<CellDmuxStreamType> streamType;
+	be_t<u32> reserved[2]; //0
 };
 
 struct CellDmuxPamfSpecificInfo
@@ -170,7 +168,7 @@ struct CellDmuxPamfSpecificInfo
 
 struct CellDmuxType2
 {
-	be_t<s32> streamType; // CellDmuxStreamType
+	be_t<CellDmuxStreamType> streamType;
 	be_t<u32> streamSpecificInfo;
 };
 
@@ -219,7 +217,7 @@ struct CellDmuxResource2
 	be_t<u32> shit[4];
 };
 
-using CellDmuxCbMsg = func_def<u32(u32 demuxerHandle, vm::ptr<CellDmuxMsg> demuxerMsg, u32 cbArg)>;
+typedef u32(CellDmuxCbMsg)(u32 demuxerHandle, vm::ptr<CellDmuxMsg> demuxerMsg, u32 cbArg);
 
 struct CellDmuxCb
 {
@@ -227,7 +225,7 @@ struct CellDmuxCb
 	be_t<u32> cbArg;
 };
 
-using CellDmuxCbEsMsg = func_def<u32(u32 demuxerHandle, u32 esHandle, vm::ptr<CellDmuxEsMsg> esMsg, u32 cbArg)>;
+typedef u32(CellDmuxCbEsMsg)(u32 demuxerHandle, u32 esHandle, vm::ptr<CellDmuxEsMsg> esMsg, u32 cbArg);
 
 struct CellDmuxEsCb
 {
@@ -408,7 +406,7 @@ public:
 	std::atomic<bool> is_running;
 	std::atomic<bool> is_working;
 
-	std::shared_ptr<PPUThread> dmuxCb;
+	PPUThread* dmuxCb;
 
 	Demuxer(u32 addr, u32 size, vm::ptr<CellDmuxCbMsg> func, u32 arg)
 		: is_finished(false)
@@ -419,6 +417,7 @@ public:
 		, memSize(size)
 		, cbFunc(func)
 		, cbArg(arg)
+		, dmuxCb(nullptr)
 	{
 	}
 };
@@ -440,7 +439,7 @@ public:
 	ElementaryStream(Demuxer* dmux, u32 addr, u32 size, u32 fidMajor, u32 fidMinor, u32 sup1, u32 sup2, vm::ptr<CellDmuxCbEsMsg> cbFunc, u32 cbArg, u32 spec);
 
 	Demuxer* dmux;
-	const u32 id;
+	u32 id;
 	const u32 memAddr;
 	const u32 memSize;
 	const u32 fidMajor;

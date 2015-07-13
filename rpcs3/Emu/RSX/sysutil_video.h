@@ -229,15 +229,15 @@ enum CellVideoOutRGBOutputRange
 
 static const CellVideoOutResolution ResolutionTable[] =
 {
-	{ 0xffff, 0xffff }, //0 - 0
-	{ 1920, 1080 },     //1 - 1
-	{ 1280, 720 },      //2 - 2
-	{ 720, 480 },       //4 - 3
-	{ 720, 576 },       //5 - 4
-	{ 1600, 1080 },     //10 - 5
-	{ 1440, 1080 },     //11 - 6
-	{ 1280, 1080 },     //12 - 7
-	{ 960, 1080 },      //13 - 8
+	{ be_t<u16>::make(0xffff), be_t<u16>::make(0xffff) }, //0 - 0
+	{ be_t<u16>::make(1920), be_t<u16>::make(1080) },     //1 - 1
+	{ be_t<u16>::make(1280), be_t<u16>::make(720) },      //2 - 2
+	{ be_t<u16>::make(720), be_t<u16>::make(480) },       //4 - 3
+	{ be_t<u16>::make(720), be_t<u16>::make(576) },       //5 - 4
+	{ be_t<u16>::make(1600), be_t<u16>::make(1080) },     //10 - 5
+	{ be_t<u16>::make(1440), be_t<u16>::make(1080) },     //11 - 6
+	{ be_t<u16>::make(1280), be_t<u16>::make(1080) },     //12 - 7
+	{ be_t<u16>::make(960), be_t<u16>::make(1080) },      //13 - 8
 };
 
 inline static u32 ResolutionIdToNum(u32 id)

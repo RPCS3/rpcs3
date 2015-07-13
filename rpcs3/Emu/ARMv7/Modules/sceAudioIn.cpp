@@ -2,21 +2,21 @@
 #include "Emu/System.h"
 #include "Emu/ARMv7/PSVFuncList.h"
 
-#include "sceAudioIn.h"
+extern psv_log_base sceAudioIn;
 
 s32 sceAudioInOpenPort(s32 portType, s32 grain, s32 freq, s32 param)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceAudioInReleasePort(s32 port)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceAudioInInput(s32 port, vm::ptr<void> destPtr)
+s32 sceAudioInInput(s32 port, vm::psv::ptr<void> destPtr)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 
@@ -27,7 +27,6 @@ psv_log_base sceAudioIn("SceAudioIn", []()
 	sceAudioIn.on_load = nullptr;
 	sceAudioIn.on_unload = nullptr;
 	sceAudioIn.on_stop = nullptr;
-	sceAudioIn.on_error = nullptr;
 
 	REG_FUNC(0x638ADD2D, sceAudioInInput);
 	REG_FUNC(0x39B50DC1, sceAudioInOpenPort);

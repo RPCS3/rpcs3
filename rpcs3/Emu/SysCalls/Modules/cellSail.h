@@ -1,7 +1,5 @@
 #pragma once
 
-namespace vm { using namespace ps3; }
-
 // Error Codes
 enum
 {
@@ -1043,7 +1041,7 @@ struct CellSailDescriptor
 	be_t<u64> internalData[31];
 };
 
-CHECK_SIZE(CellSailDescriptor, 0x100);
+static_assert(sizeof(CellSailDescriptor) == 0x100, "Invalid CellSailDescriptor size");
 
 struct CellSailStartCommand
 {
@@ -1110,4 +1108,4 @@ struct CellSailPlayer
 	be_t<u64> internalData[26];
 };
 
-CHECK_SIZE(CellSailPlayer, 0x100);
+static_assert(sizeof(CellSailPlayer) == 0x100, "Invalid CellSailPlayer size");

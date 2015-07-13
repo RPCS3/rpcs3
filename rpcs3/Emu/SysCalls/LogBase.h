@@ -11,6 +11,7 @@ class LogBase
 		LogSuccess,
 		LogWarning,
 		LogError,
+		LogFatal,
 		LogTodo,
 	};
 
@@ -62,8 +63,29 @@ public:
 		LogPrepare(LogError, fmt, fmt::do_unveil(args)...);
 	}
 
+	template<typename... Args> force_inline void Fatal(const char* fmt, Args... args) const
+	{
+		LogPrepare(LogFatal, fmt, fmt::do_unveil(args)...);
+	}
+
 	template<typename... Args> force_inline void Todo(const char* fmt, Args... args) const
 	{
 		LogPrepare(LogTodo, fmt, fmt::do_unveil(args)...);
 	}
 };
+
+namespace hle
+{
+	struct error
+	{
+		const s32 code;
+		const LogBase* const base;
+		const std::string text;
+
+		error(s32 errorCode, const char* errorText = nullptr);
+		error(s32 errorCode, const LogBase& base, const char* errorText = nullptr);
+		error(s32 errorCode, const LogBase* base, const char* errorText = nullptr);
+
+		void print(const char* func = nullptr);
+	};
+}

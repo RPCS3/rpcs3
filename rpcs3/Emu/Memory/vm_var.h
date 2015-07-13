@@ -539,7 +539,7 @@ namespace vm
 		CPUThread& m_thread;
 
 	public:
-		stackvar(CPUThread& CPU, u32 size = sizeof32(T), u32 align = alignof32(T))
+		stackvar(CPUThread& CPU, u32 size = sizeof(T), u32 align = __alignof(T))
 			: m_data(CPU, size, align)
 			, m_thread(CPU)
 		{
@@ -554,12 +554,9 @@ namespace vm
 
 		stackvar(stackvar&& r) = delete;
 
-		~stackvar() noexcept(false) // allow exceptions
+		~stackvar()
 		{
-			if (!std::uncaught_exception()) // don't call during stack unwinding
-			{
-				stack_pop(m_thread, m_data.addr, m_data.old_pos);
-			}
+			stack_pop(m_thread, m_data.addr, m_data.old_pos);
 		}
 
 		stackvar& operator = (const stackvar& r)
@@ -598,16 +595,6 @@ namespace vm
 		const T& value() const
 		{
 			return *m_data.ptr;
-		}
-
-		T& operator [](u32 index)
-		{
-			return m_data.ptr[index];
-		}
-
-		const T& operator [](u32 index) const
-		{
-			return m_data.ptr[index];
 		}
 
 		u32 addr() const

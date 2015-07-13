@@ -2,8 +2,6 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/SysCalls/Modules.h"
 
-namespace vm { using namespace ps3; }
-
 extern Module cellOvis;
 
 // Return Codes
@@ -14,25 +12,25 @@ enum
 	CELL_OVIS_ERROR_ALIGN = 0x80410410,
 };
 
-s32 cellOvisGetOverlayTableSize(vm::cptr<char> elf)
+int cellOvisGetOverlayTableSize(vm::ptr<const char> elf)
 {
-	cellOvis.Todo("cellOvisGetOverlayTableSize(elf=*0x%x)", elf);
+	cellOvis.Todo("cellOvisGetOverlayTableSize(elf_addr=0x%x)", elf.addr());
 	return CELL_OK;
 }
 
-s32 cellOvisInitializeOverlayTable()
-{
-	UNIMPLEMENTED_FUNC(cellOvis);
-	return CELL_OK;
-}
-
-s32 cellOvisFixSpuSegments()
+int cellOvisInitializeOverlayTable()
 {
 	UNIMPLEMENTED_FUNC(cellOvis);
 	return CELL_OK;
 }
 
-s32 cellOvisInvalidateOverlappedSegments()
+int cellOvisFixSpuSegments()
+{
+	UNIMPLEMENTED_FUNC(cellOvis);
+	return CELL_OK;
+}
+
+int cellOvisInvalidateOverlappedSegments()
 {
 	UNIMPLEMENTED_FUNC(cellOvis);
 	return CELL_OK;

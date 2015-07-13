@@ -5,70 +5,53 @@
 #include "Emu/SysCalls/SysCalls.h"
 
 #include "Utilities/Thread.h"
+#include "sys_time.h"
 #include "sys_event.h"
 #include "sys_process.h"
 #include "sys_timer.h"
 
 SysCallBase sys_timer("sys_timer");
 
-extern u64 get_system_time();
-
-lv2_timer_t::lv2_timer_t()
-	: start(0)
-	, period(0)
-	, state(SYS_TIMER_STATE_STOP)
+s32 sys_timer_create(vm::ptr<u32> timer_id)
 {
-	auto name = fmt::format("Timer[0x%x] Thread", Emu.GetIdManager().get_current_id());
+	sys_timer.Warning("sys_timer_create(timer_id=*0x%x)", timer_id);
 
-	thread.start([name]{ return name; }, [this]()
+	std::shared_ptr<lv2_timer_t> timer(new lv2_timer_t);
+
+	thread_t(fmt::format("Timer[0x%x] Thread", (*timer_id = Emu.GetIdManager().add(timer))), [timer]() // TODO: call from the constructor
 	{
-		std::unique_lock<std::mutex> lock(thread.mutex);
+		LV2_LOCK;
 
-		while (thread.joinable())
+		while (!timer.unique() && !Emu.IsStopped())
 		{
-			CHECK_EMU_STATUS;
-
-			if (state == SYS_TIMER_STATE_RUN)
+			if (timer->state == SYS_TIMER_STATE_RUN)
 			{
-				LV2_LOCK;
-
-				if (get_system_time() >= start)
+				if (get_system_time() >= timer->start)
 				{
-					const auto queue = port.lock();
+					const auto queue = timer->port.lock();
 
 					if (queue)
 					{
-						queue->push(lv2_lock, source, data1, data2, start);
+						queue->push(lv2_lock, timer->source, timer->data1, timer->data2, timer->start);
 					}
 
-					if (period && queue)
+					if (timer->period && queue)
 					{
-						start += period; // set next expiration time
+						timer->start += timer->period; // set next expiration time
 
 						continue; // hack: check again
 					}
 					else
 					{
-						state = SYS_TIMER_STATE_STOP; // stop if oneshot or the event port was disconnected (TODO: is it correct?)
+						timer->state = SYS_TIMER_STATE_STOP; // stop if oneshot or the event port was disconnected (TODO: is it correct?)
 					}
 				}
 			}
 
-			thread.cv.wait_for(lock, std::chrono::milliseconds(1));
+			timer->cv.wait_for(lv2_lock, std::chrono::milliseconds(1));
 		}
-	});
-}
 
-lv2_timer_t::~lv2_timer_t()
-{
-	thread.join();
-}
-
-s32 sys_timer_create(vm::ptr<u32> timer_id)
-{
-	sys_timer.Warning("sys_timer_create(timer_id=*0x%x)", timer_id);
-
-	*timer_id = Emu.GetIdManager().make<lv2_timer_t>();
+	}).detach();
 
 	return CELL_OK;
 }
@@ -101,7 +84,7 @@ s32 sys_timer_get_information(u32 timer_id, vm::ptr<sys_timer_information_t> inf
 	sys_timer.Warning("sys_timer_get_information(timer_id=0x%x, info=*0x%x)", timer_id, info);
 
 	LV2_LOCK;
-
+	
 	const auto timer = Emu.GetIdManager().get<lv2_timer_t>(timer_id);
 
 	if (!timer)
@@ -111,7 +94,7 @@ s32 sys_timer_get_information(u32 timer_id, vm::ptr<sys_timer_information_t> inf
 
 	info->next_expiration_time = timer->start;
 
-	info->period      = timer->period;
+	info->period = timer->period;
 	info->timer_state = timer->state;
 
 	return CELL_OK;
@@ -163,11 +146,10 @@ s32 _sys_timer_start(u32 timer_id, u64 base_time, u64 period)
 
 	// sys_timer_start_periodic() will use current time (TODO: is it correct?)
 
-	timer->start  = base_time ? base_time : start_time + period;
+	timer->start = base_time ? base_time : start_time + period;
 	timer->period = period;
-	timer->state  = SYS_TIMER_STATE_RUN;
-
-	timer->thread.cv.notify_one();
+	timer->state = SYS_TIMER_STATE_RUN;
+	timer->cv.notify_one();
 
 	return CELL_OK;
 }
@@ -209,10 +191,10 @@ s32 sys_timer_connect_event_queue(u32 timer_id, u32 queue_id, u64 name, u64 data
 		return CELL_EISCONN;
 	}
 
-	timer->port   = queue; // connect event queue
+	timer->port = queue; // connect event queue
 	timer->source = name ? name : ((u64)process_getpid() << 32) | timer_id;
-	timer->data1  = data1;
-	timer->data2  = data2;
+	timer->data1 = data1;
+	timer->data2 = data2;
 
 	return CELL_OK;
 }
@@ -253,9 +235,13 @@ s32 sys_timer_sleep(u32 sleep_time)
 
 	while (useconds > (passed = get_system_time() - start_time) + 1000)
 	{
-		CHECK_EMU_STATUS;
-
 		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+
+		if (Emu.IsStopped())
+		{
+			sys_timer.Warning("sys_timer_sleep(sleep_time=%d) aborted", sleep_time);
+			return CELL_OK;
+		}
 	}
 	
 	if (useconds > passed)
@@ -276,9 +262,13 @@ s32 sys_timer_usleep(u64 sleep_time)
 
 	while (sleep_time > (passed = get_system_time() - start_time) + 1000)
 	{
-		CHECK_EMU_STATUS;
-
 		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+
+		if (Emu.IsStopped())
+		{
+			sys_timer.Warning("sys_timer_usleep(sleep_time=0x%llx) aborted", sleep_time);
+			return CELL_OK;
+		}
 	}
 
 	if (sleep_time > passed)

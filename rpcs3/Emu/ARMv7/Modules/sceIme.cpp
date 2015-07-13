@@ -4,29 +4,29 @@
 
 #include "sceIme.h"
 
-s32 sceImeOpen(vm::ptr<SceImeParam> param)
+s32 sceImeOpen(vm::psv::ptr<SceImeParam> param)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceImeUpdate()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceImeSetCaret(vm::cptr<SceImeCaret> caret)
+s32 sceImeSetCaret(vm::psv::ptr<const SceImeCaret> caret)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
-s32 sceImeSetPreeditGeometry(vm::cptr<SceImePreeditGeometry> preedit)
+s32 sceImeSetPreeditGeometry(vm::psv::ptr<const SceImePreeditGeometry> preedit)
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 s32 sceImeClose()
 {
-	throw EXCEPTION("");
+	throw __FUNCTION__;
 }
 
 
@@ -37,7 +37,6 @@ psv_log_base sceIme("SceIme", []()
 	sceIme.on_load = nullptr;
 	sceIme.on_unload = nullptr;
 	sceIme.on_stop = nullptr;
-	sceIme.on_error = nullptr;
 
 	REG_FUNC(0x0E050613, sceImeOpen);
 	REG_FUNC(0x71D6898A, sceImeUpdate);

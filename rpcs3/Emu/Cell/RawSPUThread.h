@@ -14,10 +14,10 @@ force_inline static u32 GetRawSPURegAddrByNum(int num, int offset)
 	return RAW_SPU_OFFSET * num + RAW_SPU_BASE_ADDR + RAW_SPU_PROB_OFFSET + offset;
 }
 
-class RawSPUThread final : public SPUThread
+class RawSPUThread : public SPUThread
 {
 public:
-	RawSPUThread(const std::string& name, u32 index);
+	RawSPUThread(CPUThreadType type = CPU_THREAD_RAW_SPU);
 	virtual ~RawSPUThread();
 
 	void start();
@@ -28,3 +28,5 @@ public:
 private:
 	virtual void Task();
 };
+
+SPUThread& GetCurrentSPUThread();

@@ -32,7 +32,7 @@ namespace loader
 				be_t<u16> e_shnum;
 				be_t<u16> e_shstrndx;
 
-				bool check() const { return e_magic == 0x7F454C46; }
+				bool check() const { return e_magic.data() == se32(0x7F454C46); }
 			} m_ehdr;
 
 			struct phdr
@@ -40,8 +40,8 @@ namespace loader
 				be_t<u32> p_type;
 				be_t<u32> p_flags;
 				be_t<u64> p_offset;
-				_ptr_base<void, be_t<u64>> p_vaddr;
-				_ptr_base<void, be_t<u64>> p_paddr;
+				bptr<void, u64> p_vaddr;
+				bptr<void, u64> p_paddr;
 				be_t<u64> p_filesz;
 				be_t<u64> p_memsz;
 				be_t<u64> p_align;
@@ -52,7 +52,7 @@ namespace loader
 				be_t<u32> sh_name;
 				be_t<u32> sh_type;
 				be_t<u64> sh_flags;
-				_ptr_base<void, be_t<u64>> sh_addr;
+				bptr<void, u64> sh_addr;
 				be_t<u64> sh_offset;
 				be_t<u64> sh_size;
 				be_t<u32> sh_link;
@@ -120,10 +120,10 @@ namespace loader
 
 			struct sprx_segment_info
 			{
-				_ptr_base<void> begin;
+				vm::ptr<void> begin;
 				u32 size;
 				u32 size_file;
-				_ptr_base<void> initial_addr;
+				vm::ptr<void> initial_addr;
 				std::vector<sprx_module_info> modules;
 			};
 

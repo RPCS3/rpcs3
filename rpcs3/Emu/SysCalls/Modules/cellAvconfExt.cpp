@@ -4,8 +4,6 @@
 #include "Emu/SysCalls/Modules.h"
 #include "Emu/RSX/sysutil_video.h"
 
-namespace vm { using namespace ps3; }
-
 extern Module cellAvconfExt;
 
 s32 cellVideoOutConvertCursorColor()

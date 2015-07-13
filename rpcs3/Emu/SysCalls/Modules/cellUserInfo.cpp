@@ -9,9 +9,9 @@
 
 extern Module cellUserInfo;
 
-s32 cellUserInfoGetStat(u32 id, vm::ptr<CellUserInfoUserStat> stat)
+int cellUserInfoGetStat(u32 id, vm::ptr<CellUserInfoUserStat> stat)
 {
-	cellUserInfo.Warning("cellUserInfoGetStat(id=%d, stat=*0x%x)", id, stat);
+	cellUserInfo.Warning("cellUserInfoGetStat(id=%d, stat_addr=0x%x)", id, stat.addr());
 
 	if (id > CELL_USERINFO_USER_MAX)
 		return CELL_USERINFO_ERROR_NOUSER;
@@ -37,27 +37,28 @@ s32 cellUserInfoGetStat(u32 id, vm::ptr<CellUserInfoUserStat> stat)
 	return CELL_OK;
 }
 
-s32 cellUserInfoSelectUser_ListType()
+int cellUserInfoSelectUser_ListType()
 {
 	UNIMPLEMENTED_FUNC(cellUserInfo);
 	return CELL_OK;
 }
 
-s32 cellUserInfoSelectUser_SetList()
+int cellUserInfoSelectUser_SetList()
 {
 	UNIMPLEMENTED_FUNC(cellUserInfo);
 	return CELL_OK;
 }
 
-s32 cellUserInfoEnableOverlay()
+int cellUserInfoEnableOverlay()
 {
 	UNIMPLEMENTED_FUNC(cellUserInfo);
 	return CELL_OK;
 }
 
-s32 cellUserInfoGetList(vm::ptr<u32> listNum, vm::ptr<CellUserInfoUserList> listBuf, vm::ptr<u32> currentUserId)
+int cellUserInfoGetList(vm::ptr<u32> listNum, vm::ptr<CellUserInfoUserList> listBuf, vm::ptr<u32> currentUserId)
 {
-	cellUserInfo.Warning("cellUserInfoGetList(listNum=*0x%x, listBuf=*0x%x, currentUserId=*0x%x)", listNum, listBuf, currentUserId);
+	cellUserInfo.Warning("cellUserInfoGetList(listNum_addr=0x%x, listBuf_addr=0x%x, currentUserId_addr=0x%x)",
+		listNum.addr(), listBuf.addr(), currentUserId.addr());
 
 	// If only listNum is NULL, an error will be returned
 	if (listBuf && !listNum)

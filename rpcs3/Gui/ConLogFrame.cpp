@@ -76,16 +76,16 @@ struct wxWriter : Log::LogListener
 				{
 					switch (msg.mServerity)
 					{
-					case Log::Severity::Notice:
+					case Log::LogSeverityNotice:
 						llogcon->SetDefaultStyle(m_color_white);
 						break;
-					case Log::Severity::Warning:
+					case Log::LogSeverityWarning:
 						llogcon->SetDefaultStyle(m_color_yellow);
 						break;
-					case Log::Severity::Error:
+					case Log::LogSeverityError:
 						llogcon->SetDefaultStyle(m_color_red);
 						break;
-					case Log::Severity::Success:
+					case Log::LogSeveritySuccess:
 						llogcon->SetDefaultStyle(m_color_green);
 						break;
 					default:
