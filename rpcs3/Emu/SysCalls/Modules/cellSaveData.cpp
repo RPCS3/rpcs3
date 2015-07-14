@@ -625,7 +625,6 @@ never_inline s32 savedata_op(
 	// Write PARAM.SFO
 	if (psf)
 	{
-		cellSysutil.Error("psf: true");
 		vfsFile f(sfo_path, vfsWriteNew);
 		psf.Save(f);
 	}
