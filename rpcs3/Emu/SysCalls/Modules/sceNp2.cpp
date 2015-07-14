@@ -2,7 +2,7 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/SysCalls/Modules.h"
 
-#include "sceNp.cpp"
+#include "sceNp.h"
 
 extern Module sceNp2;
 

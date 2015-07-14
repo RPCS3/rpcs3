@@ -219,6 +219,24 @@ enum
 
 using SceNpBasicEventHandler = func_def<s32(s32 event, s32 retCode, u32 reqId, vm::ptr<void> arg)>;
 
+struct sceNpInternal
+{
+	bool m_bSceNpInitialized;
+	bool m_bScoreInitialized;
+	bool m_bLookupInitialized;
+	bool m_bSceNpUtilBandwidthTestInitialized;
+
+	sceNpInternal()
+		: m_bSceNpInitialized(false),
+		m_bScoreInitialized(false),
+		m_bLookupInitialized(false),
+		m_bSceNpUtilBandwidthTestInitialized(false)
+	{
+	}
+};
+
+extern sceNpInternal sceNpInstance;
+
 // NP Manager Utility statuses
 enum
 {
