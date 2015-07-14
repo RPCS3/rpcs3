@@ -157,6 +157,7 @@ s32 sceNpTrophyRegisterContext(PPUThread& CPU, u32 context, u32 handle, vm::ptr<
 
 	if (!ctxt)
 	{
+		sceNpTrophy.Error("sceNpTrophyRegisterContext(): SCE_NP_TROPHY_ERROR_UNKNOWN_CONTEXT");
 		return SCE_NP_TROPHY_ERROR_UNKNOWN_CONTEXT;
 	}
 
@@ -164,43 +165,56 @@ s32 sceNpTrophyRegisterContext(PPUThread& CPU, u32 context, u32 handle, vm::ptr<
 
 	if (!hndl)
 	{
+		sceNpTrophy.Error("sceNpTrophyRegisterContext(): SCE_NP_TROPHY_ERROR_UNKNOWN_HANDLE");
 		return SCE_NP_TROPHY_ERROR_UNKNOWN_HANDLE;
 	}
 
 	TRPLoader trp(*ctxt->trp_stream);
 	if (!trp.LoadHeader())
+	{
+		sceNpTrophy.Error("sceNpTrophyRegisterContext(): SCE_NP_TROPHY_ERROR_ILLEGAL_UPDATE");
 		return SCE_NP_TROPHY_ERROR_ILLEGAL_UPDATE;
+	}
 
 	// Rename or discard certain entries based on the files found
 	const size_t kTargetBufferLength = 31;
-	char target[kTargetBufferLength+1];
+	char target[kTargetBufferLength + 1];
 	target[kTargetBufferLength] = 0;
 	strcpy_trunc(target, fmt::Format("TROP_%02d.SFM", Ini.SysLanguage.GetValue()));
 
-	if (trp.ContainsEntry(target)) {
+	if (trp.ContainsEntry(target))
+	{
 		trp.RemoveEntry("TROPCONF.SFM");
 		trp.RemoveEntry("TROP.SFM");
 		trp.RenameEntry(target, "TROPCONF.SFM");
 	}
-	else if (trp.ContainsEntry("TROP.SFM")) {
+	else if (trp.ContainsEntry("TROP.SFM"))
+	{
 		trp.RemoveEntry("TROPCONF.SFM");
 		trp.RenameEntry("TROP.SFM", "TROPCONF.SFM");
 	}
-	else if (!trp.ContainsEntry("TROPCONF.SFM")) {
+	else if (!trp.ContainsEntry("TROPCONF.SFM"))
+	{
 		return SCE_NP_TROPHY_ERROR_ILLEGAL_UPDATE;
 	}
 
 	// Discard unnecessary TROP_XX.SFM files
-	for (s32 i=0; i<=18; i++) {
+	for (s32 i = 0; i <= 18; i++)
+	{
 		strcpy_trunc(target, fmt::Format("TROP_%02d.SFM", i));
 		if (i != Ini.SysLanguage.GetValue())
+		{
 			trp.RemoveEntry(target);
+		}
 	}
 
 	// TODO: Get the path of the current user
 	std::string trophyPath = "/dev_hdd0/home/00000001/trophy/" + ctxt->trp_name;
 	if (!trp.Install(trophyPath))
+	{
+		sceNpTrophy.Error("sceNpTrophyRegisterContext(): SCE_NP_TROPHY_ERROR_ILLEGAL_UPDATE");
 		return SCE_NP_TROPHY_ERROR_ILLEGAL_UPDATE;
+	}
 	
 	TROPUSRLoader* tropusr = new TROPUSRLoader();
 	std::string trophyUsrPath = trophyPath + "/TROPUSR.DAT";

@@ -16,7 +16,7 @@ TRPLoader::~TRPLoader()
 
 bool TRPLoader::Install(std::string dest, bool show)
 {
-	if(!trp_f.IsOpened())
+	if (!trp_f.IsOpened())
 		return false;
 
 	if (!dest.empty() && dest.back() != '/')

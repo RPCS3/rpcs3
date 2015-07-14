@@ -12,46 +12,36 @@
 
 extern Module sceNp;
 
-struct sceNpInternal
-{
-	bool m_bSceNpInitialized;
-	bool m_bSceNp2Initialized;
-	bool m_bScoreInitialized;
-	bool m_bLookupInitialized;
-	bool m_bSceNpUtilBandwidthTestInitialized;
-
-	sceNpInternal()
-		: m_bSceNpInitialized(false),
-		  m_bSceNp2Initialized(false),
-		  m_bScoreInitialized(false),
-		  m_bLookupInitialized(false),
-		  m_bSceNpUtilBandwidthTestInitialized(false)
-	{
-	}
-};
-
 sceNpInternal sceNpInstance;
 
-s32 sceNpInit(u32 mem_size, u32 mem_addr)
+s32 sceNpInit(u32 poolsize, vm::ptr<u32> poolptr)
 {
-	sceNp.Warning("sceNpInit(mem_size=0x%x, mem_addr=0x%x)", mem_size, mem_addr);
+	sceNp.Warning("sceNpInit(poolsize=%d, poolptr=0x%x)", poolsize, poolptr);
 
 	if (sceNpInstance.m_bSceNpInitialized)
+	{
+		sceNp.Error("sceNpInit(): sceNp has been already initialized.");
 		return SCE_NP_ERROR_ALREADY_INITIALIZED;
+	}
+
+	if (poolsize == 0)
+	{
+		sceNp.Error("sceNpInit(): poolsize given is 0.");
+		return SCE_NP_ERROR_INVALID_ARGUMENT;
+	}
+	else if (poolsize < 128 * 1024)
+	{
+		sceNp.Error("sceNp2Init(): poolsize given is under 131072 bytes.");
+		return SCE_NP_ERROR_INSUFFICIENT_BUFFER;
+	}
+
+	if (!poolptr)
+	{
+		sceNp.Error("sceNpInit(): poolptr is invalid.");
+		return SCE_NP_ERROR_INVALID_ARGUMENT;
+	}
 
 	sceNpInstance.m_bSceNpInitialized = true;
-
-	return CELL_OK;
-}
-
-s32 sceNp2Init(u32 mem_size, u32 mem_addr)
-{
-	sceNp.Warning("sceNp2Init(mem_size=0x%x, mem_addr=0x%x)", mem_size, mem_addr);
-
-	if (sceNpInstance.m_bSceNp2Initialized)
-		return SCE_NP_ERROR_ALREADY_INITIALIZED;
-
-	sceNpInstance.m_bSceNp2Initialized = true;
 
 	return CELL_OK;
 }
@@ -61,21 +51,12 @@ s32 sceNpTerm()
 	sceNp.Warning("sceNpTerm()");
 
 	if (!sceNpInstance.m_bSceNpInitialized)
+	{
+		sceNp.Error("sceNpTerm(): sceNp has not been intialized.");
 		return SCE_NP_ERROR_NOT_INITIALIZED;
+	}
 
 	sceNpInstance.m_bSceNpInitialized = false;
-
-	return CELL_OK;
-}
-
-s32 sceNp2Term()
-{
-	sceNp.Warning("sceNp2Term()");
-
-	if (!sceNpInstance.m_bSceNp2Initialized)
-		return SCE_NP_ERROR_NOT_INITIALIZED;
-
-	sceNpInstance.m_bSceNp2Initialized = false;
 
 	return CELL_OK;
 }
@@ -191,14 +172,7 @@ s32 sceNpDrmGetTimelimit(vm::ptr<const char> path, vm::ptr<u64> time_remain)
 
 s32 sceNpDrmProcessExitSpawn(vm::cptr<char> path, u32 argv_addr, u32 envp_addr, u32 data_addr, u32 data_size, u32 prio, u64 flags)
 {
-	sceNp.Warning("sceNpDrmProcessExitSpawn()");
-	sceNp.Warning("path: %s", path.get_ptr());
-	sceNp.Warning("argv: 0x%x", argv_addr);
-	sceNp.Warning("envp: 0x%x", envp_addr);
-	sceNp.Warning("data: 0x%x", data_addr);
-	sceNp.Warning("data_size: 0x%x", data_size);
-	sceNp.Warning("prio: %d", prio);
-	sceNp.Warning("flags: %d", flags);
+	sceNp.Warning("sceNpDrmProcessExitSpawn() -> sys_game_process_exitspawn");
 
 	sys_game_process_exitspawn(path, argv_addr, envp_addr, data_addr, data_size, prio, flags);
 
@@ -207,14 +181,7 @@ s32 sceNpDrmProcessExitSpawn(vm::cptr<char> path, u32 argv_addr, u32 envp_addr, 
 
 s32 sceNpDrmProcessExitSpawn2(vm::cptr<char> path, u32 argv_addr, u32 envp_addr, u32 data_addr, u32 data_size, u32 prio, u64 flags)
 {
-	sceNp.Warning("sceNpDrmProcessExitSpawn2()");
-	sceNp.Warning("path: %s", path.get_ptr());
-	sceNp.Warning("argv: 0x%x", argv_addr);
-	sceNp.Warning("envp: 0x%x", envp_addr);
-	sceNp.Warning("data: 0x%x", data_addr);
-	sceNp.Warning("data_size: 0x%x", data_size);
-	sceNp.Warning("prio: %d", prio);
-	sceNp.Warning("flags: %d", flags);
+	sceNp.Warning("sceNpDrmProcessExitSpawn2() -> sys_game_process_exitspawn2");
 
 	sys_game_process_exitspawn2(path, argv_addr, envp_addr, data_addr, data_size, prio, flags);
 
@@ -1639,16 +1606,13 @@ s32 _sceNpSysutilClientFree()
 Module sceNp("sceNp", []()
 {
 	sceNpInstance.m_bSceNpInitialized = false;
-	sceNpInstance.m_bSceNp2Initialized = false;
 	sceNpInstance.m_bScoreInitialized = false;
 	sceNpInstance.m_bLookupInitialized = false;
 	sceNpInstance.m_bSceNpUtilBandwidthTestInitialized = false;
 
 	REG_FUNC(sceNp, sceNpInit);
-	REG_FUNC(sceNp, sceNp2Init);
 	REG_FUNC(sceNp, sceNpUtilBandwidthTestInitStart);
 	REG_FUNC(sceNp, sceNpTerm);
-	REG_FUNC(sceNp, sceNp2Term);
 	REG_FUNC(sceNp, sceNpUtilBandwidthTestShutdown);
 	REG_FUNC(sceNp, sceNpDrmIsAvailable);
 	REG_FUNC(sceNp, sceNpDrmIsAvailable2);

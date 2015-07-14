@@ -269,6 +269,9 @@
     <ClCompile Include="Emu\SysCalls\Modules\sceNp.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\sceNp2.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\SysCalls\Modules\sceNpClans.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>

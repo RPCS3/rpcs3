@@ -46,6 +46,7 @@ extern Module cellVoice;
 extern Module cellVpost;
 extern Module libmixer;
 extern Module sceNp;
+extern Module sceNp2;
 extern Module sceNpClans;
 extern Module sceNpCommerce2;
 extern Module sceNpSns;
@@ -117,7 +118,7 @@ static const g_module_list[] =
 	{ 0x0035, "cellSysutilRec", nullptr },
 	{ 0x0036, "cellVideoExport", nullptr },
 	{ 0x0037, "cellGameExec", nullptr },
-	{ 0x0038, "sceNp2", nullptr },
+	{ 0x0038, "sceNp2", &sceNp2 },
 	{ 0x0039, "cellSysutilAp", &cellSysutilAp },
 	{ 0x003a, "cellSysutilNpClans", nullptr },
 	{ 0x003b, "cellSysutilOskExt", nullptr },

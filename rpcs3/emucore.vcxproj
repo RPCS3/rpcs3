@@ -267,6 +267,7 @@
     <ClCompile Include="Emu\SysCalls\Modules\libsnd3.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\libsynth2.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\sceNp.cpp" />
+    <ClCompile Include="Emu\SysCalls\Modules\sceNp2.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\sceNpClans.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\sceNpCommerce2.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\sceNpSns.cpp" />

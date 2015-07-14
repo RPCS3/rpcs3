@@ -121,25 +121,31 @@ s32 cellCameraGetType(s32 dev_num, vm::ptr<s32> type)
 
 s32 cellCameraIsAvailable(s32 dev_num)
 {
-	UNIMPLEMENTED_FUNC(cellCamera);
+	cellCamera.Todo("cellCameraIsAvailable(dev_num=%d)", dev_num);
 	return CELL_OK;
 }
 
 s32 cellCameraIsAttached(s32 dev_num)
 {
-	UNIMPLEMENTED_FUNC(cellCamera);
-	return CELL_OK;
+	cellCamera.Warning("cellCameraIsAttached(dev_num=%d)", dev_num);
+
+	if (Ini.Camera.GetValue() == 1)
+	{
+		return 1;
+	}
+
+	return CELL_OK; // CELL_OK means that no camera is attached
 }
 
 s32 cellCameraIsOpen(s32 dev_num)
 {
-	UNIMPLEMENTED_FUNC(cellCamera);
+	cellCamera.Todo("cellCameraIsOpen(dev_num=%d)", dev_num);
 	return CELL_OK;
 }
 
 s32 cellCameraIsStarted(s32 dev_num)
 {
-	UNIMPLEMENTED_FUNC(cellCamera);
+	cellCamera.Todo("cellCameraIsStarted(dev_num=%d)", dev_num);
 	return CELL_OK;
 }
 
