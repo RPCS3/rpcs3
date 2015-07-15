@@ -210,6 +210,7 @@ void SPUThread::InitRegs()
 
 	ch_event_mask = 0;
 	ch_event_stat = {};
+	last_raddr = 0;
 
 	ch_dec_start_timestamp = get_timebased_time(); // ???
 	ch_dec_value = 0;
@@ -454,16 +455,16 @@ void SPUThread::process_mfc_cmd(u32 cmd)
 			break;
 		}
 
-		vm::reservation_acquire(vm::get_ptr(offset + ch_mfc_args.lsa), VM_CAST(ch_mfc_args.ea), 128);
+		const u32 raddr = VM_CAST(ch_mfc_args.ea);
 
-		if (ch_event_stat.load() & SPU_EVENT_AR)
+		vm::reservation_acquire(vm::get_ptr(offset + ch_mfc_args.lsa), raddr, 128);
+
+		if (last_raddr)
 		{
 			ch_event_stat |= SPU_EVENT_LR;
 		}
-		else
-		{
-			ch_event_stat |= SPU_EVENT_AR;
-		}
+
+		last_raddr = raddr;
 
 		return ch_atomic_stat.push_uncond(MFC_GETLLAR_SUCCESS);
 	}
@@ -475,22 +476,24 @@ void SPUThread::process_mfc_cmd(u32 cmd)
 			break;
 		}
 
-		const bool was_acquired = (ch_event_stat._and_not(SPU_EVENT_AR) & SPU_EVENT_AR) != 0;
-
 		if (vm::reservation_update(VM_CAST(ch_mfc_args.ea), vm::get_ptr(offset + ch_mfc_args.lsa), 128))
 		{
-			if (!was_acquired)
+			if (last_raddr == 0)
 			{
 				throw EXCEPTION("Unexpected: PUTLLC command succeeded, but GETLLAR command not detected");
 			}
+
+			last_raddr = 0;
 
 			return ch_atomic_stat.push_uncond(MFC_PUTLLC_SUCCESS);
 		}
 		else
 		{
-			if (was_acquired)
+			if (last_raddr != 0)
 			{
 				ch_event_stat |= SPU_EVENT_LR;
+
+				last_raddr = 0;
 			}
 
 			return ch_atomic_stat.push_uncond(MFC_PUTLLC_FAILURE);
@@ -510,9 +513,11 @@ void SPUThread::process_mfc_cmd(u32 cmd)
 			std::memcpy(vm::priv_ptr(VM_CAST(ch_mfc_args.ea)), vm::get_ptr(offset + ch_mfc_args.lsa), 128);
 		});
 
-		if (ch_event_stat._and_not(SPU_EVENT_AR) & SPU_EVENT_AR && vm::g_tls_did_break_reservation)
+		if (last_raddr != 0 && vm::g_tls_did_break_reservation)
 		{
 			ch_event_stat |= SPU_EVENT_LR;
+
+			last_raddr = 0;
 		}
 
 		if (cmd == MFC_PUTLLUC_CMD)
@@ -527,16 +532,59 @@ void SPUThread::process_mfc_cmd(u32 cmd)
 	throw EXCEPTION("Unknown command %s (cmd=0x%x, lsa=0x%x, ea=0x%llx, tag=0x%x, size=0x%x)", get_mfc_cmd_name(cmd), cmd, ch_mfc_args.lsa, ch_mfc_args.ea, ch_mfc_args.tag, ch_mfc_args.size);
 }
 
-u32 SPUThread::get_events()
+u32 SPUThread::get_events(bool waiting)
 {
 	// check reservation status and set SPU_EVENT_LR if lost
-	if (ch_event_stat.load() & SPU_EVENT_AR && !vm::reservation_test())
+	if (last_raddr != 0 && !vm::reservation_test(get_ctrl()))
 	{
 		ch_event_stat |= SPU_EVENT_LR;
-		ch_event_stat &= ~SPU_EVENT_AR;
+		
+		last_raddr = 0;
 	}
 
+	// initialize waiting
+	if (waiting)
+	{
+		// polling with atomically set/removed SPU_EVENT_WAITING flag
+		return ch_event_stat.atomic_op([this](u32& stat) -> u32
+		{
+			if (u32 res = stat & ch_event_mask)
+			{
+				stat &= ~SPU_EVENT_WAITING;
+				return res;
+			}
+			else
+			{
+				stat |= SPU_EVENT_WAITING;
+				return 0;
+			}
+		});
+	}
+
+	// simple polling
 	return ch_event_stat.load() & ch_event_mask;
+}
+
+void SPUThread::set_events(u32 mask)
+{
+	if (u32 unimpl = mask & ~SPU_EVENT_IMPLEMENTED)
+	{
+		throw EXCEPTION("Unimplemented events (0x%x)", unimpl);
+	}
+
+	// set new events, get old event mask
+	const u32 old_stat = ch_event_stat._or(mask);
+
+	// notify if some events were set
+	if (~old_stat & mask && old_stat & SPU_EVENT_WAITING)
+	{
+		std::lock_guard<std::mutex> lock(mutex);
+
+		if (ch_event_stat.load() & SPU_EVENT_WAITING)
+		{
+			cv.notify_one();
+		}
+	}
 }
 
 u32 SPUThread::get_ch_count(u32 ch)
@@ -675,29 +723,40 @@ u32 SPUThread::get_ch_value(u32 ch)
 	{
 		std::unique_lock<std::mutex> lock(mutex, std::defer_lock);
 
-		u32 result;
-
-		while ((result = get_events()) == 0)
+		// start waiting or return immediately
+		if (u32 res = get_events(true))
 		{
-			CHECK_EMU_STATUS;
-
-			if (IsStopped()) throw CPUThreadStop{};
-
-			if (!lock)
-			{
-				lock.lock();
-				continue;
-			}
-
-			cv.wait_for(lock, std::chrono::milliseconds(1));
+			return res;
 		}
+
+		if (ch_event_mask & SPU_EVENT_LR)
+		{
+			// register waiter if polling reservation status is required
+			vm::wait_op(*this, last_raddr, 128, WRAP_EXPR(get_events(true) || IsStopped()));
+		}
+		else
+		{
+			lock.lock();
+
+			// simple waiting loop otherwise
+			while (!get_events(true) && !IsStopped())
+			{
+				CHECK_EMU_STATUS;
+
+				cv.wait(lock);
+			}
+		}
+
+		ch_event_stat &= ~SPU_EVENT_WAITING;
+
+		if (IsStopped()) throw CPUThreadStop{};
 		
-		return result;
+		return get_events();
 	}
 
 	case SPU_RdMachStat:
 	{
-		return 1; // hack (not isolated, interrupts enabled)
+		return 0; // hack (not isolated, interrupts disabled)
 	}
 	}
 
@@ -1048,7 +1107,7 @@ void SPUThread::set_ch_value(u32 ch, u32 value)
 
 	case SPU_WrEventMask:
 	{
-		if (value & ~(SPU_EVENT_IMPLEMENTED))
+		if (value & ~SPU_EVENT_IMPLEMENTED)
 		{
 			break;
 		}
@@ -1059,7 +1118,7 @@ void SPUThread::set_ch_value(u32 ch, u32 value)
 
 	case SPU_WrEventAck:
 	{
-		if (value & ~(SPU_EVENT_IMPLEMENTED))
+		if (value & ~SPU_EVENT_IMPLEMENTED)
 		{
 			break;
 		}

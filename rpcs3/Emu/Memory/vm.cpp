@@ -145,7 +145,7 @@ namespace vm
 
 	reservation_mutex_t g_reservation_mutex;
 
-	waiter_list_t g_waiter_list;
+	std::array<waiter_t, 1024> g_waiter_list;
 
 	std::size_t g_waiter_max = 0; // min unused position
 	std::size_t g_waiter_nil = 0; // min search position
@@ -493,11 +493,11 @@ namespace vm
 		return true;
 	}
 
-	bool reservation_test()
+	bool reservation_test(const thread_ctrl_t* current)
 	{
 		const auto owner = g_reservation_owner;
 
-		return owner && owner == get_current_thread_ctrl();
+		return owner && owner == current;
 	}
 
 	void reservation_free()

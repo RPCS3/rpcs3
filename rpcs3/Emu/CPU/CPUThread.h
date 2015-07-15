@@ -19,9 +19,10 @@ enum : u64
 	CPU_STATE_STEP    = (1ull << 3), // forces the thread to pause after executing just one instruction or something appropriate, set by the debugger
 	CPU_STATE_DEAD    = (1ull << 4), // indicates irreversible exit of the thread
 	CPU_STATE_RETURN  = (1ull << 5), // used for callback return
-	CPU_STATE_SIGNAL  = (1ull << 6),
+	CPU_STATE_SIGNAL  = (1ull << 6), // used for HLE signaling
+	CPU_STATE_INTR    = (1ull << 7), // thread interrupted
 
-	CPU_STATE_MAX     = (1ull << 7), // added to (subtracted from) m_state by Sleep()/Awake() calls to trigger status check
+	CPU_STATE_MAX     = (1ull << 8), // added to (subtracted from) m_state by Sleep()/Awake() calls to trigger status check
 };
 
 // "HLE return" exception event
@@ -49,6 +50,8 @@ protected:
 public:
 	using thread_t::mutex;
 	using thread_t::cv;
+	using thread_t::is_current;
+	using thread_t::get_ctrl;
 
 protected:
 	CPUThread(CPUThreadType type, const std::string& name, std::function<std::string()> thread_name);

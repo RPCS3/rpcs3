@@ -65,7 +65,7 @@ enum : u32
 
 	SPU_EVENT_IMPLEMENTED = SPU_EVENT_LR, // Mask of implemented events
 
-	SPU_EVENT_AR = 0x80000000, // Set after acquiring the reservation (hack)
+	SPU_EVENT_WAITING = 0x80000000, // This bit is originally unused, set when SPU thread starts waiting on ch_event_stat
 };
 
 // SPU Class 0 Interrupts
@@ -504,6 +504,7 @@ public:
 
 	u32 ch_event_mask;
 	atomic_t<u32> ch_event_stat;
+	u32 last_raddr; // Last Reservation Address (0 if not set)
 
 	u64 ch_dec_start_timestamp; // timestamp of writing decrementer value
 	u32 ch_dec_value; // written decrementer value
@@ -555,7 +556,8 @@ public:
 	void do_dma_list_cmd(u32 cmd, spu_mfc_arg_t args);
 	void process_mfc_cmd(u32 cmd);
 
-	u32 get_events();
+	u32 get_events(bool waiting = false);
+	void set_events(u32 mask);
 	u32 get_ch_count(u32 ch);
 	u32 get_ch_value(u32 ch);
 	void set_ch_value(u32 ch, u32 value);

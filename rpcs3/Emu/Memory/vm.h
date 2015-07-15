@@ -2,6 +2,8 @@
 
 #include "stdafx.h"
 
+const class thread_ctrl_t* get_current_thread_ctrl();
+
 class CPUThread;
 
 namespace vm
@@ -59,8 +61,6 @@ namespace vm
 
 		bool try_notify();
 	};
-
-	using waiter_list_t = std::array<waiter_t, 1024>;
 
 	class waiter_lock_t
 	{
@@ -125,7 +125,7 @@ namespace vm
 	bool reservation_query(u32 addr, u32 size, bool is_writing, std::function<bool()> callback);
 
 	// Returns true if the current thread owns reservation
-	bool reservation_test();
+	bool reservation_test(const thread_ctrl_t* current = get_current_thread_ctrl());
 
 	// Break all reservations created by the current thread
 	void reservation_free();
