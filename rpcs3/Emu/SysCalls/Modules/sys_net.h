@@ -25,3 +25,8 @@ struct sys_net_sockaddr_in
 	be_t<u32> sa_addr; // struct in_addr
 	u8 unused[8];
 };
+
+struct sys_net_fd_set
+{
+	s32 fds_bits[8];
+};

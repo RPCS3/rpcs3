@@ -98,6 +98,7 @@ namespace sys_net_func
 	s32 accept(s32 s, vm::ptr<sys_net_sockaddr> addr, vm::ptr<pck_len_t> paddrlen)
 	{
 		sys_net.Warning("accept(s=%d, family=*0x%x, paddrlen=*0x%x)", s, addr, paddrlen);
+
 		if (!addr) {
 			int ret = ::accept(s, nullptr, nullptr);
 			*g_lastError = getLastError();
@@ -108,7 +109,7 @@ namespace sys_net_func
 			memcpy(&_addr, addr.get_ptr(), sizeof(sockaddr));
 			_addr.sa_family = addr->sa_family;
 			pck_len_t _paddrlen;
-			int ret = ::accept(s, &_addr, &_paddrlen);
+			s32 ret = ::accept(s, &_addr, &_paddrlen);
 			*paddrlen = _paddrlen;
 			*g_lastError = getLastError();
 			return ret;
@@ -118,26 +119,30 @@ namespace sys_net_func
 	s32 bind(s32 s, vm::ptr<sys_net_sockaddr_in> addr, u32 addrlen)
 	{
 		sys_net.Warning("bind(s=%d, family=*0x%x, addrlen=%d)", s, addr, addrlen);
+
 		sockaddr_in saddr;
 		memcpy(&saddr, addr.get_ptr(), sizeof(sockaddr_in));
 		saddr.sin_family = addr->sin_family;
 		const char *ipaddr = inet_ntoa(saddr.sin_addr);
 		sys_net.Warning("binding on %s to port %d", ipaddr, ntohs(saddr.sin_port));
-		int ret = ::bind(s, (const sockaddr *)&saddr, addrlen);
+		s32 ret = ::bind(s, (const sockaddr *)&saddr, addrlen);
 		*g_lastError = getLastError();
+
 		return ret;
 	}
 
 	s32 connect(s32 s, vm::ptr<sys_net_sockaddr_in> addr, u32 addrlen)
 	{
 		sys_net.Warning("connect(s=%d, family=*0x%x, addrlen=%d)", s, addr, addrlen);
+
 		sockaddr_in saddr;
 		memcpy(&saddr, addr.get_ptr(), sizeof(sockaddr_in));
 		saddr.sin_family = addr->sin_family;
 		const char *ipaddr = inet_ntoa(saddr.sin_addr);
 		sys_net.Warning("connecting on %s to port %d", ipaddr, ntohs(saddr.sin_port));
-		int ret = ::connect(s, (const sockaddr *)&saddr, addrlen);
+		s32 ret = ::connect(s, (const sockaddr *)&saddr, addrlen);
 		*g_lastError = getLastError();
+
 		return ret;
 	}
 
@@ -229,8 +234,9 @@ namespace sys_net_func
 	s32 listen(s32 s, s32 backlog)
 	{
 		sys_net.Warning("listen(s=%d, backlog=%d)", s, backlog);
-		int ret = ::listen(s, backlog);
+		s32 ret = ::listen(s, backlog);
 		*g_lastError = getLastError();
+
 		return ret;
 	}
 
@@ -238,8 +244,9 @@ namespace sys_net_func
 	{
 		sys_net.Warning("recv(s=%d, buf=*0x%x, len=%d, flags=0x%x)", s, buf, len, flags);
 
-		int ret = ::recv(s, buf.get_ptr(), len, flags);
+		s32 ret = ::recv(s, buf.get_ptr(), len, flags);
 		*g_lastError = getLastError();
+
 		return ret;
 	}
 
@@ -251,24 +258,26 @@ namespace sys_net_func
 		memcpy(&_addr, addr.get_ptr(), sizeof(sockaddr));
 		_addr.sa_family = addr->sa_family;
 		pck_len_t _paddrlen;
-		int ret = ::recvfrom(s, buf.get_ptr(), len, flags, &_addr, &_paddrlen);
+		s32 ret = ::recvfrom(s, buf.get_ptr(), len, flags, &_addr, &_paddrlen);
 		*paddrlen = _paddrlen;
 		*g_lastError = getLastError();
+
 		return ret;
 	}
 
 	s32 recvmsg()
 	{
 		UNIMPLEMENTED_FUNC(sys_net);
-		return CELL_OK;
+return CELL_OK;
 	}
 
 	s32 send(s32 s, vm::cptr<char> buf, u32 len, s32 flags)
 	{
 		sys_net.Warning("send(s=%d, buf=*0x%x, len=%d, flags=0x%x)", s, buf, len, flags);
 
-		int ret = ::send(s, buf.get_ptr(), len, flags);
+		s32 ret = ::send(s, buf.get_ptr(), len, flags);
 		*g_lastError = getLastError();
+
 		return ret;
 	}
 
@@ -285,8 +294,9 @@ namespace sys_net_func
 		sockaddr _addr;
 		memcpy(&_addr, addr.get_ptr(), sizeof(sockaddr));
 		_addr.sa_family = addr->sa_family;
-		int ret = ::sendto(s, buf.get_ptr(), len, flags, &_addr, addrlen);
+		s32 ret = ::sendto(s, buf.get_ptr(), len, flags, &_addr, addrlen);
 		*g_lastError = getLastError();
+
 		return ret;
 	}
 
@@ -294,24 +304,29 @@ namespace sys_net_func
 	{
 		sys_net.Warning("socket(s=%d, level=%d, optname=%d, optval=*0x%x, optlen=%d)", s, level, optname, optval, optlen);
 
-		int ret = ::setsockopt(s, level, optname, optval.get_ptr(), optlen);
+		s32 ret = ::setsockopt(s, level, optname, optval.get_ptr(), optlen);
 		*g_lastError = getLastError();
+
 		return ret;
 	}
 
 	s32 shutdown(s32 s, s32 how)
 	{
 		sys_net.Warning("shutdown(s=%d, how=%d)", s, how);
-		int ret = ::shutdown(s, how);
+
+		s32 ret = ::shutdown(s, how);
 		*g_lastError = getLastError();
+
 		return ret;
 	}
 
 	s32 socket(s32 family, s32 type, s32 protocol)
 	{
 		sys_net.Warning("socket(family=%d, type=%d, protocol=%d)", family, type, protocol);
-		int ret = ::socket(family, type, protocol);
+
+		s32 ret = ::socket(family, type, protocol);
 		*g_lastError = getLastError();
+
 		return ret;
 	}
 
@@ -333,9 +348,39 @@ namespace sys_net_func
 		return CELL_OK;
 	}
 
-	s32 socketselect()
+	s32 socketselect(s32 nfds, vm::ptr<fd_set> readfds, vm::ptr<sys_net_fd_set> writefds, vm::ptr<sys_net_fd_set> exceptfds, vm::ptr<timeval> timeout)
 	{
-		UNIMPLEMENTED_FUNC(sys_net);
+		sys_net.Todo("socketselect(nfds=%d, readfds_addr=0x%x, writefds_addr=0x%x, exceptfds_addr=0x%x, timeout_addr=0x%x)",
+			nfds, readfds.addr(), writefds.addr(), exceptfds.addr(), timeout.addr());
+
+		fd_set _readfds;
+		fd_set _writefds;
+		fd_set _exceptfds;
+
+		if (readfds)
+		{
+			memcpy(&_readfds, readfds.get_ptr(), sizeof(fd_set));
+		}
+
+		if (writefds)
+		{
+			memcpy(&_writefds, writefds.get_ptr(), sizeof(fd_set));
+		}
+
+		if (exceptfds)
+		{
+			memcpy(&_exceptfds, exceptfds.get_ptr(), sizeof(fd_set));
+		}
+
+		s32 ret = ::select(nfds, readfds.get_ptr(), &_writefds, &_exceptfds, timeout.get_ptr());
+		*g_lastError = getLastError();
+
+		if (getLastError() >= 0)
+		{
+			sys_net.Error("socketselect(): error %d", getLastError());
+		}
+
+		//return ret;
 		return CELL_OK;
 	}
 }

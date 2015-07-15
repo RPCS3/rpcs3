@@ -620,64 +620,64 @@ union CellSailEvent
 	};
 };
 
-typedef u32(CellSailMemAllocatorFuncAlloc)(u32 pArg, u32 boundary, u32 size);
-typedef u32(CellSailMemAllocatorFuncFree)(u32 pArg, u32 boundary, u32 pMemory);
+typedef vm::ptr<u32>(CellSailMemAllocatorFuncAlloc)(vm::ptr<u32> pArg, u32 boundary, u32 size);
+typedef u32(CellSailMemAllocatorFuncFree)(vm::ptr<u32> pArg, u32 boundary, vm::ptr<u32> pMemory);
 
-typedef int(CellSailSoundAdapterFuncMakeup)(u32 pArg);
-typedef int(CellSailSoundAdapterFuncCleanup)(u32 pArg);
-typedef void(CellSailSoundAdapterFuncFormatChanged)(u32 pArg, vm::ptr<CellSailAudioFormat> pFormat, u32 sessionId);
+typedef s32(CellSailSoundAdapterFuncMakeup)(vm::ptr<u32> pArg);
+typedef s32(CellSailSoundAdapterFuncCleanup)(vm::ptr<u32> pArg);
+typedef u32(CellSailSoundAdapterFuncFormatChanged)(vm::ptr<u32> pArg, vm::ptr<CellSailAudioFormat> pFormat, u32 sessionId);
 
-typedef int(CellSailGraphicsAdapterFuncMakeup)(u32 pArg);
-typedef int(CellSailGraphicsAdapterFuncCleanup)(u32 pArg);
-typedef void(CellSailGraphicsAdapterFuncFormatChanged)(u32 pArg, vm::ptr<CellSailVideoFormat> pFormat, u32 sessionId);
-typedef int(CellSailGraphicsAdapterFuncAllocFrame)(u32 pArg, u32 size, s32 num, u8 ppFrame);
-typedef int(CellSailGraphicsAdapterFuncFreeFrame)(u32 pArg, s32 num, u8 ppFrame);
+typedef s32(CellSailGraphicsAdapterFuncMakeup)(vm::ptr<u32> pArg);
+typedef s32(CellSailGraphicsAdapterFuncCleanup)(vm::ptr<u32> pArg);
+typedef u32(CellSailGraphicsAdapterFuncFormatChanged)(vm::ptr<u32> pArg, vm::ptr<CellSailVideoFormat> pFormat, u32 sessionId);
+typedef s32(CellSailGraphicsAdapterFuncAllocFrame)(vm::ptr<u32> pArg, u32 size, s32 num, vm::ptr<u8> ppFrame);
+typedef s32(CellSailGraphicsAdapterFuncFreeFrame)(vm::ptr<u32> pArg, s32 num, vm::ptr<u8> ppFrame);
 
-typedef int(CellSailSourceFuncMakeup)(u32 pArg, s8 pProtocolNames);
-typedef int(CellSailSourceFuncCleanup)(u32 pArg);
-typedef void(CellSailSourceFuncOpen)(u32 pArg, s32 streamType, u32 pMediaInfo, s8 pUri, vm::ptr<CellSailSourceStreamingProfile> pProfile);
-typedef void(CellSailSourceFuncClose)(u32 pArg);
-typedef void(CellSailSourceFuncStart)(u32 pArg, vm::ptr<CellSailSourceStartCommand> pCommand, u32 sessionId);
-typedef void(CellSailSourceFuncStop)(u32 pArg);
-typedef void(CellSailSourceFuncCancel)(u32 pArg);
-typedef int(CellSailSourceFuncCheckout)(u32 pArg, vm::ptr<CellSailSourceBufferItem> ppItem);
-typedef int(CellSailSourceFuncCheckin)(u32 pArg, vm::ptr<CellSailSourceBufferItem> pItem);
-typedef int(CellSailSourceFuncClear)(u32 pArg);
-typedef int(CellSailSourceFuncRead)(u32 pArg, s32 streamType, u32 pMediaInfo, s8 pUri, u64 offset, u8 pBuf, u32 size, u64 pTotalSize);
-typedef int(CellSailSourceFuncReadSync)(u32 pArg, s32 streamType, u32 pMediaInfo, s8 pUri, u64 offset, u8 pBuf, u32 size, u64 pTotalSize);
-typedef int(CellSailSourceFuncGetCapabilities)(u32 pArg, s32 streamType, u32 pMediaInfo, s8 pUri, u64 pCapabilities);
-typedef int(CellSailSourceFuncInquireCapability)(u32 pArg, s32 streamType, u32 pMediaInfo, s8 pUri, vm::ptr<CellSailSourceStartCommand> pCommand);
-typedef void(CellSailSourceCheckFuncError)(u32 pArg, s8 pMsg, s32 line);
+typedef s32(CellSailSourceFuncMakeup)(vm::ptr<u32> pArg, vm::cptr<s8> pProtocolNames);
+typedef s32(CellSailSourceFuncCleanup)(vm::ptr<u32> pArg);
+typedef u32(CellSailSourceFuncOpen)(vm::ptr<u32> pArg, s32 streamType, vm::ptr<u32> pMediaInfo, vm::cptr<s8> pUri, vm::ptr<CellSailSourceStreamingProfile> pProfile);
+typedef u32(CellSailSourceFuncClose)(vm::ptr<u32> pArg);
+typedef u32(CellSailSourceFuncStart)(vm::ptr<u32> pArg, vm::ptr<CellSailSourceStartCommand> pCommand, u32 sessionId);
+typedef u32(CellSailSourceFuncStop)(vm::ptr<u32> pArg);
+typedef u32(CellSailSourceFuncCancel)(vm::ptr<u32> pArg);
+typedef s32(CellSailSourceFuncCheckout)(vm::ptr<u32> pArg, vm::ptr<CellSailSourceBufferItem> ppItem);
+typedef s32(CellSailSourceFuncCheckin)(vm::ptr<u32> pArg, vm::ptr<CellSailSourceBufferItem> pItem);
+typedef s32(CellSailSourceFuncClear)(vm::ptr<u32> pArg);
+typedef s32(CellSailSourceFuncRead)(vm::ptr<u32> pArg, s32 streamType, vm::ptr<u32> pMediaInfo, vm::cptr<s8> pUri, u64 offset, vm::ptr<u8> pBuf, u32 size, vm::ptr<u64> pTotalSize);
+typedef s32(CellSailSourceFuncReadSync)(vm::ptr<u32> pArg, s32 streamType, vm::ptr<u32> pMediaInfo, vm::cptr<s8> pUri, u64 offset, vm::ptr<u8> pBuf, u32 size, vm::ptr<u64> pTotalSize);
+typedef s32(CellSailSourceFuncGetCapabilities)(vm::ptr<u32> pArg, s32 streamType, vm::ptr<u32> pMediaInfo, vm::cptr<s8> pUri, vm::ptr<u64> pCapabilities);
+typedef s32(CellSailSourceFuncInquireCapability)(vm::ptr<u32> pArg, s32 streamType, vm::ptr<u32> pMediaInfo, vm::cptr<s8> pUri, vm::ptr<CellSailSourceStartCommand> pCommand);
+typedef u32(CellSailSourceCheckFuncError)(vm::ptr<u32> pArg, vm::cptr<s8> pMsg, s32 line);
 
-typedef int(CellSailFsFuncOpen)(s8 pPath, s32 flag, s32 pFd, u32 pArg, u64 size);
-typedef int(CellSailFsFuncOpenSecond)(s8 pPath, s32 flag, s32 fd, u32 pArg, u64 size);
-typedef int(CellSailFsFuncClose)(s32 fd);
-typedef int(CellSailFsFuncFstat)(s32 fd, u32 pStat_addr);
-typedef int(CellSailFsFuncRead)(s32 fd, u32 pBuf, u64 numBytes, u64 pNumRead);
-typedef int(CellSailFsFuncLseek)(s32 fd, s64 offset, s32 whence, u64 pPosition);
-typedef int(CellSailFsFuncCancel)(s32 fd);
+typedef s32(CellSailFsFuncOpen)(vm::cptr<s8> pPath, s32 flag, vm::ptr<s32> pFd, vm::ptr<u32> pArg, u64 size);
+typedef s32(CellSailFsFuncOpenSecond)(vm::cptr<s8> pPath, s32 flag, s32 fd, vm::ptr<u32> pArg, u64 size);
+typedef s32(CellSailFsFuncClose)(s32 fd);
+typedef s32(CellSailFsFuncFstat)(s32 fd, vm::ptr<u32> pStat_addr);
+typedef s32(CellSailFsFuncRead)(s32 fd, vm::ptr<u32> pBuf, u64 numBytes, vm::ptr<u64> pNumRead);
+typedef s32(CellSailFsFuncLseek)(s32 fd, s64 offset, s32 whence, vm::ptr<u64> pPosition);
+typedef s32(CellSailFsFuncCancel)(s32 fd);
 
-typedef int(CellSailRendererAudioFuncMakeup)(u32 pArg);
-typedef int(CellSailRendererAudioFuncCleanup)(u32 pArg);
-typedef void(CellSailRendererAudioFuncOpen)(u32 pArg, vm::ptr<CellSailAudioFormat> pInfo, u32 frameNum);
-typedef void(CellSailRendererAudioFuncClose)(u32 pArg);
-typedef void(CellSailRendererAudioFuncStart)(u32 pArg, bool buffering);
-typedef void(CellSailRendererAudioFuncStop)(u32 pArg, bool flush);
-typedef void(CellSailRendererAudioFuncCancel)(u32 pArg);
-typedef int(CellSailRendererAudioFuncCheckout)(u32 pArg, vm::ptr<CellSailAudioFrameInfo> ppInfo);
-typedef int(CellSailRendererAudioFuncCheckin)(u32 pArg, vm::ptr<CellSailAudioFrameInfo> pInfo);
+typedef s32(CellSailRendererAudioFuncMakeup)(vm::ptr<u32> pArg);
+typedef s32(CellSailRendererAudioFuncCleanup)(vm::ptr<u32> pArg);
+typedef u32(CellSailRendererAudioFuncOpen)(vm::ptr<u32> pArg, vm::ptr<CellSailAudioFormat> pInfo, u32 frameNum);
+typedef u32(CellSailRendererAudioFuncClose)(vm::ptr<u32> pArg);
+typedef u32(CellSailRendererAudioFuncStart)(vm::ptr<u32> pArg, bool buffering);
+typedef u32(CellSailRendererAudioFuncStop)(vm::ptr<u32> pArg, bool flush);
+typedef u32(CellSailRendererAudioFuncCancel)(vm::ptr<u32> pArg);
+typedef s32(CellSailRendererAudioFuncCheckout)(vm::ptr<u32> pArg, vm::ptr<CellSailAudioFrameInfo> ppInfo);
+typedef s32(CellSailRendererAudioFuncCheckin)(vm::ptr<u32> pArg, vm::ptr<CellSailAudioFrameInfo> pInfo);
 
-typedef int(CellSailRendererVideoFuncMakeup)(u32 pArg);
-typedef int(CellSailRendererVideoFuncCleanup)(u32 pArg);
-typedef void(CellSailRendererVideoFuncOpen)(u32 pArg, vm::ptr<CellSailVideoFormat> pInfo, u32 frameNum, u32 minFrameNum);
-typedef void(CellSailRendererVideoFuncClose)(u32 pArg);
-typedef void(CellSailRendererVideoFuncStart)(u32 pArg, bool buffering);
-typedef void(CellSailRendererVideoFuncStop)(u32 pArg, bool flush, bool keepRendering);
-typedef void(CellSailRendererVideoFuncCancel)(u32 pArg);
-typedef int(CellSailRendererVideoFuncCheckout)(u32 pArg, vm::ptr<CellSailVideoFrameInfo> ppInfo);
-typedef int(CellSailRendererVideoFuncCheckin)(u32 pArg, vm::ptr<CellSailVideoFrameInfo> pInfo);
+typedef s32(CellSailRendererVideoFuncMakeup)(vm::ptr<u32> pArg);
+typedef s32(CellSailRendererVideoFuncCleanup)(vm::ptr<u32> pArg);
+typedef u32(CellSailRendererVideoFuncOpen)(vm::ptr<u32> pArg, vm::ptr<CellSailVideoFormat> pInfo, u32 frameNum, u32 minFrameNum);
+typedef u32(CellSailRendererVideoFuncClose)(vm::ptr<u32> pArg);
+typedef u32(CellSailRendererVideoFuncStart)(vm::ptr<u32> pArg, bool buffering);
+typedef u32(CellSailRendererVideoFuncStop)(vm::ptr<u32> pArg, bool flush, bool keepRendering);
+typedef u32(CellSailRendererVideoFuncCancel)(vm::ptr<u32> pArg);
+typedef s32(CellSailRendererVideoFuncCheckout)(vm::ptr<u32> pArg, vm::ptr<CellSailVideoFrameInfo> ppInfo);
+typedef s32(CellSailRendererVideoFuncCheckin)(vm::ptr<u32> pArg, vm::ptr<CellSailVideoFrameInfo> pInfo);
 
-typedef void(CellSailPlayerFuncNotified)(u32 pArg, vm::ptr<CellSailEvent> event, u64 arg0, u64 arg1);
+typedef void(CellSailPlayerFuncNotified)(vm::ptr<u32> pArg, CellSailEvent event, u64 arg0, u64 arg1);
 
 struct CellSailMemAllocatorFuncs
 {
@@ -855,8 +855,8 @@ struct CellSailMp4DateTime
 	be_t<u16> day;
 	be_t<u16> month;
 	be_t<u16> year;
-	//be_t<u16> reserved0;
-	//be_t<u16> reserved1;
+	be_t<u16> reserved0;
+	be_t<u16> reserved1;
 };
 
 struct CellSailMp4Movie
@@ -871,7 +871,7 @@ struct CellSailMp4MovieInfo
 	be_t<u32> trackCount;
 	be_t<u32> movieTimeScale;
 	be_t<u32> movieDuration;
-	//be_t<u32> reserved[16];
+	be_t<u32> reserved[16];
 };
 
 struct CellSailMp4Track
@@ -893,7 +893,7 @@ struct CellSailMp4TrackInfo
 	be_t<u16> language;
 	be_t<u16> reserved2;
 	be_t<u16> mediaType;
-	//be_t<u32> reserved3[3];
+	be_t<u32> reserved3[3];
 };
 
 struct CellSailAviMovie
@@ -913,8 +913,8 @@ struct CellSailAviMovieInfo
 	be_t<u32> scale;
 	be_t<u32> rate;
 	be_t<u32> length;
-	//be_t<u32> reserved1;
-	//be_t<u32> reserved2;
+	be_t<u32> reserved1;
+	be_t<u32> reserved2;
 };
 
 struct CellSailAviMainHeader
@@ -929,7 +929,7 @@ struct CellSailAviMainHeader
 	be_t<u32> suggestedBufferSize;
 	be_t<u32> width;
 	be_t<u32> height;
-	//be_t<u32> reserved[4];
+	be_t<u32> reserved[4];
 };
 
 struct CellSailAviExtendedHeader

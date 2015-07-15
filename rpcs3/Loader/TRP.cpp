@@ -22,7 +22,11 @@ bool TRPLoader::Install(std::string dest, bool show)
 	if (!dest.empty() && dest.back() != '/')
 		dest += '/';
 
-	Emu.GetVFS().CreateDir(dest);
+	if (!Emu.GetVFS().ExistsDir(dest))
+	{
+		Emu.GetVFS().CreateDir(dest);
+	}
+
 	for (const TRPEntry& entry : m_entries)
 	{
 		char* buffer = new char [(u32)entry.size];

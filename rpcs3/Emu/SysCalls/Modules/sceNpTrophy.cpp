@@ -231,7 +231,7 @@ s32 sceNpTrophyRegisterContext(PPUThread& CPU, u32 context, u32 handle, vm::ptr<
 
 s32 sceNpTrophyGetRequiredDiskSpace(u32 context, u32 handle, vm::ptr<u64> reqspace, u64 options)
 {
-	sceNpTrophy.Error("sceNpTrophyGetRequiredDiskSpace(context=0x%x, handle=0x%x, reqspace*=0x%x, options=0x%llx)", context, handle, reqspace, options);
+	sceNpTrophy.Todo("sceNpTrophyGetRequiredDiskSpace(context=0x%x, handle=0x%x, reqspace*=0x%x, options=0x%llx)", context, handle, reqspace, options);
 
 	const auto ctxt = Emu.GetIdManager().get<trophy_context_t>(context);
 
