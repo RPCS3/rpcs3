@@ -144,7 +144,7 @@ static const g_module_list[] =
 	{ 0x0053, "cellMusicDecode2", nullptr },
 	{ 0x0055, "cellSync2", &cellSync2 },
 	{ 0x0056, "sceNpUtil", nullptr },
-	{ 0x0057, "cellRudp", nullptr },
+	{ 0x0057, "cellRudp", &cellRudp },
 	{ 0x0059, "sceNpSns", &sceNpSns },
 	{ 0x005a, "cellGem", &cellGem },
 	{ 0xf00a, "cellCelpEnc", nullptr },

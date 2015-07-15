@@ -2,6 +2,8 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
+
+#include "sys_net.h"
 #include "cellRudp.h"
 
 extern Module cellRudp;
@@ -9,6 +11,9 @@ extern Module cellRudp;
 struct cellRudpInternal
 {
 	bool m_bInitialized;
+	CellRudpAllocator allocator;
+	vm::ptr<CellRudpEventHandler> handler;
+	u32 argument;
 
 	cellRudpInternal()
 		: m_bInitialized(false)
@@ -20,10 +25,18 @@ cellRudpInternal cellRudpInstance;
 
 s32 cellRudpInit(vm::ptr<CellRudpAllocator> allocator)
 {
-	cellRudp.Warning("cellRudpInit()");
+	cellRudp.Warning("cellRudpInit(allocator_addr=0x%x)", allocator.addr());
 
 	if (cellRudpInstance.m_bInitialized)
+	{
+		cellRudp.Error("cellRudpInit(): cellRudp has already been initialized.");
 		return CELL_RUDP_ERROR_ALREADY_INITIALIZED;
+	}
+
+	if (allocator)
+	{
+		cellRudpInstance.allocator = *allocator.get_ptr();
+	}
 
 	cellRudpInstance.m_bInitialized = true;
 
@@ -32,10 +45,13 @@ s32 cellRudpInit(vm::ptr<CellRudpAllocator> allocator)
 
 s32 cellRudpEnd()
 {
-	cellRudp.Log("cellRudpInit()");
+	cellRudp.Log("cellRudpEnd()");
 
 	if (!cellRudpInstance.m_bInitialized)
+	{
+		cellRudp.Error("cellRudpEnd(): cellRudp has not been initialized.");
 		return CELL_RUDP_ERROR_NOT_INITIALIZED;
+	}
 
 	cellRudpInstance.m_bInitialized = false;
 
@@ -48,9 +64,19 @@ s32 cellRudpEnableInternalIOThread()
 	return CELL_OK;
 }
 
-s32 cellRudpSetEventHandler()
+s32 cellRudpSetEventHandler(vm::ptr<CellRudpEventHandler> handler, vm::ptr<u32> arg)
 {
-	UNIMPLEMENTED_FUNC(cellRudp);
+	cellRudp.Todo("cellRudpSetEventHandler(handler=0x%x, arg_addr=0x%x)", handler, arg.addr());
+
+	if (!cellRudpInstance.m_bInitialized)
+	{
+		cellRudp.Error("cellRudpInit(): cellRudp has not been initialized.");
+		return CELL_RUDP_ERROR_NOT_INITIALIZED;
+	}
+
+	cellRudpInstance.argument = *arg.get_ptr();
+	cellRudpInstance.handler = handler;
+
 	return CELL_OK;
 }
 

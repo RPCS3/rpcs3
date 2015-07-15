@@ -46,6 +46,39 @@ enum
 	CELL_RUDP_ERROR_KEEP_ALIVE_FAILURE           = 0x80770026,
 };
 
+// Context options
+enum
+{
+	CELL_RUDP_OPTION_MAX_PAYLOAD         = 1,
+	CELL_RUDP_OPTION_SNDBUF              = 2,
+	CELL_RUDP_OPTION_RCVBUF              = 3,
+	CELL_RUDP_OPTION_NODELAY             = 4,
+	CELL_RUDP_OPTION_DELIVERY_CRITICAL   = 5,
+	CELL_RUDP_OPTION_ORDER_CRITICAL      = 6,
+	CELL_RUDP_OPTION_NONBLOCK            = 7,
+	CELL_RUDP_OPTION_STREAM              = 8,
+	CELL_RUDP_OPTION_CONNECTION_TIMEOUT  = 9,
+	CELL_RUDP_OPTION_CLOSE_WAIT_TIMEOUT  = 10,
+	CELL_RUDP_OPTION_AGGREGATION_TIMEOUT = 11,
+	CELL_RUDP_OPTION_LAST_ERROR          = 14,
+	CELL_RUDP_OPTION_READ_TIMEOUT        = 15,
+	CELL_RUDP_OPTION_WRITE_TIMEOUT       = 16,
+	CELL_RUDP_OPTION_FLUSH_TIMEOUT       = 17,
+	CELL_RUDP_OPTION_KEEP_ALIVE_INTERVAL = 18,
+	CELL_RUDP_OPTION_KEEP_ALIVE_TIMEOUT  = 19,
+};
+
+// Polling event flags
+enum
+{
+	CELL_RUDP_POLL_EV_READ  = 0x0001,
+	CELL_RUDP_POLL_EV_WRITE = 0x0002,
+	CELL_RUDP_POLL_EV_FLUSH = 0x0004,
+	CELL_RUDP_POLL_EV_ERROR = 0x0008,
+};
+
+typedef s32(CellRudpEventHandler)(s32 event_id, s32 soc, vm::cptr<u8> data, u32 datalen, vm::cptr<sys_net_sockaddr> addr, u32 addrlen, vm::ptr<u32> arg);
+
 using CellRudpAllocatorFuncAlloc = func_def<vm::ptr<u32>(u32 size)>;
 using CellRudpAllocatorFuncFree = func_def<u32(vm::ptr<u32> ptr)>;
 
