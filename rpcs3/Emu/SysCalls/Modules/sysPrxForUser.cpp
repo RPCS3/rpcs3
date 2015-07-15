@@ -32,8 +32,6 @@ u32 g_tls_size;
 
 std::array<std::atomic<u32>, TLS_MAX> g_tls_owners;
 
-waiter_map_t g_sys_spinlock_wm("sys_spinlock_wm");
-
 void sys_initialize_tls()
 {
 	sysPrxForUser.Log("sys_initialize_tls()");
@@ -120,18 +118,18 @@ s32 sys_lwmutex_create(vm::ptr<sys_lwmutex_t> lwmutex, vm::ptr<sys_lwmutex_attri
 	return CELL_OK;
 }
 
-s32 sys_lwmutex_destroy(PPUThread& CPU, vm::ptr<sys_lwmutex_t> lwmutex)
+s32 sys_lwmutex_destroy(PPUThread& ppu, vm::ptr<sys_lwmutex_t> lwmutex)
 {
 	sysPrxForUser.Log("sys_lwmutex_destroy(lwmutex=*0x%x)", lwmutex);
 
 	// check to prevent recursive locking in the next call
-	if (lwmutex->vars.owner.load() == CPU.GetId())
+	if (lwmutex->vars.owner.load() == ppu.GetId())
 	{
 		return CELL_EBUSY;
 	}
 
 	// attempt to lock the mutex
-	if (s32 res = sys_lwmutex_trylock(CPU, lwmutex))
+	if (s32 res = sys_lwmutex_trylock(ppu, lwmutex))
 	{
 		return res;
 	}
@@ -140,7 +138,7 @@ s32 sys_lwmutex_destroy(PPUThread& CPU, vm::ptr<sys_lwmutex_t> lwmutex)
 	if (s32 res = _sys_lwmutex_destroy(lwmutex->sleep_queue))
 	{
 		// unlock the mutex if failed
-		sys_lwmutex_unlock(CPU, lwmutex);
+		sys_lwmutex_unlock(ppu, lwmutex);
 
 		return res;
 	}
@@ -151,11 +149,11 @@ s32 sys_lwmutex_destroy(PPUThread& CPU, vm::ptr<sys_lwmutex_t> lwmutex)
 	return CELL_OK;
 }
 
-s32 sys_lwmutex_lock(PPUThread& CPU, vm::ptr<sys_lwmutex_t> lwmutex, u64 timeout)
+s32 sys_lwmutex_lock(PPUThread& ppu, vm::ptr<sys_lwmutex_t> lwmutex, u64 timeout)
 {
 	sysPrxForUser.Log("sys_lwmutex_lock(lwmutex=*0x%x, timeout=0x%llx)", lwmutex, timeout);
 
-	const be_t<u32> tid = CPU.GetId();
+	const be_t<u32> tid = ppu.GetId();
 
 	// try to lock lightweight mutex
 	const be_t<u32> old_owner = lwmutex->vars.owner.compare_and_swap(lwmutex_free, tid);
@@ -245,11 +243,11 @@ s32 sys_lwmutex_lock(PPUThread& CPU, vm::ptr<sys_lwmutex_t> lwmutex, u64 timeout
 	return res;
 }
 
-s32 sys_lwmutex_trylock(PPUThread& CPU, vm::ptr<sys_lwmutex_t> lwmutex)
+s32 sys_lwmutex_trylock(PPUThread& ppu, vm::ptr<sys_lwmutex_t> lwmutex)
 {
 	sysPrxForUser.Log("sys_lwmutex_trylock(lwmutex=*0x%x)", lwmutex);
 
-	const be_t<u32> tid = CPU.GetId();
+	const be_t<u32> tid = ppu.GetId();
 
 	// try to lock lightweight mutex
 	const be_t<u32> old_owner = lwmutex->vars.owner.compare_and_swap(lwmutex_free, tid);
@@ -312,11 +310,11 @@ s32 sys_lwmutex_trylock(PPUThread& CPU, vm::ptr<sys_lwmutex_t> lwmutex)
 	return CELL_EBUSY;
 }
 
-s32 sys_lwmutex_unlock(PPUThread& CPU, vm::ptr<sys_lwmutex_t> lwmutex)
+s32 sys_lwmutex_unlock(PPUThread& ppu, vm::ptr<sys_lwmutex_t> lwmutex)
 {
 	sysPrxForUser.Log("sys_lwmutex_unlock(lwmutex=*0x%x)", lwmutex);
 
-	const be_t<u32> tid = CPU.GetId();
+	const be_t<u32> tid = ppu.GetId();
 
 	// check owner
 	if (lwmutex->vars.owner.load() != tid)
@@ -380,7 +378,7 @@ s32 sys_lwcond_destroy(vm::ptr<sys_lwcond_t> lwcond)
 	return res;
 }
 
-s32 sys_lwcond_signal(PPUThread& CPU, vm::ptr<sys_lwcond_t> lwcond)
+s32 sys_lwcond_signal(PPUThread& ppu, vm::ptr<sys_lwcond_t> lwcond)
 {
 	sysPrxForUser.Log("sys_lwcond_signal(lwcond=*0x%x)", lwcond);
 
@@ -392,7 +390,7 @@ s32 sys_lwcond_signal(PPUThread& CPU, vm::ptr<sys_lwcond_t> lwcond)
 		//return _sys_lwcond_signal(lwcond->lwcond_queue, 0, -1, 2);
 	}
 
-	if (lwmutex->vars.owner.load() == CPU.GetId())
+	if (lwmutex->vars.owner.load() == ppu.GetId())
 	{
 		// if owns the mutex
 		lwmutex->all_info++;
@@ -408,7 +406,7 @@ s32 sys_lwcond_signal(PPUThread& CPU, vm::ptr<sys_lwcond_t> lwcond)
 		return CELL_OK;
 	}
 	
-	if (s32 res = sys_lwmutex_trylock(CPU, lwmutex))
+	if (s32 res = sys_lwmutex_trylock(ppu, lwmutex))
 	{
 		// if locking failed
 
@@ -430,7 +428,7 @@ s32 sys_lwcond_signal(PPUThread& CPU, vm::ptr<sys_lwcond_t> lwcond)
 		lwmutex->all_info--;
 
 		// unlock the lightweight mutex
-		sys_lwmutex_unlock(CPU, lwmutex);
+		sys_lwmutex_unlock(ppu, lwmutex);
 
 		return res == CELL_ENOENT ? CELL_OK : res;
 	}
@@ -438,7 +436,7 @@ s32 sys_lwcond_signal(PPUThread& CPU, vm::ptr<sys_lwcond_t> lwcond)
 	return CELL_OK;
 }
 
-s32 sys_lwcond_signal_all(PPUThread& CPU, vm::ptr<sys_lwcond_t> lwcond)
+s32 sys_lwcond_signal_all(PPUThread& ppu, vm::ptr<sys_lwcond_t> lwcond)
 {
 	sysPrxForUser.Log("sys_lwcond_signal_all(lwcond=*0x%x)", lwcond);
 
@@ -450,7 +448,7 @@ s32 sys_lwcond_signal_all(PPUThread& CPU, vm::ptr<sys_lwcond_t> lwcond)
 		//return _sys_lwcond_signal_all(lwcond->lwcond_queue, lwmutex->sleep_queue, 2);
 	}
 
-	if (lwmutex->vars.owner.load() == CPU.GetId())
+	if (lwmutex->vars.owner.load() == ppu.GetId())
 	{
 		// if owns the mutex, call the syscall
 		const s32 res = _sys_lwcond_signal_all(lwcond->lwcond_queue, lwmutex->sleep_queue, 1);
@@ -466,7 +464,7 @@ s32 sys_lwcond_signal_all(PPUThread& CPU, vm::ptr<sys_lwcond_t> lwcond)
 		return CELL_OK;
 	}
 
-	if (s32 res = sys_lwmutex_trylock(CPU, lwmutex))
+	if (s32 res = sys_lwmutex_trylock(ppu, lwmutex))
 	{
 		// if locking failed
 
@@ -490,12 +488,12 @@ s32 sys_lwcond_signal_all(PPUThread& CPU, vm::ptr<sys_lwcond_t> lwcond)
 	}
 
 	// unlock mutex
-	sys_lwmutex_unlock(CPU, lwmutex);
+	sys_lwmutex_unlock(ppu, lwmutex);
 
 	return res;
 }
 
-s32 sys_lwcond_signal_to(PPUThread& CPU, vm::ptr<sys_lwcond_t> lwcond, u32 ppu_thread_id)
+s32 sys_lwcond_signal_to(PPUThread& ppu, vm::ptr<sys_lwcond_t> lwcond, u32 ppu_thread_id)
 {
 	sysPrxForUser.Log("sys_lwcond_signal_to(lwcond=*0x%x, ppu_thread_id=0x%x)", lwcond, ppu_thread_id);
 
@@ -507,7 +505,7 @@ s32 sys_lwcond_signal_to(PPUThread& CPU, vm::ptr<sys_lwcond_t> lwcond, u32 ppu_t
 		//return _sys_lwcond_signal(lwcond->lwcond_queue, 0, ppu_thread_id, 2);
 	}
 
-	if (lwmutex->vars.owner.load() == CPU.GetId())
+	if (lwmutex->vars.owner.load() == ppu.GetId())
 	{
 		// if owns the mutex
 		lwmutex->all_info++;
@@ -523,7 +521,7 @@ s32 sys_lwcond_signal_to(PPUThread& CPU, vm::ptr<sys_lwcond_t> lwcond, u32 ppu_t
 		return CELL_OK;
 	}
 
-	if (s32 res = sys_lwmutex_trylock(CPU, lwmutex))
+	if (s32 res = sys_lwmutex_trylock(ppu, lwmutex))
 	{
 		// if locking failed
 
@@ -545,7 +543,7 @@ s32 sys_lwcond_signal_to(PPUThread& CPU, vm::ptr<sys_lwcond_t> lwcond, u32 ppu_t
 		lwmutex->all_info--;
 
 		// unlock the lightweight mutex
-		sys_lwmutex_unlock(CPU, lwmutex);
+		sys_lwmutex_unlock(ppu, lwmutex);
 
 		return res;
 	}
@@ -553,11 +551,11 @@ s32 sys_lwcond_signal_to(PPUThread& CPU, vm::ptr<sys_lwcond_t> lwcond, u32 ppu_t
 	return CELL_OK;
 }
 
-s32 sys_lwcond_wait(PPUThread& CPU, vm::ptr<sys_lwcond_t> lwcond, u64 timeout)
+s32 sys_lwcond_wait(PPUThread& ppu, vm::ptr<sys_lwcond_t> lwcond, u64 timeout)
 {
 	sysPrxForUser.Log("sys_lwcond_wait(lwcond=*0x%x, timeout=0x%llx)", lwcond, timeout);
 
-	const be_t<u32> tid = CPU.GetId();
+	const be_t<u32> tid = ppu.GetId();
 
 	const vm::ptr<sys_lwmutex_t> lwmutex = lwcond->lwmutex;
 
@@ -575,7 +573,7 @@ s32 sys_lwcond_wait(PPUThread& CPU, vm::ptr<sys_lwcond_t> lwcond, u64 timeout)
 	lwmutex->recursive_count = 0;
 
 	// call the syscall
-	s32 res = _sys_lwcond_queue_wait(CPU, lwcond->lwcond_queue, lwmutex->sleep_queue, timeout);
+	s32 res = _sys_lwcond_queue_wait(ppu, lwcond->lwcond_queue, lwmutex->sleep_queue, timeout);
 
 	if (res == CELL_OK || res == CELL_ESRCH)
 	{
@@ -598,7 +596,7 @@ s32 sys_lwcond_wait(PPUThread& CPU, vm::ptr<sys_lwcond_t> lwcond, u64 timeout)
 
 	if (res == CELL_EBUSY || res == CELL_ETIMEDOUT)
 	{
-		const s32 res2 = sys_lwmutex_lock(CPU, lwmutex, 0);
+		const s32 res2 = sys_lwmutex_lock(ppu, lwmutex, 0);
 
 		if (res2 == CELL_OK)
 		{
@@ -819,11 +817,11 @@ s64 _sys_process_at_Exitspawn()
 	return CELL_OK;
 }
 
-s32 sys_interrupt_thread_disestablish(PPUThread& CPU, u32 ih)
+s32 sys_interrupt_thread_disestablish(PPUThread& ppu, u32 ih)
 {
 	sysPrxForUser.Todo("sys_interrupt_thread_disestablish(ih=0x%x)", ih);
 
-	return _sys_interrupt_thread_disestablish(CPU, ih, vm::stackvar<be_t<u64>>(CPU));
+	return _sys_interrupt_thread_disestablish(ppu, ih, vm::stackvar<be_t<u64>>(ppu));
 }
 
 s32 sys_process_is_stack(u32 p)
@@ -898,7 +896,7 @@ s32 sys_raw_spu_load(s32 id, vm::cptr<char> path, vm::ptr<u32> entry)
 	return CELL_OK;
 }
 
-s32 sys_raw_spu_image_load(PPUThread& CPU, s32 id, vm::ptr<sys_spu_image> img)
+s32 sys_raw_spu_image_load(PPUThread& ppu, s32 id, vm::ptr<sys_spu_image> img)
 {
 	sysPrxForUser.Warning("sys_raw_spu_image_load(id=%d, img=*0x%x)", id, img);
 
@@ -1069,7 +1067,7 @@ s32 _sys_spu_printf_finalize()
 	return CELL_OK;
 }
 
-s32 _sys_spu_printf_attach_group(PPUThread& CPU, u32 group)
+s32 _sys_spu_printf_attach_group(PPUThread& ppu, u32 group)
 {
 	sysPrxForUser.Warning("_sys_spu_printf_attach_group(group=0x%x)", group);
 
@@ -1078,10 +1076,10 @@ s32 _sys_spu_printf_attach_group(PPUThread& CPU, u32 group)
 		return CELL_ESTAT;
 	}
 
-	return spu_printf_agcb(CPU, group);
+	return spu_printf_agcb(ppu, group);
 }
 
-s32 _sys_spu_printf_detach_group(PPUThread& CPU, u32 group)
+s32 _sys_spu_printf_detach_group(PPUThread& ppu, u32 group)
 {
 	sysPrxForUser.Warning("_sys_spu_printf_detach_group(group=0x%x)", group);
 
@@ -1090,10 +1088,10 @@ s32 _sys_spu_printf_detach_group(PPUThread& CPU, u32 group)
 		return CELL_ESTAT;
 	}
 
-	return spu_printf_dgcb(CPU, group);
+	return spu_printf_dgcb(ppu, group);
 }
 
-s32 _sys_spu_printf_attach_thread(PPUThread& CPU, u32 thread)
+s32 _sys_spu_printf_attach_thread(PPUThread& ppu, u32 thread)
 {
 	sysPrxForUser.Warning("_sys_spu_printf_attach_thread(thread=0x%x)", thread);
 
@@ -1102,10 +1100,10 @@ s32 _sys_spu_printf_attach_thread(PPUThread& CPU, u32 thread)
 		return CELL_ESTAT;
 	}
 
-	return spu_printf_atcb(CPU, thread);
+	return spu_printf_atcb(ppu, thread);
 }
 
-s32 _sys_spu_printf_detach_thread(PPUThread& CPU, u32 thread)
+s32 _sys_spu_printf_detach_thread(PPUThread& ppu, u32 thread)
 {
 	sysPrxForUser.Warning("_sys_spu_printf_detach_thread(thread=0x%x)", thread);
 
@@ -1114,7 +1112,7 @@ s32 _sys_spu_printf_detach_thread(PPUThread& CPU, u32 thread)
 		return CELL_ESTAT;
 	}
 
-	return spu_printf_dtcb(CPU, thread);
+	return spu_printf_dtcb(ppu, thread);
 }
 
 u32 _sys_malloc(u32 size)
@@ -1140,11 +1138,11 @@ s32 _sys_free(u32 addr)
 	return CELL_OK;
 }
 
-s32 _sys_snprintf(PPUThread& CPU, vm::ptr<char> dst, u32 count, vm::cptr<char> fmt, ppu_va_args_t va_args)
+s32 _sys_snprintf(PPUThread& ppu, vm::ptr<char> dst, u32 count, vm::cptr<char> fmt, ppu_va_args_t va_args)
 {
 	sysPrxForUser.Warning("_sys_snprintf(dst=*0x%x, count=%d, fmt=*0x%x, ...)", dst, count, fmt);
 
-	std::string result = ps3_fmt(CPU, fmt, va_args.g_count, va_args.f_count, va_args.v_count);
+	std::string result = ps3_fmt(ppu, fmt, va_args.g_count, va_args.f_count, va_args.v_count);
 
 	sysPrxForUser.Warning("*** '%s' -> '%s'", fmt.get_ptr(), result);
 
@@ -1186,14 +1184,14 @@ void sys_spinlock_initialize(vm::ptr<atomic_be_t<u32>> lock)
 	lock->exchange(0);
 }
 
-void sys_spinlock_lock(vm::ptr<atomic_be_t<u32>> lock)
+void sys_spinlock_lock(PPUThread& ppu, vm::ptr<atomic_be_t<u32>> lock)
 {
 	sysPrxForUser.Log("sys_spinlock_lock(lock=*0x%x)", lock);
 
 	// prx: exchange with 0xabadcafe, repeat until exchanged with 0
 	while (lock->exchange(0xabadcafe).data())
 	{
-		g_sys_spinlock_wm.wait_op(lock.addr(), WRAP_EXPR(!lock->load().data()));
+		vm::wait_op(ppu, lock.addr(), 4, WRAP_EXPR(!lock->load().data()));
 
 		CHECK_EMU_STATUS;
 	}
@@ -1219,10 +1217,10 @@ void sys_spinlock_unlock(vm::ptr<atomic_be_t<u32>> lock)
 	// prx: sync and set 0
 	lock->exchange(0);
 
-	g_sys_spinlock_wm.notify(lock.addr());
+	vm::notify_at(lock.addr(), 4);
 }
 
-s32 sys_ppu_thread_create(PPUThread& CPU, vm::ptr<u64> thread_id, u32 entry, u64 arg, s32 prio, u32 stacksize, u64 flags, vm::cptr<char> threadname)
+s32 sys_ppu_thread_create(PPUThread& ppu, vm::ptr<u64> thread_id, u32 entry, u64 arg, s32 prio, u32 stacksize, u64 flags, vm::cptr<char> threadname)
 {
 	sysPrxForUser.Warning("sys_ppu_thread_create(thread_id=*0x%x, entry=0x%x, arg=0x%llx, prio=%d, stacksize=0x%x, flags=0x%llx, threadname=*0x%x)", thread_id, entry, arg, prio, stacksize, flags, threadname);
 
@@ -1230,7 +1228,7 @@ s32 sys_ppu_thread_create(PPUThread& CPU, vm::ptr<u64> thread_id, u32 entry, u64
 	// (return CELL_ENOMEM if failed)
 	// ...
 
-	vm::stackvar<ppu_thread_param_t> attr(CPU);
+	vm::stackvar<ppu_thread_param_t> attr(ppu);
 
 	attr->entry = entry;
 	attr->tls = 0;
@@ -1245,16 +1243,16 @@ s32 sys_ppu_thread_create(PPUThread& CPU, vm::ptr<u64> thread_id, u32 entry, u64
 	return flags & SYS_PPU_THREAD_CREATE_INTERRUPT ? CELL_OK : sys_ppu_thread_start(static_cast<u32>(*thread_id));
 }
 
-s32 sys_ppu_thread_get_id(PPUThread& CPU, vm::ptr<u64> thread_id)
+s32 sys_ppu_thread_get_id(PPUThread& ppu, vm::ptr<u64> thread_id)
 {
 	sysPrxForUser.Log("sys_ppu_thread_get_id(thread_id=*0x%x)", thread_id);
 
-	*thread_id = CPU.GetId();
+	*thread_id = ppu.GetId();
 
 	return CELL_OK;
 }
 
-void sys_ppu_thread_exit(PPUThread& CPU, u64 val)
+void sys_ppu_thread_exit(PPUThread& ppu, u64 val)
 {
 	sysPrxForUser.Log("sys_ppu_thread_exit(val=0x%llx)", val);
 
@@ -1263,12 +1261,12 @@ void sys_ppu_thread_exit(PPUThread& CPU, u64 val)
 	// ...
 
 	// call the syscall
-	_sys_ppu_thread_exit(CPU, val);
+	_sys_ppu_thread_exit(ppu, val);
 }
 
 std::mutex g_once_mutex;
 
-void sys_ppu_thread_once(PPUThread& CPU, vm::ptr<atomic_be_t<u32>> once_ctrl, vm::ptr<void()> init)
+void sys_ppu_thread_once(PPUThread& ppu, vm::ptr<atomic_be_t<u32>> once_ctrl, vm::ptr<void()> init)
 {
 	sysPrxForUser.Warning("sys_ppu_thread_once(once_ctrl=*0x%x, init=*0x%x)", once_ctrl, init);
 
@@ -1277,7 +1275,7 @@ void sys_ppu_thread_once(PPUThread& CPU, vm::ptr<atomic_be_t<u32>> once_ctrl, vm
 	if (once_ctrl->compare_and_swap_test(SYS_PPU_THREAD_ONCE_INIT, SYS_PPU_THREAD_DONE_INIT))
 	{
 		// call init function using current thread context
-		init(CPU);
+		init(ppu);
 	}
 }
 

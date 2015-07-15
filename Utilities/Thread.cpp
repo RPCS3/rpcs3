@@ -1377,20 +1377,6 @@ bool thread_t::is_current() const
 	return g_tls_this_thread == m_thread.get();
 }
 
-void waiter_map_t::check_emu_status(u32 addr)
-{
-	if (Emu.IsStopped())
-	{
-		throw EXCEPTION("Aborted (emulation stopped) (%s, addr=0x%x)", name, addr);
-	}
-}
-
-void waiter_map_t::notify(u32 addr)
-{
-	// signal an appropriate condition variable
-	cvs[get_hash(addr)].notify_all();
-}
-
 const std::function<bool()> SQUEUE_ALWAYS_EXIT = [](){ return true; };
 const std::function<bool()> SQUEUE_NEVER_EXIT = [](){ return false; };
 

@@ -97,61 +97,6 @@ public:
 	using thread_t::is_current;
 };
 
-struct waiter_map_t
-{
-	static const size_t size = 16;
-
-	std::array<std::mutex, size> mutexes;
-	std::array<std::condition_variable, size> cvs;
-
-	const std::string name;
-
-	waiter_map_t(const char* name)
-		: name(name)
-	{
-	}
-
-	// generate simple "hash" for mutex/cv distribution
-	u32 get_hash(u32 addr)
-	{
-		addr ^= addr >> 16;
-		addr ^= addr >> 24;
-		addr ^= addr >> 28;
-		return addr % size;
-	}
-
-	void check_emu_status(u32 addr);
-
-	// wait until pred() returns true, `addr` is an arbitrary number
-	template<typename F, typename... Args> safe_buffers auto wait_op(u32 addr, F pred, Args&&... args) -> decltype(static_cast<void>(pred(args...)))
-	{
-		const u32 hash = get_hash(addr);
-
-		// set mutex locker
-		std::unique_lock<std::mutex> lock(mutexes[hash], std::defer_lock);
-
-		while (true)
-		{
-			// check the condition
-			if (pred(args...)) return;
-
-			check_emu_status(addr);
-
-			if (!lock)
-			{
-				lock.lock();
-				continue;
-			}
-			
-			// wait on an appropriate cond var for 1 ms or until a signal arrived
-			cvs[hash].wait_for(lock, std::chrono::milliseconds(1));
-		}
-	}
-
-	// signal all threads waiting on wait_op() with the same `addr` (signaling only hints those threads that corresponding conditions are *probably* met)
-	void notify(u32 addr);
-};
-
 extern const std::function<bool()> SQUEUE_ALWAYS_EXIT;
 extern const std::function<bool()> SQUEUE_NEVER_EXIT;
 

@@ -2,6 +2,7 @@
 #include "Utilities/Log.h"
 #include "Memory.h"
 #include "Emu/System.h"
+#include "Utilities/Thread.h"
 #include "Emu/CPU/CPUThread.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/SPUThread.h"
@@ -144,6 +145,200 @@ namespace vm
 
 	reservation_mutex_t g_reservation_mutex;
 
+	waiter_list_t g_waiter_list;
+
+	std::size_t g_waiter_max = 0; // min unused position
+	std::size_t g_waiter_nil = 0; // min search position
+
+	std::mutex g_waiter_list_mutex;
+
+	waiter_t* _add_waiter(CPUThread& thread, u32 addr, u32 size)
+	{
+		std::lock_guard<std::mutex> lock(g_waiter_list_mutex);
+
+		const u64 align = 0x80000000ull >> cntlz32(size);
+
+		if (!size || !addr || size > 4096 || size != align || addr & (align - 1))
+		{
+			throw EXCEPTION("Invalid arguments (addr=0x%x, size=0x%x)", addr, size);
+		}
+
+		thread.mutex.lock();
+
+		// look for empty position
+		for (; g_waiter_nil < g_waiter_max; g_waiter_nil++)
+		{
+			waiter_t& waiter = g_waiter_list[g_waiter_nil];
+
+			if (!waiter.thread)
+			{
+				// store next position for further addition
+				g_waiter_nil++;
+
+				return waiter.reset(addr, size, thread);
+			}
+		}
+
+		if (g_waiter_max >= g_waiter_list.size())
+		{
+			throw EXCEPTION("Waiter list limit broken (%lld)", g_waiter_max);
+		}
+
+		waiter_t& waiter = g_waiter_list[g_waiter_max++];
+
+		g_waiter_nil = g_waiter_max;
+		
+		return waiter.reset(addr, size, thread);
+	}
+
+	void _remove_waiter(waiter_t* waiter)
+	{
+		std::lock_guard<std::mutex> lock(g_waiter_list_mutex);
+
+		// mark as deleted
+		waiter->thread = nullptr;
+
+		// amortize adding new element
+		g_waiter_nil = std::min<std::size_t>(g_waiter_nil, waiter - g_waiter_list.data());
+
+		// amortize polling
+		while (g_waiter_max && !g_waiter_list[g_waiter_max - 1].thread)
+		{
+			g_waiter_max--;
+		}
+	}
+
+	bool waiter_t::try_notify()
+	{
+		std::lock_guard<std::mutex> lock(thread->mutex);
+
+		// check predicate
+		if (pred && pred())
+		{
+			// clear predicate and signal if succeeded
+			pred = nullptr;
+
+			if (thread->Signal())
+			{
+				return true;
+			}
+			else
+			{
+				throw EXCEPTION("Thread already signaled");
+			}
+		}
+
+		return false;
+	}
+
+	waiter_lock_t::waiter_lock_t(CPUThread& thread, u32 addr, u32 size)
+		: m_waiter(_add_waiter(thread, addr, size))
+		, m_lock(thread.mutex, std::adopt_lock) // must be locked in _add_waiter
+	{
+	}
+
+	void waiter_lock_t::wait()
+	{
+		while (!m_waiter->thread->Signaled())
+		{
+			if (m_waiter->pred())
+			{
+				return;
+			}
+
+			CHECK_EMU_STATUS;
+
+			m_waiter->thread->cv.wait(m_lock);
+		}
+
+		// if another thread called pred(), it must be removed
+		if (m_waiter->pred)
+		{
+			throw EXCEPTION("Unexpected");
+		}
+	}	
+
+	waiter_lock_t::~waiter_lock_t()
+	{
+		// remove predicate to avoid excessive signaling
+		m_waiter->pred = nullptr;
+
+		// unlock thread's mutex to avoid deadlock with g_waiter_list_mutex
+		m_lock.unlock();
+
+		_remove_waiter(m_waiter);
+	}
+
+	void _notify_at(u32 addr, u32 size)
+	{
+		std::lock_guard<std::mutex> lock(g_waiter_list_mutex);
+
+		const u32 mask = ~(size - 1);
+
+		for (std::size_t i = 0; i < g_waiter_max; i++)
+		{
+			waiter_t& waiter = g_waiter_list[i];
+
+			if (((waiter.addr ^ addr) & (mask & waiter.mask)) == 0 && waiter.thread)
+			{
+				waiter.try_notify();
+			}
+		}
+	}
+
+	void notify_at(u32 addr, u32 size)
+	{
+		const u64 align = 0x80000000ull >> cntlz32(size);
+
+		if (!size || !addr || size > 4096 || size != align || addr & (align - 1))
+		{
+			throw EXCEPTION("Invalid arguments (addr=0x%x, size=0x%x)", addr, size);
+		}
+
+		_notify_at(addr, size);
+	}
+
+	bool notify_all()
+	{
+		std::unique_lock<std::mutex> lock(g_waiter_list_mutex, std::try_to_lock);
+
+		if (lock)
+		{
+			for (std::size_t i = 0; i < g_waiter_max; i++)
+			{
+				waiter_t& waiter = g_waiter_list[i];
+
+				if (waiter.thread && waiter.pred)
+				{
+					waiter.try_notify();
+				}
+			}
+
+			return true;
+		}
+
+		return false;
+	}
+
+	void start()
+	{
+		// start notification thread
+		thread_t(COPY_EXPR("vm::start thread"), []()
+		{
+			while (!Emu.IsStopped())
+			{
+				// poll waiters periodically (TODO)
+				while (!notify_all() && !Emu.IsPaused())
+				{
+					std::this_thread::yield();
+				}
+
+				std::this_thread::sleep_for(std::chrono::milliseconds(1));
+			}
+
+		}).detach();
+	}
+
 	void _reservation_set(u32 addr, bool no_access = false)
 	{
 #ifdef _WIN32
@@ -183,9 +378,15 @@ namespace vm
 
 	void reservation_break(u32 addr)
 	{
-		std::lock_guard<reservation_mutex_t> lock(g_reservation_mutex);
+		std::unique_lock<reservation_mutex_t> lock(g_reservation_mutex);
 
-		g_tls_did_break_reservation = _reservation_break(addr);
+		const u32 raddr = g_reservation_addr;
+		const u32 rsize = g_reservation_size;
+
+		if ((g_tls_did_break_reservation = _reservation_break(addr)))
+		{
+			lock.unlock(), _notify_at(raddr, rsize);
+		}
 	}
 
 	void reservation_acquire(void* data, u32 addr, u32 size)
@@ -229,7 +430,7 @@ namespace vm
 
 	bool reservation_update(u32 addr, const void* data, u32 size)
 	{
-		std::lock_guard<reservation_mutex_t> lock(g_reservation_mutex);
+		std::unique_lock<reservation_mutex_t> lock(g_reservation_mutex);
 
 		const u64 align = 0x80000000ull >> cntlz32(size);
 
@@ -253,13 +454,16 @@ namespace vm
 		// free the reservation and restore memory protection
 		_reservation_break(addr);
 
+		// notify waiter
+		lock.unlock(), _notify_at(addr, size);
+
 		// atomic update succeeded
 		return true;
 	}
 
 	bool reservation_query(u32 addr, u32 size, bool is_writing, std::function<bool()> callback)
 	{
-		std::lock_guard<reservation_mutex_t> lock(g_reservation_mutex);
+		std::unique_lock<reservation_mutex_t> lock(g_reservation_mutex);
 
 		if (!check_addr(addr))
 		{
@@ -269,15 +473,21 @@ namespace vm
 		// check if current reservation and address may overlap
 		if (g_reservation_addr >> 12 == addr >> 12 && is_writing)
 		{
-			if (size && addr + size - 1 >= g_reservation_addr && g_reservation_addr + g_reservation_size - 1 >= addr)
+			const bool result = callback(); 
+
+			if (result && size && addr + size - 1 >= g_reservation_addr && g_reservation_addr + g_reservation_size - 1 >= addr)
 			{
+				const u32 raddr = g_reservation_addr;
+				const u32 rsize = g_reservation_size;
+
 				// break the reservation if overlap
-				g_tls_did_break_reservation = _reservation_break(addr);
+				if ((g_tls_did_break_reservation = _reservation_break(addr)))
+				{
+					lock.unlock(), _notify_at(raddr, rsize);
+				}
 			}
-			else
-			{
-				return callback(); //? true : _reservation_break(addr), true;
-			}
+			
+			return result;
 		}
 		
 		return true;
@@ -302,7 +512,7 @@ namespace vm
 
 	void reservation_op(u32 addr, u32 size, std::function<void()> proc)
 	{
-		std::lock_guard<reservation_mutex_t> lock(g_reservation_mutex);
+		std::unique_lock<reservation_mutex_t> lock(g_reservation_mutex);
 
 		const u64 align = 0x80000000ull >> cntlz32(size);
 
@@ -337,6 +547,9 @@ namespace vm
 
 		// remove the reservation
 		_reservation_break(addr);
+
+		// notify waiter
+		lock.unlock(), _notify_at(addr, size);
 	}
 
 	void _page_map(u32 addr, u32 size, u8 flags)
@@ -752,6 +965,8 @@ namespace vm
 
 				std::make_shared<block_t>(0xE0000000, 0x20000000), // SPU
 			};
+
+			vm::start();
 		}
 	}
 
@@ -766,6 +981,8 @@ namespace vm
 				nullptr, // video
 				nullptr, // stack
 			};
+
+			vm::start();
 		}
 	}
 
@@ -783,6 +1000,8 @@ namespace vm
 				std::make_shared<block_t>(0x00010000, 0x00004000), // scratchpad
 				std::make_shared<block_t>(0x88000000, 0x00800000), // kernel
 			};
+
+			vm::start();
 		}
 	}
 

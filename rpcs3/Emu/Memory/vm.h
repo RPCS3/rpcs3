@@ -32,6 +32,78 @@ namespace vm
 		page_allocated          = (1 << 7),
 	};
 
+	struct waiter_t
+	{
+		u32 addr = 0;
+		u32 mask = 0;
+		CPUThread* thread = nullptr;
+		
+		std::function<bool()> pred;
+
+		waiter_t() = default;
+
+		waiter_t* reset(u32 addr, u32 size, CPUThread& thread)
+		{
+			this->addr = addr;
+			this->mask = ~(size - 1);
+			this->thread = &thread;
+
+			// must be null at this point
+			if (pred)
+			{
+				throw EXCEPTION("Unexpected");
+			}
+
+			return this;
+		}
+
+		bool try_notify();
+	};
+
+	using waiter_list_t = std::array<waiter_t, 1024>;
+
+	class waiter_lock_t
+	{
+		waiter_t* m_waiter;
+		std::unique_lock<std::mutex> m_lock;
+
+	public:
+		waiter_lock_t() = delete;
+
+		waiter_lock_t(CPUThread& thread, u32 addr, u32 size);
+
+		waiter_t* operator ->() const
+		{
+			return m_waiter;
+		}
+
+		void wait();
+
+		~waiter_lock_t();
+	};
+
+	// wait until pred() returns true, addr must be aligned to size which must be a power of 2, pred() may be called by any thread
+	template<typename F, typename... Args> auto wait_op(CPUThread& thread, u32 addr, u32 size, F pred, Args&&... args) -> decltype(static_cast<void>(pred(args...)))
+	{
+		// return immediately if condition passed (optimistic case)
+		if (pred(args...)) return;
+
+		// initialize waiter and locker
+		waiter_lock_t lock(thread, addr, size);
+
+		// initialize predicate
+		lock->pred = WRAP_EXPR(pred(args...));
+
+		// start waiting
+		lock.wait();
+	}
+
+	// notify waiters on specific addr, addr must be aligned to size which must be a power of 2
+	void notify_at(u32 addr, u32 size);
+
+	// try to poll each waiter's condition (false if try_lock failed)
+	bool notify_all();
+
 	// This flag is changed by various reservation functions and may have different meaning.
 	// reservation_break() - true if the reservation was successfully broken.
 	// reservation_acquire() - true if another existing reservation was broken.
