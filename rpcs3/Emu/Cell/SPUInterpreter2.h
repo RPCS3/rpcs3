@@ -88,6 +88,8 @@ namespace spu_interpreter
 {
 	void DEFAULT(SPUThread& CPU, spu_opcode_t op);
 
+	void set_interrupt_status(SPUThread& CPU, spu_opcode_t op);
+
 	void STOP(SPUThread& CPU, spu_opcode_t op);
 	void LNOP(SPUThread& CPU, spu_opcode_t op);
 	void SYNC(SPUThread& CPU, spu_opcode_t op);

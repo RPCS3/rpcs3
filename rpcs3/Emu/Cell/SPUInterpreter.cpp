@@ -25,6 +25,24 @@ void spu_interpreter::DEFAULT(SPUThread& CPU, spu_opcode_t op)
 }
 
 
+void spu_interpreter::set_interrupt_status(SPUThread& CPU, spu_opcode_t op)
+{
+	if (op.e)
+	{
+		CPU.set_interrupt_status(true);
+
+		if (op.d)
+		{
+			throw EXCEPTION("Undefined behaviour");
+		}
+	}
+	else if (op.d)
+	{
+		CPU.set_interrupt_status(false);
+	}
+}
+
+
 void spu_interpreter::STOP(SPUThread& CPU, spu_opcode_t op)
 {
 	CPU.stop_and_signal(op.opcode & 0x3fff);
@@ -272,53 +290,37 @@ void spu_interpreter::WRCH(SPUThread& CPU, spu_opcode_t op)
 
 void spu_interpreter::BIZ(SPUThread& CPU, spu_opcode_t op)
 {
-	if (op.d || op.e)
-	{
-		throw EXCEPTION("Unimplemented interrupt flags (d=%d, e=%d)", op.d, op.e);
-	}
-
 	if (CPU.GPR[op.rt]._u32[3] == 0)
 	{
 		CPU.PC = SPUOpcodes::branchTarget(CPU.GPR[op.ra]._u32[3], 0) - 4;
+		set_interrupt_status(CPU, op);
 	}
 }
 
 void spu_interpreter::BINZ(SPUThread& CPU, spu_opcode_t op)
 {
-	if (op.d || op.e)
-	{
-		throw EXCEPTION("Unimplemented interrupt flags (d=%d, e=%d)", op.d, op.e);
-	}
-
 	if (CPU.GPR[op.rt]._u32[3] != 0)
 	{
 		CPU.PC = SPUOpcodes::branchTarget(CPU.GPR[op.ra]._u32[3], 0) - 4;
+		set_interrupt_status(CPU, op);
 	}
 }
 
 void spu_interpreter::BIHZ(SPUThread& CPU, spu_opcode_t op)
 {
-	if (op.d || op.e)
-	{
-		throw EXCEPTION("Unimplemented interrupt flags (d=%d, e=%d)", op.d, op.e);
-	}
-
 	if (CPU.GPR[op.rt]._u16[6] == 0)
 	{
 		CPU.PC = SPUOpcodes::branchTarget(CPU.GPR[op.ra]._u32[3], 0) - 4;
+		set_interrupt_status(CPU, op);
 	}
 }
 
 void spu_interpreter::BIHNZ(SPUThread& CPU, spu_opcode_t op)
 {
-	if (op.d || op.e)
-	{
-		throw EXCEPTION("Unimplemented interrupt flags (d=%d, e=%d)", op.d, op.e);
-	}
-
 	if (CPU.GPR[op.rt]._u16[6] != 0)
 	{
 		CPU.PC = SPUOpcodes::branchTarget(CPU.GPR[op.ra]._u32[3], 0) - 4;
+		set_interrupt_status(CPU, op);
 	}
 }
 
@@ -334,24 +336,16 @@ void spu_interpreter::STQX(SPUThread& CPU, spu_opcode_t op)
 
 void spu_interpreter::BI(SPUThread& CPU, spu_opcode_t op)
 {
-	if (op.d || op.e)
-	{
-		throw EXCEPTION("Unimplemented interrupt flags (d=%d, e=%d)", op.d, op.e);
-	}
-
 	CPU.PC = SPUOpcodes::branchTarget(CPU.GPR[op.ra]._u32[3], 0) - 4;
+	set_interrupt_status(CPU, op);
 }
 
 void spu_interpreter::BISL(SPUThread& CPU, spu_opcode_t op)
 {
-	if (op.d || op.e)
-	{
-		throw EXCEPTION("Unimplemented interrupt flags (d=%d, e=%d)", op.d, op.e);
-	}
-
 	const u32 target = SPUOpcodes::branchTarget(CPU.GPR[op.ra]._u32[3], 0);
 	CPU.GPR[op.rt] = u128::from32r(CPU.PC + 4);
 	CPU.PC = target - 4;
+	set_interrupt_status(CPU, op);
 }
 
 void spu_interpreter::IRET(SPUThread& CPU, spu_opcode_t op)

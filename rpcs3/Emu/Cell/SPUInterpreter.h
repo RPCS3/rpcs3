@@ -315,17 +315,19 @@ private:
 	}
 	void BIZ(u32 intr, u32 rt, u32 ra)
 	{
-		switch (intr & 0x30)
-		{
-		case 0: break;
-		default: UNIMPLEMENTED(); return;
-		}
-
 		u32 target = branchTarget(CPU.GPR[ra]._u32[3], 0);
 		if (CPU.GPR[rt]._u32[3] == 0)
 		{
 			LOG5_OPCODE("taken (0x%x)", target);
 			CPU.PC = target - 4;
+
+			switch (intr & 0x30)
+			{
+			case 0: break;
+			case 0x10: CPU.set_interrupt_status(true);
+			case 0x20: CPU.set_interrupt_status(false);
+			default: UNIMPLEMENTED(); return;
+			}
 		}
 		else
 		{
@@ -334,17 +336,19 @@ private:
 	}
 	void BINZ(u32 intr, u32 rt, u32 ra)
 	{
-		switch (intr & 0x30)
-		{
-		case 0: break;
-		default: UNIMPLEMENTED(); return;
-		}
-
 		u32 target = branchTarget(CPU.GPR[ra]._u32[3], 0);
 		if (CPU.GPR[rt]._u32[3] != 0)
 		{
 			LOG5_OPCODE("taken (0x%x)", target);
 			CPU.PC = target - 4;
+
+			switch (intr & 0x30)
+			{
+			case 0: break;
+			case 0x10: CPU.set_interrupt_status(true);
+			case 0x20: CPU.set_interrupt_status(false);
+			default: UNIMPLEMENTED(); return;
+			}
 		}
 		else
 		{
@@ -353,17 +357,19 @@ private:
 	}
 	void BIHZ(u32 intr, u32 rt, u32 ra)
 	{
-		switch (intr & 0x30)
-		{
-		case 0: break;
-		default: UNIMPLEMENTED(); return;
-		}
-
 		u32 target = branchTarget(CPU.GPR[ra]._u32[3], 0);
 		if (CPU.GPR[rt]._u16[6] == 0)
 		{
 			LOG5_OPCODE("taken (0x%x)", target);
 			CPU.PC = target - 4;
+
+			switch (intr & 0x30)
+			{
+			case 0: break;
+			case 0x10: CPU.set_interrupt_status(true);
+			case 0x20: CPU.set_interrupt_status(false);
+			default: UNIMPLEMENTED(); return;
+			}
 		}
 		else
 		{
@@ -372,17 +378,19 @@ private:
 	}
 	void BIHNZ(u32 intr, u32 rt, u32 ra)
 	{
-		switch (intr & 0x30)
-		{
-		case 0: break;
-		default: UNIMPLEMENTED(); return;
-		}
-
 		u32 target = branchTarget(CPU.GPR[ra]._u32[3], 0);
 		if (CPU.GPR[rt]._u16[6] != 0)
 		{
 			LOG5_OPCODE("taken (0x%x)", target);
 			CPU.PC = target - 4;
+
+			switch (intr & 0x30)
+			{
+			case 0: break;
+			case 0x10: CPU.set_interrupt_status(true);
+			case 0x20: CPU.set_interrupt_status(false);
+			default: UNIMPLEMENTED(); return;
+			}
 		}
 		else
 		{
@@ -401,28 +409,32 @@ private:
 	}
 	void BI(u32 intr, u32 ra)
 	{
-		switch (intr & 0x30)
-		{
-		case 0: break;
-		default: UNIMPLEMENTED(); return;
-		}
-
 		u32 target = branchTarget(CPU.GPR[ra]._u32[3], 0);
 		LOG5_OPCODE("branch (0x%x)", target);
 		CPU.PC = target - 4;
-	}
-	void BISL(u32 intr, u32 rt, u32 ra)
-	{
+
 		switch (intr & 0x30)
 		{
 		case 0: break;
+		case 0x10: CPU.set_interrupt_status(true);
+		case 0x20: CPU.set_interrupt_status(false);
 		default: UNIMPLEMENTED(); return;
 		}
-
+	}
+	void BISL(u32 intr, u32 rt, u32 ra)
+	{
 		u32 target = branchTarget(CPU.GPR[ra]._u32[3], 0);
 		CPU.GPR[rt] = u128::from32r(CPU.PC + 4);
 		LOG5_OPCODE("branch (0x%x)", target);
 		CPU.PC = target - 4;
+
+		switch (intr & 0x30)
+		{
+		case 0: break;
+		case 0x10: CPU.set_interrupt_status(true);
+		case 0x20: CPU.set_interrupt_status(false);
+		default: UNIMPLEMENTED(); return;
+		}
 	}
 	void IRET(u32 ra)
 	{

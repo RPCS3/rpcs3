@@ -224,9 +224,15 @@ bool RawSPUThread::WriteReg(const u32 addr, const u32 value)
 
 void RawSPUThread::Task()
 {
-	PC = npc.exchange(0) & ~3;
+	// get next PC and SPU Interrupt status
+	PC = npc.exchange(0);
+
+	set_interrupt_status((PC & 1) != 0);
+
+	PC &= 0x3FFFC;
 
 	SPUThread::Task();
 
-	npc.store(PC | 1);
+	// save next PC and current SPU Interrupt status
+	npc.store(PC | ((ch_event_stat.load() & SPU_EVENT_INTR_ENABLED) != 0));
 }

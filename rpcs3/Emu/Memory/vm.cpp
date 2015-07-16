@@ -222,13 +222,12 @@ namespace vm
 		}
 		catch (...)
 		{
-			// catch exception thrown by predicate
+			// capture any exception possibly thrown by predicate
 			auto exception = std::current_exception();
 
 			// set new predicate that will throw this exception from the original thread
 			pred = [exception]() -> bool
 			{
-				// rethrow exception
 				std::rethrow_exception(exception);
 
 				// dummy return value
@@ -241,10 +240,9 @@ namespace vm
 			return true;
 		}
 
-		// clear predicate if succeeded
+		// clear predicate and signal
 		pred = nullptr;
 
-		// signal if succeeded or an exception thrown
 		if (!thread->Signal())
 		{
 			throw EXCEPTION("Thread already signaled");

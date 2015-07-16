@@ -208,7 +208,7 @@ void SPUThread::InitRegs()
 	ch_snr1 = {};
 	ch_snr2 = {};
 
-	ch_event_mask = 0;
+	ch_event_mask = {};
 	ch_event_stat = {};
 	last_raddr = 0;
 
@@ -548,7 +548,7 @@ u32 SPUThread::get_events(bool waiting)
 		// polling with atomically set/removed SPU_EVENT_WAITING flag
 		return ch_event_stat.atomic_op([this](u32& stat) -> u32
 		{
-			if (u32 res = stat & ch_event_mask)
+			if (u32 res = stat & ch_event_mask.load())
 			{
 				stat &= ~SPU_EVENT_WAITING;
 				return res;
@@ -562,7 +562,7 @@ u32 SPUThread::get_events(bool waiting)
 	}
 
 	// simple polling
-	return ch_event_stat.load() & ch_event_mask;
+	return ch_event_stat.load() & ch_event_mask.load();
 }
 
 void SPUThread::set_events(u32 mask)
@@ -584,6 +584,24 @@ void SPUThread::set_events(u32 mask)
 		{
 			cv.notify_one();
 		}
+	}
+}
+
+void SPUThread::set_interrupt_status(bool enable)
+{
+	if (enable)
+	{
+		// detect enabling interrupts with events masked
+		if (u32 mask = ch_event_mask.load())
+		{
+			throw EXCEPTION("SPU Interrupts not implemented (mask=0x%x)", mask);
+		}
+
+		ch_event_stat |= SPU_EVENT_INTR_ENABLED;
+	}
+	else
+	{
+		ch_event_stat &= ~SPU_EVENT_INTR_ENABLED;
 	}
 }
 
@@ -716,7 +734,7 @@ u32 SPUThread::get_ch_value(u32 ch)
 
 	case SPU_RdEventMask:
 	{
-		return ch_event_mask;
+		return ch_event_mask.load();
 	}
 
 	case SPU_RdEventStat:
@@ -729,7 +747,7 @@ u32 SPUThread::get_ch_value(u32 ch)
 			return res;
 		}
 
-		if (ch_event_mask & SPU_EVENT_LR)
+		if (ch_event_mask.load() & SPU_EVENT_LR)
 		{
 			// register waiter if polling reservation status is required
 			vm::wait_op(*this, last_raddr, 128, WRAP_EXPR(get_events(true) || IsStopped()));
@@ -756,7 +774,9 @@ u32 SPUThread::get_ch_value(u32 ch)
 
 	case SPU_RdMachStat:
 	{
-		return 0; // hack (not isolated, interrupts disabled)
+		// HACK: "Not isolated" status
+		// Return SPU Interrupt status in LSB
+		return (ch_event_stat.load() & SPU_EVENT_INTR_ENABLED) != 0;
 	}
 	}
 
@@ -1107,12 +1127,19 @@ void SPUThread::set_ch_value(u32 ch, u32 value)
 
 	case SPU_WrEventMask:
 	{
+		// detect masking events with enabled interrupt status
+		if (value && ch_event_stat.load() & SPU_EVENT_INTR_ENABLED)
+		{
+			throw EXCEPTION("SPU Interrupts not implemented (mask=0x%x)", value);
+		}
+
+		// detect masking unimplemented events
 		if (value & ~SPU_EVENT_IMPLEMENTED)
 		{
 			break;
 		}
 
-		ch_event_mask = value;
+		ch_event_mask.store(value);
 		return;
 	}
 

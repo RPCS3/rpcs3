@@ -65,7 +65,9 @@ enum : u32
 
 	SPU_EVENT_IMPLEMENTED = SPU_EVENT_LR, // Mask of implemented events
 
-	SPU_EVENT_WAITING = 0x80000000, // This bit is originally unused, set when SPU thread starts waiting on ch_event_stat
+	SPU_EVENT_WAITING      = 0x80000000, // Originally unused, set when SPU thread starts waiting on ch_event_stat
+	//SPU_EVENT_AVAILABLE  = 0x40000000, // Originally unused, channel count of the SPU_RdEventStat channel
+	SPU_EVENT_INTR_ENABLED = 0x20000000, // Originally unused, represents "SPU Interrupts Enabled" status
 };
 
 // SPU Class 0 Interrupts
@@ -502,7 +504,7 @@ public:
 	spu_channel_t ch_snr1; // SPU Signal Notification Register 1
 	spu_channel_t ch_snr2; // SPU Signal Notification Register 2
 
-	u32 ch_event_mask;
+	atomic_t<u32> ch_event_mask;
 	atomic_t<u32> ch_event_stat;
 	u32 last_raddr; // Last Reservation Address (0 if not set)
 
@@ -558,6 +560,7 @@ public:
 
 	u32 get_events(bool waiting = false);
 	void set_events(u32 mask);
+	void set_interrupt_status(bool enable);
 	u32 get_ch_count(u32 ch);
 	u32 get_ch_value(u32 ch);
 	void set_ch_value(u32 ch, u32 value);
