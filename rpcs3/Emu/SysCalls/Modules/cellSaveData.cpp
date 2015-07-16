@@ -389,7 +389,7 @@ never_inline s32 savedata_op(
 		}
 
 		statGet->hddFreeSizeKB = 40 * 1024 * 1024; // 40 GB
-		statGet->isNewData = save_entry.isNew = !psf;
+		statGet->isNewData = save_entry.isNew = psf;
 
 		statGet->dir.atime = save_entry.atime = dir_info.atime;
 		statGet->dir.mtime = save_entry.mtime = dir_info.mtime;

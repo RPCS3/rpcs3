@@ -8,12 +8,13 @@
 
 extern Module cellSail;
 
+// TODO: Create an internal cellSail thread
+
 s32 cellSailMemAllocatorInitialize(vm::ptr<CellSailMemAllocator> pSelf, vm::ptr<CellSailMemAllocatorFuncs> pCallbacks)
 {
 	cellSail.Warning("cellSailMemAllocatorInitialize(pSelf_addr=0x%x, pCallbacks_addr=0x%x)", pSelf.addr(), pCallbacks.addr());
 
 	pSelf->callbacks = pCallbacks;
-	// TODO: Create a cellSail thread
 
 	return CELL_OK;
 }
