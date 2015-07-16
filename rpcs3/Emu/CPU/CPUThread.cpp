@@ -86,7 +86,10 @@ bool CPUThread::IsPaused() const
 
 void CPUThread::DumpInformation() const
 {
-	LOG_WARNING(GENERAL, RegsToString());
+	if (!Emu.IsStopped())
+	{
+		LOG_NOTICE(GENERAL, RegsToString());
+	}
 }
 
 void CPUThread::Run()

@@ -219,6 +219,9 @@ namespace vm
 			{
 				return false;
 			}
+
+			// clear predicate
+			pred = nullptr;
 		}
 		catch (...)
 		{
@@ -233,16 +236,13 @@ namespace vm
 				// dummy return value
 				return true;
 			};
-
-			// signal unconditionally (may be already signaled)
-			thread->Signal();
-
-			return true;
 		}
 
-		// clear predicate and signal
-		pred = nullptr;
+		// set addr and mask to invalid values to prevent further polling
+		addr = 0;
+		mask = ~0;
 
+		// signal thread (must not be signaled yet)
 		if (!thread->Signal())
 		{
 			throw EXCEPTION("Thread already signaled");
@@ -271,10 +271,10 @@ namespace vm
 			m_waiter->thread->cv.wait(m_lock);
 		}
 
-		// if another thread called pred(), it must be removed
+		// if another thread successfully called pred(), it must be set to null
 		if (m_waiter->pred)
 		{
-			// pred() should rethrow exception caught by another thread
+			// if pred() called by another thread threw an exception, rethrow it
 			m_waiter->pred();
 
 			throw EXCEPTION("Unexpected");
@@ -283,7 +283,9 @@ namespace vm
 
 	waiter_lock_t::~waiter_lock_t()
 	{
-		// remove predicate to avoid excessive signaling
+		// reset some data to avoid excessive signaling
+		m_waiter->addr = 0;
+		m_waiter->mask = ~0;
 		m_waiter->pred = nullptr;
 
 		// unlock thread's mutex to avoid deadlock with g_waiter_list_mutex
@@ -302,7 +304,8 @@ namespace vm
 		{
 			waiter_t& waiter = g_waiter_list[i];
 
-			if (((waiter.addr ^ addr) & (mask & waiter.mask)) == 0 && waiter.thread && waiter.pred)
+			// check address range overlapping using masks generated from size (power of 2)
+			if (waiter.thread && ((waiter.addr ^ addr) & (mask & waiter.mask)) == 0)
 			{
 				waiter.try_notify();
 			}
@@ -323,24 +326,28 @@ namespace vm
 
 	bool notify_all()
 	{
-		std::unique_lock<std::mutex> lock(g_waiter_list_mutex, std::try_to_lock);
+		std::unique_lock<std::mutex> lock(g_waiter_list_mutex);
 
-		if (lock)
+		std::size_t waiters = 0;
+		std::size_t signaled = 0;
+
+		for (std::size_t i = 0; i < g_waiter_max; i++)
 		{
-			for (std::size_t i = 0; i < g_waiter_max; i++)
-			{
-				waiter_t& waiter = g_waiter_list[i];
+			waiter_t& waiter = g_waiter_list[i];
 
-				if (waiter.thread && waiter.pred)
+			if (waiter.thread && waiter.addr)
+			{
+				waiters++;
+
+				if (waiter.try_notify())
 				{
-					waiter.try_notify();
+					signaled++;
 				}
 			}
-
-			return true;
 		}
 
-		return false;
+		// return true if waiter list is empty or all available waiters were signaled
+		return waiters == signaled;
 	}
 
 	void start()

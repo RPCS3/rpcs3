@@ -37,7 +37,7 @@ namespace vm
 	struct waiter_t
 	{
 		u32 addr = 0;
-		u32 mask = 0;
+		u32 mask = ~0;
 		CPUThread* thread = nullptr;
 		
 		std::function<bool()> pred;
