@@ -7,9 +7,10 @@ compiler:
 env:
   global:
    - secure: "jA29KvTCTR7q4BMzPPUBGazjJwrIWa7k4fo5ZSMlyxh2NbztZTKQYwodgDcXBoptCd1KJ9H3FXwBnNdMNVnTkvoPL9uWnN4K/3D1D20FCag1kmlBwnaVqVei5cRiZ9TOMuaxhjkdg8pcrQLTlXEEdMZf6A2OW0VgoBGDVSX9nYc="
+
 branches:
-  only:
-    - master
+  except:
+    - ppu_recompiler
 
 git:
   submodules: false
