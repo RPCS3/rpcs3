@@ -212,23 +212,45 @@ namespace vm
 	{
 		std::lock_guard<std::mutex> lock(thread->mutex);
 
-		// check predicate
-		if (pred && pred())
+		try
 		{
-			// clear predicate and signal if succeeded
-			pred = nullptr;
-
-			if (thread->Signal())
+			// test predicate
+			if (!pred || !pred())
 			{
-				return true;
-			}
-			else
-			{
-				throw EXCEPTION("Thread already signaled");
+				return false;
 			}
 		}
+		catch (...)
+		{
+			// catch exception thrown by predicate
+			auto exception = std::current_exception();
 
-		return false;
+			// set new predicate that will throw this exception from the original thread
+			pred = [exception]() -> bool
+			{
+				// rethrow exception
+				std::rethrow_exception(exception);
+
+				// dummy return value
+				return true;
+			};
+
+			// signal unconditionally (may be already signaled)
+			thread->Signal();
+
+			return true;
+		}
+
+		// clear predicate if succeeded
+		pred = nullptr;
+
+		// signal if succeeded or an exception thrown
+		if (!thread->Signal())
+		{
+			throw EXCEPTION("Thread already signaled");
+		}
+
+		return true;
 	}
 
 	waiter_lock_t::waiter_lock_t(CPUThread& thread, u32 addr, u32 size)
@@ -254,6 +276,9 @@ namespace vm
 		// if another thread called pred(), it must be removed
 		if (m_waiter->pred)
 		{
+			// pred() should rethrow exception caught by another thread
+			m_waiter->pred();
+
 			throw EXCEPTION("Unexpected");
 		}
 	}	
@@ -279,7 +304,7 @@ namespace vm
 		{
 			waiter_t& waiter = g_waiter_list[i];
 
-			if (((waiter.addr ^ addr) & (mask & waiter.mask)) == 0 && waiter.thread)
+			if (((waiter.addr ^ addr) & (mask & waiter.mask)) == 0 && waiter.thread && waiter.pred)
 			{
 				waiter.try_notify();
 			}
