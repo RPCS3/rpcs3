@@ -74,15 +74,19 @@ s32 cellRudpSetEventHandler(vm::ptr<CellRudpEventHandler> handler, vm::ptr<u32> 
 		return CELL_RUDP_ERROR_NOT_INITIALIZED;
 	}
 
-	cellRudpInstance.argument = *arg.get_ptr();
+	if (arg)
+	{
+		cellRudpInstance.argument = *arg.get_ptr();
+	}
+
 	cellRudpInstance.handler = handler;
 
 	return CELL_OK;
 }
 
-s32 cellRudpSetMaxSegmentSize()
+s32 cellRudpSetMaxSegmentSize(u16 mss)
 {
-	UNIMPLEMENTED_FUNC(cellRudp);
+	cellRudp.Todo("cellRudpSetMaxSegmentSize(mss=%d)", mss);
 	return CELL_OK;
 }
 

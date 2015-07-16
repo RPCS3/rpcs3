@@ -268,7 +268,7 @@ namespace sys_net_func
 	s32 recvmsg()
 	{
 		UNIMPLEMENTED_FUNC(sys_net);
-return CELL_OK;
+		return CELL_OK;
 	}
 
 	s32 send(s32 s, vm::cptr<char> buf, u32 len, s32 flags)
@@ -348,7 +348,7 @@ return CELL_OK;
 		return CELL_OK;
 	}
 
-	s32 socketselect(s32 nfds, vm::ptr<fd_set> readfds, vm::ptr<sys_net_fd_set> writefds, vm::ptr<sys_net_fd_set> exceptfds, vm::ptr<timeval> timeout)
+	s32 socketselect(s32 nfds, vm::ptr<sys_net_fd_set> readfds, vm::ptr<sys_net_fd_set> writefds, vm::ptr<sys_net_fd_set> exceptfds, vm::ptr<timeval> timeout)
 	{
 		sys_net.Todo("socketselect(nfds=%d, readfds_addr=0x%x, writefds_addr=0x%x, exceptfds_addr=0x%x, timeout_addr=0x%x)",
 			nfds, readfds.addr(), writefds.addr(), exceptfds.addr(), timeout.addr());
@@ -359,20 +359,49 @@ return CELL_OK;
 
 		if (readfds)
 		{
-			memcpy(&_readfds, readfds.get_ptr(), sizeof(fd_set));
+			for (int c = 0; c < 8; c++)
+			{
+#ifdef _WIN32
+				_readfds.fd_array[c] = readfds->fds_bits[c];
+#else
+				_readfds.fds_bits[c] = readfds->fds_bits[c];
+#endif
+			}
 		}
 
 		if (writefds)
 		{
-			memcpy(&_writefds, writefds.get_ptr(), sizeof(fd_set));
+			for (int c = 0; c < 8; c++)
+			{
+#ifdef _WIN32
+				_writefds.fd_array[c] = writefds->fds_bits[c];
+#else
+				_writefds.fds_bits[c] = writefds->fds_bits[c];
+#endif
+			}
 		}
 
 		if (exceptfds)
 		{
-			memcpy(&_exceptfds, exceptfds.get_ptr(), sizeof(fd_set));
+			for (int c = 0; c < 8; c++)
+			{
+#ifdef _WIN32
+				_exceptfds.fd_array[c] = exceptfds->fds_bits[c];
+#else
+				_exceptfds.fds_bits[c] = writefds->fds_bits[c];
+#endif
+			}
 		}
 
-		s32 ret = ::select(nfds, readfds.get_ptr(), &_writefds, &_exceptfds, timeout.get_ptr());
+		/*for (int c = 0; c < 8; c++)
+		{
+			if (!FD_ISSET(nfds, &_readfds.fd_array[c]))
+			{
+				sys_net.Error("!FD_ISSET: %d", c);
+			}
+		}*/
+
+		s32 ret = ::select(nfds, &_readfds, &_writefds, &_exceptfds, timeout.get_ptr());
 		*g_lastError = getLastError();
 
 		if (getLastError() >= 0)
