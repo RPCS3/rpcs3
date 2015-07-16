@@ -7,6 +7,22 @@
 #include "cellSysutil.h"
 #include "cellNetCtl.h"
 
+#ifdef _WIN32
+#include <windows.h>
+#include <iphlpapi.h>
+
+#pragma comment(lib, "iphlpapi.lib")
+#else
+#include <unistd.h>
+
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/ioctl.h>
+#include <netinet/in.h>
+#include <net/if.h>
+#include <arpa/inet.h>
+#endif
+
 extern Module cellNetCtl;
 
 struct cellNetCtlInternal
@@ -89,7 +105,128 @@ s32 cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 
 	if (code == CELL_NET_CTL_INFO_IP_ADDRESS)
 	{
-		strcpy_trunc(info->ip_address, "192.168.1.1");
+#ifdef _WIN32
+		PIP_ADAPTER_INFO pAdapterInfo;
+		pAdapterInfo = (IP_ADAPTER_INFO*) malloc(sizeof(IP_ADAPTER_INFO));
+		ULONG buflen = sizeof(IP_ADAPTER_INFO);
+
+		if (GetAdaptersInfo(pAdapterInfo, &buflen) == ERROR_BUFFER_OVERFLOW)
+		{
+			free(pAdapterInfo);
+			pAdapterInfo = (IP_ADAPTER_INFO*) malloc(buflen);
+		}
+
+		if (GetAdaptersInfo(pAdapterInfo, &buflen) == NO_ERROR)
+		{
+			PIP_ADAPTER_INFO pAdapter = pAdapterInfo;
+
+			for (int c = 0; c < Ini.NETInterface.GetValue(); c++)
+			{
+				pAdapter = pAdapter->Next;
+			}
+
+			strcpy_trunc(info->ip_address, pAdapter->IpAddressList.IpAddress.String);
+		}
+		else
+		{
+			cellNetCtl.Error("cellNetCtlGetInfo(IP_ADDRESS): Call to GetAdaptersInfo failed.");
+			// 0.0.0.0 seems to be the default address when no ethernet cables are connected to the PS3
+			strcpy_trunc(info->ip_address, "0.0.0.0");
+		}
+#else
+		struct ifaddrs *ifaddr, *ifa;
+		int family, s, n;
+		char host[NI_MAXHOST];
+
+		if (getifaddrs(&ifaddr) == -1)
+		{
+			LOG_ERROR(HLE, "Call to getifaddrs returned negative.");
+		}
+
+		for (ifa = ifaddr, n = 0; ifa != NULL; ifa = ifa->ifa_next, n++)
+		{
+			if (ifa->ifa_addr == NULL)
+			{
+				continue;
+			}
+
+			if (n < Ini.NETInterface.GetValue())
+			{
+				continue;
+			}
+
+			family = ifa->ifa_addr->sa_family;
+
+			if (family == AF_INET)
+			{
+				strcpy_trunc(info->ip_address, ifaddrs->ifa_addr->sa_data);
+			}
+		}
+
+		freeifaddrs(ifaddr);
+#endif
+	}
+	else if (code == CELL_NET_CTL_INFO_NETMASK)
+	{
+#ifdef _WIN32
+		PIP_ADAPTER_INFO pAdapterInfo;
+		pAdapterInfo = (IP_ADAPTER_INFO*)malloc(sizeof(IP_ADAPTER_INFO));
+		ULONG buflen = sizeof(IP_ADAPTER_INFO);
+
+		if (GetAdaptersInfo(pAdapterInfo, &buflen) == ERROR_BUFFER_OVERFLOW)
+		{
+			free(pAdapterInfo);
+			pAdapterInfo = (IP_ADAPTER_INFO*)malloc(buflen);
+		}
+
+		if (GetAdaptersInfo(pAdapterInfo, &buflen) == NO_ERROR)
+		{
+			PIP_ADAPTER_INFO pAdapter = pAdapterInfo;
+
+			for (int c = 0; c < Ini.NETInterface.GetValue(); c++)
+			{
+				pAdapter = pAdapter->Next;
+			}
+
+			strcpy_trunc(info->ip_address, pAdapter->IpAddressList.IpMask.String);
+		}
+		else
+		{
+			cellNetCtl.Error("cellNetCtlGetInfo(INFO_NETMASK): Call to GetAdaptersInfo failed.");
+			// TODO: What would be the default netmask? 255.255.255.0?
+		}
+#else
+		struct ifaddrs *ifaddr, *ifa;
+		int family, s, n;
+		char host[NI_MAXHOST];
+
+		if (getifaddrs(&ifaddr) == -1)
+		{
+			LOG_ERROR(HLE, "Call to getifaddrs returned negative.");
+		}
+
+		for (ifa = ifaddr, n = 0; ifa != NULL; ifa = ifa->ifa_next, n++)
+		{
+			if (ifa->ifa_addr == NULL)
+			{
+				continue;
+			}
+
+			if (n < Ini.NETInterface.GetValue())
+			{
+				continue;
+			}
+
+			family = ifa->ifa_addr->sa_family;
+
+			if (family == AF_INET)
+			{
+				strcpy_trunc(info->ip_address, ifaddrs->ifa_netmask->sa_data);
+			}
+	}
+
+		freeifaddrs(ifaddr);
+#endif
 	}
 
 	return CELL_OK;
