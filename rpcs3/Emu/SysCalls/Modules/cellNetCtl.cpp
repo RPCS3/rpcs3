@@ -2,6 +2,7 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
+#include "Utilities/Log.h"
 
 #include "rpcs3/Ini.h"
 #include "cellSysutil.h"
@@ -21,6 +22,8 @@
 #include <netinet/in.h>
 #include <net/if.h>
 #include <arpa/inet.h>
+#include <netdb.h>
+#include <ifaddrs.h>
 #endif
 
 extern Module cellNetCtl;
@@ -159,7 +162,7 @@ s32 cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 
 			if (family == AF_INET)
 			{
-				strcpy_trunc(info->ip_address, ifaddrs->ifa_addr->sa_data);
+				strcpy_trunc(info->ip_address, ifa->ifa_addr->sa_data);
 			}
 		}
 
@@ -221,7 +224,7 @@ s32 cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 
 			if (family == AF_INET)
 			{
-				strcpy_trunc(info->ip_address, ifaddrs->ifa_netmask->sa_data);
+				strcpy_trunc(info->ip_address, ifa->ifa_netmask->sa_data);
 			}
 	}
 
