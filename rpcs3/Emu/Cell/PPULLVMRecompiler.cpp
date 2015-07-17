@@ -6033,6 +6033,8 @@ u32 ppu_recompiler_llvm::ExecutionEngine::ExecuteTillReturn(PPUThread * ppu_stat
             switch (branch_type) {
             case BranchType::Return:
                 execution_engine->m_tracer.Trace(Tracer::TraceType::Return, 0, 0);
+                if (Emu.GetCPUThreadStop() == ppu_state->PC)
+                  ppu_state->FastStop();
                 terminate = true;
                 break;
             case BranchType::FunctionCall:
