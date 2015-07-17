@@ -68,7 +68,18 @@ bool RawSPUThread::ReadReg(const u32 addr, u32& value)
 
 	case SPU_Out_MBox_offs:
 	{
-		value = ch_out_mbox.pop_uncond();
+		bool notify;
+
+		std::tie(value, notify) = ch_out_mbox.pop();
+
+		if (notify)
+		{
+			// notify if necessary
+			std::lock_guard<std::mutex> lock(mutex);
+
+			cv.notify_one();
+		}
+
 		return true;
 	}
 
@@ -169,8 +180,14 @@ bool RawSPUThread::WriteReg(const u32 addr, const u32 value)
 
 	case SPU_In_MBox_offs:
 	{
-		ch_in_mbox.push_uncond(value); 
-		cv.notify_one();
+		if (ch_in_mbox.push(value))
+		{
+			// notify if necessary
+			std::lock_guard<std::mutex> lock(mutex);
+
+			cv.notify_one();
+		}
+
 		return true;
 	}
 
@@ -207,13 +224,13 @@ bool RawSPUThread::WriteReg(const u32 addr, const u32 value)
 
 	case SPU_RdSigNotify1_offs:
 	{
-		write_snr(0, value);
+		push_snr(0, value);
 		return true;
 	}
 
 	case SPU_RdSigNotify2_offs:
 	{
-		write_snr(1, value);
+		push_snr(1, value);
 		return true;
 	}
 	}

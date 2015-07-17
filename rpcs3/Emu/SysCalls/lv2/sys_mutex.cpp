@@ -24,7 +24,7 @@ void lv2_mutex_t::unlock(lv2_lock_t& lv2_lock)
 
 		if (!owner->Signal())
 		{
-			throw EXCEPTION("Mutex owner not signaled");
+			throw EXCEPTION("Mutex owner already signaled");
 		}
 	}
 }

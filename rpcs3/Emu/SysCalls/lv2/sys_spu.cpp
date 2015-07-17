@@ -209,7 +209,14 @@ s32 sys_spu_thread_get_exit_status(u32 id, vm::ptr<u32> status)
 
 	// TODO: check CELL_ESTAT condition
 
-	*status = thread->ch_out_mbox.pop_uncond();
+	bool notify;
+
+	std::tie(*status, notify) = thread->ch_out_mbox.pop();
+
+	if (notify)
+	{
+		throw EXCEPTION("Unexpected");
+	}
 
 	return CELL_OK;
 }
@@ -694,8 +701,13 @@ s32 sys_spu_thread_write_spu_mb(u32 id, u32 value)
 		return CELL_ESTAT;
 	}
 
-	thread->ch_in_mbox.push_uncond(value);
-	thread->cv.notify_one();
+	if (thread->ch_in_mbox.push(value))
+	{
+		// notify if necessary
+		std::lock_guard<std::mutex> lock(thread->mutex);
+
+		thread->cv.notify_one();
+	}
 
 	return CELL_OK;
 }
@@ -771,7 +783,7 @@ s32 sys_spu_thread_write_snr(u32 id, u32 number, u32 value)
 	//	return CELL_ESTAT;
 	//}
 
-	thread->write_snr(number, value);
+	thread->push_snr(number, value);
 
 	return CELL_OK;
 }
@@ -1306,7 +1318,17 @@ s32 sys_raw_spu_read_puint_mb(u32 id, vm::ptr<u32> value)
 		return CELL_ESRCH;
 	}
 
-	*value = thread->ch_out_intr_mbox.pop_uncond();
+	bool notify;
+
+	std::tie(*value, notify) = thread->ch_out_intr_mbox.pop();
+
+	if (notify)
+	{
+		// notify if necessary
+		std::lock_guard<std::mutex> lock(thread->mutex);
+
+		thread->cv.notify_one();
+	}
 
 	return CELL_OK;
 }

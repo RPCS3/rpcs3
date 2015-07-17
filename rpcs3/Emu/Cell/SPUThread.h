@@ -139,49 +139,48 @@ union spu_channel_t
 {
 	struct sync_var_t
 	{
-		u32 count;
+		struct
+		{
+			u32 waiting : 1; // waiting flag (0..1)
+			u32 count : 1; // channel count (0..1)
+		};
+		
 		u32 value;
 	};
 
 	atomic_t<sync_var_t> sync_var;
 
 public:
+	// returns true on success
 	bool try_push(u32 value)
 	{
 		return sync_var.atomic_op([=](sync_var_t& data) -> bool
 		{
 			if (data.count == 0)
 			{
+				data.waiting = 0;
 				data.count = 1;
 				data.value = value;
 
 				return true;
 			}
 
+			data.waiting = 1;
 			return false;
 		});
 	}
 
-	void push_bit_or(u32 value)
+	// push performing bitwise OR with previous value, returns true if needs signaling
+	bool push_or(u32 value)
 	{
-		sync_var._or({ 1, value });
-	}
-
-	void push_uncond(u32 value)
-	{
-		sync_var.exchange({ 1, value });
-	}
-
-	bool try_pop(u32& out_value)
-	{
-		return sync_var.atomic_op([&](sync_var_t& data) -> bool
+		return sync_var.atomic_op([=](sync_var_t& data) -> bool
 		{
-			if (data.count != 0)
-			{
-				out_value = data.value;
+			data.count = 1;
+			data.value |= value;
 
-				data.count = 0;
-				data.value = 0;
+			if (data.waiting)
+			{
+				data.waiting = 0;
 
 				return true;
 			}
@@ -190,20 +189,58 @@ public:
 		});
 	}
 
-	u32 pop_uncond()
+	// push unconditionally (overwriting previous value), returns true if needs signaling
+	bool push(u32 value)
 	{
-		return sync_var.atomic_op([](sync_var_t& data) -> u32
+		return sync_var.atomic_op([=](sync_var_t& data) -> bool
 		{
-			data.count = 0;
+			data.count = 1;
+			data.value = value;
 
+			if (data.waiting)
+			{
+				data.waiting = 0;
+
+				return true;
+			}
+
+			return false;
+		});
+	}
+
+	// returns true on success and u32 value
+	std::tuple<bool, u32> try_pop()
+	{
+		return sync_var.atomic_op([](sync_var_t& data)
+		{
+			const auto result = std::make_tuple(data.count != 0, u32{ data.value });
+
+			data.waiting = data.count == 0;
+			data.count = 0;
+			data.value = 0;
+
+			return result;
+		});
+	}
+
+	// pop unconditionally (loading last value), returns u32 value and bool value (true if needs signaling)
+	std::tuple<u32, bool> pop()
+	{
+		return sync_var.atomic_op([](sync_var_t& data)
+		{
+			const auto result = std::make_tuple(u32{ data.value }, data.waiting != 0);
+
+			data.waiting = 0;
+			data.count = 0;
 			// value is not cleared and may be read again
-			return data.value;
+			
+			return result;
 		});
 	}
 
 	void set_value(u32 value, u32 count = 1)
 	{
-		sync_var.store({ count, value });
+		sync_var.store({ { 0, count }, value });
 	}
 
 	u32 get_value() volatile
@@ -221,7 +258,12 @@ struct spu_channel_4_t
 {
 	struct sync_var_t
 	{
-		u32 count;
+		struct
+		{
+			u32 waiting : 1;
+			u32 count : 3;
+		};
+		
 		u32 value0;
 		u32 value1;
 		u32 value2;
@@ -237,11 +279,12 @@ public:
 		value3 = {};
 	}
 
-	void push_uncond(u32 value)
+	// push unconditionally (overwriting latest value), returns true if needs signaling
+	bool push(u32 value)
 	{
 		value3.exchange(value);
 
-		sync_var.atomic_op([value](sync_var_t& data)
+		return sync_var.atomic_op([=](sync_var_t& data) -> bool
 		{
 			switch (data.count++)
 			{
@@ -250,35 +293,56 @@ public:
 			case 2: data.value2 = value; break;
 			default: data.count = 4;
 			}
+
+			if (data.waiting)
+			{
+				data.waiting = 0;
+
+				return true;
+			}
+
+			return false;
 		});
 	}
 
-	// out_count: count after removing first element
-	bool try_pop(u32& out_value, u32& out_count)
+	// returns true on success and two u32 values: data and count after removing the first element
+	std::tuple<bool, u32, u32> try_pop()
 	{
-		bool out_result;
-
-		const u32 last_value = value3.load_sync();
-
-		sync_var.atomic_op([&out_result, &out_value, &out_count, last_value](sync_var_t& data)
+		return sync_var.atomic_op([this](sync_var_t& data)
 		{
-			if ((out_result = (data.count != 0)))
+			const auto result = std::make_tuple(data.count != 0, u32{ data.value0 }, u32{ data.count - 1u });
+
+			if (data.count != 0)
 			{
-				out_value = data.value0;
-				out_count = --data.count;
+				data.waiting = 0;
+				data.count--;
 
 				data.value0 = data.value1;
 				data.value1 = data.value2;
-				data.value2 = last_value;
+				data.value2 = value3.load_sync();
 			}
-		});
+			else
+			{
+				data.waiting = 1;
+			}
 
-		return out_result;
+			return result;
+		});
 	}
 
 	u32 get_count() volatile
 	{
 		return sync_var.data.count;
+	}
+
+	void set_values(u32 count, u32 value0, u32 value1 = 0, u32 value2 = 0, u32 value3 = 0)
+	{
+		sync_var.data.waiting = 0;
+		sync_var.data.count = count;
+		sync_var.data.value0 = value0;
+		sync_var.data.value1 = value1;
+		sync_var.data.value2 = value2;
+		this->value3.store(value3);
 	}
 };
 
@@ -526,30 +590,37 @@ public:
 	const u32 index; // SPU index
 	const u32 offset; // SPU LS offset
 
-	void write_snr(bool number, u32 value)
+	void push_snr(u32 number, u32 value)
 	{
-		if (!number)
+		if (number == 0)
 		{
 			if (snr_config & 1)
 			{
-				ch_snr1.push_bit_or(value);
+				if (!ch_snr1.push_or(value)) return;
 			}
 			else
 			{
-				ch_snr1.push_uncond(value);
+				if (!ch_snr1.push(value)) return;
+			}
+		}
+		else if (number == 1)
+		{
+			if (snr_config & 2)
+			{
+				if (!ch_snr2.push_or(value)) return;
+			}
+			else
+			{
+				if (!ch_snr2.push(value)) return;
 			}
 		}
 		else
 		{
-			if (snr_config & 2)
-			{
-				ch_snr2.push_bit_or(value);
-			}
-			else
-			{
-				ch_snr2.push_uncond(value);
-			}
+			throw EXCEPTION("Unexpected");
 		}
+
+		// notify if required
+		std::lock_guard<std::mutex> lock(mutex);
 
 		cv.notify_one();
 	}

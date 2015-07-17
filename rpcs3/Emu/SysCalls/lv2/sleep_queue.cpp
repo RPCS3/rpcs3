@@ -10,7 +10,7 @@ sleep_queue_entry_t::sleep_queue_entry_t(CPUThread& cpu, sleep_queue_t& queue)
 	: m_queue(queue)
 	, m_thread(cpu)
 {
-	m_queue.emplace_back(std::move(cpu.shared_from_this()));
+	m_queue.emplace_back(cpu.shared_from_this());
 
 	m_thread.Sleep();
 }

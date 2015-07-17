@@ -167,22 +167,11 @@ s32 sys_cond_wait(PPUThread& ppu, u32 cond_id, u64 timeout)
 		return CELL_EPERM;
 	}
 
-	// unlock mutex
-	cond->mutex->owner.reset();
-
-	// save recursive value
+	// save the recursive value
 	const u32 recursive_value = cond->mutex->recursive_count.exchange(0);
 
-	if (cond->mutex->sq.size())
-	{
-		// pick another owner; protocol is ignored in current implementation
-		cond->mutex->owner = cond->mutex->sq.front();
-
-		if (!cond->mutex->owner->Signal())
-		{
-			throw EXCEPTION("Mutex owner not signaled");
-		}
-	}
+	// unlock the mutex
+	cond->mutex->unlock(lv2_lock);
 
 	{
 		// add waiter; protocol is ignored in current implementation

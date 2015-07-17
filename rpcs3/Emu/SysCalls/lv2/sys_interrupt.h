@@ -6,14 +6,11 @@ class PPUThread;
 
 struct lv2_int_tag_t
 {
-	//const u32 class_id; // 0 or 2 for RawSPU
 	const u32 id;
-
-	//const std::weak_ptr<class RawSPUThread> thread; // RawSPU thread
 
 	std::shared_ptr<struct lv2_int_serv_t> handler;
 
-	lv2_int_tag_t(/*u32 class_id, const std::shared_ptr<RawSPUThread> thread*/);
+	lv2_int_tag_t();
 };
 
 REG_ID_TYPE(lv2_int_tag_t, 0x0A); // SYS_INTR_TAG_OBJECT
