@@ -9,7 +9,7 @@
 thread_local spu_mfc_arg_t raw_spu_mfc[8] = {};
 
 RawSPUThread::RawSPUThread(const std::string& name, u32 index)
-	: SPUThread(CPU_THREAD_RAW_SPU, name, COPY_EXPR(fmt::format("RawSPU_%d[0x%x] Thread (%s)[0x%08x]", index, GetId(), GetName(), PC)), index, RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * index)
+	: SPUThread(CPU_THREAD_RAW_SPU, name, COPY_EXPR(fmt::format("RawSPU%d[0x%x] Thread (%s)[0x%08x]", index, m_id, m_name.c_str(), PC)), index, RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * index)
 {
 	if (!vm::falloc(offset, 0x40000))
 	{
@@ -27,28 +27,7 @@ RawSPUThread::~RawSPUThread()
 	}
 }
 
-void RawSPUThread::start()
-{
-	const bool do_start = status.atomic_op([](u32& status) -> bool
-	{
-		if (status & SPU_STATUS_RUNNING)
-		{
-			return false;
-		}
-		else
-		{
-			status = SPU_STATUS_RUNNING;
-			return true;
-		}
-	});
-
-	if (do_start)
-	{
-		Exec();
-	}
-}
-
-bool RawSPUThread::ReadReg(const u32 addr, u32& value)
+bool RawSPUThread::read_reg(const u32 addr, u32& value)
 {
 	const u32 offset = addr - RAW_SPU_BASE_ADDR - index * RAW_SPU_OFFSET - RAW_SPU_PROB_OFFSET;
 
@@ -100,8 +79,27 @@ bool RawSPUThread::ReadReg(const u32 addr, u32& value)
 	return false;
 }
 
-bool RawSPUThread::WriteReg(const u32 addr, const u32 value)
+bool RawSPUThread::write_reg(const u32 addr, const u32 value)
 {
+	auto try_start = [this]()
+	{
+		if (status.atomic_op([](u32& status) -> bool
+		{
+			if (status & SPU_STATUS_RUNNING)
+			{
+				return false;
+			}
+			else
+			{
+				status = SPU_STATUS_RUNNING;
+				return true;
+			}
+		}))
+		{
+			exec();
+		}
+	};
+
 	const u32 offset = addr - RAW_SPU_BASE_ADDR - index * RAW_SPU_OFFSET - RAW_SPU_PROB_OFFSET;
 
 	switch (offset)
@@ -147,7 +145,7 @@ bool RawSPUThread::WriteReg(const u32 addr, const u32 value)
 
 		if (value & MFC_START_MASK)
 		{
-			start();
+			try_start();
 		}
 
 		return true;
@@ -195,12 +193,12 @@ bool RawSPUThread::WriteReg(const u32 addr, const u32 value)
 	{
 		if (value == SPU_RUNCNTL_RUN_REQUEST)
 		{
-			start();
+			try_start();
 		}
 		else if (value == SPU_RUNCNTL_STOP_REQUEST)
 		{
 			status &= ~SPU_STATUS_RUNNING;
-			Stop();
+			stop();
 		}
 		else
 		{
@@ -239,7 +237,7 @@ bool RawSPUThread::WriteReg(const u32 addr, const u32 value)
 	return false;
 }
 
-void RawSPUThread::Task()
+void RawSPUThread::task()
 {
 	// get next PC and SPU Interrupt status
 	PC = npc.exchange(0);
@@ -248,7 +246,7 @@ void RawSPUThread::Task()
 
 	PC &= 0x3FFFC;
 
-	SPUThread::Task();
+	SPUThread::task();
 
 	// save next PC and current SPU Interrupt status
 	npc.store(PC | ((ch_event_stat.load() & SPU_EVENT_INTR_ENABLED) != 0));

@@ -177,9 +177,9 @@ s32 _sys_lwcond_queue_wait(PPUThread& CPU, u32 lwcond_id, u32 lwmutex_id, u64 ti
 	}
 
 	// add waiter; protocol is ignored in current implementation
-	cond->waiters.emplace(CPU.GetId());
+	cond->waiters.emplace(CPU.get_id());
 
-	while ((!(cond->signaled1 && mutex->signaled) && !cond->signaled2) || cond->waiters.count(CPU.GetId()))
+	while ((!(cond->signaled1 && mutex->signaled) && !cond->signaled2) || cond->waiters.count(CPU.get_id()))
 	{
 		CHECK_EMU_STATUS;
 
@@ -189,7 +189,7 @@ s32 _sys_lwcond_queue_wait(PPUThread& CPU, u32 lwcond_id, u32 lwmutex_id, u64 ti
 		if (is_timedout)
 		{
 			// cancel waiting
-			if (!cond->waiters.erase(CPU.GetId()))
+			if (!cond->waiters.erase(CPU.get_id()))
 			{
 				if (cond->signaled1 && !mutex->signaled)
 				{

@@ -71,7 +71,7 @@ namespace ppu_func_detail
 		static force_inline T get_arg(PPUThread& CPU)
 		{
 			// TODO: check stack argument displacement
-			const u64 res = CPU.GetStackArg(8 + std::max<s32>(g_count - 8, 0) + std::max<s32>(f_count - 13, 0) + std::max<s32>(v_count - 12, 0));
+			const u64 res = CPU.get_stack_arg(8 + std::max<s32>(g_count - 8, 0) + std::max<s32>(f_count - 13, 0) + std::max<s32>(v_count - 12, 0));
 			return cast_from_ppu_gpr<T>(res);
 		}
 	};

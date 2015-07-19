@@ -41,18 +41,18 @@ sleep_queue_entry_t::sleep_queue_entry_t(CPUThread& cpu, sleep_queue_t& queue)
 	, m_queue(queue)
 {
 	add_entry();
-	cpu.Sleep();
+	cpu.sleep();
 }
 
 sleep_queue_entry_t::sleep_queue_entry_t(CPUThread& cpu, sleep_queue_t& queue, const defer_sleep_t&)
 	: m_thread(cpu)
 	, m_queue(queue)
 {
-	cpu.Sleep();
+	cpu.sleep();
 }
 
 sleep_queue_entry_t::~sleep_queue_entry_t() noexcept(false)
 {
 	remove_entry();
-	m_thread.Awake();
+	m_thread.awake();
 }

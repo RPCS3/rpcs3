@@ -300,7 +300,7 @@ void Emulator::Pause()
 
 	for (auto& t : GetCPU().GetAllThreads())
 	{
-		t->Sleep(); // trigger status check
+		t->sleep(); // trigger status check
 	}
 
 	SendDbgCommand(DID_PAUSED_EMU);
@@ -332,7 +332,7 @@ void Emulator::Resume()
 
 	for (auto& t : GetCPU().GetAllThreads())
 	{
-		t->Awake(); // untrigger status check and signal
+		t->awake(); // untrigger status check and signal
 	}
 
 	SendDbgCommand(DID_RESUMED_EMU);
@@ -359,7 +359,7 @@ void Emulator::Stop()
 		{
 			std::lock_guard<std::mutex> lock(t->mutex);
 
-			t->Sleep(); // trigger status check
+			t->sleep(); // trigger status check
 
 			t->cv.notify_one(); // signal
 		}

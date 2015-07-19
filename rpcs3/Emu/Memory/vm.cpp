@@ -243,7 +243,7 @@ namespace vm
 		mask = ~0;
 
 		// signal thread (must not be signaled yet)
-		if (!thread->Signal())
+		if (!thread->signal())
 		{
 			throw EXCEPTION("Thread already signaled");
 		}
@@ -259,7 +259,7 @@ namespace vm
 
 	void waiter_lock_t::wait()
 	{
-		while (!m_waiter->thread->Unsignal())
+		while (!m_waiter->thread->unsignal())
 		{
 			if (m_waiter->pred())
 			{
@@ -1048,7 +1048,7 @@ namespace vm
 
 	u32 stack_push(CPUThread& cpu, u32 size, u32 align_v, u32& old_pos)
 	{
-		switch (cpu.GetType())
+		switch (cpu.get_type())
 		{
 		case CPU_THREAD_PPU:
 		{
@@ -1107,14 +1107,14 @@ namespace vm
 
 		default:
 		{
-			throw EXCEPTION("Invalid thread type (%d)", cpu.GetId());
+			throw EXCEPTION("Invalid thread type (%d)", cpu.get_id());
 		}
 		}
 	}
 
 	void stack_pop(CPUThread& cpu, u32 addr, u32 old_pos)
 	{
-		switch (cpu.GetType())
+		switch (cpu.get_type())
 		{
 		case CPU_THREAD_PPU:
 		{
@@ -1158,7 +1158,7 @@ namespace vm
 
 		default:
 		{
-			throw EXCEPTION("Invalid thread type (%d)", cpu.GetType());
+			throw EXCEPTION("Invalid thread type (%d)", cpu.get_type());
 		}
 		}
 	}

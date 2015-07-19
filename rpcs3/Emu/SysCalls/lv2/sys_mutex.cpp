@@ -22,7 +22,7 @@ void lv2_mutex_t::unlock(lv2_lock_t& lv2_lock)
 		// pick new owner; protocol is ignored in current implementation
 		owner = sq.front();
 
-		if (!owner->Signal())
+		if (!owner->signal())
 		{
 			throw EXCEPTION("Mutex owner already signaled");
 		}
@@ -140,7 +140,7 @@ s32 sys_mutex_lock(PPUThread& ppu, u32 mutex_id, u64 timeout)
 	// add waiter; protocol is ignored in current implementation
 	sleep_queue_entry_t waiter(ppu, mutex->sq);
 
-	while (!ppu.Unsignal())
+	while (!ppu.unsignal())
 	{
 		CHECK_EMU_STATUS;
 

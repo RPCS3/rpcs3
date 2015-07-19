@@ -231,7 +231,7 @@ void initialize_psv_modules()
 	hle_return.name = "HLE_RETURN";
 	hle_return.func = [](ARMv7Context& context)
 	{
-		static_cast<ARMv7Thread&>(context).FastStop();
+		static_cast<ARMv7Thread&>(context).fast_stop();
 	};
 
 	// load functions

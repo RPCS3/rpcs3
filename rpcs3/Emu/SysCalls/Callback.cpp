@@ -87,7 +87,7 @@ void CallbackManager::Init()
 		thread->prio = 1001;
 		thread->stack_size = 0x10000;
 		thread->custom_task = task;
-		thread->Run();
+		thread->run();
 
 		m_cb_thread = thread;
 	}
@@ -98,7 +98,7 @@ void CallbackManager::Init()
 		thread->prio = 1001;
 		thread->stack_size = 0x10000;
 		thread->custom_task = task;
-		thread->Run();
+		thread->run();
 
 		m_cb_thread = thread;
 	}

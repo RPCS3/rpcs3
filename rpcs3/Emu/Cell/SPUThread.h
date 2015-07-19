@@ -682,7 +682,7 @@ public:
 		}
 	}
 
-	std::function<void(SPUThread& SPU)> m_custom_task;
+	std::function<void(SPUThread&)> custom_task;
 
 protected:
 	SPUThread(CPUThreadType type, const std::string& name, std::function<std::string()> thread_name, u32 index, u32 offset);
@@ -691,19 +691,19 @@ public:
 	SPUThread(const std::string& name, u32 index);
 	virtual ~SPUThread() override;
 
-	virtual bool IsPaused() const override;
+	virtual bool is_paused() const override;
 
-	virtual void DumpInformation() const override;
-	virtual u32 GetPC() const override { return PC; }
-	virtual u32 GetOffset() const override { return offset; }
-	virtual void DoRun() override;
-	virtual void Task() override;
+	virtual void dump_info() const override;
+	virtual u32 get_pc() const override { return PC; }
+	virtual u32 get_offset() const override { return offset; }
+	virtual void do_run() override;
+	virtual void task() override;
 
-	virtual void InitRegs() override;
-	virtual void InitStack() override;
-	virtual void CloseStack() override;
+	virtual void init_regs() override;
+	virtual void init_stack() override;
+	virtual void close_stack() override;
 
-	void FastCall(u32 ls_addr);
+	void fast_call(u32 ls_addr);
 
 	virtual std::string RegsToString() const
 	{
@@ -770,7 +770,7 @@ public:
 	{
 		auto& spu = static_cast<SPUThread&>(*thread);
 
-		spu.Run();
+		spu.run();
 
 		return *this;
 	}

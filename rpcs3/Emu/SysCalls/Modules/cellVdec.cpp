@@ -540,8 +540,8 @@ void vdecOpen(u32 vdec_id) // TODO: call from the constructor
 		vdec.is_finished = true;
 	};
 
-	vdec.vdecCb->Run();
-	vdec.vdecCb->Exec();
+	vdec.vdecCb->run();
+	vdec.vdecCb->exec();
 }
 
 s32 cellVdecQueryAttr(vm::cptr<CellVdecType> type, vm::ptr<CellVdecAttr> attr)
@@ -597,7 +597,7 @@ s32 cellVdecClose(u32 handle)
 		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 	}
 
-	Emu.GetIdManager().remove<PPUThread>(vdec->vdecCb->GetId());
+	Emu.GetIdManager().remove<PPUThread>(vdec->vdecCb->get_id());
 	Emu.GetIdManager().remove<VideoDecoder>(handle);
 	return CELL_OK;
 }

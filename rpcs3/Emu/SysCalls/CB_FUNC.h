@@ -171,7 +171,7 @@ namespace cb_detail
 			const bool stack = _bind_func_args<0, 0, 0, T...>(CPU, args...);
 			if (stack) CPU.GPR[1] -= FIXED_STACK_FRAME_SIZE;
 			CPU.GPR[1] -= 0x70; // create reserved area
-			CPU.FastCall2(pc, rtoc);
+			CPU.fast_call(pc, rtoc);
 			CPU.GPR[1] += 0x70;
 			if (stack) CPU.GPR[1] += FIXED_STACK_FRAME_SIZE;
 		}

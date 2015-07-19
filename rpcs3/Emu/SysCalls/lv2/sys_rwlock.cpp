@@ -166,7 +166,7 @@ s32 sys_rwlock_wlock(PPUThread& CPU, u32 rw_lock_id, u64 timeout)
 		return CELL_ESRCH;
 	}
 
-	if (rwlock->writer == CPU.GetId())
+	if (rwlock->writer == CPU.get_id())
 	{
 		return CELL_EDEADLK;
 	}
@@ -187,7 +187,7 @@ s32 sys_rwlock_wlock(PPUThread& CPU, u32 rw_lock_id, u64 timeout)
 		rwlock->wcv.wait_for(lv2_lock, std::chrono::milliseconds(1));
 	}
 
-	rwlock->writer = CPU.GetId();
+	rwlock->writer = CPU.get_id();
 	rwlock->wwaiters--;
 
 	return CELL_OK;
@@ -206,7 +206,7 @@ s32 sys_rwlock_trywlock(PPUThread& CPU, u32 rw_lock_id)
 		return CELL_ESRCH;
 	}
 
-	if (rwlock->writer == CPU.GetId())
+	if (rwlock->writer == CPU.get_id())
 	{
 		return CELL_EDEADLK;
 	}
@@ -216,7 +216,7 @@ s32 sys_rwlock_trywlock(PPUThread& CPU, u32 rw_lock_id)
 		return CELL_EBUSY;
 	}
 
-	rwlock->writer = CPU.GetId();
+	rwlock->writer = CPU.get_id();
 
 	return CELL_OK;
 }
@@ -234,7 +234,7 @@ s32 sys_rwlock_wunlock(PPUThread& CPU, u32 rw_lock_id)
 		return CELL_ESRCH;
 	}
 
-	if (rwlock->writer != CPU.GetId())
+	if (rwlock->writer != CPU.get_id())
 	{
 		return CELL_EPERM;
 	}

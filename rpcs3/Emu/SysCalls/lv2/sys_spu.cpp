@@ -102,7 +102,7 @@ u32 spu_thread_initialize(u32 group_id, u32 spu_num, vm::ptr<sys_spu_image> img,
 
 	const auto spu = Emu.GetIdManager().make_ptr<SPUThread>(name, spu_num);
 
-	spu->m_custom_task = task;
+	spu->custom_task = task;
 
 	const auto group = Emu.GetIdManager().get<spu_group_t>(group_id);
 
@@ -131,7 +131,7 @@ u32 spu_thread_initialize(u32 group_id, u32 spu_num, vm::ptr<sys_spu_image> img,
 		group->state = SPU_THREAD_GROUP_STATUS_INITIALIZED;
 	}
 	
-	return spu->GetId();
+	return spu->get_id();
 }
 
 s32 sys_spu_thread_initialize(vm::ptr<u32> thread, u32 group_id, u32 spu_num, vm::ptr<sys_spu_image> img, vm::ptr<sys_spu_thread_attribute> attr, vm::ptr<sys_spu_thread_argument> arg)
@@ -265,7 +265,7 @@ s32 sys_spu_thread_group_destroy(u32 id)
 	{
 		if (t)
 		{
-			Emu.GetIdManager().remove<SPUThread>(t->GetId());
+			Emu.GetIdManager().remove<SPUThread>(t->get_id());
 
 			t.reset();
 		}
@@ -317,7 +317,7 @@ s32 sys_spu_thread_group_start(u32 id)
 			std::memcpy(vm::get_ptr<void>(t->offset), vm::get_ptr<void>(image->addr), 256 * 1024);
 
 			t->PC = image->entry_point;
-			t->Run();
+			t->run();
 			t->GPR[3] = u128::from64(0, args.arg1);
 			t->GPR[4] = u128::from64(0, args.arg2);
 			t->GPR[5] = u128::from64(0, args.arg3);
@@ -333,7 +333,7 @@ s32 sys_spu_thread_group_start(u32 id)
 
 	for (auto& t : group->threads)
 	{
-		if (t) t->Exec();
+		if (t) t->exec();
 	}
 
 	return CELL_OK;
@@ -383,7 +383,7 @@ s32 sys_spu_thread_group_suspend(u32 id)
 
 	for (auto& t : group->threads)
 	{
-		if (t) t->Sleep(); // trigger status check
+		if (t) t->sleep(); // trigger status check
 	}
 
 	return CELL_OK;
@@ -424,7 +424,7 @@ s32 sys_spu_thread_group_resume(u32 id)
 
 	for (auto& t : group->threads)
 	{
-		if (t) t->Awake(); // untrigger status check
+		if (t) t->awake(); // untrigger status check
 	}
 
 	group->cv.notify_all();
@@ -498,7 +498,7 @@ s32 sys_spu_thread_group_terminate(u32 id, s32 value)
 
 	for (auto& t : group->threads)
 	{
-		if (t) t->Stop();
+		if (t) t->stop();
 	}
 
 	group->state = SPU_THREAD_GROUP_STATUS_INITIALIZED;
@@ -1147,7 +1147,7 @@ s32 sys_raw_spu_create(vm::ptr<u32> id, vm::ptr<void> attr)
 		return CELL_EAGAIN;
 	}
 
-	thread->Run();
+	thread->run();
 
 	*id = thread->index;
 
@@ -1170,7 +1170,7 @@ s32 sys_raw_spu_destroy(PPUThread& ppu, u32 id)
 	// TODO: CELL_EBUSY is not returned
 
 	// Stop thread
-	thread->Stop();
+	thread->stop();
 
 	// Clear interrupt handlers
 	for (auto& intr : thread->int_ctrl)
@@ -1186,7 +1186,7 @@ s32 sys_raw_spu_destroy(PPUThread& ppu, u32 id)
 		}
 	}
 
-	Emu.GetIdManager().remove<RawSPUThread>(thread->GetId());
+	Emu.GetIdManager().remove<RawSPUThread>(thread->get_id());
 
 	return CELL_OK;
 }

@@ -1156,10 +1156,10 @@ s32 spursInit(
 		const auto spuThread = Emu.GetIdManager().get<SPUThread>(spurs->spus[num] = spuThreadId.value());
 
 		// entry point cannot be initialized immediately because SPU LS will be rewritten by sys_spu_thread_group_start()
-		spuThread->m_custom_task = [spurs](SPUThread& SPU)
+		spuThread->custom_task = [spurs](SPUThread& spu)
 		{
-			SPU.RegisterHleFunction(spurs->spuImg.entry_point, spursKernelEntry);
-			SPU.FastCall(spurs->spuImg.entry_point);
+			spu.RegisterHleFunction(spurs->spuImg.entry_point, spursKernelEntry);
+			spu.fast_call(spurs->spuImg.entry_point);
 		};
 	}
 

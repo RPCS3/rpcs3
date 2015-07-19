@@ -128,7 +128,7 @@ void InterpreterDisAsmFrame::OnSelectUnit(wxCommandEvent& event)
 
 	if(CPU)
 	{
-		switch(CPU->GetType())
+		switch(CPU->get_type())
 		{
 		case CPU_THREAD_PPU:
 		{
@@ -247,10 +247,10 @@ void InterpreterDisAsmFrame::ShowAddr(const u64 addr)
 	}
 	else
 	{
-		disasm->offset = vm::get_ptr<u8>(CPU->GetOffset());
+		disasm->offset = vm::get_ptr<u8>(CPU->get_offset());
 		for(uint i=0, count = 4; i<m_item_count; ++i, PC += count)
 		{
-			if(!vm::check_addr(CPU->GetOffset() + PC, 4))
+			if(!vm::check_addr(CPU->get_offset() + PC, 4))
 			{
 				m_list->SetItem(i, 0, wxString(IsBreakPoint(PC) ? ">>> " : "    ") + wxString::Format("[%08llx] illegal address", PC));
 				count = 4;
@@ -258,7 +258,7 @@ void InterpreterDisAsmFrame::ShowAddr(const u64 addr)
 			}
 
 			disasm->dump_pc = PC;
-			count = decoder->DecodeMemory(CPU->GetOffset() + PC);
+			count = decoder->DecodeMemory(CPU->get_offset() + PC);
 
 			if(IsBreakPoint(PC))
 			{
@@ -271,7 +271,7 @@ void InterpreterDisAsmFrame::ShowAddr(const u64 addr)
 
 			wxColour colour;
 
-			if(CPU->IsPaused() && PC == CPU->GetPC())
+			if(CPU->is_paused() && PC == CPU->get_pc())
 			{
 				colour = wxColour("Green");
 			}
@@ -339,11 +339,9 @@ void InterpreterDisAsmFrame::WriteCallStack()
 		return;
 	}
 
-	const std::string data = CPU->CallStackToString();
-
 	m_calls->Freeze();
 	m_calls->Clear();
-	m_calls->WriteText(fmt::FromUTF8(data));
+	//m_calls->WriteText(fmt::FromUTF8(data));
 	m_calls->Thaw();
 }
 
@@ -365,7 +363,7 @@ void InterpreterDisAsmFrame::HandleCommand(wxCommandEvent& event)
 		break;
 		}
 	}
-	else if(CPU && thr->GetId() == CPU->GetId())
+	else if(CPU && thr->get_id() == CPU->get_id())
 	{
 		switch(event.GetId())
 		{
@@ -455,11 +453,11 @@ void InterpreterDisAsmFrame::Show_Val(wxCommandEvent& WXUNUSED(event))
 
 	diag->SetSizerAndFit( s_panel );
 
-	if(CPU) p_pc->SetValue(wxString::Format("%x", CPU->GetPC()));
+	if(CPU) p_pc->SetValue(wxString::Format("%x", CPU->get_pc()));
 
 	if(diag->ShowModal() == wxID_OK)
 	{
-		unsigned long pc = CPU ? CPU->GetPC() : 0x0;
+		unsigned long pc = CPU ? CPU->get_pc() : 0x0;
 		p_pc->GetValue().ToULong(&pc, 16);
 		Emu.GetMarkedPoints().push_back(pc);
 		remove_markedPC.push_back(Emu.GetMarkedPoints().size()-1);
@@ -469,18 +467,18 @@ void InterpreterDisAsmFrame::Show_Val(wxCommandEvent& WXUNUSED(event))
 
 void InterpreterDisAsmFrame::Show_PC(wxCommandEvent& WXUNUSED(event))
 {
-	if(CPU) ShowAddr(CentrePc(CPU->GetPC()));
+	if(CPU) ShowAddr(CentrePc(CPU->get_pc()));
 }
 
 void InterpreterDisAsmFrame::DoRun(wxCommandEvent& WXUNUSED(event))
 {
 	if(!CPU) return;
 
-	if(CPU->IsPaused()) CPU->Resume();
+	if(CPU->is_paused()) CPU->resume();
 
 	if(!Emu.IsPaused())
 	{
-		CPU->Exec();
+		CPU->exec();
 	}
 
 	//ThreadBase::Start();
@@ -489,12 +487,12 @@ void InterpreterDisAsmFrame::DoRun(wxCommandEvent& WXUNUSED(event))
 void InterpreterDisAsmFrame::DoPause(wxCommandEvent& WXUNUSED(event))
 {
 	//DoUpdate();
-	if(CPU) CPU->Pause();
+	if(CPU) CPU->pause();
 }
 
 void InterpreterDisAsmFrame::DoStep(wxCommandEvent& WXUNUSED(event))
 {
-	if(CPU) CPU->Step();
+	if(CPU) CPU->step();
 }
 
 void InterpreterDisAsmFrame::InstrKey(wxListEvent& event)

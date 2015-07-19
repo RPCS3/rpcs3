@@ -2026,7 +2026,7 @@ void Compiler::SC(u32 lev) {
         Call<void>("SysCalls.DoSyscall", SysCalls::DoSyscall, m_state.args[CompileTaskState::Args::State], GetGpr(11));
         break;
     case 3:
-        Call<void>("PPUThread.FastStop", &PPUThread::FastStop, m_state.args[CompileTaskState::Args::State]);
+        Call<void>("PPUThread.FastStop", &PPUThread::fast_stop, m_state.args[CompileTaskState::Args::State]);
         break;
     default:
         CompilationError(fmt::Format("SC %u", lev));
@@ -6055,7 +6055,7 @@ u32 ppu_recompiler_llvm::ExecutionEngine::ExecuteTillReturn(PPUThread * ppu_stat
 }
 
 bool ppu_recompiler_llvm::ExecutionEngine::PollStatus(PPUThread * ppu_state) {
-    return ppu_state->CheckStatus();
+    return ppu_state->check_status();
 }
 
 BranchType ppu_recompiler_llvm::GetBranchTypeFromInstruction(u32 instruction) {

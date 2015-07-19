@@ -764,8 +764,8 @@ void dmuxOpen(u32 dmux_id) // TODO: call from the constructor
 		dmux.is_finished = true;
 	};
 
-	dmux.dmuxCb->Run();
-	dmux.dmuxCb->Exec();
+	dmux.dmuxCb->run();
+	dmux.dmuxCb->exec();
 }
 
 s32 cellDmuxQueryAttr(vm::cptr<CellDmuxType> type, vm::ptr<CellDmuxAttr> attr)
@@ -872,7 +872,7 @@ s32 cellDmuxClose(u32 handle)
 		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 	}
 
-	Emu.GetIdManager().remove<PPUThread>(dmux->dmuxCb->GetId());
+	Emu.GetIdManager().remove<PPUThread>(dmux->dmuxCb->get_id());
 	Emu.GetIdManager().remove<Demuxer>(handle);
 	return CELL_OK;
 }

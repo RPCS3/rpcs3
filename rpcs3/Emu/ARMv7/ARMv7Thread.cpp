@@ -13,7 +13,7 @@
 
 void ARMv7Context::fast_call(u32 addr)
 {
-	return static_cast<ARMv7Thread*>(this)->FastCall(addr);
+	return static_cast<ARMv7Thread*>(this)->fast_call(addr);
 }
 
 #define TLS_MAX 128
@@ -80,7 +80,7 @@ void armv7_free_tls(u32 thread)
 }
 
 ARMv7Thread::ARMv7Thread(const std::string& name)
-	: CPUThread(CPU_THREAD_ARMv7, name, WRAP_EXPR(fmt::format("ARMv7[0x%x] Thread (%s)[0x%08x]", GetId(), GetName(), PC)))
+	: CPUThread(CPU_THREAD_ARMv7, name, WRAP_EXPR(fmt::format("ARMv7[0x%x] Thread (%s)[0x%08x]", m_id, m_name.c_str(), PC)))
 	, ARMv7Context({})
 {
 }
@@ -90,23 +90,23 @@ ARMv7Thread::~ARMv7Thread()
 	cv.notify_one();
 	join();
 
-	CloseStack();
-	armv7_free_tls(GetId());
+	close_stack();
+	armv7_free_tls(m_id);
 }
 
-void ARMv7Thread::DumpInformation() const
+void ARMv7Thread::dump_info() const
 {
 	if (hle_func)
 	{
 		const auto func = get_psv_func_by_nid(hle_func);
 		
-		LOG_SUCCESS(HLE, "Information: function 0x%x (%s)", hle_func, func ? func->name : "?????????");
+		LOG_SUCCESS(HLE, "Last function: %s (0x%x)", func ? func->name : "?????????", hle_func);
 	}
 
-	CPUThread::DumpInformation();
+	CPUThread::dump_info();
 }
 
-void ARMv7Thread::InitRegs()
+void ARMv7Thread::init_regs()
 {
 	memset(GPR, 0, sizeof(GPR));
 	APSR.APSR = 0;
@@ -115,11 +115,11 @@ void ARMv7Thread::InitRegs()
 	PC = PC & ~1; // and fix PC
 	ITSTATE.IT = 0;
 	SP = stack_addr + stack_size;
-	TLS = armv7_get_tls(GetId());
+	TLS = armv7_get_tls(m_id);
 	debug = DF_DISASM | DF_PRINT;
 }
 
-void ARMv7Thread::InitStack()
+void ARMv7Thread::init_stack()
 {
 	if (!stack_addr)
 	{
@@ -137,7 +137,7 @@ void ARMv7Thread::InitStack()
 	}
 }
 
-void ARMv7Thread::CloseStack()
+void ARMv7Thread::close_stack()
 {
 	if (stack_addr)
 	{
@@ -175,7 +175,7 @@ bool ARMv7Thread::WriteRegString(const std::string& reg, std::string value)
 	return true;
 }
 
-void ARMv7Thread::DoRun()
+void ARMv7Thread::do_run()
 {
 	m_dec.reset();
 
@@ -186,30 +186,30 @@ void ARMv7Thread::DoRun()
 		m_dec.reset(new ARMv7Decoder(*this));
 		break;
 	default:
-		LOG_ERROR(PPU, "Invalid CPU decoder mode: %d", Ini.CPUDecoderMode.GetValue());
+		LOG_ERROR(ARMv7, "Invalid CPU decoder mode: %d", Ini.CPUDecoderMode.GetValue());
 		Emu.Pause();
 	}
 }
 
-void ARMv7Thread::Task()
+void ARMv7Thread::task()
 {
 	if (custom_task)
 	{
-		if (m_state.load() && CheckStatus()) return;
+		if (m_state.load() && check_status()) return;
 
 		return custom_task(*this);
 	}
 
 	while (true)
 	{
-		if (m_state.load() && CheckStatus()) break;
+		if (m_state.load() && check_status()) break;
 
 		// decode instruction using specified decoder
 		PC += m_dec->DecodeMemory(PC);
 	}
 }
 
-void ARMv7Thread::FastCall(u32 addr)
+void ARMv7Thread::fast_call(u32 addr)
 {
 	if (!is_current())
 	{
@@ -219,15 +219,15 @@ void ARMv7Thread::FastCall(u32 addr)
 	auto old_PC = PC;
 	auto old_stack = SP;
 	auto old_LR = LR;
-	auto old_task = decltype(custom_task)();
+	auto old_task = std::move(custom_task);
 
 	PC = addr;
 	LR = Emu.GetCPUThreadStop();
-	custom_task.swap(old_task);
+	custom_task = nullptr;
 
 	try
 	{
-		Task();
+		task();
 	}
 	catch (CPUThreadReturn)
 	{
@@ -243,10 +243,10 @@ void ARMv7Thread::FastCall(u32 addr)
 	}
 
 	LR = old_LR;
-	custom_task.swap(old_task);
+	custom_task = std::move(old_task);
 }
 
-void ARMv7Thread::FastStop()
+void ARMv7Thread::fast_stop()
 {
 	m_state |= CPU_STATE_RETURN;
 }
@@ -301,7 +301,7 @@ cpu_thread& armv7_thread::run()
 {
 	auto& armv7 = static_cast<ARMv7Thread&>(*thread);
 
-	armv7.Run();
+	armv7.run();
 
 	// set arguments
 	armv7.GPR[0] = argc;

@@ -20,11 +20,9 @@ public:
 	RawSPUThread(const std::string& name, u32 index);
 	virtual ~RawSPUThread();
 
-	void start();
-
-	bool ReadReg(const u32 addr, u32& value);
-	bool WriteReg(const u32 addr, const u32 value);
+	bool read_reg(const u32 addr, u32& value);
+	bool write_reg(const u32 addr, const u32 value);
 
 private:
-	virtual void Task();
+	virtual void task() override;
 };

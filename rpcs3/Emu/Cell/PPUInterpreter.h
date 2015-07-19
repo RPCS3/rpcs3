@@ -2240,7 +2240,7 @@ private:
 		{
 		case 0x0: SysCalls::DoSyscall(CPU, CPU.GPR[11]); break;
 		case 0x1: throw EXCEPTION("HyperCall LV1");
-		case 0x3: CPU.FastStop(); break;
+		case 0x3: CPU.fast_stop(); break;
 		default: throw EXCEPTION("Unknown level (0x%x)", lev);
 		}
 	}

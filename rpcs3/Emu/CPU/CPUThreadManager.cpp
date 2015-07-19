@@ -59,12 +59,12 @@ void CPUThreadManager::Exec()
 {
 	for (auto& t : Emu.GetIdManager().get_all<PPUThread>())
 	{
-		t->Exec();
+		t->exec();
 	}
 
 	for (auto& t : Emu.GetIdManager().get_all<ARMv7Thread>())
 	{
-		t->Exec();
+		t->exec();
 	}
 }
 

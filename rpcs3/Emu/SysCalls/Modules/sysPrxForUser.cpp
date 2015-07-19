@@ -123,7 +123,7 @@ s32 sys_lwmutex_destroy(PPUThread& ppu, vm::ptr<sys_lwmutex_t> lwmutex)
 	sysPrxForUser.Log("sys_lwmutex_destroy(lwmutex=*0x%x)", lwmutex);
 
 	// check to prevent recursive locking in the next call
-	if (lwmutex->vars.owner.load() == ppu.GetId())
+	if (lwmutex->vars.owner.load() == ppu.get_id())
 	{
 		return CELL_EBUSY;
 	}
@@ -153,7 +153,7 @@ s32 sys_lwmutex_lock(PPUThread& ppu, vm::ptr<sys_lwmutex_t> lwmutex, u64 timeout
 {
 	sysPrxForUser.Log("sys_lwmutex_lock(lwmutex=*0x%x, timeout=0x%llx)", lwmutex, timeout);
 
-	const be_t<u32> tid = ppu.GetId();
+	const be_t<u32> tid = ppu.get_id();
 
 	// try to lock lightweight mutex
 	const be_t<u32> old_owner = lwmutex->vars.owner.compare_and_swap(lwmutex_free, tid);
@@ -247,7 +247,7 @@ s32 sys_lwmutex_trylock(PPUThread& ppu, vm::ptr<sys_lwmutex_t> lwmutex)
 {
 	sysPrxForUser.Log("sys_lwmutex_trylock(lwmutex=*0x%x)", lwmutex);
 
-	const be_t<u32> tid = ppu.GetId();
+	const be_t<u32> tid = ppu.get_id();
 
 	// try to lock lightweight mutex
 	const be_t<u32> old_owner = lwmutex->vars.owner.compare_and_swap(lwmutex_free, tid);
@@ -314,7 +314,7 @@ s32 sys_lwmutex_unlock(PPUThread& ppu, vm::ptr<sys_lwmutex_t> lwmutex)
 {
 	sysPrxForUser.Log("sys_lwmutex_unlock(lwmutex=*0x%x)", lwmutex);
 
-	const be_t<u32> tid = ppu.GetId();
+	const be_t<u32> tid = ppu.get_id();
 
 	// check owner
 	if (lwmutex->vars.owner.load() != tid)
@@ -390,7 +390,7 @@ s32 sys_lwcond_signal(PPUThread& ppu, vm::ptr<sys_lwcond_t> lwcond)
 		//return _sys_lwcond_signal(lwcond->lwcond_queue, 0, -1, 2);
 	}
 
-	if (lwmutex->vars.owner.load() == ppu.GetId())
+	if (lwmutex->vars.owner.load() == ppu.get_id())
 	{
 		// if owns the mutex
 		lwmutex->all_info++;
@@ -448,7 +448,7 @@ s32 sys_lwcond_signal_all(PPUThread& ppu, vm::ptr<sys_lwcond_t> lwcond)
 		//return _sys_lwcond_signal_all(lwcond->lwcond_queue, lwmutex->sleep_queue, 2);
 	}
 
-	if (lwmutex->vars.owner.load() == ppu.GetId())
+	if (lwmutex->vars.owner.load() == ppu.get_id())
 	{
 		// if owns the mutex, call the syscall
 		const s32 res = _sys_lwcond_signal_all(lwcond->lwcond_queue, lwmutex->sleep_queue, 1);
@@ -505,7 +505,7 @@ s32 sys_lwcond_signal_to(PPUThread& ppu, vm::ptr<sys_lwcond_t> lwcond, u32 ppu_t
 		//return _sys_lwcond_signal(lwcond->lwcond_queue, 0, ppu_thread_id, 2);
 	}
 
-	if (lwmutex->vars.owner.load() == ppu.GetId())
+	if (lwmutex->vars.owner.load() == ppu.get_id())
 	{
 		// if owns the mutex
 		lwmutex->all_info++;
@@ -555,7 +555,7 @@ s32 sys_lwcond_wait(PPUThread& ppu, vm::ptr<sys_lwcond_t> lwcond, u64 timeout)
 {
 	sysPrxForUser.Log("sys_lwcond_wait(lwcond=*0x%x, timeout=0x%llx)", lwcond, timeout);
 
-	const be_t<u32> tid = ppu.GetId();
+	const be_t<u32> tid = ppu.get_id();
 
 	const vm::ptr<sys_lwmutex_t> lwmutex = lwcond->lwmutex;
 
@@ -1247,7 +1247,7 @@ s32 sys_ppu_thread_get_id(PPUThread& ppu, vm::ptr<u64> thread_id)
 {
 	sysPrxForUser.Log("sys_ppu_thread_get_id(thread_id=*0x%x)", thread_id);
 
-	*thread_id = ppu.GetId();
+	*thread_id = ppu.get_id();
 
 	return CELL_OK;
 }

@@ -27,7 +27,7 @@ void lv2_cond_t::notify(lv2_lock_t& lv2_lock, sleep_queue_t::iterator it)
 	{
 		mutex->owner = thread;
 
-		if (!thread->Signal())
+		if (!thread->signal())
 		{
 			throw EXCEPTION("Thread already signaled");
 		}
@@ -156,7 +156,7 @@ s32 sys_cond_signal_to(u32 cond_id, u32 thread_id)
 	// signal specified thread (protocol is not required)
 	for (auto it = cond->sq.begin(); it != cond->sq.end(); it++)
 	{
-		if ((*it)->GetId() == thread_id)
+		if ((*it)->get_id() == thread_id)
 		{
 			cond->notify(lv2_lock, it);
 			cond->sq.erase(it);
@@ -200,8 +200,10 @@ s32 sys_cond_wait(PPUThread& ppu, u32 cond_id, u64 timeout)
 	// add empty mutex waiter (may be actually set later)
 	sleep_queue_entry_t mutex_waiter(ppu, cond->mutex->sq, defer_sleep);
 
-	while (!ppu.Unsignal())
+	while (!ppu.unsignal())
 	{
+		CHECK_EMU_STATUS;
+
 		// timeout is ignored if waiting on the cond var is already dropped
 		if (timeout && waiter)
 		{
@@ -228,8 +230,6 @@ s32 sys_cond_wait(PPUThread& ppu, u32 cond_id, u64 timeout)
 		{
 			ppu.cv.wait(lv2_lock);
 		}
-
-		CHECK_EMU_STATUS;
 	}
 
 	// mutex owner is restored after notification or unlocking

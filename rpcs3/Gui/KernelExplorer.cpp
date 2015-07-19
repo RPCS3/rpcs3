@@ -224,7 +224,7 @@ void KernelExplorer::Update()
 
 		for (const auto& thread : Emu.GetIdManager().get_all<PPUThread>())
 		{
-			sprintf(name, "Thread: ID = 0x%08x '%s', - %s", thread->GetId(), thread->GetName().c_str(), thread->ThreadStatusToString());
+			sprintf(name, "Thread: ID = 0x%08x '%s', - %s", thread->get_id(), thread->get_name().c_str(), thread->ThreadStatusToString());
 			m_tree->AppendItem(node, name);
 		}
 	}
@@ -236,9 +236,9 @@ void KernelExplorer::Update()
 
 		for (const auto& thread : Emu.GetIdManager().get_all<SPUThread>())
 		{
-			if (thread->GetType() == CPU_THREAD_SPU)
+			if (thread->get_type() == CPU_THREAD_SPU)
 			{
-				sprintf(name, "Thread: ID = 0x%08x '%s', - %s", thread->GetId(), thread->GetName().c_str(), thread->ThreadStatusToString());
+				sprintf(name, "Thread: ID = 0x%08x '%s', - %s", thread->get_id(), thread->get_name().c_str(), thread->ThreadStatusToString());
 				m_tree->AppendItem(node, name);
 			}
 		}
@@ -251,9 +251,9 @@ void KernelExplorer::Update()
 
 		for (const auto& thread : Emu.GetIdManager().get_all<RawSPUThread>())
 		{
-			if (thread->GetType() == CPU_THREAD_RAW_SPU)
+			if (thread->get_type() == CPU_THREAD_RAW_SPU)
 			{
-				sprintf(name, "Thread: ID = 0x%08x '%s', - %s", thread->GetId(), thread->GetName().c_str(), thread->ThreadStatusToString());
+				sprintf(name, "Thread: ID = 0x%08x '%s', - %s", thread->get_id(), thread->get_name().c_str(), thread->ThreadStatusToString());
 				m_tree->AppendItem(node, name);
 			}
 		}

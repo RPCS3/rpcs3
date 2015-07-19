@@ -67,7 +67,7 @@ RegisterEditorDialog::RegisterEditorDialog(wxPanel *parent, u64 _pc, CPUThread* 
 
 	Bind(wxEVT_COMBOBOX, &RegisterEditorDialog::updateRegister, this);
 
-	switch(CPU->GetType())
+	switch(CPU->get_type())
 	{
 	case CPU_THREAD_PPU:
 		for (int i=0; i<32; i++) t1_register->Append(wxString::Format("GPR[%d]",i));

@@ -22,18 +22,18 @@ CPUThread::CPUThread(CPUThreadType type, const std::string& name, std::function<
 		std::unique_lock<std::mutex> lock(mutex);
 
 		// check thread status
-		while (joinable() && IsActive())
+		while (joinable() && is_alive())
 		{
 			CHECK_EMU_STATUS;
 
 			// check stop status
-			if (!IsStopped())
+			if (!is_stopped())
 			{
 				if (lock) lock.unlock();
 
 				try
 				{
-					Task();
+					task();
 				}
 				catch (CPUThreadReturn)
 				{
@@ -50,7 +50,7 @@ CPUThread::CPUThread(CPUThreadType type, const std::string& name, std::function<
 				}
 				catch (const fmt::exception&)
 				{
-					DumpInformation();
+					dump_info();
 					throw;
 				}
 
@@ -79,12 +79,12 @@ CPUThread::~CPUThread()
 	SendDbgCommand(DID_REMOVE_THREAD, this);
 }
 
-bool CPUThread::IsPaused() const
+bool CPUThread::is_paused() const
 {
 	return (m_state.load() & CPU_STATE_PAUSED) != 0 || Emu.IsPaused();
 }
 
-void CPUThread::DumpInformation() const
+void CPUThread::dump_info() const
 {
 	if (!Emu.IsStopped())
 	{
@@ -92,18 +92,18 @@ void CPUThread::DumpInformation() const
 	}
 }
 
-void CPUThread::Run()
+void CPUThread::run()
 {
 	SendDbgCommand(DID_START_THREAD, this);
 
-	InitStack();
-	InitRegs();
-	DoRun();
+	init_stack();
+	init_regs();
+	do_run();
 
 	SendDbgCommand(DID_STARTED_THREAD, this);
 }
 
-void CPUThread::Pause()
+void CPUThread::pause()
 {
 	SendDbgCommand(DID_PAUSE_THREAD, this);
 
@@ -112,7 +112,7 @@ void CPUThread::Pause()
 	SendDbgCommand(DID_PAUSED_THREAD, this);
 }
 
-void CPUThread::Resume()
+void CPUThread::resume()
 {
 	SendDbgCommand(DID_RESUME_THREAD, this);
 
@@ -128,7 +128,7 @@ void CPUThread::Resume()
 	SendDbgCommand(DID_RESUMED_THREAD, this);
 }
 
-void CPUThread::Stop()
+void CPUThread::stop()
 {
 	SendDbgCommand(DID_STOP_THREAD, this);
 
@@ -149,7 +149,7 @@ void CPUThread::Stop()
 	SendDbgCommand(DID_STOPED_THREAD, this);
 }
 
-void CPUThread::Exec()
+void CPUThread::exec()
 {
 	SendDbgCommand(DID_EXEC_THREAD, this);
 
@@ -163,7 +163,7 @@ void CPUThread::Exec()
 	}
 }
 
-void CPUThread::Exit()
+void CPUThread::exit()
 {
 	if (is_current())
 	{
@@ -175,7 +175,7 @@ void CPUThread::Exit()
 	}
 }
 
-void CPUThread::Step()
+void CPUThread::step()
 {
 	if (m_state.atomic_op([](u64& state) -> bool
 	{
@@ -196,13 +196,13 @@ void CPUThread::Step()
 	}
 }
 
-void CPUThread::Sleep()
+void CPUThread::sleep()
 {
 	m_state += CPU_STATE_MAX;
 	m_state |= CPU_STATE_SLEEP;
 }
 
-void CPUThread::Awake()
+void CPUThread::awake()
 {
 	// must be called after the balanced Sleep() call
 
@@ -233,7 +233,7 @@ void CPUThread::Awake()
 	}
 }
 
-bool CPUThread::Signal()
+bool CPUThread::signal()
 {
 	// try to set SIGNAL
 	if (m_state._or(CPU_STATE_SIGNAL) & CPU_STATE_SIGNAL)
@@ -249,13 +249,13 @@ bool CPUThread::Signal()
 	}
 }
 
-bool CPUThread::Unsignal()
+bool CPUThread::unsignal()
 {
 	// remove SIGNAL and return its old value
 	return (m_state._and_not(CPU_STATE_SIGNAL) & CPU_STATE_SIGNAL) != 0;
 }
 
-bool CPUThread::CheckStatus()
+bool CPUThread::check_status()
 {
 	std::unique_lock<std::mutex> lock(mutex, std::defer_lock);
 
@@ -263,7 +263,7 @@ bool CPUThread::CheckStatus()
 	{
 		CHECK_EMU_STATUS; // check at least once
 
-		if (!IsPaused()) break;
+		if (!is_paused()) break;
 
 		if (!lock)
 		{
@@ -274,7 +274,7 @@ bool CPUThread::CheckStatus()
 		cv.wait(lock);
 	}
 
-	if (m_state.load() & CPU_STATE_RETURN || IsStopped())
+	if (m_state.load() & CPU_STATE_RETURN || is_stopped())
 	{
 		return true;
 	}

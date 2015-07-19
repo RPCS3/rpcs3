@@ -1386,7 +1386,7 @@ void spursTasksetOnTaskExit(SPUThread & spu, u64 addr, u32 taskId, s32 exitCode,
     spu.GPR[4]._u32[3] = taskId;
     spu.GPR[5]._u32[3] = exitCode;
     spu.GPR[6]._u64[1] = args;
-    spu.FastCall(0x10000);
+    spu.fast_call(0x10000);
 }
 
 /// Save the context of a task
@@ -1505,7 +1505,7 @@ void spursTasksetDispatch(SPUThread & spu) {
 
         if (elfAddr & 2) { // TODO: Figure this out
             spu.status |= SPU_STATUS_STOPPED_BY_STOP;
-            spu.Stop();
+            spu.stop();
             return;
         }
 
@@ -1551,7 +1551,7 @@ void spursTasksetDispatch(SPUThread & spu) {
 
         if (elfAddr & 2) { // TODO: Figure this out
             spu.status |= SPU_STATUS_STOPPED_BY_STOP;
-            spu.Stop();
+            spu.stop();
             return;
         }
 

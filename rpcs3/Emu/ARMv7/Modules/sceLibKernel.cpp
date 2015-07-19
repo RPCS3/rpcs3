@@ -50,9 +50,9 @@ s32 sceKernelCreateThread(
 	armv7->PC = entry.addr();
 	armv7->prio = initPriority;
 	armv7->stack_size = stackSize;
-	armv7->Run();
+	armv7->run();
 
-	return armv7->GetId();
+	return armv7->get_id();
 }
 
 s32 sceKernelStartThread(s32 threadId, u32 argSize, vm::cptr<void> pArgBlock)
@@ -81,7 +81,7 @@ s32 sceKernelStartThread(s32 threadId, u32 argSize, vm::cptr<void> pArgBlock)
 	thread->GPR[0] = argSize;
 	thread->GPR[1] = pos;
 
-	thread->Exec();
+	thread->exec();
 	return SCE_OK;
 }
 
@@ -90,7 +90,7 @@ s32 sceKernelExitThread(ARMv7Context& context, s32 exitStatus)
 	sceLibKernel.Warning("sceKernelExitThread(exitStatus=0x%x)", exitStatus);
 
 	// exit status is stored in r0
-	static_cast<ARMv7Thread&>(context).Exit();
+	static_cast<ARMv7Thread&>(context).exit();
 
 	return SCE_OK;
 }
@@ -122,10 +122,10 @@ s32 sceKernelExitDeleteThread(ARMv7Context& context, s32 exitStatus)
 	sceLibKernel.Warning("sceKernelExitDeleteThread(exitStatus=0x%x)", exitStatus);
 
 	// exit status is stored in r0
-	static_cast<ARMv7Thread&>(context).Stop();
+	static_cast<ARMv7Thread&>(context).stop();
 
 	// current thread should be deleted
-	const u32 id = static_cast<ARMv7Thread&>(context).GetId();
+	const u32 id = static_cast<ARMv7Thread&>(context).get_id();
 
 	CallAfter([id]()
 	{
@@ -167,7 +167,7 @@ u32 sceKernelGetThreadId(ARMv7Context& context)
 {
 	sceLibKernel.Log("sceKernelGetThreadId()");
 
-	return static_cast<ARMv7Thread&>(context).GetId();
+	return static_cast<ARMv7Thread&>(context).get_id();
 }
 
 s32 sceKernelChangeCurrentThreadAttr(u32 clearAttr, u32 setAttr)
@@ -269,7 +269,7 @@ s32 sceKernelWaitThreadEnd(s32 threadId, vm::ptr<s32> pExitStatus, vm::ptr<u32> 
 	{
 	}
 
-	while (thread->IsActive())
+	while (thread->is_alive())
 	{
 		CHECK_EMU_STATUS;
 

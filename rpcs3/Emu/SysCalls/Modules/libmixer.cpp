@@ -455,11 +455,11 @@ s32 cellSurMixerCreate(vm::cptr<CellSurMixerConfig> config)
 		
 		surMixerCb.set(0);
 
-		Emu.GetIdManager().remove<PPUThread>(ppu.GetId());
+		Emu.GetIdManager().remove<PPUThread>(ppu.get_id());
 	};
 
-	ppu->Run();
-	ppu->Exec();
+	ppu->run();
+	ppu->exec();
 
 	return CELL_OK;
 }

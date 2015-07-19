@@ -30,7 +30,7 @@ void lv2_int_serv_t::join(PPUThread& ppu, lv2_lock_t& lv2_lock)
 	thread->cv.notify_one();
 
 	// Start joining
-	while (thread->IsActive())
+	while (thread->is_alive())
 	{
 		CHECK_EMU_STATUS;
 
@@ -39,7 +39,7 @@ void lv2_int_serv_t::join(PPUThread& ppu, lv2_lock_t& lv2_lock)
 
 	// Cleanup
 	Emu.GetIdManager().remove<lv2_int_serv_t>(id);
-	Emu.GetIdManager().remove<PPUThread>(thread->GetId());
+	Emu.GetIdManager().remove<PPUThread>(thread->get_id());
 }
 
 s32 sys_interrupt_tag_destroy(u32 intrtag)
@@ -88,7 +88,7 @@ s32 _sys_interrupt_thread_establish(vm::ptr<u32> ih, u32 intrtag, u32 intrthread
 	}
 
 	// If interrupt thread is running, it's already established on another interrupt tag
-	if (!it->IsStopped())
+	if (!it->is_stopped())
 	{
 		return CELL_EAGAIN;
 	}
@@ -122,7 +122,7 @@ s32 _sys_interrupt_thread_establish(vm::ptr<u32> ih, u32 intrtag, u32 intrthread
 
 				ppu.GPR[3] = arg1;
 				ppu.GPR[4] = arg2;
-				ppu.FastCall2(pc, rtoc);
+				ppu.fast_call(pc, rtoc);
 
 				handler->signal--;
 				continue;
@@ -137,10 +137,10 @@ s32 _sys_interrupt_thread_establish(vm::ptr<u32> ih, u32 intrtag, u32 intrthread
 			ppu.cv.wait(lv2_lock);
 		}
 
-		ppu.Exit();
+		ppu.exit();
 	};
 
-	it->Exec();
+	it->exec();
 
 	*ih = handler->id;
 
@@ -177,5 +177,5 @@ void sys_interrupt_thread_eoi(PPUThread& ppu)
 
 	ppu.GPR[1] = align(ppu.stack_addr + ppu.stack_size, 0x200) - 0x200; // supercrutch to bypass stack check
 
-	ppu.FastStop();
+	ppu.fast_stop();
 }

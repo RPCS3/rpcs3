@@ -540,15 +540,15 @@ public:
 	PPUThread(const std::string& name);
 	virtual ~PPUThread() override;
 
-	virtual void DumpInformation() const override;
-	virtual u32 GetPC() const override { return PC; }
-	virtual u32 GetOffset() const override { return 0; }
-	virtual void DoRun() override;
-	virtual void Task() override;
+	virtual void dump_info() const override;
+	virtual u32 get_pc() const override { return PC; }
+	virtual u32 get_offset() const override { return 0; }
+	virtual void do_run() override;
+	virtual void task() override;
 
-	virtual void InitRegs() override;
-	virtual void InitStack() override;
-	virtual void CloseStack() override;
+	virtual void init_regs() override;
+	virtual void init_stack() override;
+	virtual void close_stack() override;
 
 	inline u8 GetCR(const u8 n) const
 	{
@@ -810,14 +810,14 @@ public:
 		}
 		else
 		{
-			return GetStackArg(++g_count);
+			return get_stack_arg(++g_count);
 		}
 	}
 
 public:
-	u64 GetStackArg(s32 i);
-	void FastCall2(u32 addr, u32 rtoc);
-	void FastStop();
+	u64 get_stack_arg(s32 i);
+	void fast_call(u32 addr, u32 rtoc);
+	void fast_stop();
 };
 
 class ppu_thread : cpu_thread

@@ -490,7 +490,7 @@ void fill_ppu_exec_map(u32 addr, u32 size)
 }
 
 PPUThread::PPUThread(const std::string& name)
-	: CPUThread(CPU_THREAD_PPU, name, WRAP_EXPR(fmt::format("PPU[0x%x] Thread (%s)[0x%08x]", GetId(), GetName(), PC)))
+	: CPUThread(CPU_THREAD_PPU, name, WRAP_EXPR(fmt::format("PPU[0x%x] Thread (%s)[0x%08x]", m_id, m_name.c_str(), PC)))
 {
 	InitRotateMask();
 }
@@ -506,11 +506,11 @@ PPUThread::~PPUThread()
 		join();
 	}
 
-	CloseStack();
+	close_stack();
 	ppu_free_tls(m_id);
 }
 
-void PPUThread::DumpInformation() const
+void PPUThread::dump_info() const
 {
 	if (~hle_code < 1024)
 	{
@@ -521,10 +521,10 @@ void PPUThread::DumpInformation() const
 		LOG_SUCCESS(HLE, "Last function: %s (0x%llx)", SysCalls::GetFuncName(hle_code), hle_code);
 	}
 
-	CPUThread::DumpInformation();
+	CPUThread::dump_info();
 }
 
-void PPUThread::InitRegs()
+void PPUThread::init_regs()
 {
 	GPR[1] = align(stack_addr + stack_size, 0x200) - 0x200;
 	GPR[13] = ppu_get_tls(m_id) + 0x7000; // 0x7000 is subtracted from r13 to access first TLS element
@@ -536,7 +536,7 @@ void PPUThread::InitRegs()
 	TB = 0;
 }
 
-void PPUThread::InitStack()
+void PPUThread::init_stack()
 {
 	if (!stack_addr)
 	{
@@ -554,7 +554,7 @@ void PPUThread::InitStack()
 	}
 }
 
-void PPUThread::CloseStack()
+void PPUThread::close_stack()
 {
 	if (stack_addr)
 	{
@@ -563,7 +563,7 @@ void PPUThread::CloseStack()
 	}
 }
 
-void PPUThread::DoRun()
+void PPUThread::do_run()
 {
 	m_dec.reset();
 
@@ -636,12 +636,12 @@ int FPRdouble::Cmp(PPCdouble a, PPCdouble b)
 	return CR_SO;
 }
 
-u64 PPUThread::GetStackArg(s32 i)
+u64 PPUThread::get_stack_arg(s32 i)
 {
 	return vm::read64(VM_CAST(GPR[1] + 0x70 + 0x8 * (i - 9)));
 }
 
-void PPUThread::FastCall2(u32 addr, u32 rtoc)
+void PPUThread::fast_call(u32 addr, u32 rtoc)
 {
 	if (!is_current())
 	{
@@ -652,16 +652,18 @@ void PPUThread::FastCall2(u32 addr, u32 rtoc)
 	auto old_stack = GPR[1];
 	auto old_rtoc = GPR[2];
 	auto old_LR = LR;
-	auto old_task = decltype(custom_task)();
+	auto old_task = std::move(custom_task);
+
+	assert(!old_task || !custom_task);
 
 	PC = addr;
 	GPR[2] = rtoc;
 	LR = Emu.GetCPUThreadStop();
-	custom_task.swap(old_task);
+	custom_task = nullptr;
 
 	try
 	{
-		Task();
+		task();
 	}
 	catch (CPUThreadReturn)
 	{
@@ -678,21 +680,21 @@ void PPUThread::FastCall2(u32 addr, u32 rtoc)
 
 	GPR[2] = old_rtoc;
 	LR = old_LR;
-	custom_task.swap(old_task);
+	custom_task = std::move(old_task);
 }
 
-void PPUThread::FastStop()
+void PPUThread::fast_stop()
 {
 	m_state |= CPU_STATE_RETURN;
 }
 
-void PPUThread::Task()
+void PPUThread::task()
 {
 	SetHostRoundingMode(FPSCR_RN_NEAR);
 
 	if (custom_task)
 	{
-		if (CheckStatus()) return;
+		if (check_status()) return;
 
 		return custom_task(*this);
 	}
@@ -701,7 +703,7 @@ void PPUThread::Task()
 	{
 		while (true)
 		{
-			if (m_state.load() && CheckStatus()) break;
+			if (m_state.load() && check_status()) break;
 
 			// decode instruction using specified decoder
 			m_dec->DecodeMemory(PC);
@@ -714,7 +716,7 @@ void PPUThread::Task()
 	{
 		while (true)
 		{
-			if (m_state.load() && CheckStatus()) break;
+			if (m_state.load() && check_status()) break;
 
 			// get interpreter function
 			const auto func = g_ppu_inter_func_list[*(u32*)((u8*)g_ppu_exec_map + PC)];
@@ -775,7 +777,7 @@ cpu_thread& ppu_thread::args(std::initializer_list<std::string> values)
 
 cpu_thread& ppu_thread::run()
 {
-	thread->Run();
+	thread->run();
 
 	gpr(3, argc);
 	gpr(4, argv.addr());

@@ -165,7 +165,7 @@ void execute_ppu_func_by_index(PPUThread& CPU, u32 index)
 				LOG_NOTICE(HLE, "LLE function called: %s", SysCalls::GetFuncName(func->id));
 			}
 			
-			CPU.FastCall2(pc, rtoc);
+			CPU.fast_call(pc, rtoc);
 
 			if (Ini.HLELogging.GetValue())
 			{

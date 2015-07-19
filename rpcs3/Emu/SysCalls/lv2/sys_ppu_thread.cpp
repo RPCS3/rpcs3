@@ -31,10 +31,10 @@ void _sys_ppu_thread_exit(PPUThread& ppu, u64 errorcode)
 
 	if (!ppu.is_joinable)
 	{
-		Emu.GetIdManager().remove<PPUThread>(ppu.GetId());
+		Emu.GetIdManager().remove<PPUThread>(ppu.get_id());
 	}
 
-	ppu.Exit();
+	ppu.exit();
 }
 
 void sys_ppu_thread_yield()
@@ -71,7 +71,7 @@ s32 sys_ppu_thread_join(PPUThread& ppu, u32 thread_id, vm::ptr<u64> vptr)
 	thread->is_joining = true;
 
 	// join thread
-	while (thread->IsActive())
+	while (thread->is_alive())
 	{
 		CHECK_EMU_STATUS;
 
@@ -82,7 +82,7 @@ s32 sys_ppu_thread_join(PPUThread& ppu, u32 thread_id, vm::ptr<u64> vptr)
 	*vptr = thread->GPR[3];
 
 	// cleanup
-	Emu.GetIdManager().remove<PPUThread>(thread->GetId());
+	Emu.GetIdManager().remove<PPUThread>(thread->get_id());
 
 	return CELL_OK;
 }
@@ -220,7 +220,7 @@ u32 ppu_thread_create(u32 entry, u64 arg, s32 prio, u32 stacksize, bool is_joina
 	ppu->prio = prio;
 	ppu->stack_size = stacksize < 0x4000 ? 0x4000 : stacksize; // (hack) adjust minimal stack size
 	ppu->custom_task = task;
-	ppu->Run();
+	ppu->run();
 
 	if (entry)
 	{
@@ -231,10 +231,10 @@ u32 ppu_thread_create(u32 entry, u64 arg, s32 prio, u32 stacksize, bool is_joina
 	if (!is_interrupt)
 	{
 		ppu->GPR[3] = arg;
-		ppu->Exec();
+		ppu->exec();
 	}
 
-	return ppu->GetId();
+	return ppu->get_id();
 }
 
 s32 _sys_ppu_thread_create(vm::ptr<u64> thread_id, vm::ptr<ppu_thread_param_t> param, u64 arg, u64 unk, s32 prio, u32 stacksize, u64 flags, vm::cptr<char> threadname)
@@ -261,7 +261,7 @@ s32 _sys_ppu_thread_create(vm::ptr<u64> thread_id, vm::ptr<ppu_thread_param_t> p
 
 	ppu->prio = prio;
 	ppu->stack_size = stacksize < 0x4000 ? 0x4000 : stacksize; // (hack) adjust minimal stack size
-	ppu->Run();
+	ppu->run();
 
 	ppu->PC = vm::read32(param->entry);
 	ppu->GPR[2] = vm::read32(param->entry + 4); // rtoc
@@ -275,7 +275,7 @@ s32 _sys_ppu_thread_create(vm::ptr<u64> thread_id, vm::ptr<ppu_thread_param_t> p
 		ppu->GPR[13] = tls;
 	}
 
-	*thread_id = ppu->GetId();
+	*thread_id = ppu->get_id();
 
 	return CELL_OK;
 }
@@ -293,7 +293,7 @@ s32 sys_ppu_thread_start(u32 thread_id)
 		return CELL_ESRCH;
 	}
 
-	thread->Exec();
+	thread->exec();
 
 	return CELL_OK;
 }

@@ -59,59 +59,59 @@ protected:
 public:
 	virtual ~CPUThread() override;
 
-	u32 GetId() const { return m_id; }
-	CPUThreadType GetType() const { return m_type; }
-	std::string GetName() const { return m_name; }
+	u32 get_id() const { return m_id; }
+	CPUThreadType get_type() const { return m_type; }
+	std::string get_name() const { return m_name; }
 
-	bool IsActive() const { return (m_state.load() & CPU_STATE_DEAD) == 0; }
-	bool IsStopped() const { return (m_state.load() & CPU_STATE_STOPPED) != 0; }
-	virtual bool IsPaused() const;
+	bool is_alive() const { return (m_state.load() & CPU_STATE_DEAD) == 0; }
+	bool is_stopped() const { return (m_state.load() & CPU_STATE_STOPPED) != 0; }
+	virtual bool is_paused() const;
 
-	virtual void DumpInformation() const;
-	virtual u32 GetPC() const = 0;
-	virtual u32 GetOffset() const = 0;
-	virtual void DoRun() = 0;
-	virtual void Task() = 0;
+	virtual void dump_info() const;
+	virtual u32 get_pc() const = 0;
+	virtual u32 get_offset() const = 0;
+	virtual void do_run() = 0;
+	virtual void task() = 0;
 
-	virtual void InitRegs() = 0;
-	virtual void InitStack() = 0;
-	virtual void CloseStack() = 0;
+	virtual void init_regs() = 0;
+	virtual void init_stack() = 0;
+	virtual void close_stack() = 0;
 
 	// initialize thread
-	void Run();
+	void run();
 
 	// called by the debugger, don't use
-	void Pause();
+	void pause();
 
 	// called by the debugger, don't use
-	void Resume();
+	void resume();
 
 	// stop thread execution
-	void Stop();
+	void stop();
 
 	// start thread execution (removing STOP status)
-	void Exec();
+	void exec();
 
 	// exit thread execution
-	void Exit();
+	void exit();
 
 	// called by the debugger, don't use
-	void Step();
+	void step();
 
 	// trigger thread status check
-	void Sleep();
+	void sleep();
 
 	// untrigger thread status check
-	void Awake();
+	void awake();
 
 	// set SIGNAL and notify (returns true if set)
-	bool Signal();
+	bool signal();
 
 	// test SIGNAL and reset
-	bool Unsignal();
+	bool unsignal();
 
 	// process m_state flags, returns true if the checker must return
-	bool CheckStatus();
+	bool check_status();
 
 	std::string GetFName() const
 	{
@@ -162,54 +162,6 @@ public:
 	virtual std::string RegsToString() const = 0;
 	virtual std::string ReadRegString(const std::string& reg) const = 0;
 	virtual bool WriteRegString(const std::string& reg, std::string value) = 0;
-
-	struct CallStackItem
-	{
-		u32 pc;
-		u32 branch_pc;
-	};
-
-	std::vector<CallStackItem> m_call_stack;
-
-	std::string CallStackToString()
-	{
-		std::string ret = "Call Stack:\n==========\n";
-
-		for(uint i=0; i<m_call_stack.size(); ++i)
-		{
-			ret += fmt::Format("0x%x -> 0x%x\n", m_call_stack[i].pc, m_call_stack[i].branch_pc);
-		}
-
-		return ret;
-	}
-
-	void CallStackBranch(u32 pc)
-	{
-		//look if we're jumping back and if so pop the stack back to that position
-		auto res = std::find_if(m_call_stack.rbegin(), m_call_stack.rend(),
-			[&pc, this](CallStackItem &it)
-			{
-				return CallStackGetNextPC(it.pc) == pc;
-			});
-		if (res != m_call_stack.rend())
-		{
-			m_call_stack.erase((res + 1).base(), m_call_stack.end());
-			return;
-		}
-
-		//add a new entry otherwise
-		CallStackItem new_item;
-
-		new_item.branch_pc = pc;
-		new_item.pc = GetPC();
-
-		m_call_stack.push_back(new_item);
-	}
-
-	virtual u32 CallStackGetNextPC(u32 pc)
-	{
-		return pc + 4;
-	}
 };
 
 class cpu_thread
@@ -245,8 +197,8 @@ public:
 	//	return thread->IsJoinable();
 	//}
 
-	u32 get_id() const
-	{
-		return thread->GetId();
-	}
+	//u32 get_id() const
+	//{
+	//	return thread->GetId();
+	//}
 };

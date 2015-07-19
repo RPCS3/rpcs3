@@ -1476,7 +1476,7 @@ void ppu_interpreter::SC(PPUThread& CPU, ppu_opcode_t op)
 	switch (op.lev)
 	{
 	case 0x0: SysCalls::DoSyscall(CPU, CPU.GPR[11]); break;
-	case 0x3: CPU.FastStop(); break;
+	case 0x3: CPU.fast_stop(); break;
 	default: throw EXCEPTION("");
 	}
 }

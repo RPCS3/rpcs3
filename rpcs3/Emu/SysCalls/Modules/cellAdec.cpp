@@ -469,8 +469,8 @@ void adecOpen(u32 adec_id) // TODO: call from the constructor
 
 	};
 
-	adec.adecCb->Run();
-	adec.adecCb->Exec();
+	adec.adecCb->run();
+	adec.adecCb->exec();
 }
 
 bool adecCheckType(s32 type)
@@ -572,7 +572,7 @@ s32 cellAdecClose(u32 handle)
 		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 	}
 
-	Emu.GetIdManager().remove<PPUThread>(adec->adecCb->GetId());
+	Emu.GetIdManager().remove<PPUThread>(adec->adecCb->get_id());
 	Emu.GetIdManager().remove<AudioDecoder>(handle);
 	return CELL_OK;
 }
