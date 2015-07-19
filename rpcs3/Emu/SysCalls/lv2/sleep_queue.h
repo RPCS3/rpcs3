@@ -43,7 +43,7 @@ enum
 
 using sleep_queue_t = std::deque<std::shared_ptr<CPUThread>>;
 
-static struct defer_sleep_t{} const defer_sleep;
+static struct defer_sleep_t{} const defer_sleep{};
 
 // automatic object handling a thread entry in the sleep queue
 class sleep_queue_entry_t final

@@ -1316,9 +1316,9 @@ void SPUThread::stop_and_signal(u32 code)
 		{
 			group->state = SPU_THREAD_GROUP_STATUS_WAITING;
 
-			for (auto& t : group->threads)
+			for (auto& thread : group->threads)
 			{
-				if (t) t->sleep(); // trigger status check
+				if (thread) thread->sleep(); // trigger status check
 			}
 		}
 		else
@@ -1326,35 +1326,37 @@ void SPUThread::stop_and_signal(u32 code)
 			throw EXCEPTION("Unexpected SPU Thread Group state (%d)", group->state);
 		}
 
-		// protocol is ignored in current implementation
-		queue->waiters++;
-
-		// wait on the event queue
-		while (queue->events.empty() && !queue->cancelled)
+		if (queue->events.empty() || !queue->sq.empty())
 		{
-			CHECK_EMU_STATUS;
+			// add waiter; protocol is ignored in current implementation
+			sleep_queue_entry_t waiter(*this, queue->sq);
+
+			// wait on the event queue
+			while (!unsignal())
+			{
+				CHECK_EMU_STATUS;
 
 				if (is_stopped()) throw CPUThreadStop{};
 
-			queue->cv.wait_for(lv2_lock, std::chrono::milliseconds(1));
+				cv.wait(lv2_lock);
+			}
 		}
 
-		if (queue->cancelled)
+		if (queue->events.empty())
 		{
+			if (Emu.GetIdManager().check_id<lv2_event_queue_t>(queue->id))
+			{
+				throw EXCEPTION("Unexpected");
+			}
+
 			ch_in_mbox.set_values(1, CELL_ECANCELED);
 		}
 		else
 		{
 			auto& event = queue->events.front();
-			ch_in_mbox.set_values(4, CELL_OK, static_cast<u32>(event.data1), static_cast<u32>(event.data2), static_cast<u32>(event.data3));
+			ch_in_mbox.set_values(4, CELL_OK, static_cast<u32>(std::get<1>(event)), static_cast<u32>(std::get<2>(event)), static_cast<u32>(std::get<3>(event)));
 
 			queue->events.pop_front();
-			queue->waiters--;
-
-			if (queue->events.size())
-			{
-				queue->cv.notify_one();
-			}
 		}
 		
 		// restore thread group status
@@ -1371,9 +1373,9 @@ void SPUThread::stop_and_signal(u32 code)
 			throw EXCEPTION("Unexpected SPU Thread Group state (%d)", group->state);
 		}
 
-		for (auto& t : group->threads)
+		for (auto& thread : group->threads)
 		{
-			if (t) t->awake(); // untrigger status check
+			if (thread) thread->awake(); // untrigger status check
 		}
 
 		group->cv.notify_all();
@@ -1408,11 +1410,11 @@ void SPUThread::stop_and_signal(u32 code)
 			throw EXCEPTION("Invalid SPU Thread Group");
 		}
 
-		for (auto t : group->threads)
+		for (auto thread : group->threads)
 		{
-			if (t && t.get() != this)
+			if (thread && thread.get() != this)
 			{
-				t->stop();
+				thread->stop();
 			}
 		}
 

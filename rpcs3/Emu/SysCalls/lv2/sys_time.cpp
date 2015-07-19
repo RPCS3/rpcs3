@@ -55,7 +55,7 @@ u64 get_timebased_time()
 	LARGE_INTEGER count;
 	if (!QueryPerformanceCounter(&count))
 	{
-		throw EXCEPTION("System error 0x%x", GetLastError());
+		throw EXCEPTION("Unexpected");
 	}
 
 	const u64 time = count.QuadPart;
@@ -82,7 +82,7 @@ u64 get_system_time()
 		LARGE_INTEGER count;
 		if (!QueryPerformanceCounter(&count))
 		{
-			throw EXCEPTION("System error 0x%x", GetLastError());
+			throw EXCEPTION("Unexpected");
 		}
 
 		const u64 time = count.QuadPart;
@@ -122,7 +122,7 @@ s32 sys_time_get_current_time(vm::ptr<s64> sec, vm::ptr<s64> nsec)
 	LARGE_INTEGER count;
 	if (!QueryPerformanceCounter(&count))
 	{
-		throw EXCEPTION("System error 0x%x", GetLastError());
+		throw EXCEPTION("Unexpected");
 	}
 
 	// get time difference in nanoseconds
