@@ -28,8 +28,8 @@ struct lv2_mutex_t
 	const u64 name;
 
 	std::atomic<u32> cond_count{ 0 }; // count of condition variables associated
-	std::atomic<u32> recursive_count{ 0 };
-	std::shared_ptr<CPUThread> owner;
+	std::atomic<u32> recursive_count{ 0 }; // count of recursive locks
+	std::shared_ptr<CPUThread> owner; // current mutex owner
 
 	sleep_queue_t sq;
 

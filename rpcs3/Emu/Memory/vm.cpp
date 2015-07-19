@@ -259,7 +259,7 @@ namespace vm
 
 	void waiter_lock_t::wait()
 	{
-		while (!m_waiter->thread->Signaled())
+		while (!m_waiter->thread->Unsignal())
 		{
 			if (m_waiter->pred())
 			{
@@ -536,7 +536,10 @@ namespace vm
 		{
 			std::lock_guard<reservation_mutex_t> lock(g_reservation_mutex);
 
-			g_tls_did_break_reservation = _reservation_break(g_reservation_addr);
+			if (g_reservation_owner && g_reservation_owner == get_current_thread_ctrl())
+			{
+				g_tls_did_break_reservation = _reservation_break(g_reservation_addr);
+			}
 		}
 	}
 
@@ -556,7 +559,10 @@ namespace vm
 		// check and possibly break previous reservation
 		if (g_reservation_owner != get_current_thread_ctrl() || g_reservation_addr != addr || g_reservation_size != size)
 		{
-			_reservation_break(g_reservation_addr);
+			if (g_reservation_owner)
+			{
+				_reservation_break(g_reservation_addr);
+			}
 
 			g_tls_did_break_reservation = true;
 		}

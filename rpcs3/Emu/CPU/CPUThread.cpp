@@ -249,7 +249,7 @@ bool CPUThread::Signal()
 	}
 }
 
-bool CPUThread::Signaled()
+bool CPUThread::Unsignal()
 {
 	// remove SIGNAL and return its old value
 	return (m_state._and_not(CPU_STATE_SIGNAL) & CPU_STATE_SIGNAL) != 0;

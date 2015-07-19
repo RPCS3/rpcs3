@@ -535,7 +535,7 @@ void SPUThread::process_mfc_cmd(u32 cmd)
 u32 SPUThread::get_events(bool waiting)
 {
 	// check reservation status and set SPU_EVENT_LR if lost
-	if (last_raddr != 0 && !vm::reservation_test(get_ctrl()))
+	if (last_raddr != 0 && !vm::reservation_test(get_thread_ctrl()))
 	{
 		ch_event_stat |= SPU_EVENT_LR;
 		

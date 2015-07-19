@@ -6,31 +6,13 @@
 #include "Emu/CPU/CPUThread.h"
 #include "sleep_queue.h"
 
-sleep_queue_entry_t::sleep_queue_entry_t(CPUThread& cpu, sleep_queue_t& queue)
-	: m_queue(queue)
-	, m_thread(cpu)
+void sleep_queue_entry_t::add_entry()
 {
-	m_queue.emplace_back(cpu.shared_from_this());
-
-	m_thread.Sleep();
+	m_queue.emplace_back(m_thread.shared_from_this());
 }
 
-sleep_queue_entry_t::~sleep_queue_entry_t() noexcept(false)
+void sleep_queue_entry_t::remove_entry()
 {
-	m_thread.Awake();
-
-	if (m_queue.front().get() == &m_thread)
-	{
-		m_queue.pop_front();
-		return;
-	}
-
-	if (m_queue.back().get() == &m_thread)
-	{
-		m_queue.pop_back();
-		return;
-	}
-
 	for (auto it = m_queue.begin(); it != m_queue.end(); it++)
 	{
 		if (it->get() == &m_thread)
@@ -39,9 +21,38 @@ sleep_queue_entry_t::~sleep_queue_entry_t() noexcept(false)
 			return;
 		}
 	}
+}
 
-	if (!std::uncaught_exception())
+bool sleep_queue_entry_t::find() const
+{
+	for (auto it = m_queue.begin(); it != m_queue.end(); it++)
 	{
-		throw EXCEPTION("Thread not found");
+		if (it->get() == &m_thread)
+		{
+			return true;
+		}
 	}
+
+	return false;
+}
+
+sleep_queue_entry_t::sleep_queue_entry_t(CPUThread& cpu, sleep_queue_t& queue)
+	: m_thread(cpu)
+	, m_queue(queue)
+{
+	add_entry();
+	cpu.Sleep();
+}
+
+sleep_queue_entry_t::sleep_queue_entry_t(CPUThread& cpu, sleep_queue_t& queue, const defer_sleep_t&)
+	: m_thread(cpu)
+	, m_queue(queue)
+{
+	cpu.Sleep();
+}
+
+sleep_queue_entry_t::~sleep_queue_entry_t() noexcept(false)
+{
+	remove_entry();
+	m_thread.Awake();
 }

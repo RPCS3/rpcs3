@@ -51,7 +51,7 @@ public:
 	using thread_t::mutex;
 	using thread_t::cv;
 	using thread_t::is_current;
-	using thread_t::get_ctrl;
+	using thread_t::get_thread_ctrl;
 
 protected:
 	CPUThread(CPUThreadType type, const std::string& name, std::function<std::string()> thread_name);
@@ -108,7 +108,7 @@ public:
 	bool Signal();
 
 	// test SIGNAL and reset
-	bool Signaled();
+	bool Unsignal();
 
 	// process m_state flags, returns true if the checker must return
 	bool CheckStatus();

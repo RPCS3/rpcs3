@@ -45,7 +45,12 @@ s32 sys_mutex_create(vm::ptr<u32> mutex_id, vm::ptr<sys_mutex_attribute_t> attr)
 	case SYS_SYNC_FIFO: break;
 	case SYS_SYNC_PRIORITY: break;
 	case SYS_SYNC_PRIORITY_INHERIT: break;
-	default: sys_mutex.Error("sys_mutex_create(): unknown protocol (0x%x)", protocol); return CELL_EINVAL;
+
+	default:
+	{
+		sys_mutex.Error("sys_mutex_create(): unknown protocol (0x%x)", protocol);
+		return CELL_EINVAL;
+	}
 	}
 
 	const bool recursive = attr->recursive == SYS_SYNC_RECURSIVE;
@@ -135,7 +140,7 @@ s32 sys_mutex_lock(PPUThread& ppu, u32 mutex_id, u64 timeout)
 	// add waiter; protocol is ignored in current implementation
 	sleep_queue_entry_t waiter(ppu, mutex->sq);
 
-	while (!ppu.Signaled())
+	while (!ppu.Unsignal())
 	{
 		CHECK_EMU_STATUS;
 
@@ -143,10 +148,12 @@ s32 sys_mutex_lock(PPUThread& ppu, u32 mutex_id, u64 timeout)
 		{
 			const u64 passed = get_system_time() - start_time;
 
-			if (passed >= timeout || ppu.cv.wait_for(lv2_lock, std::chrono::microseconds(timeout - passed)) == std::cv_status::timeout)
+			if (passed >= timeout)
 			{
 				return CELL_ETIMEDOUT;
 			}
+
+			ppu.cv.wait_for(lv2_lock, std::chrono::microseconds(timeout - passed));
 		}
 		else
 		{

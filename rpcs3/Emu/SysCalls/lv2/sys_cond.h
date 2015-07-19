@@ -31,6 +31,8 @@ struct lv2_cond_t
 		, name(name)
 	{
 	}
+
+	void notify(lv2_lock_t& lv2_lock, sleep_queue_t::iterator it);
 };
 
 REG_ID_TYPE(lv2_cond_t, 0x86); // SYS_COND_OBJECT

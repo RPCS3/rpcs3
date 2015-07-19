@@ -75,7 +75,7 @@ public:
 	bool is_current() const;
 
 	// get internal thread pointer
-	const thread_ctrl_t* get_ctrl() const { return m_thread.get(); }
+	const thread_ctrl_t* get_thread_ctrl() const { return m_thread.get(); }
 };
 
 class autojoin_thread_t final : private thread_t

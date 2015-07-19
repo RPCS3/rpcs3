@@ -12,6 +12,28 @@ SysCallBase sys_cond("sys_cond");
 
 extern u64 get_system_time();
 
+void lv2_cond_t::notify(lv2_lock_t& lv2_lock, sleep_queue_t::iterator it)
+{
+	CHECK_LV2_LOCK(lv2_lock);
+
+	auto& thread = *it;
+
+	if (mutex->owner)
+	{
+		// add thread to the mutex sleep queue if cannot lock immediately
+		mutex->sq.emplace_back(thread);
+	}
+	else
+	{
+		mutex->owner = thread;
+
+		if (!thread->Signal())
+		{
+			throw EXCEPTION("Thread already signaled");
+		}
+	}
+}
+
 s32 sys_cond_create(vm::ptr<u32> cond_id, u32 mutex_id, vm::ptr<sys_cond_attribute_t> attr)
 {
 	sys_cond.Warning("sys_cond_create(cond_id=*0x%x, mutex_id=0x%x, attr=*0x%x)", cond_id, mutex_id, attr);
@@ -54,7 +76,7 @@ s32 sys_cond_destroy(u32 cond_id)
 		return CELL_ESRCH;
 	}
 
-	if (!cond->sq.empty())
+	if (!cond->sq.empty() || cond.use_count() > 2)
 	{
 		return CELL_EBUSY;
 	}
@@ -82,13 +104,11 @@ s32 sys_cond_signal(u32 cond_id)
 		return CELL_ESRCH;
 	}
 
-	for (auto& thread : cond->sq)
+	// signal one waiting thread; protocol is ignored in current implementation
+	if (!cond->sq.empty())
 	{
-		// signal one waiting thread; protocol is ignored in current implementation
-		if (thread->Signal())
-		{
-			return CELL_OK;
-		}
+		cond->notify(lv2_lock, cond->sq.begin());
+		cond->sq.pop_front();
 	}
 
 	return CELL_OK;
@@ -107,14 +127,13 @@ s32 sys_cond_signal_all(u32 cond_id)
 		return CELL_ESRCH;
 	}
 
-	for (auto& thread : cond->sq)
+	// signal all waiting threads; protocol is ignored in current implementation
+	for (auto it = cond->sq.begin(); it != cond->sq.end(); it++)
 	{
-		// signal all waiting threads; protocol is ignored in current implementation
-		if (thread->Signal())
-		{
-			;
-		}
+		cond->notify(lv2_lock, it);
 	}
+
+	cond->sq.clear();
 
 	return CELL_OK;
 }
@@ -134,11 +153,13 @@ s32 sys_cond_signal_to(u32 cond_id, u32 thread_id)
 
 	// TODO: check if CELL_ESRCH is returned if thread_id is invalid
 
-	for (auto& thread : cond->sq)
+	// signal specified thread (protocol is not required)
+	for (auto it = cond->sq.begin(); it != cond->sq.end(); it++)
 	{
-		// signal specified thread
-		if (thread->GetId() == thread_id && thread->Signal())
+		if ((*it)->GetId() == thread_id)
 		{
+			cond->notify(lv2_lock, it);
+			cond->sq.erase(it);
 			return CELL_OK;
 		}
 	}
@@ -173,58 +194,54 @@ s32 sys_cond_wait(PPUThread& ppu, u32 cond_id, u64 timeout)
 	// unlock the mutex
 	cond->mutex->unlock(lv2_lock);
 
+	// add waiter; protocol is ignored in current implementation
+	sleep_queue_entry_t waiter(ppu, cond->sq);
+
+	// add empty mutex waiter (may be actually set later)
+	sleep_queue_entry_t mutex_waiter(ppu, cond->mutex->sq, defer_sleep);
+
+	while (!ppu.Unsignal())
 	{
-		// add waiter; protocol is ignored in current implementation
-		sleep_queue_entry_t waiter(ppu, cond->sq);
-
-		while (!ppu.Signaled())
+		// timeout is ignored if waiting on the cond var is already dropped
+		if (timeout && waiter)
 		{
-			if (timeout)
-			{
-				const u64 passed = get_system_time() - start_time;
+			const u64 passed = get_system_time() - start_time;
 
-				if (passed >= timeout || ppu.cv.wait_for(lv2_lock, std::chrono::microseconds(timeout - passed)) == std::cv_status::timeout)
+			if (passed >= timeout)
+			{
+				// try to reown mutex and exit if timed out
+				if (!cond->mutex->owner)
 				{
+					cond->mutex->owner = ppu.shared_from_this();
 					break;
 				}
-			}
-			else
-			{
-				ppu.cv.wait(lv2_lock);
+
+				// drop condition variable and start waiting on the mutex queue
+				mutex_waiter.enter();
+				waiter.leave();
+				continue;
 			}
 
-			CHECK_EMU_STATUS;
+			ppu.cv.wait_for(lv2_lock, std::chrono::microseconds(timeout - passed));
 		}
-	}
-
-	// reown the mutex (could be set when notified)
-	if (!cond->mutex->owner)
-	{
-		cond->mutex->owner = ppu.shared_from_this();
-	}
-
-	if (cond->mutex->owner.get() != &ppu)
-	{
-		// add waiter; protocol is ignored in current implementation
-		sleep_queue_entry_t waiter(ppu, cond->mutex->sq);
-
-		while (!ppu.Signaled())
+		else
 		{
 			ppu.cv.wait(lv2_lock);
-
-			CHECK_EMU_STATUS;
 		}
 
-		if (cond->mutex->owner.get() != &ppu)
-		{
-			throw EXCEPTION("Unexpected mutex owner");
-		}
+		CHECK_EMU_STATUS;
+	}
+
+	// mutex owner is restored after notification or unlocking
+	if (cond->mutex->owner.get() != &ppu)
+	{
+		throw EXCEPTION("Unexpected mutex owner");
 	}
 
 	// restore the recursive value
 	cond->mutex->recursive_count = recursive_value;
 
-	// check timeout
+	// check timeout (unclear)
 	if (timeout && get_system_time() - start_time > timeout)
 	{
 		return CELL_ETIMEDOUT;
