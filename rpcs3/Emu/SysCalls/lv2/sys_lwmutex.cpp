@@ -16,17 +16,15 @@ s32 _sys_lwmutex_create(vm::ptr<u32> lwmutex_id, u32 protocol, vm::ptr<sys_lwmut
 {
 	sys_lwmutex.Warning("_sys_lwmutex_create(lwmutex_id=*0x%x, protocol=0x%x, control=*0x%x, arg4=0x%x, name=0x%llx, arg6=0x%x)", lwmutex_id, protocol, control, arg4, name, arg6);
 
-	switch (protocol)
+	if (protocol != SYS_SYNC_FIFO && protocol != SYS_SYNC_RETRY && protocol != SYS_SYNC_PRIORITY)
 	{
-	case SYS_SYNC_FIFO: break;
-	case SYS_SYNC_RETRY: break;
-	case SYS_SYNC_PRIORITY: break;
-	default: sys_lwmutex.Error("_sys_lwmutex_create(): invalid protocol (0x%x)", protocol); return CELL_EINVAL;
+		sys_lwmutex.Error("_sys_lwmutex_create(): unknown protocol (0x%x)", protocol);
+		return CELL_EINVAL;
 	}
 
 	if (arg4 != 0x80000001 || arg6)
 	{
-		sys_lwmutex.Error("_sys_lwmutex_create(): unknown parameters (arg4=0x%x, arg6=0x%x)", arg4, arg6);
+		throw EXCEPTION("Unknown arguments (arg4=0x%x, arg6=0x%x)", arg4, arg6);
 	}
 
 	*lwmutex_id = Emu.GetIdManager().make<lv2_lwmutex_t>(protocol, name);

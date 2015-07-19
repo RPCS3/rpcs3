@@ -15,19 +15,6 @@ void EventManager::Clear()
 	m_map.clear();
 }
 
-bool EventManager::CheckKey(u64 key)
-{
-	if (!key)
-	{
-		// never exists
-		return false;
-	}
-
-	std::lock_guard<std::mutex> lock(m_mutex);
-
-	return m_map.find(key) != m_map.end();
-}
-
 bool EventManager::UnregisterKey(u64 key)
 {
 	if (!key)

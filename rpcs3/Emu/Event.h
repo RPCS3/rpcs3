@@ -12,7 +12,6 @@ class EventManager
 public:
 	void Init();
 	void Clear();
-	bool CheckKey(u64 key);
 	bool UnregisterKey(u64 key);
 
 	template<typename... Args, typename = std::enable_if_t<std::is_constructible<lv2_event_queue_t, Args...>::value>> std::shared_ptr<lv2_event_queue_t> MakeEventQueue(u64 key, Args&&... args)

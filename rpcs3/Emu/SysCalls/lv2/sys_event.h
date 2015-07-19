@@ -20,7 +20,7 @@ enum : s32
 // Event Queue Ipc Key
 enum : u64
 {
-	SYS_EVENT_QUEUE_LOCAL = 0x00,
+	SYS_EVENT_QUEUE_LOCAL = 0,
 };
 
 // Event Port Type

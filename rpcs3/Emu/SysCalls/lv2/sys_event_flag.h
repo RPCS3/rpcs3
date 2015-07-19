@@ -1,5 +1,7 @@
 #pragma once
 
+#include "sleep_queue.h"
+
 namespace vm { using namespace ps3; }
 
 enum
@@ -35,29 +37,86 @@ struct lv2_event_flag_t
 	const s32 type;
 	const u64 name;
 
-	std::atomic<u64> flags;
-	std::atomic<u32> cancelled;
+	std::atomic<u64> pattern;
 
-	// TODO: use sleep queue, possibly remove condition variable
-	std::condition_variable cv;
-	std::atomic<u32> waiters;
+	sleep_queue_t sq;
 
 	lv2_event_flag_t(u64 pattern, u32 protocol, s32 type, u64 name)
-		: flags(pattern)
+		: pattern(pattern)
 		, protocol(protocol)
 		, type(type)
 		, name(name)
-		, cancelled(0)
-		, waiters(0)
 	{
 	}
+
+	static inline bool check_mode(u32 mode)
+	{
+		switch (mode & 0xf)
+		{
+		case SYS_EVENT_FLAG_WAIT_AND: break;
+		case SYS_EVENT_FLAG_WAIT_OR: break;
+		default: return false;
+		}
+
+		switch (mode & ~0xf)
+		{
+		case 0: break;
+		case SYS_EVENT_FLAG_WAIT_CLEAR: break;
+		case SYS_EVENT_FLAG_WAIT_CLEAR_ALL: break;
+		default: return false;
+		}
+
+		return true;
+	}
+
+	inline bool check_pattern(u64 bitptn, u32 mode)
+	{
+		if ((mode & 0xf) == SYS_EVENT_FLAG_WAIT_AND)
+		{
+			return (pattern & bitptn) == bitptn;
+		}
+		else if ((mode & 0xf) == SYS_EVENT_FLAG_WAIT_OR)
+		{
+			return (pattern & bitptn) != 0;
+		}
+		else
+		{
+			throw EXCEPTION("Unknown mode (0x%x)", mode);
+		}
+	}
+
+	inline u64 clear_pattern(u64 bitptn, u32 mode)
+	{
+		if ((mode & ~0xf) == SYS_EVENT_FLAG_WAIT_CLEAR)
+		{
+			return pattern.fetch_and(~bitptn);
+		}
+		else if ((mode & ~0xf) == SYS_EVENT_FLAG_WAIT_CLEAR_ALL)
+		{
+			return pattern.exchange(0);
+		}
+		else if ((mode & ~0xf) == 0)
+		{
+			return pattern;
+		}
+		else
+		{
+			throw EXCEPTION("Unknown mode (0x%x)", mode);
+		}
+	}
+
+	void notify_all(lv2_lock_t& lv2_lock);
 };
 
 REG_ID_TYPE(lv2_event_flag_t, 0x98); // SYS_EVENT_FLAG_OBJECT
 
+// Aux
+class PPUThread;
+
+// SysCalls
 s32 sys_event_flag_create(vm::ptr<u32> id, vm::ptr<sys_event_flag_attribute_t> attr, u64 init);
 s32 sys_event_flag_destroy(u32 id);
-s32 sys_event_flag_wait(u32 id, u64 bitptn, u32 mode, vm::ptr<u64> result, u64 timeout);
+s32 sys_event_flag_wait(PPUThread& ppu, u32 id, u64 bitptn, u32 mode, vm::ptr<u64> result, u64 timeout);
 s32 sys_event_flag_trywait(u32 id, u64 bitptn, u32 mode, vm::ptr<u64> result);
 s32 sys_event_flag_set(u32 id, u64 bitptn);
 s32 sys_event_flag_clear(u32 id, u64 bitptn);

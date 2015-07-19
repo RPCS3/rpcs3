@@ -951,23 +951,19 @@ void SPUThread::set_ch_value(u32 ch, u32 value)
 					LOG_WARNING(SPU, "sys_event_flag_set_bit(id=%d, value=0x%x (flag=%d))", data, value, flag);
 				}
 
-				const auto ef = Emu.GetIdManager().get<lv2_event_flag_t>(data);
+				const auto eflag = Emu.GetIdManager().get<lv2_event_flag_t>(data);
 
-				if (!ef)
+				if (!eflag)
 				{
 					return ch_in_mbox.set_values(1, CELL_ESRCH);
 				}
 
-				while (ef->cancelled)
-				{
-					ef->cv.wait_for(lv2_lock, std::chrono::milliseconds(1));
-				}
+				const u64 bitptn = 1ull << flag;
 
-				ef->flags |= 1ull << flag;
-
-				if (ef->waiters)
+				if (~eflag->pattern.fetch_or(bitptn) & bitptn)
 				{
-					ef->cv.notify_all();
+					// notify if the bit was set
+					eflag->notify_all(lv2_lock);
 				}
 				
 				return ch_in_mbox.set_values(1, CELL_OK);
@@ -999,23 +995,19 @@ void SPUThread::set_ch_value(u32 ch, u32 value)
 					LOG_WARNING(SPU, "sys_event_flag_set_bit_impatient(id=%d, value=0x%x (flag=%d))", data, value, flag);
 				}
 
-				const auto ef = Emu.GetIdManager().get<lv2_event_flag_t>(data);
+				const auto eflag = Emu.GetIdManager().get<lv2_event_flag_t>(data);
 
-				if (!ef)
+				if (!eflag)
 				{
 					return;
 				}
 
-				while (ef->cancelled)
-				{
-					ef->cv.wait_for(lv2_lock, std::chrono::milliseconds(1));
-				}
+				const u64 bitptn = 1ull << flag;
 
-				ef->flags |= 1ull << flag;
-
-				if (ef->waiters)
+				if (~eflag->pattern.fetch_or(bitptn) & bitptn)
 				{
-					ef->cv.notify_all();
+					// notify if the bit was set
+					eflag->notify_all(lv2_lock);
 				}
 				
 				return;
