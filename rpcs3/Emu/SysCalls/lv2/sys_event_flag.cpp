@@ -40,15 +40,13 @@ void lv2_event_flag_t::notify_all(lv2_lock_t& lv2_lock)
 		return false;
 	};
 
-	// iterate over all waiters; protocol is ignored in current implementation
+	// check all waiters; protocol is ignored in current implementation
 	sq.erase(std::remove_if(sq.begin(), sq.end(), pred), sq.end());
 }
 
 s32 sys_event_flag_create(vm::ptr<u32> id, vm::ptr<sys_event_flag_attribute_t> attr, u64 init)
 {
 	sys_event_flag.Warning("sys_event_flag_create(id=*0x%x, attr=*0x%x, init=0x%llx)", id, attr, init);
-
-	LV2_LOCK;
 
 	if (!id || !attr)
 	{

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "sleep_queue.h"
+
 namespace vm { using namespace ps3; }
 
 struct sys_rwlock_attribute_t
@@ -19,37 +21,35 @@ struct sys_rwlock_attribute_t
 
 struct lv2_rwlock_t
 {
-	const u32 protocol;
 	const u64 name;
+	const u32 protocol;
 
-	std::atomic<u32> readers; // reader count
-	std::atomic<u32> writer; // writer id
+	std::atomic<u32> readers{ 0 }; // reader lock count
+	std::shared_ptr<CPUThread> writer; // writer lock owner
 
-	// TODO: use sleep queue, possibly remove condition variables
-	std::condition_variable rcv;
-	std::condition_variable wcv;
-	std::atomic<u32> rwaiters;
-	std::atomic<u32> wwaiters;
+	sleep_queue_t rsq; // threads trying to acquire readed lock
+	sleep_queue_t wsq; // threads trying to acquire writer lock
 
 	lv2_rwlock_t(u32 protocol, u64 name)
 		: protocol(protocol)
 		, name(name)
-		, readers(0)
-		, writer(0)
-		, rwaiters(0)
-		, wwaiters(0)
 	{
 	}
+
+	void notify_all(lv2_lock_t& lv2_lock);
 };
 
 REG_ID_TYPE(lv2_rwlock_t, 0x88); // SYS_RWLOCK_OBJECT
 
+// Aux
+class PPUThread;
+
 // SysCalls
 s32 sys_rwlock_create(vm::ptr<u32> rw_lock_id, vm::ptr<sys_rwlock_attribute_t> attr);
 s32 sys_rwlock_destroy(u32 rw_lock_id);
-s32 sys_rwlock_rlock(u32 rw_lock_id, u64 timeout);
+s32 sys_rwlock_rlock(PPUThread& ppu, u32 rw_lock_id, u64 timeout);
 s32 sys_rwlock_tryrlock(u32 rw_lock_id);
 s32 sys_rwlock_runlock(u32 rw_lock_id);
-s32 sys_rwlock_wlock(PPUThread& CPU, u32 rw_lock_id, u64 timeout);
-s32 sys_rwlock_trywlock(PPUThread& CPU, u32 rw_lock_id);
-s32 sys_rwlock_wunlock(PPUThread& CPU, u32 rw_lock_id);
+s32 sys_rwlock_wlock(PPUThread& ppu, u32 rw_lock_id, u64 timeout);
+s32 sys_rwlock_trywlock(PPUThread& ppu, u32 rw_lock_id);
+s32 sys_rwlock_wunlock(PPUThread& ppu, u32 rw_lock_id);
