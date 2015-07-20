@@ -142,6 +142,7 @@ Module cellVpost("cellVpost", []()
 	REG_FUNC(cellVpost, cellVpostQueryAttr);
 	REG_FUNC(cellVpost, cellVpostOpen);
 	REG_FUNC(cellVpost, cellVpostOpenEx);
+	//REG_FUNC(cellVpost, cellVpostOpenExt); // 0x9f1795df
 	REG_FUNC(cellVpost, cellVpostClose);
 	REG_FUNC(cellVpost, cellVpostExec);
 });

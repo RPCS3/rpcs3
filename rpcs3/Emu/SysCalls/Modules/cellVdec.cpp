@@ -769,9 +769,9 @@ s32 cellVdecGetPicture(u32 handle, vm::cptr<CellVdecPicFormat> format, vm::ptr<u
 	return CELL_OK;
 }
 
-s32 _nid_a21aa896(PPUThread& CPU, u32 handle, vm::cptr<CellVdecPicFormat2> format2, vm::ptr<u8> outBuff, u32 arg4)
+s32 cellVdecGetPictureExt(PPUThread& CPU, u32 handle, vm::cptr<CellVdecPicFormat2> format2, vm::ptr<u8> outBuff, u32 arg4)
 {
-	cellVdec.Warning("_nid_a21aa896(handle=0x%x, format2=*0x%x, outBuff=*0x%x, arg4=*0x%x)", handle, format2, outBuff, arg4);
+	cellVdec.Warning("cellVdecGetPictureExt(handle=0x%x, format2=*0x%x, outBuff=*0x%x, arg4=*0x%x)", handle, format2, outBuff, arg4);
 
 	if (arg4 || format2->unk0 || format2->unk1)
 	{
@@ -956,12 +956,16 @@ Module cellVdec("cellVdec", []()
 	REG_FUNC(cellVdec, cellVdecQueryAttrEx);
 	REG_FUNC(cellVdec, cellVdecOpen);
 	REG_FUNC(cellVdec, cellVdecOpenEx);
+	//REG_FUNC(cellVdec, cellVdecOpenExt); // 0xef4d8ad7
 	REG_FUNC(cellVdec, cellVdecClose);
 	REG_FUNC(cellVdec, cellVdecStartSeq);
+	//REG_FUNC(cellVdec, cellVdecStartSeqExt); // 0xebb8e70a
 	REG_FUNC(cellVdec, cellVdecEndSeq);
 	REG_FUNC(cellVdec, cellVdecDecodeAu);
 	REG_FUNC(cellVdec, cellVdecGetPicture);
-	REG_UNNAMED(cellVdec, a21aa896);
+	REG_FUNC(cellVdec, cellVdecGetPictureExt); // 0xa21aa896
 	REG_FUNC(cellVdec, cellVdecGetPicItem);
+	//REG_FUNC(cellVdec, cellVdecGetPicItemExt); // 0x2cbd9806
 	REG_FUNC(cellVdec, cellVdecSetFrameRate);
+	//REG_FUNC(cellVdec, cellVdecSetFrameRateExt); // 0xcffc42a5
 });

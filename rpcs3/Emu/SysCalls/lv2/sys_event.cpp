@@ -5,6 +5,7 @@
 #include "Emu/SysCalls/SysCalls.h"
 
 #include "Emu/Cell/PPUThread.h"
+#include "Emu/Cell/SPUThread.h"
 #include "Emu/Event.h"
 #include "sys_process.h"
 #include "sys_event.h"
@@ -27,16 +28,48 @@ void lv2_event_queue_t::push(lv2_lock_t& lv2_lock, u64 source, u64 data1, u64 da
 {
 	CHECK_LV2_LOCK(lv2_lock);
 
-	events.emplace_back(source, data1, data2, data3);
+	// save event if no waiters
+	if (sq.empty())
+	{
+		return events.emplace_back(source, data1, data2, data3);
+	}
+
+	if (events.size())
+	{
+		throw EXCEPTION("Unexpected");
+	}
 
 	// notify waiter; protocol is ignored in current implementation
-	for (auto& waiter : sq)
+	auto& thread = sq.front();
+
+	if (type == SYS_PPU_QUEUE && thread->get_type() == CPU_THREAD_PPU)
 	{
-		if (waiter->signal())
-		{
-			return;
-		}
+		// store event data in registers
+		auto& ppu = static_cast<PPUThread&>(*thread);
+
+		ppu.GPR[4] = source;
+		ppu.GPR[5] = data1;
+		ppu.GPR[6] = data2;
+		ppu.GPR[7] = data3;
 	}
+	else if (type == SYS_SPU_QUEUE && thread->get_type() == CPU_THREAD_SPU)
+	{
+		// store event data in In_MBox
+		auto& spu = static_cast<SPUThread&>(*thread);
+
+		spu.ch_in_mbox.set_values(4, CELL_OK, static_cast<u32>(data1), static_cast<u32>(data2), static_cast<u32>(data3));
+	}
+	else
+	{
+		throw EXCEPTION("Unexpected (queue_type=%d, thread_type=%d)", type, thread->get_type());
+	}
+
+	if (!sq.front()->signal())
+	{
+		throw EXCEPTION("Thread already signaled");
+	}
+
+	return sq.pop_front();
 }
 
 s32 sys_event_queue_create(vm::ptr<u32> equeue_id, vm::ptr<sys_event_queue_attribute_t> attr, u64 event_queue_key, s32 size)
@@ -106,6 +139,19 @@ s32 sys_event_queue_destroy(u32 equeue_id, s32 mode)
 	// signal all threads to return CELL_ECANCELED
 	for (auto& thread : queue->sq)
 	{
+		if (queue->type == SYS_PPU_QUEUE && thread->get_type() == CPU_THREAD_PPU)
+		{
+			static_cast<PPUThread&>(*thread).GPR[3] = 1;
+		}
+		else if (queue->type == SYS_SPU_QUEUE && thread->get_type() == CPU_THREAD_SPU)
+		{
+			static_cast<SPUThread&>(*thread).ch_in_mbox.set_values(1, CELL_ECANCELED);
+		}
+		else
+		{
+			throw EXCEPTION("Unexpected (queue_type=%d, thread_type=%d)", queue->type, thread->get_type());
+		}
+
 		thread->signal();
 	}
 
@@ -171,34 +217,44 @@ s32 sys_event_queue_receive(PPUThread& ppu, u32 equeue_id, vm::ptr<sys_event_t> 
 		return CELL_EINVAL;
 	}
 
-	if (queue->events.empty() || !queue->sq.empty())
+	if (queue->events.size())
 	{
-		// add waiter; protocol is ignored in current implementation
-		sleep_queue_entry_t waiter(ppu, queue->sq);
+		// event data is returned in registers (dummy_event is not used)
+		std::tie(ppu.GPR[4], ppu.GPR[5], ppu.GPR[6], ppu.GPR[7]) = queue->events.front();
 
-		while (!ppu.unsignal())
+		queue->events.pop_front();
+
+		return CELL_OK;
+	}
+
+	// cause (if cancelled) will be returned in r3
+	ppu.GPR[3] = 0;
+
+	// add waiter; protocol is ignored in current implementation
+	sleep_queue_entry_t waiter(ppu, queue->sq);
+
+	while (!ppu.unsignal())
+	{
+		CHECK_EMU_STATUS;
+
+		if (timeout)
 		{
-			CHECK_EMU_STATUS;
+			const u64 passed = get_system_time() - start_time;
 
-			if (timeout)
+			if (passed >= timeout)
 			{
-				const u64 passed = get_system_time() - start_time;
-
-				if (passed >= timeout)
-				{
-					return CELL_ETIMEDOUT;
-				}
-
-				ppu.cv.wait_for(lv2_lock, std::chrono::microseconds(timeout - passed));
+				return CELL_ETIMEDOUT;
 			}
-			else
-			{
-				ppu.cv.wait(lv2_lock);
-			}
+
+			ppu.cv.wait_for(lv2_lock, std::chrono::microseconds(timeout - passed));
+		}
+		else
+		{
+			ppu.cv.wait(lv2_lock);
 		}
 	}
 
-	if (queue->events.empty())
+	if (ppu.GPR[3])
 	{
 		if (Emu.GetIdManager().check_id<lv2_event_queue_t>(equeue_id))
 		{
@@ -208,11 +264,7 @@ s32 sys_event_queue_receive(PPUThread& ppu, u32 equeue_id, vm::ptr<sys_event_t> 
 		return CELL_ECANCELED;
 	}
 
-	// event data is returned in registers (dummy_event is not used)
-	std::tie(ppu.GPR[4], ppu.GPR[5], ppu.GPR[6], ppu.GPR[7]) = queue->events.front();
-
-	queue->events.pop_front();
-
+	// r4-r7 registers must be set by push()
 	return CELL_OK;
 }
 

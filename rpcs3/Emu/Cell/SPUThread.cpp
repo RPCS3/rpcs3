@@ -1318,7 +1318,14 @@ void SPUThread::stop_and_signal(u32 code)
 			throw EXCEPTION("Unexpected SPU Thread Group state (%d)", group->state);
 		}
 
-		if (queue->events.empty() || !queue->sq.empty())
+		if (queue->events.size())
+		{
+			auto& event = queue->events.front();
+			ch_in_mbox.set_values(4, CELL_OK, static_cast<u32>(std::get<1>(event)), static_cast<u32>(std::get<2>(event)), static_cast<u32>(std::get<3>(event)));
+
+			queue->events.pop_front();
+		}
+		else
 		{
 			// add waiter; protocol is ignored in current implementation
 			sleep_queue_entry_t waiter(*this, queue->sq);
@@ -1332,23 +1339,8 @@ void SPUThread::stop_and_signal(u32 code)
 
 				cv.wait(lv2_lock);
 			}
-		}
 
-		if (queue->events.empty())
-		{
-			if (Emu.GetIdManager().check_id<lv2_event_queue_t>(queue->id))
-			{
-				throw EXCEPTION("Unexpected");
-			}
-
-			ch_in_mbox.set_values(1, CELL_ECANCELED);
-		}
-		else
-		{
-			auto& event = queue->events.front();
-			ch_in_mbox.set_values(4, CELL_OK, static_cast<u32>(std::get<1>(event)), static_cast<u32>(std::get<2>(event)), static_cast<u32>(std::get<3>(event)));
-
-			queue->events.pop_front();
+			// event data must be set by push()
 		}
 		
 		// restore thread group status
