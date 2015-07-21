@@ -285,7 +285,7 @@ namespace ppu_recompiler_llvm {
         Compiler & operator = (Compiler && other) = delete;
 
         /// Compile a code fragment described by a cfg and return an executable
-        Executable Compile(const std::string & name, const ControlFlowGraph & cfg, bool inline_all_blocks, bool generate_linkable_exits);
+        Executable Compile(const std::string & name, const ControlFlowGraph & cfg, bool generate_linkable_exits);
 
         /// Free an executable earilier obtained via a call to Compile
         void FreeExecutable(const std::string & name);
@@ -726,9 +726,6 @@ namespace ppu_recompiler_llvm {
             /// This is set to false at the start of compilation of an instruction.
             /// If a branch instruction is encountered, this is set to true by the decode function.
             bool hit_branch_instruction;
-
-            /// Indicates whether a block should be inlined even if an already compiled version of the block exists
-            bool inline_all;
 
             /// Create code such that exit points can be linked to other blocks
             bool generate_linkable_exits;
