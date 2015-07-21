@@ -68,14 +68,14 @@ struct sys_event_t
 	be_t<u64> data3;
 };
 
-struct event_t
+struct lv2_event_t
 {
-	u64 source;
-	u64 data1;
-	u64 data2;
-	u64 data3;
+	const u64 source;
+	const u64 data1;
+	const u64 data2;
+	const u64 data3;
 
-	event_t(u64 source, u64 data1, u64 data2, u64 data3)
+	lv2_event_t(u64 source, u64 data1, u64 data2, u64 data3)
 		: source(source)
 		, data1(data1)
 		, data2(data2)
@@ -93,7 +93,7 @@ struct lv2_event_queue_t
 	const u64 key;
 	const s32 size;
 
-	std::deque<event_t> events;
+	std::deque<lv2_event_t> events;
 	std::atomic<bool> cancelled;
 
 	// TODO: use sleep queue, possibly remove condition variable

@@ -1,4 +1,5 @@
 #pragma once
+
 #include "Emu/Cell/Common.h"
 #include "Emu/CPU/CPUThread.h"
 #include "Emu/Cell/SPUContext.h"
@@ -11,58 +12,60 @@ struct lv2_int_tag_t;
 // SPU Channels
 enum : u32
 {
-	SPU_RdEventStat     = 0,  //Read event status with mask applied
-	SPU_WrEventMask     = 1,  //Write event mask
-	SPU_WrEventAck      = 2,  //Write end of event processing
-	SPU_RdSigNotify1    = 3,  //Signal notification 1
-	SPU_RdSigNotify2    = 4,  //Signal notification 2
-	SPU_WrDec           = 7,  //Write decrementer count
-	SPU_RdDec           = 8,  //Read decrementer count
-	SPU_RdEventMask     = 11, //Read event mask
-	SPU_RdMachStat      = 13, //Read SPU run status
-	SPU_WrSRR0          = 14, //Write SPU machine state save/restore register 0 (SRR0)
-	SPU_RdSRR0          = 15, //Read SPU machine state save/restore register 0 (SRR0)
-	SPU_WrOutMbox       = 28, //Write outbound mailbox contents
-	SPU_RdInMbox        = 29, //Read inbound mailbox contents
-	SPU_WrOutIntrMbox   = 30, //Write outbound interrupt mailbox contents (interrupting PPU)
+	SPU_RdEventStat     = 0,  // Read event status with mask applied
+	SPU_WrEventMask     = 1,  // Write event mask
+	SPU_WrEventAck      = 2,  // Write end of event processing
+	SPU_RdSigNotify1    = 3,  // Signal notification 1
+	SPU_RdSigNotify2    = 4,  // Signal notification 2
+	SPU_WrDec           = 7,  // Write decrementer count
+	SPU_RdDec           = 8,  // Read decrementer count
+	SPU_RdEventMask     = 11, // Read event mask
+	SPU_RdMachStat      = 13, // Read SPU run status
+	SPU_WrSRR0          = 14, // Write SPU machine state save/restore register 0 (SRR0)
+	SPU_RdSRR0          = 15, // Read SPU machine state save/restore register 0 (SRR0)
+	SPU_WrOutMbox       = 28, // Write outbound mailbox contents
+	SPU_RdInMbox        = 29, // Read inbound mailbox contents
+	SPU_WrOutIntrMbox   = 30, // Write outbound interrupt mailbox contents (interrupting PPU)
 };
 
 // MFC Channels
 enum : u32
 {
-	MFC_WrMSSyncReq     = 9,  //Write multisource synchronization request
-	MFC_RdTagMask       = 12, //Read tag mask
-	MFC_LSA             = 16, //Write local memory address command parameter
-	MFC_EAH             = 17, //Write high order DMA effective address command parameter
-	MFC_EAL             = 18, //Write low order DMA effective address command parameter
-	MFC_Size            = 19, //Write DMA transfer size command parameter
-	MFC_TagID           = 20, //Write tag identifier command parameter
-	MFC_Cmd             = 21, //Write and enqueue DMA command with associated class ID
-	MFC_WrTagMask       = 22, //Write tag mask
-	MFC_WrTagUpdate     = 23, //Write request for conditional or unconditional tag status update
-	MFC_RdTagStat       = 24, //Read tag status with mask applied
-	MFC_RdListStallStat = 25, //Read DMA list stall-and-notify status
-	MFC_WrListStallAck  = 26, //Write DMA list stall-and-notify acknowledge
-	MFC_RdAtomicStat    = 27, //Read completion status of last completed immediate MFC atomic update command
+	MFC_WrMSSyncReq     = 9,  // Write multisource synchronization request
+	MFC_RdTagMask       = 12, // Read tag mask
+	MFC_LSA             = 16, // Write local memory address command parameter
+	MFC_EAH             = 17, // Write high order DMA effective address command parameter
+	MFC_EAL             = 18, // Write low order DMA effective address command parameter
+	MFC_Size            = 19, // Write DMA transfer size command parameter
+	MFC_TagID           = 20, // Write tag identifier command parameter
+	MFC_Cmd             = 21, // Write and enqueue DMA command with associated class ID
+	MFC_WrTagMask       = 22, // Write tag mask
+	MFC_WrTagUpdate     = 23, // Write request for conditional or unconditional tag status update
+	MFC_RdTagStat       = 24, // Read tag status with mask applied
+	MFC_RdListStallStat = 25, // Read DMA list stall-and-notify status
+	MFC_WrListStallAck  = 26, // Write DMA list stall-and-notify acknowledge
+	MFC_RdAtomicStat    = 27, // Read completion status of last completed immediate MFC atomic update command
 };
 
 // SPU Events
 enum : u32
 {
-	SPU_EVENT_MS = 0x1000, // multisource synchronization event
-	SPU_EVENT_A  = 0x800, // privileged attention event
-	SPU_EVENT_LR = 0x400, // lock line reservation lost event
-	SPU_EVENT_S1 = 0x200, // signal notification register 1 available
-	SPU_EVENT_S2 = 0x100, // signal notification register 2 available
-	SPU_EVENT_LE = 0x80, // SPU outbound mailbox available
-	SPU_EVENT_ME = 0x40, // SPU outbound interrupt mailbox available
-	SPU_EVENT_TM = 0x20, // SPU decrementer became negative (?)
-	SPU_EVENT_MB = 0x10, // SPU inbound mailbox available
-	SPU_EVENT_QV = 0x4, // MFC SPU command queue available
-	SPU_EVENT_SN = 0x2, // MFC list command stall-and-notify event
-	SPU_EVENT_TG = 0x1, // MFC tag-group status update event
+	SPU_EVENT_MS = 0x1000, // Multisource Synchronization event
+	SPU_EVENT_A  = 0x800,  // Privileged Attention event
+	SPU_EVENT_LR = 0x400,  // Lock Line Reservation Lost event
+	SPU_EVENT_S1 = 0x200,  // Signal Notification Register 1 available
+	SPU_EVENT_S2 = 0x100,  // Signal Notification Register 2 available
+	SPU_EVENT_LE = 0x80,   // SPU Outbound Mailbox available
+	SPU_EVENT_ME = 0x40,   // SPU Outbound Interrupt Mailbox available
+	SPU_EVENT_TM = 0x20,   // SPU Decrementer became negative (?)
+	SPU_EVENT_MB = 0x10,   // SPU Inbound mailbox available
+	SPU_EVENT_QV = 0x4,    // MFC SPU Command Queue available
+	SPU_EVENT_SN = 0x2,    // MFC List Command stall-and-notify event
+	SPU_EVENT_TG = 0x1,    // MFC Tag Group status update event
 
-	SPU_EVENT_IMPLEMENTED = SPU_EVENT_LR,
+	SPU_EVENT_IMPLEMENTED = SPU_EVENT_LR, // Mask of implemented events
+
+	SPU_EVENT_AR = 0x80000000, // Set after acquiring the reservation (hack)
 };
 
 // SPU Class 0 Interrupts
@@ -552,6 +555,7 @@ public:
 	void do_dma_list_cmd(u32 cmd, spu_mfc_arg_t args);
 	void process_mfc_cmd(u32 cmd);
 
+	u32 get_events();
 	u32 get_ch_count(u32 ch);
 	u32 get_ch_value(u32 ch);
 	void set_ch_value(u32 ch, u32 value);

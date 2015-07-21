@@ -3,7 +3,8 @@
 #include "Emu/SysCalls/Modules.h"
 
 #ifdef _WIN32
-#include <winsock.h>
+#include <winsock2.h>
+#include <WS2tcpip.h>
 #else
 extern "C"
 {
@@ -104,7 +105,7 @@ namespace sys_net_func
 			sockaddr _addr;
 			memcpy(&_addr, addr.get_ptr(), sizeof(sockaddr));
 			_addr.sa_family = addr->sa_family;
-			int _paddrlen;
+			::socklen_t _paddrlen;
 			s32 ret = ::accept(s, &_addr, &_paddrlen);
 			*paddrlen = _paddrlen;
 			*g_lastError = getLastError();
@@ -253,7 +254,7 @@ namespace sys_net_func
 		sockaddr _addr;
 		memcpy(&_addr, addr.get_ptr(), sizeof(sockaddr));
 		_addr.sa_family = addr->sa_family;
-		int _paddrlen;
+		::socklen_t _paddrlen;
 		s32 ret = ::recvfrom(s, buf.get_ptr(), len, flags, &_addr, &_paddrlen);
 		*paddrlen = _paddrlen;
 		*g_lastError = getLastError();
@@ -416,7 +417,7 @@ s32 sys_net_initialize_network_ex(vm::ptr<sys_net_initialize_parameter> param)
 	g_lastError = vm::ptr<s32>::make(vm::alloc(4, vm::main));
 #ifdef _WIN32
 	WSADATA wsaData;
-	WORD wVersionRequested = MAKEWORD(1, 1);
+	WORD wVersionRequested = MAKEWORD(2, 2);
 	WSAStartup(wVersionRequested, &wsaData);
 #endif
 	return CELL_OK;

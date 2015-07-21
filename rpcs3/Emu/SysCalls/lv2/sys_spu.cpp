@@ -887,14 +887,6 @@ s32 sys_spu_thread_group_disconnect_event(u32 id, u32 et)
 	return CELL_OK;
 }
 
-/*
-SPU-Side functions:
-s32 sys_spu_thread_receive_event(u32 spuq_num, mem32_t d1, mem32_t d2, mem32_t d3);
-s32 sys_spu_thread_send_event(u8 spup, u24 data0, u32 data1);
-s32 sys_spu_thread_throw_event(u8 spup, u24 data0, u32 data1);
-s32 sys_spu_thread_tryreceive_event(u32 spuq_num, mem32_t d1, mem32_t d2, mem32_t d3);
-*/
-
 s32 sys_spu_thread_connect_event(u32 id, u32 eq, u32 et, u8 spup)
 {
 	sys_spu.Warning("sys_spu_thread_connect_event(id=0x%x, eq=0x%x, et=%d, spup=%d)", id, eq, et, spup);

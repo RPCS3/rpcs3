@@ -32,6 +32,14 @@ namespace vm
 		page_allocated          = (1 << 7),
 	};
 
+	// This flag is changed by various reservation functions and may have different meaning.
+	// reservation_break() - true if the reservation was successfully broken.
+	// reservation_acquire() - true if another existing reservation was broken.
+	// reservation_free() - true if this thread's reservation was successfully removed.
+	// reservation_op() - false if reservation_update() would succeed if called instead.
+	// Write access to reserved memory - only set to true if the reservation was broken.
+	extern thread_local bool g_tls_did_break_reservation;
+
 	// Unconditionally break the reservation at specified address
 	void reservation_break(u32 addr);
 
@@ -208,9 +216,9 @@ namespace vm
 		return cast_ptr<T>::cast(addr, file, line, func);
 	}
 
-	static u8 read8(u32 addr)
+	static const u8& read8(u32 addr)
 	{
-		return get_ref<u8>(addr);
+		return get_ref<const u8>(addr);
 	}
 
 	static void write8(u32 addr, u8 value)
@@ -232,22 +240,12 @@ namespace vm
 			get_ref<be_t<u16>>(addr) = value;
 		}
 
-		inline void write16(u32 addr, u16 value)
-		{
-			get_ref<be_t<u16>>(addr) = value;
-		}
-
 		inline const be_t<u32>& read32(u32 addr)
 		{
 			return get_ref<const be_t<u32>>(addr);
 		}
 
 		inline void write32(u32 addr, be_t<u32> value)
-		{
-			get_ref<be_t<u32>>(addr) = value;
-		}
-
-		inline void write32(u32 addr, u32 value)
 		{
 			get_ref<be_t<u32>>(addr) = value;
 		}
@@ -262,22 +260,12 @@ namespace vm
 			get_ref<be_t<u64>>(addr) = value;
 		}
 
-		inline void write64(u32 addr, u64 value)
-		{
-			get_ref<be_t<u64>>(addr) = value;
-		}
-
 		inline const be_t<u128>& read128(u32 addr)
 		{
 			return get_ref<const be_t<u128>>(addr);
 		}
 
 		inline void write128(u32 addr, be_t<u128> value)
-		{
-			get_ref<be_t<u128>>(addr) = value;
-		}
-
-		inline void write128(u32 addr, u128 value)
 		{
 			get_ref<be_t<u128>>(addr) = value;
 		}
@@ -297,22 +285,12 @@ namespace vm
 			get_ref<le_t<u16>>(addr) = value;
 		}
 
-		inline void write16(u32 addr, u16 value)
-		{
-			get_ref<le_t<u16>>(addr) = value;
-		}
-
 		inline const le_t<u32>& read32(u32 addr)
 		{
 			return get_ref<const le_t<u32>>(addr);
 		}
 
 		inline void write32(u32 addr, le_t<u32> value)
-		{
-			get_ref<le_t<u32>>(addr) = value;
-		}
-
-		inline void write32(u32 addr, u32 value)
 		{
 			get_ref<le_t<u32>>(addr) = value;
 		}
@@ -327,22 +305,12 @@ namespace vm
 			get_ref<le_t<u64>>(addr) = value;
 		}
 
-		inline void write64(u32 addr, u64 value)
-		{
-			get_ref<le_t<u64>>(addr) = value;
-		}
-
 		inline const le_t<u128>& read128(u32 addr)
 		{
 			return get_ref<const le_t<u128>>(addr);
 		}
 
 		inline void write128(u32 addr, le_t<u128> value)
-		{
-			get_ref<le_t<u128>>(addr) = value;
-		}
-
-		inline void write128(u32 addr, u128 value)
 		{
 			get_ref<le_t<u128>>(addr) = value;
 		}

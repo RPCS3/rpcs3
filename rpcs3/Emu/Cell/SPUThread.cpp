@@ -431,8 +431,7 @@ void SPUThread::process_mfc_cmd(u32 cmd)
 	case MFC_GETB_CMD:
 	case MFC_GETF_CMD:
 	{
-		do_dma_transfer(cmd, ch_mfc_args);
-		return;
+		return do_dma_transfer(cmd, ch_mfc_args);
 	}
 
 	case MFC_PUTL_CMD:
@@ -445,8 +444,7 @@ void SPUThread::process_mfc_cmd(u32 cmd)
 	case MFC_GETLB_CMD:
 	case MFC_GETLF_CMD:
 	{
-		do_dma_list_cmd(cmd, ch_mfc_args);
-		return;
+		return do_dma_list_cmd(cmd, ch_mfc_args);
 	}
 
 	case MFC_GETLLAR_CMD: // acquire reservation
@@ -458,8 +456,16 @@ void SPUThread::process_mfc_cmd(u32 cmd)
 
 		vm::reservation_acquire(vm::get_ptr(offset + ch_mfc_args.lsa), VM_CAST(ch_mfc_args.ea), 128);
 
-		ch_atomic_stat.push_uncond(MFC_GETLLAR_SUCCESS);
-		return;
+		if (ch_event_stat.load() & SPU_EVENT_AR)
+		{
+			ch_event_stat |= SPU_EVENT_LR;
+		}
+		else
+		{
+			ch_event_stat |= SPU_EVENT_AR;
+		}
+
+		return ch_atomic_stat.push_uncond(MFC_GETLLAR_SUCCESS);
 	}
 
 	case MFC_PUTLLC_CMD: // store conditionally
@@ -469,16 +475,26 @@ void SPUThread::process_mfc_cmd(u32 cmd)
 			break;
 		}
 
+		const bool was_acquired = (ch_event_stat._and_not(SPU_EVENT_AR) & SPU_EVENT_AR) != 0;
+
 		if (vm::reservation_update(VM_CAST(ch_mfc_args.ea), vm::get_ptr(offset + ch_mfc_args.lsa), 128))
 		{
-			ch_atomic_stat.push_uncond(MFC_PUTLLC_SUCCESS);
+			if (!was_acquired)
+			{
+				throw EXCEPTION("Unexpected: PUTLLC command succeeded, but GETLLAR command not detected");
+			}
+
+			return ch_atomic_stat.push_uncond(MFC_PUTLLC_SUCCESS);
 		}
 		else
 		{
-			ch_atomic_stat.push_uncond(MFC_PUTLLC_FAILURE);
-		}
+			if (was_acquired)
+			{
+				ch_event_stat |= SPU_EVENT_LR;
+			}
 
-		return;
+			return ch_atomic_stat.push_uncond(MFC_PUTLLC_FAILURE);
+		}
 	}
 
 	case MFC_PUTLLUC_CMD: // store unconditionally
@@ -491,16 +507,17 @@ void SPUThread::process_mfc_cmd(u32 cmd)
 
 		vm::reservation_op(VM_CAST(ch_mfc_args.ea), 128, [this]()
 		{
-			memcpy(vm::priv_ptr(VM_CAST(ch_mfc_args.ea)), vm::get_ptr(offset + ch_mfc_args.lsa), 128);
+			std::memcpy(vm::priv_ptr(VM_CAST(ch_mfc_args.ea)), vm::get_ptr(offset + ch_mfc_args.lsa), 128);
 		});
+
+		if (ch_event_stat._and_not(SPU_EVENT_AR) & SPU_EVENT_AR && vm::g_tls_did_break_reservation)
+		{
+			ch_event_stat |= SPU_EVENT_LR;
+		}
 
 		if (cmd == MFC_PUTLLUC_CMD)
 		{
 			ch_atomic_stat.push_uncond(MFC_PUTLLUC_SUCCESS);
-		}
-		else
-		{
-			// tag may be used here
 		}
 
 		return;
@@ -508,6 +525,18 @@ void SPUThread::process_mfc_cmd(u32 cmd)
 	}
 
 	throw EXCEPTION("Unknown command %s (cmd=0x%x, lsa=0x%x, ea=0x%llx, tag=0x%x, size=0x%x)", get_mfc_cmd_name(cmd), cmd, ch_mfc_args.lsa, ch_mfc_args.ea, ch_mfc_args.tag, ch_mfc_args.size);
+}
+
+u32 SPUThread::get_events()
+{
+	// check reservation status and set SPU_EVENT_LR if lost
+	if (ch_event_stat.load() & SPU_EVENT_AR && !vm::reservation_test())
+	{
+		ch_event_stat |= SPU_EVENT_LR;
+		ch_event_stat &= ~SPU_EVENT_AR;
+	}
+
+	return ch_event_stat.load() & ch_event_mask;
 }
 
 u32 SPUThread::get_ch_count(u32 ch)
@@ -531,7 +560,7 @@ u32 SPUThread::get_ch_count(u32 ch)
 	case SPU_RdSigNotify1:    return ch_snr1.get_count(); break;
 	case SPU_RdSigNotify2:    return ch_snr2.get_count(); break;
 	case MFC_RdAtomicStat:    return ch_atomic_stat.get_count(); break;
-	case SPU_RdEventStat:     return ch_event_stat.load() & ch_event_mask ? 1 : 0; break;
+	case SPU_RdEventStat:     return get_events() ? 1 : 0; break;
 	}
 
 	throw EXCEPTION("Unknown/illegal channel (ch=%d [%s])", ch, ch < 128 ? spu_ch_name[ch] : "???");
@@ -648,7 +677,7 @@ u32 SPUThread::get_ch_value(u32 ch)
 
 		u32 result;
 
-		while ((result = ch_event_stat.load() & ch_event_mask) == 0)
+		while ((result = get_events()) == 0)
 		{
 			CHECK_EMU_STATUS;
 
@@ -1030,6 +1059,11 @@ void SPUThread::set_ch_value(u32 ch, u32 value)
 
 	case SPU_WrEventAck:
 	{
+		if (value & ~(SPU_EVENT_IMPLEMENTED))
+		{
+			break;
+		}
+
 		ch_event_stat &= ~value;
 		return;
 	}

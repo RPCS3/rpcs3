@@ -13,7 +13,7 @@ namespace vm
 		T* m_ptr;
 
 	public:
-		var(u32 size = sizeof(T), u32 align = sizeof(T))
+		var(u32 size = sizeof32(T), u32 align = alignof32(T))
 			: m_size(size)
 			, m_align(align)
 		{
@@ -35,7 +35,7 @@ namespace vm
 
 		void alloc()
 		{
-			m_addr = Memory.Alloc(size(), m_align);
+			m_addr = vm::alloc(size(), vm::main, std::max<u32>(m_align, 4096));
 			m_ptr = vm::get_ptr<T>(m_addr);
 		}
 
@@ -43,13 +43,13 @@ namespace vm
 		{
 			if (m_addr)
 			{
-				Memory.Free(m_addr);
+				vm::dealloc(m_addr);
 				m_addr = 0;
 				m_ptr = vm::get_ptr<T>(0u);
 			}
 		}
 		
-		static var make(u32 addr, u32 size = sizeof(T), u32 align = sizeof(T))
+		static var make(u32 addr, u32 size = sizeof32(T), u32 align = alignof32(T))
 		{
 			var res;
 
@@ -149,7 +149,7 @@ namespace vm
 		T* m_ptr;
 
 	public:
-		var(u32 count, u32 size = sizeof(T), u32 align = sizeof(T))
+		var(u32 count, u32 size = sizeof32(T), u32 align = alignof32(T))
 			: m_count(count)
 			, m_size(size)
 			, m_align(align)
@@ -172,7 +172,7 @@ namespace vm
 
 		void alloc()
 		{
-			m_addr = Memory.Alloc(size(), m_align);
+			m_addr = vm::alloc(size(), vm::main, std::max<u32>(m_align, 4096));
 			m_ptr = vm::get_ptr<T>(m_addr);
 		}
 
@@ -180,13 +180,13 @@ namespace vm
 		{
 			if (m_addr)
 			{
-				Memory.Free(m_addr);
+				vm::dealloc(m_addr);
 				m_addr = 0;
 				m_ptr = nullptr;
 			}
 		}
 
-		static var make(u32 addr, u32 count, u32 size = sizeof(T), u32 align = sizeof(T))
+		static var make(u32 addr, u32 count, u32 size = sizeof32(T), u32 align = alignof32(T))
 		{
 			var res;
 
@@ -344,7 +344,7 @@ namespace vm
 		T* m_ptr;
 
 	public:
-		var(u32 size = sizeof(T), u32 align = sizeof(T))
+		var(u32 size = sizeof32(T), u32 align = alignof32(T))
 			: m_size(size)
 			, m_align(align)
 		{
@@ -366,7 +366,7 @@ namespace vm
 
 		void alloc()
 		{
-			m_addr = (u32)Memory.Alloc(size(), m_align);
+			m_addr = vm::alloc(size(), vm::main, std::max<u32>(m_align, 4096));
 			m_ptr = vm::get_ptr<T>(m_addr);
 		}
 
@@ -374,7 +374,7 @@ namespace vm
 		{
 			if (m_addr)
 			{
-				Memory.Free(m_addr);
+				vm::dealloc(m_addr);
 				m_addr = 0;
 				m_ptr = vm::get_ptr<T>(0u);
 			}

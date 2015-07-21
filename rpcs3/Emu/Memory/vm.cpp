@@ -78,16 +78,21 @@ namespace vm
 
 	std::array<atomic_t<u8>, 0x100000000ull / 4096> g_pages = {}; // information about every page
 
+	const thread_ctrl_t* const INVALID_THREAD = reinterpret_cast<const thread_ctrl_t*>(~0ull);
+
 	class reservation_mutex_t
 	{
-		atomic_t<const thread_ctrl_t*> m_owner{};
+		atomic_t<const thread_ctrl_t*> m_owner;
 		std::condition_variable m_cv;
 		std::mutex m_mutex;
 
 	public:
-		reservation_mutex_t() = default;
+		reservation_mutex_t()
+		{
+			m_owner.store(INVALID_THREAD);
+		}
 
-		bool do_notify;
+		bool do_notify = false;
 
 		never_inline void lock()
 		{
@@ -95,9 +100,9 @@ namespace vm
 
 			std::unique_lock<std::mutex> lock(m_mutex, std::defer_lock);
 
-			while (auto old = m_owner.compare_and_swap(nullptr, owner))
+			while (!m_owner.compare_and_swap_test(INVALID_THREAD, owner))
 			{
-				if (old == owner)
+				if (m_owner.load() == owner)
 				{
 					throw EXCEPTION("Deadlock");
 				}
@@ -118,7 +123,7 @@ namespace vm
 		{
 			auto owner = get_current_thread_ctrl();
 
-			if (!m_owner.compare_and_swap_test(owner, nullptr))
+			if (!m_owner.compare_and_swap_test(owner, INVALID_THREAD))
 			{
 				throw EXCEPTION("Lost lock");
 			}
@@ -135,30 +140,32 @@ namespace vm
 	u32 g_reservation_addr = 0;
 	u32 g_reservation_size = 0;
 
+	thread_local bool g_tls_did_break_reservation = false;
+
 	reservation_mutex_t g_reservation_mutex;
 
 	void _reservation_set(u32 addr, bool no_access = false)
 	{
 #ifdef _WIN32
 		DWORD old;
-		if (!VirtualProtect(vm::get_ptr(addr & ~0xfff), 4096, no_access ? PAGE_NOACCESS : PAGE_READONLY, &old))
+		if (!VirtualProtect(get_ptr(addr & ~0xfff), 4096, no_access ? PAGE_NOACCESS : PAGE_READONLY, &old))
 #else
-		if (mprotect(vm::get_ptr(addr & ~0xfff), 4096, no_access ? PROT_NONE : PROT_READ))
+		if (mprotect(get_ptr(addr & ~0xfff), 4096, no_access ? PROT_NONE : PROT_READ))
 #endif
 		{
 			throw EXCEPTION("System failure (addr=0x%x)", addr);
 		}
 	}
 
-	void _reservation_break(u32 addr)
+	bool _reservation_break(u32 addr)
 	{
 		if (g_reservation_addr >> 12 == addr >> 12)
 		{
 #ifdef _WIN32
 			DWORD old;
-			if (!VirtualProtect(vm::get_ptr(addr & ~0xfff), 4096, PAGE_READWRITE, &old))
+			if (!VirtualProtect(get_ptr(addr & ~0xfff), 4096, PAGE_READWRITE, &old))
 #else
-			if (mprotect(vm::get_ptr(addr & ~0xfff), 4096, PROT_READ | PROT_WRITE))
+			if (mprotect(get_ptr(addr & ~0xfff), 4096, PROT_READ | PROT_WRITE))
 #endif
 			{
 				throw EXCEPTION("System failure (addr=0x%x)", addr);
@@ -167,22 +174,30 @@ namespace vm
 			g_reservation_addr = 0;
 			g_reservation_size = 0;
 			g_reservation_owner = nullptr;
+			
+			return true;
 		}
+
+		return false;
 	}
 
 	void reservation_break(u32 addr)
 	{
 		std::lock_guard<reservation_mutex_t> lock(g_reservation_mutex);
 
-		_reservation_break(addr);
+		g_tls_did_break_reservation = _reservation_break(addr);
 	}
 
 	void reservation_acquire(void* data, u32 addr, u32 size)
 	{
 		std::lock_guard<reservation_mutex_t> lock(g_reservation_mutex);
 
-		assert(size == 1 || size == 2 || size == 4 || size == 8 || size == 128);
-		assert((addr + size - 1 & ~0xfff) == (addr & ~0xfff));
+		const u64 align = 0x80000000ull >> cntlz32(size);
+
+		if (!size || !addr || size > 4096 || size != align || addr & (align - 1))
+		{
+			throw EXCEPTION("Invalid arguments (addr=0x%x, size=0x%x)", addr, size);
+		}
 
 		const u8 flags = g_pages[addr >> 12].load();
 
@@ -194,11 +209,8 @@ namespace vm
 		// silent unlocking to prevent priority boost for threads going to break reservation
 		//g_reservation_mutex.do_notify = false;
 
-		// break previous reservation
-		if (g_reservation_owner)
-		{
-			_reservation_break(g_reservation_addr);
-		}
+		// break the reservation
+		g_tls_did_break_reservation = g_reservation_owner && _reservation_break(g_reservation_addr);
 
 		// change memory protection to read-only
 		_reservation_set(addr);
@@ -212,15 +224,19 @@ namespace vm
 		g_reservation_owner = get_current_thread_ctrl();
 
 		// copy data
-		memcpy(data, vm::get_ptr(addr), size);
+		std::memcpy(data, get_ptr(addr), size);
 	}
 
 	bool reservation_update(u32 addr, const void* data, u32 size)
 	{
 		std::lock_guard<reservation_mutex_t> lock(g_reservation_mutex);
 
-		assert(size == 1 || size == 2 || size == 4 || size == 8 || size == 128);
-		assert((addr + size - 1 & ~0xfff) == (addr & ~0xfff));
+		const u64 align = 0x80000000ull >> cntlz32(size);
+
+		if (!size || !addr || size > 4096 || size != align || addr & (align - 1))
+		{
+			throw EXCEPTION("Invalid arguments (addr=0x%x, size=0x%x)", addr, size);
+		}
 
 		if (g_reservation_owner != get_current_thread_ctrl() || g_reservation_addr != addr || g_reservation_size != size)
 		{
@@ -232,7 +248,7 @@ namespace vm
 		_reservation_set(addr, true);
 
 		// update memory using privileged access
-		memcpy(vm::priv_ptr(addr), data, size);
+		std::memcpy(priv_ptr(addr), data, size);
 
 		// free the reservation and restore memory protection
 		_reservation_break(addr);
@@ -256,7 +272,7 @@ namespace vm
 			if (size && addr + size - 1 >= g_reservation_addr && g_reservation_addr + g_reservation_size - 1 >= addr)
 			{
 				// break the reservation if overlap
-				_reservation_break(addr);
+				g_tls_did_break_reservation = _reservation_break(addr);
 			}
 			else
 			{
@@ -280,7 +296,7 @@ namespace vm
 		{
 			std::lock_guard<reservation_mutex_t> lock(g_reservation_mutex);
 
-			_reservation_break(g_reservation_addr);
+			g_tls_did_break_reservation = _reservation_break(g_reservation_addr);
 		}
 	}
 
@@ -288,16 +304,21 @@ namespace vm
 	{
 		std::lock_guard<reservation_mutex_t> lock(g_reservation_mutex);
 
-		assert(size == 1 || size == 2 || size == 4 || size == 8 || size == 128);
-		assert((addr + size - 1 & ~0xfff) == (addr & ~0xfff));
+		const u64 align = 0x80000000ull >> cntlz32(size);
 
-		// break previous reservation
+		if (!size || !addr || size > 4096 || size != align || addr & (align - 1))
+		{
+			throw EXCEPTION("Invalid arguments (addr=0x%x, size=0x%x)", addr, size);
+		}
+
+		g_tls_did_break_reservation = false;
+
+		// check and possibly break previous reservation
 		if (g_reservation_owner != get_current_thread_ctrl() || g_reservation_addr != addr || g_reservation_size != size)
 		{
-			if (g_reservation_owner)
-			{
-				_reservation_break(g_reservation_addr);
-			}
+			_reservation_break(g_reservation_addr);
+
+			g_tls_did_break_reservation = true;
 		}
 
 		// change memory protection to no access
@@ -330,8 +351,8 @@ namespace vm
 			}
 		}
 
-		void* real_addr = vm::get_ptr(addr);
-		void* priv_addr = vm::priv_ptr(addr);
+		void* real_addr = get_ptr(addr);
+		void* priv_addr = priv_ptr(addr);
 
 #ifdef _WIN32
 		auto protection = flags & page_writable ? PAGE_READWRITE : (flags & page_readable ? PAGE_READONLY : PAGE_NOACCESS);
@@ -388,7 +409,7 @@ namespace vm
 
 			if (f1 != f2)
 			{
-				void* real_addr = vm::get_ptr(i * 4096);
+				void* real_addr = get_ptr(i * 4096);
 
 #ifdef _WIN32
 				DWORD old;
@@ -430,8 +451,8 @@ namespace vm
 			}
 		}
 
-		void* real_addr = vm::get_ptr(addr);
-		void* priv_addr = vm::priv_ptr(addr);
+		void* real_addr = get_ptr(addr);
+		void* priv_addr = priv_ptr(addr);
 
 #ifdef _WIN32
 		DWORD old;
@@ -551,8 +572,7 @@ namespace vm
 		// deallocate all memory
 		for (auto& entry : m_map)
 		{
-			// unmap memory pages
-			vm::_page_unmap(entry.first, entry.second);
+			_page_unmap(entry.first, entry.second);
 		}
 	}
 
@@ -630,7 +650,7 @@ namespace vm
 			used -= size;
 
 			// unmap memory pages
-			std::lock_guard<reservation_mutex_t>{ g_reservation_mutex }, vm::_page_unmap(addr, size);
+			std::lock_guard<reservation_mutex_t>{ g_reservation_mutex }, _page_unmap(addr, size);
 
 			return true;
 		}
@@ -664,7 +684,7 @@ namespace vm
 		{
 			if (g_pages[i].load())
 			{
-				throw EXCEPTION("Unexpected memory usage");
+				throw EXCEPTION("Unexpected pages allocated (current_addr=0x%x)", i * 4096);
 			}
 		}
 
@@ -730,7 +750,7 @@ namespace vm
 				std::make_shared<block_t>(0xC0000000, 0x10000000), // video
 				std::make_shared<block_t>(0xD0000000, 0x10000000), // stack
 
-				std::make_shared<block_t>(0xE0000000, 0x20000000), // RawSPU
+				std::make_shared<block_t>(0xE0000000, 0x20000000), // SPU
 			};
 		}
 	}
@@ -771,13 +791,13 @@ namespace vm
 		g_locations.clear();
 	}
 
-	u32 stack_push(CPUThread& CPU, u32 size, u32 align_v, u32& old_pos)
+	u32 stack_push(CPUThread& cpu, u32 size, u32 align_v, u32& old_pos)
 	{
-		switch (CPU.GetType())
+		switch (cpu.GetType())
 		{
 		case CPU_THREAD_PPU:
 		{
-			PPUThread& context = static_cast<PPUThread&>(CPU);
+			PPUThread& context = static_cast<PPUThread&>(cpu);
 
 			old_pos = VM_CAST(context.GPR[1]);
 			context.GPR[1] -= align(size, 8); // room minimal possible size
@@ -796,7 +816,7 @@ namespace vm
 		case CPU_THREAD_SPU:
 		case CPU_THREAD_RAW_SPU:
 		{
-			SPUThread& context = static_cast<SPUThread&>(CPU);
+			SPUThread& context = static_cast<SPUThread&>(cpu);
 
 			old_pos = context.GPR[1]._u32[3];
 			context.GPR[1]._u32[3] -= align(size, 16);
@@ -814,7 +834,7 @@ namespace vm
 
 		case CPU_THREAD_ARMv7:
 		{
-			ARMv7Context& context = static_cast<ARMv7Thread&>(CPU);
+			ARMv7Context& context = static_cast<ARMv7Thread&>(cpu);
 
 			old_pos = context.SP;
 			context.SP -= align(size, 4); // room minimal possible size
@@ -832,18 +852,18 @@ namespace vm
 
 		default:
 		{
-			throw EXCEPTION("Invalid thread type (%d)", CPU.GetId());
+			throw EXCEPTION("Invalid thread type (%d)", cpu.GetId());
 		}
 		}
 	}
 
-	void stack_pop(CPUThread& CPU, u32 addr, u32 old_pos)
+	void stack_pop(CPUThread& cpu, u32 addr, u32 old_pos)
 	{
-		switch (CPU.GetType())
+		switch (cpu.GetType())
 		{
 		case CPU_THREAD_PPU:
 		{
-			PPUThread& context = static_cast<PPUThread&>(CPU);
+			PPUThread& context = static_cast<PPUThread&>(cpu);
 
 			if (context.GPR[1] != addr)
 			{
@@ -857,7 +877,7 @@ namespace vm
 		case CPU_THREAD_SPU:
 		case CPU_THREAD_RAW_SPU:
 		{
-			SPUThread& context = static_cast<SPUThread&>(CPU);
+			SPUThread& context = static_cast<SPUThread&>(cpu);
 
 			if (context.GPR[1]._u32[3] + context.offset != addr)
 			{
@@ -870,7 +890,7 @@ namespace vm
 
 		case CPU_THREAD_ARMv7:
 		{
-			ARMv7Context& context = static_cast<ARMv7Thread&>(CPU);
+			ARMv7Context& context = static_cast<ARMv7Thread&>(cpu);
 
 			if (context.SP != addr)
 			{
@@ -883,7 +903,7 @@ namespace vm
 
 		default:
 		{
-			throw EXCEPTION("Invalid thread type (%d)", CPU.GetType());
+			throw EXCEPTION("Invalid thread type (%d)", cpu.GetType());
 		}
 		}
 	}

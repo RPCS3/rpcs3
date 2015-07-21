@@ -365,6 +365,8 @@ void Emulator::Stop()
 		}
 	}
 
+	LOG_NOTICE(GENERAL, "All threads signaled...");
+
 	while (g_thread_count)
 	{
 		std::this_thread::sleep_for(std::chrono::milliseconds(1));
