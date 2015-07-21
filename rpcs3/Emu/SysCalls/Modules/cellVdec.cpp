@@ -19,8 +19,6 @@ extern "C"
 
 extern Module cellVdec;
 
-#define VDEC_ERROR(...) { cellVdec.Error(__VA_ARGS__); Emu.Pause(); return; } // only for decoder thread
-
 VideoDecoder::VideoDecoder(s32 type, u32 profile, u32 addr, u32 size, vm::ptr<CellVdecCbMsg> func, u32 arg)
 	: type(type)
 	, profile(profile)
@@ -63,28 +61,28 @@ VideoDecoder::VideoDecoder(s32 type, u32 profile, u32 addr, u32 size, vm::ptr<Ce
 	}
 	default:
 	{
-		VDEC_ERROR("VideoDecoder(): unknown type (0x%x)", type);
+		throw EXCEPTION("Unknown type (0x%x)", type);
 	}
 	}
 
 	if (!codec)
 	{
-		VDEC_ERROR("VideoDecoder(): avcodec_find_decoder() failed");
+		throw EXCEPTION("avcodec_find_decoder() failed");
 	}
 	if (!input_format)
 	{
-		VDEC_ERROR("VideoDecoder(): av_find_input_format() failed");
+		throw EXCEPTION("av_find_input_format() failed");
 	}
 	fmt = avformat_alloc_context();
 	if (!fmt)
 	{
-		VDEC_ERROR("VideoDecoder(): avformat_alloc_context() failed");
+		throw EXCEPTION("avformat_alloc_context() failed");
 	}
 	io_buf = (u8*)av_malloc(4096);
 	fmt->pb = avio_alloc_context(io_buf, 4096, 0, this, vdecRead, NULL, NULL);
 	if (!fmt->pb)
 	{
-		VDEC_ERROR("VideoDecoder(): avio_alloc_context() failed");
+		throw EXCEPTION("avio_alloc_context() failed");
 	}
 }
 
@@ -311,21 +309,21 @@ void vdecOpen(u32 vdec_id) // TODO: call from the constructor
 					err = avformat_open_input(&vdec.fmt, NULL, NULL, &opts);
 					if (err || opts)
 					{
-						VDEC_ERROR("vdecDecodeAu: avformat_open_input() failed (err=0x%x, opts=%d)", err, opts ? 1 : 0);
+						throw EXCEPTION("avformat_open_input() failed (err=0x%x, opts=%d)", err, opts ? 1 : 0);
 					}
 					if (vdec.type == CELL_VDEC_CODEC_TYPE_DIVX)
 					{
 						err = avformat_find_stream_info(vdec.fmt, NULL);
 						if (err || !vdec.fmt->nb_streams)
 						{
-							VDEC_ERROR("vdecDecodeAu: avformat_find_stream_info() failed (err=0x%x, nb_streams=%d)", err, vdec.fmt->nb_streams);
+							throw EXCEPTION("avformat_find_stream_info() failed (err=0x%x, nb_streams=%d)", err, vdec.fmt->nb_streams);
 						}
 					}
 					else
 					{
 						if (!avformat_new_stream(vdec.fmt, vdec.codec))
 						{
-							VDEC_ERROR("vdecDecodeAu: avformat_new_stream() failed");
+							throw EXCEPTION("avformat_new_stream() failed");
 						}
 					}
 					vdec.ctx = vdec.fmt->streams[0]->codec; // TODO: check data
@@ -339,7 +337,7 @@ void vdecOpen(u32 vdec_id) // TODO: call from the constructor
 					}
 					if (err || opts)
 					{
-						VDEC_ERROR("vdecDecodeAu: avcodec_open2() failed (err=0x%x, opts=%d)", err, opts ? 1 : 0);
+						throw EXCEPTION("avcodec_open2() failed (err=0x%x, opts=%d)", err, opts ? 1 : 0);
 					}
 
 					vdec.just_started = false;
@@ -384,7 +382,7 @@ void vdecOpen(u32 vdec_id) // TODO: call from the constructor
 
 					if (!frame.data)
 					{
-						VDEC_ERROR("vdecDecodeAu: av_frame_alloc() failed");
+						throw EXCEPTION("av_frame_alloc() failed");
 					}
 
 					int got_picture = 0;
@@ -404,12 +402,12 @@ void vdecOpen(u32 vdec_id) // TODO: call from the constructor
 					{
 						if (frame.data->interlaced_frame)
 						{
-							VDEC_ERROR("vdecDecodeAu: interlaced frames not supported (0x%x)", frame.data->interlaced_frame);
+							throw EXCEPTION("Interlaced frames not supported (0x%x)", frame.data->interlaced_frame);
 						}
 
 						if (frame.data->repeat_pict)
 						{
-							VDEC_ERROR("vdecDecodeAu: repeated frames not supported (0x%x)", frame.data->repeat_pict);
+							throw EXCEPTION("Repeated frames not supported (0x%x)", frame.data->repeat_pict);
 						}
 
 						if (vdec.frc_set)
@@ -438,7 +436,7 @@ void vdecOpen(u32 vdec_id) // TODO: call from the constructor
 							case CELL_VDEC_FRC_60: vdec.last_pts += 90000 / 60; break;
 							default:
 							{
-								VDEC_ERROR("vdecDecodeAu: invalid frame rate code set (0x%x)", vdec.frc_set);
+								throw EXCEPTION("Invalid frame rate code set (0x%x)", vdec.frc_set);
 							}
 							}
 
@@ -471,7 +469,7 @@ void vdecOpen(u32 vdec_id) // TODO: call from the constructor
 								case 60: case 0x100000000ull + 120: frame.frc = CELL_VDEC_FRC_60; break;
 								default:
 								{
-									VDEC_ERROR("vdecDecodeAu: unsupported time_base.den (%d/1, tpf=%d)", vdec.ctx->time_base.den, vdec.ctx->ticks_per_frame);
+									throw EXCEPTION("Unsupported time_base.den (%d/1, tpf=%d)", vdec.ctx->time_base.den, vdec.ctx->ticks_per_frame);
 								}
 								}
 							}
@@ -491,12 +489,12 @@ void vdecOpen(u32 vdec_id) // TODO: call from the constructor
 								}
 								else
 								{
-									VDEC_ERROR("vdecDecodeAu: unsupported time_base.den (%d/1001, tpf=%d)", vdec.ctx->time_base.den, vdec.ctx->ticks_per_frame);
+									throw EXCEPTION("Unsupported time_base.den (%d/1001, tpf=%d)", vdec.ctx->time_base.den, vdec.ctx->ticks_per_frame);
 								}
 							}
 							else
 							{
-								VDEC_ERROR("vdecDecodeAu: unsupported time_base.num (%d)", vdec.ctx->time_base.num);
+								throw EXCEPTION("Unsupported time_base.num (%d)", vdec.ctx->time_base.num);
 							}
 						}
 
@@ -532,7 +530,7 @@ void vdecOpen(u32 vdec_id) // TODO: call from the constructor
 
 			default:
 			{
-				VDEC_ERROR("VideoDecoder thread error: unknown task(%d)", task.type);
+				throw EXCEPTION("Unknown task(%d)", task.type);
 			}
 			}
 		}

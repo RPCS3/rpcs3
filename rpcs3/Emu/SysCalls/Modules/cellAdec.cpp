@@ -18,8 +18,6 @@ extern "C"
 
 extern Module cellAdec;
 
-#define ADEC_ERROR(...) { cellAdec.Error(__VA_ARGS__); Emu.Pause(); return; } // only for decoder thread
-
 AudioDecoder::AudioDecoder(s32 type, u32 addr, u32 size, vm::ptr<CellAdecCbMsg> func, u32 arg)
 	: type(type)
 	, memAddr(addr)
@@ -58,28 +56,28 @@ AudioDecoder::AudioDecoder(s32 type, u32 addr, u32 size, vm::ptr<CellAdecCbMsg> 
 	}
 	default:
 	{
-		ADEC_ERROR("AudioDecoder(): unknown type (0x%x)", type);
+		throw EXCEPTION("Unknown type (0x%x)", type);
 	}
 	}
 	
 	if (!codec)
 	{
-		ADEC_ERROR("AudioDecoder(): avcodec_find_decoder() failed");
+		throw EXCEPTION("avcodec_find_decoder() failed");
 	}
 	if (!input_format)
 	{
-		ADEC_ERROR("AudioDecoder(): av_find_input_format() failed");
+		throw EXCEPTION("av_find_input_format() failed");
 	}
 	fmt = avformat_alloc_context();
 	if (!fmt)
 	{
-		ADEC_ERROR("AudioDecoder(): avformat_alloc_context() failed");
+		throw EXCEPTION("avformat_alloc_context() failed");
 	}
 	io_buf = (u8*)av_malloc(4096);
 	fmt->pb = avio_alloc_context(io_buf, 256, 0, this, adecRead, NULL, NULL);
 	if (!fmt->pb)
 	{
-		ADEC_ERROR("AudioDecoder(): avio_alloc_context() failed");
+		throw EXCEPTION("avio_alloc_context() failed");
 	}
 }
 
@@ -330,7 +328,7 @@ void adecOpen(u32 adec_id) // TODO: call from the constructor
 					err = avformat_open_input(&adec.fmt, NULL, adec.input_format, &opts);
 					if (err || opts)
 					{
-						ADEC_ERROR("adecDecodeAu: avformat_open_input() failed (err=0x%x, opts=%d)", err, opts ? 1 : 0);
+						throw EXCEPTION("avformat_open_input() failed (err=0x%x, opts=%d)", err, opts ? 1 : 0);
 					}
 					//err = avformat_find_stream_info(adec.fmt, NULL);
 					//if (err || !adec.fmt->nb_streams)
@@ -339,7 +337,7 @@ void adecOpen(u32 adec_id) // TODO: call from the constructor
 					//}
 					if (!avformat_new_stream(adec.fmt, adec.codec))
 					{
-						ADEC_ERROR("adecDecodeAu: avformat_new_stream() failed");
+						throw EXCEPTION("avformat_new_stream() failed");
 					}
 					adec.ctx = adec.fmt->streams[0]->codec; // TODO: check data
 
@@ -352,7 +350,7 @@ void adecOpen(u32 adec_id) // TODO: call from the constructor
 					}
 					if (err || opts)
 					{
-						ADEC_ERROR("adecDecodeAu: avcodec_open2() failed (err=0x%x, opts=%d)", err, opts ? 1 : 0);
+						throw EXCEPTION("avcodec_open2() failed (err=0x%x, opts=%d)", err, opts ? 1 : 0);
 					}
 					adec.just_started = false;
 				}
@@ -396,7 +394,7 @@ void adecOpen(u32 adec_id) // TODO: call from the constructor
 
 					if (!frame.data)
 					{
-						ADEC_ERROR("adecDecodeAu: av_frame_alloc() failed");
+						throw EXCEPTION("av_frame_alloc() failed");
 					}
 
 					int got_frame = 0;
@@ -430,7 +428,7 @@ void adecOpen(u32 adec_id) // TODO: call from the constructor
 						case AV_SAMPLE_FMT_S16P: break;
 						default:
 						{
-							ADEC_ERROR("adecDecodeAu: unsupported frame format(%d)", frame.data->format);
+							throw EXCEPTION("Unsupported frame format(%d)", frame.data->format);
 						}
 						}
 						frame.auAddr = task.au.addr;
@@ -460,7 +458,7 @@ void adecOpen(u32 adec_id) // TODO: call from the constructor
 
 			default:
 			{
-				ADEC_ERROR("AudioDecoder thread error: unknown task(%d)", task.type);
+				throw EXCEPTION("Unknown task(%d)", task.type);
 			}
 			}
 		}

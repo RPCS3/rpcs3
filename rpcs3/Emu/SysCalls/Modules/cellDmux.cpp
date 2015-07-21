@@ -9,8 +9,6 @@
 
 extern Module cellDmux;
 
-#define DMUX_ERROR(...) { cellDmux.Error(__VA_ARGS__); Emu.Pause(); return; } // only for demuxer thread
-
 PesHeader::PesHeader(DemuxerStream& stream)
 	: pts(CODEC_TS_INVALID)
 	, dts(CODEC_TS_INVALID)
@@ -21,15 +19,15 @@ PesHeader::PesHeader(DemuxerStream& stream)
 	u16 header;
 	if (!stream.get(header))
 	{
-		DMUX_ERROR("PesHeader(): end of stream (header)");
+		throw EXCEPTION("End of stream (header)");
 	}
 	if (!stream.get(size))
 	{
-		DMUX_ERROR("PesHeader(): end of stream (size)");
+		throw EXCEPTION("End of stream (size)");
 	}
 	if (!stream.check(size))
 	{
-		DMUX_ERROR("PesHeader(): end of stream (size=%d)", size);
+		throw EXCEPTION("End of stream (size=%d)", size);
 	}
 	
 	u8 pos = 0;
@@ -360,7 +358,7 @@ void dmuxOpen(u32 dmux_id) // TODO: call from the constructor
 				{
 					if (!stream.check(14))
 					{
-						DMUX_ERROR("End of stream (PACK_START_CODE)");
+						throw EXCEPTION("End of stream (PACK_START_CODE)");
 					}
 					stream.skip(14);
 					break;
@@ -370,7 +368,7 @@ void dmuxOpen(u32 dmux_id) // TODO: call from the constructor
 				{
 					if (!stream.check(18))
 					{
-						DMUX_ERROR("End of stream (SYSTEM_HEADER_START_CODE)");
+						throw EXCEPTION("End of stream (SYSTEM_HEADER_START_CODE)");
 					}
 					stream.skip(18);
 					break;
@@ -380,14 +378,14 @@ void dmuxOpen(u32 dmux_id) // TODO: call from the constructor
 				{
 					if (!stream.check(6))
 					{
-						DMUX_ERROR("End of stream (PADDING_STREAM)");
+						throw EXCEPTION("End of stream (PADDING_STREAM)");
 					}
 					stream.skip(4);
 					stream.get(len);
 
 					if (!stream.check(len))
 					{
-						DMUX_ERROR("End of stream (PADDING_STREAM, len=%d)", len);
+						throw EXCEPTION("End of stream (PADDING_STREAM, len=%d)", len);
 					}
 					stream.skip(len);
 					break;
@@ -397,7 +395,7 @@ void dmuxOpen(u32 dmux_id) // TODO: call from the constructor
 				{
 					if (!stream.check(6))
 					{
-						DMUX_ERROR("End of stream (PRIVATE_STREAM_2)");
+						throw EXCEPTION("End of stream (PRIVATE_STREAM_2)");
 					}
 					stream.skip(4);
 					stream.get(len);
@@ -406,7 +404,7 @@ void dmuxOpen(u32 dmux_id) // TODO: call from the constructor
 
 					if (!stream.check(len))
 					{
-						DMUX_ERROR("End of stream (PRIVATE_STREAM_2, len=%d)", len);
+						throw EXCEPTION("End of stream (PRIVATE_STREAM_2, len=%d)", len);
 					}
 					stream.skip(len);
 					break;
@@ -419,32 +417,32 @@ void dmuxOpen(u32 dmux_id) // TODO: call from the constructor
 
 					if (!stream.check(6))
 					{
-						DMUX_ERROR("End of stream (PRIVATE_STREAM_1)");
+						throw EXCEPTION("End of stream (PRIVATE_STREAM_1)");
 					}
 					stream.skip(4);
 					stream.get(len);
 
 					if (!stream.check(len))
 					{
-						DMUX_ERROR("End of stream (PRIVATE_STREAM_1, len=%d)", len);
+						throw EXCEPTION("End of stream (PRIVATE_STREAM_1, len=%d)", len);
 					}
 
 					const PesHeader pes(stream);
 					if (!pes.is_ok)
 					{
-						DMUX_ERROR("PesHeader error (PRIVATE_STREAM_1, len=%d)", len);
+						throw EXCEPTION("PesHeader error (PRIVATE_STREAM_1, len=%d)", len);
 					}
 
 					if (len < pes.size + 4)
 					{
-						DMUX_ERROR("End of block (PRIVATE_STREAM_1, PesHeader + fid_minor, len=%d)", len);
+						throw EXCEPTION("End of block (PRIVATE_STREAM_1, PesHeader + fid_minor, len=%d)", len);
 					}
 					len -= pes.size + 4;
 					
 					u8 fid_minor;
 					if (!stream.get(fid_minor))
 					{
-						DMUX_ERROR("End of stream (PRIVATE_STREAM1, fid_minor)");
+						throw EXCEPTION("End of stream (PRIVATE_STREAM1, fid_minor)");
 					}
 
 					const u32 ch = fid_minor % 16;
@@ -460,7 +458,7 @@ void dmuxOpen(u32 dmux_id) // TODO: call from the constructor
 
 						if (len < 3 || !stream.check(3))
 						{
-							DMUX_ERROR("End of block (ATX, unknown header, len=%d)", len);
+							throw EXCEPTION("End of block (ATX, unknown header, len=%d)", len);
 						}
 						len -= 3;
 						stream.skip(3);
@@ -482,7 +480,7 @@ void dmuxOpen(u32 dmux_id) // TODO: call from the constructor
 
 							if (data[0] != 0x0f || data[1] != 0xd0)
 							{
-								DMUX_ERROR("ATX: 0x0fd0 header not found (ats=0x%llx)", *(be_t<u64>*)data);
+								throw EXCEPTION("ATX: 0x0fd0 header not found (ats=0x%llx)", *(be_t<u64>*)data);
 							}
 
 							u32 frame_size = ((((u32)data[2] & 0x3) << 8) | (u32)data[3]) * 8 + 8;
@@ -519,25 +517,25 @@ void dmuxOpen(u32 dmux_id) // TODO: call from the constructor
 
 					if (!stream.check(6))
 					{
-						DMUX_ERROR("End of stream (video, code=0x%x)", code);
+						throw EXCEPTION("End of stream (video, code=0x%x)", code);
 					}
 					stream.skip(4);
 					stream.get(len);
 
 					if (!stream.check(len))
 					{
-						DMUX_ERROR("End of stream (video, code=0x%x, len=%d)", code, len);
+						throw EXCEPTION("End of stream (video, code=0x%x, len=%d)", code, len);
 					}
 
 					const PesHeader pes(stream);
 					if (!pes.is_ok)
 					{
-						DMUX_ERROR("PesHeader error (video, code=0x%x, len=%d)", code, len);
+						throw EXCEPTION("PesHeader error (video, code=0x%x, len=%d)", code, len);
 					}
 
 					if (len < pes.size + 3)
 					{
-						DMUX_ERROR("End of block (video, code=0x%x, PesHeader)", code);
+						throw EXCEPTION("End of block (video, code=0x%x, PesHeader)", code);
 					}
 					len -= pes.size + 3;
 
@@ -590,7 +588,7 @@ void dmuxOpen(u32 dmux_id) // TODO: call from the constructor
 				{
 					if ((code & PACKET_START_CODE_MASK) == PACKET_START_CODE_PREFIX)
 					{
-						DMUX_ERROR("Unknown code found (0x%x)", code);
+						throw EXCEPTION("Unknown code found (0x%x)", code);
 					}
 
 					// search
@@ -680,7 +678,7 @@ void dmuxOpen(u32 dmux_id) // TODO: call from the constructor
 				//}
 				else
 				{
-					DMUX_ERROR("dmuxEnableEs: unknown filter (0x%x, 0x%x, 0x%x, 0x%x)", es.fidMajor, es.fidMinor, es.sup1, es.sup2);
+					throw EXCEPTION("dmuxEnableEs: unknown filter (0x%x, 0x%x, 0x%x, 0x%x)", es.fidMajor, es.fidMinor, es.sup1, es.sup2);
 				}
 				es.dmux = &dmux;
 				break;
@@ -691,7 +689,7 @@ void dmuxOpen(u32 dmux_id) // TODO: call from the constructor
 				ElementaryStream& es = *task.es.es_ptr;
 				if (es.dmux != &dmux)
 				{
-					DMUX_ERROR("dmuxDisableEs: invalid elementary stream");
+					throw EXCEPTION("dmuxDisableEs: invalid elementary stream");
 				}
 
 				for (u32 i = 0; i < sizeof(esALL) / sizeof(esALL[0]); i++)
@@ -756,7 +754,7 @@ void dmuxOpen(u32 dmux_id) // TODO: call from the constructor
 
 			default:
 			{
-				DMUX_ERROR("Demuxer thread error: unknown task (0x%x)", task.type);
+				throw EXCEPTION("Demuxer thread error: unknown task (0x%x)", task.type);
 			}	
 			}
 		}
