@@ -80,7 +80,6 @@ s32 sys_mutex_destroy(u32 mutex_id)
 		return CELL_ESRCH;
 	}
 
-	// assuming that the mutex is locked immediately by another waiting thread when unlocked
 	if (mutex->owner || mutex->sq.size())
 	{
 		return CELL_EBUSY;

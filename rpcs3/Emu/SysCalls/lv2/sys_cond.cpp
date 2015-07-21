@@ -76,7 +76,7 @@ s32 sys_cond_destroy(u32 cond_id)
 		return CELL_ESRCH;
 	}
 
-	if (!cond->sq.empty() || cond.use_count() > 2)
+	if (!cond->sq.empty())
 	{
 		return CELL_EBUSY;
 	}
@@ -197,7 +197,7 @@ s32 sys_cond_wait(PPUThread& ppu, u32 cond_id, u64 timeout)
 	// add waiter; protocol is ignored in current implementation
 	sleep_queue_entry_t waiter(ppu, cond->sq);
 
-	// add empty mutex waiter (may be actually set later)
+	// potential mutex waiter (not added immediately)
 	sleep_queue_entry_t mutex_waiter(ppu, cond->mutex->sq, defer_sleep);
 
 	while (!ppu.unsignal())

@@ -5,18 +5,17 @@
 #include "Emu/SysCalls/SysCalls.h"
 
 #include "Emu/Cell/PPUThread.h"
-#include "sleep_queue.h"
 #include "sys_semaphore.h"
 
 SysCallBase sys_semaphore("sys_semaphore");
 
 extern u64 get_system_time();
 
-s32 sys_semaphore_create(vm::ptr<u32> sem, vm::ptr<sys_semaphore_attribute_t> attr, s32 initial_val, s32 max_val)
+s32 sys_semaphore_create(vm::ptr<u32> sem_id, vm::ptr<sys_semaphore_attribute_t> attr, s32 initial_val, s32 max_val)
 {
-	sys_semaphore.Warning("sys_semaphore_create(sem=*0x%x, attr=*0x%x, initial_val=%d, max_val=%d)", sem, attr, initial_val, max_val);
+	sys_semaphore.Warning("sys_semaphore_create(sem_id=*0x%x, attr=*0x%x, initial_val=%d, max_val=%d)", sem_id, attr, initial_val, max_val);
 
-	if (!sem || !attr)
+	if (!sem_id || !attr)
 	{
 		return CELL_EFAULT;
 	}
@@ -29,12 +28,10 @@ s32 sys_semaphore_create(vm::ptr<u32> sem, vm::ptr<sys_semaphore_attribute_t> at
 
 	const u32 protocol = attr->protocol;
 
-	switch (protocol)
+	if (protocol != SYS_SYNC_FIFO && protocol != SYS_SYNC_PRIORITY && protocol != SYS_SYNC_PRIORITY_INHERIT)
 	{
-	case SYS_SYNC_FIFO: break;
-	case SYS_SYNC_PRIORITY: break;
-	case SYS_SYNC_PRIORITY_INHERIT: break;
-	default: sys_semaphore.Error("sys_semaphore_create(): unknown protocol (0x%x)", protocol); return CELL_EINVAL;
+		sys_semaphore.Error("sys_semaphore_create(): unknown protocol (0x%x)", protocol);
+		return CELL_EINVAL;
 	}
 
 	if (attr->pshared != SYS_SYNC_NOT_PROCESS_SHARED || attr->ipc_key.data() || attr->flags.data())
@@ -43,103 +40,115 @@ s32 sys_semaphore_create(vm::ptr<u32> sem, vm::ptr<sys_semaphore_attribute_t> at
 		return CELL_EINVAL;
 	}
 
-	*sem = Emu.GetIdManager().make<lv2_sema_t>(protocol, max_val, attr->name_u64, initial_val);
+	*sem_id = Emu.GetIdManager().make<lv2_sema_t>(protocol, max_val, attr->name_u64, initial_val);
 
 	return CELL_OK;
 }
 
-s32 sys_semaphore_destroy(u32 sem)
+s32 sys_semaphore_destroy(u32 sem_id)
 {
-	sys_semaphore.Warning("sys_semaphore_destroy(sem=0x%x)", sem);
+	sys_semaphore.Warning("sys_semaphore_destroy(sem_id=0x%x)", sem_id);
 
 	LV2_LOCK;
 
-	const auto semaphore = Emu.GetIdManager().get<lv2_sema_t>(sem);
+	const auto sem = Emu.GetIdManager().get<lv2_sema_t>(sem_id);
 
-	if (!semaphore)
+	if (!sem)
 	{
 		return CELL_ESRCH;
 	}
 	
-	if (semaphore->waiters)
+	if (sem->sq.size())
 	{
 		return CELL_EBUSY;
 	}
 
-	Emu.GetIdManager().remove<lv2_sema_t>(sem);
+	Emu.GetIdManager().remove<lv2_sema_t>(sem_id);
 
 	return CELL_OK;
 }
 
-s32 sys_semaphore_wait(u32 sem, u64 timeout)
+s32 sys_semaphore_wait(PPUThread& ppu, u32 sem_id, u64 timeout)
 {
-	sys_semaphore.Log("sys_semaphore_wait(sem=0x%x, timeout=0x%llx)", sem, timeout);
+	sys_semaphore.Log("sys_semaphore_wait(sem_id=0x%x, timeout=0x%llx)", sem_id, timeout);
 
 	const u64 start_time = get_system_time();
 
 	LV2_LOCK;
 
-	const auto semaphore = Emu.GetIdManager().get<lv2_sema_t>(sem);
+	const auto sem = Emu.GetIdManager().get<lv2_sema_t>(sem_id);
 
-	if (!semaphore)
+	if (!sem)
 	{
 		return CELL_ESRCH;
 	}
 
-	// protocol is ignored in current implementation
-	semaphore->waiters++;
+	if (sem->value > 0)
+	{
+		sem->value--;
+		
+		return CELL_OK;
+	}
 
-	while (semaphore->value <= 0)
+	// add waiter; protocol is ignored in current implementation
+	sleep_queue_entry_t waiter(ppu, sem->sq);
+
+	while (!ppu.unsignal())
 	{
 		CHECK_EMU_STATUS;
 
-		if (timeout && get_system_time() - start_time > timeout)
+		if (timeout)
 		{
-			semaphore->waiters--;
-			return CELL_ETIMEDOUT;
+			const u64 passed = get_system_time() - start_time;
+
+			if (passed >= timeout)
+			{
+				return CELL_ETIMEDOUT;
+			}
+
+			ppu.cv.wait_for(lv2_lock, std::chrono::microseconds(timeout - passed));
 		}
-
-		semaphore->cv.wait_for(lv2_lock, std::chrono::milliseconds(1));
+		else
+		{
+			ppu.cv.wait(lv2_lock);
+		}
 	}
-
-	semaphore->value--;
-	semaphore->waiters--;
 
 	return CELL_OK;
 }
 
-s32 sys_semaphore_trywait(u32 sem)
+s32 sys_semaphore_trywait(u32 sem_id)
 {
-	sys_semaphore.Log("sys_semaphore_trywait(sem=0x%x)", sem);
+	sys_semaphore.Log("sys_semaphore_trywait(sem_id=0x%x)", sem_id);
 
 	LV2_LOCK;
 
-	const auto semaphore = Emu.GetIdManager().get<lv2_sema_t>(sem);
+	const auto sem = Emu.GetIdManager().get<lv2_sema_t>(sem_id);
 
-	if (!semaphore)
+	if (!sem)
 	{
 		return CELL_ESRCH;
 	}
 
-	if (semaphore->value <= 0 || semaphore->waiters)
+	if (sem->value <= 0 || sem->sq.size())
 	{
 		return CELL_EBUSY;
 	}
 
-	semaphore->value--;
+	sem->value--;
 
 	return CELL_OK;
 }
 
-s32 sys_semaphore_post(u32 sem, s32 count)
+s32 sys_semaphore_post(u32 sem_id, s32 count)
 {
-	sys_semaphore.Log("sys_semaphore_post(sem=0x%x, count=%d)", sem, count);
+	sys_semaphore.Log("sys_semaphore_post(sem_id=0x%x, count=%d)", sem_id, count);
 
 	LV2_LOCK;
 
-	const auto semaphore = Emu.GetIdManager().get<lv2_sema_t>(sem);
+	const auto sem = Emu.GetIdManager().get<lv2_sema_t>(sem_id);
 
-	if (!semaphore)
+	if (!sem)
 	{
 		return CELL_ESRCH;
 	}
@@ -149,43 +158,53 @@ s32 sys_semaphore_post(u32 sem, s32 count)
 		return CELL_EINVAL;
 	}
 
-	const u64 new_value = semaphore->value + count;
-	const u64 max_value = semaphore->max + semaphore->waiters;
+	// get comparable values considering waiting threads
+	const u64 new_value = sem->value + count;
+	const u64 max_value = sem->max + sem->sq.size();
 
 	if (new_value > max_value)
 	{
 		return CELL_EBUSY;
 	}
 
-	semaphore->value += count;
-
-	if (semaphore->waiters)
+	// wakeup as much threads as possible
+	while (count && !sem->sq.empty())
 	{
-		semaphore->cv.notify_all();
+		count--;
+
+		if (!sem->sq.front()->signal())
+		{
+			throw EXCEPTION("Thread already signaled");
+		}
+
+		sem->sq.pop_front();
 	}
+
+	// add the rest to the value
+	sem->value += count;
 
 	return CELL_OK;
 }
 
-s32 sys_semaphore_get_value(u32 sem, vm::ptr<s32> count)
+s32 sys_semaphore_get_value(u32 sem_id, vm::ptr<s32> count)
 {
-	sys_semaphore.Log("sys_semaphore_get_value(sem=0x%x, count=*0x%x)", sem, count);
+	sys_semaphore.Log("sys_semaphore_get_value(sem_id=0x%x, count=*0x%x)", sem_id, count);
+
+	LV2_LOCK;
 
 	if (!count)
 	{
 		return CELL_EFAULT;
 	}
 
-	LV2_LOCK;
+	const auto sem = Emu.GetIdManager().get<lv2_sema_t>(sem_id);
 
-	const auto semaphore = Emu.GetIdManager().get<lv2_sema_t>(sem);
-
-	if (!semaphore)
+	if (!sem)
 	{
 		return CELL_ESRCH;
 	}
 
-	*count = std::max<s32>(0, semaphore->value - semaphore->waiters);
+	*count = sem->value;
 
 	return CELL_OK;
 }
