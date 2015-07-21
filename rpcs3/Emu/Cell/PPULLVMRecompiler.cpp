@@ -58,8 +58,6 @@ Compiler::Compiler(RecompilationEngine & recompilation_engine, const Executable 
 }
 
 Compiler::~Compiler() {
-    for (auto execution_engine : m_execution_engines)
-      delete execution_engine;
     delete m_ir_builder;
     delete m_llvm_context;
 }
@@ -84,7 +82,7 @@ public:
 };
 
 
-Executable Compiler::Compile(const std::string & name, const ControlFlowGraph & cfg, bool generate_linkable_exits) {
+std::pair<Executable, llvm::ExecutionEngine *> Compiler::Compile(const std::string & name, const ControlFlowGraph & cfg, bool generate_linkable_exits) {
     auto compilation_start = std::chrono::high_resolution_clock::now();
 
     m_module = new llvm::Module("Module", *m_llvm_context);
@@ -254,7 +252,6 @@ Executable Compiler::Compile(const std::string & name, const ControlFlowGraph & 
     void *function = execution_engine->getPointerToFunction(m_state.function);
     auto translate_end        = std::chrono::high_resolution_clock::now();
     m_stats.translation_time += std::chrono::duration_cast<std::chrono::nanoseconds>(translate_end - optimize_end);
-    m_execution_engines.push_back(execution_engine);
 
 /*    m_recompilation_engine.Log() << "\nDisassembly:\n";
     auto disassembler = LLVMCreateDisasm(sys::getProcessTriple().c_str(), nullptr, 0, nullptr, nullptr);
@@ -273,15 +270,7 @@ Executable Compiler::Compile(const std::string & name, const ControlFlowGraph & 
     delete fpm;
 
     assert(function != nullptr);
-    return (Executable)function;
-}
-
-void Compiler::FreeExecutable(const std::string & name) {
-    auto function = m_module->getFunction(name);
-    if (function) {
-//        m_execution_engine->freeMachineCodeForFunction(function);
-        function->eraseFromParent();
-    }
+    return std::make_pair((Executable)function, execution_engine);
 }
 
 Compiler::Stats Compiler::GetStats() {
@@ -297,48 +286,49 @@ std::shared_ptr<RecompilationEngine> RecompilationEngine::s_the_instance = nullp
 
 RecompilationEngine::RecompilationEngine()
     : m_log(nullptr)
-    , m_next_ordinal(0)
+    , m_last_cache_clear_time(std::chrono::high_resolution_clock::now())
     , m_compiler(*this, CPUHybridDecoderRecompiler::ExecuteFunction, CPUHybridDecoderRecompiler::ExecuteTillReturn, CPUHybridDecoderRecompiler::PollStatus) {
     m_compiler.RunAllTests();
 }
 
 RecompilationEngine::~RecompilationEngine() {
+  m_address_to_function.clear();
     join();
 }
 
-u32 RecompilationEngine::AllocateOrdinal(u32 address, bool is_function) {
-    std::lock_guard<std::mutex> lock(m_address_to_ordinal_lock);
+Executable executeFunc;
+Executable executeUntilReturn;
 
-    auto i = m_address_to_ordinal.find(address);
-    if (i == m_address_to_ordinal.end()) {
-        assert(m_next_ordinal < (sizeof(m_executable_lookup) / sizeof(m_executable_lookup[0])));
+const Executable *RecompilationEngine::GetExecutable(u32 address, bool isFunction) {
+  return isFunction ? &executeFunc : &executeUntilReturn;
+}
 
-        m_executable_lookup[m_next_ordinal] = is_function ? CPUHybridDecoderRecompiler::ExecuteFunction : CPUHybridDecoderRecompiler::ExecuteTillReturn;
-        std::atomic_thread_fence(std::memory_order_release);
-        i = m_address_to_ordinal.insert(m_address_to_ordinal.end(), std::make_pair(address, m_next_ordinal++));
+const Executable *RecompilationEngine::GetCompiledExecutableIfAvailable(u32 address, std::mutex *mut)
+{
+  std::lock_guard<std::mutex> lock(m_address_to_function_lock);
+  std::unordered_map<u32, ExecutableStorage>::iterator It = m_address_to_function.find(address);
+  if (It == m_address_to_function.end())
+    return nullptr;
+  if(std::get<1>(It->second) == nullptr)
+    return nullptr;
+  mut = &(std::get<3>(It->second));
+  return &(std::get<0>(It->second));
+}
+
+void RecompilationEngine::RemoveUnusedEntriesFromCache() {
+  auto now = std::chrono::high_resolution_clock::now();
+  if (std::chrono::duration_cast<std::chrono::milliseconds>(now - m_last_cache_clear_time).count() > 10000) {
+    for (auto i = m_address_to_function.begin(); i != m_address_to_function.end();) {
+      auto tmp = i;
+      i++;
+      if (std::get<2>(tmp->second) == 0)
+        m_address_to_function.erase(tmp);
+      else
+        std::get<2>(tmp->second) = 0;
     }
 
-    return i->second;
-}
-
-u32 RecompilationEngine::GetOrdinal(u32 address) const {
-    std::lock_guard<std::mutex> lock(m_address_to_ordinal_lock);
-
-    auto i = m_address_to_ordinal.find(address);
-    if (i != m_address_to_ordinal.end()) {
-        return i->second;
-    } else {
-        return 0xFFFFFFFF;
-    }
-}
-
-const Executable RecompilationEngine::GetExecutable(u32 ordinal) const {
-    std::atomic_thread_fence(std::memory_order_acquire);
-    return m_executable_lookup[ordinal];
-}
-
-u64 RecompilationEngine::GetAddressOfExecutableLookup() const {
-    return (u64)m_executable_lookup;
+    m_last_cache_clear_time = now;
+  }
 }
 
 void RecompilationEngine::NotifyTrace(ExecutionTrace * execution_trace) {
@@ -447,7 +437,6 @@ void RecompilationEngine::Task() {
     Log() << "    Time spent recompiling      = " << recompiling_time.count() / 1000000 << "ms\n";
     Log() << "    Time spent idling           = " << idling_time.count() / 1000000 << "ms\n";
     Log() << "    Time spent doing misc tasks = " << (total_time.count() - idling_time.count() - compiler_stats.total_time.count()) / 1000000 << "ms\n";
-    Log() << "Ordinals allocated              = " << m_next_ordinal << "\n";
 
     LOG_NOTICE(PPU, "PPU LLVM Recompilation thread exiting.");
     s_the_instance = nullptr; // Can cause deadlock if this is the last instance. Need to fix this.
@@ -543,12 +532,27 @@ void RecompilationEngine::CompileBlock(BlockEntry & block_entry) {
     Log() << "Compile: " << block_entry.ToString() << "\n";
     Log() << "CFG: " << block_entry.cfg.ToString() << "\n";
 
-    u32 ordinal    = AllocateOrdinal(block_entry.cfg.start_address, block_entry.IsFunction());
-    Executable executable = m_compiler.Compile(fmt::Format("fn_0x%08X_%u", block_entry.cfg.start_address, block_entry.revision++), block_entry.cfg,
-                                         block_entry.IsFunction() ? true : false /*generate_linkable_exits*/);
-    m_executable_lookup[ordinal]       = executable;
+    const std::pair<Executable, llvm::ExecutionEngine *> &compileResult =
+      m_compiler.Compile(fmt::Format("fn_0x%08X_%u", block_entry.cfg.start_address, block_entry.revision++), block_entry.cfg,
+                         block_entry.IsFunction() ? true : false /*generate_linkable_exits*/);
+
+    // If entry doesn't exist, create it (using lock)
+    std::unordered_map<u32, ExecutableStorage>::iterator It = m_address_to_function.find(block_entry.cfg.start_address);
+    if (It == m_address_to_function.end())
+    {
+        std::lock_guard<std::mutex> lock(m_address_to_function_lock);
+        std::get<1>(m_address_to_function[block_entry.cfg.start_address]) = nullptr;
+    }
+
+    // Prevent access on this block
+    std::lock_guard<std::mutex> lock(std::get<3>(m_address_to_function[block_entry.cfg.start_address]));
+
+    std::get<1>(m_address_to_function[block_entry.cfg.start_address]) = std::unique_ptr<llvm::ExecutionEngine>(compileResult.second);
+    std::get<0>(m_address_to_function[block_entry.cfg.start_address]) = compileResult.first;
     block_entry.last_compiled_cfg_size = block_entry.cfg.GetSize();
-    block_entry.is_compiled            = true;
+    block_entry.is_compiled = true;
+
+
 }
 
 std::shared_ptr<RecompilationEngine> RecompilationEngine::GetInstance() {
@@ -645,8 +649,9 @@ ppu_recompiler_llvm::CPUHybridDecoderRecompiler::CPUHybridDecoderRecompiler(PPUT
     : m_ppu(ppu)
     , m_interpreter(new PPUInterpreter(ppu))
     , m_decoder(m_interpreter)
-    , m_last_cache_clear_time(std::chrono::high_resolution_clock::now())
     , m_recompilation_engine(RecompilationEngine::GetInstance()) {
+    executeFunc = CPUHybridDecoderRecompiler::ExecuteFunction;
+    executeUntilReturn = CPUHybridDecoderRecompiler::ExecuteTillReturn;
 }
 
 ppu_recompiler_llvm::CPUHybridDecoderRecompiler::~CPUHybridDecoderRecompiler() {
@@ -654,51 +659,37 @@ ppu_recompiler_llvm::CPUHybridDecoderRecompiler::~CPUHybridDecoderRecompiler() {
 }
 
 u32 ppu_recompiler_llvm::CPUHybridDecoderRecompiler::DecodeMemory(const u32 address) {
+
     ExecuteFunction(&m_ppu, 0);
     return 0;
-}
-
-void ppu_recompiler_llvm::CPUHybridDecoderRecompiler::RemoveUnusedEntriesFromCache() const {
-    auto now = std::chrono::high_resolution_clock::now();
-    if (std::chrono::duration_cast<std::chrono::milliseconds>(now - m_last_cache_clear_time).count() > 10000) {
-        for (auto i = m_address_to_ordinal.begin(); i != m_address_to_ordinal.end();) {
-            auto tmp = i;
-            i++;
-            if (tmp->second.second == 0) {
-                m_address_to_ordinal.erase(tmp);
-            } else {
-                tmp->second.second = 0;
-            }
-        }
-
-        m_last_cache_clear_time = now;
-    }
-}
-
-Executable ppu_recompiler_llvm::CPUHybridDecoderRecompiler::GetExecutable(u32 address, Executable default_executable) const {
-    // Find the ordinal for the specified address and insert it to the cache
-    auto i = m_address_to_ordinal.find(address);
-    if (i == m_address_to_ordinal.end()) {
-        auto ordinal = m_recompilation_engine->GetOrdinal(address);
-        if (ordinal != 0xFFFFFFFF) {
-            i = m_address_to_ordinal.insert(m_address_to_ordinal.end(), std::make_pair(address, std::make_pair(ordinal, 0)));
-        }
-    }
-
-    Executable executable = default_executable;
-    if (i != m_address_to_ordinal.end()) {
-        i->second.second++;
-        executable = m_recompilation_engine->GetExecutable(i->second.first);
-    }
-
-    RemoveUnusedEntriesFromCache();
-    return executable;
 }
 
 u32 ppu_recompiler_llvm::CPUHybridDecoderRecompiler::ExecuteFunction(PPUThread * ppu_state, u64 context) {
     auto execution_engine = (CPUHybridDecoderRecompiler *)ppu_state->GetDecoder();
     execution_engine->m_tracer.Trace(Tracer::TraceType::EnterFunction, ppu_state->PC, 0);
     return ExecuteTillReturn(ppu_state, 0);
+}
+
+/// Get the branch type from a branch instruction
+static BranchType GetBranchTypeFromInstruction(u32 instruction) {
+  u32 field1 = instruction >> 26;
+  u32 lk = instruction & 1;
+
+  if (field1 == 16 || field1 == 18)
+    return lk ? BranchType::FunctionCall : BranchType::LocalBranch;
+  if (field1 == 19) {
+    u32 field2 = (instruction >> 1) & 0x3FF;
+    if (field2 == 16)
+      return lk ? BranchType::FunctionCall : BranchType::Return;
+    if (field2 == 528)
+      return lk ? BranchType::FunctionCall : BranchType::LocalBranch;
+    return BranchType::NonBranch;
+  }
+  if (field1 == 1 && (instruction & EIF_PERFORM_BLR)) // classify HACK instruction
+    return instruction & EIF_USE_BRANCH ? BranchType::FunctionCall : BranchType::Return;
+  if (field1 == 1 && (instruction & EIF_USE_BRANCH))
+    return BranchType::LocalBranch;
+  return BranchType::NonBranch;
 }
 
 u32 ppu_recompiler_llvm::CPUHybridDecoderRecompiler::ExecuteTillReturn(PPUThread * ppu_state, u64 context) {
@@ -708,10 +699,12 @@ u32 ppu_recompiler_llvm::CPUHybridDecoderRecompiler::ExecuteTillReturn(PPUThread
         execution_engine->m_tracer.Trace(Tracer::TraceType::ExitFromCompiledFunction, context >> 32, context & 0xFFFFFFFF);
 
     while (PollStatus(ppu_state) == false) {
-        Executable executable = execution_engine->GetExecutable(ppu_state->PC, ExecuteTillReturn);
-        if (executable != ExecuteTillReturn && executable != ExecuteFunction) {
+        std::mutex mut;
+        const Executable *executable = execution_engine->m_recompilation_engine->GetCompiledExecutableIfAvailable(ppu_state->PC, &mut);
+        if (executable) {
+            std::lock_guard<std::mutex> lock(mut);
             auto entry = ppu_state->PC;
-            u32 exit  = (u32)executable(ppu_state, 0);
+            u32 exit  = (u32)(*executable)(ppu_state, 0);
             execution_engine->m_tracer.Trace(Tracer::TraceType::ExitFromCompiledBlock, entry, exit);
             if (exit == 0)
               return 0;
@@ -730,8 +723,8 @@ u32 ppu_recompiler_llvm::CPUHybridDecoderRecompiler::ExecuteTillReturn(PPUThread
                 return 0;
             case BranchType::FunctionCall:
                 execution_engine->m_tracer.Trace(Tracer::TraceType::CallFunction, ppu_state->PC, 0);
-                executable = execution_engine->GetExecutable(ppu_state->PC, ExecuteFunction);
-                executable(ppu_state, 0);
+                executable = execution_engine->m_recompilation_engine->GetExecutable(ppu_state->PC, true);
+                (*executable)(ppu_state, 0);
                 break;
             case BranchType::LocalBranch:
                 break;
@@ -749,25 +742,4 @@ u32 ppu_recompiler_llvm::CPUHybridDecoderRecompiler::ExecuteTillReturn(PPUThread
 
 bool ppu_recompiler_llvm::CPUHybridDecoderRecompiler::PollStatus(PPUThread * ppu_state) {
     return ppu_state->check_status();
-}
-
-BranchType ppu_recompiler_llvm::GetBranchTypeFromInstruction(u32 instruction) {
-    u32 field1 = instruction >> 26;
-    u32 lk     = instruction & 1;
-
-    if (field1 == 16 || field1 == 18)
-        return lk ? BranchType::FunctionCall : BranchType::LocalBranch;
-    if (field1 == 19) {
-        u32 field2 = (instruction >> 1) & 0x3FF;
-        if (field2 == 16)
-            return lk ? BranchType::FunctionCall : BranchType::Return;
-        if (field2 == 528)
-            return lk ? BranchType::FunctionCall : BranchType::LocalBranch;
-        return BranchType::NonBranch;
-    }
-    if (field1 == 1 && (instruction & EIF_PERFORM_BLR)) // classify HACK instruction
-        return instruction & EIF_USE_BRANCH ? BranchType::FunctionCall : BranchType::Return;
-    if (field1 == 1 && (instruction & EIF_USE_BRANCH))
-        return BranchType::LocalBranch;
-    return BranchType::NonBranch;
 }
