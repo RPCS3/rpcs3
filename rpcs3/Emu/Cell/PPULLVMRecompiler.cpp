@@ -84,7 +84,7 @@ public:
 };
 
 
-Executable Compiler::Compile(const std::string & name, const ControlFlowGraph & cfg, bool inline_all, bool generate_linkable_exits) {
+Executable Compiler::Compile(const std::string & name, const ControlFlowGraph & cfg, bool generate_linkable_exits) {
     auto compilation_start = std::chrono::high_resolution_clock::now();
 
     m_module = new llvm::Module("Module", *m_llvm_context);
@@ -128,7 +128,6 @@ Executable Compiler::Compile(const std::string & name, const ControlFlowGraph & 
     fpm->doInitialization();
 
     m_state.cfg                     = &cfg;
-    m_state.inline_all              = inline_all;
     m_state.generate_linkable_exits = generate_linkable_exits;
 
     // Create the function
@@ -151,27 +150,6 @@ Executable Compiler::Compile(const std::string & name, const ControlFlowGraph & 
         m_state.current_instruction_address = *instr_i;
         auto instr_bb                       = GetBasicBlockFromAddress(m_state.current_instruction_address);
         m_ir_builder->SetInsertPoint(instr_bb);
-
-        if (!inline_all && *instr_i != cfg.start_address) {
-            // Use an already compiled implementation of this block if available
-            auto ordinal = m_recompilation_engine.GetOrdinal(*instr_i);
-            if (ordinal != 0xFFFFFFFF) {
-                auto exit_instr_i32 = m_ir_builder->CreatePHI(m_ir_builder->getInt32Ty(), 0);
-                exit_instr_list.push_back(exit_instr_i32);
-
-                auto context_i64 = m_ir_builder->CreateZExt(exit_instr_i32, m_ir_builder->getInt64Ty());
-                context_i64      = m_ir_builder->CreateOr(context_i64, (u64)cfg.function_address << 32);
-                auto ret_i32     = IndirectCall(*instr_i, context_i64, false);
-
-                auto switch_instr = m_ir_builder->CreateSwitch(ret_i32, GetBasicBlockFromAddress(0xFFFFFFFF));
-                auto branch_i     = cfg.branches.find(*instr_i);
-                if (branch_i != cfg.branches.end()) {
-                    for (auto next_instr_i = branch_i->second.begin(); next_instr_i != branch_i->second.end(); next_instr_i++) {
-                        switch_instr->addCase(m_ir_builder->getInt32(*next_instr_i), GetBasicBlockFromAddress(*next_instr_i));
-                    }
-                }
-            }
-        }
 
         if (instr_bb->empty()) {
             u32 instr = vm::ps3::read32(m_state.current_instruction_address);
@@ -5870,7 +5848,7 @@ void RecompilationEngine::CompileBlock(BlockEntry & block_entry) {
     Log() << "CFG: " << block_entry.cfg.ToString() << "\n";
 
     auto ordinal    = AllocateOrdinal(block_entry.cfg.start_address, block_entry.IsFunction());
-    auto executable = m_compiler.Compile(fmt::Format("fn_0x%08X_%u", block_entry.cfg.start_address, block_entry.revision++), block_entry.cfg, true,
+    auto executable = m_compiler.Compile(fmt::Format("fn_0x%08X_%u", block_entry.cfg.start_address, block_entry.revision++), block_entry.cfg,
                                          block_entry.IsFunction() ? true : false /*generate_linkable_exits*/);
     m_executable_lookup[ordinal]       = executable;
     block_entry.last_compiled_cfg_size = block_entry.cfg.GetSize();
