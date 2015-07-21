@@ -656,7 +656,7 @@
     <ExcludePath>$(ExcludePath)</ExcludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">
-    <IncludePath>.\;..\;..\minidx9\Include;..\asmjit\src\asmjit;..\wxWidgets\include\msvc;..\wxWidgets\include;.\OpenAL\include;..\ffmpeg\WindowsInclude;..\ffmpeg\Windows\x86_64\Include;$(VC_IncludePath);$(WindowsSDK_IncludePath);..\llvm\include;..\llvm_build\include</IncludePath>
+    <IncludePath>.\;..\;..\minidx9\Include;..\asmjit\src\asmjit;..\wxWidgets\include\msvc;..\wxWidgets\include;.\OpenAL\include;..\ffmpeg\WindowsInclude;..\ffmpeg\Windows\x86_64\Include;$(VC_IncludePath);$(WindowsSDK_IncludePath);..\llvm\include;..\llvm_build\include;$(UniversalCRT_IncludePath)</IncludePath>
     <IntDir>$(Platform)\$(Configuration)\emucore\</IntDir>
     <LibraryPath>$(LibraryPath)</LibraryPath>
     <ExcludePath>$(ExcludePath)</ExcludePath>
@@ -715,7 +715,7 @@
     </Link>
     <Lib>
       <AdditionalLibraryDirectories>..\llvm_build\Debug\lib</AdditionalLibraryDirectories>
-      <AdditionalDependencies>LLVMJIT.lib;LLVMVectorize.lib;LLVMX86CodeGen.lib;LLVMX86Disassembler.lib;LLVMExecutionEngine.lib;LLVMAsmPrinter.lib;LLVMSelectionDAG.lib;LLVMCodeGen.lib;LLVMScalarOpts.lib;LLVMInstCombine.lib;LLVMTransformUtils.lib;LLVMipa.lib;LLVMAnalysis.lib;LLVMTarget.lib;LLVMX86Desc.lib;LLVMX86AsmPrinter.lib;LLVMObject.lib;LLVMMCParser.lib;LLVMBitReader.lib;LLVMCore.lib;LLVMX86Utils.lib;LLVMMC.lib;LLVMX86Info.lib;LLVMSupport.lib;LLVMMCDisassembler.lib</AdditionalDependencies>
+      <AdditionalDependencies>LLVMMCJIT.lib;LLVMRuntimeDyld.lib;LLVMVectorize.lib;LLVMX86CodeGen.lib;LLVMX86Disassembler.lib;LLVMExecutionEngine.lib;LLVMAsmPrinter.lib;LLVMSelectionDAG.lib;LLVMCodeGen.lib;LLVMScalarOpts.lib;LLVMInstCombine.lib;LLVMTransformUtils.lib;LLVMipa.lib;LLVMAnalysis.lib;LLVMTarget.lib;LLVMX86Desc.lib;LLVMX86AsmPrinter.lib;LLVMObject.lib;LLVMMCParser.lib;LLVMBitReader.lib;LLVMCore.lib;LLVMX86Utils.lib;LLVMMC.lib;LLVMX86Info.lib;LLVMSupport.lib;LLVMMCDisassembler.lib</AdditionalDependencies>
     </Lib>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug - MemLeak|x64'">
@@ -777,7 +777,7 @@
     </Link>
     <Lib>
       <AdditionalLibraryDirectories>..\llvm_build\Release\lib</AdditionalLibraryDirectories>
-      <AdditionalDependencies>LLVMJIT.lib;LLVMVectorize.lib;LLVMX86CodeGen.lib;LLVMX86Disassembler.lib;LLVMExecutionEngine.lib;LLVMAsmPrinter.lib;LLVMSelectionDAG.lib;LLVMCodeGen.lib;LLVMScalarOpts.lib;LLVMInstCombine.lib;LLVMTransformUtils.lib;LLVMipa.lib;LLVMAnalysis.lib;LLVMTarget.lib;LLVMX86Desc.lib;LLVMX86AsmPrinter.lib;LLVMObject.lib;LLVMMCParser.lib;LLVMBitReader.lib;LLVMCore.lib;LLVMX86Utils.lib;LLVMMC.lib;LLVMX86Info.lib;LLVMSupport.lib;LLVMMCDisassembler.lib</AdditionalDependencies>
+      <AdditionalDependencies>LLVMMCJIT.lib;LLVMRuntimeDyld.lib;LLVMVectorize.lib;LLVMX86CodeGen.lib;LLVMX86Disassembler.lib;LLVMExecutionEngine.lib;LLVMAsmPrinter.lib;LLVMSelectionDAG.lib;LLVMCodeGen.lib;LLVMScalarOpts.lib;LLVMInstCombine.lib;LLVMTransformUtils.lib;LLVMipa.lib;LLVMAnalysis.lib;LLVMTarget.lib;LLVMX86Desc.lib;LLVMX86AsmPrinter.lib;LLVMObject.lib;LLVMMCParser.lib;LLVMBitReader.lib;LLVMCore.lib;LLVMX86Utils.lib;LLVMMC.lib;LLVMX86Info.lib;LLVMSupport.lib;LLVMMCDisassembler.lib</AdditionalDependencies>
     </Lib>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
