@@ -916,11 +916,57 @@ namespace ppu_recompiler_llvm {
 
         /// Convert a C++ type to an LLVM type
         template<class T>
-        llvm::Type * CppToLlvmType();
+        llvm::Type * CppToLlvmType() {
+          if (std::is_void<T>::value) {
+            return m_ir_builder->getVoidTy();
+          }
+          else if (std::is_same<T, long long>::value || std::is_same<T, unsigned long long>::value) {
+            return m_ir_builder->getInt64Ty();
+          }
+          else if (std::is_same<T, int>::value || std::is_same<T, unsigned int>::value) {
+            return m_ir_builder->getInt32Ty();
+          }
+          else if (std::is_same<T, short>::value || std::is_same<T, unsigned short>::value) {
+            return m_ir_builder->getInt16Ty();
+          }
+          else if (std::is_same<T, char>::value || std::is_same<T, unsigned char>::value) {
+            return m_ir_builder->getInt8Ty();
+          }
+          else if (std::is_same<T, float>::value) {
+            return m_ir_builder->getFloatTy();
+          }
+          else if (std::is_same<T, double>::value) {
+            return m_ir_builder->getDoubleTy();
+          }
+          else if (std::is_same<T, bool>::value) {
+            return m_ir_builder->getInt1Ty();
+          }
+          else if (std::is_pointer<T>::value) {
+            return m_ir_builder->getInt8PtrTy();
+          }
+          else {
+            assert(0);
+          }
+
+          return nullptr;
+        }
 
         /// Call a function
         template<class ReturnType, class Func, class... Args>
-        llvm::Value * Call(const char * name, Func function, Args... args);
+        llvm::Value * Call(const char * name, Func function, Args... args) {
+          auto fn = m_module->getFunction(name);
+          if (!fn) {
+            std::vector<llvm::Type *> fn_args_type = { args->getType()... };
+            auto fn_type = llvm::FunctionType::get(CppToLlvmType<ReturnType>(), fn_args_type, false);
+            fn = llvm::cast<llvm::Function>(m_module->getOrInsertFunction(name, fn_type));
+            fn->setCallingConv(llvm::CallingConv::X86_64_Win64);
+            // Note: not threadsafe
+            m_executableMap[name] = (Executable)(void *&)function;
+          }
+
+          std::vector<llvm::Value *> fn_args = { args... };
+          return m_ir_builder->CreateCall(fn, fn_args);
+        }
 
         /// Indirect call
         llvm::Value * IndirectCall(u32 address, llvm::Value * context_i64, bool is_function);

@@ -878,6 +878,9 @@
     <ClCompile Include="Emu\SysCalls\Modules\sys_lv2dbg.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Cell\PPULLVMRecompilerCore.cpp">
+      <Filter>Emu\CPU\Cell</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
