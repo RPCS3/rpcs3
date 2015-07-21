@@ -6026,8 +6026,9 @@ u32 ppu_recompiler_llvm::ExecutionEngine::ExecuteTillReturn(PPUThread * ppu_stat
         } else {
             execution_engine->m_tracer.Trace(Tracer::TraceType::Instruction, ppu_state->PC, 0);
             u32 instruction = vm::ps3::read32(ppu_state->PC);
+            u32 oldPC = ppu_state->PC;
             execution_engine->m_decoder.Decode(instruction);
-            branch_type = GetBranchTypeFromInstruction(instruction);
+            branch_type = ppu_state->PC != oldPC ? GetBranchTypeFromInstruction(instruction) : BranchType::NonBranch;
             ppu_state->PC += 4;
 
             switch (branch_type) {
