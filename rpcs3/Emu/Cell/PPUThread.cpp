@@ -583,7 +583,7 @@ void PPUThread::do_run()
 	case 2:
 	{
 #ifdef PPU_LLVM_RECOMPILER
-		m_dec.reset(new ppu_recompiler_llvm::ExecutionEngine(*this));
+		m_dec.reset(new ppu_recompiler_llvm::CPUHybridDecoderRecompiler(*this));
 #else
 		LOG_ERROR(PPU, "This image does not include PPU JIT (LLVM)");
 		Emu.Pause();
