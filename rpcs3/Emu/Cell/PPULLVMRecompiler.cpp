@@ -7,6 +7,8 @@
 #include "llvm/Support/Host.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/ExecutionEngine/GenericValue.h"
+#include "llvm/ExecutionEngine/MCJIT.h"
+#include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Analysis/Passes.h"
@@ -40,49 +42,14 @@ Compiler::Compiler(RecompilationEngine & recompilation_engine, const Executable 
 
     m_llvm_context = new LLVMContext();
     m_ir_builder   = new IRBuilder<>(*m_llvm_context);
-    m_module       = new llvm::Module("Module", *m_llvm_context);
-    m_fpm          = new FunctionPassManager(m_module);
-
-    EngineBuilder engine_builder(m_module);
-    engine_builder.setMCPU(sys::getHostCPUName());
-    engine_builder.setEngineKind(EngineKind::JIT);
-    engine_builder.setOptLevel(CodeGenOpt::Default);
-    m_execution_engine = engine_builder.create();
-
-    m_fpm->add(new DataLayoutPass(m_module));
-    m_fpm->add(createNoAAPass());
-    m_fpm->add(createBasicAliasAnalysisPass());
-    m_fpm->add(createNoTargetTransformInfoPass());
-    m_fpm->add(createEarlyCSEPass());
-    m_fpm->add(createTailCallEliminationPass());
-    m_fpm->add(createReassociatePass());
-    m_fpm->add(createInstructionCombiningPass());
-    m_fpm->add(new DominatorTreeWrapperPass());
-    m_fpm->add(new MemoryDependenceAnalysis());
-    m_fpm->add(createGVNPass());
-    m_fpm->add(createInstructionCombiningPass());
-    m_fpm->add(new MemoryDependenceAnalysis());
-    m_fpm->add(createDeadStoreEliminationPass());
-    m_fpm->add(new LoopInfo());
-    m_fpm->add(new ScalarEvolution());
-    m_fpm->add(createSLPVectorizerPass());
-    m_fpm->add(createInstructionCombiningPass());
-    m_fpm->add(createCFGSimplificationPass());
-    m_fpm->doInitialization();
 
     std::vector<Type *> arg_types;
-    arg_types.push_back(m_ir_builder->getInt8PtrTy());
     arg_types.push_back(m_ir_builder->getInt8PtrTy());
     arg_types.push_back(m_ir_builder->getInt64Ty());
     m_compiled_function_type = FunctionType::get(m_ir_builder->getInt32Ty(), arg_types, false);
 
-    m_execute_unknown_function = (Function *)m_module->getOrInsertFunction("execute_unknown_function", m_compiled_function_type);
-    m_execute_unknown_function->setCallingConv(CallingConv::X86_64_Win64);
-    m_execution_engine->addGlobalMapping(m_execute_unknown_function, (void *)execute_unknown_function);
-
-    m_execute_unknown_block = (Function *)m_module->getOrInsertFunction("execute_unknown_block", m_compiled_function_type);
-    m_execute_unknown_block->setCallingConv(CallingConv::X86_64_Win64);
-    m_execution_engine->addGlobalMapping(m_execute_unknown_block, (void *)execute_unknown_block);
+    m_executableMap["execute_unknown_function"] = execute_unknown_function;
+    m_executableMap["execute_unknown_block"] = execute_unknown_block;
 
     if (!s_rotate_mask_inited) {
         InitRotateMask();
@@ -91,14 +58,74 @@ Compiler::Compiler(RecompilationEngine & recompilation_engine, const Executable 
 }
 
 Compiler::~Compiler() {
-    delete m_execution_engine;
-    delete m_fpm;
+    for (auto execution_engine : m_execution_engines)
+      delete execution_engine;
     delete m_ir_builder;
     delete m_llvm_context;
 }
 
+
+class CustomSectionMemoryManager : public llvm::SectionMemoryManager {
+private:
+    std::unordered_map<std::string, Executable> &executableMap;
+public:
+    CustomSectionMemoryManager(std::unordered_map<std::string, Executable> &map) :
+      executableMap(map)
+    {}
+    ~CustomSectionMemoryManager() override {}
+
+    virtual uint64_t getSymbolAddress(const std::string &Name)
+    {
+      std::unordered_map<std::string, Executable>::const_iterator It = executableMap.find(Name);
+      if (It != executableMap.end())
+        return (uint64_t)It->second;
+      return 0;
+    }
+};
+
+
 Executable Compiler::Compile(const std::string & name, const ControlFlowGraph & cfg, bool inline_all, bool generate_linkable_exits) {
     auto compilation_start = std::chrono::high_resolution_clock::now();
+
+    m_module = new llvm::Module("Module", *m_llvm_context);
+    m_execute_unknown_function = (Function *)m_module->getOrInsertFunction("execute_unknown_function", m_compiled_function_type);
+    m_execute_unknown_function->setCallingConv(CallingConv::X86_64_Win64);
+
+    m_execute_unknown_block = (Function *)m_module->getOrInsertFunction("execute_unknown_block", m_compiled_function_type);
+    m_execute_unknown_block->setCallingConv(CallingConv::X86_64_Win64);
+
+    std::string targetTriple = "x86_64-pc-windows-elf";
+    m_module->setTargetTriple(targetTriple);
+
+    llvm::ExecutionEngine *execution_engine =
+      EngineBuilder(std::unique_ptr<llvm::Module>(m_module))
+        .setEngineKind(EngineKind::JIT)
+        .setMCJITMemoryManager(std::unique_ptr<llvm::SectionMemoryManager>(new CustomSectionMemoryManager(m_executableMap)))
+        .setOptLevel(llvm::CodeGenOpt::Aggressive)
+        .setMCPU("nehalem")
+        .create();
+    m_module->setDataLayout(execution_engine->getDataLayout());
+
+    llvm::FunctionPassManager *fpm = new llvm::FunctionPassManager(m_module);
+    fpm->add(createNoAAPass());
+    fpm->add(createBasicAliasAnalysisPass());
+    fpm->add(createNoTargetTransformInfoPass());
+    fpm->add(createEarlyCSEPass());
+    fpm->add(createTailCallEliminationPass());
+    fpm->add(createReassociatePass());
+    fpm->add(createInstructionCombiningPass());
+    fpm->add(new DominatorTreeWrapperPass());
+    fpm->add(new MemoryDependenceAnalysis());
+    fpm->add(createGVNPass());
+    fpm->add(createInstructionCombiningPass());
+    fpm->add(new MemoryDependenceAnalysis());
+    fpm->add(createDeadStoreEliminationPass());
+    fpm->add(new LoopInfo());
+    fpm->add(new ScalarEvolution());
+    fpm->add(createSLPVectorizerPass());
+    fpm->add(createInstructionCombiningPass());
+    fpm->add(createCFGSimplificationPass());
+    fpm->doInitialization();
 
     m_state.cfg                     = &cfg;
     m_state.inline_all              = inline_all;
@@ -228,32 +255,32 @@ Executable Compiler::Compile(const std::string & name, const ControlFlowGraph & 
         }
     }
 
-#ifdef _DEBUG
-    m_recompilation_engine.Log() << *m_state.function;
+
+    m_recompilation_engine.Log() << *m_module;
 
     std::string        verify;
     raw_string_ostream verify_ostream(verify);
     if (verifyFunction(*m_state.function, &verify_ostream)) {
         m_recompilation_engine.Log() << "Verification failed: " << verify << "\n";
     }
-#endif
+
 
     auto ir_build_end      = std::chrono::high_resolution_clock::now();
     m_stats.ir_build_time += std::chrono::duration_cast<std::chrono::nanoseconds>(ir_build_end - compilation_start);
 
     // Optimize this function
-    m_fpm->run(*m_state.function);
+    fpm->run(*m_state.function);
     auto optimize_end          = std::chrono::high_resolution_clock::now();
     m_stats.optimization_time += std::chrono::duration_cast<std::chrono::nanoseconds>(optimize_end - ir_build_end);
 
     // Translate to machine code
-    MachineCodeInfo mci;
-    m_execution_engine->runJITOnFunction(m_state.function, &mci);
+    execution_engine->finalizeObject();
+    void *function = execution_engine->getPointerToFunction(m_state.function);
     auto translate_end        = std::chrono::high_resolution_clock::now();
     m_stats.translation_time += std::chrono::duration_cast<std::chrono::nanoseconds>(translate_end - optimize_end);
+    m_execution_engines.push_back(execution_engine);
 
-#ifdef _DEBUG
-    m_recompilation_engine.Log() << "\nDisassembly:\n";
+/*    m_recompilation_engine.Log() << "\nDisassembly:\n";
     auto disassembler = LLVMCreateDisasm(sys::getProcessTriple().c_str(), nullptr, 0, nullptr, nullptr);
     for (size_t pc = 0; pc < mci.size();) {
         char str[1024];
@@ -263,19 +290,20 @@ Executable Compiler::Compile(const std::string & name, const ControlFlowGraph & 
         pc += size;
     }
 
-    LLVMDisasmDispose(disassembler);
-#endif
+    LLVMDisasmDispose(disassembler);*/
 
     auto compilation_end  = std::chrono::high_resolution_clock::now();
     m_stats.total_time   += std::chrono::duration_cast<std::chrono::nanoseconds>(compilation_end - compilation_start);
+    delete fpm;
 
-    return (Executable)mci.address();
+    assert(function != nullptr);
+    return (Executable)function;
 }
 
 void Compiler::FreeExecutable(const std::string & name) {
     auto function = m_module->getFunction(name);
     if (function) {
-        m_execution_engine->freeMachineCodeForFunction(function);
+//        m_execution_engine->freeMachineCodeForFunction(function);
         function->eraseFromParent();
     }
 }
@@ -4990,13 +5018,11 @@ BasicBlock * Compiler::GetBasicBlockFromAddress(u32 address, const std::string &
             break;
         }
 
-#ifdef _DEBUG
         auto block_address = GetAddressFromBasicBlockName(i->getName());
         if (block_address > address) {
             next_block = &(*i);
             break;
         }
-#endif
     }
 
     if (!block && create_if_not_exist) {
@@ -5551,7 +5577,8 @@ Value * Compiler::Call(const char * name, Func function, Args... args) {
         auto fn_type = FunctionType::get(CppToLlvmType<ReturnType>(), fn_args_type, false);
         fn           = cast<Function>(m_module->getOrInsertFunction(name, fn_type));
         fn->setCallingConv(CallingConv::X86_64_Win64);
-        m_execution_engine->addGlobalMapping(fn, (void *&)function);
+        // Note: not threadsafe
+        m_executableMap[name] = (Executable)(void *&)function;
     }
 
     std::vector<Value *> fn_args = {args...};
@@ -5656,7 +5683,7 @@ void RecompilationEngine::NotifyTrace(ExecutionTrace * execution_trace) {
 
 raw_fd_ostream & RecompilationEngine::Log() {
     if (!m_log) {
-        std::string error;
+        std::error_code error;
         m_log = new raw_fd_ostream("PPULLVMRecompiler.log", error, sys::fs::F_Text);
         m_log->SetUnbuffered();
     }
@@ -5756,9 +5783,7 @@ void RecompilationEngine::ProcessExecutionTrace(const ExecutionTrace & execution
     auto execution_trace_id          = execution_trace.GetId();
     auto processed_execution_trace_i = m_processed_execution_traces.find(execution_trace_id);
     if (processed_execution_trace_i == m_processed_execution_traces.end()) {
-#ifdef _DEBUG
         Log() << "Trace: " << execution_trace.ToString() << "\n";
-#endif
         // Find the function block
         BlockEntry key(execution_trace.function_address, execution_trace.function_address);
         auto       block_i = m_block_table.find(&key);
@@ -5841,10 +5866,8 @@ void RecompilationEngine::UpdateControlFlowGraph(ControlFlowGraph & cfg, const E
 }
 
 void RecompilationEngine::CompileBlock(BlockEntry & block_entry) {
-#ifdef _DEBUG
     Log() << "Compile: " << block_entry.ToString() << "\n";
     Log() << "CFG: " << block_entry.cfg.ToString() << "\n";
-#endif
 
     auto ordinal    = AllocateOrdinal(block_entry.cfg.start_address, block_entry.IsFunction());
     auto executable = m_compiler.Compile(fmt::Format("fn_0x%08X_%u", block_entry.cfg.start_address, block_entry.revision++), block_entry.cfg, true,
