@@ -986,6 +986,9 @@ namespace ppu_recompiler_llvm {
 
         /// Initialse s_rotate_mask
         static void InitRotateMask();
+
+		//ugly
+		std::pair<llvm::FunctionPassManager *, llvm::ExecutionEngine *> getFpmAndExec();
     };
 
     /**

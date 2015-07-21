@@ -81,6 +81,49 @@ public:
     }
 };
 
+//ugly
+std::pair<llvm::FunctionPassManager *, llvm::ExecutionEngine *> Compiler::getFpmAndExec() {
+	m_module = new llvm::Module("Module", *m_llvm_context);
+	m_execute_unknown_function = (Function *)m_module->getOrInsertFunction("execute_unknown_function", m_compiled_function_type);
+	m_execute_unknown_function->setCallingConv(CallingConv::X86_64_Win64);
+
+	m_execute_unknown_block = (Function *)m_module->getOrInsertFunction("execute_unknown_block", m_compiled_function_type);
+	m_execute_unknown_block->setCallingConv(CallingConv::X86_64_Win64);
+
+	std::string targetTriple = "x86_64-pc-windows-elf";
+	m_module->setTargetTriple(targetTriple);
+
+	llvm::ExecutionEngine *execution_engine =
+		EngineBuilder(std::unique_ptr<llvm::Module>(m_module))
+		.setEngineKind(EngineKind::JIT)
+		.setMCJITMemoryManager(std::unique_ptr<llvm::SectionMemoryManager>(new CustomSectionMemoryManager(m_executableMap)))
+		.setOptLevel(llvm::CodeGenOpt::Aggressive)
+		.setMCPU("nehalem")
+		.create();
+	m_module->setDataLayout(execution_engine->getDataLayout());
+
+	llvm::FunctionPassManager *fpm = new llvm::FunctionPassManager(m_module);
+	fpm->add(createNoAAPass());
+	fpm->add(createBasicAliasAnalysisPass());
+	fpm->add(createNoTargetTransformInfoPass());
+	fpm->add(createEarlyCSEPass());
+	fpm->add(createTailCallEliminationPass());
+	fpm->add(createReassociatePass());
+	fpm->add(createInstructionCombiningPass());
+	fpm->add(new DominatorTreeWrapperPass());
+	fpm->add(new MemoryDependenceAnalysis());
+	fpm->add(createGVNPass());
+	fpm->add(createInstructionCombiningPass());
+	fpm->add(new MemoryDependenceAnalysis());
+	fpm->add(createDeadStoreEliminationPass());
+	fpm->add(new LoopInfo());
+	fpm->add(new ScalarEvolution());
+	fpm->add(createSLPVectorizerPass());
+	fpm->add(createInstructionCombiningPass());
+	fpm->add(createCFGSimplificationPass());
+	fpm->doInitialization();
+	return std::pair<llvm::FunctionPassManager *, llvm::ExecutionEngine *>(fpm, execution_engine);
+}
 
 std::pair<Executable, llvm::ExecutionEngine *> Compiler::Compile(const std::string & name, const ControlFlowGraph & cfg, bool generate_linkable_exits) {
     auto compilation_start = std::chrono::high_resolution_clock::now();
