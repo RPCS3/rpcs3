@@ -1,17 +1,18 @@
 [submodule "wxWidgets"]
 	path = wxWidgets
-	url = https://github.com/RPCS3/wxWidgets.git
+	url = https://github.com/Zangetsu38/wxWidgets
 	ignore = dirty
+	branch = master
 [submodule "rpcs3-ffmpeg"]
 	path = ffmpeg
-	url = https://github.com/hrydgard/ppsspp-ffmpeg
+	url = https://github.com/bigpet/ppsspp-ffmpeg
 [submodule "asmjit"]
 	path = asmjit
 	url = https://github.com/kobalicek/asmjit
 [submodule "llvm"]
 	path = llvm
-	url = https://github.com/llvm-mirror/llvm.git
-	branch = release_35
+	url = https://github.com/llvm-mirror/llvm
+	branch = release_36
 [submodule "minidx9"]
 	path = minidx9
 	url = https://github.com/hrydgard/minidx9.git

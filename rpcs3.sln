@@ -1,6 +1,6 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2013
-VisualStudioVersion = 12.0.31101.0
+# Visual Studio 14
+VisualStudioVersion = 14.0.22823.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "rpcs3", "rpcs3\rpcs3.vcxproj", "{70CD65B0-91D6-4FAE-9A7B-4AF55D0D1B12}"
 	ProjectSection(ProjectDependencies) = postProject
@@ -128,11 +128,13 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "wxzlib", "wxWidgets\build\m
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "xml", "wxWidgets\build\msw\wx_xml.vcxproj", "{3E6DCA27-5FA3-53EC-BBD6-2D42294B7AE6}"
 	ProjectSection(ProjectDependencies) = postProject
+		{01F4CE10-2CFB-41A8-B41F-E54337868A1D} = {01F4CE10-2CFB-41A8-B41F-E54337868A1D}
 		{3FCC50C2-81E9-5DB2-B8D8-2129427568B1} = {3FCC50C2-81E9-5DB2-B8D8-2129427568B1}
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "xrc", "wxWidgets\build\msw\wx_xrc.vcxproj", "{09F2F96A-1CC6-5E43-AF1D-956EC2A4888D}"
 	ProjectSection(ProjectDependencies) = postProject
+		{01F4CE10-2CFB-41A8-B41F-E54337868A1D} = {01F4CE10-2CFB-41A8-B41F-E54337868A1D}
 		{24C45343-FD20-5C92-81C1-35A2AE841E79} = {24C45343-FD20-5C92-81C1-35A2AE841E79}
 		{3E6DCA27-5FA3-53EC-BBD6-2D42294B7AE6} = {3E6DCA27-5FA3-53EC-BBD6-2D42294B7AE6}
 	EndProjectSection

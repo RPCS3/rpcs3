@@ -8,12 +8,12 @@
 #include "Emu/Cell/PPUDecoder.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/PPUInterpreter.h"
+#include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/GlobalVariable.h"
-#include "llvm/ExecutionEngine/JIT.h"
 #include "llvm/PassManager.h"
 
 namespace ppu_recompiler_llvm {
@@ -284,11 +284,11 @@ namespace ppu_recompiler_llvm {
         Compiler & operator = (const Compiler & other) = delete;
         Compiler & operator = (Compiler && other) = delete;
 
-        /// Compile a code fragment described by a cfg and return an executable
-        Executable Compile(const std::string & name, const ControlFlowGraph & cfg, bool inline_all_blocks, bool generate_linkable_exits);
-
-        /// Free an executable earilier obtained via a call to Compile
-        void FreeExecutable(const std::string & name);
+        /**
+         * Compile a code fragment described by a cfg and return an executable and the ExecutionEngine storing it
+         * Pointer to function can be retrieved with getPointerToFunction
+         */
+        std::pair<Executable, llvm::ExecutionEngine *> Compile(const std::string & name, const ControlFlowGraph & cfg, bool generate_linkable_exits);
 
         /// Retrieve compiler stats
         Stats GetStats();
@@ -727,9 +727,6 @@ namespace ppu_recompiler_llvm {
             /// If a branch instruction is encountered, this is set to true by the decode function.
             bool hit_branch_instruction;
 
-            /// Indicates whether a block should be inlined even if an already compiled version of the block exists
-            bool inline_all;
-
             /// Create code such that exit points can be linked to other blocks
             bool generate_linkable_exits;
         };
@@ -746,6 +743,9 @@ namespace ppu_recompiler_llvm {
         /// The executable that will be called to execute unknown blocks
         llvm::Function *  m_execute_unknown_block;
 
+        /// Maps function name to executable memory pointer
+        std::unordered_map<std::string, Executable> m_executableMap;
+
         /// LLVM context
         llvm::LLVMContext * m_llvm_context;
 
@@ -754,12 +754,6 @@ namespace ppu_recompiler_llvm {
 
         /// Module to which all generated code is output to
         llvm::Module * m_module;
-
-        /// JIT execution engine
-        llvm::ExecutionEngine * m_execution_engine;
-
-        /// Function pass manager
-        llvm::FunctionPassManager * m_fpm;
 
         /// LLVM type of the functions genreated by the compiler
         llvm::FunctionType * m_compiled_function_type;
@@ -919,11 +913,57 @@ namespace ppu_recompiler_llvm {
 
         /// Convert a C++ type to an LLVM type
         template<class T>
-        llvm::Type * CppToLlvmType();
+        llvm::Type * CppToLlvmType() {
+          if (std::is_void<T>::value) {
+            return m_ir_builder->getVoidTy();
+          }
+          else if (std::is_same<T, long long>::value || std::is_same<T, unsigned long long>::value) {
+            return m_ir_builder->getInt64Ty();
+          }
+          else if (std::is_same<T, int>::value || std::is_same<T, unsigned int>::value) {
+            return m_ir_builder->getInt32Ty();
+          }
+          else if (std::is_same<T, short>::value || std::is_same<T, unsigned short>::value) {
+            return m_ir_builder->getInt16Ty();
+          }
+          else if (std::is_same<T, char>::value || std::is_same<T, unsigned char>::value) {
+            return m_ir_builder->getInt8Ty();
+          }
+          else if (std::is_same<T, float>::value) {
+            return m_ir_builder->getFloatTy();
+          }
+          else if (std::is_same<T, double>::value) {
+            return m_ir_builder->getDoubleTy();
+          }
+          else if (std::is_same<T, bool>::value) {
+            return m_ir_builder->getInt1Ty();
+          }
+          else if (std::is_pointer<T>::value) {
+            return m_ir_builder->getInt8PtrTy();
+          }
+          else {
+            assert(0);
+          }
+
+          return nullptr;
+        }
 
         /// Call a function
         template<class ReturnType, class Func, class... Args>
-        llvm::Value * Call(const char * name, Func function, Args... args);
+        llvm::Value * Call(const char * name, Func function, Args... args) {
+          auto fn = m_module->getFunction(name);
+          if (!fn) {
+            std::vector<llvm::Type *> fn_args_type = { args->getType()... };
+            auto fn_type = llvm::FunctionType::get(CppToLlvmType<ReturnType>(), fn_args_type, false);
+            fn = llvm::cast<llvm::Function>(m_module->getOrInsertFunction(name, fn_type));
+            fn->setCallingConv(llvm::CallingConv::X86_64_Win64);
+            // Note: not threadsafe
+            m_executableMap[name] = (Executable)(void *&)function;
+          }
+
+          std::vector<llvm::Value *> fn_args = { args... };
+          return m_ir_builder->CreateCall(fn, fn_args);
+        }
 
         /// Indirect call
         llvm::Value * IndirectCall(u32 address, llvm::Value * context_i64, bool is_function);
@@ -948,21 +988,30 @@ namespace ppu_recompiler_llvm {
         static void InitRotateMask();
     };
 
+    /**
+     * Manages block compilation.
+     * PPUInterpreter1 execution is traced (using Tracer class)
+     * Periodically RecompilationEngine process traces result to find blocks
+     * whose compilation can improve performances.
+     * It then builds them asynchroneously and update the executable mapping
+     * using atomic based locks to avoid undefined behavior.
+     **/
     class RecompilationEngine final : protected thread_t {
     public:
         virtual ~RecompilationEngine() override;
 
-        /// Allocate an ordinal
-        u32 AllocateOrdinal(u32 address, bool is_function);
+        /**
+         * Get the executable for the specified address
+         * The pointer is always valid during the lifetime of RecompilationEngine
+         * but the function pointed to can be updated.
+         **/
+        const Executable *GetExecutable(u32 address, bool isFunction);
 
-        /// Get the ordinal for the specified address
-        u32 GetOrdinal(u32 address) const;
-
-        /// Get the executable specified by the ordinal
-        const Executable GetExecutable(u32 ordinal) const;
-
-        /// Get the address of the executable lookup
-        u64 GetAddressOfExecutableLookup() const;
+        /**
+         * Get the executable for the specified address if a compiled version is
+         * available, otherwise returns nullptr.
+         **/
+        const Executable *GetCompiledExecutableIfAvailable(u32 address, std::mutex*);
 
         /// Notify the recompilation engine about a newly detected trace. It takes ownership of the trace.
         void NotifyTrace(ExecutionTrace * execution_trace);
@@ -1042,21 +1091,22 @@ namespace ppu_recompiler_llvm {
         /// Execution traces that have been already encountered. Data is the list of all blocks that this trace includes.
         std::unordered_map<ExecutionTrace::Id, std::vector<BlockEntry *>> m_processed_execution_traces;
 
-        /// Lock for accessing m_address_to_ordinal.
-        // TODO: Make this a RW lock
-        mutable std::mutex m_address_to_ordinal_lock;
+        /// Lock for accessing m_address_to_function.
+        std::mutex m_address_to_function_lock;
 
-        /// Mapping from address to ordinal
-        std::unordered_map<u32, u32> m_address_to_ordinal;
+        /// (function, module containing function, times hit, mutex for access).
+        typedef std::tuple<Executable, std::unique_ptr<llvm::ExecutionEngine>, u32, std::mutex> ExecutableStorage;
+        /// Address to ordinal cahce. Key is address.
+        std::unordered_map<u32, ExecutableStorage> m_address_to_function;
 
-        /// Next ordinal to allocate
-        u32 m_next_ordinal;
+        /// The time at which the m_address_to_ordinal cache was last cleared
+        std::chrono::high_resolution_clock::time_point m_last_cache_clear_time;
+
+        /// Remove unused entries from the m_address_to_ordinal cache
+        void RemoveUnusedEntriesFromCache();
 
         /// PPU Compiler
         Compiler m_compiler;
-
-        /// Executable lookup table
-        Executable m_executable_lookup[10000]; // TODO: Adjust size
 
         RecompilationEngine();
 
@@ -1119,20 +1169,26 @@ namespace ppu_recompiler_llvm {
         std::shared_ptr<RecompilationEngine> m_recompilation_engine;
     };
 
-    /// PPU execution engine
-    class ExecutionEngine : public CPUDecoder {
+    /**
+     * PPU execution engine
+     * Relies on PPUInterpreter1 to execute uncompiled code.
+     * Traces execution to determine which block to compile.
+     * Use LLVM to compile block into native code.
+     */
+    class CPUHybridDecoderRecompiler : public CPUDecoder {
         friend class RecompilationEngine;
+        friend class Compiler;
     public:
-        ExecutionEngine(PPUThread & ppu);
-        ExecutionEngine() = delete;
+        CPUHybridDecoderRecompiler(PPUThread & ppu);
+        CPUHybridDecoderRecompiler() = delete;
 
-        ExecutionEngine(const ExecutionEngine & other) = delete;
-        ExecutionEngine(ExecutionEngine && other) = delete;
+        CPUHybridDecoderRecompiler(const CPUHybridDecoderRecompiler & other) = delete;
+        CPUHybridDecoderRecompiler(CPUHybridDecoderRecompiler && other) = delete;
 
-        virtual ~ExecutionEngine();
+        virtual ~CPUHybridDecoderRecompiler();
 
-        ExecutionEngine & operator = (const ExecutionEngine & other) = delete;
-        ExecutionEngine & operator = (ExecutionEngine && other) = delete;
+        CPUHybridDecoderRecompiler & operator = (const ExecutionEngine & other) = delete;
+        CPUHybridDecoderRecompiler & operator = (ExecutionEngine && other) = delete;
 
         u32 DecodeMemory(const u32 address) override;
 
@@ -1149,20 +1205,8 @@ namespace ppu_recompiler_llvm {
         /// Execution tracer
         Tracer m_tracer;
 
-        /// The time at which the m_address_to_ordinal cache was last cleared
-        mutable std::chrono::high_resolution_clock::time_point m_last_cache_clear_time;
-
-        /// Address to ordinal cahce. Key is address. Data is the pair (ordinal, times hit).
-        mutable std::unordered_map<u32, std::pair<u32, u32>> m_address_to_ordinal;
-
         /// Recompilation engine
         std::shared_ptr<RecompilationEngine> m_recompilation_engine;
-
-        /// Remove unused entries from the m_address_to_ordinal cache
-        void RemoveUnusedEntriesFromCache() const;
-
-        /// Get the executable for the specified address
-        Executable GetExecutable(u32 address, Executable default_executable) const;
 
         /// Execute a function
         static u32 ExecuteFunction(PPUThread * ppu_state, u64 context);
@@ -1173,9 +1217,6 @@ namespace ppu_recompiler_llvm {
         /// Check thread status. Returns true if the thread must exit.
         static bool PollStatus(PPUThread * ppu_state);
     };
-
-    /// Get the branch type from a branch instruction
-    BranchType GetBranchTypeFromInstruction(u32 instruction);
 }
 
 #endif // LLVM_AVAILABLE

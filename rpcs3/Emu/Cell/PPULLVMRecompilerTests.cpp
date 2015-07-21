@@ -3,7 +3,6 @@
 #include "Emu/Cell/PPULLVMRecompiler.h"
 #include "llvm/Support/Host.h"
 #include "llvm/IR/Verifier.h"
-#include "llvm/CodeGen/MachineCodeInfo.h"
 #include "llvm/ExecutionEngine/GenericValue.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/MC/MCDisassembler.h"
