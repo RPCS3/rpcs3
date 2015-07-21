@@ -1119,20 +1119,25 @@ namespace ppu_recompiler_llvm {
         std::shared_ptr<RecompilationEngine> m_recompilation_engine;
     };
 
-    /// PPU execution engine
-    class ExecutionEngine : public CPUDecoder {
+    /**
+     * PPU execution engine
+     * Relies on PPUInterpreter1 to execute uncompiled code.
+     * Traces execution to determine which block to compile.
+     * Use LLVM to compile block into native code.
+     */
+    class CPUHybridDecoderRecompiler : public CPUDecoder {
         friend class RecompilationEngine;
     public:
-        ExecutionEngine(PPUThread & ppu);
-        ExecutionEngine() = delete;
+        CPUHybridDecoderRecompiler(PPUThread & ppu);
+        CPUHybridDecoderRecompiler() = delete;
 
-        ExecutionEngine(const ExecutionEngine & other) = delete;
-        ExecutionEngine(ExecutionEngine && other) = delete;
+        CPUHybridDecoderRecompiler(const CPUHybridDecoderRecompiler & other) = delete;
+        CPUHybridDecoderRecompiler(CPUHybridDecoderRecompiler && other) = delete;
 
-        virtual ~ExecutionEngine();
+        virtual ~CPUHybridDecoderRecompiler();
 
-        ExecutionEngine & operator = (const ExecutionEngine & other) = delete;
-        ExecutionEngine & operator = (ExecutionEngine && other) = delete;
+        CPUHybridDecoderRecompiler & operator = (const ExecutionEngine & other) = delete;
+        CPUHybridDecoderRecompiler & operator = (ExecutionEngine && other) = delete;
 
         u32 DecodeMemory(const u32 address) override;
 

@@ -5624,7 +5624,7 @@ std::shared_ptr<RecompilationEngine> RecompilationEngine::s_the_instance = nullp
 RecompilationEngine::RecompilationEngine()
     : m_log(nullptr)
     , m_next_ordinal(0)
-    , m_compiler(*this, ExecutionEngine::ExecuteFunction, ExecutionEngine::ExecuteTillReturn, ExecutionEngine::PollStatus) {
+    , m_compiler(*this, CPUHybridDecoderRecompiler::ExecuteFunction, CPUHybridDecoderRecompiler::ExecuteTillReturn, CPUHybridDecoderRecompiler::PollStatus) {
     m_compiler.RunAllTests();
 }
 
@@ -5639,7 +5639,7 @@ u32 RecompilationEngine::AllocateOrdinal(u32 address, bool is_function) {
     if (i == m_address_to_ordinal.end()) {
         assert(m_next_ordinal < (sizeof(m_executable_lookup) / sizeof(m_executable_lookup[0])));
 
-        m_executable_lookup[m_next_ordinal] = is_function ? ExecutionEngine::ExecuteFunction : ExecutionEngine::ExecuteTillReturn;
+        m_executable_lookup[m_next_ordinal] = is_function ? CPUHybridDecoderRecompiler::ExecuteFunction : CPUHybridDecoderRecompiler::ExecuteTillReturn;
         std::atomic_thread_fence(std::memory_order_release);
         i = m_address_to_ordinal.insert(m_address_to_ordinal.end(), std::make_pair(address, m_next_ordinal++));
     }
@@ -5967,7 +5967,7 @@ void Tracer::Terminate() {
     // TODO: Notify recompilation engine
 }
 
-ppu_recompiler_llvm::ExecutionEngine::ExecutionEngine(PPUThread & ppu)
+ppu_recompiler_llvm::CPUHybridDecoderRecompiler::CPUHybridDecoderRecompiler(PPUThread & ppu)
     : m_ppu(ppu)
     , m_interpreter(new PPUInterpreter(ppu))
     , m_decoder(m_interpreter)
@@ -5975,16 +5975,16 @@ ppu_recompiler_llvm::ExecutionEngine::ExecutionEngine(PPUThread & ppu)
     , m_recompilation_engine(RecompilationEngine::GetInstance()) {
 }
 
-ppu_recompiler_llvm::ExecutionEngine::~ExecutionEngine() {
+ppu_recompiler_llvm::CPUHybridDecoderRecompiler::~CPUHybridDecoderRecompiler() {
 
 }
 
-u32 ppu_recompiler_llvm::ExecutionEngine::DecodeMemory(const u32 address) {
+u32 ppu_recompiler_llvm::CPUHybridDecoderRecompiler::DecodeMemory(const u32 address) {
     ExecuteFunction(&m_ppu, 0);
     return 0;
 }
 
-void ppu_recompiler_llvm::ExecutionEngine::RemoveUnusedEntriesFromCache() const {
+void ppu_recompiler_llvm::CPUHybridDecoderRecompiler::RemoveUnusedEntriesFromCache() const {
     auto now = std::chrono::high_resolution_clock::now();
     if (std::chrono::duration_cast<std::chrono::milliseconds>(now - m_last_cache_clear_time).count() > 10000) {
         for (auto i = m_address_to_ordinal.begin(); i != m_address_to_ordinal.end();) {
@@ -6001,7 +6001,7 @@ void ppu_recompiler_llvm::ExecutionEngine::RemoveUnusedEntriesFromCache() const 
     }
 }
 
-Executable ppu_recompiler_llvm::ExecutionEngine::GetExecutable(u32 address, Executable default_executable) const {
+Executable ppu_recompiler_llvm::CPUHybridDecoderRecompiler::GetExecutable(u32 address, Executable default_executable) const {
     // Find the ordinal for the specified address and insert it to the cache
     auto i = m_address_to_ordinal.find(address);
     if (i == m_address_to_ordinal.end()) {
@@ -6021,14 +6021,14 @@ Executable ppu_recompiler_llvm::ExecutionEngine::GetExecutable(u32 address, Exec
     return executable;
 }
 
-u32 ppu_recompiler_llvm::ExecutionEngine::ExecuteFunction(PPUThread * ppu_state, u64 context) {
-    auto execution_engine = (ExecutionEngine *)ppu_state->GetDecoder();
+u32 ppu_recompiler_llvm::CPUHybridDecoderRecompiler::ExecuteFunction(PPUThread * ppu_state, u64 context) {
+    auto execution_engine = (CPUHybridDecoderRecompiler *)ppu_state->GetDecoder();
     execution_engine->m_tracer.Trace(Tracer::TraceType::EnterFunction, ppu_state->PC, 0);
     return ExecuteTillReturn(ppu_state, 0);
 }
 
-u32 ppu_recompiler_llvm::ExecutionEngine::ExecuteTillReturn(PPUThread * ppu_state, u64 context) {
-    auto execution_engine = (ExecutionEngine *)ppu_state->GetDecoder();
+u32 ppu_recompiler_llvm::CPUHybridDecoderRecompiler::ExecuteTillReturn(PPUThread * ppu_state, u64 context) {
+    auto execution_engine = (CPUHybridDecoderRecompiler *)ppu_state->GetDecoder();
     auto terminate        = false;
     auto branch_type      = BranchType::NonBranch;
 
@@ -6079,7 +6079,7 @@ u32 ppu_recompiler_llvm::ExecutionEngine::ExecuteTillReturn(PPUThread * ppu_stat
     return 0;
 }
 
-bool ppu_recompiler_llvm::ExecutionEngine::PollStatus(PPUThread * ppu_state) {
+bool ppu_recompiler_llvm::CPUHybridDecoderRecompiler::PollStatus(PPUThread * ppu_state) {
     return ppu_state->CheckStatus();
 }
 
