@@ -5,12 +5,35 @@
 #include "Emu/SysCalls/SysCalls.h"
 
 #include "Emu/Cell/PPUThread.h"
-#include "sleep_queue.h"
 #include "sys_lwmutex.h"
 
 SysCallBase sys_lwmutex("sys_lwmutex");
 
 extern u64 get_system_time();
+
+void lv2_lwmutex_t::unlock(lv2_lock_t& lv2_lock)
+{
+	CHECK_LV2_LOCK(lv2_lock);
+
+	if (signaled)
+	{
+		throw EXCEPTION("Unexpected");
+	}
+
+	if (sq.size())
+	{
+		if (!sq.front()->signal())
+		{
+			throw EXCEPTION("Thread already signaled");
+		}
+
+		sq.pop_front();
+	}
+	else
+	{
+		signaled++;
+	}
+}
 
 s32 _sys_lwmutex_create(vm::ptr<u32> lwmutex_id, u32 protocol, vm::ptr<sys_lwmutex_t> control, u32 arg4, u64 name, u32 arg6)
 {
@@ -45,7 +68,7 @@ s32 _sys_lwmutex_destroy(u32 lwmutex_id)
 		return CELL_ESRCH;
 	}
 
-	if (mutex->waiters)
+	if (!mutex->sq.empty())
 	{
 		return CELL_EBUSY;
 	}
@@ -55,7 +78,7 @@ s32 _sys_lwmutex_destroy(u32 lwmutex_id)
 	return CELL_OK;
 }
 
-s32 _sys_lwmutex_lock(u32 lwmutex_id, u64 timeout)
+s32 _sys_lwmutex_lock(PPUThread& ppu, u32 lwmutex_id, u64 timeout)
 {
 	sys_lwmutex.Log("_sys_lwmutex_lock(lwmutex_id=0x%x, timeout=0x%llx)", lwmutex_id, timeout);
 
@@ -70,25 +93,36 @@ s32 _sys_lwmutex_lock(u32 lwmutex_id, u64 timeout)
 		return CELL_ESRCH;
 	}
 
-	// protocol is ignored in current implementation
-	mutex->waiters++;
+	if (mutex->signaled)
+	{
+		mutex->signaled--;
 
-	while (!mutex->signaled)
+		return CELL_OK;
+	}
+
+	// add waiter; protocol is ignored in current implementation
+	sleep_queue_entry_t waiter(ppu, mutex->sq);
+
+	while (!ppu.unsignal())
 	{
 		CHECK_EMU_STATUS;
 
-		if (timeout && get_system_time() - start_time > timeout)
+		if (timeout)
 		{
-			mutex->waiters--;
-			return CELL_ETIMEDOUT;
+			const u64 passed = get_system_time() - start_time;
+
+			if (passed >= timeout)
+			{
+				return CELL_ETIMEDOUT;
+			}
+
+			ppu.cv.wait_for(lv2_lock, std::chrono::microseconds(timeout - passed));
 		}
-
-		mutex->cv.wait_for(lv2_lock, std::chrono::milliseconds(1));
+		else
+		{
+			ppu.cv.wait(lv2_lock);
+		}
 	}
-	
-	mutex->signaled--;
-
-	mutex->waiters--;
 
 	return CELL_OK;
 }
@@ -106,7 +140,7 @@ s32 _sys_lwmutex_trylock(u32 lwmutex_id)
 		return CELL_ESRCH;
 	}
 
-	if (mutex->waiters || !mutex->signaled)
+	if (!mutex->sq.empty() || !mutex->signaled)
 	{
 		return CELL_EBUSY;
 	}
@@ -129,17 +163,7 @@ s32 _sys_lwmutex_unlock(u32 lwmutex_id)
 		return CELL_ESRCH;
 	}
 
-	if (mutex->signaled)
-	{
-		throw EXCEPTION("Already signaled (lwmutex_id=0x%x)", lwmutex_id);
-	}
-
-	mutex->signaled++;
-
-	if (mutex->waiters)
-	{
-		mutex->cv.notify_one();
-	}
+	mutex->unlock(lv2_lock);
 
 	return CELL_OK;
 }

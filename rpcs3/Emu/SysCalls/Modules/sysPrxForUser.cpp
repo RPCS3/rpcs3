@@ -217,7 +217,7 @@ s32 sys_lwmutex_lock(PPUThread& ppu, vm::ptr<sys_lwmutex_t> lwmutex, u64 timeout
 	}
 
 	// lock using the syscall
-	const s32 res = _sys_lwmutex_lock(lwmutex->sleep_queue, timeout);
+	const s32 res = _sys_lwmutex_lock(ppu, lwmutex->sleep_queue, timeout);
 
 	lwmutex->all_info--;
 
