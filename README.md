@@ -18,7 +18,7 @@ If you want to contribute please take a took at the [Coding Style](https://githu
 ### Dependencies
 
 __Windows__
-* [Visual C++ Redistributable Packages for Visual Studio 2013](http://www.microsoft.com/en-us/download/details.aspx?id=40784)
+* [Visual C++ Redistributable Packages for Visual Studio 2015](http://www.microsoft.com/en-us/download/details.aspx?id=48145)
 
 __Linux__
 * Debian & Ubuntu: `sudo apt-get install libopenal-dev libwxgtk3.0-dev build-essential libglew-dev`
@@ -32,7 +32,7 @@ __Mac OSX__
 ### Building
 
 To initialize the repository don't forget to execute `git submodule update --init` to pull the wxWidgets source.
-* __Windows__: Install *Visual Studio 2013*, *Cmake*, *Python* and select *Add in the PATH variable* for both. Then open the *.SLN* file, and press *Build* > *Rebuild Solution*.
+* __Windows__: Install *Visual Studio 2015*, *Cmake*, *Python* and select *Add in the PATH variable* for both. Then open the *.SLN* file, and press *Build* > *Rebuild Solution*.
 * __Linux & Mac OSX__:
 `cd rpcs3 && cmake CMakeLists.txt && make && cd ../` Then run with `cd bin && ./rpcs3`
 
