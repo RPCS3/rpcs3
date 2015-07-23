@@ -9,6 +9,7 @@
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/PPUInterpreter.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
+#include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/IRBuilder.h"
@@ -986,9 +987,6 @@ namespace ppu_recompiler_llvm {
 
 		/// Initialse s_rotate_mask
 		static void InitRotateMask();
-
-		//ugly
-		std::pair<llvm::FunctionPassManager *, llvm::ExecutionEngine *> getFpmAndExec();
 	};
 
 	/**
@@ -1219,6 +1217,24 @@ namespace ppu_recompiler_llvm {
 
 		/// Check thread status. Returns true if the thread must exit.
 		static bool PollStatus(PPUThread * ppu_state);
+	};
+
+	class CustomSectionMemoryManager : public llvm::SectionMemoryManager {
+	private:
+		std::unordered_map<std::string, Executable> &executableMap;
+	public:
+		CustomSectionMemoryManager(std::unordered_map<std::string, Executable> &map) :
+			executableMap(map)
+		{}
+		~CustomSectionMemoryManager() override {}
+
+		virtual uint64_t getSymbolAddress(const std::string &Name)
+		{
+			std::unordered_map<std::string, Executable>::const_iterator It = executableMap.find(Name);
+			if (It != executableMap.end())
+				return (uint64_t)It->second;
+			return 0;
+		}
 	};
 }
 
