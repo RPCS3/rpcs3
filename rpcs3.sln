@@ -96,13 +96,14 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "richtext", "wxWidgets\build
 		{24C45343-FD20-5C92-81C1-35A2AE841E79} = {24C45343-FD20-5C92-81C1-35A2AE841E79}
 	EndProjectSection
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "webview", "wxWidgets\build\msw\wx_webview.vcxproj", "{A8E8442A-078A-5FC5-B495-8D71BA77EE6E}"
+EndProjectProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "wxexpat", "wxWidgets\build\msw\wx_wxexpat.vcxproj", "{A1A8355B-0988-528E-9CC2-B971D6266669}"
 	ProjectSection(ProjectDependencies) = postProject
 		{01F4CE10-2CFB-41A8-B41F-E54337868A1D} = {01F4CE10-2CFB-41A8-B41F-E54337868A1D}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "webview", "wxWidgets\build\msw\wx_webview.vcxproj", "{A8E8442A-078A-5FC5-B495-8D71BA77EE6E}"
-EndProjectProject("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "wxjpeg", "wxWidgets\build\msw\wx_wxjpeg.vcxproj", "{6053CC38-CDEE-584C-8BC8-4B000D800FC7}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "wxjpeg", "wxWidgets\build\msw\wx_wxjpeg.vcxproj", "{6053CC38-CDEE-584C-8BC8-4B000D800FC7}"
 	ProjectSection(ProjectDependencies) = postProject
 		{01F4CE10-2CFB-41A8-B41F-E54337868A1D} = {01F4CE10-2CFB-41A8-B41F-E54337868A1D}
 	EndProjectSection
