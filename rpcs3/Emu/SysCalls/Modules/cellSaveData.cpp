@@ -191,6 +191,7 @@ never_inline s32 savedata_op(
 
 			if (result->result < 0)
 			{
+				cellSysutil.Warning("savedata_op(): funcList returned < 0.");
 				return CELL_SAVEDATA_ERROR_CBRESULT;
 			}
 
@@ -302,6 +303,7 @@ never_inline s32 savedata_op(
 
 			if (result->result < 0)
 			{
+				cellSysutil.Warning("savedata_op(): funcFixed returned < 0.");
 				return CELL_SAVEDATA_ERROR_CBRESULT;
 			}
 
@@ -436,6 +438,7 @@ never_inline s32 savedata_op(
 
 		if (result->result < 0)
 		{
+			cellSysutil.Warning("savedata_op(): funcStat returned < 0.");
 			return CELL_SAVEDATA_ERROR_CBRESULT;
 		}
 
@@ -504,6 +507,7 @@ never_inline s32 savedata_op(
 
 		if (result->result < 0)
 		{
+			cellSysutil.Warning("savedata_op(): funcFile returned < 0.");
 			return CELL_SAVEDATA_ERROR_CBRESULT;
 		}
 
