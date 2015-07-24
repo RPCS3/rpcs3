@@ -260,3 +260,35 @@ struct CellNetCtlNatInfo
 };
 
 typedef void(cellNetCtlHandler)(s32 prev_state, s32 new_state, s32 event, s32 error_code, vm::ptr<u32> arg);
+
+inline static std::string InfoCodeToName(s32 code)
+{
+	static const std::string names[] =
+	{
+		"INFO_DEVICE",
+		"INFO_ETHER_ADDR",
+		"INFO_MTU",
+		"INFO_LINK",
+		"INFO_LINK_TYPE",
+		"INFO_BSSID",
+		"INFO_SSID",
+		"INFO_WLAN_SECURITY",
+		"INFO_8021X_TYPE",
+		"INFO_8021X_AUTH_NAME",
+		"INFO_RSSI",
+		"INFO_CHANNEL",
+		"INFO_IP_CONFIG",
+		"INFO_DHCP_HOSTNAME",
+		"INFO_PPPOE_AUTH_NAME",
+		"INFO_IP_ADDRESS",
+		"INFO_DEFAULT_ROUTE",
+		"INFO_PRIMARY_DNS",
+		"INFO_SECONDARY_DNS",
+		"INFO_HTTP_PROXY_CONFIG",
+		"INFO_HTTP_PROXY_SERVER",
+		"INFO_HTTP_PROXY_PORT",
+		"INFO_UPNP_CONFIG",
+	};
+
+	return names[code - 1];
+}
