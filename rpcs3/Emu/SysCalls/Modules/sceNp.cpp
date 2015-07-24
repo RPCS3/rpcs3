@@ -1535,62 +1535,6 @@ s32 sceNpSignalingGetPeerNetInfoResult()
 	return CELL_OK;
 }
 
-s32 sceNpUtilCmpNpId()
-{
-	UNIMPLEMENTED_FUNC(sceNp);
-	return CELL_OK;
-}
-
-s32 sceNpUtilCmpNpIdInOrder()
-{
-	UNIMPLEMENTED_FUNC(sceNp);
-	return CELL_OK;
-}
-
-s32 sceNpUtilBandwidthTestInitStart(u32 prio, size_t stack)
-{
-	UNIMPLEMENTED_FUNC(sceNp);
-
-	if (sceNpInstance.m_bSceNpUtilBandwidthTestInitialized)
-		return SCE_NP_ERROR_ALREADY_INITIALIZED;
-
-	sceNpInstance.m_bSceNpUtilBandwidthTestInitialized = true;
-
-	return CELL_OK;
-}
-
-s32 sceNpUtilBandwidthTestGetStatus()
-{
-	UNIMPLEMENTED_FUNC(sceNp);
-
-	if (!sceNpInstance.m_bSceNpUtilBandwidthTestInitialized)
-		return SCE_NP_ERROR_NOT_INITIALIZED;
-
-	return CELL_OK;
-}
-
-s32 sceNpUtilBandwidthTestShutdown()
-{
-	UNIMPLEMENTED_FUNC(sceNp);
-
-	if (!sceNpInstance.m_bSceNpUtilBandwidthTestInitialized)
-		return SCE_NP_ERROR_NOT_INITIALIZED;
-
-	sceNpInstance.m_bSceNpUtilBandwidthTestInitialized = false;
-
-	return CELL_OK;
-}
-
-s32 sceNpUtilBandwidthTestAbort()
-{
-	UNIMPLEMENTED_FUNC(sceNp);
-
-	if (!sceNpInstance.m_bSceNpUtilBandwidthTestInitialized)
-		return SCE_NP_ERROR_NOT_INITIALIZED;
-
-	return CELL_OK;
-}
-
 s32 _sceNpSysutilClientMalloc()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
@@ -1608,12 +1552,9 @@ Module sceNp("sceNp", []()
 	sceNpInstance.m_bSceNpInitialized = false;
 	sceNpInstance.m_bScoreInitialized = false;
 	sceNpInstance.m_bLookupInitialized = false;
-	sceNpInstance.m_bSceNpUtilBandwidthTestInitialized = false;
 
 	REG_FUNC(sceNp, sceNpInit);
-	REG_FUNC(sceNp, sceNpUtilBandwidthTestInitStart);
 	REG_FUNC(sceNp, sceNpTerm);
-	REG_FUNC(sceNp, sceNpUtilBandwidthTestShutdown);
 	REG_FUNC(sceNp, sceNpDrmIsAvailable);
 	REG_FUNC(sceNp, sceNpDrmIsAvailable2);
 	REG_FUNC(sceNp, sceNpDrmVerifyUpgradeLicense);
@@ -1830,10 +1771,6 @@ Module sceNp("sceNp", []()
 	REG_FUNC(sceNp, sceNpSignalingGetPeerNetInfo);
 	REG_FUNC(sceNp, sceNpSignalingCancelPeerNetInfo);
 	REG_FUNC(sceNp, sceNpSignalingGetPeerNetInfoResult);
-	REG_FUNC(sceNp, sceNpUtilCmpNpId);
-	REG_FUNC(sceNp, sceNpUtilCmpNpIdInOrder);
-	REG_FUNC(sceNp, sceNpUtilBandwidthTestGetStatus);
-	REG_FUNC(sceNp, sceNpUtilBandwidthTestAbort);
 	REG_FUNC(sceNp, _sceNpSysutilClientMalloc);
 	REG_FUNC(sceNp, _sceNpSysutilClientFree);
 });

@@ -881,6 +881,9 @@
     <ClCompile Include="Emu\Cell\PPULLVMRecompilerCore.cpp">
       <Filter>Emu\CPU\Cell</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\sceNpUtil.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">

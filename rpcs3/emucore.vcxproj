@@ -277,6 +277,7 @@
     <ClCompile Include="Emu\SysCalls\Modules\cellKb.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellMouse.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellPad.cpp" />
+    <ClCompile Include="Emu\SysCalls\Modules\sceNpUtil.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\sysPrxForUser.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\sys_lv2dbg.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\sys_http.cpp" />
