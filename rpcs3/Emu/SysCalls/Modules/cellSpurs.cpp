@@ -191,7 +191,7 @@ s32 cellSpursEventFlagGetTasksetAddress(vm::ptr<CellSpursEventFlag> eventFlag, v
 //
 // SPURS lock free queue functions
 //
-s32 _cellSpursLFQueueInitialize();
+s32 _cellSpursLFQueueInitialize(vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursTaskset> taskset, vm::ptr<CellSpursLFQueue> lfQueue, vm::cptr<void> queueBuffer, u32 queueSize, u32 queueDepth, u32 queueDirection);
 s32 _cellSpursLFQueuePushBody();
 s32 cellSpursLFQueueDetachLv2EventQueue();
 s32 cellSpursLFQueueAttachLv2EventQueue();
@@ -3272,9 +3272,27 @@ s32 cellSpursEventFlagGetTasksetAddress(vm::ptr<CellSpursEventFlag> eventFlag, v
 	return CELL_OK;
 }
 
-s32 _cellSpursLFQueueInitialize()
+s32 _cellSpursLFQueueInitialize(vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursTaskset> taskset, vm::ptr<CellSpursLFQueue> lfQueue, vm::cptr<void> queueBuffer, u32 queueSize, u32 queueDepth, u32 queueDirection)
 {
-	UNIMPLEMENTED_FUNC(cellSpurs);
+	cellSpurs.Todo("_cellSpursLFQueueInitialize(pTaskset=*0x%x, ea=*0x%x, buffer=*0x%x, size=%d, depth=%d, direction=%d)", taskset.addr(), lfQueue.addr(), queueBuffer.addr(), queueSize, queueDepth, queueDirection);
+
+	if ((!spurs && !taskset) || !lfQueue || !queueBuffer)
+	{
+		return CELL_SPURS_TASK_ERROR_NULL_POINTER;
+	}
+
+	if (!lfQueue.aligned())
+	{
+		return CELL_SPURS_TASK_ERROR_ALIGN;
+	}
+
+	if (queueDirection > CELL_SPURS_LFQUEUE_FLAG_LAST || queueDirection == CELL_SPURS_LFQUEUE_ANY2ANY)
+	{
+		return CELL_SPURS_TASK_ERROR_INVAL;
+	}
+
+	memset(lfQueue.get_ptr(), 0, sizeof(CellSpursLFQueue));
+
 	return CELL_OK;
 }
 

@@ -259,6 +259,15 @@ enum SpursEventFlagConstants
 	CELL_SPURS_EVENT_FLAG_INVALID_SPU_PORT = 0xFF,
 };
 
+enum CellSpursLFQueueDirection
+{
+	CELL_SPURS_LFQUEUE_SPU2SPU,
+	CELL_SPURS_LFQUEUE_SPU2PPU,
+	CELL_SPURS_LFQUEUE_PPU2SPU,
+	CELL_SPURS_LFQUEUE_ANY2ANY,
+	CELL_SPURS_LFQUEUE_FLAG_LAST = CELL_SPURS_LFQUEUE_ANY2ANY,
+};
+
 struct set_alignment(16) CellSpursWorkloadFlag
 {
 	be_t<u64> unused0;
@@ -637,6 +646,13 @@ struct set_alignment(128) CellSpursEventFlag
 	be_t<u64> addr;                      // 0x70
 	be_t<u32> eventPortId;               // 0x78
 	be_t<u32> eventQueueId;              // 0x7C
+};
+
+CHECK_SIZE_ALIGN(CellSpursEventFlag, 128, 128);
+
+struct set_alignment(128) CellSpursLFQueue
+{
+	u32 padding[32];
 };
 
 CHECK_SIZE_ALIGN(CellSpursEventFlag, 128, 128);

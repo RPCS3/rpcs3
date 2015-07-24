@@ -344,6 +344,9 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	case_range(16, NV4097_SET_TEX_COORD_CONTROL, 4);
 	{
 		LOG_WARNING(RSX, "TODO: NV4097_SET_TEX_COORD_CONTROL");
+		const u32 a0 = ARGS(0);
+		u8 texMask2D = a0 & 1;
+		u8 texMaskCentroid = (a0 & 1) >> 4;
 		break;
 	}
 
