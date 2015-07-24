@@ -224,13 +224,11 @@ struct sceNpInternal
 	bool m_bSceNpInitialized;
 	bool m_bScoreInitialized;
 	bool m_bLookupInitialized;
-	bool m_bSceNpUtilBandwidthTestInitialized;
 
 	sceNpInternal()
 		: m_bSceNpInitialized(false),
-		m_bScoreInitialized(false),
-		m_bLookupInitialized(false),
-		m_bSceNpUtilBandwidthTestInitialized(false)
+		  m_bScoreInitialized(false),
+		  m_bLookupInitialized(false)
 	{
 	}
 };
