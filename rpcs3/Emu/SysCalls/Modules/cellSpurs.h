@@ -1,5 +1,7 @@
 #pragma once
 
+#include "cellSync.h"
+
 namespace vm { using namespace ps3; }
 
 struct CellSpurs;
@@ -640,6 +642,8 @@ struct set_alignment(128) CellSpursEventFlag
 };
 
 CHECK_SIZE_ALIGN(CellSpursEventFlag, 128, 128);
+
+using CellSpursLFQueue = CellSyncLFQueue;
 
 union CellSpursTaskArgument
 {

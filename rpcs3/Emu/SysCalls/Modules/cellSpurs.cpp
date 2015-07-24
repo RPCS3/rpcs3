@@ -191,7 +191,7 @@ s32 cellSpursEventFlagGetTasksetAddress(vm::ptr<CellSpursEventFlag> eventFlag, v
 //
 // SPURS lock free queue functions
 //
-s32 _cellSpursLFQueueInitialize();
+s32 _cellSpursLFQueueInitialize(vm::ptr<void> pTasksetOrSpurs, vm::ptr<CellSpursLFQueue> pQueue, vm::cptr<void> buffer, u32 size, u32 depth, u32 direction);
 s32 _cellSpursLFQueuePushBody();
 s32 cellSpursLFQueueDetachLv2EventQueue();
 s32 cellSpursLFQueueAttachLv2EventQueue();
@@ -3272,9 +3272,10 @@ s32 cellSpursEventFlagGetTasksetAddress(vm::ptr<CellSpursEventFlag> eventFlag, v
 	return CELL_OK;
 }
 
-s32 _cellSpursLFQueueInitialize()
+s32 _cellSpursLFQueueInitialize(vm::ptr<void> pTasksetOrSpurs, vm::ptr<CellSpursLFQueue> pQueue, vm::cptr<void> buffer, u32 size, u32 depth, u32 direction)
 {
-	UNIMPLEMENTED_FUNC(cellSpurs);
+	cellSpurs.Todo("_cellSpursLFQueueInitialize(pTasksetOrSpurs=*0x%x, pQueue=*0x%x, buffer=*0x%x, size=0x%x, depth=0x%x, direction=%d)", pTasksetOrSpurs, pQueue, buffer, size, depth, direction);
+
 	return CELL_OK;
 }
 
