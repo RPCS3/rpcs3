@@ -396,6 +396,9 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	// Core settings
 	wxStaticBoxSizer* s_round_cpu_decoder = new wxStaticBoxSizer(wxVERTICAL, p_core, _("CPU"));
 	wxStaticBoxSizer* s_round_spu_decoder = new wxStaticBoxSizer(wxVERTICAL, p_core, _("SPU"));
+	wxStaticBoxSizer* s_round_llvm = new wxStaticBoxSizer(wxVERTICAL, p_core, _("LLVM config"));
+	wxStaticBoxSizer* s_round_llvm_range = new wxStaticBoxSizer(wxHORIZONTAL, p_core, _("Excluded block range"));
+	wxStaticBoxSizer* s_round_llvm_threshold = new wxStaticBoxSizer(wxHORIZONTAL, p_core, _("Compilation threshold"));
 
 	// Graphics
 	wxStaticBoxSizer* s_round_gs_render = new wxStaticBoxSizer(wxVERTICAL, p_graphics, _("Render"));
@@ -440,6 +443,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	wxComboBox* cbox_net_interface    = new wxComboBox(p_networking, wxID_ANY);
 	wxComboBox* cbox_sys_lang         = new wxComboBox(p_system, wxID_ANY);
 
+	wxCheckBox* chbox_core_llvm_exclud    = new wxCheckBox(p_core, wxID_ANY, "Enable exclusion of compiled blocks");
 	wxCheckBox* chbox_core_hook_stfunc    = new wxCheckBox(p_core, wxID_ANY, "Hook static functions");
 	wxCheckBox* chbox_core_load_liblv2    = new wxCheckBox(p_core, wxID_ANY, "Load liblv2.sprx");
 	wxCheckBox* chbox_gs_log_prog         = new wxCheckBox(p_graphics, wxID_ANY, "Log vertex/fragment programs");
@@ -455,6 +459,10 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	wxCheckBox* chbox_hle_savetty         = new wxCheckBox(p_misc, wxID_ANY, "Save TTY output to file");
 	wxCheckBox* chbox_hle_exitonstop      = new wxCheckBox(p_misc, wxID_ANY, "Exit RPCS3 when process finishes");
 	wxCheckBox* chbox_hle_always_start    = new wxCheckBox(p_misc, wxID_ANY, "Always start after boot");
+
+	wxTextCtrl* txt_dbg_range_min   = new wxTextCtrl(p_core, wxID_ANY);
+	wxTextCtrl* txt_dbg_range_max = new wxTextCtrl(p_core, wxID_ANY);
+	wxTextCtrl* txt_llvm_threshold = new wxTextCtrl(p_core, wxID_ANY);
 
 	//Auto Pause
 	wxCheckBox* chbox_dbg_ap_systemcall   = new wxCheckBox(p_misc, wxID_ANY, "Auto Pause at System Call");
@@ -601,6 +609,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	cbox_sys_lang->Append("English (UK)");
 
 	// Get values from .ini
+	chbox_core_llvm_exclud   ->SetValue(Ini.LLVMExclusionRange.GetValue());
 	chbox_gs_log_prog        ->SetValue(Ini.GSLogPrograms.GetValue());
 	chbox_gs_dump_depth      ->SetValue(Ini.GSDumpDepthBuffer.GetValue());
 	chbox_gs_dump_color      ->SetValue(Ini.GSDumpColorBuffers.GetValue());
@@ -626,6 +635,9 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	txt_emulationdir_path    ->SetValue(Ini.SysEmulationDirPath.GetValue());
 
 	cbox_cpu_decoder     ->SetSelection(Ini.CPUDecoderMode.GetValue() ? Ini.CPUDecoderMode.GetValue() : 0);
+	txt_dbg_range_min    ->SetValue(std::to_string(Ini.LLVMMinId.GetValue()));
+	txt_dbg_range_max    ->SetValue(std::to_string(Ini.LLVMMaxId.GetValue()));
+	txt_llvm_threshold   ->SetValue(std::to_string(Ini.LLVMThreshold.GetValue()));
 	cbox_spu_decoder     ->SetSelection(Ini.SPUDecoderMode.GetValue() ? Ini.SPUDecoderMode.GetValue() : 0);
 	cbox_gs_render       ->SetSelection(Ini.GSRenderMode.GetValue());
 	cbox_gs_resolution   ->SetSelection(ResolutionIdToNum(Ini.GSResolution.GetValue()) - 1);
@@ -645,6 +657,12 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	// Core
 	s_round_cpu_decoder->Add(cbox_cpu_decoder, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_round_spu_decoder->Add(cbox_spu_decoder, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_round_llvm->Add(chbox_core_llvm_exclud, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_round_llvm_range->Add(txt_dbg_range_min, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_round_llvm_range->Add(txt_dbg_range_max, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_round_llvm->Add(s_round_llvm_range, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_round_llvm_threshold->Add(txt_llvm_threshold, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_round_llvm->Add(s_round_llvm_threshold, wxSizerFlags().Border(wxALL, 5).Expand());
 
 	// Rendering
 	s_round_gs_render->Add(cbox_gs_render, wxSizerFlags().Border(wxALL, 5).Expand());
@@ -672,6 +690,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	// Core
 	s_subpanel_core->Add(s_round_cpu_decoder, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_core->Add(s_round_spu_decoder, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_subpanel_core->Add(s_round_llvm, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_core->Add(chbox_core_hook_stfunc, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_core->Add(chbox_core_load_liblv2, wxSizerFlags().Border(wxALL, 5).Expand());
 
@@ -742,6 +761,15 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	if(diag.ShowModal() == wxID_OK)
 	{
 		Ini.CPUDecoderMode.SetValue(cbox_cpu_decoder->GetSelection());
+		long minllvmid, maxllvmid;
+		txt_dbg_range_min->GetValue().ToLong(&minllvmid);
+		txt_dbg_range_max->GetValue().ToLong(&maxllvmid);
+		Ini.LLVMExclusionRange.SetValue(chbox_core_llvm_exclud->GetValue());
+		Ini.LLVMMinId.SetValue(minllvmid);
+		Ini.LLVMMaxId.SetValue(maxllvmid);
+		long llvmthreshold;
+		txt_llvm_threshold->GetValue().ToLong(&llvmthreshold);
+		Ini.LLVMThreshold.SetValue(llvmthreshold);
 		Ini.SPUDecoderMode.SetValue(cbox_spu_decoder->GetSelection());
 		Ini.HookStFunc.SetValue(chbox_core_hook_stfunc->GetValue());
 		Ini.LoadLibLv2.SetValue(chbox_core_load_liblv2->GetValue());

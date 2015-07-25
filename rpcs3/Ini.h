@@ -92,6 +92,10 @@ private:
 public:
 	// Core
 	IniEntry<u8> CPUDecoderMode;
+	IniEntry<bool> LLVMExclusionRange;
+	IniEntry<int> LLVMMinId;
+	IniEntry<int> LLVMMaxId;
+	IniEntry<int> LLVMThreshold;
 	IniEntry<u8> SPUDecoderMode;
 	IniEntry<bool> HookStFunc;
 	IniEntry<bool> LoadLibLv2;
@@ -176,6 +180,10 @@ public:
 
 		// Core
 		CPUDecoderMode.Init("CORE_DecoderMode", path);
+		LLVMExclusionRange.Init("LLVM_Exclusion_Range", path);
+		LLVMMinId.Init("LLVM_Min_ID", path);
+		LLVMMaxId.Init("LLVM_Max_ID", path);
+		LLVMThreshold.Init("LLVM_Threshold", path);
 		SPUDecoderMode.Init("CORE_SPUDecoderMode", path);
 		HookStFunc.Init("CORE_HookStFunc", path);
 		LoadLibLv2.Init("CORE_LoadLibLv2", path);
@@ -256,6 +264,10 @@ public:
 	{
 		// Core
 		CPUDecoderMode.Load(0);
+		LLVMExclusionRange.Load(false);
+		LLVMMinId.Load(200);
+		LLVMMaxId.Load(250);
+		LLVMThreshold.Load(1000);
 		SPUDecoderMode.Load(0);
 		HookStFunc.Load(false);
 		LoadLibLv2.Load(false);
@@ -336,6 +348,10 @@ public:
 	{
 		// Core
 		CPUDecoderMode.Save();
+		LLVMExclusionRange.Save();
+		LLVMMinId.Save();
+		LLVMMaxId.Save();
+		LLVMThreshold.Save();
 		SPUDecoderMode.Save();
 		HookStFunc.Save();
 		LoadLibLv2.Save();
