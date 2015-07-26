@@ -32,7 +32,7 @@ struct lv2_lwcond_t
 	{
 	}
 
-	void notify(lv2_lock_t& lv2_lock, sleep_queue_t::iterator it, const std::shared_ptr<lv2_lwmutex_t>& mutex, bool mode2);
+	void notify(lv2_lock_t& lv2_lock, sleep_queue_t::value_type& thread, const std::shared_ptr<lv2_lwmutex_t>& mutex, bool mode2);
 };
 
 REG_ID_TYPE(lv2_lwcond_t, 0x97); // SYS_LWCOND_OBJECT

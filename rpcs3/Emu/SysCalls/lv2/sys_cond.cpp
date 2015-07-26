@@ -12,11 +12,9 @@ SysCallBase sys_cond("sys_cond");
 
 extern u64 get_system_time();
 
-void lv2_cond_t::notify(lv2_lock_t& lv2_lock, sleep_queue_t::iterator it)
+void lv2_cond_t::notify(lv2_lock_t& lv2_lock, sleep_queue_t::value_type& thread)
 {
 	CHECK_LV2_LOCK(lv2_lock);
-
-	auto& thread = *it;
 
 	if (mutex->owner)
 	{
@@ -107,7 +105,7 @@ s32 sys_cond_signal(u32 cond_id)
 	// signal one waiting thread; protocol is ignored in current implementation
 	if (!cond->sq.empty())
 	{
-		cond->notify(lv2_lock, cond->sq.begin());
+		cond->notify(lv2_lock, cond->sq.front());
 		cond->sq.pop_front();
 	}
 
@@ -128,9 +126,9 @@ s32 sys_cond_signal_all(u32 cond_id)
 	}
 
 	// signal all waiting threads; protocol is ignored in current implementation
-	for (auto it = cond->sq.begin(); it != cond->sq.end(); it++)
+	for (auto& thread : cond->sq)
 	{
-		cond->notify(lv2_lock, it);
+		cond->notify(lv2_lock, thread);
 	}
 
 	cond->sq.clear();
@@ -151,20 +149,22 @@ s32 sys_cond_signal_to(u32 cond_id, u32 thread_id)
 		return CELL_ESRCH;
 	}
 
-	// TODO: check if CELL_ESRCH is returned if thread_id is invalid
-
-	// signal specified thread (protocol is not required)
-	for (auto it = cond->sq.begin(); it != cond->sq.end(); it++)
+	const auto found = std::find_if(cond->sq.begin(), cond->sq.end(), [=](sleep_queue_t::value_type& thread)
 	{
-		if ((*it)->get_id() == thread_id)
-		{
-			cond->notify(lv2_lock, it);
-			cond->sq.erase(it);
-			return CELL_OK;
-		}
+		return thread->get_id() == thread_id;
+	});
+
+	// TODO: check if CELL_ESRCH is returned if thread_id is invalid
+	if (found == cond->sq.end())
+	{
+		return CELL_EPERM;
 	}
 
-	return CELL_EPERM;
+	// signal specified thread
+	cond->notify(lv2_lock, *found);
+	cond->sq.erase(found);
+
+	return CELL_OK;
 }
 
 s32 sys_cond_wait(PPUThread& ppu, u32 cond_id, u64 timeout)

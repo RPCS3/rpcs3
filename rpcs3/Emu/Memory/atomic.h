@@ -33,11 +33,11 @@ template<typename T> struct _to_atomic_subtype<T, 16>
 template<typename T> using atomic_subtype_t = typename _to_atomic_subtype<T>::type;
 
 // result wrapper to deal with void result type
-template<typename RT> struct atomic_op_result_t
+template<typename RT, typename... Args> struct atomic_op_result_t
 {
 	RT result;
 
-	template<typename T, typename... Args> inline atomic_op_result_t(T func, Args&&... args)
+	template<typename T> inline atomic_op_result_t(T func, Args&&... args)
 		: result(std::move(func(std::forward<Args>(args)...)))
 	{
 	}
@@ -48,16 +48,20 @@ template<typename RT> struct atomic_op_result_t
 	}
 };
 
-// void specialization
-template<> struct atomic_op_result_t<void>
+// void specialization: result is the initial value of the first arg
+template<typename RT, typename... Args> struct atomic_op_result_t<void, RT&, Args...>
 {
-	template<typename T, typename... Args> inline atomic_op_result_t(T func, Args&&... args)
+	RT result;
+
+	template<typename T> inline atomic_op_result_t(T func, RT& var, Args&&... args)
+		: result(var)
 	{
-		func(std::forward<Args>(args)...);
+		func(var, std::forward<Args>(args)...);
 	}
 
-	inline void move()
+	inline RT move()
 	{
+		return std::move(result);
 	}
 };
 
@@ -144,7 +148,7 @@ public:
 	}
 
 	// perform an atomic operation on data (callable object version, first arg is a reference to atomic type)
-	template<typename F, typename... Args> auto atomic_op(F func, Args&&... args) volatile -> decltype(func(std::declval<T&>(), args...))
+	template<typename F, typename... Args, typename RT = std::result_of_t<F(T&, Args...)>> auto atomic_op(F func, Args&&... args) volatile -> decltype(std::declval<atomic_op_result_t<RT, T&, Args...>>().result)
 	{
 		while (true)
 		{
@@ -155,7 +159,7 @@ public:
 			subtype _new = old;
 
 			// call atomic op for the local copy of the old value and save the return value of the function
-			atomic_op_result_t<std::result_of_t<F(T&, Args...)>> result(func, to_type(_new), args...);
+			atomic_op_result_t<RT, T&, Args...> result(func, to_type(_new), args...);
 
 			// atomically compare value with `old`, replace with `_new` and return on success
 			if (sync_bool_compare_and_swap(&sub_data, old, _new)) return result.move();
@@ -163,7 +167,12 @@ public:
 	}
 
 	// perform an atomic operation on data (member function version)
-	template<typename RT, typename... FArgs, typename CT, typename... Args, typename = std::enable_if_t<std::is_same<T, CT>::value>> auto atomic_op(RT(CT::* func)(FArgs...), Args&&... args) volatile -> decltype((std::declval<T&>().*func)(args...))
+	template<typename RT, typename... FArgs, typename CT, typename... Args> RT atomic_op(RT(CT::* func)(FArgs...), Args&&... args) volatile
+	{
+		return atomic_op(std::mem_fn(func), std::forward<Args>(args)...);
+	}
+
+	template<typename... FArgs, typename CT, typename... Args> T atomic_op(void(CT::* func)(FArgs...), Args&&... args) volatile
 	{
 		return atomic_op(std::mem_fn(func), std::forward<Args>(args)...);
 	}
