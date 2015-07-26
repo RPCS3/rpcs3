@@ -910,3 +910,8 @@ CHECK_SIZE(SpursTasksetContext, 0x900);
 class SpursModuleExit
 {
 };
+
+inline static s32 SyncErrorToSpursError(s32 res)
+{
+	return res < 0 ? 0x80410900 | (res & 0xff) : res;
+}

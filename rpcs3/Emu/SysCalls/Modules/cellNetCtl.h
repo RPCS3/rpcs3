@@ -196,6 +196,18 @@ enum
 	CELL_NET_CTL_NATINFO_NAT_TYPE_3 = 3,
 };
 
+struct CellNetCtlInternal
+{
+	bool m_bInitialized;
+
+	CellNetCtlInternal()
+		: m_bInitialized(false)
+	{
+	}
+};
+
+extern std::unique_ptr<CellNetCtlInternal> g_netCtl;
+
 struct CellNetCtlEtherAddr
 {
 	u8 data[6];
@@ -260,3 +272,35 @@ struct CellNetCtlNatInfo
 };
 
 typedef void(cellNetCtlHandler)(s32 prev_state, s32 new_state, s32 event, s32 error_code, vm::ptr<u32> arg);
+
+inline static std::string InfoCodeToName(s32 code)
+{
+	switch (code)
+	{
+	case CELL_NET_CTL_INFO_DEVICE:             return "INFO_DEVICE";
+	case CELL_NET_CTL_INFO_ETHER_ADDR:         return "INFO_ETHER_ADDR";
+	case CELL_NET_CTL_INFO_MTU:                return "INFO_MTU";
+	case CELL_NET_CTL_INFO_LINK:               return "INFO_LINK";
+	case CELL_NET_CTL_INFO_LINK_TYPE:          return "INFO_LINK_TYPE";
+	case CELL_NET_CTL_INFO_BSSID:              return "INFO_BSSID";
+	case CELL_NET_CTL_INFO_SSID:               return "INFO_SSID";
+	case CELL_NET_CTL_INFO_WLAN_SECURITY:      return "INFO_WLAN_SECURITY";
+	case CELL_NET_CTL_INFO_8021X_TYPE:         return "INFO_8021X_TYPE";
+	case CELL_NET_CTL_INFO_8021X_AUTH_NAME:    return "INFO_8021X_AUTH_NAME";
+	case CELL_NET_CTL_INFO_RSSI:               return "INFO_RSSI";
+	case CELL_NET_CTL_INFO_CHANNEL:            return "INFO_CHANNEL";
+	case CELL_NET_CTL_INFO_IP_CONFIG:          return "INFO_IP_CONFIG";
+	case CELL_NET_CTL_INFO_DHCP_HOSTNAME:      return "INFO_DHCP_HOSTNAME";
+	case CELL_NET_CTL_INFO_PPPOE_AUTH_NAME:    return "INFO_PPPOE_AUTH_NAME";
+	case CELL_NET_CTL_INFO_IP_ADDRESS:         return "INFO_IP_ADDRESS";
+	case CELL_NET_CTL_INFO_NETMASK:            return "INFO_NETMASK";
+	case CELL_NET_CTL_INFO_DEFAULT_ROUTE:      return "INFO_DEFAULT_ROUTE";
+	case CELL_NET_CTL_INFO_PRIMARY_DNS:        return "INFO_PRIMARY_DNS";
+	case CELL_NET_CTL_INFO_SECONDARY_DNS:      return "INFO_SECONDARY_DNS";
+	case CELL_NET_CTL_INFO_HTTP_PROXY_CONFIG:  return "INFO_HTTP_PROXY_CONFIG";
+	case CELL_NET_CTL_INFO_HTTP_PROXY_SERVER:  return "INFO_HTTP_PROXY_SERVER";
+	case CELL_NET_CTL_INFO_HTTP_PROXY_PORT:    return "INFO_HTTP_PROXY_PORT";
+	case CELL_NET_CTL_INFO_UPNP_CONFIG:        return "INFO_UPNP_CONFIG";
+	default: return "???";
+	}
+}

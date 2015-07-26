@@ -219,24 +219,6 @@ enum
 
 using SceNpBasicEventHandler = func_def<s32(s32 event, s32 retCode, u32 reqId, vm::ptr<void> arg)>;
 
-struct sceNpInternal
-{
-	bool m_bSceNpInitialized;
-	bool m_bScoreInitialized;
-	bool m_bLookupInitialized;
-	bool m_bSceNpUtilBandwidthTestInitialized;
-
-	sceNpInternal()
-		: m_bSceNpInitialized(false),
-		m_bScoreInitialized(false),
-		m_bLookupInitialized(false),
-		m_bSceNpUtilBandwidthTestInitialized(false)
-	{
-	}
-};
-
-extern sceNpInternal sceNpInstance;
-
 // NP Manager Utility statuses
 enum
 {
@@ -824,6 +806,37 @@ enum
 {
 	SCE_NP_SIGNALING_CTX_MAX = 8,
 };
+
+struct SceNpInternal
+{
+	bool m_bSceNpInitialized;
+	bool m_bScoreInitialized;
+	bool m_bLookupInitialized;
+
+	SceNpInternal()
+		: m_bSceNpInitialized(false),
+		  m_bScoreInitialized(false),
+		  m_bLookupInitialized(false)
+	{
+	}
+};
+
+struct SceNp2Internal
+{
+	bool m_bSceNp2Initialized;
+	bool m_bSceNp2Matching2Initialized;
+	bool m_bSceNp2Matching2Initialized2;
+
+	SceNp2Internal()
+		: m_bSceNp2Initialized(false),
+		  m_bSceNp2Matching2Initialized(false),
+		  m_bSceNp2Matching2Initialized2(false)
+	{
+	}
+};
+
+extern std::unique_ptr<SceNpInternal> g_sceNp;
+extern std::unique_ptr<SceNp2Internal> g_sceNp2;
 
 // NP communication ID structure
 struct SceNpCommunicationId

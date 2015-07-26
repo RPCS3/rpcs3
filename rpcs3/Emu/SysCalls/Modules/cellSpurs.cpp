@@ -17,6 +17,7 @@
 #include "Emu/SysCalls/lv2/sys_event.h"
 #include "sysPrxForUser.h"
 #include "cellSpurs.h"
+#include "cellSync.h"
 
 //----------------------------------------------------------------------------
 // Externs
@@ -191,10 +192,10 @@ s32 cellSpursEventFlagGetTasksetAddress(vm::ptr<CellSpursEventFlag> eventFlag, v
 //
 // SPURS lock free queue functions
 //
-s32 _cellSpursLFQueueInitialize();
+s32 _cellSpursLFQueueInitialize(vm::ptr<void> taskset, vm::ptr<CellSyncLFQueue> queue, vm::ptr<u8> buffer, u32 size, u32 depth, CellSyncQueueDirection direction);
 s32 _cellSpursLFQueuePushBody();
-s32 cellSpursLFQueueDetachLv2EventQueue();
-s32 cellSpursLFQueueAttachLv2EventQueue();
+s32 cellSpursLFQueueAttachLv2EventQueue(vm::ptr<CellSyncLFQueue> queue);
+s32 cellSpursLFQueueDetachLv2EventQueue(vm::ptr<CellSyncLFQueue> queue);
 s32 _cellSpursLFQueuePopBody();
 s32 cellSpursLFQueueGetTasksetAddress();
 
@@ -3272,10 +3273,13 @@ s32 cellSpursEventFlagGetTasksetAddress(vm::ptr<CellSpursEventFlag> eventFlag, v
 	return CELL_OK;
 }
 
-s32 _cellSpursLFQueueInitialize()
+s32 _cellSpursLFQueueInitialize(vm::ptr<void> taskset, vm::ptr<CellSyncLFQueue> queue, vm::ptr<u8> buffer, u32 size, u32 depth, CellSyncQueueDirection direction)
 {
-	UNIMPLEMENTED_FUNC(cellSpurs);
-	return CELL_OK;
+	cellSpurs.Warning("_cellSpursLFQueueInitialize() -> cellSyncLFQueueInitialize()");
+
+	s32 ret = cellSyncLFQueueInitialize(queue, buffer, size, depth, direction, taskset);
+
+	return SyncErrorToSpursError(ret);
 }
 
 s32 _cellSpursLFQueuePushBody()
@@ -3284,13 +3288,13 @@ s32 _cellSpursLFQueuePushBody()
 	return CELL_OK;
 }
 
-s32 cellSpursLFQueueDetachLv2EventQueue()
+s32 cellSpursLFQueueAttachLv2EventQueue(vm::ptr<CellSyncLFQueue> queue)
 {
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
 }
 
-s32 cellSpursLFQueueAttachLv2EventQueue()
+s32 cellSpursLFQueueDetachLv2EventQueue(vm::ptr<CellSyncLFQueue> queue)
 {
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;

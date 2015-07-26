@@ -52,6 +52,7 @@ extern Module sceNpCommerce2;
 extern Module sceNpSns;
 extern Module sceNpTrophy;
 extern Module sceNpTus;
+extern Module sceNpUtil;
 extern Module sys_io;
 extern Module sys_net;
 extern Module sysPrxForUser;
@@ -120,7 +121,7 @@ static const g_module_list[] =
 	{ 0x0037, "cellGameExec", nullptr },
 	{ 0x0038, "sceNp2", &sceNp2 },
 	{ 0x0039, "cellSysutilAp", &cellSysutilAp },
-	{ 0x003a, "cellSysutilNpClans", nullptr },
+	{ 0x003a, "sceNpClans", &sceNpClans },
 	{ 0x003b, "cellSysutilOskExt", nullptr },
 	{ 0x003c, "cellVdecDivx", nullptr },
 	{ 0x003d, "cellJpgEnc", nullptr },
@@ -143,7 +144,7 @@ static const g_module_list[] =
 	{ 0x0052, "cellPngEnc", nullptr },
 	{ 0x0053, "cellMusicDecode2", nullptr },
 	{ 0x0055, "cellSync2", &cellSync2 },
-	{ 0x0056, "sceNpUtil", nullptr },
+	{ 0x0056, "sceNpUtil", &sceNpUtil },
 	{ 0x0057, "cellRudp", &cellRudp },
 	{ 0x0059, "sceNpSns", &sceNpSns },
 	{ 0x005a, "cellGem", &cellGem },

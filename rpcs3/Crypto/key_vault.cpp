@@ -773,27 +773,34 @@ void rap_to_rif(unsigned char* rap, unsigned char* rif)
 	aes_crypt_cbc(&aes, AES_DECRYPT, 0x10, iv, rap, key);
 
 	// rap2rifkey round.
-	for (round = 0; round < 5; ++round) {
-		for (i = 0; i < 16; ++i) {
+	for (round = 0; round < 5; ++round)
+	{
+		for (i = 0; i < 16; ++i)
+		{
 			int p = RAP_PBOX[i];
 			key[p] ^= RAP_E1[p];
 		}
-		for (i = 15; i >= 1; --i) {
+		for (i = 15; i >= 1; --i)
+		{
 			int p = RAP_PBOX[i];
 			int pp = RAP_PBOX[i - 1];
 			key[p] ^= key[pp];
 		}
 		int o = 0;
-		for (i = 0; i < 16; ++i) {
+		for (i = 0; i < 16; ++i)
+		{
 			int p = RAP_PBOX[i];
 			unsigned char kc = key[p] - o;
 			unsigned char ec2 = RAP_E2[p];
-			if (o != 1 || kc != 0xFF) {
+			if (o != 1 || kc != 0xFF)
+			{
 				o = kc < ec2 ? 1 : 0;
 				key[p] = kc - ec2;
-			} else if (kc == 0xFF) {
+			} else if (kc == 0xFF)
+			{
 				key[p] = kc - ec2;
-			} else {
+			} else
+			{
 				key[p] = kc;
 			}
 		}
