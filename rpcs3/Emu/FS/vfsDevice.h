@@ -12,6 +12,7 @@ class vfsDevice
 public:
 	vfsDevice(const std::string& ps3_path, const std::string& local_path);
 	vfsDevice() {}
+	virtual ~vfsDevice() {}
 
 	virtual vfsFileBase* GetNewFileStream()=0;
 	virtual vfsDirBase* GetNewDirStream()=0;

@@ -86,7 +86,7 @@ void KernelExplorer::Update()
 		for (const auto id : Emu.GetIdManager().get_IDs(SYS_SEMAPHORE_OBJECT))
 		{
 			const auto sem = Emu.GetIdManager().get<lv2_sema_t>(id);
-			sprintf(name, "Semaphore: ID = 0x%x '%s', Count = %d, Max Count = %d, Waiters = %lld", id, &name64(sem->name), sem->value.load(), sem->max, sem->sq.size());
+			sprintf(name, "Semaphore: ID = 0x%x '%s', Count = %d, Max Count = %d, Waiters = %#llx", id, &name64(sem->name), sem->value.load(), sem->max, sem->sq.size());
 			m_tree->AppendItem(node, name);
 		}
 	}
