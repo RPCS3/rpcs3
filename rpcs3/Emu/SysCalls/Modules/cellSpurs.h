@@ -259,15 +259,6 @@ enum SpursEventFlagConstants
 	CELL_SPURS_EVENT_FLAG_INVALID_SPU_PORT = 0xFF,
 };
 
-enum CellSpursLFQueueDirection
-{
-	CELL_SPURS_LFQUEUE_SPU2SPU,
-	CELL_SPURS_LFQUEUE_SPU2PPU,
-	CELL_SPURS_LFQUEUE_PPU2SPU,
-	CELL_SPURS_LFQUEUE_ANY2ANY,
-	CELL_SPURS_LFQUEUE_FLAG_LAST = CELL_SPURS_LFQUEUE_ANY2ANY,
-};
-
 struct set_alignment(16) CellSpursWorkloadFlag
 {
 	be_t<u64> unused0;
@@ -650,13 +641,6 @@ struct set_alignment(128) CellSpursEventFlag
 
 CHECK_SIZE_ALIGN(CellSpursEventFlag, 128, 128);
 
-struct set_alignment(128) CellSpursLFQueue
-{
-	u32 padding[32];
-};
-
-CHECK_SIZE_ALIGN(CellSpursEventFlag, 128, 128);
-
 union CellSpursTaskArgument
 {
 	be_t<u32> _u32[4];
@@ -926,3 +910,8 @@ CHECK_SIZE(SpursTasksetContext, 0x900);
 class SpursModuleExit
 {
 };
+
+inline static s32 SyncErrorToSpursError(s32 res)
+{
+	return res < 0 ? 0x80410900 | (res & 0xff) : res;
+}

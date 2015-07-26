@@ -7,26 +7,18 @@
 
 extern Module sceNpTus;
 
-struct sceNpTusInternal
-{
-	bool m_bSceNpTusInitialized;
-
-	sceNpTusInternal()
-		: m_bSceNpTusInitialized(false)
-	{
-	}
-};
-
-sceNpTusInternal sceNpTusInstance;
+std::unique_ptr<SceNpTusInternal> g_sceNpTus;
 
 s32 sceNpTusInit()
 {
 	sceNpTus.Warning("sceNpTusInit()");
 
-	if (sceNpTusInstance.m_bSceNpTusInitialized)
+	if (g_sceNpTus->m_bSceNpTusInitialized)
+	{
 		return SCE_NP_COMMUNITY_ERROR_ALREADY_INITIALIZED;
+	}
 
-	sceNpTusInstance.m_bSceNpTusInitialized = true;
+	g_sceNpTus->m_bSceNpTusInitialized = true;
 
 	return CELL_OK;
 }
@@ -35,10 +27,12 @@ s32 sceNpTusTerm()
 {
 	sceNpTus.Warning("sceNpTusTerm()");
 	
-	if (!sceNpTusInstance.m_bSceNpTusInitialized)
+	if (!g_sceNpTus->m_bSceNpTusInitialized)
+	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
 
-	sceNpTusInstance.m_bSceNpTusInitialized = false;
+	g_sceNpTus->m_bSceNpTusInitialized = false;
 
 	return CELL_OK;
 }
@@ -47,8 +41,10 @@ s32 sceNpTusCreateTitleCtx()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 
-	if (!sceNpTusInstance.m_bSceNpTusInitialized)
+	if (!g_sceNpTus->m_bSceNpTusInitialized)
+	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
 
 	return CELL_OK;
 }
@@ -57,8 +53,10 @@ s32 sceNpTusDestroyTitleCtx()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 
-	if (!sceNpTusInstance.m_bSceNpTusInitialized)
+	if (!g_sceNpTus->m_bSceNpTusInitialized)
+	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
 
 	return CELL_OK;
 }
@@ -67,8 +65,10 @@ s32 sceNpTusCreateTransactionCtx()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 
-	if (!sceNpTusInstance.m_bSceNpTusInitialized)
+	if (!g_sceNpTus->m_bSceNpTusInitialized)
+	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
 
 	return CELL_OK;
 }
@@ -77,8 +77,10 @@ s32 sceNpTusDestroyTransactionCtx()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 
-	if (!sceNpTusInstance.m_bSceNpTusInitialized)
+	if (!g_sceNpTus->m_bSceNpTusInitialized)
+	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
 
 	return CELL_OK;
 }
@@ -87,8 +89,10 @@ s32 sceNpTusSetTimeout()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 
-	if (!sceNpTusInstance.m_bSceNpTusInitialized)
+	if (!g_sceNpTus->m_bSceNpTusInitialized)
+	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
 
 	return CELL_OK;
 }
@@ -97,8 +101,10 @@ s32 sceNpTusAbortTransaction()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 
-	if (!sceNpTusInstance.m_bSceNpTusInitialized)
+	if (!g_sceNpTus->m_bSceNpTusInitialized)
+	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
 
 	return CELL_OK;
 }
@@ -107,8 +113,10 @@ s32 sceNpTusWaitAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 
-	if (!sceNpTusInstance.m_bSceNpTusInitialized)
+	if (!g_sceNpTus->m_bSceNpTusInitialized)
+	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
 
 	return CELL_OK;
 }
@@ -117,8 +125,10 @@ s32 sceNpTusPollAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 
-	if (!sceNpTusInstance.m_bSceNpTusInitialized)
+	if (!g_sceNpTus->m_bSceNpTusInitialized)
+	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
 
 	return CELL_OK;
 }
@@ -127,8 +137,10 @@ s32 sceNpTusSetMultiSlotVariable()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
-	if (!sceNpTusInstance.m_bSceNpTusInitialized)
+	if (!g_sceNpTus->m_bSceNpTusInitialized)
+	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
 	
 	return CELL_OK;
 }
@@ -137,8 +149,10 @@ s32 sceNpTusSetMultiSlotVariableVUser()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
-	if (!sceNpTusInstance.m_bSceNpTusInitialized)
+	if (!g_sceNpTus->m_bSceNpTusInitialized)
+	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
 	
 	return CELL_OK;
 }
@@ -147,8 +161,10 @@ s32 sceNpTusSetMultiSlotVariableAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
-	if (!sceNpTusInstance.m_bSceNpTusInitialized)
+	if (!g_sceNpTus->m_bSceNpTusInitialized)
+	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
 	
 	return CELL_OK;
 }
@@ -157,8 +173,10 @@ s32 sceNpTusSetMultiSlotVariableVUserAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
-	if (!sceNpTusInstance.m_bSceNpTusInitialized)
+	if (!g_sceNpTus->m_bSceNpTusInitialized)
+	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
 	
 	return CELL_OK;
 }
@@ -167,8 +185,10 @@ s32 sceNpTusGetMultiSlotVariable()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
-	if (!sceNpTusInstance.m_bSceNpTusInitialized)
+	if (!g_sceNpTus->m_bSceNpTusInitialized)
+	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
 	
 	return CELL_OK;
 }
@@ -177,8 +197,10 @@ s32 sceNpTusGetMultiSlotVariableVUser()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
-	if (!sceNpTusInstance.m_bSceNpTusInitialized)
+	if (!g_sceNpTus->m_bSceNpTusInitialized)
+	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
 	
 	return CELL_OK;
 }
@@ -187,8 +209,10 @@ s32 sceNpTusGetMultiSlotVariableAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
-	if (!sceNpTusInstance.m_bSceNpTusInitialized)
+	if (!g_sceNpTus->m_bSceNpTusInitialized)
+	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
 	
 	return CELL_OK;
 }
@@ -197,8 +221,10 @@ s32 sceNpTusGetMultiSlotVariableVUserAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
-	if (!sceNpTusInstance.m_bSceNpTusInitialized)
+	if (!g_sceNpTus->m_bSceNpTusInitialized)
+	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
 	
 	return CELL_OK;
 }
@@ -207,8 +233,10 @@ s32 sceNpTusGetMultiUserVariable()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
-	if (!sceNpTusInstance.m_bSceNpTusInitialized)
+	if (!g_sceNpTus->m_bSceNpTusInitialized)
+	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
 	
 	return CELL_OK;
 }
@@ -217,8 +245,10 @@ s32 sceNpTusGetMultiUserVariableVUser()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
-	if (!sceNpTusInstance.m_bSceNpTusInitialized)
+	if (!g_sceNpTus->m_bSceNpTusInitialized)
+	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
 	
 	return CELL_OK;
 }
@@ -227,8 +257,10 @@ s32 sceNpTusGetMultiUserVariableAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
-	if (!sceNpTusInstance.m_bSceNpTusInitialized)
+	if (!g_sceNpTus->m_bSceNpTusInitialized)
+	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
 	
 	return CELL_OK;
 }
@@ -237,8 +269,10 @@ s32 sceNpTusGetMultiUserVariableVUserAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
-	if (!sceNpTusInstance.m_bSceNpTusInitialized)
+	if (!g_sceNpTus->m_bSceNpTusInitialized)
+	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
 	
 	return CELL_OK;
 }
@@ -247,8 +281,10 @@ s32 sceNpTusAddAndGetVariable()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
-	if (!sceNpTusInstance.m_bSceNpTusInitialized)
+	if (!g_sceNpTus->m_bSceNpTusInitialized)
+	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
 	
 	return CELL_OK;
 }
@@ -257,8 +293,10 @@ s32 sceNpTusAddAndGetVariableVUser()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
-	if (!sceNpTusInstance.m_bSceNpTusInitialized)
+	if (!g_sceNpTus->m_bSceNpTusInitialized)
+	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
 	
 	return CELL_OK;
 }
@@ -267,8 +305,10 @@ s32 sceNpTusAddAndGetVariableAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
-	if (!sceNpTusInstance.m_bSceNpTusInitialized)
+	if (!g_sceNpTus->m_bSceNpTusInitialized)
+	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
 	
 	return CELL_OK;
 }
@@ -277,8 +317,10 @@ s32 sceNpTusAddAndGetVariableVUserAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
-	if (!sceNpTusInstance.m_bSceNpTusInitialized)
+	if (!g_sceNpTus->m_bSceNpTusInitialized)
+	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
 	
 	return CELL_OK;
 }
@@ -287,8 +329,10 @@ s32 sceNpTusTryAndSetVariable()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
-	if (!sceNpTusInstance.m_bSceNpTusInitialized)
+	if (!g_sceNpTus->m_bSceNpTusInitialized)
+	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
 	
 	return CELL_OK;
 }
@@ -297,8 +341,10 @@ s32 sceNpTusTryAndSetVariableVUser()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
-	if (!sceNpTusInstance.m_bSceNpTusInitialized)
+	if (!g_sceNpTus->m_bSceNpTusInitialized)
+	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
 	
 	return CELL_OK;
 }
@@ -307,8 +353,10 @@ s32 sceNpTusTryAndSetVariableAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
-	if (!sceNpTusInstance.m_bSceNpTusInitialized)
+	if (!g_sceNpTus->m_bSceNpTusInitialized)
+	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
 	
 	return CELL_OK;
 }
@@ -317,8 +365,10 @@ s32 sceNpTusTryAndSetVariableVUserAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
-	if (!sceNpTusInstance.m_bSceNpTusInitialized)
+	if (!g_sceNpTus->m_bSceNpTusInitialized)
+	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
 	
 	return CELL_OK;
 }
@@ -327,8 +377,10 @@ s32 sceNpTusDeleteMultiSlotVariable()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
-	if (!sceNpTusInstance.m_bSceNpTusInitialized)
+	if (!g_sceNpTus->m_bSceNpTusInitialized)
+	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
 	
 	return CELL_OK;
 }
@@ -337,8 +389,10 @@ s32 sceNpTusDeleteMultiSlotVariableVUser()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
-	if (!sceNpTusInstance.m_bSceNpTusInitialized)
+	if (!g_sceNpTus->m_bSceNpTusInitialized)
+	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
 	
 	return CELL_OK;
 }
@@ -347,8 +401,10 @@ s32 sceNpTusDeleteMultiSlotVariableAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
-	if (!sceNpTusInstance.m_bSceNpTusInitialized)
+	if (!g_sceNpTus->m_bSceNpTusInitialized)
+	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
 	
 	return CELL_OK;
 }
@@ -357,8 +413,10 @@ s32 sceNpTusDeleteMultiSlotVariableVUserAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
-	if (!sceNpTusInstance.m_bSceNpTusInitialized)
+	if (!g_sceNpTus->m_bSceNpTusInitialized)
+	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
 	
 	return CELL_OK;
 }
@@ -367,8 +425,10 @@ s32 sceNpTusSetData()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
-	if (!sceNpTusInstance.m_bSceNpTusInitialized)
+	if (!g_sceNpTus->m_bSceNpTusInitialized)
+	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
 	
 	return CELL_OK;
 }
@@ -377,8 +437,10 @@ s32 sceNpTusSetDataVUser()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
-	if (!sceNpTusInstance.m_bSceNpTusInitialized)
+	if (!g_sceNpTus->m_bSceNpTusInitialized)
+	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
 	
 	return CELL_OK;
 }
@@ -387,8 +449,10 @@ s32 sceNpTusSetDataAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
-	if (!sceNpTusInstance.m_bSceNpTusInitialized)
+	if (!g_sceNpTus->m_bSceNpTusInitialized)
+	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
 	
 	return CELL_OK;
 }
@@ -397,8 +461,10 @@ s32 sceNpTusSetDataVUserAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
-	if (!sceNpTusInstance.m_bSceNpTusInitialized)
+	if (!g_sceNpTus->m_bSceNpTusInitialized)
+	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
 	
 	return CELL_OK;
 }
@@ -407,8 +473,10 @@ s32 sceNpTusGetData()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
-	if (!sceNpTusInstance.m_bSceNpTusInitialized)
+	if (!g_sceNpTus->m_bSceNpTusInitialized)
+	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
 	
 	return CELL_OK;
 }
@@ -417,8 +485,10 @@ s32 sceNpTusGetDataVUser()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
-	if (!sceNpTusInstance.m_bSceNpTusInitialized)
+	if (!g_sceNpTus->m_bSceNpTusInitialized)
+	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
 	
 	return CELL_OK;
 }
@@ -427,8 +497,10 @@ s32 sceNpTusGetDataAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
-	if (!sceNpTusInstance.m_bSceNpTusInitialized)
+	if (!g_sceNpTus->m_bSceNpTusInitialized)
+	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
 	
 	return CELL_OK;
 }
@@ -437,8 +509,10 @@ s32 sceNpTusGetDataVUserAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
-	if (!sceNpTusInstance.m_bSceNpTusInitialized)
+	if (!g_sceNpTus->m_bSceNpTusInitialized)
+	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
 	
 	return CELL_OK;
 }
@@ -447,8 +521,10 @@ s32 sceNpTusGetMultiSlotDataStatus()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
-	if (!sceNpTusInstance.m_bSceNpTusInitialized)
+	if (!g_sceNpTus->m_bSceNpTusInitialized)
+	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
 		
 	return CELL_OK;
 }
@@ -457,8 +533,10 @@ s32 sceNpTusGetMultiSlotDataStatusVUser()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
-	if (!sceNpTusInstance.m_bSceNpTusInitialized)
+	if (!g_sceNpTus->m_bSceNpTusInitialized)
+	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
 	
 	return CELL_OK;
 }
@@ -467,8 +545,10 @@ s32 sceNpTusGetMultiSlotDataStatusAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
-	if (!sceNpTusInstance.m_bSceNpTusInitialized)
+	if (!g_sceNpTus->m_bSceNpTusInitialized)
+	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
 	
 	return CELL_OK;
 }
@@ -477,8 +557,10 @@ s32 sceNpTusGetMultiSlotDataStatusVUserAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
-	if (!sceNpTusInstance.m_bSceNpTusInitialized)
+	if (!g_sceNpTus->m_bSceNpTusInitialized)
+	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
 	
 	return CELL_OK;
 }
@@ -487,8 +569,10 @@ s32 sceNpTusGetMultiUserDataStatus()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
-	if (!sceNpTusInstance.m_bSceNpTusInitialized)
+	if (!g_sceNpTus->m_bSceNpTusInitialized)
+	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
 	
 	return CELL_OK;
 }
@@ -497,8 +581,10 @@ s32 sceNpTusGetMultiUserDataStatusVUser()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
-	if (!sceNpTusInstance.m_bSceNpTusInitialized)
+	if (!g_sceNpTus->m_bSceNpTusInitialized)
+	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
 	
 	return CELL_OK;
 }
@@ -507,8 +593,10 @@ s32 sceNpTusGetMultiUserDataStatusAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
-	if (!sceNpTusInstance.m_bSceNpTusInitialized)
+	if (!g_sceNpTus->m_bSceNpTusInitialized)
+	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
 	
 	return CELL_OK;
 }
@@ -517,8 +605,10 @@ s32 sceNpTusGetMultiUserDataStatusVUserAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
-	if (!sceNpTusInstance.m_bSceNpTusInitialized)
+	if (!g_sceNpTus->m_bSceNpTusInitialized)
+	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
 	
 	return CELL_OK;
 }
@@ -527,8 +617,10 @@ s32 sceNpTusDeleteMultiSlotData()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
-	if (!sceNpTusInstance.m_bSceNpTusInitialized)
+	if (!g_sceNpTus->m_bSceNpTusInitialized)
+	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
 	
 	return CELL_OK;
 }
@@ -537,8 +629,10 @@ s32 sceNpTusDeleteMultiSlotDataVUser()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
-	if (!sceNpTusInstance.m_bSceNpTusInitialized)
+	if (!g_sceNpTus->m_bSceNpTusInitialized)
+	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
 	
 	return CELL_OK;
 }
@@ -547,8 +641,10 @@ s32 sceNpTusDeleteMultiSlotDataAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
-	if (!sceNpTusInstance.m_bSceNpTusInitialized)
+	if (!g_sceNpTus->m_bSceNpTusInitialized)
+	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
 	
 	return CELL_OK;
 }
@@ -557,15 +653,17 @@ s32 sceNpTusDeleteMultiSlotDataVUserAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNpTus);
 	
-	if (!sceNpTusInstance.m_bSceNpTusInitialized)
+	if (!g_sceNpTus->m_bSceNpTusInitialized)
+	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
 	
 	return CELL_OK;
 }
 
 Module sceNpTus("sceNpTus", []()
 {
-	sceNpTusInstance.m_bSceNpTusInitialized = false;
+	g_sceNpTus = std::make_unique<SceNpTusInternal>();
 
 	REG_FUNC(sceNpTus, sceNpTusInit);
 	REG_FUNC(sceNpTus, sceNpTusTerm);

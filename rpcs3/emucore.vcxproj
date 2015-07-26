@@ -571,9 +571,10 @@
     <ClInclude Include="Emu\SysCalls\Modules\sceNpCommerce2.h" />
     <ClInclude Include="Emu\SysCalls\Modules\sceNpSns.h" />
     <ClInclude Include="Emu\SysCalls\Modules\sceNpTrophy.h" />
-    <ClInclude Include="Emu\SysCalls\Modules\sceNpTus.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellKb.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellMouse.h" />
+    <ClInclude Include="Emu\SysCalls\Modules\sceNpTus.h" />
+    <ClInclude Include="Emu\SysCalls\Modules\sceNpUtil.h" />
     <ClInclude Include="Emu\SysCalls\Modules\sysPrxForUser.h" />
     <ClInclude Include="Emu\SysCalls\Modules\sys_lv2dbg.h" />
     <ClInclude Include="Emu\SysCalls\Modules\sys_net.h" />

@@ -28,26 +28,18 @@
 
 extern Module cellNetCtl;
 
-struct cellNetCtlInternal
-{
-	bool m_bInitialized;
-
-	cellNetCtlInternal()
-		: m_bInitialized(false)
-	{
-	}
-};
-
-cellNetCtlInternal cellNetCtlInstance;
+std::unique_ptr<CellNetCtlInternal> g_netCtl;
 
 s32 cellNetCtlInit()
 {
 	cellNetCtl.Log("cellNetCtlInit()");
 
-	if (cellNetCtlInstance.m_bInitialized)
+	if (g_netCtl->m_bInitialized)
+	{
 		return CELL_NET_CTL_ERROR_NOT_TERMINATED;
+	}
 
-	cellNetCtlInstance.m_bInitialized = true;
+	g_netCtl->m_bInitialized = true;
 
 	return CELL_OK;
 }
@@ -56,10 +48,12 @@ s32 cellNetCtlTerm()
 {
 	cellNetCtl.Log("cellNetCtlTerm()");
 
-	if (!cellNetCtlInstance.m_bInitialized)
+	if (!g_netCtl->m_bInitialized)
+	{
 		return CELL_NET_CTL_ERROR_NOT_INITIALIZED;
+	}
 
-	cellNetCtlInstance.m_bInitialized = false;
+	g_netCtl->m_bInitialized = false;
 
 	return CELL_OK;
 }
@@ -276,7 +270,7 @@ s32 cellNetCtlGetNatInfo(vm::ptr<CellNetCtlNatInfo> natInfo)
 
 Module cellNetCtl("cellNetCtl", []()
 {
-	cellNetCtlInstance.m_bInitialized = false;
+	g_netCtl = std::make_unique<CellNetCtlInternal>();
 
 	REG_FUNC(cellNetCtl, cellNetCtlInit);
 	REG_FUNC(cellNetCtl, cellNetCtlTerm);

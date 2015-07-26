@@ -75,6 +75,18 @@ enum SceNpTrophyGrade
 	SCE_NP_TROPHY_GRADE_BRONZE         = 4,
 };
 
+struct SceNpTrophyInternal
+{
+	bool m_bInitialized;
+
+	SceNpTrophyInternal()
+		: m_bInitialized(false)
+	{
+	}
+};
+
+extern std::unique_ptr<SceNpTrophyInternal> g_sceNpTrophy;
+
 struct SceNpTrophyGameDetails
 {
 	be_t<u32> numTrophies;

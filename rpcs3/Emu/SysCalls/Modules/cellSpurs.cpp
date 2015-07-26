@@ -17,6 +17,7 @@
 #include "Emu/SysCalls/lv2/sys_event.h"
 #include "sysPrxForUser.h"
 #include "cellSpurs.h"
+#include "cellSync.h"
 
 //----------------------------------------------------------------------------
 // Externs
@@ -191,10 +192,10 @@ s32 cellSpursEventFlagGetTasksetAddress(vm::ptr<CellSpursEventFlag> eventFlag, v
 //
 // SPURS lock free queue functions
 //
-s32 _cellSpursLFQueueInitialize(vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursTaskset> taskset, vm::ptr<CellSpursLFQueue> lfQueue, vm::cptr<void> queueBuffer, u32 queueSize, u32 queueDepth, u32 queueDirection);
+s32 _cellSpursLFQueueInitialize(vm::ptr<void> taskset, vm::ptr<CellSyncLFQueue> queue, vm::ptr<u8> buffer, u32 size, u32 depth, CellSyncQueueDirection direction);
 s32 _cellSpursLFQueuePushBody();
-s32 cellSpursLFQueueDetachLv2EventQueue();
-s32 cellSpursLFQueueAttachLv2EventQueue();
+s32 cellSpursLFQueueAttachLv2EventQueue(vm::ptr<CellSyncLFQueue> queue);
+s32 cellSpursLFQueueDetachLv2EventQueue(vm::ptr<CellSyncLFQueue> queue);
 s32 _cellSpursLFQueuePopBody();
 s32 cellSpursLFQueueGetTasksetAddress();
 
@@ -3272,28 +3273,13 @@ s32 cellSpursEventFlagGetTasksetAddress(vm::ptr<CellSpursEventFlag> eventFlag, v
 	return CELL_OK;
 }
 
-s32 _cellSpursLFQueueInitialize(vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursTaskset> taskset, vm::ptr<CellSpursLFQueue> lfQueue, vm::cptr<void> queueBuffer, u32 queueSize, u32 queueDepth, u32 queueDirection)
+s32 _cellSpursLFQueueInitialize(vm::ptr<void> taskset, vm::ptr<CellSyncLFQueue> queue, vm::ptr<u8> buffer, u32 size, u32 depth, CellSyncQueueDirection direction)
 {
-	cellSpurs.Todo("_cellSpursLFQueueInitialize(pTaskset=*0x%x, ea=*0x%x, buffer=*0x%x, size=%d, depth=%d, direction=%d)", taskset.addr(), lfQueue.addr(), queueBuffer.addr(), queueSize, queueDepth, queueDirection);
+	cellSpurs.Warning("_cellSpursLFQueueInitialize() -> cellSyncLFQueueInitialize()");
 
-	if ((!spurs && !taskset) || !lfQueue || !queueBuffer)
-	{
-		return CELL_SPURS_TASK_ERROR_NULL_POINTER;
-	}
+	s32 ret = cellSyncLFQueueInitialize(queue, buffer, size, depth, direction, taskset);
 
-	if (!lfQueue.aligned())
-	{
-		return CELL_SPURS_TASK_ERROR_ALIGN;
-	}
-
-	if (queueDirection > CELL_SPURS_LFQUEUE_FLAG_LAST || queueDirection == CELL_SPURS_LFQUEUE_ANY2ANY)
-	{
-		return CELL_SPURS_TASK_ERROR_INVAL;
-	}
-
-	memset(lfQueue.get_ptr(), 0, sizeof(CellSpursLFQueue));
-
-	return CELL_OK;
+	return SyncErrorToSpursError(ret);
 }
 
 s32 _cellSpursLFQueuePushBody()
@@ -3302,13 +3288,13 @@ s32 _cellSpursLFQueuePushBody()
 	return CELL_OK;
 }
 
-s32 cellSpursLFQueueDetachLv2EventQueue()
+s32 cellSpursLFQueueAttachLv2EventQueue(vm::ptr<CellSyncLFQueue> queue)
 {
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
 }
 
-s32 cellSpursLFQueueAttachLv2EventQueue()
+s32 cellSpursLFQueueDetachLv2EventQueue(vm::ptr<CellSyncLFQueue> queue)
 {
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;

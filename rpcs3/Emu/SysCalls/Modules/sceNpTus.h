@@ -13,6 +13,18 @@ enum
 	SCE_NP_TUS_MAX_USER_NUM_PER_TRANS = 101,
 };
 
+struct SceNpTusInternal
+{
+	bool m_bSceNpTusInitialized;
+
+	SceNpTusInternal()
+		: m_bSceNpTusInitialized(false)
+	{
+	}
+};
+
+extern std::unique_ptr<SceNpTusInternal> g_sceNpTus;
+
 SceNpOnlineId SceNpTusVirtualUserId;
 
 // Structure for representing a TUS variable
@@ -20,19 +32,19 @@ struct SceNpTusVariable
 {
 	SceNpId ownerId;
 	be_t<s32> hasData;
-	//u8 pad[4];
+	u8 pad[4];
 	CellRtcTick lastChangedDate;
 	SceNpId lastChangedAuthorId;
 	be_t<s64> variable;
 	be_t<s64> oldVariable;
-	//u8 reserved[16];
+	u8 reserved[16];
 };
 
 // Structure for representing the accessory information of a TUS data
 struct SceNpTusDataInfo
 {
 	be_t<u32> infoSize;
-	//u8 pad[4];
+	u8 pad[4];
 	u8 data[SCE_NP_TUS_DATA_INFO_MAX_SIZE];
 };
 
@@ -45,6 +57,6 @@ struct SceNpTusDataStatus
 	SceNpId lastChangedAuthorId;
 	be_t<u32> data;
 	be_t<u32> dataSize;
-	//u8 pad[4];
+	u8 pad[4];
 	SceNpTusDataInfo info;
 };

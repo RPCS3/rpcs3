@@ -287,6 +287,9 @@
     <ClCompile Include="Emu\SysCalls\Modules\sceNpTus.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\sceNpUtil.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\SysCalls\Modules\sysPrxForUser.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
@@ -881,9 +884,6 @@
     <ClCompile Include="Emu\Cell\PPULLVMRecompilerCore.cpp">
       <Filter>Emu\CPU\Cell</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\SysCalls\Modules\sceNpUtil.cpp">
-      <Filter>Emu\SysCalls\Modules</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -1055,6 +1055,9 @@
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClInclude>
     <ClInclude Include="Emu\SysCalls\Modules\sceNpTus.h">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\Modules\sceNpUtil.h">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClInclude>
     <ClInclude Include="Emu\SysCalls\Modules\sysPrxForUser.h">
