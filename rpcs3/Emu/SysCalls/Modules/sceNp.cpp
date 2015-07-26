@@ -12,13 +12,13 @@
 
 extern Module sceNp;
 
-sceNpInternal sceNpInstance;
+std::unique_ptr<SceNpInternal> g_sceNp;
 
 s32 sceNpInit(u32 poolsize, vm::ptr<u32> poolptr)
 {
 	sceNp.Warning("sceNpInit(poolsize=%d, poolptr=0x%x)", poolsize, poolptr);
 
-	if (sceNpInstance.m_bSceNpInitialized)
+	if (g_sceNp->m_bSceNpInitialized)
 	{
 		sceNp.Error("sceNpInit(): sceNp has been already initialized.");
 		return SCE_NP_ERROR_ALREADY_INITIALIZED;
@@ -41,7 +41,7 @@ s32 sceNpInit(u32 poolsize, vm::ptr<u32> poolptr)
 		return SCE_NP_ERROR_INVALID_ARGUMENT;
 	}
 
-	sceNpInstance.m_bSceNpInitialized = true;
+	g_sceNp->m_bSceNpInitialized = true;
 
 	return CELL_OK;
 }
@@ -50,13 +50,13 @@ s32 sceNpTerm()
 {
 	sceNp.Warning("sceNpTerm()");
 
-	if (!sceNpInstance.m_bSceNpInitialized)
+	if (!g_sceNp->m_bSceNpInitialized)
 	{
 		sceNp.Error("sceNpTerm(): sceNp has not been intialized.");
 		return SCE_NP_ERROR_NOT_INITIALIZED;
 	}
 
-	sceNpInstance.m_bSceNpInitialized = false;
+	g_sceNp->m_bSceNpInitialized = false;
 
 	return CELL_OK;
 }
@@ -282,8 +282,10 @@ s32 sceNpBasicGetFriendListEntryCount(vm::ptr<u32> count)
 {
 	sceNp.Warning("sceNpBasicGetFriendListEntryCount(count_addr=0x%x)", count.addr());
 
-	if (!sceNpInstance.m_bSceNpInitialized)
+	if (!g_sceNp->m_bSceNpInitialized)
+	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
+	}
 
 	// TODO: Check if there are any friends
 	*count = 0;
@@ -337,8 +339,10 @@ s32 sceNpBasicGetPlayersHistoryEntryCount(u32 options, vm::ptr<u32> count)
 {
 	sceNp.Todo("sceNpBasicGetPlayersHistoryEntryCount(options=%d, count_addr=0x%x)", options, count.addr());
 
-	if (!sceNpInstance.m_bSceNpInitialized)
+	if (!g_sceNp->m_bSceNpInitialized)
+	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
+	}
 
 	return CELL_OK;
 }
@@ -359,8 +363,10 @@ s32 sceNpBasicGetBlockListEntryCount(u32 count)
 {
 	sceNp.Todo("sceNpBasicGetBlockListEntryCount(count=%d)", count);
 
-	if (!sceNpInstance.m_bSceNpInitialized)
+	if (!g_sceNp->m_bSceNpInitialized)
+	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
+	}
 
 	return CELL_OK;
 }
@@ -375,8 +381,10 @@ s32 sceNpBasicGetMessageAttachmentEntryCount(vm::ptr<u32> count)
 {
 	sceNp.Todo("sceNpBasicGetMessageAttachmentEntryCount(count_addr=0x%x)", count.addr());
 
-	if (!sceNpInstance.m_bSceNpInitialized)
+	if (!g_sceNp->m_bSceNpInitialized)
+	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
+	}
 
 	return CELL_OK;
 }
@@ -385,8 +393,10 @@ s32 sceNpBasicGetMessageAttachmentEntry(u32 index, vm::ptr<SceNpUserInfo> from)
 {
 	sceNp.Todo("sceNpBasicGetMessageAttachmentEntry(index=%d, from_addr=0x%x)", index, from.addr());
 
-	if (!sceNpInstance.m_bSceNpInitialized)
+	if (!g_sceNp->m_bSceNpInitialized)
+	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
+	}
 
 	return CELL_OK;
 }
@@ -407,8 +417,10 @@ s32 sceNpBasicGetMatchingInvitationEntryCount(vm::ptr<u32> count)
 {
 	sceNp.Todo("sceNpBasicGetMatchingInvitationEntryCount(count_addr=0x%x)", count.addr());
 
-	if (!sceNpInstance.m_bSceNpInitialized)
+	if (!g_sceNp->m_bSceNpInitialized)
+	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
+	}
 
 	return CELL_OK;
 }
@@ -417,8 +429,10 @@ s32 sceNpBasicGetMatchingInvitationEntry(u32 index, vm::ptr<SceNpUserInfo> from)
 {
 	sceNp.Todo("sceNpBasicGetMatchingInvitationEntry(index=%d, from_addr=0x%x)", index, from.addr());
 
-	if (!sceNpInstance.m_bSceNpInitialized)
+	if (!g_sceNp->m_bSceNpInitialized)
+	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
+	}
 
 	return CELL_OK;
 }
@@ -427,8 +441,10 @@ s32 sceNpBasicGetClanMessageEntryCount(vm::ptr<u32> count)
 {
 	sceNp.Todo("sceNpBasicGetClanMessageEntryCount(count_addr=0x%x)", count.addr());
 
-	if (!sceNpInstance.m_bSceNpInitialized)
+	if (!g_sceNp->m_bSceNpInitialized)
+	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
+	}
 
 	return CELL_OK;
 }
@@ -437,8 +453,10 @@ s32 sceNpBasicGetClanMessageEntry(u32 index, vm::ptr<SceNpUserInfo> from)
 {
 	sceNp.Todo("sceNpBasicGetClanMessageEntry(index=%d, from_addr=0x%x)", index, from.addr());
 
-	if (!sceNpInstance.m_bSceNpInitialized)
+	if (!g_sceNp->m_bSceNpInitialized)
+	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
+	}
 
 	return CELL_OK;
 }
@@ -447,8 +465,10 @@ s32 sceNpBasicGetMessageEntryCount(u32 type, vm::ptr<u32> count)
 {
 	sceNp.Warning("sceNpBasicGetMessageEntryCount(type=%d, count_addr=0x%x)", type, count.addr());
 
-	if (!sceNpInstance.m_bSceNpInitialized)
+	if (!g_sceNp->m_bSceNpInitialized)
+	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
+	}
 
 	// TODO: Check if there are messages
 	*count = 0;
@@ -460,8 +480,10 @@ s32 sceNpBasicGetMessageEntry(u32 type, u32 index, vm::ptr<SceNpUserInfo> from)
 {
 	sceNp.Todo("sceNpBasicGetMessageEntry(type=%d, index=%d, from_addr=0x%x)", type, index, from.addr());
 
-	if (!sceNpInstance.m_bSceNpInitialized)
+	if (!g_sceNp->m_bSceNpInitialized)
+	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
+	}
 
 	return CELL_OK;
 }
@@ -470,8 +492,10 @@ s32 sceNpBasicGetEvent(vm::ptr<s32> event, vm::ptr<SceNpUserInfo> from, vm::ptr<
 {
 	sceNp.Warning("sceNpBasicGetEvent(event_addr=0x%x, from_addr=0x%x, data_addr=0x%x, size_addr=0x%x)", event.addr(), from.addr(), data.addr(), size.addr());
 
-	if (!sceNpInstance.m_bSceNpInitialized)
+	if (!g_sceNp->m_bSceNpInitialized)
+	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
+	}
 
 	// TODO: Check for other error and pass other events
 	*event = SCE_NP_BASIC_EVENT_OFFLINE;
@@ -737,10 +761,12 @@ s32 sceNpLookupInit()
 
 	// TODO: Make sure the error code returned is right,
 	//       since there are no error codes for Lookup utility.
-	if (sceNpInstance.m_bLookupInitialized)
+	if (g_sceNp->m_bLookupInitialized)
+	{
 		return SCE_NP_COMMUNITY_ERROR_ALREADY_INITIALIZED;
+	}
 
-	sceNpInstance.m_bLookupInitialized = true;
+	g_sceNp->m_bLookupInitialized = true;
 
 	return CELL_OK;
 }
@@ -749,10 +775,12 @@ s32 sceNpLookupTerm()
 {
 	sceNp.Warning("sceNpLookupTerm()");
 
-	if (!sceNpInstance.m_bLookupInitialized)
+	if (!g_sceNp->m_bLookupInitialized)
+	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
 
-	sceNpInstance.m_bLookupInitialized = false;
+	g_sceNp->m_bLookupInitialized = false;
 
 	return CELL_OK;
 }
@@ -892,10 +920,12 @@ s32 sceNpManagerUnregisterCallback()
 
 s32 sceNpManagerGetStatus(vm::ptr<u32> status)
 {
-	sceNp.Log("sceNpManagerGetStatus(status_addr=0x%x)", status.addr());
+	sceNp.Warning("sceNpManagerGetStatus(status_addr=0x%x)", status.addr());
 
-	if (!sceNpInstance.m_bSceNpInitialized)
+	if (!g_sceNp->m_bSceNpInitialized)
+	{
 		return SCE_NP_ERROR_NOT_INITIALIZED;
+	}
 
 	// TODO: Support different statuses
 	*status = SCE_NP_MANAGER_STATUS_OFFLINE;
@@ -955,8 +985,10 @@ s32 sceNpManagerGetContentRatingFlag(vm::ptr<u32> isRestricted, vm::ptr<u32> age
 {
 	sceNp.Warning("sceNpManagerGetContentRatingFlag(isRestricted_addr=0x%x, age_addr=0x%x)", isRestricted.addr(), age.addr());
 
-	if (!sceNpInstance.m_bSceNpInitialized)
+	if (!g_sceNp->m_bSceNpInitialized)
+	{
 		return SCE_NP_ERROR_NOT_INITIALIZED;
+	}
 
 	// TODO: read user's parental control information
 	*isRestricted = 0;
@@ -1185,10 +1217,12 @@ s32 sceNpScoreInit()
 {
 	sceNp.Warning("sceNpScoreInit()");
 
-	if (sceNpInstance.m_bScoreInitialized)
+	if (g_sceNp->m_bScoreInitialized)
+	{
 		return SCE_NP_COMMUNITY_ERROR_ALREADY_INITIALIZED;
+	}
 
-	sceNpInstance.m_bScoreInitialized = true;
+	g_sceNp->m_bScoreInitialized = true;
 
 	return CELL_OK;
 }
@@ -1197,10 +1231,12 @@ s32 sceNpScoreTerm()
 {
 	sceNp.Warning("sceNpScoreTerm()");
 
-	if (!sceNpInstance.m_bScoreInitialized)
+	if (!g_sceNp->m_bScoreInitialized)
+	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
 
-	sceNpInstance.m_bScoreInitialized = false;
+	g_sceNp->m_bScoreInitialized = false;
 
 	return CELL_OK;
 }
@@ -1549,9 +1585,7 @@ s32 _sceNpSysutilClientFree()
 
 Module sceNp("sceNp", []()
 {
-	sceNpInstance.m_bSceNpInitialized = false;
-	sceNpInstance.m_bScoreInitialized = false;
-	sceNpInstance.m_bLookupInitialized = false;
+	g_sceNp = std::make_unique<SceNpInternal>();
 
 	REG_FUNC(sceNp, sceNpInit);
 	REG_FUNC(sceNp, sceNpTerm);

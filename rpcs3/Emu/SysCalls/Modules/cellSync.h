@@ -331,7 +331,7 @@ struct set_alignment(128) CellSyncLFQueue
 
 	be_t<u32> m_size;              // 0x10
 	be_t<u32> m_depth;             // 0x14
-	vm::bptr<u8, u64> m_buffer;    // 0x18
+	vm::bcptr<void, u64> m_buffer; // 0x18
 	u8 m_bs[4];                    // 0x20
 	be_t<u32> m_direction;         // 0x24 CellSyncQueueDirection
 	be_t<u32> m_v1;                // 0x28
@@ -363,3 +363,6 @@ struct set_alignment(128) CellSyncLFQueue
 };
 
 CHECK_SIZE_ALIGN(CellSyncLFQueue, 128, 128);
+
+// Prototypes
+s32 cellSyncLFQueueInitialize(vm::ptr<CellSyncLFQueue> queue, vm::cptr<void> buffer, u32 size, u32 depth, u32 direction, vm::ptr<void> eaSignal);

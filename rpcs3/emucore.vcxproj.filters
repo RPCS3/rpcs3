@@ -1735,5 +1735,8 @@
     <ClInclude Include="Emu\SysCalls\Modules\sys_lv2dbg.h">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\SysCalls\Modules\sceNpUtil.h">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

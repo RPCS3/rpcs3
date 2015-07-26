@@ -132,6 +132,18 @@ enum
 	SCE_NP_COMMERCE2_DO_PRODUCT_CODE_MEMORY_CONTAINER_SIZE = 16777216,
 };
 
+struct SceNpCommerce2Internal
+{
+	bool m_bSceNpCommerce2Initialized;
+
+	SceNpCommerce2Internal()
+		: m_bSceNpCommerce2Initialized(false)
+	{
+	}
+};
+
+extern std::unique_ptr<SceNpCommerce2Internal> g_sceNpCommerce2;
+
 // Common structure used when receiving data
 struct SceNpCommerce2CommonData
 {
@@ -141,7 +153,7 @@ struct SceNpCommerce2CommonData
 	be_t<u32> data;
 	be_t<u32> data_size;
 	be_t<u32> data2;
-	//be_t<u32> reserved[4];
+	be_t<u32> reserved[4];
 };
 
 // Structure indicating the range of results obtained
@@ -164,7 +176,7 @@ struct SceNpCommerce2SessionInfo
 	s8 thousandSeparator[SCE_NP_COMMERCE2_THOUSAND_SEPARATOR_LEN + 1];
 	s8 decimalLetter[SCE_NP_COMMERCE2_DECIMAL_LETTER_LEN + 1];
 	u8 padding2[1];
-	//be_t<u32> reserved[4];
+	be_t<u32> reserved[4];
 };
 
 // Structure for category information
@@ -254,7 +266,7 @@ struct SceNpCommerce2GameSkuInfo
 	s8 productId;
 	s8 contentLinkUrl;
 	be_t<u32> countOfRewardInfo;
-	//be_t<u32> reserved[8];
+	be_t<u32> reserved[8];
 };
 
 // Structure of parameters for in-game product browsing
@@ -269,11 +281,11 @@ struct SceNpCommerce2ProductCodeParam
 	be_t<u32> size;
 	be_t<u32> inputMode; // Unsigned ints go into be_t<u32>, right?
 	s8 code1[SCE_NP_COMMERCE2_PRODUCT_CODE_BLOCK_LEN + 1];
-	//s8 padding1[3];
+	s8 padding1[3];
 	s8 code2[SCE_NP_COMMERCE2_PRODUCT_CODE_BLOCK_LEN + 1];
-	//s8 padding2[3];
+	s8 padding2[3];
 	s8 code3[SCE_NP_COMMERCE2_PRODUCT_CODE_BLOCK_LEN + 1];
-	//s8 padding3[3];
+	s8 padding3[3];
 };
 
 typedef void(*SceNpCommerce2Handler)(u32 ctx_id, u32 subject_id, s32 event, s32 error_code, u32 arg);

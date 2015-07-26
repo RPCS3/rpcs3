@@ -8,29 +8,23 @@
 
 extern Module sceNpClans;
 
-struct sceNpClansInternal
-{
-	bool m_bSceNpClansInitialized;
-
-	sceNpClansInternal()
-		: m_bSceNpClansInitialized(false)
-	{
-	}
-};
-
-sceNpClansInternal sceNpClansInstance;
+std::unique_ptr<SceNpClansInternal> g_sceNpClans;
 
 s32 sceNpClansInit(vm::ptr<SceNpCommunicationId> commId, vm::ptr<SceNpCommunicationPassphrase> passphrase, vm::ptr<void> pool, vm::ptr<u32> poolSize, u32 flags)
 {
 	sceNpClans.Warning("sceNpClansInit(commId=*0x%x, passphrase=*0x%x, pool=*0x%x, poolSize=*0x%x, flags=0x%x)", commId, passphrase, pool, poolSize, flags);
 
-	if (sceNpClansInstance.m_bSceNpClansInitialized)
+	if (g_sceNpClans->m_bSceNpClansInitialized)
+	{
 		return SCE_NP_CLANS_ERROR_ALREADY_INITIALIZED;
+	}
 
 	if (flags != 0)
+	{
 		return SCE_NP_CLANS_ERROR_NOT_SUPPORTED;
+	}
 
-	sceNpClansInstance.m_bSceNpClansInitialized = true;
+	g_sceNpClans->m_bSceNpClansInitialized = true;
 
 	return CELL_OK;
 }
@@ -39,10 +33,12 @@ s32 sceNpClansTerm()
 {
 	sceNpClans.Warning("sceNpClansTerm()");
 
-	if (!sceNpClansInstance.m_bSceNpClansInitialized)
+	if (!g_sceNpClans->m_bSceNpClansInitialized)
+	{
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
+	}
 
-	sceNpClansInstance.m_bSceNpClansInitialized = false;
+	g_sceNpClans->m_bSceNpClansInitialized = false;
 
 	return CELL_OK;
 }
@@ -51,11 +47,15 @@ s32 sceNpClansCreateRequest(vm::ptr<SceNpClansRequestHandle> handle, u64 flags)
 {
 	sceNpClans.Todo("sceNpClansCreateRequest(handle=*0x%x, flags=0x%llx)", handle, flags);
 
-	if (!sceNpClansInstance.m_bSceNpClansInitialized)
+	if (!g_sceNpClans->m_bSceNpClansInitialized)
+	{
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
+	}
 
 	if (flags != 0)
+	{
 		return SCE_NP_CLANS_ERROR_NOT_SUPPORTED;
+	}
 
 	return CELL_OK;
 }
@@ -64,8 +64,10 @@ s32 sceNpClansDestroyRequest(vm::ptr<SceNpClansRequestHandle> handle)
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
-	if (!sceNpClansInstance.m_bSceNpClansInitialized)
+	if (!g_sceNpClans->m_bSceNpClansInitialized)
+	{
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
+	}
 
 	return CELL_OK;
 }
@@ -74,8 +76,10 @@ s32 sceNpClansAbortRequest(vm::ptr<SceNpClansRequestHandle> handle)
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
-	if (!sceNpClansInstance.m_bSceNpClansInitialized)
+	if (!g_sceNpClans->m_bSceNpClansInitialized)
+	{
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
+	}
 
 	return CELL_OK;
 }
@@ -84,8 +88,10 @@ s32 sceNpClansCreateClan(vm::ptr<SceNpClansRequestHandle> handle, vm::cptr<char>
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
-	if (!sceNpClansInstance.m_bSceNpClansInitialized)
+	if (!g_sceNpClans->m_bSceNpClansInitialized)
+	{
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
+	}
 
 	return CELL_OK;
 }
@@ -94,8 +100,10 @@ s32 sceNpClansDisbandClan(vm::ptr<SceNpClansRequestHandle> handle, u32 clanId)
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
-	if (!sceNpClansInstance.m_bSceNpClansInitialized)
+	if (!g_sceNpClans->m_bSceNpClansInitialized)
+	{
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
+	}
 
 	return CELL_OK;
 }
@@ -104,8 +112,10 @@ s32 sceNpClansGetClanList(vm::ptr<SceNpClansRequestHandle> handle, vm::cptr<SceN
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
-	if (!sceNpClansInstance.m_bSceNpClansInitialized)
+	if (!g_sceNpClans->m_bSceNpClansInitialized)
+	{
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
+	}
 
 	return CELL_OK;
 }
@@ -114,8 +124,10 @@ s32 sceNpClansGetClanListByNpId()
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
-	if (!sceNpClansInstance.m_bSceNpClansInitialized)
+	if (!g_sceNpClans->m_bSceNpClansInitialized)
+	{
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
+	}
 
 	return CELL_OK;
 }
@@ -124,8 +136,10 @@ s32 sceNpClansSearchByProfile()
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
-	if (!sceNpClansInstance.m_bSceNpClansInitialized)
+	if (!g_sceNpClans->m_bSceNpClansInitialized)
+	{
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
+	}
 
 	return CELL_OK;
 }
@@ -134,8 +148,10 @@ s32 sceNpClansSearchByName()
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
-	if (!sceNpClansInstance.m_bSceNpClansInitialized)
+	if (!g_sceNpClans->m_bSceNpClansInitialized)
+	{
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
+	}
 
 	return CELL_OK;
 }
@@ -144,8 +160,10 @@ s32 sceNpClansGetClanInfo()
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
-	if (!sceNpClansInstance.m_bSceNpClansInitialized)
+	if (!g_sceNpClans->m_bSceNpClansInitialized)
+	{
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
+	}
 
 	return CELL_OK;
 }
@@ -154,8 +172,10 @@ s32 sceNpClansUpdateClanInfo()
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
-	if (!sceNpClansInstance.m_bSceNpClansInitialized)
+	if (!g_sceNpClans->m_bSceNpClansInitialized)
+	{
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
+	}
 
 	return CELL_OK;
 }
@@ -164,8 +184,10 @@ s32 sceNpClansGetMemberList()
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
-	if (!sceNpClansInstance.m_bSceNpClansInitialized)
+	if (!g_sceNpClans->m_bSceNpClansInitialized)
+	{
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
+	}
 
 	return CELL_OK;
 }
@@ -174,8 +196,10 @@ s32 sceNpClansGetMemberInfo()
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
-	if (!sceNpClansInstance.m_bSceNpClansInitialized)
+	if (!g_sceNpClans->m_bSceNpClansInitialized)
+	{
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
+	}
 
 	return CELL_OK;
 }
@@ -184,8 +208,10 @@ s32 sceNpClansUpdateMemberInfo()
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
-	if (!sceNpClansInstance.m_bSceNpClansInitialized)
+	if (!g_sceNpClans->m_bSceNpClansInitialized)
+	{
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
+	}
 
 	return CELL_OK;
 }
@@ -194,8 +220,10 @@ s32 sceNpClansChangeMemberRole()
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
-	if (!sceNpClansInstance.m_bSceNpClansInitialized)
+	if (!g_sceNpClans->m_bSceNpClansInitialized)
+	{
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
+	}
 
 	return CELL_OK;
 }
@@ -204,8 +232,10 @@ s32 sceNpClansGetAutoAcceptStatus()
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
-	if (!sceNpClansInstance.m_bSceNpClansInitialized)
+	if (!g_sceNpClans->m_bSceNpClansInitialized)
+	{
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
+	}
 
 	return CELL_OK;
 }
@@ -214,8 +244,10 @@ s32 sceNpClansUpdateAutoAcceptStatus()
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
-	if (!sceNpClansInstance.m_bSceNpClansInitialized)
+	if (!g_sceNpClans->m_bSceNpClansInitialized)
+	{
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
+	}
 
 	return CELL_OK;
 }
@@ -224,8 +256,10 @@ s32 sceNpClansJoinClan()
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
-	if (!sceNpClansInstance.m_bSceNpClansInitialized)
+	if (!g_sceNpClans->m_bSceNpClansInitialized)
+	{
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
+	}
 
 	return CELL_OK;
 }
@@ -234,8 +268,10 @@ s32 sceNpClansLeaveClan()
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
-	if (!sceNpClansInstance.m_bSceNpClansInitialized)
+	if (!g_sceNpClans->m_bSceNpClansInitialized)
+	{
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
+	}
 
 	return CELL_OK;
 }
@@ -244,8 +280,10 @@ s32 sceNpClansKickMember(vm::ptr<SceNpClansRequestHandle> handle, u32 clanId, vm
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
-	if (!sceNpClansInstance.m_bSceNpClansInitialized)
+	if (!g_sceNpClans->m_bSceNpClansInitialized)
+	{
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
+	}
 
 	return CELL_OK;
 }
@@ -254,8 +292,10 @@ s32 sceNpClansSendInvitation(vm::ptr<SceNpClansRequestHandle> handle, u32 clanId
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
-	if (!sceNpClansInstance.m_bSceNpClansInitialized)
+	if (!g_sceNpClans->m_bSceNpClansInitialized)
+	{
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
+	}
 
 	return CELL_OK;
 }
@@ -264,8 +304,10 @@ s32 sceNpClansCancelInvitation()
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
-	if (!sceNpClansInstance.m_bSceNpClansInitialized)
+	if (!g_sceNpClans->m_bSceNpClansInitialized)
+	{
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
+	}
 
 	return CELL_OK;
 }
@@ -274,8 +316,10 @@ s32 sceNpClansSendInvitationResponse(vm::ptr<SceNpClansRequestHandle> handle, u3
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
-	if (!sceNpClansInstance.m_bSceNpClansInitialized)
+	if (!g_sceNpClans->m_bSceNpClansInitialized)
+	{
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
+	}
 
 	return CELL_OK;
 }
@@ -284,8 +328,10 @@ s32 sceNpClansSendMembershipRequest(vm::ptr<SceNpClansRequestHandle> handle, u32
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
-	if (!sceNpClansInstance.m_bSceNpClansInitialized)
+	if (!g_sceNpClans->m_bSceNpClansInitialized)
+	{
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
+	}
 
 	return CELL_OK;
 }
@@ -294,8 +340,10 @@ s32 sceNpClansCancelMembershipRequest()
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
-	if (!sceNpClansInstance.m_bSceNpClansInitialized)
+	if (!g_sceNpClans->m_bSceNpClansInitialized)
+	{
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
+	}
 
 	return CELL_OK;
 }
@@ -304,8 +352,10 @@ s32 sceNpClansSendMembershipResponse()
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
-	if (!sceNpClansInstance.m_bSceNpClansInitialized)
+	if (!g_sceNpClans->m_bSceNpClansInitialized)
+	{
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
+	}
 
 	return CELL_OK;
 }
@@ -314,8 +364,10 @@ s32 sceNpClansGetBlacklist()
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
-	if (!sceNpClansInstance.m_bSceNpClansInitialized)
+	if (!g_sceNpClans->m_bSceNpClansInitialized)
+	{
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
+	}
 
 	return CELL_OK;
 }
@@ -324,8 +376,10 @@ s32 sceNpClansAddBlacklistEntry()
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
-	if (!sceNpClansInstance.m_bSceNpClansInitialized)
+	if (!g_sceNpClans->m_bSceNpClansInitialized)
+	{
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
+	}
 
 	return CELL_OK;
 }
@@ -334,8 +388,10 @@ s32 sceNpClansRemoveBlacklistEntry()
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
-	if (!sceNpClansInstance.m_bSceNpClansInitialized)
+	if (!g_sceNpClans->m_bSceNpClansInitialized)
+	{
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
+	}
 
 	return CELL_OK;
 }
@@ -344,8 +400,10 @@ s32 sceNpClansRetrieveAnnouncements()
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
-	if (!sceNpClansInstance.m_bSceNpClansInitialized)
+	if (!g_sceNpClans->m_bSceNpClansInitialized)
+	{
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
+	}
 
 	return CELL_OK;
 }
@@ -354,8 +412,10 @@ s32 sceNpClansPostAnnouncement()
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
-	if (!sceNpClansInstance.m_bSceNpClansInitialized)
+	if (!g_sceNpClans->m_bSceNpClansInitialized)
+	{
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
+	}
 
 	return CELL_OK;
 }
@@ -364,8 +424,10 @@ s32 sceNpClansRemoveAnnouncement()
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
-	if (!sceNpClansInstance.m_bSceNpClansInitialized)
+	if (!g_sceNpClans->m_bSceNpClansInitialized)
+	{
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
+	}
 
 	return CELL_OK;
 }
@@ -374,13 +436,15 @@ s32 sceNpClansPostChallenge(vm::ptr<SceNpClansRequestHandle> handle, u32 clanId,
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
-	if (!sceNpClansInstance.m_bSceNpClansInitialized)
+	if (!g_sceNpClans->m_bSceNpClansInitialized)
+	{
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
+	}
 
 	if (data)
+	{
 		return SCE_NP_CLANS_ERROR_NOT_SUPPORTED;
-
-	//todo
+	}
 
 	return CELL_OK;
 }
@@ -389,10 +453,10 @@ s32 sceNpClansRetrievePostedChallenges()
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
-	if (!sceNpClansInstance.m_bSceNpClansInitialized)
+	if (!g_sceNpClans->m_bSceNpClansInitialized)
+	{
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
-
-	//todo
+	}
 
 	return CELL_OK;
 }
@@ -401,8 +465,10 @@ s32 sceNpClansRemovePostedChallenge()
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
-	if (!sceNpClansInstance.m_bSceNpClansInitialized)
+	if (!g_sceNpClans->m_bSceNpClansInitialized)
+	{
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
+	}
 
 	return CELL_OK;
 }
@@ -411,8 +477,10 @@ s32 sceNpClansRetrieveChallenges()
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
-	if (!sceNpClansInstance.m_bSceNpClansInitialized)
+	if (!g_sceNpClans->m_bSceNpClansInitialized)
+	{
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
+	}
 
 	return CELL_OK;
 }
@@ -421,15 +489,17 @@ s32 sceNpClansRemoveChallenge()
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
-	if (!sceNpClansInstance.m_bSceNpClansInitialized)
+	if (!g_sceNpClans->m_bSceNpClansInitialized)
+	{
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
+	}
 
 	return CELL_OK;
 }
 
 Module sceNpClans("sceNpClans", []()
 {
-	sceNpClansInstance.m_bSceNpClansInitialized = false;
+	g_sceNpClans = std::make_unique<SceNpClansInternal>();
 
 	REG_FUNC(sceNpClans, sceNpClansInit);
 	REG_FUNC(sceNpClans, sceNpClansTerm);

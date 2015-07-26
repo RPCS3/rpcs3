@@ -6,17 +6,7 @@
 
 extern Module sceNpCommerce2;
 
-struct sceNpCommerce2Internal
-{
-	bool m_bSceNpCommerce2Initialized;
-
-	sceNpCommerce2Internal()
-		: m_bSceNpCommerce2Initialized(false)
-	{
-	}
-};
-
-sceNpCommerce2Internal sceNpCommerce2Instance;
+std::unique_ptr<SceNpCommerce2Internal> g_sceNpCommerce2;
 
 s32 sceNpCommerce2ExecuteStoreBrowse()
 {
@@ -34,10 +24,12 @@ s32 sceNpCommerce2Init()
 {
 	sceNpCommerce2.Warning("sceNpCommerce2Init()");
 
-	if (sceNpCommerce2Instance.m_bSceNpCommerce2Initialized)
+	if (g_sceNpCommerce2->m_bSceNpCommerce2Initialized)
+	{
 		return SCE_NP_COMMERCE2_ERROR_ALREADY_INITIALIZED;
+	}
 
-	sceNpCommerce2Instance.m_bSceNpCommerce2Initialized = true;
+	g_sceNpCommerce2->m_bSceNpCommerce2Initialized = true;
 
 	return CELL_OK;
 }
@@ -46,10 +38,12 @@ s32 sceNpCommerce2Term()
 {
 	sceNpCommerce2.Warning("sceNpCommerce2Term()");
 
-	if (!sceNpCommerce2Instance.m_bSceNpCommerce2Initialized)
+	if (!g_sceNpCommerce2->m_bSceNpCommerce2Initialized)
+	{
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
+	}
 
-	sceNpCommerce2Instance.m_bSceNpCommerce2Initialized = false;
+	g_sceNpCommerce2->m_bSceNpCommerce2Initialized = false;
 
 	return CELL_OK;
 }
@@ -314,7 +308,7 @@ s32 sceNpCommerce2DestroyReq()
 
 Module sceNpCommerce2("sceNpCommerce2", []()
 {
-	sceNpCommerce2Instance.m_bSceNpCommerce2Initialized = false;
+	g_sceNpCommerce2 = std::make_unique<SceNpCommerce2Internal>();
 
 	REG_FUNC(sceNpCommerce2, sceNpCommerce2ExecuteStoreBrowse);
 	REG_FUNC(sceNpCommerce2, sceNpCommerce2GetStoreBrowseUserdata);

@@ -8,14 +8,14 @@
 
 extern Module cellFont;
 
-CellFontInternal* s_fontInternalInstance = nullptr;
+std::unique_ptr<CellFontInternal> g_font;
 
 // Functions
 s32 cellFontInitializeWithRevision(u64 revisionFlags, vm::ptr<CellFontConfig> config)
 {
 	cellFont.Warning("cellFontInitializeWithRevision(revisionFlags=0x%llx, config=*0x%x)", revisionFlags, config);
 	
-	if (s_fontInternalInstance->m_bInitialized)
+	if (g_font->m_bInitialized)
 	{
 		return CELL_FONT_ERROR_ALREADY_INITIALIZED;
 	}
@@ -30,11 +30,11 @@ s32 cellFontInitializeWithRevision(u64 revisionFlags, vm::ptr<CellFontConfig> co
 		cellFont.Error("cellFontInitializeWithRevision: Unknown flags (0x%x)", config->flags);
 	}
 
-	s_fontInternalInstance->m_buffer_addr = config->FileCache.buffer_addr;
-	s_fontInternalInstance->m_buffer_size = config->FileCache.size;
-	s_fontInternalInstance->m_userFontEntrys_addr = config->userFontEntrys_addr;
-	s_fontInternalInstance->m_userFontEntryMax    = config->userFontEntryMax;
-	s_fontInternalInstance->m_bInitialized = true;
+	g_font->m_buffer_addr = config->FileCache.buffer_addr;
+	g_font->m_buffer_size = config->FileCache.size;
+	g_font->m_userFontEntrys_addr = config->userFontEntrys_addr;
+	g_font->m_userFontEntryMax    = config->userFontEntryMax;
+	g_font->m_bInitialized = true;
 	return CELL_OK;
 }
 
@@ -59,12 +59,12 @@ s32 cellFontEnd()
 {
 	cellFont.Warning("cellFontEnd()");
 
-	if (!s_fontInternalInstance->m_bInitialized)
+	if (!g_font->m_bInitialized)
 	{
 		return CELL_FONT_ERROR_UNINITIALIZED;
 	}
 
-	s_fontInternalInstance->m_bInitialized = false;
+	g_font->m_bInitialized = false;
 
 	return CELL_OK;
 }
@@ -79,7 +79,7 @@ s32 cellFontOpenFontMemory(vm::ptr<CellFontLibrary> library, u32 fontAddr, u32 f
 {
 	cellFont.Warning("cellFontOpenFontMemory(library=*0x%x, fontAddr=0x%x, fontSize=%d, subNum=%d, uniqueId=%d, font=*0x%x)", library, fontAddr, fontSize, subNum, uniqueId, font);
 
-	if (!s_fontInternalInstance->m_bInitialized)
+	if (!g_font->m_bInitialized)
 	{
 		return CELL_FONT_ERROR_UNINITIALIZED;
 	}
@@ -119,7 +119,7 @@ s32 cellFontOpenFontset(PPUThread& CPU, vm::ptr<CellFontLibrary> library, vm::pt
 {
 	cellFont.Warning("cellFontOpenFontset(library=*0x%x, fontType=*0x%x, font=*0x%x)", library, fontType, font);
 
-	if (!s_fontInternalInstance->m_bInitialized)
+	if (!g_font->m_bInitialized)
 	{
 		return CELL_FONT_ERROR_UNINITIALIZED;
 	}
@@ -227,7 +227,7 @@ s32 cellFontCreateRenderer(vm::ptr<CellFontLibrary> library, vm::ptr<CellFontRen
 {
 	cellFont.Todo("cellFontCreateRenderer(library=*0x%x, config=*0x%x, Renderer=*0x%x)", library, config, Renderer);
 
-	if (!s_fontInternalInstance->m_bInitialized)
+	if (!g_font->m_bInitialized)
 	{
 		return CELL_FONT_ERROR_UNINITIALIZED;
 	}
@@ -475,16 +475,16 @@ s32 cellFontGraphicsSetFontRGBA()
 
 s32 cellFontOpenFontsetOnMemory(PPUThread& CPU, vm::ptr<CellFontLibrary> library, vm::ptr<CellFontType> fontType, vm::ptr<CellFont> font)
 {
-	cellFont.Todo("cellFontOpenFontsetOnMemory()");
+	cellFont.Todo("cellFontOpenFontsetOnMemory(library=*0x%x, fontType=*0x%x, font=*0x%x)", library, fontType, font);
 
-	if (!s_fontInternalInstance->m_bInitialized)
+	if (!g_font->m_bInitialized)
 	{
 		return CELL_FONT_ERROR_UNINITIALIZED;
 	}
 
 	if (fontType->map != CELL_FONT_MAP_UNICODE)
 	{
-		cellFont.Warning("cellFontOpenFontset: Only Unicode is supported");
+		cellFont.Warning("cellFontOpenFontsetOnMemory: Only Unicode is supported");
 	}
 
 	return CELL_OK;
@@ -632,14 +632,7 @@ s32 cellFontGetCharGlyphMetricsVertical()
 
 Module cellFont("cellFont", []()
 {
-	s_fontInternalInstance = new CellFontInternal();
-
-	cellFont.on_stop = []()
-	{
-		// s_fontInternalInstance->m_bInitialized = false;
-		// s_fontInternalInstance->m_bFontGcmInitialized = false;
-		delete s_fontInternalInstance;
-	};
+	g_font = std::make_unique<CellFontInternal>();
 
 	REG_FUNC(cellFont, cellFontInit);
 	REG_FUNC(cellFont, cellFontSetFontsetOpenMode);

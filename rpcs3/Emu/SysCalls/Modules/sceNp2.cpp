@@ -6,27 +6,13 @@
 
 extern Module sceNp2;
 
-struct sceNp2Internal
-{
-	bool m_bSceNp2Initialized;
-	bool m_bSceNp2Matching2Initialized;
-	bool m_bSceNp2Matching2Initialized2;
-
-	sceNp2Internal()
-		: m_bSceNp2Initialized(false),
-		  m_bSceNp2Matching2Initialized(false),
-		  m_bSceNp2Matching2Initialized2(false)
-	{
-	}
-};
-
-sceNp2Internal sceNp2Instance;
+std::unique_ptr<SceNp2Internal> g_sceNp2;
 
 s32 sceNp2Init(u32 poolsize, vm::ptr<u32> poolptr)
 {
 	sceNp2.Warning("sceNp2Init(poolsize=%d, poolptr=0x%x)", poolsize, poolptr);
 
-	if (sceNp2Instance.m_bSceNp2Initialized)
+	if (g_sceNp2->m_bSceNp2Initialized)
 	{
 		sceNp2.Error("sceNp2Init(): sceNp2 has been already initialized.");
 		return SCE_NP_ERROR_ALREADY_INITIALIZED;
@@ -49,8 +35,8 @@ s32 sceNp2Init(u32 poolsize, vm::ptr<u32> poolptr)
 		return SCE_NP_ERROR_INVALID_ARGUMENT;
 	}
 
-	sceNpInstance.m_bSceNpInitialized = true;
-	sceNp2Instance.m_bSceNp2Initialized = true;
+	g_sceNp->m_bSceNpInitialized = true;
+	g_sceNp2->m_bSceNp2Initialized = true;
 
 	return CELL_OK;
 }
@@ -59,19 +45,19 @@ s32 sceNpMatching2Init(u32 poolsize, s32 priority)
 {
 	sceNp2.Todo("sceNpMatching2Init(poolsize=%d, priority=%d)", poolsize, priority);
 
-	if (!sceNp2Instance.m_bSceNp2Initialized)
+	if (!g_sceNp2->m_bSceNp2Initialized)
 	{
 		sceNp2.Error("sceNpMatching2Init(): sceNp2 has not been intialized.");
 		return SCE_NP_ERROR_NOT_INITIALIZED;
 	}
 
-	if (sceNp2Instance.m_bSceNp2Matching2Initialized)
+	if (g_sceNp2->m_bSceNp2Matching2Initialized)
 	{
 		sceNp2.Error("sceNpMatching2Init(): sceNpMatching2 has already been intialized.");
 		return SCE_NP_MATCHING2_ERROR_ALREADY_INITIALIZED;
 	}
 
-	sceNp2Instance.m_bSceNp2Matching2Initialized = true;
+	g_sceNp2->m_bSceNp2Matching2Initialized = true;
 
 	return CELL_OK;
 }
@@ -80,19 +66,19 @@ s32 sceNpMatching2Init2(u32 poolsize, s32 priority, vm::ptr<SceNpMatching2Utilit
 {
 	sceNp2.Todo("sceNpMatching2Init2(poolsize=%d, priority=%d, param_addr=0x%x)", poolsize, priority, param.addr());
 
-	if (!sceNp2Instance.m_bSceNp2Initialized)
+	if (!g_sceNp2->m_bSceNp2Initialized)
 	{
 		sceNp2.Error("sceNpMatching2Init2(): sceNp2 has not been intialized.");
 		return SCE_NP_ERROR_NOT_INITIALIZED;
 	}
 
-	if (sceNp2Instance.m_bSceNp2Matching2Initialized2)
+	if (g_sceNp2->m_bSceNp2Matching2Initialized2)
 	{
 		sceNp2.Error("sceNpMatching2Init2(): new sceNpMatching2 has already been intialized.");
 		return SCE_NP_MATCHING2_ERROR_ALREADY_INITIALIZED;
 	}
 
-	sceNp2Instance.m_bSceNp2Matching2Initialized2 = true;
+	g_sceNp2->m_bSceNp2Matching2Initialized2 = true;
 
 	// TODO:
 	// 1. Create an internal thread
@@ -106,13 +92,13 @@ s32 sceNp2Term()
 {
 	sceNp2.Warning("sceNp2Term()");
 
-	if (!sceNp2Instance.m_bSceNp2Initialized)
+	if (!g_sceNp2->m_bSceNp2Initialized)
 	{
 		sceNp2.Error("sceNp2Term(): sceNp2 has not been intialized.");
 		return SCE_NP_ERROR_NOT_INITIALIZED;
 	}
 
-	sceNp2Instance.m_bSceNp2Initialized = false;
+	g_sceNp2->m_bSceNp2Initialized = false;
 
 	return CELL_OK;
 }
@@ -121,19 +107,19 @@ s32 sceNpMatching2Term(PPUThread& ppu)
 {
 	sceNp2.Warning("sceNpMatching2Term()");
 
-	if (!sceNp2Instance.m_bSceNp2Initialized)
+	if (!g_sceNp2->m_bSceNp2Initialized)
 	{
 		sceNp2.Error("sceNpMatching2Term(): sceNp2 has not been intialized.");
 		return SCE_NP_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!sceNp2Instance.m_bSceNp2Matching2Initialized)
+	if (!g_sceNp2->m_bSceNp2Matching2Initialized)
 	{
 		sceNp2.Error("sceNpMatching2Term(): sceNpMatching2 has not been intialized.");
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
 
-	sceNp2Instance.m_bSceNp2Matching2Initialized = false;
+	g_sceNp2->m_bSceNp2Matching2Initialized = false;
 
 	return CELL_OK;
 }
@@ -142,28 +128,26 @@ s32 sceNpMatching2Term2()
 {
 	sceNp2.Warning("sceNpMatching2Term2()");
 
-	if (!sceNp2Instance.m_bSceNp2Initialized)
+	if (!g_sceNp2->m_bSceNp2Initialized)
 	{
 		sceNp2.Error("sceNpMatching2Term2(): sceNp2 has not been intialized.");
 		return SCE_NP_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!sceNp2Instance.m_bSceNp2Matching2Initialized2)
+	if (!g_sceNp2->m_bSceNp2Matching2Initialized2)
 	{
 		sceNp2.Error("sceNpMatching2Term(): new sceNpMatching2 has not been intialized.");
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
 
-	sceNp2Instance.m_bSceNp2Matching2Initialized2 = false;
+	g_sceNp2->m_bSceNp2Matching2Initialized2 = false;
 
 	return CELL_OK;
 }
 
 Module sceNp2("sceNp2", []()
 {
-	sceNp2Instance.m_bSceNp2Initialized = false;
-	sceNp2Instance.m_bSceNp2Matching2Initialized = false;
-	sceNp2Instance.m_bSceNp2Matching2Initialized2 = false;
+	g_sceNp2 = std::make_unique<SceNp2Internal>();
 
 	REG_FUNC(sceNp2, sceNp2Init);
 	REG_FUNC(sceNp2, sceNpMatching2Init);
