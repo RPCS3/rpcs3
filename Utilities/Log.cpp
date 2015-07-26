@@ -82,7 +82,7 @@ void LogChannel::removeListener(std::shared_ptr<LogListener> listener)
 
 struct CoutListener : LogListener
 {
-	void log(const LogMessage &msg)
+	void log(const LogMessage &msg) override
 	{
 		std::cerr << msg.mText << std::endl;
 	}
@@ -103,7 +103,7 @@ struct FileListener : LogListener
 		}
 	}
 
-	void log(const LogMessage &msg)
+	void log(const LogMessage &msg) override
 	{
 		std::string text = msg.mText;
 		if (mPrependChannelName)

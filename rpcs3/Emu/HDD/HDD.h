@@ -158,7 +158,7 @@ public:
 
 	int OpenDir(const std::string& name);
 
-	bool Rename(const std::string& from, const std::string& to);
+	bool Rename(const std::string& from, const std::string& to) override;
 
 	u64 FindFreeBlock();
 
@@ -182,7 +182,7 @@ public:
 
 	bool GetNextEntry(u64& block, vfsHDD_Entry& entry, std::string& name);
 
-	virtual bool Open(const std::string& path, u32 mode = vfsRead);
+	virtual bool Open(const std::string& path, u32 mode = vfsRead) override;
 
 	bool HasEntry(const std::string& name);
 
@@ -204,5 +204,5 @@ public:
 
 	virtual bool IsOpened() const override;
 
-	virtual u64 GetSize() const;
+	virtual u64 GetSize() const override;
 };

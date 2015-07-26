@@ -701,7 +701,7 @@ public:
 		FPSCR.FI = val;
 	}
 
-	virtual std::string RegsToString() const
+	virtual std::string RegsToString() const override
 	{
 		std::string ret = "Registers:\n=========\n";
 
@@ -729,7 +729,7 @@ public:
 		return ret;
 	}
 
-	virtual std::string ReadRegString(const std::string& reg) const
+	virtual std::string ReadRegString(const std::string& reg) const override
 	{
 		std::string::size_type first_brk = reg.find('[');
 		if (first_brk != std::string::npos)
@@ -748,7 +748,8 @@ public:
 		return "";
 	}
 
-	bool WriteRegString(const std::string& reg, std::string value) {
+	bool WriteRegString(const std::string& reg, std::string value) override
+	{
 		while (value.length() < 32) value = "0"+value;
 		std::string::size_type first_brk = reg.find('[');
 		try

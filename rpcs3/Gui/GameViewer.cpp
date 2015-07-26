@@ -40,14 +40,14 @@ public:
 class WxDirDeleteTraverser : public wxDirTraverser
 {
 public:
-	virtual wxDirTraverseResult OnFile(const wxString& filename)
+	virtual wxDirTraverseResult OnFile(const wxString& filename) override
 	{
 		if (!wxRemoveFile(filename)){
 			LOG_ERROR(HLE, "Couldn't delete File: %s", fmt::ToUTF8(filename).c_str());
 		}
 		return wxDIR_CONTINUE;
 	}
-	virtual wxDirTraverseResult OnDir(const wxString& dirname)
+	virtual wxDirTraverseResult OnDir(const wxString& dirname) override
 	{
 		wxDir dir(dirname);
 		dir.Traverse(*this);

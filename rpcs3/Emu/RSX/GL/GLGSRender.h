@@ -174,7 +174,7 @@ private:
 	void InitFragmentData();
 
 	void Enable(bool enable, const u32 cap);
-	virtual void Close();
+	virtual void Close() override;
 	bool LoadProgram();
 	void WriteBuffers();
 	void WriteDepthBuffer();
@@ -188,13 +188,13 @@ private:
 	void InitDrawBuffers();
 
 protected:
-	virtual void OnInit();
-	virtual void OnInitThread();
-	virtual void OnExitThread();
-	virtual void OnReset();
+	virtual void OnInit() override;
+	virtual void OnInitThread() override;
+	virtual void OnExitThread() override;
+	virtual void OnReset() override;
 	virtual void Clear(u32 cmd) override;
 	virtual void Draw() override;
-	virtual void Flip();
+	virtual void Flip() override;
 
 	virtual void semaphorePGRAPHTextureReadRelease(u32 offset, u32 value) override;
 	virtual void semaphorePGRAPHBackendRelease(u32 offset, u32 value) override;

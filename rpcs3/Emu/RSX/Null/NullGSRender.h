@@ -18,19 +18,19 @@ public:
 	}
 
 private:
-	virtual void OnInit()
+	virtual void OnInit() override
 	{
 	}
 
-	virtual void OnInitThread()
+	virtual void OnInitThread() override
 	{
 	}
 
-	virtual void OnExitThread()
+	virtual void OnExitThread() override
 	{
 	}
 
-	virtual void OnReset()
+	virtual void OnReset() override
 	{
 	}
 
@@ -42,11 +42,11 @@ private:
 	{
 	}
 
-	virtual void Flip()
+	virtual void Flip() override
 	{
 	}
 
-	virtual void Close()
+	virtual void Close() override
 	{
 		if (joinable())
 		{

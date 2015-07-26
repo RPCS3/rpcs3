@@ -24,7 +24,7 @@ struct GLGSFrame : public GSFrame, public GSFrameBase
 
 	wxGLCanvas* GetCanvas() const { return canvas; }
 
-	virtual void SetViewport(int x, int y, u32 w, u32 h);
+	virtual void SetViewport(int x, int y, u32 w, u32 h) override;
 
 private:
 	virtual void OnSize(wxSizeEvent& event);
