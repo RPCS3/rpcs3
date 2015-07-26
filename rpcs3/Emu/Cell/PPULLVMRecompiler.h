@@ -1228,7 +1228,7 @@ namespace ppu_recompiler_llvm {
 		{}
 		~CustomSectionMemoryManager() override {}
 
-		virtual uint64_t getSymbolAddress(const std::string &Name)
+		virtual uint64_t getSymbolAddress(const std::string &Name) override
 		{
 			std::unordered_map<std::string, Executable>::const_iterator It = executableMap.find(Name);
 			if (It != executableMap.end())

@@ -4390,7 +4390,7 @@ private:
 		else
 		{
 			CPU.SetFPSCR_FI(1);
-			CPU.FPSCR.FR = abs(bfi) > abs(bi);
+			CPU.FPSCR.FR = std::abs(bfi) > std::abs(bi);
 		}
 
 		CPU.FPR[frd] = bf;
