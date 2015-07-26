@@ -20,10 +20,14 @@ TROPUSRLoader::~TROPUSRLoader()
 bool TROPUSRLoader::Load(const std::string& filepath, const std::string& configpath)
 {
 	if (m_file)
+	{
 		Close();
+	}
 
 	if (!Emu.GetVFS().ExistsFile(filepath))
+	{
 		Generate(filepath, configpath);
+	}
 
 	m_file = Emu.GetVFS().OpenFile(filepath, vfsRead);
 	LoadHeader();
@@ -36,34 +40,47 @@ bool TROPUSRLoader::Load(const std::string& filepath, const std::string& configp
 
 bool TROPUSRLoader::LoadHeader()
 {
-	if(!m_file->IsOpened())
+	if (!m_file->IsOpened())
+	{
 		return false;
+	}
 
 	m_file->Seek(0);
+
 	if (m_file->Read(&m_header, sizeof(TROPUSRHeader)) != sizeof(TROPUSRHeader))
+	{
 		return false;
+	}
+
 	return true;
 }
 
 bool TROPUSRLoader::LoadTableHeaders()
 {
-	if(!m_file->IsOpened())
+	if (!m_file->IsOpened())
+	{
 		return false;
+	}
 
 	m_file->Seek(0x30);
 	m_tableHeaders.clear();
 	m_tableHeaders.resize(m_header.tables_count);
-	for (TROPUSRTableHeader& tableHeader : m_tableHeaders) {
+
+	for (TROPUSRTableHeader& tableHeader : m_tableHeaders)
+	{
 		if (m_file->Read(&tableHeader, sizeof(TROPUSRTableHeader)) != sizeof(TROPUSRTableHeader))
 			return false;
 	}
+
 	return true;
 }
 
 bool TROPUSRLoader::LoadTables()
 {
-	if(!m_file->IsOpened())
+	if (!m_file->IsOpened())
+	{
 		return false;
+	}
 
 	for (const TROPUSRTableHeader& tableHeader : m_tableHeaders)
 	{
@@ -73,7 +90,9 @@ bool TROPUSRLoader::LoadTables()
 		{
 			m_table4.clear();
 			m_table4.resize(tableHeader.entries_count);
-			for (auto& entry : m_table4) {
+
+			for (auto& entry : m_table4)
+			{
 				if (m_file->Read(&entry, sizeof(TROPUSREntry4)) != sizeof(TROPUSREntry4))
 					return false;
 			}
@@ -83,7 +102,9 @@ bool TROPUSRLoader::LoadTables()
 		{
 			m_table6.clear();
 			m_table6.resize(tableHeader.entries_count);
-			for (auto& entry : m_table6) {
+
+			for (auto& entry : m_table6)
+			{
 				if (m_file->Read(&entry, sizeof(TROPUSREntry6)) != sizeof(TROPUSREntry6))
 					return false;
 			}
@@ -99,20 +120,30 @@ bool TROPUSRLoader::LoadTables()
 bool TROPUSRLoader::Save(const std::string& filepath)
 {
 	if (m_file)
+	{
 		Close();
+	}
 
 	m_file = Emu.GetVFS().OpenFile(filepath, vfsWriteNew);
 	m_file->Write(&m_header, sizeof(TROPUSRHeader));
 
 	for (const TROPUSRTableHeader& tableHeader : m_tableHeaders)
+	{
 		m_file->Write(&tableHeader, sizeof(TROPUSRTableHeader));
+	}
 
 	for (const auto& entry : m_table4)
+	{
 		m_file->Write(&entry, sizeof(TROPUSREntry4));
+	}
+
 	for (const auto& entry : m_table6)
+	{
 		m_file->Write(&entry, sizeof(TROPUSREntry6));
+	}
 
 	m_file->Close();
+
 	return true;
 }
 
@@ -125,6 +156,7 @@ bool TROPUSRLoader::Generate(const std::string& filepath, const std::string& con
 
 	m_table4.clear();
 	m_table6.clear();
+
 	for (std::shared_ptr<rXmlNode> n = doc.GetRoot()->GetChildren(); n; n = n->GetNext())
 	{
 		if (n->GetName() == "trophy")
@@ -164,6 +196,7 @@ bool TROPUSRLoader::Generate(const std::string& filepath, const std::string& con
 	m_header.unk2 = 0;
 
 	Save(filepath);
+
 	return true;
 }
 
@@ -174,8 +207,10 @@ u32 TROPUSRLoader::GetTrophiesCount()
 
 u32 TROPUSRLoader::GetTrophyUnlockState(u32 id)
 {
-	if (id >=  m_table6.size())
+	if (id >= m_table6.size())
+	{
 		LOG_WARNING(LOADER, "TROPUSRLoader::GetUnlockState: Invalid id=%d", id);
+	}
 
 	return m_table6[id].trophy_state; // Let's assume the trophies are stored ordered
 }
@@ -183,7 +218,9 @@ u32 TROPUSRLoader::GetTrophyUnlockState(u32 id)
 u64 TROPUSRLoader::GetTrophyTimestamp(u32 id)
 {
 	if (id >= m_table6.size())
+	{
 		LOG_WARNING(LOADER, "TROPUSRLoader::GetTrophyTimestamp: Invalid id=%d", id);
+	}
 
 	// TODO: What timestamp does sceNpTrophyGetTrophyInfo want, timestamp1 or timestamp2? 
 	return m_table6[id].timestamp2; // Let's assume the trophies are stored ordered
@@ -191,12 +228,15 @@ u64 TROPUSRLoader::GetTrophyTimestamp(u32 id)
 
 bool TROPUSRLoader::UnlockTrophy(u32 id, u64 timestamp1, u64 timestamp2)
 {
-	if (id >=  m_table6.size())
+	if (id >= m_table6.size())
+	{
 		return false;
+	}
 
 	m_table6[id].trophy_state = 1;
 	m_table6[id].timestamp1 = timestamp1;
 	m_table6[id].timestamp2 = timestamp2;
+
 	return true;
 }
 
@@ -208,5 +248,6 @@ bool TROPUSRLoader::Close()
 		m_file = nullptr;
 		return true;
 	}
+
 	return false;
 }

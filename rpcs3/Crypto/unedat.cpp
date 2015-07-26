@@ -7,7 +7,8 @@
 void generate_key(int crypto_mode, int version, unsigned char *key_final, unsigned char *iv_final, unsigned char *key, unsigned char *iv)
 {
 	int mode = (int)(crypto_mode & 0xF0000000);
-	switch (mode) {
+	switch (mode)
+	{
 	case 0x10000000:
 		// Encrypted ERK.
 		// Decrypt the key with EDAT_KEY + EDAT_IV and copy the original IV.
@@ -32,7 +33,8 @@ void generate_key(int crypto_mode, int version, unsigned char *key_final, unsign
 void generate_hash(int hash_mode, int version, unsigned char *hash_final, unsigned char *hash)
 {
 	int mode = (int)(hash_mode & 0xF0000000);
-	switch (mode) {
+	switch (mode)
+	{
 	case 0x10000000:
 		// Encrypted HASH.
 		// Decrypt the hash with EDAT_KEY + EDAT_IV.

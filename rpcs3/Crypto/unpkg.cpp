@@ -110,7 +110,7 @@ int Decrypt(const fs::file& pkg_f, const fs::file& dec_pkg_f, PKGHeader* m_heade
 	memcpy(iv, m_header->klicensee, sizeof(iv));
 	aes_setkey_enc(&c, PKG_AES_KEY, 128);
 	
-	for (u32 i=0; i<parts; i++)
+	for (u32 i = 0; i < parts; i++)
 	{
 		memset(buf, 0, sizeof(buf));
 		u32 length = pkg_f.read(buf, BUF_SIZE);
@@ -118,21 +118,21 @@ int Decrypt(const fs::file& pkg_f, const fs::file& dec_pkg_f, PKGHeader* m_heade
 		
 		if (m_header->pkg_type == PKG_RELEASE_TYPE_DEBUG)
 		{
-			for (u32 j=0; j<bits; j++)
+			for (u32 j = 0; j < bits; j++)
 			{
 				u8 hash[0x14];
 				sha1(key, 0x40, hash);
-				*(u64*)&buf[j*HASH_LEN + 0] ^= *(u64*)&hash[0];
-				*(u64*)&buf[j*HASH_LEN + 8] ^= *(u64*)&hash[8];
+				*(u64*)&buf[j * HASH_LEN + 0] ^= *(u64*)&hash[0];
+				*(u64*)&buf[j * HASH_LEN + 8] ^= *(u64*)&hash[8];
 				*(be_t<u64>*)&key[0x38] += 1;
 			}
 		}
 
 		if (m_header->pkg_type == PKG_RELEASE_TYPE_RELEASE)
 		{
-			for (u32 j=0; j<bits; j++)
+			for (u32 j = 0; j < bits; j++)
 			{
-				aes_crypt_ecb(&c, AES_ENCRYPT, iv, ctr+j*HASH_LEN);
+				aes_crypt_ecb(&c, AES_ENCRYPT, iv, ctr + j * HASH_LEN);
 
 				be_t<u64> hi = *(be_t<u64>*)&iv[0];
 				be_t<u64> lo = *(be_t<u64>*)&iv[8];
@@ -145,7 +145,8 @@ int Decrypt(const fs::file& pkg_f, const fs::file& dec_pkg_f, PKGHeader* m_heade
 				*(be_t<u64>*)&iv[8] = lo;
 			}
 		
-			for (u32 j=0; j<length; j++) {
+			for (u32 j = 0; j < length; j++)
+			{
 				buf[j] ^= ctr[j];
 			}
 		}		
