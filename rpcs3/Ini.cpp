@@ -46,19 +46,26 @@ static std::pair<int, int> StringToSize(const std::string& str)
 {
 	std::size_t start = 0, found;
 	std::vector<int> vec;
-	for (int i = 0; i < 2 && (found = str.find_first_of('x', start)); i++) {
-		try {
+
+	for (int i = 0; i < 2 && (found = str.find_first_of('x', start)); i++)
+	{
+		try
+		{
 			vec.push_back(std::stoi(str.substr(start, found == std::string::npos ? found : found - start)));
 		}
-		catch (const std::invalid_argument& e) {
+		catch (const std::invalid_argument& e)
+		{
 			return std::make_pair(-1, -1);
 		}
 		if (found == std::string::npos)
 			break;
 		start = found + 1;
 	}
+
 	if (vec.size() < 2 || vec[0] < 0 || vec[1] < 0)
+	{
 		return std::make_pair(-1, -1);
+	}
 
 	return std::make_pair(vec[0], vec[1]);
 }

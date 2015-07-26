@@ -82,7 +82,8 @@ void AutoPause::Reload(void)
 	initialized = true;
 }
 
-void AutoPause::TryPause(u32 code) {
+void AutoPause::TryPause(u32 code)
+{
 	if (code < 1024)
 	{
 		//Would first check Enable setting. Then the list length.
