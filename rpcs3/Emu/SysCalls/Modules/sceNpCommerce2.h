@@ -171,7 +171,7 @@ struct SceNpCommerce2SessionInfo
 	be_t<u32> decimals;
 	s8 currencySymbol[SCE_NP_COMMERCE2_CURRENCY_SYMBOL_LEN + 1];
 	be_t<u32> symbolPosition;
-	bool symbolWithSpace;
+	b8 symbolWithSpace;
 	u8 padding1[3];
 	s8 thousandSeparator[SCE_NP_COMMERCE2_THOUSAND_SEPARATOR_LEN + 1];
 	s8 decimalLetter[SCE_NP_COMMERCE2_DECIMAL_LETTER_LEN + 1];
@@ -259,7 +259,7 @@ struct SceNpCommerce2GameSkuInfo
 	be_t<u32> timeUntilExpiration;
 	be_t<u32> purchasabilityFlag;
 	be_t<u32> annotation;
-	bool downloadable;
+	b8 downloadable;
 	u8 padding[3];
 	be_t<u32> price;
 	s8 skuName;

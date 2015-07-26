@@ -154,7 +154,7 @@ struct SceNpClansEntry
 	SceNpClansClanBasicInfo info;
 	be_t<u32> role;
 	be_t<s32> status;
-	bool allowMsg;
+	b8 allowMsg;
 	u8 reserved[3];
 };
 
@@ -219,7 +219,7 @@ struct SceNpClansUpdatableMemberInfo
 	be_t<u32> binData1Size;
 	u8 binAttr1[SCE_NP_CLANS_CLAN_BINARY_ATTRIBUTE1_MAX_SIZE + 1];
 	s8 description[SCE_NP_CLANS_MEMBER_DESCRIPTION_MAX_LENGTH + 1];
-	bool allowMsg;
+	b8 allowMsg;
 	u8 reserved[3];
 };
 

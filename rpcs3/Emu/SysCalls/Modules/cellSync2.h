@@ -35,7 +35,7 @@ struct CellSync2MutexAttribute
 	be_t<u32> sdkVersion;
 	be_t<u16> threadTypes;
 	be_t<u16> maxWaiters;
-	bool recursive;
+	b8 recursive;
 	u8 padding;
 	char name[CELL_SYNC2_NAME_MAX_LENGTH + 1];
 	u8 reserved[86];

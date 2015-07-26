@@ -312,7 +312,7 @@ s32 sceNpClansCancelInvitation()
 	return CELL_OK;
 }
 
-s32 sceNpClansSendInvitationResponse(vm::ptr<SceNpClansRequestHandle> handle, u32 clanId, vm::ptr<SceNpClansMessage> message, bool accept)
+s32 sceNpClansSendInvitationResponse(vm::ptr<SceNpClansRequestHandle> handle, u32 clanId, vm::ptr<SceNpClansMessage> message, b8 accept)
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 

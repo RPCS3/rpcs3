@@ -73,7 +73,7 @@ s32 cellSailDescriptorGetMediaInfo()
 	return CELL_OK;
 }
 
-s32 cellSailDescriptorSetAutoSelection(vm::ptr<CellSailDescriptor> pSelf, bool autoSelection)
+s32 cellSailDescriptorSetAutoSelection(vm::ptr<CellSailDescriptor> pSelf, b8 autoSelection)
 {
 	cellSail.Warning("cellSailDescriptorSetAutoSelection(pSelf_addr=0x%x, autoSelection=%s)", pSelf.addr(), autoSelection ? "true" : "false");
 
@@ -812,7 +812,7 @@ s32 cellSailPlayerCancel()
 	return CELL_OK;
 }
 
-s32 cellSailPlayerSetPaused(vm::ptr<CellSailPlayer> pSelf, bool paused)
+s32 cellSailPlayerSetPaused(vm::ptr<CellSailPlayer> pSelf, b8 paused)
 {
 	cellSail.Todo("cellSailPlayerSetPaused(pSelf_addr=0x%x, paused=%d)", pSelf.addr(), paused);
 	return CELL_OK;

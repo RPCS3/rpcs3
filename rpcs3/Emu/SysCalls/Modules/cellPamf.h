@@ -157,7 +157,7 @@ struct CellPamfEp
 // Entry point iterator
 struct CellPamfEpIterator
 {
-	bool isPamf;
+	b8 isPamf;
 	be_t<u32> index;
 	be_t<u32> num;
 	be_t<u32> pCur_addr;

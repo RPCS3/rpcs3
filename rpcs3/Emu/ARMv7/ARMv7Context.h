@@ -298,16 +298,16 @@ struct cast_armv7_gpr<s32, false>
 };
 
 template<>
-struct cast_armv7_gpr<bool, false>
+struct cast_armv7_gpr<b8, false>
 {
-	force_inline static u32 to_gpr(const bool& value)
+	force_inline static u32 to_gpr(const b8& value)
 	{
 		return value;
 	}
 
-	force_inline static bool from_gpr(const u32& reg)
+	force_inline static b8 from_gpr(const u32& reg)
 	{
-		return reinterpret_cast<const bool&>(reg);
+		return reg != 0;
 	}
 };
 

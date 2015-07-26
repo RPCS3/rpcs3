@@ -109,7 +109,7 @@ struct SceNpMatching2World
 	le_t<u32> curNumOfTotalLobbyMember;
 	le_t<u32> curNumOfRoom;
 	le_t<u32> curNumOfTotalRoomMember;
-	bool withEntitlementId;
+	b8 withEntitlementId;
 	SceNpEntitlementId entitlementId;
 	u8 padding[3];
 };
@@ -214,9 +214,9 @@ struct SceNpMatching2GroupLabel
 struct SceNpMatching2RoomGroupConfig
 {
 	le_t<u32> slotNum;
-	bool withLabel;
+	b8 withLabel;
 	SceNpMatching2GroupLabel label;
-	bool withPassword;
+	b8 withPassword;
 	u8 padding[2];
 };
 
@@ -224,7 +224,7 @@ struct SceNpMatching2RoomGroupConfig
 struct SceNpMatching2RoomGroupPasswordConfig
 {
 	u8 groupId;
-	bool withPassword;
+	b8 withPassword;
 	u8 padding[1];
 };
 
@@ -240,8 +240,8 @@ struct SceNpMatching2RoomMemberBinAttrInternal
 struct SceNpMatching2RoomGroup
 {
 	u8 groupId;
-	bool withPassword;
-	bool withLabel;
+	b8 withPassword;
+	b8 withLabel;
 	u8 padding[1];
 	SceNpMatching2GroupLabel label;
 	le_t<u32> slotNum;
@@ -638,7 +638,7 @@ struct SceNpMatching2SendRoomChatMessageRequest
 
 struct SceNpMatching2SendRoomChatMessageResponse
 {
-	bool filtered;
+	b8 filtered;
 };
 
 
@@ -794,7 +794,7 @@ struct SceNpMatching2GetLobbyMemberDataInternalListRequest
 	le_t<u32> memberIdNum;
 	vm::lcptr<u16> attrId;
 	le_t<u32> attrIdNum;
-	bool extendedData;
+	b8 extendedData;
 	u8 padding[7];
 };
 
@@ -822,7 +822,7 @@ struct SceNpMatching2SendLobbyChatMessageRequest
 
 struct SceNpMatching2SendLobbyChatMessageResponse
 {
-	bool filtered;
+	b8 filtered;
 };
 
 
@@ -899,7 +899,7 @@ struct SceNpMatching2SignalingOptParamUpdateInfo
 
 struct SceNpMatching2RoomMessageInfo
 {
-	bool filtered;
+	b8 filtered;
 	u8 castType;
 	u8 padding[2];
 	vm::lptr<SceNpMatching2RoomMessageDestination> dst;
@@ -942,7 +942,7 @@ struct SceNpMatching2LobbyMemberDataInternalUpdateInfo
 
 struct SceNpMatching2LobbyMessageInfo
 {
-	bool filtered;
+	b8 filtered;
 	u8 castType;
 	u8 padding[2];
 	vm::lptr<SceNpMatching2LobbyMessageDestination> dst;

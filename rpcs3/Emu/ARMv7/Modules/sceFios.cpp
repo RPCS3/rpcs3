@@ -14,7 +14,7 @@ void sceFiosTerminate()
 	throw EXCEPTION("");
 }
 
-bool sceFiosIsInitialized(vm::ptr<SceFiosParams> pOutParameters)
+b8 sceFiosIsInitialized(vm::ptr<SceFiosParams> pOutParameters)
 {
 	throw EXCEPTION("");
 }
@@ -29,7 +29,7 @@ void sceFiosSetGlobalDefaultOpAttr(vm::cptr<SceFiosOpAttr> pAttr)
 	throw EXCEPTION("");
 }
 
-bool sceFiosGetGlobalDefaultOpAttr(vm::ptr<SceFiosOpAttr> pOutAttr)
+b8 sceFiosGetGlobalDefaultOpAttr(vm::ptr<SceFiosOpAttr> pOutAttr)
 {
 	throw EXCEPTION("");
 }
@@ -39,7 +39,7 @@ void sceFiosSetThreadDefaultOpAttr(vm::cptr<SceFiosOpAttr> pAttr)
 	throw EXCEPTION("");
 }
 
-bool sceFiosGetThreadDefaultOpAttr(vm::ptr<SceFiosOpAttr> pOutAttr)
+b8 sceFiosGetThreadDefaultOpAttr(vm::ptr<SceFiosOpAttr> pOutAttr)
 {
 	throw EXCEPTION("");
 }
@@ -59,7 +59,7 @@ u32 sceFiosGetSuspendCount()
 	throw EXCEPTION("");
 }
 
-bool sceFiosIsSuspended()
+b8 sceFiosIsSuspended()
 {
 	throw EXCEPTION("");
 }
@@ -84,7 +84,7 @@ void sceFiosCloseAllFiles()
 	throw EXCEPTION("");
 }
 
-bool sceFiosIsIdle()
+b8 sceFiosIsIdle()
 {
 	throw EXCEPTION("");
 }
@@ -104,7 +104,7 @@ u32 sceFiosGetAllOps(vm::ptr<s32> pOutArray, u32 arraySize)
 	throw EXCEPTION("");
 }
 
-bool sceFiosIsValidHandle(s32 h)
+b8 sceFiosIsValidHandle(s32 h)
 {
 	throw EXCEPTION("");
 }
@@ -129,12 +129,12 @@ s32 sceFiosVprintf(vm::cptr<char> pFormat) // va_list
 	throw EXCEPTION("");
 }
 
-s32 sceFiosFileExists(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath, vm::ptr<bool> pOutExists)
+s32 sceFiosFileExists(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath, vm::ptr<b8> pOutExists)
 {
 	throw EXCEPTION("");
 }
 
-bool sceFiosFileExistsSync(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath)
+b8 sceFiosFileExistsSync(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath)
 {
 	throw EXCEPTION("");
 }
@@ -159,12 +159,12 @@ s32 sceFiosFileDeleteSync(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath)
 	throw EXCEPTION("");
 }
 
-s32 sceFiosDirectoryExists(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath, vm::ptr<bool> pOutExists)
+s32 sceFiosDirectoryExists(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath, vm::ptr<b8> pOutExists)
 {
 	throw EXCEPTION("");
 }
 
-bool sceFiosDirectoryExistsSync(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath)
+b8 sceFiosDirectoryExistsSync(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath)
 {
 	throw EXCEPTION("");
 }
@@ -189,12 +189,12 @@ s32 sceFiosDirectoryDeleteSync(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPa
 	throw EXCEPTION("");
 }
 
-s32 sceFiosExists(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath, vm::ptr<bool> pOutExists)
+s32 sceFiosExists(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath, vm::ptr<b8> pOutExists)
 {
 	throw EXCEPTION("");
 }
 
-bool sceFiosExistsSync(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath)
+b8 sceFiosExistsSync(vm::cptr<SceFiosOpAttr> pAttr, vm::cptr<char> pPath)
 {
 	throw EXCEPTION("");
 }
@@ -459,7 +459,7 @@ vm::cptr<char> sceFiosDHGetPath(s32 dh)
 	throw EXCEPTION("");
 }
 
-bool sceFiosOpIsDone(s32 op)
+b8 sceFiosOpIsDone(s32 op)
 {
 	throw EXCEPTION("");
 }
@@ -499,7 +499,7 @@ void sceFiosOpCancel(s32 op)
 	throw EXCEPTION("");
 }
 
-bool sceFiosOpIsCancelled(s32 op)
+b8 sceFiosOpIsCancelled(s32 op)
 {
 	throw EXCEPTION("");
 }

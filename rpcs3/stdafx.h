@@ -42,6 +42,11 @@
 
 #include "Utilities/GNU.h"
 
+#define CHECK_SIZE(type, size) static_assert(sizeof(type) == size, "Invalid " #type " type size")
+#define CHECK_ALIGN(type, align) static_assert(__alignof(type) == align, "Invalid " #type " type alignment")
+#define CHECK_MAX_SIZE(type, size) static_assert(sizeof(type) <= size, #type " type size is too big")
+#define CHECK_SIZE_ALIGN(type, size, align) CHECK_SIZE(type, size); CHECK_ALIGN(type, align)
+
 using uint = unsigned int;
 
 using u8 = std::uint8_t;
@@ -54,10 +59,27 @@ using s16 = std::int16_t;
 using s32 = std::int32_t;
 using s64 = std::int64_t;
 
-using b8 = std::uint8_t;
-
 using f32 = float;
 using f64 = double;
+
+// bool type replacement for PS3/PSV
+class b8
+{
+	std::uint8_t m_value;
+
+public:
+	b8(const bool value)
+		: m_value(value)
+	{
+	}
+
+	operator bool() const //template<typename T, typename = std::enable_if_t<std::is_integral<T>::value>> operator T() const
+	{
+		return m_value != 0;
+	}
+};
+
+CHECK_SIZE_ALIGN(b8, 1, 1);
 
 template<typename T, typename = std::enable_if_t<std::is_integral<T>::value>> inline T align(const T& value, u64 align)
 {
@@ -121,11 +143,6 @@ template<typename T> using func_def = T; // workaround for MSVC bug: `using X = 
 template<typename T> struct ID_type;
 
 #define REG_ID_TYPE(t, id) template<> struct ID_type<t> { enum : u32 { type = id }; }
-
-#define CHECK_SIZE(type, size) static_assert(sizeof(type) == size, "Invalid " #type " type size")
-#define CHECK_ALIGN(type, align) static_assert(__alignof(type) == align, "Invalid " #type " type alignment")
-#define CHECK_MAX_SIZE(type, size) static_assert(sizeof(type) <= size, #type " type size is too big")
-#define CHECK_SIZE_ALIGN(type, size, align) CHECK_SIZE(type, size); CHECK_ALIGN(type, align)
 
 #define WRAP_EXPR(expr) [&]{ return expr; }
 #define COPY_EXPR(expr) [=]{ return expr; }

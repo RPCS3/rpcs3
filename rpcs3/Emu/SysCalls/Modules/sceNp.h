@@ -954,7 +954,7 @@ struct SceNpBasicExtendedAttachmentData
 	be_t<u64> msgId;
 	SceNpBasicAttachmentData data;
 	be_t<u32> userAction;
-	bool markedAsUsed;
+	b8 markedAsUsed;
 	//be_t<u8> reserved[3];
 };
 
@@ -1130,7 +1130,7 @@ struct SceNpMatching2World
 	be_t<u32> curNumOfTotalLobbyMember;
 	be_t<u32> curNumOfRoom;
 	be_t<u32> curNumOfTotalRoomMember;
-	bool withEntitlementId;
+	b8 withEntitlementId;
 	SceNpEntitlementId entitlementId;
 	u8 padding[3];
 };
@@ -1234,9 +1234,9 @@ struct SceNpMatching2GroupLabel
 struct SceNpMatching2RoomGroupConfig
 {
 	be_t<u32> slotNum;
-	bool withLabel;
+	b8 withLabel;
 	SceNpMatching2GroupLabel label;
-	bool withPassword;
+	b8 withPassword;
 	u8 padding[2];
 };
 
@@ -1244,7 +1244,7 @@ struct SceNpMatching2RoomGroupConfig
 struct SceNpMatching2RoomGroupPasswordConfig
 {
 	u8 groupId;
-	bool withPassword;
+	b8 withPassword;
 	u8 padding[1];
 };
 
@@ -1252,8 +1252,8 @@ struct SceNpMatching2RoomGroupPasswordConfig
 struct SceNpMatching2RoomGroup
 {
 	u8 groupId;
-	bool withPassword;
-	bool withLabel;
+	b8 withPassword;
+	b8 withLabel;
 	u8 padding[1];
 	SceNpMatching2GroupLabel label;
 	be_t<u32> slotNum;
@@ -1652,7 +1652,7 @@ struct SceNpMatching2SendRoomChatMessageRequest
 // Room chat message send request response data
 struct SceNpMatching2SendRoomChatMessageResponse
 {
-	bool filtered;
+	b8 filtered;
 };
 
 // Internal room data configuration request parameters
@@ -1778,7 +1778,7 @@ struct SceNpMatching2SendLobbyChatMessageRequest
 // Lobby chat message sending response data
 struct SceNpMatching2SendLobbyChatMessageResponse
 {
-	bool filtered;
+	b8 filtered;
 };
 
 // Lobby invitation message sending request parameter
@@ -1831,7 +1831,7 @@ struct SceNpMatching2GetLobbyMemberDataInternalListRequest
 	be_t<u32> memberIdNum;
 	be_t<u16> attrId;
 	be_t<u32> attrIdNum;
-	bool extendedData;
+	b8 extendedData;
 	u8 padding[7];
 };
 
@@ -1925,7 +1925,7 @@ struct SceNpMatching2RoomMemberDataInternalUpdateInfo
 // Room message information
 struct SceNpMatching2RoomMessageInfo
 {
-	bool filtered;
+	b8 filtered;
 	u8 castType;
 	u8 padding[2];
 	SceNpMatching2RoomMessageDestination dst;
@@ -1968,7 +1968,7 @@ struct SceNpMatching2LobbyMemberDataInternalUpdateInfo
 // Lobby message information
 struct SceNpMatching2LobbyMessageInfo
 {
-	bool filtered;
+	b8 filtered;
 	u8 castType;
 	u8 padding[2];
 	SceNpMatching2LobbyMessageDestination dst;
