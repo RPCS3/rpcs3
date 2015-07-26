@@ -9,7 +9,7 @@ std::unique_ptr<SceNpSnsInternal> g_sceNpSns;
 
 s32 sceNpSnsFbInit(/*const SceNpSnsFbInitParams params*/)
 {
-	sceNpSns.Todo("sceNpSnsFbInit(params=???)"/*, params*/);
+	sceNpSns.Todo("sceNpSnsFbInit(params=?)"/*, params*/);
 
 	if (g_sceNpSns->m_bSceNpSnsInitialized)
 	{

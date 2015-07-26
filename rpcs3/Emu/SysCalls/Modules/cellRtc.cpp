@@ -429,10 +429,10 @@ s32 cellRtcCheckValid(vm::ptr<CellRtcDateTime> pTime)
 	if ((pTime->year < 1) || (pTime->year > 9999)) return CELL_RTC_ERROR_INVALID_YEAR;
 	else if ((pTime->month < 1) || (pTime->month > 12)) return CELL_RTC_ERROR_INVALID_MONTH;
 	else if ((pTime->day < 1) || (pTime->day > 31)) return CELL_RTC_ERROR_INVALID_DAY;
-	else if ((pTime->hour < 0) || (pTime->hour > 23)) return CELL_RTC_ERROR_INVALID_HOUR;
-	else if ((pTime->minute < 0) || (pTime->minute > 59)) return CELL_RTC_ERROR_INVALID_MINUTE;
-	else if ((pTime->second < 0) || (pTime->second > 59)) return CELL_RTC_ERROR_INVALID_SECOND;
-	else if ((pTime->microsecond < 0) || (pTime->microsecond > 999999)) return CELL_RTC_ERROR_INVALID_MICROSECOND;
+	else if (pTime->hour > 23) return CELL_RTC_ERROR_INVALID_HOUR;
+	else if (pTime->minute > 59) return CELL_RTC_ERROR_INVALID_MINUTE;
+	else if (pTime->second > 59) return CELL_RTC_ERROR_INVALID_SECOND;
+	else if (pTime->microsecond > 999999) return CELL_RTC_ERROR_INVALID_MICROSECOND;
 	else return CELL_OK;
 }
 

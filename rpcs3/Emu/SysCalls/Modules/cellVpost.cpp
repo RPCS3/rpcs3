@@ -76,19 +76,19 @@ s32 cellVpostExec(u32 handle, vm::cptr<u8> inPicBuff, vm::cptr<CellVpostCtrlPara
 	u32 ow = ctrlParam->outWidth;
 	u32 oh = ctrlParam->outHeight;
 
-	ctrlParam->inWindow; // ignored
+	//ctrlParam->inWindow; // ignored
 	if (ctrlParam->inWindow.x) cellVpost.Notice("*** inWindow.x = %d", (u32)ctrlParam->inWindow.x);
 	if (ctrlParam->inWindow.y) cellVpost.Notice("*** inWindow.y = %d", (u32)ctrlParam->inWindow.y);
 	if (ctrlParam->inWindow.width != w) cellVpost.Notice("*** inWindow.width = %d", (u32)ctrlParam->inWindow.width);
 	if (ctrlParam->inWindow.height != h) cellVpost.Notice("*** inWindow.height = %d", (u32)ctrlParam->inWindow.height);
-	ctrlParam->outWindow; // ignored
+	//ctrlParam->outWindow; // ignored
 	if (ctrlParam->outWindow.x) cellVpost.Notice("*** outWindow.x = %d", (u32)ctrlParam->outWindow.x);
 	if (ctrlParam->outWindow.y) cellVpost.Notice("*** outWindow.y = %d", (u32)ctrlParam->outWindow.y);
 	if (ctrlParam->outWindow.width != ow) cellVpost.Notice("*** outWindow.width = %d", (u32)ctrlParam->outWindow.width);
 	if (ctrlParam->outWindow.height != oh) cellVpost.Notice("*** outWindow.height = %d", (u32)ctrlParam->outWindow.height);
-	ctrlParam->execType; // ignored
-	ctrlParam->scalerType; // ignored
-	ctrlParam->ipcType; // ignored
+	//ctrlParam->execType; // ignored
+	//ctrlParam->scalerType; // ignored
+	//ctrlParam->ipcType; // ignored
 
 	picInfo->inWidth = w; // copy
 	picInfo->inHeight = h; // copy
