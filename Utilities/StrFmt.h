@@ -104,10 +104,10 @@ namespace fmt
 		{
 			std::vector<char> buffptr(length);
 #if !defined(_MSC_VER)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wformat-security"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-security"
 			size_t printlen = snprintf(buffptr.data(), length, fmt, std::forward<Args>(parameters)...);
-#pragma clang diagnostic pop
+#pragma GCC diagnostic pop
 #else
 			size_t printlen = _snprintf_s(buffptr.data(), length, length - 1, fmt, std::forward<Args>(parameters)...);
 #endif
