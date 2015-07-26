@@ -305,7 +305,7 @@ struct SceKernelAllocMemBlockOpt
 
 // Thread Manager definitions (threads)
 
-using SceKernelThreadEntry = func_def<s32(u32 argSize, vm::ptr<void> pArgBlock)>;
+using SceKernelThreadEntry = s32(u32 argSize, vm::ptr<void> pArgBlock);
 
 struct SceKernelThreadOptParam
 {
@@ -370,7 +370,7 @@ struct SceKernelSystemInfo
 
 // Thread Manager definitions (callbacks)
 
-using SceKernelCallbackFunction = func_def<s32(s32 notifyId, s32 notifyCount, s32 notifyArg, vm::ptr<void> pCommon)>;
+using SceKernelCallbackFunction = s32(s32 notifyId, s32 notifyCount, s32 notifyArg, vm::ptr<void> pCommon);
 
 struct SceKernelCallbackInfo
 {
@@ -388,7 +388,7 @@ struct SceKernelCallbackInfo
 
 // Thread Manager definitions (events)
 
-using SceKernelThreadEventHandler = func_def<s32(s32 type, s32 threadId, s32 arg, vm::ptr<void> pCommon)>;
+using SceKernelThreadEventHandler = s32(s32 type, s32 threadId, s32 arg, vm::ptr<void> pCommon);
 
 struct SceKernelEventInfo
 {

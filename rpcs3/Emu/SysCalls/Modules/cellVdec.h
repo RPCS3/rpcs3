@@ -171,7 +171,7 @@ struct CellVdecPicFormat2
 	be_t<u32> unk1;
 };
 
-using CellVdecCbMsg = func_def<u32(u32 handle, CellVdecMsgType msgType, s32 msgData, u32 cbArg)>;
+using CellVdecCbMsg = u32(u32 handle, CellVdecMsgType msgType, s32 msgData, u32 cbArg);
 
 // Callback Function Information
 struct CellVdecCb

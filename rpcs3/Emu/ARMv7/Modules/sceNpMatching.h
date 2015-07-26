@@ -382,13 +382,13 @@ struct SceNpMatching2InvitationData
 	le_t<u32> optDataLen;
 };
 
-using SceNpMatching2RequestCallback = func_def<void(u16 ctxId, u32 reqId, u16 event, s32 errorCode, vm::cptr<void> data, vm::ptr<void> arg)>;
-using SceNpMatching2LobbyEventCallback = func_def<void(u16 ctxId, u64 lobbyId, u16 event, s32 errorCode, vm::cptr<void> data, vm::ptr<void> arg)>;
-using SceNpMatching2RoomEventCallback = func_def<void(u16 ctxId, u64 roomId, u16 event, s32 errorCode, vm::cptr<void> data, vm::ptr<void> arg)>;
-using SceNpMatching2LobbyMessageCallback = func_def<void(u16 ctxId, u64 lobbyId, u16 srcMemberId, u16 event, s32 errorCode, vm::cptr<void> data, vm::ptr<void> arg)>;
-using SceNpMatching2RoomMessageCallback = func_def<void(u16 ctxId, u64 roomId, u16 srcMemberId, u16 event, s32 errorCode, vm::cptr<void> data, vm::ptr<void> arg)>;
-using SceNpMatching2SignalingCallback = func_def<void(u16 ctxId, u64 roomId, u16 peerMemberId, u16 event, s32 errorCode, vm::ptr<void> arg)>;
-using SceNpMatching2ContextCallback = func_def<void(u16 ctxId, u16 event, u8 eventCause, s32 errorCode, vm::ptr<void> arg)>;
+using SceNpMatching2RequestCallback = void(u16 ctxId, u32 reqId, u16 event, s32 errorCode, vm::cptr<void> data, vm::ptr<void> arg);
+using SceNpMatching2LobbyEventCallback = void(u16 ctxId, u64 lobbyId, u16 event, s32 errorCode, vm::cptr<void> data, vm::ptr<void> arg);
+using SceNpMatching2RoomEventCallback = void(u16 ctxId, u64 roomId, u16 event, s32 errorCode, vm::cptr<void> data, vm::ptr<void> arg);
+using SceNpMatching2LobbyMessageCallback = void(u16 ctxId, u64 lobbyId, u16 srcMemberId, u16 event, s32 errorCode, vm::cptr<void> data, vm::ptr<void> arg);
+using SceNpMatching2RoomMessageCallback = void(u16 ctxId, u64 roomId, u16 srcMemberId, u16 event, s32 errorCode, vm::cptr<void> data, vm::ptr<void> arg);
+using SceNpMatching2SignalingCallback = void(u16 ctxId, u64 roomId, u16 peerMemberId, u16 event, s32 errorCode, vm::ptr<void> arg);
+using SceNpMatching2ContextCallback = void(u16 ctxId, u16 event, u8 eventCause, s32 errorCode, vm::ptr<void> arg);
 
 struct SceNpMatching2RequestOptParam
 {

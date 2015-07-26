@@ -95,7 +95,7 @@ struct SceNgsCallbackInfo
 	vm::lptr<void> pUserData;
 };
 
-using SceNgsCallbackFunc = func_def<void(vm::cptr<SceNgsCallbackInfo> pCallbackInfo)>;
+using SceNgsCallbackFunc = void(vm::cptr<SceNgsCallbackInfo> pCallbackInfo);
 
 struct SceSulphaNgsConfig
 {

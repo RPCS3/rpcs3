@@ -82,4 +82,4 @@ struct CellSubDisplayPeerInfo
 	CellSubDisplayNickname pspNickname;
 };
 
-using CellSubDisplayHandler = func_def<void(s32 cbMsg, u64 cbParam, vm::ptr<void> userdata)>;
+using CellSubDisplayHandler = void(s32 cbMsg, u64 cbParam, vm::ptr<void> userdata);

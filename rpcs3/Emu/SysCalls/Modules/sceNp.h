@@ -217,7 +217,7 @@ enum
 	// SCE_NP_MATCHING2_NET_H_ERRNO_BASE = 0x800225XX,
 };
 
-using SceNpBasicEventHandler = func_def<s32(s32 event, s32 retCode, u32 reqId, vm::ptr<void> arg)>;
+using SceNpBasicEventHandler = s32(s32 event, s32 retCode, u32 reqId, vm::ptr<void> arg);
 
 // NP Manager Utility statuses
 enum

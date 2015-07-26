@@ -70,8 +70,8 @@ struct SceLocationHeadingInfo
 	le_t<u64> timestamp;
 };
 
-using SceLocationLocationInfoCallback = func_def<void(s32 result, u8 handle, vm::cptr<SceLocationLocationInfo> location, vm::ptr<void> userdata)>;
-using SceLocationHeadingInfoCallback = func_def<void(s32 result, u8 handle, vm::cptr<SceLocationHeadingInfo> heading, vm::ptr<void> userdata)>;
+using SceLocationLocationInfoCallback = void(s32 result, u8 handle, vm::cptr<SceLocationLocationInfo> location, vm::ptr<void> userdata);
+using SceLocationHeadingInfoCallback = void(s32 result, u8 handle, vm::cptr<SceLocationHeadingInfo> heading, vm::ptr<void> userdata);
 
 struct SceLocationPermissionInfo
 {

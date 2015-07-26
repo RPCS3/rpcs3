@@ -1,6 +1,6 @@
 #pragma once
 
-using SceImeCharFilter = func_def<s32(u16 ch)>;
+using SceImeCharFilter = s32(u16 ch);
 
 struct SceImeRect
 {
@@ -46,7 +46,7 @@ struct SceImePreeditGeometry
 	le_t<u32> height;
 };
 
-using SceImeEventHandler = func_def<void(vm::ptr<void> arg, vm::cptr<SceImeEvent> e)>;
+using SceImeEventHandler = void(vm::ptr<void> arg, vm::cptr<SceImeEvent> e);
 
 struct SceImeParam
 {

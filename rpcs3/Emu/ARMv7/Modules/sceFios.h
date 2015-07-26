@@ -1,8 +1,8 @@
 #pragma once
 
-using SceFiosOpCallback = func_def<s32(vm::ptr<void> pContext, s32 op, u8 event, s32 err)>;
-using SceFiosVprintfCallback = func_def<s32(vm::cptr<char> fmt, va_list ap)>;
-using SceFiosMemcpyCallback = func_def<vm::ptr<void>(vm::ptr<void> dst, vm::cptr<void> src, u32 len)>;
+using SceFiosOpCallback = s32(vm::ptr<void> pContext, s32 op, u8 event, s32 err);
+using SceFiosVprintfCallback = s32(vm::cptr<char> fmt, va_list ap);
+using SceFiosMemcpyCallback = vm::ptr<void>(vm::ptr<void> dst, vm::cptr<void> src, u32 len);
 
 enum SceFiosWhence : s32
 {
@@ -100,7 +100,7 @@ struct SceFiosOverlay
 	char src[292];
 };
 
-using SceFiosIOFilterCallback = func_def<void()>;
+using SceFiosIOFilterCallback = void();
 
 struct SceFiosPsarcDearchiverContext
 {

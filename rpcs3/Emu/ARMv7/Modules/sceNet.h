@@ -115,8 +115,8 @@ struct SceNetEmulationParam
 	u8 reserved[44];
 };
 
-using SceNetResolverFunctionAllocate = func_def<vm::ptr<void>(u32 size, s32 rid, vm::cptr<char> name, vm::ptr<void> user)>;
-using SceNetResolverFunctionFree = func_def<void(vm::ptr<void> ptr, s32 rid, vm::cptr<char> name, vm::ptr<void> user)>;
+using SceNetResolverFunctionAllocate = vm::ptr<void>(u32 size, s32 rid, vm::cptr<char> name, vm::ptr<void> user);
+using SceNetResolverFunctionFree = void(vm::ptr<void> ptr, s32 rid, vm::cptr<char> name, vm::ptr<void> user);
 
 struct SceNetResolverParam
 {

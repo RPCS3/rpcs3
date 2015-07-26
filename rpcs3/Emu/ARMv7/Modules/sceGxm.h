@@ -29,7 +29,7 @@ enum
 	SCE_GXM_ERROR_DRIVER = 0x805B0017,
 };
 
-using SceGxmDisplayQueueCallback = func_def<void(vm::cptr<void> callbackData)>;
+using SceGxmDisplayQueueCallback = void(vm::cptr<void> callbackData);
 
 struct SceGxmInitializeParams
 {
@@ -1193,12 +1193,12 @@ struct SceGxmShaderPatcher;
 
 struct SceGxmRegisteredProgram;
 
-using SceGxmShaderPatcherHostAllocCallback = func_def<vm::ptr<void>(vm::ptr<void> userData, u32 size)>;
-using SceGxmShaderPatcherHostFreeCallback = func_def<void(vm::ptr<void> userData, vm::ptr<void> mem)>;
-using SceGxmShaderPatcherBufferAllocCallback = func_def<vm::ptr<void>(vm::ptr<void> userData, u32 size)>;
-using SceGxmShaderPatcherBufferFreeCallback = func_def<void(vm::ptr<void> userData, vm::ptr<void> mem)>;
-using SceGxmShaderPatcherUsseAllocCallback = func_def<vm::ptr<void>(vm::ptr<void> userData, u32 size, vm::ptr<u32> usseOffset)>;
-using SceGxmShaderPatcherUsseFreeCallback = func_def<void(vm::ptr<void> userData, vm::ptr<void> mem)>;
+using SceGxmShaderPatcherHostAllocCallback = vm::ptr<void>(vm::ptr<void> userData, u32 size);
+using SceGxmShaderPatcherHostFreeCallback = void(vm::ptr<void> userData, vm::ptr<void> mem);
+using SceGxmShaderPatcherBufferAllocCallback = vm::ptr<void>(vm::ptr<void> userData, u32 size);
+using SceGxmShaderPatcherBufferFreeCallback = void(vm::ptr<void> userData, vm::ptr<void> mem);
+using SceGxmShaderPatcherUsseAllocCallback = vm::ptr<void>(vm::ptr<void> userData, u32 size, vm::ptr<u32> usseOffset);
+using SceGxmShaderPatcherUsseFreeCallback = void(vm::ptr<void> userData, vm::ptr<void> mem);
 
 struct SceGxmShaderPatcherParams
 {

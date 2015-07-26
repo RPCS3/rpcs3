@@ -219,7 +219,7 @@ struct CellDmuxResource2
 	be_t<u32> shit[4];
 };
 
-using CellDmuxCbMsg = func_def<u32(u32 demuxerHandle, vm::ptr<CellDmuxMsg> demuxerMsg, u32 cbArg)>;
+using CellDmuxCbMsg = u32(u32 demuxerHandle, vm::ptr<CellDmuxMsg> demuxerMsg, u32 cbArg);
 
 struct CellDmuxCb
 {
@@ -227,7 +227,7 @@ struct CellDmuxCb
 	be_t<u32> cbArg;
 };
 
-using CellDmuxCbEsMsg = func_def<u32(u32 demuxerHandle, u32 esHandle, vm::ptr<CellDmuxEsMsg> esMsg, u32 cbArg)>;
+using CellDmuxCbEsMsg = u32(u32 demuxerHandle, u32 esHandle, vm::ptr<CellDmuxEsMsg> esMsg, u32 cbArg);
 
 struct CellDmuxEsCb
 {

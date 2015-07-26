@@ -153,6 +153,6 @@ struct SceUltUlthread
 
 CHECK_SIZE(SceUltUlthread, 256);
 
-using SceUltUlthreadEntry = func_def<s32(u32 arg)>;
+using SceUltUlthreadEntry = s32(u32 arg);
 
 extern psv_log_base sceUlt;

@@ -116,7 +116,7 @@ namespace vm
 	{
 		AT m_addr;
 
-		using type = func_def<RT(T...)>;
+		using type = RT(T...);
 
 		AT addr() const
 		{

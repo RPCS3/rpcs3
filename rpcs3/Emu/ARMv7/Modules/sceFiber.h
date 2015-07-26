@@ -1,6 +1,6 @@
 #pragma once
 
-using SceFiberEntry = func_def<void(u32 argOnInitialize, u32 argOnRun)>;
+using SceFiberEntry = void(u32 argOnInitialize, u32 argOnRun);
 
 struct set_alignment(8) SceFiber
 {

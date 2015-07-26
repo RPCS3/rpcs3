@@ -80,7 +80,7 @@ enum
 	CELL_SYSUTIL_SYSCHAT_VOICE_STREAMING_PAUSED  = 0x0164,
 };
 
-using CellSysutilCallback = func_def<void(u64 status, u64 param, vm::ptr<void> userdata)>;
+using CellSysutilCallback = void(u64 status, u64 param, vm::ptr<void> userdata);
 
 void sysutilSendSystemCommand(u64 status, u64 param);
 
@@ -154,15 +154,15 @@ enum
 	CELL_SYSCACHE_ERROR_NOTMOUNTED    = 0x8002bc04, // We don't really need to simulate the mounting, so this is probably useless
 };
 
-using CellWebBrowserCallback = func_def<void(s32 cb_type, vm::ptr<void> client_session, vm::ptr<void> usrdata)>;
-using CellWebComponentCallback = func_def<void(s32 web_browser_id, s32 cb_type, vm::ptr<void> client_session, vm::ptr<void> usrdata)>;
-using CellWebBrowserSystemCallback = func_def<void(s32 cb_type, vm::ptr<void> usrdata)>;
+using CellWebBrowserCallback = void(s32 cb_type, vm::ptr<void> client_session, vm::ptr<void> usrdata);
+using CellWebComponentCallback = void(s32 web_browser_id, s32 cb_type, vm::ptr<void> client_session, vm::ptr<void> usrdata);
+using CellWebBrowserSystemCallback = void(s32 cb_type, vm::ptr<void> usrdata);
 
-using CellWebBrowserMIMETypeCallback = func_def<void(vm::cptr<char> mimetype, vm::cptr<char> url, vm::ptr<void> usrdata)>;
-using CellWebBrowserErrorCallback = func_def<void(s32 err_type, vm::ptr<void> usrdata)>;
-using CellWebBrowserStatusCallback = func_def<void(s32 err_type, vm::ptr<void> usrdata)>;
-using CellWebBrowserNotify = func_def<void(vm::cptr<char> message, vm::ptr<void> usrdata)>;
-using CellWebBrowserUsrdata = func_def<void(vm::ptr<void> usrdata)>;
+using CellWebBrowserMIMETypeCallback = void(vm::cptr<char> mimetype, vm::cptr<char> url, vm::ptr<void> usrdata);
+using CellWebBrowserErrorCallback = void(s32 err_type, vm::ptr<void> usrdata);
+using CellWebBrowserStatusCallback = void(s32 err_type, vm::ptr<void> usrdata);
+using CellWebBrowserNotify = void(vm::cptr<char> message, vm::ptr<void> usrdata);
+using CellWebBrowserUsrdata = void(vm::ptr<void> usrdata);
 
 struct CellWebBrowserMimeSet
 {

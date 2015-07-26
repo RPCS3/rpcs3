@@ -42,6 +42,6 @@ struct SceNetCtlAdhocPeerInfo
 	SceNetInAddr inet_addr;
 };
 
-using SceNetCtlCallback = func_def<void(s32 event_type, vm::ptr<void> arg)>;
+using SceNetCtlCallback = void(s32 event_type, vm::ptr<void> arg);
 
 extern psv_log_base sceNetCtl;

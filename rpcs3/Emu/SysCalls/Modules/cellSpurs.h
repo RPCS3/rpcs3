@@ -317,7 +317,7 @@ struct set_alignment(8) CellSpursAttribute
 
 CHECK_SIZE_ALIGN(CellSpursAttribute, 512, 8);
 
-using CellSpursShutdownCompletionEventHook = func_def<void(vm::ptr<CellSpurs> spurs, u32 wid, vm::ptr<void> arg)>;
+using CellSpursShutdownCompletionEventHook = void(vm::ptr<CellSpurs> spurs, u32 wid, vm::ptr<void> arg);
 
 struct set_alignment(16) CellSpursTraceInfo
 {
@@ -428,7 +428,7 @@ struct set_alignment(128) CellSpurs
 
 	struct EventPortMux;
 
-	using EventHandlerCallback = func_def<void(vm::ptr<EventPortMux>, u64 data)>;
+	using EventHandlerCallback = void(vm::ptr<EventPortMux>, u64 data);
 
 	struct EventHandlerListNode
 	{
@@ -588,7 +588,7 @@ struct CellSpursExceptionInfo
 };
 
 // Exception handler
-using CellSpursGlobalExceptionEventHandler = func_def<void(vm::ptr<CellSpurs> spurs, vm::cptr<CellSpursExceptionInfo> info, u32 id, vm::ptr<void> arg)>;
+using CellSpursGlobalExceptionEventHandler = void(vm::ptr<CellSpurs> spurs, vm::cptr<CellSpursExceptionInfo> info, u32 id, vm::ptr<void> arg);
 
 struct CellSpursWorkloadAttribute
 {
@@ -678,7 +678,7 @@ struct set_alignment(16) CellSpursTaskAttribute2
 CHECK_SIZE_ALIGN(CellSpursTaskAttribute2, 256, 16);
 
 // Exception handler
-using CellSpursTasksetExceptionEventHandler = func_def<void(vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursTaskset> taskset, u32 idTask, vm::cptr<CellSpursExceptionInfo> info, vm::ptr<void> arg)>;
+using CellSpursTasksetExceptionEventHandler = void(vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursTaskset> taskset, u32 idTask, vm::cptr<CellSpursExceptionInfo> info, vm::ptr<void> arg);
 
 struct set_alignment(128) CellSpursTaskExitCode
 {
