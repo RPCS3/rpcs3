@@ -181,7 +181,7 @@ namespace vm
 		const u32 size; // total size
 		const u64 flags; // currently unused
 
-		atomic_t<u32> used{}; // amount of memory used, may be increased manually prevent some memory from allocating
+		atomic_t<u32> used{}; // amount of memory used, may be increased manually to prevent some memory from allocating
 
 		// Search and map memory (don't pass alignment smaller than 4096)
 		u32 alloc(u32 size, u32 align = 4096);

@@ -80,6 +80,8 @@ namespace vm
 	std::array<atomic_t<u8>, 0x100000000ull / 4096> g_pages = {}; // information about every page
 
 	const thread_ctrl_t* const INVALID_THREAD = reinterpret_cast<const thread_ctrl_t*>(~0ull);
+	
+	//using reservation_mutex_t = std::mutex;
 
 	class reservation_mutex_t
 	{

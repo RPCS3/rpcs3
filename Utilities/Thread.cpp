@@ -109,15 +109,14 @@ enum x64_op_t : u32
 	X64OP_NONE,
 	X64OP_LOAD, // obtain and put the value into x64 register
 	X64OP_STORE, // take the value from x64 register or an immediate and use it
-
-	// example: add eax,[rax] -> X64OP_LOAD_ADD (add the value to x64 register)
-	// example: add [rax],eax -> X64OP_LOAD_ADD_STORE (this will probably never happen for MMIO registers)
-
 	X64OP_MOVS,
 	X64OP_STOS,
 	X64OP_XCHG,
 	X64OP_CMPXCHG,
 	X64OP_LOAD_AND_STORE, // lock and [mem],reg
+	X64OP_LOAD_OR_STORE, // TODO: lock or [mem], reg
+	X64OP_INC, // TODO: lock inc [mem]
+	X64OP_DEC, // TODO: lock dec [mem]
 };
 
 void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, size_t& out_size, size_t& out_length)
@@ -272,6 +271,18 @@ void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, siz
 
 		switch (op2)
 		{
+		case 0x11:
+		{
+			if (!repe && !repne && !oso) // MOVUPS xmm/m, xmm
+			{
+				out_op = X64OP_STORE;
+				out_reg = get_modRM_reg_xmm(code, rex);
+				out_size = 16;
+				out_length += get_modRM_size(code);
+				return;
+			}
+			break;
+		}
 		case 0x7f:
 		{
 			if ((repe && !oso) || (!repe && oso)) // MOVDQU/MOVDQA xmm/m, xmm
