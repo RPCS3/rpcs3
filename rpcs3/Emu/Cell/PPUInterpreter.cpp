@@ -2488,7 +2488,7 @@ void ppu_interpreter::LVLX(PPUThread& CPU, ppu_opcode_t op)
 void ppu_interpreter::LDBRX(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? CPU.GPR[op.ra] + CPU.GPR[op.rb] : CPU.GPR[op.rb];
-	CPU.GPR[op.rd] = vm::get_ref<u64>(VM_CAST(addr));
+	CPU.GPR[op.rd] = vm::get_ref<le_t<u64>>(VM_CAST(addr));
 }
 
 void ppu_interpreter::LSWX(PPUThread& CPU, ppu_opcode_t op)
@@ -2514,7 +2514,7 @@ void ppu_interpreter::LSWX(PPUThread& CPU, ppu_opcode_t op)
 void ppu_interpreter::LWBRX(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? CPU.GPR[op.ra] + CPU.GPR[op.rb] : CPU.GPR[op.rb];
-	CPU.GPR[op.rd] = vm::get_ref<u32>(VM_CAST(addr));
+	CPU.GPR[op.rd] = vm::get_ref<le_t<u32>>(VM_CAST(addr));
 }
 
 void ppu_interpreter::LFSX(PPUThread& CPU, ppu_opcode_t op)
@@ -2619,7 +2619,7 @@ void ppu_interpreter::STVLX(PPUThread& CPU, ppu_opcode_t op)
 void ppu_interpreter::STDBRX(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? CPU.GPR[op.ra] + CPU.GPR[op.rb] : CPU.GPR[op.rb];
-	vm::get_ref<u64>(VM_CAST(addr)) = CPU.GPR[op.rs];
+	vm::get_ref<le_t<u64>>(VM_CAST(addr)) = CPU.GPR[op.rs];
 }
 
 void ppu_interpreter::STSWX(PPUThread& CPU, ppu_opcode_t op)
@@ -2644,7 +2644,7 @@ void ppu_interpreter::STSWX(PPUThread& CPU, ppu_opcode_t op)
 void ppu_interpreter::STWBRX(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? CPU.GPR[op.ra] + CPU.GPR[op.rb] : CPU.GPR[op.rb];
-	vm::get_ref<u32>(VM_CAST(addr)) = (u32)CPU.GPR[op.rs];
+	vm::get_ref<le_t<u32>>(VM_CAST(addr)) = (u32)CPU.GPR[op.rs];
 }
 
 void ppu_interpreter::STFSX(PPUThread& CPU, ppu_opcode_t op)
@@ -2722,7 +2722,7 @@ void ppu_interpreter::LVLXL(PPUThread& CPU, ppu_opcode_t op)
 void ppu_interpreter::LHBRX(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? CPU.GPR[op.ra] + CPU.GPR[op.rb] : CPU.GPR[op.rb];
-	CPU.GPR[op.rd] = vm::get_ref<u16>(VM_CAST(addr));
+	CPU.GPR[op.rd] = vm::get_ref<le_t<u16>>(VM_CAST(addr));
 }
 
 void ppu_interpreter::SRAW(PPUThread& CPU, ppu_opcode_t op)
@@ -2809,7 +2809,7 @@ void ppu_interpreter::STVLXL(PPUThread& CPU, ppu_opcode_t op)
 void ppu_interpreter::STHBRX(PPUThread& CPU, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? CPU.GPR[op.ra] + CPU.GPR[op.rb] : CPU.GPR[op.rb];
-	vm::get_ref<u16>(VM_CAST(addr)) = (u16)CPU.GPR[op.rs];
+	vm::get_ref<le_t<u16>>(VM_CAST(addr)) = (u16)CPU.GPR[op.rs];
 }
 
 void ppu_interpreter::EXTSH(PPUThread& CPU, ppu_opcode_t op)

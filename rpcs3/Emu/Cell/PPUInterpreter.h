@@ -3072,7 +3072,7 @@ private:
 	void LDBRX(u32 rd, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		CPU.GPR[rd] = vm::get_ref<u64>(VM_CAST(addr));
+		CPU.GPR[rd] = vm::get_ref<le_t<u64>>(VM_CAST(addr));
 	}
 	void LSWX(u32 rd, u32 ra, u32 rb)
 	{
@@ -3096,7 +3096,7 @@ private:
 	void LWBRX(u32 rd, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		CPU.GPR[rd] = vm::get_ref<u32>(VM_CAST(addr));
+		CPU.GPR[rd] = vm::get_ref<le_t<u32>>(VM_CAST(addr));
 	}
 	void LFSX(u32 frd, u32 ra, u32 rb)
 	{
@@ -3208,7 +3208,7 @@ private:
 	void STDBRX(u32 rs, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		vm::get_ref<u64>(VM_CAST(addr)) = CPU.GPR[rs];
+		vm::get_ref<le_t<u64>>(VM_CAST(addr)) = CPU.GPR[rs];
 	}
 	void STSWX(u32 rs, u32 ra, u32 rb)
 	{
@@ -3231,7 +3231,7 @@ private:
 	void STWBRX(u32 rs, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		vm::get_ref<u32>(VM_CAST(addr)) = (u32)CPU.GPR[rs];
+		vm::get_ref<le_t<u32>>(VM_CAST(addr)) = (u32)CPU.GPR[rs];
 	}
 	void STFSX(u32 frs, u32 ra, u32 rb)
 	{
@@ -3321,7 +3321,7 @@ private:
 	void LHBRX(u32 rd, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		CPU.GPR[rd] = vm::get_ref<u16>(VM_CAST(addr));
+		CPU.GPR[rd] = vm::get_ref<le_t<u16>>(VM_CAST(addr));
 	}
 	void SRAW(u32 ra, u32 rs, u32 rb, u32 rc)
 	{
@@ -3402,7 +3402,7 @@ private:
 	void STHBRX(u32 rs, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		vm::get_ref<u16>(VM_CAST(addr)) = (u16)CPU.GPR[rs];
+		vm::get_ref<le_t<u16>>(VM_CAST(addr)) = (u16)CPU.GPR[rs];
 	}
 	void EXTSH(u32 ra, u32 rs, u32 rc)
 	{
