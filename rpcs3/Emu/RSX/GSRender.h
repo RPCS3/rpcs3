@@ -17,7 +17,6 @@ struct GSRender : public RSXThread
 enum GSLockType
 {
 	GS_LOCK_NOT_WAIT,
-	GS_LOCK_WAIT_FLUSH,
 	GS_LOCK_WAIT_FLIP,
 };
 

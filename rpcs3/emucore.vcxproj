@@ -30,7 +30,7 @@
     <ClCompile Include="..\Utilities\rPlatform.cpp" />
     <ClCompile Include="..\Utilities\rTime.cpp" />
     <ClCompile Include="..\Utilities\rXml.cpp" />
-    <ClCompile Include="..\Utilities\SSemaphore.cpp" />
+    <ClCompile Include="..\Utilities\Semaphore.cpp" />
     <ClCompile Include="..\Utilities\StrFmt.cpp" />
     <ClCompile Include="..\Utilities\Thread.cpp" />
     <ClCompile Include="Emu\Cell\PPUInterpreter.cpp" />
@@ -318,9 +318,9 @@
     <ClInclude Include="..\Utilities\rPlatform.h" />
     <ClInclude Include="..\Utilities\rTime.h" />
     <ClInclude Include="..\Utilities\rXml.h" />
+    <ClInclude Include="..\Utilities\Semaphore.h" />
     <ClInclude Include="..\Utilities\simpleini\ConvertUTF.h" />
     <ClInclude Include="..\Utilities\simpleini\SimpleIni.h" />
-    <ClInclude Include="..\Utilities\SSemaphore.h" />
     <ClInclude Include="..\Utilities\StrFmt.h" />
     <ClInclude Include="..\Utilities\Thread.h" />
     <ClInclude Include="..\Utilities\Timer.h" />

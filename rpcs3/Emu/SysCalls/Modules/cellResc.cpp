@@ -17,7 +17,7 @@ extern void cellGcmSetFlipHandler(vm::ptr<void(u32)> handler);
 extern void cellGcmSetVBlankHandler(vm::ptr<void(u32)> handler);
 extern s32 cellGcmAddressToOffset(u32 address, vm::ptr<u32> offset);
 extern s32 cellGcmSetDisplayBuffer(u32 id, u32 offset, u32 pitch, u32 width, u32 height);
-extern s32 cellGcmSetPrepareFlip(PPUThread& CPU, vm::ptr<CellGcmContextData> ctx, u32 id);
+extern s32 cellGcmSetPrepareFlip(PPUThread& ppu, vm::ptr<CellGcmContextData> ctx, u32 id);
 extern s32 cellGcmSetSecondVFrequency(u32 freq);
 extern u32 cellGcmGetLabelAddress(u8 index);
 extern u32 cellGcmGetTiledPitchSize(u32 size);
@@ -467,7 +467,6 @@ void InitMembers()
 void SetupRsxRenderingStates(vm::ptr<CellGcmContextData>& cntxt)
 {
 	//TODO: use cntxt
-	GSLockCurrent lock(GS_LOCK_WAIT_FLUSH);
 	GSRender& r = Emu.GetGSManager().GetRender();
 	r.m_set_color_mask = true; r.m_color_mask_a = r.m_color_mask_r = r.m_color_mask_g = r.m_color_mask_b = true;
 	r.m_set_depth_mask = true; r.m_depth_mask = 0;
@@ -514,7 +513,6 @@ void SetupRsxRenderingStates(vm::ptr<CellGcmContextData>& cntxt)
 
 void SetupVertexArrays(vm::ptr<CellGcmContextData>& cntxt)
 {
-	GSLockCurrent lock(GS_LOCK_WAIT_FLUSH);
 	GSRender& r = Emu.GetGSManager().GetRender();
 	
 	//TODO
@@ -538,7 +536,6 @@ void SetupSurfaces(vm::ptr<CellGcmContextData>& cntxt)
 		dstOffset1 = s_rescInternalInstance->m_dstOffsets[s_rescInternalInstance->m_bufIdPalMidNow];
 	}
 
-	GSLockCurrent lock(GS_LOCK_WAIT_FLUSH);
 	GSRender& r = Emu.GetGSManager().GetRender();
 
 	r.m_surface_type = CELL_GCM_SURFACE_PITCH;
@@ -1023,8 +1020,9 @@ s32 cellRescSetConvertAndFlip(PPUThread& CPU, vm::ptr<CellGcmContextData> cntxt,
 
 s32 cellRescSetWaitFlip()
 {
-	cellResc.Log("cellRescSetWaitFlip()");
-	GSLockCurrent lock(GS_LOCK_WAIT_FLIP);
+	cellResc.Warning("cellRescSetWaitFlip()");
+	
+	// TODO: emit RSX command for "wait flip" operation
 
 	return CELL_OK;
 }

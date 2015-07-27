@@ -476,9 +476,6 @@
     <ClCompile Include="Emu\SysCalls\Modules\sys_http.cpp">
       <Filter>Emu\SysCalls\currently_unused</Filter>
     </ClCompile>
-    <ClCompile Include="..\Utilities\SSemaphore.cpp">
-      <Filter>Utilities</Filter>
-    </ClCompile>
     <ClCompile Include="Emu\SysCalls\lv2\sys_process.cpp">
       <Filter>Emu\SysCalls\lv2</Filter>
     </ClCompile>
@@ -884,6 +881,9 @@
     <ClCompile Include="Emu\SysCalls\Modules\sceNpUtil.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="..\Utilities\Semaphore.cpp">
+      <Filter>Utilities</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -1266,9 +1266,6 @@
     </ClInclude>
     <ClInclude Include="Emu\Event.h">
       <Filter>Emu\SysCalls</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Utilities\SSemaphore.h">
-      <Filter>Utilities</Filter>
     </ClInclude>
     <ClInclude Include="Emu\SysCalls\lv2\sys_process.h">
       <Filter>Emu\SysCalls\lv2</Filter>
@@ -1737,6 +1734,9 @@
     </ClInclude>
     <ClInclude Include="Emu\SysCalls\Modules\sceNpUtil.h">
       <Filter>Emu\SysCalls\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utilities\Semaphore.h">
+      <Filter>Utilities</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
