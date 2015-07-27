@@ -40,7 +40,7 @@ before_install:
   - download_extract() { aria2c -x 16 $1 -o $2 && tar -xf $2; }
   - if [ "$CXX" = "g++" ]; then
       sudo apt-get install -qq g++-4.9;
-      export CXX="g++-4.9" CC="gcc-4.9";
+      export CXX="g++-4.9" CC="gcc-4.9" CXXFLAGS="-Wno-format-security";
       export GCC_COLORS='error=01;31:warning=01;35:note=01;36:caret=01;32:locus=01:quote=01';
     else
       sudo apt-get install -qq --allow-unauthenticated clang-3.6 libstdc++-4.8-dev;
