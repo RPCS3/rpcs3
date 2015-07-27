@@ -25,6 +25,11 @@ public:
 
 	void Init()
 	{
+		on_load = nullptr;
+		on_unload = nullptr;
+		on_stop = nullptr;
+		on_error = nullptr;
+
 		m_init();
 	}
 

@@ -99,6 +99,7 @@ public:
 	std::function<void()> on_load;
 	std::function<void()> on_unload;
 	std::function<void()> on_stop;
+	std::function<void(s64 value, ModuleFunc* func)> on_error;
 
 	void Init();
 	void Load();

@@ -198,6 +198,12 @@ void execute_ppu_func_by_index(PPUThread& CPU, u32 index)
 			CPU.PC = VM_CAST(CPU.LR & ~3) - 4;
 		}
 
+		// execute module-specific error check
+		if ((s64)CPU.GPR[3] < 0 && func->module && func->module->on_error)
+		{
+			func->module->on_error(CPU.GPR[3], func);
+		}
+
 		CPU.hle_code = last_code;
 	}
 	else
@@ -610,6 +616,11 @@ Module::~Module()
 
 void Module::Init()
 {
+	on_load = nullptr;
+	on_unload = nullptr;
+	on_stop = nullptr;
+	on_error = nullptr;
+
 	m_init();
 }
 

@@ -1596,6 +1596,41 @@ s32 _cellSyncLFQueueDetachLv2EventQueue(vm::ptr<u32> spus, u32 num, vm::ptr<Cell
 
 Module cellSync("cellSync", []()
 {
+	// setup error handler
+	cellSync.on_error = [](s64 value, ModuleFunc* func)
+	{
+		// get error name for CELL_SYNC errors
+		auto get_error = [](s32 code) -> const char*
+		{
+			switch (code)
+			{
+			case CELL_SYNC_ERROR_AGAIN:   return "CELL_SYNC_ERROR_AGAIN";
+			case CELL_SYNC_ERROR_INVAL:   return "CELL_SYNC_ERROR_INVAL";
+			case CELL_SYNC_ERROR_NOSYS:   return "CELL_SYNC_ERROR_NOSYS";
+			case CELL_SYNC_ERROR_NOMEM:   return "CELL_SYNC_ERROR_NOMEM";
+			case CELL_SYNC_ERROR_SRCH:    return "CELL_SYNC_ERROR_SRCH";
+			case CELL_SYNC_ERROR_NOENT:   return "CELL_SYNC_ERROR_NOENT";
+			case CELL_SYNC_ERROR_NOEXEC:  return "CELL_SYNC_ERROR_NOEXEC";
+			case CELL_SYNC_ERROR_DEADLK:  return "CELL_SYNC_ERROR_DEADLK";
+			case CELL_SYNC_ERROR_PERM:    return "CELL_SYNC_ERROR_PERM";
+			case CELL_SYNC_ERROR_BUSY:    return "CELL_SYNC_ERROR_BUSY";
+			case CELL_SYNC_ERROR_ABORT:   return "CELL_SYNC_ERROR_ABORT";
+			case CELL_SYNC_ERROR_FAULT:   return "CELL_SYNC_ERROR_FAULT";
+			case CELL_SYNC_ERROR_CHILD:   return "CELL_SYNC_ERROR_CHILD";
+			case CELL_SYNC_ERROR_STAT:    return "CELL_SYNC_ERROR_STAT";
+			case CELL_SYNC_ERROR_ALIGN:   return "CELL_SYNC_ERROR_ALIGN";
+			}
+
+			return "???";
+		};
+
+		// analyse error code
+		if (s32 code = (value & 0xffffff00) == 0x80410100 ? static_cast<s32>(value) : 0)
+		{
+			cellSync.Error("%s() -> %s (0x%x)", func->name, get_error(code), code);
+		}
+	};
+
 	REG_FUNC(cellSync, cellSyncMutexInitialize);
 	REG_FUNC(cellSync, cellSyncMutexLock);
 	REG_FUNC(cellSync, cellSyncMutexTryLock);
