@@ -152,7 +152,7 @@ namespace vm
 
 	std::mutex g_waiter_list_mutex;
 
-	waiter_t* _add_waiter(CPUThread& thread, u32 addr, u32 size)
+	waiter_t* _add_waiter(thread_t& thread, u32 addr, u32 size)
 	{
 		std::lock_guard<std::mutex> lock(g_waiter_list_mutex);
 
@@ -242,25 +242,18 @@ namespace vm
 		addr = 0;
 		mask = ~0;
 
-		// signal thread (must not be signaled yet)
-		if (!thread->signal())
-		{
-			throw EXCEPTION("Thread already signaled");
-		}
+		// signal thread
+		thread->cv.notify_one();
 
 		return true;
 	}
 
-	waiter_lock_t::waiter_lock_t(CPUThread& thread, u32 addr, u32 size)
-		: m_waiter(_add_waiter(thread, addr, size))
-		, m_lock(thread.mutex, std::adopt_lock) // must be locked in _add_waiter
-	{
-	}
-
 	void waiter_lock_t::wait()
 	{
-		while (!m_waiter->thread->unsignal())
+		// if another thread successfully called pred(), it must be set to null
+		while (m_waiter->pred)
 		{
+			// if pred() called by another thread threw an exception, it'll be rethrown
 			if (m_waiter->pred())
 			{
 				return;
@@ -269,15 +262,6 @@ namespace vm
 			CHECK_EMU_STATUS;
 
 			m_waiter->thread->cv.wait(m_lock);
-		}
-
-		// if another thread successfully called pred(), it must be set to null
-		if (m_waiter->pred)
-		{
-			// if pred() called by another thread threw an exception, rethrow it
-			m_waiter->pred();
-
-			throw EXCEPTION("Unexpected");
 		}
 	}	
 
