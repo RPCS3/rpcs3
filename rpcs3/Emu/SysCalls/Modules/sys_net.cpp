@@ -364,8 +364,7 @@ namespace sys_net_func
 
 	s32 socketselect(s32 nfds, vm::ptr<sys_net_fd_set> readfds, vm::ptr<sys_net_fd_set> writefds, vm::ptr<sys_net_fd_set> exceptfds, vm::ptr<sys_net_timeval> timeout)
 	{
-		sys_net.Warning("socketselect(nfds=%d, readfds_addr=0x%x, writefds_addr=0x%x, exceptfds_addr=0x%x, timeout_addr=0x%x)",
-			nfds, readfds.addr(), writefds.addr(), exceptfds.addr(), timeout.addr());
+		sys_net.Warning("socketselect(nfds=%d, readfds=*0x%x, writefds=*0x%x, exceptfds=*0x%x, timeout=*0x%x)", nfds, readfds, writefds, exceptfds, timeout);
 
 		timeval _timeout;
 

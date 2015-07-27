@@ -64,7 +64,7 @@ s32 sceNpMatching2Init(u32 poolsize, s32 priority)
 
 s32 sceNpMatching2Init2(u32 poolsize, s32 priority, vm::ptr<SceNpMatching2UtilityInitParam> param)
 {
-	sceNp2.Todo("sceNpMatching2Init2(poolsize=%d, priority=%d, param_addr=0x%x)", poolsize, priority, param.addr());
+	sceNp2.Todo("sceNpMatching2Init2(poolsize=%d, priority=%d, param=*0x%x)", poolsize, priority, param);
 
 	if (!g_sceNp2->m_bSceNp2Initialized)
 	{

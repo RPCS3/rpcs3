@@ -77,10 +77,10 @@ enum
 	CELL_RUDP_POLL_EV_ERROR = 0x0008,
 };
 
-typedef s32(CellRudpEventHandler)(s32 event_id, s32 soc, vm::cptr<u8> data, u32 datalen, vm::cptr<sys_net_sockaddr> addr, u32 addrlen, vm::ptr<u32> arg);
+using CellRudpEventHandler = s32(s32 event_id, s32 soc, vm::cptr<u8> data, u32 datalen, vm::cptr<sys_net_sockaddr> addr, u32 addrlen, vm::ptr<void> arg);
 
-using CellRudpAllocatorFuncAlloc = vm::ptr<u32>(u32 size);
-using CellRudpAllocatorFuncFree = u32(vm::ptr<u32> ptr);
+using CellRudpAllocatorFuncAlloc = vm::ptr<void>(u32 size);
+using CellRudpAllocatorFuncFree = void(vm::ptr<void> ptr);
 
 struct CellRudpAllocator
 {

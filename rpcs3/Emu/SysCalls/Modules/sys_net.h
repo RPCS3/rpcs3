@@ -38,6 +38,6 @@ struct sys_net_fd_set
 
 struct sys_net_timeval
 {
-	be_t<s32> tv_sec;
-	be_t<s32> tv_usec;
+	be_t<s64> tv_sec;
+	be_t<s64> tv_usec;
 };

@@ -324,7 +324,7 @@ s32 process_get_sdk_version(u32 pid, s32& ver)
 
 s32 sys_process_get_sdk_version(u32 pid, vm::ptr<s32> version)
 {
-	sys_process.Warning("sys_process_get_sdk_version(pid=0x%x, version_addr=0x%x)", pid, version.addr());
+	sys_process.Warning("sys_process_get_sdk_version(pid=0x%x, version=*0x%x)", pid, version);
 
 	s32 sdk_ver;
 	s32 ret = process_get_sdk_version(pid, sdk_ver);
@@ -347,8 +347,8 @@ s32 sys_process_kill(u32 pid)
 
 s32 sys_process_wait_for_child(u32 pid, vm::ptr<u32> status, u64 unk)
 {
-	sys_process.Todo("sys_process_wait_for_child(pid=0x%x, status_addr=0x%x, unk=0x%llx",
-		pid, status.addr(), unk);
+	sys_process.Todo("sys_process_wait_for_child(pid=0x%x, status=*0x%x, unk=0x%llx", pid, status, unk);
+
 	return CELL_OK;
 }
 

@@ -1097,17 +1097,16 @@ struct CellSailPlayerResource
 
 struct CellSailPlayer
 {
-	vm::ptr<CellSailMemAllocator> allocator;
+	CellSailMemAllocator allocator;
 	vm::ptr<CellSailPlayerFuncNotified> callback;
-	be_t<u64> callbackArgument;
-	vm::ptr<CellSailPlayerAttribute> attribute;
-	vm::ptr<CellSailPlayerResource> resource;
+	vm::ptr<void> callbackArg;
+	CellSailPlayerAttribute attribute;
+	CellSailPlayerResource resource;
 	vm::ptr<CellSailStartCommand> playbackCommand;
-	be_t<s32> repeatMode;
-	be_t<s32> descriptors;
+	s32 repeatMode;
+	s32 descriptors;
 	vm::ptr<CellSailDescriptor> registeredDescriptors[2];
-	bool paused = true;
-	be_t<u64> internalData[26];
+	bool paused;
 };
 
-CHECK_SIZE(CellSailPlayer, 0x100);
+CHECK_MAX_SIZE(CellSailPlayer, 0x100);

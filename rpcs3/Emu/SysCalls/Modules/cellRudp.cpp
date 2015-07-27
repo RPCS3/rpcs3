@@ -8,52 +8,71 @@
 
 extern Module cellRudp;
 
-struct cellRudpInternal
+struct RudpInternal
 {
-	bool m_bInitialized;
-	CellRudpAllocator allocator;
+	std::atomic<bool> init;
+
+	// allocator functions
+	std::function<vm::ptr<void>(PPUThread& ppu, u32 size)> malloc;
+	std::function<void(PPUThread& ppu, vm::ptr<void> ptr)> free;
+
+	// event handler function
 	vm::ptr<CellRudpEventHandler> handler;
-	u32 argument;
-
-	cellRudpInternal()
-		: m_bInitialized(false)
-	{
-	}
-};
-
-cellRudpInternal cellRudpInstance;
+	vm::ptr<void> handler_arg;
+}
+g_rudp;
 
 s32 cellRudpInit(vm::ptr<CellRudpAllocator> allocator)
 {
-	cellRudp.Warning("cellRudpInit(allocator_addr=0x%x)", allocator.addr());
+	cellRudp.Warning("cellRudpInit(allocator=*0x%x)", allocator);
 
-	if (cellRudpInstance.m_bInitialized)
+	if (g_rudp.init.load())
 	{
-		cellRudp.Error("cellRudpInit(): cellRudp has already been initialized.");
 		return CELL_RUDP_ERROR_ALREADY_INITIALIZED;
 	}
 
 	if (allocator)
 	{
-		cellRudpInstance.allocator = *allocator.get_ptr();
+		g_rudp.malloc = allocator->app_malloc;
+		g_rudp.free = allocator->app_free;
+	}
+	else
+	{
+		g_rudp.malloc = [](PPUThread& ppu, u32 size)
+		{
+			return vm::ptr<void>::make(vm::alloc(size, vm::main));
+		};
+
+		g_rudp.free = [](PPUThread& ppu, vm::ptr<void> ptr)
+		{
+			if (!vm::dealloc(ptr.addr(), vm::main))
+			{
+				throw EXCEPTION("Memory deallocation failed (ptr=0x%x)", ptr);
+			}
+		};
 	}
 
-	cellRudpInstance.m_bInitialized = true;
+	if (g_rudp.init.exchange(true))
+	{
+		throw EXCEPTION("Unexpected");
+	}
 
 	return CELL_OK;
 }
 
 s32 cellRudpEnd()
 {
-	cellRudp.Log("cellRudpEnd()");
+	cellRudp.Warning("cellRudpEnd()");
 
-	if (!cellRudpInstance.m_bInitialized)
+	if (!g_rudp.init.load())
 	{
-		cellRudp.Error("cellRudpEnd(): cellRudp has not been initialized.");
 		return CELL_RUDP_ERROR_NOT_INITIALIZED;
 	}
 
-	cellRudpInstance.m_bInitialized = false;
+	if (!g_rudp.init.exchange(false))
+	{
+		throw EXCEPTION("Unexpected");
+	}
 
 	return CELL_OK;
 }
@@ -64,22 +83,17 @@ s32 cellRudpEnableInternalIOThread()
 	return CELL_OK;
 }
 
-s32 cellRudpSetEventHandler(vm::ptr<CellRudpEventHandler> handler, vm::ptr<u32> arg)
+s32 cellRudpSetEventHandler(vm::ptr<CellRudpEventHandler> handler, vm::ptr<void> arg)
 {
-	cellRudp.Todo("cellRudpSetEventHandler(handler=0x%x, arg_addr=0x%x)", handler, arg.addr());
+	cellRudp.Todo("cellRudpSetEventHandler(handler=*0x%x, arg=*0x%x)", handler, arg);
 
-	if (!cellRudpInstance.m_bInitialized)
+	if (!g_rudp.init.load())
 	{
-		cellRudp.Error("cellRudpInit(): cellRudp has not been initialized.");
 		return CELL_RUDP_ERROR_NOT_INITIALIZED;
 	}
 
-	if (arg)
-	{
-		cellRudpInstance.argument = *arg.get_ptr();
-	}
-
-	cellRudpInstance.handler = handler;
+	g_rudp.handler = handler;
+	g_rudp.handler_arg = arg;
 
 	return CELL_OK;
 }
@@ -216,6 +230,12 @@ s32 cellRudpPollWait()
 	return CELL_OK;
 }
 
+s32 cellRudpPollCancel()
+{
+	UNIMPLEMENTED_FUNC(cellRudp);
+	return CELL_OK;
+}
+
 s32 cellRudpNetReceived()
 {
 	UNIMPLEMENTED_FUNC(cellRudp);
@@ -230,7 +250,7 @@ s32 cellRudpProcessEvents()
 
 Module cellRudp("cellRudp", []()
 {
-	cellRudpInstance.m_bInitialized = false;
+	g_rudp.init = false;
 
 	REG_FUNC(cellRudp, cellRudpInit);
 	REG_FUNC(cellRudp, cellRudpEnd);
@@ -263,7 +283,7 @@ Module cellRudp("cellRudp", []()
 	REG_FUNC(cellRudp, cellRudpPollDestroy);
 	REG_FUNC(cellRudp, cellRudpPollControl);
 	REG_FUNC(cellRudp, cellRudpPollWait);
-	//REG_FUNC(cellRudp, cellRudpPollCancel);
+	REG_FUNC(cellRudp, cellRudpPollCancel);
 
 	REG_FUNC(cellRudp, cellRudpNetReceived);
 	REG_FUNC(cellRudp, cellRudpProcessEvents);

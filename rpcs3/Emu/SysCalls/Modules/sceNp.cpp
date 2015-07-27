@@ -129,28 +129,28 @@ s32 npDrmIsAvailable(u32 k_licensee_addr, vm::cptr<char> drm_path)
 
 s32 sceNpDrmIsAvailable(u32 k_licensee_addr, vm::cptr<char> drm_path)
 {
-	sceNp.Warning("sceNpDrmIsAvailable(k_licensee_addr=0x%x, drm_path_addr=0x%x('%s'))", k_licensee_addr, drm_path.addr(), drm_path.get_ptr());
+	sceNp.Warning("sceNpDrmIsAvailable(k_licensee=*0x%x, drm_path=*0x%x)", k_licensee_addr, drm_path);
 
 	return npDrmIsAvailable(k_licensee_addr, drm_path);
 }
 
 s32 sceNpDrmIsAvailable2(u32 k_licensee_addr, vm::cptr<char> drm_path)
 {
-	sceNp.Warning("sceNpDrmIsAvailable2(k_licensee_addr=0x%x, drm_path_addr=0x%x('%s'))", k_licensee_addr, drm_path.addr(), drm_path.get_ptr());
+	sceNp.Warning("sceNpDrmIsAvailable2(k_licensee=*0x%x, drm_path=*0x%x)", k_licensee_addr, drm_path);
 
 	return npDrmIsAvailable(k_licensee_addr, drm_path);
 }
 
 s32 sceNpDrmVerifyUpgradeLicense(vm::cptr<char> content_id)
 {
-	sceNp.Todo("sceNpDrmVerifyUpgradeLicense(content_id_addr=0x%x)", content_id.addr());
+	sceNp.Todo("sceNpDrmVerifyUpgradeLicense(content_id=*0x%x)", content_id);
 
 	return CELL_OK;
 }
 
 s32 sceNpDrmVerifyUpgradeLicense2(vm::cptr<char> content_id)
 {
-	sceNp.Todo("sceNpDrmVerifyUpgradeLicense2(content_id_addr=0x%x)", content_id.addr());
+	sceNp.Todo("sceNpDrmVerifyUpgradeLicense2(content_id=*0x%x)", content_id);
 
 	return CELL_OK;
 }
@@ -163,7 +163,7 @@ s32 sceNpDrmExecuteGamePurchase()
 
 s32 sceNpDrmGetTimelimit(vm::ptr<const char> path, vm::ptr<u64> time_remain)
 {
-	sceNp.Warning("sceNpDrmGetTimelimit(path_addr=0x%x, time_remain=0x%x)", path.addr(), time_remain.addr());
+	sceNp.Warning("sceNpDrmGetTimelimit(path=*0x%x, time_remain=*0x%x)", path, time_remain);
 
 	*time_remain = 0x7FFFFFFFFFFFFFFFULL;
 
@@ -280,7 +280,7 @@ s32 sceNpBasicAddFriend()
 
 s32 sceNpBasicGetFriendListEntryCount(vm::ptr<u32> count)
 {
-	sceNp.Warning("sceNpBasicGetFriendListEntryCount(count_addr=0x%x)", count.addr());
+	sceNp.Warning("sceNpBasicGetFriendListEntryCount(count=*0x%x)", count);
 
 	if (!g_sceNp->m_bSceNpInitialized)
 	{
@@ -337,7 +337,7 @@ s32 sceNpBasicAddPlayersHistoryAsync()
 
 s32 sceNpBasicGetPlayersHistoryEntryCount(u32 options, vm::ptr<u32> count)
 {
-	sceNp.Todo("sceNpBasicGetPlayersHistoryEntryCount(options=%d, count_addr=0x%x)", options, count.addr());
+	sceNp.Todo("sceNpBasicGetPlayersHistoryEntryCount(options=%d, count=*0x%x)", options, count);
 
 	if (!g_sceNp->m_bSceNpInitialized)
 	{
@@ -379,7 +379,7 @@ s32 sceNpBasicGetBlockListEntry()
 
 s32 sceNpBasicGetMessageAttachmentEntryCount(vm::ptr<u32> count)
 {
-	sceNp.Todo("sceNpBasicGetMessageAttachmentEntryCount(count_addr=0x%x)", count.addr());
+	sceNp.Todo("sceNpBasicGetMessageAttachmentEntryCount(count=*0x%x)", count);
 
 	if (!g_sceNp->m_bSceNpInitialized)
 	{
@@ -391,7 +391,7 @@ s32 sceNpBasicGetMessageAttachmentEntryCount(vm::ptr<u32> count)
 
 s32 sceNpBasicGetMessageAttachmentEntry(u32 index, vm::ptr<SceNpUserInfo> from)
 {
-	sceNp.Todo("sceNpBasicGetMessageAttachmentEntry(index=%d, from_addr=0x%x)", index, from.addr());
+	sceNp.Todo("sceNpBasicGetMessageAttachmentEntry(index=%d, from=*0x%x)", index, from);
 
 	if (!g_sceNp->m_bSceNpInitialized)
 	{
@@ -415,7 +415,7 @@ s32 sceNpBasicGetCustomInvitationEntry()
 
 s32 sceNpBasicGetMatchingInvitationEntryCount(vm::ptr<u32> count)
 {
-	sceNp.Todo("sceNpBasicGetMatchingInvitationEntryCount(count_addr=0x%x)", count.addr());
+	sceNp.Todo("sceNpBasicGetMatchingInvitationEntryCount(count=*0x%x)", count);
 
 	if (!g_sceNp->m_bSceNpInitialized)
 	{
@@ -427,7 +427,7 @@ s32 sceNpBasicGetMatchingInvitationEntryCount(vm::ptr<u32> count)
 
 s32 sceNpBasicGetMatchingInvitationEntry(u32 index, vm::ptr<SceNpUserInfo> from)
 {
-	sceNp.Todo("sceNpBasicGetMatchingInvitationEntry(index=%d, from_addr=0x%x)", index, from.addr());
+	sceNp.Todo("sceNpBasicGetMatchingInvitationEntry(index=%d, from=*0x%x)", index, from);
 
 	if (!g_sceNp->m_bSceNpInitialized)
 	{
@@ -439,7 +439,7 @@ s32 sceNpBasicGetMatchingInvitationEntry(u32 index, vm::ptr<SceNpUserInfo> from)
 
 s32 sceNpBasicGetClanMessageEntryCount(vm::ptr<u32> count)
 {
-	sceNp.Todo("sceNpBasicGetClanMessageEntryCount(count_addr=0x%x)", count.addr());
+	sceNp.Todo("sceNpBasicGetClanMessageEntryCount(count=*0x%x)", count);
 
 	if (!g_sceNp->m_bSceNpInitialized)
 	{
@@ -451,7 +451,7 @@ s32 sceNpBasicGetClanMessageEntryCount(vm::ptr<u32> count)
 
 s32 sceNpBasicGetClanMessageEntry(u32 index, vm::ptr<SceNpUserInfo> from)
 {
-	sceNp.Todo("sceNpBasicGetClanMessageEntry(index=%d, from_addr=0x%x)", index, from.addr());
+	sceNp.Todo("sceNpBasicGetClanMessageEntry(index=%d, from=*0x%x)", index, from);
 
 	if (!g_sceNp->m_bSceNpInitialized)
 	{
@@ -463,7 +463,7 @@ s32 sceNpBasicGetClanMessageEntry(u32 index, vm::ptr<SceNpUserInfo> from)
 
 s32 sceNpBasicGetMessageEntryCount(u32 type, vm::ptr<u32> count)
 {
-	sceNp.Warning("sceNpBasicGetMessageEntryCount(type=%d, count_addr=0x%x)", type, count.addr());
+	sceNp.Warning("sceNpBasicGetMessageEntryCount(type=%d, count=*0x%x)", type, count);
 
 	if (!g_sceNp->m_bSceNpInitialized)
 	{
@@ -478,7 +478,7 @@ s32 sceNpBasicGetMessageEntryCount(u32 type, vm::ptr<u32> count)
 
 s32 sceNpBasicGetMessageEntry(u32 type, u32 index, vm::ptr<SceNpUserInfo> from)
 {
-	sceNp.Todo("sceNpBasicGetMessageEntry(type=%d, index=%d, from_addr=0x%x)", type, index, from.addr());
+	sceNp.Todo("sceNpBasicGetMessageEntry(type=%d, index=%d, from=*0x%x)", type, index, from);
 
 	if (!g_sceNp->m_bSceNpInitialized)
 	{
@@ -490,7 +490,7 @@ s32 sceNpBasicGetMessageEntry(u32 type, u32 index, vm::ptr<SceNpUserInfo> from)
 
 s32 sceNpBasicGetEvent(vm::ptr<s32> event, vm::ptr<SceNpUserInfo> from, vm::ptr<s32> data, vm::ptr<u32> size)
 {
-	sceNp.Warning("sceNpBasicGetEvent(event_addr=0x%x, from_addr=0x%x, data_addr=0x%x, size_addr=0x%x)", event.addr(), from.addr(), data.addr(), size.addr());
+	sceNp.Warning("sceNpBasicGetEvent(event=*0x%x, from=*0x%x, data=*0x%x, size=*0x%x)", event, from, data, size);
 
 	if (!g_sceNp->m_bSceNpInitialized)
 	{
@@ -920,7 +920,7 @@ s32 sceNpManagerUnregisterCallback()
 
 s32 sceNpManagerGetStatus(vm::ptr<u32> status)
 {
-	sceNp.Warning("sceNpManagerGetStatus(status_addr=0x%x)", status.addr());
+	sceNp.Warning("sceNpManagerGetStatus(status=*0x%x)", status);
 
 	if (!g_sceNp->m_bSceNpInitialized)
 	{
@@ -983,7 +983,7 @@ s32 sceNpManagerGetAccountAge()
 
 s32 sceNpManagerGetContentRatingFlag(vm::ptr<u32> isRestricted, vm::ptr<u32> age)
 {
-	sceNp.Warning("sceNpManagerGetContentRatingFlag(isRestricted_addr=0x%x, age_addr=0x%x)", isRestricted.addr(), age.addr());
+	sceNp.Warning("sceNpManagerGetContentRatingFlag(isRestricted=*0x%x, age=*0x%x)", isRestricted, age);
 
 	if (!g_sceNp->m_bSceNpInitialized)
 	{

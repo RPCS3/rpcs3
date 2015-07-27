@@ -218,28 +218,6 @@ namespace ppu_func_detail
 		}
 	};
 
-	template<>
-	struct func_binder<void> // redundant specialization to bypass internal compiler error in MSVC
-	{
-		using func_t = void(*)();
-
-		static force_inline void do_call(PPUThread& CPU, func_t func)
-		{
-			func();
-		}
-	};
-
-	template<typename RT>
-	struct func_binder<RT> // redundant specialization to bypass internal compiler error in MSVC
-	{
-		using func_t = RT(*)();
-
-		static force_inline void do_call(PPUThread& CPU, func_t func)
-		{
-			bind_result<RT, result_type<RT>::value>::put_result(CPU, func());
-		}
-	};
-
 	template<typename RT, typename... T>
 	struct func_binder
 	{

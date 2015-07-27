@@ -61,7 +61,7 @@ s32 sys_spu_initialize(u32 max_usable_spu, u32 max_raw_spu)
 
 s32 sys_spu_image_open(vm::ptr<sys_spu_image> img, vm::cptr<char> path)
 {
-	sys_spu.Warning("sys_spu_image_open(img_addr=0x%x, path_addr=0x%x [%s])", img.addr(), path.addr(), path.get_ptr());
+	sys_spu.Warning("sys_spu_image_open(img=*0x%x, path=*0x%x)", img, path);
 
 	vfsFile f(path.get_ptr());
 	if(!f.IsOpened())
