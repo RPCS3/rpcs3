@@ -22,6 +22,10 @@ extern Module sys_net;
 
 vm::ptr<s32> g_lastError = vm::null;
 
+// We map host sockets to sequential IDs to return as FDs because syscalls using
+// socketselect(), etc. expect socket FDs to be under 1024.
+// We start at 1 because 0 is an invalid socket.
+std::vector<s64> g_socketMap{ 0 };
 
 // Auxiliary Functions
 int inet_pton4(const char *src, char *dst)
@@ -95,6 +99,7 @@ namespace sys_net_func
 	s32 accept(s32 s, vm::ptr<sys_net_sockaddr> addr, vm::ptr<pck_len_t> paddrlen)
 	{
 		sys_net.Warning("accept(s=%d, family=*0x%x, paddrlen=*0x%x)", s, addr, paddrlen);
+		s = g_socketMap[s];
 
 		if (!addr) {
 			int ret = ::accept(s, nullptr, nullptr);
@@ -116,6 +121,7 @@ namespace sys_net_func
 	s32 bind(s32 s, vm::ptr<sys_net_sockaddr_in> addr, u32 addrlen)
 	{
 		sys_net.Warning("bind(s=%d, family=*0x%x, addrlen=%d)", s, addr, addrlen);
+		s = g_socketMap[s];
 
 		sockaddr_in saddr;
 		memcpy(&saddr, addr.get_ptr(), sizeof(sockaddr_in));
@@ -131,6 +137,7 @@ namespace sys_net_func
 	s32 connect(s32 s, vm::ptr<sys_net_sockaddr_in> addr, u32 addrlen)
 	{
 		sys_net.Warning("connect(s=%d, family=*0x%x, addrlen=%d)", s, addr, addrlen);
+		s = g_socketMap[s];
 
 		sockaddr_in saddr;
 		memcpy(&saddr, addr.get_ptr(), sizeof(sockaddr_in));
@@ -231,6 +238,7 @@ namespace sys_net_func
 	s32 listen(s32 s, s32 backlog)
 	{
 		sys_net.Warning("listen(s=%d, backlog=%d)", s, backlog);
+		s = g_socketMap[s];
 		s32 ret = ::listen(s, backlog);
 		*g_lastError = getLastError();
 
@@ -240,6 +248,7 @@ namespace sys_net_func
 	s32 recv(s32 s, vm::ptr<char> buf, u32 len, s32 flags)
 	{
 		sys_net.Warning("recv(s=%d, buf=*0x%x, len=%d, flags=0x%x)", s, buf, len, flags);
+		s = g_socketMap[s];
 
 		s32 ret = ::recv(s, buf.get_ptr(), len, flags);
 		*g_lastError = getLastError();
@@ -250,6 +259,7 @@ namespace sys_net_func
 	s32 recvfrom(s32 s, vm::ptr<char> buf, u32 len, s32 flags, vm::ptr<sys_net_sockaddr> addr, vm::ptr<pck_len_t> paddrlen)
 	{
 		sys_net.Warning("recvfrom(s=%d, buf=*0x%x, len=%d, flags=0x%x, addr=*0x%x, paddrlen=*0x%x)", s, buf, len, flags, addr, paddrlen);
+		s = g_socketMap[s];
 
 		sockaddr _addr;
 		memcpy(&_addr, addr.get_ptr(), sizeof(sockaddr));
@@ -271,6 +281,7 @@ namespace sys_net_func
 	s32 send(s32 s, vm::cptr<char> buf, u32 len, s32 flags)
 	{
 		sys_net.Warning("send(s=%d, buf=*0x%x, len=%d, flags=0x%x)", s, buf, len, flags);
+		s = g_socketMap[s];
 
 		s32 ret = ::send(s, buf.get_ptr(), len, flags);
 		*g_lastError = getLastError();
@@ -287,6 +298,7 @@ namespace sys_net_func
 	s32 sendto(s32 s, vm::cptr<char> buf, u32 len, s32 flags, vm::ptr<sys_net_sockaddr> addr, u32 addrlen)
 	{
 		sys_net.Warning("sendto(s=%d, buf=*0x%x, len=%d, flags=0x%x, addr=*0x%x, addrlen=%d)", s, buf, len, flags, addr, addrlen);
+		s = g_socketMap[s];
 
 		sockaddr _addr;
 		memcpy(&_addr, addr.get_ptr(), sizeof(sockaddr));
@@ -300,6 +312,7 @@ namespace sys_net_func
 	s32 setsockopt(s32 s, s32 level, s32 optname, vm::cptr<char> optval, u32 optlen)
 	{
 		sys_net.Warning("socket(s=%d, level=%d, optname=%d, optval=*0x%x, optlen=%d)", s, level, optname, optval, optlen);
+		s = g_socketMap[s];
 
 		s32 ret = ::setsockopt(s, level, optname, optval.get_ptr(), optlen);
 		*g_lastError = getLastError();
@@ -310,6 +323,7 @@ namespace sys_net_func
 	s32 shutdown(s32 s, s32 how)
 	{
 		sys_net.Warning("shutdown(s=%d, how=%d)", s, how);
+		s = g_socketMap[s];
 
 		s32 ret = ::shutdown(s, how);
 		*g_lastError = getLastError();
@@ -321,15 +335,18 @@ namespace sys_net_func
 	{
 		sys_net.Warning("socket(family=%d, type=%d, protocol=%d)", family, type, protocol);
 
-		s32 ret = ::socket(family, type, protocol);
+		s32 sock = ::socket(family, type, protocol);
 		*g_lastError = getLastError();
 
-		return ret;
+		g_socketMap.push_back(sock);
+		return g_socketMap.size() - 1;
 	}
 
 	s32 socketclose(s32 s)
 	{
 		sys_net.Warning("socket(s=%d)", s);
+		s = g_socketMap[s];
+
 #ifdef _WIN32
 		int ret = ::closesocket(s);
 #else
@@ -345,60 +362,58 @@ namespace sys_net_func
 		return CELL_OK;
 	}
 
-	s32 socketselect(s32 nfds, vm::ptr<sys_net_fd_set> readfds, vm::ptr<sys_net_fd_set> writefds, vm::ptr<sys_net_fd_set> exceptfds, vm::ptr<timeval> timeout)
+	s32 socketselect(s32 nfds, vm::ptr<sys_net_fd_set> readfds, vm::ptr<sys_net_fd_set> writefds, vm::ptr<sys_net_fd_set> exceptfds, vm::ptr<sys_net_timeval> timeout)
 	{
-		sys_net.Todo("socketselect(nfds=%d, readfds_addr=0x%x, writefds_addr=0x%x, exceptfds_addr=0x%x, timeout_addr=0x%x)",
+		sys_net.Warning("socketselect(nfds=%d, readfds_addr=0x%x, writefds_addr=0x%x, exceptfds_addr=0x%x, timeout_addr=0x%x)",
 			nfds, readfds.addr(), writefds.addr(), exceptfds.addr(), timeout.addr());
+
+		timeval _timeout;
+
+		if (timeout)
+		{
+			_timeout.tv_sec = timeout->tv_sec;
+			_timeout.tv_usec = timeout->tv_usec;
+		}
+
+		//sys_net.Error("timeval: %d . %d", _timeout.tv_sec, _timeout.tv_usec);
 
 		fd_set _readfds;
 		fd_set _writefds;
 		fd_set _exceptfds;
 
-		if (readfds)
-		{
-			for (int c = 0; c < 8; c++)
-			{
-#ifdef _WIN32
-				_readfds.fd_array[c] = readfds->fds_bits[c];
-#else
-				_readfds.fds_bits[c] = readfds->fds_bits[c];
-#endif
-			}
-		}
+		// Copy the fd_sets to native ones
 
-		if (writefds)
-		{
-			for (int c = 0; c < 8; c++)
-			{
-#ifdef _WIN32
-				_writefds.fd_array[c] = writefds->fds_bits[c];
-#else
-				_writefds.fds_bits[c] = writefds->fds_bits[c];
-#endif
-			}
-		}
+		FD_ZERO(&_readfds);
+		FD_ZERO(&_writefds);
+		FD_ZERO(&_exceptfds);
 
-		if (exceptfds)
+		auto copy_fdset = [](fd_set *set, vm::ptr<sys_net_fd_set> src)
 		{
-			for (int c = 0; c < 8; c++)
+			if (src)
 			{
-#ifdef _WIN32
-				_exceptfds.fd_array[c] = exceptfds->fds_bits[c];
-#else
-				_exceptfds.fds_bits[c] = writefds->fds_bits[c];
-#endif
-			}
-		}
+				// Go through the bit set fds_bits and calculate the
+				// socket FDs from it, setting it in the native fd-set.
 
-		/*for (int c = 0; c < 8; c++)
-		{
-			if (!FD_ISSET(nfds, &_readfds.fd_array[c]))
-			{
-				sys_net.Error("!FD_ISSET: %d", c);
+				for (int i = 0; i < 32; i++)
+				{
+					for (int bit = 0; bit < 32; bit++)
+					{
+						if (src->fds_bits[i] & (1 << bit))
+						{
+							u32 sock = (i << 5) | bit;
+							//sys_net.Error("setting: fd %d", sock);
+							FD_SET(g_socketMap[sock], set);
+						}
+					}
+				}
 			}
-		}*/
+		};
 
-		s32 ret = ::select(nfds, &_readfds, &_writefds, &_exceptfds, timeout.get_ptr());
+		copy_fdset(&_readfds, readfds);
+		copy_fdset(&_writefds, writefds);
+		copy_fdset(&_exceptfds, exceptfds);
+
+		s32 ret = ::select(nfds, &_readfds, &_writefds, &_exceptfds, timeout ? &_timeout : NULL);
 		*g_lastError = getLastError();
 
 		if (getLastError() >= 0)

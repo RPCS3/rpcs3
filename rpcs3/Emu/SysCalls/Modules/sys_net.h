@@ -33,5 +33,11 @@ struct sys_net_in_addr
 
 struct sys_net_fd_set
 {
-	be_t<s32> fds_bits[8];
+	be_t<u32> fds_bits[32];
+};
+
+struct sys_net_timeval
+{
+	be_t<s32> tv_sec;
+	be_t<s32> tv_usec;
 };
