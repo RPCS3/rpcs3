@@ -201,6 +201,8 @@ struct lv2_file_t
 		, st_callback({})
 	{
 	}
+
+	~lv2_file_t();
 };
 
 REG_ID_TYPE(lv2_file_t, 0x73); // SYS_FS_FD_OBJECT
@@ -215,6 +217,8 @@ struct lv2_dir_t
 		: dir(std::move(dir))
 	{
 	}
+
+	~lv2_dir_t();
 };
 
 REG_ID_TYPE(lv2_dir_t, 0x73); // SYS_FS_FD_OBJECT

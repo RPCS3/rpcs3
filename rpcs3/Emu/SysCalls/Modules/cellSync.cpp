@@ -1600,7 +1600,7 @@ Module cellSync("cellSync", []()
 	cellSync.on_error = [](s64 value, ModuleFunc* func)
 	{
 		// get error name for CELL_SYNC errors
-		auto get_error = [](s32 code) -> const char*
+		auto get_error = [](u32 code) -> const char*
 		{
 			switch (code)
 			{
@@ -1625,7 +1625,7 @@ Module cellSync("cellSync", []()
 		};
 
 		// analyse error code
-		if (s32 code = (value & 0xffffff00) == 0x80410100 ? static_cast<s32>(value) : 0)
+		if (u32 code = (value & 0xffffff00) == 0x80410100 ? static_cast<u32>(value) : 0)
 		{
 			cellSync.Error("%s() -> %s (0x%x)", func->name, get_error(code), code);
 		}

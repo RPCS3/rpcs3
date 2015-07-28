@@ -407,7 +407,6 @@ namespace vm
 
 #include "vm_ref.h"
 #include "vm_ptr.h"
-#include "vm_var.h"
 
 class CPUThread;
 
@@ -449,3 +448,5 @@ namespace vm
 	u32 stack_push(CPUThread& cpu, u32 size, u32 align, u32& old_pos);
 	void stack_pop(CPUThread& cpu, u32 addr, u32 old_pos);
 }
+
+#include "vm_var.h"
