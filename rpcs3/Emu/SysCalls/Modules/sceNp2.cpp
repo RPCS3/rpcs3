@@ -3,6 +3,7 @@
 #include "Emu/SysCalls/Modules.h"
 
 #include "sceNp.h"
+#include "sceNp2.h"
 
 extern Module sceNp2;
 
