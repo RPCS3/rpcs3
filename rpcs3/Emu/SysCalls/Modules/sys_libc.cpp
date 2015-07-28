@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
@@ -125,6 +126,16 @@ std::string ps3_fmt(PPUThread& context, vm::cptr<char> fmt, u32 g_count, u32 f_c
 				if (plus_sign || minus_sign || space_sign || number_sign || zero_padding || width || prec) break;
 
 				result += string.get_ptr();
+				continue;
+			}
+			case 'u':
+			{
+				// unsigned decimal
+				const u64 value = context.get_next_gpr_arg(g_count, f_count, v_count);
+
+				if (plus_sign || minus_sign || space_sign || number_sign || zero_padding || width || prec) break;
+
+				result += fmt::to_udec(value);
 				continue;
 			}
 			}
@@ -332,12 +343,14 @@ s32 _sys_snprintf(PPUThread& ppu, vm::ptr<char> dst, u32 count, vm::cptr<char> f
 	}
 }
 
-s32 _sys_printf(vm::cptr<char> fmt, ppu_va_args_t va_args)
+s32 _sys_printf(PPUThread& ppu, vm::cptr<char> fmt, ppu_va_args_t va_args)
 {
-	sysPrxForUser.Todo("_sys_printf(fmt=*0x%x, ...)", fmt);
+	sysPrxForUser.Warning("_sys_printf(fmt=*0x%x, ...)", fmt);
+	std::string result = ps3_fmt(ppu, fmt, va_args.g_count, va_args.f_count, va_args.v_count);
 
-	// probably, assertion failed
-	throw EXCEPTION("%s", fmt.get_ptr());
+	LOG_ERROR(TTY, result);
+
+	return CELL_OK;
 }
 
 s32 _sys_sprintf()

@@ -101,6 +101,12 @@ struct sys_prx_param_t
 	be_t<u32> unk2;
 };
 
+struct sys_prx_get_module_id_by_name_option_t
+{
+	be_t<u64> size;
+	vm::ptr<void> base;
+};
+
 // PRX file headers
 struct sys_prx_module_info_t
 {
@@ -124,7 +130,6 @@ struct sys_prx_relocation_info_t
 	be_t<u32> type;
 	vm::bptr<void, u64> ptr;
 };
-
 
 // Data types
 struct sys_prx_load_module_option_t
@@ -180,7 +185,7 @@ s32 sys_prx_unload_module(s32 id, u64 flags, vm::ptr<sys_prx_unload_module_optio
 s32 sys_prx_get_module_list();
 s32 sys_prx_get_my_module_id();
 s32 sys_prx_get_module_id_by_address();
-s32 sys_prx_get_module_id_by_name();
+s32 sys_prx_get_module_id_by_name(vm::cptr<char> name, u64 flags, vm::ptr<sys_prx_get_module_id_by_name_option_t> pOpt);
 s32 sys_prx_get_module_info();
 s32 sys_prx_register_library(vm::ptr<void> library);
 s32 sys_prx_unregister_library(vm::ptr<void> library);

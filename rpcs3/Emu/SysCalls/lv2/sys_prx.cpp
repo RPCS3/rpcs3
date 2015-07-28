@@ -260,9 +260,13 @@ s32 sys_prx_get_module_id_by_address()
 	return CELL_OK;
 }
 
-s32 sys_prx_get_module_id_by_name()
+s32 sys_prx_get_module_id_by_name(vm::cptr<char> name, u64 flags, vm::ptr<sys_prx_get_module_id_by_name_option_t> pOpt)
 {
-	sys_prx.Todo("sys_prx_get_module_id_by_name()");
+	const char *realName = name.get_ptr();
+	sys_prx.Todo("sys_prx_get_module_id_by_name(name=%s, flags=%d, pOpt=*0x%x)", realName, flags, pOpt);
+
+	//if (realName == "?") ...
+
 	return CELL_PRX_ERROR_UNKNOWN_MODULE;
 }
 
