@@ -44,6 +44,7 @@
     <ClCompile Include="Emu\RSX\GL\GLCommonDecompiler.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\sys_dbg.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\sys_fs.cpp" />
+    <ClCompile Include="Emu\SysCalls\Modules\cellAtracMulti.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellFs.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellSpursSpu.cpp" />
     <ClCompile Include="Crypto\aes.cpp" />
@@ -524,6 +525,7 @@
     <ClInclude Include="Emu\SysCalls\Modules.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellAdec.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellAtrac.h" />
+    <ClInclude Include="Emu\SysCalls\Modules\cellAtracMulti.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellAudio.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellAudioIn.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellAudioOut.h" />

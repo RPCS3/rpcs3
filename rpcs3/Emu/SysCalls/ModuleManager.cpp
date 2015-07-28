@@ -4,6 +4,7 @@
 
 extern Module cellAdec;
 extern Module cellAtrac;
+extern Module cellAtracMulti;
 extern Module cellAudio;
 extern Module cellAvconfExt;
 extern Module cellCamera;
@@ -19,7 +20,6 @@ extern Module cellGifDec;
 extern Module cellJpgDec;
 extern Module cellL10n;
 extern Module cellMic;
-extern Module cellSysutil;
 extern Module cellNetCtl;
 extern Module cellOvis;
 extern Module cellPamf;
@@ -30,7 +30,6 @@ extern Module cellRudp;
 extern Module cellSail;
 extern Module cellScreenshot;
 extern Module cellSearch;
-extern Module cellSysutil;
 extern Module cellSpurs;
 extern Module cellSpursJq;
 extern Module cellSubdisplay;
@@ -166,7 +165,7 @@ static const g_module_list[] =
 	{ 0xf034, "cellSailRec", nullptr },
 	{ 0xf035, "sceNpTrophy", &sceNpTrophy },
 	{ 0xf053, "cellAdecAt3multi", nullptr },
-	{ 0xf054, "cellLibatrac3multi", nullptr },
+	{ 0xf054, "cellAtracMulti", &cellAtracMulti },
 
 	{ -1, "cellSysmodule", &cellSysmodule },
 	{ -1, "libmixer", &libmixer },
