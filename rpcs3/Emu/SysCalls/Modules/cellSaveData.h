@@ -265,11 +265,11 @@ struct CellSaveDataDoneGet
 
 
 // Callback Functions
-typedef void(CellSaveDataFixedCallback)(vm::ptr<CellSaveDataCBResult> cbResult, vm::ptr<CellSaveDataListGet> get, vm::ptr<CellSaveDataFixedSet> set);
-typedef void(CellSaveDataListCallback)(vm::ptr<CellSaveDataCBResult> cbResult, vm::ptr<CellSaveDataListGet> get, vm::ptr<CellSaveDataListSet> set);
-typedef void(CellSaveDataStatCallback)(vm::ptr<CellSaveDataCBResult> cbResult, vm::ptr<CellSaveDataStatGet> get, vm::ptr<CellSaveDataStatSet> set);
-typedef void(CellSaveDataFileCallback)(vm::ptr<CellSaveDataCBResult> cbResult, vm::ptr<CellSaveDataFileGet> get, vm::ptr<CellSaveDataFileSet> set);
-typedef void(CellSaveDataDoneCallback)(vm::ptr<CellSaveDataCBResult> cbResult, vm::ptr<CellSaveDataDoneGet> get);
+using CellSaveDataFixedCallback = void(vm::ptr<CellSaveDataCBResult> cbResult, vm::ptr<CellSaveDataListGet> get, vm::ptr<CellSaveDataFixedSet> set);
+using CellSaveDataListCallback = void(vm::ptr<CellSaveDataCBResult> cbResult, vm::ptr<CellSaveDataListGet> get, vm::ptr<CellSaveDataListSet> set);
+using CellSaveDataStatCallback = void(vm::ptr<CellSaveDataCBResult> cbResult, vm::ptr<CellSaveDataStatGet> get, vm::ptr<CellSaveDataStatSet> set);
+using CellSaveDataFileCallback = void(vm::ptr<CellSaveDataCBResult> cbResult, vm::ptr<CellSaveDataFileGet> get, vm::ptr<CellSaveDataFileSet> set);
+using CellSaveDataDoneCallback = void(vm::ptr<CellSaveDataCBResult> cbResult, vm::ptr<CellSaveDataDoneGet> get);
 
 
 // Auxiliary Structs
@@ -298,3 +298,5 @@ struct SaveDataDialogInstance
 
 	virtual s32 ShowSaveDataList(std::vector<SaveDataEntry>& save_entries, s32 focused, vm::ptr<CellSaveDataListSet> listSet) = 0;
 };
+
+extern class Module cellSaveData;

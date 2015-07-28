@@ -28,6 +28,8 @@ extern Module cellResc;
 extern Module cellRtc;
 extern Module cellRudp;
 extern Module cellSail;
+extern Module cellSaveData;
+extern Module cellMinisSaveData;
 extern Module cellScreenshot;
 extern Module cellSearch;
 extern Module cellSpurs;
@@ -113,7 +115,7 @@ static const g_module_list[] =
 	{ 0x0030, "cellUsbpspcm", nullptr },
 	{ 0x0031, "cellAvconfExt", &cellAvconfExt },
 	{ 0x0032, "cellUserInfo", &cellUserInfo },
-	{ 0x0033, "cellSysutilSavedata", nullptr },
+	{ 0x0033, "cellSaveData", &cellSaveData },
 	{ 0x0034, "cellSubdisplay", &cellSubdisplay },
 	{ 0x0035, "cellSysutilRec", nullptr },
 	{ 0x0036, "cellVideoExport", nullptr },
@@ -171,6 +173,7 @@ static const g_module_list[] =
 	{ -1, "libmixer", &libmixer },
 	{ -1, "sysPrxForUser", &sysPrxForUser },
 	{ -1, "sys_libc", &sys_libc },
+	{ -1, "cellMinisSaveData", &cellMinisSaveData },
 };
 
 void ModuleManager::Init()
