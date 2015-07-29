@@ -581,8 +581,6 @@ Module cellGame("cellGame", []()
 	usrdir = "";
 	path_set = false;
 
-	// (TODO: Disc Exchange functions missing)
-
 	REG_FUNC(cellGame, cellGameBootCheck);
 	REG_FUNC(cellGame, cellGamePatchCheck);
 	REG_FUNC(cellGame, cellGameDataCheck);
@@ -592,7 +590,6 @@ Module cellGame("cellGame", []()
 	REG_FUNC(cellGame, cellGameDeleteGameData);
 
 	REG_FUNC(cellGame, cellGameGetParamInt);
-	//cellGame.AddFunc(, cellGameSetParamInt);
 	REG_FUNC(cellGame, cellGameGetParamString);
 	REG_FUNC(cellGame, cellGameSetParamString);
 	REG_FUNC(cellGame, cellGameGetSizeKB);
@@ -603,7 +600,6 @@ Module cellGame("cellGame", []()
 
 	REG_FUNC(cellGame, cellGameThemeInstall);
 	REG_FUNC(cellGame, cellGameThemeInstallFromBuffer);
-	//cellGame.AddFunc(, CellGameThemeInstallCallback);
 });
 
 void cellSysutil_GameData_init()

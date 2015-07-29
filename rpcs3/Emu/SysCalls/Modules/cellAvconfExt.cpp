@@ -4,14 +4,81 @@
 #include "Emu/SysCalls/Modules.h"
 #include "Emu/RSX/sysutil_video.h"
 
-namespace vm { using namespace ps3; }
-
 extern Module cellAvconfExt;
+
+s32 cellAudioOutUnregisterDevice()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellAudioOutGetDeviceInfo2()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellVideoOutSetXVColor()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellVideoOutSetupDisplay()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellAudioInGetDeviceInfo()
+{
+	throw EXCEPTION("");
+}
 
 s32 cellVideoOutConvertCursorColor()
 {
-	UNIMPLEMENTED_FUNC(cellAvconfExt);
-	return CELL_OK;
+	throw EXCEPTION("");
+}
+
+s32 cellVideoOutGetGamma()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellAudioInGetAvailableDeviceInfo()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellAudioOutGetAvailableDeviceInfo()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellVideoOutSetGamma()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellAudioOutRegisterDevice()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellAudioOutSetDeviceMode()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellAudioInSetDeviceMode()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellAudioInRegisterDevice()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellAudioInUnregisterDevice()
+{
+	throw EXCEPTION("");
 }
 
 s32 cellVideoOutGetScreenSize(u32 videoOut, vm::ptr<float> screenSize)
@@ -41,22 +108,23 @@ s32 cellVideoOutGetScreenSize(u32 videoOut, vm::ptr<float> screenSize)
 	return CELL_VIDEO_OUT_ERROR_VALUE_IS_NOT_SET;
 }
 
-s32 cellVideoOutGetGamma()
-{
-	UNIMPLEMENTED_FUNC(cellAvconfExt);
-	return CELL_OK;
-}
-
-s32 cellVideoOutSetGamma()
-{
-	UNIMPLEMENTED_FUNC(cellAvconfExt);
-	return CELL_OK;
-}
 
 Module cellAvconfExt("cellAvconfExt", []()
 {
+	REG_FUNC(cellAvconfExt, cellAudioOutUnregisterDevice);
+	REG_FUNC(cellAvconfExt, cellAudioOutGetDeviceInfo2);
+	REG_FUNC(cellAvconfExt, cellVideoOutSetXVColor);
+	REG_FUNC(cellAvconfExt, cellVideoOutSetupDisplay);
+	REG_FUNC(cellAvconfExt, cellAudioInGetDeviceInfo);
 	REG_FUNC(cellAvconfExt, cellVideoOutConvertCursorColor);
-	REG_FUNC(cellAvconfExt, cellVideoOutGetScreenSize);
 	REG_FUNC(cellAvconfExt, cellVideoOutGetGamma);
+	REG_FUNC(cellAvconfExt, cellAudioInGetAvailableDeviceInfo);
+	REG_FUNC(cellAvconfExt, cellAudioOutGetAvailableDeviceInfo);
 	REG_FUNC(cellAvconfExt, cellVideoOutSetGamma);
+	REG_FUNC(cellAvconfExt, cellAudioOutRegisterDevice);
+	REG_FUNC(cellAvconfExt, cellAudioOutSetDeviceMode);
+	REG_FUNC(cellAvconfExt, cellAudioInSetDeviceMode);
+	REG_FUNC(cellAvconfExt, cellAudioInRegisterDevice);
+	REG_FUNC(cellAvconfExt, cellAudioInUnregisterDevice);
+	REG_FUNC(cellAvconfExt, cellVideoOutGetScreenSize);
 });
