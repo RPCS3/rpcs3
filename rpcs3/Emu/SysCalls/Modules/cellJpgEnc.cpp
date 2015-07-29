@@ -1,8 +1,8 @@
 #include "stdafx.h"
-#if 0
+#include "Emu/Memory/Memory.h"
+#include "Emu/SysCalls/Modules.h"
 
-void cellJpgEnc_init();
-Module cellJpgEnc(0x003d, cellJpgEnc_init);
+extern Module cellJpgEnc;
 
 // Error Codes
 enum
@@ -15,67 +15,67 @@ enum
 	CELL_JPGENC_ERROR_FATAL = 0x80611196,
 };
 
-int cellJpgEncQueryAttr()
+s32 cellJpgEncQueryAttr()
 {
 	UNIMPLEMENTED_FUNC(cellJpgEnc);
 	return CELL_OK;
 }
 
-int cellJpgEncOpen()
+s32 cellJpgEncOpen()
 {
 	UNIMPLEMENTED_FUNC(cellJpgEnc);
 	return CELL_OK;
 }
 
-int cellJpgEncOpenEx()
+s32 cellJpgEncOpenEx()
 {
 	UNIMPLEMENTED_FUNC(cellJpgEnc);
 	return CELL_OK;
 }
 
-int cellJpgEncClose()
+s32 cellJpgEncClose()
 {
 	UNIMPLEMENTED_FUNC(cellJpgEnc);
 	return CELL_OK;
 }
 
-int cellJpgEncWaitForInput()
+s32 cellJpgEncWaitForInput()
 {
 	UNIMPLEMENTED_FUNC(cellJpgEnc);
 	return CELL_OK;
 }
 
-int cellJpgEncEncodePicture()
+s32 cellJpgEncEncodePicture()
 {
 	UNIMPLEMENTED_FUNC(cellJpgEnc);
 	return CELL_OK;
 }
 
-int cellJpgEncEncodePicture2()
+s32 cellJpgEncEncodePicture2()
 {
 	UNIMPLEMENTED_FUNC(cellJpgEnc);
 	return CELL_OK;
 }
 
-int cellJpgEncWaitForOutput()
+s32 cellJpgEncWaitForOutput()
 {
 	UNIMPLEMENTED_FUNC(cellJpgEnc);
 	return CELL_OK;
 }
 
-int cellJpgEncGetStreamInfo()
+s32 cellJpgEncGetStreamInfo()
 {
 	UNIMPLEMENTED_FUNC(cellJpgEnc);
 	return CELL_OK;
 }
 
-int cellJpgEncReset()
+s32 cellJpgEncReset()
 {
 	UNIMPLEMENTED_FUNC(cellJpgEnc);
 	return CELL_OK;
 }
 
-void cellJpgEnc_init()
+Module cellJpgEnc("cellJpgEnc", []()
 {
 	REG_FUNC(cellJpgEnc, cellJpgEncQueryAttr);
 	REG_FUNC(cellJpgEnc, cellJpgEncOpen);
@@ -87,5 +87,4 @@ void cellJpgEnc_init()
 	REG_FUNC(cellJpgEnc, cellJpgEncWaitForOutput);
 	REG_FUNC(cellJpgEnc, cellJpgEncGetStreamInfo);
 	REG_FUNC(cellJpgEnc, cellJpgEncReset);
-}
-#endif
+});

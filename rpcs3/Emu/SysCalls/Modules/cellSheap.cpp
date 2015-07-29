@@ -1,8 +1,8 @@
 #include "stdafx.h"
-#if 0
+#include "Emu/Memory/Memory.h"
+#include "Emu/SysCalls/Modules.h"
 
-void cellSheap_init();
-Module cellSheap(0x000c, cellSheap_init);
+extern Module cellSheap;
 
 // Return Codes
 enum
@@ -13,115 +13,115 @@ enum
 	CELL_SHEAP_ERROR_SHORTAGE = 0x80410312,
 };
 
-int cellSheapInitialize()
+s32 cellSheapInitialize()
 {
 	UNIMPLEMENTED_FUNC(cellSheap);
 	return CELL_OK;
 }
 
-int cellSheapAllocate()
+s32 cellSheapAllocate()
 {
 	UNIMPLEMENTED_FUNC(cellSheap);
 	return CELL_OK;
 }
 
-int cellSheapFree()
+s32 cellSheapFree()
 {
 	UNIMPLEMENTED_FUNC(cellSheap);
 	return CELL_OK;
 }
 
-int cellSheapQueryMax()
+s32 cellSheapQueryMax()
 {
 	UNIMPLEMENTED_FUNC(cellSheap);
 	return CELL_OK;
 }
 
-int cellSheapQueryFree()
+s32 cellSheapQueryFree()
 {
 	UNIMPLEMENTED_FUNC(cellSheap);
 	return CELL_OK;
 }
 
-int cellKeySheapInitialize()
+s32 cellKeySheapInitialize()
 {
 	UNIMPLEMENTED_FUNC(cellSheap);
 	return CELL_OK;
 }
 
-int cellKeySheapBufferNew()
+s32 cellKeySheapBufferNew()
 {
 	UNIMPLEMENTED_FUNC(cellSheap);
 	return CELL_OK;
 }
 
-int cellKeySheapBufferDelete()
+s32 cellKeySheapBufferDelete()
 {
 	UNIMPLEMENTED_FUNC(cellSheap);
 	return CELL_OK;
 }
 
-int cellKeySheapMutexNew()
+s32 cellKeySheapMutexNew()
 {
 	UNIMPLEMENTED_FUNC(cellSheap);
 	return CELL_OK;
 }
 
-int cellKeySheapMutexDelete()
+s32 cellKeySheapMutexDelete()
 {
 	UNIMPLEMENTED_FUNC(cellSheap);
 	return CELL_OK;
 }
 
-int cellKeySheapBarrierNew()
+s32 cellKeySheapBarrierNew()
 {
 	UNIMPLEMENTED_FUNC(cellSheap);
 	return CELL_OK;
 }
 
-int cellKeySheapBarrierDelete()
+s32 cellKeySheapBarrierDelete()
 {
 	UNIMPLEMENTED_FUNC(cellSheap);
 	return CELL_OK;
 }
 
-int cellKeySheapSemaphoreNew()
+s32 cellKeySheapSemaphoreNew()
 {
 	UNIMPLEMENTED_FUNC(cellSheap);
 	return CELL_OK;
 }
 
-int cellKeySheapSemaphoreDelete()
+s32 cellKeySheapSemaphoreDelete()
 {
 	UNIMPLEMENTED_FUNC(cellSheap);
 	return CELL_OK;
 }
 
-int cellKeySheapRwmNew()
+s32 cellKeySheapRwmNew()
 {
 	UNIMPLEMENTED_FUNC(cellSheap);
 	return CELL_OK;
 }
 
-int cellKeySheapRwmDelete()
+s32 cellKeySheapRwmDelete()
 {
 	UNIMPLEMENTED_FUNC(cellSheap);
 	return CELL_OK;
 }
 
-int cellKeySheapQueueNew()
+s32 cellKeySheapQueueNew()
 {
 	UNIMPLEMENTED_FUNC(cellSheap);
 	return CELL_OK;
 }
 
-int cellKeySheapQueueDelete()
+s32 cellKeySheapQueueDelete()
 {
 	UNIMPLEMENTED_FUNC(cellSheap);
 	return CELL_OK;
 }
 
-void cellSheap_init()
+Module cellSheap("cellSheap", []()
 {
 	REG_FUNC(cellSheap, cellSheapInitialize);
 	REG_FUNC(cellSheap, cellSheapAllocate);
@@ -129,7 +129,6 @@ void cellSheap_init()
 	REG_FUNC(cellSheap, cellSheapQueryMax);
 	REG_FUNC(cellSheap, cellSheapQueryFree);
 
-	// (TODO: Some cellKeySheap* functions are missing)
 	REG_FUNC(cellSheap, cellKeySheapInitialize);
 	REG_FUNC(cellSheap, cellKeySheapBufferNew);
 	REG_FUNC(cellSheap, cellKeySheapBufferDelete);
@@ -144,5 +143,4 @@ void cellSheap_init()
 	REG_FUNC(cellSheap, cellKeySheapRwmDelete);
 	REG_FUNC(cellSheap, cellKeySheapQueueNew);
 	REG_FUNC(cellSheap, cellKeySheapQueueDelete);
-}
-#endif
+});

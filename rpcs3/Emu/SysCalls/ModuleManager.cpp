@@ -24,6 +24,8 @@ extern Module cellHttp;
 extern Module cellHttps;
 extern Module cellHttpUtil;
 extern Module cellJpgDec;
+extern Module cellJpgEnc;
+extern Module cellKey2char;
 extern Module cellL10n;
 extern Module cellMic;
 extern Module cellNetCtl;
@@ -38,6 +40,7 @@ extern Module cellSaveData;
 extern Module cellMinisSaveData;
 extern Module cellScreenshot;
 extern Module cellSearch;
+extern Module cellSheap;
 extern Module cellSpurs;
 extern Module cellSpursJq;
 extern Module cellSsl;
@@ -69,11 +72,26 @@ extern Module sys_lv2dbg;
 
 struct ModuleInfo
 {
-	s32 id; //-1 is used by module with only name
-	const char* name;
-	Module* module;
+	const s32 id; // -1 if the module doesn't have corresponding CELL_SYSMODULE_* id
+	const char* const name;
+	Module* const module;
+
+	explicit operator bool() const
+	{
+		return module != nullptr;
+	}
+
+	operator Module*() const
+	{
+		return module;
+	}
+
+	Module* operator ->() const
+	{
+		return module;
+	}
 }
-static const g_module_list[] =
+const g_module_list[] =
 {
 	{ 0x0000, "sys_net", &sys_net },
 	{ 0x0001, "cellHttp", &cellHttp },
@@ -87,7 +105,7 @@ static const g_module_list[] =
 	{ 0x0009, "cellRtc", &cellRtc },
 	{ 0x000a, "cellSpurs", &cellSpurs },
 	{ 0x000b, "cellOvis", &cellOvis },
-	{ 0x000c, "cellSheap", nullptr },
+	{ 0x000c, "cellSheap", &cellSheap },
 	{ 0x000d, "cellSync", &cellSync },
 	{ 0x000e, "sys_fs", &cellFs },
 	{ 0x000f, "cellJpgDec", &cellJpgDec },
@@ -108,7 +126,7 @@ static const g_module_list[] =
 	{ 0x001e, "cellL10n", &cellL10n },
 	{ 0x001f, "cellResc", &cellResc },
 	{ 0x0020, "cellDaisy", nullptr },
-	{ 0x0021, "cellKey2char", nullptr },
+	{ 0x0021, "cellKey2char", &cellKey2char },
 	{ 0x0022, "cellMic", &cellMic },
 	{ 0x0023, "cellCamera", &cellCamera },
 	{ 0x0024, "cellVdecMpeg2", nullptr },
@@ -132,7 +150,7 @@ static const g_module_list[] =
 	{ 0x003a, "sceNpClans", &sceNpClans },
 	{ 0x003b, "cellSysutilOskExt", nullptr },
 	{ 0x003c, "cellVdecDivx", nullptr },
-	{ 0x003d, "cellJpgEnc", nullptr },
+	{ 0x003d, "cellJpgEnc", &cellJpgEnc },
 	{ 0x003e, "cellGame", &cellGame },
 	{ 0x003f, "cellBGDLUtility", &cellBGDL },
 	{ 0x0040, "cellFreetypeTT", nullptr },
@@ -185,53 +203,58 @@ static const g_module_list[] =
 
 void ModuleManager::Init()
 {
-	if (initialized)
+	if (m_init)
 	{
 		Close();
 	}
 
 	clear_ppu_functions();
 
-	for (auto& m : g_module_list)
+	for (auto& module : g_module_list)
 	{
-		if (m.module)
+		if (module)
 		{
-			m.module->Init();
+			module->Init();
 		}
 	}
 
-	initialized = true;
+	m_init = true;
 }
 
 ModuleManager::ModuleManager()
-	: initialized(false)
 {
 }
 
 ModuleManager::~ModuleManager()
 {
+	Close();
 }
 
 void ModuleManager::Close()
 {
-	for (auto& m : g_module_list)
+	if (!m_init)
 	{
-		if (m.module && m.module->on_stop)
+		return;
+	}
+
+	for (auto& module : g_module_list)
+	{
+		if (module && module->on_stop)
 		{
-			m.module->on_stop();
+			module->on_stop();
 		}
 	}
 
-	initialized = false;
+	m_init = false;
 }
 
 Module* ModuleManager::GetModuleByName(const char* name)
 {
-	for (auto& m : g_module_list)
+	for (auto& module : g_module_list)
 	{
-		if (!strcmp(name, m.name))
+		if (!strcmp(name, module.name))
 		{
-			return m.module;
+			return module;
 		}
 	}
 
@@ -240,11 +263,11 @@ Module* ModuleManager::GetModuleByName(const char* name)
 
 Module* ModuleManager::GetModuleById(u16 id)
 {
-	for (auto& m : g_module_list)
+	for (auto& module : g_module_list)
 	{
-		if (m.id == id)
+		if (module.id == id)
 		{
-			return m.module;
+			return module;
 		}
 	}
 
@@ -253,9 +276,9 @@ Module* ModuleManager::GetModuleById(u16 id)
 
 bool ModuleManager::CheckModuleId(u16 id)
 {
-	for (auto& m : g_module_list)
+	for (auto& module : g_module_list)
 	{
-		if (m.id == id)
+		if (module.id == id)
 		{
 			return true;
 		}

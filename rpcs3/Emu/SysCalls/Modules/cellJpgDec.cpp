@@ -68,6 +68,11 @@ s32 cellJpgDecOpen(u32 mainHandle, vm::ptr<u32> subHandle, vm::ptr<CellJpgDecSrc
 	return CELL_OK;
 }
 
+s32 cellJpgDecExtOpen()
+{
+	throw EXCEPTION("");
+}
+
 s32 cellJpgDecClose(u32 mainHandle, u32 subHandle)
 {
 	cellJpgDec.Warning("cellJpgDecOpen(mainHandle=0x%x, subHandle=0x%x)", mainHandle, subHandle);
@@ -155,6 +160,11 @@ s32 cellJpgDecReadHeader(u32 mainHandle, u32 subHandle, vm::ptr<CellJpgDecInfo> 
 	*info = current_info;
 
 	return CELL_OK;
+}
+
+s32 cellJpgDecExtReadHeader()
+{
+	throw EXCEPTION("");
 }
 
 s32 cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, vm::cptr<CellJpgDecDataCtrlParam> dataCtrlParam, vm::ptr<CellJpgDecDataOutInfo> dataOutInfo)
@@ -293,6 +303,11 @@ s32 cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, vm::cp
 	return CELL_OK;
 }
 
+s32 cellJpgDecExtDecodeData()
+{
+	throw EXCEPTION("");
+}
+
 s32 cellJpgDecSetParameter(u32 mainHandle, u32 subHandle, vm::cptr<CellJpgDecInParam> inParam, vm::ptr<CellJpgDecOutParam> outParam)
 {
 	cellJpgDec.Log("cellJpgDecSetParameter(mainHandle=0x%x, subHandle=0x%x, inParam=*0x%x, outParam=*0x%x)", mainHandle, subHandle, inParam, outParam);
@@ -338,6 +353,11 @@ s32 cellJpgDecSetParameter(u32 mainHandle, u32 subHandle, vm::cptr<CellJpgDecInP
 	return CELL_OK;
 }
 
+s32 cellJpgDecExtSetParameter()
+{
+	throw EXCEPTION("");
+}
+
 
 Module cellJpgDec("cellJpgDec", []()
 {
@@ -350,8 +370,8 @@ Module cellJpgDec("cellJpgDec", []()
 	REG_FUNC(cellJpgDec, cellJpgDecClose);
 	REG_FUNC(cellJpgDec, cellJpgDecDestroy);
 
-	/*REG_FUNC(cellJpgDec, cellJpgDecExtOpen);
+	REG_FUNC(cellJpgDec, cellJpgDecExtOpen);
 	REG_FUNC(cellJpgDec, cellJpgDecExtReadHeader);
 	REG_FUNC(cellJpgDec, cellJpgDecExtSetParameter);
-	REG_FUNC(cellJpgDec, cellJpgDecExtDecodeData);*/
+	REG_FUNC(cellJpgDec, cellJpgDecExtDecodeData);
 });
