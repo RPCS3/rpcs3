@@ -7,6 +7,7 @@ extern Module cellAtrac;
 extern Module cellAtracMulti;
 extern Module cellAudio;
 extern Module cellAvconfExt;
+extern Module cellBGDL;
 extern Module cellCamera;
 extern Module cellCelp8Enc;
 extern Module cellCelpEnc;
@@ -19,6 +20,9 @@ extern Module cellGame;
 extern Module cellGcmSys;
 extern Module cellGem;
 extern Module cellGifDec;
+extern Module cellHttp;
+extern Module cellHttps;
+extern Module cellHttpUtil;
 extern Module cellJpgDec;
 extern Module cellL10n;
 extern Module cellMic;
@@ -36,6 +40,7 @@ extern Module cellScreenshot;
 extern Module cellSearch;
 extern Module cellSpurs;
 extern Module cellSpursJq;
+extern Module cellSsl;
 extern Module cellSubdisplay;
 extern Module cellSync;
 extern Module cellSync2;
@@ -71,10 +76,10 @@ struct ModuleInfo
 static const g_module_list[] =
 {
 	{ 0x0000, "sys_net", &sys_net },
-	{ 0x0001, "sys_http", nullptr },
-	{ 0x0002, "cellHttpUtil", nullptr },
-	{ 0x0003, "cellSsl", nullptr },
-	{ 0x0004, "cellHttps", nullptr },
+	{ 0x0001, "cellHttp", &cellHttp },
+	{ 0x0002, "cellHttpUtil", &cellHttpUtil },
+	{ 0x0003, "cellSsl", &cellSsl },
+	{ 0x0004, "cellHttps", &cellHttps },
 	{ 0x0005, "libvdec", &cellVdec },
 	{ 0x0006, "cellAdec", &cellAdec },
 	{ 0x0007, "cellDmux", &cellDmux },
@@ -129,7 +134,7 @@ static const g_module_list[] =
 	{ 0x003c, "cellVdecDivx", nullptr },
 	{ 0x003d, "cellJpgEnc", nullptr },
 	{ 0x003e, "cellGame", &cellGame },
-	{ 0x003f, "cellBgdl", nullptr },
+	{ 0x003f, "cellBGDLUtility", &cellBGDL },
 	{ 0x0040, "cellFreetypeTT", nullptr },
 	{ 0x0041, "cellSysutilVideoUpload", nullptr },
 	{ 0x0042, "cellSysutilSysconfExt", nullptr },

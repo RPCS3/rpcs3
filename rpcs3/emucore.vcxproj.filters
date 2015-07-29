@@ -413,12 +413,6 @@
     <ClCompile Include="Emu\SysCalls\ModuleManager.cpp">
       <Filter>Emu\SysCalls</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\SysCalls\Modules\cellBgdl.cpp">
-      <Filter>Emu\SysCalls\currently_unused</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\SysCalls\Modules\cellHttpUtil.cpp">
-      <Filter>Emu\SysCalls\currently_unused</Filter>
-    </ClCompile>
     <ClCompile Include="Emu\SysCalls\Modules\cellImejp.cpp">
       <Filter>Emu\SysCalls\currently_unused</Filter>
     </ClCompile>
@@ -455,9 +449,6 @@
     <ClCompile Include="Emu\SysCalls\Modules\cellSheap.cpp">
       <Filter>Emu\SysCalls\currently_unused</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\SysCalls\Modules\cellSsl.cpp">
-      <Filter>Emu\SysCalls\currently_unused</Filter>
-    </ClCompile>
     <ClCompile Include="Emu\SysCalls\Modules\cellUsbpspcm.cpp">
       <Filter>Emu\SysCalls\currently_unused</Filter>
     </ClCompile>
@@ -465,9 +456,6 @@
       <Filter>Emu\SysCalls\currently_unused</Filter>
     </ClCompile>
     <ClCompile Include="Emu\SysCalls\Modules\libsynth2.cpp">
-      <Filter>Emu\SysCalls\currently_unused</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\SysCalls\Modules\sys_http.cpp">
       <Filter>Emu\SysCalls\currently_unused</Filter>
     </ClCompile>
     <ClCompile Include="Emu\SysCalls\lv2\sys_process.cpp">
@@ -885,6 +873,18 @@
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
     <ClCompile Include="Emu\SysCalls\Modules\cellCelpEnc.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellBgdl.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellHttp.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellHttpUtil.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellSsl.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
   </ItemGroup>
