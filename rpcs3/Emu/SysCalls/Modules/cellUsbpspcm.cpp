@@ -1,8 +1,8 @@
 #include "stdafx.h"
-#if 0
+#include "Emu/Memory/Memory.h"
+#include "Emu/SysCalls/Modules.h"
 
-void cellUsbpspcm_init();
-Module cellUsbpspcm(0x0030, cellUsbpspcm_init);
+extern Module cellUsbPspcm;
 
 // Return Codes
 enum
@@ -21,196 +21,195 @@ enum
 	CELL_USBPSPCM_ERROR_NO_DATA         = 0x8011040C,
 };
 
-int cellUsbPspcmInit()
+s32 cellUsbPspcmInit()
 {
-	UNIMPLEMENTED_FUNC(cellUsbpspcm);
+	UNIMPLEMENTED_FUNC(cellUsbPspcm);
 	return CELL_OK;
 }
 
-int cellUsbPspcmEnd()
+s32 cellUsbPspcmEnd()
 {
-	UNIMPLEMENTED_FUNC(cellUsbpspcm);
+	UNIMPLEMENTED_FUNC(cellUsbPspcm);
 	return CELL_OK;
 }
 
-int cellUsbPspcmCalcPoolSize()
+s32 cellUsbPspcmCalcPoolSize()
 {
-	UNIMPLEMENTED_FUNC(cellUsbpspcm);
+	UNIMPLEMENTED_FUNC(cellUsbPspcm);
 	return CELL_OK;
 }
 
-int cellUsbPspcmRegister()
+s32 cellUsbPspcmRegister()
 {
-	UNIMPLEMENTED_FUNC(cellUsbpspcm);
+	UNIMPLEMENTED_FUNC(cellUsbPspcm);
 	return CELL_OK;
 }
 
-int cellUsbPspcmUnregister()
+s32 cellUsbPspcmUnregister()
 {
-	UNIMPLEMENTED_FUNC(cellUsbpspcm);
+	UNIMPLEMENTED_FUNC(cellUsbPspcm);
 	return CELL_OK;
 }
 
-int cellUsbPspcmGetAddr()
+s32 cellUsbPspcmGetAddr()
 {
-	UNIMPLEMENTED_FUNC(cellUsbpspcm);
+	UNIMPLEMENTED_FUNC(cellUsbPspcm);
 	return CELL_OK;
 }
 
-int cellUsbPspcmBind()
+s32 cellUsbPspcmBind()
 {
-	UNIMPLEMENTED_FUNC(cellUsbpspcm);
+	UNIMPLEMENTED_FUNC(cellUsbPspcm);
 	return CELL_OK;
 }
 
-int cellUsbPspcmBindAsync()
+s32 cellUsbPspcmBindAsync()
 {
-	UNIMPLEMENTED_FUNC(cellUsbpspcm);
+	UNIMPLEMENTED_FUNC(cellUsbPspcm);
 	return CELL_OK;
 }
 
-int cellUsbPspcmWaitBindAsync()
+s32 cellUsbPspcmWaitBindAsync()
 {
-	UNIMPLEMENTED_FUNC(cellUsbpspcm);
+	UNIMPLEMENTED_FUNC(cellUsbPspcm);
 	return CELL_OK;
 }
 
-int cellUsbPspcmPollBindAsync()
+s32 cellUsbPspcmPollBindAsync()
 {
-	UNIMPLEMENTED_FUNC(cellUsbpspcm);
+	UNIMPLEMENTED_FUNC(cellUsbPspcm);
 	return CELL_OK;
 }
 
-int cellUsbPspcmCancelBind()
+s32 cellUsbPspcmCancelBind()
 {
-	UNIMPLEMENTED_FUNC(cellUsbpspcm);
+	UNIMPLEMENTED_FUNC(cellUsbPspcm);
 	return CELL_OK;
 }
 
-int cellUsbPspcmClose()
+s32 cellUsbPspcmClose()
 {
-	UNIMPLEMENTED_FUNC(cellUsbpspcm);
+	UNIMPLEMENTED_FUNC(cellUsbPspcm);
 	return CELL_OK;
 }
 
-int cellUsbPspcmSend()
+s32 cellUsbPspcmSend()
 {
-	UNIMPLEMENTED_FUNC(cellUsbpspcm);
+	UNIMPLEMENTED_FUNC(cellUsbPspcm);
 	return CELL_OK;
 }
 
-int cellUsbPspcmSendAsync()
+s32 cellUsbPspcmSendAsync()
 {
-	UNIMPLEMENTED_FUNC(cellUsbpspcm);
+	UNIMPLEMENTED_FUNC(cellUsbPspcm);
 	return CELL_OK;
 }
 
-int cellUsbPspcmWaitSendAsync()
+s32 cellUsbPspcmWaitSendAsync()
 {
-	UNIMPLEMENTED_FUNC(cellUsbpspcm);
+	UNIMPLEMENTED_FUNC(cellUsbPspcm);
 	return CELL_OK;
 }
 
-int cellUsbPspcmPollSendAsync()
+s32 cellUsbPspcmPollSendAsync()
 {
-	UNIMPLEMENTED_FUNC(cellUsbpspcm);
+	UNIMPLEMENTED_FUNC(cellUsbPspcm);
 	return CELL_OK;
 }
 
-int cellUsbPspcmRecv()
+s32 cellUsbPspcmRecv()
 {
-	UNIMPLEMENTED_FUNC(cellUsbpspcm);
+	UNIMPLEMENTED_FUNC(cellUsbPspcm);
 	return CELL_OK;
 }
 
-int cellUsbPspcmRecvAsync()
+s32 cellUsbPspcmRecvAsync()
 {
-	UNIMPLEMENTED_FUNC(cellUsbpspcm);
+	UNIMPLEMENTED_FUNC(cellUsbPspcm);
 	return CELL_OK;
 }
 
-int cellUsbPspcmWaitRecvAsync()
+s32 cellUsbPspcmWaitRecvAsync()
 {
-	UNIMPLEMENTED_FUNC(cellUsbpspcm);
+	UNIMPLEMENTED_FUNC(cellUsbPspcm);
 	return CELL_OK;
 }
 
-int cellUsbPspcmPollRecvAsync()
+s32 cellUsbPspcmPollRecvAsync()
 {
-	UNIMPLEMENTED_FUNC(cellUsbpspcm);
+	UNIMPLEMENTED_FUNC(cellUsbPspcm);
 	return CELL_OK;
 }
 
-int cellUsbPspcmReset()
+s32 cellUsbPspcmReset()
 {
-	UNIMPLEMENTED_FUNC(cellUsbpspcm);
+	UNIMPLEMENTED_FUNC(cellUsbPspcm);
 	return CELL_OK;
 }
 
-int cellUsbPspcmResetAsync()
+s32 cellUsbPspcmResetAsync()
 {
-	UNIMPLEMENTED_FUNC(cellUsbpspcm);
+	UNIMPLEMENTED_FUNC(cellUsbPspcm);
 	return CELL_OK;
 }
 
-int cellUsbPspcmWaitResetAsync()
+s32 cellUsbPspcmWaitResetAsync()
 {
-	UNIMPLEMENTED_FUNC(cellUsbpspcm);
+	UNIMPLEMENTED_FUNC(cellUsbPspcm);
 	return CELL_OK;
 }
 
-int cellUsbPspcmPollResetAsync()
+s32 cellUsbPspcmPollResetAsync()
 {
-	UNIMPLEMENTED_FUNC(cellUsbpspcm);
+	UNIMPLEMENTED_FUNC(cellUsbPspcm);
 	return CELL_OK;
 }
 
-int cellUsbPspcmWaitData()
+s32 cellUsbPspcmWaitData()
 {
-	UNIMPLEMENTED_FUNC(cellUsbpspcm);
+	UNIMPLEMENTED_FUNC(cellUsbPspcm);
 	return CELL_OK;
 }
 
-int cellUsbPspcmPollData()
+s32 cellUsbPspcmPollData()
 {
-	UNIMPLEMENTED_FUNC(cellUsbpspcm);
+	UNIMPLEMENTED_FUNC(cellUsbPspcm);
 	return CELL_OK;
 }
 
-int cellUsbPspcmCancelWaitData()
+s32 cellUsbPspcmCancelWaitData()
 {
-	UNIMPLEMENTED_FUNC(cellUsbpspcm);
+	UNIMPLEMENTED_FUNC(cellUsbPspcm);
 	return CELL_OK;
 }
 
-void cellUsbpspcm_init()
+Module cellUsbPspcm("cellUsbPspcm", []()
 {
-	REG_FUNC(cellUsbpspcm, cellUsbPspcmInit);
-	REG_FUNC(cellUsbpspcm, cellUsbPspcmEnd);
-	REG_FUNC(cellUsbpspcm, cellUsbPspcmCalcPoolSize);
-	REG_FUNC(cellUsbpspcm, cellUsbPspcmRegister);
-	REG_FUNC(cellUsbpspcm, cellUsbPspcmUnregister);
-	REG_FUNC(cellUsbpspcm, cellUsbPspcmGetAddr);
-	REG_FUNC(cellUsbpspcm, cellUsbPspcmBind);
-	REG_FUNC(cellUsbpspcm, cellUsbPspcmBindAsync);
-	REG_FUNC(cellUsbpspcm, cellUsbPspcmWaitBindAsync);
-	REG_FUNC(cellUsbpspcm, cellUsbPspcmPollBindAsync);
-	REG_FUNC(cellUsbpspcm, cellUsbPspcmCancelBind);
-	REG_FUNC(cellUsbpspcm, cellUsbPspcmClose);
-	REG_FUNC(cellUsbpspcm, cellUsbPspcmSend);
-	REG_FUNC(cellUsbpspcm, cellUsbPspcmSendAsync);
-	REG_FUNC(cellUsbpspcm, cellUsbPspcmWaitSendAsync);
-	REG_FUNC(cellUsbpspcm, cellUsbPspcmPollSendAsync);
-	REG_FUNC(cellUsbpspcm, cellUsbPspcmRecv);
-	REG_FUNC(cellUsbpspcm, cellUsbPspcmRecvAsync);
-	REG_FUNC(cellUsbpspcm, cellUsbPspcmWaitRecvAsync);
-	REG_FUNC(cellUsbpspcm, cellUsbPspcmPollRecvAsync);
-	REG_FUNC(cellUsbpspcm, cellUsbPspcmReset);
-	REG_FUNC(cellUsbpspcm, cellUsbPspcmResetAsync);
-	REG_FUNC(cellUsbpspcm, cellUsbPspcmWaitResetAsync);
-	REG_FUNC(cellUsbpspcm, cellUsbPspcmPollResetAsync);
-	REG_FUNC(cellUsbpspcm, cellUsbPspcmWaitData);
-	REG_FUNC(cellUsbpspcm, cellUsbPspcmPollData);
-	REG_FUNC(cellUsbpspcm, cellUsbPspcmCancelWaitData);
-}
-#endif
+	REG_FUNC(cellUsbPspcm, cellUsbPspcmInit);
+	REG_FUNC(cellUsbPspcm, cellUsbPspcmEnd);
+	REG_FUNC(cellUsbPspcm, cellUsbPspcmCalcPoolSize);
+	REG_FUNC(cellUsbPspcm, cellUsbPspcmRegister);
+	REG_FUNC(cellUsbPspcm, cellUsbPspcmUnregister);
+	REG_FUNC(cellUsbPspcm, cellUsbPspcmGetAddr);
+	REG_FUNC(cellUsbPspcm, cellUsbPspcmBind);
+	REG_FUNC(cellUsbPspcm, cellUsbPspcmBindAsync);
+	REG_FUNC(cellUsbPspcm, cellUsbPspcmWaitBindAsync);
+	REG_FUNC(cellUsbPspcm, cellUsbPspcmPollBindAsync);
+	REG_FUNC(cellUsbPspcm, cellUsbPspcmCancelBind);
+	REG_FUNC(cellUsbPspcm, cellUsbPspcmClose);
+	REG_FUNC(cellUsbPspcm, cellUsbPspcmSend);
+	REG_FUNC(cellUsbPspcm, cellUsbPspcmSendAsync);
+	REG_FUNC(cellUsbPspcm, cellUsbPspcmWaitSendAsync);
+	REG_FUNC(cellUsbPspcm, cellUsbPspcmPollSendAsync);
+	REG_FUNC(cellUsbPspcm, cellUsbPspcmRecv);
+	REG_FUNC(cellUsbPspcm, cellUsbPspcmRecvAsync);
+	REG_FUNC(cellUsbPspcm, cellUsbPspcmWaitRecvAsync);
+	REG_FUNC(cellUsbPspcm, cellUsbPspcmPollRecvAsync);
+	REG_FUNC(cellUsbPspcm, cellUsbPspcmReset);
+	REG_FUNC(cellUsbPspcm, cellUsbPspcmResetAsync);
+	REG_FUNC(cellUsbPspcm, cellUsbPspcmWaitResetAsync);
+	REG_FUNC(cellUsbPspcm, cellUsbPspcmPollResetAsync);
+	REG_FUNC(cellUsbPspcm, cellUsbPspcmWaitData);
+	REG_FUNC(cellUsbPspcm, cellUsbPspcmPollData);
+	REG_FUNC(cellUsbPspcm, cellUsbPspcmCancelWaitData);
+});

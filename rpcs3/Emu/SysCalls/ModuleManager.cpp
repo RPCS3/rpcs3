@@ -32,10 +32,12 @@ extern Module cellNetCtl;
 extern Module cellOvis;
 extern Module cellPamf;
 extern Module cellPngDec;
+extern Module cellPngEnc;
 extern Module cellResc;
 extern Module cellRtc;
 extern Module cellRudp;
 extern Module cellSail;
+extern Module cellSailRec;
 extern Module cellSaveData;
 extern Module cellMinisSaveData;
 extern Module cellScreenshot;
@@ -51,6 +53,7 @@ extern Module cellSysmodule;
 extern Module cellSysutil;
 extern Module cellSysutilAp;
 extern Module cellUsbd;
+extern Module cellUsbPspcm;
 extern Module cellUserInfo;
 extern Module cellVdec;
 extern Module cellVoice;
@@ -137,7 +140,7 @@ const g_module_list[] =
 	{ 0x0029, "cellAdecAt3", nullptr },
 	{ 0x002a, "cellDmuxPamf", nullptr },
 	{ 0x002e, "sys_lv2dbg", &sys_lv2dbg },
-	{ 0x0030, "cellUsbpspcm", nullptr },
+	{ 0x0030, "cellUsbPspcm", &cellUsbPspcm },
 	{ 0x0031, "cellAvconfExt", &cellAvconfExt },
 	{ 0x0032, "cellUserInfo", &cellUserInfo },
 	{ 0x0033, "cellSaveData", &cellSaveData },
@@ -167,7 +170,7 @@ const g_module_list[] =
 	{ 0x004e, "cellScreenShotUtility", &cellScreenshot },
 	{ 0x004f, "cellMusicDecode", nullptr },
 	{ 0x0050, "cellSpursJq", &cellSpursJq },
-	{ 0x0052, "cellPngEnc", nullptr },
+	{ 0x0052, "cellPngEnc", &cellPngEnc },
 	{ 0x0053, "cellMusicDecode2", nullptr },
 	{ 0x0055, "cellSync2", &cellSync2 },
 	{ 0x0056, "sceNpUtil", &sceNpUtil },
@@ -189,7 +192,7 @@ const g_module_list[] =
 	{ 0xf02e, "cellPhotoDecode", nullptr },
 	{ 0xf02f, "cellSearch", &cellSearch },
 	{ 0xf030, "cellAvchat2", nullptr },
-	{ 0xf034, "cellSailRec", nullptr },
+	{ 0xf034, "cellSailRec", &cellSailRec },
 	{ 0xf035, "sceNpTrophy", &sceNpTrophy },
 	{ 0xf053, "cellAdecAt3multi", nullptr },
 	{ 0xf054, "cellAtracMulti", &cellAtracMulti },
