@@ -887,6 +887,12 @@
     <ClCompile Include="Emu\SysCalls\Modules\cellUsbpspcm.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellDaisy.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellSpudll.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">

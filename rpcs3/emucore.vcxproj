@@ -45,7 +45,9 @@
     <ClCompile Include="Emu\SysCalls\lv2\sys_dbg.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\sys_fs.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellAtracMulti.cpp" />
+    <ClCompile Include="Emu\SysCalls\Modules\cellDaisy.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellFs.cpp" />
+    <ClCompile Include="Emu\SysCalls\Modules\cellSpudll.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellSpursSpu.cpp" />
     <ClCompile Include="Crypto\aes.cpp" />
     <ClCompile Include="Crypto\ec.cpp" />

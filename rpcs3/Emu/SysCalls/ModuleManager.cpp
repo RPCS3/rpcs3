@@ -11,6 +11,7 @@ extern Module cellBGDL;
 extern Module cellCamera;
 extern Module cellCelp8Enc;
 extern Module cellCelpEnc;
+extern Module cellDaisy;
 extern Module cellDmux;
 extern Module cellFiber;
 extern Module cellFont;
@@ -43,6 +44,7 @@ extern Module cellMinisSaveData;
 extern Module cellScreenshot;
 extern Module cellSearch;
 extern Module cellSheap;
+extern Module cellSpudll;
 extern Module cellSpurs;
 extern Module cellSpursJq;
 extern Module cellSsl;
@@ -128,7 +130,7 @@ const g_module_list[] =
 	{ 0x001d, "cellSail", &cellSail },
 	{ 0x001e, "cellL10n", &cellL10n },
 	{ 0x001f, "cellResc", &cellResc },
-	{ 0x0020, "cellDaisy", nullptr },
+	{ 0x0020, "cellDaisy", &cellDaisy },
 	{ 0x0021, "cellKey2char", &cellKey2char },
 	{ 0x0022, "cellMic", &cellMic },
 	{ 0x0023, "cellCamera", &cellCamera },
@@ -202,6 +204,7 @@ const g_module_list[] =
 	{ -1, "sysPrxForUser", &sysPrxForUser },
 	{ -1, "sys_libc", &sys_libc },
 	{ -1, "cellMinisSaveData", &cellMinisSaveData },
+	{ -1, "cellSpudll", &cellSpudll },
 };
 
 void ModuleManager::Init()
