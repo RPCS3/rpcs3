@@ -375,8 +375,15 @@ D3D12GSRender::~D3D12GSRender()
 
 void D3D12GSRender::Close()
 {
-	Stop();
-	m_frame->Hide();
+	if (joinable())
+	{
+		join();
+	}
+
+	if (m_frame->IsShown())
+	{
+		m_frame->Hide();
+	}
 }
 
 void D3D12GSRender::OnInit()

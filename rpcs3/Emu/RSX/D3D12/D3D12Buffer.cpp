@@ -244,7 +244,7 @@ ID3D12Resource *createVertexBuffer(const VertexBufferFormat &vbf, const RSXVerte
 			{
 				const u16* c_src = (const u16*)src;
 				u16* c_dst = (u16*)dst;
-				for (u32 j = 0; j < size; ++j) *c_dst++ = re16(*c_src++);
+				for (u32 j = 0; j < size; ++j) *c_dst++ = _byteswap_ushort(*c_src++);
 				break;
 			}
 
@@ -252,7 +252,7 @@ ID3D12Resource *createVertexBuffer(const VertexBufferFormat &vbf, const RSXVerte
 			{
 				const u32* c_src = (const u32*)src;
 				u32* c_dst = (u32*)dst;
-				for (u32 j = 0; j < size; ++j) *c_dst++ = re32(*c_src++);
+				for (u32 j = 0; j < size; ++j) *c_dst++ = _byteswap_ulong(*c_src++);
 				break;
 			}
 			}
