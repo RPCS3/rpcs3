@@ -1,8 +1,9 @@
 #include "stdafx.h"
-#if 0
+#include "Emu/Memory/Memory.h"
+#include "Emu/System.h"
+#include "Emu/SysCalls/Modules.h"
 
-void cellCelp8Enc_init();
-Module cellCelp8Enc(0x0048, cellCelp8Enc_init);
+extern Module cellCelp8Enc;
 
 // Return Codes
 enum
@@ -15,61 +16,61 @@ enum
 	CELL_CELP8ENC_ERROR_CORE_ARG    = 0x806140b3,
 };
 
-int cellCelp8EncQueryAttr()
+s32 cellCelp8EncQueryAttr()
 {
 	UNIMPLEMENTED_FUNC(cellCelp8Enc);
 	return CELL_OK;
 }
 
-int cellCelp8EncOpen()
+s32 cellCelp8EncOpen()
 {
 	UNIMPLEMENTED_FUNC(cellCelp8Enc);
 	return CELL_OK;
 }
 
-int cellCelp8EncOpenEx()
+s32 cellCelp8EncOpenEx()
 {
 	UNIMPLEMENTED_FUNC(cellCelp8Enc);
 	return CELL_OK;
 }
 
-int cellCelp8EncClose()
+s32 cellCelp8EncClose()
 {
 	UNIMPLEMENTED_FUNC(cellCelp8Enc);
 	return CELL_OK;
 }
 
-int cellCelp8EncStart()
+s32 cellCelp8EncStart()
 {
 	UNIMPLEMENTED_FUNC(cellCelp8Enc);
 	return CELL_OK;
 }
 
-int cellCelp8EncEnd()
+s32 cellCelp8EncEnd()
 {
 	UNIMPLEMENTED_FUNC(cellCelp8Enc);
 	return CELL_OK;
 }
 
-int cellCelp8EncEncodeFrame()
+s32 cellCelp8EncEncodeFrame()
 {
 	UNIMPLEMENTED_FUNC(cellCelp8Enc);
 	return CELL_OK;
 }
 
-int cellCelp8EncWaitForOutput()
+s32 cellCelp8EncWaitForOutput()
 {
 	UNIMPLEMENTED_FUNC(cellCelp8Enc);
 	return CELL_OK;
 }
 
-int cellCelp8EncGetAu()
+s32 cellCelp8EncGetAu()
 {
 	UNIMPLEMENTED_FUNC(cellCelp8Enc);
 	return CELL_OK;
 }
 
-void cellCelp8Enc_init()
+Module cellCelp8Enc("cellCelp8Enc", []()
 {
 	REG_FUNC(cellCelp8Enc, cellCelp8EncQueryAttr);
 	REG_FUNC(cellCelp8Enc, cellCelp8EncOpen);
@@ -80,5 +81,4 @@ void cellCelp8Enc_init()
 	REG_FUNC(cellCelp8Enc, cellCelp8EncEncodeFrame);
 	REG_FUNC(cellCelp8Enc, cellCelp8EncWaitForOutput);
 	REG_FUNC(cellCelp8Enc, cellCelp8EncGetAu);
-}
-#endif
+});

@@ -416,12 +416,6 @@
     <ClCompile Include="Emu\SysCalls\Modules\cellBgdl.cpp">
       <Filter>Emu\SysCalls\currently_unused</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\SysCalls\Modules\cellCelp8Enc.cpp">
-      <Filter>Emu\SysCalls\currently_unused</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\SysCalls\Modules\cellCelpEnc.cpp">
-      <Filter>Emu\SysCalls\currently_unused</Filter>
-    </ClCompile>
     <ClCompile Include="Emu\SysCalls\Modules\cellHttpUtil.cpp">
       <Filter>Emu\SysCalls\currently_unused</Filter>
     </ClCompile>
@@ -885,6 +879,12 @@
       <Filter>Utilities</Filter>
     </ClCompile>
     <ClCompile Include="Emu\SysCalls\Modules\cellAtracMulti.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellCelp8Enc.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellCelpEnc.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
   </ItemGroup>

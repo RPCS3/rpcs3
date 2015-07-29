@@ -1,8 +1,9 @@
 #include "stdafx.h"
-#if 0
+#include "Emu/Memory/Memory.h"
+#include "Emu/System.h"
+#include "Emu/SysCalls/Modules.h"
 
-void cellCelpEnc_init();
-Module cellCelpEnc(0xf00a, cellCelpEnc_init);
+extern Module cellCelpEnc;
 
 // Return Codes
 enum
@@ -15,61 +16,61 @@ enum
 	CELL_CELPENC_ERROR_CORE_ARG    = 0x80614083,
 };
 
-int cellCelpEncQueryAttr()
+s32 cellCelpEncQueryAttr()
 {
 	UNIMPLEMENTED_FUNC(cellCelpEnc);
 	return CELL_OK;
 }
 
-int cellCelpEncOpen()
+s32 cellCelpEncOpen()
 {
 	UNIMPLEMENTED_FUNC(cellCelpEnc);
 	return CELL_OK;
 }
 
-int cellCelpEncOpenEx()
+s32 cellCelpEncOpenEx()
 {
 	UNIMPLEMENTED_FUNC(cellCelpEnc);
 	return CELL_OK;
 }
 
-int cellCelpEncClose()
+s32 cellCelpEncClose()
 {
 	UNIMPLEMENTED_FUNC(cellCelpEnc);
 	return CELL_OK;
 }
 
-int cellCelpEncStart()
+s32 cellCelpEncStart()
 {
 	UNIMPLEMENTED_FUNC(cellCelpEnc);
 	return CELL_OK;
 }
 
-int cellCelpEncEnd()
+s32 cellCelpEncEnd()
 {
 	UNIMPLEMENTED_FUNC(cellCelpEnc);
 	return CELL_OK;
 }
 
-int cellCelpEncEncodeFrame()
+s32 cellCelpEncEncodeFrame()
 {
 	UNIMPLEMENTED_FUNC(cellCelpEnc);
 	return CELL_OK;
 }
 
-int cellCelpEncWaitForOutput()
+s32 cellCelpEncWaitForOutput()
 {
 	UNIMPLEMENTED_FUNC(cellCelpEnc);
 	return CELL_OK;
 }
 
-int cellCelpEncGetAu()
+s32 cellCelpEncGetAu()
 {
 	UNIMPLEMENTED_FUNC(cellCelpEnc);
 	return CELL_OK;
 }
 
-void cellCelpEnc_init()
+Module cellCelpEnc("cellCelpEnc", []()
 {
 	REG_FUNC(cellCelpEnc, cellCelpEncQueryAttr);
 	REG_FUNC(cellCelpEnc, cellCelpEncOpen);
@@ -80,5 +81,4 @@ void cellCelpEnc_init()
 	REG_FUNC(cellCelpEnc, cellCelpEncEncodeFrame);
 	REG_FUNC(cellCelpEnc, cellCelpEncWaitForOutput);
 	REG_FUNC(cellCelpEnc, cellCelpEncGetAu);
-}
-#endif 
+});

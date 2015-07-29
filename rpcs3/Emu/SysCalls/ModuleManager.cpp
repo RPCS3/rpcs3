@@ -8,6 +8,8 @@ extern Module cellAtracMulti;
 extern Module cellAudio;
 extern Module cellAvconfExt;
 extern Module cellCamera;
+extern Module cellCelp8Enc;
+extern Module cellCelpEnc;
 extern Module cellDmux;
 extern Module cellFiber;
 extern Module cellFont;
@@ -136,7 +138,7 @@ static const g_module_list[] =
 	{ 0x0045, "sceNpTus", &sceNpTus },
 	{ 0x0046, "cellVoice", &cellVoice },
 	{ 0x0047, "cellAdecCelp8", nullptr },
-	{ 0x0048, "cellCelp8Enc", nullptr },
+	{ 0x0048, "cellCelp8Enc", &cellCelp8Enc },
 	{ 0x0049, "cellLicenseArea", nullptr },
 	{ 0x004a, "cellMusic2", nullptr },
 	{ 0x004e, "cellScreenShotUtility", &cellScreenshot },
@@ -149,7 +151,7 @@ static const g_module_list[] =
 	{ 0x0057, "cellRudp", &cellRudp },
 	{ 0x0059, "sceNpSns", &sceNpSns },
 	{ 0x005a, "libgem", &cellGem },
-	{ 0xf00a, "cellCelpEnc", nullptr },
+	{ 0xf00a, "cellCelpEnc", &cellCelpEnc },
 	{ 0xf010, "cellGifDec", &cellGifDec },
 	{ 0xf019, "cellAdecCelp", nullptr },
 	{ 0xf01b, "cellAdecM2bc", nullptr },
