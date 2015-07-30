@@ -9,6 +9,7 @@
 #include "cellNetCtl.h"
 
 #ifdef _WIN32
+#include <winsock2.h>
 #include <windows.h>
 #include <iphlpapi.h>
 
@@ -24,6 +25,7 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <ifaddrs.h>
+#include <fcntl.h>
 #endif
 
 extern Module cellNetCtl;
@@ -84,17 +86,101 @@ s32 cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 {
 	cellNetCtl.Todo("cellNetCtlGetInfo(code=0x%x (%s), info=*0x%x)", code, InfoCodeToName(code), info);
 
-	if (code == CELL_NET_CTL_INFO_IP_ADDRESS)
+	if (code == CELL_NET_CTL_INFO_MTU)
+	{
+#ifdef _WIN32
+		PIP_ADAPTER_ADDRESSES pAddresses;
+		DWORD ret;
+		ULONG outBufLen = sizeof(PIP_ADAPTER_ADDRESSES);
+
+		pAddresses = (IP_ADAPTER_ADDRESSES*)vm::alloc(outBufLen, vm::main);
+
+		if (pAddresses == nullptr)
+		{
+			cellNetCtl.Error("cellNetCtlGetInfo(INFO_MTU): pAddresses memory allocation failed.");
+		}
+		else
+		{
+			ret = GetAdaptersAddresses(AF_INET, GAA_FLAG_INCLUDE_PREFIX, nullptr, pAddresses, &outBufLen);
+
+			if (ret == ERROR_BUFFER_OVERFLOW)
+			{
+				free(pAddresses);
+			}
+		}
+
+		if (ret == NO_ERROR)
+		{
+			PIP_ADAPTER_ADDRESSES pCurrAddresses = pAddresses;
+
+			for (int c = 0; c < Ini.NETInterface.GetValue(); c++)
+			{
+				pCurrAddresses = pCurrAddresses->Next;
+			}
+
+			info->mtu = pCurrAddresses->Mtu;
+		}
+		else
+		{
+			cellNetCtl.Error("cellNetCtlGetInfo(INFO_MTU): Call to GetAdaptersAddresses failed.");
+			info->mtu = 1490; // Seems to be the default value on Windows, generally.
+		}
+#else
+		struct ifaddrs *ifaddr, *ifa;
+		int family, s, n;
+
+		if (getifaddrs(&ifaddr) == -1)
+		{
+			LOG_ERROR(HLE, "Call to getifaddrs returned negative.");
+		}
+
+		for (ifa = ifaddr, n = 0; ifa != nullptr; ifa = ifa->ifa_next, n++)
+		{
+			if (ifa->ifa_addr == nullptr)
+			{
+				continue;
+			}
+
+			if (n < Ini.NETInterface.GetValue())
+			{
+				continue;
+			}
+
+			family = ifa->ifa_addr->sa_family;
+
+			if (family == AF_INET)
+			{
+				s32 fd, status;
+
+				fd = open("/proc/net/dev", O_RDONLY);
+				struct ifreq freq;
+
+				if (ioctl(fd, SIOCGIFMTU, &freq) == -1)
+				{
+					cellNetCtl.Error("cellNetCtlGetInfo(INFO_MTU): Call to ioctl failed.");
+				}
+				else
+				{
+					info->mtu = (u32)freq.ifr_mtu;
+				}
+
+				close(fd);
+			}
+		}
+
+		freeifaddrs(ifaddr);
+#endif
+	}
+	else if (code == CELL_NET_CTL_INFO_IP_ADDRESS)
 	{
 #ifdef _WIN32
 		PIP_ADAPTER_INFO pAdapterInfo;
-		pAdapterInfo = (IP_ADAPTER_INFO*) malloc(sizeof(IP_ADAPTER_INFO));
+		pAdapterInfo = (IP_ADAPTER_INFO*)vm::alloc(sizeof(IP_ADAPTER_INFO), vm::main);
 		ULONG buflen = sizeof(IP_ADAPTER_INFO);
 
 		if (GetAdaptersInfo(pAdapterInfo, &buflen) == ERROR_BUFFER_OVERFLOW)
 		{
 			free(pAdapterInfo);
-			pAdapterInfo = (IP_ADAPTER_INFO*) malloc(buflen);
 		}
 
 		if (GetAdaptersInfo(pAdapterInfo, &buflen) == NO_ERROR)
@@ -117,16 +203,15 @@ s32 cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 #else
 		struct ifaddrs *ifaddr, *ifa;
 		int family, s, n;
-		char host[NI_MAXHOST];
 
 		if (getifaddrs(&ifaddr) == -1)
 		{
 			LOG_ERROR(HLE, "Call to getifaddrs returned negative.");
 		}
 
-		for (ifa = ifaddr, n = 0; ifa != NULL; ifa = ifa->ifa_next, n++)
+		for (ifa = ifaddr, n = 0; ifa != nullptr; ifa = ifa->ifa_next, n++)
 		{
-			if (ifa->ifa_addr == NULL)
+			if (ifa->ifa_addr == nullptr)
 			{
 				continue;
 			}
@@ -151,13 +236,12 @@ s32 cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 	{
 #ifdef _WIN32
 		PIP_ADAPTER_INFO pAdapterInfo;
-		pAdapterInfo = (IP_ADAPTER_INFO*)malloc(sizeof(IP_ADAPTER_INFO));
+		pAdapterInfo = (IP_ADAPTER_INFO*)vm::alloc(sizeof(IP_ADAPTER_INFO), vm::main);
 		ULONG buflen = sizeof(IP_ADAPTER_INFO);
 
 		if (GetAdaptersInfo(pAdapterInfo, &buflen) == ERROR_BUFFER_OVERFLOW)
 		{
 			free(pAdapterInfo);
-			pAdapterInfo = (IP_ADAPTER_INFO*)malloc(buflen);
 		}
 
 		if (GetAdaptersInfo(pAdapterInfo, &buflen) == NO_ERROR)
@@ -169,12 +253,19 @@ s32 cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 				pAdapter = pAdapter->Next;
 			}
 
-			strcpy_trunc(info->ip_address, pAdapter->IpAddressList.IpMask.String);
+			for (int c = 0; c < 4; c++)
+			{
+				info->netmask[c] = (s8)pAdapter->IpAddressList.IpMask.String;
+			}
 		}
 		else
 		{
 			cellNetCtl.Error("cellNetCtlGetInfo(INFO_NETMASK): Call to GetAdaptersInfo failed.");
-			// TODO: What would be the default netmask? 255.255.255.0?
+			// TODO: Is the default netmask default?
+			info->netmask[0] = 255;
+			info->netmask[1] = 255;
+			info->netmask[2] = 255;
+			info->netmask[3] = 0;
 		}
 #else
 		struct ifaddrs *ifaddr, *ifa;
@@ -186,9 +277,9 @@ s32 cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 			LOG_ERROR(HLE, "Call to getifaddrs returned negative.");
 		}
 
-		for (ifa = ifaddr, n = 0; ifa != NULL; ifa = ifa->ifa_next, n++)
+		for (ifa = ifaddr, n = 0; ifa != nullptr; ifa = ifa->ifa_next, n++)
 		{
-			if (ifa->ifa_addr == NULL)
+			if (ifa->ifa_addr == nullptr)
 			{
 				continue;
 			}
