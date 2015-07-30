@@ -73,6 +73,8 @@ extern Module cellUsbd;
 extern Module cellUsbPspcm;
 extern Module cellUserInfo;
 extern Module cellVdec;
+extern Module cellVideoExport;
+extern Module cellVideoUpload;
 extern Module cellVoice;
 extern Module cellVpost;
 extern Module libmixer;
@@ -163,7 +165,7 @@ const g_module_list[] =
 	{ 0x0033, "cellSaveData", &cellSaveData },
 	{ 0x0034, "cellSubDisplay", &cellSubdisplay },
 	{ 0x0035, "cellRec", &cellRec },
-	{ 0x0036, "cellVideoExport", nullptr },
+	{ 0x0036, "cellVideoExportUtility", &cellVideoExport },
 	{ 0x0037, "cellGameExec", &cellGameExec },
 	{ 0x0038, "sceNp2", &sceNp2 },
 	{ 0x0039, "cellSysutilAp", &cellSysutilAp },
@@ -174,7 +176,7 @@ const g_module_list[] =
 	{ 0x003e, "cellGame", &cellGame },
 	{ 0x003f, "cellBGDLUtility", &cellBGDL },
 	{ 0x0040, "cell_FreeType2", nullptr },
-	{ 0x0041, "cellSysutilVideoUpload", nullptr },
+	{ 0x0041, "cellVideoUpload", &cellVideoUpload },
 	{ 0x0042, "cellSysconfExtUtility", &cellSysconf },
 	{ 0x0043, "cellFiber", &cellFiber },
 	{ 0x0044, "sceNpCommerce2", &sceNpCommerce2 },

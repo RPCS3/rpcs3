@@ -259,6 +259,7 @@
     <ClCompile Include="Emu\SysCalls\Modules\cellSpurs.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellSpursJq.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellSsl.cpp" />
+    <ClCompile Include="Emu\SysCalls\Modules\cellStorage.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellSubdisplay.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellSync.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellSync2.cpp" />
@@ -273,6 +274,7 @@
     <ClCompile Include="Emu\SysCalls\Modules\cellUsbpspcm.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellUserInfo.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellVdec.cpp" />
+    <ClCompile Include="Emu\SysCalls\Modules\cellVideoExport.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellVoice.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellVpost.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\libmixer.cpp" />
@@ -289,6 +291,7 @@
     <ClCompile Include="Emu\SysCalls\Modules\cellMouse.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellPad.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\sceNpUtil.cpp" />
+    <ClCompile Include="Emu\SysCalls\Modules\cellVideoUpload.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\sysPrxForUser.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\sys_lv2dbg.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellHttp.cpp" />

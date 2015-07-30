@@ -711,6 +711,7 @@ extern void cellSysutil_SaveData_init();
 extern void cellSysutil_GameData_init();
 extern void cellSysutil_MsgDialog_init();
 extern void cellSysutil_OskDialog_init();
+extern void cellSysutil_Storage_init();
 
 Module cellSysutil("cellSysutil", []()
 {
@@ -724,6 +725,7 @@ Module cellSysutil("cellSysutil", []()
 	cellSysutil_GameData_init(); // cellGameData, cellHddGame functions
 	cellSysutil_MsgDialog_init(); // cellMsgDialog functions
 	cellSysutil_OskDialog_init(); // cellOskDialog functions
+	cellSysutil_Storage_init(); // cellStorage functions
 
 	REG_FUNC(cellSysutil, cellSysutilGetSystemParamInt);
 	REG_FUNC(cellSysutil, cellSysutilGetSystemParamString);

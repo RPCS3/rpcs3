@@ -917,6 +917,15 @@
     <ClCompile Include="Emu\SysCalls\Modules\cellSysconf.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellVideoExport.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellVideoUpload.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellStorage.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
