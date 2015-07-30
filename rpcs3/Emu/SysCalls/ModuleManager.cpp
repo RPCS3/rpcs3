@@ -44,6 +44,8 @@ extern Module cellPhotoImportUtil;
 extern Module cellPngDec;
 extern Module cellPngEnc;
 extern Module cellPrint;
+extern Module cellRec;
+extern Module cellRemotePlay;
 extern Module cellResc;
 extern Module cellRtc;
 extern Module cellRudp;
@@ -61,6 +63,7 @@ extern Module cellSsl;
 extern Module cellSubdisplay;
 extern Module cellSync;
 extern Module cellSync2;
+extern Module cellSysconf;
 extern Module cellSysmodule;
 extern Module cellSysutil;
 extern Module cellSysutilAp;
@@ -158,8 +161,8 @@ const g_module_list[] =
 	{ 0x0031, "cellSysutilAvconfExt", &cellAvconfExt },
 	{ 0x0032, "cellUserInfo", &cellUserInfo },
 	{ 0x0033, "cellSaveData", &cellSaveData },
-	{ 0x0034, "cellSubdisplay", &cellSubdisplay },
-	{ 0x0035, "cellSysutilRec", nullptr },
+	{ 0x0034, "cellSubDisplay", &cellSubdisplay },
+	{ 0x0035, "cellRec", &cellRec },
 	{ 0x0036, "cellVideoExport", nullptr },
 	{ 0x0037, "cellGameExec", &cellGameExec },
 	{ 0x0038, "sceNp2", &sceNp2 },
@@ -172,7 +175,7 @@ const g_module_list[] =
 	{ 0x003f, "cellBGDLUtility", &cellBGDL },
 	{ 0x0040, "cell_FreeType2", nullptr },
 	{ 0x0041, "cellSysutilVideoUpload", nullptr },
-	{ 0x0042, "cellSysutilSysconfExt", nullptr },
+	{ 0x0042, "cellSysconfExtUtility", &cellSysconf },
 	{ 0x0043, "cellFiber", &cellFiber },
 	{ 0x0044, "sceNpCommerce2", &sceNpCommerce2 },
 	{ 0x0045, "sceNpTus", &sceNpTus },
@@ -204,7 +207,7 @@ const g_module_list[] =
 	{ 0xf02b, "cellPhotoImportUtil", &cellPhotoImportUtil },
 	{ 0xf02c, "cellMusicExportUtility", &cellMusicExport },
 	{ 0xf02e, "cellPhotoDecodeUtil", &cellPhotoDecode },
-	{ 0xf02f, "cellSearch", &cellSearch },
+	{ 0xf02f, "cellSearchUtility", &cellSearch },
 	{ 0xf030, "cellSysutilAvc2", &cellSysutilAvc2 },
 	{ 0xf034, "cellSailRec", &cellSailRec },
 	{ 0xf035, "sceNpTrophy", &sceNpTrophy },
@@ -217,6 +220,7 @@ const g_module_list[] =
 	{ -1, "sys_libc", &sys_libc },
 	{ -1, "cellMinisSaveData", &cellMinisSaveData },
 	{ -1, "cellSpudll", &cellSpudll },
+	{ -1, "cellRemotePlay", &cellRemotePlay },
 };
 
 void ModuleManager::Init()

@@ -50,6 +50,8 @@
     <ClCompile Include="Emu\SysCalls\Modules\cellGameExec.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellMusic.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellOskDialog.cpp" />
+    <ClCompile Include="Emu\SysCalls\Modules\cellRec.cpp" />
+    <ClCompile Include="Emu\SysCalls\Modules\cellRemotePlay.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellSpudll.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellSpursSpu.cpp" />
     <ClCompile Include="Crypto\aes.cpp" />
@@ -260,6 +262,7 @@
     <ClCompile Include="Emu\SysCalls\Modules\cellSubdisplay.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellSync.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellSync2.cpp" />
+    <ClCompile Include="Emu\SysCalls\Modules\cellSysconf.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellSysmodule.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellSysutil.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellSysutilAp.cpp" />
