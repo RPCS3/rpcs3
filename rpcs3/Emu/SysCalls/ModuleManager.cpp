@@ -25,11 +25,15 @@ extern Module cellGifDec;
 extern Module cellHttp;
 extern Module cellHttps;
 extern Module cellHttpUtil;
+extern Module cellImeJp;
 extern Module cellJpgDec;
 extern Module cellJpgEnc;
 extern Module cellKey2char;
 extern Module cellL10n;
 extern Module cellMic;
+extern Module cellMusic;
+extern Module cellMusicDecode;
+extern Module cellMusicExport;
 extern Module cellNetCtl;
 extern Module cellOvis;
 extern Module cellPamf;
@@ -56,6 +60,7 @@ extern Module cellSysmodule;
 extern Module cellSysutil;
 extern Module cellSysutilAp;
 extern Module cellSysutilAvc2;
+extern Module cellSysutilMisc;
 extern Module cellUsbd;
 extern Module cellUsbPspcm;
 extern Module cellUserInfo;
@@ -127,7 +132,7 @@ const g_module_list[] =
 	{ 0x0018, "cellPngDec", &cellPngDec },
 	{ 0x0019, "cellFont", &cellFont },
 	{ 0x001a, "cellFontFT", &cellFontFT },
-	{ 0x001b, "cellFreetype", nullptr },
+	{ 0x001b, "cell_FreeType2", nullptr },
 	{ 0x001c, "cellUsbd", &cellUsbd },
 	{ 0x001d, "cellSail", &cellSail },
 	{ 0x001e, "cellL10n", &cellL10n },
@@ -160,7 +165,7 @@ const g_module_list[] =
 	{ 0x003d, "cellJpgEnc", &cellJpgEnc },
 	{ 0x003e, "cellGame", &cellGame },
 	{ 0x003f, "cellBGDLUtility", &cellBGDL },
-	{ 0x0040, "cellFreetypeTT", nullptr },
+	{ 0x0040, "cell_FreeType2", nullptr },
 	{ 0x0041, "cellSysutilVideoUpload", nullptr },
 	{ 0x0042, "cellSysutilSysconfExt", nullptr },
 	{ 0x0043, "cellFiber", &cellFiber },
@@ -169,13 +174,13 @@ const g_module_list[] =
 	{ 0x0046, "cellVoice", &cellVoice },
 	{ 0x0047, "cellAdecCelp8", nullptr },
 	{ 0x0048, "cellCelp8Enc", &cellCelp8Enc },
-	{ 0x0049, "cellLicenseArea", nullptr },
-	{ 0x004a, "cellMusic2", nullptr },
+	{ 0x0049, "cellSysutilMisc", &cellSysutilMisc },
+	{ 0x004a, "cellMusicUtility", &cellMusic }, // 2
 	{ 0x004e, "cellScreenShotUtility", &cellScreenshot },
-	{ 0x004f, "cellMusicDecode", nullptr },
+	{ 0x004f, "cellMusicDecodeUtility", &cellMusicDecode },
 	{ 0x0050, "cellSpursJq", &cellSpursJq },
 	{ 0x0052, "cellPngEnc", &cellPngEnc },
-	{ 0x0053, "cellMusicDecode2", nullptr },
+	{ 0x0053, "cellMusicDecodeUtility", &cellMusicDecode }, // 2
 	{ 0x0055, "cellSync2", &cellSync2 },
 	{ 0x0056, "sceNpUtil", &sceNpUtil },
 	{ 0x0057, "cellRudp", &cellRudp },
@@ -187,12 +192,12 @@ const g_module_list[] =
 	{ 0xf01b, "cellAdecM2bc", nullptr },
 	{ 0xf01d, "cellAdecM4aac", nullptr },
 	{ 0xf01e, "cellAdecMp3", nullptr },
-	{ 0xf023, "cellImejp", nullptr },
-	{ 0xf028, "cellMusic", nullptr },
+	{ 0xf023, "cellImeJpUtility", &cellImeJp },
+	{ 0xf028, "cellMusicUtility", &cellMusic },
 	{ 0xf029, "cellPhotoExport", nullptr },
 	{ 0xf02a, "cellPrint", nullptr },
 	{ 0xf02b, "cellPhotoImport", nullptr },
-	{ 0xf02c, "cellMusicExport", nullptr },
+	{ 0xf02c, "cellMusicExportUtility", &cellMusicExport },
 	{ 0xf02e, "cellPhotoDecode", nullptr },
 	{ 0xf02f, "cellSearch", &cellSearch },
 	{ 0xf030, "cellSysutilAvc2", &cellSysutilAvc2 },

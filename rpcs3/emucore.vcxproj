@@ -48,6 +48,7 @@
     <ClCompile Include="Emu\SysCalls\Modules\cellDaisy.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellFs.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellGameExec.cpp" />
+    <ClCompile Include="Emu\SysCalls\Modules\cellMusic.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellSpudll.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellSpursSpu.cpp" />
     <ClCompile Include="Crypto\aes.cpp" />
@@ -263,6 +264,7 @@
     <ClCompile Include="Emu\SysCalls\Modules\cellSysutilAp.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellSaveData.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellSysutilAvc2.cpp" />
+    <ClCompile Include="Emu\SysCalls\Modules\cellSysutilMisc.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellUsbd.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellUsbpspcm.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellUserInfo.cpp" />

@@ -1,8 +1,8 @@
 #include "stdafx.h"
-#if 0
+#include "Emu/Memory/Memory.h"
+#include "Emu/SysCalls/Modules.h"
 
-void cellMusicDecode_init();
-Module cellMusicDecode(0x004f, cellMusicDecode_init);
+extern Module cellMusicDecode;
 
 // Return Codes
 enum
@@ -24,67 +24,128 @@ enum
 	CELL_MUSIC_DECODE_ERROR_GENERIC           = 0x8002C1FF,
 };
 
-int cellMusicDecodeInitialize()
+s32 cellMusicDecodeInitialize()
 {
 	UNIMPLEMENTED_FUNC(cellMusicDecode);
 	return CELL_OK;
 }
 
-int cellMusicDecodeInitializeSystemWorkload()
+s32 cellMusicDecodeInitializeSystemWorkload()
 {
 	UNIMPLEMENTED_FUNC(cellMusicDecode);
 	return CELL_OK;
 }
 
-int cellMusicDecodeFinalize()
+s32 cellMusicDecodeFinalize()
 {
 	UNIMPLEMENTED_FUNC(cellMusicDecode);
 	return CELL_OK;
 }
 
-int cellMusicDecodeSelectContents()
+s32 cellMusicDecodeSelectContents()
 {
 	UNIMPLEMENTED_FUNC(cellMusicDecode);
 	return CELL_OK;
 }
 
-int cellMusicDecodeSetDecodeCommand()
+s32 cellMusicDecodeSetDecodeCommand()
 {
 	UNIMPLEMENTED_FUNC(cellMusicDecode);
 	return CELL_OK;
 }
 
-int cellMusicDecodeGetDecodeStatus()
+s32 cellMusicDecodeGetDecodeStatus()
 {
 	UNIMPLEMENTED_FUNC(cellMusicDecode);
 	return CELL_OK;
 }
 
-int cellMusicDecodeRead()
+s32 cellMusicDecodeRead()
 {
 	UNIMPLEMENTED_FUNC(cellMusicDecode);
 	return CELL_OK;
 }
 
-int cellMusicDecodeGetSelectionContext()
+s32 cellMusicDecodeGetSelectionContext()
 {
 	UNIMPLEMENTED_FUNC(cellMusicDecode);
 	return CELL_OK;
 }
 
-int cellMusicDecodeSetSelectionContext()
+s32 cellMusicDecodeSetSelectionContext()
 {
 	UNIMPLEMENTED_FUNC(cellMusicDecode);
 	return CELL_OK;
 }
 
-int cellMusicDecodeGetContentsId()
+s32 cellMusicDecodeGetContentsId()
 {
 	UNIMPLEMENTED_FUNC(cellMusicDecode);
 	return CELL_OK;
 }
 
-void cellMusicDecode_init()
+s32 cellMusicDecodeInitialize2()
+{
+	UNIMPLEMENTED_FUNC(cellMusicDecode);
+	return CELL_OK;
+}
+
+s32 cellMusicDecodeInitialize2SystemWorkload()
+{
+	UNIMPLEMENTED_FUNC(cellMusicDecode);
+	return CELL_OK;
+}
+
+s32 cellMusicDecodeFinalize2()
+{
+	UNIMPLEMENTED_FUNC(cellMusicDecode);
+	return CELL_OK;
+}
+
+s32 cellMusicDecodeSelectContents2()
+{
+	UNIMPLEMENTED_FUNC(cellMusicDecode);
+	return CELL_OK;
+}
+
+s32 cellMusicDecodeSetDecodeCommand2()
+{
+	UNIMPLEMENTED_FUNC(cellMusicDecode);
+	return CELL_OK;
+}
+
+s32 cellMusicDecodeGetDecodeStatus2()
+{
+	UNIMPLEMENTED_FUNC(cellMusicDecode);
+	return CELL_OK;
+}
+
+s32 cellMusicDecodeRead2()
+{
+	UNIMPLEMENTED_FUNC(cellMusicDecode);
+	return CELL_OK;
+}
+
+s32 cellMusicDecodeGetSelectionContext2()
+{
+	UNIMPLEMENTED_FUNC(cellMusicDecode);
+	return CELL_OK;
+}
+
+s32 cellMusicDecodeSetSelectionContext2()
+{
+	UNIMPLEMENTED_FUNC(cellMusicDecode);
+	return CELL_OK;
+}
+
+s32 cellMusicDecodeGetContentsId2()
+{
+	UNIMPLEMENTED_FUNC(cellMusicDecode);
+	return CELL_OK;
+}
+
+
+Module cellMusicDecode("cellMusicDecode", []()
 {
 	REG_FUNC(cellMusicDecode, cellMusicDecodeInitialize);
 	REG_FUNC(cellMusicDecode, cellMusicDecodeInitializeSystemWorkload);
@@ -96,5 +157,15 @@ void cellMusicDecode_init()
 	REG_FUNC(cellMusicDecode, cellMusicDecodeGetSelectionContext);
 	REG_FUNC(cellMusicDecode, cellMusicDecodeSetSelectionContext);
 	REG_FUNC(cellMusicDecode, cellMusicDecodeGetContentsId);
-}
-#endif
+
+	REG_FUNC(cellMusicDecode, cellMusicDecodeInitialize2);
+	REG_FUNC(cellMusicDecode, cellMusicDecodeInitialize2SystemWorkload);
+	REG_FUNC(cellMusicDecode, cellMusicDecodeFinalize2);
+	REG_FUNC(cellMusicDecode, cellMusicDecodeSelectContents2);
+	REG_FUNC(cellMusicDecode, cellMusicDecodeSetDecodeCommand2);
+	REG_FUNC(cellMusicDecode, cellMusicDecodeGetDecodeStatus2);
+	REG_FUNC(cellMusicDecode, cellMusicDecodeRead2);
+	REG_FUNC(cellMusicDecode, cellMusicDecodeGetSelectionContext2);
+	REG_FUNC(cellMusicDecode, cellMusicDecodeSetSelectionContext2);
+	REG_FUNC(cellMusicDecode, cellMusicDecodeGetContentsId2);
+});

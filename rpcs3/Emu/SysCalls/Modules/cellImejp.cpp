@@ -1,8 +1,8 @@
 #include "stdafx.h"
-#if 0
+#include "Emu/Memory/Memory.h"
+#include "Emu/SysCalls/Modules.h"
 
-void cellImejp_init();
-Module cellImejp(0xf023, cellImejp_init);
+extern Module cellImeJp;
 
 // Return Codes
 enum
@@ -16,291 +16,296 @@ enum
 	CELL_IMEJP_ERROR_OTHER              = 0x8002bfff,
 };
 
-int cellImeJpOpen()
+s32 cellImeJpOpen()
 {
-	UNIMPLEMENTED_FUNC(cellImejp);
+	UNIMPLEMENTED_FUNC(cellImeJp);
 	return CELL_OK;
 }
 
-int cellImeJpOpen2()
+s32 cellImeJpOpen2()
 {
-	UNIMPLEMENTED_FUNC(cellImejp);
+	UNIMPLEMENTED_FUNC(cellImeJp);
 	return CELL_OK;
 }
 
-int cellImeJpOpen3()
+s32 cellImeJpOpen3()
 {
-	UNIMPLEMENTED_FUNC(cellImejp);
+	UNIMPLEMENTED_FUNC(cellImeJp);
 	return CELL_OK;
 }
 
-int cellImeJpClose()
+s32 cellImeJpClose()
 {
-	UNIMPLEMENTED_FUNC(cellImejp);
+	UNIMPLEMENTED_FUNC(cellImeJp);
 	return CELL_OK;
 }
 
-int cellImeJpSetKanaInputMode()
+s32 cellImeJpSetKanaInputMode()
 {
-	UNIMPLEMENTED_FUNC(cellImejp);
+	UNIMPLEMENTED_FUNC(cellImeJp);
 	return CELL_OK;
 }
 
-int cellImeJpSetInputCharType()
+s32 cellImeJpSetInputCharType()
 {
-	UNIMPLEMENTED_FUNC(cellImejp);
+	UNIMPLEMENTED_FUNC(cellImeJp);
 	return CELL_OK;
 }
 
-int cellImeJpSetFixInputMode()
+s32 cellImeJpSetFixInputMode()
 {
-	UNIMPLEMENTED_FUNC(cellImejp);
+	UNIMPLEMENTED_FUNC(cellImeJp);
 	return CELL_OK;
 }
 
-int cellImeJpReset()
+s32 cellImeJpAllowExtensionCharacters()
 {
-	UNIMPLEMENTED_FUNC(cellImejp);
+	UNIMPLEMENTED_FUNC(cellImeJp);
 	return CELL_OK;
 }
 
-int cellImeJpGetStatus()
+s32 cellImeJpReset()
 {
-	UNIMPLEMENTED_FUNC(cellImejp);
+	UNIMPLEMENTED_FUNC(cellImeJp);
 	return CELL_OK;
 }
 
-int cellImeJpEnterChar()
+s32 cellImeJpGetStatus()
 {
-	UNIMPLEMENTED_FUNC(cellImejp);
+	UNIMPLEMENTED_FUNC(cellImeJp);
 	return CELL_OK;
 }
 
-int cellImeJpEnterCharExt()
+s32 cellImeJpEnterChar()
 {
-	UNIMPLEMENTED_FUNC(cellImejp);
+	UNIMPLEMENTED_FUNC(cellImeJp);
 	return CELL_OK;
 }
 
-int cellImeJpEnterString()
+s32 cellImeJpEnterCharExt()
 {
-	UNIMPLEMENTED_FUNC(cellImejp);
+	UNIMPLEMENTED_FUNC(cellImeJp);
 	return CELL_OK;
 }
 
-int cellImeJpEnterStringExt()
+s32 cellImeJpEnterString()
 {
-	UNIMPLEMENTED_FUNC(cellImejp);
+	UNIMPLEMENTED_FUNC(cellImeJp);
 	return CELL_OK;
 }
 
-int cellImeJpModeCaretRight()
+s32 cellImeJpEnterStringExt()
 {
-	UNIMPLEMENTED_FUNC(cellImejp);
+	UNIMPLEMENTED_FUNC(cellImeJp);
 	return CELL_OK;
 }
 
-int cellImeJpModeCaretLeft()
+s32 cellImeJpModeCaretRight()
 {
-	UNIMPLEMENTED_FUNC(cellImejp);
+	UNIMPLEMENTED_FUNC(cellImeJp);
 	return CELL_OK;
 }
 
-int cellImeJpBackspaceWord()
+s32 cellImeJpModeCaretLeft()
 {
-	UNIMPLEMENTED_FUNC(cellImejp);
+	UNIMPLEMENTED_FUNC(cellImeJp);
 	return CELL_OK;
 }
 
-int cellImeJpDeleteWord()
+s32 cellImeJpBackspaceWord()
 {
-	UNIMPLEMENTED_FUNC(cellImejp);
+	UNIMPLEMENTED_FUNC(cellImeJp);
 	return CELL_OK;
 }
 
-int cellImeJpAllDeleteConvertString()
+s32 cellImeJpDeleteWord()
 {
-	UNIMPLEMENTED_FUNC(cellImejp);
+	UNIMPLEMENTED_FUNC(cellImeJp);
 	return CELL_OK;
 }
 
-int cellImeJpConvertForward()
+s32 cellImeJpAllDeleteConvertString()
 {
-	UNIMPLEMENTED_FUNC(cellImejp);
+	UNIMPLEMENTED_FUNC(cellImeJp);
 	return CELL_OK;
 }
 
-int cellImeJpConvertBackward()
+s32 cellImeJpConvertForward()
 {
-	UNIMPLEMENTED_FUNC(cellImejp);
+	UNIMPLEMENTED_FUNC(cellImeJp);
 	return CELL_OK;
 }
 
-int cellImeJpCurrentPartConfirm()
+s32 cellImeJpConvertBackward()
 {
-	UNIMPLEMENTED_FUNC(cellImejp);
+	UNIMPLEMENTED_FUNC(cellImeJp);
 	return CELL_OK;
 }
 
-int cellImeJpAllConfirm()
+s32 cellImeJpCurrentPartConfirm()
 {
-	UNIMPLEMENTED_FUNC(cellImejp);
+	UNIMPLEMENTED_FUNC(cellImeJp);
 	return CELL_OK;
 }
 
-int cellImeJpConvertCancel()
+s32 cellImeJpAllConfirm()
 {
-	UNIMPLEMENTED_FUNC(cellImejp);
+	UNIMPLEMENTED_FUNC(cellImeJp);
 	return CELL_OK;
 }
 
-int cellImeJpAllConvertCancel()
+s32 cellImeJpConvertCancel()
 {
-	UNIMPLEMENTED_FUNC(cellImejp);
+	UNIMPLEMENTED_FUNC(cellImeJp);
 	return CELL_OK;
 }
 
-int cellImeJpExtendConvertArea()
+s32 cellImeJpAllConvertCancel()
 {
-	UNIMPLEMENTED_FUNC(cellImejp);
+	UNIMPLEMENTED_FUNC(cellImeJp);
 	return CELL_OK;
 }
 
-int cellImeJpShortenConvertArea()
+s32 cellImeJpExtendConvertArea()
 {
-	UNIMPLEMENTED_FUNC(cellImejp);
+	UNIMPLEMENTED_FUNC(cellImeJp);
 	return CELL_OK;
 }
 
-int cellImeJpTemporalConfirm()
+s32 cellImeJpShortenConvertArea()
 {
-	UNIMPLEMENTED_FUNC(cellImejp);
+	UNIMPLEMENTED_FUNC(cellImeJp);
 	return CELL_OK;
 }
 
-int cellImeJpPostConvert()
+s32 cellImeJpTemporalConfirm()
 {
-	UNIMPLEMENTED_FUNC(cellImejp);
+	UNIMPLEMENTED_FUNC(cellImeJp);
 	return CELL_OK;
 }
 
-int cellImeJpMoveFocusClause()
+s32 cellImeJpPostConvert()
 {
-	UNIMPLEMENTED_FUNC(cellImejp);
+	UNIMPLEMENTED_FUNC(cellImeJp);
 	return CELL_OK;
 }
 
-int cellImeJpGetFocusTop()
+s32 cellImeJpMoveFocusClause()
 {
-	UNIMPLEMENTED_FUNC(cellImejp);
+	UNIMPLEMENTED_FUNC(cellImeJp);
 	return CELL_OK;
 }
 
-int cellImeJpGetFocusLength()
+s32 cellImeJpGetFocusTop()
 {
-	UNIMPLEMENTED_FUNC(cellImejp);
+	UNIMPLEMENTED_FUNC(cellImeJp);
 	return CELL_OK;
 }
 
-int cellImeJpGetConfirmYomiString()
+s32 cellImeJpGetFocusLength()
 {
-	UNIMPLEMENTED_FUNC(cellImejp);
+	UNIMPLEMENTED_FUNC(cellImeJp);
 	return CELL_OK;
 }
 
-int cellImeJpGetConfirmString()
+s32 cellImeJpGetConfirmYomiString()
 {
-	UNIMPLEMENTED_FUNC(cellImejp);
+	UNIMPLEMENTED_FUNC(cellImeJp);
 	return CELL_OK;
 }
 
-int cellImeJpGetConvertYomiString()
+s32 cellImeJpGetConfirmString()
 {
-	UNIMPLEMENTED_FUNC(cellImejp);
+	UNIMPLEMENTED_FUNC(cellImeJp);
 	return CELL_OK;
 }
 
-int cellImeJpGetConvertString()
+s32 cellImeJpGetConvertYomiString()
 {
-	UNIMPLEMENTED_FUNC(cellImejp);
+	UNIMPLEMENTED_FUNC(cellImeJp);
 	return CELL_OK;
 }
 
-int cellImeJpGetCandidateListSize()
+s32 cellImeJpGetConvertString()
 {
-	UNIMPLEMENTED_FUNC(cellImejp);
+	UNIMPLEMENTED_FUNC(cellImeJp);
 	return CELL_OK;
 }
 
-int cellImeJpGetCandidateList()
+s32 cellImeJpGetCandidateListSize()
 {
-	UNIMPLEMENTED_FUNC(cellImejp);
+	UNIMPLEMENTED_FUNC(cellImeJp);
 	return CELL_OK;
 }
 
-int cellImeJpGetCandidateSelect()
+s32 cellImeJpGetCandidateList()
 {
-	UNIMPLEMENTED_FUNC(cellImejp);
+	UNIMPLEMENTED_FUNC(cellImeJp);
 	return CELL_OK;
 }
 
-int cellImeJpGetPredictList()
+s32 cellImeJpGetCandidateSelect()
 {
-	UNIMPLEMENTED_FUNC(cellImejp);
+	UNIMPLEMENTED_FUNC(cellImeJp);
 	return CELL_OK;
 }
 
-int cellImeJpConfirmPrediction()
+s32 cellImeJpGetPredictList()
 {
-	UNIMPLEMENTED_FUNC(cellImejp);
+	UNIMPLEMENTED_FUNC(cellImeJp);
 	return CELL_OK;
 }
 
-void cellImejp_init()
+s32 cellImeJpConfirmPrediction()
 {
-	REG_FUNC(cellImejp, cellImeJpOpen);
-	REG_FUNC(cellImejp, cellImeJpOpen2);
-	REG_FUNC(cellImejp, cellImeJpOpen3);
-	REG_FUNC(cellImejp, cellImeJpClose);
-
-	REG_FUNC(cellImejp, cellImeJpSetKanaInputMode);
-	REG_FUNC(cellImejp, cellImeJpSetInputCharType);
-	REG_FUNC(cellImejp, cellImeJpSetFixInputMode);
-	//cellImejp.AddFunc(, cellImeJpAllowExtensionCharacters);
-	REG_FUNC(cellImejp, cellImeJpReset);
-
-	REG_FUNC(cellImejp, cellImeJpGetStatus);
-
-	REG_FUNC(cellImejp, cellImeJpEnterChar);
-	REG_FUNC(cellImejp, cellImeJpEnterCharExt);
-	REG_FUNC(cellImejp, cellImeJpEnterString);
-	REG_FUNC(cellImejp, cellImeJpEnterStringExt);
-	REG_FUNC(cellImejp, cellImeJpModeCaretRight);
-	REG_FUNC(cellImejp, cellImeJpModeCaretLeft);
-	REG_FUNC(cellImejp, cellImeJpBackspaceWord);
-	REG_FUNC(cellImejp, cellImeJpDeleteWord);
-	REG_FUNC(cellImejp, cellImeJpAllDeleteConvertString);
-	REG_FUNC(cellImejp, cellImeJpConvertForward);
-	REG_FUNC(cellImejp, cellImeJpConvertBackward);
-	REG_FUNC(cellImejp, cellImeJpCurrentPartConfirm);
-	REG_FUNC(cellImejp, cellImeJpAllConfirm);
-	REG_FUNC(cellImejp, cellImeJpConvertCancel);
-	REG_FUNC(cellImejp, cellImeJpAllConvertCancel);
-	REG_FUNC(cellImejp, cellImeJpExtendConvertArea);
-	REG_FUNC(cellImejp, cellImeJpShortenConvertArea);
-	REG_FUNC(cellImejp, cellImeJpTemporalConfirm);
-	REG_FUNC(cellImejp, cellImeJpPostConvert);
-	REG_FUNC(cellImejp, cellImeJpMoveFocusClause);
-	REG_FUNC(cellImejp, cellImeJpGetFocusTop);
-	REG_FUNC(cellImejp, cellImeJpGetFocusLength);
-	REG_FUNC(cellImejp, cellImeJpGetConfirmYomiString);
-	REG_FUNC(cellImejp, cellImeJpGetConfirmString);
-	REG_FUNC(cellImejp, cellImeJpGetConvertYomiString);
-	REG_FUNC(cellImejp, cellImeJpGetConvertString);
-	REG_FUNC(cellImejp, cellImeJpGetCandidateListSize);
-	REG_FUNC(cellImejp, cellImeJpGetCandidateList);
-	REG_FUNC(cellImejp, cellImeJpGetCandidateSelect);
-	REG_FUNC(cellImejp, cellImeJpGetPredictList);
-	REG_FUNC(cellImejp, cellImeJpConfirmPrediction);
+	UNIMPLEMENTED_FUNC(cellImeJp);
+	return CELL_OK;
 }
-#endif
+
+Module cellImeJp("cellImeJp", []()
+{
+	REG_FUNC(cellImeJp, cellImeJpOpen);
+	REG_FUNC(cellImeJp, cellImeJpOpen2);
+	REG_FUNC(cellImeJp, cellImeJpOpen3);
+	REG_FUNC(cellImeJp, cellImeJpClose);
+
+	REG_FUNC(cellImeJp, cellImeJpSetKanaInputMode);
+	REG_FUNC(cellImeJp, cellImeJpSetInputCharType);
+	REG_FUNC(cellImeJp, cellImeJpSetFixInputMode);
+	REG_FUNC(cellImeJp, cellImeJpAllowExtensionCharacters);
+	REG_FUNC(cellImeJp, cellImeJpReset);
+
+	REG_FUNC(cellImeJp, cellImeJpGetStatus);
+
+	REG_FUNC(cellImeJp, cellImeJpEnterChar);
+	REG_FUNC(cellImeJp, cellImeJpEnterCharExt);
+	REG_FUNC(cellImeJp, cellImeJpEnterString);
+	REG_FUNC(cellImeJp, cellImeJpEnterStringExt);
+	REG_FUNC(cellImeJp, cellImeJpModeCaretRight);
+	REG_FUNC(cellImeJp, cellImeJpModeCaretLeft);
+	REG_FUNC(cellImeJp, cellImeJpBackspaceWord);
+	REG_FUNC(cellImeJp, cellImeJpDeleteWord);
+	REG_FUNC(cellImeJp, cellImeJpAllDeleteConvertString);
+	REG_FUNC(cellImeJp, cellImeJpConvertForward);
+	REG_FUNC(cellImeJp, cellImeJpConvertBackward);
+	REG_FUNC(cellImeJp, cellImeJpCurrentPartConfirm);
+	REG_FUNC(cellImeJp, cellImeJpAllConfirm);
+	REG_FUNC(cellImeJp, cellImeJpConvertCancel);
+	REG_FUNC(cellImeJp, cellImeJpAllConvertCancel);
+	REG_FUNC(cellImeJp, cellImeJpExtendConvertArea);
+	REG_FUNC(cellImeJp, cellImeJpShortenConvertArea);
+	REG_FUNC(cellImeJp, cellImeJpTemporalConfirm);
+	REG_FUNC(cellImeJp, cellImeJpPostConvert);
+	REG_FUNC(cellImeJp, cellImeJpMoveFocusClause);
+	REG_FUNC(cellImeJp, cellImeJpGetFocusTop);
+	REG_FUNC(cellImeJp, cellImeJpGetFocusLength);
+	REG_FUNC(cellImeJp, cellImeJpGetConfirmYomiString);
+	REG_FUNC(cellImeJp, cellImeJpGetConfirmString);
+	REG_FUNC(cellImeJp, cellImeJpGetConvertYomiString);
+	REG_FUNC(cellImeJp, cellImeJpGetConvertString);
+	REG_FUNC(cellImeJp, cellImeJpGetCandidateListSize);
+	REG_FUNC(cellImeJp, cellImeJpGetCandidateList);
+	REG_FUNC(cellImeJp, cellImeJpGetCandidateSelect);
+	REG_FUNC(cellImeJp, cellImeJpGetPredictList);
+	REG_FUNC(cellImeJp, cellImeJpConfirmPrediction);
+});

@@ -1,8 +1,8 @@
 #include "stdafx.h"
-#if 0
+#include "Emu/Memory/Memory.h"
+#include "Emu/SysCalls/Modules.h"
 
-void cellMusicExport_init();
-Module cellMusicExport(0xf02c, cellMusicExport_init);
+extern Module cellMusicExport;
 
 // Return Codes
 enum
@@ -21,42 +21,41 @@ enum
 	CELL_MUSIC_EXPORT_UTIL_ERROR_INITIALIZE   = 0x8002c60a,
 };
 
-int cellMusicExportInitialize()
+s32 cellMusicExportInitialize()
 {
 	UNIMPLEMENTED_FUNC(cellMusicExport);
 	return CELL_OK;
 }
 
-int cellMusicExportInitialize2()
+s32 cellMusicExportInitialize2()
 {
 	UNIMPLEMENTED_FUNC(cellMusicExport);
 	return CELL_OK;
 }
 
-int cellMusicExportFinalize()
+s32 cellMusicExportFinalize()
 {
 	UNIMPLEMENTED_FUNC(cellMusicExport);
 	return CELL_OK;
 }
 
-int cellMusicExportFromFile()
+s32 cellMusicExportFromFile()
 {
 	UNIMPLEMENTED_FUNC(cellMusicExport);
 	return CELL_OK;
 }
 
-int cellMusicExportProgress()
+s32 cellMusicExportProgress()
 {
 	UNIMPLEMENTED_FUNC(cellMusicExport);
 	return CELL_OK;
 }
 
-void cellMusicExport_init()
+Module cellMusicExport("cellMusicExport", []()
 {
 	REG_FUNC(cellMusicExport, cellMusicExportInitialize);
 	REG_FUNC(cellMusicExport, cellMusicExportInitialize2);
 	REG_FUNC(cellMusicExport, cellMusicExportFinalize);
 	REG_FUNC(cellMusicExport, cellMusicExportFromFile);
 	REG_FUNC(cellMusicExport, cellMusicExportProgress);
-}
-#endif
+});
