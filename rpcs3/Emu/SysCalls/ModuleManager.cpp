@@ -43,6 +43,7 @@ extern Module cellPhotoExport;
 extern Module cellPhotoImportUtil;
 extern Module cellPngDec;
 extern Module cellPngEnc;
+extern Module cellPrint;
 extern Module cellResc;
 extern Module cellRtc;
 extern Module cellRudp;
@@ -199,7 +200,7 @@ const g_module_list[] =
 	{ 0xf023, "cellImeJpUtility", &cellImeJp },
 	{ 0xf028, "cellMusicUtility", &cellMusic },
 	{ 0xf029, "cellPhotoUtility", &cellPhotoExport },
-	{ 0xf02a, "cellPrint", nullptr },
+	{ 0xf02a, "cellPrintUtility", &cellPrint },
 	{ 0xf02b, "cellPhotoImportUtil", &cellPhotoImportUtil },
 	{ 0xf02c, "cellMusicExportUtility", &cellMusicExport },
 	{ 0xf02e, "cellPhotoDecodeUtil", &cellPhotoDecode },
