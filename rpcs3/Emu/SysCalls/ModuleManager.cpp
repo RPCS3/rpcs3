@@ -35,8 +35,12 @@ extern Module cellMusic;
 extern Module cellMusicDecode;
 extern Module cellMusicExport;
 extern Module cellNetCtl;
+extern Module cellOskDialog;
 extern Module cellOvis;
 extern Module cellPamf;
+extern Module cellPhotoDecode;
+extern Module cellPhotoExport;
+extern Module cellPhotoImportUtil;
 extern Module cellPngDec;
 extern Module cellPngEnc;
 extern Module cellResc;
@@ -160,7 +164,7 @@ const g_module_list[] =
 	{ 0x0038, "sceNp2", &sceNp2 },
 	{ 0x0039, "cellSysutilAp", &cellSysutilAp },
 	{ 0x003a, "sceNpClans", &sceNpClans },
-	{ 0x003b, "cellSysutilOskExt", nullptr },
+	{ 0x003b, "cellOskExtUtility", &cellOskDialog },
 	{ 0x003c, "cellVdecDivx", nullptr },
 	{ 0x003d, "cellJpgEnc", &cellJpgEnc },
 	{ 0x003e, "cellGame", &cellGame },
@@ -194,11 +198,11 @@ const g_module_list[] =
 	{ 0xf01e, "cellAdecMp3", nullptr },
 	{ 0xf023, "cellImeJpUtility", &cellImeJp },
 	{ 0xf028, "cellMusicUtility", &cellMusic },
-	{ 0xf029, "cellPhotoExport", nullptr },
+	{ 0xf029, "cellPhotoUtility", &cellPhotoExport },
 	{ 0xf02a, "cellPrint", nullptr },
-	{ 0xf02b, "cellPhotoImport", nullptr },
+	{ 0xf02b, "cellPhotoImportUtil", &cellPhotoImportUtil },
 	{ 0xf02c, "cellMusicExportUtility", &cellMusicExport },
-	{ 0xf02e, "cellPhotoDecode", nullptr },
+	{ 0xf02e, "cellPhotoDecodeUtil", &cellPhotoDecode },
 	{ 0xf02f, "cellSearch", &cellSearch },
 	{ 0xf030, "cellSysutilAvc2", &cellSysutilAvc2 },
 	{ 0xf034, "cellSailRec", &cellSailRec },
@@ -223,9 +227,11 @@ void ModuleManager::Init()
 
 	clear_ppu_functions();
 
+	std::unordered_set<Module*> processed;
+
 	for (auto& module : g_module_list)
 	{
-		if (module)
+		if (module && processed.emplace(module).second)
 		{
 			module->Init();
 		}
@@ -250,9 +256,11 @@ void ModuleManager::Close()
 		return;
 	}
 
+	std::unordered_set<Module*> processed;
+
 	for (auto& module : g_module_list)
 	{
-		if (module && module->on_stop)
+		if (module && module->on_stop && processed.emplace(module).second)
 		{
 			module->on_stop();
 		}

@@ -49,6 +49,7 @@
     <ClCompile Include="Emu\SysCalls\Modules\cellFs.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellGameExec.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellMusic.cpp" />
+    <ClCompile Include="Emu\SysCalls\Modules\cellOskDialog.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellSpudll.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellSpursSpu.cpp" />
     <ClCompile Include="Crypto\aes.cpp" />

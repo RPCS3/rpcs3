@@ -413,15 +413,6 @@
     <ClCompile Include="Emu\SysCalls\ModuleManager.cpp">
       <Filter>Emu\SysCalls</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\SysCalls\Modules\cellPhotoDecode.cpp">
-      <Filter>Emu\SysCalls\currently_unused</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\SysCalls\Modules\cellPhotoExport.cpp">
-      <Filter>Emu\SysCalls\currently_unused</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\SysCalls\Modules\cellPhotoImport.cpp">
-      <Filter>Emu\SysCalls\currently_unused</Filter>
-    </ClCompile>
     <ClCompile Include="Emu\SysCalls\Modules\cellPrint.cpp">
       <Filter>Emu\SysCalls\currently_unused</Filter>
     </ClCompile>
@@ -903,6 +894,18 @@
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
     <ClCompile Include="Emu\SysCalls\Modules\cellMusic.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellOskDialog.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellPhotoDecode.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellPhotoExport.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellPhotoImport.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
   </ItemGroup>

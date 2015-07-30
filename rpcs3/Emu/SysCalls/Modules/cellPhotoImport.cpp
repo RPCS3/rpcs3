@@ -1,8 +1,8 @@
 #include "stdafx.h"
-#if 0
+#include "Emu/Memory/Memory.h"
+#include "Emu/SysCalls/Modules.h"
 
-void cellPhotoImport_init();
-Module cellPhotoImport(0xf02b, cellPhotoImport_init);
+extern Module cellPhotoImportUtil;
 
 // Return Codes
 enum
@@ -41,21 +41,20 @@ struct CellPhotoImportSetParam
 };
 
 // Functions
-int _cellPhotoImport()
+s32 cellPhotoImport()
 {
-	UNIMPLEMENTED_FUNC(cellPhotoImport);
+	UNIMPLEMENTED_FUNC(cellPhotoImportUtil);
 	return CELL_OK;
 }
 
-int _cellPhotoImport2()
+s32 cellPhotoImport2()
 {
-	UNIMPLEMENTED_FUNC(cellPhotoImport);
+	UNIMPLEMENTED_FUNC(cellPhotoImportUtil);
 	return CELL_OK;
 }
 
-void cellPhotoImport_init()
+Module cellPhotoImportUtil("cellPhotoImport", []()
 {
-	REG_FUNC(cellPhotoImport, _cellPhotoImport);
-	REG_FUNC(cellPhotoImport, _cellPhotoImport2);
-}
-#endif
+	REG_FUNC(cellPhotoImportUtil, cellPhotoImport);
+	REG_FUNC(cellPhotoImportUtil, cellPhotoImport2);
+});

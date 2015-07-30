@@ -88,11 +88,11 @@ class Module : public LogBase
 public:
 	Module(const char* name, void(*init)());
 
-	Module(Module &other) = delete;
-	Module(Module &&other) = delete;
+	Module(Module& other) = delete;
+	Module(Module&& other) = delete;
 
-	Module &operator =(Module &other) = delete;
-	Module &operator =(Module &&other) = delete;
+	Module& operator =(Module& other) = delete;
+	Module& operator =(Module&& other) = delete;
 
 	~Module();
 

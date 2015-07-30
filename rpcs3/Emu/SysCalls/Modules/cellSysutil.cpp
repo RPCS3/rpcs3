@@ -710,6 +710,7 @@ s32 cellWebBrowserEstimate2(vm::cptr<CellWebBrowserConfig2> config, vm::ptr<u32>
 extern void cellSysutil_SaveData_init();
 extern void cellSysutil_GameData_init();
 extern void cellSysutil_MsgDialog_init();
+extern void cellSysutil_OskDialog_init();
 
 Module cellSysutil("cellSysutil", []()
 {
@@ -722,6 +723,7 @@ Module cellSysutil("cellSysutil", []()
 	cellSysutil_SaveData_init(); // cellSaveData functions
 	cellSysutil_GameData_init(); // cellGameData, cellHddGame functions
 	cellSysutil_MsgDialog_init(); // cellMsgDialog functions
+	cellSysutil_OskDialog_init(); // cellOskDialog functions
 
 	REG_FUNC(cellSysutil, cellSysutilGetSystemParamInt);
 	REG_FUNC(cellSysutil, cellSysutilGetSystemParamString);
