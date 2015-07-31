@@ -189,3 +189,15 @@ struct CellSysutilBgmPlaybackExtraParam
 	be_t<s32> gameBgmFadeOutTime;
 	char reserved[8];
 };
+
+struct CellSysCacheParam
+{
+	char cacheId[CELL_SYSCACHE_ID_SIZE];
+	char getCachePath[CELL_SYSCACHE_PATH_MAX];
+	vm::ptr<void> reserved;
+};
+
+struct sysutil_t
+{
+	std::atomic<bool> cacheMounted{ false };
+};

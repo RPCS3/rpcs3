@@ -11,6 +11,8 @@
 
 extern Module cellSysutil;
 
+std::unique_ptr<sysutil_t> g_sysutil;
+
 const char* get_systemparam_id_name(s32 id)
 {
 	switch (id)
@@ -200,22 +202,19 @@ s32 cellSysutilUnregisterCallback(s32 slot)
 	return CELL_OK;
 }
 
-struct CellSysCacheParam
-{
-	char cacheId[CELL_SYSCACHE_ID_SIZE];
-	char getCachePath[CELL_SYSCACHE_PATH_MAX];
-	vm::ptr<void> reserved;
-};
-
 s32 cellSysCacheClear(void)
 {
 	cellSysutil.Todo("cellSysCacheClear()");
 
-	//if some software expects CELL_SYSCACHE_ERROR_NOTMOUNTED we need to check whether
-	//it was mounted before, for that we would need to save the state which I don't know
-	//where to put
+	if (g_sysutil->cacheMounted.exchange(false))
+	{
+		return CELL_SYSCACHE_ERROR_NOTMOUNTED;
+	}
+
 	std::string localPath;
 	Emu.GetVFS().GetDevice(std::string("/dev_hdd1/cache/"), localPath);
+
+	// TODO: Delete everything in the cache folder, except the README
 
 	return CELL_SYSCACHE_RET_OK_CLEARED;
 }
@@ -224,7 +223,7 @@ s32 cellSysCacheMount(vm::ptr<CellSysCacheParam> param)
 {
 	cellSysutil.Warning("cellSysCacheMount(param=*0x%x)", param);
 
-	//TODO: implement
+	// TODO: implement
 	char id[CELL_SYSCACHE_ID_SIZE];
 	strncpy(id, param->cacheId, CELL_SYSCACHE_ID_SIZE);
 	strncpy(param->getCachePath, ("/dev_hdd1/cache/" + std::string(id) + "/").c_str(), CELL_SYSCACHE_PATH_MAX);
@@ -278,7 +277,7 @@ s32 cellSysutilDisableBgmPlaybackEx(vm::ptr<CellSysutilBgmPlaybackExtraParam> pa
 
 s32 cellSysutilGetBgmPlaybackStatus(vm::ptr<CellSysutilBgmPlaybackStatus> status)
 {
-	cellSysutil.Log("cellSysutilGetBgmPlaybackStatus(status=*0x%x)", status);
+	cellSysutil.Warning("cellSysutilGetBgmPlaybackStatus(status=*0x%x)", status);
 
 	// TODO
 	status->playerState = CELL_SYSUTIL_BGMPLAYBACK_STATUS_STOP;
@@ -292,7 +291,7 @@ s32 cellSysutilGetBgmPlaybackStatus(vm::ptr<CellSysutilBgmPlaybackStatus> status
 
 s32 cellSysutilGetBgmPlaybackStatus2(vm::ptr<CellSysutilBgmPlaybackStatus2> status2)
 {
-	cellSysutil.Log("cellSysutilGetBgmPlaybackStatus2(status2=*0x%x)", status2);
+	cellSysutil.Warning("cellSysutilGetBgmPlaybackStatus2(status2=*0x%x)", status2);
 
 	// TODO
 	status2->playerState = CELL_SYSUTIL_BGMPLAYBACK_STATUS_STOP;
@@ -315,7 +314,6 @@ s32 cellSysutilPacketWrite()
 {
 	throw EXCEPTION("");
 }
-
 
 s32 cellSysutilGameDataAssignVmc()
 {
@@ -342,7 +340,6 @@ s32 cellSysutilGameReboot_I()
 	throw EXCEPTION("");
 }
 
-
 extern void cellSysutil_SaveData_init();
 extern void cellSysutil_GameData_init();
 extern void cellSysutil_MsgDialog_init();
@@ -356,6 +353,8 @@ extern void cellSysutil_VideoOut_init();
 
 Module cellSysutil("cellSysutil", []()
 {
+	g_sysutil = std::make_unique<sysutil_t>();
+
 	for (auto& v : g_sys_callback)
 	{
 		v.func.set(0);

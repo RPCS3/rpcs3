@@ -89,25 +89,20 @@ s32 cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 	if (code == CELL_NET_CTL_INFO_MTU)
 	{
 #ifdef _WIN32
-		PIP_ADAPTER_ADDRESSES pAddresses;
+		ULONG bufLen = sizeof(PIP_ADAPTER_ADDRESSES) + 1;
+		PIP_ADAPTER_ADDRESSES pAddresses = (PIP_ADAPTER_ADDRESSES)malloc(bufLen);
 		DWORD ret;
-		ULONG outBufLen = sizeof(PIP_ADAPTER_ADDRESSES);
 
-		pAddresses = (IP_ADAPTER_ADDRESSES*)vm::alloc(outBufLen, vm::main);
+		ret = GetAdaptersAddresses(AF_INET, GAA_FLAG_INCLUDE_PREFIX, nullptr, pAddresses, &bufLen);
 
-		if (pAddresses == nullptr)
+		if (ret == ERROR_BUFFER_OVERFLOW)
 		{
-			cellNetCtl.Error("cellNetCtlGetInfo(INFO_MTU): pAddresses memory allocation failed.");
+			cellNetCtl.Error("cellNetCtlGetInfo(INFO_MTU): GetAdaptersAddresses buffer overflow.");
+			free(pAddresses);
+			pAddresses = (PIP_ADAPTER_ADDRESSES)malloc(bufLen);
 		}
-		else
-		{
-			ret = GetAdaptersAddresses(AF_INET, GAA_FLAG_INCLUDE_PREFIX, nullptr, pAddresses, &outBufLen);
-
-			if (ret == ERROR_BUFFER_OVERFLOW)
-			{
-				free(pAddresses);
-			}
-		}
+		
+		ret = GetAdaptersAddresses(AF_INET, GAA_FLAG_INCLUDE_PREFIX, nullptr, pAddresses, &bufLen);
 
 		if (ret == NO_ERROR)
 		{
@@ -122,16 +117,18 @@ s32 cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 		}
 		else
 		{
-			cellNetCtl.Error("cellNetCtlGetInfo(INFO_MTU): Call to GetAdaptersAddresses failed.");
-			info->mtu = 1490; // Seems to be the default value on Windows, generally.
+			cellNetCtl.Error("cellNetCtlGetInfo(INFO_MTU): Call to GetAdaptersAddresses failed. (%d)", ret);
+			info->mtu = 1500; // Seems to be the default value on Windows 10.
 		}
+
+		free(pAddresses);
 #else
 		struct ifaddrs *ifaddr, *ifa;
-		int family, s, n;
+		int family, n;
 
 		if (getifaddrs(&ifaddr) == -1)
 		{
-			LOG_ERROR(HLE, "Call to getifaddrs returned negative.");
+			cellNetCtl.Error("cellNetCtlGetInfo(INFO_MTU): Call to getifaddrs returned negative.");
 		}
 
 		for (ifa = ifaddr, n = 0; ifa != nullptr; ifa = ifa->ifa_next, n++)
@@ -174,16 +171,22 @@ s32 cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 	else if (code == CELL_NET_CTL_INFO_IP_ADDRESS)
 	{
 #ifdef _WIN32
-		PIP_ADAPTER_INFO pAdapterInfo;
-		pAdapterInfo = (IP_ADAPTER_INFO*)vm::alloc(sizeof(IP_ADAPTER_INFO), vm::main);
-		ULONG buflen = sizeof(IP_ADAPTER_INFO);
+		ULONG bufLen = sizeof(IP_ADAPTER_INFO) + 1;
+		PIP_ADAPTER_INFO pAdapterInfo = (PIP_ADAPTER_INFO)malloc(bufLen);
+		DWORD ret;
 
-		if (GetAdaptersInfo(pAdapterInfo, &buflen) == ERROR_BUFFER_OVERFLOW)
+		ret = GetAdaptersInfo(pAdapterInfo, &bufLen);
+		
+		if (ret == ERROR_BUFFER_OVERFLOW)
 		{
+			cellNetCtl.Error("cellNetCtlGetInfo(IP_ADDRESS): GetAdaptersAddresses buffer overflow.");
 			free(pAdapterInfo);
+			pAdapterInfo = (IP_ADAPTER_INFO*)malloc(bufLen);
 		}
+		
+		ret = GetAdaptersInfo(pAdapterInfo, &bufLen);
 
-		if (GetAdaptersInfo(pAdapterInfo, &buflen) == NO_ERROR)
+		if (ret == NO_ERROR)
 		{
 			PIP_ADAPTER_INFO pAdapter = pAdapterInfo;
 
@@ -196,17 +199,19 @@ s32 cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 		}
 		else
 		{
-			cellNetCtl.Error("cellNetCtlGetInfo(IP_ADDRESS): Call to GetAdaptersInfo failed.");
+			cellNetCtl.Error("cellNetCtlGetInfo(IP_ADDRESS): Call to GetAdaptersInfo failed. (%d)", ret);
 			// 0.0.0.0 seems to be the default address when no ethernet cables are connected to the PS3
 			strcpy_trunc(info->ip_address, "0.0.0.0");
 		}
+
+		free(pAdapterInfo);
 #else
 		struct ifaddrs *ifaddr, *ifa;
-		int family, s, n;
+		int family, n;
 
 		if (getifaddrs(&ifaddr) == -1)
 		{
-			LOG_ERROR(HLE, "Call to getifaddrs returned negative.");
+			cellNetCtl.Error("cellNetCtlGetInfo(IP_ADDRESS): Call to getifaddrs returned negative.");
 		}
 
 		for (ifa = ifaddr, n = 0; ifa != nullptr; ifa = ifa->ifa_next, n++)
@@ -235,16 +240,22 @@ s32 cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 	else if (code == CELL_NET_CTL_INFO_NETMASK)
 	{
 #ifdef _WIN32
-		PIP_ADAPTER_INFO pAdapterInfo;
-		pAdapterInfo = (IP_ADAPTER_INFO*)vm::alloc(sizeof(IP_ADAPTER_INFO), vm::main);
-		ULONG buflen = sizeof(IP_ADAPTER_INFO);
+		ULONG bufLen = sizeof(IP_ADAPTER_INFO) + 1;
+		PIP_ADAPTER_INFO pAdapterInfo = (PIP_ADAPTER_INFO)malloc(bufLen);
+		DWORD ret;
 
-		if (GetAdaptersInfo(pAdapterInfo, &buflen) == ERROR_BUFFER_OVERFLOW)
+		ret = GetAdaptersInfo(pAdapterInfo, &bufLen);
+
+		if (ret == ERROR_BUFFER_OVERFLOW)
 		{
+			cellNetCtl.Error("cellNetCtlGetInfo(INFO_NETMASK): GetAdaptersAddresses buffer overflow.");
 			free(pAdapterInfo);
+			pAdapterInfo = (IP_ADAPTER_INFO*)malloc(bufLen);
 		}
+		
+		ret = GetAdaptersInfo(pAdapterInfo, &bufLen);
 
-		if (GetAdaptersInfo(pAdapterInfo, &buflen) == NO_ERROR)
+		if (ret == NO_ERROR)
 		{
 			PIP_ADAPTER_INFO pAdapter = pAdapterInfo;
 
@@ -260,21 +271,22 @@ s32 cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 		}
 		else
 		{
-			cellNetCtl.Error("cellNetCtlGetInfo(INFO_NETMASK): Call to GetAdaptersInfo failed.");
-			// TODO: Is the default netmask default?
+			cellNetCtl.Error("cellNetCtlGetInfo(INFO_NETMASK): Call to GetAdaptersInfo failed. (%d)", ret);
+			// TODO: Is this the default netmask?
 			info->netmask[0] = 255;
 			info->netmask[1] = 255;
 			info->netmask[2] = 255;
 			info->netmask[3] = 0;
 		}
+
+		free(pAdapterInfo);
 #else
 		struct ifaddrs *ifaddr, *ifa;
-		int family, s, n;
-		char host[NI_MAXHOST];
+		int family, n;
 
 		if (getifaddrs(&ifaddr) == -1)
 		{
-			LOG_ERROR(HLE, "Call to getifaddrs returned negative.");
+			cellNetCtl.Error("cellNetCtlGetInfo(INFO_NETMASK): Call to getifaddrs returned negative.");
 		}
 
 		for (ifa = ifaddr, n = 0; ifa != nullptr; ifa = ifa->ifa_next, n++)
