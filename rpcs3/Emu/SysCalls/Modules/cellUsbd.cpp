@@ -6,38 +6,16 @@
 
 extern Module cellUsbd;
 
-struct cellUsbdInternal
-{
-	bool m_bInitialized;
-
-	cellUsbdInternal()
-		: m_bInitialized(false)
-	{
-	}
-};
-
-cellUsbdInternal cellUsbdInstance;
-
 s32 cellUsbdInit()
 {
-	cellUsbd.Log("cellUsbdInit()");
-
-	if (cellUsbdInstance.m_bInitialized)
-		return CELL_USBD_ERROR_ALREADY_INITIALIZED;
-
-	cellUsbdInstance.m_bInitialized = true;
+	cellUsbd.Warning("cellUsbdInit()");
 
 	return CELL_OK;
 }
 
 s32 cellUsbdEnd()
 {
-	cellUsbd.Log("cellUsbdEnd()");
-
-	if (!cellUsbdInstance.m_bInitialized)
-		return CELL_USBD_ERROR_NOT_INITIALIZED;
-
-	cellUsbdInstance.m_bInitialized = false;
+	cellUsbd.Warning("cellUsbdEnd()");
 
 	return CELL_OK;
 }
@@ -176,8 +154,6 @@ s32 cellUsbdFreeMemory()
 
 Module cellUsbd("cellUsbd", []()
 {
-	cellUsbdInstance.m_bInitialized = false;
-
 	REG_FUNC(cellUsbd, cellUsbdInit);
 	REG_FUNC(cellUsbd, cellUsbdEnd);
 

@@ -807,37 +807,6 @@ enum
 	SCE_NP_SIGNALING_CTX_MAX = 8,
 };
 
-struct SceNpInternal
-{
-	bool m_bSceNpInitialized;
-	bool m_bScoreInitialized;
-	bool m_bLookupInitialized;
-
-	SceNpInternal()
-		: m_bSceNpInitialized(false),
-		  m_bScoreInitialized(false),
-		  m_bLookupInitialized(false)
-	{
-	}
-};
-
-struct SceNp2Internal
-{
-	bool m_bSceNp2Initialized;
-	bool m_bSceNp2Matching2Initialized;
-	bool m_bSceNp2Matching2Initialized2;
-
-	SceNp2Internal()
-		: m_bSceNp2Initialized(false),
-		  m_bSceNp2Matching2Initialized(false),
-		  m_bSceNp2Matching2Initialized2(false)
-	{
-	}
-};
-
-extern std::unique_ptr<SceNpInternal> g_sceNp;
-extern std::unique_ptr<SceNp2Internal> g_sceNp2;
-
 // NP communication ID structure
 struct SceNpCommunicationId
 {
@@ -1998,8 +1967,8 @@ struct SceNpMatching2UtilityInitParam
 {
 	be_t<u32> containerId;
 	be_t<u32> requestCbQueueLen;
-	be_t<u32> sessionEventCbQueueLen;;
-	be_t<u32> sessionMsgCbQueueLen;;
+	be_t<u32> sessionEventCbQueueLen;
+	be_t<u32> sessionMsgCbQueueLen;
 	u8 reserved[16];
 };
 
@@ -2007,8 +1976,8 @@ struct SceNpMatching2UtilityInitParam
 struct SceNpMatching2MemoryInfo
 {
 	be_t<u32> totalMemSize;
-	be_t<u32> curMemUsage;;
-	be_t<u32> maxMemUsage;;
+	be_t<u32> curMemUsage;
+	be_t<u32> maxMemUsage;
 	u8 reserved[12];
 };
 
@@ -2016,14 +1985,14 @@ struct SceNpMatching2MemoryInfo
 struct SceNpMatching2CbQueueInfo
 {
 	be_t<u32> requestCbQueueLen;
-	be_t<u32> curRequestCbQueueLen;;
-	be_t<u32> maxRequestCbQueueLen;;
-	be_t<u32> sessionEventCbQueueLen;;
-	be_t<u32> curSessionEventCbQueueLen;;
-	be_t<u32> maxSessionEventCbQueueLen;;
-	be_t<u32> sessionMsgCbQueueLen;;
-	be_t<u32> curSessionMsgCbQueueLen;;
-	be_t<u32> maxSessionMsgCbQueueLen;;
+	be_t<u32> curRequestCbQueueLen;
+	be_t<u32> maxRequestCbQueueLen;
+	be_t<u32> sessionEventCbQueueLen;
+	be_t<u32> curSessionEventCbQueueLen;
+	be_t<u32> maxSessionEventCbQueueLen;
+	be_t<u32> sessionMsgCbQueueLen;
+	be_t<u32> curSessionMsgCbQueueLen;
+	be_t<u32> maxSessionMsgCbQueueLen;
 	u8 reserved[12];
 };
 

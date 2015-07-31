@@ -132,18 +132,6 @@ enum
 	SCE_NP_COMMERCE2_DO_PRODUCT_CODE_MEMORY_CONTAINER_SIZE = 16777216,
 };
 
-struct SceNpCommerce2Internal
-{
-	bool m_bSceNpCommerce2Initialized;
-
-	SceNpCommerce2Internal()
-		: m_bSceNpCommerce2Initialized(false)
-	{
-	}
-};
-
-extern std::unique_ptr<SceNpCommerce2Internal> g_sceNpCommerce2;
-
 // Common structure used when receiving data
 struct SceNpCommerce2CommonData
 {
@@ -288,4 +276,4 @@ struct SceNpCommerce2ProductCodeParam
 	s8 padding3[3];
 };
 
-typedef void(*SceNpCommerce2Handler)(u32 ctx_id, u32 subject_id, s32 event, s32 error_code, u32 arg);
+using SceNpCommerce2Handler = void(u32 ctx_id, u32 subject_id, s32 event, s32 error_code, vm::ptr<void> arg);

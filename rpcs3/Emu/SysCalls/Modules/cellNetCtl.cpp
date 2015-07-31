@@ -28,32 +28,16 @@
 
 extern Module cellNetCtl;
 
-std::unique_ptr<CellNetCtlInternal> g_netCtl;
-
 s32 cellNetCtlInit()
 {
-	cellNetCtl.Log("cellNetCtlInit()");
-
-	if (g_netCtl->m_bInitialized)
-	{
-		return CELL_NET_CTL_ERROR_NOT_TERMINATED;
-	}
-
-	g_netCtl->m_bInitialized = true;
+	cellNetCtl.Warning("cellNetCtlInit()");
 
 	return CELL_OK;
 }
 
 s32 cellNetCtlTerm()
 {
-	cellNetCtl.Log("cellNetCtlTerm()");
-
-	if (!g_netCtl->m_bInitialized)
-	{
-		return CELL_NET_CTL_ERROR_NOT_INITIALIZED;
-	}
-
-	g_netCtl->m_bInitialized = false;
+	cellNetCtl.Warning("cellNetCtlTerm()");
 
 	return CELL_OK;
 }
@@ -268,10 +252,55 @@ s32 cellNetCtlGetNatInfo(vm::ptr<CellNetCtlNatInfo> natInfo)
 	return CELL_OK;
 }
 
+s32 cellGameUpdateInit()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellGameUpdateTerm()
+{
+	throw EXCEPTION("");
+}
+
+
+s32 cellGameUpdateCheckStartAsync()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellGameUpdateCheckFinishAsync()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellGameUpdateCheckStartWithoutDialogAsync()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellGameUpdateCheckAbort()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellGameUpdateCheckStartAsyncEx()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellGameUpdateCheckFinishAsyncEx()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellGameUpdateCheckStartWithoutDialogAsyncEx()
+{
+	throw EXCEPTION("");
+}
+
+
 Module cellNetCtl("cellNetCtl", []()
 {
-	g_netCtl = std::make_unique<CellNetCtlInternal>();
-
 	REG_FUNC(cellNetCtl, cellNetCtlInit);
 	REG_FUNC(cellNetCtl, cellNetCtlTerm);
 
@@ -286,4 +315,15 @@ Module cellNetCtl("cellNetCtl", []()
 	REG_FUNC(cellNetCtl, cellNetCtlNetStartDialogUnloadAsync);
 
 	REG_FUNC(cellNetCtl, cellNetCtlGetNatInfo);
+
+	REG_FUNC(cellNetCtl, cellGameUpdateInit);
+	REG_FUNC(cellNetCtl, cellGameUpdateTerm);
+
+	REG_FUNC(cellNetCtl, cellGameUpdateCheckStartAsync);
+	REG_FUNC(cellNetCtl, cellGameUpdateCheckFinishAsync);
+	REG_FUNC(cellNetCtl, cellGameUpdateCheckStartWithoutDialogAsync);
+	REG_FUNC(cellNetCtl, cellGameUpdateCheckAbort);
+	REG_FUNC(cellNetCtl, cellGameUpdateCheckStartAsyncEx);
+	REG_FUNC(cellNetCtl, cellGameUpdateCheckFinishAsyncEx);
+	REG_FUNC(cellNetCtl, cellGameUpdateCheckStartWithoutDialogAsyncEx);
 });

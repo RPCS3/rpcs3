@@ -7,26 +7,9 @@
 
 extern Module cellMic;
 
-struct cellMicInternal
-{
-	bool m_bCellMicInitialized;;
-
-	cellMicInternal()
-		: m_bCellMicInitialized(false)
-	{
-	}
-};
-
-cellMicInternal cellMicInstance;
-
 s32 cellMicInit()
 {
 	cellMic.Warning("cellMicInit()");
-
-	if (cellMicInstance.m_bCellMicInitialized)
-		return CELL_MICIN_ERROR_ALREADY_INIT;
-
-	cellMicInstance.m_bCellMicInitialized = true;
 
 	return CELL_OK;
 }
@@ -34,11 +17,6 @@ s32 cellMicInit()
 s32 cellMicEnd()
 {
 	cellMic.Warning("cellMicEnd()");
-
-	if (!cellMicInstance.m_bCellMicInitialized)
-		return CELL_MICIN_ERROR_NOT_INIT;
-
-	cellMicInstance.m_bCellMicInitialized = false;
 
 	return CELL_OK;
 }
@@ -285,8 +263,6 @@ s32 cellMicGetDeviceIdentifier()
 
 Module cellMic("cellMic", []()
 {
-	cellMicInstance.m_bCellMicInitialized = false;
-
 	REG_FUNC(cellMic, cellMicInit);
 	REG_FUNC(cellMic, cellMicEnd);
 	REG_FUNC(cellMic, cellMicOpen);

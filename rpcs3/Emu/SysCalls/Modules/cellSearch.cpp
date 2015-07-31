@@ -6,30 +6,9 @@
 
 extern Module cellSearch;
 
-struct cellSearchInternal
-{
-	bool m_bInitialized;
-
-	cellSearchInternal()
-		: m_bInitialized(false)
-	{
-	}
-};
-
-cellSearchInternal cellSearchInstance;
-
 s32 cellSearchInitialize(CellSearchMode mode, u32 container, vm::ptr<CellSearchSystemCallback> func, vm::ptr<u32> userData)
 {
-	cellSearch.Todo("cellSearchInitialize()");
-
-	if (cellSearchInstance.m_bInitialized)
-		return CELL_SEARCH_ERROR_ALREADY_INITIALIZED;
-	if (mode != 0)
-		return CELL_SEARCH_ERROR_UNKNOWN_MODE;
-	if (!func)
-		return CELL_SEARCH_ERROR_PARAM;
-
-	cellSearchInstance.m_bInitialized = true;
+	cellSearch.Warning("cellSearchInitialize()");
 
 	// TODO: Store the arguments somewhere so we can use them later.
 
@@ -38,12 +17,7 @@ s32 cellSearchInitialize(CellSearchMode mode, u32 container, vm::ptr<CellSearchS
 
 s32 cellSearchFinalize()
 {
-	cellSearch.Log("cellSearchFinalize()");
-
-	if (!cellSearchInstance.m_bInitialized)
-		return CELL_SEARCH_ERROR_NOT_INITIALIZED;
-
-	cellSearchInstance.m_bInitialized = false;
+	cellSearch.Warning("cellSearchFinalize()");
 
 	return CELL_OK;
 }
@@ -158,8 +132,6 @@ s32 cellSearchEnd()
 
 Module cellSearch("cellSearch", []()
 {
-	cellSearchInstance.m_bInitialized = false;
-
 	REG_FUNC(cellSearch, cellSearchInitialize);
 	REG_FUNC(cellSearch, cellSearchFinalize);
 	REG_FUNC(cellSearch, cellSearchStartListSearch);

@@ -60,18 +60,6 @@ enum
 	SCE_NP_CLANS_SERVER_ERROR_FAILED_TO_SEND_NP_MESSAGE     = 0x8002284c,
 };
 
-struct SceNpClansInternal
-{
-	bool m_bSceNpClansInitialized;
-
-	SceNpClansInternal()
-		: m_bSceNpClansInitialized(false)
-	{
-	}
-};
-
-extern SceNpClansInternal* sceNpClansInstance;
-
 // Clan roles
 enum
 {

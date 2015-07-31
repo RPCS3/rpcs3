@@ -196,18 +196,6 @@ enum
 	CELL_NET_CTL_NATINFO_NAT_TYPE_3 = 3,
 };
 
-struct CellNetCtlInternal
-{
-	bool m_bInitialized;
-
-	CellNetCtlInternal()
-		: m_bInitialized(false)
-	{
-	}
-};
-
-extern std::unique_ptr<CellNetCtlInternal> g_netCtl;
-
 struct CellNetCtlEtherAddr
 {
 	u8 data[6];
