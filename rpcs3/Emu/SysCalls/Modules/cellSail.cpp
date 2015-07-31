@@ -372,34 +372,24 @@ s32 cellSailSourceNotifyMediaStateChanged()
 	return CELL_OK;
 }
 
-s32 cellSailSourceCheck()
-{
-	UNIMPLEMENTED_FUNC(cellSail);
-	return CELL_OK;
-}
-
 s32 cellSailSourceNotifyOpenCompleted()
 {
-	UNIMPLEMENTED_FUNC(cellSail);
-	return CELL_OK;
+	throw EXCEPTION("Unexpected function");
 }
 
 s32 cellSailSourceNotifyStartCompleted()
 {
-	UNIMPLEMENTED_FUNC(cellSail);
-	return CELL_OK;
+	throw EXCEPTION("Unexpected function");
 }
 
 s32 cellSailSourceNotifyStopCompleted()
 {
-	UNIMPLEMENTED_FUNC(cellSail);
-	return CELL_OK;
+	throw EXCEPTION("Unexpected function");
 }
 
 s32 cellSailSourceNotifyReadCompleted()
 {
-	UNIMPLEMENTED_FUNC(cellSail);
-	return CELL_OK;
+	throw EXCEPTION("Unexpected function");
 }
 
 s32 cellSailSourceSetDiagHandler()
@@ -410,8 +400,7 @@ s32 cellSailSourceSetDiagHandler()
 
 s32 cellSailSourceNotifyCloseCompleted()
 {
-	UNIMPLEMENTED_FUNC(cellSail);
-	return CELL_OK;
+	throw EXCEPTION("Unexpected function");
 }
 
 s32 cellSailMp4MovieGetBrand()
@@ -463,12 +452,6 @@ s32 cellSailMp4TrackGetTrackReferenceCount()
 }
 
 s32 cellSailMp4TrackGetTrackReference()
-{
-	UNIMPLEMENTED_FUNC(cellSail);
-	return CELL_OK;
-}
-
-s32 cellSailMp4ConvertTimeScale()
 {
 	UNIMPLEMENTED_FUNC(cellSail);
 	return CELL_OK;
@@ -949,12 +932,16 @@ Module cellSail("cellSail", []()
 	REG_FUNC(cellSail, cellSailSourceNotifyStreamOut);
 	REG_FUNC(cellSail, cellSailSourceNotifySessionError);
 	REG_FUNC(cellSail, cellSailSourceNotifyMediaStateChanged);
-	REG_FUNC(cellSail, cellSailSourceNotifyOpenCompleted);
-	REG_FUNC(cellSail, cellSailSourceNotifyStartCompleted);
-	REG_FUNC(cellSail, cellSailSourceNotifyStopCompleted);
-	REG_FUNC(cellSail, cellSailSourceNotifyReadCompleted);
 	REG_FUNC(cellSail, cellSailSourceSetDiagHandler);
-	REG_FUNC(cellSail, cellSailSourceNotifyCloseCompleted);
+
+	{
+		// these functions shouldn't exist
+		REG_FUNC(cellSail, cellSailSourceNotifyOpenCompleted);
+		REG_FUNC(cellSail, cellSailSourceNotifyStartCompleted);
+		REG_FUNC(cellSail, cellSailSourceNotifyStopCompleted);
+		REG_FUNC(cellSail, cellSailSourceNotifyReadCompleted);
+		REG_FUNC(cellSail, cellSailSourceNotifyCloseCompleted);
+	}
 
 	REG_FUNC(cellSail, cellSailMp4MovieGetBrand);
 	REG_FUNC(cellSail, cellSailMp4MovieIsCompatibleBrand);

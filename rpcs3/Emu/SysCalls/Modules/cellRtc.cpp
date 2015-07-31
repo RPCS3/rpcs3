@@ -472,8 +472,6 @@ Module cellRtc("cellRtc", []()
 	REG_FUNC(cellRtc, cellRtcConvertUtcToLocalTime);
 	REG_FUNC(cellRtc, cellRtcConvertLocalTimeToUtc);
 
-	// (TODO: Time Information Manipulation Functions missing)
-
 	REG_FUNC(cellRtc, cellRtcGetDosTime);
 	REG_FUNC(cellRtc, cellRtcGetTime_t);
 	REG_FUNC(cellRtc, cellRtcGetWin32FileTime);

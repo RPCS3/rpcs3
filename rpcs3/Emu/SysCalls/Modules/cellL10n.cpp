@@ -8,59 +8,9 @@
 #include <iconv.h>
 #endif
 
-//#include <codecvt>
 #include "cellL10n.h"
 
 extern Module cellL10n;
-
-s32 UTF16stoUTF8s(vm::cptr<char16_t> utf16, vm::ref<u32> utf16_len, vm::ptr<char> utf8, vm::ref<u32> utf8_len)
-{
-	cellL10n.Todo("UTF16stoUTF8s(utf16=*0x%x, utf16_len=*0x%x, utf8=*0x%x, utf8_len=*0x%x)", utf16, utf16_len, utf8, utf8_len);
-
-	const u32 max_len = utf8_len; utf8_len = 0;
-
-	for (u32 i = 0, len = 0; i < utf16_len; i++, utf8_len = len)
-	{
-		const char16_t ch = utf16[i];
-
-		// increase required length (TODO)
-		len = len + 1;
-
-		// validate character (TODO)
-		//if ()
-		//{
-		//	utf16_len -= i;
-		//	return SRCIllegal;
-		//}
-
-		if (utf8 != vm::null)
-		{
-			if (len > max_len)
-			{
-				utf16_len -= i;
-				return DSTExhausted;
-			}
-
-			if (ch <= 0x7f)
-			{
-				*utf8++ = static_cast<char>(ch);
-			}
-			else
-			{
-				*utf8++ = '?'; // TODO
-			}
-		}
-	}
-
-	return ConversionOK;
-}
-
-s32 jstrchk(vm::cptr<char> jstr)
-{
-	cellL10n.Warning("jstrchk(jstr=*0x%x) -> utf8", jstr);
-
-	return L10N_STR_UTF8;
-}
 
 //translate code id to code name. some codepage may has another name.
 //If this makes your compilation fail, try replace the string code with one in "iconv -l"
@@ -296,11 +246,516 @@ s32 _L10nConvertStr(s32 src_code, const void* src, size_t * src_len, s32 dst_cod
 }*/
 #endif
 
-//TODO: Check the code in emulation. If support for UTF8/UTF16/UTF32/UCS2/UCS4 should use wider chars.. awful.
+s32 UCS2toEUCJP()
+{
+	throw EXCEPTION("");
+}
+
+s32 l10n_convert()
+{
+	throw EXCEPTION("");
+}
+
+s32 UCS2toUTF32()
+{
+	throw EXCEPTION("");
+}
+
+s32 jis2kuten()
+{
+	throw EXCEPTION("");
+}
+
+s32 UTF8toGB18030()
+{
+	throw EXCEPTION("");
+}
+
+s32 JISstoUTF8s()
+{
+	throw EXCEPTION("");
+}
+
+s32 SjisZen2Han()
+{
+	throw EXCEPTION("");
+}
+
+s32 ToSjisLower()
+{
+	throw EXCEPTION("");
+}
+
+s32 UCS2toGB18030()
+{
+	throw EXCEPTION("");
+}
+
+s32 HZstoUCS2s()
+{
+	throw EXCEPTION("");
+}
+
+s32 UCS2stoHZs()
+{
+	throw EXCEPTION("");
+}
+
+s32 UCS2stoSJISs()
+{
+	throw EXCEPTION("");
+}
+
+s32 kuten2eucjp()
+{
+	throw EXCEPTION("");
+}
+
+s32 sjis2jis()
+{
+	throw EXCEPTION("");
+}
+
+s32 EUCKRstoUCS2s()
+{
+	throw EXCEPTION("");
+}
+
+s32 UHCstoEUCKRs()
+{
+	throw EXCEPTION("");
+}
+
+s32 jis2sjis()
+{
+	throw EXCEPTION("");
+}
+
+s32 jstrnchk()
+{
+	throw EXCEPTION("");
+}
+
+s32 L10nConvert()
+{
+	throw EXCEPTION("");
+}
+
+s32 EUCCNstoUTF8s()
+{
+	throw EXCEPTION("");
+}
+
+s32 GBKstoUCS2s()
+{
+	throw EXCEPTION("");
+}
+
+s32 eucjphan2zen()
+{
+	throw EXCEPTION("");
+}
+
+s32 ToSjisHira()
+{
+	throw EXCEPTION("");
+}
+
+s32 GBKtoUCS2()
+{
+	throw EXCEPTION("");
+}
+
+s32 eucjp2jis()
+{
+	throw EXCEPTION("");
+}
+
+s32 UTF32stoUTF8s()
+{
+	throw EXCEPTION("");
+}
+
+s32 sjishan2zen()
+{
+	throw EXCEPTION("");
+}
+
+s32 UCS2toSBCS()
+{
+	throw EXCEPTION("");
+}
+
+s32 UTF8stoGBKs()
+{
+	throw EXCEPTION("");
+}
+
+s32 UTF8toUCS2()
+{
+	throw EXCEPTION("");
+}
+
+s32 UCS2stoUTF8s()
+{
+	throw EXCEPTION("");
+}
+
+s32 EUCKRstoUTF8s()
+{
+	throw EXCEPTION("");
+}
+
+s32 UTF16stoUTF32s()
+{
+	throw EXCEPTION("");
+}
+
+s32 UTF8toEUCKR()
+{
+	throw EXCEPTION("");
+}
+
+s32 UTF16toUTF8()
+{
+	throw EXCEPTION("");
+}
+
+s32 ARIBstoUTF8s()
+{
+	throw EXCEPTION("");
+}
+
+s32 SJISstoUTF8s()
+{
+	throw EXCEPTION("");
+}
+
+s32 sjiszen2han()
+{
+	throw EXCEPTION("");
+}
+
+s32 ToEucJpLower()
+{
+	throw EXCEPTION("");
+}
+
+s32 MSJIStoUTF8()
+{
+	throw EXCEPTION("");
+}
+
+s32 UCS2stoMSJISs()
+{
+	throw EXCEPTION("");
+}
+
+s32 EUCJPtoUTF8()
+{
+	throw EXCEPTION("");
+}
+
+s32 eucjp2sjis()
+{
+	throw EXCEPTION("");
+}
+
+s32 ToEucJpHira()
+{
+	throw EXCEPTION("");
+}
+
+s32 UHCstoUCS2s()
+{
+	throw EXCEPTION("");
+}
+
+s32 ToEucJpKata()
+{
+	throw EXCEPTION("");
+}
+
+s32 HZstoUTF8s()
+{
+	throw EXCEPTION("");
+}
+
+s32 UTF8toMSJIS()
+{
+	throw EXCEPTION("");
+}
+
+s32 BIG5toUTF8()
+{
+	throw EXCEPTION("");
+}
+
+s32 EUCJPstoSJISs()
+{
+	throw EXCEPTION("");
+}
+
+s32 UTF8stoBIG5s()
+{
+	throw EXCEPTION("");
+}
+
+s32 UTF16stoUCS2s()
+{
+	throw EXCEPTION("");
+}
+
+s32 UCS2stoGB18030s()
+{
+	throw EXCEPTION("");
+}
+
+s32 EUCJPtoSJIS()
+{
+	throw EXCEPTION("");
+}
+
+s32 EUCJPtoUCS2()
+{
+	throw EXCEPTION("");
+}
+
+s32 UCS2stoGBKs()
+{
+	throw EXCEPTION("");
+}
+
+s32 EUCKRtoUHC()
+{
+	throw EXCEPTION("");
+}
+
+s32 UCS2toSJIS()
+{
+	throw EXCEPTION("");
+}
+
+s32 MSJISstoUTF8s()
+{
+	throw EXCEPTION("");
+}
+
+s32 EUCJPstoUTF8s()
+{
+	throw EXCEPTION("");
+}
+
+s32 UCS2toBIG5()
+{
+	throw EXCEPTION("");
+}
+
+s32 UTF8stoEUCKRs()
+{
+	throw EXCEPTION("");
+}
+
+s32 UHCstoUTF8s()
+{
+	throw EXCEPTION("");
+}
+
+s32 GB18030stoUCS2s()
+{
+	throw EXCEPTION("");
+}
+
+s32 SJIStoUTF8()
+{
+	throw EXCEPTION("");
+}
+
+s32 JISstoSJISs()
+{
+	throw EXCEPTION("");
+}
+
+s32 UTF8toUTF16()
+{
+	throw EXCEPTION("");
+}
+
+s32 UTF8stoMSJISs()
+{
+	throw EXCEPTION("");
+}
+
+s32 EUCKRtoUTF8()
+{
+	throw EXCEPTION("");
+}
+
+s32 SjisHan2Zen()
+{
+	throw EXCEPTION("");
+}
+
+s32 UCS2toUTF16()
+{
+	throw EXCEPTION("");
+}
+
+s32 UCS2toMSJIS()
+{
+	throw EXCEPTION("");
+}
+
+s32 sjis2kuten()
+{
+	throw EXCEPTION("");
+}
+
+s32 UCS2toUHC()
+{
+	throw EXCEPTION("");
+}
+
+s32 UTF32toUCS2()
+{
+	throw EXCEPTION("");
+}
+
+s32 ToSjisUpper()
+{
+	throw EXCEPTION("");
+}
+
+s32 UTF8toEUCJP()
+{
+	throw EXCEPTION("");
+}
+
+s32 UCS2stoEUCJPs()
+{
+	throw EXCEPTION("");
+}
+
+s32 UTF16toUCS2()
+{
+	throw EXCEPTION("");
+}
+
+s32 UCS2stoUTF16s()
+{
+	throw EXCEPTION("");
+}
+
+s32 UCS2stoEUCCNs()
+{
+	throw EXCEPTION("");
+}
+
+s32 SBCSstoUTF8s()
+{
+	throw EXCEPTION("");
+}
+
+s32 SJISstoJISs()
+{
+	throw EXCEPTION("");
+}
+
+s32 SBCStoUTF8()
+{
+	throw EXCEPTION("");
+}
+
+s32 UTF8toUTF32()
+{
+	throw EXCEPTION("");
+}
+
+s32 jstrchk(vm::cptr<char> jstr)
+{
+	cellL10n.Warning("jstrchk(jstr=*0x%x) -> utf8", jstr);
+
+	return L10N_STR_UTF8;
+}
+
+s32 UHCtoEUCKR()
+{
+	throw EXCEPTION("");
+}
+
+s32 kuten2jis()
+{
+	throw EXCEPTION("");
+}
+
+s32 UTF8toEUCCN()
+{
+	throw EXCEPTION("");
+}
+
+s32 EUCCNtoUTF8()
+{
+	throw EXCEPTION("");
+}
+
+s32 EucJpZen2Han()
+{
+	throw EXCEPTION("");
+}
+
+s32 UTF32stoUTF16s()
+{
+	throw EXCEPTION("");
+}
+
+s32 GBKtoUTF8()
+{
+	throw EXCEPTION("");
+}
+
+s32 ToEucJpUpper()
+{
+	throw EXCEPTION("");
+}
+
+s32 UCS2stoJISs()
+{
+	throw EXCEPTION("");
+}
+
+s32 UTF8stoGB18030s()
+{
+	throw EXCEPTION("");
+}
+
+s32 EUCKRstoUHCs()
+{
+	throw EXCEPTION("");
+}
+
+s32 UTF8stoUTF32s()
+{
+	throw EXCEPTION("");
+}
+
+s32 UTF8stoEUCCNs()
+{
+	throw EXCEPTION("");
+}
+
+s32 EUCJPstoUCS2s()
+{
+	throw EXCEPTION("");
+}
+
+s32 UHCtoUCS2()
+{
+	throw EXCEPTION("");
+}
+
 s32 L10nConvertStr(s32 src_code, vm::cptr<void> src, vm::ptr<u32> src_len, s32 dst_code, vm::ptr<void> dst, vm::ptr<u32> dst_len)
 {
 	cellL10n.Error("L10nConvertStr(src_code=%d, srca=*0x%x, src_len=*0x%x, dst_code=%d, dst=*0x%x, dst_len=*0x%x)", src_code, src, src_len, dst_code, dst, dst_len);
-	//cellL10n.Todo("L10nConvertStr: 1st char at dst: 0x%x", *((char*)src.get_ptr()));
 #ifdef _MSC_VER
 	u32 srcCode = 0, dstCode = 0;	//OEM code pages
 	bool src_page_converted = _L10nCodeParse(src_code, srcCode);	//Check if code is in list.
@@ -350,173 +805,524 @@ s32 L10nConvertStr(s32 src_code, vm::cptr<void> src, vm::ptr<u32> src_len, s32 d
 #endif
 }
 
+s32 GBKstoUTF8s()
+{
+	throw EXCEPTION("");
+}
+
+s32 UTF8toUHC()
+{
+	throw EXCEPTION("");
+}
+
+s32 UTF32toUTF8()
+{
+	throw EXCEPTION("");
+}
+
+s32 sjis2eucjp()
+{
+	throw EXCEPTION("");
+}
+
+s32 UCS2toEUCCN()
+{
+	throw EXCEPTION("");
+}
+
+s32 UTF8stoUHCs()
+{
+	throw EXCEPTION("");
+}
+
+s32 EUCKRtoUCS2()
+{
+	throw EXCEPTION("");
+}
+
+s32 UTF32toUTF16()
+{
+	throw EXCEPTION("");
+}
+
+s32 EUCCNstoUCS2s()
+{
+	throw EXCEPTION("");
+}
+
+s32 SBCSstoUCS2s()
+{
+	throw EXCEPTION("");
+}
+
+s32 UTF8stoJISs()
+{
+	throw EXCEPTION("");
+}
+
+s32 ToSjisKata()
+{
+	throw EXCEPTION("");
+}
+
+s32 jis2eucjp()
+{
+	throw EXCEPTION("");
+}
+
+s32 BIG5toUCS2()
+{
+	throw EXCEPTION("");
+}
+
+s32 UCS2toGBK()
+{
+	throw EXCEPTION("");
+}
+
+s32 UTF16toUTF32()
+{
+	throw EXCEPTION("");
+}
+
+s32 l10n_convert_str()
+{
+	throw EXCEPTION("");
+}
+
+s32 EUCJPstoJISs()
+{
+	throw EXCEPTION("");
+}
+
+s32 UTF8stoARIBs()
+{
+	throw EXCEPTION("");
+}
+
+s32 JISstoEUCJPs()
+{
+	throw EXCEPTION("");
+}
+
+s32 EucJpHan2Zen()
+{
+	throw EXCEPTION("");
+}
+
+s32 isEucJpKigou()
+{
+	throw EXCEPTION("");
+}
+
+s32 UCS2toUTF8()
+{
+	throw EXCEPTION("");
+}
+
+s32 GB18030toUCS2()
+{
+	throw EXCEPTION("");
+}
+
+s32 UHCtoUTF8()
+{
+	throw EXCEPTION("");
+}
+
+s32 MSJIStoUCS2()
+{
+	throw EXCEPTION("");
+}
+
+s32 UTF8toGBK()
+{
+	throw EXCEPTION("");
+}
+
+s32 kuten2sjis()
+{
+	throw EXCEPTION("");
+}
+
+s32 UTF8toSBCS()
+{
+	throw EXCEPTION("");
+}
+
+s32 SJIStoUCS2()
+{
+	throw EXCEPTION("");
+}
+
+s32 eucjpzen2han()
+{
+	throw EXCEPTION("");
+}
+
+s32 UCS2stoARIBs()
+{
+	throw EXCEPTION("");
+}
+
+s32 isSjisKigou()
+{
+	throw EXCEPTION("");
+}
+
+s32 UTF8stoEUCJPs()
+{
+	throw EXCEPTION("");
+}
+
+s32 UCS2toEUCKR()
+{
+	throw EXCEPTION("");
+}
+
+s32 SBCStoUCS2()
+{
+	throw EXCEPTION("");
+}
+
+s32 MSJISstoUCS2s()
+{
+	throw EXCEPTION("");
+}
+
+s32 l10n_get_converter()
+{
+	throw EXCEPTION("");
+}
+
+s32 GB18030stoUTF8s()
+{
+	throw EXCEPTION("");
+}
+
+s32 SJISstoEUCJPs()
+{
+	throw EXCEPTION("");
+}
+
+s32 UTF32stoUCS2s()
+{
+	throw EXCEPTION("");
+}
+
+s32 BIG5stoUTF8s()
+{
+	throw EXCEPTION("");
+}
+
+s32 EUCCNtoUCS2()
+{
+	throw EXCEPTION("");
+}
+
+s32 UTF8stoSBCSs()
+{
+	throw EXCEPTION("");
+}
+
+s32 UCS2stoEUCKRs()
+{
+	throw EXCEPTION("");
+}
+
+s32 UTF8stoSJISs()
+{
+	throw EXCEPTION("");
+}
+
+s32 UTF8stoHZs()
+{
+	throw EXCEPTION("");
+}
+
+s32 eucjp2kuten()
+{
+	throw EXCEPTION("");
+}
+
+s32 UTF8toBIG5()
+{
+	throw EXCEPTION("");
+}
+
+s32 UTF16stoUTF8s(vm::cptr<char16_t> utf16, vm::ref<u32> utf16_len, vm::ptr<char> utf8, vm::ref<u32> utf8_len)
+{
+	cellL10n.Error("UTF16stoUTF8s(utf16=*0x%x, utf16_len=*0x%x, utf8=*0x%x, utf8_len=*0x%x)", utf16, utf16_len, utf8, utf8_len);
+
+	const u32 max_len = utf8_len; utf8_len = 0;
+
+	for (u32 i = 0, len = 0; i < utf16_len; i++, utf8_len = len)
+	{
+		const char16_t ch = utf16[i];
+
+		// increase required length (TODO)
+		len = len + 1;
+
+		// validate character (TODO)
+		//if ()
+		//{
+		//	utf16_len -= i;
+		//	return SRCIllegal;
+		//}
+
+		if (utf8 != vm::null)
+		{
+			if (len > max_len)
+			{
+				utf16_len -= i;
+				return DSTExhausted;
+			}
+
+			if (ch <= 0x7f)
+			{
+				*utf8++ = static_cast<char>(ch);
+			}
+			else
+			{
+				*utf8++ = '?'; // TODO
+			}
+		}
+	}
+
+	return ConversionOK;
+}
+
+s32 JISstoUCS2s()
+{
+	throw EXCEPTION("");
+}
+
+s32 GB18030toUTF8()
+{
+	throw EXCEPTION("");
+}
+
+s32 UTF8toSJIS()
+{
+	throw EXCEPTION("");
+}
+
+s32 ARIBstoUCS2s()
+{
+	throw EXCEPTION("");
+}
+
+s32 UCS2stoUTF32s()
+{
+	throw EXCEPTION("");
+}
+
+s32 UCS2stoSBCSs()
+{
+	throw EXCEPTION("");
+}
+
+s32 UCS2stoBIG5s()
+{
+	throw EXCEPTION("");
+}
+
+s32 UCS2stoUHCs()
+{
+	throw EXCEPTION("");
+}
+
+s32 SJIStoEUCJP()
+{
+	throw EXCEPTION("");
+}
+
+s32 UTF8stoUTF16s()
+{
+	throw EXCEPTION("");
+}
+
+s32 SJISstoUCS2s()
+{
+	throw EXCEPTION("");
+}
+
+s32 BIG5stoUCS2s()
+{
+	throw EXCEPTION("");
+}
+
+s32 UTF8stoUCS2s()
+{
+	throw EXCEPTION("");
+}
+
+
 Module cellL10n("cellL10n", []()
 {
-	// NOTE: I think this module should be LLE'd instead of implementing all its functions
-
-	// REG_FUNC(cellL10n, UCS2toEUCJP);
-	// REG_FUNC(cellL10n, l10n_convert);
-	// REG_FUNC(cellL10n, UCS2toUTF32);
-	// REG_FUNC(cellL10n, jis2kuten);
-	// REG_FUNC(cellL10n, UTF8toGB18030);
-	// REG_FUNC(cellL10n, JISstoUTF8s);
-	// REG_FUNC(cellL10n, SjisZen2Han);
-	// REG_FUNC(cellL10n, ToSjisLower);
-	// REG_FUNC(cellL10n, UCS2toGB18030);
-	// REG_FUNC(cellL10n, HZstoUCS2s);
-	// REG_FUNC(cellL10n, UCS2stoHZs);
-	// REG_FUNC(cellL10n, UCS2stoSJISs);
-	// REG_FUNC(cellL10n, kuten2eucjp);
-	// REG_FUNC(cellL10n, sjis2jis);
-	// REG_FUNC(cellL10n, EUCKRstoUCS2s);
-	// REG_FUNC(cellL10n, UHCstoEUCKRs);
-	// REG_FUNC(cellL10n, jis2sjis);
-	// REG_FUNC(cellL10n, jstrnchk);
-	// REG_FUNC(cellL10n, L10nConvert);
-	// REG_FUNC(cellL10n, EUCCNstoUTF8s);
-	// REG_FUNC(cellL10n, GBKstoUCS2s);
-	// REG_FUNC(cellL10n, eucjphan2zen);
-	// REG_FUNC(cellL10n, ToSjisHira);
-	// REG_FUNC(cellL10n, GBKtoUCS2);
-	// REG_FUNC(cellL10n, eucjp2jis);
-	// REG_FUNC(cellL10n, UTF32stoUTF8s);
-	// REG_FUNC(cellL10n, sjishan2zen);
-	// REG_FUNC(cellL10n, UCS2toSBCS);
-	// REG_FUNC(cellL10n, UTF8stoGBKs);
-	// REG_FUNC(cellL10n, UTF8toUCS2);
-	// REG_FUNC(cellL10n, UCS2stoUTF8s);
-	// REG_FUNC(cellL10n, EUCKRstoUTF8s);
-	// REG_FUNC(cellL10n, UTF16stoUTF32s);
-	// REG_FUNC(cellL10n, UTF8toEUCKR);
-	// REG_FUNC(cellL10n, UTF16toUTF8);
-	// REG_FUNC(cellL10n, ARIBstoUTF8s);
-	// REG_FUNC(cellL10n, SJISstoUTF8s);
-	// REG_FUNC(cellL10n, sjiszen2han);
-	// REG_FUNC(cellL10n, ToEucJpLower);
-	// REG_FUNC(cellL10n, MSJIStoUTF8);
-	// REG_FUNC(cellL10n, UCS2stoMSJISs);
-	// REG_FUNC(cellL10n, EUCJPtoUTF8);
-	// REG_FUNC(cellL10n, eucjp2sjis);
-	// REG_FUNC(cellL10n, ToEucJpHira);
-	// REG_FUNC(cellL10n, UHCstoUCS2s);
-	// REG_FUNC(cellL10n, ToEucJpKata);
-	// REG_FUNC(cellL10n, HZstoUTF8s);
-	// REG_FUNC(cellL10n, UTF8toMSJIS);
-	// REG_FUNC(cellL10n, BIG5toUTF8);
-	// REG_FUNC(cellL10n, EUCJPstoSJISs);
-	// REG_FUNC(cellL10n, UTF8stoBIG5s);
-	// REG_FUNC(cellL10n, UTF16stoUCS2s);
-	// REG_FUNC(cellL10n, UCS2stoGB18030s);
-	// REG_FUNC(cellL10n, EUCJPtoSJIS);
-	// REG_FUNC(cellL10n, EUCJPtoUCS2);
-	// REG_FUNC(cellL10n, UCS2stoGBKs);
-	// REG_FUNC(cellL10n, EUCKRtoUHC);
-	// REG_FUNC(cellL10n, UCS2toSJIS);
-	// REG_FUNC(cellL10n, MSJISstoUTF8s);
-	// REG_FUNC(cellL10n, EUCJPstoUTF8s);
-	// REG_FUNC(cellL10n, UCS2toBIG5);
-	// REG_FUNC(cellL10n, UTF8stoEUCKRs);
-	// REG_FUNC(cellL10n, UHCstoUTF8s);
-	// REG_FUNC(cellL10n, GB18030stoUCS2s);
-	// REG_FUNC(cellL10n, SJIStoUTF8);
-	// REG_FUNC(cellL10n, JISstoSJISs);
-	// REG_FUNC(cellL10n, UTF8toUTF16);
-	// REG_FUNC(cellL10n, UTF8stoMSJISs);
-	// REG_FUNC(cellL10n, EUCKRtoUTF8);
-	// REG_FUNC(cellL10n, SjisHan2Zen);
-	// REG_FUNC(cellL10n, UCS2toUTF16);
-	// REG_FUNC(cellL10n, UCS2toMSJIS);
-	// REG_FUNC(cellL10n, sjis2kuten);
-	// REG_FUNC(cellL10n, UCS2toUHC);
-	// REG_FUNC(cellL10n, UTF32toUCS2);
-	// REG_FUNC(cellL10n, ToSjisUpper);
-	// REG_FUNC(cellL10n, UTF8toEUCJP);
-	// REG_FUNC(cellL10n, UCS2stoEUCJPs);
-	// REG_FUNC(cellL10n, UTF16toUCS2);
-	// REG_FUNC(cellL10n, UCS2stoUTF16s);
-	// REG_FUNC(cellL10n, UCS2stoEUCCNs);
-	// REG_FUNC(cellL10n, SBCSstoUTF8s);
-	// REG_FUNC(cellL10n, SJISstoJISs);
-	// REG_FUNC(cellL10n, SBCStoUTF8);
-	// REG_FUNC(cellL10n, UTF8toUTF32);
+	REG_FUNC(cellL10n, UCS2toEUCJP);
+	REG_FUNC(cellL10n, l10n_convert);
+	REG_FUNC(cellL10n, UCS2toUTF32);
+	REG_FUNC(cellL10n, jis2kuten);
+	REG_FUNC(cellL10n, UTF8toGB18030);
+	REG_FUNC(cellL10n, JISstoUTF8s);
+	REG_FUNC(cellL10n, SjisZen2Han);
+	REG_FUNC(cellL10n, ToSjisLower);
+	REG_FUNC(cellL10n, UCS2toGB18030);
+	REG_FUNC(cellL10n, HZstoUCS2s);
+	REG_FUNC(cellL10n, UCS2stoHZs);
+	REG_FUNC(cellL10n, UCS2stoSJISs);
+	REG_FUNC(cellL10n, kuten2eucjp);
+	REG_FUNC(cellL10n, sjis2jis);
+	REG_FUNC(cellL10n, EUCKRstoUCS2s);
+	REG_FUNC(cellL10n, UHCstoEUCKRs);
+	REG_FUNC(cellL10n, jis2sjis);
+	REG_FUNC(cellL10n, jstrnchk);
+	REG_FUNC(cellL10n, L10nConvert);
+	REG_FUNC(cellL10n, EUCCNstoUTF8s);
+	REG_FUNC(cellL10n, GBKstoUCS2s);
+	REG_FUNC(cellL10n, eucjphan2zen);
+	REG_FUNC(cellL10n, ToSjisHira);
+	REG_FUNC(cellL10n, GBKtoUCS2);
+	REG_FUNC(cellL10n, eucjp2jis);
+	REG_FUNC(cellL10n, UTF32stoUTF8s);
+	REG_FUNC(cellL10n, sjishan2zen);
+	REG_FUNC(cellL10n, UCS2toSBCS);
+	REG_FUNC(cellL10n, UTF8stoGBKs);
+	REG_FUNC(cellL10n, UTF8toUCS2);
+	REG_FUNC(cellL10n, UCS2stoUTF8s);
+	REG_FUNC(cellL10n, EUCKRstoUTF8s);
+	REG_FUNC(cellL10n, UTF16stoUTF32s);
+	REG_FUNC(cellL10n, UTF8toEUCKR);
+	REG_FUNC(cellL10n, UTF16toUTF8);
+	REG_FUNC(cellL10n, ARIBstoUTF8s);
+	REG_FUNC(cellL10n, SJISstoUTF8s);
+	REG_FUNC(cellL10n, sjiszen2han);
+	REG_FUNC(cellL10n, ToEucJpLower);
+	REG_FUNC(cellL10n, MSJIStoUTF8);
+	REG_FUNC(cellL10n, UCS2stoMSJISs);
+	REG_FUNC(cellL10n, EUCJPtoUTF8);
+	REG_FUNC(cellL10n, eucjp2sjis);
+	REG_FUNC(cellL10n, ToEucJpHira);
+	REG_FUNC(cellL10n, UHCstoUCS2s);
+	REG_FUNC(cellL10n, ToEucJpKata);
+	REG_FUNC(cellL10n, HZstoUTF8s);
+	REG_FUNC(cellL10n, UTF8toMSJIS);
+	REG_FUNC(cellL10n, BIG5toUTF8);
+	REG_FUNC(cellL10n, EUCJPstoSJISs);
+	REG_FUNC(cellL10n, UTF8stoBIG5s);
+	REG_FUNC(cellL10n, UTF16stoUCS2s);
+	REG_FUNC(cellL10n, UCS2stoGB18030s);
+	REG_FUNC(cellL10n, EUCJPtoSJIS);
+	REG_FUNC(cellL10n, EUCJPtoUCS2);
+	REG_FUNC(cellL10n, UCS2stoGBKs);
+	REG_FUNC(cellL10n, EUCKRtoUHC);
+	REG_FUNC(cellL10n, UCS2toSJIS);
+	REG_FUNC(cellL10n, MSJISstoUTF8s);
+	REG_FUNC(cellL10n, EUCJPstoUTF8s);
+	REG_FUNC(cellL10n, UCS2toBIG5);
+	REG_FUNC(cellL10n, UTF8stoEUCKRs);
+	REG_FUNC(cellL10n, UHCstoUTF8s);
+	REG_FUNC(cellL10n, GB18030stoUCS2s);
+	REG_FUNC(cellL10n, SJIStoUTF8);
+	REG_FUNC(cellL10n, JISstoSJISs);
+	REG_FUNC(cellL10n, UTF8toUTF16);
+	REG_FUNC(cellL10n, UTF8stoMSJISs);
+	REG_FUNC(cellL10n, EUCKRtoUTF8);
+	REG_FUNC(cellL10n, SjisHan2Zen);
+	REG_FUNC(cellL10n, UCS2toUTF16);
+	REG_FUNC(cellL10n, UCS2toMSJIS);
+	REG_FUNC(cellL10n, sjis2kuten);
+	REG_FUNC(cellL10n, UCS2toUHC);
+	REG_FUNC(cellL10n, UTF32toUCS2);
+	REG_FUNC(cellL10n, ToSjisUpper);
+	REG_FUNC(cellL10n, UTF8toEUCJP);
+	REG_FUNC(cellL10n, UCS2stoEUCJPs);
+	REG_FUNC(cellL10n, UTF16toUCS2);
+	REG_FUNC(cellL10n, UCS2stoUTF16s);
+	REG_FUNC(cellL10n, UCS2stoEUCCNs);
+	REG_FUNC(cellL10n, SBCSstoUTF8s);
+	REG_FUNC(cellL10n, SJISstoJISs);
+	REG_FUNC(cellL10n, SBCStoUTF8);
+	REG_FUNC(cellL10n, UTF8toUTF32);
 	REG_FUNC(cellL10n, jstrchk);
-	// REG_FUNC(cellL10n, UHCtoEUCKR);
-	// REG_FUNC(cellL10n, kuten2jis);
-	// REG_FUNC(cellL10n, UTF8toEUCCN);
-	// REG_FUNC(cellL10n, EUCCNtoUTF8);
-	// REG_FUNC(cellL10n, EucJpZen2Han);
-	// REG_FUNC(cellL10n, UTF32stoUTF16s);
-	// REG_FUNC(cellL10n, GBKtoUTF8);
-	// REG_FUNC(cellL10n, ToEucJpUpper);
-	// REG_FUNC(cellL10n, UCS2stoJISs);
-	// REG_FUNC(cellL10n, UTF8stoGB18030s);
-	// REG_FUNC(cellL10n, EUCKRstoUHCs);
-	// REG_FUNC(cellL10n, UTF8stoUTF32s);
-	// REG_FUNC(cellL10n, UTF8stoEUCCNs);
-	// REG_FUNC(cellL10n, EUCJPstoUCS2s);
-	// REG_FUNC(cellL10n, UHCtoUCS2);
+	REG_FUNC(cellL10n, UHCtoEUCKR);
+	REG_FUNC(cellL10n, kuten2jis);
+	REG_FUNC(cellL10n, UTF8toEUCCN);
+	REG_FUNC(cellL10n, EUCCNtoUTF8);
+	REG_FUNC(cellL10n, EucJpZen2Han);
+	REG_FUNC(cellL10n, UTF32stoUTF16s);
+	REG_FUNC(cellL10n, GBKtoUTF8);
+	REG_FUNC(cellL10n, ToEucJpUpper);
+	REG_FUNC(cellL10n, UCS2stoJISs);
+	REG_FUNC(cellL10n, UTF8stoGB18030s);
+	REG_FUNC(cellL10n, EUCKRstoUHCs);
+	REG_FUNC(cellL10n, UTF8stoUTF32s);
+	REG_FUNC(cellL10n, UTF8stoEUCCNs);
+	REG_FUNC(cellL10n, EUCJPstoUCS2s);
+	REG_FUNC(cellL10n, UHCtoUCS2);
 	REG_FUNC(cellL10n, L10nConvertStr);
-	// REG_FUNC(cellL10n, GBKstoUTF8s);
-	// REG_FUNC(cellL10n, UTF8toUHC);
-	// REG_FUNC(cellL10n, UTF32toUTF8);
-	// REG_FUNC(cellL10n, sjis2eucjp);
-	// REG_FUNC(cellL10n, UCS2toEUCCN);
-	// REG_FUNC(cellL10n, UTF8stoUHCs);
-	// REG_FUNC(cellL10n, EUCKRtoUCS2);
-	// REG_FUNC(cellL10n, UTF32toUTF16);
-	// REG_FUNC(cellL10n, EUCCNstoUCS2s);
-	// REG_FUNC(cellL10n, SBCSstoUCS2s);
-	// REG_FUNC(cellL10n, UTF8stoJISs);
-	// REG_FUNC(cellL10n, ToSjisKata);
-	// REG_FUNC(cellL10n, jis2eucjp);
-	// REG_FUNC(cellL10n, BIG5toUCS2);
-	// REG_FUNC(cellL10n, UCS2toGBK);
-	// REG_FUNC(cellL10n, UTF16toUTF32);
-	// REG_FUNC(cellL10n, l10n_convert_str);
-	// REG_FUNC(cellL10n, EUCJPstoJISs);
-	// REG_FUNC(cellL10n, UTF8stoARIBs);
-	// REG_FUNC(cellL10n, JISstoEUCJPs);
-	// REG_FUNC(cellL10n, EucJpHan2Zen);
-	// REG_FUNC(cellL10n, isEucJpKigou);
-	// REG_FUNC(cellL10n, UCS2toUTF8);
-	// REG_FUNC(cellL10n, GB18030toUCS2);
-	// REG_FUNC(cellL10n, UHCtoUTF8);
-	// REG_FUNC(cellL10n, MSJIStoUCS2);
-	// REG_FUNC(cellL10n, UTF8toGBK);
-	// REG_FUNC(cellL10n, kuten2sjis);
-	// REG_FUNC(cellL10n, UTF8toSBCS);
-	// REG_FUNC(cellL10n, SJIStoUCS2);
-	// REG_FUNC(cellL10n, eucjpzen2han);
-	// REG_FUNC(cellL10n, UCS2stoARIBs);
-	// REG_FUNC(cellL10n, isSjisKigou);
-	// REG_FUNC(cellL10n, UTF8stoEUCJPs);
-	// REG_FUNC(cellL10n, UCS2toEUCKR);
-	// REG_FUNC(cellL10n, SBCStoUCS2);
-	// REG_FUNC(cellL10n, MSJISstoUCS2s);
-	// REG_FUNC(cellL10n, l10n_get_converter);
-	// REG_FUNC(cellL10n, GB18030stoUTF8s);
-	// REG_FUNC(cellL10n, SJISstoEUCJPs);
-	// REG_FUNC(cellL10n, UTF32stoUCS2s);
-	// REG_FUNC(cellL10n, BIG5stoUTF8s);
-	// REG_FUNC(cellL10n, EUCCNtoUCS2);
-	// REG_FUNC(cellL10n, UTF8stoSBCSs);
-	// REG_FUNC(cellL10n, UCS2stoEUCKRs);
-	// REG_FUNC(cellL10n, UTF8stoSJISs);
-	// REG_FUNC(cellL10n, UTF8stoHZs);
-	// REG_FUNC(cellL10n, eucjp2kuten);
-	// REG_FUNC(cellL10n, UTF8toBIG5);
+	REG_FUNC(cellL10n, GBKstoUTF8s);
+	REG_FUNC(cellL10n, UTF8toUHC);
+	REG_FUNC(cellL10n, UTF32toUTF8);
+	REG_FUNC(cellL10n, sjis2eucjp);
+	REG_FUNC(cellL10n, UCS2toEUCCN);
+	REG_FUNC(cellL10n, UTF8stoUHCs);
+	REG_FUNC(cellL10n, EUCKRtoUCS2);
+	REG_FUNC(cellL10n, UTF32toUTF16);
+	REG_FUNC(cellL10n, EUCCNstoUCS2s);
+	REG_FUNC(cellL10n, SBCSstoUCS2s);
+	REG_FUNC(cellL10n, UTF8stoJISs);
+	REG_FUNC(cellL10n, ToSjisKata);
+	REG_FUNC(cellL10n, jis2eucjp);
+	REG_FUNC(cellL10n, BIG5toUCS2);
+	REG_FUNC(cellL10n, UCS2toGBK);
+	REG_FUNC(cellL10n, UTF16toUTF32);
+	REG_FUNC(cellL10n, l10n_convert_str);
+	REG_FUNC(cellL10n, EUCJPstoJISs);
+	REG_FUNC(cellL10n, UTF8stoARIBs);
+	REG_FUNC(cellL10n, JISstoEUCJPs);
+	REG_FUNC(cellL10n, EucJpHan2Zen);
+	REG_FUNC(cellL10n, isEucJpKigou);
+	REG_FUNC(cellL10n, UCS2toUTF8);
+	REG_FUNC(cellL10n, GB18030toUCS2);
+	REG_FUNC(cellL10n, UHCtoUTF8);
+	REG_FUNC(cellL10n, MSJIStoUCS2);
+	REG_FUNC(cellL10n, UTF8toGBK);
+	REG_FUNC(cellL10n, kuten2sjis);
+	REG_FUNC(cellL10n, UTF8toSBCS);
+	REG_FUNC(cellL10n, SJIStoUCS2);
+	REG_FUNC(cellL10n, eucjpzen2han);
+	REG_FUNC(cellL10n, UCS2stoARIBs);
+	REG_FUNC(cellL10n, isSjisKigou);
+	REG_FUNC(cellL10n, UTF8stoEUCJPs);
+	REG_FUNC(cellL10n, UCS2toEUCKR);
+	REG_FUNC(cellL10n, SBCStoUCS2);
+	REG_FUNC(cellL10n, MSJISstoUCS2s);
+	REG_FUNC(cellL10n, l10n_get_converter);
+	REG_FUNC(cellL10n, GB18030stoUTF8s);
+	REG_FUNC(cellL10n, SJISstoEUCJPs);
+	REG_FUNC(cellL10n, UTF32stoUCS2s);
+	REG_FUNC(cellL10n, BIG5stoUTF8s);
+	REG_FUNC(cellL10n, EUCCNtoUCS2);
+	REG_FUNC(cellL10n, UTF8stoSBCSs);
+	REG_FUNC(cellL10n, UCS2stoEUCKRs);
+	REG_FUNC(cellL10n, UTF8stoSJISs);
+	REG_FUNC(cellL10n, UTF8stoHZs);
+	REG_FUNC(cellL10n, eucjp2kuten);
+	REG_FUNC(cellL10n, UTF8toBIG5);
 	REG_FUNC(cellL10n, UTF16stoUTF8s);
-	// REG_FUNC(cellL10n, JISstoUCS2s);
-	// REG_FUNC(cellL10n, GB18030toUTF8);
-	// REG_FUNC(cellL10n, UTF8toSJIS);
-	// REG_FUNC(cellL10n, ARIBstoUCS2s);
-	// REG_FUNC(cellL10n, UCS2stoUTF32s);
-	// REG_FUNC(cellL10n, UCS2stoSBCSs);
-	// REG_FUNC(cellL10n, UCS2stoBIG5s);
-	// REG_FUNC(cellL10n, UCS2stoUHCs);
-	// REG_FUNC(cellL10n, SJIStoEUCJP);
-	// REG_FUNC(cellL10n, UTF8stoUTF16s);
-	// REG_FUNC(cellL10n, SJISstoUCS2s);
-	// REG_FUNC(cellL10n, BIG5stoUCS2s);
-	// REG_FUNC(cellL10n, UTF8stoUCS2s);
+	REG_FUNC(cellL10n, JISstoUCS2s);
+	REG_FUNC(cellL10n, GB18030toUTF8);
+	REG_FUNC(cellL10n, UTF8toSJIS);
+	REG_FUNC(cellL10n, ARIBstoUCS2s);
+	REG_FUNC(cellL10n, UCS2stoUTF32s);
+	REG_FUNC(cellL10n, UCS2stoSBCSs);
+	REG_FUNC(cellL10n, UCS2stoBIG5s);
+	REG_FUNC(cellL10n, UCS2stoUHCs);
+	REG_FUNC(cellL10n, SJIStoEUCJP);
+	REG_FUNC(cellL10n, UTF8stoUTF16s);
+	REG_FUNC(cellL10n, SJISstoUCS2s);
+	REG_FUNC(cellL10n, BIG5stoUCS2s);
+	REG_FUNC(cellL10n, UTF8stoUCS2s);
 });
