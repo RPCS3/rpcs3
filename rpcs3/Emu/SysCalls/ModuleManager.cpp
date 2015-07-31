@@ -78,6 +78,8 @@ extern Module cellVideoUpload;
 extern Module cellVoice;
 extern Module cellVpost;
 extern Module libmixer;
+extern Module libsnd3;
+extern Module libsynth2;
 extern Module sceNp;
 extern Module sceNp2;
 extern Module sceNpClans;
@@ -158,7 +160,11 @@ const g_module_list[] =
 	{ 0x0028, "cellAdecAtx", nullptr },
 	{ 0x0029, "cellAdecAt3", nullptr },
 	{ 0x002a, "cellDmuxPamf", nullptr },
+	{ 0x002b, "?", nullptr },
+	{ 0x002c, "?", nullptr },
+	{ 0x002d, "?", nullptr },
 	{ 0x002e, "sys_lv2dbg", &sys_lv2dbg },
+	{ 0x002f, "cellSysutilAvcExt", nullptr },
 	{ 0x0030, "cellUsbPspcm", &cellUsbPspcm },
 	{ 0x0031, "cellSysutilAvconfExt", &cellAvconfExt },
 	{ 0x0032, "cellUserInfo", &cellUserInfo },
@@ -223,6 +229,8 @@ const g_module_list[] =
 	{ -1, "cellMinisSaveData", &cellMinisSaveData },
 	{ -1, "cellSpudll", &cellSpudll },
 	{ -1, "cellRemotePlay", &cellRemotePlay },
+	{ -1, "libsnd3", &libsnd3 },
+	{ -1, "libsynth2", &libsynth2 },
 };
 
 void ModuleManager::Init()

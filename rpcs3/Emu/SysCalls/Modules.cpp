@@ -35,37 +35,19 @@ u32 add_ppu_func(ModuleFunc func)
 
 u32 add_ppu_func_sub(StaticFunc func)
 {
-	g_ppu_func_subs.push_back(func);
+	g_ppu_func_subs.emplace_back(func);
 	return func.index;
 }
 
-u32 add_ppu_func_sub(const char group[8], const SearchPatternEntry ops[], const size_t count, const char* name, Module* module, ppu_func_caller func)
+u32 add_ppu_func_sub(const std::initializer_list<SearchPatternEntry>& ops, const char* name, Module* module, ppu_func_caller func)
 {
-	char group_name[9] = {};
-
-	if (group)
-	{
-		strcpy_trunc(group_name, group);
-	}
-
 	StaticFunc sf;
 	sf.index = add_ppu_func(ModuleFunc(get_function_id(name), 0, module, name, func));
 	sf.name = name;
-	sf.group = *(u64*)group_name;
 	sf.found = 0;
+	sf.ops = ops;
 
-	for (u32 i = 0; i < count; i++)
-	{
-		SearchPatternEntry op;
-		op.type = ops[i].type;
-		op.data = _byteswap_ulong(ops[i].data); // TODO: use be_t<>
-		op.mask = _byteswap_ulong(ops[i].mask);
-		op.num = ops[i].num;
-		assert(!op.mask || (op.data & ~op.mask) == 0);
-		sf.ops.push_back(op);
-	}
-
-	return add_ppu_func_sub(sf);
+	return add_ppu_func_sub(std::move(sf));
 }
 
 ModuleFunc* get_ppu_func_by_nid(u32 nid, u32* out_index)
@@ -240,7 +222,7 @@ void hook_ppu_func(vm::ptr<u32> base, u32 pos, u32 size)
 
 	for (auto& sub : g_ppu_func_subs)
 	{
-		bool found = true;
+		bool found = sub.ops.size() != 0;
 
 		for (u32 k = pos, x = 0; x + 1 <= sub.ops.size(); k++, x++)
 		{
@@ -257,8 +239,8 @@ void hook_ppu_func(vm::ptr<u32> base, u32 pos, u32 size)
 				continue;
 			}
 
-			const u32 data = sub.ops[x].data;
-			const u32 mask = sub.ops[x].mask;
+			const u32 data = sub.ops[x].data.data();
+			const u32 mask = sub.ops[x].mask.data();
 
 			const bool match = (base[k].data() & mask) == data;
 
@@ -350,7 +332,7 @@ void hook_ppu_func(vm::ptr<u32> base, u32 pos, u32 size)
 
 		if (found)
 		{
-			LOG_SUCCESS(LOADER, "Function '%s' hooked (addr=0x%x)", sub.name, (base + pos).addr());
+			LOG_SUCCESS(LOADER, "Function '%s' hooked (addr=*0x%x)", sub.name, base + pos);
 			sub.found++;
 			base[pos] = HACK(sub.index | EIF_PERFORM_BLR);
 		}
@@ -366,11 +348,6 @@ void hook_ppu_funcs(vm::ptr<u32> base, u32 size)
 {
 	using namespace PPU_instr;
 
-	if (!Ini.HLEHookStFunc.GetValue())
-	{
-		return;
-	}
-
 	// TODO: optimize search
 	for (u32 i = 0; i < size; i++)
 	{
@@ -383,95 +360,12 @@ void hook_ppu_funcs(vm::ptr<u32> base, u32 size)
 		hook_ppu_func(base, i, size);
 	}
 
-	// check function groups
+	// check functions
 	for (u32 i = 0; i < g_ppu_func_subs.size(); i++)
 	{
-		if (g_ppu_func_subs[i].found) // start from some group
+		if (g_ppu_func_subs[i].found > 1)
 		{
-			const u64 group = g_ppu_func_subs[i].group;
-
-			if (!group)
-			{
-				// skip if group not set
-				continue;
-			}
-
-			enum : u32
-			{
-				GSR_SUCCESS = 0, // every function from this group has been found once
-				GSR_MISSING = 1, // (error) some function not found
-				GSR_EXCESS = 2, // (error) some function found twice or more
-			};
-
-			u32 res = GSR_SUCCESS;
-
-			// analyse
-			for (u32 j = 0; j < g_ppu_func_subs.size(); j++) if (g_ppu_func_subs[j].group == group)
-			{
-				u32 count = g_ppu_func_subs[j].found;
-
-				if (count == 0) // not found
-				{
-					// check if this function has been found with different pattern
-					for (u32 k = 0; k < g_ppu_func_subs.size(); k++) if (g_ppu_func_subs[k].group == group)
-					{
-						if (k != j && g_ppu_func_subs[k].index == g_ppu_func_subs[j].index)
-						{
-							count += g_ppu_func_subs[k].found;
-						}
-					}
-					if (count == 0)
-					{
-						res |= GSR_MISSING;
-						LOG_ERROR(LOADER, "Function '%s' not found", g_ppu_func_subs[j].name);
-					}
-					else if (count > 1)
-					{
-						res |= GSR_EXCESS;
-					}
-				}
-				else if (count == 1) // found
-				{
-					// ensure that this function has NOT been found with different pattern
-					for (u32 k = 0; k < g_ppu_func_subs.size(); k++) if (g_ppu_func_subs[k].group == group)
-					{
-						if (k != j && g_ppu_func_subs[k].index == g_ppu_func_subs[j].index)
-						{
-							if (g_ppu_func_subs[k].found)
-							{
-								res |= GSR_EXCESS;
-								LOG_ERROR(LOADER, "Function '%s' hooked twice", g_ppu_func_subs[j].name);
-							}
-						}
-					}
-				}
-				else
-				{
-					res |= GSR_EXCESS;
-					LOG_ERROR(LOADER, "Function '%s' hooked twice", g_ppu_func_subs[j].name);
-				}
-			}
-
-			// clear data
-			for (u32 j = 0; j < g_ppu_func_subs.size(); j++)
-			{
-				if (g_ppu_func_subs[j].group == group) g_ppu_func_subs[j].found = 0;
-			}
-
-			char group_name[9] = {};
-
-			*(u64*)group_name = group;
-
-			if (res == GSR_SUCCESS)
-			{
-				LOG_SUCCESS(LOADER, "Function group [%s] successfully hooked", group_name);
-			}
-			else
-			{
-				LOG_ERROR(LOADER, "Function group [%s] failed:%s%s", group_name,
-					(res & GSR_MISSING ? " missing;" : ""),
-					(res & GSR_EXCESS ? " excess;" : ""));
-			}
+			LOG_ERROR(LOADER, "Function '%s' hooked %u times", g_ppu_func_subs[i].found);
 		}
 	}
 }

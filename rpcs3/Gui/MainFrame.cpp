@@ -370,32 +370,32 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	// Settings panels
 	wxNotebook* nb_config = new wxNotebook(&diag, wxID_ANY, wxPoint(6,6), wxSize(width, height));
 	wxPanel* p_system     = new wxPanel(nb_config, wxID_ANY);
-	wxPanel* p_cpu        = new wxPanel(nb_config, wxID_ANY);
+	wxPanel* p_core       = new wxPanel(nb_config, wxID_ANY);
 	wxPanel* p_graphics   = new wxPanel(nb_config, wxID_ANY);
 	wxPanel* p_audio      = new wxPanel(nb_config, wxID_ANY);
 	wxPanel* p_io         = new wxPanel(nb_config, wxID_ANY);
-	wxPanel* p_hle        = new wxPanel(nb_config, wxID_ANY);
+	wxPanel* p_misc       = new wxPanel(nb_config, wxID_ANY);
 	wxPanel* p_networking = new wxPanel(nb_config, wxID_ANY);
 
-	nb_config->AddPage(p_cpu,        wxT("Core"));
+	nb_config->AddPage(p_core,       wxT("Core"));
 	nb_config->AddPage(p_graphics,   wxT("Graphics"));
 	nb_config->AddPage(p_audio,      wxT("Audio"));
 	nb_config->AddPage(p_io,         wxT("Input / Output"));
-	nb_config->AddPage(p_hle,        wxT("HLE / Misc."));
+	nb_config->AddPage(p_misc,       wxT("Miscellaneous"));
 	nb_config->AddPage(p_networking, wxT("Networking"));
 	nb_config->AddPage(p_system,     wxT("System"));
 
 	wxBoxSizer* s_subpanel_system     = new wxBoxSizer(wxVERTICAL);
-	wxBoxSizer* s_subpanel_cpu        = new wxBoxSizer(wxVERTICAL);
+	wxBoxSizer* s_subpanel_core       = new wxBoxSizer(wxVERTICAL);
 	wxBoxSizer* s_subpanel_graphics   = new wxBoxSizer(wxVERTICAL);
 	wxBoxSizer* s_subpanel_audio      = new wxBoxSizer(wxVERTICAL);
 	wxBoxSizer* s_subpanel_io         = new wxBoxSizer(wxVERTICAL);
-	wxBoxSizer* s_subpanel_hle        = new wxBoxSizer(wxVERTICAL);
+	wxBoxSizer* s_subpanel_misc       = new wxBoxSizer(wxVERTICAL);
 	wxBoxSizer* s_subpanel_networking = new wxBoxSizer(wxVERTICAL);
 
-	// CPU/SPU settings
-	wxStaticBoxSizer* s_round_cpu_decoder = new wxStaticBoxSizer(wxVERTICAL, p_cpu, _("CPU"));
-	wxStaticBoxSizer* s_round_spu_decoder = new wxStaticBoxSizer(wxVERTICAL, p_cpu, _("SPU"));
+	// Core settings
+	wxStaticBoxSizer* s_round_cpu_decoder = new wxStaticBoxSizer(wxVERTICAL, p_core, _("CPU"));
+	wxStaticBoxSizer* s_round_spu_decoder = new wxStaticBoxSizer(wxVERTICAL, p_core, _("SPU"));
 
 	// Graphics
 	wxStaticBoxSizer* s_round_gs_render = new wxStaticBoxSizer(wxVERTICAL, p_graphics, _("Render"));
@@ -413,8 +413,8 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	// Audio
 	wxStaticBoxSizer* s_round_audio_out = new wxStaticBoxSizer(wxVERTICAL, p_audio, _("Audio Out"));
 
-	// HLE / Misc.
-	wxStaticBoxSizer* s_round_hle_log_lvl = new wxStaticBoxSizer(wxVERTICAL, p_hle, _("Log Level"));
+	// Miscellaneous
+	wxStaticBoxSizer* s_round_hle_log_lvl = new wxStaticBoxSizer(wxVERTICAL, p_misc, _("Log Level"));
 
 	// Networking
 	wxStaticBoxSizer* s_round_net_status  = new wxStaticBoxSizer(wxVERTICAL, p_networking, _("Connection status"));
@@ -423,8 +423,8 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	// System
 	wxStaticBoxSizer* s_round_sys_lang = new wxStaticBoxSizer(wxVERTICAL, p_system, _("Language"));
 
-	wxComboBox* cbox_cpu_decoder      = new wxComboBox(p_cpu, wxID_ANY);
-	wxComboBox* cbox_spu_decoder      = new wxComboBox(p_cpu, wxID_ANY);
+	wxComboBox* cbox_cpu_decoder      = new wxComboBox(p_core, wxID_ANY);
+	wxComboBox* cbox_spu_decoder      = new wxComboBox(p_core, wxID_ANY);
 	wxComboBox* cbox_gs_render        = new wxComboBox(p_graphics, wxID_ANY);
 	wxComboBox* cbox_gs_resolution    = new wxComboBox(p_graphics, wxID_ANY);
 	wxComboBox* cbox_gs_aspect        = new wxComboBox(p_graphics, wxID_ANY);
@@ -435,11 +435,13 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	wxComboBox* cbox_camera           = new wxComboBox(p_io, wxID_ANY);
 	wxComboBox* cbox_camera_type      = new wxComboBox(p_io, wxID_ANY);
 	wxComboBox* cbox_audio_out        = new wxComboBox(p_audio, wxID_ANY);
-	wxComboBox* cbox_hle_loglvl       = new wxComboBox(p_hle, wxID_ANY);
+	wxComboBox* cbox_hle_loglvl       = new wxComboBox(p_misc, wxID_ANY);
 	wxComboBox* cbox_net_status       = new wxComboBox(p_networking, wxID_ANY);
 	wxComboBox* cbox_net_interface    = new wxComboBox(p_networking, wxID_ANY);
 	wxComboBox* cbox_sys_lang         = new wxComboBox(p_system, wxID_ANY);
 
+	wxCheckBox* chbox_core_hook_stfunc    = new wxCheckBox(p_core, wxID_ANY, "Hook static functions");
+	wxCheckBox* chbox_core_load_liblv2    = new wxCheckBox(p_core, wxID_ANY, "Load liblv2.sprx");
 	wxCheckBox* chbox_gs_log_prog         = new wxCheckBox(p_graphics, wxID_ANY, "Log vertex/fragment programs");
 	wxCheckBox* chbox_gs_dump_depth       = new wxCheckBox(p_graphics, wxID_ANY, "Write Depth Buffer");
 	wxCheckBox* chbox_gs_dump_color       = new wxCheckBox(p_graphics, wxID_ANY, "Write Color Buffers");
@@ -448,16 +450,15 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	wxCheckBox* chbox_gs_3dmonitor        = new wxCheckBox(p_graphics, wxID_ANY, "3D Monitor");
 	wxCheckBox* chbox_audio_dump          = new wxCheckBox(p_audio, wxID_ANY, "Dump to file");
 	wxCheckBox* chbox_audio_conv          = new wxCheckBox(p_audio, wxID_ANY, "Convert to 16 bit");
-	wxCheckBox* chbox_hle_logging         = new wxCheckBox(p_hle, wxID_ANY, "Log everything");
-	wxCheckBox* chbox_rsx_logging         = new wxCheckBox(p_hle, wxID_ANY, "RSX Logging");
-	wxCheckBox* chbox_hle_hook_stfunc     = new wxCheckBox(p_hle, wxID_ANY, "Hook static functions");
-	wxCheckBox* chbox_hle_savetty         = new wxCheckBox(p_hle, wxID_ANY, "Save TTY output to file");
-	wxCheckBox* chbox_hle_exitonstop      = new wxCheckBox(p_hle, wxID_ANY, "Exit RPCS3 when process finishes");
-	wxCheckBox* chbox_hle_always_start    = new wxCheckBox(p_hle, wxID_ANY, "Always start after boot");
+	wxCheckBox* chbox_hle_logging         = new wxCheckBox(p_misc, wxID_ANY, "Log everything");
+	wxCheckBox* chbox_rsx_logging         = new wxCheckBox(p_misc, wxID_ANY, "RSX Logging");
+	wxCheckBox* chbox_hle_savetty         = new wxCheckBox(p_misc, wxID_ANY, "Save TTY output to file");
+	wxCheckBox* chbox_hle_exitonstop      = new wxCheckBox(p_misc, wxID_ANY, "Exit RPCS3 when process finishes");
+	wxCheckBox* chbox_hle_always_start    = new wxCheckBox(p_misc, wxID_ANY, "Always start after boot");
 
 	//Auto Pause
-	wxCheckBox* chbox_dbg_ap_systemcall   = new wxCheckBox(p_hle, wxID_ANY, "Auto Pause at System Call");
-	wxCheckBox* chbox_dbg_ap_functioncall = new wxCheckBox(p_hle, wxID_ANY, "Auto Pause at Function Call");
+	wxCheckBox* chbox_dbg_ap_systemcall   = new wxCheckBox(p_misc, wxID_ANY, "Auto Pause at System Call");
+	wxCheckBox* chbox_dbg_ap_functioncall = new wxCheckBox(p_misc, wxID_ANY, "Auto Pause at Function Call");
 
 	//Custom EmulationDir
 	wxCheckBox* chbox_emulationdir_enable = new wxCheckBox(p_system, wxID_ANY, "Use Path Below as EmulationDir ? (Need Restart)");
@@ -610,10 +611,11 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	chbox_audio_conv         ->SetValue(Ini.AudioConvertToU16.GetValue());
 	chbox_hle_logging        ->SetValue(Ini.HLELogging.GetValue());
 	chbox_rsx_logging        ->SetValue(Ini.RSXLogging.GetValue());
-	chbox_hle_hook_stfunc    ->SetValue(Ini.HLEHookStFunc.GetValue());
 	chbox_hle_savetty        ->SetValue(Ini.HLESaveTTY.GetValue());
 	chbox_hle_exitonstop     ->SetValue(Ini.HLEExitOnStop.GetValue());
 	chbox_hle_always_start   ->SetValue(Ini.HLEAlwaysStart.GetValue());
+	chbox_core_hook_stfunc   ->SetValue(Ini.HookStFunc.GetValue());
+	chbox_core_load_liblv2   ->SetValue(Ini.LoadLibLv2.GetValue());
 
 	//Auto Pause related
 	chbox_dbg_ap_systemcall  ->SetValue(Ini.DBGAutoPauseSystemCall.GetValue());
@@ -668,8 +670,10 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	s_round_sys_lang->Add(cbox_sys_lang, wxSizerFlags().Border(wxALL, 5).Expand());
 
 	// Core
-	s_subpanel_cpu->Add(s_round_cpu_decoder, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_subpanel_cpu->Add(s_round_spu_decoder, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_subpanel_core->Add(s_round_cpu_decoder, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_subpanel_core->Add(s_round_spu_decoder, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_subpanel_core->Add(chbox_core_hook_stfunc, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_subpanel_core->Add(chbox_core_load_liblv2, wxSizerFlags().Border(wxALL, 5).Expand());
 
 	// Graphics
 	s_subpanel_graphics->Add(s_round_gs_render, wxSizerFlags().Border(wxALL, 5).Expand());
@@ -695,18 +699,17 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	s_subpanel_audio->Add(chbox_audio_dump, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_audio->Add(chbox_audio_conv, wxSizerFlags().Border(wxALL, 5).Expand());
 
-	// HLE / Misc.
-	s_subpanel_hle->Add(s_round_hle_log_lvl, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_subpanel_hle->Add(chbox_hle_logging, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_subpanel_hle->Add(chbox_rsx_logging, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_subpanel_hle->Add(chbox_hle_hook_stfunc, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_subpanel_hle->Add(chbox_hle_savetty, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_subpanel_hle->Add(chbox_hle_exitonstop, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_subpanel_hle->Add(chbox_hle_always_start, wxSizerFlags().Border(wxALL, 5).Expand());
+	// Miscellaneous
+	s_subpanel_misc->Add(s_round_hle_log_lvl, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_subpanel_misc->Add(chbox_hle_logging, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_subpanel_misc->Add(chbox_rsx_logging, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_subpanel_misc->Add(chbox_hle_savetty, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_subpanel_misc->Add(chbox_hle_exitonstop, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_subpanel_misc->Add(chbox_hle_always_start, wxSizerFlags().Border(wxALL, 5).Expand());
 
 	// Auto Pause
-	s_subpanel_hle->Add(chbox_dbg_ap_systemcall, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_subpanel_hle->Add(chbox_dbg_ap_functioncall, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_subpanel_misc->Add(chbox_dbg_ap_systemcall, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_subpanel_misc->Add(chbox_dbg_ap_functioncall, wxSizerFlags().Border(wxALL, 5).Expand());
 
 	// Networking
 	s_subpanel_networking->Add(s_round_net_status, wxSizerFlags().Border(wxALL, 5).Expand());
@@ -725,11 +728,11 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	s_b_panel->Add(new wxButton(&diag, wxID_CANCEL), wxSizerFlags().Border(wxALL, 5).Bottom());
 
 	// Resize panels 
-	diag.SetSizerAndFit(s_subpanel_cpu, false);
+	diag.SetSizerAndFit(s_subpanel_core, false);
 	diag.SetSizerAndFit(s_subpanel_graphics, false);
 	diag.SetSizerAndFit(s_subpanel_io, false);
 	diag.SetSizerAndFit(s_subpanel_audio, false);
-	diag.SetSizerAndFit(s_subpanel_hle, false);
+	diag.SetSizerAndFit(s_subpanel_misc, false);
 	diag.SetSizerAndFit(s_subpanel_networking, false);
 	diag.SetSizerAndFit(s_subpanel_system, false);
 	diag.SetSizerAndFit(s_b_panel, false);
@@ -740,6 +743,8 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	{
 		Ini.CPUDecoderMode.SetValue(cbox_cpu_decoder->GetSelection());
 		Ini.SPUDecoderMode.SetValue(cbox_spu_decoder->GetSelection());
+		Ini.HookStFunc.SetValue(chbox_core_hook_stfunc->GetValue());
+		Ini.LoadLibLv2.SetValue(chbox_core_load_liblv2->GetValue());
 		Ini.GSRenderMode.SetValue(cbox_gs_render->GetSelection());
 		Ini.GSResolution.SetValue(ResolutionNumToId(cbox_gs_resolution->GetSelection() + 1));
 		Ini.GSAspectRatio.SetValue(cbox_gs_aspect->GetSelection() + 1);
@@ -760,7 +765,6 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 		Ini.CameraType.SetValue(cbox_camera_type->GetSelection());
 		Ini.HLELogging.SetValue(chbox_hle_logging->GetValue());
 		Ini.RSXLogging.SetValue(chbox_rsx_logging->GetValue());
-		Ini.HLEHookStFunc.SetValue(chbox_hle_hook_stfunc->GetValue());
 		Ini.HLESaveTTY.SetValue(chbox_hle_savetty->GetValue());
 		Ini.HLEExitOnStop.SetValue(chbox_hle_exitonstop->GetValue());
 		Ini.HLELogLvl.SetValue(cbox_hle_loglvl->GetSelection());

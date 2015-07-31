@@ -4,8 +4,6 @@
 #include "Emu/SysCalls/ModuleManager.h"
 #include "Emu/SysCalls/Modules.h"
 
-namespace vm { using namespace ps3; }
-
 extern Module cellSysmodule;
 
 enum
@@ -69,6 +67,7 @@ const char* get_module_id(u16 id)
 	case 0x002c: return "CELL_SYSMODULE_ADEC_AL";
 	case 0x002d: return "CELL_SYSMODULE_DMUX_AL";
 	case 0x002e: return "CELL_SYSMODULE_LV2DBG";
+	case 0x002f: return "CELL_SYSMODULE_SYSUTIL_AVCHAT";
 	case 0x0030: return "CELL_SYSMODULE_USBPSPCM";
 	case 0x0031: return "CELL_SYSMODULE_AVCONF_EXT";
 	case 0x0032: return "CELL_SYSMODULE_SYSUTIL_USERINFO";

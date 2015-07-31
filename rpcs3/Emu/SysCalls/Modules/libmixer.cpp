@@ -12,13 +12,8 @@
 extern Module libmixer;
 
 SurMixerConfig g_surmx;
-vm::ptr<CellSurMixerNotifyCallbackFunction> surMixerCb;
-vm::ptr<void> surMixerCbArg;
-std::mutex mixer_mutex;
-float mixdata[8*256];
-u64 mixcount;
 
-std::vector<SSPlayer> ssp;
+std::vector<SSPlayer> g_ssp;
 
 s32 cellAANAddData(u32 aan_handle, u32 aan_port, u32 offset, vm::ptr<float> addr, u32 samples)
 {
@@ -47,7 +42,7 @@ s32 cellAANAddData(u32 aan_handle, u32 aan_port, u32 offset, vm::ptr<float> addr
 		return CELL_LIBMIXER_ERROR_INVALID_PARAMATER;
 	}
 
-	std::lock_guard<std::mutex> lock(mixer_mutex);
+	std::lock_guard<std::mutex> lock(g_surmx.mutex);
 
 	if (type == CELL_SURMIXER_CHSTRIP_TYPE1A)
 	{
@@ -55,8 +50,8 @@ s32 cellAANAddData(u32 aan_handle, u32 aan_port, u32 offset, vm::ptr<float> addr
 		for (u32 i = 0; i < samples; i++)
 		{
 			const float center = addr[i];
-			mixdata[i * 8 + 0] += center;
-			mixdata[i * 8 + 1] += center;
+			g_surmx.mixdata[i * 8 + 0] += center;
+			g_surmx.mixdata[i * 8 + 1] += center;
 		}		
 	}
 	else if (type == CELL_SURMIXER_CHSTRIP_TYPE2A)
@@ -66,8 +61,8 @@ s32 cellAANAddData(u32 aan_handle, u32 aan_port, u32 offset, vm::ptr<float> addr
 		{
 			const float left = addr[i * 2 + 0];
 			const float right = addr[i * 2 + 1];
-			mixdata[i * 8 + 0] += left;
-			mixdata[i * 8 + 1] += right;
+			g_surmx.mixdata[i * 8 + 0] += left;
+			g_surmx.mixdata[i * 8 + 1] += right;
 		}
 	}
 	else if (type == CELL_SURMIXER_CHSTRIP_TYPE6A)
@@ -81,12 +76,12 @@ s32 cellAANAddData(u32 aan_handle, u32 aan_port, u32 offset, vm::ptr<float> addr
 			const float low_freq = addr[i * 6 + 3];
 			const float rear_left = addr[i * 6 + 4];
 			const float rear_right = addr[i * 6 + 5];
-			mixdata[i * 8 + 0] += left;
-			mixdata[i * 8 + 1] += right;
-			mixdata[i * 8 + 2] += center;
-			mixdata[i * 8 + 3] += low_freq;
-			mixdata[i * 8 + 4] += rear_left;
-			mixdata[i * 8 + 5] += rear_right;
+			g_surmx.mixdata[i * 8 + 0] += left;
+			g_surmx.mixdata[i * 8 + 1] += right;
+			g_surmx.mixdata[i * 8 + 2] += center;
+			g_surmx.mixdata[i * 8 + 3] += low_freq;
+			g_surmx.mixdata[i * 8 + 4] += rear_left;
+			g_surmx.mixdata[i * 8 + 5] += rear_right;
 		}
 	}
 	else if (type == CELL_SURMIXER_CHSTRIP_TYPE8A)
@@ -94,7 +89,7 @@ s32 cellAANAddData(u32 aan_handle, u32 aan_port, u32 offset, vm::ptr<float> addr
 		// 7.1
 		for (u32 i = 0; i < samples * 8; i++)
 		{
-			mixdata[i] += addr[i];
+			g_surmx.mixdata[i] += addr[i];
 		}
 	}
 
@@ -106,15 +101,15 @@ s32 cellAANConnect(u32 receive, u32 receivePortNo, u32 source, u32 sourcePortNo)
 	libmixer.Warning("cellAANConnect(receive=0x%x, receivePortNo=0x%x, source=0x%x, sourcePortNo=0x%x)",
 		receive, receivePortNo, source, sourcePortNo);
 
-	std::lock_guard<std::mutex> lock(mixer_mutex);
+	std::lock_guard<std::mutex> lock(g_surmx.mutex);
 
-	if (source >= ssp.size() || !ssp[source].m_created)
+	if (source >= g_ssp.size() || !g_ssp[source].m_created)
 	{
 		libmixer.Error("cellAANConnect(): invalid source (%d)", source);
 		return CELL_LIBMIXER_ERROR_INVALID_PARAMATER;
 	}
 
-	ssp[source].m_connected = true;
+	g_ssp[source].m_connected = true;
 
 	return CELL_OK;
 }
@@ -124,15 +119,15 @@ s32 cellAANDisconnect(u32 receive, u32 receivePortNo, u32 source, u32 sourcePort
 	libmixer.Warning("cellAANDisconnect(receive=0x%x, receivePortNo=0x%x, source=0x%x, sourcePortNo=0x%x)",
 		receive, receivePortNo, source, sourcePortNo);
 
-	std::lock_guard<std::mutex> lock(mixer_mutex);
+	std::lock_guard<std::mutex> lock(g_surmx.mutex);
 
-	if (source >= ssp.size() || !ssp[source].m_created)
+	if (source >= g_ssp.size() || !g_ssp[source].m_created)
 	{
 		libmixer.Error("cellAANDisconnect(): invalid source (%d)", source);
 		return CELL_LIBMIXER_ERROR_INVALID_PARAMATER;
 	}
 
-	ssp[source].m_connected = false;
+	g_ssp[source].m_connected = false;
 
 	return CELL_OK;
 }
@@ -147,7 +142,7 @@ s32 cellSSPlayerCreate(vm::ptr<u32> handle, vm::ptr<CellSSPlayerConfig> config)
 		return CELL_LIBMIXER_ERROR_INVALID_PARAMATER;
 	}
 
-	std::lock_guard<std::mutex> lock(mixer_mutex);
+	std::lock_guard<std::mutex> lock(g_surmx.mutex);
 
 	SSPlayer p;
 	p.m_created = true;
@@ -155,8 +150,8 @@ s32 cellSSPlayerCreate(vm::ptr<u32> handle, vm::ptr<CellSSPlayerConfig> config)
 	p.m_active = false;
 	p.m_channels = config->channels;
 	
-	ssp.push_back(p);
-	*handle = (u32)ssp.size() - 1;
+	g_ssp.push_back(p);
+	*handle = (u32)g_ssp.size() - 1;
 	return CELL_OK;
 }
 
@@ -164,17 +159,17 @@ s32 cellSSPlayerRemove(u32 handle)
 {
 	libmixer.Warning("cellSSPlayerRemove(handle=0x%x)", handle);
 
-	std::lock_guard<std::mutex> lock(mixer_mutex);
+	std::lock_guard<std::mutex> lock(g_surmx.mutex);
 
-	if (handle >= ssp.size() || !ssp[handle].m_created)
+	if (handle >= g_ssp.size() || !g_ssp[handle].m_created)
 	{
 		libmixer.Error("cellSSPlayerRemove(): SSPlayer not found (%d)", handle);
 		return CELL_LIBMIXER_ERROR_INVALID_PARAMATER;
 	}
 
-	ssp[handle].m_active = false;
-	ssp[handle].m_created = false;
-	ssp[handle].m_connected = false;
+	g_ssp[handle].m_active = false;
+	g_ssp[handle].m_created = false;
+	g_ssp[handle].m_connected = false;
 
 	return CELL_OK;
 }
@@ -183,9 +178,9 @@ s32 cellSSPlayerSetWave(u32 handle, vm::ptr<CellSSPlayerWaveParam> waveInfo, vm:
 {
 	libmixer.Warning("cellSSPlayerSetWave(handle=0x%x, waveInfo=*0x%x, commonInfo=*0x%x)", handle, waveInfo, commonInfo);
 
-	std::lock_guard<std::mutex> lock(mixer_mutex);
+	std::lock_guard<std::mutex> lock(g_surmx.mutex);
 
-	if (handle >= ssp.size() || !ssp[handle].m_created)
+	if (handle >= g_ssp.size() || !g_ssp[handle].m_created)
 	{
 		libmixer.Error("cellSSPlayerSetWave(): SSPlayer not found (%d)", handle);
 		return CELL_LIBMIXER_ERROR_INVALID_PARAMATER;
@@ -193,11 +188,11 @@ s32 cellSSPlayerSetWave(u32 handle, vm::ptr<CellSSPlayerWaveParam> waveInfo, vm:
 
 	// TODO: check parameters
 
-	ssp[handle].m_addr = waveInfo->addr;
-	ssp[handle].m_samples = waveInfo->samples;
-	ssp[handle].m_loop_start = waveInfo->loopStartOffset - 1;
-	ssp[handle].m_loop_mode = commonInfo ? (u32)commonInfo->loopMode : CELL_SSPLAYER_ONESHOT;
-	ssp[handle].m_position = waveInfo->startOffset - 1;
+	g_ssp[handle].m_addr = waveInfo->addr;
+	g_ssp[handle].m_samples = waveInfo->samples;
+	g_ssp[handle].m_loop_start = waveInfo->loopStartOffset - 1;
+	g_ssp[handle].m_loop_mode = commonInfo ? (u32)commonInfo->loopMode : CELL_SSPLAYER_ONESHOT;
+	g_ssp[handle].m_position = waveInfo->startOffset - 1;
 
 	return CELL_OK;
 }
@@ -206,9 +201,9 @@ s32 cellSSPlayerPlay(u32 handle, vm::ptr<CellSSPlayerRuntimeInfo> info)
 {
 	libmixer.Warning("cellSSPlayerPlay(handle=0x%x, info=*0x%x)", handle, info);
 
-	std::lock_guard<std::mutex> lock(mixer_mutex);
+	std::lock_guard<std::mutex> lock(g_surmx.mutex);
 
-	if (handle >= ssp.size() || !ssp[handle].m_created)
+	if (handle >= g_ssp.size() || !g_ssp[handle].m_created)
 	{
 		libmixer.Error("cellSSPlayerPlay(): SSPlayer not found (%d)", handle);
 		return CELL_LIBMIXER_ERROR_INVALID_PARAMATER;
@@ -216,12 +211,12 @@ s32 cellSSPlayerPlay(u32 handle, vm::ptr<CellSSPlayerRuntimeInfo> info)
 
 	// TODO: check parameters
 
-	ssp[handle].m_active = true;
-	ssp[handle].m_level = info->level;
-	ssp[handle].m_speed = info->speed;
-	ssp[handle].m_x = info->position.x;
-	ssp[handle].m_y = info->position.y;
-	ssp[handle].m_z = info->position.z;
+	g_ssp[handle].m_active = true;
+	g_ssp[handle].m_level = info->level;
+	g_ssp[handle].m_speed = info->speed;
+	g_ssp[handle].m_x = info->position.x;
+	g_ssp[handle].m_y = info->position.y;
+	g_ssp[handle].m_z = info->position.z;
 
 	return CELL_OK;
 }
@@ -230,9 +225,9 @@ s32 cellSSPlayerStop(u32 handle, u32 mode)
 {
 	libmixer.Warning("cellSSPlayerStop(handle=0x%x, mode=0x%x)", handle, mode);
 
-	std::lock_guard<std::mutex> lock(mixer_mutex);
+	std::lock_guard<std::mutex> lock(g_surmx.mutex);
 
-	if (handle >= ssp.size() || !ssp[handle].m_created)
+	if (handle >= g_ssp.size() || !g_ssp[handle].m_created)
 	{
 		libmixer.Error("cellSSPlayerStop(): SSPlayer not found (%d)", handle);
 		return CELL_LIBMIXER_ERROR_INVALID_PARAMATER;
@@ -240,7 +235,7 @@ s32 cellSSPlayerStop(u32 handle, u32 mode)
 
 	// TODO: transition to stop state
 
-	ssp[handle].m_active = false;
+	g_ssp[handle].m_active = false;
 
 	return CELL_OK;
 }
@@ -249,9 +244,9 @@ s32 cellSSPlayerSetParam(u32 handle, vm::ptr<CellSSPlayerRuntimeInfo> info)
 {
 	libmixer.Warning("cellSSPlayerSetParam(handle=0x%x, info=*0x%x)", handle, info);
 
-	std::lock_guard<std::mutex> lock(mixer_mutex);
+	std::lock_guard<std::mutex> lock(g_surmx.mutex);
 
-	if (handle >= ssp.size() || !ssp[handle].m_created)
+	if (handle >= g_ssp.size() || !g_ssp[handle].m_created)
 	{
 		libmixer.Error("cellSSPlayerSetParam(): SSPlayer not found (%d)", handle);
 		return CELL_LIBMIXER_ERROR_INVALID_PARAMATER;
@@ -259,11 +254,11 @@ s32 cellSSPlayerSetParam(u32 handle, vm::ptr<CellSSPlayerRuntimeInfo> info)
 
 	// TODO: check parameters
 	
-	ssp[handle].m_level = info->level;
-	ssp[handle].m_speed = info->speed;
-	ssp[handle].m_x = info->position.x;
-	ssp[handle].m_y = info->position.y;
-	ssp[handle].m_z = info->position.z;
+	g_ssp[handle].m_level = info->level;
+	g_ssp[handle].m_speed = info->speed;
+	g_ssp[handle].m_x = info->position.x;
+	g_ssp[handle].m_y = info->position.y;
+	g_ssp[handle].m_z = info->position.z;
 
 	return CELL_OK;
 }
@@ -272,15 +267,15 @@ s32 cellSSPlayerGetState(u32 handle)
 {
 	libmixer.Warning("cellSSPlayerGetState(handle=0x%x)", handle);
 
-	std::lock_guard<std::mutex> lock(mixer_mutex);
+	std::lock_guard<std::mutex> lock(g_surmx.mutex);
 
-	if (handle >= ssp.size() || !ssp[handle].m_created)
+	if (handle >= g_ssp.size() || !g_ssp[handle].m_created)
 	{
 		libmixer.Warning("cellSSPlayerGetState(): SSPlayer not found (%d)", handle);
 		return CELL_SSPLAYER_STATE_ERROR;
 	}
 
-	if (ssp[handle].m_active)
+	if (g_ssp[handle].m_active)
 	{
 		return CELL_SSPLAYER_STATE_ON;
 	}
@@ -319,8 +314,10 @@ s32 cellSurMixerCreate(vm::cptr<CellSurMixerConfig> config)
 
 	libmixer.Warning("*** audio port opened (port=%d)", g_surmx.audio_port);
 
-	mixcount = 0;
-	surMixerCb.set(0);
+	g_surmx.mixcount = 0;
+	g_surmx.cb = vm::null;
+
+	g_ssp.clear();
 
 	libmixer.Warning("*** surMixer created (ch1=%d, ch2=%d, ch6=%d, ch8=%d)", config->chStrips1, config->chStrips2, config->chStrips6, config->chStrips8);
 
@@ -335,7 +332,7 @@ s32 cellSurMixerCreate(vm::cptr<CellSurMixerConfig> config)
 		{
 			CHECK_EMU_STATUS;
 
-			if (mixcount > (port.tag + 0)) // adding positive value (1-15): preemptive buffer filling (hack)
+			if (g_surmx.mixcount > (port.tag + 0)) // adding positive value (1-15): preemptive buffer filling (hack)
 			{
 				std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 				continue;
@@ -345,18 +342,18 @@ s32 cellSurMixerCreate(vm::cptr<CellSurMixerConfig> config)
 			{
 				//u64 stamp0 = get_system_time();
 
-				memset(mixdata, 0, sizeof(mixdata));
-				if (surMixerCb)
+				memset(g_surmx.mixdata, 0, sizeof(g_surmx.mixdata));
+				if (g_surmx.cb)
 				{
-					surMixerCb(ppu, surMixerCbArg, (u32)mixcount, 256);
+					g_surmx.cb(ppu, g_surmx.cb_arg, (u32)g_surmx.mixcount, 256);
 				}
 
 				//u64 stamp1 = get_system_time();
 
 				{
-					std::lock_guard<std::mutex> lock(mixer_mutex);
+					std::lock_guard<std::mutex> lock(g_surmx.mutex);
 
-					for (auto& p : ssp) if (p.m_active && p.m_created)
+					for (auto& p : g_ssp) if (p.m_active && p.m_created)
 					{
 						auto v = vm::ptrl<s16>::make(p.m_addr); // 16-bit LE audio data
 						float left = 0.0f;
@@ -406,8 +403,8 @@ s32 cellSurMixerCreate(vm::cptr<CellSurMixerConfig> config)
 							if (p.m_connected) // mix
 							{
 								// TODO: m_x, m_y, m_z ignored
-								mixdata[i * 8 + 0] += left;
-								mixdata[i * 8 + 1] += right;
+								g_surmx.mixdata[i * 8 + 0] += left;
+								g_surmx.mixdata[i * 8 + 1] += right;
 							}
 							if ((p.m_position == p.m_samples && p.m_speed > 0.0f) ||
 								(p.m_position == ~0 && p.m_speed < 0.0f)) // loop or stop
@@ -432,12 +429,12 @@ s32 cellSurMixerCreate(vm::cptr<CellSurMixerConfig> config)
 
 				//u64 stamp2 = get_system_time();
 
-				auto buf = vm::get_ptr<be_t<float>>(port.addr + (mixcount % port.block) * port.channel * AUDIO_SAMPLES * sizeof(float));
+				auto buf = vm::get_ptr<be_t<float>>(port.addr + (g_surmx.mixcount % port.block) * port.channel * AUDIO_SAMPLES * sizeof(float));
 
-				for (u32 i = 0; i < (sizeof(mixdata) / sizeof(float)); i++)
+				for (auto& mixdata : g_surmx.mixdata)
 				{
 					// reverse byte order
-					buf[i] = mixdata[i];
+					*buf++ = mixdata;
 				}
 
 				//u64 stamp3 = get_system_time();
@@ -445,15 +442,8 @@ s32 cellSurMixerCreate(vm::cptr<CellSurMixerConfig> config)
 				//ConLog.Write("Libmixer perf: start=%lld (cb=%lld, ssp=%lld, finalize=%lld)", stamp0 - m_config.start_time, stamp1 - stamp0, stamp2 - stamp1, stamp3 - stamp2);
 			}
 
-			mixcount++;
+			g_surmx.mixcount++;
 		}
-
-		{
-			std::lock_guard<std::mutex> lock(mixer_mutex);
-			ssp.clear();
-		}
-		
-		surMixerCb.set(0);
 
 		Emu.GetIdManager().remove<PPUThread>(ppu.get_id());
 	};
@@ -482,13 +472,13 @@ s32 cellSurMixerSetNotifyCallback(vm::ptr<CellSurMixerNotifyCallbackFunction> fu
 {
 	libmixer.Warning("cellSurMixerSetNotifyCallback(func=*0x%x, arg=*0x%x)", func, arg);
 
-	if (surMixerCb)
+	if (g_surmx.cb)
 	{
-		libmixer.Error("cellSurMixerSetNotifyCallback: surMixerCb already set (*0x%x)", surMixerCb);
+		throw EXCEPTION("Callback already set");
 	}
 
-	surMixerCb = func;
-	surMixerCbArg = arg;
+	g_surmx.cb = func;
+	g_surmx.cb_arg = arg;
 
 	return CELL_OK;
 }
@@ -497,14 +487,12 @@ s32 cellSurMixerRemoveNotifyCallback(vm::ptr<CellSurMixerNotifyCallbackFunction>
 {
 	libmixer.Warning("cellSurMixerRemoveNotifyCallback(func=*0x%x)", func);
 
-	if (surMixerCb != func)
+	if (g_surmx.cb != func)
 	{
-		libmixer.Error("cellSurMixerRemoveNotifyCallback: surMixerCb had different value (*0x%x)", surMixerCb);
+		throw EXCEPTION("Callback not set");
 	}
-	else
-	{
-		surMixerCb = vm::null;
-	}
+
+	g_surmx.cb = vm::null;
 
 	return CELL_OK;
 }
@@ -555,12 +543,12 @@ s32 cellSurMixerSurBusAddData(u32 busNo, u32 offset, vm::ptr<float> addr, u32 sa
 		return CELL_OK;
 	}
 
-	std::lock_guard<std::mutex> lock(mixer_mutex);
+	std::lock_guard<std::mutex> lock(g_surmx.mutex);
 
 	for (u32 i = 0; i < samples; i++)
 	{
 		// reverse byte order and mix
-		mixdata[i * 8 + busNo] += addr[i];
+		g_surmx.mixdata[i * 8 + busNo] += addr[i];
 	}
 
 	return CELL_OK;
@@ -590,7 +578,7 @@ s32 cellSurMixerGetCurrentBlockTag(vm::ptr<u64> tag)
 {
 	libmixer.Log("cellSurMixerGetCurrentBlockTag(tag=*0x%x)", tag);
 
-	*tag = mixcount;
+	*tag = g_surmx.mixcount;
 	return CELL_OK;
 }
 
@@ -610,23 +598,20 @@ void cellSurMixerBeep(u32 arg)
 
 float cellSurMixerUtilGetLevelFromDB(float dB)
 {
-	// not hooked, probably unnecessary
 	libmixer.Todo("cellSurMixerUtilGetLevelFromDB(dB=%f)", dB);
-	return 0.0f;
+	throw EXCEPTION("");
 }
 
 float cellSurMixerUtilGetLevelFromDBIndex(s32 index)
 {
-	// not hooked, probably unnecessary
 	libmixer.Todo("cellSurMixerUtilGetLevelFromDBIndex(index=%d)", index);
-	return 0.0f;
+	throw EXCEPTION("");
 }
 
 float cellSurMixerUtilNoteToRatio(u8 refNote, u8 note)
 {
-	// not hooked, probably unnecessary
 	libmixer.Todo("cellSurMixerUtilNoteToRatio(refNote=%d, note=%d)", refNote, note);
-	return 0.0f;
+	throw EXCEPTION("");
 }
 
 Module libmixer("libmixer", []()
@@ -635,12 +620,12 @@ Module libmixer("libmixer", []()
 
 	libmixer.on_stop = []()
 	{
-		ssp.clear();
+		g_ssp.clear();
 	};
 
 	using namespace PPU_instr;
 
-	REG_SUB(libmixer, "surmxAAN", , cellAANAddData,
+	REG_SUB(libmixer,, cellAANAddData,
 		{ SPET_MASKED_OPCODE, 0x7c691b78, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x7c0802a6, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0xf821ff91, 0xffffffff },
@@ -666,7 +651,7 @@ Module libmixer("libmixer", []()
 		{ SPET_MASKED_OPCODE, 0x4e800020, 0xffffffff },
 	);
 
-	REG_SUB(libmixer, "surmxAAN", , cellAANConnect,
+	REG_SUB(libmixer,, cellAANConnect,
 		{ SPET_MASKED_OPCODE, 0xf821ff71, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x7c0802a6, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x2f830000, 0xffffffff },
@@ -675,18 +660,18 @@ Module libmixer("libmixer", []()
 		{ SPET_MASKED_OPCODE, 0x7c691b78, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x7c8a2378, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x60000003, 0xffffffff },
-		se_br_label(BNE(cr7, XXX), 0x24),
-		se_label(0x24),
+		SP_LABEL_BR(BNE(cr7, XXX), 0x24),
+		SET_LABEL(0x24),
 		{ SPET_MASKED_OPCODE, 0x7c0307b4, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0xe80100a0, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x38210090, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x7c0803a6, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x4e800020, 0xffffffff },
-		se_label(0x38),
+		SET_LABEL(0x38),
 		{ SPET_MASKED_OPCODE, 0x2f850000, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x78630020, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x38810070, 0xffffffff },
-		se_br_label(BEQ(cr7, XXX), 0x38),
+		SP_LABEL_BR(BEQ(cr7, XXX), 0x38),
 		{ SPET_MASKED_OPCODE, 0x81690000, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x38000001, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x91210074, 0xffffffff },
@@ -709,7 +694,7 @@ Module libmixer("libmixer", []()
 		{ SPET_MASKED_OPCODE, 0x4e800020, 0xffffffff },
 	);
 
-	REG_SUB(libmixer, "surmxAAN", , cellAANDisconnect,
+	REG_SUB(libmixer,, cellAANDisconnect,
 		{ SPET_MASKED_OPCODE, 0xf821ff71, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x7c0802a6, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x2f830000, 0xffffffff },
@@ -718,18 +703,18 @@ Module libmixer("libmixer", []()
 		{ SPET_MASKED_OPCODE, 0x7c691b78, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x7c8a2378, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x60000003, 0xffffffff },
-		se_br_label(BNE(cr7, XXX), 0x24),
-		se_label(0x24),
+		SP_LABEL_BR(BNE(cr7, XXX), 0x24),
+		SET_LABEL(0x24),
 		{ SPET_MASKED_OPCODE, 0x7c0307b4, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0xe80100a0, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x38210090, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x7c0803a6, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x4e800020, 0xffffffff },
-		se_label(0x38),
+		SET_LABEL(0x38),
 		{ SPET_MASKED_OPCODE, 0x2f850000, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x78630020, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x38810070, 0xffffffff },
-		se_br_label(BEQ(cr7, XXX), 0x38),
+		SP_LABEL_BR(BEQ(cr7, XXX), 0x38),
 		{ SPET_MASKED_OPCODE, 0x81690000, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x38000001, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x91210074, 0xffffffff },
@@ -752,7 +737,7 @@ Module libmixer("libmixer", []()
 		{ SPET_MASKED_OPCODE, 0x4e800020, 0xffffffff },
 	);
 
-	REG_SUB(libmixer, "surmixer", , cellSurMixerCreate,
+	REG_SUB(libmixer,, cellSurMixerCreate,
 		{ SPET_MASKED_OPCODE, 0x2f830000, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x7c0802a6, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0xf821ff51, 0xffffffff },
@@ -765,7 +750,7 @@ Module libmixer("libmixer", []()
 		{ SPET_MASKED_OPCODE, 0xfbe100a8, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0xf80100c0, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x7c7e1b78, 0xffffffff },
-		se_br_label(BNE(cr7, XXX), 0x6c),
+		SP_LABEL_BR(BNE(cr7, XXX), 0x6c),
 		{ SPET_MASKED_OPCODE, 0x3fe08031, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x63ff0003, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0xe80100c0, 0xffffffff },
@@ -780,11 +765,11 @@ Module libmixer("libmixer", []()
 		{ SPET_MASKED_OPCODE, 0xebe100a8, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x382100b0, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x4e800020, 0xffffffff },
-		se_label(0x6c),
+		SET_LABEL(0x6c),
 	);
 
-	REG_SUB(libmixer, "surmixer", , cellSurMixerGetAANHandle,
-		se_op(LWZ(r10, r2, XXX)),
+	REG_SUB(libmixer,, cellSurMixerGetAANHandle,
+		SP_I(LWZ(r10, r2, XXX)),
 		{ SPET_MASKED_OPCODE, 0x3d607fce, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x616bfffe, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x812a0018, 0xffffffff },
@@ -800,8 +785,8 @@ Module libmixer("libmixer", []()
 		{ SPET_MASKED_OPCODE, 0x4e800020, 0xffffffff },
 	);
 
-	REG_SUB(libmixer, "surmixer", , cellSurMixerChStripGetAANPortNo,
-		se_op(LWZ(r9, r2, XXX)),
+	REG_SUB(libmixer,, cellSurMixerChStripGetAANPortNo,
+		SP_I(LWZ(r9, r2, XXX)),
 		{ SPET_MASKED_OPCODE, 0x7c661b78, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x3c608031, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x78c60020, 0xffffffff },
@@ -812,11 +797,11 @@ Module libmixer("libmixer", []()
 		{ SPET_MASKED_OPCODE, 0x2f800000, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x4d9e0020, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x78030020, 0xffffffff },
-		se_op(B(XXX, 0, 0)),
+		SP_I(B(XXX, 0, 0)),
 	);
 
-	REG_SUB(libmixer, "surmixer", , cellSurMixerSetNotifyCallback,
-		se_op(LWZ(r10, r2, XXX)),
+	REG_SUB(libmixer,, cellSurMixerSetNotifyCallback,
+		SP_I(LWZ(r10, r2, XXX)),
 		{ SPET_MASKED_OPCODE, 0x7c0802a6, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0xf821ff81, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0xf8010090, 0xffffffff },
@@ -836,15 +821,15 @@ Module libmixer("libmixer", []()
 		{ SPET_MASKED_OPCODE, 0x7c0803a6, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x4e800020, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x419aff00, 0xffffff00 }, // beq
-		se_op(LWZ(r0, r10, XXX)),
+		SP_I(LWZ(r0, r10, XXX)),
 		{ SPET_MASKED_OPCODE, 0x79290020, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x38810070, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x2f800000, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x7d234b78, 0xffffffff }
 	);
 
-	REG_SUB(libmixer, "surmixer", , cellSurMixerRemoveNotifyCallback,
-		se_op(LWZ(r11, r2, XXX)),
+	REG_SUB(libmixer,, cellSurMixerRemoveNotifyCallback,
+		SP_I(LWZ(r11, r2, XXX)),
 		{ SPET_MASKED_OPCODE, 0x7c0802a6, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0xf821ff81, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0xf8010090, 0xffffffff },
@@ -861,11 +846,11 @@ Module libmixer("libmixer", []()
 		{ SPET_MASKED_OPCODE, 0x4e800020, 0xffffffff }
 	);
 
-	REG_SUB(libmixer, "surmixer", , cellSurMixerStart,
+	REG_SUB(libmixer,, cellSurMixerStart,
 		{ SPET_MASKED_OPCODE, 0xf821ff71, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x7c0802a6, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0xfbc10080, 0xffffffff },
-		se_op(LWZ(r30, r2, XXX)),
+		SP_I(LWZ(r30, r2, XXX)),
 		{ SPET_MASKED_OPCODE, 0xf80100a0, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0xfba10078, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0xfbe10088, 0xffffffff },
@@ -884,12 +869,12 @@ Module libmixer("libmixer", []()
 		{ SPET_MASKED_OPCODE, 0x4e800020, 0xffffffff }
 	);
 
-	REG_SUB(libmixer, "surmixer", , cellSurMixerSetParameter,
+	REG_SUB(libmixer,, cellSurMixerSetParameter,
 		{ SPET_MASKED_OPCODE, 0xf821ff81, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x7c0802a6, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0xfbc10070, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0xfc000890, 0xffffffff },
-		se_op(LWZ(r30, r2, XXX)),
+		SP_I(LWZ(r30, r2, XXX)),
 		{ SPET_MASKED_OPCODE, 0x3d208031, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0xf8010090, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0xfbe10078, 0xffffffff },
@@ -914,7 +899,7 @@ Module libmixer("libmixer", []()
 		{ SPET_MASKED_OPCODE, 0x409d0000, 0xffff0000 }, // ble
 	);
 
-	REG_SUB(libmixer, "surmixer", , cellSurMixerFinalize,
+	REG_SUB(libmixer,, cellSurMixerFinalize,
 		{ SPET_MASKED_OPCODE, 0xf821ff91, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x7c0802a6, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0xf8010080, 0xffffffff },
@@ -940,8 +925,8 @@ Module libmixer("libmixer", []()
 		{ SPET_MASKED_OPCODE, 0x4e800421, 0xffffffff }
 	);
 
-	REG_SUB(libmixer, "surmixer", , cellSurMixerSurBusAddData,
-		se_op(LWZ(r10, r2, XXX)),
+	REG_SUB(libmixer,, cellSurMixerSurBusAddData,
+		SP_I(LWZ(r10, r2, XXX)),
 		{ SPET_MASKED_OPCODE, 0x7c0802a6, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0xf821ff91, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0xf8010080, 0xffffffff },
@@ -969,8 +954,8 @@ Module libmixer("libmixer", []()
 		{ SPET_MASKED_OPCODE, 0x419c0000, 0xffff0000 } // blt
 	);
 
-	REG_SUB(libmixer, "surmixer", , cellSurMixerChStripSetParameter,
-		se_op(LWZ(r8, r2, XXX)),
+	REG_SUB(libmixer,, cellSurMixerChStripSetParameter,
+		SP_I(LWZ(r8, r2, XXX)),
 		{ SPET_MASKED_OPCODE, 0x7c6b1b78, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x3c608031, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x7c8a2378, 0xffffffff },
@@ -989,8 +974,8 @@ Module libmixer("libmixer", []()
 		{ SPET_MASKED_OPCODE, 0x40000000, 0xf0000000 } // b
 	);
 
-	REG_SUB(libmixer, "surmixer", , cellSurMixerPause,
-		se_op(LWZ(r10, r2, XXX)),
+	REG_SUB(libmixer,, cellSurMixerPause,
+		SP_I(LWZ(r10, r2, XXX)),
 		{ SPET_MASKED_OPCODE, 0x7c0802a6, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0xf821ff81, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0xf8010090, 0xffffffff },
@@ -1014,8 +999,8 @@ Module libmixer("libmixer", []()
 		{ SPET_MASKED_OPCODE, 0x2f800000, 0xffffffff }
 	);
 
-	REG_SUB(libmixer, "surmixer", , cellSurMixerGetCurrentBlockTag,
-		se_op(LWZ(r11, r2, XXX)),
+	REG_SUB(libmixer,, cellSurMixerGetCurrentBlockTag,
+		SP_I(LWZ(r11, r2, XXX)),
 		{ SPET_MASKED_OPCODE, 0x3d208031, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x61290002, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x880b0020, 0xffffffff },
@@ -1028,8 +1013,8 @@ Module libmixer("libmixer", []()
 		{ SPET_MASKED_OPCODE, 0x4e800020, 0xffffffff }
 	);
 
-	REG_SUB(libmixer, "surmixer", , cellSurMixerGetTimestamp,
-		se_op(LWZ(r11, r2, XXX)),
+	REG_SUB(libmixer,, cellSurMixerGetTimestamp,
+		SP_I(LWZ(r11, r2, XXX)),
 		{ SPET_MASKED_OPCODE, 0x7c0802a6, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0xf821ff91, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0xf8010080, 0xffffffff },
@@ -1050,8 +1035,8 @@ Module libmixer("libmixer", []()
 		{ SPET_MASKED_OPCODE, 0x40000000, 0xf0000000 } // bl
 	);
 
-	REG_SUB(libmixer, "surmixer", , cellSurMixerBeep,
-		se_op(LWZ(r9, r2, XXX)),
+	REG_SUB(libmixer,, cellSurMixerBeep,
+		SP_I(LWZ(r9, r2, XXX)),
 		{ SPET_MASKED_OPCODE, 0x7c641b78, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x80690018, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x2f830000, 0xffffffff },
@@ -1064,7 +1049,7 @@ Module libmixer("libmixer", []()
 		{ SPET_MASKED_OPCODE, 0x40000000, 0xf0000000 } // b
 	);
 
-	REG_SUB(libmixer, "surmxSSP", , cellSSPlayerCreate,
+	REG_SUB(libmixer,, cellSSPlayerCreate,
 		{ SPET_MASKED_OPCODE, 0xf821ff51, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x7c0802a6, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x2f840000, 0xffffffff },
@@ -1098,7 +1083,7 @@ Module libmixer("libmixer", []()
 		{ SPET_MASKED_OPCODE, 0x40000000, 0xf0000000 } // bl
 	);
 
-	REG_SUB(libmixer, "surmxSSP", , cellSSPlayerRemove,
+	REG_SUB(libmixer,, cellSSPlayerRemove,
 		{ SPET_MASKED_OPCODE, 0x7c641b78, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x7c0802a6, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x3c608031, 0xffffffff },
@@ -1128,7 +1113,7 @@ Module libmixer("libmixer", []()
 		{ SPET_MASKED_OPCODE, 0x4e800421, 0xffffffff }
 	);
 
-	REG_SUB(libmixer, "surmxSSP", , cellSSPlayerSetWave,
+	REG_SUB(libmixer,, cellSSPlayerSetWave,
 		{ SPET_MASKED_OPCODE, 0x7c601b78, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x78840020, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x2f800000, 0xffffffff },
@@ -1141,7 +1126,7 @@ Module libmixer("libmixer", []()
 		{ SPET_MASKED_OPCODE, 0x4e800020, 0xffffffff }
 	);
 
-	REG_SUB(libmixer, "surmxSSP", , cellSSPlayerPlay,
+	REG_SUB(libmixer,, cellSSPlayerPlay,
 		{ SPET_MASKED_OPCODE, 0x7c601b78, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x3c608031, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x2f800000, 0xffffffff },
@@ -1160,7 +1145,7 @@ Module libmixer("libmixer", []()
 		{ SPET_MASKED_OPCODE, 0x38630010, 0xffffffff }
 	);
 
-	REG_SUB(libmixer, "surmxSSP", , cellSSPlayerStop,
+	REG_SUB(libmixer,, cellSSPlayerStop,
 		{ SPET_MASKED_OPCODE, 0xf821ff91, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x7c0802a6, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x2f830000, 0xffffffff },
@@ -1179,7 +1164,7 @@ Module libmixer("libmixer", []()
 		{ SPET_MASKED_OPCODE, 0x4e800020, 0xffffffff }
 	);
 
-	REG_SUB(libmixer, "surmxSSP", , cellSSPlayerSetParam,
+	REG_SUB(libmixer,, cellSSPlayerSetParam,
 		{ SPET_MASKED_OPCODE, 0x7c601b78, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x3c608031, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x2f800000, 0xffffffff },
@@ -1198,17 +1183,17 @@ Module libmixer("libmixer", []()
 		{ SPET_MASKED_OPCODE, 0x2f800000, 0xffffffff }
 	);
 
-	REG_SUB(libmixer, "surmxSSP", , cellSSPlayerGetState,
+	REG_SUB(libmixer,, cellSSPlayerGetState,
 		{ SPET_MASKED_OPCODE, 0x7c601b78, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x3c608031, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x2f800000, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x60630003, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x4d9e0020, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x78030020, 0xffffffff },
-		{ SPET_MASKED_OPCODE, 0x40000000, 0xf0000000 } // b
+		{ SPET_MASKED_OPCODE, 0x40000000, 0xf0000000 }, // b
 	);
 
-	//REG_SUB(libmixer, "surmxUti", cellSurMixerUtilGetLevelFromDB);
-	//REG_SUB(libmixer, "surmxUti", cellSurMixerUtilGetLevelFromDBIndex);
-	//REG_SUB(libmixer, "surmxUti", cellSurMixerUtilNoteToRatio);
+	REG_SUB(libmixer,, cellSurMixerUtilGetLevelFromDB);
+	REG_SUB(libmixer,, cellSurMixerUtilGetLevelFromDBIndex);
+	REG_SUB(libmixer,, cellSurMixerUtilNoteToRatio);
 });

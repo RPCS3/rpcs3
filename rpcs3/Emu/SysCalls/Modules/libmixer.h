@@ -112,7 +112,7 @@ enum
 	CELL_SSPLAYER_STATE_ON = 0x20,
 };
 
-typedef s32(CellSurMixerNotifyCallbackFunction)(vm::ptr<void> arg, u32 counter, u32 samples);
+using CellSurMixerNotifyCallbackFunction = s32(vm::ptr<void> arg, u32 counter, u32 samples);
 
 struct CellSSPlayerConfig
 {
@@ -169,12 +169,20 @@ struct CellSurMixerChStripParam
 
 struct SurMixerConfig
 {
+	std::mutex mutex;
+
 	u32 audio_port;
 	s32 priority;
 	u32 ch_strips_1;
 	u32 ch_strips_2;
 	u32 ch_strips_6;
 	u32 ch_strips_8;
+
+	vm::ptr<CellSurMixerNotifyCallbackFunction> cb;
+	vm::ptr<void> cb_arg;
+
+	f32 mixdata[8 * 256];
+	u64 mixcount;
 };
 
 struct SSPlayer
