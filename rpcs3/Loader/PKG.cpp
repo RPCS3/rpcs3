@@ -13,13 +13,6 @@ bool PKGLoader::Install(const fs::file& pkg_f, std::string dest)
 		return false;
 	}
 
-	// TODO: This shouldn't use current dir
-	dest.insert(0, 1, '.');
-	if (!dest.empty() && dest.back() != '/')
-	{
-		dest += '/';
-	}
-
 	// Fetch title ID from the header.
 	char title_id[48];
 	pkg_f.seek(48);

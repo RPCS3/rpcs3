@@ -270,7 +270,10 @@ void MainFrame::InstallPkg(wxCommandEvent& WXUNUSED(event))
 
 	if (pkg_f)
 	{
-		PKGLoader::Install(pkg_f, "/dev_hdd0/game/");
+		Emu.GetVFS().Init("/");
+		std::string local_path;
+		Emu.GetVFS().GetDevice("/dev_hdd0/game/", local_path);
+		PKGLoader::Install(pkg_f, local_path + "/");
 
 		// Refresh game list
 		m_game_viewer->Refresh();
