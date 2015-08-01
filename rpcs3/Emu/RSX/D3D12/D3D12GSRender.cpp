@@ -343,6 +343,7 @@ D3D12GSRender::D3D12GSRender()
 
 D3D12GSRender::~D3D12GSRender()
 {
+	gfxHandler = [this](u32) { return false; };
 	m_constantsData.Release();
 	m_vertexIndexData.Release();
 	m_textureUploadData.Release();
