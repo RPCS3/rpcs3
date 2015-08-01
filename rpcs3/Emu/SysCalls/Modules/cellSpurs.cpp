@@ -1737,6 +1737,13 @@ s32 cellSpursSetPriorities(vm::ptr<CellSpurs> spurs, u32 wid, vm::cptr<u8> prior
 	return CELL_OK;
 }
 
+/// Set the priority of a workload for the specified SPU
+s32 cellSpursSetPriority(vm::ptr<CellSpurs> spurs, u32 wid, u32 spuId, u32 priority)
+{
+	cellSpurs.Todo("cellSpursSetPriority(spurs=*0x%x, wid=%d, spuId=%d, priority=%d)", spurs, wid, spuId, priority);
+	return CELL_OK;
+}
+
 /// Set preemption victim SPU
 s32 cellSpursSetPreemptionVictimHints(vm::ptr<CellSpurs> spurs, vm::cptr<b8> isPreemptible)
 {
@@ -4226,6 +4233,7 @@ Module cellSpurs("cellSpurs", []()
 	REG_FUNC(cellSpurs, cellSpursGetInfo);
 	REG_FUNC(cellSpurs, cellSpursSetMaxContention);
 	REG_FUNC(cellSpurs, cellSpursSetPriorities);
+	REG_FUNC(cellSpurs, cellSpursSetPriority);
 	REG_FUNC(cellSpurs, cellSpursSetPreemptionVictimHints);
 	REG_FUNC(cellSpurs, cellSpursAttachLv2EventQueue);
 	REG_FUNC(cellSpurs, cellSpursDetachLv2EventQueue);

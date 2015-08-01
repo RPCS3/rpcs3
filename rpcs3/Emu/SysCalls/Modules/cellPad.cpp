@@ -83,6 +83,11 @@ s32 cellPadPeriphGetInfo(vm::ptr<CellPadPeriphInfo> info)
 	return CELL_OK;
 }
 
+s32 cellPadPeriphGetData()
+{
+	throw EXCEPTION("");
+}
+
 s32 cellPadGetData(u32 port_no, vm::ptr<CellPadData> data)
 {
 	sys_io.Log("cellPadGetData(port_no=%d, data=*0x%x)", port_no, data);
@@ -260,6 +265,11 @@ s32 cellPadGetData(u32 port_no, vm::ptr<CellPadData> data)
 	data->button[CELL_PAD_BTN_OFFSET_SENSOR_G]       = pad.m_sensor_g;
 
 	return CELL_OK;
+}
+
+s32 cellPadGetRawData(u32 port_no, vm::ptr<CellPadData> data)
+{
+	throw EXCEPTION("");
 }
 
 s32 cellPadGetDataExtra(u32 port_no, vm::ptr<u32> device_type, vm::ptr<CellPadData> data)
@@ -526,23 +536,26 @@ s32 cellPadLddUnregisterController(s32 handle)
 	return CELL_OK;
 }
 
+
 void cellPad_init()
 {
 	REG_FUNC(sys_io, cellPadInit);
 	REG_FUNC(sys_io, cellPadEnd);
 	REG_FUNC(sys_io, cellPadClearBuf);
 	REG_FUNC(sys_io, cellPadGetData);
+	REG_FUNC(sys_io, cellPadGetRawData); //
 	REG_FUNC(sys_io, cellPadGetDataExtra);
 	REG_FUNC(sys_io, cellPadSetActDirect);
-	REG_FUNC(sys_io, cellPadGetInfo);
+	REG_FUNC(sys_io, cellPadGetInfo); //
 	REG_FUNC(sys_io, cellPadGetInfo2);
 	REG_FUNC(sys_io, cellPadPeriphGetInfo);
+	REG_FUNC(sys_io, cellPadPeriphGetData);
 	REG_FUNC(sys_io, cellPadSetPortSetting);
-	REG_FUNC(sys_io, cellPadInfoPressMode);
-	REG_FUNC(sys_io, cellPadInfoSensorMode);
-	REG_FUNC(sys_io, cellPadSetPressMode);
-	REG_FUNC(sys_io, cellPadSetSensorMode);
-	REG_FUNC(sys_io, cellPadGetCapabilityInfo);
+	REG_FUNC(sys_io, cellPadInfoPressMode); //
+	REG_FUNC(sys_io, cellPadInfoSensorMode); //
+	REG_FUNC(sys_io, cellPadSetPressMode); //
+	REG_FUNC(sys_io, cellPadSetSensorMode); //
+	REG_FUNC(sys_io, cellPadGetCapabilityInfo); //
 	REG_FUNC(sys_io, cellPadLddRegisterController);
 	REG_FUNC(sys_io, cellPadLddDataInsert);
 	REG_FUNC(sys_io, cellPadLddGetPortNo);

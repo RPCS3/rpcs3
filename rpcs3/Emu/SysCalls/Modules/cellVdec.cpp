@@ -950,6 +950,8 @@ s32 cellVdecSetFrameRate(u32 handle, CellVdecFrameRate frc)
 
 Module cellVdec("cellVdec", []()
 {
+	//REG_VARIABLE(cellVdec, _cell_vdec_prx_ver); // 0x085a7ecb
+
 	REG_FUNC(cellVdec, cellVdecQueryAttr);
 	REG_FUNC(cellVdec, cellVdecQueryAttrEx);
 	REG_FUNC(cellVdec, cellVdecOpen);

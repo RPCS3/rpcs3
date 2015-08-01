@@ -116,8 +116,6 @@ namespace vm
 	{
 		AT m_addr;
 
-		using type = RT(T...);
-
 		AT addr() const
 		{
 			return m_addr;
@@ -141,7 +139,7 @@ namespace vm
 		RT operator()(ARMv7Context& context, T... args) const;
 
 		// conversion to another function pointer
-		template<typename AT2> operator _ptr_base<type, AT2>() const
+		template<typename AT2> operator _ptr_base<RT(T...), AT2>() const
 		{
 			return{ VM_CAST(m_addr) };
 		}

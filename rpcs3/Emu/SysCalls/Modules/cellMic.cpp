@@ -191,8 +191,7 @@ s32 cellMicGetStatus()
 
 s32 cellMicStopEx()
 {
-	UNIMPLEMENTED_FUNC(cellMic);
-	return CELL_OK;
+	throw EXCEPTION("Unexpected function");
 }
 
 s32 cellMicSysShareClose()
@@ -298,7 +297,7 @@ Module cellMic("cellMic", []()
 	REG_FUNC(cellMic, cellMicReadDsp);
 
 	REG_FUNC(cellMic, cellMicGetStatus);
-	REG_FUNC(cellMic, cellMicStopEx);
+	REG_FUNC(cellMic, cellMicStopEx); // this function shouldn't exist
 	REG_FUNC(cellMic, cellMicSysShareClose);
 	REG_FUNC(cellMic, cellMicGetFormat);
 	REG_FUNC(cellMic, cellMicSetMultiMicNotifyEventQueue);

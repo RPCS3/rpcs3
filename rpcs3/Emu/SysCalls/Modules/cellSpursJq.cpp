@@ -378,6 +378,12 @@ s32 cellSpursJobQueueSetExceptionEventHandler()
 	return CELL_OK;
 }
 
+s32 cellSpursJobQueueSetExceptionEventHandler2()
+{
+	UNIMPLEMENTED_FUNC(cellSpursJq);
+	return CELL_OK;
+}
+
 s32 cellSpursJobQueueUnsetExceptionEventHandler()
 {
 	UNIMPLEMENTED_FUNC(cellSpursJq);
@@ -447,5 +453,6 @@ Module cellSpursJq("cellSpursJq", []()
 	REG_FUNC(cellSpursJq, _cellSpursJobQueuePort2CopyPushJobBody);
 	REG_FUNC(cellSpursJq, _cellSpursJobQueuePort2PushJobBody);
 	REG_FUNC(cellSpursJq, cellSpursJobQueueSetExceptionEventHandler);
+	REG_FUNC(cellSpursJq, cellSpursJobQueueSetExceptionEventHandler2);
 	REG_FUNC(cellSpursJq, cellSpursJobQueueUnsetExceptionEventHandler);
 });

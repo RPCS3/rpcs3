@@ -1297,6 +1297,8 @@ Module sysPrxForUser("sysPrxForUser", []()
 	// Setup random number generator
 	srand(time(NULL));
 
+	//REG_VARIABLE(sysPrxForUser, sys_prx_version); // 0x7df066cf
+
 	REG_FUNC(sysPrxForUser, sys_initialize_tls);
 	
 	REG_FUNC(sysPrxForUser, sys_lwmutex_create);
