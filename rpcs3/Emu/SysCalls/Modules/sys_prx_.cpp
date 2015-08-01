@@ -25,6 +25,8 @@ void sysPrxForUser_sys_prx_init()
 
 	REG_FUNC(sysPrxForUser, sys_prx_load_module);
 	REG_FUNC(sysPrxForUser, sys_prx_load_module_by_fd);
+	REG_FUNC(sysPrxForUser, sys_prx_load_module_on_memcontainer);
+	REG_FUNC(sysPrxForUser, sys_prx_load_module_on_memcontainer_by_fd);
 	REG_FUNC(sysPrxForUser, sys_prx_load_module_list);
 	REG_FUNC(sysPrxForUser, sys_prx_load_module_list_on_memcontainer);
 	REG_FUNC(sysPrxForUser, sys_prx_start_module);
@@ -36,8 +38,6 @@ void sysPrxForUser_sys_prx_init()
 	REG_FUNC(sysPrxForUser, sys_prx_get_module_info);
 	REG_FUNC(sysPrxForUser, sys_prx_get_module_id_by_name);
 	REG_FUNC(sysPrxForUser, sys_prx_get_module_id_by_address);
-	REG_FUNC(sysPrxForUser, sys_prx_load_module_on_memcontainer);
-	REG_FUNC(sysPrxForUser, sys_prx_load_module_on_memcontainer_by_fd);
 	REG_FUNC(sysPrxForUser, sys_prx_exitspawn_with_level);
 	REG_FUNC(sysPrxForUser, sys_prx_get_my_module_id);
 }

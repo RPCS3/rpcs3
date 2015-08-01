@@ -910,7 +910,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	{
 		if (u32 value = ARGS(0))
 		{
-			LOG_WARNING(RSX, "TODO: NNV4097_INLINE_ARRAY: 0x%x", value);
+			LOG_WARNING(RSX, "TODO: NV4097_INLINE_ARRAY: 0x%x", value);
 		}
 		break;
 	}

@@ -31,10 +31,14 @@ s32 prx_load_module(std::string path, u64 flags, vm::ptr<sys_prx_load_module_opt
 
 	vfsFile f(path);
 	if (!f.IsOpened())
+	{
 		return CELL_PRX_ERROR_UNKNOWN_MODULE;
+	}
 
 	if (loader.init(f) != loader::handler::error_code::ok || !loader.is_sprx())
+	{
 		return CELL_PRX_ERROR_ILLEGAL_LIBRARY;
+	}
 
 	loader::handlers::elf64::sprx_info info;
 	loader.load_sprx(info);
@@ -242,9 +246,9 @@ s32 sys_prx_unload_module(s32 id, u64 flags, vm::ptr<sys_prx_unload_module_optio
 	return CELL_OK;
 }
 
-s32 sys_prx_get_module_list()
+s32 sys_prx_get_module_list(u64 flags, vm::ptr<sys_prx_get_module_list_t> pInfo)
 {
-	sys_prx.Todo("sys_prx_get_module_list()");
+	sys_prx.Todo("sys_prx_get_module_list(flags=%d, pInfo=*0x%x)", flags, pInfo);
 	return CELL_OK;
 }
 
@@ -270,9 +274,9 @@ s32 sys_prx_get_module_id_by_name(vm::cptr<char> name, u64 flags, vm::ptr<sys_pr
 	return CELL_PRX_ERROR_UNKNOWN_MODULE;
 }
 
-s32 sys_prx_get_module_info()
+s32 sys_prx_get_module_info(s32 id, u64 flags, vm::ptr<sys_prx_module_info_t> info)
 {
-	sys_prx.Todo("sys_prx_get_module_info()");
+	sys_prx.Todo("sys_prx_get_module_info(id=%d, flags=%d, info=*0x%x)", id, flags, info);
 	return CELL_OK;
 }
 

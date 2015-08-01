@@ -157,6 +157,14 @@ struct sys_prx_unload_module_option_t
 	be_t<u64> size;
 };
 
+struct sys_prx_get_module_list_t
+{
+	be_t<u64> size;
+	be_t<u32> max;
+	be_t<u32> count;
+	vm::bptr<s32> idlist;
+};
+
 // Auxiliary data types
 struct lv2_prx_t
 {
@@ -182,11 +190,11 @@ s32 sys_prx_load_module_on_memcontainer_by_fd();
 s32 sys_prx_start_module(s32 id, u64 flags, vm::ptr<sys_prx_start_module_option_t> pOpt);
 s32 sys_prx_stop_module(s32 id, u64 flags, vm::ptr<sys_prx_stop_module_option_t> pOpt);
 s32 sys_prx_unload_module(s32 id, u64 flags, vm::ptr<sys_prx_unload_module_option_t> pOpt);
-s32 sys_prx_get_module_list();
+s32 sys_prx_get_module_list(u64 flags, vm::ptr<sys_prx_get_module_list_t> pInfo);
 s32 sys_prx_get_my_module_id();
 s32 sys_prx_get_module_id_by_address();
 s32 sys_prx_get_module_id_by_name(vm::cptr<char> name, u64 flags, vm::ptr<sys_prx_get_module_id_by_name_option_t> pOpt);
-s32 sys_prx_get_module_info();
+s32 sys_prx_get_module_info(s32 id, u64 flags, vm::ptr<sys_prx_module_info_t> info);
 s32 sys_prx_register_library(vm::ptr<void> library);
 s32 sys_prx_unregister_library(vm::ptr<void> library);
 s32 sys_prx_get_ppu_guid();
