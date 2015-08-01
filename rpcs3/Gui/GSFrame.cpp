@@ -1,7 +1,7 @@
 #include "stdafx_gui.h"
 #include "GSFrame.h"
 #include "Emu/System.h"
-#include "Emu/RSX/sysutil_video.h"
+#include "Emu/SysCalls/Modules/cellVideoOut.h"
 #include "rpcs3.h"
 
 BEGIN_EVENT_TABLE(GSFrame, wxFrame)

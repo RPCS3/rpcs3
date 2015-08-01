@@ -1,8 +1,11 @@
 #include "stdafx.h"
-#include "Ini.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/SysCalls/Modules.h"
-#include "Emu/RSX/sysutil_video.h"
+
+#include "Ini.h"
+#include "cellAudioIn.h"
+#include "cellAudioOut.h"
+#include "cellVideoOut.h"
 
 extern Module cellAvconfExt;
 

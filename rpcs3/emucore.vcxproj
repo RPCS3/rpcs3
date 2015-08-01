@@ -45,6 +45,7 @@
     <ClCompile Include="Emu\SysCalls\lv2\sys_dbg.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\sys_fs.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellAtracMulti.cpp" />
+    <ClCompile Include="Emu\SysCalls\Modules\cellAudioOut.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellDaisy.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellFs.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellGameExec.cpp" />
@@ -268,6 +269,7 @@
     <ClCompile Include="Emu\SysCalls\Modules\cellSysutil.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellSysutilAp.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellSaveData.cpp" />
+    <ClCompile Include="Emu\SysCalls\Modules\cellSysutilAvc.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellSysutilAvc2.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellSysutilMisc.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellUsbd.cpp" />
@@ -275,8 +277,10 @@
     <ClCompile Include="Emu\SysCalls\Modules\cellUserInfo.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellVdec.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellVideoExport.cpp" />
+    <ClCompile Include="Emu\SysCalls\Modules\cellVideoOut.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellVoice.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellVpost.cpp" />
+    <ClCompile Include="Emu\SysCalls\Modules\cellWebBrowser.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\libmixer.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\libsnd3.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\libsynth2.cpp" />
@@ -501,7 +505,6 @@
     <ClInclude Include="Emu\RSX\RSXTexture.h" />
     <ClInclude Include="Emu\RSX\RSXThread.h" />
     <ClInclude Include="Emu\RSX\RSXVertexProgram.h" />
-    <ClInclude Include="Emu\RSX\sysutil_video.h" />
     <ClInclude Include="Emu\Memory\vm.h" />
     <ClInclude Include="Emu\Memory\vm_ptr.h" />
     <ClInclude Include="Emu\Memory\vm_ref.h" />
@@ -577,7 +580,9 @@
     <ClInclude Include="Emu\SysCalls\Modules\cellUsbd.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellUserInfo.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellVdec.h" />
+    <ClInclude Include="Emu\SysCalls\Modules\cellVideoOut.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellVpost.h" />
+    <ClInclude Include="Emu\SysCalls\Modules\cellWebBrowser.h" />
     <ClInclude Include="Emu\SysCalls\Modules\libmixer.h" />
     <ClInclude Include="Emu\SysCalls\Modules\libsnd3.h" />
     <ClInclude Include="Emu\SysCalls\Modules\libsynth2.h" />

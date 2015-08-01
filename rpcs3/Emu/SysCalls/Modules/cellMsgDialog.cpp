@@ -23,6 +23,11 @@ void MsgDialogInstance::Close()
 	wait_until = get_system_time();
 }
 
+s32 cellMsgDialogOpen()
+{
+	throw EXCEPTION("");
+}
+
 s32 cellMsgDialogOpen2(u32 type, vm::cptr<char> msgString, vm::ptr<CellMsgDialogCallback> callback, vm::ptr<void> userData, vm::ptr<void> extParam)
 {
 	cellSysutil.Warning("cellMsgDialogOpen2(type=0x%x, msgString=*0x%x, callback=*0x%x, userData=*0x%x, extParam=*0x%x)", type, msgString, callback, userData, extParam);
@@ -256,6 +261,11 @@ s32 cellMsgDialogOpenErrorCode(PPUThread& CPU, u32 errorCode, vm::ptr<CellMsgDia
 	return cellMsgDialogOpen2(CELL_MSGDIALOG_DIALOG_TYPE_ERROR | CELL_MSGDIALOG_TYPE_BUTTON_TYPE_OK, message, callback, userData, extParam);
 }
 
+s32 cellMsgDialogOpenSimulViewWarning()
+{
+	throw EXCEPTION("");
+}
+
 s32 cellMsgDialogClose(float delay)
 {
 	cellSysutil.Warning("cellMsgDialogClose(delay=%f)", delay);
@@ -363,8 +373,10 @@ void cellSysutil_MsgDialog_init()
 {
 	g_msg_dialog->state = msgDialogNone;
 
+	REG_FUNC(cellSysutil, cellMsgDialogOpen);
 	REG_FUNC(cellSysutil, cellMsgDialogOpen2);
 	REG_FUNC(cellSysutil, cellMsgDialogOpenErrorCode);
+	REG_FUNC(cellSysutil, cellMsgDialogOpenSimulViewWarning);
 	REG_FUNC(cellSysutil, cellMsgDialogProgressBarSetMsg);
 	REG_FUNC(cellSysutil, cellMsgDialogProgressBarReset);
 	REG_FUNC(cellSysutil, cellMsgDialogProgressBarInc);

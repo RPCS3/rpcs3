@@ -651,6 +651,16 @@ s32 cellSaveDataListLoad2(
 	return savedata_op(ppu, SAVEDATA_OP_LIST_LOAD, version, vm::null, 1, setList, setBuf, funcList, vm::null, funcStat, funcFile, container, 2, userdata, 0, vm::null);
 }
 
+s32 cellSaveDataListSave()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellSaveDataListLoad()
+{
+	throw EXCEPTION("");
+}
+
 s32 cellSaveDataFixedSave2(
 	PPUThread& ppu,
 	u32 version,
@@ -685,6 +695,16 @@ s32 cellSaveDataFixedLoad2(
 	return savedata_op(ppu, SAVEDATA_OP_FIXED_LOAD, version, vm::null, 1, setList, setBuf, vm::null, funcFixed, funcStat, funcFile, container, 2, userdata, 0, vm::null);
 }
 
+s32 cellSaveDataFixedSave()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellSaveDataFixedLoad()
+{
+	throw EXCEPTION("");
+}
+
 s32 cellSaveDataAutoSave2(
 	PPUThread& ppu,
 	u32 version,
@@ -717,6 +737,16 @@ s32 cellSaveDataAutoLoad2(
 		version, dirName, errDialog, setBuf, funcStat, funcFile, container, userdata);
 
 	return savedata_op(ppu, SAVEDATA_OP_AUTO_LOAD, version, dirName, errDialog, vm::null, setBuf, vm::null, vm::null, funcStat, funcFile, container, 2, userdata, 0, vm::null);
+}
+
+s32 cellSaveDataAutoSave()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellSaveDataAutoLoad()
+{
+	throw EXCEPTION("");
 }
 
 s32 cellSaveDataListAutoSave(
@@ -760,6 +790,11 @@ s32 cellSaveDataDelete2(u32 container)
 	cellSysutil.Todo("cellSaveDataDelete2(container=0x%x)", container);
 
 	return CELL_SAVEDATA_RET_CANCEL;
+}
+
+s32 cellSaveDataDelete()
+{
+	throw EXCEPTION("");
 }
 
 s32 cellSaveDataFixedDelete(
@@ -1116,7 +1151,7 @@ void cellSysutil_SaveData_init()
 	REG_FUNC(cellSysutil, cellSaveDataEnableOverlay);
 
 	REG_FUNC(cellSysutil, cellSaveDataDelete2);
-	//REG_FUNC(cellSysutil, cellSaveDataDelete);
+	REG_FUNC(cellSysutil, cellSaveDataDelete);
 	REG_FUNC(cellSysutil, cellSaveDataUserFixedDelete);
 	REG_FUNC(cellSysutil, cellSaveDataFixedDelete);
 
@@ -1124,15 +1159,15 @@ void cellSysutil_SaveData_init()
 	REG_FUNC(cellSysutil, cellSaveDataUserFixedSave);
 	REG_FUNC(cellSysutil, cellSaveDataFixedLoad2);
 	REG_FUNC(cellSysutil, cellSaveDataFixedSave2);
-	//REG_FUNC(cellSysutil, cellSaveDataFixedLoad);
-	//REG_FUNC(cellSysutil, cellSaveDataFixedSave);
+	REG_FUNC(cellSysutil, cellSaveDataFixedLoad);
+	REG_FUNC(cellSysutil, cellSaveDataFixedSave);
 
 	REG_FUNC(cellSysutil, cellSaveDataUserListLoad);
 	REG_FUNC(cellSysutil, cellSaveDataUserListSave);
 	REG_FUNC(cellSysutil, cellSaveDataListLoad2);
 	REG_FUNC(cellSysutil, cellSaveDataListSave2);
-	//REG_FUNC(cellSysutil, cellSaveDataListLoad);
-	//REG_FUNC(cellSysutil, cellSaveDataListSave);
+	REG_FUNC(cellSysutil, cellSaveDataListLoad);
+	REG_FUNC(cellSysutil, cellSaveDataListSave);
 
 	REG_FUNC(cellSysutil, cellSaveDataUserListAutoLoad);
 	REG_FUNC(cellSysutil, cellSaveDataUserListAutoSave);
@@ -1143,8 +1178,8 @@ void cellSysutil_SaveData_init()
 	REG_FUNC(cellSysutil, cellSaveDataUserAutoSave);
 	REG_FUNC(cellSysutil, cellSaveDataAutoLoad2);
 	REG_FUNC(cellSysutil, cellSaveDataAutoSave2);
-	//REG_FUNC(cellSysutil, cellSaveDataAutoLoad);
-	//REG_FUNC(cellSysutil, cellSaveDataAutoSave);
+	REG_FUNC(cellSysutil, cellSaveDataAutoLoad);
+	REG_FUNC(cellSysutil, cellSaveDataAutoSave);
 }
 
 Module cellSaveData("cellSaveData", []()

@@ -25,7 +25,7 @@
 #include "git-version.h"
 #include "Ini.h"
 #include "Emu/SysCalls/Modules/cellSysutil.h"
-#include "Emu/RSX/sysutil_video.h"
+#include "Emu/SysCalls/Modules/cellVideoOut.h"
 #include "Gui/PADManager.h"
 #include "Gui/VHDDManager.h"
 #include "Gui/VFSManager.h"

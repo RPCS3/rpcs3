@@ -923,6 +923,18 @@
     <ClCompile Include="Emu\SysCalls\Modules\libsynth2.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellWebBrowser.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellAudioOut.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellVideoOut.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellSysutilAvc.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -1414,9 +1426,6 @@
     <ClInclude Include="Emu\RSX\RSXVertexProgram.h">
       <Filter>Emu\GPU\RSX</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\RSX\sysutil_video.h">
-      <Filter>Emu\GPU\RSX</Filter>
-    </ClInclude>
     <ClInclude Include="Emu\RSX\GCM.h">
       <Filter>Emu\GPU\RSX</Filter>
     </ClInclude>
@@ -1778,6 +1787,12 @@
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClInclude>
     <ClInclude Include="Emu\SysCalls\Modules\libsynth2.h">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\Modules\cellWebBrowser.h">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\Modules\cellVideoOut.h">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClInclude>
   </ItemGroup>

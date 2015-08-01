@@ -4,7 +4,7 @@
 #include "Emu/SysCalls/Modules.h"
 
 #include "cellSysutil.h"
-#include "Emu/RSX/sysutil_video.h"
+#include "Emu/SysCalls/Modules/cellVideoOut.h"
 #include "Emu/RSX/GSManager.h"
 #include "Emu/RSX/GSRender.h"
 #include "cellResc.h"

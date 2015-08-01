@@ -67,6 +67,7 @@ extern Module cellSysconf;
 extern Module cellSysmodule;
 extern Module cellSysutil;
 extern Module cellSysutilAp;
+extern Module cellSysutilAvc;
 extern Module cellSysutilAvc2;
 extern Module cellSysutilMisc;
 extern Module cellUsbd;
@@ -164,7 +165,7 @@ const g_module_list[] =
 	{ 0x002c, "?", nullptr },
 	{ 0x002d, "?", nullptr },
 	{ 0x002e, "sys_lv2dbg", &sys_lv2dbg },
-	{ 0x002f, "cellSysutilAvcExt", nullptr },
+	{ 0x002f, "cellSysutilAvcExt", &cellSysutilAvc },
 	{ 0x0030, "cellUsbPspcm", &cellUsbPspcm },
 	{ 0x0031, "cellSysutilAvconfExt", &cellAvconfExt },
 	{ 0x0032, "cellUserInfo", &cellUserInfo },

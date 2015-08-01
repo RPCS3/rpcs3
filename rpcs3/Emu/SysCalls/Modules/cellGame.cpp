@@ -89,6 +89,43 @@ s32 cellHddGameCheck(PPUThread& CPU, u32 version, vm::cptr<char> dirName, u32 er
 	return CELL_OK;
 }
 
+s32 cellHddGameCheck2()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellHddGameGetSizeKB()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellHddGameSetSystemVer()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellHddGameExitBroken()
+{
+	throw EXCEPTION("");
+}
+
+
+s32 cellGameDataGetSizeKB()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellGameDataSetSystemVer()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellGameDataExitBroken()
+{
+	throw EXCEPTION("");
+}
+
+
 s32 cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr<CellGameContentSize> size, vm::ptr<char[CELL_GAME_DIRNAME_SIZE]> dirName)
 {
 	cellGame.Warning("cellGameBootCheck(type=*0x%x, attributes=*0x%x, size=*0x%x, dirName=*0x%x)", type, attributes, size, dirName);
@@ -575,6 +612,57 @@ s32 cellGameThemeInstallFromBuffer()
 	return CELL_OK;
 }
 
+
+s32 cellDiscGameGetBootDiscInfo()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellDiscGameRegisterDiscChangeCallback()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellDiscGameUnregisterDiscChangeCallback()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellGameRegisterDiscChangeCallback()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellGameUnregisterDiscChangeCallback()
+{
+	throw EXCEPTION("");
+}
+
+
+void cellSysutil_GameData_init()
+{
+	extern Module cellSysutil;
+
+	REG_FUNC(cellSysutil, cellHddGameCheck);
+	REG_FUNC(cellSysutil, cellHddGameCheck2);
+	REG_FUNC(cellSysutil, cellHddGameGetSizeKB);
+	REG_FUNC(cellSysutil, cellHddGameSetSystemVer);
+	REG_FUNC(cellSysutil, cellHddGameExitBroken);
+
+	REG_FUNC(cellSysutil, cellGameDataGetSizeKB);
+	REG_FUNC(cellSysutil, cellGameDataSetSystemVer);
+	REG_FUNC(cellSysutil, cellGameDataExitBroken);
+
+	REG_FUNC(cellSysutil, cellGameDataCheckCreate);
+	REG_FUNC(cellSysutil, cellGameDataCheckCreate2);
+
+	REG_FUNC(cellSysutil, cellDiscGameGetBootDiscInfo);
+	REG_FUNC(cellSysutil, cellDiscGameRegisterDiscChangeCallback);
+	REG_FUNC(cellSysutil, cellDiscGameUnregisterDiscChangeCallback);
+	REG_FUNC(cellSysutil, cellGameRegisterDiscChangeCallback);
+	REG_FUNC(cellSysutil, cellGameUnregisterDiscChangeCallback);
+}
+
 Module cellGame("cellGame", []()
 {
 	contentInfo = "";
@@ -601,15 +689,3 @@ Module cellGame("cellGame", []()
 	REG_FUNC(cellGame, cellGameThemeInstall);
 	REG_FUNC(cellGame, cellGameThemeInstallFromBuffer);
 });
-
-void cellSysutil_GameData_init()
-{
-	REG_FUNC(cellGame, cellHddGameCheck);
-	//REG_FUNC(cellGame, cellHddGameCheck2);
-	//REG_FUNC(cellGame, cellHddGameGetSizeKB);
-	//REG_FUNC(cellGame, cellHddGameSetSystemVer);
-	//REG_FUNC(cellGame, cellHddGameExitBroken);
-
-	REG_FUNC(cellGame, cellGameDataCheckCreate);
-	REG_FUNC(cellGame, cellGameDataCheckCreate2);
-}
