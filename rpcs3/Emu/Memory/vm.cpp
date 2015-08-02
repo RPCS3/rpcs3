@@ -228,14 +228,12 @@ namespace vm
 		catch (...)
 		{
 			// capture any exception possibly thrown by predicate
-			auto exception = std::current_exception();
-
-			// set new predicate that will throw this exception from the original thread
-			pred = [exception]() -> bool
+			pred = [exception = std::current_exception()]
 			{
+				// new predicate will throw the captured exception from the original thread
 				std::rethrow_exception(exception);
 
-				// dummy return value
+				// dummy return value, remove when std::rethrow_exception gains [[noreturn]] attribute in MSVC
 				return true;
 			};
 		}
@@ -282,6 +280,9 @@ namespace vm
 
 	void _notify_at(u32 addr, u32 size)
 	{
+		// skip notification if no waiters available
+		if (_mm_mfence(), !g_waiter_max) return;
+
 		std::lock_guard<std::mutex> lock(g_waiter_list_mutex);
 
 		const u32 mask = ~(size - 1);

@@ -48,17 +48,6 @@ s32 cellFontGetRevisionFlags(vm::ptr<u64> revisionFlags)
 	return CELL_OK;
 }
 
-s32 cellFontInit(PPUThread& ppu, vm::ptr<CellFontConfig> config)
-{
-	cellFont.Warning("cellFontInit(config=*0x%x)", config);
-
-	vm::stackvar<be_t<u64>> revisionFlags(ppu);
-	revisionFlags.value() = 0;
-	cellFontGetRevisionFlags(revisionFlags);
-
-	return cellFontInitializeWithRevision(revisionFlags.value(), config);
-}
-
 s32 cellFontEnd()
 {
 	cellFont.Warning("cellFontEnd()");
@@ -632,11 +621,176 @@ s32 cellFontGetCharGlyphMetricsVertical()
 	return CELL_OK;
 }
 
+s32 cellFontGetRenderEffectWeight()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellFontGraphicsGetDrawType()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellFontGetKerning()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellFontGetRenderScaledKerning()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellFontGetRenderScalePixel()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellFontGlyphGetScalePixel()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellFontGlyphGetHorizontalShift()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellFontRenderCharGlyphImageHorizontal()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellFontGetEffectWeight()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellFontGetScalePixel()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellFontClearFileCache()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellFontAdjustFontScaling()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellFontSetupRenderScalePoint()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellFontGlyphGetVerticalShift()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellFontGetGlyphExpandBufferInfo()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellFontGetLibrary()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellFontVertexesGlyphRelocate()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellFontGetInitializedRevisionFlags()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellFontGetResolutionDpi()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellFontGlyphRenderImageVertical()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellFontGlyphRenderImageHorizontal()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellFontAdjustGlyphExpandBuffer()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellFontGetRenderScalePoint()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellFontGraphicsGetFontRGBA()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellFontGlyphGetOutlineVertexes()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellFontDelete()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellFontPatchWorks()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellFontGlyphRenderImage()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellFontGetBindingRenderer()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellFontGenerateCharGlyphVertical()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellFontGetRenderEffectSlant()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellFontGetScalePoint()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellFontGraphicsGetLineRGBA()
+{
+	throw EXCEPTION("");
+}
+
+
 Module cellFont("cellFont", []()
 {
 	g_font.init = false;
 
-	REG_FUNC(cellFont, cellFontInit);
 	REG_FUNC(cellFont, cellFontSetFontsetOpenMode);
 	REG_FUNC(cellFont, cellFontSetFontOpenMode);
 	REG_FUNC(cellFont, cellFontCreateRenderer);
@@ -685,5 +839,38 @@ Module cellFont("cellFont", []()
 	REG_FUNC(cellFont, cellFontSetResolutionDpi);
 	REG_FUNC(cellFont, cellFontGetCharGlyphMetricsVertical);
 	REG_FUNC(cellFont, cellFontUnbindRenderer);
-	REG_FUNC(cellFont, cellFontGetRevisionFlags);	
+	REG_FUNC(cellFont, cellFontGetRevisionFlags);
+	REG_FUNC(cellFont, cellFontGetRenderEffectWeight);
+	REG_FUNC(cellFont, cellFontGraphicsGetDrawType);
+	REG_FUNC(cellFont, cellFontGetKerning);
+	REG_FUNC(cellFont, cellFontGetRenderScaledKerning);
+	REG_FUNC(cellFont, cellFontGetRenderScalePixel);
+	REG_FUNC(cellFont, cellFontGlyphGetScalePixel);
+	REG_FUNC(cellFont, cellFontGlyphGetHorizontalShift);
+	REG_FUNC(cellFont, cellFontRenderCharGlyphImageHorizontal);
+	REG_FUNC(cellFont, cellFontGetEffectWeight);
+	REG_FUNC(cellFont, cellFontGetScalePixel);
+	REG_FUNC(cellFont, cellFontClearFileCache);
+	REG_FUNC(cellFont, cellFontAdjustFontScaling);
+	REG_FUNC(cellFont, cellFontSetupRenderScalePoint);
+	REG_FUNC(cellFont, cellFontGlyphGetVerticalShift);
+	REG_FUNC(cellFont, cellFontGetGlyphExpandBufferInfo);
+	REG_FUNC(cellFont, cellFontGetLibrary);
+	REG_FUNC(cellFont, cellFontVertexesGlyphRelocate);
+	REG_FUNC(cellFont, cellFontGetInitializedRevisionFlags);
+	REG_FUNC(cellFont, cellFontGetResolutionDpi);
+	REG_FUNC(cellFont, cellFontGlyphRenderImageVertical);
+	REG_FUNC(cellFont, cellFontGlyphRenderImageHorizontal);
+	REG_FUNC(cellFont, cellFontAdjustGlyphExpandBuffer);
+	REG_FUNC(cellFont, cellFontGetRenderScalePoint);
+	REG_FUNC(cellFont, cellFontGraphicsGetFontRGBA);
+	REG_FUNC(cellFont, cellFontGlyphGetOutlineVertexes);
+	REG_FUNC(cellFont, cellFontDelete);
+	REG_FUNC(cellFont, cellFontPatchWorks);
+	REG_FUNC(cellFont, cellFontGlyphRenderImage);
+	REG_FUNC(cellFont, cellFontGetBindingRenderer);
+	REG_FUNC(cellFont, cellFontGenerateCharGlyphVertical);
+	REG_FUNC(cellFont, cellFontGetRenderEffectSlant);
+	REG_FUNC(cellFont, cellFontGetScalePoint);
+	REG_FUNC(cellFont, cellFontGraphicsGetLineRGBA);
 });

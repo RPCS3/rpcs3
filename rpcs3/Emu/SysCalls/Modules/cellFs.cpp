@@ -978,6 +978,72 @@ s32 cellFsSetIoBufferFromDefaultContainer(u32 fd, u32 buffer_size, u32 page_type
 	return CELL_OK;
 }
 
+s32 cellFsUtime()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellFsArcadeHddSerialNumber()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellFsAllocateFileAreaWithInitialData()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellFsAllocateFileAreaByFdWithoutZeroFill()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellFsSetIoBuffer()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellFsAllocateFileAreaByFdWithInitialData()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellFsTruncate2()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellFsChangeFileSizeWithoutAllocation()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellFsAllocateFileAreaWithoutZeroFill()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellFsChangeFileSizeByFdWithoutAllocation()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellFsSetDiscReadRetrySetting()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellFsRegisterConversionCallback()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellFsUnregisterL10nCallbacks()
+{
+	throw EXCEPTION("");
+}
+
+
 Module cellFs("cellFs", []()
 {
 	g_fs_aio_id = 1;
@@ -1027,4 +1093,17 @@ Module cellFs("cellFs", []()
 	REG_FUNC(cellFs, cellFsStReadWaitCallback);
 	REG_FUNC(cellFs, cellFsSetDefaultContainer);
 	REG_FUNC(cellFs, cellFsSetIoBufferFromDefaultContainer);
+	REG_FUNC(cellFs, cellFsUtime);
+	REG_FUNC(cellFs, cellFsArcadeHddSerialNumber);
+	REG_FUNC(cellFs, cellFsAllocateFileAreaWithInitialData);
+	REG_FUNC(cellFs, cellFsAllocateFileAreaByFdWithoutZeroFill);
+	REG_FUNC(cellFs, cellFsSetIoBuffer);
+	REG_FUNC(cellFs, cellFsAllocateFileAreaByFdWithInitialData);
+	REG_FUNC(cellFs, cellFsTruncate2);
+	REG_FUNC(cellFs, cellFsChangeFileSizeWithoutAllocation);
+	REG_FUNC(cellFs, cellFsAllocateFileAreaWithoutZeroFill);
+	REG_FUNC(cellFs, cellFsChangeFileSizeByFdWithoutAllocation);
+	REG_FUNC(cellFs, cellFsSetDiscReadRetrySetting);
+	REG_FUNC(cellFs, cellFsRegisterConversionCallback);
+	REG_FUNC(cellFs, cellFsUnregisterL10nCallbacks);
 });

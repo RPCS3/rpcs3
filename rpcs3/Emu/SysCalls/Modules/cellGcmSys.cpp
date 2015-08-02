@@ -588,6 +588,11 @@ void cellGcmSetUserHandler(vm::ptr<void(u32)> handler)
 	Emu.GetGSManager().GetRender().m_user_handler = handler;
 }
 
+s32 cellGcmSetUserCommand()
+{
+	throw EXCEPTION("");
+}
+
 void cellGcmSetVBlankHandler(vm::ptr<void(u32)> handler)
 {
 	cellGcmSys.Warning("cellGcmSetVBlankHandler(handler=*0x%x)", handler);
@@ -602,6 +607,11 @@ s32 cellGcmSetWaitFlip(vm::ptr<CellGcmContextData> ctxt)
 	// TODO: emit RSX command for "wait flip" operation
 
 	return CELL_OK;
+}
+
+s32 cellGcmSetWaitFlipUnsafe()
+{
+	throw EXCEPTION("");
 }
 
 s32 cellGcmSetZcull(u8 index, u32 offset, u32 width, u32 height, u32 cullStart, u32 zFormat, u32 aaFormat, u32 zCullDir, u32 zCullFormat, u32 sFunc, u32 sRef, u32 sMask)
@@ -702,6 +712,11 @@ s32 cellGcmSetInvalidateTile()
 	return CELL_OK;
 }
 
+s32 cellGcmTerminate()
+{
+	throw EXCEPTION("");
+}
+
 s32 cellGcmDumpGraphicsError()
 {
 	UNIMPLEMENTED_FUNC(cellGcmSys);
@@ -732,6 +747,11 @@ u64 cellGcmGetVBlankCount()
 	cellGcmSys.Log("cellGcmGetVBlankCount()");
 
 	return Emu.GetGSManager().GetRender().m_vblank_count;
+}
+
+s32 cellGcmSysGetLastVBlankTime()
+{
+	throw EXCEPTION("");
 }
 
 s32 cellGcmInitSystemMode(u64 mode)
@@ -1085,6 +1105,11 @@ void cellGcmSetDefaultCommandBuffer()
 	vm::write32(Emu.GetGSManager().GetRender().m_ctxt_addr, gcm_info.context_addr);
 }
 
+s32 cellGcmSetDefaultCommandBufferAndSegmentWordSize()
+{
+	throw EXCEPTION("");
+}
+
 //------------------------------------------------------------------------
 // Other
 //------------------------------------------------------------------------
@@ -1146,6 +1171,47 @@ s32 cellGcmSetTile(u8 index, u8 location, u32 offset, u32 size, u32 pitch, u8 co
 	vm::get_ptr<CellGcmTileInfo>(Emu.GetGSManager().GetRender().m_tiles_addr)[index] = tile.Pack();
 	return CELL_OK;
 }
+
+s32 _cellGcmFunc2()
+{
+	throw EXCEPTION("");
+}
+
+s32 _cellGcmFunc3()
+{
+	throw EXCEPTION("");
+}
+
+s32 _cellGcmFunc4()
+{
+	throw EXCEPTION("");
+}
+
+s32 _cellGcmFunc13()
+{
+	throw EXCEPTION("");
+}
+
+s32 _cellGcmFunc38()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellGcmGpadGetStatus()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellGcmGpadNotifyCaptureSurface()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellGcmGpadCaptureSnapshot()
+{
+	throw EXCEPTION("");
+}
+
 
 //----------------------------------------------------------------------------
 
@@ -1250,12 +1316,6 @@ Module cellGcmSys("cellGcmSys", []()
 	REG_FUNC(cellGcmSys, cellGcmGetDefaultSegmentWordSize);
 	REG_FUNC(cellGcmSys, cellGcmInitDefaultFifoMode);
 	REG_FUNC(cellGcmSys, cellGcmSetDefaultFifoSize);
-	//cellGcmSys.AddFunc(, cellGcmReserveMethodSize);
-	//cellGcmSys.AddFunc(, cellGcmResetDefaultCommandBuffer);
-	//cellGcmSys.AddFunc(, cellGcmSetupContextData);
-	//cellGcmSys.AddFunc(, cellGcmCallbackForSnc);
-	//cellGcmSys.AddFunc(, cellGcmFinish);
-	//cellGcmSys.AddFunc(, cellGcmFlush);
 
 	// Hardware Resource Management
 	REG_FUNC(cellGcmSys, cellGcmBindTile);
@@ -1268,6 +1328,7 @@ Module cellGcmSys("cellGcmSys", []()
 	REG_FUNC(cellGcmSys, cellGcmGetLastSecondVTime);
 	REG_FUNC(cellGcmSys, cellGcmGetTiledPitchSize);
 	REG_FUNC(cellGcmSys, cellGcmGetVBlankCount);
+	REG_FUNC(cellGcmSys, cellGcmSysGetLastVBlankTime);
 	REG_FUNC(cellGcmSys, _cellGcmFunc1);
 	REG_FUNC(cellGcmSys, _cellGcmFunc15);
 	REG_FUNC(cellGcmSys, _cellGcmInitBody);
@@ -1275,7 +1336,7 @@ Module cellGcmSys("cellGcmSys", []()
 	REG_FUNC(cellGcmSys, cellGcmResetFlipStatus);
 	REG_FUNC(cellGcmSys, cellGcmSetDebugOutputLevel);
 	REG_FUNC(cellGcmSys, cellGcmSetDisplayBuffer);
-	REG_FUNC(cellGcmSys, cellGcmSetFlip);
+	REG_FUNC(cellGcmSys, cellGcmSetFlip); //
 	REG_FUNC(cellGcmSys, cellGcmSetFlipHandler);
 	REG_FUNC(cellGcmSys, cellGcmSetFlipImmediate);
 	REG_FUNC(cellGcmSys, cellGcmSetFlipMode);
@@ -1287,9 +1348,11 @@ Module cellGcmSys("cellGcmSys", []()
 	REG_FUNC(cellGcmSys, cellGcmSetSecondVHandler);
 	REG_FUNC(cellGcmSys, cellGcmSetTileInfo);
 	REG_FUNC(cellGcmSys, cellGcmSetUserHandler);
+	REG_FUNC(cellGcmSys, cellGcmSetUserCommand); //
 	REG_FUNC(cellGcmSys, cellGcmSetVBlankFrequency);
 	REG_FUNC(cellGcmSys, cellGcmSetVBlankHandler);
-	REG_FUNC(cellGcmSys, cellGcmSetWaitFlip);
+	REG_FUNC(cellGcmSys, cellGcmSetWaitFlip); //
+	REG_FUNC(cellGcmSys, cellGcmSetWaitFlipUnsafe); //
 	REG_FUNC(cellGcmSys, cellGcmSetZcull);
 	REG_FUNC(cellGcmSys, cellGcmSortRemapEaIoAddress);
 	REG_FUNC(cellGcmSys, cellGcmUnbindTile);
@@ -1299,7 +1362,7 @@ Module cellGcmSys("cellGcmSys", []()
 	REG_FUNC(cellGcmSys, cellGcmGetDisplayInfo);
 	REG_FUNC(cellGcmSys, cellGcmGetCurrentDisplayBufferId);
 	REG_FUNC(cellGcmSys, cellGcmSetInvalidateTile);
-	//cellGcmSys.AddFunc(, cellGcmSetFlipWithWaitLabel);
+	REG_FUNC(cellGcmSys, cellGcmTerminate);
 
 	// Memory Mapping
 	REG_FUNC(cellGcmSys, cellGcmAddressToOffset);
@@ -1325,13 +1388,20 @@ Module cellGcmSys("cellGcmSys", []()
 
 	// Functions for Maintaining Compatibility
 	REG_FUNC(cellGcmSys, cellGcmSetDefaultCommandBuffer);
-	//cellGcmSys.AddFunc(, cellGcmGetCurrentBuffer);
-	//cellGcmSys.AddFunc(, cellGcmSetCurrentBuffer);
-	//cellGcmSys.AddFunc(, cellGcmSetDefaultCommandBufferAndSegmentWordSize);
-	//cellGcmSys.AddFunc(, cellGcmSetUserCallback);
+	REG_FUNC(cellGcmSys, cellGcmSetDefaultCommandBufferAndSegmentWordSize);
 
 	// Other
 	REG_FUNC(cellGcmSys, _cellGcmSetFlipCommand);
 	REG_FUNC(cellGcmSys, _cellGcmSetFlipCommandWithWaitLabel);
 	REG_FUNC(cellGcmSys, cellGcmSetTile);
+	REG_FUNC(cellGcmSys, _cellGcmFunc2);
+	REG_FUNC(cellGcmSys, _cellGcmFunc3);
+	REG_FUNC(cellGcmSys, _cellGcmFunc4);
+	REG_FUNC(cellGcmSys, _cellGcmFunc13);
+	REG_FUNC(cellGcmSys, _cellGcmFunc38);
+
+	// GPAD
+	REG_FUNC(cellGcmSys, cellGcmGpadGetStatus);
+	REG_FUNC(cellGcmSys, cellGcmGpadNotifyCaptureSurface);
+	REG_FUNC(cellGcmSys, cellGcmGpadCaptureSnapshot);
 });

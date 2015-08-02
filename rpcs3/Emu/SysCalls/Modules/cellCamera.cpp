@@ -310,7 +310,7 @@ Module cellCamera("cellCamera", []()
 
 	REG_FUNC(cellCamera, cellCameraInit);
 	REG_FUNC(cellCamera, cellCameraEnd);
-	REG_FUNC(cellCamera, cellCameraOpen);
+	REG_FUNC(cellCamera, cellCameraOpen); // was "renamed", but exists
 	REG_FUNC(cellCamera, cellCameraOpenEx);
 	REG_FUNC(cellCamera, cellCameraClose);
 
@@ -323,7 +323,7 @@ Module cellCamera("cellCamera", []()
 	REG_FUNC(cellCamera, cellCameraGetAttribute);
 	REG_FUNC(cellCamera, cellCameraSetAttribute);
 	REG_FUNC(cellCamera, cellCameraGetBufferSize);
-	REG_FUNC(cellCamera, cellCameraGetBufferInfo);
+	REG_FUNC(cellCamera, cellCameraGetBufferInfo); // was "renamed", but exists
 	REG_FUNC(cellCamera, cellCameraGetBufferInfoEx);
 
 	REG_FUNC(cellCamera, cellCameraPrepExtensionUnit);

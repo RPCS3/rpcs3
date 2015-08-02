@@ -249,12 +249,11 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		m_read_buffer = true;
 		m_flip_status = 0;
 
-		if (m_flip_handler)
+		if (auto cb = m_flip_handler)
 		{
-			auto cb = m_flip_handler;
-			Emu.GetCallbackManager().Async([=](CPUThread& CPU)
+			Emu.GetCallbackManager().Async([=](CPUThread& cpu)
 			{
-				cb(static_cast<PPUThread&>(CPU), 1);
+				cb(static_cast<PPUThread&>(cpu), 1);
 			});
 		}
 
@@ -2311,11 +2310,19 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	case GCM_SET_USER_COMMAND:
 	{
 		const u32 cause = ARGS(0);
-		auto cb = m_user_handler;
-		Emu.GetCallbackManager().Async([=](CPUThread& CPU)
+
+		if (auto cb = m_user_handler)
 		{
-			cb(static_cast<PPUThread&>(CPU), cause);
-		});
+			Emu.GetCallbackManager().Async([=](CPUThread& cpu)
+			{
+				cb(static_cast<PPUThread&>(cpu), cause);
+			});
+		}
+		else
+		{
+			throw EXCEPTION("User handler not set");
+		}
+		
 		break;
 	}
 
@@ -2477,9 +2484,9 @@ void RSXThread::Task()
 
 				if (auto cb = m_vblank_handler)
 				{
-					Emu.GetCallbackManager().Async([=](CPUThread& CPU)
+					Emu.GetCallbackManager().Async([=](CPUThread& cpu)
 					{
-						cb(static_cast<PPUThread&>(CPU), 1);
+						cb(static_cast<PPUThread&>(cpu), 1);
 					});
 				}
 			}
@@ -2544,10 +2551,7 @@ void RSXThread::Task()
 
 		if (cmd == 0) //nop
 		{
-			m_ctrl->get.atomic_op([](be_t<u32>& value)
-			{
-				value += 4;
-			});
+			m_ctrl->get += 4;
 			continue;
 		}
 
@@ -2560,10 +2564,7 @@ void RSXThread::Task()
 
 		DoCmd(cmd, cmd & 0x3ffff, args.addr(), count);
 
-		m_ctrl->get.atomic_op([count](be_t<u32>& value)
-		{
-			value += (count + 1) * 4;
-		});
+		m_ctrl->get += (count + 1) * 4;
 	}
 
 	OnExitThread();

@@ -180,7 +180,8 @@ public:
 		write_relaxed(sub_data, to_subtype(value));
 	}
 
-	// perform an atomic operation on data (callable object version, first arg is a reference to atomic type)
+	// perform an atomic operation on data (func is either pointer to member function or callable object with a T& first arg);
+	// returns the result of the callable object call or previous (old) value of the atomic variable if the return type is void
 	template<typename F, typename... Args, typename RT = std::result_of_t<F(T&, Args...)>> auto atomic_op(F func, Args&&... args) volatile -> decltype(atomic_op_result_t<F, RT, T>::result)
 	{
 		while (true)
