@@ -1167,7 +1167,7 @@ s32 spursInit(
 	if (flags & SAF_SPU_PRINTF_ENABLED)
 	{
 		// spu_printf: attach group
-		if (!spu_printf_agcb || spu_printf_agcb(ppu, spurs->spuTG) != CELL_OK)
+		if (!g_spu_printf_agcb || g_spu_printf_agcb(ppu, spurs->spuTG) != CELL_OK)
 		{
 			// remove flag if failed
 			spurs->flags &= ~SAF_SPU_PRINTF_ENABLED;
