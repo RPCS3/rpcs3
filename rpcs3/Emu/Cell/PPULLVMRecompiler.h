@@ -1242,7 +1242,7 @@ namespace ppu_recompiler_llvm {
 			std::unordered_map<std::string, Executable>::const_iterator It = executableMap.find(Name);
 			if (It != executableMap.end())
 				return (uint64_t)It->second;
-			return 0;
+			return getSymbolAddressInProcess(Name);
 		}
 	};
 }
