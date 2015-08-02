@@ -14,6 +14,8 @@
 
 extern Module cellFs;
 
+extern u32 _fd_to_id(u32 fd);
+
 s32 cellFsOpen(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, vm::cptr<void> arg, u64 size)
 {
 	cellFs.Warning("cellFsOpen(path=*0x%x, flags=%#o, fd=*0x%x, arg=*0x%x, size=0x%llx) -> sys_fs_open()", path, flags, fd, arg, size);
@@ -207,9 +209,9 @@ s32 cellFsGetFreeSize(vm::cptr<char> path, vm::ptr<u32> block_size, vm::ptr<u64>
 
 s32 cellFsGetDirectoryEntries(u32 fd, vm::ptr<CellFsDirectoryEntry> entries, u32 entries_size, vm::ptr<u32> data_count)
 {
-	cellFs.Warning("cellFsGetDirectoryEntries(fd=0x%x, entries=*0x%x, entries_size=0x%x, data_count=*0x%x)", fd, entries, entries_size, data_count);
+	cellFs.Warning("cellFsGetDirectoryEntries(fd=%d, entries=*0x%x, entries_size=0x%x, data_count=*0x%x)", fd, entries, entries_size, data_count);
 
-	const auto directory = Emu.GetIdManager().get<lv2_dir_t>(fd);
+	const auto directory = Emu.GetIdManager().get<lv2_dir_t>(_fd_to_id(fd));
 
 	if (!directory)
 	{
@@ -250,11 +252,11 @@ s32 cellFsGetDirectoryEntries(u32 fd, vm::ptr<CellFsDirectoryEntry> entries, u32
 
 s32 cellFsReadWithOffset(u32 fd, u64 offset, vm::ptr<void> buf, u64 buffer_size, vm::ptr<u64> nread)
 {
-	cellFs.Log("cellFsReadWithOffset(fd=0x%x, offset=0x%llx, buf=*0x%x, buffer_size=0x%llx, nread=*0x%x)", fd, offset, buf, buffer_size, nread);
+	cellFs.Log("cellFsReadWithOffset(fd=%d, offset=0x%llx, buf=*0x%x, buffer_size=0x%llx, nread=*0x%x)", fd, offset, buf, buffer_size, nread);
 
 	// TODO: use single sys_fs_fcntl syscall
 
-	const auto file = Emu.GetIdManager().get<lv2_file_t>(fd);
+	const auto file = Emu.GetIdManager().get<lv2_file_t>(_fd_to_id(fd));
 
 	if (!file || file->flags & CELL_FS_O_WRONLY)
 	{
@@ -281,11 +283,11 @@ s32 cellFsReadWithOffset(u32 fd, u64 offset, vm::ptr<void> buf, u64 buffer_size,
 
 s32 cellFsWriteWithOffset(u32 fd, u64 offset, vm::cptr<void> buf, u64 data_size, vm::ptr<u64> nwrite)
 {
-	cellFs.Log("cellFsWriteWithOffset(fd=0x%x, offset=0x%llx, buf=*0x%x, data_size=0x%llx, nwrite=*0x%x)", fd, offset, buf, data_size, nwrite);
+	cellFs.Log("cellFsWriteWithOffset(fd=%d, offset=0x%llx, buf=*0x%x, data_size=0x%llx, nwrite=*0x%x)", fd, offset, buf, data_size, nwrite);
 
 	// TODO: use single sys_fs_fcntl syscall
 
-	const auto file = Emu.GetIdManager().get<lv2_file_t>(fd);
+	const auto file = Emu.GetIdManager().get<lv2_file_t>(_fd_to_id(fd));
 
 	if (!file || !(file->flags & CELL_FS_O_ACCMODE))
 	{
@@ -312,7 +314,7 @@ s32 cellFsWriteWithOffset(u32 fd, u64 offset, vm::cptr<void> buf, u64 data_size,
 
 s32 cellFsStReadInit(u32 fd, vm::cptr<CellFsRingBuffer> ringbuf)
 {
-	cellFs.Warning("cellFsStReadInit(fd=0x%x, ringbuf=*0x%x)", fd, ringbuf);
+	cellFs.Warning("cellFsStReadInit(fd=%d, ringbuf=*0x%x)", fd, ringbuf);
 
 	if (ringbuf->copy & ~CELL_FS_ST_COPYLESS)
 	{
@@ -329,7 +331,7 @@ s32 cellFsStReadInit(u32 fd, vm::cptr<CellFsRingBuffer> ringbuf)
 		return CELL_FS_EINVAL;
 	}
 
-	const auto file = Emu.GetIdManager().get<lv2_file_t>(fd);
+	const auto file = Emu.GetIdManager().get<lv2_file_t>(_fd_to_id(fd));
 
 	if (!file)
 	{
@@ -365,9 +367,9 @@ s32 cellFsStReadInit(u32 fd, vm::cptr<CellFsRingBuffer> ringbuf)
 
 s32 cellFsStReadFinish(u32 fd)
 {
-	cellFs.Warning("cellFsStReadFinish(fd=0x%x)", fd);
+	cellFs.Warning("cellFsStReadFinish(fd=%d)", fd);
 
-	const auto file = Emu.GetIdManager().get<lv2_file_t>(fd);
+	const auto file = Emu.GetIdManager().get<lv2_file_t>(_fd_to_id(fd));
 
 	if (!file)
 	{
@@ -388,9 +390,9 @@ s32 cellFsStReadFinish(u32 fd)
 
 s32 cellFsStReadGetRingBuf(u32 fd, vm::ptr<CellFsRingBuffer> ringbuf)
 {
-	cellFs.Warning("cellFsStReadGetRingBuf(fd=0x%x, ringbuf=*0x%x)", fd, ringbuf);
+	cellFs.Warning("cellFsStReadGetRingBuf(fd=%d, ringbuf=*0x%x)", fd, ringbuf);
 
-	const auto file = Emu.GetIdManager().get<lv2_file_t>(fd);
+	const auto file = Emu.GetIdManager().get<lv2_file_t>(_fd_to_id(fd));
 
 	if (!file)
 	{
@@ -412,9 +414,9 @@ s32 cellFsStReadGetRingBuf(u32 fd, vm::ptr<CellFsRingBuffer> ringbuf)
 
 s32 cellFsStReadGetStatus(u32 fd, vm::ptr<u64> status)
 {
-	cellFs.Warning("cellFsStReadGetRingBuf(fd=0x%x, status=*0x%x)", fd, status);
+	cellFs.Warning("cellFsStReadGetRingBuf(fd=%d, status=*0x%x)", fd, status);
 
-	const auto file = Emu.GetIdManager().get<lv2_file_t>(fd);
+	const auto file = Emu.GetIdManager().get<lv2_file_t>(_fd_to_id(fd));
 
 	if (!file)
 	{
@@ -446,9 +448,9 @@ s32 cellFsStReadGetStatus(u32 fd, vm::ptr<u64> status)
 
 s32 cellFsStReadGetRegid(u32 fd, vm::ptr<u64> regid)
 {
-	cellFs.Warning("cellFsStReadGetRingBuf(fd=0x%x, regid=*0x%x)", fd, regid);
+	cellFs.Warning("cellFsStReadGetRingBuf(fd=%d, regid=*0x%x)", fd, regid);
 
-	const auto file = Emu.GetIdManager().get<lv2_file_t>(fd);
+	const auto file = Emu.GetIdManager().get<lv2_file_t>(_fd_to_id(fd));
 
 	if (!file)
 	{
@@ -467,9 +469,9 @@ s32 cellFsStReadGetRegid(u32 fd, vm::ptr<u64> regid)
 
 s32 cellFsStReadStart(u32 fd, u64 offset, u64 size)
 {
-	cellFs.Warning("cellFsStReadStart(fd=0x%x, offset=0x%llx, size=0x%llx)", fd, offset, size);
+	cellFs.Warning("cellFsStReadStart(fd=%d, offset=0x%llx, size=0x%llx)", fd, offset, size);
 
-	const auto file = Emu.GetIdManager().get<lv2_file_t>(fd);
+	const auto file = Emu.GetIdManager().get<lv2_file_t>(_fd_to_id(fd));
 
 	if (!file)
 	{
@@ -548,9 +550,9 @@ s32 cellFsStReadStart(u32 fd, u64 offset, u64 size)
 
 s32 cellFsStReadStop(u32 fd)
 {
-	cellFs.Warning("cellFsStReadStop(fd=0x%x)", fd);
+	cellFs.Warning("cellFsStReadStop(fd=%d)", fd);
 
-	const auto file = Emu.GetIdManager().get<lv2_file_t>(fd);
+	const auto file = Emu.GetIdManager().get<lv2_file_t>(_fd_to_id(fd));
 
 	if (!file)
 	{
@@ -579,9 +581,9 @@ s32 cellFsStReadStop(u32 fd)
 
 s32 cellFsStRead(u32 fd, vm::ptr<u8> buf, u64 size, vm::ptr<u64> rsize)
 {
-	cellFs.Warning("cellFsStRead(fd=0x%x, buf=*0x%x, size=0x%llx, rsize=*0x%x)", fd, buf, size, rsize);
+	cellFs.Warning("cellFsStRead(fd=%d, buf=*0x%x, size=0x%llx, rsize=*0x%x)", fd, buf, size, rsize);
 	
-	const auto file = Emu.GetIdManager().get<lv2_file_t>(fd);
+	const auto file = Emu.GetIdManager().get<lv2_file_t>(_fd_to_id(fd));
 
 	if (!file)
 	{
@@ -613,9 +615,9 @@ s32 cellFsStRead(u32 fd, vm::ptr<u8> buf, u64 size, vm::ptr<u64> rsize)
 
 s32 cellFsStReadGetCurrentAddr(u32 fd, vm::ptr<u32> addr, vm::ptr<u64> size)
 {
-	cellFs.Warning("cellFsStReadGetCurrentAddr(fd=0x%x, addr=*0x%x, size=*0x%x)", fd, addr, size);
+	cellFs.Warning("cellFsStReadGetCurrentAddr(fd=%d, addr=*0x%x, size=*0x%x)", fd, addr, size);
 
-	const auto file = Emu.GetIdManager().get<lv2_file_t>(fd);
+	const auto file = Emu.GetIdManager().get<lv2_file_t>(_fd_to_id(fd));
 
 	if (!file)
 	{
@@ -646,9 +648,9 @@ s32 cellFsStReadGetCurrentAddr(u32 fd, vm::ptr<u32> addr, vm::ptr<u64> size)
 
 s32 cellFsStReadPutCurrentAddr(u32 fd, vm::ptr<u8> addr, u64 size)
 {
-	cellFs.Warning("cellFsStReadPutCurrentAddr(fd=0x%x, addr=*0x%x, size=0x%llx)", fd, addr, size);
+	cellFs.Warning("cellFsStReadPutCurrentAddr(fd=%d, addr=*0x%x, size=0x%llx)", fd, addr, size);
 	
-	const auto file = Emu.GetIdManager().get<lv2_file_t>(fd);
+	const auto file = Emu.GetIdManager().get<lv2_file_t>(_fd_to_id(fd));
 
 	if (!file)
 	{
@@ -673,9 +675,9 @@ s32 cellFsStReadPutCurrentAddr(u32 fd, vm::ptr<u8> addr, u64 size)
 
 s32 cellFsStReadWait(u32 fd, u64 size)
 {
-	cellFs.Warning("cellFsStReadWait(fd=0x%x, size=0x%llx)", fd, size);
+	cellFs.Warning("cellFsStReadWait(fd=%d, size=0x%llx)", fd, size);
 	
-	const auto file = Emu.GetIdManager().get<lv2_file_t>(fd);
+	const auto file = Emu.GetIdManager().get<lv2_file_t>(_fd_to_id(fd));
 
 	if (!file)
 	{
@@ -702,9 +704,9 @@ s32 cellFsStReadWait(u32 fd, u64 size)
 
 s32 cellFsStReadWaitCallback(u32 fd, u64 size, fs_st_cb_t func)
 {
-	cellFs.Warning("cellFsStReadWaitCallback(fd=0x%x, size=0x%llx, func=*0x%x)", fd, size, func);
+	cellFs.Warning("cellFsStReadWaitCallback(fd=%d, size=0x%llx, func=*0x%x)", fd, size, func);
 
-	const auto file = Emu.GetIdManager().get<lv2_file_t>(fd);
+	const auto file = Emu.GetIdManager().get<lv2_file_t>(_fd_to_id(fd));
 
 	if (!file)
 	{
@@ -867,12 +869,12 @@ using fs_aio_cb_t = vm::ptr<void(vm::ptr<CellFsAio> xaio, s32 error, s32 xid, u6
 
 void fsAio(vm::ptr<CellFsAio> aio, bool write, s32 xid, fs_aio_cb_t func)
 {
-	cellFs.Notice("FS AIO Request(%d): fd=0x%x, offset=0x%llx, buf=*0x%x, size=0x%llx, user_data=0x%llx", xid, aio->fd, aio->offset, aio->buf, aio->size, aio->user_data);
+	cellFs.Notice("FS AIO Request(%d): fd=%d, offset=0x%llx, buf=*0x%x, size=0x%llx, user_data=0x%llx", xid, aio->fd, aio->offset, aio->buf, aio->size, aio->user_data);
 
 	s32 error = CELL_OK;
 	u64 result = 0;
 
-	const auto file = Emu.GetIdManager().get<lv2_file_t>(aio->fd);
+	const auto file = Emu.GetIdManager().get<lv2_file_t>(_fd_to_id(aio->fd));
 
 	if (!file || (!write && file->flags & CELL_FS_O_WRONLY) || (write && !(file->flags & CELL_FS_O_ACCMODE)))
 	{
@@ -964,9 +966,9 @@ s32 cellFsSetDefaultContainer(u32 id, u32 total_limit)
 
 s32 cellFsSetIoBufferFromDefaultContainer(u32 fd, u32 buffer_size, u32 page_type)
 {
-	cellFs.Todo("cellFsSetIoBufferFromDefaultContainer(fd=0x%x, buffer_size=%d, page_type=%d)", fd, buffer_size, page_type);
+	cellFs.Todo("cellFsSetIoBufferFromDefaultContainer(fd=%d, buffer_size=%d, page_type=%d)", fd, buffer_size, page_type);
 
-	const auto file = Emu.GetIdManager().get<lv2_file_t>(fd);
+	const auto file = Emu.GetIdManager().get<lv2_file_t>(_fd_to_id(fd));
 
 	if (!file)
 	{

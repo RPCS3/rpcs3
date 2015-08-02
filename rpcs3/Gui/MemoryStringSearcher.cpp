@@ -6,9 +6,6 @@
 #include "Emu/System.h"
 
 #include "MemoryStringSearcher.h"
-#include "Emu/RSX/sysutil_video.h"
-#include "Emu/RSX/GSManager.h"
-//#include "Emu/RSX/GCM.h"
 
 #include <wx/notebook.h>
 

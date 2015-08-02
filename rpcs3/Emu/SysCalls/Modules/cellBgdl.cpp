@@ -1,8 +1,9 @@
 #include "stdafx.h"
-#if 0
+#include "Emu/Memory/Memory.h"
+#include "Emu/System.h"
+#include "Emu/SysCalls/Modules.h"
 
-void cellBgdl_init();
-Module cellBgdl(0x003f, cellBgdl_init);
+extern Module cellBGDL;
 
 // Return Codes
 enum
@@ -15,35 +16,34 @@ enum
 	CELL_BGDL_UTIL_ERROR_INITIALIZE   = 0x8002ce05,
 };
 
-int cellBGDLGetInfo()
+s32 cellBGDLGetInfo()
 {
-	UNIMPLEMENTED_FUNC(cellBgdl);
+	UNIMPLEMENTED_FUNC(cellBGDL);
 	return CELL_OK;
 }
 
-int cellBGDLGetInfo2()
+s32 cellBGDLGetInfo2()
 {
-	UNIMPLEMENTED_FUNC(cellBgdl);
+	UNIMPLEMENTED_FUNC(cellBGDL);
 	return CELL_OK;
 }
 
-int cellBGDLSetMode()
+s32 cellBGDLSetMode()
 {
-	UNIMPLEMENTED_FUNC(cellBgdl);
+	UNIMPLEMENTED_FUNC(cellBGDL);
 	return CELL_OK;
 }
 
-int cellBGDLGetMode()
+s32 cellBGDLGetMode()
 {
-	UNIMPLEMENTED_FUNC(cellBgdl);
+	UNIMPLEMENTED_FUNC(cellBGDL);
 	return CELL_OK;
 }
 
-void cellBgdl_init()
+Module cellBGDL("cellBGDL", []()
 {
-	REG_FUNC(cellBgdl, cellBGDLGetInfo);
-	REG_FUNC(cellBgdl, cellBGDLGetInfo2);
-	REG_FUNC(cellBgdl, cellBGDLSetMode);
-	REG_FUNC(cellBgdl, cellBGDLGetMode);
-}
-#endif
+	REG_FUNC(cellBGDL, cellBGDLGetInfo);
+	REG_FUNC(cellBGDL, cellBGDLGetInfo2);
+	REG_FUNC(cellBGDL, cellBGDLSetMode);
+	REG_FUNC(cellBGDL, cellBGDLGetMode);
+});

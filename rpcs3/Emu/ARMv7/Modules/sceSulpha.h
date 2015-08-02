@@ -1,6 +1,6 @@
 #pragma once
 
-using SceSulphaCallback = func_def<void(vm::ptr<void> arg)>;
+using SceSulphaCallback = void(vm::ptr<void> arg);
 
 struct SceSulphaConfig
 {

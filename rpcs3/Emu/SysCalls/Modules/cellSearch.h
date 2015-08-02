@@ -165,7 +165,7 @@ enum CellSearchEvent : s32
 	CELL_SEARCH_EVENT_SCENESEARCH_RESULT,
 };
 
-using CellSearchSystemCallback = func_def<void(CellSearchEvent event, s32 result, vm::cptr<u32> param, vm::ptr<u32> userData)>;
+using CellSearchSystemCallback = void(CellSearchEvent event, s32 result, vm::cptr<u32> param, vm::ptr<u32> userData);
 
 struct CellSearchContentId
 {

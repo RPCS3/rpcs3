@@ -661,8 +661,8 @@ typedef s32(CellSailRendererAudioFuncMakeup)(vm::ptr<void> pArg);
 typedef s32(CellSailRendererAudioFuncCleanup)(vm::ptr<void> pArg);
 typedef void(CellSailRendererAudioFuncOpen)(vm::ptr<void> pArg, vm::ptr<CellSailAudioFormat> pInfo, u32 frameNum);
 typedef void(CellSailRendererAudioFuncClose)(vm::ptr<void> pArg);
-typedef void(CellSailRendererAudioFuncStart)(vm::ptr<void> pArg, bool buffering);
-typedef void(CellSailRendererAudioFuncStop)(vm::ptr<void> pArg, bool flush);
+typedef void(CellSailRendererAudioFuncStart)(vm::ptr<void> pArg, b8 buffering);
+typedef void(CellSailRendererAudioFuncStop)(vm::ptr<void> pArg, b8 flush);
 typedef void(CellSailRendererAudioFuncCancel)(vm::ptr<void> pArg);
 typedef s32(CellSailRendererAudioFuncCheckout)(vm::ptr<void> pArg, vm::pptr<CellSailAudioFrameInfo> ppInfo);
 typedef s32(CellSailRendererAudioFuncCheckin)(vm::ptr<void> pArg, vm::ptr<CellSailAudioFrameInfo> pInfo);
@@ -671,8 +671,8 @@ typedef s32(CellSailRendererVideoFuncMakeup)(vm::ptr<void> pArg);
 typedef s32(CellSailRendererVideoFuncCleanup)(vm::ptr<void> pArg);
 typedef void(CellSailRendererVideoFuncOpen)(vm::ptr<void> pArg, vm::ptr<CellSailVideoFormat> pInfo, u32 frameNum, u32 minFrameNum);
 typedef void(CellSailRendererVideoFuncClose)(vm::ptr<void> pArg);
-typedef void(CellSailRendererVideoFuncStart)(vm::ptr<void> pArg, bool buffering);
-typedef void(CellSailRendererVideoFuncStop)(vm::ptr<void> pArg, bool flush, bool keepRendering);
+typedef void(CellSailRendererVideoFuncStart)(vm::ptr<void> pArg, b8 buffering);
+typedef void(CellSailRendererVideoFuncStop)(vm::ptr<void> pArg, b8 flush, b8 keepRendering);
 typedef void(CellSailRendererVideoFuncCancel)(vm::ptr<void> pArg);
 typedef s32(CellSailRendererVideoFuncCheckout)(vm::ptr<void> pArg, vm::pptr<CellSailVideoFrameInfo> ppInfo);
 typedef s32(CellSailRendererVideoFuncCheckin)(vm::ptr<void> pArg, vm::ptr<CellSailVideoFrameInfo> pInfo);
@@ -881,7 +881,7 @@ struct CellSailMp4Track
 
 struct CellSailMp4TrackInfo
 {
-	bool isTrackEnabled;
+	b8 isTrackEnabled;
 	u8 reserved0[3];
 	be_t<u32> trackId;
 	be_t<u64> trackDuration;
@@ -1037,8 +1037,8 @@ struct CellSailMpegLayer3WaveFormat
 
 struct CellSailDescriptor
 {
-	bool autoSelection;
-	bool registered;
+	b8 autoSelection;
+	b8 registered;
 	be_t<s32> streamType;
 	be_t<u64> internalData[31];
 };
@@ -1097,17 +1097,16 @@ struct CellSailPlayerResource
 
 struct CellSailPlayer
 {
-	vm::ptr<CellSailMemAllocator> allocator;
+	CellSailMemAllocator allocator;
 	vm::ptr<CellSailPlayerFuncNotified> callback;
-	be_t<u64> callbackArgument;
-	vm::ptr<CellSailPlayerAttribute> attribute;
-	vm::ptr<CellSailPlayerResource> resource;
+	vm::ptr<void> callbackArg;
+	CellSailPlayerAttribute attribute;
+	CellSailPlayerResource resource;
 	vm::ptr<CellSailStartCommand> playbackCommand;
-	be_t<s32> repeatMode;
-	be_t<s32> descriptors;
+	s32 repeatMode;
+	s32 descriptors;
 	vm::ptr<CellSailDescriptor> registeredDescriptors[2];
-	bool paused = true;
-	be_t<u64> internalData[26];
+	bool paused;
 };
 
-CHECK_SIZE(CellSailPlayer, 0x100);
+CHECK_MAX_SIZE(CellSailPlayer, 0x100);

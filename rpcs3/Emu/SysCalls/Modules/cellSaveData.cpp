@@ -33,7 +33,7 @@ enum : u32
 };
 
 never_inline s32 savedata_op(
-	PPUThread& CPU,
+	PPUThread& ppu,
 	u32 operation,
 	u32 version,
 	vm::cptr<char> dirName,
@@ -63,7 +63,7 @@ never_inline s32 savedata_op(
 	// path of the specified user (00000001 by default)
 	const std::string base_dir = fmt::format("/dev_hdd0/home/%08d/savedata/", userId ? userId : 1u);
 
-	vm::stackvar<CellSaveDataCBResult> result(CPU);
+	vm::stackvar<CellSaveDataCBResult> result(ppu);
 
 	result->userdata = userdata; // probably should be assigned only once (allows the callback to change it)
 
@@ -73,7 +73,7 @@ never_inline s32 savedata_op(
 	{
 		std::vector<SaveDataEntry> save_entries;
 
-		vm::stackvar<CellSaveDataListGet> listGet(CPU);
+		vm::stackvar<CellSaveDataListGet> listGet(ppu);
 
 		listGet->dirNum = 0;
 		listGet->dirListNum = 0;
@@ -184,10 +184,10 @@ never_inline s32 savedata_op(
 
 		if (funcList)
 		{
-			vm::stackvar<CellSaveDataListSet> listSet(CPU);
+			vm::stackvar<CellSaveDataListSet> listSet(ppu);
 
 			// List Callback
-			funcList(CPU, result, listGet, listSet);
+			funcList(ppu, result, listGet, listSet);
 
 			if (result->result < 0)
 			{
@@ -296,10 +296,10 @@ never_inline s32 savedata_op(
 
 		if (funcFixed)
 		{
-			vm::stackvar<CellSaveDataFixedSet> fixedSet(CPU);
+			vm::stackvar<CellSaveDataFixedSet> fixedSet(ppu);
 
 			// Fixed Callback
-			funcFixed(CPU, result, listGet, fixedSet);
+			funcFixed(ppu, result, listGet, fixedSet);
 
 			if (result->result < 0)
 			{
@@ -353,8 +353,8 @@ never_inline s32 savedata_op(
 
 	// Get save stats
 	{
-		vm::stackvar<CellSaveDataStatGet> statGet(CPU);
-		vm::stackvar<CellSaveDataStatSet> statSet(CPU);
+		vm::stackvar<CellSaveDataStatGet> statGet(ppu);
+		vm::stackvar<CellSaveDataStatSet> statSet(ppu);
 
 		std::string dir_local_path;
 
@@ -434,7 +434,7 @@ never_inline s32 savedata_op(
 		}
 
 		// Stat Callback
-		funcStat(CPU, result, statGet, statSet);
+		funcStat(ppu, result, statGet, statSet);
 
 		if (result->result < 0)
 		{
@@ -495,15 +495,15 @@ never_inline s32 savedata_op(
 	}
 
 	// Enter the loop where the save files are read/created/deleted
-	vm::stackvar<CellSaveDataFileGet> fileGet(CPU);
-	vm::stackvar<CellSaveDataFileSet> fileSet(CPU);
+	vm::stackvar<CellSaveDataFileGet> fileGet(ppu);
+	vm::stackvar<CellSaveDataFileSet> fileSet(ppu);
 
 	fileGet->excSize = 0;
 	memset(fileGet->reserved, 0, sizeof(fileGet->reserved));
 
 	while (funcFile)
 	{
-		funcFile(CPU, result, fileGet, fileSet);
+		funcFile(ppu, result, fileGet, fileSet);
 
 		if (result->result < 0)
 		{
@@ -618,7 +618,7 @@ never_inline s32 savedata_op(
 
 // Functions
 s32 cellSaveDataListSave2(
-	PPUThread& CPU,
+	PPUThread& ppu,
 	u32 version,
 	vm::ptr<CellSaveDataSetList> setList,
 	vm::ptr<CellSaveDataSetBuf> setBuf,
@@ -631,11 +631,11 @@ s32 cellSaveDataListSave2(
 	cellSysutil.Warning("cellSaveDataListSave2(version=%d, setList=*0x%x, setBuf=*0x%x, funcList=*0x%x, funcStat=*0x%x, funcFile=*0x%x, container=0x%x, userdata=*0x%x)",
 		version, setList, setBuf, funcList, funcStat, funcFile, container, userdata);
 
-	return savedata_op(CPU, SAVEDATA_OP_LIST_SAVE, version, vm::null, 1, setList, setBuf, funcList, vm::null, funcStat, funcFile, container, 2, userdata, 0, vm::null);
+	return savedata_op(ppu, SAVEDATA_OP_LIST_SAVE, version, vm::null, 1, setList, setBuf, funcList, vm::null, funcStat, funcFile, container, 2, userdata, 0, vm::null);
 }
 
 s32 cellSaveDataListLoad2(
-	PPUThread& CPU,
+	PPUThread& ppu,
 	u32 version,
 	vm::ptr<CellSaveDataSetList> setList,
 	vm::ptr<CellSaveDataSetBuf> setBuf,
@@ -648,11 +648,21 @@ s32 cellSaveDataListLoad2(
 	cellSysutil.Warning("cellSaveDataListLoad2(version=%d, setList=*0x%x, setBuf=*0x%x, funcList=*0x%x, funcStat=*0x%x, funcFile=*0x%x, container=0x%x, userdata=*0x%x)",
 		version, setList, setBuf, funcList, funcStat, funcFile, container, userdata);
 
-	return savedata_op(CPU, SAVEDATA_OP_LIST_LOAD, version, vm::null, 1, setList, setBuf, funcList, vm::null, funcStat, funcFile, container, 2, userdata, 0, vm::null);
+	return savedata_op(ppu, SAVEDATA_OP_LIST_LOAD, version, vm::null, 1, setList, setBuf, funcList, vm::null, funcStat, funcFile, container, 2, userdata, 0, vm::null);
+}
+
+s32 cellSaveDataListSave()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellSaveDataListLoad()
+{
+	throw EXCEPTION("");
 }
 
 s32 cellSaveDataFixedSave2(
-	PPUThread& CPU,
+	PPUThread& ppu,
 	u32 version,
 	vm::ptr<CellSaveDataSetList> setList,
 	vm::ptr<CellSaveDataSetBuf> setBuf,
@@ -665,11 +675,11 @@ s32 cellSaveDataFixedSave2(
 	cellSysutil.Warning("cellSaveDataFixedSave2(version=%d, setList=*0x%x, setBuf=*0x%x, funcFixed=*0x%x, funcStat=*0x%x, funcFile=*0x%x, container=0x%x, userdata=*0x%x)",
 		version, setList, setBuf, funcFixed, funcStat, funcFile, container, userdata);
 
-	return savedata_op(CPU, SAVEDATA_OP_FIXED_SAVE, version, vm::null, 1, setList, setBuf, vm::null, funcFixed, funcStat, funcFile, container, 2, userdata, 0, vm::null);
+	return savedata_op(ppu, SAVEDATA_OP_FIXED_SAVE, version, vm::null, 1, setList, setBuf, vm::null, funcFixed, funcStat, funcFile, container, 2, userdata, 0, vm::null);
 }
 
 s32 cellSaveDataFixedLoad2(
-	PPUThread& CPU,
+	PPUThread& ppu,
 	u32 version,
 	vm::ptr<CellSaveDataSetList> setList,
 	vm::ptr<CellSaveDataSetBuf> setBuf,
@@ -682,11 +692,21 @@ s32 cellSaveDataFixedLoad2(
 	cellSysutil.Warning("cellSaveDataFixedLoad2(version=%d, setList=*0x%x, setBuf=*0x%x, funcFixed=*0x%x, funcStat=*0x%x, funcFile=*0x%x, container=0x%x, userdata=*0x%x)",
 		version, setList, setBuf, funcFixed, funcStat, funcFile, container, userdata);
 
-	return savedata_op(CPU, SAVEDATA_OP_FIXED_LOAD, version, vm::null, 1, setList, setBuf, vm::null, funcFixed, funcStat, funcFile, container, 2, userdata, 0, vm::null);
+	return savedata_op(ppu, SAVEDATA_OP_FIXED_LOAD, version, vm::null, 1, setList, setBuf, vm::null, funcFixed, funcStat, funcFile, container, 2, userdata, 0, vm::null);
+}
+
+s32 cellSaveDataFixedSave()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellSaveDataFixedLoad()
+{
+	throw EXCEPTION("");
 }
 
 s32 cellSaveDataAutoSave2(
-	PPUThread& CPU,
+	PPUThread& ppu,
 	u32 version,
 	vm::cptr<char> dirName,
 	u32 errDialog,
@@ -699,11 +719,11 @@ s32 cellSaveDataAutoSave2(
 	cellSysutil.Warning("cellSaveDataAutoSave2(version=%d, dirName=*0x%x, errDialog=%d, setBuf=*0x%x, funcStat=*0x%x, funcFile=*0x%x, container=0x%x, userdata=*0x%x)",
 		version, dirName, errDialog, setBuf, funcStat, funcFile, container, userdata);
 
-	return savedata_op(CPU, SAVEDATA_OP_AUTO_SAVE, version, dirName, errDialog, vm::null, setBuf, vm::null, vm::null, funcStat, funcFile, container, 2, userdata, 0, vm::null);
+	return savedata_op(ppu, SAVEDATA_OP_AUTO_SAVE, version, dirName, errDialog, vm::null, setBuf, vm::null, vm::null, funcStat, funcFile, container, 2, userdata, 0, vm::null);
 }
 
 s32 cellSaveDataAutoLoad2(
-	PPUThread& CPU,
+	PPUThread& ppu,
 	u32 version,
 	vm::cptr<char> dirName,
 	u32 errDialog,
@@ -716,11 +736,21 @@ s32 cellSaveDataAutoLoad2(
 	cellSysutil.Warning("cellSaveDataAutoLoad2(version=%d, dirName=*0x%x, errDialog=%d, setBuf=*0x%x, funcStat=*0x%x, funcFile=*0x%x, container=0x%x, userdata=*0x%x)",
 		version, dirName, errDialog, setBuf, funcStat, funcFile, container, userdata);
 
-	return savedata_op(CPU, SAVEDATA_OP_AUTO_LOAD, version, dirName, errDialog, vm::null, setBuf, vm::null, vm::null, funcStat, funcFile, container, 2, userdata, 0, vm::null);
+	return savedata_op(ppu, SAVEDATA_OP_AUTO_LOAD, version, dirName, errDialog, vm::null, setBuf, vm::null, vm::null, funcStat, funcFile, container, 2, userdata, 0, vm::null);
+}
+
+s32 cellSaveDataAutoSave()
+{
+	throw EXCEPTION("");
+}
+
+s32 cellSaveDataAutoLoad()
+{
+	throw EXCEPTION("");
 }
 
 s32 cellSaveDataListAutoSave(
-	PPUThread& CPU,
+	PPUThread& ppu,
 	u32 version,
 	u32 errDialog,
 	vm::ptr<CellSaveDataSetList> setList,
@@ -734,11 +764,11 @@ s32 cellSaveDataListAutoSave(
 	cellSysutil.Warning("cellSaveDataListAutoSave(version=%d, errDialog=%d, setList=*0x%x, setBuf=*0x%x, funcFixed=*0x%x, funcStat=*0x%x, funcFile=*0x%x, container=0x%x, userdata=*0x%x)",
 		version, errDialog, setList, setBuf, funcFixed, funcStat, funcFile, container, userdata);
 
-	return savedata_op(CPU, SAVEDATA_OP_LIST_AUTO_SAVE, version, vm::null, errDialog, setList, setBuf, vm::null, funcFixed, funcStat, funcFile, container, 0, userdata, 0, vm::null);
+	return savedata_op(ppu, SAVEDATA_OP_LIST_AUTO_SAVE, version, vm::null, errDialog, setList, setBuf, vm::null, funcFixed, funcStat, funcFile, container, 0, userdata, 0, vm::null);
 }
 
 s32 cellSaveDataListAutoLoad(
-	PPUThread& CPU,
+	PPUThread& ppu,
 	u32 version,
 	u32 errDialog,
 	vm::ptr<CellSaveDataSetList> setList,
@@ -752,7 +782,7 @@ s32 cellSaveDataListAutoLoad(
 	cellSysutil.Warning("cellSaveDataListAutoLoad(version=%d, errDialog=%d, setList=*0x%x, setBuf=*0x%x, funcFixed=*0x%x, funcStat=*0x%x, funcFile=*0x%x, container=0x%x, userdata=*0x%x)",
 		version, errDialog, setList, setBuf, funcFixed, funcStat, funcFile, container, userdata);
 
-	return savedata_op(CPU, SAVEDATA_OP_LIST_AUTO_LOAD, version, vm::null, errDialog, setList, setBuf, vm::null, funcFixed, funcStat, funcFile, container, 0, userdata, 0, vm::null);
+	return savedata_op(ppu, SAVEDATA_OP_LIST_AUTO_LOAD, version, vm::null, errDialog, setList, setBuf, vm::null, funcFixed, funcStat, funcFile, container, 0, userdata, 0, vm::null);
 }
 
 s32 cellSaveDataDelete2(u32 container)
@@ -762,8 +792,13 @@ s32 cellSaveDataDelete2(u32 container)
 	return CELL_SAVEDATA_RET_CANCEL;
 }
 
+s32 cellSaveDataDelete()
+{
+	throw EXCEPTION("");
+}
+
 s32 cellSaveDataFixedDelete(
-	PPUThread& CPU,
+	PPUThread& ppu,
 	vm::ptr<CellSaveDataSetList> setList,
 	vm::ptr<CellSaveDataSetBuf> setBuf,
 	vm::ptr<CellSaveDataFixedCallback> funcFixed,
@@ -778,7 +813,7 @@ s32 cellSaveDataFixedDelete(
 }
 
 s32 cellSaveDataUserListSave(
-	PPUThread& CPU,
+	PPUThread& ppu,
 	u32 version,
 	u32 userId,
 	vm::ptr<CellSaveDataSetList> setList,
@@ -792,11 +827,11 @@ s32 cellSaveDataUserListSave(
 	cellSysutil.Error("cellSaveDataUserListSave(version=%d, userId=%d, setList=*0x%x, setBuf=*0x%x, funcList=*0x%x, funcStat=*0x%x, funcFile=*0x%x, container=0x%x, userdata=*0x%x)",
 		version, userId, setList, setBuf, funcList, funcStat, funcFile, container, userdata);
 
-	return savedata_op(CPU, SAVEDATA_OP_LIST_SAVE, version, vm::null, 0, setList, setBuf, funcList, vm::null, funcStat, funcFile, container, 6, userdata, userId, vm::null);
+	return savedata_op(ppu, SAVEDATA_OP_LIST_SAVE, version, vm::null, 0, setList, setBuf, funcList, vm::null, funcStat, funcFile, container, 6, userdata, userId, vm::null);
 }
 
 s32 cellSaveDataUserListLoad(
-	PPUThread& CPU,
+	PPUThread& ppu,
 	u32 version,
 	u32 userId,
 	vm::ptr<CellSaveDataSetList> setList,
@@ -810,11 +845,11 @@ s32 cellSaveDataUserListLoad(
 	cellSysutil.Error("cellSaveDataUserListLoad(version=%d, userId=%d, setList=*0x%x, setBuf=*0x%x, funcList=*0x%x, funcStat=*0x%x, funcFile=*0x%x, container=0x%x, userdata=*0x%x)",
 		version, userId, setList, setBuf, funcList, funcStat, funcFile, container, userdata);
 
-	return savedata_op(CPU, SAVEDATA_OP_LIST_LOAD, version, vm::null, 0, setList, setBuf, funcList, vm::null, funcStat, funcFile, container, 6, userdata, userId, vm::null);
+	return savedata_op(ppu, SAVEDATA_OP_LIST_LOAD, version, vm::null, 0, setList, setBuf, funcList, vm::null, funcStat, funcFile, container, 6, userdata, userId, vm::null);
 }
 
 s32 cellSaveDataUserFixedSave(
-	PPUThread& CPU,
+	PPUThread& ppu,
 	u32 version,
 	u32 userId,
 	vm::ptr<CellSaveDataSetList> setList,
@@ -828,11 +863,11 @@ s32 cellSaveDataUserFixedSave(
 	cellSysutil.Error("cellSaveDataUserFixedSave(version=%d, userId=%d, setList=*0x%x, setBuf=*0x%x, funcFixed=*0x%x, funcStat=*0x%x, funcFile=*0x%x, container=0x%x, userdata=*0x%x)",
 		version, userId, setList, setBuf, funcFixed, funcStat, funcFile, container, userdata);
 
-	return savedata_op(CPU, SAVEDATA_OP_FIXED_SAVE, version, vm::null, 0, setList, setBuf, vm::null, funcFixed, funcStat, funcFile, container, 6, userdata, userId, vm::null);
+	return savedata_op(ppu, SAVEDATA_OP_FIXED_SAVE, version, vm::null, 0, setList, setBuf, vm::null, funcFixed, funcStat, funcFile, container, 6, userdata, userId, vm::null);
 }
 
 s32 cellSaveDataUserFixedLoad(
-	PPUThread& CPU,
+	PPUThread& ppu,
 	u32 version,
 	u32 userId,
 	vm::ptr<CellSaveDataSetList> setList,
@@ -846,11 +881,11 @@ s32 cellSaveDataUserFixedLoad(
 	cellSysutil.Error("cellSaveDataUserFixedLoad(version=%d, userId=%d, setList=*0x%x, setBuf=*0x%x, funcFixed=*0x%x, funcStat=*0x%x, funcFile=*0x%x, container=0x%x, userdata=*0x%x)",
 		version, userId, setList, setBuf, funcFixed, funcStat, funcFile, container, userdata);
 
-	return savedata_op(CPU, SAVEDATA_OP_FIXED_LOAD, version, vm::null, 0, setList, setBuf, vm::null, funcFixed, funcStat, funcFile, container, 6, userdata, userId, vm::null);
+	return savedata_op(ppu, SAVEDATA_OP_FIXED_LOAD, version, vm::null, 0, setList, setBuf, vm::null, funcFixed, funcStat, funcFile, container, 6, userdata, userId, vm::null);
 }
 
 s32 cellSaveDataUserAutoSave(
-	PPUThread& CPU,
+	PPUThread& ppu,
 	u32 version,
 	u32 userId,
 	vm::cptr<char> dirName,
@@ -864,11 +899,11 @@ s32 cellSaveDataUserAutoSave(
 	cellSysutil.Error("cellSaveDataUserAutoSave(version=%d, userId=%d, dirName=*0x%x, errDialog=%d, setBuf=*0x%x, funcStat=*0x%x, funcFile=*0x%x, container=0x%x, userdata=*0x%x)",
 		version, userId, dirName, errDialog, setBuf, funcStat, funcFile, container, userdata);
 
-	return savedata_op(CPU, SAVEDATA_OP_AUTO_SAVE, version, dirName, errDialog, vm::null, setBuf, vm::null, vm::null, funcStat, funcFile, container, 6, userdata, userId, vm::null);
+	return savedata_op(ppu, SAVEDATA_OP_AUTO_SAVE, version, dirName, errDialog, vm::null, setBuf, vm::null, vm::null, funcStat, funcFile, container, 6, userdata, userId, vm::null);
 }
 
 s32 cellSaveDataUserAutoLoad(
-	PPUThread& CPU,
+	PPUThread& ppu,
 	u32 version,
 	u32 userId,
 	vm::cptr<char> dirName,
@@ -882,11 +917,11 @@ s32 cellSaveDataUserAutoLoad(
 	cellSysutil.Error("cellSaveDataUserAutoLoad(version=%d, userId=%d, dirName=*0x%x, errDialog=%d, setBuf=*0x%x, funcStat=*0x%x, funcFile=*0x%x, container=0x%x, userdata=*0x%x)",
 		version, userId, dirName, errDialog, setBuf, funcStat, funcFile, container, userdata);
 
-	return savedata_op(CPU, SAVEDATA_OP_AUTO_LOAD, version, dirName, errDialog, vm::null, setBuf, vm::null, vm::null, funcStat, funcFile, container, 6, userdata, userId, vm::null);
+	return savedata_op(ppu, SAVEDATA_OP_AUTO_LOAD, version, dirName, errDialog, vm::null, setBuf, vm::null, vm::null, funcStat, funcFile, container, 6, userdata, userId, vm::null);
 }
 
 s32 cellSaveDataUserListAutoSave(
-	PPUThread& CPU,
+	PPUThread& ppu,
 	u32 version,
 	u32 userId,
 	u32 errDialog,
@@ -901,11 +936,11 @@ s32 cellSaveDataUserListAutoSave(
 	cellSysutil.Error("cellSaveDataUserListAutoSave(version=%d, userId=%d, errDialog=%d, setList=*0x%x, setBuf=*0x%x, funcFixed=*0x%x, funcStat=*0x%x, funcFile=*0x%x, container=0x%x, userdata=*0x%x)",
 		version, userId, errDialog, setList, setBuf, funcFixed, funcStat, funcFile, container, userdata);
 
-	return savedata_op(CPU, SAVEDATA_OP_LIST_AUTO_SAVE, version, vm::null, errDialog, setList, setBuf, vm::null, funcFixed, funcStat, funcFile, container, 6, userdata, userId, vm::null);
+	return savedata_op(ppu, SAVEDATA_OP_LIST_AUTO_SAVE, version, vm::null, errDialog, setList, setBuf, vm::null, funcFixed, funcStat, funcFile, container, 6, userdata, userId, vm::null);
 }
 
 s32 cellSaveDataUserListAutoLoad(
-	PPUThread& CPU,
+	PPUThread& ppu,
 	u32 version,
 	u32 userId,
 	u32 errDialog,
@@ -920,11 +955,11 @@ s32 cellSaveDataUserListAutoLoad(
 	cellSysutil.Error("cellSaveDataUserListAutoLoad(version=%d, userId=%d, errDialog=%d, setList=*0x%x, setBuf=*0x%x, funcFixed=*0x%x, funcStat=*0x%x, funcFile=*0x%x, container=0x%x, userdata=*0x%x)",
 		version, userId, errDialog, setList, setBuf, funcFixed, funcStat, funcFile, container, userdata);
 
-	return savedata_op(CPU, SAVEDATA_OP_LIST_AUTO_LOAD, version, vm::null, errDialog, setList, setBuf, vm::null, funcFixed, funcStat, funcFile, container, 6, userdata, userId, vm::null);
+	return savedata_op(ppu, SAVEDATA_OP_LIST_AUTO_LOAD, version, vm::null, errDialog, setList, setBuf, vm::null, funcFixed, funcStat, funcFile, container, 6, userdata, userId, vm::null);
 }
 
 s32 cellSaveDataUserFixedDelete(
-	PPUThread& CPU,
+	PPUThread& ppu,
 	u32 userId,
 	vm::ptr<CellSaveDataSetList> setList,
 	vm::ptr<CellSaveDataSetBuf> setBuf,
@@ -949,7 +984,7 @@ void cellSaveDataEnableOverlay(s32 enable)
 
 // Functions (Extensions) 
 s32 cellSaveDataListDelete(
-	PPUThread& CPU,
+	PPUThread& ppu,
 	vm::ptr<CellSaveDataSetList> setList,
 	vm::ptr<CellSaveDataSetBuf> setBuf,
 	vm::ptr<CellSaveDataListCallback> funcList,
@@ -957,59 +992,59 @@ s32 cellSaveDataListDelete(
 	u32 container,
 	vm::ptr<void> userdata)
 {
-	UNIMPLEMENTED_FUNC(cellSysutil);
+	UNIMPLEMENTED_FUNC(cellSaveData);
 
 	return CELL_OK;
 }
 
 s32 cellSaveDataListImport(
-	PPUThread& CPU,
+	PPUThread& ppu,
 	vm::ptr<CellSaveDataSetList> setList,
 	u32 maxSizeKB,
 	vm::ptr<CellSaveDataDoneCallback> funcDone,
 	u32 container,
 	vm::ptr<void> userdata)
 {
-	UNIMPLEMENTED_FUNC(cellSysutil);
+	UNIMPLEMENTED_FUNC(cellSaveData);
 
 	return CELL_OK;
 }
 
 s32 cellSaveDataListExport(
-	PPUThread& CPU,
+	PPUThread& ppu,
 	vm::ptr<CellSaveDataSetList> setList,
 	u32 maxSizeKB,
 	vm::ptr<CellSaveDataDoneCallback> funcDone,
 	u32 container,
 	vm::ptr<void> userdata)
 {
-	UNIMPLEMENTED_FUNC(cellSysutil);
+	UNIMPLEMENTED_FUNC(cellSaveData);
 
 	return CELL_OK;
 }
 
 s32 cellSaveDataFixedImport(
-	PPUThread& CPU,
+	PPUThread& ppu,
 	vm::cptr<char> dirName,
 	u32 maxSizeKB,
 	vm::ptr<CellSaveDataDoneCallback> funcDone,
 	u32 container,
 	vm::ptr<void> userdata)
 {
-	UNIMPLEMENTED_FUNC(cellSysutil);
+	UNIMPLEMENTED_FUNC(cellSaveData);
 
 	return CELL_OK;
 }
 
 s32 cellSaveDataFixedExport(
-	PPUThread& CPU,
+	PPUThread& ppu,
 	vm::cptr<char> dirName,
 	u32 maxSizeKB,
 	vm::ptr<CellSaveDataDoneCallback> funcDone,
 	u32 container,
 	vm::ptr<void> userdata)
 {
-	UNIMPLEMENTED_FUNC(cellSysutil);
+	UNIMPLEMENTED_FUNC(cellSaveData);
 
 	return CELL_OK;
 }
@@ -1021,13 +1056,13 @@ s32 cellSaveDataGetListItem(
 	vm::ptr<u32> bind,
 	vm::ptr<u32> sizeKB)
 {
-	UNIMPLEMENTED_FUNC(cellSysutil);
+	UNIMPLEMENTED_FUNC(cellSaveData);
 
 	return CELL_OK;
 }
 
 s32 cellSaveDataUserListDelete(
-	PPUThread& CPU,
+	PPUThread& ppu,
 	u32 userId,
 	vm::ptr<CellSaveDataSetList> setList,
 	vm::ptr<CellSaveDataSetBuf> setBuf,
@@ -1036,13 +1071,13 @@ s32 cellSaveDataUserListDelete(
 	u32 container,
 	vm::ptr<void> userdata)
 {
-	UNIMPLEMENTED_FUNC(cellSysutil);
+	UNIMPLEMENTED_FUNC(cellSaveData);
 
 	return CELL_OK;
 }
 
 s32 cellSaveDataUserListImport(
-	PPUThread& CPU,
+	PPUThread& ppu,
 	u32 userId,
 	vm::ptr<CellSaveDataSetList> setList,
 	u32 maxSizeKB,
@@ -1050,13 +1085,13 @@ s32 cellSaveDataUserListImport(
 	u32 container,
 	vm::ptr<void> userdata)
 {
-	UNIMPLEMENTED_FUNC(cellSysutil);
+	UNIMPLEMENTED_FUNC(cellSaveData);
 
 	return CELL_OK;
 }
 
 s32 cellSaveDataUserListExport(
-	PPUThread& CPU,
+	PPUThread& ppu,
 	u32 userId,
 	vm::ptr<CellSaveDataSetList> setList,
 	u32 maxSizeKB,
@@ -1064,13 +1099,13 @@ s32 cellSaveDataUserListExport(
 	u32 container,
 	vm::ptr<void> userdata)
 {
-	UNIMPLEMENTED_FUNC(cellSysutil);
+	UNIMPLEMENTED_FUNC(cellSaveData);
 
 	return CELL_OK;
 }
 
 s32 cellSaveDataUserFixedImport(
-	PPUThread& CPU,
+	PPUThread& ppu,
 	u32 userId,
 	vm::cptr<char> dirName,
 	u32 maxSizeKB,
@@ -1078,13 +1113,13 @@ s32 cellSaveDataUserFixedImport(
 	u32 container,
 	vm::ptr<void> userdata)
 {
-	UNIMPLEMENTED_FUNC(cellSysutil);
+	UNIMPLEMENTED_FUNC(cellSaveData);
 
 	return CELL_OK;
 }
 
 s32 cellSaveDataUserFixedExport(
-	PPUThread& CPU,
+	PPUThread& ppu,
 	u32 userId,
 	vm::cptr<char> dirName,
 	u32 maxSizeKB,
@@ -1092,7 +1127,7 @@ s32 cellSaveDataUserFixedExport(
 	u32 container,
 	vm::ptr<void> userdata)
 {
-	UNIMPLEMENTED_FUNC(cellSysutil);
+	UNIMPLEMENTED_FUNC(cellSaveData);
 
 	return CELL_OK;
 }
@@ -1105,7 +1140,7 @@ s32 cellSaveDataUserGetListItem(
 	vm::ptr<u32> bind,
 	vm::ptr<u32> sizeKB)
 {
-	UNIMPLEMENTED_FUNC(cellSysutil);
+	UNIMPLEMENTED_FUNC(cellSaveData);
 
 	return CELL_OK;
 }
@@ -1113,11 +1148,10 @@ s32 cellSaveDataUserGetListItem(
 void cellSysutil_SaveData_init()
 {
 	// libsysutil functions:
-
 	REG_FUNC(cellSysutil, cellSaveDataEnableOverlay);
 
 	REG_FUNC(cellSysutil, cellSaveDataDelete2);
-	//REG_FUNC(cellSysutil, cellSaveDataDelete);
+	REG_FUNC(cellSysutil, cellSaveDataDelete);
 	REG_FUNC(cellSysutil, cellSaveDataUserFixedDelete);
 	REG_FUNC(cellSysutil, cellSaveDataFixedDelete);
 
@@ -1125,15 +1159,15 @@ void cellSysutil_SaveData_init()
 	REG_FUNC(cellSysutil, cellSaveDataUserFixedSave);
 	REG_FUNC(cellSysutil, cellSaveDataFixedLoad2);
 	REG_FUNC(cellSysutil, cellSaveDataFixedSave2);
-	//REG_FUNC(cellSysutil, cellSaveDataFixedLoad);
-	//REG_FUNC(cellSysutil, cellSaveDataFixedSave);
+	REG_FUNC(cellSysutil, cellSaveDataFixedLoad);
+	REG_FUNC(cellSysutil, cellSaveDataFixedSave);
 
 	REG_FUNC(cellSysutil, cellSaveDataUserListLoad);
 	REG_FUNC(cellSysutil, cellSaveDataUserListSave);
 	REG_FUNC(cellSysutil, cellSaveDataListLoad2);
 	REG_FUNC(cellSysutil, cellSaveDataListSave2);
-	//REG_FUNC(cellSysutil, cellSaveDataListLoad);
-	//REG_FUNC(cellSysutil, cellSaveDataListSave);
+	REG_FUNC(cellSysutil, cellSaveDataListLoad);
+	REG_FUNC(cellSysutil, cellSaveDataListSave);
 
 	REG_FUNC(cellSysutil, cellSaveDataUserListAutoLoad);
 	REG_FUNC(cellSysutil, cellSaveDataUserListAutoSave);
@@ -1144,22 +1178,38 @@ void cellSysutil_SaveData_init()
 	REG_FUNC(cellSysutil, cellSaveDataUserAutoSave);
 	REG_FUNC(cellSysutil, cellSaveDataAutoLoad2);
 	REG_FUNC(cellSysutil, cellSaveDataAutoSave2);
-	//REG_FUNC(cellSysutil, cellSaveDataAutoLoad);
-	//REG_FUNC(cellSysutil, cellSaveDataAutoSave);
-
-	// libsysutil_savedata functions:
-	REG_FUNC(cellSysutil, cellSaveDataUserGetListItem);
-	REG_FUNC(cellSysutil, cellSaveDataGetListItem);
-	REG_FUNC(cellSysutil, cellSaveDataUserListDelete);
-	REG_FUNC(cellSysutil, cellSaveDataListDelete);
-	REG_FUNC(cellSysutil, cellSaveDataUserFixedExport);
-	REG_FUNC(cellSysutil, cellSaveDataUserFixedImport);
-	REG_FUNC(cellSysutil, cellSaveDataUserListExport);
-	REG_FUNC(cellSysutil, cellSaveDataUserListImport);
-	REG_FUNC(cellSysutil, cellSaveDataFixedExport);
-	REG_FUNC(cellSysutil, cellSaveDataFixedImport);
-	REG_FUNC(cellSysutil, cellSaveDataListExport);
-	REG_FUNC(cellSysutil, cellSaveDataListImport);
-
-	// libsysutil_savedata_psp functions:
+	REG_FUNC(cellSysutil, cellSaveDataAutoLoad);
+	REG_FUNC(cellSysutil, cellSaveDataAutoSave);
 }
+
+Module cellSaveData("cellSaveData", []()
+{
+	// libsysutil_savedata functions:
+	REG_FUNC(cellSaveData, cellSaveDataUserGetListItem);
+	REG_FUNC(cellSaveData, cellSaveDataGetListItem);
+	REG_FUNC(cellSaveData, cellSaveDataUserListDelete);
+	REG_FUNC(cellSaveData, cellSaveDataListDelete);
+	REG_FUNC(cellSaveData, cellSaveDataUserFixedExport);
+	REG_FUNC(cellSaveData, cellSaveDataUserFixedImport);
+	REG_FUNC(cellSaveData, cellSaveDataUserListExport);
+	REG_FUNC(cellSaveData, cellSaveDataUserListImport);
+	REG_FUNC(cellSaveData, cellSaveDataFixedExport);
+	REG_FUNC(cellSaveData, cellSaveDataFixedImport);
+	REG_FUNC(cellSaveData, cellSaveDataListExport);
+	REG_FUNC(cellSaveData, cellSaveDataListImport);
+});
+
+Module cellMinisSaveData("cellMinisSaveData", []()
+{
+	// libsysutil_savedata_psp functions:
+	//REG_FUNC(cellMinisSaveData, cellMinisSaveDataDelete); // 0x6eb168b3
+	//REG_FUNC(cellMinisSaveData, cellMinisSaveDataListDelete); // 0xe63eb964
+
+	//REG_FUNC(cellMinisSaveData, cellMinisSaveDataFixedLoad); // 0x66515c18
+	//REG_FUNC(cellMinisSaveData, cellMinisSaveDataFixedSave); // 0xf3f974b8
+	//REG_FUNC(cellMinisSaveData, cellMinisSaveDataListLoad); // 0xba161d45
+	//REG_FUNC(cellMinisSaveData, cellMinisSaveDataListSave); // 0xa342a73f
+	//REG_FUNC(cellMinisSaveData, cellMinisSaveDataListAutoLoad); // 0x22f2a553
+	//REG_FUNC(cellMinisSaveData, cellMinisSaveDataListAutoSave); // 0xa931356e
+	//REG_FUNC(cellMinisSaveData, cellMinisSaveDataAutoLoad); // 0xfc3045d9
+});

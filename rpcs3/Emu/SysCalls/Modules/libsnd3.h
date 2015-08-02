@@ -1,6 +1,6 @@
 #pragma once
 
-//libsnd3 Error Codes
+// Error Codes
 enum
 {
 	CELL_SND3_ERROR_PARAM = 0x80310301,
@@ -21,17 +21,6 @@ enum
 	CELL_SND3_ERROR_OUTPUTMODE = 0x80310310,
 };
 
-//libsnd3 datatypes
-struct CellSnd3DataCtx
-{
-	s8 system;  //[CELL_SND3_DATA_CTX_SIZE], unknown identifier
-};
-
-struct CellSnd3SmfCtx
-{
-	s8 system;  //[CELL_SND3_SMF_CTX_SIZE],  unknown identifier
-};
-
 struct CellSnd3KeyOnParam
 {
 	u8 vel;
@@ -42,13 +31,25 @@ struct CellSnd3KeyOnParam
 
 struct CellSnd3VoiceBitCtx
 {
-	be_t<u32> core;  //[CELL_SND3_MAX_CORE],  unknown identifier
+	be_t<u32> core[4];
+};
+
+struct CellSnd3DataCtx
+{
+	s8 system[32];
+};
+
+struct CellSnd3SmfCtx
+{
+	s8 system[352];
 };
 
 struct CellSnd3RequestQueueCtx
 {
-	void *frontQueue;
+	vm::bptr<void> frontQueue;
 	be_t<u32> frontQueueSize;
-	void *rearQueue;
+	vm::bptr<void> rearQueue;
 	be_t<u32> rearQueueSize;
 };
+
+extern Module libsnd3;

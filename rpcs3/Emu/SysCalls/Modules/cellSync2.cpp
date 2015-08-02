@@ -251,6 +251,13 @@ s32 cellSync2QueueGetDepth()
 
 Module cellSync2("cellSync2", []()
 {
+	//REG_VARIABLE(cellSync2, gCellSync2CallerThreadTypePpuThread);
+	//REG_VARIABLE(cellSync2, gCellSync2NotifierPpuThread);
+	//REG_VARIABLE(cellSync2, gCellSync2CallerThreadTypePpuFiber);
+	//REG_VARIABLE(cellSync2, gCellSync2NotifierPpuFiber);
+	//REG_VARIABLE(cellSync2, gCellSync2NotifierSpursTask);
+	//REG_VARIABLE(cellSync2, gCellSync2NotifierSpursJobQueueJob);
+
 	REG_FUNC(cellSync2, _cellSync2MutexAttributeInitialize);
 	REG_FUNC(cellSync2, cellSync2MutexEstimateBufferSize);
 	REG_FUNC(cellSync2, cellSync2MutexInitialize);

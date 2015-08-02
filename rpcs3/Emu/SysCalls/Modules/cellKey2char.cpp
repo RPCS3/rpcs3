@@ -1,8 +1,8 @@
 #include "stdafx.h"
-#if 0
+#include "Emu/Memory/Memory.h"
+#include "Emu/SysCalls/Modules.h"
 
-void cellKey2char_init();
-Module cellKey2char(0x0021, cellKey2char_init);
+extern Module cellKey2char;
 
 // Return Codes
 enum
@@ -16,42 +16,41 @@ enum
 	CELL_K2C_ERROR_OTHER               = 0x80121306,
 };
 
-int cellKey2CharOpen()
+s32 cellKey2CharOpen()
 {
 	UNIMPLEMENTED_FUNC(cellKey2char);
 	return CELL_OK;
 }
 
-int cellKey2CharClose()
+s32 cellKey2CharClose()
 {
 	UNIMPLEMENTED_FUNC(cellKey2char);
 	return CELL_OK;
 }
 
-int cellKey2CharGetChar()
+s32 cellKey2CharGetChar()
 {
 	UNIMPLEMENTED_FUNC(cellKey2char);
 	return CELL_OK;
 }
 
-int cellKey2CharSetMode()
+s32 cellKey2CharSetMode()
 {
 	UNIMPLEMENTED_FUNC(cellKey2char);
 	return CELL_OK;
 }
 
-int cellKey2CharSetArrangement()
+s32 cellKey2CharSetArrangement()
 {
 	UNIMPLEMENTED_FUNC(cellKey2char);
 	return CELL_OK;
 }
 
-void cellKey2char_init()
+Module cellKey2char("cellKey2char", []()
 {
 	REG_FUNC(cellKey2char, cellKey2CharOpen);
 	REG_FUNC(cellKey2char, cellKey2CharClose);
 	REG_FUNC(cellKey2char, cellKey2CharGetChar);
 	REG_FUNC(cellKey2char, cellKey2CharSetMode);
 	REG_FUNC(cellKey2char, cellKey2CharSetArrangement);
-}
-#endif
+});

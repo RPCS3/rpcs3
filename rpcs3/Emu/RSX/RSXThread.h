@@ -5,7 +5,7 @@
 #include "RSXFragmentProgram.h"
 
 #include <stack>
-#include "Utilities/SSemaphore.h"
+#include "Utilities/Semaphore.h"
 #include "Utilities/Thread.h"
 #include "Utilities/Timer.h"
 
@@ -155,8 +155,7 @@ public:
 
 public:
 	std::mutex m_cs_main;
-	SSemaphore m_sem_flush;
-	SSemaphore m_sem_flip;
+	semaphore_t m_sem_flip;
 	u64 m_last_flip_time;
 	vm::ptr<void(u32)> m_flip_handler;
 	vm::ptr<void(u32)> m_user_handler;

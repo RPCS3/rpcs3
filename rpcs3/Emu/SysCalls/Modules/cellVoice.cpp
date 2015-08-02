@@ -3,8 +3,6 @@
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
 
-namespace vm { using namespace ps3; }
-
 extern Module cellVoice;
 
 // Error Codes
@@ -222,6 +220,11 @@ s32 cellVoiceWriteToIPortEx()
 	return CELL_OK;
 }
 
+s32 cellVoiceWriteToIPortEx2()
+{
+	throw EXCEPTION("");
+}
+
 s32 cellVoiceReadFromOPort()
 {
 	UNIMPLEMENTED_FUNC(cellVoice);
@@ -268,6 +271,7 @@ Module cellVoice("cellVoice", []()
 	REG_FUNC(cellVoice, cellVoiceUpdatePort);
 	REG_FUNC(cellVoice, cellVoiceWriteToIPort);
 	REG_FUNC(cellVoice, cellVoiceWriteToIPortEx);
+	REG_FUNC(cellVoice, cellVoiceWriteToIPortEx2);
 	REG_FUNC(cellVoice, cellVoiceReadFromOPort);
 	REG_FUNC(cellVoice, cellVoiceDebugTopology);
 });

@@ -117,7 +117,7 @@ struct SceNpTicketVersion
 	le_t<u16> minor;
 };
 
-using SceNpAuthCallback = func_def<s32(s32 id, s32 result, vm::ptr<void> arg)>;
+using SceNpAuthCallback = s32(s32 id, s32 result, vm::ptr<void> arg);
 
 struct SceNpAuthRequestParameter
 {

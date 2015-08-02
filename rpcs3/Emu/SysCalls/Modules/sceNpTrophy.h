@@ -75,18 +75,6 @@ enum SceNpTrophyGrade
 	SCE_NP_TROPHY_GRADE_BRONZE         = 4,
 };
 
-struct SceNpTrophyInternal
-{
-	bool m_bInitialized;
-
-	SceNpTrophyInternal()
-		: m_bInitialized(false)
-	{
-	}
-};
-
-extern std::unique_ptr<SceNpTrophyInternal> g_sceNpTrophy;
-
 struct SceNpTrophyGameDetails
 {
 	be_t<u32> numTrophies;
@@ -148,4 +136,4 @@ enum
 	SCE_NP_TROPHY_STATUS_CHANGES_DETECTED    = 9,
 };
 
-using SceNpTrophyStatusCallback = func_def<s32(u32 context, u32 status, s32 completed, s32 total, vm::ptr<void> arg)>;
+using SceNpTrophyStatusCallback = s32(u32 context, u32 status, s32 completed, s32 total, vm::ptr<void> arg);

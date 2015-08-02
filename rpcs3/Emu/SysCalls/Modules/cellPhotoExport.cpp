@@ -1,8 +1,8 @@
 #include "stdafx.h"
-#if 0
+#include "Emu/Memory/Memory.h"
+#include "Emu/SysCalls/Modules.h"
 
-void cellPhotoExport_init();
-Module cellPhotoExport(0xf029, cellPhotoExport_init);
+extern Module cellPhotoExport;
 
 // Return Codes
 enum
@@ -21,43 +21,69 @@ enum
 	CELL_PHOTO_EXPORT_UTIL_ERROR_INITIALIZE   = 0x8002c20a,
 };
 
-int cellPhotoExportInitialize()
+s32 cellPhotoInitialize()
 {
 	UNIMPLEMENTED_FUNC(cellPhotoExport);
 	return CELL_OK;
 }
 
-int cellPhotoExportInitialize2()
+s32 cellPhotoFinalize()
 {
 	UNIMPLEMENTED_FUNC(cellPhotoExport);
 	return CELL_OK;
 }
 
-int cellPhotoExportFinalize()
+s32 cellPhotoRegistFromFile()
 {
 	UNIMPLEMENTED_FUNC(cellPhotoExport);
 	return CELL_OK;
 }
 
-int cellPhotoExportFromFile()
+s32 cellPhotoExportInitialize()
 {
 	UNIMPLEMENTED_FUNC(cellPhotoExport);
 	return CELL_OK;
 }
 
-int cellPhotoExportProgress()
+s32 cellPhotoExportInitialize2()
 {
 	UNIMPLEMENTED_FUNC(cellPhotoExport);
 	return CELL_OK;
 }
 
-void cellPhotoExport_init()
+s32 cellPhotoExportFinalize()
 {
+	UNIMPLEMENTED_FUNC(cellPhotoExport);
+	return CELL_OK;
+}
+
+s32 cellPhotoExportFromFile()
+{
+	UNIMPLEMENTED_FUNC(cellPhotoExport);
+	return CELL_OK;
+}
+
+s32 cellPhotoExportFromFileWithCopy()
+{
+	UNIMPLEMENTED_FUNC(cellPhotoExport);
+	return CELL_OK;
+}
+
+s32 cellPhotoExportProgress()
+{
+	UNIMPLEMENTED_FUNC(cellPhotoExport);
+	return CELL_OK;
+}
+
+Module cellPhotoExport("cellPhotoExport", []()
+{
+	REG_FUNC(cellPhotoExport, cellPhotoInitialize);
+	REG_FUNC(cellPhotoExport, cellPhotoFinalize);
+	REG_FUNC(cellPhotoExport, cellPhotoRegistFromFile);
 	REG_FUNC(cellPhotoExport, cellPhotoExportInitialize);
 	REG_FUNC(cellPhotoExport, cellPhotoExportInitialize2);
 	REG_FUNC(cellPhotoExport, cellPhotoExportFinalize);
 	REG_FUNC(cellPhotoExport, cellPhotoExportFromFile);
-	//cellPhotoExport.AddFunc(, cellPhotoExportFromFileWithCopy);
+	REG_FUNC(cellPhotoExport, cellPhotoExportFromFileWithCopy);
 	REG_FUNC(cellPhotoExport, cellPhotoExportProgress);
-}
-#endif
+});

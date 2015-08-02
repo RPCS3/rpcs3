@@ -2,8 +2,6 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/SysCalls/Modules.h"
 
-namespace vm { using namespace ps3; }
-
 extern Module cellSysutilAp;
 
 // Return Codes

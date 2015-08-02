@@ -165,7 +165,7 @@ struct CellDmuxType
 struct CellDmuxPamfSpecificInfo
 {
 	be_t<u32> thisSize;
-	bool programEndCodeCb;
+	b8 programEndCodeCb;
 };
 
 struct CellDmuxType2
@@ -198,20 +198,20 @@ struct CellDmuxResourceEx
 /*
 struct CellDmuxResource2Ex
 {
-	bool isResourceEx; //true
+	b8 isResourceEx; //true
 	CellDmuxResourceEx resourceEx;
 };
 
 struct CellDmuxResource2NoEx
 {
-	bool isResourceEx; //false
+	b8 isResourceEx; //false
 	CellDmuxResource resource;
 };
 */
 
 struct CellDmuxResource2
 {
-	bool isResourceEx;
+	b8 isResourceEx;
 	be_t<u32> memAddr;
 	be_t<u32> memSize;
 	be_t<u32> ppuThreadPriority;
@@ -219,7 +219,7 @@ struct CellDmuxResource2
 	be_t<u32> shit[4];
 };
 
-using CellDmuxCbMsg = func_def<u32(u32 demuxerHandle, vm::ptr<CellDmuxMsg> demuxerMsg, u32 cbArg)>;
+using CellDmuxCbMsg = u32(u32 demuxerHandle, vm::ptr<CellDmuxMsg> demuxerMsg, u32 cbArg);
 
 struct CellDmuxCb
 {
@@ -227,7 +227,7 @@ struct CellDmuxCb
 	be_t<u32> cbArg;
 };
 
-using CellDmuxCbEsMsg = func_def<u32(u32 demuxerHandle, u32 esHandle, vm::ptr<CellDmuxEsMsg> esMsg, u32 cbArg)>;
+using CellDmuxCbEsMsg = u32(u32 demuxerHandle, u32 esHandle, vm::ptr<CellDmuxEsMsg> esMsg, u32 cbArg);
 
 struct CellDmuxEsCb
 {
@@ -270,7 +270,7 @@ struct CellDmuxAuInfoEx
 	be_t<u32> auAddr;
 	be_t<u32> auSize;
 	be_t<u32> reserved;
-	bool isRap;
+	b8 isRap;
 	be_t<u64> userData;
 	CellCodecTimeStamp pts;
 	CellCodecTimeStamp dts;

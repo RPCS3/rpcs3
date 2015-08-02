@@ -74,6 +74,11 @@ s32 cellGifDecOpen(
 	return CELL_OK;
 }
 
+s32 cellGifDecExtOpen()
+{
+	throw EXCEPTION("");
+}
+
 s32 cellGifDecReadHeader(
 	CellGifDecMainHandle mainHandle,
 	CellGifDecSubHandle subHandle,
@@ -131,6 +136,11 @@ s32 cellGifDecReadHeader(
 	return CELL_OK;
 }
 
+s32 cellGifDecExtReadHeader()
+{
+	throw EXCEPTION("");
+}
+
 s32 cellGifDecSetParameter(
 	CellGifDecMainHandle mainHandle,
 	CellGifDecSubHandle subHandle,
@@ -165,6 +175,11 @@ s32 cellGifDecSetParameter(
 	*outParam = current_outParam;
 
 	return CELL_OK;
+}
+
+s32 cellGifDecExtSetParameter()
+{
+	throw EXCEPTION("");
 }
 
 s32 cellGifDecDecodeData(
@@ -293,6 +308,11 @@ s32 cellGifDecDecodeData(
 	return CELL_OK;
 }
 
+s32 cellGifDecExtDecodeData()
+{
+	throw EXCEPTION("");
+}
+
 s32 cellGifDecClose(CellGifDecMainHandle mainHandle, CellGifDecSubHandle subHandle)
 {
 	cellGifDec.Warning("cellGifDecClose(mainHandle=0x%x, subHandle=0x%x)", mainHandle, subHandle);
@@ -327,8 +347,8 @@ Module cellGifDec("cellGifDec", []()
 	REG_FUNC(cellGifDec, cellGifDecClose);
 	REG_FUNC(cellGifDec, cellGifDecDestroy);
 	
-	/*REG_FUNC(cellGifDec, cellGifDecExtOpen);
+	REG_FUNC(cellGifDec, cellGifDecExtOpen);
 	REG_FUNC(cellGifDec, cellGifDecExtReadHeader);
 	REG_FUNC(cellGifDec, cellGifDecExtSetParameter);
-	REG_FUNC(cellGifDec, cellGifDecExtDecodeData);*/
+	REG_FUNC(cellGifDec, cellGifDecExtDecodeData);
 });

@@ -217,7 +217,7 @@ enum
 	// SCE_NP_MATCHING2_NET_H_ERRNO_BASE = 0x800225XX,
 };
 
-using SceNpBasicEventHandler = func_def<s32(s32 event, s32 retCode, u32 reqId, vm::ptr<void> arg)>;
+using SceNpBasicEventHandler = s32(s32 event, s32 retCode, u32 reqId, vm::ptr<void> arg);
 
 // NP Manager Utility statuses
 enum
@@ -807,37 +807,6 @@ enum
 	SCE_NP_SIGNALING_CTX_MAX = 8,
 };
 
-struct SceNpInternal
-{
-	bool m_bSceNpInitialized;
-	bool m_bScoreInitialized;
-	bool m_bLookupInitialized;
-
-	SceNpInternal()
-		: m_bSceNpInitialized(false),
-		  m_bScoreInitialized(false),
-		  m_bLookupInitialized(false)
-	{
-	}
-};
-
-struct SceNp2Internal
-{
-	bool m_bSceNp2Initialized;
-	bool m_bSceNp2Matching2Initialized;
-	bool m_bSceNp2Matching2Initialized2;
-
-	SceNp2Internal()
-		: m_bSceNp2Initialized(false),
-		  m_bSceNp2Matching2Initialized(false),
-		  m_bSceNp2Matching2Initialized2(false)
-	{
-	}
-};
-
-extern std::unique_ptr<SceNpInternal> g_sceNp;
-extern std::unique_ptr<SceNp2Internal> g_sceNp2;
-
 // NP communication ID structure
 struct SceNpCommunicationId
 {
@@ -954,7 +923,7 @@ struct SceNpBasicExtendedAttachmentData
 	be_t<u64> msgId;
 	SceNpBasicAttachmentData data;
 	be_t<u32> userAction;
-	bool markedAsUsed;
+	b8 markedAsUsed;
 	//be_t<u8> reserved[3];
 };
 
@@ -1130,7 +1099,7 @@ struct SceNpMatching2World
 	be_t<u32> curNumOfTotalLobbyMember;
 	be_t<u32> curNumOfRoom;
 	be_t<u32> curNumOfTotalRoomMember;
-	bool withEntitlementId;
+	b8 withEntitlementId;
 	SceNpEntitlementId entitlementId;
 	u8 padding[3];
 };
@@ -1234,9 +1203,9 @@ struct SceNpMatching2GroupLabel
 struct SceNpMatching2RoomGroupConfig
 {
 	be_t<u32> slotNum;
-	bool withLabel;
+	b8 withLabel;
 	SceNpMatching2GroupLabel label;
-	bool withPassword;
+	b8 withPassword;
 	u8 padding[2];
 };
 
@@ -1244,7 +1213,7 @@ struct SceNpMatching2RoomGroupConfig
 struct SceNpMatching2RoomGroupPasswordConfig
 {
 	u8 groupId;
-	bool withPassword;
+	b8 withPassword;
 	u8 padding[1];
 };
 
@@ -1252,8 +1221,8 @@ struct SceNpMatching2RoomGroupPasswordConfig
 struct SceNpMatching2RoomGroup
 {
 	u8 groupId;
-	bool withPassword;
-	bool withLabel;
+	b8 withPassword;
+	b8 withLabel;
 	u8 padding[1];
 	SceNpMatching2GroupLabel label;
 	be_t<u32> slotNum;
@@ -1652,7 +1621,7 @@ struct SceNpMatching2SendRoomChatMessageRequest
 // Room chat message send request response data
 struct SceNpMatching2SendRoomChatMessageResponse
 {
-	bool filtered;
+	b8 filtered;
 };
 
 // Internal room data configuration request parameters
@@ -1778,7 +1747,7 @@ struct SceNpMatching2SendLobbyChatMessageRequest
 // Lobby chat message sending response data
 struct SceNpMatching2SendLobbyChatMessageResponse
 {
-	bool filtered;
+	b8 filtered;
 };
 
 // Lobby invitation message sending request parameter
@@ -1831,7 +1800,7 @@ struct SceNpMatching2GetLobbyMemberDataInternalListRequest
 	be_t<u32> memberIdNum;
 	be_t<u16> attrId;
 	be_t<u32> attrIdNum;
-	bool extendedData;
+	b8 extendedData;
 	u8 padding[7];
 };
 
@@ -1925,7 +1894,7 @@ struct SceNpMatching2RoomMemberDataInternalUpdateInfo
 // Room message information
 struct SceNpMatching2RoomMessageInfo
 {
-	bool filtered;
+	b8 filtered;
 	u8 castType;
 	u8 padding[2];
 	SceNpMatching2RoomMessageDestination dst;
@@ -1968,7 +1937,7 @@ struct SceNpMatching2LobbyMemberDataInternalUpdateInfo
 // Lobby message information
 struct SceNpMatching2LobbyMessageInfo
 {
-	bool filtered;
+	b8 filtered;
 	u8 castType;
 	u8 padding[2];
 	SceNpMatching2LobbyMessageDestination dst;
@@ -1998,8 +1967,8 @@ struct SceNpMatching2UtilityInitParam
 {
 	be_t<u32> containerId;
 	be_t<u32> requestCbQueueLen;
-	be_t<u32> sessionEventCbQueueLen;;
-	be_t<u32> sessionMsgCbQueueLen;;
+	be_t<u32> sessionEventCbQueueLen;
+	be_t<u32> sessionMsgCbQueueLen;
 	u8 reserved[16];
 };
 
@@ -2007,8 +1976,8 @@ struct SceNpMatching2UtilityInitParam
 struct SceNpMatching2MemoryInfo
 {
 	be_t<u32> totalMemSize;
-	be_t<u32> curMemUsage;;
-	be_t<u32> maxMemUsage;;
+	be_t<u32> curMemUsage;
+	be_t<u32> maxMemUsage;
 	u8 reserved[12];
 };
 
@@ -2016,14 +1985,14 @@ struct SceNpMatching2MemoryInfo
 struct SceNpMatching2CbQueueInfo
 {
 	be_t<u32> requestCbQueueLen;
-	be_t<u32> curRequestCbQueueLen;;
-	be_t<u32> maxRequestCbQueueLen;;
-	be_t<u32> sessionEventCbQueueLen;;
-	be_t<u32> curSessionEventCbQueueLen;;
-	be_t<u32> maxSessionEventCbQueueLen;;
-	be_t<u32> sessionMsgCbQueueLen;;
-	be_t<u32> curSessionMsgCbQueueLen;;
-	be_t<u32> maxSessionMsgCbQueueLen;;
+	be_t<u32> curRequestCbQueueLen;
+	be_t<u32> maxRequestCbQueueLen;
+	be_t<u32> sessionEventCbQueueLen;
+	be_t<u32> curSessionEventCbQueueLen;
+	be_t<u32> maxSessionEventCbQueueLen;
+	be_t<u32> sessionMsgCbQueueLen;
+	be_t<u32> curSessionMsgCbQueueLen;
+	be_t<u32> maxSessionMsgCbQueueLen;
 	u8 reserved[12];
 };
 

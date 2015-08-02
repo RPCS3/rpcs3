@@ -171,7 +171,7 @@ struct CellVdecPicFormat2
 	be_t<u32> unk1;
 };
 
-using CellVdecCbMsg = func_def<u32(u32 handle, CellVdecMsgType msgType, s32 msgData, u32 cbArg)>;
+using CellVdecCbMsg = u32(u32 handle, CellVdecMsgType msgType, s32 msgData, u32 cbArg);
 
 // Callback Function Information
 struct CellVdecCb
@@ -208,7 +208,7 @@ struct CellVdecAvcSpecificInfo
 	be_t<u32> thisSize;
 	be_t<u16> maxDecodedFrameWidth;
 	be_t<u16> maxDecodedFrameHeight;
-	bool disableDeblockingFilter;
+	b8 disableDeblockingFilter;
 	u8 numberOfDecodedFrameBuffer;
 };
 
@@ -331,26 +331,26 @@ struct CellVdecAvcInfo
 	be_t<u16> horizontalSize;
 	be_t<u16> verticalSize;
 	AVC_PictureType pictureType[2];
-	bool idrPictureFlag;
+	b8 idrPictureFlag;
 	AVC_aspect_ratio_idc aspect_ratio_idc;
 	be_t<u16> sar_height;
 	be_t<u16> sar_width;
 	AVC_pic_struct pic_struct;
 	be_t<s16> picOrderCount[2];
-	bool vui_parameters_present_flag;
-	bool frame_mbs_only_flag;
-	bool video_signal_type_present_flag;
+	b8 vui_parameters_present_flag;
+	b8 frame_mbs_only_flag;
+	b8 video_signal_type_present_flag;
 	AVC_video_format video_format;
-	bool video_full_range_flag;
-	bool colour_description_present_flag;
+	b8 video_full_range_flag;
+	b8 colour_description_present_flag;
 	AVC_colour_primaries colour_primaries;
 	AVC_transfer_characteristics transfer_characteristics;
 	AVC_matrix_coefficients matrix_coefficients;
-	bool timing_info_present_flag;
+	b8 timing_info_present_flag;
 	AVC_FrameRateCode frameRateCode; // ???
-	bool fixed_frame_rate_flag;
-	bool low_delay_hrd_flag;
-	bool entropy_coding_mode_flag;
+	b8 fixed_frame_rate_flag;
+	b8 low_delay_hrd_flag;
+	b8 entropy_coding_mode_flag;
 	be_t<u16> nalUnitPresentFlags;
 	u8 ccDataLength[2];
 	u8 ccData[2][CELL_VDEC_AVC_CCD_MAX];
@@ -462,7 +462,7 @@ struct CellVdecDivxInfo
 	DIVX_pixelAspectRatio pixelAspectRatio;
 	u8 parWidth;
 	u8 parHeight;
-	bool colourDescription;
+	b8 colourDescription;
 	DIVX_colourPrimaries colourPrimaries;
 	DIVX_transferCharacteristics transferCharacteristics;
 	DIVX_matrixCoefficients matrixCoefficients;
@@ -615,22 +615,22 @@ struct CellVdecMpeg2Info
 		MPEG1_aspectRatio aspect_ratio_information1;
 	};
 	MPEG2_frameRate frame_rate_code;
-	bool progressive_sequence;
-	bool low_delay;
+	b8 progressive_sequence;
+	b8 low_delay;
 	MPEG2_videoFormat video_format;
-	bool colour_description;
+	b8 colour_description;
 	MPEG2_colourPrimaries colour_primaries;
 	MPEG2_transferCharacteristics transfer_characteristics;
 	MPEG2_matrixCoefficients matrix_coefficients;
 	be_t<u16> temporal_reference[2];
 	MPEG2_pictureCodingType picture_coding_type[2];
 	MPEG2_pictureStructure picture_structure[2];
-	bool top_field_first;
-	bool repeat_first_field;
-	bool progressive_frame;
+	b8 top_field_first;
+	b8 repeat_first_field;
+	b8 progressive_frame;
 	be_t<u32> time_code;
-	bool closed_gop;
-	bool broken_link;
+	b8 closed_gop;
+	b8 broken_link;
 	be_t<u16> vbv_delay[2];
 	be_t<u16> display_horizontal_size;
 	be_t<u16> display_vertical_size;
@@ -639,7 +639,7 @@ struct CellVdecMpeg2Info
 	be_t<u16> frame_centre_vertical_offset[2][3];
 	be_t<u32> headerPresentFlags; // MPEG2_headerFlags
 	be_t<u32> headerRetentionFlags; // MPEG2_headerFlags
-	bool mpeg1Flag;
+	b8 mpeg1Flag;
 	u8 ccDataLength[2];
 	u8 ccData[2][128];
 	be_t<u64> reserved[2];

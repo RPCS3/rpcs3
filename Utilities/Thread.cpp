@@ -109,15 +109,14 @@ enum x64_op_t : u32
 	X64OP_NONE,
 	X64OP_LOAD, // obtain and put the value into x64 register
 	X64OP_STORE, // take the value from x64 register or an immediate and use it
-
-	// example: add eax,[rax] -> X64OP_LOAD_ADD (add the value to x64 register)
-	// example: add [rax],eax -> X64OP_LOAD_ADD_STORE (this will probably never happen for MMIO registers)
-
 	X64OP_MOVS,
 	X64OP_STOS,
 	X64OP_XCHG,
 	X64OP_CMPXCHG,
 	X64OP_LOAD_AND_STORE, // lock and [mem],reg
+	X64OP_LOAD_OR_STORE, // TODO: lock or [mem], reg
+	X64OP_INC, // TODO: lock inc [mem]
+	X64OP_DEC, // TODO: lock dec [mem]
 };
 
 void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, size_t& out_size, size_t& out_length)
@@ -272,6 +271,18 @@ void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, siz
 
 		switch (op2)
 		{
+		case 0x11:
+		{
+			if (!repe && !repne && !oso) // MOVUPS xmm/m, xmm
+			{
+				out_op = X64OP_STORE;
+				out_reg = get_modRM_reg_xmm(code, rex);
+				out_size = 16;
+				out_length += get_modRM_size(code);
+				return;
+			}
+			break;
+		}
 		case 0x7f:
 		{
 			if ((repe && !oso) || (!repe && oso)) // MOVDQU/MOVDQA xmm/m, xmm
@@ -470,7 +481,6 @@ void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, siz
 	}
 	}
 
-	LOG_WARNING(MEMORY, "decode_x64_reg_op(%016llxh): unsupported opcode found (%016llX%016llX)", (size_t)code - out_length, *(be_t<u64>*)(code - out_length), *(be_t<u64>*)(code - out_length + 8));
 	out_op = X64OP_NONE;
 	out_reg = X64_NOT_SET;
 	out_size = 0;
@@ -789,9 +799,18 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 	// decode single x64 instruction that causes memory access
 	decode_x64_reg_op(code, op, reg, d_size, i_size);
 
+	auto report_opcode = [=]()
+	{
+		if (op == X64OP_NONE)
+		{
+			LOG_ERROR(MEMORY, "decode_x64_reg_op(%016llxh): unsupported opcode found (%016llX%016llX)", code, *(be_t<u64>*)(code), *(be_t<u64>*)(code + 8));
+		}
+	};
+
 	if ((d_size | d_size + addr) >= 0x100000000ull)
 	{
 		LOG_ERROR(MEMORY, "Invalid d_size (0x%llx)", d_size);
+		report_opcode();
 		return false;
 	}
 
@@ -801,6 +820,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 	if ((a_size | a_size + addr) >= 0x100000000ull)
 	{
 		LOG_ERROR(MEMORY, "Invalid a_size (0x%llx)", a_size);
+		report_opcode();
 		return false;
 	}
 
@@ -817,6 +837,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 		if (a_size != 4 || !d_size || !i_size)
 		{
 			LOG_ERROR(MEMORY, "Invalid or unsupported instruction (op=%d, reg=%d, d_size=%lld, a_size=0x%llx, i_size=%lld)", op, reg, d_size, a_size, i_size);
+			report_opcode();
 			return false;
 		}
 
@@ -847,6 +868,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 		default:
 		{
 			LOG_ERROR(MEMORY, "Invalid or unsupported operation (op=%d, reg=%d, d_size=%lld, i_size=%lld)", op, reg, d_size, i_size);
+			report_opcode();
 			return false;
 		}
 		}
@@ -863,6 +885,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 		if (!d_size || !i_size)
 		{
 			LOG_ERROR(MEMORY, "Invalid or unsupported instruction (op=%d, reg=%d, d_size=%lld, a_size=0x%llx, i_size=%lld)", op, reg, d_size, a_size, i_size);
+			report_opcode();
 			return false;
 		}
 
@@ -1074,6 +1097,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 		default:
 		{
 			LOG_ERROR(MEMORY, "Invalid or unsupported operation (op=%d, reg=%d, d_size=%lld, a_size=0x%llx, i_size=%lld)", op, reg, d_size, a_size, i_size);
+			report_opcode();
 			return false;
 		}
 		}

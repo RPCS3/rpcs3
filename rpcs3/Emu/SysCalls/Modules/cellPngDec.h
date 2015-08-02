@@ -88,8 +88,8 @@ using CellPngDecMainHandle = vm::ptr<struct PngDecoder>;
 using CellPngDecSubHandle = vm::ptr<struct PngStream>;
 
 // Callbacks for memory management
-using CellPngDecCbControlMalloc = func_def<vm::ptr<void>(u32 size, vm::ptr<void> cbCtrlMallocArg)>;
-using CellPngDecCbControlFree = func_def<s32(vm::ptr<void> ptr, vm::ptr<void> cbCtrlFreeArg)>;
+using CellPngDecCbControlMalloc = vm::ptr<void>(u32 size, vm::ptr<void> cbCtrlMallocArg);
+using CellPngDecCbControlFree = s32(vm::ptr<void> ptr, vm::ptr<void> cbCtrlFreeArg);
 
 // Structs
 struct CellPngDecThreadInParam
@@ -251,8 +251,8 @@ struct CellPngDecExtOutParam
 };
 
 // Callbacks for decoding partial streams
-using CellPngDecCbControlStream = func_def<s32(vm::ptr<CellPngDecStrmInfo> strmInfo, vm::ptr<CellPngDecStrmParam> strmParam, vm::ptr<void> cbCtrlStrmArg)>;
-using CellPngDecCbControlDisp = func_def<s32(vm::ptr<CellPngDecDispInfo> dispInfo, vm::ptr<CellPngDecDispParam> dispParam, vm::ptr<void> cbCtrlDispArg)>;
+using CellPngDecCbControlStream = s32(vm::ptr<CellPngDecStrmInfo> strmInfo, vm::ptr<CellPngDecStrmParam> strmParam, vm::ptr<void> cbCtrlStrmArg);
+using CellPngDecCbControlDisp = s32(vm::ptr<CellPngDecDispInfo> dispInfo, vm::ptr<CellPngDecDispParam> dispParam, vm::ptr<void> cbCtrlDispArg);
 
 struct CellPngDecCbCtrlStrm
 {

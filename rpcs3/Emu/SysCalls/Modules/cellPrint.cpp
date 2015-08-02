@@ -1,8 +1,8 @@
 #include "stdafx.h"
-#if 0
+#include "Emu/Memory/Memory.h"
+#include "Emu/SysCalls/Modules.h"
 
-void cellPrint_init();
-Module cellPrint(0xf02a, cellPrint_init);
+extern Module cellPrint;
 
 // Error Codes
 enum
@@ -17,80 +17,95 @@ enum
 	CELL_PRINT_ERROR_CANCELED_BY_PRINTER = 0x8002c408,
 };
 
-int cellPrintLoadAsync()
+s32 cellSysutilPrintInit()
 {
 	UNIMPLEMENTED_FUNC(cellPrint);
 	return CELL_OK;
 }
 
-int cellPrintLoadAsync2()
+s32 cellSysutilPrintShutdown()
 {
 	UNIMPLEMENTED_FUNC(cellPrint);
 	return CELL_OK;
 }
 
-int cellPrintUnloadAsync()
+s32 cellPrintLoadAsync()
 {
 	UNIMPLEMENTED_FUNC(cellPrint);
 	return CELL_OK;
 }
 
-int cellPrintGetStatus()
+s32 cellPrintLoadAsync2()
 {
 	UNIMPLEMENTED_FUNC(cellPrint);
 	return CELL_OK;
 }
 
-int cellPrintOpenConfig()
+s32 cellPrintUnloadAsync()
 {
 	UNIMPLEMENTED_FUNC(cellPrint);
 	return CELL_OK;
 }
 
-int cellPrintGetPrintableArea()
+s32 cellPrintGetStatus()
 {
 	UNIMPLEMENTED_FUNC(cellPrint);
 	return CELL_OK;
 }
 
-int cellPrintStartJob()
+s32 cellPrintOpenConfig()
 {
 	UNIMPLEMENTED_FUNC(cellPrint);
 	return CELL_OK;
 }
 
-int cellPrintEndJob()
+s32 cellPrintGetPrintableArea()
 {
 	UNIMPLEMENTED_FUNC(cellPrint);
 	return CELL_OK;
 }
 
-int cellPrintCancelJob()
+s32 cellPrintStartJob()
 {
 	UNIMPLEMENTED_FUNC(cellPrint);
 	return CELL_OK;
 }
 
-int cellPrintStartPage()
+s32 cellPrintEndJob()
 {
 	UNIMPLEMENTED_FUNC(cellPrint);
 	return CELL_OK;
 }
 
-int cellPrintEndPage()
+s32 cellPrintCancelJob()
 {
 	UNIMPLEMENTED_FUNC(cellPrint);
 	return CELL_OK;
 }
 
-int cellPrintSendBand()
+s32 cellPrintStartPage()
 {
 	UNIMPLEMENTED_FUNC(cellPrint);
 	return CELL_OK;
 }
 
-void cellPrint_init()
+s32 cellPrintEndPage()
 {
+	UNIMPLEMENTED_FUNC(cellPrint);
+	return CELL_OK;
+}
+
+s32 cellPrintSendBand()
+{
+	UNIMPLEMENTED_FUNC(cellPrint);
+	return CELL_OK;
+}
+
+Module cellPrint("cellPrint", []()
+{
+	REG_FUNC(cellPrint, cellSysutilPrintInit);
+	REG_FUNC(cellPrint, cellSysutilPrintShutdown);
+
 	REG_FUNC(cellPrint, cellPrintLoadAsync);
 	REG_FUNC(cellPrint, cellPrintLoadAsync2);
 	REG_FUNC(cellPrint, cellPrintUnloadAsync);
@@ -103,5 +118,4 @@ void cellPrint_init()
 	REG_FUNC(cellPrint, cellPrintStartPage);
 	REG_FUNC(cellPrint, cellPrintEndPage);
 	REG_FUNC(cellPrint, cellPrintSendBand);
-}
-#endif
+});

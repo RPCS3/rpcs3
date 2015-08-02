@@ -3,8 +3,6 @@
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
 
-extern Module cellAtrac;
-
 #include "cellAtrac.h"
 
 s32 cellAtracSetDataAndGetMemSize(vm::ptr<CellAtracHandle> pHandle, vm::ptr<u8> pucBufferAddr, u32 uiReadByte, u32 uiBufferByte, vm::ptr<u32> puiWorkMemByte)

@@ -17,27 +17,27 @@ void MsgDialogFrame::Create(u32 type, std::string msg)
 	m_button_yes = nullptr;
 	m_button_no = nullptr;
 
-	m_dialog = new wxDialog(parent, wxID_ANY, type & CELL_MSGDIALOG_TYPE_SE_TYPE ? "" : "Error", wxDefaultPosition, wxDefaultSize);
+	m_dialog = std::make_unique<wxDialog>(parent, wxID_ANY, type & CELL_MSGDIALOG_TYPE_SE_TYPE ? "" : "Error", wxDefaultPosition, wxDefaultSize);
 
 	m_dialog->SetExtraStyle(m_dialog->GetExtraStyle() | wxWS_EX_TRANSIENT);
 	m_dialog->SetTransparent(127 + (type & CELL_MSGDIALOG_TYPE_BG) * (128 / CELL_MSGDIALOG_TYPE_BG_INVISIBLE));
 
 	m_sizer1 = new wxBoxSizer(wxVERTICAL);
 
-	m_text = new wxStaticText(m_dialog, wxID_ANY, wxString(msg.c_str(), wxConvUTF8));
+	m_text = new wxStaticText(m_dialog.get(), wxID_ANY, wxString(msg.c_str(), wxConvUTF8));
 	m_sizer1->Add(m_text, 0, wxALIGN_CENTER_HORIZONTAL | wxLEFT | wxRIGHT | wxTOP, 16);
 
 	switch (type & CELL_MSGDIALOG_TYPE_PROGRESSBAR)
 	{
 	case CELL_MSGDIALOG_TYPE_PROGRESSBAR_DOUBLE:
-		m_gauge2 = new wxGauge(m_dialog, wxID_ANY, 100, wxDefaultPosition, wxSize(300, -1), wxGA_HORIZONTAL | wxGA_SMOOTH);
-		m_text2 = new wxStaticText(m_dialog, wxID_ANY, "");
+		m_gauge2 = new wxGauge(m_dialog.get(), wxID_ANY, 100, wxDefaultPosition, wxSize(300, -1), wxGA_HORIZONTAL | wxGA_SMOOTH);
+		m_text2 = new wxStaticText(m_dialog.get(), wxID_ANY, "");
 		m_text2->SetAutoLayout(true);
 		// fallthrough
 
 	case CELL_MSGDIALOG_TYPE_PROGRESSBAR_SINGLE:
-		m_gauge1 = new wxGauge(m_dialog, wxID_ANY, 100, wxDefaultPosition, wxSize(300, -1), wxGA_HORIZONTAL | wxGA_SMOOTH);
-		m_text1 = new wxStaticText(m_dialog, wxID_ANY, "");
+		m_gauge1 = new wxGauge(m_dialog.get(), wxID_ANY, 100, wxDefaultPosition, wxSize(300, -1), wxGA_HORIZONTAL | wxGA_SMOOTH);
+		m_text1 = new wxStaticText(m_dialog.get(), wxID_ANY, "");
 		m_text1->SetAutoLayout(true);
 	}
 
@@ -59,9 +59,9 @@ void MsgDialogFrame::Create(u32 type, std::string msg)
 
 	if (type & CELL_MSGDIALOG_TYPE_BUTTON_TYPE_YESNO)
 	{
-		m_button_yes = new wxButton(m_dialog, wxID_YES);
+		m_button_yes = new wxButton(m_dialog.get(), wxID_YES);
 		m_buttons->Add(m_button_yes, 0, wxALIGN_CENTER_HORIZONTAL | wxRIGHT, 8);
-		m_button_no = new wxButton(m_dialog, wxID_NO);
+		m_button_no = new wxButton(m_dialog.get(), wxID_NO);
 		m_buttons->Add(m_button_no, 0, wxALIGN_CENTER_HORIZONTAL, 16);
 
 		if ((type & CELL_MSGDIALOG_TYPE_DEFAULT_CURSOR) == CELL_MSGDIALOG_TYPE_DEFAULT_CURSOR_NO)
@@ -78,7 +78,7 @@ void MsgDialogFrame::Create(u32 type, std::string msg)
 
 	if (type & CELL_MSGDIALOG_TYPE_BUTTON_TYPE_OK)
 	{
-		m_button_ok = new wxButton(m_dialog, wxID_OK);
+		m_button_ok = new wxButton(m_dialog.get(), wxID_OK);
 		m_buttons->Add(m_button_ok, 0, wxALIGN_CENTER_HORIZONTAL, 16);
 
 		if ((type & CELL_MSGDIALOG_TYPE_DEFAULT_CURSOR) == CELL_MSGDIALOG_TYPE_DEFAULT_CURSOR_OK)
@@ -119,8 +119,7 @@ void MsgDialogFrame::Create(u32 type, std::string msg)
 
 void MsgDialogFrame::Destroy()
 {
-	delete m_dialog;
-	m_dialog = nullptr;
+	m_dialog.reset();
 }
 
 void MsgDialogFrame::ProgressBarSetMsg(u32 index, std::string msg)

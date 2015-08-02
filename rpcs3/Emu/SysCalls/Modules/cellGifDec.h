@@ -57,8 +57,8 @@ using CellGifDecMainHandle = vm::ptr<struct GifDecoder>;
 using CellGifDecSubHandle = u32; // vm::ptr<struct GifStream>;
 
 // Callbacks for memory management
-using CellGifDecCbControlMalloc = func_def<vm::ptr<void>(u32 size, vm::ptr<void> cbCtrlMallocArg)>;
-using CellGifDecCbControlFree = func_def<s32(vm::ptr<void> ptr, vm::ptr<void> cbCtrlFreeArg)>;
+using CellGifDecCbControlMalloc = vm::ptr<void>(u32 size, vm::ptr<void> cbCtrlMallocArg);
+using CellGifDecCbControlFree = s32(vm::ptr<void> ptr, vm::ptr<void> cbCtrlFreeArg);
 
 // Structs
 struct CellGifDecThreadInParam

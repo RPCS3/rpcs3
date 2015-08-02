@@ -4,7 +4,7 @@
 
 class MsgDialogFrame : public MsgDialogInstance
 {
-	wxDialog* m_dialog;
+	std::unique_ptr<wxDialog> m_dialog;
 	wxGauge* m_gauge1;
 	wxGauge* m_gauge2;
 	wxStaticText* m_text1;

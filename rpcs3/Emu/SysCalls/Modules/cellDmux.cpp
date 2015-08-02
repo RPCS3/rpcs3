@@ -877,7 +877,7 @@ s32 cellDmuxClose(u32 handle)
 	return CELL_OK;
 }
 
-s32 cellDmuxSetStream(u32 handle, u32 streamAddress, u32 streamSize, bool discontinuity, u64 userData)
+s32 cellDmuxSetStream(u32 handle, u32 streamAddress, u32 streamSize, b8 discontinuity, u64 userData)
 {
 	cellDmux.Log("cellDmuxSetStream(handle=0x%x, streamAddress=0x%x, streamSize=%d, discontinuity=%d, userData=0x%llx)", handle, streamAddress, streamSize, discontinuity, userData);
 

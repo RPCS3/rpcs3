@@ -252,7 +252,7 @@ struct sys_dbg_event_flag_information_t
 	be_t<u32> wait_all_threads_num;
 };
 
-using dbg_exception_handler_t = func_def<void(u64 exception_type, u64 thread_id, u64 dar)>;
+using dbg_exception_handler_t = void(u64 exception_type, u64 thread_id, u64 dar);
 
 enum : u64
 {

@@ -57,9 +57,6 @@
     <Filter Include="Emu\Io\Null">
       <UniqueIdentifier>{fcac6852-b45f-4cf2-afee-cf56bcea14e5}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Emu\SysCalls\currently_unused">
-      <UniqueIdentifier>{ead7494f-a872-4b4d-a864-1a61c3b6012f}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Emu\CPU\Cell">
       <UniqueIdentifier>{13d20086-2188-425a-9856-0440fe6f79f2}</UniqueIdentifier>
     </Filter>
@@ -412,72 +409,6 @@
     </ClCompile>
     <ClCompile Include="Emu\SysCalls\ModuleManager.cpp">
       <Filter>Emu\SysCalls</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\SysCalls\Modules\cellBgdl.cpp">
-      <Filter>Emu\SysCalls\currently_unused</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\SysCalls\Modules\cellCelp8Enc.cpp">
-      <Filter>Emu\SysCalls\currently_unused</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\SysCalls\Modules\cellCelpEnc.cpp">
-      <Filter>Emu\SysCalls\currently_unused</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\SysCalls\Modules\cellHttpUtil.cpp">
-      <Filter>Emu\SysCalls\currently_unused</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\SysCalls\Modules\cellImejp.cpp">
-      <Filter>Emu\SysCalls\currently_unused</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\SysCalls\Modules\cellJpgEnc.cpp">
-      <Filter>Emu\SysCalls\currently_unused</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\SysCalls\Modules\cellKey2char.cpp">
-      <Filter>Emu\SysCalls\currently_unused</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\SysCalls\Modules\cellMusicDecode.cpp">
-      <Filter>Emu\SysCalls\currently_unused</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\SysCalls\Modules\cellMusicExport.cpp">
-      <Filter>Emu\SysCalls\currently_unused</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\SysCalls\Modules\cellPhotoDecode.cpp">
-      <Filter>Emu\SysCalls\currently_unused</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\SysCalls\Modules\cellPhotoExport.cpp">
-      <Filter>Emu\SysCalls\currently_unused</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\SysCalls\Modules\cellPhotoImport.cpp">
-      <Filter>Emu\SysCalls\currently_unused</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\SysCalls\Modules\cellPngEnc.cpp">
-      <Filter>Emu\SysCalls\currently_unused</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\SysCalls\Modules\cellPrint.cpp">
-      <Filter>Emu\SysCalls\currently_unused</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\SysCalls\Modules\cellSailRec.cpp">
-      <Filter>Emu\SysCalls\currently_unused</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\SysCalls\Modules\cellSheap.cpp">
-      <Filter>Emu\SysCalls\currently_unused</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\SysCalls\Modules\cellSsl.cpp">
-      <Filter>Emu\SysCalls\currently_unused</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\SysCalls\Modules\cellUsbpspcm.cpp">
-      <Filter>Emu\SysCalls\currently_unused</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\SysCalls\Modules\libsnd3.cpp">
-      <Filter>Emu\SysCalls\currently_unused</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\SysCalls\Modules\libsynth2.cpp">
-      <Filter>Emu\SysCalls\currently_unused</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\SysCalls\Modules\sys_http.cpp">
-      <Filter>Emu\SysCalls\currently_unused</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Utilities\SSemaphore.cpp">
-      <Filter>Utilities</Filter>
     </ClCompile>
     <ClCompile Include="Emu\SysCalls\lv2\sys_process.cpp">
       <Filter>Emu\SysCalls\lv2</Filter>
@@ -884,6 +815,156 @@
     <ClCompile Include="Emu\SysCalls\Modules\sceNpUtil.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="..\Utilities\Semaphore.cpp">
+      <Filter>Utilities</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellAtracMulti.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellCelp8Enc.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellCelpEnc.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellBgdl.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellHttp.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellHttpUtil.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellSsl.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellJpgEnc.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellSheap.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellKey2char.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellPngEnc.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellSailRec.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellUsbpspcm.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellDaisy.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellSpudll.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellSysutilAvc2.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellGameExec.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellImejp.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellSysutilMisc.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellMusicDecode.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellMusicExport.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellMusic.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellOskDialog.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellPhotoDecode.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellPhotoExport.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellPhotoImport.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellPrint.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellRec.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellRemotePlay.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellSysconf.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellVideoExport.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellVideoUpload.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellStorage.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\libsnd3.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\libsynth2.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellWebBrowser.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellAudioOut.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellVideoOut.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellSysutilAvc.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\sys_lwcond_.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\sys_lwmutex_.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\sys_ppu_thread_.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\sys_prx_.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\sys_heap.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\sys_spinlock.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\sys_mmapper_.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\sys_mempool.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\sys_game.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\sys_spu_.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -1258,17 +1339,8 @@
     <ClInclude Include="Emu\DbgCommand.h">
       <Filter>Emu</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\SysCalls\Modules\libsnd3.h">
-      <Filter>Emu\SysCalls\currently_unused</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\SysCalls\Modules\libsynth2.h">
-      <Filter>Emu\SysCalls\currently_unused</Filter>
-    </ClInclude>
     <ClInclude Include="Emu\Event.h">
       <Filter>Emu\SysCalls</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Utilities\SSemaphore.h">
-      <Filter>Utilities</Filter>
     </ClInclude>
     <ClInclude Include="Emu\SysCalls\lv2\sys_process.h">
       <Filter>Emu\SysCalls\lv2</Filter>
@@ -1382,9 +1454,6 @@
       <Filter>Emu\GPU\RSX</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\RSXVertexProgram.h">
-      <Filter>Emu\GPU\RSX</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\RSX\sysutil_video.h">
       <Filter>Emu\GPU\RSX</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\GCM.h">
@@ -1736,6 +1805,24 @@
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClInclude>
     <ClInclude Include="Emu\SysCalls\Modules\sceNpUtil.h">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utilities\Semaphore.h">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\Modules\cellAtracMulti.h">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\Modules\libsnd3.h">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\Modules\libsynth2.h">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\Modules\cellWebBrowser.h">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\Modules\cellVideoOut.h">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClInclude>
   </ItemGroup>

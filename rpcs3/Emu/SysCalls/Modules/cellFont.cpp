@@ -8,19 +8,23 @@
 
 extern Module cellFont;
 
-std::unique_ptr<CellFontInternal> g_font;
+struct font_instance_t
+{
+	std::atomic<bool> init{ false };
+}
+g_font;
 
 // Functions
 s32 cellFontInitializeWithRevision(u64 revisionFlags, vm::ptr<CellFontConfig> config)
 {
 	cellFont.Warning("cellFontInitializeWithRevision(revisionFlags=0x%llx, config=*0x%x)", revisionFlags, config);
-	
-	if (g_font->m_bInitialized)
+
+	if (g_font.init.load())
 	{
 		return CELL_FONT_ERROR_ALREADY_INITIALIZED;
 	}
-
-	if (config->FileCache.size < 24)
+	
+	if (config->fc_size < 24)
 	{
 		return CELL_FONT_ERROR_INVALID_PARAMETER;
 	}
@@ -30,11 +34,11 @@ s32 cellFontInitializeWithRevision(u64 revisionFlags, vm::ptr<CellFontConfig> co
 		cellFont.Error("cellFontInitializeWithRevision: Unknown flags (0x%x)", config->flags);
 	}
 
-	g_font->m_buffer_addr = config->FileCache.buffer_addr;
-	g_font->m_buffer_size = config->FileCache.size;
-	g_font->m_userFontEntrys_addr = config->userFontEntrys_addr;
-	g_font->m_userFontEntryMax    = config->userFontEntryMax;
-	g_font->m_bInitialized = true;
+	if (g_font.init.exchange(true))
+	{
+		throw EXCEPTION("Unexpected");
+	}
+
 	return CELL_OK;
 }
 
@@ -44,11 +48,11 @@ s32 cellFontGetRevisionFlags(vm::ptr<u64> revisionFlags)
 	return CELL_OK;
 }
 
-s32 cellFontInit(PPUThread& CPU, vm::ptr<CellFontConfig> config)
+s32 cellFontInit(PPUThread& ppu, vm::ptr<CellFontConfig> config)
 {
 	cellFont.Warning("cellFontInit(config=*0x%x)", config);
 
-	vm::stackvar<be_t<u64>> revisionFlags(CPU);
+	vm::stackvar<be_t<u64>> revisionFlags(ppu);
 	revisionFlags.value() = 0;
 	cellFontGetRevisionFlags(revisionFlags);
 
@@ -59,12 +63,15 @@ s32 cellFontEnd()
 {
 	cellFont.Warning("cellFontEnd()");
 
-	if (!g_font->m_bInitialized)
+	if (!g_font.init.load())
 	{
 		return CELL_FONT_ERROR_UNINITIALIZED;
 	}
 
-	g_font->m_bInitialized = false;
+	if (!g_font.init.exchange(false))
+	{
+		throw EXCEPTION("Unexpected");
+	}
 
 	return CELL_OK;
 }
@@ -79,7 +86,7 @@ s32 cellFontOpenFontMemory(vm::ptr<CellFontLibrary> library, u32 fontAddr, u32 f
 {
 	cellFont.Warning("cellFontOpenFontMemory(library=*0x%x, fontAddr=0x%x, fontSize=%d, subNum=%d, uniqueId=%d, font=*0x%x)", library, fontAddr, fontSize, subNum, uniqueId, font);
 
-	if (!g_font->m_bInitialized)
+	if (!g_font.init.load())
 	{
 		return CELL_FONT_ERROR_UNINITIALIZED;
 	}
@@ -115,11 +122,11 @@ s32 cellFontOpenFontFile(vm::ptr<CellFontLibrary> library, vm::cptr<char> fontPa
 	return ret;
 }
 
-s32 cellFontOpenFontset(PPUThread& CPU, vm::ptr<CellFontLibrary> library, vm::ptr<CellFontType> fontType, vm::ptr<CellFont> font)
+s32 cellFontOpenFontset(PPUThread& ppu, vm::ptr<CellFontLibrary> library, vm::ptr<CellFontType> fontType, vm::ptr<CellFont> font)
 {
 	cellFont.Warning("cellFontOpenFontset(library=*0x%x, fontType=*0x%x, font=*0x%x)", library, fontType, font);
 
-	if (!g_font->m_bInitialized)
+	if (!g_font.init.load())
 	{
 		return CELL_FONT_ERROR_UNINITIALIZED;
 	}
@@ -195,7 +202,7 @@ s32 cellFontOpenFontset(PPUThread& CPU, vm::ptr<CellFontLibrary> library, vm::pt
 		return CELL_FONT_ERROR_NO_SUPPORT_FONTSET;
 	}
 
-	vm::stackvar<char> f(CPU, (u32)file.length() + 1, 1);
+	vm::stackvar<char> f(ppu, (u32)file.length() + 1, 1);
 	memcpy(f.get_ptr(), file.c_str(), file.size() + 1);
 	s32 ret = cellFontOpenFontFile(library, f, 0, 0, font); //TODO: Find the correct values of subNum, uniqueId
 	font->origin = CELL_FONT_OPEN_FONTSET;
@@ -227,7 +234,7 @@ s32 cellFontCreateRenderer(vm::ptr<CellFontLibrary> library, vm::ptr<CellFontRen
 {
 	cellFont.Todo("cellFontCreateRenderer(library=*0x%x, config=*0x%x, Renderer=*0x%x)", library, config, Renderer);
 
-	if (!g_font->m_bInitialized)
+	if (!g_font.init.load())
 	{
 		return CELL_FONT_ERROR_UNINITIALIZED;
 	}
@@ -241,26 +248,21 @@ void cellFontRenderSurfaceInit(vm::ptr<CellFontRenderSurface> surface, vm::ptr<v
 {
 	cellFont.Warning("cellFontRenderSurfaceInit(surface=*0x%x, buffer=*0x%x, bufferWidthByte=%d, pixelSizeByte=%d, w=%d, h=%d)", surface, buffer, bufferWidthByte, pixelSizeByte, w, h);
 
-	surface->buffer_addr	= buffer.addr();
-	surface->widthByte		= bufferWidthByte;
-	surface->pixelSizeByte	= pixelSizeByte;
-	surface->width			= w;
-	surface->height			= h;
-
-	if (!buffer)
-	{
-		surface->buffer_addr = vm::alloc(bufferWidthByte * h, vm::main); // TODO: Huge memory leak
-	}
+	surface->buffer         = buffer;
+	surface->widthByte      = bufferWidthByte;
+	surface->pixelSizeByte  = pixelSizeByte;
+	surface->width          = w;
+	surface->height         = h;
 }
 
 void cellFontRenderSurfaceSetScissor(vm::ptr<CellFontRenderSurface> surface, s32 x0, s32 y0, s32 w, s32 h)
 {
 	cellFont.Warning("cellFontRenderSurfaceSetScissor(surface=*0x%x, x0=%d, y0=%d, w=%d, h=%d)", surface, x0, y0, w, h);
 
-	surface->Scissor.x0 = x0;
-	surface->Scissor.y0 = y0;
-	surface->Scissor.x1 = w;
-	surface->Scissor.y1 = h;
+	surface->sc_x0 = x0;
+	surface->sc_y0 = y0;
+	surface->sc_x1 = w;
+	surface->sc_y1 = h;
 }
 
 s32 cellFontSetScalePixel(vm::ptr<CellFont> font, float w, float h)
@@ -374,7 +376,7 @@ s32 cellFontRenderCharGlyphImage(vm::ptr<CellFont> font, u32 code, vm::ptr<CellF
 	baseLineY = (int)((float)ascent * scale); // ???
 
 	// Move the rendered character to the surface
-	unsigned char* buffer = vm::get_ptr<unsigned char>(surface->buffer_addr);
+	unsigned char* buffer = vm::get_ptr<unsigned char>(surface->buffer.addr());
 	for (u32 ypos = 0; ypos < (u32)height; ypos++)
 	{
 		if ((u32)y + ypos + yoff + baseLineY >= surface->height)
@@ -457,12 +459,12 @@ s32 cellFontGetCharGlyphMetrics(vm::ptr<CellFont> font, u32 code, vm::ptr<CellFo
 	// TODO: Add the rest of the information
 	metrics->width = (x1-x0) * scale;
 	metrics->height = (y1-y0) * scale;
-	metrics->Horizontal.bearingX = (float)leftSideBearing * scale;
-	metrics->Horizontal.bearingY = 0.f;
-	metrics->Horizontal.advance = (float)advanceWidth * scale;
-	metrics->Vertical.bearingX = 0.f;
-	metrics->Vertical.bearingY = 0.f;
-	metrics->Vertical.advance = 0.f;
+	metrics->h_bearingX = (float)leftSideBearing * scale;
+	metrics->h_bearingY = 0.f;
+	metrics->h_advance = (float)advanceWidth * scale;
+	metrics->v_bearingX = 0.f;
+	metrics->v_bearingY = 0.f;
+	metrics->v_advance = 0.f;
 
 	return CELL_OK;
 }
@@ -473,11 +475,11 @@ s32 cellFontGraphicsSetFontRGBA()
 	return CELL_OK;
 }
 
-s32 cellFontOpenFontsetOnMemory(PPUThread& CPU, vm::ptr<CellFontLibrary> library, vm::ptr<CellFontType> fontType, vm::ptr<CellFont> font)
+s32 cellFontOpenFontsetOnMemory(PPUThread& ppu, vm::ptr<CellFontLibrary> library, vm::ptr<CellFontType> fontType, vm::ptr<CellFont> font)
 {
 	cellFont.Todo("cellFontOpenFontsetOnMemory(library=*0x%x, fontType=*0x%x, font=*0x%x)", library, fontType, font);
 
-	if (!g_font->m_bInitialized)
+	if (!g_font.init.load())
 	{
 		return CELL_FONT_ERROR_UNINITIALIZED;
 	}
@@ -632,7 +634,7 @@ s32 cellFontGetCharGlyphMetricsVertical()
 
 Module cellFont("cellFont", []()
 {
-	g_font = std::make_unique<CellFontInternal>();
+	g_font.init = false;
 
 	REG_FUNC(cellFont, cellFontInit);
 	REG_FUNC(cellFont, cellFontSetFontsetOpenMode);

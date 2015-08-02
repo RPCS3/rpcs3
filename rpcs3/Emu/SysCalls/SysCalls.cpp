@@ -37,7 +37,7 @@
 
 void null_func(PPUThread& ppu)
 {
-	const auto code = ppu.GPR[11];
+	const u64 code = ppu.GPR[11];
 	LOG_ERROR(HLE, "Unimplemented syscall %lld: %s -> CELL_OK", code, SysCalls::GetFuncName(~code));
 	ppu.GPR[3] = 0;
 }

@@ -7,7 +7,7 @@
 #define noexcept _NOEXCEPT_OP
 #endif
 
-#if defined(_MSC_VER)
+#if defined(_MSC_VER) && _MSC_VER <= 1800
 #define thread_local __declspec(thread)
 #elif __APPLE__
 #define thread_local __thread

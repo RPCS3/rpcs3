@@ -2,7 +2,7 @@
 #include "rpcs3/Ini.h"
 #include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
-#include "sysutil_video.h"
+#include "Emu/SysCalls/Modules/cellVideoOut.h"
 
 #include "GSManager.h"
 #include "Null/NullGSRender.h"

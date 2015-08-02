@@ -6,8 +6,6 @@
 
 extern Module sceNpCommerce2;
 
-std::unique_ptr<SceNpCommerce2Internal> g_sceNpCommerce2;
-
 s32 sceNpCommerce2ExecuteStoreBrowse()
 {
 	UNIMPLEMENTED_FUNC(sceNpCommerce2);
@@ -24,26 +22,12 @@ s32 sceNpCommerce2Init()
 {
 	sceNpCommerce2.Warning("sceNpCommerce2Init()");
 
-	if (g_sceNpCommerce2->m_bSceNpCommerce2Initialized)
-	{
-		return SCE_NP_COMMERCE2_ERROR_ALREADY_INITIALIZED;
-	}
-
-	g_sceNpCommerce2->m_bSceNpCommerce2Initialized = true;
-
 	return CELL_OK;
 }
 
 s32 sceNpCommerce2Term()
 {
 	sceNpCommerce2.Warning("sceNpCommerce2Term()");
-
-	if (!g_sceNpCommerce2->m_bSceNpCommerce2Initialized)
-	{
-		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
-	}
-
-	g_sceNpCommerce2->m_bSceNpCommerce2Initialized = false;
 
 	return CELL_OK;
 }
@@ -58,6 +42,21 @@ s32 sceNpCommerce2DestroyCtx()
 {
 	UNIMPLEMENTED_FUNC(sceNpCommerce2);
 	return CELL_OK;
+}
+
+s32 sceNpCommerce2EmptyStoreCheckStart()
+{
+	throw EXCEPTION("");
+}
+
+s32 sceNpCommerce2EmptyStoreCheckAbort()
+{
+	throw EXCEPTION("");
+}
+
+s32 sceNpCommerce2EmptyStoreCheckFinish()
+{
+	throw EXCEPTION("");
 }
 
 s32 sceNpCommerce2CreateSessionStart()
@@ -306,16 +305,27 @@ s32 sceNpCommerce2DestroyReq()
 	return CELL_OK;
 }
 
+s32 sceNpCommerce2DoServiceListStartAsync()
+{
+	throw EXCEPTION("");
+}
+
+s32 sceNpCommerce2DoServiceListFinishAsync()
+{
+	throw EXCEPTION("");
+}
+
 Module sceNpCommerce2("sceNpCommerce2", []()
 {
-	g_sceNpCommerce2 = std::make_unique<SceNpCommerce2Internal>();
-
 	REG_FUNC(sceNpCommerce2, sceNpCommerce2ExecuteStoreBrowse);
 	REG_FUNC(sceNpCommerce2, sceNpCommerce2GetStoreBrowseUserdata);
 	REG_FUNC(sceNpCommerce2, sceNpCommerce2Init);
 	REG_FUNC(sceNpCommerce2, sceNpCommerce2Term);
 	REG_FUNC(sceNpCommerce2, sceNpCommerce2CreateCtx);
 	REG_FUNC(sceNpCommerce2, sceNpCommerce2DestroyCtx);
+	REG_FUNC(sceNpCommerce2, sceNpCommerce2EmptyStoreCheckStart);
+	REG_FUNC(sceNpCommerce2, sceNpCommerce2EmptyStoreCheckAbort);
+	REG_FUNC(sceNpCommerce2, sceNpCommerce2EmptyStoreCheckFinish);
 	REG_FUNC(sceNpCommerce2, sceNpCommerce2CreateSessionStart);
 	REG_FUNC(sceNpCommerce2, sceNpCommerce2CreateSessionAbort);
 	REG_FUNC(sceNpCommerce2, sceNpCommerce2CreateSessionFinish);
@@ -357,4 +367,7 @@ Module sceNpCommerce2("sceNpCommerce2", []()
 	REG_FUNC(sceNpCommerce2, sceNpCommerce2SetBGDLAvailability);
 	REG_FUNC(sceNpCommerce2, sceNpCommerce2AbortReq);
 	REG_FUNC(sceNpCommerce2, sceNpCommerce2DestroyReq);
+
+	REG_FUNC(sceNpCommerce2, sceNpCommerce2DoServiceListStartAsync);
+	REG_FUNC(sceNpCommerce2, sceNpCommerce2DoServiceListFinishAsync);
 });

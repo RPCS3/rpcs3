@@ -29,8 +29,8 @@ enum SceHttpAuthType : s32
 	SCE_HTTP_AUTH_RESERVED2
 };
 
-using SceHttpAuthInfoCallback = func_def<s32(s32 request, SceHttpAuthType authType, vm::cptr<char> realm, vm::ptr<char> username, vm::ptr<char> password, s32 needEntity, vm::pptr<u8> entityBody, vm::ptr<u32> entitySize, vm::ptr<s32> save, vm::ptr<void> userArg)>;
-using SceHttpRedirectCallback = func_def<s32(s32 request, s32 statusCode, vm::ptr<s32> method, vm::cptr<char> location, vm::ptr<void> userArg)>;
+using SceHttpAuthInfoCallback = s32(s32 request, SceHttpAuthType authType, vm::cptr<char> realm, vm::ptr<char> username, vm::ptr<char> password, s32 needEntity, vm::pptr<u8> entityBody, vm::ptr<u32> entitySize, vm::ptr<s32> save, vm::ptr<void> userArg);
+using SceHttpRedirectCallback = s32(s32 request, s32 statusCode, vm::ptr<s32> method, vm::cptr<char> location, vm::ptr<void> userArg);
 
 struct SceHttpMemoryPoolStats
 {
@@ -54,8 +54,8 @@ struct SceHttpUriElement
 	u8 reserved[10];
 };
 
-using SceHttpCookieRecvCallback = func_def<s32(s32 request, vm::cptr<char> url, vm::cptr<char> cookieHeader, u32 headerLen, vm::ptr<void> userArg)>;
-using SceHttpCookieSendCallback = func_def<s32(s32 request, vm::cptr<char> url, vm::cptr<char> cookieHeader, vm::ptr<void> userArg)>;
+using SceHttpCookieRecvCallback = s32(s32 request, vm::cptr<char> url, vm::cptr<char> cookieHeader, u32 headerLen, vm::ptr<void> userArg);
+using SceHttpCookieSendCallback = s32(s32 request, vm::cptr<char> url, vm::cptr<char> cookieHeader, vm::ptr<void> userArg);
 
 struct SceHttpsData
 {
@@ -69,6 +69,6 @@ struct SceHttpsCaList
 	le_t<s32> caNum;
 };
 
-using SceHttpsCallback = func_def<s32(u32 verifyEsrr, vm::cptr<vm::ptr<SceSslCert>> sslCert, s32 certNum, vm::ptr<void> userArg)>;
+using SceHttpsCallback = s32(u32 verifyEsrr, vm::cptr<vm::ptr<SceSslCert>> sslCert, s32 certNum, vm::ptr<void> userArg);
 
 extern psv_log_base sceHttp;

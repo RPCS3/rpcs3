@@ -200,14 +200,19 @@ public:
 	force_inline bool IsReady()   const { return m_status == Ready; }
 };
 
+extern Emulator Emu;
+
 using lv2_lock_t = std::unique_lock<std::mutex>;
+
+inline bool check_lv2_lock(lv2_lock_t& lv2_lock)
+{
+	return lv2_lock.owns_lock() && lv2_lock.mutex() == &Emu.GetCoreMutex();
+}
 
 #define LV2_LOCK lv2_lock_t lv2_lock(Emu.GetCoreMutex())
 #define LV2_DEFER_LOCK lv2_lock_t lv2_lock
-#define CHECK_LV2_LOCK(x) if (!(x).owns_lock() || (x).mutex() != &Emu.GetCoreMutex()) throw EXCEPTION("Invalid LV2_LOCK (locked=%d)", (x).owns_lock())
+#define CHECK_LV2_LOCK(x) if (!check_lv2_lock(x)) throw EXCEPTION("lv2_lock is invalid or not locked")
 #define CHECK_EMU_STATUS if (Emu.IsStopped()) throw EXCEPTION("Aborted (emulation stopped)")
-
-extern Emulator Emu;
 
 typedef void(*CallAfterCbType)(std::function<void()> func);
 

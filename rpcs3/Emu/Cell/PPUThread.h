@@ -981,16 +981,16 @@ struct cast_ppu_gpr<s64, false>
 };
 
 template<>
-struct cast_ppu_gpr<bool, false>
+struct cast_ppu_gpr<b8, false>
 {
-	force_inline static u64 to_gpr(const bool& value)
+	force_inline static u64 to_gpr(const b8& value)
 	{
 		return value;
 	}
 
-	force_inline static bool from_gpr(const u64& reg)
+	force_inline static b8 from_gpr(const u64& reg)
 	{
-		return reinterpret_cast<const bool&>(reg);
+		return static_cast<u32>(reg) != 0;
 	}
 };
 

@@ -1,130 +1,130 @@
 #include "stdafx.h"
-#if 0
+#include "Emu/Memory/Memory.h"
+#include "Emu/SysCalls/Modules.h"
 
-void cellHttpUtil_init();
-Module cellHttpUtil(0x0002, cellHttpUtil_init);
+extern Module cellHttpUtil;
 
-int cellHttpUtilParseUri()
+s32 cellHttpUtilParseUri()
 {
 	UNIMPLEMENTED_FUNC(cellHttpUtil);
 	return CELL_OK;
 }
 
-int cellHttpUtilParseUriPath()
+s32 cellHttpUtilParseUriPath()
 {
 	UNIMPLEMENTED_FUNC(cellHttpUtil);
 	return CELL_OK;
 }
 
-int cellHttpUtilParseProxy()
+s32 cellHttpUtilParseProxy()
 {
 	UNIMPLEMENTED_FUNC(cellHttpUtil);
 	return CELL_OK;
 }
 
-int cellHttpUtilParseStatusLine()
+s32 cellHttpUtilParseStatusLine()
 {
 	UNIMPLEMENTED_FUNC(cellHttpUtil);
 	return CELL_OK;
 }
 
-int cellHttpUtilParseHeader()
+s32 cellHttpUtilParseHeader()
 {
 	UNIMPLEMENTED_FUNC(cellHttpUtil);
 	return CELL_OK;
 }
 
-int cellHttpUtilBuildRequestLine()
+s32 cellHttpUtilBuildRequestLine()
 {
 	UNIMPLEMENTED_FUNC(cellHttpUtil);
 	return CELL_OK;
 }
 
-int cellHttpUtilBuildHeader()
+s32 cellHttpUtilBuildHeader()
 {
 	UNIMPLEMENTED_FUNC(cellHttpUtil);
 	return CELL_OK;
 }
 
-int cellHttpUtilBuildUri()
+s32 cellHttpUtilBuildUri()
 {
 	UNIMPLEMENTED_FUNC(cellHttpUtil);
 	return CELL_OK;
 }
 
-int cellHttpUtilCopyUri()
+s32 cellHttpUtilCopyUri()
 {
 	UNIMPLEMENTED_FUNC(cellHttpUtil);
 	return CELL_OK;
 }
 
-int cellHttpUtilMergeUriPath()
+s32 cellHttpUtilMergeUriPath()
 {
 	UNIMPLEMENTED_FUNC(cellHttpUtil);
 	return CELL_OK;
 }
 
-int cellHttpUtilSweepPath()
+s32 cellHttpUtilSweepPath()
 {
 	UNIMPLEMENTED_FUNC(cellHttpUtil);
 	return CELL_OK;
 }
 
-int cellHttpUtilCopyStatusLine()
+s32 cellHttpUtilCopyStatusLine()
 {
 	UNIMPLEMENTED_FUNC(cellHttpUtil);
 	return CELL_OK;
 }
 
-int cellHttpUtilCopyHeader()
+s32 cellHttpUtilCopyHeader()
 {
 	UNIMPLEMENTED_FUNC(cellHttpUtil);
 	return CELL_OK;
 }
 
-int cellHttpUtilAppendHeaderValue()
+s32 cellHttpUtilAppendHeaderValue()
 {
 	UNIMPLEMENTED_FUNC(cellHttpUtil);
 	return CELL_OK;
 }
 
-int cellHttpUtilEscapeUri()
+s32 cellHttpUtilEscapeUri()
 {
 	UNIMPLEMENTED_FUNC(cellHttpUtil);
 	return CELL_OK;
 }
 
-int cellHttpUtilUnescapeUri()
+s32 cellHttpUtilUnescapeUri()
 {
 	UNIMPLEMENTED_FUNC(cellHttpUtil);
 	return CELL_OK;
 }
 
-int cellHttpUtilFormUrlEncode()
+s32 cellHttpUtilFormUrlEncode()
 {
 	UNIMPLEMENTED_FUNC(cellHttpUtil);
 	return CELL_OK;
 }
 
-int cellHttpUtilFormUrlDecode()
+s32 cellHttpUtilFormUrlDecode()
 {
 	UNIMPLEMENTED_FUNC(cellHttpUtil);
 	return CELL_OK;
 }
 
-int cellHttpUtilBase64Encoder()
+s32 cellHttpUtilBase64Encoder()
 {
 	UNIMPLEMENTED_FUNC(cellHttpUtil);
 	return CELL_OK;
 }
 
-int cellHttpUtilBase64Decoder()
+s32 cellHttpUtilBase64Decoder()
 {
 	UNIMPLEMENTED_FUNC(cellHttpUtil);
 	return CELL_OK;
 }
 
-void cellHttpUtil_init()
+Module cellHttpUtil("cellHttpUtil", []()
 {
 	REG_FUNC(cellHttpUtil, cellHttpUtilParseUri);
 	REG_FUNC(cellHttpUtil, cellHttpUtilParseUriPath);
@@ -149,5 +149,4 @@ void cellHttpUtil_init()
 	REG_FUNC(cellHttpUtil, cellHttpUtilFormUrlDecode);
 	REG_FUNC(cellHttpUtil, cellHttpUtilBase64Encoder);
 	REG_FUNC(cellHttpUtil, cellHttpUtilBase64Decoder);
-}
-#endif
+});

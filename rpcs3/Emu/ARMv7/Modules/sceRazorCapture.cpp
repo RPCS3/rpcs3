@@ -14,7 +14,7 @@ void sceRazorCaptureSetTriggerNextFrame(vm::cptr<char> captureFilename)
 	throw EXCEPTION("");
 }
 
-bool sceRazorCaptureIsInProgress()
+b8 sceRazorCaptureIsInProgress()
 {
 	throw EXCEPTION("");
 }

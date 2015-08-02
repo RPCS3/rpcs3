@@ -10,7 +10,7 @@ enum SceNpBasicFriendListEventType : s32
 	SCE_NP_BASIC_FRIEND_LIST_EVENT_TYPE_DELETED = 4
 };
 
-using SceNpBasicFriendListEventHandler = func_def<void(SceNpBasicFriendListEventType eventType, vm::cptr<SceNpId> friendId, vm::ptr<void> userdata)>;
+using SceNpBasicFriendListEventHandler = void(SceNpBasicFriendListEventType eventType, vm::cptr<SceNpId> friendId, vm::ptr<void> userdata);
 
 enum SceNpBasicFriendOnlineStatusEventType : s32
 {
@@ -28,7 +28,7 @@ enum SceNpBasicFriendOnlineStatus : s32
 	SCE_NP_BASIC_FRIEND_ONLINE_STATUS_ONLINE_IN_CONTEXT = 4
 };
 
-using SceNpBasicFriendOnlineStatusEventHandler = func_def<void(SceNpBasicFriendOnlineStatusEventType eventType, vm::cptr<SceNpId> friendId, SceNpBasicFriendOnlineStatus status, vm::ptr<void> userdata)>;
+using SceNpBasicFriendOnlineStatusEventHandler = void(SceNpBasicFriendOnlineStatusEventType eventType, vm::cptr<SceNpId> friendId, SceNpBasicFriendOnlineStatus status, vm::ptr<void> userdata);
 
 enum SceNpBasicBlockListEventType : s32
 {
@@ -38,7 +38,7 @@ enum SceNpBasicBlockListEventType : s32
 	SCE_NP_BASIC_BLOCK_LIST_EVENT_TYPE_DELETED = 4
 };
 
-using SceNpBasicBlockListEventHandler = func_def<void(SceNpBasicBlockListEventType eventType, vm::cptr<SceNpId> playerId, vm::ptr<void> userdata)>;
+using SceNpBasicBlockListEventHandler = void(SceNpBasicBlockListEventType eventType, vm::cptr<SceNpId> playerId, vm::ptr<void> userdata);
 
 enum SceNpBasicFriendGamePresenceEventType : s32
 {
@@ -72,7 +72,7 @@ struct SceNpBasicGamePresence
 	SceNpBasicInGamePresence inGamePresence;
 };
 
-using SceNpBasicFriendGamePresenceEventHandler = func_def<void(SceNpBasicFriendGamePresenceEventType eventtype, vm::cptr<SceNpId> friendId, vm::cptr<SceNpBasicGamePresence> presence, vm::ptr<void> userdata)>;
+using SceNpBasicFriendGamePresenceEventHandler = void(SceNpBasicFriendGamePresenceEventType eventtype, vm::cptr<SceNpId> friendId, vm::cptr<SceNpBasicGamePresence> presence, vm::ptr<void> userdata);
 
 struct SceNpBasicInGameDataMessage
 {
@@ -80,7 +80,7 @@ struct SceNpBasicInGameDataMessage
 	le_t<u32> dataSize;
 };
 
-using SceNpBasicInGameDataMessageEventHandler = func_def<void(vm::cptr<SceNpId> from, vm::cptr<SceNpBasicInGameDataMessage> message, vm::ptr<void> userdata)>;
+using SceNpBasicInGameDataMessageEventHandler = void(vm::cptr<SceNpId> from, vm::cptr<SceNpBasicInGameDataMessage> message, vm::ptr<void> userdata);
 
 struct SceNpBasicEventHandlers
 {

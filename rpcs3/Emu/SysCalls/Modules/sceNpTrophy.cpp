@@ -40,19 +40,10 @@ struct trophy_handle_t
 	}
 };
 
-std::unique_ptr<SceNpTrophyInternal> g_sceNpTrophy;
-
 // Functions
 s32 sceNpTrophyInit(vm::ptr<void> pool, u32 poolSize, u32 containerId, u64 options)
 {
 	sceNpTrophy.Warning("sceNpTrophyInit(pool=*0x%x, poolSize=0x%x, containerId=0x%x, options=0x%llx)", pool, poolSize, containerId, options);
-
-	if (g_sceNpTrophy->m_bInitialized)
-	{
-		return SCE_NP_TROPHY_ERROR_ALREADY_INITIALIZED;
-	}
-
-	g_sceNpTrophy->m_bInitialized = true;
 
 	return CELL_OK;
 }
@@ -61,24 +52,12 @@ s32 sceNpTrophyTerm()
 {
 	sceNpTrophy.Warning("sceNpTrophyTerm()");
 
-	if (!g_sceNpTrophy->m_bInitialized)
-	{
-		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
-	}
-
-	g_sceNpTrophy->m_bInitialized = false;
-
 	return CELL_OK;
 }
 
 s32 sceNpTrophyCreateHandle(vm::ptr<u32> handle)
 {
 	sceNpTrophy.Warning("sceNpTrophyCreateHandle(handle=*0x%x)", handle);
-
-	if (!g_sceNpTrophy->m_bInitialized)
-	{
-		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
-	}
 
 	if (!handle)
 	{
@@ -93,11 +72,6 @@ s32 sceNpTrophyCreateHandle(vm::ptr<u32> handle)
 s32 sceNpTrophyDestroyHandle(u32 handle)
 {
 	sceNpTrophy.Warning("sceNpTrophyDestroyHandle(handle=0x%x)", handle);
-
-	if (!g_sceNpTrophy->m_bInitialized)
-	{
-		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
-	}
 
 	const auto hndl = Emu.GetIdManager().get<trophy_handle_t>(handle);
 
@@ -115,11 +89,6 @@ s32 sceNpTrophyAbortHandle(u32 handle)
 {
 	sceNpTrophy.Todo("sceNpTrophyAbortHandle(handle=0x%x)", handle);
 
-	if (!g_sceNpTrophy->m_bInitialized)
-	{
-		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
-	}
-
 	const auto hndl = Emu.GetIdManager().get<trophy_handle_t>(handle);
 
 	if (!hndl)
@@ -133,11 +102,6 @@ s32 sceNpTrophyAbortHandle(u32 handle)
 s32 sceNpTrophyCreateContext(vm::ptr<u32> context, vm::cptr<SceNpCommunicationId> commId, vm::cptr<SceNpCommunicationSignature> commSign, u64 options)
 {
 	sceNpTrophy.Warning("sceNpTrophyCreateContext(context=*0x%x, commId=*0x%x, commSign=*0x%x, options=0x%llx)", context, commId, commSign, options);
-
-	if (!g_sceNpTrophy->m_bInitialized)
-	{
-		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
-	}
 
 	// rough checks for further fmt::format call
 	if (commId->term || commId->num > 99)
@@ -172,11 +136,6 @@ s32 sceNpTrophyDestroyContext(u32 context)
 {
 	sceNpTrophy.Warning("sceNpTrophyDestroyContext(context=0x%x)", context);
 
-	if (!g_sceNpTrophy->m_bInitialized)
-	{
-		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
-	}
-
 	const auto ctxt = Emu.GetIdManager().get<trophy_context_t>(context);
 
 	if (!ctxt)
@@ -192,11 +151,6 @@ s32 sceNpTrophyDestroyContext(u32 context)
 s32 sceNpTrophyRegisterContext(PPUThread& CPU, u32 context, u32 handle, vm::ptr<SceNpTrophyStatusCallback> statusCb, vm::ptr<u32> arg, u64 options)
 {
 	sceNpTrophy.Error("sceNpTrophyRegisterContext(context=0x%x, handle=0x%x, statusCb=*0x%x, arg=*0x%x, options=0x%llx)", context, handle, statusCb, arg, options);
-
-	if (!g_sceNpTrophy->m_bInitialized)
-	{
-		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
-	}
 
 	const auto ctxt = Emu.GetIdManager().get<trophy_context_t>(context);
 
@@ -278,11 +232,6 @@ s32 sceNpTrophyGetRequiredDiskSpace(u32 context, u32 handle, vm::ptr<u64> reqspa
 {
 	sceNpTrophy.Todo("sceNpTrophyGetRequiredDiskSpace(context=0x%x, handle=0x%x, reqspace*=0x%x, options=0x%llx)", context, handle, reqspace, options);
 
-	if (!g_sceNpTrophy->m_bInitialized)
-	{
-		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
-	}
-
 	const auto ctxt = Emu.GetIdManager().get<trophy_context_t>(context);
 
 	if (!ctxt)
@@ -307,22 +256,12 @@ s32 sceNpTrophySetSoundLevel(u32 context, u32 handle, u32 level, u64 options)
 {
 	sceNpTrophy.Todo("sceNpTrophySetSoundLevel(context=0x%x, handle=0x%x, level=%d, options=0x%llx)", context, handle, level, options);
 
-	if (!g_sceNpTrophy->m_bInitialized)
-	{
-		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
-	}
-
 	return CELL_OK;
 }
 
 s32 sceNpTrophyGetGameInfo(u32 context, u32 handle, vm::ptr<SceNpTrophyGameDetails> details, vm::ptr<SceNpTrophyGameData> data)
 {
 	sceNpTrophy.Error("sceNpTrophyGetGameInfo(context=0x%x, handle=0x%x, details=*0x%x, data=*0x%x)", context, handle, details, data);
-
-	if (!g_sceNpTrophy->m_bInitialized)
-	{
-		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
-	}
 
 	const auto ctxt = Emu.GetIdManager().get<trophy_context_t>(context);
 
@@ -385,11 +324,6 @@ s32 sceNpTrophyUnlockTrophy(u32 context, u32 handle, s32 trophyId, vm::ptr<u32> 
 {
 	sceNpTrophy.Error("sceNpTrophyUnlockTrophy(context=0x%x, handle=0x%x, trophyId=%d, platinumId=*0x%x)", context, handle, trophyId, platinumId);
 
-	if (!g_sceNpTrophy->m_bInitialized)
-	{
-		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
-	}
-
 	const auto ctxt = Emu.GetIdManager().get<trophy_context_t>(context);
 
 	if (!ctxt)
@@ -420,11 +354,6 @@ s32 sceNpTrophyUnlockTrophy(u32 context, u32 handle, s32 trophyId, vm::ptr<u32> 
 s32 sceNpTrophyGetTrophyUnlockState(u32 context, u32 handle, vm::ptr<SceNpTrophyFlagArray> flags, vm::ptr<u32> count)
 {
 	sceNpTrophy.Error("sceNpTrophyGetTrophyUnlockState(context=0x%x, handle=0x%x, flags=*0x%x, count=*0x%x)", context, handle, flags, count);
-
-	if (!g_sceNpTrophy->m_bInitialized)
-	{
-		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
-	}
 
 	const auto ctxt = Emu.GetIdManager().get<trophy_context_t>(context);
 
@@ -460,11 +389,6 @@ s32 sceNpTrophyGetTrophyUnlockState(u32 context, u32 handle, vm::ptr<SceNpTrophy
 s32 sceNpTrophyGetTrophyInfo(u32 context, u32 handle, s32 trophyId, vm::ptr<SceNpTrophyDetails> details, vm::ptr<SceNpTrophyData> data)
 {
 	sceNpTrophy.Warning("sceNpTrophyGetTrophyInfo(context=0x%x, handle=0x%x, trophyId=%d, details=*0x%x, data=*0x%x)", context, handle, trophyId, details, data);
-
-	if (!g_sceNpTrophy->m_bInitialized)
-	{
-		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
-	}
 
 	const auto ctxt = Emu.GetIdManager().get<trophy_context_t>(context);
 
@@ -523,22 +447,12 @@ s32 sceNpTrophyGetGameProgress(u32 context, u32 handle, vm::ptr<s32> percentage)
 {
 	sceNpTrophy.Todo("sceNpTrophyGetGameProgress(context=0x%x, handle=0x%x, percentage=*0x%x)", context, handle, percentage);
 
-	if (!g_sceNpTrophy->m_bInitialized)
-	{
-		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
-	}
-
 	return CELL_OK;
 }
 
 s32 sceNpTrophyGetGameIcon(u32 context, u32 handle, vm::ptr<void> buffer, vm::ptr<u32> size)
 {
 	sceNpTrophy.Todo("sceNpTrophyGetGameIcon(context=0x%x, handle=0x%x, buffer=*0x%x, size=*0x%x)", context, handle, buffer, size);
-
-	if (!g_sceNpTrophy->m_bInitialized)
-	{
-		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
-	}
 
 	return CELL_OK;
 }
@@ -547,19 +461,12 @@ s32 sceNpTrophyGetTrophyIcon(u32 context, u32 handle, s32 trophyId, vm::ptr<void
 {
 	sceNpTrophy.Todo("sceNpTrophyGetTrophyIcon(context=0x%x, handle=0x%x, trophyId=%d, buffer=*0x%x, size=*0x%x)", context, handle, trophyId, buffer, size);
 
-	if (!g_sceNpTrophy->m_bInitialized)
-	{
-		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
-	}
-
 	return CELL_OK;
 }
 
 
 Module sceNpTrophy("sceNpTrophy", []()
 {
-	g_sceNpTrophy = std::make_unique<SceNpTrophyInternal>();
-
 	REG_FUNC(sceNpTrophy, sceNpTrophyGetGameProgress);
 	REG_FUNC(sceNpTrophy, sceNpTrophyRegisterContext);
 	REG_FUNC(sceNpTrophy, sceNpTrophyCreateHandle);

@@ -2,6 +2,11 @@
 
 #include "Utilities/Thread.h"
 
+namespace vm
+{
+	class waiter_lock_t;
+}
+
 enum CPUThreadType
 {
 	CPU_THREAD_PPU,
@@ -52,6 +57,8 @@ public:
 	using thread_t::cv;
 	using thread_t::is_current;
 	using thread_t::get_thread_ctrl;
+
+	friend vm::waiter_lock_t;
 
 protected:
 	CPUThread(CPUThreadType type, const std::string& name, std::function<std::string()> thread_name);

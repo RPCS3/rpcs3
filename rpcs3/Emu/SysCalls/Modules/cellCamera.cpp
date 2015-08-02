@@ -18,7 +18,7 @@ s32 cellCameraInit()
 		return CELL_CAMERA_ERROR_DEVICE_NOT_FOUND;
 	}
 
-	if (g_camera->init.exchange(true))
+	if (g_camera->init)
 	{
 		return CELL_CAMERA_ERROR_ALREADY_INIT;
 	}
@@ -60,6 +60,11 @@ s32 cellCameraInit()
 	}
 	// TODO: Some other default attributes? Need to check the actual behaviour on a real PS3.
 
+	if (g_camera->init.exchange(true))
+	{
+		throw EXCEPTION("Unexpected");
+	}
+
 	return CELL_OK;
 }
 
@@ -67,9 +72,14 @@ s32 cellCameraEnd()
 {
 	cellCamera.Warning("cellCameraEnd()");
 
-	if (!g_camera->init.exchange(false))
+	if (!g_camera->init)
 	{
 		return CELL_CAMERA_ERROR_NOT_INIT;
+	}
+
+	if (!g_camera->init.exchange(false))
+	{
+		throw EXCEPTION("Unexpected");
 	}
 
 	return CELL_OK;

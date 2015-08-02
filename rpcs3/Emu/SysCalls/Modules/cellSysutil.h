@@ -80,7 +80,7 @@ enum
 	CELL_SYSUTIL_SYSCHAT_VOICE_STREAMING_PAUSED  = 0x0164,
 };
 
-using CellSysutilCallback = func_def<void(u64 status, u64 param, vm::ptr<void> userdata)>;
+using CellSysutilCallback = void(u64 status, u64 param, vm::ptr<void> userdata);
 
 void sysutilSendSystemCommand(u64 status, u64 param);
 
@@ -152,71 +152,6 @@ enum
 
 	CELL_SYSCACHE_ERROR_PARAM         = 0x8002bc03,
 	CELL_SYSCACHE_ERROR_NOTMOUNTED    = 0x8002bc04, // We don't really need to simulate the mounting, so this is probably useless
-};
-
-using CellWebBrowserCallback = func_def<void(s32 cb_type, vm::ptr<void> client_session, vm::ptr<void> usrdata)>;
-using CellWebComponentCallback = func_def<void(s32 web_browser_id, s32 cb_type, vm::ptr<void> client_session, vm::ptr<void> usrdata)>;
-using CellWebBrowserSystemCallback = func_def<void(s32 cb_type, vm::ptr<void> usrdata)>;
-
-using CellWebBrowserMIMETypeCallback = func_def<void(vm::cptr<char> mimetype, vm::cptr<char> url, vm::ptr<void> usrdata)>;
-using CellWebBrowserErrorCallback = func_def<void(s32 err_type, vm::ptr<void> usrdata)>;
-using CellWebBrowserStatusCallback = func_def<void(s32 err_type, vm::ptr<void> usrdata)>;
-using CellWebBrowserNotify = func_def<void(vm::cptr<char> message, vm::ptr<void> usrdata)>;
-using CellWebBrowserUsrdata = func_def<void(vm::ptr<void> usrdata)>;
-
-struct CellWebBrowserMimeSet
-{
-	vm::bcptr<char> type;
-	vm::bcptr<char> directory;
-};
-
-struct CellWebBrowserPos
-{
-	be_t<s32> x;
-	be_t<s32> y;
-};
-
-struct CellWebBrowserSize
-{
-	be_t<s32> width;
-	be_t<s32> height;
-};
-
-struct CellWebBrowserRect
-{
-	CellWebBrowserPos pos;
-	CellWebBrowserSize size;
-};
-
-struct CellWebBrowserConfig
-{
-	be_t<s32> version;
-	be_t<s32> heap_size;
-	vm::bcptr<CellWebBrowserMimeSet> mimesets;
-	be_t<s32> mimeset_num;
-	be_t<s32> functions;
-	be_t<s32> tab_count;
-	vm::bptr<CellWebBrowserCallback> exit_cb;
-	vm::bptr<CellWebBrowserCallback> download_cb;
-	vm::bptr<CellWebBrowserCallback> navigated_cb;
-};
-
-struct CellWebBrowserConfig2
-{
-	be_t<s32> version;
-	be_t<s32> heap_size;
-	be_t<s32> functions;
-	be_t<s32> tab_count;
-	be_t<s32> size_mode;
-	be_t<s32> view_restriction;
-	vm::bptr<CellWebBrowserMIMETypeCallback> unknown_mimetype_cb;
-	vm::bptr<CellWebBrowserErrorCallback> error_cb;
-	vm::bptr<CellWebBrowserStatusCallback> status_error_cb;
-	vm::bptr<CellWebBrowserNotify> notify_cb;
-	vm::bptr<CellWebBrowserCallback> request_cb;
-	CellWebBrowserRect rect;
-	be_t<float> resolution_factor;
-	be_t<s32> magic_number_;
 };
 
 enum CellSysutilBgmPlaybackStatusState

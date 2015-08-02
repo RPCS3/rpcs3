@@ -1,8 +1,8 @@
 #include "stdafx.h"
-#if 0
+#include "Emu/Memory/Memory.h"
+#include "Emu/SysCalls/Modules.h"
 
-void cellPngEnc_init();
-Module cellPngEnc(0x0052, cellPngEnc_init);
+extern Module cellPngEnc;
 
 // Error Codes
 enum
@@ -15,61 +15,61 @@ enum
 	CELL_PNGENC_ERROR_FATAL = 0x80611296,
 };
 
-int cellPngEncQueryAttr()
+s32 cellPngEncQueryAttr()
 {
 	UNIMPLEMENTED_FUNC(cellPngEnc);
 	return CELL_OK;
 }
 
-int cellPngEncOpen()
+s32 cellPngEncOpen()
 {
 	UNIMPLEMENTED_FUNC(cellPngEnc);
 	return CELL_OK;
 }
 
-int cellPngEncOpenEx()
+s32 cellPngEncOpenEx()
 {
 	UNIMPLEMENTED_FUNC(cellPngEnc);
 	return CELL_OK;
 }
 
-int cellPngEncClose()
+s32 cellPngEncClose()
 {
 	UNIMPLEMENTED_FUNC(cellPngEnc);
 	return CELL_OK;
 }
 
-int cellPngEncWaitForInput()
+s32 cellPngEncWaitForInput()
 {
 	UNIMPLEMENTED_FUNC(cellPngEnc);
 	return CELL_OK;
 }
 
-int cellPngEncEncodePicture()
+s32 cellPngEncEncodePicture()
 {
 	UNIMPLEMENTED_FUNC(cellPngEnc);
 	return CELL_OK;
 }
 
-int cellPngEncWaitForOutput()
+s32 cellPngEncWaitForOutput()
 {
 	UNIMPLEMENTED_FUNC(cellPngEnc);
 	return CELL_OK;
 }
 
-int cellPngEncGetStreamInfo()
+s32 cellPngEncGetStreamInfo()
 {
 	UNIMPLEMENTED_FUNC(cellPngEnc);
 	return CELL_OK;
 }
 
-int cellPngEncReset()
+s32 cellPngEncReset()
 {
 	UNIMPLEMENTED_FUNC(cellPngEnc);
 	return CELL_OK;
 }
 
-void cellPngEnc_init()
+Module cellPngEnc("cellPngEnc", []()
 {
 	REG_FUNC(cellPngEnc, cellPngEncQueryAttr);
 	REG_FUNC(cellPngEnc, cellPngEncOpen);
@@ -80,5 +80,4 @@ void cellPngEnc_init()
 	REG_FUNC(cellPngEnc, cellPngEncWaitForOutput);
 	REG_FUNC(cellPngEnc, cellPngEncGetStreamInfo);
 	REG_FUNC(cellPngEnc, cellPngEncReset);
-}
-#endif
+});

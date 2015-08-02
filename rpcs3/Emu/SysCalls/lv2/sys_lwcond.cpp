@@ -12,11 +12,11 @@ SysCallBase sys_lwcond("sys_lwcond");
 
 extern u64 get_system_time();
 
-void lv2_lwcond_t::notify(lv2_lock_t & lv2_lock, sleep_queue_t::iterator it, const std::shared_ptr<lv2_lwmutex_t>& mutex, bool mode2)
+void lv2_lwcond_t::notify(lv2_lock_t & lv2_lock, sleep_queue_t::value_type& thread, const std::shared_ptr<lv2_lwmutex_t>& mutex, bool mode2)
 {
 	CHECK_LV2_LOCK(lv2_lock);
 
-	auto& ppu = static_cast<PPUThread&>(*it->get());
+	auto& ppu = static_cast<PPUThread&>(*thread);
 
 	ppu.GPR[3] = mode2;  // set to return CELL_EBUSY
 
@@ -24,7 +24,7 @@ void lv2_lwcond_t::notify(lv2_lock_t & lv2_lock, sleep_queue_t::iterator it, con
 	{
 		if (!mutex->signaled)
 		{
-			return mutex->sq.emplace_back(*it);
+			return mutex->sq.emplace_back(thread);
 		}
 
 		mutex->signaled--;
@@ -114,7 +114,7 @@ s32 _sys_lwcond_signal(u32 lwcond_id, u32 lwmutex_id, u32 ppu_thread_id, u32 mod
 	}
 
 	// signal specified waiting thread
-	cond->notify(lv2_lock, found, mutex, mode == 2);
+	cond->notify(lv2_lock, *found, mutex, mode == 2);
 
 	cond->sq.erase(found);
 
@@ -144,9 +144,9 @@ s32 _sys_lwcond_signal_all(u32 lwcond_id, u32 lwmutex_id, u32 mode)
 	// mode 2: lightweight mutex was not owned by the calling thread and waiter hasn't been increased
 
 	// signal all waiting threads; protocol is ignored in current implementation
-	for (auto it = cond->sq.begin(); it != cond->sq.end(); it++)
+	for (auto& thread : cond->sq)
 	{
-		cond->notify(lv2_lock, it, mutex, mode == 2);
+		cond->notify(lv2_lock, thread, mutex, mode == 2);
 	}
 
 	// in mode 1, return the amount of threads signaled

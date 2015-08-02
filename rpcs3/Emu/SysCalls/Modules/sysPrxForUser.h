@@ -2,23 +2,13 @@
 
 namespace vm { using namespace ps3; }
 
-struct HeapInfo
-{
-	const std::string name;
-
-	HeapInfo(const char* name)
-		: name(name)
-	{
-	}
-};
-
 using spu_printf_cb_t = vm::ptr<s32(u32 arg)>;
 
 // Aux
-extern spu_printf_cb_t spu_printf_agcb;
-extern spu_printf_cb_t spu_printf_dgcb;
-extern spu_printf_cb_t spu_printf_atcb;
-extern spu_printf_cb_t spu_printf_dtcb;
+extern spu_printf_cb_t g_spu_printf_agcb;
+extern spu_printf_cb_t g_spu_printf_dgcb;
+extern spu_printf_cb_t g_spu_printf_atcb;
+extern spu_printf_cb_t g_spu_printf_dtcb;
 
 // Functions
 vm::ptr<void> _sys_memset(vm::ptr<void> dst, s32 value, u32 size);

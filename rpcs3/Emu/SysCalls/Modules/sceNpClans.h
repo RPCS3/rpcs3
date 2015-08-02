@@ -60,18 +60,6 @@ enum
 	SCE_NP_CLANS_SERVER_ERROR_FAILED_TO_SEND_NP_MESSAGE     = 0x8002284c,
 };
 
-struct SceNpClansInternal
-{
-	bool m_bSceNpClansInitialized;
-
-	SceNpClansInternal()
-		: m_bSceNpClansInitialized(false)
-	{
-	}
-};
-
-extern SceNpClansInternal* sceNpClansInstance;
-
 // Clan roles
 enum
 {
@@ -154,7 +142,7 @@ struct SceNpClansEntry
 	SceNpClansClanBasicInfo info;
 	be_t<u32> role;
 	be_t<s32> status;
-	bool allowMsg;
+	b8 allowMsg;
 	u8 reserved[3];
 };
 
@@ -219,7 +207,7 @@ struct SceNpClansUpdatableMemberInfo
 	be_t<u32> binData1Size;
 	u8 binAttr1[SCE_NP_CLANS_CLAN_BINARY_ATTRIBUTE1_MAX_SIZE + 1];
 	s8 description[SCE_NP_CLANS_MEMBER_DESCRIPTION_MAX_LENGTH + 1];
-	bool allowMsg;
+	b8 allowMsg;
 	u8 reserved[3];
 };
 

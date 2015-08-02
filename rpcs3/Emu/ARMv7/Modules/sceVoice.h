@@ -114,7 +114,7 @@ struct SceVoicePortParam
 	};
 };
 
-using SceVoiceEventCallback = func_def<void(vm::ptr<void> event)>;
+using SceVoiceEventCallback = void(vm::ptr<void> event);
 
 struct SceVoiceInitParam
 {

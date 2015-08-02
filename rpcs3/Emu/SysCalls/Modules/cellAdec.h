@@ -368,7 +368,7 @@ enum CellAdecMsgType : s32
 	CELL_ADEC_MSG_TYPE_SEQDONE,
 };
 
-using CellAdecCbMsg = func_def<s32(u32 handle, CellAdecMsgType msgType, s32 msgData, u32 cbArg)>;
+using CellAdecCbMsg = s32(u32 handle, CellAdecMsgType msgType, s32 msgData, u32 cbArg);
 
 struct CellAdecCb
 {

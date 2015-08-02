@@ -224,9 +224,9 @@ typedef s32(CellGcmContextCallback)(vm::ptr<CellGcmContextData>, u32);
 
 struct CellGcmContextData
 {
-	be_t<u32> begin;
-	be_t<u32> end;
-	be_t<u32> current;
+	vm::bptr<u32> begin;
+	vm::bptr<u32> end;
+	vm::bptr<u32> current;
 	vm::bptr<CellGcmContextCallback> callback;
 };
 

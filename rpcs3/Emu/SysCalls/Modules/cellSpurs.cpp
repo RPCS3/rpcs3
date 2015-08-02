@@ -60,25 +60,25 @@ s32 spursSignalToHandlerThread(PPUThread& ppu, vm::ptr<CellSpurs> spurs);
 s32 spursJoinHandlerThread(PPUThread& ppu, vm::ptr<CellSpurs> spurs);
 s32 spursInit(PPUThread& ppu, vm::ptr<CellSpurs> spurs, u32 revision, u32 sdkVersion, s32 nSpus, s32 spuPriority, s32 ppuPriority, u32 flags,
 	vm::cptr<char> prefix, u32 prefixSize, u32 container, vm::cptr<u8> swlPriority, u32 swlMaxSpu, u32 swlIsPreem);
-s32 cellSpursInitialize(PPUThread& ppu, vm::ptr<CellSpurs> spurs, s32 nSpus, s32 spuPriority, s32 ppuPriority, bool exitIfNoWork);
+s32 cellSpursInitialize(PPUThread& ppu, vm::ptr<CellSpurs> spurs, s32 nSpus, s32 spuPriority, s32 ppuPriority, b8 exitIfNoWork);
 s32 cellSpursInitializeWithAttribute(PPUThread& ppu, vm::ptr<CellSpurs> spurs, vm::cptr<CellSpursAttribute> attr);
 s32 cellSpursInitializeWithAttribute2(PPUThread& ppu, vm::ptr<CellSpurs> spurs, vm::cptr<CellSpursAttribute> attr);
-s32 _cellSpursAttributeInitialize(vm::ptr<CellSpursAttribute> attr, u32 revision, u32 sdkVersion, u32 nSpus, s32 spuPriority, s32 ppuPriority, bool exitIfNoWork);
+s32 _cellSpursAttributeInitialize(vm::ptr<CellSpursAttribute> attr, u32 revision, u32 sdkVersion, u32 nSpus, s32 spuPriority, s32 ppuPriority, b8 exitIfNoWork);
 s32 cellSpursAttributeSetMemoryContainerForSpuThread(vm::ptr<CellSpursAttribute> attr, u32 container);
 s32 cellSpursAttributeSetNamePrefix(vm::ptr<CellSpursAttribute> attr, vm::cptr<char> prefix, u32 size);
 s32 cellSpursAttributeEnableSpuPrintfIfAvailable(vm::ptr<CellSpursAttribute> attr);
 s32 cellSpursAttributeSetSpuThreadGroupType(vm::ptr<CellSpursAttribute> attr, s32 type);
-s32 cellSpursAttributeEnableSystemWorkload(vm::ptr<CellSpursAttribute> attr, vm::cptr<u8[8]> priority, u32 maxSpu, vm::cptr<bool[8]> isPreemptible);
+s32 cellSpursAttributeEnableSystemWorkload(vm::ptr<CellSpursAttribute> attr, vm::cptr<u8[8]> priority, u32 maxSpu, vm::cptr<b8[8]> isPreemptible);
 s32 cellSpursFinalize(vm::ptr<CellSpurs> spurs);
 s32 cellSpursGetSpuThreadGroupId(vm::ptr<CellSpurs> spurs, vm::ptr<u32> group);
 s32 cellSpursGetNumSpuThread(vm::ptr<CellSpurs> spurs, vm::ptr<u32> nThreads);
 s32 cellSpursGetSpuThreadId(vm::ptr<CellSpurs> spurs, vm::ptr<u32> thread, vm::ptr<u32> nThreads);
 s32 cellSpursSetMaxContention(vm::ptr<CellSpurs> spurs, u32 wid, u32 maxContention);
 s32 cellSpursSetPriorities(vm::ptr<CellSpurs> spurs, u32 wid, vm::cptr<u8> priorities);
-s32 cellSpursSetPreemptionVictimHints(vm::ptr<CellSpurs> spurs, vm::cptr<bool> isPreemptible);
+s32 cellSpursSetPreemptionVictimHints(vm::ptr<CellSpurs> spurs, vm::cptr<b8> isPreemptible);
 s32 cellSpursAttachLv2EventQueue(PPUThread& ppu, vm::ptr<CellSpurs> spurs, u32 queue, vm::ptr<u8> port, s32 isDynamic);
 s32 cellSpursDetachLv2EventQueue(vm::ptr<CellSpurs> spurs, u8 port);
-s32 cellSpursEnableExceptionEventHandler(vm::ptr<CellSpurs> spurs, bool flag);
+s32 cellSpursEnableExceptionEventHandler(vm::ptr<CellSpurs> spurs, b8 flag);
 s32 cellSpursSetGlobalExceptionEventHandler(vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursGlobalExceptionEventHandler> eaHandler, vm::ptr<void> arg);
 s32 cellSpursUnsetGlobalExceptionEventHandler(vm::ptr<CellSpurs> spurs);
 s32 cellSpursGetInfo(vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursInfo> info);
@@ -1167,7 +1167,7 @@ s32 spursInit(
 	if (flags & SAF_SPU_PRINTF_ENABLED)
 	{
 		// spu_printf: attach group
-		if (!spu_printf_agcb || spu_printf_agcb(ppu, spurs->spuTG) != CELL_OK)
+		if (!g_spu_printf_agcb || g_spu_printf_agcb(ppu, spurs->spuTG) != CELL_OK)
 		{
 			// remove flag if failed
 			spurs->flags &= ~SAF_SPU_PRINTF_ENABLED;
@@ -1266,7 +1266,7 @@ s32 spursInit(
 }
 
 /// Initialise SPURS
-s32 cellSpursInitialize(PPUThread& ppu, vm::ptr<CellSpurs> spurs, s32 nSpus, s32 spuPriority, s32 ppuPriority, bool exitIfNoWork)
+s32 cellSpursInitialize(PPUThread& ppu, vm::ptr<CellSpurs> spurs, s32 nSpus, s32 spuPriority, s32 ppuPriority, b8 exitIfNoWork)
 {
 	cellSpurs.Warning("cellSpursInitialize(spurs=*0x%x, nSpus=%d, spuPriority=%d, ppuPriority=%d, exitIfNoWork=%d)", spurs, nSpus, spuPriority, ppuPriority, exitIfNoWork);
 
@@ -1348,7 +1348,7 @@ s32 cellSpursInitializeWithAttribute2(PPUThread& ppu, vm::ptr<CellSpurs> spurs, 
 }
 
 /// Initialise SPURS attribute
-s32 _cellSpursAttributeInitialize(vm::ptr<CellSpursAttribute> attr, u32 revision, u32 sdkVersion, u32 nSpus, s32 spuPriority, s32 ppuPriority, bool exitIfNoWork)
+s32 _cellSpursAttributeInitialize(vm::ptr<CellSpursAttribute> attr, u32 revision, u32 sdkVersion, u32 nSpus, s32 spuPriority, s32 ppuPriority, b8 exitIfNoWork)
 {
 	cellSpurs.Warning("_cellSpursAttributeInitialize(attr=*0x%x, revision=%d, sdkVersion=0x%x, nSpus=%d, spuPriority=%d, ppuPriority=%d, exitIfNoWork=%d)",
 		attr, revision, sdkVersion, nSpus, spuPriority, ppuPriority, exitIfNoWork);
@@ -1478,7 +1478,7 @@ s32 cellSpursAttributeSetSpuThreadGroupType(vm::ptr<CellSpursAttribute> attr, s3
 }
 
 /// Enable the system workload
-s32 cellSpursAttributeEnableSystemWorkload(vm::ptr<CellSpursAttribute> attr, vm::cptr<u8[8]> priority, u32 maxSpu, vm::cptr<bool[8]> isPreemptible)
+s32 cellSpursAttributeEnableSystemWorkload(vm::ptr<CellSpursAttribute> attr, vm::cptr<u8[8]> priority, u32 maxSpu, vm::cptr<b8[8]> isPreemptible)
 {
 	cellSpurs.Warning("cellSpursAttributeEnableSystemWorkload(attr=*0x%x, priority=*0x%x, maxSpu=%d, isPreemptible=*0x%x)", attr, priority, maxSpu, isPreemptible);
 
@@ -1737,8 +1737,15 @@ s32 cellSpursSetPriorities(vm::ptr<CellSpurs> spurs, u32 wid, vm::cptr<u8> prior
 	return CELL_OK;
 }
 
+/// Set the priority of a workload for the specified SPU
+s32 cellSpursSetPriority(vm::ptr<CellSpurs> spurs, u32 wid, u32 spuId, u32 priority)
+{
+	cellSpurs.Todo("cellSpursSetPriority(spurs=*0x%x, wid=%d, spuId=%d, priority=%d)", spurs, wid, spuId, priority);
+	return CELL_OK;
+}
+
 /// Set preemption victim SPU
-s32 cellSpursSetPreemptionVictimHints(vm::ptr<CellSpurs> spurs, vm::cptr<bool> isPreemptible)
+s32 cellSpursSetPreemptionVictimHints(vm::ptr<CellSpurs> spurs, vm::cptr<b8> isPreemptible)
 {
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
@@ -1761,7 +1768,7 @@ s32 cellSpursDetachLv2EventQueue(vm::ptr<CellSpurs> spurs, u8 port)
 }
 
 /// Enable the SPU exception event handler
-s32 cellSpursEnableExceptionEventHandler(vm::ptr<CellSpurs> spurs, bool flag)
+s32 cellSpursEnableExceptionEventHandler(vm::ptr<CellSpurs> spurs, b8 flag)
 {
 	cellSpurs.Warning("cellSpursEnableExceptionEventHandler(spurs=*0x%x, flag=%d)", spurs, flag);
 
@@ -4226,6 +4233,7 @@ Module cellSpurs("cellSpurs", []()
 	REG_FUNC(cellSpurs, cellSpursGetInfo);
 	REG_FUNC(cellSpurs, cellSpursSetMaxContention);
 	REG_FUNC(cellSpurs, cellSpursSetPriorities);
+	REG_FUNC(cellSpurs, cellSpursSetPriority);
 	REG_FUNC(cellSpurs, cellSpursSetPreemptionVictimHints);
 	REG_FUNC(cellSpurs, cellSpursAttachLv2EventQueue);
 	REG_FUNC(cellSpurs, cellSpursDetachLv2EventQueue);

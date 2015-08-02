@@ -85,7 +85,7 @@ s32 sceGxmDestroyContext(vm::ptr<SceGxmContext> context)
 	throw EXCEPTION("");
 }
 
-void sceGxmSetValidationEnable(vm::ptr<SceGxmContext> context, bool enable)
+void sceGxmSetValidationEnable(vm::ptr<SceGxmContext> context, b8 enable)
 {
 	throw EXCEPTION("");
 }
@@ -388,7 +388,7 @@ s32 sceGxmColorSurfaceInitDisabled(vm::ptr<SceGxmColorSurface> surface)
 	throw EXCEPTION("");
 }
 
-bool sceGxmColorSurfaceIsEnabled(vm::cptr<SceGxmColorSurface> surface)
+b8 sceGxmColorSurfaceIsEnabled(vm::cptr<SceGxmColorSurface> surface)
 {
 	throw EXCEPTION("");
 }
@@ -473,7 +473,7 @@ void sceGxmDepthStencilSurfaceSetBackgroundStencil(vm::ptr<SceGxmDepthStencilSur
 	throw EXCEPTION("");
 }
 
-bool sceGxmDepthStencilSurfaceIsEnabled(vm::cptr<SceGxmDepthStencilSurface> surface)
+b8 sceGxmDepthStencilSurfaceIsEnabled(vm::cptr<SceGxmDepthStencilSurface> surface)
 {
 	throw EXCEPTION("");
 }
@@ -544,17 +544,17 @@ SceGxmProgramType sceGxmProgramGetType(vm::cptr<SceGxmProgram> program)
 	throw EXCEPTION("");
 }
 
-bool sceGxmProgramIsDiscardUsed(vm::cptr<SceGxmProgram> program)
+b8 sceGxmProgramIsDiscardUsed(vm::cptr<SceGxmProgram> program)
 {
 	throw EXCEPTION("");
 }
 
-bool sceGxmProgramIsDepthReplaceUsed(vm::cptr<SceGxmProgram> program)
+b8 sceGxmProgramIsDepthReplaceUsed(vm::cptr<SceGxmProgram> program)
 {
 	throw EXCEPTION("");
 }
 
-bool sceGxmProgramIsSpriteCoordUsed(vm::cptr<SceGxmProgram> program)
+b8 sceGxmProgramIsSpriteCoordUsed(vm::cptr<SceGxmProgram> program)
 {
 	throw EXCEPTION("");
 }
@@ -634,7 +634,7 @@ u32 sceGxmProgramParameterGetContainerIndex(vm::cptr<SceGxmProgramParameter> par
 	throw EXCEPTION("");
 }
 
-bool sceGxmProgramParameterIsSamplerCube(vm::cptr<SceGxmProgramParameter> parameter)
+b8 sceGxmProgramParameterIsSamplerCube(vm::cptr<SceGxmProgramParameter> parameter)
 {
 	throw EXCEPTION("");
 }

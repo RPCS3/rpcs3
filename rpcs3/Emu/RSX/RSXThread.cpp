@@ -5,7 +5,7 @@
 #include "Emu/System.h"
 #include "Emu/RSX/GSManager.h"
 #include "Emu/RSX/GSRender.h"
-#include "Emu/RSX/sysutil_video.h"
+#include "Emu/SysCalls/Modules/cellVideoOut.h"
 #include "RSXThread.h"
 
 #include "Emu/SysCalls/Callback.h"
@@ -257,6 +257,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 				cb(static_cast<PPUThread&>(CPU), 1);
 			});
 		}
+
+		m_sem_flip.post_and_wait();
 
 		auto sync = [&]()
 		{
@@ -2499,14 +2501,6 @@ void RSXThread::Task()
 
 		if (put == get || !Emu.IsRunning())
 		{
-			if (put == get)
-			{
-				if (m_flip_status == 0)
-					m_sem_flip.post_and_wait();
-
-				m_sem_flush.post_and_wait();
-			}
-
 			std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 			continue;
 		}

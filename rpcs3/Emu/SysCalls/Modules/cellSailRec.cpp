@@ -1,8 +1,8 @@
 #include "stdafx.h"
-#if 0
+#include "Emu/Memory/Memory.h"
+#include "Emu/SysCalls/Modules.h"
 
-void cellSailRec_init();
-Module cellSailRec(0xf034, cellSailRec_init);
+extern Module cellSailRec;
 
 // Error Codes
 enum
@@ -21,223 +21,241 @@ enum
 	CELL_SAIL_ERROR_FATAL              = 0x806107FF,
 };
 
-int cellSailProfileSetEsAudioParameter()
+s32 cellSailProfileSetEsAudioParameter()
 {
 	UNIMPLEMENTED_FUNC(cellSailRec);
 	return CELL_OK;
 }
 
-int cellSailProfileSetEsVideoParameter()
+s32 cellSailProfileSetEsVideoParameter()
 {
 	UNIMPLEMENTED_FUNC(cellSailRec);
 	return CELL_OK;
 }
 
-int cellSailProfileSetStreamParameter()
+s32 cellSailProfileSetStreamParameter()
 {
 	UNIMPLEMENTED_FUNC(cellSailRec);
 	return CELL_OK;
 }
 
-int cellSailVideoConverterCanProcess()
+s32 cellSailVideoConverterCanProcess()
 {
 	UNIMPLEMENTED_FUNC(cellSailRec);
 	return CELL_OK;
 }
 
-int cellSailVideoConverterProcess()
+s32 cellSailVideoConverterProcess()
 {
 	UNIMPLEMENTED_FUNC(cellSailRec);
 	return CELL_OK;
 }
 
-int cellSailVideoConverterCanGetResult()
+s32 cellSailVideoConverterCanGetResult()
 {
 	UNIMPLEMENTED_FUNC(cellSailRec);
 	return CELL_OK;
 }
 
-int cellSailVideoConverterGetResult()
+s32 cellSailVideoConverterGetResult()
 {
 	UNIMPLEMENTED_FUNC(cellSailRec);
 	return CELL_OK;
 }
 
-int cellSailFeederAudioInitialize()
+s32 cellSailFeederAudioInitialize()
 {
 	UNIMPLEMENTED_FUNC(cellSailRec);
 	return CELL_OK;
 }
 
-int cellSailFeederAudioFinalize()
+s32 cellSailFeederAudioFinalize()
 {
 	UNIMPLEMENTED_FUNC(cellSailRec);
 	return CELL_OK;
 }
 
-int cellSailFeederAudioNotifyCallCompleted()
+s32 cellSailFeederAudioNotifyCallCompleted()
 {
 	UNIMPLEMENTED_FUNC(cellSailRec);
 	return CELL_OK;
 }
 
-int cellSailFeederAudioNotifyFrameOut()
+s32 cellSailFeederAudioNotifyFrameOut()
 {
 	UNIMPLEMENTED_FUNC(cellSailRec);
 	return CELL_OK;
 }
 
-int cellSailFeederAudioNotifySessionEnd()
+s32 cellSailFeederAudioNotifySessionEnd()
 {
 	UNIMPLEMENTED_FUNC(cellSailRec);
 	return CELL_OK;
 }
 
-int cellSailFeederAudioNotifySessionError()
+s32 cellSailFeederAudioNotifySessionError()
 {
 	UNIMPLEMENTED_FUNC(cellSailRec);
 	return CELL_OK;
 }
 
-int cellSailFeederVideoInitialize()
+s32 cellSailFeederVideoInitialize()
 {
 	UNIMPLEMENTED_FUNC(cellSailRec);
 	return CELL_OK;
 }
 
-int cellSailFeederVideoFinalize()
+s32 cellSailFeederVideoFinalize()
 {
 	UNIMPLEMENTED_FUNC(cellSailRec);
 	return CELL_OK;
 }
 
-int cellSailFeederVideoNotifyCallCompleted()
+s32 cellSailFeederVideoNotifyCallCompleted()
 {
 	UNIMPLEMENTED_FUNC(cellSailRec);
 	return CELL_OK;
 }
 
-int cellSailFeederVideoNotifyFrameOut()
+s32 cellSailFeederVideoNotifyFrameOut()
 {
 	UNIMPLEMENTED_FUNC(cellSailRec);
 	return CELL_OK;
 }
 
-int cellSailFeederVideoNotifySessionEnd()
+s32 cellSailFeederVideoNotifySessionEnd()
 {
 	UNIMPLEMENTED_FUNC(cellSailRec);
 	return CELL_OK;
 }
 
-int cellSailFeederVideoNotifySessionError()
+s32 cellSailFeederVideoNotifySessionError()
 {
 	UNIMPLEMENTED_FUNC(cellSailRec);
 	return CELL_OK;
 }
 
-int cellSailRecorderInitialize()
+s32 cellSailRecorderInitialize()
 {
 	UNIMPLEMENTED_FUNC(cellSailRec);
 	return CELL_OK;
 }
 
-int cellSailRecorderFinalize()
+s32 cellSailRecorderFinalize()
 {
 	UNIMPLEMENTED_FUNC(cellSailRec);
 	return CELL_OK;
 }
 
-int cellSailRecorderSetFeederAudio()
+s32 cellSailRecorderSetFeederAudio()
 {
 	UNIMPLEMENTED_FUNC(cellSailRec);
 	return CELL_OK;
 }
 
-int cellSailRecorderSetFeederVideo()
+s32 cellSailRecorderSetFeederVideo()
 {
 	UNIMPLEMENTED_FUNC(cellSailRec);
 	return CELL_OK;
 }
 
-int cellSailRecorderSetParameter()
+s32 cellSailRecorderSetParameter()
 {
 	UNIMPLEMENTED_FUNC(cellSailRec);
 	return CELL_OK;
 }
 
-int cellSailRecorderGetParameter()
+s32 cellSailRecorderGetParameter()
 {
 	UNIMPLEMENTED_FUNC(cellSailRec);
 	return CELL_OK;
 }
 
-int cellSailRecorderBoot()
+s32 cellSailRecorderSubscribeEvent()
 {
 	UNIMPLEMENTED_FUNC(cellSailRec);
 	return CELL_OK;
 }
 
-int cellSailRecorderCreateProfile()
+s32 cellSailRecorderUnsubscribeEvent()
 {
 	UNIMPLEMENTED_FUNC(cellSailRec);
 	return CELL_OK;
 }
 
-int cellSailRecorderDestroyProfile()
+s32 cellSailRecorderReplaceEventHandler()
 {
 	UNIMPLEMENTED_FUNC(cellSailRec);
 	return CELL_OK;
 }
 
-int cellSailRecorderCreateVideoConverter()
+s32 cellSailRecorderBoot()
 {
 	UNIMPLEMENTED_FUNC(cellSailRec);
 	return CELL_OK;
 }
 
-int cellSailRecorderDestroyVideoConverter()
+s32 cellSailRecorderCreateProfile()
 {
 	UNIMPLEMENTED_FUNC(cellSailRec);
 	return CELL_OK;
 }
 
-int cellSailRecorderOpenStream()
+s32 cellSailRecorderDestroyProfile()
 {
 	UNIMPLEMENTED_FUNC(cellSailRec);
 	return CELL_OK;
 }
 
-int cellSailRecorderCloseStream()
+s32 cellSailRecorderCreateVideoConverter()
 {
 	UNIMPLEMENTED_FUNC(cellSailRec);
 	return CELL_OK;
 }
 
-int cellSailRecorderStart()
+s32 cellSailRecorderDestroyVideoConverter()
 {
 	UNIMPLEMENTED_FUNC(cellSailRec);
 	return CELL_OK;
 }
 
-int cellSailRecorderStop()
+s32 cellSailRecorderOpenStream()
 {
 	UNIMPLEMENTED_FUNC(cellSailRec);
 	return CELL_OK;
 }
 
-int cellSailRecorderCancel()
+s32 cellSailRecorderCloseStream()
 {
 	UNIMPLEMENTED_FUNC(cellSailRec);
 	return CELL_OK;
 }
 
-int cellSailRecorderDumpImage()
+s32 cellSailRecorderStart()
 {
 	UNIMPLEMENTED_FUNC(cellSailRec);
 	return CELL_OK;
 }
 
-void cellSailRec_init()
+s32 cellSailRecorderStop()
+{
+	UNIMPLEMENTED_FUNC(cellSailRec);
+	return CELL_OK;
+}
+
+s32 cellSailRecorderCancel()
+{
+	UNIMPLEMENTED_FUNC(cellSailRec);
+	return CELL_OK;
+}
+
+s32 cellSailRecorderDumpImage()
+{
+	UNIMPLEMENTED_FUNC(cellSailRec);
+	return CELL_OK;
+}
+
+Module cellSailRec("cellSailRec", []()
 {
 	REG_FUNC(cellSailRec, cellSailProfileSetEsAudioParameter);
 	REG_FUNC(cellSailRec, cellSailProfileSetEsVideoParameter);
@@ -247,7 +265,6 @@ void cellSailRec_init()
 	REG_FUNC(cellSailRec, cellSailVideoConverterProcess);
 	REG_FUNC(cellSailRec, cellSailVideoConverterCanGetResult);
 	REG_FUNC(cellSailRec, cellSailVideoConverterGetResult);
-	//cellSailRec.AddFunc(, CellSailVideoConverterFuncProcessDone);
 
 	REG_FUNC(cellSailRec, cellSailFeederAudioInitialize);
 	REG_FUNC(cellSailRec, cellSailFeederAudioFinalize);
@@ -269,9 +286,9 @@ void cellSailRec_init()
 	REG_FUNC(cellSailRec, cellSailRecorderSetFeederVideo);
 	REG_FUNC(cellSailRec, cellSailRecorderSetParameter);
 	REG_FUNC(cellSailRec, cellSailRecorderGetParameter);
-	//cellSailRec.AddFunc(, cellSailRecorderSubscribeEvent);
-	//cellSailRec.AddFunc(, cellSailRecorderUnsubscribeEvent);
-	//cellSailRec.AddFunc(, cellSailRecorderReplaceEventHandler);
+	REG_FUNC(cellSailRec, cellSailRecorderSubscribeEvent);
+	REG_FUNC(cellSailRec, cellSailRecorderUnsubscribeEvent);
+	REG_FUNC(cellSailRec, cellSailRecorderReplaceEventHandler);
 	REG_FUNC(cellSailRec, cellSailRecorderBoot);
 	REG_FUNC(cellSailRec, cellSailRecorderCreateProfile);
 	REG_FUNC(cellSailRec, cellSailRecorderDestroyProfile);
@@ -284,5 +301,4 @@ void cellSailRec_init()
 	REG_FUNC(cellSailRec, cellSailRecorderCancel);
 
 	REG_FUNC(cellSailRec, cellSailRecorderDumpImage);
-}
-#endif
+});

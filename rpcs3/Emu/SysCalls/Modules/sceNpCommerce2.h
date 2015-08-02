@@ -132,18 +132,6 @@ enum
 	SCE_NP_COMMERCE2_DO_PRODUCT_CODE_MEMORY_CONTAINER_SIZE = 16777216,
 };
 
-struct SceNpCommerce2Internal
-{
-	bool m_bSceNpCommerce2Initialized;
-
-	SceNpCommerce2Internal()
-		: m_bSceNpCommerce2Initialized(false)
-	{
-	}
-};
-
-extern std::unique_ptr<SceNpCommerce2Internal> g_sceNpCommerce2;
-
 // Common structure used when receiving data
 struct SceNpCommerce2CommonData
 {
@@ -171,7 +159,7 @@ struct SceNpCommerce2SessionInfo
 	be_t<u32> decimals;
 	s8 currencySymbol[SCE_NP_COMMERCE2_CURRENCY_SYMBOL_LEN + 1];
 	be_t<u32> symbolPosition;
-	bool symbolWithSpace;
+	b8 symbolWithSpace;
 	u8 padding1[3];
 	s8 thousandSeparator[SCE_NP_COMMERCE2_THOUSAND_SEPARATOR_LEN + 1];
 	s8 decimalLetter[SCE_NP_COMMERCE2_DECIMAL_LETTER_LEN + 1];
@@ -259,7 +247,7 @@ struct SceNpCommerce2GameSkuInfo
 	be_t<u32> timeUntilExpiration;
 	be_t<u32> purchasabilityFlag;
 	be_t<u32> annotation;
-	bool downloadable;
+	b8 downloadable;
 	u8 padding[3];
 	be_t<u32> price;
 	s8 skuName;
@@ -288,4 +276,4 @@ struct SceNpCommerce2ProductCodeParam
 	s8 padding3[3];
 };
 
-typedef void(*SceNpCommerce2Handler)(u32 ctx_id, u32 subject_id, s32 event, s32 error_code, u32 arg);
+using SceNpCommerce2Handler = void(u32 ctx_id, u32 subject_id, s32 event, s32 error_code, vm::ptr<void> arg);

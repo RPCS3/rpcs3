@@ -1,8 +1,8 @@
 #include "stdafx.h"
-#if 0
+#include "Emu/Memory/Memory.h"
+#include "Emu/SysCalls/Modules.h"
 
-void cellPhotoDecode_init();
-Module cellPhotoDecode(0xf02e, cellPhotoDecode_init);
+extern Module cellPhotoDecode;
 
 // Return Codes
 enum
@@ -32,35 +32,34 @@ struct CellPhotoDecodeReturnParam
 };
 
 // Functions
-int cellPhotoDecodeInitialize()
+s32 cellPhotoDecodeInitialize()
 {
 	UNIMPLEMENTED_FUNC(cellPhotoDecode);
 	return CELL_OK;
 }
 
-int cellPhotoDecodeInitialize2()
+s32 cellPhotoDecodeInitialize2()
 {
 	UNIMPLEMENTED_FUNC(cellPhotoDecode);
 	return CELL_OK;
 }
 
-int cellPhotoDecodeFinalize()
+s32 cellPhotoDecodeFinalize()
 {
 	UNIMPLEMENTED_FUNC(cellPhotoDecode);
 	return CELL_OK;
 }
 
-int cellPhotoDecodeFromFile()
+s32 cellPhotoDecodeFromFile()
 {
 	UNIMPLEMENTED_FUNC(cellPhotoDecode);
 	return CELL_OK;
 }
 
-void cellPhotoDecode_init()
+Module cellPhotoDecode("cellPhotoDecode", []()
 {
 	REG_FUNC(cellPhotoDecode, cellPhotoDecodeInitialize);
 	REG_FUNC(cellPhotoDecode, cellPhotoDecodeInitialize2);
 	REG_FUNC(cellPhotoDecode, cellPhotoDecodeFinalize);
 	REG_FUNC(cellPhotoDecode, cellPhotoDecodeFromFile);
-}
-#endif 
+});

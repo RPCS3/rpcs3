@@ -1,94 +1,94 @@
 #include "stdafx.h"
-#if 0
+#include "Emu/Memory/Memory.h"
+#include "Emu/SysCalls/Modules.h"
 
-void cellSsl_init();
-Module cellSsl(0x0003, cellSsl_init);
+extern Module cellSsl;
 
-int cellSslInit()
+s32 cellSslInit()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-int cellSslEnd()
+s32 cellSslEnd()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-int cellSslCertificateLoader()
+s32 cellSslCertificateLoader()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-int cellSslCertGetSerialNumber()
+s32 cellSslCertGetSerialNumber()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-int cellSslCertGetPublicKey()
+s32 cellSslCertGetPublicKey()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-int cellSslCertGetRsaPublicKeyModulus()
+s32 cellSslCertGetRsaPublicKeyModulus()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-int cellSslCertGetRsaPublicKeyExponent()
+s32 cellSslCertGetRsaPublicKeyExponent()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-int cellSslCertGetNotBefore()
+s32 cellSslCertGetNotBefore()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-int cellSslCertGetNotAfter()
+s32 cellSslCertGetNotAfter()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-int cellSslCertGetSubjectName()
+s32 cellSslCertGetSubjectName()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-int cellSslCertGetIssuerName()
+s32 cellSslCertGetIssuerName()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-int cellSslCertGetNameEntryCount()
+s32 cellSslCertGetNameEntryCount()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-int cellSslCertGetNameEntryInfo()
+s32 cellSslCertGetNameEntryInfo()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-int cellSslCertGetMd5Fingerprint()
+s32 cellSslCertGetMd5Fingerprint()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-void cellSsl_init()
+Module cellSsl("cellSsl", []()
 {
 	REG_FUNC(cellSsl, cellSslInit);
 	REG_FUNC(cellSsl, cellSslEnd);
@@ -106,5 +106,4 @@ void cellSsl_init()
 	REG_FUNC(cellSsl, cellSslCertGetNameEntryCount);
 	REG_FUNC(cellSsl, cellSslCertGetNameEntryInfo);
 	REG_FUNC(cellSsl, cellSslCertGetMd5Fingerprint);
-}
-#endif
+});
