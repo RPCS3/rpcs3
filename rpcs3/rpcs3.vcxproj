@@ -157,7 +157,7 @@
       <ExceptionHandling>Async</ExceptionHandling>
       <PrecompiledHeaderFile>stdafx_gui.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName)_gui.pch</PrecompiledHeaderOutputFile>
-      <PreprocessorDefinitions>_UNICODE;UNICODE;%(PreprocessorDefinitions);DX12_SUPPORT</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_UNICODE;UNICODE;DX12_SUPPORT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <OpenMPSupport>true</OpenMPSupport>
     </ClCompile>
     <Link>
@@ -256,7 +256,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <AdditionalIncludeDirectories>..\wxWidgets\include\msvc</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions);DX12_SUPPORT</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;DX12_SUPPORT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <DisableLanguageExtensions>false</DisableLanguageExtensions>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>

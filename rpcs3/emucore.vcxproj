@@ -846,7 +846,7 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>false</SDLCheck>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <PreprocessorDefinitions>_UNICODE;UNICODE;%(PreprocessorDefinitions);DX12_SUPPORT</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_UNICODE;UNICODE;DX12_SUPPORT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
       <ExceptionHandling>Async</ExceptionHandling>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
@@ -886,7 +886,7 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>false</SDLCheck>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <PreprocessorDefinitions>_UNICODE;UNICODE;LLVM_AVAILABLE;%(PreprocessorDefinitions);DX12_SUPPORT</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_UNICODE;UNICODE;LLVM_AVAILABLE;DX12_SUPPORT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
       <ExceptionHandling>Async</ExceptionHandling>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
@@ -953,7 +953,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <AdditionalIncludeDirectories>
       </AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_UNICODE;UNICODE;%(PreprocessorDefinitions);DX12_SUPPORT</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_UNICODE;UNICODE;DX12_SUPPORT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -996,7 +996,7 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
       <ExceptionHandling>Async</ExceptionHandling>
-      <PreprocessorDefinitions>LLVM_AVAILABLE;%(PreprocessorDefinitions);DX12_SUPPORT</PreprocessorDefinitions>
+      <PreprocessorDefinitions>LLVM_AVAILABLE;DX12_SUPPORT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <AdditionalIncludeDirectories>
       </AdditionalIncludeDirectories>
