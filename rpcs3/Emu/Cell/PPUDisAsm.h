@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Emu/Cell/PPCDisAsm.h"
+#include "Emu/Cell/PPUOpcodes.h"
 
 class PPUDisAsm
 	: public PPUOpcodes
