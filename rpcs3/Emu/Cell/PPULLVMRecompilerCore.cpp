@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #ifdef LLVM_AVAILABLE
+#include "Emu/state.h"
 #include "Emu/System.h"
 #include "Emu/Cell/PPULLVMRecompiler.h"
 #include "Emu/Memory/Memory.h"
@@ -27,6 +28,13 @@
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
+
+#define USE_INTERP_IF_REQUESTED(inst, ...) \
+	if (!rpcs3::state.config.core.llvm.enable_##inst.value()) \
+	{ \
+		Call<void>(#inst, m_state.args[CompileTaskState::Args::State], __VA_ARGS__); \
+		return; \
+	}
 
 using namespace llvm;
 using namespace ppu_recompiler_llvm;
@@ -1668,12 +1676,16 @@ void Compiler::VXOR(u32 vd, u32 va, u32 vb) {
 }
 
 void Compiler::MULLI(u32 rd, u32 ra, s32 simm16) {
+	USE_INTERP_IF_REQUESTED(MULLI, m_ir_builder->getInt32(rd), m_ir_builder->getInt32(ra), m_ir_builder->getInt32(simm16));
+
 	auto ra_i64 = GetGpr(ra);
 	auto res_i64 = m_ir_builder->CreateMul(ra_i64, m_ir_builder->getInt64((s64)simm16));
 	SetGpr(rd, res_i64);
 }
 
 void Compiler::SUBFIC(u32 rd, u32 ra, s32 simm16) {
+	USE_INTERP_IF_REQUESTED(SUBFIC, m_ir_builder->getInt32(rd), m_ir_builder->getInt32(ra), m_ir_builder->getInt32(simm16))
+
 	auto ra_i64 = GetGpr(ra);
 	ra_i64 = m_ir_builder->CreateNeg(ra_i64); // simpler way of doing  ~ra + 1
 	auto res_s = m_ir_builder->CreateCall2(Intrinsic::getDeclaration(m_module, Intrinsic::uadd_with_overflow, m_ir_builder->getInt64Ty()), ra_i64, m_ir_builder->getInt64((s64)simm16));
@@ -1686,6 +1698,8 @@ void Compiler::SUBFIC(u32 rd, u32 ra, s32 simm16) {
 }
 
 void Compiler::CMPLI(u32 crfd, u32 l, u32 ra, u32 uimm16) {
+	USE_INTERP_IF_REQUESTED(CMPLI, m_ir_builder->getInt32(crfd), m_ir_builder->getInt32(l), m_ir_builder->getInt32(ra), m_ir_builder->getInt32(uimm16));
+
 	Value * ra_i64;
 	if (l == 0) {
 		ra_i64 = m_ir_builder->CreateZExt(GetGpr(ra, 32), m_ir_builder->getInt64Ty());
@@ -1698,6 +1712,8 @@ void Compiler::CMPLI(u32 crfd, u32 l, u32 ra, u32 uimm16) {
 }
 
 void Compiler::CMPI(u32 crfd, u32 l, u32 ra, s32 simm16) {
+	USE_INTERP_IF_REQUESTED(CMPI, m_ir_builder->getInt32(crfd), m_ir_builder->getInt32(l), m_ir_builder->getInt32(ra), m_ir_builder->getInt32(simm16));
+
 	Value * ra_i64;
 	if (l == 0) {
 		ra_i64 = m_ir_builder->CreateSExt(GetGpr(ra, 32), m_ir_builder->getInt64Ty());
@@ -1710,6 +1726,8 @@ void Compiler::CMPI(u32 crfd, u32 l, u32 ra, s32 simm16) {
 }
 
 void Compiler::ADDIC(u32 rd, u32 ra, s32 simm16) {
+	USE_INTERP_IF_REQUESTED(ADDIC, m_ir_builder->getInt32(rd), m_ir_builder->getInt32(ra), m_ir_builder->getInt32(simm16));
+
 	auto ra_i64 = GetGpr(ra);
 	auto res_s = m_ir_builder->CreateCall2(Intrinsic::getDeclaration(m_module, Intrinsic::uadd_with_overflow, m_ir_builder->getInt64Ty()), m_ir_builder->getInt64((s64)simm16), ra_i64);
 	auto sum_i64 = m_ir_builder->CreateExtractValue(res_s, { 0 });
@@ -1719,11 +1737,15 @@ void Compiler::ADDIC(u32 rd, u32 ra, s32 simm16) {
 }
 
 void Compiler::ADDIC_(u32 rd, u32 ra, s32 simm16) {
+	USE_INTERP_IF_REQUESTED(ADDIC_, m_ir_builder->getInt32(rd), m_ir_builder->getInt32(ra), m_ir_builder->getInt32(simm16));
+
 	ADDIC(rd, ra, simm16);
 	SetCrFieldSignedCmp(0, GetGpr(rd), m_ir_builder->getInt64(0));
 }
 
 void Compiler::ADDI(u32 rd, u32 ra, s32 simm16) {
+	USE_INTERP_IF_REQUESTED(ADDI, m_ir_builder->getInt32(rd), m_ir_builder->getInt32(ra), m_ir_builder->getInt32(simm16));
+
 	if (ra == 0) {
 		SetGpr(rd, m_ir_builder->getInt64((s64)simm16));
 	}
@@ -1735,6 +1757,8 @@ void Compiler::ADDI(u32 rd, u32 ra, s32 simm16) {
 }
 
 void Compiler::ADDIS(u32 rd, u32 ra, s32 simm16) {
+	USE_INTERP_IF_REQUESTED(ADDIS, m_ir_builder->getInt32(rd), m_ir_builder->getInt32(ra), m_ir_builder->getInt32(simm16));
+
 	if (ra == 0) {
 		SetGpr(rd, m_ir_builder->getInt64((s64)simm16 << 16));
 	}
@@ -1806,6 +1830,8 @@ void Compiler::B(s32 ll, u32 aa, u32 lk) {
 }
 
 void Compiler::MCRF(u32 crfd, u32 crfs) {
+	USE_INTERP_IF_REQUESTED(MCRF, m_ir_builder->getInt32(crfd), m_ir_builder->getInt32(crfs));
+
 	if (crfd != crfs) {
 		auto cr_i32 = GetCr();
 		auto crf_i32 = GetNibble(cr_i32, crfs);
@@ -1822,6 +1848,8 @@ void Compiler::BCLR(u32 bo, u32 bi, u32 bh, u32 lk) {
 }
 
 void Compiler::CRNOR(u32 crbd, u32 crba, u32 crbb) {
+	USE_INTERP_IF_REQUESTED(CRNOR, m_ir_builder->getInt32(crbd), m_ir_builder->getInt32(crba), m_ir_builder->getInt32(crbb));
+
 	auto cr_i32 = GetCr();
 	auto ba_i32 = GetBit(cr_i32, crba);
 	auto bb_i32 = GetBit(cr_i32, crbb);
@@ -1832,6 +1860,8 @@ void Compiler::CRNOR(u32 crbd, u32 crba, u32 crbb) {
 }
 
 void Compiler::CRANDC(u32 crbd, u32 crba, u32 crbb) {
+	USE_INTERP_IF_REQUESTED(CRANDC, m_ir_builder->getInt32(crbd), m_ir_builder->getInt32(crba), m_ir_builder->getInt32(crbb));
+
 	auto cr_i32 = GetCr();
 	auto ba_i32 = GetBit(cr_i32, crba);
 	auto bb_i32 = GetBit(cr_i32, crbb);
@@ -1846,6 +1876,8 @@ void Compiler::ISYNC() {
 }
 
 void Compiler::CRXOR(u32 crbd, u32 crba, u32 crbb) {
+	USE_INTERP_IF_REQUESTED(CRXOR, m_ir_builder->getInt32(crbd), m_ir_builder->getInt32(crba), m_ir_builder->getInt32(crbb));
+
 	auto cr_i32 = GetCr();
 	auto ba_i32 = GetBit(cr_i32, crba);
 	auto bb_i32 = GetBit(cr_i32, crbb);
@@ -1860,6 +1892,8 @@ void Compiler::DCBI(u32 ra, u32 rb) {
 }
 
 void Compiler::CRNAND(u32 crbd, u32 crba, u32 crbb) {
+	USE_INTERP_IF_REQUESTED(CRNAND, m_ir_builder->getInt32(crbd), m_ir_builder->getInt32(crba), m_ir_builder->getInt32(crbb));
+
 	auto cr_i32 = GetCr();
 	auto ba_i32 = GetBit(cr_i32, crba);
 	auto bb_i32 = GetBit(cr_i32, crbb);
@@ -1870,6 +1904,8 @@ void Compiler::CRNAND(u32 crbd, u32 crba, u32 crbb) {
 }
 
 void Compiler::CRAND(u32 crbd, u32 crba, u32 crbb) {
+	USE_INTERP_IF_REQUESTED(CRAND, m_ir_builder->getInt32(crbd), m_ir_builder->getInt32(crba), m_ir_builder->getInt32(crbb));
+
 	auto cr_i32 = GetCr();
 	auto ba_i32 = GetBit(cr_i32, crba);
 	auto bb_i32 = GetBit(cr_i32, crbb);
@@ -1879,6 +1915,8 @@ void Compiler::CRAND(u32 crbd, u32 crba, u32 crbb) {
 }
 
 void Compiler::CREQV(u32 crbd, u32 crba, u32 crbb) {
+	USE_INTERP_IF_REQUESTED(CREQV, m_ir_builder->getInt32(crbd), m_ir_builder->getInt32(crba), m_ir_builder->getInt32(crbb));
+
 	auto cr_i32 = GetCr();
 	auto ba_i32 = GetBit(cr_i32, crba);
 	auto bb_i32 = GetBit(cr_i32, crbb);
@@ -1889,6 +1927,8 @@ void Compiler::CREQV(u32 crbd, u32 crba, u32 crbb) {
 }
 
 void Compiler::CRORC(u32 crbd, u32 crba, u32 crbb) {
+	USE_INTERP_IF_REQUESTED(CRORC, m_ir_builder->getInt32(crbd), m_ir_builder->getInt32(crba), m_ir_builder->getInt32(crbb));
+
 	auto cr_i32 = GetCr();
 	auto ba_i32 = GetBit(cr_i32, crba);
 	auto bb_i32 = GetBit(cr_i32, crbb);
@@ -1899,6 +1939,8 @@ void Compiler::CRORC(u32 crbd, u32 crba, u32 crbb) {
 }
 
 void Compiler::CROR(u32 crbd, u32 crba, u32 crbb) {
+	USE_INTERP_IF_REQUESTED(CROR, m_ir_builder->getInt32(crbd), m_ir_builder->getInt32(crba), m_ir_builder->getInt32(crbb));
+
 	auto cr_i32 = GetCr();
 	auto ba_i32 = GetBit(cr_i32, crba);
 	auto bb_i32 = GetBit(cr_i32, crbb);
@@ -1915,6 +1957,8 @@ void Compiler::BCCTR(u32 bo, u32 bi, u32 bh, u32 lk) {
 }
 
 void Compiler::RLWIMI(u32 ra, u32 rs, u32 sh, u32 mb, u32 me, u32 rc) {
+	USE_INTERP_IF_REQUESTED(RLWIMI, m_ir_builder->getInt32(ra), m_ir_builder->getInt32(rs), m_ir_builder->getInt32(sh), m_ir_builder->getInt32(mb), m_ir_builder->getInt32(me), m_ir_builder->getInt32(rc));
+
 	auto rs_i32 = GetGpr(rs, 32);
 	auto rs_i64 = m_ir_builder->CreateZExt(rs_i32, m_ir_builder->getInt64Ty());
 	auto rsh_i64 = m_ir_builder->CreateShl(rs_i64, 32);
@@ -1939,6 +1983,8 @@ void Compiler::RLWIMI(u32 ra, u32 rs, u32 sh, u32 mb, u32 me, u32 rc) {
 }
 
 void Compiler::RLWINM(u32 ra, u32 rs, u32 sh, u32 mb, u32 me, u32 rc) {
+	USE_INTERP_IF_REQUESTED(RLWINM, m_ir_builder->getInt32(ra), m_ir_builder->getInt32(rs), m_ir_builder->getInt32(sh), m_ir_builder->getInt32(mb), m_ir_builder->getInt32(me), m_ir_builder->getInt32(rc));
+
 	auto rs_i32 = GetGpr(rs, 32);
 	auto rs_i64 = m_ir_builder->CreateZExt(rs_i32, m_ir_builder->getInt64Ty());
 	auto rsh_i64 = m_ir_builder->CreateShl(rs_i64, 32);
@@ -1959,6 +2005,8 @@ void Compiler::RLWINM(u32 ra, u32 rs, u32 sh, u32 mb, u32 me, u32 rc) {
 }
 
 void Compiler::RLWNM(u32 ra, u32 rs, u32 rb, u32 mb, u32 me, u32 rc) {
+	USE_INTERP_IF_REQUESTED(RLWNM, m_ir_builder->getInt32(ra), m_ir_builder->getInt32(rs), m_ir_builder->getInt32(rb), m_ir_builder->getInt32(mb), m_ir_builder->getInt32(me), m_ir_builder->getInt32(rc));
+
 	auto rs_i32 = GetGpr(rs, 32);
 	auto rs_i64 = m_ir_builder->CreateZExt(rs_i32, m_ir_builder->getInt64Ty());
 	auto rsh_i64 = m_ir_builder->CreateShl(rs_i64, 32);
@@ -1978,30 +2026,40 @@ void Compiler::RLWNM(u32 ra, u32 rs, u32 rb, u32 mb, u32 me, u32 rc) {
 }
 
 void Compiler::ORI(u32 ra, u32 rs, u32 uimm16) {
+	USE_INTERP_IF_REQUESTED(ORI, m_ir_builder->getInt32(ra), m_ir_builder->getInt32(rs), m_ir_builder->getInt32(uimm16));
+
 	auto rs_i64 = GetGpr(rs);
 	auto res_i64 = m_ir_builder->CreateOr(rs_i64, uimm16);
 	SetGpr(ra, res_i64);
 }
 
 void Compiler::ORIS(u32 ra, u32 rs, u32 uimm16) {
+	USE_INTERP_IF_REQUESTED(ORIS, m_ir_builder->getInt32(ra), m_ir_builder->getInt32(rs), m_ir_builder->getInt32(uimm16));
+
 	auto rs_i64 = GetGpr(rs);
 	auto res_i64 = m_ir_builder->CreateOr(rs_i64, (u64)uimm16 << 16);
 	SetGpr(ra, res_i64);
 }
 
 void Compiler::XORI(u32 ra, u32 rs, u32 uimm16) {
+	USE_INTERP_IF_REQUESTED(XORI, m_ir_builder->getInt32(ra), m_ir_builder->getInt32(rs), m_ir_builder->getInt32(uimm16));
+
 	auto rs_i64 = GetGpr(rs);
 	auto res_i64 = m_ir_builder->CreateXor(rs_i64, uimm16);
 	SetGpr(ra, res_i64);
 }
 
 void Compiler::XORIS(u32 ra, u32 rs, u32 uimm16) {
+	USE_INTERP_IF_REQUESTED(XORIS, m_ir_builder->getInt32(ra), m_ir_builder->getInt32(rs), m_ir_builder->getInt32(uimm16));
+
 	auto rs_i64 = GetGpr(rs);
 	auto res_i64 = m_ir_builder->CreateXor(rs_i64, (u64)uimm16 << 16);
 	SetGpr(ra, res_i64);
 }
 
 void Compiler::ANDI_(u32 ra, u32 rs, u32 uimm16) {
+	USE_INTERP_IF_REQUESTED(ANDI_, m_ir_builder->getInt32(ra), m_ir_builder->getInt32(rs), m_ir_builder->getInt32(uimm16));
+
 	auto rs_i64 = GetGpr(rs);
 	auto res_i64 = m_ir_builder->CreateAnd(rs_i64, uimm16);
 	SetGpr(ra, res_i64);
@@ -2009,6 +2067,8 @@ void Compiler::ANDI_(u32 ra, u32 rs, u32 uimm16) {
 }
 
 void Compiler::ANDIS_(u32 ra, u32 rs, u32 uimm16) {
+	USE_INTERP_IF_REQUESTED(ANDIS_, m_ir_builder->getInt32(ra), m_ir_builder->getInt32(rs), m_ir_builder->getInt32(uimm16));
+
 	auto rs_i64 = GetGpr(rs);
 	auto res_i64 = m_ir_builder->CreateAnd(rs_i64, (u64)uimm16 << 16);
 	SetGpr(ra, res_i64);
@@ -2016,6 +2076,8 @@ void Compiler::ANDIS_(u32 ra, u32 rs, u32 uimm16) {
 }
 
 void Compiler::RLDICL(u32 ra, u32 rs, u32 sh, u32 mb, u32 rc) {
+	USE_INTERP_IF_REQUESTED(RLDICL, m_ir_builder->getInt32(ra), m_ir_builder->getInt32(rs), m_ir_builder->getInt32(sh), m_ir_builder->getInt32(mb), m_ir_builder->getInt32(rc));
+
 	auto rs_i64 = GetGpr(rs);
 	auto res_i64 = rs_i64;
 	if (sh) {
@@ -2033,6 +2095,8 @@ void Compiler::RLDICL(u32 ra, u32 rs, u32 sh, u32 mb, u32 rc) {
 }
 
 void Compiler::RLDICR(u32 ra, u32 rs, u32 sh, u32 me, u32 rc) {
+	USE_INTERP_IF_REQUESTED(RLDICR, m_ir_builder->getInt32(ra), m_ir_builder->getInt32(rs), m_ir_builder->getInt32(sh), m_ir_builder->getInt32(me), m_ir_builder->getInt32(rc));
+
 	auto rs_i64 = GetGpr(rs);
 	auto res_i64 = rs_i64;
 	if (sh) {
@@ -2050,6 +2114,8 @@ void Compiler::RLDICR(u32 ra, u32 rs, u32 sh, u32 me, u32 rc) {
 }
 
 void Compiler::RLDIC(u32 ra, u32 rs, u32 sh, u32 mb, u32 rc) {
+	USE_INTERP_IF_REQUESTED(RLDIC, m_ir_builder->getInt32(ra), m_ir_builder->getInt32(rs), m_ir_builder->getInt32(sh), m_ir_builder->getInt32(mb), m_ir_builder->getInt32(rc));
+
 	auto rs_i64 = GetGpr(rs);
 	auto res_i64 = rs_i64;
 	if (sh) {
@@ -2067,6 +2133,8 @@ void Compiler::RLDIC(u32 ra, u32 rs, u32 sh, u32 mb, u32 rc) {
 }
 
 void Compiler::RLDIMI(u32 ra, u32 rs, u32 sh, u32 mb, u32 rc) {
+	USE_INTERP_IF_REQUESTED(RLDIMI, m_ir_builder->getInt32(ra), m_ir_builder->getInt32(rs), m_ir_builder->getInt32(sh), m_ir_builder->getInt32(mb), m_ir_builder->getInt32(rc));
+
 	auto rs_i64 = GetGpr(rs);
 	auto ra_i64 = GetGpr(ra);
 	auto res_i64 = rs_i64;
@@ -2088,6 +2156,8 @@ void Compiler::RLDIMI(u32 ra, u32 rs, u32 sh, u32 mb, u32 rc) {
 }
 
 void Compiler::RLDC_LR(u32 ra, u32 rs, u32 rb, u32 m_eb, u32 is_r, u32 rc) {
+	USE_INTERP_IF_REQUESTED(RLDC_LR, m_ir_builder->getInt32(ra), m_ir_builder->getInt32(rs), m_ir_builder->getInt32(rb), m_ir_builder->getInt32(m_eb), m_ir_builder->getInt32(is_r), m_ir_builder->getInt32(rc));
+
 	auto rs_i64 = GetGpr(rs);
 	auto rb_i64 = GetGpr(rb);
 	auto shl_i64 = m_ir_builder->CreateAnd(rb_i64, 0x3F);
@@ -2111,6 +2181,8 @@ void Compiler::RLDC_LR(u32 ra, u32 rs, u32 rb, u32 m_eb, u32 is_r, u32 rc) {
 }
 
 void Compiler::CMP(u32 crfd, u32 l, u32 ra, u32 rb) {
+	USE_INTERP_IF_REQUESTED(CMP, m_ir_builder->getInt32(crfd), m_ir_builder->getInt32(l), m_ir_builder->getInt32(ra), m_ir_builder->getInt32(rb));
+
 	Value * ra_i64;
 	Value * rb_i64;
 	if (l == 0) {
@@ -2245,12 +2317,16 @@ void Compiler::MULHWU(u32 rd, u32 ra, u32 rb, u32 rc) {
 }
 
 void Compiler::MFOCRF(u32 a, u32 rd, u32 crm) {
+	USE_INTERP_IF_REQUESTED(MFOCRF, m_ir_builder->getInt32(a), m_ir_builder->getInt32(rd), m_ir_builder->getInt32(crm));
+
 	auto cr_i32 = GetCr();
 	auto cr_i64 = m_ir_builder->CreateZExt(cr_i32, m_ir_builder->getInt64Ty());
 	SetGpr(rd, cr_i64);
 }
 
 void Compiler::LWARX(u32 rd, u32 ra, u32 rb) {
+	USE_INTERP_IF_REQUESTED(LWARX, m_ir_builder->getInt32(rd), m_ir_builder->getInt32(ra), m_ir_builder->getInt32(rb));
+
 	auto addr_i64 = GetGpr(rb);
 	if (ra) {
 		auto ra_i64 = GetGpr(ra);
@@ -2333,6 +2409,8 @@ void Compiler::SLD(u32 ra, u32 rs, u32 rb, u32 rc) {
 }
 
 void Compiler::AND(u32 ra, u32 rs, u32 rb, u32 rc) {
+	USE_INTERP_IF_REQUESTED(AND, m_ir_builder->getInt32(ra), m_ir_builder->getInt32(rs), m_ir_builder->getInt32(rb), m_ir_builder->getInt32(rc));
+
 	auto rs_i64 = GetGpr(rs);
 	auto rb_i64 = GetGpr(rb);
 	auto res_i64 = m_ir_builder->CreateAnd(rs_i64, rb_i64);
@@ -2344,6 +2422,8 @@ void Compiler::AND(u32 ra, u32 rs, u32 rb, u32 rc) {
 }
 
 void Compiler::CMPL(u32 crfd, u32 l, u32 ra, u32 rb) {
+	USE_INTERP_IF_REQUESTED(CMPL, m_ir_builder->getInt32(crfd), m_ir_builder->getInt32(l), m_ir_builder->getInt32(ra), m_ir_builder->getInt32(rb));
+
 	Value * ra_i64;
 	Value * rb_i64;
 	if (l == 0) {
@@ -2409,6 +2489,8 @@ void Compiler::LVEHX(u32 vd, u32 ra, u32 rb) {
 }
 
 void Compiler::SUBF(u32 rd, u32 ra, u32 rb, u32 oe, u32 rc) {
+	USE_INTERP_IF_REQUESTED(SUBF, m_ir_builder->getInt32(rd), m_ir_builder->getInt32(ra), m_ir_builder->getInt32(rb), m_ir_builder->getInt32(oe), m_ir_builder->getInt32(rc));
+
 	auto ra_i64 = GetGpr(ra);
 	auto rb_i64 = GetGpr(rb);
 	auto diff_i64 = m_ir_builder->CreateSub(rb_i64, ra_i64);
@@ -2568,6 +2650,8 @@ void Compiler::LVX(u32 vd, u32 ra, u32 rb) {
 }
 
 void Compiler::NEG(u32 rd, u32 ra, u32 oe, u32 rc) {
+	USE_INTERP_IF_REQUESTED(NEG, m_ir_builder->getInt32(rd), m_ir_builder->getInt32(ra), m_ir_builder->getInt32(oe), m_ir_builder->getInt32(rc));
+
 	auto ra_i64 = GetGpr(ra);
 	auto diff_i64 = m_ir_builder->CreateSub(m_ir_builder->getInt64(0), ra_i64);
 	SetGpr(rd, diff_i64);
@@ -2669,6 +2753,8 @@ void Compiler::ADDE(u32 rd, u32 ra, u32 rb, u32 oe, u32 rc) {
 }
 
 void Compiler::MTOCRF(u32 l, u32 crm, u32 rs) {
+	USE_INTERP_IF_REQUESTED(MTOCRF, m_ir_builder->getInt32(l), m_ir_builder->getInt32(crm), m_ir_builder->getInt32(rs));
+
 	auto rs_i32 = GetGpr(rs, 32);
 	auto cr_i32 = GetCr();
 	u32  mask = 0;
@@ -2699,6 +2785,8 @@ void Compiler::STDX(u32 rs, u32 ra, u32 rb) {
 }
 
 void Compiler::STWCX_(u32 rs, u32 ra, u32 rb) {
+	USE_INTERP_IF_REQUESTED(STWCX_, m_ir_builder->getInt32(rs), m_ir_builder->getInt32(ra), m_ir_builder->getInt32(rb));
+
 	auto addr_i64 = GetGpr(rb);
 	if (ra) {
 		auto ra_i64 = GetGpr(ra);
@@ -2922,6 +3010,8 @@ void Compiler::ADDME(u32 rd, u32 ra, u32 oe, u32 rc) {
 }
 
 void Compiler::MULLW(u32 rd, u32 ra, u32 rb, u32 oe, u32 rc) {
+	USE_INTERP_IF_REQUESTED(MULLW, m_ir_builder->getInt32(rd), m_ir_builder->getInt32(ra), m_ir_builder->getInt32(rb), m_ir_builder->getInt32(oe), m_ir_builder->getInt32(rc));
+
 	auto ra_i32 = GetGpr(ra, 32);
 	auto rb_i32 = GetGpr(rb, 32);
 	auto ra_i64 = m_ir_builder->CreateSExt(ra_i32, m_ir_builder->getInt64Ty());
@@ -2954,6 +3044,8 @@ void Compiler::STBUX(u32 rs, u32 ra, u32 rb) {
 }
 
 void Compiler::ADD(u32 rd, u32 ra, u32 rb, u32 oe, u32 rc) {
+	USE_INTERP_IF_REQUESTED(ADD, m_ir_builder->getInt32(rd), m_ir_builder->getInt32(ra), m_ir_builder->getInt32(rb), m_ir_builder->getInt32(oe), m_ir_builder->getInt32(rc));
+
 	auto ra_i64 = GetGpr(ra);
 	auto rb_i64 = GetGpr(rb);
 	auto sum_i64 = m_ir_builder->CreateAdd(ra_i64, rb_i64);
@@ -3179,6 +3271,8 @@ void Compiler::STHUX(u32 rs, u32 ra, u32 rb) {
 }
 
 void Compiler::OR(u32 ra, u32 rs, u32 rb, u32 rc) {
+	USE_INTERP_IF_REQUESTED(OR, m_ir_builder->getInt32(ra), m_ir_builder->getInt32(rs), m_ir_builder->getInt32(rb), m_ir_builder->getInt32(rc));
+
 	auto rs_i64 = GetGpr(rs);
 	auto rb_i64 = GetGpr(rb);
 	auto res_i64 = m_ir_builder->CreateOr(rs_i64, rb_i64);
@@ -3208,6 +3302,8 @@ void Compiler::DIVDU(u32 rd, u32 ra, u32 rb, u32 oe, u32 rc) {
 }
 
 void Compiler::DIVWU(u32 rd, u32 ra, u32 rb, u32 oe, u32 rc) {
+	USE_INTERP_IF_REQUESTED(DIVWU, m_ir_builder->getInt32(rd), m_ir_builder->getInt32(ra), m_ir_builder->getInt32(rb), m_ir_builder->getInt32(oe), m_ir_builder->getInt32(rc));
+
 	auto ra_i32 = GetGpr(ra, 32);
 	auto rb_i32 = GetGpr(rb, 32);
 	auto res_i32 = m_ir_builder->CreateUDiv(ra_i32, rb_i32);
@@ -3284,6 +3380,8 @@ void Compiler::DIVD(u32 rd, u32 ra, u32 rb, u32 oe, u32 rc) {
 }
 
 void Compiler::DIVW(u32 rd, u32 ra, u32 rb, u32 oe, u32 rc) {
+	USE_INTERP_IF_REQUESTED(DIVW, m_ir_builder->getInt32(rd), m_ir_builder->getInt32(ra), m_ir_builder->getInt32(rb), m_ir_builder->getInt32(oe), m_ir_builder->getInt32(rc));
+
 	auto ra_i32 = GetGpr(ra, 32);
 	auto rb_i32 = GetGpr(rb, 32);
 	auto res_i32 = m_ir_builder->CreateSDiv(ra_i32, rb_i32);
@@ -3682,6 +3780,8 @@ void Compiler::DSS(u32 strm, u32 a) {
 }
 
 void Compiler::SRAWI(u32 ra, u32 rs, u32 sh, u32 rc) {
+	USE_INTERP_IF_REQUESTED(SRAWI, m_ir_builder->getInt32(ra), m_ir_builder->getInt32(rs), m_ir_builder->getInt32(sh), m_ir_builder->getInt32(rc));
+
 	auto rs_i32 = GetGpr(rs, 32);
 	auto rs_i64 = m_ir_builder->CreateZExt(rs_i32, m_ir_builder->getInt64Ty());
 	rs_i64 = m_ir_builder->CreateShl(rs_i64, 32);
@@ -3757,6 +3857,8 @@ void Compiler::STVRXL(u32 vs, u32 ra, u32 rb) {
 }
 
 void Compiler::EXTSB(u32 ra, u32 rs, u32 rc) {
+	USE_INTERP_IF_REQUESTED(EXTSB, m_ir_builder->getInt32(ra), m_ir_builder->getInt32(rs), m_ir_builder->getInt32(rc));
+
 	auto rs_i8 = GetGpr(rs, 8);
 	auto rs_i64 = m_ir_builder->CreateSExt(rs_i8, m_ir_builder->getInt64Ty());
 	SetGpr(ra, rs_i64);
@@ -3779,6 +3881,8 @@ void Compiler::STFIWX(u32 frs, u32 ra, u32 rb) {
 }
 
 void Compiler::EXTSW(u32 ra, u32 rs, u32 rc) {
+	USE_INTERP_IF_REQUESTED(EXTSW, m_ir_builder->getInt32(ra), m_ir_builder->getInt32(rs), m_ir_builder->getInt32(rc));
+
 	auto rs_i32 = GetGpr(rs, 32);
 	auto rs_i64 = m_ir_builder->CreateSExt(rs_i32, m_ir_builder->getInt64Ty());
 	SetGpr(ra, rs_i64);
@@ -3810,6 +3914,8 @@ void Compiler::DCBZ(u32 ra, u32 rb) {
 }
 
 void Compiler::LWZ(u32 rd, u32 ra, s32 d) {
+	USE_INTERP_IF_REQUESTED(LWZ, m_ir_builder->getInt32(rd), m_ir_builder->getInt32(ra), m_ir_builder->getInt32(d));
+
 	auto addr_i64 = (Value *)m_ir_builder->getInt64((s64)d);
 	if (ra) {
 		auto ra_i64 = GetGpr(ra);
@@ -3833,6 +3939,8 @@ void Compiler::LWZU(u32 rd, u32 ra, s32 d) {
 }
 
 void Compiler::LBZ(u32 rd, u32 ra, s32 d) {
+	USE_INTERP_IF_REQUESTED(LBZ, m_ir_builder->getInt32(rd), m_ir_builder->getInt32(ra), m_ir_builder->getInt32(d));
+
 	auto addr_i64 = (Value *)m_ir_builder->getInt64((s64)d);
 	if (ra) {
 		auto ra_i64 = GetGpr(ra);
@@ -3856,6 +3964,8 @@ void Compiler::LBZU(u32 rd, u32 ra, s32 d) {
 }
 
 void Compiler::STW(u32 rs, u32 ra, s32 d) {
+	USE_INTERP_IF_REQUESTED(STW, m_ir_builder->getInt32(rs), m_ir_builder->getInt32(ra), m_ir_builder->getInt32(d));
+
 	auto addr_i64 = (Value *)m_ir_builder->getInt64((s64)d);
 	if (ra) {
 		auto ra_i64 = GetGpr(ra);
@@ -3894,6 +4004,8 @@ void Compiler::STBU(u32 rs, u32 ra, s32 d) {
 }
 
 void Compiler::LHZ(u32 rd, u32 ra, s32 d) {
+	USE_INTERP_IF_REQUESTED(LHZ, m_ir_builder->getInt32(rd), m_ir_builder->getInt32(ra), m_ir_builder->getInt32(d));
+
 	auto addr_i64 = (Value *)m_ir_builder->getInt64((s64)d);
 	if (ra) {
 		auto ra_i64 = GetGpr(ra);
@@ -3986,6 +4098,8 @@ void Compiler::STMW(u32 rs, u32 ra, s32 d) {
 }
 
 void Compiler::LFS(u32 frd, u32 ra, s32 d) {
+	USE_INTERP_IF_REQUESTED(LFS, m_ir_builder->getInt32(frd), m_ir_builder->getInt32(ra), m_ir_builder->getInt32(d));
+
 	auto addr_i64 = (Value *)m_ir_builder->getInt64((s64)d);
 	if (ra) {
 		auto ra_i64 = GetGpr(ra);
@@ -4027,6 +4141,8 @@ void Compiler::LFDU(u32 frd, u32 ra, s32 ds) {
 }
 
 void Compiler::STFS(u32 frs, u32 ra, s32 d) {
+	USE_INTERP_IF_REQUESTED(STFS, m_ir_builder->getInt32(frs), m_ir_builder->getInt32(ra), m_ir_builder->getInt32(d));
+
 	auto addr_i64 = (Value *)m_ir_builder->getInt64((s64)d);
 	if (ra) {
 		auto ra_i64 = GetGpr(ra);
@@ -4069,6 +4185,8 @@ void Compiler::STFDU(u32 frs, u32 ra, s32 d) {
 }
 
 void Compiler::LD(u32 rd, u32 ra, s32 ds) {
+	USE_INTERP_IF_REQUESTED(LD, m_ir_builder->getInt32(rd), m_ir_builder->getInt32(ra), m_ir_builder->getInt32(ds));
+
 	auto addr_i64 = (Value *)m_ir_builder->getInt64((s64)ds);
 	if (ra) {
 		auto ra_i64 = GetGpr(ra);
@@ -4132,6 +4250,7 @@ void Compiler::FSUBS(u32 frd, u32 fra, u32 frb, u32 rc) {
 }
 
 void Compiler::FADDS(u32 frd, u32 fra, u32 frb, u32 rc) {
+
 	auto ra_f64 = GetFpr(fra);
 	auto rb_f64 = GetFpr(frb);
 	auto res_f64 = m_ir_builder->CreateFAdd(ra_f64, rb_f64);
@@ -4258,6 +4377,8 @@ void Compiler::FNMADDS(u32 frd, u32 fra, u32 frc, u32 frb, u32 rc) {
 }
 
 void Compiler::STD(u32 rs, u32 ra, s32 d) {
+	USE_INTERP_IF_REQUESTED(STD, m_ir_builder->getInt32(rs), m_ir_builder->getInt32(ra), m_ir_builder->getInt32(d));
+
 	auto addr_i64 = (Value *)m_ir_builder->getInt64((s64)d);
 	if (ra) {
 		auto ra_i64 = GetGpr(ra);
@@ -4268,6 +4389,8 @@ void Compiler::STD(u32 rs, u32 ra, s32 d) {
 }
 
 void Compiler::STDU(u32 rs, u32 ra, s32 ds) {
+	USE_INTERP_IF_REQUESTED(STDU, m_ir_builder->getInt32(rs), m_ir_builder->getInt32(ra), m_ir_builder->getInt32(ds));
+
 	auto addr_i64 = (Value *)m_ir_builder->getInt64((s64)ds);
 	auto ra_i64 = GetGpr(ra);
 	addr_i64 = m_ir_builder->CreateAdd(ra_i64, addr_i64);

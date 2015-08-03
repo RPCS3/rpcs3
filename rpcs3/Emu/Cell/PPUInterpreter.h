@@ -99,6 +99,7 @@ static void SetHostRoundingMode(u32 rn)
 
 namespace ppu_recompiler_llvm {
 	class Compiler;
+	class RecompilationEngine;
 }
 
 class ppu_llvm_test_class;
@@ -108,6 +109,7 @@ class PPUInterpreter : public PPUOpcodes
 #ifdef PPU_LLVM_RECOMPILER
 	friend class ppu_recompiler_llvm::Compiler;
 	friend class ppu_llvm_test_class;
+	friend class ppu_recompiler_llvm::RecompilationEngine;
 #endif
 private:
 	PPUThread& CPU;
@@ -236,18 +238,23 @@ private:
 		}
 	}
 
-	void TWI(u32 to, u32 ra, s32 simm16)
+	static void TWI_impl(PPUThread *CPU, u32 to, u32 ra, s32 simm16)
 	{
-		s32 a = (s32)CPU.GPR[ra];
+		s32 a = (s32)CPU->GPR[ra];
 
-		if( (a < simm16  && (to & 0x10)) ||
-			(a > simm16  && (to & 0x8))  ||
-			(a == simm16 && (to & 0x4))  ||
+		if ((a < simm16 && (to & 0x10)) ||
+			(a > simm16 && (to & 0x8)) ||
+			(a == simm16 && (to & 0x4)) ||
 			((u32)a < (u32)simm16 && (to & 0x2)) ||
 			((u32)a > (u32)simm16 && (to & 0x1)) )
 		{
 			throw EXCEPTION("Trap! (twi 0x%x, r%d, 0x%x)", to, ra, simm16);
 		}
+	}
+
+	void TWI(u32 to, u32 ra, s32 simm16)
+	{
+		TWI_impl(&CPU, to, ra, simm16);
 	}
 
 	void MFVSCR(u32 vd) //nf
@@ -2198,47 +2205,85 @@ private:
 		CPU.VPR[vd]._u32[2] = CPU.VPR[va]._u32[2] ^ CPU.VPR[vb]._u32[2];
 		CPU.VPR[vd]._u32[3] = CPU.VPR[va]._u32[3] ^ CPU.VPR[vb]._u32[3];
 	}
+	static void MULLI_impl(PPUThread *CPU, u32 rd, u32 ra, s32 simm16)
+	{
+		CPU->GPR[rd] = (s64)CPU->GPR[ra] * simm16;
+	}
 	void MULLI(u32 rd, u32 ra, s32 simm16)
 	{
-		CPU.GPR[rd] = (s64)CPU.GPR[ra] * simm16;
+		MULLI_impl(&CPU, rd, ra, simm16);
+	}
+	static void SUBFIC_impl(PPUThread *CPU, u32 rd, u32 ra, s32 simm16)
+	{
+		const u64 RA = CPU->GPR[ra];
+		const u64 IMM = (s64)simm16;
+		CPU->GPR[rd] = ~RA + IMM + 1;
+
+		CPU->XER.CA = CPU->IsCarry(~RA, IMM, 1);
 	}
 	void SUBFIC(u32 rd, u32 ra, s32 simm16)
 	{
-		const u64 RA = CPU.GPR[ra];
-		const u64 IMM = (s64)simm16;
-		CPU.GPR[rd] = ~RA + IMM + 1;
+		SUBFIC_impl(&CPU, rd, ra, simm16);
+	}
 
-		CPU.XER.CA = CPU.IsCarry(~RA, IMM, 1);
-	}
-	void CMPLI(u32 crfd, u32 l, u32 ra, u32 uimm16)
+	static void CMPLI_impl(PPUThread *CPU, u32 crfd, u32 l, u32 ra, u32 uimm16)
 	{
-		CPU.UpdateCRnU(l, crfd, CPU.GPR[ra], uimm16);
+		CPU->UpdateCRnU(l, crfd, CPU->GPR[ra], uimm16);
 	}
-	void CMPI(u32 crfd, u32 l, u32 ra, s32 simm16)
+	void CMPLI(u32 crfd, u32 l, u32 ra, u32 uimm16) override
 	{
-		CPU.UpdateCRnS(l, crfd, CPU.GPR[ra], simm16);
+		CMPLI_impl(&CPU, crfd, l, ra, uimm16);
+	}
+
+	static void CMPI_impl(PPUThread *CPU, u32 crfd, u32 l, u32 ra, s32 simm16)
+	{
+		CPU->UpdateCRnS(l, crfd, CPU->GPR[ra], simm16);
+	}
+	void CMPI(u32 crfd, u32 l, u32 ra, s32 simm16) override
+	{
+		CMPI_impl(&CPU, crfd, l, ra, simm16);
+	}
+
+	static void ADDIC_impl(PPUThread *CPU, u32 rd, u32 ra, s32 simm16)
+	{
+		const u64 RA = CPU->GPR[ra];
+		CPU->GPR[rd] = RA + simm16;
+		CPU->XER.CA = CPU->IsCarry(RA, simm16);
 	}
 	void ADDIC(u32 rd, u32 ra, s32 simm16)
 	{
-		const u64 RA = CPU.GPR[ra];
-		CPU.GPR[rd] = RA + simm16;
-		CPU.XER.CA = CPU.IsCarry(RA, simm16);
+		ADDIC_impl(&CPU, rd, ra, simm16);
+	}
+	static 	void ADDIC__impl(PPUThread *CPU, u32 rd, u32 ra, s32 simm16)
+	{
+		const u64 RA = CPU->GPR[ra];
+		CPU->GPR[rd] = RA + simm16;
+		CPU->XER.CA = CPU->IsCarry(RA, simm16);
+		CPU->UpdateCR0<s64>(CPU->GPR[rd]);
 	}
 	void ADDIC_(u32 rd, u32 ra, s32 simm16)
 	{
-		const u64 RA = CPU.GPR[ra];
-		CPU.GPR[rd] = RA + simm16;
-		CPU.XER.CA = CPU.IsCarry(RA, simm16);
-		CPU.UpdateCR0<s64>(CPU.GPR[rd]);
+		ADDIC__impl(&CPU, rd, ra, simm16);
 	}
-	void ADDI(u32 rd, u32 ra, s32 simm16)
+
+	static void ADDI_impl(PPUThread *CPU, u32 rd, u32 ra, s32 simm16)
 	{
-		CPU.GPR[rd] = ra ? ((s64)CPU.GPR[ra] + simm16) : simm16;
+		CPU->GPR[rd] = ra ? ((s64)CPU->GPR[ra] + simm16) : simm16;
 	}
-	void ADDIS(u32 rd, u32 ra, s32 simm16)
+	void ADDI(u32 rd, u32 ra, s32 simm16) override
 	{
-		CPU.GPR[rd] = ra ? ((s64)CPU.GPR[ra] + (simm16 << 16)) : (simm16 << 16);
+		ADDI_impl(&CPU, rd, ra, simm16);
 	}
+
+	static void ADDIS_impl(PPUThread *CPU, u32 rd, u32 ra, s32 simm16)
+	{
+		CPU->GPR[rd] = ra ? ((s64)CPU->GPR[ra] + (simm16 << 16)) : (simm16 << 16);
+	}
+	void ADDIS(u32 rd, u32 ra, s32 simm16) override
+	{
+		ADDIS_impl(&CPU, rd, ra, simm16);
+	}
+
 	void BC(u32 bo, u32 bi, s32 bd, u32 aa, u32 lk)
 	{
 		if (CheckCondition(bo, bi))
@@ -2272,9 +2317,13 @@ private:
 		CPU.PC = branchTarget(aa ? 0 : CPU.PC, ll) - 4;
 		if(lk) CPU.LR = nextLR;
 	}
+	static void MCRF_impl(PPUThread *CPU, u32 crfd, u32 crfs)
+	{
+		CPU->SetCR(crfd, CPU->GetCR(crfs));
+	}
 	void MCRF(u32 crfd, u32 crfs)
 	{
-		CPU.SetCR(crfd, CPU.GetCR(crfs));
+		MCRF_impl(&CPU, crfd, crfs);
 	}
 	void BCLR(u32 bo, u32 bi, u32 bh, u32 lk)
 	{
@@ -2285,49 +2334,81 @@ private:
 			if(lk) CPU.LR = nextLR;
 		}
 	}
+	static void CRNOR_impl(PPUThread *CPU, u32 crbd, u32 crba, u32 crbb)
+	{
+		const u8 v = 1 ^ (CPU->IsCR(crba) | CPU->IsCR(crbb));
+		CPU->SetCRBit2(crbd, v & 0x1);
+	}
 	void CRNOR(u32 crbd, u32 crba, u32 crbb)
 	{
-		const u8 v = 1 ^ (CPU.IsCR(crba) | CPU.IsCR(crbb));
-		CPU.SetCRBit2(crbd, v & 0x1);
+		CRNOR_impl(&CPU, crbd, crba, crbb);
+	}
+	static void CRANDC_impl(PPUThread *CPU, u32 crbd, u32 crba, u32 crbb)
+	{
+		const u8 v = CPU->IsCR(crba) & (1 ^ CPU->IsCR(crbb));
+		CPU->SetCRBit2(crbd, v & 0x1);
 	}
 	void CRANDC(u32 crbd, u32 crba, u32 crbb)
 	{
-		const u8 v = CPU.IsCR(crba) & (1 ^ CPU.IsCR(crbb));
-		CPU.SetCRBit2(crbd, v & 0x1);
+		CRANDC_impl(&CPU, crbd, crba, crbb);
 	}
 	void ISYNC()
 	{
 		_mm_mfence();
 	}
+	static void CRXOR_impl(PPUThread *CPU, u32 crbd, u32 crba, u32 crbb)
+	{
+		const u8 v = CPU->IsCR(crba) ^ CPU->IsCR(crbb);
+		CPU->SetCRBit2(crbd, v & 0x1);
+	}
 	void CRXOR(u32 crbd, u32 crba, u32 crbb)
 	{
-		const u8 v = CPU.IsCR(crba) ^ CPU.IsCR(crbb);
-		CPU.SetCRBit2(crbd, v & 0x1);
+		CRXOR_impl(&CPU, crbd, crba, crbb);
+	}
+	static void CRNAND_impl(PPUThread *CPU, u32 crbd, u32 crba, u32 crbb)
+	{
+		const u8 v = 1 ^ (CPU->IsCR(crba) & CPU->IsCR(crbb));
+		CPU->SetCRBit2(crbd, v & 0x1);
 	}
 	void CRNAND(u32 crbd, u32 crba, u32 crbb)
 	{
-		const u8 v = 1 ^ (CPU.IsCR(crba) & CPU.IsCR(crbb));
-		CPU.SetCRBit2(crbd, v & 0x1);
+		CRNAND_impl(&CPU, crbd, crba, crbb);
+	}
+	static void CRAND_impl(PPUThread *CPU, u32 crbd, u32 crba, u32 crbb)
+	{
+		const u8 v = CPU->IsCR(crba) & CPU->IsCR(crbb);
+		CPU->SetCRBit2(crbd, v & 0x1);
 	}
 	void CRAND(u32 crbd, u32 crba, u32 crbb)
 	{
-		const u8 v = CPU.IsCR(crba) & CPU.IsCR(crbb);
-		CPU.SetCRBit2(crbd, v & 0x1);
+		CRAND_impl(&CPU, crbd, crba, crbb);
+	}
+	static void CREQV_impl(PPUThread *CPU, u32 crbd, u32 crba, u32 crbb)
+	{
+		const u8 v = 1 ^ (CPU->IsCR(crba) ^ CPU->IsCR(crbb));
+		CPU->SetCRBit2(crbd, v & 0x1);
 	}
 	void CREQV(u32 crbd, u32 crba, u32 crbb)
 	{
-		const u8 v = 1 ^ (CPU.IsCR(crba) ^ CPU.IsCR(crbb));
-		CPU.SetCRBit2(crbd, v & 0x1);
+		CREQV_impl(&CPU, crbd, crba, crbb);
+	}
+	static void CRORC_impl(PPUThread *CPU, u32 crbd, u32 crba, u32 crbb)
+	{
+		const u8 v = CPU->IsCR(crba) | (1 ^ CPU->IsCR(crbb));
+		CPU->SetCRBit2(crbd, v & 0x1);
 	}
 	void CRORC(u32 crbd, u32 crba, u32 crbb)
 	{
-		const u8 v = CPU.IsCR(crba) | (1 ^ CPU.IsCR(crbb));
-		CPU.SetCRBit2(crbd, v & 0x1);
+		CRORC_impl(&CPU, crbd, crba, crbb);
+	}
+	static void CROR_impl(PPUThread *CPU, u32 crbd, u32 crba, u32 crbb)
+	{
+		const u8 v = CPU->IsCR(crba) | CPU->IsCR(crbb);
+		CPU->SetCRBit2(crbd, v & 0x1);
 	}
 	void CROR(u32 crbd, u32 crba, u32 crbb)
 	{
-		const u8 v = CPU.IsCR(crba) | CPU.IsCR(crbb);
-		CPU.SetCRBit2(crbd, v & 0x1);
+		CROR_impl(&CPU, crbd, crba, crbb);
 	}
 	void BCCTR(u32 bo, u32 bi, u32 bh, u32 lk)
 	{
@@ -2338,84 +2419,153 @@ private:
 			if(lk) CPU.LR = nextLR;
 		}
 	}	
-	void RLWIMI(u32 ra, u32 rs, u32 sh, u32 mb, u32 me, u32 rc)
+	static void RLWIMI_impl(PPUThread *CPU, u32 ra, u32 rs, u32 sh, u32 mb, u32 me, u32 rc)
 	{
 		const u64 mask = rotate_mask[32 + mb][32 + me];
-		CPU.GPR[ra] = (CPU.GPR[ra] & ~mask) | (rotl32(CPU.GPR[rs], sh) & mask);
-		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[ra]);
+		CPU->GPR[ra] = (CPU->GPR[ra] & ~mask) | (rotl32(CPU->GPR[rs], sh) & mask);
+		if(rc) CPU->UpdateCR0<s64>(CPU->GPR[ra]);
 	}
-	void RLWINM(u32 ra, u32 rs, u32 sh, u32 mb, u32 me, u32 rc)
+	void RLWIMI(u32 ra, u32 rs, u32 sh, u32 mb, u32 me, u32 rc)
 	{
-		CPU.GPR[ra] = rotl32(CPU.GPR[rs], sh) & rotate_mask[32 + mb][32 + me];
-		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[ra]);
+		RLWIMI_impl(&CPU, ra, rs, sh, mb, me, rc);
+	}
+
+	static void RLWINM_impl(PPUThread *CPU, u32 ra, u32 rs, u32 sh, u32 mb, u32 me, u32 rc)
+	{
+		CPU->GPR[ra] = rotl32(CPU->GPR[rs], sh) & rotate_mask[32 + mb][32 + me];
+		if(rc) CPU->UpdateCR0<s64>(CPU->GPR[ra]);
+	}
+	void RLWINM(u32 ra, u32 rs, u32 sh, u32 mb, u32 me, u32 rc) override
+	{
+		RLWINM_impl(&CPU, ra, rs, sh, mb, me, rc);
+	}
+	static void RLWNM_impl(PPUThread *CPU, u32 ra, u32 rs, u32 rb, u32 mb, u32 me, u32 rc)
+	{
+		CPU->GPR[ra] = rotl32(CPU->GPR[rs], CPU->GPR[rb] & 0x1f) & rotate_mask[32 + mb][32 + me];
+		if(rc) CPU->UpdateCR0<s64>(CPU->GPR[ra]);
 	}
 	void RLWNM(u32 ra, u32 rs, u32 rb, u32 mb, u32 me, u32 rc)
 	{
-		CPU.GPR[ra] = rotl32(CPU.GPR[rs], CPU.GPR[rb] & 0x1f) & rotate_mask[32 + mb][32 + me];
-		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[ra]);
+		RLWNM_impl(&CPU, ra, rs, rb, mb, me, rc);
+	}
+
+	static void ORI_impl(PPUThread *CPU, u32 ra, u32 rs, u32 uimm16)
+	{
+		CPU->GPR[ra] = CPU->GPR[rs] | uimm16;
 	}
 	void ORI(u32 ra, u32 rs, u32 uimm16)
 	{
-		CPU.GPR[ra] = CPU.GPR[rs] | uimm16;
+		ORI_impl(&CPU, ra, rs, uimm16);
+	}
+	static void ORIS_impl(PPUThread *CPU, u32 ra, u32 rs, u32 uimm16)
+	{
+		CPU->GPR[ra] = CPU->GPR[rs] | ((u64)uimm16 << 16);
 	}
 	void ORIS(u32 ra, u32 rs, u32 uimm16)
 	{
-		CPU.GPR[ra] = CPU.GPR[rs] | ((u64)uimm16 << 16);
+		ORIS_impl(&CPU, ra, rs, uimm16);
+	}
+	static void XORI_impl(PPUThread *CPU, u32 ra, u32 rs, u32 uimm16)
+	{
+		CPU->GPR[ra] = CPU->GPR[rs] ^ uimm16;
 	}
 	void XORI(u32 ra, u32 rs, u32 uimm16)
 	{
-		CPU.GPR[ra] = CPU.GPR[rs] ^ uimm16;
+		XORI_impl(&CPU, ra, rs, uimm16);
+	}
+	static void XORIS_impl(PPUThread *CPU, u32 ra, u32 rs, u32 uimm16)
+	{
+		CPU->GPR[ra] = CPU->GPR[rs] ^ ((u64)uimm16 << 16);
 	}
 	void XORIS(u32 ra, u32 rs, u32 uimm16)
 	{
-		CPU.GPR[ra] = CPU.GPR[rs] ^ ((u64)uimm16 << 16);
+		XORIS_impl(&CPU, ra, rs, uimm16);
+	}
+	static void ANDI__impl(PPUThread *CPU, u32 ra, u32 rs, u32 uimm16)
+	{
+		CPU->GPR[ra] = CPU->GPR[rs] & uimm16;
+		CPU->UpdateCR0<s64>(CPU->GPR[ra]);
 	}
 	void ANDI_(u32 ra, u32 rs, u32 uimm16)
 	{
-		CPU.GPR[ra] = CPU.GPR[rs] & uimm16;
-		CPU.UpdateCR0<s64>(CPU.GPR[ra]);
+		ANDI__impl(&CPU, ra, rs, uimm16);
+	}
+	static void ANDIS__impl(PPUThread *CPU, u32 ra, u32 rs, u32 uimm16)
+	{
+		CPU->GPR[ra] = CPU->GPR[rs] & ((u64)uimm16 << 16);
+		CPU->UpdateCR0<s64>(CPU->GPR[ra]);
 	}
 	void ANDIS_(u32 ra, u32 rs, u32 uimm16)
 	{
-		CPU.GPR[ra] = CPU.GPR[rs] & ((u64)uimm16 << 16);
-		CPU.UpdateCR0<s64>(CPU.GPR[ra]);
+		ANDIS__impl(&CPU, ra, rs, uimm16);
 	}
-	void RLDICL(u32 ra, u32 rs, u32 sh, u32 mb, u32 rc)
+
+	static
+	void RLDICL_impl(PPUThread *CPU, u32 ra, u32 rs, u32 sh, u32 mb, u32 rc)
 	{
-		CPU.GPR[ra] = rotl64(CPU.GPR[rs], sh) & rotate_mask[mb][63];
-		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[ra]);
+		CPU->GPR[ra] = rotl64(CPU->GPR[rs], sh) & rotate_mask[mb][63];
+		if(rc) CPU->UpdateCR0<s64>(CPU->GPR[ra]);
 	}
+	void RLDICL(u32 ra, u32 rs, u32 sh, u32 mb, u32 rc) override
+	{
+		RLDICL_impl(&CPU, ra, rs, sh, mb, rc);
+	}
+
+	static
+	void RLDICR_impl(PPUThread *CPU, u32 ra, u32 rs, u32 sh, u32 me, u32 rc)
+	{
+		CPU->GPR[ra] = rotl64(CPU->GPR[rs], sh) & rotate_mask[0][me];
+		if(rc) CPU->UpdateCR0<s64>(CPU->GPR[ra]);
+	}
+
 	void RLDICR(u32 ra, u32 rs, u32 sh, u32 me, u32 rc)
 	{
-		CPU.GPR[ra] = rotl64(CPU.GPR[rs], sh) & rotate_mask[0][me];
-		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[ra]);
+		RLDICR_impl(&CPU, ra, rs, sh, me, rc);
+	}
+	static void RLDIC_impl(PPUThread *CPU, u32 ra, u32 rs, u32 sh, u32 mb, u32 rc)
+	{
+		CPU->GPR[ra] = rotl64(CPU->GPR[rs], sh) & rotate_mask[mb][63 - sh];
+		if(rc) CPU->UpdateCR0<s64>(CPU->GPR[ra]);
 	}
 	void RLDIC(u32 ra, u32 rs, u32 sh, u32 mb, u32 rc)
 	{
-		CPU.GPR[ra] = rotl64(CPU.GPR[rs], sh) & rotate_mask[mb][63-sh];
-		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[ra]);
+		RLDIC_impl(&CPU, ra, rs, sh, mb, rc);
+	}
+	static void RLDIMI_impl(PPUThread *CPU, u32 ra, u32 rs, u32 sh, u32 mb, u32 rc)
+	{
+		const u64 mask = rotate_mask[mb][63 - sh];
+		CPU->GPR[ra] = (CPU->GPR[ra] & ~mask) | (rotl64(CPU->GPR[rs], sh) & mask);
+		if(rc) CPU->UpdateCR0<s64>(CPU->GPR[ra]);
 	}
 	void RLDIMI(u32 ra, u32 rs, u32 sh, u32 mb, u32 rc)
 	{
-		const u64 mask = rotate_mask[mb][63-sh];
-		CPU.GPR[ra] = (CPU.GPR[ra] & ~mask) | (rotl64(CPU.GPR[rs], sh) & mask);
-		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[ra]);
+		RLDIMI_impl(&CPU, ra, rs, sh, mb, rc);
 	}
-	void RLDC_LR(u32 ra, u32 rs, u32 rb, u32 m_eb, u32 is_r, u32 rc)
+	static void RLDC_LR_impl(PPUThread *CPU, u32 ra, u32 rs, u32 rb, u32 m_eb, u32 is_r, u32 rc)
 	{
 		if (is_r) // rldcr
 		{
-			RLDICR(ra, rs, (u32)(CPU.GPR[rb] & 0x3F), m_eb, rc);
+			RLDICR_impl(CPU, ra, rs, (u32)(CPU->GPR[rb] & 0x3F), m_eb, rc);
 		}
 		else // rldcl
 		{
-			RLDICL(ra, rs, (u32)(CPU.GPR[rb] & 0x3F), m_eb, rc);
+			RLDICL_impl(CPU, ra, rs, (u32)(CPU->GPR[rb] & 0x3F), m_eb, rc);
 		}
 	}
-	void CMP(u32 crfd, u32 l, u32 ra, u32 rb)
+	void RLDC_LR(u32 ra, u32 rs, u32 rb, u32 m_eb, u32 is_r, u32 rc)
 	{
-		CPU.UpdateCRnS(l, crfd, CPU.GPR[ra], CPU.GPR[rb]);
+		RLDC_LR_impl(&CPU, ra, rs, rb, m_eb, is_r, rc);
 	}
+
+	static void CMP_impl(PPUThread *CPU, u32 crfd, u32 l, u32 ra, u32 rb)
+	{
+		CPU->UpdateCRnS(l, crfd, CPU->GPR[ra], CPU->GPR[rb]);
+	}
+	void CMP(u32 crfd, u32 l, u32 ra, u32 rb) override
+	{
+		CMP_impl(&CPU, crfd, l, ra, rb);
+	}
+
 	void TW(u32 to, u32 ra, u32 rb)
 	{
 		s32 a = (s32)CPU.GPR[ra];
@@ -2493,18 +2643,27 @@ private:
 		CPU.GPR[rd] = ((u64)a * (u64)b) >> 32;
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
 	}
-	void MFOCRF(u32 a, u32 rd, u32 crm)
+
+	static void MFOCRF_impl(PPUThread *CPU, u32 a, u32 rd, u32 crm)
 	{
-		CPU.GPR[rd] = CPU.CR.CR;
+		CPU->GPR[rd] = CPU->CR.CR;
 	}
-	void LWARX(u32 rd, u32 ra, u32 rb)
+	void MFOCRF(u32 a, u32 rd, u32 crm) override
 	{
-		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
+		MFOCRF_impl(&CPU, a, rd, crm);
+	}
+	static void LWARX_impl(PPUThread *CPU, u32 rd, u32 ra, u32 rb)
+	{
+		const u64 addr = ra ? CPU->GPR[ra] + CPU->GPR[rb] : CPU->GPR[rb];
 
 		be_t<u32> value;
 		vm::reservation_acquire(&value, VM_CAST(addr), sizeof(value));
 
-		CPU.GPR[rd] = value;
+		CPU->GPR[rd] = value;
+	}
+	void LWARX(u32 rd, u32 ra, u32 rb)
+	{
+		LWARX_impl(&CPU, rd, ra, rb);
 	}
 	void LDX(u32 rd, u32 ra, u32 rb)
 	{
@@ -2547,15 +2706,26 @@ private:
 
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[ra]);
 	}
-	void AND(u32 ra, u32 rs, u32 rb, u32 rc)
+
+	static void AND_impl(PPUThread *CPU, u32 ra, u32 rs, u32 rb, u32 rc)
 	{
-		CPU.GPR[ra] = CPU.GPR[rs] & CPU.GPR[rb];
-		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[ra]);
+		CPU->GPR[ra] = CPU->GPR[rs] & CPU->GPR[rb];
+		if(rc) CPU->UpdateCR0<s64>(CPU->GPR[ra]);
 	}
-	void CMPL(u32 crfd, u32 l, u32 ra, u32 rb)
+	void AND(u32 ra, u32 rs, u32 rb, u32 rc) override
 	{
-		CPU.UpdateCRnU(l, crfd, CPU.GPR[ra], CPU.GPR[rb]);
+		AND_impl(&CPU, ra, rs, rb, rc);
 	}
+
+	static void CMPL_impl(PPUThread *CPU, u32 crfd, u32 l, u32 ra, u32 rb)
+	{
+		CPU->UpdateCRnU(l, crfd, CPU->GPR[ra], CPU->GPR[rb]);
+	}
+	void CMPL(u32 crfd, u32 l, u32 ra, u32 rb) override
+	{
+		CMPL_impl(&CPU, crfd, l, ra, rb);
+	}
+
 	void LVSR(u32 vd, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
@@ -2589,14 +2759,20 @@ private:
 		CPU.VPR[vd]._u16[7 - ((addr >> 1) & 0x7)] = vm::ps3::read16(VM_CAST(addr));
 		// It's bad idea to read 128 bit there
 	}
-	void SUBF(u32 rd, u32 ra, u32 rb, u32 oe, u32 rc)
+
+	static void SUBF_impl(PPUThread *CPU, u32 rd, u32 ra, u32 rb, u32 oe, u32 rc)
 	{
-		const u64 RA = CPU.GPR[ra];
-		const u64 RB = CPU.GPR[rb];
-		CPU.GPR[rd] = RB - RA;
-		if(oe) CPU.SetOV((~RA>>63 == RB>>63) && (~RA>>63 != CPU.GPR[rd]>>63));
-		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
+		const u64 RA = CPU->GPR[ra];
+		const u64 RB = CPU->GPR[rb];
+		CPU->GPR[rd] = RB - RA;
+		if(oe) CPU->SetOV((~RA >> 63 == RB >> 63) && (~RA >> 63 != CPU->GPR[rd] >> 63));
+		if(rc) CPU->UpdateCR0<s64>(CPU->GPR[rd]);
 	}
+	void SUBF(u32 rd, u32 ra, u32 rb, u32 oe, u32 rc) override
+	{
+		SUBF_impl(&CPU, rd, ra, rb, oe, rc);
+	}
+
 	void LDUX(u32 rd, u32 ra, u32 rb)
 	{
 		const u64 addr = CPU.GPR[ra] + CPU.GPR[rb];
@@ -2672,13 +2848,19 @@ private:
 		const u64 addr = (ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~0xfull;
 		CPU.VPR[vd] = vm::ps3::_ref<v128>(VM_CAST(addr));
 	}
-	void NEG(u32 rd, u32 ra, u32 oe, u32 rc)
+
+	static void NEG_impl(PPUThread *CPU, u32 rd, u32 ra, u32 oe, u32 rc)
 	{
-		const u64 RA = CPU.GPR[ra];
-		CPU.GPR[rd] = 0 - RA;
-		if(oe) CPU.SetOV((~RA>>63 == 0) && (~RA>>63 != CPU.GPR[rd]>>63));
-		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
+		const u64 RA = CPU->GPR[ra];
+		CPU->GPR[rd] = 0 - RA;
+		if(oe) CPU->SetOV((~RA >> 63 == 0) && (~RA >> 63 != CPU->GPR[rd] >> 63));
+		if(rc) CPU->UpdateCR0<s64>(CPU->GPR[rd]);
 	}
+	void NEG(u32 rd, u32 ra, u32 oe, u32 rc) override
+	{
+		NEG_impl(&CPU, rd, ra, oe, rc);
+	}
+
 	void LBZUX(u32 rd, u32 ra, u32 rb)
 	{
 		const u64 addr = CPU.GPR[ra] + CPU.GPR[rb];
@@ -2730,14 +2912,15 @@ private:
 		if(oe) CPU.SetOV((RA>>63 == RB>>63) && (RA>>63 != CPU.GPR[rd]>>63));
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
 	}
-	void MTOCRF(u32 l, u32 crm, u32 rs)
+
+	static void MTOCRF_impl(PPUThread *CPU, u32 l, u32 crm, u32 rs)
 	{
 		if(l)
 		{
 			u32 n = 0, count = 0;
 			for(u32 i=0; i<8; ++i)
 			{
-				if(crm & (1 << i))
+				if (crm & (1 << i))
 				{
 					n = i;
 					count++;
@@ -2747,10 +2930,10 @@ private:
 			if(count == 1)
 			{
 				//CR[4*n : 4*n+3] = RS[32+4*n : 32+4*n+3];
-				CPU.SetCR(7 - n, (CPU.GPR[rs] >> (4*n)) & 0xf);
+				CPU->SetCR(7 - n, (CPU->GPR[rs] >> (4 * n)) & 0xf);
 			}
 			else
-				CPU.CR.CR = 0;
+				CPU->CR.CR = 0;
 		}
 		else
 		{
@@ -2758,22 +2941,31 @@ private:
 			{
 				if(crm & (1 << i))
 				{
-					CPU.SetCR(7 - i, (CPU.GPR[rs] >> (i * 4)) & 0xf);
+					CPU->SetCR(7 - i, (CPU->GPR[rs] >> (i * 4)) & 0xf);
 				}
 			}
 		}
 	}
+	void MTOCRF(u32 l, u32 crm, u32 rs) override
+	{
+		MTOCRF_impl(&CPU, l, crm, rs);
+	}
+
 	void STDX(u32 rs, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
 		vm::ps3::write64(VM_CAST(addr), CPU.GPR[rs]);
 	}
+	static void STWCX__impl(PPUThread* CPU, u32 rs, u32 ra, u32 rb)
+	{
+		const u64 addr = ra ? CPU->GPR[ra] + CPU->GPR[rb] : CPU->GPR[rb];
+
+		const be_t<u32> value = (u32)CPU->GPR[rs];
+		CPU->SetCR_EQ(0, vm::reservation_update(VM_CAST(addr), &value, sizeof(value)));
+	}
 	void STWCX_(u32 rs, u32 ra, u32 rb)
 	{
-		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-
-		const be_t<u32> value = (u32)CPU.GPR[rs];
-		CPU.SetCR_EQ(0, vm::reservation_update(VM_CAST(addr), &value, sizeof(value)));
+		STWCX__impl(&CPU, rs, ra, rb);
 	}
 	void STWX(u32 rs, u32 ra, u32 rb)
 	{
@@ -2866,12 +3058,18 @@ private:
 		if(oe) CPU.SetOV((u64(RA)>>63 == 1) && (u64(RA)>>63 != CPU.GPR[rd]>>63));
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
 	}
-	void MULLW(u32 rd, u32 ra, u32 rb, u32 oe, u32 rc)
+
+	static void MULLW_impl(PPUThread *CPU, u32 rd, u32 ra, u32 rb, u32 oe, u32 rc)
 	{
-		CPU.GPR[rd] = (s64)((s64)(s32)CPU.GPR[ra] * (s64)(s32)CPU.GPR[rb]);
-		if(oe) CPU.SetOV(s64(CPU.GPR[rd]) < s64(-1)<<31 || s64(CPU.GPR[rd]) >= s64(1)<<31);
-		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
+		CPU->GPR[rd] = (s64)((s64)(s32)CPU->GPR[ra] * (s64)(s32)CPU->GPR[rb]);
+		if(oe) CPU->SetOV(s64(CPU->GPR[rd]) < s64(-1) << 31 || s64(CPU->GPR[rd]) >= s64(1) << 31);
+		if(rc) CPU->UpdateCR0<s64>(CPU->GPR[rd]);
 	}
+	void MULLW(u32 rd, u32 ra, u32 rb, u32 oe, u32 rc) override
+	{
+		MULLW_impl(&CPU, rd, ra, rb, oe, rc);
+	}
+
 	void DCBTST(u32 ra, u32 rb, u32 th)
 	{
 	}
@@ -2881,14 +3079,20 @@ private:
 		vm::write8(VM_CAST(addr), (u8)CPU.GPR[rs]);
 		CPU.GPR[ra] = addr;
 	}
-	void ADD(u32 rd, u32 ra, u32 rb, u32 oe, u32 rc)
+
+	static void ADD_impl(PPUThread *CPU, u32 rd, u32 ra, u32 rb, u32 oe, u32 rc)
 	{
-		const u64 RA = CPU.GPR[ra];
-		const u64 RB = CPU.GPR[rb];
-		CPU.GPR[rd] = RA + RB;
-		if(oe) CPU.SetOV((RA>>63 == RB>>63) && (RA>>63 != CPU.GPR[rd]>>63));
-		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
+		const u64 RA = CPU->GPR[ra];
+		const u64 RB = CPU->GPR[rb];
+		CPU->GPR[rd] = RA + RB;
+		if(oe) CPU->SetOV((RA >> 63 == RB >> 63) && (RA >> 63 != CPU->GPR[rd] >> 63));
+		if(rc) CPU->UpdateCR0<s64>(CPU->GPR[rd]);
 	}
+	void ADD(u32 rd, u32 ra, u32 rb, u32 oe, u32 rc) override
+	{
+		ADD_impl(&CPU, rd, ra, rb, oe, rc);
+	}
+
 	void DCBT(u32 ra, u32 rb, u32 th)
 	{
 	}
@@ -2986,11 +3190,17 @@ private:
 		vm::ps3::write16(VM_CAST(addr), (u16)CPU.GPR[rs]);
 		CPU.GPR[ra] = addr;
 	}
-	void OR(u32 ra, u32 rs, u32 rb, u32 rc)
+
+	static void OR_impl(PPUThread *CPU, u32 ra, u32 rs, u32 rb, u32 rc)
 	{
-		CPU.GPR[ra] = CPU.GPR[rs] | CPU.GPR[rb];
-		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[ra]);
+		CPU->GPR[ra] = CPU->GPR[rs] | CPU->GPR[rb];
+		if(rc) CPU->UpdateCR0<s64>(CPU->GPR[ra]);
 	}
+	void OR(u32 ra, u32 rs, u32 rb, u32 rc) override
+	{
+		OR_impl(&CPU, ra, rs, rb, rc);
+	}
+
 	void DIVDU(u32 rd, u32 ra, u32 rb, u32 oe, u32 rc)
 	{
 		const u64 RA = CPU.GPR[ra];
@@ -3009,24 +3219,30 @@ private:
 
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
 	}
-	void DIVWU(u32 rd, u32 ra, u32 rb, u32 oe, u32 rc)
+
+	static void DIVWU_impl(PPUThread *CPU, u32 rd, u32 ra, u32 rb, u32 oe, u32 rc)
 	{
-		const u32 RA = (u32)CPU.GPR[ra];
-		const u32 RB = (u32)CPU.GPR[rb];
+		const u32 RA = (u32)CPU->GPR[ra];
+		const u32 RB = (u32)CPU->GPR[rb];
 
 		if(RB == 0)
 		{
-			if(oe) CPU.SetOV(true);
-			CPU.GPR[rd] = 0;
+			if(oe) CPU->SetOV(true);
+			CPU->GPR[rd] = 0;
 		}
 		else
 		{
-			if(oe) CPU.SetOV(false);
-			CPU.GPR[rd] = RA / RB;
+			if(oe) CPU->SetOV(false);
+			CPU->GPR[rd] = RA / RB;
 		}
 
-		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
+		if(rc) CPU->UpdateCR0<s64>(CPU->GPR[rd]);
 	}
+	void DIVWU(u32 rd, u32 ra, u32 rb, u32 oe, u32 rc) override
+	{
+		DIVWU_impl(&CPU, rd, ra, rb, oe, rc);
+	}
+
 	void MTSPR(u32 spr, u32 rs)
 	{
 		WriteSPR(spr, CPU.GPR[rs]);
@@ -3063,24 +3279,30 @@ private:
 
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
 	}
-	void DIVW(u32 rd, u32 ra, u32 rb, u32 oe, u32 rc)
+
+	static void DIVW_impl(PPUThread *CPU, u32 rd, u32 ra, u32 rb, u32 oe, u32 rc)
 	{
-		const s32 RA = (s32)CPU.GPR[ra];
-		const s32 RB = (s32)CPU.GPR[rb];
+		const s32 RA = (s32)CPU->GPR[ra];
+		const s32 RB = (s32)CPU->GPR[rb];
 
 		if (RB == 0 || ((u32)RA == (1 << 31) && RB == -1))
 		{
-			if(oe) CPU.SetOV(true);
-			CPU.GPR[rd] = /*(((u32)RA & (1 << 31)) && RB == 0) ? -1 :*/ 0;
+			if(oe) CPU->SetOV(true);
+			CPU->GPR[rd] = /*(((u32)RA & (1 << 31)) && RB == 0) ? -1 :*/ 0;
 		}
 		else
 		{
-			if(oe) CPU.SetOV(false);
-			CPU.GPR[rd] = (u32)(RA / RB);
+			if(oe) CPU->SetOV(false);
+			CPU->GPR[rd] = (u32)(RA / RB);
 		}
 
-		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
+		if(rc) CPU->UpdateCR0<s64>(CPU->GPR[rd]);
 	}
+	void DIVW(u32 rd, u32 ra, u32 rb, u32 oe, u32 rc) override
+	{
+		DIVW_impl(&CPU, rd, ra, rb, oe, rc);
+	}
+
 	void LVLX(u32 vd, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
@@ -3388,14 +3610,20 @@ private:
 	void DSS(u32 strm, u32 a)
 	{
 	}
-	void SRAWI(u32 ra, u32 rs, u32 sh, u32 rc)
-	{
-		s32 RS = (u32)CPU.GPR[rs];
-		CPU.GPR[ra] = RS >> sh;
-		CPU.XER.CA = (RS < 0) & ((u32)(CPU.GPR[ra] << sh) != RS);
 
-		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[ra]);
+	static void SRAWI_impl(PPUThread *CPU, u32 ra, u32 rs, u32 sh, u32 rc)
+	{
+		s32 RS = (u32)CPU->GPR[rs];
+		CPU->GPR[ra] = RS >> sh;
+		CPU->XER.CA = (RS < 0) & ((u32)(CPU->GPR[ra] << sh) != RS);
+
+		if(rc) CPU->UpdateCR0<s64>(CPU->GPR[ra]);
 	}
+	void SRAWI(u32 ra, u32 rs, u32 sh, u32 rc) override
+	{
+		SRAWI_impl(&CPU, ra, rs, sh, rc);
+	}
+
 	void SRADI1(u32 ra, u32 rs, u32 sh, u32 rc)
 	{
 		s64 RS = CPU.GPR[rs];
@@ -3436,21 +3664,33 @@ private:
 
 		for (u32 i = 16 - eb; i < 16; ++i) vm::write8(VM_CAST(addr + i - 16), CPU.VPR[vs]._u8[15 - i]);
 	}
-	void EXTSB(u32 ra, u32 rs, u32 rc)
+
+	static void EXTSB_impl(PPUThread *CPU, u32 ra, u32 rs, u32 rc)
 	{
-		CPU.GPR[ra] = (s64)(s8)CPU.GPR[rs];
-		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[ra]);
+		CPU->GPR[ra] = (s64)(s8)CPU->GPR[rs];
+		if(rc) CPU->UpdateCR0<s64>(CPU->GPR[ra]);
 	}
+	void EXTSB(u32 ra, u32 rs, u32 rc) override
+	{
+		EXTSB_impl(&CPU, ra, rs, rc);
+	}
+
 	void STFIWX(u32 frs, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
 		vm::ps3::write32(VM_CAST(addr), (u32&)CPU.FPR[frs]);
 	}
-	void EXTSW(u32 ra, u32 rs, u32 rc)
+
+	static void EXTSW_impl(PPUThread *CPU, u32 ra, u32 rs, u32 rc)
 	{
-		CPU.GPR[ra] = (s64)(s32)CPU.GPR[rs];
-		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[ra]);
+		CPU->GPR[ra] = (s64)(s32)CPU->GPR[rs];
+		if(rc) CPU->UpdateCR0<s64>(CPU->GPR[ra]);
 	}
+	void EXTSW(u32 ra, u32 rs, u32 rc) override
+	{
+		EXTSW_impl(&CPU, ra, rs, rc);
+	}
+
 	void ICBI(u32 ra, u32 rs)
 	{
 		// Clear jit for the specified block?  Nothing to do in the interpreter.
@@ -3461,33 +3701,51 @@ private:
 
 		std::memset(vm::base(VM_CAST(addr) & ~127), 0, 128);
 	}
-	void LWZ(u32 rd, u32 ra, s32 d)
+
+	static void LWZ_impl(PPUThread *CPU, u32 rd, u32 ra, s32 d)
 	{
-		const u64 addr = ra ? CPU.GPR[ra] + d : d;
-		CPU.GPR[rd] = vm::ps3::read32(VM_CAST(addr));
+		const u64 addr = ra ? CPU->GPR[ra] + d : d;
+		CPU->GPR[rd] = vm::ps3::read32(VM_CAST(addr));
 	}
+	void LWZ(u32 rd, u32 ra, s32 d) override
+	{
+		LWZ_impl(&CPU, rd, ra, d);
+	}
+
 	void LWZU(u32 rd, u32 ra, s32 d)
 	{
 		const u64 addr = CPU.GPR[ra] + d;
 		CPU.GPR[rd] = vm::ps3::read32(VM_CAST(addr));
 		CPU.GPR[ra] = addr;
 	}
-	void LBZ(u32 rd, u32 ra, s32 d)
+
+	static void LBZ_impl(PPUThread *CPU, u32 rd, u32 ra, s32 d)
 	{
-		const u64 addr = ra ? CPU.GPR[ra] + d : d;
-		CPU.GPR[rd] = vm::read8(VM_CAST(addr));
+		const u64 addr = ra ? CPU->GPR[ra] + d : d;
+		CPU->GPR[rd] = vm::read8(VM_CAST(addr));
 	}
+	void LBZ(u32 rd, u32 ra, s32 d) override
+	{
+		LBZ_impl(&CPU, rd, ra, d);
+	}
+
 	void LBZU(u32 rd, u32 ra, s32 d)
 	{
 		const u64 addr = CPU.GPR[ra] + d;
 		CPU.GPR[rd] = vm::read8(VM_CAST(addr));
 		CPU.GPR[ra] = addr;
 	}
+
+	static void STW_impl(PPUThread *CPU, u32 rs, u32 ra, s32 d)
+	{
+		const u64 addr = ra ? CPU->GPR[ra] + d : d;
+		vm::ps3::write32(VM_CAST(addr), (u32)CPU->GPR[rs]);
+	}
 	void STW(u32 rs, u32 ra, s32 d)
 	{
-		const u64 addr = ra ? CPU.GPR[ra] + d : d;
-		vm::ps3::write32(VM_CAST(addr), (u32)CPU.GPR[rs]);
+		STW_impl(&CPU, rs, ra, d);
 	}
+
 	void STWU(u32 rs, u32 ra, s32 d)
 	{
 		const u64 addr = CPU.GPR[ra] + d;
@@ -3505,10 +3763,14 @@ private:
 		vm::write8(VM_CAST(addr), (u8)CPU.GPR[rs]);
 		CPU.GPR[ra] = addr;
 	}
+	static void LHZ_impl(PPUThread *CPU, u32 rd, u32 ra, s32 d)
+	{
+		const u64 addr = ra ? CPU->GPR[ra] + d : d;
+		CPU->GPR[rd] = vm::ps3::read16(VM_CAST(addr));
+	}
 	void LHZ(u32 rd, u32 ra, s32 d)
 	{
-		const u64 addr = ra ? CPU.GPR[ra] + d : d;
-		CPU.GPR[rd] = vm::ps3::read16(VM_CAST(addr));
+		LHZ_impl(&CPU, rd, ra, d);
 	}
 	void LHZU(u32 rd, u32 ra, s32 d)
 	{
@@ -3554,20 +3816,26 @@ private:
 			vm::ps3::write32(VM_CAST(addr), (u32)CPU.GPR[i]);
 		}
 	}
-	void LFS(u32 frd, u32 ra, s32 d)
+
+	static void LFS_impl(PPUThread *CPU, u32 frd, u32 ra, s32 d)
 	{
-		const u64 addr = ra ? CPU.GPR[ra] + d : d;
+		const u64 addr = ra ? CPU->GPR[ra] + d : d;
 		const f32 val = vm::ps3::_ref<f32>(VM_CAST(addr));
 		if (!FPRdouble::IsNaN(val))
 		{
-			CPU.FPR[frd] = val;
+			CPU->FPR[frd] = val;
 		}
 		else
 		{
 			u64 bits = (u32&)val;
-			(u64&)CPU.FPR[frd] = (bits & 0x80000000) << 32 | 7ULL << 60 | (bits & 0x7fffffff) << 29;
+			(u64&)CPU->FPR[frd] = (bits & 0x80000000) << 32 | 7ULL << 60 | (bits & 0x7fffffff) << 29;
 		}
 	}
+	void LFS(u32 frd, u32 ra, s32 d) override
+	{
+		LFS_impl(&CPU, frd, ra, d);
+	}
+
 	void LFSU(u32 frd, u32 ra, s32 ds)
 	{
 		const u64 addr = CPU.GPR[ra] + ds;
@@ -3594,10 +3862,11 @@ private:
 		CPU.FPR[frd]._double = vm::ps3::_ref<f64>(VM_CAST(addr));
 		CPU.GPR[ra] = addr;
 	}
-	void STFS(u32 frs, u32 ra, s32 d)
+
+	static void STFS_impl(PPUThread *CPU, u32 frs, u32 ra, s32 d)
 	{
-		const u64 addr = ra ? CPU.GPR[ra] + d : d;
-		double val = CPU.FPR[frs];
+		const u64 addr = ra ? CPU->GPR[ra] + d : d;
+		double val = CPU->FPR[frs];
 		if (!FPRdouble::IsNaN(val))
 		{
 			vm::ps3::_ref<f32>(VM_CAST(addr)) = (float)val;
@@ -3609,6 +3878,11 @@ private:
 			vm::ps3::_ref<u32>(VM_CAST(addr)) = bits32;
 		}
 	}
+	void STFS(u32 frs, u32 ra, s32 d) override
+	{
+		STFS_impl(&CPU, frs, ra, d);
+	}
+
 	void STFSU(u32 frs, u32 ra, s32 d)
 	{
 		const u64 addr = CPU.GPR[ra] + d;
@@ -3636,11 +3910,17 @@ private:
 		vm::ps3::_ref<f64>(VM_CAST(addr)) = CPU.FPR[frs];
 		CPU.GPR[ra] = addr;
 	}
-	void LD(u32 rd, u32 ra, s32 ds)
+
+	static void LD_impl(PPUThread *CPU, u32 rd, u32 ra, s32 ds)
 	{
-		const u64 addr = ra ? CPU.GPR[ra] + ds : ds;
-		CPU.GPR[rd] = vm::ps3::read64(VM_CAST(addr));
+		const u64 addr = ra ? CPU->GPR[ra] + ds : ds;
+		CPU->GPR[rd] = vm::ps3::read64(VM_CAST(addr));
 	}
+	void LD(u32 rd, u32 ra, s32 ds) override
+	{
+		LD_impl(&CPU, rd, ra, ds);
+	}
+
 	void LDU(u32 rd, u32 ra, s32 ds)
 	{
 		const u64 addr = CPU.GPR[ra] + ds;
@@ -3701,17 +3981,30 @@ private:
 	void FMSUBS(u32 frd, u32 fra, u32 frc, u32 frb, u32 rc) {FMADD(frd, fra, frc, frb, rc, false, true, true);}
 	void FNMSUBS(u32 frd, u32 fra, u32 frc, u32 frb, u32 rc) {FMADD(frd, fra, frc, frb, rc, true, true, true);}
 	void FNMADDS(u32 frd, u32 fra, u32 frc, u32 frb, u32 rc) {FMADD(frd, fra, frc, frb, rc, true, false, true);}
-	void STD(u32 rs, u32 ra, s32 d)
+
+	static void STD_impl(PPUThread *CPU, u32 rs, u32 ra, s32 d)
 	{
-		const u64 addr = ra ? CPU.GPR[ra] + d : d;
-		vm::ps3::write64(VM_CAST(addr), CPU.GPR[rs]);
+		const u64 addr = ra ? CPU->GPR[ra] + d : d;
+		vm::ps3::write64(VM_CAST(addr), CPU->GPR[rs]);
 	}
-	void STDU(u32 rs, u32 ra, s32 ds)
+
+	void STD(u32 rs, u32 ra, s32 d) override
 	{
-		const u64 addr = CPU.GPR[ra] + ds;
-		vm::ps3::write64(VM_CAST(addr), CPU.GPR[rs]);
-		CPU.GPR[ra] = addr;
+		STD_impl(&CPU, rs, ra, d);
 	}
+
+	static void STDU_impl(PPUThread *CPU, u32 rs, u32 ra, s32 ds)
+	{
+		const u64 addr = CPU->GPR[ra] + ds;
+		vm::ps3::write64(VM_CAST(addr), CPU->GPR[rs]);
+		CPU->GPR[ra] = addr;
+	}
+
+	void STDU(u32 rs, u32 ra, s32 ds) override
+	{
+		STDU_impl(&CPU, rs, ra, ds);
+	}
+
 	void MTFSB1(u32 crbd, u32 rc)
 	{
 		u32 mask = 1 << (31 - crbd);

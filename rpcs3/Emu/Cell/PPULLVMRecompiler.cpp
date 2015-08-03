@@ -376,6 +376,16 @@ std::pair<Executable, llvm::ExecutionEngine *> RecompilationEngine::compile(cons
 	function_ptrs["wrappedExecutePPUFuncByIndex"] = reinterpret_cast<void*>(wrappedExecutePPUFuncByIndex);
 	function_ptrs["wrappedDoSyscall"] = reinterpret_cast<void*>(wrappedDoSyscall);
 
+#define REGISTER_FUNCTION_PTR(name) \
+	function_ptrs[#name] = reinterpret_cast<void*>(PPUInterpreter::name##_impl);
+
+	MACRO_PPU_INST_MAIN_EXPANDERS(REGISTER_FUNCTION_PTR)
+	MACRO_PPU_INST_G_13_EXPANDERS(REGISTER_FUNCTION_PTR)
+	MACRO_PPU_INST_G_1E_EXPANDERS(REGISTER_FUNCTION_PTR)
+	MACRO_PPU_INST_G_1F_EXPANDERS(REGISTER_FUNCTION_PTR)
+	MACRO_PPU_INST_G_3A_EXPANDERS(REGISTER_FUNCTION_PTR)
+	MACRO_PPU_INST_G_3E_EXPANDERS(REGISTER_FUNCTION_PTR)
+
 	Compiler(&m_llvm_context, &m_ir_builder, function_ptrs)
 		.translate_to_llvm_ir(module.get(), name, start_address, instruction_count);
 
