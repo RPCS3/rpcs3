@@ -1,0 +1,15 @@
+version: 1.0.{build}
+os: Visual Studio 2015
+configuration: Release
+platform: x64
+clone_folder: c:\projects\rpcs3
+
+before_build:
+- git submodule update --init asmjit ffmpeg minidx9 wxWidgets
+
+install:
+- set PATH=C:\Program Files (x86)\MSBuild\14.0\Bin;%PATH%
+
+build:
+  project: rpcs3.sln
+  verbosity: minimal
