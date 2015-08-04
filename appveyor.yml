@@ -3,20 +3,30 @@ os: Visual Studio 2015
 configuration: Release
 platform: x64
 clone_folder: c:\projects\rpcs3
+clone_depth: 1
+
+branches:
+ except:
+   - ppu_recompiler
 
 before_build:
- - git submodule update --init asmjit ffmpeg minidx9 wxWidgets
+ - git submodule update --init --depth 3 asmjit minidx9
+ # until git for win 2.5 release
+ - git submodule update --init ffmpeg wxWidgets
+ - if exist "c:\cache\wxWidgets\build" move c:\cache\wxWidgets\build wxWidgets\build
 
 install:
  - set PATH=C:\Program Files (x86)\MSBuild\14.0\Bin;%PATH%
 
-cache:
- - c:\projects\rpcs3\admjit -> .gitmodules
- - c:\projects\rpcs3\ffmpeg -> .gitmodules
- - c:\projects\rpcs3\minidx9 -> .gitmodules
- - c:\projects\rpcs3\wxWidgets -> .gitmodules
+after_build:
+- mkdir c:\cache\wxWidgets\build
+- move wxWidgets\lib\vc_x64_lib c:\cache\wxWidgets\build
 
+# not exactly the best dependency but works for now
+cache:
+ - c:\cache\wxWidgets\build -> .gitmodules
+
+test: off
 build:
   project: rpcs3.sln
-  parallel: true
   verbosity: minimal
