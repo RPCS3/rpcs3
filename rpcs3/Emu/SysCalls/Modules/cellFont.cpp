@@ -8,21 +8,10 @@
 
 extern Module cellFont;
 
-struct font_instance_t
-{
-	std::atomic<bool> init{ false };
-}
-g_font;
-
 // Functions
 s32 cellFontInitializeWithRevision(u64 revisionFlags, vm::ptr<CellFontConfig> config)
 {
 	cellFont.Warning("cellFontInitializeWithRevision(revisionFlags=0x%llx, config=*0x%x)", revisionFlags, config);
-
-	if (g_font.init.load())
-	{
-		return CELL_FONT_ERROR_ALREADY_INITIALIZED;
-	}
 	
 	if (config->fc_size < 24)
 	{
@@ -32,11 +21,6 @@ s32 cellFontInitializeWithRevision(u64 revisionFlags, vm::ptr<CellFontConfig> co
 	if (config->flags != 0)
 	{
 		cellFont.Error("cellFontInitializeWithRevision: Unknown flags (0x%x)", config->flags);
-	}
-
-	if (g_font.init.exchange(true))
-	{
-		throw EXCEPTION("Unexpected");
 	}
 
 	return CELL_OK;
@@ -52,16 +36,6 @@ s32 cellFontEnd()
 {
 	cellFont.Warning("cellFontEnd()");
 
-	if (!g_font.init.load())
-	{
-		return CELL_FONT_ERROR_UNINITIALIZED;
-	}
-
-	if (!g_font.init.exchange(false))
-	{
-		throw EXCEPTION("Unexpected");
-	}
-
 	return CELL_OK;
 }
 
@@ -74,11 +48,6 @@ s32 cellFontSetFontsetOpenMode(u32 openMode)
 s32 cellFontOpenFontMemory(vm::ptr<CellFontLibrary> library, u32 fontAddr, u32 fontSize, u32 subNum, u32 uniqueId, vm::ptr<CellFont> font)
 {
 	cellFont.Warning("cellFontOpenFontMemory(library=*0x%x, fontAddr=0x%x, fontSize=%d, subNum=%d, uniqueId=%d, font=*0x%x)", library, fontAddr, fontSize, subNum, uniqueId, font);
-
-	if (!g_font.init.load())
-	{
-		return CELL_FONT_ERROR_UNINITIALIZED;
-	}
 
 	font->stbfont = (stbtt_fontinfo*)((u8*)&(font->stbfont) + sizeof(void*)); // hack: use next bytes of the struct
 
@@ -115,11 +84,6 @@ s32 cellFontOpenFontset(PPUThread& ppu, vm::ptr<CellFontLibrary> library, vm::pt
 {
 	cellFont.Warning("cellFontOpenFontset(library=*0x%x, fontType=*0x%x, font=*0x%x)", library, fontType, font);
 
-	if (!g_font.init.load())
-	{
-		return CELL_FONT_ERROR_UNINITIALIZED;
-	}
-	
 	if (fontType->map != CELL_FONT_MAP_UNICODE)
 	{
 		cellFont.Warning("cellFontOpenFontset: Only Unicode is supported");
@@ -222,11 +186,6 @@ s32 cellFontSetFontOpenMode(u32 openMode)
 s32 cellFontCreateRenderer(vm::ptr<CellFontLibrary> library, vm::ptr<CellFontRendererConfig> config, vm::ptr<CellFontRenderer> Renderer)
 {
 	cellFont.Todo("cellFontCreateRenderer(library=*0x%x, config=*0x%x, Renderer=*0x%x)", library, config, Renderer);
-
-	if (!g_font.init.load())
-	{
-		return CELL_FONT_ERROR_UNINITIALIZED;
-	}
 	
 	//Write data in Renderer
 
@@ -467,11 +426,6 @@ s32 cellFontGraphicsSetFontRGBA()
 s32 cellFontOpenFontsetOnMemory(PPUThread& ppu, vm::ptr<CellFontLibrary> library, vm::ptr<CellFontType> fontType, vm::ptr<CellFont> font)
 {
 	cellFont.Todo("cellFontOpenFontsetOnMemory(library=*0x%x, fontType=*0x%x, font=*0x%x)", library, fontType, font);
-
-	if (!g_font.init.load())
-	{
-		return CELL_FONT_ERROR_UNINITIALIZED;
-	}
 
 	if (fontType->map != CELL_FONT_MAP_UNICODE)
 	{
@@ -789,8 +743,6 @@ s32 cellFontGraphicsGetLineRGBA()
 
 Module cellFont("cellFont", []()
 {
-	g_font.init = false;
-
 	REG_FUNC(cellFont, cellFontSetFontsetOpenMode);
 	REG_FUNC(cellFont, cellFontSetFontOpenMode);
 	REG_FUNC(cellFont, cellFontCreateRenderer);

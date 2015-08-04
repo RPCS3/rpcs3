@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Emu/Memory/Memory.h"
+#include "Emu/IdManager.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
 
@@ -8,53 +9,47 @@
 
 extern Module cellRudp;
 
-struct RudpInternal
+struct rudp_t
 {
-	std::atomic<bool> init;
-
 	// allocator functions
 	std::function<vm::ptr<void>(PPUThread& ppu, u32 size)> malloc;
 	std::function<void(PPUThread& ppu, vm::ptr<void> ptr)> free;
 
 	// event handler function
-	vm::ptr<CellRudpEventHandler> handler;
+	vm::ptr<CellRudpEventHandler> handler = vm::null;
 	vm::ptr<void> handler_arg;
-}
-g_rudp;
+};
 
 s32 cellRudpInit(vm::ptr<CellRudpAllocator> allocator)
 {
 	cellRudp.Warning("cellRudpInit(allocator=*0x%x)", allocator);
 
-	if (g_rudp.init.load())
+	const auto rudp = Emu.GetIdManager().make_fixed<rudp_t>();
+
+	if (!rudp)
 	{
 		return CELL_RUDP_ERROR_ALREADY_INITIALIZED;
 	}
 
 	if (allocator)
 	{
-		g_rudp.malloc = allocator->app_malloc;
-		g_rudp.free = allocator->app_free;
+		rudp->malloc = allocator->app_malloc;
+		rudp->free = allocator->app_free;
 	}
 	else
 	{
-		g_rudp.malloc = [](PPUThread& ppu, u32 size)
+		rudp->malloc = [](PPUThread& ppu, u32 size)
 		{
 			return vm::ptr<void>::make(vm::alloc(size, vm::main));
 		};
 
-		g_rudp.free = [](PPUThread& ppu, vm::ptr<void> ptr)
+		rudp->free = [](PPUThread& ppu, vm::ptr<void> ptr)
 		{
 			if (!vm::dealloc(ptr.addr(), vm::main))
 			{
 				throw EXCEPTION("Memory deallocation failed (ptr=0x%x)", ptr);
 			}
 		};
-	}
-
-	if (g_rudp.init.exchange(true))
-	{
-		throw EXCEPTION("Unexpected");
 	}
 
 	return CELL_OK;
@@ -64,14 +59,9 @@ s32 cellRudpEnd()
 {
 	cellRudp.Warning("cellRudpEnd()");
 
-	if (!g_rudp.init.load())
+	if (!Emu.GetIdManager().remove<rudp_t>())
 	{
 		return CELL_RUDP_ERROR_NOT_INITIALIZED;
-	}
-
-	if (!g_rudp.init.exchange(false))
-	{
-		throw EXCEPTION("Unexpected");
 	}
 
 	return CELL_OK;
@@ -87,13 +77,15 @@ s32 cellRudpSetEventHandler(vm::ptr<CellRudpEventHandler> handler, vm::ptr<void>
 {
 	cellRudp.Todo("cellRudpSetEventHandler(handler=*0x%x, arg=*0x%x)", handler, arg);
 
-	if (!g_rudp.init.load())
+	const auto rudp = Emu.GetIdManager().get<rudp_t>();
+
+	if (!rudp)
 	{
 		return CELL_RUDP_ERROR_NOT_INITIALIZED;
 	}
 
-	g_rudp.handler = handler;
-	g_rudp.handler_arg = arg;
+	rudp->handler = handler;
+	rudp->handler_arg = arg;
 
 	return CELL_OK;
 }
@@ -250,8 +242,6 @@ s32 cellRudpProcessEvents()
 
 Module cellRudp("cellRudp", []()
 {
-	g_rudp.init = false;
-
 	REG_FUNC(cellRudp, cellRudpInit);
 	REG_FUNC(cellRudp, cellRudpEnd);
 	REG_FUNC(cellRudp, cellRudpEnableInternalIOThread);
