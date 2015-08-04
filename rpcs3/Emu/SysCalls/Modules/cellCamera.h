@@ -315,8 +315,6 @@ struct CellCameraReadEx
 // Custom struct to keep track of cameras
 struct camera_t
 {
-	std::atomic<bool> init{ false };
-
 	struct attr_t
 	{
 		u32 v1, v2;

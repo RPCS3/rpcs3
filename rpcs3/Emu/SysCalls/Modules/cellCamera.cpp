@@ -1,13 +1,13 @@
 #include "stdafx.h"
 #include "Ini.h"
 #include "Emu/Memory/Memory.h"
+#include "Emu/IdManager.h"
+#include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
 
 #include "cellCamera.h"
 
 extern Module cellCamera;
-
-std::unique_ptr<camera_t> g_camera;
 
 s32 cellCameraInit()
 {
@@ -18,52 +18,49 @@ s32 cellCameraInit()
 		return CELL_CAMERA_ERROR_DEVICE_NOT_FOUND;
 	}
 
-	if (g_camera->init)
+	const auto camera = Emu.GetIdManager().make_fixed<camera_t>();
+
+	if (!camera)
 	{
 		return CELL_CAMERA_ERROR_ALREADY_INIT;
 	}
 
 	if (Ini.CameraType.GetValue() == 1)
 	{
-		g_camera->attr[CELL_CAMERA_SATURATION] = { 164 };
-		g_camera->attr[CELL_CAMERA_BRIGHTNESS] = { 96 };
-		g_camera->attr[CELL_CAMERA_AEC] = { 1 };
-		g_camera->attr[CELL_CAMERA_AGC] = { 1 };
-		g_camera->attr[CELL_CAMERA_AWB] = { 1 };
-		g_camera->attr[CELL_CAMERA_ABC] = { 0 };
-		g_camera->attr[CELL_CAMERA_LED] = { 1 };
-		g_camera->attr[CELL_CAMERA_QS] = { 0 };
-		g_camera->attr[CELL_CAMERA_NONZEROCOEFFS] = { 32, 32 };
-		g_camera->attr[CELL_CAMERA_YUVFLAG] = { 0 };
-		g_camera->attr[CELL_CAMERA_BACKLIGHTCOMP] = { 0 };
-		g_camera->attr[CELL_CAMERA_MIRRORFLAG] = { 1 };
-		g_camera->attr[CELL_CAMERA_422FLAG] = { 1 };
-		g_camera->attr[CELL_CAMERA_USBLOAD] = { 4 };
+		camera->attr[CELL_CAMERA_SATURATION] = { 164 };
+		camera->attr[CELL_CAMERA_BRIGHTNESS] = { 96 };
+		camera->attr[CELL_CAMERA_AEC] = { 1 };
+		camera->attr[CELL_CAMERA_AGC] = { 1 };
+		camera->attr[CELL_CAMERA_AWB] = { 1 };
+		camera->attr[CELL_CAMERA_ABC] = { 0 };
+		camera->attr[CELL_CAMERA_LED] = { 1 };
+		camera->attr[CELL_CAMERA_QS] = { 0 };
+		camera->attr[CELL_CAMERA_NONZEROCOEFFS] = { 32, 32 };
+		camera->attr[CELL_CAMERA_YUVFLAG] = { 0 };
+		camera->attr[CELL_CAMERA_BACKLIGHTCOMP] = { 0 };
+		camera->attr[CELL_CAMERA_MIRRORFLAG] = { 1 };
+		camera->attr[CELL_CAMERA_422FLAG] = { 1 };
+		camera->attr[CELL_CAMERA_USBLOAD] = { 4 };
 	}
 	else if (Ini.CameraType.GetValue() == 2)
 	{
-		g_camera->attr[CELL_CAMERA_SATURATION] = { 64 };
-		g_camera->attr[CELL_CAMERA_BRIGHTNESS] = { 8 };
-		g_camera->attr[CELL_CAMERA_AEC] = { 1 };
-		g_camera->attr[CELL_CAMERA_AGC] = { 1 };
-		g_camera->attr[CELL_CAMERA_AWB] = { 1 };
-		g_camera->attr[CELL_CAMERA_LED] = { 1 };
-		g_camera->attr[CELL_CAMERA_BACKLIGHTCOMP] = { 0 };
-		g_camera->attr[CELL_CAMERA_MIRRORFLAG] = { 1 };
-		g_camera->attr[CELL_CAMERA_GAMMA] = { 1 };
-		g_camera->attr[CELL_CAMERA_AGCLIMIT] = { 4 };
-		g_camera->attr[CELL_CAMERA_DENOISE] = { 0 };
-		g_camera->attr[CELL_CAMERA_FRAMERATEADJUST] = { 0 };
-		g_camera->attr[CELL_CAMERA_PIXELOUTLIERFILTER] = { 1 };
-		g_camera->attr[CELL_CAMERA_AGCLOW] = { 48 };
-		g_camera->attr[CELL_CAMERA_AGCHIGH] = { 64 };
+		camera->attr[CELL_CAMERA_SATURATION] = { 64 };
+		camera->attr[CELL_CAMERA_BRIGHTNESS] = { 8 };
+		camera->attr[CELL_CAMERA_AEC] = { 1 };
+		camera->attr[CELL_CAMERA_AGC] = { 1 };
+		camera->attr[CELL_CAMERA_AWB] = { 1 };
+		camera->attr[CELL_CAMERA_LED] = { 1 };
+		camera->attr[CELL_CAMERA_BACKLIGHTCOMP] = { 0 };
+		camera->attr[CELL_CAMERA_MIRRORFLAG] = { 1 };
+		camera->attr[CELL_CAMERA_GAMMA] = { 1 };
+		camera->attr[CELL_CAMERA_AGCLIMIT] = { 4 };
+		camera->attr[CELL_CAMERA_DENOISE] = { 0 };
+		camera->attr[CELL_CAMERA_FRAMERATEADJUST] = { 0 };
+		camera->attr[CELL_CAMERA_PIXELOUTLIERFILTER] = { 1 };
+		camera->attr[CELL_CAMERA_AGCLOW] = { 48 };
+		camera->attr[CELL_CAMERA_AGCHIGH] = { 64 };
 	}
 	// TODO: Some other default attributes? Need to check the actual behaviour on a real PS3.
-
-	if (g_camera->init.exchange(true))
-	{
-		throw EXCEPTION("Unexpected");
-	}
 
 	return CELL_OK;
 }
@@ -72,14 +69,9 @@ s32 cellCameraEnd()
 {
 	cellCamera.Warning("cellCameraEnd()");
 
-	if (!g_camera->init)
+	if (!Emu.GetIdManager().remove<camera_t>())
 	{
 		return CELL_CAMERA_ERROR_NOT_INIT;
-	}
-
-	if (!g_camera->init.exchange(false))
-	{
-		throw EXCEPTION("Unexpected");
 	}
 
 	return CELL_OK;
@@ -113,7 +105,9 @@ s32 cellCameraGetType(s32 dev_num, vm::ptr<s32> type)
 {
 	cellCamera.Warning("cellCameraGetType(dev_num=%d, type=*0x%x)", dev_num, type);
 
-	if (!g_camera->init.load())
+	const auto camera = Emu.GetIdManager().get<camera_t>();
+
+	if (!camera)
 	{
 		return CELL_CAMERA_ERROR_NOT_INIT;
 	}
@@ -165,7 +159,9 @@ s32 cellCameraGetAttribute(s32 dev_num, s32 attrib, vm::ptr<u32> arg1, vm::ptr<u
 
 	const auto attr_name = camera_t::get_attr_name(attrib);
 
-	if (!g_camera->init.load())
+	const auto camera = Emu.GetIdManager().get<camera_t>();
+
+	if (!camera)
 	{
 		return CELL_CAMERA_ERROR_NOT_INIT;
 	}
@@ -175,8 +171,8 @@ s32 cellCameraGetAttribute(s32 dev_num, s32 attrib, vm::ptr<u32> arg1, vm::ptr<u
 		return CELL_CAMERA_ERROR_PARAM;
 	}
 
-	*arg1 = g_camera->attr[attrib].v1;
-	*arg2 = g_camera->attr[attrib].v2;
+	*arg1 = camera->attr[attrib].v1;
+	*arg2 = camera->attr[attrib].v2;
 
 	return CELL_OK;
 }
@@ -187,7 +183,9 @@ s32 cellCameraSetAttribute(s32 dev_num, s32 attrib, u32 arg1, u32 arg2)
 
 	const auto attr_name = camera_t::get_attr_name(attrib);
 
-	if (!g_camera->init.load())
+	const auto camera = Emu.GetIdManager().get<camera_t>();
+
+	if (!camera)
 	{
 		return CELL_CAMERA_ERROR_NOT_INIT;
 	}
@@ -197,7 +195,7 @@ s32 cellCameraSetAttribute(s32 dev_num, s32 attrib, u32 arg1, u32 arg2)
 		return CELL_CAMERA_ERROR_PARAM;
 	}
 
-	g_camera->attr[attrib] = { arg1, arg2 };
+	camera->attr[attrib] = { arg1, arg2 };
 
 	return CELL_OK;
 }
@@ -306,8 +304,6 @@ s32 cellCameraRemoveNotifyEventQueue2(u64 key)
 
 Module cellCamera("cellCamera", []()
 {
-	g_camera = std::make_unique<camera_t>();
-
 	REG_FUNC(cellCamera, cellCameraInit);
 	REG_FUNC(cellCamera, cellCameraEnd);
 	REG_FUNC(cellCamera, cellCameraOpen); // was "renamed", but exists
