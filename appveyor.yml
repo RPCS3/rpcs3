@@ -5,11 +5,18 @@ platform: x64
 clone_folder: c:\projects\rpcs3
 
 before_build:
-- git submodule update --init asmjit ffmpeg minidx9 wxWidgets
+ - git submodule update --init asmjit ffmpeg minidx9 wxWidgets
 
 install:
-- set PATH=C:\Program Files (x86)\MSBuild\14.0\Bin;%PATH%
+ - set PATH=C:\Program Files (x86)\MSBuild\14.0\Bin;%PATH%
+
+cache:
+ - c:\projects\rpcs3\admjit -> .gitmodules
+ - c:\projects\rpcs3\ffmpeg -> .gitmodules
+ - c:\projects\rpcs3\minidx9 -> .gitmodules
+ - c:\projects\rpcs3\wxWidgets -> .gitmodules
 
 build:
   project: rpcs3.sln
+  parallel: true
   verbosity: minimal
