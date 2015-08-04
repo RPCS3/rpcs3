@@ -69,11 +69,14 @@ add_definitions(-DGL_GLEXT_PROTOTYPES)
 add_definitions(-DGLX_GLXEXT_PROTOTYPES)
 
 find_package(wxWidgets COMPONENTS core base net aui gl xml REQUIRED)
-find_package(GLEW REQUIRED)
+if(WIN32)
+    find_package(GLEW REQUIRED)
+endif()
 find_package(OpenGL REQUIRED)
-find_package(ZLIB REQUIRED)
+#find_package(ZLIB REQUIRED) test
 find_package(OpenAL REQUIRED)
-find_package(LLVM REQUIRED CONFIG)
+#find_package(LLVM REQUIRED CONFIG)
+find_package(LLVM CONFIG)
 
 include("${wxWidgets_USE_FILE}")
 
@@ -97,12 +100,14 @@ ${LLVM_INCLUDE_DIRS}
 "${RPCS3_SRC_DIR}/../asmjit/src/asmjit"
 )
 
-add_definitions(${LLVM_DEFINITIONS})
-add_definitions(-DLLVM_AVAILABLE)
-if (CMAKE_BUILD_TYPE STREQUAL "Release")
-	llvm_map_components_to_libnames(LLVM_LIBS mcjit vectorize x86codegen x86disassembler)
-else()
-	llvm_map_components_to_libnames(LLVM_LIBS mcjit vectorize x86codegen x86disassembler mcdisassembler)
+if(LLVM_FOUND)
+	add_definitions(${LLVM_DEFINITIONS})
+	add_definitions(-DLLVM_AVAILABLE)
+	if (CMAKE_BUILD_TYPE STREQUAL "Release")
+		llvm_map_components_to_libnames(LLVM_LIBS mcjit vectorize x86codegen x86disassembler)
+	else()
+		llvm_map_components_to_libnames(LLVM_LIBS mcjit vectorize x86codegen x86disassembler mcdisassembler)
+	endif()
 endif()
 
 link_directories("${RPCS3_SRC_DIR}/../ffmpeg/${PLATFORM_ARCH}/lib")

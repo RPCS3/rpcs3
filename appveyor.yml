@@ -13,20 +13,33 @@ before_build:
  - git submodule update --init --depth 3 asmjit minidx9
  # until git for win 2.5 release
  - git submodule update --init ffmpeg wxWidgets
- - if exist "c:\cache\wxWidgets\build" move c:\cache\wxWidgets\build wxWidgets\build
+ - 7z x lib.7z -aos -oC:\projects\rpcs3\wxWidgets
+ - cmake -G "Visual Studio 14 Win64" -DwxWidgets_ROOT_DIR=C:\projects\rpcs3\wxWidgets;
+
+build_script:
+ - cmake --build . --config Release
 
 install:
- - set PATH=C:\Program Files (x86)\MSBuild\14.0\Bin;%PATH%
+ - cinst wget
+# - ps: Start-FileDownload 'http://sourceforge.net/projects/syncped/files/wxWidgets-3.1.0-include.7z'
+ - ps: Start-FileDownload 'https://402331b94f8e4b87ae2ef4677347f7956cf3861f.googledrive.com/host/0B6v_qtb9hkicfmt0NG0wTTRtUmF4X3VTQk5Oc2JidEVKVnUteDA1dXdrYlNsVW9kREpsSHc/lib.7z'
+# - ps: Start-FileDownload 'http://sourceforge.net/projects/syncped/files/wxWidgets-3.1.0-locale.7z'
+# - 7z x wxWidgets-3.1.0-include.7z -oC:\wxWidgets
+# - 7z x wxWidgets-3.1.0-locale.7z -oC:\wxWidgets
+ - set wxWidgets_ROOT_DIR=C:\projects\rpcs3\wxWidgets;
+ - set WXWIN=C:\projects\rpcs3\wxWidgets;
+ - set OPENALDIR=C:\projects\rpcs3\OpenAL;
+ - set PATH=C:\Program Files (x86)\MSBuild\14.0\Bin;C:\wxWidgets;%PATH%
 
 after_build:
-- mkdir c:\cache\wxWidgets\build
-- move wxWidgets\lib\vc_x64_lib c:\cache\wxWidgets\build
+- mkdir c:\cache\wxWidgets\lib\vc_x64_lib
+- move wxWidgets\lib\vc_x64_lib c:\cache\wxWidgets\lib\vc_x64_lib
 
 # not exactly the best dependency but works for now
 cache:
- - c:\cache\wxWidgets\build -> .gitmodules
+# - c:\cache\wxWidgets\lib\vc_x64_lib -> .gitmodules
 
 test: off
-build:
-  project: rpcs3.sln
-  verbosity: minimal
+#build:
+#  project: rpcs3.sln
+#  verbosity: minimal
