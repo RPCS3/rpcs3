@@ -2,6 +2,7 @@ RPCS3
 =====
 
 [![Build Status](https://travis-ci.org/RPCS3/rpcs3.svg?branch=master)](https://travis-ci.org/RPCS3/rpcs3)
+[![Build status](https://ci.appveyor.com/api/projects/status/411c4clmiohtx7eo/branch/master?svg=true)](https://ci.appveyor.com/project/rpcs3/rpcs3/branch/master)
 [![Coverity Status](https://scan.coverity.com/projects/3960/badge.svg)](https://scan.coverity.com/projects/3960)
 [![Coverage Status](https://coveralls.io/repos/DHrpcs3/rpcs3/badge.svg)](https://coveralls.io/r/DHrpcs3/rpcs3)
 
