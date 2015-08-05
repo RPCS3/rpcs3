@@ -100,6 +100,12 @@ s32 cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 			cellNetCtl.Error("cellNetCtlGetInfo(INFO_MTU): GetAdaptersAddresses buffer overflow.");
 			free(pAddresses);
 			pAddresses = (PIP_ADAPTER_ADDRESSES)malloc(bufLen);
+
+			if (pAddresses == nullptr)
+			{
+				cellNetCtl.Error("cellNetCtlGetInfo(INFO_MTU): Unable to allocate memory for pAddresses.");
+				return CELL_NET_CTL_ERROR_NET_CABLE_NOT_CONNECTED;
+			}
 		}
 		
 		ret = GetAdaptersAddresses(AF_INET, GAA_FLAG_INCLUDE_PREFIX, nullptr, pAddresses, &bufLen);
@@ -182,6 +188,12 @@ s32 cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 			cellNetCtl.Error("cellNetCtlGetInfo(IP_ADDRESS): GetAdaptersAddresses buffer overflow.");
 			free(pAdapterInfo);
 			pAdapterInfo = (IP_ADAPTER_INFO*)malloc(bufLen);
+
+			if (pAdapterInfo == nullptr)
+			{
+				cellNetCtl.Error("cellNetCtlGetInfo(IP_ADDRESS): Unable to allocate memory for pAddresses.");
+				return CELL_NET_CTL_ERROR_NET_CABLE_NOT_CONNECTED;
+			}
 		}
 		
 		ret = GetAdaptersInfo(pAdapterInfo, &bufLen);
@@ -251,6 +263,12 @@ s32 cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 			cellNetCtl.Error("cellNetCtlGetInfo(INFO_NETMASK): GetAdaptersAddresses buffer overflow.");
 			free(pAdapterInfo);
 			pAdapterInfo = (IP_ADAPTER_INFO*)malloc(bufLen);
+
+			if (pAdapterInfo == nullptr)
+			{
+				cellNetCtl.Error("cellNetCtlGetInfo(INFO_NETMASK): Unable to allocate memory for pAddresses.");
+				return CELL_NET_CTL_ERROR_NET_CABLE_NOT_CONNECTED;
+			}
 		}
 		
 		ret = GetAdaptersInfo(pAdapterInfo, &bufLen);

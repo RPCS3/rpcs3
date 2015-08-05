@@ -206,7 +206,7 @@ s32 cellSysCacheClear(void)
 {
 	cellSysutil.Todo("cellSysCacheClear()");
 
-	if (g_sysutil->cacheMounted.exchange(false))
+	if (!g_sysutil->cacheMounted)
 	{
 		return CELL_SYSCACHE_ERROR_NOTMOUNTED;
 	}
@@ -214,7 +214,7 @@ s32 cellSysCacheClear(void)
 	std::string localPath;
 	Emu.GetVFS().GetDevice(std::string("/dev_hdd1/cache/"), localPath);
 
-	// TODO: Delete everything in the cache folder, except the README
+	// TODO: Write tests to figure out, what is deleted.
 
 	return CELL_SYSCACHE_RET_OK_CLEARED;
 }
@@ -229,6 +229,7 @@ s32 cellSysCacheMount(vm::ptr<CellSysCacheParam> param)
 	strncpy(param->getCachePath, ("/dev_hdd1/cache/" + std::string(id) + "/").c_str(), CELL_SYSCACHE_PATH_MAX);
 	param->getCachePath[CELL_SYSCACHE_PATH_MAX - 1] = '\0';
 	Emu.GetVFS().CreateDir(std::string(param->getCachePath));
+	g_sysutil->cacheMounted.exchange(true);
 
 	return CELL_SYSCACHE_RET_OK_RELAYED;
 }
