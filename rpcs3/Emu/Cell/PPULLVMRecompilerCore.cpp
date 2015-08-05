@@ -2667,7 +2667,7 @@ void Compiler::MTOCRF(u32 l, u32 crm, u32 rs) {
 		}
 	}
 
-	cr_i32 = m_ir_builder->CreateAnd(cr_i32, ~mask);
+	cr_i32 = m_ir_builder->CreateAnd(cr_i32, mask);
 	rs_i32 = m_ir_builder->CreateAnd(rs_i32, ~mask);
 	cr_i32 = m_ir_builder->CreateOr(cr_i32, rs_i32);
 	SetCr(cr_i32);
