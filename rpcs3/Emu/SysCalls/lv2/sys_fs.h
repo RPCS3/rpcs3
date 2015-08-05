@@ -205,8 +205,6 @@ struct lv2_file_t
 	~lv2_file_t();
 };
 
-REG_ID_TYPE(lv2_file_t, 0x73); // SYS_FS_FD_OBJECT
-
 class vfsDirBase;
 
 struct lv2_dir_t
@@ -220,8 +218,6 @@ struct lv2_dir_t
 
 	~lv2_dir_t();
 };
-
-REG_ID_TYPE(lv2_dir_t, 0x73); // SYS_FS_FD_OBJECT
 
 // SysCalls
 s32 sys_fs_test(u32 arg1, u32 arg2, vm::ptr<u32> arg3, u32 arg4, vm::ptr<char> arg5, u32 arg6);

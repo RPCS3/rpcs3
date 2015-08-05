@@ -38,8 +38,6 @@ struct lv2_sema_t
 	}
 };
 
-REG_ID_TYPE(lv2_sema_t, 0x96); // SYS_SEMAPHORE_OBJECT
-
 // Aux
 class PPUThread;
 

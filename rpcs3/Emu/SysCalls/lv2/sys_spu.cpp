@@ -100,11 +100,11 @@ u32 spu_thread_initialize(u32 group_id, u32 spu_num, vm::ptr<sys_spu_image> img,
 		sys_spu.Error("Unsupported SPU Thread options (0x%x)", option);
 	}
 
-	const auto spu = Emu.GetIdManager().make_ptr<SPUThread>(name, spu_num);
+	const auto spu = idm::make_ptr<SPUThread>(name, spu_num);
 
 	spu->custom_task = task;
 
-	const auto group = Emu.GetIdManager().get<spu_group_t>(group_id);
+	const auto group = idm::get<spu_group_t>(group_id);
 
 	spu->tg = group;
 	group->threads[spu_num] = spu;
@@ -140,7 +140,7 @@ s32 sys_spu_thread_initialize(vm::ptr<u32> thread, u32 group_id, u32 spu_num, vm
 
 	LV2_LOCK;
 
-	const auto group = Emu.GetIdManager().get<spu_group_t>(group_id);
+	const auto group = idm::get<spu_group_t>(group_id);
 
 	if (!group)
 	{
@@ -167,7 +167,7 @@ s32 sys_spu_thread_set_argument(u32 id, vm::ptr<sys_spu_thread_argument> arg)
 
 	LV2_LOCK;
 
-	const auto thread = Emu.GetIdManager().get<SPUThread>(id);
+	const auto thread = idm::get<SPUThread>(id);
 
 	if (!thread)
 	{
@@ -200,7 +200,7 @@ s32 sys_spu_thread_get_exit_status(u32 id, vm::ptr<u32> status)
 
 	LV2_LOCK;
 
-	const auto thread = Emu.GetIdManager().get<SPUThread>(id);
+	const auto thread = idm::get<SPUThread>(id);
 
 	if (!thread)
 	{
@@ -237,7 +237,7 @@ s32 sys_spu_thread_group_create(vm::ptr<u32> id, u32 num, s32 prio, vm::ptr<sys_
 		sys_spu.Todo("Unsupported SPU Thread Group type (0x%x)", attr->type);
 	}
 
-	*id = Emu.GetIdManager().make<spu_group_t>(std::string{ attr->name.get_ptr(), attr->nsize - 1 }, num, prio, attr->type, attr->ct);
+	*id = idm::make<spu_group_t>(std::string{ attr->name.get_ptr(), attr->nsize - 1 }, num, prio, attr->type, attr->ct);
 
 	return CELL_OK;
 }
@@ -248,7 +248,7 @@ s32 sys_spu_thread_group_destroy(u32 id)
 
 	LV2_LOCK;
 
-	const auto group = Emu.GetIdManager().get<spu_group_t>(id);
+	const auto group = idm::get<spu_group_t>(id);
 
 	if (!group)
 	{
@@ -265,14 +265,14 @@ s32 sys_spu_thread_group_destroy(u32 id)
 	{
 		if (t)
 		{
-			Emu.GetIdManager().remove<SPUThread>(t->get_id());
+			idm::remove<SPUThread>(t->get_id());
 
 			t.reset();
 		}
 	}
 
 	group->state = SPU_THREAD_GROUP_STATUS_NOT_INITIALIZED; // hack
-	Emu.GetIdManager().remove<spu_group_t>(id);
+	idm::remove<spu_group_t>(id);
 
 	return CELL_OK;
 }
@@ -283,7 +283,7 @@ s32 sys_spu_thread_group_start(u32 id)
 
 	LV2_LOCK;
 
-	const auto group = Emu.GetIdManager().get<spu_group_t>(id);
+	const auto group = idm::get<spu_group_t>(id);
 
 	if (!group)
 	{
@@ -345,7 +345,7 @@ s32 sys_spu_thread_group_suspend(u32 id)
 
 	LV2_LOCK;
 
-	const auto group = Emu.GetIdManager().get<spu_group_t>(id);
+	const auto group = idm::get<spu_group_t>(id);
 
 	if (!group)
 	{
@@ -395,7 +395,7 @@ s32 sys_spu_thread_group_resume(u32 id)
 
 	LV2_LOCK;
 
-	const auto group = Emu.GetIdManager().get<spu_group_t>(id);
+	const auto group = idm::get<spu_group_t>(id);
 
 	if (!group)
 	{
@@ -438,7 +438,7 @@ s32 sys_spu_thread_group_yield(u32 id)
 
 	LV2_LOCK;
 
-	const auto group = Emu.GetIdManager().get<spu_group_t>(id);
+	const auto group = idm::get<spu_group_t>(id);
 
 	if (!group)
 	{
@@ -462,8 +462,8 @@ s32 sys_spu_thread_group_terminate(u32 id, s32 value)
 	LV2_LOCK;
 
 	// seems the id can be either SPU Thread Group or SPU Thread
-	const auto thread = Emu.GetIdManager().get<SPUThread>(id);
-	const auto group = thread ? thread->tg.lock() : Emu.GetIdManager().get<spu_group_t>(id);
+	const auto thread = idm::get<SPUThread>(id);
+	const auto group = thread ? thread->tg.lock() : idm::get<spu_group_t>(id);
 
 	if (!group && !thread)
 	{
@@ -515,7 +515,7 @@ s32 sys_spu_thread_group_join(u32 id, vm::ptr<u32> cause, vm::ptr<u32> status)
 
 	LV2_LOCK;
 
-	const auto group = Emu.GetIdManager().get<spu_group_t>(id);
+	const auto group = idm::get<spu_group_t>(id);
 
 	if (!group)
 	{
@@ -598,7 +598,7 @@ s32 sys_spu_thread_write_ls(u32 id, u32 address, u64 value, u32 type)
 
 	LV2_LOCK;
 
-	const auto thread = Emu.GetIdManager().get<SPUThread>(id);
+	const auto thread = idm::get<SPUThread>(id);
 
 	if (!thread)
 	{
@@ -640,7 +640,7 @@ s32 sys_spu_thread_read_ls(u32 id, u32 address, vm::ptr<u64> value, u32 type)
 
 	LV2_LOCK;
 
-	const auto thread = Emu.GetIdManager().get<SPUThread>(id);
+	const auto thread = idm::get<SPUThread>(id);
 
 	if (!thread)
 	{
@@ -682,7 +682,7 @@ s32 sys_spu_thread_write_spu_mb(u32 id, u32 value)
 
 	LV2_LOCK;
 
-	const auto thread = Emu.GetIdManager().get<SPUThread>(id);
+	const auto thread = idm::get<SPUThread>(id);
 
 	if (!thread)
 	{
@@ -718,7 +718,7 @@ s32 sys_spu_thread_set_spu_cfg(u32 id, u64 value)
 
 	LV2_LOCK;
 
-	const auto thread = Emu.GetIdManager().get<SPUThread>(id);
+	const auto thread = idm::get<SPUThread>(id);
 
 	if (!thread)
 	{
@@ -741,7 +741,7 @@ s32 sys_spu_thread_get_spu_cfg(u32 id, vm::ptr<u64> value)
 
 	LV2_LOCK;
 
-	const auto thread = Emu.GetIdManager().get<SPUThread>(id);
+	const auto thread = idm::get<SPUThread>(id);
 
 	if (!thread)
 	{
@@ -759,7 +759,7 @@ s32 sys_spu_thread_write_snr(u32 id, u32 number, u32 value)
 
 	LV2_LOCK;
 
-	const auto thread = Emu.GetIdManager().get<SPUThread>(id);
+	const auto thread = idm::get<SPUThread>(id);
 
 	if (!thread)
 	{
@@ -794,8 +794,8 @@ s32 sys_spu_thread_group_connect_event(u32 id, u32 eq, u32 et)
 
 	LV2_LOCK;
 
-	const auto group = Emu.GetIdManager().get<spu_group_t>(id);
-	const auto queue = Emu.GetIdManager().get<lv2_event_queue_t>(eq);
+	const auto group = idm::get<spu_group_t>(id);
+	const auto queue = idm::get<lv2_event_queue_t>(eq);
 
 	if (!group || !queue)
 	{
@@ -850,7 +850,7 @@ s32 sys_spu_thread_group_disconnect_event(u32 id, u32 et)
 
 	LV2_LOCK;
 
-	const auto group = Emu.GetIdManager().get<spu_group_t>(id);
+	const auto group = idm::get<spu_group_t>(id);
 
 	if (!group)
 	{
@@ -905,8 +905,8 @@ s32 sys_spu_thread_connect_event(u32 id, u32 eq, u32 et, u8 spup)
 
 	LV2_LOCK;
 
-	const auto thread = Emu.GetIdManager().get<SPUThread>(id);
-	const auto queue = Emu.GetIdManager().get<lv2_event_queue_t>(eq);
+	const auto thread = idm::get<SPUThread>(id);
+	const auto queue = idm::get<lv2_event_queue_t>(eq);
 
 	if (!thread || !queue)
 	{
@@ -937,7 +937,7 @@ s32 sys_spu_thread_disconnect_event(u32 id, u32 et, u8 spup)
 
 	LV2_LOCK;
 
-	const auto thread = Emu.GetIdManager().get<SPUThread>(id);
+	const auto thread = idm::get<SPUThread>(id);
 
 	if (!thread)
 	{
@@ -968,8 +968,8 @@ s32 sys_spu_thread_bind_queue(u32 id, u32 spuq, u32 spuq_num)
 
 	LV2_LOCK;
 
-	const auto thread = Emu.GetIdManager().get<SPUThread>(id);
-	const auto queue = Emu.GetIdManager().get<lv2_event_queue_t>(spuq);
+	const auto thread = idm::get<SPUThread>(id);
+	const auto queue = idm::get<lv2_event_queue_t>(spuq);
 
 	if (!thread || !queue)
 	{
@@ -1012,7 +1012,7 @@ s32 sys_spu_thread_unbind_queue(u32 id, u32 spuq_num)
 
 	LV2_LOCK;
 
-	const auto thread = Emu.GetIdManager().get<SPUThread>(id);
+	const auto thread = idm::get<SPUThread>(id);
 
 	if (!thread)
 	{
@@ -1038,8 +1038,8 @@ s32 sys_spu_thread_group_connect_event_all_threads(u32 id, u32 eq, u64 req, vm::
 
 	LV2_LOCK;
 
-	const auto group = Emu.GetIdManager().get<spu_group_t>(id);
-	const auto queue = Emu.GetIdManager().get<lv2_event_queue_t>(eq);
+	const auto group = idm::get<spu_group_t>(id);
+	const auto queue = idm::get<lv2_event_queue_t>(eq);
 
 	if (!group || !queue)
 	{
@@ -1109,7 +1109,7 @@ s32 sys_spu_thread_group_disconnect_event_all_threads(u32 id, u8 spup)
 
 	LV2_LOCK;
 
-	const auto group = Emu.GetIdManager().get<spu_group_t>(id);
+	const auto group = idm::get<spu_group_t>(id);
 
 	if (!group)
 	{
@@ -1182,11 +1182,11 @@ s32 sys_raw_spu_destroy(PPUThread& ppu, u32 id)
 				intr.tag->handler->join(ppu, lv2_lock);
 			}
 
-			Emu.GetIdManager().remove<lv2_int_tag_t>(intr.tag->id);
+			idm::remove<lv2_int_tag_t>(intr.tag->id);
 		}
 	}
 
-	Emu.GetIdManager().remove<RawSPUThread>(thread->get_id());
+	idm::remove<RawSPUThread>(thread->get_id());
 
 	return CELL_OK;
 }
@@ -1216,7 +1216,7 @@ s32 sys_raw_spu_create_interrupt_tag(u32 id, u32 class_id, u32 hwthread, vm::ptr
 		return CELL_EAGAIN;
 	}
 
-	int_ctrl.tag = Emu.GetIdManager().make_ptr<lv2_int_tag_t>();
+	int_ctrl.tag = idm::make_ptr<lv2_int_tag_t>();
 
 	*intrtag = int_ctrl.tag->id;
 

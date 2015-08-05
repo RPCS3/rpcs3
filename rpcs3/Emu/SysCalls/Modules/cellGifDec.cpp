@@ -18,33 +18,38 @@ extern "C"
 
 extern Module cellGifDec;
 
-s32 cellGifDecCreate(
-	vm::ptr<CellGifDecMainHandle> mainHandle,
-	vm::cptr<CellGifDecThreadInParam> threadInParam,
-	vm::ptr<CellGifDecThreadOutParam> threadOutParam)
+// cellGifDec aliases (only for cellGifDec.cpp)
+using PPMainHandle = vm::pptr<GifDecoder>;
+using PMainHandle = vm::ptr<GifDecoder>;
+using PThreadInParam = vm::cptr<CellGifDecThreadInParam>;
+using PThreadOutParam = vm::ptr<CellGifDecThreadOutParam>;
+using PExtThreadInParam = vm::cptr<CellGifDecExtThreadInParam>;
+using PExtThreadOutParam = vm::ptr<CellGifDecExtThreadOutParam>;
+using PPSubHandle = vm::pptr<GifStream>;
+using PSubHandle = vm::ptr<GifStream>;
+using PSrc = vm::cptr<CellGifDecSrc>;
+using POpenInfo = vm::ptr<CellGifDecOpnInfo>;
+using PInfo = vm::ptr<CellGifDecInfo>;
+using PInParam = vm::cptr<CellGifDecInParam>;
+using POutParam = vm::ptr<CellGifDecOutParam>;
+using PDataCtrlParam = vm::cptr<CellGifDecDataCtrlParam>;
+using PDataOutInfo = vm::ptr<CellGifDecDataOutInfo>;
+
+s32 cellGifDecCreate(PPMainHandle mainHandle, PThreadInParam threadInParam, PThreadOutParam threadOutParam)
 {
 	UNIMPLEMENTED_FUNC(cellGifDec);
 	return CELL_OK;
 }
 
-s32 cellGifDecExtCreate(
-	vm::ptr<CellGifDecMainHandle> mainHandle,
-	vm::cptr<CellGifDecThreadInParam> threadInParam,
-	vm::ptr<CellGifDecThreadOutParam> threadOutParam,
-	vm::cptr<CellGifDecExtThreadInParam> extThreadInParam,
-	vm::ptr<CellGifDecExtThreadOutParam> extThreadOutParam)
+s32 cellGifDecExtCreate(PPMainHandle mainHandle, PThreadInParam threadInParam, PThreadOutParam threadOutParam, PExtThreadInParam extThreadInParam, PExtThreadOutParam extThreadOutParam)
 {
 	UNIMPLEMENTED_FUNC(cellGifDec);
 	return CELL_OK;
 }
 
-s32 cellGifDecOpen(
-	CellGifDecMainHandle mainHandle,
-	vm::ptr<CellGifDecSubHandle> subHandle,
-	vm::cptr<CellGifDecSrc> src,
-	vm::ptr<CellGifDecOpnInfo> openInfo)
+s32 cellGifDecOpen(PMainHandle mainHandle, PPSubHandle subHandle, PSrc src, POpenInfo openInfo)
 {
-	cellGifDec.Warning("cellGifDecOpen(mainHandle=0x%x, subHandle=*0x%x, src=*0x%x, openInfo=*0x%x)", mainHandle, subHandle, src, openInfo);
+	cellGifDec.Warning("cellGifDecOpen(mainHandle=*0x%x, subHandle=**0x%x, src=*0x%x, openInfo=*0x%x)", mainHandle, subHandle, src, openInfo);
 
 	GifStream current_subHandle;
 	current_subHandle.fd = 0;
@@ -62,14 +67,15 @@ s32 cellGifDecOpen(
 		std::shared_ptr<vfsStream> file_s(Emu.GetVFS().OpenFile(src->fileName.get_ptr(), vfsRead));
 		if (!file_s) return CELL_GIFDEC_ERROR_OPEN_FILE;
 
-		current_subHandle.fd = Emu.GetIdManager().make<lv2_file_t>(file_s, 0, 0);
+		current_subHandle.fd = idm::make<lv2_file_t>(file_s, 0, 0);
 		current_subHandle.fileSize = file_s->GetSize();
 		break;
 	}
 	}
 
-	// From now, every u32 subHandle argument is a pointer to a CellGifDecSubHandle struct.
-	*subHandle = Emu.GetIdManager().make<GifStream>(current_subHandle);
+	subHandle->set(vm::alloc(sizeof32(GifStream), vm::main));
+
+	**subHandle = current_subHandle;
 
 	return CELL_OK;
 }
@@ -79,36 +85,26 @@ s32 cellGifDecExtOpen()
 	throw EXCEPTION("");
 }
 
-s32 cellGifDecReadHeader(
-	CellGifDecMainHandle mainHandle,
-	CellGifDecSubHandle subHandle,
-	vm::ptr<CellGifDecInfo> info)
+s32 cellGifDecReadHeader(PMainHandle mainHandle, PSubHandle subHandle, PInfo info)
 {
-	cellGifDec.Warning("cellGifDecReadHeader(mainHandle=0x%x, subHandle=0x%x, info=*0x%x)", mainHandle, subHandle, info);
+	cellGifDec.Warning("cellGifDecReadHeader(mainHandle=*0x%x, subHandle=*0x%x, info=*0x%x)", mainHandle, subHandle, info);
 
-	const auto subHandle_data = Emu.GetIdManager().get<GifStream>(subHandle);
-
-	if (!subHandle_data)
-	{
-		return CELL_GIFDEC_ERROR_FATAL;
-	}
-
-	const u32& fd = subHandle_data->fd;
-	const u64& fileSize = subHandle_data->fileSize;
-	CellGifDecInfo& current_info = subHandle_data->info;
+	const u32& fd = subHandle->fd;
+	const u64& fileSize = subHandle->fileSize;
+	CellGifDecInfo& current_info = subHandle->info;
 	
 	// Write the header to buffer
 	u8 buffer[13];
 
-	switch(subHandle_data->src.srcSelect.value())
+	switch (subHandle->src.srcSelect.value())
 	{
 	case CELL_GIFDEC_BUFFER:
-		std::memcpy(buffer, subHandle_data->src.streamPtr.get_ptr(), sizeof(buffer));
+		std::memcpy(buffer, subHandle->src.streamPtr.get_ptr(), sizeof(buffer));
 		break;
 
 	case CELL_GIFDEC_FILE:
 	{
-		auto file = Emu.GetIdManager().get<lv2_file_t>(fd);
+		auto file = idm::get<lv2_file_t>(fd);
 		file->file->Seek(0);
 		file->file->Read(buffer, sizeof(buffer));
 		break;
@@ -141,23 +137,12 @@ s32 cellGifDecExtReadHeader()
 	throw EXCEPTION("");
 }
 
-s32 cellGifDecSetParameter(
-	CellGifDecMainHandle mainHandle,
-	CellGifDecSubHandle subHandle,
-	vm::cptr<CellGifDecInParam> inParam,
-	vm::ptr<CellGifDecOutParam> outParam)
+s32 cellGifDecSetParameter(PMainHandle mainHandle, PSubHandle subHandle, PInParam inParam, POutParam outParam)
 {
-	cellGifDec.Warning("cellGifDecSetParameter(mainHandle=0x%x, subHandle=0x%x, inParam=*0x%x, outParam=*0x%x)", mainHandle, subHandle, inParam, outParam);
+	cellGifDec.Warning("cellGifDecSetParameter(mainHandle=*0x%x, subHandle=*0x%x, inParam=*0x%x, outParam=*0x%x)", mainHandle, subHandle, inParam, outParam);
 
-	const auto subHandle_data = Emu.GetIdManager().get<GifStream>(subHandle);
-
-	if (!subHandle_data)
-	{
-		return CELL_GIFDEC_ERROR_FATAL;
-	}
-
-	CellGifDecInfo& current_info = subHandle_data->info;
-	CellGifDecOutParam& current_outParam = subHandle_data->outParam;
+	CellGifDecInfo& current_info = subHandle->info;
+	CellGifDecOutParam& current_outParam = subHandle->outParam;
 
 	current_outParam.outputWidthByte  = (current_info.SWidth * current_info.SColorResolution * 3)/8;
 	current_outParam.outputWidth      = current_info.SWidth;
@@ -182,40 +167,28 @@ s32 cellGifDecExtSetParameter()
 	throw EXCEPTION("");
 }
 
-s32 cellGifDecDecodeData(
-	CellGifDecMainHandle mainHandle,
-	CellGifDecSubHandle subHandle,
-	vm::ptr<u8> data,
-	vm::cptr<CellGifDecDataCtrlParam> dataCtrlParam,
-	vm::ptr<CellGifDecDataOutInfo> dataOutInfo)
+s32 cellGifDecDecodeData(PMainHandle mainHandle, PSubHandle subHandle, vm::ptr<u8> data, PDataCtrlParam dataCtrlParam, PDataOutInfo dataOutInfo)
 {
-	cellGifDec.Warning("cellGifDecDecodeData(mainHandle=0x%x, subHandle=0x%x, data=*0x%x, dataCtrlParam=*0x%x, dataOutInfo=*0x%x)", mainHandle, subHandle, data, dataCtrlParam, dataOutInfo);
+	cellGifDec.Warning("cellGifDecDecodeData(mainHandle=*0x%x, subHandle=*0x%x, data=*0x%x, dataCtrlParam=*0x%x, dataOutInfo=*0x%x)", mainHandle, subHandle, data, dataCtrlParam, dataOutInfo);
 
 	dataOutInfo->status = CELL_GIFDEC_DEC_STATUS_STOP;
 
-	const auto subHandle_data = Emu.GetIdManager().get<GifStream>(subHandle);
-
-	if (!subHandle_data)
-	{
-		return CELL_GIFDEC_ERROR_FATAL;
-	}
-
-	const u32& fd = subHandle_data->fd;
-	const u64& fileSize = subHandle_data->fileSize;
-	const CellGifDecOutParam& current_outParam = subHandle_data->outParam; 
+	const u32& fd = subHandle->fd;
+	const u64& fileSize = subHandle->fileSize;
+	const CellGifDecOutParam& current_outParam = subHandle->outParam; 
 
 	//Copy the GIF file to a buffer
 	std::unique_ptr<u8[]> gif(new u8[fileSize]);
 
-	switch(subHandle_data->src.srcSelect.value())
+	switch (subHandle->src.srcSelect.value())
 	{
 	case CELL_GIFDEC_BUFFER:
-		std::memcpy(gif.get(), subHandle_data->src.streamPtr.get_ptr(), fileSize);
+		std::memcpy(gif.get(), subHandle->src.streamPtr.get_ptr(), fileSize);
 		break;
 
 	case CELL_GIFDEC_FILE:
 	{
-		auto file = Emu.GetIdManager().get<lv2_file_t>(fd);
+		auto file = idm::get<lv2_file_t>(fd);
 		file->file->Seek(0);
 		file->file->Read(gif.get(), fileSize);
 		break;
@@ -313,24 +286,18 @@ s32 cellGifDecExtDecodeData()
 	throw EXCEPTION("");
 }
 
-s32 cellGifDecClose(CellGifDecMainHandle mainHandle, CellGifDecSubHandle subHandle)
+s32 cellGifDecClose(PMainHandle mainHandle, PSubHandle subHandle)
 {
-	cellGifDec.Warning("cellGifDecClose(mainHandle=0x%x, subHandle=0x%x)", mainHandle, subHandle);
+	cellGifDec.Warning("cellGifDecClose(mainHandle=*0x%x, subHandle=*0x%x)", mainHandle, subHandle);
 
-	const auto subHandle_data = Emu.GetIdManager().get<GifStream>(subHandle);
+	idm::remove<lv2_file_t>(subHandle->fd);
 
-	if (!subHandle_data)
-	{
-		return CELL_GIFDEC_ERROR_FATAL;
-	}
-
-	Emu.GetIdManager().remove<lv2_file_t>(subHandle_data->fd);
-	Emu.GetIdManager().remove<CellGifDecSubHandle>(subHandle);
+	vm::dealloc(subHandle.addr());
 
 	return CELL_OK;
 }
 
-s32 cellGifDecDestroy(CellGifDecMainHandle mainHandle)
+s32 cellGifDecDestroy(PMainHandle mainHandle)
 {
 	UNIMPLEMENTED_FUNC(cellGifDec);
 	return CELL_OK;

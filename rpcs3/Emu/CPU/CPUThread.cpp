@@ -11,7 +11,7 @@
 
 CPUThread::CPUThread(CPUThreadType type, const std::string& name, std::function<std::string()> thread_name)
 	: m_state({ CPU_STATE_STOPPED })
-	, m_id(Emu.GetIdManager().get_current_id())
+	, m_id(idm::get_current_id())
 	, m_type(type)
 	, m_name(name)
 {

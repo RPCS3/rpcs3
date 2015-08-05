@@ -204,13 +204,13 @@ u32 vdecQueryAttr(s32 type, u32 profile, u32 spec_addr /* may be 0 */, vm::ptr<C
 
 void vdecOpen(u32 vdec_id) // TODO: call from the constructor
 {
-	const auto sptr = Emu.GetIdManager().get<VideoDecoder>(vdec_id);
+	const auto sptr = idm::get<VideoDecoder>(vdec_id);
 
 	VideoDecoder& vdec = *sptr;
 
 	vdec.id = vdec_id;
 
-	vdec.vdecCb = Emu.GetIdManager().make_ptr<PPUThread>(fmt::format("VideoDecoder[0x%x] Thread", vdec_id));
+	vdec.vdecCb = idm::make_ptr<PPUThread>(fmt::format("VideoDecoder[0x%x] Thread", vdec_id));
 	vdec.vdecCb->prio = 1001;
 	vdec.vdecCb->stack_size = 0x10000;
 	vdec.vdecCb->custom_task = [sptr](PPUThread& CPU)
@@ -560,7 +560,7 @@ s32 cellVdecOpen(vm::cptr<CellVdecType> type, vm::cptr<CellVdecResource> res, vm
 {
 	cellVdec.Warning("cellVdecOpen(type=*0x%x, res=*0x%x, cb=*0x%x, handle=*0x%x)", type, res, cb, handle);
 
-	vdecOpen(*handle = Emu.GetIdManager().make<VideoDecoder>(type->codecType, type->profileLevel, res->memAddr, res->memSize, cb->cbFunc, cb->cbArg));
+	vdecOpen(*handle = idm::make<VideoDecoder>(type->codecType, type->profileLevel, res->memAddr, res->memSize, cb->cbFunc, cb->cbArg));
 
 	return CELL_OK;
 }
@@ -569,7 +569,7 @@ s32 cellVdecOpenEx(vm::cptr<CellVdecTypeEx> type, vm::cptr<CellVdecResourceEx> r
 {
 	cellVdec.Warning("cellVdecOpenEx(type=*0x%x, res=*0x%x, cb=*0x%x, handle=*0x%x)", type, res, cb, handle);
 
-	vdecOpen(*handle = Emu.GetIdManager().make<VideoDecoder>(type->codecType, type->profileLevel, res->memAddr, res->memSize, cb->cbFunc, cb->cbArg));
+	vdecOpen(*handle = idm::make<VideoDecoder>(type->codecType, type->profileLevel, res->memAddr, res->memSize, cb->cbFunc, cb->cbArg));
 
 	return CELL_OK;
 }
@@ -578,7 +578,7 @@ s32 cellVdecClose(u32 handle)
 {
 	cellVdec.Warning("cellVdecClose(handle=0x%x)", handle);
 
-	const auto vdec = Emu.GetIdManager().get<VideoDecoder>(handle);
+	const auto vdec = idm::get<VideoDecoder>(handle);
 
 	if (!vdec)
 	{
@@ -595,8 +595,8 @@ s32 cellVdecClose(u32 handle)
 		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 	}
 
-	Emu.GetIdManager().remove<PPUThread>(vdec->vdecCb->get_id());
-	Emu.GetIdManager().remove<VideoDecoder>(handle);
+	idm::remove<PPUThread>(vdec->vdecCb->get_id());
+	idm::remove<VideoDecoder>(handle);
 	return CELL_OK;
 }
 
@@ -604,7 +604,7 @@ s32 cellVdecStartSeq(u32 handle)
 {
 	cellVdec.Log("cellVdecStartSeq(handle=0x%x)", handle);
 
-	const auto vdec = Emu.GetIdManager().get<VideoDecoder>(handle);
+	const auto vdec = idm::get<VideoDecoder>(handle);
 
 	if (!vdec)
 	{
@@ -619,7 +619,7 @@ s32 cellVdecEndSeq(u32 handle)
 {
 	cellVdec.Warning("cellVdecEndSeq(handle=0x%x)", handle);
 
-	const auto vdec = Emu.GetIdManager().get<VideoDecoder>(handle);
+	const auto vdec = idm::get<VideoDecoder>(handle);
 
 	if (!vdec)
 	{
@@ -634,7 +634,7 @@ s32 cellVdecDecodeAu(u32 handle, CellVdecDecodeMode mode, vm::cptr<CellVdecAuInf
 {
 	cellVdec.Log("cellVdecDecodeAu(handle=0x%x, mode=%d, auInfo=*0x%x)", handle, mode, auInfo);
 
-	const auto vdec = Emu.GetIdManager().get<VideoDecoder>(handle);
+	const auto vdec = idm::get<VideoDecoder>(handle);
 
 	if (!vdec || mode > CELL_VDEC_DEC_MODE_PB_SKIP)
 	{
@@ -664,7 +664,7 @@ s32 cellVdecGetPicture(u32 handle, vm::cptr<CellVdecPicFormat> format, vm::ptr<u
 {
 	cellVdec.Log("cellVdecGetPicture(handle=0x%x, format=*0x%x, outBuff=*0x%x)", handle, format, outBuff);
 
-	const auto vdec = Emu.GetIdManager().get<VideoDecoder>(handle);
+	const auto vdec = idm::get<VideoDecoder>(handle);
 
 	if (!vdec || !format)
 	{
@@ -788,7 +788,7 @@ s32 cellVdecGetPicItem(u32 handle, vm::pptr<CellVdecPicItem> picItem)
 {
 	cellVdec.Log("cellVdecGetPicItem(handle=0x%x, picItem=**0x%x)", handle, picItem);
 
-	const auto vdec = Emu.GetIdManager().get<VideoDecoder>(handle);
+	const auto vdec = idm::get<VideoDecoder>(handle);
 
 	if (!vdec)
 	{
@@ -933,7 +933,7 @@ s32 cellVdecSetFrameRate(u32 handle, CellVdecFrameRate frc)
 {
 	cellVdec.Log("cellVdecSetFrameRate(handle=0x%x, frc=0x%x)", handle, frc);
 
-	const auto vdec = Emu.GetIdManager().get<VideoDecoder>(handle);
+	const auto vdec = idm::get<VideoDecoder>(handle);
 
 	if (!vdec)
 	{

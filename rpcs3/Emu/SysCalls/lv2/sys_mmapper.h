@@ -17,8 +17,6 @@ struct lv2_memory_t
 	lv2_memory_t(u32 size, u32 align, u64 flags, const std::shared_ptr<lv2_memory_container_t> ct);
 };
 
-REG_ID_TYPE(lv2_memory_t, 0x08); // SYS_MEM_OBJECT
-
 // SysCalls
 s32 sys_mmapper_allocate_address(u64 size, u64 flags, u64 alignment, vm::ptr<u32> alloc_addr);
 s32 sys_mmapper_allocate_fixed_address();

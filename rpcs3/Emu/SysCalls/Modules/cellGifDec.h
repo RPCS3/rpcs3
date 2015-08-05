@@ -52,10 +52,6 @@ enum CellGifDecDecodeStatus : s32
 	CELL_GIFDEC_DEC_STATUS_STOP   = 1, // Decoding was stopped
 };
 
-// Handles
-using CellGifDecMainHandle = vm::ptr<struct GifDecoder>;
-using CellGifDecSubHandle = u32; // vm::ptr<struct GifStream>;
-
 // Callbacks for memory management
 using CellGifDecCbControlMalloc = vm::ptr<void>(u32 size, vm::ptr<void> cbCtrlMallocArg);
 using CellGifDecCbControlFree = s32(vm::ptr<void> ptr, vm::ptr<void> cbCtrlFreeArg);

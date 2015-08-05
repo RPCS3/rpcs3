@@ -2,136 +2,97 @@
 
 #define ID_MANAGER_INCLUDED
 
-// ID type
-enum : u32
-{
-	ID_TYPE_NONE = 0,
-};
-
-// Helper template to detect type
-template<typename T> struct ID_type
-{
-	//static_assert(sizeof(T) == 0, "ID type not registered (use REG_ID_TYPE)");
-
-	static const u32 type = ID_TYPE_NONE; // default type
-};
-
 class ID_data_t final
 {
 public:
 	const std::shared_ptr<void> data;
 	const std::type_info& info;
 	const std::size_t hash;
-	const u32 type;
-	const u32 id;
 
-	template<typename T> force_inline ID_data_t(std::shared_ptr<T> data, u32 type, u32 id)
+	template<typename T> force_inline ID_data_t(std::shared_ptr<T> data)
 		: data(std::move(data))
 		, info(typeid(T))
 		, hash(typeid(T).hash_code())
-		, type(type)
-		, id(id)
 	{
 	}
-
-	ID_data_t(const ID_data_t& right)
-		: data(right.data)
-		, info(right.info)
-		, hash(right.hash)
-		, type(right.type)
-		, id(right.id)
-	{
-	}
-
-	ID_data_t& operator =(const ID_data_t& right) = delete;
 
 	ID_data_t(ID_data_t&& right)
 		: data(std::move(const_cast<std::shared_ptr<void>&>(right.data)))
 		, info(right.info)
 		, hash(right.hash)
-		, type(right.type)
-		, id(right.id)
 	{
 	}
-
-	ID_data_t& operator =(ID_data_t&& other) = delete;
 };
 
-class ID_manager
+// ID Manager
+// 0 is invalid ID
+// 1..0x7fffffff : general purpose IDs
+// 0x80000000+ : occupied by fixed IDs
+namespace idm
 {
-	std::mutex m_mutex;
-
-	// 0 is invalid ID
-	// 1..0x7fffffff : general purpose IDs
-	// 0x80000000+ : occupied by fixed IDs
-	std::unordered_map<u32, ID_data_t> m_id_map;
-
-	// contains the next ID or 0x80000000 | current_ID
-	u32 m_cur_id = 1;
-
-	static u32 get_type_fixed_id(const std::type_info& type)
+	// for internal use
+	inline u32 get_type_fixed_id(const std::type_info& type)
 	{
-		// TODO: more reliable way of fixed ID generation
+		// TODO: better way of fixed ID generation
 		return 0x80000000 | static_cast<u32>(type.hash_code());
 	}
 
-public:
-	// check if ID exists and has specified type
-	template<typename T> bool check_id(u32 id)
+	// reinitialize ID manager
+	void clear();
+
+	// check if ID exists
+	template<typename T> bool check(u32 id)
 	{
-		std::lock_guard<std::mutex> lock(m_mutex);
+		extern std::mutex g_id_mutex;
+		extern std::unordered_map<u32, ID_data_t> g_id_map;
 
-		const auto f = m_id_map.find(id);
+		std::lock_guard<std::mutex> lock(g_id_mutex);
 
-		return f != m_id_map.end() && f->second.info == typeid(T);
+		const auto f = g_id_map.find(id);
+
+		return f != g_id_map.end() && f->second.info == typeid(T);
 	}
 
-	// check if ID exists and has specified type
-	bool check_id(u32 id, u32 type)
+	// check if fixed ID exists
+	template<typename T> bool check_fixed()
 	{
-		std::lock_guard<std::mutex> lock(m_mutex);
+		static const u32 id = get_type_fixed_id(typeid(T));
 
-		const auto f = m_id_map.find(id);
-
-		return f != m_id_map.end() && f->second.type == type;
+		return check<T>(id);
 	}
 
 	// must be called from the constructor called through make() or make_ptr() to get further ID of current object
-	u32 get_current_id()
+	inline u32 get_current_id()
 	{
-		if ((m_cur_id & 0x80000000) == 0)
+		// contains the next ID or 0x80000000 | current_ID
+		extern u32 g_cur_id;
+
+		if ((g_cur_id & 0x80000000) == 0)
 		{
 			throw EXCEPTION("Current ID is not available");
 		}
 
-		return m_cur_id & 0x7fffffff;
-	}
-
-	void clear()
-	{
-		std::lock_guard<std::mutex> lock(m_mutex);
-
-		m_id_map.clear();
-		m_cur_id = 1; // first ID
+		return g_cur_id & 0x7fffffff;
 	}
 
 	// add fixed ID of specified type only if it doesn't exist (each type has unique id)
-	template<typename T, typename... Args, typename = std::enable_if_t<std::is_constructible<T, Args...>::value>> std::shared_ptr<T> make_fixed(Args&&... args)
+	template<typename T, typename... Args> std::enable_if_t<std::is_constructible<T, Args...>::value, std::shared_ptr<T>> make_fixed(Args&&... args)
 	{
-		std::lock_guard<std::mutex> lock(m_mutex);
-
-		const u32 type = ID_type<T>::type;
+		extern std::mutex g_id_mutex;
+		extern std::unordered_map<u32, ID_data_t> g_id_map;
 
 		static const u32 id = get_type_fixed_id(typeid(T));
 
-		const auto found = m_id_map.find(id);
+		std::lock_guard<std::mutex> lock(g_id_mutex);
+
+		const auto found = g_id_map.find(id);
 
 		// ensure that this ID doesn't exist
-		if (found == m_id_map.end())
+		if (found == g_id_map.end())
 		{
 			auto ptr = std::make_shared<T>(std::forward<Args>(args)...);
 
-			m_id_map.emplace(id, ID_data_t(ptr, type, id));
+			g_id_map.emplace(id, ID_data_t(ptr));
 
 			return std::move(ptr);
 		}
@@ -146,21 +107,23 @@ public:
 	}
 
 	// add new ID of specified type with specified constructor arguments (returns object)
-	template<typename T, typename... Args, typename = std::enable_if_t<std::is_constructible<T, Args...>::value>> std::shared_ptr<T> make_ptr(Args&&... args)
+	template<typename T, typename... Args> std::enable_if_t<std::is_constructible<T, Args...>::value, std::shared_ptr<T>> make_ptr(Args&&... args)
 	{
-		std::lock_guard<std::mutex> lock(m_mutex);
+		extern std::mutex g_id_mutex;
+		extern std::unordered_map<u32, ID_data_t> g_id_map;
+		extern u32 g_cur_id;
 
-		const u32 type = ID_type<T>::type;
+		std::lock_guard<std::mutex> lock(g_id_mutex);
 
-		m_cur_id |= 0x80000000;
+		g_cur_id |= 0x80000000;
 
-		if (const u32 id = m_cur_id & 0x7fffffff)
+		if (const u32 id = g_cur_id & 0x7fffffff)
 		{
 			auto ptr = std::make_shared<T>(std::forward<Args>(args)...);
 
-			m_id_map.emplace(id, ID_data_t(ptr, type, id));
+			g_id_map.emplace(id, ID_data_t(ptr));
 
-			m_cur_id = id + 1;
+			g_cur_id = id + 1;
 
 			return std::move(ptr);
 		}
@@ -171,17 +134,19 @@ public:
 	// add new ID of specified type with specified constructor arguments (returns id)
 	template<typename T, typename... Args> std::enable_if_t<std::is_constructible<T, Args...>::value, u32> make(Args&&... args)
 	{
-		std::lock_guard<std::mutex> lock(m_mutex);
+		extern std::mutex g_id_mutex;
+		extern std::unordered_map<u32, ID_data_t> g_id_map;
+		extern u32 g_cur_id;
 
-		const u32 type = ID_type<T>::type;
+		std::lock_guard<std::mutex> lock(g_id_mutex);
 
-		m_cur_id |= 0x80000000;
+		g_cur_id |= 0x80000000;
 
-		if (const u32 id = m_cur_id & 0x7fffffff)
+		if (const u32 id = g_cur_id & 0x7fffffff)
 		{
-			m_id_map.emplace(id, ID_data_t(std::make_shared<T>(std::forward<Args>(args)...), type, id));
+			g_id_map.emplace(id, ID_data_t(std::make_shared<T>(std::forward<Args>(args)...)));
 
-			m_cur_id = id + 1;
+			g_cur_id = id + 1;
 
 			return id;
 		}
@@ -189,16 +154,19 @@ public:
 		throw EXCEPTION("Out of IDs");
 	}
 
-	// load fixed ID of specified type Orig, optionally static_cast to T
-	template<typename T, typename Orig = T> auto get() -> decltype(std::shared_ptr<T>(static_cast<T*>(std::declval<Orig*>())))
+	// get fixed ID of specified type
+	template<typename T> std::shared_ptr<T> get_fixed()
 	{
-		std::lock_guard<std::mutex> lock(m_mutex);
+		extern std::mutex g_id_mutex;
+		extern std::unordered_map<u32, ID_data_t> g_id_map;
+
+		std::lock_guard<std::mutex> lock(g_id_mutex);
 
 		static const u32 id = get_type_fixed_id(typeid(T));
 
-		const auto found = m_id_map.find(id);
+		const auto found = g_id_map.find(id);
 
-		if (found == m_id_map.end() || found->second.info != typeid(Orig))
+		if (found == g_id_map.end() || found->second.info != typeid(T))
 		{
 			return nullptr;
 		}
@@ -206,14 +174,17 @@ public:
 		return std::static_pointer_cast<T>(found->second.data);
 	}
 
-	// load ID created with type Orig, optionally static_cast to T
-	template<typename T, typename Orig = T> auto get(u32 id) -> decltype(std::shared_ptr<T>(static_cast<T*>(std::declval<Orig*>())))
+	// get ID of specified type
+	template<typename T> std::shared_ptr<T> get(u32 id)
 	{
-		std::lock_guard<std::mutex> lock(m_mutex);
+		extern std::mutex g_id_mutex;
+		extern std::unordered_map<u32, ID_data_t> g_id_map;
 
-		const auto found = m_id_map.find(id);
+		std::lock_guard<std::mutex> lock(g_id_mutex);
 
-		if (found == m_id_map.end() || found->second.info != typeid(Orig))
+		const auto found = g_id_map.find(id);
+
+		if (found == g_id_map.end() || found->second.info != typeid(T))
 		{
 			return nullptr;
 		}
@@ -221,18 +192,21 @@ public:
 		return std::static_pointer_cast<T>(found->second.data);
 	}
 
-	// load all IDs created with type Orig, optionally static_cast to T
-	template<typename T, typename Orig = T> auto get_all() -> std::vector<decltype(std::shared_ptr<T>(static_cast<T*>(std::declval<Orig*>())))>
+	// load all IDs of specified type T
+	template<typename T> std::vector<std::shared_ptr<T>> get_all()
 	{
-		std::lock_guard<std::mutex> lock(m_mutex);
+		extern std::mutex g_id_mutex;
+		extern std::unordered_map<u32, ID_data_t> g_id_map;
+
+		std::lock_guard<std::mutex> lock(g_id_mutex);
 
 		std::vector<std::shared_ptr<T>> result;
 
-		const std::size_t hash = typeid(Orig).hash_code();
+		const std::size_t hash = typeid(T).hash_code();
 
-		for (auto& v : m_id_map)
+		for (auto& v : g_id_map)
 		{
-			if (v.second.hash == hash && v.second.info == typeid(Orig))
+			if (v.second.hash == hash && v.second.info == typeid(T))
 			{
 				result.emplace_back(std::static_pointer_cast<T>(v.second.data));
 			}
@@ -241,51 +215,46 @@ public:
 		return result;
 	}
 
-	// remove fixed ID created with type T
-	template<typename T> bool remove()
+	// remove ID created with type T
+	template<typename T> bool remove(u32 id)
 	{
-		std::lock_guard<std::mutex> lock(m_mutex);
+		extern std::mutex g_id_mutex;
+		extern std::unordered_map<u32, ID_data_t> g_id_map;
 
-		static const u32 id = get_type_fixed_id(typeid(T));
+		std::lock_guard<std::mutex> lock(g_id_mutex);
 
-		const auto found = m_id_map.find(id);
+		const auto found = g_id_map.find(id);
 
-		if (found == m_id_map.end() || found->second.info != typeid(T))
+		if (found == g_id_map.end() || found->second.info != typeid(T))
 		{
 			return false;
 		}
 
-		m_id_map.erase(found);
+		g_id_map.erase(found);
 
 		return true;
 	}
 
-	// remove ID created with type T
-	template<typename T> bool remove(u32 id)
+	// remove fixed ID created with type T
+	template<typename T> bool remove_fixed()
 	{
-		std::lock_guard<std::mutex> lock(m_mutex);
+		static const u32 id = get_type_fixed_id(typeid(T));
 
-		const auto found = m_id_map.find(id);
-
-		if (found == m_id_map.end() || found->second.info != typeid(T))
-		{
-			return false;
-		}
-
-		m_id_map.erase(found);
-
-		return true;
+		return remove<T>(id);
 	}
 
 	template<typename T> u32 get_count()
 	{
-		std::lock_guard<std::mutex> lock(m_mutex);
+		extern std::mutex g_id_mutex;
+		extern std::unordered_map<u32, ID_data_t> g_id_map;
+
+		std::lock_guard<std::mutex> lock(g_id_mutex);
 
 		u32 result = 0;
 
 		const std::size_t hash = typeid(T).hash_code();
 
-		for (auto& v : m_id_map)
+		for (auto& v : g_id_map)
 		{
 			if (v.second.hash == hash && v.second.info == typeid(T))
 			{
@@ -296,33 +265,19 @@ public:
 		return result;
 	}
 
-	u32 get_count(u32 type)
-	{
-		std::lock_guard<std::mutex> lock(m_mutex);
-
-		u32 result = 0;
-
-		for (auto& v : m_id_map)
-		{
-			if (v.second.type == type)
-			{
-				result++;
-			}
-		}
-
-		return result;
-	}
-
-	// get sorted ID list
+	// get sorted ID list of specified type
 	template<typename T> std::set<u32> get_set()
 	{
-		std::lock_guard<std::mutex> lock(m_mutex);
+		extern std::mutex g_id_mutex;
+		extern std::unordered_map<u32, ID_data_t> g_id_map;
+
+		std::lock_guard<std::mutex> lock(g_id_mutex);
 
 		std::set<u32> result;
 
 		const std::size_t hash = typeid(T).hash_code();
 
-		for (auto& v : m_id_map)
+		for (auto& v : g_id_map)
 		{
 			if (v.second.hash == hash && v.second.info == typeid(T))
 			{
@@ -333,54 +288,23 @@ public:
 		return result;
 	}
 
-	// get sorted ID list
-	std::set<u32> get_set(u32 type)
+	// get sorted ID map (ID value -> ID data) of specified type
+	template<typename T> std::map<u32, std::shared_ptr<T>> get_map()
 	{
-		std::lock_guard<std::mutex> lock(m_mutex);
+		extern std::mutex g_id_mutex;
+		extern std::unordered_map<u32, ID_data_t> g_id_map;
 
-		std::set<u32> result;
+		std::lock_guard<std::mutex> lock(g_id_mutex);
 
-		for (auto& v : m_id_map)
-		{
-			if (v.second.type == type)
-			{
-				result.insert(v.first);
-			}
-		}
-
-		return result;
-	}
-
-	template<typename T> std::vector<ID_data_t> get_data()
-	{
-		std::lock_guard<std::mutex> lock(m_mutex);
-
-		std::vector<ID_data_t> result;
+		std::map<u32, std::shared_ptr<T>> result;
 
 		const std::size_t hash = typeid(T).hash_code();
 
-		for (auto& v : m_id_map)
+		for (auto& v : g_id_map)
 		{
 			if (v.second.hash == hash && v.second.info == typeid(T))
 			{
-				result.emplace_back(v.second);
-			}
-		}
-
-		return result;
-	}
-
-	std::vector<ID_data_t> get_data(u32 type)
-	{
-		std::lock_guard<std::mutex> lock(m_mutex);
-
-		std::vector<ID_data_t> result;
-
-		for (auto& v : m_id_map)
-		{
-			if (v.second.type == type)
-			{
-				result.emplace_back(v.second);
+				result[v.first] = std::static_pointer_cast<T>(v.second.data);
 			}
 		}
 

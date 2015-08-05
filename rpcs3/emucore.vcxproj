@@ -52,6 +52,7 @@
     <ClCompile Include="Emu\Cell\PPUInterpreter.cpp" />
     <ClCompile Include="Emu\Cell\PPULLVMRecompilerCore.cpp" />
     <ClCompile Include="Emu\Cell\SPUInterpreter.cpp" />
+    <ClCompile Include="Emu\IdManager.cpp" />
     <ClCompile Include="Emu\RSX\CgBinaryFragmentProgram.cpp" />
     <ClCompile Include="Emu\RSX\CgBinaryVertexProgram.cpp" />
     <ClCompile Include="Emu\RSX\Common\FragmentProgramDecompiler.cpp" />

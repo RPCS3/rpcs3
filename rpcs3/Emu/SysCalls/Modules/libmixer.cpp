@@ -321,7 +321,7 @@ s32 cellSurMixerCreate(vm::cptr<CellSurMixerConfig> config)
 
 	libmixer.Warning("*** surMixer created (ch1=%d, ch2=%d, ch6=%d, ch8=%d)", config->chStrips1, config->chStrips2, config->chStrips6, config->chStrips8);
 
-	const auto ppu = Emu.GetIdManager().make_ptr<PPUThread>("Surmixer Thread");
+	const auto ppu = idm::make_ptr<PPUThread>("Surmixer Thread");
 	ppu->prio = 1001;
 	ppu->stack_size = 0x10000;
 	ppu->custom_task = [](PPUThread& ppu)
@@ -445,7 +445,7 @@ s32 cellSurMixerCreate(vm::cptr<CellSurMixerConfig> config)
 			g_surmx.mixcount++;
 		}
 
-		Emu.GetIdManager().remove<PPUThread>(ppu.get_id());
+		idm::remove<PPUThread>(ppu.get_id());
 	};
 
 	ppu->run();

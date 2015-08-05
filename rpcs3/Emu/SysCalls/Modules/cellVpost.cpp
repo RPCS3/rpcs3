@@ -32,7 +32,7 @@ s32 cellVpostOpen(vm::cptr<CellVpostCfgParam> cfgParam, vm::cptr<CellVpostResour
 	cellVpost.Warning("cellVpostOpen(cfgParam=*0x%x, resource=*0x%x, handle=*0x%x)", cfgParam, resource, handle);
 
 	// TODO: check values
-	*handle = Emu.GetIdManager().make<VpostInstance>(cfgParam->outPicFmt == CELL_VPOST_PIC_FMT_OUT_RGBA_ILV);
+	*handle = idm::make<VpostInstance>(cfgParam->outPicFmt == CELL_VPOST_PIC_FMT_OUT_RGBA_ILV);
 	return CELL_OK;
 }
 
@@ -41,7 +41,7 @@ s32 cellVpostOpenEx(vm::cptr<CellVpostCfgParam> cfgParam, vm::cptr<CellVpostReso
 	cellVpost.Warning("cellVpostOpenEx(cfgParam=*0x%x, resource=*0x%x, handle=*0x%x)", cfgParam, resource, handle);
 
 	// TODO: check values
-	*handle = Emu.GetIdManager().make<VpostInstance>(cfgParam->outPicFmt == CELL_VPOST_PIC_FMT_OUT_RGBA_ILV);
+	*handle = idm::make<VpostInstance>(cfgParam->outPicFmt == CELL_VPOST_PIC_FMT_OUT_RGBA_ILV);
 	return CELL_OK;
 }
 
@@ -49,14 +49,14 @@ s32 cellVpostClose(u32 handle)
 {
 	cellVpost.Warning("cellVpostClose(handle=0x%x)", handle);
 
-	const auto vpost = Emu.GetIdManager().get<VpostInstance>(handle);
+	const auto vpost = idm::get<VpostInstance>(handle);
 
 	if (!vpost)
 	{
 		return CELL_VPOST_ERROR_C_ARG_HDL_INVALID;
 	}
 
-	Emu.GetIdManager().remove<VpostInstance>(handle);	
+	idm::remove<VpostInstance>(handle);	
 	return CELL_OK;
 }
 
@@ -64,7 +64,7 @@ s32 cellVpostExec(u32 handle, vm::cptr<u8> inPicBuff, vm::cptr<CellVpostCtrlPara
 {
 	cellVpost.Log("cellVpostExec(handle=0x%x, inPicBuff=*0x%x, ctrlParam=*0x%x, outPicBuff=*0x%x, picInfo=*0x%x)", handle, inPicBuff, ctrlParam, outPicBuff, picInfo);
 
-	const auto vpost = Emu.GetIdManager().get<VpostInstance>(handle);
+	const auto vpost = idm::get<VpostInstance>(handle);
 
 	if (!vpost)
 	{

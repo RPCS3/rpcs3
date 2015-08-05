@@ -13,8 +13,6 @@ struct lv2_int_tag_t
 	lv2_int_tag_t();
 };
 
-REG_ID_TYPE(lv2_int_tag_t, 0x0A); // SYS_INTR_TAG_OBJECT
-
 struct lv2_int_serv_t
 {
 	const std::shared_ptr<PPUThread> thread;
@@ -26,8 +24,6 @@ struct lv2_int_serv_t
 
 	void join(PPUThread& ppu, lv2_lock_t& lv2_lock);
 };
-
-REG_ID_TYPE(lv2_int_serv_t, 0x0B); // SYS_INTR_SERVICE_HANDLE_OBJECT
 
 // SysCalls
 s32 sys_interrupt_tag_destroy(u32 intrtag);

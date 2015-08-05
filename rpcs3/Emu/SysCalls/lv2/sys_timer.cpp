@@ -18,7 +18,7 @@ lv2_timer_t::lv2_timer_t()
 	, period(0)
 	, state(SYS_TIMER_STATE_STOP)
 {
-	auto name = fmt::format("Timer[0x%x] Thread", Emu.GetIdManager().get_current_id());
+	auto name = fmt::format("Timer[0x%x] Thread", idm::get_current_id());
 
 	thread.start([name]{ return name; }, [this]()
 	{
@@ -68,7 +68,7 @@ s32 sys_timer_create(vm::ptr<u32> timer_id)
 {
 	sys_timer.Warning("sys_timer_create(timer_id=*0x%x)", timer_id);
 
-	*timer_id = Emu.GetIdManager().make<lv2_timer_t>();
+	*timer_id = idm::make<lv2_timer_t>();
 
 	return CELL_OK;
 }
@@ -79,7 +79,7 @@ s32 sys_timer_destroy(u32 timer_id)
 
 	LV2_LOCK;
 
-	const auto timer = Emu.GetIdManager().get<lv2_timer_t>(timer_id);
+	const auto timer = idm::get<lv2_timer_t>(timer_id);
 
 	if (!timer)
 	{
@@ -91,7 +91,7 @@ s32 sys_timer_destroy(u32 timer_id)
 		return CELL_EISCONN;
 	}
 
-	Emu.GetIdManager().remove<lv2_timer_t>(timer_id);
+	idm::remove<lv2_timer_t>(timer_id);
 
 	return CELL_OK;
 }
@@ -102,7 +102,7 @@ s32 sys_timer_get_information(u32 timer_id, vm::ptr<sys_timer_information_t> inf
 
 	LV2_LOCK;
 
-	const auto timer = Emu.GetIdManager().get<lv2_timer_t>(timer_id);
+	const auto timer = idm::get<lv2_timer_t>(timer_id);
 
 	if (!timer)
 	{
@@ -125,7 +125,7 @@ s32 _sys_timer_start(u32 timer_id, u64 base_time, u64 period)
 
 	LV2_LOCK;
 
-	const auto timer = Emu.GetIdManager().get<lv2_timer_t>(timer_id);
+	const auto timer = idm::get<lv2_timer_t>(timer_id);
 
 	if (!timer)
 	{
@@ -178,7 +178,7 @@ s32 sys_timer_stop(u32 timer_id)
 
 	LV2_LOCK;
 
-	const auto timer = Emu.GetIdManager().get<lv2_timer_t>(timer_id);
+	const auto timer = idm::get<lv2_timer_t>(timer_id);
 
 	if (!timer)
 	{
@@ -196,8 +196,8 @@ s32 sys_timer_connect_event_queue(u32 timer_id, u32 queue_id, u64 name, u64 data
 
 	LV2_LOCK;
 
-	const auto timer = Emu.GetIdManager().get<lv2_timer_t>(timer_id);
-	const auto queue = Emu.GetIdManager().get<lv2_event_queue_t>(queue_id);
+	const auto timer = idm::get<lv2_timer_t>(timer_id);
+	const auto queue = idm::get<lv2_event_queue_t>(queue_id);
 
 	if (!timer || !queue)
 	{
@@ -223,7 +223,7 @@ s32 sys_timer_disconnect_event_queue(u32 timer_id)
 
 	LV2_LOCK;
 
-	const auto timer = Emu.GetIdManager().get<lv2_timer_t>(timer_id);
+	const auto timer = idm::get<lv2_timer_t>(timer_id);
 
 	if (!timer)
 	{

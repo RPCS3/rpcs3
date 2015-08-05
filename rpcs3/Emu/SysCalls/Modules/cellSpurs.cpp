@@ -1042,7 +1042,7 @@ s32 spursInit(
 	memcpy(semAttr->name, "_spuWkl", 8);
 	for (u32 i = 0; i < CELL_SPURS_MAX_WORKLOAD; i++)
 	{
-		if (s32 rc = sys_semaphore_create(sem, semAttr, 0, 1)) // Emu.GetIdManager().make<lv2_sema_t>(SYS_SYNC_PRIORITY, 1, *(u64*)"_spuWkl", 0)
+		if (s32 rc = sys_semaphore_create(sem, semAttr, 0, 1))
 		{
 			return rollback(), rc;
 		}
@@ -1051,7 +1051,7 @@ s32 spursInit(
 
 		if (isSecond)
 		{
-			if (s32 rc = sys_semaphore_create(sem, semAttr, 0, 1)) // Emu.GetIdManager().make<lv2_sema_t>(SYS_SYNC_PRIORITY, 1, *(u64*)"_spuWkl", 0)
+			if (s32 rc = sys_semaphore_create(sem, semAttr, 0, 1))
 			{
 				return rollback(), rc;
 			}
@@ -1063,7 +1063,7 @@ s32 spursInit(
 	// Create semaphore
 	// TODO: Figure out why this semaphore is needed
 	memcpy(semAttr->name, "_spuPrv", 8);
-	if (s32 rc = sys_semaphore_create(sem, semAttr, 0, 1)) // Emu.GetIdManager().make<lv2_sema_t>(SYS_SYNC_PRIORITY, 1, *(u64*)"_spuPrv", 0);
+	if (s32 rc = sys_semaphore_create(sem, semAttr, 0, 1))
 	{
 		return rollback(), rc;
 	}
@@ -1153,7 +1153,7 @@ s32 spursInit(
 			return rollback(), rc;
 		}
 
-		const auto spuThread = Emu.GetIdManager().get<SPUThread>(spurs->spus[num] = spuThreadId.value());
+		const auto spuThread = idm::get<SPUThread>(spurs->spus[num] = spuThreadId.value());
 
 		// entry point cannot be initialized immediately because SPU LS will be rewritten by sys_spu_thread_group_start()
 		spuThread->custom_task = [spurs](SPUThread& spu)

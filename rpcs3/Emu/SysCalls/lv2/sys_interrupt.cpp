@@ -10,13 +10,13 @@
 SysCallBase sys_interrupt("sys_interrupt");
 
 lv2_int_tag_t::lv2_int_tag_t()
-	: id(Emu.GetIdManager().get_current_id())
+	: id(idm::get_current_id())
 {
 }
 
 lv2_int_serv_t::lv2_int_serv_t(const std::shared_ptr<PPUThread>& thread)
 	: thread(thread)
-	, id(Emu.GetIdManager().get_current_id())
+	, id(idm::get_current_id())
 {
 }
 
@@ -38,8 +38,8 @@ void lv2_int_serv_t::join(PPUThread& ppu, lv2_lock_t& lv2_lock)
 	}
 
 	// Cleanup
-	Emu.GetIdManager().remove<lv2_int_serv_t>(id);
-	Emu.GetIdManager().remove<PPUThread>(thread->get_id());
+	idm::remove<lv2_int_serv_t>(id);
+	idm::remove<PPUThread>(thread->get_id());
 }
 
 s32 sys_interrupt_tag_destroy(u32 intrtag)
@@ -48,7 +48,7 @@ s32 sys_interrupt_tag_destroy(u32 intrtag)
 
 	LV2_LOCK;
 
-	const auto tag = Emu.GetIdManager().get<lv2_int_tag_t>(intrtag);
+	const auto tag = idm::get<lv2_int_tag_t>(intrtag);
 
 	if (!tag)
 	{
@@ -60,7 +60,7 @@ s32 sys_interrupt_tag_destroy(u32 intrtag)
 		return CELL_EBUSY;
 	}
 
-	Emu.GetIdManager().remove<lv2_int_tag_t>(intrtag);
+	idm::remove<lv2_int_tag_t>(intrtag);
 
 	return CELL_OK;
 }
@@ -72,7 +72,7 @@ s32 _sys_interrupt_thread_establish(vm::ptr<u32> ih, u32 intrtag, u32 intrthread
 	LV2_LOCK;
 
 	// Get interrupt tag
-	const auto tag = Emu.GetIdManager().get<lv2_int_tag_t>(intrtag);
+	const auto tag = idm::get<lv2_int_tag_t>(intrtag);
 
 	if (!tag)
 	{
@@ -80,7 +80,7 @@ s32 _sys_interrupt_thread_establish(vm::ptr<u32> ih, u32 intrtag, u32 intrthread
 	}
 
 	// Get interrupt thread
-	const auto it = Emu.GetIdManager().get<PPUThread>(intrthread);
+	const auto it = idm::get<PPUThread>(intrthread);
 
 	if (!it)
 	{
@@ -100,7 +100,7 @@ s32 _sys_interrupt_thread_establish(vm::ptr<u32> ih, u32 intrtag, u32 intrthread
 		return CELL_ESTAT;
 	}
 
-	const auto handler = Emu.GetIdManager().make_ptr<lv2_int_serv_t>(it);
+	const auto handler = idm::make_ptr<lv2_int_serv_t>(it);
 
 	tag->handler = handler;
 
@@ -153,7 +153,7 @@ s32 _sys_interrupt_thread_disestablish(PPUThread& ppu, u32 ih, vm::ptr<u64> r13)
 
 	LV2_LOCK;
 
-	const auto handler = Emu.GetIdManager().get<lv2_int_serv_t>(ih);
+	const auto handler = idm::get<lv2_int_serv_t>(ih);
 
 	if (!handler)
 	{

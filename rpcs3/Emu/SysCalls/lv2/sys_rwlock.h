@@ -39,8 +39,6 @@ struct lv2_rwlock_t
 	void notify_all(lv2_lock_t& lv2_lock);
 };
 
-REG_ID_TYPE(lv2_rwlock_t, 0x88); // SYS_RWLOCK_OBJECT
-
 // Aux
 class PPUThread;
 

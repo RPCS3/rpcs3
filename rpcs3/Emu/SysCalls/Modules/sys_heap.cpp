@@ -22,14 +22,14 @@ u32 _sys_heap_create_heap(vm::cptr<char> name, u32 arg2, u32 arg3, u32 arg4)
 {
 	sysPrxForUser.Warning("_sys_heap_create_heap(name=*0x%x, arg2=0x%x, arg3=0x%x, arg4=0x%x)", name, arg2, arg3, arg4);
 
-	return Emu.GetIdManager().make<HeapInfo>(name.get_ptr());
+	return idm::make<HeapInfo>(name.get_ptr());
 }
 
 s32 _sys_heap_delete_heap(u32 heap)
 {
 	sysPrxForUser.Warning("_sys_heap_delete_heap(heap=0x%x)", heap);
 
-	Emu.GetIdManager().remove<HeapInfo>(heap);
+	idm::remove<HeapInfo>(heap);
 
 	return CELL_OK;
 }

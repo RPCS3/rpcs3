@@ -253,7 +253,7 @@ void ARMv7Thread::fast_stop()
 
 armv7_thread::armv7_thread(u32 entry, const std::string& name, u32 stack_size, s32 prio)
 {
-	std::shared_ptr<ARMv7Thread> armv7 = Emu.GetIdManager().make_ptr<ARMv7Thread>(name);
+	std::shared_ptr<ARMv7Thread> armv7 = idm::make_ptr<ARMv7Thread>(name);
 
 	armv7->PC = entry;
 	armv7->stack_size = stack_size;

@@ -82,7 +82,7 @@ void CallbackManager::Init()
 
 	if (vm::get(vm::main)->addr != 0x10000)
 	{
-		auto thread = Emu.GetIdManager().make_ptr<ARMv7Thread>("Callback Thread");
+		auto thread = idm::make_ptr<ARMv7Thread>("Callback Thread");
 
 		thread->prio = 1001;
 		thread->stack_size = 0x10000;
@@ -93,7 +93,7 @@ void CallbackManager::Init()
 	}
 	else
 	{
-		auto thread = Emu.GetIdManager().make_ptr<PPUThread>("Callback Thread");
+		auto thread = idm::make_ptr<PPUThread>("Callback Thread");
 
 		thread->prio = 1001;
 		thread->stack_size = 0x10000;

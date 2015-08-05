@@ -142,7 +142,7 @@ s32 sys_fs_open(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, s32 mode, vm::c
 		// try to reserve fd
 		if (g_fds[i].compare_and_swap_test(0, ~0))
 		{
-			g_fds[i].store(Emu.GetIdManager().make<lv2_file_t>(std::move(file), mode, flags));
+			g_fds[i].store(idm::make<lv2_file_t>(std::move(file), mode, flags));
 
 			*fd = i;
 
@@ -158,7 +158,7 @@ s32 sys_fs_read(u32 fd, vm::ptr<void> buf, u64 nbytes, vm::ptr<u64> nread)
 {
 	sys_fs.Log("sys_fs_read(fd=%d, buf=0x%x, nbytes=0x%llx, nread=0x%x)", fd, buf, nbytes, nread);
 
-	const auto file = Emu.GetIdManager().get<lv2_file_t>(_fd_to_id(fd));
+	const auto file = idm::get<lv2_file_t>(_fd_to_id(fd));
 
 	if (!file || file->flags & CELL_FS_O_WRONLY)
 	{
@@ -176,7 +176,7 @@ s32 sys_fs_write(u32 fd, vm::cptr<void> buf, u64 nbytes, vm::ptr<u64> nwrite)
 {
 	sys_fs.Log("sys_fs_write(fd=%d, buf=*0x%x, nbytes=0x%llx, nwrite=*0x%x)", fd, buf, nbytes, nwrite);
 
-	const auto file = Emu.GetIdManager().get<lv2_file_t>(_fd_to_id(fd));
+	const auto file = idm::get<lv2_file_t>(_fd_to_id(fd));
 
 	if (!file || !(file->flags & CELL_FS_O_ACCMODE))
 	{
@@ -196,7 +196,7 @@ s32 sys_fs_close(u32 fd)
 {
 	sys_fs.Log("sys_fs_close(fd=%d)", fd);
 
-	const auto file = Emu.GetIdManager().get<lv2_file_t>(_fd_to_id(fd));
+	const auto file = idm::get<lv2_file_t>(_fd_to_id(fd));
 
 	if (!file)
 	{
@@ -205,7 +205,7 @@ s32 sys_fs_close(u32 fd)
 
 	// TODO: return CELL_FS_EBUSY if locked
 
-	Emu.GetIdManager().remove<lv2_file_t>(_fd_to_id(fd));
+	idm::remove<lv2_file_t>(_fd_to_id(fd));
 
 	g_fds[fd].store(0);
 
@@ -230,7 +230,7 @@ s32 sys_fs_opendir(vm::cptr<char> path, vm::ptr<u32> fd)
 		// try to reserve fd
 		if (g_fds[i].compare_and_swap_test(0, ~0))
 		{
-			g_fds[i].store(Emu.GetIdManager().make<lv2_dir_t>(std::move(dir)));
+			g_fds[i].store(idm::make<lv2_dir_t>(std::move(dir)));
 
 			*fd = i;
 
@@ -246,7 +246,7 @@ s32 sys_fs_readdir(u32 fd, vm::ptr<CellFsDirent> dir, vm::ptr<u64> nread)
 {
 	sys_fs.Warning("sys_fs_readdir(fd=%d, dir=*0x%x, nread=*0x%x)", fd, dir, nread);
 
-	const auto directory = Emu.GetIdManager().get<lv2_dir_t>(_fd_to_id(fd));
+	const auto directory = idm::get<lv2_dir_t>(_fd_to_id(fd));
 
 	if (!directory)
 	{
@@ -274,14 +274,14 @@ s32 sys_fs_closedir(u32 fd)
 {
 	sys_fs.Log("sys_fs_closedir(fd=%d)", fd);
 
-	const auto directory = Emu.GetIdManager().get<lv2_dir_t>(_fd_to_id(fd));
+	const auto directory = idm::get<lv2_dir_t>(_fd_to_id(fd));
 
 	if (!directory)
 	{
 		return CELL_FS_EBADF;
 	}
 
-	Emu.GetIdManager().remove<lv2_dir_t>(_fd_to_id(fd));
+	idm::remove<lv2_dir_t>(_fd_to_id(fd));
 
 	g_fds[fd].store(0);
 
@@ -325,7 +325,7 @@ s32 sys_fs_fstat(u32 fd, vm::ptr<CellFsStat> sb)
 {
 	sys_fs.Warning("sys_fs_fstat(fd=%d, sb=*0x%x)", fd, sb);
 
-	const auto file = Emu.GetIdManager().get<lv2_file_t>(_fd_to_id(fd));
+	const auto file = idm::get<lv2_file_t>(_fd_to_id(fd));
 
 	if (!file)
 	{
@@ -474,7 +474,7 @@ s32 sys_fs_lseek(u32 fd, s64 offset, s32 whence, vm::ptr<u64> pos)
 		return CELL_FS_EINVAL;
 	}
 
-	const auto file = Emu.GetIdManager().get<lv2_file_t>(_fd_to_id(fd));
+	const auto file = idm::get<lv2_file_t>(_fd_to_id(fd));
 
 	if (!file)
 	{
@@ -492,7 +492,7 @@ s32 sys_fs_fget_block_size(u32 fd, vm::ptr<u64> sector_size, vm::ptr<u64> block_
 {
 	sys_fs.Todo("sys_fs_fget_block_size(fd=%d, sector_size=*0x%x, block_size=*0x%x, arg4=*0x%x, arg5=*0x%x)", fd, sector_size, block_size, arg4, arg5);
 
-	const auto file = Emu.GetIdManager().get<lv2_file_t>(_fd_to_id(fd));
+	const auto file = idm::get<lv2_file_t>(_fd_to_id(fd));
 
 	if (!file)
 	{
@@ -540,7 +540,7 @@ s32 sys_fs_ftruncate(u32 fd, u64 size)
 {
 	sys_fs.Warning("sys_fs_ftruncate(fd=%d, size=0x%llx)", fd, size);
 
-	const auto file = Emu.GetIdManager().get<lv2_file_t>(_fd_to_id(fd));
+	const auto file = idm::get<lv2_file_t>(_fd_to_id(fd));
 
 	if (!file || !(file->flags & CELL_FS_O_ACCMODE))
 	{

@@ -735,7 +735,7 @@ void PPUThread::task()
 
 ppu_thread::ppu_thread(u32 entry, const std::string& name, u32 stack_size, s32 prio)
 {
-	auto ppu = Emu.GetIdManager().make_ptr<PPUThread>(name);
+	auto ppu = idm::make_ptr<PPUThread>(name);
 
 	if (entry)
 	{

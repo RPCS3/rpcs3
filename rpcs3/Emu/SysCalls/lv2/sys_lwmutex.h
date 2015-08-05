@@ -70,8 +70,6 @@ struct lv2_lwmutex_t
 	void unlock(lv2_lock_t& lv2_lock);
 };
 
-REG_ID_TYPE(lv2_lwmutex_t, 0x95); // SYS_LWMUTEX_OBJECT
-
 // Aux
 class PPUThread;
 

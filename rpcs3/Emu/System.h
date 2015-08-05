@@ -14,7 +14,6 @@ class CPUThreadManager;
 class PadManager;
 class KeyboardManager;
 class MouseManager;
-class ID_manager;
 class GSManager;
 class AudioManager;
 class CallbackManager;
@@ -69,7 +68,6 @@ class Emulator
 	std::unique_ptr<PadManager>       m_pad_manager;
 	std::unique_ptr<KeyboardManager>  m_keyboard_manager;
 	std::unique_ptr<MouseManager>     m_mouse_manager;
-	std::unique_ptr<ID_manager>       m_id_manager;
 	std::unique_ptr<GSManager>        m_gs_manager;
 	std::unique_ptr<AudioManager>     m_audio_manager;
 	std::unique_ptr<CallbackManager>  m_callback_manager;
@@ -130,7 +128,6 @@ public:
 	PadManager&       GetPadManager()      { return *m_pad_manager; }
 	KeyboardManager&  GetKeyboardManager() { return *m_keyboard_manager; }
 	MouseManager&     GetMouseManager()    { return *m_mouse_manager; }
-	ID_manager&       GetIdManager()       { return *m_id_manager; }
 	GSManager&        GetGSManager()       { return *m_gs_manager; }
 	AudioManager&     GetAudioManager()    { return *m_audio_manager; }
 	CallbackManager&  GetCallbackManager() { return *m_callback_manager; }

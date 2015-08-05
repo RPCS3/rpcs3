@@ -124,10 +124,6 @@ struct explicit_bool_t
 // return 32 bit alignof() to avoid widening/narrowing conversions with size_t
 #define alignof32(type) static_cast<u32>(__alignof(type))
 
-template<typename T> struct ID_type;
-
-#define REG_ID_TYPE(t, id) template<> struct ID_type<t> { enum : u32 { type = id }; }
-
 #define WRAP_EXPR(expr) [&]{ return expr; }
 #define COPY_EXPR(expr) [=]{ return expr; }
 #define EXCEPTION(text, ...) fmt::exception(__FILE__, __LINE__, __FUNCTION__, text, ##__VA_ARGS__)

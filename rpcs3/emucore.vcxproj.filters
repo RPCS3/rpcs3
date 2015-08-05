@@ -998,6 +998,9 @@
     <ClCompile Include="Emu\RSX\D3D12\D3D12Overlay.cpp">
       <Filter>Emu\GPU\RSX\D3D12</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\IdManager.cpp">
+      <Filter>Emu</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">

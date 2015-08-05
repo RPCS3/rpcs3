@@ -83,10 +83,6 @@ enum CellPngDecDecodeStatus : s32
 	CELL_PNGDEC_DEC_STATUS_STOP   = 1,
 };
 
-// Handles
-using CellPngDecMainHandle = vm::ptr<struct PngDecoder>;
-using CellPngDecSubHandle = vm::ptr<struct PngStream>;
-
 // Callbacks for memory management
 using CellPngDecCbControlMalloc = vm::ptr<void>(u32 size, vm::ptr<void> cbCtrlMallocArg);
 using CellPngDecCbControlFree = s32(vm::ptr<void> ptr, vm::ptr<void> cbCtrlFreeArg);
@@ -277,7 +273,7 @@ struct PngDecoder
 
 struct PngStream
 {
-	CellPngDecMainHandle dec;
+	vm::ptr<PngDecoder> dec;
 
 	// old data:
 	u32 fd;

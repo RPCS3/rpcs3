@@ -24,7 +24,7 @@ s32 cellRudpInit(vm::ptr<CellRudpAllocator> allocator)
 {
 	cellRudp.Warning("cellRudpInit(allocator=*0x%x)", allocator);
 
-	const auto rudp = Emu.GetIdManager().make_fixed<rudp_t>();
+	const auto rudp = idm::make_fixed<rudp_t>();
 
 	if (!rudp)
 	{
@@ -59,7 +59,7 @@ s32 cellRudpEnd()
 {
 	cellRudp.Warning("cellRudpEnd()");
 
-	if (!Emu.GetIdManager().remove<rudp_t>())
+	if (!idm::remove_fixed<rudp_t>())
 	{
 		return CELL_RUDP_ERROR_NOT_INITIALIZED;
 	}
@@ -77,7 +77,7 @@ s32 cellRudpSetEventHandler(vm::ptr<CellRudpEventHandler> handler, vm::ptr<void>
 {
 	cellRudp.Todo("cellRudpSetEventHandler(handler=*0x%x, arg=*0x%x)", handler, arg);
 
-	const auto rudp = Emu.GetIdManager().get<rudp_t>();
+	const auto rudp = idm::get_fixed<rudp_t>();
 
 	if (!rudp)
 	{

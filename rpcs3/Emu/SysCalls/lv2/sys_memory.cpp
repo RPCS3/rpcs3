@@ -10,7 +10,7 @@ SysCallBase sys_memory("sys_memory");
 
 lv2_memory_container_t::lv2_memory_container_t(u32 size)
 	: size(size)
-	, id(Emu.GetIdManager().get_current_id())
+	, id(idm::get_current_id())
 {
 }
 
@@ -73,7 +73,7 @@ s32 sys_memory_allocate_from_container(u32 size, u32 cid, u64 flags, vm::ptr<u32
 	LV2_LOCK;
 
 	// Check if this container ID is valid
-	const auto ct = Emu.GetIdManager().get<lv2_memory_container_t>(cid);
+	const auto ct = idm::get<lv2_memory_container_t>(cid);
 
 	if (!ct)
 	{
@@ -155,7 +155,7 @@ s32 sys_memory_free(u32 addr)
 	const auto area = vm::get(vm::user_space);
 
 	// Check all memory containers
-	for (auto& ct : Emu.GetIdManager().get_all<lv2_memory_container_t>())
+	for (auto& ct : idm::get_all<lv2_memory_container_t>())
 	{
 		auto found = ct->allocs.find(addr);
 
@@ -210,7 +210,7 @@ s32 sys_memory_get_user_memory_size(vm::ptr<sys_memory_info_t> mem_info)
 	u32 reserved = 0;
 
 	// Check all memory containers
-	for (auto& ct : Emu.GetIdManager().get_all<lv2_memory_container_t>())
+	for (auto& ct : idm::get_all<lv2_memory_container_t>())
 	{
 		reserved += ct->size;
 	}
@@ -241,7 +241,7 @@ s32 sys_memory_container_create(vm::ptr<u32> cid, u32 size)
 	u32 reserved = 0;
 
 	// Check all memory containers
-	for (auto& ct : Emu.GetIdManager().get_all<lv2_memory_container_t>())
+	for (auto& ct : idm::get_all<lv2_memory_container_t>())
 	{
 		reserved += ct->size;
 	}
@@ -255,7 +255,7 @@ s32 sys_memory_container_create(vm::ptr<u32> cid, u32 size)
 	}
 
 	// Create the memory container
-	*cid = Emu.GetIdManager().make<lv2_memory_container_t>(size);
+	*cid = idm::make<lv2_memory_container_t>(size);
 
 	return CELL_OK;
 }
@@ -266,7 +266,7 @@ s32 sys_memory_container_destroy(u32 cid)
 
 	LV2_LOCK;
 
-	const auto ct = Emu.GetIdManager().get<lv2_memory_container_t>(cid);
+	const auto ct = idm::get<lv2_memory_container_t>(cid);
 
 	if (!ct)
 	{
@@ -279,7 +279,7 @@ s32 sys_memory_container_destroy(u32 cid)
 		return CELL_EBUSY;
 	}
 
-	Emu.GetIdManager().remove<lv2_memory_container_t>(cid);
+	idm::remove<lv2_memory_container_t>(cid);
 
 	return CELL_OK;
 }
@@ -290,7 +290,7 @@ s32 sys_memory_container_get_size(vm::ptr<sys_memory_info_t> mem_info, u32 cid)
 
 	LV2_LOCK;
 
-	const auto ct = Emu.GetIdManager().get<lv2_memory_container_t>(cid);
+	const auto ct = idm::get<lv2_memory_container_t>(cid);
 
 	if (!ct)
 	{

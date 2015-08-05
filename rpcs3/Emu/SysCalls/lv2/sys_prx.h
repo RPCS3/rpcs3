@@ -179,8 +179,6 @@ struct lv2_prx_t
 	lv2_prx_t();
 };
 
-REG_ID_TYPE(lv2_prx_t, 0x23); // SYS_PRX_OBJECT
-
 // SysCalls
 s32 sys_prx_load_module(vm::cptr<char> path, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt);
 s32 sys_prx_load_module_list(s32 count, vm::cpptr<char> path_list, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt, vm::ptr<u32> id_list);

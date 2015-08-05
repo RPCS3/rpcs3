@@ -50,7 +50,7 @@ s32 _sys_lwmutex_create(vm::ptr<u32> lwmutex_id, u32 protocol, vm::ptr<sys_lwmut
 		throw EXCEPTION("Unknown arguments (arg4=0x%x, arg6=0x%x)", arg4, arg6);
 	}
 
-	*lwmutex_id = Emu.GetIdManager().make<lv2_lwmutex_t>(protocol, name);
+	*lwmutex_id = idm::make<lv2_lwmutex_t>(protocol, name);
 
 	return CELL_OK;
 }
@@ -61,7 +61,7 @@ s32 _sys_lwmutex_destroy(u32 lwmutex_id)
 
 	LV2_LOCK;
 
-	const auto mutex = Emu.GetIdManager().get<lv2_lwmutex_t>(lwmutex_id);
+	const auto mutex = idm::get<lv2_lwmutex_t>(lwmutex_id);
 
 	if (!mutex)
 	{
@@ -73,7 +73,7 @@ s32 _sys_lwmutex_destroy(u32 lwmutex_id)
 		return CELL_EBUSY;
 	}
 
-	Emu.GetIdManager().remove<lv2_lwmutex_t>(lwmutex_id);
+	idm::remove<lv2_lwmutex_t>(lwmutex_id);
 
 	return CELL_OK;
 }
@@ -86,7 +86,7 @@ s32 _sys_lwmutex_lock(PPUThread& ppu, u32 lwmutex_id, u64 timeout)
 
 	LV2_LOCK;
 
-	const auto mutex = Emu.GetIdManager().get<lv2_lwmutex_t>(lwmutex_id);
+	const auto mutex = idm::get<lv2_lwmutex_t>(lwmutex_id);
 
 	if (!mutex)
 	{
@@ -133,7 +133,7 @@ s32 _sys_lwmutex_trylock(u32 lwmutex_id)
 
 	LV2_LOCK;
 
-	const auto mutex = Emu.GetIdManager().get<lv2_lwmutex_t>(lwmutex_id);
+	const auto mutex = idm::get<lv2_lwmutex_t>(lwmutex_id);
 
 	if (!mutex)
 	{
@@ -156,7 +156,7 @@ s32 _sys_lwmutex_unlock(u32 lwmutex_id)
 
 	LV2_LOCK;
 
-	const auto mutex = Emu.GetIdManager().get<lv2_lwmutex_t>(lwmutex_id);
+	const auto mutex = idm::get<lv2_lwmutex_t>(lwmutex_id);
 
 	if (!mutex)
 	{

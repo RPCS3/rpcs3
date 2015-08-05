@@ -18,7 +18,7 @@ void _sys_ppu_thread_exit(PPUThread& ppu, u64 errorcode)
 	LV2_LOCK;
 
 	// get all sys_mutex objects
-	for (auto& mutex : Emu.GetIdManager().get_all<lv2_mutex_t>())
+	for (auto& mutex : idm::get_all<lv2_mutex_t>())
 	{
 		// unlock mutex if locked by this thread
 		if (mutex->owner.get() == &ppu)
@@ -31,7 +31,7 @@ void _sys_ppu_thread_exit(PPUThread& ppu, u64 errorcode)
 
 	if (!ppu.is_joinable)
 	{
-		Emu.GetIdManager().remove<PPUThread>(ppu.get_id());
+		idm::remove<PPUThread>(ppu.get_id());
 	}
 
 	ppu.exit();
@@ -50,7 +50,7 @@ s32 sys_ppu_thread_join(PPUThread& ppu, u32 thread_id, vm::ptr<u64> vptr)
 
 	LV2_LOCK;
 
-	const auto thread = Emu.GetIdManager().get<PPUThread>(thread_id);
+	const auto thread = idm::get<PPUThread>(thread_id);
 
 	if (!thread)
 	{
@@ -82,7 +82,7 @@ s32 sys_ppu_thread_join(PPUThread& ppu, u32 thread_id, vm::ptr<u64> vptr)
 	*vptr = thread->GPR[3];
 
 	// cleanup
-	Emu.GetIdManager().remove<PPUThread>(thread->get_id());
+	idm::remove<PPUThread>(thread->get_id());
 
 	return CELL_OK;
 }
@@ -93,7 +93,7 @@ s32 sys_ppu_thread_detach(u32 thread_id)
 
 	LV2_LOCK;
 
-	const auto thread = Emu.GetIdManager().get<PPUThread>(thread_id);
+	const auto thread = idm::get<PPUThread>(thread_id);
 
 	if (!thread)
 	{
@@ -131,7 +131,7 @@ s32 sys_ppu_thread_set_priority(u32 thread_id, s32 prio)
 
 	LV2_LOCK;
 
-	const auto thread = Emu.GetIdManager().get<PPUThread>(thread_id);
+	const auto thread = idm::get<PPUThread>(thread_id);
 
 	if (!thread)
 	{
@@ -154,7 +154,7 @@ s32 sys_ppu_thread_get_priority(u32 thread_id, vm::ptr<s32> priop)
 
 	LV2_LOCK;
 
-	const auto thread = Emu.GetIdManager().get<PPUThread>(thread_id);
+	const auto thread = idm::get<PPUThread>(thread_id);
 
 	if (!thread)
 	{
@@ -182,7 +182,7 @@ s32 sys_ppu_thread_stop(u32 thread_id)
 
 	LV2_LOCK;
 
-	const auto thread = Emu.GetIdManager().get<PPUThread>(thread_id);
+	const auto thread = idm::get<PPUThread>(thread_id);
 
 	if (!thread)
 	{
@@ -200,7 +200,7 @@ s32 sys_ppu_thread_restart(u32 thread_id)
 
 	LV2_LOCK;
 
-	const auto thread = Emu.GetIdManager().get<PPUThread>(thread_id);
+	const auto thread = idm::get<PPUThread>(thread_id);
 
 	if (!thread)
 	{
@@ -215,7 +215,7 @@ s32 sys_ppu_thread_restart(u32 thread_id)
 
 u32 ppu_thread_create(u32 entry, u64 arg, s32 prio, u32 stacksize, bool is_joinable, bool is_interrupt, std::string name, std::function<void(PPUThread&)> task)
 {
-	const auto ppu = Emu.GetIdManager().make_ptr<PPUThread>(name);
+	const auto ppu = idm::make_ptr<PPUThread>(name);
 
 	ppu->prio = prio;
 	ppu->stack_size = stacksize < 0x4000 ? 0x4000 : stacksize; // (hack) adjust minimal stack size
@@ -257,7 +257,7 @@ s32 _sys_ppu_thread_create(vm::ptr<u64> thread_id, vm::ptr<ppu_thread_param_t> p
 		return CELL_EPERM;
 	}
 
-	const auto ppu = Emu.GetIdManager().make_ptr<PPUThread>(threadname ? threadname.get_ptr() : "");
+	const auto ppu = idm::make_ptr<PPUThread>(threadname ? threadname.get_ptr() : "");
 
 	ppu->prio = prio;
 	ppu->stack_size = stacksize < 0x4000 ? 0x4000 : stacksize; // (hack) adjust minimal stack size
@@ -286,7 +286,7 @@ s32 sys_ppu_thread_start(u32 thread_id)
 
 	LV2_LOCK;
 
-	const auto thread = Emu.GetIdManager().get<PPUThread>(thread_id);
+	const auto thread = idm::get<PPUThread>(thread_id);
 
 	if (!thread)
 	{
@@ -304,7 +304,7 @@ s32 sys_ppu_thread_rename(u32 thread_id, vm::cptr<char> name)
 
 	LV2_LOCK;
 
-	const auto thread = Emu.GetIdManager().get<PPUThread>(thread_id);
+	const auto thread = idm::get<PPUThread>(thread_id);
 
 	if (!thread)
 	{

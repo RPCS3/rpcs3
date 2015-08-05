@@ -34,7 +34,7 @@ s32 sys_lwmutex_create(vm::ptr<sys_lwmutex_t> lwmutex, vm::ptr<sys_lwmutex_attri
 	lwmutex->lock_var = { { lwmutex_free, 0 } };
 	lwmutex->attribute = attr->recursive | attr->protocol;
 	lwmutex->recursive_count = 0;
-	lwmutex->sleep_queue = Emu.GetIdManager().make<lv2_lwmutex_t>(protocol, attr->name_u64);
+	lwmutex->sleep_queue = idm::make<lv2_lwmutex_t>(protocol, attr->name_u64);
 
 	return CELL_OK;
 }

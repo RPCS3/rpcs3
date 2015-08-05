@@ -45,7 +45,7 @@ s32 sceKernelCreateThread(
 	sceLibKernel.Warning("sceKernelCreateThread(pName=*0x%x, entry=*0x%x, initPriority=%d, stackSize=0x%x, attr=0x%x, cpuAffinityMask=0x%x, pOptParam=*0x%x)",
 		pName, entry, initPriority, stackSize, attr, cpuAffinityMask, pOptParam);
 
-	auto armv7 = Emu.GetIdManager().make_ptr<ARMv7Thread>(pName.get_ptr());
+	auto armv7 = idm::make_ptr<ARMv7Thread>(pName.get_ptr());
 
 	armv7->PC = entry.addr();
 	armv7->prio = initPriority;
@@ -59,7 +59,7 @@ s32 sceKernelStartThread(s32 threadId, u32 argSize, vm::cptr<void> pArgBlock)
 {
 	sceLibKernel.Warning("sceKernelStartThread(threadId=0x%x, argSize=0x%x, pArgBlock=*0x%x)", threadId, argSize, pArgBlock);
 
-	const auto thread = Emu.GetIdManager().get<ARMv7Thread>(threadId);
+	const auto thread = idm::get<ARMv7Thread>(threadId);
 
 	if (!thread)
 	{
@@ -99,7 +99,7 @@ s32 sceKernelDeleteThread(s32 threadId)
 {
 	sceLibKernel.Warning("sceKernelDeleteThread(threadId=0x%x)", threadId);
 
-	const auto thread = Emu.GetIdManager().get<ARMv7Thread>(threadId);
+	const auto thread = idm::get<ARMv7Thread>(threadId);
 
 	if (!thread)
 	{
@@ -113,7 +113,7 @@ s32 sceKernelDeleteThread(s32 threadId)
 	//	return SCE_KERNEL_ERROR_NOT_DORMANT;
 	//}
 
-	Emu.GetIdManager().remove<ARMv7Thread>(threadId);
+	idm::remove<ARMv7Thread>(threadId);
 	return SCE_OK;
 }
 
@@ -129,7 +129,7 @@ s32 sceKernelExitDeleteThread(ARMv7Context& context, s32 exitStatus)
 
 	CallAfter([id]()
 	{
-		Emu.GetIdManager().remove<ARMv7Thread>(id);
+		idm::remove<ARMv7Thread>(id);
 	});
 
 	return SCE_OK;
@@ -258,7 +258,7 @@ s32 sceKernelWaitThreadEnd(s32 threadId, vm::ptr<s32> pExitStatus, vm::ptr<u32> 
 {
 	sceLibKernel.Warning("sceKernelWaitThreadEnd(threadId=0x%x, pExitStatus=*0x%x, pTimeout=*0x%x)", threadId, pExitStatus, pTimeout);
 
-	const auto thread = Emu.GetIdManager().get<ARMv7Thread>(threadId);
+	const auto thread = idm::get<ARMv7Thread>(threadId);
 
 	if (!thread)
 	{

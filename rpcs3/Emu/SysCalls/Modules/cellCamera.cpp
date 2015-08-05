@@ -9,6 +9,75 @@
 
 extern Module cellCamera;
 
+static const char* get_camera_attr_name(s32 value)
+{
+	switch (value)
+	{
+	case CELL_CAMERA_GAIN: return "GAIN";
+	case CELL_CAMERA_REDBLUEGAIN: return "REDBLUEGAIN";
+	case CELL_CAMERA_SATURATION: return "SATURATION";
+	case CELL_CAMERA_EXPOSURE: return "EXPOSURE";
+	case CELL_CAMERA_BRIGHTNESS: return "BRIGHTNESS";
+	case CELL_CAMERA_AEC: return "AEC";
+	case CELL_CAMERA_AGC: return "AGC";
+	case CELL_CAMERA_AWB: return "AWB";
+	case CELL_CAMERA_ABC: return "ABC";
+	case CELL_CAMERA_LED: return "LED";
+	case CELL_CAMERA_AUDIOGAIN: return "AUDIOGAIN";
+	case CELL_CAMERA_QS: return "QS";
+	case CELL_CAMERA_NONZEROCOEFFS: return "NONZEROCOEFFS";
+	case CELL_CAMERA_YUVFLAG: return "YUVFLAG";
+	case CELL_CAMERA_JPEGFLAG: return "JPEGFLAG";
+	case CELL_CAMERA_BACKLIGHTCOMP: return "BACKLIGHTCOMP";
+	case CELL_CAMERA_MIRRORFLAG: return "MIRRORFLAG";
+	case CELL_CAMERA_MEASUREDQS: return "MEASUREDQS";
+	case CELL_CAMERA_422FLAG: return "422FLAG";
+	case CELL_CAMERA_USBLOAD: return "USBLOAD";
+	case CELL_CAMERA_GAMMA: return "GAMMA";
+	case CELL_CAMERA_GREENGAIN: return "GREENGAIN";
+	case CELL_CAMERA_AGCLIMIT: return "AGCLIMIT";
+	case CELL_CAMERA_DENOISE: return "DENOISE";
+	case CELL_CAMERA_FRAMERATEADJUST: return "FRAMERATEADJUST";
+	case CELL_CAMERA_PIXELOUTLIERFILTER: return "PIXELOUTLIERFILTER";
+	case CELL_CAMERA_AGCLOW: return "AGCLOW";
+	case CELL_CAMERA_AGCHIGH: return "AGCHIGH";
+	case CELL_CAMERA_DEVICELOCATION: return "DEVICELOCATION";
+	case CELL_CAMERA_FORMATCAP: return "FORMATCAP";
+	case CELL_CAMERA_FORMATINDEX: return "FORMATINDEX";
+	case CELL_CAMERA_NUMFRAME: return "NUMFRAME";
+	case CELL_CAMERA_FRAMEINDEX: return "FRAMEINDEX";
+	case CELL_CAMERA_FRAMESIZE: return "FRAMESIZE";
+	case CELL_CAMERA_INTERVALTYPE: return "INTERVALTYPE";
+	case CELL_CAMERA_INTERVALINDEX: return "INTERVALINDEX";
+	case CELL_CAMERA_INTERVALVALUE: return "INTERVALVALUE";
+	case CELL_CAMERA_COLORMATCHING: return "COLORMATCHING";
+	case CELL_CAMERA_PLFREQ: return "PLFREQ";
+	case CELL_CAMERA_DEVICEID: return "DEVICEID";
+	case CELL_CAMERA_DEVICECAP: return "DEVICECAP";
+	case CELL_CAMERA_DEVICESPEED: return "DEVICESPEED";
+	case CELL_CAMERA_UVCREQCODE: return "UVCREQCODE";
+	case CELL_CAMERA_UVCREQDATA: return "UVCREQDATA";
+	case CELL_CAMERA_DEVICEID2: return "DEVICEID2";
+	case CELL_CAMERA_READMODE: return "READMODE";
+	case CELL_CAMERA_GAMEPID: return "GAMEPID";
+	case CELL_CAMERA_PBUFFER: return "PBUFFER";
+	case CELL_CAMERA_READFINISH: return "READFINISH";
+	}
+
+	return nullptr;
+}
+
+// Custom struct to keep track of cameras
+struct camera_t
+{
+	struct attr_t
+	{
+		u32 v1, v2;
+	};
+
+	attr_t attr[500]{};
+};
+
 s32 cellCameraInit()
 {
 	cellCamera.Warning("cellCameraInit()");
@@ -18,7 +87,7 @@ s32 cellCameraInit()
 		return CELL_CAMERA_ERROR_DEVICE_NOT_FOUND;
 	}
 
-	const auto camera = Emu.GetIdManager().make_fixed<camera_t>();
+	const auto camera = idm::make_fixed<camera_t>();
 
 	if (!camera)
 	{
@@ -69,7 +138,7 @@ s32 cellCameraEnd()
 {
 	cellCamera.Warning("cellCameraEnd()");
 
-	if (!Emu.GetIdManager().remove<camera_t>())
+	if (!idm::remove_fixed<camera_t>())
 	{
 		return CELL_CAMERA_ERROR_NOT_INIT;
 	}
@@ -105,7 +174,7 @@ s32 cellCameraGetType(s32 dev_num, vm::ptr<s32> type)
 {
 	cellCamera.Warning("cellCameraGetType(dev_num=%d, type=*0x%x)", dev_num, type);
 
-	const auto camera = Emu.GetIdManager().get<camera_t>();
+	const auto camera = idm::get_fixed<camera_t>();
 
 	if (!camera)
 	{
@@ -157,9 +226,9 @@ s32 cellCameraGetAttribute(s32 dev_num, s32 attrib, vm::ptr<u32> arg1, vm::ptr<u
 {
 	cellCamera.Warning("cellCameraGetAttribute(dev_num=%d, attrib=%d, arg1=*0x%x, arg2=*0x%x)", dev_num, attrib, arg1, arg2);
 
-	const auto attr_name = camera_t::get_attr_name(attrib);
+	const auto attr_name = get_camera_attr_name(attrib);
 
-	const auto camera = Emu.GetIdManager().get<camera_t>();
+	const auto camera = idm::get_fixed<camera_t>();
 
 	if (!camera)
 	{
@@ -181,9 +250,9 @@ s32 cellCameraSetAttribute(s32 dev_num, s32 attrib, u32 arg1, u32 arg2)
 {
 	cellCamera.Warning("cellCameraSetAttribute(dev_num=%d, attrib=%d, arg1=%d, arg2=%d)", dev_num, attrib, arg1, arg2);
 
-	const auto attr_name = camera_t::get_attr_name(attrib);
+	const auto attr_name = get_camera_attr_name(attrib);
 
-	const auto camera = Emu.GetIdManager().get<camera_t>();
+	const auto camera = idm::get_fixed<camera_t>();
 
 	if (!camera)
 	{

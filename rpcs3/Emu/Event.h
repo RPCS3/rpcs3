@@ -23,7 +23,7 @@ public:
 			return nullptr;
 		}
 
-		auto queue = Emu.GetIdManager().make_ptr<lv2_event_queue_t>(std::forward<Args>(args)...);
+		auto queue = idm::make_ptr<lv2_event_queue_t>(std::forward<Args>(args)...);
 
 		if (key)
 		{

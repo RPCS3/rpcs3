@@ -25,7 +25,7 @@ struct trophy_context_t
 	std::unique_ptr<TROPUSRLoader> tropusr;
 
 	trophy_context_t()
-		: id(Emu.GetIdManager().get_current_id())
+		: id(idm::get_current_id())
 	{
 	}
 };
@@ -35,7 +35,7 @@ struct trophy_handle_t
 	const u32 id;
 
 	trophy_handle_t()
-		: id(Emu.GetIdManager().get_current_id())
+		: id(idm::get_current_id())
 	{
 	}
 };
@@ -64,7 +64,7 @@ s32 sceNpTrophyCreateHandle(vm::ptr<u32> handle)
 		return SCE_NP_TROPHY_ERROR_INVALID_ARGUMENT;
 	}
 
-	*handle = Emu.GetIdManager().make<trophy_handle_t>();
+	*handle = idm::make<trophy_handle_t>();
 
 	return CELL_OK;
 }
@@ -73,14 +73,14 @@ s32 sceNpTrophyDestroyHandle(u32 handle)
 {
 	sceNpTrophy.Warning("sceNpTrophyDestroyHandle(handle=0x%x)", handle);
 
-	const auto hndl = Emu.GetIdManager().get<trophy_handle_t>(handle);
+	const auto hndl = idm::get<trophy_handle_t>(handle);
 
 	if (!hndl)
 	{
 		return SCE_NP_TROPHY_ERROR_UNKNOWN_HANDLE;
 	}
 
-	Emu.GetIdManager().remove<trophy_handle_t>(handle);
+	idm::remove<trophy_handle_t>(handle);
 
 	return CELL_OK;
 }
@@ -89,7 +89,7 @@ s32 sceNpTrophyAbortHandle(u32 handle)
 {
 	sceNpTrophy.Todo("sceNpTrophyAbortHandle(handle=0x%x)", handle);
 
-	const auto hndl = Emu.GetIdManager().get<trophy_handle_t>(handle);
+	const auto hndl = idm::get<trophy_handle_t>(handle);
 
 	if (!hndl)
 	{
@@ -122,7 +122,7 @@ s32 sceNpTrophyCreateContext(vm::ptr<u32> context, vm::cptr<SceNpCommunicationId
 	}
 
 	// create trophy context
-	const auto ctxt = Emu.GetIdManager().make_ptr<trophy_context_t>();
+	const auto ctxt = idm::make_ptr<trophy_context_t>();
 
 	// set trophy context parameters (could be passed to constructor through make_ptr call)
 	ctxt->trp_name = std::move(name);
@@ -136,14 +136,14 @@ s32 sceNpTrophyDestroyContext(u32 context)
 {
 	sceNpTrophy.Warning("sceNpTrophyDestroyContext(context=0x%x)", context);
 
-	const auto ctxt = Emu.GetIdManager().get<trophy_context_t>(context);
+	const auto ctxt = idm::get<trophy_context_t>(context);
 
 	if (!ctxt)
 	{
 		return SCE_NP_TROPHY_ERROR_UNKNOWN_CONTEXT;
 	}
 
-	Emu.GetIdManager().remove<trophy_context_t>(context);
+	idm::remove<trophy_context_t>(context);
 
 	return CELL_OK;
 }
@@ -152,7 +152,7 @@ s32 sceNpTrophyRegisterContext(PPUThread& CPU, u32 context, u32 handle, vm::ptr<
 {
 	sceNpTrophy.Error("sceNpTrophyRegisterContext(context=0x%x, handle=0x%x, statusCb=*0x%x, arg=*0x%x, options=0x%llx)", context, handle, statusCb, arg, options);
 
-	const auto ctxt = Emu.GetIdManager().get<trophy_context_t>(context);
+	const auto ctxt = idm::get<trophy_context_t>(context);
 
 	if (!ctxt)
 	{
@@ -160,7 +160,7 @@ s32 sceNpTrophyRegisterContext(PPUThread& CPU, u32 context, u32 handle, vm::ptr<
 		return SCE_NP_TROPHY_ERROR_UNKNOWN_CONTEXT;
 	}
 
-	const auto hndl = Emu.GetIdManager().get<trophy_handle_t>(handle);
+	const auto hndl = idm::get<trophy_handle_t>(handle);
 
 	if (!hndl)
 	{
@@ -232,14 +232,14 @@ s32 sceNpTrophyGetRequiredDiskSpace(u32 context, u32 handle, vm::ptr<u64> reqspa
 {
 	sceNpTrophy.Todo("sceNpTrophyGetRequiredDiskSpace(context=0x%x, handle=0x%x, reqspace*=0x%x, options=0x%llx)", context, handle, reqspace, options);
 
-	const auto ctxt = Emu.GetIdManager().get<trophy_context_t>(context);
+	const auto ctxt = idm::get<trophy_context_t>(context);
 
 	if (!ctxt)
 	{
 		return SCE_NP_TROPHY_ERROR_UNKNOWN_CONTEXT;
 	}
 
-	const auto hndl = Emu.GetIdManager().get<trophy_handle_t>(handle);
+	const auto hndl = idm::get<trophy_handle_t>(handle);
 
 	if (!hndl)
 	{
@@ -263,14 +263,14 @@ s32 sceNpTrophyGetGameInfo(u32 context, u32 handle, vm::ptr<SceNpTrophyGameDetai
 {
 	sceNpTrophy.Error("sceNpTrophyGetGameInfo(context=0x%x, handle=0x%x, details=*0x%x, data=*0x%x)", context, handle, details, data);
 
-	const auto ctxt = Emu.GetIdManager().get<trophy_context_t>(context);
+	const auto ctxt = idm::get<trophy_context_t>(context);
 
 	if (!ctxt)
 	{
 		return SCE_NP_TROPHY_ERROR_UNKNOWN_CONTEXT;
 	}
 
-	const auto hndl = Emu.GetIdManager().get<trophy_handle_t>(handle);
+	const auto hndl = idm::get<trophy_handle_t>(handle);
 
 	if (!hndl)
 	{
@@ -324,14 +324,14 @@ s32 sceNpTrophyUnlockTrophy(u32 context, u32 handle, s32 trophyId, vm::ptr<u32> 
 {
 	sceNpTrophy.Error("sceNpTrophyUnlockTrophy(context=0x%x, handle=0x%x, trophyId=%d, platinumId=*0x%x)", context, handle, trophyId, platinumId);
 
-	const auto ctxt = Emu.GetIdManager().get<trophy_context_t>(context);
+	const auto ctxt = idm::get<trophy_context_t>(context);
 
 	if (!ctxt)
 	{
 		return SCE_NP_TROPHY_ERROR_UNKNOWN_CONTEXT;
 	}
 
-	const auto hndl = Emu.GetIdManager().get<trophy_handle_t>(handle);
+	const auto hndl = idm::get<trophy_handle_t>(handle);
 
 	if (!hndl)
 	{
@@ -355,14 +355,14 @@ s32 sceNpTrophyGetTrophyUnlockState(u32 context, u32 handle, vm::ptr<SceNpTrophy
 {
 	sceNpTrophy.Error("sceNpTrophyGetTrophyUnlockState(context=0x%x, handle=0x%x, flags=*0x%x, count=*0x%x)", context, handle, flags, count);
 
-	const auto ctxt = Emu.GetIdManager().get<trophy_context_t>(context);
+	const auto ctxt = idm::get<trophy_context_t>(context);
 
 	if (!ctxt)
 	{
 		return SCE_NP_TROPHY_ERROR_UNKNOWN_CONTEXT;
 	}
 
-	const auto hndl = Emu.GetIdManager().get<trophy_handle_t>(handle);
+	const auto hndl = idm::get<trophy_handle_t>(handle);
 
 	if (!hndl)
 	{
@@ -390,14 +390,14 @@ s32 sceNpTrophyGetTrophyInfo(u32 context, u32 handle, s32 trophyId, vm::ptr<SceN
 {
 	sceNpTrophy.Warning("sceNpTrophyGetTrophyInfo(context=0x%x, handle=0x%x, trophyId=%d, details=*0x%x, data=*0x%x)", context, handle, trophyId, details, data);
 
-	const auto ctxt = Emu.GetIdManager().get<trophy_context_t>(context);
+	const auto ctxt = idm::get<trophy_context_t>(context);
 
 	if (!ctxt)
 	{
 		return SCE_NP_TROPHY_ERROR_UNKNOWN_CONTEXT;
 	}
 
-	const auto hndl = Emu.GetIdManager().get<trophy_handle_t>(handle);
+	const auto hndl = idm::get<trophy_handle_t>(handle);
 
 	if (!hndl)
 	{

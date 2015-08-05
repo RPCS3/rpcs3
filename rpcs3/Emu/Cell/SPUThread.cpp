@@ -951,7 +951,7 @@ void SPUThread::set_ch_value(u32 ch, u32 value)
 					LOG_WARNING(SPU, "sys_event_flag_set_bit(id=%d, value=0x%x (flag=%d))", data, value, flag);
 				}
 
-				const auto eflag = Emu.GetIdManager().get<lv2_event_flag_t>(data);
+				const auto eflag = idm::get<lv2_event_flag_t>(data);
 
 				if (!eflag)
 				{
@@ -995,7 +995,7 @@ void SPUThread::set_ch_value(u32 ch, u32 value)
 					LOG_WARNING(SPU, "sys_event_flag_set_bit_impatient(id=%d, value=0x%x (flag=%d))", data, value, flag);
 				}
 
-				const auto eflag = Emu.GetIdManager().get<lv2_event_flag_t>(data);
+				const auto eflag = idm::get<lv2_event_flag_t>(data);
 
 				if (!eflag)
 				{
@@ -1476,7 +1476,7 @@ void SPUThread::halt()
 
 spu_thread::spu_thread(u32 entry, const std::string& name, u32 stack_size, u32 prio)
 {
-	auto spu = Emu.GetIdManager().make_ptr<SPUThread>(name, 0x13370666);
+	auto spu = idm::make_ptr<SPUThread>(name, 0x13370666);
 
 	spu->PC = entry;
 

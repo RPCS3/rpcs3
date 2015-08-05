@@ -51,10 +51,10 @@ s32 sys_mempool_create(vm::ptr<sys_mempool_t> mempool, vm::ptr<void> chunk, cons
 		return CELL_EINVAL;
 	}
 
-	auto id = Emu.GetIdManager().make<memory_pool_t>();
+	auto id = idm::make<memory_pool_t>();
 	*mempool = id;
 
-	auto memory_pool = Emu.GetIdManager().get<memory_pool_t>(id);
+	auto memory_pool = idm::get<memory_pool_t>(id);
 
 	memory_pool->chunk = chunk;
 	memory_pool->chunk_size = chunk_size;
@@ -76,14 +76,14 @@ void sys_mempool_destroy(sys_mempool_t mempool)
 {
 	sysPrxForUser.Warning("sys_mempool_destroy(mempool=%d)", mempool);
 
-	Emu.GetIdManager().remove<memory_pool_t>(mempool);
+	idm::remove<memory_pool_t>(mempool);
 }
 
 s32 sys_mempool_free_block(sys_mempool_t mempool, vm::ptr<void> block)
 {
 	sysPrxForUser.Warning("sys_mempool_free_block(mempool=%d, block=*0x%x)", mempool, block);
 
-	auto memory_pool = Emu.GetIdManager().get<memory_pool_t>(mempool);
+	auto memory_pool = idm::get<memory_pool_t>(mempool);
 	if (!memory_pool)
 	{
 		return CELL_EINVAL;
@@ -102,7 +102,7 @@ u64 sys_mempool_get_count(sys_mempool_t mempool)
 {
 	sysPrxForUser.Warning("sys_mempool_get_count(mempool=%d)", mempool);
 
-	auto memory_pool = Emu.GetIdManager().get<memory_pool_t>(mempool);
+	auto memory_pool = idm::get<memory_pool_t>(mempool);
 	if (!memory_pool)
 	{
 		return CELL_EINVAL;
@@ -115,7 +115,7 @@ vm::ptr<void> sys_mempool_try_allocate_block(sys_mempool_t mempool)
 {
 	sysPrxForUser.Warning("sys_mempool_try_allocate_block(mempool=%d)", mempool);
 
-	auto memory_pool = Emu.GetIdManager().get<memory_pool_t>(mempool);
+	auto memory_pool = idm::get<memory_pool_t>(mempool);
 
 	if (!memory_pool || memory_pool->free_blocks.size() == 0)
 	{

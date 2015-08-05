@@ -19,7 +19,7 @@ SysCallBase sys_prx("sys_prx");
 extern void fill_ppu_exec_map(u32 addr, u32 size);
 
 lv2_prx_t::lv2_prx_t()
-	: id(Emu.GetIdManager().get_current_id())
+	: id(idm::get_current_id())
 {
 }
 
@@ -43,7 +43,7 @@ s32 prx_load_module(std::string path, u64 flags, vm::ptr<sys_prx_load_module_opt
 	loader::handlers::elf64::sprx_info info;
 	loader.load_sprx(info);
 
-	auto prx = Emu.GetIdManager().make_ptr<lv2_prx_t>();
+	auto prx = idm::make_ptr<lv2_prx_t>();
 
 	auto meta = info.modules[""];
 	prx->start.set(meta.exports[0xBC9A0086]);
@@ -190,7 +190,7 @@ s32 sys_prx_start_module(s32 id, u64 flags, vm::ptr<sys_prx_start_module_option_
 {
 	sys_prx.Warning("sys_prx_start_module(id=0x%x, flags=0x%llx, pOpt=*0x%x)", id, flags, pOpt);
 
-	const auto prx = Emu.GetIdManager().get<lv2_prx_t>(id);
+	const auto prx = idm::get<lv2_prx_t>(id);
 
 	if (!prx)
 	{
@@ -210,7 +210,7 @@ s32 sys_prx_stop_module(s32 id, u64 flags, vm::ptr<sys_prx_stop_module_option_t>
 {
 	sys_prx.Warning("sys_prx_stop_module(id=0x%x, flags=0x%llx, pOpt=*0x%x)", id, flags, pOpt);
 
-	const auto prx = Emu.GetIdManager().get<lv2_prx_t>(id);
+	const auto prx = idm::get<lv2_prx_t>(id);
 
 	if (!prx)
 	{
@@ -231,7 +231,7 @@ s32 sys_prx_unload_module(s32 id, u64 flags, vm::ptr<sys_prx_unload_module_optio
 	sys_prx.Warning("sys_prx_unload_module(id=0x%x, flags=0x%llx, pOpt=*0x%x)", id, flags, pOpt);
 
 	// Get the PRX, free the used memory and delete the object and its ID
-	const auto prx = Emu.GetIdManager().get<lv2_prx_t>(id);
+	const auto prx = idm::get<lv2_prx_t>(id);
 
 	if (!prx)
 	{
@@ -241,7 +241,7 @@ s32 sys_prx_unload_module(s32 id, u64 flags, vm::ptr<sys_prx_unload_module_optio
 	//Memory.Free(prx->address);
 
 	//s32 result = prx->exit ? prx->exit() : CELL_OK;
-	Emu.GetIdManager().remove<lv2_prx_t>(id);
+	idm::remove<lv2_prx_t>(id);
 	
 	return CELL_OK;
 }

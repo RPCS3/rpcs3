@@ -11,7 +11,7 @@ SysCallBase sys_mmapper("sys_mmapper");
 lv2_memory_t::lv2_memory_t(u32 size, u32 align, u64 flags, const std::shared_ptr<lv2_memory_container_t> ct)
 	: size(size)
 	, align(align)
-	, id(Emu.GetIdManager().get_current_id())
+	, id(idm::get_current_id())
 	, flags(flags)
 	, ct(ct)
 {
@@ -118,7 +118,7 @@ s32 sys_mmapper_allocate_memory(u64 size, u64 flags, vm::ptr<u32> mem_id)
 		throw EXCEPTION("Unexpected");
 
 	// Generate a new mem ID
-	*mem_id = Emu.GetIdManager().make<lv2_memory_t>(static_cast<u32>(size), align, flags, nullptr);
+	*mem_id = idm::make<lv2_memory_t>(static_cast<u32>(size), align, flags, nullptr);
 
 	return CELL_OK;
 }
@@ -130,7 +130,7 @@ s32 sys_mmapper_allocate_memory_from_container(u32 size, u32 cid, u64 flags, vm:
 	LV2_LOCK;
 
 	// Check if this container ID is valid.
-	const auto ct = Emu.GetIdManager().get<lv2_memory_container_t>(cid);
+	const auto ct = idm::get<lv2_memory_container_t>(cid);
 
 	if (!ct)
 	{
@@ -179,7 +179,7 @@ s32 sys_mmapper_allocate_memory_from_container(u32 size, u32 cid, u64 flags, vm:
 	ct->used += size;
 
 	// Generate a new mem ID
-	*mem_id = Emu.GetIdManager().make<lv2_memory_t>(size, align, flags, ct);
+	*mem_id = idm::make<lv2_memory_t>(size, align, flags, ct);
 
 	return CELL_OK;
 }
@@ -224,7 +224,7 @@ s32 sys_mmapper_free_memory(u32 mem_id)
 	LV2_LOCK;
 
 	// Check if this mem ID is valid.
-	const auto mem = Emu.GetIdManager().get<lv2_memory_t>(mem_id);
+	const auto mem = idm::get<lv2_memory_t>(mem_id);
 
 	if (!mem)
 	{
@@ -243,7 +243,7 @@ s32 sys_mmapper_free_memory(u32 mem_id)
 	}
 
 	// Release the allocated memory and remove the ID
-	Emu.GetIdManager().remove<lv2_memory_t>(mem_id);
+	idm::remove<lv2_memory_t>(mem_id);
 
 	return CELL_OK;
 }
@@ -261,7 +261,7 @@ s32 sys_mmapper_map_memory(u32 addr, u32 mem_id, u64 flags)
 		return CELL_EINVAL;
 	}
 
-	const auto mem = Emu.GetIdManager().get<lv2_memory_t>(mem_id);
+	const auto mem = idm::get<lv2_memory_t>(mem_id);
 
 	if (!mem)
 	{
@@ -301,7 +301,7 @@ s32 sys_mmapper_search_and_map(u32 start_addr, u32 mem_id, u64 flags, vm::ptr<u3
 		return CELL_EINVAL;
 	}
 
-	const auto mem = Emu.GetIdManager().get<lv2_memory_t>(mem_id);
+	const auto mem = idm::get<lv2_memory_t>(mem_id);
 
 	if (!mem)
 	{
@@ -333,7 +333,7 @@ s32 sys_mmapper_unmap_memory(u32 addr, vm::ptr<u32> mem_id)
 		return CELL_EINVAL;
 	}
 
-	for (auto& mem : Emu.GetIdManager().get_all<lv2_memory_t>())
+	for (auto& mem : idm::get_all<lv2_memory_t>())
 	{
 		if (mem->addr == addr)
 		{

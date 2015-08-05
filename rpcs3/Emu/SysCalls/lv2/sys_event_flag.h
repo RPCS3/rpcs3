@@ -108,8 +108,6 @@ struct lv2_event_flag_t
 	void notify_all(lv2_lock_t& lv2_lock);
 };
 
-REG_ID_TYPE(lv2_event_flag_t, 0x98); // SYS_EVENT_FLAG_OBJECT
-
 // Aux
 class PPUThread;
 

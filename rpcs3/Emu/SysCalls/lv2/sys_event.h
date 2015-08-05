@@ -89,8 +89,6 @@ struct lv2_event_queue_t
 	void push(lv2_lock_t& lv2_lock, u64 source, u64 data1, u64 data2, u64 data3);
 };
 
-REG_ID_TYPE(lv2_event_queue_t, 0x8D); // SYS_EVENT_QUEUE_OBJECT
-
 struct lv2_event_port_t
 {
 	const s32 type; // port type, must be SYS_EVENT_PORT_LOCAL
@@ -104,8 +102,6 @@ struct lv2_event_port_t
 	{
 	}
 };
-
-REG_ID_TYPE(lv2_event_port_t, 0x0E); // SYS_EVENT_PORT_OBJECT
 
 class PPUThread;
 

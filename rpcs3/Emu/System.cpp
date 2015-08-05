@@ -50,7 +50,6 @@ Emulator::Emulator()
 	, m_pad_manager(new PadManager())
 	, m_keyboard_manager(new KeyboardManager())
 	, m_mouse_manager(new MouseManager())
-	, m_id_manager(new ID_manager())
 	, m_gs_manager(new GSManager())
 	, m_audio_manager(new AudioManager())
 	, m_callback_manager(new CallbackManager())
@@ -374,6 +373,10 @@ void Emulator::Stop()
 
 	LOG_NOTICE(GENERAL, "All threads stopped...");
 
+	idm::clear();
+
+	LOG_NOTICE(GENERAL, "ID manager cleared...");
+
 	finalize_psv_modules();
 	clear_all_psv_objects();
 
@@ -396,7 +399,6 @@ void Emulator::Stop()
 	GetAudioManager().Close();
 	GetEventManager().Clear();
 	GetCPU().Close();
-	GetIdManager().clear();
 	GetPadManager().Close();
 	GetKeyboardManager().Close();
 	GetMouseManager().Close();

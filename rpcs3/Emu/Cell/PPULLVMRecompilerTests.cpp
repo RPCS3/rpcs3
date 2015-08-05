@@ -410,7 +410,7 @@ void Compiler::RunTest(const char * name, std::function<void()> test_case, std::
 
 void Compiler::RunAllTests() {
 #ifdef PPU_LLVM_RECOMPILER_UNIT_TESTS
-	s_ppu_state = Emu.GetIdManager().make_ptr<PPUThread>("Test Thread").get();
+	s_ppu_state = idm::make_ptr<PPUThread>("Test Thread").get();
 	PPUInterpreter interpreter(*s_ppu_state);
 	s_interpreter = &interpreter;
 
@@ -981,7 +981,6 @@ void Compiler::RunAllTests() {
 	VERIFY_INSTRUCTION_AGAINST_INTERPRETER(DCBZ, 1, input, 14u, 23u);
 
 	m_recompilation_engine.Log() << "Finished Unit Tests\n";
-	Emu.GetIdManager().remove<PPUThread>(s_ppu_state->get_id());
+	idm::remove<PPUThread>(s_ppu_state->get_id());
 #endif // PPU_LLVM_RECOMPILER_UNIT_TESTS
-}
-#endif // LLVM_AVAILABLE
+}#endif // LLVM_AVAILABLE
