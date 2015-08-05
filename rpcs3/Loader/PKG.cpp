@@ -35,7 +35,7 @@ bool PKGLoader::Install(const fs::file& pkg_f, std::string dest)
 	}
 
 	// Decrypt and unpack the PKG file.
-	if (Unpack(pkg_f, titleID, dest) < 0)
+	if (!Unpack(pkg_f, titleID, dest))
 	{
 		LOG_ERROR(LOADER, "PKG Loader: Failed to install package!");
 		return false;

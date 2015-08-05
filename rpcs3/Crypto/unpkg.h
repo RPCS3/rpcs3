@@ -3,9 +3,10 @@
 // Constants
 enum
 {
-	HASH_LEN = 16,
-	BUF_SIZE = 4096,
-	PKG_HEADER_SIZE = 0xC0, //sizeof(pkg_header) + sizeof(pkg_unk_checksum)
+	HASH_LEN         = 16,
+	BUF_SIZE         = 8192 * 1024,
+	PKG_HEADER_SIZE  = 0xC0, //sizeof(pkg_header) + sizeof(pkg_unk_checksum)
+	PKG_HEADER_SIZE2 = 0x280,
 };
 
 enum : u16
@@ -23,9 +24,11 @@ enum : u32
 	PKG_FILE_ENTRY_NPDRMEDAT      = 2,
 	PKG_FILE_ENTRY_REGULAR        = 3,
 	PKG_FILE_ENTRY_FOLDER         = 4,
+	PKG_FILE_ENTRY_UNK1           = 6,
 	PKG_FILE_ENTRY_SDAT           = 9,
 
 	PKG_FILE_ENTRY_OVERWRITE      = 0x80000000,
+	PKG_FILE_ENTRY_PSP            = 0x10000000,
 };
 
 // Structs
@@ -58,4 +61,4 @@ struct PKGEntry
 
 namespace fs { struct file; }
 
-int Unpack(const fs::file& dec_pkg_f, std::string src, std::string dst);
+bool Unpack(const fs::file& dec_pkg_f, std::string src, std::string dst);
