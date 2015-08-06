@@ -386,62 +386,6 @@ inline v128 operator ~(const v128& other)
 	return v128::from64(~other._u64[0], ~other._u64[1]);
 }
 
-static force_inline v128 sync_val_compare_and_swap(volatile v128* dest, v128 comp, v128 exch)
-{
-#if !defined(_MSC_VER)
-	auto res = __sync_val_compare_and_swap((volatile __int128_t*)dest, (__int128_t&)comp, (__int128_t&)exch);
-	return (v128&)res;
-#else
-	_InterlockedCompareExchange128((volatile long long*)dest, exch._u64[1], exch._u64[0], (long long*)&comp);
-	return comp;
-#endif
-}
-
-static force_inline bool sync_bool_compare_and_swap(volatile v128* dest, v128 comp, v128 exch)
-{
-#if !defined(_MSC_VER)
-	return __sync_bool_compare_and_swap((volatile __int128_t*)dest, (__int128_t&)comp, (__int128_t&)exch);
-#else
-	return _InterlockedCompareExchange128((volatile long long*)dest, exch._u64[1], exch._u64[0], (long long*)&comp) != 0;
-#endif
-}
-
-static force_inline v128 sync_lock_test_and_set(volatile v128* dest, v128 value)
-{
-	while (true)
-	{
-		const v128 old = *(v128*)dest;
-		if (sync_bool_compare_and_swap(dest, old, value)) return old;
-	}
-}
-
-static force_inline v128 sync_fetch_and_or(volatile v128* dest, v128 value)
-{
-	while (true)
-	{
-		const v128 old = *(v128*)dest;
-		if (sync_bool_compare_and_swap(dest, old, value | old)) return old;
-	}
-}
-
-static force_inline v128 sync_fetch_and_and(volatile v128* dest, v128 value)
-{
-	while (true)
-	{
-		const v128 old = *(v128*)dest;
-		if (sync_bool_compare_and_swap(dest, old, value & old)) return old;
-	}
-}
-
-static force_inline v128 sync_fetch_and_xor(volatile v128* dest, v128 value)
-{
-	while (true)
-	{
-		const v128 old = *(v128*)dest;
-		if (sync_bool_compare_and_swap(dest, old, value ^ old)) return old;
-	}
-}
-
 template<typename T, std::size_t Size = sizeof(T)> struct se_t;
 
 template<typename T> struct se_t<T, 2>

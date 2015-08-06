@@ -63,6 +63,10 @@ using s64 = std::int64_t;
 using f32 = float;
 using f64 = double;
 
+using u128 = __uint128_t;
+
+CHECK_SIZE_ALIGN(u128, 16, 16);
+
 // bool type replacement for PS3/PSV
 class b8
 {

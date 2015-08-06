@@ -27,7 +27,7 @@ template<typename T> struct _to_atomic_subtype<T, 8>
 
 template<typename T> struct _to_atomic_subtype<T, 16>
 {
-	using type = v128;
+	using type = u128;
 };
 
 template<typename T> using atomic_subtype_t = typename _to_atomic_subtype<T>::type;
@@ -127,7 +127,7 @@ private:
 		data = value;
 	}
 
-	force_inline static void write_relaxed(volatile v128& data, const v128& value)
+	force_inline static void write_relaxed(volatile u128& data, const u128& value)
 	{
 		sync_lock_test_and_set(&data, value);
 	}
@@ -137,9 +137,9 @@ private:
 		return data;
 	}
 
-	force_inline static v128 read_relaxed(const volatile v128& value)
+	force_inline static u128 read_relaxed(const volatile u128& value)
 	{
-		return sync_val_compare_and_swap(const_cast<volatile v128*>(&value), {}, {});
+		return sync_val_compare_and_swap(const_cast<volatile u128*>(&value), u128{0}, u128{0});
 	}
 
 public:
@@ -239,8 +239,6 @@ public:
 		return from_subtype(sync_fetch_and_xor(&sub_data, to_subtype(right)) ^ to_subtype(right));
 	}
 };
-
-template<typename T> using if_integral_t = std::enable_if_t<std::is_integral<T>::value>;
 
 template<typename T, typename = if_integral_t<T>> inline T operator ++(_atomic_base<T>& left)
 {
