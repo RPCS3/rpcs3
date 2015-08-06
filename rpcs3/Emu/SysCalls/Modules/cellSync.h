@@ -31,7 +31,7 @@ enum
 	CELL_SYNC_ERROR_NO_SPU_CONTEXT_STORAGE = 0x80410114, // ???
 };
 
-struct set_alignment(4) sync_mutex_t // CellSyncMutex sync var
+struct alignas(4) sync_mutex_t // CellSyncMutex sync var
 {
 	be_t<u16> rel;
 	be_t<u16> acq;
@@ -56,7 +56,7 @@ using CellSyncMutex = atomic_be_t<sync_mutex_t>;
 
 CHECK_SIZE_ALIGN(CellSyncMutex, 4, 4);
 
-struct set_alignment(4) sync_barrier_t // CellSyncBarrier sync var
+struct alignas(4) sync_barrier_t // CellSyncBarrier sync var
 {
 	be_t<s16> value;
 	be_t<u16> count;
@@ -145,7 +145,7 @@ struct sync_rwm_t // CellSyncRwm sync var
 	}
 };
 
-struct set_alignment(16) CellSyncRwm
+struct alignas(16) CellSyncRwm
 {
 	atomic_be_t<sync_rwm_t> ctrl; // sync var
 
@@ -245,7 +245,7 @@ struct sync_queue_t // CellSyncQueue sync var
 	}
 };
 
-struct set_alignment(32) CellSyncQueue
+struct alignas(32) CellSyncQueue
 {
 	atomic_be_t<sync_queue_t> ctrl;
 
@@ -277,7 +277,7 @@ enum CellSyncQueueDirection : u32 // CellSyncLFQueueDirection
 	CELL_SYNC_QUEUE_ANY2ANY = 3, // SPU/PPU to SPU/PPU
 };
 
-struct set_alignment(128) CellSyncLFQueue
+struct alignas(128) CellSyncLFQueue
 {
 	struct pop1_t
 	{

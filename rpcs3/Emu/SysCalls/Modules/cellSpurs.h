@@ -261,7 +261,7 @@ enum SpursEventFlagConstants
 	CELL_SPURS_EVENT_FLAG_INVALID_SPU_PORT = 0xFF,
 };
 
-struct set_alignment(16) CellSpursWorkloadFlag
+struct alignas(16) CellSpursWorkloadFlag
 {
 	be_t<u64> unused0;
 	be_t<u32> unused1;
@@ -295,7 +295,7 @@ struct CellSpursInfo
 
 CHECK_SIZE(CellSpursInfo, 280);
 
-struct set_alignment(8) CellSpursAttribute
+struct alignas(8) CellSpursAttribute
 {
 	be_t<u32> revision;    // 0x0
 	be_t<u32> sdkVersion;  // 0x4
@@ -319,7 +319,7 @@ CHECK_SIZE_ALIGN(CellSpursAttribute, 512, 8);
 
 using CellSpursShutdownCompletionEventHook = void(vm::ptr<CellSpurs> spurs, u32 wid, vm::ptr<void> arg);
 
-struct set_alignment(16) CellSpursTraceInfo
+struct alignas(16) CellSpursTraceInfo
 {
 	be_t<u32> spuThread[8];     // 0x00
 	be_t<u32> count[8];         // 0x20
@@ -385,7 +385,7 @@ struct CellSpursTraceStartData
 	be_t<u16> ls;
 };
 
-struct set_alignment(16) CellSpursTracePacket
+struct alignas(16) CellSpursTracePacket
 {
 	CellSpursTraceHeader header;
 
@@ -411,7 +411,7 @@ struct set_alignment(16) CellSpursTracePacket
 CHECK_SIZE_ALIGN(CellSpursTracePacket, 16, 16);
 
 // Core CellSpurs structures
-struct set_alignment(128) CellSpurs
+struct alignas(128) CellSpurs
 {
 	struct _sub_str1
 	{
@@ -609,7 +609,7 @@ struct CellSpursWorkloadAttribute
 
 CHECK_SIZE_ALIGN(CellSpursWorkloadAttribute, 512, 8);
 
-struct set_alignment(128) CellSpursEventFlag
+struct alignas(128) CellSpursEventFlag
 {
 	struct ControlSyncVar
 	{
@@ -657,14 +657,14 @@ union CellSpursTaskLsPattern
 	be_t<u64> _u64[2];
 };
 
-struct set_alignment(16) CellSpursTaskAttribute
+struct alignas(16) CellSpursTaskAttribute
 {
 	u8 reserved[256];
 };
 
 CHECK_SIZE_ALIGN(CellSpursTaskAttribute, 256, 16);
 
-struct set_alignment(16) CellSpursTaskAttribute2
+struct alignas(16) CellSpursTaskAttribute2
 {
 	be_t<u32> revision;
 	be_t<u32> sizeContext;
@@ -680,7 +680,7 @@ CHECK_SIZE_ALIGN(CellSpursTaskAttribute2, 256, 16);
 // Exception handler
 using CellSpursTasksetExceptionEventHandler = void(vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursTaskset> taskset, u32 idTask, vm::cptr<CellSpursExceptionInfo> info, vm::ptr<void> arg);
 
-struct set_alignment(128) CellSpursTaskExitCode
+struct alignas(128) CellSpursTaskExitCode
 {
 	u8 skip[128];
 };
@@ -719,7 +719,7 @@ struct CellSpursTasksetInfo
 
 CHECK_SIZE(CellSpursTasksetInfo, 9360);
 
-struct set_alignment(8) CellSpursTasksetAttribute
+struct alignas(8) CellSpursTasksetAttribute
 {
 	be_t<u32> revision;             // 0x00
 	be_t<u32> sdk_version;          // 0x04
@@ -734,7 +734,7 @@ struct set_alignment(8) CellSpursTasksetAttribute
 
 CHECK_SIZE_ALIGN(CellSpursTasksetAttribute, 512, 8);
 
-struct set_alignment(128) CellSpursTaskset
+struct alignas(128) CellSpursTaskset
 {
 	struct TaskInfo
 	{
@@ -772,7 +772,7 @@ struct set_alignment(128) CellSpursTaskset
 
 CHECK_SIZE_ALIGN(CellSpursTaskset, 128 * 50, 128);
 
-struct set_alignment(128) CellSpursTaskset2
+struct alignas(128) CellSpursTaskset2
 {
 	struct TaskInfo
 	{
@@ -812,12 +812,12 @@ struct set_alignment(128) CellSpursTaskset2
 
 CHECK_SIZE_ALIGN(CellSpursTaskset2, 128 * 82, 128);
 
-struct set_alignment(16) CellSpursTaskNameBuffer
+struct alignas(16) CellSpursTaskNameBuffer
 {
 	char taskName[CELL_SPURS_MAX_TASK][CELL_SPURS_MAX_TASK_NAME_LENGTH];
 };
 
-struct set_alignment(8) CellSpursTasksetAttribute2
+struct alignas(8) CellSpursTasksetAttribute2
 {
 	be_t<u32> revision;                                 // 0x00
 	vm::bcptr<char> name;                               // 0x04
@@ -831,7 +831,7 @@ struct set_alignment(8) CellSpursTasksetAttribute2
 
 CHECK_SIZE_ALIGN(CellSpursTasksetAttribute2, 512, 8);
 
-struct set_alignment(16) CellSpursTaskBinInfo
+struct alignas(16) CellSpursTaskBinInfo
 {
 	be_t<u64> eaElf;
 	be_t<u32> sizeContext;

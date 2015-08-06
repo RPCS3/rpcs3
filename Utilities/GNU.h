@@ -31,10 +31,10 @@
 #define force_inline __attribute__((always_inline))
 #endif
 
-#if defined(_MSC_VER)
-#define set_alignment(x) _CRT_ALIGN(x)
-#else
-#define set_alignment(x) __attribute__((aligned(x)))
+#if defined(_MSC_VER) && _MSC_VER <= 1800
+#define alignas(x) _CRT_ALIGN(x)
+#elif defined(__GNUG__)
+#define ALIGN(x) __attribute__((aligned(x))) // not used
 #endif
 
 #if defined(__GNUG__)

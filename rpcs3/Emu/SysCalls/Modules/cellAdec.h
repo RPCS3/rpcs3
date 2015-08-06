@@ -551,7 +551,7 @@ struct CellAdecParamM4Aac
 };
 
 // MPEG4 AAC BSI
-struct set_alignment(16) CellAdecM4AacInfo
+struct alignas(16) CellAdecM4AacInfo
 {
 	be_t<u32> samplingFreq; // [Hz]
 	be_t<u32> numberOfChannels;

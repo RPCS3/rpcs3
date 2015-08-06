@@ -37,7 +37,7 @@ enum : s32
 	CELL_ATRACMULTI_LOOP_STREAM_DATA_IS_ON_MEMORY    = -3,
 };
 
-struct set_alignment(8) CellAtracMultiHandle
+struct alignas(8) CellAtracMultiHandle
 {
 	vm::ptr<u8> pucWorkMem;
 	// ...

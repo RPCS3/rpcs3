@@ -2,21 +2,21 @@
 
 using SceFiberEntry = void(u32 argOnInitialize, u32 argOnRun);
 
-struct set_alignment(8) SceFiber
+struct alignas(8) SceFiber
 {
 	le_t<u64> padding[16];
 };
 
 CHECK_SIZE_ALIGN(SceFiber, 128, 8);
 
-struct set_alignment(8) SceFiberOptParam
+struct alignas(8) SceFiberOptParam
 {
 	le_t<u64> padding[16];
 };
 
 CHECK_SIZE_ALIGN(SceFiberOptParam, 128, 8);
 
-struct set_alignment(8) SceFiberInfo
+struct alignas(8) SceFiberInfo
 {
 	vm::lptr<SceFiberEntry> entry;
 	le_t<u32> argOnInitialize;
