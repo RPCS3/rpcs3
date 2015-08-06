@@ -61,4 +61,4 @@ struct PKGEntry
 
 namespace fs { struct file; }
 
-bool Unpack(const fs::file& dec_pkg_f, std::string src, std::string dst);
+bool Unpack(const fs::file& pkg_f, std::string dir);

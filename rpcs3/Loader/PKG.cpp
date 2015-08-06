@@ -17,6 +17,7 @@ bool PKGLoader::Install(const fs::file& pkg_f, std::string dest)
 	char title_id[48];
 	pkg_f.seek(48);
 	pkg_f.read(title_id, 48);
+	pkg_f.seek(0);
 	
 	std::string titleID = std::string(title_id).substr(7, 9);
 
@@ -35,7 +36,7 @@ bool PKGLoader::Install(const fs::file& pkg_f, std::string dest)
 	}
 
 	// Decrypt and unpack the PKG file.
-	if (!Unpack(pkg_f, titleID, dest))
+	if (!Unpack(pkg_f, dest + titleID + "/"))
 	{
 		LOG_ERROR(LOADER, "PKG Loader: Failed to install package!");
 		return false;
