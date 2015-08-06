@@ -492,7 +492,7 @@ void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, siz
 typedef CONTEXT x64_context;
 
 #define X64REG(context, reg) (&(&(context)->Rax)[reg])
-#define XMMREG(context, reg) (reinterpret_cast<u128*>(&(&(context)->Xmm0)[reg]))
+#define XMMREG(context, reg) (reinterpret_cast<v128*>(&(&(context)->Xmm0)[reg]))
 #define EFLAGS(context) ((context)->EFlags)
 
 #else
@@ -502,7 +502,7 @@ typedef ucontext_t x64_context;
 #ifdef __APPLE__
 
 #define X64REG(context, reg) (darwin_x64reg(context, reg))
-#define XMMREG(context, reg) (reinterpret_cast<u128*>(&(context)->uc_mcontext->__fs.__fpu_xmm0.__xmm_reg[reg]))
+#define XMMREG(context, reg) (reinterpret_cast<v128*>(&(context)->uc_mcontext->__fs.__fpu_xmm0.__xmm_reg[reg]))
 #define EFLAGS(context) ((context)->uc_mcontext->__ss.__rflags)
 
 uint64_t* darwin_x64reg(x64_context *context, int reg)
@@ -560,7 +560,7 @@ static const reg_table_t reg_table[17] =
 };
 
 #define X64REG(context, reg) (&(context)->uc_mcontext.gregs[reg_table[reg]])
-#define XMMREG(context, reg) (reinterpret_cast<u128*>(&(context)->uc_mcontext.fpregs->_xmm[reg]))
+#define XMMREG(context, reg) (reinterpret_cast<v128*>(&(context)->uc_mcontext.fpregs->_xmm[reg]))
 #define EFLAGS(context) ((context)->uc_mcontext.gregs[REG_EFL])
 
 #endif // __APPLE__

@@ -51,7 +51,7 @@ struct ppu_recompiler_llvm::PPUState {
 	u64 GPR[32];
 
 	/// Vector purpose registers
-	u128 VPR[32];
+	v128 VPR[32];
 
 	/// Condition register
 	CRhdr CR;

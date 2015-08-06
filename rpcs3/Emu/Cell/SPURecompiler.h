@@ -34,7 +34,7 @@ public:
 
 	std::array<SPURecEntry, 0x10000> entry = {};
 
-	std::vector<u128> imm_table;
+	std::vector<v128> imm_table;
 
 	SPURecompilerCore(SPUThread& cpu);
 
@@ -105,7 +105,7 @@ public:
 	void XmmInvalidate(const s8 reg);
 	void XmmFinalize(const XmmLink& var, s8 reg = -1);
 	void XmmRelease();
-	asmjit::X86Mem XmmConst(u128 data);
+	asmjit::X86Mem XmmConst(v128 data);
 
 private:
 

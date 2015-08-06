@@ -136,7 +136,7 @@ namespace psv_func_detail
 	struct bind_arg<T, ARG_VECTOR, g_count, f_count, v_count>
 	{
 		static_assert(v_count <= 0, "TODO: Unsupported argument type (vector)");
-		static_assert(std::is_same<std::remove_cv_t<T>, u128>::value, "Invalid function argument type for ARG_VECTOR");
+		static_assert(std::is_same<std::remove_cv_t<T>, v128>::value, "Invalid function argument type for ARG_VECTOR");
 
 		force_inline static T get_arg(ARMv7Context& context)
 		{
@@ -294,7 +294,7 @@ namespace psv_func_detail
 	//template<typename T>
 	//struct bind_result<T, ARG_VECTOR>
 	//{
-	//	static_assert(std::is_same<std::remove_cv_t<T>, u128>::value, "Invalid function result type for ARG_VECTOR");
+	//	static_assert(std::is_same<std::remove_cv_t<T>, v128>::value, "Invalid function result type for ARG_VECTOR");
 
 	//	static force_inline void put_result(ARMv7Context& context, const T& result)
 	//	{
@@ -307,7 +307,7 @@ namespace psv_func_detail
 		static_assert(!std::is_pointer<RT>::value, "Invalid function result type (pointer)");
 		static_assert(!std::is_reference<RT>::value, "Invalid function result type (reference)");
 		static const bool is_float = std::is_floating_point<RT>::value;
-		static const bool is_vector = std::is_same<std::remove_cv_t<RT>, u128>::value;
+		static const bool is_vector = std::is_same<std::remove_cv_t<RT>, v128>::value;
 		static const arg_class value = is_float ? ARG_FLOAT : (is_vector ? ARG_VECTOR : ARG_GENERAL);
 	};
 
@@ -316,7 +316,7 @@ namespace psv_func_detail
 	{
 		// TODO: check calculations
 		static const bool is_float = std::is_floating_point<T>::value;
-		static const bool is_vector = std::is_same<std::remove_cv_t<T>, u128>::value;
+		static const bool is_vector = std::is_same<std::remove_cv_t<T>, v128>::value;
 		static const bool is_context = std::is_same<T, ARMv7Context&>::value;
 		static const bool is_variadic = std::is_same<std::remove_cv_t<T>, armv7_va_args_t>::value;
 		static const bool is_general = !is_float && !is_vector && !is_context && !is_variadic;

@@ -1162,7 +1162,7 @@ void spursTasksetStartTask(SPUThread & spu, CellSpursTaskArgument & taskArgs) {
     auto taskset = vm::get_ptr<CellSpursTaskset>(spu.offset + 0x2700);
 
     spu.GPR[2].clear();
-    spu.GPR[3]         = u128::from64r(taskArgs._u64[0], taskArgs._u64[1]);
+    spu.GPR[3]         = v128::from64r(taskArgs._u64[0], taskArgs._u64[1]);
     spu.GPR[4]._u64[1] = taskset->args;
     spu.GPR[4]._u64[0] = taskset->spurs.addr();
     for (auto i = 5; i < 128; i++) {
@@ -1183,7 +1183,7 @@ s32 spursTasksetProcessRequest(SPUThread & spu, s32 request, u32 * taskId, u32 *
         auto taskset = ctxt->taskset.priv_ptr();
 
         // Verify taskset state is valid
-        be_t<u128> _0(u128::from32(0));
+        be_t<v128> _0(v128::from32(0));
         if ((taskset->waiting & taskset->running) != _0 || (taskset->ready & taskset->pending_ready) != _0 ||
             ((taskset->running | taskset->ready | taskset->pending_ready | taskset->signalled | taskset->waiting) & ~taskset->enabled) != _0) {
             assert(!"Invalid taskset state");
@@ -1199,13 +1199,13 @@ s32 spursTasksetProcessRequest(SPUThread & spu, s32 request, u32 * taskId, u32 *
             }
         }
 
-        u128 readyButNotRunning;
+        v128 readyButNotRunning;
         u8   selectedTaskId;
-        u128 running   = taskset->running.value();
-        u128 waiting   = taskset->waiting.value();
-        u128 enabled   = taskset->enabled.value();
-        u128 signalled = (taskset->signalled & (taskset->ready | taskset->pending_ready));
-        u128 ready     = (taskset->signalled | taskset->ready | taskset->pending_ready);
+        v128 running   = taskset->running.value();
+        v128 waiting   = taskset->waiting.value();
+        v128 enabled   = taskset->enabled.value();
+        v128 signalled = (taskset->signalled & (taskset->ready | taskset->pending_ready));
+        v128 ready     = (taskset->signalled | taskset->ready | taskset->pending_ready);
 
         switch (request) {
         case SPURS_TASKSET_REQUEST_POLL_SIGNAL:
@@ -1235,7 +1235,7 @@ s32 spursTasksetProcessRequest(SPUThread & spu, s32 request, u32 * taskId, u32 *
         case SPURS_TASKSET_REQUEST_POLL:
             readyButNotRunning = ready & ~running;
             if (taskset->wkl_flag_wait_task < CELL_SPURS_MAX_TASK) {
-                readyButNotRunning = readyButNotRunning & ~(u128::fromBit(taskset->wkl_flag_wait_task));
+                readyButNotRunning = readyButNotRunning & ~(v128::fromBit(taskset->wkl_flag_wait_task));
             }
 
             rc = readyButNotRunning != _0 ? 1 : 0;
@@ -1260,7 +1260,7 @@ s32 spursTasksetProcessRequest(SPUThread & spu, s32 request, u32 * taskId, u32 *
         case SPURS_TASKSET_REQUEST_SELECT_TASK:
             readyButNotRunning = ready & ~running;
             if (taskset->wkl_flag_wait_task < CELL_SPURS_MAX_TASK) {
-                readyButNotRunning = readyButNotRunning & ~(u128::fromBit(taskset->wkl_flag_wait_task));
+                readyButNotRunning = readyButNotRunning & ~(v128::fromBit(taskset->wkl_flag_wait_task));
             }
 
             // Select a task from the readyButNotRunning set to run. Start from the task after the last scheduled task to ensure fairness.
@@ -1402,7 +1402,7 @@ s32 spursTasketSaveTaskContext(SPUThread & spu) {
 
     u32 allocLsBlocks = taskInfo->context_save_storage_and_alloc_ls_blocks & 0x7F;
     u32 lsBlocks      = 0;
-    u128 ls_pattern   = u128::from64r(taskInfo->ls_pattern._u64[0], taskInfo->ls_pattern._u64[1]);
+    v128 ls_pattern   = v128::from64r(taskInfo->ls_pattern._u64[0], taskInfo->ls_pattern._u64[1]);
     for (auto i = 0; i < 128; i++) {
         if (ls_pattern._bit[i]) {
             lsBlocks++;
@@ -1421,7 +1421,7 @@ s32 spursTasketSaveTaskContext(SPUThread & spu) {
     }
 
     // Get the processor context
-    u128 r;
+    v128 r;
     spu.FPSCR.Read(r);
     ctxt->savedContextFpscr = r;
     ctxt->savedSpuWriteEventMask = spu.get_ch_value(SPU_RdEventMask);
@@ -1486,7 +1486,7 @@ void spursTasksetDispatch(SPUThread & spu) {
 
         //spursDmaWaitForCompletion(spu, 1 << ctxt->dmaTagId);
 
-        ctxt->savedContextLr  = u128::from32r(entryPoint);
+        ctxt->savedContextLr  = v128::from32r(entryPoint);
         ctxt->guidAddr        = lowestLoadAddr;
         ctxt->tasksetMgmtAddr = 0x2700;
         ctxt->x2FC0           = 0;
@@ -1516,8 +1516,8 @@ void spursTasksetDispatch(SPUThread & spu) {
         }
 
         // If the entire LS is saved then there is no need to load the ELF as it will be be saved in the context save area as well
-        u128 ls_pattern = u128::from64r(taskInfo->ls_pattern._u64[0], taskInfo->ls_pattern._u64[1]);
-        if (ls_pattern != u128::from64r(0x03FFFFFFFFFFFFFFull, 0xFFFFFFFFFFFFFFFFull)) {
+        v128 ls_pattern = v128::from64r(taskInfo->ls_pattern._u64[0], taskInfo->ls_pattern._u64[1]);
+        if (ls_pattern != v128::from64r(0x03FFFFFFFFFFFFFFull, 0xFFFFFFFFFFFFFFFFull)) {
             // Load the ELF
             u32 entryPoint;
             if (spursTasksetLoadElf(spu, &entryPoint, nullptr, taskInfo->elf.addr(), true) != CELL_OK) {

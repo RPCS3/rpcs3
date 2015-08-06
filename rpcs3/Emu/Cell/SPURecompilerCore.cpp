@@ -486,7 +486,7 @@ void SPURecompiler::XmmRelease()
 	}
 }
 
-X86Mem SPURecompiler::XmmConst(u128 data)
+X86Mem SPURecompiler::XmmConst(v128 data)
 {
 	s32 shift = 0;
 
@@ -494,12 +494,12 @@ X86Mem SPURecompiler::XmmConst(u128 data)
 	{
 		if (rec.imm_table[shift] == data)
 		{
-			return oword_ptr(*imm_var, shift * sizeof(u128));
+			return oword_ptr(*imm_var, shift * sizeof(v128));
 		}
 	}
 
 	rec.imm_table.push_back(data);
-	return oword_ptr(*imm_var, shift * sizeof(u128));
+	return oword_ptr(*imm_var, shift * sizeof(v128));
 }
 
 
@@ -553,7 +553,7 @@ void SPURecompiler::RDCH(u32 rt, u32 ra)
 {
 	c.mov(cpu_dword(PC), CPU.PC);
 	WRAPPER_BEGIN(rt, ra, zz);
-	CPU->GPR[rt] = u128::from32r(CPU->get_ch_value(ra));
+	CPU->GPR[rt] = v128::from32r(CPU->get_ch_value(ra));
 	WRAPPER_END(rt, ra, 0);
 	// TODO
 }
@@ -562,7 +562,7 @@ void SPURecompiler::RCHCNT(u32 rt, u32 ra)
 {
 	c.mov(cpu_dword(PC), CPU.PC);
 	WRAPPER_BEGIN(rt, ra, zz);
-	CPU->GPR[rt] = u128::from32r(CPU->get_ch_count(ra));
+	CPU->GPR[rt] = v128::from32r(CPU->get_ch_count(ra));
 	WRAPPER_END(rt, ra, 0);
 	// TODO
 }
@@ -603,7 +603,7 @@ void SPURecompiler::BG(u32 rt, u32 ra, u32 rb)
 	// compare if-greater-than
 	const XmmLink& va = XmmGet(ra, rt);
 	const XmmLink& vi = XmmAlloc();
-	c.movdqa(vi.get(), XmmConst(u128::from32p(0x80000000)));
+	c.movdqa(vi.get(), XmmConst(v128::from32p(0x80000000)));
 	c.pxor(va.get(), vi.get());
 	if (const XmmLink* vb = XmmRead(rb))
 	{
@@ -614,7 +614,7 @@ void SPURecompiler::BG(u32 rt, u32 ra, u32 rb)
 		c.pxor(vi.get(), cpu_xmm(GPR[rb]));
 	}
 	c.pcmpgtd(va.get(), vi.get());
-	c.paddd(va.get(), XmmConst(u128::from32p(1)));
+	c.paddd(va.get(), XmmConst(v128::from32p(1)));
 	XmmFinalize(va, rt);
 	XmmFinalize(vi);
 	LOG_OPCODE();
@@ -650,7 +650,7 @@ void SPURecompiler::NOR(u32 rt, u32 ra, u32 rb)
 			c.por(va.get(), cpu_xmm(GPR[rb]));
 		}
 	}
-	c.pxor(va.get(), XmmConst(u128::from32p(0xffffffff)));
+	c.pxor(va.get(), XmmConst(v128::from32p(0xffffffff)));
 	XmmFinalize(va, rt);
 	LOG_OPCODE();
 }
@@ -901,7 +901,7 @@ void SPURecompiler::CG(u32 rt, u32 ra, u32 rb)
 	const XmmLink& va = XmmGet(ra, rt);
 	const XmmLink& vb = XmmGet(rb);
 	const XmmLink& vi = XmmAlloc();
-	c.movdqa(vi.get(), XmmConst(u128::from32p(0x80000000)));
+	c.movdqa(vi.get(), XmmConst(v128::from32p(0x80000000)));
 	c.paddd(vb.get(), va.get());
 	c.pxor(va.get(), vi.get());
 	c.pxor(vb.get(), vi.get());
@@ -940,7 +940,7 @@ void SPURecompiler::NAND(u32 rt, u32 ra, u32 rb)
 	{
 		c.pand(va.get(), cpu_xmm(GPR[rb]));
 	}
-	c.pxor(va.get(), XmmConst(u128::from32p(0xffffffff)));
+	c.pxor(va.get(), XmmConst(v128::from32p(0xffffffff)));
 	XmmFinalize(va, rt);
 	LOG_OPCODE();
 }
@@ -1178,7 +1178,7 @@ void SPURecompiler::HBR(u32 p, u32 ro, u32 ra)
 void SPURecompiler::GB(u32 rt, u32 ra)
 {
 	const XmmLink& va = XmmGet(ra, rt);
-	c.pshufb(va.get(), XmmConst(u128::fromV(_mm_set_epi8(-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 12, 8, 4, 0))));
+	c.pshufb(va.get(), XmmConst(v128::fromV(_mm_set_epi8(-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 12, 8, 4, 0))));
 	c.psllq(va.get(), 7);
 	c.pmovmskb(*addr, va.get());
 	c.pxor(va.get(), va.get());
@@ -1190,7 +1190,7 @@ void SPURecompiler::GB(u32 rt, u32 ra)
 void SPURecompiler::GBH(u32 rt, u32 ra)
 {
 	const XmmLink& va = XmmGet(ra, rt);
-	c.pshufb(va.get(), XmmConst(u128::fromV(_mm_set_epi8(-1, -1, -1, -1, -1, -1, -1, -1, 14, 12, 10, 8, 6, 4, 2, 0))));
+	c.pshufb(va.get(), XmmConst(v128::fromV(_mm_set_epi8(-1, -1, -1, -1, -1, -1, -1, -1, 14, 12, 10, 8, 6, 4, 2, 0))));
 	c.psllq(va.get(), 7);
 	c.pmovmskb(*addr, va.get());
 	c.pxor(va.get(), va.get());
@@ -1254,7 +1254,7 @@ void SPURecompiler::FREST(u32 rt, u32 ra)
 void SPURecompiler::FRSQEST(u32 rt, u32 ra)
 {
 	const XmmLink& va = XmmGet(ra, rt);
-	c.andps(va.get(), XmmConst(u128::from32p(0x7fffffff))); // abs
+	c.andps(va.get(), XmmConst(v128::from32p(0x7fffffff))); // abs
 	c.rsqrtps(va.get(), va.get());
 	XmmFinalize(va, rt);
 	LOG_OPCODE();
@@ -1343,7 +1343,7 @@ void SPURecompiler::CBX(u32 rt, u32 ra, u32 rb)
 	c.not_(*addr);
 	c.and_(*addr, 0xf);
 	const XmmLink& vr = XmmAlloc(rt);
-	c.movdqa(vr.get(), XmmConst(u128::fromV(_mm_set_epi32(0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f))));
+	c.movdqa(vr.get(), XmmConst(v128::fromV(_mm_set_epi32(0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f))));
 	XmmFinalize(vr, rt);
 	XmmInvalidate(rt);
 	c.mov(byte_ptr(*cpu_var, *addr, 0, cpu_offset(GPR[rt])), 0x03);
@@ -1368,7 +1368,7 @@ void SPURecompiler::CHX(u32 rt, u32 ra, u32 rb)
 	c.not_(*addr);
 	c.and_(*addr, 0xe);
 	const XmmLink& vr = XmmAlloc(rt);
-	c.movdqa(vr.get(), XmmConst(u128::fromV(_mm_set_epi32(0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f))));
+	c.movdqa(vr.get(), XmmConst(v128::fromV(_mm_set_epi32(0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f))));
 	XmmFinalize(vr, rt);
 	XmmInvalidate(rt);
 	c.mov(word_ptr(*cpu_var, *addr, 0, cpu_offset(GPR[rt])), 0x0203);
@@ -1393,7 +1393,7 @@ void SPURecompiler::CWX(u32 rt, u32 ra, u32 rb)
 	c.not_(*addr);
 	c.and_(*addr, 0xc);
 	const XmmLink& vr = XmmAlloc(rt);
-	c.movdqa(vr.get(), XmmConst(u128::fromV(_mm_set_epi32(0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f))));
+	c.movdqa(vr.get(), XmmConst(v128::fromV(_mm_set_epi32(0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f))));
 	XmmFinalize(vr, rt);
 	XmmInvalidate(rt);
 	c.mov(dword_ptr(*cpu_var, *addr, 0, cpu_offset(GPR[rt])), 0x00010203);
@@ -1419,10 +1419,10 @@ void SPURecompiler::CDX(u32 rt, u32 ra, u32 rb)
 	const XmmLink& vr = XmmAlloc(rt);
 	Label p1(c), p2(c);
 	c.jnz(p1);
-	c.movdqa(vr.get(), XmmConst(u128::fromV(_mm_set_epi32(0x00010203, 0x04050607, 0x18191a1b, 0x1c1d1e1f))));
+	c.movdqa(vr.get(), XmmConst(v128::fromV(_mm_set_epi32(0x00010203, 0x04050607, 0x18191a1b, 0x1c1d1e1f))));
 	c.jmp(p2);
 	c.bind(p1);
-	c.movdqa(vr.get(), XmmConst(u128::fromV(_mm_set_epi32(0x10111213, 0x14151617, 0x00010203, 0x04050607))));
+	c.movdqa(vr.get(), XmmConst(v128::fromV(_mm_set_epi32(0x10111213, 0x14151617, 0x00010203, 0x04050607))));
 	c.bind(p2);
 	XmmFinalize(vr, rt);
 	LOG_OPCODE();
@@ -1527,7 +1527,7 @@ void SPURecompiler::CBD(u32 rt, u32 ra, s32 i7)
 	{
 		// assuming that SP % 16 is always zero
 		const XmmLink& vr = XmmAlloc(rt);
-		u128 value = u128::fromV(_mm_set_epi32(0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f));
+		v128 value = v128::fromV(_mm_set_epi32(0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f));
 		value.u8r[i7 & 0xf] = 0x03;
 		c.movdqa(vr.get(), XmmConst(value));
 		XmmFinalize(vr, rt);
@@ -1539,7 +1539,7 @@ void SPURecompiler::CBD(u32 rt, u32 ra, s32 i7)
 		c.not_(*addr);
 		c.and_(*addr, 0xf);
 		const XmmLink& vr = XmmAlloc(rt);
-		c.movdqa(vr.get(), XmmConst(u128::fromV(_mm_set_epi32(0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f))));
+		c.movdqa(vr.get(), XmmConst(v128::fromV(_mm_set_epi32(0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f))));
 		XmmFinalize(vr, rt);
 		XmmInvalidate(rt);
 		c.mov(byte_ptr(*cpu_var, *addr, 0, cpu_offset(GPR[rt])), 0x03);
@@ -1553,7 +1553,7 @@ void SPURecompiler::CHD(u32 rt, u32 ra, s32 i7)
 	{
 		// assuming that SP % 16 is always zero
 		const XmmLink& vr = XmmAlloc(rt);
-		u128 value = u128::fromV(_mm_set_epi32(0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f));
+		v128 value = v128::fromV(_mm_set_epi32(0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f));
 		value.u16r[(i7 >> 1) & 0x7] = 0x0203;
 		c.movdqa(vr.get(), XmmConst(value));
 		XmmFinalize(vr, rt);
@@ -1565,7 +1565,7 @@ void SPURecompiler::CHD(u32 rt, u32 ra, s32 i7)
 		c.not_(*addr);
 		c.and_(*addr, 0xe);
 		const XmmLink& vr = XmmAlloc(rt);
-		c.movdqa(vr.get(), XmmConst(u128::fromV(_mm_set_epi32(0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f))));
+		c.movdqa(vr.get(), XmmConst(v128::fromV(_mm_set_epi32(0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f))));
 		XmmFinalize(vr, rt);
 		XmmInvalidate(rt);
 		c.mov(word_ptr(*cpu_var, *addr, 0, cpu_offset(GPR[rt])), 0x0203);
@@ -1579,7 +1579,7 @@ void SPURecompiler::CWD(u32 rt, u32 ra, s32 i7)
 	{
 		// assuming that SP % 16 is always zero
 		const XmmLink& vr = XmmAlloc(rt);
-		u128 value = u128::fromV(_mm_set_epi32(0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f));
+		v128 value = v128::fromV(_mm_set_epi32(0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f));
 		value.u32r[(i7 >> 2) & 0x3] = 0x00010203;
 		c.movdqa(vr.get(), XmmConst(value));
 		XmmFinalize(vr, rt);
@@ -1591,7 +1591,7 @@ void SPURecompiler::CWD(u32 rt, u32 ra, s32 i7)
 		c.not_(*addr);
 		c.and_(*addr, 0xc);
 		const XmmLink& vr = XmmAlloc(rt);
-		c.movdqa(vr.get(), XmmConst(u128::fromV(_mm_set_epi32(0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f))));
+		c.movdqa(vr.get(), XmmConst(v128::fromV(_mm_set_epi32(0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f))));
 		XmmFinalize(vr, rt);
 		XmmInvalidate(rt);
 		c.mov(dword_ptr(*cpu_var, *addr, 0, cpu_offset(GPR[rt])), 0x00010203);
@@ -1605,7 +1605,7 @@ void SPURecompiler::CDD(u32 rt, u32 ra, s32 i7)
 	{
 		// assuming that SP % 16 is always zero
 		const XmmLink& vr = XmmAlloc(rt);
-		u128 value = u128::fromV(_mm_set_epi32(0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f));
+		v128 value = v128::fromV(_mm_set_epi32(0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f));
 		value.u64r[(i7 >> 3) & 0x1] = 0x0001020304050607ull;
 		c.movdqa(vr.get(), XmmConst(value));
 		XmmFinalize(vr, rt);
@@ -1618,10 +1618,10 @@ void SPURecompiler::CDD(u32 rt, u32 ra, s32 i7)
 		const XmmLink& vr = XmmAlloc(rt);
 		Label p1(c), p2(c);
 		c.jnz(p1);
-		c.movdqa(vr.get(), XmmConst(u128::fromV(_mm_set_epi32(0x00010203, 0x04050607, 0x18191a1b, 0x1c1d1e1f))));
+		c.movdqa(vr.get(), XmmConst(v128::fromV(_mm_set_epi32(0x00010203, 0x04050607, 0x18191a1b, 0x1c1d1e1f))));
 		c.jmp(p2);
 		c.bind(p1);
-		c.movdqa(vr.get(), XmmConst(u128::fromV(_mm_set_epi32(0x10111213, 0x14151617, 0x00010203, 0x04050607))));
+		c.movdqa(vr.get(), XmmConst(v128::fromV(_mm_set_epi32(0x10111213, 0x14151617, 0x00010203, 0x04050607))));
 		c.bind(p2);
 		XmmFinalize(vr, rt);
 	}
@@ -1746,7 +1746,7 @@ void SPURecompiler::CGTH(u32 rt, u32 ra, u32 rb)
 void SPURecompiler::EQV(u32 rt, u32 ra, u32 rb)
 {
 	const XmmLink& vb = XmmGet(rb, rt);
-	c.pxor(vb.get(), XmmConst(u128::from32p(0xffffffff)));
+	c.pxor(vb.get(), XmmConst(v128::from32p(0xffffffff)));
 	if (const XmmLink* va = XmmRead(ra))
 	{
 		c.pxor(vb.get(), va->read());
@@ -1779,11 +1779,11 @@ void SPURecompiler::SUMB(u32 rt, u32 ra, u32 rb)
 	const XmmLink& va = XmmGet(ra, rt);
 	const XmmLink& vb = (ra == rb) ? XmmCopy(va) : XmmGet(rb);
 	const XmmLink& vi = XmmAlloc();
-	c.movdqa(vi.get(), XmmConst(u128::from8p(1)));
+	c.movdqa(vi.get(), XmmConst(v128::from8p(1)));
 	c.pmaddubsw(va.get(), vi.get());
 	c.pmaddubsw(vb.get(), vi.get());
 	c.phaddw(va.get(), vb.get());
-	c.pshufb(va.get(), XmmConst(u128::fromV(_mm_set_epi8(15, 14, 7, 6, 13, 12, 5, 4, 11, 10, 3, 2, 9, 8, 1, 0))));
+	c.pshufb(va.get(), XmmConst(v128::fromV(_mm_set_epi8(15, 14, 7, 6, 13, 12, 5, 4, 11, 10, 3, 2, 9, 8, 1, 0))));
 	XmmFinalize(va, rt);
 	XmmFinalize(vb);
 	XmmFinalize(vi);
@@ -1842,12 +1842,12 @@ void SPURecompiler::CNTB(u32 rt, u32 ra)
 	const XmmLink& v1 = XmmCopy(va);
 	const XmmLink& vm = XmmAlloc();
 	c.psrlq(v1.get(), 4);
-	c.movdqa(vm.get(), XmmConst(u128::from8p(0xf)));
+	c.movdqa(vm.get(), XmmConst(v128::from8p(0xf)));
 	c.pand(va.get(), vm.get());
 	c.pand(v1.get(), vm.get());
-	c.movdqa(vm.get(), XmmConst(u128::fromV(_mm_set_epi8(4, 3, 3, 2, 3, 2, 2, 1, 3, 2, 2, 1, 2, 1, 1, 0))));
+	c.movdqa(vm.get(), XmmConst(v128::fromV(_mm_set_epi8(4, 3, 3, 2, 3, 2, 2, 1, 3, 2, 2, 1, 2, 1, 1, 0))));
 	c.pshufb(vm.get(), va.get());
-	c.movdqa(va.get(), XmmConst(u128::fromV(_mm_set_epi8(4, 3, 3, 2, 3, 2, 2, 1, 3, 2, 2, 1, 2, 1, 1, 0))));
+	c.movdqa(va.get(), XmmConst(v128::fromV(_mm_set_epi8(4, 3, 3, 2, 3, 2, 2, 1, 3, 2, 2, 1, 2, 1, 1, 0))));
 	c.pshufb(va.get(), v1.get());
 	c.paddb(va.get(), vm.get());
 	XmmFinalize(va, rt);
@@ -1870,7 +1870,7 @@ void SPURecompiler::CLGT(u32 rt, u32 ra, u32 rb)
 	// compare if-greater-than
 	const XmmLink& va = XmmGet(ra, rt);
 	const XmmLink& vi = XmmAlloc();
-	c.movdqa(vi.get(), XmmConst(u128::from32p(0x80000000)));
+	c.movdqa(vi.get(), XmmConst(v128::from32p(0x80000000)));
 	c.pxor(va.get(), vi.get());
 	if (const XmmLink* vb = XmmRead(rb))
 	{
@@ -1973,7 +1973,7 @@ void SPURecompiler::CLGTH(u32 rt, u32 ra, u32 rb)
 	// compare if-greater-than
 	const XmmLink& va = XmmGet(ra, rt);
 	const XmmLink& vi = XmmAlloc();
-	c.movdqa(vi.get(), XmmConst(u128::from16p(0x8000)));
+	c.movdqa(vi.get(), XmmConst(v128::from16p(0x8000)));
 	c.pxor(va.get(), vi.get());
 	if (const XmmLink* vb = XmmRead(rb))
 	{
@@ -1992,7 +1992,7 @@ void SPURecompiler::CLGTH(u32 rt, u32 ra, u32 rb)
 void SPURecompiler::ORC(u32 rt, u32 ra, u32 rb)
 {
 	const XmmLink& vb = XmmGet(rb, rt);
-	c.pxor(vb.get(), XmmConst(u128::from32p(0xffffffff)));
+	c.pxor(vb.get(), XmmConst(v128::from32p(0xffffffff)));
 	if (const XmmLink* va = XmmRead(ra))
 	{
 		c.por(vb.get(), va->read());
@@ -2010,7 +2010,7 @@ void SPURecompiler::FCMGT(u32 rt, u32 ra, u32 rb)
 	// reverted less-than
 	const XmmLink& vb = XmmGet(rb, rt);
 	const XmmLink& vi = XmmAlloc();
-	c.movaps(vi.get(), XmmConst(u128::from32p(0x7fffffff)));
+	c.movaps(vi.get(), XmmConst(v128::from32p(0x7fffffff)));
 	c.andps(vb.get(), vi.get()); // abs
 	if (const XmmLink* va = XmmRead(ra))
 	{
@@ -2081,7 +2081,7 @@ void SPURecompiler::CLGTB(u32 rt, u32 ra, u32 rb)
 	// compare if-greater-than
 	const XmmLink& va = XmmGet(ra, rt);
 	const XmmLink& vi = XmmAlloc();
-	c.movdqa(vi.get(), XmmConst(u128::from8p(0x80)));
+	c.movdqa(vi.get(), XmmConst(v128::from8p(0x80)));
 	c.pxor(va.get(), vi.get());
 	if (const XmmLink* vb = XmmRead(rb))
 	{
@@ -2177,7 +2177,7 @@ void SPURecompiler::MPYHHU(u32 rt, u32 ra, u32 rb)
 	const XmmLink& va2 = XmmCopy(va);
 	c.pmulhuw(va.get(), vb.get());
 	c.pmullw(va2.get(), vb.get());
-	c.pand(va.get(), XmmConst(u128::from32p(0xffff0000)));
+	c.pand(va.get(), XmmConst(v128::from32p(0xffff0000)));
 	c.psrld(va2.get(), 16);
 	c.por(va.get(), va2.get());
 	XmmFinalize(va, rt);
@@ -2189,7 +2189,7 @@ void SPURecompiler::MPYHHU(u32 rt, u32 ra, u32 rb)
 void SPURecompiler::ADDX(u32 rt, u32 ra, u32 rb)
 {
 	const XmmLink& vt = XmmGet(rt);
-	c.pand(vt.get(), XmmConst(u128::from32p(1)));
+	c.pand(vt.get(), XmmConst(v128::from32p(1)));
 	c.paddd(vt.get(), cpu_xmm(GPR[ra]));
 	c.paddd(vt.get(), cpu_xmm(GPR[rb]));
 	XmmFinalize(vt, rt);
@@ -2200,7 +2200,7 @@ void SPURecompiler::SFX(u32 rt, u32 ra, u32 rb)
 {
 	const XmmLink& vt = XmmGet(rt);
 	const XmmLink& vb = XmmGet(rb, rt);
-	c.pandn(vt.get(), XmmConst(u128::from32p(1)));
+	c.pandn(vt.get(), XmmConst(v128::from32p(1)));
 	c.psubd(vb.get(), cpu_xmm(GPR[ra]));
 	c.psubd(vb.get(), vt.get());
 	XmmFinalize(vb, rt);
@@ -2252,7 +2252,7 @@ void SPURecompiler::MPYHHAU(u32 rt, u32 ra, u32 rb)
 	const XmmLink& va2 = XmmCopy(va);
 	c.pmulhuw(va.get(), vb.get());
 	c.pmullw(va2.get(), vb.get());
-	c.pand(va.get(), XmmConst(u128::from32p(0xffff0000)));
+	c.pand(va.get(), XmmConst(v128::from32p(0xffff0000)));
 	c.psrld(va2.get(), 16);
 	c.paddd(vt.get(), va.get());
 	c.paddd(vt.get(), va2.get());
@@ -2327,7 +2327,7 @@ void SPURecompiler::MPY(u32 rt, u32 ra, u32 rb)
 	const XmmLink& va = XmmGet(ra, rt);
 	const XmmLink& vb = (ra == rb) ? XmmCopy(va) : XmmGet(rb);
 	const XmmLink& vi = XmmAlloc();
-	c.movdqa(vi.get(), XmmConst(u128::from32p(0xffff)));
+	c.movdqa(vi.get(), XmmConst(v128::from32p(0xffff)));
 	c.pand(va.get(), vi.get());
 	c.pand(vb.get(), vi.get());
 	c.pmaddwd(va.get(), vb.get());
@@ -2392,7 +2392,7 @@ void SPURecompiler::FCMEQ(u32 rt, u32 ra, u32 rb)
 {
 	const XmmLink& vb = XmmGet(rb, rt);
 	const XmmLink& vi = XmmAlloc();
-	c.movaps(vi.get(), XmmConst(u128::from32p(0x7fffffff)));
+	c.movaps(vi.get(), XmmConst(v128::from32p(0x7fffffff)));
 	c.andps(vb.get(), vi.get()); // abs
 	if (const XmmLink* va = XmmRead(ra))
 	{
@@ -2421,7 +2421,7 @@ void SPURecompiler::MPYU(u32 rt, u32 ra, u32 rb)
 	c.pmulhuw(va.get(), vb.get());
 	c.pmullw(va2.get(), vb.get());
 	c.pslld(va.get(), 16);
-	c.pand(va2.get(), XmmConst(u128::from32p(0xffff)));
+	c.pand(va2.get(), XmmConst(v128::from32p(0xffff)));
 	c.por(va.get(), va2.get());
 	XmmFinalize(va, rt);
 	XmmFinalize(vb);
@@ -2468,10 +2468,10 @@ void SPURecompiler::CFLTS(u32 rt, u32 ra, s32 i8)
 	const XmmLink& va = XmmGet(ra, rt);
 	if (i8 != 173)
 	{
-		c.mulps(va.get(), XmmConst(u128::fromF(_mm_set1_ps(exp2f(static_cast<float>(173 - (i8 & 0xff))))))); // scale
+		c.mulps(va.get(), XmmConst(v128::fromF(_mm_set1_ps(exp2f(static_cast<float>(173 - (i8 & 0xff))))))); // scale
 	}
 	const XmmLink& vi = XmmAlloc();
-	c.movaps(vi.get(), XmmConst(u128::fromF(_mm_set1_ps(exp2f(31)))));
+	c.movaps(vi.get(), XmmConst(v128::fromF(_mm_set1_ps(exp2f(31)))));
 	c.cmpps(vi.get(), va.get(), 2);
 	c.cvttps2dq(va.get(), va.get()); // convert to ints with truncation
 	c.pxor(va.get(), vi.get()); // fix result saturation (0x80000000 -> 0x7fffffff)
@@ -2485,18 +2485,18 @@ void SPURecompiler::CFLTU(u32 rt, u32 ra, s32 i8)
 	const XmmLink& va = XmmGet(ra, rt);
 	if (i8 != 173)
 	{
-		c.mulps(va.get(), XmmConst(u128::fromF(_mm_set1_ps(exp2f(static_cast<float>(173 - (i8 & 0xff))))))); // scale
+		c.mulps(va.get(), XmmConst(v128::fromF(_mm_set1_ps(exp2f(static_cast<float>(173 - (i8 & 0xff))))))); // scale
 	}
 	c.maxps(va.get(), XmmConst({})); // saturate
 	const XmmLink& vs = XmmCopy(va); // copy scaled value
 	const XmmLink& vs2 = XmmCopy(va);
 	const XmmLink& vs3 = XmmAlloc();
-	c.movaps(vs3.get(), XmmConst(u128::fromF(_mm_set1_ps(exp2f(31)))));
+	c.movaps(vs3.get(), XmmConst(v128::fromF(_mm_set1_ps(exp2f(31)))));
 	c.subps(vs2.get(), vs3.get());
 	c.cmpps(vs3.get(), vs.get(), 2);
 	c.andps(vs2.get(), vs3.get());
 	c.cvttps2dq(va.get(), va.get());
-	c.cmpps(vs.get(), XmmConst(u128::fromF(_mm_set1_ps(exp2f(32)))), 5);
+	c.cmpps(vs.get(), XmmConst(v128::fromF(_mm_set1_ps(exp2f(32)))), 5);
 	c.cvttps2dq(vs2.get(), vs2.get());
 	c.por(va.get(), vs.get());
 	c.por(va.get(), vs2.get());
@@ -2513,7 +2513,7 @@ void SPURecompiler::CSFLT(u32 rt, u32 ra, s32 i8)
 	c.cvtdq2ps(va.get(), va.get()); // convert to floats
 	if (i8 != 155)
 	{
-		c.mulps(va.get(), XmmConst(u128::fromF(_mm_set1_ps(exp2f(static_cast<float>((i8 & 0xff) - 155)))))); // scale
+		c.mulps(va.get(), XmmConst(v128::fromF(_mm_set1_ps(exp2f(static_cast<float>((i8 & 0xff) - 155)))))); // scale
 	}
 	XmmFinalize(va, rt);
 	LOG_OPCODE();
@@ -2523,14 +2523,14 @@ void SPURecompiler::CUFLT(u32 rt, u32 ra, s32 i8)
 {
 	const XmmLink& va = XmmGet(ra, rt);
 	const XmmLink& v1 = XmmCopy(va);
-	c.pand(va.get(), XmmConst(u128::from32p(0x7fffffff)));
+	c.pand(va.get(), XmmConst(v128::from32p(0x7fffffff)));
 	c.cvtdq2ps(va.get(), va.get()); // convert to floats
 	c.psrad(v1.get(), 31); // generate mask from sign bit
-	c.andps(v1.get(), XmmConst(u128::fromF(_mm_set1_ps(exp2f(31))))); // generate correction component
+	c.andps(v1.get(), XmmConst(v128::fromF(_mm_set1_ps(exp2f(31))))); // generate correction component
 	c.addps(va.get(), v1.get()); // add correction component
 	if (i8 != 155)
 	{
-		c.mulps(va.get(), XmmConst(u128::fromF(_mm_set1_ps(exp2f(static_cast<float>((i8 & 0xff) - 155)))))); // scale
+		c.mulps(va.get(), XmmConst(v128::fromF(_mm_set1_ps(exp2f(static_cast<float>((i8 & 0xff) - 155)))))); // scale
 	}
 	XmmFinalize(va, rt);
 	XmmFinalize(v1);
@@ -2746,7 +2746,7 @@ void SPURecompiler::IL(u32 rt, s32 i16)
 	}
 	else
 	{
-		c.movdqa(vr.get(), XmmConst(u128::from32p(i16)));
+		c.movdqa(vr.get(), XmmConst(v128::from32p(i16)));
 	}
 	XmmFinalize(vr, rt);
 	LOG_OPCODE();
@@ -2755,7 +2755,7 @@ void SPURecompiler::IL(u32 rt, s32 i16)
 void SPURecompiler::ILHU(u32 rt, s32 i16)
 {
 	const XmmLink& vr = XmmAlloc(rt);
-	c.movdqa(vr.get(), XmmConst(u128::from32p(i16 << 16)));
+	c.movdqa(vr.get(), XmmConst(v128::from32p(i16 << 16)));
 	XmmFinalize(vr, rt);
 	LOG_OPCODE();
 }
@@ -2763,7 +2763,7 @@ void SPURecompiler::ILHU(u32 rt, s32 i16)
 void SPURecompiler::ILH(u32 rt, s32 i16)
 {
 	const XmmLink& vr = XmmAlloc(rt);
-	c.movdqa(vr.get(), XmmConst(u128::from32p(i16)));
+	c.movdqa(vr.get(), XmmConst(v128::from32p(i16)));
 	XmmFinalize(vr, rt);
 	LOG_OPCODE();
 }
@@ -2771,7 +2771,7 @@ void SPURecompiler::ILH(u32 rt, s32 i16)
 void SPURecompiler::IOHL(u32 rt, s32 i16)
 {
 	const XmmLink& vt = XmmGet(rt, rt);
-	c.por(vt.get(), XmmConst(u128::from32p(i16 & 0xffff)));
+	c.por(vt.get(), XmmConst(v128::from32p(i16 & 0xffff)));
 	XmmFinalize(vt, rt);
 	LOG_OPCODE();
 }
@@ -2798,7 +2798,7 @@ void SPURecompiler::ORI(u32 rt, u32 ra, s32 i10)
 	else
 	{
 		const XmmLink& va = XmmGet(ra, rt);
-		c.por(va.get(), XmmConst(u128::from32p(i10)));
+		c.por(va.get(), XmmConst(v128::from32p(i10)));
 		XmmFinalize(va, rt);
 	}
 	LOG_OPCODE();
@@ -2807,7 +2807,7 @@ void SPURecompiler::ORI(u32 rt, u32 ra, s32 i10)
 void SPURecompiler::ORHI(u32 rt, u32 ra, s32 i10)
 {
 	const XmmLink& va = XmmGet(ra, rt);
-	c.por(va.get(), XmmConst(u128::from16p(i10)));
+	c.por(va.get(), XmmConst(v128::from16p(i10)));
 	XmmFinalize(va, rt);
 	LOG_OPCODE();
 }
@@ -2815,7 +2815,7 @@ void SPURecompiler::ORHI(u32 rt, u32 ra, s32 i10)
 void SPURecompiler::ORBI(u32 rt, u32 ra, s32 i10)
 {
 	const XmmLink& va = XmmGet(ra, rt);
-	c.por(va.get(), XmmConst(u128::from8p(i10)));
+	c.por(va.get(), XmmConst(v128::from8p(i10)));
 	XmmFinalize(va, rt);
 	LOG_OPCODE();
 }
@@ -2841,7 +2841,7 @@ void SPURecompiler::SFI(u32 rt, u32 ra, s32 i10)
 	else
 	{
 		const XmmLink& vr = XmmAlloc(rt);
-		c.movdqa(vr.get(), XmmConst(u128::from32p(i10)));
+		c.movdqa(vr.get(), XmmConst(v128::from32p(i10)));
 		c.psubd(vr.get(), cpu_xmm(GPR[ra]));
 		XmmFinalize(vr, rt);
 	}
@@ -2869,7 +2869,7 @@ void SPURecompiler::SFHI(u32 rt, u32 ra, s32 i10)
 	else
 	{
 		const XmmLink& vr = XmmAlloc(rt);
-		c.movdqa(vr.get(), XmmConst(u128::from16p(i10)));
+		c.movdqa(vr.get(), XmmConst(v128::from16p(i10)));
 		c.psubw(vr.get(), cpu_xmm(GPR[ra]));
 		XmmFinalize(vr, rt);
 	}
@@ -2879,7 +2879,7 @@ void SPURecompiler::SFHI(u32 rt, u32 ra, s32 i10)
 void SPURecompiler::ANDI(u32 rt, u32 ra, s32 i10)
 {
 	const XmmLink& va = XmmGet(ra, rt);
-	c.pand(va.get(), XmmConst(u128::from32p(i10)));
+	c.pand(va.get(), XmmConst(v128::from32p(i10)));
 	XmmFinalize(va, rt);
 	LOG_OPCODE();
 }
@@ -2887,7 +2887,7 @@ void SPURecompiler::ANDI(u32 rt, u32 ra, s32 i10)
 void SPURecompiler::ANDHI(u32 rt, u32 ra, s32 i10)
 {
 	const XmmLink& va = XmmGet(ra, rt);
-	c.pand(va.get(), XmmConst(u128::from16p(i10)));
+	c.pand(va.get(), XmmConst(v128::from16p(i10)));
 	XmmFinalize(va, rt);
 	LOG_OPCODE();
 }
@@ -2895,7 +2895,7 @@ void SPURecompiler::ANDHI(u32 rt, u32 ra, s32 i10)
 void SPURecompiler::ANDBI(u32 rt, u32 ra, s32 i10)
 {
 	const XmmLink& va = XmmGet(ra, rt);
-	c.pand(va.get(), XmmConst(u128::from8p(i10)));
+	c.pand(va.get(), XmmConst(v128::from8p(i10)));
 	XmmFinalize(va, rt);
 	LOG_OPCODE();
 }
@@ -2904,7 +2904,7 @@ void SPURecompiler::AI(u32 rt, u32 ra, s32 i10)
 {
 	// add
 	const XmmLink& va = XmmGet(ra, rt);
-	c.paddd(va.get(), XmmConst(u128::from32p(i10)));
+	c.paddd(va.get(), XmmConst(v128::from32p(i10)));
 	XmmFinalize(va, rt);
 	LOG_OPCODE();
 }
@@ -2913,7 +2913,7 @@ void SPURecompiler::AHI(u32 rt, u32 ra, s32 i10)
 {
 	// add
 	const XmmLink& va = XmmGet(ra, rt);
-	c.paddw(va.get(), XmmConst(u128::from16p(i10)));
+	c.paddw(va.get(), XmmConst(v128::from16p(i10)));
 	XmmFinalize(va, rt);
 	LOG_OPCODE();
 }
@@ -2965,7 +2965,7 @@ void SPURecompiler::LQD(u32 rt, s32 i10, u32 ra) // i10 is shifted left by 4 whi
 void SPURecompiler::XORI(u32 rt, u32 ra, s32 i10)
 {
 	const XmmLink& va = XmmGet(ra);
-	c.pxor(va.get(), XmmConst(u128::from32p(i10)));
+	c.pxor(va.get(), XmmConst(v128::from32p(i10)));
 	XmmFinalize(va, rt);
 	LOG_OPCODE();
 }
@@ -2973,7 +2973,7 @@ void SPURecompiler::XORI(u32 rt, u32 ra, s32 i10)
 void SPURecompiler::XORHI(u32 rt, u32 ra, s32 i10)
 {
 	const XmmLink& va = XmmGet(ra);
-	c.pxor(va.get(), XmmConst(u128::from16p(i10)));
+	c.pxor(va.get(), XmmConst(v128::from16p(i10)));
 	XmmFinalize(va, rt);
 	LOG_OPCODE();
 }
@@ -2981,7 +2981,7 @@ void SPURecompiler::XORHI(u32 rt, u32 ra, s32 i10)
 void SPURecompiler::XORBI(u32 rt, u32 ra, s32 i10)
 {
 	const XmmLink& va = XmmGet(ra);
-	c.pxor(va.get(), XmmConst(u128::from8p(i10)));
+	c.pxor(va.get(), XmmConst(v128::from8p(i10)));
 	XmmFinalize(va, rt);
 	LOG_OPCODE();
 }
@@ -2989,7 +2989,7 @@ void SPURecompiler::XORBI(u32 rt, u32 ra, s32 i10)
 void SPURecompiler::CGTI(u32 rt, u32 ra, s32 i10)
 {
 	const XmmLink& va = XmmGet(ra);
-	c.pcmpgtd(va.get(), XmmConst(u128::from32p(i10)));
+	c.pcmpgtd(va.get(), XmmConst(v128::from32p(i10)));
 	XmmFinalize(va, rt);
 	LOG_OPCODE();
 }
@@ -2997,7 +2997,7 @@ void SPURecompiler::CGTI(u32 rt, u32 ra, s32 i10)
 void SPURecompiler::CGTHI(u32 rt, u32 ra, s32 i10)
 {
 	const XmmLink& va = XmmGet(ra);
-	c.pcmpgtw(va.get(), XmmConst(u128::from16p(i10)));
+	c.pcmpgtw(va.get(), XmmConst(v128::from16p(i10)));
 	XmmFinalize(va, rt);
 	LOG_OPCODE();
 }
@@ -3005,7 +3005,7 @@ void SPURecompiler::CGTHI(u32 rt, u32 ra, s32 i10)
 void SPURecompiler::CGTBI(u32 rt, u32 ra, s32 i10)
 {
 	const XmmLink& va = XmmGet(ra);
-	c.pcmpgtb(va.get(), XmmConst(u128::from8p(i10)));
+	c.pcmpgtb(va.get(), XmmConst(v128::from8p(i10)));
 	XmmFinalize(va, rt);
 	LOG_OPCODE();
 }
@@ -3025,8 +3025,8 @@ void SPURecompiler::HGTI(u32 rt, u32 ra, s32 i10)
 void SPURecompiler::CLGTI(u32 rt, u32 ra, s32 i10)
 {
 	const XmmLink& va = XmmGet(ra);
-	c.pxor(va.get(), XmmConst(u128::from32p(0x80000000)));
-	c.pcmpgtd(va.get(), XmmConst(u128::from32p((u32)i10 - 0x80000000)));
+	c.pxor(va.get(), XmmConst(v128::from32p(0x80000000)));
+	c.pcmpgtd(va.get(), XmmConst(v128::from32p((u32)i10 - 0x80000000)));
 	XmmFinalize(va, rt);
 	LOG_OPCODE();
 }
@@ -3034,8 +3034,8 @@ void SPURecompiler::CLGTI(u32 rt, u32 ra, s32 i10)
 void SPURecompiler::CLGTHI(u32 rt, u32 ra, s32 i10)
 {
 	const XmmLink& va = XmmGet(ra);
-	c.pxor(va.get(), XmmConst(u128::from16p(0x8000)));
-	c.pcmpgtw(va.get(), XmmConst(u128::from16p((u16)i10 - 0x8000)));
+	c.pxor(va.get(), XmmConst(v128::from16p(0x8000)));
+	c.pcmpgtw(va.get(), XmmConst(v128::from16p((u16)i10 - 0x8000)));
 	XmmFinalize(va, rt);
 	LOG_OPCODE();
 }
@@ -3043,8 +3043,8 @@ void SPURecompiler::CLGTHI(u32 rt, u32 ra, s32 i10)
 void SPURecompiler::CLGTBI(u32 rt, u32 ra, s32 i10)
 {
 	const XmmLink& va = XmmGet(ra);
-	c.psubb(va.get(), XmmConst(u128::from8p(0x80)));
-	c.pcmpgtb(va.get(), XmmConst(u128::from8p((s8)i10 - 0x80)));
+	c.psubb(va.get(), XmmConst(v128::from8p(0x80)));
+	c.pcmpgtb(va.get(), XmmConst(v128::from8p((s8)i10 - 0x80)));
 	XmmFinalize(va, rt);
 	LOG_OPCODE();
 }
@@ -3064,7 +3064,7 @@ void SPURecompiler::HLGTI(u32 rt, u32 ra, s32 i10)
 void SPURecompiler::MPYI(u32 rt, u32 ra, s32 i10)
 {
 	const XmmLink& va = XmmGet(ra, rt);
-	c.pmaddwd(va.get(), XmmConst(u128::from32p(i10 & 0xffff)));
+	c.pmaddwd(va.get(), XmmConst(v128::from32p(i10 & 0xffff)));
 	XmmFinalize(va, rt);
 	LOG_OPCODE();
 }
@@ -3074,7 +3074,7 @@ void SPURecompiler::MPYUI(u32 rt, u32 ra, s32 i10)
 	const XmmLink& va = XmmGet(ra, rt);
 	const XmmLink& vi = XmmAlloc();
 	const XmmLink& va2 = XmmCopy(va);
-	c.movdqa(vi.get(), XmmConst(u128::from32p(i10 & 0xffff)));
+	c.movdqa(vi.get(), XmmConst(v128::from32p(i10 & 0xffff)));
 	c.pmulhuw(va.get(), vi.get());
 	c.pmullw(va2.get(), vi.get());
 	c.pslld(va.get(), 16);
@@ -3088,7 +3088,7 @@ void SPURecompiler::MPYUI(u32 rt, u32 ra, s32 i10)
 void SPURecompiler::CEQI(u32 rt, u32 ra, s32 i10)
 {
 	const XmmLink& va = XmmGet(ra);
-	c.pcmpeqd(va.get(), XmmConst(u128::from32p(i10)));
+	c.pcmpeqd(va.get(), XmmConst(v128::from32p(i10)));
 	XmmFinalize(va, rt);
 	LOG_OPCODE();
 }
@@ -3096,7 +3096,7 @@ void SPURecompiler::CEQI(u32 rt, u32 ra, s32 i10)
 void SPURecompiler::CEQHI(u32 rt, u32 ra, s32 i10)
 {
 	const XmmLink& va = XmmGet(ra);
-	c.pcmpeqw(va.get(), XmmConst(u128::from16p(i10)));
+	c.pcmpeqw(va.get(), XmmConst(v128::from16p(i10)));
 	XmmFinalize(va, rt);
 	LOG_OPCODE();
 }
@@ -3104,7 +3104,7 @@ void SPURecompiler::CEQHI(u32 rt, u32 ra, s32 i10)
 void SPURecompiler::CEQBI(u32 rt, u32 ra, s32 i10)
 {
 	const XmmLink& va = XmmGet(ra);
-	c.pcmpeqb(va.get(), XmmConst(u128::from8p(i10)));
+	c.pcmpeqb(va.get(), XmmConst(v128::from8p(i10)));
 	XmmFinalize(va, rt);
 	LOG_OPCODE();
 }
@@ -3141,7 +3141,7 @@ void SPURecompiler::ILA(u32 rt, u32 i18)
 	}
 	else
 	{
-		c.movdqa(vr.get(), XmmConst(u128::from32p(i18 & 0x3ffff)));
+		c.movdqa(vr.get(), XmmConst(v128::from32p(i18 & 0x3ffff)));
 	}
 	XmmFinalize(vr, rt);
 	LOG_OPCODE();
@@ -3168,11 +3168,11 @@ void SPURecompiler::SHUFB(u32 rt, u32 ra, u32 rb, u32 rc)
 	const XmmLink& v4 = XmmAlloc();
 	const XmmLink& vFF = XmmAlloc(rt);
 	// generate specific values:
-	c.movdqa(v1.get(), XmmConst(u128::from8p(0xe0))); // v1 = 11100000
-	c.movdqa(v3.get(), XmmConst(u128::from8p(0x80))); // v3 = 10000000
+	c.movdqa(v1.get(), XmmConst(v128::from8p(0xe0))); // v1 = 11100000
+	c.movdqa(v3.get(), XmmConst(v128::from8p(0x80))); // v3 = 10000000
 	c.pand(v2.get(), v1.get()); // filter mask      v2 = mask & 11100000
 	c.movdqa(vFF.get(), v2.get()); // and copy      vFF = mask & 11100000
-	c.movdqa(v4.get(), XmmConst(u128::from8p(0xc0))); // v4 = 11000000
+	c.movdqa(v4.get(), XmmConst(v128::from8p(0xc0))); // v4 = 11000000
 	c.pcmpeqb(vFF.get(), v4.get()); // gen 0xff     vFF = (mask & 11100000 == 11000000) ? 0xff : 0
 	c.movdqa(v4.get(), v2.get()); // copy again     v4 = mask & 11100000
 	c.pand(v4.get(), v3.get()); // filter mask      v4 = mask & 10000000
@@ -3182,13 +3182,13 @@ void SPURecompiler::SHUFB(u32 rt, u32 ra, u32 rb, u32 rc)
 	c.por(vFF.get(), v2.get()); // merge 0xff, 0x80 vFF = (mask & 11100000 == 11000000) ? 0xff : (mask & 11100000 == 11100000) ? 0x80 : 0
 	c.pandn(v1.get(), v0.get()); // filter mask     v1 = mask & 00011111
 								 // select bytes from [rb]:
-	c.movdqa(v2.get(), XmmConst(u128::from8p(0x0f))); //   v2 = 00001111
-	c.pxor(v1.get(), XmmConst(u128::from8p(0x10))); //   v1 = (mask & 00011111) ^ 00010000
+	c.movdqa(v2.get(), XmmConst(v128::from8p(0x0f))); //   v2 = 00001111
+	c.pxor(v1.get(), XmmConst(v128::from8p(0x10))); //   v1 = (mask & 00011111) ^ 00010000
 	c.psubb(v2.get(), v1.get()); //                 v2 = 00001111 - ((mask & 00011111) ^ 00010000)
 	c.movdqa(v1.get(), cpu_xmm(GPR[rb])); //        v1 = rb
 	c.pshufb(v1.get(), v2.get()); //                v1 = select(rb, 00001111 - ((mask & 00011111) ^ 00010000))
 								  // select bytes from [ra]:
-	c.pxor(v2.get(), XmmConst(u128::from8p(0xf0))); //   v2 = (00001111 - ((mask & 00011111) ^ 00010000)) ^ 11110000
+	c.pxor(v2.get(), XmmConst(v128::from8p(0xf0))); //   v2 = (00001111 - ((mask & 00011111) ^ 00010000)) ^ 11110000
 	c.movdqa(v3.get(), cpu_xmm(GPR[ra])); //        v3 = ra
 	c.pshufb(v3.get(), v2.get()); //                v3 = select(ra, (00001111 - ((mask & 00011111) ^ 00010000)) ^ 11110000)
 	c.por(v1.get(), v3.get()); //                   v1 = select(rb, 00001111 - ((mask & 00011111) ^ 00010000)) | (v3)
@@ -3208,7 +3208,7 @@ void SPURecompiler::MPYA(u32 rt, u32 ra, u32 rb, u32 rc)
 	const XmmLink& va = XmmGet(ra, rt);
 	const XmmLink& vb = XmmGet(rb);
 	const XmmLink& vi = XmmAlloc();
-	c.movdqa(vi.get(), XmmConst(u128::from32p(0xffff)));
+	c.movdqa(vi.get(), XmmConst(v128::from32p(0xffff)));
 	c.pand(va.get(), vi.get());
 	c.pand(vb.get(), vi.get());
 	c.pmaddwd(va.get(), vb.get());

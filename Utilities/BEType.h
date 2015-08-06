@@ -8,7 +8,7 @@
 
 #define IS_LE_MACHINE // only draft
 
-union u128
+union v128
 {
 	u64 _u64[2];
 	s64 _s64[2];
@@ -171,22 +171,22 @@ union u128
 
 	} _bit;
 
-	static u128 from64(u64 _0, u64 _1 = 0)
+	static v128 from64(u64 _0, u64 _1 = 0)
 	{
-		u128 ret;
+		v128 ret;
 		ret._u64[0] = _0;
 		ret._u64[1] = _1;
 		return ret;
 	}
 
-	static u128 from64r(u64 _1, u64 _0 = 0)
+	static v128 from64r(u64 _1, u64 _0 = 0)
 	{
 		return from64(_0, _1);
 	}
 
-	static u128 from32(u32 _0, u32 _1 = 0, u32 _2 = 0, u32 _3 = 0)
+	static v128 from32(u32 _0, u32 _1 = 0, u32 _2 = 0, u32 _3 = 0)
 	{
-		u128 ret;
+		v128 ret;
 		ret._u32[0] = _0;
 		ret._u32[1] = _1;
 		ret._u32[2] = _2;
@@ -194,141 +194,141 @@ union u128
 		return ret;
 	}
 
-	static u128 from32r(u32 _3, u32 _2 = 0, u32 _1 = 0, u32 _0 = 0)
+	static v128 from32r(u32 _3, u32 _2 = 0, u32 _1 = 0, u32 _0 = 0)
 	{
 		return from32(_0, _1, _2, _3);
 	}
 
-	static u128 from32p(u32 value)
+	static v128 from32p(u32 value)
 	{
-		u128 ret;
+		v128 ret;
 		ret.vi = _mm_set1_epi32(static_cast<s32>(value));
 		return ret;
 	}
 
-	static u128 from16p(u16 value)
+	static v128 from16p(u16 value)
 	{
-		u128 ret;
+		v128 ret;
 		ret.vi = _mm_set1_epi16(static_cast<s16>(value));
 		return ret;
 	}
 
-	static u128 from8p(u8 value)
+	static v128 from8p(u8 value)
 	{
-		u128 ret;
+		v128 ret;
 		ret.vi = _mm_set1_epi8(static_cast<s8>(value));
 		return ret;
 	}
 
-	static u128 fromBit(u32 bit)
+	static v128 fromBit(u32 bit)
 	{
-		u128 ret = {};
+		v128 ret = {};
 		ret._bit[bit] = true;
 		return ret;
 	}
 
-	static u128 fromV(__m128i value)
+	static v128 fromV(__m128i value)
 	{
-		u128 ret;
+		v128 ret;
 		ret.vi = value;
 		return ret;
 	}
 
-	static u128 fromF(__m128 value)
+	static v128 fromF(__m128 value)
 	{
-		u128 ret;
+		v128 ret;
 		ret.vf = value;
 		return ret;
 	}
 
-	static u128 fromD(__m128d value)
+	static v128 fromD(__m128d value)
 	{
-		u128 ret;
+		v128 ret;
 		ret.vd = value;
 		return ret;
 	}
 
-	static force_inline u128 add8(const u128& left, const u128& right)
+	static force_inline v128 add8(const v128& left, const v128& right)
 	{
 		return fromV(_mm_add_epi8(left.vi, right.vi));
 	}
 
-	static force_inline u128 add16(const u128& left, const u128& right)
+	static force_inline v128 add16(const v128& left, const v128& right)
 	{
 		return fromV(_mm_add_epi16(left.vi, right.vi));
 	}
 
-	static force_inline u128 add32(const u128& left, const u128& right)
+	static force_inline v128 add32(const v128& left, const v128& right)
 	{
 		return fromV(_mm_add_epi32(left.vi, right.vi));
 	}
 
-	static force_inline u128 addfs(const u128& left, const u128& right)
+	static force_inline v128 addfs(const v128& left, const v128& right)
 	{
 		return fromF(_mm_add_ps(left.vf, right.vf));
 	}
 
-	static force_inline u128 addfd(const u128& left, const u128& right)
+	static force_inline v128 addfd(const v128& left, const v128& right)
 	{
 		return fromD(_mm_add_pd(left.vd, right.vd));
 	}
 
-	static force_inline u128 sub8(const u128& left, const u128& right)
+	static force_inline v128 sub8(const v128& left, const v128& right)
 	{
 		return fromV(_mm_sub_epi8(left.vi, right.vi));
 	}
 
-	static force_inline u128 sub16(const u128& left, const u128& right)
+	static force_inline v128 sub16(const v128& left, const v128& right)
 	{
 		return fromV(_mm_sub_epi16(left.vi, right.vi));
 	}
 
-	static force_inline u128 sub32(const u128& left, const u128& right)
+	static force_inline v128 sub32(const v128& left, const v128& right)
 	{
 		return fromV(_mm_sub_epi32(left.vi, right.vi));
 	}
 
-	static force_inline u128 subfs(const u128& left, const u128& right)
+	static force_inline v128 subfs(const v128& left, const v128& right)
 	{
 		return fromF(_mm_sub_ps(left.vf, right.vf));
 	}
 
-	static force_inline u128 subfd(const u128& left, const u128& right)
+	static force_inline v128 subfd(const v128& left, const v128& right)
 	{
 		return fromD(_mm_sub_pd(left.vd, right.vd));
 	}
 
-	static force_inline u128 maxu8(const u128& left, const u128& right)
+	static force_inline v128 maxu8(const v128& left, const v128& right)
 	{
 		return fromV(_mm_max_epu8(left.vi, right.vi));
 	}
 
-	static force_inline u128 minu8(const u128& left, const u128& right)
+	static force_inline v128 minu8(const v128& left, const v128& right)
 	{
 		return fromV(_mm_min_epu8(left.vi, right.vi));
 	}
 
-	static force_inline u128 eq8(const u128& left, const u128& right)
+	static force_inline v128 eq8(const v128& left, const v128& right)
 	{
 		return fromV(_mm_cmpeq_epi8(left.vi, right.vi));
 	}
 
-	static force_inline u128 eq16(const u128& left, const u128& right)
+	static force_inline v128 eq16(const v128& left, const v128& right)
 	{
 		return fromV(_mm_cmpeq_epi16(left.vi, right.vi));
 	}
 
-	static force_inline u128 eq32(const u128& left, const u128& right)
+	static force_inline v128 eq32(const v128& left, const v128& right)
 	{
 		return fromV(_mm_cmpeq_epi32(left.vi, right.vi));
 	}
 
-	bool operator == (const u128& right) const
+	bool operator == (const v128& right) const
 	{
 		return (_u64[0] == right._u64[0]) && (_u64[1] == right._u64[1]);
 	}
 
-	bool operator != (const u128& right) const
+	bool operator != (const v128& right) const
 	{
 		return (_u64[0] != right._u64[0]) || (_u64[1] != right._u64[1]);
 	}
@@ -344,7 +344,7 @@ union u128
 	}
 
 	// result = (~left) & (right)
-	static force_inline u128 andnot(const u128& left, const u128& right)
+	static force_inline v128 andnot(const v128& left, const v128& right)
 	{
 		return fromV(_mm_andnot_si128(left.vi, right.vi));
 	}
@@ -358,46 +358,46 @@ union u128
 
 	std::string to_xyzw() const;
 
-	static force_inline u128 byteswap(const u128 val)
+	static force_inline v128 byteswap(const v128 val)
 	{
 		return fromV(_mm_shuffle_epi8(val.vi, _mm_set_epi8(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15)));
 	}
 };
 
-CHECK_SIZE_ALIGN(u128, 16, 16);
+CHECK_SIZE_ALIGN(v128, 16, 16);
 
-inline u128 operator |(const u128& left, const u128& right)
+inline v128 operator |(const v128& left, const v128& right)
 {
-	return u128::fromV(_mm_or_si128(left.vi, right.vi));
+	return v128::fromV(_mm_or_si128(left.vi, right.vi));
 }
 
-inline u128 operator &(const u128& left, const u128& right)
+inline v128 operator &(const v128& left, const v128& right)
 {
-	return u128::fromV(_mm_and_si128(left.vi, right.vi));
+	return v128::fromV(_mm_and_si128(left.vi, right.vi));
 }
 
-inline u128 operator ^(const u128& left, const u128& right)
+inline v128 operator ^(const v128& left, const v128& right)
 {
-	return u128::fromV(_mm_xor_si128(left.vi, right.vi));
+	return v128::fromV(_mm_xor_si128(left.vi, right.vi));
 }
 
-inline u128 operator ~(const u128& other)
+inline v128 operator ~(const v128& other)
 {
-	return u128::from64(~other._u64[0], ~other._u64[1]);
+	return v128::from64(~other._u64[0], ~other._u64[1]);
 }
 
-static force_inline u128 sync_val_compare_and_swap(volatile u128* dest, u128 comp, u128 exch)
+static force_inline v128 sync_val_compare_and_swap(volatile v128* dest, v128 comp, v128 exch)
 {
 #if !defined(_MSC_VER)
 	auto res = __sync_val_compare_and_swap((volatile __int128_t*)dest, (__int128_t&)comp, (__int128_t&)exch);
-	return (u128&)res;
+	return (v128&)res;
 #else
 	_InterlockedCompareExchange128((volatile long long*)dest, exch._u64[1], exch._u64[0], (long long*)&comp);
 	return comp;
 #endif
 }
 
-static force_inline bool sync_bool_compare_and_swap(volatile u128* dest, u128 comp, u128 exch)
+static force_inline bool sync_bool_compare_and_swap(volatile v128* dest, v128 comp, v128 exch)
 {
 #if !defined(_MSC_VER)
 	return __sync_bool_compare_and_swap((volatile __int128_t*)dest, (__int128_t&)comp, (__int128_t&)exch);
@@ -406,38 +406,38 @@ static force_inline bool sync_bool_compare_and_swap(volatile u128* dest, u128 co
 #endif
 }
 
-static force_inline u128 sync_lock_test_and_set(volatile u128* dest, u128 value)
+static force_inline v128 sync_lock_test_and_set(volatile v128* dest, v128 value)
 {
 	while (true)
 	{
-		const u128 old = *(u128*)dest;
+		const v128 old = *(v128*)dest;
 		if (sync_bool_compare_and_swap(dest, old, value)) return old;
 	}
 }
 
-static force_inline u128 sync_fetch_and_or(volatile u128* dest, u128 value)
+static force_inline v128 sync_fetch_and_or(volatile v128* dest, v128 value)
 {
 	while (true)
 	{
-		const u128 old = *(u128*)dest;
+		const v128 old = *(v128*)dest;
 		if (sync_bool_compare_and_swap(dest, old, value | old)) return old;
 	}
 }
 
-static force_inline u128 sync_fetch_and_and(volatile u128* dest, u128 value)
+static force_inline v128 sync_fetch_and_and(volatile v128* dest, v128 value)
 {
 	while (true)
 	{
-		const u128 old = *(u128*)dest;
+		const v128 old = *(v128*)dest;
 		if (sync_bool_compare_and_swap(dest, old, value & old)) return old;
 	}
 }
 
-static force_inline u128 sync_fetch_and_xor(volatile u128* dest, u128 value)
+static force_inline v128 sync_fetch_and_xor(volatile v128* dest, v128 value)
 {
 	while (true)
 	{
-		const u128 old = *(u128*)dest;
+		const v128 old = *(v128*)dest;
 		if (sync_bool_compare_and_swap(dest, old, value ^ old)) return old;
 	}
 }
@@ -488,14 +488,14 @@ template<typename T> struct se_t<T, 8>
 
 template<typename T> struct se_t<T, 16>
 {
-	static force_inline u128 to(const T& src)
+	static force_inline v128 to(const T& src)
 	{
-		return u128::byteswap((u128&)src);
+		return v128::byteswap((v128&)src);
 	}
 
-	static force_inline T from(const u128& src)
+	static force_inline T from(const v128& src)
 	{
-		const u128 res = u128::byteswap(src);
+		const v128 res = v128::byteswap(src);
 		return (T&)res;
 	}
 };
@@ -553,7 +553,7 @@ template<typename T> struct be_storage<T, 8>
 
 template<typename T> struct be_storage<T, 16>
 {
-	using type = u128;
+	using type = v128;
 };
 
 template<typename T> using be_storage_t = typename be_storage<T>::type;
@@ -602,7 +602,7 @@ public:
 #endif
 
 	static_assert(!std::is_class<type>::value, "be_t<> error: invalid type (class or structure)");
-	static_assert(!std::is_union<type>::value || std::is_same<type, u128>::value, "be_t<> error: invalid type (union)");
+	static_assert(!std::is_union<type>::value || std::is_same<type, v128>::value, "be_t<> error: invalid type (union)");
 	static_assert(!std::is_pointer<type>::value, "be_t<> error: invalid type (pointer)");
 	static_assert(!std::is_reference<type>::value, "be_t<> error: invalid type (reference)");
 	static_assert(!std::is_array<type>::value, "be_t<> error: invalid type (array)");
@@ -748,7 +748,7 @@ template<typename T> struct is_be_t<volatile T> : public std::integral_constant<
 // to_be_t helper struct
 template<typename T> struct to_be
 {
-	using type = std::conditional_t<std::is_arithmetic<T>::value || std::is_enum<T>::value || std::is_same<T, u128>::value, be_t<T>, T>;
+	using type = std::conditional_t<std::is_arithmetic<T>::value || std::is_enum<T>::value || std::is_same<T, v128>::value, be_t<T>, T>;
 };
 
 // be_t<T> if possible, T otherwise
@@ -781,7 +781,7 @@ public:
 	type m_data; // don't access directly
 
 	static_assert(!std::is_class<type>::value, "le_t<> error: invalid type (class or structure)");
-	static_assert(!std::is_union<type>::value || std::is_same<type, u128>::value, "le_t<> error: invalid type (union)");
+	static_assert(!std::is_union<type>::value || std::is_same<type, v128>::value, "le_t<> error: invalid type (union)");
 	static_assert(!std::is_pointer<type>::value, "le_t<> error: invalid type (pointer)");
 	static_assert(!std::is_reference<type>::value, "le_t<> error: invalid type (reference)");
 	static_assert(!std::is_array<type>::value, "le_t<> error: invalid type (array)");
@@ -863,7 +863,7 @@ template<typename T> struct is_le_t<volatile T> : public std::integral_constant<
 
 template<typename T> struct to_le
 {
-	using type = std::conditional_t<std::is_arithmetic<T>::value || std::is_enum<T>::value || std::is_same<T, u128>::value, le_t<T>, T>;
+	using type = std::conditional_t<std::is_arithmetic<T>::value || std::is_enum<T>::value || std::is_same<T, v128>::value, le_t<T>, T>;
 };
 
 // le_t<T> if possible, T otherwise

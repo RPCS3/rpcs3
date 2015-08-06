@@ -462,7 +462,7 @@ public:
 	PPCdouble FPR[32]{}; //Floating Point Register
 	FPSCRhdr FPSCR{}; //Floating Point Status and Control Register
 	u64 GPR[32]{}; //General-Purpose Register
-	u128 VPR[32]{};
+	v128 VPR[32]{};
 	u32 vpcr = 0;
 
 	CRhdr CR{}; //Condition Register

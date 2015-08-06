@@ -360,13 +360,13 @@ struct spu_int_ctrl_t
 
 struct g_spu_imm_table_t
 {
-	u128 fsmb[65536]; // table for FSMB, FSMBI instructions
-	u128 fsmh[256]; // table for FSMH instruction
-	u128 fsm[16]; // table for FSM instruction
+	v128 fsmb[65536]; // table for FSMB, FSMBI instructions
+	v128 fsmh[256]; // table for FSMH instruction
+	v128 fsm[16]; // table for FSM instruction
 
-	u128 sldq_pshufb[32]; // table for SHLQBYBI, SHLQBY, SHLQBYI instructions
-	u128 srdq_pshufb[32]; // table for ROTQMBYBI, ROTQMBY, ROTQMBYI instructions
-	u128 rldq_pshufb[16]; // table for ROTQBYBI, ROTQBY, ROTQBYI instructions
+	v128 sldq_pshufb[32]; // table for SHLQBYBI, SHLQBY, SHLQBYI instructions
+	v128 srdq_pshufb[32]; // table for ROTQMBYBI, ROTQMBY, ROTQMBYI instructions
+	v128 rldq_pshufb[16]; // table for ROTQBYBI, ROTQBY, ROTQBYI instructions
 
 	class scale_table_t
 	{
@@ -475,7 +475,7 @@ public:
 		memset(this, 0, sizeof(*this));
 	}
 	//slice -> 0 - 1 (double-precision slice index)
-	//NOTE: slices follow u128 indexing, i.e. slice 0 is RIGHT end of register!
+	//NOTE: slices follow v128 indexing, i.e. slice 0 is RIGHT end of register!
 	//roundTo -> FPSCR_RN_*
 	void setSliceRounding(u8 slice, u8 roundTo)
 	{
@@ -523,7 +523,7 @@ public:
 	}
 
 	// Write the FPSCR
-	void Write(const u128 & r)
+	void Write(const v128 & r)
 	{
 		_u32[3] = r._u32[3] & 0x00000F07;
 		_u32[2] = r._u32[2] & 0x00003F07;
@@ -532,7 +532,7 @@ public:
 	}
 
 	// Read the FPSCR
-	void Read(u128 & r)
+	void Read(v128 & r)
 	{
 		r._u32[3] = _u32[3];
 		r._u32[2] = _u32[2];
@@ -544,7 +544,7 @@ public:
 class SPUThread : public CPUThread
 {
 public:
-	u128 GPR[128]; // General-Purpose Registers
+	v128 GPR[128]; // General-Purpose Registers
 	SPU_FPSCR FPSCR;
 
 	std::unordered_map<u32, std::function<bool(SPUThread& SPU)>> m_addr_to_hle_function_map;
@@ -643,18 +643,18 @@ public:
 	u16 read16(u32 lsa) const { return vm::ps3::read16(lsa + offset); }
 	u32 read32(u32 lsa) const { return vm::ps3::read32(lsa + offset); }
 	u64 read64(u32 lsa) const { return vm::ps3::read64(lsa + offset); }
-	u128 read128(u32 lsa) const { return vm::ps3::read128(lsa + offset); }
+	v128 read128(u32 lsa) const { return vm::ps3::read128(lsa + offset); }
 
 	void write8(u32 lsa, u8 data) const { vm::write8(lsa + offset, data); }
 	void write16(u32 lsa, u16 data) const { vm::ps3::write16(lsa + offset, data); }
 	void write32(u32 lsa, u32 data) const { vm::ps3::write32(lsa + offset, data); }
 	void write64(u32 lsa, u64 data) const { vm::ps3::write64(lsa + offset, data); }
-	void write128(u32 lsa, u128 data) const { vm::ps3::write128(lsa + offset, data); }
+	void write128(u32 lsa, v128 data) const { vm::ps3::write128(lsa + offset, data); }
 
 	void write16(u32 lsa, be_t<u16> data) const { vm::ps3::write16(lsa + offset, data); }
 	void write32(u32 lsa, be_t<u32> data) const { vm::ps3::write32(lsa + offset, data); }
 	void write64(u32 lsa, be_t<u64> data) const { vm::ps3::write64(lsa + offset, data); }
-	void write128(u32 lsa, be_t<u128> data) const { vm::ps3::write128(lsa + offset, data); }
+	void write128(u32 lsa, be_t<v128> data) const { vm::ps3::write128(lsa + offset, data); }
 
 	void RegisterHleFunction(u32 addr, std::function<bool(SPUThread & SPU)> function)
 	{

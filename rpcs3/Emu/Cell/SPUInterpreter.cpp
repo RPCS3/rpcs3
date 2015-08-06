@@ -69,17 +69,17 @@ void spu_interpreter::MFSPR(SPUThread& CPU, spu_opcode_t op)
 
 void spu_interpreter::RDCH(SPUThread& CPU, spu_opcode_t op)
 {
-	CPU.GPR[op.rt] = u128::from32r(CPU.get_ch_value(op.ra));
+	CPU.GPR[op.rt] = v128::from32r(CPU.get_ch_value(op.ra));
 }
 
 void spu_interpreter::RCHCNT(SPUThread& CPU, spu_opcode_t op)
 {
-	CPU.GPR[op.rt] = u128::from32r(CPU.get_ch_count(op.ra));
+	CPU.GPR[op.rt] = v128::from32r(CPU.get_ch_count(op.ra));
 }
 
 void spu_interpreter::SF(SPUThread& CPU, spu_opcode_t op)
 {
-	CPU.GPR[op.rt] = u128::sub32(CPU.GPR[op.rb], CPU.GPR[op.ra]);
+	CPU.GPR[op.rt] = v128::sub32(CPU.GPR[op.rb], CPU.GPR[op.ra]);
 }
 
 void spu_interpreter::OR(SPUThread& CPU, spu_opcode_t op)
@@ -94,7 +94,7 @@ void spu_interpreter::BG(SPUThread& CPU, spu_opcode_t op)
 
 void spu_interpreter::SFH(SPUThread& CPU, spu_opcode_t op)
 {
-	CPU.GPR[op.rt] = u128::sub16(CPU.GPR[op.rb], CPU.GPR[op.ra]);
+	CPU.GPR[op.rt] = v128::sub16(CPU.GPR[op.rb], CPU.GPR[op.ra]);
 }
 
 void spu_interpreter::NOR(SPUThread& CPU, spu_opcode_t op)
@@ -106,7 +106,7 @@ void spu_interpreter::ABSDB(SPUThread& CPU, spu_opcode_t op)
 {
 	const auto a = CPU.GPR[op.ra];
 	const auto b = CPU.GPR[op.rb];
-	CPU.GPR[op.rt] = u128::sub8(u128::maxu8(a, b), u128::minu8(a, b));
+	CPU.GPR[op.rt] = v128::sub8(v128::maxu8(a, b), v128::minu8(a, b));
 }
 
 void spu_interpreter::ROT(SPUThread& CPU, spu_opcode_t op)
@@ -249,7 +249,7 @@ void spu_interpreter::SHLHI(SPUThread& CPU, spu_opcode_t op)
 
 void spu_interpreter::A(SPUThread& CPU, spu_opcode_t op)
 {
-	CPU.GPR[op.rt] = u128::add32(CPU.GPR[op.ra], CPU.GPR[op.rb]);
+	CPU.GPR[op.rt] = v128::add32(CPU.GPR[op.ra], CPU.GPR[op.rb]);
 }
 
 void spu_interpreter::AND(SPUThread& CPU, spu_opcode_t op)
@@ -266,7 +266,7 @@ void spu_interpreter::CG(SPUThread& CPU, spu_opcode_t op)
 
 void spu_interpreter::AH(SPUThread& CPU, spu_opcode_t op)
 {
-	CPU.GPR[op.rt] = u128::add16(CPU.GPR[op.ra], CPU.GPR[op.rb]);
+	CPU.GPR[op.rt] = v128::add16(CPU.GPR[op.ra], CPU.GPR[op.rb]);
 }
 
 void spu_interpreter::NAND(SPUThread& CPU, spu_opcode_t op)
@@ -343,7 +343,7 @@ void spu_interpreter::BI(SPUThread& CPU, spu_opcode_t op)
 void spu_interpreter::BISL(SPUThread& CPU, spu_opcode_t op)
 {
 	const u32 target = SPUOpcodes::branchTarget(CPU.GPR[op.ra]._u32[3], 0);
-	CPU.GPR[op.rt] = u128::from32r(CPU.PC + 4);
+	CPU.GPR[op.rt] = v128::from32r(CPU.PC + 4);
 	CPU.PC = target - 4;
 	set_interrupt_status(CPU, op);
 }
@@ -364,17 +364,17 @@ void spu_interpreter::HBR(SPUThread& CPU, spu_opcode_t op)
 
 void spu_interpreter::GB(SPUThread& CPU, spu_opcode_t op)
 {
-	CPU.GPR[op.rt] = u128::from32r(_mm_movemask_epi8(_mm_slli_epi64(_mm_shuffle_epi8(CPU.GPR[op.ra].vi, _mm_set_epi8(-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 12, 8, 4, 0)), 7)));
+	CPU.GPR[op.rt] = v128::from32r(_mm_movemask_epi8(_mm_slli_epi64(_mm_shuffle_epi8(CPU.GPR[op.ra].vi, _mm_set_epi8(-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 12, 8, 4, 0)), 7)));
 }
 
 void spu_interpreter::GBH(SPUThread& CPU, spu_opcode_t op)
 {
-	CPU.GPR[op.rt] = u128::from32r(_mm_movemask_epi8(_mm_slli_epi64(_mm_shuffle_epi8(CPU.GPR[op.ra].vi, _mm_set_epi8(-1, -1, -1, -1, -1, -1, -1, -1, 14, 12, 10, 8, 6, 4, 2, 0)), 7)));
+	CPU.GPR[op.rt] = v128::from32r(_mm_movemask_epi8(_mm_slli_epi64(_mm_shuffle_epi8(CPU.GPR[op.ra].vi, _mm_set_epi8(-1, -1, -1, -1, -1, -1, -1, -1, 14, 12, 10, 8, 6, 4, 2, 0)), 7)));
 }
 
 void spu_interpreter::GBB(SPUThread& CPU, spu_opcode_t op)
 {
-	CPU.GPR[op.rt] = u128::from32r(_mm_movemask_epi8(_mm_slli_epi64(CPU.GPR[op.ra].vi, 7)));
+	CPU.GPR[op.rt] = v128::from32r(_mm_movemask_epi8(_mm_slli_epi64(CPU.GPR[op.ra].vi, 7)));
 }
 
 void spu_interpreter::FSM(SPUThread& CPU, spu_opcode_t op)
@@ -426,28 +426,28 @@ void spu_interpreter::SHLQBYBI(SPUThread& CPU, spu_opcode_t op)
 void spu_interpreter::CBX(SPUThread& CPU, spu_opcode_t op)
 {
 	const s32 t = ~(CPU.GPR[op.rb]._u32[3] + CPU.GPR[op.ra]._u32[3]) & 0xf;
-	CPU.GPR[op.rt] = u128::from64(0x18191A1B1C1D1E1Full, 0x1011121314151617ull);
+	CPU.GPR[op.rt] = v128::from64(0x18191A1B1C1D1E1Full, 0x1011121314151617ull);
 	CPU.GPR[op.rt]._u8[t] = 0x03;
 }
 
 void spu_interpreter::CHX(SPUThread& CPU, spu_opcode_t op)
 {
 	const s32 t = (~(CPU.GPR[op.rb]._u32[3] + CPU.GPR[op.ra]._u32[3]) & 0xe) >> 1;
-	CPU.GPR[op.rt] = u128::from64(0x18191A1B1C1D1E1Full, 0x1011121314151617ull);
+	CPU.GPR[op.rt] = v128::from64(0x18191A1B1C1D1E1Full, 0x1011121314151617ull);
 	CPU.GPR[op.rt]._u16[t] = 0x0203;
 }
 
 void spu_interpreter::CWX(SPUThread& CPU, spu_opcode_t op)
 {
 	const s32 t = (~(CPU.GPR[op.rb]._u32[3] + CPU.GPR[op.ra]._u32[3]) & 0xc) >> 2;
-	CPU.GPR[op.rt] = u128::from64(0x18191A1B1C1D1E1Full, 0x1011121314151617ull);
+	CPU.GPR[op.rt] = v128::from64(0x18191A1B1C1D1E1Full, 0x1011121314151617ull);
 	CPU.GPR[op.rt]._u32[t] = 0x00010203;
 }
 
 void spu_interpreter::CDX(SPUThread& CPU, spu_opcode_t op)
 {
 	const s32 t = (~(CPU.GPR[op.rb]._u32[3] + CPU.GPR[op.ra]._u32[3]) & 0x8) >> 3;
-	CPU.GPR[op.rt] = u128::from64(0x18191A1B1C1D1E1Full, 0x1011121314151617ull);
+	CPU.GPR[op.rt] = v128::from64(0x18191A1B1C1D1E1Full, 0x1011121314151617ull);
 	CPU.GPR[op.rt]._u64[t] = 0x0001020304050607ull;
 }
 
@@ -489,34 +489,34 @@ void spu_interpreter::SHLQBY(SPUThread& CPU, spu_opcode_t op)
 
 void spu_interpreter::ORX(SPUThread& CPU, spu_opcode_t op)
 {
-	CPU.GPR[op.rt] = u128::from32r(CPU.GPR[op.ra]._u32[0] | CPU.GPR[op.ra]._u32[1] | CPU.GPR[op.ra]._u32[2] | CPU.GPR[op.ra]._u32[3]);
+	CPU.GPR[op.rt] = v128::from32r(CPU.GPR[op.ra]._u32[0] | CPU.GPR[op.ra]._u32[1] | CPU.GPR[op.ra]._u32[2] | CPU.GPR[op.ra]._u32[3]);
 }
 
 void spu_interpreter::CBD(SPUThread& CPU, spu_opcode_t op)
 {
 	const s32 t = ~(op.i7 + CPU.GPR[op.ra]._u32[3]) & 0xf;
-	CPU.GPR[op.rt] = u128::from64(0x18191A1B1C1D1E1Full, 0x1011121314151617ull);
+	CPU.GPR[op.rt] = v128::from64(0x18191A1B1C1D1E1Full, 0x1011121314151617ull);
 	CPU.GPR[op.rt]._u8[t] = 0x03;
 }
 
 void spu_interpreter::CHD(SPUThread& CPU, spu_opcode_t op)
 {
 	const s32 t = (~(op.i7 + CPU.GPR[op.ra]._u32[3]) & 0xe) >> 1;
-	CPU.GPR[op.rt] = u128::from64(0x18191A1B1C1D1E1Full, 0x1011121314151617ull);
+	CPU.GPR[op.rt] = v128::from64(0x18191A1B1C1D1E1Full, 0x1011121314151617ull);
 	CPU.GPR[op.rt]._u16[t] = 0x0203;
 }
 
 void spu_interpreter::CWD(SPUThread& CPU, spu_opcode_t op)
 {
 	const s32 t = (~(op.i7 + CPU.GPR[op.ra]._u32[3]) & 0xc) >> 2;
-	CPU.GPR[op.rt] = u128::from64(0x18191A1B1C1D1E1Full, 0x1011121314151617ull);
+	CPU.GPR[op.rt] = v128::from64(0x18191A1B1C1D1E1Full, 0x1011121314151617ull);
 	CPU.GPR[op.rt]._u32[t] = 0x00010203;
 }
 
 void spu_interpreter::CDD(SPUThread& CPU, spu_opcode_t op)
 {
 	const s32 t = (~(op.i7 + CPU.GPR[op.ra]._u32[3]) & 0x8) >> 3;
-	CPU.GPR[op.rt] = u128::from64(0x18191A1B1C1D1E1Full, 0x1011121314151617ull);
+	CPU.GPR[op.rt] = v128::from64(0x18191A1B1C1D1E1Full, 0x1011121314151617ull);
 	CPU.GPR[op.rt]._u64[t] = 0x0001020304050607ull;
 }
 
@@ -640,7 +640,7 @@ void spu_interpreter::CLGT(SPUThread& CPU, spu_opcode_t op)
 
 void spu_interpreter::ANDC(SPUThread& CPU, spu_opcode_t op)
 {
-	CPU.GPR[op.rt] = u128::andnot(CPU.GPR[op.rb], CPU.GPR[op.ra]);
+	CPU.GPR[op.rt] = v128::andnot(CPU.GPR[op.rb], CPU.GPR[op.ra]);
 }
 
 void spu_interpreter::FCGT(SPUThread& CPU, spu_opcode_t op)
@@ -655,12 +655,12 @@ void spu_interpreter::DFCGT(SPUThread& CPU, spu_opcode_t op)
 
 void spu_interpreter::FA(SPUThread& CPU, spu_opcode_t op)
 {
-	CPU.GPR[op.rt] = u128::addfs(CPU.GPR[op.ra], CPU.GPR[op.rb]);
+	CPU.GPR[op.rt] = v128::addfs(CPU.GPR[op.ra], CPU.GPR[op.rb]);
 }
 
 void spu_interpreter::FS(SPUThread& CPU, spu_opcode_t op)
 {
-	CPU.GPR[op.rt] = u128::subfs(CPU.GPR[op.ra], CPU.GPR[op.rb]);
+	CPU.GPR[op.rt] = v128::subfs(CPU.GPR[op.ra], CPU.GPR[op.rb]);
 }
 
 void spu_interpreter::FM(SPUThread& CPU, spu_opcode_t op)
@@ -691,12 +691,12 @@ void spu_interpreter::DFCMGT(SPUThread& CPU, spu_opcode_t op)
 
 void spu_interpreter::DFA(SPUThread& CPU, spu_opcode_t op)
 {
-	CPU.GPR[op.rt] = u128::addfd(CPU.GPR[op.ra], CPU.GPR[op.rb]);
+	CPU.GPR[op.rt] = v128::addfd(CPU.GPR[op.ra], CPU.GPR[op.rb]);
 }
 
 void spu_interpreter::DFS(SPUThread& CPU, spu_opcode_t op)
 {
-	CPU.GPR[op.rt] = u128::subfd(CPU.GPR[op.ra], CPU.GPR[op.rb]);
+	CPU.GPR[op.rt] = v128::subfd(CPU.GPR[op.ra], CPU.GPR[op.rb]);
 }
 
 void spu_interpreter::DFM(SPUThread& CPU, spu_opcode_t op)
@@ -751,12 +751,12 @@ void spu_interpreter::MPYHHU(SPUThread& CPU, spu_opcode_t op)
 
 void spu_interpreter::ADDX(SPUThread& CPU, spu_opcode_t op)
 {
-	CPU.GPR[op.rt] = u128::add32(u128::add32(CPU.GPR[op.ra], CPU.GPR[op.rb]), CPU.GPR[op.rt] & u128::from32p(1));
+	CPU.GPR[op.rt] = v128::add32(v128::add32(CPU.GPR[op.ra], CPU.GPR[op.rb]), CPU.GPR[op.rt] & v128::from32p(1));
 }
 
 void spu_interpreter::SFX(SPUThread& CPU, spu_opcode_t op)
 {
-	CPU.GPR[op.rt] = u128::sub32(u128::sub32(CPU.GPR[op.rb], CPU.GPR[op.ra]), u128::andnot(CPU.GPR[op.rt], u128::from32p(1)));
+	CPU.GPR[op.rt] = v128::sub32(v128::sub32(CPU.GPR[op.rb], CPU.GPR[op.ra]), v128::andnot(CPU.GPR[op.rt], v128::from32p(1)));
 }
 
 void spu_interpreter::CGX(SPUThread& CPU, spu_opcode_t op)
@@ -976,7 +976,7 @@ void spu_interpreter::LQA(SPUThread& CPU, spu_opcode_t op)
 void spu_interpreter::BRASL(SPUThread& CPU, spu_opcode_t op)
 {
 	const u32 target = SPUOpcodes::branchTarget(0, op.i16);
-	CPU.GPR[op.rt] = u128::from32r(CPU.PC + 4);
+	CPU.GPR[op.rt] = v128::from32r(CPU.PC + 4);
 	CPU.PC = target - 4;
 }
 
@@ -993,7 +993,7 @@ void spu_interpreter::FSMBI(SPUThread& CPU, spu_opcode_t op)
 void spu_interpreter::BRSL(SPUThread& CPU, spu_opcode_t op)
 {
 	const u32 target = SPUOpcodes::branchTarget(CPU.PC, op.i16);
-	CPU.GPR[op.rt] = u128::from32r(CPU.PC + 4);
+	CPU.GPR[op.rt] = v128::from32r(CPU.PC + 4);
 	CPU.PC = target - 4;
 }
 
@@ -1197,7 +1197,7 @@ void spu_interpreter::ILA(SPUThread& CPU, spu_opcode_t op)
 void spu_interpreter::SELB(SPUThread& CPU, spu_opcode_t op)
 {
 	// rt <> rc
-	CPU.GPR[op.rc] = (CPU.GPR[op.rt] & CPU.GPR[op.rb]) | u128::andnot(CPU.GPR[op.rt], CPU.GPR[op.ra]);
+	CPU.GPR[op.rc] = (CPU.GPR[op.rt] & CPU.GPR[op.rb]) | v128::andnot(CPU.GPR[op.rt], CPU.GPR[op.ra]);
 }
 
 void spu_interpreter::SHUFB(SPUThread& CPU, spu_opcode_t op)

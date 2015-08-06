@@ -339,14 +339,14 @@ namespace vm
 			get_ref<be_t<u64>>(addr) = value;
 		}
 
-		inline const be_t<u128>& read128(u32 addr)
+		inline const be_t<v128>& read128(u32 addr)
 		{
-			return get_ref<const be_t<u128>>(addr);
+			return get_ref<const be_t<v128>>(addr);
 		}
 
-		inline void write128(u32 addr, be_t<u128> value)
+		inline void write128(u32 addr, be_t<v128> value)
 		{
-			get_ref<be_t<u128>>(addr) = value;
+			get_ref<be_t<v128>>(addr) = value;
 		}
 	}
 	
@@ -384,14 +384,14 @@ namespace vm
 			get_ref<le_t<u64>>(addr) = value;
 		}
 
-		inline const le_t<u128>& read128(u32 addr)
+		inline const le_t<v128>& read128(u32 addr)
 		{
-			return get_ref<const le_t<u128>>(addr);
+			return get_ref<const le_t<v128>>(addr);
 		}
 
-		inline void write128(u32 addr, le_t<u128> value)
+		inline void write128(u32 addr, le_t<v128> value)
 		{
-			get_ref<le_t<u128>>(addr) = value;
+			get_ref<le_t<v128>>(addr) = value;
 		}
 	}
 

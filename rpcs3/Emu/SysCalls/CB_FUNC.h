@@ -47,7 +47,7 @@ namespace cb_detail
 	template<typename T, int g_count, int f_count, int v_count>
 	struct _func_arg<T, ARG_VECTOR, g_count, f_count, v_count>
 	{
-		static_assert(std::is_same<std::remove_cv_t<T>, u128>::value, "Invalid callback argument type for ARG_VECTOR");
+		static_assert(std::is_same<std::remove_cv_t<T>, v128>::value, "Invalid callback argument type for ARG_VECTOR");
 
 		force_inline static void set_value(PPUThread& CPU, const T& arg)
 		{
@@ -91,7 +91,7 @@ namespace cb_detail
 	force_inline static bool _bind_func_args(PPUThread& CPU, T1 arg1, T... args)
 	{
 		const bool is_float = std::is_floating_point<T1>::value;
-		const bool is_vector = std::is_same<std::remove_cv_t<T1>, u128>::value;
+		const bool is_vector = std::is_same<std::remove_cv_t<T1>, v128>::value;
 		const bool is_context = std::is_same<T1, PPUThread&>::value;
 		const bool is_general = !is_float && !is_vector && !is_context;
 
@@ -138,7 +138,7 @@ namespace cb_detail
 	template<typename T>
 	struct _func_res<T, ARG_VECTOR>
 	{
-		static_assert(std::is_same<std::remove_cv_t<T>, u128>::value, "Invalid callback result type for ARG_VECTOR");
+		static_assert(std::is_same<std::remove_cv_t<T>, v128>::value, "Invalid callback result type for ARG_VECTOR");
 
 		force_inline static T get_value(const PPUThread& CPU)
 		{
@@ -156,7 +156,7 @@ namespace cb_detail
 			static_assert(!std::is_pointer<RT>::value, "Invalid callback result type (pointer)");
 			static_assert(!std::is_reference<RT>::value, "Invalid callback result type (reference)");
 			const bool is_float = std::is_floating_point<RT>::value;
-			const bool is_vector = std::is_same<std::remove_cv_t<RT>, u128>::value;
+			const bool is_vector = std::is_same<std::remove_cv_t<RT>, v128>::value;
 			const _func_arg_type t = is_float ? ARG_FLOAT : (is_vector ? ARG_VECTOR : ARG_GENERAL);
 
 			return _func_res<RT, t>::get_value(CPU);

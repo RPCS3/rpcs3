@@ -746,12 +746,12 @@ struct set_alignment(128) CellSpursTaskset
 
 	CHECK_SIZE(TaskInfo, 48);
 
-	be_t<u128> running;                          // 0x00
-	be_t<u128> ready;                            // 0x10
-	be_t<u128> pending_ready;                    // 0x20
-	be_t<u128> enabled;                          // 0x30
-	be_t<u128> signalled;                        // 0x40
-	be_t<u128> waiting;                          // 0x50
+	be_t<v128> running;                          // 0x00
+	be_t<v128> ready;                            // 0x10
+	be_t<v128> pending_ready;                    // 0x20
+	be_t<v128> enabled;                          // 0x30
+	be_t<v128> signalled;                        // 0x40
+	be_t<v128> waiting;                          // 0x50
 	vm::bptr<CellSpurs, u64> spurs;              // 0x60
 	be_t<u64> args;                              // 0x68
 	u8 enable_clear_ls;                          // 0x70
@@ -806,7 +806,7 @@ struct set_alignment(128) CellSpursTaskset2
 	u32 event_flag_id1;                          // 0x1898
 	u32 event_flag_id2;                          // 0x189C
 	u8 unk3[0x1980 - 0x18A0];                    // 0x18A0
-	be_t<u128> task_exit_code[128];              // 0x1980
+	be_t<v128> task_exit_code[128];              // 0x1980
 	u8 unk4[0x2900 - 0x2180];                    // 0x2180
 };
 
@@ -894,10 +894,10 @@ struct SpursTasksetContext
 	u8 x27D8[0x2840 - 0x27D8];                      // 0x27D8
 	u8 moduleId[16];                                // 0x2840
 	u8 stackArea[0x2C80 - 0x2850];                  // 0x2850
-	be_t<u128> savedContextLr;                      // 0x2C80
-	be_t<u128> savedContextSp;                      // 0x2C90
-	be_t<u128> savedContextR80ToR127[48];           // 0x2CA0
-	be_t<u128> savedContextFpscr;                   // 0x2FA0
+	be_t<v128> savedContextLr;                      // 0x2C80
+	be_t<v128> savedContextSp;                      // 0x2C90
+	be_t<v128> savedContextR80ToR127[48];           // 0x2CA0
+	be_t<v128> savedContextFpscr;                   // 0x2FA0
 	be_t<u32> savedWriteTagGroupQueryMask;          // 0x2FB0
 	be_t<u32> savedSpuWriteEventMask;               // 0x2FB4
 	be_t<u32> tasksetMgmtAddr;                      // 0x2FB8

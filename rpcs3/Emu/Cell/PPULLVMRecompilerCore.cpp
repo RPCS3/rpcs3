@@ -2121,7 +2121,7 @@ void Compiler::TW(u32 to, u32 ra, u32 rb) {
 }
 
 void Compiler::LVSL(u32 vd, u32 ra, u32 rb) {
-	static const u128 s_lvsl_values[] = {
+	static const v128 s_lvsl_values[] = {
 	  { 0x08090A0B0C0D0E0F, 0x0001020304050607 },
 	  { 0x090A0B0C0D0E0F10, 0x0102030405060708 },
 	  { 0x0A0B0C0D0E0F1011, 0x0203040506070809 },
@@ -2350,7 +2350,7 @@ void Compiler::CMPL(u32 crfd, u32 l, u32 ra, u32 rb) {
 }
 
 void Compiler::LVSR(u32 vd, u32 ra, u32 rb) {
-	static const u128 s_lvsr_values[] = {
+	static const v128 s_lvsr_values[] = {
 	  { 0x18191A1B1C1D1E1F, 0x1011121314151617 },
 	  { 0x1718191A1B1C1D1E, 0x0F10111213141516 },
 	  { 0x161718191A1B1C1D, 0x0E0F101112131415 },

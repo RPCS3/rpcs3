@@ -1055,8 +1055,8 @@ private:
 	}
 	void VMRGHB(u32 vd, u32 va, u32 vb)
 	{
-		u128 VA = CPU.VPR[va];
-		u128 VB = CPU.VPR[vb];
+		v128 VA = CPU.VPR[va];
+		v128 VB = CPU.VPR[vb];
 		for (uint h = 0; h < 8; h++)
 		{
 			CPU.VPR[vd]._u8[15 - h*2] = VA._u8[15 - h];
@@ -1065,8 +1065,8 @@ private:
 	}
 	void VMRGHH(u32 vd, u32 va, u32 vb)
 	{
-		u128 VA = CPU.VPR[va];
-		u128 VB = CPU.VPR[vb];
+		v128 VA = CPU.VPR[va];
+		v128 VB = CPU.VPR[vb];
 		for (uint w = 0; w < 4; w++)
 		{
 			CPU.VPR[vd]._u16[7 - w*2] = VA._u16[7 - w];
@@ -1075,8 +1075,8 @@ private:
 	}
 	void VMRGHW(u32 vd, u32 va, u32 vb)
 	{
-		u128 VA = CPU.VPR[va];
-		u128 VB = CPU.VPR[vb];
+		v128 VA = CPU.VPR[va];
+		v128 VB = CPU.VPR[vb];
 		for (uint d = 0; d < 2; d++)
 		{
 			CPU.VPR[vd]._u32[3 - d*2] = VA._u32[3 - d];
@@ -1085,8 +1085,8 @@ private:
 	}
 	void VMRGLB(u32 vd, u32 va, u32 vb)
 	{
-		u128 VA = CPU.VPR[va];
-		u128 VB = CPU.VPR[vb];
+		v128 VA = CPU.VPR[va];
+		v128 VB = CPU.VPR[vb];
 		for (uint h = 0; h < 8; h++)
 		{
 			CPU.VPR[vd]._u8[15 - h*2] = VA._u8[7 - h];
@@ -1095,8 +1095,8 @@ private:
 	}
 	void VMRGLH(u32 vd, u32 va, u32 vb)
 	{
-		u128 VA = CPU.VPR[va];
-		u128 VB = CPU.VPR[vb];
+		v128 VA = CPU.VPR[va];
+		v128 VB = CPU.VPR[vb];
 		for (uint w = 0; w < 4; w++)
 		{
 			CPU.VPR[vd]._u16[7 - w*2] = VA._u16[3 - w];
@@ -1105,8 +1105,8 @@ private:
 	}
 	void VMRGLW(u32 vd, u32 va, u32 vb)
 	{
-		u128 VA = CPU.VPR[va];
-		u128 VB = CPU.VPR[vb];
+		v128 VA = CPU.VPR[va];
+		v128 VB = CPU.VPR[vb];
 		for (uint d = 0; d < 2; d++)
 		{
 			CPU.VPR[vd]._u32[3 - d*2] = VA._u32[1 - d];
@@ -1339,8 +1339,8 @@ private:
 	}
 	void VPKPX(u32 vd, u32 va, u32 vb)
 	{
-		u128 VA = CPU.VPR[va];
-		u128 VB = CPU.VPR[vb];
+		v128 VA = CPU.VPR[va];
+		v128 VB = CPU.VPR[vb];
 		for (uint h = 0; h < 4; h++)
 		{
 			u16 bb7  = VB._u8[15 - (h*4 + 0)] & 0x1;
@@ -1358,8 +1358,8 @@ private:
 	}
 	void VPKSHSS(u32 vd, u32 va, u32 vb) //nf
 	{
-		u128 VA = CPU.VPR[va];
-		u128 VB = CPU.VPR[vb];
+		v128 VA = CPU.VPR[va];
+		v128 VB = CPU.VPR[vb];
 		for (uint b = 0; b < 8; b++)
 		{
 			s16 result = VA._s16[b];
@@ -1395,8 +1395,8 @@ private:
 	}
 	void VPKSHUS(u32 vd, u32 va, u32 vb)
 	{
-		u128 VA = CPU.VPR[va];
-		u128 VB = CPU.VPR[vb];
+		v128 VA = CPU.VPR[va];
+		v128 VB = CPU.VPR[vb];
 		for (uint b = 0; b < 8; b++)
 		{
 			s16 result = VA._s16[b];
@@ -1432,8 +1432,8 @@ private:
 	}
 	void VPKSWSS(u32 vd, u32 va, u32 vb)
 	{
-		u128 VA = CPU.VPR[va];
-		u128 VB = CPU.VPR[vb];
+		v128 VA = CPU.VPR[va];
+		v128 VB = CPU.VPR[vb];
 		for (uint h = 0; h < 4; h++)
 		{
 			s32 result = VA._s32[h];
@@ -1469,8 +1469,8 @@ private:
 	}
 	void VPKSWUS(u32 vd, u32 va, u32 vb) //nf
 	{
-		u128 VA = CPU.VPR[va];
-		u128 VB = CPU.VPR[vb];
+		v128 VA = CPU.VPR[va];
+		v128 VB = CPU.VPR[vb];
 		for (uint h = 0; h < 4; h++)
 		{
 			s32 result = VA._s32[h];
@@ -1506,8 +1506,8 @@ private:
 	}
 	void VPKUHUM(u32 vd, u32 va, u32 vb) //nf
 	{
-		u128 VA = CPU.VPR[va];
-		u128 VB = CPU.VPR[vb];
+		v128 VA = CPU.VPR[va];
+		v128 VB = CPU.VPR[vb];
 		for (uint b = 0; b < 8; b++)
 		{
 			CPU.VPR[vd]._u8[b+8] = VA._u8[b*2];
@@ -1516,8 +1516,8 @@ private:
 	}
 	void VPKUHUS(u32 vd, u32 va, u32 vb)
 	{
-		u128 VA = CPU.VPR[va];
-		u128 VB = CPU.VPR[vb];
+		v128 VA = CPU.VPR[va];
+		v128 VB = CPU.VPR[vb];
 		for (uint b = 0; b < 8; b++)
 		{
 			u16 result = VA._u16[b];
@@ -1543,8 +1543,8 @@ private:
 	}
 	void VPKUWUM(u32 vd, u32 va, u32 vb)
 	{
-		u128 VA = CPU.VPR[va];
-		u128 VB = CPU.VPR[vb];
+		v128 VA = CPU.VPR[va];
+		v128 VB = CPU.VPR[vb];
 		for (uint h = 0; h < 4; h++)
 		{
 			CPU.VPR[vd]._u16[h+4] = VA._u16[h*2];
@@ -1553,8 +1553,8 @@ private:
 	}
 	void VPKUWUS(u32 vd, u32 va, u32 vb) //nf
 	{
-		u128 VA = CPU.VPR[va];
-		u128 VB = CPU.VPR[vb];
+		v128 VA = CPU.VPR[va];
+		v128 VB = CPU.VPR[vb];
 		for (uint h = 0; h < 4; h++)
 		{
 			u32 result = VA._u32[h];
@@ -1684,7 +1684,7 @@ private:
 	}
 	void VSL(u32 vd, u32 va, u32 vb) //nf
 	{
-		u128 VA = CPU.VPR[va];
+		v128 VA = CPU.VPR[va];
 		u8 sh = CPU.VPR[vb]._u8[0] & 0x7;
 
 		CPU.VPR[vd]._u8[0] = VA._u8[0] << sh;
@@ -1720,7 +1720,7 @@ private:
 	}
 	void VSLO(u32 vd, u32 va, u32 vb)
 	{
-		u128 VA = CPU.VPR[va];
+		v128 VA = CPU.VPR[va];
 		u8 nShift = (CPU.VPR[vb]._u8[0] >> 3) & 0xf;
 
 		CPU.VPR[vd].clear();
@@ -1791,7 +1791,7 @@ private:
 	}
 	void VSR(u32 vd, u32 va, u32 vb) //nf
 	{
-		u128 VA = CPU.VPR[va];
+		v128 VA = CPU.VPR[va];
 		u8 sh = CPU.VPR[vb]._u8[0] & 0x7;
 
 		CPU.VPR[vd]._u8[15] = VA._u8[15] >> sh;
@@ -1837,7 +1837,7 @@ private:
 	}
 	void VSRO(u32 vd, u32 va, u32 vb)
 	{
-		u128 VA = CPU.VPR[va];
+		v128 VA = CPU.VPR[va];
 		u8 nShift = (CPU.VPR[vb]._u8[0] >> 3) & 0xf;
 
 		CPU.VPR[vd].clear();
@@ -2121,7 +2121,7 @@ private:
 	}
 	void VUPKHPX(u32 vd, u32 vb)
 	{
-		u128 VB = CPU.VPR[vb];
+		v128 VB = CPU.VPR[vb];
 		for (uint w = 0; w < 4; w++)
 		{
 			CPU.VPR[vd]._s8[w*4 + 3] = VB._s8[8 + w*2 + 1] >> 7;  // signed shift sign extends
@@ -2132,7 +2132,7 @@ private:
 	}
 	void VUPKHSB(u32 vd, u32 vb)
 	{
-		u128 VB = CPU.VPR[vb];
+		v128 VB = CPU.VPR[vb];
 		for (uint h = 0; h < 8; h++)
 		{
 			CPU.VPR[vd]._s16[h] = VB._s8[8 + h];
@@ -2140,7 +2140,7 @@ private:
 	}
 	void VUPKHSH(u32 vd, u32 vb)
 	{
-		u128 VB = CPU.VPR[vb];
+		v128 VB = CPU.VPR[vb];
 		for (uint w = 0; w < 4; w++)
 		{
 			CPU.VPR[vd]._s32[w] = VB._s16[4 + w];
@@ -2148,7 +2148,7 @@ private:
 	}
 	void VUPKLPX(u32 vd, u32 vb)
 	{
-		u128 VB = CPU.VPR[vb];
+		v128 VB = CPU.VPR[vb];
 		for (uint w = 0; w < 4; w++)
 		{
 			CPU.VPR[vd]._s8[w*4 + 3] = VB._s8[w*2 + 1] >> 7;  // signed shift sign extends
@@ -2159,7 +2159,7 @@ private:
 	}
 	void VUPKLSB(u32 vd, u32 vb) //nf
 	{
-		u128 VB = CPU.VPR[vb];
+		v128 VB = CPU.VPR[vb];
 		for (uint h = 0; h < 8; h++)
 		{
 			CPU.VPR[vd]._s16[h] = VB._s8[h];
@@ -2167,7 +2167,7 @@ private:
 	}
 	void VUPKLSH(u32 vd, u32 vb)
 	{
-		u128 VB = CPU.VPR[vb];
+		v128 VB = CPU.VPR[vb];
 		for (uint w = 0; w < 4; w++)
 		{
 			CPU.VPR[vd]._s32[w] = VB._s16[w];

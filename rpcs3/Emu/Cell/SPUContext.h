@@ -2,5 +2,5 @@
 
 struct SPUContext
 {
-	u128 gpr[128];
+	v128 gpr[128];
 };

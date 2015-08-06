@@ -116,11 +116,11 @@ private:
 	}
 	void RDCH(u32 rt, u32 ra)
 	{
-		CPU.GPR[rt] = u128::from32r(CPU.get_ch_value(ra));
+		CPU.GPR[rt] = v128::from32r(CPU.get_ch_value(ra));
 	}
 	void RCHCNT(u32 rt, u32 ra)
 	{
-		CPU.GPR[rt] = u128::from32r(CPU.get_ch_count(ra));
+		CPU.GPR[rt] = v128::from32r(CPU.get_ch_count(ra));
 	}
 	void SF(u32 rt, u32 ra, u32 rb)
 	{
@@ -424,7 +424,7 @@ private:
 	void BISL(u32 intr, u32 rt, u32 ra)
 	{
 		u32 target = branchTarget(CPU.GPR[ra]._u32[3], 0);
-		CPU.GPR[rt] = u128::from32r(CPU.PC + 4);
+		CPU.GPR[rt] = v128::from32r(CPU.PC + 4);
 		LOG5_OPCODE("branch (0x%x)", target);
 		CPU.PC = target - 4;
 
@@ -539,14 +539,14 @@ private:
 	void ROTQBYBI(u32 rt, u32 ra, u32 rb)
 	{
 		const int s = (CPU.GPR[rb]._u32[3] >> 3) & 0xf;
-		const u128 temp = CPU.GPR[ra];
+		const v128 temp = CPU.GPR[ra];
 		for (int b = 0; b < 16; b++)
 			CPU.GPR[rt]._u8[b] = temp._u8[(b - s) & 0xf];
 	}
 	void ROTQMBYBI(u32 rt, u32 ra, u32 rb)
 	{
 		const int s = (0 - (CPU.GPR[rb]._u32[3] >> 3)) & 0x1f;
-		const u128 temp = CPU.GPR[ra];
+		const v128 temp = CPU.GPR[ra];
 		CPU.GPR[rt].clear();
 		for (int b = 0; b < 16 - s; b++)
 			CPU.GPR[rt]._u8[b] = temp._u8[b + s];
@@ -554,7 +554,7 @@ private:
 	void SHLQBYBI(u32 rt, u32 ra, u32 rb)
 	{
 		const int s = (CPU.GPR[rb]._u32[3] >> 3) & 0x1f;
-		const u128 temp = CPU.GPR[ra];
+		const v128 temp = CPU.GPR[ra];
 		CPU.GPR[rt].clear();
 		for (int b = s; b < 16; b++)
 			CPU.GPR[rt]._u8[b] = temp._u8[b - s];
@@ -620,7 +620,7 @@ private:
 		const int t = CPU.GPR[rb]._u32[3] & 0x7;
 		if (t) // not an optimization, it fixes shifts
 		{
-			const u128 temp = CPU.GPR[ra];
+			const v128 temp = CPU.GPR[ra];
 			CPU.GPR[rt]._u32[0] = (temp._u32[0] << t) | (temp._u32[3] >> (32 - t));
 			CPU.GPR[rt]._u32[1] = (temp._u32[1] << t) | (temp._u32[0] >> (32 - t));
 			CPU.GPR[rt]._u32[2] = (temp._u32[2] << t) | (temp._u32[1] >> (32 - t));
@@ -636,7 +636,7 @@ private:
 		const int t = (0 - CPU.GPR[rb]._u32[3]) & 0x7;
 		if (t) // not an optimization, it fixes shifts
 		{
-			const u128 temp = CPU.GPR[ra];
+			const v128 temp = CPU.GPR[ra];
 			CPU.GPR[rt]._u32[0] = (temp._u32[0] >> t) | (temp._u32[1] << (32 - t));
 			CPU.GPR[rt]._u32[1] = (temp._u32[1] >> t) | (temp._u32[2] << (32 - t));
 			CPU.GPR[rt]._u32[2] = (temp._u32[2] >> t) | (temp._u32[3] << (32 - t));
@@ -652,7 +652,7 @@ private:
 		const int t = CPU.GPR[rb]._u32[3] & 0x7;
 		if (t) // not an optimization, it fixes shifts
 		{
-			const u128 temp = CPU.GPR[ra];
+			const v128 temp = CPU.GPR[ra];
 			CPU.GPR[rt]._u32[0] = (temp._u32[0] << t);
 			CPU.GPR[rt]._u32[1] = (temp._u32[1] << t) | (temp._u32[0] >> (32 - t));
 			CPU.GPR[rt]._u32[2] = (temp._u32[2] << t) | (temp._u32[1] >> (32 - t));
@@ -666,14 +666,14 @@ private:
 	void ROTQBY(u32 rt, u32 ra, u32 rb)
 	{
 		const int s = CPU.GPR[rb]._u32[3] & 0xf;
-		const u128 temp = CPU.GPR[ra];
+		const v128 temp = CPU.GPR[ra];
 		for (int b = 0; b < 16; ++b)
 			CPU.GPR[rt]._u8[b] = temp._u8[(b - s) & 0xf];
 	}
 	void ROTQMBY(u32 rt, u32 ra, u32 rb)
 	{
 		const int s = (0 - CPU.GPR[rb]._u32[3]) & 0x1f;
-		const u128 temp = CPU.GPR[ra];
+		const v128 temp = CPU.GPR[ra];
 		CPU.GPR[rt].clear();
 		for (int b = 0; b < 16 - s; b++)
 			CPU.GPR[rt]._u8[b] = temp._u8[b + s];
@@ -681,7 +681,7 @@ private:
 	void SHLQBY(u32 rt, u32 ra, u32 rb)
 	{
 		const int s = CPU.GPR[rb]._u32[3] & 0x1f;
-		const u128 temp = CPU.GPR[ra];
+		const v128 temp = CPU.GPR[ra];
 		CPU.GPR[rt].clear();
 		for (int b = s; b < 16; b++)
 			CPU.GPR[rt]._u8[b] = temp._u8[b - s];
@@ -753,7 +753,7 @@ private:
 		const int s = i7 & 0x7;
 		if (s) // not an optimization, it fixes shifts
 		{
-			const u128 temp = CPU.GPR[ra];
+			const v128 temp = CPU.GPR[ra];
 			CPU.GPR[rt]._u32[0] = (temp._u32[0] << s) | (temp._u32[3] >> (32 - s));
 			CPU.GPR[rt]._u32[1] = (temp._u32[1] << s) | (temp._u32[0] >> (32 - s));
 			CPU.GPR[rt]._u32[2] = (temp._u32[2] << s) | (temp._u32[1] >> (32 - s));
@@ -769,7 +769,7 @@ private:
 		const int s = (0 - i7) & 0x7;
 		if (s) // not an optimization, it fixes shifts
 		{
-			const u128 temp = CPU.GPR[ra];
+			const v128 temp = CPU.GPR[ra];
 			CPU.GPR[rt]._u32[0] = (temp._u32[0] >> s) | (temp._u32[1] << (32 - s));
 			CPU.GPR[rt]._u32[1] = (temp._u32[1] >> s) | (temp._u32[2] << (32 - s));
 			CPU.GPR[rt]._u32[2] = (temp._u32[2] >> s) | (temp._u32[3] << (32 - s));
@@ -785,7 +785,7 @@ private:
 		const int s = i7 & 0x7;
 		if (s) // not an optimization, it fixes shifts
 		{
-			const u128 temp = CPU.GPR[ra];
+			const v128 temp = CPU.GPR[ra];
 			CPU.GPR[rt]._u32[0] = (temp._u32[0] << s);
 			CPU.GPR[rt]._u32[1] = (temp._u32[1] << s) | (temp._u32[0] >> (32 - s));
 			CPU.GPR[rt]._u32[2] = (temp._u32[2] << s) | (temp._u32[1] >> (32 - s));
@@ -799,14 +799,14 @@ private:
 	void ROTQBYI(u32 rt, u32 ra, s32 i7)
 	{
 		const int s = i7 & 0xf;
-		const u128 temp = CPU.GPR[ra];
+		const v128 temp = CPU.GPR[ra];
 		for (int b = 0; b < 16; b++)
 			CPU.GPR[rt]._u8[b] = temp._u8[(b - s) & 0xf];
 	}
 	void ROTQMBYI(u32 rt, u32 ra, s32 i7)
 	{
 		const int s = (0 - i7) & 0x1f;
-		const u128 temp = CPU.GPR[ra];
+		const v128 temp = CPU.GPR[ra];
 		CPU.GPR[rt].clear();
 		for (int b = 0; b < 16 - s; b++)
 			CPU.GPR[rt]._u8[b] = temp._u8[b + s];
@@ -814,7 +814,7 @@ private:
 	void SHLQBYI(u32 rt, u32 ra, s32 i7)
 	{
 		const int s = i7 & 0x1f;
-		const u128 temp = CPU.GPR[ra];
+		const v128 temp = CPU.GPR[ra];
 		CPU.GPR[rt].clear();
 		for (int b = s; b < 16; b++)
 			CPU.GPR[rt]._u8[b] = temp._u8[b - s];
@@ -849,8 +849,8 @@ private:
 	}
 	void SUMB(u32 rt, u32 ra, u32 rb)
 	{
-		const u128 _a = CPU.GPR[ra];
-		const u128 _b = CPU.GPR[rb];
+		const v128 _a = CPU.GPR[ra];
+		const v128 _b = CPU.GPR[rb];
 		for (int w = 0; w < 4; w++)
 		{
 			CPU.GPR[rt]._u16[w*2] = _a._u8[w*4] + _a._u8[w*4 + 1] + _a._u8[w*4 + 2] + _a._u8[w*4 + 3];
@@ -890,7 +890,7 @@ private:
 	}
 	void CNTB(u32 rt, u32 ra)
 	{
-		const u128 temp = CPU.GPR[ra];
+		const v128 temp = CPU.GPR[ra];
 		CPU.GPR[rt].clear();
 		for (int b = 0; b < 16; b++)
 			for (int i = 0; i < 8; i++)
@@ -1621,7 +1621,7 @@ private:
 	void BRASL(u32 rt, s32 i16)
 	{
 		u32 target = branchTarget(0, i16);
-		CPU.GPR[rt] = u128::from32r(CPU.PC + 4);
+		CPU.GPR[rt] = v128::from32r(CPU.PC + 4);
 		LOG5_OPCODE("branch (0x%x)", target);
 		CPU.PC = target - 4;
 	}
@@ -1650,7 +1650,7 @@ private:
 	void BRSL(u32 rt, s32 i16)
 	{
 		u32 target = branchTarget(CPU.PC, i16);
-		CPU.GPR[rt] = u128::from32r(CPU.PC + 4);
+		CPU.GPR[rt] = v128::from32r(CPU.PC + 4);
 		LOG5_OPCODE("branch (0x%x)", target);
 		CPU.PC = target - 4;
 	}
@@ -1873,8 +1873,8 @@ private:
 	}
 	void SHUFB(u32 rt, u32 ra, u32 rb, u32 rc)
 	{
-		const u128 _a = CPU.GPR[ra];
-		const u128 _b = CPU.GPR[rb];
+		const v128 _a = CPU.GPR[ra];
+		const v128 _b = CPU.GPR[rb];
 		for (int i = 0; i < 16; i++)
 		{
 			u8 b = CPU.GPR[rc]._u8[i];

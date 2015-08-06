@@ -3536,7 +3536,7 @@ s32 spursCreateTask(vm::ptr<CellSpursTaskset> taskset, vm::ptr<u32> task_id, vm:
 		alloc_ls_blocks = size > 0x3D400 ? 0x7A : ((size - 0x400) >> 11);
 		if (ls_pattern)
 		{
-			u128 ls_pattern_128 = u128::from64r(ls_pattern->_u64[0], ls_pattern->_u64[1]);
+			v128 ls_pattern_128 = v128::from64r(ls_pattern->_u64[0], ls_pattern->_u64[1]);
 			u32 ls_blocks       = 0;
 			for (auto i = 0; i < 128; i++)
 			{
@@ -3551,8 +3551,8 @@ s32 spursCreateTask(vm::ptr<CellSpursTaskset> taskset, vm::ptr<u32> task_id, vm:
 				return CELL_SPURS_TASK_ERROR_INVAL;
 			}
 
-			u128 _0 = u128::from32(0);
-			if ((ls_pattern_128 & u128::from32r(0xFC000000)) != _0)
+			v128 _0 = v128::from32(0);
+			if ((ls_pattern_128 & v128::from32r(0xFC000000)) != _0)
 			{
 				// Prevent save/restore to SPURS management area
 				return CELL_SPURS_TASK_ERROR_INVAL;
@@ -3666,7 +3666,7 @@ s32 _cellSpursSendSignal(PPUThread& ppu, vm::ptr<CellSpursTaskset> taskset, u32 
 		return CELL_SPURS_TASK_ERROR_INVAL;
 	}
 
-    be_t<u128> _0(u128::from32(0));
+    be_t<v128> _0(v128::from32(0));
 	bool disabled = taskset->enabled.value()._bit[taskId];
 	auto invalid  = (taskset->ready & taskset->pending_ready) != _0 || (taskset->running & taskset->waiting) != _0 || disabled ||
 					((taskset->running | taskset->ready | taskset->pending_ready | taskset->waiting | taskset->signalled) & ~taskset->enabled) != _0;
@@ -3676,7 +3676,7 @@ s32 _cellSpursSendSignal(PPUThread& ppu, vm::ptr<CellSpursTaskset> taskset, u32 
 		return CELL_SPURS_TASK_ERROR_SRCH;
 	}
 
-	auto shouldSignal      = ((taskset->waiting & ~taskset->signalled) & be_t<u128>(u128::fromBit(taskId))) != _0 ? true : false;
+	auto shouldSignal      = ((taskset->waiting & ~taskset->signalled) & be_t<v128>(v128::fromBit(taskId))) != _0 ? true : false;
 	auto signalled         = taskset->signalled.value();
 	signalled._bit[taskId] = true;
 	taskset->signalled   = signalled;

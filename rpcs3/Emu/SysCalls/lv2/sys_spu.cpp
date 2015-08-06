@@ -318,10 +318,10 @@ s32 sys_spu_thread_group_start(u32 id)
 
 			t->PC = image->entry_point;
 			t->run();
-			t->GPR[3] = u128::from64(0, args.arg1);
-			t->GPR[4] = u128::from64(0, args.arg2);
-			t->GPR[5] = u128::from64(0, args.arg3);
-			t->GPR[6] = u128::from64(0, args.arg4);
+			t->GPR[3] = v128::from64(0, args.arg1);
+			t->GPR[4] = v128::from64(0, args.arg2);
+			t->GPR[5] = v128::from64(0, args.arg3);
+			t->GPR[6] = v128::from64(0, args.arg4);
 
 			t->status.exchange(SPU_STATUS_RUNNING);
 		}
