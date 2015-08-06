@@ -39,6 +39,7 @@
 #include <unordered_map>
 #include <list>
 #include <forward_list>
+#include <typeindex>
 
 #include "Utilities/GNU.h"
 

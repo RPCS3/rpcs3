@@ -27,16 +27,9 @@ public:
 // ID Manager
 // 0 is invalid ID
 // 1..0x7fffffff : general purpose IDs
-// 0x80000000+ : occupied by fixed IDs
+// 0x80000000+ : reserved
 namespace idm
 {
-	// for internal use
-	inline u32 get_type_fixed_id(const std::type_info& type)
-	{
-		// TODO: better way of fixed ID generation
-		return 0x80000000 | static_cast<u32>(type.hash_code());
-	}
-
 	// reinitialize ID manager
 	void clear();
 
@@ -53,14 +46,6 @@ namespace idm
 		return f != g_id_map.end() && f->second.info == typeid(T);
 	}
 
-	// check if fixed ID exists
-	template<typename T> bool check_fixed()
-	{
-		static const u32 id = get_type_fixed_id(typeid(T));
-
-		return check<T>(id);
-	}
-
 	// must be called from the constructor called through make() or make_ptr() to get further ID of current object
 	inline u32 get_current_id()
 	{
@@ -73,37 +58,6 @@ namespace idm
 		}
 
 		return g_cur_id & 0x7fffffff;
-	}
-
-	// add fixed ID of specified type only if it doesn't exist (each type has unique id)
-	template<typename T, typename... Args> std::enable_if_t<std::is_constructible<T, Args...>::value, std::shared_ptr<T>> make_fixed(Args&&... args)
-	{
-		extern std::mutex g_id_mutex;
-		extern std::unordered_map<u32, ID_data_t> g_id_map;
-
-		static const u32 id = get_type_fixed_id(typeid(T));
-
-		std::lock_guard<std::mutex> lock(g_id_mutex);
-
-		const auto found = g_id_map.find(id);
-
-		// ensure that this ID doesn't exist
-		if (found == g_id_map.end())
-		{
-			auto ptr = std::make_shared<T>(std::forward<Args>(args)...);
-
-			g_id_map.emplace(id, ID_data_t(ptr));
-
-			return std::move(ptr);
-		}
-
-		// ensure that this ID is not occupied by the object of another type
-		if (found->second.info == typeid(T))
-		{
-			return nullptr;
-		}
-
-		throw EXCEPTION("Collision occured ('%s' and '%s', id=0x%x)", found->second.info.name(), typeid(T).name(), id);
 	}
 
 	// add new ID of specified type with specified constructor arguments (returns object)
@@ -154,26 +108,6 @@ namespace idm
 		throw EXCEPTION("Out of IDs");
 	}
 
-	// get fixed ID of specified type
-	template<typename T> std::shared_ptr<T> get_fixed()
-	{
-		extern std::mutex g_id_mutex;
-		extern std::unordered_map<u32, ID_data_t> g_id_map;
-
-		std::lock_guard<std::mutex> lock(g_id_mutex);
-
-		static const u32 id = get_type_fixed_id(typeid(T));
-
-		const auto found = g_id_map.find(id);
-
-		if (found == g_id_map.end() || found->second.info != typeid(T))
-		{
-			return nullptr;
-		}
-
-		return std::static_pointer_cast<T>(found->second.data);
-	}
-
 	// get ID of specified type
 	template<typename T> std::shared_ptr<T> get(u32 id)
 	{
@@ -192,7 +126,7 @@ namespace idm
 		return std::static_pointer_cast<T>(found->second.data);
 	}
 
-	// load all IDs of specified type T
+	// get all IDs of specified type T (unsorted)
 	template<typename T> std::vector<std::shared_ptr<T>> get_all()
 	{
 		extern std::mutex g_id_mutex;
@@ -233,14 +167,6 @@ namespace idm
 		g_id_map.erase(found);
 
 		return true;
-	}
-
-	// remove fixed ID created with type T
-	template<typename T> bool remove_fixed()
-	{
-		static const u32 id = get_type_fixed_id(typeid(T));
-
-		return remove<T>(id);
 	}
 
 	template<typename T> u32 get_count()
@@ -310,4 +236,83 @@ namespace idm
 
 		return result;
 	}
-};
+}
+
+// Fixed Object Manager
+// allows to manage shared objects of any specified type, but only one object per type;
+// object are deleted when the emulation is stopped
+namespace fxm
+{
+	// reinitialize
+	void clear();
+
+	// add fixed object of specified type only if it doesn't exist (one unique object per type may exist)
+	template<typename T, typename... Args> std::enable_if_t<std::is_constructible<T, Args...>::value, std::shared_ptr<T>> make(Args&&... args)
+	{
+		extern std::mutex g_fx_mutex;
+		extern std::unordered_map<std::type_index, std::shared_ptr<void>> g_fx_map;
+
+		std::lock_guard<std::mutex> lock(g_fx_mutex);
+
+		const auto found = g_fx_map.find(typeid(T));
+
+		// only if object of this type doesn't exist
+		if (found == g_fx_map.end())
+		{
+			auto ptr = std::make_shared<T>(std::forward<Args>(args)...);
+
+			g_fx_map.emplace(typeid(T), ptr);
+
+			return std::move(ptr);
+		}
+
+		return nullptr;
+	}
+
+	// check whether the object exists
+	template<typename T> bool check()
+	{
+		extern std::mutex g_fx_mutex;
+		extern std::unordered_map<std::type_index, std::shared_ptr<void>> g_fx_map;
+
+		std::lock_guard<std::mutex> lock(g_fx_mutex);
+
+		return g_fx_map.find(typeid(T)) != g_fx_map.end();
+	}
+
+	// get fixed object of specified type
+	template<typename T> std::shared_ptr<T> get()
+	{
+		extern std::mutex g_fx_mutex;
+		extern std::unordered_map<std::type_index, std::shared_ptr<void>> g_fx_map;
+
+		std::lock_guard<std::mutex> lock(g_fx_mutex);
+
+		const auto found = g_fx_map.find(typeid(T));
+
+		if (found == g_fx_map.end())
+		{
+			return nullptr;
+		}
+
+		return std::static_pointer_cast<T>(found->second);
+	}
+
+	// remove fixed object created with type T
+	template<typename T> bool remove()
+	{
+		extern std::mutex g_fx_mutex;
+		extern std::unordered_map<std::type_index, std::shared_ptr<void>> g_fx_map;
+
+		std::lock_guard<std::mutex> lock(g_fx_mutex);
+
+		const auto found = g_fx_map.find(typeid(T));
+
+		if (found == g_fx_map.end())
+		{
+			return false;
+		}
+
+		return g_fx_map.erase(found), true;
+	}
+}

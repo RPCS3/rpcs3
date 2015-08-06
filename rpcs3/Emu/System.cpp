@@ -374,8 +374,9 @@ void Emulator::Stop()
 	LOG_NOTICE(GENERAL, "All threads stopped...");
 
 	idm::clear();
+	fxm::clear();
 
-	LOG_NOTICE(GENERAL, "ID manager cleared...");
+	LOG_NOTICE(GENERAL, "Objects cleared...");
 
 	finalize_psv_modules();
 	clear_all_psv_objects();

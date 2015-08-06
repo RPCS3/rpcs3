@@ -87,7 +87,7 @@ s32 cellCameraInit()
 		return CELL_CAMERA_ERROR_DEVICE_NOT_FOUND;
 	}
 
-	const auto camera = idm::make_fixed<camera_t>();
+	const auto camera = fxm::make<camera_t>();
 
 	if (!camera)
 	{
@@ -138,7 +138,7 @@ s32 cellCameraEnd()
 {
 	cellCamera.Warning("cellCameraEnd()");
 
-	if (!idm::remove_fixed<camera_t>())
+	if (!fxm::remove<camera_t>())
 	{
 		return CELL_CAMERA_ERROR_NOT_INIT;
 	}
@@ -174,7 +174,7 @@ s32 cellCameraGetType(s32 dev_num, vm::ptr<s32> type)
 {
 	cellCamera.Warning("cellCameraGetType(dev_num=%d, type=*0x%x)", dev_num, type);
 
-	const auto camera = idm::get_fixed<camera_t>();
+	const auto camera = fxm::get<camera_t>();
 
 	if (!camera)
 	{
@@ -228,7 +228,7 @@ s32 cellCameraGetAttribute(s32 dev_num, s32 attrib, vm::ptr<u32> arg1, vm::ptr<u
 
 	const auto attr_name = get_camera_attr_name(attrib);
 
-	const auto camera = idm::get_fixed<camera_t>();
+	const auto camera = fxm::get<camera_t>();
 
 	if (!camera)
 	{
@@ -252,7 +252,7 @@ s32 cellCameraSetAttribute(s32 dev_num, s32 attrib, u32 arg1, u32 arg2)
 
 	const auto attr_name = get_camera_attr_name(attrib);
 
-	const auto camera = idm::get_fixed<camera_t>();
+	const auto camera = fxm::get<camera_t>();
 
 	if (!camera)
 	{
