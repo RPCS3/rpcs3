@@ -1,1 +1,1 @@
-every Folder in this directory gets cleared when  cellSysCacheClear() is called, so don't store important data here
+This directory is used for cache functionality, so don't store any data here.
