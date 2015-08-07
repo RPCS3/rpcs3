@@ -108,6 +108,27 @@ namespace idm
 		throw EXCEPTION("Out of IDs");
 	}
 
+	// add new ID for an existing object provided (don't use for initial object creation)
+	template<typename T> u32 import(const std::shared_ptr<T>& ptr)
+	{
+		extern std::mutex g_id_mutex;
+		extern std::unordered_map<u32, ID_data_t> g_id_map;
+		extern u32 g_cur_id;
+
+		std::lock_guard<std::mutex> lock(g_id_mutex);
+
+		if (const u32 id = g_cur_id & 0x7fffffff)
+		{
+			g_id_map.emplace(id, ID_data_t(ptr));
+
+			g_cur_id = id + 1;
+
+			return id;
+		}
+
+		throw EXCEPTION("Out of IDs");
+	}
+
 	// get ID of specified type
 	template<typename T> std::shared_ptr<T> get(u32 id)
 	{
@@ -167,6 +188,28 @@ namespace idm
 		g_id_map.erase(found);
 
 		return true;
+	}
+
+	// remove ID created with type T and return the object
+	template<typename T> std::shared_ptr<T> withdraw(u32 id)
+	{
+		extern std::mutex g_id_mutex;
+		extern std::unordered_map<u32, ID_data_t> g_id_map;
+
+		std::lock_guard<std::mutex> lock(g_id_mutex);
+
+		const auto found = g_id_map.find(id);
+
+		if (found == g_id_map.end() || found->second.info != typeid(T))
+		{
+			return nullptr;
+		}
+
+		auto ptr = std::static_pointer_cast<T>(found->second.data);
+
+		g_id_map.erase(found);
+
+		return ptr;
 	}
 
 	template<typename T> u32 get_count()
