@@ -9,7 +9,7 @@ s32 sceNpBasicInit(vm::ptr<void> opt)
 	throw EXCEPTION("");
 }
 
-s32 sceNpBasicTerm(ARMv7Context&)
+s32 sceNpBasicTerm(ARMv7Thread&)
 {
 	throw EXCEPTION("");
 }
@@ -19,7 +19,7 @@ s32 sceNpBasicRegisterHandler(vm::cptr<SceNpBasicEventHandlers> handlers, vm::cp
 	throw EXCEPTION("");
 }
 
-s32 sceNpBasicUnregisterHandler(ARMv7Context&)
+s32 sceNpBasicUnregisterHandler(ARMv7Thread&)
 {
 	throw EXCEPTION("");
 }

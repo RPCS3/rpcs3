@@ -9,7 +9,7 @@
 
 vm::ptr<void> g_dso;
 
-std::vector<std::function<void(ARMv7Context&)>> g_atexit;
+std::vector<std::function<void(ARMv7Thread&)>> g_atexit;
 
 std::mutex g_atexit_mutex;
 
@@ -155,7 +155,7 @@ namespace sce_libc_func
 		
 		std::lock_guard<std::mutex> lock(g_atexit_mutex);
 
-		g_atexit.insert(g_atexit.begin(), [func, arg, dso](ARMv7Context& context)
+		g_atexit.insert(g_atexit.begin(), [func, arg, dso](ARMv7Thread& context)
 		{
 			func(context, arg);
 		});
@@ -167,13 +167,13 @@ namespace sce_libc_func
 
 		std::lock_guard<std::mutex> lock(g_atexit_mutex);
 
-		g_atexit.insert(g_atexit.begin(), [func, arg, dso](ARMv7Context& context)
+		g_atexit.insert(g_atexit.begin(), [func, arg, dso](ARMv7Thread& context)
 		{
 			func(context, arg);
 		});
 	}
 
-	void exit(ARMv7Context& context)
+	void exit(ARMv7Thread& context)
 	{
 		sceLibc.Warning("exit()");
 
@@ -201,7 +201,7 @@ namespace sce_libc_func
 		}
 	}
 
-	void printf(ARMv7Context& context, vm::cptr<char> fmt, armv7_va_args_t va_args)
+	void printf(ARMv7Thread& context, vm::cptr<char> fmt, armv7_va_args_t va_args)
 	{
 		sceLibc.Warning("printf(fmt=*0x%x)", fmt);
 		sceLibc.Log("*** *fmt = '%s'", fmt.get_ptr());
@@ -212,7 +212,7 @@ namespace sce_libc_func
 		LOG_NOTICE(TTY, result);
 	}
 
-	void sprintf(ARMv7Context& context, vm::ptr<char> str, vm::cptr<char> fmt, armv7_va_args_t va_args)
+	void sprintf(ARMv7Thread& context, vm::ptr<char> str, vm::cptr<char> fmt, armv7_va_args_t va_args)
 	{
 		sceLibc.Warning("sprintf(str=*0x%x, fmt=*0x%x)", str, fmt);
 		sceLibc.Log("*** *fmt = '%s'", fmt.get_ptr());

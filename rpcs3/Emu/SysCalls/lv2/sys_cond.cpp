@@ -5,6 +5,7 @@
 #include "Emu/SysCalls/SysCalls.h"
 
 #include "Emu/Cell/PPUThread.h"
+#include "sys_sync.h"
 #include "sys_mutex.h"
 #include "sys_cond.h"
 

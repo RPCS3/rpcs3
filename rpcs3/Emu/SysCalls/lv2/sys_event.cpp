@@ -7,6 +7,7 @@
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/Event.h"
+#include "sys_sync.h"
 #include "sys_process.h"
 #include "sys_event.h"
 

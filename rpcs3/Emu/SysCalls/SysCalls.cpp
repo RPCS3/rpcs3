@@ -6,7 +6,6 @@
 #include "Emu/System.h"
 #include "Modules.h"
 
-#include "lv2/sleep_queue.h"
 #include "lv2/sys_lwmutex.h"
 #include "lv2/sys_lwcond.h"
 #include "lv2/sys_mutex.h"

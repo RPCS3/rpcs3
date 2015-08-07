@@ -9,7 +9,7 @@ s32 sceNpLookupInit(s32 usesAsync, s32 threadPriority, s32 cpuAffinityMask, vm::
 	throw EXCEPTION("");
 }
 
-s32 sceNpLookupTerm(ARMv7Context&)
+s32 sceNpLookupTerm(ARMv7Thread&)
 {
 	throw EXCEPTION("");
 }

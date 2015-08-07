@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Utilities/SleepQueue.h"
+
 // Error Codes
 
 enum
@@ -419,6 +421,14 @@ struct SceKernelResultEvent
 
 // Thread Manager definitions (event flags)
 
+enum : u32
+{
+	SCE_KERNEL_EVF_WAITMODE_AND       = 0x00000000,
+	SCE_KERNEL_EVF_WAITMODE_OR        = 0x00000001,
+	SCE_KERNEL_EVF_WAITMODE_CLEAR_ALL = 0x00000002,
+	SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT = 0x00000004,
+};
+
 struct SceKernelEventFlagOptParam
 {
 	le_t<u32> size;
@@ -434,6 +444,77 @@ struct SceKernelEventFlagInfo
 	le_t<u32> currentPattern;
 	le_t<s32> numWaitThreads;
 };
+
+struct psv_event_flag_t
+{
+	const std::string name; // IPC Name
+
+	atomic_t<u32> ref{ 0x80000000 }; // IPC Ref Counter
+
+	const u32 attr; // Event Flag Attributes
+	const u32 init; // Event Flag Init Pattern
+
+	atomic_t<u32> pattern; // Event Flag Pattern
+
+	std::mutex mutex;
+
+	sleep_queue_t sq;
+
+	psv_event_flag_t(const char* name, u32 attr, u32 pattern)
+		: name(name)
+		, attr(attr)
+		, init(pattern)
+	{
+		this->pattern.store(pattern);
+	}
+
+	// Wakeup all waiters to return SCE_KERNEL_ERROR_WAIT_DELETE
+	void destroy()
+	{
+		std::lock_guard<std::mutex> lock(mutex);
+
+		const u32 pattern = this->pattern.load();
+
+		for (auto& thread : sq)
+		{
+			static_cast<ARMv7Thread&>(*thread).GPR[0] = SCE_KERNEL_ERROR_WAIT_DELETE;
+			static_cast<ARMv7Thread&>(*thread).GPR[1] = pattern;
+			thread->signal();
+		}
+	}
+};
+
+inline bool event_flag_test(u32 value, u32 pattern, u32 mode)
+{
+	if (mode & SCE_KERNEL_EVF_WAITMODE_OR)
+	{
+		return (value & pattern) != 0;
+	}
+	else
+	{
+		return (value & pattern) == pattern;
+	}
+}
+
+inline void event_flag_try_poll(u32& value, u32 pattern, u32 mode)
+{
+	if (mode & ~7 || (mode & 6) == 6)
+	{
+		throw EXCEPTION("Unknown mode (0x%x)", mode);
+	}
+
+	if (event_flag_test(value, pattern, mode))
+	{
+		if (mode & SCE_KERNEL_EVF_WAITMODE_CLEAR_ALL)
+		{
+			value = 0;
+		}
+		else if (mode & SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT)
+		{
+			value &= ~pattern;
+		}
+	}
+}
 
 // Thread Manager definitions (semaphores)
 
@@ -454,6 +535,26 @@ struct SceKernelSemaInfo
 	le_t<s32> numWaitThreads;
 };
 
+struct psv_semaphore_t
+{
+	const std::string name; // IPC Name
+
+	atomic_t<u32> ref{ 0x80000000 }; // IPC Ref Counter
+
+	const u32 attr;
+	const s32 max;
+
+	atomic_t<s32> count;
+
+	psv_semaphore_t(const char* name, u32 attr, s32 count, s32 max)
+		: name(name)
+		, attr(attr)
+		, max(max)
+	{
+		this->count.store(count);
+	}
+};
+
 // Thread Manager definitions (mutexes)
 
 struct SceKernelMutexOptParam
@@ -472,6 +573,24 @@ struct SceKernelMutexInfo
 	le_t<s32> currentCount;
 	le_t<s32> currentOwnerId;
 	le_t<s32> numWaitThreads;
+};
+
+struct psv_mutex_t
+{
+	const std::string name; // IPC Name
+
+	atomic_t<u32> ref{ 0x80000000 }; // IPC Ref Counter
+
+	const u32 attr;
+
+	atomic_t<s32> count;
+
+	psv_mutex_t(const char* name, u32 attr, s32 count)
+		: name(name)
+		, attr(attr)
+	{
+		this->count.store(count);
+	}
 };
 
 // Thread Manager definitions (lightweight mutexes)
@@ -514,6 +633,24 @@ struct SceKernelCondInfo
 	le_t<u32> attr;
 	le_t<s32> mutexId;
 	le_t<u32> numWaitThreads;
+};
+
+struct psv_cond_t
+{
+	const std::string name; // IPC Name
+
+	atomic_t<u32> ref{ 0x80000000 }; // IPC Ref Counter
+
+	const u32 attr;
+
+	const std::shared_ptr<psv_mutex_t> mutex;
+
+	psv_cond_t(const char* name, u32 attr, const std::shared_ptr<psv_mutex_t>& mutex)
+		: name(name)
+		, attr(attr)
+		, mutex(mutex)
+	{
+	}
 };
 
 // Thread Manager definitions (lightweight condition variables)
@@ -604,5 +741,47 @@ struct SceIoDirent
 };
 
 // Module
-
 extern psv_log_base sceLibKernel;
+
+// Aux
+
+inline bool ipc_ref_try_dec(u32& ref)
+{
+	if (ref & 0x7fffffff)
+	{
+		// return true if the last reference is removed and object must be deleted
+		return !--ref;
+	}
+	else
+	{
+		throw EXCEPTION("Unexpected IPC Ref value (0x%x)", ref);
+	}
+}
+
+inline bool ipc_ref_try_inc(u32& ref)
+{
+	if (ref & 0x80000000)
+	{
+		if (!++ref)
+		{
+			throw EXCEPTION("IPC Ref overflow");
+		}
+
+		return true;
+	}
+
+	return false;
+}
+
+inline bool ipc_ref_try_unregister(u32& ref)
+{
+	if (ref & 0x80000000)
+	{
+		ref &= ~0x80000000;
+
+		// return true if object must be deleted
+		return !ref;
+	}
+
+	throw EXCEPTION("Unexpected IPC Ref value (0x%x)", ref);
+}

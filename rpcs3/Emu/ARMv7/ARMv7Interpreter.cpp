@@ -541,7 +541,7 @@ void ARMv7_instrs::HACK(ARMv7Context& context, const ARMv7Code code, const ARMv7
 
 	if (ConditionPassed(context, cond))
 	{
-		execute_psv_func_by_index(context, index);
+		execute_psv_func_by_index(static_cast<ARMv7Thread&>(context), index);
 	}
 }
 

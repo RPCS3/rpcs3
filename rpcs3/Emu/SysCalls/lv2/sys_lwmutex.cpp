@@ -5,6 +5,7 @@
 #include "Emu/SysCalls/SysCalls.h"
 
 #include "Emu/Cell/PPUThread.h"
+#include "sys_sync.h"
 #include "sys_lwmutex.h"
 
 SysCallBase sys_lwmutex("sys_lwmutex");

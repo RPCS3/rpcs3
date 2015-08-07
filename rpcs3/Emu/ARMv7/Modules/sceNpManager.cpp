@@ -9,7 +9,7 @@ s32 sceNpInit(vm::cptr<SceNpCommunicationConfig> commConf, vm::ptr<SceNpOptParam
 	throw EXCEPTION("");
 }
 
-s32 sceNpTerm(ARMv7Context&)
+s32 sceNpTerm(ARMv7Thread&)
 {
 	throw EXCEPTION("");
 }

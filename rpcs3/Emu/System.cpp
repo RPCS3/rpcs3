@@ -40,7 +40,6 @@ extern std::atomic<u32> g_thread_count;
 extern u64 get_system_time();
 extern void finalize_ppu_exec_map();
 extern void finalize_psv_modules();
-extern void clear_all_psv_objects();
 
 Emulator::Emulator()
 	: m_status(Stopped)
@@ -379,7 +378,6 @@ void Emulator::Stop()
 	LOG_NOTICE(GENERAL, "Objects cleared...");
 
 	finalize_psv_modules();
-	clear_all_psv_objects();
 
 	for (auto& v : decltype(g_armv7_dump)(std::move(g_armv7_dump)))
 	{

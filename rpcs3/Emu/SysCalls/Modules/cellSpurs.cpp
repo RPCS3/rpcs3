@@ -6,7 +6,7 @@
 #include "Emu/Event.h"
 
 #include "Emu/Cell/SPUThread.h"
-#include "Emu/SysCalls/lv2/sleep_queue.h"
+#include "Emu/SysCalls/lv2/sys_sync.h"
 #include "Emu/SysCalls/lv2/sys_lwmutex.h"
 #include "Emu/SysCalls/lv2/sys_lwcond.h"
 #include "Emu/SysCalls/lv2/sys_spu.h"

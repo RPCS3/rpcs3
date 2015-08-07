@@ -6,7 +6,7 @@
 
 extern u64 get_system_time();
 
-s32 scePerfArmPmonReset(ARMv7Context& context, s32 threadId)
+s32 scePerfArmPmonReset(ARMv7Thread& context, s32 threadId)
 {
 	scePerf.Warning("scePerfArmPmonReset(threadId=0x%x)", threadId);
 
@@ -20,7 +20,7 @@ s32 scePerfArmPmonReset(ARMv7Context& context, s32 threadId)
 	return SCE_OK;
 }
 
-s32 scePerfArmPmonSelectEvent(ARMv7Context& context, s32 threadId, u32 counter, u8 eventCode)
+s32 scePerfArmPmonSelectEvent(ARMv7Thread& context, s32 threadId, u32 counter, u8 eventCode)
 {
 	scePerf.Warning("scePerfArmPmonSelectEvent(threadId=0x%x, counter=0x%x, eventCode=0x%x)", threadId, counter, eventCode);
 
@@ -72,7 +72,7 @@ s32 scePerfArmPmonSelectEvent(ARMv7Context& context, s32 threadId, u32 counter, 
 	return SCE_OK;
 }
 
-s32 scePerfArmPmonStart(ARMv7Context& context, s32 threadId)
+s32 scePerfArmPmonStart(ARMv7Thread& context, s32 threadId)
 {
 	scePerf.Warning("scePerfArmPmonStart(threadId=0x%x)", threadId);
 
@@ -84,7 +84,7 @@ s32 scePerfArmPmonStart(ARMv7Context& context, s32 threadId)
 	return SCE_OK;
 }
 
-s32 scePerfArmPmonStop(ARMv7Context& context, s32 threadId)
+s32 scePerfArmPmonStop(ARMv7Thread& context, s32 threadId)
 {
 	scePerf.Warning("scePerfArmPmonStop(threadId=0x%x)");
 
@@ -96,7 +96,7 @@ s32 scePerfArmPmonStop(ARMv7Context& context, s32 threadId)
 	return SCE_OK;
 }
 
-s32 scePerfArmPmonGetCounterValue(ARMv7Context& context, s32 threadId, u32 counter, vm::ptr<u32> pValue)
+s32 scePerfArmPmonGetCounterValue(ARMv7Thread& context, s32 threadId, u32 counter, vm::ptr<u32> pValue)
 {
 	scePerf.Warning("scePerfArmPmonGetCounterValue(threadId=0x%x, counter=%d, pValue=*0x%x)", threadId, counter, pValue);
 
@@ -122,7 +122,7 @@ s32 scePerfArmPmonGetCounterValue(ARMv7Context& context, s32 threadId, u32 count
 	return SCE_OK;
 }
 
-s32 scePerfArmPmonSoftwareIncrement(ARMv7Context& context, u32 mask)
+s32 scePerfArmPmonSoftwareIncrement(ARMv7Thread& context, u32 mask)
 {
 	scePerf.Warning("scePerfArmPmonSoftwareIncrement(mask=0x%x)", mask);
 

@@ -122,5 +122,3 @@ public:
 		m_hint = 0;
 	}
 };
-
-void clear_all_psv_objects();

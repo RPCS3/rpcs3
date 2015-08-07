@@ -8,10 +8,8 @@
 #include "Emu/ARMv7/ARMv7Thread.h"
 
 #include "sceLibKernel.h"
-#include "psv_sema.h"
-#include "psv_event_flag.h"
-#include "psv_mutex.h"
-#include "psv_cond.h"
+
+extern u64 get_system_time();
 
 s32 sceKernelAllocMemBlock(vm::cptr<char> name, s32 type, u32 vsize, vm::ptr<SceKernelAllocMemBlockOpt> pOpt)
 {
@@ -85,12 +83,12 @@ s32 sceKernelStartThread(s32 threadId, u32 argSize, vm::cptr<void> pArgBlock)
 	return SCE_OK;
 }
 
-s32 sceKernelExitThread(ARMv7Context& context, s32 exitStatus)
+s32 sceKernelExitThread(ARMv7Thread& context, s32 exitStatus)
 {
 	sceLibKernel.Warning("sceKernelExitThread(exitStatus=0x%x)", exitStatus);
 
 	// exit status is stored in r0
-	static_cast<ARMv7Thread&>(context).exit();
+	context.exit();
 
 	return SCE_OK;
 }
@@ -117,15 +115,15 @@ s32 sceKernelDeleteThread(s32 threadId)
 	return SCE_OK;
 }
 
-s32 sceKernelExitDeleteThread(ARMv7Context& context, s32 exitStatus)
+s32 sceKernelExitDeleteThread(ARMv7Thread& context, s32 exitStatus)
 {
 	sceLibKernel.Warning("sceKernelExitDeleteThread(exitStatus=0x%x)", exitStatus);
 
 	// exit status is stored in r0
-	static_cast<ARMv7Thread&>(context).stop();
+	context.stop();
 
 	// current thread should be deleted
-	const u32 id = static_cast<ARMv7Thread&>(context).get_id();
+	const u32 id = context.get_id();
 
 	CallAfter([id]()
 	{
@@ -163,11 +161,11 @@ s32 sceKernelGetThreadCurrentPriority()
 	throw EXCEPTION("");
 }
 
-u32 sceKernelGetThreadId(ARMv7Context& context)
+u32 sceKernelGetThreadId(ARMv7Thread& context)
 {
 	sceLibKernel.Log("sceKernelGetThreadId()");
 
-	return static_cast<ARMv7Thread&>(context).get_id();
+	return context.get_id();
 }
 
 s32 sceKernelChangeCurrentThreadAttr(u32 clearAttr, u32 setAttr)
@@ -386,62 +384,275 @@ s32 sceKernelCreateEventFlag(vm::cptr<char> pName, u32 attr, u32 initPattern, vm
 {
 	sceLibKernel.Error("sceKernelCreateEventFlag(pName=*0x%x, attr=0x%x, initPattern=0x%x, pOptParam=*0x%x)", pName, attr, initPattern, pOptParam);
 
-	if (s32 id = g_psv_ef_list.create(pName.get_ptr(), attr, initPattern))
-	{
-		return id;
-	}
-
-	return SCE_KERNEL_ERROR_ERROR;
+	return idm::make<psv_event_flag_t>(pName.get_ptr(), attr, initPattern);
 }
 
 s32 sceKernelDeleteEventFlag(s32 evfId)
 {
-	throw EXCEPTION("");
+	sceLibKernel.Error("sceKernelDeleteEventFlag(evfId=0x%x)", evfId);
+
+	const auto evf = idm::withdraw<psv_event_flag_t>(evfId);
+
+	if (!evf)
+	{
+		return SCE_KERNEL_ERROR_INVALID_UID;
+	}
+
+	// Unregister IPC name
+	if (evf->ref.atomic_op(ipc_ref_try_unregister))
+	{
+		evf->destroy();
+	}
+
+	return SCE_OK;
 }
 
 s32 sceKernelOpenEventFlag(vm::cptr<char> pName)
 {
-	throw EXCEPTION("");
+	sceLibKernel.Error("sceKernelOpenEventFlag(pName=*0x%x)", pName);
+
+	// For now, go through all objects to find the name
+	for (const auto& data : idm::get_map<psv_event_flag_t>())
+	{
+		const auto& evf = data.second;
+
+		if (evf->name == pName.get_ptr() && evf->ref.atomic_op(ipc_ref_try_inc))
+		{
+			return idm::import(evf);
+		}
+	}
+
+	return SCE_KERNEL_ERROR_UID_CANNOT_FIND_BY_NAME;
 }
 
 s32 sceKernelCloseEventFlag(s32 evfId)
 {
-	throw EXCEPTION("");
+	sceLibKernel.Error("sceKernelCloseEventFlag(evfId=0x%x)", evfId);
+
+	const auto evf = idm::withdraw<psv_event_flag_t>(evfId);
+
+	if (!evf)
+	{
+		return SCE_KERNEL_ERROR_INVALID_UID;
+	}
+
+	// Decrement IPC ref
+	if (evf->ref.atomic_op(ipc_ref_try_dec))
+	{
+		evf->destroy();
+	}
+
+	return SCE_OK;
 }
 
-s32 sceKernelWaitEventFlag(s32 evfId, u32 bitPattern, u32 waitMode, vm::ptr<u32> pResultPat, vm::ptr<u32> pTimeout)
+s32 sceKernelWaitEventFlag(ARMv7Thread& context, s32 evfId, u32 bitPattern, u32 waitMode, vm::ptr<u32> pResultPat, vm::ptr<u32> pTimeout)
 {
-	throw EXCEPTION("");
+	sceLibKernel.Error("sceKernelWaitEventFlag(evfId=0x%x, bitPattern=0x%x, waitMode=0x%x, pResultPat=*0x%x, pTimeout=*0x%x)", evfId, bitPattern, waitMode, pResultPat, pTimeout);
+
+	const u64 start_time = pTimeout ? get_system_time() : 0;
+	const u32 timeout = pTimeout ? pTimeout->value() : 0;
+
+	const auto evf = idm::get<psv_event_flag_t>(evfId);
+
+	if (!evf)
+	{
+		return SCE_KERNEL_ERROR_INVALID_UID;
+	}
+
+	std::unique_lock<std::mutex> lock(evf->mutex);
+
+	const u32 result = evf->pattern.atomic_op(event_flag_try_poll, bitPattern, waitMode);
+
+	if (event_flag_test(result, bitPattern, waitMode))
+	{
+		if (pResultPat) *pResultPat = result;
+
+		return SCE_OK;
+	}
+
+	// fixup register values for external use
+	context.GPR[1] = bitPattern;
+	context.GPR[2] = waitMode;
+
+	// add waiter; attributes are ignored in current implementation
+	sleep_queue_entry_t waiter(context, evf->sq);
+
+	while (!context.unsignal())
+	{
+		CHECK_EMU_STATUS;
+
+		if (pTimeout)
+		{
+			const u64 passed = get_system_time() - start_time;
+
+			if (passed >= timeout)
+			{
+				context.GPR[0] = SCE_KERNEL_ERROR_WAIT_TIMEOUT;
+				context.GPR[1] = evf->pattern.load();
+				break;
+			}
+
+			context.cv.wait_for(lock, std::chrono::microseconds(timeout - passed));
+		}
+		else
+		{
+			context.cv.wait(lock);
+		}
+	}
+
+	if (pResultPat) *pResultPat = context.GPR[1];
+	if (pTimeout) *pTimeout = static_cast<u32>(std::max<s64>(0, timeout - (get_system_time() - start_time)));
+
+	return context.GPR[0];
 }
 
-s32 sceKernelWaitEventFlagCB(s32 evfId, u32 bitPattern, u32 waitMode, vm::ptr<u32> pResultPat, vm::ptr<u32> pTimeout)
+s32 sceKernelWaitEventFlagCB(ARMv7Thread& context, s32 evfId, u32 bitPattern, u32 waitMode, vm::ptr<u32> pResultPat, vm::ptr<u32> pTimeout)
 {
-	throw EXCEPTION("");
+	sceLibKernel.Todo("sceKernelWaitEventFlagCB(evfId=0x%x, bitPattern=0x%x, waitMode=0x%x, pResultPat=*0x%x, pTimeout=*0x%x)", evfId, bitPattern, waitMode, pResultPat, pTimeout);
+
+	return sceKernelWaitEventFlag(context, evfId, bitPattern, waitMode, pResultPat, pTimeout);
 }
 
 s32 sceKernelPollEventFlag(s32 evfId, u32 bitPattern, u32 waitMode, vm::ptr<u32> pResultPat)
 {
-	throw EXCEPTION("");
+	sceLibKernel.Error("sceKernelPollEventFlag(evfId=0x%x, bitPattern=0x%x, waitMode=0x%x, pResultPat=*0x%x)", evfId, bitPattern, waitMode, pResultPat);
+
+	const auto evf = idm::get<psv_event_flag_t>(evfId);
+
+	if (!evf)
+	{
+		return SCE_KERNEL_ERROR_INVALID_UID;
+	}
+
+	std::lock_guard<std::mutex> lock(evf->mutex);
+
+	const u32 result = evf->pattern.atomic_op(event_flag_try_poll, bitPattern, waitMode);
+
+	if (!event_flag_test(result, bitPattern, waitMode))
+	{
+		return SCE_KERNEL_ERROR_EVENT_COND;
+	}
+
+	*pResultPat = result;
+
+	return SCE_OK;
 }
 
 s32 sceKernelSetEventFlag(s32 evfId, u32 bitPattern)
 {
-	throw EXCEPTION("");
+	sceLibKernel.Error("sceKernelSetEventFlag(evfId=0x%x, bitPattern=0x%x)", evfId, bitPattern);
+
+	const auto evf = idm::get<psv_event_flag_t>(evfId);
+
+	if (!evf)
+	{
+		return SCE_KERNEL_ERROR_INVALID_UID;
+	}
+
+	std::lock_guard<std::mutex> lock(evf->mutex);
+
+	evf->pattern |= bitPattern;
+
+	auto pred = [&](sleep_queue_t::value_type& thread) -> bool
+	{
+		auto& context = static_cast<ARMv7Thread&>(*thread);
+
+		// load pattern and mode from registers
+		const u32 pattern = context.GPR[1];
+		const u32 mode = context.GPR[2];
+
+		// check specific pattern
+		const u32 result = evf->pattern.atomic_op(event_flag_try_poll, pattern, mode);
+
+		if (event_flag_test(result, pattern, mode))
+		{
+			// save pattern
+			context.GPR[0] = SCE_OK;
+			context.GPR[1] = result;
+
+			context.signal();
+			return true;
+		}
+
+		return false;
+	};
+
+	// check all waiters; protocol is ignored in current implementation
+	evf->sq.erase(std::remove_if(evf->sq.begin(), evf->sq.end(), pred), evf->sq.end());
+
+	return SCE_OK;
 }
 
 s32 sceKernelClearEventFlag(s32 evfId, u32 bitPattern)
 {
-	throw EXCEPTION("");
+	sceLibKernel.Error("sceKernelClearEventFlag(evfId=0x%x, bitPattern=0x%x)", evfId, bitPattern);
+
+	const auto evf = idm::get<psv_event_flag_t>(evfId);
+
+	if (!evf)
+	{
+		return SCE_KERNEL_ERROR_INVALID_UID;
+	}
+
+	std::lock_guard<std::mutex> lock(evf->mutex);
+
+	evf->pattern &= ~bitPattern;
+
+	return SCE_OK;
 }
 
 s32 sceKernelCancelEventFlag(s32 evfId, u32 setPattern, vm::ptr<s32> pNumWaitThreads)
 {
-	throw EXCEPTION("");
+	sceLibKernel.Error("sceKernelCancelEventFlag(evfId=0x%x, setPattern=0x%x, pNumWaitThreads=*0x%x)", evfId, setPattern, pNumWaitThreads);
+
+	const auto evf = idm::get<psv_event_flag_t>(evfId);
+
+	if (!evf)
+	{
+		return SCE_KERNEL_ERROR_INVALID_UID;
+	}
+
+	std::lock_guard<std::mutex> lock(evf->mutex);
+
+	for (auto& thread : evf->sq)
+	{
+		static_cast<ARMv7Thread&>(*thread).GPR[0] = SCE_KERNEL_ERROR_WAIT_CANCEL;
+		static_cast<ARMv7Thread&>(*thread).GPR[1] = setPattern;
+		thread->signal();
+	}
+
+	*pNumWaitThreads = static_cast<u32>(evf->sq.size());
+
+	evf->pattern.store(setPattern);
+	evf->sq.clear();
+
+	return SCE_OK;
 }
 
 s32 sceKernelGetEventFlagInfo(s32 evfId, vm::ptr<SceKernelEventFlagInfo> pInfo)
 {
-	throw EXCEPTION("");
+	sceLibKernel.Error("sceKernelGetEventFlagInfo(evfId=0x%x, pInfo=*0x%x)", evfId, pInfo);
+
+	const auto evf = idm::get<psv_event_flag_t>(evfId);
+
+	if (!evf)
+	{
+		return SCE_KERNEL_ERROR_INVALID_UID;
+	}
+
+	std::lock_guard<std::mutex> lock(evf->mutex);
+
+	pInfo->size = sizeof32(SceKernelEventFlagInfo);
+	pInfo->evfId = evfId;
+	
+	strcpy_trunc(pInfo->name, evf->name);
+
+	pInfo->attr = evf->attr;
+	pInfo->initPattern = evf->init;
+	pInfo->currentPattern = evf->pattern.load();
+	pInfo->numWaitThreads = static_cast<u32>(evf->sq.size());
+
+	return SCE_OK;
 }
 
 // Semaphore functions
@@ -450,29 +661,21 @@ s32 sceKernelCreateSema(vm::cptr<char> pName, u32 attr, s32 initCount, s32 maxCo
 {
 	sceLibKernel.Error("sceKernelCreateSema(pName=*0x%x, attr=0x%x, initCount=%d, maxCount=%d, pOptParam=*0x%x)", pName, attr, initCount, maxCount, pOptParam);
 
-	if (s32 id = g_psv_sema_list.create(pName.get_ptr(), attr, initCount, maxCount))
-	{
-		return id;
-	}
-
-	return SCE_KERNEL_ERROR_ERROR;
+	return idm::make<psv_semaphore_t>(pName.get_ptr(), attr, initCount, maxCount);
 }
 
 s32 sceKernelDeleteSema(s32 semaId)
 {
 	sceLibKernel.Error("sceKernelDeleteSema(semaId=0x%x)", semaId);
 
-	const auto sema = g_psv_sema_list.get(semaId);
+	const auto sema = idm::withdraw<psv_semaphore_t>(semaId);
 
 	if (!sema)
 	{
 		return SCE_KERNEL_ERROR_INVALID_UID;
 	}
 
-	if (!g_psv_sema_list.remove(semaId))
-	{
-		return SCE_KERNEL_ERROR_INVALID_UID;
-	}
+	// ...
 
 	return SCE_OK;
 }
@@ -491,7 +694,7 @@ s32 sceKernelWaitSema(s32 semaId, s32 needCount, vm::ptr<u32> pTimeout)
 {
 	sceLibKernel.Error("sceKernelWaitSema(semaId=0x%x, needCount=%d, pTimeout=*0x%x)", semaId, needCount, pTimeout);
 
-	const auto sema = g_psv_sema_list.get(semaId);
+	const auto sema = idm::get<psv_semaphore_t>(semaId);
 
 	if (!sema)
 	{
@@ -534,17 +737,23 @@ s32 sceKernelCreateMutex(vm::cptr<char> pName, u32 attr, s32 initCount, vm::cptr
 {
 	sceLibKernel.Error("sceKernelCreateMutex(pName=*0x%x, attr=0x%x, initCount=%d, pOptParam=*0x%x)", pName, attr, initCount, pOptParam);
 
-	if (s32 id = g_psv_mutex_list.create(pName.get_ptr(), attr, initCount))
-	{
-		return id;
-	}
-
-	return SCE_KERNEL_ERROR_ERROR;
+	return idm::make<psv_mutex_t>(pName.get_ptr(), attr, initCount);
 }
 
 s32 sceKernelDeleteMutex(s32 mutexId)
 {
-	throw EXCEPTION("");
+	sceLibKernel.Error("sceKernelDeleteMutex(mutexId=0x%x)", mutexId);
+
+	const auto mutex = idm::withdraw<psv_mutex_t>(mutexId);
+
+	if (!mutex)
+	{
+		return SCE_KERNEL_ERROR_INVALID_UID;
+	}
+
+	// ...
+
+	return SCE_OK;
 }
 
 s32 sceKernelOpenMutex(vm::cptr<char> pName)
@@ -635,17 +844,30 @@ s32 sceKernelCreateCond(vm::cptr<char> pName, u32 attr, s32 mutexId, vm::cptr<Sc
 {
 	sceLibKernel.Error("sceKernelCreateCond(pName=*0x%x, attr=0x%x, mutexId=0x%x, pOptParam=*0x%x)", pName, attr, mutexId, pOptParam);
 
-	if (s32 id = g_psv_cond_list.create(pName.get_ptr(), attr, mutexId))
+	const auto mutex = idm::get<psv_mutex_t>(mutexId);
+
+	if (!mutex)
 	{
-		return id;
+		return SCE_KERNEL_ERROR_INVALID_UID;
 	}
 
-	return SCE_KERNEL_ERROR_ERROR;
+	return idm::make<psv_cond_t>(pName.get_ptr(), attr, mutex);
 }
 
 s32 sceKernelDeleteCond(s32 condId)
 {
-	throw EXCEPTION("");
+	sceLibKernel.Error("sceKernelDeleteCond(condId=0x%x)", condId);
+
+	const auto cond = idm::withdraw<psv_cond_t>(condId);
+
+	if (!cond)
+	{
+		return SCE_KERNEL_ERROR_INVALID_UID;
+	}
+
+	// ...
+
+	return SCE_OK;
 }
 
 s32 sceKernelOpenCond(vm::cptr<char> pName)

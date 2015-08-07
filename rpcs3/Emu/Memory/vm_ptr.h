@@ -1,7 +1,7 @@
 #pragma once
 
 class PPUThread;
-struct ARMv7Context;
+class ARMv7Thread;
 
 namespace vm
 {
@@ -136,7 +136,7 @@ namespace vm
 		RT operator()(PPUThread& CPU, T... args) const;
 
 		// defined in ARMv7Callback.h, passing context is mandatory
-		RT operator()(ARMv7Context& context, T... args) const;
+		RT operator()(ARMv7Thread& context, T... args) const;
 
 		// conversion to another function pointer
 		template<typename AT2> operator _ptr_base<RT(T...), AT2>() const

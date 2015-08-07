@@ -9,7 +9,7 @@ s32 sceNpScoreInit(s32 threadPriority, s32 cpuAffinityMask, vm::ptr<void> option
 	throw EXCEPTION("");
 }
 
-s32 sceNpScoreTerm(ARMv7Context&)
+s32 sceNpScoreTerm(ARMv7Thread&)
 {
 	throw EXCEPTION("");
 }

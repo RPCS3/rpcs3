@@ -1,6 +1,6 @@
 #pragma once
 
-#include "sleep_queue.h"
+#include "Utilities/SleepQueue.h"
 
 namespace vm { using namespace ps3; }
 

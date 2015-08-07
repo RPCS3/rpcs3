@@ -66,7 +66,7 @@ psv_func* get_psv_func_by_index(u32 index)
 	return &g_psv_func_list[index];
 }
 
-void execute_psv_func_by_index(ARMv7Context& context, u32 index)
+void execute_psv_func_by_index(ARMv7Thread& context, u32 index)
 {
 	if (auto func = get_psv_func_by_index(index))
 	{
@@ -229,9 +229,9 @@ void initialize_psv_modules()
 	psv_func& hle_return = g_psv_func_list[SFI_HLE_RETURN];
 	hle_return.nid = 0;
 	hle_return.name = "HLE_RETURN";
-	hle_return.func = [](ARMv7Context& context)
+	hle_return.func = [](ARMv7Thread& context)
 	{
-		static_cast<ARMv7Thread&>(context).fast_stop();
+		context.fast_stop();
 	};
 
 	// load functions
