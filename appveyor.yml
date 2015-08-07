@@ -20,12 +20,7 @@ build_script:
  - cmake --build . --config Release
 
 install:
- - cinst wget
-# - ps: Start-FileDownload 'http://sourceforge.net/projects/syncped/files/wxWidgets-3.1.0-include.7z'
  - ps: Start-FileDownload 'https://402331b94f8e4b87ae2ef4677347f7956cf3861f.googledrive.com/host/0B6v_qtb9hkicfmt0NG0wTTRtUmF4X3VTQk5Oc2JidEVKVnUteDA1dXdrYlNsVW9kREpsSHc/lib.7z'
-# - ps: Start-FileDownload 'http://sourceforge.net/projects/syncped/files/wxWidgets-3.1.0-locale.7z'
-# - 7z x wxWidgets-3.1.0-include.7z -oC:\wxWidgets
-# - 7z x wxWidgets-3.1.0-locale.7z -oC:\wxWidgets
  - set wxWidgets_ROOT_DIR=C:\projects\rpcs3\wxWidgets;
  - set WXWIN=C:\projects\rpcs3\wxWidgets;
  - set OPENALDIR=C:\projects\rpcs3\OpenAL;
@@ -35,11 +30,4 @@ after_build:
 - mkdir c:\cache\wxWidgets\lib\vc_x64_lib
 - move wxWidgets\lib\vc_x64_lib c:\cache\wxWidgets\lib\vc_x64_lib
 
-# not exactly the best dependency but works for now
-cache:
-# - c:\cache\wxWidgets\lib\vc_x64_lib -> .gitmodules
-
 test: off
-#build:
-#  project: rpcs3.sln
-#  verbosity: minimal
