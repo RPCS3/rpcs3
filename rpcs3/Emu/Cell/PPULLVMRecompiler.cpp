@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#ifdef LLVM_AVAILABLE
 #include "Utilities/Log.h"
 #include "Emu/System.h"
 #include "Emu/Cell/PPULLVMRecompiler.h"
@@ -737,3 +738,4 @@ u32 ppu_recompiler_llvm::CPUHybridDecoderRecompiler::ExecuteTillReturn(PPUThread
 bool ppu_recompiler_llvm::CPUHybridDecoderRecompiler::PollStatus(PPUThread * ppu_state) {
 	return ppu_state->check_status();
 }
+#endif // LLVM_AVAILABLE
