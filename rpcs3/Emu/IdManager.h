@@ -33,7 +33,7 @@ namespace idm
 	// reinitialize ID manager
 	void clear();
 
-	// check if ID exists
+	// check if ID of specified type exists
 	template<typename T> bool check(u32 id)
 	{
 		extern std::mutex g_id_mutex;
@@ -41,9 +41,22 @@ namespace idm
 
 		std::lock_guard<std::mutex> lock(g_id_mutex);
 
-		const auto f = g_id_map.find(id);
+		const auto found = g_id_map.find(id);
 
-		return f != g_id_map.end() && f->second.info == typeid(T);
+		return found != g_id_map.end() && found->second.info == typeid(T);
+	}
+
+	// check if ID exists and return its type or nullptr
+	inline const std::type_info* get_type(u32 id)
+	{
+		extern std::mutex g_id_mutex;
+		extern std::unordered_map<u32, ID_data_t> g_id_map;
+
+		std::lock_guard<std::mutex> lock(g_id_mutex);
+
+		const auto found = g_id_map.find(id);
+
+		return found == g_id_map.end() ? nullptr : &found->second.info;
 	}
 
 	// must be called from the constructor called through make() or make_ptr() to get further ID of current object

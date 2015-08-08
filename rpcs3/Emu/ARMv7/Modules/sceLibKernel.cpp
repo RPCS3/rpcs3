@@ -31,14 +31,7 @@ s32 sceKernelGetMemBlockInfoByAddr(vm::ptr<void> vbase, vm::ptr<SceKernelMemBloc
 	throw EXCEPTION("");
 }
 
-s32 sceKernelCreateThread(
-	vm::cptr<char> pName,
-	vm::ptr<SceKernelThreadEntry> entry,
-	s32 initPriority,
-	u32 stackSize,
-	u32 attr,
-	s32 cpuAffinityMask,
-	vm::cptr<SceKernelThreadOptParam> pOptParam)
+s32 sceKernelCreateThread(vm::cptr<char> pName, vm::ptr<SceKernelThreadEntry> entry, s32 initPriority, u32 stackSize, u32 attr, s32 cpuAffinityMask, vm::cptr<SceKernelThreadOptParam> pOptParam)
 {
 	sceLibKernel.Warning("sceKernelCreateThread(pName=*0x%x, entry=*0x%x, initPriority=%d, stackSize=0x%x, attr=0x%x, cpuAffinityMask=0x%x, pOptParam=*0x%x)",
 		pName, entry, initPriority, stackSize, attr, cpuAffinityMask, pOptParam);
@@ -219,9 +212,22 @@ s32 sceKernelGetSystemInfo(vm::ptr<SceKernelSystemInfo> pInfo)
 
 s32 sceKernelGetThreadmgrUIDClass(s32 uid)
 {
-	sceLibKernel.Todo("sceKernelGetThreadmgrUIDClass(uid=0x%x)", uid);
+	sceLibKernel.Error("sceKernelGetThreadmgrUIDClass(uid=0x%x)", uid);
 
-	throw EXCEPTION("");
+	const auto type = idm::get_type(uid);
+
+	if (!type)
+	{
+		return SCE_KERNEL_ERROR_INVALID_UID;
+	}
+
+	if (*type == typeid(ARMv7Thread)) return SCE_KERNEL_THREADMGR_UID_CLASS_THREAD;
+	if (*type == typeid(psv_semaphore_t)) return SCE_KERNEL_THREADMGR_UID_CLASS_SEMA;
+	if (*type == typeid(psv_event_flag_t)) return SCE_KERNEL_THREADMGR_UID_CLASS_EVENT_FLAG;
+	if (*type == typeid(psv_mutex_t)) return SCE_KERNEL_THREADMGR_UID_CLASS_MUTEX;
+	if (*type == typeid(psv_cond_t)) return SCE_KERNEL_THREADMGR_UID_CLASS_COND;
+	
+	throw EXCEPTION("Unknown UID class (type='%s')", type->name());
 }
 
 s32 sceKernelChangeThreadVfpException(s32 clearMask, s32 setMask)
