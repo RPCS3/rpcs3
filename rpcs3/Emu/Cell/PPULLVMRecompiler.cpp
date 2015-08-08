@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Utilities/Log.h"
 #include "Emu/System.h"
+#include "Emu/Cell/PPUDisAsm.h"
 #include "Emu/Cell/PPULLVMRecompiler.h"
 #include "Emu/Memory/Memory.h"
 #include "llvm/Support/TargetSelect.h"
@@ -120,6 +121,12 @@ std::pair<Executable, llvm::ExecutionEngine *> Compiler::Compile(const std::stri
 	m_ir_builder->SetInsertPoint(GetBasicBlockFromAddress(0));
 	m_ir_builder->CreateBr(GetBasicBlockFromAddress(cfg.start_address));
 
+	// Used to decode instructions
+	PPUDisAsm dis_asm(CPUDisAsm_DumpMode);
+	dis_asm.offset = vm::get_ptr<u8>(cfg.start_address);
+
+	m_recompilation_engine.Log() << "Recompiling block :\n\n";
+
 	// Convert each instruction in the CFG to LLVM IR
 	std::vector<PHINode *> exit_instr_list;
 	for (u32 instr_i : cfg.instruction_addresses) {
@@ -130,6 +137,12 @@ std::pair<Executable, llvm::ExecutionEngine *> Compiler::Compile(const std::stri
 
 		if (instr_bb->empty()) {
 			u32 instr = vm::ps3::read32(m_state.current_instruction_address);
+
+			// Dump PPU opcode
+			dis_asm.dump_pc = m_state.current_instruction_address * 4;
+			(*PPU_instr::main_list)(&dis_asm, instr);
+			m_recompilation_engine.Log() << dis_asm.last_opcode;
+
 			Decode(instr);
 			if (!m_state.hit_branch_instruction)
 				m_ir_builder->CreateBr(GetBasicBlockFromAddress(m_state.current_instruction_address + 4));
@@ -210,6 +223,7 @@ std::pair<Executable, llvm::ExecutionEngine *> Compiler::Compile(const std::stri
 		}
 	}
 
+	m_recompilation_engine.Log() << "LLVM bytecode:\n";
 	m_recompilation_engine.Log() << *m_module;
 
 	std::string        verify;

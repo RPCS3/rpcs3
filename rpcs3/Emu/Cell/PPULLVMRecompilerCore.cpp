@@ -2660,16 +2660,16 @@ void Compiler::MTOCRF(u32 l, u32 crm, u32 rs) {
 
 	for (u32 i = 0; i < 8; i++) {
 		if (crm & (1 << i)) {
-			mask |= 0xF << ((7 - i) * 4);
+			mask |= 0xF << (i * 4); // move 0xF to the left i positions (in hex form)
 			if (l) {
 				break;
 			}
 		}
 	}
 
-	cr_i32 = m_ir_builder->CreateAnd(cr_i32, ~mask);
-	rs_i32 = m_ir_builder->CreateAnd(rs_i32, ~mask);
-	cr_i32 = m_ir_builder->CreateOr(cr_i32, rs_i32);
+	cr_i32 = m_ir_builder->CreateAnd(cr_i32, ~mask); // null ith nibble
+	rs_i32 = m_ir_builder->CreateAnd(rs_i32, mask);  // null everything except ith nibble
+	cr_i32 = m_ir_builder->CreateOr(cr_i32, rs_i32); // now ith cr nibble == ith rs nibble
 	SetCr(cr_i32);
 }
 
