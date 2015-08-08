@@ -138,7 +138,7 @@ public:
 		return "Unknown";
 	}
 
-	const char* ThreadStatusToString()
+	const char* ThreadStatusToString() const
 	{
 		// TODO
 

@@ -14,8 +14,11 @@
 #include "Emu/SysCalls/lv2/sys_semaphore.h"
 #include "Emu/SysCalls/lv2/sys_event.h"
 #include "Emu/SysCalls/lv2/sys_event_flag.h"
+#include "Emu/SysCalls/lv2/sys_rwlock.h"
 #include "Emu/SysCalls/lv2/sys_prx.h"
 #include "Emu/SysCalls/lv2/sys_memory.h"
+#include "Emu/SysCalls/lv2/sys_mmapper.h"
+#include "Emu/SysCalls/lv2/sys_spu.h"
 
 #include "KernelExplorer.h"
 
@@ -53,12 +56,10 @@ KernelExplorer::KernelExplorer(wxWindow* parent)
 
 void KernelExplorer::Update()
 {
-	char name[4096];
-
 	m_tree->DeleteAllItems();
 	const u32 total_memory_usage = vm::get(vm::user_space)->used.load();
 
-	const auto& root = m_tree->AddRoot(fmt::Format("Process, ID = 0x00000001, Total Memory Usage = 0x%x (%0.2f MB)", total_memory_usage, (float)total_memory_usage / (1024 * 1024)));
+	const auto& root = m_tree->AddRoot(fmt::format("Process, ID = 0x00000001, Total Memory Usage = 0x%x (%0.2f MB)", total_memory_usage, (float)total_memory_usage / (1024 * 1024)));
 
 	union name64
 	{
@@ -79,174 +80,225 @@ void KernelExplorer::Update()
 	// TODO: FileSystem
 
 	// Semaphores
-	if (u32 count = idm::get_count<lv2_sema_t>())
-	{
-		sprintf(name, "Semaphores (%d)", count);
-		const auto& node = m_tree->AppendItem(root, name);
+	const auto sema_map = idm::get_map<lv2_sema_t>();
 
-		for (const auto& data : idm::get_map<lv2_sema_t>())
+	if (sema_map.size())
+	{
+		const auto& node = m_tree->AppendItem(root, fmt::format("Semaphores (%zu)", sema_map.size()));
+
+		for (const auto& data : sema_map)
 		{
 			const auto& sema = *data.second;
-			sprintf(name, "Semaphore: ID = 0x%x '%s', Count = %d, Max Count = %d, Waiters = %#llx", data.first, &name64(sema.name), sema.value.load(), sema.max, sema.sq.size());
-			m_tree->AppendItem(node, name);
+
+			m_tree->AppendItem(node, fmt::format("Semaphore: ID = 0x%08x '%s', Count = %d, Max Count = %d, Waiters = %#zu", data.first,
+				&name64(sema.name), sema.value.load(), sema.max, sema.sq.size()));
 		}
 	}
 
 	// Mutexes
-	if (u32 count = idm::get_count<lv2_mutex_t>())
-	{
-		sprintf(name, "Mutexes (%d)", count);
-		const auto& node = m_tree->AppendItem(root, name);
+	const auto mutex_map = idm::get_map<lv2_mutex_t>();
 
-		for (const auto& data : idm::get_map<lv2_mutex_t>())
+	if (mutex_map.size())
+	{
+		const auto& node = m_tree->AppendItem(root, fmt::format("Mutexes (%zu)", mutex_map.size()));
+
+		for (const auto& data : mutex_map)
 		{
-			sprintf(name, "Mutex: ID = 0x%x '%s'", data.first, &name64(data.second->name));
-			m_tree->AppendItem(node, name);
+			const auto& mutex = *data.second;
+
+			m_tree->AppendItem(node, fmt::format("Mutex: ID = 0x%08x '%s'", data.first,
+				&name64(mutex.name)));
 		}
 	}
 
-	// Light Weight Mutexes
-	if (u32 count = idm::get_count<lv2_lwmutex_t>())
-	{
-		sprintf(name, "Lightweight Mutexes (%d)", count);
-		const auto& node = m_tree->AppendItem(root, name);
+	// Lightweight Mutexes
+	const auto lwm_map = idm::get_map<lv2_lwmutex_t>();
 
-		for (const auto& data : idm::get_map<lv2_lwmutex_t>())
+	if (lwm_map.size())
+	{
+		const auto& node = m_tree->AppendItem(root, fmt::format("Lightweight Mutexes (%zu)", lwm_map.size()));
+
+		for (const auto& data : lwm_map)
 		{
-			sprintf(name, "Lightweight Mutex: ID = 0x%x '%s'", data.first, &name64(data.second->name));
-			m_tree->AppendItem(node, name);
+			const auto& lwm = *data.second;
+
+			m_tree->AppendItem(node, fmt::format("LWMutex: ID = 0x%08x '%s'", data.first,
+				&name64(lwm.name)));
 		}
 	}
 
 	// Condition Variables
-	if (u32 count = idm::get_count<lv2_cond_t>())
-	{
-		sprintf(name, "Condition Variables (%d)", count);
-		const auto& node = m_tree->AppendItem(root, name);
+	const auto cond_map = idm::get_map<lv2_cond_t>();
 
-		for (const auto& data : idm::get_map<lv2_cond_t>())
+	if (cond_map.size())
+	{
+		const auto& node = m_tree->AppendItem(root, fmt::format("Condition Variables (%zu)", cond_map.size()));
+
+		for (const auto& data : cond_map)
 		{
-			sprintf(name, "Condition Variable: ID = 0x%x '%s'", data.first, &name64(data.second->name));
-			m_tree->AppendItem(node, name);
+			const auto& cond = *data.second;
+
+			m_tree->AppendItem(node, fmt::format("Cond: ID = 0x%08x '%s'", data.first,
+				&name64(cond.name)));
 		}
 	}
 
-	// Light Weight Condition Variables
-	if (u32 count = idm::get_count<lv2_lwcond_t>())
-	{
-		sprintf(name, "Lightweight Condition Variables (%d)", count);
-		const auto& node = m_tree->AppendItem(root, name);
+	// Lightweight Condition Variables
+	const auto lwc_map = idm::get_map<lv2_lwcond_t>();
 
-		for (const auto& data : idm::get_map<lv2_lwcond_t>())
+	if (lwc_map.size())
+	{
+		const auto& node = m_tree->AppendItem(root, fmt::format("Lightweight Condition Variables (%zu)", lwc_map.size()));
+
+		for (const auto& data : lwc_map)
 		{
-			sprintf(name, "Lightweight Condition Variable: ID = 0x%x '%s'", data.first, &name64(data.second->name));
-			m_tree->AppendItem(node, name);
+			const auto& lwc = *data.second;
+
+			m_tree->AppendItem(node, fmt::format("LWCond: ID = 0x%08x '%s'", data.first,
+				&name64(lwc.name)));
 		}
 	}
 
 	// Event Queues
-	if (u32 count = idm::get_count<lv2_event_queue_t>())
-	{
-		sprintf(name, "Event Queues (%d)", count);
-		const auto& node = m_tree->AppendItem(root, name);
+	const auto eq_map = idm::get_map<lv2_event_queue_t>();
 
-		for (const auto& data : idm::get_map<lv2_event_queue_t>())
+	if (eq_map.size())
+	{
+		const auto& node = m_tree->AppendItem(root, fmt::format("Event Queues (%zu)", eq_map.size()));
+
+		for (const auto& data : eq_map)
 		{
-			sprintf(name, "Event Queue: ID = 0x%x '%s', Key = %#llx", data.first, &name64(data.second->name), data.second->key);
-			m_tree->AppendItem(node, name);
+			const auto& eq = *data.second;
+
+			m_tree->AppendItem(node, fmt::format("Event Queue: ID = 0x%08x '%s', %s, Key = %#llx, Events = %zu/%d, Waiters = %zu", data.first,
+				&name64(eq.name), eq.type == SYS_SPU_QUEUE ? "SPU" : "PPU", eq.key, eq.events.size(), eq.size, eq.sq.size()));
 		}
 	}
 
 	// Event Ports
-	if (u32 count = idm::get_count<lv2_event_port_t>())
+	const auto ep_map = idm::get_map<lv2_event_port_t>();
+
+	if (ep_map.size())
 	{
-		sprintf(name, "Event Ports (%d)", count);
-		const auto& node = m_tree->AppendItem(root, name);
+		const auto& node = m_tree->AppendItem(root, fmt::format("Event Ports (%zu)", ep_map.size()));
 
-		for (const auto& data : idm::get_map<lv2_event_port_t>())
+		for (const auto& data : ep_map)
 		{
-			sprintf(name, "Event Port: ID = 0x%x, Name = %#llx", data.first, data.second->name);
-			m_tree->AppendItem(node, name);
-		}
-	}
+			const auto& ep = *data.second;
 
-	// Modules
-	if (u32 count = idm::get_count<lv2_prx_t>())
-	{
-		sprintf(name, "Modules (%d)", count);
-		const auto& node = m_tree->AppendItem(root, name);
-		//sprintf(name, "Segment List (%l)", 2 * objects.size()); // TODO: Assuming 2 segments per PRX file is not good
-		//m_tree->AppendItem(node, name);
-
-		for (const auto id : idm::get_set<lv2_prx_t>())
-		{
-			sprintf(name, "PRX: ID = 0x%x", id);
-			m_tree->AppendItem(node, name);
-		}
-	}
-
-	// Memory Containers
-	if (u32 count = idm::get_count<lv2_memory_container_t>())
-	{
-		sprintf(name, "Memory Containers (%d)", count);
-		const auto& node = m_tree->AppendItem(root, name);
-
-		for (const auto id : idm::get_set<lv2_memory_container_t>())
-		{
-			sprintf(name, "Memory Container: ID = 0x%x", id);
-			m_tree->AppendItem(node, name);
+			m_tree->AppendItem(node, fmt::format("Event Port: ID = 0x%08x, Name = %#llx", data.first,
+				ep.name));
 		}
 	}
 
 	// Event Flags
-	if (u32 count = idm::get_count<lv2_event_flag_t>())
-	{
-		sprintf(name, "Event Flags (%d)", count);
-		const auto& node = m_tree->AppendItem(root, name);
+	const auto ef_map = idm::get_map<lv2_event_flag_t>();
 
-		for (const auto& data : idm::get_map<lv2_event_flag_t>())
+	if (ef_map.size())
+	{
+		const auto& node = m_tree->AppendItem(root, fmt::format("Event Flags (%zu)", ef_map.size()));
+
+		for (const auto& data : ef_map)
 		{
-			sprintf(name, "Event Flag: ID = 0x%x", data.first);
-			m_tree->AppendItem(node, name);
+			const auto& ef = *data.second;
+
+			m_tree->AppendItem(node, fmt::format("Event Flag: ID = 0x%08x", data.first));
+		}
+	}
+
+	// Reader/writer Locks
+	const auto rwlock_map = idm::get_map<lv2_rwlock_t>();
+
+	if (rwlock_map.size())
+	{
+		const auto& node = m_tree->AppendItem(root, fmt::format("Reader/writer Locks (%zu)", rwlock_map.size()));
+
+		for (const auto& data : rwlock_map)
+		{
+			const auto& rwlock = *data.second;
+
+			m_tree->AppendItem(node, fmt::format("RWLock: ID = 0x%08x", data.first));
+		}
+	}
+
+	// PRX Libraries
+	const auto prx_map = idm::get_map<lv2_prx_t>();
+
+	if (prx_map.size())
+	{
+		const auto& node = m_tree->AppendItem(root, fmt::format("PRX Libraries (%zu)", prx_map.size()));
+
+		for (const auto& data : prx_map)
+		{
+			const auto& prx = *data.second;
+
+			m_tree->AppendItem(node, fmt::format("PRX: ID = 0x%08x", data.first));
+		}
+	}
+
+	// Memory Containers
+	const auto ct_map = idm::get_map<lv2_memory_container_t>();
+
+	if (ct_map.size())
+	{
+		const auto& node = m_tree->AppendItem(root, fmt::format("Memory Containers (%zu)", ct_map.size()));
+
+		for (const auto& data : ct_map)
+		{
+			const auto& ct = *data.second;
+
+			m_tree->AppendItem(node, fmt::format("Memory Container: ID = 0x%08x", data.first));
+		}
+	}
+
+	// Memory Objects
+	const auto mem_map = idm::get_map<lv2_memory_t>();
+
+	if (mem_map.size())
+	{
+		const auto& node = m_tree->AppendItem(root, fmt::format("Memory Objects (%zu)", mem_map.size()));
+
+		for (const auto& data : mem_map)
+		{
+			const auto& mem = *data.second;
+
+			m_tree->AppendItem(node, fmt::format("Memory Object: ID = 0x%08x", data.first));
 		}
 	}
 
 	// PPU Threads
-	if (u32 count = idm::get_count<PPUThread>())
-	{
-		sprintf(name, "PPU Threads (%d)", count);
-		const auto& node = m_tree->AppendItem(root, name);
+	const auto ppu_map = idm::get_map<PPUThread>();
 
-		for (const auto& data : idm::get_map<PPUThread>())
+	if (ppu_map.size())
+	{
+		const auto& node = m_tree->AppendItem(root, fmt::format("PPU Threads (%zu)", ppu_map.size()));
+
+		for (const auto& data : ppu_map)
 		{
-			sprintf(name, "Thread: ID = 0x%08x '%s', - %s", data.first, data.second->get_name().c_str(), data.second->ThreadStatusToString());
-			m_tree->AppendItem(node, name);
+			const auto& ppu = *data.second;
+
+			m_tree->AppendItem(node, fmt::format("PPU Thread: ID = 0x%08x '%s', - %s", data.first,
+				ppu.get_name().c_str(), ppu.ThreadStatusToString()));
 		}
 	}
 
-	if (u32 count = idm::get_count<SPUThread>())
-	{
-		sprintf(name, "SPU Threads (%d)", count);
-		const auto& node = m_tree->AppendItem(root, name);
+	// SPU Thread Groups
+	const auto spu_map = idm::get_map<lv2_spu_group_t>();
 
-		for (const auto& data : idm::get_map<SPUThread>())
+	if (spu_map.size())
+	{
+		const auto& node = m_tree->AppendItem(root, fmt::format("SPU Thread Groups (%d)", spu_map.size()));
+
+		for (const auto& data : spu_map)
 		{
-			sprintf(name, "Thread: ID = 0x%08x '%s', - %s", data.first, data.second->get_name().c_str(), data.second->ThreadStatusToString());
-			m_tree->AppendItem(node, name);
+			const auto& tg = *data.second;
+
+			m_tree->AppendItem(node, fmt::format("SPU Thread Group: ID = 0x%08x '%s'", data.first,
+				tg.name.c_str()));
 		}
 	}
 
-	if (u32 count = idm::get_count<RawSPUThread>())
-	{
-		sprintf(name, "RawSPU Threads (%d)", count);
-		const auto& node = m_tree->AppendItem(root, name);
-
-		for (const auto& data : idm::get_map<RawSPUThread>())
-		{
-			sprintf(name, "Thread: ID = 0x%08x '%s', - %s", data.first, data.second->get_name().c_str(), data.second->ThreadStatusToString());
-			m_tree->AppendItem(node, name);
-		}
-	}
+	// RawSPU Threads (TODO)
 
 	m_tree->Expand(root);
 }

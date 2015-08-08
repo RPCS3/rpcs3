@@ -6,7 +6,7 @@
 #include "MFC.h"
 
 struct lv2_event_queue_t;
-struct spu_group_t;
+struct lv2_spu_group_t;
 struct lv2_int_tag_t;
 
 // SPU Channels
@@ -581,7 +581,7 @@ public:
 
 	std::array<spu_int_ctrl_t, 3> int_ctrl; // SPU Class 0, 1, 2 Interrupt Management
 
-	std::weak_ptr<spu_group_t> tg; // SPU Thread Group
+	std::weak_ptr<lv2_spu_group_t> tg; // SPU Thread Group
 
 	std::array<std::pair<u32, std::weak_ptr<lv2_event_queue_t>>, 32> spuq; // Event Queue Keys for SPU Thread
 	std::weak_ptr<lv2_event_queue_t> spup[64]; // SPU Ports

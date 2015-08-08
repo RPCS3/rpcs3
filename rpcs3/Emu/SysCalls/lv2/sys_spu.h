@@ -143,7 +143,7 @@ enum : u32
 
 class SPUThread;
 
-struct spu_group_t
+struct lv2_spu_group_t
 {
 	const std::string name;
 	const u32 num; // SPU Number
@@ -165,7 +165,7 @@ struct spu_group_t
 	std::weak_ptr<lv2_event_queue_t> ep_exception; // TODO: SYS_SPU_THREAD_GROUP_EVENT_EXCEPTION
 	std::weak_ptr<lv2_event_queue_t> ep_sysmodule; // TODO: SYS_SPU_THREAD_GROUP_EVENT_SYSTEM_MODULE
 
-	spu_group_t(std::string name, u32 num, s32 prio, s32 type, u32 ct)
+	lv2_spu_group_t(std::string name, u32 num, s32 prio, s32 type, u32 ct)
 		: name(name)
 		, num(num)
 		, prio(prio)
