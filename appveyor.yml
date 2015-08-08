@@ -17,7 +17,7 @@ before_build:
  - cmake -G "Visual Studio 14 Win64"
 
 build_script:
- - cmake --build . --config Release
+ - cmake --build . --config Release -- /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
 
 install:
  - ps: Start-FileDownload 'https://402331b94f8e4b87ae2ef4677347f7956cf3861f.googledrive.com/host/0B6v_qtb9hkicfmt0NG0wTTRtUmF4X3VTQk5Oc2JidEVKVnUteDA1dXdrYlNsVW9kREpsSHc/wxWidgets.7z'
