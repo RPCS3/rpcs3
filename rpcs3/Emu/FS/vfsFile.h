@@ -11,9 +11,6 @@ public:
 	vfsFile(const std::string& path, u32 mode = vfsRead);
 
 	virtual bool Open(const std::string& path, u32 mode = vfsRead) override;
-	virtual bool Exists(const std::string& path) override;
-	virtual bool Rename(const std::string& from, const std::string& to) override;
-	virtual bool Remove(const std::string& path) override;
 	virtual bool Close() override;
 
 	virtual u64 GetSize() const override;

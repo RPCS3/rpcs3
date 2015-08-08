@@ -45,15 +45,10 @@ public:
 
 	virtual bool Open(const std::string& path);
 	virtual bool IsOpened() const;
-	virtual bool IsExists(const std::string& path) const;
 	virtual const std::vector<DirEntryInfo>& GetEntries() const;
 	virtual void Close();
 	virtual std::string GetPath() const;
 
-	virtual bool Create(const std::string& path) = 0;
-	//virtual bool Create(const DirEntryInfo& info)=0;
-	virtual bool Rename(const std::string& from, const std::string& to) = 0;
-	virtual bool Remove(const std::string& path) = 0;
 	virtual const DirEntryInfo* Read();
 	virtual const DirEntryInfo* First();
 

@@ -38,26 +38,6 @@ bool vfsLocalDir::Open(const std::string& path)
 	return true;
 }
 
-bool vfsLocalDir::Create(const std::string& path)
-{
-	return fs::create_dir(path);
-}
-
-bool vfsLocalDir::IsExists(const std::string& path) const
-{
-	return fs::is_dir(path);
-}
-
-bool vfsLocalDir::Rename(const std::string& from, const std::string& to)
-{
-	return fs::rename(from, to);
-}
-
-bool vfsLocalDir::Remove(const std::string& path)
-{
-	return fs::remove_dir(path);
-}
-
 bool vfsLocalDir::IsOpened() const
 {
 	return m_dir && vfsDirBase::IsOpened();

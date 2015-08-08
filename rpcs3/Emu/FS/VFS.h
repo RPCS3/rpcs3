@@ -81,10 +81,12 @@ struct VFS
 	bool CreatePath(const std::string& ps3_path) const;
 	bool RemoveFile(const std::string& ps3_path) const;
 	bool RemoveDir(const std::string& ps3_path) const;
+	void DeleteAll(const std::string& ps3_path) const;
+	u64 GetDirSize(const std::string& ps3_path) const;
 	bool ExistsFile(const std::string& ps3_path) const;
 	bool ExistsDir(const std::string& ps3_path) const;
-	bool RenameFile(const std::string& ps3_path_from, const std::string& ps3_path_to) const;
-	bool RenameDir(const std::string& ps3_path_from, const std::string& ps3_path_to) const;
+	bool Exists(const std::string& ps3_path) const;
+	bool Rename(const std::string& ps3_path_from, const std::string& ps3_path_to) const;
 	bool CopyFile(const std::string& ps3_path_from, const std::string& ps3_path_to, bool overwrite = true) const;
 	bool TruncateFile(const std::string& ps3_path, u64 length) const;
 

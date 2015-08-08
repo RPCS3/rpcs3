@@ -158,7 +158,7 @@ public:
 
 	int OpenDir(const std::string& name);
 
-	bool Rename(const std::string& from, const std::string& to) override;
+	bool Rename(const std::string& from, const std::string& to);
 
 	u64 FindFreeBlock();
 

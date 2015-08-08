@@ -13,10 +13,5 @@ public:
 	virtual ~vfsLocalDir();
 
 	virtual bool Open(const std::string& path) override;
-
-	virtual bool Create(const std::string& path) override;
-	virtual bool Rename(const std::string& from, const std::string& to) override;
-	virtual bool Remove(const std::string& path) override;
 	virtual bool IsOpened() const override;
-	virtual bool IsExists(const std::string& path) const override;
 };

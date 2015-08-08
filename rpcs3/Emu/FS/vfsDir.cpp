@@ -68,39 +68,6 @@ bool vfsDir::Open(const std::string& path)
 	return !m_entries.empty();
 }
 
-bool vfsDir::Create(const std::string& path)
-{
-	return Emu.GetVFS().CreateDir(path);
-}
-
-bool vfsDir::IsExists(const std::string& path) const
-{
-	auto path_blocks = simplify_path_blocks(path);
-
-	if (path_blocks.empty())
-		return false;
-
-	std::string dir_name = path_blocks[path_blocks.size() - 1];
-
-	for (const auto entry : vfsDir(path + "/.."))
-	{
-		if (!strcmp(entry->name.c_str(), dir_name.c_str()))
-			return true;
-	}
-
-	return false;
-}
-
-bool vfsDir::Rename(const std::string& from, const std::string& to)
-{
-	return Emu.GetVFS().RenameDir(from, to);
-}
-
-bool vfsDir::Remove(const std::string& path)
-{
-	return Emu.GetVFS().RemoveDir(path);
-}
-
 void vfsDir::Close()
 {
 	m_stream.reset();

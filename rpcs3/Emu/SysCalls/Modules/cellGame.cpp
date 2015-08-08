@@ -48,7 +48,7 @@ struct content_permission_t final
 	{
 		if (is_temporary)
 		{
-			// TODO: delete temporary directory and all its contents
+			Emu.GetVFS().DeleteAll("/dev_hdd1/game/" + dir);
 		}
 	}
 };
@@ -342,7 +342,7 @@ s32 cellGameContentPermit(vm::ptr<char[CELL_GAME_PATH_MAX]> contentInfoPath, vm:
 		const std::string dir = "/dev_hdd0/game/" + path_set->dir;
 
 		// make temporary directory persistent
-		if (Emu.GetVFS().RenameDir("/dev_hdd1/game/" + path_set->dir, dir))
+		if (Emu.GetVFS().Rename("/dev_hdd1/game/" + path_set->dir, dir))
 		{
 			cellGame.Success("cellGameContentPermit(): '%s' directory created", dir);
 		}

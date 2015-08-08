@@ -388,31 +388,13 @@ s32 sys_fs_rename(vm::cptr<char> from, vm::cptr<char> to)
 	sys_fs.Warning("*** from = '%s'", from.get_ptr());
 	sys_fs.Warning("*** to   = '%s'", to.get_ptr());
 
-	std::string ps3_path = from.get_ptr();
-
-	if (Emu.GetVFS().ExistsDir(ps3_path))
+	if (!Emu.GetVFS().Rename(from.get_ptr(), to.get_ptr()))
 	{
-		if (!Emu.GetVFS().RenameDir(ps3_path, to.get_ptr()))
-		{
-			return CELL_FS_EIO; // ???
-		}
-
-		sys_fs.Notice("sys_fs_rename(): directory '%s' renamed to '%s'", from.get_ptr(), to.get_ptr());
-		return CELL_OK;
+		return CELL_FS_ENOENT; // ???
 	}
 
-	if (Emu.GetVFS().ExistsFile(ps3_path))
-	{
-		if (!Emu.GetVFS().RenameFile(ps3_path, to.get_ptr()))
-		{
-			return CELL_FS_EIO; // ???
-		}
-
-		sys_fs.Notice("sys_fs_rename(): file '%s' renamed to '%s'", from.get_ptr(), to.get_ptr());
-		return CELL_OK;
-	}
-
-	return CELL_FS_ENOENT;
+	sys_fs.Notice("sys_fs_rename(): '%s' renamed to '%s'", from.get_ptr(), to.get_ptr());
+	return CELL_OK;
 }
 
 s32 sys_fs_rmdir(vm::cptr<char> path)

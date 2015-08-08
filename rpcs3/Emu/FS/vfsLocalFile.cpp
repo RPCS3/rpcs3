@@ -47,18 +47,3 @@ bool vfsLocalFile::IsOpened() const
 {
 	return m_file && vfsFileBase::IsOpened();
 }
-
-bool vfsLocalFile::Exists(const std::string& path)
-{
-	return fs::is_file(path);
-}
-
-bool vfsLocalFile::Rename(const std::string& from, const std::string& to)
-{
-	return fs::rename(from, to);
-}
-
-bool vfsLocalFile::Remove(const std::string& path)
-{
-	return fs::remove_file(path);
-}
