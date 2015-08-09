@@ -4,6 +4,7 @@ configuration: Release
 platform: x64
 clone_folder: c:\projects\rpcs3
 clone_depth: 1
+test: off
 
 branches:
  except:
@@ -24,5 +25,8 @@ install:
  - set WXWIN=C:\projects\rpcs3\wxWidgets;
  - set OPENALDIR=C:\projects\rpcs3\OpenAL;
  - set PATH=C:\Program Files (x86)\MSBuild\14.0\Bin;C:\wxWidgets;%PATH%
+ - set COMMIT_SHA=%APPVEYOR_REPO_COMMIT:~0,8%
 
-test: off
+artifacts:
+ - path: bin
+   name: rpcs3-$(COMMIT_SHA)
