@@ -1012,7 +1012,7 @@ namespace ppu_recompiler_llvm {
 		/**
 		 * Get a mutex for an address. Used to avoid modifying a block currently in execution.
 		 **/
-		std::mutex* GetMutexForAddress(u32 address);
+		std::pair<std::mutex, std::atomic<int> >* GetMutexAndCounterForAddress(u32 address);
 
 		/**
 		 * Get the executable for the specified address if a compiled version is
@@ -1107,7 +1107,7 @@ namespace ppu_recompiler_llvm {
 		typedef std::tuple<Executable, std::unique_ptr<llvm::ExecutionEngine>, u32> ExecutableStorage;
 		/// Address to ordinal cahce. Key is address.
 		std::unordered_map<u32, ExecutableStorage> m_address_to_function;
-		std::unordered_map<u32, std::mutex> m_address_locks;
+		std::unordered_map<u32, std::pair<std::mutex, std::atomic<int> > > m_address_locks;
 
 		/// The time at which the m_address_to_ordinal cache was last cleared
 		std::chrono::high_resolution_clock::time_point m_last_cache_clear_time;
