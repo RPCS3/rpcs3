@@ -215,6 +215,8 @@ struct DataHeap
  */
 struct GarbageCollectionThread
 {
+	bool m_isThreadAlive;
+	bool m_askForTermination;
 	std::mutex m_mutex;
 	std::condition_variable cv;
 	std::queue<std::function<void()> > m_queue;

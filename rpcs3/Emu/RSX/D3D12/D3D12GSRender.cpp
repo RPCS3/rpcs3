@@ -35,21 +35,46 @@ void SetGetD3DGSFrameCallback(GetGSFrameCb2 value)
 
 GarbageCollectionThread::GarbageCollectionThread()
 {
+	m_isThreadAlive = true;
+	m_askForTermination = false;
 	m_worker = std::thread([this]() {
-		while (true)
+		while (m_isThreadAlive)
 		{
 			std::unique_lock<std::mutex> lock(m_mutex);
-			while (m_queue.empty())
+			while (!m_askForTermination)
+			{
+				CHECK_EMU_STATUS;
+
+				if (!lock)
+				{
+					lock.lock();
+					continue;
+				}
+
+				if (!m_queue.empty())
+				{
+					auto func = std::move(m_queue.front());
+
+					m_queue.pop();
+
+					if (lock) lock.unlock();
+
+					func();
+
+					continue;
+				}
 				cv.wait(lock);
-			m_queue.front()();
-			m_queue.pop();
+			}
 		}
+		m_isThreadAlive = false;
 	});
 	m_worker.detach();
 }
 
 GarbageCollectionThread::~GarbageCollectionThread()
 {
+	m_askForTermination = true;
+	while (m_isThreadAlive);
 }
 
 void GarbageCollectionThread::pushWork(std::function<void()>&& f)
