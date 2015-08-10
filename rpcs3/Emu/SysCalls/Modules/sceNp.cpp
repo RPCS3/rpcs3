@@ -260,7 +260,7 @@ s32 sceNpBasicAddFriend()
 
 s32 sceNpBasicGetFriendListEntryCount(vm::ptr<u32> count)
 {
-	sceNp.Warning("sceNpBasicGetFriendListEntryCount(count=*0x%x)", count);
+	sceNp.Todo("sceNpBasicGetFriendListEntryCount(count=*0x%x)", count);
 
 	// TODO: Check if there are any friends
 	*count = 0;
@@ -398,7 +398,7 @@ s32 sceNpBasicGetClanMessageEntry(u32 index, vm::ptr<SceNpUserInfo> from)
 
 s32 sceNpBasicGetMessageEntryCount(u32 type, vm::ptr<u32> count)
 {
-	sceNp.Warning("sceNpBasicGetMessageEntryCount(type=%d, count=*0x%x)", type, count);
+	sceNp.Todo("sceNpBasicGetMessageEntryCount(type=%d, count=*0x%x)", type, count);
 
 	// TODO: Check if there are messages
 	*count = 0;
@@ -415,7 +415,7 @@ s32 sceNpBasicGetMessageEntry(u32 type, u32 index, vm::ptr<SceNpUserInfo> from)
 
 s32 sceNpBasicGetEvent(vm::ptr<s32> event, vm::ptr<SceNpUserInfo> from, vm::ptr<s32> data, vm::ptr<u32> size)
 {
-	sceNp.Warning("sceNpBasicGetEvent(event=*0x%x, from=*0x%x, data=*0x%x, size=*0x%x)", event, from, data, size);
+	sceNp.Todo("sceNpBasicGetEvent(event=*0x%x, from=*0x%x, data=*0x%x, size=*0x%x)", event, from, data, size);
 
 	// TODO: Check for other error and pass other events
 	*event = SCE_NP_BASIC_EVENT_OFFLINE;
@@ -882,7 +882,7 @@ s32 sceNpManagerGetAccountAge()
 
 s32 sceNpManagerGetContentRatingFlag(vm::ptr<u32> isRestricted, vm::ptr<u32> age)
 {
-	sceNp.Warning("sceNpManagerGetContentRatingFlag(isRestricted=*0x%x, age=*0x%x)", isRestricted, age);
+	sceNp.Todo("sceNpManagerGetContentRatingFlag(isRestricted=*0x%x, age=*0x%x)", isRestricted, age);
 
 	// TODO: read user's parental control information
 	*isRestricted = 0;

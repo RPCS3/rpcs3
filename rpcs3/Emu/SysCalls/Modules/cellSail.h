@@ -1,5 +1,7 @@
 #pragma once
 
+#include "cellVpost.h"
+
 namespace vm { using namespace ps3; }
 
 // Error Codes
@@ -610,13 +612,13 @@ struct CellSailSourceStreamingProfile
 
 union CellSailEvent
 {
-	struct u32x2
+	struct
 	{
 		be_t<u32> major;
 		be_t<u32> minor;
 	};
 
-	struct ui64
+	struct
 	{
 		be_t<u64> value;
 	};
@@ -679,7 +681,7 @@ using CellSailRendererVideoFuncCancel = void(vm::ptr<void> pArg);
 using CellSailRendererVideoFuncCheckout = s32(vm::ptr<void> pArg, vm::pptr<CellSailVideoFrameInfo> ppInfo);
 using CellSailRendererVideoFuncCheckin = s32(vm::ptr<void> pArg, vm::ptr<CellSailVideoFrameInfo> pInfo);
 
-using CellSailPlayerFuncNotified = void(vm::ptr<void> pArg, CellSailEvent event, u64 arg0, u64 arg1);
+using CellSailPlayerFuncNotified = void(vm::ptr<void> pArg, CellSailEvent evnt, u64 arg0, u64 arg1);
 
 struct CellSailMemAllocatorFuncs
 {
@@ -689,7 +691,7 @@ struct CellSailMemAllocatorFuncs
 
 struct CellSailMemAllocator
 {
-	vm::ptr<CellSailMemAllocatorFuncs> callbacks;
+	vm::bptr<CellSailMemAllocatorFuncs> callbacks;
 	be_t<u32> pArg;
 };
 
@@ -1124,11 +1126,13 @@ struct CellSailPlayer
 	s32 descriptors;
 	vm::ptr<CellSailDescriptor> registeredDescriptors[2];
 	bool paused;
+	bool booted;
 	vm::ptr<CellSailSoundAdapter> sAdapter;
 	vm::ptr<CellSailGraphicsAdapter> gAdapter;
 
 	// Attributes
-	be_t<s32> PPU_THREAD_STACK_SIZE;
+	be_t<s32> CONTROL_PPU_THREAD_PRIORITY;
+	be_t<s32> CONTROL_PPU_THREAD_STACK_SIZE;
 	be_t<s32> SPURS_NUM_OF_SPUS;
 	be_t<s32> SPURS_SPU_THREAD_PRIORITY;
 	be_t<s32> SPURS_PPU_THREAD_PRIORITY;
@@ -1136,7 +1140,7 @@ struct CellSailPlayer
 	be_t<s32> IO_PPU_THREAD_PRIORITY;
 	be_t<s32> IO_PPU_THREAD_STACK_SIZE;
 	be_t<s32> DMUX_PPU_THREAD_PRIORITY;
-	be_t<s32> _DMUX_NUM_OF_SPUS;
+	be_t<s32> DMUX_NUM_OF_SPUS;
 	be_t<u64> DMUX_SPURS_TASK_PRIORITIES;
 	be_t<s32> ADEC_PPU_THREAD_PRIORITY;
 	be_t<s32> ADEC_NUM_OF_SPUS;

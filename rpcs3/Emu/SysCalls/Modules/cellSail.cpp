@@ -1,15 +1,35 @@
 #include "stdafx.h"
+#include "Emu/System.h"
 #include "Emu/Memory/Memory.h"
+#include "Emu/SysCalls/Callback.h"
 #include "Emu/SysCalls/Modules.h"
+#include "Emu/IdManager.h"
 #include "Emu/FS/vfsFile.h"
 
 #include "cellSail.h"
 #include "cellPamf.h"
-#include "cellVpost.h"
 
 extern Module cellSail;
 
-// TODO: Create an internal cellSail thread
+void playerBoot(vm::ptr<CellSailPlayer> pSelf, u64 userParam)
+{
+	Emu.GetCallbackManager().Async([=](CPUThread& CPU)
+	{
+		CellSailEvent evnt;
+		evnt.minor = 0;
+		pSelf->callback(static_cast<PPUThread&>(CPU), pSelf->callbackArg, evnt, CELL_SAIL_PLAYER_STATE_BOOT_TRANSITION, 0); // Invalid type for cast_ppu_gpr - where's the enum?!
+	});
+
+	// TODO: Do stuff here
+	pSelf->booted = true;
+
+	/*Emu.GetCallbackManager().Async([=](CPUThread& CPU)
+	{
+		CellSailEvent evnt;
+		evnt.u32x2.minor = CELL_SAIL_PLAYER_CALL_BOOT;
+		pSelf->callback(static_cast<PPUThread&>(CPU), pSelf->callbackArg, evnt, 0, 0);
+	});*/
+}
 
 s32 cellSailMemAllocatorInitialize(vm::ptr<CellSailMemAllocator> pSelf, vm::ptr<CellSailMemAllocatorFuncs> pCallbacks)
 {
@@ -615,7 +635,38 @@ s32 cellSailPlayerInitialize2(
 	pSelf->callbackArg = callbackArg;
 	pSelf->attribute = *pAttribute;
 	pSelf->resource = *pResource;
+	pSelf->booted = false;
 	pSelf->paused = true;
+
+	// Set the default attributes
+	pSelf->CONTROL_PPU_THREAD_PRIORITY = 900;
+	pSelf->CONTROL_PPU_THREAD_STACK_SIZE = 12288;
+	pSelf->SPURS_NUM_OF_SPUS = 4;
+	pSelf->SPURS_SPU_THREAD_PRIORITY = 100;
+	pSelf->SPURS_PPU_THREAD_PRIORITY = 300;
+	pSelf->SPURS_EXIT_IF_NO_WORK = true;
+	pSelf->IO_PPU_THREAD_PRIORITY = 1200;
+	//pSelf->IO_PPU_THREAD_STACK_SIZE = 4096;
+	pSelf->DMUX_PPU_THREAD_PRIORITY = 700;
+	pSelf->DMUX_NUM_OF_SPUS = 1;
+	pSelf->DMUX_SPURS_TASK_PRIORITIES = 0x0101010101010101;
+	pSelf->ADEC_PPU_THREAD_PRIORITY = 450;
+	pSelf->ADEC_NUM_OF_SPUS = 1;
+	pSelf->ADEC_SPURS_TASK_PRIORITIES = 0x0101010101010101;
+	pSelf->ENABLE_APOST_SRC = false;
+	pSelf->VDEC_PPU_THREAD_PRIORITY = 550;
+	pSelf->VDEC_M2V_NUM_OF_SPUS = 1;
+	pSelf->VDEC_AVC_NUM_OF_SPUS = 4;
+	pSelf->VDEC_SPURS_TASK_PRIORITIES = 0x0101010101010101;
+	//pSelf->ENABLE_VPOST = nullptr;
+	pSelf->VPOST_PPU_THREAD_PRIORITY = 500;
+	pSelf->VPOST_NUM_OF_SPUS = 1;
+	pSelf->VPOST_SPURS_TASK_PRIORITIES = 0x0101010101010101;
+	pSelf->GRAPHICS_ADAPTER_BUFFER_RELEASE_DELAY = 2;
+	pSelf->VIDEO_PERFORMANCE_POLICY = 0;
+	pSelf->AV_SYNC_ES_AUDIO = false;
+	pSelf->AV_SYNC_ES_VIDEO = false;
+	//pSelf->FS = nullptr;
 
 	return CELL_OK;
 }
@@ -633,6 +684,8 @@ s32 cellSailPlayerFinalize(vm::ptr<CellSailPlayer> pSelf)
 	{
 		pSelf->gAdapter->registered = false;
 	}
+
+	//vm::dealloc(pSelf.addr());
 
 	return CELL_OK;
 }
@@ -702,12 +755,29 @@ s32 cellSailPlayerSetRendererVideo()
 s32 cellSailPlayerSetParameter(vm::ptr<CellSailPlayer> pSelf, s32 parameterType, u64 param0, u64 param1)
 {
 	cellSail.Todo("cellSailPlayerSetParameter(pSelf=*0x%x, parameterType=0x%x (%s), param0=%d, param1=%d)", pSelf, parameterType, ParameterCodeToName(parameterType), param0, param1);
+
+	switch (parameterType)
+	{
+	case CELL_SAIL_PARAMETER_ENABLE_APOST_SRC: pSelf->ENABLE_APOST_SRC = param0; break;
+	default:
+		cellSail.Error("cellSailPlayerSetParameter(): unimplemented parameter type 0x%x (%s).", parameterType, ParameterCodeToName(parameterType));
+		break;
+	}
+
 	return CELL_OK;
 }
 
-s32 cellSailPlayerGetParameter()
+s32 cellSailPlayerGetParameter(vm::ptr<CellSailPlayer> pSelf, s32 parameterType, vm::ptr<u64> pParam0, vm::ptr<u64> pParam1)
 {
-	UNIMPLEMENTED_FUNC(cellSail);
+	cellSail.Todo("cellSailPlayerGetParameter(pSelf=*0x%x, parameterType=0x%x (%s), param0=*0x%x, param1=*0x%x)", pSelf, parameterType, ParameterCodeToName(parameterType), pParam0, pParam1);
+
+	switch (parameterType)
+	{
+	default:
+		cellSail.Error("cellSailPlayerGetParameter(): unimplemented parameter type 0x%x (%s).", parameterType, ParameterCodeToName(parameterType));
+		break;
+	}
+
 	return CELL_OK;
 }
 
@@ -729,9 +799,12 @@ s32 cellSailPlayerReplaceEventHandler()
 	return CELL_OK;
 }
 
-s32 cellSailPlayerBoot()
+s32 cellSailPlayerBoot(PPUThread& ppu, vm::ptr<CellSailPlayer> pSelf, u64 userParam)
 {
-	UNIMPLEMENTED_FUNC(cellSail);
+	cellSail.Todo("cellSailPlayerBoot(pSelf=*0x%x, userParam=%d)", pSelf, userParam);
+
+	thread_t(WRAP_EXPR("Sail Boot Thread"), [=] { playerBoot(pSelf, userParam); }).detach();
+
 	return CELL_OK;
 }
 
