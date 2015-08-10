@@ -1440,8 +1440,9 @@ static const std::string GetMethodName(const u32 id)
 		{ NV4097_SET_TRANSFORM_BRANCH_BITS, "NV4097_SET_TRANSFORM_BRANCH_BITS" }
 	};
 
-	for(auto& s: METHOD_NAME_LIST) {
-		if(s.id == id)
+	for (auto& s: METHOD_NAME_LIST)
+	{
+		if (s.id == id)
 			return "CELL_GCM_" + s.name;
 	}
 

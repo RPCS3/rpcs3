@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "Emu/IdManager.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/SysCalls/Modules.h"
 
@@ -8,6 +9,16 @@
 #include "cellVideoOut.h"
 
 extern Module cellAvconfExt;
+
+struct avconfext_t
+{
+	u8 gamma;
+
+	avconfext_t()
+	{
+		gamma = 1;
+	}
+};
 
 s32 cellAudioOutUnregisterDevice()
 {
@@ -39,9 +50,20 @@ s32 cellVideoOutConvertCursorColor()
 	throw EXCEPTION("");
 }
 
-s32 cellVideoOutGetGamma()
+s32 cellVideoOutGetGamma(u32 videoOut, vm::ptr<u8> gamma)
 {
-	throw EXCEPTION("");
+	cellAvconfExt.Warning("cellVideoOutGetGamma(videoOut=%d, gamma=*0x%x)", videoOut, gamma);
+
+	if (videoOut != CELL_VIDEO_OUT_PRIMARY)
+	{
+		return CELL_VIDEO_OUT_ERROR_UNSUPPORTED_VIDEO_OUT;
+	}
+
+	const auto avconfExt = fxm::get<avconfext_t>();
+
+	*gamma = avconfExt->gamma;
+
+	return CELL_VIDEO_OUT_SUCCEEDED;
 }
 
 s32 cellAudioInGetAvailableDeviceInfo()
@@ -54,9 +76,25 @@ s32 cellAudioOutGetAvailableDeviceInfo()
 	throw EXCEPTION("");
 }
 
-s32 cellVideoOutSetGamma()
+s32 cellVideoOutSetGamma(u32 videoOut, u8 gamma)
 {
-	throw EXCEPTION("");
+	cellAvconfExt.Warning("cellVideoOutSetGamma(videoOut=%d, gamma=%d)", videoOut, gamma);
+
+	if (videoOut != CELL_VIDEO_OUT_PRIMARY)
+	{
+		return CELL_VIDEO_OUT_ERROR_UNSUPPORTED_VIDEO_OUT;
+	}
+
+	if (gamma < 0.8 || gamma > 1.2)
+	{
+		return CELL_VIDEO_OUT_ERROR_ILLEGAL_PARAMETER;
+	}
+
+	const auto avconfExt = fxm::get<avconfext_t>();
+
+	avconfExt->gamma = gamma;
+
+	return CELL_VIDEO_OUT_SUCCEEDED;
 }
 
 s32 cellAudioOutRegisterDevice()
@@ -114,6 +152,9 @@ s32 cellVideoOutGetScreenSize(u32 videoOut, vm::ptr<float> screenSize)
 
 Module cellAvconfExt("cellAvconfExt", []()
 {
+	fxm::remove<avconfext_t>();
+	fxm::make<avconfext_t>();
+
 	REG_FUNC(cellAvconfExt, cellAudioOutUnregisterDevice);
 	REG_FUNC(cellAvconfExt, cellAudioOutGetDeviceInfo2);
 	REG_FUNC(cellAvconfExt, cellVideoOutSetXVColor);
