@@ -610,16 +610,23 @@ struct CellSailSourceStreamingProfile
 
 union CellSailEvent
 {
-	struct u32x2
+	struct
 	{
 		be_t<u32> major;
 		be_t<u32> minor;
 	};
 
-	struct ui64
+	be_t<u64> value;
+};
+
+template<typename T, bool is_enum> struct cast_ppu_gpr;
+
+template<> struct cast_ppu_gpr<CellSailEvent, false>
+{
+	inline static u64 to_gpr(const CellSailEvent& event)
 	{
-		be_t<u64> value;
-	};
+		return event.value;
+	}
 };
 
 using CellSailMemAllocatorFuncAlloc = vm::ptr<void>(vm::ptr<void> pArg, u32 boundary, u32 size);
@@ -679,7 +686,7 @@ using CellSailRendererVideoFuncCancel = void(vm::ptr<void> pArg);
 using CellSailRendererVideoFuncCheckout = s32(vm::ptr<void> pArg, vm::pptr<CellSailVideoFrameInfo> ppInfo);
 using CellSailRendererVideoFuncCheckin = s32(vm::ptr<void> pArg, vm::ptr<CellSailVideoFrameInfo> pInfo);
 
-using CellSailPlayerFuncNotified = void(vm::ptr<void> pArg, CellSailEvent event, u64 arg0, u64 arg1);
+using CellSailPlayerFuncNotified = void(vm::ptr<void> pArg, CellSailEvent evnt, u64 arg0, u64 arg1);
 
 struct CellSailMemAllocatorFuncs
 {
@@ -689,7 +696,7 @@ struct CellSailMemAllocatorFuncs
 
 struct CellSailMemAllocator
 {
-	vm::ptr<CellSailMemAllocatorFuncs> callbacks;
+	vm::bptr<CellSailMemAllocatorFuncs> callbacks;
 	be_t<u32> pArg;
 };
 
@@ -1130,6 +1137,7 @@ struct CellSailPlayer
 	s32 descriptors;
 	vm::ptr<CellSailDescriptor> registeredDescriptors[2];
 	bool paused;
+	bool booted;
 	vm::ptr<CellSailSoundAdapter> sAdapter;
 	vm::ptr<CellSailGraphicsAdapter> gAdapter;
 };

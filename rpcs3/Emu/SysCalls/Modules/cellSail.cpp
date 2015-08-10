@@ -1,5 +1,7 @@
 #include "stdafx.h"
+#include "Emu/System.h"
 #include "Emu/Memory/Memory.h"
+#include "Emu/SysCalls/Callback.h"
 #include "Emu/SysCalls/Modules.h"
 #include "Emu/FS/vfsFile.h"
 
@@ -8,7 +10,25 @@
 
 extern Module cellSail;
 
-// TODO: Create an internal cellSail thread
+void playerBoot(vm::ptr<CellSailPlayer> pSelf, u64 userParam)
+{
+	Emu.GetCallbackManager().Async([=](CPUThread& cpu)
+	{
+		CellSailEvent evnt;
+		evnt.minor = 0;
+		pSelf->callback(static_cast<PPUThread&>(cpu), pSelf->callbackArg, evnt, CELL_SAIL_PLAYER_STATE_BOOT_TRANSITION, 0);
+	});
+
+	// TODO: Do stuff here
+	pSelf->booted = true;
+
+	/*Emu.GetCallbackManager().Async([=](CPUThread& CPU)
+	{
+		CellSailEvent evnt;
+		evnt.u32x2.minor = CELL_SAIL_PLAYER_CALL_BOOT;
+		pSelf->callback(static_cast<PPUThread&>(CPU), pSelf->callbackArg, evnt, 0, 0);
+	});*/
+}
 
 s32 cellSailMemAllocatorInitialize(vm::ptr<CellSailMemAllocator> pSelf, vm::ptr<CellSailMemAllocatorFuncs> pCallbacks)
 {
@@ -607,6 +627,7 @@ s32 cellSailPlayerInitialize2(
 	pSelf->callbackArg = callbackArg;
 	pSelf->attribute = *pAttribute;
 	pSelf->resource = *pResource;
+	pSelf->booted = false;
 	pSelf->paused = true;
 
 	return CELL_OK;
@@ -693,13 +714,25 @@ s32 cellSailPlayerSetRendererVideo()
 
 s32 cellSailPlayerSetParameter(vm::ptr<CellSailPlayer> pSelf, s32 parameterType, u64 param0, u64 param1)
 {
-	cellSail.Todo("cellSailPlayerSetParameter(pSelf=*0x%x, parameterType=0x%x (%s), param0=0x%llx, param1=0x%llx)", pSelf, parameterType, ParameterCodeToName(parameterType), param0, param1);
+	cellSail.Todo("cellSailPlayerSetParameter(pSelf=*0x%x, parameterType=0x%x, param0=0x%llx, param1=0x%llx)", pSelf, parameterType, param0, param1);
+
+	switch (parameterType)
+	{
+	default: cellSail.Error("cellSailPlayerSetParameter(): unimplemented parameter %s", ParameterCodeToName(parameterType));
+	}
+
 	return CELL_OK;
 }
 
-s32 cellSailPlayerGetParameter()
+s32 cellSailPlayerGetParameter(vm::ptr<CellSailPlayer> pSelf, s32 parameterType, vm::ptr<u64> pParam0, vm::ptr<u64> pParam1)
 {
-	UNIMPLEMENTED_FUNC(cellSail);
+	cellSail.Todo("cellSailPlayerGetParameter(pSelf=*0x%x, parameterType=0x%x, param0=*0x%x, param1=*0x%x)", pSelf, parameterType, pParam0, pParam1);
+
+	switch (parameterType)
+	{
+	default: cellSail.Error("cellSailPlayerGetParameter(): unimplemented parameter %s", ParameterCodeToName(parameterType));
+	}
+
 	return CELL_OK;
 }
 
@@ -721,9 +754,12 @@ s32 cellSailPlayerReplaceEventHandler()
 	return CELL_OK;
 }
 
-s32 cellSailPlayerBoot()
+s32 cellSailPlayerBoot(PPUThread& ppu, vm::ptr<CellSailPlayer> pSelf, u64 userParam)
 {
-	UNIMPLEMENTED_FUNC(cellSail);
+	cellSail.Todo("cellSailPlayerBoot(pSelf=*0x%x, userParam=%d)", pSelf, userParam);
+
+	playerBoot(pSelf, userParam);
+
 	return CELL_OK;
 }
 
