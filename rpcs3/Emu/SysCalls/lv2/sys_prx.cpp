@@ -16,8 +16,6 @@
 
 SysCallBase sys_prx("sys_prx");
 
-extern void fill_ppu_exec_map(u32 addr, u32 size);
-
 lv2_prx_t::lv2_prx_t()
 	: id(idm::get_current_id())
 {
@@ -124,6 +122,8 @@ s32 prx_load_module(std::string path, u64 flags, vm::ptr<sys_prx_load_module_opt
 		}
 	}
 
+	const auto decoder_cache = fxm::get<ppu_decoder_cache_t>();
+
 	for (auto& seg : info.segments)
 	{
 		const u32 addr = seg.begin.addr();
@@ -131,7 +131,7 @@ s32 prx_load_module(std::string path, u64 flags, vm::ptr<sys_prx_load_module_opt
 
 		if (vm::check_addr(addr, size))
 		{
-			fill_ppu_exec_map(addr, size);
+			decoder_cache->initialize(addr, size);
 		}
 		else
 		{

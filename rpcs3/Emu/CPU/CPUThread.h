@@ -120,6 +120,8 @@ public:
 	// process m_state flags, returns true if the checker must return
 	bool check_status();
 
+	virtual bool handle_interrupt() { return false; }
+
 	std::string GetFName() const
 	{
 		return fmt::format("%s[0x%x] Thread (%s)", GetTypeString(), m_id, m_name);

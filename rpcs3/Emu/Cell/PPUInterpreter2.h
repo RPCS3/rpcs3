@@ -136,8 +136,6 @@ union ppu_opcode_t
 	};
 };
 
-using ppu_inter_func_t = void(*)(PPUThread& CPU, ppu_opcode_t opcode);
-
 namespace ppu_interpreter
 {
 	void NULL_OP(PPUThread& CPU, ppu_opcode_t op);

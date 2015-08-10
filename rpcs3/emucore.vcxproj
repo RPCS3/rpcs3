@@ -470,6 +470,7 @@
     <ClInclude Include="Emu\Audio\AudioThread.h" />
     <ClInclude Include="Emu\Audio\Null\NullAudioThread.h" />
     <ClInclude Include="Emu\Audio\XAudio2\XAudio2Thread.h" />
+    <ClInclude Include="Emu\Cell\Common.h" />
     <ClInclude Include="Emu\Cell\MFC.h" />
     <ClInclude Include="Emu\Cell\PPCDecoder.h" />
     <ClInclude Include="Emu\Cell\PPCDisAsm.h" />

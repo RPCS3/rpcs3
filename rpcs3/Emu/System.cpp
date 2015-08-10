@@ -38,7 +38,6 @@ static const u16 bpdb_version = 0x1000;
 extern std::atomic<u32> g_thread_count;
 
 extern u64 get_system_time();
-extern void finalize_ppu_exec_map();
 extern void finalize_psv_modules();
 
 Emulator::Emulator()
@@ -407,8 +406,6 @@ void Emulator::Stop()
 	CurGameInfo.Reset();
 	RSXIOMem.Clear();
 	vm::close();
-	
-	finalize_ppu_exec_map();
 
 	SendDbgCommand(DID_STOPPED_EMU);
 }

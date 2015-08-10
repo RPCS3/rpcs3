@@ -1864,5 +1864,8 @@
     <ClInclude Include="Emu\SysCalls\lv2\sys_sync.h">
       <Filter>Emu\SysCalls\lv2</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\Cell\Common.h">
+      <Filter>Emu\CPU\Cell</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

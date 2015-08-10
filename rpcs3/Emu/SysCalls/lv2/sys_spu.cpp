@@ -445,6 +445,11 @@ s32 sys_spu_thread_group_yield(u32 id)
 		return CELL_ESRCH;
 	}
 
+	if (group->type & SYS_SPU_THREAD_GROUP_TYPE_EXCLUSIVE_NON_CONTEXT) // this check may be inaccurate
+	{
+		return CELL_OK;
+	}
+
 	if (group->state != SPU_THREAD_GROUP_STATUS_RUNNING)
 	{
 		return CELL_ESTAT;

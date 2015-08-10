@@ -340,6 +340,28 @@ namespace fxm
 		return ptr;
 	}
 
+	// get fixed object of specified type (always returns an object, it's created if it doesn't exist)
+	template<typename T, typename... Args> std::enable_if_t<std::is_constructible<T, Args...>::value, std::shared_ptr<T>> get_always(Args&&... args)
+	{
+		extern std::mutex g_fx_mutex;
+		extern std::unordered_map<std::type_index, std::shared_ptr<void>> g_fx_map;
+
+		std::lock_guard<std::mutex> lock(g_fx_mutex);
+
+		const auto found = g_fx_map.find(typeid(T));
+
+		if (found == g_fx_map.end())
+		{
+			auto ptr = std::make_shared<T>(std::forward<Args>(args)...);
+
+			g_fx_map[typeid(T)] = ptr;
+
+			return ptr;
+		}
+
+		return std::static_pointer_cast<T>(found->second);
+	}
+
 	// check whether the object exists
 	template<typename T> bool check()
 	{
@@ -351,7 +373,7 @@ namespace fxm
 		return g_fx_map.find(typeid(T)) != g_fx_map.end();
 	}
 
-	// get fixed object of specified type
+	// get fixed object of specified type (returns nullptr if it doesn't exist)
 	template<typename T> std::shared_ptr<T> get()
 	{
 		extern std::mutex g_fx_mutex;

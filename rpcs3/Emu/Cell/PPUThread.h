@@ -550,6 +550,8 @@ public:
 	virtual void init_stack() override;
 	virtual void close_stack() override;
 
+	virtual bool handle_interrupt() override;
+
 	inline u8 GetCR(const u8 n) const
 	{
 		switch(n)

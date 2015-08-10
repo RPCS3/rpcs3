@@ -263,11 +263,19 @@ bool CPUThread::check_status()
 	{
 		CHECK_EMU_STATUS; // check at least once
 
-		if (!is_paused()) break;
+		if (!is_paused() && (m_state.load() & CPU_STATE_INTR) == 0)
+		{
+			break;
+		}
 
 		if (!lock)
 		{
 			lock.lock();
+			continue;
+		}
+
+		if (!is_paused() && (m_state.load() & CPU_STATE_INTR) != 0 && handle_interrupt())
+		{
 			continue;
 		}
 
