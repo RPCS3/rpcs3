@@ -559,8 +559,13 @@ void RecompilationEngine::CompileBlock(BlockEntry & block_entry) {
 
 	std::lock_guard<std::mutex> lock(m_address_locks[block_entry.cfg.start_address].first);
 
+	int loopiteration = 0;
 	while (m_address_locks[block_entry.cfg.start_address].second.load() > 0)
+	{
 		std::this_thread::yield();
+		if (loopiteration++ > 10000000)
+			return;
+	}
 
 	std::get<1>(m_address_to_function[block_entry.cfg.start_address]) = std::unique_ptr<llvm::ExecutionEngine>(compileResult.second);
 	std::get<0>(m_address_to_function[block_entry.cfg.start_address]) = compileResult.first;
