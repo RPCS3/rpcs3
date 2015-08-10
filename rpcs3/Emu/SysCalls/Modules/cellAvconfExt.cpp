@@ -9,6 +9,8 @@
 
 extern Module cellAvconfExt;
 
+f32 g_gamma;
+
 s32 cellAudioOutUnregisterDevice()
 {
 	throw EXCEPTION("");
@@ -39,9 +41,18 @@ s32 cellVideoOutConvertCursorColor()
 	throw EXCEPTION("");
 }
 
-s32 cellVideoOutGetGamma()
+s32 cellVideoOutGetGamma(u32 videoOut, vm::ptr<f32> gamma)
 {
-	throw EXCEPTION("");
+	cellAvconfExt.Warning("cellVideoOutGetGamma(videoOut=%d, gamma=*0x%x)", videoOut, gamma);
+
+	if (videoOut != CELL_VIDEO_OUT_PRIMARY)
+	{
+		return CELL_VIDEO_OUT_ERROR_UNSUPPORTED_VIDEO_OUT;
+	}
+
+	*gamma = g_gamma;
+
+	return CELL_OK;
 }
 
 s32 cellAudioInGetAvailableDeviceInfo()
@@ -54,9 +65,23 @@ s32 cellAudioOutGetAvailableDeviceInfo()
 	throw EXCEPTION("");
 }
 
-s32 cellVideoOutSetGamma()
+s32 cellVideoOutSetGamma(u32 videoOut, f32 gamma)
 {
-	throw EXCEPTION("");
+	cellAvconfExt.Warning("cellVideoOutSetGamma(videoOut=%d, gamma=%f)", videoOut, gamma);
+
+	if (videoOut != CELL_VIDEO_OUT_PRIMARY)
+	{
+		return CELL_VIDEO_OUT_ERROR_UNSUPPORTED_VIDEO_OUT;
+	}
+
+	if (gamma < 0.8f || gamma > 1.2f)
+	{
+		return CELL_VIDEO_OUT_ERROR_ILLEGAL_PARAMETER;
+	}
+
+	g_gamma = gamma;
+
+	return CELL_OK;
 }
 
 s32 cellAudioOutRegisterDevice()
@@ -114,6 +139,8 @@ s32 cellVideoOutGetScreenSize(u32 videoOut, vm::ptr<float> screenSize)
 
 Module cellAvconfExt("cellAvconfExt", []()
 {
+	g_gamma = 1.0f;
+
 	REG_FUNC(cellAvconfExt, cellAudioOutUnregisterDevice);
 	REG_FUNC(cellAvconfExt, cellAudioOutGetDeviceInfo2);
 	REG_FUNC(cellAvconfExt, cellVideoOutSetXVColor);

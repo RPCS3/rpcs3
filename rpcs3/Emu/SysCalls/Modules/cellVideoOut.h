@@ -1,8 +1,8 @@
 #pragma once
 
-enum VideoErrorCode
+// Video Out Error Codes
+enum
 {
-	CELL_VIDEO_OUT_SUCCEEDED                      = 0,
 	CELL_VIDEO_OUT_ERROR_NOT_IMPLEMENTED          = 0x8002b220,
 	CELL_VIDEO_OUT_ERROR_ILLEGAL_CONFIGURATION    = 0x8002b221,
 	CELL_VIDEO_OUT_ERROR_ILLEGAL_PARAMETER        = 0x8002b222,

@@ -25,11 +25,11 @@ s32 cellVideoOutGetState(u32 videoOut, u32 deviceIndex, vm::ptr<CellVideoOutStat
 		state->displayMode.conversion = Emu.GetGSManager().GetInfo().mode.conversion;
 		state->displayMode.aspect = Emu.GetGSManager().GetInfo().mode.aspect;
 		state->displayMode.refreshRates = Emu.GetGSManager().GetInfo().mode.refreshRates;
-		return CELL_VIDEO_OUT_SUCCEEDED;
+		return CELL_OK;
 
 	case CELL_VIDEO_OUT_SECONDARY:
 		*state = { CELL_VIDEO_OUT_OUTPUT_STATE_DISABLED }; // ???
-		return CELL_VIDEO_OUT_SUCCEEDED;
+		return CELL_OK;
 	}
 
 	return CELL_VIDEO_OUT_ERROR_UNSUPPORTED_VIDEO_OUT;
@@ -46,7 +46,7 @@ s32 cellVideoOutGetResolution(u32 resolutionId, vm::ptr<CellVideoOutResolution> 
 	resolution->width = ResolutionTable[num].width;
 	resolution->height = ResolutionTable[num].height;
 
-	return CELL_VIDEO_OUT_SUCCEEDED;
+	return CELL_OK;
 }
 
 s32 cellVideoOutConfigure(u32 videoOut, vm::ptr<CellVideoOutConfiguration> config, vm::ptr<CellVideoOutOption> option, u32 waitForEvent)
@@ -73,10 +73,10 @@ s32 cellVideoOutConfigure(u32 videoOut, vm::ptr<CellVideoOutConfiguration> confi
 			Emu.GetGSManager().GetInfo().mode.pitch = config->pitch;
 		}
 
-		return CELL_VIDEO_OUT_SUCCEEDED;
+		return CELL_OK;
 
 	case CELL_VIDEO_OUT_SECONDARY:
-		return CELL_VIDEO_OUT_SUCCEEDED;
+		return CELL_OK;
 	}
 
 	return CELL_VIDEO_OUT_ERROR_UNSUPPORTED_VIDEO_OUT;
@@ -97,11 +97,11 @@ s32 cellVideoOutGetConfiguration(u32 videoOut, vm::ptr<CellVideoOutConfiguration
 		config->aspect = Emu.GetGSManager().GetInfo().mode.aspect;
 		config->pitch = Emu.GetGSManager().GetInfo().mode.pitch;
 
-		return CELL_VIDEO_OUT_SUCCEEDED;
+		return CELL_OK;
 
 	case CELL_VIDEO_OUT_SECONDARY:
 
-		return CELL_VIDEO_OUT_SUCCEEDED;
+		return CELL_OK;
 	}
 
 	return CELL_VIDEO_OUT_ERROR_UNSUPPORTED_VIDEO_OUT;
