@@ -13,12 +13,6 @@ class thread_ctrl_t final
 	// name getter
 	const std::function<std::string()> name;
 
-	// true if assigned somewhere in TLS
-	std::atomic<bool> assigned{ false };
-
-	// assign TLS (must be assigned only once)
-	void set_current();
-
 public:
 	thread_ctrl_t(std::function<std::string()> name)
 		: name(std::move(name))

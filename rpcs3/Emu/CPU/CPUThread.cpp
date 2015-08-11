@@ -48,7 +48,7 @@ CPUThread::CPUThread(CPUThreadType type, const std::string& name, std::function<
 					m_state |= CPU_STATE_DEAD;
 					break;
 				}
-				catch (const fmt::exception&)
+				catch (...)
 				{
 					dump_info();
 					throw;

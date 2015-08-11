@@ -10,6 +10,9 @@ enum Status : u32
 	Ready,
 };
 
+// Emulation Stopped exception event
+class EmulationStopped {};
+
 class CPUThreadManager;
 class PadManager;
 class KeyboardManager;
@@ -209,7 +212,7 @@ inline bool check_lv2_lock(lv2_lock_t& lv2_lock)
 #define LV2_LOCK lv2_lock_t lv2_lock(Emu.GetCoreMutex())
 #define LV2_DEFER_LOCK lv2_lock_t lv2_lock
 #define CHECK_LV2_LOCK(x) if (!check_lv2_lock(x)) throw EXCEPTION("lv2_lock is invalid or not locked")
-#define CHECK_EMU_STATUS if (Emu.IsStopped()) throw EXCEPTION("Aborted (emulation stopped)")
+#define CHECK_EMU_STATUS if (Emu.IsStopped()) throw EmulationStopped{}
 
 typedef void(*CallAfterCbType)(std::function<void()> func);
 

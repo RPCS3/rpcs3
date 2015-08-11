@@ -248,6 +248,12 @@ namespace vm
 		return true;
 	}
 
+	waiter_lock_t::waiter_lock_t(thread_t& thread, u32 addr, u32 size)
+		: m_waiter(_add_waiter(thread, addr, size))
+		, m_lock(thread.mutex, std::adopt_lock) // must be locked in _add_waiter
+	{
+	}
+
 	void waiter_lock_t::wait()
 	{
 		// if another thread successfully called pred(), it must be set to null

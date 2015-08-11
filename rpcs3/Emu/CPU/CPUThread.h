@@ -2,11 +2,6 @@
 
 #include "Utilities/Thread.h"
 
-namespace vm
-{
-	class waiter_lock_t;
-}
-
 enum CPUThreadType
 {
 	CPU_THREAD_PPU,
@@ -31,19 +26,25 @@ enum : u64
 };
 
 // "HLE return" exception event
-class CPUThreadReturn{};
+class CPUThreadReturn {};
 
 // CPUThread::Stop exception event
-class CPUThreadStop{};
+class CPUThreadStop {};
 
 // CPUThread::Exit exception event
-class CPUThreadExit{};
+class CPUThreadExit {};
 
 class CPUDecoder;
 
-class CPUThread : protected thread_t, public std::enable_shared_from_this<CPUThread>
+class CPUThread : public thread_t, public std::enable_shared_from_this<CPUThread>
 {
+	using thread_t::start;
+
 protected:
+	using thread_t::detach;
+	using thread_t::join;
+	using thread_t::joinable;
+
 	atomic_t<u64> m_state; // thread state flags
 
 	std::unique_ptr<CPUDecoder> m_dec;
@@ -52,15 +53,6 @@ protected:
 	const CPUThreadType m_type;
 	const std::string m_name; // changing m_name would be terribly thread-unsafe in current implementation
 
-public:
-	using thread_t::mutex;
-	using thread_t::cv;
-	using thread_t::is_current;
-	using thread_t::get_thread_ctrl;
-
-	friend vm::waiter_lock_t;
-
-protected:
 	CPUThread(CPUThreadType type, const std::string& name, std::function<std::string()> thread_name);
 
 public:

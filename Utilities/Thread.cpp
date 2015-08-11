@@ -1199,36 +1199,6 @@ std::string thread_ctrl_t::get_name() const
 	return name();
 }
 
-void thread_ctrl_t::set_current()
-{
-	const auto old_value = g_tls_this_thread;
-
-	if (old_value == this)
-	{
-		return;
-	}
-
-	if (old_value)
-	{
-		vm::reservation_free();
-	}
-
-	if (true && assigned.exchange(true))
-	{
-		LOG_ERROR(GENERAL, "Thread '%s' was already assigned to g_tls_this_thread of another thread", get_name());
-		g_tls_this_thread = nullptr;
-	}
-	else
-	{
-		g_tls_this_thread = this;
-	}
-
-	if (old_value)
-	{
-		old_value->assigned = false;
-	}
-}
-
 thread_t::thread_t(std::function<std::string()> name, std::function<void()> func)
 {
 	start(std::move(name), func);
@@ -1272,12 +1242,12 @@ void thread_t::start(std::function<std::string()> name, std::function<void()> fu
 	// start thread
 	m_thread->m_thread = std::thread([](std::shared_ptr<thread_ctrl_t> ctrl, std::function<void()> func)
 	{
-		g_thread_count++;
+		g_tls_this_thread = ctrl.get();
 
 		SetCurrentThreadDebugName(ctrl->get_name().c_str());
 
 #if defined(_MSC_VER)
-		auto old_se_translator = _set_se_translator(_se_translator);
+		_set_se_translator(_se_translator);
 #endif
 
 #ifdef _WIN32
@@ -1294,16 +1264,9 @@ void thread_t::start(std::function<std::string()> name, std::function<void()> fu
 		}
 #endif
 
-		// error handler
-		const auto error = [&](const char* text)
-		{
-			log_message(GENERAL, Emu.IsStopped() ? Log::Severity::Warning : Log::Severity::Error, "Exception: %s", text);
-			Emu.Pause();
-		};
-
 		try
 		{
-			ctrl->set_current();
+			g_thread_count++;
 
 			if (Ini.HLELogging.GetValue())
 			{
@@ -1311,36 +1274,31 @@ void thread_t::start(std::function<std::string()> name, std::function<void()> fu
 			}
 
 			func();
-		}
-		catch (const char* e) // obsolete
-		{
-			LOG_ERROR(GENERAL, "Deprecated exception type (const char*)");
-			error(e);
-		}
-		catch (const std::string& e) // obsolete
-		{
-			LOG_ERROR(GENERAL, "Deprecated exception type (std::string)");
-			error(e.c_str());
+
+			if (Ini.HLELogging.GetValue())
+			{
+				LOG_NOTICE(GENERAL, "Thread ended");
+			}
 		}
 		catch (const fmt::exception& e)
 		{
-			error(e);
+			LOG_ERROR(GENERAL, "Exception: %s", e.message.get());
+			Emu.Pause();
 		}
-
-		if (Ini.HLELogging.GetValue())
+		catch (const std::exception& e)
 		{
-			LOG_NOTICE(GENERAL, "Thread ended");
+			LOG_ERROR(GENERAL, "STD Exception: %s", e.what());
+			Emu.Pause();
 		}
-
-		//ctrl->set_current(false);
+		catch (EmulationStopped)
+		{
+			LOG_NOTICE(GENERAL, "Thread aborted");
+		}
 
 		vm::reservation_free();
 
 		g_thread_count--;
 
-#if defined(_MSC_VER)
-		_set_se_translator(old_se_translator);
-#endif
 	}, m_thread, std::move(func));
 }
 

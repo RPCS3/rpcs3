@@ -62,9 +62,6 @@ namespace vm
 		bool try_notify();
 	};
 
-	// for internal use
-	waiter_t* _add_waiter(thread_t& thread, u32 addr, u32 size);
-
 	class waiter_lock_t
 	{
 		waiter_t* m_waiter;
@@ -73,11 +70,7 @@ namespace vm
 	public:
 		waiter_lock_t() = delete;
 
-		template<typename T> inline waiter_lock_t(T& thread, u32 addr, u32 size)
-			: m_waiter(_add_waiter(static_cast<thread_t&>(thread), addr, size))
-			, m_lock(thread.mutex, std::adopt_lock) // must be locked in _add_waiter
-		{
-		}
+		waiter_lock_t(thread_t& thread, u32 addr, u32 size);
 
 		waiter_t* operator ->() const
 		{
@@ -90,7 +83,7 @@ namespace vm
 	};
 
 	// wait until pred() returns true, addr must be aligned to size which must be a power of 2, pred() may be called by any thread
-	template<typename T, typename F, typename... Args> auto wait_op(T& thread, u32 addr, u32 size, F pred, Args&&... args) -> decltype(static_cast<void>(pred(args...)))
+	template<typename F, typename... Args> auto wait_op(thread_t& thread, u32 addr, u32 size, F pred, Args&&... args) -> decltype(static_cast<void>(pred(args...)))
 	{
 		// return immediately if condition passed (optimistic case)
 		if (pred(args...)) return;
