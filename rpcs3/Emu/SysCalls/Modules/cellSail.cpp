@@ -15,64 +15,70 @@ void playerBoot(vm::ptr<CellSailPlayer> pSelf, u64 userParam)
 {
 	Emu.GetCallbackManager().Async([=](CPUThread& CPU)
 	{
-		CellSailEvent evnt;
-		evnt.minor = 0;
-		pSelf->callback(static_cast<PPUThread&>(CPU), pSelf->callbackArg, evnt, CELL_SAIL_PLAYER_STATE_BOOT_TRANSITION, 0); // Invalid type for cast_ppu_gpr - where's the enum?!
+		auto evnt = vm::ptr<CellSailEvent>::make(vm::alloc(sizeof(CellSailEvent), vm::main));
+		evnt->u32x2.major = CELL_SAIL_EVENT_PLAYER_STATE_CHANGED;
+		evnt->u32x2.minor = 0;
+		//evnt->u64.value = evnt->u32x2.major << 32 | evnt->u32x2.minor;
+		pSelf->callback(static_cast<PPUThread&>(CPU), pSelf->callbackArg, evnt, CELL_SAIL_PLAYER_STATE_BOOT_TRANSITION, 0);
+		vm::dealloc((u32)&evnt);
 	});
 
 	// TODO: Do stuff here
 	pSelf->booted = true;
 
-	/*Emu.GetCallbackManager().Async([=](CPUThread& CPU)
+	Emu.GetCallbackManager().Async([=](CPUThread& CPU)
 	{
-		CellSailEvent evnt;
-		evnt.u32x2.minor = CELL_SAIL_PLAYER_CALL_BOOT;
+		auto evnt = vm::ptr<CellSailEvent>::make(vm::alloc(sizeof(CellSailEvent), vm::main));
+		evnt->u32x2.major = CELL_SAIL_EVENT_PLAYER_CALL_COMPLETED;
+		evnt->u32x2.minor = CELL_SAIL_PLAYER_CALL_BOOT;
+		//evnt->u64.value = evnt->u32x2.major << 32 | evnt->u32x2.minor;
 		pSelf->callback(static_cast<PPUThread&>(CPU), pSelf->callbackArg, evnt, 0, 0);
-	});*/
+		vm::dealloc((u32)&evnt);
+	});
 }
 
 s32 cellSailMemAllocatorInitialize(vm::ptr<CellSailMemAllocator> pSelf, vm::ptr<CellSailMemAllocatorFuncs> pCallbacks)
 {
-	cellSail.Warning("cellSailMemAllocatorInitialize(pSelf=*0x%x, pCallbacks=*0x%x)", pSelf, pCallbacks);
+	cellSail.Warning("cellSailMemAllocatorInitialize(pSelf_addr=*0x%x, pCallbacks_addr=*0x%x)", pSelf, pCallbacks);
 
 	pSelf->callbacks = pCallbacks;
 
 	return CELL_OK;
 }
 
-s32 cellSailFutureInitialize()
+s32 cellSailFutureInitialize(vm::ptr<CellSailFuture> pSelf)
 {
-	UNIMPLEMENTED_FUNC(cellSail);
+	cellSail.Todo("cellSailFutureInitialize(pSelf=*0x%x)", pSelf);
 	return CELL_OK;
 }
 
-s32 cellSailFutureFinalize()
+s32 cellSailFutureFinalize(vm::ptr<CellSailFuture> pSelf)
 {
-	UNIMPLEMENTED_FUNC(cellSail);
+	cellSail.Todo("cellSailFutureFinalize(pSelf=*0x%x)", pSelf);
 	return CELL_OK;
 }
 
-s32 cellSailFutureReset()
+s32 cellSailFutureReset(vm::ptr<CellSailFuture> pSelf, b8 wait)
 {
-	UNIMPLEMENTED_FUNC(cellSail);
+	cellSail.Todo("cellSailFutureReset(pSelf=*0x%x, wait=%d)", pSelf, wait);
 	return CELL_OK;
 }
 
-s32 cellSailFutureSet()
+s32 cellSailFutureSet(vm::ptr<CellSailFuture> pSelf, s32 result)
 {
-	UNIMPLEMENTED_FUNC(cellSail);
+	cellSail.Todo("cellSailFutureSet(pSelf=*0x%x, result=%d)", pSelf, result);
 	return CELL_OK;
 }
 
-s32 cellSailFutureGet()
+s32 cellSailFutureGet(vm::ptr<CellSailFuture> pSelf, u64 timeout, vm::ptr<s32> pResult)
 {
-	UNIMPLEMENTED_FUNC(cellSail);
+	cellSail.Todo("cellSailFutureGet(pSelf=*0x%x, timeout=%d, result=*0x%x)", pSelf, timeout, pResult);
 	return CELL_OK;
 }
 
-s32 cellSailFutureIsDone()
+s32 cellSailFutureIsDone(vm::ptr<CellSailFuture> pSelf, vm::ptr<s32> pResult)
 {
-	UNIMPLEMENTED_FUNC(cellSail);
+	cellSail.Todo("cellSailFutureGet(pSelf=*0x%x, result=*0x%x)", pSelf, pResult);
 	return CELL_OK;
 }
 
@@ -121,7 +127,7 @@ s32 cellSailDescriptorIsAutoSelection(vm::ptr<CellSailDescriptor> pSelf)
 
 s32 cellSailDescriptorCreateDatabase(vm::ptr<CellSailDescriptor> pSelf, vm::ptr<void> pDatabase, u32 size, u64 arg)
 {
-	cellSail.Warning("cellSailDescriptorCreateDatabase(pSelf=*0x%x, pDatabase=*0x%x, size=0x%x, arg=0x%x", pSelf, pDatabase, size, arg);
+	cellSail.Warning("cellSailDescriptorCreateDatabase(pSelf=*0x%x, pDatabase=*0x%x, size=%d, arg=%d", pSelf, pDatabase, size, arg);
 
 	switch ((s32)pSelf->streamType)
 	{
@@ -189,7 +195,7 @@ s32 cellSailDescriptorSetParameter()
 
 s32 cellSailSoundAdapterInitialize(vm::ptr<CellSailSoundAdapter> pSelf, vm::cptr<CellSailSoundAdapterFuncs> pCallbacks, vm::ptr<u32> pArg)
 {
-	cellSail.Warning("cellSailSoundAdapterInitialize(pSelf_addr=*0x%x, pCallbacks_addr=*0x%x, pArg=*0x%x)", pSelf, pCallbacks, pArg);
+	cellSail.Warning("cellSailSoundAdapterInitialize(pSelf=*0x%x, pCallbacks=*0x%x, pArg=*0x%x)", pSelf, pCallbacks, pArg);
 
 	if (pSelf->initialized)
 	{
@@ -202,7 +208,12 @@ s32 cellSailSoundAdapterInitialize(vm::ptr<CellSailSoundAdapter> pSelf, vm::cptr
 	}
 
 	pSelf->callbacks = pCallbacks;
-	pSelf->arg = *pArg;
+
+	if (pArg)
+	{
+		pSelf->arg = *pArg;
+	}
+	
 	pSelf->initialized = true;
 	pSelf->registered = false;
 
@@ -211,7 +222,7 @@ s32 cellSailSoundAdapterInitialize(vm::ptr<CellSailSoundAdapter> pSelf, vm::cptr
 
 s32 cellSailSoundAdapterFinalize(vm::ptr<CellSailSoundAdapter> pSelf)
 {
-	cellSail.Warning("cellSailSoundAdapterFinalize(pSelf_addr=*0x%x)", pSelf);
+	cellSail.Warning("cellSailSoundAdapterFinalize(pSelf=*0x%x)", pSelf);
 
 	if (!pSelf->initialized)
 	{
@@ -230,7 +241,7 @@ s32 cellSailSoundAdapterFinalize(vm::ptr<CellSailSoundAdapter> pSelf)
 
 s32 cellSailSoundAdapterSetPreferredFormat(vm::ptr<CellSailSoundAdapter> pSelf, vm::cptr<CellSailAudioFormat> pFormat)
 {
-	cellSail.Warning("cellSailSoundAdapterSetPreferredFormat(pSelf_addr=*0x%x, pFormat_addr=*0x%x)", pSelf, pFormat);
+	cellSail.Warning("cellSailSoundAdapterSetPreferredFormat(pSelf=*0x%x, pFormat=*0x%x)", pSelf, pFormat);
 
 	pSelf->format = *pFormat;
 
@@ -239,7 +250,7 @@ s32 cellSailSoundAdapterSetPreferredFormat(vm::ptr<CellSailSoundAdapter> pSelf, 
 
 s32 cellSailSoundAdapterGetFrame(vm::ptr<CellSailSoundAdapter> pSelf, u32 samples, vm::ptr<CellSailSoundFrameInfo> pInfo)
 {
-	cellSail.Todo("cellSailSoundAdapterGetFrame(pSelf_addr=*0x%x, samples=%d, pInfo_addr=*0x%x)", pSelf, samples, pInfo);
+	cellSail.Todo("cellSailSoundAdapterGetFrame(pSelf=*0x%x, samples=%d, pInfo=*0x%x)", pSelf, samples, pInfo);
 
 	if (!pSelf->initialized)
 	{
@@ -270,7 +281,7 @@ s32 cellSailSoundAdapterGetFrame(vm::ptr<CellSailSoundAdapter> pSelf, u32 sample
 
 s32 cellSailSoundAdapterGetFormat(vm::ptr<CellSailSoundAdapter> pSelf, vm::ptr<CellSailAudioFormat> pFormat)
 {
-	cellSail.Warning("cellSailSoundAdapterGetFormat(pSelf_addr=*0x%x, pFormat_addr=*0x%x)", pSelf, pFormat);
+	cellSail.Warning("cellSailSoundAdapterGetFormat(pSelf=*0x%x, pFormat=*0x%x)", pSelf, pFormat);
 
 	*pFormat = pSelf->format;
 
@@ -291,7 +302,7 @@ s32 cellSailSoundAdapterPtsToTimePosition()
 
 s32 cellSailGraphicsAdapterInitialize(vm::ptr<CellSailGraphicsAdapter> pSelf, vm::cptr<CellSailGraphicsAdapterFuncs> pCallbacks, vm::ptr<u32> pArg)
 {
-	cellSail.Warning("cellSailGraphicsAdapterInitialize(pSelf_addr=*0x%x, pCallbacks_addr=*0x%x, pArg_addr=*0x%x)", pSelf, pCallbacks, pArg);
+	cellSail.Warning("cellSailGraphicsAdapterInitialize(pSelf=*0x%x, pCallbacks=*0x%x, pArg=*0x%x)", pSelf, pCallbacks, pArg);
 
 	if (pSelf->initialized)
 	{
@@ -304,7 +315,12 @@ s32 cellSailGraphicsAdapterInitialize(vm::ptr<CellSailGraphicsAdapter> pSelf, vm
 	}
 
 	pSelf->callbacks = pCallbacks;
-	pSelf->arg = *pArg;
+
+	if (pArg)
+	{
+		pSelf->arg = *pArg;
+	}
+	
 	pSelf->initialized = true;
 	pSelf->registered = true;
 
@@ -313,7 +329,7 @@ s32 cellSailGraphicsAdapterInitialize(vm::ptr<CellSailGraphicsAdapter> pSelf, vm
 
 s32 cellSailGraphicsAdapterFinalize(vm::ptr<CellSailGraphicsAdapter> pSelf)
 {
-	cellSail.Todo("cellSailGraphicsAdapterFinalize(pSelf_addr=*0x%x)", pSelf);
+	cellSail.Todo("cellSailGraphicsAdapterFinalize(pSelf=*0x%x)", pSelf);
 
 	if (!pSelf->initialized)
 	{
@@ -332,7 +348,7 @@ s32 cellSailGraphicsAdapterFinalize(vm::ptr<CellSailGraphicsAdapter> pSelf)
 
 s32 cellSailGraphicsAdapterSetPreferredFormat(vm::ptr<CellSailGraphicsAdapter> pSelf, const vm::ptr<CellSailVideoFormat> pFormat)
 {
-	cellSail.Warning("cellSailGraphicsAdapterSetPreferredFormat(pSelf_addr=*0x%x, pFormat_addr=*0x%x)", pSelf, pFormat);
+	cellSail.Warning("cellSailGraphicsAdapterSetPreferredFormat(pSelf=*0x%x, pFormat=*0x%x)", pSelf, pFormat);
 
 	pSelf->format = *pFormat;
 
@@ -341,19 +357,19 @@ s32 cellSailGraphicsAdapterSetPreferredFormat(vm::ptr<CellSailGraphicsAdapter> p
 
 s32 cellSailGraphicsAdapterGetFrame(vm::ptr<CellSailGraphicsAdapter> pSelf, vm::ptr<CellSailGraphicsFrameInfo> pInfo)
 {
-	cellSail.Todo("cellSailGraphicsAdapterGetFrame(pSelf_addr=*0x%x, pInfo_addr=*0x%x)", pSelf, pInfo);
+	cellSail.Todo("cellSailGraphicsAdapterGetFrame(pSelf=*0x%x, pInfo=*0x%x)", pSelf, pInfo);
 	return CELL_OK;
 }
 
 s32 cellSailGraphicsAdapterGetFrame2(vm::ptr<CellSailGraphicsAdapter> pSelf, vm::ptr<CellSailGraphicsFrameInfo> pInfo, vm::ptr<CellSailGraphicsFrameInfo> pPrevInfo, vm::ptr<u64> pFlipTime, u64 flags)
 {
-	cellSail.Todo("cellSailGraphicsAdapterGetFrame2(pSelf_addr=*0x%x, pInfo_addr=*0x%x, pPrevInfo_addr=*0x%x, flipTime_addr=*0x%x, flags=%d)", pSelf, pInfo, pPrevInfo, pFlipTime, flags);
+	cellSail.Todo("cellSailGraphicsAdapterGetFrame2(pSelf=*0x%x, pInfo=*0x%x, pPrevInfo=*0x%x, flipTime=*0x%x, flags=%d)", pSelf, pInfo, pPrevInfo, pFlipTime, flags);
 	return CELL_OK;
 }
 
 s32 cellSailGraphicsAdapterGetFormat(vm::ptr<CellSailGraphicsAdapter> pSelf, vm::ptr<CellSailVideoFormat> pFormat)
 {
-	cellSail.Warning("cellSailGraphicsAdapterGetFormat(pSelf_addr=*0x%x, format_addr=*0x%x)", pSelf, pFormat);
+	cellSail.Warning("cellSailGraphicsAdapterGetFormat(pSelf=*0x%x, format=*0x%x)", pSelf, pFormat);
 
 	*pFormat = pSelf->format;
 
@@ -668,12 +684,26 @@ s32 cellSailPlayerInitialize2(
 	pSelf->AV_SYNC_ES_VIDEO = false;
 	//pSelf->FS = nullptr;
 
+	Emu.GetCallbackManager().Async([=](CPUThread& CPU)
+	{
+		auto evnt = vm::ptr<CellSailEvent>::make(vm::alloc(sizeof(CellSailEvent), vm::main));
+		evnt->u32x2.major = CELL_SAIL_EVENT_PLAYER_STATE_CHANGED;
+		evnt->u32x2.minor = 0;
+		//evnt->value = CELL_SAIL_EVENT_PLAYER_STATE_CHANGED << 32 | 0;
+		cellSail.Error("major: %d", evnt->u32x2.major);
+		cellSail.Error("minor: %d", evnt->u32x2.minor);
+		evnt->u64.value = evnt->u32x2.major << 32 | evnt->u32x2.minor;
+		cellSail.Error("value: 0x%x", evnt->u64.value);
+		pSelf->callback(static_cast<PPUThread&>(CPU), pSelf->callbackArg, evnt, CELL_SAIL_PLAYER_STATE_INITIALIZED, 0);
+		vm::dealloc((u32) &evnt);
+	});
+
 	return CELL_OK;
 }
 
 s32 cellSailPlayerFinalize(vm::ptr<CellSailPlayer> pSelf)
 {
-	cellSail.Todo("cellSailPlayerFinalize(pSelf_addr=0x%x)", pSelf.addr());
+	cellSail.Todo("cellSailPlayerFinalize(pSelf=0x%x)", pSelf.addr());
 
 	if (pSelf->sAdapter)
 	{
@@ -704,7 +734,7 @@ s32 cellSailPlayerGetRegisteredProtocols()
 
 s32 cellSailPlayerSetSoundAdapter(vm::ptr<CellSailPlayer> pSelf, s32 index, vm::ptr<CellSailSoundAdapter> pAdapter)
 {
-	cellSail.Warning("cellSailPlayerSetSoundAdapter(pSelf_addr=*0x%x, index=%d, pAdapter_addr=*0x%x)", pSelf, index, pAdapter);
+	cellSail.Warning("cellSailPlayerSetSoundAdapter(pSelf=*0x%x, index=%d, pAdapter=*0x%x)", pSelf, index, pAdapter);
 
 	if (index < 0 || index > pSelf->attribute.maxAudioStreamNum)
 	{
@@ -720,7 +750,7 @@ s32 cellSailPlayerSetSoundAdapter(vm::ptr<CellSailPlayer> pSelf, s32 index, vm::
 
 s32 cellSailPlayerSetGraphicsAdapter(vm::ptr<CellSailPlayer> pSelf, s32 index, vm::ptr<CellSailGraphicsAdapter> pAdapter)
 {
-	cellSail.Warning("cellSailPlayerSetGraphicsAdapter(pSelf_addr=*0x%x, index=%d, pAdapter_addr=*0x%x)", pSelf, index, pAdapter);
+	cellSail.Warning("cellSailPlayerSetGraphicsAdapter(pSelf=*0x%x, index=%d, pAdapter=*0x%x)", pSelf, index, pAdapter);
 
 	if (index < 0 || index > pSelf->attribute.maxVideoStreamNum)
 	{
@@ -801,7 +831,7 @@ s32 cellSailPlayerReplaceEventHandler()
 
 s32 cellSailPlayerBoot(PPUThread& ppu, vm::ptr<CellSailPlayer> pSelf, u64 userParam)
 {
-	cellSail.Todo("cellSailPlayerBoot(pSelf=*0x%x, userParam=%d)", pSelf, userParam);
+	cellSail.Warning("cellSailPlayerBoot(pSelf=*0x%x, userParam=%d)", pSelf, userParam);
 
 	thread_t(WRAP_EXPR("Sail Boot Thread"), [=] { playerBoot(pSelf, userParam); }).detach();
 
@@ -876,8 +906,6 @@ s32 cellSailPlayerCreateDescriptor(vm::ptr<CellSailPlayer> pSelf, s32 streamType
 		default:
 			cellSail.Error("Unhandled stream type: %d", streamType);
 	}
-
-	//cellSailPlayerAddDescriptor(pSelf, ppDesc);
 
 	return CELL_OK;
 }
