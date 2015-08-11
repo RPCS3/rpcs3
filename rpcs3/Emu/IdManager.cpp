@@ -5,16 +5,18 @@ namespace idm
 {
 	std::mutex g_id_mutex;
 
-	std::unordered_map<u32, ID_data_t> g_id_map;
+	std::unordered_map<u32, id_data_t> g_id_map;
 
-	u32 g_cur_id = 1;
+	thread_local u32 g_tls_last_id = 0xdeadbeef;
+
+	u32 g_last_raw_id = 0;
 
 	void clear()
 	{
 		std::lock_guard<std::mutex> lock(g_id_mutex);
 
 		g_id_map.clear();
-		g_cur_id = 1; // first ID
+		g_last_raw_id = 0;
 	}
 }
 

@@ -201,8 +201,28 @@ struct lv2_file_t
 		, st_callback({})
 	{
 	}
+};
 
-	~lv2_file_t();
+template<> struct id_traits<lv2_file_t>
+{
+	static const u32 base = 0xfddd0000, max = 255;
+
+	static u32 next_id(u32 raw_id)
+	{
+		return
+			raw_id < 0x80000000 ? base + 3 :
+			raw_id - base < max ? raw_id + 1 : 0;
+	}
+
+	static u32 in_id(u32 id)
+	{
+		return id + base;
+	}
+
+	static u32 out_id(u32 raw_id)
+	{
+		return raw_id - base;
+	}
 };
 
 class vfsDirBase;
@@ -215,9 +235,9 @@ struct lv2_dir_t
 		: dir(std::move(dir))
 	{
 	}
-
-	~lv2_dir_t();
 };
+
+template<> struct id_traits<lv2_dir_t> : public id_traits<lv2_file_t> {};
 
 // SysCalls
 s32 sys_fs_test(u32 arg1, u32 arg2, vm::ptr<u32> arg3, u32 arg4, vm::ptr<char> arg5, u32 arg6);

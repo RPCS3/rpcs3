@@ -10,7 +10,7 @@ SysCallBase sys_memory("sys_memory");
 
 lv2_memory_container_t::lv2_memory_container_t(u32 size)
 	: size(size)
-	, id(idm::get_current_id())
+	, id(idm::get_last_id())
 {
 }
 

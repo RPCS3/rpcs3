@@ -10,13 +10,13 @@
 SysCallBase sys_interrupt("sys_interrupt");
 
 lv2_int_tag_t::lv2_int_tag_t()
-	: id(idm::get_current_id())
+	: id(idm::get_last_id())
 {
 }
 
 lv2_int_serv_t::lv2_int_serv_t(const std::shared_ptr<PPUThread>& thread)
 	: thread(thread)
-	, id(idm::get_current_id())
+	, id(idm::get_last_id())
 {
 }
 

@@ -11,7 +11,7 @@ SysCallBase sys_mmapper("sys_mmapper");
 lv2_memory_t::lv2_memory_t(u32 size, u32 align, u64 flags, const std::shared_ptr<lv2_memory_container_t> ct)
 	: size(size)
 	, align(align)
-	, id(idm::get_current_id())
+	, id(idm::get_last_id())
 	, flags(flags)
 	, ct(ct)
 {

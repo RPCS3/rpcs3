@@ -18,26 +18,16 @@ extern Module sceNpTrophy;
 
 struct trophy_context_t
 {
-	const u32 id;
+	const u32 id = idm::get_last_id();
 
 	std::string trp_name;
 	std::unique_ptr<vfsStream> trp_stream;
 	std::unique_ptr<TROPUSRLoader> tropusr;
-
-	trophy_context_t()
-		: id(idm::get_current_id())
-	{
-	}
 };
 
 struct trophy_handle_t
 {
-	const u32 id;
-
-	trophy_handle_t()
-		: id(idm::get_current_id())
-	{
-	}
+	const u32 id = idm::get_last_id();
 };
 
 // Functions

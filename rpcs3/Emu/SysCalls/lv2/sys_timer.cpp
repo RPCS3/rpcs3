@@ -18,7 +18,7 @@ lv2_timer_t::lv2_timer_t()
 	, period(0)
 	, state(SYS_TIMER_STATE_STOP)
 {
-	auto name = fmt::format("Timer[0x%x] Thread", idm::get_current_id());
+	auto name = fmt::format("Timer[0x%x] Thread", idm::get_last_id());
 
 	thread.start([name]{ return name; }, [this]()
 	{

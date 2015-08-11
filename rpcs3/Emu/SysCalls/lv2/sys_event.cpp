@@ -16,7 +16,7 @@ SysCallBase sys_event("sys_event");
 extern u64 get_system_time();
 
 lv2_event_queue_t::lv2_event_queue_t(u32 protocol, s32 type, u64 name, u64 key, s32 size)
-	: id(idm::get_current_id())
+	: id(idm::get_last_id())
 	, protocol(protocol)
 	, type(type)
 	, name(name)

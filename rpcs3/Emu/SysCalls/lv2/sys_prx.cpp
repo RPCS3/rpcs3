@@ -17,7 +17,7 @@
 SysCallBase sys_prx("sys_prx");
 
 lv2_prx_t::lv2_prx_t()
-	: id(idm::get_current_id())
+	: id(idm::get_last_id())
 {
 }
 

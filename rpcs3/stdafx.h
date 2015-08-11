@@ -134,6 +134,8 @@ struct explicit_bool_t
 #define EXCEPTION(text, ...) fmt::exception(__FILE__, __LINE__, __FUNCTION__, text, ##__VA_ARGS__)
 #define VM_CAST(value) vm::impl_cast(value, __FILE__, __LINE__, __FUNCTION__)
 
+template<typename T> struct id_traits;
+
 #define _PRGNAME_ "RPCS3"
 #define _PRGVER_ "0.0.0.5"
 
