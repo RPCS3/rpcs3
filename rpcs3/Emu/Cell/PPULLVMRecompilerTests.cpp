@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#ifdef LLVM_AVAILABLE
 #include "Utilities/Log.h"
 #include "Emu/Cell/PPULLVMRecompiler.h"
 #include "llvm/Support/Host.h"
@@ -983,3 +984,4 @@ void Compiler::RunAllTests() {
 	Emu.GetIdManager().remove<PPUThread>(s_ppu_state->get_id());
 #endif // PPU_LLVM_RECOMPILER_UNIT_TESTS
 }
+#endif // LLVM_AVAILABLE

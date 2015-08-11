@@ -4,6 +4,7 @@ configuration: Release
 platform: x64
 clone_folder: c:\projects\rpcs3
 clone_depth: 1
+test: off
 
 branches:
  except:
@@ -11,22 +12,21 @@ branches:
 
 before_build:
  - git submodule update --init --depth 3 asmjit minidx9
- # until git for win 2.5 release
- - git submodule update --init ffmpeg wxWidgets
- - if exist "c:\cache\wxWidgets\build" move c:\cache\wxWidgets\build wxWidgets\build
+ # until git for win 2.5 release with commit checkout
+ - git submodule update --init ffmpeg
+ - 7z x wxWidgets.7z -aos -oC:\projects\rpcs3\wxWidgets > null
+ - cmake -G "Visual Studio 14 Win64"
+
+build_script:
+ - cmake --build . --config Release -- /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
 
 install:
- - set PATH=C:\Program Files (x86)\MSBuild\14.0\Bin;%PATH%
+ - ps: Start-FileDownload 'https://402331b94f8e4b87ae2ef4677347f7956cf3861f.googledrive.com/host/0B6v_qtb9hkicfmt0NG0wTTRtUmF4X3VTQk5Oc2JidEVKVnUteDA1dXdrYlNsVW9kREpsSHc/wxWidgets.7z'
+ - set WXWIN=C:\projects\rpcs3\wxWidgets;
+ - set OPENALDIR=C:\projects\rpcs3\OpenAL;
+ - set PATH=C:\Program Files (x86)\MSBuild\14.0\Bin;C:\wxWidgets;%PATH%
+ - set COMMIT_SHA=%APPVEYOR_REPO_COMMIT:~0,8%
 
-after_build:
-- mkdir c:\cache\wxWidgets\build
-- move wxWidgets\lib\vc_x64_lib c:\cache\wxWidgets\build
-
-# not exactly the best dependency but works for now
-cache:
- - c:\cache\wxWidgets\build -> .gitmodules
-
-test: off
-build:
-  project: rpcs3.sln
-  verbosity: minimal
+artifacts:
+ - path: bin
+   name: rpcs3-$(COMMIT_SHA)
