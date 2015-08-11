@@ -20,7 +20,8 @@ enum
 };
 
 // Call types
-enum {
+enum
+{
 	CELL_SAIL_PLAYER_CALL_NONE                  = 0,
 	CELL_SAIL_PLAYER_CALL_BOOT                  = 1,
 	CELL_SAIL_PLAYER_CALL_OPEN_STREAM           = 2,
@@ -42,7 +43,8 @@ enum {
 };
 
 // State types
-enum {
+enum
+{
 	CELL_SAIL_PLAYER_STATE_INITIALIZED           = 0,
 	CELL_SAIL_PLAYER_STATE_BOOT_TRANSITION       = 1,
 	CELL_SAIL_PLAYER_STATE_CLOSED                = 2,
@@ -57,7 +59,8 @@ enum {
 };
 
 // Preset types
-enum {
+enum
+{
 	CELL_SAIL_PLAYER_PRESET_AV_SYNC             = 0, // Deprecated, same as 59_94HZ
 	CELL_SAIL_PLAYER_PRESET_AS_IS               = 1,
 	CELL_SAIL_PLAYER_PRESET_AV_SYNC_59_94HZ     = 2,
@@ -67,8 +70,28 @@ enum {
 	CELL_SAIL_PLAYER_PRESET_AV_SYNC_AUTO_DETECT = 6,
 };
 
+// Event types
+enum
+{
+	CELL_SAIL_EVENT_EMPTY                 = 0, // NEVER USED
+	CELL_SAIL_EVENT_ERROR_OCCURED         = 1,
+	CELL_SAIL_EVENT_PLAYER_CALL_COMPLETED = 2,
+	CELL_SAIL_EVENT_PLAYER_STATE_CHANGED  = 3,
+	CELL_SAIL_EVENT_STREAM_OPENED         = 4,
+	CELL_SAIL_EVENT_STREAM_CLOSED         = 5,
+	CELL_SAIL_EVENT_SESSION_STARTED       = 6,
+	CELL_SAIL_EVENT_PAUSE_STATE_CHANGED   = 7,
+	CELL_SAIL_EVENT_SOURCE_EOS            = 8,
+	CELL_SAIL_EVENT_ES_OPENED             = 9,
+	CELL_SAIL_EVENT_ES_CLOSED             = 10,
+	CELL_SAIL_EVENT_MEDIA_STATE_CHANGED   = 11,
+
+	_CELL_SAIL_EVENT_TYPE_NUM_OF_ELEMENTS = 12, // DO NOT USE
+};
+
 // Parameter types
-enum {
+enum
+{
 	CELL_SAIL_PARAMETER_ENABLE_VPOST                          = 0,
 
 	// Player
@@ -138,7 +161,8 @@ enum {
 };
 
 // Media states
-enum {
+enum
+{
 	CELL_SAIL_MEDIA_STATE_FINE = 0,
 	CELL_SAIL_MEDIA_STATE_BAD  = 1,
 	CELL_SAIL_MEDIA_STATE_LOST = 2,
@@ -155,7 +179,8 @@ enum
 };
 
 // Sync Types
-enum {
+enum
+{
 	CELL_SAIL_SYNC_MODE_REPEAT = 1 << 0,
 	CELL_SAIL_SYNC_MODE_SKIP   = 1 << 1,
 };
@@ -174,7 +199,8 @@ enum {
 };
 
 // Wave types
-enum {
+enum
+{
 	CELL_SAIL_WAVE_FORMAT_PCM = 0x0001,
 	CELL_SAIL_WAVE_FORMAT_MPEG = 0x0050,
 	CELL_SAIL_WAVE_FORMAT_MPEGLAYER3 = 0x0055,
@@ -183,14 +209,16 @@ enum {
 };
 
 // MPEG Layers
-enum {
+enum
+{
 	CELL_SAIL_ACM_MPEG_LAYER1 = 0x0001,
 	CELL_SAIL_ACM_MPEG_LAYER2 = 0x0002,
 	CELL_SAIL_ACM_MPEG_LAYER3 = 0x0004,
 };
 
 // MPEG Modes
-enum {
+enum
+{
 	CELL_SAIL_ACM_MPEG_STEREO        = 0x0001,
 	CELL_SAIL_ACM_MPEG_JOINTSTEREO   = 0x0002,
 	CELL_SAIL_ACM_MPEG_DUALCHANNEL   = 0x0004,
@@ -198,7 +226,8 @@ enum {
 };
 
 // MPEG Flags
-enum {
+enum
+{
 	CELL_SAIL_ACM_MPEG_PRIVATEBIT    = 0x0001,
 	CELL_SAIL_ACM_MPEG_COPYRIGHT     = 0x0002,
 	CELL_SAIL_ACM_MPEG_ORIGINALHOME  = 0x0004,
@@ -207,7 +236,8 @@ enum {
 };
 
 // MPEG Layer 3 Flags
-enum {
+enum
+{
 	CELL_SAIL_MPEGLAYER3_ID_UNKNOWN           = 0,
 	CELL_SAIL_MPEGLAYER3_ID_MPEG              = 1,
 	CELL_SAIL_MPEGLAYER3_ID_CONSTANTFRAMESIZE = 2,
@@ -217,26 +247,30 @@ enum {
 };
 
 // ES Types
-enum {
+enum
+{
 	CELL_SAIL_ES_AUDIO = 0,
 	CELL_SAIL_ES_VIDEO = 1,
 	CELL_SAIL_ES_USER  = 2,
 };
 
 // Audio Coding Types
-enum {
+enum
+{
 	CELL_SAIL_AUDIO_CODING_UNSPECIFIED  = -1,
 	CELL_SAIL_AUDIO_CODING_LPCM_FLOAT32 = 1,
 };
 
-enum {
+enum
+{
 	CELL_SAIL_AUDIO_CHNUM_UNSPECIFIED      = -1,
 	CELL_SAIL_AUDIO_CH_NUM_UNSPECIFIED     = -1,
 	CELL_SAIL_AUDIO_AUSAMPLE_UNSPECIFIED   = -1,
 	CELL_SAIL_AUDIO_SAMPLE_NUM_UNSPECIFIED = -1,
 };
 
-enum {
+enum
+{
 	CELL_SAIL_AUDIO_FS_32000HZ     = 32000,
 	CELL_SAIL_AUDIO_FS_44100HZ     = 44100,
 	CELL_SAIL_AUDIO_FS_48000HZ     = 48000,
@@ -261,7 +295,8 @@ enum {
 
 };
 
-enum {
+enum
+{
 	CELL_SAIL_AUDIO_CH_LAYOUT_UNDEFINED    = 0,
 
 	// monoral
@@ -349,7 +384,8 @@ enum {
 };
 
 // Video Codings
-enum {
+enum
+{
 	CELL_SAIL_VIDEO_CODING_UNSPECIFIED                 = -1,
 	CELL_SAIL_VIDEO_CODING_ARGB_INTERLEAVED            = 0,
 	CELL_SAIL_VIDEO_CODING_RGBA_INTERLEAVED            = 1,
@@ -370,7 +406,8 @@ enum {
 };
 
 // Video Color Types
-enum {
+enum
+{
 	CELL_SAIL_VIDEO_COLOR_MATRIX_UNSPECIFIED           = -1,
 	CELL_SAIL_VIDEO_COLOR_MATRIX_BT601                 = 0,
 	CELL_SAIL_VIDEO_COLOR_MATRIX_BT709                 = 1,
@@ -378,7 +415,8 @@ enum {
 };
 
 // Video Scan Types
-enum {
+enum
+{
 	CELL_SAIL_VIDEO_SCAN_UNSPECIFIED           = -1,
 	CELL_SAIL_VIDEO_SCAN_PROGRESSIVE           = 0,
 	CELL_SAIL_VIDEO_SCAN_INTERLACE             = 1,
@@ -386,7 +424,8 @@ enum {
 };
 
 // Framerates
-enum {
+enum
+{
     CELL_SAIL_VIDEO_FRAME_RATE_UNSPECIFIED           = -1,
     CELL_SAIL_VIDEO_FRAME_RATE_24000_1001HZ          = 0,
     CELL_SAIL_VIDEO_FRAME_RATE_24HZ                  = 1,
@@ -400,7 +439,8 @@ enum {
 };
 
 // Aspect Ratios
-enum {
+enum
+{
 	CELL_SAIL_VIDEO_ASPECT_RATIO_UNSPECIFIED = -1,
 	CELL_SAIL_VIDEO_ASPECT_RATIO_1_1         = 1, // 1920x1080 1280x720
 	CELL_SAIL_VIDEO_ASPECT_RATIO_12_11       = 2, // 720x576 normal
@@ -410,7 +450,8 @@ enum {
 	CELL_SAIL_VIDEO_ASPECT_RATIO_4_3         = 14, // 1440x1080
 };
 
-enum {
+enum
+{
     CELL_SAIL_VIDEO_WIDTH_UNSPECIFIED          = -1,
     CELL_SAIL_VIDEO_HEIGHT_UNSPECIFIED         = -1,
     CELL_SAIL_VIDEO_PITCH_UNSPECIFIED          = -1,
@@ -419,13 +460,15 @@ enum {
 };
 
 // Color Ranges
-enum {
+enum
+{
 	CELL_SAIL_VIDEO_COLOR_RANGE_UNSPECIFIED = -1,
 	CELL_SAIL_VIDEO_COLOR_RANGE_LIMITED     = 1,
 	CELL_SAIL_VIDEO_COLOR_RANGE_FULL        = 0,
 };
 
-enum {
+enum
+{
 	CELL_SAIL_START_NOT_SPECIFIED   = 0,
 	CELL_SAIL_START_NORMAL          = 1 << 0, //1
 	CELL_SAIL_START_TIME_SCALE      = 1 << 2, //4
@@ -435,7 +478,8 @@ enum {
 };
 
 // Seek Types
-enum {
+enum
+{
 	CELL_SAIL_SEEK_NOT_SPECIFIED          = 0,
 	CELL_SAIL_SEEK_ABSOLUTE_BYTE_POSITION = 1 << 0, // For PAMF
 	CELL_SAIL_SEEK_RELATIVE_BYTE_POSITION = 1 << 1, // Not implemented
@@ -445,7 +489,8 @@ enum {
 };
 
 // Terminus Types
-enum {
+enum
+{
 	CELL_SAIL_TERMINUS_NOT_SPECIFIED          = 0,
 	CELL_SAIL_TERMINUS_EOS                    = 1 << 0,
 	CELL_SAIL_TERMINUS_ABSOLUTE_BYTE_POSITION = 1 << 1, // For PAMF
@@ -456,7 +501,8 @@ enum {
 };
 
 // Start Flag Types
-enum {
+enum
+{
 	CELL_SAIL_START_FLAG_NOT_SPECIFIED   = 0,
 	CELL_SAIL_START_FLAG_UNFLUSH         = 1 << 0,
 	CELL_SAIL_START_FLAG_PAUSE_BEGIN     = 1 << 1,
@@ -466,7 +512,8 @@ enum {
 	CELL_SAIL_START_FLAG_PAUSE           = 1 << 1, // Obsolete
 };
 
-enum {
+enum
+{
 	_CELL_SAIL_SYNC_SHIFT_NUM      = 8,
 
 	// Buffering
@@ -501,29 +548,34 @@ enum {
 	CELL_SAIL_SYNC_SKIPPED_ONE     = 3 << _CELL_SAIL_SYNC_SHIFT_NUM,
 };
 
-enum {
+enum
+{
 	CELL_SAIL_EVENT_RECORDER_CALL_COMPLETED = 2,
 	CELL_SAIL_EVENT_RECORDER_STATE_CHANGED  = 3,
 };
 
 
-enum {
+enum
+{
 	CELL_SAIL_VIDEO_FRAME_RATE_100HZ         = 8,
 	CELL_SAIL_VIDEO_FRAME_RATE_120000_1001HZ = 9,
 	CELL_SAIL_VIDEO_FRAME_RATE_120HZ         = 10,
 };
 
-enum {
+enum
+{
 	CELL_SAIL_GRAPHICS_ADAPTER_FIELD_TOP       = 0,
 	CELL_SAIL_GRAPHICS_ADAPTER_FIELD_BOTTOM    = 1,
 	CELL_SAIL_GRAPHICS_ADAPTER_FIELD_DONT_CARE = 2,
 };
 
-enum {
+enum
+{
 	CELL_SAIL_SOURCE_SEEK_ABSOLUTE_BYTE_POSITION = 1 << 0,
 };
 
-enum {
+enum
+{
 	CELL_SAIL_SOURCE_CAPABILITY_NONE                        = 0,
 	CELL_SAIL_SOURCE_CAPABILITY_SEEK_ABSOLUTE_BYTE_POSITION = 1 << 0,
 	CELL_SAIL_SOURCE_CAPABILITY_PAUSE                       = 1 << 4,
@@ -614,7 +666,8 @@ union CellSailEvent
 	{
 		be_t<u32> major;
 		be_t<u32> minor;
-	};
+	}
+	u32x2;
 
 	be_t<u64> value;
 };
@@ -686,7 +739,7 @@ using CellSailRendererVideoFuncCancel = void(vm::ptr<void> pArg);
 using CellSailRendererVideoFuncCheckout = s32(vm::ptr<void> pArg, vm::pptr<CellSailVideoFrameInfo> ppInfo);
 using CellSailRendererVideoFuncCheckin = s32(vm::ptr<void> pArg, vm::ptr<CellSailVideoFrameInfo> pInfo);
 
-using CellSailPlayerFuncNotified = void(vm::ptr<void> pArg, CellSailEvent evnt, u64 arg0, u64 arg1);
+using CellSailPlayerFuncNotified = void(vm::ptr<void> pArg, CellSailEvent event, u64 arg0, u64 arg1);
 
 struct CellSailMemAllocatorFuncs
 {

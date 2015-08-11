@@ -14,64 +14,66 @@ void playerBoot(vm::ptr<CellSailPlayer> pSelf, u64 userParam)
 {
 	Emu.GetCallbackManager().Async([=](CPUThread& cpu)
 	{
-		CellSailEvent evnt;
-		evnt.minor = 0;
-		pSelf->callback(static_cast<PPUThread&>(cpu), pSelf->callbackArg, evnt, CELL_SAIL_PLAYER_STATE_BOOT_TRANSITION, 0);
+		CellSailEvent event;
+		event.u32x2.major = CELL_SAIL_EVENT_PLAYER_STATE_CHANGED;
+		event.u32x2.minor = 0;
+		pSelf->callback(static_cast<PPUThread&>(cpu), pSelf->callbackArg, event, CELL_SAIL_PLAYER_STATE_BOOT_TRANSITION, 0);
 	});
 
 	// TODO: Do stuff here
 	pSelf->booted = true;
 
-	/*Emu.GetCallbackManager().Async([=](CPUThread& CPU)
+	Emu.GetCallbackManager().Async([=](CPUThread& cpu)
 	{
-		CellSailEvent evnt;
-		evnt.u32x2.minor = CELL_SAIL_PLAYER_CALL_BOOT;
-		pSelf->callback(static_cast<PPUThread&>(CPU), pSelf->callbackArg, evnt, 0, 0);
-	});*/
+		CellSailEvent event;
+		event.u32x2.major = CELL_SAIL_EVENT_PLAYER_CALL_COMPLETED;
+		event.u32x2.minor = CELL_SAIL_PLAYER_CALL_BOOT;
+		pSelf->callback(static_cast<PPUThread&>(cpu), pSelf->callbackArg, event, 0, 0);
+	});
 }
 
 s32 cellSailMemAllocatorInitialize(vm::ptr<CellSailMemAllocator> pSelf, vm::ptr<CellSailMemAllocatorFuncs> pCallbacks)
 {
-	cellSail.Warning("cellSailMemAllocatorInitialize(pSelf=*0x%x, pCallbacks=*0x%x)", pSelf, pCallbacks);
+	cellSail.Warning("cellSailMemAllocatorInitialize(pSelf_addr=*0x%x, pCallbacks_addr=*0x%x)", pSelf, pCallbacks);
 
 	pSelf->callbacks = pCallbacks;
 
 	return CELL_OK;
 }
 
-s32 cellSailFutureInitialize()
+s32 cellSailFutureInitialize(vm::ptr<CellSailFuture> pSelf)
 {
-	UNIMPLEMENTED_FUNC(cellSail);
+	cellSail.Todo("cellSailFutureInitialize(pSelf=*0x%x)", pSelf);
 	return CELL_OK;
 }
 
-s32 cellSailFutureFinalize()
+s32 cellSailFutureFinalize(vm::ptr<CellSailFuture> pSelf)
 {
-	UNIMPLEMENTED_FUNC(cellSail);
+	cellSail.Todo("cellSailFutureFinalize(pSelf=*0x%x)", pSelf);
 	return CELL_OK;
 }
 
-s32 cellSailFutureReset()
+s32 cellSailFutureReset(vm::ptr<CellSailFuture> pSelf, b8 wait)
 {
-	UNIMPLEMENTED_FUNC(cellSail);
+	cellSail.Todo("cellSailFutureReset(pSelf=*0x%x, wait=%d)", pSelf, wait);
 	return CELL_OK;
 }
 
-s32 cellSailFutureSet()
+s32 cellSailFutureSet(vm::ptr<CellSailFuture> pSelf, s32 result)
 {
-	UNIMPLEMENTED_FUNC(cellSail);
+	cellSail.Todo("cellSailFutureSet(pSelf=*0x%x, result=%d)", pSelf, result);
 	return CELL_OK;
 }
 
-s32 cellSailFutureGet()
+s32 cellSailFutureGet(vm::ptr<CellSailFuture> pSelf, u64 timeout, vm::ptr<s32> pResult)
 {
-	UNIMPLEMENTED_FUNC(cellSail);
+	cellSail.Todo("cellSailFutureGet(pSelf=*0x%x, timeout=%lld, result=*0x%x)", pSelf, timeout, pResult);
 	return CELL_OK;
 }
 
-s32 cellSailFutureIsDone()
+s32 cellSailFutureIsDone(vm::ptr<CellSailFuture> pSelf, vm::ptr<s32> pResult)
 {
-	UNIMPLEMENTED_FUNC(cellSail);
+	cellSail.Todo("cellSailFutureIsDone(pSelf=*0x%x, result=*0x%x)", pSelf, pResult);
 	return CELL_OK;
 }
 
@@ -340,6 +342,7 @@ s32 cellSailGraphicsAdapterGetFrame(vm::ptr<CellSailGraphicsAdapter> pSelf, vm::
 s32 cellSailGraphicsAdapterGetFrame2(vm::ptr<CellSailGraphicsAdapter> pSelf, vm::ptr<CellSailGraphicsFrameInfo> pInfo, vm::ptr<CellSailGraphicsFrameInfo> pPrevInfo, vm::ptr<u64> pFlipTime, u64 flags)
 {
 	cellSail.Todo("cellSailGraphicsAdapterGetFrame2(pSelf=*0x%x, pInfo=*0x%x, pPrevInfo=*0x%x, flipTime=*0x%x, flags=0x%llx)", pSelf, pInfo, pPrevInfo, pFlipTime, flags);
+
 	return CELL_OK;
 }
 
@@ -630,6 +633,14 @@ s32 cellSailPlayerInitialize2(
 	pSelf->booted = false;
 	pSelf->paused = true;
 
+	Emu.GetCallbackManager().Async([=](CPUThread& cpu)
+	{
+		CellSailEvent event;
+		event.u32x2.major = CELL_SAIL_EVENT_PLAYER_STATE_CHANGED;
+		event.u32x2.minor = 0;
+		pSelf->callback(static_cast<PPUThread&>(cpu), pSelf->callbackArg, event, CELL_SAIL_PLAYER_STATE_INITIALIZED, 0);
+	});
+
 	return CELL_OK;
 }
 
@@ -756,7 +767,7 @@ s32 cellSailPlayerReplaceEventHandler()
 
 s32 cellSailPlayerBoot(PPUThread& ppu, vm::ptr<CellSailPlayer> pSelf, u64 userParam)
 {
-	cellSail.Todo("cellSailPlayerBoot(pSelf=*0x%x, userParam=%d)", pSelf, userParam);
+	cellSail.Warning("cellSailPlayerBoot(pSelf=*0x%x, userParam=%d)", pSelf, userParam);
 
 	playerBoot(pSelf, userParam);
 
@@ -831,8 +842,6 @@ s32 cellSailPlayerCreateDescriptor(vm::ptr<CellSailPlayer> pSelf, s32 streamType
 		default:
 			cellSail.Error("Unhandled stream type: %d", streamType);
 	}
-
-	//cellSailPlayerAddDescriptor(pSelf, ppDesc);
 
 	return CELL_OK;
 }
