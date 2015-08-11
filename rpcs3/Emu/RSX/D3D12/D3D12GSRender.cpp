@@ -35,53 +35,51 @@ void SetGetD3DGSFrameCallback(GetGSFrameCb2 value)
 
 GarbageCollectionThread::GarbageCollectionThread()
 {
-	m_isThreadAlive = true;
 	m_askForTermination = false;
 	m_worker = std::thread([this]() {
-		while (m_isThreadAlive)
+		std::unique_lock<std::mutex> lock(m_mutex);
+		while (!m_askForTermination)
 		{
-			std::unique_lock<std::mutex> lock(m_mutex);
-			while (!m_askForTermination)
+			if (!lock)
 			{
-				CHECK_EMU_STATUS;
-
-				if (!lock)
-				{
-					lock.lock();
-					continue;
-				}
-
-				if (!m_queue.empty())
-				{
-					auto func = std::move(m_queue.front());
-
-					m_queue.pop();
-
-					if (lock) lock.unlock();
-
-					func();
-
-					continue;
-				}
-				cv.wait(lock);
+				lock.lock();
+				continue;
 			}
+
+			if (!m_queue.empty())
+			{
+				auto func = std::move(m_queue.front());
+
+				m_queue.pop();
+
+				if (lock) lock.unlock();
+
+				func();
+
+				continue;
+			}
+			cv.wait(lock);
 		}
-		m_isThreadAlive = false;
 	});
-	m_worker.detach();
 }
 
 GarbageCollectionThread::~GarbageCollectionThread()
 {
-	m_askForTermination = true;
-	while (m_isThreadAlive);
+	{
+		std::unique_lock<std::mutex> lock(m_mutex);
+		m_askForTermination = true;
+		cv.notify_one();
+	}
+	m_worker.join();
 }
 
 void GarbageCollectionThread::pushWork(std::function<void()>&& f)
 {
-	std::unique_lock<std::mutex> lock(m_mutex);
-	m_queue.push(f);
-	cv.notify_all();
+	{
+		std::unique_lock<std::mutex> lock(m_mutex);
+		m_queue.push(f);
+	}
+	cv.notify_one();
 }
 
 void GarbageCollectionThread::waitForCompletion()
