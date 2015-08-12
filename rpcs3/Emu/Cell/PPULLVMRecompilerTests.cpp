@@ -983,4 +983,5 @@ void Compiler::RunAllTests() {
 	m_recompilation_engine.Log() << "Finished Unit Tests\n";
 	idm::remove<PPUThread>(s_ppu_state->get_id());
 #endif // PPU_LLVM_RECOMPILER_UNIT_TESTS
-}#endif // LLVM_AVAILABLE
+}
+#endif // LLVM_AVAILABLE
