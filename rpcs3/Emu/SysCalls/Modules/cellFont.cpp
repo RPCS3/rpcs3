@@ -374,7 +374,7 @@ s32 cellFontGetEffectSlant(vm::ptr<CellFont> font, vm::ptr<float> slantParam)
 
 s32 cellFontGetFontIdCode(vm::ptr<CellFont> font, u32 code, vm::ptr<u32> fontId, vm::ptr<u32> fontCode)
 {
-	cellFont.Todo("cellFontGetFontIdCode(font=*0x%x, code=0x%x, fontId=*0x%x, fontCode=*0x%x)", font, code, fontId, fontCode);
+	cellFont.Todo("cellFontGetFontIdCode(font=*0x%x, code=%d, fontId=*0x%x, fontCode=*0x%x)", font, code, fontId, fontCode);
 
 	// TODO: ?
 	return CELL_OK;

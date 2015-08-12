@@ -1178,7 +1178,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 			break;
 		}
 
-		for (u32 id = ARGS(0), i = 1; i<count; ++id)
+		for (u32 id = ARGS(0), i = 1; i < count; ++id)
 		{
 			const u32 x = ARGS(i); i++;
 			const u32 y = ARGS(i); i++;
@@ -1874,14 +1874,15 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	// Clip Plane
 	case NV4097_SET_USER_CLIP_PLANE_CONTROL:
 	{
+		LOG_WARNING(RSX, "TODO: NV4097_SET_USER_CLIP_PLANE_CONTROL");
 		const u32 a0 = ARGS(0);
 		m_set_clip_plane = true;
-		m_clip_plane_0 = (a0 & 0xf) ? true : false;
-		m_clip_plane_1 = ((a0 >> 4)) & 0xf ? true : false;
-		m_clip_plane_2 = ((a0 >> 8)) & 0xf ? true : false;
-		m_clip_plane_3 = ((a0 >> 12)) & 0xf ? true : false;
-		m_clip_plane_4 = ((a0 >> 16)) & 0xf ? true : false;
-		m_clip_plane_5 = (a0 >> 20) ? true : false;
+		m_clip_plane_0 = (a0 & 0xf);
+		m_clip_plane_1 = (a0 >> 4) & 0xf;
+		m_clip_plane_2 = (a0 >> 8) & 0xf;
+		m_clip_plane_3 = (a0 >> 12) & 0xf;
+		m_clip_plane_4 = (a0 >> 16) & 0xf;
+		m_clip_plane_5 = (a0 >> 20);
 		break;
 	}
 
@@ -1907,10 +1908,10 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	case NV4097_SET_ZMIN_MAX_CONTROL:
 	{
 		const u8 cullNearFarEnable = ARGS(0) & 0xf;
-		const u8 zclampEnable = (ARGS(0) >> 4) & 0xf;
+		m_set_zclamp = (ARGS(0) >> 4) & 0xf;
 		const u8 cullIgnoreW = (ARGS(0) >> 8) & 0xf;
 
-		LOG_WARNING(RSX, "TODO: NV4097_SET_ZMIN_MAX_CONTROL: cullNearFarEnable=%d, zclampEnable=%d, cullIgnoreW=%d", cullNearFarEnable, zclampEnable, cullIgnoreW);
+		LOG_WARNING(RSX, "TODO: NV4097_SET_ZMIN_MAX_CONTROL: cullNearFarEnable=%d, zclampEnable=%d, cullIgnoreW=%d", cullNearFarEnable, m_set_zclamp, cullIgnoreW);
 		break;
 	}
 

@@ -15,12 +15,12 @@ void playerBoot(vm::ptr<CellSailPlayer> pSelf, u64 userParam)
 {
 	Emu.GetCallbackManager().Async([=](CPUThread& CPU)
 	{
-		auto evnt = vm::ptr<CellSailEvent>::make(vm::alloc(sizeof(CellSailEvent), vm::main));
+		// Requires enum support for callbacks to work properly
+		/*auto evnt = vm::ptr<CellSailEvent>::make(vm::alloc(sizeof(CellSailEvent), vm::main));
 		evnt->u32x2.major = CELL_SAIL_EVENT_PLAYER_STATE_CHANGED;
 		evnt->u32x2.minor = 0;
-		//evnt->u64.value = evnt->u32x2.major << 32 | evnt->u32x2.minor;
 		pSelf->callback(static_cast<PPUThread&>(CPU), pSelf->callbackArg, evnt, CELL_SAIL_PLAYER_STATE_BOOT_TRANSITION, 0);
-		vm::dealloc((u32)&evnt);
+		vm::dealloc(evnt.addr());*/
 	});
 
 	// TODO: Do stuff here
@@ -28,12 +28,12 @@ void playerBoot(vm::ptr<CellSailPlayer> pSelf, u64 userParam)
 
 	Emu.GetCallbackManager().Async([=](CPUThread& CPU)
 	{
-		auto evnt = vm::ptr<CellSailEvent>::make(vm::alloc(sizeof(CellSailEvent), vm::main));
+		// Requires enum support for callbacks to work properly
+		/*auto evnt = vm::ptr<CellSailEvent>::make(vm::alloc(sizeof(CellSailEvent), vm::main));
 		evnt->u32x2.major = CELL_SAIL_EVENT_PLAYER_CALL_COMPLETED;
 		evnt->u32x2.minor = CELL_SAIL_PLAYER_CALL_BOOT;
-		//evnt->u64.value = evnt->u32x2.major << 32 | evnt->u32x2.minor;
 		pSelf->callback(static_cast<PPUThread&>(CPU), pSelf->callbackArg, evnt, 0, 0);
-		vm::dealloc((u32)&evnt);
+		vm::dealloc(evnt.addr());*/
 	});
 }
 
@@ -686,16 +686,20 @@ s32 cellSailPlayerInitialize2(
 
 	Emu.GetCallbackManager().Async([=](CPUThread& CPU)
 	{
-		auto evnt = vm::ptr<CellSailEvent>::make(vm::alloc(sizeof(CellSailEvent), vm::main));
+		// Requires enum support for callbacks to work properly
+		/*auto evnt = vm::ptr<CellSailEvent>::make(vm::alloc(sizeof(CellSailEvent), vm::main));
 		evnt->u32x2.major = CELL_SAIL_EVENT_PLAYER_STATE_CHANGED;
 		evnt->u32x2.minor = 0;
-		//evnt->value = CELL_SAIL_EVENT_PLAYER_STATE_CHANGED << 32 | 0;
+		cellSail.Error("address: 0x%x", evnt.addr());
+		cellSail.Error("major_addr: 0x%x", &evnt->u32x2.major);
+		cellSail.Error("minor_addr: 0x%x", &evnt->u32x2.minor);
+		cellSail.Error("value_addr: 0x%x", &evnt->u64.value);
+		cellSail.Error("size: %d", sizeof(CellSailEvent));
 		cellSail.Error("major: %d", evnt->u32x2.major);
 		cellSail.Error("minor: %d", evnt->u32x2.minor);
-		evnt->u64.value = evnt->u32x2.major << 32 | evnt->u32x2.minor;
 		cellSail.Error("value: 0x%x", evnt->u64.value);
 		pSelf->callback(static_cast<PPUThread&>(CPU), pSelf->callbackArg, evnt, CELL_SAIL_PLAYER_STATE_INITIALIZED, 0);
-		vm::dealloc((u32) &evnt);
+		vm::dealloc(evnt.addr());*/
 	});
 
 	return CELL_OK;

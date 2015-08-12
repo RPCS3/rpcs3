@@ -418,6 +418,9 @@ public:
 	bool m_set_cull_face;
 	u32 m_cull_face;
 
+	// Culling
+	bool m_set_zclamp;
+
 	// Alpha test
 	bool m_set_alpha_test;
 	bool m_set_alpha_func;
