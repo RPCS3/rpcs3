@@ -402,12 +402,19 @@ private:
 	void FillVertexShaderConstantsBuffer();
 	void FillPixelShaderConstantsBuffer();
 	/**
-	 * Upload textures to Data heap if necessary and create necessary descriptor in the per frame storage struct.
-	 * returns the number of texture uploaded
+	 * Fetch all textures recorded in the state in the render target cache and in the texture cache.
+	 * If a texture is not cached, populate cmdlist with uploads command.
+	 * Create necessary resource view/sampler descriptors in the per frame storage struct.
+	 * returns the number of texture uploaded.
 	 */
-	size_t UploadTextures();
+	size_t UploadTextures(ID3D12GraphicsCommandList *cmdlist);
 
-	void PrepareRenderTargets();
+	/**
+	 * Creates render target if necessary.
+	 * Populate cmdlist with render target state change (from RTT to generic read for previous rtt,
+	 * from generic to rtt for rtt in cache).
+	 */
+	void PrepareRenderTargets(ID3D12GraphicsCommandList *cmdlist);
 protected:
 	virtual void OnInit() override;
 	virtual void OnInitThread() override;

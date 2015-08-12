@@ -726,7 +726,7 @@ size_t getTextureSize(const RSXTexture &texture)
 	}
 }
 
-size_t D3D12GSRender::UploadTextures()
+size_t D3D12GSRender::UploadTextures(ID3D12GraphicsCommandList *cmdlist)
 {
 	std::lock_guard<std::mutex> lock(mut);
 	size_t usedTexture = 0;
@@ -758,15 +758,7 @@ size_t D3D12GSRender::UploadTextures()
 		}
 		else
 		{
-			// Upload at each iteration to take advantage of overlapping transfer
-			ID3D12GraphicsCommandList *commandList;
-			check(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, getCurrentResourceStorage().m_textureUploadCommandAllocator, nullptr, IID_PPV_ARGS(&commandList)));
-
-			vramTexture = uploadSingleTexture(m_textures[i], m_device, commandList, m_textureUploadData);
-
-			check(commandList->Close());
-			m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**)&commandList);
-			getCurrentResourceStorage().m_inflightCommandList.push_back(commandList);
+			vramTexture = uploadSingleTexture(m_textures[i], m_device, cmdlist, m_textureUploadData);
 			m_texturesCache[texaddr] = vramTexture;
 
 			u32 s = (u32)align(getTextureSize(m_textures[i]), 4096);

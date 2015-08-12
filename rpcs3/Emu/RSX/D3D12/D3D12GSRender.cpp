@@ -431,11 +431,11 @@ void D3D12GSRender::Clear(u32 cmd)
 {
 	assert(cmd == NV4097_CLEAR_SURFACE);
 
-	PrepareRenderTargets();
-
 	ID3D12GraphicsCommandList *commandList;
 	check(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, getCurrentResourceStorage().m_commandAllocator, nullptr, IID_PPV_ARGS(&commandList)));
 	getCurrentResourceStorage().m_inflightCommandList.push_back(commandList);
+
+	PrepareRenderTargets(commandList);
 
 /*	if (m_set_color_mask)
 	{
@@ -509,7 +509,11 @@ void D3D12GSRender::Clear(u32 cmd)
 
 void D3D12GSRender::Draw()
 {
-	PrepareRenderTargets();
+	ID3D12GraphicsCommandList *commandList;
+	m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, getCurrentResourceStorage().m_commandAllocator, nullptr, IID_PPV_ARGS(&commandList));
+	getCurrentResourceStorage().m_inflightCommandList.push_back(commandList);
+
+	PrepareRenderTargets(commandList);
 
 	// Init vertex count
 	// TODO: Very hackish, clean this
@@ -535,11 +539,6 @@ void D3D12GSRender::Draw()
 			m_vertex_data[i].data.resize((m_draw_array_first + m_draw_array_count) * tsize * m_vertex_data[i].size);
 		}
 	}
-
-	ID3D12GraphicsCommandList *commandList;
-	m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, getCurrentResourceStorage().m_commandAllocator, nullptr, IID_PPV_ARGS(&commandList));
-	getCurrentResourceStorage().m_inflightCommandList.push_back(commandList);
-
 
 	std::chrono::time_point<std::chrono::system_clock> startVertexTime = std::chrono::system_clock::now();
 	if (m_indexed_array.m_count || m_draw_array_count)
@@ -588,7 +587,7 @@ void D3D12GSRender::Draw()
 	if (m_PSO->second > 0)
 	{
 		std::chrono::time_point<std::chrono::system_clock> startTextureTime = std::chrono::system_clock::now();
-		size_t usedTexture = UploadTextures();
+		size_t usedTexture = UploadTextures(commandList);
 
 		// Fill empty slots
 		for (; usedTexture < m_PSO->second; usedTexture++)
