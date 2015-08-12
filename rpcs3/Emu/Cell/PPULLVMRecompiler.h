@@ -1103,8 +1103,10 @@ namespace ppu_recompiler_llvm {
 		/// Lock for modifying address mutex table
 		std::mutex m_address_locks_lock;
 
-		/// (function, module containing function, times hit, mutex for access).
-		typedef std::tuple<Executable, std::unique_ptr<llvm::ExecutionEngine>, u32> ExecutableStorage;
+		int m_currentId;
+
+		/// (function, module containing function, times hit, id).
+		typedef std::tuple<Executable, std::unique_ptr<llvm::ExecutionEngine>, u32, u32> ExecutableStorage;
 		/// Address to ordinal cahce. Key is address.
 		std::unordered_map<u32, ExecutableStorage> m_address_to_function;
 		std::unordered_map<u32, std::pair<std::mutex, std::atomic<int> > > m_address_locks;
