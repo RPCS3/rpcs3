@@ -1,16 +1,12 @@
 version: 1.0.{build}
 os: Visual Studio 2015
 configuration:
- - Release
+# - Release
  - ReleaseLLVM
 platform: x64
 clone_folder: c:\rpcs3
 clone_depth: 1
 test: off
-
-matrix:
- allow_failures:
-  - configuration: ReleaseLLVM
 
 branches:
  except:
