@@ -1776,7 +1776,7 @@ void Compiler::SC(u32 lev) {
 		Call<void>("PPUThread.FastStop", &PPUThread::fast_stop, m_state.args[CompileTaskState::Args::State]);
 		break;
 	default:
-		CompilationError(fmt::Format("SC %u", lev));
+		CompilationError(fmt::format("SC %u", lev));
 		break;
 	}
 
@@ -4700,7 +4700,7 @@ void Compiler::FCFID(u32 frd, u32 frb, u32 rc) {
 }
 
 void Compiler::UNK(const u32 code, const u32 opcode, const u32 gcode) {
-	CompilationError(fmt::Format("Unknown/Illegal opcode! (0x%08x : 0x%x : 0x%x)", code, opcode, gcode));
+	CompilationError(fmt::format("Unknown/Illegal opcode! (0x%08x : 0x%x : 0x%x)", code, opcode, gcode));
 }
 
 std::string Compiler::GetBasicBlockNameFromAddress(u32 address, const std::string & suffix) const {
@@ -4713,7 +4713,7 @@ std::string Compiler::GetBasicBlockNameFromAddress(u32 address, const std::strin
 		name = "default_exit";
 	}
 	else {
-		name = fmt::Format("instr_0x%08X", address);
+		name = fmt::format("instr_0x%08X", address);
 	}
 
 	if (suffix != "") {
@@ -5229,7 +5229,7 @@ void Compiler::CreateBranch(llvm::Value * cmp_i1, llvm::Value * target_i32, bool
 			auto call_i = m_state.cfg->calls.find(m_state.current_instruction_address);
 			if (call_i != m_state.cfg->calls.end()) {
 				for (auto function_i = call_i->second.begin(); function_i != call_i->second.end(); function_i++) {
-					auto block = GetBasicBlockFromAddress(m_state.current_instruction_address, fmt::Format("0x%08X", *function_i));
+					auto block = GetBasicBlockFromAddress(m_state.current_instruction_address, fmt::format("0x%08X", *function_i));
 					m_ir_builder->SetInsertPoint(block);
 					IndirectCall(*function_i, m_ir_builder->getInt64(0), true);
 					m_ir_builder->CreateBr(next_block);

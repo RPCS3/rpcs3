@@ -640,7 +640,7 @@ s32 cellGameContentErrorDialog(s32 type, s32 errNeedSizeKB, vm::cptr<char> dirNa
 
 	if (dirName)
 	{
-		errorMsg += fmt::Format("\nDirectory name: %s", dirName.get_ptr());
+		errorMsg += fmt::format("\nDirectory name: %s", dirName.get_ptr());
 	}
 
 	rMessageBox(errorMsg, "Error", rICON_ERROR | rOK);

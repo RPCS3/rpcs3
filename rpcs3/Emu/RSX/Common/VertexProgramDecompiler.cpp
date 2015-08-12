@@ -48,7 +48,7 @@ std::string VertexProgramDecompiler::GetDST(bool isSca)
 
 	default:
 		if (d3.dst > 15)
-			LOG_ERROR(RSX, fmt::Format("dst index out of range: %u", d3.dst));
+			LOG_ERROR(RSX, fmt::format("dst index out of range: %u", d3.dst));
 		ret += m_parr.AddParam(PF_PARAM_NONE, getFloatTypeName(4), std::string("dst_reg") + std::to_string(d3.dst), d3.dst == 0 ? getFloatTypeName(4) + "(0.0f, 0.0f, 0.0f, 1.0f)" : getFloatTypeName(4) + "(0.0, 0.0, 0.0, 0.0)");
 		break;
 	}
@@ -82,7 +82,7 @@ std::string VertexProgramDecompiler::GetSRC(const u32 n)
 		}
 		else
 		{
-			LOG_ERROR(RSX, "Bad input src num: %d", fmt::by_value(d1.input_src));
+			LOG_ERROR(RSX, "Bad input src num: %d", u32{ d1.input_src });
 			ret += m_parr.AddParam(PF_PARAM_IN, getFloatTypeName(4), "in_unk", d1.input_src);
 		}
 		break;
@@ -92,7 +92,7 @@ std::string VertexProgramDecompiler::GetSRC(const u32 n)
 		break;
 
 	default:
-		LOG_ERROR(RSX, fmt::Format("Bad src%u reg type: %d", n, fmt::by_value(src[n].reg_type)));
+		LOG_ERROR(RSX, fmt::format("Bad src%u reg type: %d", n, u32{ src[n].reg_type }));
 		Emu.Pause();
 		break;
 	}
@@ -254,7 +254,7 @@ std::string VertexProgramDecompiler::GetCond()
 
 	swizzle = swizzle == "xyzw" ? "" : "." + swizzle;
 
-	return fmt::Format("any(%s(cc%d%s, vec4(0.0)%s))", cond_string_table[d0.cond], d0.cond_reg_sel_1, swizzle.c_str(), swizzle.c_str());
+	return fmt::format("any(%s(cc%d%s, vec4(0.0)%s))", cond_string_table[d0.cond], d0.cond_reg_sel_1, swizzle.c_str(), swizzle.c_str());
 }
 
 void VertexProgramDecompiler::AddCodeCond(const std::string& dst, const std::string& src)
@@ -517,7 +517,7 @@ std::string VertexProgramDecompiler::Decompile()
 		AddCode("{");
 		m_cur_instr->open_scopes++;
 
-		AddCode(fmt::Format("if (jump_position <= %u)", jump_position++));
+		AddCode(fmt::format("if (jump_position <= %u)", jump_position++));
 		AddCode("{");
 		m_cur_instr->open_scopes++;
 	}
@@ -543,7 +543,7 @@ std::string VertexProgramDecompiler::Decompile()
 			AddCode("}");
 			AddCode("");
 
-			AddCode(fmt::Format("if (jump_position <= %u)", jump_position++));
+			AddCode(fmt::format("if (jump_position <= %u)", jump_position++));
 			AddCode("{");
 			m_cur_instr->open_scopes++;
 		}
@@ -600,7 +600,7 @@ std::string VertexProgramDecompiler::Decompile()
 		AddCode("$ifcond ");
 		AddCode("{");
 		m_cur_instr->open_scopes++;
-		AddCode(fmt::Format("jump_position = %u;", jump_position));
+		AddCode(fmt::format("jump_position = %u;", jump_position));
 		AddCode("continue;");
 		m_cur_instr->close_scopes++;
 		AddCode("}");
@@ -641,8 +641,8 @@ std::string VertexProgramDecompiler::Decompile()
 			break;
 
 		default:
-			AddCode(fmt::Format("//Unknown vp sca_opcode 0x%x", fmt::by_value(d1.sca_opcode)));
-			LOG_ERROR(RSX, "Unknown vp sca_opcode 0x%x", fmt::by_value(d1.sca_opcode));
+			AddCode(fmt::format("//Unknown vp sca_opcode 0x%x", u32{ d1.sca_opcode }));
+			LOG_ERROR(RSX, "Unknown vp sca_opcode 0x%x", u32{ d1.sca_opcode });
 			Emu.Pause();
 			break;
 		}
@@ -675,8 +675,8 @@ std::string VertexProgramDecompiler::Decompile()
 		case RSX_VEC_OPCODE_TXL: SetDSTVec("texture($t, $0.xy)"); break;
 
 		default:
-			AddCode(fmt::Format("//Unknown vp opcode 0x%x", fmt::by_value(d1.vec_opcode)));
-			LOG_ERROR(RSX, "Unknown vp opcode 0x%x", fmt::by_value(d1.vec_opcode));
+			AddCode(fmt::format("//Unknown vp opcode 0x%x", u32{ d1.vec_opcode }));
+			LOG_ERROR(RSX, "Unknown vp opcode 0x%x", u32{ d1.vec_opcode });
 			Emu.Pause();
 			break;
 		}

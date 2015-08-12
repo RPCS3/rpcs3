@@ -151,16 +151,16 @@ std::string ARMv7Thread::RegsToString() const
 	std::string result = "Registers:\n=========\n";
 	for(int i=0; i<15; ++i)
 	{
-		result += fmt::Format("%s\t= 0x%08x\n", g_arm_reg_name[i], GPR[i]);
+		result += fmt::format("%s\t= 0x%08x\n", g_arm_reg_name[i], GPR[i]);
 	}
 
-	result += fmt::Format("APSR\t= 0x%08x [N: %d, Z: %d, C: %d, V: %d, Q: %d]\n", 
+	result += fmt::format("APSR\t= 0x%08x [N: %d, Z: %d, C: %d, V: %d, Q: %d]\n", 
 		APSR.APSR,
-		fmt::by_value(APSR.N),
-		fmt::by_value(APSR.Z),
-		fmt::by_value(APSR.C),
-		fmt::by_value(APSR.V),
-		fmt::by_value(APSR.Q));
+		u32{ APSR.N },
+		u32{ APSR.Z },
+		u32{ APSR.C },
+		u32{ APSR.V },
+		u32{ APSR.Q });
 	
 	return result;
 }

@@ -29,7 +29,7 @@ using namespace llvm;
 using namespace ppu_recompiler_llvm;
 
 #define VERIFY_INSTRUCTION_AGAINST_INTERPRETER(fn, tc, input, ...) \
-VerifyInstructionAgainstInterpreter(fmt::Format("%s.%d", #fn, tc).c_str(), &Compiler::fn, &PPUInterpreter::fn, input, ##__VA_ARGS__)
+VerifyInstructionAgainstInterpreter(fmt::format("%s.%d", #fn, tc).c_str(), &Compiler::fn, &PPUInterpreter::fn, input, ##__VA_ARGS__)
 
 #define VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(fn, s, n, ...) {  \
     PPUState input;                                                                 \
@@ -167,32 +167,18 @@ struct ppu_recompiler_llvm::PPUState {
 		std::string ret;
 
 		for (int i = 0; i < 32; i++) {
-			ret += fmt::Format("GPR[%02d] = 0x%016llx  FPR[%02d] = %16g (0x%016llx)  VPR[%02d] = 0x%s [%s]\n", i, GPR[i], i, FPR[i]._double, FPR[i]._u64, i, VPR[i].to_hex().c_str(), VPR[i].to_xyzw().c_str());
+			ret += fmt::format("GPR[%02d] = 0x%016llx  FPR[%02d] = %16g (0x%016llx)  VPR[%02d] = 0x%s [%s]\n", i, GPR[i], i, FPR[i]._double, FPR[i]._u64, i, VPR[i].to_hex().c_str(), VPR[i].to_xyzw().c_str());
 		}
 
 		for (int i = 0; i < 8; i++) {
-			ret += fmt::Format("SPRG[%d] = 0x%016llx\n", i, SPRG[i]);
+			ret += fmt::format("SPRG[%d] = 0x%016llx\n", i, SPRG[i]);
 		}
 
-		ret += fmt::Format("CR      = 0x%08x LR = 0x%016llx CTR = 0x%016llx TB=0x%016llx\n", CR.CR, LR, CTR, TB);
-		ret += fmt::Format("XER     = 0x%016llx [CA=%d | OV=%d | SO=%d]\n", XER.XER, fmt::by_value(XER.CA), fmt::by_value(XER.OV), fmt::by_value(XER.SO));
-		//ret += fmt::Format("FPSCR   = 0x%08x " // TODO: Uncomment after implementing FPSCR
-		//                   "[RN=%d | NI=%d | XE=%d | ZE=%d | UE=%d | OE=%d | VE=%d | "
-		//                   "VXCVI=%d | VXSQRT=%d | VXSOFT=%d | FPRF=%d | "
-		//                   "FI=%d | FR=%d | VXVC=%d | VXIMZ=%d | "
-		//                   "VXZDZ=%d | VXIDI=%d | VXISI=%d | VXSNAN=%d | "
-		//                   "XX=%d | ZX=%d | UX=%d | OX=%d | VX=%d | FEX=%d | FX=%d]\n",
-		//                   FPSCR.FPSCR,
-		//                   fmt::by_value(FPSCR.RN),
-		//                   fmt::by_value(FPSCR.NI), fmt::by_value(FPSCR.XE), fmt::by_value(FPSCR.ZE), fmt::by_value(FPSCR.UE), fmt::by_value(FPSCR.OE), fmt::by_value(FPSCR.VE),
-		//                   fmt::by_value(FPSCR.VXCVI), fmt::by_value(FPSCR.VXSQRT), fmt::by_value(FPSCR.VXSOFT), fmt::by_value(FPSCR.FPRF),
-		//                   fmt::by_value(FPSCR.FI), fmt::by_value(FPSCR.FR), fmt::by_value(FPSCR.VXVC), fmt::by_value(FPSCR.VXIMZ),
-		//                   fmt::by_value(FPSCR.VXZDZ), fmt::by_value(FPSCR.VXIDI), fmt::by_value(FPSCR.VXISI), fmt::by_value(FPSCR.VXSNAN),
-		//                   fmt::by_value(FPSCR.XX), fmt::by_value(FPSCR.ZX), fmt::by_value(FPSCR.UX), fmt::by_value(FPSCR.OX), fmt::by_value(FPSCR.VX), fmt::by_value(FPSCR.FEX), fmt::by_value(FPSCR.FX));
-		//ret += fmt::Format("VSCR    = 0x%08x [NJ=%d | SAT=%d]\n", VSCR.VSCR, fmt::by_value(VSCR.NJ), fmt::by_value(VSCR.SAT)); // TODO: Uncomment after implementing VSCR.SAT
+		ret += fmt::format("CR      = 0x%08x LR = 0x%016llx CTR = 0x%016llx TB=0x%016llx\n", CR.CR, LR, CTR, TB);
+		ret += fmt::format("XER     = 0x%016llx [CA=%d | OV=%d | SO=%d]\n", XER.XER, u32{ XER.CA }, u32{ XER.OV }, u32{ XER.SO });
 
 		for (int i = 0; i < (sizeof(mem_block) / 8); i += 2) {
-			ret += fmt::Format("mem_block[%d] = 0x%016llx mem_block[%d] = 0x%016llx\n", i, mem_block[i], i + 1, mem_block[i + 1]);
+			ret += fmt::format("mem_block[%d] = 0x%016llx mem_block[%d] = 0x%016llx\n", i, mem_block[i], i + 1, mem_block[i + 1]);
 		}
 
 		return ret;
@@ -205,48 +191,48 @@ static std::string StateDiff(PPUState const & recomp, PPUState const & interp) {
 
 	for (int i = 0; i < 32; i++) {
 		if (recomp.GPR[i] != interp.GPR[i]) {
-			ret += fmt::Format("recomp: GPR[%02d] = 0x%016llx interp: GPR[%02d] = 0x%016llx\n", i, recomp.GPR[i], i, interp.GPR[i]);
+			ret += fmt::format("recomp: GPR[%02d] = 0x%016llx interp: GPR[%02d] = 0x%016llx\n", i, recomp.GPR[i], i, interp.GPR[i]);
 		}
 		if (recomp.FPR[i]._u64 != interp.FPR[i]._u64) {
-			ret += fmt::Format("recomp: FPR[%02d] = %16g (0x%016llx) interp: FPR[%02d] = %16g (0x%016llx)\n", i, recomp.FPR[i]._double, recomp.FPR[i]._u64, i, interp.FPR[i]._double, interp.FPR[i]._u64);
+			ret += fmt::format("recomp: FPR[%02d] = %16g (0x%016llx) interp: FPR[%02d] = %16g (0x%016llx)\n", i, recomp.FPR[i]._double, recomp.FPR[i]._u64, i, interp.FPR[i]._double, interp.FPR[i]._u64);
 		}
 		if (recomp.VPR[i] != interp.VPR[i]) {
-			ret += fmt::Format("recomp: VPR[%02d] = 0x%s [%s]\n", i, recomp.VPR[i].to_hex().c_str(), recomp.VPR[i].to_xyzw().c_str());
-			ret += fmt::Format("interp: VPR[%02d] = 0x%s [%s]\n", i, interp.VPR[i].to_hex().c_str(), interp.VPR[i].to_xyzw().c_str());
+			ret += fmt::format("recomp: VPR[%02d] = 0x%s [%s]\n", i, recomp.VPR[i].to_hex().c_str(), recomp.VPR[i].to_xyzw().c_str());
+			ret += fmt::format("interp: VPR[%02d] = 0x%s [%s]\n", i, interp.VPR[i].to_hex().c_str(), interp.VPR[i].to_xyzw().c_str());
 		}
 	}
 
 	for (int i = 0; i < 8; i++) {
 		if (recomp.SPRG[i] != interp.SPRG[i])
-			ret += fmt::Format("recomp: SPRG[%d] = 0x%016llx interp: SPRG[%d] = 0x%016llx\n", i, recomp.SPRG[i], i, interp.SPRG[i]);
+			ret += fmt::format("recomp: SPRG[%d] = 0x%016llx interp: SPRG[%d] = 0x%016llx\n", i, recomp.SPRG[i], i, interp.SPRG[i]);
 	}
 
 	if (recomp.CR.CR != interp.CR.CR) {
-		ret += fmt::Format("recomp: CR      = 0x%08x\n", recomp.CR.CR);
-		ret += fmt::Format("interp: CR      = 0x%08x\n", interp.CR.CR);
+		ret += fmt::format("recomp: CR      = 0x%08x\n", recomp.CR.CR);
+		ret += fmt::format("interp: CR      = 0x%08x\n", interp.CR.CR);
 	}
 	if (recomp.LR != interp.LR) {
-		ret += fmt::Format("recomp: LR = 0x%016llx\n", recomp.LR);
-		ret += fmt::Format("interp: LR = 0x%016llx\n", interp.LR);
+		ret += fmt::format("recomp: LR = 0x%016llx\n", recomp.LR);
+		ret += fmt::format("interp: LR = 0x%016llx\n", interp.LR);
 	}
 	if (recomp.CTR != interp.CTR) {
-		ret += fmt::Format("recomp: CTR = 0x%016llx\n", recomp.CTR);
-		ret += fmt::Format("interp: CTR = 0x%016llx\n", interp.CTR);
+		ret += fmt::format("recomp: CTR = 0x%016llx\n", recomp.CTR);
+		ret += fmt::format("interp: CTR = 0x%016llx\n", interp.CTR);
 	}
 	if (recomp.TB != interp.TB) {
-		ret += fmt::Format("recomp: TB = 0x%016llx\n", recomp.TB);
-		ret += fmt::Format("interp: TB = 0x%016llx\n", interp.TB);
+		ret += fmt::format("recomp: TB = 0x%016llx\n", recomp.TB);
+		ret += fmt::format("interp: TB = 0x%016llx\n", interp.TB);
 	}
 
 	if (recomp.XER.XER != interp.XER.XER) {
-		ret += fmt::Format("recomp: XER     = 0x%016llx [CA=%d | OV=%d | SO=%d]\n", recomp.XER.XER, fmt::by_value(recomp.XER.CA), fmt::by_value(recomp.XER.OV), fmt::by_value(recomp.XER.SO));
-		ret += fmt::Format("interp: XER     = 0x%016llx [CA=%d | OV=%d | SO=%d]\n", interp.XER.XER, fmt::by_value(interp.XER.CA), fmt::by_value(interp.XER.OV), fmt::by_value(interp.XER.SO));
+		ret += fmt::format("recomp: XER     = 0x%016llx [CA=%d | OV=%d | SO=%d]\n", recomp.XER.XER, u32{ recomp.XER.CA }, u32{ recomp.XER.OV }, u32{ recomp.XER.SO });
+		ret += fmt::format("interp: XER     = 0x%016llx [CA=%d | OV=%d | SO=%d]\n", interp.XER.XER, u32{ interp.XER.CA }, u32{ interp.XER.OV }, u32{ interp.XER.SO });
 	}
 
 	for (int i = 0; i < (sizeof(recomp.mem_block) / 8); i++) {
 		if (recomp.mem_block[i] != interp.mem_block[i]) {
-			ret += fmt::Format("recomp: mem_block[%d] = 0x%016llx\n", i, recomp.mem_block[i]);
-			ret += fmt::Format("interp: mem_block[%d] = 0x%016llx\n", i, interp.mem_block[i]);
+			ret += fmt::format("recomp: mem_block[%d] = 0x%016llx\n", i, recomp.mem_block[i]);
+			ret += fmt::format("interp: mem_block[%d] = 0x%016llx\n", i, interp.mem_block[i]);
 		}
 	}
 

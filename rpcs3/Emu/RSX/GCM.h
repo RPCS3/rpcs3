@@ -1445,5 +1445,5 @@ static const std::string GetMethodName(const u32 id)
 			return "CELL_GCM_" + s.name;
 	}
 
-	return fmt::Format("unknown/illegal method [0x%08x]", id);
+	return fmt::format("unknown/illegal method [0x%08x]", id);
 }

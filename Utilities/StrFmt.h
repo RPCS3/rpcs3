@@ -2,15 +2,15 @@
 
 class wxString;
 
-#if defined(_MSC_VER)
+#if defined(_MSC_VER) && _MSC_VER <= 1800
 #define snprintf _snprintf
 #endif
 
 namespace fmt
 {
-	struct empty_t{};
+	//struct empty_t{};
 
-	extern const std::string placeholder;
+	//extern const std::string placeholder;
 
 	template <typename T>
 	std::string AfterLast(const std::string& source, T searchstr)
@@ -89,37 +89,6 @@ namespace fmt
 	//	std::string result = os.str();
 	//	return result;
 	//}
-
-	//small wrapper used to deal with bitfields
-	template<typename T>
-	T by_value(T x) { return x; }
-
-	//wrapper to deal with advance sprintf formating options with automatic length finding
-	template<typename... Args> std::string Format(const char* fmt, Args... parameters)
-	{
-		size_t length = 256;
-		std::string str;
-
-		for (;;)
-		{
-			std::vector<char> buffptr(length);
-#if !defined(_MSC_VER)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wformat-security"
-			size_t printlen = snprintf(buffptr.data(), length, fmt, std::forward<Args>(parameters)...);
-#pragma GCC diagnostic pop
-#else
-			size_t printlen = _snprintf_s(buffptr.data(), length, length - 1, fmt, std::forward<Args>(parameters)...);
-#endif
-			if (printlen < length)
-			{
-				str = std::string(buffptr.data(), printlen);
-				break;
-			}
-			length *= 2;
-		}
-		return str;
-	}
 
 	std::string replace_first(const std::string& src, const std::string& from, const std::string& to);
 	std::string replace_all(const std::string &src, const std::string& from, const std::string& to);
@@ -259,22 +228,39 @@ namespace fmt
 		return unveil<T>::get_value(arg);
 	}
 
-	/*
-	fmt::format(const char* fmt, args...)
-
-	Formatting function with special functionality:
-
-	std::string forced to .c_str()
-	be_t<> forced to .value() (fmt::unveil reverts byte order automatically)
-
-	External specializations for fmt::unveil (can be found in another headers):
-	vm::ptr, vm::bptr, ... (fmt::unveil) (vm_ptr.h) (with appropriate address type, using .addr() can be avoided)
-	vm::ref, vm::bref, ... (fmt::unveil) (vm_ref.h)
-	
-	*/
-	template<typename... Args> force_inline safe_buffers std::string format(const char* fmt, Args... args)
+	// Formatting function with special functionality:
+	//
+	// std::string is forced to .c_str()
+	// be_t<> is forced to .value() (fmt::do_unveil reverts byte order automatically)
+	//
+	// External specializations for fmt::do_unveil (can be found in another headers):
+	// vm::ptr, vm::bptr, ... (fmt::do_unveil) (vm_ptr.h) (with appropriate address type, using .addr() can be avoided)
+	// vm::ref, vm::bref, ... (fmt::do_unveil) (vm_ref.h)
+	//
+	template<typename... Args> safe_buffers std::string format(const char* fmt, Args... args)
 	{
-		return Format(fmt, do_unveil(args)...);
+		// fixed stack buffer for the first attempt
+		std::array<char, 4096> fixed_buf;
+
+		// possibly dynamically allocated buffer for additional attempts
+		std::unique_ptr<char[]> buf;
+
+		// pointer to the current buffer
+		char* buf_addr = fixed_buf.data();
+
+		for (std::size_t buf_size = fixed_buf.size();; buf_size *= 2, buf.reset(buf_addr = new char[buf_size]))
+		{
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-security"
+			const std::size_t len = snprintf(buf_addr, buf_size, fmt, do_unveil(args)...);
+
+#pragma GCC diagnostic pop
+
+			if (len <= buf_size)
+			{
+				return{ buf_addr, len };
+			}
+		}
 	}
 
 	struct exception
@@ -285,7 +271,7 @@ namespace fmt
 		{
 			const std::string data = format(text, args...) + format("\n(in file %s:%d, in function %s)", file, line, func);
 
-			message = std::make_unique<char[]>(data.size() + 1);
+			message.reset(new char[data.size() + 1]);
 
 			std::memcpy(message.get(), data.c_str(), data.size() + 1);
 		}
@@ -294,7 +280,7 @@ namespace fmt
 		{
 			const std::size_t size = std::strlen(other);
 
-			message = std::make_unique<char[]>(size + 1);
+			message.reset(new char[size + 1]);
 
 			std::memcpy(message.get(), other, size + 1);
 		}

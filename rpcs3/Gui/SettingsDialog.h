@@ -43,8 +43,7 @@ static std::vector<std::string> GetAdapters()
 		PIP_ADAPTER_INFO pAdapter = pAdapterInfo;
 		while (pAdapter)
 		{
-			std::string adapterName = fmt::Format("%s", pAdapter->Description);
-			adapters.push_back(adapterName);
+			adapters.emplace_back(pAdapter->Description);
 			pAdapter = pAdapter->Next;
 		}
 	}
@@ -73,8 +72,7 @@ static std::vector<std::string> GetAdapters()
 
 		if (family == AF_INET || family == AF_INET6)
 		{
-			std::string adapterName = fmt::Format("%s", ifa->ifa_name);
-			adapters.push_back(adapterName);
+			adapters.emplace_back(ifa->ifa_name);
 		}
 	}
 

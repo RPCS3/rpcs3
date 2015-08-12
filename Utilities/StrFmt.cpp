@@ -12,7 +12,7 @@ std::string v128::to_hex() const
 
 std::string v128::to_xyzw() const
 {
-	return fmt::Format("x: %g y: %g z: %g w: %g", _f[3], _f[2], _f[1], _f[0]);
+	return fmt::format("x: %g y: %g z: %g w: %g", _f[3], _f[2], _f[1], _f[0]);
 }
 
 std::string fmt::to_hex(u64 value, size_t count)
@@ -74,7 +74,7 @@ std::string fmt::to_sdec(s64 svalue)
 	return std::string(&res[first], sizeof(res) - first);
 }
 
-extern const std::string fmt::placeholder = "???";
+//extern const std::string fmt::placeholder = "???";
 
 std::string fmt::replace_first(const std::string& src, const std::string& from, const std::string& to)
 {
@@ -240,7 +240,7 @@ std::string fmt::escape(std::string source)
 
 	for (char c = 0; c < 32; c++)
 	{
-		if (c != '\n') source = fmt::replace_all(source, std::string(1, c), fmt::Format("\\x%02X", c));
+		if (c != '\n') source = fmt::replace_all(source, std::string(1, c), fmt::format("\\x%02X", c));
 	}
 
 	return source;

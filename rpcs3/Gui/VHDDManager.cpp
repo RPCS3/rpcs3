@@ -250,20 +250,18 @@ void VHDDExplorer::OnRemove(wxCommandEvent& event)
 void VHDDExplorer::OnCreateDir(wxCommandEvent& event)
 {
 	int i = 1;
-	static const std::string& fmt = "New Dir (%d)";
-	while(m_hdd->HasEntry(fmt::Format(fmt.c_str(), i))) i++;
+	while(m_hdd->HasEntry(fmt::format("New Dir (%d)", i))) i++;
 
-	m_hdd->Create(vfsHDD_Entry_Dir, fmt::Format(fmt.c_str(), i));
+	m_hdd->Create(vfsHDD_Entry_Dir, fmt::format("New Dir (%d)", i));
 	UpdateList();
 }
 
 void VHDDExplorer::OnCreateFile(wxCommandEvent& event)
 {
 	int i = 1;
-	static const std::string& fmt = "New File (%d)";
-	while (m_hdd->HasEntry(fmt::Format(fmt.c_str(), i))) i++;
+	while (m_hdd->HasEntry(fmt::format("New File (%d)", i))) i++;
 
-	m_hdd->Create(vfsHDD_Entry_File, fmt::Format(fmt.c_str(), i));
+	m_hdd->Create(vfsHDD_Entry_File, fmt::format("New File (%d)", i));
 	UpdateList();
 }
 
@@ -537,7 +535,7 @@ void VHDDManagerDialog::LoadPaths()
 	for(size_t i=0; i<count; ++i)
 	{
 		IniEntry<std::string> path_entry;
-		path_entry.Init(fmt::Format("path[%d]", i), "HDDManager");
+		path_entry.Init(fmt::format("path[%d]", i), "HDDManager");
 		m_paths.emplace_back(path_entry.LoadValue(""));
 	}
 }
@@ -551,7 +549,7 @@ void VHDDManagerDialog::SavePaths()
 	for(size_t i=0; i<m_paths.size(); ++i)
 	{
 		IniEntry<std::string> path_entry;
-		path_entry.Init(fmt::Format("path[%d]", i), "HDDManager");
+		path_entry.Init(fmt::format("path[%d]", i), "HDDManager");
 		path_entry.SaveValue(m_paths[i]);
 	}
 }

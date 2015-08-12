@@ -169,7 +169,7 @@ s32 sceNpTrophyRegisterContext(PPUThread& CPU, u32 context, u32 handle, vm::ptr<
 	const size_t kTargetBufferLength = 31;
 	char target[kTargetBufferLength + 1];
 	target[kTargetBufferLength] = 0;
-	strcpy_trunc(target, fmt::Format("TROP_%02d.SFM", Ini.SysLanguage.GetValue()));
+	strcpy_trunc(target, fmt::format("TROP_%02d.SFM", Ini.SysLanguage.GetValue()));
 
 	if (trp.ContainsEntry(target))
 	{
@@ -190,7 +190,7 @@ s32 sceNpTrophyRegisterContext(PPUThread& CPU, u32 context, u32 handle, vm::ptr<
 	// Discard unnecessary TROP_XX.SFM files
 	for (s32 i = 0; i <= 18; i++)
 	{
-		strcpy_trunc(target, fmt::Format("TROP_%02d.SFM", i));
+		strcpy_trunc(target, fmt::format("TROP_%02d.SFM", i));
 		if (i != Ini.SysLanguage.GetValue())
 		{
 			trp.RemoveEntry(target);

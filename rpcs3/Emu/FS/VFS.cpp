@@ -552,10 +552,10 @@ void VFS::SaveLoadDevices(std::vector<VFSManagerEntry>& res, bool is_load)
 		IniEntry<std::string> entry_mount;
 		IniEntry<int> entry_device;
 
-		entry_path.Init(fmt::Format("path[%d]", i), "VFSManager");
-		entry_device_path.Init(fmt::Format("device_path[%d]", i), "VFSManager");
-		entry_mount.Init(fmt::Format("mount[%d]", i), "VFSManager");
-		entry_device.Init(fmt::Format("device[%d]", i), "VFSManager");
+		entry_path.Init(fmt::format("path[%d]", i), "VFSManager");
+		entry_device_path.Init(fmt::format("device_path[%d]", i), "VFSManager");
+		entry_mount.Init(fmt::format("mount[%d]", i), "VFSManager");
+		entry_device.Init(fmt::format("device[%d]", i), "VFSManager");
 		
 		if (is_load)
 		{

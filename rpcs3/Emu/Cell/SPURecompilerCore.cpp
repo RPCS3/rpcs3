@@ -88,7 +88,7 @@ void SPURecompilerCore::Compile(u16 pos)
 
 	for (u32 i = 0; i < 16; i++)
 	{
-		m_enc->xmm_var[i].data = new X86XmmVar(compiler, kX86VarTypeXmm, fmt::Format("reg_%d", i).c_str());
+		m_enc->xmm_var[i].data = new X86XmmVar(compiler, kX86VarTypeXmm, fmt::format("reg_%d", i).c_str());
 	}
 
 	compiler.xor_(pos_var, pos_var);
@@ -103,7 +103,7 @@ void SPURecompilerCore::Compile(u16 pos)
 			// disasm for logging:
 			//dis_asm.dump_pc = pos * 4;
 			//(*SPU_instr::rrr_list)(&dis_asm, opcode);
-			//compiler.addComment(fmt::Format("SPU data: PC=0x%05x %s", pos * 4, dis_asm.last_opcode.c_str()).c_str());
+			//compiler.addComment(fmt::format("SPU data: PC=0x%05x %s", pos * 4, dis_asm.last_opcode.c_str()).c_str());
 			// compile single opcode:
 			(*SPU_instr::rrr_list)(m_enc.get(), opcode);
 			// force finalization between every slice using absolute alignment
@@ -160,7 +160,7 @@ void SPURecompilerCore::Compile(u16 pos)
 	//		entry[start].count, excess, stamp1 - stamp0, time0, get_system_time() - stamp1);
 	//}
 
-	//fs::file(fmt::Format("SPUjit_%d.log", this->CPU.GetId()), fom::write | fom::create | (first ? fom::trunc : fom::append)).write(log.c_str(), log.size());
+	//fs::file(fmt::format("SPUjit_%d.log", this->CPU.GetId()), fom::write | fom::create | (first ? fom::trunc : fom::append)).write(log.c_str(), log.size());
 
 	m_enc->compiler = nullptr;
 	first = false;
@@ -270,7 +270,7 @@ u32 SPURecompilerCore::DecodeMemory(const u32 address)
 
 #define LOG3_OPCODE(...) //ConLog.Write("Linked "__FUNCTION__"(): "__VA_ARGS__)
 
-#define LOG4_OPCODE(...) //c.addComment(fmt::Format("SPU info: "__FUNCTION__"(): "__VA_ARGS__).c_str())
+#define LOG4_OPCODE(...) //c.addComment(fmt::format("SPU info: "__FUNCTION__"(): "__VA_ARGS__).c_str())
 
 #define WRAPPER_BEGIN(a0, a1, a2) struct opwr_##a0 \
 { \
@@ -3415,7 +3415,7 @@ void SPURecompiler::FMS(u32 rt, u32 ra, u32 rb, u32 rc)
 
 void SPURecompiler::UNK(u32 code, u32 opcode, u32 gcode)
 {
-	UNK(fmt::Format("Unimplemented opcode! (0x%08x, 0x%x, 0x%x)", code, opcode, gcode));
+	UNK(fmt::format("Unimplemented opcode! (0x%08x, 0x%x, 0x%x)", code, opcode, gcode));
 }
 
 void SPURecompiler::UNK(const std::string& err)

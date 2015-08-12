@@ -91,11 +91,11 @@ namespace ppu_recompiler_llvm {
 		std::string ToString() const {
 			switch (type) {
 			case Type::Instruction:
-				return fmt::Format("I:0x%08X", data.instruction.address);
+				return fmt::format("I:0x%08X", data.instruction.address);
 			case Type::FunctionCall:
-				return fmt::Format("F:0x%08X", data.function_call.address);
+				return fmt::format("F:0x%08X", data.function_call.address);
 			case Type::CompiledBlock:
-				return fmt::Format("C:0x%08X-0x%08X", data.compiled_block.entry_address, data.compiled_block.exit_address);
+				return fmt::format("C:0x%08X-0x%08X", data.compiled_block.entry_address, data.compiled_block.exit_address);
 			default:
 				assert(0);
 				return "";
@@ -147,7 +147,7 @@ namespace ppu_recompiler_llvm {
 		}
 
 		std::string ToString() const {
-			auto s = fmt::Format("0x%08X %s ->", function_address, type == ExecutionTrace::Type::Loop ? "Loop" : "Linear");
+			auto s = fmt::format("0x%08X %s ->", function_address, type == ExecutionTrace::Type::Loop ? "Loop" : "Linear");
 			for (auto i = 0; i < entries.size(); i++) {
 				s += " " + entries[i].ToString();
 			}
@@ -222,24 +222,24 @@ namespace ppu_recompiler_llvm {
 		}
 
 		std::string ToString() const {
-			auto s = fmt::Format("0x%08X (0x%08X): Size=%u ->", start_address, function_address, GetSize());
+			auto s = fmt::format("0x%08X (0x%08X): Size=%u ->", start_address, function_address, GetSize());
 			for (auto i = instruction_addresses.begin(); i != instruction_addresses.end(); i++) {
-				s += fmt::Format(" 0x%08X", *i);
+				s += fmt::format(" 0x%08X", *i);
 			}
 
 			s += "\nBranches:";
 			for (auto i = branches.begin(); i != branches.end(); i++) {
-				s += fmt::Format("\n0x%08X ->", i->first);
+				s += fmt::format("\n0x%08X ->", i->first);
 				for (auto j = i->second.begin(); j != i->second.end(); j++) {
-					s += fmt::Format(" 0x%08X", *j);
+					s += fmt::format(" 0x%08X", *j);
 				}
 			}
 
 			s += "\nCalls:";
 			for (auto i = calls.begin(); i != calls.end(); i++) {
-				s += fmt::Format("\n0x%08X ->", i->first);
+				s += fmt::format("\n0x%08X ->", i->first);
 				for (auto j = i->second.begin(); j != i->second.end(); j++) {
-					s += fmt::Format(" 0x%08X", *j);
+					s += fmt::format(" 0x%08X", *j);
 				}
 			}
 
@@ -1064,7 +1064,7 @@ namespace ppu_recompiler_llvm {
 			}
 
 			std::string ToString() const {
-				return fmt::Format("0x%08X (0x%08X): NumHits=%u, Revision=%u, LastCompiledCfgSize=%u, IsCompiled=%c",
+				return fmt::format("0x%08X (0x%08X): NumHits=%u, Revision=%u, LastCompiledCfgSize=%u, IsCompiled=%c",
 					cfg.start_address, cfg.function_address, num_hits, revision, last_compiled_cfg_size, is_compiled ? 'Y' : 'N');
 			}
 

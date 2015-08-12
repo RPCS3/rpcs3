@@ -72,7 +72,7 @@ static std::pair<int, int> StringToSize(const std::string& str)
 
 static std::string SizeToString(const std::pair<int, int>& size)
 {
-	return fmt::Format("%dx%d", size.first, size.second);
+	return fmt::format("%dx%d", size.first, size.second);
 }
 
 static WindowInfo StringToWindowInfo(const std::string& str)
@@ -100,7 +100,7 @@ static std::string WindowInfoToString(const WindowInfo& wind)
 {
 	const int px = wind.position.first < -wind.size.first ? -1 : wind.position.first;
 	const int py = wind.position.second < -wind.size.second ? -1 : wind.position.second;
-	return fmt::Format("%dx%d:%dx%d", wind.size.first, wind.size.second, px, py);
+	return fmt::format("%dx%d:%dx%d", wind.size.first, wind.size.second, px, py);
 }
 
 //Ini

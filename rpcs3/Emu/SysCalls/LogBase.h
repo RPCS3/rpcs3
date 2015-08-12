@@ -18,7 +18,7 @@ class LogBase
 
 	template<typename... Args> never_inline void LogPrepare(LogType type, const char* fmt, Args... args) const
 	{
-		LogOutput(type, fmt::Format(fmt, args...));
+		LogOutput(type, fmt::format(fmt, args...));
 	}
 
 public:

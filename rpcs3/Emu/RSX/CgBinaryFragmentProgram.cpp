@@ -76,7 +76,7 @@ std::string CgBinaryDisasm::AddConstDisAsm()
 	const u32 z = GetData(data[2]);
 	const u32 w = GetData(data[3]);
 
-	return fmt::Format("{0x%08x(%g), 0x%08x(%g), 0x%08x(%g), 0x%08x(%g)}", x, (float&)x, y, (float&)y, z, (float&)z, w, (float&)w);
+	return fmt::format("{0x%08x(%g), 0x%08x(%g), 0x%08x(%g), 0x%08x(%g)}", x, (float&)x, y, (float&)y, z, (float&)z, w, (float&)w);
 }
 
 std::string CgBinaryDisasm::AddTexDisAsm()
@@ -183,7 +183,7 @@ template<typename T> std::string CgBinaryDisasm::GetSrcDisAsm(T src)
 			}
 			else
 			{
-				LOG_ERROR(RSX, "Bad src reg num: %d", fmt::by_value(dst.src_attr_reg_num));
+				LOG_ERROR(RSX, "Bad src reg num: %d", u32{ dst.src_attr_reg_num });
 			}
 			break;
 		}
@@ -195,7 +195,7 @@ template<typename T> std::string CgBinaryDisasm::GetSrcDisAsm(T src)
 		break;
 
 	default:
-		LOG_ERROR(RSX, "Bad src type %d", fmt::by_value(src.reg_type));
+		LOG_ERROR(RSX, "Bad src type %d", u32{ src.reg_type });
 		break;
 	}
 
@@ -402,12 +402,12 @@ void CgBinaryDisasm::TaskFP()
 			{
 				if (!src0.exec_if_eq && !src0.exec_if_gr && !src0.exec_if_lt)
 				{
-					AddCodeAsm(fmt::Format("{ %u, %u, %u }", src1.end_counter, src1.init_counter, src1.increment));
+					AddCodeAsm(fmt::format("{ %u, %u, %u }", src1.end_counter, src1.init_counter, src1.increment));
 				}
 				else
 				{
 					m_loop_end_offsets.push_back(src2.end_offset << 2);
-					AddCodeAsm(fmt::Format("{ %u, %u, %u }", src1.end_counter, src1.init_counter, src1.increment));
+					AddCodeAsm(fmt::format("{ %u, %u, %u }", src1.end_counter, src1.init_counter, src1.increment));
 				}
 			}
 			break;

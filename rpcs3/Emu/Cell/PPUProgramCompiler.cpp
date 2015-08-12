@@ -151,7 +151,7 @@ void CompilePPUProgram::WriteError(const std::string& error)
 {
 	if(m_err_list)
 	{
-		m_err_list->WriteText(fmt::FromUTF8(fmt::Format("line %lld: %s\n", m_line, error.c_str())));
+		m_err_list->WriteText(fmt::FromUTF8(fmt::format("line %lld: %s\n", m_line, error.c_str())));
 	}
 }
 
@@ -280,7 +280,7 @@ int CompilePPUProgram::GetArg(std::string& result, bool func)
 						break;
 					}
 
-					WriteError(fmt::Format("Bad symbol '%c'", cur_char));
+					WriteError(fmt::format("Bad symbol '%c'", cur_char));
 					m_error = true;
 					break;
 				}
@@ -347,7 +347,7 @@ bool CompilePPUProgram::CheckEnd(bool show_err)
 			return true;
 		}
 
-		WriteError(fmt::Format("Bad symbol '%c'", cur_char));
+		WriteError(fmt::format("Bad symbol '%c'", cur_char));
 		NextLn();
 		return false;
 	}
@@ -552,7 +552,7 @@ bool CompilePPUProgram::SetNextArgType(u32 types, bool show_err)
 	{
 		if(show_err)
 		{
-			WriteError(fmt::Format("%d arg not found", m_cur_arg + 1));
+			WriteError(fmt::format("%d arg not found", m_cur_arg + 1));
 			m_error = true;
 		}
 
@@ -569,7 +569,7 @@ bool CompilePPUProgram::SetNextArgType(u32 types, bool show_err)
 
 	if(show_err)
 	{
-		WriteError(fmt::Format("Bad arg '%s'", arg.string.c_str()));
+		WriteError(fmt::format("Bad arg '%s'", arg.string.c_str()));
 		m_error = true;
 	}
 
@@ -703,7 +703,7 @@ void CompilePPUProgram::LoadSp(const std::string& op, Elf64_Shdr& s_opd)
 	if(!GetArg(test) || test[0] != '[')
 	{
 		if(m_analyze) WriteHex("error\n");
-		WriteError(fmt::Format("data not found. style: %s", GetSpStyle(sp).c_str()));
+		WriteError(fmt::format("data not found. style: %s", GetSpStyle(sp).c_str()));
 		m_error = true;
 		NextLn();
 		return;
@@ -716,7 +716,7 @@ void CompilePPUProgram::LoadSp(const std::string& op, Elf64_Shdr& s_opd)
 	if(!GetArg(dst))
 	{
 		if(m_analyze) WriteHex("error\n");
-		WriteError(fmt::Format("dst not found. style: %s", GetSpStyle(sp).c_str()));
+		WriteError(fmt::format("dst not found. style: %s", GetSpStyle(sp).c_str()));
 		m_error = true;
 		NextLn();
 		return;
@@ -747,7 +747,7 @@ void CompilePPUProgram::LoadSp(const std::string& op, Elf64_Shdr& s_opd)
 	if(!dst_branch)
 	{
 		if(m_analyze) WriteHex("error\n");
-		WriteError(fmt::Format("bad dst type. style: %s", GetSpStyle(sp).c_str()));
+		WriteError(fmt::format("bad dst type. style: %s", GetSpStyle(sp).c_str()));
 		m_error = true;
 		NextLn();
 		return;
@@ -765,7 +765,7 @@ void CompilePPUProgram::LoadSp(const std::string& op, Elf64_Shdr& s_opd)
 		if(!GetArg(src1, true))
 		{
 			if(m_analyze) WriteHex("error\n");
-			WriteError(fmt::Format("src not found. style: %s", GetSpStyle(sp).c_str()));
+			WriteError(fmt::format("src not found. style: %s", GetSpStyle(sp).c_str()));
 			m_error = true;
 			NextLn();
 			return;
@@ -781,7 +781,7 @@ void CompilePPUProgram::LoadSp(const std::string& op, Elf64_Shdr& s_opd)
 				: ~(ARG_IMM | ARG_BRANCH) & a_src1.type)
 		{
 			if(m_analyze) WriteHex("error\n");
-			WriteError(fmt::Format("bad src type. style: %s", GetSpStyle(sp).c_str()));
+			WriteError(fmt::format("bad src type. style: %s", GetSpStyle(sp).c_str()));
 			m_error = true;
 			NextLn();
 			return;
@@ -790,7 +790,7 @@ void CompilePPUProgram::LoadSp(const std::string& op, Elf64_Shdr& s_opd)
 		if(m_asm[(size_t)p - 1] != ']')
 		{
 			if(m_analyze) WriteHex("error\n");
-			WriteError(fmt::Format("']' not found. style: %s", GetSpStyle(sp).c_str()));
+			WriteError(fmt::format("']' not found. style: %s", GetSpStyle(sp).c_str()));
 			m_error = true;
 			NextLn();
 			return;
@@ -873,7 +873,7 @@ void CompilePPUProgram::LoadSp(const std::string& op, Elf64_Shdr& s_opd)
 		if(!GetArg(src1))
 		{
 			if(m_analyze) WriteHex("error\n");
-			WriteError(fmt::Format("src1 not found. style: %s", GetSpStyle(sp).c_str()));
+			WriteError(fmt::format("src1 not found. style: %s", GetSpStyle(sp).c_str()));
 			m_error = true;
 			NextLn();
 			return;
@@ -885,7 +885,7 @@ void CompilePPUProgram::LoadSp(const std::string& op, Elf64_Shdr& s_opd)
 		if(~(ARG_IMM | ARG_BRANCH) & a_src1.type)
 		{
 			if(m_analyze) WriteHex("error\n");
-			WriteError(fmt::Format("bad src1 type. style: %s", GetSpStyle(sp).c_str()));
+			WriteError(fmt::format("bad src1 type. style: %s", GetSpStyle(sp).c_str()));
 			m_error = true;
 			NextLn();
 			return;
@@ -895,7 +895,7 @@ void CompilePPUProgram::LoadSp(const std::string& op, Elf64_Shdr& s_opd)
 		if(!GetArg(src2, true))
 		{
 			if(m_analyze) WriteHex("error\n");
-			WriteError(fmt::Format("src2 not found. style: %s", GetSpStyle(sp).c_str()));
+			WriteError(fmt::format("src2 not found. style: %s", GetSpStyle(sp).c_str()));
 			m_error = true;
 			return;
 		}
@@ -906,7 +906,7 @@ void CompilePPUProgram::LoadSp(const std::string& op, Elf64_Shdr& s_opd)
 		if(~(ARG_IMM | ARG_BRANCH) & a_src2.type)
 		{
 			if(m_analyze) WriteHex("error\n");
-			WriteError(fmt::Format("bad src2 type. style: %s", GetSpStyle(sp).c_str()));
+			WriteError(fmt::format("bad src2 type. style: %s", GetSpStyle(sp).c_str()));
 			m_error = true;
 			NextLn();
 			return;
@@ -915,7 +915,7 @@ void CompilePPUProgram::LoadSp(const std::string& op, Elf64_Shdr& s_opd)
 		if(m_asm[(size_t)p - 1] != ']')
 		{
 			if(m_analyze) WriteHex("error\n");
-			WriteError(fmt::Format("']' not found. style: %s", GetSpStyle(sp).c_str()));
+			WriteError(fmt::format("']' not found. style: %s", GetSpStyle(sp).c_str()));
 			m_error = true;
 			NextLn();
 			return;
@@ -1344,7 +1344,7 @@ void CompilePPUProgram::Compile()
 				if(name != branch.m_name)
 					continue;
 
-				WriteError(fmt::Format("'%s' already declared", name.c_str()));
+				WriteError(fmt::format("'%s' already declared", name.c_str()));
 				m_error = true;
 				break;
 			}
@@ -1354,7 +1354,7 @@ void CompilePPUProgram::Compile()
 
 			if(a_name.type != ARG_ERR)
 			{
-				WriteError(fmt::Format("bad name '%s'", name.c_str()));
+				WriteError(fmt::format("bad name '%s'", name.c_str()));
 				m_error = true;
 			}
 
@@ -1434,7 +1434,7 @@ void CompilePPUProgram::Compile()
 		}
 		else
 		{
-			WriteError(fmt::Format("unknown instruction '%s'", op.c_str()));
+			WriteError(fmt::format("unknown instruction '%s'", op.c_str()));
 			EndLn();
 			m_error = true;
 		}
@@ -1466,7 +1466,7 @@ void CompilePPUProgram::Compile()
 			code = (*instr)(args);
 		}
 
-		if(m_analyze) WriteHex(fmt::Format("0x%08x\n", code));
+		if(m_analyze) WriteHex(fmt::format("0x%08x\n", code));
 
 		if(!m_analyze) m_code.push_back(code);
 

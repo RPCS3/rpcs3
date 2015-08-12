@@ -44,10 +44,10 @@ static const u64 g_spu_offset = 0x10000;
 
 const std::string Ehdr_DataToString(const u8 data)
 {
-	if(data > 1) return fmt::Format("%d's complement, big endian", data);
+	if(data > 1) return fmt::format("%d's complement, big endian", data);
 	if(data < 1) return "Data is not found";
 
-	return fmt::Format("%d's complement, little endian", data);
+	return fmt::format("%d's complement, little endian", data);
 }
 
 const std::string Ehdr_TypeToString(const u16 type)
@@ -58,7 +58,7 @@ const std::string Ehdr_TypeToString(const u16 type)
 	case 2: return "EXEC (Executable file)";
 	};
 
-	return fmt::Format("Unknown (%d)", type);
+	return fmt::format("Unknown (%d)", type);
 }
 
 const std::string Ehdr_OS_ABIToString(const u8 os_abi)
@@ -69,7 +69,7 @@ const std::string Ehdr_OS_ABIToString(const u8 os_abi)
 	case 0x66: return "Cell OS LV-2";
 	};
 
-	return fmt::Format("Unknown (0x%x)", os_abi);
+	return fmt::format("Unknown (0x%x)", os_abi);
 }
 
 const std::string Ehdr_MachineToString(const u16 machine)
@@ -82,7 +82,7 @@ const std::string Ehdr_MachineToString(const u16 machine)
 	case MACHINE_ARM:	return "ARM";
 	};
 
-	return fmt::Format("Unknown (0x%x)", machine);
+	return fmt::format("Unknown (0x%x)", machine);
 }
 
 const std::string Phdr_FlagsToString(u32 flags)
@@ -101,13 +101,13 @@ const std::string Phdr_FlagsToString(u32 flags)
 	const u8 rsx = (flags >> 0x18) & 0xf;
 
 	std::string ret;
-	ret += fmt::Format("[0x%x] ", flags);
+	ret += fmt::format("[0x%x] ", flags);
 
 	flags &= ~ppu;
 	flags &= ~spu << 0x14;
 	flags &= ~rsx << 0x18;
 
-	if(flags != 0) return fmt::Format("Unknown %s PPU[0x%x] SPU[0x%x] RSX[0x%x]", ret.c_str(), ppu, spu, rsx);
+	if(flags != 0) return fmt::format("Unknown %s PPU[0x%x] SPU[0x%x] RSX[0x%x]", ret.c_str(), ppu, spu, rsx);
 
 	ret += "PPU[" + FLAGS_TO_STRING(ppu) + "] ";
 	ret += "SPU[" + FLAGS_TO_STRING(spu) + "] ";
@@ -127,5 +127,5 @@ const std::string Phdr_TypeToString(const u32 type)
 	case 0x60000002: return "LOOS+2";
 	};
 
-	return fmt::Format("Unknown (0x%x)", type);
+	return fmt::format("Unknown (0x%x)", type);
 }

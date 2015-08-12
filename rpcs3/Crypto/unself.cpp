@@ -353,7 +353,7 @@ void ControlInfo::Show()
 		{
 			std::string digest_str;
 			for (int i = 0; i < 20; i++)
-				digest_str += fmt::Format("%02x", file_digest_30.digest[i]);
+				digest_str += fmt::format("%02x", file_digest_30.digest[i]);
 
 			LOG_NOTICE(LOADER, "Digest: %s", digest_str.c_str());
 			LOG_NOTICE(LOADER, "Unknown: 0x%llx", file_digest_30.unknown);
@@ -364,8 +364,8 @@ void ControlInfo::Show()
 			std::string digest_str2;
 			for (int i = 0; i < 20; i++)
 			{
-				digest_str1 += fmt::Format("%02x", file_digest_40.digest1[i]);
-				digest_str2 += fmt::Format("%02x", file_digest_40.digest2[i]);
+				digest_str1 += fmt::format("%02x", file_digest_40.digest1[i]);
+				digest_str2 += fmt::format("%02x", file_digest_40.digest2[i]);
 			}
 
 			LOG_NOTICE(LOADER, "Digest1: %s", digest_str1.c_str());
@@ -380,12 +380,12 @@ void ControlInfo::Show()
 		std::string invdigest_str;
 		std::string xordigest_str;
 		for (int i = 0; i < 48; i++)
-			contentid_str += fmt::Format("%02x", npdrm.content_id[i]);
+			contentid_str += fmt::format("%02x", npdrm.content_id[i]);
 		for (int i = 0; i < 16; i++)
 		{
-			digest_str += fmt::Format("%02x", npdrm.digest[i]);
-			invdigest_str += fmt::Format("%02x", npdrm.invdigest[i]);
-			xordigest_str += fmt::Format("%02x", npdrm.xordigest[i]);
+			digest_str += fmt::format("%02x", npdrm.digest[i]);
+			invdigest_str += fmt::format("%02x", npdrm.invdigest[i]);
+			xordigest_str += fmt::format("%02x", npdrm.xordigest[i]);
 		}
 
 		LOG_NOTICE(LOADER, "Magic: 0x%08x", npdrm.magic);
@@ -417,10 +417,10 @@ void MetadataInfo::Show()
 	std::string iv_pad_str;
 	for (int i = 0; i < 0x10; i++)
 	{
-		key_str += fmt::Format("%02x", key[i]);
-		key_pad_str += fmt::Format("%02x", key_pad[i]);
-		iv_str += fmt::Format("%02x", iv[i]);
-		iv_pad_str += fmt::Format("%02x", iv_pad[i]);
+		key_str += fmt::format("%02x", key[i]);
+		key_pad_str += fmt::format("%02x", key_pad[i]);
+		iv_str += fmt::format("%02x", iv[i]);
+		iv_pad_str += fmt::format("%02x", iv_pad[i]);
 	}
 
 	LOG_NOTICE(LOADER, "Key: %s", key_str.c_str());

@@ -23,7 +23,7 @@ int GLProgram::GetLocation(const std::string& name)
 	m_locations[pos].name = name;
 
 	m_locations[pos].loc = glGetUniformLocation(id, name.c_str());
-	checkForGlError(fmt::Format("glGetUniformLocation(0x%x, %s)", id, name.c_str()));
+	checkForGlError(fmt::format("glGetUniformLocation(0x%x, %s)", id, name.c_str()));
 	return m_locations[pos].loc;
 }
 
@@ -95,16 +95,16 @@ void GLProgram::Use()
 
 void GLProgram::SetTex(u32 index)
 {
-	int loc = GetLocation(fmt::Format("tex%u", index));
+	int loc = GetLocation(fmt::format("tex%u", index));
 	glProgramUniform1i(id, loc, index);
-	checkForGlError(fmt::Format("SetTex(%u - %d - %d)", id, index, loc));
+	checkForGlError(fmt::format("SetTex(%u - %d - %d)", id, index, loc));
 }
 
 void GLProgram::SetVTex(u32 index)
 {
-	int loc = GetLocation(fmt::Format("vtex%u", index));
+	int loc = GetLocation(fmt::format("vtex%u", index));
 	glProgramUniform1i(id, loc, index);
-	checkForGlError(fmt::Format("SetVTex(%u - %d - %d)", id, index, loc));
+	checkForGlError(fmt::format("SetVTex(%u - %d - %d)", id, index, loc));
 }
 
 void GLProgram::Delete()

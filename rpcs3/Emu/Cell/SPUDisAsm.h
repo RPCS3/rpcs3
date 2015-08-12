@@ -97,43 +97,43 @@ private:
 	}
 	void DisAsm(std::string op, u32 a1)
 	{
-		Write(fmt::Format("%s 0x%x", FixOp(op).c_str(), a1));
+		Write(fmt::format("%s 0x%x", FixOp(op).c_str(), a1));
 	}
 	void DisAsm(std::string op, const char* a1)
 	{
-		Write(fmt::Format("%s %s", FixOp(op).c_str(), a1));
+		Write(fmt::format("%s %s", FixOp(op).c_str(), a1));
 	}
 	void DisAsm(std::string op, const char* a1, const char* a2)
 	{
-		Write(fmt::Format("%s %s,%s", FixOp(op).c_str(), a1, a2));
+		Write(fmt::format("%s %s,%s", FixOp(op).c_str(), a1, a2));
 	}
 	void DisAsm(std::string op, int a1, const char* a2)
 	{
-		Write(fmt::Format("%s 0x%x,%s", FixOp(op).c_str(), a1, a2));
+		Write(fmt::format("%s 0x%x,%s", FixOp(op).c_str(), a1, a2));
 	}
 	void DisAsm(std::string op, const char* a1, int a2)
 	{
-		Write(fmt::Format("%s %s,0x%x", FixOp(op).c_str(), a1, a2));
+		Write(fmt::format("%s %s,0x%x", FixOp(op).c_str(), a1, a2));
 	}
 	void DisAsm(std::string op, int a1, int a2)
 	{
-		Write(fmt::Format("%s 0x%x,0x%x", FixOp(op).c_str(), a1, a2));
+		Write(fmt::format("%s 0x%x,0x%x", FixOp(op).c_str(), a1, a2));
 	}
 	void DisAsm(std::string op, const char* a1, const char* a2, const char* a3)
 	{
-		Write(fmt::Format("%s %s,%s,%s", FixOp(op).c_str(), a1, a2, a3));
+		Write(fmt::format("%s %s,%s,%s", FixOp(op).c_str(), a1, a2, a3));
 	}
 	void DisAsm(std::string op, const char* a1, int a2, const char* a3)
 	{
-		Write(fmt::Format("%s %s,0x%x(%s)", FixOp(op).c_str(), a1, a2, a3));
+		Write(fmt::format("%s %s,0x%x(%s)", FixOp(op).c_str(), a1, a2, a3));
 	}
 	void DisAsm(std::string op, const char* a1, const char* a2, int a3)
 	{
-		Write(fmt::Format("%s %s,%s,0x%x", FixOp(op).c_str(), a1, a2, a3));
+		Write(fmt::format("%s %s,%s,0x%x", FixOp(op).c_str(), a1, a2, a3));
 	}
 	void DisAsm(std::string op, const char* a1, const char* a2, const char* a3, const char* a4)
 	{
-		Write(fmt::Format("%s %s,%s,%s,%s", FixOp(op).c_str(), a1, a2, a3, a4));
+		Write(fmt::format("%s %s,%s,%s,%s", FixOp(op).c_str(), a1, a2, a3, a4));
 	}
 	//0 - 10
 	void STOP(u32 code)
@@ -945,6 +945,6 @@ private:
 
 	void UNK(u32 code, u32 opcode, u32 gcode)
 	{
-		Write(fmt::Format("Unknown/Illegal opcode! (0x%08x, 0x%x, 0x%x)", code, opcode, gcode));
+		Write(fmt::format("Unknown/Illegal opcode! (0x%08x, 0x%x, 0x%x)", code, opcode, gcode));
 	}
 };

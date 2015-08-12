@@ -259,7 +259,7 @@ std::pair<Executable, llvm::ExecutionEngine *> Compiler::Compile(const std::stri
 			char str[1024];
 
 			auto size = LLVMDisasmInstruction(disassembler, ((u8 *)mci.address()) + pc, mci.size() - pc, (uint64_t)(((u8 *)mci.address()) + pc), str, sizeof(str));
-			m_recompilation_engine.Log() << fmt::Format("0x%08X: ", (u64)(((u8 *)mci.address()) + pc)) << str << '\n';
+			m_recompilation_engine.Log() << fmt::format("0x%08X: ", (u64)(((u8 *)mci.address()) + pc)) << str << '\n';
 			pc += size;
 		}
 
@@ -549,7 +549,7 @@ void RecompilationEngine::CompileBlock(BlockEntry & block_entry) {
 	Log() << "CFG: " << block_entry.cfg.ToString() << "\n";
 
 	const std::pair<Executable, llvm::ExecutionEngine *> &compileResult =
-		m_compiler.Compile(fmt::Format("fn_0x%08X_%u", block_entry.cfg.start_address, block_entry.revision++), block_entry.cfg,
+		m_compiler.Compile(fmt::format("fn_0x%08X_%u", block_entry.cfg.start_address, block_entry.revision++), block_entry.cfg,
 			block_entry.IsFunction() ? true : false /*generate_linkable_exits*/);
 
 	// If entry doesn't exist, create it (using lock)

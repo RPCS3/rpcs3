@@ -613,8 +613,8 @@ void GLTexture::Save(RSXTexture& tex)
 	if (!fs::exists(dir_path)) fs::create_dir(dir_path);
 
 	u32 count = 0;
-	while (fs::exists(fmt::Format(file_fmt.c_str(), count))) count++;
-	Save(tex, fmt::Format(file_fmt.c_str(), count));
+	while (fs::exists(fmt::format(file_fmt.c_str(), count))) count++;
+	Save(tex, fmt::format(file_fmt.c_str(), count));
 }
 
 void GLTexture::Bind()
@@ -1063,12 +1063,12 @@ void GLGSRender::InitVertexData()
 
 	for (const RSXTransformConstant& c : m_transform_constants)
 	{
-		const std::string name = fmt::Format("vc[%u]", c.id);
+		const std::string name = fmt::format("vc[%u]", c.id);
 		l = m_program.GetLocation(name);
 		checkForGlError("glGetUniformLocation " + name);
 
 		glUniform4f(l, c.x, c.y, c.z, c.w);
-		checkForGlError("glUniform4f " + name + fmt::Format(" %d [%f %f %f %f]", l, c.x, c.y, c.z, c.w));
+		checkForGlError("glUniform4f " + name + fmt::format(" %d [%f %f %f %f]", l, c.x, c.y, c.z, c.w));
 	}
 
 	// Scale
@@ -1107,7 +1107,7 @@ void GLGSRender::InitFragmentData()
 		u32 c1 = (data[1] >> 16 | data[1] << 16);
 		u32 c2 = (data[2] >> 16 | data[2] << 16);
 		u32 c3 = (data[3] >> 16 | data[3] << 16);
-		const std::string name = fmt::Format("fc%u", offsetInFP);
+		const std::string name = fmt::format("fc%u", offsetInFP);
 		const int l = m_program.GetLocation(name);
 		checkForGlError("glGetUniformLocation " + name);
 
@@ -1116,7 +1116,7 @@ void GLGSRender::InitFragmentData()
 		float f2 = (float&)c2;
 		float f3 = (float&)c3;
 		glUniform4f(l, f0, f1, f2, f3);
-		checkForGlError("glUniform4f " + name + fmt::Format(" %u [%f %f %f %f]", l, f0, f1, f2, f3));
+		checkForGlError("glUniform4f " + name + fmt::format(" %u [%f %f %f %f]", l, f0, f1, f2, f3));
 	}
 
 	for (const RSXTransformConstant& c : m_fragment_constants)
@@ -1125,12 +1125,12 @@ void GLGSRender::InitFragmentData()
 
 		//LOG_WARNING(RSX,"fc%u[0x%x - 0x%x] = (%f, %f, %f, %f)", id, c.id, m_cur_shader_prog->offset, c.x, c.y, c.z, c.w);
 
-		const std::string name = fmt::Format("fc%u", id);
+		const std::string name = fmt::format("fc%u", id);
 		const int l = m_program.GetLocation(name);
 		checkForGlError("glGetUniformLocation " + name);
 
 		glUniform4f(l, c.x, c.y, c.z, c.w);
-		checkForGlError("glUniform4f " + name + fmt::Format(" %u [%f %f %f %f]", l, c.x, c.y, c.z, c.w));
+		checkForGlError("glUniform4f " + name + fmt::format(" %u [%f %f %f %f]", l, c.x, c.y, c.z, c.w));
 	}
 
 
@@ -1520,7 +1520,7 @@ void GLGSRender::InitDrawBuffers()
 		for (int i = 0; i < 4; ++i)
 		{
 			m_fbo.Renderbuffer(GL_COLOR_ATTACHMENT0 + i, m_rbo.GetId(i));
-			checkForGlError(fmt::Format("m_fbo.Renderbuffer(GL_COLOR_ATTACHMENT%d)", i));
+			checkForGlError(fmt::format("m_fbo.Renderbuffer(GL_COLOR_ATTACHMENT%d)", i));
 		}
 
 		//m_fbo.Renderbuffer(GL_DEPTH_ATTACHMENT, m_rbo.GetId(4));
@@ -1951,10 +1951,10 @@ void GLGSRender::Draw()
 		checkForGlError("glActiveTexture");
 		m_gl_textures[i].Create();
 		m_gl_textures[i].Bind();
-		checkForGlError(fmt::Format("m_gl_textures[%d].Bind", i));
+		checkForGlError(fmt::format("m_gl_textures[%d].Bind", i));
 		m_program.SetTex(i);
 		m_gl_textures[i].Init(m_textures[i]);
-		checkForGlError(fmt::Format("m_gl_textures[%d].Init", i));
+		checkForGlError(fmt::format("m_gl_textures[%d].Init", i));
 	}
 
 	for (u32 i = 0; i < m_textures_count; ++i)
@@ -1965,10 +1965,10 @@ void GLGSRender::Draw()
 		checkForGlError("glActiveTexture");
 		m_gl_vertex_textures[i].Create();
 		m_gl_vertex_textures[i].Bind();
-		checkForGlError(fmt::Format("m_gl_vertex_textures[%d].Bind", i));
+		checkForGlError(fmt::format("m_gl_vertex_textures[%d].Bind", i));
 		m_program.SetVTex(i);
 		m_gl_vertex_textures[i].Init(m_vertex_textures[i]);
-		checkForGlError(fmt::Format("m_gl_vertex_textures[%d].Init", i));
+		checkForGlError(fmt::format("m_gl_vertex_textures[%d].Init", i));
 	}
 
 	m_vao.Bind();

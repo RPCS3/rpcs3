@@ -61,7 +61,7 @@ std::string CgBinaryDisasm::GetDSTDisasm(bool isSca)
 
 	default:
 		if (d3.dst > 15)
-			LOG_ERROR(RSX, fmt::Format("dst index out of range: %u", d3.dst));
+			LOG_ERROR(RSX, fmt::format("dst index out of range: %u", d3.dst));
 
 		ret += fmt::format("o[%d]", d3.dst) + GetVecMaskDisasm();
 		break;
@@ -86,7 +86,7 @@ std::string CgBinaryDisasm::GetSRCDisasm(const u32 n)
 		}
 		else
 		{
-			LOG_ERROR(RSX, "Bad input src num: %d", fmt::by_value(d1.input_src));
+			LOG_ERROR(RSX, "Bad input src num: %d", u32{ d1.input_src });
 			ret += fmt::format("v[%d] # bad src", d1.input_src);
 		}
 		break;
@@ -95,7 +95,7 @@ std::string CgBinaryDisasm::GetSRCDisasm(const u32 n)
 		break;
 
 	default:
-		LOG_ERROR(RSX, fmt::Format("Bad src%u reg type: %d", n, fmt::by_value(src[n].reg_type)));
+		LOG_ERROR(RSX, fmt::format("Bad src%u reg type: %d", n, u32{ src[n].reg_type }));
 		Emu.Pause();
 		break;
 	}
@@ -233,7 +233,7 @@ std::string CgBinaryDisasm::GetCondDisasm()
 
 	swizzle = swizzle == "xyzw" ? "" : "." + swizzle;
 
-	return fmt::Format("(%s%s)", cond_string_table[d0.cond], swizzle.c_str());
+	return fmt::format("(%s%s)", cond_string_table[d0.cond], swizzle.c_str());
 }
 
 void CgBinaryDisasm::AddCodeCondDisasm(const std::string& dst, const std::string& src)
@@ -280,7 +280,7 @@ void CgBinaryDisasm::AddCodeCondDisasm(const std::string& dst, const std::string
 
 	swizzle = swizzle == "xyzw" ? "" : "." + swizzle;
 
-	std::string cond = fmt::Format("%s%s", cond_string_table[d0.cond], swizzle.c_str());
+	std::string cond = fmt::format("%s%s", cond_string_table[d0.cond], swizzle.c_str());
 	AddCodeDisasm(dst + "(" + cond + ") " + ", " + src + ";");
 }
 
@@ -410,7 +410,7 @@ void CgBinaryDisasm::TaskVP()
 		case RSX_SCA_OPCODE_POP: SetDSTScaDisasm(""); break;
 
 		default:
-			LOG_ERROR(RSX, "Unknown vp sca_opcode 0x%x", fmt::by_value(d1.sca_opcode));
+			LOG_ERROR(RSX, "Unknown vp sca_opcode 0x%x", u32{ d1.sca_opcode });
 			break;
 		}
 
@@ -443,7 +443,7 @@ void CgBinaryDisasm::TaskVP()
 		case RSX_VEC_OPCODE_TXL: SetDSTVecDisasm("$t, $0"); break;
 
 		default:
-			LOG_ERROR(RSX, "Unknown vp opcode 0x%x", fmt::by_value(d1.vec_opcode));
+			LOG_ERROR(RSX, "Unknown vp opcode 0x%x", u32{ d1.vec_opcode });
 			break;
 		}
 	}

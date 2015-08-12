@@ -467,7 +467,7 @@ public:
 
 	std::string ToString() const
 	{
-		return fmt::Format("%08x%08x%08x%08x", _u32[3], _u32[2], _u32[1], _u32[0]);
+		return fmt::format("%08x%08x%08x%08x", _u32[3], _u32[2], _u32[1], _u32[0]);
 	}
 
 	void Reset()
@@ -709,7 +709,7 @@ public:
 	{
 		std::string ret = "Registers:\n=========\n";
 
-		for(uint i=0; i<128; ++i) ret += fmt::Format("GPR[%d] = 0x%s\n", i, GPR[i].to_hex().c_str());
+		for(uint i=0; i<128; ++i) ret += fmt::format("GPR[%d] = 0x%s\n", i, GPR[i].to_hex().c_str());
 
 		return ret;
 	}
@@ -721,7 +721,7 @@ public:
 		{
 			long reg_index;
 			reg_index = atol(reg.substr(first_brk + 1, reg.length()-2).c_str());
-			if (reg.find("GPR")==0) return fmt::Format("%016llx%016llx",  GPR[reg_index]._u64[1], GPR[reg_index]._u64[0]);
+			if (reg.find("GPR")==0) return fmt::format("%016llx%016llx",  GPR[reg_index]._u64[1], GPR[reg_index]._u64[0]);
 		}
 		return "";
 	}

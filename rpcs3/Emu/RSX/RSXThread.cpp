@@ -141,7 +141,7 @@ u32 RSXThread::OutOfArgsCount(const uint x, const u32 cmd, const u32 count, cons
 	auto args = vm::ptr<u32>::make(args_addr);
 	std::string debug = GetMethodName(cmd);
 	debug += "(";
-	for (u32 i = 0; i < count; ++i) debug += (i ? ", " : "") + fmt::Format("0x%x", ARGS(i));
+	for (u32 i = 0; i < count; ++i) debug += (i ? ", " : "") + fmt::format("0x%x", ARGS(i));
 	debug += ")";
 	LOG_NOTICE(RSX, "OutOfArgsCount(x=%d, count=%d): %s", x, count, debug.c_str());
 
@@ -174,7 +174,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 #if	CMD_DEBUG
 	std::string debug = GetMethodName(cmd);
 	debug += "(";
-	for (u32 i = 0; i < count; ++i) debug += (i ? ", " : "") + fmt::Format("0x%x", ARGS(i));
+	for (u32 i = 0; i < count; ++i) debug += (i ? ", " : "") + fmt::format("0x%x", ARGS(i));
 	debug += ")";
 	LOG_NOTICE(RSX, debug);
 #endif
@@ -2422,7 +2422,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		log += "(";
 		for (u32 i = 0; i < count; ++i)
 		{
-			log += (i ? ", " : "") + fmt::Format("0x%x", ARGS(i));
+			log += (i ? ", " : "") + fmt::format("0x%x", ARGS(i));
 		}
 		log += ")";
 		LOG_ERROR(RSX, "TODO: %s", log.c_str());

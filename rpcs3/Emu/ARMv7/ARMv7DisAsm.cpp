@@ -97,11 +97,11 @@ void ARMv7DisAsm::B(const u32 data, const ARMv7_encoding type)
 	Write(__FUNCTION__);
 	//if ((cond & 0xe) == 0xe)
 	//{
-	//	Write(fmt::Format("b 0x%x", DisAsmBranchTarget(imm) + intstr_size));
+	//	Write(fmt::format("b 0x%x", DisAsmBranchTarget(imm) + intstr_size));
 	//}
 	//else
 	//{
-	//	Write(fmt::Format("b[%s] 0x%x", g_arm_cond_name[cond], DisAsmBranchTarget(imm) + intstr_size));
+	//	Write(fmt::format("b[%s] 0x%x", g_arm_cond_name[cond], DisAsmBranchTarget(imm) + intstr_size));
 	//}
 }
 
@@ -142,13 +142,13 @@ void ARMv7DisAsm::BKPT(const u32 data, const ARMv7_encoding type)
 void ARMv7DisAsm::BL(const u32 data, const ARMv7_encoding type)
 {
 	Write(__FUNCTION__);
-	//Write(fmt::Format("bl 0x%x", DisAsmBranchTarget(imm) + intstr_size));
+	//Write(fmt::format("bl 0x%x", DisAsmBranchTarget(imm) + intstr_size));
 }
 
 void ARMv7DisAsm::BLX(const u32 data, const ARMv7_encoding type)
 {
 	Write(__FUNCTION__);
-	//Write(fmt::Format("bl 0x%x", DisAsmBranchTarget(imm) + intstr_size));
+	//Write(fmt::format("bl 0x%x", DisAsmBranchTarget(imm) + intstr_size));
 }
 
 void ARMv7DisAsm::BX(const u32 data, const ARMv7_encoding type)
@@ -160,8 +160,8 @@ void ARMv7DisAsm::BX(const u32 data, const ARMv7_encoding type)
 void ARMv7DisAsm::CB_Z(const u32 data, const ARMv7_encoding type)
 {
 	Write(__FUNCTION__);
-	//Write(fmt::Format("cbz 0x%x,%s", DisAsmBranchTarget(imm) + intstr_size, g_arm_reg_name[rn]));
-	//Write(fmt::Format("cbnz 0x%x,%s", DisAsmBranchTarget(imm) + intstr_size, g_arm_reg_name[rn]));
+	//Write(fmt::format("cbz 0x%x,%s", DisAsmBranchTarget(imm) + intstr_size, g_arm_reg_name[rn]));
+	//Write(fmt::format("cbnz 0x%x,%s", DisAsmBranchTarget(imm) + intstr_size, g_arm_reg_name[rn]));
 }
 
 
@@ -471,13 +471,13 @@ void ARMv7DisAsm::PKH(const u32 data, const ARMv7_encoding type)
 void ARMv7DisAsm::POP(const u32 data, const ARMv7_encoding type)
 {
 	Write(__FUNCTION__);
-	//Write(fmt::Format("pop {%s}", GetRegsListString(regs_list).c_str()));
+	//Write(fmt::format("pop {%s}", GetRegsListString(regs_list).c_str()));
 }
 
 void ARMv7DisAsm::PUSH(const u32 data, const ARMv7_encoding type)
 {
 	Write(__FUNCTION__);
-	//Write(fmt::Format("push {%s}", GetRegsListString(regs_list).c_str()));
+	//Write(fmt::format("push {%s}", GetRegsListString(regs_list).c_str()));
 }
 
 

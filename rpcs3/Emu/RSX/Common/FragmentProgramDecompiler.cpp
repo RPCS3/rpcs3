@@ -31,7 +31,7 @@ void FragmentProgramDecompiler::SetDst(std::string code, bool append_mask)
 	case 7: code = "(" + code + " / 8.0)"; break;
 
 	default:
-		LOG_ERROR(RSX, "Bad scale: %d", fmt::by_value(src1.scale));
+		LOG_ERROR(RSX, "Bad scale: %d", u32{ src1.scale });
 		Emu.Pause();
 		break;
 	}
@@ -276,7 +276,7 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 			}
 			else
 			{
-				LOG_ERROR(RSX, "Bad src reg num: %d", fmt::by_value(dst.src_attr_reg_num));
+				LOG_ERROR(RSX, "Bad src reg num: %d", u32{ dst.src_attr_reg_num });
 				ret += m_parr.AddParam(PF_PARAM_IN, getFloatTypeName(4), "unk");
 				Emu.Pause();
 			}
@@ -290,7 +290,7 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 		break;
 
 	default:
-		LOG_ERROR(RSX, "Bad src type %d", fmt::by_value(src.reg_type));
+		LOG_ERROR(RSX, "Bad src type %d", u32{ src.reg_type });
 		Emu.Pause();
 		break;
 	}
@@ -313,7 +313,7 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 
 std::string FragmentProgramDecompiler::BuildCode()
 {
-	//main += fmt::Format("\tgl_FragColor = %c0;\n", m_ctrl & 0x40 ? 'r' : 'h');
+	//main += fmt::format("\tgl_FragColor = %c0;\n", m_ctrl & 0x40 ? 'r' : 'h');
 
 	if (m_ctrl & 0xe) main += m_ctrl & 0x40 ? "\tgl_FragDepth = r1.z;\n" : "\tgl_FragDepth = h2.z;\n";
 
@@ -510,12 +510,12 @@ std::string FragmentProgramDecompiler::Decompile()
 			case RSX_FP_OPCODE_LOOP:
 				if (!src0.exec_if_eq && !src0.exec_if_gr && !src0.exec_if_lt)
 				{
-					AddCode(fmt::Format("$ifcond for(int i%u = %u; i%u < %u; i%u += %u) {} //-> %u //LOOP",
+					AddCode(fmt::format("$ifcond for(int i%u = %u; i%u < %u; i%u += %u) {} //-> %u //LOOP",
 						m_loop_count, src1.init_counter, m_loop_count, src1.end_counter, m_loop_count, src1.increment, src2.end_offset));
 				}
 				else
 				{
-					AddCode(fmt::Format("$ifcond for(int i%u = %u; i%u < %u; i%u += %u) //LOOP",
+					AddCode(fmt::format("$ifcond for(int i%u = %u; i%u < %u; i%u += %u) //LOOP",
 						m_loop_count, src1.init_counter, m_loop_count, src1.end_counter, m_loop_count, src1.increment));
 					m_loop_count++;
 					m_end_offsets.push_back(src2.end_offset << 2);
@@ -526,12 +526,12 @@ std::string FragmentProgramDecompiler::Decompile()
 			case RSX_FP_OPCODE_REP:
 				if (!src0.exec_if_eq && !src0.exec_if_gr && !src0.exec_if_lt)
 				{
-					AddCode(fmt::Format("$ifcond for(int i%u = %u; i%u < %u; i%u += %u) {} //-> %u //REP",
+					AddCode(fmt::format("$ifcond for(int i%u = %u; i%u < %u; i%u += %u) {} //-> %u //REP",
 						m_loop_count, src1.init_counter, m_loop_count, src1.end_counter, m_loop_count, src1.increment, src2.end_offset));
 				}
 				else
 				{
-					AddCode(fmt::Format("if($cond) for(int i%u = %u; i%u < %u; i%u += %u) //REP",
+					AddCode(fmt::format("if($cond) for(int i%u = %u; i%u < %u; i%u += %u) //REP",
 						m_loop_count, src1.init_counter, m_loop_count, src1.end_counter, m_loop_count, src1.increment));
 					m_loop_count++;
 					m_end_offsets.push_back(src2.end_offset << 2);
