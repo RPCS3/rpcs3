@@ -8,6 +8,10 @@ clone_folder: c:\rpcs3
 clone_depth: 1
 test: off
 
+matrix:
+ allow_failures:
+  - configuration: ReleaseLLVM
+
 branches:
  except:
    - ppu_recompiler

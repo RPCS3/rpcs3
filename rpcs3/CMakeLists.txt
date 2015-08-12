@@ -97,6 +97,9 @@ ${LLVM_INCLUDE_DIRS}
 "${RPCS3_SRC_DIR}/.."
 "${RPCS3_SRC_DIR}/../asmjit/src/asmjit"
 )
+if(WIN32)
+	include_directories(BEFORE "${RPCS3_SRC_DIR}/../minidx9/Include")
+endif()
 
 if(LLVM_FOUND)
 	add_definitions(${LLVM_DEFINITIONS})
@@ -145,9 +148,9 @@ endif()
 if(WIN32) # I'm not sure we need all of these libs, but we link them in vs
 	target_link_libraries(rpcs3  odbc32.lib odbccp32.lib comctl32.lib ws2_32.lib shlwapi.lib winmm.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib)
 	if(LLVM_FOUND)
-		target_link_libraries(rpcs3  asmjit.lib xaudio2.lib ${wxWidgets_LIBRARIES} ${OPENAL_LIBRARY} avformat.lib avcodec.lib avutil.lib swresample.lib swscale.lib ${LLVM_LIBS} ${ADDITIONAL_LIBS})
+		target_link_libraries(rpcs3  asmjit.lib ${wxWidgets_LIBRARIES} ${OPENAL_LIBRARY} avformat.lib avcodec.lib avutil.lib swresample.lib swscale.lib ${LLVM_LIBS} ${ADDITIONAL_LIBS})
 	else()
-		target_link_libraries(rpcs3  asmjit.lib xaudio2.lib ${wxWidgets_LIBRARIES} ${OPENAL_LIBRARY} avformat.lib avcodec.lib avutil.lib swresample.lib swscale.lib ${ADDITIONAL_LIBS})
+		target_link_libraries(rpcs3  asmjit.lib ${wxWidgets_LIBRARIES} ${OPENAL_LIBRARY} avformat.lib avcodec.lib avutil.lib swresample.lib swscale.lib ${ADDITIONAL_LIBS})
 	endif()
 else()
 	if(LLVM_FOUND)
