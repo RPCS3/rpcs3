@@ -664,16 +664,23 @@ struct CellSailSourceStreamingProfile
 
 union CellSailEvent
 {
-	struct
+	struct _data_t
 	{
 		be_t<u32> major;
 		be_t<u32> minor;
 	} u32x2;
 
-	struct
+	be_t<u64> value;
+};
+
+template<typename T, bool is_enum> struct cast_ppu_gpr;
+
+template<> struct cast_ppu_gpr<CellSailEvent, false>
+{
+	force_inline static u64 to_gpr(const CellSailEvent& event)
 	{
-		be_t<u64> value;
-	} u64;
+		return event.value;
+	}
 };
 
 using CellSailMemAllocatorFuncAlloc = vm::ptr<void>(vm::ptr<void> pArg, u32 boundary, u32 size);
@@ -733,7 +740,7 @@ using CellSailRendererVideoFuncCancel = void(vm::ptr<void> pArg);
 using CellSailRendererVideoFuncCheckout = s32(vm::ptr<void> pArg, vm::pptr<CellSailVideoFrameInfo> ppInfo);
 using CellSailRendererVideoFuncCheckin = s32(vm::ptr<void> pArg, vm::ptr<CellSailVideoFrameInfo> pInfo);
 
-using CellSailPlayerFuncNotified = void(vm::ptr<void> pArg, vm::ptr<CellSailEvent> evnt, u64 arg0, u64 arg1);
+using CellSailPlayerFuncNotified = void(vm::ptr<void> pArg, CellSailEvent evnt, u64 arg0, u64 arg1);
 
 struct CellSailMemAllocatorFuncs
 {

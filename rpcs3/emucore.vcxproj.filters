@@ -1870,6 +1870,12 @@
     <ClInclude Include="..\Utilities\VirtualMemory.h">
       <Filter>Utilities</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\SysCalls\Modules\cellSysconf.h">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\Modules\cellPrint.h">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClInclude>
     <ClInclude Include="Emu\Cell\SPUASMJITRecompiler.h">
       <Filter>Emu\CPU\Cell</Filter>
     </ClInclude>

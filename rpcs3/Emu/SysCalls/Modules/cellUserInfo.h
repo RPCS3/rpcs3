@@ -13,21 +13,23 @@ enum
 	CELL_USERINFO_ERROR_NOUSER    = 0x8002c304,
 };
 
-// Enums
-enum CellUserInfoParamSize
+// Constants
+enum
 {
 	CELL_USERINFO_USER_MAX      = 16,
 	CELL_USERINFO_TITLE_SIZE    = 256,
 	CELL_USERINFO_USERNAME_SIZE = 64,
+
+	CELL_SYSUTIL_USERID_CURRENT = 0,
+	CELL_SYSUTIL_USERID_MAX     = 99999999,
 };
 
-enum  CellUserInfoListType
+enum CellUserInfoListType
 {
 	CELL_USERINFO_LISTTYPE_ALL       = 0,
 	CELL_USERINFO_LISTTYPE_NOCURRENT = 1,
 };
 
-// Structs
 struct CellUserInfoUserStat
 {
 	be_t<u32> id;
@@ -55,3 +57,5 @@ struct CellUserInfoTypeSet
 	CellUserInfoListType type;
 	be_t<u32> reserved_addr; // (void*)
 };
+
+using CellUserInfoFinishCallback = void(s32 result, vm::ptr<CellUserInfoUserStat> selectUser, vm::ptr<u32> userdata);

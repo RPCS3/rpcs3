@@ -2040,6 +2040,11 @@ void GLGSRender::Draw()
 	}
 
 	WriteBuffers();
+
+	if (Ini.RSXFrameStep.GetValue())
+	{
+		Emu.Pause();
+	}
 }
 
 void GLGSRender::Flip()

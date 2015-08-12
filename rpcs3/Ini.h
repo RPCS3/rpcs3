@@ -161,6 +161,7 @@ public:
 	IniEntry<u8>   NETInterface;
 	IniEntry<bool> HLELogging;
 	IniEntry<bool> RSXLogging;
+	IniEntry<bool> RSXFrameStep;
 	IniEntry<bool> HLESaveTTY;
 	IniEntry<bool> HLEExitOnStop;
 	IniEntry<bool> HLEAlwaysStart;
@@ -249,6 +250,7 @@ public:
 		// Miscellaneous
 		HLELogging.Init("HLE_HLELogging", path);
 		RSXLogging.Init("RSX_Logging", path);
+		RSXFrameStep.Init("RSX_Frame_Step", path);
 		NETStatus.Init("NET_Status", path);
 		NETInterface.Init("NET_Interface", path);
 		HLESaveTTY.Init("HLE_HLESaveTTY", path);
@@ -336,6 +338,7 @@ public:
 		// Miscellaneous
 		HLELogging.Load(false);
 		RSXLogging.Load(false);
+		RSXFrameStep.Load(false);
 		NETStatus.Load(0);
 		NETInterface.Load(0);
 		HLESaveTTY.Load(false);
@@ -423,6 +426,7 @@ public:
 		// Miscellaneous
 		HLELogging.Save();
 		RSXLogging.Save();
+		RSXFrameStep.Save();
 		NETStatus.Save();
 		NETInterface.Save();
 		HLESaveTTY.Save();

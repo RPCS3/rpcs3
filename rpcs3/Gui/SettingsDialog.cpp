@@ -120,6 +120,7 @@ SettingsDialog::SettingsDialog(wxWindow *parent)
 	wxCheckBox* chbox_audio_conv = new wxCheckBox(p_audio, wxID_ANY, "Convert to 16 bit");
 	wxCheckBox* chbox_hle_logging = new wxCheckBox(p_misc, wxID_ANY, "Log everything");
 	wxCheckBox* chbox_rsx_logging = new wxCheckBox(p_misc, wxID_ANY, "RSX Logging");
+	wxCheckBox* chbox_rsx_frame_step = new wxCheckBox(p_misc, wxID_ANY, "RSX Frame Stepping");
 	wxCheckBox* chbox_hle_savetty = new wxCheckBox(p_misc, wxID_ANY, "Save TTY output to file");
 	wxCheckBox* chbox_hle_exitonstop = new wxCheckBox(p_misc, wxID_ANY, "Exit RPCS3 when process finishes");
 	wxCheckBox* chbox_hle_always_start = new wxCheckBox(p_misc, wxID_ANY, "Always start after boot");
@@ -249,6 +250,7 @@ SettingsDialog::SettingsDialog(wxWindow *parent)
 	chbox_audio_conv->SetValue(Ini.AudioConvertToU16.GetValue());
 	chbox_hle_logging->SetValue(Ini.HLELogging.GetValue());
 	chbox_rsx_logging->SetValue(Ini.RSXLogging.GetValue());
+	chbox_rsx_frame_step->SetValue(Ini.RSXFrameStep.GetValue());
 	chbox_hle_savetty->SetValue(Ini.HLESaveTTY.GetValue());
 	chbox_hle_exitonstop->SetValue(Ini.HLEExitOnStop.GetValue());
 	chbox_hle_always_start->SetValue(Ini.HLEAlwaysStart.GetValue());
@@ -361,6 +363,7 @@ SettingsDialog::SettingsDialog(wxWindow *parent)
 	s_subpanel_misc->Add(s_round_hle_log_lvl, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_misc->Add(chbox_hle_logging, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_misc->Add(chbox_rsx_logging, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_subpanel_misc->Add(chbox_rsx_frame_step, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_misc->Add(chbox_hle_savetty, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_misc->Add(chbox_hle_exitonstop, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_misc->Add(chbox_hle_always_start, wxSizerFlags().Border(wxALL, 5).Expand());
@@ -435,6 +438,7 @@ SettingsDialog::SettingsDialog(wxWindow *parent)
 		Ini.CameraType.SetValue(cbox_camera_type->GetSelection());
 		Ini.HLELogging.SetValue(chbox_hle_logging->GetValue());
 		Ini.RSXLogging.SetValue(chbox_rsx_logging->GetValue());
+		Ini.RSXFrameStep.SetValue(chbox_rsx_frame_step->GetValue());
 		Ini.HLESaveTTY.SetValue(chbox_hle_savetty->GetValue());
 		Ini.HLEExitOnStop.SetValue(chbox_hle_exitonstop->GetValue());
 		Ini.HLELogLvl.SetValue(cbox_hle_loglvl->GetSelection());

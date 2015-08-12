@@ -2,20 +2,9 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/SysCalls/Modules.h"
 
-extern Module cellPrint;
+#include "cellPrint.h"
 
-// Error Codes
-enum
-{
-	CELL_PRINT_ERROR_INTERNAL            = 0x8002c401,
-	CELL_PRINT_ERROR_NO_MEMORY           = 0x8002c402,
-	CELL_PRINT_ERROR_PRINTER_NOT_FOUND   = 0x8002c403,
-	CELL_PRINT_ERROR_INVALID_PARAM       = 0x8002c404,
-	CELL_PRINT_ERROR_INVALID_FUNCTION    = 0x8002c405,
-	CELL_PRINT_ERROR_NOT_SUPPORT         = 0x8002c406,
-	CELL_PRINT_ERROR_OCCURRED            = 0x8002c407,
-	CELL_PRINT_ERROR_CANCELED_BY_PRINTER = 0x8002c408,
-};
+extern Module cellPrint;
 
 s32 cellSysutilPrintInit()
 {
@@ -29,15 +18,15 @@ s32 cellSysutilPrintShutdown()
 	return CELL_OK;
 }
 
-s32 cellPrintLoadAsync()
+s32 cellPrintLoadAsync(vm::ptr<CellPrintCallback> function, vm::ptr<u32> userdata, vm::cptr<CellPrintLoadParam> param, u32 container)
 {
-	UNIMPLEMENTED_FUNC(cellPrint);
+	cellPrint.Todo("cellPrintLoadAsync(function=*0x%x, userdata=*0x%x, param=*0x%x, container=%d)", function, userdata, param, container);
 	return CELL_OK;
 }
 
-s32 cellPrintLoadAsync2()
+s32 cellPrintLoadAsync2(vm::ptr<CellPrintCallback> function, vm::ptr<u32> userdata, vm::cptr<CellPrintLoadParam> param)
 {
-	UNIMPLEMENTED_FUNC(cellPrint);
+	cellPrint.Todo("cellPrintLoadAsync2(function=*0x%x, userdata=*0x%x, param=*0x%x)", function, userdata, param);
 	return CELL_OK;
 }
 

@@ -618,6 +618,7 @@
     <ClInclude Include="Emu\SysCalls\Modules\cellPamf.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellPng.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellPngDec.h" />
+    <ClInclude Include="Emu\SysCalls\Modules\cellPrint.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellResc.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellRtc.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellRudp.h" />
@@ -629,6 +630,7 @@
     <ClInclude Include="Emu\SysCalls\Modules\cellSubdisplay.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellSync.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellSync2.h" />
+    <ClInclude Include="Emu\SysCalls\Modules\cellSysconf.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellSysutil.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellSaveData.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellUsbd.h" />
