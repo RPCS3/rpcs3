@@ -182,7 +182,7 @@ public:
 
 	bool GetNextEntry(u64& block, vfsHDD_Entry& entry, std::string& name);
 
-	virtual bool Open(const std::string& path, u32 mode = vfsRead) override;
+	virtual bool Open(const std::string& path, u32 mode = fom::read) override;
 
 	bool HasEntry(const std::string& name);
 
@@ -196,7 +196,7 @@ public:
 
 	virtual u64 Read(void* dst, u64 count) override;
 
-	virtual u64 Seek(s64 offset, u32 mode = from_begin) override;
+	virtual u64 Seek(s64 offset, fsm seek_mode = fsm::begin) override;
 
 	virtual u64 Tell() const override;
 

@@ -64,7 +64,7 @@ s32 cellGifDecOpen(PMainHandle mainHandle, PPSubHandle subHandle, PSrc src, POpe
 	case CELL_GIFDEC_FILE:
 	{
 		// Get file descriptor and size
-		std::shared_ptr<vfsStream> file_s(Emu.GetVFS().OpenFile(src->fileName.get_ptr(), vfsRead));
+		std::shared_ptr<vfsStream> file_s(Emu.GetVFS().OpenFile(src->fileName.get_ptr(), fom::read));
 		if (!file_s) return CELL_GIFDEC_ERROR_OPEN_FILE;
 
 		current_subHandle.fd = idm::make<lv2_file_t>(file_s, 0, 0);

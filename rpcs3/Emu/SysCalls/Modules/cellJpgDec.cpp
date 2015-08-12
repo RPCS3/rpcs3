@@ -53,7 +53,7 @@ s32 cellJpgDecOpen(u32 mainHandle, vm::ptr<u32> subHandle, vm::ptr<CellJpgDecSrc
 	case CELL_JPGDEC_FILE:
 	{
 		// Get file descriptor and size
-		std::shared_ptr<vfsStream> file_s(Emu.GetVFS().OpenFile(src->fileName.get_ptr(), vfsRead));
+		std::shared_ptr<vfsStream> file_s(Emu.GetVFS().OpenFile(src->fileName.get_ptr(), fom::read));
 		if (!file_s) return CELL_JPGDEC_ERROR_OPEN_FILE;
 
 		current_subHandle.fd = idm::make<lv2_file_t>(file_s, 0, 0);

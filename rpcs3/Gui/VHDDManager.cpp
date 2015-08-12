@@ -122,7 +122,7 @@ void VHDDExplorer::Import(const std::string& path, const std::string& to)
 		return;
 	}
 
-	if(!m_hdd->Open(to, o_write))
+	if(!m_hdd->Open(to, fom::write))
 	{
 		wxMessageBox("IMPORT ERROR: file open error.");
 		return;

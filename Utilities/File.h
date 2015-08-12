@@ -1,32 +1,53 @@
 #pragma once
 
-enum file_seek_mode : u32
+enum class fsm : u32 // file seek mode
 {
-	from_begin,
-	from_cur,
-	from_end,
+	begin,
+	cur,
+	end,
 };
 
-enum file_open_mode : u32
+namespace fom // file open mode
 {
-	o_read = 1 << 0,
-	o_write = 1 << 1,
-	o_append = 1 << 2,
-	o_create = 1 << 3,
-	o_trunc = 1 << 4,
-	o_excl = 1 << 5,
+	enum : u32
+	{
+		read = 1 << 0,
+		write = 1 << 1,
+		append = 1 << 2,
+		create = 1 << 3,
+		trunc = 1 << 4,
+		excl = 1 << 5,
+	};
+};
+
+enum class fse : u32 // filesystem (file or dir) error
+{
+	ok, // no error
+	invalid_arguments,
+};
+
+enum : u32 // obsolete flags
+{
+	o_read = fom::read,
+	o_write = fom::write,
+	o_append = fom::append,
+	o_create = fom::create,
+	o_trunc = fom::trunc,
+	o_excl = fom::excl,
 };
 
 namespace fs
 {
+	thread_local extern fse g_tls_error;
+
 	struct stat_t
 	{
 		bool is_directory;
 		bool is_writable;
 		u64 size;
-		time_t atime;
-		time_t mtime;
-		time_t ctime;
+		s64 atime;
+		s64 mtime;
+		s64 ctime;
 	};
 
 	bool stat(const std::string& path, stat_t& info);
@@ -53,7 +74,7 @@ namespace fs
 	public:
 		file() = default;
 		~file();
-		explicit file(const std::string& filename, u32 mode = o_read) { open(filename, mode); }
+		explicit file(const std::string& filename, u32 mode = fom::read) { open(filename, mode); }
 
 		file(const file&) = delete;
 		file(file&&) = delete; // possibly TODO
@@ -65,7 +86,7 @@ namespace fs
 
 		void import(handle_type fd) { this->~file(); m_fd = fd; }
 
-		bool open(const std::string& filename, u32 mode = o_read);
+		bool open(const std::string& filename, u32 mode = fom::read);
 		bool is_opened() const { return m_fd != null; }
 		bool trunc(u64 size) const; // change file size (possibly appending zero bytes)
 		bool stat(stat_t& info) const; // get file info
@@ -73,7 +94,7 @@ namespace fs
 
 		u64 read(void* buffer, u64 count) const;
 		u64 write(const void* buffer, u64 count) const;
-		u64 seek(u64 offset, u32 mode = from_begin) const;
+		u64 seek(s64 offset, fsm seek_mode = fsm::begin) const;
 		u64 size() const;
 	};
 

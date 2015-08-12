@@ -29,7 +29,7 @@ bool TROPUSRLoader::Load(const std::string& filepath, const std::string& configp
 		Generate(filepath, configpath);
 	}
 
-	m_file = Emu.GetVFS().OpenFile(filepath, vfsRead);
+	m_file = Emu.GetVFS().OpenFile(filepath, fom::read);
 	LoadHeader();
 	LoadTableHeaders();
 	LoadTables();
@@ -124,7 +124,7 @@ bool TROPUSRLoader::Save(const std::string& filepath)
 		Close();
 	}
 
-	m_file = Emu.GetVFS().OpenFile(filepath, vfsWriteNew);
+	m_file = Emu.GetVFS().OpenFile(filepath, fom::write | fom::create | fom::trunc);
 	m_file->Write(&m_header, sizeof(TROPUSRHeader));
 
 	for (const TROPUSRTableHeader& tableHeader : m_tableHeaders)

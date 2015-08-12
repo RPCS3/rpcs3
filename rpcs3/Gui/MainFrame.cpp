@@ -245,7 +245,7 @@ void MainFrame::InstallPkg(wxCommandEvent& WXUNUSED(event))
 	Emu.Stop();
 	
 	// Open and install PKG file
-	fs::file pkg_f(ctrl.GetPath().ToStdString(), o_read);
+	fs::file pkg_f(ctrl.GetPath().ToStdString(), fom::read);
 
 	if (pkg_f)
 	{

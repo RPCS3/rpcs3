@@ -53,31 +53,31 @@ s32 sys_fs_open(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, s32 mode, vm::c
 
 	switch (flags & CELL_FS_O_ACCMODE)
 	{
-	case CELL_FS_O_RDONLY: open_mode |= o_read; break;
-	case CELL_FS_O_WRONLY: open_mode |= o_write; break;
-	case CELL_FS_O_RDWR: open_mode |= o_read | o_write; break;
+	case CELL_FS_O_RDONLY: open_mode |= fom::read; break;
+	case CELL_FS_O_WRONLY: open_mode |= fom::write; break;
+	case CELL_FS_O_RDWR: open_mode |= fom::read | fom::write; break;
 	}
 
 	if (flags & CELL_FS_O_CREAT)
 	{
-		open_mode |= o_create;
+		open_mode |= fom::create;
 	}
 
 	if (flags & CELL_FS_O_TRUNC)
 	{
-		open_mode |= o_trunc;
+		open_mode |= fom::trunc;
 	}
 
 	if (flags & CELL_FS_O_APPEND)
 	{
-		open_mode |= o_append;
+		open_mode |= fom::append;
 	}
 
 	if (flags & CELL_FS_O_EXCL)
 	{
 		if (flags & CELL_FS_O_CREAT)
 		{
-			open_mode |= o_excl;
+			open_mode |= fom::excl;
 		}
 		else
 		{
@@ -106,7 +106,7 @@ s32 sys_fs_open(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, s32 mode, vm::c
 	{
 		sys_fs.Error("sys_fs_open('%s'): failed to open file (flags=%#o, mode=%#o)", path.get_ptr(), flags, mode);
 
-		if (open_mode & o_excl)
+		if (open_mode & fom::excl)
 		{
 			return CELL_FS_EEXIST; // approximation
 		}
@@ -430,7 +430,7 @@ s32 sys_fs_lseek(u32 fd, s64 offset, s32 whence, vm::ptr<u64> pos)
 
 	std::lock_guard<std::mutex> lock(file->mutex);
 
-	*pos = file->file->Seek(offset, whence);
+	*pos = file->file->Seek(offset, (fsm)whence);
 
 	return CELL_OK;
 }

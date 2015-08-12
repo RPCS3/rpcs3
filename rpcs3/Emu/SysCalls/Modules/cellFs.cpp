@@ -752,8 +752,8 @@ bool sdata_check(u32 version, u32 flags, u64 filesizeInput, u64 filesizeTmp)
 
 s32 sdata_unpack(const std::string& packed_file, const std::string& unpacked_file)
 {
-	std::shared_ptr<vfsFileBase> packed_stream(Emu.GetVFS().OpenFile(packed_file, vfsRead));
-	std::shared_ptr<vfsFileBase> unpacked_stream(Emu.GetVFS().OpenFile(unpacked_file, vfsWriteNew));
+	std::shared_ptr<vfsFileBase> packed_stream(Emu.GetVFS().OpenFile(packed_file, fom::read));
+	std::shared_ptr<vfsFileBase> unpacked_stream(Emu.GetVFS().OpenFile(unpacked_file, fom::write | fom::create | fom::trunc));
 
 	if (!packed_stream || !packed_stream->IsOpened())
 	{

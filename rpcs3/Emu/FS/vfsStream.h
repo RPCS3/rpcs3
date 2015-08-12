@@ -1,4 +1,5 @@
 #pragma once
+
 #include "Utilities/File.h"
 
 struct vfsStream
@@ -31,7 +32,7 @@ struct vfsStream
 		return Read(&data, count) == count;
 	}
 
-	virtual u64 Seek(s64 offset, u32 mode = from_begin) = 0;
+	virtual u64 Seek(s64 offset, fsm seek_mode = fsm::begin) = 0;
 
 	virtual u64 Tell() const = 0;
 

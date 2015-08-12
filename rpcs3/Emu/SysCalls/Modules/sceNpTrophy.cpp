@@ -103,7 +103,7 @@ s32 sceNpTrophyCreateContext(vm::ptr<u32> context, vm::cptr<SceNpCommunicationId
 	std::string name = fmt::format("%s_%02d", commId->data, commId->num);
 
 	// open trophy pack file
-	std::unique_ptr<vfsStream> stream(Emu.GetVFS().OpenFile("/app_home/../TROPDIR/" + name + "/TROPHY.TRP", vfsRead));
+	std::unique_ptr<vfsStream> stream(Emu.GetVFS().OpenFile("/app_home/../TROPDIR/" + name + "/TROPHY.TRP", fom::read));
 
 	// check if exists and opened
 	if (!stream || !stream->IsOpened())

@@ -1076,7 +1076,7 @@ bool SELFDecrypter::DecryptData()
 bool SELFDecrypter::MakeElf(const std::string& elf, bool isElf32)
 {
 	// Create a new ELF file.
-	fs::file e(elf, o_write | o_create | o_trunc);
+	fs::file e(elf, fom::write | fom::create | fom::trunc);
 	if(!e)
 	{
 		LOG_ERROR(LOADER, "Could not create ELF file! (%s)", elf.c_str());
@@ -1283,7 +1283,7 @@ bool CheckDebugSelf(const std::string& self, const std::string& elf)
 		s.seek(elf_offset);
 
 		// Write the real ELF file back.
-		fs::file e(elf, o_write | o_create | o_trunc);
+		fs::file e(elf, fom::write | fom::create | fom::trunc);
 		if(!e)
 		{
 			LOG_ERROR(LOADER, "Could not create ELF file! (%s)", elf.c_str());

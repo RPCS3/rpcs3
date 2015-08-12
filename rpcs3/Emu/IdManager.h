@@ -2,7 +2,7 @@
 
 #define ID_MANAGER_INCLUDED
 
-// default specialization for all types
+// default traits for any arbitrary type
 template<typename T> struct id_traits
 {
 	// get next mapped id (may return 0 if out of IDs)

@@ -1,13 +1,6 @@
 #pragma once
-#include "vfsStream.h"
 
-enum vfsOpenMode : u32
-{
-	vfsRead = o_read,
-	vfsReadWrite = o_read | o_write,
-	vfsWriteNew = o_write | o_create | o_trunc,
-	vfsWriteExcl = o_write | o_create | o_excl,
-};
+#include "vfsStream.h"
 
 class vfsDevice;
 

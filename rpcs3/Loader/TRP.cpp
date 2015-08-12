@@ -36,7 +36,7 @@ bool TRPLoader::Install(std::string dest, bool show)
 		char* buffer = new char [(u32)entry.size];
 		trp_f.Seek(entry.offset);
 		trp_f.Read(buffer, entry.size);
-		vfsFile(dest + entry.name, vfsWriteNew).Write(buffer, entry.size);
+		vfsFile(dest + entry.name, fom::write | fom::create | fom::trunc).Write(buffer, entry.size);
 		delete[] buffer;
 	}
 

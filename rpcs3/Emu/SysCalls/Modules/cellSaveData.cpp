@@ -561,7 +561,7 @@ never_inline s32 savedata_op(PPUThread& ppu, u32 operation, u32 version, vm::cpt
 		{
 		case CELL_SAVEDATA_FILEOP_READ:
 		{
-			fs::file file(local_path, o_read);
+			fs::file file(local_path, fom::read);
 			file.seek(fileSet->fileOffset);
 			fileGet->excSize = static_cast<u32>(file.read(fileSet->fileBuf.get_ptr(), std::min<u32>(fileSet->fileSize, fileSet->fileBufSize)));
 			break;
@@ -569,10 +569,10 @@ never_inline s32 savedata_op(PPUThread& ppu, u32 operation, u32 version, vm::cpt
 
 		case CELL_SAVEDATA_FILEOP_WRITE:
 		{
-			fs::file file(local_path, o_write | o_create);
+			fs::file file(local_path, fom::write | fom::create);
 			file.seek(fileSet->fileOffset);
 			fileGet->excSize = static_cast<u32>(file.write(fileSet->fileBuf.get_ptr(), std::min<u32>(fileSet->fileSize, fileSet->fileBufSize)));
-			file.trunc(file.seek(0, from_cur)); // truncate
+			file.trunc(file.seek(0, fsm::cur)); // truncate
 			break;
 		}
 
@@ -585,7 +585,7 @@ never_inline s32 savedata_op(PPUThread& ppu, u32 operation, u32 version, vm::cpt
 
 		case CELL_SAVEDATA_FILEOP_WRITE_NOTRUNC:
 		{
-			fs::file file(local_path, o_write | o_create);
+			fs::file file(local_path, fom::write | fom::create);
 			file.seek(fileSet->fileOffset);
 			fileGet->excSize = static_cast<u32>(file.write(fileSet->fileBuf.get_ptr(), std::min<u32>(fileSet->fileSize, fileSet->fileBufSize)));
 			break;
@@ -602,7 +602,7 @@ never_inline s32 savedata_op(PPUThread& ppu, u32 operation, u32 version, vm::cpt
 	// Write PARAM.SFO
 	if (psf)
 	{
-		vfsFile f(sfo_path, vfsWriteNew);
+		vfsFile f(sfo_path, fom::write | fom::create | fom::trunc);
 		psf.Save(f);
 	}
 

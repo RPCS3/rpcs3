@@ -48,7 +48,7 @@ u64 vfsFile::Read(void* dst, u64 size)
 	return m_stream->Read(dst, size);
 }
 
-u64 vfsFile::Seek(s64 offset, u32 mode)
+u64 vfsFile::Seek(s64 offset, fsm mode)
 {
 	return m_stream->Seek(offset, mode);
 }

@@ -98,7 +98,7 @@ s32 pngDecOpen(PMainHandle dec, PPSubHandle subHandle, PSrc src, POpenInfo openI
 	case CELL_PNGDEC_FILE:
 	{
 		// Get file descriptor and size
-		std::shared_ptr<vfsStream> file_s(Emu.GetVFS().OpenFile(src->fileName.get_ptr(), vfsRead));
+		std::shared_ptr<vfsStream> file_s(Emu.GetVFS().OpenFile(src->fileName.get_ptr(), fom::read));
 		if (!file_s) return CELL_PNGDEC_ERROR_OPEN_FILE;
 
 		stream->fd = idm::make<lv2_file_t>(file_s, 0, 0);

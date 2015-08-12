@@ -33,14 +33,14 @@ u64 vfsLocalFile::Read(void* dst, u64 size)
 	return m_file.read(dst, size);
 }
 
-u64 vfsLocalFile::Seek(s64 offset, u32 mode)
+u64 vfsLocalFile::Seek(s64 offset, fsm mode)
 {
 	return m_file.seek(offset, mode);
 }
 
 u64 vfsLocalFile::Tell() const
 {
-	return m_file.seek(0, from_cur);
+	return m_file.seek(0, fsm::cur);
 }
 
 bool vfsLocalFile::IsOpened() const

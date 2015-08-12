@@ -69,7 +69,7 @@ static bool CheckHeader(const fs::file& pkg_f, PKGHeader& header)
 bool Unpack(const fs::file& pkg_f, std::string dir)
 {
 	// Save current file offset (probably zero)
-	const u64 start_offset = pkg_f.seek(0, from_cur);
+	const u64 start_offset = pkg_f.seek(0, fsm::cur);
 
 	// Get basic PKG information
 	PKGHeader header;
@@ -186,7 +186,7 @@ bool Unpack(const fs::file& pkg_f, std::string dir)
 				LOG_WARNING(LOADER, "PKG Loader: '%s' is overwritten", path);
 			}
 
-			if (fs::file out{ path, o_write | o_create | o_trunc })
+			if (fs::file out{ path, fom::write | fom::create | fom::trunc })
 			{
 				for (u64 pos = 0; pos < entry.file_size; pos += BUF_SIZE)
 				{

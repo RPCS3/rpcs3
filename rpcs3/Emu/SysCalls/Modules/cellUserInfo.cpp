@@ -22,7 +22,7 @@ s32 cellUserInfoGetStat(u32 id, vm::ptr<CellUserInfoUserStat> stat)
 		return CELL_USERINFO_ERROR_NOUSER;
 
 	sprintf(path, "/dev_hdd0/home/%08d/localusername", id);
-	vfsStream* stream = Emu.GetVFS().OpenFile(path, vfsRead);
+	vfsStream* stream = Emu.GetVFS().OpenFile(path, fom::read);
 	if (!stream || !(stream->IsOpened()))
 		return CELL_USERINFO_ERROR_INTERNAL;
 

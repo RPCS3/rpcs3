@@ -160,7 +160,7 @@ void SPURecompilerCore::Compile(u16 pos)
 	//		entry[start].count, excess, stamp1 - stamp0, time0, get_system_time() - stamp1);
 	//}
 
-	//fs::file(fmt::Format("SPUjit_%d.log", this->CPU.GetId()), o_write | o_create | (first ? o_trunc : o_append)).write(log.c_str(), log.size());
+	//fs::file(fmt::Format("SPUjit_%d.log", this->CPU.GetId()), fom::write | fom::create | (first ? fom::trunc : fom::append)).write(log.c_str(), log.size());
 
 	m_enc->compiler = nullptr;
 	first = false;

@@ -15,13 +15,13 @@ void vfsHDDManager::CreateEntry(vfsHDD_Entry& entry)
 	entry.atime = ctime;
 	entry.ctime = ctime;
 	entry.mtime = ctime;
-	entry.access = vfsReadWrite;
+	entry.access = 0666;
 	CreateBlock(entry);
 }
 
 void vfsHDDManager::CreateHDD(const std::string& path, u64 size, u64 block_size)
 {
-	fs::file f(path, o_write | o_create | o_trunc);
+	fs::file f(path, fom::write | fom::create | fom::trunc);
 
 	static const u64 cur_dir_block = 1;
 
@@ -353,7 +353,7 @@ vfsHDD::vfsHDD(vfsDevice* device, const std::string& hdd_path)
 	, m_hdd_path(hdd_path)
 	, vfsFileBase(device)
 {
-	m_hdd_file.Open(hdd_path, vfsReadWrite);
+	m_hdd_file.Open(hdd_path, fom::read | fom::write);
 	m_hdd_file.Read(&m_hdd_info, sizeof(vfsHDD_Hdr));
 	m_cur_dir_block = m_hdd_info.next_block;
 	if (!m_hdd_info.block_size)
@@ -747,16 +747,16 @@ u64 vfsHDD::Read(void* dst, u64 size)
 	return m_file.Read(dst, size); // ???
 }
 
-u64 vfsHDD::Seek(s64 offset, u32 mode)
+u64 vfsHDD::Seek(s64 offset, fsm seek_mode)
 {
-	switch (mode)
+	switch (seek_mode)
 	{
-	case from_begin: return m_file.Seek(offset);
-	case from_cur: return m_file.Seek(Tell() + offset);
-	case from_end: return m_file.Seek(m_file.GetSize() + offset);
+	case fsm::begin: return m_file.Seek(offset);
+	case fsm::cur: return m_file.Seek(Tell() + offset);
+	case fsm::end: return m_file.Seek(m_file.GetSize() + offset);
 	}
 
-	return m_file.Tell(); // ???
+	throw EXCEPTION("Unknown seek_mode(0x%x)", seek_mode);
 }
 
 u64 vfsHDD::Tell() const
