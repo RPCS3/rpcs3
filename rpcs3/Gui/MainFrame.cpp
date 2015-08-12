@@ -364,7 +364,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	}
 
 	wxDialog diag(this, wxID_ANY, "Settings", wxDefaultPosition);
-	static const u32 width = 452;
+	static const u32 width = 458;
 	static const u32 height = 460;
 
 	// Settings panels
