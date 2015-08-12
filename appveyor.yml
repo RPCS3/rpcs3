@@ -1,8 +1,10 @@
 version: 1.0.{build}
 os: Visual Studio 2015
-configuration: Release
+configuration:
+ - Release
+ - ReleaseLLVM
 platform: x64
-clone_folder: c:\projects\rpcs3
+clone_folder: c:\rpcs3
 clone_depth: 1
 test: off
 
@@ -14,19 +16,21 @@ before_build:
  - git submodule update --init --depth 3 asmjit minidx9
  # until git for win 2.5 release with commit checkout
  - git submodule update --init ffmpeg
- - 7z x wxWidgets.7z -aos -oC:\projects\rpcs3\wxWidgets > null
- - cmake -G "Visual Studio 14 Win64"
+ - 7z x wxWidgets.7z -aos -oC:\rpcs3\wxWidgets > null
+ - if %configuration%==Release (cmake -G "Visual Studio 14 Win64")
+   else (7z x llvmlibs.7z -aos -oC:\rpcs3 > null && cmake -G "Visual Studio 14 Win64" -DLLVM_DIR=C:/rpcs3/llvm_build/share/llvm/cmake)
 
 build_script:
  - cmake --build . --config Release -- /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
 
 install:
  - ps: Start-FileDownload 'https://402331b94f8e4b87ae2ef4677347f7956cf3861f.googledrive.com/host/0B6v_qtb9hkicfmt0NG0wTTRtUmF4X3VTQk5Oc2JidEVKVnUteDA1dXdrYlNsVW9kREpsSHc/wxWidgets.7z'
- - set WXWIN=C:\projects\rpcs3\wxWidgets;
- - set OPENALDIR=C:\projects\rpcs3\OpenAL;
+ - ps: Start-FileDownload 'https://402331b94f8e4b87ae2ef4677347f7956cf3861f.googledrive.com/host/0B6v_qtb9hkicfmt0NG0wTTRtUmF4X3VTQk5Oc2JidEVKVnUteDA1dXdrYlNsVW9kREpsSHc/llvmlibs.7z'
+ - set WXWIN=C:\rpcs3\wxWidgets
+ - set OPENALDIR=C:\rpcs3\OpenAL
  - set PATH=C:\Program Files (x86)\MSBuild\14.0\Bin;C:\wxWidgets;%PATH%
  - set COMMIT_SHA=%APPVEYOR_REPO_COMMIT:~0,8%
 
 artifacts:
  - path: bin
-   name: rpcs3-$(COMMIT_SHA)
+   name: rpcs3-$(configuration)-$(COMMIT_SHA)
