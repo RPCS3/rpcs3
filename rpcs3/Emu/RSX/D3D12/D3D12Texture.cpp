@@ -222,7 +222,7 @@ writeTexelsSwizzled(const char *src, char *dst, size_t widthInBlock, size_t heig
 		log2height = (u32)(logf((float)currentHeight) / logf(2.f));
 
 #pragma omp parallel for
-		for (unsigned row = 0; row < currentHeight; row++)
+		for (int row = 0; row < currentHeight; row++)
 			for (int j = 0; j < currentWidth; j++)
 				castedDst[(row * rowPitch / 4) + j] = castedSrc[LinearToSwizzleAddress(j, row, 0, log2width, log2height, 0)];
 
@@ -298,7 +298,7 @@ write16bTexelsSwizzled(const char *src, char *dst, size_t widthInBlock, size_t h
 		log2height = (u32)(logf((float)currentHeight) / logf(2.f));
 
 #pragma omp parallel for
-		for (unsigned row = 0; row < currentHeight; row++)
+		for (int row = 0; row < currentHeight; row++)
 			for (int j = 0; j < currentWidth; j++)
 				castedDst[(row * rowPitch / 2) + j] = castedSrc[LinearToSwizzleAddress(j, row, 0, log2width, log2height, 0)];
 
