@@ -2,25 +2,20 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/SysCalls/Modules.h"
 
+#include "sys_net.h"
+
 #ifdef _WIN32
 #include <winsock2.h>
 #include <WS2tcpip.h>
 #else
-extern "C"
-{
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
-}
 #endif
 
-#include "sys_net.h"
-
-extern Module sys_net;
-
-vm::ptr<s32> g_lastError = vm::null;
+extern Module libnet;
 
 // We map host sockets to sequential IDs to return as FDs because syscalls using
 // socketselect(), etc. expect socket FDs to be under 1024.
@@ -91,252 +86,282 @@ s32 getLastError()
 #endif
 }
 
-using pck_len_t = u32;
-
-namespace sys_net_func
+void copy_fdset(fd_set* set, vm::ptr<sys_net::fd_set> src)
 {
-	// Functions
-	s32 accept(s32 s, vm::ptr<sys_net_sockaddr> addr, vm::ptr<pck_len_t> paddrlen)
+	FD_ZERO(set);
+
+	if (src)
 	{
-		sys_net.Warning("accept(s=%d, family=*0x%x, paddrlen=*0x%x)", s, addr, paddrlen);
+		// Go through the bit set fds_bits and calculate the
+		// socket FDs from it, setting it in the native fd-set.
+
+		for (int i = 0; i < 32; i++)
+		{
+			for (int bit = 0; bit < 32; bit++)
+			{
+				if (src->fds_bits[i] & (1 << bit))
+				{
+					u32 sock = (i << 5) | bit;
+					//libnet.Error("setting: fd %d", sock);
+					FD_SET(g_socketMap[sock], set);
+				}
+			}
+		}
+	}
+}
+
+namespace sys_net
+{
+	struct tls_data_t
+	{
+		be_t<s32> _errno;
+		be_t<s32> _h_errno;
+	};
+
+	thread_local vm::var<tls_data_t> g_tls_data;
+
+	// Functions
+	s32 accept(s32 s, vm::ptr<sockaddr> addr, vm::ptr<u32> paddrlen)
+	{
+		libnet.Warning("accept(s=%d, family=*0x%x, paddrlen=*0x%x)", s, addr, paddrlen);
 		s = g_socketMap[s];
 
 		if (!addr) {
 			int ret = ::accept(s, nullptr, nullptr);
-			*g_lastError = getLastError();
+			g_tls_data->_errno = getLastError();
 			return ret;
 		}
 		else {
-			sockaddr _addr;
-			memcpy(&_addr, addr.get_ptr(), sizeof(sockaddr));
+			::sockaddr _addr;
+			memcpy(&_addr, addr.get_ptr(), sizeof(::sockaddr));
 			_addr.sa_family = addr->sa_family;
 			::socklen_t _paddrlen;
 			s32 ret = ::accept(s, &_addr, &_paddrlen);
 			*paddrlen = _paddrlen;
-			*g_lastError = getLastError();
+			g_tls_data->_errno = getLastError();
 			return ret;
 		}
 	}
 
-	s32 bind(s32 s, vm::ptr<sys_net_sockaddr_in> addr, u32 addrlen)
+	s32 bind(s32 s, vm::cptr<sockaddr> addr, u32 addrlen)
 	{
-		sys_net.Warning("bind(s=%d, family=*0x%x, addrlen=%d)", s, addr, addrlen);
+		libnet.Warning("bind(s=%d, family=*0x%x, addrlen=%d)", s, addr, addrlen);
 		s = g_socketMap[s];
 
-		sockaddr_in saddr;
-		memcpy(&saddr, addr.get_ptr(), sizeof(sockaddr_in));
-		saddr.sin_family = addr->sin_family;
-		const char *ipaddr = inet_ntoa(saddr.sin_addr);
-		sys_net.Warning("binding on %s to port %d", ipaddr, ntohs(saddr.sin_port));
-		s32 ret = ::bind(s, (const sockaddr *)&saddr, addrlen);
-		*g_lastError = getLastError();
+		::sockaddr_in saddr;
+		memcpy(&saddr, addr.get_ptr(), sizeof(::sockaddr_in));
+		saddr.sin_family = addr->sa_family;
+		const char *ipaddr = ::inet_ntoa(saddr.sin_addr);
+		libnet.Warning("binding on %s to port %d", ipaddr, ntohs(saddr.sin_port));
+		s32 ret = ::bind(s, (const ::sockaddr*)&saddr, addrlen);
+		g_tls_data->_errno = getLastError();
 
 		return ret;
 	}
 
-	s32 connect(s32 s, vm::ptr<sys_net_sockaddr_in> addr, u32 addrlen)
+	s32 connect(s32 s, vm::ptr<sockaddr> addr, u32 addrlen)
 	{
-		sys_net.Warning("connect(s=%d, family=*0x%x, addrlen=%d)", s, addr, addrlen);
+		libnet.Warning("connect(s=%d, family=*0x%x, addrlen=%d)", s, addr, addrlen);
 		s = g_socketMap[s];
 
-		sockaddr_in saddr;
-		memcpy(&saddr, addr.get_ptr(), sizeof(sockaddr_in));
-		saddr.sin_family = addr->sin_family;
-		const char *ipaddr = inet_ntoa(saddr.sin_addr);
-		sys_net.Warning("connecting on %s to port %d", ipaddr, ntohs(saddr.sin_port));
-		s32 ret = ::connect(s, (const sockaddr *)&saddr, addrlen);
-		*g_lastError = getLastError();
+		::sockaddr_in saddr;
+		memcpy(&saddr, addr.get_ptr(), sizeof(::sockaddr_in));
+		saddr.sin_family = addr->sa_family;
+		const char *ipaddr = ::inet_ntoa(saddr.sin_addr);
+		libnet.Warning("connecting on %s to port %d", ipaddr, ntohs(saddr.sin_port));
+		s32 ret = ::connect(s, (const ::sockaddr*)&saddr, addrlen);
+		g_tls_data->_errno = getLastError();
 
 		return ret;
 	}
 
 	s32 gethostbyaddr()
 	{
-		UNIMPLEMENTED_FUNC(sys_net);
+		UNIMPLEMENTED_FUNC(libnet);
 		return CELL_OK;
 	}
 
 	s32 gethostbyname()
 	{
-		UNIMPLEMENTED_FUNC(sys_net);
+		UNIMPLEMENTED_FUNC(libnet);
 		return CELL_OK;
 	}
 
 	s32 getpeername()
 	{
-		UNIMPLEMENTED_FUNC(sys_net);
+		UNIMPLEMENTED_FUNC(libnet);
 		return CELL_OK;
 	}
 
 	s32 getsockname()
 	{
-		UNIMPLEMENTED_FUNC(sys_net);
+		UNIMPLEMENTED_FUNC(libnet);
 		return CELL_OK;
 	}
 
 	s32 getsockopt()
 	{
-		UNIMPLEMENTED_FUNC(sys_net);
+		UNIMPLEMENTED_FUNC(libnet);
 		return CELL_OK;
 	}
 
-	s32 inet_addr(vm::cptr<char> cp)
+	u32 inet_addr(vm::cptr<char> cp)
 	{
-		sys_net.Warning("inet_addr(cp=*0x%x)", cp.addr());
+		libnet.Warning("inet_addr(cp=*0x%x)", cp);
 		return htonl(::inet_addr(cp.get_ptr())); // return a big-endian IP address (WTF? function should return LITTLE-ENDIAN value)
 	}
 
 	s32 inet_aton()
 	{
-		UNIMPLEMENTED_FUNC(sys_net);
+		UNIMPLEMENTED_FUNC(libnet);
 		return CELL_OK;
 	}
 
 	s32 inet_lnaof()
 	{
-		UNIMPLEMENTED_FUNC(sys_net);
+		UNIMPLEMENTED_FUNC(libnet);
 		return CELL_OK;
 	}
 
 	s32 inet_makeaddr()
 	{
-		UNIMPLEMENTED_FUNC(sys_net);
+		UNIMPLEMENTED_FUNC(libnet);
 		return CELL_OK;
 	}
 
 	s32 inet_netof()
 	{
-		UNIMPLEMENTED_FUNC(sys_net);
+		UNIMPLEMENTED_FUNC(libnet);
 		return CELL_OK;
 	}
 
 	s32 inet_network()
 	{
-		UNIMPLEMENTED_FUNC(sys_net);
+		UNIMPLEMENTED_FUNC(libnet);
 		return CELL_OK;
 	}
 
 	s32 inet_ntoa()
 	{
-		UNIMPLEMENTED_FUNC(sys_net);
+		UNIMPLEMENTED_FUNC(libnet);
 		return CELL_OK;
 	}
 
 	s32 inet_ntop()
 	{
-		UNIMPLEMENTED_FUNC(sys_net);
+		UNIMPLEMENTED_FUNC(libnet);
 		return CELL_OK;
 	}
 
 	s32 inet_pton(s32 af, vm::cptr<char> src, vm::ptr<char> dst)
 	{
-		sys_net.Warning("inet_pton(af=%d, src=*0x%x, dst=*0x%x)", af, src, dst);
+		libnet.Warning("inet_pton(af=%d, src=*0x%x, dst=*0x%x)", af, src, dst);
 
 		return ::inet_pton(af, src.get_ptr(), dst.get_ptr());
 	}
 
 	s32 listen(s32 s, s32 backlog)
 	{
-		sys_net.Warning("listen(s=%d, backlog=%d)", s, backlog);
+		libnet.Warning("listen(s=%d, backlog=%d)", s, backlog);
 		s = g_socketMap[s];
 		s32 ret = ::listen(s, backlog);
-		*g_lastError = getLastError();
+		g_tls_data->_errno = getLastError();
 
 		return ret;
 	}
 
 	s32 recv(s32 s, vm::ptr<char> buf, u32 len, s32 flags)
 	{
-		sys_net.Warning("recv(s=%d, buf=*0x%x, len=%d, flags=0x%x)", s, buf, len, flags);
+		libnet.Warning("recv(s=%d, buf=*0x%x, len=%d, flags=0x%x)", s, buf, len, flags);
 		s = g_socketMap[s];
 
 		s32 ret = ::recv(s, buf.get_ptr(), len, flags);
-		*g_lastError = getLastError();
+		g_tls_data->_errno = getLastError();
 
 		return ret;
 	}
 
-	s32 recvfrom(s32 s, vm::ptr<char> buf, u32 len, s32 flags, vm::ptr<sys_net_sockaddr> addr, vm::ptr<pck_len_t> paddrlen)
+	s32 recvfrom(s32 s, vm::ptr<char> buf, u32 len, s32 flags, vm::ptr<sockaddr> addr, vm::ptr<u32> paddrlen)
 	{
-		sys_net.Warning("recvfrom(s=%d, buf=*0x%x, len=%d, flags=0x%x, addr=*0x%x, paddrlen=*0x%x)", s, buf, len, flags, addr, paddrlen);
+		libnet.Warning("recvfrom(s=%d, buf=*0x%x, len=%d, flags=0x%x, addr=*0x%x, paddrlen=*0x%x)", s, buf, len, flags, addr, paddrlen);
 		s = g_socketMap[s];
 
-		sockaddr _addr;
-		memcpy(&_addr, addr.get_ptr(), sizeof(sockaddr));
+		::sockaddr _addr;
+		memcpy(&_addr, addr.get_ptr(), sizeof(::sockaddr));
 		_addr.sa_family = addr->sa_family;
 		::socklen_t _paddrlen;
 		s32 ret = ::recvfrom(s, buf.get_ptr(), len, flags, &_addr, &_paddrlen);
 		*paddrlen = _paddrlen;
-		*g_lastError = getLastError();
+		g_tls_data->_errno = getLastError();
 
 		return ret;
 	}
 
 	s32 recvmsg()
 	{
-		UNIMPLEMENTED_FUNC(sys_net);
+		UNIMPLEMENTED_FUNC(libnet);
 		return CELL_OK;
 	}
 
 	s32 send(s32 s, vm::cptr<char> buf, u32 len, s32 flags)
 	{
-		sys_net.Warning("send(s=%d, buf=*0x%x, len=%d, flags=0x%x)", s, buf, len, flags);
+		libnet.Warning("send(s=%d, buf=*0x%x, len=%d, flags=0x%x)", s, buf, len, flags);
 		s = g_socketMap[s];
 
 		s32 ret = ::send(s, buf.get_ptr(), len, flags);
-		*g_lastError = getLastError();
+		g_tls_data->_errno = getLastError();
 
 		return ret;
 	}
 
 	s32 sendmsg()
 	{
-		UNIMPLEMENTED_FUNC(sys_net);
+		UNIMPLEMENTED_FUNC(libnet);
 		return CELL_OK;
 	}
 
-	s32 sendto(s32 s, vm::cptr<char> buf, u32 len, s32 flags, vm::ptr<sys_net_sockaddr> addr, u32 addrlen)
+	s32 sendto(s32 s, vm::cptr<char> buf, u32 len, s32 flags, vm::ptr<sockaddr> addr, u32 addrlen)
 	{
-		sys_net.Warning("sendto(s=%d, buf=*0x%x, len=%d, flags=0x%x, addr=*0x%x, addrlen=%d)", s, buf, len, flags, addr, addrlen);
+		libnet.Warning("sendto(s=%d, buf=*0x%x, len=%d, flags=0x%x, addr=*0x%x, addrlen=%d)", s, buf, len, flags, addr, addrlen);
 		s = g_socketMap[s];
 
-		sockaddr _addr;
-		memcpy(&_addr, addr.get_ptr(), sizeof(sockaddr));
+		::sockaddr _addr;
+		memcpy(&_addr, addr.get_ptr(), sizeof(::sockaddr));
 		_addr.sa_family = addr->sa_family;
 		s32 ret = ::sendto(s, buf.get_ptr(), len, flags, &_addr, addrlen);
-		*g_lastError = getLastError();
+		g_tls_data->_errno = getLastError();
 
 		return ret;
 	}
 
 	s32 setsockopt(s32 s, s32 level, s32 optname, vm::cptr<char> optval, u32 optlen)
 	{
-		sys_net.Warning("socket(s=%d, level=%d, optname=%d, optval=*0x%x, optlen=%d)", s, level, optname, optval, optlen);
+		libnet.Warning("socket(s=%d, level=%d, optname=%d, optval=*0x%x, optlen=%d)", s, level, optname, optval, optlen);
 		s = g_socketMap[s];
 
 		s32 ret = ::setsockopt(s, level, optname, optval.get_ptr(), optlen);
-		*g_lastError = getLastError();
+		g_tls_data->_errno = getLastError();
 
 		return ret;
 	}
 
 	s32 shutdown(s32 s, s32 how)
 	{
-		sys_net.Warning("shutdown(s=%d, how=%d)", s, how);
+		libnet.Warning("shutdown(s=%d, how=%d)", s, how);
 		s = g_socketMap[s];
 
 		s32 ret = ::shutdown(s, how);
-		*g_lastError = getLastError();
+		g_tls_data->_errno = getLastError();
 
 		return ret;
 	}
 
 	s32 socket(s32 family, s32 type, s32 protocol)
 	{
-		sys_net.Warning("socket(family=%d, type=%d, protocol=%d)", family, type, protocol);
+		libnet.Warning("socket(family=%d, type=%d, protocol=%d)", family, type, protocol);
 
 		s32 sock = ::socket(family, type, protocol);
-		*g_lastError = getLastError();
+		g_tls_data->_errno = getLastError();
 
 		g_socketMap.push_back(sock);
 		return g_socketMap.size() - 1;
@@ -344,7 +369,7 @@ namespace sys_net_func
 
 	s32 socketclose(s32 s)
 	{
-		sys_net.Warning("socket(s=%d)", s);
+		libnet.Warning("socket(s=%d)", s);
 		s = g_socketMap[s];
 
 #ifdef _WIN32
@@ -352,21 +377,21 @@ namespace sys_net_func
 #else
 		int ret = ::close(s);
 #endif
-		*g_lastError = getLastError();
+		g_tls_data->_errno = getLastError();
 		return ret;
 	}
 
 	s32 socketpoll()
 	{
-		UNIMPLEMENTED_FUNC(sys_net);
+		UNIMPLEMENTED_FUNC(libnet);
 		return CELL_OK;
 	}
 
-	s32 socketselect(s32 nfds, vm::ptr<sys_net_fd_set> readfds, vm::ptr<sys_net_fd_set> writefds, vm::ptr<sys_net_fd_set> exceptfds, vm::ptr<sys_net_timeval> timeout)
+	s32 socketselect(s32 nfds, vm::ptr<fd_set> readfds, vm::ptr<fd_set> writefds, vm::ptr<fd_set> exceptfds, vm::ptr<timeval> timeout)
 	{
-		sys_net.Warning("socketselect(nfds=%d, readfds=*0x%x, writefds=*0x%x, exceptfds=*0x%x, timeout=*0x%x)", nfds, readfds, writefds, exceptfds, timeout);
+		libnet.Warning("socketselect(nfds=%d, readfds=*0x%x, writefds=*0x%x, exceptfds=*0x%x, timeout=*0x%x)", nfds, readfds, writefds, exceptfds, timeout);
 
-		timeval _timeout;
+		::timeval _timeout;
 
 		if (timeout)
 		{
@@ -374,222 +399,197 @@ namespace sys_net_func
 			_timeout.tv_usec = timeout->tv_usec;
 		}
 
-		//sys_net.Error("timeval: %d . %d", _timeout.tv_sec, _timeout.tv_usec);
+		//libnet.Error("timeval: %d . %d", _timeout.tv_sec, _timeout.tv_usec);
 
-		fd_set _readfds;
-		fd_set _writefds;
-		fd_set _exceptfds;
+		::fd_set _readfds;
+		::fd_set _writefds;
+		::fd_set _exceptfds;
 
 		// Copy the fd_sets to native ones
-
-		FD_ZERO(&_readfds);
-		FD_ZERO(&_writefds);
-		FD_ZERO(&_exceptfds);
-
-		auto copy_fdset = [](fd_set *set, vm::ptr<sys_net_fd_set> src)
-		{
-			if (src)
-			{
-				// Go through the bit set fds_bits and calculate the
-				// socket FDs from it, setting it in the native fd-set.
-
-				for (int i = 0; i < 32; i++)
-				{
-					for (int bit = 0; bit < 32; bit++)
-					{
-						if (src->fds_bits[i] & (1 << bit))
-						{
-							u32 sock = (i << 5) | bit;
-							//sys_net.Error("setting: fd %d", sock);
-							FD_SET(g_socketMap[sock], set);
-						}
-					}
-				}
-			}
-		};
-
 		copy_fdset(&_readfds, readfds);
 		copy_fdset(&_writefds, writefds);
 		copy_fdset(&_exceptfds, exceptfds);
 
 		s32 ret = ::select(nfds, &_readfds, &_writefds, &_exceptfds, timeout ? &_timeout : NULL);
-		*g_lastError = getLastError();
+		g_tls_data->_errno = getLastError();
 
 		if (getLastError() >= 0)
 		{
-			sys_net.Error("socketselect(): error %d", getLastError());
+			libnet.Error("socketselect(): error %d", getLastError());
 		}
 
 		//return ret;
 		return CELL_OK;
 	}
-}
 
-s32 sys_net_initialize_network_ex(vm::ptr<sys_net_initialize_parameter> param)
-{
-	sys_net.Warning("sys_net_initialize_network_ex(param=*0x%x)", param);
-	g_lastError = vm::ptr<s32>::make(vm::alloc(4, vm::main));
+	s32 sys_net_initialize_network_ex(vm::ptr<sys_net_initialize_parameter_t> param)
+	{
+		libnet.Warning("sys_net_initialize_network_ex(param=*0x%x)", param);
+
 #ifdef _WIN32
-	WSADATA wsaData;
-	WORD wVersionRequested = MAKEWORD(2, 2);
-	WSAStartup(wVersionRequested, &wsaData);
+		WSADATA wsaData;
+		WORD wVersionRequested = MAKEWORD(2, 2);
+		WSAStartup(wVersionRequested, &wsaData);
 #endif
-	return CELL_OK;
-}
+		return CELL_OK;
+	}
 
-s32 sys_net_get_udpp2p_test_param()
-{
-	UNIMPLEMENTED_FUNC(sys_net);
-	return CELL_OK;
-}
+	s32 sys_net_get_udpp2p_test_param()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
 
-s32 sys_net_set_udpp2p_test_param()
-{
-	UNIMPLEMENTED_FUNC(sys_net);
-	return CELL_OK;
-}
+	s32 sys_net_set_udpp2p_test_param()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
 
-s32 sys_net_get_lib_name_server()
-{
-	UNIMPLEMENTED_FUNC(sys_net);
-	return CELL_OK;
-}
+	s32 sys_net_get_lib_name_server()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
 
-s32 sys_net_if_ctl()
-{
-	UNIMPLEMENTED_FUNC(sys_net);
-	return CELL_OK;
-}
+	s32 sys_net_if_ctl()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
 
-s32 sys_net_get_netemu_test_param()
-{
-	UNIMPLEMENTED_FUNC(sys_net);
-	return CELL_OK;
-}
+	s32 sys_net_get_netemu_test_param()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
 
-s32 sys_net_get_sockinfo()
-{
-	UNIMPLEMENTED_FUNC(sys_net);
-	return CELL_OK;
-}
+	s32 sys_net_get_sockinfo()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
 
-s32 sys_net_close_dump()
-{
-	UNIMPLEMENTED_FUNC(sys_net);
-	return CELL_OK;
-}
+	s32 sys_net_close_dump()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
 
-s32 sys_net_set_test_param()
-{
-	UNIMPLEMENTED_FUNC(sys_net);
-	return CELL_OK;
-}
+	s32 sys_net_set_test_param()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
 
-s32 sys_net_show_nameserver()
-{
-	UNIMPLEMENTED_FUNC(sys_net);
-	return CELL_OK;
-}
+	s32 sys_net_show_nameserver()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
 
-u32 _sys_net_errno_loc()
-{
-	sys_net.Warning("_sys_net_errno_loc()");
-	return g_lastError.addr();
-}
+	vm::ptr<s32> _sys_net_errno_loc()
+	{
+		libnet.Warning("_sys_net_errno_loc()");
 
-s32 sys_net_set_resolver_configurations()
-{
-	UNIMPLEMENTED_FUNC(sys_net);
-	return CELL_OK;
-}
+		const vm::ptr<tls_data_t> tls = g_tls_data;
 
-s32 sys_net_show_route()
-{
-	UNIMPLEMENTED_FUNC(sys_net);
-	return CELL_OK;
-}
+		return tls.of(&tls_data_t::_errno);
+	}
 
-s32 sys_net_read_dump()
-{
-	UNIMPLEMENTED_FUNC(sys_net);
-	return CELL_OK;
-}
+	s32 sys_net_set_resolver_configurations()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
 
-s32 sys_net_abort_resolver()
-{
-	UNIMPLEMENTED_FUNC(sys_net);
-	return CELL_OK;
-}
+	s32 sys_net_show_route()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
 
-s32 sys_net_abort_socket()
-{
-	UNIMPLEMENTED_FUNC(sys_net);
-	return CELL_OK;
-}
+	s32 sys_net_read_dump()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
 
-s32 sys_net_set_lib_name_server()
-{
-	UNIMPLEMENTED_FUNC(sys_net);
-	return CELL_OK;
-}
+	s32 sys_net_abort_resolver()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
 
-s32 sys_net_get_test_param()
-{
-	UNIMPLEMENTED_FUNC(sys_net);
-	return CELL_OK;
-}
+	s32 sys_net_abort_socket()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
 
-s32 sys_net_get_sockinfo_ex()
-{
-	UNIMPLEMENTED_FUNC(sys_net);
-	return CELL_OK;
-}
+	s32 sys_net_set_lib_name_server()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
 
-s32 sys_net_open_dump()
-{
-	UNIMPLEMENTED_FUNC(sys_net);
-	return CELL_OK;
-}
+	s32 sys_net_get_test_param()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
 
-s32 sys_net_show_ifconfig()
-{
-	UNIMPLEMENTED_FUNC(sys_net);
-	return CELL_OK;
-}
+	s32 sys_net_get_sockinfo_ex()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
 
-s32 sys_net_finalize_network()
-{
-	sys_net.Warning("sys_net_initialize_network_ex()");
-	vm::dealloc(g_lastError.addr(), vm::main);
-	g_lastError = vm::null;
+	s32 sys_net_open_dump()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+
+	s32 sys_net_show_ifconfig()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
+
+	s32 sys_net_finalize_network()
+	{
+		libnet.Warning("sys_net_initialize_network_ex()");
+
 #ifdef _WIN32
-	WSACleanup();
+		WSACleanup();
 #endif
-	return CELL_OK;
-}
+		return CELL_OK;
+	}
 
-s32 _sys_net_h_errno_loc()
-{
-	UNIMPLEMENTED_FUNC(sys_net);
-	return CELL_OK;
-}
+	s32 _sys_net_h_errno_loc()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
 
-s32 sys_net_set_netemu_test_param()
-{
-	UNIMPLEMENTED_FUNC(sys_net);
-	return CELL_OK;
-}
+	s32 sys_net_set_netemu_test_param()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
 
-s32 sys_net_free_thread_context()
-{
-	UNIMPLEMENTED_FUNC(sys_net);
-	return CELL_OK;
+	s32 sys_net_free_thread_context()
+	{
+		UNIMPLEMENTED_FUNC(libnet);
+		return CELL_OK;
+	}
 }
 
 // define additional macro for specific namespace
-#define REG_FUNC_(name) add_ppu_func(ModuleFunc(get_function_id(#name), 0, &sys_net, #name, bind_func(sys_net_func::name)))
+#define REG_FUNC_(name) add_ppu_func(ModuleFunc(get_function_id(#name), 0, &libnet, #name, bind_func(sys_net::name)))
 
-Module sys_net("sys_net", []()
+Module libnet("sys_net", []()
 {
 	REG_FUNC_(accept);
 	REG_FUNC_(bind);
@@ -622,29 +622,29 @@ Module sys_net("sys_net", []()
 	REG_FUNC_(socketpoll);
 	REG_FUNC_(socketselect);
 
-	REG_FUNC(sys_net, sys_net_initialize_network_ex);
-	REG_FUNC(sys_net, sys_net_get_udpp2p_test_param);
-	REG_FUNC(sys_net, sys_net_set_udpp2p_test_param);
-	REG_FUNC(sys_net, sys_net_get_lib_name_server);
-	REG_FUNC(sys_net, sys_net_if_ctl);
-	REG_FUNC(sys_net, sys_net_get_netemu_test_param);
-	REG_FUNC(sys_net, sys_net_get_sockinfo);
-	REG_FUNC(sys_net, sys_net_close_dump);
-	REG_FUNC(sys_net, sys_net_set_test_param);
-	REG_FUNC(sys_net, sys_net_show_nameserver);
-	REG_FUNC(sys_net, _sys_net_errno_loc);
-	REG_FUNC(sys_net, sys_net_set_resolver_configurations);
-	REG_FUNC(sys_net, sys_net_show_route);
-	REG_FUNC(sys_net, sys_net_read_dump);
-	REG_FUNC(sys_net, sys_net_abort_resolver);
-	REG_FUNC(sys_net, sys_net_abort_socket);
-	REG_FUNC(sys_net, sys_net_set_lib_name_server);
-	REG_FUNC(sys_net, sys_net_get_test_param);
-	REG_FUNC(sys_net, sys_net_get_sockinfo_ex);
-	REG_FUNC(sys_net, sys_net_open_dump);
-	REG_FUNC(sys_net, sys_net_show_ifconfig);
-	REG_FUNC(sys_net, sys_net_finalize_network);
-	REG_FUNC(sys_net, _sys_net_h_errno_loc);
-	REG_FUNC(sys_net, sys_net_set_netemu_test_param);
-	REG_FUNC(sys_net, sys_net_free_thread_context);
+	REG_FUNC_(sys_net_initialize_network_ex);
+	REG_FUNC_(sys_net_get_udpp2p_test_param);
+	REG_FUNC_(sys_net_set_udpp2p_test_param);
+	REG_FUNC_(sys_net_get_lib_name_server);
+	REG_FUNC_(sys_net_if_ctl);
+	REG_FUNC_(sys_net_get_netemu_test_param);
+	REG_FUNC_(sys_net_get_sockinfo);
+	REG_FUNC_(sys_net_close_dump);
+	REG_FUNC_(sys_net_set_test_param);
+	REG_FUNC_(sys_net_show_nameserver);
+	REG_FUNC_(_sys_net_errno_loc);
+	REG_FUNC_(sys_net_set_resolver_configurations);
+	REG_FUNC_(sys_net_show_route);
+	REG_FUNC_(sys_net_read_dump);
+	REG_FUNC_(sys_net_abort_resolver);
+	REG_FUNC_(sys_net_abort_socket);
+	REG_FUNC_(sys_net_set_lib_name_server);
+	REG_FUNC_(sys_net_get_test_param);
+	REG_FUNC_(sys_net_get_sockinfo_ex);
+	REG_FUNC_(sys_net_open_dump);
+	REG_FUNC_(sys_net_show_ifconfig);
+	REG_FUNC_(sys_net_finalize_network);
+	REG_FUNC_(_sys_net_h_errno_loc);
+	REG_FUNC_(sys_net_set_netemu_test_param);
+	REG_FUNC_(sys_net_free_thread_context);
 });

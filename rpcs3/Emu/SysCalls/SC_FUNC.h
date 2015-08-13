@@ -33,9 +33,9 @@ namespace ppu_func_detail
 		static_assert(!std::is_reference<T>::value, "Invalid function argument type (reference)");
 		static_assert(sizeof(T) <= 8, "Invalid function argument type for ARG_GENERAL");
 
-		static force_inline T get_arg(PPUThread& CPU)
+		static force_inline T get_arg(PPUThread& ppu)
 		{
-			return cast_from_ppu_gpr<T>(CPU.GPR[g_count + 2]);
+			return cast_from_ppu_gpr<T>(ppu.GPR[g_count + 2]);
 		}
 	};
 
@@ -44,9 +44,9 @@ namespace ppu_func_detail
 	{
 		static_assert(sizeof(T) <= 8, "Invalid function argument type for ARG_FLOAT");
 
-		static force_inline T get_arg(PPUThread& CPU)
+		static force_inline T get_arg(PPUThread& ppu)
 		{
-			return static_cast<T>(CPU.FPR[f_count]);
+			return static_cast<T>(ppu.FPR[f_count]);
 		}
 	};
 
@@ -55,9 +55,9 @@ namespace ppu_func_detail
 	{
 		static_assert(std::is_same<std::remove_cv_t<T>, v128>::value, "Invalid function argument type for ARG_VECTOR");
 
-		static force_inline T get_arg(PPUThread& CPU)
+		static force_inline T get_arg(PPUThread& ppu)
 		{
-			return CPU.VPR[v_count + 1];
+			return ppu.VPR[v_count + 1];
 		}
 	};
 
@@ -68,10 +68,10 @@ namespace ppu_func_detail
 		static_assert(v_count <= 12, "TODO: Unsupported stack argument type (vector)");
 		static_assert(sizeof(T) <= 8, "Invalid function argument type for ARG_STACK");
 
-		static force_inline T get_arg(PPUThread& CPU)
+		static force_inline T get_arg(PPUThread& ppu)
 		{
 			// TODO: check stack argument displacement
-			const u64 res = CPU.get_stack_arg(8 + std::max<s32>(g_count - 8, 0) + std::max<s32>(f_count - 13, 0) + std::max<s32>(v_count - 12, 0));
+			const u64 res = ppu.get_stack_arg(8 + std::max<s32>(g_count - 8, 0) + std::max<s32>(f_count - 13, 0) + std::max<s32>(v_count - 12, 0));
 			return cast_from_ppu_gpr<T>(res);
 		}
 	};
@@ -81,9 +81,9 @@ namespace ppu_func_detail
 	{
 		static_assert(std::is_same<T, PPUThread&>::value, "Invalid function argument type for ARG_CONTEXT");
 
-		static force_inline PPUThread& get_arg(PPUThread& CPU)
+		static force_inline PPUThread& get_arg(PPUThread& ppu)
 		{
-			return CPU;
+			return ppu;
 		}
 	};
 
@@ -92,7 +92,7 @@ namespace ppu_func_detail
 	{
 		static_assert(std::is_same<T, ppu_va_args_t>::value, "Invalid function argument type for ARG_VARIADIC");
 
-		static force_inline ppu_va_args_t get_arg(PPUThread& CPU)
+		static force_inline ppu_va_args_t get_arg(PPUThread& ppu)
 		{
 			return{ g_count, f_count, v_count };
 		}
@@ -104,9 +104,9 @@ namespace ppu_func_detail
 		static_assert(type == ARG_GENERAL, "Unknown function result type");
 		static_assert(sizeof(T) <= 8, "Invalid function result type for ARG_GENERAL");
 
-		static force_inline void put_result(PPUThread& CPU, const T& result)
+		static force_inline void put_result(PPUThread& ppu, const T& result)
 		{
-			CPU.GPR[3] = cast_to_ppu_gpr<T>(result);
+			ppu.GPR[3] = cast_to_ppu_gpr<T>(result);
 		}
 	};
 
@@ -115,9 +115,9 @@ namespace ppu_func_detail
 	{
 		static_assert(sizeof(T) <= 8, "Invalid function result type for ARG_FLOAT");
 
-		static force_inline void put_result(PPUThread& CPU, const T& result)
+		static force_inline void put_result(PPUThread& ppu, const T& result)
 		{
-			CPU.FPR[1] = static_cast<T>(result);
+			ppu.FPR[1] = static_cast<T>(result);
 		}
 	};
 
@@ -126,9 +126,9 @@ namespace ppu_func_detail
 	{
 		static_assert(std::is_same<std::remove_cv_t<T>, v128>::value, "Invalid function result type for ARG_VECTOR");
 
-		static force_inline void put_result(PPUThread& CPU, const T& result)
+		static force_inline void put_result(PPUThread& ppu, const T& result)
 		{
-			CPU.VPR[2] = result;
+			ppu.VPR[2] = result;
 		}
 	};
 
@@ -153,21 +153,21 @@ namespace ppu_func_detail
 	// argument type + g/f/v_count unpacker
 	template<typename T, u32 type_pack> struct bind_arg_packed
 	{
-		static force_inline T get_arg(PPUThread& CPU)
+		static force_inline T get_arg(PPUThread& ppu)
 		{
-			return bind_arg<T, static_cast<arg_class>(type_pack & 0xff), (type_pack >> 8) & 0xff, (type_pack >> 16) & 0xff, (type_pack >> 24)>::get_arg(CPU);
+			return bind_arg<T, static_cast<arg_class>(type_pack & 0xff), (type_pack >> 8) & 0xff, (type_pack >> 16) & 0xff, (type_pack >> 24)>::get_arg(ppu);
 		}
 	};
 
 	template<u32... Info, typename RT, typename... Args>
-	force_inline RT call(PPUThread& CPU, RT(*func)(Args...), arg_info_pack_t<Info...>)
+	force_inline RT call(PPUThread& ppu, RT(*func)(Args...), arg_info_pack_t<Info...>)
 	{
 		// do the actual function call when all arguments are prepared (simultaneous unpacking of Args... and Info...)
-		return func(bind_arg_packed<Args, Info>::get_arg(CPU)...);
+		return func(bind_arg_packed<Args, Info>::get_arg(ppu)...);
 	}
 
 	template<typename T, typename... Types, u32... Info, typename RT, typename... Args>
-	force_inline RT call(PPUThread& CPU, RT(*func)(Args...), arg_info_pack_t<Info...> info)
+	force_inline RT call(PPUThread& ppu, RT(*func)(Args...), arg_info_pack_t<Info...> info)
 	{
 		// unpack previous type counts (0/0/0 for the first time)
 		const u32 g_count = (info.last_value >> 8) & 0xff;
@@ -193,7 +193,7 @@ namespace ppu_func_detail
 		const u32 f = f_count + is_float;
 		const u32 v = v_count + is_vector;
 
-		return call<Types...>(CPU, func, arg_info_pack_t<Info..., t | (g << 8) | (f << 16) | (v << 24)>{});
+		return call<Types...>(ppu, func, arg_info_pack_t<Info..., t | (g << 8) | (f << 16) | (v << 24)>{});
 	}
 
 	template<typename RT> struct result_type
@@ -212,9 +212,9 @@ namespace ppu_func_detail
 	{
 		using func_t = void(*)(T...);
 
-		static force_inline void do_call(PPUThread& CPU, func_t func)
+		static force_inline void do_call(PPUThread& ppu, func_t func)
 		{
-			call<T...>(CPU, func, arg_info_pack_t<>{});
+			call<T...>(ppu, func, arg_info_pack_t<>{});
 		}
 	};
 
@@ -223,16 +223,16 @@ namespace ppu_func_detail
 	{
 		using func_t = RT(*)(T...);
 
-		static force_inline void do_call(PPUThread& CPU, func_t func)
+		static force_inline void do_call(PPUThread& ppu, func_t func)
 		{
-			bind_result<RT, result_type<RT>::value>::put_result(CPU, call<T...>(CPU, func, arg_info_pack_t<>{}));
+			bind_result<RT, result_type<RT>::value>::put_result(ppu, call<T...>(ppu, func, arg_info_pack_t<>{}));
 		}
 	};
 }
 
-template<typename RT, typename... T> force_inline void call_ppu_func(PPUThread& CPU, RT(*func)(T...))
+template<typename RT, typename... T> force_inline void call_ppu_func(PPUThread& ppu, RT(*func)(T...))
 {
-	ppu_func_detail::func_binder<RT, T...>::do_call(CPU, func);
+	ppu_func_detail::func_binder<RT, T...>::do_call(ppu, func);
 }
 
-#define bind_func(func) [](PPUThread& CPU){ call_ppu_func(CPU, func); }
+#define bind_func(func) [](PPUThread& ppu){ call_ppu_func(ppu, func); }

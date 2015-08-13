@@ -4,7 +4,6 @@
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
 
-#include "sys_net.h"
 #include "cellRudp.h"
 
 extern Module cellRudp;

@@ -252,7 +252,7 @@ namespace fmt
 		{
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wformat-security"
-			const std::size_t len = snprintf(buf_addr, buf_size, fmt, do_unveil(args)...);
+			const std::size_t len = std::snprintf(buf_addr, buf_size, fmt, do_unveil(args)...);
 
 #pragma GCC diagnostic pop
 

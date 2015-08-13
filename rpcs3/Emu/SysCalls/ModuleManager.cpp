@@ -90,7 +90,7 @@ extern Module sceNpTrophy;
 extern Module sceNpTus;
 extern Module sceNpUtil;
 extern Module sys_io;
-extern Module sys_net;
+extern Module libnet;
 extern Module sysPrxForUser;
 extern Module sys_libc;
 extern Module sys_lv2dbg;
@@ -118,7 +118,7 @@ struct ModuleInfo
 }
 const g_module_list[] =
 {
-	{ 0x0000, "sys_net", &sys_net },
+	{ 0x0000, "sys_net", &libnet },
 	{ 0x0001, "cellHttp", &cellHttp },
 	{ 0x0002, "cellHttpUtil", &cellHttpUtil },
 	{ 0x0003, "cellSsl", &cellSsl },
