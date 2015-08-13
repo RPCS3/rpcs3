@@ -162,9 +162,9 @@ s32 cellMsgDialogOpen2(u32 type, vm::cptr<char> msgString, vm::ptr<CellMsgDialog
 		{
 			const s32 status = g_msg_dialog->status;
 
-			Emu.GetCallbackManager().Register([=](CPUThread& CPU) -> s32
+			Emu.GetCallbackManager().Register([=](CPUThread& cpu) -> s32
 			{
-				callback(static_cast<PPUThread&>(CPU), status, userData);
+				callback(static_cast<PPUThread&>(cpu), status, userData);
 				return CELL_OK;
 			});
 		}
@@ -180,7 +180,7 @@ s32 cellMsgDialogOpen2(u32 type, vm::cptr<char> msgString, vm::ptr<CellMsgDialog
 	return CELL_OK;
 }
 
-s32 cellMsgDialogOpenErrorCode(PPUThread& CPU, u32 errorCode, vm::ptr<CellMsgDialogCallback> callback, vm::ptr<void> userData, vm::ptr<void> extParam)
+s32 cellMsgDialogOpenErrorCode(PPUThread& ppu, u32 errorCode, vm::ptr<CellMsgDialogCallback> callback, vm::ptr<void> userData, vm::ptr<void> extParam)
 {
 	cellSysutil.Warning("cellMsgDialogOpenErrorCode(errorCode=0x%x, callback=*0x%x, userData=*0x%x, extParam=*0x%x)", errorCode, callback, userData, extParam);
 
@@ -254,9 +254,9 @@ s32 cellMsgDialogOpenErrorCode(PPUThread& CPU, u32 errorCode, vm::ptr<CellMsgDia
 
 	error.append(fmt::format("\n(%08x)", errorCode));
 
-	vm::stackvar<char> message(CPU, error.size() + 1);
+	const vm::var<char> message(ppu, error.size() + 1);
 
-	memcpy(message.get_ptr(), error.c_str(), message.size());
+	std::memcpy(message.get_ptr(), error.c_str(), error.size() + 1);
 
 	return cellMsgDialogOpen2(CELL_MSGDIALOG_DIALOG_TYPE_ERROR | CELL_MSGDIALOG_TYPE_BUTTON_TYPE_OK, message, callback, userData, extParam);
 }

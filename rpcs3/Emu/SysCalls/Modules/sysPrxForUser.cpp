@@ -98,7 +98,7 @@ s32 sys_interrupt_thread_disestablish(PPUThread& ppu, u32 ih)
 {
 	sysPrxForUser.Todo("sys_interrupt_thread_disestablish(ih=0x%x)", ih);
 
-	return _sys_interrupt_thread_disestablish(ppu, ih, vm::stackvar<be_t<u64>>(ppu));
+	return _sys_interrupt_thread_disestablish(ppu, ih, vm::var<u64>(ppu));
 }
 
 s32 sys_process_is_stack(u32 p)

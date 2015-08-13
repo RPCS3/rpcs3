@@ -53,10 +53,31 @@ never_inline s32 savedata_op(PPUThread& ppu, u32 operation, u32 version, vm::cpt
 		return CELL_SAVEDATA_ERROR_BUSY;
 	}
 
+	struct _stack_t
+	{
+		CellSaveDataCBResult  result;
+		CellSaveDataListGet   listGet;
+		CellSaveDataListSet   listSet;
+		CellSaveDataFixedSet  fixedSet;
+		CellSaveDataStatGet   statGet;
+		CellSaveDataStatSet   statSet;
+		CellSaveDataFileGet   fileGet;
+		CellSaveDataFileSet   fileSet;
+	};
+
+	const vm::var<_stack_t> stack(ppu);
+
+	const auto result   = stack.of(&_stack_t::result);
+	const auto listGet  = stack.of(&_stack_t::listGet);
+	const auto listSet  = stack.of(&_stack_t::listSet);
+	const auto fixedSet = stack.of(&_stack_t::fixedSet);
+	const auto statGet  = stack.of(&_stack_t::statGet);
+	const auto statSet  = stack.of(&_stack_t::statSet);
+	const auto fileGet  = stack.of(&_stack_t::fileGet);
+	const auto fileSet  = stack.of(&_stack_t::fileSet);
+
 	// path of the specified user (00000001 by default)
 	const std::string base_dir = fmt::format("/dev_hdd0/home/%08d/savedata/", userId ? userId : 1u);
-
-	vm::stackvar<CellSaveDataCBResult> result(ppu);
 
 	result->userdata = userdata; // probably should be assigned only once (allows the callback to change it)
 
@@ -65,8 +86,6 @@ never_inline s32 savedata_op(PPUThread& ppu, u32 operation, u32 version, vm::cpt
 	if (setList)
 	{
 		std::vector<SaveDataEntry> save_entries;
-
-		vm::stackvar<CellSaveDataListGet> listGet(ppu);
 
 		listGet->dirNum = 0;
 		listGet->dirListNum = 0;
@@ -177,8 +196,6 @@ never_inline s32 savedata_op(PPUThread& ppu, u32 operation, u32 version, vm::cpt
 
 		if (funcList)
 		{
-			vm::stackvar<CellSaveDataListSet> listSet(ppu);
-
 			// List Callback
 			funcList(ppu, result, listGet, listSet);
 
@@ -289,8 +306,6 @@ never_inline s32 savedata_op(PPUThread& ppu, u32 operation, u32 version, vm::cpt
 
 		if (funcFixed)
 		{
-			vm::stackvar<CellSaveDataFixedSet> fixedSet(ppu);
-
 			// Fixed Callback
 			funcFixed(ppu, result, listGet, fixedSet);
 
@@ -346,9 +361,6 @@ never_inline s32 savedata_op(PPUThread& ppu, u32 operation, u32 version, vm::cpt
 
 	// Get save stats
 	{
-		vm::stackvar<CellSaveDataStatGet> statGet(ppu);
-		vm::stackvar<CellSaveDataStatSet> statSet(ppu);
-
 		std::string dir_local_path;
 
 		Emu.GetVFS().GetDevice(dir_path, dir_local_path);
@@ -488,8 +500,6 @@ never_inline s32 savedata_op(PPUThread& ppu, u32 operation, u32 version, vm::cpt
 	}
 
 	// Enter the loop where the save files are read/created/deleted
-	vm::stackvar<CellSaveDataFileGet> fileGet(ppu);
-	vm::stackvar<CellSaveDataFileSet> fileSet(ppu);
 
 	fileGet->excSize = 0;
 	memset(fileGet->reserved, 0, sizeof(fileGet->reserved));

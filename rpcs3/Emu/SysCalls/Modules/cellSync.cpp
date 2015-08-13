@@ -1067,7 +1067,7 @@ s32 _cellSyncLFQueuePushBody(PPUThread& ppu, vm::ptr<CellSyncLFQueue> queue, vm:
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	vm::stackvar<be_t<s32>> position(ppu);
+	const vm::var<s32> position(ppu);
 
 	while (true)
 	{
@@ -1096,7 +1096,7 @@ s32 _cellSyncLFQueuePushBody(PPUThread& ppu, vm::ptr<CellSyncLFQueue> queue, vm:
 
 	const s32 depth = queue->m_depth;
 	const s32 size = queue->m_size;
-	const s32 pos = position.value();
+	const s32 pos = *position;
 	const u32 addr = VM_CAST((u64)((queue->m_buffer.addr() & ~1ull) + size * (pos >= depth ? pos - depth : pos)));
 	std::memcpy(vm::get_ptr<void>(addr), buffer.get_ptr(), size);
 
@@ -1373,7 +1373,7 @@ s32 _cellSyncLFQueuePopBody(PPUThread& ppu, vm::ptr<CellSyncLFQueue> queue, vm::
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	vm::stackvar<be_t<s32>> position(ppu);
+	const vm::var<s32> position(ppu);
 
 	while (true)
 	{
@@ -1402,7 +1402,7 @@ s32 _cellSyncLFQueuePopBody(PPUThread& ppu, vm::ptr<CellSyncLFQueue> queue, vm::
 
 	const s32 depth = queue->m_depth;
 	const s32 size = queue->m_size;
-	const s32 pos = position.value();
+	const s32 pos = *position;
 	const u32 addr = VM_CAST((u64)((queue->m_buffer.addr() & ~1) + size * (pos >= depth ? pos - depth : pos)));
 	std::memcpy(buffer.get_ptr(), vm::get_ptr<void>(addr), size);
 

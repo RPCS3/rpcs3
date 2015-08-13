@@ -711,7 +711,7 @@ void SetFlipHandler(vm::ptr<void(u32)> handler)
 	}
 }
 
-s32 cellRescSetDisplayMode(PPUThread& CPU, u32 displayMode)
+s32 cellRescSetDisplayMode(PPUThread& ppu, u32 displayMode)
 {
 	cellResc.Warning("cellRescSetDisplayMode(displayMode=%d)", displayMode);
 
@@ -762,7 +762,7 @@ s32 cellRescSetDisplayMode(PPUThread& CPU, u32 displayMode)
 		else			  m_pCFragmentShader = m_pCFragmentShaderArray[RESC_SHADER_DEFAULT_BILINEAR];
 	}*/
 
-	vm::stackvar<CellVideoOutConfiguration> videocfg(CPU);
+	const vm::var<CellVideoOutConfiguration> videocfg(ppu);
 	videocfg->resolutionId = RescBufferMode2SysutilResolutionId(s_rescInternalInstance->m_dstMode);
 	videocfg->format       = RescDstFormat2SysutilFormat(s_rescInternalInstance->m_pRescDsts->format );
 	videocfg->aspect       = CELL_VIDEO_OUT_ASPECT_AUTO;
@@ -980,7 +980,7 @@ s32 cellRescSetSrc(s32 idx, vm::ptr<CellRescSrc> src)
 	return 0;
 }
 
-s32 cellRescSetConvertAndFlip(PPUThread& CPU, vm::ptr<CellGcmContextData> cntxt, s32 idx)
+s32 cellRescSetConvertAndFlip(PPUThread& ppu, vm::ptr<CellGcmContextData> cntxt, s32 idx)
 {
 	cellResc.Log("cellRescSetConvertAndFlip(cntxt=*0x%x, idx=0x%x)", cntxt, idx);
 
@@ -1013,7 +1013,7 @@ s32 cellRescSetConvertAndFlip(PPUThread& CPU, vm::ptr<CellGcmContextData> cntxt,
 
 	//TODO: ?
 
-	cellGcmSetPrepareFlip(CPU, cntxt, idx);
+	cellGcmSetPrepareFlip(ppu, cntxt, idx);
 
 	return CELL_OK;
 }
@@ -1027,7 +1027,7 @@ s32 cellRescSetWaitFlip()
 	return CELL_OK;
 }
 
-s32 cellRescSetBufferAddress(PPUThread& CPU, vm::ptr<u32> colorBuffers, vm::ptr<u32> vertexArray, vm::ptr<u32> fragmentShader)
+s32 cellRescSetBufferAddress(PPUThread& ppu, vm::ptr<u32> colorBuffers, vm::ptr<u32> vertexArray, vm::ptr<u32> fragmentShader)
 {
 	cellResc.Warning("cellRescSetBufferAddress(colorBuffers=*0x%x, vertexArray=*0x%x, fragmentShader=*0x%x)", colorBuffers, vertexArray, fragmentShader);
 
@@ -1047,12 +1047,12 @@ s32 cellRescSetBufferAddress(PPUThread& CPU, vm::ptr<u32> colorBuffers, vm::ptr<
 	s_rescInternalInstance->m_vertexArrayEA   = vertexArray.addr();
 	s_rescInternalInstance->m_fragmentUcodeEA = fragmentShader.addr();
 
-	vm::stackvar<be_t<u32>> dstOffset(CPU);
+	const vm::var<u32> dstOffset(ppu);
 	cellGcmAddressToOffset(s_rescInternalInstance->m_colorBuffersEA, dstOffset);
 
 	for (s32 i=0; i<GetNumColorBuffers(); i++)
 	{
-		s_rescInternalInstance->m_dstOffsets[i] = dstOffset.value() + i * s_rescInternalInstance->m_dstBufInterval;
+		s_rescInternalInstance->m_dstOffsets[i] = *dstOffset + i * s_rescInternalInstance->m_dstBufInterval;
 	}
 
 	for (s32 i=0; i<GetNumColorBuffers(); i++)

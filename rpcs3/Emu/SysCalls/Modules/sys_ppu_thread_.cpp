@@ -16,7 +16,7 @@ s32 sys_ppu_thread_create(PPUThread& ppu, vm::ptr<u64> thread_id, u32 entry, u64
 	// (return CELL_ENOMEM if failed)
 	// ...
 
-	vm::stackvar<ppu_thread_param_t> attr(ppu);
+	const vm::var<ppu_thread_param_t> attr(ppu);
 
 	attr->entry = entry;
 	attr->tls = 0;

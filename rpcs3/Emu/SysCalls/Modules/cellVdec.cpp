@@ -213,7 +213,7 @@ void vdecOpen(u32 vdec_id) // TODO: call from the constructor
 	vdec.vdecCb = idm::make_ptr<PPUThread>(fmt::format("VideoDecoder[0x%x] Thread", vdec_id));
 	vdec.vdecCb->prio = 1001;
 	vdec.vdecCb->stack_size = 0x10000;
-	vdec.vdecCb->custom_task = [sptr](PPUThread& CPU)
+	vdec.vdecCb->custom_task = [sptr](PPUThread& ppu)
 	{
 		VideoDecoder& vdec = *sptr;
 		VdecTask& task = vdec.task;
@@ -767,7 +767,7 @@ s32 cellVdecGetPicture(u32 handle, vm::cptr<CellVdecPicFormat> format, vm::ptr<u
 	return CELL_OK;
 }
 
-s32 cellVdecGetPictureExt(PPUThread& CPU, u32 handle, vm::cptr<CellVdecPicFormat2> format2, vm::ptr<u8> outBuff, u32 arg4)
+s32 cellVdecGetPictureExt(PPUThread& ppu, u32 handle, vm::cptr<CellVdecPicFormat2> format2, vm::ptr<u8> outBuff, u32 arg4)
 {
 	cellVdec.Warning("cellVdecGetPictureExt(handle=0x%x, format2=*0x%x, outBuff=*0x%x, arg4=*0x%x)", handle, format2, outBuff, arg4);
 
@@ -776,7 +776,7 @@ s32 cellVdecGetPictureExt(PPUThread& CPU, u32 handle, vm::cptr<CellVdecPicFormat
 		throw EXCEPTION("Unknown arguments (arg4=*0x%x, unk0=0x%x, unk1=0x%x)", arg4, format2->unk0, format2->unk1);
 	}
 
-	vm::stackvar<CellVdecPicFormat> format(CPU);
+	const vm::var<CellVdecPicFormat> format(ppu);
 	format->formatType = format2->formatType;
 	format->colorMatrixType = format2->colorMatrixType;
 	format->alpha = format2->alpha;

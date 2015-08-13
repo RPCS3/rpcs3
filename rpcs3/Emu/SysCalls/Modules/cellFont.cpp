@@ -155,7 +155,7 @@ s32 cellFontOpenFontset(PPUThread& ppu, vm::ptr<CellFontLibrary> library, vm::pt
 		return CELL_FONT_ERROR_NO_SUPPORT_FONTSET;
 	}
 
-	vm::stackvar<char> f(ppu, (u32)file.length() + 1, 1);
+	const vm::var<char> f(ppu, (u32)file.length() + 1);
 	memcpy(f.get_ptr(), file.c_str(), file.size() + 1);
 	s32 ret = cellFontOpenFontFile(library, f, 0, 0, font); //TODO: Find the correct values of subNum, uniqueId
 	font->origin = CELL_FONT_OPEN_FONTSET;

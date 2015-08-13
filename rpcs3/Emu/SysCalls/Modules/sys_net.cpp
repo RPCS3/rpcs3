@@ -118,7 +118,7 @@ namespace sys_net
 		be_t<s32> _h_errno;
 	};
 
-	thread_local vm::var<tls_data_t> g_tls_data;
+	thread_local vm::var<tls_data_t, vm::page_alloc_t> g_tls_data; // TODO
 
 	// Functions
 	s32 accept(s32 s, vm::ptr<sockaddr> addr, vm::ptr<u32> paddrlen)
@@ -492,9 +492,7 @@ namespace sys_net
 	{
 		libnet.Warning("_sys_net_errno_loc()");
 
-		const vm::ptr<tls_data_t> tls = g_tls_data;
-
-		return tls.of(&tls_data_t::_errno);
+		return g_tls_data.of(&tls_data_t::_errno);
 	}
 
 	s32 sys_net_set_resolver_configurations()

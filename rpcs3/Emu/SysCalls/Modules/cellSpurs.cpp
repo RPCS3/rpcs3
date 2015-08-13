@@ -283,7 +283,7 @@ bool spursIsLibProfLoaded()
 /// Create an LV2 event queue and attach it to the SPURS instance
 s32 spursCreateLv2EventQueue(PPUThread& ppu, vm::ptr<CellSpurs> spurs, vm::ptr<u32> queueId, vm::ptr<u8> port, s32 size, vm::cptr<char> name)
 {
-	vm::stackvar<sys_event_queue_attribute_t> attr(ppu);
+	const vm::var<sys_event_queue_attribute_t> attr(ppu);
 
 	auto sys_event_queue_attribute_initialize = [](vm::ptr<sys_event_queue_attribute_t> attr)
 	{
@@ -294,18 +294,17 @@ s32 spursCreateLv2EventQueue(PPUThread& ppu, vm::ptr<CellSpurs> spurs, vm::ptr<u
 
 	sys_event_queue_attribute_initialize(attr);
 	std::memcpy(attr->name, name.get_ptr(), sizeof(attr->name));
+
 	if (s32 rc = sys_event_queue_create(queueId, attr, SYS_EVENT_QUEUE_LOCAL, size))
 	{
 		return rc;
 	}
 
-	vm::stackvar<u8> _port(ppu);
-	if (s32 rc = spursAttachLv2EventQueue(ppu, spurs, *queueId, _port, 1 /*isDynamic*/, true /*spursCreated*/))
+	if (s32 rc = spursAttachLv2EventQueue(ppu, spurs, *queueId, port, 1 /*isDynamic*/, true /*spursCreated*/))
 	{
 		sys_event_queue_destroy(*queueId, SYS_EVENT_QUEUE_DESTROY_FORCE);
 	}
 
-	*port = _port;
 	return CELL_OK;
 }
 
@@ -350,8 +349,7 @@ s32 spursAttachLv2EventQueue(PPUThread& ppu, vm::ptr<CellSpurs> spurs, u32 queue
 		portMask |= 1ull << (i);
 	}
 
-	vm::stackvar<u8> connectedPort(ppu);
-	if (s32 res = sys_spu_thread_group_connect_event_all_threads(spurs->spuTG, queue, portMask, connectedPort))
+	if (s32 res = sys_spu_thread_group_connect_event_all_threads(spurs->spuTG, queue, portMask, port))
 	{
 		if (res == CELL_EISCONN)
 		{
@@ -361,10 +359,9 @@ s32 spursAttachLv2EventQueue(PPUThread& ppu, vm::ptr<CellSpurs> spurs, u32 queue
 		return res;
 	}
 
-	*port = connectedPort;
 	if (!spursCreated)
 	{
-		spurs->spuPortBits |= 1ull << connectedPort;
+		spurs->spuPortBits |= 1ull << *port;
 	}
 
 	return CELL_OK;
@@ -633,10 +630,8 @@ void spursEventHelperEntry(PPUThread& ppu)
 
 	bool terminate = false;
 
-	vm::stackvar<sys_event_t> eventArray(ppu, sizeof32(sys_event_t) * 8);
-	vm::stackvar<be_t<u32>>   count(ppu);
-
-	vm::ptr<sys_event_t> events = eventArray;
+	const vm::var<sys_event_t> events(ppu, 8);
+	const vm::var<u32>         count(ppu);
 
 	while (!terminate)
 	{
@@ -731,7 +726,7 @@ void spursEventHelperEntry(PPUThread& ppu)
 /// Create the SPURS event helper thread
 s32 spursCreateSpursEventHelper(PPUThread& ppu, vm::ptr<CellSpurs> spurs, u32 ppuPriority)
 {
-	vm::stackvar<char> evqName(ppu, 8);
+	const vm::var<char> evqName(ppu, 8);
 	memcpy(evqName.get_ptr(), "_spuPrv", 8);
 
 	if (s32 rc = spursCreateLv2EventQueue(ppu, spurs, spurs.of(&CellSpurs::eventQueue), spurs.of(&CellSpurs::spuPort), 0x2A /*size*/, evqName))
@@ -855,7 +850,7 @@ s32 spursStopEventHelper(PPUThread& ppu, vm::ptr<CellSpurs> spurs)
 		return CELL_SPURS_CORE_ERROR_STAT;
 	}
 
-	if (sys_ppu_thread_join(ppu, (u32)spurs->ppu1, vm::stackvar<be_t<u64>>(ppu)) != CELL_OK)
+	if (sys_ppu_thread_join(ppu, (u32)spurs->ppu1, vm::var<u64>(ppu)) != CELL_OK)
 	{
 		return CELL_SPURS_CORE_ERROR_STAT;
 	}
@@ -914,7 +909,7 @@ s32 spursJoinHandlerThread(PPUThread& ppu, vm::ptr<CellSpurs> spurs)
 		return CELL_SPURS_CORE_ERROR_STAT;
 	}
 
-	if (s32 rc = sys_ppu_thread_join(ppu, (u32)spurs->ppu0, vm::stackvar<be_t<u64>>(ppu)))
+	if (s32 rc = sys_ppu_thread_join(ppu, (u32)spurs->ppu0, vm::var<u64>(ppu)))
 	{
 		throw EXCEPTION("sys_ppu_thread_join() failed (0x%x)", rc);
 	}
@@ -940,17 +935,17 @@ s32 spursInit(
 	u32 swlMaxSpu,
 	u32 swlIsPreem)
 {
-	vm::stackvar<be_t<u32>>                      sem(ppu);
-	vm::stackvar<sys_semaphore_attribute_t>      semAttr(ppu);
-	vm::stackvar<sys_lwcond_attribute_t>         lwCondAttr(ppu);
-	vm::stackvar<sys_lwmutex_attribute_t>        lwMutexAttr(ppu);
-	vm::stackvar<be_t<u32>>                      spuTgId(ppu);
-	vm::stackvar<char>                           spuTgName(ppu, 128);
-	vm::stackvar<sys_spu_thread_group_attribute> spuTgAttr(ppu);
-	vm::stackvar<sys_spu_thread_argument>        spuThArgs(ppu);
-	vm::stackvar<be_t<u32>>                      spuThreadId(ppu);
-	vm::stackvar<sys_spu_thread_attribute>       spuThAttr(ppu);
-	vm::stackvar<char>                           spuThName(ppu, 128);
+	vm::var<u32>                      sem(ppu);
+	vm::var<sys_semaphore_attribute_t>      semAttr(ppu);
+	vm::var<sys_lwcond_attribute_t>         lwCondAttr(ppu);
+	vm::var<sys_lwmutex_attribute_t>        lwMutexAttr(ppu);
+	vm::var<u32>                      spuTgId(ppu);
+	vm::var<char>                           spuTgName(ppu, 128);
+	vm::var<sys_spu_thread_group_attribute> spuTgAttr(ppu);
+	vm::var<sys_spu_thread_argument>        spuThArgs(ppu);
+	vm::var<u32>                      spuThreadId(ppu);
+	vm::var<sys_spu_thread_attribute>       spuThAttr(ppu);
+	vm::var<char>                           spuThName(ppu, 128);
 
 	if (!spurs)
 	{
@@ -1047,7 +1042,7 @@ s32 spursInit(
 			return rollback(), rc;
 		}
 
-		spurs->wklF1[i].sem = sem.value();
+		spurs->wklF1[i].sem = *sem;
 
 		if (isSecond)
 		{
@@ -1056,7 +1051,7 @@ s32 spursInit(
 				return rollback(), rc;
 			}
 
-			spurs->wklF2[i].sem = sem.value();
+			spurs->wklF2[i].sem = *sem;
 		}
 	}
 
@@ -1068,7 +1063,7 @@ s32 spursInit(
 		return rollback(), rc;
 	}
 
-	spurs->semPrv      = sem.value();
+	spurs->semPrv      = *sem;
 
 	spurs->unk11       = -1;
 	spurs->unk12       = -1;
@@ -1128,7 +1123,7 @@ s32 spursInit(
 		return rollback(), rc;
 	}
 
-	spurs->spuTG = spuTgId.value();
+	spurs->spuTG = *spuTgId;
 
 	// Initialise all SPUs in the SPU thread group
 	memcpy(spuThName.get_ptr(), spurs->prefix, spurs->prefixSize);
@@ -1153,7 +1148,7 @@ s32 spursInit(
 			return rollback(), rc;
 		}
 
-		const auto spuThread = idm::get<SPUThread>(spurs->spus[num] = spuThreadId.value());
+		const auto spuThread = idm::get<SPUThread>(spurs->spus[num] = *spuThreadId);
 
 		// entry point cannot be initialized immediately because SPU LS will be rewritten by sys_spu_thread_group_start()
 		spuThread->custom_task = [spurs](SPUThread& spu)
@@ -2874,7 +2869,7 @@ s32 cellSpursEventFlagSet(PPUThread& ppu, vm::ptr<CellSpursEventFlag> eventFlag,
 			if (pendingRecv & (0x8000 >> i))
 			{
 				eventFlag->pendingRecvTaskEvents[i] = pendingRecvTaskEvents[i];
-				vm::stackvar<vm::bptr<CellSpursTaskset>> taskset(ppu);
+				const vm::var<vm::ptr<CellSpursTaskset>> taskset(ppu);
 				if (eventFlag->isIwl)
 				{
 					cellSpursLookUpTasksetAddress(ppu, vm::ptr<CellSpurs>::make((u32)eventFlag->addr), taskset, eventFlag->waitingTaskWklId[i]);
@@ -2884,7 +2879,7 @@ s32 cellSpursEventFlagSet(PPUThread& ppu, vm::ptr<CellSpursEventFlag> eventFlag,
 					taskset->set((u32)eventFlag->addr);
 				}
 
-				auto rc = _cellSpursSendSignal(ppu, taskset.value(), eventFlag->waitingTaskId[i]);
+				auto rc = _cellSpursSendSignal(ppu, *taskset, eventFlag->waitingTaskId[i]);
 				if (rc == CELL_SPURS_TASK_ERROR_INVAL || rc == CELL_SPURS_TASK_ERROR_STAT)
 				{
 					return CELL_SPURS_TASK_ERROR_FATAL;
@@ -3111,9 +3106,9 @@ s32 cellSpursEventFlagAttachLv2EventQueue(PPUThread& ppu, vm::ptr<CellSpursEvent
 		spurs = taskset->spurs;
 	}
 
-	vm::stackvar<be_t<u32>> eventQueueId(ppu);
-	vm::stackvar<u8>        port(ppu);
-	vm::stackvar<char>      evqName(ppu, 8);
+	vm::var<u32>       eventQueueId(ppu);
+	vm::var<u8>        port(ppu);
+	vm::var<char>      evqName(ppu, 8);
 	memcpy(evqName.get_ptr(), "_spuEvF", 8);
 
 	auto failure = [](s32 rc) -> s32
@@ -3129,30 +3124,30 @@ s32 cellSpursEventFlagAttachLv2EventQueue(PPUThread& ppu, vm::ptr<CellSpursEvent
 
 	auto success = [&]
 	{
-		eventFlag->eventQueueId = eventQueueId;
-		eventFlag->spuPort      = port;
+		eventFlag->eventQueueId = *eventQueueId;
+		eventFlag->spuPort      = *port;
 	};
 
 	if (eventFlag->direction == CELL_SPURS_EVENT_FLAG_ANY2ANY)
 	{
-		vm::stackvar<be_t<u32>> eventPortId(ppu);
+		vm::var<u32> eventPortId(ppu);
 
 		s32 rc = sys_event_port_create(eventPortId, SYS_EVENT_PORT_LOCAL, 0);
 		if (rc == CELL_OK)
 		{
-			rc = sys_event_port_connect_local(eventPortId.value(), eventQueueId.value());
+			rc = sys_event_port_connect_local(*eventPortId, *eventQueueId);
 			if (rc == CELL_OK)
 			{
-				eventFlag->eventPortId = eventPortId;
+				eventFlag->eventPortId = *eventPortId;
 				return success(), CELL_OK;
 			}
 
-			sys_event_port_destroy(eventPortId.value());
+			sys_event_port_destroy(*eventPortId);
 		}
 
-		if (spursDetachLv2EventQueue(spurs, port, true /*spursCreated*/) == CELL_OK)
+		if (spursDetachLv2EventQueue(spurs, *port, true /*spursCreated*/) == CELL_OK)
 		{
-			sys_event_queue_destroy(eventQueueId.value(), SYS_EVENT_QUEUE_DESTROY_FORCE);
+			sys_event_queue_destroy(*eventQueueId, SYS_EVENT_QUEUE_DESTROY_FORCE);
 		}
 
 		return failure(rc);
@@ -3401,7 +3396,7 @@ s32 spursCreateTaskset(PPUThread& ppu, vm::ptr<CellSpurs> spurs, vm::ptr<CellSpu
 	taskset->enable_clear_ls = enable_clear_ls > 0 ? 1 : 0;
 	taskset->size = size;
 
-	vm::stackvar<CellSpursWorkloadAttribute> wkl_attr(ppu);
+	const vm::var<CellSpursWorkloadAttribute> wkl_attr(ppu);
 	_cellSpursWorkloadAttributeInitialize(wkl_attr, 1 /*revision*/, 0x33 /*sdk_version*/, vm::cptr<void>::make(SPURS_IMG_ADDR_TASKSET_PM), 0x1E40 /*pm_size*/,
 		taskset.addr(), priority, 8 /*min_contention*/, max_contention);
 	// TODO: Check return code
@@ -3412,12 +3407,12 @@ s32 spursCreateTaskset(PPUThread& ppu, vm::ptr<CellSpurs> spurs, vm::ptr<CellSpu
 	// TODO: cellSpursWorkloadAttributeSetShutdownCompletionEventHook(wkl_attr, hook, taskset);
 	// TODO: Check return code
 
-	vm::stackvar<be_t<u32>> wid(ppu);
+	vm::var<u32> wid(ppu);
 	cellSpursAddWorkloadWithAttribute(spurs, wid, wkl_attr);
 	// TODO: Check return code
 
 	taskset->wkl_flag_wait_task = 0x80;
-	taskset->wid                = wid.value();
+	taskset->wid                = *wid;
 	// TODO: cellSpursSetExceptionEventHandler(spurs, wid, hook, taskset);
 	// TODO: Check return code
 
@@ -3632,20 +3627,18 @@ s32 cellSpursCreateTask(PPUThread& ppu, vm::ptr<CellSpursTaskset> taskset, vm::p
 		return CELL_SPURS_TASK_ERROR_ALIGN;
 	}
 
-	vm::stackvar<be_t<u32>> tmpTaskId(ppu);
-	auto rc = spursCreateTask(taskset, tmpTaskId, elf, context, size, lsPattern, argument);
+	auto rc = spursCreateTask(taskset, taskId, elf, context, size, lsPattern, argument);
 	if (rc != CELL_OK) 
 	{
 		return rc;
 	}
 
-	rc = spursTaskStart(ppu, taskset, tmpTaskId.value());
+	rc = spursTaskStart(ppu, taskset, *taskId);
 	if (rc != CELL_OK) 
 	{
 		return rc;
 	}
 
-	*taskId = tmpTaskId;
 	return CELL_OK;
 }
 
@@ -3859,7 +3852,7 @@ s32 cellSpursCreateTaskset2(PPUThread& ppu, vm::ptr<CellSpurs> spurs, vm::ptr<Ce
 {
 	cellSpurs.Warning("cellSpursCreateTaskset2(spurs=*0x%x, taskset=*0x%x, attr=*0x%x)", spurs, taskset, attr);
 
-	vm::stackvar<CellSpursTasksetAttribute2> tmp_attr(ppu);
+	const vm::var<CellSpursTasksetAttribute2> tmp_attr(ppu);
 
 	if (!attr)
 	{
@@ -3973,14 +3966,14 @@ s32 cellSpursLookUpTasksetAddress(PPUThread& ppu, vm::ptr<CellSpurs> spurs, vm::
 		return CELL_SPURS_TASK_ERROR_NULL_POINTER;
 	}
 
-	vm::stackvar<be_t<u64>> data(ppu);
+	vm::var<u64> data(ppu);
 	if (s32 rc = cellSpursGetWorkloadData(spurs, data, id))
 	{
 		// Convert policy module error code to a task error code
 		return rc ^ 0x100;
 	}
 
-	taskset->set((u32)data.value());
+	taskset->set((u32)*data);
 	return CELL_OK;
 }
 

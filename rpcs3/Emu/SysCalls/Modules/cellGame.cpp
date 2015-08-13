@@ -53,7 +53,7 @@ struct content_permission_t final
 	}
 };
 
-s32 cellHddGameCheck(PPUThread& CPU, u32 version, vm::cptr<char> dirName, u32 errDialog, vm::ptr<CellHddGameStatCallback> funcStat, u32 container)
+s32 cellHddGameCheck(PPUThread& ppu, u32 version, vm::cptr<char> dirName, u32 errDialog, vm::ptr<CellHddGameStatCallback> funcStat, u32 container)
 {
 	cellGame.Warning("cellHddGameCheck(version=%d, dirName=*0x%x, errDialog=%d, funcStat=*0x%x, container=%d)", version, dirName, errDialog, funcStat, container);
 
@@ -64,10 +64,20 @@ s32 cellHddGameCheck(PPUThread& CPU, u32 version, vm::cptr<char> dirName, u32 er
 		return CELL_HDDGAME_ERROR_PARAM;
 	}
 
-	vm::stackvar<CellHddGameSystemFileParam> param(CPU);
-	vm::stackvar<CellHddGameCBResult> result(CPU);
-	vm::stackvar<CellHddGameStatGet> get(CPU);
-	vm::stackvar<CellHddGameStatSet> set(CPU);
+	struct _stack_t
+	{
+		CellHddGameSystemFileParam param;
+		CellHddGameCBResult result;
+		CellHddGameStatGet get;
+		CellHddGameStatSet set;
+	};
+
+	const vm::var<_stack_t> stack(ppu);
+
+	const auto param = stack.of(&_stack_t::param);
+	const auto result = stack.of(&_stack_t::result);
+	const auto get = stack.of(&_stack_t::get);
+	const auto set = stack.of(&_stack_t::set);
 
 	get->hddFreeSizeKB = 40 * 1024 * 1024; // 40 GB, TODO: Use the free space of the computer's HDD where RPCS3 is being run.
 	get->isNewData = CELL_HDDGAME_ISNEWDATA_EXIST;
@@ -366,7 +376,7 @@ s32 cellGameContentPermit(vm::ptr<char[CELL_GAME_PATH_MAX]> contentInfoPath, vm:
 	return CELL_OK;
 }
 
-s32 cellGameDataCheckCreate2(PPUThread& CPU, u32 version, vm::cptr<char> dirName, u32 errDialog, vm::ptr<CellGameDataStatCallback> funcStat, u32 container)
+s32 cellGameDataCheckCreate2(PPUThread& ppu, u32 version, vm::cptr<char> dirName, u32 errDialog, vm::ptr<CellGameDataStatCallback> funcStat, u32 container)
 {
 	cellGame.Warning("cellGameDataCheckCreate2(version=0x%x, dirName=*0x%x, errDialog=0x%x, funcStat=*0x%x, container=%d)", version, dirName, errDialog, funcStat, container);
 
@@ -395,11 +405,20 @@ s32 cellGameDataCheckCreate2(PPUThread& CPU, u32 version, vm::cptr<char> dirName
 		return CELL_GAMEDATA_ERROR_BROKEN;
 	}
 
-	vm::stackvar<CellGameDataCBResult> cbResult(CPU);
-	vm::stackvar<CellGameDataStatGet> cbGet(CPU);
-	vm::stackvar<CellGameDataStatSet> cbSet(CPU);
+	struct _stack_t
+	{
+		CellGameDataCBResult result;
+		CellGameDataStatGet get;
+		CellGameDataStatSet set;
+	};
 
-	cbGet.value() = {};
+	const vm::var<_stack_t> stack(ppu);
+
+	const auto cbResult = stack.of(&_stack_t::result);
+	const auto cbGet = stack.of(&_stack_t::get);
+	const auto cbSet = stack.of(&_stack_t::set);
+
+	*cbGet = {};
 
 	// TODO: Use the free space of the computer's HDD where RPCS3 is being run.
 	cbGet->hddFreeSizeKB = 40000000; //40 GB
@@ -424,7 +443,7 @@ s32 cellGameDataCheckCreate2(PPUThread& CPU, u32 version, vm::cptr<char> dirName
 	strcpy_trunc(cbGet->getParam.title, psf.GetString("TITLE"));
 	// TODO: write lang titles
 
-	funcStat(CPU, cbResult, cbGet, cbSet);
+	funcStat(ppu, cbResult, cbGet, cbSet);
 
 	if (cbSet->setParam)
 	{
@@ -463,12 +482,12 @@ s32 cellGameDataCheckCreate2(PPUThread& CPU, u32 version, vm::cptr<char> dirName
 	}
 }
 
-s32 cellGameDataCheckCreate(PPUThread& CPU, u32 version, vm::cptr<char> dirName, u32 errDialog, vm::ptr<CellGameDataStatCallback> funcStat, u32 container)
+s32 cellGameDataCheckCreate(PPUThread& ppu, u32 version, vm::cptr<char> dirName, u32 errDialog, vm::ptr<CellGameDataStatCallback> funcStat, u32 container)
 {
 	cellGame.Warning("cellGameDataCheckCreate(version=0x%x, dirName=*0x%x, errDialog=0x%x, funcStat=*0x%x, container=%d)", version, dirName, errDialog, funcStat, container);
 
 	// TODO: almost identical, the only difference is that this function will always calculate the size of game data
-	return cellGameDataCheckCreate2(CPU, version, dirName, errDialog, funcStat, container);
+	return cellGameDataCheckCreate2(ppu, version, dirName, errDialog, funcStat, container);
 }
 
 s32 cellGameCreateGameData(vm::ptr<CellGameSetInitParams> init, vm::ptr<char[CELL_GAME_PATH_MAX]> tmp_contentInfoPath, vm::ptr<char[CELL_GAME_PATH_MAX]> tmp_usrdirPath)
