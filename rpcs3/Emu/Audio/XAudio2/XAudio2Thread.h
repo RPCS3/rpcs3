@@ -2,8 +2,9 @@
 
 #include "Emu/Audio/AudioThread.h"
 #if defined (_WIN32)
-
+#define _WIN32_WINNT 0x0601 // This is to be sure that correct (2.7) header is included
 #include "XAudio2.h" // XAudio2 2.8 available only on Win8+, used XAudio2 2.7 from dxsdk
+#undef _WIN32_WINNT
 
 class XAudio2Thread : public AudioThread
 {
