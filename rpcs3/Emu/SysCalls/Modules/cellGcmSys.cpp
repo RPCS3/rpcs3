@@ -84,20 +84,29 @@ vm::ptr<CellGcmReportData> cellGcmGetReportDataAddressLocation(u32 index, u32 lo
 {
 	cellGcmSys.Warning("cellGcmGetReportDataAddressLocation(index=%d, location=%d)", index, location);
 
-	if (location == CELL_GCM_LOCATION_LOCAL) {
-		if (index >= 2048) {
+	if (local_addr == 0 || Emu.GetGSManager().GetRender().m_report_main_addr == 0)
+	{
+		throw EXCEPTION("cellGcmGetReportDataAddressLocation() should never ever be called before cellGcmInit.");
+	}
+
+	if (location == CELL_GCM_LOCATION_LOCAL)
+	{
+		if (index >= 2048)
+		{
 			cellGcmSys.Error("cellGcmGetReportDataAddressLocation: Wrong local index (%d)", index);
 			return vm::null;
 		}
-		return vm::ptr<CellGcmReportData>::make(0xC0000000 + index * 0x10);
-	}
 
-	if (location == CELL_GCM_LOCATION_MAIN) {
-		if (index >= 1024 * 1024) {
+		return vm::ptr<CellGcmReportData>::make(local_addr + index * 0x10);
+	}
+	else if (location == CELL_GCM_LOCATION_MAIN)
+	{
+		if (index >= 1024 * 1024)
+		{
 			cellGcmSys.Error("cellGcmGetReportDataAddressLocation: Wrong main index (%d)", index);
 			return vm::null;
 		}
-		// TODO: It seems m_report_main_addr is not initialized
+
 		return vm::ptr<CellGcmReportData>::make(Emu.GetGSManager().GetRender().m_report_main_addr + index * 0x10);
 	}
 
@@ -109,11 +118,13 @@ u64 cellGcmGetTimeStamp(u32 index)
 {
 	cellGcmSys.Log("cellGcmGetTimeStamp(index=%d)", index);
 
-	if (index >= 2048) {
+	if (index >= 2048)
+	{
 		cellGcmSys.Error("cellGcmGetTimeStamp: Wrong local index (%d)", index);
 		return 0;
 	}
-	return vm::read64(0xC0000000 + index * 0x10);
+
+	return vm::read64(local_addr + index * 0x10);
 }
 
 s32 cellGcmGetCurrentField()
@@ -128,7 +139,8 @@ u32 cellGcmGetNotifyDataAddress(u32 index)
 
 	// If entry not in use, return NULL
 	u16 entry = offsetTable.eaAddress[241];
-	if (entry == 0xFFFF) {
+	if (entry == 0xFFFF)
+	{
 		return 0;
 	}
 
@@ -140,7 +152,7 @@ u32 cellGcmGetNotifyDataAddress(u32 index)
  */
 vm::ptr<CellGcmReportData> _cellGcmFunc12()
 {
-	return vm::ptr<CellGcmReportData>::make(0xC0000000); // TODO
+	return vm::ptr<CellGcmReportData>::make(local_addr); // TODO
 }
 
 u32 cellGcmGetReport(u32 type, u32 index)
@@ -164,11 +176,13 @@ u32 cellGcmGetReportDataAddress(u32 index)
 {
 	cellGcmSys.Warning("cellGcmGetReportDataAddress(index=%d)",  index);
 
-	if (index >= 2048) {
+	if (index >= 2048)
+	{
 		cellGcmSys.Error("cellGcmGetReportDataAddress: Wrong local index (%d)", index);
 		return 0;
 	}
-	return 0xC0000000 + index * 0x10;
+
+	return local_addr + index * 0x10;
 }
 
 u32 cellGcmGetReportDataLocation(u32 index, u32 location)
@@ -183,25 +197,30 @@ u64 cellGcmGetTimeStampLocation(u32 index, u32 location)
 {
 	cellGcmSys.Warning("cellGcmGetTimeStampLocation(index=%d, location=%d)", index, location);
 
-	if (location == CELL_GCM_LOCATION_LOCAL) {
-		if (index >= 2048) {
+	if (location == CELL_GCM_LOCATION_LOCAL)
+	{
+		if (index >= 2048)
+		{
 			cellGcmSys.Error("cellGcmGetTimeStampLocation: Wrong local index (%d)", index);
-			return 0;
+			return CELL_OK;
 		}
-		return vm::read64(0xC0000000 + index * 0x10);
+
+		return vm::read64(local_addr + index * 0x10);
 	}
 
-	if (location == CELL_GCM_LOCATION_MAIN) {
-		if (index >= 1024 * 1024) {
+	if (location == CELL_GCM_LOCATION_MAIN)
+	{
+		if (index >= 1024 * 1024)
+		{
 			cellGcmSys.Error("cellGcmGetTimeStampLocation: Wrong main index (%d)", index);
-			return 0;
+			return CELL_OK;
 		}
-		// TODO: It seems m_report_main_addr is not initialized
+
 		return vm::read64(Emu.GetGSManager().GetRender().m_report_main_addr + index * 0x10);
 	}
 
 	cellGcmSys.Error("cellGcmGetTimeStampLocation: Wrong location (%d)", location);
-	return 0;
+	return CELL_OK;
 }
 
 //----------------------------------------------------------------------------
@@ -297,9 +316,11 @@ u32 cellGcmGetTiledPitchSize(u32 size)
 {
 	cellGcmSys.Log("cellGcmGetTiledPitchSize(size=%d)", size);
 
-	for (size_t i=0; i < sizeof(tiled_pitches) / sizeof(tiled_pitches[0]) - 1; i++) {
-		if (tiled_pitches[i] < size && size <= tiled_pitches[i+1]) {
-			return tiled_pitches[i+1];
+	for (size_t i = 0; i < sizeof(tiled_pitches) / sizeof(tiled_pitches[0]) - 1; i++)
+	{
+		if (tiled_pitches[i] < size && size <= tiled_pitches[i + 1])
+		{
+			return tiled_pitches[i + 1];
 		}
 	}
 	return 0;
@@ -324,11 +345,11 @@ s32 _cellGcmInitBody(vm::pptr<CellGcmContextData> context, u32 cmdSize, u32 ioSi
 {
 	cellGcmSys.Warning("_cellGcmInitBody(context=**0x%x, cmdSize=0x%x, ioSize=0x%x, ioAddress=0x%x)", context, cmdSize, ioSize, ioAddress);
 
-	if(!local_size && !local_addr)
+	if ((!local_size && !local_addr) || (local_size == 0 && local_addr == 0))
 	{
 		local_size = 0xf900000; // TODO: Get sdk_version in _cellGcmFunc15 and pass it to gcmGetLocalMemorySize
-		local_addr = 0xC0000000;
-		vm::falloc(0xC0000000, local_size, vm::video);
+		local_addr = 0xC0000000; // TODO: Seems like it should be 0x40301400?
+		vm::falloc(local_addr, local_size, vm::video);
 	}
 
 	cellGcmSys.Warning("*** local memory(addr=0x%x, size=0x%x)", local_addr, local_size);
@@ -384,6 +405,7 @@ s32 _cellGcmInitBody(vm::pptr<CellGcmContextData> context, u32 cmdSize, u32 ioSi
 	ctrl.ref.store(-1);
 
 	auto& render = Emu.GetGSManager().GetRender();
+	render.m_report_main_addr = 0xfff00000;
 	render.m_ctxt_addr = context.addr();
 	render.m_gcm_buffers_addr = vm::alloc(sizeof(CellGcmDisplayInfo) * 8, vm::main);
 	render.m_zculls_addr = vm::alloc(sizeof(CellGcmZcullInfo) * 8, vm::main);
@@ -826,7 +848,7 @@ s32 cellGcmAddressToOffset(u32 address, vm::ptr<u32> offset)
 	// Address in local memory
 	if ((address >> 28) == 0xC)
 	{
-		result = address - 0xC0000000;
+		result = address - local_addr;
 	}
 	// Address in main memory else check 
 	else
@@ -879,18 +901,24 @@ s32 cellGcmIoOffsetToAddress(u32 ioOffset, vm::ptr<u32> address)
 
 s32 gcmMapEaIoAddress(u32 ea, u32 io, u32 size, bool is_strict)
 {
-	if ((ea & 0xFFFFF) || (io & 0xFFFFF) || (size & 0xFFFFF)) return CELL_GCM_ERROR_FAILURE;
+	if ((ea & 0xFFFFF) || (io & 0xFFFFF) || (size & 0xFFFFF))
+	{
+		return CELL_GCM_ERROR_FAILURE;
+	}
 
-	// Check if the mapping was successfull
+	// Check if the mapping was successful
 	if (RSXIOMem.Map(ea, size, io))
 	{
 		// Fill the offset table
-		for (u32 i = 0; i<(size >> 20); i++)
+		for (u32 i = 0; i < (size >> 20); i++)
 		{
 			offsetTable.ioAddress[(ea >> 20) + i] = (io >> 20) + i;
 			offsetTable.eaAddress[(io >> 20) + i] = (ea >> 20) + i;
 			Emu.GetGSManager().GetRender().m_strict_ordering[(io >> 20) + i] = is_strict;
 		}
+
+		// Set the proper main memory report address
+		Emu.GetGSManager().GetRender().m_report_main_addr = 0x10000000 + ea;
 	}
 	else
 	{
@@ -921,6 +949,7 @@ s32 cellGcmMapLocalMemory(vm::ptr<u32> address, vm::ptr<u32> size)
 {
 	cellGcmSys.Warning("cellGcmMapLocalMemory(address=*0x%x, size=*0x%x)", address, size);
 
+	// TODO: Setting local address to the default address doesn't seem to make much sense. FIX ME.
 	if (!local_addr && !local_size && vm::falloc(local_addr = 0xC0000000, local_size = 0xf900000 /* TODO */, vm::video))
 	{
 		*address = local_addr;

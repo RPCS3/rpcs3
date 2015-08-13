@@ -1979,7 +1979,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 
 		if (lineCount == 1 && !inPitch && !outPitch && !notify)
 		{
-			memcpy(vm::get_ptr<void>(GetAddress(outOffset, 0)), vm::get_ptr<void>(GetAddress(inOffset, 0)), lineLength);
+			memcpy(vm::get_ptr<void>(GetAddress(outOffset, CELL_GCM_LOCATION_LOCAL)), vm::get_ptr<void>(GetAddress(inOffset, CELL_GCM_LOCATION_LOCAL)), lineLength);
 		}
 		else
 		{
