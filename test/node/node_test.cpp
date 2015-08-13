@@ -80,6 +80,25 @@ TEST(NodeTest, MapWithUndefinedValues) {
   EXPECT_EQ(2, node.size());
 }
 
+TEST(NodeTest, MapForceInsert) {
+  Node node;
+  Node k1("k1");
+  Node k2("k2");
+  Node v1("v1");
+  Node v2("v2");
+  node[k1] = v1;
+  node[k2] = v1;
+  EXPECT_TRUE(node.IsMap());
+  EXPECT_EQ("v1", node["k1"].as<std::string>());
+  EXPECT_EQ("v1", node["k2"].as<std::string>());
+  EXPECT_EQ(2, node.size());
+
+  node.force_insert(k2, v2);
+  EXPECT_EQ("v1", node["k1"].as<std::string>());
+  EXPECT_EQ("v2", node["k2"].as<std::string>());
+  EXPECT_EQ(2, node.size());
+}
+
 TEST(NodeTest, UndefinedConstNodeWithFallback) {
   Node node;
   const Node& cn = node;

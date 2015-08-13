@@ -43,6 +43,17 @@ inline bool IsNaN(const std::string& input) {
 }
 }
 
+// Node
+template <>
+struct convert<Node> {
+  static Node encode(const Node& rhs) { return rhs; }
+
+  static bool decode(const Node& node, Node& rhs) {
+    rhs.reset(node);
+    return true;
+  }
+};
+
 // std::string
 template <>
 struct convert<std::string> {
