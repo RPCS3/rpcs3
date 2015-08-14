@@ -817,7 +817,8 @@ void D3D12GSRender::Flip()
 	}
 	else
 	{
-		commandList->ResourceBarrier(1, &getResourceBarrierTransition(m_rtts.m_currentlyBoundRenderTargets[0], D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
+		if (m_rtts.m_currentlyBoundRenderTargets[0] != nullptr)
+			commandList->ResourceBarrier(1, &getResourceBarrierTransition(m_rtts.m_currentlyBoundRenderTargets[0], D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
 		resourceToFlip = m_rtts.m_currentlyBoundRenderTargets[0];
 	}
 
@@ -890,11 +891,11 @@ void D3D12GSRender::Flip()
 	vbv.SizeInBytes = 16 * sizeof(float);
 	commandList->IASetVertexBuffers(0, 1, &vbv);
 	commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-
-	commandList->DrawInstanced(4, 1, 0, 0);
+	if (m_rtts.m_currentlyBoundRenderTargets[0] != nullptr)
+		commandList->DrawInstanced(4, 1, 0, 0);
 
 	commandList->ResourceBarrier(1, &getResourceBarrierTransition(m_backBuffer[m_swapChain->GetCurrentBackBufferIndex()], D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
-	if (isFlipSurfaceInLocalMemory(m_surface_color_target))
+	if (isFlipSurfaceInLocalMemory(m_surface_color_target) && m_rtts.m_currentlyBoundRenderTargets[0] != nullptr)
 		commandList->ResourceBarrier(1, &getResourceBarrierTransition(m_rtts.m_currentlyBoundRenderTargets[0], D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET));
 	check(commandList->Close());
 	m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**)&commandList);
