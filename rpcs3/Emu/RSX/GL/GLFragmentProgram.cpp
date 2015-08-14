@@ -155,6 +155,8 @@ void GLFragmentProgram::Decompile(RSXFragmentProgram& prog)
 	{
 		for (const ParamItem PI : PT.items)
 		{
+			if (PT.type == "sampler2D")
+				continue;
 			size_t offset = atoi(PI.name.c_str() + 2);
 			FragmentConstantOffsetCache.push_back(offset);
 		}

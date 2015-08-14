@@ -23,6 +23,39 @@ extern u64 get_system_time();
 
 u32 methodRegisters[0xffff];
 
+u32 LinearToSwizzleAddress(u32 x, u32 y, u32 z, u32 log2_width, u32 log2_height, u32 log2_depth)
+{
+	u32 offset = 0;
+	u32 shift_count = 0;
+	while (log2_width | log2_height | log2_depth)
+	{
+		if (log2_width)
+		{
+			offset |= (x & 0x01) << shift_count;
+			x >>= 1;
+			++shift_count;
+			--log2_width;
+		}
+
+		if (log2_height)
+		{
+			offset |= (y & 0x01) << shift_count;
+			y >>= 1;
+			++shift_count;
+			--log2_height;
+		}
+
+		if (log2_depth)
+		{
+			offset |= (z & 0x01) << shift_count;
+			z >>= 1;
+			++shift_count;
+			--log2_depth;
+		}
+	}
+	return offset;
+}
+
 u32 GetAddress(u32 offset, u32 location)
 {
 	u32 res = 0;
@@ -118,7 +151,7 @@ void RSXVertexData::Load(u32 start, u32 count, u32 baseOffset, u32 baseIndex = 0
 	}
 }
 
-u32 RSXVertexData::GetTypeSize()
+u32 RSXVertexData::GetTypeSize() const
 {
 	switch (type)
 	{
@@ -2045,6 +2078,20 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		break;
 	}
 
+	case NV3062_SET_PITCH:
+	{
+		if (count == 1)
+		{
+			m_color_format_src_pitch = ARGS(0);
+			m_color_format_dst_pitch = ARGS(0) >> 16;
+		}
+		else
+		{
+			LOG_ERROR(RSX, "NV3062_SET_PITCH: unknown arg count (%d)", count);
+		}
+		break;
+	}
+
 	// NV309E
 	case NV309E_SET_CONTEXT_DMA_IMAGE:
 	{
@@ -2071,6 +2118,19 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		else
 		{
 			LOG_ERROR(RSX, "NV309E_SET_FORMAT: unknown arg count (%d)", count);
+		}
+		break;
+	}
+
+	case NV309E_SET_OFFSET:
+	{
+		if (count == 1)
+		{
+			m_swizzle_offset = ARGS(0);
+		}
+		else
+		{
+			LOG_ERROR(RSX, "NV309E_SET_OFFSET: unknown arg count (%d)", count);
 		}
 		break;
 	}
@@ -2162,38 +2222,97 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 
 	case NV3089_IMAGE_IN_SIZE:
 	{
-		const u16 width = ARGS(0);
-		const u16 height = ARGS(0) >> 16;
-		const u16 pitch = ARGS(1);
+		if (count == 1)
+		{
+			m_img_in_size = ARGS(0);
 
-		const u8 origin = ARGS(1) >> 16;
+		}
+		else
+		{
+			LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown arg count (%d)", count);
+		}
+		break;
+	}
+
+	case NV3089_IMAGE_IN_FORMAT:
+	{
+		if (count == 1)
+		{
+			m_img_in_format = ARGS(0);
+
+		}
+		else
+		{
+			LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown arg count (%d)", count);
+		}
+		break;
+	}
+
+	case NV3089_IMAGE_IN_OFFSET:
+	{
+		if (count == 1)
+		{
+			m_src_offset = ARGS(0);
+
+		}
+		else
+		{
+			LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown arg count (%d)", count);
+		}
+		break;
+	}
+
+	case NV3089_IMAGE_IN:
+	{
+		const u16 width = m_img_in_size;
+		const u16 height = m_img_in_size >> 16;
+		const u16 pitch = m_img_in_format;
+		const u8 origin = m_img_in_format >> 16;
+		const u8 inter = m_img_in_format >> 24;
+
 		if (origin != 2 /* CELL_GCM_TRANSFER_ORIGIN_CORNER */)
 		{
 			LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown origin (%d)", origin);
 		}
 
-		const u8 inter = ARGS(1) >> 24;
 		if (inter != 0 /* CELL_GCM_TRANSFER_INTERPOLATOR_ZOH */ && inter != 1 /* CELL_GCM_TRANSFER_INTERPOLATOR_FOH */)
 		{
 			LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown inter (%d)", inter);
 		}
 
-		const u32 offset = ARGS(2);
+		const u32 src_offset = m_src_offset;
+		const u32 src_dma = m_context_dma_img_src;
 
-		const u16 u = ARGS(3); // inX (currently ignored)
-		const u16 v = ARGS(3) >> 16; // inY (currently ignored)
+		u32 dst_offset;
+		u32 dst_dma = 0;
 
-		u8* pixels_src = vm::get_ptr<u8>(GetAddress(offset, m_context_dma_img_src - 0xfeed0000));
-		u8* pixels_dst = vm::get_ptr<u8>(GetAddress(m_dst_offset, m_context_dma_img_dst - 0xfeed0000));
-
-		if (m_context_surface == CELL_GCM_CONTEXT_SWIZZLE2D)
+		switch (m_context_surface)
 		{
-			LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: Swizzle2D not implemented");
-		}
-		else if (m_context_surface != CELL_GCM_CONTEXT_SURFACE2D)
-		{
+		case CELL_GCM_CONTEXT_SURFACE2D:
+			dst_dma = m_context_dma_img_dst;
+			dst_offset = m_dst_offset;
+			break;
+
+		case CELL_GCM_CONTEXT_SWIZZLE2D:
+			dst_dma = m_context_dma_img_src;
+			dst_offset = m_swizzle_offset;
+			break;
+
+		default:
 			LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown m_context_surface (0x%x)", m_context_surface);
+			break;
 		}
+
+		if (!dst_dma)
+			break;
+
+		LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: src = 0x%x, dst = 0x%x", src_offset, dst_offset);
+
+		const u16 u = ARGS(0); // inX (currently ignored)
+		const u16 v = ARGS(0) >> 16; // inY (currently ignored)
+
+		u8* pixels_src = vm::get_ptr<u8>(GetAddress(src_offset, src_dma));
+		u8* pixels_dst = vm::get_ptr<u8>(GetAddress(dst_offset, dst_dma));
 
 		if (m_color_format != 4 /* CELL_GCM_TRANSFER_SURFACE_FORMAT_R5G6B5 */ && m_color_format != 10 /* CELL_GCM_TRANSFER_SURFACE_FORMAT_A8R8G8B8 */)
 		{
@@ -2206,11 +2325,42 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		const s32 out_w = (s32)(u64(width) * (1 << 20) / m_color_conv_dsdx);
 		const s32 out_h = (s32)(u64(height) * (1 << 20) / m_color_conv_dtdy);
 
+		if (m_context_surface == CELL_GCM_CONTEXT_SWIZZLE2D)
+		{
+			u8* linear_pixels = pixels_src;
+			u8* swizzled_pixels = new u8[in_bpp * width * height];
+
+			int sw_width = 1 << (int)log2(width);
+			int sw_height = 1 << (int)log2(height);
+
+			for (int y = 0; y < sw_height; y++)
+			{
+				for (int x = 0; x < sw_width; x++)
+				{
+					switch (in_bpp)
+					{
+					case 1:
+						swizzled_pixels[LinearToSwizzleAddress(x, y, 0, sw_width, sw_height, 0)] = linear_pixels[y * sw_height + x];
+						break;
+					case 2:
+						((u16*)swizzled_pixels)[LinearToSwizzleAddress(x, y, 0, sw_width, sw_height, 0)] = ((u16*)linear_pixels)[y * sw_height + x];
+						break;
+					case 4:
+						((u32*)swizzled_pixels)[LinearToSwizzleAddress(x, y, 0, sw_width, sw_height, 0)] = ((u32*)linear_pixels)[y * sw_height + x];
+						break;
+					}
+
+				}
+			}
+
+			pixels_src = swizzled_pixels;
+		}
+
 		LOG_WARNING(RSX, "NV3089_IMAGE_IN_SIZE: w=%d, h=%d, pitch=%d, offset=0x%x, inX=%f, inY=%f, scaleX=%f, scaleY=%f",
-			width, height, pitch, offset, double(u) / 16, double(v) / 16, double(1 << 20) / (m_color_conv_dsdx), double(1 << 20) / (m_color_conv_dtdy));
+			width, height, pitch, src_offset, double(u) / 16, double(v) / 16, double(1 << 20) / (m_color_conv_dsdx), double(1 << 20) / (m_color_conv_dtdy));
 
 		std::unique_ptr<u8[]> temp;
-		
+
 		if (in_bpp != out_bpp && width != out_w && height != out_h)
 		{
 			// resize/convert if necessary
@@ -2220,7 +2370,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 			AVPixelFormat in_format = m_color_format == 4 ? AV_PIX_FMT_RGB565BE : AV_PIX_FMT_ARGB; // ???
 			AVPixelFormat out_format = m_color_conv_fmt == 7 ? AV_PIX_FMT_RGB565BE : AV_PIX_FMT_ARGB; // ???
 
-			std::unique_ptr<SwsContext, void(*)(SwsContext*)> sws(sws_getContext(width, height, in_format, out_w, out_h, out_format, inter ? SWS_FAST_BILINEAR : SWS_POINT, NULL, NULL, NULL), sws_freeContext);
+			std::unique_ptr<SwsContext, void(*)(SwsContext*)> sws(sws_getContext(width, height, in_format, out_w, out_h, out_format,
+				inter ? SWS_FAST_BILINEAR : SWS_POINT, NULL, NULL, NULL), sws_freeContext);
 
 			int in_line = in_bpp * width;
 			u8* out_ptr = temp.get();
@@ -2272,6 +2423,11 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 			memcpy(pixels_dst, pixels_src, out_w * out_h * out_bpp);
 		}
 
+		if (m_context_surface == CELL_GCM_CONTEXT_SWIZZLE2D)
+		{
+			delete[] pixels_src;
+		}
+
 		break;
 	}
 
@@ -2307,6 +2463,49 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		m_color_conv_dtdy = ARGS(8);
 		break;
 	}
+
+	case NV3089_SET_COLOR_FORMAT:
+		m_color_conv_fmt = ARGS(0);
+		if (m_color_conv_fmt != 3 /* CELL_GCM_TRANSFER_SCALE_FORMAT_A8R8G8B8 */ && m_color_conv_fmt != 7 /* CELL_GCM_TRANSFER_SCALE_FORMAT_R5G6B5 */)
+		{
+			LOG_ERROR(RSX, "NV3089_SET_COLOR_FORMAT: unknown format (%d)", m_color_conv_fmt);
+		}
+		break;
+
+	case NV3089_SET_OPERATION:
+		m_color_conv_op = ARGS(0);
+		if (m_color_conv_op != 3 /* CELL_GCM_TRANSFER_OPERATION_SRCCOPY */)
+		{
+			LOG_ERROR(RSX, "NV3089_SET_OPERATION: unknown color conv op (%d)", m_color_conv_op);
+		}
+		break;
+	case NV3089_CLIP_POINT:
+		m_color_conv_clip_x = ARGS(0);
+		m_color_conv_clip_y = ARGS(0) >> 16;
+		break;
+
+	case NV3089_CLIP_SIZE:
+		m_color_conv_clip_w = ARGS(0);
+		m_color_conv_clip_h = ARGS(0) >> 16;
+		break;
+
+	case NV3089_IMAGE_OUT_POINT:
+		m_color_conv_out_x = ARGS(0);
+		m_color_conv_out_y = ARGS(0) >> 16;
+		break;
+
+	case NV3089_IMAGE_OUT_SIZE:
+		m_color_conv_out_w = ARGS(0);
+		m_color_conv_out_h = ARGS(0) >> 16;
+		break;
+
+	case NV3089_DS_DX:
+		m_color_conv_dsdx = ARGS(0);
+		break;
+
+	case NV3089_DT_DY:
+		m_color_conv_dtdy = ARGS(0);
+		break;
 
 	case GCM_SET_USER_COMMAND:
 	{
@@ -2353,7 +2552,6 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	case NV3062_SET_OBJECT:
 	case NV3062_SET_CONTEXT_DMA_NOTIFIES:
 	case NV3062_SET_CONTEXT_DMA_IMAGE_SOURCE:
-	case NV3062_SET_PITCH:
 	case NV3062_SET_OFFSET_SOURCE:
 	{
 		LOG_WARNING(RSX, "Unused NV3062 method 0x%x detected!", cmd);
@@ -2381,7 +2579,6 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 
 	case NV309E_SET_OBJECT:
 	case NV309E_SET_CONTEXT_DMA_NOTIFIES:
-	case NV309E_SET_OFFSET:
 	{
 		LOG_WARNING(RSX, "Unused NV309E method 0x%x detected!", cmd);
 		break;
@@ -2393,17 +2590,6 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	case NV3089_SET_CONTEXT_ROP:
 	case NV3089_SET_CONTEXT_BETA1:
 	case NV3089_SET_CONTEXT_BETA4:
-	case NV3089_SET_COLOR_FORMAT:
-	case NV3089_SET_OPERATION:
-	case NV3089_CLIP_POINT:
-	case NV3089_CLIP_SIZE:
-	case NV3089_IMAGE_OUT_POINT:
-	case NV3089_IMAGE_OUT_SIZE:
-	case NV3089_DS_DX:
-	case NV3089_DT_DY:
-	case NV3089_IMAGE_IN_FORMAT:
-	case NV3089_IMAGE_IN_OFFSET:
-	case NV3089_IMAGE_IN:
 	{
 		LOG_WARNING(RSX, "Unused NV3089 methods 0x%x detected!", cmd);
 		break;

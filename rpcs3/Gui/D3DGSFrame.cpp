@@ -1,70 +1,74 @@
 #include "stdafx_gui.h"
-#include "Utilities/Log.h"
+#if defined(DX12_SUPPORT)
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
-#include "GLGSFrame.h"
 #include "D3DGSFrame.h"
 #include "Utilities/Timer.h"
 
-GLGSFrame::GLGSFrame()
-	: GSFrame(nullptr, "GSFrame[OpenGL]")
+D3DGSFrame::D3DGSFrame()
+	: GSFrame(nullptr, "GSFrame[DirectX 12]")
 	, m_frames(0)
 {
-	canvas = new wxGLCanvas(this, wxID_ANY, NULL);
+	canvas = new wxWindow(this, wxID_ANY);
 	canvas->SetSize(GetClientSize());
 
 	canvas->Bind(wxEVT_LEFT_DCLICK, &GSFrame::OnLeftDclick, this);
 }
 
-GLGSFrame::~GLGSFrame()
+D3DGSFrame::~D3DGSFrame()
 {
 }
 
-void GLGSFrame::Close()
+void D3DGSFrame::SetAdaptaterName(const wchar_t *name)
+{
+	AdaptaterName = name;
+}
+
+void D3DGSFrame::Close()
 {
 	GSFrame::Close();
 }
 
-bool GLGSFrame::IsShown()
+bool D3DGSFrame::IsShown()
 {
 	return GSFrame::IsShown();
 }
 
-void GLGSFrame::Hide()
+void D3DGSFrame::Hide()
 {
 	GSFrame::Hide();
 }
 
-void GLGSFrame::Show()
+void D3DGSFrame::Show()
 {
 	GSFrame::Show();
 }
 
-void* GLGSFrame::GetNewContext()
+void* D3DGSFrame::GetNewContext()
 {
-	return new wxGLContext(GetCanvas());
+	return nullptr;//new wxGLContext(GetCanvas());
 }
 
-void GLGSFrame::SetCurrent(void* ctx)
+void D3DGSFrame::SetCurrent(void* ctx)
 {
-	GetCanvas()->SetCurrent(*(wxGLContext*)ctx);
+//	GetCanvas()->SetCurrent(*(wxGLContext*)ctx);
 }
 
-void GLGSFrame::DeleteContext(void* ctx)
+void D3DGSFrame::DeleteContext(void* ctx)
 {
-	delete (wxGLContext*)ctx;
+//	delete (wxGLContext*)ctx;
 }
 
-void GLGSFrame::Flip(void* context)
+void D3DGSFrame::Flip(void* context)
 {
 	if (!canvas) return;
-	canvas->SetCurrent(*(wxGLContext*)context);
+//	canvas->SetCurrent(*(wxGLContext*)context);
 
 	static Timer fps_t;
-	canvas->SwapBuffers();
+//	canvas->SwapBuffers();
 	m_frames++;
 
-	const std::string sub_title = Emu.GetTitle() + (Emu.GetTitleID().length() ? " [" + Emu.GetTitleID() + "] | " : " | ");
+	const std::string sub_title = Emu.GetTitle() + (Emu.GetTitleID().length() ? " [" + Emu.GetTitleID() + "] | " : " | ") + AdaptaterName.ToStdString() + " | ";
 
 	if (fps_t.GetElapsedTimeInSec() >= 0.5)
 	{
@@ -75,13 +79,13 @@ void GLGSFrame::Flip(void* context)
 	}
 }
 
-void GLGSFrame::OnSize(wxSizeEvent& event)
+void D3DGSFrame::OnSize(wxSizeEvent& event)
 {
 	if (canvas) canvas->SetSize(GetClientSize());
 	event.Skip();
 }
 
-void GLGSFrame::SetViewport(int x, int y, u32 w, u32 h)
+void D3DGSFrame::SetViewport(int x, int y, u32 w, u32 h)
 {
 	/*
 	//ConLog.Warning("SetViewport(x=%d, y=%d, w=%d, h=%d)", x, y, w, h);
@@ -95,3 +99,9 @@ void GLGSFrame::SetViewport(int x, int y, u32 w, u32 h)
 	glViewport(vx + x, vy + y, viewport.GetWidth(), viewport.GetHeight());
 	*/
 }
+
+HWND D3DGSFrame::getHandle() const
+{
+	return canvas->GetHandle();
+}
+#endif

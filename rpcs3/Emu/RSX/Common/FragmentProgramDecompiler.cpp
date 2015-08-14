@@ -92,7 +92,7 @@ std::string FragmentProgramDecompiler::GetMask()
 
 std::string FragmentProgramDecompiler::AddReg(u32 index, int fp16)
 {
-	return m_parr.AddParam(PF_PARAM_NONE, getFloatTypeName(4), std::string(fp16 ? "h" : "r") + std::to_string(index), getFloatTypeName(4) + "(0.0)");
+	return m_parr.AddParam(PF_PARAM_NONE, getFloatTypeName(4), std::string(fp16 ? "h" : "r") + std::to_string(index), getFloatTypeName(4) + "(0., 0., 0., 0.)");
 }
 
 bool FragmentProgramDecompiler::HasReg(u32 index, int fp16)
