@@ -5,19 +5,9 @@
 #include "Emu/SysCalls/Modules.h"
 
 #include "sysPrxForUser.h"
+#include "sys_mempool.h"
 
 extern Module sysPrxForUser;
-
-using sys_mempool_t = u32;
-
-struct memory_pool_t
-{
-	vm::ptr<void> chunk;
-	u64 chunk_size;
-	u64 block_size;
-	u64 ralignment;
-	std::vector<vm::ptr<void>> free_blocks;
-};
 
 s32 sys_mempool_allocate_block()
 {
