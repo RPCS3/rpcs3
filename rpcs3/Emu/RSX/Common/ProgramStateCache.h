@@ -2,6 +2,7 @@
 
 #include "Emu/RSX/RSXFragmentProgram.h"
 #include "Emu/RSX/RSXVertexProgram.h"
+#include "Utilities/Log.h"
 
 
 enum class SHADER_TYPE

@@ -31,7 +31,7 @@
 *.wav
 
 /build
-
+/bin
 /libs
 /ipch
 /rpcs3/Debug
@@ -44,6 +44,7 @@
 /bin/rpcs3.iobj
 /bin/FragmentProgram.txt
 /bin/VertexProgram.txt
+/bin/*.hlsl
 /bin/BreakPoints.dat
 /bin/textures
 /bin/*.lib

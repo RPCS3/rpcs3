@@ -188,7 +188,7 @@ void GLTexture::Init(RSXTexture& tex)
 			{
 				for (int j = 0; j < tex.GetWidth(); j++)
 				{
-					dst[(i*tex.GetHeight()) + j] = src[LinearToSwizzleAddress(j, i, 0, log2width, log2height, 0)];
+					dst[(i*tex.GetWidth()) + j] = src[LinearToSwizzleAddress(j, i, 0, log2width, log2height, 0)];
 				}
 			}
 		}
@@ -2164,34 +2164,4 @@ void GLGSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 void GLGSRender::semaphorePFIFOAcquire(u32 offset, u32 value)
 {
 
-}
-
-u32 LinearToSwizzleAddress(u32 x, u32 y, u32 z, u32 log2_width, u32 log2_height, u32 log2_depth)
-{
-	u32 offset = 0;
-	u32 shift_count = 0;
-	while (log2_width | log2_height | log2_depth){
-		if (log2_width)
-		{
-			offset |= (x & 0x01) << shift_count;
-			x >>= 1;
-			++shift_count;
-			--log2_width;
-		}
-		if (log2_height)
-		{
-			offset |= (y & 0x01) << shift_count;
-			y >>= 1;
-			++shift_count;
-			--log2_height;
-		}
-		if (log2_depth)
-		{
-			offset |= (z & 0x01) << shift_count;
-			z >>= 1;
-			++shift_count;
-			--log2_depth;
-		}
-	}
-	return offset;
 }
