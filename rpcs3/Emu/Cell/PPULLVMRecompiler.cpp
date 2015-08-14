@@ -5,6 +5,9 @@
 #include "Emu/Cell/PPUDisAsm.h"
 #include "Emu/Cell/PPULLVMRecompiler.h"
 #include "Emu/Memory/Memory.h"
+#ifdef _MSC_VER
+#pragma warning(push, 0)
+#endif
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/ManagedStatic.h"
@@ -22,6 +25,9 @@
 #include "llvm/Transforms/Vectorize.h"
 #include "llvm/MC/MCDisassembler.h"
 #include "llvm/IR/Verifier.h"
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 
 using namespace llvm;
 using namespace ppu_recompiler_llvm;
