@@ -293,11 +293,13 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 
 	case NV4097_SET_CONTEXT_DMA_REPORT:
 	{
-		if (ARGS(0))
+		dma_report = ARGS(0);
+
+		if (dma_report != CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_REPORT)
 		{
-			LOG_WARNING(RSX, "TODO: NV4097_SET_CONTEXT_DMA_REPORT: 0x%x", ARGS(0));
-			dma_report = ARGS(0);
+			LOG_WARNING(RSX, "TODO: NV4097_SET_CONTEXT_DMA_REPORT: 0x%x", dma_report);
 		}
+
 		break;
 	}
 
@@ -533,10 +535,11 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 
 	case NV4097_SET_COLOR_MASK_MRT:
 	{
-		if (u32 mask = ARGS(0))
-		{
-			LOG_WARNING(RSX, "TODO: NV4097_SET_COLOR_MASK_MRT: 0x%x", mask);
-		}
+		const u32 a0 = ARGS(0);
+
+		m_set_color_mask_mrt = true;
+
+		LOG_ERROR(RSX, "TODO: NV4097_SET_COLOR_MASK_MRT: 0x%x", a0);
 		break;
 	}
 

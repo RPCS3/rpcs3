@@ -26,7 +26,7 @@ u32 VirtualMemoryBlock::Map(u32 realaddr, u32 size)
 		bool is_good_addr = true;
 
 		// check if address is already mapped
-		for (u32 i = 0; i<m_mapped_memory.size(); ++i)
+		for (u32 i = 0; i < m_mapped_memory.size(); ++i)
 		{
 			if ((addr >= m_mapped_memory[i].addr && addr < m_mapped_memory[i].addr + m_mapped_memory[i].size) ||
 				(m_mapped_memory[i].addr >= addr && m_mapped_memory[i].addr < addr + size))
@@ -56,7 +56,7 @@ bool VirtualMemoryBlock::Map(u32 realaddr, u32 size, u32 addr)
 		return false;
 	}
 
-	for (u32 i = 0; i<m_mapped_memory.size(); ++i)
+	for (u32 i = 0; i < m_mapped_memory.size(); ++i)
 	{
 		if (addr >= m_mapped_memory[i].addr && addr + size - 1 <= m_mapped_memory[i].addr + m_mapped_memory[i].size - 1)
 		{
@@ -70,7 +70,7 @@ bool VirtualMemoryBlock::Map(u32 realaddr, u32 size, u32 addr)
 
 bool VirtualMemoryBlock::UnmapRealAddress(u32 realaddr, u32& size)
 {
-	for (u32 i = 0; i<m_mapped_memory.size(); ++i)
+	for (u32 i = 0; i < m_mapped_memory.size(); ++i)
 	{
 		if (m_mapped_memory[i].realAddress == realaddr && IsInMyRange(m_mapped_memory[i].addr, m_mapped_memory[i].size))
 		{
@@ -85,7 +85,7 @@ bool VirtualMemoryBlock::UnmapRealAddress(u32 realaddr, u32& size)
 
 bool VirtualMemoryBlock::UnmapAddress(u32 addr, u32& size)
 {
-	for (u32 i = 0; i<m_mapped_memory.size(); ++i)
+	for (u32 i = 0; i < m_mapped_memory.size(); ++i)
 	{
 		if (m_mapped_memory[i].addr == addr && IsInMyRange(m_mapped_memory[i].addr, m_mapped_memory[i].size))
 		{
@@ -118,7 +118,7 @@ bool VirtualMemoryBlock::Write32(const u32 addr, const u32 value)
 
 bool VirtualMemoryBlock::getRealAddr(u32 addr, u32& result)
 {
-	for (u32 i = 0; i<m_mapped_memory.size(); ++i)
+	for (u32 i = 0; i < m_mapped_memory.size(); ++i)
 	{
 		if (addr >= m_mapped_memory[i].addr && addr < m_mapped_memory[i].addr + m_mapped_memory[i].size)
 		{
@@ -132,7 +132,7 @@ bool VirtualMemoryBlock::getRealAddr(u32 addr, u32& result)
 
 u32 VirtualMemoryBlock::getMappedAddress(u32 realAddress)
 {
-	for (u32 i = 0; i<m_mapped_memory.size(); ++i)
+	for (u32 i = 0; i < m_mapped_memory.size(); ++i)
 	{
 		if (realAddress >= m_mapped_memory[i].realAddress && realAddress < m_mapped_memory[i].realAddress + m_mapped_memory[i].size)
 		{

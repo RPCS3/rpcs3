@@ -5,10 +5,8 @@
 
 #include "sysPrxForUser.h"
 
-//#include "Emu/RSX/GCM.h"
 #include "Emu/RSX/GSManager.h"
 #include "Emu/RSX/GSRender.h"
-//#include "Emu/SysCalls/lv2/sys_process.h"
 #include "cellGcmSys.h"
 
 extern Module cellGcmSys;
@@ -107,7 +105,23 @@ vm::ptr<CellGcmReportData> cellGcmGetReportDataAddressLocation(u32 index, u32 lo
 			return vm::null;
 		}
 
-		return vm::ptr<CellGcmReportData>::make(Emu.GetGSManager().GetRender().m_report_main_addr + index * 0x10);
+		u32 reportAddr;
+		
+		if (Emu.GetGSManager().GetRender().dma_report == CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_REPORT)
+		{
+			// TOOD: Investigate the correctness. The report address is used in report_to_main_memory grapics sample.
+			reportAddr = 0x0e000000;
+		}
+		else if (index != 0)
+		{
+			reportAddr = index * 0x10;
+		}
+		else
+		{
+			reportAddr = Emu.GetGSManager().GetRender().m_report_main_addr + index * 0x10;
+		}
+
+		return vm::ptr<CellGcmReportData>::make(reportAddr);
 	}
 
 	cellGcmSys.Error("cellGcmGetReportDataAddressLocation: Wrong location (%d)", location);
