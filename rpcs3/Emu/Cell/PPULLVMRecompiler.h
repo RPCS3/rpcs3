@@ -8,6 +8,9 @@
 #include "Emu/Cell/PPUDecoder.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/PPUInterpreter.h"
+#ifdef _MSC_VER
+#pragma warning(push, 0)
+#endif
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/Support/raw_ostream.h"
@@ -16,6 +19,9 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/PassManager.h"
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 
 namespace ppu_recompiler_llvm {
 	class Compiler;
