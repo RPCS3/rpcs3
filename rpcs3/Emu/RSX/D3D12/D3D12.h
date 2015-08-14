@@ -3,11 +3,14 @@
 
 #include <d3d12.h>
 #include <cassert>
+#include <wrl/client.h>
 #include "utilities/Log.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/RSX/GCM.h"
 
 #pragma comment (lib, "dxgi.lib")
+
+using namespace Microsoft::WRL;
 
 #define SAFE_RELEASE(x) if (x) x->Release();
 

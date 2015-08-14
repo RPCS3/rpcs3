@@ -279,7 +279,7 @@ std::vector<D3D12_VERTEX_BUFFER_VIEW> D3D12GSRender::UploadVertexBuffers(bool in
 {
 	std::vector<D3D12_VERTEX_BUFFER_VIEW> result;
 	const std::vector<VertexBufferFormat> &vertexBufferFormat = FormatVertexData(m_vertex_data);
-	m_IASet = getIALayout(m_device, vertexBufferFormat, m_vertex_data);
+	m_IASet = getIALayout(m_device.Get(), vertexBufferFormat, m_vertex_data);
 
 	const u32 data_offset = indexed_draw ? 0 : m_draw_array_first;
 
@@ -302,7 +302,7 @@ std::vector<D3D12_VERTEX_BUFFER_VIEW> D3D12GSRender::UploadVertexBuffers(bool in
 			vertexBuffer = It->second;
 		else
 		{
-			vertexBuffer = createVertexBuffer(vbf, m_vertex_data, m_device, m_vertexIndexData);
+			vertexBuffer = createVertexBuffer(vbf, m_vertex_data, m_device.Get(), m_vertexIndexData);
 			m_vertexCache[key] = vertexBuffer;
 		}
 

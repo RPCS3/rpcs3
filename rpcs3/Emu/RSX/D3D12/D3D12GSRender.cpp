@@ -242,8 +242,7 @@ D3D12GSRender::D3D12GSRender()
 	D3D12_COMMAND_QUEUE_DESC copyQueueDesc = {}, graphicQueueDesc = {};
 	copyQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_COPY;
 	graphicQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
-	ThrowIfFailed(m_device->CreateCommandQueue(&copyQueueDesc, IID_PPV_ARGS(&m_commandQueueCopy)));
-	ThrowIfFailed(m_device->CreateCommandQueue(&graphicQueueDesc, IID_PPV_ARGS(&m_commandQueueGraphic)));
+	ThrowIfFailed(m_device->CreateCommandQueue(&graphicQueueDesc, IID_PPV_ARGS(m_commandQueueGraphic.GetAddressOf())));
 
 	g_descriptorStrideSRVCBVUAV = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	g_descriptorStrideDSV = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
@@ -266,7 +265,7 @@ D3D12GSRender::D3D12GSRender()
 	swapChain.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
 	swapChain.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
 
-	ThrowIfFailed(dxgiFactory->CreateSwapChain(m_commandQueueGraphic, &swapChain, (IDXGISwapChain**)&m_swapChain));
+	ThrowIfFailed(dxgiFactory->CreateSwapChain(m_commandQueueGraphic.Get(), &swapChain, (IDXGISwapChain**)m_swapChain.GetAddressOf()));
 	m_swapChain->GetBuffer(0, IID_PPV_ARGS(&m_backBuffer[0]));
 	m_swapChain->GetBuffer(1, IID_PPV_ARGS(&m_backBuffer[1]));
 
@@ -277,9 +276,9 @@ D3D12GSRender::D3D12GSRender()
 	rttDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
 	rttDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	m_device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&m_backbufferAsRendertarget[0]));
-	m_device->CreateRenderTargetView(m_backBuffer[0], &rttDesc, m_backbufferAsRendertarget[0]->GetCPUDescriptorHandleForHeapStart());
+	m_device->CreateRenderTargetView(m_backBuffer[0].Get(), &rttDesc, m_backbufferAsRendertarget[0]->GetCPUDescriptorHandleForHeapStart());
 	m_device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&m_backbufferAsRendertarget[1]));
-	m_device->CreateRenderTargetView(m_backBuffer[1], &rttDesc, m_backbufferAsRendertarget[1]->GetCPUDescriptorHandleForHeapStart());
+	m_device->CreateRenderTargetView(m_backBuffer[1].Get(), &rttDesc, m_backbufferAsRendertarget[1]->GetCPUDescriptorHandleForHeapStart());
 
 	// Common root signatures
 	for (unsigned textureCount = 0; textureCount < 17; textureCount++)
@@ -331,16 +330,16 @@ D3D12GSRender::D3D12GSRender()
 		m_device->CreateRootSignature(0,
 			rootSignatureBlob->GetBufferPointer(),
 			rootSignatureBlob->GetBufferSize(),
-			IID_PPV_ARGS(&m_rootSignatures[textureCount]));
+			IID_PPV_ARGS(m_rootSignatures[textureCount].GetAddressOf()));
 	}
 
-	m_perFrameStorage[0].Init(m_device);
+	m_perFrameStorage[0].Init(m_device.Get());
 	m_perFrameStorage[0].Reset();
-	m_perFrameStorage[1].Init(m_device);
+	m_perFrameStorage[1].Init(m_device.Get());
 	m_perFrameStorage[1].Reset();
 
 	initConvertShader();
-	m_outputScalingPass.Init(m_device);
+	m_outputScalingPass.Init(m_device.Get());
 
 	D3D12_HEAP_PROPERTIES hp = {};
 	hp.Type = D3D12_HEAP_TYPE_DEFAULT;
@@ -354,14 +353,14 @@ D3D12GSRender::D3D12GSRender()
 			IID_PPV_ARGS(&m_dummyTexture))
 			);
 
-	m_readbackResources.Init(m_device, 1024 * 1024 * 128, D3D12_HEAP_TYPE_READBACK, D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS);
-	m_UAVHeap.Init(m_device, 1024 * 1024 * 128, D3D12_HEAP_TYPE_DEFAULT, D3D12_HEAP_FLAG_ALLOW_ONLY_NON_RT_DS_TEXTURES);
+	m_readbackResources.Init(m_device.Get(), 1024 * 1024 * 128, D3D12_HEAP_TYPE_READBACK, D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS);
+	m_UAVHeap.Init(m_device.Get(), 1024 * 1024 * 128, D3D12_HEAP_TYPE_DEFAULT, D3D12_HEAP_FLAG_ALLOW_ONLY_NON_RT_DS_TEXTURES);
 
-	m_rtts.Init(m_device);
+	m_rtts.Init(m_device.Get());
 
-	m_constantsData.Init(m_device, 1024 * 1024 * 64, D3D12_HEAP_TYPE_UPLOAD, D3D12_HEAP_FLAG_NONE);
-	m_vertexIndexData.Init(m_device, 1024 * 1024 * 384, D3D12_HEAP_TYPE_UPLOAD, D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS);
-	m_textureUploadData.Init(m_device, 1024 * 1024 * 256, D3D12_HEAP_TYPE_UPLOAD, D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS);
+	m_constantsData.Init(m_device.Get(), 1024 * 1024 * 64, D3D12_HEAP_TYPE_UPLOAD, D3D12_HEAP_FLAG_NONE);
+	m_vertexIndexData.Init(m_device.Get(), 1024 * 1024 * 384, D3D12_HEAP_TYPE_UPLOAD, D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS);
+	m_textureUploadData.Init(m_device.Get(), 1024 * 1024 * 256, D3D12_HEAP_TYPE_UPLOAD, D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS);
 }
 
 D3D12GSRender::~D3D12GSRender()
@@ -378,22 +377,12 @@ D3D12GSRender::~D3D12GSRender()
 	m_convertRootSignature->Release();
 	m_perFrameStorage[0].Release();
 	m_perFrameStorage[1].Release();
-	m_commandQueueGraphic->Release();
-	m_commandQueueCopy->Release();
-	m_backbufferAsRendertarget[0]->Release();
-	m_backBuffer[0]->Release();
-	m_backbufferAsRendertarget[1]->Release();
-	m_backBuffer[1]->Release();
 	m_rtts.Release();
-	for (unsigned i = 0; i < 17; i++)
-		m_rootSignatures[i]->Release();
 	for (auto &tmp : m_texToClean)
 		tmp->Release();
 	for (auto &tmp : m_texturesCache)
 		tmp.second->Release();
-	m_swapChain->Release();
 	m_outputScalingPass.Release();
-	m_device->Release();
 	unloadD3D12FunctionPointers();
 }
 
@@ -559,7 +548,7 @@ void D3D12GSRender::Draw()
 		return;
 	}
 
-	commandList->SetGraphicsRootSignature(m_rootSignatures[m_PSO->second]);
+	commandList->SetGraphicsRootSignature(m_rootSignatures[m_PSO->second].Get());
 	commandList->OMSetStencilRef(m_stencil_func_ref);
 
 	// Constants
@@ -821,7 +810,7 @@ void D3D12GSRender::Flip()
 		resourceToFlip = m_rtts.m_currentlyBoundRenderTargets[0];
 	}
 
-	commandList->ResourceBarrier(1, &getResourceBarrierTransition(m_backBuffer[m_swapChain->GetCurrentBackBufferIndex()], D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
+	commandList->ResourceBarrier(1, &getResourceBarrierTransition(m_backBuffer[m_swapChain->GetCurrentBackBufferIndex()].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
 
 	D3D12_VIEWPORT viewport =
 	{
@@ -893,7 +882,7 @@ void D3D12GSRender::Flip()
 	if (m_rtts.m_currentlyBoundRenderTargets[0] != nullptr)
 		commandList->DrawInstanced(4, 1, 0, 0);
 
-	commandList->ResourceBarrier(1, &getResourceBarrierTransition(m_backBuffer[m_swapChain->GetCurrentBackBufferIndex()], D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
+	commandList->ResourceBarrier(1, &getResourceBarrierTransition(m_backBuffer[m_swapChain->GetCurrentBackBufferIndex()].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
 	if (isFlipSurfaceInLocalMemory(m_surface_color_target) && m_rtts.m_currentlyBoundRenderTargets[0] != nullptr)
 		commandList->ResourceBarrier(1, &getResourceBarrierTransition(m_rtts.m_currentlyBoundRenderTargets[0], D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET));
 	ThrowIfFailed(commandList->Close());

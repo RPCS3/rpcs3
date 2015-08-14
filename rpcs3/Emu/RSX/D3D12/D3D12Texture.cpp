@@ -758,7 +758,7 @@ size_t D3D12GSRender::UploadTextures(ID3D12GraphicsCommandList *cmdlist)
 		}
 		else
 		{
-			vramTexture = uploadSingleTexture(m_textures[i], m_device, cmdlist, m_textureUploadData);
+			vramTexture = uploadSingleTexture(m_textures[i], m_device.Get(), cmdlist, m_textureUploadData);
 			m_texturesCache[texaddr] = vramTexture;
 
 			u32 s = (u32)align(getTextureSize(m_textures[i]), 4096);
