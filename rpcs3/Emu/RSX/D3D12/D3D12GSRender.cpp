@@ -203,8 +203,18 @@ bool D3D12GSRender::invalidateTexture(u32 addr)
 	return handled;
 }
 
+D3D12DLLManagement::D3D12DLLManagement()
+{
+	loadD3D12FunctionPointers();
+}
+
+D3D12DLLManagement::~D3D12DLLManagement()
+{
+	unloadD3D12FunctionPointers();
+}
+
 D3D12GSRender::D3D12GSRender()
-	: GSRender(), m_PSO(nullptr)
+	: GSRender(), m_D3D12Lib(), m_PSO(nullptr)
 {
 	gfxHandler = [this](u32 addr) {
 		bool result = invalidateTexture(addr);
@@ -212,7 +222,6 @@ D3D12GSRender::D3D12GSRender()
 				LOG_WARNING(RSX, "Reporting Cell writing to %x", addr);
 		return result;
 	};
-	loadD3D12FunctionPointers();
 	if (Ini.GSDebugOutputEnable.GetValue())
 	{
 		Microsoft::WRL::ComPtr<ID3D12Debug> debugInterface;
@@ -383,7 +392,6 @@ D3D12GSRender::~D3D12GSRender()
 	for (auto &tmp : m_texturesCache)
 		tmp.second->Release();
 	m_outputScalingPass.Release();
-	unloadD3D12FunctionPointers();
 }
 
 void D3D12GSRender::Close()
