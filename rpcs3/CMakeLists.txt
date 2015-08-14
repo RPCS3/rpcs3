@@ -1,6 +1,7 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 2.8.12)
 
-set (CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake_modules")
+set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake_modules")
+set(CMAKE_VERBOSE_MAKEFILE ON)
 include(cotire)
 
 project(rpcs3)
@@ -17,7 +18,7 @@ if (CMAKE_COMPILER_IS_GNUCXX)
 		message(FATAL_ERROR "GCC ${CMAKE_CXX_COMPILER_VERSION} is too old.")
 	endif()
 	# Warnings
-	add_definitions(-Wno-attributes -Wno-enum-compare -Wno-invalid-offsetof)
+	add_compile_options(-Wno-attributes -Wno-enum-compare -Wno-invalid-offsetof)
 elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 	# TODO: stdlib?
 endif()
@@ -33,7 +34,7 @@ if (NOT MSVC)
 	set(CMAKE_C_FLAGS_MINSIZEREL "${CMAKE_C_FLAGS_MINSIZEREL} -Os -D_NDEBUG")
 	set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O1 -D_NDEBUG")
 	set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} -O1 -g -D_NDEBUG")
-	add_definitions(-msse -msse2 -mcx16 -mssse3)
+	add_compile_options(-msse -msse2 -mcx16 -mssse3)
 else()
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHa /Zc:throwingNew /D _CRT_SECURE_NO_DEPRECATE=1 /D _CRT_NON_CONFORMING_SWPRINTFS=1 /D _SCL_SECURE_NO_WARNINGS=1")
 endif()
