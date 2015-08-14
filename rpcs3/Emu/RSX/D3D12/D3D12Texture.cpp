@@ -555,7 +555,7 @@ ID3D12Resource *uploadSingleTexture(
 	assert(textureBuffersHeap.canAlloc(textureSize));
 	size_t heapOffset = textureBuffersHeap.alloc(textureSize);
 
-	check(device->CreatePlacedResource(
+	ThrowIfFailed(device->CreatePlacedResource(
 		textureBuffersHeap.m_heap,
 		heapOffset,
 		&getBufferResourceDesc(textureSize),
@@ -567,7 +567,7 @@ ID3D12Resource *uploadSingleTexture(
 
 	auto pixels = vm::get_ptr<const u8>(texaddr);
 	void *textureData;
-	check(Texture->Map(0, nullptr, (void**)&textureData));
+	ThrowIfFailed(Texture->Map(0, nullptr, (void**)&textureData));
 	std::vector<MipmapLevelInfo> mipInfos;
 
 	switch (format)
@@ -616,7 +616,7 @@ ID3D12Resource *uploadSingleTexture(
 	D3D12_HEAP_PROPERTIES heapProp = {};
 	heapProp.Type = D3D12_HEAP_TYPE_DEFAULT;
 
-	check(device->CreateCommittedResource(
+	ThrowIfFailed(device->CreateCommittedResource(
 		&heapProp,
 		D3D12_HEAP_FLAG_NONE,
 		&texturedesc,

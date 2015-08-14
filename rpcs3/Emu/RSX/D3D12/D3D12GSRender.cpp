@@ -119,31 +119,31 @@ void D3D12GSRender::ResourceStorage::Init(ID3D12Device *device)
 	// Create a global command allocator
 	device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocator));
 	device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_textureUploadCommandAllocator));
-	check(device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_COPY, IID_PPV_ARGS(&m_downloadCommandAllocator)));
+	ThrowIfFailed(device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_COPY, IID_PPV_ARGS(&m_downloadCommandAllocator)));
 
 	D3D12_DESCRIPTOR_HEAP_DESC descriptorHeapDesc = {};
 	descriptorHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 	descriptorHeapDesc.NumDescriptors = 10000; // For safety
 	descriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-	check(device->CreateDescriptorHeap(&descriptorHeapDesc, IID_PPV_ARGS(&m_constantsBufferDescriptorsHeap)));
+	ThrowIfFailed(device->CreateDescriptorHeap(&descriptorHeapDesc, IID_PPV_ARGS(&m_constantsBufferDescriptorsHeap)));
 
 
 	descriptorHeapDesc = {};
 	descriptorHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 	descriptorHeapDesc.NumDescriptors = 10000; // For safety
 	descriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-	check(device->CreateDescriptorHeap(&descriptorHeapDesc, IID_PPV_ARGS(&m_scaleOffsetDescriptorHeap)));
+	ThrowIfFailed(device->CreateDescriptorHeap(&descriptorHeapDesc, IID_PPV_ARGS(&m_scaleOffsetDescriptorHeap)));
 
 	D3D12_DESCRIPTOR_HEAP_DESC textureDescriptorDesc = {};
 	textureDescriptorDesc.NumDescriptors = 10000; // For safety
 	textureDescriptorDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	textureDescriptorDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-	check(device->CreateDescriptorHeap(&textureDescriptorDesc, IID_PPV_ARGS(&m_textureDescriptorsHeap)));
+	ThrowIfFailed(device->CreateDescriptorHeap(&textureDescriptorDesc, IID_PPV_ARGS(&m_textureDescriptorsHeap)));
 
 	textureDescriptorDesc.NumDescriptors = 2048; // For safety
 	textureDescriptorDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
-	check(device->CreateDescriptorHeap(&textureDescriptorDesc, IID_PPV_ARGS(&m_samplerDescriptorHeap[0])));
-	check(device->CreateDescriptorHeap(&textureDescriptorDesc, IID_PPV_ARGS(&m_samplerDescriptorHeap[1])));
+	ThrowIfFailed(device->CreateDescriptorHeap(&textureDescriptorDesc, IID_PPV_ARGS(&m_samplerDescriptorHeap[0])));
+	ThrowIfFailed(device->CreateDescriptorHeap(&textureDescriptorDesc, IID_PPV_ARGS(&m_samplerDescriptorHeap[1])));
 }
 
 void D3D12GSRender::ResourceStorage::Release()
@@ -221,13 +221,13 @@ D3D12GSRender::D3D12GSRender()
 	}
 
 	Microsoft::WRL::ComPtr<IDXGIFactory4> dxgiFactory;
-	check(CreateDXGIFactory(IID_PPV_ARGS(&dxgiFactory)));
+	ThrowIfFailed(CreateDXGIFactory(IID_PPV_ARGS(&dxgiFactory)));
 	// Create adapter
 	IDXGIAdapter* adaptater = nullptr;
 	switch (Ini.GSD3DAdaptater.GetValue())
 	{
 	case 0: // WARP
-		check(dxgiFactory->EnumWarpAdapter(IID_PPV_ARGS(&adaptater)));
+		ThrowIfFailed(dxgiFactory->EnumWarpAdapter(IID_PPV_ARGS(&adaptater)));
 		break;
 	case 1: // Default
 		dxgiFactory->EnumAdapters(0, &adaptater);
@@ -236,14 +236,14 @@ D3D12GSRender::D3D12GSRender()
 		dxgiFactory->EnumAdapters(Ini.GSD3DAdaptater.GetValue() - 2,&adaptater);
 		break;
 	}
-	check(wrapD3D12CreateDevice(adaptater, D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&m_device)));
+	ThrowIfFailed(wrapD3D12CreateDevice(adaptater, D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&m_device)));
 
 	// Queues
 	D3D12_COMMAND_QUEUE_DESC copyQueueDesc = {}, graphicQueueDesc = {};
 	copyQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_COPY;
 	graphicQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
-	check(m_device->CreateCommandQueue(&copyQueueDesc, IID_PPV_ARGS(&m_commandQueueCopy)));
-	check(m_device->CreateCommandQueue(&graphicQueueDesc, IID_PPV_ARGS(&m_commandQueueGraphic)));
+	ThrowIfFailed(m_device->CreateCommandQueue(&copyQueueDesc, IID_PPV_ARGS(&m_commandQueueCopy)));
+	ThrowIfFailed(m_device->CreateCommandQueue(&graphicQueueDesc, IID_PPV_ARGS(&m_commandQueueGraphic)));
 
 	g_descriptorStrideSRVCBVUAV = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	g_descriptorStrideDSV = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
@@ -266,7 +266,7 @@ D3D12GSRender::D3D12GSRender()
 	swapChain.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
 	swapChain.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
 
-	check(dxgiFactory->CreateSwapChain(m_commandQueueGraphic, &swapChain, (IDXGISwapChain**)&m_swapChain));
+	ThrowIfFailed(dxgiFactory->CreateSwapChain(m_commandQueueGraphic, &swapChain, (IDXGISwapChain**)&m_swapChain));
 	m_swapChain->GetBuffer(0, IID_PPV_ARGS(&m_backBuffer[0]));
 	m_swapChain->GetBuffer(1, IID_PPV_ARGS(&m_backBuffer[1]));
 
@@ -326,7 +326,7 @@ D3D12GSRender::D3D12GSRender()
 
 		Microsoft::WRL::ComPtr<ID3DBlob> rootSignatureBlob;
 		Microsoft::WRL::ComPtr<ID3DBlob> errorBlob;
-		check(wrapD3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &rootSignatureBlob, &errorBlob));
+		ThrowIfFailed(wrapD3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &rootSignatureBlob, &errorBlob));
 
 		m_device->CreateRootSignature(0,
 			rootSignatureBlob->GetBufferPointer(),
@@ -344,7 +344,7 @@ D3D12GSRender::D3D12GSRender()
 
 	D3D12_HEAP_PROPERTIES hp = {};
 	hp.Type = D3D12_HEAP_TYPE_DEFAULT;
-	check(
+	ThrowIfFailed(
 		m_device->CreateCommittedResource(
 			&hp,
 			D3D12_HEAP_FLAG_NONE,
@@ -432,7 +432,7 @@ void D3D12GSRender::Clear(u32 cmd)
 	assert(cmd == NV4097_CLEAR_SURFACE);
 
 	ID3D12GraphicsCommandList *commandList;
-	check(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, getCurrentResourceStorage().m_commandAllocator, nullptr, IID_PPV_ARGS(&commandList)));
+	ThrowIfFailed(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, getCurrentResourceStorage().m_commandAllocator, nullptr, IID_PPV_ARGS(&commandList)));
 	getCurrentResourceStorage().m_inflightCommandList.push_back(commandList);
 
 	PrepareRenderTargets(commandList);
@@ -503,7 +503,7 @@ void D3D12GSRender::Clear(u32 cmd)
 		}
 	}
 
-	check(commandList->Close());
+	ThrowIfFailed(commandList->Close());
 	m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**) &commandList);
 }
 
@@ -716,7 +716,7 @@ void D3D12GSRender::Draw()
 	else
 		commandList->DrawInstanced((UINT)m_renderingInfo.m_count, 1, (UINT)m_renderingInfo.m_baseVertex, 0);
 
-	check(commandList->Close());
+	ThrowIfFailed(commandList->Close());
 	m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**)&commandList);
 	m_indexed_array.Reset();
 }
@@ -771,7 +771,7 @@ void D3D12GSRender::Flip()
 			assert(m_textureUploadData.canAlloc(textureSize));
 			size_t heapOffset = m_textureUploadData.alloc(textureSize);
 
-			check(m_device->CreatePlacedResource(
+			ThrowIfFailed(m_device->CreatePlacedResource(
 				m_textureUploadData.m_heap,
 				heapOffset,
 				&getBufferResourceDesc(textureSize),
@@ -782,13 +782,13 @@ void D3D12GSRender::Flip()
 			m_textureUploadData.m_resourceStoredSinceLastSync.push_back(std::make_tuple(heapOffset, textureSize, stagingTexture));
 
 			void *dstBuffer;
-			check(stagingTexture->Map(0, nullptr, &dstBuffer));
+			ThrowIfFailed(stagingTexture->Map(0, nullptr, &dstBuffer));
 			for (unsigned row = 0; row < h; row++)
 				memcpy((char*)dstBuffer + row * rowPitch, (char*)src_buffer + row * w * 4, w * 4);
 			stagingTexture->Unmap(0, nullptr);
 		}
 
-		check(
+		ThrowIfFailed(
 			m_device->CreateCommittedResource(
 				&heapProp,
 				D3D12_HEAP_FLAG_NONE,
@@ -896,10 +896,10 @@ void D3D12GSRender::Flip()
 	commandList->ResourceBarrier(1, &getResourceBarrierTransition(m_backBuffer[m_swapChain->GetCurrentBackBufferIndex()], D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
 	if (isFlipSurfaceInLocalMemory(m_surface_color_target) && m_rtts.m_currentlyBoundRenderTargets[0] != nullptr)
 		commandList->ResourceBarrier(1, &getResourceBarrierTransition(m_rtts.m_currentlyBoundRenderTargets[0], D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET));
-	check(commandList->Close());
+	ThrowIfFailed(commandList->Close());
 	m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**)&commandList);
 
-	check(m_swapChain->Present(Ini.GSVSyncEnable.GetValue() ? 1 : 0, 0));
+	ThrowIfFailed(m_swapChain->Present(Ini.GSVSyncEnable.GetValue() ? 1 : 0, 0));
 	// Add an event signaling queue completion
 
 	ResourceStorage &storage = getNonCurrentResourceStorage();
@@ -996,7 +996,7 @@ ID3D12Resource * D3D12GSRender::writeColorBuffer(ID3D12Resource * RTT, ID3D12Gra
 	size_t heapOffset = m_readbackResources.alloc(sizeInByte);
 
 	resdesc = getBufferResourceDesc(sizeInByte);
-	check(
+	ThrowIfFailed(
 		m_device->CreatePlacedResource(
 			m_readbackResources.m_heap,
 			heapOffset,
@@ -1030,7 +1030,7 @@ static
 void copyToCellRamAndRelease(void *dstAddress, ID3D12Resource *res, size_t dstPitch, size_t srcPitch, size_t width, size_t height)
 {
 	void *srcBuffer;
-	check(res->Map(0, nullptr, &srcBuffer));
+	ThrowIfFailed(res->Map(0, nullptr, &srcBuffer));
 	for (unsigned row = 0; row < height; row++)
 		memcpy((char*)dstAddress + row * dstPitch, (char*)srcBuffer + row * srcPitch, srcPitch);
 	res->Unmap(0, nullptr);
@@ -1050,7 +1050,7 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 
 
 	ID3D12Fence *fence;
-	check(
+	ThrowIfFailed(
 		m_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence))
 		);
 	HANDLE handle = CreateEvent(0, FALSE, FALSE, 0);
@@ -1076,7 +1076,7 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 		assert(m_UAVHeap.canAlloc(sizeInByte));
 		size_t heapOffset = m_UAVHeap.alloc(sizeInByte);
 
-		check(
+		ThrowIfFailed(
 			m_device->CreatePlacedResource(
 				m_UAVHeap.m_heap,
 				heapOffset,
@@ -1093,7 +1093,7 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 		heapOffset = m_readbackResources.alloc(sizeInByte);
 
 		resdesc = getBufferResourceDesc(sizeInByte);
-		check(
+		ThrowIfFailed(
 			m_device->CreatePlacedResource(
 				m_readbackResources.m_heap,
 				heapOffset,
@@ -1105,7 +1105,7 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 			);
 		m_readbackResources.m_resourceStoredSinceLastSync.push_back(std::make_tuple(heapOffset, sizeInByte, writeDest));
 
-		check(
+		ThrowIfFailed(
 			m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, getCurrentResourceStorage().m_commandAllocator, nullptr, IID_PPV_ARGS(&convertCommandList))
 			);
 
@@ -1113,7 +1113,7 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 		descriptorHeapDesc.NumDescriptors = 2;
 		descriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 		descriptorHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-		check(
+		ThrowIfFailed(
 			m_device->CreateDescriptorHeap(&descriptorHeapDesc, IID_PPV_ARGS(&descriptorHeap))
 			);
 		D3D12_CPU_DESCRIPTOR_HANDLE Handle = descriptorHeap->GetCPUDescriptorHandleForHeapStart();
@@ -1164,14 +1164,14 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 		convertCommandList->ResourceBarrier(2, barriers);
 		convertCommandList->ResourceBarrier(1, &getResourceBarrierTransition(depthConverted, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COPY_SOURCE));
 
-		check(convertCommandList->Close());
+		ThrowIfFailed(convertCommandList->Close());
 		m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**)&convertCommandList);
 	}
 
 	ID3D12GraphicsCommandList *downloadCommandList;
 	if (needTransfer)
 	{
-		check(
+		ThrowIfFailed(
 			m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, getCurrentResourceStorage().m_commandAllocator, nullptr, IID_PPV_ARGS(&downloadCommandList))
 			);
 	}
@@ -1237,7 +1237,7 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 	}
 	if (needTransfer)
 	{
-		check(downloadCommandList->Close());
+		ThrowIfFailed(downloadCommandList->Close());
 		m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**)&downloadCommandList);
 	}
 
@@ -1259,7 +1259,7 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 			auto ptr = vm::get_ptr<void>(address);
 			char *ptrAsChar = (char*)ptr;
 			unsigned char *writeDestPtr;
-			check(writeDest->Map(0, nullptr, (void**)&writeDestPtr));
+			ThrowIfFailed(writeDest->Map(0, nullptr, (void**)&writeDestPtr));
 			// TODO : this should be done by the gpu
 			for (unsigned row = 0; row < m_surface_clip_h; row++)
 			{

@@ -11,11 +11,13 @@
 
 #define SAFE_RELEASE(x) if (x) x->Release();
 
-inline
-void check(HRESULT hr)
+// From DX12 D3D11On12 Sample (MIT Licensed)
+inline void ThrowIfFailed(HRESULT hr)
 {
-	if (hr != 0)
-		abort();
+	if (FAILED(hr))
+	{
+		throw;
+	}
 }
 
 /**
