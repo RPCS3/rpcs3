@@ -30,7 +30,7 @@ s32 sys_mempool_create(vm::ptr<sys_mempool_t> mempool, vm::ptr<void> chunk, cons
 
 	if (block_size > chunk_size)
 	{
-		return EINVAL;
+		return CELL_EINVAL;
 	}
 
 	u64 alignment = ralignment;
@@ -42,17 +42,18 @@ s32 sys_mempool_create(vm::ptr<sys_mempool_t> mempool, vm::ptr<void> chunk, cons
 	// Check if alignment is power of two
 	if ((alignment & (alignment - 1)) != 0)
 	{
-		return EINVAL;
+		return CELL_EINVAL;
 	}
 
 	// Test chunk address aligment
-	vm::ptr<u8> test_align = vm::ptr<u8>::make(chunk.addr());
-	if (!test_align.aligned())
+	if (chunk % 8)
 	{
-		return EINVAL;
+		return CELL_EINVAL;
 	}
 
 	auto id = Emu.GetIdManager().make<memory_pool_t>();
+	*mempool = id;
+
 	auto memory_pool = Emu.GetIdManager().get<memory_pool_t>(id);
 
 	memory_pool->chunk = chunk;
@@ -62,12 +63,12 @@ s32 sys_mempool_create(vm::ptr<sys_mempool_t> mempool, vm::ptr<void> chunk, cons
 
 	// TODO: check blocks alignment wrt ralignment
 	u64 num_blocks = chunk_size / block_size;
+	memory_pool->free_blocks.resize(num_blocks);
 	for (int i = 0; i < num_blocks; ++i)
 	{
-		memory_pool->free_blocks.push_back(vm::ptr<void>::make(chunk.addr() + i * block_size));
+		memory_pool->free_blocks[i] = vm::ptr<void>::make(chunk.addr() + i * block_size);
 	}
-	*mempool = id;
-
+	
 	return CELL_OK;
 }
 
@@ -85,26 +86,26 @@ s32 sys_mempool_free_block(sys_mempool_t mempool, vm::ptr<void> block)
 	auto memory_pool = Emu.GetIdManager().get<memory_pool_t>(mempool);
 	if (!memory_pool)
 	{
-		return EINVAL;
+		return CELL_EINVAL;
 	}
 
 	// Cannot free a block not belonging to this memory pool
 	if (block.addr() > memory_pool->chunk.addr() + memory_pool->chunk_size)
 	{
-		return EINVAL;
+		return CELL_EINVAL;
 	}
 	memory_pool->free_blocks.push_back(block);
 	return CELL_OK;
 }
 
-s32 sys_mempool_get_count(sys_mempool_t mempool)
+u64 sys_mempool_get_count(sys_mempool_t mempool)
 {
 	sysPrxForUser.Warning("sys_mempool_get_count(mempool=%d)", mempool);
 
 	auto memory_pool = Emu.GetIdManager().get<memory_pool_t>(mempool);
 	if (!memory_pool)
 	{
-		return EINVAL;
+		return CELL_EINVAL;
 	}
 
 	return memory_pool->free_blocks.size();
