@@ -608,6 +608,7 @@
     <ClInclude Include="Emu\SysCalls\Modules\sceNpUtil.h" />
     <ClInclude Include="Emu\SysCalls\Modules\sysPrxForUser.h" />
     <ClInclude Include="Emu\SysCalls\Modules\sys_lv2dbg.h" />
+    <ClInclude Include="Emu\SysCalls\Modules\sys_mempool.h" />
     <ClInclude Include="Emu\SysCalls\Modules\sys_net.h" />
     <ClInclude Include="Emu\SysCalls\SC_FUNC.h" />
     <ClInclude Include="Emu\SysCalls\SysCalls.h" />

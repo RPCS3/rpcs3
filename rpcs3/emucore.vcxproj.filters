@@ -1828,5 +1828,8 @@
     <ClInclude Include="Emu\SysCalls\Modules\sceNp2.h">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\SysCalls\Modules\sys_mempool.h">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
