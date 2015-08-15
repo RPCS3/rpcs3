@@ -74,7 +74,7 @@ addons:
 # It passed but when coverall it failed.
 script:
 # Add a command to show all the variables now. maybe only useful for debugging travis.
- - echo "--Shell Export Lists START--" ; export -p; echo "--Shell Export Lists STOP--";
+# - echo "--Shell Export Lists START--" ; export -p; echo "--Shell Export Lists STOP--";
 # And to ensure the versions of toolchain
  - echo "--CXX version?"; "$CXX" --version; echo "--CXX version confirmed";
 # From https://github.com/devernay/cminpack/blob/master/.travis.yml: that is $COVERITY_SCAN_BRANCH not ${COVERITY_SCAN_BRANCH}
