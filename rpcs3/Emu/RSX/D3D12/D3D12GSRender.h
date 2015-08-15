@@ -314,8 +314,11 @@ private:
 	 */
 	struct ResourceStorage
 	{
-		ID3D12Fence* m_frameFinishedFence;
+		std::atomic<int> m_isUseable;
+		ComPtr<ID3D12Fence> m_frameFinishedFence;
+		UINT64 m_fenceValue;
 		HANDLE m_frameFinishedHandle;
+
 		ID3D12CommandAllocator *m_commandAllocator;
 		ID3D12CommandAllocator *m_downloadCommandAllocator;
 		std::list<ID3D12GraphicsCommandList *> m_inflightCommandList;

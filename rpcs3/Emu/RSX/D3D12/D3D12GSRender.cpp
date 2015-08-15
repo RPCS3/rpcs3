@@ -99,8 +99,6 @@ void D3D12GSRender::ResourceStorage::Reset()
 	m_constantsBufferIndex = 0;
 	m_currentScaleOffsetBufferIndex = 0;
 	m_currentTextureIndex = 0;
-	m_frameFinishedFence = nullptr;
-	m_frameFinishedHandle = 0;
 	m_currentSamplerIndex = 0;
 	m_samplerDescriptorHeapIndex = 0;
 
@@ -115,7 +113,6 @@ void D3D12GSRender::ResourceStorage::Reset()
 void D3D12GSRender::ResourceStorage::Init(ID3D12Device *device)
 {
 	m_RAMFramebuffer = nullptr;
-	m_frameFinishedHandle = 0;
 	// Create a global command allocator
 	device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocator));
 	device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_textureUploadCommandAllocator));
@@ -144,6 +141,11 @@ void D3D12GSRender::ResourceStorage::Init(ID3D12Device *device)
 	textureDescriptorDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
 	ThrowIfFailed(device->CreateDescriptorHeap(&textureDescriptorDesc, IID_PPV_ARGS(&m_samplerDescriptorHeap[0])));
 	ThrowIfFailed(device->CreateDescriptorHeap(&textureDescriptorDesc, IID_PPV_ARGS(&m_samplerDescriptorHeap[1])));
+
+	m_frameFinishedHandle = CreateEventEx(nullptr, FALSE, FALSE, EVENT_ALL_ACCESS);
+	m_fenceValue = 0;
+	ThrowIfFailed(device->CreateFence(m_fenceValue++, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(m_frameFinishedFence.GetAddressOf())));
+	m_isUseable = true;
 }
 
 void D3D12GSRender::ResourceStorage::Release()
@@ -159,10 +161,7 @@ void D3D12GSRender::ResourceStorage::Release()
 	m_commandAllocator->Release();
 	m_textureUploadCommandAllocator->Release();
 	m_downloadCommandAllocator->Release();
-	if (m_frameFinishedHandle)
-		CloseHandle(m_frameFinishedHandle);
-	if (m_frameFinishedFence)
-		m_frameFinishedFence->Release();
+	CloseHandle(m_frameFinishedHandle);
 }
 
 
@@ -374,6 +373,10 @@ D3D12GSRender::D3D12GSRender()
 
 D3D12GSRender::~D3D12GSRender()
 {
+	while (!getCurrentResourceStorage().m_isUseable.load(std::memory_order_acquire) &&
+		!getNonCurrentResourceStorage().m_isUseable.load(std::memory_order_acquire))
+		std::this_thread::yield();
+
 	gfxHandler = [this](u32) { return false; };
 	m_constantsData.Release();
 	m_vertexIndexData.Release();
@@ -901,10 +904,9 @@ void D3D12GSRender::Flip()
 
 	ResourceStorage &storage = getNonCurrentResourceStorage();
 
-	m_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&storage.m_frameFinishedFence));
-	storage.m_frameFinishedHandle = CreateEvent(0, 0, 0, 0);
-	storage.m_frameFinishedFence->SetEventOnCompletion(1, storage.m_frameFinishedHandle);
-	m_commandQueueGraphic->Signal(storage.m_frameFinishedFence, 1);
+	storage.m_frameFinishedFence->SetEventOnCompletion(storage.m_fenceValue, storage.m_frameFinishedHandle);
+	m_commandQueueGraphic->Signal(storage.m_frameFinishedFence.Get(), storage.m_fenceValue);
+	storage.m_fenceValue++;
 
 	// Flush
 	m_texturesRTTs.clear();
@@ -922,11 +924,11 @@ void D3D12GSRender::Flip()
 	std::vector<ID3D12Resource *> textoclean = m_texToClean;
 	m_texToClean.clear();
 
+	storage.m_isUseable.store(false);
+
 	m_GC.pushWork([&, cleaningFunction, textoclean]()
 	{
-		WaitForSingleObject(storage.m_frameFinishedHandle, INFINITE);
-		CloseHandle(storage.m_frameFinishedHandle);
-		storage.m_frameFinishedFence->Release();
+		WaitForSingleObjectEx(storage.m_frameFinishedHandle, INFINITE, FALSE);
 
 		for (auto &cleanFunc : cleaningFunction)
 			cleanFunc();
@@ -937,9 +939,10 @@ void D3D12GSRender::Flip()
 
 		SAFE_RELEASE(storage.m_RAMFramebuffer);
 		storage.m_RAMFramebuffer = nullptr;
+		storage.m_isUseable.store(true, std::memory_order_release);
 	});
 
-	while (getCurrentResourceStorage().m_frameFinishedHandle)
+	while (!getCurrentResourceStorage().m_isUseable.load(std::memory_order_acquire))
 		std::this_thread::yield();
 	m_frame->Flip(nullptr);
 
