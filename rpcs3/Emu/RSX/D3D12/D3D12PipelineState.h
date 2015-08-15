@@ -1,14 +1,11 @@
 #pragma once
 #if defined (DX12_SUPPORT)
 
-#include <d3d12.h>
-#include <wrl/client.h>
+#include "D3D12.h"
 #include "../Common/ProgramStateCache.h"
 #include "D3D12VertexProgramDecompiler.h"
 #include "D3D12FragmentProgramDecompiler.h"
 #include "Utilities/File.h"
-
-
 
 struct D3D12PipelineProperties
 {
@@ -66,7 +63,7 @@ public:
 	~Shader() {}
 
 	u32 id;
-	Microsoft::WRL::ComPtr<ID3DBlob> bytecode;
+	ComPtr<ID3DBlob> bytecode;
 	std::vector<size_t> FragmentConstantOffsetCache;
 	size_t m_textureCount;
 
@@ -86,7 +83,7 @@ struct D3D12Traits
 	typedef Shader FragmentProgramData;
 	typedef std::pair<ID3D12PipelineState *, size_t> PipelineData;
 	typedef D3D12PipelineProperties PipelineProperties;
-	typedef std::pair<ID3D12Device *, ID3D12RootSignature **> ExtraData;
+	typedef std::pair<ID3D12Device *, ComPtr<ID3D12RootSignature> *> ExtraData;
 
 	static
 	void RecompileFragmentProgram(RSXFragmentProgram *RSXFP, FragmentProgramData& fragmentProgramData, size_t ID)
@@ -145,7 +142,7 @@ struct D3D12Traits
 		graphicPipelineStateDesc.PS.BytecodeLength = fragmentProgramData.bytecode->GetBufferSize();
 		graphicPipelineStateDesc.PS.pShaderBytecode = fragmentProgramData.bytecode->GetBufferPointer();
 
-		graphicPipelineStateDesc.pRootSignature = extraData.second[fragmentProgramData.m_textureCount];
+		graphicPipelineStateDesc.pRootSignature = extraData.second[fragmentProgramData.m_textureCount].Get();
 		result->second = fragmentProgramData.m_textureCount;
 
 		graphicPipelineStateDesc.BlendState = pipelineProperties.Blend;

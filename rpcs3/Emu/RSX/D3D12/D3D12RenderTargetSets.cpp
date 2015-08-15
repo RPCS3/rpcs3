@@ -12,7 +12,7 @@
 #include "D3D12.h"
 #include "D3D12GSRender.h"
 
-void D3D12GSRender::PrepareRenderTargets()
+void D3D12GSRender::PrepareRenderTargets(ID3D12GraphicsCommandList *copycmdlist)
 {
 	// FBO location has changed, previous data might be copied
 	u32 address_a = m_set_context_dma_color_a ? GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000) : 0;
@@ -20,10 +20,6 @@ void D3D12GSRender::PrepareRenderTargets()
 	u32 address_c = m_set_context_dma_color_c ? GetAddress(m_surface_offset_c, m_context_dma_color_c - 0xfeed0000) : 0;
 	u32 address_d = m_set_context_dma_color_d ? GetAddress(m_surface_offset_d, m_context_dma_color_d - 0xfeed0000) : 0;
 	u32 address_z = m_set_context_dma_z ? GetAddress(m_surface_offset_z, m_context_dma_z - 0xfeed0000) : 0;
-
-	ID3D12GraphicsCommandList *copycmdlist;
-	check(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, getCurrentResourceStorage().m_commandAllocator, nullptr, IID_PPV_ARGS(&copycmdlist)));
-	getCurrentResourceStorage().m_inflightCommandList.push_back(copycmdlist);
 
 	// Make previous RTTs sampleable
 	for (unsigned i = 0; i < 4; i++)
@@ -63,66 +59,66 @@ void D3D12GSRender::PrepareRenderTargets()
 	{
 	case CELL_GCM_SURFACE_TARGET_0:
 	{
-		ID3D12Resource *rttA = m_rtts.bindAddressAsRenderTargets(m_device, copycmdlist, 0, address_a, m_surface_clip_w, m_surface_clip_h, m_surface_color_format,
+		ID3D12Resource *rttA = m_rtts.bindAddressAsRenderTargets(m_device.Get(), copycmdlist, 0, address_a, m_surface_clip_w, m_surface_clip_h, m_surface_color_format,
 			m_clear_surface_color_r / 255.0f, m_clear_surface_color_g / 255.0f, m_clear_surface_color_b / 255.0f, m_clear_surface_color_a / 255.0f);
 		m_device->CreateRenderTargetView(rttA, &rttViewDesc, Handle);
 		break;
 	}
 	case CELL_GCM_SURFACE_TARGET_1:
 	{
-		ID3D12Resource *rttB = m_rtts.bindAddressAsRenderTargets(m_device, copycmdlist, 0, address_b, m_surface_clip_w, m_surface_clip_h, m_surface_color_format,
+		ID3D12Resource *rttB = m_rtts.bindAddressAsRenderTargets(m_device.Get(), copycmdlist, 0, address_b, m_surface_clip_w, m_surface_clip_h, m_surface_color_format,
 			m_clear_surface_color_r / 255.0f, m_clear_surface_color_g / 255.0f, m_clear_surface_color_b / 255.0f, m_clear_surface_color_a / 255.0f);
 		m_device->CreateRenderTargetView(rttB, &rttViewDesc, Handle);
 		break;
 	}
 	case CELL_GCM_SURFACE_TARGET_MRT1:
 	{
-		ID3D12Resource *rttA = m_rtts.bindAddressAsRenderTargets(m_device, copycmdlist, 0, address_a, m_surface_clip_w, m_surface_clip_h, m_surface_color_format,
+		ID3D12Resource *rttA = m_rtts.bindAddressAsRenderTargets(m_device.Get(), copycmdlist, 0, address_a, m_surface_clip_w, m_surface_clip_h, m_surface_color_format,
 			m_clear_surface_color_r / 255.0f, m_clear_surface_color_g / 255.0f, m_clear_surface_color_b / 255.0f, m_clear_surface_color_a / 255.0f);
 		m_device->CreateRenderTargetView(rttA, &rttViewDesc, Handle);
 		Handle.ptr += g_RTTIncrement;
-		ID3D12Resource *rttB = m_rtts.bindAddressAsRenderTargets(m_device, copycmdlist, 1, address_b, m_surface_clip_w, m_surface_clip_h, m_surface_color_format,
+		ID3D12Resource *rttB = m_rtts.bindAddressAsRenderTargets(m_device.Get(), copycmdlist, 1, address_b, m_surface_clip_w, m_surface_clip_h, m_surface_color_format,
 			m_clear_surface_color_r / 255.0f, m_clear_surface_color_g / 255.0f, m_clear_surface_color_b / 255.0f, m_clear_surface_color_a / 255.0f);
 		m_device->CreateRenderTargetView(rttB, &rttViewDesc, Handle);
 	}
 	break;
 	case CELL_GCM_SURFACE_TARGET_MRT2:
 	{
-		ID3D12Resource *rttA = m_rtts.bindAddressAsRenderTargets(m_device, copycmdlist, 0, address_a, m_surface_clip_w, m_surface_clip_h, m_surface_color_format,
+		ID3D12Resource *rttA = m_rtts.bindAddressAsRenderTargets(m_device.Get(), copycmdlist, 0, address_a, m_surface_clip_w, m_surface_clip_h, m_surface_color_format,
 			m_clear_surface_color_r / 255.0f, m_clear_surface_color_g / 255.0f, m_clear_surface_color_b / 255.0f, m_clear_surface_color_a / 255.0f);
 		m_device->CreateRenderTargetView(rttA, &rttViewDesc, Handle);
 		Handle.ptr += g_RTTIncrement;
-		ID3D12Resource *rttB = m_rtts.bindAddressAsRenderTargets(m_device, copycmdlist, 1, address_b, m_surface_clip_w, m_surface_clip_h, m_surface_color_format,
+		ID3D12Resource *rttB = m_rtts.bindAddressAsRenderTargets(m_device.Get(), copycmdlist, 1, address_b, m_surface_clip_w, m_surface_clip_h, m_surface_color_format,
 			m_clear_surface_color_r / 255.0f, m_clear_surface_color_g / 255.0f, m_clear_surface_color_b / 255.0f, m_clear_surface_color_a / 255.0f);
 		m_device->CreateRenderTargetView(rttB, &rttViewDesc, Handle);
 		Handle.ptr += g_RTTIncrement;
-		ID3D12Resource *rttC = m_rtts.bindAddressAsRenderTargets(m_device, copycmdlist, 2, address_c, m_surface_clip_w, m_surface_clip_h, m_surface_color_format,
+		ID3D12Resource *rttC = m_rtts.bindAddressAsRenderTargets(m_device.Get(), copycmdlist, 2, address_c, m_surface_clip_w, m_surface_clip_h, m_surface_color_format,
 			m_clear_surface_color_r / 255.0f, m_clear_surface_color_g / 255.0f, m_clear_surface_color_b / 255.0f, m_clear_surface_color_a / 255.0f);
 		m_device->CreateRenderTargetView(rttC, &rttViewDesc, Handle);
 		break;
 	}
 	case CELL_GCM_SURFACE_TARGET_MRT3:
 	{
-		ID3D12Resource *rttA = m_rtts.bindAddressAsRenderTargets(m_device, copycmdlist, 0, address_a, m_surface_clip_w, m_surface_clip_h, m_surface_color_format,
+		ID3D12Resource *rttA = m_rtts.bindAddressAsRenderTargets(m_device.Get(), copycmdlist, 0, address_a, m_surface_clip_w, m_surface_clip_h, m_surface_color_format,
 			m_clear_surface_color_r / 255.0f, m_clear_surface_color_g / 255.0f, m_clear_surface_color_b / 255.0f, m_clear_surface_color_a / 255.0f);
 		m_device->CreateRenderTargetView(rttA, &rttViewDesc, Handle);
 		Handle.ptr += g_RTTIncrement;
-		ID3D12Resource *rttB = m_rtts.bindAddressAsRenderTargets(m_device, copycmdlist, 1, address_b, m_surface_clip_w, m_surface_clip_h, m_surface_color_format,
+		ID3D12Resource *rttB = m_rtts.bindAddressAsRenderTargets(m_device.Get(), copycmdlist, 1, address_b, m_surface_clip_w, m_surface_clip_h, m_surface_color_format,
 			m_clear_surface_color_r / 255.0f, m_clear_surface_color_g / 255.0f, m_clear_surface_color_b / 255.0f, m_clear_surface_color_a / 255.0f);
 		m_device->CreateRenderTargetView(rttB, &rttViewDesc, Handle);
 		Handle.ptr += g_RTTIncrement;
-		ID3D12Resource *rttC = m_rtts.bindAddressAsRenderTargets(m_device, copycmdlist, 2, address_c, m_surface_clip_w, m_surface_clip_h, m_surface_color_format,
+		ID3D12Resource *rttC = m_rtts.bindAddressAsRenderTargets(m_device.Get(), copycmdlist, 2, address_c, m_surface_clip_w, m_surface_clip_h, m_surface_color_format,
 			m_clear_surface_color_r / 255.0f, m_clear_surface_color_g / 255.0f, m_clear_surface_color_b / 255.0f, m_clear_surface_color_a / 255.0f);
 		m_device->CreateRenderTargetView(rttC, &rttViewDesc, Handle);
 		Handle.ptr += g_RTTIncrement;
-		ID3D12Resource *rttD = m_rtts.bindAddressAsRenderTargets(m_device, copycmdlist, 3, address_d, m_surface_clip_w, m_surface_clip_h, m_surface_color_format,
+		ID3D12Resource *rttD = m_rtts.bindAddressAsRenderTargets(m_device.Get(), copycmdlist, 3, address_d, m_surface_clip_w, m_surface_clip_h, m_surface_color_format,
 			m_clear_surface_color_r / 255.0f, m_clear_surface_color_g / 255.0f, m_clear_surface_color_b / 255.0f, m_clear_surface_color_a / 255.0f);
 		m_device->CreateRenderTargetView(rttD, &rttViewDesc, Handle);
 		break;
 	}
 	}
 
-	ID3D12Resource *ds = m_rtts.bindAddressAsDepthStencil(m_device, copycmdlist, address_z, m_surface_clip_w, m_surface_clip_h, m_surface_depth_format, 1., 0);
+	ID3D12Resource *ds = m_rtts.bindAddressAsDepthStencil(m_device.Get(), copycmdlist, address_z, m_surface_clip_w, m_surface_clip_h, m_surface_depth_format, 1., 0);
 
 	D3D12_DEPTH_STENCIL_VIEW_DESC depthStencilViewDesc = {};
 	switch (m_surface_depth_format)
@@ -141,9 +137,6 @@ void D3D12GSRender::PrepareRenderTargets()
 	}
 	depthStencilViewDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
 	m_device->CreateDepthStencilView(ds, &depthStencilViewDesc, m_rtts.m_depthStencilDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
-
-	check(copycmdlist->Close());
-	m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**)&copycmdlist);
 }
 
 ID3D12Resource *RenderTargets::bindAddressAsRenderTargets(ID3D12Device *device, ID3D12GraphicsCommandList *cmdList, size_t slot, u32 address,

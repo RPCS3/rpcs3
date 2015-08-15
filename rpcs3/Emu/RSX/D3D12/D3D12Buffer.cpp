@@ -205,7 +205,7 @@ ID3D12Resource *createVertexBuffer(const VertexBufferFormat &vbf, const RSXVerte
 	size_t heapOffset = vertexIndexHeap.alloc(subBufferSize);
 
 	ID3D12Resource *vertexBuffer;
-	check(device->CreatePlacedResource(
+	ThrowIfFailed(device->CreatePlacedResource(
 		vertexIndexHeap.m_heap,
 		heapOffset,
 		&getBufferResourceDesc(subBufferSize),
@@ -214,7 +214,7 @@ ID3D12Resource *createVertexBuffer(const VertexBufferFormat &vbf, const RSXVerte
 		IID_PPV_ARGS(&vertexBuffer)
 		));
 	void *bufferMap;
-	check(vertexBuffer->Map(0, nullptr, (void**)&bufferMap));
+	ThrowIfFailed(vertexBuffer->Map(0, nullptr, (void**)&bufferMap));
 	memset(bufferMap, -1, subBufferSize);
 	#pragma omp parallel for
 	for (int vertex = 0; vertex < vbf.elementCount; vertex++)
@@ -279,7 +279,7 @@ std::vector<D3D12_VERTEX_BUFFER_VIEW> D3D12GSRender::UploadVertexBuffers(bool in
 {
 	std::vector<D3D12_VERTEX_BUFFER_VIEW> result;
 	const std::vector<VertexBufferFormat> &vertexBufferFormat = FormatVertexData(m_vertex_data);
-	m_IASet = getIALayout(m_device, vertexBufferFormat, m_vertex_data);
+	m_IASet = getIALayout(m_device.Get(), vertexBufferFormat, m_vertex_data);
 
 	const u32 data_offset = indexed_draw ? 0 : m_draw_array_first;
 
@@ -302,7 +302,7 @@ std::vector<D3D12_VERTEX_BUFFER_VIEW> D3D12GSRender::UploadVertexBuffers(bool in
 			vertexBuffer = It->second;
 		else
 		{
-			vertexBuffer = createVertexBuffer(vbf, m_vertex_data, m_device, m_vertexIndexData);
+			vertexBuffer = createVertexBuffer(vbf, m_vertex_data, m_device.Get(), m_vertexIndexData);
 			m_vertexCache[key] = vertexBuffer;
 		}
 
@@ -405,7 +405,7 @@ D3D12_INDEX_BUFFER_VIEW D3D12GSRender::uploadIndexBuffers(bool indexed_draw)
 	size_t heapOffset = m_vertexIndexData.alloc(subBufferSize);
 
 	ID3D12Resource *indexBuffer;
-	check(m_device->CreatePlacedResource(
+	ThrowIfFailed(m_device->CreatePlacedResource(
 		m_vertexIndexData.m_heap,
 		heapOffset,
 		&getBufferResourceDesc(subBufferSize),
@@ -415,7 +415,7 @@ D3D12_INDEX_BUFFER_VIEW D3D12GSRender::uploadIndexBuffers(bool indexed_draw)
 		));
 
 	void *bufferMap;
-	check(indexBuffer->Map(0, nullptr, (void**)&bufferMap));
+	ThrowIfFailed(indexBuffer->Map(0, nullptr, (void**)&bufferMap));
 	if (indexed_draw && !forcedIndexBuffer)
 		streamBuffer(bufferMap, m_indexed_array.m_data.data(), subBufferSize);
 	else if (indexed_draw && forcedIndexBuffer)
@@ -499,7 +499,7 @@ void D3D12GSRender::setScaleOffset()
 	D3D12_RANGE range = { heapOffset, heapOffset + 256 };
 
 	void *scaleOffsetMap;
-	check(m_constantsData.m_heap->Map(0, &range, &scaleOffsetMap));
+	ThrowIfFailed(m_constantsData.m_heap->Map(0, &range, &scaleOffsetMap));
 	streamToBuffer((char*)scaleOffsetMap + heapOffset, scaleOffsetMat, 16 * sizeof(float));
 	int isAlphaTested = m_set_alpha_test;
 	memcpy((char*)scaleOffsetMap + heapOffset + 16 * sizeof(float), &isAlphaTested, sizeof(int));
@@ -531,7 +531,7 @@ void D3D12GSRender::FillVertexShaderConstantsBuffer()
 	D3D12_RANGE range = { heapOffset, heapOffset + bufferSize };
 
 	void *constantsBufferMap;
-	check(m_constantsData.m_heap->Map(0, &range, &constantsBufferMap));
+	ThrowIfFailed(m_constantsData.m_heap->Map(0, &range, &constantsBufferMap));
 	for (const auto &vertexConstants : m_vertexConstants)
 	{
 		float data[4] = {
@@ -568,7 +568,7 @@ void D3D12GSRender::FillPixelShaderConstantsBuffer()
 
 	size_t offset = 0;
 	void *constantsBufferMap;
-	check(m_constantsData.m_heap->Map(0, &range, &constantsBufferMap));
+	ThrowIfFailed(m_constantsData.m_heap->Map(0, &range, &constantsBufferMap));
 	for (size_t offsetInFP : fragmentOffset)
 	{
 		u32 vector[4];

@@ -3,19 +3,24 @@
 
 #include <d3d12.h>
 #include <cassert>
+#include <wrl/client.h>
 #include "utilities/Log.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/RSX/GCM.h"
 
 #pragma comment (lib, "dxgi.lib")
 
+using namespace Microsoft::WRL;
+
 #define SAFE_RELEASE(x) if (x) x->Release();
 
-inline
-void check(HRESULT hr)
+// From DX12 D3D11On12 Sample (MIT Licensed)
+inline void ThrowIfFailed(HRESULT hr)
 {
-	if (hr != 0)
-		abort();
+	if (FAILED(hr))
+	{
+		throw;
+	}
 }
 
 /**

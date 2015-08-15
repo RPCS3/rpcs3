@@ -185,7 +185,7 @@ void D3D12GSRender::Shader::Init(ID3D12Device *device)
 	psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 	psoDesc.BlendState.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
 
-	check(device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_PSO)));
+	ThrowIfFailed(device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_PSO)));
 
 
 	float quadVertex[16] = {
@@ -197,7 +197,7 @@ void D3D12GSRender::Shader::Init(ID3D12Device *device)
 
 	D3D12_HEAP_PROPERTIES heapProp = {};
 	heapProp.Type = D3D12_HEAP_TYPE_UPLOAD;
-	check(
+	ThrowIfFailed(
 		device->CreateCommittedResource(
 			&heapProp,
 			D3D12_HEAP_FLAG_NONE,
@@ -217,11 +217,11 @@ void D3D12GSRender::Shader::Init(ID3D12Device *device)
 	heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 	heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 
-	check(
+	ThrowIfFailed(
 		device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&m_textureDescriptorHeap))
 		);
 	heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
-	check(
+	ThrowIfFailed(
 		device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&m_samplerDescriptorHeap))
 		);
 }
@@ -229,7 +229,7 @@ void D3D12GSRender::Shader::Init(ID3D12Device *device)
 void D3D12GSRender::initConvertShader()
 {
 	const auto &p = compileF32toU8CS();
-	check(
+	ThrowIfFailed(
 		m_device->CreateRootSignature(0, p.second->GetBufferPointer(), p.second->GetBufferSize(), IID_PPV_ARGS(&m_convertRootSignature))
 		);
 
@@ -238,7 +238,7 @@ void D3D12GSRender::initConvertShader()
 	computePipelineStateDesc.CS.pShaderBytecode = p.first->GetBufferPointer();
 	computePipelineStateDesc.pRootSignature = m_convertRootSignature;
 
-	check(
+	ThrowIfFailed(
 		m_device->CreateComputePipelineState(&computePipelineStateDesc, IID_PPV_ARGS(&m_convertPSO))
 		);
 

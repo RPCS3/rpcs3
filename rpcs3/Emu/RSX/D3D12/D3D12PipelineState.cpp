@@ -10,8 +10,9 @@
 #define TO_STRING(x) #x
 
 void Shader::Compile(const std::string &code, SHADER_TYPE st)
-{	HRESULT hr;
-	Microsoft::WRL::ComPtr<ID3DBlob> errorBlob;
+{
+	HRESULT hr;
+	ComPtr<ID3DBlob> errorBlob;
 	switch (st)
 	{
 	case SHADER_TYPE::SHADER_TYPE_VERTEX:
@@ -26,9 +27,6 @@ void Shader::Compile(const std::string &code, SHADER_TYPE st)
 		break;
 	}
 }
-
-
-
 
 bool D3D12GSRender::LoadProgram()
 {
@@ -287,7 +285,7 @@ bool D3D12GSRender::LoadProgram()
 
 	prop.IASet = m_IASet;
 
-	m_PSO = m_cachePSO.getGraphicPipelineState(m_cur_vertex_prog, m_cur_fragment_prog, prop, std::make_pair(m_device, m_rootSignatures));
+	m_PSO = m_cachePSO.getGraphicPipelineState(m_cur_vertex_prog, m_cur_fragment_prog, prop, std::make_pair(m_device.Get(), m_rootSignatures));
 	return m_PSO != nullptr;
 }
 
