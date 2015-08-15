@@ -12,7 +12,7 @@ add_custom_command(OUTPUT something_that_never_exists
 	COMMAND ${CMAKE_COMMAND} -DSOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}
 		-P ${CMAKE_CURRENT_SOURCE_DIR}/git-version.cmake)
 
-if (CMAKE_COMPILER_IS_GNUCXX)
+if(CMAKE_COMPILER_IS_GNUCXX)
 	if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.7.0)
 		message(FATAL_ERROR "GCC ${CMAKE_CXX_COMPILER_VERSION} is too old.")
 	endif()
@@ -22,15 +22,18 @@ elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 	# TODO: stdlib?
 endif()
 
-if (NOT MSVC)
+if(NOT MSVC)
 	add_definitions(-DwxGUI)
+	if($ENV{CI})
+		set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O1") # fix for travis gcc OoM crash. Might be fixed with the move to containers.
+	endif()
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -fexceptions")
 	add_compile_options(-msse -msse2 -mcx16 -mssse3)
 else()
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHa /Zc:throwingNew /D _CRT_SECURE_NO_DEPRECATE=1 /D _CRT_NON_CONFORMING_SWPRINTFS=1 /D _SCL_SECURE_NO_WARNINGS=1")
 endif()
 
-if (APPLE)
+if(APPLE)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -I/opt/X11/include")
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -I/opt/X11/include")
 endif()
