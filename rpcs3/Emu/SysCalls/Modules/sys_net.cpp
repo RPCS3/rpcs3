@@ -32,21 +32,25 @@ int inet_pton4(const char *src, char *dst)
 	saw_digit = 0;
 	octets = 0;
 	*(tp = tmp) = 0;
-	while ((ch = *src++) != '\0') {
+	while ((ch = *src++) != '\0')
+	{
 		const char *pch;
 
-		if ((pch = strchr(digits, ch)) != NULL) {
+		if ((pch = strchr(digits, ch)) != NULL)
+		{
 			unsigned int n = *tp * 10 + (pch - digits);
 
 			if (n > 255)
 				return (0);
 			*tp = n;
-			if (! saw_digit) {
+			if (! saw_digit)
+			{
 				if (++octets > 4)
 					return (0);
 				saw_digit = 1;
 			}
-		} else if (ch == '.' && saw_digit) {
+		} else if (ch == '.' && saw_digit)
+		{
 			if (octets == 4)
 				return 0;
 			*++tp = 0;
@@ -63,7 +67,8 @@ int inet_pton4(const char *src, char *dst)
 
 int inet_pton(int af, const char *src, char *dst)
 {
-	switch (af) {
+	switch (af)
+	{
 	case AF_INET:
 		return (inet_pton4(src, dst));
 
@@ -155,12 +160,14 @@ namespace sys_net
 		libnet.Warning("accept(s=%d, family=*0x%x, paddrlen=*0x%x)", s, addr, paddrlen);
 		s = g_socketMap[s];
 
-		if (!addr) {
+		if (!addr)
+		{
 			int ret = ::accept(s, nullptr, nullptr);
 			get_errno() = getLastError();
 			return ret;
 		}
-		else {
+		else
+		{
 			::sockaddr _addr;
 			memcpy(&_addr, addr.get_ptr(), sizeof(::sockaddr));
 			_addr.sa_family = addr->sa_family;

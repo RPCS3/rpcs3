@@ -109,7 +109,7 @@ vm::ptr<CellGcmReportData> cellGcmGetReportDataAddressLocation(u32 index, u32 lo
 		
 		if (Emu.GetGSManager().GetRender().dma_report == CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_REPORT)
 		{
-			// TOOD: Investigate the correctness. The report address is used in report_to_main_memory grapics sample.
+			// TOOD: Investigate the correctness. This report address is used in report_to_main_memory graphics sample.
 			reportAddr = 0x0e000000;
 		}
 		else if (index != 0)
@@ -118,7 +118,7 @@ vm::ptr<CellGcmReportData> cellGcmGetReportDataAddressLocation(u32 index, u32 lo
 		}
 		else
 		{
-			reportAddr = Emu.GetGSManager().GetRender().m_report_main_addr + index * 0x10;
+			reportAddr = Emu.GetGSManager().GetRender().m_report_main_addr;
 		}
 
 		return vm::ptr<CellGcmReportData>::make(reportAddr);
@@ -772,9 +772,9 @@ u64 cellGcmGetLastFlipTime()
 	return Emu.GetGSManager().GetRender().m_last_flip_time;
 }
 
-s32 cellGcmGetLastSecondVTime()
+u64 cellGcmGetLastSecondVTime()
 {
-	UNIMPLEMENTED_FUNC(cellGcmSys);
+	cellGcmSys.Todo("cellGcmGetLastSecondVTime()");
 	return CELL_OK;
 }
 

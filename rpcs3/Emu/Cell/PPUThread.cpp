@@ -83,11 +83,11 @@ void PPUThread::dump_info() const
 {
 	if (~hle_code < 1024)
 	{
-		LOG_ERROR(HLE, "Last syscall: %lld (%s)", ~hle_code, SysCalls::GetFuncName(hle_code));
+		LOG_WARNING(HLE, "Last syscall: %lld (%s)", ~hle_code, SysCalls::GetFuncName(hle_code));
 	}
 	else if (hle_code)
 	{
-		LOG_ERROR(HLE, "Last function: %s (0x%llx)", SysCalls::GetFuncName(hle_code), hle_code);
+		LOG_WARNING(HLE, "Last function: %s (0x%llx)", SysCalls::GetFuncName(hle_code), hle_code);
 	}
 
 	CPUThread::dump_info();

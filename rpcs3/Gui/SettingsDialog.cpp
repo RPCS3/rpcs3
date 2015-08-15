@@ -78,6 +78,7 @@ SettingsDialog::SettingsDialog(wxWindow *parent)
 
 	// Miscellaneous
 	wxStaticBoxSizer* s_round_hle_log_lvl = new wxStaticBoxSizer(wxVERTICAL, p_misc, _("Log Level"));
+	wxStaticBoxSizer* s_round_hle_license_area = new wxStaticBoxSizer(wxVERTICAL, p_misc, _("License Area"));
 
 	// Networking
 	wxStaticBoxSizer* s_round_net_status = new wxStaticBoxSizer(wxVERTICAL, p_networking, _("Connection status"));
@@ -101,6 +102,7 @@ SettingsDialog::SettingsDialog(wxWindow *parent)
 	wxComboBox* cbox_camera_type = new wxComboBox(p_io, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(150, -1), 0, NULL, wxCB_READONLY);
 	wxComboBox* cbox_audio_out = new wxComboBox(p_audio, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(150, -1), 0, NULL, wxCB_READONLY);
 	wxComboBox* cbox_hle_loglvl = new wxComboBox(p_misc, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(150, -1), 0, NULL, wxCB_READONLY);
+	wxComboBox* cbox_hle_license_area = new wxComboBox(p_misc, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(150, -1), 0, NULL, wxCB_READONLY);
 	wxComboBox* cbox_net_status = new wxComboBox(p_networking, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY);
 	wxComboBox* cbox_net_interface = new wxComboBox(p_networking, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY);
 	wxComboBox* cbox_sys_lang = new wxComboBox(p_system, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY);
@@ -134,7 +136,7 @@ SettingsDialog::SettingsDialog(wxWindow *parent)
 	wxCheckBox* chbox_dbg_ap_functioncall = new wxCheckBox(p_misc, wxID_ANY, "Auto Pause at Function Call");
 
 	//Custom EmulationDir
-	wxCheckBox* chbox_emulationdir_enable = new wxCheckBox(p_system, wxID_ANY, "Use Path Below as EmulationDir ? (Need Restart)");
+	wxCheckBox* chbox_emulationdir_enable = new wxCheckBox(p_system, wxID_ANY, "Use path below as EmulationDir. (Restart required)");
 	wxTextCtrl* txt_emulationdir_path = new wxTextCtrl(p_system, wxID_ANY, Emu.GetEmulatorPath());
 
 
@@ -217,6 +219,14 @@ SettingsDialog::SettingsDialog(wxWindow *parent)
 	cbox_hle_loglvl->Append("Errors");
 	cbox_hle_loglvl->Append("Nothing");
 
+	cbox_hle_license_area->Append("SCEJ (Japan)");
+	cbox_hle_license_area->Append("SCEA (North America, South America, Canada)");
+	cbox_hle_license_area->Append("SCEE (Europe, Russia, Oceania, UK)");
+	cbox_hle_license_area->Append("SCEH (Hong Kong, Taiwan, Southeast Asia)");
+	cbox_hle_license_area->Append("SCEK (Korea)");
+	cbox_hle_license_area->Append("SCH (China)");
+	cbox_hle_license_area->Append("Other");
+
 	cbox_net_status->Append("IP Obtained");
 	cbox_net_status->Append("Obtaining IP");
 	cbox_net_status->Append("Connecting");
@@ -282,6 +292,7 @@ SettingsDialog::SettingsDialog(wxWindow *parent)
 	cbox_camera->SetSelection(Ini.Camera.GetValue());
 	cbox_camera_type->SetSelection(Ini.CameraType.GetValue());
 	cbox_hle_loglvl->SetSelection(Ini.HLELogLvl.GetValue());
+	cbox_hle_license_area->SetSelection(Ini.HLELicenseArea.GetValue());
 	cbox_net_status->SetSelection(Ini.NETStatus.GetValue());
 	cbox_net_interface->SetSelection(Ini.NETInterface.GetValue());
 	cbox_sys_lang->SetSelection(Ini.SysLanguage.GetValue());
@@ -310,7 +321,9 @@ SettingsDialog::SettingsDialog(wxWindow *parent)
 
 	s_round_audio_out->Add(cbox_audio_out, wxSizerFlags().Border(wxALL, 5).Expand());
 
+	// Miscellaneous
 	s_round_hle_log_lvl->Add(cbox_hle_loglvl, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_round_hle_license_area->Add(cbox_hle_license_area, wxSizerFlags().Border(wxALL, 5).Expand());
 
 	// Networking
 	s_round_net_status->Add(cbox_net_status, wxSizerFlags().Border(wxALL, 5).Expand());
@@ -361,6 +374,7 @@ SettingsDialog::SettingsDialog(wxWindow *parent)
 
 	// Miscellaneous
 	s_subpanel_misc->Add(s_round_hle_log_lvl, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_subpanel_misc->Add(s_round_hle_license_area, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_misc->Add(chbox_hle_logging, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_misc->Add(chbox_rsx_logging, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_misc->Add(chbox_rsx_frame_step, wxSizerFlags().Border(wxALL, 5).Expand());
@@ -442,6 +456,7 @@ SettingsDialog::SettingsDialog(wxWindow *parent)
 		Ini.HLESaveTTY.SetValue(chbox_hle_savetty->GetValue());
 		Ini.HLEExitOnStop.SetValue(chbox_hle_exitonstop->GetValue());
 		Ini.HLELogLvl.SetValue(cbox_hle_loglvl->GetSelection());
+		Ini.HLELicenseArea.SetValue(cbox_hle_license_area->GetSelection());
 		Ini.NETStatus.SetValue(cbox_net_status->GetSelection());
 		Ini.NETInterface.SetValue(cbox_net_interface->GetSelection());
 		Ini.SysLanguage.SetValue(cbox_sys_lang->GetSelection());

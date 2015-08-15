@@ -157,6 +157,7 @@ public:
 
 	// HLE/Miscs
 	IniEntry<u8>   HLELogLvl;
+	IniEntry<u8>   HLELicenseArea;
 	IniEntry<u8>   NETStatus;
 	IniEntry<u8>   NETInterface;
 	IniEntry<bool> HLELogging;
@@ -256,6 +257,7 @@ public:
 		HLESaveTTY.Init("HLE_HLESaveTTY", path);
 		HLEExitOnStop.Init("HLE_HLEExitOnStop", path);
 		HLELogLvl.Init("HLE_HLELogLvl", path);
+		HLELicenseArea.Init("HLE_LicenseArea", path);
 		HLEAlwaysStart.Init("HLE_HLEAlwaysStart", path);
 
 		// Auto Pause
@@ -344,6 +346,7 @@ public:
 		HLESaveTTY.Load(false);
 		HLEExitOnStop.Load(false);
 		HLELogLvl.Load(3);
+		HLELicenseArea.Load(2);
 		HLEAlwaysStart.Load(true);
 
 		//Auto Pause
@@ -432,6 +435,7 @@ public:
 		HLESaveTTY.Save();
 		HLEExitOnStop.Save();
 		HLELogLvl.Save();
+		HLELicenseArea.Save();
 		HLEAlwaysStart.Save();
 
 		//Auto Pause

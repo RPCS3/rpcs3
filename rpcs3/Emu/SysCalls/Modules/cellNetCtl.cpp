@@ -84,10 +84,9 @@ s32 cellNetCtlDelHandler(s32 hid)
 
 s32 cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 {
-	cellNetCtl.Todo("cellNetCtlGetInfo(code=0x%x (%s), info=*0x%x)", code, InfoCodeToName(code), info);
-
 	if (code == CELL_NET_CTL_INFO_MTU)
 	{
+		cellNetCtl.Warning("cellNetCtlGetInfo(code=0x%x (%s), info=*0x%x)", code, InfoCodeToName(code), info);
 #ifdef _WIN32
 		ULONG bufLen = sizeof(PIP_ADAPTER_ADDRESSES) + 1;
 		PIP_ADAPTER_ADDRESSES pAddresses = (PIP_ADAPTER_ADDRESSES)malloc(bufLen);
@@ -176,6 +175,7 @@ s32 cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 	}
 	else if (code == CELL_NET_CTL_INFO_IP_ADDRESS)
 	{
+		cellNetCtl.Warning("cellNetCtlGetInfo(code=0x%x (%s), info=*0x%x)", code, InfoCodeToName(code), info);
 #ifdef _WIN32
 		ULONG bufLen = sizeof(IP_ADAPTER_INFO) + 1;
 		PIP_ADAPTER_INFO pAdapterInfo = (PIP_ADAPTER_INFO)malloc(bufLen);
@@ -251,6 +251,7 @@ s32 cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 	}
 	else if (code == CELL_NET_CTL_INFO_NETMASK)
 	{
+		cellNetCtl.Warning("cellNetCtlGetInfo(code=0x%x (%s), info=*0x%x)", code, InfoCodeToName(code), info);
 #ifdef _WIN32
 		ULONG bufLen = sizeof(IP_ADAPTER_INFO) + 1;
 		PIP_ADAPTER_INFO pAdapterInfo = (PIP_ADAPTER_INFO)malloc(bufLen);
@@ -329,6 +330,10 @@ s32 cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 
 		freeifaddrs(ifaddr);
 #endif
+	}
+	else
+	{
+		cellNetCtl.Todo("cellNetCtlGetInfo(code=0x%x (%s), info=*0x%x)", code, InfoCodeToName(code), info);
 	}
 
 	return CELL_OK;

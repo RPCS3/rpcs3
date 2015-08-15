@@ -538,8 +538,32 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		const u32 a0 = ARGS(0);
 
 		m_set_color_mask_mrt = true;
+		m_color_mask_mrt1_a = a0 & 0x1000000 ? true : false;
+		m_color_mask_mrt1_r = a0 & 0x0010000 ? true : false;
+		m_color_mask_mrt1_g = a0 & 0x1000100 ? true : false;
+		m_color_mask_mrt1_b = a0 & 0x1000001 ? true : false;
+		m_color_mask_mrt2_a = (a0 >> 8) & 0x1000000 ? true : false;
+		m_color_mask_mrt2_r = (a0 >> 8) & 0x0010000 ? true : false;
+		m_color_mask_mrt2_g = (a0 >> 8) & 0x1000100 ? true : false;
+		m_color_mask_mrt2_b = (a0 >> 8) & 0x1000001 ? true : false;
+		m_color_mask_mrt3_a = (a0 >> 16) & 0x1000000 ? true : false;
+		m_color_mask_mrt3_r = (a0 >> 16) & 0x0010000 ? true : false;
+		m_color_mask_mrt3_g = (a0 >> 16) & 0x1000100 ? true : false;
+		m_color_mask_mrt3_b = (a0 >> 16) & 0x1000001 ? true : false;
 
-		LOG_ERROR(RSX, "TODO: NV4097_SET_COLOR_MASK_MRT: 0x%x", a0);
+		LOG_WARNING(RSX, "mrt1 r mask: %s", m_color_mask_mrt1_r ? "true" : "false");
+		LOG_WARNING(RSX, "mrt1 g mask: %s", m_color_mask_mrt1_g ? "true" : "false");
+		LOG_WARNING(RSX, "mrt1 b mask: %s", m_color_mask_mrt1_b ? "true" : "false");
+		LOG_WARNING(RSX, "mrt1 a mask: %s", m_color_mask_mrt1_a ? "true" : "false");
+		LOG_WARNING(RSX, "mrt2 r mask: %s", m_color_mask_mrt2_r ? "true" : "false");
+		LOG_WARNING(RSX, "mrt2 g mask: %s", m_color_mask_mrt2_g ? "true" : "false");
+		LOG_WARNING(RSX, "mrt2 b mask: %s", m_color_mask_mrt2_b ? "true" : "false");
+		LOG_WARNING(RSX, "mrt2 a mask: %s", m_color_mask_mrt2_a ? "true" : "false");
+		LOG_WARNING(RSX, "mrt3 r mask: %s", m_color_mask_mrt3_r ? "true" : "false");
+		LOG_WARNING(RSX, "mrt3 g mask: %s", m_color_mask_mrt3_g ? "true" : "false");
+		LOG_WARNING(RSX, "mrt3 b mask: %s", m_color_mask_mrt3_b ? "true" : "false");
+		LOG_WARNING(RSX, "mrt3 a mask: %s", m_color_mask_mrt3_a ? "true" : "false");
+		LOG_WARNING(RSX, "TODO: NV4097_SET_COLOR_MASK_MRT: 0x%x", a0);
 		break;
 	}
 
