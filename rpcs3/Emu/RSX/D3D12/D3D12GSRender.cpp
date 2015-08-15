@@ -1231,10 +1231,10 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 			break;
 		}
 
-		invalidateTexture(GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000));
-		invalidateTexture(GetAddress(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000));
-		invalidateTexture(GetAddress(m_surface_offset_c, m_context_dma_color_c - 0xfeed0000));
-		invalidateTexture(GetAddress(m_surface_offset_d, m_context_dma_color_d - 0xfeed0000));
+		if (m_context_dma_color_a) invalidateTexture(GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000));
+		if (m_context_dma_color_b) invalidateTexture(GetAddress(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000));
+		if (m_context_dma_color_c) invalidateTexture(GetAddress(m_surface_offset_c, m_context_dma_color_c - 0xfeed0000));
+		if (m_context_dma_color_d) invalidateTexture(GetAddress(m_surface_offset_d, m_context_dma_color_d - 0xfeed0000));
 	}
 	if (needTransfer)
 	{
