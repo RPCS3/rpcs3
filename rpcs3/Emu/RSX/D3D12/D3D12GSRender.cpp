@@ -104,6 +104,7 @@ void D3D12GSRender::ResourceStorage::Reset()
 
 	m_commandAllocator->Reset();
 	m_inflightCommandList.clear();
+	m_singleFrameLifetimeResources.clear();
 }
 
 void D3D12GSRender::ResourceStorage::Init(ID3D12Device *device)
@@ -139,6 +140,19 @@ void D3D12GSRender::ResourceStorage::Init(ID3D12Device *device)
 	m_fenceValue = 0;
 	ThrowIfFailed(device->CreateFence(m_fenceValue++, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(m_frameFinishedFence.GetAddressOf())));
 	m_isUseable = true;
+}
+
+void D3D12GSRender::ResourceStorage::WaitAndClean(const std::vector<ID3D12Resource *> &dirtyTextures)
+{
+	WaitForSingleObjectEx(m_frameFinishedHandle, INFINITE, FALSE);
+
+	Reset();
+
+	for (auto tmp : dirtyTextures)
+		tmp->Release();
+
+	m_RAMFramebuffer = nullptr;
+	m_isUseable.store(true, std::memory_order_release);
 }
 
 void D3D12GSRender::ResourceStorage::Release()
@@ -763,7 +777,7 @@ void D3D12GSRender::Flip()
 				nullptr,
 				IID_PPV_ARGS(&stagingTexture)
 				));
-			m_textureUploadData.m_resourceStoredSinceLastSync.push_back(std::make_tuple(heapOffset, textureSize, stagingTexture));
+			getCurrentResourceStorage().m_singleFrameLifetimeResources.push_back(stagingTexture);
 
 			void *dstBuffer;
 			ThrowIfFailed(stagingTexture->Map(0, nullptr, &dstBuffer));
@@ -897,12 +911,15 @@ void D3D12GSRender::Flip()
 	m_vertexCache.clear();
 	m_vertexConstants.clear();
 
-	std::vector<std::function<void()> >  cleaningFunction =
-	{
-		m_constantsData.getCleaningFunction(),
-		m_vertexIndexData.getCleaningFunction(),
-		m_textureUploadData.getCleaningFunction(),
-	};
+
+	// Get the put pos - 1. This way after cleaning we can set the get ptr to
+	// this value, allowing heap to proceed even if we cleant before allocating
+	// a new value (that's the reason of the -1)
+	size_t newGetPosConstantsHeap = m_constantsData.getCurrentPutPosMinusOne();
+	size_t newGetPosVertexIndexHeap = m_vertexIndexData.getCurrentPutPosMinusOne();
+	size_t newGetPosTextureUploadHeap = m_textureUploadData.getCurrentPutPosMinusOne();
+	size_t newGetPosReadbackHeap = m_readbackResources.getCurrentPutPosMinusOne();
+	size_t newGetPosUAVHeap = m_UAVHeap.getCurrentPutPosMinusOne();
 
 	std::lock_guard<std::mutex> lock(mut);
 	std::vector<ID3D12Resource *> textoclean = m_texToClean;
@@ -910,20 +927,20 @@ void D3D12GSRender::Flip()
 
 	storage.m_isUseable.store(false);
 
-	m_GC.pushWork([&, cleaningFunction, textoclean]()
+	m_GC.pushWork([&,
+		textoclean,
+		newGetPosConstantsHeap,
+		newGetPosVertexIndexHeap,
+		newGetPosTextureUploadHeap,
+		newGetPosReadbackHeap,
+		newGetPosUAVHeap]()
 	{
-		WaitForSingleObjectEx(storage.m_frameFinishedHandle, INFINITE, FALSE);
-
-		for (auto &cleanFunc : cleaningFunction)
-			cleanFunc();
-		storage.Reset();
-
-		for (auto tmp : textoclean)
-			tmp->Release();
-
-		SAFE_RELEASE(storage.m_RAMFramebuffer);
-		storage.m_RAMFramebuffer = nullptr;
-		storage.m_isUseable.store(true, std::memory_order_release);
+		storage.WaitAndClean(textoclean);
+		m_constantsData.m_getPos.store(newGetPosConstantsHeap, std::memory_order_release);
+		m_vertexIndexData.m_getPos.store(newGetPosVertexIndexHeap, std::memory_order_release);
+		m_textureUploadData.m_getPos.store(newGetPosTextureUploadHeap, std::memory_order_release);
+		m_readbackResources.m_getPos.store(newGetPosReadbackHeap, std::memory_order_release);
+		m_UAVHeap.m_getPos.store(newGetPosUAVHeap, std::memory_order_release);
 	});
 
 	while (!getCurrentResourceStorage().m_isUseable.load(std::memory_order_acquire))
@@ -990,7 +1007,7 @@ ID3D12Resource * D3D12GSRender::writeColorBuffer(ID3D12Resource * RTT, ID3D12Gra
 			IID_PPV_ARGS(&Result)
 			)
 		);
-	m_readbackResources.m_resourceStoredSinceLastSync.push_back(std::make_tuple(heapOffset, sizeInByte, Result));
+	getCurrentResourceStorage().m_singleFrameLifetimeResources.push_back(Result);
 
 	cmdlist->ResourceBarrier(1, &getResourceBarrierTransition(RTT, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_COPY_SOURCE));
 
@@ -1040,7 +1057,7 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 	HANDLE handle = CreateEvent(0, FALSE, FALSE, 0);
 	fence->SetEventOnCompletion(1, handle);
 
-	ID3D12Resource *writeDest, *depthConverted;
+	ComPtr<ID3D12Resource> writeDest, depthConverted;
 	ID3D12GraphicsCommandList *convertCommandList;
 	ID3D12DescriptorHeap *descriptorHeap;
 	size_t depthRowPitch = m_surface_clip_w;
@@ -1067,10 +1084,10 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 				&resdesc,
 				D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
 				nullptr,
-				IID_PPV_ARGS(&depthConverted)
+				IID_PPV_ARGS(depthConverted.GetAddressOf())
 				)
 			);
-		m_UAVHeap.m_resourceStoredSinceLastSync.push_back(std::make_tuple(heapOffset, sizeInByte, depthConverted));
+		getCurrentResourceStorage().m_singleFrameLifetimeResources.push_back(depthConverted);
 
 		sizeInByte = depthRowPitch * m_surface_clip_h;
 		assert(m_readbackResources.canAlloc(sizeInByte));
@@ -1084,10 +1101,10 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 				&resdesc,
 				D3D12_RESOURCE_STATE_COPY_DEST,
 				nullptr,
-				IID_PPV_ARGS(&writeDest)
+				IID_PPV_ARGS(writeDest.GetAddressOf())
 				)
 			);
-		m_readbackResources.m_resourceStoredSinceLastSync.push_back(std::make_tuple(heapOffset, sizeInByte, writeDest));
+		getCurrentResourceStorage().m_singleFrameLifetimeResources.push_back(writeDest);
 
 		ThrowIfFailed(
 			m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, getCurrentResourceStorage().m_commandAllocator.Get(), nullptr, IID_PPV_ARGS(&convertCommandList))
@@ -1124,7 +1141,7 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 		D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
 		uavDesc.Format = DXGI_FORMAT_R8_UNORM;
 		uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
-		m_device->CreateUnorderedAccessView(depthConverted, nullptr, &uavDesc, Handle);
+		m_device->CreateUnorderedAccessView(depthConverted.Get(), nullptr, &uavDesc, Handle);
 
 		// Convert
 		convertCommandList->ResourceBarrier(1, &getResourceBarrierTransition(m_rtts.m_currentlyBoundDepthStencil, D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_GENERIC_READ));
@@ -1138,7 +1155,7 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 		// Flush UAV
 		D3D12_RESOURCE_BARRIER uavbarrier = {};
 		uavbarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
-		uavbarrier.UAV.pResource = depthConverted;
+		uavbarrier.UAV.pResource = depthConverted.Get();
 
 		D3D12_RESOURCE_BARRIER barriers[] =
 		{
@@ -1146,7 +1163,7 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 			uavbarrier,
 		};
 		convertCommandList->ResourceBarrier(2, barriers);
-		convertCommandList->ResourceBarrier(1, &getResourceBarrierTransition(depthConverted, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COPY_SOURCE));
+		convertCommandList->ResourceBarrier(1, &getResourceBarrierTransition(depthConverted.Get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COPY_SOURCE));
 
 		ThrowIfFailed(convertCommandList->Close());
 		m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**)&convertCommandList);
@@ -1165,9 +1182,9 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 		// Copy
 		D3D12_TEXTURE_COPY_LOCATION dst = {}, src = {};
 		src.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-		src.pResource = depthConverted;
+		src.pResource = depthConverted.Get();
 		dst.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
-		dst.pResource = writeDest;
+		dst.pResource = writeDest.Get();
 		dst.PlacedFootprint.Offset = 0;
 		dst.PlacedFootprint.Footprint.Depth = 1;
 		dst.PlacedFootprint.Footprint.Format = DXGI_FORMAT_R8_UNORM;
@@ -1228,10 +1245,6 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 	//Wait for result
 	m_commandQueueGraphic->Signal(fence, 1);
 
-
-	auto depthUAVCleaning = m_UAVHeap.getCleaningFunction();
-	auto readbackCleaning = m_readbackResources.getCleaningFunction();
-
 	m_GC.pushWork([=]() {
 		WaitForSingleObject(handle, INFINITE);
 		CloseHandle(handle);
@@ -1256,11 +1269,8 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 					ptrAsChar[4 * (row * m_surface_clip_w + i) + 3] = c;
 				}
 			}
-			writeDest->Release();
-			depthConverted->Release();
 			descriptorHeap->Release();
 			convertCommandList->Release();
-			depthUAVCleaning();
 		}
 
 		size_t srcPitch, dstPitch;
@@ -1345,7 +1355,6 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 
 		if (needTransfer)
 			downloadCommandList->Release();
-		readbackCleaning();
 
 		vm::write32(m_label_addr + offset, value);
 	});

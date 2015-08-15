@@ -122,7 +122,6 @@ struct DataHeap
 	size_t m_size;
 	size_t m_putPos; // Start of free space
 	std::atomic<size_t> m_getPos; // End of free space
-	std::vector<std::tuple<size_t, size_t, ID3D12Resource *> > m_resourceStoredSinceLastSync;
 
 	void Init(ID3D12Device *device, size_t heapSize, D3D12_HEAP_TYPE type, D3D12_HEAP_FLAGS flags)
 	{
@@ -182,28 +181,14 @@ struct DataHeap
 	void Release()
 	{
 		m_heap->Release();
-		for (auto tmp : m_resourceStoredSinceLastSync)
-		{
-			SAFE_RELEASE(std::get<2>(tmp));
-		}
 	}
 
 	/**
-	 * Get a function that cleans heaps.
-	 * It's caller responsability to ensure data are not used when executed.
+	 * return current putpos - 1
 	 */
-	std::function<void()> getCleaningFunction()
+	size_t getCurrentPutPosMinusOne() const
 	{
-		std::atomic<size_t>& getPointer = m_getPos;
-		auto duplicatem_resourceStoredSinceLastSync = m_resourceStoredSinceLastSync;
-		m_resourceStoredSinceLastSync.clear();
-		return [=, &getPointer]() {
-			for (auto tmp : duplicatem_resourceStoredSinceLastSync)
-			{
-				SAFE_RELEASE(std::get<2>(tmp));
-				getPointer.exchange(std::get<0>(tmp));
-			}
-		};
+		return (m_putPos - 1 > 0) ? m_putPos - 1 : m_size - 1;
 	}
 };
 
@@ -337,8 +322,12 @@ private:
 
 		ComPtr<ID3D12Resource> m_RAMFramebuffer;
 
+		// List of resources that can be freed after frame is flipped
+		std::vector<ComPtr<ID3D12Resource> > m_singleFrameLifetimeResources;
+
 		void Reset();
 		void Init(ID3D12Device *device);
+		void WaitAndClean(const std::vector<ID3D12Resource *> &dirtyTextures);
 		void Release();
 	};
 

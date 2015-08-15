@@ -195,7 +195,7 @@ std::vector<VertexBufferFormat> FormatVertexData(const RSXVertexData *m_vertex_d
  * Create a new vertex buffer with attributes from vbf using vertexIndexHeap as storage heap.
  */
 static
-ID3D12Resource *createVertexBuffer(const VertexBufferFormat &vbf, const RSXVertexData *vertexData, ID3D12Device *device, DataHeap<ID3D12Heap, 65536> &vertexIndexHeap)
+ComPtr<ID3D12Resource> createVertexBuffer(const VertexBufferFormat &vbf, const RSXVertexData *vertexData, ID3D12Device *device, DataHeap<ID3D12Heap, 65536> &vertexIndexHeap)
 {
 	size_t subBufferSize = vbf.range.second - vbf.range.first + 1;
 	// Make multiple of stride
@@ -204,14 +204,14 @@ ID3D12Resource *createVertexBuffer(const VertexBufferFormat &vbf, const RSXVerte
 	assert(vertexIndexHeap.canAlloc(subBufferSize));
 	size_t heapOffset = vertexIndexHeap.alloc(subBufferSize);
 
-	ID3D12Resource *vertexBuffer;
+	ComPtr<ID3D12Resource> vertexBuffer;
 	ThrowIfFailed(device->CreatePlacedResource(
 		vertexIndexHeap.m_heap,
 		heapOffset,
 		&getBufferResourceDesc(subBufferSize),
 		D3D12_RESOURCE_STATE_GENERIC_READ,
 		nullptr,
-		IID_PPV_ARGS(&vertexBuffer)
+		IID_PPV_ARGS(vertexBuffer.GetAddressOf())
 		));
 	void *bufferMap;
 	ThrowIfFailed(vertexBuffer->Map(0, nullptr, (void**)&bufferMap));
@@ -260,7 +260,6 @@ ID3D12Resource *createVertexBuffer(const VertexBufferFormat &vbf, const RSXVerte
 	}
 
 	vertexBuffer->Unmap(0, nullptr);
-	vertexIndexHeap.m_resourceStoredSinceLastSync.push_back(std::make_tuple(heapOffset, subBufferSize, vertexBuffer));
 	return vertexBuffer;
 }
 
@@ -302,8 +301,10 @@ std::vector<D3D12_VERTEX_BUFFER_VIEW> D3D12GSRender::UploadVertexBuffers(bool in
 			vertexBuffer = It->second;
 		else
 		{
-			vertexBuffer = createVertexBuffer(vbf, m_vertex_data, m_device.Get(), m_vertexIndexData);
-			m_vertexCache[key] = vertexBuffer;
+			ComPtr<ID3D12Resource> newVertexBuffer = createVertexBuffer(vbf, m_vertex_data, m_device.Get(), m_vertexIndexData);
+			vertexBuffer = newVertexBuffer.Get();
+			m_vertexCache[key] = newVertexBuffer.Get();
+			getCurrentResourceStorage().m_singleFrameLifetimeResources.push_back(newVertexBuffer);
 		}
 
 		D3D12_VERTEX_BUFFER_VIEW vertexBufferView = {};
@@ -404,14 +405,14 @@ D3D12_INDEX_BUFFER_VIEW D3D12GSRender::uploadIndexBuffers(bool indexed_draw)
 	assert(m_vertexIndexData.canAlloc(subBufferSize));
 	size_t heapOffset = m_vertexIndexData.alloc(subBufferSize);
 
-	ID3D12Resource *indexBuffer;
+	ComPtr<ID3D12Resource> indexBuffer;
 	ThrowIfFailed(m_device->CreatePlacedResource(
 		m_vertexIndexData.m_heap,
 		heapOffset,
 		&getBufferResourceDesc(subBufferSize),
 		D3D12_RESOURCE_STATE_GENERIC_READ,
 		nullptr,
-		IID_PPV_ARGS(&indexBuffer)
+		IID_PPV_ARGS(indexBuffer.GetAddressOf())
 		));
 
 	void *bufferMap;
@@ -461,7 +462,7 @@ D3D12_INDEX_BUFFER_VIEW D3D12GSRender::uploadIndexBuffers(bool indexed_draw)
 
 	}
 	indexBuffer->Unmap(0, nullptr);
-	m_vertexIndexData.m_resourceStoredSinceLastSync.push_back(std::make_tuple(heapOffset, subBufferSize, indexBuffer));
+	getCurrentResourceStorage().m_singleFrameLifetimeResources.push_back(indexBuffer);
 
 	indexBufferView.SizeInBytes = (UINT)subBufferSize;
 	indexBufferView.BufferLocation = indexBuffer->GetGPUVirtualAddress();
@@ -512,7 +513,6 @@ void D3D12GSRender::setScaleOffset()
 	D3D12_CPU_DESCRIPTOR_HANDLE Handle = getCurrentResourceStorage().m_scaleOffsetDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
 	Handle.ptr += getCurrentResourceStorage().m_currentScaleOffsetBufferIndex * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	m_device->CreateConstantBufferView(&constantBufferViewDesc, Handle);
-	m_constantsData.m_resourceStoredSinceLastSync.push_back(std::make_tuple(heapOffset, 256, nullptr));
 }
 
 void D3D12GSRender::FillVertexShaderConstantsBuffer()
@@ -550,7 +550,6 @@ void D3D12GSRender::FillVertexShaderConstantsBuffer()
 	D3D12_CPU_DESCRIPTOR_HANDLE Handle = getCurrentResourceStorage().m_constantsBufferDescriptorsHeap->GetCPUDescriptorHandleForHeapStart();
 	Handle.ptr += getCurrentResourceStorage().m_constantsBufferIndex * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	m_device->CreateConstantBufferView(&constantBufferViewDesc, Handle);
-	m_constantsData.m_resourceStoredSinceLastSync.push_back(std::make_tuple(heapOffset, bufferSize, nullptr));
 }
 
 void D3D12GSRender::FillPixelShaderConstantsBuffer()
@@ -614,7 +613,6 @@ void D3D12GSRender::FillPixelShaderConstantsBuffer()
 	D3D12_CPU_DESCRIPTOR_HANDLE Handle = getCurrentResourceStorage().m_constantsBufferDescriptorsHeap->GetCPUDescriptorHandleForHeapStart();
 	Handle.ptr += getCurrentResourceStorage().m_constantsBufferIndex * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	m_device->CreateConstantBufferView(&constantBufferViewDesc, Handle);
-	m_constantsData.m_resourceStoredSinceLastSync.push_back(std::make_tuple(heapOffset, bufferSize, nullptr));
 }
 
 

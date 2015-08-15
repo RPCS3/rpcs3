@@ -395,7 +395,8 @@ ID3D12Resource *uploadSingleTexture(
 	const RSXTexture &texture,
 	ID3D12Device *device,
 	ID3D12GraphicsCommandList *commandList,
-	DataHeap<ID3D12Heap, 65536> &textureBuffersHeap)
+	DataHeap<ID3D12Heap, 65536> &textureBuffersHeap,
+	std::vector<ComPtr<ID3D12Resource> > &stagingRamTexture)
 {
 	ID3D12Resource *vramTexture;
 	size_t w = texture.GetWidth(), h = texture.GetHeight();
@@ -550,7 +551,7 @@ ID3D12Resource *uploadSingleTexture(
 	// Multiple of 256
 	size_t rowPitch = align(blockSizeInByte * widthInBlocks, 256);
 
-	ID3D12Resource *Texture;
+	ComPtr<ID3D12Resource> Texture;
 	size_t textureSize = rowPitch * heightInBlocks * 2; // * 4 for mipmap levels
 	assert(textureBuffersHeap.canAlloc(textureSize));
 	size_t heapOffset = textureBuffersHeap.alloc(textureSize);
@@ -561,9 +562,9 @@ ID3D12Resource *uploadSingleTexture(
 		&getBufferResourceDesc(textureSize),
 		D3D12_RESOURCE_STATE_GENERIC_READ,
 		nullptr,
-		IID_PPV_ARGS(&Texture)
+		IID_PPV_ARGS(Texture.GetAddressOf())
 		));
-	textureBuffersHeap.m_resourceStoredSinceLastSync.push_back(std::make_tuple(heapOffset, textureSize, Texture));
+	stagingRamTexture.push_back(Texture);
 
 	auto pixels = vm::get_ptr<const u8>(texaddr);
 	void *textureData;
@@ -633,7 +634,7 @@ ID3D12Resource *uploadSingleTexture(
 		dst.SubresourceIndex = (UINT)miplevel;
 		dst.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
 		src.PlacedFootprint.Offset = mli.offset;
-		src.pResource = Texture;
+		src.pResource = Texture.Get();
 		src.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
 		src.PlacedFootprint.Footprint.Depth = 1;
 		src.PlacedFootprint.Footprint.Width = (UINT)mli.width;
@@ -758,7 +759,7 @@ size_t D3D12GSRender::UploadTextures(ID3D12GraphicsCommandList *cmdlist)
 		}
 		else
 		{
-			vramTexture = uploadSingleTexture(m_textures[i], m_device.Get(), cmdlist, m_textureUploadData);
+			vramTexture = uploadSingleTexture(m_textures[i], m_device.Get(), cmdlist, m_textureUploadData, getCurrentResourceStorage().m_singleFrameLifetimeResources);
 			m_texturesCache[texaddr] = vramTexture;
 
 			u32 s = (u32)align(getTextureSize(m_textures[i]), 4096);
