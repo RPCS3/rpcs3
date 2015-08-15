@@ -319,25 +319,23 @@ private:
 		UINT64 m_fenceValue;
 		HANDLE m_frameFinishedHandle;
 
-		ID3D12CommandAllocator *m_commandAllocator;
-		ID3D12CommandAllocator *m_downloadCommandAllocator;
-		std::list<ID3D12GraphicsCommandList *> m_inflightCommandList;
+		ComPtr<ID3D12CommandAllocator> m_commandAllocator;
+		std::list<ComPtr<ID3D12GraphicsCommandList> > m_inflightCommandList;
 
 		// Constants storage
-		ID3D12DescriptorHeap *m_constantsBufferDescriptorsHeap;
+		ComPtr<ID3D12DescriptorHeap> m_constantsBufferDescriptorsHeap;
 		size_t m_constantsBufferIndex;
-		ID3D12DescriptorHeap *m_scaleOffsetDescriptorHeap;
+		ComPtr<ID3D12DescriptorHeap> m_scaleOffsetDescriptorHeap;
 		size_t m_currentScaleOffsetBufferIndex;
 
 		// Texture storage
-		ID3D12CommandAllocator *m_textureUploadCommandAllocator;
-		ID3D12DescriptorHeap *m_textureDescriptorsHeap;
-		ID3D12DescriptorHeap *m_samplerDescriptorHeap[2];
+		ComPtr<ID3D12DescriptorHeap> m_textureDescriptorsHeap;
+		size_t m_currentTextureIndex;
+		ComPtr<ID3D12DescriptorHeap> m_samplerDescriptorHeap[2];
 		size_t m_samplerDescriptorHeapIndex;
 		size_t m_currentSamplerIndex;
-		size_t m_currentTextureIndex;
 
-		ID3D12Resource *m_RAMFramebuffer;
+		ComPtr<ID3D12Resource> m_RAMFramebuffer;
 
 		void Reset();
 		void Init(ID3D12Device *device);

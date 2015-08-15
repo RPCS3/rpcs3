@@ -103,10 +103,6 @@ void D3D12GSRender::ResourceStorage::Reset()
 	m_samplerDescriptorHeapIndex = 0;
 
 	m_commandAllocator->Reset();
-	m_textureUploadCommandAllocator->Reset();
-	m_downloadCommandAllocator->Reset();
-	for (ID3D12GraphicsCommandList *gfxCommandList : m_inflightCommandList)
-		gfxCommandList->Release();
 	m_inflightCommandList.clear();
 }
 
@@ -114,16 +110,13 @@ void D3D12GSRender::ResourceStorage::Init(ID3D12Device *device)
 {
 	m_RAMFramebuffer = nullptr;
 	// Create a global command allocator
-	device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocator));
-	device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_textureUploadCommandAllocator));
-	ThrowIfFailed(device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_COPY, IID_PPV_ARGS(&m_downloadCommandAllocator)));
+	ThrowIfFailed(device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(m_commandAllocator.GetAddressOf())));
 
 	D3D12_DESCRIPTOR_HEAP_DESC descriptorHeapDesc = {};
 	descriptorHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 	descriptorHeapDesc.NumDescriptors = 10000; // For safety
 	descriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	ThrowIfFailed(device->CreateDescriptorHeap(&descriptorHeapDesc, IID_PPV_ARGS(&m_constantsBufferDescriptorsHeap)));
-
 
 	descriptorHeapDesc = {};
 	descriptorHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
@@ -150,17 +143,8 @@ void D3D12GSRender::ResourceStorage::Init(ID3D12Device *device)
 
 void D3D12GSRender::ResourceStorage::Release()
 {
-	// NOTE: Should be released only if no command are in flight !
-	m_constantsBufferDescriptorsHeap->Release();
-	m_scaleOffsetDescriptorHeap->Release();
-	m_textureDescriptorsHeap->Release();
-	m_samplerDescriptorHeap[0]->Release();
-	m_samplerDescriptorHeap[1]->Release();
-	for (auto &tmp : m_inflightCommandList)
-		tmp->Release();
-	m_commandAllocator->Release();
-	m_textureUploadCommandAllocator->Release();
-	m_downloadCommandAllocator->Release();
+	// NOTE: Should be released only after gfx pipeline last command has been finished.
+	m_inflightCommandList.clear();
 	CloseHandle(m_frameFinishedHandle);
 }
 
@@ -431,11 +415,11 @@ void D3D12GSRender::Clear(u32 cmd)
 {
 	assert(cmd == NV4097_CLEAR_SURFACE);
 
-	ID3D12GraphicsCommandList *commandList;
-	ThrowIfFailed(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, getCurrentResourceStorage().m_commandAllocator, nullptr, IID_PPV_ARGS(&commandList)));
+	ComPtr<ID3D12GraphicsCommandList> commandList;
+	ThrowIfFailed(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, getCurrentResourceStorage().m_commandAllocator.Get(), nullptr, IID_PPV_ARGS(commandList.GetAddressOf())));
 	getCurrentResourceStorage().m_inflightCommandList.push_back(commandList);
 
-	PrepareRenderTargets(commandList);
+	PrepareRenderTargets(commandList.Get());
 
 /*	if (m_set_color_mask)
 	{
@@ -504,16 +488,16 @@ void D3D12GSRender::Clear(u32 cmd)
 	}
 
 	ThrowIfFailed(commandList->Close());
-	m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**) &commandList);
+	m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**)commandList.GetAddressOf());
 }
 
 void D3D12GSRender::Draw()
 {
-	ID3D12GraphicsCommandList *commandList;
-	m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, getCurrentResourceStorage().m_commandAllocator, nullptr, IID_PPV_ARGS(&commandList));
+	ComPtr<ID3D12GraphicsCommandList> commandList;
+	m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, getCurrentResourceStorage().m_commandAllocator.Get(), nullptr, IID_PPV_ARGS(commandList.GetAddressOf()));
 	getCurrentResourceStorage().m_inflightCommandList.push_back(commandList);
 
-	PrepareRenderTargets(commandList);
+	PrepareRenderTargets(commandList.Get());
 
 	// Init vertex count
 	// TODO: Very hackish, clean this
@@ -564,9 +548,9 @@ void D3D12GSRender::Draw()
 
 	// Constants
 	setScaleOffset();
-	commandList->SetDescriptorHeaps(1, &getCurrentResourceStorage().m_scaleOffsetDescriptorHeap);
+	commandList->SetDescriptorHeaps(1, getCurrentResourceStorage().m_scaleOffsetDescriptorHeap.GetAddressOf());
 	commandList->SetGraphicsRootDescriptorTable(0,
-		getGPUDescriptorHandle(getCurrentResourceStorage().m_scaleOffsetDescriptorHeap,
+		getGPUDescriptorHandle(getCurrentResourceStorage().m_scaleOffsetDescriptorHeap.Get(),
 			getCurrentResourceStorage().m_currentScaleOffsetBufferIndex * g_descriptorStrideSRVCBVUAV)
 		);
 	getCurrentResourceStorage().m_currentScaleOffsetBufferIndex++;
@@ -577,9 +561,9 @@ void D3D12GSRender::Draw()
 	FillPixelShaderConstantsBuffer();
 	getCurrentResourceStorage().m_constantsBufferIndex++;
 
-	commandList->SetDescriptorHeaps(1, &getCurrentResourceStorage().m_constantsBufferDescriptorsHeap);
+	commandList->SetDescriptorHeaps(1, getCurrentResourceStorage().m_constantsBufferDescriptorsHeap.GetAddressOf());
 	commandList->SetGraphicsRootDescriptorTable(1,
-		getGPUDescriptorHandle(getCurrentResourceStorage().m_constantsBufferDescriptorsHeap,
+		getGPUDescriptorHandle(getCurrentResourceStorage().m_constantsBufferDescriptorsHeap.Get(),
 			currentBufferIndex * g_descriptorStrideSRVCBVUAV)
 		);
 	commandList->SetPipelineState(m_PSO->first);
@@ -587,7 +571,7 @@ void D3D12GSRender::Draw()
 	if (m_PSO->second > 0)
 	{
 		std::chrono::time_point<std::chrono::system_clock> startTextureTime = std::chrono::system_clock::now();
-		size_t usedTexture = UploadTextures(commandList);
+		size_t usedTexture = UploadTextures(commandList.Get());
 
 		// Fill empty slots
 		for (; usedTexture < m_PSO->second; usedTexture++)
@@ -602,7 +586,7 @@ void D3D12GSRender::Draw()
 				D3D12_SHADER_COMPONENT_MAPPING_FORCE_VALUE_0,
 				D3D12_SHADER_COMPONENT_MAPPING_FORCE_VALUE_0);
 			m_device->CreateShaderResourceView(m_dummyTexture, &srvDesc, 
-				getCPUDescriptorHandle(getCurrentResourceStorage().m_textureDescriptorsHeap,
+				getCPUDescriptorHandle(getCurrentResourceStorage().m_textureDescriptorsHeap.Get(),
 					(getCurrentResourceStorage().m_currentTextureIndex + usedTexture) * g_descriptorStrideSRVCBVUAV)
 				);
 
@@ -612,20 +596,20 @@ void D3D12GSRender::Draw()
 			samplerDesc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
 			samplerDesc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
 			m_device->CreateSampler(&samplerDesc,
-				getCPUDescriptorHandle(getCurrentResourceStorage().m_samplerDescriptorHeap[getCurrentResourceStorage().m_samplerDescriptorHeapIndex],
+				getCPUDescriptorHandle(getCurrentResourceStorage().m_samplerDescriptorHeap[getCurrentResourceStorage().m_samplerDescriptorHeapIndex].Get(),
 					(getCurrentResourceStorage().m_currentSamplerIndex + usedTexture) * g_descriptorStrideSamplers)
 				);
 		}
 
-		commandList->SetDescriptorHeaps(1, &getCurrentResourceStorage().m_textureDescriptorsHeap);
+		commandList->SetDescriptorHeaps(1, getCurrentResourceStorage().m_textureDescriptorsHeap.GetAddressOf());
 		commandList->SetGraphicsRootDescriptorTable(2,
-			getGPUDescriptorHandle(getCurrentResourceStorage().m_textureDescriptorsHeap,
+			getGPUDescriptorHandle(getCurrentResourceStorage().m_textureDescriptorsHeap.Get(),
 				getCurrentResourceStorage().m_currentTextureIndex * g_descriptorStrideSRVCBVUAV)
 			);
 
-		commandList->SetDescriptorHeaps(1, &getCurrentResourceStorage().m_samplerDescriptorHeap[getCurrentResourceStorage().m_samplerDescriptorHeapIndex]);
+		commandList->SetDescriptorHeaps(1, getCurrentResourceStorage().m_samplerDescriptorHeap[getCurrentResourceStorage().m_samplerDescriptorHeapIndex].GetAddressOf());
 		commandList->SetGraphicsRootDescriptorTable(3,
-			getGPUDescriptorHandle(getCurrentResourceStorage().m_samplerDescriptorHeap[getCurrentResourceStorage().m_samplerDescriptorHeapIndex],
+			getGPUDescriptorHandle(getCurrentResourceStorage().m_samplerDescriptorHeap[getCurrentResourceStorage().m_samplerDescriptorHeapIndex].Get(),
 				getCurrentResourceStorage().m_currentTextureIndex * g_descriptorStrideSamplers)
 			);
 
@@ -717,7 +701,7 @@ void D3D12GSRender::Draw()
 		commandList->DrawInstanced((UINT)m_renderingInfo.m_count, 1, (UINT)m_renderingInfo.m_baseVertex, 0);
 
 	ThrowIfFailed(commandList->Close());
-	m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**)&commandList);
+	m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**)commandList.GetAddressOf());
 	m_indexed_array.Reset();
 }
 
@@ -740,8 +724,8 @@ isFlipSurfaceInLocalMemory(u32 surfaceColorTarget)
 
 void D3D12GSRender::Flip()
 {
-	ID3D12GraphicsCommandList *commandList;
-	m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, getCurrentResourceStorage().m_commandAllocator, nullptr, IID_PPV_ARGS(&commandList));
+	ComPtr<ID3D12GraphicsCommandList> commandList;
+	m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, getCurrentResourceStorage().m_commandAllocator.Get(), nullptr, IID_PPV_ARGS(commandList.GetAddressOf()));
 	getCurrentResourceStorage().m_inflightCommandList.push_back(commandList);
 
 	ID3D12Resource *resourceToFlip;
@@ -795,12 +779,12 @@ void D3D12GSRender::Flip()
 				&getTexture2DResourceDesc(w, h, DXGI_FORMAT_R8G8B8A8_UNORM, 1),
 				D3D12_RESOURCE_STATE_COPY_DEST,
 				nullptr,
-				IID_PPV_ARGS(&storage.m_RAMFramebuffer)
+				IID_PPV_ARGS(storage.m_RAMFramebuffer.GetAddressOf())
 				)
 			);
 		D3D12_TEXTURE_COPY_LOCATION src = {}, dst = {};
 		dst.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-		dst.pResource = storage.m_RAMFramebuffer;
+		dst.pResource = storage.m_RAMFramebuffer.Get();
 		src.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
 		src.pResource = stagingTexture;
 		src.PlacedFootprint.Footprint.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
@@ -810,8 +794,8 @@ void D3D12GSRender::Flip()
 		src.PlacedFootprint.Footprint.RowPitch = (UINT)rowPitch;
 		commandList->CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
 
-		commandList->ResourceBarrier(1, &getResourceBarrierTransition(storage.m_RAMFramebuffer, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ));
-		resourceToFlip = storage.m_RAMFramebuffer;
+		commandList->ResourceBarrier(1, &getResourceBarrierTransition(storage.m_RAMFramebuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ));
+		resourceToFlip = storage.m_RAMFramebuffer.Get();
 		viewport_w = (float)w, viewport_h = (float)h;
 	}
 	else
@@ -897,7 +881,7 @@ void D3D12GSRender::Flip()
 	if (isFlipSurfaceInLocalMemory(m_surface_color_target) && m_rtts.m_currentlyBoundRenderTargets[0] != nullptr)
 		commandList->ResourceBarrier(1, &getResourceBarrierTransition(m_rtts.m_currentlyBoundRenderTargets[0], D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET));
 	ThrowIfFailed(commandList->Close());
-	m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**)&commandList);
+	m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**)commandList.GetAddressOf());
 
 	ThrowIfFailed(m_swapChain->Present(Ini.GSVSyncEnable.GetValue() ? 1 : 0, 0));
 	// Add an event signaling queue completion
@@ -1106,7 +1090,7 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 		m_readbackResources.m_resourceStoredSinceLastSync.push_back(std::make_tuple(heapOffset, sizeInByte, writeDest));
 
 		ThrowIfFailed(
-			m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, getCurrentResourceStorage().m_commandAllocator, nullptr, IID_PPV_ARGS(&convertCommandList))
+			m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, getCurrentResourceStorage().m_commandAllocator.Get(), nullptr, IID_PPV_ARGS(&convertCommandList))
 			);
 
 		D3D12_DESCRIPTOR_HEAP_DESC descriptorHeapDesc = {};
@@ -1172,7 +1156,7 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 	if (needTransfer)
 	{
 		ThrowIfFailed(
-			m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, getCurrentResourceStorage().m_commandAllocator, nullptr, IID_PPV_ARGS(&downloadCommandList))
+			m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, getCurrentResourceStorage().m_commandAllocator.Get(), nullptr, IID_PPV_ARGS(&downloadCommandList))
 			);
 	}
 
