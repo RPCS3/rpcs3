@@ -641,7 +641,7 @@ void D3D12GSRender::Draw()
 		getCurrentResourceStorage().m_currentCommandList->SetDescriptorHeaps(1, getCurrentResourceStorage().m_samplerDescriptorHeap[getCurrentResourceStorage().m_samplerDescriptorHeapIndex].GetAddressOf());
 		getCurrentResourceStorage().m_currentCommandList->SetGraphicsRootDescriptorTable(3,
 			getGPUDescriptorHandle(getCurrentResourceStorage().m_samplerDescriptorHeap[getCurrentResourceStorage().m_samplerDescriptorHeapIndex].Get(),
-				getCurrentResourceStorage().m_currentTextureIndex * g_descriptorStrideSamplers)
+				getCurrentResourceStorage().m_currentSamplerIndex * g_descriptorStrideSamplers)
 			);
 
 		getCurrentResourceStorage().m_currentTextureIndex += usedTexture;
