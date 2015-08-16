@@ -17,7 +17,7 @@ git:
 
 before_install:
 # shutdown services on Travis, which may have a memory impact
-# show memory usage before and after shutdown of services
+# show memory usage before and after shutdown of services 
   - sudo service --status-all
   - sudo free -m -t
   - sudo /etc/init.d/mysql stop
