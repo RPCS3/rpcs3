@@ -2165,3 +2165,33 @@ void GLGSRender::semaphorePFIFOAcquire(u32 offset, u32 value)
 {
 
 }
+
+u32 LinearToSwizzleAddress(u32 x, u32 y, u32 z, u32 log2_width, u32 log2_height, u32 log2_depth)
+{
+	u32 offset = 0;
+	u32 shift_count = 0;
+	while (log2_width | log2_height | log2_depth){
+		if (log2_width)
+		{
+			offset |= (x & 0x01) << shift_count;
+			x >>= 1;
+			++shift_count;
+			--log2_width;
+		}
+		if (log2_height)
+		{
+			offset |= (y & 0x01) << shift_count;
+			y >>= 1;
+			++shift_count;
+			--log2_height;
+		}
+		if (log2_depth)
+		{
+			offset |= (z & 0x01) << shift_count;
+			z >>= 1;
+			++shift_count;
+			--log2_depth;
+		}
+	}
+	return offset;
+}
