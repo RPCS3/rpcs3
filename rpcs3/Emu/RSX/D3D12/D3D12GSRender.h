@@ -261,8 +261,8 @@ private:
 
 	struct
 	{
-		size_t m_vertexUploadDuration;
-		size_t m_textureUploadDuration;
+		size_t m_drawCallDuration;
+		size_t m_drawCallCount;
 	} m_timers;
 
 	void ResetTimer();

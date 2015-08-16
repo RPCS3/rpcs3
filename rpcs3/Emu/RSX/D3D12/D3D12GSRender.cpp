@@ -447,6 +447,8 @@ void D3D12GSRender::OnReset()
 
 void D3D12GSRender::Clear(u32 cmd)
 {
+	std::chrono::time_point<std::chrono::system_clock> startDuration = std::chrono::system_clock::now();
+	PrepareRenderTargets(getCurrentResourceStorage().m_currentCommandList);
 	assert(cmd == NV4097_CLEAR_SURFACE);
 
 	PrepareRenderTargets(getCurrentResourceStorage().m_currentCommandList);
@@ -516,10 +518,15 @@ void D3D12GSRender::Clear(u32 cmd)
 				LOG_ERROR(RSX, "Bad surface color target: %d", m_surface_color_target);
 		}
 	}
+
+	std::chrono::time_point<std::chrono::system_clock> endDuration = std::chrono::system_clock::now();
+	m_timers.m_drawCallDuration += std::chrono::duration_cast<std::chrono::microseconds>(endDuration - startDuration).count();
+	m_timers.m_drawCallCount++;
 }
 
 void D3D12GSRender::Draw()
 {
+	std::chrono::time_point<std::chrono::system_clock> startDuration = std::chrono::system_clock::now();
 	PrepareRenderTargets(getCurrentResourceStorage().m_currentCommandList);
 
 	// Init vertex count
@@ -547,7 +554,7 @@ void D3D12GSRender::Draw()
 		}
 	}
 
-	std::chrono::time_point<std::chrono::system_clock> startVertexTime = std::chrono::system_clock::now();
+
 	if (m_indexed_array.m_count || m_draw_array_count)
 	{
 		const std::vector<D3D12_VERTEX_BUFFER_VIEW> &vertexBufferViews = UploadVertexBuffers(m_indexed_array.m_count ? true : false);
@@ -556,8 +563,6 @@ void D3D12GSRender::Draw()
 		if (m_renderingInfo.m_indexed)
 			getCurrentResourceStorage().m_currentCommandList->IASetIndexBuffer(&indexBufferView);
 	}
-	std::chrono::time_point<std::chrono::system_clock> endVertexTime = std::chrono::system_clock::now();
-	m_timers.m_vertexUploadDuration += std::chrono::duration_cast<std::chrono::microseconds>(endVertexTime - startVertexTime).count();
 
 	if (!LoadProgram())
 	{
@@ -593,7 +598,6 @@ void D3D12GSRender::Draw()
 
 	if (m_PSO->second > 0)
 	{
-		std::chrono::time_point<std::chrono::system_clock> startTextureTime = std::chrono::system_clock::now();
 		size_t usedTexture = UploadTextures(getCurrentResourceStorage().m_currentCommandList);
 
 		// Fill empty slots
@@ -638,8 +642,6 @@ void D3D12GSRender::Draw()
 
 		getCurrentResourceStorage().m_currentTextureIndex += usedTexture;
 		getCurrentResourceStorage().m_currentSamplerIndex += usedTexture;
-		std::chrono::time_point<std::chrono::system_clock> endTextureTime = std::chrono::system_clock::now();
-		m_timers.m_textureUploadDuration += std::chrono::duration_cast<std::chrono::microseconds>(endTextureTime - startTextureTime).count();
 	}
 
 	size_t numRTT;
@@ -724,6 +726,9 @@ void D3D12GSRender::Draw()
 		getCurrentResourceStorage().m_currentCommandList->DrawInstanced((UINT)m_renderingInfo.m_count, 1, (UINT)m_renderingInfo.m_baseVertex, 0);
 
 	m_indexed_array.Reset();
+	std::chrono::time_point<std::chrono::system_clock> endDuration = std::chrono::system_clock::now();
+	m_timers.m_drawCallDuration += std::chrono::duration_cast<std::chrono::microseconds>(endDuration - startDuration).count();
+	m_timers.m_drawCallCount++;
 }
 
 static bool
@@ -955,8 +960,8 @@ void D3D12GSRender::Flip()
 
 void D3D12GSRender::ResetTimer()
 {
-	m_timers.m_textureUploadDuration = 0;
-	m_timers.m_vertexUploadDuration = 0;
+	m_timers.m_drawCallCount = 0;
+	m_timers.m_drawCallDuration = 0;
 }
 
 D3D12GSRender::ResourceStorage& D3D12GSRender::getCurrentResourceStorage()
