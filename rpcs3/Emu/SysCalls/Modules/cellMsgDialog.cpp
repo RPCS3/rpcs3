@@ -32,7 +32,7 @@ s32 cellMsgDialogOpen2(u32 type, vm::cptr<char> msgString, vm::ptr<CellMsgDialog
 {
 	cellSysutil.Warning("cellMsgDialogOpen2(type=0x%x, msgString=*0x%x, callback=*0x%x, userData=*0x%x, extParam=*0x%x)", type, msgString, callback, userData, extParam);
 
-	if (!msgString || strlen(msgString.get_ptr()) >= 0x200 || type & -0x33f8)
+	if (!msgString || std::strlen(msgString.get_ptr()) >= 0x200 || type & -0x33f8)
 	{
 		return CELL_MSGDIALOG_ERROR_PARAM;
 	}

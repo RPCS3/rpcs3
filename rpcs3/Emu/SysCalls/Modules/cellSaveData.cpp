@@ -77,7 +77,7 @@ never_inline s32 savedata_op(PPUThread& ppu, u32 operation, u32 version, vm::cpt
 	const auto fileSet  = stack.of(&_stack_t::fileSet);
 
 	// path of the specified user (00000001 by default)
-	const std::string base_dir = fmt::format("/dev_hdd0/home/%08d/savedata/", userId ? userId : 1u);
+	const std::string base_dir = fmt::format("/dev_hdd0/home/%08u/savedata/", userId ? userId : 1u);
 
 	result->userdata = userdata; // probably should be assigned only once (allows the callback to change it)
 
@@ -447,10 +447,11 @@ never_inline s32 savedata_op(PPUThread& ppu, u32 operation, u32 version, vm::cpt
 			return CELL_SAVEDATA_ERROR_CBRESULT;
 		}
 
-		// Update PARAM.SFO
 		if (statSet->setParam)
 		{
 			psf.Clear();
+
+			// Update PARAM.SFO
 			psf.SetString("ACCOUNT_ID", ""); // ???
 			psf.SetInteger("ATTRIBUTE", statSet->setParam->attribute);
 			psf.SetString("CATEGORY", "SD"); // ???
@@ -463,14 +464,26 @@ never_inline s32 savedata_op(PPUThread& ppu, u32 operation, u32 version, vm::cpt
 			psf.SetString("SUB_TITLE", statSet->setParam->subTitle);
 			psf.SetString("TITLE", statSet->setParam->title);
 		}
+		else if (!psf)
+		{
+			// setParam is NULL for new savedata: abort operation
+
+			return CELL_OK;
+		}
 
 		switch (const u32 mode = statSet->reCreateMode & 0xffff)
 		{
 		case CELL_SAVEDATA_RECREATE_NO:
+		{
+			cellSaveData.Error("Savedata %s considered broken", save_entry.dirName);
+			// fallthrough
+		}
+
 		case CELL_SAVEDATA_RECREATE_NO_NOBROKEN:
 		{
 			break;
 		}
+
 		case CELL_SAVEDATA_RECREATE_YES:
 		case CELL_SAVEDATA_RECREATE_YES_RESET_OWNER:
 		{
@@ -483,8 +496,17 @@ never_inline s32 savedata_op(PPUThread& ppu, u32 operation, u32 version, vm::cpt
 				}
 			}
 
+			if (!statSet->setParam)
+			{
+				// Savedata deleted and setParam is NULL: delete directory and abort operation
+				if (Emu.GetVFS().RemoveDir(dir_path)) cellSysutil.Error("savedata_op(): savedata directory %s deleted", save_entry.dirName);
+
+				return CELL_OK;
+			}
+
 			break;
 		}
+
 		default:
 		{
 			cellSysutil.Error("savedata_op(): unknown statSet->reCreateMode (0x%x)", statSet->reCreateMode);
