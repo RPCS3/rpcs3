@@ -385,6 +385,8 @@ public:
 	virtual void semaphorePFIFOAcquire(u32 offset, u32 value) override;
 
 private:
+	void InitD2DStructures();
+	void ReleaseD2DStructures();
 	ID3D12Resource *writeColorBuffer(ID3D12Resource *RTT, ID3D12GraphicsCommandList *cmdlist);
 	virtual void Close() override;
 
@@ -422,6 +424,12 @@ private:
 	 * from generic to rtt for rtt in cache).
 	 */
 	void PrepareRenderTargets(ID3D12GraphicsCommandList *cmdlist);
+
+	/**
+	 * Render D2D overlay if enabled on top of the backbuffer.
+	 */
+	void renderOverlay();
+
 protected:
 	virtual void OnInit() override;
 	virtual void OnInitThread() override;

@@ -387,6 +387,8 @@ D3D12GSRender::D3D12GSRender()
 	m_constantsData.Init(m_device.Get(), 1024 * 1024 * 64, D3D12_HEAP_TYPE_UPLOAD, D3D12_HEAP_FLAG_NONE);
 	m_vertexIndexData.Init(m_device.Get(), 1024 * 1024 * 384, D3D12_HEAP_TYPE_UPLOAD, D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS);
 	m_textureUploadData.Init(m_device.Get(), 1024 * 1024 * 256, D3D12_HEAP_TYPE_UPLOAD, D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS);
+
+	InitD2DStructures();
 }
 
 D3D12GSRender::~D3D12GSRender()
@@ -413,6 +415,8 @@ D3D12GSRender::~D3D12GSRender()
 	for (auto &tmp : m_texturesCache)
 		tmp.second->Release();
 	m_outputScalingPass.Release();
+
+	ReleaseD2DStructures();
 }
 
 void D3D12GSRender::Close()
@@ -899,11 +903,15 @@ void D3D12GSRender::Flip()
 	if (m_rtts.m_currentlyBoundRenderTargets[0] != nullptr)
 		getCurrentResourceStorage().m_currentCommandList->DrawInstanced(4, 1, 0, 0);
 
-	getCurrentResourceStorage().m_currentCommandList->ResourceBarrier(1, &getResourceBarrierTransition(m_backBuffer[m_swapChain->GetCurrentBackBufferIndex()].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
+	if (!Ini.GSOverlay.GetValue())
+		getCurrentResourceStorage().m_currentCommandList->ResourceBarrier(1, &getResourceBarrierTransition(m_backBuffer[m_swapChain->GetCurrentBackBufferIndex()].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
 	if (isFlipSurfaceInLocalMemory(m_surface_color_target) && m_rtts.m_currentlyBoundRenderTargets[0] != nullptr)
 		getCurrentResourceStorage().m_currentCommandList->ResourceBarrier(1, &getResourceBarrierTransition(m_rtts.m_currentlyBoundRenderTargets[0], D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET));
 	ThrowIfFailed(getCurrentResourceStorage().m_currentCommandList->Close());
 	m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**)&(getCurrentResourceStorage().m_currentCommandList));
+
+	if(Ini.GSOverlay.GetValue())
+		renderOverlay();
 
 	ThrowIfFailed(m_swapChain->Present(Ini.GSVSyncEnable.GetValue() ? 1 : 0, 0));
 	// Add an event signaling queue completion

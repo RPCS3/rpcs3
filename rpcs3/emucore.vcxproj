@@ -60,6 +60,7 @@
     <ClCompile Include="Emu\RSX\D3D12\D3D12Buffer.cpp" />
     <ClCompile Include="Emu\RSX\D3D12\D3D12FragmentProgramDecompiler.cpp" />
     <ClCompile Include="Emu\RSX\D3D12\D3D12GSRender.cpp" />
+    <ClCompile Include="Emu\RSX\D3D12\D3D12Overlay.cpp" />
     <ClCompile Include="Emu\RSX\D3D12\D3D12PipelineState.cpp" />
     <ClCompile Include="Emu\RSX\D3D12\D3D12RenderTargetSets.cpp" />
     <ClCompile Include="Emu\RSX\D3D12\D3D12Texture.cpp" />

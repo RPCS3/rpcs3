@@ -113,6 +113,7 @@ public:
 	IniEntry<bool> GSVSyncEnable;
 	IniEntry<bool> GS3DTV;
 	IniEntry<bool> GSDebugOutputEnable;
+	IniEntry<bool> GSOverlay;
 
 	// Audio
 	IniEntry<u8> AudioOutMode;
@@ -203,6 +204,7 @@ public:
 		GSVSyncEnable.Init("GS_VSyncEnable", path);
 		GSDebugOutputEnable.Init("GS_DebugOutputEnable", path);
 		GS3DTV.Init("GS_3DTV", path);
+		GSOverlay.Init("GS_Overlay", path);
 
 		// Audio
 		AudioOutMode.Init("Audio_AudioOutMode", path);
@@ -289,6 +291,7 @@ public:
 		GSVSyncEnable.Load(false);
 		GSDebugOutputEnable.Load(false);
 		GS3DTV.Load(false);
+		GSOverlay.Load(false);
 
 		// Audio
 		AudioOutMode.Load(1);
@@ -375,6 +378,7 @@ public:
 		GSVSyncEnable.Save();
 		GSDebugOutputEnable.Save();
 		GS3DTV.Save();
+		GSOverlay.Save();
 
 		// Audio 
 		AudioOutMode.Save();
