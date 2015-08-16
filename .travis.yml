@@ -64,7 +64,8 @@ after_success:
 - if [ "$COVERITY_SCAN_BRANCH" != 1 ]; then coveralls --extension .c --extension .cpp
   --extension .h; fi
 - tar -cvf rpcs3.tar rpcs3/bin
-- "curl --ftp-create-dirs -T rpcs3.tar -u $FTP_USER:$FTP_PASSWORD ftp://24.29.62.216/rpcs3-$(git rev-parse HEAD).tar"
+- "curl --ftp-create-dirs -T rpcs3.tar -u $FTP_USER:$FTP_PASSWORD ftp://24.29.62.216/rpcs3-latest.tar"
+- curl --ftp-create-dirs -T rpcs3.tar -u $FTP_USER:$FTP_PASSWORD ftp://24.29.62.216/rpcs3-$(git rev-parse HEAD).tar
 after_failure:
 - sudo free -m -t
 - sudo dmesg
