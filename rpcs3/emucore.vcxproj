@@ -766,55 +766,55 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>.\;..\;..\minidx9\Include;..\asmjit\src\asmjit;..\wxWidgets\include\msvc;..\wxWidgets\include;.\OpenAL\include;..\ffmpeg\WindowsInclude;..\ffmpeg\Windows\x86_64\Include;$(VC_IncludePath);$(WindowsSDK_IncludePath);..\llvm\include;..\llvm_build\include;$(UniversalCRT_IncludePath)</IncludePath>
+    <IncludePath>.\;..\;..\asmjit\src\asmjit;..\wxWidgets\include\msvc;..\wxWidgets\include;.\OpenAL\include;..\ffmpeg\WindowsInclude;..\ffmpeg\Windows\x86_64\Include;$(VC_IncludePath);$(WindowsSDK_IncludePath);..\llvm\include;..\llvm_build\include;$(UniversalCRT_IncludePath);..\minidx9\Include</IncludePath>
     <IntDir>$(Platform)\$(Configuration)\emucore\</IntDir>
     <LibraryPath>$(UniversalCRT_LibraryPath_x64);$(LibraryPath)</LibraryPath>
     <ExcludePath>$(ExcludePath)</ExcludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug - DX12|x64'">
-    <IncludePath>.\;..\;..\minidx9\Include;..\asmjit\src\asmjit;..\wxWidgets\include\msvc;..\wxWidgets\include;.\OpenAL\include;..\ffmpeg\WindowsInclude;..\ffmpeg\Windows\x86_64\Include;$(VC_IncludePath);$(WindowsSDK_IncludePath);..\llvm\include;..\llvm_build\include;$(UniversalCRT_IncludePath)</IncludePath>
+    <IncludePath>.\;..\;..\asmjit\src\asmjit;..\wxWidgets\include\msvc;..\wxWidgets\include;.\OpenAL\include;..\ffmpeg\WindowsInclude;..\ffmpeg\Windows\x86_64\Include;$(VC_IncludePath);$(WindowsSDK_IncludePath);..\llvm\include;..\llvm_build\include;$(UniversalCRT_IncludePath);..\minidx9\Include</IncludePath>
     <IntDir>$(Platform)\$(Configuration)\emucore\</IntDir>
     <LibraryPath>$(UniversalCRT_LibraryPath_x64);$(LibraryPath)</LibraryPath>
     <ExcludePath>$(ExcludePath)</ExcludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">
-    <IncludePath>.\;..\;..\minidx9\Include;..\asmjit\src\asmjit;..\wxWidgets\include\msvc;..\wxWidgets\include;.\OpenAL\include;..\ffmpeg\WindowsInclude;..\ffmpeg\Windows\x86_64\Include;$(VC_IncludePath);$(WindowsSDK_IncludePath);..\llvm\include;..\llvm_build\include;$(UniversalCRT_IncludePath)</IncludePath>
+    <IncludePath>.\;..\;..\asmjit\src\asmjit;..\wxWidgets\include\msvc;..\wxWidgets\include;.\OpenAL\include;..\ffmpeg\WindowsInclude;..\ffmpeg\Windows\x86_64\Include;$(VC_IncludePath);$(WindowsSDK_IncludePath);..\llvm\include;..\llvm_build\include;$(UniversalCRT_IncludePath);..\minidx9\Include</IncludePath>
     <IntDir>$(Platform)\$(Configuration)\emucore\</IntDir>
     <LibraryPath>$(LibraryPath)</LibraryPath>
     <ExcludePath>$(ExcludePath)</ExcludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM DX12|x64'">
-    <IncludePath>.\;..\;..\minidx9\Include;..\asmjit\src\asmjit;..\wxWidgets\include\msvc;..\wxWidgets\include;.\OpenAL\include;..\ffmpeg\WindowsInclude;..\ffmpeg\Windows\x86_64\Include;$(VC_IncludePath);$(WindowsSDK_IncludePath);..\llvm\include;..\llvm_build\include;$(UniversalCRT_IncludePath)</IncludePath>
+    <IncludePath>.\;..\;..\asmjit\src\asmjit;..\wxWidgets\include\msvc;..\wxWidgets\include;.\OpenAL\include;..\ffmpeg\WindowsInclude;..\ffmpeg\Windows\x86_64\Include;$(VC_IncludePath);$(WindowsSDK_IncludePath);..\llvm\include;..\llvm_build\include;$(UniversalCRT_IncludePath);..\minidx9\Include</IncludePath>
     <IntDir>$(Platform)\$(Configuration)\emucore\</IntDir>
     <LibraryPath>$(LibraryPath)</LibraryPath>
     <ExcludePath>$(ExcludePath)</ExcludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug - MemLeak|x64'">
-    <IncludePath>.\;..\;..\minidx9\Include;..\asmjit\src\asmjit;..\wxWidgets\include\msvc;..\wxWidgets\include;.\OpenAL\include;..\ffmpeg\WindowsInclude;..\ffmpeg\Windows\x86_64\Include;$(VC_IncludePath);$(WindowsSDK_IncludePath);..\llvm\include;..\llvm_build\include;$(UniversalCRT_IncludePath)</IncludePath>
+    <IncludePath>.\;..\;..\asmjit\src\asmjit;..\wxWidgets\include\msvc;..\wxWidgets\include;.\OpenAL\include;..\ffmpeg\WindowsInclude;..\ffmpeg\Windows\x86_64\Include;$(VC_IncludePath);$(WindowsSDK_IncludePath);..\llvm\include;..\llvm_build\include;$(UniversalCRT_IncludePath);..\minidx9\Include</IncludePath>
     <IntDir>$(Platform)\$(Configuration)\emucore\</IntDir>
     <LibraryPath>$(UniversalCRT_LibraryPath_x64);$(LibraryPath)</LibraryPath>
     <ExcludePath>$(ExcludePath)</ExcludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>.\;..\;..\minidx9\Include;..\asmjit\src\asmjit;..\wxWidgets\include\msvc;..\wxWidgets\include;.\OpenAL\include;..\ffmpeg\WindowsInclude;..\ffmpeg\Windows\x86_64\Include;$(VC_IncludePath);$(WindowsSDK_IncludePath);..\llvm\include;..\llvm_build\include;$(UniversalCRT_IncludePath)</IncludePath>
+    <IncludePath>.\;..\;..\asmjit\src\asmjit;..\wxWidgets\include\msvc;..\wxWidgets\include;.\OpenAL\include;..\ffmpeg\WindowsInclude;..\ffmpeg\Windows\x86_64\Include;$(VC_IncludePath);$(WindowsSDK_IncludePath);..\llvm\include;..\llvm_build\include;$(UniversalCRT_IncludePath);..\minidx9\Include</IncludePath>
     <IntDir>$(Platform)\$(Configuration)\emucore\</IntDir>
     <LibraryPath>$(UniversalCRT_LibraryPath_x64);$(LibraryPath)</LibraryPath>
     <ExcludePath>$(ExcludePath)</ExcludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release - DX12|x64'">
-    <IncludePath>.\;..\;..\minidx9\Include;..\asmjit\src\asmjit;..\wxWidgets\include\msvc;..\wxWidgets\include;.\OpenAL\include;..\ffmpeg\WindowsInclude;..\ffmpeg\Windows\x86_64\Include;$(VC_IncludePath);$(WindowsSDK_IncludePath);..\llvm\include;..\llvm_build\include;$(UniversalCRT_IncludePath)</IncludePath>
+    <IncludePath>.\;..\;..\asmjit\src\asmjit;..\wxWidgets\include\msvc;..\wxWidgets\include;.\OpenAL\include;..\ffmpeg\WindowsInclude;..\ffmpeg\Windows\x86_64\Include;$(VC_IncludePath);$(WindowsSDK_IncludePath);..\llvm\include;..\llvm_build\include;$(UniversalCRT_IncludePath);..\minidx9\Include</IncludePath>
     <IntDir>$(Platform)\$(Configuration)\emucore\</IntDir>
     <LibraryPath>$(UniversalCRT_LibraryPath_x64);$(LibraryPath)</LibraryPath>
     <ExcludePath>$(ExcludePath)</ExcludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">
-    <IncludePath>.\;..\;..\minidx9\Include;..\asmjit\src\asmjit;..\wxWidgets\include\msvc;..\wxWidgets\include;.\OpenAL\include;..\ffmpeg\WindowsInclude;..\ffmpeg\Windows\x86_64\Include;$(VC_IncludePath);$(WindowsSDK_IncludePath);..\llvm\include;..\llvm_build\include;$(UniversalCRT_IncludePath)</IncludePath>
+    <IncludePath>.\;..\;..\asmjit\src\asmjit;..\wxWidgets\include\msvc;..\wxWidgets\include;.\OpenAL\include;..\ffmpeg\WindowsInclude;..\ffmpeg\Windows\x86_64\Include;$(VC_IncludePath);$(WindowsSDK_IncludePath);..\llvm\include;..\llvm_build\include;$(UniversalCRT_IncludePath);..\minidx9\Include</IncludePath>
     <IntDir>$(Platform)\$(Configuration)\emucore\</IntDir>
     <LibraryPath>$(UniversalCRT_LibraryPath_x64);$(LibraryPath)</LibraryPath>
     <ExcludePath>$(ExcludePath)</ExcludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release - LLVM DX12|x64'">
-    <IncludePath>.\;..\;..\minidx9\Include;..\asmjit\src\asmjit;..\wxWidgets\include\msvc;..\wxWidgets\include;.\OpenAL\include;..\ffmpeg\WindowsInclude;..\ffmpeg\Windows\x86_64\Include;$(VC_IncludePath);$(WindowsSDK_IncludePath);..\llvm\include;..\llvm_build\include;$(UniversalCRT_IncludePath)</IncludePath>
+    <IncludePath>.\;..\;..\asmjit\src\asmjit;..\wxWidgets\include\msvc;..\wxWidgets\include;.\OpenAL\include;..\ffmpeg\WindowsInclude;..\ffmpeg\Windows\x86_64\Include;$(VC_IncludePath);$(WindowsSDK_IncludePath);..\llvm\include;..\llvm_build\include;$(UniversalCRT_IncludePath);..\minidx9\Include</IncludePath>
     <IntDir>$(Platform)\$(Configuration)\emucore\</IntDir>
     <LibraryPath>$(UniversalCRT_LibraryPath_x64);$(LibraryPath)</LibraryPath>
     <ExcludePath>$(ExcludePath)</ExcludePath>
