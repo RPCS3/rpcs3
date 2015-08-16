@@ -304,8 +304,11 @@ private:
 		UINT64 m_fenceValue;
 		HANDLE m_frameFinishedHandle;
 
+		// Pointer to device, not owned by ResourceStorage
+		ID3D12Device *m_device;
 		ComPtr<ID3D12CommandAllocator> m_commandAllocator;
-		std::list<ComPtr<ID3D12GraphicsCommandList> > m_inflightCommandList;
+		std::vector<ComPtr<ID3D12GraphicsCommandList> > m_availableCommandLists;
+		size_t m_nextAvailableCommandListIndex;
 
 		// Constants storage
 		ComPtr<ID3D12DescriptorHeap> m_constantsBufferDescriptorsHeap;
@@ -325,8 +328,11 @@ private:
 		// List of resources that can be freed after frame is flipped
 		std::vector<ComPtr<ID3D12Resource> > m_singleFrameLifetimeResources;
 
+		ID3D12GraphicsCommandList *m_currentCommandList;
+
 		void Reset();
 		void Init(ID3D12Device *device);
+		void setNewCommandList();
 		void WaitAndClean(const std::vector<ID3D12Resource *> &dirtyTextures);
 		void Release();
 	};

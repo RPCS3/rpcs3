@@ -103,12 +103,32 @@ void D3D12GSRender::ResourceStorage::Reset()
 	m_samplerDescriptorHeapIndex = 0;
 
 	m_commandAllocator->Reset();
-	m_inflightCommandList.clear();
+	m_nextAvailableCommandListIndex = 0;
+	setNewCommandList();
+
 	m_singleFrameLifetimeResources.clear();
+}
+
+void D3D12GSRender::ResourceStorage::setNewCommandList()
+{
+	if (m_availableCommandLists.size() > m_nextAvailableCommandListIndex)
+	{
+		m_currentCommandList = m_availableCommandLists[m_nextAvailableCommandListIndex].Get();
+		m_currentCommandList->Reset(m_commandAllocator.Get(), nullptr);
+	}
+	else
+	{
+		ComPtr<ID3D12GraphicsCommandList> commandList;
+		ThrowIfFailed(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocator.Get(), nullptr, IID_PPV_ARGS(commandList.GetAddressOf())));
+		m_availableCommandLists.push_back(commandList);
+		m_currentCommandList = m_availableCommandLists.back().Get();
+	}
+	m_nextAvailableCommandListIndex++;
 }
 
 void D3D12GSRender::ResourceStorage::Init(ID3D12Device *device)
 {
+	m_device = device;
 	m_RAMFramebuffer = nullptr;
 	// Create a global command allocator
 	ThrowIfFailed(device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(m_commandAllocator.GetAddressOf())));
@@ -158,7 +178,7 @@ void D3D12GSRender::ResourceStorage::WaitAndClean(const std::vector<ID3D12Resour
 void D3D12GSRender::ResourceStorage::Release()
 {
 	// NOTE: Should be released only after gfx pipeline last command has been finished.
-	m_inflightCommandList.clear();
+	m_availableCommandLists.clear();
 	CloseHandle(m_frameFinishedHandle);
 }
 
@@ -429,11 +449,7 @@ void D3D12GSRender::Clear(u32 cmd)
 {
 	assert(cmd == NV4097_CLEAR_SURFACE);
 
-	ComPtr<ID3D12GraphicsCommandList> commandList;
-	ThrowIfFailed(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, getCurrentResourceStorage().m_commandAllocator.Get(), nullptr, IID_PPV_ARGS(commandList.GetAddressOf())));
-	getCurrentResourceStorage().m_inflightCommandList.push_back(commandList);
-
-	PrepareRenderTargets(commandList.Get());
+	PrepareRenderTargets(getCurrentResourceStorage().m_currentCommandList);
 
 /*	if (m_set_color_mask)
 	{
@@ -451,11 +467,11 @@ void D3D12GSRender::Clear(u32 cmd)
 	if (m_clear_surface_mask & 0x1)
 	{
 		u32 max_depth_value = m_surface_depth_format == CELL_GCM_SURFACE_Z16 ? 0x0000ffff : 0x00ffffff;
-		commandList->ClearDepthStencilView(m_rtts.m_depthStencilDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), D3D12_CLEAR_FLAG_DEPTH, m_clear_surface_z / (float)max_depth_value, 0, 0, nullptr);
+		getCurrentResourceStorage().m_currentCommandList->ClearDepthStencilView(m_rtts.m_depthStencilDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), D3D12_CLEAR_FLAG_DEPTH, m_clear_surface_z / (float)max_depth_value, 0, 0, nullptr);
 	}
 
 	if (m_clear_surface_mask & 0x2)
-		commandList->ClearDepthStencilView(m_rtts.m_depthStencilDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), D3D12_CLEAR_FLAG_STENCIL, 0.f, m_clear_surface_s, 0, nullptr);
+		getCurrentResourceStorage().m_currentCommandList->ClearDepthStencilView(m_rtts.m_depthStencilDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), D3D12_CLEAR_FLAG_STENCIL, 0.f, m_clear_surface_s, 0, nullptr);
 
 	if (m_clear_surface_mask & 0xF0)
 	{
@@ -475,43 +491,36 @@ void D3D12GSRender::Clear(u32 cmd)
 
 			case CELL_GCM_SURFACE_TARGET_0:
 			case CELL_GCM_SURFACE_TARGET_1:
-				commandList->ClearRenderTargetView(getCPUDescriptorHandle(m_rtts.m_renderTargetsDescriptorsHeap, 0), clearColor, 0, nullptr);
+				getCurrentResourceStorage().m_currentCommandList->ClearRenderTargetView(getCPUDescriptorHandle(m_rtts.m_renderTargetsDescriptorsHeap, 0), clearColor, 0, nullptr);
 				break;
 			case CELL_GCM_SURFACE_TARGET_MRT1:
-				commandList->ClearRenderTargetView(getCPUDescriptorHandle(m_rtts.m_renderTargetsDescriptorsHeap, 0), clearColor, 0, nullptr);
-				commandList->ClearRenderTargetView(getCPUDescriptorHandle(m_rtts.m_renderTargetsDescriptorsHeap, g_descriptorStrideRTV), clearColor, 0, nullptr);
+				getCurrentResourceStorage().m_currentCommandList->ClearRenderTargetView(getCPUDescriptorHandle(m_rtts.m_renderTargetsDescriptorsHeap, 0), clearColor, 0, nullptr);
+				getCurrentResourceStorage().m_currentCommandList->ClearRenderTargetView(getCPUDescriptorHandle(m_rtts.m_renderTargetsDescriptorsHeap, g_descriptorStrideRTV), clearColor, 0, nullptr);
 				break;
 			case CELL_GCM_SURFACE_TARGET_MRT2:
-				commandList->ClearRenderTargetView(getCPUDescriptorHandle(m_rtts.m_renderTargetsDescriptorsHeap, 0), clearColor, 0, nullptr);
-				commandList->ClearRenderTargetView(getCPUDescriptorHandle(m_rtts.m_renderTargetsDescriptorsHeap, g_descriptorStrideRTV), clearColor, 0, nullptr);
+				getCurrentResourceStorage().m_currentCommandList->ClearRenderTargetView(getCPUDescriptorHandle(m_rtts.m_renderTargetsDescriptorsHeap, 0), clearColor, 0, nullptr);
+				getCurrentResourceStorage().m_currentCommandList->ClearRenderTargetView(getCPUDescriptorHandle(m_rtts.m_renderTargetsDescriptorsHeap, g_descriptorStrideRTV), clearColor, 0, nullptr);
 				handle.ptr += g_RTTIncrement;
-				commandList->ClearRenderTargetView(getCPUDescriptorHandle(m_rtts.m_renderTargetsDescriptorsHeap, 2 * g_descriptorStrideRTV), clearColor, 0, nullptr);
+				getCurrentResourceStorage().m_currentCommandList->ClearRenderTargetView(getCPUDescriptorHandle(m_rtts.m_renderTargetsDescriptorsHeap, 2 * g_descriptorStrideRTV), clearColor, 0, nullptr);
 				break;
 			case CELL_GCM_SURFACE_TARGET_MRT3:
-				commandList->ClearRenderTargetView(getCPUDescriptorHandle(m_rtts.m_renderTargetsDescriptorsHeap, 0), clearColor, 0, nullptr);
+				getCurrentResourceStorage().m_currentCommandList->ClearRenderTargetView(getCPUDescriptorHandle(m_rtts.m_renderTargetsDescriptorsHeap, 0), clearColor, 0, nullptr);
 				handle.ptr += g_RTTIncrement;
-				commandList->ClearRenderTargetView(getCPUDescriptorHandle(m_rtts.m_renderTargetsDescriptorsHeap, g_descriptorStrideRTV), clearColor, 0, nullptr);
+				getCurrentResourceStorage().m_currentCommandList->ClearRenderTargetView(getCPUDescriptorHandle(m_rtts.m_renderTargetsDescriptorsHeap, g_descriptorStrideRTV), clearColor, 0, nullptr);
 				handle.ptr += g_RTTIncrement;
-				commandList->ClearRenderTargetView(getCPUDescriptorHandle(m_rtts.m_renderTargetsDescriptorsHeap, 2 * g_descriptorStrideRTV), clearColor, 0, nullptr);
+				getCurrentResourceStorage().m_currentCommandList->ClearRenderTargetView(getCPUDescriptorHandle(m_rtts.m_renderTargetsDescriptorsHeap, 2 * g_descriptorStrideRTV), clearColor, 0, nullptr);
 				handle.ptr += g_RTTIncrement;
-				commandList->ClearRenderTargetView(getCPUDescriptorHandle(m_rtts.m_renderTargetsDescriptorsHeap, 3 * g_descriptorStrideRTV), clearColor, 0, nullptr);
+				getCurrentResourceStorage().m_currentCommandList->ClearRenderTargetView(getCPUDescriptorHandle(m_rtts.m_renderTargetsDescriptorsHeap, 3 * g_descriptorStrideRTV), clearColor, 0, nullptr);
 				break;
 			default:
 				LOG_ERROR(RSX, "Bad surface color target: %d", m_surface_color_target);
 		}
 	}
-
-	ThrowIfFailed(commandList->Close());
-	m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**)commandList.GetAddressOf());
 }
 
 void D3D12GSRender::Draw()
 {
-	ComPtr<ID3D12GraphicsCommandList> commandList;
-	m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, getCurrentResourceStorage().m_commandAllocator.Get(), nullptr, IID_PPV_ARGS(commandList.GetAddressOf()));
-	getCurrentResourceStorage().m_inflightCommandList.push_back(commandList);
-
-	PrepareRenderTargets(commandList.Get());
+	PrepareRenderTargets(getCurrentResourceStorage().m_currentCommandList);
 
 	// Init vertex count
 	// TODO: Very hackish, clean this
@@ -543,9 +552,9 @@ void D3D12GSRender::Draw()
 	{
 		const std::vector<D3D12_VERTEX_BUFFER_VIEW> &vertexBufferViews = UploadVertexBuffers(m_indexed_array.m_count ? true : false);
 		const D3D12_INDEX_BUFFER_VIEW &indexBufferView = uploadIndexBuffers(m_indexed_array.m_count ? true : false);
-		commandList->IASetVertexBuffers(0, (UINT)vertexBufferViews.size(), vertexBufferViews.data());
+		getCurrentResourceStorage().m_currentCommandList->IASetVertexBuffers(0, (UINT)vertexBufferViews.size(), vertexBufferViews.data());
 		if (m_renderingInfo.m_indexed)
-			commandList->IASetIndexBuffer(&indexBufferView);
+			getCurrentResourceStorage().m_currentCommandList->IASetIndexBuffer(&indexBufferView);
 	}
 	std::chrono::time_point<std::chrono::system_clock> endVertexTime = std::chrono::system_clock::now();
 	m_timers.m_vertexUploadDuration += std::chrono::duration_cast<std::chrono::microseconds>(endVertexTime - startVertexTime).count();
@@ -557,13 +566,13 @@ void D3D12GSRender::Draw()
 		return;
 	}
 
-	commandList->SetGraphicsRootSignature(m_rootSignatures[m_PSO->second].Get());
-	commandList->OMSetStencilRef(m_stencil_func_ref);
+	getCurrentResourceStorage().m_currentCommandList->SetGraphicsRootSignature(m_rootSignatures[m_PSO->second].Get());
+	getCurrentResourceStorage().m_currentCommandList->OMSetStencilRef(m_stencil_func_ref);
 
 	// Constants
 	setScaleOffset();
-	commandList->SetDescriptorHeaps(1, getCurrentResourceStorage().m_scaleOffsetDescriptorHeap.GetAddressOf());
-	commandList->SetGraphicsRootDescriptorTable(0,
+	getCurrentResourceStorage().m_currentCommandList->SetDescriptorHeaps(1, getCurrentResourceStorage().m_scaleOffsetDescriptorHeap.GetAddressOf());
+	getCurrentResourceStorage().m_currentCommandList->SetGraphicsRootDescriptorTable(0,
 		getGPUDescriptorHandle(getCurrentResourceStorage().m_scaleOffsetDescriptorHeap.Get(),
 			getCurrentResourceStorage().m_currentScaleOffsetBufferIndex * g_descriptorStrideSRVCBVUAV)
 		);
@@ -575,17 +584,17 @@ void D3D12GSRender::Draw()
 	FillPixelShaderConstantsBuffer();
 	getCurrentResourceStorage().m_constantsBufferIndex++;
 
-	commandList->SetDescriptorHeaps(1, getCurrentResourceStorage().m_constantsBufferDescriptorsHeap.GetAddressOf());
-	commandList->SetGraphicsRootDescriptorTable(1,
+	getCurrentResourceStorage().m_currentCommandList->SetDescriptorHeaps(1, getCurrentResourceStorage().m_constantsBufferDescriptorsHeap.GetAddressOf());
+	getCurrentResourceStorage().m_currentCommandList->SetGraphicsRootDescriptorTable(1,
 		getGPUDescriptorHandle(getCurrentResourceStorage().m_constantsBufferDescriptorsHeap.Get(),
 			currentBufferIndex * g_descriptorStrideSRVCBVUAV)
 		);
-	commandList->SetPipelineState(m_PSO->first);
+	getCurrentResourceStorage().m_currentCommandList->SetPipelineState(m_PSO->first);
 
 	if (m_PSO->second > 0)
 	{
 		std::chrono::time_point<std::chrono::system_clock> startTextureTime = std::chrono::system_clock::now();
-		size_t usedTexture = UploadTextures(commandList.Get());
+		size_t usedTexture = UploadTextures(getCurrentResourceStorage().m_currentCommandList);
 
 		// Fill empty slots
 		for (; usedTexture < m_PSO->second; usedTexture++)
@@ -615,14 +624,14 @@ void D3D12GSRender::Draw()
 				);
 		}
 
-		commandList->SetDescriptorHeaps(1, getCurrentResourceStorage().m_textureDescriptorsHeap.GetAddressOf());
-		commandList->SetGraphicsRootDescriptorTable(2,
+		getCurrentResourceStorage().m_currentCommandList->SetDescriptorHeaps(1, getCurrentResourceStorage().m_textureDescriptorsHeap.GetAddressOf());
+		getCurrentResourceStorage().m_currentCommandList->SetGraphicsRootDescriptorTable(2,
 			getGPUDescriptorHandle(getCurrentResourceStorage().m_textureDescriptorsHeap.Get(),
 				getCurrentResourceStorage().m_currentTextureIndex * g_descriptorStrideSRVCBVUAV)
 			);
 
-		commandList->SetDescriptorHeaps(1, getCurrentResourceStorage().m_samplerDescriptorHeap[getCurrentResourceStorage().m_samplerDescriptorHeapIndex].GetAddressOf());
-		commandList->SetGraphicsRootDescriptorTable(3,
+		getCurrentResourceStorage().m_currentCommandList->SetDescriptorHeaps(1, getCurrentResourceStorage().m_samplerDescriptorHeap[getCurrentResourceStorage().m_samplerDescriptorHeapIndex].GetAddressOf());
+		getCurrentResourceStorage().m_currentCommandList->SetGraphicsRootDescriptorTable(3,
 			getGPUDescriptorHandle(getCurrentResourceStorage().m_samplerDescriptorHeap[getCurrentResourceStorage().m_samplerDescriptorHeapIndex].Get(),
 				getCurrentResourceStorage().m_currentTextureIndex * g_descriptorStrideSamplers)
 			);
@@ -654,7 +663,7 @@ void D3D12GSRender::Draw()
 		LOG_ERROR(RSX, "Bad surface color target: %d", m_surface_color_target);
 	}
 
-	commandList->OMSetRenderTargets((UINT)numRTT, &m_rtts.m_renderTargetsDescriptorsHeap->GetCPUDescriptorHandleForHeapStart(), true,
+	getCurrentResourceStorage().m_currentCommandList->OMSetRenderTargets((UINT)numRTT, &m_rtts.m_renderTargetsDescriptorsHeap->GetCPUDescriptorHandleForHeapStart(), true,
 		&getCPUDescriptorHandle(m_rtts.m_depthStencilDescriptorHeap, 0));
 
 	D3D12_VIEWPORT viewport =
@@ -666,7 +675,7 @@ void D3D12GSRender::Draw()
 		-1.f,
 		1.f
 	};
-	commandList->RSSetViewports(1, &viewport);
+	getCurrentResourceStorage().m_currentCommandList->RSSetViewports(1, &viewport);
 
 	D3D12_RECT box =
 	{
@@ -675,47 +684,45 @@ void D3D12GSRender::Draw()
 		(LONG)m_surface_clip_w,
 		(LONG)m_surface_clip_h,
 	};
-	commandList->RSSetScissorRects(1, &box);
+	getCurrentResourceStorage().m_currentCommandList->RSSetScissorRects(1, &box);
 
 	switch (m_draw_mode - 1)
 	{
 	case GL_POINTS:
-		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_POINTLIST);
+		getCurrentResourceStorage().m_currentCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_POINTLIST);
 		break;
 	case GL_LINES:
-		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_LINELIST);
+		getCurrentResourceStorage().m_currentCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_LINELIST);
 		break;
 	case GL_LINE_LOOP:
-		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_LINELIST_ADJ);
+		getCurrentResourceStorage().m_currentCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_LINELIST_ADJ);
 		break;
 	case GL_LINE_STRIP:
-		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_LINESTRIP);
+		getCurrentResourceStorage().m_currentCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_LINESTRIP);
 		break;
 	case GL_TRIANGLES:
-		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		getCurrentResourceStorage().m_currentCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 		break;
 	case GL_TRIANGLE_STRIP:
-		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+		getCurrentResourceStorage().m_currentCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 		break;
 	case GL_TRIANGLE_FAN:
 	case GL_QUADS:
-		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		getCurrentResourceStorage().m_currentCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 		break;
 	case GL_QUAD_STRIP:
 	case GL_POLYGON:
 	default:
-		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		getCurrentResourceStorage().m_currentCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 		LOG_ERROR(RSX, "Unsupported primitive type");
 		break;
 	}
 
 	if (m_renderingInfo.m_indexed)
-		commandList->DrawIndexedInstanced((UINT)m_renderingInfo.m_count, 1, 0, (UINT)m_renderingInfo.m_baseVertex, 0);
+		getCurrentResourceStorage().m_currentCommandList->DrawIndexedInstanced((UINT)m_renderingInfo.m_count, 1, 0, (UINT)m_renderingInfo.m_baseVertex, 0);
 	else
-		commandList->DrawInstanced((UINT)m_renderingInfo.m_count, 1, (UINT)m_renderingInfo.m_baseVertex, 0);
+		getCurrentResourceStorage().m_currentCommandList->DrawInstanced((UINT)m_renderingInfo.m_count, 1, (UINT)m_renderingInfo.m_baseVertex, 0);
 
-	ThrowIfFailed(commandList->Close());
-	m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**)commandList.GetAddressOf());
 	m_indexed_array.Reset();
 }
 
@@ -738,10 +745,6 @@ isFlipSurfaceInLocalMemory(u32 surfaceColorTarget)
 
 void D3D12GSRender::Flip()
 {
-	ComPtr<ID3D12GraphicsCommandList> commandList;
-	m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, getCurrentResourceStorage().m_commandAllocator.Get(), nullptr, IID_PPV_ARGS(commandList.GetAddressOf()));
-	getCurrentResourceStorage().m_inflightCommandList.push_back(commandList);
-
 	ID3D12Resource *resourceToFlip;
 	float viewport_w, viewport_h;
 
@@ -806,20 +809,20 @@ void D3D12GSRender::Flip()
 		src.PlacedFootprint.Footprint.Height = (UINT)h;
 		src.PlacedFootprint.Footprint.Depth = (UINT)1;
 		src.PlacedFootprint.Footprint.RowPitch = (UINT)rowPitch;
-		commandList->CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
+		getCurrentResourceStorage().m_currentCommandList->CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
 
-		commandList->ResourceBarrier(1, &getResourceBarrierTransition(storage.m_RAMFramebuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ));
+		getCurrentResourceStorage().m_currentCommandList->ResourceBarrier(1, &getResourceBarrierTransition(storage.m_RAMFramebuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ));
 		resourceToFlip = storage.m_RAMFramebuffer.Get();
 		viewport_w = (float)w, viewport_h = (float)h;
 	}
 	else
 	{
 		if (m_rtts.m_currentlyBoundRenderTargets[0] != nullptr)
-			commandList->ResourceBarrier(1, &getResourceBarrierTransition(m_rtts.m_currentlyBoundRenderTargets[0], D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
+			getCurrentResourceStorage().m_currentCommandList->ResourceBarrier(1, &getResourceBarrierTransition(m_rtts.m_currentlyBoundRenderTargets[0], D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
 		resourceToFlip = m_rtts.m_currentlyBoundRenderTargets[0];
 	}
 
-	commandList->ResourceBarrier(1, &getResourceBarrierTransition(m_backBuffer[m_swapChain->GetCurrentBackBufferIndex()].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
+	getCurrentResourceStorage().m_currentCommandList->ResourceBarrier(1, &getResourceBarrierTransition(m_backBuffer[m_swapChain->GetCurrentBackBufferIndex()].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
 
 	D3D12_VIEWPORT viewport =
 	{
@@ -830,7 +833,7 @@ void D3D12GSRender::Flip()
 		0.f,
 		1.f
 	};
-	commandList->RSSetViewports(1, &viewport);
+	getCurrentResourceStorage().m_currentCommandList->RSSetViewports(1, &viewport);
 
 	D3D12_RECT box =
 	{
@@ -839,9 +842,9 @@ void D3D12GSRender::Flip()
 		(LONG)m_backBuffer[m_swapChain->GetCurrentBackBufferIndex()]->GetDesc().Width,
 		(LONG)m_backBuffer[m_swapChain->GetCurrentBackBufferIndex()]->GetDesc().Height,
 	};
-	commandList->RSSetScissorRects(1, &box);
-	commandList->SetGraphicsRootSignature(m_outputScalingPass.m_rootSignature);
-	commandList->SetPipelineState(m_outputScalingPass.m_PSO);
+	getCurrentResourceStorage().m_currentCommandList->RSSetScissorRects(1, &box);
+	getCurrentResourceStorage().m_currentCommandList->SetGraphicsRootSignature(m_outputScalingPass.m_rootSignature);
+	getCurrentResourceStorage().m_currentCommandList->SetPipelineState(m_outputScalingPass.m_PSO);
 	D3D12_CPU_DESCRIPTOR_HANDLE CPUHandle;
 	CPUHandle = m_outputScalingPass.m_textureDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
 	CPUHandle.ptr += m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV) * m_swapChain->GetCurrentBackBufferIndex();
@@ -873,29 +876,29 @@ void D3D12GSRender::Flip()
 	D3D12_GPU_DESCRIPTOR_HANDLE GPUHandle;
 	GPUHandle = m_outputScalingPass.m_textureDescriptorHeap->GetGPUDescriptorHandleForHeapStart();
 	GPUHandle.ptr += m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV) * m_swapChain->GetCurrentBackBufferIndex();
-	commandList->SetDescriptorHeaps(1, &m_outputScalingPass.m_textureDescriptorHeap);
-	commandList->SetGraphicsRootDescriptorTable(0, GPUHandle);
+	getCurrentResourceStorage().m_currentCommandList->SetDescriptorHeaps(1, &m_outputScalingPass.m_textureDescriptorHeap);
+	getCurrentResourceStorage().m_currentCommandList->SetGraphicsRootDescriptorTable(0, GPUHandle);
 	GPUHandle = m_outputScalingPass.m_samplerDescriptorHeap->GetGPUDescriptorHandleForHeapStart();
 	GPUHandle.ptr += m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER) * m_swapChain->GetCurrentBackBufferIndex();
-	commandList->SetDescriptorHeaps(1, &m_outputScalingPass.m_samplerDescriptorHeap);
-	commandList->SetGraphicsRootDescriptorTable(1, GPUHandle);
+	getCurrentResourceStorage().m_currentCommandList->SetDescriptorHeaps(1, &m_outputScalingPass.m_samplerDescriptorHeap);
+	getCurrentResourceStorage().m_currentCommandList->SetGraphicsRootDescriptorTable(1, GPUHandle);
 
 	CPUHandle = m_backbufferAsRendertarget[m_swapChain->GetCurrentBackBufferIndex()]->GetCPUDescriptorHandleForHeapStart();
-	commandList->OMSetRenderTargets(1, &CPUHandle, true, nullptr);
+	getCurrentResourceStorage().m_currentCommandList->OMSetRenderTargets(1, &CPUHandle, true, nullptr);
 	D3D12_VERTEX_BUFFER_VIEW vbv = {};
 	vbv.BufferLocation = m_outputScalingPass.m_vertexBuffer->GetGPUVirtualAddress();
 	vbv.StrideInBytes = 4 * sizeof(float);
 	vbv.SizeInBytes = 16 * sizeof(float);
-	commandList->IASetVertexBuffers(0, 1, &vbv);
-	commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+	getCurrentResourceStorage().m_currentCommandList->IASetVertexBuffers(0, 1, &vbv);
+	getCurrentResourceStorage().m_currentCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 	if (m_rtts.m_currentlyBoundRenderTargets[0] != nullptr)
-		commandList->DrawInstanced(4, 1, 0, 0);
+		getCurrentResourceStorage().m_currentCommandList->DrawInstanced(4, 1, 0, 0);
 
-	commandList->ResourceBarrier(1, &getResourceBarrierTransition(m_backBuffer[m_swapChain->GetCurrentBackBufferIndex()].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
+	getCurrentResourceStorage().m_currentCommandList->ResourceBarrier(1, &getResourceBarrierTransition(m_backBuffer[m_swapChain->GetCurrentBackBufferIndex()].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
 	if (isFlipSurfaceInLocalMemory(m_surface_color_target) && m_rtts.m_currentlyBoundRenderTargets[0] != nullptr)
-		commandList->ResourceBarrier(1, &getResourceBarrierTransition(m_rtts.m_currentlyBoundRenderTargets[0], D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET));
-	ThrowIfFailed(commandList->Close());
-	m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**)commandList.GetAddressOf());
+		getCurrentResourceStorage().m_currentCommandList->ResourceBarrier(1, &getResourceBarrierTransition(m_rtts.m_currentlyBoundRenderTargets[0], D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET));
+	ThrowIfFailed(getCurrentResourceStorage().m_currentCommandList->Close());
+	m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**)&(getCurrentResourceStorage().m_currentCommandList));
 
 	ThrowIfFailed(m_swapChain->Present(Ini.GSVSyncEnable.GetValue() ? 1 : 0, 0));
 	// Add an event signaling queue completion
@@ -1054,7 +1057,6 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 	fence->SetEventOnCompletion(1, handle);
 
 	ComPtr<ID3D12Resource> writeDest, depthConverted;
-	ID3D12GraphicsCommandList *convertCommandList;
 	ID3D12DescriptorHeap *descriptorHeap;
 	size_t depthRowPitch = m_surface_clip_w;
 	depthRowPitch = (depthRowPitch + 255) & ~255;
@@ -1102,10 +1104,6 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 			);
 		getCurrentResourceStorage().m_singleFrameLifetimeResources.push_back(writeDest);
 
-		ThrowIfFailed(
-			m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, getCurrentResourceStorage().m_commandAllocator.Get(), nullptr, IID_PPV_ARGS(&convertCommandList))
-			);
-
 		D3D12_DESCRIPTOR_HEAP_DESC descriptorHeapDesc = {};
 		descriptorHeapDesc.NumDescriptors = 2;
 		descriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
@@ -1140,13 +1138,13 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 		m_device->CreateUnorderedAccessView(depthConverted.Get(), nullptr, &uavDesc, Handle);
 
 		// Convert
-		convertCommandList->ResourceBarrier(1, &getResourceBarrierTransition(m_rtts.m_currentlyBoundDepthStencil, D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_GENERIC_READ));
+		getCurrentResourceStorage().m_currentCommandList->ResourceBarrier(1, &getResourceBarrierTransition(m_rtts.m_currentlyBoundDepthStencil, D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_GENERIC_READ));
 
-		convertCommandList->SetPipelineState(m_convertPSO);
-		convertCommandList->SetComputeRootSignature(m_convertRootSignature);
-		convertCommandList->SetDescriptorHeaps(1, &descriptorHeap);
-		convertCommandList->SetComputeRootDescriptorTable(0, descriptorHeap->GetGPUDescriptorHandleForHeapStart());
-		convertCommandList->Dispatch(m_surface_clip_w / 8, m_surface_clip_h / 8, 1);
+		getCurrentResourceStorage().m_currentCommandList->SetPipelineState(m_convertPSO);
+		getCurrentResourceStorage().m_currentCommandList->SetComputeRootSignature(m_convertRootSignature);
+		getCurrentResourceStorage().m_currentCommandList->SetDescriptorHeaps(1, &descriptorHeap);
+		getCurrentResourceStorage().m_currentCommandList->SetComputeRootDescriptorTable(0, descriptorHeap->GetGPUDescriptorHandleForHeapStart());
+		getCurrentResourceStorage().m_currentCommandList->Dispatch(m_surface_clip_w / 8, m_surface_clip_h / 8, 1);
 
 		// Flush UAV
 		D3D12_RESOURCE_BARRIER uavbarrier = {};
@@ -1158,19 +1156,8 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 			getResourceBarrierTransition(m_rtts.m_currentlyBoundDepthStencil, D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_DEPTH_WRITE),
 			uavbarrier,
 		};
-		convertCommandList->ResourceBarrier(2, barriers);
-		convertCommandList->ResourceBarrier(1, &getResourceBarrierTransition(depthConverted.Get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COPY_SOURCE));
-
-		ThrowIfFailed(convertCommandList->Close());
-		m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**)&convertCommandList);
-	}
-
-	ID3D12GraphicsCommandList *downloadCommandList;
-	if (needTransfer)
-	{
-		ThrowIfFailed(
-			m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, getCurrentResourceStorage().m_commandAllocator.Get(), nullptr, IID_PPV_ARGS(&downloadCommandList))
-			);
+		getCurrentResourceStorage().m_currentCommandList->ResourceBarrier(2, barriers);
+		getCurrentResourceStorage().m_currentCommandList->ResourceBarrier(1, &getResourceBarrierTransition(depthConverted.Get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COPY_SOURCE));
 	}
 
 	if (m_set_context_dma_z && Ini.GSDumpDepthBuffer.GetValue())
@@ -1187,7 +1174,7 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 		dst.PlacedFootprint.Footprint.Height = m_surface_clip_h;
 		dst.PlacedFootprint.Footprint.Width = m_surface_clip_w;
 		dst.PlacedFootprint.Footprint.RowPitch = (UINT)depthRowPitch;
-		downloadCommandList->CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
+		getCurrentResourceStorage().m_currentCommandList->CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
 
 		invalidateTexture(GetAddress(m_surface_offset_z, m_context_dma_z - 0xfeed0000));
 	}
@@ -1201,29 +1188,29 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 			break;
 
 		case CELL_GCM_SURFACE_TARGET_0:
-			if (m_context_dma_color_a) rtt0 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[0], downloadCommandList);
+			if (m_context_dma_color_a) rtt0 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[0], getCurrentResourceStorage().m_currentCommandList);
 			break;
 
 		case CELL_GCM_SURFACE_TARGET_1:
-			if (m_context_dma_color_b) rtt1 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[0], downloadCommandList);
+			if (m_context_dma_color_b) rtt1 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[0], getCurrentResourceStorage().m_currentCommandList);
 			break;
 
 		case CELL_GCM_SURFACE_TARGET_MRT1:
-			if (m_context_dma_color_a) rtt0 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[0], downloadCommandList);
-			if (m_context_dma_color_b) rtt1 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[1], downloadCommandList);
+			if (m_context_dma_color_a) rtt0 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[0], getCurrentResourceStorage().m_currentCommandList);
+			if (m_context_dma_color_b) rtt1 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[1], getCurrentResourceStorage().m_currentCommandList);
 			break;
 
 		case CELL_GCM_SURFACE_TARGET_MRT2:
-			if (m_context_dma_color_a) rtt0 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[0], downloadCommandList);
-			if (m_context_dma_color_b) rtt1 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[1], downloadCommandList);
-			if (m_context_dma_color_c) rtt2 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[2], downloadCommandList);
+			if (m_context_dma_color_a) rtt0 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[0], getCurrentResourceStorage().m_currentCommandList);
+			if (m_context_dma_color_b) rtt1 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[1], getCurrentResourceStorage().m_currentCommandList);
+			if (m_context_dma_color_c) rtt2 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[2], getCurrentResourceStorage().m_currentCommandList);
 			break;
 
 		case CELL_GCM_SURFACE_TARGET_MRT3:
-			if (m_context_dma_color_a) rtt0 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[0], downloadCommandList);
-			if (m_context_dma_color_b) rtt1 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[1], downloadCommandList);
-			if (m_context_dma_color_c) rtt2 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[2], downloadCommandList);
-			if (m_context_dma_color_d) rtt3 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[3], downloadCommandList);
+			if (m_context_dma_color_a) rtt0 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[0], getCurrentResourceStorage().m_currentCommandList);
+			if (m_context_dma_color_b) rtt1 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[1], getCurrentResourceStorage().m_currentCommandList);
+			if (m_context_dma_color_c) rtt2 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[2], getCurrentResourceStorage().m_currentCommandList);
+			if (m_context_dma_color_d) rtt3 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[3], getCurrentResourceStorage().m_currentCommandList);
 			break;
 		}
 
@@ -1234,8 +1221,9 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 	}
 	if (needTransfer)
 	{
-		ThrowIfFailed(downloadCommandList->Close());
-		m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**)&downloadCommandList);
+		ThrowIfFailed(getCurrentResourceStorage().m_currentCommandList->Close());
+		m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**)&(getCurrentResourceStorage().m_currentCommandList));
+		getCurrentResourceStorage().setNewCommandList();
 	}
 
 	//Wait for result
@@ -1266,7 +1254,6 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 				}
 			}
 			descriptorHeap->Release();
-			convertCommandList->Release();
 		}
 
 		size_t srcPitch, dstPitch;
@@ -1348,9 +1335,6 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 			break;
 			}
 		}
-
-		if (needTransfer)
-			downloadCommandList->Release();
 
 		vm::write32(m_label_addr + offset, value);
 	});
