@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 2.8.12)
 
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake_modules")
+set(CMAKE_VERBOSE_MAKEFILE ON)
 include(cotire)
 
 project(rpcs3)
@@ -18,8 +19,10 @@ if(CMAKE_COMPILER_IS_GNUCXX)
 	endif()
 	# Warnings
 	add_compile_options(-Wno-attributes -Wno-enum-compare -Wno-invalid-offsetof)
-elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-	# TODO: stdlib?
+elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+	if(APPLE)
+		add_compile_options(-stdlib=libc++) # TODO: stdlib?
+	endif()
 endif()
 
 if(NOT MSVC)
@@ -59,13 +62,26 @@ EndIf()
 set(CMAKE_MODULE_PATH "${RPCS3_SRC_DIR}/cmake_modules")
 
 if(NOT WIN32)
-    add_definitions(-DGL_GLEXT_PROTOTYPES)
-    add_definitions(-DGLX_GLXEXT_PROTOTYPES)
+	add_definitions(-DGL_GLEXT_PROTOTYPES)
+	add_definitions(-DGLX_GLXEXT_PROTOTYPES)
 endif()
 
 find_package(wxWidgets COMPONENTS core base net aui gl xml REQUIRED)
 if(NOT WIN32)
-    find_package(GLEW REQUIRED)
+	if(APPLE)
+		find_path(GLEW_INCLUDE_DIR GL/glew.h
+			/usr/include/GL
+			/usr/openwin/share/include
+			/usr/openwin/include
+			/usr/X11R6/include
+			/usr/include/X11
+			/opt/graphics/OpenGL/include
+			/opt/graphics/OpenGL/contrib/libglew
+			/usr/local/include
+		)
+	endif()
+	find_package(GLEW REQUIRED)
+	message("${GLEW_LIBRARY} AND ${GLEW_INCLUDE_DIR}")
 endif()
 find_package(OpenGL REQUIRED)
 find_package(OpenAL REQUIRED)
@@ -82,6 +98,7 @@ else()
 endif()
 
 include_directories(
+${GLEW_INCLUDE_DIR}
 ${wxWidgets_INCLUDE_DIRS}
 ${OPENAL_INCLUDE_DIR}
 ${LLVM_INCLUDE_DIRS}

@@ -49,7 +49,7 @@ public:
 	thread_t(std::function<std::string()> name, std::function<void()> func);
 
 	// destructor, joins automatically (questionable, don't rely on this functionality in derived destructors)
-	virtual ~thread_t() noexcept(false);
+	virtual ~thread_t() /*noexcept(false) compile error on osx*/;
 
 	thread_t(const thread_t&) = delete;
 

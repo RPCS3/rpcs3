@@ -1,5 +1,11 @@
 #pragma once
 
+#ifdef _MSC_VER
+#include <intrin.h>
+#else
+#include <x86intrin.h>
+#endif
+
 #define IS_LE_MACHINE // only draft
 
 union u128
