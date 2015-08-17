@@ -5,7 +5,7 @@ configuration:
  - ReleaseLLVM
 platform: x64
 clone_folder: c:\rpcs3
-clone_depth: 1
+clone_depth: 3
 test: off
 
 branches:

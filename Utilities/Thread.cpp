@@ -1234,7 +1234,7 @@ thread_t::thread_t(std::function<std::string()> name, std::function<void()> func
 	start(std::move(name), func);
 }
 
-thread_t::~thread_t() noexcept(false)
+thread_t::~thread_t() //noexcept(false)
 {
 	if (m_thread)
 	{
