@@ -156,6 +156,35 @@ inline D3D12_BLEND getBlendFactor(u16 factor)
 	}
 }
 
+
+/**
+* Convert GCM blend factor code to D3D12 one for alpha component
+*/
+inline D3D12_BLEND getBlendFactorAlpha(u16 factor)
+{
+	switch (factor)
+	{
+	case CELL_GCM_ZERO: return D3D12_BLEND_ZERO;
+	case CELL_GCM_ONE: return D3D12_BLEND_ONE;
+	case CELL_GCM_SRC_COLOR: return D3D12_BLEND_SRC_ALPHA;
+	case CELL_GCM_ONE_MINUS_SRC_COLOR: return D3D12_BLEND_INV_SRC_ALPHA;
+	case CELL_GCM_SRC_ALPHA: return D3D12_BLEND_SRC_ALPHA;
+	case CELL_GCM_ONE_MINUS_SRC_ALPHA: return D3D12_BLEND_INV_SRC_ALPHA;
+	case CELL_GCM_DST_ALPHA: return D3D12_BLEND_DEST_ALPHA;
+	case CELL_GCM_ONE_MINUS_DST_ALPHA: return D3D12_BLEND_INV_DEST_ALPHA;
+	case CELL_GCM_DST_COLOR: return D3D12_BLEND_DEST_ALPHA;
+	case CELL_GCM_ONE_MINUS_DST_COLOR: return D3D12_BLEND_INV_DEST_COLOR;
+	case CELL_GCM_SRC_ALPHA_SATURATE: return D3D12_BLEND_INV_DEST_ALPHA;
+	default:
+	case CELL_GCM_CONSTANT_COLOR:
+	case CELL_GCM_ONE_MINUS_CONSTANT_COLOR:
+	case CELL_GCM_CONSTANT_ALPHA:
+	case CELL_GCM_ONE_MINUS_CONSTANT_ALPHA:
+		LOG_WARNING(RSX, "Unsupported Blend Factor %d", factor);
+		return D3D12_BLEND();
+	}
+}
+
 /**
  * Convert GCM logic op code to D3D12 one
  */
