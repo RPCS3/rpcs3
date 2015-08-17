@@ -701,23 +701,25 @@ u32 ppu_recompiler_llvm::CPUHybridDecoderRecompiler::ExecuteFunction(PPUThread *
 }
 
 /// Get the branch type from a branch instruction
-static BranchType GetBranchTypeFromInstruction(u32 instruction) {
-	u32 field1 = instruction >> 26;
+static BranchType GetBranchTypeFromInstruction(u32 instruction)
+{
+	u32 instructionOpcode = PPU_instr::fields::OPCD(instruction);
 	u32 lk = instruction & 1;
 
-	if (field1 == 16 || field1 == 18)
+	if (instructionOpcode == PPU_opcodes::PPU_MainOpcodes::B ||
+		instructionOpcode == PPU_opcodes::PPU_MainOpcodes::BC)
 		return lk ? BranchType::FunctionCall : BranchType::LocalBranch;
-	if (field1 == 19) {
-		u32 field2 = (instruction >> 1) & 0x3FF;
-		if (field2 == 16)
+	if (instructionOpcode == PPU_opcodes::PPU_MainOpcodes::G_13) {
+		u32 G13Opcode = PPU_instr::fields::GD_13(instruction);
+		if (G13Opcode == PPU_opcodes::G_13Opcodes::BCLR)
 			return lk ? BranchType::FunctionCall : BranchType::Return;
-		if (field2 == 528)
+		if (G13Opcode == PPU_opcodes::G_13Opcodes::BCCTR)
 			return lk ? BranchType::FunctionCall : BranchType::LocalBranch;
 		return BranchType::NonBranch;
 	}
-	if (field1 == 1 && (instruction & EIF_PERFORM_BLR)) // classify HACK instruction
+	if (instructionOpcode == PPU_opcodes::PPU_MainOpcodes::HACK && (instruction & EIF_PERFORM_BLR)) // classify HACK instruction
 		return instruction & EIF_USE_BRANCH ? BranchType::FunctionCall : BranchType::Return;
-	if (field1 == 1 && (instruction & EIF_USE_BRANCH))
+	if (instructionOpcode == PPU_opcodes::PPU_MainOpcodes::HACK && (instruction & EIF_USE_BRANCH))
 		return BranchType::LocalBranch;
 	return BranchType::NonBranch;
 }
