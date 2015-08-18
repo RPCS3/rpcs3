@@ -5,6 +5,8 @@ class ARMv7Thread;
 
 namespace vm
 {
+	template<typename T, typename AT> struct _ref_base;
+
 	// helper SFINAE type for vm::_ptr_base comparison operators (enables comparison between equal types and between any type and void*)
 	template<typename T1, typename T2, typename RT = void> using if_comparable_t = std::enable_if_t<
 		std::is_void<T1>::value ||
@@ -33,18 +35,38 @@ namespace vm
 			return m_addr;
 		}
 
-		// get vm pointer to member
-		template<typename MT, typename T2, typename = if_comparable_t<T, T2>> _ptr_base<MT> of(MT T2::*const member) const
+		// get vm pointer to a struct member
+		template<typename MT, typename T2, typename = if_comparable_t<T, T2>> _ptr_base<MT> ptr(MT T2::*const member) const
 		{
 			const u32 offset = static_cast<u32>(reinterpret_cast<std::ptrdiff_t>(&(reinterpret_cast<T*>(0ull)->*member)));
 			return{ VM_CAST(m_addr + offset) };
 		}
 
-		// get vm pointer to array member with array subscribtion
-		template<typename MT, typename T2, typename = if_comparable_t<T, T2>> _ptr_base<std::remove_extent_t<MT>> of(MT T2::*const member, u32 index) const
+		// get vm pointer to a struct member with array subscription
+		template<typename MT, typename T2, typename = if_comparable_t<T, T2>> _ptr_base<std::remove_extent_t<MT>> ptr(MT T2::*const member, u32 index) const
 		{
 			const u32 offset = static_cast<u32>(reinterpret_cast<std::ptrdiff_t>(&(reinterpret_cast<T*>(0ull)->*member)));
 			return{ VM_CAST(m_addr + offset + sizeof32(T) * index) };
+		}
+
+		// get vm reference to a struct member
+		template<typename MT, typename T2, typename = if_comparable_t<T, T2>> _ref_base<MT> ref(MT T2::*const member) const
+		{
+			const u32 offset = static_cast<u32>(reinterpret_cast<std::ptrdiff_t>(&(reinterpret_cast<T*>(0ull)->*member)));
+			return{ VM_CAST(m_addr + offset) };
+		}
+
+		// get vm reference to a struct member with array subscription
+		template<typename MT, typename T2, typename = if_comparable_t<T, T2>> _ref_base<std::remove_extent_t<MT>> ref(MT T2::*const member, u32 index) const
+		{
+			const u32 offset = static_cast<u32>(reinterpret_cast<std::ptrdiff_t>(&(reinterpret_cast<T*>(0ull)->*member)));
+			return{ VM_CAST(m_addr + offset + sizeof32(T) * index) };
+		}
+
+		// get vm reference
+		_ref_base<T, u32> ref() const
+		{
+			return{ VM_CAST(m_addr) };
 		}
 		
 		template<typename CT> std::enable_if_t<std::is_assignable<AT&, CT>::value> set(const CT& value)

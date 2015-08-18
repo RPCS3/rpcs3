@@ -112,13 +112,35 @@ void copy_fdset(fd_set* set, vm::ptr<sys_net::fd_set> src)
 
 namespace sys_net
 {
-	struct tls_data_t
+	struct _tls_data_t
 	{
 		be_t<s32> _errno;
 		be_t<s32> _h_errno;
 	};
 
-	thread_local vm::var<tls_data_t, vm::page_alloc_t> g_tls_data; // TODO
+	thread_local vm::var<_tls_data_t, vm::page_alloc_t> g_tls_net_data;
+
+	inline void initialize_tls()
+	{
+		if (!g_tls_net_data)
+		{
+			g_tls_net_data = { vm::main }; // allocate if not initialized
+		}
+	}
+
+	vm::ref<s32> get_errno()
+	{
+		initialize_tls();
+
+		return g_tls_net_data.ref(&_tls_data_t::_errno);
+	}
+
+	vm::ref<s32> get_h_errno()
+	{
+		initialize_tls();
+
+		return g_tls_net_data.ref(&_tls_data_t::_h_errno);
+	}
 
 	// Functions
 	s32 accept(s32 s, vm::ptr<sockaddr> addr, vm::ptr<u32> paddrlen)
@@ -128,7 +150,7 @@ namespace sys_net
 
 		if (!addr) {
 			int ret = ::accept(s, nullptr, nullptr);
-			g_tls_data->_errno = getLastError();
+			get_errno() = getLastError();
 			return ret;
 		}
 		else {
@@ -138,7 +160,7 @@ namespace sys_net
 			::socklen_t _paddrlen;
 			s32 ret = ::accept(s, &_addr, &_paddrlen);
 			*paddrlen = _paddrlen;
-			g_tls_data->_errno = getLastError();
+			get_errno() = getLastError();
 			return ret;
 		}
 	}
@@ -154,7 +176,7 @@ namespace sys_net
 		const char *ipaddr = ::inet_ntoa(saddr.sin_addr);
 		libnet.Warning("binding on %s to port %d", ipaddr, ntohs(saddr.sin_port));
 		s32 ret = ::bind(s, (const ::sockaddr*)&saddr, addrlen);
-		g_tls_data->_errno = getLastError();
+		get_errno() = getLastError();
 
 		return ret;
 	}
@@ -170,7 +192,7 @@ namespace sys_net
 		const char *ipaddr = ::inet_ntoa(saddr.sin_addr);
 		libnet.Warning("connecting on %s to port %d", ipaddr, ntohs(saddr.sin_port));
 		s32 ret = ::connect(s, (const ::sockaddr*)&saddr, addrlen);
-		g_tls_data->_errno = getLastError();
+		get_errno() = getLastError();
 
 		return ret;
 	}
@@ -265,7 +287,7 @@ namespace sys_net
 		libnet.Warning("listen(s=%d, backlog=%d)", s, backlog);
 		s = g_socketMap[s];
 		s32 ret = ::listen(s, backlog);
-		g_tls_data->_errno = getLastError();
+		get_errno() = getLastError();
 
 		return ret;
 	}
@@ -276,7 +298,7 @@ namespace sys_net
 		s = g_socketMap[s];
 
 		s32 ret = ::recv(s, buf.get_ptr(), len, flags);
-		g_tls_data->_errno = getLastError();
+		get_errno() = getLastError();
 
 		return ret;
 	}
@@ -292,7 +314,7 @@ namespace sys_net
 		::socklen_t _paddrlen;
 		s32 ret = ::recvfrom(s, buf.get_ptr(), len, flags, &_addr, &_paddrlen);
 		*paddrlen = _paddrlen;
-		g_tls_data->_errno = getLastError();
+		get_errno() = getLastError();
 
 		return ret;
 	}
@@ -309,7 +331,7 @@ namespace sys_net
 		s = g_socketMap[s];
 
 		s32 ret = ::send(s, buf.get_ptr(), len, flags);
-		g_tls_data->_errno = getLastError();
+		get_errno() = getLastError();
 
 		return ret;
 	}
@@ -329,7 +351,7 @@ namespace sys_net
 		memcpy(&_addr, addr.get_ptr(), sizeof(::sockaddr));
 		_addr.sa_family = addr->sa_family;
 		s32 ret = ::sendto(s, buf.get_ptr(), len, flags, &_addr, addrlen);
-		g_tls_data->_errno = getLastError();
+		get_errno() = getLastError();
 
 		return ret;
 	}
@@ -340,7 +362,7 @@ namespace sys_net
 		s = g_socketMap[s];
 
 		s32 ret = ::setsockopt(s, level, optname, optval.get_ptr(), optlen);
-		g_tls_data->_errno = getLastError();
+		get_errno() = getLastError();
 
 		return ret;
 	}
@@ -351,7 +373,7 @@ namespace sys_net
 		s = g_socketMap[s];
 
 		s32 ret = ::shutdown(s, how);
-		g_tls_data->_errno = getLastError();
+		get_errno() = getLastError();
 
 		return ret;
 	}
@@ -361,7 +383,7 @@ namespace sys_net
 		libnet.Warning("socket(family=%d, type=%d, protocol=%d)", family, type, protocol);
 
 		s32 sock = ::socket(family, type, protocol);
-		g_tls_data->_errno = getLastError();
+		get_errno() = getLastError();
 
 		g_socketMap.push_back(sock);
 		return g_socketMap.size() - 1;
@@ -377,7 +399,7 @@ namespace sys_net
 #else
 		int ret = ::close(s);
 #endif
-		g_tls_data->_errno = getLastError();
+		get_errno() = getLastError();
 		return ret;
 	}
 
@@ -411,7 +433,7 @@ namespace sys_net
 		copy_fdset(&_exceptfds, exceptfds);
 
 		s32 ret = ::select(nfds, &_readfds, &_writefds, &_exceptfds, timeout ? &_timeout : NULL);
-		g_tls_data->_errno = getLastError();
+		get_errno() = getLastError();
 
 		if (getLastError() >= 0)
 		{
@@ -492,7 +514,7 @@ namespace sys_net
 	{
 		libnet.Warning("_sys_net_errno_loc()");
 
-		return g_tls_data.of(&tls_data_t::_errno);
+		return &get_errno();
 	}
 
 	s32 sys_net_set_resolver_configurations()

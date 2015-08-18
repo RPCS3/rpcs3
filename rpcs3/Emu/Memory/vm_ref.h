@@ -2,6 +2,8 @@
 
 namespace vm
 {
+	template<typename T, typename AT> struct _ptr_base;
+
 	template<typename T, typename AT = u32>
 	struct _ref_base
 	{
@@ -33,7 +35,7 @@ namespace vm
 		}
 
 		// TODO: conversion operator (seems hard to define it correctly)
-		//template<typename CT, typename dummy = std::enable_if_t<std::is_convertible<T, CT>::value || std::is_convertible<to_ne_t<T>, CT>::value>> operator CT() const
+		//template<typename CT, typename = std::enable_if_t<std::is_convertible<T, CT>::value || std::is_convertible<to_ne_t<T>, CT>::value>> operator CT() const
 		//{
 		//	return get_ref();
 		//}
@@ -46,6 +48,12 @@ namespace vm
 		explicit operator T&() const
 		{
 			return get_ref();
+		}
+
+		// convert to vm pointer
+		vm::_ptr_base<T, u32> operator &() const
+		{
+			return{ VM_CAST(m_addr) };
 		}
 
 		// copy assignment operator:

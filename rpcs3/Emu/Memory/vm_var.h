@@ -100,13 +100,13 @@ namespace vm
 	{
 		using _ptr_base<T>::m_addr;
 
-		using allocator = A<T>;
+		using allocation = A<T>;
 
 	public:
 		template<typename... Args, typename = std::enable_if_t<std::is_constructible<A<T>, Args...>::value>> _var_base(Args&&... args)
-			: allocator(std::forward<Args>(args)...)
+			: allocation(std::forward<Args>(args)...)
 		{
-			m_addr = allocator::get_addr();
+			m_addr = allocation::get_addr();
 		}
 	};
 

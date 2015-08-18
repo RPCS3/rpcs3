@@ -42,8 +42,6 @@ wxDEFINE_EVENT(wxEVT_DBG_COMMAND, wxCommandEvent);
 IMPLEMENT_APP(Rpcs3App)
 Rpcs3App* TheApp;
 
-extern std::string simplify_path(const std::string& path, bool is_dir);
-
 extern std::unique_ptr<MsgDialogInstance> g_msg_dialog;
 extern std::unique_ptr<SaveDataDialogInstance> g_savedata_dialog;
 

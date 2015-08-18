@@ -67,14 +67,14 @@ never_inline s32 savedata_op(PPUThread& ppu, u32 operation, u32 version, vm::cpt
 
 	const vm::var<_stack_t> stack(ppu);
 
-	const auto result   = stack.of(&_stack_t::result);
-	const auto listGet  = stack.of(&_stack_t::listGet);
-	const auto listSet  = stack.of(&_stack_t::listSet);
-	const auto fixedSet = stack.of(&_stack_t::fixedSet);
-	const auto statGet  = stack.of(&_stack_t::statGet);
-	const auto statSet  = stack.of(&_stack_t::statSet);
-	const auto fileGet  = stack.of(&_stack_t::fileGet);
-	const auto fileSet  = stack.of(&_stack_t::fileSet);
+	const auto result   = stack.ptr(&_stack_t::result);
+	const auto listGet  = stack.ptr(&_stack_t::listGet);
+	const auto listSet  = stack.ptr(&_stack_t::listSet);
+	const auto fixedSet = stack.ptr(&_stack_t::fixedSet);
+	const auto statGet  = stack.ptr(&_stack_t::statGet);
+	const auto statSet  = stack.ptr(&_stack_t::statSet);
+	const auto fileGet  = stack.ptr(&_stack_t::fileGet);
+	const auto fileSet  = stack.ptr(&_stack_t::fileSet);
 
 	// path of the specified user (00000001 by default)
 	const std::string base_dir = fmt::format("/dev_hdd0/home/%08u/savedata/", userId ? userId : 1u);
