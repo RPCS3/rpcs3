@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 2.8.12)
 
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake_modules")
-set(CMAKE_VERBOSE_MAKEFILE ON)
 include(cotire)
 
 project(rpcs3)
@@ -21,7 +20,7 @@ if(CMAKE_COMPILER_IS_GNUCXX)
 	add_compile_options(-Wno-attributes -Wno-enum-compare -Wno-invalid-offsetof)
 elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
 	if(APPLE)
-		add_compile_options(-stdlib=libc++) # TODO: stdlib?
+		add_compile_options(-stdlib=libc++)
 	endif()
 endif()
 
@@ -47,7 +46,7 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 elseif(UNIX)
 	#it seems like glibc includes the iconv functions we use but other libc
 	#implementations like the one on OSX don't seem implement them
-	set(ADDITIONAL_LIBS "iconv")
+	set(ADDITIONAL_LIBS "iconv" "z")
 else()
 	set(ADDITIONAL_LIBS "")
 endif()
@@ -81,7 +80,6 @@ if(NOT WIN32)
 		)
 	endif()
 	find_package(GLEW REQUIRED)
-	message("${GLEW_LIBRARY} AND ${GLEW_INCLUDE_DIR}")
 endif()
 find_package(OpenGL REQUIRED)
 find_package(OpenAL REQUIRED)
