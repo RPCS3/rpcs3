@@ -26,7 +26,7 @@ __Linux__
 * Arch: `sudo pacman -S glew openal wxgtk cmake llvm`
 
 __Mac OSX__
-* Install with Homebrew: `brew install glew wxwidgets`
+* Install with Homebrew: `brew install glew wxwidgets` (add `llvm36` to that list if you want to build with ppu jit)
 * Remove '-framework QuickTime' from '_ldflags' in /usr/local/bin/wx-config
 
 
@@ -36,6 +36,7 @@ To initialize the repository don't forget to execute `git submodule update --ini
 * __Windows__: Install *Visual Studio 2015*, *Cmake 3.1.0+*, *Python* and select *Add in the PATH variable* for both. Then open the *.SLN* file, and press *Build* > *Rebuild Solution*.
 * __Linux & Mac OSX__:
 `cd rpcs3 && cmake CMakeLists.txt && make && cd ../` Then run with `cd bin && ./rpcs3`
+If you are on OSX and want to build with llvm don't forget to add `-DLLVM_DIR=/usr/local/opt/llvm36/lib/llvm-3.6/share/llvm/cmake` (or wherever llvm brew was installed) to cmake invocation.
 
 ### Support
 * [Donate by PayPal](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=MPJ3S9XQXCE3G)
