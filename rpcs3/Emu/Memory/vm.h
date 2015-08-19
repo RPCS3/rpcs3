@@ -4,7 +4,7 @@
 
 const class thread_ctrl_t* get_current_thread_ctrl();
 
-class thread_t;
+class named_thread_t;
 
 namespace vm
 {
@@ -38,13 +38,13 @@ namespace vm
 	{
 		u32 addr = 0;
 		u32 mask = ~0;
-		thread_t* thread = nullptr;
+		named_thread_t* thread = nullptr;
 		
 		std::function<bool()> pred;
 
 		waiter_t() = default;
 
-		waiter_t* reset(u32 addr, u32 size, thread_t& thread)
+		waiter_t* reset(u32 addr, u32 size, named_thread_t& thread)
 		{
 			this->addr = addr;
 			this->mask = ~(size - 1);
@@ -70,7 +70,7 @@ namespace vm
 	public:
 		waiter_lock_t() = delete;
 
-		waiter_lock_t(thread_t& thread, u32 addr, u32 size);
+		waiter_lock_t(named_thread_t& thread, u32 addr, u32 size);
 
 		waiter_t* operator ->() const
 		{
@@ -83,7 +83,7 @@ namespace vm
 	};
 
 	// wait until pred() returns true, addr must be aligned to size which must be a power of 2, pred() may be called by any thread
-	template<typename F, typename... Args> auto wait_op(thread_t& thread, u32 addr, u32 size, F pred, Args&&... args) -> decltype(static_cast<void>(pred(args...)))
+	template<typename F, typename... Args> auto wait_op(named_thread_t& thread, u32 addr, u32 size, F pred, Args&&... args) -> decltype(static_cast<void>(pred(args...)))
 	{
 		// return immediately if condition passed (optimistic case)
 		if (pred(args...)) return;
@@ -148,6 +148,9 @@ namespace vm
 
 	// Unmap memory at specified address (in optionally specified memory location)
 	bool dealloc(u32 addr, memory_location_t location = any);
+
+	// dealloc() with no return value and no exceptions
+	void dealloc_verbose_nothrow(u32 addr, memory_location_t location = any) noexcept;
 
 	// Object that handles memory allocations inside specific constant bounds ("location"), currently non-virtual
 	class block_t final

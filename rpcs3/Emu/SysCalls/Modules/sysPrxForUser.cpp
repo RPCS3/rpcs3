@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
@@ -30,7 +31,7 @@ u32 ppu_get_tls(u32 thread)
 	{
 		g_tls_size = Emu.GetTLSMemsz() + TLS_SYS;
 		g_tls_start = vm::alloc(g_tls_size * TLS_MAX, vm::main); // memory for up to TLS_MAX threads
-		sysPrxForUser.Notice("Thread Local Storage initialized (g_tls_start=0x%x, user_size=0x%x)\n*** TLS segment addr: 0x%08x\n*** TLS segment size: 0x%08x",
+		LOG_NOTICE(MEMORY, "Thread Local Storage initialized (g_tls_start=0x%x, user_size=0x%x)\n*** TLS segment addr: 0x%08x\n*** TLS segment size: 0x%08x",
 			g_tls_start, Emu.GetTLSMemsz(), Emu.GetTLSAddr(), Emu.GetTLSFilesz());
 	}
 
@@ -73,6 +74,8 @@ void ppu_free_tls(u32 thread)
 			return;
 		}
 	}
+
+	LOG_ERROR(MEMORY, "TLS deallocation failed (thread=0x%x)", thread);
 }
 
 s64 sys_time_get_system_time()

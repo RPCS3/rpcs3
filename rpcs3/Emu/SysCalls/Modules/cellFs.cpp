@@ -928,7 +928,7 @@ s32 cellFsAioRead(vm::ptr<CellFsAio> aio, vm::ptr<s32> id, fs_aio_cb_t func)
 
 	const s32 xid = (*id = ++g_fs_aio_id);
 
-	thread_t(WRAP_EXPR("FS AIO Read Thread"), [=]{ fsAio(aio, false, xid, func); }).detach();
+	named_thread_t(WRAP_EXPR("FS AIO Read Thread"), [=]{ fsAio(aio, false, xid, func); }).detach();
 
 	return CELL_OK;
 }
@@ -941,7 +941,7 @@ s32 cellFsAioWrite(vm::ptr<CellFsAio> aio, vm::ptr<s32> id, fs_aio_cb_t func)
 
 	const s32 xid = (*id = ++g_fs_aio_id);
 
-	thread_t(WRAP_EXPR("FS AIO Write Thread"), [=]{ fsAio(aio, true, xid, func); }).detach();
+	named_thread_t(WRAP_EXPR("FS AIO Write Thread"), [=]{ fsAio(aio, true, xid, func); }).detach();
 
 	return CELL_OK;
 }

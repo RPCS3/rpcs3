@@ -90,7 +90,7 @@ struct RSXTransformConstant
 	}
 };
 
-class RSXThread : protected thread_t
+class RSXThread : protected named_thread_t
 {
 public:
 	static const uint m_textures_count = 16;
@@ -551,10 +551,6 @@ protected:
 
 	virtual ~RSXThread() override
 	{
-		if (joinable())
-		{
-			throw EXCEPTION("Thread not joined");
-		}
 	}
 
 	void Reset()

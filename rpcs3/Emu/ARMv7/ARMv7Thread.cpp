@@ -141,7 +141,7 @@ void ARMv7Thread::close_stack()
 {
 	if (stack_addr)
 	{
-		vm::dealloc(stack_addr, vm::main);
+		vm::dealloc_verbose_nothrow(stack_addr, vm::main);
 		stack_addr = 0;
 	}
 }

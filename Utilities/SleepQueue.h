@@ -24,7 +24,7 @@ public:
 	sleep_queue_entry_t(CPUThread& cpu, sleep_queue_t& queue, const defer_sleep_t&);
 
 	// removes specified thread from the sleep queue if added
-	~sleep_queue_entry_t() noexcept(false);
+	~sleep_queue_entry_t();
 
 	// add thread to the sleep queue
 	inline void enter()

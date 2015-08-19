@@ -1003,7 +1003,7 @@ namespace ppu_recompiler_llvm {
 	 * It then builds them asynchroneously and update the executable mapping
 	 * using atomic based locks to avoid undefined behavior.
 	 **/
-	class RecompilationEngine final : protected thread_t {
+	class RecompilationEngine final : protected named_thread_t {
 		friend class CPUHybridDecoderRecompiler;
 	public:
 		virtual ~RecompilationEngine() override;

@@ -139,7 +139,7 @@ void PPUThread::close_stack()
 {
 	if (stack_addr)
 	{
-		vm::dealloc(stack_addr, vm::stack);
+		vm::dealloc_verbose_nothrow(stack_addr, vm::stack);
 		stack_addr = 0;
 	}
 }

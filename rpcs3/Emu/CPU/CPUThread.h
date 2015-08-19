@@ -36,14 +36,14 @@ class CPUThreadExit {};
 
 class CPUDecoder;
 
-class CPUThread : public thread_t, public std::enable_shared_from_this<CPUThread>
+class CPUThread : public named_thread_t, public std::enable_shared_from_this<CPUThread>
 {
-	using thread_t::start;
+	using named_thread_t::start;
 
 protected:
-	using thread_t::detach;
-	using thread_t::join;
-	using thread_t::joinable;
+	using named_thread_t::detach;
+	using named_thread_t::join;
+	using named_thread_t::joinable;
 
 	atomic_t<u64> m_state; // thread state flags
 

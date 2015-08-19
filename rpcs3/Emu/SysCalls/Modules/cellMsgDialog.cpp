@@ -146,7 +146,7 @@ s32 cellMsgDialogOpen2(u32 type, vm::cptr<char> msgString, vm::ptr<CellMsgDialog
 		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 	}
 
-	thread_t(WRAP_EXPR("MsgDialog Thread"), [=]()
+	named_thread_t(WRAP_EXPR("MsgDialog Thread"), [=]()
 	{
 		while (g_msg_dialog->state == msgDialogOpen || (s64)(get_system_time() - g_msg_dialog->wait_until) < 0)
 		{

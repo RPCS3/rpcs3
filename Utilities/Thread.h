@@ -5,7 +5,7 @@ const class thread_ctrl_t* get_current_thread_ctrl();
 // named thread control class
 class thread_ctrl_t final
 {
-	friend class thread_t;
+	friend class named_thread_t;
 
 	// thread handler
 	std::thread m_thread;
@@ -23,7 +23,7 @@ public:
 	std::string get_name() const;
 };
 
-class thread_t
+class named_thread_t
 {
 	// pointer to managed resource (shared with actual thread)
 	std::shared_ptr<thread_ctrl_t> m_thread;
@@ -37,17 +37,17 @@ public:
 
 public:
 	// initialize in empty state
-	thread_t() = default;
+	named_thread_t() = default;
 
 	// create named thread
-	thread_t(std::function<std::string()> name, std::function<void()> func);
+	named_thread_t(std::function<std::string()> name, std::function<void()> func);
 
-	// destructor, joins automatically (questionable, don't rely on this functionality in derived destructors)
-	virtual ~thread_t() /*noexcept(false) compile error on osx*/;
+	// destructor, will terminate if thread is neither joined nor detached
+	virtual ~named_thread_t();
 
-	thread_t(const thread_t&) = delete;
+	named_thread_t(const named_thread_t&) = delete;
 
-	thread_t& operator =(const thread_t&) = delete;
+	named_thread_t& operator =(const named_thread_t&) = delete;
 
 public:
 	// get thread name
@@ -72,11 +72,11 @@ public:
 	const thread_ctrl_t* get_thread_ctrl() const { return m_thread.get(); }
 };
 
-class autojoin_thread_t final : private thread_t
+class autojoin_thread_t final : private named_thread_t
 {
 public:
-	using thread_t::mutex;
-	using thread_t::cv;
+	using named_thread_t::mutex;
+	using named_thread_t::cv;
 
 public:
 	autojoin_thread_t() = delete;
@@ -91,7 +91,7 @@ public:
 		join();
 	}
 
-	using thread_t::is_current;
+	using named_thread_t::is_current;
 };
 
 extern const std::function<bool()> SQUEUE_ALWAYS_EXIT;

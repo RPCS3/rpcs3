@@ -154,7 +154,7 @@ namespace vm
 
 	std::mutex g_waiter_list_mutex;
 
-	waiter_t* _add_waiter(thread_t& thread, u32 addr, u32 size)
+	waiter_t* _add_waiter(named_thread_t& thread, u32 addr, u32 size)
 	{
 		std::lock_guard<std::mutex> lock(g_waiter_list_mutex);
 
@@ -248,7 +248,7 @@ namespace vm
 		return true;
 	}
 
-	waiter_lock_t::waiter_lock_t(thread_t& thread, u32 addr, u32 size)
+	waiter_lock_t::waiter_lock_t(named_thread_t& thread, u32 addr, u32 size)
 		: m_waiter(_add_waiter(thread, addr, size))
 		, m_lock(thread.mutex, std::adopt_lock) // must be locked in _add_waiter
 	{
@@ -346,7 +346,7 @@ namespace vm
 	void start()
 	{
 		// start notification thread
-		thread_t(COPY_EXPR("vm::start thread"), []()
+		named_thread_t(COPY_EXPR("vm::start thread"), []()
 		{
 			while (!Emu.IsStopped())
 			{
@@ -764,6 +764,23 @@ namespace vm
 		}
 
 		return block->dealloc(addr);
+	}
+
+	void dealloc_verbose_nothrow(u32 addr, memory_location_t location) noexcept
+	{
+		const auto block = get(location, addr);
+
+		if (!block)
+		{
+			LOG_ERROR(MEMORY, "%s(): invalid memory location (%d, addr=0x%x)\n", __func__, location, addr);
+			return;
+		}
+
+		if (!block->dealloc(addr))
+		{
+			LOG_ERROR(MEMORY, "%s(): deallocation failed (addr=0x%x)\n", __func__, addr);
+			return;
+		}
 	}
 
 	bool block_t::try_alloc(u32 addr, u32 size)

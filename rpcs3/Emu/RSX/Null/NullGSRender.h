@@ -11,10 +11,6 @@ public:
 
 	virtual ~NullGSRender() override
 	{
-		if (joinable())
-		{
-			throw EXCEPTION("Thread not joined");
-		}
 	}
 
 private:

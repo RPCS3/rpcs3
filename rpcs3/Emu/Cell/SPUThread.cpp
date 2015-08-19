@@ -106,14 +106,8 @@ SPUThread::~SPUThread()
 	{
 		join();
 
-		if (!vm::dealloc(offset, vm::main))
-		{
-			throw EXCEPTION("Failed to deallocate SPU local storage");
-		}
-	}
-	else if (joinable())
-	{
-		throw EXCEPTION("Thread not joined");
+		// Deallocate Local Storage
+		vm::dealloc_verbose_nothrow(offset, vm::main);
 	}
 }
 

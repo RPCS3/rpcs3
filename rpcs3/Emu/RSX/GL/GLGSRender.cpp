@@ -794,11 +794,6 @@ GLGSRender::GLGSRender()
 
 GLGSRender::~GLGSRender()
 {
-	if (joinable())
-	{
-		throw EXCEPTION("Thread not joined");
-	}
-
 	m_frame->Close();
 	m_frame->DeleteContext(m_context);
 }

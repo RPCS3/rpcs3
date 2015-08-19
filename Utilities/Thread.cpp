@@ -1199,20 +1199,21 @@ std::string thread_ctrl_t::get_name() const
 	return name();
 }
 
-thread_t::thread_t(std::function<std::string()> name, std::function<void()> func)
+named_thread_t::named_thread_t(std::function<std::string()> name, std::function<void()> func)
 {
 	start(std::move(name), func);
 }
 
-thread_t::~thread_t() //noexcept(false)
+named_thread_t::~named_thread_t()
 {
 	if (m_thread)
 	{
-		throw EXCEPTION("Neither joined nor detached");
+		std::printf("Fatal: thread '%s' is neither joined nor detached\n", this->get_name().c_str());
+		std::terminate();
 	}
 }
 
-std::string thread_t::get_name() const
+std::string named_thread_t::get_name() const
 {
 	if (!m_thread)
 	{
@@ -1229,7 +1230,7 @@ std::string thread_t::get_name() const
 
 std::atomic<u32> g_thread_count{ 0 };
 
-void thread_t::start(std::function<std::string()> name, std::function<void()> func)
+void named_thread_t::start(std::function<std::string()> name, std::function<void()> func)
 {
 	if (m_thread)
 	{
@@ -1302,7 +1303,7 @@ void thread_t::start(std::function<std::string()> name, std::function<void()> fu
 	}, m_thread, std::move(func));
 }
 
-void thread_t::detach()
+void named_thread_t::detach()
 {
 	if (!m_thread)
 	{
@@ -1324,7 +1325,7 @@ void thread_t::detach()
 	ctrl->m_thread.detach();
 }
 
-void thread_t::join()
+void named_thread_t::join()
 {
 	if (!m_thread)
 	{
@@ -1349,7 +1350,7 @@ void thread_t::join()
 	ctrl->m_thread.join();
 }
 
-bool thread_t::is_current() const
+bool named_thread_t::is_current() const
 {
 	if (!m_thread)
 	{

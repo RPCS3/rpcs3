@@ -71,11 +71,6 @@ CPUThread::CPUThread(CPUThreadType type, const std::string& name, std::function<
 
 CPUThread::~CPUThread()
 {
-	if (joinable())
-	{
-		throw EXCEPTION("Thread not joined");
-	}
-
 	SendDbgCommand(DID_REMOVE_THREAD, this);
 }
 

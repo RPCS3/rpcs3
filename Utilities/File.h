@@ -64,7 +64,7 @@ namespace fs
 
 	struct file final
 	{
-		using handle_type = intptr_t;
+		using handle_type = std::intptr_t;
 
 		static const handle_type null = -1;
 

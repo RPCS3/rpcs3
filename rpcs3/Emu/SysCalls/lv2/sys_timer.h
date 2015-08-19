@@ -31,7 +31,7 @@ struct lv2_timer_t final
 
 	std::atomic<u32> state; // timer state
 
-	thread_t thread; // timer thread
+	named_thread_t thread; // timer thread
 
 	lv2_timer_t();
 	~lv2_timer_t();

@@ -48,7 +48,7 @@ sleep_queue_entry_t::sleep_queue_entry_t(CPUThread& cpu, sleep_queue_t& queue, c
 	cpu.sleep();
 }
 
-sleep_queue_entry_t::~sleep_queue_entry_t() noexcept(false)
+sleep_queue_entry_t::~sleep_queue_entry_t()
 {
 	remove_entry();
 	m_thread.awake();

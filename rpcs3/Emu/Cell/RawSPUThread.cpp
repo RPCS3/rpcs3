@@ -21,10 +21,8 @@ RawSPUThread::~RawSPUThread()
 {
 	join();
 
-	if (!vm::dealloc(offset))
-	{
-		throw EXCEPTION("Failed to deallocate RawSPU local storage");
-	}
+	// Deallocate Local Storage
+	vm::dealloc_verbose_nothrow(offset);
 }
 
 bool RawSPUThread::read_reg(const u32 addr, u32& value)

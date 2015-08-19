@@ -10,12 +10,9 @@ namespace vm
 
 		void dealloc()
 		{
-			if (m_addr && !vm::dealloc(m_addr))
+			if (m_addr)
 			{
-				if (!std::uncaught_exception()) // don't throw during stack unwinding
-				{
-					throw EXCEPTION("Deallocation failed (addr=0x%x)", m_addr);
-				}
+				vm::dealloc_verbose_nothrow(m_addr);
 			}
 		}
 
@@ -26,7 +23,7 @@ namespace vm
 		}
 
 		page_alloc_t(vm::memory_location_t location, u32 count = 1)
-			: m_addr(alloc(sizeof32(T) * count, location, std::max<u32>(alignof32(T), 4096)))
+			: m_addr(vm::alloc(sizeof32(T) * count, location, std::max<u32>(alignof32(T), 4096)))
 		{
 		}
 
@@ -38,7 +35,7 @@ namespace vm
 			other.m_addr = 0;
 		}
 
-		~page_alloc_t() noexcept(false) // allow exceptions
+		~page_alloc_t()
 		{
 			this->dealloc();
 		}
@@ -61,7 +58,7 @@ namespace vm
 	template<typename T> class stack_alloc_t
 	{
 		u32 m_addr;
-		u32 m_old_pos;
+		u32 m_old_pos; // TODO: use the stack to save it?
 
 		CPUThread& m_thread;
 
@@ -69,9 +66,9 @@ namespace vm
 		stack_alloc_t() = delete;
 
 		stack_alloc_t(CPUThread& thread, u32 count = 1)
-			: m_thread(thread)
+			: m_addr(vm::stack_push(thread, sizeof32(T) * count, alignof32(T), m_old_pos))
+			, m_thread(thread)
 		{
-			m_addr = vm::stack_push(thread, sizeof32(T) * count, alignof32(T), m_old_pos);
 		}
 
 		~stack_alloc_t() noexcept(false) // allow exceptions

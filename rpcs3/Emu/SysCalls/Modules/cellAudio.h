@@ -124,7 +124,7 @@ struct AudioPortConfig
 struct AudioConfig final // custom structure
 {
 	atomic_t<AudioState> state;
-	thread_t thread;
+	named_thread_t thread;
 
 	AudioPortConfig ports[AUDIO_PORT_COUNT];
 	u32 buffer; // 1 MB memory for audio ports
