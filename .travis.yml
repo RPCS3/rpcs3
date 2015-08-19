@@ -68,14 +68,15 @@ before_install:
       sudo ./cmake-3.0.0-Linux-i386.sh --skip-license --prefix=/usr;
       sudo pip install cpp-coveralls;
     else
-      brew install glew wxwidgets;
+      brew update; brew update;
+      brew install glew wxwidgets llvm36;
     fi;
 
 before_script:
  - git submodule update --init asmjit ffmpeg llvm
  - mkdir build
  - cd build
- - cmake ..
+ - if [ "$TRAVIS_OS_NAME" = "linux" ]; then cmake ..; else cmake .. -DLLVM_DIR=/usr/local/opt/llvm36/lib/llvm-3.6/share/llvm/cmake; fi
 
 addons:
   coverity_scan:
