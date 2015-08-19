@@ -73,7 +73,7 @@ before_install:
     fi;
 
 before_script:
- - git submodule update --init asmjit ffmpeg llvm
+ - git submodule update --init asmjit ffmpeg
  - mkdir build
  - cd build
  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then cmake ..; else cmake .. -DLLVM_DIR=/usr/local/opt/llvm36/lib/llvm-3.6/share/llvm/cmake; fi
