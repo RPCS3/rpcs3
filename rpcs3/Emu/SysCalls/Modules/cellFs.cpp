@@ -833,7 +833,17 @@ s32 cellFsSdataOpen(PPUThread& ppu, vm::cptr<char> path, s32 flags, vm::ptr<u32>
 		return CELL_FS_EINVAL;
 	}
 
-	return cellFsOpen(path, CELL_FS_O_RDONLY, fd, vm::var<u64>(ppu), 8);
+	struct _arg_t
+	{
+		be_t<u32> a, b;
+	};
+
+	const vm::var<_arg_t> _arg(ppu);
+
+	_arg->a = 0x180;
+	_arg->b = 0x10;
+
+	return cellFsOpen(path, CELL_FS_O_RDONLY, fd, _arg, 8);
 
 	// Don't implement sdata decryption in this function, it should be done in sys_fs_open() syscall or somewhere else
 

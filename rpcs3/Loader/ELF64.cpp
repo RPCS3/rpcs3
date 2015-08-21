@@ -148,7 +148,7 @@ namespace loader
 									char name[27];
 									m_stream->Seek(handler::get_stream_offset() + phdr.p_offset + lib.name_addr);
 									m_stream->Read(name, sizeof(name));
-									modulename = std::string(name);
+									modulename = name;
 									LOG_WARNING(LOADER, "**** Exported: %s", name);
 								}
 
@@ -185,7 +185,7 @@ namespace loader
 									char name[27];
 									m_stream->Seek(handler::get_stream_offset() + phdr.p_offset + lib.name_addr);
 									m_stream->Read(name, sizeof(name));
-									modulename = std::string(name);
+									modulename = name;
 									LOG_WARNING(LOADER, "**** Imported: %s", name);
 								}
 

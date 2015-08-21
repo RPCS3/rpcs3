@@ -25,7 +25,8 @@ u64 rotate_mask[64][64];
 extern u32 ppu_get_tls(u32 thread);
 extern void ppu_free_tls(u32 thread);
 
-thread_local const std::weak_ptr<ppu_decoder_cache_t> g_tls_ppu_decoder_cache = fxm::get<ppu_decoder_cache_t>();
+//thread_local const std::weak_ptr<ppu_decoder_cache_t> g_tls_ppu_decoder_cache = fxm::get<ppu_decoder_cache_t>();
+thread_local const ppu_decoder_cache_t* g_tls_ppu_decoder_cache = nullptr; // temporarily, because thread_local is not fully available
 
 ppu_decoder_cache_t::ppu_decoder_cache_t()
 #ifdef _WIN32
@@ -285,14 +286,19 @@ void PPUThread::task()
 		return custom_task(*this);
 	}
 
-	const auto decoder_cache = g_tls_ppu_decoder_cache.lock();
-
-	if (!decoder_cache)
+	if (!g_tls_ppu_decoder_cache)
 	{
-		throw EXCEPTION("PPU Decoder Cache not initialized");
-	}
+		const auto decoder_cache = fxm::get<ppu_decoder_cache_t>();
 
-	const auto exec_map = decoder_cache->pointer;
+		if (!decoder_cache)
+		{
+			throw EXCEPTION("PPU Decoder Cache not initialized");
+		}
+
+		g_tls_ppu_decoder_cache = decoder_cache.get(); // unsafe (TODO)
+	}
+	
+	const auto exec_map = g_tls_ppu_decoder_cache->pointer;
 
 	if (m_dec)
 	{

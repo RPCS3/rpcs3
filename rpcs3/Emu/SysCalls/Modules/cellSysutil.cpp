@@ -212,7 +212,7 @@ s32 cellSysCacheClear(void)
 	}
 
 	std::string localPath;
-	Emu.GetVFS().GetDevice(std::string("/dev_hdd1/cache/"), localPath);
+	Emu.GetVFS().GetDevice("/dev_hdd1/cache/", localPath);
 
 	// TODO: Write tests to figure out, what is deleted.
 
@@ -226,9 +226,9 @@ s32 cellSysCacheMount(vm::ptr<CellSysCacheParam> param)
 	// TODO: implement
 	char id[CELL_SYSCACHE_ID_SIZE];
 	strncpy(id, param->cacheId, CELL_SYSCACHE_ID_SIZE);
-	strncpy(param->getCachePath, ("/dev_hdd1/cache/" + std::string(id) + "/").c_str(), CELL_SYSCACHE_PATH_MAX);
+	strncpy(param->getCachePath, ("/dev_hdd1/cache/"s + id + "/").c_str(), CELL_SYSCACHE_PATH_MAX);
 	param->getCachePath[CELL_SYSCACHE_PATH_MAX - 1] = '\0';
-	Emu.GetVFS().CreateDir(std::string(param->getCachePath));
+	Emu.GetVFS().CreateDir(param->getCachePath);
 	g_sysutil->cacheMounted.exchange(true);
 
 	return CELL_SYSCACHE_RET_OK_RELAYED;

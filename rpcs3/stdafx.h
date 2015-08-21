@@ -41,12 +41,15 @@
 #include <forward_list>
 #include <typeindex>
 
+using namespace std::string_literals;
+
 #include "Utilities/GNU.h"
 
 #define CHECK_SIZE(type, size) static_assert(sizeof(type) == size, "Invalid " #type " type size")
 #define CHECK_ALIGN(type, align) static_assert(__alignof(type) == align, "Invalid " #type " type alignment")
 #define CHECK_MAX_SIZE(type, size) static_assert(sizeof(type) <= size, #type " type size is too big")
 #define CHECK_SIZE_ALIGN(type, size, align) CHECK_SIZE(type, size); CHECK_ALIGN(type, align)
+#define CHECK_ASCENDING(constexpr_array) static_assert(::is_ascending(constexpr_array), #constexpr_array " is not sorted in ascending order")
 
 using uint = unsigned int;
 
@@ -107,6 +110,18 @@ template<std::size_t N, std::size_t N2> inline void strcpy_trunc(char(&dst)[N], 
 	dst[count] = '\0';
 }
 
+// returns true if all array elements are unique and sorted in ascending order
+template<typename T, std::size_t N> constexpr bool is_ascending(const T(&array)[N], std::size_t from = 0)
+{
+	return from >= N - 1 ? true : array[from] < array[from + 1] ? is_ascending(array, from + 1) : false;
+}
+
+// get (first) array element equal to `value` or nullptr if not found
+template<typename T, std::size_t N, typename T2> constexpr const T* static_search(const T(&array)[N], const T2& value, std::size_t from = 0)
+{
+	return from >= N ? nullptr : array[from] == value ? array + from : static_search(array, value, from + 1);
+}
+
 // bool wrapper for restricting bool result conversions
 struct explicit_bool_t
 {
@@ -120,6 +135,18 @@ struct explicit_bool_t
 	explicit operator bool() const
 	{
 		return value;
+	}
+};
+
+template<typename T1, typename T2, typename T3 = const char*> struct triplet_t
+{
+	T1 first;
+	T2 second;
+	T3 third;
+
+	constexpr bool operator ==(const T1& right) const
+	{
+		return first == right;
 	}
 };
 

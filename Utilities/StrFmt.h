@@ -248,7 +248,7 @@ namespace fmt
 		// pointer to the current buffer
 		char* buf_addr = fixed_buf.data();
 
-		for (std::size_t buf_size = fixed_buf.size();; buf_size *= 2, buf.reset(buf_addr = new char[buf_size]))
+		for (std::size_t buf_size = fixed_buf.size();; buf.reset(buf_addr = new char[buf_size]))
 		{
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wformat-security"
@@ -256,10 +256,17 @@ namespace fmt
 
 #pragma GCC diagnostic pop
 
+			if (len > INT_MAX)
+			{
+				throw std::runtime_error("std::snprintf() failed");
+			}
+
 			if (len <= buf_size)
 			{
 				return{ buf_addr, len };
 			}
+
+			buf_size = len;
 		}
 	}
 
@@ -283,11 +290,6 @@ namespace fmt
 			message.reset(new char[size + 1]);
 
 			std::memcpy(message.get(), other, size + 1);
-		}
-
-		exception(exception&& other)
-		{
-			message = std::move(other.message);
 		}
 
 		operator const char*() const

@@ -314,7 +314,7 @@ s32 cellGameDataCheck(u32 type, vm::cptr<char> dirName, vm::ptr<CellGameContentS
 	}
 	else
 	{
-		const std::string dir = std::string("/dev_hdd0/game/") + dirName.get_ptr();
+		const std::string dir = "/dev_hdd0/game/"s + dirName.get_ptr();
 
 		if (!Emu.GetVFS().ExistsDir(dir))
 		{
@@ -388,7 +388,7 @@ s32 cellGameDataCheckCreate2(PPUThread& ppu, u32 version, vm::cptr<char> dirName
 
 	// TODO: output errors (errDialog)
 
-	const std::string dir = std::string("/dev_hdd0/game/") + dirName.get_ptr();
+	const std::string dir = "/dev_hdd0/game/"s + dirName.get_ptr();
 
 	if (!Emu.GetVFS().ExistsDir(dir))
 	{

@@ -7,21 +7,34 @@ class thread_ctrl_t final
 {
 	friend class named_thread_t;
 
+	template<typename T> friend void current_thread_register_atexit(T);
+
 	// thread handler
 	std::thread m_thread;
 
 	// name getter
-	const std::function<std::string()> name;
+	const std::function<std::string()> m_name;
+
+	// functions executed at thread exit (temporarily)
+	std::vector<std::function<void()>> m_atexit;
 
 public:
 	thread_ctrl_t(std::function<std::string()> name)
-		: name(std::move(name))
+		: m_name(std::move(name))
 	{
 	}
 
 	// get thread name
 	std::string get_name() const;
 };
+
+// register function at thread exit (temporarily)
+template<typename T> void current_thread_register_atexit(T func)
+{
+	extern thread_local thread_ctrl_t* g_tls_this_thread;
+
+	g_tls_this_thread->m_atexit.emplace_back(func);
+}
 
 class named_thread_t
 {

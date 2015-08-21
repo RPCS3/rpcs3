@@ -1196,7 +1196,7 @@ const thread_ctrl_t* get_current_thread_ctrl()
 
 std::string thread_ctrl_t::get_name() const
 {
-	return name();
+	return m_name();
 }
 
 named_thread_t::named_thread_t(std::function<std::string()> name, std::function<void()> func)
@@ -1220,12 +1220,12 @@ std::string named_thread_t::get_name() const
 		throw EXCEPTION("Invalid thread");
 	}
 
-	if (!m_thread->name)
+	if (!m_thread->m_name)
 	{
 		throw EXCEPTION("Invalid name getter");
 	}
 
-	return m_thread->name();
+	return m_thread->m_name();
 }
 
 std::atomic<u32> g_thread_count{ 0 };
@@ -1294,6 +1294,13 @@ void named_thread_t::start(std::function<std::string()> name, std::function<void
 		catch (EmulationStopped)
 		{
 			LOG_NOTICE(GENERAL, "Thread aborted");
+		}
+
+		for (auto& func : ctrl->m_atexit)
+		{
+			func();
+
+			func = nullptr;
 		}
 
 		vm::reservation_free();

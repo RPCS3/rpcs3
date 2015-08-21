@@ -118,13 +118,20 @@ namespace sys_net
 		be_t<s32> _h_errno;
 	};
 
-	thread_local vm::var<_tls_data_t, vm::page_alloc_t> g_tls_net_data;
+	// TODO
+	thread_local vm::ptr<_tls_data_t> g_tls_net_data{};
 
 	inline void initialize_tls()
 	{
+		// allocate if not initialized
 		if (!g_tls_net_data)
 		{
-			g_tls_net_data = { vm::main }; // allocate if not initialized
+			g_tls_net_data.set(vm::alloc(sizeof(decltype(g_tls_net_data)::type), vm::main));
+
+			current_thread_register_atexit([addr = g_tls_net_data.addr()]
+			{
+				vm::dealloc_verbose_nothrow(addr, vm::main);
+			});
 		}
 	}
 

@@ -40,9 +40,9 @@ s32 sys_mmapper_allocate_address(u64 size, u64 flags, u64 alignment, vm::ptr<u32
 	case 0x40000000:
 	case 0x80000000:
 	{
-		for (u32 addr = ::align(0x30000000, alignment); addr < 0xC0000000; addr += static_cast<u32>(alignment))
+		for (u64 addr = ::align<u64>(0x30000000, alignment); addr < 0xC0000000; addr += alignment)
 		{
-			if (const auto area = vm::map(addr, static_cast<u32>(size), flags))
+			if (const auto area = vm::map(static_cast<u32>(addr), static_cast<u32>(size), flags))
 			{
 				*alloc_addr = addr;
 
@@ -273,9 +273,9 @@ s32 sys_mmapper_map_memory(u32 addr, u32 mem_id, u64 flags)
 		return CELL_EALIGN;
 	}
 
-	if (mem->addr)
+	if (const u32 old_addr = mem->addr.load())
 	{
-		throw EXCEPTION("Already mapped (mem_id=0x%x, addr=0x%x)", mem_id, mem->addr.load());
+		throw EXCEPTION("Already mapped (mem_id=0x%x, addr=0x%x)", mem_id, old_addr);
 	}
 
 	if (!area->falloc(addr, mem->size))
@@ -322,7 +322,7 @@ s32 sys_mmapper_search_and_map(u32 start_addr, u32 mem_id, u64 flags, vm::ptr<u3
 
 s32 sys_mmapper_unmap_memory(u32 addr, vm::ptr<u32> mem_id)
 {
-	sys_mmapper.Todo("sys_mmapper_unmap_memory(addr=0x%x, mem_id=*0x%x)", addr, mem_id);
+	sys_mmapper.Error("sys_mmapper_unmap_memory(addr=0x%x, mem_id=*0x%x)", addr, mem_id);
 
 	LV2_LOCK;
 
@@ -339,7 +339,7 @@ s32 sys_mmapper_unmap_memory(u32 addr, vm::ptr<u32> mem_id)
 		{
 			if (!area->dealloc(addr))
 			{
-				throw EXCEPTION("Not mapped (mem_id=0x%x, addr=0x%x)", mem->id, addr);
+				throw EXCEPTION("Deallocation failed (mem_id=0x%x, addr=0x%x)", mem->id, addr);
 			}
 
 			mem->addr = 0;

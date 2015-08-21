@@ -28,8 +28,6 @@
 
 #if defined(_MSC_VER) && _MSC_VER <= 1800
 #define alignas(x) _CRT_ALIGN(x)
-#elif defined(__GNUG__)
-#define ALIGN(x) __attribute__((aligned(x))) // not used
 #endif
 
 #if defined(__GNUG__)
@@ -83,7 +81,7 @@ int clock_gettime(clockid_t clk_id, struct timespec *tp);
 #endif /* __GNUG__ */
 
 #if defined(_MSC_VER)
-// Unsigned 128-bit number implementation
+// Unsigned 128-bit integer implementation
 struct alignas(16) uint128_t
 {
 	uint64_t lo, hi;
