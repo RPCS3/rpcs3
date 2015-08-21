@@ -823,7 +823,7 @@ s32 cellSailPlayerBoot(PPUThread& ppu, vm::ptr<CellSailPlayer> pSelf, u64 userPa
 {
 	cellSail.Warning("cellSailPlayerBoot(pSelf=*0x%x, userParam=%d)", pSelf, userParam);
 
-	thread_t(WRAP_EXPR("Sail Boot Thread"), [=] { playerBoot(pSelf, userParam); }).detach();
+	named_thread_t(WRAP_EXPR("Sail Boot Thread"), [=] { playerBoot(pSelf, userParam); }).detach();
 
 	return CELL_OK;
 }
