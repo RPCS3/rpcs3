@@ -1,10 +1,16 @@
 #include "stdafx.h"
+#include "Emu/IdManager.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/SysCalls/Modules.h"
 
 #include "cellGem.h"
 
 extern Module cellGem;
+
+struct gem_t
+{
+	CellGemAttribute attribute;
+};
 
 s32 cellGemCalibrate()
 {
@@ -45,6 +51,12 @@ s32 cellGemEnableMagnetometer()
 s32 cellGemEnd()
 {
 	cellGem.Warning("cellGemEnd()");
+
+	if (!fxm::remove<gem_t>())
+	{
+		return CELL_GEM_ERROR_UNINITIALIZED;
+	}
+
 	return CELL_OK;
 }
 
@@ -106,8 +118,21 @@ s32 cellGemGetInfo(vm::ptr<CellGemInfo> info)
 {
 	cellGem.Todo("cellGemGetInfo(info=*0x%x)", info);
 
-	// TODO: Support many controllers to be connected
-	*info = {};
+	const auto gem = fxm::get<gem_t>();
+
+	if (!gem)
+	{
+		return CELL_GEM_ERROR_UNINITIALIZED;
+	}
+
+	// TODO: Support connecting PlayStation Move controllers
+	info->max_connect = gem->attribute.max_connect;
+	info->now_connect = 0;
+
+	for (int i = 0; i < CELL_GEM_MAX_NUM; i++)
+	{
+		info->status[i] = CELL_GEM_STATUS_DISCONNECTED;
+	}
 
 	return CELL_OK;
 }
@@ -160,9 +185,18 @@ s32 cellGemHSVtoRGB()
 	return CELL_OK;
 }
 
-s32 cellGemInit(vm::ptr<CellGemAttribute> attribute)
+s32 cellGemInit(vm::cptr<CellGemAttribute> attribute)
 {
 	cellGem.Warning("cellGemInit(attribute=*0x%x)", attribute);
+
+	const auto gem = fxm::make<gem_t>();
+
+	if (!gem)
+	{
+		return CELL_GEM_ERROR_ALREADY_INITIALIZED;
+	}
+
+	gem->attribute = *attribute;
 
 	return CELL_OK;
 }
