@@ -764,8 +764,7 @@ u32 ppu_recompiler_llvm::CPUHybridDecoderRecompiler::ExecuteTillReturn(PPUThread
 			return 0;
 		case BranchType::FunctionCall: {
 			execution_engine->m_tracer.Trace(Tracer::TraceType::CallFunction, ppu_state->PC, 0);
-			const Executable *executable = execution_engine->m_recompilation_engine->GetExecutable(ppu_state->PC, true);
-			(*executable)(ppu_state, 0);
+			ExecuteFunction(ppu_state, 0);
 			break;
 		}
 		case BranchType::LocalBranch:
