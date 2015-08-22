@@ -441,6 +441,80 @@ public:
 		SysEmulationDirPath.Save();
 		SysEmulationDirPathEnable.Save();
 	}
+
+	// For getting strings for certain options to display settings in the log.
+	inline static const char* CPUIdToString(u8 code)
+	{
+		switch (code)
+		{
+		case 0: return "PPU Interpreter";
+		case 1: return "PPU Interpreter 2";
+		case 2: return "PPU JIT (LLVM)";
+		default: return "Unknown";
+		}
+	}
+
+	inline static const char* SPUIdToString(u8 code)
+	{
+		switch (code)
+		{
+		case 0: return "SPU Interpreter (precise)";
+		case 1: return "SPU Interpreter (fast)";
+		case 2: return "SPU Recompiler (ASMJIT)";
+		default: return "Unknown";
+		}
+	}
+
+	inline static const char* RendererIdToString(u8 code)
+	{
+		switch (code)
+		{
+		case 0: return "Null";
+		case 1: return "OpenGL";
+		case 2: return "DirectX 12";
+		default: return "Unknown";
+		}
+	}
+
+	inline static const char* AdapterIdToString(u8 code)
+	{
+		switch (code)
+		{
+		case 0: return "WARP";
+		case 1: return "Default";
+		case 2: return "Renderer 0";
+		case 3: return "Renderer 1";
+		case 4: return "Renderer 2";
+		default: return "Unknown";
+		}
+	}
+
+	inline static const char* AudioOutIdToString(u8 code)
+	{
+		switch (code)
+		{
+		case 0: return "Null";
+		case 1: return "OpenAL";
+		case 2: return "XAudio2";
+		default: return "Unknown";
+		}
+	}
+
+	inline static const char* ResolutionIdToString(u32 id)
+	{
+		switch (id)
+		{
+		case 1: return "1920x1080";
+		case 2: return "1280x720";
+		case 4: return "720x480";
+		case 5: return "720x576";
+		case 10: return "1600x1080";
+		case 11: return "1440x1080";
+		case 12: return "1280x1080";
+		case 13: return "960x1080";
+		default: return "Unknown";
+		}
+	}
 };
 
 extern Inis Ini;
