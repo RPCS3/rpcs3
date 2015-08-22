@@ -56,7 +56,7 @@ struct VFS
 	// A vfsDevice will be deleted when they're unmounted or the VFS struct is destroyed.
 	// This will cause problems if other code stores the pointer returned by GetDevice/GetDeviceLocal
 	// and tries to use it after the device is unmounted.
-	std::vector<vfsDevice *> m_devices;
+	std::vector<vfsDevice*> m_devices;
 
 	struct links_sorter
 	{

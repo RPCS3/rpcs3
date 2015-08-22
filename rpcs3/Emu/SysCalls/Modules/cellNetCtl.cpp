@@ -84,7 +84,13 @@ s32 cellNetCtlDelHandler(s32 hid)
 
 s32 cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 {
-	if (code == CELL_NET_CTL_INFO_MTU)
+	if (code == CELL_NET_CTL_INFO_DEVICE)
+	{
+		cellNetCtl.Warning("cellNetCtlGetInfo(code=0x%x (%s), info=*0x%x)", code, InfoCodeToName(code), info);
+
+		info->device = Ini.NETType.GetValue();
+	}
+	else if (code == CELL_NET_CTL_INFO_MTU)
 	{
 		cellNetCtl.Warning("cellNetCtlGetInfo(code=0x%x (%s), info=*0x%x)", code, InfoCodeToName(code), info);
 #ifdef _WIN32

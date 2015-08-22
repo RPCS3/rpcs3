@@ -41,6 +41,8 @@ s32 sys_fs_open(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, s32 mode, vm::c
 		return CELL_FS_ENOTMOUNTED;
 	}
 
+	sys_fs.Warning("*** local_path = '%s'", local_path.c_str());
+
 	// TODO: other checks for path
 
 	if (fs::is_dir(local_path))
@@ -266,7 +268,7 @@ s32 sys_fs_stat(vm::cptr<char> path, vm::ptr<CellFsStat> sb)
 		return CELL_FS_ENOTMOUNTED;
 	}
 
-	sys_fs.Warning("*** local_path = '%s'", local_path);
+	sys_fs.Warning("*** local_path = '%s'", local_path.c_str());
 
 	fs::stat_t info;
 

@@ -81,8 +81,9 @@ SettingsDialog::SettingsDialog(wxWindow *parent)
 	wxStaticBoxSizer* s_round_hle_license_area = new wxStaticBoxSizer(wxVERTICAL, p_misc, _("License Area"));
 
 	// Networking
-	wxStaticBoxSizer* s_round_net_status = new wxStaticBoxSizer(wxVERTICAL, p_networking, _("Connection status"));
 	wxStaticBoxSizer* s_round_net_interface = new wxStaticBoxSizer(wxVERTICAL, p_networking, _("Network adapter"));
+	wxStaticBoxSizer* s_round_net_status = new wxStaticBoxSizer(wxVERTICAL, p_networking, _("Connection status"));
+	wxStaticBoxSizer* s_round_net_type = new wxStaticBoxSizer(wxVERTICAL, p_networking, _("Connection type"));
 
 	// System
 	wxStaticBoxSizer* s_round_sys_lang = new wxStaticBoxSizer(wxVERTICAL, p_system, _("Language"));
@@ -103,8 +104,9 @@ SettingsDialog::SettingsDialog(wxWindow *parent)
 	wxComboBox* cbox_audio_out = new wxComboBox(p_audio, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(150, -1), 0, NULL, wxCB_READONLY);
 	wxComboBox* cbox_hle_loglvl = new wxComboBox(p_misc, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(150, -1), 0, NULL, wxCB_READONLY);
 	wxComboBox* cbox_hle_license_area = new wxComboBox(p_misc, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(150, -1), 0, NULL, wxCB_READONLY);
-	wxComboBox* cbox_net_status = new wxComboBox(p_networking, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY);
 	wxComboBox* cbox_net_interface = new wxComboBox(p_networking, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY);
+	wxComboBox* cbox_net_status = new wxComboBox(p_networking, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY);
+	wxComboBox* cbox_net_type = new wxComboBox(p_networking, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY);
 	wxComboBox* cbox_sys_lang = new wxComboBox(p_system, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY);
 
 	wxCheckBox* chbox_core_llvm_exclud = new wxCheckBox(p_core, wxID_ANY, "Compiled blocks exclusion");
@@ -227,13 +229,18 @@ SettingsDialog::SettingsDialog(wxWindow *parent)
 	cbox_hle_license_area->Append("SCH (China)");
 	cbox_hle_license_area->Append("Other");
 
+	for (const auto& adapterName : GetAdapters())
+	{
+		cbox_net_interface->Append(adapterName);
+	}
+
 	cbox_net_status->Append("IP Obtained");
 	cbox_net_status->Append("Obtaining IP");
 	cbox_net_status->Append("Connecting");
 	cbox_net_status->Append("Disconnected");
 
-	for(const auto& adapterName : GetAdapters())
-		cbox_net_interface->Append(adapterName);
+	cbox_net_type->Append("Wired");
+	cbox_net_type->Append("Wireless (WiFi)");
 
 	static wxString s_langs[] =
 	{
@@ -294,6 +301,7 @@ SettingsDialog::SettingsDialog(wxWindow *parent)
 	cbox_hle_loglvl->SetSelection(Ini.HLELogLvl.GetValue());
 	cbox_hle_license_area->SetSelection(Ini.HLELicenseArea.GetValue());
 	cbox_net_status->SetSelection(Ini.NETStatus.GetValue());
+	cbox_net_type->SetSelection(Ini.NETType.GetValue());
 	cbox_net_interface->SetSelection(Ini.NETInterface.GetValue());
 	cbox_sys_lang->SetSelection(Ini.SysLanguage.GetValue());
 
@@ -326,9 +334,11 @@ SettingsDialog::SettingsDialog(wxWindow *parent)
 	s_round_hle_license_area->Add(cbox_hle_license_area, wxSizerFlags().Border(wxALL, 5).Expand());
 
 	// Networking
-	s_round_net_status->Add(cbox_net_status, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_round_net_interface->Add(cbox_net_interface, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_round_net_status->Add(cbox_net_status, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_round_net_type->Add(cbox_net_type, wxSizerFlags().Border(wxALL, 5).Expand());
 
+	// System
 	s_round_sys_lang->Add(cbox_sys_lang, wxSizerFlags().Border(wxALL, 5).Expand());
 
 	// Core
@@ -387,8 +397,9 @@ SettingsDialog::SettingsDialog(wxWindow *parent)
 	s_subpanel_misc->Add(chbox_dbg_ap_functioncall, wxSizerFlags().Border(wxALL, 5).Expand());
 
 	// Networking
-	s_subpanel_networking->Add(s_round_net_status, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_networking->Add(s_round_net_interface, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_subpanel_networking->Add(s_round_net_status, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_subpanel_networking->Add(s_round_net_type, wxSizerFlags().Border(wxALL, 5).Expand());
 
 	// System
 	s_subpanel_system->Add(s_round_sys_lang, wxSizerFlags().Border(wxALL, 5).Expand());
@@ -457,8 +468,9 @@ SettingsDialog::SettingsDialog(wxWindow *parent)
 		Ini.HLEExitOnStop.SetValue(chbox_hle_exitonstop->GetValue());
 		Ini.HLELogLvl.SetValue(cbox_hle_loglvl->GetSelection());
 		Ini.HLELicenseArea.SetValue(cbox_hle_license_area->GetSelection());
-		Ini.NETStatus.SetValue(cbox_net_status->GetSelection());
 		Ini.NETInterface.SetValue(cbox_net_interface->GetSelection());
+		Ini.NETStatus.SetValue(cbox_net_status->GetSelection());
+		Ini.NETType.SetValue(cbox_net_type->GetSelection());
 		Ini.SysLanguage.SetValue(cbox_sys_lang->GetSelection());
 		Ini.HLEAlwaysStart.SetValue(chbox_hle_always_start->GetValue());
 

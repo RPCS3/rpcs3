@@ -158,8 +158,9 @@ public:
 	// HLE/Miscs
 	IniEntry<u8>   HLELogLvl;
 	IniEntry<u8>   HLELicenseArea;
-	IniEntry<u8>   NETStatus;
 	IniEntry<u8>   NETInterface;
+	IniEntry<u8>   NETStatus;
+	IniEntry<u8>   NETType;
 	IniEntry<bool> HLELogging;
 	IniEntry<bool> RSXLogging;
 	IniEntry<bool> RSXFrameStep;
@@ -252,13 +253,16 @@ public:
 		HLELogging.Init("HLE_HLELogging", path);
 		RSXLogging.Init("RSX_Logging", path);
 		RSXFrameStep.Init("RSX_Frame_Step", path);
-		NETStatus.Init("NET_Status", path);
-		NETInterface.Init("NET_Interface", path);
 		HLESaveTTY.Init("HLE_HLESaveTTY", path);
 		HLEExitOnStop.Init("HLE_HLEExitOnStop", path);
 		HLELogLvl.Init("HLE_HLELogLvl", path);
 		HLELicenseArea.Init("HLE_LicenseArea", path);
 		HLEAlwaysStart.Init("HLE_HLEAlwaysStart", path);
+
+		// Networking
+		NETInterface.Init("NET_Interface", path);
+		NETStatus.Init("NET_Status", path);
+		NETType.Init("NET_Type", path);
 
 		// Auto Pause
 		DBGAutoPauseFunctionCall.Init("DBG_AutoPauseFunctionCall", path);
@@ -341,13 +345,16 @@ public:
 		HLELogging.Load(false);
 		RSXLogging.Load(false);
 		RSXFrameStep.Load(false);
-		NETStatus.Load(0);
-		NETInterface.Load(0);
 		HLESaveTTY.Load(false);
 		HLEExitOnStop.Load(false);
 		HLELogLvl.Load(3);
 		HLELicenseArea.Load(2);
 		HLEAlwaysStart.Load(true);
+
+		// Networking
+		NETInterface.Load(0);
+		NETStatus.Load(0);
+		NETType.Load(0);
 
 		//Auto Pause
 		DBGAutoPauseFunctionCall.Load(false);
@@ -430,13 +437,16 @@ public:
 		HLELogging.Save();
 		RSXLogging.Save();
 		RSXFrameStep.Save();
-		NETStatus.Save();
-		NETInterface.Save();
 		HLESaveTTY.Save();
 		HLEExitOnStop.Save();
 		HLELogLvl.Save();
 		HLELicenseArea.Save();
 		HLEAlwaysStart.Save();
+
+		// Networking
+		NETInterface.Save();
+		NETStatus.Save();
+		NETType.Save();
 
 		//Auto Pause
 		DBGAutoPauseFunctionCall.Save();

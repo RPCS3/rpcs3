@@ -360,7 +360,9 @@ vfsDevice* VFS::GetDevice(const std::string& ps3_path, std::string& path) const
 			std::vector<std::string> dev_ps3_path_blocks = simplify_path_blocks(m_devices[i]->GetPs3Path());
 
 			if (ps3_path_blocks.size() < dev_ps3_path_blocks.size())
+			{
 				continue;
+			}
 
 			size_t eq = 0;
 			for (; eq < dev_ps3_path_blocks.size(); ++eq)
@@ -379,7 +381,35 @@ vfsDevice* VFS::GetDevice(const std::string& ps3_path, std::string& path) const
 		}
 
 		if (max_i < 0)
-			return nullptr;
+		{
+			// Assume that the base dir of the file is /app_home/, if the mapping can't be found
+			const auto usrdir = GetDevice("/app_home", path);
+
+			if (!usrdir)
+			{
+				LOG_ERROR(GENERAL, "Getting /app_home couldn't be located, your VFS settings are most likely wrong.");
+				return nullptr;
+			}
+
+			for (size_t i = max_eq; i < ps3_path_blocks.size(); i++)
+			{
+				path += "/" + ps3_path_blocks[i];
+			}
+
+			path = simplify_path(path, false, false);
+
+			// Find the slot of /app_home/ mapping
+			for (u32 i = 0; i < m_devices.size(); ++i)
+			{
+				if (m_devices[i]->GetPs3Path() == "/app_home/")
+				{
+					max_i = i;
+					break;
+				}
+			}
+
+			return m_devices[max_i];
+		}
 
 		path = m_devices[max_i]->GetLocalPath();
 
