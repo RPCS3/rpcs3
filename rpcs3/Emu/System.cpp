@@ -1,11 +1,13 @@
 #include "stdafx.h"
 #include "Utilities/Log.h"
 #include "Utilities/File.h"
+#include "rpcs3/Ini.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 
 #include "Emu/GameInfo.h"
 #include "Emu/SysCalls/ModuleManager.h"
+#include "Emu/SysCalls/Modules/cellVideoOut.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/Cell/PPUInstrTable.h"
@@ -199,14 +201,35 @@ void Emulator::Load()
 		}
 	}
 
-	LOG_NOTICE(LOADER, " "); //used to be skip_line
+	LOG_NOTICE(LOADER, "");
 	LOG_NOTICE(LOADER, "Mount info:");
 	for (uint i = 0; i < GetVFS().m_devices.size(); ++i)
 	{
 		LOG_NOTICE(LOADER, "%s -> %s", GetVFS().m_devices[i]->GetPs3Path().c_str(), GetVFS().m_devices[i]->GetLocalPath().c_str());
 	}
 
-	LOG_NOTICE(LOADER, " "); //used to be skip_line
+	LOG_NOTICE(LOADER, "");
+
+	LOG_NOTICE(LOADER, "Settings:");
+	LOG_NOTICE(LOADER, "CPU: %s", Ini.CPUIdToString(Ini.CPUDecoderMode.GetValue()));
+	LOG_NOTICE(LOADER, "SPU: %s", Ini.SPUIdToString(Ini.SPUDecoderMode.GetValue()));
+	LOG_NOTICE(LOADER, "Renderer: %s", Ini.RendererIdToString(Ini.GSRenderMode.GetValue()));
+
+	if (Ini.GSRenderMode.GetValue() == 2)
+	{
+		LOG_NOTICE(LOADER, "D3D Adapter: %s", Ini.AdapterIdToString(Ini.GSD3DAdaptater.GetValue()));
+	}
+
+	LOG_NOTICE(LOADER, "Resolution: %s", ResolutionIdToString(Ini.GSResolution.GetValue()));
+	LOG_NOTICE(LOADER, "Write Depth Buffer: %s", Ini.GSDumpDepthBuffer.GetValue() ? "Yes" : "No");
+	LOG_NOTICE(LOADER, "Write Color Buffers: %s", Ini.GSDumpColorBuffers.GetValue() ? "Yes" : "No");
+	LOG_NOTICE(LOADER, "Read Color Buffer: %s", Ini.GSReadColorBuffer.GetValue() ? "Yes" : "No");
+	LOG_NOTICE(LOADER, "Audio Out: %s", Ini.AudioOutIdToString(Ini.AudioOutMode.GetValue()));
+	LOG_NOTICE(LOADER, "Log Level: %s", Ini.LogLevelIdToString(Ini.HLELogLvl.GetValue()));
+	LOG_NOTICE(LOADER, "Log Everything: %s", Ini.HLELogging.GetValue() ? "Yes" : "No");
+	LOG_NOTICE(LOADER, "RSX Logging: %s", Ini.RSXLogging.GetValue() ? "Yes" : "No");
+
+	LOG_NOTICE(LOADER, "");
 	f.Open("/app_home/../PARAM.SFO");
 	const PSFLoader psf(f);
 	std::string title = psf.GetString("TITLE");

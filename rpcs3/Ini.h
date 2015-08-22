@@ -449,6 +449,77 @@ public:
 		SysEmulationDirPath.Save();
 		SysEmulationDirPathEnable.Save();
 	}
+
+	// For getting strings for certain options to display settings in the log.
+	inline static const char* CPUIdToString(u8 code)
+	{
+		switch (code)
+		{
+		case 0: return "PPU Interpreter";
+		case 1: return "PPU Interpreter 2";
+		case 2: return "PPU JIT (LLVM)";
+		default: return "Unknown";
+		}
+	}
+
+	inline static const char* SPUIdToString(u8 code)
+	{
+		switch (code)
+		{
+		case 0: return "SPU Interpreter";
+		case 1: return "SPU Interpreter 2";
+		case 2: return "SPU JIT (ASMJIT)";
+		default: return "Unknown";
+		}
+	}
+
+	inline static const char* RendererIdToString(u8 code)
+	{
+		switch (code)
+		{
+		case 0: return "Null";
+		case 1: return "OpenGL";
+		case 2: return "DirectX 12";
+		default: return "Unknown";
+		}
+	}
+
+	inline static const char* AdapterIdToString(u8 code)
+	{
+		switch (code)
+		{
+		case 0: return "WARP";
+		case 1: return "Default";
+		case 2: return "Renderer 0";
+		case 3: return "Renderer 1";
+		case 4: return "Renderer 2";
+		default: return "Unknown";
+		}
+	}
+
+	inline static const char* AudioOutIdToString(u8 code)
+	{
+		switch (code)
+		{
+		case 0: return "Null";
+		case 1: return "OpenAL";
+		case 2: return "XAudio2";
+		default: return "Unknown";
+		}
+	}
+
+	inline static const char* LogLevelIdToString(u8 code)
+	{
+		switch (code)
+		{
+		case 0: return "All";
+		case 1: return "Warnings";
+		case 2: return "Success";
+		case 3: return "Errors";
+		case 4: return "Nothing";
+		default: return "Unknown";
+		}
+	}
 };
 
 extern Inis Ini;

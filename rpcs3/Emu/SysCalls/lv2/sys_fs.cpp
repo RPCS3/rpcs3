@@ -266,6 +266,8 @@ s32 sys_fs_stat(vm::cptr<char> path, vm::ptr<CellFsStat> sb)
 		return CELL_FS_ENOTMOUNTED;
 	}
 
+	sys_fs.Warning("*** local_path = '%s'", local_path);
+
 	fs::stat_t info;
 
 	if (!fs::stat(local_path, info))

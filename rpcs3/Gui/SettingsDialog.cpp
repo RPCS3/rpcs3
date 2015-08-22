@@ -163,10 +163,10 @@ SettingsDialog::SettingsDialog(wxWindow *parent)
 #endif
 
 	cbox_gs_d3d_adaptater->Append("WARP");
-	cbox_gs_d3d_adaptater->Append("default");
-	cbox_gs_d3d_adaptater->Append("renderer 0");
-	cbox_gs_d3d_adaptater->Append("renderer 1");
-	cbox_gs_d3d_adaptater->Append("renderer 2");
+	cbox_gs_d3d_adaptater->Append("Default");
+	cbox_gs_d3d_adaptater->Append("Renderer 0");
+	cbox_gs_d3d_adaptater->Append("Renderer 1");
+	cbox_gs_d3d_adaptater->Append("Renderer 2");
 
 #if !defined(DX12_SUPPORT)
 	cbox_gs_d3d_adaptater->Enable(false);

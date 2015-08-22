@@ -4,21 +4,12 @@
 #include "Emu/SysCalls/Modules.h"
 
 #include "Ini.h"
+#include "cellAvconfExt.h"
 #include "cellAudioIn.h"
 #include "cellAudioOut.h"
 #include "cellVideoOut.h"
 
 extern Module cellAvconfExt;
-
-struct avconfext_t
-{
-	u8 gamma;
-
-	avconfext_t()
-	{
-		gamma = 1;
-	}
-};
 
 s32 cellAudioOutUnregisterDevice()
 {
@@ -124,7 +115,7 @@ s32 cellAudioInUnregisterDevice()
 
 s32 cellVideoOutGetScreenSize(u32 videoOut, vm::ptr<float> screenSize)
 {
-	cellAvconfExt.Warning("cellVideoOutGetScreenSize(videoOut=%d, screenSize=*0x%x)", videoOut, screenSize);
+	cellAvconfExt.Todo("cellVideoOutGetScreenSize(videoOut=%d, screenSize=*0x%x)", videoOut, screenSize);
 
 	if (videoOut != CELL_VIDEO_OUT_PRIMARY)
 	{

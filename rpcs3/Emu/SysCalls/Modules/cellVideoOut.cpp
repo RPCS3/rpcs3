@@ -1,10 +1,12 @@
 #include "stdafx.h"
+#include "Emu/IdManager.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
 
 #include "Ini.h"
 #include "Emu/RSX/GSManager.h"
+#include "cellAvconfExt.h"
 #include "cellVideoOut.h"
 
 extern Module cellSysutil;
@@ -13,7 +15,10 @@ s32 cellVideoOutGetState(u32 videoOut, u32 deviceIndex, vm::ptr<CellVideoOutStat
 {
 	cellSysutil.Log("cellVideoOutGetState(videoOut=%d, deviceIndex=%d, state=*0x%x)", videoOut, deviceIndex, state);
 
-	if (deviceIndex) return CELL_VIDEO_OUT_ERROR_DEVICE_NOT_FOUND;
+	if (deviceIndex)
+	{
+		return CELL_VIDEO_OUT_ERROR_DEVICE_NOT_FOUND;
+	}
 
 	switch (videoOut)
 	{
@@ -40,8 +45,11 @@ s32 cellVideoOutGetResolution(u32 resolutionId, vm::ptr<CellVideoOutResolution> 
 	cellSysutil.Log("cellVideoOutGetResolution(resolutionId=%d, resolution=*0x%x)", resolutionId, resolution);
 
 	u32 num = ResolutionIdToNum(resolutionId);
+	
 	if (!num)
+	{
 		return CELL_EINVAL;
+	}
 
 	resolution->width = ResolutionTable[num].width;
 	resolution->height = ResolutionTable[num].height;
@@ -96,11 +104,9 @@ s32 cellVideoOutGetConfiguration(u32 videoOut, vm::ptr<CellVideoOutConfiguration
 		config->format = Emu.GetGSManager().GetInfo().mode.format;
 		config->aspect = Emu.GetGSManager().GetInfo().mode.aspect;
 		config->pitch = Emu.GetGSManager().GetInfo().mode.pitch;
-
 		return CELL_VIDEO_OUT_SUCCEEDED;
 
 	case CELL_VIDEO_OUT_SECONDARY:
-
 		return CELL_VIDEO_OUT_SUCCEEDED;
 	}
 
@@ -111,7 +117,18 @@ s32 cellVideoOutGetDeviceInfo(u32 videoOut, u32 deviceIndex, vm::ptr<CellVideoOu
 {
 	cellSysutil.Warning("cellVideoOutGetDeviceInfo(videoOut=%d, deviceIndex=%d, info=*0x%x)", videoOut, deviceIndex, info);
 
-	if (deviceIndex) return CELL_VIDEO_OUT_ERROR_DEVICE_NOT_FOUND;
+	if (deviceIndex)
+	{
+		return CELL_VIDEO_OUT_ERROR_DEVICE_NOT_FOUND;
+	}
+
+	const auto avconfExt = fxm::get<avconfext_t>();
+	u32 gamma = 212; // Default value (1.0)
+
+	if (avconfExt)
+	{
+		gamma = avconfExt->gamma * 212;
+	}
 
 	// Use standard dummy values for now.
 	info->portType = CELL_VIDEO_OUT_PORT_HDMI;
@@ -128,12 +145,14 @@ s32 cellVideoOutGetDeviceInfo(u32 videoOut, u32 deviceIndex, vm::ptr<CellVideoOu
 	info->colorInfo.redY = 0xFFFF;
 	info->colorInfo.whiteX = 0xFFFF;
 	info->colorInfo.whiteY = 0xFFFF;
-	info->colorInfo.gamma = 100;
-	info->availableModes[0].aspect = 0;
-	info->availableModes[0].conversion = 0;
-	info->availableModes[0].refreshRates = 0xF;
-	info->availableModes[0].resolutionId = 1;
-	info->availableModes[0].scanMode = 0;
+	info->colorInfo.gamma = gamma;
+
+	// TODO: Calculate all the available modes (up to 23)
+	info->availableModes[0].resolutionId = Ini.GSResolution.GetValue();
+	info->availableModes[0].scanMode = CELL_VIDEO_OUT_SCAN_MODE_INTERLACE;
+	info->availableModes[0].conversion = CELL_VIDEO_OUT_DISPLAY_CONVERSION_NONE;
+	info->availableModes[0].aspect = Ini.GSAspectRatio.GetValue() + 1;
+	info->availableModes[0].refreshRates = FrameLimitIdToConstant(Ini.GSFrameLimit.GetValue());
 
 	return CELL_OK;
 }
@@ -153,16 +172,18 @@ s32 cellVideoOutGetNumberOfDevice(u32 videoOut)
 
 s32 cellVideoOutGetResolutionAvailability(u32 videoOut, u32 resolutionId, u32 aspect, u32 option)
 {
-	cellSysutil.Warning("cellVideoOutGetResolutionAvailability(videoOut=%d, resolutionId=0x%x, aspect=%d, option=%d)", videoOut, resolutionId, aspect, option);
+	cellSysutil.Warning("cellVideoOutGetResolutionAvailability(videoOut=%d, resolutionId=%d, aspect=%d, option=%d)", videoOut, resolutionId, aspect, option);
 
 	if (!Ini.GS3DTV.GetValue() && (resolutionId == CELL_VIDEO_OUT_RESOLUTION_720_3D_FRAME_PACKING || resolutionId == CELL_VIDEO_OUT_RESOLUTION_1024x720_3D_FRAME_PACKING ||
 		resolutionId == CELL_VIDEO_OUT_RESOLUTION_960x720_3D_FRAME_PACKING || resolutionId == CELL_VIDEO_OUT_RESOLUTION_800x720_3D_FRAME_PACKING ||
 		resolutionId == CELL_VIDEO_OUT_RESOLUTION_640x720_3D_FRAME_PACKING))
+	{
 		return 0;
+	}
 
 	switch (videoOut)
 	{
-	case CELL_VIDEO_OUT_PRIMARY: return 1;
+	case CELL_VIDEO_OUT_PRIMARY: return Ini.GSResolution.GetValue();
 	case CELL_VIDEO_OUT_SECONDARY: return 0;
 	}
 
