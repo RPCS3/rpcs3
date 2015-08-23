@@ -75,7 +75,7 @@ Compiler::~Compiler() {
 	delete m_llvm_context;
 }
 
-std::pair<Executable, llvm::ExecutionEngine *> Compiler::Compile(const std::string & name, const ControlFlowGraph & cfg, bool generate_linkable_exits) {
+std::pair<Executable, llvm::ExecutionEngine *> Compiler::Compile(const std::string & name, u32 start_address, u32 instruction_count, bool generate_linkable_exits) {
 	auto compilation_start = std::chrono::high_resolution_clock::now();
 
 	m_module = new llvm::Module("Module", *m_llvm_context);
@@ -118,7 +118,6 @@ std::pair<Executable, llvm::ExecutionEngine *> Compiler::Compile(const std::stri
 	fpm->add(createCFGSimplificationPass());
 	fpm->doInitialization();
 
-	m_state.cfg = &cfg;
 	m_state.generate_linkable_exits = generate_linkable_exits;
 
 	// Create the function
@@ -132,34 +131,32 @@ std::pair<Executable, llvm::ExecutionEngine *> Compiler::Compile(const std::stri
 
 	// Create the entry block and add code to branch to the first instruction
 	m_ir_builder->SetInsertPoint(GetBasicBlockFromAddress(0));
-	m_ir_builder->CreateBr(GetBasicBlockFromAddress(cfg.start_address));
+	m_ir_builder->CreateBr(GetBasicBlockFromAddress(start_address));
 
 	// Used to decode instructions
 	PPUDisAsm dis_asm(CPUDisAsm_DumpMode);
-	dis_asm.offset = vm::get_ptr<u8>(cfg.start_address);
+	dis_asm.offset = vm::get_ptr<u8>(start_address);
 
 	m_recompilation_engine.Log() << "Recompiling block :\n\n";
 
 	// Convert each instruction in the CFG to LLVM IR
 	std::vector<PHINode *> exit_instr_list;
-	for (u32 instr_i : cfg.instruction_addresses) {
+	for (u32 instructionAddress = start_address; instructionAddress < start_address + instruction_count * 4; instructionAddress += 4) {
 		m_state.hit_branch_instruction = false;
-		m_state.current_instruction_address = instr_i;
-		BasicBlock *instr_bb = GetBasicBlockFromAddress(m_state.current_instruction_address);
+		m_state.current_instruction_address = instructionAddress;
+		BasicBlock *instr_bb = GetBasicBlockFromAddress(instructionAddress);
 		m_ir_builder->SetInsertPoint(instr_bb);
 
-		if (instr_bb->empty()) {
-			u32 instr = vm::ps3::read32(m_state.current_instruction_address);
+		u32 instr = vm::ps3::read32(instructionAddress);
 
-			// Dump PPU opcode
-			dis_asm.dump_pc = m_state.current_instruction_address * 4;
-			(*PPU_instr::main_list)(&dis_asm, instr);
-			m_recompilation_engine.Log() << dis_asm.last_opcode;
+		// Dump PPU opcode
+		dis_asm.dump_pc = instructionAddress;
+		(*PPU_instr::main_list)(&dis_asm, instr);
+		m_recompilation_engine.Log() << dis_asm.last_opcode;
 
-			Decode(instr);
-			if (!m_state.hit_branch_instruction)
-				m_ir_builder->CreateBr(GetBasicBlockFromAddress(m_state.current_instruction_address + 4));
-		}
+		Decode(instr);
+		if (!m_state.hit_branch_instruction)
+			 m_ir_builder->CreateBr(GetBasicBlockFromAddress(instructionAddress + 4));
 	}
 
 	// Generate exit logic for all empty blocks
@@ -179,7 +176,7 @@ std::pair<Executable, llvm::ExecutionEngine *> Compiler::Compile(const std::stri
 
 		if (generate_linkable_exits) {
 			Value *context_i64 = m_ir_builder->CreateZExt(exit_instr_i32, m_ir_builder->getInt64Ty());
-			context_i64 = m_ir_builder->CreateOr(context_i64, (u64)cfg.function_address << 32);
+			context_i64 = m_ir_builder->CreateOr(context_i64, (u64)start_address << 32);
 			Value *ret_i32 = IndirectCall(m_state.current_instruction_address, context_i64, false);
 			Value *cmp_i1 = m_ir_builder->CreateICmpNE(ret_i32, m_ir_builder->getInt32(0));
 			BasicBlock *then_bb = GetBasicBlockFromAddress(m_state.current_instruction_address, "then_0");
@@ -188,7 +185,7 @@ std::pair<Executable, llvm::ExecutionEngine *> Compiler::Compile(const std::stri
 
 			m_ir_builder->SetInsertPoint(then_bb);
 			context_i64 = m_ir_builder->CreateZExt(ret_i32, m_ir_builder->getInt64Ty());
-			context_i64 = m_ir_builder->CreateOr(context_i64, (u64)cfg.function_address << 32);
+			context_i64 = m_ir_builder->CreateOr(context_i64, (u64)start_address << 32);
 			m_ir_builder->CreateCall2(m_execute_unknown_block, m_state.args[CompileTaskState::Args::State], context_i64);
 			m_ir_builder->CreateBr(merge_bb);
 
@@ -215,7 +212,7 @@ std::pair<Executable, llvm::ExecutionEngine *> Compiler::Compile(const std::stri
 
 			m_ir_builder->SetInsertPoint(then_bb);
 			Value *context_i64 = m_ir_builder->CreateZExt(exit_instr_i32, m_ir_builder->getInt64Ty());
-			context_i64 = m_ir_builder->CreateOr(context_i64, (u64)cfg.function_address << 32);
+			context_i64 = m_ir_builder->CreateOr(context_i64, (u64)start_address << 32);
 			m_ir_builder->CreateCall2(m_execute_unknown_block, m_state.args[CompileTaskState::Args::State], context_i64);
 			m_ir_builder->CreateBr(merge_bb);
 
@@ -353,10 +350,10 @@ const Executable RecompilationEngine::GetCompiledExecutableIfAvailable(u32 addre
 	return std::get<0>(It->second);
 }
 
-void RecompilationEngine::NotifyTrace(ExecutionTrace * execution_trace) {
+void RecompilationEngine::NotifyBlockStart(u32 address) {
 	{
-		std::lock_guard<std::mutex> lock(m_pending_execution_traces_lock);
-		m_pending_execution_traces.push_back(execution_trace);
+		std::lock_guard<std::mutex> lock(m_pending_address_start_lock);
+		m_pending_address_start.push_back(address);
 	}
 
 	if (!joinable()) {
@@ -384,22 +381,16 @@ void RecompilationEngine::Task() {
 	auto start = std::chrono::high_resolution_clock::now();
 	while (joinable() && !Emu.IsStopped()) {
 		bool             work_done_this_iteration = false;
-		ExecutionTrace * execution_trace = nullptr;
+		std::list <u32> m_current_execution_traces;
 
 		{
-			std::lock_guard<std::mutex> lock(m_pending_execution_traces_lock);
-
-			auto i = m_pending_execution_traces.begin();
-			if (i != m_pending_execution_traces.end()) {
-				execution_trace = *i;
-				m_pending_execution_traces.erase(i);
-			}
+			std::lock_guard<std::mutex> lock(m_pending_address_start_lock);
+			m_current_execution_traces.swap(m_pending_address_start);
 		}
 
-		if (execution_trace) {
-			ProcessExecutionTrace(*execution_trace);
-			work_done_this_iteration = true;
-			delete execution_trace;
+		if (!m_current_execution_traces.empty()) {
+			for (u32 address : m_current_execution_traces)
+				work_done_this_iteration |= ProcessExecutionTrace(address);
 		}
 
 		if (!work_done_this_iteration) {
@@ -429,122 +420,116 @@ void RecompilationEngine::Task() {
 	s_the_instance = nullptr; // Can cause deadlock if this is the last instance. Need to fix this.
 }
 
-void RecompilationEngine::ProcessExecutionTrace(const ExecutionTrace & execution_trace) {
-	auto execution_trace_id = execution_trace.GetId();
-	auto processed_execution_trace_i = m_processed_execution_traces.find(execution_trace_id);
-	if (processed_execution_trace_i == m_processed_execution_traces.end()) {
-		Log() << "Trace: " << execution_trace.ToString() << "\n";
-		// Find the function block
-		BlockEntry key(execution_trace.function_address, execution_trace.function_address);
-		auto       block_i = m_block_table.find(&key);
-		if (block_i == m_block_table.end()) {
-			block_i = m_block_table.insert(m_block_table.end(), new BlockEntry(key.cfg.start_address, key.cfg.function_address));
-		}
-
-		auto function_block = *block_i;
-		block_i = m_block_table.end();
-		auto split_trace = false;
-		std::vector<BlockEntry *> tmp_block_list;
-		for (auto trace_i = execution_trace.entries.begin(); trace_i != execution_trace.entries.end(); trace_i++) {
-			if (trace_i->type == ExecutionTraceEntry::Type::CompiledBlock) {
-				block_i = m_block_table.end();
-				split_trace = true;
-			}
-
-			if (block_i == m_block_table.end()) {
-				BlockEntry key(trace_i->GetPrimaryAddress(), execution_trace.function_address);
-				block_i = m_block_table.find(&key);
-				if (block_i == m_block_table.end()) {
-					block_i = m_block_table.insert(m_block_table.end(), new BlockEntry(key.cfg.start_address, key.cfg.function_address));
-				}
-
-				tmp_block_list.push_back(*block_i);
-			}
-
-			const ExecutionTraceEntry * next_trace = nullptr;
-			if (trace_i + 1 != execution_trace.entries.end()) {
-				next_trace = &(*(trace_i + 1));
-			}
-			else if (!split_trace && execution_trace.type == ExecutionTrace::Type::Loop) {
-				next_trace = &(*(execution_trace.entries.begin()));
-			}
-
-			UpdateControlFlowGraph((*block_i)->cfg, *trace_i, next_trace);
-			if (*block_i != function_block) {
-				UpdateControlFlowGraph(function_block->cfg, *trace_i, next_trace);
-			}
-		}
-
-		processed_execution_trace_i = m_processed_execution_traces.insert(m_processed_execution_traces.end(), std::make_pair(execution_trace_id, std::move(tmp_block_list)));
-	}
-
-	for (auto i = processed_execution_trace_i->second.begin(); i != processed_execution_trace_i->second.end(); i++) {
-		if (!(*i)->is_compiled) {
-			(*i)->num_hits++;
-			if ((*i)->num_hits >= Ini.LLVMThreshold.GetValue()) {
-				CompileBlock(*(*i));
-			}
+bool RecompilationEngine::ProcessExecutionTrace(u32 address) {
+	auto It = m_block_table.find(address);
+	if (It == m_block_table.end())
+		It = m_block_table.emplace(address, BlockEntry(address)).first;
+	BlockEntry &block = It->second;
+	if (!block.is_compiled) {
+		block.num_hits++;
+		if (block.num_hits >= Ini.LLVMThreshold.GetValue()) {
+			CompileBlock(block);
+			return true;
 		}
 	}
-	// TODO:: Syphurith: It is said that just remove_if would cause some troubles.. I don't know if that would cause Memleak. From CppCheck:
-	// The return value of std::remove_if() is ignored. This function returns an iterator to the end of the range containing those elements that should be kept.
-	// Elements past new end remain valid but with unspecified values. Use the erase method of the container to delete them.
-	std::remove_if(processed_execution_trace_i->second.begin(), processed_execution_trace_i->second.end(), [](const BlockEntry * b)->bool { return b->is_compiled; });
+	return false;
 }
 
-void RecompilationEngine::UpdateControlFlowGraph(ControlFlowGraph & cfg, const ExecutionTraceEntry & this_entry, const ExecutionTraceEntry * next_entry) {
-	if (this_entry.type == ExecutionTraceEntry::Type::Instruction) {
-		cfg.instruction_addresses.insert(this_entry.GetPrimaryAddress());
+/**
+* This code is inspired from Dolphin PPC Analyst
+*/
+inline s32 SignExt16(s16 x) { return (s32)(s16)x; }
+inline s32 SignExt26(u32 x) { return x & 0x2000000 ? (s32)(x | 0xFC000000) : (s32)(x); }
 
-		if (next_entry) {
-			if (next_entry->type == ExecutionTraceEntry::Type::Instruction || next_entry->type == ExecutionTraceEntry::Type::CompiledBlock) {
-				if (next_entry->GetPrimaryAddress() != (this_entry.GetPrimaryAddress() + 4)) {
-					cfg.branches[this_entry.GetPrimaryAddress()].insert(next_entry->GetPrimaryAddress());
+
+bool RecompilationEngine::AnalyseBlock(BlockEntry &functionData, size_t maxSize)
+{
+	u32 startAddress = functionData.address;
+	u32 farthestBranchTarget = startAddress;
+	functionData.instructionCount = 0;
+	functionData.calledFunctions.clear();
+	functionData.is_analysed = true;
+	functionData.is_compilable_function = true;
+	Log() << "Analysing " << (void*)(uint64_t)startAddress << "\n";
+	for (size_t instructionAddress = startAddress; instructionAddress < startAddress + maxSize; instructionAddress += 4)
+	{
+		u32 instr = vm::ps3::read32((u32)instructionAddress);
+		functionData.instructionCount++;
+		if (instr == PPU_instr::implicts::BLR() && instructionAddress >= farthestBranchTarget && functionData.is_compilable_function)
+		{
+			Log() << "Analysis: Block is compilable into a function \n";
+			return true;
+		}
+		else if (PPU_instr::fields::GD_13(instr) == PPU_opcodes::G_13Opcodes::BCCTR)
+		{
+			if (!PPU_instr::fields::LK(instr))
+			{
+				Log() << "Analysis: indirect branching found \n";
+				functionData.is_compilable_function = false;
+				return true;
+			}
+		}
+		else if (PPU_instr::fields::OPCD(instr) == PPU_opcodes::PPU_MainOpcodes::BC)
+		{
+			u32 target = SignExt16(PPU_instr::fields::BD(instr));
+			if (!PPU_instr::fields::AA(instr)) // Absolute address
+				target += (u32)instructionAddress;
+			if (target > farthestBranchTarget && !PPU_instr::fields::LK(instr))
+				farthestBranchTarget = target;
+		}
+		else if (PPU_instr::fields::OPCD(instr) == PPU_opcodes::PPU_MainOpcodes::B)
+		{
+			u32 target = SignExt26(PPU_instr::fields::LL(instr));
+			if (!PPU_instr::fields::AA(instr)) // Absolute address
+				target += (u32)instructionAddress;
+
+			if (!PPU_instr::fields::LK(instr))
+			{
+				if (target < startAddress)
+				{
+					Log() << "Analysis: branch to previous block\n";
+					functionData.is_compilable_function = false;
+					return true;
 				}
+				else if (target > farthestBranchTarget)
+					farthestBranchTarget = target;
 			}
-			else if (next_entry->type == ExecutionTraceEntry::Type::FunctionCall) {
-				cfg.calls[this_entry.data.instruction.address].insert(next_entry->GetPrimaryAddress());
-			}
+			else
+				functionData.calledFunctions.insert(target);
 		}
 	}
-	else if (this_entry.type == ExecutionTraceEntry::Type::CompiledBlock) {
-		if (next_entry) {
-			if (next_entry->type == ExecutionTraceEntry::Type::Instruction || next_entry->type == ExecutionTraceEntry::Type::CompiledBlock) {
-				cfg.branches[this_entry.data.compiled_block.exit_address].insert(next_entry->GetPrimaryAddress());
-			}
-			else if (next_entry->type == ExecutionTraceEntry::Type::FunctionCall) {
-				cfg.calls[this_entry.data.compiled_block.exit_address].insert(next_entry->GetPrimaryAddress());
-			}
-		}
-	}
+	Log() << "Analysis: maxSize reached \n";
+	functionData.is_compilable_function = false;
+	return true;
 }
 
 void RecompilationEngine::CompileBlock(BlockEntry & block_entry) {
-	Log() << "Compile: " << block_entry.ToString() << "\n";
-	Log() << "CFG: " << block_entry.cfg.ToString() << "\n";
+	if (block_entry.is_analysed)
+		return;
 
+	if (!AnalyseBlock(block_entry))
+		return;
+	Log() << "Compile: " << block_entry.ToString() << "\n";
 	const std::pair<Executable, llvm::ExecutionEngine *> &compileResult =
-		m_compiler.Compile(fmt::format("fn_0x%08X", block_entry.cfg.start_address), block_entry.cfg,
-			block_entry.IsFunction() ? true : false /*generate_linkable_exits*/);
+		m_compiler.Compile(fmt::format("fn_0x%08X", block_entry.address), block_entry.address, block_entry.instructionCount, false /*generate_linkable_exits*/);
 
 	// If entry doesn't exist, create it (using lock)
-	std::unordered_map<u32, ExecutableStorage>::iterator It = m_address_to_function.find(block_entry.cfg.start_address);
+	std::unordered_map<u32, ExecutableStorage>::iterator It = m_address_to_function.find(block_entry.address);
 	if (It == m_address_to_function.end())
 	{
 		std::lock_guard<std::mutex> lock(m_address_to_function_lock);
-		std::get<1>(m_address_to_function[block_entry.cfg.start_address]) = nullptr;
-		if (!isAddressCommited(block_entry.cfg.start_address / 4))
-			commitAddress(block_entry.cfg.start_address / 4);
+		std::get<1>(m_address_to_function[block_entry.address]) = nullptr;
+		if (!isAddressCommited(block_entry.address / 4))
+			commitAddress(block_entry.address / 4);
 	}
 
-	std::get<1>(m_address_to_function[block_entry.cfg.start_address]) = std::unique_ptr<llvm::ExecutionEngine>(compileResult.second);
-	std::get<0>(m_address_to_function[block_entry.cfg.start_address]) = compileResult.first;
-	std::get<3>(m_address_to_function[block_entry.cfg.start_address]) = m_currentId;
-	Log() << "ID IS " << m_currentId << "\n";
+	std::get<1>(m_address_to_function[block_entry.address]) = std::unique_ptr<llvm::ExecutionEngine>(compileResult.second);
+	std::get<0>(m_address_to_function[block_entry.address]) = compileResult.first;
+	std::get<3>(m_address_to_function[block_entry.address]) = m_currentId;
+	Log() << "Associating " << (void*)(uint64_t)block_entry.address << " with ID " << m_currentId << "\n";
 	m_currentId++;
-	block_entry.last_compiled_cfg_size = block_entry.cfg.GetSize();
 	block_entry.is_compiled = true;
-	FunctionCache[block_entry.cfg.start_address / 4] = compileResult.first;
+	FunctionCache[block_entry.address / 4] = compileResult.first;
 }
 
 std::shared_ptr<RecompilationEngine> RecompilationEngine::GetInstance() {
@@ -555,86 +540,6 @@ std::shared_ptr<RecompilationEngine> RecompilationEngine::GetInstance() {
 	}
 
 	return s_the_instance;
-}
-
-Tracer::Tracer()
-	: m_recompilation_engine(RecompilationEngine::GetInstance()) {
-	m_stack.reserve(100);
-}
-
-Tracer::~Tracer() {
-	Terminate();
-}
-
-void Tracer::Trace(TraceType trace_type, u32 arg1, u32 arg2) {
-	ExecutionTrace * execution_trace = nullptr;
-
-	switch (trace_type) {
-	case TraceType::CallFunction:
-		// arg1 is address of the function
-		m_stack.back()->entries.push_back(ExecutionTraceEntry(ExecutionTraceEntry::Type::FunctionCall, arg1));
-		break;
-	case TraceType::EnterFunction:
-		// arg1 is address of the function
-		m_stack.push_back(new ExecutionTrace(arg1));
-		break;
-	case TraceType::ExitFromCompiledFunction:
-		// arg1 is address of function.
-		// arg2 is the address of the exit instruction.
-		if (arg2) {
-			m_stack.push_back(new ExecutionTrace(arg1));
-			m_stack.back()->entries.push_back(ExecutionTraceEntry(ExecutionTraceEntry::Type::CompiledBlock, arg1, arg2));
-		}
-		break;
-	case TraceType::Return:
-		// No args used
-		execution_trace = m_stack.back();
-		execution_trace->type = ExecutionTrace::Type::Linear;
-		m_stack.pop_back();
-		break;
-	case TraceType::Instruction:
-		// arg1 is the address of the instruction
-		for (int i = (int)m_stack.back()->entries.size() - 1; i >= 0; i--) {
-			if ((m_stack.back()->entries[i].type == ExecutionTraceEntry::Type::Instruction && m_stack.back()->entries[i].data.instruction.address == arg1) ||
-				(m_stack.back()->entries[i].type == ExecutionTraceEntry::Type::CompiledBlock && m_stack.back()->entries[i].data.compiled_block.entry_address == arg1)) {
-				// Found a loop
-				execution_trace = new ExecutionTrace(m_stack.back()->function_address);
-				execution_trace->type = ExecutionTrace::Type::Loop;
-				std::copy(m_stack.back()->entries.begin() + i, m_stack.back()->entries.end(), std::back_inserter(execution_trace->entries));
-				m_stack.back()->entries.erase(m_stack.back()->entries.begin() + i + 1, m_stack.back()->entries.end());
-				break;
-			}
-		}
-
-		if (!execution_trace) {
-			// A loop was not found
-			m_stack.back()->entries.push_back(ExecutionTraceEntry(ExecutionTraceEntry::Type::Instruction, arg1));
-		}
-		break;
-	case TraceType::ExitFromCompiledBlock:
-		// arg1 is address of the compiled block.
-		// arg2 is the address of the exit instruction.
-		m_stack.back()->entries.push_back(ExecutionTraceEntry(ExecutionTraceEntry::Type::CompiledBlock, arg1, arg2));
-
-		if (arg2 == 0) {
-			// Return from function
-			execution_trace = m_stack.back();
-			execution_trace->type = ExecutionTrace::Type::Linear;
-			m_stack.pop_back();
-		}
-		break;
-	default:
-		assert(0);
-		break;
-	}
-
-	if (execution_trace) {
-		m_recompilation_engine->NotifyTrace(execution_trace);
-	}
-}
-
-void Tracer::Terminate() {
-	// TODO: Notify recompilation engine
 }
 
 ppu_recompiler_llvm::CPUHybridDecoderRecompiler::CPUHybridDecoderRecompiler(PPUThread & ppu)
@@ -656,7 +561,6 @@ u32 ppu_recompiler_llvm::CPUHybridDecoderRecompiler::DecodeMemory(const u32 addr
 
 u32 ppu_recompiler_llvm::CPUHybridDecoderRecompiler::ExecuteFunction(PPUThread * ppu_state, u64 context) {
 	auto execution_engine = (CPUHybridDecoderRecompiler *)ppu_state->GetDecoder();
-	execution_engine->m_tracer.Trace(Tracer::TraceType::EnterFunction, ppu_state->PC, 0);
 	return ExecuteTillReturn(ppu_state, 0);
 }
 
@@ -687,8 +591,7 @@ static BranchType GetBranchTypeFromInstruction(u32 instruction)
 u32 ppu_recompiler_llvm::CPUHybridDecoderRecompiler::ExecuteTillReturn(PPUThread * ppu_state, u64 context) {
 	CPUHybridDecoderRecompiler *execution_engine = (CPUHybridDecoderRecompiler *)ppu_state->GetDecoder();
 
-	if (context)
-		execution_engine->m_tracer.Trace(Tracer::TraceType::ExitFromCompiledFunction, context >> 32, context & 0xFFFFFFFF);
+	execution_engine->m_recompilation_engine->NotifyBlockStart(ppu_state->PC);
 
 	while (PollStatus(ppu_state) == false) {
 		const Executable executable = execution_engine->m_recompilation_engine->GetCompiledExecutableIfAvailable(ppu_state->PC);
@@ -696,12 +599,11 @@ u32 ppu_recompiler_llvm::CPUHybridDecoderRecompiler::ExecuteTillReturn(PPUThread
 		{
 			auto entry = ppu_state->PC;
 			u32 exit = (u32)executable(ppu_state, 0);
-			execution_engine->m_tracer.Trace(Tracer::TraceType::ExitFromCompiledBlock, entry, exit);
 			if (exit == 0)
 				return 0;
+			execution_engine->m_recompilation_engine->NotifyBlockStart(ppu_state->PC);
 			continue;
 		}
-		execution_engine->m_tracer.Trace(Tracer::TraceType::Instruction, ppu_state->PC, 0);
 		u32 instruction = vm::ps3::read32(ppu_state->PC);
 		u32 oldPC = ppu_state->PC;
 		execution_engine->m_decoder.Decode(instruction);
@@ -710,11 +612,9 @@ u32 ppu_recompiler_llvm::CPUHybridDecoderRecompiler::ExecuteTillReturn(PPUThread
 
 		switch (branch_type) {
 		case BranchType::Return:
-			execution_engine->m_tracer.Trace(Tracer::TraceType::Return, 0, 0);
 			if (Emu.GetCPUThreadStop() == ppu_state->PC) ppu_state->fast_stop();
 			return 0;
 		case BranchType::FunctionCall: {
-			execution_engine->m_tracer.Trace(Tracer::TraceType::CallFunction, ppu_state->PC, 0);
 			ExecuteFunction(ppu_state, 0);
 			break;
 		}
