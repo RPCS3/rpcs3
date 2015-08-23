@@ -307,6 +307,7 @@
     <ClCompile Include="Gui\RSXDebugger.cpp" />
     <ClCompile Include="Gui\SaveDataDialog.cpp" />
     <ClCompile Include="Gui\SaveDataUtility.cpp" />
+    <ClCompile Include="Gui\SettingsDialog.cpp" />
     <ClCompile Include="Gui\TextInputDialog.cpp" />
     <ClCompile Include="Gui\VFSManager.cpp" />
     <ClCompile Include="Gui\VHDDManager.cpp" />
@@ -352,6 +353,7 @@
     <ClInclude Include="Gui\RSXDebugger.h" />
     <ClInclude Include="Gui\SaveDataDialog.h" />
     <ClInclude Include="Gui\SaveDataUtility.h" />
+    <ClInclude Include="Gui\SettingsDialog.h" />
     <ClInclude Include="Gui\TextInputDialog.h" />
     <ClInclude Include="Gui\VFSManager.h" />
     <ClInclude Include="Gui\VHDDManager.h" />

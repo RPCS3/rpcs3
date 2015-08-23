@@ -105,6 +105,9 @@
     <ClCompile Include="Gui\D3DGSFrame.cpp">
       <Filter>Gui</Filter>
     </ClCompile>
+    <ClCompile Include="Gui\SettingsDialog.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="rpcs3.rc" />
@@ -211,6 +214,9 @@
     </ClInclude>
     <ClInclude Include="resource.h" />
     <ClInclude Include="Gui\D3DGSFrame.h">
+      <Filter>Gui</Filter>
+    </ClInclude>
+    <ClInclude Include="Gui\SettingsDialog.h">
       <Filter>Gui</Filter>
     </ClInclude>
   </ItemGroup>
