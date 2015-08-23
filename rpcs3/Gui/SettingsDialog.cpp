@@ -5,6 +5,7 @@
 #include "Emu/SysCalls/Modules/cellVideoOut.h"
 #include "SettingsDialog.h"
 #include "Utilities/Log.h"
+#include <wx/radiobox.h>
 
 SettingsDialog::SettingsDialog(wxWindow *parent)
 	: wxDialog(parent, wxID_ANY, "Settings", wxDefaultPosition)
