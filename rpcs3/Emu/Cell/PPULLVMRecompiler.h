@@ -1016,11 +1016,6 @@ namespace ppu_recompiler_llvm {
 		const Executable *GetExecutable(u32 address, bool isFunction);
 
 		/**
-		 * Get a mutex for an address. Used to avoid modifying a block currently in execution.
-		 **/
-		std::pair<std::mutex, std::atomic<int> >* GetMutexAndCounterForAddress(u32 address);
-
-		/**
 		 * Get the executable for the specified address if a compiled version is
 		 * available, otherwise returns nullptr.
 		 **/
@@ -1043,9 +1038,6 @@ namespace ppu_recompiler_llvm {
 			/// Number of times this block was hit
 			u32 num_hits;
 
-			/// The current revision number of this function
-			u32 revision;
-
 			/// Size of the CFG when it was last compiled
 			size_t last_compiled_cfg_size;
 
@@ -1057,15 +1049,14 @@ namespace ppu_recompiler_llvm {
 
 			BlockEntry(u32 start_address, u32 function_address)
 				: num_hits(0)
-				, revision(0)
 				, last_compiled_cfg_size(0)
 				, is_compiled(false)
 				, cfg(start_address, function_address) {
 			}
 
 			std::string ToString() const {
-				return fmt::format("0x%08X (0x%08X): NumHits=%u, Revision=%u, LastCompiledCfgSize=%u, IsCompiled=%c",
-					cfg.start_address, cfg.function_address, num_hits, revision, last_compiled_cfg_size, is_compiled ? 'Y' : 'N');
+				return fmt::format("0x%08X (0x%08X): NumHits=%u, LastCompiledCfgSize=%u, IsCompiled=%c",
+					cfg.start_address, cfg.function_address, num_hits, last_compiled_cfg_size, is_compiled ? 'Y' : 'N');
 			}
 
 			bool operator == (const BlockEntry & other) const {
@@ -1106,8 +1097,6 @@ namespace ppu_recompiler_llvm {
 
 		/// Lock for accessing m_address_to_function.
 		std::mutex m_address_to_function_lock;
-		/// Lock for modifying address mutex table
-		std::mutex m_address_locks_lock;
 
 		int m_currentId;
 
@@ -1126,13 +1115,9 @@ namespace ppu_recompiler_llvm {
 		typedef std::tuple<Executable, std::unique_ptr<llvm::ExecutionEngine>, u32, u32> ExecutableStorage;
 		/// Address to ordinal cahce. Key is address.
 		std::unordered_map<u32, ExecutableStorage> m_address_to_function;
-		std::unordered_map<u32, std::pair<std::mutex, std::atomic<int> > > m_address_locks;
 
 		/// The time at which the m_address_to_ordinal cache was last cleared
 		std::chrono::high_resolution_clock::time_point m_last_cache_clear_time;
-
-		/// Remove unused entries from the m_address_to_ordinal cache
-		void RemoveUnusedEntriesFromCache();
 
 		/// PPU Compiler
 		Compiler m_compiler;
