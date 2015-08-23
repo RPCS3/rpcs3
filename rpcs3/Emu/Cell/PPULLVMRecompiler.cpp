@@ -5,6 +5,7 @@
 #include "Emu/Cell/PPUDisAsm.h"
 #include "Emu/Cell/PPULLVMRecompiler.h"
 #include "Emu/Memory/Memory.h"
+#include "Utilities/VirtualMemory.h"
 #ifdef _MSC_VER
 #pragma warning(push, 0)
 #endif
@@ -35,6 +36,11 @@ using namespace ppu_recompiler_llvm;
 #ifdef ID_MANAGER_INCLUDED
 #error "ID Manager cannot be used in this module"
 #endif
+
+// PS3 can address 32 bits aligned on 4 bytes boundaries : 2^30 pointers
+#define VIRTUAL_INSTRUCTION_COUNT 0x40000000
+#define PAGE_SIZE 4096
+
 
 u64  Compiler::s_rotate_mask[64][64];
 bool Compiler::s_rotate_mask_inited = false;
@@ -289,12 +295,20 @@ RecompilationEngine::RecompilationEngine()
 	, m_currentId(0)
 	, m_last_cache_clear_time(std::chrono::high_resolution_clock::now())
 	, m_compiler(*this, CPUHybridDecoderRecompiler::ExecuteFunction, CPUHybridDecoderRecompiler::ExecuteTillReturn, CPUHybridDecoderRecompiler::PollStatus) {
+
+	FunctionCache = (Executable *)memory_helper::reserve_memory(VIRTUAL_INSTRUCTION_COUNT * sizeof(Executable));
+	// Each char can store 8 page status
+	FunctionCachePagesCommited = (char *)malloc(VIRTUAL_INSTRUCTION_COUNT / (8 * PAGE_SIZE));
+	memset(FunctionCachePagesCommited, 0, VIRTUAL_INSTRUCTION_COUNT / (8 * PAGE_SIZE));
+
 	m_compiler.RunAllTests();
 }
 
 RecompilationEngine::~RecompilationEngine() {
 	m_address_to_function.clear();
 	join();
+	memory_helper::free_reserved_memory(FunctionCache, VIRTUAL_INSTRUCTION_COUNT * sizeof(Executable));
+	free(FunctionCachePagesCommited);
 }
 
 Executable executeFunc;
@@ -312,18 +326,39 @@ std::pair<std::mutex, std::atomic<int> >* RecompilationEngine::GetMutexAndCounte
 	return &(It->second);
 }
 
-const Executable *RecompilationEngine::GetCompiledExecutableIfAvailable(u32 address)
+bool RecompilationEngine::isAddressCommited(u32 address) const
+{
+	size_t offset = address * sizeof(Executable);
+	size_t page = offset / 4096;
+	// Since bool is stored in char, the char index is page / 8 (or page >> 3)
+	// and we shr the value with the remaining bits (page & 7)
+	return (FunctionCachePagesCommited[page >> 3] >> (page & 7)) & 1;
+}
+
+void RecompilationEngine::commitAddress(u32 address)
+{
+	size_t offset = address * sizeof(Executable);
+	size_t page = offset / 4096;
+	memory_helper::commit_page_memory((u8*)FunctionCache + page * 4096, 4096);
+	// Reverse of isAddressCommited : we set the (page & 7)th bit of (page / 8) th char
+	// in the array
+	FunctionCachePagesCommited[page >> 3] |= (1 << (page & 7));
+}
+
+const Executable RecompilationEngine::GetCompiledExecutableIfAvailable(u32 address)
 {
 	std::lock_guard<std::mutex> lock(m_address_to_function_lock);
+	if (!isAddressCommited(address / 4))
+		commitAddress(address / 4);
+	if (!Ini.LLVMExclusionRange.GetValue())
+		return FunctionCache[address / 4];
 	std::unordered_map<u32, ExecutableStorage>::iterator It = m_address_to_function.find(address);
 	if (It == m_address_to_function.end())
 		return nullptr;
-	if (std::get<1>(It->second) == nullptr)
-		return nullptr;
 	u32 id = std::get<3>(It->second);
-	if (Ini.LLVMExclusionRange.GetValue() && (id >= Ini.LLVMMinId.GetValue() && id <= Ini.LLVMMaxId.GetValue()))
+	if (id >= Ini.LLVMMinId.GetValue() && id <= Ini.LLVMMaxId.GetValue())
 		return nullptr;
-	return &(std::get<0>(It->second));
+	return std::get<0>(It->second);
 }
 
 void RecompilationEngine::RemoveUnusedEntriesFromCache() {
@@ -558,6 +593,8 @@ void RecompilationEngine::CompileBlock(BlockEntry & block_entry) {
 	{
 		std::lock_guard<std::mutex> lock(m_address_to_function_lock);
 		std::get<1>(m_address_to_function[block_entry.cfg.start_address]) = nullptr;
+		if (!isAddressCommited(block_entry.cfg.start_address / 4))
+			commitAddress(block_entry.cfg.start_address / 4);
 	}
 
 	std::unordered_map<u32, std::pair<std::mutex, std::atomic<int>> >::iterator It2 = m_address_locks.find(block_entry.cfg.start_address);
@@ -585,6 +622,7 @@ void RecompilationEngine::CompileBlock(BlockEntry & block_entry) {
 	m_currentId++;
 	block_entry.last_compiled_cfg_size = block_entry.cfg.GetSize();
 	block_entry.is_compiled = true;
+	FunctionCache[block_entry.cfg.start_address / 4] = compileResult.first;
 }
 
 std::shared_ptr<RecompilationEngine> RecompilationEngine::GetInstance() {
@@ -737,11 +775,11 @@ u32 ppu_recompiler_llvm::CPUHybridDecoderRecompiler::ExecuteTillReturn(PPUThread
 				std::lock_guard<std::mutex> lock(mut->first);
 				mut->second.fetch_add(1);
 			}
-			const Executable *executable = execution_engine->m_recompilation_engine->GetCompiledExecutableIfAvailable(ppu_state->PC);
+			const Executable executable = execution_engine->m_recompilation_engine->GetCompiledExecutableIfAvailable(ppu_state->PC);
 			if (executable)
 			{
 				auto entry = ppu_state->PC;
-				u32 exit = (u32)(*executable)(ppu_state, 0);
+				u32 exit = (u32)executable(ppu_state, 0);
 				mut->second.fetch_sub(1);
 				execution_engine->m_tracer.Trace(Tracer::TraceType::ExitFromCompiledBlock, entry, exit);
 				if (exit == 0)

@@ -1024,7 +1024,7 @@ namespace ppu_recompiler_llvm {
 		 * Get the executable for the specified address if a compiled version is
 		 * available, otherwise returns nullptr.
 		 **/
-		const Executable *GetCompiledExecutableIfAvailable(u32 address);
+		const Executable GetCompiledExecutableIfAvailable(u32 address);
 
 		/// Notify the recompilation engine about a newly detected trace. It takes ownership of the trace.
 		void NotifyTrace(ExecutionTrace * execution_trace);
@@ -1110,6 +1110,17 @@ namespace ppu_recompiler_llvm {
 		std::mutex m_address_locks_lock;
 
 		int m_currentId;
+
+		// Store pointer to every compiled function/block.
+		// We need to map every instruction in PS3 Ram so it's a big table
+		// But a lot of it won't be accessed. Fortunatly virtual memory help here...
+		Executable *FunctionCache;
+
+		// Bitfield recording page status in FunctionCache reserved memory.
+		char *FunctionCachePagesCommited;
+
+		bool isAddressCommited(u32) const;
+		void commitAddress(u32);
 
 		/// (function, module containing function, times hit, id).
 		typedef std::tuple<Executable, std::unique_ptr<llvm::ExecutionEngine>, u32, u32> ExecutableStorage;
