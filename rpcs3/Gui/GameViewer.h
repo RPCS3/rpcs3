@@ -4,6 +4,7 @@
 #include <wx/log.h>
 #include "rpcs3/Ini.h"
 #include "Emu/GameInfo.h"
+#include "Utilities/Log.h"
 
 struct Column
 {
