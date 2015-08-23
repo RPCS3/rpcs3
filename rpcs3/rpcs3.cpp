@@ -23,6 +23,7 @@
 #endif
 
 #include "Gui/MsgDialog.h"
+#include "Gui/SignInDialog.h"
 #include "Gui/SaveDataDialog.h"
 
 #include "Gui/GLGSFrame.h"
@@ -43,6 +44,7 @@ IMPLEMENT_APP(Rpcs3App)
 Rpcs3App* TheApp;
 
 extern std::unique_ptr<MsgDialogInstance> g_msg_dialog;
+extern std::unique_ptr<SignInDialogInstance> g_sign_in_dialog;
 extern std::unique_ptr<SaveDataDialogInstance> g_savedata_dialog;
 
 bool Rpcs3App::OnInit()
@@ -144,6 +146,7 @@ bool Rpcs3App::OnInit()
 #endif
 
 	g_msg_dialog.reset(new MsgDialogFrame);
+	g_sign_in_dialog.reset(new SignInDialogFrame);
 	g_savedata_dialog.reset(new SaveDataDialogFrame);
 
 	TheApp = this;

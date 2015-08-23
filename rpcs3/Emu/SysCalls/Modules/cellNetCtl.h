@@ -259,7 +259,31 @@ struct CellNetCtlNatInfo
 	be_t<u32> mapped_addr;
 };
 
-typedef void(cellNetCtlHandler)(s32 prev_state, s32 new_state, s32 event, s32 error_code, vm::ptr<u32> arg);
+using CellNetCtlHandler = void(s32 prev_state, s32 new_state, s32 evnt, s32 error_code, vm::ptr<u32> arg);
+
+enum SignInDialogState
+{
+	signInDialogNone,
+	signInDialogInit,
+	signInDialogOpen,
+	signInDialogClose,
+	signInDialogAbort,
+};
+
+struct SignInDialogInstance
+{
+	std::atomic<SignInDialogState> state;
+
+	s32 status;
+
+	SignInDialogInstance();
+	virtual ~SignInDialogInstance() = default;
+
+	virtual void Close();
+
+	virtual void Create() = 0;
+	virtual void Destroy() = 0;
+};
 
 inline static const char* InfoCodeToName(s32 code)
 {

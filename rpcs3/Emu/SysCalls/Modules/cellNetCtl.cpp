@@ -30,6 +30,17 @@
 
 extern Module cellNetCtl;
 
+std::unique_ptr<SignInDialogInstance> g_sign_in_dialog;
+
+SignInDialogInstance::SignInDialogInstance()
+{
+}
+
+void SignInDialogInstance::Close()
+{
+	state = signInDialogClose;
+}
+
 s32 cellNetCtlInit()
 {
 	cellNetCtl.Warning("cellNetCtlInit()");
@@ -46,7 +57,7 @@ s32 cellNetCtlTerm()
 
 s32 cellNetCtlGetState(vm::ptr<u32> state)
 {
-	cellNetCtl.Log("cellNetCtlGetState(state=*0x%x)", state);
+	cellNetCtl.Warning("cellNetCtlGetState(state=*0x%x)", state);
 
 	if (Ini.NETStatus.GetValue() == 0)
 	{
@@ -68,7 +79,7 @@ s32 cellNetCtlGetState(vm::ptr<u32> state)
 	return CELL_OK;
 }
 
-s32 cellNetCtlAddHandler(vm::ptr<cellNetCtlHandler> handler, vm::ptr<void> arg, vm::ptr<s32> hid)
+s32 cellNetCtlAddHandler(vm::ptr<CellNetCtlHandler> handler, vm::ptr<void> arg, vm::ptr<s32> hid)
 {
 	cellNetCtl.Todo("cellNetCtlAddHandler(handler=*0x%x, arg=*0x%x, hid=*0x%x)", handler, arg, hid);
 
@@ -345,12 +356,79 @@ s32 cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 	return CELL_OK;
 }
 
-s32 cellNetCtlNetStartDialogLoadAsync(vm::ptr<CellNetCtlNetStartDialogParam> param)
+s32 cellNetCtlNetStartDialogLoadAsync(vm::cptr<CellNetCtlNetStartDialogParam> param)
 {
 	cellNetCtl.Warning("cellNetCtlNetStartDialogLoadAsync(param=*0x%x)", param);
 
 	// TODO: Actually sign into PSN or an emulated network similar to PSN
-	sysutilSendSystemCommand(CELL_SYSUTIL_NET_CTL_NETSTART_FINISHED, 0);
+	sysutilSendSystemCommand(CELL_SYSUTIL_NET_CTL_NETSTART_LOADED, 0);
+
+	// The way this is handled, is heavily inspired by the cellMsgDialogOpen2 implementation
+	if (param->type == CELL_NET_CTL_NETSTART_TYPE_NP)
+	{
+		cellNetCtl.Warning("cellNetCtlNetStartDialogLoadAsync(CELL_NET_CTL_NETSTART_TYPE_NP)", param);
+
+		// Make sure that the dialog is not already open.
+		SignInDialogState old = signInDialogNone;
+		if (!g_sign_in_dialog->state.compare_exchange_strong(old, signInDialogInit))
+		{
+			return CELL_SYSUTIL_ERROR_BUSY;
+		}
+
+		CallAfter([]()
+		{
+			if (Emu.IsStopped())
+			{
+				g_sign_in_dialog->state.exchange(signInDialogNone);
+
+				return;
+			}
+
+			g_sign_in_dialog->Create();
+
+			g_sign_in_dialog->state.exchange(signInDialogOpen);
+		});
+
+		while (g_sign_in_dialog->state == signInDialogInit)
+		{
+			if (Emu.IsStopped())
+			{
+				if (g_sign_in_dialog->state != signInDialogNone)
+				{
+					break;
+				}
+
+				CHECK_EMU_STATUS;
+			}
+
+			std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
+		}
+
+		named_thread_t(WRAP_EXPR("SignInDialog Thread"), [=]()
+		{
+			while (g_sign_in_dialog->state == signInDialogOpen)
+			{
+				if (Emu.IsStopped())
+				{
+					g_sign_in_dialog->state = signInDialogAbort;
+					break;
+				}
+
+				std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
+			}
+
+			CallAfter([]()
+			{
+				g_sign_in_dialog->Destroy();
+				g_sign_in_dialog->state = signInDialogNone;
+			});
+		}).detach();
+	}
+	else
+	{
+		cellNetCtl.Warning("cellNetCtlNetStartDialogLoadAsync(CELL_NET_CTL_NETSTART_TYPE_NET)", param);
+		sysutilSendSystemCommand(CELL_SYSUTIL_NET_CTL_NETSTART_FINISHED, 0);
+	}
 
 	return CELL_OK;
 }
@@ -433,6 +511,8 @@ s32 cellGameUpdateCheckStartWithoutDialogAsyncEx()
 
 Module cellNetCtl("cellNetCtl", []()
 {
+	g_sign_in_dialog->state = signInDialogNone;
+
 	REG_FUNC(cellNetCtl, cellNetCtlInit);
 	REG_FUNC(cellNetCtl, cellNetCtlTerm);
 

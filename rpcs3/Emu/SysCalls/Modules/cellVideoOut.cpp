@@ -13,7 +13,7 @@ extern Module cellSysutil;
 
 s32 cellVideoOutGetState(u32 videoOut, u32 deviceIndex, vm::ptr<CellVideoOutState> state)
 {
-	cellSysutil.Log("cellVideoOutGetState(videoOut=%d, deviceIndex=%d, state=*0x%x)", videoOut, deviceIndex, state);
+	cellSysutil.Notice("cellVideoOutGetState(videoOut=%d, deviceIndex=%d, state=*0x%x)", videoOut, deviceIndex, state);
 
 	if (deviceIndex)
 	{
@@ -42,7 +42,7 @@ s32 cellVideoOutGetState(u32 videoOut, u32 deviceIndex, vm::ptr<CellVideoOutStat
 
 s32 cellVideoOutGetResolution(u32 resolutionId, vm::ptr<CellVideoOutResolution> resolution)
 {
-	cellSysutil.Log("cellVideoOutGetResolution(resolutionId=%d, resolution=*0x%x)", resolutionId, resolution);
+	cellSysutil.Notice("cellVideoOutGetResolution(resolutionId=%d, resolution=*0x%x)", resolutionId, resolution);
 
 	u32 num = ResolutionIdToNum(resolutionId);
 	

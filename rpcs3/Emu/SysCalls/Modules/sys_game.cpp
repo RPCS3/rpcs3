@@ -43,7 +43,7 @@ void sys_game_process_exitspawn(vm::cptr<char> path, u32 argv_addr, u32 envp_add
 
 		for (auto &arg : argv)
 		{
-			sysPrxForUser.Log("argument: %s", arg.c_str());
+			sysPrxForUser.Warning("argument: %s", arg.c_str());
 		}
 	}
 
@@ -58,7 +58,7 @@ void sys_game_process_exitspawn(vm::cptr<char> path, u32 argv_addr, u32 envp_add
 
 		for (auto &en : env)
 		{
-			sysPrxForUser.Log("env_argument: %s", en.c_str());
+			sysPrxForUser.Warning("env_argument: %s", en.c_str());
 		}
 	}
 
@@ -119,7 +119,7 @@ void sys_game_process_exitspawn2(vm::cptr<char> path, u32 argv_addr, u32 envp_ad
 
 		for (auto &arg : argv)
 		{
-			sysPrxForUser.Log("argument: %s", arg.c_str());
+			sysPrxForUser.Warning("argument: %s", arg.c_str());
 		}
 	}
 
@@ -134,7 +134,7 @@ void sys_game_process_exitspawn2(vm::cptr<char> path, u32 argv_addr, u32 envp_ad
 
 		for (auto &en : env)
 		{
-			sysPrxForUser.Log("env_argument: %s", en.c_str());
+			sysPrxForUser.Warning("env_argument: %s", en.c_str());
 		}
 	}
 

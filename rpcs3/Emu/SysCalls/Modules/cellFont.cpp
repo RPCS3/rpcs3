@@ -300,7 +300,7 @@ s32 cellFontGetRenderCharGlyphMetrics(vm::ptr<CellFont> font, u32 code, vm::ptr<
 
 s32 cellFontRenderCharGlyphImage(vm::ptr<CellFont> font, u32 code, vm::ptr<CellFontRenderSurface> surface, float x, float y, vm::ptr<CellFontGlyphMetrics> metrics, vm::ptr<CellFontImageTransInfo> transInfo)
 {
-	cellFont.Log("cellFontRenderCharGlyphImage(font=*0x%x, code=0x%x, surface=*0x%x, x=%f, y=%f, metrics=*0x%x, trans=*0x%x)", font, code, surface, x, y, metrics, transInfo);
+	cellFont.Notice("cellFontRenderCharGlyphImage(font=*0x%x, code=0x%x, surface=*0x%x, x=%f, y=%f, metrics=*0x%x, trans=*0x%x)", font, code, surface, x, y, metrics, transInfo);
 
 	if (!font->renderer_addr)
 	{

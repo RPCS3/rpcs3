@@ -30,7 +30,7 @@ s32 cellMouseInit(u32 max_connect)
 
 s32 cellMouseClearBuf(u32 port_no)
 {
-	sys_io.Log("cellMouseClearBuf(port_no=%d)", port_no);
+	sys_io.Notice("cellMouseClearBuf(port_no=%d)", port_no);
 
 	if (!Emu.GetMouseManager().IsInited())
 	{
@@ -49,7 +49,7 @@ s32 cellMouseClearBuf(u32 port_no)
 
 s32 cellMouseEnd()
 {
-	sys_io.Log("cellMouseEnd()");
+	sys_io.Notice("cellMouseEnd()");
 
 	if (!Emu.GetMouseManager().IsInited())
 	{
@@ -62,7 +62,7 @@ s32 cellMouseEnd()
 
 s32 cellMouseGetInfo(vm::ptr<CellMouseInfo> info)
 {
-	sys_io.Log("cellMouseGetInfo(info=*0x%x)", info);
+	sys_io.Notice("cellMouseGetInfo(info=*0x%x)", info);
 
 	if (!Emu.GetMouseManager().IsInited())
 	{
@@ -94,7 +94,7 @@ s32 cellMouseGetInfo(vm::ptr<CellMouseInfo> info)
 
 s32 cellMouseInfoTabletMode(u32 port_no, vm::ptr<CellMouseInfoTablet> info)
 {
-	sys_io.Log("cellMouseInfoTabletMode(port_no=%d, info=*0x%x)", port_no, info);
+	sys_io.Notice("cellMouseInfoTabletMode(port_no=%d, info=*0x%x)", port_no, info);
 
 	if (!Emu.GetMouseManager().IsInited())
 	{
@@ -114,7 +114,7 @@ s32 cellMouseInfoTabletMode(u32 port_no, vm::ptr<CellMouseInfoTablet> info)
 
 s32 cellMouseGetData(u32 port_no, vm::ptr<CellMouseData> data)
 {
-	sys_io.Log("cellMouseGetData(port_no=%d, data=*0x%x)", port_no, data);
+	sys_io.Notice("cellMouseGetData(port_no=%d, data=*0x%x)", port_no, data);
 
 	if (!Emu.GetMouseManager().IsInited())
 	{
