@@ -142,6 +142,7 @@ SettingsDialog::SettingsDialog(wxWindow *parent)
 	ppu_decoder_modes.Add("Interpreter 2");
 	ppu_decoder_modes.Add("Recompiler (LLVM)");
 	rbox_ppu_decoder = new wxRadioBox(p_core, wxID_ANY, "PPU Decoder", wxDefaultPosition, wxSize(215, -1), ppu_decoder_modes, 1);
+
 #if !defined(LLVM_AVAILABLE)
 	rbox_ppu_decoder->Enable(2, false);
 #endif
@@ -163,6 +164,11 @@ SettingsDialog::SettingsDialog(wxWindow *parent)
 	cbox_gs_d3d_adaptater->Append("renderer 0");
 	cbox_gs_d3d_adaptater->Append("renderer 1");
 	cbox_gs_d3d_adaptater->Append("renderer 2");
+
+#if !defined(DX12_SUPPORT)
+	cbox_gs_d3d_adaptater->Enable(false);
+	chbox_gs_overlay->Enable(false);
+#endif
 
 	for (int i = 1; i < WXSIZEOF(ResolutionTable); ++i)
 	{
