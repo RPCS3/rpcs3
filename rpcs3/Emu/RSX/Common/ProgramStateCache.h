@@ -223,6 +223,8 @@ private:
 		{
 			size_t hashValue = 0;
 			hashValue ^= std::hash<unsigned>()(key.vpIdx);
+			hashValue ^= std::hash<unsigned>()(key.fpIdx);
+			hashValue ^= std::hash<typename BackendTraits::PipelineProperties>()(key.properties);
 			return hashValue;
 		}
 	};
