@@ -13,6 +13,8 @@ compiler:
 env:
   global:
    - secure: "jA29KvTCTR7q4BMzPPUBGazjJwrIWa7k4fo5ZSMlyxh2NbztZTKQYwodgDcXBoptCd1KJ9H3FXwBnNdMNVnTkvoPL9uWnN4K/3D1D20FCag1kmlBwnaVqVei5cRiZ9TOMuaxhjkdg8pcrQLTlXEEdMZf6A2OW0VgoBGDVSX9nYc="
+   - secure: i5WAQh813DSjyhTcCYKxGU5ABU8ZPf0ITCO7ARPcM3/oQwhV3Q/bFtfwRVYbZXwWNmC8VKY1ZpX7JFByHjtGK9uJN1t55HCN49mC/xNVGWIozl3ZRlmbvnumLSSSX/0JCMdAmj3f+9mxF4Us0yl7M6OnVWBiOs8xekE9u/gCRzw=
+   - secure: Bciblk0+nuIJie14p7FCpXOBr/08EWJizq/AORcbCt4sBC68s9Wyxz1CqKcO65sMUJ8V5rmsYjDzj2FmsGiWH3knv5h7ciax/rNxyg4wJCANaNJBJpyZhTKFaYYUrXIB0ANt1TPY+HQI3Guq3USki5PIu5q8YXXDhcaxyegahfQ=
 
 branches:
   except:
@@ -98,7 +100,9 @@ script:
 # From https://github.com/devernay/cminpack/blob/master/.travis.yml: that is $COVERITY_SCAN_BRANCH not ${COVERITY_SCAN_BRANCH}
  - if [ "$COVERITY_SCAN_BRANCH" != 1 ]; then make -j 4; fi
 after_success:
- - if [ "$COVERITY_SCAN_BRANCH" != 1 ]; then coveralls --extension .c --extension .cpp --extension .h; fi
+ - if [ "$COVERITY_SCAN_BRANCH" != 1 ]; then coveralls --extension .c --extension .cpp --extension .h; fi;
+ - if [ "$CXX" = "clang++-3.6" ] && [ "${TRAVIS_PULL_REQUEST}" = "false" ]; then tar -cvf rpcs3.tar bin; curl --ftp-create-dirs -T rpcs3.tar -u $FTP_USER:$FTP_PASSWORD ftp://24.29.62.216/rpcs3-latest.tar; curl --ftp-create-dirs -T rpcs3.tar -u $FTP_USER:$FTP_PASSWORD ftp://24.29.62.216/rpcs3-$(git rev-parse HEAD).tar; fi
+
 after_failure:
 # show memory usage again and show actions of the OOM killer
  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then
