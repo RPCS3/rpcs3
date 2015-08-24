@@ -527,6 +527,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		m_color_mask_r = a0 & 0x0010000 ? true : false;
 		m_color_mask_g = a0 & 0x0000100 ? true : false;
 		m_color_mask_b = a0 & 0x0000001 ? true : false;
+		notifyRasterizerStateChange();
 		break;
 	}
 
@@ -572,12 +573,14 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	case NV4097_SET_CULL_FACE_ENABLE:
 	{
 		m_set_cull_face = ARGS(0) ? true : false;
+		notifyRasterizerStateChange();
 		break;
 	}
 
 	case NV4097_SET_CULL_FACE:
 	{
 		m_cull_face = ARGS(0);
+		notifyRasterizerStateChange();
 		break;
 	}
 
@@ -585,6 +588,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	case NV4097_SET_FRONT_FACE:
 	{
 		m_front_face = ARGS(0);
+		notifyRasterizerStateChange();
 		break;
 	}
 
@@ -592,6 +596,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	case NV4097_SET_BLEND_ENABLE:
 	{
 		m_set_blend = ARGS(0) ? true : false;
+		notifyBlendStateChange();
 		break;
 	}
 
@@ -600,6 +605,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		m_set_blend_mrt1 = ARGS(0) & 0x02 ? true : false;
 		m_set_blend_mrt2 = ARGS(0) & 0x04 ? true : false;
 		m_set_blend_mrt3 = ARGS(0) & 0x08 ? true : false;
+		notifyBlendStateChange();
 		break;
 	}
 
@@ -615,6 +621,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 			m_blend_dfactor_rgb = ARGS(1) & 0xffff;
 			m_blend_dfactor_alpha = ARGS(1) >> 16;
 		}
+		notifyBlendStateChange();
 		break;
 	}
 
@@ -623,6 +630,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		m_set_blend_dfactor = true;
 		m_blend_dfactor_rgb = ARGS(0) & 0xffff;
 		m_blend_dfactor_alpha = ARGS(0) >> 16;
+		notifyBlendStateChange();
 		break;
 	}
 
@@ -633,6 +641,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		m_blend_color_g = (ARGS(0) >> 8) & 0xff;
 		m_blend_color_b = (ARGS(0) >> 16) & 0xff;
 		m_blend_color_a = (ARGS(0) >> 24) & 0xff;
+		notifyBlendStateChange();
 		break;
 	}
 
@@ -650,6 +659,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		m_set_blend_equation = true;
 		m_blend_equation_rgb = ARGS(0) & 0xffff;
 		m_blend_equation_alpha = ARGS(0) >> 16;
+		notifyBlendStateChange();
 		break;
 	}
 
@@ -762,6 +772,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	{
 		m_set_depth_func = true;
 		m_depth_func = ARGS(0);
+		notifyDepthStencilStateChange();
 		break;
 	}
 
@@ -769,6 +780,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	{
 		m_set_depth_mask = true;
 		m_depth_mask = ARGS(0);
+		notifyDepthStencilStateChange();
 		break;
 	}
 
@@ -1052,6 +1064,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		m_cur_fragment_prog->offset = a0 & ~0x3;
 		m_cur_fragment_prog->addr = GetAddress(m_cur_fragment_prog->offset, (a0 & 0x3) - 1);
 		m_cur_fragment_prog->ctrl = 0x40;
+		notifyProgramChange();
 		break;
 	}
 
@@ -1101,6 +1114,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 				LOG_WARNING(RSX, "NV4097_SET_TRANSFORM_PROGRAM_LOAD: start = %d", start);
 			}
 		}
+		notifyProgramChange();
 		break;
 	}
 
@@ -1128,6 +1142,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		{
 			m_cur_vertex_prog->data.push_back(ARGS(i));
 		}
+		notifyProgramChange();
 		break;
 	}
 
@@ -1220,12 +1235,14 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	case NV4097_SET_LOGIC_OP_ENABLE:
 	{
 		m_set_logic_op = ARGS(0) ? true : false;
+		notifyBlendStateChange();
 		break;
 	}
 
 	case NV4097_SET_LOGIC_OP:
 	{
 		m_logic_op = ARGS(0);
+		notifyBlendStateChange();
 		break;
 	}
 
@@ -1240,6 +1257,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	case NV4097_SET_STENCIL_TEST_ENABLE:
 	{
 		m_set_stencil_test = ARGS(0) ? true : false;
+		notifyDepthStencilStateChange();
 		break;
 	}
 
@@ -1259,6 +1277,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	{
 		m_set_stencil_mask = true;
 		m_stencil_mask = ARGS(0);
+		notifyDepthStencilStateChange();
 		break;
 	}
 
@@ -1278,6 +1297,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 				m_stencil_func_mask = ARGS(2);
 			}
 		}
+		notifyDepthStencilStateChange();
 		break;
 	}
 
@@ -1285,6 +1305,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	{
 		m_set_stencil_func_ref = true;
 		m_stencil_func_ref = ARGS(0);
+		notifyDepthStencilStateChange();
 		break;
 	}
 
@@ -1292,6 +1313,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	{
 		m_set_stencil_func_mask = true;
 		m_stencil_func_mask = ARGS(0);
+		notifyDepthStencilStateChange();
 		break;
 	}
 
@@ -1311,6 +1333,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 				m_stencil_zpass = ARGS(2);
 			}
 		}
+		notifyDepthStencilStateChange();
 		break;
 	}
 
@@ -1318,6 +1341,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	{
 		m_set_back_stencil_mask = true;
 		m_back_stencil_mask = ARGS(0);
+		notifyDepthStencilStateChange();
 		break;
 	}
 
@@ -1337,6 +1361,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 				m_back_stencil_func_mask = ARGS(2);
 			}
 		}
+		notifyDepthStencilStateChange();
 		break;
 	}
 
@@ -1344,6 +1369,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	{
 		m_set_back_stencil_func_ref = true;
 		m_back_stencil_func_ref = ARGS(0);
+		notifyDepthStencilStateChange();
 		break;
 	}
 
@@ -1351,6 +1377,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	{
 		m_set_back_stencil_func_mask = true;
 		m_back_stencil_func_mask = ARGS(0);
+		notifyDepthStencilStateChange();
 		break;
 	}
 
@@ -1370,6 +1397,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 				m_back_stencil_zpass = ARGS(2);
 			}
 		}
+		notifyDepthStencilStateChange();
 		break;
 	}
 
@@ -1484,7 +1512,6 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		m_height_scale = (float)res.height / m_height * 2.0f;
 		m_width = (u32)res.width;
 		m_height = (u32)res.height;
-
 		break;
 	}
 
@@ -1746,6 +1773,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 
 		m_set_depth_test = a0 & 0x1 ? true : false;
 		m_set_stencil_test = a0 & 0x2 ? true : false;
+		notifyDepthStencilStateChange();
 		break;
 	}
 
