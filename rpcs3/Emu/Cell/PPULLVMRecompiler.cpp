@@ -236,7 +236,7 @@ std::pair<Executable, llvm::ExecutionEngine *> Compiler::Compile(const std::stri
 	std::string        verify;
 	raw_string_ostream verify_ostream(verify);
 	if (verifyFunction(*m_state.function, &verify_ostream)) {
-		m_recompilation_engine.Log() << "Verification failed: " << verify << "\n";
+		m_recompilation_engine.Log() << "Verification failed: " << verify_ostream.str() << "\n";
 	}
 
 	auto ir_build_end = std::chrono::high_resolution_clock::now();
