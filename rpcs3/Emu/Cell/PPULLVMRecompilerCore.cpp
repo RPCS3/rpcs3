@@ -1676,10 +1676,12 @@ void Compiler::MULLI(u32 rd, u32 ra, s32 simm16) {
 
 void Compiler::SUBFIC(u32 rd, u32 ra, s32 simm16) {
 	auto ra_i64 = GetGpr(ra);
-	ra_i64 = m_ir_builder->CreateNeg(ra_i64);
+	ra_i64 = m_ir_builder->CreateNeg(ra_i64); // simpler way of doing  ~ra + 1
 	auto res_s = m_ir_builder->CreateCall2(Intrinsic::getDeclaration(m_module, Intrinsic::uadd_with_overflow, m_ir_builder->getInt64Ty()), ra_i64, m_ir_builder->getInt64((s64)simm16));
 	auto diff_i64 = m_ir_builder->CreateExtractValue(res_s, { 0 });
 	auto carry_i1 = m_ir_builder->CreateExtractValue(res_s, { 1 });
+	auto is_zero = m_ir_builder->CreateICmpEQ(ra_i64, m_ir_builder->getInt64(0)); // if ra is zero when ~ra + 1 = 0 sets overflow bit
+	carry_i1 = m_ir_builder->CreateOr(is_zero, carry_i1);
 	SetGpr(rd, diff_i64);
 	SetXerCa(carry_i1);
 }
