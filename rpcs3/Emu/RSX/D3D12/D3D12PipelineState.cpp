@@ -28,8 +28,28 @@ void Shader::Compile(const std::string &code, SHADER_TYPE st)
 	}
 }
 
+void D3D12GSRender::notifyProgramChange()
+{
+	m_PSO = nullptr;
+}
+void D3D12GSRender::notifyBlendStateChange()
+{
+	m_PSO = nullptr;
+}
+void D3D12GSRender::notifyDepthStencilStateChange()
+{
+	m_PSO = nullptr;
+}
+void D3D12GSRender::notifyRasterizerStateChange()
+{
+	m_PSO = nullptr;
+}
+
 bool D3D12GSRender::LoadProgram()
 {
+	if (m_PSO != nullptr)
+		return true;
+
 	if (!m_cur_fragment_prog)
 	{
 		LOG_WARNING(RSX, "LoadProgram: m_cur_shader_prog == NULL");

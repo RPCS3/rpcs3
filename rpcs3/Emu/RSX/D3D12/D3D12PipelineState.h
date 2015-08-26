@@ -47,6 +47,33 @@ struct D3D12PipelineProperties
 	}
 };
 
+template<typename T>
+size_t hashStructContent(const T& structure)
+{
+	char *data = (char*)(&structure);
+	size_t result = 0;
+	for (unsigned i = 0; i < sizeof(T); i++)
+		result ^= std::hash<char>()(data[i]);
+	return result;
+}
+
+namespace std
+{
+	template <>
+	struct hash<D3D12PipelineProperties> {
+		size_t operator()(const D3D12PipelineProperties &pipelineProperties) const {
+			size_t seed = hash<unsigned>()(pipelineProperties.DepthStencilFormat) ^
+				(hash<unsigned>()(pipelineProperties.RenderTargetsFormat) << 2) ^
+				(hash<unsigned>()(pipelineProperties.Topology) << 2) ^
+				(hash<unsigned>()(pipelineProperties.numMRT) << 4);
+			seed ^= hashStructContent(pipelineProperties.Blend);
+			seed ^= hashStructContent(pipelineProperties.DepthStencil);
+			seed ^= hashStructContent(pipelineProperties.Rasterization);
+			return hash<size_t>()(seed);
+		}
+	};
+}
+
 /** Storage for a shader
 *   Embeds the D3DBlob
 */

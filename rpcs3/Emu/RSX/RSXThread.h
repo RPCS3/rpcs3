@@ -685,6 +685,27 @@ protected:
 	* waiting.
 	*/
 	virtual void semaphorePFIFOAcquire(u32 offset, u32 value) = 0;
+	/**
+	 * Called when vertex or fragment shader changes.
+	 * Backend can reuse same program if no change has been notified.
+	 */
+	virtual void notifyProgramChange() = 0;
+	/**
+	* Called when blend state changes.
+	* Backend can reuse same program if no change has been notified.
+	*/
+	virtual void notifyBlendStateChange() = 0;
+	/**
+	* Called when depth stencil state changes.
+	* Backend can reuse same program if no change has been notified.
+	*/
+	virtual void notifyDepthStencilStateChange() = 0;
+	/**
+	* Called when rasterizer state changes.
+	* Rasterizer state includes culling, color masking
+	* Backend can reuse same program if no change has been notified.
+	*/
+	virtual void notifyRasterizerStateChange() = 0;
 
 	void LoadVertexData(u32 first, u32 count)
 	{
