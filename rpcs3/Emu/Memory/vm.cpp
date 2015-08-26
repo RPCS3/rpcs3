@@ -1083,17 +1083,17 @@ namespace vm
 		{
 			SPUThread& context = static_cast<SPUThread&>(cpu);
 
-			old_pos = context.GPR[1]._u32[3];
-			context.GPR[1]._u32[3] -= align(size, 16);
-			context.GPR[1]._u32[3] &= ~(align_v - 1);
+			old_pos = context.gpr[1]._u32[3];
+			context.gpr[1]._u32[3] -= align(size, 16);
+			context.gpr[1]._u32[3] &= ~(align_v - 1);
 
-			if (context.GPR[1]._u32[3] >= 0x40000) // extremely rough
+			if (context.gpr[1]._u32[3] >= 0x40000) // extremely rough
 			{
 				throw EXCEPTION("Stack overflow (size=0x%x, align=0x%x, SP=LS:0x%05x)", size, align_v, old_pos);
 			}
 			else
 			{
-				return context.GPR[1]._u32[3] + context.offset;
+				return context.gpr[1]._u32[3] + context.offset;
 			}
 		}
 
@@ -1144,12 +1144,12 @@ namespace vm
 		{
 			SPUThread& context = static_cast<SPUThread&>(cpu);
 
-			if (context.GPR[1]._u32[3] + context.offset != addr)
+			if (context.gpr[1]._u32[3] + context.offset != addr)
 			{
-				throw EXCEPTION("Stack inconsistency (addr=0x%x, SP=LS:0x%05x, old_pos=LS:0x%05x)", addr, context.GPR[1]._u32[3], old_pos);
+				throw EXCEPTION("Stack inconsistency (addr=0x%x, SP=LS:0x%05x, old_pos=LS:0x%05x)", addr, context.gpr[1]._u32[3], old_pos);
 			}
 
-			context.GPR[1]._u32[3] = old_pos;
+			context.gpr[1]._u32[3] = old_pos;
 			return;
 		}
 

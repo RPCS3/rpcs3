@@ -209,11 +209,9 @@ s32 sys_spu_thread_get_exit_status(u32 id, vm::ptr<u32> status)
 
 	// TODO: check CELL_ESTAT condition
 
-	bool notify;
+	*status = thread->ch_out_mbox.pop();
 
-	std::tie(*status, notify) = thread->ch_out_mbox.pop();
-
-	if (notify)
+	if (thread->ch_out_mbox.notification_required)
 	{
 		throw EXCEPTION("Unexpected");
 	}
@@ -316,12 +314,12 @@ s32 sys_spu_thread_group_start(u32 id)
 			// TODO: use segment info
 			std::memcpy(vm::get_ptr<void>(t->offset), vm::get_ptr<void>(image->addr), 256 * 1024);
 
-			t->PC = image->entry_point;
+			t->pc = image->entry_point;
 			t->run();
-			t->GPR[3] = v128::from64(0, args.arg1);
-			t->GPR[4] = v128::from64(0, args.arg2);
-			t->GPR[5] = v128::from64(0, args.arg3);
-			t->GPR[6] = v128::from64(0, args.arg4);
+			t->gpr[3] = v128::from64(0, args.arg1);
+			t->gpr[4] = v128::from64(0, args.arg2);
+			t->gpr[5] = v128::from64(0, args.arg3);
+			t->gpr[6] = v128::from64(0, args.arg4);
 
 			t->status.exchange(SPU_STATUS_RUNNING);
 		}
@@ -708,7 +706,7 @@ s32 sys_spu_thread_write_spu_mb(u32 id, u32 value)
 
 	if (thread->ch_in_mbox.push(value))
 	{
-		// notify if necessary
+		// lock for reliable notification
 		std::lock_guard<std::mutex> lock(thread->mutex);
 
 		thread->cv.notify_one();
@@ -1323,13 +1321,11 @@ s32 sys_raw_spu_read_puint_mb(u32 id, vm::ptr<u32> value)
 		return CELL_ESRCH;
 	}
 
-	bool notify;
+	*value = thread->ch_out_intr_mbox.pop();
 
-	std::tie(*value, notify) = thread->ch_out_intr_mbox.pop();
-
-	if (notify)
+	if (thread->ch_out_intr_mbox.notification_required)
 	{
-		// notify if necessary
+		// lock for reliable notification
 		std::lock_guard<std::mutex> lock(thread->mutex);
 
 		thread->cv.notify_one();

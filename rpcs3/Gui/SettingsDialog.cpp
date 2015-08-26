@@ -148,8 +148,8 @@ SettingsDialog::SettingsDialog(wxWindow *parent)
 #endif
 
 	wxArrayString spu_decoder_modes;
-	spu_decoder_modes.Add("Interpreter");
-	spu_decoder_modes.Add("Interpreter 2");
+	spu_decoder_modes.Add("Interpreter (precise)");
+	spu_decoder_modes.Add("Interpreter (fast)");
 	spu_decoder_modes.Add("Recompiler (ASMJIT)");
 	rbox_spu_decoder = new wxRadioBox(p_core, wxID_ANY, "SPU Decoder", wxDefaultPosition, wxSize(215, -1), spu_decoder_modes, 1);
 

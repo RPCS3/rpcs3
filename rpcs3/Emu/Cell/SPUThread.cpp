@@ -14,14 +14,17 @@
 
 #include "Emu/Cell/SPUDisAsm.h"
 #include "Emu/Cell/SPUThread.h"
-#include "Emu/Cell/SPUDecoder.h"
 #include "Emu/Cell/SPUInterpreter.h"
-#include "Emu/Cell/SPUInterpreter2.h"
 #include "Emu/Cell/SPURecompiler.h"
 
 #include <cfenv>
 
 extern u64 get_timebased_time();
+
+// defined here since SPUDisAsm.cpp doesn't exist
+const spu_opcode_table_t<void(SPUDisAsm::*)(spu_opcode_t)> SPUDisAsm::opcodes{ DEFINE_SPU_OPCODES(&SPUDisAsm::), &SPUDisAsm::UNK };
+
+thread_local bool spu_channel_t::notification_required;
 
 void spu_int_ctrl_t::set(u64 ints)
 {
@@ -47,40 +50,7 @@ void spu_int_ctrl_t::clear(u64 ints)
 	stat &= ~ints;
 }
 
-const g_spu_imm_table_t g_spu_imm;
-
-class spu_inter_func_list_t
-{
-	std::array<spu_inter_func_t, 2048> funcs = {};
-
-	std::mutex m_mutex;
-
-public:
-	void initialize()
-	{
-		std::lock_guard<std::mutex> lock(m_mutex);
-
-		if (funcs[0]) return; // check if already initialized
-
-		auto inter = new SPUInterpreter2;
-		SPUDecoder dec(*inter);
-
-		for (u32 i = 0; i < funcs.size(); i++)
-		{
-			inter->func = spu_interpreter::DEFAULT;
-			
-			dec.Decode(i << 21);
-
-			funcs[i] = inter->func;
-		}
-	}
-
-	force_inline spu_inter_func_t operator [](u32 opcode) const
-	{
-		return funcs[opcode >> 21];
-	}
-}
-g_spu_inter_func_list;
+const spu_imm_table_t g_spu_imm;
 
 SPUThread::SPUThread(CPUThreadType type, const std::string& name, std::function<std::string()> thread_name, u32 index, u32 offset)
 	: CPUThread(type, name, std::move(thread_name))
@@ -90,7 +60,7 @@ SPUThread::SPUThread(CPUThreadType type, const std::string& name, std::function<
 }
 
 SPUThread::SPUThread(const std::string& name, u32 index)
-	: CPUThread(CPU_THREAD_SPU, name, WRAP_EXPR(fmt::format("SPU[0x%x] Thread (%s)[0x%08x]", m_id, m_name.c_str(), PC)))
+	: CPUThread(CPU_THREAD_SPU, name, WRAP_EXPR(fmt::format("SPU[0x%x] Thread (%s)[0x%05x]", m_id, m_name.c_str(), pc)))
 	, index(index)
 	, offset(vm::alloc(0x40000, vm::main))
 {
@@ -138,51 +108,55 @@ void SPUThread::task()
 {
 	std::fesetround(FE_TOWARDZERO);
 
+	if (!custom_task && !m_dec)
+	{
+		// Select opcode table (TODO)
+		const auto& table = Ini.SPUDecoderMode.GetValue() == 0 ? spu_interpreter::precise::g_spu_opcode_table : spu_interpreter::fast::g_spu_opcode_table;
+
+		// LS base address
+		const auto base = vm::get_ptr<const be_t<u32>>(offset);
+
+		while (true)
+		{
+			if (!m_state.load())
+			{
+				// read opcode
+				const u32 opcode = base[pc / 4];
+
+				// call interpreter function
+				table[opcode](*this, { opcode });
+
+				// next instruction
+				pc += 4;
+
+				continue;
+			}
+
+			if (check_status())
+			{
+				return;
+			}
+		}
+	}
+
 	if (custom_task)
 	{
 		if (check_status()) return;
 
 		return custom_task(*this);
 	}
-	
-	if (m_dec)
+
+	while (!m_state.load() || !check_status())
 	{
-		while (true)
-		{
-			if (m_state.load() && check_status()) break;
-
-			// decode instruction using specified decoder
-			m_dec->DecodeMemory(PC + offset);
-
-			// next instruction
-			PC += 4;
-		}
-	}
-	else
-	{
-		while (true)
-		{
-			if (m_state.load() && check_status()) break;
-
-			// read opcode
-			const spu_opcode_t opcode = { vm::read32(PC + offset) };
-
-			// get interpreter function
-			const auto func = g_spu_inter_func_list[opcode.opcode];
-
-			// call interpreter function
-			func(*this, opcode);
-
-			// next instruction
-			PC += 4;
-		}
+		// decode instruction using specified decoder
+		pc += m_dec->DecodeMemory(pc + offset);
 	}
 }
 
 void SPUThread::init_regs()
 {
-	memset(GPR, 0, sizeof(GPR));
-	FPSCR.Reset();
+	gpr = {};
+	fpscr.Reset();
 
 	ch_mfc_args = {};
 	mfc_queue.clear();
@@ -215,7 +189,7 @@ void SPUThread::init_regs()
 
 	int_ctrl = {};
 
-	GPR[1]._u32[3] = 0x3FFF0; // initial stack frame pointer
+	gpr[1]._u32[3] = 0x3FFF0; // initial stack frame pointer
 }
 
 void SPUThread::init_stack()
@@ -230,25 +204,19 @@ void SPUThread::close_stack()
 
 void SPUThread::do_run()
 {
-	m_dec = nullptr;
+	m_dec.reset();
 
 	switch (auto mode = Ini.SPUDecoderMode.GetValue())
 	{
-	case 0: // original interpreter
+	case 0: // Interpreter 1 (Precise)
+	case 1: // Interpreter 2 (Fast)
 	{
-		m_dec.reset(new SPUDecoder(*new SPUInterpreter(*this)));
-		break;
-	}
-		
-	case 1: // alternative interpreter
-	{
-		g_spu_inter_func_list.initialize(); // initialize helper table
 		break;
 	}
 
 	case 2:
 	{
-		m_dec.reset(new SPURecompilerCore(*this));
+		m_dec.reset(new SPURecompilerDecoder(*this));
 		break;
 	}
 
@@ -267,15 +235,16 @@ void SPUThread::fast_call(u32 ls_addr)
 		throw EXCEPTION("Called from the wrong thread");
 	}
 
+	// LS:0x0: this is originally the entry point of the interrupt handler, but interrupts are not implemented
 	write32(0x0, 2);
 
-	auto old_PC = PC;
-	auto old_LR = GPR[0]._u32[3];
-	auto old_stack = GPR[1]._u32[3]; // only saved and restored (may be wrong)
+	auto old_pc = pc;
+	auto old_lr = gpr[0]._u32[3];
+	auto old_stack = gpr[1]._u32[3]; // only saved and restored (may be wrong)
 	auto old_task = std::move(custom_task);
 
-	PC = ls_addr;
-	GPR[0]._u32[3] = 0x0;
+	pc = ls_addr;
+	gpr[0]._u32[3] = 0x0;
 	custom_task = nullptr;
 
 	try
@@ -288,9 +257,9 @@ void SPUThread::fast_call(u32 ls_addr)
 
 	m_state &= ~CPU_STATE_RETURN;
 
-	PC = old_PC;
-	GPR[0]._u32[3] = old_LR;
-	GPR[1]._u32[3] = old_stack;
+	pc = old_pc;
+	gpr[0]._u32[3] = old_lr;
+	gpr[1]._u32[3] = old_stack;
 	custom_task = std::move(old_task);
 }
 
@@ -1218,14 +1187,18 @@ void SPUThread::stop_and_signal(u32 code)
 
 	case 0x003:
 	{
-		auto iter = m_addr_to_hle_function_map.find(PC);
-		assert(iter != m_addr_to_hle_function_map.end());
+		const auto found = m_addr_to_hle_function_map.find(pc);
 
-		auto return_to_caller = iter->second(*this);
-		if (return_to_caller)
+		if (found == m_addr_to_hle_function_map.end())
 		{
-			PC = (GPR[0]._u32[3] & 0x3fffc) - 4;
+			throw EXCEPTION("HLE function not registered (PC=0x%05x)", pc);
 		}
+
+		if (const auto return_to_caller = found->second(*this))
+		{
+			pc = (gpr[0]._u32[3] & 0x3fffc) - 4;
+		}
+
 		return;
 	}
 
@@ -1472,7 +1445,7 @@ spu_thread::spu_thread(u32 entry, const std::string& name, u32 stack_size, u32 p
 {
 	auto spu = idm::make_ptr<SPUThread>(name, 0x13370666);
 
-	spu->PC = entry;
+	spu->pc = entry;
 
 	thread = std::move(spu);
 }
