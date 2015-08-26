@@ -12,6 +12,7 @@
 #include "Emu/Cell/PPUInterpreter2.h"
 #include "Emu/Cell/PPULLVMRecompiler.h"
 //#include "Emu/Cell/PPURecompiler.h"
+#include "Utilities/VirtualMemory.h"
 
 #ifdef _WIN32
 #include <Windows.h>
@@ -29,30 +30,18 @@ extern void ppu_free_tls(u32 thread);
 thread_local const ppu_decoder_cache_t* g_tls_ppu_decoder_cache = nullptr; // temporarily, because thread_local is not fully available
 
 ppu_decoder_cache_t::ppu_decoder_cache_t()
-#ifdef _WIN32
-	: pointer(static_cast<decltype(pointer)>(VirtualAlloc(NULL, 0x200000000, MEM_RESERVE, PAGE_NOACCESS)))
-#else
-	: pointer(static_cast<decltype(pointer)>(mmap(nullptr, 0x200000000, PROT_NONE, MAP_ANON | MAP_PRIVATE, -1, 0)))
-#endif
+	: pointer(static_cast<decltype(pointer)>(memory_helper::reserve_memory(0x200000000)))
 {
 }
 
 ppu_decoder_cache_t::~ppu_decoder_cache_t()
 {
-#ifdef _WIN32
-	VirtualFree(pointer, 0, MEM_RELEASE);
-#else
-	munmap(pointer, 0x200000000);
-#endif
+	memory_helper::free_reserved_memory(pointer, 0x200000000);
 }
 
 void ppu_decoder_cache_t::initialize(u32 addr, u32 size)
 {
-#ifdef _WIN32
-	VirtualAlloc(pointer + addr / 4, size * 2, MEM_COMMIT, PAGE_READWRITE);
-#else
-	mprotect(pointer + addr / 4, size * 2, PROT_READ | PROT_WRITE);
-#endif
+	memory_helper::commit_page_memory(pointer + addr / 4, size * 2);
 
 	PPUInterpreter2* inter;
 	PPUDecoder dec(inter = new PPUInterpreter2);

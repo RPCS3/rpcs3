@@ -983,6 +983,9 @@
     <ClCompile Include="..\Utilities\SleepQueue.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
+    <ClCompile Include="..\Utilities\VirtualMemory.cpp">
+      <Filter>Utilities</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -1866,6 +1869,9 @@
     </ClInclude>
     <ClInclude Include="Emu\Cell\Common.h">
       <Filter>Emu\CPU\Cell</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utilities\VirtualMemory.h">
+      <Filter>Utilities</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
