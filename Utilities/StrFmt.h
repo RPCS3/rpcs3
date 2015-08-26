@@ -242,13 +242,13 @@ namespace fmt
 		// fixed stack buffer for the first attempt
 		std::array<char, 4096> fixed_buf;
 
-		// possibly dynamically allocated buffer for additional attempts
+		// possibly dynamically allocated buffer for the second attempt
 		std::unique_ptr<char[]> buf;
 
 		// pointer to the current buffer
 		char* buf_addr = fixed_buf.data();
 
-		for (std::size_t buf_size = fixed_buf.size();; buf.reset(buf_addr = new char[buf_size]))
+		for (std::size_t buf_size = fixed_buf.size();;)
 		{
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wformat-security"
@@ -261,12 +261,12 @@ namespace fmt
 				throw std::runtime_error("std::snprintf() failed");
 			}
 
-			if (len <= buf_size)
+			if (len < buf_size)
 			{
 				return{ buf_addr, len };
 			}
 
-			buf_size = len;
+			buf.reset(buf_addr = new char[buf_size = len + 1]);
 		}
 	}
 
