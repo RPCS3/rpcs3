@@ -634,6 +634,7 @@
     <ClInclude Include="Emu\SysCalls\Modules\cellSysconf.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellSysutil.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellSaveData.h" />
+    <ClInclude Include="Emu\SysCalls\Modules\cellSysutilAvc2.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellUsbd.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellUserInfo.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellVdec.h" />

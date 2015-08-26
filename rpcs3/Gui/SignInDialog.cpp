@@ -1,22 +1,25 @@
 #include "stdafx_gui.h"
+#include "Emu/SysCalls/Modules.h"
 #include "Emu/Memory/Memory.h"
 
 #include "Emu/SysCalls/Modules/cellSysutil.h"
 #include "SignInDialog.h"
 
+// TODO: Make this look and work more reasonably
 void SignInDialogFrame::Create()
 {
 	wxWindow* parent = nullptr; // TODO: align the window better
 
 	m_dialog = std::make_unique<wxDialog>(parent, wxID_ANY, "Sign in", wxDefaultPosition, wxDefaultSize);
 	static const u32 width = 300;
-	static const u32 height = 70;
+	static const u32 height = 98;
 
 	wxNotebook* nb_config = new wxNotebook(m_dialog.get(), wxID_ANY, wxPoint(2, 2), wxSize(width, height));
 	wxPanel* p_esn = new wxPanel(nb_config, wxID_ANY);
 	wxPanel* p_psn = new wxPanel(nb_config, wxID_ANY);
 
 	wxButton* b_signin = new wxButton(p_esn, wxID_OK, "Fake sign in");
+	wxButton* b_cancel = new wxButton(p_esn, wxID_CANCEL, "Cancel");
 
 	nb_config->AddPage(p_esn, wxT("ESN"));
 	nb_config->AddPage(p_psn, wxT("PSN"));
@@ -29,7 +32,8 @@ void SignInDialogFrame::Create()
 
 	// ESN
 	s_subpanel_esn->Add(esn_unimplemented, wxSizerFlags().Centre());
-	s_subpanel_esn->Add(b_signin, wxSizerFlags().Centre());
+	s_subpanel_esn->Add(b_signin, wxSizerFlags().Left().Border(5).Expand());
+	s_subpanel_esn->Add(b_cancel, wxSizerFlags().Right().Border(5).Expand());
 
 	// PSN
 	s_subpanel_psn->Add(psn_unimplemented, wxSizerFlags().Centre());
@@ -42,19 +46,30 @@ void SignInDialogFrame::Create()
 	m_dialog->Centre(wxBOTH);
 	m_dialog->Show();
 	m_dialog->Enable();
-	m_dialog->ShowModal();
+	//m_dialog->ShowModal();
 
-	m_dialog->Bind(wxEVT_BUTTON, [&](wxCommandEvent& event)
+	b_signin->Bind(wxEVT_BUTTON, [&](wxCommandEvent& event)
 	{
-		sysutilSendSystemCommand(CELL_SYSUTIL_NET_CTL_NETSTART_FINISHED, 0);
+		this->status = CELL_OK;
 		this->m_dialog->Hide();
 		this->Close();
+		sysutilSendSystemCommand(CELL_SYSUTIL_NET_CTL_NETSTART_FINISHED, 0);
+	});
+
+	b_cancel->Bind(wxEVT_BUTTON, [&](wxCommandEvent& event)
+	{
+		this->status = CELL_NET_CTL_ERROR_DIALOG_CANCELED;
+		this->m_dialog->Hide();
+		this->Close();
+		sysutilSendSystemCommand(CELL_SYSUTIL_NET_CTL_NETSTART_FINISHED, 0);
 	});
 
 	m_dialog->Bind(wxEVT_CLOSE_WINDOW, [&](wxCloseEvent& event)
 	{
+		this->status = CELL_NET_CTL_ERROR_DIALOG_CANCELED;
 		this->m_dialog->Hide();
 		this->Close();
+		sysutilSendSystemCommand(CELL_SYSUTIL_NET_CTL_NETSTART_FINISHED, 0);
 	});
 }
 

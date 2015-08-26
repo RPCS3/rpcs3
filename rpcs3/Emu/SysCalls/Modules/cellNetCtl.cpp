@@ -435,7 +435,16 @@ s32 cellNetCtlNetStartDialogLoadAsync(vm::cptr<CellNetCtlNetStartDialogParam> pa
 
 s32 cellNetCtlNetStartDialogAbortAsync()
 {
-	cellNetCtl.Todo("cellNetCtlNetStartDialogAbortAsync()");
+	cellNetCtl.Warning("cellNetCtlNetStartDialogAbortAsync()");
+
+	SignInDialogState old = signInDialogOpen;
+
+	if (!g_sign_in_dialog->state.compare_exchange_strong(old, signInDialogAbort))
+	{
+		cellNetCtl.Error("cellNetCtlNetStartDialogAbortAsync(): Aborting the dialog failed.");
+	}
+
+	g_sign_in_dialog->status = CELL_NET_CTL_ERROR_DIALOG_ABORTED;
 
 	return CELL_OK;
 }
@@ -444,6 +453,7 @@ s32 cellNetCtlNetStartDialogUnloadAsync(vm::ptr<CellNetCtlNetStartDialogResult> 
 {
 	cellNetCtl.Warning("cellNetCtlNetStartDialogUnloadAsync(result=*0x%x)", result);
 
+	result->result = g_sign_in_dialog->status;
 	sysutilSendSystemCommand(CELL_SYSUTIL_NET_CTL_NETSTART_UNLOADED, 0);
 
 	return CELL_OK;
@@ -455,7 +465,7 @@ s32 cellNetCtlGetNatInfo(vm::ptr<CellNetCtlNatInfo> natInfo)
 
 	if (natInfo->size == 0)
 	{
-		cellNetCtl.Error("cellNetCtlGetNatInfo : CELL_NET_CTL_ERROR_INVALID_SIZE");
+		cellNetCtl.Error("cellNetCtlGetNatInfo(): CELL_NET_CTL_ERROR_INVALID_SIZE");
 		return CELL_NET_CTL_ERROR_INVALID_SIZE;
 	}
 	
@@ -471,7 +481,6 @@ s32 cellGameUpdateTerm()
 {
 	throw EXCEPTION("");
 }
-
 
 s32 cellGameUpdateCheckStartAsync()
 {

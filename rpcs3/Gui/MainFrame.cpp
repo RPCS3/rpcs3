@@ -300,15 +300,15 @@ void MainFrame::BootElf(wxCommandEvent& WXUNUSED(event))
 
 void MainFrame::Pause(wxCommandEvent& WXUNUSED(event))
 {
-	if(Emu.IsReady())
+	if (Emu.IsReady())
 	{
 		Emu.Run();
 	}
-	else if(Emu.IsPaused())
+	else if (Emu.IsPaused())
 	{
 		Emu.Resume();
 	}
-	else if(Emu.IsRunning())
+	else if (Emu.IsRunning())
 	{
 		Emu.Pause();
 	}

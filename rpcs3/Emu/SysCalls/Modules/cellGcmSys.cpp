@@ -932,7 +932,8 @@ s32 gcmMapEaIoAddress(u32 ea, u32 io, u32 size, bool is_strict)
 		}
 
 		// Set the proper main memory report address
-		Emu.GetGSManager().GetRender().m_report_main_addr = 0x10000000 + ea;
+		// TODO: PS3 has a custom memalign() implementation, this will most likely cause problems here
+		Emu.GetGSManager().GetRender().m_report_main_addr = ea;
 	}
 	else
 	{

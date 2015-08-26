@@ -637,9 +637,10 @@ union SceNpSignalingConnectionInfo
 	be_t<u32> rtt;
 	be_t<u32> bandwidth;
 	SceNpId npId;
-	struct address {
+	struct address
+	{
 		be_t<u32> addr; // in_addr
-		//in_port_t port; // TODO: Implement this?
+		be_t<u16> port; // TODO: Implement this?
 	};
 	be_t<u32> packet_loss;
 };
@@ -657,4 +658,4 @@ struct SceNpSignalingNetInfo
 };
 
 // NP signaling callback function
-typedef void(*SceNpSignalingHandler)(u32 ctx_id, u32 subject_id, s32 event, s32 error_code, u32 arg_addr);
+using SceNpSignalingHandler = void(u32 ctx_id, u32 subject_id, s32 event, s32 error_code, u32 arg_addr);
