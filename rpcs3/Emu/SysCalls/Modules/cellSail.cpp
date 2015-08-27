@@ -774,13 +774,14 @@ s32 cellSailPlayerSetRendererVideo()
 
 s32 cellSailPlayerSetParameter(vm::ptr<CellSailPlayer> pSelf, s32 parameterType, u64 param0, u64 param1)
 {
-	cellSail.Todo("cellSailPlayerSetParameter(pSelf=*0x%x, parameterType=0x%x (%s), param0=%d, param1=%d)", pSelf, parameterType, ParameterCodeToName(parameterType), param0, param1);
+	cellSail.Warning("cellSailPlayerSetParameter(pSelf=*0x%x, parameterType=0x%x (%s), param0=%d, param1=%d)", pSelf, parameterType, ParameterCodeToName(parameterType), param0, param1);
 
 	switch (parameterType)
 	{
 	case CELL_SAIL_PARAMETER_ENABLE_APOST_SRC: pSelf->ENABLE_APOST_SRC = param0; break;
+	case CELL_SAIL_PARAMETER_GRAPHICS_ADAPTER_BUFFER_RELEASE_DELAY: pSelf->GRAPHICS_ADAPTER_BUFFER_RELEASE_DELAY = param1; break;
 	default:
-		cellSail.Error("cellSailPlayerSetParameter(): unimplemented parameter type 0x%x (%s).", parameterType, ParameterCodeToName(parameterType));
+		cellSail.Todo("cellSailPlayerSetParameter(): unimplemented parameter type 0x%x (%s).", parameterType, ParameterCodeToName(parameterType));
 		break;
 	}
 

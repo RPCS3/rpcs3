@@ -82,7 +82,3 @@ enum
 	L10N_CODEPAGE_869,
 	_L10N_CODE_,
 };
-
-// For convenience
-typedef u32 L10nCode;
-typedef s32 l10n_conv_t;

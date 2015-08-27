@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "Emu/IdManager.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/SysCalls/Modules.h"
 
@@ -11,7 +12,41 @@ extern Module cellSysutilAvc2;
 s32 cellSysutilAvc2InitParam(u16 version, vm::ptr<CellSysutilAvc2InitParam> option)
 {
 	cellSysutilAvc2.Todo("cellSysutilAvc2InitParam(version=%d, option=*0x%x)", version, option);
-	throw EXCEPTION("");
+
+	if (version == 140)
+	{
+		option->avc_init_param_version = version;
+
+		if (option->media_type == CELL_SYSUTIL_AVC2_VOICE_CHAT)
+		{
+			option->max_players = 16;
+		}
+		else if (option->media_type == CELL_SYSUTIL_AVC2_VOICE_CHAT)
+		{
+			if (option->video_param.frame_mode == CELL_SYSUTIL_AVC2_FRAME_MODE_NORMAL)
+			{
+				option->max_players = 6;
+			}
+			else if (option->video_param.frame_mode == CELL_SYSUTIL_AVC2_FRAME_MODE_NORMAL)
+			{
+				option->max_players = 16;
+			}
+			else
+			{
+				cellSysutilAvc2.Error("Unknown frame mode 0x%x", option->video_param.frame_mode);
+			}
+		}
+		else
+		{
+			cellSysutilAvc2.Error("Unknown media type 0x%x", option->media_type);
+		}
+	}
+	else
+	{
+		cellSysutilAvc2.Error("cellSysutilAvc2InitParam(): Version 110 or 120 used, please report this to a developer.");
+	}
+
+	return CELL_OK;
 }
 
 s32 cellSysutilAvc2LoadAsync()

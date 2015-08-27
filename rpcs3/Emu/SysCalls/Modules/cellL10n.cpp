@@ -12,6 +12,682 @@
 
 extern Module cellL10n;
 
+// Converts *src_code and *dst_code to converter ID
+inline static const s32 GetConverter(u32 src_code, u32 dst_code)
+{
+	switch (src_code)
+	{
+	case L10N_UTF8:
+		switch (dst_code)
+		{
+		case L10N_UTF16:         return 1;
+		case L10N_UTF32:         return 2;
+		case L10N_UCS2:          return 3;
+		case L10N_ISO_8859_1:    return 5;
+		case L10N_ISO_8859_2:    return 6;
+		case L10N_ISO_8859_3:    return 7;
+		case L10N_ISO_8859_4:    return 8;
+		case L10N_ISO_8859_5:    return 9;
+		case L10N_ISO_8859_6:    return 10;
+		case L10N_ISO_8859_7:    return 11;
+		case L10N_ISO_8859_8:    return 12;
+		case L10N_ISO_8859_9:    return 13;
+		case L10N_ISO_8859_10:   return 14;
+		case L10N_ISO_8859_11:   return 15;
+		case L10N_ISO_8859_13:   return 16;
+		case L10N_ISO_8859_14:   return 17;
+		case L10N_ISO_8859_15:   return 18;
+		case L10N_ISO_8859_16:   return 19;
+		case L10N_CODEPAGE_437:  return 20;
+		case L10N_CODEPAGE_850:  return 21;
+		case L10N_CODEPAGE_863:  return 22;
+		case L10N_CODEPAGE_866:  return 23;
+		case L10N_CODEPAGE_932:  return 24;
+		case L10N_CODEPAGE_936:  return 25;
+		case L10N_CODEPAGE_949:  return 26;
+		case L10N_CODEPAGE_950:  return 27;
+		case L10N_CODEPAGE_1251: return 28;
+		case L10N_CODEPAGE_1252: return 29;
+		case L10N_EUC_CN:        return 30;
+		case L10N_EUC_JP:        return 31;
+		case L10N_EUC_KR:        return 32;
+		case L10N_ISO_2022_JP:   return 33;
+		case L10N_ARIB:          return 34;
+		case L10N_HZ:            return 35;
+		case L10N_GB18030:       return 36;
+		case L10N_RIS_506:       return 37;
+		case L10N_CODEPAGE_852:  return 38;
+		case L10N_CODEPAGE_1250: return 39;
+		case L10N_CODEPAGE_737:  return 40;
+		case L10N_CODEPAGE_1253: return 41;
+		case L10N_CODEPAGE_857:  return 42;
+		case L10N_CODEPAGE_1254: return 43;
+		case L10N_CODEPAGE_775:  return 44;
+		case L10N_CODEPAGE_1257: return 45;
+		case L10N_CODEPAGE_855:  return 46;
+		case L10N_CODEPAGE_858:  return 47;
+		case L10N_CODEPAGE_860:  return 48;
+		case L10N_CODEPAGE_861:  return 49;
+		case L10N_CODEPAGE_865:  return 50;
+		case L10N_CODEPAGE_869:  return 51;
+		default: cellL10n.Error("GetConverter(): Unknown/improper *dst_code %d.", dst_code); break;
+		}
+	case L10N_UTF16:
+		switch (dst_code)
+		{
+		case L10N_UTF8:  return 65536;
+		case L10N_UTF32: return 65538;
+		case L10N_UCS2:  return 65539;
+		default: cellL10n.Error("GetConverter(): Unknown/improper *dst_code %d.", dst_code); break;
+		}
+	case L10N_UTF32:
+		switch (dst_code)
+		{
+		case L10N_UTF8:  return 131072;
+		case L10N_UTF16: return 131073;
+		case L10N_UCS2:  return 131075;
+		default: cellL10n.Error("GetConverter(): Unknown/improper *dst_code %d.", dst_code); break;
+		}
+	case L10N_UCS2:
+		switch (dst_code)
+		{
+		case L10N_UTF8:          return 196608;
+		case L10N_UTF16:         return 196609;
+		case L10N_UTF32:         return 196610;
+		case L10N_ISO_8859_1:    return 196613;
+		case L10N_ISO_8859_2:    return 196614;
+		case L10N_ISO_8859_3:    return 196615;
+		case L10N_ISO_8859_4:    return 196616;
+		case L10N_ISO_8859_5:    return 196617;
+		case L10N_ISO_8859_6:    return 196618;
+		case L10N_ISO_8859_7:    return 196619;
+		case L10N_ISO_8859_8:    return 196620;
+		case L10N_ISO_8859_9:    return 196621;
+		case L10N_ISO_8859_10:   return 196622;
+		case L10N_ISO_8859_11:   return 196623;
+		case L10N_ISO_8859_13:   return 196624;
+		case L10N_ISO_8859_14:   return 196625;
+		case L10N_ISO_8859_15:   return 196626;
+		case L10N_ISO_8859_16:   return 196627;
+		case L10N_CODEPAGE_437:  return 196628;
+		case L10N_CODEPAGE_850:  return 196629;
+		case L10N_CODEPAGE_863:  return 196630;
+		case L10N_CODEPAGE_866:  return 196631;
+		case L10N_CODEPAGE_932:  return 196632;
+		case L10N_CODEPAGE_936:  return 196633;
+		case L10N_CODEPAGE_949:  return 196634;
+		case L10N_CODEPAGE_950:  return 196635;
+		case L10N_CODEPAGE_1251: return 196636;
+		case L10N_CODEPAGE_1252: return 196637;
+		case L10N_EUC_CN:        return 196638;
+		case L10N_EUC_JP:        return 196639;
+		case L10N_EUC_KR:        return 196640;
+		case L10N_ISO_2022_JP:   return 196641;
+		case L10N_ARIB:          return 196642;
+		case L10N_HZ:            return 196643;
+		case L10N_GB18030:       return 196644;
+		case L10N_RIS_506:       return 196645;
+		case L10N_CODEPAGE_852:  return 196646;
+		case L10N_CODEPAGE_1250: return 196647;
+		case L10N_CODEPAGE_737:  return 196648;
+		case L10N_CODEPAGE_1253: return 196649;
+		case L10N_CODEPAGE_857:  return 196650;
+		case L10N_CODEPAGE_1254: return 196651;
+		case L10N_CODEPAGE_775:  return 196652;
+		case L10N_CODEPAGE_1257: return 196653;
+		case L10N_CODEPAGE_855:  return 196654;
+		case L10N_CODEPAGE_858:  return 196655;
+		case L10N_CODEPAGE_860:  return 196656;
+		case L10N_CODEPAGE_861:  return 196657;
+		case L10N_CODEPAGE_865:  return 196658;
+		case L10N_CODEPAGE_869:  return 196659;
+		default: cellL10n.Error("GetConverter(): Unknown/improper *dst_code %d.", dst_code); break;
+		}
+	case L10N_ISO_8859_1:
+		switch (dst_code)
+		{
+		case L10N_UTF8: return 327680;
+		case L10N_UCS2: return 327683;
+		default: cellL10n.Error("GetConverter(): Unknown/improper *dst_code %d.", dst_code); break;
+		}
+	case L10N_ISO_8859_2:
+		switch (dst_code)
+		{
+		case L10N_UTF8: return 393216;
+		case L10N_UCS2: return 393219;
+		default: cellL10n.Error("GetConverter(): Unknown/improper *dst_code %d.", dst_code); break;
+		}
+	case L10N_ISO_8859_3:
+		switch (dst_code)
+		{
+		case L10N_UTF8: return 458752;
+		case L10N_UCS2: return 458755;
+		default: cellL10n.Error("GetConverter(): Unknown/improper *dst_code %d.", dst_code); break;
+		}
+	case L10N_ISO_8859_4:
+		switch (dst_code)
+		{
+		case L10N_UTF8: return 524288;
+		case L10N_UCS2: return 524291;
+		default: cellL10n.Error("GetConverter(): Unknown/improper *dst_code %d.", dst_code); break;
+		}
+	case L10N_ISO_8859_5:
+		switch (dst_code)
+		{
+		case L10N_UTF8: return 589824;
+		case L10N_UCS2: return 589827;
+		default: cellL10n.Error("GetConverter(): Unknown/improper *dst_code %d.", dst_code); break;
+		}
+	case L10N_ISO_8859_6:
+		switch (dst_code)
+		{
+		case L10N_UTF8: return 655360;
+		case L10N_UCS2: return 655363;
+		default: cellL10n.Error("GetConverter(): Unknown/improper *dst_code %d.", dst_code); break;
+		}
+	case L10N_ISO_8859_7:
+		switch (dst_code)
+		{
+		case L10N_UTF8: return 720896;
+		case L10N_UCS2: return 720899;
+		default: cellL10n.Error("GetConverter(): Unknown/improper *dst_code %d.", dst_code); break;
+		}
+	case L10N_ISO_8859_8:
+		switch (dst_code)
+		{
+		case L10N_UTF8: return 786432;
+		case L10N_UCS2: return 786435;
+		default: cellL10n.Error("GetConverter(): Unknown/improper *dst_code %d.", dst_code); break;
+		}
+	case L10N_ISO_8859_9:
+		switch (dst_code)
+		{
+		case L10N_UTF8: return 851968;
+		case L10N_UCS2: return 851971;
+		default: cellL10n.Error("GetConverter(): Unknown/improper *dst_code %d.", dst_code); break;
+		}
+	case L10N_ISO_8859_10:
+		switch (dst_code)
+		{
+		case L10N_UTF8: return 917504;
+		case L10N_UCS2: return 917507;
+		default: cellL10n.Error("GetConverter(): Unknown/improper *dst_code %d.", dst_code); break;
+		}
+	case L10N_ISO_8859_11:
+		switch (dst_code)
+		{
+		case L10N_UTF8: return 983040;
+		case L10N_UCS2: return 983043;
+		default: cellL10n.Error("GetConverter(): Unknown/improper *dst_code %d.", dst_code); break;
+		}
+	case L10N_ISO_8859_13:
+		switch (dst_code)
+		{
+		case L10N_UTF8: return 1048576;
+		case L10N_UCS2: return 1048579;
+		default: cellL10n.Error("GetConverter(): Unknown/improper *dst_code %d.", dst_code); break;
+		}
+	case L10N_ISO_8859_14:
+		switch (dst_code)
+		{
+		case L10N_UTF8: return 1114112;
+		case L10N_UCS2: return 1114115;
+		default: cellL10n.Error("GetConverter(): Unknown/improper *dst_code %d.", dst_code); break;
+		}
+	case L10N_ISO_8859_15:
+		switch (dst_code)
+		{
+		case L10N_UTF8: return 1179648;
+		case L10N_UCS2: return 1179651;
+		default: cellL10n.Error("GetConverter(): Unknown/improper *dst_code %d.", dst_code); break;
+		}
+	case L10N_ISO_8859_16:
+		switch (dst_code)
+		{
+		case L10N_UTF8: return 1245184;
+		case L10N_UCS2: return 1245187;
+		default: cellL10n.Error("GetConverter(): Unknown/improper *dst_code %d.", dst_code); break;
+		}
+	case L10N_CODEPAGE_437:
+		switch (dst_code)
+		{
+		case L10N_UTF8: return 1310720;
+		case L10N_UCS2: return 1310723;
+		default: cellL10n.Error("GetConverter(): Unknown/improper *dst_code %d.", dst_code); break;
+		}
+	case L10N_CODEPAGE_850:
+		switch (dst_code)
+		{
+		case L10N_UTF8: return 1376256;
+		case L10N_UCS2: return 1376259;
+		default: cellL10n.Error("GetConverter(): Unknown/improper *dst_code %d.", dst_code); break;
+		}
+	case L10N_CODEPAGE_863:
+		switch (dst_code)
+		{
+		case L10N_UTF8: return 1441792;
+		case L10N_UCS2: return 1441795;
+		default: cellL10n.Error("GetConverter(): Unknown/improper *dst_code %d.", dst_code); break;
+		}
+	case L10N_CODEPAGE_866:
+		switch (dst_code)
+		{
+		case L10N_UTF8: return 1507328;
+		case L10N_UCS2: return 1507331;
+		default: cellL10n.Error("GetConverter(): Unknown/improper *dst_code %d.", dst_code); break;
+		}
+	case L10N_CODEPAGE_932:
+		switch (dst_code)
+		{
+		case L10N_UTF8: return 1572864;
+		case L10N_UCS2: return 1572867;
+		default: cellL10n.Error("GetConverter(): Unknown/improper *dst_code %d.", dst_code); break;
+		}
+	case L10N_CODEPAGE_936:
+		switch (dst_code)
+		{
+		case L10N_UTF8: return 1638400;
+		case L10N_UCS2: return 1638403;
+		default: cellL10n.Error("GetConverter(): Unknown/improper *dst_code %d.", dst_code); break;
+		}
+	case L10N_CODEPAGE_949:
+		switch (dst_code)
+		{
+		case L10N_UTF8: return 1703936;
+		case L10N_UCS2: return 1703939;
+		default: cellL10n.Error("GetConverter(): Unknown/improper *dst_code %d.", dst_code); break;
+		}
+	case L10N_CODEPAGE_950:
+		switch (dst_code)
+		{
+		case L10N_UTF8: return 1769472;
+		case L10N_UCS2: return 1769475;
+		default: cellL10n.Error("GetConverter(): Unknown/improper *dst_code %d.", dst_code); break;
+		}
+	case L10N_CODEPAGE_1251:
+		switch (dst_code)
+		{
+		case L10N_UTF8: return 1835008;
+		case L10N_UCS2: return 1835011;
+		default: cellL10n.Error("GetConverter(): Unknown/improper *dst_code %d.", dst_code); break;
+		}
+	case L10N_CODEPAGE_1252:
+		switch (dst_code)
+		{
+		case L10N_UTF8: return 1900544;
+		case L10N_UCS2: return 1900547;
+		default: cellL10n.Error("GetConverter(): Unknown/improper *dst_code %d.", dst_code); break;
+		}
+	case L10N_EUC_CN:
+		switch (dst_code)
+		{
+		case L10N_UTF8: return 1966080;
+		case L10N_UCS2: return 1966083;
+		default: cellL10n.Error("GetConverter(): Unknown/improper *dst_code %d.", dst_code); break;
+		}
+	case L10N_EUC_JP:
+		switch (dst_code)
+		{
+		case L10N_UTF8: return 2031616;
+		case L10N_UCS2: return 2031619;
+		default: cellL10n.Error("GetConverter(): Unknown/improper *dst_code %d.", dst_code); break;
+		}
+	case L10N_EUC_KR:
+		switch (dst_code)
+		{
+		case L10N_UTF8: return 2097152;
+		case L10N_UCS2: return 2097155;
+		default: cellL10n.Error("GetConverter(): Unknown/improper *dst_code %d.", dst_code); break;
+		}
+	case L10N_ISO_2022_JP:
+		switch (dst_code)
+		{
+		case L10N_UTF8: return 2162688;
+		case L10N_UCS2: return 2162691;
+		default: cellL10n.Error("GetConverter(): Unknown/improper *dst_code %d.", dst_code); break;
+		}
+	case L10N_ARIB:
+		switch (dst_code)
+		{
+		case L10N_UTF8: return 2228224;
+		case L10N_UCS2: return 2228227;
+		default: cellL10n.Error("GetConverter(): Unknown/improper *dst_code %d.", dst_code); break;
+		}
+	case L10N_HZ:
+		switch (dst_code)
+		{
+		case L10N_UTF8: return 2293760;
+		case L10N_UCS2: return 2293763;
+		default: cellL10n.Error("GetConverter(): Unknown/improper *dst_code %d.", dst_code); break;
+		}
+	case L10N_GB18030:
+		switch (dst_code)
+		{
+		case L10N_UTF8: return 2359296;
+		case L10N_UCS2: return 2359299;
+		default: cellL10n.Error("GetConverter(): Unknown/improper *dst_code %d.", dst_code); break;
+		}
+	case L10N_RIS_506:
+		switch (dst_code)
+		{
+		case L10N_UTF8: return 2424832;
+		case L10N_UCS2: return 2424835;
+		default: cellL10n.Error("GetConverter(): Unknown/improper *dst_code %d.", dst_code); break;
+		}
+	case L10N_CODEPAGE_852:
+		switch (dst_code)
+		{
+		case L10N_UTF8: return 2490368;
+		case L10N_UCS2: return 2490371;
+		default: cellL10n.Error("GetConverter(): Unknown/improper *dst_code %d.", dst_code); break;
+		}
+	case L10N_CODEPAGE_1250:
+		switch (dst_code)
+		{
+		case L10N_UTF8: return 2555904;
+		case L10N_UCS2: return 2555907;
+		default: cellL10n.Error("GetConverter(): Unknown/improper *dst_code %d.", dst_code); break;
+		}
+	case L10N_CODEPAGE_737:
+		switch (dst_code)
+		{
+		case L10N_UTF8: return 2621440;
+		case L10N_UCS2: return 2621443;
+		default: cellL10n.Error("GetConverter(): Unknown/improper *dst_code %d.", dst_code); break;
+		}
+	case L10N_CODEPAGE_1253:
+		switch (dst_code)
+		{
+		case L10N_UTF8: return 2686976;
+		case L10N_UCS2: return 2686979;
+		default: cellL10n.Error("GetConverter(): Unknown/improper *dst_code %d.", dst_code); break;
+		}
+	case L10N_CODEPAGE_857:
+		switch (dst_code)
+		{
+		case L10N_UTF8: return 2752512;
+		case L10N_UCS2: return 2752515;
+		default: cellL10n.Error("GetConverter(): Unknown/improper *dst_code %d.", dst_code); break;
+		}
+	case L10N_CODEPAGE_1254:
+		switch (dst_code)
+		{
+		case L10N_UTF8: return 2818048;
+		case L10N_UCS2: return 2818051;
+		default: cellL10n.Error("GetConverter(): Unknown/improper *dst_code %d.", dst_code); break;
+		}
+	case L10N_CODEPAGE_775:
+		switch (dst_code)
+		{
+		case L10N_UTF8: return 2883584;
+		case L10N_UCS2: return 2883587;
+		default: cellL10n.Error("GetConverter(): Unknown/improper *dst_code %d.", dst_code); break;
+		}
+	case L10N_CODEPAGE_1257:
+		switch (dst_code)
+		{
+		case L10N_UTF8: return 2949120;
+		case L10N_UCS2: return 2949123;
+		default: cellL10n.Error("GetConverter(): Unknown/improper *dst_code %d.", dst_code); break;
+		}
+	case L10N_CODEPAGE_855:
+		switch (dst_code)
+		{
+		case L10N_UTF8: return 3014656;
+		case L10N_UCS2: return 3014659;
+		default: cellL10n.Error("GetConverter(): Unknown/improper *dst_code %d.", dst_code); break;
+		}
+	case L10N_CODEPAGE_858:
+		switch (dst_code)
+		{
+		case L10N_UTF8: return 3080192;
+		case L10N_UCS2: return 3080195;
+		default: cellL10n.Error("GetConverter(): Unknown/improper *dst_code %d.", dst_code); break;
+		}
+	case L10N_CODEPAGE_860:
+		switch (dst_code)
+		{
+		case L10N_UTF8: return 3145728;
+		case L10N_UCS2: return 3145731;
+		default: cellL10n.Error("GetConverter(): Unknown/improper *dst_code %d.", dst_code); break;
+		}
+	case L10N_CODEPAGE_861:
+		switch (dst_code)
+		{
+		case L10N_UTF8: return 3211264;
+		case L10N_UCS2: return 3211267;
+		default: cellL10n.Error("GetConverter(): Unknown/improper *dst_code %d.", dst_code); break;
+		}
+	case L10N_CODEPAGE_865:
+		switch (dst_code)
+		{
+		case L10N_UTF8: return 3276800;
+		case L10N_UCS2: return 3276803;
+		default: cellL10n.Error("GetConverter(): Unknown/improper *dst_code %d.", dst_code); break;
+		}
+	case L10N_CODEPAGE_869:
+		switch (dst_code)
+		{
+		case L10N_UTF8: return 3342336;
+		case L10N_UCS2: return 3342339;
+		default: cellL10n.Error("GetConverter(): Unknown/improper *dst_code %d.", dst_code); break;
+		}
+	default: cellL10n.Error("GetConverter(): Unknown/improper *src_code %d.", src_code);
+	}
+
+	return -1;
+}
+
+// Converts converter ID back to *src_code and *dst_code.
+inline static const s32 GetConverterSrcAndDst(s32 converter, s32 *src_code, s32 *dst_code)
+{
+	switch (converter)
+	{
+	case 1:  *src_code = L10N_UTF8; *dst_code = L10N_UTF16;              return CELL_OK;
+	case 2:  *src_code = L10N_UTF8; *dst_code = L10N_UTF32;              return CELL_OK;
+	case 3:  *src_code = L10N_UTF8; *dst_code = L10N_UCS2;               return CELL_OK;
+	case 5:  *src_code = L10N_UTF8; *dst_code = L10N_ISO_8859_1;         return CELL_OK;
+	case 6:  *src_code = L10N_UTF8; *dst_code = L10N_ISO_8859_2;         return CELL_OK;
+	case 7:  *src_code = L10N_UTF8; *dst_code = L10N_ISO_8859_3;         return CELL_OK;
+	case 8:  *src_code = L10N_UTF8; *dst_code = L10N_ISO_8859_4;         return CELL_OK;
+	case 9:  *src_code = L10N_UTF8; *dst_code = L10N_ISO_8859_5;         return CELL_OK;
+	case 10: *src_code = L10N_UTF8; *dst_code = L10N_ISO_8859_6;         return CELL_OK;
+	case 11: *src_code = L10N_UTF8; *dst_code = L10N_ISO_8859_7;         return CELL_OK;
+	case 12: *src_code = L10N_UTF8; *dst_code = L10N_ISO_8859_8;         return CELL_OK;
+	case 13: *src_code = L10N_UTF8; *dst_code = L10N_ISO_8859_9;         return CELL_OK;
+	case 14: *src_code = L10N_UTF8; *dst_code = L10N_ISO_8859_10;        return CELL_OK;
+	case 15: *src_code = L10N_UTF8; *dst_code = L10N_ISO_8859_11;        return CELL_OK;
+	case 16: *src_code = L10N_UTF8; *dst_code = L10N_ISO_8859_13;        return CELL_OK;
+	case 17: *src_code = L10N_UTF8; *dst_code = L10N_ISO_8859_14;        return CELL_OK;
+	case 18: *src_code = L10N_UTF8; *dst_code = L10N_ISO_8859_15;        return CELL_OK;
+	case 19: *src_code = L10N_UTF8; *dst_code = L10N_ISO_8859_16;        return CELL_OK;
+	case 20: *src_code = L10N_UTF8; *dst_code = L10N_CODEPAGE_437;       return CELL_OK;
+	case 21: *src_code = L10N_UTF8; *dst_code = L10N_CODEPAGE_850;       return CELL_OK;
+	case 22: *src_code = L10N_UTF8; *dst_code = L10N_CODEPAGE_863;       return CELL_OK;
+	case 23: *src_code = L10N_UTF8; *dst_code = L10N_CODEPAGE_866;       return CELL_OK;
+	case 24: *src_code = L10N_UTF8; *dst_code = L10N_CODEPAGE_932;       return CELL_OK;
+	case 25: *src_code = L10N_UTF8; *dst_code = L10N_CODEPAGE_936;       return CELL_OK;
+	case 26: *src_code = L10N_UTF8; *dst_code = L10N_CODEPAGE_949;       return CELL_OK;
+	case 27: *src_code = L10N_UTF8; *dst_code = L10N_CODEPAGE_950;       return CELL_OK;
+	case 28: *src_code = L10N_UTF8; *dst_code = L10N_CODEPAGE_1251;      return CELL_OK;
+	case 29: *src_code = L10N_UTF8; *dst_code = L10N_CODEPAGE_1252;      return CELL_OK;
+	case 30: *src_code = L10N_UTF8; *dst_code = L10N_EUC_CN;             return CELL_OK;
+	case 31: *src_code = L10N_UTF8; *dst_code = L10N_EUC_JP;             return CELL_OK;
+	case 32: *src_code = L10N_UTF8; *dst_code = L10N_EUC_KR;             return CELL_OK;
+	case 33: *src_code = L10N_UTF8; *dst_code = L10N_ISO_2022_JP;        return CELL_OK;
+	case 34: *src_code = L10N_UTF8; *dst_code = L10N_ARIB;               return CELL_OK;
+	case 35: *src_code = L10N_UTF8; *dst_code = L10N_HZ;                 return CELL_OK;
+	case 36: *src_code = L10N_UTF8; *dst_code = L10N_GB18030;            return CELL_OK;
+	case 37: *src_code = L10N_UTF8; *dst_code = L10N_RIS_506;            return CELL_OK;
+	case 38: *src_code = L10N_UTF8; *dst_code = L10N_CODEPAGE_852;       return CELL_OK;
+	case 39: *src_code = L10N_UTF8; *dst_code = L10N_CODEPAGE_1250;      return CELL_OK;
+	case 40: *src_code = L10N_UTF8; *dst_code = L10N_CODEPAGE_737;       return CELL_OK;
+	case 41: *src_code = L10N_UTF8; *dst_code = L10N_CODEPAGE_1253;      return CELL_OK;
+	case 42: *src_code = L10N_UTF8; *dst_code = L10N_CODEPAGE_857;       return CELL_OK;
+	case 43: *src_code = L10N_UTF8; *dst_code = L10N_CODEPAGE_1254;      return CELL_OK;
+	case 44: *src_code = L10N_UTF8; *dst_code = L10N_CODEPAGE_775;       return CELL_OK;
+	case 45: *src_code = L10N_UTF8; *dst_code = L10N_CODEPAGE_1257;      return CELL_OK;
+	case 46: *src_code = L10N_UTF8; *dst_code = L10N_CODEPAGE_855;       return CELL_OK;
+	case 47: *src_code = L10N_UTF8; *dst_code = L10N_CODEPAGE_858;       return CELL_OK;
+	case 48: *src_code = L10N_UTF8; *dst_code = L10N_CODEPAGE_860;       return CELL_OK;
+	case 49: *src_code = L10N_UTF8; *dst_code = L10N_CODEPAGE_861;       return CELL_OK;
+	case 50: *src_code = L10N_UTF8; *dst_code = L10N_CODEPAGE_865;       return CELL_OK;
+	case 51: *src_code = L10N_UTF8; *dst_code = L10N_CODEPAGE_869;       return CELL_OK;
+	case 65536: *src_code = L10N_UTF16; *dst_code = L10N_UTF8;           return CELL_OK;
+	case 65538: *src_code = L10N_UTF16; *dst_code = L10N_UTF32;          return CELL_OK;
+	case 65539: *src_code = L10N_UTF16; *dst_code = L10N_UCS2;           return CELL_OK;
+	case 131072: *src_code = L10N_UTF32; *dst_code = L10N_UTF8;          return CELL_OK;
+	case 131073: *src_code = L10N_UTF32; *dst_code = L10N_UTF32;         return CELL_OK;
+	case 131075: *src_code = L10N_UTF32; *dst_code = L10N_UCS2;          return CELL_OK;
+	case 196608: *src_code = L10N_UCS2; *dst_code = L10N_UTF8;           return CELL_OK;
+	case 196609: *src_code = L10N_UCS2; *dst_code = L10N_UTF16;          return CELL_OK;
+	case 196610: *src_code = L10N_UCS2; *dst_code = L10N_UTF32;          return CELL_OK;
+	case 196613: *src_code = L10N_UCS2; *dst_code = L10N_ISO_8859_1;     return CELL_OK;
+	case 196614: *src_code = L10N_UCS2; *dst_code = L10N_ISO_8859_2;     return CELL_OK;
+	case 196615: *src_code = L10N_UCS2; *dst_code = L10N_ISO_8859_3;     return CELL_OK;
+	case 196616: *src_code = L10N_UCS2; *dst_code = L10N_ISO_8859_4;     return CELL_OK;
+	case 196617: *src_code = L10N_UCS2; *dst_code = L10N_ISO_8859_5;     return CELL_OK;
+	case 196618: *src_code = L10N_UCS2; *dst_code = L10N_ISO_8859_6;     return CELL_OK;
+	case 196619: *src_code = L10N_UCS2; *dst_code = L10N_ISO_8859_7;     return CELL_OK;
+	case 196620: *src_code = L10N_UCS2; *dst_code = L10N_ISO_8859_8;     return CELL_OK;
+	case 196621: *src_code = L10N_UCS2; *dst_code = L10N_ISO_8859_9;     return CELL_OK;
+	case 196622: *src_code = L10N_UCS2; *dst_code = L10N_ISO_8859_10;    return CELL_OK;
+	case 196623: *src_code = L10N_UCS2; *dst_code = L10N_ISO_8859_11;    return CELL_OK;
+	case 196624: *src_code = L10N_UCS2; *dst_code = L10N_ISO_8859_13;    return CELL_OK;
+	case 196625: *src_code = L10N_UCS2; *dst_code = L10N_ISO_8859_14;    return CELL_OK;
+	case 196626: *src_code = L10N_UCS2; *dst_code = L10N_ISO_8859_15;    return CELL_OK;
+	case 196627: *src_code = L10N_UCS2; *dst_code = L10N_ISO_8859_16;    return CELL_OK;
+	case 196628: *src_code = L10N_UCS2; *dst_code = L10N_CODEPAGE_437;   return CELL_OK;
+	case 196629: *src_code = L10N_UCS2; *dst_code = L10N_CODEPAGE_850;   return CELL_OK;
+	case 196630: *src_code = L10N_UCS2; *dst_code = L10N_CODEPAGE_863;   return CELL_OK;
+	case 196631: *src_code = L10N_UCS2; *dst_code = L10N_CODEPAGE_866;   return CELL_OK;
+	case 196632: *src_code = L10N_UCS2; *dst_code = L10N_CODEPAGE_932;   return CELL_OK;
+	case 196633: *src_code = L10N_UCS2; *dst_code = L10N_CODEPAGE_936;   return CELL_OK;
+	case 196634: *src_code = L10N_UCS2; *dst_code = L10N_CODEPAGE_949;   return CELL_OK;
+	case 196635: *src_code = L10N_UCS2; *dst_code = L10N_CODEPAGE_950;   return CELL_OK;
+	case 196636: *src_code = L10N_UCS2; *dst_code = L10N_CODEPAGE_1251;  return CELL_OK;
+	case 196637: *src_code = L10N_UCS2; *dst_code = L10N_CODEPAGE_1252;  return CELL_OK;
+	case 196638: *src_code = L10N_UCS2; *dst_code = L10N_EUC_CN;         return CELL_OK;
+	case 196639: *src_code = L10N_UCS2; *dst_code = L10N_EUC_JP;         return CELL_OK;
+	case 196640: *src_code = L10N_UCS2; *dst_code = L10N_EUC_KR;         return CELL_OK;
+	case 196641: *src_code = L10N_UCS2; *dst_code = L10N_ISO_2022_JP;    return CELL_OK;
+	case 196642: *src_code = L10N_UCS2; *dst_code = L10N_ARIB;           return CELL_OK;
+	case 196643: *src_code = L10N_UCS2; *dst_code = L10N_HZ;             return CELL_OK;
+	case 196644: *src_code = L10N_UCS2; *dst_code = L10N_GB18030;        return CELL_OK;
+	case 196645: *src_code = L10N_UCS2; *dst_code = L10N_RIS_506;        return CELL_OK;
+	case 196646: *src_code = L10N_UCS2; *dst_code = L10N_CODEPAGE_852;   return CELL_OK;
+	case 196647: *src_code = L10N_UCS2; *dst_code = L10N_CODEPAGE_1250;  return CELL_OK;
+	case 196648: *src_code = L10N_UCS2; *dst_code = L10N_CODEPAGE_737;   return CELL_OK;
+	case 196649: *src_code = L10N_UCS2; *dst_code = L10N_CODEPAGE_1253;  return CELL_OK;
+	case 196650: *src_code = L10N_UCS2; *dst_code = L10N_CODEPAGE_857;   return CELL_OK;
+	case 196651: *src_code = L10N_UCS2; *dst_code = L10N_CODEPAGE_1254;  return CELL_OK;
+	case 196652: *src_code = L10N_UCS2; *dst_code = L10N_CODEPAGE_775;   return CELL_OK;
+	case 196653: *src_code = L10N_UCS2; *dst_code = L10N_CODEPAGE_1257;  return CELL_OK;
+	case 196654: *src_code = L10N_UCS2; *dst_code = L10N_CODEPAGE_855;   return CELL_OK;
+	case 196655: *src_code = L10N_UCS2; *dst_code = L10N_CODEPAGE_858;   return CELL_OK;
+	case 196656: *src_code = L10N_UCS2; *dst_code = L10N_CODEPAGE_860;   return CELL_OK;
+	case 196657: *src_code = L10N_UCS2; *dst_code = L10N_CODEPAGE_861;   return CELL_OK;
+	case 196658: *src_code = L10N_UCS2; *dst_code = L10N_CODEPAGE_865;   return CELL_OK;
+	case 196659: *src_code = L10N_UCS2; *dst_code = L10N_CODEPAGE_869;   return CELL_OK;
+	case 327680: *src_code = L10N_ISO_8859_1; *dst_code = L10N_UTF8;     return CELL_OK;
+	case 327683: *src_code = L10N_ISO_8859_1; *dst_code = L10N_UCS2;     return CELL_OK;
+	case 393216: *src_code = L10N_ISO_8859_2; *dst_code = L10N_UTF8;     return CELL_OK;
+	case 393219: *src_code = L10N_ISO_8859_2; *dst_code = L10N_UCS2;     return CELL_OK;
+	case 458752: *src_code = L10N_ISO_8859_3; *dst_code = L10N_UTF8;     return CELL_OK;
+	case 458755: *src_code = L10N_ISO_8859_3; *dst_code = L10N_UCS2;     return CELL_OK;
+	case 524288: *src_code = L10N_ISO_8859_4; *dst_code = L10N_UTF8;     return CELL_OK;
+	case 524291: *src_code = L10N_ISO_8859_4; *dst_code = L10N_UCS2;     return CELL_OK;
+	case 589824: *src_code = L10N_ISO_8859_5; *dst_code = L10N_UTF8;     return CELL_OK;
+	case 589827: *src_code = L10N_ISO_8859_5; *dst_code = L10N_UCS2;     return CELL_OK;
+	case 655360: *src_code = L10N_ISO_8859_6; *dst_code = L10N_UTF8;     return CELL_OK;
+	case 655363: *src_code = L10N_ISO_8859_6; *dst_code = L10N_UCS2;     return CELL_OK;
+	case 720896: *src_code = L10N_ISO_8859_7; *dst_code = L10N_UTF8;     return CELL_OK;
+	case 720899: *src_code = L10N_ISO_8859_7; *dst_code = L10N_UCS2;     return CELL_OK;
+	case 786432: *src_code = L10N_ISO_8859_8; *dst_code = L10N_UTF8;     return CELL_OK;
+	case 786435: *src_code = L10N_ISO_8859_8; *dst_code = L10N_UCS2;     return CELL_OK;
+	case 851968: *src_code = L10N_ISO_8859_9; *dst_code = L10N_UTF8;     return CELL_OK;
+	case 851971: *src_code = L10N_ISO_8859_9; *dst_code = L10N_UCS2;     return CELL_OK;
+	case 917504: *src_code = L10N_ISO_8859_10; *dst_code = L10N_UTF8;    return CELL_OK;
+	case 917507: *src_code = L10N_ISO_8859_10; *dst_code = L10N_UCS2;    return CELL_OK;
+	case 983040: *src_code = L10N_ISO_8859_11; *dst_code = L10N_UTF8;    return CELL_OK;
+	case 983043: *src_code = L10N_ISO_8859_11; *dst_code = L10N_UCS2;    return CELL_OK;
+	case 1048576: *src_code = L10N_ISO_8859_13; *dst_code = L10N_UTF8;   return CELL_OK;
+	case 1048579: *src_code = L10N_ISO_8859_13; *dst_code = L10N_UCS2;   return CELL_OK;
+	case 1114112: *src_code = L10N_ISO_8859_14; *dst_code = L10N_UTF8;   return CELL_OK;
+	case 1114115: *src_code = L10N_ISO_8859_14; *dst_code = L10N_UCS2;   return CELL_OK;
+	case 1179648: *src_code = L10N_ISO_8859_15; *dst_code = L10N_UTF8;   return CELL_OK;
+	case 1179651: *src_code = L10N_ISO_8859_15; *dst_code = L10N_UCS2;   return CELL_OK;
+	case 1245184: *src_code = L10N_ISO_8859_16; *dst_code = L10N_UTF8;   return CELL_OK;
+	case 1245187: *src_code = L10N_ISO_8859_16; *dst_code = L10N_UCS2;   return CELL_OK;
+	case 1310720: *src_code = L10N_CODEPAGE_437; *dst_code = L10N_UTF8;  return CELL_OK;
+	case 1310723: *src_code = L10N_CODEPAGE_437; *dst_code = L10N_UCS2;  return CELL_OK;
+	case 1376256: *src_code = L10N_CODEPAGE_850; *dst_code = L10N_UTF8;  return CELL_OK;
+	case 1376259: *src_code = L10N_CODEPAGE_850; *dst_code = L10N_UCS2;  return CELL_OK;
+	case 1441792: *src_code = L10N_CODEPAGE_863; *dst_code = L10N_UTF8;  return CELL_OK;
+	case 1441795: *src_code = L10N_CODEPAGE_863; *dst_code = L10N_UCS2;  return CELL_OK;
+	case 1507328: *src_code = L10N_CODEPAGE_866; *dst_code = L10N_UTF8;  return CELL_OK;
+	case 1507331: *src_code = L10N_CODEPAGE_866; *dst_code = L10N_UCS2;  return CELL_OK;
+	case 1572864: *src_code = L10N_CODEPAGE_932; *dst_code = L10N_UTF8;  return CELL_OK;
+	case 1572867: *src_code = L10N_CODEPAGE_932; *dst_code = L10N_UCS2;  return CELL_OK;
+	case 1638400: *src_code = L10N_CODEPAGE_936; *dst_code = L10N_UTF8;  return CELL_OK;
+	case 1638403: *src_code = L10N_CODEPAGE_936; *dst_code = L10N_UCS2;  return CELL_OK;
+	case 1703936: *src_code = L10N_CODEPAGE_949; *dst_code = L10N_UTF8;  return CELL_OK;
+	case 1703939: *src_code = L10N_CODEPAGE_949; *dst_code = L10N_UCS2;  return CELL_OK;
+	case 1769472: *src_code = L10N_CODEPAGE_950; *dst_code = L10N_UTF8;  return CELL_OK;
+	case 1769475: *src_code = L10N_CODEPAGE_950; *dst_code = L10N_UCS2;  return CELL_OK;
+	case 1835008: *src_code = L10N_CODEPAGE_1251; *dst_code = L10N_UTF8; return CELL_OK;
+	case 1835011: *src_code = L10N_CODEPAGE_1251; *dst_code = L10N_UCS2; return CELL_OK;
+	case 1900544: *src_code = L10N_CODEPAGE_1252; *dst_code = L10N_UTF8; return CELL_OK;
+	case 1900547: *src_code = L10N_CODEPAGE_1252; *dst_code = L10N_UCS2; return CELL_OK;
+	case 1966080: *src_code = L10N_EUC_CN; *dst_code = L10N_UTF8;        return CELL_OK;
+	case 1966083: *src_code = L10N_EUC_CN; *dst_code = L10N_UCS2;        return CELL_OK;
+	case 2031616: *src_code = L10N_EUC_JP; *dst_code = L10N_UTF8;        return CELL_OK;
+	case 2031619: *src_code = L10N_EUC_JP; *dst_code = L10N_UCS2;        return CELL_OK;
+	case 2097152: *src_code = L10N_EUC_KR; *dst_code = L10N_UTF8;        return CELL_OK;
+	case 2097155: *src_code = L10N_EUC_KR; *dst_code = L10N_UCS2;        return CELL_OK;
+	case 2162688: *src_code = L10N_ISO_2022_JP; *dst_code = L10N_UTF8;   return CELL_OK;
+	case 2162691: *src_code = L10N_ISO_2022_JP; *dst_code = L10N_UCS2;   return CELL_OK;
+	case 2228224: *src_code = L10N_ARIB; *dst_code = L10N_UTF8;          return CELL_OK;
+	case 2228227: *src_code = L10N_ARIB; *dst_code = L10N_UCS2;          return CELL_OK;
+	case 2293760: *src_code = L10N_HZ; *dst_code = L10N_UTF8;            return CELL_OK;
+	case 2293763: *src_code = L10N_HZ; *dst_code = L10N_UCS2;            return CELL_OK;
+	case 2359296: *src_code = L10N_GB18030; *dst_code = L10N_UTF8;       return CELL_OK;
+	case 2359299: *src_code = L10N_GB18030; *dst_code = L10N_UCS2;       return CELL_OK;
+	case 2424832: *src_code = L10N_RIS_506; *dst_code = L10N_UTF8;       return CELL_OK;
+	case 2424835: *src_code = L10N_RIS_506; *dst_code = L10N_UCS2;       return CELL_OK;
+	case 2490368: *src_code = L10N_CODEPAGE_852; *dst_code = L10N_UTF8;  return CELL_OK;
+	case 2490371: *src_code = L10N_CODEPAGE_852; *dst_code = L10N_UCS2;  return CELL_OK;
+	case 2555904: *src_code = L10N_CODEPAGE_1250; *dst_code = L10N_UTF8; return CELL_OK;
+	case 2555907: *src_code = L10N_CODEPAGE_1250; *dst_code = L10N_UCS2; return CELL_OK;
+	case 2621440: *src_code = L10N_CODEPAGE_737; *dst_code = L10N_UTF8;  return CELL_OK;
+	case 2621443: *src_code = L10N_CODEPAGE_737; *dst_code = L10N_UCS2;  return CELL_OK;
+	case 2686976: *src_code = L10N_CODEPAGE_1253; *dst_code = L10N_UTF8; return CELL_OK;
+	case 2686979: *src_code = L10N_CODEPAGE_1253; *dst_code = L10N_UCS2; return CELL_OK;
+	case 2752512: *src_code = L10N_CODEPAGE_857; *dst_code = L10N_UTF8;  return CELL_OK;
+	case 2752515: *src_code = L10N_CODEPAGE_857; *dst_code = L10N_UCS2;  return CELL_OK;
+	case 2818048: *src_code = L10N_CODEPAGE_1254; *dst_code = L10N_UTF8; return CELL_OK;
+	case 2818051: *src_code = L10N_CODEPAGE_1254; *dst_code = L10N_UCS2; return CELL_OK;
+	case 2883584: *src_code = L10N_CODEPAGE_775; *dst_code = L10N_UTF8;  return CELL_OK;
+	case 2883587: *src_code = L10N_CODEPAGE_775; *dst_code = L10N_UCS2;  return CELL_OK;
+	case 2949120: *src_code = L10N_CODEPAGE_1257; *dst_code = L10N_UTF8; return CELL_OK;
+	case 2949123: *src_code = L10N_CODEPAGE_1257; *dst_code = L10N_UCS2; return CELL_OK;
+	case 3014656: *src_code = L10N_CODEPAGE_855; *dst_code = L10N_UTF8;  return CELL_OK;
+	case 3014659: *src_code = L10N_CODEPAGE_855; *dst_code = L10N_UCS2;  return CELL_OK;
+	case 3080192: *src_code = L10N_CODEPAGE_858; *dst_code = L10N_UTF8;  return CELL_OK;
+	case 3080195: *src_code = L10N_CODEPAGE_858; *dst_code = L10N_UCS2;  return CELL_OK;
+	case 3145728: *src_code = L10N_CODEPAGE_860; *dst_code = L10N_UTF8;  return CELL_OK;
+	case 3145731: *src_code = L10N_CODEPAGE_860; *dst_code = L10N_UCS2;  return CELL_OK;
+	case 3211264: *src_code = L10N_CODEPAGE_861; *dst_code = L10N_UTF8;  return CELL_OK;
+	case 3211267: *src_code = L10N_CODEPAGE_861; *dst_code = L10N_UCS2;  return CELL_OK;
+	case 3276800: *src_code = L10N_CODEPAGE_865; *dst_code = L10N_UTF8;  return CELL_OK;
+	case 3276803: *src_code = L10N_CODEPAGE_865; *dst_code = L10N_UCS2;  return CELL_OK;
+	case 3342336: *src_code = L10N_CODEPAGE_869; *dst_code = L10N_UTF8;  return CELL_OK;
+	case 3342339: *src_code = L10N_CODEPAGE_869; *dst_code = L10N_UCS2;  return CELL_OK;
+	default: cellL10n.Error("GetConverterSrcAndDst(): Unknown/improper converter %d.", converter);
+	}
+	return -1;
+}
+
 // translate code id to code name. some codepage may has another name.
 // If this makes your compilation fail, try replace the string code with one in "iconv -l"
 bool _L10nCodeParse(s32 code, std::string& retCode)
@@ -753,6 +1429,7 @@ s32 UHCtoUCS2()
 	throw EXCEPTION("");
 }
 
+// TODO: is this correct? Check it over at some point.
 s32 L10nConvertStr(s32 src_code, vm::cptr<void> src, vm::ptr<u32> src_len, s32 dst_code, vm::ptr<void> dst, vm::ptr<u32> dst_len)
 {
 	cellL10n.Error("L10nConvertStr(src_code=%d, srca=*0x%x, src_len=*0x%x, dst_code=%d, dst=*0x%x, dst_len=*0x%x)", src_code, src, src_len, dst_code, dst, dst_len);
@@ -885,9 +1562,19 @@ s32 UTF16toUTF32()
 	throw EXCEPTION("");
 }
 
-s32 l10n_convert_str()
+s32 l10n_convert_str(s32 cd, vm::cptr<void> src, vm::ptr<u32> src_len, vm::ptr<void> dst, vm::ptr<u32> dst_len)
 {
-	throw EXCEPTION("");
+	cellL10n.Warning("l10n_convert_str(cd=%d, src=*0x%x, src_len=*0x%x, dst=*0x%x, dst_len=*0x%x)", cd, src, src_len, dst, dst_len);
+
+	s32 src_code, dst_code;
+	s32 ret = GetConverterSrcAndDst(cd, &src_code, &dst_code);
+
+	if (ret != CELL_OK)
+	{
+		return ConverterUnknown;
+	}
+
+	return L10nConvertStr(src_code, src, src_len, dst_code, dst, dst_len);
 }
 
 s32 EUCJPstoJISs()
@@ -990,17 +1677,10 @@ s32 MSJISstoUCS2s()
 	throw EXCEPTION("");
 }
 
-l10n_conv_t l10n_get_converter(L10nCode src_code, L10nCode dst_code)
+s32 l10n_get_converter(u32 src_code, u32 dst_code)
 {
-	cellL10n.Todo("l10n_get_converter(src_code=%d, dst_code=%d)", src_code, dst_code);
-
-	switch (src_code)
-	{
-	//default: cellL10n.Todo("l10n_get_converter(): Unknown dst_code %d.", dst_code); break;
-	default: cellL10n.Todo("l10n_get_converter(): Unknown src_code %d.", src_code);
-	}
-
-	return -1;
+	cellL10n.Warning("l10n_get_converter(src_code=%d, dst_code=%d)", src_code, dst_code);
+	return GetConverter(src_code, dst_code);
 }
 
 s32 GB18030stoUTF8s()

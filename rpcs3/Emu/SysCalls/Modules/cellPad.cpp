@@ -103,7 +103,7 @@ s32 cellPadPeriphGetData()
 
 s32 cellPadGetData(u32 port_no, vm::ptr<CellPadData> data)
 {
-	sys_io.Notice("cellPadGetData(port_no=%d, data=*0x%x)", port_no, data);
+	sys_io.Log("cellPadGetData(port_no=%d, data=*0x%x)", port_no, data);
 
 	std::vector<Pad>& pads = Emu.GetPadManager().GetPads();
 

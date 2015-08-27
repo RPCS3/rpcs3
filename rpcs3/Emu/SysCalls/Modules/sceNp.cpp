@@ -417,7 +417,7 @@ s32 sceNpBasicGetEvent(vm::ptr<s32> event, vm::ptr<SceNpUserInfo> from, vm::ptr<
 {
 	sceNp.Todo("sceNpBasicGetEvent(event=*0x%x, from=*0x%x, data=*0x%x, size=*0x%x)", event, from, data, size);
 
-	// TODO: Check for other error and pass other events
+	// TODO: Check for errors and pass other events
 	*event = SCE_NP_BASIC_EVENT_OFFLINE;
 
 	return CELL_OK;

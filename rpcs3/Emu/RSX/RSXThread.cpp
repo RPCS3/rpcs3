@@ -2499,6 +2499,11 @@ void RSXThread::End()
 {
 	Draw();
 
+	if (Ini.RSXFrameStep.GetValue())
+	{
+		Emu.Pause();
+	}
+
 	for (auto &vdata : m_vertex_data)
 	{
 		vdata.data.clear();
