@@ -5273,25 +5273,6 @@ void Compiler::WriteMemory(Value * addr_i64, Value * val_ix, u32 alignment, bool
 	m_ir_builder->CreateAlignedStore(val_ix, eaddr_ix_ptr, alignment);
 }
 
-llvm::Value * Compiler::IndirectCall(u32 address, Value * context_i64, bool is_function) {
-	const Executable *functionPtr = m_recompilation_engine.GetExecutable(address, is_function);
-	auto location_i64 = m_ir_builder->getInt64((uint64_t)functionPtr);
-	auto location_i64_ptr = m_ir_builder->CreateIntToPtr(location_i64, m_ir_builder->getInt64Ty()->getPointerTo());
-	auto executable_i64 = m_ir_builder->CreateLoad(location_i64_ptr);
-	auto executable_ptr = m_ir_builder->CreateIntToPtr(executable_i64, m_compiled_function_type->getPointerTo());
-	auto ret_i32 = m_ir_builder->CreateCall2(executable_ptr, m_state.args[CompileTaskState::Args::State], context_i64);
-
-	auto cmp_i1 = m_ir_builder->CreateICmpEQ(ret_i32, m_ir_builder->getInt32(0xFFFFFFFF));
-	auto then_bb = GetBasicBlockFromAddress(m_state.current_instruction_address, "then_all_fs");
-	auto merge_bb = GetBasicBlockFromAddress(m_state.current_instruction_address, "merge_all_fs");
-	m_ir_builder->CreateCondBr(cmp_i1, then_bb, merge_bb);
-
-	m_ir_builder->SetInsertPoint(then_bb);
-	m_ir_builder->CreateRet(m_ir_builder->getInt32(0));
-	m_ir_builder->SetInsertPoint(merge_bb);
-	return ret_i32;
-}
-
 void Compiler::CompilationError(const std::string & error) {
 	LOG_ERROR(PPU, "[0x%08X] %s", m_state.current_instruction_address, error.c_str());
 	Emu.Pause();
