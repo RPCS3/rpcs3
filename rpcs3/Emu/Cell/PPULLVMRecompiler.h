@@ -71,7 +71,7 @@ namespace ppu_recompiler_llvm {
 		 * Compile a code fragment described by a cfg and return an executable and the ExecutionEngine storing it
 		 * Pointer to function can be retrieved with getPointerToFunction
 		 */
-		std::pair<Executable, llvm::ExecutionEngine *> Compile(const std::string & name, u32 start_address, u32 instruction_count, bool generate_linkable_exits);
+		std::pair<Executable, llvm::ExecutionEngine *> Compile(const std::string & name, u32 start_address, u32 instruction_count);
 
 		/// Retrieve compiler stats
 		Stats GetStats();
@@ -506,9 +506,6 @@ namespace ppu_recompiler_llvm {
 			/// This is set to false at the start of compilation of an instruction.
 			/// If a branch instruction is encountered, this is set to true by the decode function.
 			bool hit_branch_instruction;
-
-			/// Create code such that exit points can be linked to other blocks
-			bool generate_linkable_exits;
 		};
 
 		/// Recompilation engine
@@ -745,9 +742,6 @@ namespace ppu_recompiler_llvm {
 			return m_ir_builder->CreateCall(fn, fn_args);
 		}
 
-		/// Indirect call
-		llvm::Value * IndirectCall(u32 address, llvm::Value * context_i64, bool is_function);
-
 		/// Test an instruction against the interpreter
 		template <class... Args>
 		void VerifyInstructionAgainstInterpreter(const char * name, void (Compiler::*recomp_fn)(Args...), void (PPUInterpreter::*interp_fn)(Args...), PPUState & input_state, Args... args);
@@ -780,13 +774,6 @@ namespace ppu_recompiler_llvm {
 		friend class CPUHybridDecoderRecompiler;
 	public:
 		virtual ~RecompilationEngine() override;
-
-		/**
-		 * Get the executable for the specified address
-		 * The pointer is always valid during the lifetime of RecompilationEngine
-		 * but the function pointed to can be updated.
-		 **/
-		const Executable *GetExecutable(u32 address, bool isFunction);
 
 		/**
 		 * Get the executable for the specified address if a compiled version is
