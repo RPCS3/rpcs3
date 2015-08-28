@@ -121,6 +121,12 @@ void Ini::Save(const std::string& section, const std::string& key, int value)
 	saveIniFile();
 }
 
+void Ini::Save(const std::string& section, const std::string& key, unsigned int value)
+{
+	static_cast<CSimpleIniCaseA*>(m_config)->SetLongValue(section.c_str(), key.c_str(), value);
+	saveIniFile();
+}
+
 void Ini::Save(const std::string& section, const std::string& key, bool value)
 {
 	static_cast<CSimpleIniCaseA*>(m_config)->SetBoolValue(section.c_str(), key.c_str(), value);
@@ -146,6 +152,11 @@ void Ini::Save(const std::string& section, const std::string& key, WindowInfo va
 }
 
 int Ini::Load(const std::string& section, const std::string& key, const int def_value)
+{
+	return static_cast<CSimpleIniCaseA*>(m_config)->GetLongValue(section.c_str(), key.c_str(), def_value);
+}
+
+unsigned int Ini::Load(const std::string& section, const std::string& key, const unsigned int def_value)
 {
 	return static_cast<CSimpleIniCaseA*>(m_config)->GetLongValue(section.c_str(), key.c_str(), def_value);
 }
