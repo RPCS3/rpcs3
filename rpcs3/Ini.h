@@ -25,12 +25,14 @@ protected:
 	Ini();
 
 	void Save(const std::string& section, const std::string& key, int value);
+	void Save(const std::string& section, const std::string& key, unsigned int value);
 	void Save(const std::string& section, const std::string& key, bool value);
 	void Save(const std::string& section, const std::string& key, std::pair<int, int> value);
 	void Save(const std::string& section, const std::string& key, const std::string& value);
 	void Save(const std::string& section, const std::string& key, WindowInfo value);
 
 	int Load(const std::string& section, const std::string& key, const int def_value);
+	unsigned int Load(const std::string& section, const std::string& key, const unsigned int def_value);
 	bool Load(const std::string& section, const std::string& key, const bool def_value);
 	std::pair<int, int> Load(const std::string& section, const std::string& key, const std::pair<int, int> def_value);
 	std::string Load(const std::string& section, const std::string& key, const std::string& def_value);
@@ -93,9 +95,9 @@ public:
 	// Core
 	IniEntry<u8> CPUDecoderMode;
 	IniEntry<bool> LLVMExclusionRange;
-	IniEntry<int> LLVMMinId;
-	IniEntry<int> LLVMMaxId;
-	IniEntry<int> LLVMThreshold;
+	IniEntry<u32> LLVMMinId;
+	IniEntry<u32> LLVMMaxId;
+	IniEntry<u32> LLVMThreshold;
 	IniEntry<u8> SPUDecoderMode;
 	IniEntry<bool> HookStFunc;
 	IniEntry<bool> LoadLibLv2;
