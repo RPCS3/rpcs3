@@ -53,6 +53,12 @@ struct content_permission_t final
 	}
 };
 
+struct game_t
+{
+	vm::ptr<CellGameDiscEjectCallback> funcEject;
+	vm::ptr<CellGameDiscInsertCallback> funcInsert;
+};
+
 s32 cellHddGameCheck(PPUThread& ppu, u32 version, vm::cptr<char> dirName, u32 errDialog, vm::ptr<CellHddGameStatCallback> funcStat, u32 container)
 {
 	cellGame.Warning("cellHddGameCheck(version=%d, dirName=*0x%x, errDialog=%d, funcStat=*0x%x, container=%d)", version, dirName, errDialog, funcStat, container);
@@ -683,9 +689,16 @@ s32 cellDiscGameGetBootDiscInfo()
 	throw EXCEPTION("");
 }
 
-s32 cellDiscGameRegisterDiscChangeCallback()
+s32 cellDiscGameRegisterDiscChangeCallback(vm::ptr<CellGameDiscEjectCallback> funcEject, vm::ptr<CellGameDiscInsertCallback> funcInsert)
 {
-	throw EXCEPTION("");
+	cellGame.Warning("cellDiscGameRegisterDiscChangeCallback(funcEject=*0x%x, funcInsert=*0x%x)", funcEject, funcInsert);
+
+	const auto game = fxm::get<game_t>();
+
+	game->funcEject = funcEject;
+	game->funcInsert = funcInsert;
+
+	return CELL_OK;
 }
 
 s32 cellDiscGameUnregisterDiscChangeCallback()
@@ -707,6 +720,9 @@ s32 cellGameUnregisterDiscChangeCallback()
 void cellSysutil_GameData_init()
 {
 	extern Module cellSysutil;
+
+	fxm::remove<game_t>();
+	fxm::make<game_t>();
 
 	REG_FUNC(cellSysutil, cellHddGameCheck);
 	REG_FUNC(cellSysutil, cellHddGameCheck2);

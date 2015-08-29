@@ -104,28 +104,44 @@ enum
 	CELL_GAME_ERRDIALOG_NOSPACE_EXIT         = 102,
 };
 
-struct CellGameContentSize
+// cellSysutil: cellHddGame
+enum
 {
-	be_t<s32> hddFreeSizeKB;
-	be_t<s32> sizeKB;
-	be_t<s32> sysSizeKB;
-};
+	// Return Codes
+	CELL_HDDGAME_RET_CANCEL         = 1,
+	CELL_HDDGAME_ERROR_CBRESULT     = 0x8002ba01,
+	CELL_HDDGAME_ERROR_ACCESS_ERROR = 0x8002ba02,
+	CELL_HDDGAME_ERROR_INTERNAL     = 0x8002ba03,
+	CELL_HDDGAME_ERROR_PARAM        = 0x8002ba04,
+	CELL_HDDGAME_ERROR_NOSPACE      = 0x8002ba05,
+	CELL_HDDGAME_ERROR_BROKEN       = 0x8002ba06,
+	CELL_HDDGAME_ERROR_FAILURE      = 0x8002ba07,
 
-struct CellGameSetInitParams
-{
-	char title[CELL_GAME_SYSP_TITLE_SIZE];
-	char titleId[CELL_GAME_SYSP_TITLEID_SIZE];
-	char reserved0[2];
-	char version[CELL_GAME_SYSP_VERSION_SIZE];
-	char reserved1[66];
-};
+	// Callback Result
+	CELL_HDDGAME_CBRESULT_OK_CANCEL   = 1,
+	CELL_HDDGAME_CBRESULT_OK          = 0,
+	CELL_HDDGAME_CBRESULT_ERR_NOSPACE = -1,
+	CELL_HDDGAME_CBRESULT_ERR_BROKEN  = -3,
+	CELL_HDDGAME_CBRESULT_ERR_NODATA  = -4,
+	CELL_HDDGAME_CBRESULT_ERR_INVALID = -5,
 
-struct CellGameDataCBResult
-{
-	be_t<s32> result;
-	be_t<s32> errNeedSizeKB;
-	be_t<u32> invalidMsg_addr;
-	be_t<u32> reserved;
+	// Character Strings
+	CELL_HDDGAME_INVALIDMSG_MAX      = 256,
+	CELL_HDDGAME_PATH_MAX            = 1055,
+	CELL_HDDGAME_SYSP_TITLE_SIZE     = 128,
+	CELL_HDDGAME_SYSP_TITLEID_SIZE   = 10,
+	CELL_HDDGAME_SYSP_VERSION_SIZE   = 6,
+	CELL_HDDGAME_SYSP_SYSTEMVER_SIZE = 8,
+
+	// HDD Directory exists
+	CELL_HDDGAME_ISNEWDATA_EXIST = 0,
+	CELL_HDDGAME_ISNEWDATA_NODIR = 1,
+
+	// Languages
+	CELL_HDDGAME_SYSP_LANGUAGE_NUM = 20,
+
+	// Stat Get
+	CELL_HDDGAME_SIZEKB_NOTCALC = -1,
 };
 
 enum // old consts
@@ -171,6 +187,30 @@ enum // old consts
 	CELL_GAMEDATA_ERRDIALOG_ALWAYS = 1,
 };
 
+struct CellGameContentSize
+{
+	be_t<s32> hddFreeSizeKB;
+	be_t<s32> sizeKB;
+	be_t<s32> sysSizeKB;
+};
+
+struct CellGameSetInitParams
+{
+	char title[CELL_GAME_SYSP_TITLE_SIZE];
+	char titleId[CELL_GAME_SYSP_TITLEID_SIZE];
+	char reserved0[2];
+	char version[CELL_GAME_SYSP_VERSION_SIZE];
+	char reserved1[66];
+};
+
+struct CellGameDataCBResult
+{
+	be_t<s32> result;
+	be_t<s32> errNeedSizeKB;
+	be_t<u32> invalidMsg_addr;
+	be_t<u32> reserved;
+};
+
 struct CellGameDataSystemFileParam
 {
 	char title[CELL_GAMEDATA_SYSP_TITLE_SIZE];
@@ -204,48 +244,6 @@ struct CellGameDataStatSet
 {
 	vm::bptr<CellGameDataSystemFileParam> setParam;
 	be_t<u32> reserved;
-};
-
-typedef void(CellGameDataStatCallback)(vm::ptr<CellGameDataCBResult> cbResult, vm::ptr<CellGameDataStatGet> get, vm::ptr<CellGameDataStatSet> set);
-
-// cellSysutil: cellHddGame
-enum
-{
-	// Return Codes
-	CELL_HDDGAME_RET_CANCEL         = 1,
-	CELL_HDDGAME_ERROR_CBRESULT     = 0x8002ba01,
-	CELL_HDDGAME_ERROR_ACCESS_ERROR = 0x8002ba02,
-	CELL_HDDGAME_ERROR_INTERNAL     = 0x8002ba03,
-	CELL_HDDGAME_ERROR_PARAM        = 0x8002ba04,
-	CELL_HDDGAME_ERROR_NOSPACE      = 0x8002ba05,
-	CELL_HDDGAME_ERROR_BROKEN       = 0x8002ba06,
-	CELL_HDDGAME_ERROR_FAILURE      = 0x8002ba07,
-
-	// Callback Result
-	CELL_HDDGAME_CBRESULT_OK_CANCEL   = 1,
-	CELL_HDDGAME_CBRESULT_OK          = 0,
-	CELL_HDDGAME_CBRESULT_ERR_NOSPACE = -1,
-	CELL_HDDGAME_CBRESULT_ERR_BROKEN  = -3,
-	CELL_HDDGAME_CBRESULT_ERR_NODATA  = -4,
-	CELL_HDDGAME_CBRESULT_ERR_INVALID = -5,
-
-	// Character Strings
-	CELL_HDDGAME_INVALIDMSG_MAX      = 256,
-	CELL_HDDGAME_PATH_MAX            = 1055,
-	CELL_HDDGAME_SYSP_TITLE_SIZE     = 128,
-	CELL_HDDGAME_SYSP_TITLEID_SIZE   = 10,
-	CELL_HDDGAME_SYSP_VERSION_SIZE   = 6,
-	CELL_HDDGAME_SYSP_SYSTEMVER_SIZE = 8,
-
-	// HDD Directory exists
-	CELL_HDDGAME_ISNEWDATA_EXIST = 0,
-	CELL_HDDGAME_ISNEWDATA_NODIR = 1,
-
-	// Languages
-	CELL_HDDGAME_SYSP_LANGUAGE_NUM = 20,
-
-	// Stat Get
-	CELL_HDDGAME_SIZEKB_NOTCALC = -1,
 };
 
 struct CellHddGameSystemFileParam
@@ -293,4 +291,7 @@ struct CellHddGameStatSet
 	vm::bptr<void> reserved;
 };
 
-typedef void(CellHddGameStatCallback)(vm::ptr<CellHddGameCBResult> cbResult, vm::ptr<CellHddGameStatGet> get, vm::ptr<CellHddGameStatSet> set);
+using CellGameDataStatCallback   = void(vm::ptr<CellGameDataCBResult> cbResult, vm::ptr<CellGameDataStatGet> get, vm::ptr<CellGameDataStatSet> set);
+using CellHddGameStatCallback    = void(vm::ptr<CellHddGameCBResult> cbResult, vm::ptr<CellHddGameStatGet> get, vm::ptr<CellHddGameStatSet> set);
+using CellGameDiscEjectCallback  = void();
+using CellGameDiscInsertCallback = void(u32 discType, vm::ptr<char> titleId);

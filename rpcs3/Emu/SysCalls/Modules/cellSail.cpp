@@ -125,7 +125,7 @@ s32 cellSailDescriptorCreateDatabase(vm::ptr<CellSailDescriptor> pSelf, vm::ptr<
 {
 	cellSail.Warning("cellSailDescriptorCreateDatabase(pSelf=*0x%x, pDatabase=*0x%x, size=%d, arg=%d", pSelf, pDatabase, size, arg);
 
-	switch ((s32)pSelf->streamType)
+	switch (pSelf->streamType)
 	{
 		case CELL_SAIL_STREAM_PAMF:
 		{
@@ -647,6 +647,7 @@ s32 cellSailPlayerInitialize2(
 	pSelf->callbackArg = callbackArg;
 	pSelf->attribute = *pAttribute;
 	pSelf->resource = *pResource;
+	pSelf->descriptors = 0;
 	pSelf->booted = false;
 	pSelf->paused = true;
 
@@ -693,7 +694,7 @@ s32 cellSailPlayerInitialize2(
 
 s32 cellSailPlayerFinalize(vm::ptr<CellSailPlayer> pSelf)
 {
-	cellSail.Todo("cellSailPlayerFinalize(pSelf=0x%x)", pSelf.addr());
+	cellSail.Todo("cellSailPlayerFinalize(pSelf=*0x%x)", pSelf);
 
 	if (pSelf->sAdapter)
 	{
@@ -778,8 +779,9 @@ s32 cellSailPlayerSetParameter(vm::ptr<CellSailPlayer> pSelf, s32 parameterType,
 
 	switch (parameterType)
 	{
-	case CELL_SAIL_PARAMETER_ENABLE_APOST_SRC: pSelf->ENABLE_APOST_SRC = param0; break;
-	case CELL_SAIL_PARAMETER_GRAPHICS_ADAPTER_BUFFER_RELEASE_DELAY: pSelf->GRAPHICS_ADAPTER_BUFFER_RELEASE_DELAY = param1; break;
+	case CELL_SAIL_PARAMETER_GRAPHICS_ADAPTER_BUFFER_RELEASE_DELAY: pSelf->GRAPHICS_ADAPTER_BUFFER_RELEASE_DELAY = param1; break; // TODO: Stream index
+	case CELL_SAIL_PARAMETER_CONTROL_PPU_THREAD_STACK_SIZE: pSelf->CONTROL_PPU_THREAD_STACK_SIZE = param0; break;
+	case CELL_SAIL_PARAMETER_ENABLE_APOST_SRC: pSelf->ENABLE_APOST_SRC = param1; break; // TODO: Stream index
 	default:
 		cellSail.Todo("cellSailPlayerSetParameter(): unimplemented parameter type 0x%x (%s).", parameterType, ParameterCodeToName(parameterType));
 		break;
@@ -833,7 +835,7 @@ s32 cellSailPlayerAddDescriptor(vm::ptr<CellSailPlayer> pSelf, vm::ptr<CellSailD
 {
 	cellSail.Warning("cellSailPlayerAddDescriptor(pSelf=*0x%x, pDesc=*0x%x)", pSelf, pDesc);
 
-	if (pSelf && pSelf->descriptors < 3 && pDesc)
+	if (pSelf && pDesc && pSelf->descriptors < 3)
 	{
 		pSelf->descriptors++;
 		pSelf->registeredDescriptors[pSelf->descriptors] = pDesc;
@@ -885,12 +887,34 @@ s32 cellSailPlayerCreateDescriptor(vm::ptr<CellSailPlayer> pSelf, s32 streamType
 				}
 				else
 				{
-					cellSail.Warning("Couldn't open PAMF: %s", uri.c_str());
+					cellSail.Error("Couldn't open PAMF: %s", uri.c_str());
 				}
 			}
 			else
 			{
-				cellSail.Warning("Unhandled uri: %s", uri.c_str());
+				cellSail.Error("Unhandled PAMF uri: %s", uri.c_str());
+			}
+			break;
+		}
+		case CELL_SAIL_STREAM_MP4:
+		{
+			std::string uri = pUri.get_ptr();
+			if (uri.substr(0, 12) == "x-cell-fs://")
+			{
+				std::string path = uri.substr(12);
+				vfsFile f;
+				if (f.Open(path))
+				{
+					cellSail.Todo("MP4 stream type is currently not supported.");
+				}
+				else
+				{
+					cellSail.Error("Couldn't open MP4: %s", uri.c_str());
+				}
+			}
+			else
+			{
+				cellSail.Error("Unhandled MP4 uri: %s", uri.c_str());
 			}
 			break;
 		}
@@ -906,7 +930,9 @@ s32 cellSailPlayerDestroyDescriptor(vm::ptr<CellSailPlayer> pSelf, vm::ptr<CellS
 	cellSail.Todo("cellSailPlayerAddDescriptor(pSelf=*0x%x, pDesc=*0x%x)", pSelf, pDesc);
 
 	if (pDesc->registered)
+	{
 		return CELL_SAIL_ERROR_INVALID_STATE;
+	}
 
 	return CELL_OK;
 }
@@ -918,8 +944,13 @@ s32 cellSailPlayerRemoveDescriptor(vm::ptr<CellSailPlayer> pSelf, vm::ptr<CellSa
 	if (pSelf->descriptors > 0)
 	{
 		ppDesc = pSelf->registeredDescriptors[pSelf->descriptors];
-		delete &pSelf->registeredDescriptors[pSelf->descriptors];
+		// TODO: Delete descriptors properly
+		//delete &pSelf->registeredDescriptors[pSelf->descriptors];
 		pSelf->descriptors--;
+	}
+	else
+	{
+		cellSail.Error("No descriptors to remove.");
 	}
 
 	return pSelf->descriptors;

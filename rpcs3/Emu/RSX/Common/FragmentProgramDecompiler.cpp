@@ -325,13 +325,48 @@ std::string FragmentProgramDecompiler::BuildCode()
 	OS << std::endl;
 	insertConstants(OS);
 	OS << std::endl;
-	insertIntputs(OS);
+	insertInputs(OS);
 	OS << std::endl;
 	insertOutputs(OS);
 	OS << std::endl;
 	insertMainStart(OS);
 	OS << main << std::endl;
 	insertMainEnd(OS);
+
+	/* HACK:
+	   Some games try to access gl_Position in fragment shader,
+	   we pass gl_Position from vertex shader to fragment shader as
+	   glPosition and replace the gl_Position occurences in fragment shader with glPosition.
+	*/
+	std::string line;
+	std::string line_end;
+	std::vector<std::string> lines;
+	std::string replace = "gl_Position";
+	std::string replace_with = "glPosition";
+	
+	while (std::getline(OS, line))
+	{
+		std::string::size_type pos = 0;
+
+		while ((pos = line.find(replace, pos)) != std::string::npos)
+		{
+			line_end = line.substr(pos + replace.length());
+			line.replace(pos, line.size(), replace_with + line_end);
+			pos += replace_with.size();
+		}
+
+		lines.push_back(line);
+	}
+
+	// Clear the stringstream
+	OS.clear();
+	OS.str(std::string());
+
+	// Output the modified stringstream
+	for (int c = 0; c < lines.size(); c++)
+	{
+		OS << lines.at(c) << std::endl;
+	}
 
 	return OS.str();
 }

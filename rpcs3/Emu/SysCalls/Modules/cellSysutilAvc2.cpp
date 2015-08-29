@@ -43,7 +43,7 @@ s32 cellSysutilAvc2InitParam(u16 version, vm::ptr<CellSysutilAvc2InitParam> opti
 	}
 	else
 	{
-		cellSysutilAvc2.Error("cellSysutilAvc2InitParam(): Version 110 or 120 used, please report this to a developer.");
+		cellSysutilAvc2.Error("cellSysutilAvc2InitParam(): Version %d used, please report this to a developer.", version);
 	}
 
 	return CELL_OK;

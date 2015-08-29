@@ -31,8 +31,10 @@ void GLFragmentDecompilerThread::insertHeader(std::stringstream & OS)
 	OS << "#version 420" << std::endl;
 }
 
-void GLFragmentDecompilerThread::insertIntputs(std::stringstream & OS)
+void GLFragmentDecompilerThread::insertInputs(std::stringstream & OS)
 {
+	OS << "in vec4 glPosition;" << std::endl;
+
 	for (ParamType PT : m_parr.params[PF_PARAM_IN])
 	{
 		for (ParamItem PI : PT.items)

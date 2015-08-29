@@ -82,6 +82,8 @@ static const reg_info reg_table[] =
 
 void GLVertexDecompilerThread::insertOutputs(std::stringstream & OS, const std::vector<ParamType> & outputs)
 {
+	OS << "out vec4 glPosition;" << std::endl;
+
 	for (auto &i : reg_table)
 	{
 		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", i.src_reg) && i.need_declare)
@@ -121,6 +123,7 @@ void GLVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
 			OS << "	" << i.name << " = " << i.src_reg << i.src_reg_mask << ";" << std::endl;
 	}
 	OS << "	gl_Position = gl_Position * scaleOffsetMat;" << std::endl;
+	OS << "\tglPosition = gl_Position;" << std::endl;
 	OS << "}" << std::endl;
 }
 

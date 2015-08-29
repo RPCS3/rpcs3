@@ -509,9 +509,10 @@ s32 cellPadInfoSensorMode(u32 port_no)
 	return (pads[port_no].m_device_capability & CELL_PAD_CAPABILITY_SENSOR_MODE) > 0;
 }
 
+// Seems to not be properly implemented
 s32 cellPadSetPressMode(u32 port_no, u32 mode)
 {
-	sys_io.Error("cellPadSetPressMode(port_no=%d, mode=%d)", port_no, mode);
+	sys_io.Warning("cellPadSetPressMode(port_no=%d, mode=%d)", port_no, mode);
 
 	if (!Emu.GetPadManager().IsInited())
 	{
