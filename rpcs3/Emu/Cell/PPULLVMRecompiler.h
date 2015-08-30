@@ -24,6 +24,13 @@
 #endif
 
 namespace ppu_recompiler_llvm {
+	enum ExecutionStatus
+	{
+		ExecutionStatusReturn = 0, ///< Block has hit a return, caller can continue execution
+		ExecutionStatusBlockEnded, ///< Block has been executed but no return was hit, at least another block must be executed before caller can continue
+		ExecutionStatusPropagateException, ///< an exception was thrown
+	};
+
 	class Compiler;
 	class RecompilationEngine;
 	class ExecutionEngine;

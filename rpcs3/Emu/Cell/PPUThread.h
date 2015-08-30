@@ -536,6 +536,11 @@ public:
 
 	std::function<void(PPUThread& CPU)> custom_task;
 
+	/// When a thread has met an exception, this variable is used to retro propagate it through stack call.
+	/// Note that exception_ptr is similar to shared_ptr and doesn't need to be freed, but need a nullptr
+	/// to be assigned.
+	std::exception_ptr pending_exception;
+
 public:
 	PPUThread(const std::string& name);
 	virtual ~PPUThread() override;

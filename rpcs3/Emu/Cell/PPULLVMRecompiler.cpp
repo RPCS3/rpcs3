@@ -172,7 +172,7 @@ std::pair<Executable, llvm::ExecutionEngine *> Compiler::Compile(const std::stri
 
 		SetPc(m_ir_builder->getInt32(m_state.current_instruction_address));
 
-		m_ir_builder->CreateRet(exit_instr_i32);
+		m_ir_builder->CreateRet(m_ir_builder->getInt32(ExecutionStatus::ExecutionStatusBlockEnded));
 	}
 
 	// If the function has a default exit block then generate code for it
@@ -182,8 +182,7 @@ std::pair<Executable, llvm::ExecutionEngine *> Compiler::Compile(const std::stri
 		PHINode *exit_instr_i32 = m_ir_builder->CreatePHI(m_ir_builder->getInt32Ty(), 0);
 		exit_instr_list.push_back(exit_instr_i32);
 
-		m_ir_builder->CreateRet(exit_instr_i32);
-
+		m_ir_builder->CreateRet(m_ir_builder->getInt32(0));
 	}
 
 	// Add incoming values for all exit instr PHI nodes
@@ -508,13 +507,21 @@ ppu_recompiler_llvm::CPUHybridDecoderRecompiler::~CPUHybridDecoderRecompiler() {
 }
 
 u32 ppu_recompiler_llvm::CPUHybridDecoderRecompiler::DecodeMemory(const u32 address) {
-	ExecuteFunction(&m_ppu, 0);
+	// TODO: exception_ptr doesnt work, should add every possible exception
+	if (ExecuteFunction(&m_ppu, 0) == ExecutionStatus::ExecutionStatusPropagateException)
+	{
+		std::exception_ptr exn = m_ppu.pending_exception;
+		m_ppu.pending_exception = nullptr;
+		std::rethrow_exception(exn);
+	}
 	return 0;
 }
 
 u32 ppu_recompiler_llvm::CPUHybridDecoderRecompiler::ExecuteFunction(PPUThread * ppu_state, u64 context) {
 	auto execution_engine = (CPUHybridDecoderRecompiler *)ppu_state->GetDecoder();
-	return ExecuteTillReturn(ppu_state, 0);
+	if (ExecuteTillReturn(ppu_state, 0) == ExecutionStatus::ExecutionStatusPropagateException)
+		return ExecutionStatus::ExecutionStatusPropagateException;
+	return ExecutionStatus::ExecutionStatusReturn;
 }
 
 /// Get the branch type from a branch instruction
@@ -552,14 +559,24 @@ u32 ppu_recompiler_llvm::CPUHybridDecoderRecompiler::ExecuteTillReturn(PPUThread
 		{
 			auto entry = ppu_state->PC;
 			u32 exit = (u32)executable(ppu_state, 0);
-			if (exit == 0)
-				return 0;
+			if (exit == ExecutionStatus::ExecutionStatusReturn)
+				return ExecutionStatus::ExecutionStatusReturn;
+			if (exit == ExecutionStatus::ExecutionStatusPropagateException)
+				return ExecutionStatus::ExecutionStatusPropagateException;
 			execution_engine->m_recompilation_engine->NotifyBlockStart(ppu_state->PC);
 			continue;
 		}
 		u32 instruction = vm::ps3::read32(ppu_state->PC);
 		u32 oldPC = ppu_state->PC;
-		execution_engine->m_decoder.Decode(instruction);
+		try
+		{
+			execution_engine->m_decoder.Decode(instruction);
+		}
+		catch (...)
+		{
+			ppu_state->pending_exception = std::current_exception();
+			return ExecutionStatus::ExecutionStatusPropagateException;
+		}
 		auto branch_type = ppu_state->PC != oldPC ? GetBranchTypeFromInstruction(instruction) : BranchType::NonBranch;
 		ppu_state->PC += 4;
 
@@ -568,7 +585,10 @@ u32 ppu_recompiler_llvm::CPUHybridDecoderRecompiler::ExecuteTillReturn(PPUThread
 			if (Emu.GetCPUThreadStop() == ppu_state->PC) ppu_state->fast_stop();
 			return 0;
 		case BranchType::FunctionCall: {
-			ExecuteFunction(ppu_state, 0);
+			u32 status = ExecuteFunction(ppu_state, 0);
+			// TODO: exception_ptr doesnt work, should add every possible exception
+			if (status == ExecutionStatus::ExecutionStatusPropagateException)
+				return ExecutionStatus::ExecutionStatusPropagateException;
 			break;
 		}
 		case BranchType::LocalBranch:

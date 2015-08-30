@@ -1752,21 +1752,37 @@ void Compiler::BC(u32 bo, u32 bi, s32 bd, u32 aa, u32 lk) {
 	CreateBranch(CheckBranchCondition(bo, bi), target_i32, lk ? true : false);
 }
 
+
+
+static u32
+wrappedExecutePPUFuncByIndex(PPUThread &CPU, u32 index)
+{
+	try
+	{
+		execute_ppu_func_by_index(CPU, index);
+		return ExecutionStatus::ExecutionStatusBlockEnded;
+	}
+	catch (...)
+	{
+		CPU.pending_exception = std::current_exception();
+		return ExecutionStatus::ExecutionStatusPropagateException;
+	}
+}
+
 void Compiler::HACK(u32 index) {
-	Call<void>("execute_ppu_func_by_index", &execute_ppu_func_by_index, m_state.args[CompileTaskState::Args::State], m_ir_builder->getInt32(index & EIF_USE_BRANCH ? index : index & ~EIF_PERFORM_BLR));
+	llvm::Value *status = Call<u32>("wrappedExecutePPUFuncByIndex", &wrappedExecutePPUFuncByIndex, m_state.args[CompileTaskState::Args::State], m_ir_builder->getInt32(index & EIF_USE_BRANCH ? index : index & ~EIF_PERFORM_BLR));
+	llvm::BasicBlock *cputhreadexitblock = GetBasicBlockFromAddress(m_state.current_instruction_address, "early_exit");
+	llvm::Value *isCPUThreadExit = m_ir_builder->CreateICmpEQ(status, m_ir_builder->getInt32(ExecutionStatus::ExecutionStatusPropagateException));
+	llvm::BasicBlock *normal_execution  = GetBasicBlockFromAddress(m_state.current_instruction_address, "normal_execution");
+	m_ir_builder->CreateCondBr(isCPUThreadExit, cputhreadexitblock, normal_execution);
+	m_ir_builder->SetInsertPoint(cputhreadexitblock);
+	m_ir_builder->CreateRet(m_ir_builder->getInt32(ExecutionStatus::ExecutionStatusPropagateException));
+
+	m_ir_builder->SetInsertPoint(normal_execution);
 	if (index & EIF_PERFORM_BLR || index & EIF_USE_BRANCH) {
 		auto lr_i32 = index & EIF_USE_BRANCH ? GetPc() : m_ir_builder->CreateTrunc(m_ir_builder->CreateAnd(GetLr(), ~0x3ULL), m_ir_builder->getInt32Ty());
 		CreateBranch(nullptr, lr_i32, false, (index & EIF_USE_BRANCH) == 0);
 	}
-	// copied from Compiler::SC()
-	//auto ret_i1   = Call<bool>("PollStatus", m_poll_status_function, m_state.args[CompileTaskState::Args::State]);
-	//auto cmp_i1   = m_ir_builder->CreateICmpEQ(ret_i1, m_ir_builder->getInt1(true));
-	//auto then_bb  = GetBasicBlockFromAddress(m_state.current_instruction_address, "then_true");
-	//auto merge_bb = GetBasicBlockFromAddress(m_state.current_instruction_address, "merge_true");
-	//m_ir_builder->CreateCondBr(cmp_i1, then_bb, merge_bb);
-	//m_ir_builder->SetInsertPoint(then_bb);
-	//m_ir_builder->CreateRet(m_ir_builder->getInt32(0xFFFFFFFF));
-	//m_ir_builder->SetInsertPoint(merge_bb);
 }
 
 void Compiler::SC(u32 lev) {
@@ -1788,7 +1804,7 @@ void Compiler::SC(u32 lev) {
 	auto merge_bb = GetBasicBlockFromAddress(m_state.current_instruction_address, "merge_true");
 	m_ir_builder->CreateCondBr(cmp_i1, then_bb, merge_bb);
 	m_ir_builder->SetInsertPoint(then_bb);
-	m_ir_builder->CreateRet(m_ir_builder->getInt32(0xFFFFFFFF));
+	m_ir_builder->CreateRet(m_ir_builder->getInt32(ExecutionStatus::ExecutionStatusBlockEnded));
 	m_ir_builder->SetInsertPoint(merge_bb);
 }
 
@@ -5199,11 +5215,21 @@ void Compiler::CreateBranch(llvm::Value * cmp_i1, llvm::Value * target_i32, bool
 			}
 
 			SetPc(target_i32);
-			Function *fn = m_module->getFunction(fmt::format("function_0x%08X", target_address));
-			if (fn)
-				m_ir_builder->CreateCall2(fn, m_state.args[CompileTaskState::Args::State], m_ir_builder->getInt64(0));
-			else
-				Call<u32>("execute_unknown_function", nullptr, m_state.args[CompileTaskState::Args::State], m_ir_builder->getInt64(0));
+//			Function *fn = m_module->getFunction(fmt::format("function_0x%08X", target_address));
+			llvm::Value *execStatus;
+//			if (fn)
+//				execStatus = m_ir_builder->CreateCall2(fn, m_state.args[CompileTaskState::Args::State], m_ir_builder->getInt64(0));
+//			else
+				execStatus = Call<u32>("execute_unknown_function", nullptr, m_state.args[CompileTaskState::Args::State], m_ir_builder->getInt64(0));
+
+			llvm::BasicBlock *cputhreadexitblock = GetBasicBlockFromAddress(m_state.current_instruction_address, "early_exit");
+			llvm::Value *isCPUThreadExit = m_ir_builder->CreateICmpEQ(execStatus, m_ir_builder->getInt32(ExecutionStatus::ExecutionStatusPropagateException));
+			llvm::BasicBlock *normal_execution = GetBasicBlockFromAddress(m_state.current_instruction_address, "normal_execution");
+			m_ir_builder->CreateCondBr(isCPUThreadExit, cputhreadexitblock, normal_execution);
+			m_ir_builder->SetInsertPoint(cputhreadexitblock);
+			m_ir_builder->CreateRet(m_ir_builder->getInt32(ExecutionStatus::ExecutionStatusPropagateException));
+			m_ir_builder->SetInsertPoint(normal_execution);
+
 			m_ir_builder->CreateBr(GetBasicBlockFromAddress(m_state.current_instruction_address + 4));
 		}
 		else {
@@ -5221,15 +5247,25 @@ void Compiler::CreateBranch(llvm::Value * cmp_i1, llvm::Value * target_i32, bool
 		SetPc(target_i32);
 		if (target_is_lr && !lk) {
 			// Return from this function
-			m_ir_builder->CreateRet(m_ir_builder->getInt32(0));
+			m_ir_builder->CreateRet(m_ir_builder->getInt32(ExecutionStatus::ExecutionStatusReturn));
 		}
 		else if (lk) {
 			BasicBlock *next_block = GetBasicBlockFromAddress(m_state.current_instruction_address + 4);
-			m_ir_builder->CreateCall2(m_execute_unknown_function, m_state.args[CompileTaskState::Args::State], m_ir_builder->getInt64(0));
+
+			llvm::Value *execStatus = m_ir_builder->CreateCall2(m_execute_unknown_function, m_state.args[CompileTaskState::Args::State], m_ir_builder->getInt64(0));
+
+			llvm::BasicBlock *cputhreadexitblock = GetBasicBlockFromAddress(m_state.current_instruction_address, "early_exit");
+			llvm::Value *isCPUThreadExit = m_ir_builder->CreateICmpEQ(execStatus, m_ir_builder->getInt32(ExecutionStatus::ExecutionStatusPropagateException));
+			llvm::BasicBlock *normal_execution = GetBasicBlockFromAddress(m_state.current_instruction_address, "normal_execution");
+			m_ir_builder->CreateCondBr(isCPUThreadExit, cputhreadexitblock, normal_execution);
+			m_ir_builder->SetInsertPoint(cputhreadexitblock);
+			m_ir_builder->CreateRet(m_ir_builder->getInt32(ExecutionStatus::ExecutionStatusPropagateException));
+			m_ir_builder->SetInsertPoint(normal_execution);
+
 			m_ir_builder->CreateBr(next_block);
 		}
 		else {
-			m_ir_builder->CreateRet(m_ir_builder->getInt32(-1));
+			m_ir_builder->CreateRet(m_ir_builder->getInt32(ExecutionStatus::ExecutionStatusBlockEnded));
 		}
 	}
 
