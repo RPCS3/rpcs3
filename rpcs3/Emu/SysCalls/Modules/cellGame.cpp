@@ -115,9 +115,7 @@ s32 cellHddGameCheck(PPUThread& ppu, u32 version, vm::cptr<char> dirName, u32 er
 
 		for (u32 i = 0; i < CELL_HDDGAME_SYSP_LANGUAGE_NUM; i++)
 		{
-			char key[16];
-			sprintf(key, "TITLE_%02d", i);
-			title = psf.GetString(key);
+			title = psf.GetString(fmt::format("TITLE_%02d", i));
 			strcpy_trunc(get->getParam.titleLang[i], title);
 		}
 	}
