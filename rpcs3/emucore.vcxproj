@@ -599,7 +599,6 @@
     <ClInclude Include="Emu\SysCalls\Modules\cellAudio.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellAudioIn.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellAudioOut.h" />
-    <ClInclude Include="Emu\SysCalls\Modules\cellAvconfExt.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellCamera.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellDmux.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellFiber.h" />

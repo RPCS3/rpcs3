@@ -42,16 +42,20 @@ u32 map_offset_pos = 0;
  */ 
 u32 gcmGetLocalMemorySize(u32 sdk_version)
 {
-	if (sdk_version >= 0x00220000) {
+	if (sdk_version >= 0x00220000)
+	{
 		return 0x0F900000; // 249MB
 	}
-	if (sdk_version >= 0x00200000) {
+	if (sdk_version >= 0x00200000)
+	{
 		return 0x0F200000; // 242MB
 	}
-	if (sdk_version >= 0x00190000) {
+	if (sdk_version >= 0x00190000)
+	{
 		return 0x0EA00000; // 234MB
 	}
-	if (sdk_version >= 0x00180000) {
+	if (sdk_version >= 0x00180000)
+	{
 		return 0x0E800000; // 232MB
 	}
 	return 0x0E000000; // 224MB
@@ -107,12 +111,12 @@ vm::ptr<CellGcmReportData> cellGcmGetReportDataAddressLocation(u32 index, u32 lo
 
 		u32 reportAddr;
 		
-		if (Emu.GetGSManager().GetRender().dma_report == CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_REPORT)
+		// TOOD: Investigate the correctness. This report address is used in report_to_main_memory graphics sample.
+		/*if (Emu.GetGSManager().GetRender().dma_report == CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_REPORT)
 		{
-			// TOOD: Investigate the correctness. This report address is used in report_to_main_memory graphics sample.
 			reportAddr = 0x0e000000;
 		}
-		else if (index != 0)
+		else*/ if (index != 0)
 		{
 			reportAddr = index * 0x10;
 		}
@@ -138,7 +142,7 @@ u64 cellGcmGetTimeStamp(u32 index)
 		return 0;
 	}
 
-	return vm::read64(local_addr + index * 0x10);
+	return vm::read64(0xC0000000 + index * 0x10);
 }
 
 s32 cellGcmGetCurrentField()
@@ -166,7 +170,7 @@ u32 cellGcmGetNotifyDataAddress(u32 index)
  */
 vm::ptr<CellGcmReportData> _cellGcmFunc12()
 {
-	return vm::ptr<CellGcmReportData>::make(local_addr); // TODO
+	return vm::ptr<CellGcmReportData>::make(0xC0000000); // TODO
 }
 
 u32 cellGcmGetReport(u32 type, u32 index)
@@ -196,7 +200,7 @@ u32 cellGcmGetReportDataAddress(u32 index)
 		return 0;
 	}
 
-	return local_addr + index * 0x10;
+	return 0xC0000000 + index * 0x10;
 }
 
 u32 cellGcmGetReportDataLocation(u32 index, u32 location)
@@ -216,10 +220,10 @@ u64 cellGcmGetTimeStampLocation(u32 index, u32 location)
 		if (index >= 2048)
 		{
 			cellGcmSys.Error("cellGcmGetTimeStampLocation: Wrong local index (%d)", index);
-			return CELL_OK;
+			return 0;
 		}
 
-		return vm::read64(local_addr + index * 0x10);
+		return vm::read64(0xC0000000 + index * 0x10);
 	}
 
 	if (location == CELL_GCM_LOCATION_MAIN)
@@ -227,14 +231,14 @@ u64 cellGcmGetTimeStampLocation(u32 index, u32 location)
 		if (index >= 1024 * 1024)
 		{
 			cellGcmSys.Error("cellGcmGetTimeStampLocation: Wrong main index (%d)", index);
-			return CELL_OK;
+			return 0;
 		}
 
 		return vm::read64(Emu.GetGSManager().GetRender().m_report_main_addr + index * 0x10);
 	}
 
 	cellGcmSys.Error("cellGcmGetTimeStampLocation: Wrong location (%d)", location);
-	return CELL_OK;
+	return 0;
 }
 
 //----------------------------------------------------------------------------
@@ -362,8 +366,8 @@ s32 _cellGcmInitBody(vm::pptr<CellGcmContextData> context, u32 cmdSize, u32 ioSi
 	if ((!local_size && !local_addr) || (local_size == 0 && local_addr == 0))
 	{
 		local_size = 0xf900000; // TODO: Get sdk_version in _cellGcmFunc15 and pass it to gcmGetLocalMemorySize
-		local_addr = 0xC0000000; // TODO: Seems like it should be 0x40301400?
-		vm::falloc(local_addr, local_size, vm::video);
+		local_addr = 0xC0000000;
+		vm::falloc(0xC0000000, local_size, vm::video);
 	}
 
 	cellGcmSys.Warning("*** local memory(addr=0x%x, size=0x%x)", local_addr, local_size);
@@ -862,7 +866,7 @@ s32 cellGcmAddressToOffset(u32 address, vm::ptr<u32> offset)
 	// Address in local memory
 	if ((address >> 28) == 0xC)
 	{
-		result = address - local_addr;
+		result = address - 0xC0000000;
 	}
 	// Address in main memory else check 
 	else
@@ -905,8 +909,10 @@ s32 cellGcmIoOffsetToAddress(u32 ioOffset, vm::ptr<u32> address)
 
 	u32 realAddr;
 
-	if (!RSXIOMem.getRealAddr(ioOffset, realAddr)) 
+	if (!RSXIOMem.getRealAddr(ioOffset, realAddr))
+	{
 		return CELL_GCM_ERROR_FAILURE;
+	}
 
 	*address = realAddr;
 
@@ -964,7 +970,6 @@ s32 cellGcmMapLocalMemory(vm::ptr<u32> address, vm::ptr<u32> size)
 {
 	cellGcmSys.Warning("cellGcmMapLocalMemory(address=*0x%x, size=*0x%x)", address, size);
 
-	// TODO: Setting local address to the default address doesn't seem to make much sense. FIX ME.
 	if (!local_addr && !local_size && vm::falloc(local_addr = 0xC0000000, local_size = 0xf900000 /* TODO */, vm::video))
 	{
 		*address = local_addr;

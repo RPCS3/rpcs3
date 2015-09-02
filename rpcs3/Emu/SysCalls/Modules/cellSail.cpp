@@ -16,8 +16,8 @@ void playerBoot(vm::ptr<CellSailPlayer> pSelf, u64 userParam)
 	Emu.GetCallbackManager().Async([=](CPUThread& CPU)
 	{
 		CellSailEvent evnt;
-		evnt.u32x2.major = CELL_SAIL_EVENT_PLAYER_STATE_CHANGED;
-		evnt.u32x2.minor = 0;
+		evnt.major = CELL_SAIL_EVENT_PLAYER_STATE_CHANGED;
+		evnt.minor = 0;
 		pSelf->callback(static_cast<PPUThread&>(CPU), pSelf->callbackArg, evnt, CELL_SAIL_PLAYER_STATE_BOOT_TRANSITION, 0);
 	});
 
@@ -27,15 +27,15 @@ void playerBoot(vm::ptr<CellSailPlayer> pSelf, u64 userParam)
 	Emu.GetCallbackManager().Async([=](CPUThread& CPU)
 	{
 		CellSailEvent evnt;
-		evnt.u32x2.major = CELL_SAIL_EVENT_PLAYER_CALL_COMPLETED;
-		evnt.u32x2.minor = CELL_SAIL_PLAYER_CALL_BOOT;
+		evnt.major = CELL_SAIL_EVENT_PLAYER_CALL_COMPLETED;
+		evnt.minor = CELL_SAIL_PLAYER_CALL_BOOT;
 		pSelf->callback(static_cast<PPUThread&>(CPU), pSelf->callbackArg, evnt, 0, 0);
 	});
 }
 
 s32 cellSailMemAllocatorInitialize(vm::ptr<CellSailMemAllocator> pSelf, vm::ptr<CellSailMemAllocatorFuncs> pCallbacks)
 {
-	cellSail.Warning("cellSailMemAllocatorInitialize(pSelf_addr=*0x%x, pCallbacks_addr=*0x%x)", pSelf, pCallbacks);
+	cellSail.Warning("cellSailMemAllocatorInitialize(pSelf=*0x%x, pCallbacks=*0x%x)", pSelf, pCallbacks);
 
 	pSelf->callbacks = pCallbacks;
 
@@ -652,40 +652,40 @@ s32 cellSailPlayerInitialize2(
 	pSelf->paused = true;
 
 	// Set the default attributes
-	pSelf->CONTROL_PPU_THREAD_PRIORITY = 900;
-	pSelf->CONTROL_PPU_THREAD_STACK_SIZE = 12288;
-	pSelf->SPURS_NUM_OF_SPUS = 4;
-	pSelf->SPURS_SPU_THREAD_PRIORITY = 100;
-	pSelf->SPURS_PPU_THREAD_PRIORITY = 300;
-	pSelf->SPURS_EXIT_IF_NO_WORK = true;
-	pSelf->IO_PPU_THREAD_PRIORITY = 1200;
-	//pSelf->IO_PPU_THREAD_STACK_SIZE = 4096;
-	pSelf->DMUX_PPU_THREAD_PRIORITY = 700;
-	pSelf->DMUX_NUM_OF_SPUS = 1;
-	pSelf->DMUX_SPURS_TASK_PRIORITIES = 0x0101010101010101;
-	pSelf->ADEC_PPU_THREAD_PRIORITY = 450;
-	pSelf->ADEC_NUM_OF_SPUS = 1;
-	pSelf->ADEC_SPURS_TASK_PRIORITIES = 0x0101010101010101;
-	pSelf->ENABLE_APOST_SRC = false;
-	pSelf->VDEC_PPU_THREAD_PRIORITY = 550;
-	pSelf->VDEC_M2V_NUM_OF_SPUS = 1;
-	pSelf->VDEC_AVC_NUM_OF_SPUS = 4;
-	pSelf->VDEC_SPURS_TASK_PRIORITIES = 0x0101010101010101;
-	//pSelf->ENABLE_VPOST = nullptr;
-	pSelf->VPOST_PPU_THREAD_PRIORITY = 500;
-	pSelf->VPOST_NUM_OF_SPUS = 1;
-	pSelf->VPOST_SPURS_TASK_PRIORITIES = 0x0101010101010101;
-	pSelf->GRAPHICS_ADAPTER_BUFFER_RELEASE_DELAY = 2;
-	pSelf->VIDEO_PERFORMANCE_POLICY = 0;
-	pSelf->AV_SYNC_ES_AUDIO = false;
-	pSelf->AV_SYNC_ES_VIDEO = false;
-	//pSelf->FS = nullptr;
+	pSelf->control_ppu_thread_priority = 900;
+	pSelf->control_ppu_thread_stack_size = 12288;
+	pSelf->spurs_num_of_spus = 4;
+	pSelf->spurs_spu_thread_priority = 100;
+	pSelf->spurs_ppu_thread_priority = 300;
+	pSelf->spurs_exit_if_no_work = true;
+	pSelf->io_ppu_thread_priority = 1200;
+	// pSelf->io_ppu_thread_stack_size = 4096;
+	pSelf->dmux_ppu_thread_priority = 700;
+	pSelf->dmux_num_of_spus = 1;
+	pSelf->dmux_spurs_task_priorities = 0x0101010101010101;
+	pSelf->adec_ppu_thread_priority = 450;
+	pSelf->adec_num_of_spus = 1;
+	pSelf->adec_spurs_task_priorities = 0x0101010101010101;
+	pSelf->enable_apost_src = false;
+	pSelf->vdec_ppu_thread_priority = 550;
+	pSelf->vdec_m2v_num_of_spus = 1;
+	pSelf->vdec_avc_num_of_spus = 4;
+	pSelf->vdec_spurs_task_priorities = 0x0101010101010101;
+	// pSelf->enable_vpost = nullptr;
+	pSelf->vpost_ppu_thread_priority = 500;
+	pSelf->vpost_num_of_spus = 1;
+	pSelf->vpost_spurs_task_priorities = 0x0101010101010101;
+	pSelf->graphics_adapter_buffer_release_delay = 2;
+	pSelf->video_performance_policy = 0;
+	pSelf->av_sync_es_audio = false;
+	pSelf->av_sync_es_video = false;
+	// pSelf->fs = nullptr;
 
 	Emu.GetCallbackManager().Async([=](CPUThread& CPU)
 	{
 		CellSailEvent evnt;
-		evnt.u32x2.major = CELL_SAIL_EVENT_PLAYER_STATE_CHANGED;
-		evnt.u32x2.minor = 0;
+		evnt.major = CELL_SAIL_EVENT_PLAYER_STATE_CHANGED;
+		evnt.minor = 0;
 		pSelf->callback(static_cast<PPUThread&>(CPU), pSelf->callbackArg, evnt, CELL_SAIL_PLAYER_STATE_INITIALIZED, 0);
 	});
 
@@ -779,9 +779,9 @@ s32 cellSailPlayerSetParameter(vm::ptr<CellSailPlayer> pSelf, s32 parameterType,
 
 	switch (parameterType)
 	{
-	case CELL_SAIL_PARAMETER_GRAPHICS_ADAPTER_BUFFER_RELEASE_DELAY: pSelf->GRAPHICS_ADAPTER_BUFFER_RELEASE_DELAY = param1; break; // TODO: Stream index
-	case CELL_SAIL_PARAMETER_CONTROL_PPU_THREAD_STACK_SIZE: pSelf->CONTROL_PPU_THREAD_STACK_SIZE = param0; break;
-	case CELL_SAIL_PARAMETER_ENABLE_APOST_SRC: pSelf->ENABLE_APOST_SRC = param1; break; // TODO: Stream index
+	case CELL_SAIL_PARAMETER_GRAPHICS_ADAPTER_BUFFER_RELEASE_DELAY: pSelf->graphics_adapter_buffer_release_delay = param1; break; // TODO: Stream index
+	case CELL_SAIL_PARAMETER_CONTROL_PPU_THREAD_STACK_SIZE: pSelf->control_ppu_thread_stack_size = param0; break;
+	case CELL_SAIL_PARAMETER_ENABLE_APOST_SRC: pSelf->enable_apost_src = param1; break; // TODO: Stream index
 	default:
 		cellSail.Todo("cellSailPlayerSetParameter(): unimplemented parameter type 0x%x (%s).", parameterType, ParameterCodeToName(parameterType));
 		break;

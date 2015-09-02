@@ -148,7 +148,7 @@ struct CellFontLibrary
 {
 	be_t<u32> libraryType;
 	be_t<u32> libraryVersion;
-	be_t<u32> systemClosed[];
+	// ...
 };
 
 struct CellFontType
@@ -244,5 +244,5 @@ struct CellFontRenderer
 struct CellFontGraphics
 {
 	be_t<u32> graphicsType;
-	be_t<u32> SystemClosed[];
+	// ...
 };

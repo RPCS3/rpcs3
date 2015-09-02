@@ -173,18 +173,6 @@ public:
 	bool m_color_mask_b;
 	bool m_color_mask_a;
 	bool m_set_color_mask_mrt;
-	bool m_color_mask_mrt1_r;
-	bool m_color_mask_mrt1_g;
-	bool m_color_mask_mrt1_b;
-	bool m_color_mask_mrt1_a;
-	bool m_color_mask_mrt2_r;
-	bool m_color_mask_mrt2_g;
-	bool m_color_mask_mrt2_b;
-	bool m_color_mask_mrt2_a;
-	bool m_color_mask_mrt3_r;
-	bool m_color_mask_mrt3_g;
-	bool m_color_mask_mrt3_b;
-	bool m_color_mask_mrt3_a;
 
 	// Clip 
 	bool m_set_clip;

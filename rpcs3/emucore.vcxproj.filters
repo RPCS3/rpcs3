@@ -1870,9 +1870,6 @@
     <ClInclude Include="..\Utilities\VirtualMemory.h">
       <Filter>Utilities</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\SysCalls\Modules\cellSysconf.h">
-      <Filter>Emu\SysCalls\Modules</Filter>
-    </ClInclude>
     <ClInclude Include="Emu\SysCalls\Modules\cellPrint.h">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClInclude>
@@ -1881,6 +1878,12 @@
     </ClInclude>
     <ClInclude Include="Emu\Cell\SPUAnalyser.h">
       <Filter>Emu\CPU\Cell</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\Modules\cellPrint.h">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\Modules\cellSysconf.h">
+      <Filter>Emu\SysCalls\Modules</Filter>
     </ClInclude>
     <ClInclude Include="Emu\SysCalls\Modules\cellSysutilAvc2.h">
       <Filter>Emu\SysCalls\Modules</Filter>

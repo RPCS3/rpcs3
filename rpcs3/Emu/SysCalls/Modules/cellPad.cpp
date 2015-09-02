@@ -62,8 +62,8 @@ s32 cellPadClearBuf(u32 port_no)
 		return CELL_PAD_ERROR_NO_DEVICE;
 	}
 
-	//Set 'm_buffer_cleared' to force a resend of everything
-	//might as well also reset everything in our pad 'buffer' to nothing as well
+	// Set 'm_buffer_cleared' to force a resend of everything
+	// might as well also reset everything in our pad 'buffer' to nothing as well
 
 	std::vector<Pad>& pads = Emu.GetPadManager().GetPads();
 	Pad& pad = pads[port_no];
@@ -76,7 +76,7 @@ s32 cellPadClearBuf(u32 port_no)
 	pad.m_press_triangle = pad.m_press_circle = pad.m_press_cross = pad.m_press_square = 0;
 	pad.m_press_L1 = pad.m_press_L2 = pad.m_press_R1 = pad.m_press_R2 = 0;
 
-	//~399 on sensor y is a level non moving controller
+	// ~399 on sensor y is a level non moving controller
 	pad.m_sensor_y = 399;
 	pad.m_sensor_x = pad.m_sensor_z = pad.m_sensor_g = 0;
 	
@@ -87,10 +87,31 @@ s32 cellPadPeriphGetInfo(vm::ptr<CellPadPeriphInfo> info)
 {
 	sys_io.Todo("cellPadPeriphGetInfo(info=*0x%x)", info);
 
-	// TODO: Support other types of controllers
-	for (u32 i = 0; i < info->now_connect; i++)
+	if (!Emu.GetPadManager().IsInited())
 	{
+		return CELL_PAD_ERROR_UNINITIALIZED;
+	}
+
+	const PadInfo& rinfo = Emu.GetPadManager().GetInfo();
+
+	info->max_connect = rinfo.max_connect;
+	info->now_connect = rinfo.now_connect;
+	info->system_info = rinfo.system_info;
+
+	std::vector<Pad>& pads = Emu.GetPadManager().GetPads();
+
+	// TODO: Support other types of controllers
+	for (u32 i = 0; i < CELL_PAD_MAX_PORT_NUM; ++i)
+	{
+		if (i >= pads.size())
+			break;
+
+		info->port_status[i] = pads[i].m_port_status;
+		info->port_setting[i] = pads[i].m_port_setting;
+		info->device_capability[i] = pads[i].m_device_capability;
+		info->device_type[i] = pads[i].m_device_type;
 		info->pclass_type[i] = CELL_PAD_PCLASS_TYPE_STANDARD;
+		info->pclass_profile[i] = 0x0;
 	}
 
 	return CELL_OK;

@@ -147,7 +147,6 @@ s32 console_putc()
 
 void console_write(vm::ptr<char> data, u32 len)
 {
-	// TODO: Move this to lv2 and just wrap it here.
 	sysPrxForUser.Warning("console_write(data=*0x%x, len=%d)", data, len);
 	sysPrxForUser.Warning("*** data='%s'", data.get_ptr());
 

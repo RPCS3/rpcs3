@@ -6,7 +6,6 @@
 
 #include "Ini.h"
 #include "Emu/RSX/GSManager.h"
-#include "cellAvconfExt.h"
 #include "cellVideoOut.h"
 
 extern Module cellSysutil;
@@ -122,14 +121,6 @@ s32 cellVideoOutGetDeviceInfo(u32 videoOut, u32 deviceIndex, vm::ptr<CellVideoOu
 		return CELL_VIDEO_OUT_ERROR_DEVICE_NOT_FOUND;
 	}
 
-	const auto avconfExt = fxm::get<avconfext_t>();
-	u32 gamma = 212; // Default value (1.0)
-
-	if (avconfExt)
-	{
-		gamma = avconfExt->gamma * 212;
-	}
-
 	// Use standard dummy values for now.
 	info->portType = CELL_VIDEO_OUT_PORT_HDMI;
 	info->colorSpace = Emu.GetGSManager().GetColorSpace();
@@ -145,7 +136,7 @@ s32 cellVideoOutGetDeviceInfo(u32 videoOut, u32 deviceIndex, vm::ptr<CellVideoOu
 	info->colorInfo.redY = 0xFFFF;
 	info->colorInfo.whiteX = 0xFFFF;
 	info->colorInfo.whiteY = 0xFFFF;
-	info->colorInfo.gamma = gamma;
+	info->colorInfo.gamma = 212; // TODO: 212 should be 1.0, but they might not be related.
 
 	// TODO: Calculate all the available modes (up to 23)
 	info->availableModes[0].resolutionId = Ini.GSResolution.GetValue();
@@ -183,7 +174,7 @@ s32 cellVideoOutGetResolutionAvailability(u32 videoOut, u32 resolutionId, u32 as
 
 	switch (videoOut)
 	{
-	case CELL_VIDEO_OUT_PRIMARY: return Ini.GSResolution.GetValue();
+	case CELL_VIDEO_OUT_PRIMARY: return 1;
 	case CELL_VIDEO_OUT_SECONDARY: return 0;
 	}
 

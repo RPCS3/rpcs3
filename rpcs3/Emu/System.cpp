@@ -225,7 +225,7 @@ void Emulator::Load()
 	LOG_NOTICE(LOADER, "Write Color Buffers: %s", Ini.GSDumpColorBuffers.GetValue() ? "Yes" : "No");
 	LOG_NOTICE(LOADER, "Read Color Buffer: %s", Ini.GSReadColorBuffer.GetValue() ? "Yes" : "No");
 	LOG_NOTICE(LOADER, "Audio Out: %s", Ini.AudioOutIdToString(Ini.AudioOutMode.GetValue()));
-	LOG_NOTICE(LOADER, "GUI Log Level: %s", Ini.LogLevelIdToString(Ini.HLELogLvl.GetValue()));
+	LOG_NOTICE(LOADER, "Log Level: %s", Ini.LogLevelIdToString(Ini.HLELogLvl.GetValue()));
 	LOG_NOTICE(LOADER, "Log Everything: %s", Ini.HLELogging.GetValue() ? "Yes" : "No");
 	LOG_NOTICE(LOADER, "RSX Logging: %s", Ini.RSXLogging.GetValue() ? "Yes" : "No");
 

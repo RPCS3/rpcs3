@@ -721,7 +721,6 @@ void cellSysutil_GameData_init()
 {
 	extern Module cellSysutil;
 
-	fxm::remove<game_t>();
 	fxm::make<game_t>();
 
 	REG_FUNC(cellSysutil, cellHddGameCheck);

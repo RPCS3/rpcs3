@@ -664,12 +664,8 @@ struct CellSailSourceStreamingProfile
 
 union CellSailEvent
 {
-	struct _data_t
-	{
-		be_t<u32> major;
-		be_t<u32> minor;
-	} u32x2;
-
+	be_t<u32> major;
+	be_t<u32> minor;
 	be_t<u64> value;
 };
 
@@ -1190,34 +1186,34 @@ struct CellSailPlayer
 	vm::ptr<CellSailGraphicsAdapter> gAdapter;
 
 	// Attributes
-	be_t<s32> CONTROL_PPU_THREAD_PRIORITY;
-	be_t<s32> CONTROL_PPU_THREAD_STACK_SIZE;
-	be_t<s32> SPURS_NUM_OF_SPUS;
-	be_t<s32> SPURS_SPU_THREAD_PRIORITY;
-	be_t<s32> SPURS_PPU_THREAD_PRIORITY;
-	b8 SPURS_EXIT_IF_NO_WORK;
-	be_t<s32> IO_PPU_THREAD_PRIORITY;
-	be_t<s32> IO_PPU_THREAD_STACK_SIZE;
-	be_t<s32> DMUX_PPU_THREAD_PRIORITY;
-	be_t<s32> DMUX_NUM_OF_SPUS;
-	be_t<u64> DMUX_SPURS_TASK_PRIORITIES;
-	be_t<s32> ADEC_PPU_THREAD_PRIORITY;
-	be_t<s32> ADEC_NUM_OF_SPUS;
-	be_t<u64> ADEC_SPURS_TASK_PRIORITIES;
-	b8 ENABLE_APOST_SRC;
-	be_t<s32> VDEC_PPU_THREAD_PRIORITY;
-	be_t<s32> VDEC_M2V_NUM_OF_SPUS;
-	be_t<s32> VDEC_AVC_NUM_OF_SPUS;
-	be_t<u64> VDEC_SPURS_TASK_PRIORITIES;
-	vm::ptr<CellVpostCtrlParam> ENABLE_VPOST;
-	be_t<s32> VPOST_PPU_THREAD_PRIORITY;
-	be_t<s32> VPOST_NUM_OF_SPUS;
-	be_t<u64> VPOST_SPURS_TASK_PRIORITIES;
-	be_t<s32> GRAPHICS_ADAPTER_BUFFER_RELEASE_DELAY;
-	be_t<s32> VIDEO_PERFORMANCE_POLICY;
-	b8 AV_SYNC_ES_AUDIO;
-	b8 AV_SYNC_ES_VIDEO;
-	CellSailFsRead FS;
+	be_t<s32> control_ppu_thread_priority;
+	be_t<s32> control_ppu_thread_stack_size;
+	be_t<s32> spurs_num_of_spus;
+	be_t<s32> spurs_spu_thread_priority;
+	be_t<s32> spurs_ppu_thread_priority;
+	b8        spurs_exit_if_no_work;
+	be_t<s32> io_ppu_thread_priority;
+	be_t<s32> io_ppu_thread_stack_size;
+	be_t<s32> dmux_ppu_thread_priority;
+	be_t<s32> dmux_num_of_spus;
+	be_t<u64> dmux_spurs_task_priorities;
+	be_t<s32> adec_ppu_thread_priority;
+	be_t<s32> adec_num_of_spus;
+	be_t<u64> adec_spurs_task_priorities;
+	b8 enable_apost_src;
+	be_t<s32> vdec_ppu_thread_priority;
+	be_t<s32> vdec_m2v_num_of_spus;
+	be_t<s32> vdec_avc_num_of_spus;
+	be_t<u64> vdec_spurs_task_priorities;
+	vm::ptr<CellVpostCtrlParam> enable_vpost;
+	be_t<s32> vpost_ppu_thread_priority;
+	be_t<s32> vpost_num_of_spus;
+	be_t<u64> vpost_spurs_task_priorities;
+	be_t<s32> graphics_adapter_buffer_release_delay;
+	be_t<s32> video_performance_policy;
+	b8        av_sync_es_audio;
+	b8        av_sync_es_video;
+	CellSailFsRead fs;
 };
 
 CHECK_MAX_SIZE(CellSailPlayer, 0x100);

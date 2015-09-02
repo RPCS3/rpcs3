@@ -4,12 +4,13 @@
 #include "Emu/SysCalls/Modules.h"
 
 #include "Ini.h"
-#include "cellAvconfExt.h"
 #include "cellAudioIn.h"
 #include "cellAudioOut.h"
 #include "cellVideoOut.h"
 
 extern Module cellAvconfExt;
+
+f32 avGamma;
 
 s32 cellAudioOutUnregisterDevice()
 {
@@ -41,18 +42,16 @@ s32 cellVideoOutConvertCursorColor()
 	throw EXCEPTION("");
 }
 
-s32 cellVideoOutGetGamma(u32 videoOut, vm::ptr<u8> gamma)
+s32 cellVideoOutGetGamma(u32 videoOut, vm::ptr<f32> gammaIn)
 {
-	cellAvconfExt.Warning("cellVideoOutGetGamma(videoOut=%d, gamma=*0x%x)", videoOut, gamma);
+	cellAvconfExt.Warning("cellVideoOutGetGamma(videoOut=%d, gamma=*0x%x)", videoOut, gammaIn);
 
 	if (videoOut != CELL_VIDEO_OUT_PRIMARY)
 	{
 		return CELL_VIDEO_OUT_ERROR_UNSUPPORTED_VIDEO_OUT;
 	}
 
-	const auto avconfExt = fxm::get<avconfext_t>();
-
-	*gamma = avconfExt->gamma;
+	*gammaIn = avGamma;
 
 	return CELL_VIDEO_OUT_SUCCEEDED;
 }
@@ -67,23 +66,21 @@ s32 cellAudioOutGetAvailableDeviceInfo()
 	throw EXCEPTION("");
 }
 
-s32 cellVideoOutSetGamma(u32 videoOut, u8 gamma)
+s32 cellVideoOutSetGamma(u32 videoOut, f32 gammaIn)
 {
-	cellAvconfExt.Warning("cellVideoOutSetGamma(videoOut=%d, gamma=%d)", videoOut, gamma);
+	cellAvconfExt.Warning("cellVideoOutSetGamma(videoOut=%d, gamma=%d)", videoOut, gammaIn);
 
 	if (videoOut != CELL_VIDEO_OUT_PRIMARY)
 	{
 		return CELL_VIDEO_OUT_ERROR_UNSUPPORTED_VIDEO_OUT;
 	}
 
-	if (gamma < 0.8 || gamma > 1.2)
+	if (gammaIn < 0.8 || gammaIn > 1.2)
 	{
 		return CELL_VIDEO_OUT_ERROR_ILLEGAL_PARAMETER;
 	}
 
-	const auto avconfExt = fxm::get<avconfext_t>();
-
-	avconfExt->gamma = gamma;
+	avGamma = gammaIn;
 
 	return CELL_VIDEO_OUT_SUCCEEDED;
 }
@@ -98,8 +95,9 @@ s32 cellAudioOutSetDeviceMode()
 	throw EXCEPTION("");
 }
 
-s32 cellAudioInSetDeviceMode()
+s32 cellAudioInSetDeviceMode(u32 deviceMode)
 {
+	cellAvconfExt.Todo("cellAudioInSetDeviceMode(deviceMode=%d)", deviceMode);
 	throw EXCEPTION("");
 }
 
@@ -143,8 +141,7 @@ s32 cellVideoOutGetScreenSize(u32 videoOut, vm::ptr<float> screenSize)
 
 Module cellAvconfExt("cellAvconfExt", []()
 {
-	fxm::remove<avconfext_t>();
-	fxm::make<avconfext_t>();
+	avGamma = 1;
 
 	REG_FUNC(cellAvconfExt, cellAudioOutUnregisterDevice);
 	REG_FUNC(cellAvconfExt, cellAudioOutGetDeviceInfo2);

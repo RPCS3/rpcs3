@@ -356,6 +356,29 @@ s32 cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 	return CELL_OK;
 }
 
+void dialogOpenCallback()
+{
+	named_thread_t(WRAP_EXPR("SignInDialog Thread"), [=]()
+	{
+		while (g_sign_in_dialog->state == signInDialogOpen)
+		{
+			if (Emu.IsStopped())
+			{
+				g_sign_in_dialog->state = signInDialogAbort;
+				break;
+			}
+
+			std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
+		}
+
+		CallAfter([]()
+		{
+			g_sign_in_dialog->Destroy();
+			g_sign_in_dialog->state = signInDialogNone;
+		});
+	}).detach();
+}
+
 s32 cellNetCtlNetStartDialogLoadAsync(vm::cptr<CellNetCtlNetStartDialogParam> param)
 {
 	cellNetCtl.Warning("cellNetCtlNetStartDialogLoadAsync(param=*0x%x)", param);
@@ -387,42 +410,8 @@ s32 cellNetCtlNetStartDialogLoadAsync(vm::cptr<CellNetCtlNetStartDialogParam> pa
 			g_sign_in_dialog->Create();
 
 			g_sign_in_dialog->state.exchange(signInDialogOpen);
+			dialogOpenCallback();
 		});
-
-		while (g_sign_in_dialog->state == signInDialogInit)
-		{
-			if (Emu.IsStopped())
-			{
-				if (g_sign_in_dialog->state != signInDialogNone)
-				{
-					break;
-				}
-
-				CHECK_EMU_STATUS;
-			}
-
-			std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
-		}
-
-		named_thread_t(WRAP_EXPR("SignInDialog Thread"), [=]()
-		{
-			while (g_sign_in_dialog->state == signInDialogOpen)
-			{
-				if (Emu.IsStopped())
-				{
-					g_sign_in_dialog->state = signInDialogAbort;
-					break;
-				}
-
-				std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
-			}
-
-			CallAfter([]()
-			{
-				g_sign_in_dialog->Destroy();
-				g_sign_in_dialog->state = signInDialogNone;
-			});
-		}).detach();
 	}
 	else
 	{
