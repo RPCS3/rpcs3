@@ -600,24 +600,24 @@ s32 spursWakeUpShutdownCompletionWaiter(PPUThread& ppu, vm::ptr<CellSpurs> spurs
 		return CELL_SPURS_POLICY_MODULE_ERROR_STAT;
 	}
 
-	auto& wklF     = wid < CELL_SPURS_MAX_WORKLOAD ? spurs->wklF1[wid] : spurs->wklF2[wid & 0x0F];
-	auto& wklEvent = wid < CELL_SPURS_MAX_WORKLOAD ? spurs->wklEvent1[wid] : spurs->wklEvent2[wid & 0x0F];
+	const auto wklF     = wid < CELL_SPURS_MAX_WORKLOAD ? &spurs->wklF1[wid] : &spurs->wklF2[wid & 0x0F];
+	const auto wklEvent = wid < CELL_SPURS_MAX_WORKLOAD ? &spurs->wklEvent1[wid] : &spurs->wklEvent2[wid & 0x0F];
 
-	if (wklF.hook)
+	if (wklF->hook)
 	{
-		wklF.hook(ppu, spurs, wid, wklF.hookArg);
+		wklF->hook(ppu, spurs, wid, wklF->hookArg);
 
-		assert(wklEvent.load() & 0x01);
-		assert(wklEvent.load() & 0x02);
-		assert((wklEvent.load() & 0x20) == 0);
-		wklEvent |= 0x20;
+		assert(wklEvent->load() & 0x01);
+		assert(wklEvent->load() & 0x02);
+		assert((wklEvent->load() & 0x20) == 0);
+		*wklEvent |= 0x20;
 	}
 
 	s32 rc = CELL_OK;
-	if (!wklF.hook || wklEvent.load() & 0x10)
+	if (!wklF->hook || wklEvent->load() & 0x10)
 	{
-		assert(wklF.x28 == 2);
-		rc = sys_semaphore_post((u32)wklF.sem, 1);
+		assert(wklF->x28 == 2);
+		rc = sys_semaphore_post((u32)wklF->sem, 1);
 	}
 
 	return rc;
@@ -1724,8 +1724,8 @@ s32 cellSpursSetPriorities(vm::ptr<CellSpurs> spurs, u32 wid, vm::cptr<u8> prior
 		prio <<= 8;
 	}
 
-	auto& wklInfo = wid < CELL_SPURS_MAX_WORKLOAD ? spurs->wklInfo1[wid] : spurs->wklInfo2[wid];
-	*((be_t<u64>*)wklInfo.priority) = prio;
+	const auto wklInfo = wid < CELL_SPURS_MAX_WORKLOAD ? &spurs->wklInfo1[wid] : &spurs->wklInfo2[wid];
+	*((be_t<u64>*)wklInfo->priority) = prio;
 
 	spurs->sysSrvMsgUpdateWorkload.store(0xFF);
 	spurs->sysSrvMessage.store(0xFF);
@@ -2296,8 +2296,8 @@ s32 spursAddWorkload(
 	spurs->wklFlagReceiver.compare_and_swap(wnum, 0xff);
 
 	u32 res_wkl;
-	CellSpurs::WorkloadInfo& wkl = wnum <= 15 ? spurs->wklInfo1[wnum] : spurs->wklInfo2[wnum & 0xf];
-	spurs->wklMskB.atomic_op([spurs, &wkl, wnum, &res_wkl](be_t<u32>& v)
+	const auto wkl = wnum <= 15 ? &spurs->wklInfo1[wnum] : &spurs->wklInfo2[wnum & 0xf];
+	spurs->wklMskB.atomic_op([spurs, wkl, wnum, &res_wkl](be_t<u32>& v)
 	{
 		const u32 mask = v & ~(0x80000000u >> wnum);
 		res_wkl = 0;
@@ -2306,22 +2306,22 @@ s32 spursAddWorkload(
 		{
 			if (mask & m)
 			{
-				CellSpurs::WorkloadInfo& current = i <= 15 ? spurs->wklInfo1[i] : spurs->wklInfo2[i & 0xf];
-				if (current.addr == wkl.addr)
+				const auto current = i <= 15 ? &spurs->wklInfo1[i] : &spurs->wklInfo2[i & 0xf];
+				if (current->addr == wkl->addr)
 				{
 					// if a workload with identical policy module found
-					res_wkl = current.uniqueId.load();
+					res_wkl = current->uniqueId.load();
 					break;
 				}
 				else
 				{
-					k |= 0x80000000 >> current.uniqueId.load();
+					k |= 0x80000000 >> current->uniqueId.load();
 					res_wkl = cntlz32(~k);
 				}
 			}
 		}
 
-		wkl.uniqueId.exchange((u8)res_wkl);
+		wkl->uniqueId.exchange((u8)res_wkl);
 		v = mask | (0x80000000u >> wnum);
 	});
 	assert(res_wkl <= 31);

@@ -142,8 +142,7 @@ public:
 
 	void ResetInfo()
 	{
-		m_info.~EmuInfo();
-		new (&m_info) EmuInfo();
+		m_info = {};
 	}
 
 	void SetTLSData(u32 addr, u32 filesz, u32 memsz)

@@ -330,6 +330,14 @@ namespace loader
 					continue;
 				}
 
+				if (Ini.LoadLibLv2.GetValue())
+				{
+					if (module->name != "liblv2.sprx")
+					{
+						continue;
+					}
+				}
+
 				elf64 sprx_handler;
 
 				vfsFile fsprx(lle_dir.GetPath() + "/" + module->name);
@@ -340,18 +348,18 @@ namespace loader
 
 					if (sprx_handler.is_sprx())
 					{
-						IniEntry<bool> load_lib;
-						load_lib.Init(sprx_handler.sprx_get_module_name(), "LLE");
+						if (!Ini.LoadLibLv2.GetValue())
+						{
+							IniEntry<bool> load_lib;
+							load_lib.Init(sprx_handler.sprx_get_module_name(), "LLE");
 
-						if (!load_lib.LoadValue(false))
-						{
-							LOG_WARNING(LOADER, "Skipped LLE library '%s'", sprx_handler.sprx_get_module_name().c_str());
-							continue;
+							if (!load_lib.LoadValue(false))
+							{
+								continue;
+							}
 						}
-						else
-						{
-							LOG_WARNING(LOADER, "Loading LLE library '%s'", sprx_handler.sprx_get_module_name().c_str());
-						}
+
+						LOG_WARNING(LOADER, "Loading LLE library '%s'", sprx_handler.sprx_get_module_name().c_str());
 
 						sprx_info info;
 						sprx_handler.load_sprx(info);

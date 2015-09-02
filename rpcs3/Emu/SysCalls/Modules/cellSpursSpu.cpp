@@ -90,14 +90,14 @@ void cellSpursModulePutTrace(CellSpursTracePacket * packet, u32 dmaTagId) {
 u32 cellSpursModulePollStatus(SPUThread & spu, u32 * status) {
     auto ctxt = vm::get_ptr<SpursKernelContext>(spu.offset + 0x100);
 
-    spu.GPR[3]._u32[3] = 1;
+    spu.gpr[3]._u32[3] = 1;
     if (ctxt->spurs->flags1 & SF1_32_WORKLOADS) {
         spursKernel2SelectWorkload(spu);
     } else {
         spursKernel1SelectWorkload(spu);
     }
 
-    auto result = spu.GPR[3]._u64[1];
+    auto result = spu.gpr[3]._u64[1];
     if (status) {
         *status = (u32)result;
     }
@@ -109,7 +109,7 @@ u32 cellSpursModulePollStatus(SPUThread & spu, u32 * status) {
 /// Exit current workload
 void cellSpursModuleExit(SPUThread & spu) {
     auto ctxt = vm::get_ptr<SpursKernelContext>(spu.offset + 0x100);
-    spu.PC = ctxt->exitToKernelAddr - 4;
+    spu.pc = ctxt->exitToKernelAddr - 4;
     throw SpursModuleExit();
 }
 
@@ -164,7 +164,7 @@ bool spursKernel1SelectWorkload(SPUThread & spu) {
     // The first and only argument to this function is a boolean that is set to false if the function
     // is called by the SPURS kernel and set to true if called by cellSpursModulePollStatus.
     // If the first argument is true then the shared data is not updated with the result.
-    const auto isPoll = spu.GPR[3]._u32[3];
+    const auto isPoll = spu.gpr[3]._u32[3];
 
     u32 wklSelectedId;
     u32 pollStatus;
@@ -310,7 +310,7 @@ bool spursKernel1SelectWorkload(SPUThread & spu) {
 
     u64 result          = (u64)wklSelectedId << 32;
     result             |= pollStatus;
-    spu.GPR[3]._u64[1]  = result;
+    spu.gpr[3]._u64[1]  = result;
     return true;
 }
 
@@ -321,7 +321,7 @@ bool spursKernel2SelectWorkload(SPUThread & spu) {
     // The first and only argument to this function is a boolean that is set to false if the function
     // is called by the SPURS kernel and set to true if called by cellSpursModulePollStatus.
     // If the first argument is true then the shared data is not updated with the result.
-    const auto isPoll = spu.GPR[3]._u32[3];
+    const auto isPoll = spu.gpr[3]._u32[3];
 
     u32 wklSelectedId;
     u32 pollStatus;
@@ -457,7 +457,7 @@ bool spursKernel2SelectWorkload(SPUThread & spu) {
 
     u64 result          = (u64)wklSelectedId << 32;
     result             |= pollStatus;
-    spu.GPR[3]._u64[1]  = result;
+    spu.gpr[3]._u64[1]  = result;
     return true;
 }
 
@@ -501,12 +501,12 @@ void spursKernelDispatchWorkload(SPUThread & spu, u64 widAndPollStatus) {
     }
 
     // Run workload
-    spu.GPR[0]._u32[3] = ctxt->exitToKernelAddr;
-    spu.GPR[1]._u32[3] = 0x3FFB0;
-    spu.GPR[3]._u32[3] = 0x100;
-    spu.GPR[4]._u64[1] = wklInfo->arg;
-    spu.GPR[5]._u32[3] = pollStatus;
-    spu.PC = 0xA00 - 4;
+    spu.gpr[0]._u32[3] = ctxt->exitToKernelAddr;
+    spu.gpr[1]._u32[3] = 0x3FFB0;
+    spu.gpr[3]._u32[3] = 0x100;
+    spu.gpr[4]._u64[1] = wklInfo->arg;
+    spu.gpr[5]._u32[3] = pollStatus;
+    spu.pc = 0xA00 - 4;
 }
 
 /// SPURS kernel workload exit
@@ -515,14 +515,14 @@ bool spursKernelWorkloadExit(SPUThread & spu) {
     auto isKernel2 = ctxt->spurs->flags1 & SF1_32_WORKLOADS ? true : false;
 
     // Select next workload to run
-    spu.GPR[3].clear();
+    spu.gpr[3].clear();
     if (isKernel2) {
         spursKernel2SelectWorkload(spu);
     } else {
         spursKernel1SelectWorkload(spu);
     }
 
-    spursKernelDispatchWorkload(spu, spu.GPR[3]._u64[1]);
+    spursKernelDispatchWorkload(spu, spu.gpr[3]._u64[1]);
     return false;
 }
 
@@ -537,8 +537,8 @@ bool spursKernelEntry(SPUThread & spu) {
     memset(ctxt, 0, sizeof(SpursKernelContext));
 
     // Save arguments
-    ctxt->spuNum = spu.GPR[3]._u32[3];
-    ctxt->spurs.set(spu.GPR[4]._u64[1]);
+    ctxt->spuNum = spu.gpr[3]._u32[3];
+    ctxt->spurs.set(spu.gpr[4]._u64[1]);
 
     auto isKernel2 = ctxt->spurs->flags1 & SF1_32_WORKLOADS ? true : false;
 
@@ -579,9 +579,9 @@ bool spursKernelEntry(SPUThread & spu) {
 
 /// Entry point of the system service
 bool spursSysServiceEntry(SPUThread & spu) {
-    auto ctxt       = vm::get_ptr<SpursKernelContext>(spu.offset + spu.GPR[3]._u32[3]);
-    auto arg        = spu.GPR[4]._u64[1];
-    auto pollStatus = spu.GPR[5]._u32[3];
+    auto ctxt       = vm::get_ptr<SpursKernelContext>(spu.offset + spu.gpr[3]._u32[3]);
+    auto arg        = spu.gpr[4]._u64[1];
+    auto pollStatus = spu.gpr[5]._u32[3];
 
     try {
         if (ctxt->wklCurrentId == CELL_SPURS_SYS_SERVICE_WORKLOAD_ID) {
@@ -1080,16 +1080,16 @@ enum SpursTasksetRequest {
 /// Taskset PM entry point
 bool spursTasksetEntry(SPUThread & spu) {
     auto ctxt       = vm::get_ptr<SpursTasksetContext>(spu.offset + 0x2700);
-    auto kernelCtxt = vm::get_ptr<SpursKernelContext>(spu.offset + spu.GPR[3]._u32[3]);
+    auto kernelCtxt = vm::get_ptr<SpursKernelContext>(spu.offset + spu.gpr[3]._u32[3]);
 
-    auto arg        = spu.GPR[4]._u64[1];
-    auto pollStatus = spu.GPR[5]._u32[3];
+    auto arg        = spu.gpr[4]._u64[1];
+    auto pollStatus = spu.gpr[5]._u32[3];
 
     // Initialise memory and save args
     memset(ctxt, 0, sizeof(*ctxt));
     ctxt->taskset.set(arg);
     memcpy(ctxt->moduleId, "SPURSTASK MODULE", sizeof(ctxt->moduleId));
-    ctxt->kernelMgmtAddr = spu.GPR[3]._u32[3];
+    ctxt->kernelMgmtAddr = spu.gpr[3]._u32[3];
     ctxt->syscallAddr    = CELL_SPURS_TASKSET_PM_SYSCALL_ADDR;
     ctxt->spuNum         = kernelCtxt->spuNum;
     ctxt->dmaTagId       = kernelCtxt->dmaTagId;
@@ -1120,14 +1120,14 @@ bool spursTasksetSyscallEntry(SPUThread & spu) {
 
     try {
         // Save task context
-        ctxt->savedContextLr = spu.GPR[0];
-        ctxt->savedContextSp = spu.GPR[1];
+        ctxt->savedContextLr = spu.gpr[0];
+        ctxt->savedContextSp = spu.gpr[1];
         for (auto i = 0; i < 48; i++) {
-            ctxt->savedContextR80ToR127[i] = spu.GPR[80 + i];
+            ctxt->savedContextR80ToR127[i] = spu.gpr[80 + i];
         }
 
         // Handle the syscall
-        spu.GPR[3]._u32[3] = spursTasksetProcessSyscall(spu, spu.GPR[3]._u32[3], spu.GPR[4]._u32[3]);
+        spu.gpr[3]._u32[3] = spursTasksetProcessSyscall(spu, spu.gpr[3]._u32[3], spu.gpr[4]._u32[3]);
 
         // Resume the previously executing task if the syscall did not cause a context switch
         throw EXCEPTION("Broken (TODO)");
@@ -1147,13 +1147,13 @@ void spursTasksetResumeTask(SPUThread & spu) {
     auto ctxt = vm::get_ptr<SpursTasksetContext>(spu.offset + 0x2700);
 
     // Restore task context
-    spu.GPR[0] = ctxt->savedContextLr;
-    spu.GPR[1] = ctxt->savedContextSp;
+    spu.gpr[0] = ctxt->savedContextLr;
+    spu.gpr[1] = ctxt->savedContextSp;
     for (auto i = 0; i < 48; i++) {
-        spu.GPR[80 + i] = ctxt->savedContextR80ToR127[i];
+        spu.gpr[80 + i] = ctxt->savedContextR80ToR127[i];
     }
 
-    spu.PC = spu.GPR[0]._u32[3] - 4;
+    spu.pc = spu.gpr[0]._u32[3] - 4;
 }
 
 /// Start a task
@@ -1161,15 +1161,15 @@ void spursTasksetStartTask(SPUThread & spu, CellSpursTaskArgument & taskArgs) {
     auto ctxt    = vm::get_ptr<SpursTasksetContext>(spu.offset + 0x2700);
     auto taskset = vm::get_ptr<CellSpursTaskset>(spu.offset + 0x2700);
 
-    spu.GPR[2].clear();
-    spu.GPR[3]         = v128::from64r(taskArgs._u64[0], taskArgs._u64[1]);
-    spu.GPR[4]._u64[1] = taskset->args;
-    spu.GPR[4]._u64[0] = taskset->spurs.addr();
+    spu.gpr[2].clear();
+    spu.gpr[3]         = v128::from64r(taskArgs._u64[0], taskArgs._u64[1]);
+    spu.gpr[4]._u64[1] = taskset->args;
+    spu.gpr[4]._u64[0] = taskset->spurs.addr();
     for (auto i = 5; i < 128; i++) {
-        spu.GPR[i].clear();
+        spu.gpr[i].clear();
     }
 
-    spu.PC = ctxt->savedContextLr.value()._u32[3] - 4;
+    spu.pc = ctxt->savedContextLr.value()._u32[3] - 4;
 }
 
 /// Process a request and update the state of the taskset
@@ -1382,10 +1382,10 @@ void spursTasksetOnTaskExit(SPUThread & spu, u64 addr, u32 taskId, s32 exitCode,
 
     memcpy(vm::get_ptr(spu.offset + 0x10000), vm::get_ptr(addr & -0x80), (addr & 0x7F) << 11);
 
-    spu.GPR[3]._u64[1] = ctxt->taskset.addr();
-    spu.GPR[4]._u32[3] = taskId;
-    spu.GPR[5]._u32[3] = exitCode;
-    spu.GPR[6]._u64[1] = args;
+    spu.gpr[3]._u64[1] = ctxt->taskset.addr();
+    spu.gpr[4]._u32[3] = taskId;
+    spu.gpr[5]._u32[3] = exitCode;
+    spu.gpr[6]._u64[1] = args;
     spu.fast_call(0x10000);
 }
 
@@ -1422,7 +1422,7 @@ s32 spursTasketSaveTaskContext(SPUThread & spu) {
 
     // Get the processor context
     v128 r;
-    spu.FPSCR.Read(r);
+    spu.fpscr.Read(r);
     ctxt->savedContextFpscr = r;
     ctxt->savedSpuWriteEventMask = spu.get_ch_value(SPU_RdEventMask);
     ctxt->savedWriteTagGroupQueryMask = spu.get_ch_value(MFC_RdTagMask);
@@ -1539,7 +1539,7 @@ void spursTasksetDispatch(SPUThread & spu) {
         //spursDmaWaitForCompletion(spu, 1 << ctxt->dmaTagId);
 
         // Restore saved registers
-        spu.FPSCR.Write(ctxt->savedContextFpscr.value());
+        spu.fpscr.Write(ctxt->savedContextFpscr.value());
         spu.set_ch_value(MFC_WrTagMask, ctxt->savedWriteTagGroupQueryMask);
         spu.set_ch_value(SPU_WrEventMask, ctxt->savedSpuWriteEventMask);
 
@@ -1555,7 +1555,7 @@ void spursTasksetDispatch(SPUThread & spu) {
             return;
         }
 
-        spu.GPR[3].clear();
+        spu.gpr[3].clear();
         spursTasksetResumeTask(spu);
     }
 }

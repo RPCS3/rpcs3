@@ -350,9 +350,6 @@
     <ClCompile Include="Emu\Cell\RawSPUThread.cpp">
       <Filter>Emu\CPU\Cell</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\Cell\SPURecompilerCore.cpp">
-      <Filter>Emu\CPU\Cell</Filter>
-    </ClCompile>
     <ClCompile Include="Emu\Cell\SPUThread.cpp">
       <Filter>Emu\CPU\Cell</Filter>
     </ClCompile>
@@ -986,6 +983,15 @@
     <ClCompile Include="..\Utilities\VirtualMemory.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Cell\SPURecompiler.cpp">
+      <Filter>Emu\CPU\Cell</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Cell\SPUAnalyser.cpp">
+      <Filter>Emu\CPU\Cell</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Cell\SPUASMJITRecompiler.cpp">
+      <Filter>Emu\CPU\Cell</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -1252,13 +1258,7 @@
     <ClInclude Include="Emu\Cell\RawSPUThread.h">
       <Filter>Emu\CPU\Cell</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\Cell\SPUDecoder.h">
-      <Filter>Emu\CPU\Cell</Filter>
-    </ClInclude>
     <ClInclude Include="Emu\Cell\SPUDisAsm.h">
-      <Filter>Emu\CPU\Cell</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\Cell\SPUInstrTable.h">
       <Filter>Emu\CPU\Cell</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Cell\SPUInterpreter.h">
@@ -1627,9 +1627,6 @@
     <ClInclude Include="Emu\Cell\PPUInterpreter2.h">
       <Filter>Emu\CPU\Cell</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\Cell\SPUInterpreter2.h">
-      <Filter>Emu\CPU\Cell</Filter>
-    </ClInclude>
     <ClInclude Include="..\Utilities\File.h">
       <Filter>Utilities</Filter>
     </ClInclude>
@@ -1872,6 +1869,12 @@
     </ClInclude>
     <ClInclude Include="..\Utilities\VirtualMemory.h">
       <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Cell\SPUASMJITRecompiler.h">
+      <Filter>Emu\CPU\Cell</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Cell\SPUAnalyser.h">
+      <Filter>Emu\CPU\Cell</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

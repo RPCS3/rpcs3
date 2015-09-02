@@ -1,6 +1,5 @@
 #pragma once
 
-struct SPUContext
+struct spu_context_t
 {
-	v128 gpr[128];
 };

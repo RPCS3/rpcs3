@@ -135,16 +135,15 @@ enum
 	SPU_RdSigNotify2_offs = 0x1C00C,
 };
 
-union spu_channel_t
+struct spu_channel_t
 {
+	// set to true if SPU thread must be notified after SPU channel operation
+	thread_local static bool notification_required;
+
 	struct sync_var_t
 	{
-		struct
-		{
-			u32 waiting : 1; // waiting flag (0..1)
-			u32 count : 1; // channel count (0..1)
-		};
-		
+		bool count; // value available
+		bool wait; // notification required
 		u32 value;
 	};
 
@@ -154,93 +153,75 @@ public:
 	// returns true on success
 	bool try_push(u32 value)
 	{
-		return sync_var.atomic_op([=](sync_var_t& data) -> bool
+		const auto old = sync_var.atomic_op([=](sync_var_t& data)
 		{
-			if (data.count == 0)
+			if ((data.wait = data.count) == false)
 			{
-				data.waiting = 0;
-				data.count = 1;
+				data.count = true;
 				data.value = value;
-
-				return true;
 			}
-
-			data.waiting = 1;
-			return false;
 		});
+
+		return !old.count;
 	}
 
-	// push performing bitwise OR with previous value, returns true if needs signaling
-	bool push_or(u32 value)
+	// push performing bitwise OR with previous value, may require notification
+	void push_or(u32 value)
 	{
-		return sync_var.atomic_op([=](sync_var_t& data) -> bool
+		const auto old = sync_var.atomic_op([=](sync_var_t& data)
 		{
-			data.count = 1;
+			data.count = true;
+			data.wait = false;
 			data.value |= value;
-
-			if (data.waiting)
-			{
-				data.waiting = 0;
-
-				return true;
-			}
-
-			return false;
 		});
+
+		notification_required = old.wait;
 	}
 
-	// push unconditionally (overwriting previous value), returns true if needs signaling
-	bool push(u32 value)
+	// push unconditionally (overwriting previous value), may require notification
+	void push(u32 value)
 	{
-		return sync_var.atomic_op([=](sync_var_t& data) -> bool
+		const auto old = sync_var.atomic_op([=](sync_var_t& data)
 		{
-			data.count = 1;
+			data.count = true;
+			data.wait = false;
 			data.value = value;
-
-			if (data.waiting)
-			{
-				data.waiting = 0;
-
-				return true;
-			}
-
-			return false;
 		});
+
+		notification_required = old.wait;
 	}
 
-	// returns true on success and u32 value
+	// returns true on success and loaded value
 	std::tuple<bool, u32> try_pop()
 	{
-		return sync_var.atomic_op([](sync_var_t& data)
+		const auto old = sync_var.atomic_op([](sync_var_t& data)
 		{
-			const auto result = std::make_tuple(data.count != 0, u32{ data.value });
-
-			data.waiting = data.count == 0;
-			data.count = 0;
-			data.value = 0;
-
-			return result;
+			data.wait = !data.count;
+			data.count = false;
+			data.value = 0; // ???
 		});
+
+		return std::tie(old.count, old.value);
 	}
 
-	// pop unconditionally (loading last value), returns u32 value and bool value (true if needs signaling)
-	std::tuple<u32, bool> pop()
+	// pop unconditionally (loading last value), may require notification
+	u32 pop()
 	{
-		return sync_var.atomic_op([](sync_var_t& data)
+		const auto old = sync_var.atomic_op([](sync_var_t& data)
 		{
-			const auto result = std::make_tuple(u32{ data.value }, data.waiting != 0);
-
-			data.waiting = 0;
-			data.count = 0;
+			data.wait = false;
+			data.count = false;
 			// value is not cleared and may be read again
-			
-			return result;
 		});
+
+		notification_required = old.wait;
+
+		return old.value;
 	}
 
-	void set_value(u32 value, u32 count = 1)
+	void set_value(u32 value, bool count = true)
 	{
-		sync_var.store({ { 0, count }, value });
+		sync_var.store({ count, false, value });
 	}
 
 	u32 get_value() volatile
@@ -358,7 +339,7 @@ struct spu_int_ctrl_t
 	void clear(u64 ints);
 };
 
-struct g_spu_imm_table_t
+struct spu_imm_table_t
 {
 	v128 fsmb[65536]; // table for FSMB, FSMBI instructions
 	v128 fsmh[256]; // table for FSMH instruction
@@ -388,7 +369,7 @@ struct g_spu_imm_table_t
 	}
 	const scale;
 
-	g_spu_imm_table_t()
+	spu_imm_table_t()
 	{
 		for (u32 i = 0; i < sizeof(fsm) / sizeof(fsm[0]); i++)
 		{
@@ -440,7 +421,7 @@ struct g_spu_imm_table_t
 	}
 };
 
-extern const g_spu_imm_table_t g_spu_imm;
+extern const spu_imm_table_t g_spu_imm;
 
 enum FPSCR_EX
 {
@@ -543,9 +524,11 @@ public:
 
 class SPUThread : public CPUThread
 {
+	friend class spu_recompiler;
+
 public:
-	v128 GPR[128]; // General-Purpose Registers
-	SPU_FPSCR FPSCR;
+	std::array<v128, 128> gpr; // General-Purpose Registers
+	SPU_FPSCR fpscr;
 
 	std::unordered_map<u32, std::function<bool(SPUThread& SPU)>> m_addr_to_hle_function_map;
 
@@ -586,43 +569,34 @@ public:
 	std::array<std::pair<u32, std::weak_ptr<lv2_event_queue_t>>, 32> spuq; // Event Queue Keys for SPU Thread
 	std::weak_ptr<lv2_event_queue_t> spup[64]; // SPU Ports
 
-	u32 PC = 0;
+	u32 pc = 0; // 
 	const u32 index; // SPU index
 	const u32 offset; // SPU LS offset
 
 	void push_snr(u32 number, u32 value)
 	{
-		if (number == 0)
+		// get channel
+		const auto channel =
+			number == 0 ? &ch_snr1 :
+			number == 1 ? &ch_snr2 : throw EXCEPTION("Unexpected");
+
+		// check corresponding SNR register settings
+		if ((snr_config >> number) & 1)
 		{
-			if (snr_config & 1)
-			{
-				if (!ch_snr1.push_or(value)) return;
-			}
-			else
-			{
-				if (!ch_snr1.push(value)) return;
-			}
-		}
-		else if (number == 1)
-		{
-			if (snr_config & 2)
-			{
-				if (!ch_snr2.push_or(value)) return;
-			}
-			else
-			{
-				if (!ch_snr2.push(value)) return;
-			}
+			channel->push_or(value);
 		}
 		else
 		{
-			throw EXCEPTION("Unexpected");
+			channel->push(value);
 		}
 
-		// notify if required
-		std::lock_guard<std::mutex> lock(mutex);
+		if (channel->notification_required)
+		{
+			// lock for reliable notification
+			std::lock_guard<std::mutex> lock(mutex);
 
-		cv.notify_one();
+			cv.notify_one();
+		}
 	}
 
 	void do_dma_transfer(u32 cmd, spu_mfc_arg_t args);
@@ -683,6 +657,7 @@ public:
 	}
 
 	std::function<void(SPUThread&)> custom_task;
+	std::exception_ptr pending_exception;
 
 protected:
 	SPUThread(CPUThreadType type, const std::string& name, std::function<std::string()> thread_name, u32 index, u32 offset);
@@ -694,7 +669,7 @@ public:
 	virtual bool is_paused() const override;
 
 	virtual void dump_info() const override;
-	virtual u32 get_pc() const override { return PC; }
+	virtual u32 get_pc() const override { return pc; }
 	virtual u32 get_offset() const override { return offset; }
 	virtual void do_run() override;
 	virtual void task() override;
@@ -709,7 +684,7 @@ public:
 	{
 		std::string ret = "Registers:\n=========\n";
 
-		for(uint i=0; i<128; ++i) ret += fmt::format("GPR[%d] = 0x%s\n", i, GPR[i].to_hex().c_str());
+		for(uint i=0; i<128; ++i) ret += fmt::format("GPR[%d] = 0x%s\n", i, gpr[i].to_hex().c_str());
 
 		return ret;
 	}
@@ -721,7 +696,7 @@ public:
 		{
 			long reg_index;
 			reg_index = atol(reg.substr(first_brk + 1, reg.length()-2).c_str());
-			if (reg.find("GPR")==0) return fmt::format("%016llx%016llx",  GPR[reg_index]._u64[1], GPR[reg_index]._u64[0]);
+			if (reg.find("GPR")==0) return fmt::format("%016llx%016llx",  gpr[reg_index]._u64[1], gpr[reg_index]._u64[0]);
 		}
 		return "";
 	}
@@ -747,8 +722,8 @@ public:
 				{
 					return false;
 				}
-				GPR[reg_index]._u64[0] = (u64)reg_value0;
-				GPR[reg_index]._u64[1] = (u64)reg_value1;
+				gpr[reg_index]._u64[0] = (u64)reg_value0;
+				gpr[reg_index]._u64[1] = (u64)reg_value1;
 				return true;
 			}
 		}
