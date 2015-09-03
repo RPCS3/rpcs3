@@ -316,7 +316,7 @@ public:
 	}
 };
 
-inline u32 spu_branch_target(u32 pc, s32 imm)
+inline u32 spu_branch_target(u32 pc, s32 imm = 0)
 {
 	return (pc + (imm << 2)) & 0x3fffc;
 }

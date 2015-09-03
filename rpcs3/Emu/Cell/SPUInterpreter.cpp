@@ -298,7 +298,7 @@ void spu_interpreter::BIZ(SPUThread& spu, spu_opcode_t op)
 	if (spu.gpr[op.rt]._u32[3] == 0)
 	{
 		set_interrupt_status(spu, op);
-		spu.pc = spu_branch_target(spu.gpr[op.ra]._u32[3], 0) - 4;
+		spu.pc = spu_branch_target(spu.gpr[op.ra]._u32[3]) - 4;
 	}
 }
 
@@ -307,7 +307,7 @@ void spu_interpreter::BINZ(SPUThread& spu, spu_opcode_t op)
 	if (spu.gpr[op.rt]._u32[3] != 0)
 	{
 		set_interrupt_status(spu, op);
-		spu.pc = spu_branch_target(spu.gpr[op.ra]._u32[3], 0) - 4;
+		spu.pc = spu_branch_target(spu.gpr[op.ra]._u32[3]) - 4;
 	}
 }
 
@@ -316,7 +316,7 @@ void spu_interpreter::BIHZ(SPUThread& spu, spu_opcode_t op)
 	if (spu.gpr[op.rt]._u16[6] == 0)
 	{
 		set_interrupt_status(spu, op);
-		spu.pc = spu_branch_target(spu.gpr[op.ra]._u32[3], 0) - 4;
+		spu.pc = spu_branch_target(spu.gpr[op.ra]._u32[3]) - 4;
 	}
 }
 
@@ -325,13 +325,13 @@ void spu_interpreter::BIHNZ(SPUThread& spu, spu_opcode_t op)
 	if (spu.gpr[op.rt]._u16[6] != 0)
 	{
 		set_interrupt_status(spu, op);
-		spu.pc = spu_branch_target(spu.gpr[op.ra]._u32[3], 0) - 4;
+		spu.pc = spu_branch_target(spu.gpr[op.ra]._u32[3]) - 4;
 	}
 }
 
 void spu_interpreter::STOPD(SPUThread& spu, spu_opcode_t op)
 {
-	throw EXCEPTION("Unexpected instruction");
+	throw EXCEPTION("Unimplemented instruction");
 }
 
 void spu_interpreter::STQX(SPUThread& spu, spu_opcode_t op)
@@ -342,25 +342,25 @@ void spu_interpreter::STQX(SPUThread& spu, spu_opcode_t op)
 void spu_interpreter::BI(SPUThread& spu, spu_opcode_t op)
 {
 	set_interrupt_status(spu, op);
-	spu.pc = spu_branch_target(spu.gpr[op.ra]._u32[3], 0) - 4;
+	spu.pc = spu_branch_target(spu.gpr[op.ra]._u32[3]) - 4;
 }
 
 void spu_interpreter::BISL(SPUThread& spu, spu_opcode_t op)
 {
 	set_interrupt_status(spu, op);
-	const u32 target = spu_branch_target(spu.gpr[op.ra]._u32[3], 0);
-	spu.gpr[op.rt] = v128::from32r(spu.pc + 4);
+	const u32 target = spu_branch_target(spu.gpr[op.ra]._u32[3]);
+	spu.gpr[op.rt] = v128::from32r(spu_branch_target(spu.pc + 4));
 	spu.pc = target - 4;
 }
 
 void spu_interpreter::IRET(SPUThread& spu, spu_opcode_t op)
 {
-	throw EXCEPTION("Unexpected instruction");
+	throw EXCEPTION("Unimplemented instruction");
 }
 
 void spu_interpreter::BISLED(SPUThread& spu, spu_opcode_t op)
 {
-	throw EXCEPTION("Unexpected instruction");
+	throw EXCEPTION("Unimplemented instruction");
 }
 
 void spu_interpreter::HBR(SPUThread& spu, spu_opcode_t op)
@@ -1022,7 +1022,7 @@ void spu_interpreter::LQA(SPUThread& spu, spu_opcode_t op)
 void spu_interpreter::BRASL(SPUThread& spu, spu_opcode_t op)
 {
 	const u32 target = spu_branch_target(0, op.i16);
-	spu.gpr[op.rt] = v128::from32r(spu.pc + 4);
+	spu.gpr[op.rt] = v128::from32r(spu_branch_target(spu.pc + 4));
 	spu.pc = target - 4;
 }
 
@@ -1039,7 +1039,7 @@ void spu_interpreter::FSMBI(SPUThread& spu, spu_opcode_t op)
 void spu_interpreter::BRSL(SPUThread& spu, spu_opcode_t op)
 {
 	const u32 target = spu_branch_target(spu.pc, op.i16);
-	spu.gpr[op.rt] = v128::from32r(spu.pc + 4);
+	spu.gpr[op.rt] = v128::from32r(spu_branch_target(spu.pc + 4));
 	spu.pc = target - 4;
 }
 

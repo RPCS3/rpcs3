@@ -242,6 +242,9 @@ struct spu_function_t
 	// jump table values (start addresses)
 	std::set<u32> jtable;
 
+	// whether ila $SP,* instruction found
+	bool does_reset_stack;
+
 	// pointer to the compiled function
 	spu_jit_func_t compiled = nullptr;
 
@@ -259,6 +262,9 @@ class SPUDatabase final
 
 	// All registered functions (uses addr and first instruction as a key)
 	std::unordered_multimap<u64, std::shared_ptr<spu_function_t>> m_db;
+
+	// For internal use
+	std::shared_ptr<spu_function_t> find(const be_t<u32>* data, u64 key, u32 max_size);
 
 public:
 	SPUDatabase();

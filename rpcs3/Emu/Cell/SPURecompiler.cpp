@@ -23,22 +23,28 @@ u32 SPURecompilerDecoder::DecodeMemory(const u32 address)
 		throw EXCEPTION("Invalid address or PC (address=0x%x, PC=0x%05x)", address, spu.pc);
 	}
 
+	// get SPU LS pointer
 	const auto _ls = vm::get_ptr<be_t<u32>>(spu.offset);
 
-	const u32 index = spu.pc / 4;
+	// always validate (TODO)
+	const auto func = db->analyse(_ls, spu.pc);
 
-	if (!m_entries.at(index) || true) // always validate (TODO)
+	// reset callstack if necessary
+	if (func->does_reset_stack && spu.recursion_level)
 	{
-		const auto func = db->analyse(_ls, spu.pc);
+		spu.m_state |= CPU_STATE_RETURN;
 
-		if (!func->compiled) rec->compile(*func);
-
-		if (!func->compiled) throw EXCEPTION("Compilation failed");
-
-		m_entries[index] = func->compiled;
+		return 0;
 	}
 
-	const u32 res = m_entries[index](&spu, _ls);
+	if (!func->compiled)
+	{
+		rec->compile(*func);
+
+		if (!func->compiled) throw EXCEPTION("Compilation failed");
+	}
+
+	const u32 res = func->compiled(&spu, _ls);
 
 	if (const auto exception = spu.pending_exception)
 	{

@@ -524,6 +524,7 @@ public:
 
 class SPUThread : public CPUThread
 {
+	friend class SPURecompilerDecoder;
 	friend class spu_recompiler;
 
 public:
@@ -658,6 +659,7 @@ public:
 
 	std::function<void(SPUThread&)> custom_task;
 	std::exception_ptr pending_exception;
+	u32 recursion_level = 0;
 
 protected:
 	SPUThread(CPUThreadType type, const std::string& name, std::function<std::string()> thread_name, u32 index, u32 offset);

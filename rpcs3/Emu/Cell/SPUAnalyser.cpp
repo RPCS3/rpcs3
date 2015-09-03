@@ -7,6 +7,25 @@
 
 const spu_opcode_table_t<spu_itype_t> g_spu_itype{ DEFINE_SPU_OPCODES(spu_itype::), spu_itype::UNK };
 
+std::shared_ptr<spu_function_t> SPUDatabase::find(const be_t<u32>* data, u64 key, u32 max_size)
+{
+	for (auto found = m_db.find(key); found != m_db.end(); found++)
+	{
+		if (found->second->size > max_size)
+		{
+			continue;
+		}
+
+		// Compare binary data explicitly (TODO: optimize)
+		if (std::equal(found->second->data.begin(), found->second->data.end(), data))
+		{
+			return found->second;
+		}
+	}
+
+	return nullptr;
+}
+
 SPUDatabase::SPUDatabase()
 {
 	// TODO: load existing database associated with currently running executable
@@ -33,13 +52,9 @@ std::shared_ptr<spu_function_t> SPUDatabase::analyse(const be_t<u32>* ls, u32 en
 	const u64 key = entry | u64{ ls[entry / 4] } << 32;
 
 	// Try to find existing function in the database
-	for (auto found = m_db.find(key); found != m_db.end(); found++)
+	if (auto func = find(ls + entry / 4, key, max_limit - entry))
 	{
-		// Compare binary data explicitly (TODO: optimize)
-		if (std::equal(found->second->data.begin(), found->second->data.end(), ls + entry / 4))
-		{
-			return found->second;
-		}
+		return func;
 	}
 
 	// Initialize block entries with the function entry point
@@ -51,6 +66,9 @@ std::shared_ptr<spu_function_t> SPUDatabase::analyse(const be_t<u32>* ls, u32 en
 	// Set initial limit which will be narrowed later
 	u32 limit = max_limit;
 
+	// Minimal position of ila $SP,* instruction
+	u32 ila_sp_pos = max_limit;
+
 	// Find preliminary set of possible block entries (first pass), `start` is the current block address
 	for (u32 start = entry, pos = entry; pos < limit; pos += 4)
 	{
@@ -60,7 +78,15 @@ std::shared_ptr<spu_function_t> SPUDatabase::analyse(const be_t<u32>* ls, u32 en
 
 		using namespace spu_itype;
 
-		if (start == pos) // Additional analysis at the beginning of the block (questionable)
+		// Find existing function
+		if (pos != entry && find(ls + pos / 4, pos | u64{ op.opcode } << 32, limit - pos))
+		{
+			limit = pos;
+			break;
+		}
+
+		// Additional analysis at the beginning of the block
+		if (start != entry && start == pos)
 		{
 			// Possible jump table
 			std::vector<u32> jt_abs, jt_rel;
@@ -128,17 +154,19 @@ std::shared_ptr<spu_function_t> SPUDatabase::analyse(const be_t<u32>* ls, u32 en
 		{
 			// Discard current block and abort the operation
 			limit = start;
-
 			break;
 		}
-		else if (op.opcode == 0) // Hack: special case (STOP 0)
+
+		if (op.opcode == 0) // Hack: special case (STOP 0)
 		{
 			limit = pos + 4;
-
 			break;
 		}
-		else if (type == BI) // Branch Indirect
+		
+		if (type == BI || type == IRET) // Branch Indirect
 		{
+			if (type == IRET) LOG_ERROR(SPU, "[0x%05x] Interrupt Return", pos);
+
 			blocks.emplace(start); start = pos + 4;
 		}
 		else if (type == BR || type == BRA) // Branch Relative/Absolute
@@ -163,7 +191,7 @@ std::shared_ptr<spu_function_t> SPUDatabase::analyse(const be_t<u32>* ls, u32 en
 			{
 				// Branch to the next instruction and set link ("get next instruction address" idiom)
 
-				if (op.rt == 0) LOG_ERROR(SPU, "Suspicious instruction at [0x%05x]", pos);
+				if (op.rt == 0) LOG_ERROR(SPU, "[0x%05x] Branch-to-next with $LR", pos);
 			}
 			else
 			{
@@ -174,13 +202,15 @@ std::shared_ptr<spu_function_t> SPUDatabase::analyse(const be_t<u32>* ls, u32 en
 				{
 					limit = std::min<u32>(limit, target);
 				}
+
+				if (op.rt != 0) LOG_ERROR(SPU, "[0x%05x] Function call without $LR", pos);
 			}
 		}
-		else if (type == BISL) // Branch Indirect and Set Link
+		else if (type == BISL || type == BISLED) // Branch Indirect and Set Link
 		{
-			// Nothing
+			if (op.rt != 0) LOG_ERROR(SPU, "[0x%05x] Indirect function call without $LR", pos);
 		}
-		else if (type == BRNZ || type == BRZ || type == BRHNZ || type == BRHZ) // Branch Relative if (Not) Zero Word/Halfword
+		else if (type == BRNZ || type == BRZ || type == BRHNZ || type == BRHZ) // Branch Relative if (Not) Zero (Half)word
 		{
 			const u32 target = spu_branch_target(pos, op.i16);
 
@@ -190,6 +220,40 @@ std::shared_ptr<spu_function_t> SPUDatabase::analyse(const be_t<u32>* ls, u32 en
 			if (target > entry)
 			{
 				blocks.emplace(target);
+			}
+		}
+		else if (type == BINZ || type == BIZ || type == BIHNZ || type == BIHZ) // Branch Indirect if (Not) Zero (Half)word
+		{
+		}
+		else if (type == HBR || type == HBRA || type == HBRR) // Hint for Branch
+		{
+		}
+		else if (type == STQA || type == STQD || type == STQR || type == STQX || type == FSCRWR || type == MTSPR || type == WRCH) // Store
+		{
+		}
+		else if (type == HEQ || type == HEQI || type == HGT || type == HGTI || type == HLGT || type == HLGTI) // Halt
+		{
+		}
+		else if (type == STOP || type == STOPD || type == NOP || type == LNOP || type == SYNC || type == DSYNC) // Miscellaneous
+		{
+		}
+		else // Other instructions (writing rt reg)
+		{
+			const u32 rt = type == SELB || type == SHUFB || type == MPYA || type == FNMS || type == FMA || type == FMS ? op.rc : op.rt;
+
+			// Analyse link register access
+			if (rt == 0)
+			{
+			}
+
+			// Analyse stack pointer access
+			if (rt == 1)
+			{
+				if (type == ILA && pos < ila_sp_pos)
+				{
+					// set minimal ila $SP,* instruction position
+					ila_sp_pos = pos;
+				}
 			}
 		}
 	}
@@ -228,6 +292,9 @@ std::shared_ptr<spu_function_t> SPUDatabase::analyse(const be_t<u32>* ls, u32 en
 	// Prepare new function (set addr and size)
 	auto func = std::make_shared<spu_function_t>(entry, limit - entry);
 
+	// Copy function contents
+	func->data = { ls + entry / 4, ls + limit / 4 };
+
 	// Fill function block info
 	for (auto i = blocks.crbegin(); i != blocks.crend(); i++)
 	{
@@ -255,8 +322,8 @@ std::shared_ptr<spu_function_t> SPUDatabase::analyse(const be_t<u32>* ls, u32 en
 		}
 	}
 
-	// Copy function contents
-	func->data = { ls + entry / 4, ls + limit / 4 };
+	// Set whether the function can reset stack
+	func->does_reset_stack = ila_sp_pos < limit;
 
 	// Add function to the database
 	m_db.emplace(key, func);

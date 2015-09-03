@@ -30,32 +30,28 @@ private:
 	asmjit::X86GpVar* cpu;
 	asmjit::X86GpVar* ls;
 
-	// output:
-	asmjit::X86GpVar* pos;
-
 	// temporary:
 	asmjit::X86GpVar* addr;
 	asmjit::X86GpVar* qw0;
 	asmjit::X86GpVar* qw1;
 	asmjit::X86GpVar* qw2;
-	std::array<asmjit::X86XmmVar*, 10> vec;
+	std::array<asmjit::X86XmmVar*, 6> vec;
 
 	// labels:
 	asmjit::Label* labels; // array[0x10000]
-	asmjit::Label* jt; // jump table resolver
+	asmjit::Label* jt; // jump table resolver (uses *addr)
+	asmjit::Label* end; // function end (return *addr)
 
 	class XmmLink
 	{
 		friend class spu_recompiler;
 
-		asmjit::X86XmmVar*& m_alloc;
-		asmjit::X86XmmVar* xmm_var;
+		asmjit::X86XmmVar* const m_var;
 
 		XmmLink(asmjit::X86XmmVar*& xmm_var)
-			: m_alloc(xmm_var)
-			, xmm_var(xmm_var)
+			: m_var(xmm_var)
 		{
-			m_alloc = nullptr;
+			xmm_var = nullptr;
 		}
 
 	public:
@@ -64,24 +60,13 @@ private:
 		XmmLink(const XmmLink&) = delete;
 
 		XmmLink(XmmLink&& right)
-			: m_alloc(right.m_alloc)
-			, xmm_var(right.xmm_var)
+			: m_var(right.m_var)
 		{
-			right.xmm_var = nullptr;
-		}
-
-		XmmLink& operator =(const XmmLink&) = delete;
-
-		XmmLink& operator =(XmmLink&& right) = delete;
-
-		~XmmLink()
-		{
-			if (xmm_var) m_alloc = xmm_var;
 		}
 
 		inline operator const asmjit::X86XmmVar&() const
 		{
-			return *xmm_var;
+			return *m_var;
 		}
 	};
 

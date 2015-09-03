@@ -1361,7 +1361,7 @@ void SPUThread::stop_and_signal(u32 code)
 			throw EXCEPTION("Invalid SPU Thread Group");
 		}
 
-		for (auto thread : group->threads)
+		for (auto& thread : group->threads)
 		{
 			if (thread && thread.get() != this)
 			{

@@ -23,8 +23,6 @@ public:
 // SPU Decoder instance (created per SPU thread)
 class SPURecompilerDecoder final : public CPUDecoder
 {
-	std::array<spu_jit_func_t, 0x10000> m_entries = {}; // currently useless
-
 public:
 	const std::shared_ptr<SPUDatabase> db; // associated SPU Analyser instance
 
