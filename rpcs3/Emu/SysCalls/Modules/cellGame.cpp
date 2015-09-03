@@ -126,14 +126,12 @@ s32 cellHddGameCheck(PPUThread& ppu, u32 version, vm::cptr<char> dirName, u32 er
 		}
 	}
 
-	// TODO ?
+	funcStat(ppu, result, get, set);
 
-	//funcStat(result, get, set);
-
-	//if (result->result != CELL_HDDGAME_CBRESULT_OK && result->result != CELL_HDDGAME_CBRESULT_OK_CANCEL)
-	//{
-	//	return CELL_HDDGAME_ERROR_CBRESULT;
-	//}
+	if (result->result != CELL_HDDGAME_CBRESULT_OK && result->result != CELL_HDDGAME_CBRESULT_OK_CANCEL)
+	{
+		return CELL_HDDGAME_ERROR_CBRESULT;
+	}
 
 	// TODO ?
 
