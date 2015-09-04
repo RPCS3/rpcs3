@@ -890,9 +890,9 @@ namespace ppu_recompiler_llvm {
 		RecompilationEngine & operator = (const RecompilationEngine & other) = delete;
 		RecompilationEngine & operator = (RecompilationEngine && other) = delete;
 
-		/// Process an execution trace.
-		/// Returns true if a block was compiled
-		bool ProcessExecutionTrace(u32);
+		/// Increase usage counter for block starting at addr and compile it if threshold was reached.
+		/// Returns true if block was compiled
+		bool IncreaseHitCounterAndBuild(u32 addr);
 
 		/**
 		* Analyse block to get useful info (function called, has indirect branch...)

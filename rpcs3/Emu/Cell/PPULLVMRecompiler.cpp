@@ -344,7 +344,7 @@ void RecompilationEngine::Task() {
 
 		if (!m_current_execution_traces.empty()) {
 			for (u32 address : m_current_execution_traces)
-				work_done_this_iteration |= ProcessExecutionTrace(address);
+				work_done_this_iteration |= IncreaseHitCounterAndBuild(address);
 		}
 
 		if (!work_done_this_iteration) {
@@ -374,7 +374,7 @@ void RecompilationEngine::Task() {
 	s_the_instance = nullptr; // Can cause deadlock if this is the last instance. Need to fix this.
 }
 
-bool RecompilationEngine::ProcessExecutionTrace(u32 address) {
+bool RecompilationEngine::IncreaseHitCounterAndBuild(u32 address) {
 	auto It = m_block_table.find(address);
 	if (It == m_block_table.end())
 		It = m_block_table.emplace(address, BlockEntry(address)).first;
