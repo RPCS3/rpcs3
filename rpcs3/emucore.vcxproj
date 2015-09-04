@@ -613,6 +613,7 @@
     <ClInclude Include="Emu\SysCalls\Modules\cellL10n.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellMic.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellMsgDialog.h" />
+    <ClInclude Include="Emu\SysCalls\Modules\cellMusic.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellNetCtl.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellPad.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellPamf.h" />
