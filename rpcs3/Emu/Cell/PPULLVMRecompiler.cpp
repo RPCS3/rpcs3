@@ -254,7 +254,7 @@ RecompilationEngine::RecompilationEngine()
 	, m_last_cache_clear_time(std::chrono::high_resolution_clock::now())
 	, m_compiler(*this, CPUHybridDecoderRecompiler::ExecuteFunction, CPUHybridDecoderRecompiler::ExecuteTillReturn, CPUHybridDecoderRecompiler::PollStatus) {
 
-	FunctionCache = (Executable *)memory_helper::reserve_memory(VIRTUAL_INSTRUCTION_COUNT * sizeof(Executable));
+	FunctionCache = (ExecutableStorageType *)memory_helper::reserve_memory(VIRTUAL_INSTRUCTION_COUNT * sizeof(ExecutableStorageType));
 	// Each char can store 8 page status
 	FunctionCachePagesCommited = (char *)malloc(VIRTUAL_INSTRUCTION_COUNT / (8 * PAGE_SIZE));
 	memset(FunctionCachePagesCommited, 0, VIRTUAL_INSTRUCTION_COUNT / (8 * PAGE_SIZE));
@@ -263,15 +263,15 @@ RecompilationEngine::RecompilationEngine()
 }
 
 RecompilationEngine::~RecompilationEngine() {
-	m_address_to_function.clear();
+	m_executable_storage.clear();
 	join();
-	memory_helper::free_reserved_memory(FunctionCache, VIRTUAL_INSTRUCTION_COUNT * sizeof(Executable));
+	memory_helper::free_reserved_memory(FunctionCache, VIRTUAL_INSTRUCTION_COUNT * sizeof(ExecutableStorageType));
 	free(FunctionCachePagesCommited);
 }
 
 bool RecompilationEngine::isAddressCommited(u32 address) const
 {
-	size_t offset = address * sizeof(Executable);
+	size_t offset = address * sizeof(ExecutableStorageType);
 	size_t page = offset / 4096;
 	// Since bool is stored in char, the char index is page / 8 (or page >> 3)
 	// and we shr the value with the remaining bits (page & 7)
@@ -280,7 +280,7 @@ bool RecompilationEngine::isAddressCommited(u32 address) const
 
 void RecompilationEngine::commitAddress(u32 address)
 {
-	size_t offset = address * sizeof(Executable);
+	size_t offset = address * sizeof(ExecutableStorageType);
 	size_t page = offset / 4096;
 	memory_helper::commit_page_memory((u8*)FunctionCache + page * 4096, 4096);
 	// Reverse of isAddressCommited : we set the (page & 7)th bit of (page / 8) th char
@@ -288,20 +288,15 @@ void RecompilationEngine::commitAddress(u32 address)
 	FunctionCachePagesCommited[page >> 3] |= (1 << (page & 7));
 }
 
-const Executable RecompilationEngine::GetCompiledExecutableIfAvailable(u32 address)
+const Executable RecompilationEngine::GetCompiledExecutableIfAvailable(u32 address) const
 {
-	std::lock_guard<std::mutex> lock(m_address_to_function_lock);
 	if (!isAddressCommited(address / 4))
-		commitAddress(address / 4);
-	if (!Ini.LLVMExclusionRange.GetValue())
-		return FunctionCache[address / 4];
-	std::unordered_map<u32, ExecutableStorage>::iterator It = m_address_to_function.find(address);
-	if (It == m_address_to_function.end())
 		return nullptr;
-	u32 id = std::get<3>(It->second);
-	if (id >= Ini.LLVMMinId.GetValue() && id <= Ini.LLVMMaxId.GetValue())
+	u32 id = FunctionCache[address / 4].second;
+	if (Ini.LLVMExclusionRange.GetValue() &&
+		(id >= Ini.LLVMMinId.GetValue() && id <= Ini.LLVMMaxId.GetValue()))
 		return nullptr;
-	return std::get<0>(It->second);
+	return FunctionCache[address / 4].first;
 }
 
 void RecompilationEngine::NotifyBlockStart(u32 address) {
@@ -464,26 +459,25 @@ void RecompilationEngine::CompileBlock(BlockEntry & block_entry) {
 	if (!AnalyseBlock(block_entry))
 		return;
 	Log() << "Compile: " << block_entry.ToString() << "\n";
-	const std::pair<Executable, llvm::ExecutionEngine *> &compileResult =
-		m_compiler.Compile(fmt::format("fn_0x%08X", block_entry.address), block_entry.address, block_entry.instructionCount);
 
-	// If entry doesn't exist, create it (using lock)
-	std::unordered_map<u32, ExecutableStorage>::iterator It = m_address_to_function.find(block_entry.address);
-	if (It == m_address_to_function.end())
 	{
-		std::lock_guard<std::mutex> lock(m_address_to_function_lock);
-		std::get<1>(m_address_to_function[block_entry.address]) = nullptr;
+		// We create a lock here so that data are properly stored at the end of the function.
+		/// Lock for accessing compiler
+		std::mutex local_mutex;
+		std::unique_lock<std::mutex> lock(local_mutex);
+
+		const std::pair<Executable, llvm::ExecutionEngine *> &compileResult =
+			m_compiler.Compile(fmt::format("fn_0x%08X", block_entry.address), block_entry.address, block_entry.instructionCount);
+
 		if (!isAddressCommited(block_entry.address / 4))
 			commitAddress(block_entry.address / 4);
-	}
 
-	std::get<1>(m_address_to_function[block_entry.address]) = std::unique_ptr<llvm::ExecutionEngine>(compileResult.second);
-	std::get<0>(m_address_to_function[block_entry.address]) = compileResult.first;
-	std::get<3>(m_address_to_function[block_entry.address]) = m_currentId;
-	Log() << "Associating " << (void*)(uint64_t)block_entry.address << " with ID " << m_currentId << "\n";
-	m_currentId++;
-	block_entry.is_compiled = true;
-	FunctionCache[block_entry.address / 4] = compileResult.first;
+		m_executable_storage.push_back(std::unique_ptr<llvm::ExecutionEngine>(compileResult.second));
+		Log() << "Associating " << (void*)(uint64_t)block_entry.address << " with ID " << m_currentId << "\n";
+		FunctionCache[block_entry.address / 4] = std::make_pair(compileResult.first, m_currentId);
+		m_currentId++;
+		block_entry.is_compiled = true;
+	}
 }
 
 std::shared_ptr<RecompilationEngine> RecompilationEngine::GetInstance() {
