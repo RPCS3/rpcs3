@@ -351,7 +351,7 @@ void RecompilationEngine::Task() {
 			// Wait a few ms for something to happen
 			auto idling_start = std::chrono::high_resolution_clock::now();
 			std::unique_lock<std::mutex> lock(mutex);
-			cv.wait_for(lock, std::chrono::milliseconds(250));
+			cv.wait_for(lock, std::chrono::milliseconds(10));
 			auto idling_end = std::chrono::high_resolution_clock::now();
 			idling_time += std::chrono::duration_cast<std::chrono::nanoseconds>(idling_end - idling_start);
 		}
