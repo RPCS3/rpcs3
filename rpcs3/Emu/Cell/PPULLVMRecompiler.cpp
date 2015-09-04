@@ -302,6 +302,8 @@ const Executable RecompilationEngine::GetCompiledExecutableIfAvailable(u32 addre
 void RecompilationEngine::NotifyBlockStart(u32 address) {
 	{
 		std::lock_guard<std::mutex> lock(m_pending_address_start_lock);
+		if (m_pending_address_start.size() > 10000)
+			m_pending_address_start.clear();
 		m_pending_address_start.push_back(address);
 	}
 
@@ -545,7 +547,8 @@ static BranchType GetBranchTypeFromInstruction(u32 instruction)
 u32 ppu_recompiler_llvm::CPUHybridDecoderRecompiler::ExecuteTillReturn(PPUThread * ppu_state, u64 context) {
 	CPUHybridDecoderRecompiler *execution_engine = (CPUHybridDecoderRecompiler *)ppu_state->GetDecoder();
 
-	execution_engine->m_recompilation_engine->NotifyBlockStart(ppu_state->PC);
+	// A block is a sequence of contiguous address.
+	bool previousInstContigousAndInterp = false;
 
 	while (PollStatus(ppu_state) == false) {
 		const Executable executable = execution_engine->m_recompilation_engine->GetCompiledExecutableIfAvailable(ppu_state->PC);
@@ -558,8 +561,13 @@ u32 ppu_recompiler_llvm::CPUHybridDecoderRecompiler::ExecuteTillReturn(PPUThread
 			if (exit == ExecutionStatus::ExecutionStatusPropagateException)
 				return ExecutionStatus::ExecutionStatusPropagateException;
 			execution_engine->m_recompilation_engine->NotifyBlockStart(ppu_state->PC);
+			previousInstContigousAndInterp = false;
 			continue;
 		}
+		// if previousInstContigousAndInterp is true, ie previous step was either a compiled block or a branch inst
+		// that caused a "gap" in instruction flow, we notify a new block.
+		if (!previousInstContigousAndInterp)
+			execution_engine->m_recompilation_engine->NotifyBlockStart(ppu_state->PC);
 		u32 instruction = vm::ps3::read32(ppu_state->PC);
 		u32 oldPC = ppu_state->PC;
 		try
@@ -571,6 +579,7 @@ u32 ppu_recompiler_llvm::CPUHybridDecoderRecompiler::ExecuteTillReturn(PPUThread
 			ppu_state->pending_exception = std::current_exception();
 			return ExecutionStatus::ExecutionStatusPropagateException;
 		}
+		previousInstContigousAndInterp = (oldPC == ppu_state->PC);
 		auto branch_type = ppu_state->PC != oldPC ? GetBranchTypeFromInstruction(instruction) : BranchType::NonBranch;
 		ppu_state->PC += 4;
 
