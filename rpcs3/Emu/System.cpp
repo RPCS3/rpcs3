@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Utilities/Log.h"
 #include "Utilities/File.h"
+#include "git-version.h"
 #include "rpcs3/Ini.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
@@ -209,6 +210,8 @@ void Emulator::Load()
 	}
 
 	LOG_NOTICE(LOADER, "");
+	LOG_NOTICE(LOADER, "RPCS3 version: %s", RPCS3_GIT_VERSION);
+	LOG_NOTICE(LOADER, "");
 
 	LOG_NOTICE(LOADER, "Settings:");
 	LOG_NOTICE(LOADER, "CPU: %s", Ini.CPUIdToString(Ini.CPUDecoderMode.GetValue()));
@@ -245,6 +248,7 @@ void Emulator::Load()
 		GetVFS().GetDeviceLocal(m_path, m_elf_path);
 
 		LOG_NOTICE(LOADER, "Elf path: %s", m_elf_path);
+		LOG_NOTICE(LOADER, "");
 	}
 
 	f.Open(m_elf_path);
@@ -259,6 +263,7 @@ void Emulator::Load()
 	if (!m_loader.load(f))
 	{
 		LOG_ERROR(LOADER, "Loading '%s' failed", m_path.c_str());
+		LOG_NOTICE(LOADER, "");
 		m_status = Stopped;
 		vm::close();
 		return;
