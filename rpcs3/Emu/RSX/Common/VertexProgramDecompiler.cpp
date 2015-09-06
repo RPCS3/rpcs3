@@ -574,39 +574,36 @@ std::string VertexProgramDecompiler::Decompile()
 			AddCode("}");
 		}
 		break;
-		/* This triggers opengl driver lost connection error code 7
 		case RSX_SCA_OPCODE_BRI: // works differently (BRI o[1].x(TR) L0;)
 		{
-		uint jump_position;
+			u32 jump_position = 1;
 
-		if (is_has_BRA)
-		{
-		jump_position = GetAddr();
+			if (is_has_BRA)
+			{
+				jump_position = GetAddr();
+			}
+			else
+			{
+				u32 addr = GetAddr();
+
+				for (auto pos : m_jump_lvls)
+				{
+					if (addr == pos)
+						break;
+
+					++jump_position;
+				}
+			}
+
+			AddCode("$ifcond ");
+			AddCode("{");
+			m_cur_instr->open_scopes++;
+			AddCode(fmt::format("jump_position = %u;", jump_position));
+			AddCode("continue;");
+			m_cur_instr->close_scopes++;
+			AddCode("}");
 		}
-		else
-		{
-		int addr = GetAddr();
-
-		jump_position = 0;
-		for (auto pos : m_jump_lvls)
-		{
-		if (addr == pos)
 		break;
-
-		++jump_position;
-		}
-		}
-
-		AddCode("$ifcond ");
-		AddCode("{");
-		m_cur_instr->open_scopes++;
-		AddCode(fmt::format("jump_position = %u;", jump_position));
-		AddCode("continue;");
-		m_cur_instr->close_scopes++;
-		AddCode("}");
-		}
-		break;
-		*/
 		case RSX_SCA_OPCODE_CAL:
 			// works same as BRI
 			AddCode("$ifcond $f(); //CAL");
