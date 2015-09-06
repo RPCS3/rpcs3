@@ -926,6 +926,8 @@ s32 gcmMapEaIoAddress(u32 ea, u32 io, u32 size, bool is_strict)
 		return CELL_GCM_ERROR_FAILURE;
 	}
 
+	// TODO: memalign() with certain parameters, right after game's startup always returns a certain address.
+	//       This affects EaIo memory mapping and certain games depend on it. (Ie. The Last of Us)
 	// Check if the mapping was successful
 	if (RSXIOMem.Map(ea, size, io))
 	{
@@ -938,7 +940,6 @@ s32 gcmMapEaIoAddress(u32 ea, u32 io, u32 size, bool is_strict)
 		}
 
 		// Set the proper main memory report address
-		// TODO: PS3 has a custom memalign() implementation, this will most likely cause problems here
 		Emu.GetGSManager().GetRender().m_report_main_addr = ea;
 	}
 	else
