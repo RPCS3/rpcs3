@@ -789,7 +789,6 @@ s32 sdata_unpack(const std::string& packed_file, const std::string& unpacked_fil
 		cellFs.Warning("cellFsSdataOpen: Compressed SDATA files are not supported yet.");
 		return CELL_EFSSPECIFIC;
 	}
-
 	// SDATA file is NOT compressed
 	else
 	{
@@ -826,7 +825,7 @@ s32 sdata_unpack(const std::string& packed_file, const std::string& unpacked_fil
 
 s32 cellFsSdataOpen(PPUThread& ppu, vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, vm::cptr<void> arg, u64 size)
 {
-	cellFs.Log("cellFsSdataOpen(path=*0x%x, flags=%#o, fd=*0x%x, arg=*0x%x, size=0x%llx)", path, flags, fd, arg, size);
+	cellFs.Notice("cellFsSdataOpen(path=*0x%x, flags=%#o, fd=*0x%x, arg=*0x%x, size=0x%llx)", path, flags, fd, arg, size);
 
 	if (flags != CELL_FS_O_RDONLY)
 	{

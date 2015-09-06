@@ -29,16 +29,15 @@ using PFuncDone = vm::ptr<CellSaveDataDoneCallback>;
 
 enum : u32
 {
-	SAVEDATA_OP_AUTO_SAVE = 0,
-	SAVEDATA_OP_AUTO_LOAD = 1,
+	SAVEDATA_OP_AUTO_SAVE      = 0,
+	SAVEDATA_OP_AUTO_LOAD      = 1,
 	SAVEDATA_OP_LIST_AUTO_SAVE = 2,
 	SAVEDATA_OP_LIST_AUTO_LOAD = 3,
-	SAVEDATA_OP_LIST_SAVE = 4,
-	SAVEDATA_OP_LIST_LOAD = 5,
-	SAVEDATA_OP_FIXED_SAVE = 6,
-	SAVEDATA_OP_FIXED_LOAD = 7,
-
-	SAVEDATA_OP_FIXED_DELETE = 14,
+	SAVEDATA_OP_LIST_SAVE      = 4,
+	SAVEDATA_OP_LIST_LOAD      = 5,
+	SAVEDATA_OP_FIXED_SAVE     = 6,
+	SAVEDATA_OP_FIXED_LOAD     = 7,
+	SAVEDATA_OP_FIXED_DELETE   = 14,
 };
 
 never_inline s32 savedata_op(PPUThread& ppu, u32 operation, u32 version, vm::cptr<char> dirName, u32 errDialog, PSetList setList, PSetBuf setBuf, PFuncList funcList, PFuncFixed funcFixed, PFuncStat funcStat, PFuncFile funcFile, u32 container, u32 unknown, vm::ptr<void> userdata, u32 userId, PFuncDone funcDone)

@@ -113,7 +113,7 @@ s32 cellSysutilGetSystemParamInt(s32 id, vm::ptr<s32> value)
 
 s32 cellSysutilGetSystemParamString(s32 id, vm::ptr<char> buf, u32 bufsize)
 {
-	cellSysutil.Log("cellSysutilGetSystemParamString(id=0x%x(%s), buf=*0x%x, bufsize=%d)", id, get_systemparam_id_name(id), buf, bufsize);
+	cellSysutil.Notice("cellSysutilGetSystemParamString(id=0x%x(%s), buf=*0x%x, bufsize=%d)", id, get_systemparam_id_name(id), buf, bufsize);
 
 	memset(buf.get_ptr(), 0, bufsize);
 

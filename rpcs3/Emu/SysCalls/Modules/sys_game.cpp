@@ -43,7 +43,7 @@ void sys_game_process_exitspawn(vm::cptr<char> path, u32 argv_addr, u32 envp_add
 
 		for (auto &arg : argv)
 		{
-			sysPrxForUser.Log("argument: %s", arg.c_str());
+			sysPrxForUser.Warning("argument: %s", arg.c_str());
 		}
 	}
 
@@ -58,14 +58,14 @@ void sys_game_process_exitspawn(vm::cptr<char> path, u32 argv_addr, u32 envp_add
 
 		for (auto &en : env)
 		{
-			sysPrxForUser.Log("env_argument: %s", en.c_str());
+			sysPrxForUser.Warning("env_argument: %s", en.c_str());
 		}
 	}
 
-	//TODO: execute the file in <path> with the args in argv
-	//and the environment parameters in envp and copy the data
-	//from data_addr into the adress space of the new process
-	//then kill the current process
+	// TODO: execute the file in <path> with the args in argv
+	// and the environment parameters in envp and copy the data
+	// from data_addr into the adress space of the new process
+	// then kill the current process
 
 	Emu.Pause();
 	sysPrxForUser.Success("Process finished");
@@ -119,7 +119,7 @@ void sys_game_process_exitspawn2(vm::cptr<char> path, u32 argv_addr, u32 envp_ad
 
 		for (auto &arg : argv)
 		{
-			sysPrxForUser.Log("argument: %s", arg.c_str());
+			sysPrxForUser.Warning("argument: %s", arg.c_str());
 		}
 	}
 
@@ -134,14 +134,14 @@ void sys_game_process_exitspawn2(vm::cptr<char> path, u32 argv_addr, u32 envp_ad
 
 		for (auto &en : env)
 		{
-			sysPrxForUser.Log("env_argument: %s", en.c_str());
+			sysPrxForUser.Warning("env_argument: %s", en.c_str());
 		}
 	}
 
-	//TODO: execute the file in <path> with the args in argv
-	//and the environment parameters in envp and copy the data
-	//from data_addr into the adress space of the new process
-	//then kill the current process
+	// TODO: execute the file in <path> with the args in argv
+	// and the environment parameters in envp and copy the data
+	// from data_addr into the adress space of the new process
+	// then kill the current process
 
 	Emu.Pause();
 	sysPrxForUser.Success("Process finished");

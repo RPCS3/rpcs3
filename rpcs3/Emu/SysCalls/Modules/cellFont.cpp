@@ -146,12 +146,12 @@ s32 cellFontOpenFontset(PPUThread& ppu, vm::ptr<CellFontLibrary> library, vm::pt
 	case CELL_FONT_TYPE_SEURAT_CAPIE_MARU_GOTHIC_YG_DFHEI5_RSANS2_SET:
 	case CELL_FONT_TYPE_SEURAT_CAPIE_MARU_GOTHIC_YG_DFHEI5_VAGR2_SET:
 	case CELL_FONT_TYPE_SEURAT_CAPIE_MARU_GOTHIC_VAGR2_SET:
-		cellFont.Warning("cellFontOpenFontset: fontType->type = %d not supported yet. RD-R-LATIN.TTF will be used instead.", fontType->type);
+		cellFont.Warning("cellFontOpenFontset: fontType->type = 0x%x not supported yet. RD-R-LATIN.TTF will be used instead.", fontType->type);
 		file = "/dev_flash/data/font/SCE-PS3-RD-R-LATIN.TTF";
 		break;
 
 	default:
-		cellFont.Warning("cellFontOpenFontset: fontType->type = %d not supported.", fontType->type);
+		cellFont.Warning("cellFontOpenFontset: fontType->type = 0x%x not supported.", fontType->type);
 		return CELL_FONT_ERROR_NO_SUPPORT_FONTSET;
 	}
 
@@ -300,7 +300,7 @@ s32 cellFontGetRenderCharGlyphMetrics(vm::ptr<CellFont> font, u32 code, vm::ptr<
 
 s32 cellFontRenderCharGlyphImage(vm::ptr<CellFont> font, u32 code, vm::ptr<CellFontRenderSurface> surface, float x, float y, vm::ptr<CellFontGlyphMetrics> metrics, vm::ptr<CellFontImageTransInfo> transInfo)
 {
-	cellFont.Log("cellFontRenderCharGlyphImage(font=*0x%x, code=0x%x, surface=*0x%x, x=%f, y=%f, metrics=*0x%x, trans=*0x%x)", font, code, surface, x, y, metrics, transInfo);
+	cellFont.Notice("cellFontRenderCharGlyphImage(font=*0x%x, code=0x%x, surface=*0x%x, x=%f, y=%f, metrics=*0x%x, trans=*0x%x)", font, code, surface, x, y, metrics, transInfo);
 
 	if (!font->renderer_addr)
 	{
@@ -377,6 +377,7 @@ s32 cellFontGetFontIdCode(vm::ptr<CellFont> font, u32 code, vm::ptr<u32> fontId,
 	cellFont.Todo("cellFontGetFontIdCode(font=*0x%x, code=0x%x, fontId=*0x%x, fontCode=*0x%x)", font, code, fontId, fontCode);
 
 	// TODO: ?
+
 	return CELL_OK;
 }
 
@@ -405,8 +406,8 @@ s32 cellFontGetCharGlyphMetrics(vm::ptr<CellFont> font, u32 code, vm::ptr<CellFo
 	stbtt_GetCodepointHMetrics(font->stbfont, code, &advanceWidth, &leftSideBearing);
 	
 	// TODO: Add the rest of the information
-	metrics->width = (x1-x0) * scale;
-	metrics->height = (y1-y0) * scale;
+	metrics->width = (x1 - x0) * scale;
+	metrics->height = (y1 - y0) * scale;
 	metrics->h_bearingX = (float)leftSideBearing * scale;
 	metrics->h_bearingY = 0.f;
 	metrics->h_advance = (float)advanceWidth * scale;

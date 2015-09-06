@@ -84,5 +84,5 @@ void AboutDialog::OpenWebsite(wxCommandEvent& WXUNUSED(event))
 
 void AboutDialog::OpenForum(wxCommandEvent& WXUNUSED(event))
 {
-	wxLaunchDefaultBrowser("http://forum.rpcs3.net/");
+	wxLaunchDefaultBrowser("http://www.emunewz.net/forum/forumdisplay.php?fid=162");
 }

@@ -280,3 +280,31 @@ inline static u32 ResolutionNumToId(u32 num)
 
 	return num <= 8 ? res[num] : 0;
 }
+
+inline static const char* ResolutionIdToString(u32 id)
+{
+	u32 num = ResolutionIdToNum(id);
+	switch (num)
+	{
+	case 1: return "1920x1080";
+	case 2: return "1280x720";
+	case 3: return "720x480";
+	case 4: return "720x576";
+	case 5: return "1600x1080";
+	case 6: return "1440x1080";
+	case 7: return "1280x1080";
+	case 8: return "960x1080";
+	default: return "Unknown";
+	}
+}
+
+inline static u16 FrameLimitIdToConstant(u8 id)
+{
+	switch (id)
+	{
+	case 1: return CELL_VIDEO_OUT_REFRESH_RATE_30HZ | CELL_VIDEO_OUT_REFRESH_RATE_50HZ; // 50Hz
+	case 2: return CELL_VIDEO_OUT_REFRESH_RATE_30HZ | CELL_VIDEO_OUT_REFRESH_RATE_50HZ | CELL_VIDEO_OUT_REFRESH_RATE_59_94HZ; // 59.94Hz
+	case 3: return CELL_VIDEO_OUT_REFRESH_RATE_30HZ; // 30Hz
+	default: return CELL_VIDEO_OUT_REFRESH_RATE_30HZ | CELL_VIDEO_OUT_REFRESH_RATE_50HZ | CELL_VIDEO_OUT_REFRESH_RATE_59_94HZ | CELL_VIDEO_OUT_REFRESH_RATE_60HZ; // Auto, off
+	}
+}

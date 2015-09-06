@@ -157,8 +157,10 @@ public:
 
 	// HLE/Miscs
 	IniEntry<u8>   HLELogLvl;
-	IniEntry<u8>   NETStatus;
+	IniEntry<u8>   HLELicenseArea;
 	IniEntry<u8>   NETInterface;
+	IniEntry<u8>   NETStatus;
+	IniEntry<u8>   NETType;
 	IniEntry<bool> HLELogging;
 	IniEntry<bool> RSXLogging;
 	IniEntry<bool> HLESaveTTY;
@@ -249,12 +251,16 @@ public:
 		// Miscellaneous
 		HLELogging.Init("HLE_HLELogging", path);
 		RSXLogging.Init("RSX_Logging", path);
-		NETStatus.Init("NET_Status", path);
-		NETInterface.Init("NET_Interface", path);
 		HLESaveTTY.Init("HLE_HLESaveTTY", path);
 		HLEExitOnStop.Init("HLE_HLEExitOnStop", path);
 		HLELogLvl.Init("HLE_HLELogLvl", path);
+		HLELicenseArea.Init("HLE_LicenseArea", path);
 		HLEAlwaysStart.Init("HLE_HLEAlwaysStart", path);
+
+		// Networking
+		NETInterface.Init("NET_Interface", path);
+		NETStatus.Init("NET_Status", path);
+		NETType.Init("NET_Type", path);
 
 		// Auto Pause
 		DBGAutoPauseFunctionCall.Init("DBG_AutoPauseFunctionCall", path);
@@ -336,12 +342,16 @@ public:
 		// Miscellaneous
 		HLELogging.Load(false);
 		RSXLogging.Load(false);
-		NETStatus.Load(0);
-		NETInterface.Load(0);
 		HLESaveTTY.Load(false);
 		HLEExitOnStop.Load(false);
 		HLELogLvl.Load(3);
+		HLELicenseArea.Load(2);
 		HLEAlwaysStart.Load(true);
+
+		// Networking
+		NETInterface.Load(0);
+		NETStatus.Load(0);
+		NETType.Load(0);
 
 		//Auto Pause
 		DBGAutoPauseFunctionCall.Load(false);
@@ -423,12 +433,16 @@ public:
 		// Miscellaneous
 		HLELogging.Save();
 		RSXLogging.Save();
-		NETStatus.Save();
-		NETInterface.Save();
 		HLESaveTTY.Save();
 		HLEExitOnStop.Save();
 		HLELogLvl.Save();
+		HLELicenseArea.Save();
 		HLEAlwaysStart.Save();
+
+		// Networking
+		NETInterface.Save();
+		NETStatus.Save();
+		NETType.Save();
 
 		//Auto Pause
 		DBGAutoPauseFunctionCall.Save();
@@ -440,6 +454,77 @@ public:
 		// Customed EmulationDir
 		SysEmulationDirPath.Save();
 		SysEmulationDirPathEnable.Save();
+	}
+
+	// For getting strings for certain options to display settings in the log.
+	inline static const char* CPUIdToString(u8 code)
+	{
+		switch (code)
+		{
+		case 0: return "PPU Interpreter";
+		case 1: return "PPU Interpreter 2";
+		case 2: return "PPU JIT (LLVM)";
+		default: return "Unknown";
+		}
+	}
+
+	inline static const char* SPUIdToString(u8 code)
+	{
+		switch (code)
+		{
+		case 0: return "SPU Interpreter";
+		case 1: return "SPU Interpreter 2";
+		case 2: return "SPU JIT (ASMJIT)";
+		default: return "Unknown";
+		}
+	}
+
+	inline static const char* RendererIdToString(u8 code)
+	{
+		switch (code)
+		{
+		case 0: return "Null";
+		case 1: return "OpenGL";
+		case 2: return "DirectX 12";
+		default: return "Unknown";
+		}
+	}
+
+	inline static const char* AdapterIdToString(u8 code)
+	{
+		switch (code)
+		{
+		case 0: return "WARP";
+		case 1: return "Default";
+		case 2: return "Renderer 0";
+		case 3: return "Renderer 1";
+		case 4: return "Renderer 2";
+		default: return "Unknown";
+		}
+	}
+
+	inline static const char* AudioOutIdToString(u8 code)
+	{
+		switch (code)
+		{
+		case 0: return "Null";
+		case 1: return "OpenAL";
+		case 2: return "XAudio2";
+		default: return "Unknown";
+		}
+	}
+
+	inline static const char* LogLevelIdToString(u8 code)
+	{
+		switch (code)
+		{
+		case 0: return "All";
+		case 1: return "Warnings";
+		case 2: return "Success";
+		case 3: return "Errors";
+		case 4: return "Nothing";
+		default: return "Unknown";
+		}
 	}
 };
 

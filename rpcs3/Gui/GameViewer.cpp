@@ -174,7 +174,22 @@ void GameViewer::LoadPSF()
 			game.category = "Disc Game";
 			game.icon_path = local_path + "/" + m_games[i] + "/PS3_GAME/ICON0.PNG";
 		}
-			
+		else if (game.category.substr(0, 2) == "HM")
+		{
+			game.category = "Home";
+			game.icon_path = local_path + "/" + m_games[i] + "/ICON0.PNG";
+		}
+		else if (game.category.substr(0, 2) == "AV")
+		{
+			// TODO: What category does AV stand for?
+			game.icon_path = local_path + "/" + m_games[i] + "/ICON0.PNG";
+		}
+		else if (game.category.substr(0, 2) == "GD")
+		{
+			// TODO: What category does GD stand for?
+			game.icon_path = local_path + "/" + m_games[i] + "/PS3_GAME/ICON0.PNG";
+		}
+		
 		m_game_data.push_back(game);
 	}
 

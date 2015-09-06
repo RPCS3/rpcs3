@@ -134,6 +134,18 @@ u32 spu_thread_initialize(u32 group_id, u32 spu_num, vm::ptr<sys_spu_image> img,
 	return spu->get_id();
 }
 
+void sys_spu_thread_argument_initialize(vm::ptr<sys_spu_thread_argument> attr)
+{
+	attr->arg1 = attr->arg2 = attr->arg3 = attr->arg4 = 0;
+}
+
+void sys_spu_thread_attribute_initialize(vm::ptr<sys_spu_thread_attribute> attr)
+{
+	attr->name = vm::null;
+	attr->name_len = 0;
+	attr->option = SYS_SPU_THREAD_OPTION_NONE;
+}
+
 s32 sys_spu_thread_initialize(vm::ptr<u32> thread, u32 group_id, u32 spu_num, vm::ptr<sys_spu_image> img, vm::ptr<sys_spu_thread_attribute> attr, vm::ptr<sys_spu_thread_argument> arg)
 {
 	sys_spu.Warning("sys_spu_thread_initialize(thread=*0x%x, group=0x%x, spu_num=%d, img=*0x%x, attr=*0x%x, arg=*0x%x)", thread, group_id, spu_num, img, attr, arg);
@@ -217,6 +229,13 @@ s32 sys_spu_thread_get_exit_status(u32 id, vm::ptr<u32> status)
 	}
 
 	return CELL_OK;
+}
+
+void sys_spu_thread_group_attribute_initialize(vm::ptr<sys_spu_thread_group_attribute> attr)
+{
+	attr->name = vm::null;
+	attr->nsize = 0;
+	attr->type = SYS_SPU_THREAD_GROUP_TYPE_NORMAL;
 }
 
 s32 sys_spu_thread_group_create(vm::ptr<u32> id, u32 num, s32 prio, vm::ptr<sys_spu_thread_group_attribute> attr)

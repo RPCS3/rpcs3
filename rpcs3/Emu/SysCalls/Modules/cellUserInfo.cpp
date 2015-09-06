@@ -14,17 +14,25 @@ s32 cellUserInfoGetStat(u32 id, vm::ptr<CellUserInfoUserStat> stat)
 	cellUserInfo.Warning("cellUserInfoGetStat(id=%d, stat=*0x%x)", id, stat);
 
 	if (id > CELL_USERINFO_USER_MAX)
+	{
 		return CELL_USERINFO_ERROR_NOUSER;
+	}
 
-	char path [256];
+	char path[256];
 	sprintf(path, "/dev_hdd0/home/%08d", id);
+
 	if (!Emu.GetVFS().ExistsDir(path))
+	{
 		return CELL_USERINFO_ERROR_NOUSER;
+	}
 
 	sprintf(path, "/dev_hdd0/home/%08d/localusername", id);
 	vfsStream* stream = Emu.GetVFS().OpenFile(path, fom::read);
+
 	if (!stream || !(stream->IsOpened()))
+	{
 		return CELL_USERINFO_ERROR_INTERNAL;
+	}
 
 	char name [CELL_USERINFO_USERNAME_SIZE];
 	memset(name, 0, CELL_USERINFO_USERNAME_SIZE);
@@ -34,24 +42,33 @@ s32 cellUserInfoGetStat(u32 id, vm::ptr<CellUserInfoUserStat> stat)
 
 	stat->id = id;
 	memcpy(stat->name, name, CELL_USERINFO_USERNAME_SIZE);
+
 	return CELL_OK;
 }
 
-s32 cellUserInfoSelectUser_ListType()
+s32 cellUserInfoSelectUser_SetList(PPUThread& ppu, vm::ptr<CellUserInfoListSet> setList, vm::ptr<CellUserInfoFinishCallback> funcSelect, u32 container, vm::ptr<u32> userdata)
 {
-	UNIMPLEMENTED_FUNC(cellUserInfo);
+	cellUserInfo.Todo("cellUserInfoSelectUser_SetList(setList=*0x%x, funcSelect=0x%x, container=%d, userdata=*0x%x)", setList, funcSelect, container, userdata);
+
+	// TODO: Proper implementation, we currently return a cancellation of the dialog
+	funcSelect(ppu, CELL_USERINFO_RET_CANCEL, vm::ptr<CellUserInfoUserStat>::make(0), userdata);
+
 	return CELL_OK;
 }
 
-s32 cellUserInfoSelectUser_SetList()
+s32 cellUserInfoSelectUser_ListType(PPUThread& ppu, vm::ptr<CellUserInfoTypeSet> setType, vm::ptr<CellUserInfoFinishCallback> funcSelect, u32 container, vm::ptr<u32> userdata)
 {
-	UNIMPLEMENTED_FUNC(cellUserInfo);
+	cellUserInfo.Todo("cellUserInfoSelectUser_ListType(setType=*0x%x, funcSelect=0x%x, container=%d, userdata=*0x%x)", setType, funcSelect, container, userdata);
+
+	// TODO: Proper implementation, we currently return a cancellation of the dialog
+	funcSelect(ppu, CELL_USERINFO_RET_CANCEL, vm::ptr<CellUserInfoUserStat>::make(0), userdata);
+
 	return CELL_OK;
 }
 
-s32 cellUserInfoEnableOverlay()
+s32 cellUserInfoEnableOverlay(s32 enable)
 {
-	UNIMPLEMENTED_FUNC(cellUserInfo);
+	cellUserInfo.Todo("cellUserInfoEnableOverlay(enable=%d)", enable);
 	return CELL_OK;
 }
 
@@ -61,14 +78,24 @@ s32 cellUserInfoGetList(vm::ptr<u32> listNum, vm::ptr<CellUserInfoUserList> list
 
 	// If only listNum is NULL, an error will be returned
 	if (listBuf && !listNum)
+	{
 		return CELL_USERINFO_ERROR_PARAM;
+	}
+
 	if (listNum)
+	{
 		*listNum = 1;
+	}
+
 	if (listBuf)
+	{
 		listBuf->userId[0] = 1;
+	}
 
 	if (currentUserId)
+	{
 		*currentUserId = 1;
+	}
 	
 	return CELL_OK;
 }

@@ -179,8 +179,8 @@ bool D3D12GSRender::LoadProgram()
 
 	if (m_set_blend_color)
 	{
-		//		glBlendColor(m_blend_color_r, m_blend_color_g, m_blend_color_b, m_blend_color_a);
-		//		checkForGlError("glBlendColor");
+		// glBlendColor(m_blend_color_r, m_blend_color_g, m_blend_color_b, m_blend_color_a);
+		// checkForGlError("glBlendColor");
 	}
 
 	switch (m_surface_depth_format)

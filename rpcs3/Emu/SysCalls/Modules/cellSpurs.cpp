@@ -1082,13 +1082,6 @@ s32 spursInit(
 	spuTgName[spurs->prefixSize] = '\0';
 	strcat(spuTgName.get_ptr(), "CellSpursKernelGroup");
 
-	auto sys_spu_thread_group_attribute_initialize = [](vm::ptr<sys_spu_thread_group_attribute> attr)
-	{
-		attr->name  = vm::null;
-		attr->nsize = 0;
-		attr->type  = SYS_SPU_THREAD_GROUP_TYPE_NORMAL;
-	};
-
 	sys_spu_thread_group_attribute_initialize(spuTgAttr);
 	spuTgAttr->name  = spuTgName;
 	spuTgAttr->nsize = (u32)strlen(spuTgAttr->name.get_ptr()) + 1;

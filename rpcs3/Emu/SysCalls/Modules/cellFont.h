@@ -219,9 +219,12 @@ struct CellFont
 
 	be_t<u32> fontdata_addr;
 	be_t<u32> origin;
+	be_t<u32> uniqueId;
 	struct stbtt_fontinfo* stbfont;
 	// hack: don't place anything after pointer
 };
+
+CHECK_MAX_SIZE(CellFont, 0x100);
 
 struct CellFontRendererConfig
 {

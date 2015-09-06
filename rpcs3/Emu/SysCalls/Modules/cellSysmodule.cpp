@@ -201,7 +201,7 @@ s32 cellSysmoduleIsLoaded(u16 id)
 	{
 		if (!m->IsLoaded())
 		{
-			cellSysmodule.Error("cellSysmoduleIsLoaded() failed: module not loaded (id=0x%04x)", id);
+			cellSysmodule.Warning("cellSysmoduleIsLoaded() failed: module not loaded (id=0x%04x)", id);
 			return CELL_SYSMODULE_ERROR_UNLOADED;
 		}
 	}

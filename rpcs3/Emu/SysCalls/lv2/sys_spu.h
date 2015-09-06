@@ -6,20 +6,20 @@ namespace vm { using namespace ps3; }
 
 enum : s32
 {
-	SYS_SPU_THREAD_GROUP_TYPE_NORMAL = 0x00,
-	SYS_SPU_THREAD_GROUP_TYPE_SEQUENTIAL = 0x01,
-	SYS_SPU_THREAD_GROUP_TYPE_SYSTEM = 0x02,
+	SYS_SPU_THREAD_GROUP_TYPE_NORMAL                = 0x00,
+	SYS_SPU_THREAD_GROUP_TYPE_SEQUENTIAL            = 0x01,
+	SYS_SPU_THREAD_GROUP_TYPE_SYSTEM                = 0x02,
 	SYS_SPU_THREAD_GROUP_TYPE_MEMORY_FROM_CONTAINER = 0x04,
-	SYS_SPU_THREAD_GROUP_TYPE_NON_CONTEXT = 0x08,
+	SYS_SPU_THREAD_GROUP_TYPE_NON_CONTEXT           = 0x08,
 	SYS_SPU_THREAD_GROUP_TYPE_EXCLUSIVE_NON_CONTEXT = 0x18,
 	SYS_SPU_THREAD_GROUP_TYPE_COOPERATE_WITH_SYSTEM = 0x20,
 };
 
 enum
 {
-	SYS_SPU_THREAD_GROUP_JOIN_GROUP_EXIT = 0x0001,
+	SYS_SPU_THREAD_GROUP_JOIN_GROUP_EXIT       = 0x0001,
 	SYS_SPU_THREAD_GROUP_JOIN_ALL_THREADS_EXIT = 0x0002,
-	SYS_SPU_THREAD_GROUP_JOIN_TERMINATED = 0x0004
+	SYS_SPU_THREAD_GROUP_JOIN_TERMINATED       = 0x0004
 };
 
 enum
@@ -221,8 +221,11 @@ s32 spu_image_import(sys_spu_image& img, u32 src, u32 type);
 s32 sys_spu_initialize(u32 max_usable_spu, u32 max_raw_spu);
 s32 sys_spu_image_open(vm::ptr<sys_spu_image> img, vm::cptr<char> path);
 s32 sys_spu_image_close(vm::ptr<sys_spu_image> img);
+void sys_spu_thread_argument_initialize(vm::ptr<sys_spu_thread_argument> attr);
+void sys_spu_thread_attribute_initialize(vm::ptr<sys_spu_thread_attribute> attr);
 s32 sys_spu_thread_initialize(vm::ptr<u32> thread, u32 group, u32 spu_num, vm::ptr<sys_spu_image> img, vm::ptr<sys_spu_thread_attribute> attr, vm::ptr<sys_spu_thread_argument> arg);
 s32 sys_spu_thread_set_argument(u32 id, vm::ptr<sys_spu_thread_argument> arg);
+void sys_spu_thread_group_attribute_initialize(vm::ptr<sys_spu_thread_group_attribute> attr);
 s32 sys_spu_thread_group_create(vm::ptr<u32> id, u32 num, s32 prio, vm::ptr<sys_spu_thread_group_attribute> attr);
 s32 sys_spu_thread_group_destroy(u32 id);
 s32 sys_spu_thread_group_start(u32 id);

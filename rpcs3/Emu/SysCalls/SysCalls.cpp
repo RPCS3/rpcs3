@@ -59,7 +59,7 @@ const ppu_func_caller g_sc_table[1024] =
 
 	bind_func(sys_process_get_number_of_object),            //12  (0x00C)
 	bind_func(sys_process_get_id),                          //13  (0x00D)
-	bind_func(sys_process_is_spu_lock_line_reservation_address),  //14  (0x00E)
+	bind_func(sys_process_is_spu_lock_line_reservation_address), //14  (0x00E)
 
 	null_func, null_func, null_func,                        //15-17  UNS
 	
@@ -75,7 +75,7 @@ const ppu_func_caller g_sc_table[1024] =
 	null_func,//bind_func(),                                //27  (0x01B)  DBG
 	null_func,//bind_func(_sys_process_get_number_of_object)//28  (0x01C)  ROOT
 	bind_func(sys_process_get_id),                          //29  (0x01D)  ROOT
-	bind_func(_sys_process_get_paramsfo),                    //30  (0x01E)
+	bind_func(_sys_process_get_paramsfo),                   //30  (0x01E)
 	null_func,//bind_func(sys_process_get_ppu_guid),        //31  (0x01F)
 	
 	null_func, null_func, null_func, null_func, null_func, null_func, null_func, null_func, null_func, //32-40  UNS
@@ -91,7 +91,7 @@ const ppu_func_caller g_sc_table[1024] =
 	bind_func(sys_ppu_thread_get_stack_information),        //49  (0x031)
 	null_func,//bind_func(sys_ppu_thread_stop),             //50  (0x032)  ROOT
 	null_func,//bind_func(sys_ppu_thread_restart),          //51  (0x033)  ROOT
-	bind_func(_sys_ppu_thread_create),                       //52  (0x034)  DBG
+	bind_func(_sys_ppu_thread_create),                      //52  (0x034)  DBG
 	bind_func(sys_ppu_thread_start),                        //53  (0x035)
 	null_func,//bind_func(sys_ppu_...),                     //54  (0x036)  ROOT
 	null_func,//bind_func(sys_ppu_...),                     //55  (0x037)  ROOT
@@ -442,14 +442,14 @@ const ppu_func_caller g_sc_table[1024] =
 	
 	null_func, null_func, null_func,                        //477-479  UNS
 
-	bind_func(sys_prx_load_module),             //480 (0x1E0)
-	bind_func(sys_prx_start_module),            //481 (0x1E1)
-	bind_func(sys_prx_stop_module),             //482 (0x1E2)
-	bind_func(sys_prx_unload_module),           //483 (0x1E3)
-	bind_func(sys_prx_register_module),         //484 (0x1E4)
+	bind_func(sys_prx_load_module),                         //480 (0x1E0)
+	bind_func(sys_prx_start_module),                        //481 (0x1E1)
+	bind_func(sys_prx_stop_module),                         //482 (0x1E2)
+	bind_func(sys_prx_unload_module),                       //483 (0x1E3)
+	bind_func(sys_prx_register_module),                     //484 (0x1E4)
 	bind_func(sys_prx_query_module),                        //485 (0x1E5)
 	bind_func(sys_prx_register_library),                    //486 (0x1E6)
-	bind_func(sys_prx_unregister_library),      //487 (0x1E7)
+	bind_func(sys_prx_unregister_library),                  //487 (0x1E7)
 	bind_func(sys_prx_link_library),                        //488 (0x1E8)
 	bind_func(sys_prx_unlink_library),                      //489 (0x1E9)
 	bind_func(sys_prx_query_library),                       //490 (0x1EA)

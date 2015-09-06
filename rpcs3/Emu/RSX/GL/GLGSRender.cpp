@@ -188,7 +188,7 @@ void GLTexture::Init(RSXTexture& tex)
 			{
 				for (int j = 0; j < tex.GetWidth(); j++)
 				{
-					dst[(i*tex.GetWidth()) + j] = src[LinearToSwizzleAddress(j, i, 0, log2width, log2height, 0)];
+					dst[(i * tex.GetWidth()) + j] = src[LinearToSwizzleAddress(j, i, 0, log2width, log2height, 0)];
 				}
 			}
 		}
@@ -1698,6 +1698,7 @@ void GLGSRender::Draw()
 	Enable(m_set_scissor_horizontal && m_set_scissor_vertical, GL_SCISSOR_TEST);
 	Enable(m_set_logic_op, GL_LOGIC_OP);
 	Enable(m_set_cull_face, GL_CULL_FACE);
+	Enable(m_set_zclamp, GL_DEPTH_CLAMP);
 	Enable(m_set_dither, GL_DITHER);
 	Enable(m_set_stencil_test, GL_STENCIL_TEST);
 	Enable(m_set_line_smooth, GL_LINE_SMOOTH);
@@ -1718,12 +1719,38 @@ void GLGSRender::Draw()
 	
 	if (m_set_clip_plane)
 	{
-		Enable(m_clip_plane_0, GL_CLIP_PLANE0);
-		Enable(m_clip_plane_1, GL_CLIP_PLANE1);
-		Enable(m_clip_plane_2, GL_CLIP_PLANE2);
-		Enable(m_clip_plane_3, GL_CLIP_PLANE3);
-		Enable(m_clip_plane_4, GL_CLIP_PLANE4);
-		Enable(m_clip_plane_5, GL_CLIP_PLANE5);
+		Enable(m_clip_plane_0 ? true : false, GL_CLIP_PLANE0);
+		Enable(m_clip_plane_1 ? true : false, GL_CLIP_PLANE1);
+		Enable(m_clip_plane_2 ? true : false, GL_CLIP_PLANE2);
+		Enable(m_clip_plane_3 ? true : false, GL_CLIP_PLANE3);
+		Enable(m_clip_plane_4 ? true : false, GL_CLIP_PLANE4);
+		Enable(m_clip_plane_5 ? true : false, GL_CLIP_PLANE5);
+
+		auto eq0Const = m_transform_constants.back();
+
+		// 467 seems to be the ID for plane0 equation.
+		if (eq0Const.id == 467)
+		{
+			double equation_0[4] = { eq0Const.x, eq0Const.y, eq0Const.z, eq0Const.w };
+
+			if (m_clip_plane_0 == CELL_GCM_USER_CLIP_PLANE_ENABLE_LT)
+			{
+				for (int i = 0; i < 4; i++)
+				{
+					equation_0[i] = equation_0[i] * -1;
+				}
+			}
+
+			// Even though the values in equation changed, what is rendered doesn't seem to change...
+			glClipPlane(GL_CLIP_PLANE0, equation_0);
+		}
+
+		// Where are the equations for these located? Need more samples to test that use plane clipping.
+		/*glClipPlane(GL_CLIP_PLANE1, equation_1);
+		glClipPlane(GL_CLIP_PLANE2, equation_2);
+		glClipPlane(GL_CLIP_PLANE3, equation_3);
+		glClipPlane(GL_CLIP_PLANE4, equation_4);
+		glClipPlane(GL_CLIP_PLANE5, equation_5);*/
 
 		checkForGlError("m_set_clip_plane");
 	}

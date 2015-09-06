@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "Emu/IdManager.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/SysCalls/Modules.h"
 
@@ -8,6 +9,8 @@
 #include "cellVideoOut.h"
 
 extern Module cellAvconfExt;
+
+f32 avGamma;
 
 s32 cellAudioOutUnregisterDevice()
 {
@@ -39,9 +42,18 @@ s32 cellVideoOutConvertCursorColor()
 	throw EXCEPTION("");
 }
 
-s32 cellVideoOutGetGamma()
+s32 cellVideoOutGetGamma(u32 videoOut, vm::ptr<f32> gammaIn)
 {
-	throw EXCEPTION("");
+	cellAvconfExt.Warning("cellVideoOutGetGamma(videoOut=%d, gamma=*0x%x)", videoOut, gammaIn);
+
+	if (videoOut != CELL_VIDEO_OUT_PRIMARY)
+	{
+		return CELL_VIDEO_OUT_ERROR_UNSUPPORTED_VIDEO_OUT;
+	}
+
+	*gammaIn = avGamma;
+
+	return CELL_VIDEO_OUT_SUCCEEDED;
 }
 
 s32 cellAudioInGetAvailableDeviceInfo()
@@ -54,9 +66,23 @@ s32 cellAudioOutGetAvailableDeviceInfo()
 	throw EXCEPTION("");
 }
 
-s32 cellVideoOutSetGamma()
+s32 cellVideoOutSetGamma(u32 videoOut, f32 gammaIn)
 {
-	throw EXCEPTION("");
+	cellAvconfExt.Warning("cellVideoOutSetGamma(videoOut=%d, gamma=%d)", videoOut, gammaIn);
+
+	if (videoOut != CELL_VIDEO_OUT_PRIMARY)
+	{
+		return CELL_VIDEO_OUT_ERROR_UNSUPPORTED_VIDEO_OUT;
+	}
+
+	if (gammaIn < 0.8 || gammaIn > 1.2)
+	{
+		return CELL_VIDEO_OUT_ERROR_ILLEGAL_PARAMETER;
+	}
+
+	avGamma = gammaIn;
+
+	return CELL_VIDEO_OUT_SUCCEEDED;
 }
 
 s32 cellAudioOutRegisterDevice()
@@ -69,8 +95,9 @@ s32 cellAudioOutSetDeviceMode()
 	throw EXCEPTION("");
 }
 
-s32 cellAudioInSetDeviceMode()
+s32 cellAudioInSetDeviceMode(u32 deviceMode)
 {
+	cellAvconfExt.Todo("cellAudioInSetDeviceMode(deviceMode=%d)", deviceMode);
 	throw EXCEPTION("");
 }
 
@@ -86,7 +113,7 @@ s32 cellAudioInUnregisterDevice()
 
 s32 cellVideoOutGetScreenSize(u32 videoOut, vm::ptr<float> screenSize)
 {
-	cellAvconfExt.Warning("cellVideoOutGetScreenSize(videoOut=%d, screenSize=*0x%x)", videoOut, screenSize);
+	cellAvconfExt.Todo("cellVideoOutGetScreenSize(videoOut=%d, screenSize=*0x%x)", videoOut, screenSize);
 
 	if (videoOut != CELL_VIDEO_OUT_PRIMARY)
 	{
@@ -114,6 +141,8 @@ s32 cellVideoOutGetScreenSize(u32 videoOut, vm::ptr<float> screenSize)
 
 Module cellAvconfExt("cellAvconfExt", []()
 {
+	avGamma = 1;
+
 	REG_FUNC(cellAvconfExt, cellAudioOutUnregisterDevice);
 	REG_FUNC(cellAvconfExt, cellAudioOutGetDeviceInfo2);
 	REG_FUNC(cellAvconfExt, cellVideoOutSetXVColor);

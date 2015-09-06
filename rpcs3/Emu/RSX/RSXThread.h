@@ -172,6 +172,7 @@ public:
 	bool m_color_mask_g;
 	bool m_color_mask_b;
 	bool m_color_mask_a;
+	bool m_set_color_mask_mrt;
 
 	// Clip 
 	bool m_set_clip;
@@ -417,6 +418,9 @@ public:
 	// Cull face
 	bool m_set_cull_face;
 	u32 m_cull_face;
+
+	// Culling
+	bool m_set_zclamp;
 
 	// Alpha test
 	bool m_set_alpha_test;

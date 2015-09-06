@@ -360,7 +360,9 @@ vfsDevice* VFS::GetDevice(const std::string& ps3_path, std::string& path) const
 			std::vector<std::string> dev_ps3_path_blocks = simplify_path_blocks(m_devices[i]->GetPs3Path());
 
 			if (ps3_path_blocks.size() < dev_ps3_path_blocks.size())
+			{
 				continue;
+			}
 
 			size_t eq = 0;
 			for (; eq < dev_ps3_path_blocks.size(); ++eq)
@@ -379,7 +381,9 @@ vfsDevice* VFS::GetDevice(const std::string& ps3_path, std::string& path) const
 		}
 
 		if (max_i < 0)
+		{
 			return nullptr;
+		}
 
 		path = m_devices[max_i]->GetLocalPath();
 

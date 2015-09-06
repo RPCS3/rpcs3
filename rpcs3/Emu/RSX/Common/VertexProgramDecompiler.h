@@ -11,7 +11,7 @@
 * - virtual std::string getFunction(enum class FUNCTION) = 0;
 * - virtual std::string compareFunction(enum class COMPARE, const std::string &, const std::string &) = 0;
 * - virtual void insertHeader(std::stringstream &OS) = 0;
-* - virtual void insertIntputs(std::stringstream &OS) = 0;
+* - virtual void insertInputs(std::stringstream &OS) = 0;
 * - virtual void insertOutputs(std::stringstream &OS) = 0;
 * - virtual void insertConstants(std::stringstream &OS) = 0;
 * - virtual void insertMainStart(std::stringstream &OS) = 0;

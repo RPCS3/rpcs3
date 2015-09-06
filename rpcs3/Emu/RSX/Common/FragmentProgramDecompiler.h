@@ -11,7 +11,7 @@
  * - virtual std::string saturate(const std::string &code) = 0;
  * - virtual std::string compareFunction(enum class COMPARE, const std::string &, const std::string &) = 0;
  * - virtual void insertHeader(std::stringstream &OS) = 0;
- * - virtual void insertIntputs(std::stringstream &OS) = 0;
+ * - virtual void insertInputs(std::stringstream &OS) = 0;
  * - virtual void insertOutputs(std::stringstream &OS) = 0;
  * - virtual void insertConstants(std::stringstream &OS) = 0;
  * - virtual void insertMainStart(std::stringstream &OS) = 0;
@@ -71,7 +71,7 @@ protected:
 	virtual void insertHeader(std::stringstream &OS) = 0;
 	/** Insert global declaration of fragments inputs.
 	 */
-	virtual void insertIntputs(std::stringstream &OS) = 0;
+	virtual void insertInputs(std::stringstream &OS) = 0;
 	/** insert global declaration of fragments outputs.
 	*/
 	virtual void insertOutputs(std::stringstream &OS) = 0;

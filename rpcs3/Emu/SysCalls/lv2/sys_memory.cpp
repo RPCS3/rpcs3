@@ -189,7 +189,7 @@ s32 sys_memory_free(u32 addr)
 
 s32 sys_memory_get_page_attribute(u32 addr, vm::ptr<sys_page_attr_t> attr)
 {
-	sys_memory.Error("sys_memory_get_page_attribute(addr=0x%x, attr=*0x%x)", addr, attr);
+	sys_memory.Todo("sys_memory_get_page_attribute(addr=0x%x, attr=*0x%x)", addr, attr);
 
 	LV2_LOCK;
 
