@@ -614,7 +614,7 @@ namespace sys_net
 }
 
 // define additional macro for specific namespace
-#define REG_FUNC_(name) add_ppu_func(ModuleFunc(get_function_id(#name), 0, &libnet, #name, bind_func(sys_net::name)))
+#define REG_FUNC_(name) add_ppu_func(ModuleFunc(get_function_id(#name), 0, &libnet, #name, BIND_FUNC(sys_net::name)))
 
 Module libnet("sys_net", []()
 {

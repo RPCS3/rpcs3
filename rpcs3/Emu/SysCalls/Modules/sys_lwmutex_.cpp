@@ -276,13 +276,11 @@ s32 sys_lwmutex_unlock(PPUThread& ppu, vm::ptr<sys_lwmutex_t> lwmutex)
 	return CELL_OK;
 }
 
-u32 g_ppu_func_index__sys_lwmutex_unlock; // test
-
 void sysPrxForUser_sys_lwmutex_init()
 {
 	REG_FUNC(sysPrxForUser, sys_lwmutex_create);
 	REG_FUNC(sysPrxForUser, sys_lwmutex_destroy);
 	REG_FUNC(sysPrxForUser, sys_lwmutex_lock);
 	REG_FUNC(sysPrxForUser, sys_lwmutex_trylock);
-	g_ppu_func_index__sys_lwmutex_unlock = REG_FUNC(sysPrxForUser, sys_lwmutex_unlock); // test
+	REG_FUNC(sysPrxForUser, sys_lwmutex_unlock);
 }

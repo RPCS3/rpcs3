@@ -125,33 +125,36 @@ void hook_ppu_funcs(vm::ptr<u32> base, u32 size);
 
 bool patch_ppu_import(u32 addr, u32 index);
 
-// call specified function directly if LLE is not available, call LLE equivalent in callback style otherwise
-template<typename T, typename... Args> inline auto hle_call_func(PPUThread& CPU, T func, u32 index, Args&&... args) -> decltype(func(std::forward<Args>(args)...))
+// Variable associated with registered HLE function
+template<typename T, T Func> struct ppu_func_by_func { static u32 index; };
+
+template<typename T, T Func> u32 ppu_func_by_func<T, Func>::index = 0xffffffffu;
+
+template<typename T, T Func, typename... Args, typename RT = std::result_of_t<T(Args...)>> inline RT call_ppu_func(PPUThread& ppu, Args&&... args)
 {
-	const auto mfunc = get_ppu_func_by_index(index);
+	const auto mfunc = get_ppu_func_by_index(ppu_func_by_func<T, Func>::index);
 
 	if (mfunc && mfunc->lle_func && (mfunc->flags & MFF_FORCED_HLE) == 0 && (mfunc->flags & MFF_NO_RETURN) == 0)
 	{
 		const u32 pc = vm::read32(mfunc->lle_func.addr());
 		const u32 rtoc = vm::read32(mfunc->lle_func.addr() + 4);
 
-		return cb_call<decltype(func(std::forward<Args>(args)...)), Args...>(CPU, pc, rtoc, std::forward<Args>(args)...);
+		return cb_call<RT, Args...>(ppu, pc, rtoc, std::forward<Args>(args)...);
 	}
 	else
 	{
-		return func(std::forward<Args>(args)...);
+		return Func(std::forward<Args>(args)...);
 	}
 }
 
-#define CALL_FUNC(cpu, func, ...) hle_call_func(cpu, func, g_ppu_func_index__##func, __VA_ARGS__)
+// call specified function directly if LLE is not available, call LLE equivalent in callback style otherwise
+#define CALL_FUNC(ppu, func, ...) call_ppu_func<decltype(&func), &func>(ppu, __VA_ARGS__)
 
-#define REG_FUNC(module, name) add_ppu_func(ModuleFunc(get_function_id(#name), 0, &module, #name, bind_func(name)))
-#define REG_FUNC_FH(module, name) add_ppu_func(ModuleFunc(get_function_id(#name), MFF_FORCED_HLE, &module, #name, bind_func(name)))
-#define REG_FUNC_NR(module, name) add_ppu_func(ModuleFunc(get_function_id(#name), MFF_NO_RETURN, &module, #name, bind_func(name)))
+#define REG_FNID(module, nid, func, ...) (ppu_func_by_func<decltype(&func), &func>::index = add_ppu_func(ModuleFunc(nid, { __VA_ARGS__ }, &module, #func, BIND_FUNC(func))))
 
-#define REG_UNNAMED(module, nid) add_ppu_func(ModuleFunc(0x##nid, 0, &module, "_nid_"#nid, bind_func(_nid_##nid)))
+#define REG_FUNC(module, func, ...) REG_FNID(module, get_function_id(#func), func, __VA_ARGS__)
 
-#define REG_SUB(module, ns, name, ...) add_ppu_func_sub({ __VA_ARGS__ }, #name, &module, bind_func(ns::name))
+#define REG_SUB(module, ns, name, ...) add_ppu_func_sub({ __VA_ARGS__ }, #name, &module, BIND_FUNC(ns::name))
 
 #define SP_OP(type, op, sup) []() { s32 XXX = 0; SearchPatternEntry res = { (type), (op), 0, (sup) }; XXX = -1; res.mask = (op) ^ ~res.data; return res; }()
 #define SP_I(op) SP_OP(SPET_MASKED_OPCODE, op, 0)
