@@ -3,7 +3,7 @@
 
 #include "sceNpSns.h"
 
-extern Module sceNpSns;
+extern Module<> sceNpSns;
 
 s32 sceNpSnsFbInit(vm::ptr<const SceNpSnsFbInitParams> params)
 {
@@ -66,7 +66,7 @@ s32 sceNpSnsFbLoadThrottle()
 }
 
 
-Module sceNpSns("sceNpSns", []()
+Module<> sceNpSns("sceNpSns", []()
 {
 	REG_FUNC(sceNpSns, sceNpSnsFbInit);
 	REG_FUNC(sceNpSns, sceNpSnsFbTerm);

@@ -2,7 +2,7 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/SysCalls/Modules.h"
 
-extern Module cellSailRec;
+extern Module<> cellSailRec;
 
 // Error Codes
 enum
@@ -255,7 +255,7 @@ s32 cellSailRecorderDumpImage()
 	return CELL_OK;
 }
 
-Module cellSailRec("cellSailRec", []()
+Module<> cellSailRec("cellSailRec", []()
 {
 	REG_FUNC(cellSailRec, cellSailProfileSetEsAudioParameter);
 	REG_FUNC(cellSailRec, cellSailProfileSetEsVideoParameter);

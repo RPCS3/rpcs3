@@ -5,7 +5,7 @@
 
 #include "sysPrxForUser.h"
 
-extern Module sysPrxForUser;
+extern Module<> sysPrxForUser;
 
 void sys_spinlock_initialize(vm::ptr<atomic_be_t<u32>> lock)
 {

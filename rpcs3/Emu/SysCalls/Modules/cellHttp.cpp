@@ -2,8 +2,8 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/SysCalls/Modules.h"
 
-extern Module cellHttp;
-extern Module cellHttps;
+extern Module<> cellHttp;
+extern Module<> cellHttps;
 
 s32 cellHttpInit()
 {
@@ -599,7 +599,7 @@ s32 cellHttpClientSetSslIdDestroyCallback()
 	return CELL_OK;
 }
 
-Module cellHttp("cellHttp", []()
+Module<> cellHttp("cellHttp", []()
 {
 	REG_FUNC(cellHttp, cellHttpInit);
 	REG_FUNC(cellHttp, cellHttpEnd);
@@ -713,7 +713,7 @@ Module cellHttp("cellHttp", []()
 	REG_FUNC(cellHttp, cellHttpClientSetSslIdDestroyCallback);
 });
 
-Module cellHttps("cellHttps", []()
+Module<> cellHttps("cellHttps", []()
 {
 	// cellHttps doesn't have functions (cellHttpsInit belongs to cellHttp, for example)
 });

@@ -7,7 +7,7 @@
 #include "cellSysutil.h"
 #include "cellMsgDialog.h"
 
-extern Module cellSysutil;
+extern Module<> cellSysutil;
 
 extern u64 get_system_time();
 

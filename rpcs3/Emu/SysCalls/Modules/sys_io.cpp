@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "Emu/SysCalls/Modules.h"
 
-extern Module sys_io;
+extern Module<> sys_io;
 
 extern void cellPad_init();
 extern void cellKb_init();
@@ -39,7 +39,7 @@ s32 sys_config_unregister_service()
 }
 
 
-Module sys_io("sys_io", []()
+Module<> sys_io("sys_io", []()
 {
 	cellPad_init();
 	cellKb_init();

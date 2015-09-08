@@ -15,7 +15,7 @@
 #include <unistd.h>
 #endif
 
-extern Module libnet;
+extern Module<> libnet;
 
 // We map host sockets to sequential IDs to return as FDs because syscalls using
 // socketselect(), etc. expect socket FDs to be under 1024.
@@ -616,7 +616,7 @@ namespace sys_net
 // define additional macro for specific namespace
 #define REG_FUNC_(name) add_ppu_func(ModuleFunc(get_function_id(#name), 0, &libnet, #name, BIND_FUNC(sys_net::name)))
 
-Module libnet("sys_net", []()
+Module<> libnet("sys_net", []()
 {
 	REG_FUNC_(accept);
 	REG_FUNC_(bind);

@@ -1,6 +1,6 @@
 #pragma once
 
-class Module;
+template<typename T> class Module;
 
 class ModuleManager
 {
@@ -12,8 +12,9 @@ public:
 
 	void Init();
 	void Close();
+	void Alloc();
 
-	static Module* GetModuleByName(const char* name);
-	static Module* GetModuleById(u16 id);
+	static Module<void>* GetModuleByName(const char* name);
+	static Module<void>* GetModuleById(u16 id);
 	static bool CheckModuleId(u16 id);
 };

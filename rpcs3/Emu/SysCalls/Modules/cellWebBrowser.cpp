@@ -4,7 +4,7 @@
 
 #include "cellWebBrowser.h"
 
-extern Module cellSysutil;
+extern Module<> cellSysutil;
 
 s32 cellWebBrowserActivate()
 {

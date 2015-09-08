@@ -9,7 +9,7 @@
 #include "cellAudio.h"
 #include "libmixer.h"
 
-extern Module libmixer;
+extern Module<> libmixer;
 
 SurMixerConfig g_surmx;
 
@@ -614,7 +614,7 @@ float cellSurMixerUtilNoteToRatio(u8 refNote, u8 note)
 	throw EXCEPTION("");
 }
 
-Module libmixer("libmixer", []()
+Module<> libmixer("libmixer", []()
 {
 	g_surmx.audio_port = ~0;
 

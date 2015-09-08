@@ -2,7 +2,7 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/SysCalls/Modules.h"
 
-extern Module cellSheap;
+extern Module<> cellSheap;
 
 // Return Codes
 enum
@@ -121,7 +121,7 @@ s32 cellKeySheapQueueDelete()
 	return CELL_OK;
 }
 
-Module cellSheap("cellSheap", []()
+Module<> cellSheap("cellSheap", []()
 {
 	REG_FUNC(cellSheap, cellSheapInitialize);
 	REG_FUNC(cellSheap, cellSheapAllocate);

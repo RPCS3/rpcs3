@@ -194,7 +194,7 @@ s32 cellAtracGetInternalErrorInfo(vm::ptr<CellAtracHandle> pHandle, vm::ptr<s32>
 	return CELL_OK;
 }
 
-Module cellAtrac("cellAtrac", []()
+Module<> cellAtrac("cellAtrac", []()
 {
 	REG_FUNC(cellAtrac, cellAtracSetDataAndGetMemSize);
 

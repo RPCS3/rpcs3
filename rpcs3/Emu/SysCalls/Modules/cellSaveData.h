@@ -298,5 +298,3 @@ struct SaveDataDialogInstance
 
 	virtual s32 ShowSaveDataList(std::vector<SaveDataEntry>& save_entries, s32 focused, vm::ptr<CellSaveDataListSet> listSet) = 0;
 };
-
-extern class Module cellSaveData;

@@ -2,7 +2,7 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/SysCalls/Modules.h"
 
-extern Module cellRemotePlay;
+extern Module<> cellRemotePlay;
 
 s32 cellRemotePlayGetStatus()
 {
@@ -45,7 +45,7 @@ s32 cellRemotePlayBreak()
 }
 
 
-Module cellRemotePlay("cellRemotePlay", []()
+Module<> cellRemotePlay("cellRemotePlay", []()
 {
 	REG_FUNC(cellRemotePlay, cellRemotePlayGetStatus);
 	REG_FUNC(cellRemotePlay, cellRemotePlaySetComparativeVolume);

@@ -5,7 +5,7 @@
 #include "sceNp.h"
 #include "sceNpUtil.h"
 
-extern Module sceNpUtil;
+extern Module<> sceNpUtil;
 
 s32 sceNpUtilBandwidthTestInitStart(u32 prio, size_t stack)
 {
@@ -31,7 +31,7 @@ s32 sceNpUtilBandwidthTestAbort()
 	return CELL_OK;
 }
 
-Module sceNpUtil("sceNpUtil", []()
+Module<> sceNpUtil("sceNpUtil", []()
 {
 	REG_FUNC(sceNpUtil, sceNpUtilBandwidthTestInitStart);
 	REG_FUNC(sceNpUtil, sceNpUtilBandwidthTestShutdown);

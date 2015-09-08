@@ -6,7 +6,7 @@
 
 #include "sysPrxForUser.h"
 
-extern Module sysPrxForUser;
+extern Module<> sysPrxForUser;
 
 using sys_mempool_t = u32;
 

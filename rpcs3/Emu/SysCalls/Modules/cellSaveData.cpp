@@ -10,7 +10,9 @@
 #include "Loader/PSF.h"
 #include "cellSaveData.h"
 
-extern Module cellSysutil;
+extern Module<> cellSysutil;
+extern Module<> cellSaveData;
+extern Module<> cellMinisSaveData;
 
 std::unique_ptr<SaveDataDialogInstance> g_savedata_dialog;
 
@@ -958,7 +960,7 @@ void cellSysutil_SaveData_init()
 	REG_FUNC(cellSysutil, cellSaveDataAutoSave);
 }
 
-Module cellSaveData("cellSaveData", []()
+Module<> cellSaveData("cellSaveData", []()
 {
 	// libsysutil_savedata functions:
 	REG_FUNC(cellSaveData, cellSaveDataUserGetListItem);
@@ -975,7 +977,7 @@ Module cellSaveData("cellSaveData", []()
 	REG_FUNC(cellSaveData, cellSaveDataListImport);
 });
 
-Module cellMinisSaveData("cellMinisSaveData", []()
+Module<> cellMinisSaveData("cellMinisSaveData", []()
 {
 	// libsysutil_savedata_psp functions:
 	//REG_FUNC(cellMinisSaveData, cellMinisSaveDataDelete); // 0x6eb168b3

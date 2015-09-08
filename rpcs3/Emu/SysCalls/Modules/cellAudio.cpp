@@ -14,7 +14,7 @@
 
 #include "cellAudio.h"
 
-extern Module cellAudio;
+extern Module<> cellAudio;
 
 extern u64 get_system_time();
 
@@ -1001,7 +1001,7 @@ s32 cellAudioUnsetPersonalDevice(s32 iPersonalStream)
 	return CELL_OK;
 }
 
-Module cellAudio("cellAudio", []()
+Module<> cellAudio("cellAudio", []()
 {
 	g_audio.state.store(AUDIO_STATE_NOT_INITIALIZED);
 	g_audio.buffer = 0;

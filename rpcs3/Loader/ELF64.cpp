@@ -309,6 +309,7 @@ namespace loader
 
 			//store elf to memory
 			vm::ps3::init();
+			Emu.GetModuleManager().Init();
 
 			error_code res = alloc_memory(0);
 			if (res != ok)
@@ -418,7 +419,7 @@ namespace loader
 								continue;
 							}
 
-							Module* module = Emu.GetModuleManager().GetModuleByName(m.first.c_str());
+							Module<>* module = Emu.GetModuleManager().GetModuleByName(m.first.c_str());
 
 							if (!module)
 							{
@@ -505,6 +506,8 @@ namespace loader
 			ppu_thr_stop_data[0] = SC(3);
 			ppu_thr_stop_data[1] = BLR();
 			Emu.SetCPUThreadStop(ppu_thr_stop_data.addr());
+
+			Emu.GetModuleManager().Alloc();
 
 			static const int branch_size = 8 * 4;
 
@@ -687,7 +690,7 @@ namespace loader
 						{
 							const std::string module_name = stub->s_modulename.get_ptr();
 
-							Module* module = Emu.GetModuleManager().GetModuleByName(module_name.c_str());
+							Module<>* module = Emu.GetModuleManager().GetModuleByName(module_name.c_str());
 
 							if (!module)
 							{

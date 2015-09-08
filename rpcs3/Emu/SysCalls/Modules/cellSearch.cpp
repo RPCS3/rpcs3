@@ -4,7 +4,7 @@
 #include "Emu/SysCalls/Modules.h"
 #include "cellSearch.h"
 
-extern Module cellSearch;
+extern Module<> cellSearch;
 
 s32 cellSearchInitialize(CellSearchMode mode, u32 container, vm::ptr<CellSearchSystemCallback> func, vm::ptr<u32> userData)
 {
@@ -130,7 +130,7 @@ s32 cellSearchEnd()
 	return CELL_OK;
 }
 
-Module cellSearch("cellSearch", []()
+Module<> cellSearch("cellSearch", []()
 {
 	REG_FUNC(cellSearch, cellSearchInitialize);
 	REG_FUNC(cellSearch, cellSearchFinalize);

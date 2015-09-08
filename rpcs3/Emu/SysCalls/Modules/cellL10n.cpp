@@ -10,7 +10,7 @@
 
 #include "cellL10n.h"
 
-extern Module cellL10n;
+extern Module<> cellL10n;
 
 // Translate code id to code name. some codepage may has another name.
 // If this makes your compilation fail, try replace the string code with one in "iconv -l"
@@ -1163,7 +1163,8 @@ s32 UTF8stoUCS2s()
 	throw EXCEPTION("");
 }
 
-Module cellL10n("cellL10n", []()
+
+Module<> cellL10n("cellL10n", []()
 {
 	REG_FUNC(cellL10n, UCS2toEUCJP);
 	REG_FUNC(cellL10n, l10n_convert);

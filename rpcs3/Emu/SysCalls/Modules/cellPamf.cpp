@@ -5,7 +5,7 @@
 
 #include "cellPamf.h"
 
-extern Module cellPamf;
+extern Module<> cellPamf;
 
 s32 pamfStreamTypeToEsFilterId(u8 type, u8 ch, CellCodecEsFilterId& pEsFilterId)
 {
@@ -733,7 +733,7 @@ s32 cellPamfEpIteratorMove(vm::ptr<CellPamfEpIterator> pIt, s32 steps, vm::ptr<C
 	return 0;
 }
 
-Module cellPamf("cellPamf", []()
+Module<> cellPamf("cellPamf", []()
 {
 	REG_FUNC(cellPamf, cellPamfGetHeaderSize);
 	REG_FUNC(cellPamf, cellPamfGetHeaderSize2);

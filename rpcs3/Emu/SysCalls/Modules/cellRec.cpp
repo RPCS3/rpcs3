@@ -2,7 +2,7 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/SysCalls/Modules.h"
 
-extern Module cellRec;
+extern Module<> cellRec;
 
 s32 cellRecOpen()
 {
@@ -40,7 +40,7 @@ s32 cellRecSetInfo()
 }
 
 
-Module cellRec("cellRec", []()
+Module<> cellRec("cellRec", []()
 {
 	REG_FUNC(cellRec, cellRecOpen);
 	REG_FUNC(cellRec, cellRecClose);

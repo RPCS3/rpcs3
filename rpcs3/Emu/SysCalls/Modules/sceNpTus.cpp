@@ -5,7 +5,7 @@
 #include "sceNp.h"
 #include "sceNpTus.h"
 
-extern Module sceNpTus;
+extern Module<> sceNpTus;
 
 s32 sceNpTusInit()
 {
@@ -333,7 +333,7 @@ s32 sceNpTusDeleteMultiSlotDataVUserAsync()
 	return CELL_OK;
 }
 
-Module sceNpTus("sceNpTus", []()
+Module<> sceNpTus("sceNpTus", []()
 {
 	REG_FUNC(sceNpTus, sceNpTusInit);
 	REG_FUNC(sceNpTus, sceNpTusTerm);

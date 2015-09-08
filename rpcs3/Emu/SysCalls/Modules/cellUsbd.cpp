@@ -4,7 +4,7 @@
 #include "Emu/SysCalls/Modules.h"
 #include "cellUsbd.h"
 
-extern Module cellUsbd;
+extern Module<> cellUsbd;
 
 s32 cellUsbdInit()
 {
@@ -152,7 +152,7 @@ s32 cellUsbdFreeMemory()
 	return CELL_OK;
 }
 
-Module cellUsbd("cellUsbd", []()
+Module<> cellUsbd("cellUsbd", []()
 {
 	REG_FUNC(cellUsbd, cellUsbdInit);
 	REG_FUNC(cellUsbd, cellUsbdEnd);

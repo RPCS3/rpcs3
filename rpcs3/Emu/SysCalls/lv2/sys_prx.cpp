@@ -53,7 +53,7 @@ s32 prx_load_module(std::string path, u64 flags, vm::ptr<sys_prx_load_module_opt
 		if (module_.first == "")
 			continue;
 
-		Module* module = Emu.GetModuleManager().GetModuleByName(module_.first.c_str());
+		Module<>* module = Emu.GetModuleManager().GetModuleByName(module_.first.c_str());
 
 		if (!module)
 		{

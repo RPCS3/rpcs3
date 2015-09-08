@@ -7,7 +7,7 @@
 #include "sceNp2.h"
 #include "cellSysutilAvc2.h"
 
-extern Module cellSysutilAvc2;
+extern Module<> cellSysutilAvc2;
 
 s32 cellSysutilAvc2GetPlayerInfo()
 {
@@ -334,7 +334,7 @@ s32 cellSysutilAvc2GetWindowPosition()
 }
 
 
-Module cellSysutilAvc2("cellSysutilAvc2", []()
+Module<> cellSysutilAvc2("cellSysutilAvc2", []()
 {
 	REG_FUNC(cellSysutilAvc2, cellSysutilAvc2GetPlayerInfo);
 	REG_FUNC(cellSysutilAvc2, cellSysutilAvc2JoinChat);

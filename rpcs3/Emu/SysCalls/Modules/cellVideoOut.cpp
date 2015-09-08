@@ -7,7 +7,7 @@
 #include "Emu/RSX/GSManager.h"
 #include "cellVideoOut.h"
 
-extern Module cellSysutil;
+extern Module<> cellSysutil;
 
 s32 cellVideoOutGetState(u32 videoOut, u32 deviceIndex, vm::ptr<CellVideoOutState> state)
 {

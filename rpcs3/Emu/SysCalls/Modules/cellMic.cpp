@@ -5,7 +5,7 @@
 
 #include "cellMic.h"
 
-extern Module cellMic;
+extern Module<> cellMic;
 
 s32 cellMicInit()
 {
@@ -260,7 +260,7 @@ s32 cellMicGetDeviceIdentifier()
 	return CELL_OK;
 }
 
-Module cellMic("cellMic", []()
+Module<> cellMic("cellMic", []()
 {
 	REG_FUNC(cellMic, cellMicInit);
 	REG_FUNC(cellMic, cellMicEnd);

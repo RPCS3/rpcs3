@@ -4,7 +4,7 @@
 
 #include "sceNpCommerce2.h"
 
-extern Module sceNpCommerce2;
+extern Module<> sceNpCommerce2;
 
 s32 sceNpCommerce2ExecuteStoreBrowse()
 {
@@ -315,7 +315,7 @@ s32 sceNpCommerce2DoServiceListFinishAsync()
 	throw EXCEPTION("");
 }
 
-Module sceNpCommerce2("sceNpCommerce2", []()
+Module<> sceNpCommerce2("sceNpCommerce2", []()
 {
 	REG_FUNC(sceNpCommerce2, sceNpCommerce2ExecuteStoreBrowse);
 	REG_FUNC(sceNpCommerce2, sceNpCommerce2GetStoreBrowseUserdata);

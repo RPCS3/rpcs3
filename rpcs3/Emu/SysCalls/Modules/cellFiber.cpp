@@ -5,7 +5,7 @@
 
 #include "cellFiber.h"
 
-extern Module cellFiber;
+extern Module<> cellFiber;
 
 s32 _cellFiberPpuInitialize()
 {
@@ -291,7 +291,7 @@ s32 cellFiberPpuUtilWorkerControlInitializeWithAttribute()
 	return CELL_OK;
 }
 
-Module cellFiber("cellFiber", []()
+Module<> cellFiber("cellFiber", []()
 {
 	REG_FUNC(cellFiber, _cellFiberPpuInitialize, MFF_NO_RETURN);
 

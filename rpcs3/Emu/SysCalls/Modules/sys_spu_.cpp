@@ -9,7 +9,7 @@
 #include "Crypto/unself.h"
 #include "sysPrxForUser.h"
 
-extern Module sysPrxForUser;
+extern Module<> sysPrxForUser;
 
 extern u64 get_system_time();
 

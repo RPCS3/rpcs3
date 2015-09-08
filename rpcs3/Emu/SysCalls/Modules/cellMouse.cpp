@@ -6,7 +6,7 @@
 #include "Emu/Io/Mouse.h"
 #include "cellMouse.h"
 
-extern Module sys_io;
+extern Module<> sys_io;
 
 s32 cellMouseInit(u32 max_connect)
 {

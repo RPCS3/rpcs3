@@ -11,7 +11,7 @@
 #include "cellSysutil.h"
 #include "cellGame.h"
 
-extern Module cellGame;
+extern Module<> cellGame;
 
 // Specified as second content_permission_t constructor argument to inform temporary directory
 static struct temporary_content_dir_tag_t{} const temporary_content_dir_tag{};
@@ -706,7 +706,7 @@ s32 cellGameUnregisterDiscChangeCallback()
 
 void cellSysutil_GameData_init()
 {
-	extern Module cellSysutil;
+	extern Module<> cellSysutil;
 
 	REG_FUNC(cellSysutil, cellHddGameCheck);
 	REG_FUNC(cellSysutil, cellHddGameCheck2);
@@ -728,7 +728,7 @@ void cellSysutil_GameData_init()
 	REG_FUNC(cellSysutil, cellGameUnregisterDiscChangeCallback);
 }
 
-Module cellGame("cellGame", []()
+Module<> cellGame("cellGame", []()
 {
 	REG_FUNC(cellGame, cellGameBootCheck);
 	REG_FUNC(cellGame, cellGamePatchCheck);

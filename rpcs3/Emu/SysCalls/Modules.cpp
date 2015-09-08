@@ -11,6 +11,7 @@
 
 std::vector<ModuleFunc> g_ppu_func_list;
 std::vector<StaticFunc> g_ppu_func_subs;
+std::vector<ModuleVariable> g_ps3_var_list;
 
 u32 add_ppu_func(ModuleFunc func)
 {
@@ -25,12 +26,43 @@ u32 add_ppu_func(ModuleFunc func)
 		if (f.id == func.id)
 		{
 			// if NIDs overlap or if the same function is added twice
-			throw EXCEPTION("NID already exists: 0x%08x (%s)", f.id, f.name);
+			throw EXCEPTION("FNID already exists: 0x%08x (%s)", f.id, f.name);
 		}
 	}
 
-	g_ppu_func_list.push_back(func);
+	g_ppu_func_list.emplace_back(std::move(func));
 	return (u32)g_ppu_func_list.size() - 1;
+}
+
+void add_variable(u32 nid, Module<>* module, const char* name, u32(*addr)())
+{
+	if (g_ps3_var_list.empty())
+	{
+		g_ps3_var_list.reserve(0x4000); // as g_ppu_func_list
+	}
+
+	for (auto& v : g_ps3_var_list)
+	{
+		if (v.id == nid)
+		{
+			throw EXCEPTION("VNID already exists: 0x%08x (%s)", nid, name);
+		}
+	}
+
+	g_ps3_var_list.emplace_back(ModuleVariable{ nid, module, name, addr });
+}
+
+ModuleVariable* get_variable_by_nid(u32 nid)
+{
+	for (auto& v : g_ps3_var_list)
+	{
+		if (v.id == nid)
+		{
+			return &v;
+		}
+	}
+
+	return nullptr;
 }
 
 u32 add_ppu_func_sub(StaticFunc func)
@@ -39,7 +71,7 @@ u32 add_ppu_func_sub(StaticFunc func)
 	return func.index;
 }
 
-u32 add_ppu_func_sub(const std::initializer_list<SearchPatternEntry>& ops, const char* name, Module* module, ppu_func_caller func)
+u32 add_ppu_func_sub(const std::initializer_list<SearchPatternEntry>& ops, const char* name, Module<>* module, ppu_func_caller func)
 {
 	StaticFunc sf;
 	sf.index = add_ppu_func(ModuleFunc(get_function_id(name), 0, module, name, func));
@@ -198,6 +230,7 @@ void clear_ppu_functions()
 {
 	g_ppu_func_list.clear();
 	g_ppu_func_subs.clear();
+	g_ps3_var_list.clear();
 }
 
 u32 get_function_id(const char* name)
@@ -497,18 +530,18 @@ bool patch_ppu_import(u32 addr, u32 index)
 	return false;
 }
 
-Module::Module(const char* name, void(*init)())
+Module<>::Module(const char* name, void(*init)())
 	: m_is_loaded(false)
 	, m_name(name)
 	, m_init(init)
 {
 }
 
-Module::~Module()
+Module<>::~Module()
 {
 }
 
-void Module::Init()
+void Module<>::Init()
 {
 	on_load = nullptr;
 	on_unload = nullptr;
@@ -518,7 +551,7 @@ void Module::Init()
 	m_init();
 }
 
-void Module::Load()
+void Module<>::Load()
 {
 	if (IsLoaded())
 	{
@@ -533,7 +566,7 @@ void Module::Load()
 	SetLoaded(true);
 }
 
-void Module::Unload()
+void Module<>::Unload()
 {
 	if (!IsLoaded())
 	{
@@ -548,22 +581,22 @@ void Module::Unload()
 	SetLoaded(false);
 }
 
-void Module::SetLoaded(bool loaded)
+void Module<>::SetLoaded(bool loaded)
 {
 	m_is_loaded = loaded;
 }
 
-bool Module::IsLoaded() const
+bool Module<>::IsLoaded() const
 {
 	return m_is_loaded;
 }
 
-const std::string& Module::GetName() const
+const std::string& Module<>::GetName() const
 {
 	return m_name;
 }
 
-void Module::SetName(const std::string& name)
+void Module<>::SetName(const std::string& name)
 {
 	m_name = name;
 }

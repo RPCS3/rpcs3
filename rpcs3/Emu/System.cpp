@@ -129,8 +129,6 @@ void Emulator::Load()
 {
 	m_status = Ready;
 
-	GetModuleManager().Init();
-
 	if (!fs::is_file(m_path))
 	{
 		m_status = Stopped;

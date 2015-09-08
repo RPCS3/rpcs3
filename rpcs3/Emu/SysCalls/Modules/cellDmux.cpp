@@ -7,7 +7,7 @@
 #include "cellPamf.h"
 #include "cellDmux.h"
 
-extern Module cellDmux;
+extern Module<> cellDmux;
 
 PesHeader::PesHeader(DemuxerStream& stream)
 	: pts(CODEC_TS_INVALID)
@@ -1178,7 +1178,7 @@ s32 cellDmuxFlushEs(u32 esHandle)
 	return CELL_OK;
 }
 
-Module cellDmux("cellDmux", []()
+Module<> cellDmux("cellDmux", []()
 {
 	REG_FUNC(cellDmux, cellDmuxQueryAttr);
 	REG_FUNC(cellDmux, cellDmuxQueryAttr2);

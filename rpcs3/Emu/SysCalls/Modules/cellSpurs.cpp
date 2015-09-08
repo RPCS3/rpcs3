@@ -22,7 +22,7 @@
 // Externs
 //----------------------------------------------------------------------------
 
-extern Module cellSpurs;
+extern Module<> cellSpurs;
 
 //----------------------------------------------------------------------------
 // Function prototypes
@@ -4205,7 +4205,7 @@ s32 cellSpursSemaphoreGetTasksetAddress()
 	return CELL_OK;
 }
 
-Module cellSpurs("cellSpurs", []()
+Module<> cellSpurs("cellSpurs", []()
 {
 	// Core 
 	REG_FUNC(cellSpurs, cellSpursInitialize);

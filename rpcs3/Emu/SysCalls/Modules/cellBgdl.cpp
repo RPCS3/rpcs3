@@ -3,7 +3,7 @@
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
 
-extern Module cellBGDL;
+extern Module<> cellBGDL;
 
 // Return Codes
 enum
@@ -40,7 +40,7 @@ s32 cellBGDLGetMode()
 	return CELL_OK;
 }
 
-Module cellBGDL("cellBGDL", []()
+Module<> cellBGDL("cellBGDL", []()
 {
 	REG_FUNC(cellBGDL, cellBGDLGetInfo);
 	REG_FUNC(cellBGDL, cellBGDLGetInfo2);

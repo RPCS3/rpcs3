@@ -7,7 +7,7 @@
 
 namespace vm { using namespace ps3; }
 
-class Module;
+template<typename T = void> class Module;
 
 // flags set in ModuleFunc
 enum : u32
@@ -30,7 +30,7 @@ struct ModuleFunc
 {
 	u32 id;
 	u32 flags;
-	Module* module;
+	Module<>* module;
 	const char* name;
 	ppu_func_caller func;
 	vm::ptr<void()> lle_func;
@@ -39,7 +39,7 @@ struct ModuleFunc
 	{
 	}
 
-	ModuleFunc(u32 id, u32 flags, Module* module, const char* name, ppu_func_caller func, vm::ptr<void()> lle_func = vm::null)
+	ModuleFunc(u32 id, u32 flags, Module<>* module, const char* name, ppu_func_caller func, vm::ptr<void()> lle_func = vm::null)
 		: id(id)
 		, flags(flags)
 		, module(module)
@@ -48,6 +48,14 @@ struct ModuleFunc
 		, lle_func(lle_func)
 	{
 	}
+};
+
+struct ModuleVariable
+{
+	u32 id;
+	Module<>* module;
+	const char* name;
+	u32(*retrieve_addr)();
 };
 
 enum : u32
@@ -76,15 +84,19 @@ struct StaticFunc
 	std::unordered_map<u32, u32> labels;
 };
 
-class Module : public LogBase
+template<> class Module<void> : public LogBase
 {
+	friend class ModuleManager;
+
 	std::string m_name;
 	bool m_is_loaded;
 	void(*m_init)();
 
-	Module() = delete;
+protected:
+	std::function<void()> on_alloc;
 
 public:
+	Module() = delete;
 	Module(const char* name, void(*init)());
 
 	Module(Module& other) = delete;
@@ -111,15 +123,42 @@ public:
 	void SetName(const std::string& name);
 };
 
+// Module<> with an instance of specified type in PS3 memory
+template<typename T> class Module : public Module<void>
+{
+	u32 m_addr;
+
+public:
+	Module(const char* name, void(*init)())
+		: Module<void>(name, init)
+	{
+		on_alloc = [this]
+		{
+			static_assert(std::is_trivially_destructible<T>::value, "Module<> instance must be trivially destructible");
+			//static_assert(std::is_trivially_copy_assignable<T>::value, "Module<> instance must be trivially copy-assignable");
+
+			// Allocate module instance and call the default constructor
+			new(vm::get_ptr<T>(m_addr = vm::alloc(sizeof(T), vm::main)))T{};
+		};
+	}
+
+	T* operator ->() const
+	{
+		return vm::get_ptr<T>(m_addr);
+	}
+};
+
 u32 add_ppu_func(ModuleFunc func);
+void add_variable(u32 nid, Module<>* module, const char* name, u32(*addr)());
 ModuleFunc* get_ppu_func_by_nid(u32 nid, u32* out_index = nullptr);
 ModuleFunc* get_ppu_func_by_index(u32 index);
+ModuleVariable* get_variable_by_nid(u32 nid);
 void execute_ppu_func_by_index(PPUThread& CPU, u32 id);
 void clear_ppu_functions();
 u32 get_function_id(const char* name);
 
 u32 add_ppu_func_sub(StaticFunc sf);
-u32 add_ppu_func_sub(const std::initializer_list<SearchPatternEntry>& ops, const char* name, Module* module, ppu_func_caller func);
+u32 add_ppu_func_sub(const std::initializer_list<SearchPatternEntry>& ops, const char* name, Module<>* module, ppu_func_caller func);
 
 void hook_ppu_funcs(vm::ptr<u32> base, u32 size);
 
@@ -147,12 +186,16 @@ template<typename T, T Func, typename... Args, typename RT = std::result_of_t<T(
 	}
 }
 
-// call specified function directly if LLE is not available, call LLE equivalent in callback style otherwise
+// Call specified function directly if LLE is not available, call LLE equivalent in callback style otherwise
 #define CALL_FUNC(ppu, func, ...) call_ppu_func<decltype(&func), &func>(ppu, __VA_ARGS__)
 
 #define REG_FNID(module, nid, func, ...) (ppu_func_by_func<decltype(&func), &func>::index = add_ppu_func(ModuleFunc(nid, { __VA_ARGS__ }, &module, #func, BIND_FUNC(func))))
 
 #define REG_FUNC(module, func, ...) REG_FNID(module, get_function_id(#func), func, __VA_ARGS__)
+
+#define REG_VNID(module, nid, var) add_variable(nid, &module, #var, []{ return vm::get_addr(&module->var); })
+
+#define REG_VARIABLE(module, var) REG_VNID(module, get_function_id(#var), var)
 
 #define REG_SUB(module, ns, name, ...) add_ppu_func_sub({ __VA_ARGS__ }, #name, &module, BIND_FUNC(ns::name))
 

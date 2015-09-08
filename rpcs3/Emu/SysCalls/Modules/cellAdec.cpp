@@ -16,7 +16,7 @@ extern "C"
 #include "cellPamf.h"
 #include "cellAdec.h"
 
-extern Module cellAdec;
+extern Module<> cellAdec;
 
 AudioDecoder::AudioDecoder(s32 type, u32 addr, u32 size, vm::ptr<CellAdecCbMsg> func, u32 arg)
 	: type(type)
@@ -863,7 +863,7 @@ s32 cellAdecGetPcmItem(u32 handle, vm::pptr<CellAdecPcmItem> pcmItem)
 	return CELL_OK;
 }
 
-Module cellAdec("cellAdec", []()
+Module<> cellAdec("cellAdec", []()
 {
 	REG_FUNC(cellAdec, cellAdecQueryAttr);
 	REG_FUNC(cellAdec, cellAdecOpen);

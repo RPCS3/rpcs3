@@ -8,7 +8,7 @@
 #include "Emu/SysCalls/lv2/sys_process.h"
 #include "sysPrxForUser.h"
 
-extern Module sysPrxForUser;
+extern Module<> sysPrxForUser;
 
 extern u64 get_system_time();
 
@@ -167,7 +167,7 @@ extern void sysPrxForUser_sys_spu_init();
 extern void sysPrxForUser_sys_game_init();
 extern void sysPrxForUser_sys_libc_init();
 
-Module sysPrxForUser("sysPrxForUser", []()
+Module<> sysPrxForUser("sysPrxForUser", []()
 {
 	g_tls_start = 0;
 	for (auto& v : g_tls_owners)

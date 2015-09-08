@@ -7,7 +7,7 @@
 
 #include "cellCamera.h"
 
-extern Module cellCamera;
+extern Module<> cellCamera;
 
 static const char* get_camera_attr_name(s32 value)
 {
@@ -371,7 +371,7 @@ s32 cellCameraRemoveNotifyEventQueue2(u64 key)
 	return CELL_OK;
 }
 
-Module cellCamera("cellCamera", []()
+Module<> cellCamera("cellCamera", []()
 {
 	REG_FUNC(cellCamera, cellCameraInit);
 	REG_FUNC(cellCamera, cellCameraEnd);

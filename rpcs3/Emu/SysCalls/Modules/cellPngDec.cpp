@@ -15,7 +15,7 @@ extern "C"
 
 #include "cellPngDec.h"
 
-extern Module cellPngDec;
+extern Module<> cellPngDec;
 
 // cellPngDec aliases (only for cellPngDec.cpp)
 using PPMainHandle = vm::pptr<PngDecoder>;
@@ -571,7 +571,7 @@ s32 cellPngDecGetTextChunk(PMainHandle mainHandle, PSubHandle subHandle, vm::ptr
 	return CELL_OK;
 }
 
-Module cellPngDec("cellPngDec", []()
+Module<> cellPngDec("cellPngDec", []()
 {
 	REG_FUNC(cellPngDec, cellPngDecGetUnknownChunks);
 	REG_FUNC(cellPngDec, cellPngDecClose);

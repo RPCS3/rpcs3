@@ -12,7 +12,7 @@
 #include "Emu/SysCalls/lv2/sys_fs.h"
 #include "cellFs.h"
 
-extern Module cellFs;
+extern Module<> cellFs;
 
 s32 cellFsOpen(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, vm::cptr<void> arg, u64 size)
 {
@@ -1051,7 +1051,7 @@ s32 cellFsUnregisterL10nCallbacks()
 }
 
 
-Module cellFs("cellFs", []()
+Module<> cellFs("cellFs", []()
 {
 	g_fs_aio_id = 1;
 

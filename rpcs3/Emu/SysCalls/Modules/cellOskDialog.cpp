@@ -2,7 +2,7 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/SysCalls/Modules.h"
 
-extern Module cellOskDialog;
+extern Module<> cellOskDialog;
 
 s32 cellOskDialogLoadAsync()
 {
@@ -153,7 +153,7 @@ s32 cellOskDialogExtRegisterForceFinishCallback()
 
 void cellSysutil_OskDialog_init()
 {
-	extern Module cellSysutil;
+	extern Module<> cellSysutil;
 
 	// cellOskDialog functions:
 	REG_FUNC(cellSysutil, cellOskDialogLoadAsync);
@@ -171,7 +171,7 @@ void cellSysutil_OskDialog_init()
 	REG_FUNC(cellSysutil, cellOskDialogGetInputText);
 }
 
-Module cellOskDialog("cellOskDialog", []()
+Module<> cellOskDialog("cellOskDialog", []()
 {
 	// cellOskDialogExt functions:
 	REG_FUNC(cellOskDialog, cellOskDialogExtInputDeviceUnlock);

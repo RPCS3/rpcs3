@@ -2,7 +2,7 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/SysCalls/Modules.h"
 
-extern Module cellPhotoDecode;
+extern Module<> cellPhotoDecode;
 
 // Return Codes
 enum
@@ -56,7 +56,7 @@ s32 cellPhotoDecodeFromFile()
 	return CELL_OK;
 }
 
-Module cellPhotoDecode("cellPhotoDecode", []()
+Module<> cellPhotoDecode("cellPhotoDecode", []()
 {
 	REG_FUNC(cellPhotoDecode, cellPhotoDecodeInitialize);
 	REG_FUNC(cellPhotoDecode, cellPhotoDecodeInitialize2);

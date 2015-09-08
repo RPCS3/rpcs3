@@ -5,7 +5,7 @@
 #include "sceNp.h"
 #include "sceNp2.h"
 
-extern Module sceNp2;
+extern Module<> sceNp2;
 
 s32 sceNp2Init(u32 poolsize, vm::ptr<void> poolptr)
 {
@@ -384,7 +384,7 @@ s32 sceNpMatching2RegisterRoomMessageCallback()
 }
 
 
-Module sceNp2("sceNp2", []()
+Module<> sceNp2("sceNp2", []()
 {
 	REG_FUNC(sceNp2, sceNpMatching2DestroyContext);
 	REG_FUNC(sceNp2, sceNpMatching2LeaveLobby);

@@ -6,7 +6,7 @@
 #include "sceNp.h"
 #include "sceNpClans.h"
 
-extern Module sceNpClans;
+extern Module<> sceNpClans;
 
 s32 sceNpClansInit(vm::ptr<SceNpCommunicationId> commId, vm::ptr<SceNpCommunicationPassphrase> passphrase, vm::ptr<void> pool, vm::ptr<u32> poolSize, u32 flags)
 {
@@ -255,7 +255,7 @@ s32 sceNpClansRemoveChallenge()
 	return CELL_OK;
 }
 
-Module sceNpClans("sceNpClans", []()
+Module<> sceNpClans("sceNpClans", []()
 {
 	REG_FUNC(sceNpClans, sceNpClansInit);
 	REG_FUNC(sceNpClans, sceNpClansTerm);

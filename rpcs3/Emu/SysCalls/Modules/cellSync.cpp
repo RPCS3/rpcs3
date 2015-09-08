@@ -9,7 +9,7 @@
 #include "Emu/Event.h"
 #include "cellSync.h"
 
-extern Module cellSync;
+extern Module<> cellSync;
 
 s32 cellSyncMutexInitialize(vm::ptr<CellSyncMutex> mutex)
 {
@@ -1594,7 +1594,7 @@ s32 _cellSyncLFQueueDetachLv2EventQueue(vm::ptr<u32> spus, u32 num, vm::ptr<Cell
 	throw EXCEPTION("");
 }
 
-Module cellSync("cellSync", []()
+Module<> cellSync("cellSync", []()
 {
 	// setup error handler
 	cellSync.on_error = [](s64 value, ModuleFunc* func)

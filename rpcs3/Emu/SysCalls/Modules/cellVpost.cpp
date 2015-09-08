@@ -11,7 +11,7 @@ extern "C"
 
 #include "cellVpost.h"
 
-extern Module cellVpost;
+extern Module<> cellVpost;
 
 s32 cellVpostQueryAttr(vm::cptr<CellVpostCfgParam> cfgParam, vm::ptr<CellVpostAttr> attr)
 {
@@ -137,7 +137,7 @@ s32 cellVpostExec(u32 handle, vm::cptr<u8> inPicBuff, vm::cptr<CellVpostCtrlPara
 	return CELL_OK;
 }
 
-Module cellVpost("cellVpost", []()
+Module<> cellVpost("cellVpost", []()
 {
 	REG_FUNC(cellVpost, cellVpostQueryAttr);
 	REG_FUNC(cellVpost, cellVpostOpen);

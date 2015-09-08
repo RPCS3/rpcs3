@@ -11,7 +11,7 @@
 //#include "Emu/SysCalls/lv2/sys_process.h"
 #include "cellGcmSys.h"
 
-extern Module cellGcmSys;
+extern Module<> cellGcmSys;
 
 const u32 tiled_pitches[] = {
 	0x00000000, 0x00000200, 0x00000300, 0x00000400,
@@ -1297,7 +1297,7 @@ s32 cellGcmCallback(vm::ptr<CellGcmContextData> context, u32 count)
 
 //----------------------------------------------------------------------------
 
-Module cellGcmSys("cellGcmSys", []()
+Module<> cellGcmSys("cellGcmSys", []()
 {
 	current_config.ioAddress = 0;
 	current_config.localAddress = 0;

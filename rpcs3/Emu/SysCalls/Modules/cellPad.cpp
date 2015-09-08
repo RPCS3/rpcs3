@@ -6,7 +6,7 @@
 #include "Emu/Io/Pad.h"
 #include "cellPad.h"
 
-extern Module sys_io;
+extern Module<> sys_io;
 
 s32 cellPadInit(u32 max_connect)
 {

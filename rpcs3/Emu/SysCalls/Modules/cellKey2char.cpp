@@ -2,7 +2,7 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/SysCalls/Modules.h"
 
-extern Module cellKey2char;
+extern Module<> cellKey2char;
 
 // Return Codes
 enum
@@ -46,7 +46,7 @@ s32 cellKey2CharSetArrangement()
 	return CELL_OK;
 }
 
-Module cellKey2char("cellKey2char", []()
+Module<> cellKey2char("cellKey2char", []()
 {
 	REG_FUNC(cellKey2char, cellKey2CharOpen);
 	REG_FUNC(cellKey2char, cellKey2CharClose);

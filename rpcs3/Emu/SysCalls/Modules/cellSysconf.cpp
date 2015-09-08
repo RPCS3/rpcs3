@@ -2,7 +2,7 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/SysCalls/Modules.h"
 
-extern Module cellSysconf;
+extern Module<> cellSysconf;
 
 s32 cellSysconfAbort()
 {
@@ -21,13 +21,13 @@ s32 cellSysconfBtGetDeviceList()
 
 void cellSysutil_Sysconf_init()
 {
-	extern Module cellSysutil;
+	extern Module<> cellSysutil;
 
 	REG_FUNC(cellSysutil, cellSysconfAbort);
 	REG_FUNC(cellSysutil, cellSysconfOpen);
 }
 
-Module cellSysconf("cellSysconf", []()
+Module<> cellSysconf("cellSysconf", []()
 {
 	REG_FUNC(cellSysconf, cellSysconfBtGetDeviceList);
 });

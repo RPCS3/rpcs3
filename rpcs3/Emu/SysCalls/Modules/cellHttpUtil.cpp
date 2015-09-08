@@ -2,7 +2,7 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/SysCalls/Modules.h"
 
-extern Module cellHttpUtil;
+extern Module<> cellHttpUtil;
 
 s32 cellHttpUtilParseUri()
 {
@@ -124,7 +124,7 @@ s32 cellHttpUtilBase64Decoder()
 	return CELL_OK;
 }
 
-Module cellHttpUtil("cellHttpUtil", []()
+Module<> cellHttpUtil("cellHttpUtil", []()
 {
 	REG_FUNC(cellHttpUtil, cellHttpUtilParseUri);
 	REG_FUNC(cellHttpUtil, cellHttpUtilParseUriPath);

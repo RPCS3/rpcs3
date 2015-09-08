@@ -2,7 +2,7 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/SysCalls/Modules.h"
 
-extern Module cellDaisy;
+extern Module<> cellDaisy;
 
 s32 _ZN4cell5Daisy17LFQueue2PushCloseEPNS0_8LFQueue2EPFiPvjE()
 {
@@ -265,7 +265,7 @@ s32 _QN4cell5Daisy22ScatterGatherInterlock7releaseEv()
 }
 
 
-Module cellDaisy("cellDaisy", []()
+Module<> cellDaisy("cellDaisy", []()
 {
 	REG_FUNC(cellDaisy, _ZN4cell5Daisy17LFQueue2PushCloseEPNS0_8LFQueue2EPFiPvjE);
 	REG_FUNC(cellDaisy, _ZN4cell5Daisy21LFQueue2GetPopPointerEPNS0_8LFQueue2EPij);

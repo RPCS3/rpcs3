@@ -3,7 +3,7 @@
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
 
-extern Module cellVoice;
+extern Module<> cellVoice;
 
 // Error Codes
 enum
@@ -237,7 +237,7 @@ s32 cellVoiceDebugTopology()
 	return CELL_OK;
 }
 
-Module cellVoice("cellVoice", []()
+Module<> cellVoice("cellVoice", []()
 {
 	REG_FUNC(cellVoice, cellVoiceConnectIPortToOPort);
 	REG_FUNC(cellVoice, cellVoiceCreateNotifyEventQueue);

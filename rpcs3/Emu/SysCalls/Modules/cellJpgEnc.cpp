@@ -2,7 +2,7 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/SysCalls/Modules.h"
 
-extern Module cellJpgEnc;
+extern Module<> cellJpgEnc;
 
 // Error Codes
 enum
@@ -75,7 +75,7 @@ s32 cellJpgEncReset()
 	return CELL_OK;
 }
 
-Module cellJpgEnc("cellJpgEnc", []()
+Module<> cellJpgEnc("cellJpgEnc", []()
 {
 	REG_FUNC(cellJpgEnc, cellJpgEncQueryAttr);
 	REG_FUNC(cellJpgEnc, cellJpgEncOpen);
