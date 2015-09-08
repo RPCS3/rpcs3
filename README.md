@@ -19,7 +19,10 @@ If you want to contribute please take a took at the [Coding Style](https://githu
 ### Dependencies
 
 __Windows__
+* [Visual Studios 2015](https://www.visualstudio.com/en-us/downloads/download-visual-studio-vs.aspx)
 * [Visual C++ Redistributable Packages for Visual Studio 2015](http://www.microsoft.com/en-us/download/details.aspx?id=48145)
+* [Cmake 3.1.0+](http://www.cmake.org/download/) (add to PATH)
+* [Python 2.7+](https://www.python.org/downloads/) (add to PATH)
 
 __Linux__
 * Debian & Ubuntu: `sudo apt-get install libopenal-dev libwxgtk3.0-dev build-essential libglew-dev`
@@ -33,10 +36,13 @@ __Mac OSX__
 ### Building
 
 To initialize the repository don't forget to execute `git submodule update --init` to pull the wxWidgets source.
-* __Windows__: Install *Visual Studio 2015*, *Cmake 3.1.0+*, *Python* and select *Add in the PATH variable* for both. Then open the *.SLN* file, and press *Build* > *Rebuild Solution*.
+* __Windows__:
+Open the *.SLN* file, and press *Build* > *Rebuild Solution*.
 * __Linux & Mac OSX__:
+If you want to build with LLVM, then LLVM 3.6.2 is required.
 `cd rpcs3 && cmake CMakeLists.txt && make && cd ../` Then run with `cd bin && ./rpcs3`
 If you are on OSX and want to build with llvm don't forget to add `-DLLVM_DIR=/usr/local/opt/llvm36/lib/llvm-3.6/share/llvm/cmake` (or wherever llvm brew was installed) to cmake invocation.
 
 ### Support
 * [Donate by PayPal](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=MPJ3S9XQXCE3G)
+
