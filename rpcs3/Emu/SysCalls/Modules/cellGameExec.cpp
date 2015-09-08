@@ -33,7 +33,7 @@ s32 cellGameGetHomeLaunchOptionPath()
 
 s32 cellGameGetBootGameInfo(vm::ptr<u32> type, vm::ptr<char> dirName, vm::ptr<u32> execData)
 {
-	cellGameExec.Todo("cellGameGetBootGameInfo(type=*0x%x, dirName=*0x%x, execData=*0x%x)");
+	cellGameExec.Todo("cellGameGetBootGameInfo(type=*0x%x, dirName=*0x%x, execData=*0x%x)", type, dirName, execData);
 
 	// TODO: Support more boot types
 	*type = CELL_GAME_GAMETYPE_SYS;

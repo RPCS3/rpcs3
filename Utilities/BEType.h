@@ -557,7 +557,7 @@ public:
 
 	be_t(const be_t&) = default;
 
-	template<typename = std::enable_if_t<std::is_constructible<type, type>::value>> be_t(const type& value)
+	force_inline be_t(const type& value)
 #ifdef IS_LE_MACHINE
 		: m_data(se_t<type, sizeof(stype)>::to(value))
 #else
@@ -736,7 +736,7 @@ public:
 
 	le_t(const le_t&) = default;
 
-	template<typename = std::enable_if_t<std::is_constructible<type, type>::value>> le_t(const type& value)
+	le_t(const type& value)
 		: m_data(value)
 	{
 	}

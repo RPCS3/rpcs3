@@ -34,7 +34,7 @@ void playerBoot(vm::ptr<CellSailPlayer> pSelf, u64 userParam)
 
 s32 cellSailMemAllocatorInitialize(vm::ptr<CellSailMemAllocator> pSelf, vm::ptr<CellSailMemAllocatorFuncs> pCallbacks)
 {
-	cellSail.Warning("cellSailMemAllocatorInitialize(pSelf_addr=*0x%x, pCallbacks_addr=*0x%x)", pSelf, pCallbacks);
+	cellSail.Warning("cellSailMemAllocatorInitialize(pSelf=*0x%x, pCallbacks=*0x%x)", pSelf, pCallbacks);
 
 	pSelf->callbacks = pCallbacks;
 

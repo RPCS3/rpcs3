@@ -1,7 +1,6 @@
 #include "stdafx.h"
 #include "Utilities/Log.h"
 #include "Utilities/File.h"
-#include "git-version.h"
 #include "rpcs3/Ini.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
@@ -208,8 +207,6 @@ void Emulator::Load()
 		LOG_NOTICE(LOADER, "%s -> %s", GetVFS().m_devices[i]->GetPs3Path().c_str(), GetVFS().m_devices[i]->GetLocalPath().c_str());
 	}
 
-	LOG_NOTICE(LOADER, "");
-	LOG_NOTICE(LOADER, "RPCS3 version: %s", RPCS3_GIT_VERSION);
 	LOG_NOTICE(LOADER, "");
 
 	LOG_NOTICE(LOADER, "Settings:");
