@@ -289,6 +289,9 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 		ret += AddConst();
 		break;
 
+	case 3: // ??? Used by a few games, what is it?
+		LOG_ERROR(RSX, "Src type 3 used, please report this to a developer.");
+
 	default:
 		LOG_ERROR(RSX, "Bad src type %d", u32{ src.reg_type });
 		Emu.Pause();
@@ -315,7 +318,10 @@ std::string FragmentProgramDecompiler::BuildCode()
 {
 	//main += fmt::format("\tgl_FragColor = %c0;\n", m_ctrl & 0x40 ? 'r' : 'h');
 
-	if (m_ctrl & 0xe) main += m_ctrl & 0x40 ? "\tgl_FragDepth = r1.z;\n" : "\tgl_FragDepth = h2.z;\n";
+	if (m_ctrl & 0xe)
+	{
+		main += m_ctrl & 0x40 ? "\tgl_FragDepth = r1.z;\n" : "\tgl_FragDepth = h0.z;\n";
+	}
 
 	std::stringstream OS;
 	insertHeader(OS);

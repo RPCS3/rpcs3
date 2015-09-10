@@ -51,7 +51,7 @@ s32 cellVideoOutGetResolution(u32 resolutionId, vm::ptr<CellVideoOutResolution> 
 
 s32 cellVideoOutConfigure(u32 videoOut, vm::ptr<CellVideoOutConfiguration> config, vm::ptr<CellVideoOutOption> option, u32 waitForEvent)
 {
-	cellSysutil.Warning("cellVideoOutConfigure(videoOut=%d, config=*0x%x, option=*0x%x, waitForEvent=0x%x)", videoOut, config, option, waitForEvent);
+	cellSysutil.Warning("cellVideoOutConfigure(videoOut=%d, config=*0x%x, option=*0x%x, waitForEvent=%d)", videoOut, config, option, waitForEvent);
 
 	switch (videoOut)
 	{
