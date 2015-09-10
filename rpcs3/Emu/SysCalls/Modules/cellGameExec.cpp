@@ -11,9 +11,13 @@ s32 cellGameSetExitParam()
 	throw EXCEPTION("");
 }
 
-s32 cellGameGetHomeDataExportPath()
+s32 cellGameGetHomeDataExportPath(vm::ptr<char> exportPath)
 {
-	throw EXCEPTION("");
+	cellGameExec.Warning("cellGameGetHomeDataExportPath(exportPath=0x%x)", exportPath);
+
+	// TODO: PlayStation home is defunct.
+
+	return CELL_GAME_ERROR_NOAPP;
 }
 
 s32 cellGameGetHomePath()

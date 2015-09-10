@@ -755,10 +755,10 @@ s32 cellRescSetDisplayMode(PPUThread& ppu, u32 displayMode)
 	s_rescInternalInstance->m_dstBufInterval = s_rescInternalInstance->m_dstPitch * roundup(s_rescInternalInstance->m_dstHeight, s_rescInternalInstance->m_pRescDsts->heightAlign);
 
 	/*if (IsPalInterpolate()) {
-		if(IsInterlace()) m_pCFragmentShader = m_pCFragmentShaderArray[RESC_SHADER_DEFAULT_INTERLACE_PAL];
+		if (IsInterlace()) m_pCFragmentShader = m_pCFragmentShaderArray[RESC_SHADER_DEFAULT_INTERLACE_PAL];
 		else			  m_pCFragmentShader = m_pCFragmentShaderArray[RESC_SHADER_DEFAULT_BILINEAR_PAL];
 	} else {
-		if(IsInterlace()) m_pCFragmentShader = m_pCFragmentShaderArray[RESC_SHADER_DEFAULT_INTERLACE];
+		if (IsInterlace()) m_pCFragmentShader = m_pCFragmentShaderArray[RESC_SHADER_DEFAULT_INTERLACE];
 		else			  m_pCFragmentShader = m_pCFragmentShaderArray[RESC_SHADER_DEFAULT_BILINEAR];
 	}*/
 
@@ -955,7 +955,7 @@ s32 cellRescSetSrc(s32 idx, vm::ptr<CellRescSrc> src)
 {
 	cellResc.Log("cellRescSetSrc(idx=0x%x, src=*0x%x)", idx, src);
 
-	if(!s_rescInternalInstance->m_bInitialized)
+	if (!s_rescInternalInstance->m_bInitialized)
 	{
 		cellResc.Error("cellRescSetSrc : CELL_RESC_ERROR_NOT_INITIALIZED");
 		return CELL_RESC_ERROR_NOT_INITIALIZED;
@@ -984,13 +984,13 @@ s32 cellRescSetConvertAndFlip(PPUThread& ppu, vm::ptr<CellGcmContextData> cntxt,
 {
 	cellResc.Log("cellRescSetConvertAndFlip(cntxt=*0x%x, idx=0x%x)", cntxt, idx);
 
-	if(!s_rescInternalInstance->m_bInitialized)
+	if (!s_rescInternalInstance->m_bInitialized)
 	{
 		cellResc.Error("cellRescSetConvertAndFlip : CELL_RESC_ERROR_NOT_INITIALIZED");
 		return CELL_RESC_ERROR_NOT_INITIALIZED;
 	}
 
-	if(idx < 0 || SRC_BUFFER_NUM <= idx)
+	if (idx < 0 || SRC_BUFFER_NUM <= idx)
 	{
 		cellResc.Error("cellRescSetConvertAndFlip : CELL_RESC_ERROR_BAD_ARGUMENT");
 		return CELL_RESC_ERROR_BAD_ARGUMENT;
@@ -1031,13 +1031,13 @@ s32 cellRescSetBufferAddress(PPUThread& ppu, vm::ptr<u32> colorBuffers, vm::ptr<
 {
 	cellResc.Warning("cellRescSetBufferAddress(colorBuffers=*0x%x, vertexArray=*0x%x, fragmentShader=*0x%x)", colorBuffers, vertexArray, fragmentShader);
 
-	if(!s_rescInternalInstance->m_bInitialized)
+	if (!s_rescInternalInstance->m_bInitialized)
 	{
 		cellResc.Error("cellRescSetBufferAddress : CELL_RESC_ERROR_NOT_INITIALIZED");
 		return CELL_RESC_ERROR_NOT_INITIALIZED;
 	}
 
-	if(colorBuffers.addr() % COLOR_BUFFER_ALIGNMENT || vertexArray.addr() % VERTEX_BUFFER_ALIGNMENT || fragmentShader.addr() % FRAGMENT_SHADER_ALIGNMENT)
+	if (colorBuffers.addr() % COLOR_BUFFER_ALIGNMENT || vertexArray.addr() % VERTEX_BUFFER_ALIGNMENT || fragmentShader.addr() % FRAGMENT_SHADER_ALIGNMENT)
 	{
 		cellResc.Error("cellRescSetBufferAddress : CELL_RESC_ERROR_BAD_ALIGNMENT");
 		return CELL_RESC_ERROR_BAD_ALIGNMENT;

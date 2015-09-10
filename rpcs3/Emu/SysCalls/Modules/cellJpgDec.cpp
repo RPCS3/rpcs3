@@ -131,7 +131,7 @@ s32 cellJpgDecReadHeader(u32 mainHandle, u32 subHandle, vm::ptr<CellJpgDecInfo> 
 
 	u32 i = 4;
 	
-	if(i >= fileSize)
+	if (i >= fileSize)
 		return CELL_JPGDEC_ERROR_HEADER;
 
 	u16 block_length = buffer[i] * 0xFF + buffer[i+1];
@@ -145,7 +145,7 @@ s32 cellJpgDecReadHeader(u32 mainHandle, u32 subHandle, vm::ptr<CellJpgDecInfo> 
 			return CELL_JPGDEC_ERROR_HEADER;
 		}
 
-		if(buffer[i+1] == 0xC0)
+		if (buffer[i+1] == 0xC0)
 			break;                                          // 0xFFC0 is the "Start of frame" marker which contains the file size
 
 		i += 2;                                             // Skip the block marker
@@ -297,7 +297,7 @@ s32 cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, vm::cp
 
 	dataOutInfo->status = CELL_JPGDEC_DEC_STATUS_FINISH;
 
-	if(dataCtrlParam->outputBytesPerLine)
+	if (dataCtrlParam->outputBytesPerLine)
 		dataOutInfo->outputLines = (u32)(image_size / dataCtrlParam->outputBytesPerLine);
 
 	return CELL_OK;

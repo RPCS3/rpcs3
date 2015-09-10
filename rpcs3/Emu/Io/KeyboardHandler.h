@@ -272,7 +272,7 @@ public:
 		{
 			for(KbButton& button : keyboard.m_buttons)
 			{
-				if(button.m_keyCode != code)
+				if (button.m_keyCode != code)
 					continue;
 
 				KbData& data = keyboard.m_data;

@@ -212,7 +212,7 @@ s32 cellPadGetData(u32 port_no, vm::ptr<CellPadData> data)
 			}
 		}
 
-		if(button.m_flush)
+		if (button.m_flush)
 		{
 			button.m_pressed = false;
 			button.m_flush = false;

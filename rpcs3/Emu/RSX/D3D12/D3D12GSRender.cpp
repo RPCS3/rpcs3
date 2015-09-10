@@ -910,7 +910,7 @@ void D3D12GSRender::Flip()
 	ThrowIfFailed(getCurrentResourceStorage().m_currentCommandList->Close());
 	m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**)&(getCurrentResourceStorage().m_currentCommandList));
 
-	if(Ini.GSOverlay.GetValue())
+	if (Ini.GSOverlay.GetValue())
 		renderOverlay();
 
 	ThrowIfFailed(m_swapChain->Present(Ini.GSVSyncEnable.GetValue() ? 1 : 0, 0));

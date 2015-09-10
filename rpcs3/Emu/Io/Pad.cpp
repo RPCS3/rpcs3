@@ -35,7 +35,7 @@ PadManager::~PadManager()
 
 void PadManager::Init(const u32 max_connect)
 {
-	if(m_inited)
+	if (m_inited)
 		return;
 
 	// NOTE: Change these to std::make_unique assignments when C++14 is available.
@@ -53,7 +53,7 @@ void PadManager::Init(const u32 max_connect)
 
 void PadManager::Close()
 {
-	if(m_pad_handler) m_pad_handler->Close();
+	if (m_pad_handler) m_pad_handler->Close();
 	m_pad_handler = nullptr;
 
 	m_inited = false;

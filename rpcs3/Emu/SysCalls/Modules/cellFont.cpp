@@ -300,7 +300,7 @@ s32 cellFontGetRenderCharGlyphMetrics(vm::ptr<CellFont> font, u32 code, vm::ptr<
 
 s32 cellFontRenderCharGlyphImage(vm::ptr<CellFont> font, u32 code, vm::ptr<CellFontRenderSurface> surface, float x, float y, vm::ptr<CellFontGlyphMetrics> metrics, vm::ptr<CellFontImageTransInfo> transInfo)
 {
-	cellFont.Log("cellFontRenderCharGlyphImage(font=*0x%x, code=0x%x, surface=*0x%x, x=%f, y=%f, metrics=*0x%x, trans=*0x%x)", font, code, surface, x, y, metrics, transInfo);
+	cellFont.Notice("cellFontRenderCharGlyphImage(font=*0x%x, code=0x%x, surface=*0x%x, x=%f, y=%f, metrics=*0x%x, trans=*0x%x)", font, code, surface, x, y, metrics, transInfo);
 
 	if (!font->renderer_addr)
 	{
@@ -374,7 +374,7 @@ s32 cellFontGetEffectSlant(vm::ptr<CellFont> font, vm::ptr<float> slantParam)
 
 s32 cellFontGetFontIdCode(vm::ptr<CellFont> font, u32 code, vm::ptr<u32> fontId, vm::ptr<u32> fontCode)
 {
-	cellFont.Todo("cellFontGetFontIdCode(font=*0x%x, code=0x%x, fontId=*0x%x, fontCode=*0x%x)", font, code, fontId, fontCode);
+	cellFont.Todo("cellFontGetFontIdCode(font=*0x%x, code=%d, fontId=*0x%x, fontCode=*0x%x)", font, code, fontId, fontCode);
 
 	// TODO: ?
 	return CELL_OK;

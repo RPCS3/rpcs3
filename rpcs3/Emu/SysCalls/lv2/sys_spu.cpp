@@ -64,7 +64,7 @@ s32 sys_spu_image_open(vm::ptr<sys_spu_image> img, vm::cptr<char> path)
 	sys_spu.Warning("sys_spu_image_open(img=*0x%x, path=*0x%x)", img, path);
 
 	vfsFile f(path.get_ptr());
-	if(!f.IsOpened())
+	if (!f.IsOpened())
 	{
 		sys_spu.Error("sys_spu_image_open error: '%s' not found!", path.get_ptr());
 		return CELL_ENOENT;

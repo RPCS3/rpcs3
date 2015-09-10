@@ -35,7 +35,7 @@ KeyboardManager::~KeyboardManager()
 
 void KeyboardManager::Init(const u32 max_connect)
 {
-	if(m_inited)
+	if (m_inited)
 		return;
 
 	// NOTE: Change these to std::make_unique assignments when C++14 comes out.
@@ -53,7 +53,7 @@ void KeyboardManager::Init(const u32 max_connect)
 
 void KeyboardManager::Close()
 {
-	if(m_keyboard_handler) m_keyboard_handler->Close();
+	if (m_keyboard_handler) m_keyboard_handler->Close();
 	m_keyboard_handler = nullptr;
 
 	m_inited = false;

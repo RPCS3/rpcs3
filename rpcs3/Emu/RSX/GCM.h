@@ -282,6 +282,14 @@ enum
 	CELL_GCM_CONTEXT_DMA_NOTIFY_MAIN_0         = 0x6660420F,
 };
 
+// User Clip Values
+enum
+{
+	CELL_GCM_USER_CLIP_PLANE_DISABLE = 0,
+	CELL_GCM_USER_CLIP_PLANE_ENABLE_LT = 1,
+	CELL_GCM_USER_CLIP_PLANE_ENABLE_GE = 2,
+};
+
 struct CellGcmControl
 {
 	atomic_be_t<u32> put;
@@ -1440,9 +1448,10 @@ static const std::string GetMethodName(const u32 id)
 		{ NV4097_SET_TRANSFORM_BRANCH_BITS, "NV4097_SET_TRANSFORM_BRANCH_BITS" }
 	};
 
-	for(auto& s: METHOD_NAME_LIST) {
-		if(s.id == id)
-			return "CELL_GCM_" + s.name;
+	for (auto& s: METHOD_NAME_LIST)
+	{
+		if (s.id == id)
+			return s.name;
 	}
 
 	return fmt::format("unknown/illegal method [0x%08x]", id);

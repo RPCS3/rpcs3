@@ -17,7 +17,7 @@ GLBufferObject::~GLBufferObject()
 	
 void GLBufferObject::Create(GLuint type, u32 count)
 {
-	if(IsCreated()) return;
+	if (IsCreated()) return;
 
 	m_id.resize(count);
 	glGenBuffers(count, &m_id[0]);
@@ -26,7 +26,7 @@ void GLBufferObject::Create(GLuint type, u32 count)
 
 void GLBufferObject::Delete()
 {
-	if(!IsCreated()) return;
+	if (!IsCreated()) return;
 
 	glDeleteBuffers(m_id.size(), &m_id[0]);
 	m_id.clear();
@@ -66,7 +66,7 @@ void GLBufferObject::SetData(const void* data, u32 size, u32 usage)
 
 void GLBufferObject::SetAttribPointer(int location, int size, int type, GLvoid* pointer, int stride, bool normalized)
 {
-	if(location < 0) return;
+	if (location < 0) return;
 
 	glVertexAttribPointer(location, size, type, normalized ? GL_TRUE : GL_FALSE, stride, pointer);
 	glEnableVertexAttribArray(location);
@@ -97,7 +97,7 @@ GLvao::~GLvao()
 
 void GLvao::Create()
 {
-	if(!IsCreated()) glGenVertexArrays(1, &m_id);
+	if (!IsCreated()) glGenVertexArrays(1, &m_id);
 }
 
 void GLvao::Bind() const
@@ -112,7 +112,7 @@ void GLvao::Unbind()
 
 void GLvao::Delete()
 {
-	if(!IsCreated()) return;
+	if (!IsCreated()) return;
 
 	Unbind();
 	glDeleteVertexArrays(1, &m_id);
@@ -164,7 +164,7 @@ void GLrbo::Unbind()
 
 void GLrbo::Delete()
 {
-	if(!IsCreated())
+	if (!IsCreated())
 	{
 		return;
 	}
@@ -194,7 +194,7 @@ GLfbo::~GLfbo()
 
 void GLfbo::Create()
 {
-	if(IsCreated())
+	if (IsCreated())
 	{
 		return;
 	}
@@ -252,7 +252,7 @@ void GLfbo::Unbind(u32 type)
 
 void GLfbo::Delete()
 {
-	if(!IsCreated())
+	if (!IsCreated())
 	{
 		return;
 	}

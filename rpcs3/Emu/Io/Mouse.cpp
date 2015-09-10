@@ -35,7 +35,7 @@ MouseManager::~MouseManager()
 
 void MouseManager::Init(const u32 max_connect)
 {
-	if(m_inited)
+	if (m_inited)
 		return;
 
 	// NOTE: Change these to std::make_unique assignments when C++14 is available.
@@ -53,7 +53,7 @@ void MouseManager::Init(const u32 max_connect)
 
 void MouseManager::Close()
 {
-	if(m_mouse_handler) m_mouse_handler->Close();
+	if (m_mouse_handler) m_mouse_handler->Close();
 	m_mouse_handler = nullptr;
 
 	m_inited = false;

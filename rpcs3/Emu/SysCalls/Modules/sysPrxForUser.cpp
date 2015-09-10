@@ -145,9 +145,12 @@ s32 console_putc()
 	throw EXCEPTION("");
 }
 
-s32 console_write()
+void console_write(vm::ptr<char> data, u32 len)
 {
-	throw EXCEPTION("");
+	sysPrxForUser.Warning("console_write(data=*0x%x, len=%d)", data, len);
+	sysPrxForUser.Warning("*** data='%s'", data.get_ptr());
+
+	LOG_NOTICE(TTY, "%s", data.get_ptr());
 }
 
 

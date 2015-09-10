@@ -17,13 +17,13 @@ enum
 enum
 {
 	L10N_STR_UNKNOWN = (1 << 0),
-	L10N_STR_ASCII = (1 << 1),
-	L10N_STR_JIS = (1 << 2),
-	L10N_STR_EUCJP = (1 << 3),
-	L10N_STR_SJIS = (1 << 4),
-	L10N_STR_UTF8 = (1 << 5),
+	L10N_STR_ASCII   = (1 << 1),
+	L10N_STR_JIS     = (1 << 2),
+	L10N_STR_EUCJP   = (1 << 3),
+	L10N_STR_SJIS    = (1 << 4),
+	L10N_STR_UTF8    = (1 << 5),
 	L10N_STR_ILLEGAL = (1 << 16),
-	L10N_STR_ERROR = (1 << 17),
+	L10N_STR_ERROR   = (1 << 17),
 };
 
 // CodePages

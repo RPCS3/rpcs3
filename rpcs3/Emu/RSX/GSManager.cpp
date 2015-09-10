@@ -28,7 +28,7 @@ GSManager::GSManager() : m_render(nullptr)
 
 void GSManager::Init()
 {
-	if(m_render) return;
+	if (m_render) return;
 
 	m_info.Init();
 
@@ -46,7 +46,7 @@ void GSManager::Init()
 
 void GSManager::Close()
 {
-	if(m_render)
+	if (m_render)
 	{
 		m_render->Close();
 		delete m_render;
