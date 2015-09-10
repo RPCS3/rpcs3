@@ -885,9 +885,17 @@ s32 UTF16toUTF32()
 	throw EXCEPTION("");
 }
 
-s32 l10n_convert_str()
+s32 l10n_convert_str(s32 cd, vm::cptr<void> src, vm::ptr<u32> src_len, vm::ptr<void> dst, vm::ptr<u32> dst_len)
 {
-	throw EXCEPTION("");
+	cellL10n.Warning("l10n_convert_str(cd=%d, src=*0x%x, src_len=*0x%x, dst=*0x%x, dst_len=*0x%x)", cd, src, src_len, dst, dst_len);
+
+	s32 src_code, dst_code;
+	auto element = converters.find(cd);
+
+	src_code = element->second.first;
+	dst_code = element->second.second;
+
+	return L10nConvertStr(src_code, src, src_len, dst_code, dst, dst_len);
 }
 
 s32 EUCJPstoJISs()
@@ -990,9 +998,21 @@ s32 MSJISstoUCS2s()
 	throw EXCEPTION("");
 }
 
-s32 l10n_get_converter()
+s32 l10n_get_converter(u32 src_code, u32 dst_code)
 {
-	throw EXCEPTION("");
+	cellL10n.Warning("l10n_get_converter(src_code=%d, dst_code=%d)", src_code, dst_code);
+
+	auto it = converters.begin();
+
+	while (it != converters.end())
+	{
+		if (it->second.first == src_code && it->second.second == dst_code)
+		{
+			return it->first;
+		}
+
+		++it;
+	}
 }
 
 s32 GB18030stoUTF8s()
@@ -1157,9 +1177,10 @@ s32 UTF8stoUCS2s()
 	throw EXCEPTION("");
 }
 
-
 Module cellL10n("cellL10n", []()
 {
+	insertConverters();
+
 	REG_FUNC(cellL10n, UCS2toEUCJP);
 	REG_FUNC(cellL10n, l10n_convert);
 	REG_FUNC(cellL10n, UCS2toUTF32);

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "cellVpost.h"
+
 namespace vm { using namespace ps3; }
 
 // Error Codes
@@ -662,13 +664,8 @@ struct CellSailSourceStreamingProfile
 
 union CellSailEvent
 {
-	struct
-	{
-		be_t<u32> major;
-		be_t<u32> minor;
-	}
-	u32x2;
-
+	be_t<u32> major;
+	be_t<u32> minor;
 	be_t<u64> value;
 };
 
@@ -1193,6 +1190,36 @@ struct CellSailPlayer
 	bool booted;
 	vm::ptr<CellSailSoundAdapter> sAdapter;
 	vm::ptr<CellSailGraphicsAdapter> gAdapter;
+
+	// Attributes
+	be_t<s32> control_ppu_thread_priority;
+	be_t<s32> control_ppu_thread_stack_size;
+	be_t<s32> spurs_num_of_spus;
+	be_t<s32> spurs_spu_thread_priority;
+	be_t<s32> spurs_ppu_thread_priority;
+	b8        spurs_exit_if_no_work;
+	be_t<s32> io_ppu_thread_priority;
+	be_t<s32> io_ppu_thread_stack_size;
+	be_t<s32> dmux_ppu_thread_priority;
+	be_t<s32> dmux_num_of_spus;
+	be_t<u64> dmux_spurs_task_priorities;
+	be_t<s32> adec_ppu_thread_priority;
+	be_t<s32> adec_num_of_spus;
+	be_t<u64> adec_spurs_task_priorities;
+	b8 enable_apost_src;
+	be_t<s32> vdec_ppu_thread_priority;
+	be_t<s32> vdec_m2v_num_of_spus;
+	be_t<s32> vdec_avc_num_of_spus;
+	be_t<u64> vdec_spurs_task_priorities;
+	vm::ptr<CellVpostCtrlParam> enable_vpost;
+	be_t<s32> vpost_ppu_thread_priority;
+	be_t<s32> vpost_num_of_spus;
+	be_t<u64> vpost_spurs_task_priorities;
+	be_t<s32> graphics_adapter_buffer_release_delay;
+	be_t<s32> video_performance_policy;
+	b8        av_sync_es_audio;
+	b8        av_sync_es_video;
+	CellSailFsRead fs;
 };
 
 CHECK_MAX_SIZE(CellSailPlayer, 0x100);

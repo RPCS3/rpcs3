@@ -15,8 +15,8 @@ void playerBoot(vm::ptr<CellSailPlayer> pSelf, u64 userParam)
 	Emu.GetCallbackManager().Async([=](CPUThread& cpu)
 	{
 		CellSailEvent event;
-		event.u32x2.major = CELL_SAIL_EVENT_PLAYER_STATE_CHANGED;
-		event.u32x2.minor = 0;
+		event.major = CELL_SAIL_EVENT_PLAYER_STATE_CHANGED;
+		event.minor = 0;
 		pSelf->callback(static_cast<PPUThread&>(cpu), pSelf->callbackArg, event, CELL_SAIL_PLAYER_STATE_BOOT_TRANSITION, 0);
 	});
 
@@ -26,8 +26,8 @@ void playerBoot(vm::ptr<CellSailPlayer> pSelf, u64 userParam)
 	Emu.GetCallbackManager().Async([=](CPUThread& cpu)
 	{
 		CellSailEvent event;
-		event.u32x2.major = CELL_SAIL_EVENT_PLAYER_CALL_COMPLETED;
-		event.u32x2.minor = CELL_SAIL_PLAYER_CALL_BOOT;
+		event.major = CELL_SAIL_EVENT_PLAYER_CALL_COMPLETED;
+		event.minor = CELL_SAIL_PLAYER_CALL_BOOT;
 		pSelf->callback(static_cast<PPUThread&>(cpu), pSelf->callbackArg, event, 0, 0);
 	});
 }
@@ -636,8 +636,8 @@ s32 cellSailPlayerInitialize2(
 	Emu.GetCallbackManager().Async([=](CPUThread& cpu)
 	{
 		CellSailEvent event;
-		event.u32x2.major = CELL_SAIL_EVENT_PLAYER_STATE_CHANGED;
-		event.u32x2.minor = 0;
+		event.major = CELL_SAIL_EVENT_PLAYER_STATE_CHANGED;
+		event.minor = 0;
 		pSelf->callback(static_cast<PPUThread&>(cpu), pSelf->callbackArg, event, CELL_SAIL_PLAYER_STATE_INITIALIZED, 0);
 	});
 
@@ -725,11 +725,14 @@ s32 cellSailPlayerSetRendererVideo()
 
 s32 cellSailPlayerSetParameter(vm::ptr<CellSailPlayer> pSelf, s32 parameterType, u64 param0, u64 param1)
 {
-	cellSail.Todo("cellSailPlayerSetParameter(pSelf=*0x%x, parameterType=0x%x, param0=0x%llx, param1=0x%llx)", pSelf, parameterType, param0, param1);
+	cellSail.Warning("cellSailPlayerSetParameter(pSelf=*0x%x, parameterType=0x%x, param0=0x%llx, param1=0x%llx)", pSelf, parameterType, param0, param1);
 
 	switch (parameterType)
 	{
-	default: cellSail.Error("cellSailPlayerSetParameter(): unimplemented parameter %s", ParameterCodeToName(parameterType));
+	case CELL_SAIL_PARAMETER_GRAPHICS_ADAPTER_BUFFER_RELEASE_DELAY: pSelf->graphics_adapter_buffer_release_delay = param1; break; // TODO: Stream index
+	case CELL_SAIL_PARAMETER_CONTROL_PPU_THREAD_STACK_SIZE:         pSelf->control_ppu_thread_stack_size = param0; break;
+	case CELL_SAIL_PARAMETER_ENABLE_APOST_SRC:                      pSelf->enable_apost_src = param1; break; // TODO: Stream index
+	default: cellSail.Todo("cellSailPlayerSetParameter(): unimplemented parameter %s", ParameterCodeToName(parameterType));
 	}
 
 	return CELL_OK;
