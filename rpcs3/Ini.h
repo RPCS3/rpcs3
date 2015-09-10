@@ -247,14 +247,14 @@ public:
 		PadHandlerRStickUp.Init("ControlSetings_PadHandlerRStickUp", path);
 
 		// Miscellaneous
-		HLELogging.Init("HLE_HLELogging", path);
+		HLELogging.Init("HLE_Logging", path);
 		RSXLogging.Init("RSX_Logging", path);
 		NETStatus.Init("NET_Status", path);
 		NETInterface.Init("NET_Interface", path);
-		HLESaveTTY.Init("HLE_HLESaveTTY", path);
-		HLEExitOnStop.Init("HLE_HLEExitOnStop", path);
-		HLELogLvl.Init("HLE_HLELogLvl", path);
-		HLEAlwaysStart.Init("HLE_HLEAlwaysStart", path);
+		HLESaveTTY.Init("HLE_SaveTTY", path);
+		HLEExitOnStop.Init("HLE_ExitOnStop", path);
+		HLELogLvl.Init("HLE_LogLvl", path);
+		HLEAlwaysStart.Init("HLE_AlwaysStart", path);
 
 		// Auto Pause
 		DBGAutoPauseFunctionCall.Init("DBG_AutoPauseFunctionCall", path);

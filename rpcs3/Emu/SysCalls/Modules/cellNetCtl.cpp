@@ -95,7 +95,7 @@ s32 cellNetCtlDelHandler(s32 hid)
 
 s32 cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 {
-	cellNetCtl.Todo("cellNetCtlGetInfo(code=0x%x (%s), info=*0x%x)", code, InfoCodeToName(code), info);
+	cellNetCtl.Warning("cellNetCtlGetInfo(code=0x%x (%s), info=*0x%x)", code, InfoCodeToName(code), info);
 
 	if (code == CELL_NET_CTL_INFO_MTU)
 	{
@@ -340,6 +340,10 @@ s32 cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 
 		freeifaddrs(ifaddr);
 #endif
+	}
+	else
+	{
+		cellNetCtl.Todo("cellNetCtlGetInfo(code=0x%x (%s), info=*0x%x)", code, InfoCodeToName(code), info);
 	}
 
 	return CELL_OK;
