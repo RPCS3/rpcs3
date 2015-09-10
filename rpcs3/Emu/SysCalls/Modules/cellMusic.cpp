@@ -1,8 +1,19 @@
 #include "stdafx.h"
+#include "Emu/System.h"
+#include "Emu/IdManager.h"
 #include "Emu/Memory/Memory.h"
+#include "Emu/SysCalls/Callback.h"
 #include "Emu/SysCalls/Modules.h"
 
+#include "cellMusic.h"
+
 extern Module cellMusic;
+
+struct music2_t
+{
+	vm::ptr<CellMusic2Callback> func;
+	vm::ptr<void> userData;
+};
 
 s32 cellMusicGetSelectionContext()
 {
@@ -99,9 +110,48 @@ s32 cellMusicSelectContents()
 	throw EXCEPTION("");
 }
 
-s32 cellMusicInitialize2()
+s32 cellMusicInitialize2(s32 mode, s32 spuPriority, vm::ptr<CellMusic2Callback> func, vm::ptr<void> userData)
 {
-	throw EXCEPTION("");
+	cellMusic.Todo("cellMusicInitialize2(mode=%d, spuPriority=%d, func=*0x%x, userData=*0x%x)", mode, spuPriority, func, userData);
+
+	named_thread_t(WRAP_EXPR("CellMusicInit"), [=]()
+	{
+		if (mode != CELL_MUSIC2_PLAYER_MODE_NORMAL)
+		{
+			cellMusic.Todo("Unknown player mode: 0x%x", mode);
+			Emu.GetCallbackManager().Async([=](CPUThread& CPU)
+			{
+				vm::var<u32> ret(CPU);
+				*ret = CELL_MUSIC2_ERROR_PARAM;
+				func(static_cast<PPUThread&>(CPU), CELL_MUSIC2_EVENT_INITIALIZE_RESULT, ret, userData);
+			});
+		}
+
+		const auto music = fxm::make<music2_t>();
+
+		if (!music)
+		{
+			Emu.GetCallbackManager().Async([=](CPUThread& CPU)
+			{
+				vm::var<u32> ret(CPU);
+				*ret = CELL_MUSIC2_ERROR_GENERIC;
+				func(static_cast<PPUThread&>(CPU), CELL_MUSIC2_EVENT_INITIALIZE_RESULT, ret, userData);
+			});
+			return;
+		}
+
+		music->func = func;
+		music->userData = userData;
+
+		Emu.GetCallbackManager().Async([=](CPUThread& CPU)
+		{
+			vm::var<u32> ret(CPU);
+			*ret = CELL_OK;
+			func(static_cast<PPUThread&>(CPU), CELL_MUSIC2_EVENT_INITIALIZE_RESULT, ret, userData);
+		});
+	}).detach();
+
+	return CELL_OK;
 }
 
 s32 cellMusicSetVolume()

@@ -1,6 +1,11 @@
 #include "stdafx.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/SysCalls/Modules.h"
+#include "rpcs3/Ini.h"
+
+#include "sceNp.h"
+#include "sceNp2.h"
+#include "cellSysutilAvc2.h"
 
 extern Module cellSysutilAvc2;
 
@@ -124,9 +129,21 @@ s32 cellSysutilAvc2GetSpeakerVolumeLevel()
 	throw EXCEPTION("");
 }
 
-s32 cellSysutilAvc2IsCameraAttached()
+s32 cellSysutilAvc2IsCameraAttached(vm::ptr<u8> status)
 {
-	throw EXCEPTION("");
+	cellSysutilAvc2.Todo("cellSysutilAvc2IsCameraAttached()");
+
+	if (Ini.Camera.GetValue() == 0)
+	{
+		*status = CELL_AVC2_CAMERA_STATUS_DETACHED;
+	}
+	else
+	{
+		// TODO: We need to check if the camera has been turned on, but this requires further implementation of cellGem/cellCamera.
+		*status = CELL_AVC2_CAMERA_STATUS_ATTACHED_OFF;
+	}
+
+	return CELL_OK;
 }
 
 s32 cellSysutilAvc2MicRead()
@@ -159,9 +176,51 @@ s32 cellSysutilAvc2GetWindowShowStatus()
 	throw EXCEPTION("");
 }
 
-s32 cellSysutilAvc2InitParam()
+s32 cellSysutilAvc2InitParam(u16 version, vm::ptr<CellSysutilAvc2InitParam> option)
 {
-	throw EXCEPTION("");
+	cellSysutilAvc2.Warning("cellSysutilAvc2InitParam(version=%d, option=*0x%x)", version, option);
+
+	if (version >= 110)
+	{
+		// Notify the user that, a version different from the one, that we know the constants for, is used.
+		// Other versions shouldn't differ by too much, if at all - they most likely differ in other functions.
+		if (version != 140)
+		{
+			cellSysutilAvc2.Todo("cellSysutilAvc2InitParam(): Older/newer version %d used, might cause problems.", version);
+		}
+
+		option->avc_init_param_version = version;
+
+		if (option->media_type == CELL_SYSUTIL_AVC2_VOICE_CHAT)
+		{
+			option->max_players = 16;
+		}
+		else if (option->media_type == CELL_SYSUTIL_AVC2_VIDEO_CHAT)
+		{
+			if (option->video_param.frame_mode == CELL_SYSUTIL_AVC2_FRAME_MODE_NORMAL)
+			{
+				option->max_players = 6;
+			}
+			else if (option->video_param.frame_mode == CELL_SYSUTIL_AVC2_FRAME_MODE_INTRA_ONLY)
+			{
+				option->max_players = 16;
+			}
+			else
+			{
+				cellSysutilAvc2.Error("Unknown frame mode 0x%x", option->video_param.frame_mode);
+			}
+		}
+		else
+		{
+			cellSysutilAvc2.Error("Unknown media type 0x%x", option->media_type);
+		}
+	}
+	else
+	{
+		cellSysutilAvc2.Error("cellSysutilAvc2InitParam(): Unknown version %d used, please report this to a developer.", version);
+	}
+
+	return CELL_OK;
 }
 
 s32 cellSysutilAvc2GetWindowSize()

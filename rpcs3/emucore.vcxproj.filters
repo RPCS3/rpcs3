@@ -1876,5 +1876,11 @@
     <ClInclude Include="Emu\Cell\SPUAnalyser.h">
       <Filter>Emu\CPU\Cell</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\SysCalls\Modules\cellMusic.h">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\Modules\cellSysutilAvc2.h">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

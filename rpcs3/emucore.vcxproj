@@ -613,6 +613,7 @@
     <ClInclude Include="Emu\SysCalls\Modules\cellL10n.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellMic.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellMsgDialog.h" />
+    <ClInclude Include="Emu\SysCalls\Modules\cellMusic.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellNetCtl.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellPad.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellPamf.h" />
@@ -631,6 +632,7 @@
     <ClInclude Include="Emu\SysCalls\Modules\cellSync2.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellSysutil.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellSaveData.h" />
+    <ClInclude Include="Emu\SysCalls\Modules\cellSysutilAvc2.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellUsbd.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellUserInfo.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellVdec.h" />
