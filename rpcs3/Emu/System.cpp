@@ -298,14 +298,14 @@ void Emulator::Run()
 	SendDbgCommand(DID_STARTED_EMU);
 }
 
-void Emulator::Pause()
+bool Emulator::Pause()
 {
 	const u64 start = get_system_time();
 
 	// try to set Paused status
 	if (!sync_bool_compare_and_swap(&m_status, Running, Paused))
 	{
-		return;
+		return false;
 	}
 
 	// update pause start time
@@ -322,6 +322,8 @@ void Emulator::Pause()
 	}
 
 	SendDbgCommand(DID_PAUSED_EMU);
+
+	return true;
 }
 
 void Emulator::Resume()

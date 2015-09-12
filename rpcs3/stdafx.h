@@ -40,13 +40,15 @@
 #include <list>
 #include <forward_list>
 #include <typeindex>
+#include <future>
 
 using namespace std::string_literals;
+using namespace std::chrono_literals;
 
 #include "Utilities/GNU.h"
 
 #define CHECK_SIZE(type, size) static_assert(sizeof(type) == size, "Invalid " #type " type size")
-#define CHECK_ALIGN(type, align) static_assert(__alignof(type) == align, "Invalid " #type " type alignment")
+#define CHECK_ALIGN(type, align) static_assert(alignof(type) == align, "Invalid " #type " type alignment")
 #define CHECK_MAX_SIZE(type, size) static_assert(sizeof(type) <= size, #type " type size is too big")
 #define CHECK_SIZE_ALIGN(type, size, align) CHECK_SIZE(type, size); CHECK_ALIGN(type, align)
 #define CHECK_ASCENDING(constexpr_array) static_assert(::is_ascending(constexpr_array), #constexpr_array " is not sorted in ascending order")
@@ -154,7 +156,7 @@ template<typename T1, typename T2, typename T3 = const char*> struct triplet_t
 #define sizeof32(type) static_cast<u32>(sizeof(type))
 
 // return 32 bit alignof() to avoid widening/narrowing conversions with size_t
-#define alignof32(type) static_cast<u32>(__alignof(type))
+#define alignof32(type) static_cast<u32>(alignof(type))
 
 #define WRAP_EXPR(expr) [&]{ return expr; }
 #define COPY_EXPR(expr) [=]{ return expr; }

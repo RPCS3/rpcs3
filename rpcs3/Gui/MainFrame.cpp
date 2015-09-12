@@ -22,8 +22,9 @@
 #include "Gui/MemoryStringSearcher.h"
 #include "Gui/LLEModulesManager.h"
 #include "Gui/CgDisasm.h"
-#include "Loader/PKG.h"
+#include "Crypto/unpkg.h"
 #include <wx/dynlib.h>
+#include <wx/progdlg.h>
 
 BEGIN_EVENT_TABLE(MainFrame, FrameBase)
 	EVT_CLOSE(MainFrame::OnQuit)
@@ -229,33 +230,81 @@ void MainFrame::BootGame(wxCommandEvent& WXUNUSED(event))
 
 void MainFrame::InstallPkg(wxCommandEvent& WXUNUSED(event))
 {
-	bool stopped = false;
-
-	if(Emu.IsRunning())
-	{
-		Emu.Pause();
-		stopped = true;
-	}
+	const bool was_running = Emu.Pause();
 
 	wxFileDialog ctrl(this, L"Select PKG", wxEmptyString, wxEmptyString, "PKG files (*.pkg)|*.pkg|All files (*.*)|*.*", wxFD_OPEN | wxFD_FILE_MUST_EXIST);
 	
-	if(ctrl.ShowModal() == wxID_CANCEL)
+	if (ctrl.ShowModal() == wxID_CANCEL)
 	{
-		if(stopped) Emu.Resume();
+		if (was_running) Emu.Resume();
 		return;
 	}
 
 	Emu.Stop();
-	
-	// Open and install PKG file
-	fs::file pkg_f(ctrl.GetPath().ToStdString(), fom::read);
 
-	if (pkg_f)
+	Emu.GetVFS().Init("/");
+	std::string local_path;
+	Emu.GetVFS().GetDevice("/dev_hdd0/game/", local_path);
+
+	// Open PKG file
+	fs::file pkg_f{ ctrl.GetPath().ToStdString() };
+
+	if (!pkg_f)
 	{
-		Emu.GetVFS().Init("/");
-		std::string local_path;
-		Emu.GetVFS().GetDevice("/dev_hdd0/game/", local_path);
-		PKGLoader::Install(pkg_f, local_path + "/");
+		LOG_ERROR(LOADER, "PKG: Failed to open %s", ctrl.GetPath().ToStdString());
+		return;
+	}
+
+	// Fetch title ID from the header
+	char title_id[10] = "?????????";
+	pkg_f.seek(55);
+	pkg_f.read(title_id, 9);
+	pkg_f.seek(0);
+
+	// Append title ID to the path
+	local_path += '/';
+	local_path += title_id;
+
+	if (!fs::create_dir(local_path))
+	{
+		if (fs::is_dir(local_path))
+		{
+			if (wxMessageDialog(this, "Another installation found. Do you want to overwrite it?", "PKG Decrypter / Installer", wxYES_NO | wxCENTRE).ShowModal() != wxID_YES)
+			{
+				LOG_ERROR(LOADER, "PKG: Cancelled installation to existing directory %s", local_path);
+				return;
+			}
+		}
+		else
+		{
+			LOG_ERROR(LOADER, "PKG: Could not create the installation directory %s", local_path);
+			return;
+		}
+	}
+
+	wxProgressDialog pdlg("PKG Decrypter / Installer", "Please wait, unpacking...", 1000, this, wxPD_AUTO_HIDE | wxPD_APP_MODAL);
+
+	volatile f64 progress = 0.0;
+
+	// Run PKG unpacking asynchronously
+	auto result = std::async(WRAP_EXPR(UnpackPKG(pkg_f, local_path + "/", progress)));
+
+	// Wait for the completion
+	while (result.wait_for(15ms) != std::future_status::ready)
+	{
+		// Update progress window
+		pdlg.Update(progress * pdlg.GetRange());
+
+		// Update main frame
+		Update();
+		wxGetApp().ProcessPendingEvents();
+	}
+
+	pdlg.Close();
+
+	if (result.get())
+	{
+		LOG_SUCCESS(LOADER, "PKG: Package successfully installed in %s", local_path);
 
 		// Refresh game list
 		m_game_viewer->Refresh();

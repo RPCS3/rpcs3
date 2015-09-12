@@ -186,7 +186,7 @@ public:
 
 	void Load();
 	void Run();
-	void Pause();
+	bool Pause();
 	void Resume();
 	void Stop();
 

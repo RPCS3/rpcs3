@@ -386,9 +386,6 @@
     <ClCompile Include="Loader\Loader.cpp">
       <Filter>Loader</Filter>
     </ClCompile>
-    <ClCompile Include="Loader\PKG.cpp">
-      <Filter>Loader</Filter>
-    </ClCompile>
     <ClCompile Include="Loader\PSF.cpp">
       <Filter>Loader</Filter>
     </ClCompile>
@@ -1325,9 +1322,6 @@
       <Filter>Loader</Filter>
     </ClInclude>
     <ClInclude Include="Loader\Loader.h">
-      <Filter>Loader</Filter>
-    </ClInclude>
-    <ClInclude Include="Loader\PKG.h">
       <Filter>Loader</Filter>
     </ClInclude>
     <ClInclude Include="Loader\PSF.h">

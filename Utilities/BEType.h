@@ -545,13 +545,13 @@ public:
 	type m_data; // don't access directly
 #endif
 
-	static_assert(!std::is_class<type>::value, "be_t<> error: invalid type (class or structure)");
-	static_assert(!std::is_union<type>::value || std::is_same<type, v128>::value, "be_t<> error: invalid type (union)");
+	static_assert(!std::is_class<type>::value || std::is_same<type, u128>::value, "be_t<> error: invalid type (class or structure)");
+	static_assert(!std::is_union<type>::value || std::is_same<type, v128>::value || std::is_same<type, u128>::value, "be_t<> error: invalid type (union)");
 	static_assert(!std::is_pointer<type>::value, "be_t<> error: invalid type (pointer)");
 	static_assert(!std::is_reference<type>::value, "be_t<> error: invalid type (reference)");
 	static_assert(!std::is_array<type>::value, "be_t<> error: invalid type (array)");
 	static_assert(!std::is_enum<type>::value, "be_t<> error: invalid type (enumeration), use integral type instead");
-	static_assert(__alignof(type) == __alignof(stype), "be_t<> error: unexpected alignment");
+	static_assert(alignof(type) == alignof(stype), "be_t<> error: unexpected alignment");
 
 	be_t() = default;
 
@@ -692,7 +692,7 @@ template<typename T> struct is_be_t<volatile T> : public std::integral_constant<
 // to_be_t helper struct
 template<typename T> struct to_be
 {
-	using type = std::conditional_t<std::is_arithmetic<T>::value || std::is_enum<T>::value || std::is_same<T, v128>::value, be_t<T>, T>;
+	using type = std::conditional_t<std::is_arithmetic<T>::value || std::is_enum<T>::value || std::is_same<T, v128>::value || std::is_same<T, u128>::value, be_t<T>, T>;
 };
 
 // be_t<T> if possible, T otherwise
@@ -724,13 +724,13 @@ public:
 
 	type m_data; // don't access directly
 
-	static_assert(!std::is_class<type>::value, "le_t<> error: invalid type (class or structure)");
-	static_assert(!std::is_union<type>::value || std::is_same<type, v128>::value, "le_t<> error: invalid type (union)");
+	static_assert(!std::is_class<type>::value || std::is_same<type, u128>::value, "le_t<> error: invalid type (class or structure)");
+	static_assert(!std::is_union<type>::value || std::is_same<type, v128>::value || std::is_same<T, u128>::value, "le_t<> error: invalid type (union)");
 	static_assert(!std::is_pointer<type>::value, "le_t<> error: invalid type (pointer)");
 	static_assert(!std::is_reference<type>::value, "le_t<> error: invalid type (reference)");
 	static_assert(!std::is_array<type>::value, "le_t<> error: invalid type (array)");
 	static_assert(!std::is_enum<type>::value, "le_t<> error: invalid type (enumeration), use integral type instead");
-	static_assert(__alignof(type) == __alignof(stype), "le_t<> error: unexpected alignment");
+	static_assert(alignof(type) == alignof(stype), "le_t<> error: unexpected alignment");
 
 	le_t() = default;
 
@@ -807,7 +807,7 @@ template<typename T> struct is_le_t<volatile T> : public std::integral_constant<
 
 template<typename T> struct to_le
 {
-	using type = std::conditional_t<std::is_arithmetic<T>::value || std::is_enum<T>::value || std::is_same<T, v128>::value, le_t<T>, T>;
+	using type = std::conditional_t<std::is_arithmetic<T>::value || std::is_enum<T>::value || std::is_same<T, v128>::value || std::is_same<T, u128>::value, le_t<T>, T>;
 };
 
 // le_t<T> if possible, T otherwise

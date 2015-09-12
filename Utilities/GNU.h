@@ -86,30 +86,146 @@ struct alignas(16) uint128_t
 {
 	uint64_t lo, hi;
 
-	uint128_t& operator ++()
+	uint128_t() = default;
+
+	uint128_t(uint64_t l)
+		: lo(l)
+		, hi(0)
+	{
+	}
+
+	[[deprecated("Not implemented")]] inline uint128_t operator +(const uint128_t& r) const
+	{
+		return{};
+	}
+
+	inline uint128_t operator +(uint64_t r) const
+	{
+		uint128_t value;
+		value.lo = lo + r;
+		value.hi = value.lo < r ? hi + 1 : hi;
+		return value;
+	}
+
+	[[deprecated("Not implemented")]] inline uint128_t operator -(const uint128_t& r) const
+	{
+		return{};
+	}
+
+	inline uint128_t operator -(uint64_t r) const
+	{
+		uint128_t value;
+		value.lo = lo - r;
+		value.hi = lo < r ? hi - 1 : hi;
+		return value;
+	}
+
+	inline uint128_t operator +() const
+	{
+		return *this;
+	}
+
+	inline uint128_t operator -() const
+	{
+		uint128_t value;
+		value.lo = ~lo + 1;
+		value.hi = lo ? ~hi : ~hi + 1;
+		return value;
+	}
+
+	inline uint128_t& operator ++()
 	{
 		if (!++lo) ++hi;
 		return *this;
 	}
 
-	uint128_t& operator --()
-	{
-		if (!lo--) hi--;
-		return *this;
-	}
-
-	uint128_t operator ++(int)
+	inline uint128_t operator ++(int)
 	{
 		uint128_t value = *this;
 		if (!++lo) ++hi;
 		return value;
 	}
 
-	uint128_t operator --(int)
+	inline uint128_t& operator --()
+	{
+		if (!lo--) hi--;
+		return *this;
+	}
+
+	inline uint128_t operator --(int)
 	{
 		uint128_t value = *this;
 		if (!lo--) hi--;
 		return value;
+	}
+
+	inline uint128_t operator ~() const
+	{
+		uint128_t value;
+		value.lo = ~lo;
+		value.hi = ~hi;
+		return value;
+	}
+
+	inline uint128_t operator &(const uint128_t& r) const
+	{
+		uint128_t value;
+		value.lo = lo & r.lo;
+		value.hi = hi & r.hi;
+		return value;
+	}
+
+	inline uint128_t operator |(const uint128_t& r) const
+	{
+		uint128_t value;
+		value.lo = lo | r.lo;
+		value.hi = hi | r.hi;
+		return value;
+	}
+
+	inline uint128_t operator ^(const uint128_t& r) const
+	{
+		uint128_t value;
+		value.lo = lo ^ r.lo;
+		value.hi = hi ^ r.hi;
+		return value;
+	}
+
+	[[deprecated("Not implemented")]] inline uint128_t& operator +=(const uint128_t& r)
+	{
+		return *this;
+	}
+
+	inline uint128_t& operator +=(uint64_t r)
+	{
+		hi = (lo += r) < r ? hi + 1 : hi;
+		return *this;
+	}
+
+	[[deprecated("Not implemented")]] inline uint128_t& operator -=(const uint128_t& r)
+	{
+		return *this;
+	}
+
+	inline uint128_t& operator &=(const uint128_t& r)
+	{
+		lo &= r.lo;
+		hi &= r.hi;
+		return *this;
+	}
+
+	inline uint128_t& operator |=(const uint128_t& r)
+	{
+		lo |= r.lo;
+		hi |= r.hi;
+		return *this;
+	}
+
+	inline uint128_t& operator ^=(const uint128_t& r)
+	{
+		lo ^= r.lo;
+		hi ^= r.hi;
+		return *this;
 	}
 };
 
