@@ -145,12 +145,13 @@ s32 console_putc()
 	throw EXCEPTION("");
 }
 
-void console_write(vm::ptr<char> data, u32 len)
+s32 console_write(vm::ptr<char> data, u32 len)
 {
 	sysPrxForUser.Warning("console_write(data=*0x%x, len=%d)", data, len);
-	sysPrxForUser.Warning("*** data='%s'", data.get_ptr());
 
-	LOG_NOTICE(TTY, "%s", data.get_ptr());
+	LOG_NOTICE(TTY, { data.get_ptr(), len });
+
+	return CELL_OK;
 }
 
 

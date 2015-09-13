@@ -261,18 +261,9 @@ struct CellNetCtlNatInfo
 
 typedef void(cellNetCtlHandler)(s32 prev_state, s32 new_state, s32 event, s32 error_code, vm::ptr<u32> arg);
 
-enum SignInDialogState
-{
-	signInDialogNone,
-	signInDialogInit,
-	signInDialogOpen,
-	signInDialogClose,
-	signInDialogAbort,
-};
-
 struct SignInDialogInstance
 {
-	std::atomic<SignInDialogState> state;
+	//std::atomic<SignInDialogState> state;
 
 	s32 status;
 

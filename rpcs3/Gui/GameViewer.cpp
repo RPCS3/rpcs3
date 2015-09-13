@@ -42,7 +42,8 @@ class WxDirDeleteTraverser : public wxDirTraverser
 public:
 	virtual wxDirTraverseResult OnFile(const wxString& filename) override
 	{
-		if (!wxRemoveFile(filename)){
+		if (!wxRemoveFile(filename))
+		{
 			LOG_ERROR(HLE, "Couldn't delete File: %s", fmt::ToUTF8(filename).c_str());
 		}
 		return wxDIR_CONTINUE;
@@ -51,7 +52,8 @@ public:
 	{
 		wxDir dir(dirname);
 		dir.Traverse(*this);
-		if (!wxRmDir(dirname)){
+		if (!wxRmDir(dirname))
+		{
 			//this get triggered a few times while clearing folders
 			//but if this gets reimplented we should probably warn
 			//if directories can't be removed
@@ -120,7 +122,7 @@ void GameViewer::LoadGames()
 void GameViewer::LoadPSF()
 {
 	m_game_data.clear();
-	for(uint i=0; i<m_games.size(); ++i)
+	for (u32 i = 0; i < m_games.size(); ++i)
 	{
 		const std::string sfb = m_path + m_games[i] + "/PS3_DISC.SFB"; 
 		const std::string sfo = m_path + m_games[i] + (Emu.GetVFS().ExistsFile(sfb) ? "/PS3_GAME/PARAM.SFO" : "/PARAM.SFO");
@@ -174,6 +176,21 @@ void GameViewer::LoadPSF()
 			game.category = "Disc Game";
 			game.icon_path = local_path + "/" + m_games[i] + "/PS3_GAME/ICON0.PNG";
 		}
+		else if (game.category.substr(0, 2) == "HM")
+		{
+			game.category = "Home";
+			game.icon_path = local_path + "/" + m_games[i] + "/ICON0.PNG";
+		}
+		else if (game.category.substr(0, 2) == "AV")
+		{
+			game.category = "Audio/Video";
+			game.icon_path = local_path + "/" + m_games[i] + "/ICON0.PNG";
+		}
+		else if (game.category.substr(0, 2) == "GD")
+		{
+			game.category = "Game Data";
+			game.icon_path = local_path + "/" + m_games[i] + "/PS3_GAME/ICON0.PNG";
+		}
 			
 		m_game_data.push_back(game);
 	}
@@ -210,7 +227,7 @@ void GameViewer::LoadSettings()
 void GameViewer::DClick(wxListEvent& event)
 {
 	long i = GetFirstSelected();
-	if(i < 0) return;
+	if (i < 0) return;
 
 	const std::string& path = m_path + m_game_data[i].root;
 
@@ -220,12 +237,14 @@ void GameViewer::DClick(wxListEvent& event)
 
 	Emu.GetVFS().Init("/");
 	std::string local_path;
-	if (Emu.GetVFS().GetDevice(path, local_path) && !Emu.BootGame(local_path)) {
+	if (Emu.GetVFS().GetDevice(path, local_path) && !Emu.BootGame(local_path))
+	{
 		LOG_ERROR(HLE, "Boot error: elf not found! [%s]", path.c_str());
 		return;
 	}
 
-	if (Ini.HLEAlwaysStart.GetValue() && Emu.IsReady()) {
+	if (Ini.HLEAlwaysStart.GetValue() && Emu.IsReady())
+	{
 		Emu.Run();
 	}
 }
@@ -250,7 +269,7 @@ void GameViewer::RemoveGame(wxCommandEvent& event)
 
 	Emu.GetVFS().UnMountAll();
 
-	//TODO: Replace wxWidgetsSpecific filesystem stuff?
+	// TODO: Replace wxWidgetsSpecific filesystem stuff?
 	WxDirDeleteTraverser deleter;
 	wxDir localDir(del_path);
 	localDir.Traverse(deleter);

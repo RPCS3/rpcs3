@@ -114,40 +114,24 @@ s32 cellMusicInitialize2(s32 mode, s32 spuPriority, vm::ptr<CellMusic2Callback> 
 {
 	cellMusic.Todo("cellMusicInitialize2(mode=%d, spuPriority=%d, func=*0x%x, userData=*0x%x)", mode, spuPriority, func, userData);
 
+	if (mode != CELL_MUSIC2_PLAYER_MODE_NORMAL)
+	{
+		cellMusic.Todo("Unknown player mode: 0x%x", mode);
+		return CELL_MUSIC2_ERROR_PARAM;
+	}
+
 	named_thread_t(WRAP_EXPR("CellMusicInit"), [=]()
 	{
-		if (mode != CELL_MUSIC2_PLAYER_MODE_NORMAL)
-		{
-			cellMusic.Todo("Unknown player mode: 0x%x", mode);
-			Emu.GetCallbackManager().Async([=](CPUThread& CPU)
-			{
-				vm::var<u32> ret(CPU);
-				*ret = CELL_MUSIC2_ERROR_PARAM;
-				func(static_cast<PPUThread&>(CPU), CELL_MUSIC2_EVENT_INITIALIZE_RESULT, ret, userData);
-			});
-		}
-
-		const auto music = fxm::make<music2_t>();
-
-		if (!music)
-		{
-			Emu.GetCallbackManager().Async([=](CPUThread& CPU)
-			{
-				vm::var<u32> ret(CPU);
-				*ret = CELL_MUSIC2_ERROR_GENERIC;
-				func(static_cast<PPUThread&>(CPU), CELL_MUSIC2_EVENT_INITIALIZE_RESULT, ret, userData);
-			});
-			return;
-		}
-
+		const auto music = fxm::make_always<music2_t>();
 		music->func = func;
 		music->userData = userData;
 
-		Emu.GetCallbackManager().Async([=](CPUThread& CPU)
+		Emu.GetCallbackManager().Register([=](CPUThread& CPU) -> s32
 		{
 			vm::var<u32> ret(CPU);
 			*ret = CELL_OK;
 			func(static_cast<PPUThread&>(CPU), CELL_MUSIC2_EVENT_INITIALIZE_RESULT, ret, userData);
+			return CELL_OK;
 		});
 	}).detach();
 

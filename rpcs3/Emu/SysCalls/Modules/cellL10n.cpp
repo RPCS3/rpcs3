@@ -889,11 +889,8 @@ s32 l10n_convert_str(s32 cd, vm::cptr<void> src, vm::ptr<u32> src_len, vm::ptr<v
 {
 	cellL10n.Warning("l10n_convert_str(cd=%d, src=*0x%x, src_len=*0x%x, dst=*0x%x, dst_len=*0x%x)", cd, src, src_len, dst, dst_len);
 
-	s32 src_code, dst_code;
-	auto element = converters.find(cd);
-
-	src_code = element->second.first;
-	dst_code = element->second.second;
+	s32 src_code = cd >> 16;
+	s32 dst_code = cd & 0xffff;
 
 	return L10nConvertStr(src_code, src, src_len, dst_code, dst, dst_len);
 }
@@ -1001,18 +998,7 @@ s32 MSJISstoUCS2s()
 s32 l10n_get_converter(u32 src_code, u32 dst_code)
 {
 	cellL10n.Warning("l10n_get_converter(src_code=%d, dst_code=%d)", src_code, dst_code);
-
-	auto it = converters.begin();
-
-	while (it != converters.end())
-	{
-		if (it->second.first == src_code && it->second.second == dst_code)
-		{
-			return it->first;
-		}
-
-		++it;
-	}
+	return (src_code << 16) | dst_code;
 }
 
 s32 GB18030stoUTF8s()
@@ -1179,8 +1165,6 @@ s32 UTF8stoUCS2s()
 
 Module cellL10n("cellL10n", []()
 {
-	insertConverters();
-
 	REG_FUNC(cellL10n, UCS2toEUCJP);
 	REG_FUNC(cellL10n, l10n_convert);
 	REG_FUNC(cellL10n, UCS2toUTF32);

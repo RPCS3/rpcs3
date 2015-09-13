@@ -742,9 +742,9 @@ u64 cellGcmGetLastFlipTime()
 	return Emu.GetGSManager().GetRender().m_last_flip_time;
 }
 
-s32 cellGcmGetLastSecondVTime()
+u64 cellGcmGetLastSecondVTime()
 {
-	UNIMPLEMENTED_FUNC(cellGcmSys);
+	cellGcmSys.Todo("cellGcmGetLastSecondVTime()");
 	return CELL_OK;
 }
 

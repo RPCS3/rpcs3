@@ -664,8 +664,12 @@ struct CellSailSourceStreamingProfile
 
 union CellSailEvent
 {
-	be_t<u32> major;
-	be_t<u32> minor;
+	struct
+	{
+		be_t<u32> major;
+		be_t<u32> minor;
+	} u32x2;
+
 	be_t<u64> value;
 };
 

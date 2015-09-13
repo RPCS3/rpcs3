@@ -15,8 +15,8 @@ void playerBoot(vm::ptr<CellSailPlayer> pSelf, u64 userParam)
 	Emu.GetCallbackManager().Async([=](CPUThread& cpu)
 	{
 		CellSailEvent event;
-		event.major = CELL_SAIL_EVENT_PLAYER_STATE_CHANGED;
-		event.minor = 0;
+		event.u32x2.major = CELL_SAIL_EVENT_PLAYER_STATE_CHANGED;
+		event.u32x2.minor = 0;
 		pSelf->callback(static_cast<PPUThread&>(cpu), pSelf->callbackArg, event, CELL_SAIL_PLAYER_STATE_BOOT_TRANSITION, 0);
 	});
 
@@ -26,8 +26,8 @@ void playerBoot(vm::ptr<CellSailPlayer> pSelf, u64 userParam)
 	Emu.GetCallbackManager().Async([=](CPUThread& cpu)
 	{
 		CellSailEvent event;
-		event.major = CELL_SAIL_EVENT_PLAYER_CALL_COMPLETED;
-		event.minor = CELL_SAIL_PLAYER_CALL_BOOT;
+		event.u32x2.major = CELL_SAIL_EVENT_PLAYER_CALL_COMPLETED;
+		event.u32x2.minor = CELL_SAIL_PLAYER_CALL_BOOT;
 		pSelf->callback(static_cast<PPUThread&>(cpu), pSelf->callbackArg, event, 0, 0);
 	});
 }
@@ -636,8 +636,8 @@ s32 cellSailPlayerInitialize2(
 	Emu.GetCallbackManager().Async([=](CPUThread& cpu)
 	{
 		CellSailEvent event;
-		event.major = CELL_SAIL_EVENT_PLAYER_STATE_CHANGED;
-		event.minor = 0;
+		event.u32x2.major = CELL_SAIL_EVENT_PLAYER_STATE_CHANGED;
+		event.u32x2.minor = 0;
 		pSelf->callback(static_cast<PPUThread&>(cpu), pSelf->callbackArg, event, CELL_SAIL_PLAYER_STATE_INITIALIZED, 0);
 	});
 
