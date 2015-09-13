@@ -33,67 +33,6 @@ void SetGetD3DGSFrameCallback(GetGSFrameCb2 value)
 	GetGSFrame = value;
 }
 
-GarbageCollectionThread::GarbageCollectionThread()
-{
-	m_askForTermination = false;
-	m_worker = std::thread([this]() {
-		std::unique_lock<std::mutex> lock(m_mutex);
-		while (!m_askForTermination)
-		{
-			if (!lock)
-			{
-				lock.lock();
-				continue;
-			}
-
-			if (!m_queue.empty())
-			{
-				auto func = std::move(m_queue.front());
-
-				m_queue.pop();
-
-				if (lock) lock.unlock();
-
-				func();
-
-				continue;
-			}
-			cv.wait(lock);
-		}
-	});
-}
-
-GarbageCollectionThread::~GarbageCollectionThread()
-{
-	{
-		std::unique_lock<std::mutex> lock(m_mutex);
-		m_askForTermination = true;
-		cv.notify_one();
-	}
-	m_worker.join();
-}
-
-void GarbageCollectionThread::pushWork(std::function<void()>&& f)
-{
-	{
-		std::unique_lock<std::mutex> lock(m_mutex);
-		m_queue.push(f);
-	}
-	cv.notify_one();
-}
-
-void GarbageCollectionThread::waitForCompletion()
-{
-	pushWork([]() {});
-	while (true)
-	{
-		std::this_thread::yield();
-		std::unique_lock<std::mutex> lock(m_mutex);
-		if (m_queue.empty())
-			return;
-	}
-}
-
 void D3D12GSRender::ResourceStorage::Reset()
 {
 	m_constantsBufferIndex = 0;
@@ -115,6 +54,7 @@ void D3D12GSRender::ResourceStorage::setNewCommandList()
 
 void D3D12GSRender::ResourceStorage::Init(ID3D12Device *device)
 {
+	m_inUse = false;
 	m_device = device;
 	m_RAMFramebuffer = nullptr;
 	// Create a global command allocator
@@ -149,23 +89,21 @@ void D3D12GSRender::ResourceStorage::Init(ID3D12Device *device)
 	m_frameFinishedHandle = CreateEventEx(nullptr, FALSE, FALSE, EVENT_ALL_ACCESS);
 	m_fenceValue = 0;
 	ThrowIfFailed(device->CreateFence(m_fenceValue++, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(m_frameFinishedFence.GetAddressOf())));
-	m_isUseable = true;
 }
 
-void D3D12GSRender::ResourceStorage::WaitAndClean(const std::vector<ID3D12Resource *> &dirtyTextures)
+void D3D12GSRender::ResourceStorage::WaitAndClean()
 {
-	if (!m_isUseable)
+	if (m_inUse)
 		WaitForSingleObjectEx(m_frameFinishedHandle, INFINITE, FALSE);
 	else
 		ThrowIfFailed(m_commandList->Close());
 
 	Reset();
 
-	for (auto tmp : dirtyTextures)
+	for (auto tmp : m_dirtyTextures)
 		tmp->Release();
 
 	m_RAMFramebuffer = nullptr;
-	m_isUseable.store(true, std::memory_order_release);
 }
 
 void D3D12GSRender::ResourceStorage::Release()
@@ -385,9 +323,7 @@ D3D12GSRender::D3D12GSRender()
 
 D3D12GSRender::~D3D12GSRender()
 {
-	while (!getCurrentResourceStorage().m_isUseable.load(std::memory_order_acquire) &&
-		!getNonCurrentResourceStorage().m_isUseable.load(std::memory_order_acquire))
-		std::this_thread::yield();
+	getNonCurrentResourceStorage().WaitAndClean();
 
 	gfxHandler = [this](u32) { return false; };
 	m_constantsData.Release();
@@ -924,49 +860,38 @@ void D3D12GSRender::Flip()
 
 	ResourceStorage &storage = getNonCurrentResourceStorage();
 
-	storage.m_frameFinishedFence->SetEventOnCompletion(storage.m_fenceValue, storage.m_frameFinishedHandle);
 	m_commandQueueGraphic->Signal(storage.m_frameFinishedFence.Get(), storage.m_fenceValue);
+	storage.m_frameFinishedFence->SetEventOnCompletion(storage.m_fenceValue, storage.m_frameFinishedHandle);
 	storage.m_fenceValue++;
+
+	storage.m_dirtyTextures = m_texToClean;
+	storage.m_inUse = true;
+	m_texToClean.clear();
+
+	// Get the put pos - 1. This way after cleaning we can set the get ptr to
+	// this value, allowing heap to proceed even if we cleant before allocating
+	// a new value (that's the reason of the -1)
+	storage.m_getPosConstantsHeap = m_constantsData.getCurrentPutPosMinusOne();
+	storage.m_getPosVertexIndexHeap = m_vertexIndexData.getCurrentPutPosMinusOne();
+	storage.m_getPosTextureUploadHeap = m_textureUploadData.getCurrentPutPosMinusOne();
+	storage.m_getPosReadbackHeap = m_readbackResources.getCurrentPutPosMinusOne();
+	storage.m_getPosUAVHeap = m_UAVHeap.getCurrentPutPosMinusOne();
 
 	// Flush
 	m_texturesRTTs.clear();
 	m_vertexCache.clear();
 	m_vertexConstants.clear();
 
+	// Now get ready for next frame
+	ResourceStorage &newStorage = getCurrentResourceStorage();
 
-	// Get the put pos - 1. This way after cleaning we can set the get ptr to
-	// this value, allowing heap to proceed even if we cleant before allocating
-	// a new value (that's the reason of the -1)
-	size_t newGetPosConstantsHeap = m_constantsData.getCurrentPutPosMinusOne();
-	size_t newGetPosVertexIndexHeap = m_vertexIndexData.getCurrentPutPosMinusOne();
-	size_t newGetPosTextureUploadHeap = m_textureUploadData.getCurrentPutPosMinusOne();
-	size_t newGetPosReadbackHeap = m_readbackResources.getCurrentPutPosMinusOne();
-	size_t newGetPosUAVHeap = m_UAVHeap.getCurrentPutPosMinusOne();
+	newStorage.WaitAndClean();
+	m_constantsData.m_getPos.store(newStorage.m_getPosConstantsHeap, std::memory_order_release);
+	m_vertexIndexData.m_getPos.store(newStorage.m_getPosVertexIndexHeap, std::memory_order_release);
+	m_textureUploadData.m_getPos.store(newStorage.m_getPosTextureUploadHeap, std::memory_order_release);
+	m_readbackResources.m_getPos.store(newStorage.m_getPosReadbackHeap, std::memory_order_release);
+	m_UAVHeap.m_getPos.store(newStorage.m_getPosUAVHeap, std::memory_order_release);
 
-	std::lock_guard<std::mutex> lock(mut);
-	std::vector<ID3D12Resource *> textoclean = m_texToClean;
-	m_texToClean.clear();
-
-	storage.m_isUseable.store(false);
-
-	m_GC.pushWork([&,
-		textoclean,
-		newGetPosConstantsHeap,
-		newGetPosVertexIndexHeap,
-		newGetPosTextureUploadHeap,
-		newGetPosReadbackHeap,
-		newGetPosUAVHeap]()
-	{
-		storage.WaitAndClean(textoclean);
-		m_constantsData.m_getPos.store(newGetPosConstantsHeap, std::memory_order_release);
-		m_vertexIndexData.m_getPos.store(newGetPosVertexIndexHeap, std::memory_order_release);
-		m_textureUploadData.m_getPos.store(newGetPosTextureUploadHeap, std::memory_order_release);
-		m_readbackResources.m_getPos.store(newGetPosReadbackHeap, std::memory_order_release);
-		m_UAVHeap.m_getPos.store(newGetPosUAVHeap, std::memory_order_release);
-	});
-
-	while (!getCurrentResourceStorage().m_isUseable.load(std::memory_order_acquire))
-		std::this_thread::yield();
 	m_frame->Flip(nullptr);
 
 	ResetTimer();
@@ -1248,7 +1173,7 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 	//Wait for result
 	m_commandQueueGraphic->Signal(fence, 1);
 
-	m_GC.pushWork([=]() {
+	auto tmp = [=]() {
 		WaitForSingleObject(handle, INFINITE);
 		CloseHandle(handle);
 		fence->Release();
@@ -1356,9 +1281,8 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 		}
 
 		vm::write32(m_label_addr + offset, value);
-	});
-
-	m_GC.waitForCompletion();
+	};
+	tmp();
 }
 
 void D3D12GSRender::semaphorePFIFOAcquire(u32 offset, u32 value)

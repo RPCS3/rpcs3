@@ -192,26 +192,6 @@ struct DataHeap
 	}
 };
 
-
-/**
- * Wrapper for a worker thread that executes lambda functions
- * in the order they were submitted during its lifetime.
- * Used mostly to release data that are not needed anymore.
- */
-struct GarbageCollectionThread
-{
-	std::atomic<bool> m_askForTermination;
-	std::mutex m_mutex;
-	std::condition_variable cv;
-	std::queue<std::function<void()> > m_queue;
-	std::thread m_worker;
-
-	GarbageCollectionThread();
-	~GarbageCollectionThread();
-	void pushWork(std::function<void()>&& f);
-	void waitForCompletion();
-};
-
 /**
  * Structure used to load/unload D3D12 lib.
  */
@@ -245,7 +225,6 @@ private:
 	std::vector<ID3D12Resource *> m_texToClean;
 	bool invalidateTexture(u32 addr);
 
-	GarbageCollectionThread m_GC;
 	// Copy of RTT to be used as texture
 	std::unordered_map<u32, ID3D12Resource* > m_texturesRTTs;
 
@@ -299,7 +278,7 @@ private:
 	 */
 	struct ResourceStorage
 	{
-		std::atomic<int> m_isUseable;
+		bool m_inUse; // False until command list has been populated at least once
 		ComPtr<ID3D12Fence> m_frameFinishedFence;
 		UINT64 m_fenceValue;
 		HANDLE m_frameFinishedHandle;
@@ -328,10 +307,19 @@ private:
 		std::vector<ComPtr<ID3D12Resource> > m_singleFrameLifetimeResources;
 
 
+		/// Texture that were invalidated
+		std::vector<ID3D12Resource *> m_dirtyTextures;
+
+		size_t m_getPosConstantsHeap;
+		size_t m_getPosVertexIndexHeap;
+		size_t m_getPosTextureUploadHeap;
+		size_t m_getPosReadbackHeap;
+		size_t m_getPosUAVHeap;
+
 		void Reset();
 		void Init(ID3D12Device *device);
 		void setNewCommandList();
-		void WaitAndClean(const std::vector<ID3D12Resource *> &dirtyTextures);
+		void WaitAndClean();
 		void Release();
 	};
 
