@@ -68,7 +68,7 @@ MainFrame::MainFrame()
 	, m_sys_menu_opened(false)
 {
 
-	SetLabel(wxString::Format(_PRGNAME_ " " _PRGVER_ " " RPCS3_GIT_VERSION));
+	SetLabel(wxString::Format(_PRGNAME_ " " RPCS3_GIT_VERSION));
 
 	wxMenuBar* menubar = new wxMenuBar();
 
@@ -162,7 +162,7 @@ MainFrame::MainFrame()
 	wxGetApp().Bind(wxEVT_KEY_DOWN, &MainFrame::OnKeyDown, this);
 	wxGetApp().Bind(wxEVT_DBG_COMMAND, &MainFrame::UpdateUI, this);
 
-	LOG_NOTICE(GENERAL, _PRGNAME_ " " _PRGVER_ " " RPCS3_GIT_VERSION);
+	LOG_NOTICE(GENERAL, _PRGNAME_ " " RPCS3_GIT_VERSION);
 	LOG_NOTICE(GENERAL, "");
 }
 
