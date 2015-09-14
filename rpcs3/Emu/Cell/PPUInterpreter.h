@@ -1,9 +1,6 @@
 #pragma once
 
 #include "Emu/Cell/PPUOpcodes.h"
-#include "Emu/SysCalls/SysCalls.h"
-#include "rpcs3/Ini.h"
-#include "Emu/SysCalls/Modules.h"
 #include "Emu/Memory/Memory.h"
 
 #include <stdint.h>
@@ -16,7 +13,7 @@
 
 #include <fenv.h>
 
-extern u64 rotate_mask[64][64]; // defined in PPUThread.cpp, static didn't work correctly in GCC 4.9 for some reason
+extern u64 rotate_mask[64][64]; // defined in PPUThread.cpp
 extern u64 get_timebased_time();
 
 inline void InitRotateMask()
@@ -1327,8 +1324,8 @@ private:
 	void VPERM(u32 vd, u32 va, u32 vb, u32 vc)
 	{
 		u8 tmpSRC[32];
-		memcpy(tmpSRC, CPU.VPR[vb]._u8, 16);
-		memcpy(tmpSRC + 16, CPU.VPR[va]._u8, 16);
+		std::memcpy(tmpSRC, CPU.VPR + vb, 16);
+		std::memcpy(tmpSRC + 16, CPU.VPR + va, 16);
 
 		for (uint b = 0; b < 16; b++)
 		{
@@ -1703,8 +1700,8 @@ private:
 	void VSLDOI(u32 vd, u32 va, u32 vb, u32 sh)
 	{
 		u8 tmpSRC[32];
-		memcpy(tmpSRC, CPU.VPR[vb]._u8, 16);
-		memcpy(tmpSRC + 16, CPU.VPR[va]._u8, 16);
+		std::memcpy(tmpSRC, CPU.VPR + vb, 16);
+		std::memcpy(tmpSRC + 16, CPU.VPR + va, 16);
 
 		for(uint b=0; b<16; b++)
 		{
@@ -2232,13 +2229,17 @@ private:
 	}
 	void HACK(u32 index)
 	{
+		extern void execute_ppu_func_by_index(PPUThread& ppu, u32 index);
+
 		execute_ppu_func_by_index(CPU, index);
 	}
 	void SC(u32 lev)
 	{
+		extern void execute_syscall_by_index(PPUThread& ppu, u64 code);
+
 		switch (lev)
 		{
-		case 0x0: SysCalls::DoSyscall(CPU, CPU.GPR[11]); break;
+		case 0x0: execute_syscall_by_index(CPU, CPU.GPR[11]); break;
 		case 0x1: throw EXCEPTION("HyperCall LV1");
 		case 0x3: CPU.fast_stop(); break;
 		default: throw EXCEPTION("Unknown level (0x%x)", lev);
@@ -2487,12 +2488,12 @@ private:
 	void LDX(u32 rd, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		CPU.GPR[rd] = vm::read64(VM_CAST(addr));
+		CPU.GPR[rd] = vm::ps3::read64(VM_CAST(addr));
 	}
 	void LWZX(u32 rd, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		CPU.GPR[rd] = vm::read32(VM_CAST(addr));
+		CPU.GPR[rd] = vm::ps3::read32(VM_CAST(addr));
 	}
 	void SLW(u32 ra, u32 rs, u32 rb, u32 rc)
 	{
@@ -2564,7 +2565,7 @@ private:
 	void LVEHX(u32 vd, u32 ra, u32 rb)
 	{
 		const u64 addr = (ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~1ULL;
-		CPU.VPR[vd]._u16[7 - ((addr >> 1) & 0x7)] = vm::read16(VM_CAST(addr));
+		CPU.VPR[vd]._u16[7 - ((addr >> 1) & 0x7)] = vm::ps3::read16(VM_CAST(addr));
 		// check LVEWX comments
 	}
 	void SUBF(u32 rd, u32 ra, u32 rb, u32 oe, u32 rc)
@@ -2578,7 +2579,7 @@ private:
 	void LDUX(u32 rd, u32 ra, u32 rb)
 	{
 		const u64 addr = CPU.GPR[ra] + CPU.GPR[rb];
-		CPU.GPR[rd] = vm::read64(VM_CAST(addr));
+		CPU.GPR[rd] = vm::ps3::read64(VM_CAST(addr));
 		CPU.GPR[ra] = addr;
 	}
 	void DCBST(u32 ra, u32 rb)
@@ -2587,7 +2588,7 @@ private:
 	void LWZUX(u32 rd, u32 ra, u32 rb)
 	{
 		const u64 addr = CPU.GPR[ra] + CPU.GPR[rb];
-		CPU.GPR[rd] = vm::read32(VM_CAST(addr));
+		CPU.GPR[rd] = vm::ps3::read32(VM_CAST(addr));
 		CPU.GPR[ra] = addr;
 	}
 	void CNTLZD(u32 ra, u32 rs, u32 rc)
@@ -2613,7 +2614,7 @@ private:
 	void LVEWX(u32 vd, u32 ra, u32 rb)
 	{
 		const u64 addr = (ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~3ULL;
-		CPU.VPR[vd]._u32[3 - ((addr >> 2) & 0x3)] = vm::read32(VM_CAST(addr));
+		CPU.VPR[vd]._u32[3 - ((addr >> 2) & 0x3)] = vm::ps3::read32(VM_CAST(addr));
 		// It's not very good idea to implement it using read128(),
 		// because it can theoretically read RawSPU 32-bit MMIO register (read128() will fail)
 		//CPU.VPR[vd] = vm::read128((ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~0xfULL);
@@ -2650,7 +2651,7 @@ private:
 	void LVX(u32 vd, u32 ra, u32 rb)
 	{
 		const u64 addr = (ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~0xfull;
-		CPU.VPR[vd] = vm::read128(VM_CAST(addr));
+		CPU.VPR[vd] = vm::ps3::read128(VM_CAST(addr));
 	}
 	void NEG(u32 rd, u32 ra, u32 oe, u32 rc)
 	{
@@ -2746,7 +2747,7 @@ private:
 	void STDX(u32 rs, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		vm::write64(VM_CAST(addr), CPU.GPR[rs]);
+		vm::ps3::write64(VM_CAST(addr), CPU.GPR[rs]);
 	}
 	void STWCX_(u32 rs, u32 ra, u32 rb)
 	{
@@ -2758,31 +2759,31 @@ private:
 	void STWX(u32 rs, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		vm::write32(VM_CAST(addr), (u32)CPU.GPR[rs]);
+		vm::ps3::write32(VM_CAST(addr), (u32)CPU.GPR[rs]);
 	}
 	void STVEHX(u32 vs, u32 ra, u32 rb)
 	{
 		const u64 addr = (ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~1ULL;
 		const u8 eb = (addr & 0xf) >> 1;
-		vm::write16(VM_CAST(addr), CPU.VPR[vs]._u16[7 - eb]);
+		vm::ps3::write16(VM_CAST(addr), CPU.VPR[vs]._u16[7 - eb]);
 	}
 	void STDUX(u32 rs, u32 ra, u32 rb)
 	{
 		const u64 addr = CPU.GPR[ra] + CPU.GPR[rb];
-		vm::write64(VM_CAST(addr), CPU.GPR[rs]);
+		vm::ps3::write64(VM_CAST(addr), CPU.GPR[rs]);
 		CPU.GPR[ra] = addr;
 	}
 	void STWUX(u32 rs, u32 ra, u32 rb)
 	{
 		const u64 addr = CPU.GPR[ra] + CPU.GPR[rb];
-		vm::write32(VM_CAST(addr), (u32)CPU.GPR[rs]);
+		vm::ps3::write32(VM_CAST(addr), (u32)CPU.GPR[rs]);
 		CPU.GPR[ra] = addr;
 	}
 	void STVEWX(u32 vs, u32 ra, u32 rb)
 	{
 		const u64 addr = (ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~3ULL;
 		const u8 eb = (addr & 0xf) >> 2;
-		vm::write32(VM_CAST(addr), CPU.VPR[vs]._u32[3 - eb]);
+		vm::ps3::write32(VM_CAST(addr), CPU.VPR[vs]._u32[3 - eb]);
 	}
 	void SUBFZE(u32 rd, u32 ra, u32 oe, u32 rc)
 	{
@@ -2815,7 +2816,7 @@ private:
 	void STVX(u32 vs, u32 ra, u32 rb)
 	{
 		const u64 addr = (ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~0xfull;
-		vm::write128(VM_CAST(addr), CPU.VPR[vs]);
+		vm::ps3::write128(VM_CAST(addr), CPU.VPR[vs]);
 	}
 	void MULLD(u32 rd, u32 ra, u32 rb, u32 oe, u32 rc)
 	{
@@ -2875,7 +2876,7 @@ private:
 	void LHZX(u32 rd, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		CPU.GPR[rd] = vm::read16(VM_CAST(addr));
+		CPU.GPR[rd] = vm::ps3::read16(VM_CAST(addr));
 	}
 	void EQV(u32 ra, u32 rs, u32 rb, u32 rc)
 	{
@@ -2889,7 +2890,7 @@ private:
 	void LHZUX(u32 rd, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		CPU.GPR[rd] = vm::read16(VM_CAST(addr));
+		CPU.GPR[rd] = vm::ps3::read16(VM_CAST(addr));
 		CPU.GPR[ra] = addr;
 	}
 	void XOR(u32 ra, u32 rs, u32 rb, u32 rc)
@@ -2904,7 +2905,7 @@ private:
 	void LWAX(u32 rd, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		CPU.GPR[rd] = (s64)(s32)vm::read32(VM_CAST(addr));
+		CPU.GPR[rd] = (s64)(s32)vm::ps3::read32(VM_CAST(addr));
 	}
 	void DST(u32 ra, u32 rb, u32 strm, u32 t)
 	{
@@ -2912,12 +2913,12 @@ private:
 	void LHAX(u32 rd, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		CPU.GPR[rd] = (s64)(s16)vm::read16(VM_CAST(addr));
+		CPU.GPR[rd] = (s64)(s16)vm::ps3::read16(VM_CAST(addr));
 	}
 	void LVXL(u32 vd, u32 ra, u32 rb)
 	{
 		const u64 addr = (ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~0xfull;
-		CPU.VPR[vd] = vm::read128(VM_CAST(addr));
+		CPU.VPR[vd] = vm::ps3::read128(VM_CAST(addr));
 	}
 	void MFTB(u32 rd, u32 spr)
 	{
@@ -2934,7 +2935,7 @@ private:
 	void LWAUX(u32 rd, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		CPU.GPR[rd] = (s64)(s32)vm::read32(VM_CAST(addr));
+		CPU.GPR[rd] = (s64)(s32)vm::ps3::read32(VM_CAST(addr));
 		CPU.GPR[ra] = addr;
 	}
 	void DSTST(u32 ra, u32 rb, u32 strm, u32 t)
@@ -2943,13 +2944,13 @@ private:
 	void LHAUX(u32 rd, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		CPU.GPR[rd] = (s64)(s16)vm::read16(VM_CAST(addr));
+		CPU.GPR[rd] = (s64)(s16)vm::ps3::read16(VM_CAST(addr));
 		CPU.GPR[ra] = addr;
 	}
 	void STHX(u32 rs, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		vm::write16(VM_CAST(addr), (u16)CPU.GPR[rs]);
+		vm::ps3::write16(VM_CAST(addr), (u16)CPU.GPR[rs]);
 	}
 	void ORC(u32 ra, u32 rs, u32 rb, u32 rc)
 	{
@@ -2963,7 +2964,7 @@ private:
 	void STHUX(u32 rs, u32 ra, u32 rb)
 	{
 		const u64 addr = CPU.GPR[ra] + CPU.GPR[rb];
-		vm::write16(VM_CAST(addr), (u16)CPU.GPR[rs]);
+		vm::ps3::write16(VM_CAST(addr), (u16)CPU.GPR[rs]);
 		CPU.GPR[ra] = addr;
 	}
 	void OR(u32 ra, u32 rs, u32 rb, u32 rc)
@@ -3023,7 +3024,7 @@ private:
 	void STVXL(u32 vs, u32 ra, u32 rb)
 	{
 		const u64 addr = (ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~0xfull;
-		vm::write128(VM_CAST(addr), CPU.VPR[vs]);
+		vm::ps3::write128(VM_CAST(addr), CPU.VPR[vs]);
 	}
 	void DIVD(u32 rd, u32 ra, u32 rb, u32 oe, u32 rc)
 	{
@@ -3148,7 +3149,7 @@ private:
 		{
 			if (N > 3)
 			{
-				CPU.GPR[reg] = vm::read32(VM_CAST(addr));
+				CPU.GPR[reg] = vm::ps3::read32(VM_CAST(addr));
 				addr += 4;
 				N -= 4;
 			}
@@ -3216,7 +3217,7 @@ private:
 		u32 count = CPU.XER.XER & 0x7F;
 		for (; count >= 4; count -= 4, addr += 4, rs = (rs+1) & 31)
 		{
-			vm::write32(VM_CAST(addr), (u32)CPU.GPR[rs]);
+			vm::ps3::write32(VM_CAST(addr), (u32)CPU.GPR[rs]);
 		}
 		if (count)
 		{
@@ -3281,7 +3282,7 @@ private:
 		{
 			if (N > 3)
 			{
-				vm::write32(VM_CAST(addr), (u32)CPU.GPR[reg]);
+				vm::ps3::write32(VM_CAST(addr), (u32)CPU.GPR[reg]);
 				addr += 4;
 				N -= 4;
 			}
@@ -3424,7 +3425,7 @@ private:
 	void STFIWX(u32 frs, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		vm::write32(VM_CAST(addr), (u32&)CPU.FPR[frs]);
+		vm::ps3::write32(VM_CAST(addr), (u32&)CPU.FPR[frs]);
 	}
 	void EXTSW(u32 ra, u32 rs, u32 rc)
 	{
@@ -3444,12 +3445,12 @@ private:
 	void LWZ(u32 rd, u32 ra, s32 d)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + d : d;
-		CPU.GPR[rd] = vm::read32(VM_CAST(addr));
+		CPU.GPR[rd] = vm::ps3::read32(VM_CAST(addr));
 	}
 	void LWZU(u32 rd, u32 ra, s32 d)
 	{
 		const u64 addr = CPU.GPR[ra] + d;
-		CPU.GPR[rd] = vm::read32(VM_CAST(addr));
+		CPU.GPR[rd] = vm::ps3::read32(VM_CAST(addr));
 		CPU.GPR[ra] = addr;
 	}
 	void LBZ(u32 rd, u32 ra, s32 d)
@@ -3466,12 +3467,12 @@ private:
 	void STW(u32 rs, u32 ra, s32 d)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + d : d;
-		vm::write32(VM_CAST(addr), (u32)CPU.GPR[rs]);
+		vm::ps3::write32(VM_CAST(addr), (u32)CPU.GPR[rs]);
 	}
 	void STWU(u32 rs, u32 ra, s32 d)
 	{
 		const u64 addr = CPU.GPR[ra] + d;
-		vm::write32(VM_CAST(addr), (u32)CPU.GPR[rs]);
+		vm::ps3::write32(VM_CAST(addr), (u32)CPU.GPR[rs]);
 		CPU.GPR[ra] = addr;
 	}
 	void STB(u32 rs, u32 ra, s32 d)
@@ -3488,34 +3489,34 @@ private:
 	void LHZ(u32 rd, u32 ra, s32 d)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + d : d;
-		CPU.GPR[rd] = vm::read16(VM_CAST(addr));
+		CPU.GPR[rd] = vm::ps3::read16(VM_CAST(addr));
 	}
 	void LHZU(u32 rd, u32 ra, s32 d)
 	{
 		const u64 addr = CPU.GPR[ra] + d;
-		CPU.GPR[rd] = vm::read16(VM_CAST(addr));
+		CPU.GPR[rd] = vm::ps3::read16(VM_CAST(addr));
 		CPU.GPR[ra] = addr;
 	}
 	void LHA(u32 rd, u32 ra, s32 d)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + d : d;
-		CPU.GPR[rd] = (s64)(s16)vm::read16(VM_CAST(addr));
+		CPU.GPR[rd] = (s64)(s16)vm::ps3::read16(VM_CAST(addr));
 	}
 	void LHAU(u32 rd, u32 ra, s32 d)
 	{
 		const u64 addr = CPU.GPR[ra] + d;
-		CPU.GPR[rd] = (s64)(s16)vm::read16(VM_CAST(addr));
+		CPU.GPR[rd] = (s64)(s16)vm::ps3::read16(VM_CAST(addr));
 		CPU.GPR[ra] = addr;
 	}
 	void STH(u32 rs, u32 ra, s32 d)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + d : d;
-		vm::write16(VM_CAST(addr), (u16)CPU.GPR[rs]);
+		vm::ps3::write16(VM_CAST(addr), (u16)CPU.GPR[rs]);
 	}
 	void STHU(u32 rs, u32 ra, s32 d)
 	{
 		const u64 addr = CPU.GPR[ra] + d;
-		vm::write16(VM_CAST(addr), (u16)CPU.GPR[rs]);
+		vm::ps3::write16(VM_CAST(addr), (u16)CPU.GPR[rs]);
 		CPU.GPR[ra] = addr;
 	}
 	void LMW(u32 rd, u32 ra, s32 d)
@@ -3523,7 +3524,7 @@ private:
 		u64 addr = ra ? CPU.GPR[ra] + d : d;
 		for(u32 i=rd; i<32; ++i, addr += 4)
 		{
-			CPU.GPR[i] = vm::read32(VM_CAST(addr));
+			CPU.GPR[i] = vm::ps3::read32(VM_CAST(addr));
 		}
 	}
 	void STMW(u32 rs, u32 ra, s32 d)
@@ -3531,7 +3532,7 @@ private:
 		u64 addr = ra ? CPU.GPR[ra] + d : d;
 		for(u32 i=rs; i<32; ++i, addr += 4)
 		{
-			vm::write32(VM_CAST(addr), (u32)CPU.GPR[i]);
+			vm::ps3::write32(VM_CAST(addr), (u32)CPU.GPR[i]);
 		}
 	}
 	void LFS(u32 frd, u32 ra, s32 d)
@@ -3619,18 +3620,18 @@ private:
 	void LD(u32 rd, u32 ra, s32 ds)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + ds : ds;
-		CPU.GPR[rd] = vm::read64(VM_CAST(addr));
+		CPU.GPR[rd] = vm::ps3::read64(VM_CAST(addr));
 	}
 	void LDU(u32 rd, u32 ra, s32 ds)
 	{
 		const u64 addr = CPU.GPR[ra] + ds;
-		CPU.GPR[rd] = vm::read64(VM_CAST(addr));
+		CPU.GPR[rd] = vm::ps3::read64(VM_CAST(addr));
 		CPU.GPR[ra] = addr;
 	}
 	void LWA(u32 rd, u32 ra, s32 ds)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + ds : ds;
-		CPU.GPR[rd] = (s64)(s32)vm::read32(VM_CAST(addr));
+		CPU.GPR[rd] = (s64)(s32)vm::ps3::read32(VM_CAST(addr));
 	}
 	void FDIVS(u32 frd, u32 fra, u32 frb, u32 rc) {FDIV(frd, fra, frb, rc, true);}
 	void FSUBS(u32 frd, u32 fra, u32 frb, u32 rc) {FSUB(frd, fra, frb, rc, true);}
@@ -3684,12 +3685,12 @@ private:
 	void STD(u32 rs, u32 ra, s32 d)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + d : d;
-		vm::write64(VM_CAST(addr), CPU.GPR[rs]);
+		vm::ps3::write64(VM_CAST(addr), CPU.GPR[rs]);
 	}
 	void STDU(u32 rs, u32 ra, s32 ds)
 	{
 		const u64 addr = CPU.GPR[ra] + ds;
-		vm::write64(VM_CAST(addr), CPU.GPR[rs]);
+		vm::ps3::write64(VM_CAST(addr), CPU.GPR[rs]);
 		CPU.GPR[ra] = addr;
 	}
 	void MTFSB1(u32 crbd, u32 rc)

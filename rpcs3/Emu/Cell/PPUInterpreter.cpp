@@ -970,8 +970,8 @@ void ppu_interpreter::VSLB(PPUThread& CPU, ppu_opcode_t op)
 void ppu_interpreter::VSLDOI(PPUThread& CPU, ppu_opcode_t op)
 {
 	u8 tmpSRC[32];
-	memcpy(tmpSRC, CPU.VPR[op.vb]._u8, 16);
-	memcpy(tmpSRC + 16, CPU.VPR[op.va]._u8, 16);
+	std::memcpy(tmpSRC, CPU.VPR + op.vb, 16);
+	std::memcpy(tmpSRC + 16, CPU.VPR + op.va, 16);
 
 	for (uint b = 0; b<16; b++)
 	{
@@ -1475,7 +1475,7 @@ void ppu_interpreter::SC(PPUThread& CPU, ppu_opcode_t op)
 {
 	switch (op.lev)
 	{
-	case 0x0: SysCalls::DoSyscall(CPU, CPU.GPR[11]); break;
+	case 0x0: execute_syscall_by_index(CPU, CPU.GPR[11]); break;
 	case 0x3: CPU.fast_stop(); break;
 	default: throw EXCEPTION("");
 	}

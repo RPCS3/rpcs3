@@ -112,18 +112,18 @@ ModuleFunc* get_ppu_func_by_index(u32 index)
 	return &g_ppu_func_list[index];
 }
 
-void execute_ppu_func_by_index(PPUThread& CPU, u32 index)
+void execute_ppu_func_by_index(PPUThread& ppu, u32 index)
 {
 	if (auto func = get_ppu_func_by_index(index))
 	{
 		// save RTOC if necessary
 		if (index & EIF_SAVE_RTOC)
 		{
-			vm::write64(VM_CAST(CPU.GPR[1] + 0x28), CPU.GPR[2]);
+			vm::write64(VM_CAST(ppu.GPR[1] + 0x28), ppu.GPR[2]);
 		}
 
 		// save old syscall/NID value
-		const auto last_code = CPU.hle_code;
+		const auto last_code = ppu.hle_code;
 
 		// branch directly to the LLE function
 		if (index & EIF_USE_BRANCH)
@@ -132,39 +132,39 @@ void execute_ppu_func_by_index(PPUThread& CPU, u32 index)
 
 			if (last_code)
 			{
-				throw EXCEPTION("This function cannot be called from the callback: %s (0x%llx)", SysCalls::GetFuncName(func->id), func->id);
+				throw EXCEPTION("This function cannot be called from the callback: %s (0x%llx)", get_ps3_function_name(func->id), func->id);
 			}
 
 			if (!func->lle_func)
 			{
-				throw EXCEPTION("LLE function not set: %s (0x%llx)", SysCalls::GetFuncName(func->id), func->id);
+				throw EXCEPTION("LLE function not set: %s (0x%llx)", get_ps3_function_name(func->id), func->id);
 			}
 
 			if (func->flags & MFF_FORCED_HLE)
 			{
-				throw EXCEPTION("Forced HLE enabled: %s (0x%llx)", SysCalls::GetFuncName(func->id), func->id);
+				throw EXCEPTION("Forced HLE enabled: %s (0x%llx)", get_ps3_function_name(func->id), func->id);
 			}
 
 			if (Ini.HLELogging.GetValue())
 			{
-				LOG_NOTICE(HLE, "Branch to LLE function: %s (0x%llx)", SysCalls::GetFuncName(func->id), func->id);
+				LOG_NOTICE(HLE, "Branch to LLE function: %s (0x%llx)", get_ps3_function_name(func->id), func->id);
 			}
 
 			if (index & EIF_PERFORM_BLR)
 			{
-				throw EXCEPTION("TODO: Branch with link: %s (0x%llx)", SysCalls::GetFuncName(func->id), func->id);
+				throw EXCEPTION("TODO: Branch with link: %s (0x%llx)", get_ps3_function_name(func->id), func->id);
 				// CPU.LR = CPU.PC + 4;
 			}
 
 			const auto data = vm::get_ptr<be_t<u32>>(func->lle_func.addr());
-			CPU.PC = data[0] - 4;
-			CPU.GPR[2] = data[1]; // set rtoc
+			ppu.PC = data[0] - 4;
+			ppu.GPR[2] = data[1]; // set rtoc
 
 			return;
 		}
 		
 		// change current syscall/NID value
-		CPU.hle_code = func->id;
+		ppu.hle_code = func->id;
 
 		if (func->lle_func && !(func->flags & MFF_FORCED_HLE))
 		{
@@ -176,49 +176,49 @@ void execute_ppu_func_by_index(PPUThread& CPU, u32 index)
 
 			if (Ini.HLELogging.GetValue())
 			{
-				LOG_NOTICE(HLE, "LLE function called: %s", SysCalls::GetFuncName(func->id));
+				LOG_NOTICE(HLE, "LLE function called: %s", get_ps3_function_name(func->id));
 			}
 			
-			CPU.fast_call(pc, rtoc);
+			ppu.fast_call(pc, rtoc);
 
 			if (Ini.HLELogging.GetValue())
 			{
-				LOG_NOTICE(HLE, "LLE function finished: %s -> 0x%llx", SysCalls::GetFuncName(func->id), CPU.GPR[3]);
+				LOG_NOTICE(HLE, "LLE function finished: %s -> 0x%llx", get_ps3_function_name(func->id), ppu.GPR[3]);
 			}
 		}
 		else if (func->func)
 		{
 			if (Ini.HLELogging.GetValue())
 			{
-				LOG_NOTICE(HLE, "HLE function called: %s", SysCalls::GetFuncName(func->id));
+				LOG_NOTICE(HLE, "HLE function called: %s", get_ps3_function_name(func->id));
 			}
 
-			func->func(CPU);
+			func->func(ppu);
 
 			if (Ini.HLELogging.GetValue())
 			{
-				LOG_NOTICE(HLE, "HLE function finished: %s -> 0x%llx", SysCalls::GetFuncName(func->id), CPU.GPR[3]);
+				LOG_NOTICE(HLE, "HLE function finished: %s -> 0x%llx", get_ps3_function_name(func->id), ppu.GPR[3]);
 			}
 		}
 		else
 		{
-			LOG_ERROR(HLE, "Unimplemented function: %s -> CELL_OK", SysCalls::GetFuncName(func->id));
-			CPU.GPR[3] = 0;
+			LOG_ERROR(HLE, "Unimplemented function: %s -> CELL_OK", get_ps3_function_name(func->id));
+			ppu.GPR[3] = 0;
 		}
 
 		if (index & EIF_PERFORM_BLR)
 		{
 			// return if necessary
-			CPU.PC = VM_CAST(CPU.LR & ~3) - 4;
+			ppu.PC = VM_CAST(ppu.LR & ~3) - 4;
 		}
 
 		// execute module-specific error check
-		if ((s64)CPU.GPR[3] < 0 && func->module && func->module->on_error)
+		if ((s64)ppu.GPR[3] < 0 && func->module && func->module->on_error)
 		{
-			func->module->on_error(CPU.GPR[3], func);
+			func->module->on_error(ppu.GPR[3], func);
 		}
 
-		CPU.hle_code = last_code;
+		ppu.hle_code = last_code;
 	}
 	else
 	{

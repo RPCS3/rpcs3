@@ -9,23 +9,6 @@ namespace vm { using namespace ps3; }
 
 template<typename T = void> class Module;
 
-// flags set in ModuleFunc
-enum : u32
-{
-	MFF_FORCED_HLE = (1 << 0), // always call HLE function
-	MFF_NO_RETURN  = (1 << 1), // uses EIF_USE_BRANCH flag with LLE, ignored with MFF_FORCED_HLE
-};
-
-// flags passed with index
-enum : u32
-{
-	EIF_SAVE_RTOC   = (1 << 25), // save RTOC in [SP+0x28] before calling HLE/LLE function
-	EIF_PERFORM_BLR = (1 << 24), // do BLR after calling HLE/LLE function
-	EIF_USE_BRANCH  = (1 << 23), // do only branch, LLE must be set, last_syscall must be zero
-
-	EIF_FLAGS = 0x3800000, // all flags
-};
-
 struct ModuleFunc
 {
 	u32 id;
@@ -153,7 +136,8 @@ void add_variable(u32 nid, Module<>* module, const char* name, u32(*addr)());
 ModuleFunc* get_ppu_func_by_nid(u32 nid, u32* out_index = nullptr);
 ModuleFunc* get_ppu_func_by_index(u32 index);
 ModuleVariable* get_variable_by_nid(u32 nid);
-void execute_ppu_func_by_index(PPUThread& CPU, u32 id);
+void execute_ppu_func_by_index(PPUThread& ppu, u32 id);
+extern std::string get_ps3_function_name(u64 fid);
 void clear_ppu_functions();
 u32 get_function_id(const char* name);
 

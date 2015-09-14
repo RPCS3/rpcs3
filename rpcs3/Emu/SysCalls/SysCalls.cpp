@@ -37,7 +37,7 @@
 void null_func(PPUThread& ppu)
 {
 	const u64 code = ppu.GPR[11];
-	LOG_ERROR(HLE, "Unimplemented syscall %lld: %s -> CELL_OK", code, SysCalls::GetFuncName(~code));
+	LOG_ERROR(HLE, "Unimplemented syscall %lld: %s -> CELL_OK", code, get_ps3_function_name(~code));
 	ppu.GPR[3] = 0;
 }
 
@@ -891,27 +891,27 @@ const ppu_func_caller g_sc_table[1024] =
 	null_func, null_func, null_func, BIND_FUNC(cellGcmCallback), //1023  UNS
 };
 
-void SysCalls::DoSyscall(PPUThread& CPU, u64 code)
+void execute_syscall_by_index(PPUThread& ppu, u64 code)
 {
 	if (code >= 1024)
 	{
 		throw EXCEPTION("Invalid syscall number (0x%llx)", code);
 	}
 	
-	auto last_code = CPU.hle_code;
-	CPU.hle_code = ~code;
+	auto last_code = ppu.hle_code;
+	ppu.hle_code = ~code;
 
 	if (Ini.HLELogging.GetValue())
 	{
-		LOG_NOTICE(PPU, "Syscall %lld called: %s", code, SysCalls::GetFuncName(~code));
+		LOG_NOTICE(PPU, "Syscall %lld called: %s", code, get_ps3_function_name(~code));
 	}
 
-	g_sc_table[code](CPU);
+	g_sc_table[code](ppu);
 
 	if (Ini.HLELogging.GetValue())
 	{
-		LOG_NOTICE(PPU, "Syscall %lld finished: %s -> 0x%llx", code, SysCalls::GetFuncName(~code), CPU.GPR[3]);
+		LOG_NOTICE(PPU, "Syscall %lld finished: %s -> 0x%llx", code, get_ps3_function_name(~code), ppu.GPR[3]);
 	}
 
-	CPU.hle_code = last_code;
+	ppu.hle_code = last_code;
 }

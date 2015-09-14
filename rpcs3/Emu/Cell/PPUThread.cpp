@@ -5,8 +5,6 @@
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUThread.h"
-#include "Emu/SysCalls/SysCalls.h"
-#include "Emu/SysCalls/Modules.h"
 #include "Emu/Cell/PPUDecoder.h"
 #include "Emu/Cell/PPUInterpreter.h"
 #include "Emu/Cell/PPUInterpreter2.h"
@@ -51,7 +49,7 @@ void ppu_decoder_cache_t::initialize(u32 addr, u32 size)
 		inter->func = ppu_interpreter::NULL_OP;
 
 		// decode PPU opcode
-		dec.Decode(vm::read32(pos));
+		dec.Decode(vm::ps3::read32(pos));
 
 		// store function address
 		pointer[pos / 4] = inter->func;
@@ -81,13 +79,15 @@ PPUThread::~PPUThread()
 
 void PPUThread::dump_info() const
 {
+	extern std::string get_ps3_function_name(u64 fid);
+
 	if (~hle_code < 1024)
 	{
-		LOG_SUCCESS(HLE, "Last syscall: %lld (%s)", ~hle_code, SysCalls::GetFuncName(hle_code));
+		LOG_SUCCESS(HLE, "Last syscall: %lld (%s)", ~hle_code, get_ps3_function_name(hle_code));
 	}
 	else if (hle_code)
 	{
-		LOG_SUCCESS(HLE, "Last function: %s (0x%llx)", SysCalls::GetFuncName(hle_code), hle_code);
+		LOG_SUCCESS(HLE, "Last function: %s (0x%llx)", get_ps3_function_name(hle_code), hle_code);
 	}
 
 	CPUThread::dump_info();
@@ -214,7 +214,7 @@ int FPRdouble::Cmp(PPCdouble a, PPCdouble b)
 
 u64 PPUThread::get_stack_arg(s32 i)
 {
-	return vm::read64(VM_CAST(GPR[1] + 0x70 + 0x8 * (i - 9)));
+	return vm::ps3::read64(VM_CAST(GPR[1] + 0x70 + 0x8 * (i - 9)));
 }
 
 void PPUThread::fast_call(u32 addr, u32 rtoc)
@@ -313,7 +313,7 @@ void PPUThread::task()
 			if (!m_state.load())
 			{
 				// call interpreter function
-				func(*this, { vm::read32(PC) });
+				func(*this, { vm::ps3::read32(PC) });
 
 				// next instruction
 				PC += 4;
@@ -335,8 +335,8 @@ ppu_thread::ppu_thread(u32 entry, const std::string& name, u32 stack_size, s32 p
 
 	if (entry)
 	{
-		ppu->PC = vm::read32(entry);
-		ppu->GPR[2] = vm::read32(entry + 4); // rtoc
+		ppu->PC = vm::ps3::read32(entry);
+		ppu->GPR[2] = vm::ps3::read32(entry + 4); // rtoc
 	}
 
 	ppu->stack_size = stack_size ? stack_size : Emu.GetPrimaryStackSize();

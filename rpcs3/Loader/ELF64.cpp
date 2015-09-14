@@ -167,8 +167,8 @@ namespace loader
 
 									module.exports[fnid] = fstub;
 
-									//LOG_NOTICE(LOADER, "Exported function '%s' in '%s' module  (LLE)", SysCalls::GetFuncName(fnid).c_str(), module_name.c_str());
-									LOG_WARNING(LOADER, "**** %s: [%s] -> 0x%x", modulename.c_str(), SysCalls::GetFuncName(fnid).c_str(), (u32)fstub);
+									//LOG_NOTICE(LOADER, "Exported function '%s' in '%s' module  (LLE)", get_ps3_function_name(fnid), module_name);
+									LOG_WARNING(LOADER, "**** %s: [%s] -> 0x%x", modulename, get_ps3_function_name(fnid), (u32)fstub);
 								}
 							}
 
@@ -204,7 +204,7 @@ namespace loader
 
 									module.imports[fnid] = fstub;
 
-									LOG_WARNING(LOADER, "**** %s: [%s] -> 0x%x", modulename.c_str(), SysCalls::GetFuncName(fnid).c_str(), (u32)fstub);
+									LOG_WARNING(LOADER, "**** %s: [%s] -> 0x%x", modulename, get_ps3_function_name(fnid), (u32)fstub);
 								}
 							}
 						}
@@ -449,7 +449,7 @@ namespace loader
 
 										if (!vm::check_addr(addr, 8) || !vm::check_addr(i_addr = vm::read32(addr), 4))
 										{
-											LOG_ERROR(LOADER, "Failed to inject code for exported function '%s' (opd=0x%x, 0x%x)", SysCalls::GetFuncName(nid), addr, i_addr);
+											LOG_ERROR(LOADER, "Failed to inject code for exported function '%s' (opd=0x%x, 0x%x)", get_ps3_function_name(nid), addr, i_addr);
 										}
 										else
 										{
@@ -470,18 +470,18 @@ namespace loader
 
 								if (!func)
 								{
-									LOG_ERROR(LOADER, "Unknown function '%s' (0x%x)", SysCalls::GetFuncName(nid), addr);
+									LOG_ERROR(LOADER, "Unknown function '%s' (0x%x)", get_ps3_function_name(nid), addr);
 
 									index = add_ppu_func(ModuleFunc(nid, 0, module, nullptr, nullptr));
 								}
 								else
 								{
-									LOG_NOTICE(LOADER, "Imported function '%s' (0x%x)", SysCalls::GetFuncName(nid), addr);
+									LOG_NOTICE(LOADER, "Imported function '%s' (0x%x)", get_ps3_function_name(nid), addr);
 								}
 
 								if (!patch_ppu_import(addr, index))
 								{
-									LOG_ERROR(LOADER, "Failed to inject code for function '%s' (0x%x)", SysCalls::GetFuncName(nid), addr);
+									LOG_ERROR(LOADER, "Failed to inject code for function '%s' (0x%x)", get_ps3_function_name(nid), addr);
 								}
 							}
 						}
@@ -708,7 +708,7 @@ namespace loader
 
 								if (!func)
 								{
-									LOG_ERROR(LOADER, "Unknown function '%s' in '%s' module (0x%x)", SysCalls::GetFuncName(nid), module_name, addr);
+									LOG_ERROR(LOADER, "Unknown function '%s' in '%s' module (0x%x)", get_ps3_function_name(nid), module_name, addr);
 
 									index = add_ppu_func(ModuleFunc(nid, 0, module, nullptr, nullptr));
 								}
@@ -716,7 +716,7 @@ namespace loader
 								{
 									const bool is_lle = func->lle_func && !(func->flags & MFF_FORCED_HLE);
 
-									LOG_NOTICE(LOADER, "Imported %sfunction '%s' in '%s' module (0x%x)", is_lle ? "LLE " : "", SysCalls::GetFuncName(nid), module_name, addr);
+									LOG_NOTICE(LOADER, "Imported %sfunction '%s' in '%s' module (0x%x)", is_lle ? "LLE " : "", get_ps3_function_name(nid), module_name, addr);
 								}
 
 								if (!patch_ppu_import(addr, index))

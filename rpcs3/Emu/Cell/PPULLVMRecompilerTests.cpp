@@ -99,7 +99,7 @@ struct ppu_recompiler_llvm::PPUState {
 
 		address = addr;
 		for (int i = 0; i < (sizeof(mem_block) / 8); i++) {
-			mem_block[i] = vm::read64(address + (i * 8));
+			mem_block[i] = vm::ps3::read64(address + (i * 8));
 		}
 	}
 
@@ -123,7 +123,7 @@ struct ppu_recompiler_llvm::PPUState {
 		ppu.TB = TB;
 
 		for (int i = 0; i < (sizeof(mem_block) / 8); i++) {
-			vm::write64(address + (i * 8), mem_block[i]);
+			vm::ps3::write64(address + (i * 8), mem_block[i]);
 		}
 	}
 

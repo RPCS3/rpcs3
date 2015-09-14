@@ -1012,3 +1012,20 @@ force_inline T cast_from_ppu_gpr(const u64 reg)
 {
 	return cast_ppu_gpr<T>::from_gpr(reg);
 }
+
+// flags set in ModuleFunc
+enum : u32
+{
+	MFF_FORCED_HLE = (1 << 0), // always call HLE function
+	MFF_NO_RETURN  = (1 << 1), // uses EIF_USE_BRANCH flag with LLE, ignored with MFF_FORCED_HLE
+};
+
+// flags passed with index
+enum : u32
+{
+	EIF_SAVE_RTOC   = (1 << 25), // save RTOC in [SP+0x28] before calling HLE/LLE function
+	EIF_PERFORM_BLR = (1 << 24), // do BLR after calling HLE/LLE function
+	EIF_USE_BRANCH  = (1 << 23), // do only branch, LLE must be set, last_syscall must be zero
+
+	EIF_FLAGS = 0x3800000, // all flags
+};
