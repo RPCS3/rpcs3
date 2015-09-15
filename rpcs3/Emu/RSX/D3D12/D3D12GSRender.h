@@ -307,8 +307,7 @@ private:
 		// Pointer to device, not owned by ResourceStorage
 		ID3D12Device *m_device;
 		ComPtr<ID3D12CommandAllocator> m_commandAllocator;
-		std::vector<ComPtr<ID3D12GraphicsCommandList> > m_availableCommandLists;
-		size_t m_nextAvailableCommandListIndex;
+		ComPtr<ID3D12GraphicsCommandList> m_commandList;
 
 		// Constants storage
 		ComPtr<ID3D12DescriptorHeap> m_constantsBufferDescriptorsHeap;
@@ -328,7 +327,6 @@ private:
 		// List of resources that can be freed after frame is flipped
 		std::vector<ComPtr<ID3D12Resource> > m_singleFrameLifetimeResources;
 
-		ID3D12GraphicsCommandList *m_currentCommandList;
 
 		void Reset();
 		void Init(ID3D12Device *device);
