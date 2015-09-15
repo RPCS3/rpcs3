@@ -230,7 +230,7 @@ s32 sys_spu_thread_group_create(vm::ptr<u32> id, u32 num, s32 prio, vm::ptr<sys_
 		return CELL_EINVAL;
 	}
 
-	if (attr->type.data())
+	if (attr->type)
 	{
 		sys_spu.Todo("Unsupported SPU Thread Group type (0x%x)", attr->type);
 	}

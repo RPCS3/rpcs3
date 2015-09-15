@@ -272,10 +272,10 @@ void hook_ppu_func(vm::ptr<u32> base, u32 pos, u32 size)
 				continue;
 			}
 
-			const u32 data = sub.ops[x].data.data();
-			const u32 mask = sub.ops[x].mask.data();
+			const be_t<u32> data = sub.ops[x].data;
+			const be_t<u32> mask = sub.ops[x].mask;
 
-			const bool match = (base[k].data() & mask) == data;
+			const bool match = (base[k] & mask) == data;
 
 			switch (sub.ops[x].type)
 			{
@@ -301,8 +301,8 @@ void hook_ppu_func(vm::ptr<u32> base, u32 pos, u32 size)
 			}
 			case SPET_LABEL:
 			{
-				const auto addr = (base + k--).addr();
-				const auto lnum = data;
+				const u32 addr = (base + k--).addr();
+				const u32 lnum = data;
 				const auto label = sub.labels.find(lnum);
 
 				if (label == sub.labels.end()) // register the label

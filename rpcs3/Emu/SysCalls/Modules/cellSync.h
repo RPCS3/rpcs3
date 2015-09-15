@@ -111,7 +111,7 @@ struct sync_rwm_t // CellSyncRwm sync var
 
 	bool try_read_begin()
 	{
-		if (writers.data())
+		if (writers)
 		{
 			return false;
 		}
@@ -122,7 +122,7 @@ struct sync_rwm_t // CellSyncRwm sync var
 
 	bool try_read_end()
 	{
-		if (!readers.data())
+		if (!readers)
 		{
 			return false;
 		}
@@ -133,7 +133,7 @@ struct sync_rwm_t // CellSyncRwm sync var
 
 	bool try_write_begin()
 	{
-		if (writers.data())
+		if (writers)
 		{
 			return false;
 		}

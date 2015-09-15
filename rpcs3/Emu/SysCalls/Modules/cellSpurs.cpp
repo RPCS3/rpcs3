@@ -321,7 +321,7 @@ s32 spursAttachLv2EventQueue(PPUThread& ppu, vm::ptr<CellSpurs> spurs, u32 queue
 		return CELL_SPURS_CORE_ERROR_ALIGN;
 	}
 
-	if (spurs->exception.data())
+	if (spurs->exception)
 	{
 		return CELL_SPURS_CORE_ERROR_STAT;
 	}
@@ -380,7 +380,7 @@ s32 spursDetachLv2EventQueue(vm::ptr<CellSpurs> spurs, u8 spuPort, bool spursCre
 		return CELL_SPURS_CORE_ERROR_ALIGN;
 	}
 
-	if (!spursCreated && spurs->exception.data())
+	if (!spursCreated && spurs->exception)
 	{
 		return CELL_SPURS_CORE_ERROR_STAT;
 	}
@@ -555,7 +555,7 @@ s32 spursCreateHandler(vm::ptr<CellSpurs> spurs, u32 ppuPriority)
 /// Invoke event handlers
 s32 spursInvokeEventHandlers(PPUThread& ppu, vm::ptr<CellSpurs::EventPortMux> eventPortMux)
 {
-	if (eventPortMux->reqPending.exchange(0).data())
+	if (eventPortMux->reqPending.exchange(0))
 	{
 		const vm::ptr<CellSpurs::EventHandlerListNode> handlerList = eventPortMux->handlerList.exchange(vm::null);
 
@@ -1656,7 +1656,7 @@ s32 cellSpursSetMaxContention(vm::ptr<CellSpurs> spurs, u32 wid, u32 maxContenti
 		return CELL_SPURS_CORE_ERROR_SRCH;
 	}
 
-	if (spurs->exception.data())
+	if (spurs->exception)
 	{
 		return CELL_SPURS_CORE_ERROR_STAT;
 	}
@@ -1700,7 +1700,7 @@ s32 cellSpursSetPriorities(vm::ptr<CellSpurs> spurs, u32 wid, vm::cptr<u8> prior
 		return CELL_SPURS_CORE_ERROR_SRCH;
 	}
 
-	if (spurs->exception.data())
+	if (spurs->exception)
 	{
 		return CELL_SPURS_CORE_ERROR_STAT;
 	}
@@ -1810,7 +1810,7 @@ s32 cellSpursSetGlobalExceptionEventHandler(vm::ptr<CellSpurs> spurs, vm::ptr<Ce
 		return CELL_SPURS_CORE_ERROR_ALIGN;
 	}
 
-	if (spurs->exception.data())
+	if (spurs->exception)
 	{
 		return CELL_SPURS_CORE_ERROR_STAT;
 	}
@@ -2182,7 +2182,7 @@ s32 spursAddWorkload(
 		return CELL_SPURS_POLICY_MODULE_ERROR_INVAL;
 	}
 
-	if (spurs->exception.data())
+	if (spurs->exception)
 	{
 		return CELL_SPURS_POLICY_MODULE_ERROR_STAT;
 	}
@@ -2398,7 +2398,7 @@ s32 cellSpursWakeUp(PPUThread& ppu, vm::ptr<CellSpurs> spurs)
 		return CELL_SPURS_POLICY_MODULE_ERROR_ALIGN;
 	}
 
-	if (spurs->exception.data())
+	if (spurs->exception)
 	{
 		return CELL_SPURS_POLICY_MODULE_ERROR_STAT;
 	}
@@ -2433,7 +2433,7 @@ s32 cellSpursSendWorkloadSignal(vm::ptr<CellSpurs> spurs, u32 wid)
 		return CELL_SPURS_POLICY_MODULE_ERROR_INVAL;
 	}
 
-	if ((spurs->wklEnabled.load() & (0x80000000u >> wid)) == 0)
+	if (!(spurs->wklEnabled.load() & (0x80000000u >> wid)))
 	{
 		return CELL_SPURS_POLICY_MODULE_ERROR_SRCH;
 	}
@@ -2504,7 +2504,7 @@ s32 cellSpursReadyCountStore(vm::ptr<CellSpurs> spurs, u32 wid, u32 value)
 		return CELL_SPURS_POLICY_MODULE_ERROR_SRCH;
 	}
 
-	if (spurs->exception.data() || spurs->wklState(wid).load() != 2)
+	if (spurs->exception || spurs->wklState(wid).load() != 2)
 	{
 		return CELL_SPURS_POLICY_MODULE_ERROR_STAT;
 	}
@@ -2630,7 +2630,7 @@ s32 _cellSpursWorkloadFlagReceiver(vm::ptr<CellSpurs> spurs, u32 wid, u32 is_set
 		return CELL_SPURS_POLICY_MODULE_ERROR_SRCH;
 	}
 
-	if (spurs->exception.data())
+	if (spurs->exception)
 	{
 		return CELL_SPURS_POLICY_MODULE_ERROR_STAT;
 	}

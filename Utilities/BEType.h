@@ -374,6 +374,9 @@ inline v128 operator ~(const v128& other)
 	return v128::from64(~other._u64[0], ~other._u64[1]);
 }
 
+#define IS_INTEGER(t) (std::is_integral<t>::value || std::is_enum<t>::value)
+#define IS_BINARY_COMPARABLE(t1, t2) (IS_INTEGER(t1) && IS_INTEGER(t2) && sizeof(t1) == sizeof(t2))
+
 template<typename T, std::size_t Size = sizeof(T)> struct se_storage
 {
 	static_assert(!Size, "Bad se_storage<> type");
@@ -382,6 +385,11 @@ template<typename T, std::size_t Size = sizeof(T)> struct se_storage
 template<typename T> struct se_storage<T, 2>
 {
 	using type = u16;
+
+	static constexpr u16 swap(u16 src)
+	{
+		return (src >> 8) | (src << 8);
+	}
 
 	static inline u16 to(const T& src)
 	{
@@ -399,6 +407,11 @@ template<typename T> struct se_storage<T, 4>
 {
 	using type = u32;
 
+	static constexpr u32 swap(u32 src)
+	{
+		return (src >> 24) | (src << 24) | ((src >> 8) & 0x0000ff00) | ((src << 8) & 0x00ff0000);
+	}
+
 	static inline u32 to(const T& src)
 	{
 		return _byteswap_ulong(reinterpret_cast<const u32&>(src));
@@ -414,6 +427,17 @@ template<typename T> struct se_storage<T, 4>
 template<typename T> struct se_storage<T, 8>
 {
 	using type = u64;
+
+	static constexpr u64 swap(u64 src)
+	{
+		return (src >> 56) | (src << 56) |
+			((src >> 40) & 0x000000000000ff00) |
+			((src >> 24) & 0x0000000000ff0000) |
+			((src >> 8)  & 0x00000000ff000000) |
+			((src << 8)  & 0x000000ff00000000) |
+			((src << 24) & 0x0000ff0000000000) |
+			((src << 40) & 0x00ff000000000000);
+	}
 
 	static inline u64 to(const T& src)
 	{
@@ -465,16 +489,17 @@ template<typename T1, typename T2> struct se_convert
 	}
 };
 
+static struct se_raw_tag_t {} const se_raw{};
+
 template<typename T, bool Se = true> class se_t
 {
 	using type = std::remove_cv_t<T>;
-	using stype = se_storage_t<std::remove_cv_t<T>>;
-	using storage = se_storage<std::remove_cv_t<T>>;
+	using stype = se_storage_t<type>;
+	using storage = se_storage<type>;
 
 	stype m_data;
 
-	static_assert(!std::is_class<type>::value || std::is_same<type, u128>::value, "se_t<> error: invalid type (class or structure)");
-	static_assert(!std::is_union<type>::value || std::is_same<type, v128>::value || std::is_same<type, u128>::value, "se_t<> error: invalid type (union)");
+	static_assert(!std::is_union<type>::value && !std::is_class<type>::value || std::is_same<type, v128>::value || std::is_same<type, u128>::value, "se_t<> error: invalid type (struct or union)");
 	static_assert(!std::is_pointer<type>::value, "se_t<> error: invalid type (pointer)");
 	static_assert(!std::is_reference<type>::value, "se_t<> error: invalid type (reference)");
 	static_assert(!std::is_array<type>::value, "se_t<> error: invalid type (array)");
@@ -484,10 +509,16 @@ template<typename T, bool Se = true> class se_t
 public:
 	se_t() = default;
 
-	se_t(const se_t&) = default;
+	se_t(const se_t& right) = default;
 
-	inline se_t(const type& value)
+	template<typename CT, typename = std::enable_if_t<std::is_constructible<type, CT>::value && !std::is_same<se_t<type>, std::decay_t<CT>>::value>> inline se_t(const CT& value)
 		: m_data(storage::to(value))
+	{
+	}
+
+	// construct directly from raw data (don't use)
+	inline se_t(const stype& raw_value, const se_raw_tag_t&)
+		: m_data(raw_value)
 	{
 	}
 
@@ -496,47 +527,88 @@ public:
 		return storage::from(m_data);
 	}
 
-	inline const stype& data() const
+	// access underlying raw data (don't use)
+	inline const stype& raw_data() const
 	{
 		return m_data;
 	}
 	
 	se_t& operator =(const se_t&) = default;
 
-	template<typename CT> std::enable_if_t<std::is_assignable<type&, CT>::value, se_t&> operator =(const CT& value)
+	template<typename CT> inline std::enable_if_t<std::is_assignable<type&, CT>::value && !std::is_same<se_t<type>, std::decay_t<CT>>::value, se_t&> operator =(const CT& value)
 	{
 		return m_data = storage::to(value), *this;
 	}
 
-	operator type() const
+	inline operator type() const
 	{
 		return value();
+	}
+
+	// optimization
+	explicit inline operator bool() const
+	{
+		static_assert(std::is_convertible<T, bool>::value, "Illegal conversion to bool");
+
+		return m_data != 0;
+	}
+
+	// optimization
+	template<typename T2> inline std::enable_if_t<IS_BINARY_COMPARABLE(T, T2), se_t&> operator &=(const se_t<T2>& right)
+	{
+		return m_data &= right.raw_data(), *this;
+	}
+
+	// optimization
+	template<typename CT> inline std::enable_if_t<std::is_integral<T>::value && std::is_convertible<CT, T>::value, se_t&> operator &=(const CT& right)
+	{
+		return m_data &= storage::to(right), *this;
+	}
+
+	// optimization
+	template<typename T2> inline std::enable_if_t<IS_BINARY_COMPARABLE(T, T2), se_t&> operator |=(const se_t<T2>& right)
+	{
+		return m_data |= right.raw_data(), *this;
+	}
+
+	// optimization
+	template<typename CT> inline std::enable_if_t<std::is_integral<T>::value && std::is_convertible<CT, T>::value, se_t&> operator |=(const CT& right)
+	{
+		return m_data |= storage::to(right), *this;
+	}
+
+	// optimization
+	template<typename T2> inline std::enable_if_t<IS_BINARY_COMPARABLE(T, T2), se_t&> operator ^=(const se_t<T2>& right)
+	{
+		return m_data ^= right.raw_data(), *this;
+	}
+
+	// optimization
+	template<typename CT> inline std::enable_if_t<std::is_integral<T>::value && std::is_convertible<CT, T>::value, se_t&> operator ^=(const CT& right)
+	{
+		return m_data ^= storage::to(right), *this;
 	}
 };
 
 template<typename T> class se_t<T, false>
 {
 	using type = std::remove_cv_t<T>;
-	using stype = se_storage_t<std::remove_cv_t<T>>;
-	using storage = se_storage<std::remove_cv_t<T>>;
 
 	type m_data;
 
-	static_assert(!std::is_class<type>::value || std::is_same<type, u128>::value, "se_t<> error: invalid type (class or structure)");
-	static_assert(!std::is_union<type>::value || std::is_same<type, v128>::value || std::is_same<T, u128>::value, "se_t<> error: invalid type (union)");
+	static_assert(!std::is_union<type>::value && !std::is_class<type>::value || std::is_same<type, v128>::value || std::is_same<type, u128>::value, "se_t<> error: invalid type (struct or union)");
 	static_assert(!std::is_pointer<type>::value, "se_t<> error: invalid type (pointer)");
 	static_assert(!std::is_reference<type>::value, "se_t<> error: invalid type (reference)");
 	static_assert(!std::is_array<type>::value, "se_t<> error: invalid type (array)");
 	static_assert(!std::is_enum<type>::value, "se_t<> error: invalid type (enumeration), use integral type instead");
-	static_assert(alignof(type) == alignof(stype), "se_t<> error: unexpected alignment");
 
 public:
 	se_t() = default;
 
 	se_t(const se_t&) = default;
 
-	inline se_t(const type& value)
-		: m_data(value)
+	template<typename CT, typename = std::enable_if_t<std::is_constructible<type, CT>::value && !std::is_same<se_t<type>, std::decay_t<CT>>::value>> inline se_t(CT&& value)
+		: m_data(std::forward<CT>(value))
 	{
 	}
 
@@ -545,33 +617,33 @@ public:
 		return m_data;
 	}
 
-	inline const stype& data() const
-	{
-		return reinterpret_cast<const stype&>(m_data);
-	}
-
 	se_t& operator =(const se_t& value) = default;
 
-	template<typename CT> std::enable_if_t<std::is_assignable<type&, CT>::value, se_t&> operator =(const CT& value)
+	template<typename CT> inline std::enable_if_t<std::is_assignable<type&, CT>::value && !std::is_same<se_t<type>, std::decay_t<CT>>::value, se_t&> operator =(const CT& value)
 	{
 		return m_data = value, *this;
 	}
 
-	operator type() const
+	inline operator type() const
 	{
 		return value();
 	}
+
+	template<typename CT> inline std::enable_if_t<std::is_integral<T>::value && std::is_convertible<CT, T>::value, se_t&> operator &=(const CT& right)
+	{
+		return m_data &= right, *this;
+	}
+
+	template<typename CT> inline std::enable_if_t<std::is_integral<T>::value && std::is_convertible<CT, T>::value, se_t&> operator |=(const CT& right)
+	{
+		return m_data |= right, *this;
+	}
+
+	template<typename CT> inline std::enable_if_t<std::is_integral<T>::value && std::is_convertible<CT, T>::value, se_t&> operator ^=(const CT& right)
+	{
+		return m_data ^= right, *this;
+	}
 };
-
-template<typename T1, typename T2> inline std::enable_if_t<std::is_same<T1, T2>::value && std::is_integral<T1>::value, bool> operator ==(const se_t<T1>& left, const se_t<T2>& right)
-{
-	return left.data() == right.data();
-}
-
-template<typename T1, typename T2> inline std::enable_if_t<std::is_same<T1, T2>::value && std::is_integral<T1>::value, bool> operator !=(const se_t<T1>& left, const se_t<T2>& right)
-{
-	return left.data() != right.data();
-}
 
 template<typename T, bool Se, typename T1> inline se_t<T, Se>& operator +=(se_t<T, Se>& left, const T1& right)
 {
@@ -615,24 +687,6 @@ template<typename T, bool Se, typename T1> inline se_t<T, Se>& operator >>=(se_t
 	return left = (value >>= right);
 }
 
-template<typename T, bool Se, typename T1> inline se_t<T, Se>& operator &=(se_t<T, Se>& left, const T1& right)
-{
-	auto value = left.value();
-	return left = (value &= right);
-}
-
-template<typename T, bool Se, typename T1> inline se_t<T, Se>& operator |=(se_t<T, Se>& left, const T1& right)
-{
-	auto value = left.value();
-	return left = (value |= right);
-}
-
-template<typename T, bool Se, typename T1> inline se_t<T, Se>& operator ^=(se_t<T, Se>& left, const T1& right)
-{
-	auto value = left.value();
-	return left = (value ^= right);
-}
-
 template<typename T, bool Se> inline se_t<T, Se> operator ++(se_t<T, Se>& left, int)
 {
 	auto value = left.value();
@@ -659,6 +713,102 @@ template<typename T, bool Se> inline se_t<T, Se>& operator --(se_t<T, Se>& right
 {
 	auto value = right.value();
 	return right = --value;
+}
+
+// optimization
+template<typename T1, typename T2> inline std::enable_if_t<IS_BINARY_COMPARABLE(T1, T2), bool> operator ==(const se_t<T1>& left, const se_t<T2>& right)
+{
+	return left.raw_data() == right.raw_data();
+}
+
+// optimization
+template<typename T1, typename T2> inline std::enable_if_t<IS_BINARY_COMPARABLE(T1, T2), bool> operator ==(const se_t<T1>& left, const T2& right)
+{
+	return left.raw_data() == se_storage<T2>::to(right);
+}
+
+// optimization
+template<typename T1, typename T2> inline std::enable_if_t<IS_BINARY_COMPARABLE(T1, T2), bool> operator ==(const T1& left, const se_t<T2>& right)
+{
+	return se_storage<T1>::to(left) == right.raw_data();
+}
+
+// optimization
+template<typename T1, typename T2> inline std::enable_if_t<IS_BINARY_COMPARABLE(T1, T2), bool> operator !=(const se_t<T1>& left, const se_t<T2>& right)
+{
+	return left.raw_data() != right.raw_data();
+}
+
+// optimization
+template<typename T1, typename T2> inline std::enable_if_t<IS_BINARY_COMPARABLE(T1, T2), bool> operator !=(const se_t<T1>& left, const T2& right)
+{
+	return left.raw_data() != se_storage<T2>::to(right);
+}
+
+// optimization
+template<typename T1, typename T2> inline std::enable_if_t<IS_BINARY_COMPARABLE(T1, T2), bool> operator !=(const T1& left, const se_t<T2>& right)
+{
+	return se_storage<T1>::to(left) != right.raw_data();
+}
+
+// optimization
+template<typename T1, typename T2> inline std::enable_if_t<IS_BINARY_COMPARABLE(T1, T2) && sizeof(T1) >= 4, se_t<decltype(T1() & T2())>> operator &(const se_t<T1>& left, const se_t<T2>& right)
+{
+	return{ static_cast<se_storage_t<T1>>(left.raw_data() & right.raw_data()), se_raw };
+}
+
+// optimization
+template<typename T1, typename T2> inline std::enable_if_t<IS_BINARY_COMPARABLE(T1, T2) && sizeof(T1) >= 4, se_t<decltype(T1() & T2())>> operator &(const se_t<T1>& left, const T2& right)
+{
+	return{ static_cast<se_storage_t<T1>>(left.raw_data() & se_storage<T2>::to(right)), se_raw };
+}
+
+// optimization
+template<typename T1, typename T2> inline std::enable_if_t<IS_BINARY_COMPARABLE(T1, T2) && sizeof(T1) >= 4, se_t<decltype(T1() & T2())>> operator &(const T1& left, const se_t<T2>& right)
+{
+	return{ static_cast<se_storage_t<T1>>(se_storage<T1>::to(left) & right.raw_data()), se_raw };
+}
+
+// optimization
+template<typename T1, typename T2> inline std::enable_if_t<IS_BINARY_COMPARABLE(T1, T2) && sizeof(T1) >= 4, se_t<decltype(T1() | T2())>> operator |(const se_t<T1>& left, const se_t<T2>& right)
+{
+	return{ static_cast<se_storage_t<T1>>(left.raw_data() | right.raw_data()), se_raw };
+}
+
+// optimization
+template<typename T1, typename T2> inline std::enable_if_t<IS_BINARY_COMPARABLE(T1, T2) && sizeof(T1) >= 4, se_t<decltype(T1() | T2())>> operator |(const se_t<T1>& left, const T2& right)
+{
+	return{ static_cast<se_storage_t<T1>>(left.raw_data() | se_storage<T2>::to(right)), se_raw };
+}
+
+// optimization
+template<typename T1, typename T2> inline std::enable_if_t<IS_BINARY_COMPARABLE(T1, T2) && sizeof(T1) >= 4, se_t<decltype(T1() | T2())>> operator |(const T1& left, const se_t<T2>& right)
+{
+	return{ static_cast<se_storage_t<T1>>(se_storage<T1>::to(left) | right.raw_data()), se_raw };
+}
+
+// optimization
+template<typename T1, typename T2> inline std::enable_if_t<IS_BINARY_COMPARABLE(T1, T2) && sizeof(T1) >= 4, se_t<decltype(T1() ^ T2())>> operator ^(const se_t<T1>& left, const se_t<T2>& right)
+{
+	return{ static_cast<se_storage_t<T1>>(left.raw_data() ^ right.raw_data()), se_raw };
+}
+
+// optimization
+template<typename T1, typename T2> inline std::enable_if_t<IS_BINARY_COMPARABLE(T1, T2) && sizeof(T1) >= 4, se_t<decltype(T1() ^ T2())>> operator ^(const se_t<T1>& left, const T2& right)
+{
+	return{ static_cast<se_storage_t<T1>>(left.raw_data() ^ se_storage<T2>::to(right)), se_raw };
+}
+
+// optimization
+template<typename T1, typename T2> inline std::enable_if_t<IS_BINARY_COMPARABLE(T1, T2) && sizeof(T1) >= 4, se_t<decltype(T1() ^ T2())>> operator ^(const T1& left, const se_t<T2>& right)
+{
+	return{ static_cast<se_storage_t<T1>>(se_storage<T1>::to(left) ^ right.raw_data()), se_raw };
+}
+
+// optimization
+template<typename T> inline std::enable_if_t<IS_INTEGER(T) && sizeof(T) >= 4, se_t<decltype(~T())>> operator ~(const se_t<T>& right)
+{
+	return{ static_cast<se_storage_t<T>>(~right.raw_data()), se_raw };
 }
 
 #ifdef IS_LE_MACHINE

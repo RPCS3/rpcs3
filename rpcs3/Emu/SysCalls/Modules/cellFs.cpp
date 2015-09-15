@@ -631,7 +631,7 @@ s32 cellFsStReadGetCurrentAddr(u32 fd, vm::ptr<u32> addr, vm::ptr<u64> size)
 	const u32 position = VM_CAST(file->st_buffer + copied % file->st_ringbuf_size);
 	const u64 total_read = file->st_total_read.load();
 
-	if ((*size = std::min<u64>(file->st_ringbuf_size - (position - file->st_buffer), total_read - copied)).data())
+	if ((*size = std::min<u64>(file->st_ringbuf_size - (position - file->st_buffer), total_read - copied)))
 	{
 		*addr = position;
 	}

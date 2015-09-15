@@ -331,7 +331,7 @@ s32 cellSyncRwmWrite(PPUThread& ppu, vm::ptr<CellSyncRwm> rwm, vm::cptr<void> bu
 	vm::wait_op(ppu, rwm.addr(), 4, WRAP_EXPR(rwm->ctrl.atomic_op(&sync_rwm_t::try_write_begin)));
 
 	// wait until `readers` is zero
-	vm::wait_op(ppu, rwm.addr(), 4, WRAP_EXPR(!rwm->ctrl.load().readers.data()));
+	vm::wait_op(ppu, rwm.addr(), 4, WRAP_EXPR(!rwm->ctrl.load().readers));
 
 	// copy data from buffer
 	std::memcpy(rwm->buffer.get_ptr(), buffer.get_ptr(), rwm->size);
@@ -746,7 +746,7 @@ s32 cellSyncLFQueueInitialize(vm::ptr<CellSyncLFQueue> queue, vm::cptr<void> buf
 		const auto old = queue->init.load();
 		auto init = old;
 
-		if (old.data())
+		if (old)
 		{
 			if (sdk_ver > 0x17ffff && old != 2)
 			{
@@ -837,7 +837,7 @@ s32 _cellSyncLFQueueGetPushPointer(PPUThread& ppu, vm::ptr<CellSyncLFQueue> queu
 
 			s32 var2 = (s16)push.m_h8;
 			s32 res;
-			if (useEventQueue && ((s32)push.m_h5 != var2 || push.m_h7.data() != 0))
+			if (useEventQueue && ((s32)push.m_h5 != var2 || push.m_h7))
 			{
 				res = CELL_SYNC_ERROR_BUSY;
 			}
@@ -884,7 +884,7 @@ s32 _cellSyncLFQueueGetPushPointer(PPUThread& ppu, vm::ptr<CellSyncLFQueue> queu
 
 			if (queue->push1.compare_and_swap_test(old, push))
 			{
-				if (!push.m_h7.data() || res)
+				if (!push.m_h7 || res)
 				{
 					return res;
 				}
@@ -1143,7 +1143,7 @@ s32 _cellSyncLFQueueGetPopPointer(PPUThread& ppu, vm::ptr<CellSyncLFQueue> queue
 
 			s32 var2 = (s32)(s16)pop.m_h4;
 			s32 res;
-			if (useEventQueue && ((s32)(u16)pop.m_h1 != var2 || pop.m_h3.data() != 0))
+			if (useEventQueue && ((s32)(u16)pop.m_h1 != var2 || pop.m_h3))
 			{
 				res = CELL_SYNC_ERROR_BUSY;
 			}
@@ -1190,7 +1190,7 @@ s32 _cellSyncLFQueueGetPopPointer(PPUThread& ppu, vm::ptr<CellSyncLFQueue> queue
 
 			if (queue->pop1.compare_and_swap_test(old, pop))
 			{
-				if (!pop.m_h3.data() || res)
+				if (!pop.m_h3 || res)
 				{
 					return res;
 				}

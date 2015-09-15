@@ -86,7 +86,7 @@ s32 sys_lwmutex_lock(PPUThread& ppu, vm::ptr<sys_lwmutex_t> lwmutex, u64 timeout
 		return CELL_OK;
 	}
 
-	if (old_owner.data() == tid.data())
+	if (old_owner == tid)
 	{
 		// recursive locking
 
@@ -96,7 +96,7 @@ s32 sys_lwmutex_lock(PPUThread& ppu, vm::ptr<sys_lwmutex_t> lwmutex, u64 timeout
 			return CELL_EDEADLK;
 		}
 
-		if (lwmutex->recursive_count.data() == -1)
+		if (lwmutex->recursive_count == -1)
 		{
 			// if recursion limit reached
 			return CELL_EKRESOURCE;
@@ -180,7 +180,7 @@ s32 sys_lwmutex_trylock(PPUThread& ppu, vm::ptr<sys_lwmutex_t> lwmutex)
 		return CELL_OK;
 	}
 
-	if (old_owner.data() == tid.data())
+	if (old_owner == tid)
 	{
 		// recursive locking
 
@@ -190,7 +190,7 @@ s32 sys_lwmutex_trylock(PPUThread& ppu, vm::ptr<sys_lwmutex_t> lwmutex)
 			return CELL_EDEADLK;
 		}
 
-		if (lwmutex->recursive_count.data() == -1)
+		if (lwmutex->recursive_count == -1)
 		{
 			// if recursion limit reached
 			return CELL_EKRESOURCE;
@@ -244,7 +244,7 @@ s32 sys_lwmutex_unlock(PPUThread& ppu, vm::ptr<sys_lwmutex_t> lwmutex)
 		return CELL_EPERM;
 	}
 
-	if (lwmutex->recursive_count.data())
+	if (lwmutex->recursive_count)
 	{
 		// recursive unlocking succeeded
 		lwmutex->recursive_count--;
