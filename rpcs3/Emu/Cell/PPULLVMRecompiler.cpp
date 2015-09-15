@@ -172,7 +172,7 @@ std::pair<Executable, llvm::ExecutionEngine *> Compiler::Compile(const std::stri
 
 		SetPc(m_ir_builder->getInt32(m_state.current_instruction_address));
 
-		m_ir_builder->CreateRet(exit_instr_i32);
+		m_ir_builder->CreateRet(m_ir_builder->getInt32(ExecutionStatus::ExecutionStatusBlockEnded));
 	}
 
 	// If the function has a default exit block then generate code for it
@@ -182,8 +182,7 @@ std::pair<Executable, llvm::ExecutionEngine *> Compiler::Compile(const std::stri
 		PHINode *exit_instr_i32 = m_ir_builder->CreatePHI(m_ir_builder->getInt32Ty(), 0);
 		exit_instr_list.push_back(exit_instr_i32);
 
-		m_ir_builder->CreateRet(exit_instr_i32);
-
+		m_ir_builder->CreateRet(m_ir_builder->getInt32(0));
 	}
 
 	// Add incoming values for all exit instr PHI nodes
@@ -255,7 +254,7 @@ RecompilationEngine::RecompilationEngine()
 	, m_last_cache_clear_time(std::chrono::high_resolution_clock::now())
 	, m_compiler(*this, CPUHybridDecoderRecompiler::ExecuteFunction, CPUHybridDecoderRecompiler::ExecuteTillReturn, CPUHybridDecoderRecompiler::PollStatus) {
 
-	FunctionCache = (Executable *)memory_helper::reserve_memory(VIRTUAL_INSTRUCTION_COUNT * sizeof(Executable));
+	FunctionCache = (ExecutableStorageType *)memory_helper::reserve_memory(VIRTUAL_INSTRUCTION_COUNT * sizeof(ExecutableStorageType));
 	// Each char can store 8 page status
 	FunctionCachePagesCommited = (char *)malloc(VIRTUAL_INSTRUCTION_COUNT / (8 * PAGE_SIZE));
 	memset(FunctionCachePagesCommited, 0, VIRTUAL_INSTRUCTION_COUNT / (8 * PAGE_SIZE));
@@ -264,15 +263,15 @@ RecompilationEngine::RecompilationEngine()
 }
 
 RecompilationEngine::~RecompilationEngine() {
-	m_address_to_function.clear();
+	m_executable_storage.clear();
 	join();
-	memory_helper::free_reserved_memory(FunctionCache, VIRTUAL_INSTRUCTION_COUNT * sizeof(Executable));
+	memory_helper::free_reserved_memory(FunctionCache, VIRTUAL_INSTRUCTION_COUNT * sizeof(ExecutableStorageType));
 	free(FunctionCachePagesCommited);
 }
 
 bool RecompilationEngine::isAddressCommited(u32 address) const
 {
-	size_t offset = address * sizeof(Executable);
+	size_t offset = address * sizeof(ExecutableStorageType);
 	size_t page = offset / 4096;
 	// Since bool is stored in char, the char index is page / 8 (or page >> 3)
 	// and we shr the value with the remaining bits (page & 7)
@@ -281,7 +280,7 @@ bool RecompilationEngine::isAddressCommited(u32 address) const
 
 void RecompilationEngine::commitAddress(u32 address)
 {
-	size_t offset = address * sizeof(Executable);
+	size_t offset = address * sizeof(ExecutableStorageType);
 	size_t page = offset / 4096;
 	memory_helper::commit_page_memory((u8*)FunctionCache + page * 4096, 4096);
 	// Reverse of isAddressCommited : we set the (page & 7)th bit of (page / 8) th char
@@ -289,25 +288,22 @@ void RecompilationEngine::commitAddress(u32 address)
 	FunctionCachePagesCommited[page >> 3] |= (1 << (page & 7));
 }
 
-const Executable RecompilationEngine::GetCompiledExecutableIfAvailable(u32 address)
+const Executable RecompilationEngine::GetCompiledExecutableIfAvailable(u32 address) const
 {
-	std::lock_guard<std::mutex> lock(m_address_to_function_lock);
 	if (!isAddressCommited(address / 4))
-		commitAddress(address / 4);
-	if (!Ini.LLVMExclusionRange.GetValue())
-		return FunctionCache[address / 4];
-	std::unordered_map<u32, ExecutableStorage>::iterator It = m_address_to_function.find(address);
-	if (It == m_address_to_function.end())
 		return nullptr;
-	u32 id = std::get<3>(It->second);
-	if (id >= Ini.LLVMMinId.GetValue() && id <= Ini.LLVMMaxId.GetValue())
+	u32 id = FunctionCache[address / 4].second;
+	if (Ini.LLVMExclusionRange.GetValue() &&
+		(id >= Ini.LLVMMinId.GetValue() && id <= Ini.LLVMMaxId.GetValue()))
 		return nullptr;
-	return std::get<0>(It->second);
+	return FunctionCache[address / 4].first;
 }
 
 void RecompilationEngine::NotifyBlockStart(u32 address) {
 	{
 		std::lock_guard<std::mutex> lock(m_pending_address_start_lock);
+		if (m_pending_address_start.size() > 10000)
+			m_pending_address_start.clear();
 		m_pending_address_start.push_back(address);
 	}
 
@@ -345,14 +341,14 @@ void RecompilationEngine::Task() {
 
 		if (!m_current_execution_traces.empty()) {
 			for (u32 address : m_current_execution_traces)
-				work_done_this_iteration |= ProcessExecutionTrace(address);
+				work_done_this_iteration |= IncreaseHitCounterAndBuild(address);
 		}
 
 		if (!work_done_this_iteration) {
 			// Wait a few ms for something to happen
 			auto idling_start = std::chrono::high_resolution_clock::now();
 			std::unique_lock<std::mutex> lock(mutex);
-			cv.wait_for(lock, std::chrono::milliseconds(250));
+			cv.wait_for(lock, std::chrono::milliseconds(10));
 			auto idling_end = std::chrono::high_resolution_clock::now();
 			idling_time += std::chrono::duration_cast<std::chrono::nanoseconds>(idling_end - idling_start);
 		}
@@ -375,7 +371,7 @@ void RecompilationEngine::Task() {
 	s_the_instance = nullptr; // Can cause deadlock if this is the last instance. Need to fix this.
 }
 
-bool RecompilationEngine::ProcessExecutionTrace(u32 address) {
+bool RecompilationEngine::IncreaseHitCounterAndBuild(u32 address) {
 	auto It = m_block_table.find(address);
 	if (It == m_block_table.end())
 		It = m_block_table.emplace(address, BlockEntry(address)).first;
@@ -465,26 +461,25 @@ void RecompilationEngine::CompileBlock(BlockEntry & block_entry) {
 	if (!AnalyseBlock(block_entry))
 		return;
 	Log() << "Compile: " << block_entry.ToString() << "\n";
-	const std::pair<Executable, llvm::ExecutionEngine *> &compileResult =
-		m_compiler.Compile(fmt::format("fn_0x%08X", block_entry.address), block_entry.address, block_entry.instructionCount);
 
-	// If entry doesn't exist, create it (using lock)
-	std::unordered_map<u32, ExecutableStorage>::iterator It = m_address_to_function.find(block_entry.address);
-	if (It == m_address_to_function.end())
 	{
-		std::lock_guard<std::mutex> lock(m_address_to_function_lock);
-		std::get<1>(m_address_to_function[block_entry.address]) = nullptr;
+		// We create a lock here so that data are properly stored at the end of the function.
+		/// Lock for accessing compiler
+		std::mutex local_mutex;
+		std::unique_lock<std::mutex> lock(local_mutex);
+
+		const std::pair<Executable, llvm::ExecutionEngine *> &compileResult =
+			m_compiler.Compile(fmt::format("fn_0x%08X", block_entry.address), block_entry.address, block_entry.instructionCount);
+
 		if (!isAddressCommited(block_entry.address / 4))
 			commitAddress(block_entry.address / 4);
-	}
 
-	std::get<1>(m_address_to_function[block_entry.address]) = std::unique_ptr<llvm::ExecutionEngine>(compileResult.second);
-	std::get<0>(m_address_to_function[block_entry.address]) = compileResult.first;
-	std::get<3>(m_address_to_function[block_entry.address]) = m_currentId;
-	Log() << "Associating " << (void*)(uint64_t)block_entry.address << " with ID " << m_currentId << "\n";
-	m_currentId++;
-	block_entry.is_compiled = true;
-	FunctionCache[block_entry.address / 4] = compileResult.first;
+		m_executable_storage.push_back(std::unique_ptr<llvm::ExecutionEngine>(compileResult.second));
+		Log() << "Associating " << (void*)(uint64_t)block_entry.address << " with ID " << m_currentId << "\n";
+		FunctionCache[block_entry.address / 4] = std::make_pair(compileResult.first, m_currentId);
+		m_currentId++;
+		block_entry.is_compiled = true;
+	}
 }
 
 std::shared_ptr<RecompilationEngine> RecompilationEngine::GetInstance() {
@@ -508,13 +503,21 @@ ppu_recompiler_llvm::CPUHybridDecoderRecompiler::~CPUHybridDecoderRecompiler() {
 }
 
 u32 ppu_recompiler_llvm::CPUHybridDecoderRecompiler::DecodeMemory(const u32 address) {
-	ExecuteFunction(&m_ppu, 0);
+	// TODO: exception_ptr doesnt work, should add every possible exception
+	if (ExecuteFunction(&m_ppu, 0) == ExecutionStatus::ExecutionStatusPropagateException)
+	{
+		std::exception_ptr exn = m_ppu.pending_exception;
+		m_ppu.pending_exception = nullptr;
+		std::rethrow_exception(exn);
+	}
 	return 0;
 }
 
 u32 ppu_recompiler_llvm::CPUHybridDecoderRecompiler::ExecuteFunction(PPUThread * ppu_state, u64 context) {
 	auto execution_engine = (CPUHybridDecoderRecompiler *)ppu_state->GetDecoder();
-	return ExecuteTillReturn(ppu_state, 0);
+	if (ExecuteTillReturn(ppu_state, 0) == ExecutionStatus::ExecutionStatusPropagateException)
+		return ExecutionStatus::ExecutionStatusPropagateException;
+	return ExecutionStatus::ExecutionStatusReturn;
 }
 
 /// Get the branch type from a branch instruction
@@ -544,7 +547,8 @@ static BranchType GetBranchTypeFromInstruction(u32 instruction)
 u32 ppu_recompiler_llvm::CPUHybridDecoderRecompiler::ExecuteTillReturn(PPUThread * ppu_state, u64 context) {
 	CPUHybridDecoderRecompiler *execution_engine = (CPUHybridDecoderRecompiler *)ppu_state->GetDecoder();
 
-	execution_engine->m_recompilation_engine->NotifyBlockStart(ppu_state->PC);
+	// A block is a sequence of contiguous address.
+	bool previousInstContigousAndInterp = false;
 
 	while (PollStatus(ppu_state) == false) {
 		const Executable executable = execution_engine->m_recompilation_engine->GetCompiledExecutableIfAvailable(ppu_state->PC);
@@ -552,14 +556,30 @@ u32 ppu_recompiler_llvm::CPUHybridDecoderRecompiler::ExecuteTillReturn(PPUThread
 		{
 			auto entry = ppu_state->PC;
 			u32 exit = (u32)executable(ppu_state, 0);
-			if (exit == 0)
-				return 0;
+			if (exit == ExecutionStatus::ExecutionStatusReturn)
+				return ExecutionStatus::ExecutionStatusReturn;
+			if (exit == ExecutionStatus::ExecutionStatusPropagateException)
+				return ExecutionStatus::ExecutionStatusPropagateException;
 			execution_engine->m_recompilation_engine->NotifyBlockStart(ppu_state->PC);
+			previousInstContigousAndInterp = false;
 			continue;
 		}
+		// if previousInstContigousAndInterp is true, ie previous step was either a compiled block or a branch inst
+		// that caused a "gap" in instruction flow, we notify a new block.
+		if (!previousInstContigousAndInterp)
+			execution_engine->m_recompilation_engine->NotifyBlockStart(ppu_state->PC);
 		u32 instruction = vm::ps3::read32(ppu_state->PC);
 		u32 oldPC = ppu_state->PC;
-		execution_engine->m_decoder.Decode(instruction);
+		try
+		{
+			execution_engine->m_decoder.Decode(instruction);
+		}
+		catch (...)
+		{
+			ppu_state->pending_exception = std::current_exception();
+			return ExecutionStatus::ExecutionStatusPropagateException;
+		}
+		previousInstContigousAndInterp = (oldPC == ppu_state->PC);
 		auto branch_type = ppu_state->PC != oldPC ? GetBranchTypeFromInstruction(instruction) : BranchType::NonBranch;
 		ppu_state->PC += 4;
 
@@ -568,7 +588,10 @@ u32 ppu_recompiler_llvm::CPUHybridDecoderRecompiler::ExecuteTillReturn(PPUThread
 			if (Emu.GetCPUThreadStop() == ppu_state->PC) ppu_state->fast_stop();
 			return 0;
 		case BranchType::FunctionCall: {
-			ExecuteFunction(ppu_state, 0);
+			u32 status = ExecuteFunction(ppu_state, 0);
+			// TODO: exception_ptr doesnt work, should add every possible exception
+			if (status == ExecutionStatus::ExecutionStatusPropagateException)
+				return ExecutionStatus::ExecutionStatusPropagateException;
 			break;
 		}
 		case BranchType::LocalBranch:
