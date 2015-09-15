@@ -41,7 +41,6 @@ using namespace ppu_recompiler_llvm;
 #define VIRTUAL_INSTRUCTION_COUNT 0x40000000
 #define PAGE_SIZE 4096
 
-
 u64  Compiler::s_rotate_mask[64][64];
 bool Compiler::s_rotate_mask_inited = false;
 
@@ -154,7 +153,7 @@ std::pair<Executable, llvm::ExecutionEngine *> Compiler::Compile(const std::stri
 
 		Decode(instr);
 		if (!m_state.hit_branch_instruction)
-			 m_ir_builder->CreateBr(GetBasicBlockFromAddress(instructionAddress + 4));
+			m_ir_builder->CreateBr(GetBasicBlockFromAddress(instructionAddress + 4));
 	}
 
 	// Generate exit logic for all empty blocks
@@ -253,7 +252,6 @@ RecompilationEngine::RecompilationEngine()
 	, m_currentId(0)
 	, m_last_cache_clear_time(std::chrono::high_resolution_clock::now())
 	, m_compiler(*this, CPUHybridDecoderRecompiler::ExecuteFunction, CPUHybridDecoderRecompiler::ExecuteTillReturn, CPUHybridDecoderRecompiler::PollStatus) {
-
 	FunctionCache = (ExecutableStorageType *)memory_helper::reserve_memory(VIRTUAL_INSTRUCTION_COUNT * sizeof(ExecutableStorageType));
 	// Each char can store 8 page status
 	FunctionCachePagesCommited = (char *)malloc(VIRTUAL_INSTRUCTION_COUNT / (8 * PAGE_SIZE));
@@ -392,7 +390,6 @@ bool RecompilationEngine::IncreaseHitCounterAndBuild(u32 address) {
 inline s32 SignExt16(s16 x) { return (s32)(s16)x; }
 inline s32 SignExt26(u32 x) { return x & 0x2000000 ? (s32)(x | 0xFC000000) : (s32)(x); }
 
-
 bool RecompilationEngine::AnalyseBlock(BlockEntry &functionData, size_t maxSize)
 {
 	u32 startAddress = functionData.address;
@@ -503,9 +500,8 @@ ppu_recompiler_llvm::CPUHybridDecoderRecompiler::~CPUHybridDecoderRecompiler() {
 }
 
 u32 ppu_recompiler_llvm::CPUHybridDecoderRecompiler::DecodeMemory(const u32 address) {
-	// TODO: exception_ptr doesnt work, should add every possible exception
-	if (ExecuteFunction(&m_ppu, 0) == ExecutionStatus::ExecutionStatusPropagateException)
-	{
+	ExecuteFunction(&m_ppu, 0);
+	if (m_ppu.pending_exception != nullptr) {
 		std::exception_ptr exn = m_ppu.pending_exception;
 		m_ppu.pending_exception = nullptr;
 		std::rethrow_exception(exn);
@@ -588,7 +584,6 @@ u32 ppu_recompiler_llvm::CPUHybridDecoderRecompiler::ExecuteTillReturn(PPUThread
 			return 0;
 		case BranchType::FunctionCall: {
 			u32 status = ExecuteFunction(ppu_state, 0);
-			// TODO: exception_ptr doesnt work, should add every possible exception
 			if (status == ExecutionStatus::ExecutionStatusPropagateException)
 				return ExecutionStatus::ExecutionStatusPropagateException;
 			break;
@@ -607,6 +602,14 @@ u32 ppu_recompiler_llvm::CPUHybridDecoderRecompiler::ExecuteTillReturn(PPUThread
 }
 
 bool ppu_recompiler_llvm::CPUHybridDecoderRecompiler::PollStatus(PPUThread * ppu_state) {
-	return ppu_state->check_status();
+	try
+	{
+		return ppu_state->check_status();
+	}
+	catch (...)
+	{
+		ppu_state->pending_exception = std::current_exception();
+		return ExecutionStatus::ExecutionStatusPropagateException;
+	}
 }
 #endif // LLVM_AVAILABLE

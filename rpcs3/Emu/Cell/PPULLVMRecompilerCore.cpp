@@ -1785,10 +1785,23 @@ void Compiler::HACK(u32 index) {
 	}
 }
 
+static u32 wrappedDoSyscall(PPUThread &CPU, u64 code) {
+	try
+	{
+		SysCalls::DoSyscall(CPU, code);
+		return ExecutionStatus::ExecutionStatusBlockEnded;
+	}
+	catch (...)
+	{
+		CPU.pending_exception = std::current_exception();
+		return ExecutionStatus::ExecutionStatusPropagateException;
+	}
+}
+
 void Compiler::SC(u32 lev) {
 	switch (lev) {
 	case 0:
-		Call<void>("SysCalls.DoSyscall", SysCalls::DoSyscall, m_state.args[CompileTaskState::Args::State], GetGpr(11));
+		Call<void>("wrappedDoSyscall", &wrappedDoSyscall, m_state.args[CompileTaskState::Args::State], GetGpr(11));
 		break;
 	case 3:
 		Call<void>("PPUThread.FastStop", &PPUThread::fast_stop, m_state.args[CompileTaskState::Args::State]);
