@@ -97,7 +97,8 @@ struct VertexBufferFormat
 	size_t stride;
 };
 
-std::vector<D3D12_INPUT_ELEMENT_DESC> getIALayout(ID3D12Device *device, const std::vector<VertexBufferFormat> &vertexBufferFormat, const RSXVertexData *m_vertex_data)
+static
+std::vector<D3D12_INPUT_ELEMENT_DESC> getIALayout(ID3D12Device *device, const std::vector<VertexBufferFormat> &vertexBufferFormat, const RSXVertexData *m_vertex_data, size_t baseOffset)
 {
 	std::vector<D3D12_INPUT_ELEMENT_DESC> result;
 
@@ -111,7 +112,7 @@ std::vector<D3D12_INPUT_ELEMENT_DESC> getIALayout(ID3D12Device *device, const st
 			IAElement.SemanticIndex = (UINT)attributeId;
 			IAElement.InputSlot = (UINT)inputSlot;
 			IAElement.Format = getFormat(vertexData.type - 1, vertexData.size);
-			IAElement.AlignedByteOffset = (UINT)(vertexData.addr - vertexBufferFormat[inputSlot].range.first);
+			IAElement.AlignedByteOffset = (UINT)(vertexData.addr + baseOffset - vertexBufferFormat[inputSlot].range.first);
 			IAElement.InputSlotClass = (vertexData.addr > 0) ? D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA : D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA;
 			IAElement.InstanceDataStepRate = (vertexData.addr > 0) ? 0 : 0;
 			result.push_back(IAElement);
@@ -154,7 +155,7 @@ bool overlaps(const std::pair<size_t, size_t> &range1, const std::pair<size_t, s
 }
 
 static
-std::vector<VertexBufferFormat> FormatVertexData(const RSXVertexData *m_vertex_data)
+std::vector<VertexBufferFormat> FormatVertexData(const RSXVertexData *m_vertex_data, size_t base_offset)
 {
 	std::vector<VertexBufferFormat> Result;
 	for (size_t i = 0; i < 32; ++i)
@@ -166,7 +167,7 @@ std::vector<VertexBufferFormat> FormatVertexData(const RSXVertexData *m_vertex_d
 		// If there is a single element, stride is 0, use the size of element instead
 		size_t stride = vertexData.stride;
 		size_t elementSize = vertexData.GetTypeSize();
-		std::pair<size_t, size_t> range = std::make_pair(vertexData.addr, vertexData.addr + elementSize * vertexData.size + (elementCount - 1) * stride - 1);
+		std::pair<size_t, size_t> range = std::make_pair(vertexData.addr + base_offset, vertexData.addr + base_offset + elementSize * vertexData.size + (elementCount - 1) * stride - 1);
 		bool isMerged = false;
 
 		for (VertexBufferFormat &vbf : Result)
@@ -195,7 +196,7 @@ std::vector<VertexBufferFormat> FormatVertexData(const RSXVertexData *m_vertex_d
  * Create a new vertex buffer with attributes from vbf using vertexIndexHeap as storage heap.
  */
 static
-ComPtr<ID3D12Resource> createVertexBuffer(const VertexBufferFormat &vbf, const RSXVertexData *vertexData, ID3D12Device *device, DataHeap<ID3D12Heap, 65536> &vertexIndexHeap)
+ComPtr<ID3D12Resource> createVertexBuffer(const VertexBufferFormat &vbf, const RSXVertexData *vertexData, size_t baseOffset, ID3D12Device *device, DataHeap<ID3D12Heap, 65536> &vertexIndexHeap)
 {
 	size_t subBufferSize = vbf.range.second - vbf.range.first + 1;
 	// Make multiple of stride
@@ -226,11 +227,11 @@ ComPtr<ID3D12Resource> createVertexBuffer(const VertexBufferFormat &vbf, const R
 				memcpy(bufferMap, vertexData[attributeId].data.data(), vertexData[attributeId].data.size());
 				continue;
 			}
-			size_t baseOffset = (size_t)vertexData[attributeId].addr - vbf.range.first;
+			size_t offset = (size_t)vertexData[attributeId].addr + baseOffset - vbf.range.first;
 			size_t tsize = vertexData[attributeId].GetTypeSize();
 			size_t size = vertexData[attributeId].size;
-			auto src = vm::get_ptr<const u8>(vertexData[attributeId].addr + (int)vbf.stride * vertex);
-			char* dst = (char*)bufferMap + baseOffset + vbf.stride * vertex;
+			auto src = vm::get_ptr<const u8>(vertexData[attributeId].addr + baseOffset + (int)vbf.stride * vertex);
+			char* dst = (char*)bufferMap + offset + vbf.stride * vertex;
 
 			switch (tsize)
 			{
@@ -277,8 +278,8 @@ isContained(const std::vector<std::pair<u32, u32> > &ranges, const std::pair<u32
 std::vector<D3D12_VERTEX_BUFFER_VIEW> D3D12GSRender::UploadVertexBuffers(bool indexed_draw)
 {
 	std::vector<D3D12_VERTEX_BUFFER_VIEW> result;
-	const std::vector<VertexBufferFormat> &vertexBufferFormat = FormatVertexData(m_vertex_data);
-	m_IASet = getIALayout(m_device.Get(), vertexBufferFormat, m_vertex_data);
+	const std::vector<VertexBufferFormat> &vertexBufferFormat = FormatVertexData(m_vertex_data, m_vertex_data_base_offset);
+	m_IASet = getIALayout(m_device.Get(), vertexBufferFormat, m_vertex_data, m_vertex_data_base_offset);
 
 	const u32 data_offset = indexed_draw ? 0 : m_draw_array_first;
 
@@ -301,7 +302,7 @@ std::vector<D3D12_VERTEX_BUFFER_VIEW> D3D12GSRender::UploadVertexBuffers(bool in
 			vertexBuffer = It->second;
 		else
 		{
-			ComPtr<ID3D12Resource> newVertexBuffer = createVertexBuffer(vbf, m_vertex_data, m_device.Get(), m_vertexIndexData);
+			ComPtr<ID3D12Resource> newVertexBuffer = createVertexBuffer(vbf, m_vertex_data, m_vertex_data_base_offset, m_device.Get(), m_vertexIndexData);
 			vertexBuffer = newVertexBuffer.Get();
 			m_vertexCache[key] = newVertexBuffer.Get();
 			getCurrentResourceStorage().m_singleFrameLifetimeResources.push_back(newVertexBuffer);
