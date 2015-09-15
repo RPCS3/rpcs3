@@ -122,6 +122,19 @@ std::vector<D3D12_INPUT_ELEMENT_DESC> getIALayout(ID3D12Device *device, const st
 }
 
 template<typename IndexType, typename DstType, typename SrcType>
+void expandIndexedTriangleFan(DstType *dst, const SrcType *src, size_t indexCount)
+{
+	IndexType *typedDst = reinterpret_cast<IndexType *>(dst);
+	const IndexType *typedSrc = reinterpret_cast<const IndexType *>(src);
+	for (unsigned i = 0; i < indexCount - 2; i++)
+	{
+		typedDst[3 * i] = typedSrc[0];
+		typedDst[3 * i + 1] = typedSrc[i + 2 - 1];
+		typedDst[3 * i + 2] = typedSrc[i + 2];
+	}
+}
+
+template<typename IndexType, typename DstType, typename SrcType>
 void expandIndexedQuads(DstType *dst, const SrcType *src, size_t indexCount)
 {
 	IndexType *typedDst = reinterpret_cast<IndexType *>(dst);
@@ -138,7 +151,6 @@ void expandIndexedQuads(DstType *dst, const SrcType *src, size_t indexCount)
 		typedDst[6 * i + 5] = typedSrc[4 * i];
 	}
 }
-
 
 
 // D3D12GS member handling buffers
@@ -380,7 +392,17 @@ D3D12_INDEX_BUFFER_VIEW D3D12GSRender::uploadIndexBuffers(bool indexed_draw)
 	if (indexed_draw && !forcedIndexBuffer)
 		m_renderingInfo.m_count = m_indexed_array.m_data.size() / indexSize;
 	else if (indexed_draw && forcedIndexBuffer)
-		m_renderingInfo.m_count = 6 * m_indexed_array.m_data.size() / (4 * indexSize);
+	{
+		switch (m_draw_mode - 1)
+		{
+		case GL_TRIANGLE_FAN:
+			m_renderingInfo.m_count = (m_indexed_array.m_data.size() - 2) * 3;
+			break;
+		case GL_QUADS:
+			m_renderingInfo.m_count = 6 * m_indexed_array.m_data.size() / (4 * indexSize);
+			break;
+		}
+	}
 	else
 	{
 		switch (m_draw_mode - 1)
@@ -423,13 +445,29 @@ D3D12_INDEX_BUFFER_VIEW D3D12GSRender::uploadIndexBuffers(bool indexed_draw)
 	else if (indexed_draw && forcedIndexBuffer)
 	{
 		// Only quads supported now
-		switch (m_indexed_array.m_type)
+		switch (m_draw_mode - 1)
 		{
-		case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_32:
-			expandIndexedQuads<unsigned int>(bufferMap, m_indexed_array.m_data.data(), m_indexed_array.m_data.size() / 4);
+		case GL_TRIANGLE_FAN:
+			switch (m_indexed_array.m_type)
+			{
+			case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_32:
+				expandIndexedTriangleFan<unsigned int>(bufferMap, m_indexed_array.m_data.data(), m_indexed_array.m_data.size() / 4);
+				break;
+			case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_16:
+				expandIndexedTriangleFan<unsigned short>(bufferMap, m_indexed_array.m_data.data(), m_indexed_array.m_data.size() / 2);
+				break;
+			}
 			break;
-		case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_16:
-			expandIndexedQuads<unsigned short>(bufferMap, m_indexed_array.m_data.data(), m_indexed_array.m_data.size() / 2);
+		case GL_QUADS:
+			switch (m_indexed_array.m_type)
+			{
+			case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_32:
+				expandIndexedQuads<unsigned int>(bufferMap, m_indexed_array.m_data.data(), m_indexed_array.m_data.size() / 4);
+				break;
+			case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_16:
+				expandIndexedQuads<unsigned short>(bufferMap, m_indexed_array.m_data.data(), m_indexed_array.m_data.size() / 2);
+				break;
+			}
 			break;
 		}
 	}
