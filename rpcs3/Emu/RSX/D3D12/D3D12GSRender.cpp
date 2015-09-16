@@ -326,6 +326,15 @@ D3D12GSRender::~D3D12GSRender()
 {
 	getNonCurrentResourceStorage().WaitAndClean();
 
+	{
+		std::lock_guard<std::mutex> lock(mut);
+		for (auto &protectedTexture : m_protectedTextures)
+		{
+			u32 protectedRangeStart = std::get<1>(protectedTexture), protectedRangeSize = std::get<2>(protectedTexture);
+			vm::page_protect(protectedRangeStart, protectedRangeSize, 0, vm::page_writable, 0);
+		}
+	}
+
 	gfxHandler = [this](u32) { return false; };
 	m_constantsData.Release();
 	m_vertexIndexData.Release();
