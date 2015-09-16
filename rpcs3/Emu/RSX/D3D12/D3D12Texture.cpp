@@ -796,26 +796,48 @@ size_t D3D12GSRender::UploadTextures(ID3D12GraphicsCommandList *cmdlist)
 			break;
 		case CELL_GCM_TEXTURE_A8R8G8B8:
 		{
-			const int RemapValue[4] =
-			{
-				D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_1,
-				D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_2,
-				D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_3,
-				D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_0
-			};
+
 
 			u8 remap_a = m_textures[i].GetRemap() & 0x3;
 			u8 remap_r = (m_textures[i].GetRemap() >> 2) & 0x3;
 			u8 remap_g = (m_textures[i].GetRemap() >> 4) & 0x3;
 			u8 remap_b = (m_textures[i].GetRemap() >> 6) & 0x3;
 			if (isRenderTarget)
-				srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-			else
+			{
+				// ARGB format
+				// Data comes from RTT, stored as RGBA already
+				const int RemapValue[4] =
+				{
+					D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_3,
+					D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_0,
+					D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_1,
+					D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_2
+				};
+
 				srvDesc.Shader4ComponentMapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(
-					RemapValue[remap_a],
 					RemapValue[remap_r],
 					RemapValue[remap_g],
-					RemapValue[remap_b]);
+					RemapValue[remap_b],
+					RemapValue[remap_a]);
+			}
+			else
+			{
+				// ARGB format
+				// Data comes from RSX mem, stored as ARGB already
+				const int RemapValue[4] =
+				{
+					D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_0,
+					D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_1,
+					D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_2,
+					D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_3
+				};
+
+				srvDesc.Shader4ComponentMapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(
+					RemapValue[remap_r],
+					RemapValue[remap_g],
+					RemapValue[remap_b],
+					RemapValue[remap_a]);
+			}
 
 			break;
 		}
