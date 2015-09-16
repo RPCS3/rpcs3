@@ -609,7 +609,7 @@ bool ppu_recompiler_llvm::CPUHybridDecoderRecompiler::PollStatus(PPUThread * ppu
 	catch (...)
 	{
 		ppu_state->pending_exception = std::current_exception();
-		return ExecutionStatus::ExecutionStatusPropagateException;
+		return true;
 	}
 }
 #endif // LLVM_AVAILABLE

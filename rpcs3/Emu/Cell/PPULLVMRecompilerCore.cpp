@@ -1754,9 +1754,8 @@ void Compiler::BC(u32 bo, u32 bi, s32 bd, u32 aa, u32 lk) {
 
 
 
-static u32
-wrappedExecutePPUFuncByIndex(PPUThread &CPU, u32 index)
-{
+static u32 
+wrappedExecutePPUFuncByIndex(PPUThread &CPU, u32 index) noexcept {
 	try
 	{
 		execute_ppu_func_by_index(CPU, index);
@@ -1785,7 +1784,7 @@ void Compiler::HACK(u32 index) {
 	}
 }
 
-static u32 wrappedDoSyscall(PPUThread &CPU, u64 code) {
+static u32 wrappedDoSyscall(PPUThread &CPU, u64 code) noexcept {
 	try
 	{
 		SysCalls::DoSyscall(CPU, code);
@@ -1801,7 +1800,16 @@ static u32 wrappedDoSyscall(PPUThread &CPU, u64 code) {
 void Compiler::SC(u32 lev) {
 	switch (lev) {
 	case 0:
-		Call<void>("wrappedDoSyscall", &wrappedDoSyscall, m_state.args[CompileTaskState::Args::State], GetGpr(11));
+		{
+		llvm::Value *status = Call<u32>("wrappedDoSyscall", &wrappedDoSyscall, m_state.args[CompileTaskState::Args::State], GetGpr(11));
+		llvm::BasicBlock *cputhreadexitblock = GetBasicBlockFromAddress(m_state.current_instruction_address, "early_exit");
+		llvm::Value *isCPUThreadExit = m_ir_builder->CreateICmpEQ(status, m_ir_builder->getInt32(ExecutionStatus::ExecutionStatusPropagateException));
+		llvm::BasicBlock *normal_execution = GetBasicBlockFromAddress(m_state.current_instruction_address, "normal_execution");
+		m_ir_builder->CreateCondBr(isCPUThreadExit, cputhreadexitblock, normal_execution);
+		m_ir_builder->SetInsertPoint(cputhreadexitblock);
+		m_ir_builder->CreateRet(m_ir_builder->getInt32(ExecutionStatus::ExecutionStatusPropagateException));
+		m_ir_builder->SetInsertPoint(normal_execution);
+		}
 		break;
 	case 3:
 		Call<void>("PPUThread.FastStop", &PPUThread::fast_stop, m_state.args[CompileTaskState::Args::State]);
