@@ -133,7 +133,7 @@ SettingsDialog::SettingsDialog(wxWindow *parent)
 	wxCheckBox* chbox_dbg_ap_functioncall = new wxCheckBox(p_misc, wxID_ANY, "Auto Pause at Function Call");
 
 	//Custom EmulationDir
-	wxCheckBox* chbox_emulationdir_enable = new wxCheckBox(p_system, wxID_ANY, "Use Path Below as EmulationDir ? (Need Restart)");
+	wxCheckBox* chbox_emulationdir_enable = new wxCheckBox(p_system, wxID_ANY, "Use path below as EmulationDir. (Restart required)");
 	wxTextCtrl* txt_emulationdir_path = new wxTextCtrl(p_system, wxID_ANY, Emu.GetEmulatorPath());
 
 
@@ -308,6 +308,7 @@ SettingsDialog::SettingsDialog(wxWindow *parent)
 
 	s_round_audio_out->Add(cbox_audio_out, wxSizerFlags().Border(wxALL, 5).Expand());
 
+	// Miscellaneous
 	s_round_hle_log_lvl->Add(cbox_hle_loglvl, wxSizerFlags().Border(wxALL, 5).Expand());
 
 	// Networking

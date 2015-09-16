@@ -24,6 +24,13 @@
 #endif
 
 namespace ppu_recompiler_llvm {
+	enum ExecutionStatus
+	{
+		ExecutionStatusReturn = 0, ///< Block has hit a return, caller can continue execution
+		ExecutionStatusBlockEnded, ///< Block has been executed but no return was hit, at least another block must be executed before caller can continue
+		ExecutionStatusPropagateException, ///< an exception was thrown
+	};
+
 	class Compiler;
 	class RecompilationEngine;
 	class ExecutionEngine;
@@ -779,7 +786,7 @@ namespace ppu_recompiler_llvm {
 		 * Get the executable for the specified address if a compiled version is
 		 * available, otherwise returns nullptr.
 		 **/
-		const Executable GetCompiledExecutableIfAvailable(u32 address);
+		const Executable GetCompiledExecutableIfAvailable(u32 address) const;
 
 		/// Notify the recompilation engine about a newly detected block start.
 		void NotifyBlockStart(u32 address);
@@ -848,15 +855,16 @@ namespace ppu_recompiler_llvm {
 		/// Block table
 		std::unordered_map<u32, BlockEntry> m_block_table;
 
-		/// Lock for accessing m_address_to_function.
-		std::mutex m_address_to_function_lock;
-
 		int m_currentId;
 
-		// Store pointer to every compiled function/block.
-		// We need to map every instruction in PS3 Ram so it's a big table
-		// But a lot of it won't be accessed. Fortunatly virtual memory help here...
-		Executable *FunctionCache;
+		/// (function, id).
+		typedef std::pair<Executable, u32> ExecutableStorageType;
+
+		/// Virtual memory allocated array.
+		/// Store pointer to every compiled function/block and a unique Id.
+		/// We need to map every instruction in PS3 Ram so it's a big table
+		/// But a lot of it won't be accessed. Fortunatly virtual memory help here...
+		ExecutableStorageType* FunctionCache;
 
 		// Bitfield recording page status in FunctionCache reserved memory.
 		char *FunctionCachePagesCommited;
@@ -864,10 +872,8 @@ namespace ppu_recompiler_llvm {
 		bool isAddressCommited(u32) const;
 		void commitAddress(u32);
 
-		/// (function, module containing function, times hit, id).
-		typedef std::tuple<Executable, std::unique_ptr<llvm::ExecutionEngine>, u32, u32> ExecutableStorage;
-		/// Address to ordinal cahce. Key is address.
-		std::unordered_map<u32, ExecutableStorage> m_address_to_function;
+		/// vector storing all exec engine
+		std::vector<std::unique_ptr<llvm::ExecutionEngine> > m_executable_storage;
 
 		/// The time at which the m_address_to_ordinal cache was last cleared
 		std::chrono::high_resolution_clock::time_point m_last_cache_clear_time;
@@ -883,9 +889,9 @@ namespace ppu_recompiler_llvm {
 		RecompilationEngine & operator = (const RecompilationEngine & other) = delete;
 		RecompilationEngine & operator = (RecompilationEngine && other) = delete;
 
-		/// Process an execution trace.
-		/// Returns true if a block was compiled
-		bool ProcessExecutionTrace(u32);
+		/// Increase usage counter for block starting at addr and compile it if threshold was reached.
+		/// Returns true if block was compiled
+		bool IncreaseHitCounterAndBuild(u32 addr);
 
 		/**
 		* Analyse block to get useful info (function called, has indirect branch...)

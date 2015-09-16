@@ -108,6 +108,9 @@
     <ClCompile Include="Gui\SettingsDialog.cpp">
       <Filter>Gui</Filter>
     </ClCompile>
+    <ClCompile Include="Gui\SignInDialog.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="rpcs3.rc" />
@@ -217,6 +220,9 @@
       <Filter>Gui</Filter>
     </ClInclude>
     <ClInclude Include="Gui\SettingsDialog.h">
+      <Filter>Gui</Filter>
+    </ClInclude>
+    <ClInclude Include="Gui\SignInDialog.h">
       <Filter>Gui</Filter>
     </ClInclude>
   </ItemGroup>

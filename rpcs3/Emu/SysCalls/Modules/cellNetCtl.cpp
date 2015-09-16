@@ -30,6 +30,17 @@
 
 extern Module cellNetCtl;
 
+std::unique_ptr<SignInDialogInstance> g_sign_in_dialog;
+
+SignInDialogInstance::SignInDialogInstance()
+{
+}
+
+void SignInDialogInstance::Close()
+{
+	//state = signInDialogClose;
+}
+
 s32 cellNetCtlInit()
 {
 	cellNetCtl.Warning("cellNetCtlInit()");
@@ -338,15 +349,20 @@ s32 cellNetCtlNetStartDialogLoadAsync(vm::ptr<CellNetCtlNetStartDialogParam> par
 {
 	cellNetCtl.Warning("cellNetCtlNetStartDialogLoadAsync(param=*0x%x)", param);
 
-	// TODO: Actually sign into PSN or an emulated network similar to PSN
+	// TODO: Actually sign into PSN or an emulated network similar to PSN (ESN)
+	// TODO: Properly open the dialog prompt for sign in
+	sysutilSendSystemCommand(CELL_SYSUTIL_NET_CTL_NETSTART_LOADED, 0);
+	g_sign_in_dialog->status = CELL_NET_CTL_ERROR_DIALOG_CANCELED;
 	sysutilSendSystemCommand(CELL_SYSUTIL_NET_CTL_NETSTART_FINISHED, 0);
 
-	return CELL_OK;
+	return CELL_NET_CTL_ERROR_NOT_CONNECTED;
 }
 
 s32 cellNetCtlNetStartDialogAbortAsync()
 {
 	cellNetCtl.Todo("cellNetCtlNetStartDialogAbortAsync()");
+
+	g_sign_in_dialog->status = CELL_NET_CTL_ERROR_DIALOG_ABORTED;
 
 	return CELL_OK;
 }
@@ -355,6 +371,7 @@ s32 cellNetCtlNetStartDialogUnloadAsync(vm::ptr<CellNetCtlNetStartDialogResult> 
 {
 	cellNetCtl.Warning("cellNetCtlNetStartDialogUnloadAsync(result=*0x%x)", result);
 
+	result->result = g_sign_in_dialog->status;
 	sysutilSendSystemCommand(CELL_SYSUTIL_NET_CTL_NETSTART_UNLOADED, 0);
 
 	return CELL_OK;

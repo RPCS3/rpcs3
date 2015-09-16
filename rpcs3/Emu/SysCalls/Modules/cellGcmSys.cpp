@@ -44,16 +44,20 @@ u32 map_offset_pos = 0;
  */ 
 u32 gcmGetLocalMemorySize(u32 sdk_version)
 {
-	if (sdk_version >= 0x00220000) {
+	if (sdk_version >= 0x00220000)
+	{
 		return 0x0F900000; // 249MB
 	}
-	if (sdk_version >= 0x00200000) {
+	if (sdk_version >= 0x00200000)
+	{
 		return 0x0F200000; // 242MB
 	}
-	if (sdk_version >= 0x00190000) {
+	if (sdk_version >= 0x00190000)
+	{
 		return 0x0EA00000; // 234MB
 	}
-	if (sdk_version >= 0x00180000) {
+	if (sdk_version >= 0x00180000)
+	{
 		return 0x0E800000; // 232MB
 	}
 	return 0x0E000000; // 224MB
@@ -249,7 +253,7 @@ s32 cellGcmBindTile(u8 index)
 
 	if (index >= RSXThread::m_tiles_count)
 	{
-		cellGcmSys.Error("cellGcmBindTile : CELL_GCM_ERROR_INVALID_VALUE");
+		cellGcmSys.Error("cellGcmBindTile: CELL_GCM_ERROR_INVALID_VALUE");
 		return CELL_GCM_ERROR_INVALID_VALUE;
 	}
 
@@ -265,7 +269,7 @@ s32 cellGcmBindZcull(u8 index)
 
 	if (index >= RSXThread::m_zculls_count)
 	{
-		cellGcmSys.Error("cellGcmBindZcull : CELL_GCM_ERROR_INVALID_VALUE");
+		cellGcmSys.Error("cellGcmBindZcull: CELL_GCM_ERROR_INVALID_VALUE");
 		return CELL_GCM_ERROR_INVALID_VALUE;
 	}
 
@@ -324,7 +328,7 @@ s32 _cellGcmInitBody(vm::pptr<CellGcmContextData> context, u32 cmdSize, u32 ioSi
 {
 	cellGcmSys.Warning("_cellGcmInitBody(context=**0x%x, cmdSize=0x%x, ioSize=0x%x, ioAddress=0x%x)", context, cmdSize, ioSize, ioAddress);
 
-	if(!local_size && !local_addr)
+	if (!local_size && !local_addr)
 	{
 		local_size = 0xf900000; // TODO: Get sdk_version in _cellGcmFunc15 and pass it to gcmGetLocalMemorySize
 		local_addr = 0xC0000000;
@@ -347,7 +351,7 @@ s32 _cellGcmInitBody(vm::pptr<CellGcmContextData> context, u32 cmdSize, u32 ioSi
 
 	if (gcmMapEaIoAddress(ioAddress, 0, ioSize, false) != CELL_OK)
 	{
-		cellGcmSys.Error("cellGcmInit : CELL_GCM_ERROR_FAILURE");
+		cellGcmSys.Error("cellGcmInit: CELL_GCM_ERROR_FAILURE");
 		return CELL_GCM_ERROR_FAILURE;
 	}
 
@@ -428,8 +432,9 @@ s32 cellGcmSetDisplayBuffer(u32 id, u32 offset, u32 pitch, u32 width, u32 height
 {
 	cellGcmSys.Log("cellGcmSetDisplayBuffer(id=0x%x,offset=0x%x,pitch=%d,width=%d,height=%d)", id, offset, width ? pitch / width : pitch, width, height);
 
-	if (id > 7) {
-		cellGcmSys.Error("cellGcmSetDisplayBuffer : CELL_EINVAL");
+	if (id > 7)
+	{
+		cellGcmSys.Error("cellGcmSetDisplayBuffer: CELL_EINVAL");
 		return CELL_EINVAL;
 	}
 
@@ -440,7 +445,8 @@ s32 cellGcmSetDisplayBuffer(u32 id, u32 offset, u32 pitch, u32 width, u32 height
 	buffers[id].width = width;
 	buffers[id].height = height;
 
-	if (id + 1 > Emu.GetGSManager().GetRender().m_gcm_buffers_count) {
+	if (id + 1 > Emu.GetGSManager().GetRender().m_gcm_buffers_count)
+	{
 		Emu.GetGSManager().GetRender().m_gcm_buffers_count = id + 1;
 	}
 
@@ -486,7 +492,7 @@ s32 cellGcmSetPrepareFlip(PPUThread& ppu, vm::ptr<CellGcmContextData> ctxt, u32 
 
 	if (id > 7)
 	{
-		cellGcmSys.Error("cellGcmSetPrepareFlip : CELL_GCM_ERROR_FAILURE");
+		cellGcmSys.Error("cellGcmSetPrepareFlip: CELL_GCM_ERROR_FAILURE");
 		return CELL_GCM_ERROR_FAILURE;
 	}
 
@@ -494,7 +500,7 @@ s32 cellGcmSetPrepareFlip(PPUThread& ppu, vm::ptr<CellGcmContextData> ctxt, u32 
 	{
 		if (s32 res = ctxt->callback(ppu, ctxt, 8 /* ??? */))
 		{
-			cellGcmSys.Error("cellGcmSetPrepareFlip : callback failed (0x%08x)", res);
+			cellGcmSys.Error("cellGcmSetPrepareFlip: callback failed (0x%08x)", res);
 			return res;
 		}
 	}
@@ -547,19 +553,19 @@ s32 cellGcmSetTileInfo(u8 index, u8 location, u32 offset, u32 size, u32 pitch, u
 
 	if (index >= RSXThread::m_tiles_count || base >= 800 || bank >= 4)
 	{
-		cellGcmSys.Error("cellGcmSetTileInfo : CELL_GCM_ERROR_INVALID_VALUE");
+		cellGcmSys.Error("cellGcmSetTileInfo: CELL_GCM_ERROR_INVALID_VALUE");
 		return CELL_GCM_ERROR_INVALID_VALUE;
 	}
 
 	if (offset & 0xffff || size & 0xffff || pitch & 0xf)
 	{
-		cellGcmSys.Error("cellGcmSetTileInfo : CELL_GCM_ERROR_INVALID_ALIGNMENT");
+		cellGcmSys.Error("cellGcmSetTileInfo: CELL_GCM_ERROR_INVALID_ALIGNMENT");
 		return CELL_GCM_ERROR_INVALID_ALIGNMENT;
 	}
 
 	if (location >= 2 || (comp != 0 && (comp < 7 || comp > 12)))
 	{
-		cellGcmSys.Error("cellGcmSetTileInfo : CELL_GCM_ERROR_INVALID_ALIGNMENT");
+		cellGcmSys.Error("cellGcmSetTileInfo: CELL_GCM_ERROR_INVALID_ALIGNMENT");
 		return CELL_GCM_ERROR_INVALID_ENUM;
 	}
 
@@ -621,7 +627,7 @@ s32 cellGcmSetZcull(u8 index, u32 offset, u32 width, u32 height, u32 cullStart, 
 
 	if (index >= RSXThread::m_zculls_count)
 	{
-		cellGcmSys.Error("cellGcmSetZcull : CELL_GCM_ERROR_INVALID_VALUE");
+		cellGcmSys.Error("cellGcmSetZcull: CELL_GCM_ERROR_INVALID_VALUE");
 		return CELL_GCM_ERROR_INVALID_VALUE;
 	}
 
@@ -648,7 +654,7 @@ s32 cellGcmUnbindTile(u8 index)
 
 	if (index >= RSXThread::m_tiles_count)
 	{
-		cellGcmSys.Error("cellGcmUnbindTile : CELL_GCM_ERROR_INVALID_VALUE");
+		cellGcmSys.Error("cellGcmUnbindTile: CELL_GCM_ERROR_INVALID_VALUE");
 		return CELL_GCM_ERROR_INVALID_VALUE;
 	}
 
@@ -664,7 +670,7 @@ s32 cellGcmUnbindZcull(u8 index)
 
 	if (index >= 8)
 	{
-		cellGcmSys.Error("cellGcmUnbindZcull : CELL_EINVAL");
+		cellGcmSys.Error("cellGcmUnbindZcull: CELL_EINVAL");
 		return CELL_EINVAL;
 	}
 
@@ -736,9 +742,9 @@ u64 cellGcmGetLastFlipTime()
 	return Emu.GetGSManager().GetRender().m_last_flip_time;
 }
 
-s32 cellGcmGetLastSecondVTime()
+u64 cellGcmGetLastSecondVTime()
 {
-	UNIMPLEMENTED_FUNC(cellGcmSys);
+	cellGcmSys.Todo("cellGcmGetLastSecondVTime()");
 	return CELL_OK;
 }
 
@@ -769,7 +775,7 @@ s32 cellGcmSetFlipImmediate(u8 id)
 
 	if (id > 7)
 	{
-		cellGcmSys.Error("cellGcmSetFlipImmediate : CELL_GCM_ERROR_FAILURE");
+		cellGcmSys.Error("cellGcmSetFlipImmediate: CELL_GCM_ERROR_FAILURE");
 		return CELL_GCM_ERROR_FAILURE;
 	}
 
@@ -894,7 +900,7 @@ s32 gcmMapEaIoAddress(u32 ea, u32 io, u32 size, bool is_strict)
 	}
 	else
 	{
-		cellGcmSys.Error("cellGcmMapEaIoAddress : CELL_GCM_ERROR_FAILURE");
+		cellGcmSys.Error("cellGcmMapEaIoAddress: CELL_GCM_ERROR_FAILURE");
 		return CELL_GCM_ERROR_FAILURE;
 	}
 
@@ -958,7 +964,7 @@ s32 cellGcmMapMainMemory(u32 ea, u32 size, vm::ptr<u32> offset)
 	}
 	else
 	{
-		cellGcmSys.Error("cellGcmMapMainMemory : CELL_GCM_ERROR_NO_IO_PAGE_TABLE");
+		cellGcmSys.Error("cellGcmMapMainMemory: CELL_GCM_ERROR_NO_IO_PAGE_TABLE");
 		return CELL_GCM_ERROR_NO_IO_PAGE_TABLE;
 	}
 
@@ -973,13 +979,13 @@ s32 cellGcmReserveIoMapSize(u32 size)
 
 	if (size & 0xFFFFF)
 	{
-		cellGcmSys.Error("cellGcmReserveIoMapSize : CELL_GCM_ERROR_INVALID_ALIGNMENT");
+		cellGcmSys.Error("cellGcmReserveIoMapSize: CELL_GCM_ERROR_INVALID_ALIGNMENT");
 		return CELL_GCM_ERROR_INVALID_ALIGNMENT;
 	}
 
 	if (size > cellGcmGetMaxIoMapSize())
 	{
-		cellGcmSys.Error("cellGcmReserveIoMapSize : CELL_GCM_ERROR_INVALID_VALUE");
+		cellGcmSys.Error("cellGcmReserveIoMapSize: CELL_GCM_ERROR_INVALID_VALUE");
 		return CELL_GCM_ERROR_INVALID_VALUE;
 	}
 
@@ -1041,13 +1047,13 @@ s32 cellGcmUnreserveIoMapSize(u32 size)
 
 	if (size & 0xFFFFF)
 	{
-		cellGcmSys.Error("cellGcmReserveIoMapSize : CELL_GCM_ERROR_INVALID_ALIGNMENT");
+		cellGcmSys.Error("cellGcmReserveIoMapSize: CELL_GCM_ERROR_INVALID_ALIGNMENT");
 		return CELL_GCM_ERROR_INVALID_ALIGNMENT;
 	}
 
 	if (size > RSXIOMem.GetReservedAmount())
 	{
-		cellGcmSys.Error("cellGcmReserveIoMapSize : CELL_GCM_ERROR_INVALID_VALUE");
+		cellGcmSys.Error("cellGcmReserveIoMapSize: CELL_GCM_ERROR_INVALID_VALUE");
 		return CELL_GCM_ERROR_INVALID_VALUE;
 	}
 
@@ -1136,25 +1142,25 @@ s32 cellGcmSetTile(u8 index, u8 location, u32 offset, u32 size, u32 pitch, u8 co
 		index, location, offset, size, pitch, comp, base, bank);
 
 	// Copied form cellGcmSetTileInfo
-	if(index >= RSXThread::m_tiles_count || base >= 800 || bank >= 4)
+	if (index >= RSXThread::m_tiles_count || base >= 800 || bank >= 4)
 	{
-		cellGcmSys.Error("cellGcmSetTile : CELL_GCM_ERROR_INVALID_VALUE");
+		cellGcmSys.Error("cellGcmSetTile: CELL_GCM_ERROR_INVALID_VALUE");
 		return CELL_GCM_ERROR_INVALID_VALUE;
 	}
 
-	if(offset & 0xffff || size & 0xffff || pitch & 0xf)
+	if (offset & 0xffff || size & 0xffff || pitch & 0xf)
 	{
-		cellGcmSys.Error("cellGcmSetTile : CELL_GCM_ERROR_INVALID_ALIGNMENT");
+		cellGcmSys.Error("cellGcmSetTile: CELL_GCM_ERROR_INVALID_ALIGNMENT");
 		return CELL_GCM_ERROR_INVALID_ALIGNMENT;
 	}
 
-	if(location >= 2 || (comp != 0 && (comp < 7 || comp > 12)))
+	if (location >= 2 || (comp != 0 && (comp < 7 || comp > 12)))
 	{
-		cellGcmSys.Error("cellGcmSetTile : CELL_GCM_ERROR_INVALID_ENUM");
+		cellGcmSys.Error("cellGcmSetTile: CELL_GCM_ERROR_INVALID_ENUM");
 		return CELL_GCM_ERROR_INVALID_ENUM;
 	}
 
-	if(comp)
+	if (comp)
 	{
 		cellGcmSys.Error("cellGcmSetTile: bad compression mode! (%d)", comp);
 	}

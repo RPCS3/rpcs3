@@ -72,12 +72,33 @@ s32 cellPadClearBuf(u32 port_no)
 
 s32 cellPadPeriphGetInfo(vm::ptr<CellPadPeriphInfo> info)
 {
-	sys_io.Warning("cellPadPeriphGetInfo(info=*0x%x)", info);
+	sys_io.Todo("cellPadPeriphGetInfo(info=*0x%x)", info);
+
+	if (!Emu.GetPadManager().IsInited())
+	{
+		return CELL_PAD_ERROR_UNINITIALIZED;
+	}
+
+	const PadInfo& rinfo = Emu.GetPadManager().GetInfo();
+
+	info->max_connect = rinfo.max_connect;
+	info->now_connect = rinfo.now_connect;
+	info->system_info = rinfo.system_info;
+
+	std::vector<Pad>& pads = Emu.GetPadManager().GetPads();
 
 	// TODO: Support other types of controllers
-	for (u32 i = 0; i < info->now_connect; i++)
+	for (u32 i = 0; i < CELL_PAD_MAX_PORT_NUM; ++i)
 	{
+		if (i >= pads.size())
+			break;
+
+		info->port_status[i] = pads[i].m_port_status;
+		info->port_setting[i] = pads[i].m_port_setting;
+		info->device_capability[i] = pads[i].m_device_capability;
+		info->device_type[i] = pads[i].m_device_type;
 		info->pclass_type[i] = CELL_PAD_PCLASS_TYPE_STANDARD;
+		info->pclass_profile[i] = 0x0;
 	}
 
 	return CELL_OK;
