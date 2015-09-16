@@ -1,8 +1,5 @@
 #include "stdafx_gui.h"
-#include "Emu/SysCalls/Modules.h"
-#include "Emu/Memory/Memory.h"
 
-#include "Emu/SysCalls/Modules/cellSysutil.h"
 #include "SignInDialog.h"
 
 // TODO: Make this look and work more reasonably
@@ -50,26 +47,26 @@ void SignInDialogFrame::Create()
 
 	b_signin->Bind(wxEVT_BUTTON, [&](wxCommandEvent& event)
 	{
-		this->status = CELL_OK;
+		//this->status = CELL_OK;
 		this->m_dialog->Hide();
-		this->Close();
-		sysutilSendSystemCommand(CELL_SYSUTIL_NET_CTL_NETSTART_FINISHED, 0);
+		//this->Close();
+		//sysutilSendSystemCommand(CELL_SYSUTIL_NET_CTL_NETSTART_FINISHED, 0);
 	});
 
 	b_cancel->Bind(wxEVT_BUTTON, [&](wxCommandEvent& event)
 	{
-		this->status = CELL_NET_CTL_ERROR_DIALOG_CANCELED;
+		//this->status = CELL_NET_CTL_ERROR_DIALOG_CANCELED;
 		this->m_dialog->Hide();
-		this->Close();
-		sysutilSendSystemCommand(CELL_SYSUTIL_NET_CTL_NETSTART_FINISHED, 0);
+		//this->Close();
+		//sysutilSendSystemCommand(CELL_SYSUTIL_NET_CTL_NETSTART_FINISHED, 0);
 	});
 
 	m_dialog->Bind(wxEVT_CLOSE_WINDOW, [&](wxCloseEvent& event)
 	{
-		this->status = CELL_NET_CTL_ERROR_DIALOG_CANCELED;
+		//this->status = CELL_NET_CTL_ERROR_DIALOG_CANCELED;
 		this->m_dialog->Hide();
-		this->Close();
-		sysutilSendSystemCommand(CELL_SYSUTIL_NET_CTL_NETSTART_FINISHED, 0);
+		//this->Close();
+		//sysutilSendSystemCommand(CELL_SYSUTIL_NET_CTL_NETSTART_FINISHED, 0);
 	});
 }
 

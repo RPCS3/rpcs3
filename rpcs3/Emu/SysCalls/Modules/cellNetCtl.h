@@ -261,22 +261,7 @@ struct CellNetCtlNatInfo
 
 typedef void(cellNetCtlHandler)(s32 prev_state, s32 new_state, s32 event, s32 error_code, vm::ptr<u32> arg);
 
-struct SignInDialogInstance
-{
-	//std::atomic<SignInDialogState> state;
-
-	s32 status;
-
-	SignInDialogInstance();
-	virtual ~SignInDialogInstance() = default;
-
-	virtual void Close();
-
-	virtual void Create() = 0;
-	virtual void Destroy() = 0;
-};
-
-inline static const char* InfoCodeToName(s32 code)
+static const char* InfoCodeToName(s32 code)
 {
 	switch (code)
 	{
