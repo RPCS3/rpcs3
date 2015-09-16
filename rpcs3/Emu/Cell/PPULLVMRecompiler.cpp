@@ -560,7 +560,6 @@ u32 ppu_recompiler_llvm::CPUHybridDecoderRecompiler::ExecuteTillReturn(PPUThread
 				return ExecutionStatus::ExecutionStatusReturn;
 			if (exit == ExecutionStatus::ExecutionStatusPropagateException)
 				return ExecutionStatus::ExecutionStatusPropagateException;
-			execution_engine->m_recompilation_engine->NotifyBlockStart(ppu_state->PC);
 			previousInstContigousAndInterp = false;
 			continue;
 		}
