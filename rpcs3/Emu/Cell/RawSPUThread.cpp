@@ -67,7 +67,7 @@ bool RawSPUThread::read_reg(const u32 addr, u32& value)
 		
 	case SPU_Status_offs:
 	{
-		value = status.load();
+		value = status;
 		return true;
 	}
 	}
@@ -201,7 +201,7 @@ bool RawSPUThread::write_reg(const u32 addr, const u32 value)
 			break;
 		}
 
-		run_ctrl.store(value);
+		run_ctrl = value;
 		return true;
 	}
 
@@ -212,7 +212,7 @@ bool RawSPUThread::write_reg(const u32 addr, const u32 value)
 			break;
 		}
 
-		npc.store(value);
+		npc = value;
 		return true;
 	}
 
@@ -245,5 +245,5 @@ void RawSPUThread::task()
 	SPUThread::task();
 
 	// save next PC and current SPU Interrupt status
-	npc.store(pc | u32{ (ch_event_stat.load() & SPU_EVENT_INTR_ENABLED) != 0 });
+	npc = pc | ((ch_event_stat & SPU_EVENT_INTR_ENABLED) != 0);
 }

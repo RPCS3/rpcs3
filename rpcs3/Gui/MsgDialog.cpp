@@ -5,7 +5,7 @@
 #include "Emu/SysCalls/lv2/sys_time.h"
 #include "MsgDialog.h"
 
-void MsgDialogFrame::Create(u32 type, std::string msg)
+void MsgDialogFrame::Create(u32 type, const std::string& msg)
 {
 	wxWindow* parent = nullptr; // TODO: align the window better
 
@@ -96,23 +96,18 @@ void MsgDialogFrame::Create(u32 type, std::string msg)
 	m_dialog->Show();
 	m_dialog->Enable();
 
-	m_dialog->Bind(wxEVT_BUTTON, [&](wxCommandEvent& event)
+	m_dialog->Bind(wxEVT_BUTTON, [this](wxCommandEvent& event)
 	{
-		this->status = (event.GetId() == wxID_NO) ? CELL_MSGDIALOG_BUTTON_NO : CELL_MSGDIALOG_BUTTON_YES /* OK */;
-		this->m_dialog->Hide();
-		this->Close();
+		this->Destroy();
+		this->Close(event.GetId() == wxID_NO ? CELL_MSGDIALOG_BUTTON_NO : CELL_MSGDIALOG_BUTTON_YES);
 	});
 
-	m_dialog->Bind(wxEVT_CLOSE_WINDOW, [&](wxCloseEvent& event)
+	m_dialog->Bind(wxEVT_CLOSE_WINDOW, [this, type](wxCloseEvent& event)
 	{
-		if (type & CELL_MSGDIALOG_TYPE_DISABLE_CANCEL)
+		if (~type & CELL_MSGDIALOG_TYPE_DISABLE_CANCEL)
 		{
-		}
-		else
-		{
-			this->status = CELL_MSGDIALOG_BUTTON_ESCAPE;
-			this->m_dialog->Hide();
-			this->Close();
+			this->Destroy();
+			this->Close(CELL_MSGDIALOG_BUTTON_ESCAPE);
 		}
 	});
 }
@@ -122,40 +117,31 @@ void MsgDialogFrame::Destroy()
 	m_dialog.reset();
 }
 
-void MsgDialogFrame::ProgressBarSetMsg(u32 index, std::string msg)
+void MsgDialogFrame::ProgressBarSetMsg(u32 index, const std::string& msg)
 {
-	wxGetApp().CallAfter([=]()
+	if (m_dialog)
 	{
-		if (m_dialog)
-		{
-			if (index == 0 && m_text1) m_text1->SetLabelText(wxString(msg.c_str(), wxConvUTF8));
-			if (index == 1 && m_text2) m_text2->SetLabelText(wxString(msg.c_str(), wxConvUTF8));
-			m_dialog->Layout();
-			m_dialog->Fit();
-		}
-	});
+		if (index == 0 && m_text1) m_text1->SetLabelText(wxString(msg.c_str(), wxConvUTF8));
+		if (index == 1 && m_text2) m_text2->SetLabelText(wxString(msg.c_str(), wxConvUTF8));
+		m_dialog->Layout();
+		m_dialog->Fit();
+	}
 }
 
 void MsgDialogFrame::ProgressBarReset(u32 index)
 {
-	wxGetApp().CallAfter([=]()
+	if (m_dialog)
 	{
-		if (m_dialog)
-		{
-			if (index == 0 && m_gauge1) m_gauge1->SetValue(0);
-			if (index == 1 && m_gauge2) m_gauge2->SetValue(0);
-		}
-	});
+		if (index == 0 && m_gauge1) m_gauge1->SetValue(0);
+		if (index == 1 && m_gauge2) m_gauge2->SetValue(0);
+	}
 }
 
 void MsgDialogFrame::ProgressBarInc(u32 index, u32 delta)
 {
-	wxGetApp().CallAfter([=]()
+	if (m_dialog)
 	{
-		if (m_dialog)
-		{
-			if (index == 0 && m_gauge1) m_gauge1->SetValue(m_gauge1->GetValue() + delta);
-			if (index == 1 && m_gauge2) m_gauge2->SetValue(m_gauge2->GetValue() + delta);
-		}
-	});
+		if (index == 0 && m_gauge1) m_gauge1->SetValue(m_gauge1->GetValue() + delta);
+		if (index == 1 && m_gauge2) m_gauge2->SetValue(m_gauge2->GetValue() + delta);
+	}
 }

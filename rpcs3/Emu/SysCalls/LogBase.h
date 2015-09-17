@@ -14,11 +14,16 @@ class LogBase
 		LogTodo,
 	};
 
-	void LogOutput(LogType type, const std::string& text) const;
+	void LogOutput(LogType type, std::string text) const;
 
-	template<typename... Args> never_inline void LogPrepare(LogType type, const char* fmt, Args... args) const
+	template<typename... Args> never_inline safe_buffers void LogPrepare(LogType type, const char* fmt, Args... args) const
 	{
 		LogOutput(type, fmt::format(fmt, args...));
+	}
+
+	never_inline safe_buffers void LogPrepare(LogType type, const char* fmt) const
+	{
+		LogOutput(type, fmt);
 	}
 
 public:

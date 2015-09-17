@@ -32,7 +32,7 @@ s32 sys_lwmutex_create(vm::ptr<sys_lwmutex_t> lwmutex, vm::ptr<sys_lwmutex_attri
 	default: sysPrxForUser.Error("sys_lwmutex_create(): invalid protocol (0x%x)", protocol); return CELL_EINVAL;
 	}
 
-	lwmutex->lock_var = { { lwmutex_free, 0 } };
+	lwmutex->lock_var.store({ lwmutex_free, 0 });
 	lwmutex->attribute = attr->recursive | attr->protocol;
 	lwmutex->recursive_count = 0;
 	lwmutex->sleep_queue = idm::make<lv2_lwmutex_t>(protocol, attr->name_u64);
@@ -133,7 +133,7 @@ s32 sys_lwmutex_lock(PPUThread& ppu, vm::ptr<sys_lwmutex_t> lwmutex, u64 timeout
 	if (lwmutex->vars.owner.compare_and_swap_test(lwmutex_free, tid))
 	{
 		// locking succeeded
-		lwmutex->all_info--;
+		--lwmutex->all_info;
 
 		return CELL_OK;
 	}

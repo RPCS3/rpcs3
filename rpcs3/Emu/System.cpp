@@ -13,7 +13,6 @@
 #include "Emu/FS/vfsFile.h"
 #include "Emu/FS/vfsLocalFile.h"
 #include "Emu/FS/vfsDeviceLocalFile.h"
-#include "Emu/DbgCommand.h"
 
 #include "Emu/CPU/CPUThreadManager.h"
 #include "Emu/SysCalls/Callback.h"
@@ -58,10 +57,6 @@ Emulator::Emulator()
 {
 	m_loader.register_handler(new loader::handlers::elf32);
 	m_loader.register_handler(new loader::handlers::elf64);
-}
-
-Emulator::~Emulator()
-{
 }
 
 void Emulator::Init()
@@ -389,7 +384,9 @@ void Emulator::Stop()
 
 	while (g_thread_count)
 	{
-		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		m_cb.process_events();
+
+		std::this_thread::sleep_for(10ms);
 	}
 
 	LOG_NOTICE(GENERAL, "All threads stopped...");
@@ -516,15 +513,3 @@ bool Emulator::LoadPoints(const std::string& path)
 }
 
 Emulator Emu;
-
-CallAfterCbType CallAfterCallback = nullptr;
-
-void CallAfter(std::function<void()> func)
-{
-	CallAfterCallback(func);
-}
-
-void SetCallAfterCallback(CallAfterCbType cb)
-{
-	CallAfterCallback = cb;
-}

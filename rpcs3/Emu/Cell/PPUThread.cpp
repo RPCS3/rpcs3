@@ -293,7 +293,7 @@ void PPUThread::task()
 	{
 		while (true)
 		{
-			if (m_state.load() && check_status()) break;
+			if (m_state && check_status()) break;
 
 			// decode instruction using specified decoder
 			m_dec->DecodeMemory(PC);
@@ -310,7 +310,7 @@ void PPUThread::task()
 			const auto func = exec_map[PC / 4];
 
 			// check status
-			if (!m_state.load())
+			if (!m_state)
 			{
 				// call interpreter function
 				func(*this, { vm::ps3::read32(PC) });

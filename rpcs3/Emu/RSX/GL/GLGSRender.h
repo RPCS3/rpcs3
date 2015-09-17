@@ -130,10 +130,6 @@ public:
 
 };
 
-typedef GSFrameBase*(*GetGSFrameCb)();
-
-void SetGetGSFrameCallback(GetGSFrameCb value);
-
 class GLGSRender final : public GSRender
 {
 private:

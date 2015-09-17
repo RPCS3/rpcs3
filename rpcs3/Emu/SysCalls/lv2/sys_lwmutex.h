@@ -33,7 +33,7 @@ struct sys_lwmutex_t
 
 	union
 	{
-		atomic_be_t<sync_var_t> lock_var;
+		atomic_t<sync_var_t> lock_var;
 
 		struct
 		{

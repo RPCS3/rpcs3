@@ -170,9 +170,10 @@ extern void sysPrxForUser_sys_libc_init();
 Module<> sysPrxForUser("sysPrxForUser", []()
 {
 	g_tls_start = 0;
+
 	for (auto& v : g_tls_owners)
 	{
-		v.store(0, std::memory_order_relaxed);
+		v = 0;
 	}
 
 	// Setup random number generator

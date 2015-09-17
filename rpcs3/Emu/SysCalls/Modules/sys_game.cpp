@@ -70,7 +70,7 @@ void sys_game_process_exitspawn(vm::cptr<char> path, u32 argv_addr, u32 envp_add
 	Emu.Pause();
 	sysPrxForUser.Success("Process finished");
 
-	CallAfter([=]()
+	Emu.CallAfter([=]()
 	{
 		Emu.Stop();
 
@@ -146,7 +146,7 @@ void sys_game_process_exitspawn2(vm::cptr<char> path, u32 argv_addr, u32 envp_ad
 	Emu.Pause();
 	sysPrxForUser.Success("Process finished");
 
-	CallAfter([=]()
+	Emu.CallAfter([=]()
 	{
 		Emu.Stop();
 

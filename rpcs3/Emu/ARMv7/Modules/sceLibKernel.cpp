@@ -116,12 +116,7 @@ s32 sceKernelExitDeleteThread(ARMv7Thread& context, s32 exitStatus)
 	context.stop();
 
 	// current thread should be deleted
-	const u32 id = context.get_id();
-
-	CallAfter([id]()
-	{
-		idm::remove<ARMv7Thread>(id);
-	});
+	idm::remove<ARMv7Thread>(context.get_id());
 
 	return SCE_OK;
 }
@@ -494,7 +489,7 @@ s32 sceKernelWaitEventFlag(ARMv7Thread& context, s32 evfId, u32 bitPattern, u32 
 			if (passed >= timeout)
 			{
 				context.GPR[0] = SCE_KERNEL_ERROR_WAIT_TIMEOUT;
-				context.GPR[1] = evf->pattern.load();
+				context.GPR[1] = evf->pattern;
 				break;
 			}
 
@@ -629,7 +624,7 @@ s32 sceKernelCancelEventFlag(s32 evfId, u32 setPattern, vm::ptr<s32> pNumWaitThr
 
 	*pNumWaitThreads = static_cast<u32>(evf->sq.size());
 
-	evf->pattern.store(setPattern);
+	evf->pattern = setPattern;
 	evf->sq.clear();
 
 	return SCE_OK;
@@ -655,7 +650,7 @@ s32 sceKernelGetEventFlagInfo(s32 evfId, vm::ptr<SceKernelEventFlagInfo> pInfo)
 
 	pInfo->attr = evf->attr;
 	pInfo->initPattern = evf->init;
-	pInfo->currentPattern = evf->pattern.load();
+	pInfo->currentPattern = evf->pattern;
 	pInfo->numWaitThreads = static_cast<u32>(evf->sq.size());
 
 	return SCE_OK;

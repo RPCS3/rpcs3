@@ -42,9 +42,6 @@ wxDEFINE_EVENT(wxEVT_DBG_COMMAND, wxCommandEvent);
 IMPLEMENT_APP(Rpcs3App)
 Rpcs3App* TheApp;
 
-extern std::unique_ptr<MsgDialogInstance> g_msg_dialog;
-extern std::unique_ptr<SaveDataDialogInstance> g_savedata_dialog;
-
 bool Rpcs3App::OnInit()
 {
 	static const wxCmdLineEntryDesc desc[]
@@ -57,85 +54,70 @@ bool Rpcs3App::OnInit()
 	
 	parser.SetDesc(desc);
 	parser.SetCmdLine(argc, argv);
+
 	if (parser.Parse())
 	{
 		// help was given, terminating
 		this->Exit();
 	}
 
-	SetSendDbgCommandCallback([](DbgCommand id, CPUThread* t)
+	EmuCallbacks callbacks;
+
+	callbacks.call_after = [](std::function<void()> func)
+	{
+		wxGetApp().CallAfter(std::move(func));
+	};
+
+	callbacks.process_events = [this]()
+	{
+		m_MainFrame->Update();
+		wxGetApp().ProcessPendingEvents();
+	};
+
+	callbacks.send_dbg_command = [](DbgCommand id, CPUThread* t)
 	{
 		wxGetApp().SendDbgCommand(id, t);
-	});
+	};
 
-	SetCallAfterCallback([](std::function<void()> func)
+	callbacks.get_kb_handler = []() -> std::unique_ptr<KeyboardHandlerBase>
 	{
-		wxGetApp().CallAfter(func);
-	});
-
-	SetGetKeyboardHandlerCountCallback([]()
-	{
-		return 2;
-	});
-
-	SetGetKeyboardHandlerCallback([](int i) -> KeyboardHandlerBase*
-	{
-		switch (i)
+		switch (auto mode = Ini.KeyboardHandlerMode.GetValue())
 		{
-		case 0: return new NullKeyboardHandler();
-		case 1: return new WindowsKeyboardHandler();
+		case 0: return std::make_unique<NullKeyboardHandler>();
+		case 1: return std::make_unique<WindowsKeyboardHandler>();
+		default: throw EXCEPTION("Invalid Keyboard Handler Mode %d", +mode);
 		}
+	};
 
-		assert(!"Invalid keyboard handler number");
-		return new NullKeyboardHandler();
-	});
-
-	SetGetMouseHandlerCountCallback([]()
+	callbacks.get_mouse_handler = []() -> std::unique_ptr<MouseHandlerBase>
 	{
-		return 2;
-	});
-
-	SetGetMouseHandlerCallback([](int i) -> MouseHandlerBase*
-	{
-		switch (i)
+		switch (auto mode = Ini.MouseHandlerMode.GetValue())
 		{
-		case 0: return new NullMouseHandler();
-		case 1: return new WindowsMouseHandler();
+		case 0: return std::make_unique<NullMouseHandler>();
+		case 1: return std::make_unique<WindowsMouseHandler>();
+		default: throw EXCEPTION("Invalid Mouse Handler Mode %d", +mode);
 		}
+	};
 
-		assert(!"Invalid mouse handler number");
-		return new NullMouseHandler();
-	});
-
-	SetGetPadHandlerCountCallback([]()
+	callbacks.get_pad_handler = []() -> std::unique_ptr<PadHandlerBase>
 	{
+		switch (auto mode = Ini.PadHandlerMode.GetValue())
+		{
+		case 0: return std::make_unique<NullPadHandler>();
+		case 1: return std::make_unique<WindowsPadHandler>();
 #if defined(_WIN32)
-		return 3;
-#else
-		return 2;
+		case 2: return std::make_unique<XInputPadHandler>();
 #endif
-	});
-
-	SetGetPadHandlerCallback([](int i) -> PadHandlerBase*
-	{
-		switch (i)
-		{
-		case 0: return new NullPadHandler();
-		case 1: return new WindowsPadHandler();
-#if defined(_WIN32)
-		case 2: return new XInputPadHandler();
-#endif
+		default: throw EXCEPTION("Invalid Pad Handler Mode %d", +mode);
 		}
+	};
 
-		assert(!"Invalid pad handler number");
-		return new NullPadHandler();
-	});
-
-	SetGetGSFrameCallback([]() -> GSFrameBase*
+	callbacks.get_gs_frame = []() -> std::unique_ptr<GSFrameBase>
 	{
-		return new GLGSFrame();
-	});
+		return std::make_unique<GLGSFrame>();
+	};
 
+	// TODO: unify with get_gs_frame callback
 #if defined(DX12_SUPPORT)
 	SetGetD3DGSFrameCallback([]() ->GSFrameBase2*
 	{
@@ -143,8 +125,17 @@ bool Rpcs3App::OnInit()
 	});
 #endif
 
-	g_msg_dialog.reset(new MsgDialogFrame);
-	g_savedata_dialog.reset(new SaveDataDialogFrame);
+	callbacks.get_msg_dialog = []() -> std::unique_ptr<MsgDialogBase>
+	{
+		return std::make_unique<MsgDialogFrame>();
+	};
+
+	callbacks.get_save_dialog = []() -> std::unique_ptr<SaveDialogBase>
+	{
+		return std::make_unique<SaveDialogFrame>();
+	};
+
+	Emu.SetCallbacks(std::move(callbacks));
 
 	TheApp = this;
 	SetAppName(_PRGNAME_);
@@ -204,10 +195,6 @@ void Rpcs3App::Exit()
 	Ini.Save();
 
 	wxApp::Exit();
-
-#ifdef _WIN32
-	timeEndPeriod(1);
-#endif
 }
 
 void Rpcs3App::SendDbgCommand(DbgCommand id, CPUThread* thr)
@@ -221,6 +208,11 @@ Rpcs3App::Rpcs3App()
 {
 #ifdef _WIN32
 	timeBeginPeriod(1);
+
+	std::atexit([]
+	{
+		timeEndPeriod(1);
+	});
 #endif
 
 #if defined(__unix__) && !defined(__APPLE__)

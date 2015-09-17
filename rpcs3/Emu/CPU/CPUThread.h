@@ -45,7 +45,7 @@ protected:
 	using named_thread_t::join;
 	using named_thread_t::joinable;
 
-	atomic_t<u64> m_state; // thread state flags
+	atomic_t<u64> m_state{ CPU_STATE_STOPPED }; // thread state flags
 
 	std::unique_ptr<CPUDecoder> m_dec;
 
@@ -62,8 +62,8 @@ public:
 	CPUThreadType get_type() const { return m_type; }
 	std::string get_name() const { return m_name; }
 
-	bool is_alive() const { return (m_state.load() & CPU_STATE_DEAD) == 0; }
-	bool is_stopped() const { return (m_state.load() & CPU_STATE_STOPPED) != 0; }
+	bool is_alive() const { return (m_state & CPU_STATE_DEAD) == 0; }
+	bool is_stopped() const { return (m_state & CPU_STATE_STOPPED) != 0; }
 	virtual bool is_paused() const;
 
 	virtual void dump_info() const;

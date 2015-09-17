@@ -568,7 +568,7 @@ void MainFrame::OnKeyDown(wxKeyEvent& event)
 		case 'E': case 'e': if(Emu.IsPaused()) Emu.Resume(); else if(Emu.IsReady()) Emu.Run(); return;
 		case 'P': case 'p': if(Emu.IsRunning()) Emu.Pause(); return;
 		case 'S': case 's': if(!Emu.IsStopped()) Emu.Stop(); return;
-		case 'R': case 'r': if(!Emu.m_path.empty()) {Emu.Stop(); Emu.Run();} return;
+		case 'R': case 'r': if(!Emu.GetPath().empty()) {Emu.Stop(); Emu.Run();} return;
 		}
 	}
 

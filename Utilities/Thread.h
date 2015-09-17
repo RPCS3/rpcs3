@@ -147,7 +147,7 @@ class squeue_t
 
 public:
 	squeue_t()
-		: m_sync({})
+		: m_sync(squeue_sync_var_t{})
 	{
 	}
 
@@ -156,9 +156,9 @@ public:
 		return sq_size;
 	}
 
-	bool is_full() const volatile
+	bool is_full() const
 	{
-		return m_sync.data.count == sq_size;
+		return m_sync.load().count == sq_size;
 	}
 
 	bool push(const T& data, const std::function<bool()>& test_exit)

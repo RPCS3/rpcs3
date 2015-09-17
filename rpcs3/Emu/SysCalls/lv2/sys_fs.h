@@ -197,8 +197,8 @@ struct lv2_file_t
 		: file(std::move(file))
 		, mode(mode)
 		, flags(flags)
-		, st_status({ SSS_NOT_INITIALIZED })
-		, st_callback({})
+		, st_status(SSS_NOT_INITIALIZED)
+		, st_callback(fs_st_cb_rec_t{})
 	{
 	}
 };

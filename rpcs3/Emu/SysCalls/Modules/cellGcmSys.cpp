@@ -383,9 +383,9 @@ s32 _cellGcmInitBody(vm::pptr<CellGcmContextData> context, u32 cmdSize, u32 ioSi
 	context->set(gcm_info.context_addr);
 
 	auto& ctrl = vm::get_ref<CellGcmControl>(gcm_info.control_addr);
-	ctrl.put.store(0);
-	ctrl.get.store(0);
-	ctrl.ref.store(-1);
+	ctrl.put = 0;
+	ctrl.get = 0;
+	ctrl.ref = -1;
 
 	auto& render = Emu.GetGSManager().GetRender();
 	render.m_ctxt_addr = context.addr();

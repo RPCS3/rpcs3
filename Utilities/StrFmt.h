@@ -145,8 +145,7 @@ namespace fmt
 	std::string to_udec(u64 value);
 	std::string to_sdec(s64 value);
 
-	template<typename T, bool is_enum = std::is_enum<T>::value>
-	struct unveil
+	template<typename T, bool is_enum = std::is_enum<T>::value> struct unveil
 	{
 		using result_type = T;
 
@@ -156,8 +155,7 @@ namespace fmt
 		}
 	};
 
-	template<>
-	struct unveil<char*, false>
+	template<> struct unveil<char*, false>
 	{
 		using result_type = const char*;
 
@@ -167,8 +165,7 @@ namespace fmt
 		}
 	};
 
-	template<size_t N>
-	struct unveil<const char[N], false>
+	template<std::size_t N> struct unveil<const char[N], false>
 	{
 		using result_type = const char*;
 
@@ -178,8 +175,7 @@ namespace fmt
 		}
 	};
 
-	template<>
-	struct unveil<std::string, false>
+	template<> struct unveil<std::string, false>
 	{
 		using result_type = const char*;
 
@@ -189,8 +185,7 @@ namespace fmt
 		}
 	};
 
-	template<typename T>
-	struct unveil<T, true>
+	template<typename T> struct unveil<T, true>
 	{
 		using result_type = std::underlying_type_t<T>;
 
@@ -200,25 +195,13 @@ namespace fmt
 		}
 	};
 
-	template<typename T>
-	struct unveil<be_t<T>, false>
+	template<typename T, bool Se> struct unveil<se_t<T, Se>, false>
 	{
 		using result_type = typename unveil<T>::result_type;
 
-		force_inline static result_type get_value(const be_t<T>& arg)
+		force_inline static result_type get_value(const se_t<T, Se>& arg)
 		{
-			return unveil<T>::get_value(arg.value());
-		}
-	};
-
-	template<typename T>
-	struct unveil<le_t<T>, false>
-	{
-		using result_type = typename unveil<T>::result_type;
-
-		force_inline static result_type get_value(const le_t<T>& arg)
-		{
-			return unveil<T>::get_value(arg.value());
+			return unveil<T>::get_value(arg);
 		}
 	};
 
@@ -270,11 +253,11 @@ namespace fmt
 		}
 	}
 
-	struct exception
+	struct exception : public std::exception
 	{
 		std::unique_ptr<char[]> message;
 
-		template<typename... Args> never_inline safe_buffers exception(const char* file, int line, const char* func, const char* text, Args... args)
+		template<typename... Args> never_inline safe_buffers exception(const char* file, int line, const char* func, const char* text, Args... args) noexcept
 		{
 			const std::string data = format(text, args...) + format("\n(in file %s:%d, in function %s)", file, line, func);
 
@@ -283,16 +266,16 @@ namespace fmt
 			std::memcpy(message.get(), data.c_str(), data.size() + 1);
 		}
 
-		exception(const exception& other)
+		exception(const exception& other) noexcept
 		{
-			const std::size_t size = std::strlen(other);
+			const std::size_t size = std::strlen(other.message.get());
 
 			message.reset(new char[size + 1]);
 
-			std::memcpy(message.get(), other, size + 1);
+			std::memcpy(message.get(), other.message.get(), size + 1);
 		}
 
-		operator const char*() const
+		virtual const char* what() const noexcept override
 		{
 			return message.get();
 		}

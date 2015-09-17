@@ -397,7 +397,7 @@ s32 cellFsStReadGetRingBuf(u32 fd, vm::ptr<CellFsRingBuffer> ringbuf)
 		return CELL_FS_EBADF;
 	}
 
-	if (file->st_status.load() == SSS_NOT_INITIALIZED)
+	if (file->st_status == SSS_NOT_INITIALIZED)
 	{
 		return CELL_FS_ENXIO;
 	}
@@ -455,7 +455,7 @@ s32 cellFsStReadGetRegid(u32 fd, vm::ptr<u64> regid)
 		return CELL_FS_EBADF;
 	}
 
-	if (file->st_status.load() == SSS_NOT_INITIALIZED)
+	if (file->st_status == SSS_NOT_INITIALIZED)
 	{
 		return CELL_FS_ENXIO;
 	}
@@ -498,7 +498,7 @@ s32 cellFsStReadStart(u32 fd, u64 offset, u64 size)
 	{
 		std::unique_lock<std::mutex> lock(file->mutex);
 
-		while (file->st_status.load() == SSS_STARTED && !Emu.IsStopped())
+		while (file->st_status == SSS_STARTED && !Emu.IsStopped())
 		{
 			// check free space in buffer and available data in stream
 			if (file->st_total_read - file->st_copied <= file->st_ringbuf_size - file->st_block_size && file->st_total_read < file->st_read_size)
@@ -518,11 +518,11 @@ s32 cellFsStReadStart(u32 fd, u64 offset, u64 size)
 			}
 
 			// check callback condition if set
-			if (file->st_callback.data.func)
+			if (file->st_callback.load().func)
 			{
 				const u64 available = file->st_total_read - file->st_copied;
 
-				if (available >= file->st_callback.data.size)
+				if (available >= file->st_callback.load().size)
 				{
 					const auto func = file->st_callback.exchange({}).func;
 
@@ -540,7 +540,7 @@ s32 cellFsStReadStart(u32 fd, u64 offset, u64 size)
 		file->st_read_size = 0;
 		file->st_total_read = 0;
 		file->st_copied = 0;
-		file->st_callback.data = {};
+		file->st_callback.store({});
 	});
 
 	return CELL_OK;
@@ -588,14 +588,14 @@ s32 cellFsStRead(u32 fd, vm::ptr<u8> buf, u64 size, vm::ptr<u64> rsize)
 		return CELL_FS_EBADF;
 	}
 
-	if (file->st_status.load() == SSS_NOT_INITIALIZED || file->st_copyless)
+	if (file->st_status == SSS_NOT_INITIALIZED || file->st_copyless)
 	{
 		return CELL_FS_ENXIO;
 	}
 
-	const u64 copied = file->st_copied.load();
+	const u64 copied = file->st_copied;
 	const u32 position = VM_CAST(file->st_buffer + copied % file->st_ringbuf_size);
-	const u64 total_read = file->st_total_read.load();
+	const u64 total_read = file->st_total_read;
 	const u64 copy_size = (*rsize = std::min<u64>(size, total_read - copied)); // write rsize
 	
 	// copy data
@@ -622,14 +622,14 @@ s32 cellFsStReadGetCurrentAddr(u32 fd, vm::ptr<u32> addr, vm::ptr<u64> size)
 		return CELL_FS_EBADF;
 	}
 
-	if (file->st_status.load() == SSS_NOT_INITIALIZED || !file->st_copyless)
+	if (file->st_status == SSS_NOT_INITIALIZED || !file->st_copyless)
 	{
 		return CELL_FS_ENXIO;
 	}
 
-	const u64 copied = file->st_copied.load();
+	const u64 copied = file->st_copied;
 	const u32 position = VM_CAST(file->st_buffer + copied % file->st_ringbuf_size);
-	const u64 total_read = file->st_total_read.load();
+	const u64 total_read = file->st_total_read;
 
 	if ((*size = std::min<u64>(file->st_ringbuf_size - (position - file->st_buffer), total_read - copied)))
 	{
@@ -655,13 +655,13 @@ s32 cellFsStReadPutCurrentAddr(u32 fd, vm::ptr<u8> addr, u64 size)
 		return CELL_FS_EBADF;
 	}
 
-	if (file->st_status.load() == SSS_NOT_INITIALIZED || !file->st_copyless)
+	if (file->st_status == SSS_NOT_INITIALIZED || !file->st_copyless)
 	{
 		return CELL_FS_ENXIO;
 	}
 
-	const u64 copied = file->st_copied.load();
-	const u64 total_read = file->st_total_read.load();
+	const u64 copied = file->st_copied;
+	const u64 total_read = file->st_total_read;
 
 	// notify
 	file->st_copied += size;
@@ -682,7 +682,7 @@ s32 cellFsStReadWait(u32 fd, u64 size)
 		return CELL_FS_EBADF;
 	}
 
-	if (file->st_status.load() == SSS_NOT_INITIALIZED)
+	if (file->st_status == SSS_NOT_INITIALIZED)
 	{
 		return CELL_FS_ENXIO;
 	}
@@ -711,7 +711,7 @@ s32 cellFsStReadWaitCallback(u32 fd, u64 size, fs_st_cb_t func)
 		return CELL_FS_EBADF;
 	}
 
-	if (file->st_status.load() == SSS_NOT_INITIALIZED)
+	if (file->st_status == SSS_NOT_INITIALIZED)
 	{
 		return CELL_FS_ENXIO;
 	}

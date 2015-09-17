@@ -162,6 +162,9 @@ template<typename T1, typename T2, typename T3 = const char*> struct triplet_t
 #define COPY_EXPR(expr) [=]{ return expr; }
 #define EXCEPTION(text, ...) fmt::exception(__FILE__, __LINE__, __FUNCTION__, text, ##__VA_ARGS__)
 #define VM_CAST(value) vm::impl_cast(value, __FILE__, __LINE__, __FUNCTION__)
+#define IS_INTEGRAL(t) (std::is_integral<t>::value || std::is_same<std::decay_t<t>, u128>::value)
+#define IS_INTEGER(t) (std::is_integral<t>::value || std::is_enum<t>::value || std::is_same<std::decay_t<t>, u128>::value)
+#define IS_BINARY_COMPARABLE(t1, t2) (IS_INTEGER(t1) && IS_INTEGER(t2) && sizeof(t1) == sizeof(t2))
 
 template<typename T> struct id_traits;
 
@@ -169,5 +172,5 @@ template<typename T> struct id_traits;
 #define _PRGVER_ "0.0.0.5"
 
 #include "Utilities/BEType.h"
+#include "Utilities/Atomic.h"
 #include "Utilities/StrFmt.h"
-#include "Emu/Memory/atomic.h"

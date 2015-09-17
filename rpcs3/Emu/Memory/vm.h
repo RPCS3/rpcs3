@@ -269,19 +269,11 @@ namespace vm
 		}
 	};
 
-	template<typename T> struct cast_ptr<be_t<T>>
+	template<typename T, bool Se> struct cast_ptr<se_t<T, Se>>
 	{
-		force_inline static u32 cast(const be_t<T>& addr, const char* file, int line, const char* func)
+		force_inline static u32 cast(const se_t<T, Se>& addr, const char* file, int line, const char* func)
 		{
-			return cast_ptr<T>::cast(addr.value(), file, line, func);
-		}
-	};
-
-	template<typename T> struct cast_ptr<le_t<T>>
-	{
-		force_inline static u32 cast(const le_t<T>& addr, const char* file, int line, const char* func)
-		{
-			return cast_ptr<T>::cast(addr.value(), file, line, func);
+			return cast_ptr<T>::cast(addr, file, line, func);
 		}
 	};
 

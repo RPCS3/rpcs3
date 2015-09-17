@@ -1,7 +1,6 @@
 #include "stdafx.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
-#include "Emu/DbgCommand.h"
 #include "Emu/IdManager.h"
 
 #include "Emu/Cell/PPUThread.h"
@@ -82,7 +81,7 @@ std::shared_ptr<RawSPUThread> CPUThreadManager::NewRawSPUThread()
 			break;
 		}
 	}
-
+	
 	return result;
 }
 

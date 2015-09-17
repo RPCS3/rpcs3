@@ -188,7 +188,7 @@ namespace sce_libc_func
 
 		sceLibc.Success("Process finished");
 
-		CallAfter([]()
+		Emu.CallAfter([]()
 		{
 			Emu.Stop();
 		});

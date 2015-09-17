@@ -14,12 +14,6 @@ extern Module<> cellSysutil;
 extern Module<> cellSaveData;
 extern Module<> cellMinisSaveData;
 
-std::unique_ptr<SaveDataDialogInstance> g_savedata_dialog;
-
-SaveDataDialogInstance::SaveDataDialogInstance()
-{
-}
-
 // cellSaveData aliases (only for cellSaveData.cpp)
 using PSetList = vm::ptr<CellSaveDataSetList>;
 using PSetBuf = vm::ptr<CellSaveDataSetBuf>;
@@ -43,12 +37,13 @@ enum : u32
 	SAVEDATA_OP_FIXED_DELETE = 14,
 };
 
+std::mutex g_savedata_mutex;
+
 never_inline s32 savedata_op(PPUThread& ppu, u32 operation, u32 version, vm::cptr<char> dirName, u32 errDialog, PSetList setList, PSetBuf setBuf, PFuncList funcList, PFuncFixed funcFixed, PFuncStat funcStat, PFuncFile funcFile, u32 container, u32 unknown, vm::ptr<void> userdata, u32 userId, PFuncDone funcDone)
 {
 	// TODO: check arguments
 
-	// try to lock the mutex (not sure how it originally works; std::try_to_lock makes it non-blocking)
-	std::unique_lock<std::mutex> lock(g_savedata_dialog->mutex, std::try_to_lock);
+	std::unique_lock<std::mutex> lock(g_savedata_mutex, std::try_to_lock);
 
 	if (!lock)
 	{
@@ -291,7 +286,7 @@ never_inline s32 savedata_op(PPUThread& ppu, u32 operation, u32 version, vm::cpt
 			}
 
 			// Display Save Data List
-			selected = g_savedata_dialog->ShowSaveDataList(save_entries, focused, listSet);
+			selected = Emu.GetCallbacks().get_save_dialog()->ShowSaveDataList(save_entries, focused, listSet);
 
 			if (selected == -1)
 			{

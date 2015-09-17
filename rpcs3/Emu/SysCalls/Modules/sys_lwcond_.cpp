@@ -226,7 +226,7 @@ s32 sys_lwcond_wait(PPUThread& ppu, vm::ptr<sys_lwcond_t> lwcond, u64 timeout)
 	const be_t<u32> recursive_value = lwmutex->recursive_count;
 
 	// set special value
-	lwmutex->vars.owner = { lwmutex_reserved };
+	lwmutex->vars.owner = lwmutex_reserved;
 	lwmutex->recursive_count = 0;
 
 	// call the syscall

@@ -665,28 +665,28 @@ void syncLFQueueInitialize(vm::ptr<CellSyncLFQueue> queue, vm::cptr<void> buffer
 
 	if (direction == CELL_SYNC_QUEUE_ANY2ANY)
 	{
-		queue->pop1 = {};
-		queue->push1 = {};
+		queue->pop1.store({});
+		queue->push1.store({});
 		queue->m_buffer.set(queue->m_buffer.addr() | 1);
 		queue->m_bs[0] = -1;
 		queue->m_bs[1] = -1;
 		//m_bs[2]
 		//m_bs[3]
 		queue->m_v1 = -1;
-		queue->push2 = { { 0xffff } };
-		queue->pop2 = { { 0xffff } };
+		queue->push2.store({ 0xffff });
+		queue->pop2.store({ 0xffff });
 	}
 	else
 	{
-		queue->pop1 = { { 0, 0, queue->pop1.load().m_h3, 0 } };
-		queue->push1 = { { 0, 0, queue->push1.load().m_h7, 0 } };
+		queue->pop1.store({ 0, 0, queue->pop1.load().m_h3, 0});
+		queue->push1.store({ 0, 0, queue->push1.load().m_h7, 0 });
 		queue->m_bs[0] = -1; // written as u32
 		queue->m_bs[1] = -1;
 		queue->m_bs[2] = -1;
 		queue->m_bs[3] = -1;
 		queue->m_v1 = 0;
-		queue->push2 = {};
-		queue->pop2 = {};
+		queue->push2.store({});
+		queue->pop2.store({});
 	}
 
 	queue->m_v2 = 0;
@@ -823,7 +823,7 @@ s32 _cellSyncLFQueueGetPushPointer(PPUThread& ppu, vm::ptr<CellSyncLFQueue> queu
 		{
 			CHECK_EMU_STATUS;
 
-			const auto old = queue->push1.load_sync();
+			const auto old = queue->push1.load(); _mm_lfence();
 			auto push = old;
 
 			if (var1)
@@ -921,7 +921,7 @@ s32 _cellSyncLFQueueCompletePushPointer(PPUThread& ppu, vm::ptr<CellSyncLFQueue>
 
 	while (true)
 	{
-		const auto old = queue->push2.load_sync();
+		const auto old = queue->push2.load(); _mm_lfence();
 		auto push2 = old;
 
 		const auto old2 = queue->push3.load();
@@ -1129,7 +1129,7 @@ s32 _cellSyncLFQueueGetPopPointer(PPUThread& ppu, vm::ptr<CellSyncLFQueue> queue
 		{
 			CHECK_EMU_STATUS;
 
-			const auto old = queue->pop1.load_sync();
+			const auto old = queue->pop1.load(); _mm_lfence();
 			auto pop = old;
 
 			if (var1)
@@ -1228,7 +1228,7 @@ s32 _cellSyncLFQueueCompletePopPointer(PPUThread& ppu, vm::ptr<CellSyncLFQueue> 
 
 	while (true)
 	{
-		const auto old = queue->pop2.load_sync();
+		const auto old = queue->pop2.load(); _mm_lfence();
 		auto pop2 = old;
 
 		const auto old2 = queue->pop3.load();
@@ -1432,7 +1432,7 @@ s32 cellSyncLFQueueClear(vm::ptr<CellSyncLFQueue> queue)
 
 	while (true)
 	{
-		const auto old = queue->pop1.load_sync();
+		const auto old = queue->pop1.load(); _mm_lfence();
 		auto pop = old;
 
 		const auto push = queue->push1.load();
@@ -1483,7 +1483,7 @@ s32 cellSyncLFQueueSize(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u32> size)
 
 	while (true)
 	{
-		const auto old = queue->pop3.load_sync();
+		const auto old = queue->pop3.load(); _mm_lfence();
 
 		u32 var1 = (u16)queue->pop1.load().m_h1;
 		u32 var2 = (u16)queue->push1.load().m_h5;

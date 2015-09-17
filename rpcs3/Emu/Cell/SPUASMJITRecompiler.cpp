@@ -272,7 +272,7 @@ void spu_recompiler::InterpreterCall(spu_opcode_t op)
 
 			const u32 old_pc = _spu->pc;
 
-			if (_spu->m_state.load() && _spu->check_status())
+			if (_spu->m_state && _spu->check_status())
 			{
 				return 0x2000000 | _spu->pc;
 			}
@@ -343,12 +343,12 @@ void spu_recompiler::FunctionCall()
 				LOG_ERROR(SPU, "Branch-to-self");
 			}
 
-			while (!_spu->m_state.load() || !_spu->check_status())
+			while (!_spu->m_state || !_spu->check_status())
 			{
 				// Call override function directly since the type is known
 				static_cast<SPURecompilerDecoder&>(*_spu->m_dec).DecodeMemory(_spu->offset + _spu->pc);
 
-				if (_spu->m_state.load() & CPU_STATE_RETURN)
+				if (_spu->m_state & CPU_STATE_RETURN)
 				{
 					break;
 				}

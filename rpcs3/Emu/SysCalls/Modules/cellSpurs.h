@@ -444,7 +444,7 @@ struct alignas(128) CellSpurs
 		be_t<u32> x08;                // 0x08
 		be_t<u32> x0C;                // 0x0C
 		be_t<u64> eventPort;          // 0x10
-		atomic_be_t<vm::ptr<EventHandlerListNode, u64>> handlerList; // 0x18
+		atomic_t<vm::bptr<EventHandlerListNode, u64>> handlerList; // 0x18
 		u8 x20[0x80 - 0x20];          // 0x20
 	};
 
@@ -455,7 +455,7 @@ struct alignas(128) CellSpurs
 		vm::bcptr<void, u64> addr;         // 0x00 Address of the executable
 		be_t<u64> arg;                     // 0x08 Argument
 		be_t<u32> size;                    // 0x10 Size of the executable
-		atomic_be_t<u8> uniqueId;          // 0x14 Unique id of the workload. It is the same for all workloads with the same addr.
+		atomic_t<u8> uniqueId;             // 0x14 Unique id of the workload. It is the same for all workloads with the same addr.
 		u8 pad[3];
 		u8 priority[8];                    // 0x18 Priority of the workload on each SPU
 	};
@@ -468,30 +468,30 @@ struct alignas(128) CellSpurs
 		vm::bcptr<char, u64> nameInstance;
 	};
 
-	atomic_be_t<u8> wklReadyCount1[0x10];               // 0x00 Number of SPUs requested by each workload (0..15 wids).
-	atomic_be_t<u8> wklIdleSpuCountOrReadyCount2[0x10]; // 0x10 SPURS1: Number of idle SPUs requested by each workload (0..15 wids). SPURS2: Number of SPUs requested by each workload (16..31 wids).
+	atomic_t<u8> wklReadyCount1[0x10];                  // 0x00 Number of SPUs requested by each workload (0..15 wids).
+	atomic_t<u8> wklIdleSpuCountOrReadyCount2[0x10];    // 0x10 SPURS1: Number of idle SPUs requested by each workload (0..15 wids). SPURS2: Number of SPUs requested by each workload (16..31 wids).
 	u8 wklCurrentContention[0x10];                      // 0x20 Number of SPUs used by each workload. SPURS1: index = wid. SPURS2: packed 4-bit data, index = wid % 16, internal index = wid / 16.
 	u8 wklPendingContention[0x10];                      // 0x30 Number of SPUs that are pending to context switch to the workload. SPURS1: index = wid. SPURS2: packed 4-bit data, index = wid % 16, internal index = wid / 16.
 	u8 wklMinContention[0x10];                          // 0x40 Min SPUs required for each workload. SPURS1: index = wid. SPURS2: Unused.
-	atomic_be_t<u8> wklMaxContention[0x10];             // 0x50 Max SPUs that may be allocated to each workload. SPURS1: index = wid. SPURS2: packed 4-bit data, index = wid % 16, internal index = wid / 16.
+	atomic_t<u8> wklMaxContention[0x10];                // 0x50 Max SPUs that may be allocated to each workload. SPURS1: index = wid. SPURS2: packed 4-bit data, index = wid % 16, internal index = wid / 16.
 	CellSpursWorkloadFlag wklFlag;                      // 0x60
 	atomic_be_t<u16> wklSignal1;                        // 0x70 Bitset for 0..15 wids
-	atomic_be_t<u8> sysSrvMessage;                      // 0x72
+	atomic_t<u8> sysSrvMessage;                         // 0x72
 	u8 spuIdling;                                       // 0x73
 	u8 flags1;                                          // 0x74 Type is SpursFlags1
 	u8 sysSrvTraceControl;                              // 0x75
 	u8 nSpus;                                           // 0x76
-	atomic_be_t<u8> wklFlagReceiver;                    // 0x77
+	atomic_t<u8> wklFlagReceiver;                       // 0x77
 	atomic_be_t<u16> wklSignal2;                        // 0x78 Bitset for 16..32 wids
 	u8 x7A[6];                                          // 0x7A
-	atomic_be_t<u8> wklState1[0x10];                    // 0x80 SPURS_WKL_STATE_*
+	atomic_t<u8> wklState1[0x10];                       // 0x80 SPURS_WKL_STATE_*
 	u8 wklStatus1[0x10];                                // 0x90
-	atomic_be_t<u8> wklEvent1[0x10];                    // 0xA0
+	atomic_t<u8> wklEvent1[0x10];                       // 0xA0
 	atomic_be_t<u32> wklEnabled;                        // 0xB0
 	atomic_be_t<u32> wklMskB;                           // 0xB4 - System service - Available module id
 	u32 xB8;                                            // 0xB8
 	u8 sysSrvExitBarrier;                               // 0xBC
-	atomic_be_t<u8> sysSrvMsgUpdateWorkload;            // 0xBD
+	atomic_t<u8> sysSrvMsgUpdateWorkload;               // 0xBD
 	u8 xBE;                                             // 0xBE
 	u8 sysSrvMsgTerminate;                              // 0xBF
 	u8 sysSrvPreemptWklId[8];                           // 0xC0 Id of the workload that was preempted by the system workload on each SPU
@@ -508,11 +508,11 @@ struct alignas(128) CellSpurs
 		u8 xCF;
 	};
 
-	atomic_be_t<SrvTraceSyncVar> sysSrvTrace;           // 0xCC
+	atomic_t<SrvTraceSyncVar> sysSrvTrace;              // 0xCC
 
-	atomic_be_t<u8> wklState2[0x10];                    // 0xD0 SPURS_WKL_STATE_*
+	atomic_t<u8> wklState2[0x10];                       // 0xD0 SPURS_WKL_STATE_*
 	u8 wklStatus2[0x10];                                // 0xE0
-	atomic_be_t<u8> wklEvent2[0x10];                    // 0xF0
+	atomic_t<u8> wklEvent2[0x10];                       // 0xF0
 	_sub_str1 wklF1[0x10];                              // 0x100
 	vm::bptr<CellSpursTraceInfo, u64> traceBuffer;      // 0x900
 	be_t<u32> traceStartIndex[6];                       // 0x908
@@ -534,9 +534,9 @@ struct alignas(128) CellSpurs
 	u8 unknown3[0xD5C - 0xD54];
 	be_t<u32> eventQueue;                               // 0xD5C
 	be_t<u32> eventPort;                                // 0xD60
-	atomic_be_t<u8> handlerDirty;                       // 0xD64
-	atomic_be_t<u8> handlerWaiting;                     // 0xD65
-	atomic_be_t<u8> handlerExiting;                     // 0xD66
+	atomic_t<u8> handlerDirty;                          // 0xD64
+	atomic_t<u8> handlerWaiting;                        // 0xD65
+	atomic_t<u8> handlerExiting;                        // 0xD66
 	atomic_be_t<u32> enableEH;                          // 0xD68
 	be_t<u32> exception;                                // 0xD6C
 	sys_spu_image spuImg;                               // 0xD70
@@ -562,7 +562,7 @@ struct alignas(128) CellSpurs
 	_sub_str4 wklH2[0x10];                              // 0x1A00
 	u8 unknown_[0x2000 - 0x1B00];
 
-	force_inline atomic_be_t<u8>& wklState(const u32 wid)
+	force_inline atomic_t<u8>& wklState(const u32 wid)
 	{
 		if (wid & 0x10)
 		{
@@ -622,7 +622,7 @@ struct alignas(128) CellSpursEventFlag
 
 	union
 	{
-		atomic_be_t<ControlSyncVar> ctrl; // 0x00
+		atomic_t<ControlSyncVar> ctrl;    // 0x00
 		atomic_be_t<u16> events;          // 0x00
 	};
 

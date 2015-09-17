@@ -544,7 +544,7 @@ s32 sys_spu_thread_group_join(u32 id, vm::ptr<u32> cause, vm::ptr<u32> status)
 		{
 			if (t)
 			{
-				if ((t->status.load() & SPU_STATUS_STOPPED_BY_STOP) == 0)
+				if ((t->status & SPU_STATUS_STOPPED_BY_STOP) == 0)
 				{
 					stopped = false;
 					break;
@@ -1263,7 +1263,7 @@ s32 sys_raw_spu_get_int_mask(u32 id, u32 class_id, vm::ptr<u64> mask)
 		return CELL_ESRCH;
 	}
 
-	*mask = thread->int_ctrl[class_id].mask.load();
+	*mask = thread->int_ctrl[class_id].mask;
 
 	return CELL_OK;
 }
@@ -1305,7 +1305,7 @@ s32 sys_raw_spu_get_int_stat(u32 id, u32 class_id, vm::ptr<u64> stat)
 		return CELL_ESRCH;
 	}
 
-	*stat = thread->int_ctrl[class_id].stat.load();
+	*stat = thread->int_ctrl[class_id].stat;
 
 	return CELL_OK;
 }

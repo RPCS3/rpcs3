@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
+#include "Emu/IdManager.h"
 #include "Emu/SysCalls/Modules.h"
 #include "Emu/SysCalls/Callback.h"
 
@@ -9,18 +10,12 @@
 
 extern Module<> cellSysutil;
 
-extern u64 get_system_time();
-
-std::unique_ptr<MsgDialogInstance> g_msg_dialog;
-
-MsgDialogInstance::MsgDialogInstance()
+void MsgDialogBase::Close(s32 status)
 {
-}
-
-void MsgDialogInstance::Close()
-{
-	state = msgDialogClose;
-	wait_until = get_system_time();
+	if (state.compare_and_swap_test(MsgDialogState::Open, MsgDialogState::Close))
+	{
+		on_close(status);
+	}
 }
 
 s32 cellMsgDialogOpen()
@@ -86,19 +81,20 @@ s32 cellMsgDialogOpen2(u32 type, vm::cptr<char> msgString, vm::ptr<CellMsgDialog
 	default: return CELL_MSGDIALOG_ERROR_PARAM;
 	}
 
-	MsgDialogState old = msgDialogNone;
-	if (!g_msg_dialog->state.compare_exchange_strong(old, msgDialogInit))
+	const auto dlg = fxm::import<MsgDialogBase>(Emu.GetCallbacks().get_msg_dialog());
+
+	if (!dlg)
 	{
 		return CELL_SYSUTIL_ERROR_BUSY;
 	}
 
-	g_msg_dialog->wait_until = get_system_time() + 31536000000000ull; // some big value
+	dlg->type = type;
 
 	switch (type & CELL_MSGDIALOG_TYPE_PROGRESSBAR)
 	{
-	case CELL_MSGDIALOG_TYPE_PROGRESSBAR_DOUBLE: g_msg_dialog->progress_bar_count = 2; break;
-	case CELL_MSGDIALOG_TYPE_PROGRESSBAR_SINGLE: g_msg_dialog->progress_bar_count = 1; break;
-	default: g_msg_dialog->progress_bar_count = 0; break;
+	case CELL_MSGDIALOG_TYPE_PROGRESSBAR_DOUBLE: dlg->progress_bar_count = 2; break;
+	case CELL_MSGDIALOG_TYPE_PROGRESSBAR_SINGLE: dlg->progress_bar_count = 1; break;
+	default: dlg->progress_bar_count = 0; break;
 	}
 
 	switch (type & CELL_MSGDIALOG_TYPE_SE_MUTE) // TODO
@@ -107,75 +103,34 @@ s32 cellMsgDialogOpen2(u32 type, vm::cptr<char> msgString, vm::ptr<CellMsgDialog
 	case CELL_MSGDIALOG_TYPE_SE_MUTE_ON: break;
 	}
 
-	std::string msg = msgString.get_ptr();
-
 	switch (type & CELL_MSGDIALOG_TYPE_SE_TYPE)
 	{
-	case CELL_MSGDIALOG_TYPE_SE_TYPE_NORMAL: cellSysutil.Warning("%s", msg); break;
-	case CELL_MSGDIALOG_TYPE_SE_TYPE_ERROR: cellSysutil.Error("%s", msg); break;
+	case CELL_MSGDIALOG_TYPE_SE_TYPE_NORMAL: cellSysutil.Warning(msgString.get_ptr()); break;
+	case CELL_MSGDIALOG_TYPE_SE_TYPE_ERROR: cellSysutil.Error(msgString.get_ptr()); break;
 	}
 
-	g_msg_dialog->status = CELL_MSGDIALOG_BUTTON_NONE;
+	dlg->callback = callback;
+	dlg->user_data = userData;
+	dlg->extra_param = extParam;
 
-	CallAfter([type, msg]()
+	dlg->on_close = [](s32 status)
 	{
-		if (Emu.IsStopped())
+		const auto dlg = fxm::get<MsgDialogBase>();
+
+		if (dlg->callback)
 		{
-			g_msg_dialog->state.exchange(msgDialogNone);
-
-			return;
-		}
-
-		g_msg_dialog->Create(type, msg);
-
-		g_msg_dialog->state.exchange(msgDialogOpen);
-	});
-
-	while (g_msg_dialog->state == msgDialogInit)
-	{
-		if (Emu.IsStopped())
-		{
-			if (g_msg_dialog->state != msgDialogNone)
+			Emu.GetCallbackManager().Register([func = dlg->callback, status, arg = dlg->user_data](CPUThread& cpu)->s32
 			{
-				break;
-			}
-
-			CHECK_EMU_STATUS;
-		}
-
-		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
-	}
-
-	named_thread_t(WRAP_EXPR("MsgDialog Thread"), [=]()
-	{
-		while (g_msg_dialog->state == msgDialogOpen || (s64)(get_system_time() - g_msg_dialog->wait_until) < 0)
-		{
-			if (Emu.IsStopped())
-			{
-				g_msg_dialog->state = msgDialogAbort;
-				break;
-			}
-			std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
-		}
-
-		if (callback && g_msg_dialog->state != msgDialogAbort)
-		{
-			const s32 status = g_msg_dialog->status;
-
-			Emu.GetCallbackManager().Register([=](CPUThread& cpu) -> s32
-			{
-				callback(static_cast<PPUThread&>(cpu), status, userData);
+				func(static_cast<PPUThread&>(cpu), status, arg);
 				return CELL_OK;
 			});
 		}
 
-		CallAfter([]()
-		{
-			g_msg_dialog->Destroy();
-			g_msg_dialog->state = msgDialogNone;
-		});
+		fxm::remove<MsgDialogBase>();
+	};
 
-	}).detach();
+	// call initialization asynchronously from the GUI thread, wait for the "result"
+	Emu.CallAfter(WRAP_EXPR(dlg->Create(type, msgString.get_ptr()))).get();
 
 	return CELL_OK;
 }
@@ -266,25 +221,35 @@ s32 cellMsgDialogOpenSimulViewWarning()
 	throw EXCEPTION("");
 }
 
-s32 cellMsgDialogClose(float delay)
+s32 cellMsgDialogClose(f32 delay)
 {
 	cellSysutil.Warning("cellMsgDialogClose(delay=%f)", delay);
 
-	MsgDialogState old = msgDialogOpen;
+	const auto dlg = fxm::get<MsgDialogBase>();
 
-	if (!g_msg_dialog->state.compare_exchange_strong(old, msgDialogClose))
+	if (!dlg)
 	{
-		if (old == msgDialogNone)
-		{
-			return CELL_MSGDIALOG_ERROR_DIALOG_NOT_OPENED;
-		}
-		else
-		{
-			return CELL_SYSUTIL_ERROR_BUSY;
-		}
+		return CELL_MSGDIALOG_ERROR_DIALOG_NOT_OPENED;
 	}
 
-	g_msg_dialog->wait_until = get_system_time() + static_cast<u64>(std::max<float>(delay, 0.0f) * 1000);
+	extern u64 get_system_time();
+
+	const u64 wait_until = get_system_time() + static_cast<u64>(std::max<float>(delay, 0.0f) * 1000);
+
+	named_thread_t(WRAP_EXPR("MsgDialog Thread"), [=]()
+	{
+		while (dlg->state == MsgDialogState::Open && get_system_time() < wait_until)
+		{
+			CHECK_EMU_STATUS;
+
+			std::this_thread::sleep_for(1ms);
+		}
+
+		Emu.CallAfter(COPY_EXPR(dlg->Destroy()));
+
+		dlg->Close(CELL_MSGDIALOG_BUTTON_NONE);
+
+	}).detach();
 
 	return CELL_OK;
 }
@@ -293,21 +258,25 @@ s32 cellMsgDialogAbort()
 {
 	cellSysutil.Warning("cellMsgDialogAbort()");
 
-	MsgDialogState old = msgDialogOpen;
+	const auto dlg = fxm::get<MsgDialogBase>();
 
-	if (!g_msg_dialog->state.compare_exchange_strong(old, msgDialogAbort))
+	if (!dlg)
 	{
-		if (old == msgDialogNone)
-		{
-			return CELL_MSGDIALOG_ERROR_DIALOG_NOT_OPENED;
-		}
-		else
-		{
-			return CELL_SYSUTIL_ERROR_BUSY;
-		}
+		return CELL_MSGDIALOG_ERROR_DIALOG_NOT_OPENED;
 	}
 
-	g_msg_dialog->wait_until = get_system_time();
+	if (!dlg->state.compare_and_swap_test(MsgDialogState::Open, MsgDialogState::Abort))
+	{
+		return CELL_SYSUTIL_ERROR_BUSY;
+	}
+
+	if (!fxm::remove<MsgDialogBase>())
+	{
+		throw EXCEPTION("Failed to remove MsgDialog object");
+	}
+
+	// call finalization from the GUI thread
+	Emu.CallAfter(COPY_EXPR(dlg->Destroy()));
 
 	return CELL_OK;
 }
@@ -316,17 +285,22 @@ s32 cellMsgDialogProgressBarSetMsg(u32 progressBarIndex, vm::cptr<char> msgStrin
 {
 	cellSysutil.Warning("cellMsgDialogProgressBarSetMsg(progressBarIndex=%d, msgString=*0x%x)", progressBarIndex, msgString);
 
-	if (g_msg_dialog->state != msgDialogOpen)
+	const auto dlg = fxm::get<MsgDialogBase>();
+
+	if (!dlg)
 	{
 		return CELL_MSGDIALOG_ERROR_DIALOG_NOT_OPENED;
 	}
 
-	if (progressBarIndex >= g_msg_dialog->progress_bar_count)
+	if (progressBarIndex >= dlg->progress_bar_count)
 	{
 		return CELL_MSGDIALOG_ERROR_PARAM;
 	}
 
-	g_msg_dialog->ProgressBarSetMsg(progressBarIndex, msgString.get_ptr());
+	Emu.CallAfter([=, msg = std::string{ msgString.get_ptr() }]
+	{
+		dlg->ProgressBarSetMsg(progressBarIndex, msg);
+	});
 
 	return CELL_OK;
 }
@@ -335,17 +309,19 @@ s32 cellMsgDialogProgressBarReset(u32 progressBarIndex)
 {
 	cellSysutil.Warning("cellMsgDialogProgressBarReset(progressBarIndex=%d)", progressBarIndex);
 
-	if (g_msg_dialog->state != msgDialogOpen)
+	const auto dlg = fxm::get<MsgDialogBase>();
+
+	if (!dlg)
 	{
 		return CELL_MSGDIALOG_ERROR_DIALOG_NOT_OPENED;
 	}
 
-	if (progressBarIndex >= g_msg_dialog->progress_bar_count)
+	if (progressBarIndex >= dlg->progress_bar_count)
 	{
 		return CELL_MSGDIALOG_ERROR_PARAM;
 	}
 
-	g_msg_dialog->ProgressBarReset(progressBarIndex);
+	Emu.CallAfter(COPY_EXPR(dlg->ProgressBarReset(progressBarIndex)));
 
 	return CELL_OK;
 }
@@ -354,25 +330,25 @@ s32 cellMsgDialogProgressBarInc(u32 progressBarIndex, u32 delta)
 {
 	cellSysutil.Warning("cellMsgDialogProgressBarInc(progressBarIndex=%d, delta=%d)", progressBarIndex, delta);
 
-	if (g_msg_dialog->state != msgDialogOpen)
+	const auto dlg = fxm::get<MsgDialogBase>();
+
+	if (!dlg)
 	{
 		return CELL_MSGDIALOG_ERROR_DIALOG_NOT_OPENED;
 	}
 
-	if (progressBarIndex >= g_msg_dialog->progress_bar_count)
+	if (progressBarIndex >= dlg->progress_bar_count)
 	{
 		return CELL_MSGDIALOG_ERROR_PARAM;
 	}
 
-	g_msg_dialog->ProgressBarInc(progressBarIndex, delta);
+	Emu.CallAfter(COPY_EXPR(dlg->ProgressBarInc(progressBarIndex, delta)));
 
 	return CELL_OK;
 }
 
 void cellSysutil_MsgDialog_init()
 {
-	g_msg_dialog->state = msgDialogNone;
-
 	REG_FUNC(cellSysutil, cellMsgDialogOpen);
 	REG_FUNC(cellSysutil, cellMsgDialogOpen2);
 	REG_FUNC(cellSysutil, cellMsgDialogOpenErrorCode);

@@ -4,20 +4,18 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
-#include "Emu/DbgCommand.h"
 
 #include "CPUDecoder.h"
 #include "CPUThread.h"
 
 CPUThread::CPUThread(CPUThreadType type, const std::string& name, std::function<std::string()> thread_name)
-	: m_state({ CPU_STATE_STOPPED })
-	, m_id(idm::get_last_id())
+	: m_id(idm::get_last_id())
 	, m_type(type)
 	, m_name(name)
 {
 	start(std::move(thread_name), [this]
 	{
-		SendDbgCommand(DID_CREATE_THREAD, this);
+		Emu.SendDbgCommand(DID_CREATE_THREAD, this);
 
 		std::unique_lock<std::mutex> lock(mutex);
 
@@ -71,12 +69,12 @@ CPUThread::CPUThread(CPUThreadType type, const std::string& name, std::function<
 
 CPUThread::~CPUThread()
 {
-	SendDbgCommand(DID_REMOVE_THREAD, this);
+	Emu.SendDbgCommand(DID_REMOVE_THREAD, this);
 }
 
 bool CPUThread::is_paused() const
 {
-	return (m_state.load() & CPU_STATE_PAUSED) != 0 || Emu.IsPaused();
+	return (m_state & CPU_STATE_PAUSED) != 0 || Emu.IsPaused();
 }
 
 void CPUThread::dump_info() const
@@ -89,27 +87,27 @@ void CPUThread::dump_info() const
 
 void CPUThread::run()
 {
-	SendDbgCommand(DID_START_THREAD, this);
+	Emu.SendDbgCommand(DID_START_THREAD, this);
 
 	init_stack();
 	init_regs();
 	do_run();
 
-	SendDbgCommand(DID_STARTED_THREAD, this);
+	Emu.SendDbgCommand(DID_STARTED_THREAD, this);
 }
 
 void CPUThread::pause()
 {
-	SendDbgCommand(DID_PAUSE_THREAD, this);
+	Emu.SendDbgCommand(DID_PAUSE_THREAD, this);
 
 	m_state |= CPU_STATE_PAUSED;
 
-	SendDbgCommand(DID_PAUSED_THREAD, this);
+	Emu.SendDbgCommand(DID_PAUSED_THREAD, this);
 }
 
 void CPUThread::resume()
 {
-	SendDbgCommand(DID_RESUME_THREAD, this);
+	Emu.SendDbgCommand(DID_RESUME_THREAD, this);
 
 	{
 		// lock for reliable notification
@@ -120,12 +118,12 @@ void CPUThread::resume()
 		cv.notify_one();
 	}
 
-	SendDbgCommand(DID_RESUMED_THREAD, this);
+	Emu.SendDbgCommand(DID_RESUMED_THREAD, this);
 }
 
 void CPUThread::stop()
 {
-	SendDbgCommand(DID_STOP_THREAD, this);
+	Emu.SendDbgCommand(DID_STOP_THREAD, this);
 
 	if (is_current())
 	{
@@ -141,12 +139,12 @@ void CPUThread::stop()
 		cv.notify_one();
 	}
 
-	SendDbgCommand(DID_STOPED_THREAD, this);
+	Emu.SendDbgCommand(DID_STOPED_THREAD, this);
 }
 
 void CPUThread::exec()
 {
-	SendDbgCommand(DID_EXEC_THREAD, this);
+	Emu.SendDbgCommand(DID_EXEC_THREAD, this);
 
 	{
 		// lock for reliable notification
@@ -258,7 +256,7 @@ bool CPUThread::check_status()
 	{
 		CHECK_EMU_STATUS; // check at least once
 
-		if (!is_paused() && (m_state.load() & CPU_STATE_INTR) == 0)
+		if (!is_paused() && (m_state & CPU_STATE_INTR) == 0)
 		{
 			break;
 		}
@@ -269,7 +267,7 @@ bool CPUThread::check_status()
 			continue;
 		}
 
-		if (!is_paused() && (m_state.load() & CPU_STATE_INTR) != 0 && handle_interrupt())
+		if (!is_paused() && (m_state & CPU_STATE_INTR) != 0 && handle_interrupt())
 		{
 			continue;
 		}
@@ -277,12 +275,12 @@ bool CPUThread::check_status()
 		cv.wait(lock);
 	}
 
-	if (m_state.load() & CPU_STATE_RETURN || is_stopped())
+	if (m_state & CPU_STATE_RETURN || is_stopped())
 	{
 		return true;
 	}
 
-	if (m_state.load() & CPU_STATE_STEP)
+	if (m_state & CPU_STATE_STEP)
 	{
 		// set PAUSE, but allow to execute once
 		m_state |= CPU_STATE_PAUSED;
