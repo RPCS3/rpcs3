@@ -67,46 +67,6 @@ void streamBuffer(void* dst, void* src, size_t sizeInBytes)
 	memcpy((char*)dst + offset, (char*)src + offset, sizeInBytes - offset);
 }
 
-inline
-D3D12_RESOURCE_DESC getBufferResourceDesc(size_t sizeInByte)
-{
-	D3D12_RESOURCE_DESC BufferDesc = {};
-	BufferDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-	BufferDesc.Width = (UINT)sizeInByte;
-	BufferDesc.Height = 1;
-	BufferDesc.DepthOrArraySize = 1;
-	BufferDesc.SampleDesc.Count = 1;
-	BufferDesc.MipLevels = 1;
-	BufferDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-	return BufferDesc;
-}
-
-inline
-D3D12_RESOURCE_DESC getTexture2DResourceDesc(size_t width, size_t height, DXGI_FORMAT dxgiFormat, size_t mipmapLevels)
-{
-	D3D12_RESOURCE_DESC result;
-	result = {};
-	result.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-	result.Width = (UINT)width;
-	result.Height = (UINT)height;
-	result.Format = dxgiFormat;
-	result.DepthOrArraySize = 1;
-	result.SampleDesc.Count = 1;
-	result.MipLevels = (UINT16)mipmapLevels;
-	return result;
-}
-
-inline
-D3D12_RESOURCE_BARRIER getResourceBarrierTransition(ID3D12Resource *res, D3D12_RESOURCE_STATES stateBefore, D3D12_RESOURCE_STATES stateAfter)
-{
-	D3D12_RESOURCE_BARRIER barrier = {};
-	barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-	barrier.Transition.pResource = res;
-	barrier.Transition.StateBefore = stateBefore;
-	barrier.Transition.StateAfter = stateAfter;
-	return barrier;
-}
-
 /**
  * Convert GCM blend operator code to D3D12 one
  */
@@ -321,22 +281,6 @@ inline DXGI_FORMAT getTextureDXGIFormat(int format)
 	case CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8:
 		return DXGI_FORMAT_R8G8_B8G8_UNORM;
 	}
-}
-
-inline
-D3D12_CPU_DESCRIPTOR_HANDLE getCPUDescriptorHandle(ID3D12DescriptorHeap *descriptors, size_t offset)
-{
-	D3D12_CPU_DESCRIPTOR_HANDLE result = descriptors->GetCPUDescriptorHandleForHeapStart();
-	result.ptr += offset;
-	return result;
-}
-
-inline
-D3D12_GPU_DESCRIPTOR_HANDLE getGPUDescriptorHandle(ID3D12DescriptorHeap *descriptors, size_t offset)
-{
-	D3D12_GPU_DESCRIPTOR_HANDLE result = descriptors->GetGPUDescriptorHandleForHeapStart();
-	result.ptr += offset;
-	return result;
 }
 
 #endif

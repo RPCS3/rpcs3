@@ -4,6 +4,7 @@
 #include "Utilities/Log.h"
 
 #include "D3D12GSRender.h"
+#include "d3dx12.h"
 
 const int g_vertexCount = 32;
 
@@ -221,7 +222,7 @@ ComPtr<ID3D12Resource> createVertexBuffer(const VertexBufferFormat &vbf, const R
 	ThrowIfFailed(device->CreatePlacedResource(
 		vertexIndexHeap.m_heap,
 		heapOffset,
-		&getBufferResourceDesc(subBufferSize),
+		&CD3DX12_RESOURCE_DESC::Buffer(subBufferSize),
 		D3D12_RESOURCE_STATE_GENERIC_READ,
 		nullptr,
 		IID_PPV_ARGS(vertexBuffer.GetAddressOf())
@@ -432,7 +433,7 @@ D3D12_INDEX_BUFFER_VIEW D3D12GSRender::uploadIndexBuffers(bool indexed_draw)
 	ThrowIfFailed(m_device->CreatePlacedResource(
 		m_vertexIndexData.m_heap,
 		heapOffset,
-		&getBufferResourceDesc(subBufferSize),
+		&CD3DX12_RESOURCE_DESC::Buffer(subBufferSize),
 		D3D12_RESOURCE_STATE_GENERIC_READ,
 		nullptr,
 		IID_PPV_ARGS(indexBuffer.GetAddressOf())

@@ -13,6 +13,7 @@
 #include "D3D12RenderTargetSets.h"
 #include "D3D12PipelineState.h"
 #include "D3D12Buffer.h"
+#include "d3dx12.h"
 
 // Some constants are the same between RSX and GL
 #include <GL\GL.h>
@@ -94,7 +95,7 @@ struct InitHeap<ID3D12Resource>
 		heapProperties.Type = type;
 		ThrowIfFailed(device->CreateCommittedResource(&heapProperties,
 			flags,
-			&getBufferResourceDesc(heapSize),
+			&CD3DX12_RESOURCE_DESC::Buffer(heapSize),
 			D3D12_RESOURCE_STATE_GENERIC_READ,
 			nullptr,
 			IID_PPV_ARGS(&result))
@@ -344,10 +345,10 @@ private:
 
 	std::vector<D3D12_INPUT_ELEMENT_DESC> m_IASet;
 
-	size_t g_descriptorStrideSRVCBVUAV;
-	size_t g_descriptorStrideDSV;
-	size_t g_descriptorStrideRTV;
-	size_t g_descriptorStrideSamplers;
+	INT g_descriptorStrideSRVCBVUAV;
+	INT g_descriptorStrideDSV;
+	INT g_descriptorStrideRTV;
+	INT g_descriptorStrideSamplers;
 
 	// Used to fill unused texture slot
 	ID3D12Resource *m_dummyTexture;

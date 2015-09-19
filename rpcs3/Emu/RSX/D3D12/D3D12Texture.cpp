@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #if defined(DX12_SUPPORT)
 #include "D3D12GSRender.h"
+#include "d3dx12.h"
 // For clarity this code deals with texture but belongs to D3D12GSRender class
 
 
@@ -559,7 +560,7 @@ ID3D12Resource *uploadSingleTexture(
 	ThrowIfFailed(device->CreatePlacedResource(
 		textureBuffersHeap.m_heap,
 		heapOffset,
-		&getBufferResourceDesc(textureSize),
+		&CD3DX12_RESOURCE_DESC::Buffer(textureSize),
 		D3D12_RESOURCE_STATE_GENERIC_READ,
 		nullptr,
 		IID_PPV_ARGS(Texture.GetAddressOf())
@@ -611,14 +612,11 @@ ID3D12Resource *uploadSingleTexture(
 	}
 	Texture->Unmap(0, nullptr);
 
-	D3D12_RESOURCE_DESC texturedesc = getTexture2DResourceDesc(w, h, dxgiFormat, texture.GetMipmap());
+	D3D12_RESOURCE_DESC texturedesc = CD3DX12_RESOURCE_DESC::Tex2D(dxgiFormat, (UINT)w, (UINT)h, 1, texture.GetMipmap());
 	textureSize = device->GetResourceAllocationInfo(0, 1, &texturedesc).SizeInBytes;
 
-	D3D12_HEAP_PROPERTIES heapProp = {};
-	heapProp.Type = D3D12_HEAP_TYPE_DEFAULT;
-
 	ThrowIfFailed(device->CreateCommittedResource(
-		&heapProp,
+		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
 		D3D12_HEAP_FLAG_NONE,
 		&texturedesc,
 		D3D12_RESOURCE_STATE_COPY_DEST,
@@ -629,29 +627,12 @@ ID3D12Resource *uploadSingleTexture(
 	size_t miplevel = 0;
 	for (const MipmapLevelInfo mli : mipInfos)
 	{
-		D3D12_TEXTURE_COPY_LOCATION dst = {}, src = {};
-		dst.pResource = vramTexture;
-		dst.SubresourceIndex = (UINT)miplevel;
-		dst.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-		src.PlacedFootprint.Offset = mli.offset;
-		src.pResource = Texture.Get();
-		src.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
-		src.PlacedFootprint.Footprint.Depth = 1;
-		src.PlacedFootprint.Footprint.Width = (UINT)mli.width;
-		src.PlacedFootprint.Footprint.Height = (UINT)mli.height;
-		src.PlacedFootprint.Footprint.RowPitch = (UINT)mli.rowPitch;
-		src.PlacedFootprint.Footprint.Format = dxgiFormat;
-
-		commandList->CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
+		commandList->CopyTextureRegion(&CD3DX12_TEXTURE_COPY_LOCATION(vramTexture, (UINT)miplevel), 0, 0, 0,
+			&CD3DX12_TEXTURE_COPY_LOCATION(Texture.Get(), { mli.offset, { dxgiFormat, (UINT)mli.width, (UINT)mli.height, 1, (UINT)mli.rowPitch } }), nullptr);
 		miplevel++;
 	}
 
-	D3D12_RESOURCE_BARRIER barrier = {};
-	barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-	barrier.Transition.pResource = vramTexture;
-	barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
-	barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_GENERIC_READ;
-	commandList->ResourceBarrier(1, &barrier);
+	commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(vramTexture, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ));
 	return vramTexture;
 }
 
@@ -892,19 +873,17 @@ size_t D3D12GSRender::UploadTextures(ID3D12GraphicsCommandList *cmdlist)
 			break;
 		}
 
-		D3D12_CPU_DESCRIPTOR_HANDLE Handle = getCurrentResourceStorage().m_textureDescriptorsHeap->GetCPUDescriptorHandleForHeapStart();
-		Handle.ptr += (getCurrentResourceStorage().m_currentTextureIndex + usedTexture) * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-		m_device->CreateShaderResourceView(vramTexture, &srvDesc, Handle);
+		m_device->CreateShaderResourceView(vramTexture, &srvDesc,
+			CD3DX12_CPU_DESCRIPTOR_HANDLE(getCurrentResourceStorage().m_textureDescriptorsHeap->GetCPUDescriptorHandleForHeapStart()).Offset((UINT)getCurrentResourceStorage().m_currentTextureIndex + (UINT)usedTexture, g_descriptorStrideSRVCBVUAV));
 
 		if (getCurrentResourceStorage().m_currentSamplerIndex + 16 > 2048)
 		{
 			getCurrentResourceStorage().m_samplerDescriptorHeapIndex = 1;
 			getCurrentResourceStorage().m_currentSamplerIndex = 0;
 		}
-
-		Handle = getCurrentResourceStorage().m_samplerDescriptorHeap[getCurrentResourceStorage().m_samplerDescriptorHeapIndex]->GetCPUDescriptorHandleForHeapStart();
-		Handle.ptr += (getCurrentResourceStorage().m_currentSamplerIndex + usedTexture) * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
-		m_device->CreateSampler(&getSamplerDesc(m_textures[i]), Handle);
+		m_device->CreateSampler(&getSamplerDesc(m_textures[i]),
+			CD3DX12_CPU_DESCRIPTOR_HANDLE(getCurrentResourceStorage().m_samplerDescriptorHeap[getCurrentResourceStorage().m_samplerDescriptorHeapIndex]->GetCPUDescriptorHandleForHeapStart())
+			.Offset((UINT)getCurrentResourceStorage().m_currentSamplerIndex + (UINT)usedTexture, g_descriptorStrideSRVCBVUAV));
 
 		usedTexture++;
 	}

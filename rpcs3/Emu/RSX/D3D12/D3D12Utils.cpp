@@ -5,6 +5,7 @@
 #if defined(DX12_SUPPORT)
 #include "D3D12GSRender.h"
 #include <d3dcompiler.h>
+#include "d3dx12.h"
 #define STRINGIFY(x) #x
 
 extern PFN_D3D12_SERIALIZE_ROOT_SIGNATURE wrapD3D12SerializeRootSignature;
@@ -201,7 +202,7 @@ void D3D12GSRender::Shader::Init(ID3D12Device *device)
 		device->CreateCommittedResource(
 			&heapProp,
 			D3D12_HEAP_FLAG_NONE,
-			&getBufferResourceDesc(16 * sizeof(float)),
+			&CD3DX12_RESOURCE_DESC::Buffer(16 * sizeof(float)),
 			D3D12_RESOURCE_STATE_GENERIC_READ,
 			nullptr,
 			IID_PPV_ARGS(&m_vertexBuffer)
@@ -212,17 +213,13 @@ void D3D12GSRender::Shader::Init(ID3D12Device *device)
 	memcpy(tmp, quadVertex, 16 * sizeof(float));
 	m_vertexBuffer->Unmap(0, nullptr);
 
-	D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
-	heapDesc.NumDescriptors = 2;
-	heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-	heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-
+	D3D12_DESCRIPTOR_HEAP_DESC textureHeapDesc = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV , 2, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE };
 	ThrowIfFailed(
-		device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&m_textureDescriptorHeap))
+		device->CreateDescriptorHeap(&textureHeapDesc, IID_PPV_ARGS(&m_textureDescriptorHeap))
 		);
-	heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
+	D3D12_DESCRIPTOR_HEAP_DESC samplerHeapDesc = { D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER , 2, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE };
 	ThrowIfFailed(
-		device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&m_samplerDescriptorHeap))
+		device->CreateDescriptorHeap(&samplerHeapDesc, IID_PPV_ARGS(&m_samplerDescriptorHeap))
 		);
 }
 
