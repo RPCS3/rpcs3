@@ -126,13 +126,13 @@ D3D12_SAMPLER_DESC getSamplerDesc(const RSXTexture &texture)
  * using a temporary texture buffer.
  */
 static
-ID3D12Resource *uploadSingleTexture(
+ComPtr<ID3D12Resource> uploadSingleTexture(
 	const RSXTexture &texture,
 	ID3D12Device *device,
 	ID3D12GraphicsCommandList *commandList,
 	DataHeap<ID3D12Resource, 65536> &textureBuffersHeap)
 {
-	ID3D12Resource *vramTexture;
+	ComPtr<ID3D12Resource> vramTexture;
 	size_t w = texture.GetWidth(), h = texture.GetHeight();
 
 	int format = texture.GetFormat() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
@@ -157,18 +157,18 @@ ID3D12Resource *uploadSingleTexture(
 		&texturedesc,
 		D3D12_RESOURCE_STATE_COPY_DEST,
 		nullptr,
-		IID_PPV_ARGS(&vramTexture)
+		IID_PPV_ARGS(vramTexture.GetAddressOf())
 		));
 
 	size_t miplevel = 0;
 	for (const MipmapLevelInfo mli : mipInfos)
 	{
-		commandList->CopyTextureRegion(&CD3DX12_TEXTURE_COPY_LOCATION(vramTexture, (UINT)miplevel), 0, 0, 0,
+		commandList->CopyTextureRegion(&CD3DX12_TEXTURE_COPY_LOCATION(vramTexture.Get(), (UINT)miplevel), 0, 0, 0,
 			&CD3DX12_TEXTURE_COPY_LOCATION(textureBuffersHeap.m_heap, { heapOffset + mli.offset, { dxgiFormat, (UINT)mli.width, (UINT)mli.height, 1, (UINT)mli.rowPitch } }), nullptr);
 		miplevel++;
 	}
 
-	commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(vramTexture, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ));
+	commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(vramTexture.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ));
 	return vramTexture;
 }
 
@@ -246,7 +246,6 @@ size_t getTextureSize(const RSXTexture &texture)
 
 size_t D3D12GSRender::UploadTextures(ID3D12GraphicsCommandList *cmdlist)
 {
-	std::lock_guard<std::mutex> lock(mut);
 	size_t usedTexture = 0;
 
 	for (u32 i = 0; i < m_textures_count; ++i)
@@ -263,26 +262,22 @@ size_t D3D12GSRender::UploadTextures(ID3D12GraphicsCommandList *cmdlist)
 
 		ID3D12Resource *vramTexture;
 		std::unordered_map<u32, ID3D12Resource* >::const_iterator ItRTT = m_rtts.m_renderTargets.find(texaddr);
-		std::unordered_map<u32, ID3D12Resource* >::const_iterator ItCache = m_texturesCache.find(texaddr);
+		ID3D12Resource *cachedTex = m_textureCache.findDataIfAvailable(texaddr);
 		bool isRenderTarget = false;
 		if (ItRTT != m_rtts.m_renderTargets.end())
 		{
 			vramTexture = ItRTT->second;
 			isRenderTarget = true;
 		}
-		else if (ItCache != m_texturesCache.end())
+		else if (cachedTex != nullptr)
 		{
-			vramTexture = ItCache->second;
+			vramTexture = cachedTex;
 		}
 		else
 		{
-			vramTexture = uploadSingleTexture(m_textures[i], m_device.Get(), cmdlist, m_textureUploadData);
-			m_texturesCache[texaddr] = vramTexture;
-
-			u32 s = (u32)align(getTextureSize(m_textures[i]), 4096);
-			LOG_WARNING(RSX, "PROTECTING %x of size %d", align(texaddr, 4096), s);
-			m_protectedTextures.push_back(std::make_tuple(texaddr, align(texaddr, 4096), s));
-			vm::page_protect(align(texaddr, 4096), s, 0, 0, vm::page_writable);
+			ComPtr<ID3D12Resource> tex = uploadSingleTexture(m_textures[i], m_device.Get(), cmdlist, m_textureUploadData);
+			vramTexture = tex.Get();
+			m_textureCache.storeAndProtectData(texaddr, texaddr, getTextureSize(m_textures[i]), tex);
 		}
 
 		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
