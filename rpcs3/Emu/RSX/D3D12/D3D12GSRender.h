@@ -34,9 +34,6 @@
  * draw call use the same buffer, but the first one doesn't use all the attribute ; then the second one will use
  * the cached version and not have updated attributes. Same for texture, if format/size does change, the caching
  * system is ignoring it.
- * - Fix vertex buffer in The Guided Paradox
- * The vertex info in the guided paradox are wrong, leading to missing character parts ingame (like leg or torso).
- * It's because some vertex position are incorrect.
  * - Improve sync between cell and RSX
  * A lot of optimisation can be gained from using Cell and RSX latency. Cell can't read RSX generated data without
  * synchronisation. We currently only cover semaphore sync, but there are more (like implicit sync at flip) that
