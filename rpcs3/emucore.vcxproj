@@ -542,6 +542,7 @@
     <ClInclude Include="Emu\RSX\D3D12\D3D12Texture.h" />
     <ClInclude Include="Emu\RSX\D3D12\D3D12VertexProgramDecompiler.h" />
     <ClInclude Include="Emu\RSX\D3D12\D3D12CommonDecompiler.h" />
+    <ClInclude Include="Emu\RSX\D3D12\d3dx12.h" />
     <ClInclude Include="Emu\RSX\GCM.h" />
     <ClInclude Include="Emu\RSX\GL\GLBuffers.h" />
     <ClInclude Include="Emu\RSX\GL\GLCommonDecompiler.h" />

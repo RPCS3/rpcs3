@@ -1879,5 +1879,8 @@
     <ClInclude Include="..\Utilities\Atomic.h">
       <Filter>Utilities</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\RSX\D3D12\d3dx12.h">
+      <Filter>Emu\GPU\RSX\D3D12</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
