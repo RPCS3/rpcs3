@@ -383,7 +383,11 @@ void D3D12GSRender::Clear(u32 cmd)
 	std::chrono::time_point<std::chrono::system_clock> startDuration = std::chrono::system_clock::now();
 	assert(cmd == NV4097_CLEAR_SURFACE);
 
+	std::chrono::time_point<std::chrono::system_clock> rttDurationStart = std::chrono::system_clock::now();
 	PrepareRenderTargets(getCurrentResourceStorage().m_commandList.Get());
+
+	std::chrono::time_point<std::chrono::system_clock> rttDurationEnd = std::chrono::system_clock::now();
+	m_timers.m_rttDuration += std::chrono::duration_cast<std::chrono::microseconds>(rttDurationEnd - rttDurationStart).count();
 
 /*	if (m_set_color_mask)
 	{
@@ -461,7 +465,14 @@ void D3D12GSRender::Clear(u32 cmd)
 void D3D12GSRender::Draw()
 {
 	std::chrono::time_point<std::chrono::system_clock> startDuration = std::chrono::system_clock::now();
+
+	std::chrono::time_point<std::chrono::system_clock> rttDurationStart = std::chrono::system_clock::now();
 	PrepareRenderTargets(getCurrentResourceStorage().m_commandList.Get());
+
+	std::chrono::time_point<std::chrono::system_clock> rttDurationEnd = std::chrono::system_clock::now();
+	m_timers.m_rttDuration += std::chrono::duration_cast<std::chrono::microseconds>(rttDurationEnd - rttDurationStart).count();
+
+	std::chrono::time_point<std::chrono::system_clock> vertexIndexDurationStart = std::chrono::system_clock::now();
 
 	// Init vertex count
 	// TODO: Very hackish, clean this
@@ -498,15 +509,23 @@ void D3D12GSRender::Draw()
 			getCurrentResourceStorage().m_commandList->IASetIndexBuffer(&indexBufferView);
 	}
 
+	std::chrono::time_point<std::chrono::system_clock> vertexIndexDurationEnd = std::chrono::system_clock::now();
+	m_timers.m_vertexIndexDuration += std::chrono::duration_cast<std::chrono::microseconds>(vertexIndexDurationEnd - vertexIndexDurationStart).count();
+
+	std::chrono::time_point<std::chrono::system_clock> programLoadStart = std::chrono::system_clock::now();
 	if (!LoadProgram())
 	{
 		LOG_ERROR(RSX, "LoadProgram failed.");
 		Emu.Pause();
 		return;
 	}
+	std::chrono::time_point<std::chrono::system_clock> programLoadEnd = std::chrono::system_clock::now();
+	m_timers.m_programLoadDuration += std::chrono::duration_cast<std::chrono::microseconds>(programLoadEnd - programLoadStart).count();
 
 	getCurrentResourceStorage().m_commandList->SetGraphicsRootSignature(m_rootSignatures[m_PSO->second].Get());
 	getCurrentResourceStorage().m_commandList->OMSetStencilRef(m_stencil_func_ref);
+
+	std::chrono::time_point<std::chrono::system_clock> constantsDurationStart = std::chrono::system_clock::now();
 
 	// Constants
 	setScaleOffset();
@@ -528,8 +547,13 @@ void D3D12GSRender::Draw()
 		CD3DX12_GPU_DESCRIPTOR_HANDLE(getCurrentResourceStorage().m_constantsBufferDescriptorsHeap->GetGPUDescriptorHandleForHeapStart())
 		.Offset((INT)currentBufferIndex, g_descriptorStrideSRVCBVUAV)
 		);
+
+	std::chrono::time_point<std::chrono::system_clock> constantsDurationEnd = std::chrono::system_clock::now();
+	m_timers.m_constantsDuration += std::chrono::duration_cast<std::chrono::microseconds>(constantsDurationEnd - constantsDurationStart).count();
+
 	getCurrentResourceStorage().m_commandList->SetPipelineState(m_PSO->first);
 
+	std::chrono::time_point<std::chrono::system_clock> textureDurationStart = std::chrono::system_clock::now();
 	if (m_PSO->second > 0)
 	{
 		size_t usedTexture = UploadTextures(getCurrentResourceStorage().m_commandList.Get());
@@ -577,6 +601,8 @@ void D3D12GSRender::Draw()
 		getCurrentResourceStorage().m_currentTextureIndex += usedTexture;
 		getCurrentResourceStorage().m_currentSamplerIndex += usedTexture;
 	}
+	std::chrono::time_point<std::chrono::system_clock> textureDurationEnd = std::chrono::system_clock::now();
+	m_timers.m_textureDuration += std::chrono::duration_cast<std::chrono::microseconds>(textureDurationEnd - textureDurationStart).count();
 
 	size_t numRTT;
 	switch (m_surface_color_target)
@@ -880,6 +906,12 @@ void D3D12GSRender::ResetTimer()
 {
 	m_timers.m_drawCallCount = 0;
 	m_timers.m_drawCallDuration = 0;
+	m_timers.m_rttDuration = 0;
+	m_timers.m_vertexIndexDuration = 0;
+	m_timers.m_bufferUploadSize = 0;
+	m_timers.m_programLoadDuration = 0;
+	m_timers.m_constantsDuration = 0;
+	m_timers.m_textureDuration = 0;
 }
 
 D3D12GSRender::ResourceStorage& D3D12GSRender::getCurrentResourceStorage()

@@ -240,6 +240,12 @@ private:
 	{
 		size_t m_drawCallDuration;
 		size_t m_drawCallCount;
+		size_t m_rttDuration;
+		size_t m_vertexIndexDuration;
+		size_t m_bufferUploadSize;
+		size_t m_programLoadDuration;
+		size_t m_constantsDuration;
+		size_t m_textureDuration;
 	} m_timers;
 
 	void ResetTimer();

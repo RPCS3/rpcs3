@@ -314,6 +314,7 @@ std::vector<D3D12_VERTEX_BUFFER_VIEW> D3D12GSRender::UploadVertexBuffers(bool in
 		else
 		{
 			ComPtr<ID3D12Resource> newVertexBuffer = createVertexBuffer(vbf, m_vertex_data, m_vertex_data_base_offset, m_device.Get(), m_vertexIndexData);
+			m_timers.m_bufferUploadSize += subBufferSize;
 			vertexBuffer = newVertexBuffer.Get();
 			m_vertexCache[key] = newVertexBuffer.Get();
 			getCurrentResourceStorage().m_singleFrameLifetimeResources.push_back(newVertexBuffer);
@@ -501,6 +502,8 @@ D3D12_INDEX_BUFFER_VIEW D3D12GSRender::uploadIndexBuffers(bool indexed_draw)
 	}
 	indexBuffer->Unmap(0, nullptr);
 	getCurrentResourceStorage().m_singleFrameLifetimeResources.push_back(indexBuffer);
+
+	m_timers.m_bufferUploadSize += subBufferSize;
 
 	indexBufferView.SizeInBytes = (UINT)subBufferSize;
 	indexBufferView.BufferLocation = indexBuffer->GetGPUVirtualAddress();
