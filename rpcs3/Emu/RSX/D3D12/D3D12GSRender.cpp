@@ -307,7 +307,15 @@ D3D12GSRender::D3D12GSRender()
 
 D3D12GSRender::~D3D12GSRender()
 {
-	getNonCurrentResourceStorage().WaitAndClean();
+	// wait until queue has completed
+	ComPtr<ID3D12Fence> fence;
+	ThrowIfFailed(m_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(fence.GetAddressOf())));
+	HANDLE handle = CreateEventEx(nullptr, FALSE, FALSE, EVENT_ALL_ACCESS);
+	fence->SetEventOnCompletion(1, handle);
+
+	m_commandQueueGraphic->Signal(fence.Get(), 1);
+	WaitForSingleObjectEx(handle, INFINITE, FALSE);
+	CloseHandle(handle);
 
 	{
 		std::lock_guard<std::mutex> lock(mut);
