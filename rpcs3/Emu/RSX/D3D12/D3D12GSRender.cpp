@@ -280,7 +280,7 @@ D3D12GSRender::D3D12GSRender()
 	m_perFrameStorage[1].Reset();
 
 	initConvertShader();
-	m_outputScalingPass.Init(m_device.Get());
+	m_outputScalingPass.Init(m_device.Get(), m_commandQueueGraphic.Get());
 
 	ThrowIfFailed(
 		m_device->CreateCommittedResource(

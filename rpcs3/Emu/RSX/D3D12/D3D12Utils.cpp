@@ -68,7 +68,7 @@ std::pair<ID3DBlob *, ID3DBlob *> compileF32toU8CS()
 }
 
 
-void D3D12GSRender::Shader::Init(ID3D12Device *device)
+void D3D12GSRender::Shader::Init(ID3D12Device *device, ID3D12CommandQueue *gfxcommandqueue)
 {
 	const char *fsCode = STRINGIFY(
 		Texture2D InputTexture : register(t0); \n
@@ -188,31 +188,6 @@ void D3D12GSRender::Shader::Init(ID3D12Device *device)
 
 	ThrowIfFailed(device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_PSO)));
 
-
-	float quadVertex[16] = {
-		-1., -1., 0., 1.,
-		-1., 1., 0., 0.,
-		1., -1., 1., 1.,
-		1., 1., 1., 0.,
-	};
-
-	D3D12_HEAP_PROPERTIES heapProp = {};
-	heapProp.Type = D3D12_HEAP_TYPE_UPLOAD;
-	ThrowIfFailed(
-		device->CreateCommittedResource(
-			&heapProp,
-			D3D12_HEAP_FLAG_NONE,
-			&CD3DX12_RESOURCE_DESC::Buffer(16 * sizeof(float)),
-			D3D12_RESOURCE_STATE_GENERIC_READ,
-			nullptr,
-			IID_PPV_ARGS(&m_vertexBuffer)
-			));
-
-	void *tmp;
-	m_vertexBuffer->Map(0, nullptr, &tmp);
-	memcpy(tmp, quadVertex, 16 * sizeof(float));
-	m_vertexBuffer->Unmap(0, nullptr);
-
 	D3D12_DESCRIPTOR_HEAP_DESC textureHeapDesc = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV , 2, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE };
 	ThrowIfFailed(
 		device->CreateDescriptorHeap(&textureHeapDesc, IID_PPV_ARGS(&m_textureDescriptorHeap))
@@ -221,6 +196,59 @@ void D3D12GSRender::Shader::Init(ID3D12Device *device)
 	ThrowIfFailed(
 		device->CreateDescriptorHeap(&samplerHeapDesc, IID_PPV_ARGS(&m_samplerDescriptorHeap))
 		);
+
+	ComPtr<ID3D12Fence> fence;
+	ThrowIfFailed(device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(fence.GetAddressOf())));
+	HANDLE handle = CreateEventEx(nullptr, FALSE, FALSE, EVENT_ALL_ACCESS);
+	fence->SetEventOnCompletion(1, handle);
+
+	float quadVertex[16] = {
+		-1., -1., 0., 1.,
+		-1., 1., 0., 0.,
+		1., -1., 1., 1.,
+		1., 1., 1., 0.,
+	};
+
+	ComPtr<ID3D12CommandAllocator> cmdlistAllocator;
+	ThrowIfFailed(
+		device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(cmdlistAllocator.GetAddressOf()))
+			);
+	ComPtr<ID3D12GraphicsCommandList> cmdList;
+	ThrowIfFailed(
+		device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, cmdlistAllocator.Get(),nullptr, IID_PPV_ARGS(cmdList.GetAddressOf()))
+			);
+	ComPtr<ID3D12Resource> intermediateBuffer;
+	ThrowIfFailed(device->CreateCommittedResource(
+		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+		D3D12_HEAP_FLAG_NONE,
+		&CD3DX12_RESOURCE_DESC::Buffer(16 * sizeof(float)),
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		IID_PPV_ARGS(intermediateBuffer.GetAddressOf())
+		));
+
+	ThrowIfFailed(
+		device->CreateCommittedResource(
+			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+			D3D12_HEAP_FLAG_NONE,
+			&CD3DX12_RESOURCE_DESC::Buffer(16 * sizeof(float)),
+			D3D12_RESOURCE_STATE_COPY_DEST,
+			nullptr,
+			IID_PPV_ARGS(&m_vertexBuffer)
+			));
+
+	D3D12_SUBRESOURCE_DATA vertexData = { reinterpret_cast<BYTE*>(quadVertex), 16 * sizeof(float), 1 };
+
+	UpdateSubresources(cmdList.Get(), m_vertexBuffer, intermediateBuffer.Get(), 0, 0, 1, &vertexData);
+	cmdList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_vertexBuffer, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER));
+	ThrowIfFailed(cmdList->Close());
+
+	gfxcommandqueue->ExecuteCommandLists(1, CommandListCast(cmdList.GetAddressOf()));
+
+	// Now wait until upload has completed
+	gfxcommandqueue->Signal(fence.Get(), 1);
+	WaitForSingleObjectEx(handle, INFINITE, FALSE);
+	CloseHandle(handle);
 }
 
 void D3D12GSRender::initConvertShader()

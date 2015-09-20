@@ -251,7 +251,7 @@ private:
 		ID3D12Resource *m_vertexBuffer;
 		ID3D12DescriptorHeap *m_textureDescriptorHeap;
 		ID3D12DescriptorHeap *m_samplerDescriptorHeap;
-		void Init(ID3D12Device *device);
+		void Init(ID3D12Device *device, ID3D12CommandQueue *gfxcommandqueue);
 		void Release();
 	};
 
