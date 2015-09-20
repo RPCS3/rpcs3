@@ -373,7 +373,6 @@ void D3D12GSRender::OnReset()
 void D3D12GSRender::Clear(u32 cmd)
 {
 	std::chrono::time_point<std::chrono::system_clock> startDuration = std::chrono::system_clock::now();
-	PrepareRenderTargets(getCurrentResourceStorage().m_commandList.Get());
 	assert(cmd == NV4097_CLEAR_SURFACE);
 
 	PrepareRenderTargets(getCurrentResourceStorage().m_commandList.Get());
@@ -950,15 +949,15 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 	// Except when a semaphore is written by RSX
 
 
-	ID3D12Fence *fence;
+	ComPtr<ID3D12Fence> fence;
 	ThrowIfFailed(
-		m_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence))
+		m_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(fence.GetAddressOf()))
 		);
 	HANDLE handle = CreateEvent(0, FALSE, FALSE, 0);
 	fence->SetEventOnCompletion(1, handle);
 
 	ComPtr<ID3D12Resource> writeDest, depthConverted;
-	ID3D12DescriptorHeap *descriptorHeap;
+	ComPtr<ID3D12DescriptorHeap> descriptorHeap;
 	size_t depthRowPitch = m_surface_clip_w;
 	depthRowPitch = (depthRowPitch + 255) & ~255;
 
@@ -981,7 +980,6 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 				IID_PPV_ARGS(depthConverted.GetAddressOf())
 				)
 			);
-		getCurrentResourceStorage().m_singleFrameLifetimeResources.push_back(depthConverted);
 
 		sizeInByte = depthRowPitch * m_surface_clip_h;
 		assert(m_readbackResources.canAlloc(sizeInByte));
@@ -997,11 +995,10 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 				IID_PPV_ARGS(writeDest.GetAddressOf())
 				)
 			);
-		getCurrentResourceStorage().m_singleFrameLifetimeResources.push_back(writeDest);
 
 		D3D12_DESCRIPTOR_HEAP_DESC descriptorHeapDesc = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV , 2, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE };
 		ThrowIfFailed(
-			m_device->CreateDescriptorHeap(&descriptorHeapDesc, IID_PPV_ARGS(&descriptorHeap))
+			m_device->CreateDescriptorHeap(&descriptorHeapDesc, IID_PPV_ARGS(descriptorHeap.GetAddressOf()))
 			);
 		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 		switch (m_surface_depth_format)
@@ -1034,7 +1031,7 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 
 		getCurrentResourceStorage().m_commandList->SetPipelineState(m_convertPSO);
 		getCurrentResourceStorage().m_commandList->SetComputeRootSignature(m_convertRootSignature);
-		getCurrentResourceStorage().m_commandList->SetDescriptorHeaps(1, &descriptorHeap);
+		getCurrentResourceStorage().m_commandList->SetDescriptorHeaps(1, descriptorHeap.GetAddressOf());
 		getCurrentResourceStorage().m_commandList->SetComputeRootDescriptorTable(0, descriptorHeap->GetGPUDescriptorHandleForHeapStart());
 		getCurrentResourceStorage().m_commandList->Dispatch(m_surface_clip_w / 8, m_surface_clip_h / 8, 1);
 
@@ -1045,10 +1042,6 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 		};
 		getCurrentResourceStorage().m_commandList->ResourceBarrier(2, barriers);
 		getCurrentResourceStorage().m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(depthConverted.Get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COPY_SOURCE));
-	}
-
-	if (m_set_context_dma_z && Ini.GSDumpDepthBuffer.GetValue())
-	{
 		getCurrentResourceStorage().m_commandList->CopyTextureRegion(&CD3DX12_TEXTURE_COPY_LOCATION(writeDest.Get(), { 0, { DXGI_FORMAT_R8_UNORM, m_surface_clip_w, m_surface_clip_h, 1, (UINT)depthRowPitch } }), 0, 0, 0,
 			&CD3DX12_TEXTURE_COPY_LOCATION(depthConverted.Get(), 0), nullptr);
 
@@ -1103,118 +1096,107 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 	}
 
 	//Wait for result
-	m_commandQueueGraphic->Signal(fence, 1);
+	m_commandQueueGraphic->Signal(fence.Get(), 1);
+	WaitForSingleObject(handle, INFINITE);
+	CloseHandle(handle);
 
-	auto tmp = [=]() {
-		WaitForSingleObject(handle, INFINITE);
-		CloseHandle(handle);
-		fence->Release();
+	if (m_set_context_dma_z && Ini.GSDumpDepthBuffer.GetValue())
+	{
+		u32 address = GetAddress(m_surface_offset_z, m_context_dma_z - 0xfeed0000);
+		auto ptr = vm::get_ptr<void>(address);
+		char *ptrAsChar = (char*)ptr;
+		unsigned char *writeDestPtr;
+		ThrowIfFailed(writeDest->Map(0, nullptr, (void**)&writeDestPtr));
 
-		if (m_set_context_dma_z && Ini.GSDumpDepthBuffer.GetValue())
+		for (unsigned row = 0; row < m_surface_clip_h; row++)
 		{
-			u32 address = GetAddress(m_surface_offset_z, m_context_dma_z - 0xfeed0000);
-			auto ptr = vm::get_ptr<void>(address);
-			char *ptrAsChar = (char*)ptr;
-			unsigned char *writeDestPtr;
-			ThrowIfFailed(writeDest->Map(0, nullptr, (void**)&writeDestPtr));
-			// TODO : this should be done by the gpu
-			for (unsigned row = 0; row < m_surface_clip_h; row++)
+			for (unsigned i = 0; i < m_surface_clip_w; i++)
 			{
-				for (unsigned i = 0; i < m_surface_clip_w; i++)
-				{
-					unsigned char c = writeDestPtr[row * depthRowPitch + i];
-					ptrAsChar[4 * (row * m_surface_clip_w + i)] = c;
-					ptrAsChar[4 * (row * m_surface_clip_w + i) + 1] = c;
-					ptrAsChar[4 * (row * m_surface_clip_w + i) + 2] = c;
-					ptrAsChar[4 * (row * m_surface_clip_w + i) + 3] = c;
-				}
-			}
-			descriptorHeap->Release();
-		}
-
-		size_t srcPitch, dstPitch;
-		switch (m_surface_color_format)
-		{
-		case CELL_GCM_SURFACE_A8R8G8B8:
-			srcPitch = align(m_surface_clip_w * 4, 256);
-			dstPitch = m_surface_clip_w * 4;
-			break;
-		case CELL_GCM_SURFACE_F_W16Z16Y16X16:
-			srcPitch = align(m_surface_clip_w * 8, 256);
-			dstPitch = m_surface_clip_w * 8;
-			break;
-		}
-
-		if (Ini.GSDumpColorBuffers.GetValue())
-		{
-			switch (m_surface_color_target)
-			{
-			case CELL_GCM_SURFACE_TARGET_NONE:
-				break;
-
-			case CELL_GCM_SURFACE_TARGET_0:
-			{
-				u32 address = GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000);
-				void *dstAddress = vm::get_ptr<void>(address);
-				copyToCellRamAndRelease(dstAddress, rtt0, srcPitch, dstPitch, m_surface_clip_w, m_surface_clip_h);
-			}
-			break;
-
-			case CELL_GCM_SURFACE_TARGET_1:
-			{
-				u32 address = GetAddress(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000);
-				void *dstAddress = vm::get_ptr<void>(address);
-				copyToCellRamAndRelease(dstAddress, rtt1, srcPitch, dstPitch, m_surface_clip_w, m_surface_clip_h);
-			}
-			break;
-
-			case CELL_GCM_SURFACE_TARGET_MRT1:
-			{
-				u32 address = GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000);
-				void *dstAddress = vm::get_ptr<void>(address);
-				copyToCellRamAndRelease(dstAddress, rtt0, srcPitch, dstPitch, m_surface_clip_w, m_surface_clip_h);
-				address = GetAddress(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000);
-				dstAddress = vm::get_ptr<void>(address);
-				copyToCellRamAndRelease(dstAddress, rtt1, srcPitch, dstPitch, m_surface_clip_w, m_surface_clip_h);
-			}
-			break;
-
-			case CELL_GCM_SURFACE_TARGET_MRT2:
-			{
-				u32 address = GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000);
-				void *dstAddress = vm::get_ptr<void>(address);
-				copyToCellRamAndRelease(dstAddress, rtt0, srcPitch, dstPitch, m_surface_clip_w, m_surface_clip_h);
-				address = GetAddress(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000);
-				dstAddress = vm::get_ptr<void>(address);
-				copyToCellRamAndRelease(dstAddress, rtt1, srcPitch, dstPitch, m_surface_clip_w, m_surface_clip_h);
-				address = GetAddress(m_surface_offset_c, m_context_dma_color_c - 0xfeed0000);
-				dstAddress = vm::get_ptr<void>(address);
-				copyToCellRamAndRelease(dstAddress, rtt2, srcPitch, dstPitch, m_surface_clip_w, m_surface_clip_h);
-			}
-			break;
-
-			case CELL_GCM_SURFACE_TARGET_MRT3:
-			{
-				u32 address = GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000);
-				void *dstAddress = vm::get_ptr<void>(address);
-				copyToCellRamAndRelease(dstAddress, rtt0, srcPitch, dstPitch, m_surface_clip_w, m_surface_clip_h);
-				address = GetAddress(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000);
-				dstAddress = vm::get_ptr<void>(address);
-				copyToCellRamAndRelease(dstAddress, rtt1, srcPitch, dstPitch, m_surface_clip_w, m_surface_clip_h);
-				address = GetAddress(m_surface_offset_c, m_context_dma_color_c - 0xfeed0000);
-				dstAddress = vm::get_ptr<void>(address);
-				copyToCellRamAndRelease(dstAddress, rtt2, srcPitch, dstPitch, m_surface_clip_w, m_surface_clip_h);
-				address = GetAddress(m_surface_offset_d, m_context_dma_color_d - 0xfeed0000);
-				dstAddress = vm::get_ptr<void>(address);
-				copyToCellRamAndRelease(dstAddress, rtt3, srcPitch, dstPitch, m_surface_clip_w, m_surface_clip_h);
-			}
-			break;
+				unsigned char c = writeDestPtr[row * depthRowPitch + i];
+				ptrAsChar[4 * (row * m_surface_clip_w + i)] = c;
+				ptrAsChar[4 * (row * m_surface_clip_w + i) + 1] = c;
+				ptrAsChar[4 * (row * m_surface_clip_w + i) + 2] = c;
+				ptrAsChar[4 * (row * m_surface_clip_w + i) + 3] = c;
 			}
 		}
+	}
 
-		vm::write32(m_label_addr + offset, value);
-	};
-	tmp();
+	size_t srcPitch, dstPitch;
+	switch (m_surface_color_format)
+	{
+	case CELL_GCM_SURFACE_A8R8G8B8:
+		srcPitch = align(m_surface_clip_w * 4, 256);
+		dstPitch = m_surface_clip_w * 4;
+		break;
+	case CELL_GCM_SURFACE_F_W16Z16Y16X16:
+		srcPitch = align(m_surface_clip_w * 8, 256);
+		dstPitch = m_surface_clip_w * 8;
+		break;
+	}
+
+	if (Ini.GSDumpColorBuffers.GetValue())
+	{
+		switch (m_surface_color_target)
+		{
+		case CELL_GCM_SURFACE_TARGET_NONE:
+			break;
+		case CELL_GCM_SURFACE_TARGET_0:
+		{
+			u32 address = GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000);
+			void *dstAddress = vm::get_ptr<void>(address);
+			copyToCellRamAndRelease(dstAddress, rtt0, srcPitch, dstPitch, m_surface_clip_w, m_surface_clip_h);
+		}
+		break;
+		case CELL_GCM_SURFACE_TARGET_1:
+		{
+			u32 address = GetAddress(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000);
+			void *dstAddress = vm::get_ptr<void>(address);
+			copyToCellRamAndRelease(dstAddress, rtt1, srcPitch, dstPitch, m_surface_clip_w, m_surface_clip_h);
+		}
+		break;
+		case CELL_GCM_SURFACE_TARGET_MRT1:
+		{
+			u32 address = GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000);
+			void *dstAddress = vm::get_ptr<void>(address);
+			copyToCellRamAndRelease(dstAddress, rtt0, srcPitch, dstPitch, m_surface_clip_w, m_surface_clip_h);
+			address = GetAddress(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000);
+			dstAddress = vm::get_ptr<void>(address);
+			copyToCellRamAndRelease(dstAddress, rtt1, srcPitch, dstPitch, m_surface_clip_w, m_surface_clip_h);
+		}
+		break;
+		case CELL_GCM_SURFACE_TARGET_MRT2:
+		{
+			u32 address = GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000);
+			void *dstAddress = vm::get_ptr<void>(address);
+			copyToCellRamAndRelease(dstAddress, rtt0, srcPitch, dstPitch, m_surface_clip_w, m_surface_clip_h);
+			address = GetAddress(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000);
+			dstAddress = vm::get_ptr<void>(address);
+			copyToCellRamAndRelease(dstAddress, rtt1, srcPitch, dstPitch, m_surface_clip_w, m_surface_clip_h);
+			address = GetAddress(m_surface_offset_c, m_context_dma_color_c - 0xfeed0000);
+			dstAddress = vm::get_ptr<void>(address);
+			copyToCellRamAndRelease(dstAddress, rtt2, srcPitch, dstPitch, m_surface_clip_w, m_surface_clip_h);
+		}
+		break;
+		case CELL_GCM_SURFACE_TARGET_MRT3:
+		{
+			u32 address = GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000);
+			void *dstAddress = vm::get_ptr<void>(address);
+			copyToCellRamAndRelease(dstAddress, rtt0, srcPitch, dstPitch, m_surface_clip_w, m_surface_clip_h);
+			address = GetAddress(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000);
+			dstAddress = vm::get_ptr<void>(address);
+			copyToCellRamAndRelease(dstAddress, rtt1, srcPitch, dstPitch, m_surface_clip_w, m_surface_clip_h);
+			address = GetAddress(m_surface_offset_c, m_context_dma_color_c - 0xfeed0000);
+			dstAddress = vm::get_ptr<void>(address);
+			copyToCellRamAndRelease(dstAddress, rtt2, srcPitch, dstPitch, m_surface_clip_w, m_surface_clip_h);
+			address = GetAddress(m_surface_offset_d, m_context_dma_color_d - 0xfeed0000);
+			dstAddress = vm::get_ptr<void>(address);
+			copyToCellRamAndRelease(dstAddress, rtt3, srcPitch, dstPitch, m_surface_clip_w, m_surface_clip_h);
+		}
+		break;
+		}
+	}
+
+	vm::write32(m_label_addr + offset, value);
 }
 
 void D3D12GSRender::semaphorePFIFOAcquire(u32 offset, u32 value)

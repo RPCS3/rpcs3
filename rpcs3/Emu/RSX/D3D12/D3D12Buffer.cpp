@@ -229,8 +229,6 @@ ComPtr<ID3D12Resource> createVertexBuffer(const VertexBufferFormat &vbf, const R
 		));
 	void *bufferMap;
 	ThrowIfFailed(vertexBuffer->Map(0, nullptr, (void**)&bufferMap));
-	memset(bufferMap, -1, subBufferSize);
-	#pragma omp parallel for
 	for (int vertex = 0; vertex < vbf.elementCount; vertex++)
 	{
 		for (size_t attributeId : vbf.attributeId)
@@ -243,7 +241,7 @@ ComPtr<ID3D12Resource> createVertexBuffer(const VertexBufferFormat &vbf, const R
 			size_t offset = (size_t)vertexData[attributeId].addr + baseOffset - vbf.range.first;
 			size_t tsize = vertexData[attributeId].GetTypeSize();
 			size_t size = vertexData[attributeId].size;
-			auto src = vm::get_ptr<const u8>(vertexData[attributeId].addr + baseOffset + (int)vbf.stride * vertex);
+			auto src = vm::get_ptr<const u8>(vertexData[attributeId].addr + (u32)baseOffset + (u32)vbf.stride * vertex);
 			char* dst = (char*)bufferMap + offset + vbf.stride * vertex;
 
 			switch (tsize)
