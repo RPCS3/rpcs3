@@ -5,7 +5,7 @@
 
 #include "cellGem.h"
 
-extern Module cellGem;
+extern Module<> cellGem;
 
 struct gem_t
 {
@@ -273,7 +273,7 @@ s32 cellGemWriteExternalPort()
 	return CELL_OK;
 }
 
-Module cellGem("cellGem", []()
+Module<> cellGem("cellGem", []()
 {
 	REG_FUNC(cellGem, cellGemCalibrate);
 	REG_FUNC(cellGem, cellGemClearStatusFlags);

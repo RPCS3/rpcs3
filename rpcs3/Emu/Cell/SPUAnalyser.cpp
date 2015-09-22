@@ -40,8 +40,6 @@ SPUDatabase::~SPUDatabase()
 
 std::shared_ptr<spu_function_t> SPUDatabase::analyse(const be_t<u32>* ls, u32 entry, u32 max_limit)
 {
-	std::lock_guard<std::mutex> lock(m_mutex);
-
 	// Check arguments (bounds and alignment)
 	if (max_limit > 0x40000 || entry >= max_limit || entry % 4 || max_limit % 4)
 	{
@@ -51,7 +49,19 @@ std::shared_ptr<spu_function_t> SPUDatabase::analyse(const be_t<u32>* ls, u32 en
 	// Key for multimap
 	const u64 key = entry | u64{ ls[entry / 4] } << 32;
 
-	// Try to find existing function in the database
+	{
+		std::shared_lock<shared_mutex_t> lock(m_mutex);
+
+		// Try to find existing function in the database
+		if (auto func = find(ls + entry / 4, key, max_limit - entry))
+		{
+			return func;
+		}
+	}
+
+	std::lock_guard<shared_mutex_t> lock(m_mutex);
+
+	// Double-check
 	if (auto func = find(ls + entry / 4, key, max_limit - entry))
 	{
 		return func;

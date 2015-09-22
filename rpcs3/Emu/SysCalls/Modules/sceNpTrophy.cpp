@@ -14,7 +14,7 @@
 #include "sceNp.h"
 #include "sceNpTrophy.h"
 
-extern Module sceNpTrophy;
+extern Module<> sceNpTrophy;
 
 struct trophy_context_t
 {
@@ -455,7 +455,7 @@ s32 sceNpTrophyGetTrophyIcon(u32 context, u32 handle, s32 trophyId, vm::ptr<void
 }
 
 
-Module sceNpTrophy("sceNpTrophy", []()
+Module<> sceNpTrophy("sceNpTrophy", []()
 {
 	REG_FUNC(sceNpTrophy, sceNpTrophyGetGameProgress);
 	REG_FUNC(sceNpTrophy, sceNpTrophyRegisterContext);

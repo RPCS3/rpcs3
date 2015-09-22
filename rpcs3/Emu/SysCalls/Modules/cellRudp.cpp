@@ -6,7 +6,7 @@
 
 #include "cellRudp.h"
 
-extern Module cellRudp;
+extern Module<> cellRudp;
 
 struct rudp_t
 {
@@ -239,7 +239,7 @@ s32 cellRudpProcessEvents()
 	return CELL_OK;
 }
 
-Module cellRudp("cellRudp", []()
+Module<> cellRudp("cellRudp", []()
 {
 	REG_FUNC(cellRudp, cellRudpInit);
 	REG_FUNC(cellRudp, cellRudpEnd);

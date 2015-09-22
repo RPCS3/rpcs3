@@ -22,7 +22,7 @@ public:
 	const u32 max_value;
 
 	semaphore_t(u32 max_value = 1, u32 value = 0)
-		: m_var({ value, 0 })
+		: m_var(sync_var_t{ value, 0 })
 		, max_value(max_value)
 	{
 	}

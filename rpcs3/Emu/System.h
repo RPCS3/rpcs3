@@ -1,6 +1,20 @@
 #pragma once
 
 #include "Loader/Loader.h"
+#include "DbgCommand.h"
+
+struct EmuCallbacks
+{
+	std::function<void(std::function<void()>)> call_after;
+	std::function<void()> process_events;
+	std::function<void(DbgCommand, class CPUThread*)> send_dbg_command;
+	std::function<std::unique_ptr<class KeyboardHandlerBase>()> get_kb_handler;
+	std::function<std::unique_ptr<class MouseHandlerBase>()> get_mouse_handler;
+	std::function<std::unique_ptr<class PadHandlerBase>()> get_pad_handler;
+	std::function<std::unique_ptr<class GSFrameBase>()> get_gs_frame;
+	std::function<std::unique_ptr<class MsgDialogBase>()> get_msg_dialog;
+	std::function<std::unique_ptr<class SaveDialogBase>()> get_save_dialog;
+};
 
 enum Status : u32
 {
@@ -44,8 +58,10 @@ public:
 	}
 };
 
-class Emulator
+class Emulator final
 {
+	EmuCallbacks m_cb;
+
 	enum Mode
 	{
 		DisAsm,
@@ -81,27 +97,59 @@ class Emulator
 	EmuInfo m_info;
 	loader::loader m_loader;
 
-public:
 	std::string m_path;
 	std::string m_elf_path;
 	std::string m_emu_path;
 	std::string m_title_id;
 	std::string m_title;
 
+public:
 	Emulator();
-	~Emulator();
+
+	void SetCallbacks(EmuCallbacks&& cb)
+	{
+		m_cb = std::move(cb);
+	}
+
+	const auto& GetCallbacks() const
+	{
+		return m_cb;
+	}
+
+	void SendDbgCommand(DbgCommand cmd, class CPUThread* thread = nullptr)
+	{
+		m_cb.send_dbg_command(cmd, thread);
+	}
+
+	// returns a future object associated with the result of the function called from the GUI thread
+	template<typename F, typename RT = std::result_of_t<F()>> inline std::future<RT> CallAfter(F&& func) const
+	{
+		// create task
+		auto task = std::make_shared<std::packaged_task<RT()>>(std::forward<F>(func));
+
+		// get future
+		std::future<RT> future = task->get_future();
+
+		// run asynchronously in GUI thread
+		m_cb.call_after([=]
+		{
+			(*task)();
+		});
+
+		return future;
+	}
 
 	void Init();
 	void SetPath(const std::string& path, const std::string& elf_path = "");
 	void SetTitleID(const std::string& id);
 	void SetTitle(const std::string& title);
 
-	std::string GetPath() const
+	const std::string& GetPath() const
 	{
 		return m_elf_path;
 	}
 
-	std::string GetEmulatorPath() const
+	const std::string& GetEmulatorPath() const
 	{
 		return m_emu_path;
 	}
@@ -186,7 +234,7 @@ public:
 
 	void Load();
 	void Run();
-	void Pause();
+	bool Pause();
 	void Resume();
 	void Stop();
 
@@ -212,9 +260,3 @@ inline bool check_lv2_lock(lv2_lock_t& lv2_lock)
 #define LV2_DEFER_LOCK lv2_lock_t lv2_lock
 #define CHECK_LV2_LOCK(x) if (!check_lv2_lock(x)) throw EXCEPTION("lv2_lock is invalid or not locked")
 #define CHECK_EMU_STATUS if (Emu.IsStopped()) throw EmulationStopped{}
-
-typedef void(*CallAfterCbType)(std::function<void()> func);
-
-void CallAfter(std::function<void()> func);
-
-void SetCallAfterCallback(CallAfterCbType cb);

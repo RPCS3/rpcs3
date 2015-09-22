@@ -18,4 +18,4 @@ struct CellSoundSynth2EffectAttr
 	be_t<u16> feedback;
 };
 
-extern Module libsynth2;
+extern Module<> libsynth2;

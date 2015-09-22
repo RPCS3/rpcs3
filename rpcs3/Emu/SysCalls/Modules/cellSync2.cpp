@@ -5,7 +5,17 @@
 
 #include "cellSync2.h"
 
-extern Module cellSync2;
+struct Sync2Instance
+{
+	CellSync2CallerThreadType gCellSync2CallerThreadTypePpuThread;
+	CellSync2Notifier gCellSync2NotifierPpuThread;
+	CellSync2CallerThreadType gCellSync2CallerThreadTypePpuFiber;
+	CellSync2Notifier gCellSync2NotifierPpuFiber;
+	CellSync2Notifier gCellSync2NotifierSpursTask;
+	CellSync2Notifier gCellSync2NotifierSpursJobQueueJob;
+};
+
+extern Module<Sync2Instance> cellSync2;
 
 s32 _cellSync2MutexAttributeInitialize(vm::ptr<CellSync2MutexAttribute> attr, u32 sdkVersion)
 {
@@ -249,14 +259,14 @@ s32 cellSync2QueueGetDepth()
 	return CELL_OK;
 }
 
-Module cellSync2("cellSync2", []()
+Module<Sync2Instance> cellSync2("cellSync2", []()
 {
-	//REG_VARIABLE(cellSync2, gCellSync2CallerThreadTypePpuThread);
-	//REG_VARIABLE(cellSync2, gCellSync2NotifierPpuThread);
-	//REG_VARIABLE(cellSync2, gCellSync2CallerThreadTypePpuFiber);
-	//REG_VARIABLE(cellSync2, gCellSync2NotifierPpuFiber);
-	//REG_VARIABLE(cellSync2, gCellSync2NotifierSpursTask);
-	//REG_VARIABLE(cellSync2, gCellSync2NotifierSpursJobQueueJob);
+	REG_VARIABLE(cellSync2, gCellSync2CallerThreadTypePpuThread);
+	REG_VARIABLE(cellSync2, gCellSync2NotifierPpuThread);
+	REG_VARIABLE(cellSync2, gCellSync2CallerThreadTypePpuFiber);
+	REG_VARIABLE(cellSync2, gCellSync2NotifierPpuFiber);
+	REG_VARIABLE(cellSync2, gCellSync2NotifierSpursTask);
+	REG_VARIABLE(cellSync2, gCellSync2NotifierSpursJobQueueJob);
 
 	REG_FUNC(cellSync2, _cellSync2MutexAttributeInitialize);
 	REG_FUNC(cellSync2, cellSync2MutexEstimateBufferSize);

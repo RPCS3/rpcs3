@@ -6,7 +6,7 @@
 #include "Emu/SysCalls/lv2/sys_mmapper.h"
 #include "sysPrxForUser.h"
 
-extern Module sysPrxForUser;
+extern Module<> sysPrxForUser;
 
 void sysPrxForUser_sys_mmapper_init()
 {

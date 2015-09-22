@@ -464,8 +464,8 @@ struct psv_event_flag_t
 		: name(name)
 		, attr(attr)
 		, init(pattern)
+		, pattern(pattern)
 	{
-		this->pattern.store(pattern);
 	}
 
 	// Wakeup all waiters to return SCE_KERNEL_ERROR_WAIT_DELETE
@@ -473,7 +473,7 @@ struct psv_event_flag_t
 	{
 		std::lock_guard<std::mutex> lock(mutex);
 
-		const u32 pattern = this->pattern.load();
+		const u32 pattern = this->pattern;
 
 		for (auto& thread : sq)
 		{
@@ -550,8 +550,8 @@ struct psv_semaphore_t
 		: name(name)
 		, attr(attr)
 		, max(max)
+		, count(count)
 	{
-		this->count.store(count);
 	}
 };
 
@@ -588,8 +588,8 @@ struct psv_mutex_t
 	psv_mutex_t(const char* name, u32 attr, s32 count)
 		: name(name)
 		, attr(attr)
+		, count(count)
 	{
-		this->count.store(count);
 	}
 };
 

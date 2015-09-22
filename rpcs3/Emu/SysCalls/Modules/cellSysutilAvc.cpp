@@ -2,7 +2,7 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/SysCalls/Modules.h"
 
-extern Module cellSysutilAvc;
+extern Module<> cellSysutilAvc;
 
 s32 cellSysutilAvcByeRequest()
 {
@@ -218,7 +218,7 @@ s32 cellSysutilAvcExtGetWindowShowStatus()
 
 void cellSysutil_SysutilAvc_init()
 {
-	extern Module cellSysutil;
+	extern Module<> cellSysutil;
 
 	REG_FUNC(cellSysutil, cellSysutilAvcByeRequest);
 	REG_FUNC(cellSysutil, cellSysutilAvcCancelByeRequest);
@@ -242,7 +242,7 @@ void cellSysutil_SysutilAvc_init()
 	REG_FUNC(cellSysutil, cellSysutilAvcUnloadAsync);
 }
 
-Module cellSysutilAvc("cellSysutilAvc", []()
+Module<> cellSysutilAvc("cellSysutilAvc", []()
 {
 	REG_FUNC(cellSysutilAvc, cellSysutilAvcExtInitOptionParam);
 	REG_FUNC(cellSysutilAvc, cellSysutilAvcExtSetHideNamePlate);

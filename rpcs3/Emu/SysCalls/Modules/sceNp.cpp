@@ -11,7 +11,7 @@
 #include "Crypto/unedat.h"
 #include "sceNp.h"
 
-extern Module sceNp;
+extern Module<> sceNp;
 
 s32 sceNpInit(u32 poolsize, vm::ptr<void> poolptr)
 {
@@ -1521,7 +1521,7 @@ s32 _Z32_sce_np_sysutil_cxml_prepare_docPN16sysutil_cxmlutil11FixedMemoryERN4cxm
 }
 
 
-Module sceNp("sceNp", []()
+Module<> sceNp("sceNp", []()
 {
 	REG_FUNC(sceNp, sceNpInit);
 	REG_FUNC(sceNp, sceNpTerm);

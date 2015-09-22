@@ -6,7 +6,7 @@
 #include "Emu/Io/Keyboard.h"
 #include "cellKb.h"
 
-extern Module sys_io;
+extern Module<> sys_io;
 
 s32 cellKbInit(u32 max_connect)
 {

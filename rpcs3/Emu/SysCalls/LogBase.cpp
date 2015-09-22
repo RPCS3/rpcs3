@@ -9,7 +9,7 @@ bool LogBase::CheckLogging() const
 	return Ini.HLELogging.GetValue() || m_logging;
 }
 
-void LogBase::LogOutput(LogType type, const std::string& text) const
+void LogBase::LogOutput(LogType type, std::string text) const
 {
 	switch (type)
 	{

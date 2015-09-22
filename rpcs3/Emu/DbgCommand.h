@@ -1,7 +1,5 @@
 #pragma once
 
-class CPUThread;
-
 enum DbgCommand
 {
 	DID_FIRST_COMMAND = 0x500,
@@ -35,9 +33,3 @@ enum DbgCommand
 
 	DID_LAST_COMMAND,
 };
-
-typedef void(*SendDbgCommandCb)(DbgCommand id, CPUThread* t);
-
-void SetSendDbgCommandCallback(SendDbgCommandCb value);
-
-void SendDbgCommand(DbgCommand id, CPUThread* thr = nullptr);

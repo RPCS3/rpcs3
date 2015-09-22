@@ -84,31 +84,33 @@ enum : s32
 
 using CellMsgDialogCallback = void(s32 buttonType, vm::ptr<void> userData);
 
-enum MsgDialogState
+enum class MsgDialogState
 {
-	msgDialogNone,
-	msgDialogInit,
-	msgDialogOpen,
-	msgDialogClose,
-	msgDialogAbort,
+	Open,
+	Abort,
+	Close,
 };
 
-struct MsgDialogInstance
+class MsgDialogBase
 {
-	std::atomic<MsgDialogState> state;
+public:
+	atomic_t<MsgDialogState> state{ MsgDialogState::Open };
 
-	s32 status;
-	u64 wait_until;
+	u32 type;
 	u32 progress_bar_count;
 
-	MsgDialogInstance();
-	virtual ~MsgDialogInstance() = default;
+	vm::ptr<CellMsgDialogCallback> callback;
+	vm::ptr<void> user_data;
+	vm::ptr<void> extra_param;
 
-	virtual void Close();
+	std::function<void(s32 status)> on_close;
 
-	virtual void Create(u32 type, std::string msg) = 0;
+	void Close(s32 status);
+
+	virtual ~MsgDialogBase() = default;
+	virtual void Create(u32 type, const std::string& msg) = 0;
 	virtual void Destroy() = 0;
-	virtual void ProgressBarSetMsg(u32 progressBarIndex, std::string msg) = 0;
+	virtual void ProgressBarSetMsg(u32 progressBarIndex, const std::string& msg) = 0;
 	virtual void ProgressBarReset(u32 progressBarIndex) = 0;
 	virtual void ProgressBarInc(u32 progressBarIndex, u32 delta) = 0;
 };

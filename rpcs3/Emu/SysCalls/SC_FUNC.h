@@ -228,11 +228,11 @@ namespace ppu_func_detail
 			bind_result<RT, result_type<RT>::value>::put_result(ppu, call<T...>(ppu, func, arg_info_pack_t<>{}));
 		}
 	};
+
+	template<typename RT, typename... T> force_inline void do_call(PPUThread& ppu, RT(*func)(T...))
+	{
+		func_binder<RT, T...>::do_call(ppu, func);
+	}
 }
 
-template<typename RT, typename... T> force_inline void call_ppu_func(PPUThread& ppu, RT(*func)(T...))
-{
-	ppu_func_detail::func_binder<RT, T...>::do_call(ppu, func);
-}
-
-#define bind_func(func) [](PPUThread& ppu){ call_ppu_func(ppu, func); }
+#define BIND_FUNC(func) [](PPUThread& ppu){ ppu_func_detail::do_call(ppu, func); }

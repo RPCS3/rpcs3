@@ -204,7 +204,7 @@ s32 sys_mmapper_free_address(u32 addr)
 		return CELL_EINVAL;
 	}
 
-	if (area->used.load())
+	if (area->used)
 	{
 		return CELL_EBUSY;
 	}
@@ -273,7 +273,7 @@ s32 sys_mmapper_map_memory(u32 addr, u32 mem_id, u64 flags)
 		return CELL_EALIGN;
 	}
 
-	if (const u32 old_addr = mem->addr.load())
+	if (const u32 old_addr = mem->addr)
 	{
 		throw EXCEPTION("Already mapped (mem_id=0x%x, addr=0x%x)", mem_id, old_addr);
 	}

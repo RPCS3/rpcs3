@@ -29,6 +29,9 @@
 #pragma warning(pop)
 #endif
 
+extern void execute_ppu_func_by_index(PPUThread& ppu, u32 id);
+extern void execute_syscall_by_index(PPUThread& ppu, u64 code);
+
 using namespace llvm;
 using namespace ppu_recompiler_llvm;
 
@@ -1787,7 +1790,7 @@ void Compiler::HACK(u32 index) {
 static u32 wrappedDoSyscall(PPUThread &CPU, u64 code) noexcept {
 	try
 	{
-		SysCalls::DoSyscall(CPU, code);
+		execute_syscall_by_index(CPU, code);
 		return ExecutionStatus::ExecutionStatusBlockEnded;
 	}
 	catch (...)
@@ -1812,7 +1815,7 @@ void Compiler::SC(u32 lev) {
 		}
 		break;
 	case 3:
-		Call<void>("PPUThread.FastStop", &PPUThread::fast_stop, m_state.args[CompileTaskState::Args::State]);
+		Call<void>("PPUThread.fast_stop", &PPUThread::fast_stop, m_state.args[CompileTaskState::Args::State]);
 		break;
 	default:
 		CompilationError(fmt::format("SC %u", lev));
@@ -2160,7 +2163,7 @@ void Compiler::TW(u32 to, u32 ra, u32 rb) {
 }
 
 void Compiler::LVSL(u32 vd, u32 ra, u32 rb) {
-	static const v128 s_lvsl_values[] = {
+	static const u64 s_lvsl_values[0x10][2] = {
 	  { 0x08090A0B0C0D0E0F, 0x0001020304050607 },
 	  { 0x090A0B0C0D0E0F10, 0x0102030405060708 },
 	  { 0x0A0B0C0D0E0F1011, 0x0203040506070809 },
@@ -2389,7 +2392,7 @@ void Compiler::CMPL(u32 crfd, u32 l, u32 ra, u32 rb) {
 }
 
 void Compiler::LVSR(u32 vd, u32 ra, u32 rb) {
-	static const v128 s_lvsr_values[] = {
+	static const u64 s_lvsr_values[0x10][2] = {
 	  { 0x18191A1B1C1D1E1F, 0x1011121314151617 },
 	  { 0x1718191A1B1C1D1E, 0x0F10111213141516 },
 	  { 0x161718191A1B1C1D, 0x0E0F101112131415 },

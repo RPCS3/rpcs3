@@ -8,7 +8,7 @@
 #include "cellSail.h"
 #include "cellPamf.h"
 
-extern Module cellSail;
+extern Module<> cellSail;
 
 void playerBoot(vm::ptr<CellSailPlayer> pSelf, u64 userParam)
 {
@@ -1042,7 +1042,7 @@ s32 cellSailPlayerUnregisterSource()
 	return CELL_OK;
 }
 
-Module cellSail("cellSail", []()
+Module<> cellSail("cellSail", []()
 {
 	REG_FUNC(cellSail, cellSailMemAllocatorInitialize);
 

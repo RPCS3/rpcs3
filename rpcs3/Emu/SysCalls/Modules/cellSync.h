@@ -50,7 +50,7 @@ struct alignas(4) sync_mutex_t // CellSyncMutex sync var
 	}
 };
 
-using CellSyncMutex = atomic_be_t<sync_mutex_t>;
+using CellSyncMutex = atomic_t<sync_mutex_t>;
 
 CHECK_SIZE_ALIGN(CellSyncMutex, 4, 4);
 
@@ -100,7 +100,7 @@ struct alignas(4) sync_barrier_t // CellSyncBarrier sync var
 	}
 };
 
-using CellSyncBarrier = atomic_be_t<sync_barrier_t>;
+using CellSyncBarrier = atomic_t<sync_barrier_t>;
 
 CHECK_SIZE_ALIGN(CellSyncBarrier, 4, 4);
 
@@ -111,7 +111,7 @@ struct sync_rwm_t // CellSyncRwm sync var
 
 	bool try_read_begin()
 	{
-		if (writers.data())
+		if (writers)
 		{
 			return false;
 		}
@@ -122,7 +122,7 @@ struct sync_rwm_t // CellSyncRwm sync var
 
 	bool try_read_end()
 	{
-		if (!readers.data())
+		if (!readers)
 		{
 			return false;
 		}
@@ -133,7 +133,7 @@ struct sync_rwm_t // CellSyncRwm sync var
 
 	bool try_write_begin()
 	{
-		if (writers.data())
+		if (writers)
 		{
 			return false;
 		}
@@ -145,7 +145,7 @@ struct sync_rwm_t // CellSyncRwm sync var
 
 struct alignas(16) CellSyncRwm
 {
-	atomic_be_t<sync_rwm_t> ctrl; // sync var
+	atomic_t<sync_rwm_t> ctrl; // sync var
 
 	be_t<u32> size;
 	vm::bptr<void, u64> buffer;
@@ -245,7 +245,7 @@ struct sync_queue_t // CellSyncQueue sync var
 
 struct alignas(32) CellSyncQueue
 {
-	atomic_be_t<sync_queue_t> ctrl;
+	atomic_t<sync_queue_t> ctrl;
 
 	be_t<u32> size;
 	be_t<u32> depth;
@@ -317,14 +317,14 @@ struct alignas(128) CellSyncLFQueue
 
 	union // 0x0
 	{
-		atomic_be_t<pop1_t> pop1;
-		atomic_be_t<pop3_t> pop3;
+		atomic_t<pop1_t> pop1;
+		atomic_t<pop3_t> pop3;
 	};
 
 	union // 0x8
 	{
-		atomic_be_t<push1_t> push1;
-		atomic_be_t<push3_t> push3;
+		atomic_t<push1_t> push1;
+		atomic_t<push3_t> push3;
 	};
 
 	be_t<u32> m_size;              // 0x10
@@ -334,9 +334,9 @@ struct alignas(128) CellSyncLFQueue
 	be_t<u32> m_direction;         // 0x24 CellSyncQueueDirection
 	be_t<u32> m_v1;                // 0x28
 	atomic_be_t<s32> init;         // 0x2C
-	atomic_be_t<push2_t> push2;    // 0x30
+	atomic_t<push2_t> push2;       // 0x30
 	be_t<u16> m_hs1[15];           // 0x32
-	atomic_be_t<pop2_t> pop2;      // 0x50
+	atomic_t<pop2_t> pop2;         // 0x50
 	be_t<u16> m_hs2[15];           // 0x52
 	vm::bptr<void, u64> m_eaSignal; // 0x70
 	be_t<u32> m_v2;                // 0x78

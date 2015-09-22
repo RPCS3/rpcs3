@@ -54,7 +54,7 @@ s32 sys_process_exit(s32 status)
 	
 	sys_process.Success("Process finished");
 
-	CallAfter([]()
+	Emu.CallAfter([]()
 	{
 		Emu.Stop();
 	});

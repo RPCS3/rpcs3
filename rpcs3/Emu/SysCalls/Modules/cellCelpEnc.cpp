@@ -3,7 +3,7 @@
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
 
-extern Module cellCelpEnc;
+extern Module<> cellCelpEnc;
 
 // Return Codes
 enum
@@ -70,7 +70,7 @@ s32 cellCelpEncGetAu()
 	return CELL_OK;
 }
 
-Module cellCelpEnc("cellCelpEnc", []()
+Module<> cellCelpEnc("cellCelpEnc", []()
 {
 	REG_FUNC(cellCelpEnc, cellCelpEncQueryAttr);
 	REG_FUNC(cellCelpEnc, cellCelpEncOpen);

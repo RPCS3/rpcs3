@@ -7,13 +7,6 @@
 #include "Emu/System.h"
 #include "GLGSRender.h"
 
-GetGSFrameCb GetGSFrame = nullptr;
-
-void SetGetGSFrameCallback(GetGSFrameCb value)
-{
-	GetGSFrame = value;
-}
-
 #define CMD_DEBUG 0
 #define DUMP_VERTEX_DATA 0
 
@@ -789,7 +782,7 @@ GLGSRender::GLGSRender()
 	, m_vp_buf_num(-1)
 	, m_context(nullptr)
 {
-	m_frame = GetGSFrame();
+	m_frame = Emu.GetCallbacks().get_gs_frame().release();
 }
 
 GLGSRender::~GLGSRender()

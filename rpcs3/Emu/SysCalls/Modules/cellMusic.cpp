@@ -7,7 +7,7 @@
 
 #include "cellMusic.h"
 
-extern Module cellMusic;
+extern Module<> cellMusic;
 
 struct music2_t
 {
@@ -149,7 +149,7 @@ s32 cellMusicGetVolume2()
 }
 
 
-Module cellMusic("cellMusic", []()
+Module<> cellMusic("cellMusic", []()
 {
 	REG_FUNC(cellMusic, cellMusicGetSelectionContext);
 	REG_FUNC(cellMusic, cellMusicSetSelectionContext2);

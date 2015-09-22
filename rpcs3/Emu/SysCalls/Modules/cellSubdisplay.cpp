@@ -4,7 +4,7 @@
 
 #include "cellSubdisplay.h"
 
-extern Module cellSubdisplay;
+extern Module<> cellSubdisplay;
 
 s32 cellSubDisplayInit()
 {
@@ -74,7 +74,7 @@ s32 cellSubDisplayGetPeerList()
 	return CELL_OK;
 }
 
-Module cellSubdisplay("cellSubdisplay", []()
+Module<> cellSubdisplay("cellSubdisplay", []()
 {
 	REG_FUNC(cellSubdisplay, cellSubDisplayInit);
 	REG_FUNC(cellSubdisplay, cellSubDisplayEnd);

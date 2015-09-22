@@ -290,7 +290,7 @@ s32 cellSnd3SMFGetKeyOnID(u32 smfID, u32 midiChannel, vm::ptr<u32> keyOnID)
 }
 
 
-Module libsnd3("libsnd3", []()
+Module<> libsnd3("libsnd3", []()
 {
 	REG_SUB(libsnd3,, cellSnd3Init);
 	REG_SUB(libsnd3,, cellSnd3Exit);

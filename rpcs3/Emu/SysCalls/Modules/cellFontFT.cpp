@@ -4,7 +4,7 @@
 
 #include "cellFontFT.h"
 
-extern Module cellFontFT;
+extern Module<> cellFontFT;
 
 s32 cellFontInitLibraryFreeTypeWithRevision(u64 revisionFlags, vm::ptr<CellFontLibraryConfigFT> config, vm::pptr<CellFontLibrary> lib)
 {
@@ -27,7 +27,7 @@ s32 cellFontFTGetInitializedRevisionFlags()
 	return CELL_OK;
 }
 
-Module cellFontFT("cellFontFT", []()
+Module<> cellFontFT("cellFontFT", []()
 {
 	REG_FUNC(cellFontFT, cellFontInitLibraryFreeTypeWithRevision);
 	REG_FUNC(cellFontFT, cellFontFTGetRevisionFlags);

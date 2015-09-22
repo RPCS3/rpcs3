@@ -2,116 +2,116 @@
 #include "Modules.h"
 #include "ModuleManager.h"
 
-extern Module cellAdec;
-extern Module cellAtrac;
-extern Module cellAtracMulti;
-extern Module cellAudio;
-extern Module cellAvconfExt;
-extern Module cellBGDL;
-extern Module cellCamera;
-extern Module cellCelp8Enc;
-extern Module cellCelpEnc;
-extern Module cellDaisy;
-extern Module cellDmux;
-extern Module cellFiber;
-extern Module cellFont;
-extern Module cellFontFT;
-extern Module cellFs;
-extern Module cellGame;
-extern Module cellGameExec;
-extern Module cellGcmSys;
-extern Module cellGem;
-extern Module cellGifDec;
-extern Module cellHttp;
-extern Module cellHttps;
-extern Module cellHttpUtil;
-extern Module cellImeJp;
-extern Module cellJpgDec;
-extern Module cellJpgEnc;
-extern Module cellKey2char;
-extern Module cellL10n;
-extern Module cellMic;
-extern Module cellMusic;
-extern Module cellMusicDecode;
-extern Module cellMusicExport;
-extern Module cellNetCtl;
-extern Module cellOskDialog;
-extern Module cellOvis;
-extern Module cellPamf;
-extern Module cellPhotoDecode;
-extern Module cellPhotoExport;
-extern Module cellPhotoImportUtil;
-extern Module cellPngDec;
-extern Module cellPngEnc;
-extern Module cellPrint;
-extern Module cellRec;
-extern Module cellRemotePlay;
-extern Module cellResc;
-extern Module cellRtc;
-extern Module cellRudp;
-extern Module cellSail;
-extern Module cellSailRec;
-extern Module cellSaveData;
-extern Module cellMinisSaveData;
-extern Module cellScreenshot;
-extern Module cellSearch;
-extern Module cellSheap;
-extern Module cellSpudll;
-extern Module cellSpurs;
-extern Module cellSpursJq;
-extern Module cellSsl;
-extern Module cellSubdisplay;
-extern Module cellSync;
-extern Module cellSync2;
-extern Module cellSysconf;
-extern Module cellSysmodule;
-extern Module cellSysutil;
-extern Module cellSysutilAp;
-extern Module cellSysutilAvc;
-extern Module cellSysutilAvc2;
-extern Module cellSysutilMisc;
-extern Module cellUsbd;
-extern Module cellUsbPspcm;
-extern Module cellUserInfo;
-extern Module cellVdec;
-extern Module cellVideoExport;
-extern Module cellVideoUpload;
-extern Module cellVoice;
-extern Module cellVpost;
-extern Module libmixer;
-extern Module libsnd3;
-extern Module libsynth2;
-extern Module sceNp;
-extern Module sceNp2;
-extern Module sceNpClans;
-extern Module sceNpCommerce2;
-extern Module sceNpSns;
-extern Module sceNpTrophy;
-extern Module sceNpTus;
-extern Module sceNpUtil;
-extern Module sys_io;
-extern Module libnet;
-extern Module sysPrxForUser;
-extern Module sys_libc;
-extern Module sys_lv2dbg;
+extern Module<> cellAdec;
+extern Module<> cellAtrac;
+extern Module<> cellAtracMulti;
+extern Module<> cellAudio;
+extern Module<> cellAvconfExt;
+extern Module<> cellBGDL;
+extern Module<> cellCamera;
+extern Module<> cellCelp8Enc;
+extern Module<> cellCelpEnc;
+extern Module<> cellDaisy;
+extern Module<> cellDmux;
+extern Module<> cellFiber;
+extern Module<> cellFont;
+extern Module<> cellFontFT;
+extern Module<> cellFs;
+extern Module<> cellGame;
+extern Module<> cellGameExec;
+extern Module<> cellGcmSys;
+extern Module<> cellGem;
+extern Module<> cellGifDec;
+extern Module<> cellHttp;
+extern Module<> cellHttps;
+extern Module<> cellHttpUtil;
+extern Module<> cellImeJp;
+extern Module<> cellJpgDec;
+extern Module<> cellJpgEnc;
+extern Module<> cellKey2char;
+extern Module<> cellL10n;
+extern Module<> cellMic;
+extern Module<> cellMusic;
+extern Module<> cellMusicDecode;
+extern Module<> cellMusicExport;
+extern Module<> cellNetCtl;
+extern Module<> cellOskDialog;
+extern Module<> cellOvis;
+extern Module<> cellPamf;
+extern Module<> cellPhotoDecode;
+extern Module<> cellPhotoExport;
+extern Module<> cellPhotoImportUtil;
+extern Module<> cellPngDec;
+extern Module<> cellPngEnc;
+extern Module<> cellPrint;
+extern Module<> cellRec;
+extern Module<> cellRemotePlay;
+extern Module<> cellResc;
+extern Module<> cellRtc;
+extern Module<> cellRudp;
+extern Module<> cellSail;
+extern Module<> cellSailRec;
+extern Module<> cellSaveData;
+extern Module<> cellMinisSaveData;
+extern Module<> cellScreenshot;
+extern Module<> cellSearch;
+extern Module<> cellSheap;
+extern Module<> cellSpudll;
+extern Module<> cellSpurs;
+extern Module<> cellSpursJq;
+extern Module<> cellSsl;
+extern Module<> cellSubdisplay;
+extern Module<> cellSync;
+extern Module<struct Sync2Instance> cellSync2;
+extern Module<> cellSysconf;
+extern Module<> cellSysmodule;
+extern Module<> cellSysutil;
+extern Module<> cellSysutilAp;
+extern Module<> cellSysutilAvc;
+extern Module<> cellSysutilAvc2;
+extern Module<> cellSysutilMisc;
+extern Module<> cellUsbd;
+extern Module<> cellUsbPspcm;
+extern Module<> cellUserInfo;
+extern Module<> cellVdec;
+extern Module<> cellVideoExport;
+extern Module<> cellVideoUpload;
+extern Module<> cellVoice;
+extern Module<> cellVpost;
+extern Module<> libmixer;
+extern Module<> libsnd3;
+extern Module<> libsynth2;
+extern Module<> sceNp;
+extern Module<> sceNp2;
+extern Module<> sceNpClans;
+extern Module<> sceNpCommerce2;
+extern Module<> sceNpSns;
+extern Module<> sceNpTrophy;
+extern Module<> sceNpTus;
+extern Module<> sceNpUtil;
+extern Module<> sys_io;
+extern Module<> libnet;
+extern Module<> sysPrxForUser;
+extern Module<> sys_libc;
+extern Module<> sys_lv2dbg;
 
 struct ModuleInfo
 {
 	const s32 id; // -1 if the module doesn't have corresponding CELL_SYSMODULE_* id
 	const char* const name;
-	Module* const module;
+	Module<>* const module;
 
 	explicit operator bool() const
 	{
 		return module != nullptr;
 	}
 
-	operator Module*() const
+	operator Module<>*() const
 	{
 		return module;
 	}
 
-	Module* operator ->() const
+	Module<>* operator ->() const
 	{
 		return module;
 	}
@@ -243,7 +243,7 @@ void ModuleManager::Init()
 
 	clear_ppu_functions();
 
-	std::unordered_set<Module*> processed;
+	std::unordered_set<Module<>*> processed;
 
 	for (auto& module : g_module_list)
 	{
@@ -272,7 +272,7 @@ void ModuleManager::Close()
 		return;
 	}
 
-	std::unordered_set<Module*> processed;
+	std::unordered_set<Module<>*> processed;
 
 	for (auto& module : g_module_list)
 	{
@@ -285,7 +285,25 @@ void ModuleManager::Close()
 	m_init = false;
 }
 
-Module* ModuleManager::GetModuleByName(const char* name)
+void ModuleManager::Alloc()
+{
+	if (!m_init)
+	{
+		return;
+	}
+
+	std::unordered_set<Module<>*> processed;
+
+	for (auto& module : g_module_list)
+	{
+		if (module && module->on_alloc && processed.emplace(module).second)
+		{
+			module->on_alloc();
+		}
+	}
+}
+
+Module<>* ModuleManager::GetModuleByName(const char* name)
 {
 	for (auto& module : g_module_list)
 	{
@@ -298,7 +316,7 @@ Module* ModuleManager::GetModuleByName(const char* name)
 	return nullptr;
 }
 
-Module* ModuleManager::GetModuleById(u16 id)
+Module<>* ModuleManager::GetModuleById(u16 id)
 {
 	for (auto& module : g_module_list)
 	{

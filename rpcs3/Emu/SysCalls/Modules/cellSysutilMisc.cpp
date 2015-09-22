@@ -3,7 +3,7 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/SysCalls/Modules.h"
 
-extern Module cellSysutilMisc;
+extern Module<> cellSysutilMisc;
 
 // License areas
 enum
@@ -33,7 +33,7 @@ s32 cellSysutilGetLicenseArea()
 	}
 }
 
-Module cellSysutilMisc("cellSysutilMisc", []()
+Module<> cellSysutilMisc("cellSysutilMisc", []()
 {
 	REG_FUNC(cellSysutilMisc, cellSysutilGetLicenseArea);
 });

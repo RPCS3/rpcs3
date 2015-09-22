@@ -29,7 +29,7 @@ thread_local bool spu_channel_t::notification_required;
 void spu_int_ctrl_t::set(u64 ints)
 {
 	// leave only enabled interrupts
-	ints &= mask.load();
+	ints &= mask;
 
 	// notify if at least 1 bit was set
 	if (ints && ~stat._or(ints) & ints && tag)
@@ -118,7 +118,7 @@ void SPUThread::task()
 
 		while (true)
 		{
-			if (!m_state.load())
+			if (!m_state)
 			{
 				// read opcode
 				const u32 opcode = base[pc / 4];
@@ -146,7 +146,7 @@ void SPUThread::task()
 		return custom_task(*this);
 	}
 
-	while (!m_state.load() || !check_status())
+	while (!m_state || !check_status())
 	{
 		// decode instruction using specified decoder
 		pc += m_dec->DecodeMemory(pc + offset);
@@ -162,32 +162,34 @@ void SPUThread::init_regs()
 	mfc_queue.clear();
 
 	ch_tag_mask = 0;
-	ch_tag_stat = {};
-	ch_stall_stat = {};
-	ch_atomic_stat = {};
+	ch_tag_stat.data.store({});
+	ch_stall_stat.data.store({});
+	ch_atomic_stat.data.store({});
 
 	ch_in_mbox.clear();
 
-	ch_out_mbox = {};
-	ch_out_intr_mbox = {};
+	ch_out_mbox.data.store({});
+	ch_out_intr_mbox.data.store({});
 
 	snr_config = 0;
 
-	ch_snr1 = {};
-	ch_snr2 = {};
+	ch_snr1.data.store({});
+	ch_snr2.data.store({});
 
-	ch_event_mask = {};
-	ch_event_stat = {};
+	ch_event_mask = 0;
+	ch_event_stat = 0;
 	last_raddr = 0;
 
 	ch_dec_start_timestamp = get_timebased_time(); // ???
 	ch_dec_value = 0;
 
-	run_ctrl = {};
-	status = {};
-	npc = {};
+	run_ctrl = 0;
+	status = 0;
+	npc = 0;
 
-	int_ctrl = {};
+	int_ctrl[0].clear();
+	int_ctrl[1].clear();
+	int_ctrl[2].clear();
 
 	gpr[1]._u32[3] = 0x3FFF0; // initial stack frame pointer
 }
@@ -511,7 +513,7 @@ u32 SPUThread::get_events(bool waiting)
 		// polling with atomically set/removed SPU_EVENT_WAITING flag
 		return ch_event_stat.atomic_op([this](u32& stat) -> u32
 		{
-			if (u32 res = stat & ch_event_mask.load())
+			if (u32 res = stat & ch_event_mask)
 			{
 				stat &= ~SPU_EVENT_WAITING;
 				return res;
@@ -525,7 +527,7 @@ u32 SPUThread::get_events(bool waiting)
 	}
 
 	// simple polling
-	return ch_event_stat.load() & ch_event_mask.load();
+	return ch_event_stat & ch_event_mask;
 }
 
 void SPUThread::set_events(u32 mask)
@@ -543,7 +545,7 @@ void SPUThread::set_events(u32 mask)
 	{
 		std::lock_guard<std::mutex> lock(mutex);
 
-		if (ch_event_stat.load() & SPU_EVENT_WAITING)
+		if (ch_event_stat & SPU_EVENT_WAITING)
 		{
 			cv.notify_one();
 		}
@@ -555,7 +557,7 @@ void SPUThread::set_interrupt_status(bool enable)
 	if (enable)
 	{
 		// detect enabling interrupts with events masked
-		if (u32 mask = ch_event_mask.load())
+		if (u32 mask = ch_event_mask)
 		{
 			throw EXCEPTION("SPU Interrupts not implemented (mask=0x%x)", mask);
 		}
@@ -710,7 +712,7 @@ u32 SPUThread::get_ch_value(u32 ch)
 
 	case SPU_RdEventMask:
 	{
-		return ch_event_mask.load();
+		return ch_event_mask;
 	}
 
 	case SPU_RdEventStat:
@@ -723,7 +725,7 @@ u32 SPUThread::get_ch_value(u32 ch)
 			return res;
 		}
 
-		if (ch_event_mask.load() & SPU_EVENT_LR)
+		if (ch_event_mask & SPU_EVENT_LR)
 		{
 			// register waiter if polling reservation status is required
 			vm::wait_op(*this, last_raddr, 128, WRAP_EXPR(get_events(true) || is_stopped()));
@@ -752,7 +754,7 @@ u32 SPUThread::get_ch_value(u32 ch)
 	{
 		// HACK: "Not isolated" status
 		// Return SPU Interrupt status in LSB
-		return (ch_event_stat.load() & SPU_EVENT_INTR_ENABLED) != 0;
+		return (ch_event_stat & SPU_EVENT_INTR_ENABLED) != 0;
 	}
 	}
 
@@ -1120,7 +1122,7 @@ void SPUThread::set_ch_value(u32 ch, u32 value)
 	case SPU_WrEventMask:
 	{
 		// detect masking events with enabled interrupt status
-		if (value && ch_event_stat.load() & SPU_EVENT_INTR_ENABLED)
+		if (value && ch_event_stat & SPU_EVENT_INTR_ENABLED)
 		{
 			throw EXCEPTION("SPU Interrupts not implemented (mask=0x%x)", value);
 		}
@@ -1131,7 +1133,7 @@ void SPUThread::set_ch_value(u32 ch, u32 value)
 			break;
 		}
 
-		ch_event_mask.store(value);
+		ch_event_mask = value;
 		return;
 	}
 

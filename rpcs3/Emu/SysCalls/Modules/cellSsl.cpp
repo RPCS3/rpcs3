@@ -2,7 +2,7 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/SysCalls/Modules.h"
 
-extern Module cellSsl;
+extern Module<> cellSsl;
 
 s32 cellSslInit()
 {
@@ -88,7 +88,7 @@ s32 cellSslCertGetMd5Fingerprint()
 	return CELL_OK;
 }
 
-Module cellSsl("cellSsl", []()
+Module<> cellSsl("cellSsl", []()
 {
 	REG_FUNC(cellSsl, cellSslInit);
 	REG_FUNC(cellSsl, cellSslEnd);

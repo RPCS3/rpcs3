@@ -1121,6 +1121,8 @@ void _se_translator(unsigned int u, EXCEPTION_POINTERS* pExp)
 	{
 		throw EXCEPTION("Access violation %s location 0x%llx", is_writing ? "writing" : "reading", addr64);
 	}
+
+	//__int2c(); // if it crashed there, check the callstack for the actual source of the crash
 }
 
 const PVOID exception_handler = (atexit([]{ RemoveVectoredExceptionHandler(exception_handler); }), AddVectoredExceptionHandler(1, [](PEXCEPTION_POINTERS pExp) -> LONG
@@ -1281,14 +1283,9 @@ void named_thread_t::start(std::function<std::string()> name, std::function<void
 				LOG_NOTICE(GENERAL, "Thread ended");
 			}
 		}
-		catch (const fmt::exception& e)
-		{
-			LOG_ERROR(GENERAL, "Exception: %s", e.message.get());
-			Emu.Pause();
-		}
 		catch (const std::exception& e)
 		{
-			LOG_ERROR(GENERAL, "STD Exception: %s", e.what());
+			LOG_ERROR(GENERAL, "Exception: %s", e.what());
 			Emu.Pause();
 		}
 		catch (EmulationStopped)

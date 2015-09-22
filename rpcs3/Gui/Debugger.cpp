@@ -45,7 +45,7 @@ public:
 	{
 		m_btn_run->Enable(!Emu.IsStopped());
 		m_btn_stop->Enable(!Emu.IsStopped());
-		m_btn_restart->Enable(!Emu.m_path.empty());
+		m_btn_restart->Enable(!Emu.GetPath().empty());
 	}
 
 	void OnRun(wxCommandEvent& event)

@@ -386,9 +386,6 @@
     <ClCompile Include="Loader\Loader.cpp">
       <Filter>Loader</Filter>
     </ClCompile>
-    <ClCompile Include="Loader\PKG.cpp">
-      <Filter>Loader</Filter>
-    </ClCompile>
     <ClCompile Include="Loader\PSF.cpp">
       <Filter>Loader</Filter>
     </ClCompile>
@@ -517,9 +514,6 @@
     </ClCompile>
     <ClCompile Include="Emu\SysCalls\LogBase.cpp">
       <Filter>Emu\SysCalls</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\DbgCommand.cpp">
-      <Filter>Emu</Filter>
     </ClCompile>
     <ClCompile Include="Ini.cpp">
       <Filter>Utilities</Filter>
@@ -992,6 +986,9 @@
     <ClCompile Include="Emu\Cell\SPUASMJITRecompiler.cpp">
       <Filter>Emu\CPU\Cell</Filter>
     </ClCompile>
+    <ClCompile Include="..\Utilities\SharedMutex.cpp">
+      <Filter>Utilities</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -1327,9 +1324,6 @@
     <ClInclude Include="Loader\Loader.h">
       <Filter>Loader</Filter>
     </ClInclude>
-    <ClInclude Include="Loader\PKG.h">
-      <Filter>Loader</Filter>
-    </ClInclude>
     <ClInclude Include="Loader\PSF.h">
       <Filter>Loader</Filter>
     </ClInclude>
@@ -1615,9 +1609,6 @@
     <ClInclude Include="Emu\Cell\SPUContext.h">
       <Filter>Emu\CPU\Cell</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\Memory\atomic.h">
-      <Filter>Emu\Memory</Filter>
-    </ClInclude>
     <ClInclude Include="Emu\SysCalls\lv2\sys_fs.h">
       <Filter>Emu\SysCalls\lv2</Filter>
     </ClInclude>
@@ -1881,6 +1872,12 @@
     </ClInclude>
     <ClInclude Include="Emu\SysCalls\Modules\cellSysutilAvc2.h">
       <Filter>Emu\SysCalls\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utilities\SharedMutex.h">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utilities\Atomic.h">
+      <Filter>Utilities</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

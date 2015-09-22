@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #ifdef LLVM_AVAILABLE
+#include "rpcs3/Ini.h"
 #include "Utilities/Log.h"
 #include "Emu/System.h"
 #include "Emu/Cell/PPUDisAsm.h"

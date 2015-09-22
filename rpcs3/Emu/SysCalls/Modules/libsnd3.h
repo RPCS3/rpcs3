@@ -52,4 +52,4 @@ struct CellSnd3RequestQueueCtx
 	be_t<u32> rearQueueSize;
 };
 
-extern Module libsnd3;
+extern Module<> libsnd3;

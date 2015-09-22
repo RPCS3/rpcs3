@@ -1,9 +1,8 @@
 #include "stdafx.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
-#include "Emu/SysCalls/SysCalls.h"
 #include "Emu/IdManager.h"
-#include "Emu/DbgCommand.h"
+#include "Emu/SysCalls/SysCalls.h"
 
 #include "Emu/Cell/PPUThread.h"
 #include "sys_mutex.h"

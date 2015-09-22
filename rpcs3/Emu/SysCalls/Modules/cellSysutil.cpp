@@ -9,7 +9,7 @@
 #include "Emu/FS/VFS.h"
 #include "cellSysutil.h"
 
-extern Module cellSysutil;
+extern Module<> cellSysutil;
 
 std::unique_ptr<sysutil_t> g_sysutil;
 
@@ -352,7 +352,7 @@ extern void cellSysutil_WebBrowser_init();
 extern void cellSysutil_AudioOut_init();
 extern void cellSysutil_VideoOut_init();
 
-Module cellSysutil("cellSysutil", []()
+Module<> cellSysutil("cellSysutil", []()
 {
 	g_sysutil = std::make_unique<sysutil_t>();
 

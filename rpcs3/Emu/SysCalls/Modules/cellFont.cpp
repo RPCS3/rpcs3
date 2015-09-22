@@ -6,7 +6,7 @@
 #include "Emu/FS/vfsFile.h"
 #include "cellFont.h"
 
-extern Module cellFont;
+extern Module<> cellFont;
 
 // Functions
 s32 cellFontInitializeWithRevision(u64 revisionFlags, vm::ptr<CellFontConfig> config)
@@ -741,7 +741,7 @@ s32 cellFontGraphicsGetLineRGBA()
 }
 
 
-Module cellFont("cellFont", []()
+Module<> cellFont("cellFont", []()
 {
 	REG_FUNC(cellFont, cellFontSetFontsetOpenMode);
 	REG_FUNC(cellFont, cellFontSetFontOpenMode);

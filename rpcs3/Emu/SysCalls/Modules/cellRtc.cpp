@@ -5,7 +5,7 @@
 #include "Utilities/rTime.h"
 #include "cellRtc.h"
 
-extern Module cellRtc;
+extern Module<> cellRtc;
 
 s64 convertToUNIXTime(u16 seconds, u16 minutes, u16 hours, u16 days, s32 years)
 {
@@ -445,7 +445,7 @@ s32 cellRtcCompareTick(vm::ptr<CellRtcTick> pTick0, vm::ptr<CellRtcTick> pTick1)
 	else return CELL_OK;
 }
 
-Module cellRtc("cellRtc", []()
+Module<> cellRtc("cellRtc", []()
 {
 	REG_FUNC(cellRtc, cellRtcGetCurrentTick);
 	REG_FUNC(cellRtc, cellRtcGetCurrentClock);

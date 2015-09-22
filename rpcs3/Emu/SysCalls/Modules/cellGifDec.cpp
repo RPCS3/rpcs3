@@ -16,7 +16,7 @@ extern "C"
 
 #include "cellGifDec.h"
 
-extern Module cellGifDec;
+extern Module<> cellGifDec;
 
 // cellGifDec aliases (only for cellGifDec.cpp)
 using PPMainHandle = vm::pptr<GifDecoder>;
@@ -303,7 +303,7 @@ s32 cellGifDecDestroy(PMainHandle mainHandle)
 	return CELL_OK;
 }
 
-Module cellGifDec("cellGifDec", []()
+Module<> cellGifDec("cellGifDec", []()
 {
 	REG_FUNC(cellGifDec, cellGifDecCreate);
 	REG_FUNC(cellGifDec, cellGifDecExtCreate);

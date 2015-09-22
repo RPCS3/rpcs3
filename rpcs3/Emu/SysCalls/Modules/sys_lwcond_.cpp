@@ -9,7 +9,7 @@
 #include "Emu/SysCalls/lv2/sys_lwcond.h"
 #include "sysPrxForUser.h"
 
-extern Module sysPrxForUser;
+extern Module<> sysPrxForUser;
 
 s32 sys_lwcond_create(vm::ptr<sys_lwcond_t> lwcond, vm::ptr<sys_lwmutex_t> lwmutex, vm::ptr<sys_lwcond_attribute_t> attr)
 {
@@ -226,7 +226,7 @@ s32 sys_lwcond_wait(PPUThread& ppu, vm::ptr<sys_lwcond_t> lwcond, u64 timeout)
 	const be_t<u32> recursive_value = lwmutex->recursive_count;
 
 	// set special value
-	lwmutex->vars.owner = { lwmutex_reserved };
+	lwmutex->vars.owner = lwmutex_reserved;
 	lwmutex->recursive_count = 0;
 
 	// call the syscall

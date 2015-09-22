@@ -2,7 +2,7 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/SysCalls/Modules.h"
 
-extern Module cellSysutilAp;
+extern Module<> cellSysutilAp;
 
 // Return Codes
 enum
@@ -35,7 +35,7 @@ s32 cellSysutilApOff()
 	return CELL_OK;
 }
 
-Module cellSysutilAp("cellSysutilAp", []()
+Module<> cellSysutilAp("cellSysutilAp", []()
 {
 	REG_FUNC(cellSysutilAp, cellSysutilApGetRequiredMemSize);
 	REG_FUNC(cellSysutilAp, cellSysutilApOn);

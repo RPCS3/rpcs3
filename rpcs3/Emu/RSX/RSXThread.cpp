@@ -2531,8 +2531,8 @@ void RSXThread::Task()
 
 		inc = 1;
 
-		u32 put = m_ctrl->put.load();
-		u32 get = m_ctrl->get.load();
+		const be_t<u32> put = m_ctrl->put;
+		const be_t<u32> get = m_ctrl->get;
 
 		if (put == get || !Emu.IsRunning())
 		{

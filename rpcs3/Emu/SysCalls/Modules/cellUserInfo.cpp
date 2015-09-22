@@ -7,7 +7,7 @@
 #include "Emu/FS/vfsFileBase.h"
 #include "cellUserInfo.h"
 
-extern Module cellUserInfo;
+extern Module<> cellUserInfo;
 
 s32 cellUserInfoGetStat(u32 id, vm::ptr<CellUserInfoUserStat> stat)
 {
@@ -73,7 +73,7 @@ s32 cellUserInfoGetList(vm::ptr<u32> listNum, vm::ptr<CellUserInfoUserList> list
 	return CELL_OK;
 }
 
-Module cellUserInfo("cellUserInfo", []()
+Module<> cellUserInfo("cellUserInfo", []()
 {
 	REG_FUNC(cellUserInfo, cellUserInfoGetStat);
 	REG_FUNC(cellUserInfo, cellUserInfoSelectUser_ListType);

@@ -8,7 +8,7 @@
 #include "Emu/SysCalls/lv2/sys_lwmutex.h"
 #include "sysPrxForUser.h"
 
-extern Module sysPrxForUser;
+extern Module<> sysPrxForUser;
 
 s32 sys_lwmutex_create(vm::ptr<sys_lwmutex_t> lwmutex, vm::ptr<sys_lwmutex_attribute_t> attr)
 {
@@ -32,7 +32,7 @@ s32 sys_lwmutex_create(vm::ptr<sys_lwmutex_t> lwmutex, vm::ptr<sys_lwmutex_attri
 	default: sysPrxForUser.Error("sys_lwmutex_create(): invalid protocol (0x%x)", protocol); return CELL_EINVAL;
 	}
 
-	lwmutex->lock_var = { { lwmutex_free, 0 } };
+	lwmutex->lock_var.store({ lwmutex_free, 0 });
 	lwmutex->attribute = attr->recursive | attr->protocol;
 	lwmutex->recursive_count = 0;
 	lwmutex->sleep_queue = idm::make<lv2_lwmutex_t>(protocol, attr->name_u64);
@@ -86,7 +86,7 @@ s32 sys_lwmutex_lock(PPUThread& ppu, vm::ptr<sys_lwmutex_t> lwmutex, u64 timeout
 		return CELL_OK;
 	}
 
-	if (old_owner.data() == tid.data())
+	if (old_owner == tid)
 	{
 		// recursive locking
 
@@ -96,7 +96,7 @@ s32 sys_lwmutex_lock(PPUThread& ppu, vm::ptr<sys_lwmutex_t> lwmutex, u64 timeout
 			return CELL_EDEADLK;
 		}
 
-		if (lwmutex->recursive_count.data() == -1)
+		if (lwmutex->recursive_count == -1)
 		{
 			// if recursion limit reached
 			return CELL_EKRESOURCE;
@@ -133,7 +133,7 @@ s32 sys_lwmutex_lock(PPUThread& ppu, vm::ptr<sys_lwmutex_t> lwmutex, u64 timeout
 	if (lwmutex->vars.owner.compare_and_swap_test(lwmutex_free, tid))
 	{
 		// locking succeeded
-		lwmutex->all_info--;
+		--lwmutex->all_info;
 
 		return CELL_OK;
 	}
@@ -180,7 +180,7 @@ s32 sys_lwmutex_trylock(PPUThread& ppu, vm::ptr<sys_lwmutex_t> lwmutex)
 		return CELL_OK;
 	}
 
-	if (old_owner.data() == tid.data())
+	if (old_owner == tid)
 	{
 		// recursive locking
 
@@ -190,7 +190,7 @@ s32 sys_lwmutex_trylock(PPUThread& ppu, vm::ptr<sys_lwmutex_t> lwmutex)
 			return CELL_EDEADLK;
 		}
 
-		if (lwmutex->recursive_count.data() == -1)
+		if (lwmutex->recursive_count == -1)
 		{
 			// if recursion limit reached
 			return CELL_EKRESOURCE;
@@ -244,7 +244,7 @@ s32 sys_lwmutex_unlock(PPUThread& ppu, vm::ptr<sys_lwmutex_t> lwmutex)
 		return CELL_EPERM;
 	}
 
-	if (lwmutex->recursive_count.data())
+	if (lwmutex->recursive_count)
 	{
 		// recursive unlocking succeeded
 		lwmutex->recursive_count--;
@@ -276,13 +276,11 @@ s32 sys_lwmutex_unlock(PPUThread& ppu, vm::ptr<sys_lwmutex_t> lwmutex)
 	return CELL_OK;
 }
 
-u32 g_ppu_func_index__sys_lwmutex_unlock; // test
-
 void sysPrxForUser_sys_lwmutex_init()
 {
 	REG_FUNC(sysPrxForUser, sys_lwmutex_create);
 	REG_FUNC(sysPrxForUser, sys_lwmutex_destroy);
 	REG_FUNC(sysPrxForUser, sys_lwmutex_lock);
 	REG_FUNC(sysPrxForUser, sys_lwmutex_trylock);
-	g_ppu_func_index__sys_lwmutex_unlock = REG_FUNC(sysPrxForUser, sys_lwmutex_unlock); // test
+	REG_FUNC(sysPrxForUser, sys_lwmutex_unlock);
 }

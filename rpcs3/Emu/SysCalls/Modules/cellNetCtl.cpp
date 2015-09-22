@@ -28,7 +28,7 @@
 #include <fcntl.h>
 #endif
 
-extern Module cellNetCtl;
+extern Module<> cellNetCtl;
 
 s32 cellNetCtlInit()
 {
@@ -423,7 +423,7 @@ s32 cellGameUpdateCheckStartWithoutDialogAsyncEx()
 }
 
 
-Module cellNetCtl("cellNetCtl", []()
+Module<> cellNetCtl("cellNetCtl", []()
 {
 	REG_FUNC(cellNetCtl, cellNetCtlInit);
 	REG_FUNC(cellNetCtl, cellNetCtlTerm);

@@ -17,7 +17,7 @@ extern "C"
 #include "cellPamf.h"
 #include "cellVdec.h"
 
-extern Module cellVdec;
+extern Module<> cellVdec;
 
 VideoDecoder::VideoDecoder(s32 type, u32 profile, u32 addr, u32 size, vm::ptr<CellVdecCbMsg> func, u32 arg)
 	: type(type)
@@ -948,7 +948,7 @@ s32 cellVdecSetFrameRate(u32 handle, CellVdecFrameRate frc)
 	return CELL_OK;
 }
 
-Module cellVdec("cellVdec", []()
+Module<> cellVdec("cellVdec", []()
 {
 	//REG_VARIABLE(cellVdec, _cell_vdec_prx_ver); // 0x085a7ecb
 

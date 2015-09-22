@@ -2,7 +2,7 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/SysCalls/Modules.h"
 
-extern Module cellImeJp;
+extern Module<> cellImeJp;
 
 // Return Codes
 enum
@@ -262,7 +262,7 @@ s32 cellImeJpConfirmPrediction()
 	return CELL_OK;
 }
 
-Module cellImeJp("cellImeJp", []()
+Module<> cellImeJp("cellImeJp", []()
 {
 	REG_FUNC(cellImeJp, cellImeJpOpen);
 	REG_FUNC(cellImeJp, cellImeJpOpen2);

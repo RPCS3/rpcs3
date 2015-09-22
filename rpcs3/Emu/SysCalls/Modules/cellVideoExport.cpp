@@ -2,7 +2,7 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/SysCalls/Modules.h"
 
-extern Module cellVideoExport;
+extern Module<> cellVideoExport;
 
 s32 cellVideoExportProgress()
 {
@@ -35,7 +35,7 @@ s32 cellVideoExportFinalize()
 }
 
 
-Module cellVideoExport("cellVideoExport", []()
+Module<> cellVideoExport("cellVideoExport", []()
 {
 	REG_FUNC(cellVideoExport, cellVideoExportProgress);
 	REG_FUNC(cellVideoExport, cellVideoExportInitialize2);

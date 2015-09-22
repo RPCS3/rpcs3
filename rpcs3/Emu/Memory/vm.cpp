@@ -77,7 +77,7 @@ namespace vm
 	void* const g_base_addr = (atexit(finalize), initialize());
 	void* g_priv_addr;
 
-	std::array<atomic_t<u8>, 0x100000000ull / 4096> g_pages = {}; // information about every page
+	std::array<atomic_t<u8>, 0x100000000ull / 4096> g_pages{}; // information about every page
 
 	const thread_ctrl_t* const INVALID_THREAD = reinterpret_cast<const thread_ctrl_t*>(~0ull);
 	
@@ -85,16 +85,11 @@ namespace vm
 
 	class reservation_mutex_t
 	{
-		atomic_t<const thread_ctrl_t*> m_owner;
+		atomic_t<const thread_ctrl_t*> m_owner{ INVALID_THREAD };
 		std::condition_variable m_cv;
 		std::mutex m_mutex;
 
 	public:
-		reservation_mutex_t()
-		{
-			m_owner.store(INVALID_THREAD);
-		}
-
 		bool do_notify = false;
 
 		never_inline void lock()
@@ -105,7 +100,7 @@ namespace vm
 
 			while (!m_owner.compare_and_swap_test(INVALID_THREAD, owner))
 			{
-				if (m_owner.load() == owner)
+				if (m_owner == owner)
 				{
 					throw EXCEPTION("Deadlock");
 				}
@@ -423,7 +418,7 @@ namespace vm
 			throw EXCEPTION("Invalid arguments (addr=0x%x, size=0x%x)", addr, size);
 		}
 
-		const u8 flags = g_pages[addr >> 12].load();
+		const u8 flags = g_pages[addr >> 12];
 
 		if (!(flags & page_writable) || !(flags & page_allocated) || (flags & page_no_reservations))
 		{
@@ -587,7 +582,7 @@ namespace vm
 
 		for (u32 i = addr / 4096; i < addr / 4096 + size / 4096; i++)
 		{
-			if (g_pages[i].load())
+			if (g_pages[i])
 			{
 				throw EXCEPTION("Memory already mapped (addr=0x%x, size=0x%x, flags=0x%x, current_addr=0x%x)", addr, size, flags, i * 4096);
 			}
@@ -630,7 +625,7 @@ namespace vm
 
 		for (u32 i = addr / 4096; i < addr / 4096 + size / 4096; i++)
 		{
-			if ((g_pages[i].load() & flags_test) != (flags_test | page_allocated))
+			if ((g_pages[i] & flags_test) != (flags_test | page_allocated))
 			{
 				return false;
 			}
@@ -677,7 +672,7 @@ namespace vm
 
 		for (u32 i = addr / 4096; i < addr / 4096 + size / 4096; i++)
 		{
-			if (!(g_pages[i].load() & page_allocated))
+			if ((g_pages[i] & page_allocated) == 0)
 			{
 				throw EXCEPTION("Memory not mapped (addr=0x%x, size=0x%x, current_addr=0x%x)", addr, size, i * 4096);
 			}
@@ -719,7 +714,7 @@ namespace vm
 
 		for (u32 i = addr / 4096; i <= (addr + size - 1) / 4096; i++)
 		{
-			if ((g_pages[i].load() & page_allocated) != page_allocated)
+			if ((g_pages[i] & page_allocated) == 0)
 			{
 				return false;
 			}
@@ -788,7 +783,7 @@ namespace vm
 		// check if memory area is already mapped
 		for (u32 i = addr / 4096; i <= (addr + size - 1) / 4096; i++)
 		{
-			if (g_pages[i].load())
+			if (g_pages[i])
 			{
 				return false;
 			}
@@ -862,7 +857,7 @@ namespace vm
 				return addr;
 			}
 
-			if (used.load() + size > this->size)
+			if (used + size > this->size)
 			{
 				return 0;
 			}
@@ -941,7 +936,7 @@ namespace vm
 
 		for (u32 i = addr / 4096; i < addr / 4096 + size / 4096; i++)
 		{
-			if (g_pages[i].load())
+			if (g_pages[i])
 			{
 				throw EXCEPTION("Unexpected pages allocated (current_addr=0x%x)", i * 4096);
 			}

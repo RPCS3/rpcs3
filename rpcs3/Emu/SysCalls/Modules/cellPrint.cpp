@@ -2,7 +2,7 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/SysCalls/Modules.h"
 
-extern Module cellPrint;
+extern Module<> cellPrint;
 
 // Error Codes
 enum
@@ -101,7 +101,7 @@ s32 cellPrintSendBand()
 	return CELL_OK;
 }
 
-Module cellPrint("cellPrint", []()
+Module<> cellPrint("cellPrint", []()
 {
 	REG_FUNC(cellPrint, cellSysutilPrintInit);
 	REG_FUNC(cellPrint, cellSysutilPrintShutdown);

@@ -2,7 +2,7 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/SysCalls/Modules.h"
 
-extern Module cellMusicDecode;
+extern Module<> cellMusicDecode;
 
 // Return Codes
 enum
@@ -145,7 +145,7 @@ s32 cellMusicDecodeGetContentsId2()
 }
 
 
-Module cellMusicDecode("cellMusicDecode", []()
+Module<> cellMusicDecode("cellMusicDecode", []()
 {
 	REG_FUNC(cellMusicDecode, cellMusicDecodeInitialize);
 	REG_FUNC(cellMusicDecode, cellMusicDecodeInitializeSystemWorkload);

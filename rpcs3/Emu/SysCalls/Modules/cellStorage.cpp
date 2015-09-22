@@ -2,7 +2,7 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/SysCalls/Modules.h"
 
-extern Module cellSysutil;
+extern Module<> cellSysutil;
 
 s32 cellStorageDataImportMove()
 {

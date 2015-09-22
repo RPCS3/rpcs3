@@ -9,7 +9,7 @@
 #include "Emu/RSX/GSRender.h"
 #include "cellResc.h"
 
-extern Module cellResc;
+extern Module<> cellResc;
 
 extern s32 cellVideoOutConfigure(u32 videoOut, vm::ptr<CellVideoOutConfiguration> config, vm::ptr<CellVideoOutOption> option, u32 waitForEvent);
 extern s32 cellGcmSetFlipMode(u32 mode);
@@ -564,7 +564,7 @@ void SetupSurfaces(vm::ptr<CellGcmContextData>& cntxt)
 	r.m_surface_clip_y = 0;
 }
 
-// Module Functions
+// Module<> Functions
 s32 cellRescInit(vm::ptr<CellRescInitConfig> initConfig)
 {
 	cellResc.Warning("cellRescInit(initConfig=*0x%x)", initConfig);
@@ -1247,7 +1247,7 @@ s32 cellRescCreateInterlaceTable(u32 ea_addr, float srcH, CellRescTableElement d
 }
 
 
-Module cellResc("cellResc", []()
+Module<> cellResc("cellResc", []()
 {
 	s_rescInternalInstance = new CCellRescInternal();
 

@@ -147,13 +147,13 @@ struct spu_channel_t
 		u32 value;
 	};
 
-	atomic_t<sync_var_t> sync_var;
+	atomic_t<sync_var_t> data;
 
 public:
 	// returns true on success
 	bool try_push(u32 value)
 	{
-		const auto old = sync_var.atomic_op([=](sync_var_t& data)
+		const auto old = data.atomic_op([=](sync_var_t& data)
 		{
 			if ((data.wait = data.count) == false)
 			{
@@ -168,7 +168,7 @@ public:
 	// push performing bitwise OR with previous value, may require notification
 	void push_or(u32 value)
 	{
-		const auto old = sync_var.atomic_op([=](sync_var_t& data)
+		const auto old = data.atomic_op([=](sync_var_t& data)
 		{
 			data.count = true;
 			data.wait = false;
@@ -181,7 +181,7 @@ public:
 	// push unconditionally (overwriting previous value), may require notification
 	void push(u32 value)
 	{
-		const auto old = sync_var.atomic_op([=](sync_var_t& data)
+		const auto old = data.atomic_op([=](sync_var_t& data)
 		{
 			data.count = true;
 			data.wait = false;
@@ -194,7 +194,7 @@ public:
 	// returns true on success and loaded value
 	std::tuple<bool, u32> try_pop()
 	{
-		const auto old = sync_var.atomic_op([](sync_var_t& data)
+		const auto old = data.atomic_op([](sync_var_t& data)
 		{
 			data.wait = !data.count;
 			data.count = false;
@@ -207,7 +207,7 @@ public:
 	// pop unconditionally (loading last value), may require notification
 	u32 pop()
 	{
-		const auto old = sync_var.atomic_op([](sync_var_t& data)
+		const auto old = data.atomic_op([](sync_var_t& data)
 		{
 			data.wait = false;
 			data.count = false;
@@ -221,17 +221,17 @@ public:
 
 	void set_value(u32 value, bool count = true)
 	{
-		sync_var.store({ count, false, value });
+		data.store({ count, false, value });
 	}
 
-	u32 get_value() volatile
+	u32 get_value()
 	{
-		return sync_var.data.value;
+		return data.load().value;
 	}
 
-	u32 get_count() volatile
+	u32 get_count()
 	{
-		return sync_var.data.count;
+		return data.load().count;
 	}
 };
 
@@ -250,22 +250,22 @@ struct spu_channel_4_t
 		u32 value2;
 	};
 
-	atomic_t<sync_var_t> sync_var;
+	atomic_t<sync_var_t> values;
 	atomic_t<u32> value3;
 
 public:
 	void clear()
 	{
-		sync_var = {};
-		value3 = {};
+		values = sync_var_t{};
+		value3 = 0;
 	}
 
 	// push unconditionally (overwriting latest value), returns true if needs signaling
 	bool push(u32 value)
 	{
-		value3.exchange(value);
+		value3 = value; _mm_sfence();
 
-		return sync_var.atomic_op([=](sync_var_t& data) -> bool
+		return values.atomic_op([=](sync_var_t& data) -> bool
 		{
 			switch (data.count++)
 			{
@@ -289,7 +289,7 @@ public:
 	// returns true on success and two u32 values: data and count after removing the first element
 	std::tuple<bool, u32, u32> try_pop()
 	{
-		return sync_var.atomic_op([this](sync_var_t& data)
+		return values.atomic_op([this](sync_var_t& data)
 		{
 			const auto result = std::make_tuple(data.count != 0, u32{ data.value0 }, u32{ data.count - 1u });
 
@@ -300,7 +300,8 @@ public:
 
 				data.value0 = data.value1;
 				data.value1 = data.value2;
-				data.value2 = value3.load_sync();
+				_mm_lfence();
+				data.value2 = this->value3;
 			}
 			else
 			{
@@ -311,19 +312,15 @@ public:
 		});
 	}
 
-	u32 get_count() volatile
+	u32 get_count()
 	{
-		return sync_var.data.count;
+		return values.raw().count;
 	}
 
 	void set_values(u32 count, u32 value0, u32 value1 = 0, u32 value2 = 0, u32 value3 = 0)
 	{
-		sync_var.data.waiting = 0;
-		sync_var.data.count = count;
-		sync_var.data.value0 = value0;
-		sync_var.data.value1 = value1;
-		sync_var.data.value2 = value2;
-		this->value3.store(value3);
+		this->values.raw() = { 0, count, value0, value1, value2 };
+		this->value3 = value3;
 	}
 };
 
@@ -337,6 +334,13 @@ struct spu_int_ctrl_t
 	void set(u64 ints);
 
 	void clear(u64 ints);
+
+	void clear()
+	{
+		mask = 0;
+		stat = 0;
+		tag = nullptr;
+	}
 };
 
 struct spu_imm_table_t

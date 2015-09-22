@@ -7,7 +7,7 @@
 #include "cellAudioOut.h"
 #include "cellVideoOut.h"
 
-extern Module cellAvconfExt;
+extern Module<> cellAvconfExt;
 
 f32 g_gamma;
 
@@ -137,7 +137,7 @@ s32 cellVideoOutGetScreenSize(u32 videoOut, vm::ptr<float> screenSize)
 }
 
 
-Module cellAvconfExt("cellAvconfExt", []()
+Module<> cellAvconfExt("cellAvconfExt", []()
 {
 	g_gamma = 1.0f;
 

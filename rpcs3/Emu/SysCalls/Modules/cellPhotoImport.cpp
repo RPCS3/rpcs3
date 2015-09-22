@@ -2,7 +2,7 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/SysCalls/Modules.h"
 
-extern Module cellPhotoImportUtil;
+extern Module<> cellPhotoImportUtil;
 
 // Return Codes
 enum
@@ -53,7 +53,7 @@ s32 cellPhotoImport2()
 	return CELL_OK;
 }
 
-Module cellPhotoImportUtil("cellPhotoImport", []()
+Module<> cellPhotoImportUtil("cellPhotoImport", []()
 {
 	REG_FUNC(cellPhotoImportUtil, cellPhotoImport);
 	REG_FUNC(cellPhotoImportUtil, cellPhotoImport2);

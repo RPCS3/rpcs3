@@ -77,3 +77,21 @@ struct CellSync2QueueAttribute
 };
 
 CHECK_SIZE(CellSync2QueueAttribute, 128);
+
+struct CellSync2CallerThreadType
+{
+	be_t<u16> threadTypeId;
+	vm::bptr<u64(u64)> self;
+	vm::bptr<s32(u64, s32, u64, u64)> waitSignal;
+	vm::bptr<s32(vm::ptr<u64>, s32, u64, u64)> allocateSignalReceiver;
+	vm::bptr<s32(u64, u64)> freeSignalReceiver;
+	be_t<u32> spinWaitNanoSec;
+	be_t<u64> callbackArg;
+};
+
+struct CellSync2Notifier
+{
+	be_t<u16> threadTypeId;
+	vm::bptr<s32(u64, u64)> sendSignal;
+	be_t<u64> callbackArg;
+};

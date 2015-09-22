@@ -6,7 +6,7 @@
 
 #include "sys_lv2dbg.h"
 
-extern Module sys_lv2dbg;
+extern Module<> sys_lv2dbg;
 
 s32 sys_dbg_read_ppu_thread_context(u64 id, vm::ptr<sys_dbg_ppu_thread_context_t> ppu_context)
 {
@@ -190,7 +190,7 @@ s32 sys_dbg_set_mask_to_ppu_exception_handler(u64 mask, u64 flags)
 	throw EXCEPTION("");
 }
 
-Module sys_lv2dbg("sys_lv2dbg", []
+Module<> sys_lv2dbg("sys_lv2dbg", []
 {
 	REG_FUNC(sys_lv2dbg, sys_dbg_read_ppu_thread_context);
 	REG_FUNC(sys_lv2dbg, sys_dbg_read_spu_thread_context);

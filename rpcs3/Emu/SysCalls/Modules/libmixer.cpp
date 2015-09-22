@@ -9,7 +9,7 @@
 #include "cellAudio.h"
 #include "libmixer.h"
 
-extern Module libmixer;
+extern Module<> libmixer;
 
 SurMixerConfig g_surmx;
 
@@ -310,7 +310,7 @@ s32 cellSurMixerCreate(vm::cptr<CellSurMixerConfig> config)
 	port.size = port.channel * port.block * AUDIO_SAMPLES * sizeof(float);
 	port.tag = 0;
 	port.level = 1.0f;
-	port.level_set.data = { 1.0f, 0.0f };
+	port.level_set.store({ 1.0f, 0.0f });
 
 	libmixer.Warning("*** audio port opened (port=%d)", g_surmx.audio_port);
 
@@ -328,7 +328,7 @@ s32 cellSurMixerCreate(vm::cptr<CellSurMixerConfig> config)
 	{
 		AudioPortConfig& port = g_audio.ports[g_surmx.audio_port];
 
-		while (port.state.load() != AUDIO_PORT_STATE_CLOSED)
+		while (port.state != AUDIO_PORT_STATE_CLOSED)
 		{
 			CHECK_EMU_STATUS;
 
@@ -338,7 +338,7 @@ s32 cellSurMixerCreate(vm::cptr<CellSurMixerConfig> config)
 				continue;
 			}
 
-			if (port.state.load() == AUDIO_PORT_STATE_STARTED)
+			if (port.state == AUDIO_PORT_STATE_STARTED)
 			{
 				//u64 stamp0 = get_system_time();
 
@@ -614,7 +614,7 @@ float cellSurMixerUtilNoteToRatio(u8 refNote, u8 note)
 	throw EXCEPTION("");
 }
 
-Module libmixer("libmixer", []()
+Module<> libmixer("libmixer", []()
 {
 	g_surmx.audio_port = ~0;
 

@@ -219,7 +219,7 @@ s32 sys_memory_get_user_memory_size(vm::ptr<sys_memory_info_t> mem_info)
 	
 	// Fetch the user memory available
 	mem_info->total_user_memory = area->size - reserved;
-	mem_info->available_user_memory = area->size - area->used.load();
+	mem_info->available_user_memory = area->size - area->used;
 
 	return CELL_OK;
 }
@@ -248,8 +248,7 @@ s32 sys_memory_container_create(vm::ptr<u32> cid, u32 size)
 
 	const auto area = vm::get(vm::user_space);
 
-	if (area->size < reserved + size ||
-		area->size - area->used.load() < size)
+	if (area->size < reserved + size || area->size - area->used < size)
 	{
 		return CELL_ENOMEM;
 	}
@@ -274,7 +273,7 @@ s32 sys_memory_container_destroy(u32 cid)
 	}
 
 	// Check if some memory is not deallocated (the container cannot be destroyed in this case)
-	if (ct->used.load())
+	if (ct->used)
 	{
 		return CELL_EBUSY;
 	}
@@ -298,7 +297,7 @@ s32 sys_memory_container_get_size(vm::ptr<sys_memory_info_t> mem_info, u32 cid)
 	}
 
 	mem_info->total_user_memory = ct->size; // total container memory
-	mem_info->available_user_memory = ct->size - ct->used.load(); // available container memory
+	mem_info->available_user_memory = ct->size - ct->used; // available container memory
 
 	return CELL_OK;
 }

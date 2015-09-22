@@ -10,7 +10,7 @@
 #include "cellSpurs.h"
 #include "cellSpursJq.h"
 
-extern Module cellSpursJq;
+extern Module<> cellSpursJq;
 
 s32 cellSpursJobQueueAttributeInitialize()
 {
@@ -390,7 +390,7 @@ s32 cellSpursJobQueueUnsetExceptionEventHandler()
 	return CELL_OK;
 }
 
-Module cellSpursJq("cellSpursJq", []()
+Module<> cellSpursJq("cellSpursJq", []()
 {
 	REG_FUNC(cellSpursJq, cellSpursJobQueueAttributeInitialize);
 	REG_FUNC(cellSpursJq, cellSpursJobQueueAttributeSetMaxGrab);

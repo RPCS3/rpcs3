@@ -15,7 +15,7 @@ extern "C"
 
 #include "cellJpgDec.h"
 
-extern Module cellJpgDec;
+extern Module<> cellJpgDec;
 
 s32 cellJpgDecCreate(u32 mainHandle, u32 threadInParam, u32 threadOutParam)
 {
@@ -359,7 +359,7 @@ s32 cellJpgDecExtSetParameter()
 }
 
 
-Module cellJpgDec("cellJpgDec", []()
+Module<> cellJpgDec("cellJpgDec", []()
 {
 	REG_FUNC(cellJpgDec, cellJpgDecCreate);
 	REG_FUNC(cellJpgDec, cellJpgDecExtCreate);

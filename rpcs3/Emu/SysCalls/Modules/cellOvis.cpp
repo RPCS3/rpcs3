@@ -4,7 +4,7 @@
 
 namespace vm { using namespace ps3; }
 
-extern Module cellOvis;
+extern Module<> cellOvis;
 
 // Return Codes
 enum
@@ -38,7 +38,7 @@ s32 cellOvisInvalidateOverlappedSegments()
 	return CELL_OK;
 }
 
-Module cellOvis("cellOvis", []()
+Module<> cellOvis("cellOvis", []()
 {
 	REG_FUNC(cellOvis, cellOvisGetOverlayTableSize);
 	REG_FUNC(cellOvis, cellOvisInitializeOverlayTable);

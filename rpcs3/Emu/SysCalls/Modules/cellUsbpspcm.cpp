@@ -2,7 +2,7 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/SysCalls/Modules.h"
 
-extern Module cellUsbPspcm;
+extern Module<> cellUsbPspcm;
 
 // Return Codes
 enum
@@ -183,7 +183,7 @@ s32 cellUsbPspcmCancelWaitData()
 	return CELL_OK;
 }
 
-Module cellUsbPspcm("cellUsbPspcm", []()
+Module<> cellUsbPspcm("cellUsbPspcm", []()
 {
 	REG_FUNC(cellUsbPspcm, cellUsbPspcmInit);
 	REG_FUNC(cellUsbPspcm, cellUsbPspcmEnd);

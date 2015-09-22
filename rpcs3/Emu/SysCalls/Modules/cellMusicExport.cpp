@@ -2,7 +2,7 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/SysCalls/Modules.h"
 
-extern Module cellMusicExport;
+extern Module<> cellMusicExport;
 
 // Return Codes
 enum
@@ -51,7 +51,7 @@ s32 cellMusicExportProgress()
 	return CELL_OK;
 }
 
-Module cellMusicExport("cellMusicExport", []()
+Module<> cellMusicExport("cellMusicExport", []()
 {
 	REG_FUNC(cellMusicExport, cellMusicExportInitialize);
 	REG_FUNC(cellMusicExport, cellMusicExportInitialize2);

@@ -58,4 +58,4 @@ struct CellAtracExtRes
 	u8 priority[8];
 };
 
-extern Module cellAtrac;
+extern Module<> cellAtrac;

@@ -2,7 +2,7 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/SysCalls/Modules.h"
 
-extern Module cellSpudll;
+extern Module<> cellSpudll;
 
 s32 cellSpudllGetImageSize(vm::ptr<u32> psize, vm::cptr<void> so_elf, vm::cptr<struct CellSpudllHandleConfig> config)
 {
@@ -14,7 +14,7 @@ s32 cellSpudllHandleConfigSetDefaultValues(vm::ptr<struct CellSpudllHandleConfig
 	throw EXCEPTION("");
 }
 
-Module cellSpudll("cellSpudll", []()
+Module<> cellSpudll("cellSpudll", []()
 {
 	REG_FUNC(cellSpudll, cellSpudllGetImageSize);
 	REG_FUNC(cellSpudll, cellSpudllHandleConfigSetDefaultValues);

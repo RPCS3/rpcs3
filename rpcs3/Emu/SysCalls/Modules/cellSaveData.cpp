@@ -10,13 +10,9 @@
 #include "Loader/PSF.h"
 #include "cellSaveData.h"
 
-extern Module cellSysutil;
-
-std::unique_ptr<SaveDataDialogInstance> g_savedata_dialog;
-
-SaveDataDialogInstance::SaveDataDialogInstance()
-{
-}
+extern Module<> cellSysutil;
+extern Module<> cellSaveData;
+extern Module<> cellMinisSaveData;
 
 // cellSaveData aliases (only for cellSaveData.cpp)
 using PSetList = vm::ptr<CellSaveDataSetList>;
@@ -41,12 +37,13 @@ enum : u32
 	SAVEDATA_OP_FIXED_DELETE = 14,
 };
 
+std::mutex g_savedata_mutex;
+
 never_inline s32 savedata_op(PPUThread& ppu, u32 operation, u32 version, vm::cptr<char> dirName, u32 errDialog, PSetList setList, PSetBuf setBuf, PFuncList funcList, PFuncFixed funcFixed, PFuncStat funcStat, PFuncFile funcFile, u32 container, u32 unknown, vm::ptr<void> userdata, u32 userId, PFuncDone funcDone)
 {
 	// TODO: check arguments
 
-	// try to lock the mutex (not sure how it originally works; std::try_to_lock makes it non-blocking)
-	std::unique_lock<std::mutex> lock(g_savedata_dialog->mutex, std::try_to_lock);
+	std::unique_lock<std::mutex> lock(g_savedata_mutex, std::try_to_lock);
 
 	if (!lock)
 	{
@@ -289,7 +286,7 @@ never_inline s32 savedata_op(PPUThread& ppu, u32 operation, u32 version, vm::cpt
 			}
 
 			// Display Save Data List
-			selected = g_savedata_dialog->ShowSaveDataList(save_entries, focused, listSet);
+			selected = Emu.GetCallbacks().get_save_dialog()->ShowSaveDataList(save_entries, focused, listSet);
 
 			if (selected == -1)
 			{
@@ -958,7 +955,7 @@ void cellSysutil_SaveData_init()
 	REG_FUNC(cellSysutil, cellSaveDataAutoSave);
 }
 
-Module cellSaveData("cellSaveData", []()
+Module<> cellSaveData("cellSaveData", []()
 {
 	// libsysutil_savedata functions:
 	REG_FUNC(cellSaveData, cellSaveDataUserGetListItem);
@@ -975,7 +972,7 @@ Module cellSaveData("cellSaveData", []()
 	REG_FUNC(cellSaveData, cellSaveDataListImport);
 });
 
-Module cellMinisSaveData("cellMinisSaveData", []()
+Module<> cellMinisSaveData("cellMinisSaveData", []()
 {
 	// libsysutil_savedata_psp functions:
 	//REG_FUNC(cellMinisSaveData, cellMinisSaveDataDelete); // 0x6eb168b3

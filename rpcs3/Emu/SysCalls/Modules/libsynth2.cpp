@@ -104,7 +104,7 @@ u16 cellSoundSynth2Pitch2Note(u16 center_note, u16 center_fine, u16 pitch)
 }
 
 
-Module libsynth2("libsynth2", []()
+Module<> libsynth2("libsynth2", []()
 {
 	REG_SUB(libsynth2,, cellSoundSynth2Config);
 	REG_SUB(libsynth2,, cellSoundSynth2Init);

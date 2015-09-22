@@ -4,7 +4,7 @@
 #include "Emu/SysCalls/Modules.h"
 #include "cellScreenshot.h"
 
-extern Module cellScreenshot;
+extern Module<> cellScreenshot;
 
 s32 cellScreenShotSetParameter() //const CellScreenShotSetParam *param
 {
@@ -30,7 +30,7 @@ s32 cellScreenShotDisable()
 	return CELL_OK;
 }
 
-Module cellScreenshot("cellScreenshot", []()
+Module<> cellScreenshot("cellScreenshot", []()
 {
 	REG_FUNC(cellScreenshot, cellScreenShotSetParameter);
 	REG_FUNC(cellScreenshot, cellScreenShotSetOverlayImage);

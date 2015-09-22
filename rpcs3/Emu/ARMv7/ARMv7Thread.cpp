@@ -28,7 +28,7 @@ void armv7_init_tls()
 
 	for (auto& v : g_armv7_tls_owners)
 	{
-		v.store(0, std::memory_order_relaxed);
+		v = 0;
 	}
 }
 
@@ -53,8 +53,8 @@ u32 armv7_get_tls(u32 thread)
 		if (g_armv7_tls_owners[i].compare_exchange_strong(old, thread))
 		{
 			const u32 addr = g_armv7_tls_start + i * Emu.GetTLSMemsz(); // get TLS address
-			memcpy(vm::get_ptr(addr), vm::get_ptr(Emu.GetTLSAddr()), Emu.GetTLSFilesz()); // initialize from TLS image
-			memset(vm::get_ptr(addr + Emu.GetTLSFilesz()), 0, Emu.GetTLSMemsz() - Emu.GetTLSFilesz()); // fill the rest with zeros
+			std::memcpy(vm::get_ptr(addr), vm::get_ptr(Emu.GetTLSAddr()), Emu.GetTLSFilesz()); // initialize from TLS image
+			std::memset(vm::get_ptr(addr + Emu.GetTLSFilesz()), 0, Emu.GetTLSMemsz() - Emu.GetTLSFilesz()); // fill the rest with zeros
 			return addr;
 		}
 	}
@@ -195,15 +195,13 @@ void ARMv7Thread::task()
 {
 	if (custom_task)
 	{
-		if (m_state.load() && check_status()) return;
+		if (check_status()) return;
 
 		return custom_task(*this);
 	}
 
-	while (true)
+	while (!m_state || !check_status())
 	{
-		if (m_state.load() && check_status()) break;
-
 		// decode instruction using specified decoder
 		PC += m_dec->DecodeMemory(PC);
 	}

@@ -4,7 +4,7 @@
 
 #include "cellGame.h"
 
-extern Module cellGameExec;
+extern Module<> cellGameExec;
 
 s32 cellGameSetExitParam()
 {
@@ -45,7 +45,7 @@ s32 cellGameGetBootGameInfo(vm::ptr<u32> type, vm::ptr<char> dirName, vm::ptr<u3
 	return CELL_OK;
 }
 
-Module cellGameExec("cellGameExec", []()
+Module<> cellGameExec("cellGameExec", []()
 {
 	REG_FUNC(cellGameExec, cellGameSetExitParam);
 	REG_FUNC(cellGameExec, cellGameGetHomeDataExportPath);

@@ -289,14 +289,10 @@ struct SaveDataEntry
 	bool isNew;
 };
 
-struct SaveDataDialogInstance
+class SaveDialogBase
 {
-	std::mutex mutex;
-
-	SaveDataDialogInstance();
-	virtual ~SaveDataDialogInstance() = default;
+public:
+	virtual ~SaveDialogBase() = default;
 
 	virtual s32 ShowSaveDataList(std::vector<SaveDataEntry>& save_entries, s32 focused, vm::ptr<CellSaveDataListSet> listSet) = 0;
 };
-
-extern class Module cellSaveData;

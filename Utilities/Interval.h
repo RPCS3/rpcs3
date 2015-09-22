@@ -1,42 +1,32 @@
 #pragma once
 
-template<typename T>
-struct BaseInterval
+template<typename T1, typename T2> struct range_t
 {
-	static const uint64_t zero = 0ull;
-	static const uint64_t notz = 0xffffffffffffffffull;
-
-	T m_min, m_max;
-
-	static BaseInterval<T> make(T min_value, T max_value)
-	{
-		BaseInterval<T> res = { min_value, max_value };
-		return res;
-	}
-
-	static BaseInterval<T> make()
-	{
-		return make((T&)zero, (T&)notz);
-	}
-
-	bool getconst(T& result)
-	{
-		if (m_min == m_max)
-		{
-			result = m_min;
-			return true;
-		}
-		else
-		{
-			return false;
-		}
-	}
-
-	bool isindef()
-	{
-		if (T == float)
-		{
-
-		}
-	}
+	T1 _min; // first value
+	T2 _max; // second value
 };
+
+template<typename T1, typename T2> constexpr range_t<std::decay_t<T1>, std::decay_t<T2>> make_range(T1&& _min, T2&& _max)
+{
+	return{ std::forward<T1>(_min), std::forward<T2>(_max) };
+}
+
+template<typename T1, typename T2, typename T> constexpr bool operator <(const range_t<T1, T2>& range, const T& value)
+{
+	return range._min < value && range._max < value;
+}
+
+template<typename T1, typename T2, typename T> constexpr bool operator <(const T& value, const range_t<T1, T2>& range)
+{
+	return value < range._min && value < range._max;
+}
+
+template<typename T1, typename T2, typename T> constexpr bool operator ==(const range_t<T1, T2>& range, const T& value)
+{
+	return !(value < range._min) && !(range._max < value);
+}
+
+template<typename T1, typename T2, typename T> constexpr bool operator ==(const T& value, const range_t<T1, T2>& range)
+{
+	return !(value < range._min) && !(range._max < value);
+}

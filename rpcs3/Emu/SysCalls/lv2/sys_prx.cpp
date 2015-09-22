@@ -53,7 +53,7 @@ s32 prx_load_module(std::string path, u64 flags, vm::ptr<sys_prx_load_module_opt
 		if (module_.first == "")
 			continue;
 
-		Module* module = Emu.GetModuleManager().GetModuleByName(module_.first.c_str());
+		Module<>* module = Emu.GetModuleManager().GetModuleByName(module_.first.c_str());
 
 		if (!module)
 		{
@@ -83,7 +83,7 @@ s32 prx_load_module(std::string path, u64 flags, vm::ptr<sys_prx_load_module_opt
 
 					if (!vm::check_addr(addr, 8) || !vm::check_addr(i_addr = vm::read32(addr), 4))
 					{
-						sys_prx.Error("Failed to inject code for exported function '%s' (opd=0x%x, 0x%x)", SysCalls::GetFuncName(nid), addr, i_addr);
+						sys_prx.Error("Failed to inject code for exported function '%s' (opd=0x%x, 0x%x)", get_ps3_function_name(nid), addr, i_addr);
 					}
 					else
 					{
@@ -104,7 +104,7 @@ s32 prx_load_module(std::string path, u64 flags, vm::ptr<sys_prx_load_module_opt
 
 			if (!func)
 			{
-				sys_prx.Error("Unknown function '%s' in '%s' module (0x%x)", SysCalls::GetFuncName(nid), module_.first);
+				sys_prx.Error("Unknown function '%s' in '%s' module (0x%x)", get_ps3_function_name(nid), module_.first);
 
 				index = add_ppu_func(ModuleFunc(nid, 0, module, nullptr, nullptr));
 			}
@@ -112,7 +112,7 @@ s32 prx_load_module(std::string path, u64 flags, vm::ptr<sys_prx_load_module_opt
 			{
 				const bool is_lle = func->lle_func && !(func->flags & MFF_FORCED_HLE);
 
-				sys_prx.Error("Imported %sfunction '%s' in '%s' module (0x%x)", (is_lle ? "LLE " : ""), SysCalls::GetFuncName(nid), module_.first, addr);
+				sys_prx.Error("Imported %sfunction '%s' in '%s' module (0x%x)", (is_lle ? "LLE " : ""), get_ps3_function_name(nid), module_.first, addr);
 			}
 
 			if (!patch_ppu_import(addr, index))

@@ -13,7 +13,6 @@
 #include "Emu/FS/vfsFile.h"
 #include "Emu/FS/vfsLocalFile.h"
 #include "Emu/FS/vfsDeviceLocalFile.h"
-#include "Emu/DbgCommand.h"
 
 #include "Emu/CPU/CPUThreadManager.h"
 #include "Emu/SysCalls/Callback.h"
@@ -58,10 +57,6 @@ Emulator::Emulator()
 {
 	m_loader.register_handler(new loader::handlers::elf32);
 	m_loader.register_handler(new loader::handlers::elf64);
-}
-
-Emulator::~Emulator()
-{
 }
 
 void Emulator::Init()
@@ -128,8 +123,6 @@ bool Emulator::BootGame(const std::string& path, bool direct)
 void Emulator::Load()
 {
 	m_status = Ready;
-
-	GetModuleManager().Init();
 
 	if (!fs::is_file(m_path))
 	{
@@ -300,14 +293,14 @@ void Emulator::Run()
 	SendDbgCommand(DID_STARTED_EMU);
 }
 
-void Emulator::Pause()
+bool Emulator::Pause()
 {
 	const u64 start = get_system_time();
 
 	// try to set Paused status
 	if (!sync_bool_compare_and_swap(&m_status, Running, Paused))
 	{
-		return;
+		return false;
 	}
 
 	// update pause start time
@@ -324,6 +317,8 @@ void Emulator::Pause()
 	}
 
 	SendDbgCommand(DID_PAUSED_EMU);
+
+	return true;
 }
 
 void Emulator::Resume()
@@ -389,7 +384,9 @@ void Emulator::Stop()
 
 	while (g_thread_count)
 	{
-		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		m_cb.process_events();
+
+		std::this_thread::sleep_for(10ms);
 	}
 
 	LOG_NOTICE(GENERAL, "All threads stopped...");
@@ -516,15 +513,3 @@ bool Emulator::LoadPoints(const std::string& path)
 }
 
 Emulator Emu;
-
-CallAfterCbType CallAfterCallback = nullptr;
-
-void CallAfter(std::function<void()> func)
-{
-	CallAfterCallback(func);
-}
-
-void SetCallAfterCallback(CallAfterCbType cb)
-{
-	CallAfterCallback = cb;
-}
