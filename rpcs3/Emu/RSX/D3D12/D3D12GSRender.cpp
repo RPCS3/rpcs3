@@ -298,7 +298,7 @@ D3D12GSRender::D3D12GSRender()
 	m_rtts.Init(m_device.Get());
 
 	m_constantsData.Init(m_device.Get(), 1024 * 1024 * 64, D3D12_HEAP_TYPE_UPLOAD, D3D12_HEAP_FLAG_NONE);
-	m_vertexIndexData.Init(m_device.Get(), 1024 * 1024 * 384, D3D12_HEAP_TYPE_UPLOAD, D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS);
+	m_vertexIndexData.Init(m_device.Get(), 1024 * 1024 * 384, D3D12_HEAP_TYPE_UPLOAD, D3D12_HEAP_FLAG_NONE);
 	m_textureUploadData.Init(m_device.Get(), 1024 * 1024 * 256, D3D12_HEAP_TYPE_UPLOAD, D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS);
 
 	if (Ini.GSOverlay.GetValue())
@@ -884,7 +884,6 @@ void D3D12GSRender::Flip()
 
 	// Flush
 	m_texturesRTTs.clear();
-	m_vertexCache.clear();
 	m_vertexConstants.clear();
 
 	// Now get ready for next frame

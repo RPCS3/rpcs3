@@ -229,10 +229,6 @@ private:
 	std::unordered_map<u32, ID3D12Resource*> m_texturesCache;
 	//  std::vector<PostDrawObj> m_post_draw_objs;
 
-	// TODO: Use a tree structure to parse more efficiently
-	// Key is begin << 32 | end
-	std::unordered_map<u64, ID3D12Resource *> m_vertexCache;
-
 	PipelineStateObjectCache m_cachePSO;
 	std::pair<ID3D12PipelineState *, size_t> *m_PSO;
 
@@ -334,7 +330,7 @@ private:
 	// Constants storage
 	DataHeap<ID3D12Resource, 256> m_constantsData;
 	// Vertex storage
-	DataHeap<ID3D12Heap, 65536> m_vertexIndexData;
+	DataHeap<ID3D12Resource, 65536> m_vertexIndexData;
 	// Texture storage
 	DataHeap<ID3D12Heap, 65536> m_textureUploadData;
 	DataHeap<ID3D12Heap, 65536> m_UAVHeap;
