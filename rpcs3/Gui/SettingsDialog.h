@@ -7,7 +7,6 @@
 
 #pragma comment(lib, "iphlpapi.lib")
 #else
-#include "frame_icon.xpm"
 
 #include <arpa/inet.h>
 #include <sys/socket.h>
