@@ -6,6 +6,10 @@
 #include "D3DGSFrame.h"
 #include "Utilities/Timer.h"
 
+#ifndef _WIN32
+#include "frame_icon.xpm"
+#endif
+
 GLGSFrame::GLGSFrame()
 	: GSFrame(nullptr, "GSFrame[OpenGL]")
 	, m_frames(0)

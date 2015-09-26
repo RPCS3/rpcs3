@@ -9,9 +9,7 @@ D3DGSFrame::D3DGSFrame()
 	: GSFrame(nullptr, "GSFrame[DirectX 12]")
 	, m_frames(0)
 {
-#ifdef _WIN32
 	SetIcon(wxICON(frame_icon));
-#endif
 	canvas = new wxWindow(this, wxID_ANY);
 	canvas->SetSize(GetClientSize());
 
