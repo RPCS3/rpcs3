@@ -4,6 +4,7 @@
 #include "Utilities/Log.h"
 
 #include "D3D12GSRender.h"
+#include "d3dx12.h"
 
 const int g_vertexCount = 32;
 
@@ -205,10 +206,10 @@ std::vector<VertexBufferFormat> FormatVertexData(const RSXVertexData *m_vertex_d
 }
 
 /**
- * Create a new vertex buffer with attributes from vbf using vertexIndexHeap as storage heap.
+ * Suballocate a new vertex buffer with attributes from vbf using vertexIndexHeap as storage heap.
  */
 static
-ComPtr<ID3D12Resource> createVertexBuffer(const VertexBufferFormat &vbf, const RSXVertexData *vertexData, size_t baseOffset, ID3D12Device *device, DataHeap<ID3D12Heap, 65536> &vertexIndexHeap)
+D3D12_GPU_VIRTUAL_ADDRESS createVertexBuffer(const VertexBufferFormat &vbf, const RSXVertexData *vertexData, size_t baseOffset, ID3D12Device *device, DataHeap<ID3D12Resource, 65536> &vertexIndexHeap)
 {
 	size_t subBufferSize = vbf.range.second - vbf.range.first + 1;
 	// Make multiple of stride
@@ -217,19 +218,9 @@ ComPtr<ID3D12Resource> createVertexBuffer(const VertexBufferFormat &vbf, const R
 	assert(vertexIndexHeap.canAlloc(subBufferSize));
 	size_t heapOffset = vertexIndexHeap.alloc(subBufferSize);
 
-	ComPtr<ID3D12Resource> vertexBuffer;
-	ThrowIfFailed(device->CreatePlacedResource(
-		vertexIndexHeap.m_heap,
-		heapOffset,
-		&getBufferResourceDesc(subBufferSize),
-		D3D12_RESOURCE_STATE_GENERIC_READ,
-		nullptr,
-		IID_PPV_ARGS(vertexBuffer.GetAddressOf())
-		));
-	void *bufferMap;
-	ThrowIfFailed(vertexBuffer->Map(0, nullptr, (void**)&bufferMap));
-	memset(bufferMap, -1, subBufferSize);
-	#pragma omp parallel for
+	void *buffer;
+	ThrowIfFailed(vertexIndexHeap.m_heap->Map(0, &CD3DX12_RANGE(heapOffset, heapOffset + subBufferSize), (void**)&buffer));
+	void *bufferMap = (char*)buffer + heapOffset;
 	for (int vertex = 0; vertex < vbf.elementCount; vertex++)
 	{
 		for (size_t attributeId : vbf.attributeId)
@@ -242,7 +233,7 @@ ComPtr<ID3D12Resource> createVertexBuffer(const VertexBufferFormat &vbf, const R
 			size_t offset = (size_t)vertexData[attributeId].addr + baseOffset - vbf.range.first;
 			size_t tsize = vertexData[attributeId].GetTypeSize();
 			size_t size = vertexData[attributeId].size;
-			auto src = vm::get_ptr<const u8>(vertexData[attributeId].addr + baseOffset + (int)vbf.stride * vertex);
+			auto src = vm::get_ptr<const u8>(vertexData[attributeId].addr + (u32)baseOffset + (u32)vbf.stride * vertex);
 			char* dst = (char*)bufferMap + offset + vbf.stride * vertex;
 
 			switch (tsize)
@@ -272,8 +263,8 @@ ComPtr<ID3D12Resource> createVertexBuffer(const VertexBufferFormat &vbf, const R
 		}
 	}
 
-	vertexBuffer->Unmap(0, nullptr);
-	return vertexBuffer;
+	vertexIndexHeap.m_heap->Unmap(0, &CD3DX12_RANGE(heapOffset, heapOffset + subBufferSize));
+	return vertexIndexHeap.m_heap->GetGPUVirtualAddress() + heapOffset;
 }
 
 static bool
@@ -303,25 +294,11 @@ std::vector<D3D12_VERTEX_BUFFER_VIEW> D3D12GSRender::UploadVertexBuffers(bool in
 		if (vbf.stride)
 			subBufferSize = ((subBufferSize + vbf.stride - 1) / vbf.stride) * vbf.stride;
 
-		u64 key = vbf.range.first;
-		key = key << 32;
-		key = key | vbf.range.second;
-		auto It = m_vertexCache.find(key);
-
-		ID3D12Resource *vertexBuffer;
-		if (vbf.range.first != 0 && // Attribute is stored in a buffer, not inline in command buffer
-			It != m_vertexCache.end())
-			vertexBuffer = It->second;
-		else
-		{
-			ComPtr<ID3D12Resource> newVertexBuffer = createVertexBuffer(vbf, m_vertex_data, m_vertex_data_base_offset, m_device.Get(), m_vertexIndexData);
-			vertexBuffer = newVertexBuffer.Get();
-			m_vertexCache[key] = newVertexBuffer.Get();
-			getCurrentResourceStorage().m_singleFrameLifetimeResources.push_back(newVertexBuffer);
-		}
+		D3D12_GPU_VIRTUAL_ADDRESS virtualAddress = createVertexBuffer(vbf, m_vertex_data, m_vertex_data_base_offset, m_device.Get(), m_vertexIndexData);
+		m_timers.m_bufferUploadSize += subBufferSize;
 
 		D3D12_VERTEX_BUFFER_VIEW vertexBufferView = {};
-		vertexBufferView.BufferLocation = vertexBuffer->GetGPUVirtualAddress();
+		vertexBufferView.BufferLocation = virtualAddress;
 		vertexBufferView.SizeInBytes = (UINT)subBufferSize;
 		vertexBufferView.StrideInBytes = (UINT)vbf.stride;
 		result.push_back(vertexBufferView);
@@ -428,18 +405,9 @@ D3D12_INDEX_BUFFER_VIEW D3D12GSRender::uploadIndexBuffers(bool indexed_draw)
 	assert(m_vertexIndexData.canAlloc(subBufferSize));
 	size_t heapOffset = m_vertexIndexData.alloc(subBufferSize);
 
-	ComPtr<ID3D12Resource> indexBuffer;
-	ThrowIfFailed(m_device->CreatePlacedResource(
-		m_vertexIndexData.m_heap,
-		heapOffset,
-		&getBufferResourceDesc(subBufferSize),
-		D3D12_RESOURCE_STATE_GENERIC_READ,
-		nullptr,
-		IID_PPV_ARGS(indexBuffer.GetAddressOf())
-		));
-
-	void *bufferMap;
-	ThrowIfFailed(indexBuffer->Map(0, nullptr, (void**)&bufferMap));
+	void *buffer;
+	ThrowIfFailed(m_vertexIndexData.m_heap->Map(0, &CD3DX12_RANGE(heapOffset, heapOffset + subBufferSize), (void**)&buffer));
+	void *bufferMap = (char*)buffer + heapOffset;
 	if (indexed_draw && !forcedIndexBuffer)
 		streamBuffer(bufferMap, m_indexed_array.m_data.data(), subBufferSize);
 	else if (indexed_draw && forcedIndexBuffer)
@@ -500,11 +468,12 @@ D3D12_INDEX_BUFFER_VIEW D3D12GSRender::uploadIndexBuffers(bool indexed_draw)
 		}
 
 	}
-	indexBuffer->Unmap(0, nullptr);
-	getCurrentResourceStorage().m_singleFrameLifetimeResources.push_back(indexBuffer);
+	m_vertexIndexData.m_heap->Unmap(0, &CD3DX12_RANGE(heapOffset, heapOffset + subBufferSize));
+
+	m_timers.m_bufferUploadSize += subBufferSize;
 
 	indexBufferView.SizeInBytes = (UINT)subBufferSize;
-	indexBufferView.BufferLocation = indexBuffer->GetGPUVirtualAddress();
+	indexBufferView.BufferLocation = m_vertexIndexData.m_heap->GetGPUVirtualAddress() + heapOffset;
 	return indexBufferView;
 }
 

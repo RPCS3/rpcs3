@@ -13,6 +13,7 @@
 #include "D3D12RenderTargetSets.h"
 #include "D3D12PipelineState.h"
 #include "D3D12Buffer.h"
+#include "d3dx12.h"
 
 // Some constants are the same between RSX and GL
 #include <GL\GL.h>
@@ -34,9 +35,6 @@
  * draw call use the same buffer, but the first one doesn't use all the attribute ; then the second one will use
  * the cached version and not have updated attributes. Same for texture, if format/size does change, the caching
  * system is ignoring it.
- * - Fix vertex buffer in The Guided Paradox
- * The vertex info in the guided paradox are wrong, leading to missing character parts ingame (like leg or torso).
- * It's because some vertex position are incorrect.
  * - Improve sync between cell and RSX
  * A lot of optimisation can be gained from using Cell and RSX latency. Cell can't read RSX generated data without
  * synchronisation. We currently only cover semaphore sync, but there are more (like implicit sync at flip) that
@@ -97,7 +95,7 @@ struct InitHeap<ID3D12Resource>
 		heapProperties.Type = type;
 		ThrowIfFailed(device->CreateCommittedResource(&heapProperties,
 			flags,
-			&getBufferResourceDesc(heapSize),
+			&CD3DX12_RESOURCE_DESC::Buffer(heapSize),
 			D3D12_RESOURCE_STATE_GENERIC_READ,
 			nullptr,
 			IID_PPV_ARGS(&result))
@@ -231,10 +229,6 @@ private:
 	std::unordered_map<u32, ID3D12Resource*> m_texturesCache;
 	//  std::vector<PostDrawObj> m_post_draw_objs;
 
-	// TODO: Use a tree structure to parse more efficiently
-	// Key is begin << 32 | end
-	std::unordered_map<u64, ID3D12Resource *> m_vertexCache;
-
 	PipelineStateObjectCache m_cachePSO;
 	std::pair<ID3D12PipelineState *, size_t> *m_PSO;
 
@@ -242,6 +236,12 @@ private:
 	{
 		size_t m_drawCallDuration;
 		size_t m_drawCallCount;
+		size_t m_rttDuration;
+		size_t m_vertexIndexDuration;
+		size_t m_bufferUploadSize;
+		size_t m_programLoadDuration;
+		size_t m_constantsDuration;
+		size_t m_textureDuration;
 	} m_timers;
 
 	void ResetTimer();
@@ -253,7 +253,7 @@ private:
 		ID3D12Resource *m_vertexBuffer;
 		ID3D12DescriptorHeap *m_textureDescriptorHeap;
 		ID3D12DescriptorHeap *m_samplerDescriptorHeap;
-		void Init(ID3D12Device *device);
+		void Init(ID3D12Device *device, ID3D12CommandQueue *gfxcommandqueue);
 		void Release();
 	};
 
@@ -330,7 +330,7 @@ private:
 	// Constants storage
 	DataHeap<ID3D12Resource, 256> m_constantsData;
 	// Vertex storage
-	DataHeap<ID3D12Heap, 65536> m_vertexIndexData;
+	DataHeap<ID3D12Resource, 65536> m_vertexIndexData;
 	// Texture storage
 	DataHeap<ID3D12Heap, 65536> m_textureUploadData;
 	DataHeap<ID3D12Heap, 65536> m_UAVHeap;
@@ -347,10 +347,10 @@ private:
 
 	std::vector<D3D12_INPUT_ELEMENT_DESC> m_IASet;
 
-	size_t g_descriptorStrideSRVCBVUAV;
-	size_t g_descriptorStrideDSV;
-	size_t g_descriptorStrideRTV;
-	size_t g_descriptorStrideSamplers;
+	INT g_descriptorStrideSRVCBVUAV;
+	INT g_descriptorStrideDSV;
+	INT g_descriptorStrideRTV;
+	INT g_descriptorStrideSamplers;
 
 	// Used to fill unused texture slot
 	ID3D12Resource *m_dummyTexture;

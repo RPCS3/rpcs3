@@ -117,7 +117,19 @@ void D3D12GSRender::ReleaseD2DStructures()
 void D3D12GSRender::renderOverlay()
 {
 	D2D1_SIZE_F rtSize = m_d2dRenderTargets[m_swapChain->GetCurrentBackBufferIndex()]->GetSize();
-	std::wstring duration = L"Draw duration : " + std::to_wstring(m_timers.m_drawCallDuration) + L" ms";
+	std::wstring duration = L"Draw duration : " + std::to_wstring(m_timers.m_drawCallDuration) + L" us";
+	float vtxIdxPercent = (float)m_timers.m_vertexIndexDuration / (float)m_timers.m_drawCallDuration;
+	std::wstring vertexIndexDuration = L"Vtx/Idx upload : " + std::to_wstring(m_timers.m_vertexIndexDuration) + L" us (" + std::to_wstring(100.f * vtxIdxPercent) + L" %)";
+	std::wstring size = L"Upload size : " + std::to_wstring(m_timers.m_bufferUploadSize) + L" Bytes";
+	float texPercent = (float)m_timers.m_textureDuration / (float)m_timers.m_drawCallDuration;
+	std::wstring texDuration = L"Textures : " + std::to_wstring(m_timers.m_textureDuration) + L" us (" + std::to_wstring(100.f * texPercent) + L" %)";
+	float programPercent = (float)m_timers.m_programLoadDuration / (float)m_timers.m_drawCallDuration;
+	std::wstring programDuration = L"Program : " + std::to_wstring(m_timers.m_programLoadDuration) + L" us (" + std::to_wstring(100.f * programPercent) + L" %)";
+	float constantsPercent = (float)m_timers.m_constantsDuration / (float)m_timers.m_drawCallDuration;
+	std::wstring constantDuration = L"Constants : " + std::to_wstring(m_timers.m_constantsDuration) + L" us (" + std::to_wstring(100.f * constantsPercent) + L" %)";
+	float rttPercent = (float)m_timers.m_rttDuration / (float)m_timers.m_drawCallDuration;
+	std::wstring rttDuration = L"RTT : " + std::to_wstring(m_timers.m_rttDuration) + L" us (" + std::to_wstring(100.f * rttPercent) + L" %)";
+
 	std::wstring count = L"Draw count : " + std::to_wstring(m_timers.m_drawCallCount);
 
 	// Acquire our wrapped render target resource for the current back buffer.
@@ -129,16 +141,58 @@ void D3D12GSRender::renderOverlay()
 	m_d2dDeviceContext->SetTransform(D2D1::Matrix3x2F::Identity());
 	m_d2dDeviceContext->DrawTextW(
 		duration.c_str(),
-		duration.size(),
+		(UINT32)duration.size(),
 		m_textFormat.Get(),
 		&D2D1::RectF(0, 0, rtSize.width, rtSize.height),
 		m_textBrush.Get()
 		);
 	m_d2dDeviceContext->DrawTextW(
 		count.c_str(),
-		count.size(),
+		(UINT32)count.size(),
 		m_textFormat.Get(),
 		&D2D1::RectF(0, 14, rtSize.width, rtSize.height),
+		m_textBrush.Get()
+		);
+	m_d2dDeviceContext->DrawTextW(
+		rttDuration.c_str(),
+		(UINT32)rttDuration.size(),
+		m_textFormat.Get(),
+		&D2D1::RectF(0, 28, rtSize.width, rtSize.height),
+		m_textBrush.Get()
+		);
+	m_d2dDeviceContext->DrawTextW(
+		vertexIndexDuration.c_str(),
+		(UINT32)vertexIndexDuration.size(),
+		m_textFormat.Get(),
+		&D2D1::RectF(0, 42, rtSize.width, rtSize.height),
+		m_textBrush.Get()
+		);
+	m_d2dDeviceContext->DrawTextW(
+		size.c_str(),
+		(UINT32)size.size(),
+		m_textFormat.Get(),
+		&D2D1::RectF(0, 56, rtSize.width, rtSize.height),
+		m_textBrush.Get()
+		);
+	m_d2dDeviceContext->DrawTextW(
+		programDuration.c_str(),
+		(UINT32)programDuration.size(),
+		m_textFormat.Get(),
+		&D2D1::RectF(0, 70, rtSize.width, rtSize.height),
+		m_textBrush.Get()
+		);
+	m_d2dDeviceContext->DrawTextW(
+		constantDuration.c_str(),
+		(UINT32)constantDuration.size(),
+		m_textFormat.Get(),
+		&D2D1::RectF(0, 86, rtSize.width, rtSize.height),
+		m_textBrush.Get()
+		);
+	m_d2dDeviceContext->DrawTextW(
+		texDuration.c_str(),
+		(UINT32)texDuration.size(),
+		m_textFormat.Get(),
+		&D2D1::RectF(0, 98, rtSize.width, rtSize.height),
 		m_textBrush.Get()
 		);
 	m_d2dDeviceContext->EndDraw();
