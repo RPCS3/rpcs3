@@ -232,6 +232,8 @@ private:
 	PipelineStateObjectCache m_cachePSO;
 	std::pair<ID3D12PipelineState *, size_t> *m_PSO;
 
+	size_t m_vertexBufferSize[32];
+
 	struct
 	{
 		size_t m_drawCallDuration;

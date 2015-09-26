@@ -475,7 +475,6 @@ void D3D12GSRender::Draw()
 	std::chrono::time_point<std::chrono::system_clock> vertexIndexDurationStart = std::chrono::system_clock::now();
 
 	// Init vertex count
-	// TODO: Very hackish, clean this
 	if (m_indexed_array.m_count)
 	{
 		for (u32 i = 0; i < m_vertex_count; ++i)
@@ -484,7 +483,7 @@ void D3D12GSRender::Draw()
 			if (!m_vertex_data[i].addr) continue;
 
 			const u32 tsize = m_vertex_data[i].GetTypeSize();
-			m_vertex_data[i].data.resize((m_indexed_array.index_min + m_indexed_array.index_max - m_indexed_array.index_min + 1) * tsize * m_vertex_data[i].size);
+			m_vertexBufferSize[i] = (m_indexed_array.index_min + m_indexed_array.index_max - m_indexed_array.index_min + 1) * tsize * m_vertex_data[i].size;
 		}
 	}
 	else
@@ -495,7 +494,7 @@ void D3D12GSRender::Draw()
 			if (!m_vertex_data[i].addr) continue;
 
 			const u32 tsize = m_vertex_data[i].GetTypeSize();
-			m_vertex_data[i].data.resize((m_draw_array_first + m_draw_array_count) * tsize * m_vertex_data[i].size);
+			m_vertexBufferSize[i] = (m_draw_array_first + m_draw_array_count) * tsize * m_vertex_data[i].size;
 		}
 	}
 

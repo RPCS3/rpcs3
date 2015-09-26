@@ -168,7 +168,7 @@ bool overlaps(const std::pair<size_t, size_t> &range1, const std::pair<size_t, s
 }
 
 static
-std::vector<VertexBufferFormat> FormatVertexData(const RSXVertexData *m_vertex_data, size_t base_offset)
+std::vector<VertexBufferFormat> FormatVertexData(const RSXVertexData *m_vertex_data, size_t *vertex_data_size, size_t base_offset)
 {
 	std::vector<VertexBufferFormat> Result;
 	for (size_t i = 0; i < 32; ++i)
@@ -176,7 +176,7 @@ std::vector<VertexBufferFormat> FormatVertexData(const RSXVertexData *m_vertex_d
 		const RSXVertexData &vertexData = m_vertex_data[i];
 		if (!vertexData.IsEnabled()) continue;
 
-		size_t elementCount = vertexData.data.size() / (vertexData.size * vertexData.GetTypeSize());
+		size_t elementCount = vertex_data_size[i] / (vertexData.size * vertexData.GetTypeSize());
 		// If there is a single element, stride is 0, use the size of element instead
 		size_t stride = vertexData.stride;
 		size_t elementSize = vertexData.GetTypeSize();
@@ -281,7 +281,7 @@ isContained(const std::vector<std::pair<u32, u32> > &ranges, const std::pair<u32
 std::vector<D3D12_VERTEX_BUFFER_VIEW> D3D12GSRender::UploadVertexBuffers(bool indexed_draw)
 {
 	std::vector<D3D12_VERTEX_BUFFER_VIEW> result;
-	const std::vector<VertexBufferFormat> &vertexBufferFormat = FormatVertexData(m_vertex_data, m_vertex_data_base_offset);
+	const std::vector<VertexBufferFormat> &vertexBufferFormat = FormatVertexData(m_vertex_data, m_vertexBufferSize, m_vertex_data_base_offset);
 	m_IASet = getIALayout(m_device.Get(), vertexBufferFormat, m_vertex_data, m_vertex_data_base_offset);
 
 	const u32 data_offset = indexed_draw ? 0 : m_draw_array_first;
