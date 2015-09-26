@@ -14,9 +14,7 @@ GLGSFrame::GLGSFrame()
 	: GSFrame(nullptr, "GSFrame[OpenGL]")
 	, m_frames(0)
 {
-#ifdef _WIN32
 	SetIcon(wxICON(frame_icon));
-#endif
 	canvas = new wxGLCanvas(this, wxID_ANY, NULL);
 	canvas->SetSize(GetClientSize());
 
