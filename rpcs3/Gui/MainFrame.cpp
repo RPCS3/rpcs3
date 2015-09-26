@@ -26,6 +26,10 @@
 #include <wx/dynlib.h>
 #include <wx/progdlg.h>
 
+#ifndef _WIN32
+#include "frame_icon.xpm"
+#endif
+
 BEGIN_EVENT_TABLE(MainFrame, FrameBase)
 	EVT_CLOSE(MainFrame::OnQuit)
 END_EVENT_TABLE()
@@ -117,9 +121,7 @@ MainFrame::MainFrame()
 	menu_help->Append(id_help_about, "&About...");
 
 	SetMenuBar(menubar);
-#ifdef _WIN32
 	SetIcon(wxICON(frame_icon));
-#endif
 
 	// Panels
 	m_log_frame = new LogFrame(this);
