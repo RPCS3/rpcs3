@@ -304,7 +304,7 @@ struct DemuxerStream
 	{
 		if (sizeof(T) > size) return false;
 
-		out = vm::get_ref<T>(addr);
+		out = vm::_ref<T>(addr);
 		addr += sizeof(T);
 		size -= sizeof(T);
 
@@ -316,7 +316,7 @@ struct DemuxerStream
 	{
 		if (sizeof(T) + shift > size) return false;
 
-		out = vm::get_ref<T>(addr + shift);
+		out = vm::_ref<T>(addr + shift);
 		return true;
 	}
 

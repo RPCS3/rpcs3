@@ -54,12 +54,7 @@ struct sys_event_queue_attribute_t
 {
 	be_t<u32> protocol; // SYS_SYNC_PRIORITY or SYS_SYNC_FIFO
 	be_t<s32> type; // SYS_PPU_QUEUE or SYS_SPU_QUEUE
-
-	union
-	{
-		char name[8];
-		u64 name_u64;
-	};
+	char name[8];
 };
 
 struct sys_event_t

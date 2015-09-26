@@ -312,7 +312,7 @@ s32 sys_spu_thread_group_start(u32 id)
 
 			// Copy SPU image:
 			// TODO: use segment info
-			std::memcpy(vm::get_ptr<void>(t->offset), vm::get_ptr<void>(image->addr), 256 * 1024);
+			std::memcpy(vm::base(t->offset), vm::base(image->addr), 256 * 1024);
 
 			t->pc = image->entry_point;
 			t->run();
@@ -595,9 +595,9 @@ s32 sys_spu_thread_group_join(u32 id, vm::ptr<u32> cause, vm::ptr<u32> status)
 	return CELL_OK;
 }
 
-s32 sys_spu_thread_write_ls(u32 id, u32 address, u64 value, u32 type)
+s32 sys_spu_thread_write_ls(u32 id, u32 lsa, u64 value, u32 type)
 {
-	sys_spu.Log("sys_spu_thread_write_ls(id=0x%x, address=0x%x, value=0x%llx, type=%d)", id, address, value, type);
+	sys_spu.Log("sys_spu_thread_write_ls(id=0x%x, lsa=0x%05x, value=0x%llx, type=%d)", id, lsa, value, type);
 
 	LV2_LOCK;
 
@@ -608,7 +608,7 @@ s32 sys_spu_thread_write_ls(u32 id, u32 address, u64 value, u32 type)
 		return CELL_ESRCH;
 	}
 
-	if (address >= 0x40000 || address + type > 0x40000 || address % type) // check range and alignment
+	if (lsa >= 0x40000 || lsa + type > 0x40000 || lsa % type) // check range and alignment
 	{
 		return CELL_EINVAL;
 	}
@@ -627,19 +627,19 @@ s32 sys_spu_thread_write_ls(u32 id, u32 address, u64 value, u32 type)
 
 	switch (type)
 	{
-	case 1: thread->write8(address, (u8)value); break;
-	case 2: thread->write16(address, (u16)value); break;
-	case 4: thread->write32(address, (u32)value); break;
-	case 8: thread->write64(address, value); break;
+	case 1: thread->_ref<u8>(lsa) = (u8)value; break;
+	case 2: thread->_ref<u16>(lsa) = (u16)value; break;
+	case 4: thread->_ref<u32>(lsa) = (u32)value; break;
+	case 8: thread->_ref<u64>(lsa) = value; break;
 	default: return CELL_EINVAL;
 	}
 
 	return CELL_OK;
 }
 
-s32 sys_spu_thread_read_ls(u32 id, u32 address, vm::ptr<u64> value, u32 type)
+s32 sys_spu_thread_read_ls(u32 id, u32 lsa, vm::ptr<u64> value, u32 type)
 {
-	sys_spu.Log("sys_spu_thread_read_ls(id=0x%x, address=0x%x, value=*0x%x, type=%d)", id, address, value, type);
+	sys_spu.Log("sys_spu_thread_read_ls(id=0x%x, lsa=0x%05x, value=*0x%x, type=%d)", id, lsa, value, type);
 
 	LV2_LOCK;
 
@@ -650,7 +650,7 @@ s32 sys_spu_thread_read_ls(u32 id, u32 address, vm::ptr<u64> value, u32 type)
 		return CELL_ESRCH;
 	}
 
-	if (address >= 0x40000 || address + type > 0x40000 || address % type) // check range and alignment
+	if (lsa >= 0x40000 || lsa + type > 0x40000 || lsa % type) // check range and alignment
 	{
 		return CELL_EINVAL;
 	}
@@ -669,10 +669,10 @@ s32 sys_spu_thread_read_ls(u32 id, u32 address, vm::ptr<u64> value, u32 type)
 
 	switch (type)
 	{
-	case 1: *value = thread->read8(address); break;
-	case 2: *value = thread->read16(address); break;
-	case 4: *value = thread->read32(address); break;
-	case 8: *value = thread->read64(address); break;
+	case 1: *value = thread->_ref<u8>(lsa); break;
+	case 2: *value = thread->_ref<u16>(lsa); break;
+	case 4: *value = thread->_ref<u32>(lsa); break;
+	case 8: *value = thread->_ref<u64>(lsa); break;
 	default: return CELL_EINVAL;
 	}
 

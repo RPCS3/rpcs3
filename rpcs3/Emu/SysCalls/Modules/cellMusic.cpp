@@ -120,20 +120,15 @@ s32 cellMusicInitialize2(s32 mode, s32 spuPriority, vm::ptr<CellMusic2Callback> 
 		return CELL_MUSIC2_ERROR_PARAM;
 	}
 
-	named_thread_t(WRAP_EXPR("CellMusicInit"), [=]()
-	{
-		const auto music = fxm::make_always<music2_t>();
-		music->func = func;
-		music->userData = userData;
+	const auto music = fxm::make_always<music2_t>();
+	music->func = func;
+	music->userData = userData;
 
-		Emu.GetCallbackManager().Register([=](CPUThread& CPU) -> s32
-		{
-			vm::var<u32> ret(CPU);
-			*ret = CELL_OK;
-			func(static_cast<PPUThread&>(CPU), CELL_MUSIC2_EVENT_INITIALIZE_RESULT, ret, userData);
-			return CELL_OK;
-		});
-	}).detach();
+	Emu.GetCallbackManager().Register([=](PPUThread& ppu) -> s32
+	{
+		func(ppu, CELL_MUSIC2_EVENT_INITIALIZE_RESULT, vm::make_var<s32>(CELL_OK), userData);
+		return CELL_OK;
+	});
 
 	return CELL_OK;
 }

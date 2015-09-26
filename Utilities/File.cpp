@@ -7,8 +7,6 @@
 
 #define GET_API_ERROR static_cast<u64>(GetLastError())
 
-static_assert(fs::file::null == intptr_t(INVALID_HANDLE_VALUE) && fs::dir::null == fs::file::null, "Check fs::file::null definition");
-
 std::unique_ptr<wchar_t[]> to_wchar(const std::string& source)
 {
 	const auto length = source.size() + 1; // size + null terminator
@@ -443,7 +441,7 @@ bool fs::file::open(const std::string& filename, u32 mode)
 		return false;
 	}
 
-	m_fd = (intptr_t)CreateFileW(to_wchar(filename).get(), access, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, disp, FILE_ATTRIBUTE_NORMAL, NULL);
+	m_fd = (std::intptr_t)CreateFileW(to_wchar(filename).get(), access, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, disp, FILE_ATTRIBUTE_NORMAL, NULL);
 #else
 	int flags = 0;
 
@@ -598,11 +596,6 @@ u64 fs::file::write(const void* buffer, u64 count) const
 #endif
 }
 
-u64 fs::file::write(const std::string &string) const
-{
-	return write(string.data(), string.size());
-}
-
 u64 fs::file::seek(s64 offset, fsm seek_mode) const
 {
 	g_tls_error = fse::ok;
@@ -659,66 +652,34 @@ u64 fs::file::size() const
 
 fs::dir::~dir()
 {
-	if (m_dd != null)
+	if (m_path)
 	{
 #ifdef _WIN32
-		FindClose((HANDLE)m_dd);
+		if (m_dd != -1) FindClose((HANDLE)m_dd);
 #else
 		::closedir((DIR*)m_dd);
 #endif
 	}
-}
-
-void fs::dir::import(handle_type dd, const std::string& path)
-{
-	if (m_dd != null)
-	{
-#ifdef _WIN32
-		FindClose((HANDLE)m_dd);
-#else
-		::closedir((DIR*)m_dd);
-#endif
-	}
-
-	g_tls_error = fse::ok;
-
-	m_dd = dd;
-
-#ifdef _WIN32
-	m_path = to_wchar(path);
-#else
-	m_path.reset(new char[path.size() + 1]);
-	memcpy(m_path.get(), path.c_str(), path.size() + 1);
-#endif
 }
 
 bool fs::dir::open(const std::string& dirname)
 {
-	if (m_dd != null)
-	{
-#ifdef _WIN32
-		FindClose((HANDLE)m_dd);
-#else
-		::closedir((DIR*)m_dd);
-#endif
-	}
+	this->close();
 
 	g_tls_error = fse::ok;
-
-	m_dd = null;
-
-	m_path.reset();
 
 	if (!is_dir(dirname))
 	{
 		return false;
 	}
 
-#ifdef _WIN32
-	m_path = to_wchar(dirname + "/*");
-#else
 	m_path.reset(new char[dirname.size() + 1]);
-	memcpy(m_path.get(), dirname.c_str(), dirname.size() + 1);
+	std::memcpy(m_path.get(), dirname.c_str(), dirname.size() + 1);
+
+#ifdef _WIN32
+	m_dd = -1;
+#else
+	m_dd = (std::intptr_t)::opendir(m_path.get());
 #endif
 
 	return true;
@@ -728,45 +689,25 @@ bool fs::dir::close()
 {
 	g_tls_error = fse::ok;
 
-	if (m_dd == null)
+	if (!m_path)
 	{
-		if (m_path)
-		{
-			m_path.reset();
-			return true;
-		}
-		else
-		{
-			return false;
-		}
+		return false;
 	}
-
-	auto dd = m_dd;
-	m_dd = null;
 
 	m_path.reset();
 
 #ifdef _WIN32
-	return FindClose((HANDLE)dd);
+	CHECK_ASSERTION(m_dd == -1 || FindClose((HANDLE)m_dd));
 #else
-	return !::closedir((DIR*)dd);
+	CHECK_ASSERTION(!::closedir((DIR*)m_dd));
 #endif
+
+	return true;
 }
 
-bool fs::dir::get_first(std::string& name, stat_t& info)
+bool fs::dir::read(std::string& name, stat_t& info)
 {
-	if (m_dd != null) // close previous handle
-	{
-#ifdef _WIN32
-		FindClose((HANDLE)m_dd);
-#else
-		::closedir((DIR*)m_dd);
-#endif
-	}
-
 	g_tls_error = fse::ok;
-
-	m_dd = null;
 
 	if (!m_path)
 	{
@@ -776,43 +717,16 @@ bool fs::dir::get_first(std::string& name, stat_t& info)
 #ifdef _WIN32
 	WIN32_FIND_DATAW found;
 
-	m_dd = (intptr_t)FindFirstFileW(m_path.get(), &found);
-
-	if (m_dd == null)
+	if (m_dd == -1)
 	{
-		return false;
+		m_dd = (std::intptr_t)FindFirstFileW(to_wchar(m_path.get() + "/*"s).get(), &found);
+
+		if (m_dd == -1)
+		{
+			return false;
+		}
 	}
-
-	to_utf8(name, found.cFileName);
-
-	info.is_directory = (found.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
-	info.is_writable = (found.dwFileAttributes & FILE_ATTRIBUTE_READONLY) == 0;
-	info.size = ((u64)found.nFileSizeHigh << 32) | (u64)found.nFileSizeLow;
-	info.atime = to_time_t(found.ftLastAccessTime);
-	info.mtime = to_time_t(found.ftLastWriteTime);
-	info.ctime = to_time_t(found.ftCreationTime);
-
-	return true;
-#else
-	m_dd = (intptr_t)::opendir(m_path.get());
-
-	return get_next(name, info);
-#endif
-}
-
-bool fs::dir::get_next(std::string& name, stat_t& info)
-{
-	g_tls_error = fse::ok;
-
-	if (m_dd == null)
-	{
-		return false;
-	}
-
-#ifdef _WIN32
-	WIN32_FIND_DATAW found;
-
-	if (!FindNextFileW((HANDLE)m_dd, &found))
+	else if (!FindNextFileW((HANDLE)m_dd, &found))
 	{
 		return false;
 	}

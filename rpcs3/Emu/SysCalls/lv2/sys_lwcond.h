@@ -8,11 +8,7 @@ struct sys_lwmutex_t;
 
 struct sys_lwcond_attribute_t
 {
-	union
-	{
-		char name[8];
-		u64 name_u64;
-	};
+	char name[8];
 };
 
 struct sys_lwcond_t

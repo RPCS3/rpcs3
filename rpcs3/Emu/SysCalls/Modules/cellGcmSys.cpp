@@ -379,17 +379,17 @@ s32 _cellGcmInitBody(vm::pptr<CellGcmContextData> context, u32 cmdSize, u32 ioSi
 
 	gcm_info.label_addr = vm::alloc(0x1000, vm::main); // ???
 
-	vm::get_ref<CellGcmContextData>(gcm_info.context_addr) = current_context;
+	vm::_ref<CellGcmContextData>(gcm_info.context_addr) = current_context;
 	context->set(gcm_info.context_addr);
 
-	auto& ctrl = vm::get_ref<CellGcmControl>(gcm_info.control_addr);
+	auto& ctrl = vm::_ref<CellGcmControl>(gcm_info.control_addr);
 	ctrl.put = 0;
 	ctrl.get = 0;
 	ctrl.ref = -1;
 
 	auto& render = Emu.GetGSManager().GetRender();
 	render.ctxt_addr = context.addr();
-	render.gcm_buffers = { vm::alloc(sizeof(CellGcmDisplayInfo) * 8, vm::main) };
+	render.gcm_buffers.set(vm::alloc(sizeof(CellGcmDisplayInfo) * 8, vm::main));
 	render.zculls_addr = vm::alloc(sizeof(CellGcmZcullInfo) * 8, vm::main);
 	render.tiles_addr = vm::alloc(sizeof(CellGcmTileInfo) * 15, vm::main);
 	render.gcm_buffers_count = 0;
@@ -511,14 +511,14 @@ s32 cellGcmSetPrepareFlip(PPUThread& ppu, vm::ptr<CellGcmContextData> ctxt, u32 
 
 	if (ctxt.addr() == gcm_info.context_addr)
 	{
-		vm::get_ref<CellGcmControl>(gcm_info.control_addr).put += 2 * sizeof(u32);
+		vm::_ref<CellGcmControl>(gcm_info.control_addr).put += 2 * sizeof(u32);
 	}
 #else
 	u32 command_size = rsx::make_command(ctxt->current, GCM_FLIP_COMMAND, id);
 
 	if (ctxt.addr() == gcm_info.context_addr)
 	{
-		vm::get_ref<CellGcmControl>(gcm_info.control_addr).put += command_size * sizeof(u32);
+		vm::_ref<CellGcmControl>(gcm_info.control_addr).put += command_size * sizeof(u32);
 	}
 #endif
 
@@ -592,7 +592,7 @@ s32 cellGcmSetTileInfo(u8 index, u8 location, u32 offset, u32 size, u32 pitch, u
 	tile.base = base;
 	tile.bank = bank;
 
-	vm::get_ptr<CellGcmTileInfo>(Emu.GetGSManager().GetRender().tiles_addr)[index] = tile.pack();
+	vm::_ptr<CellGcmTileInfo>(Emu.GetGSManager().GetRender().tiles_addr)[index] = tile.pack();
 	return CELL_OK;
 }
 
@@ -653,7 +653,7 @@ s32 cellGcmSetZcull(u8 index, u32 offset, u32 width, u32 height, u32 cullStart, 
 	zcull.sRef = sRef;
 	zcull.sMask = sMask;
 
-	vm::get_ptr<CellGcmZcullInfo>(Emu.GetGSManager().GetRender().zculls_addr)[index] = zcull.pack();
+	vm::_ptr<CellGcmZcullInfo>(Emu.GetGSManager().GetRender().zculls_addr)[index] = zcull.pack();
 	return CELL_OK;
 }
 
@@ -1183,7 +1183,7 @@ s32 cellGcmSetTile(u8 index, u8 location, u32 offset, u32 size, u32 pitch, u8 co
 	tile.base = base;
 	tile.bank = bank;
 
-	vm::get_ptr<CellGcmTileInfo>(Emu.GetGSManager().GetRender().tiles_addr)[index] = tile.pack();
+	vm::_ptr<CellGcmTileInfo>(Emu.GetGSManager().GetRender().tiles_addr)[index] = tile.pack();
 	return CELL_OK;
 }
 
@@ -1274,7 +1274,7 @@ s32 cellGcmCallback(vm::ptr<CellGcmContextData> context, u32 count)
 {
 	cellGcmSys.Log("cellGcmCallback(context=*0x%x, count=0x%x)", context, count);
 
-	auto& ctrl = vm::get_ref<CellGcmControl>(gcm_info.control_addr);
+	auto& ctrl = vm::_ref<CellGcmControl>(gcm_info.control_addr);
 	const std::chrono::time_point<std::chrono::system_clock> enterWait = std::chrono::system_clock::now();
 	// Flush command buffer (ie allow RSX to read up to context->current)
 	ctrl.put.exchange(getOffsetFromAddress(context->current.addr()));
@@ -1291,7 +1291,7 @@ s32 cellGcmCallback(vm::ptr<CellGcmContextData> context, u32 count)
 	// Wait for rsx to "release" the new command buffer
 	while (!Emu.IsStopped())
 	{
-		u32 getPos = ctrl.get.load().value();
+		u32 getPos = ctrl.get.load();
 		if (isInCommandBufferExcept(getPos, newCommandBuffer.first, newCommandBuffer.second))
 			break;
 		std::chrono::time_point<std::chrono::system_clock> waitPoint = std::chrono::system_clock::now();

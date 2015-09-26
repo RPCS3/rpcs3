@@ -26,16 +26,6 @@ enum class fse : u32 // filesystem (file or dir) error
 	invalid_arguments,
 };
 
-enum : u32 // obsolete flags
-{
-	o_read = fom::read,
-	o_write = fom::write,
-	o_append = fom::append,
-	o_create = fom::create,
-	o_trunc = fom::trunc,
-	o_excl = fom::excl,
-};
-
 namespace fs
 {
 	thread_local extern fse g_tls_error;
@@ -50,95 +40,156 @@ namespace fs
 		s64 ctime;
 	};
 
+	// Get file information
 	bool stat(const std::string& path, stat_t& info);
+
+	// Check whether a file or a directory exists (not recommended, use is_file() or is_dir() instead)
 	bool exists(const std::string& path);
+
+	// Check whether the file exists and is NOT a directory
 	bool is_file(const std::string& file);
+
+	// Check whether the directory exists and is NOT a file
 	bool is_dir(const std::string& dir);
+
+	// Delete empty directory
 	bool remove_dir(const std::string& dir);
+
+	// Create directory
 	bool create_dir(const std::string& dir);
+
+	// Create directories
 	bool create_path(const std::string& path);
+
+	// Rename (move) file or directory
 	bool rename(const std::string& from, const std::string& to);
+
+	// Copy file contents
 	bool copy_file(const std::string& from, const std::string& to, bool overwrite);
+
+	// Delete file
 	bool remove_file(const std::string& file);
+
+	// Change file size (possibly appending zeros)
 	bool truncate_file(const std::string& file, u64 length);
 
-	struct file final
+	class file final
 	{
 		using handle_type = std::intptr_t;
 
-		static const handle_type null = -1;
+		constexpr static handle_type null = -1;
 
-	private:
 		handle_type m_fd = null;
 
 	public:
 		file() = default;
+
+		explicit file(const std::string& filename, u32 mode = fom::read)
+		{
+			open(filename, mode);
+		}
+
+		file(file&& other)
+			: m_fd(other.m_fd)
+		{
+			other.m_fd = null;
+		}
+
+		file& operator =(file&& right)
+		{
+			std::swap(m_fd, right.m_fd);
+			return *this;
+		}
+
 		~file();
-		explicit file(const std::string& filename, u32 mode = fom::read) { open(filename, mode); }
 
-		file(const file&) = delete;
-		file(file&&) = delete; // possibly TODO
+		// Check whether the handle is valid (opened file)
+		bool is_opened() const
+		{
+			return m_fd != null;
+		}
 
-		file& operator =(const file&) = delete;
-		file& operator =(file&&) = delete; // possibly TODO
+		// Check whether the handle is valid (opened file)
+		explicit operator bool() const
+		{
+			return is_opened();
+		}
 
-		operator bool() const { return m_fd != null; }
-
-		void import(handle_type fd) { this->~file(); m_fd = fd; }
-
+		// Open specified file with specified mode
 		bool open(const std::string& filename, u32 mode = fom::read);
-		bool is_opened() const { return m_fd != null; }
-		bool trunc(u64 size) const; // change file size (possibly appending zero bytes)
-		bool stat(stat_t& info) const; // get file info
+
+		// Change file size (possibly appending zero bytes)
+		bool trunc(u64 size) const;
+
+		// Get file information
+		bool stat(stat_t& info) const;
+
+		// Close the file explicitly (destructor automatically closes the file)
 		bool close();
 
+		// Read the data from the file and return the amount of data written in buffer
 		u64 read(void* buffer, u64 count) const;
+
+		// Write the data to the file and return the amount of data actually written
 		u64 write(const void* buffer, u64 count) const;
-		u64 write(const std::string &string) const;
+
+		// Write std::string
+		u64 write(const std::string& string) const { return write(string.data(), string.size()); }
+
+		// Move file pointer
 		u64 seek(s64 offset, fsm seek_mode = fsm::begin) const;
+
+		// Get file size
 		u64 size() const;
 	};
 
-	struct dir final
+	class dir final
 	{
-#ifdef _WIN32
-		using handle_type = intptr_t;
-		using name_type = std::unique_ptr<wchar_t[]>;
-
-		static const handle_type null = -1;
-#else
-		using handle_type = intptr_t;
-		using name_type = std::unique_ptr<char[]>;
-
-		static const handle_type null = 0;
-#endif
-
-	private:
-		handle_type m_dd = null;
-		name_type m_path;
+		std::unique_ptr<char[]> m_path;
+		std::intptr_t m_dd; // handle (aux)
 
 	public:
 		dir() = default;
+
+		explicit dir(const std::string& dirname)
+		{
+			open(dirname);
+		}
+
+		dir(dir&& other)
+			: m_dd(other.m_dd)
+			, m_path(std::move(other.m_path))
+		{
+		}
+
+		dir& operator =(dir&& right)
+		{
+			m_dd = right.m_dd;
+			m_path = std::move(right.m_path);
+			return *this;
+		}
+
 		~dir();
-		explicit dir(const std::string& dirname) { open(dirname); }
 
-		dir(const dir&) = delete;
-		dir(dir&&) = delete; // possibly TODO
+		// Check whether the handle is valid (opened directory)
+		bool is_opened() const
+		{
+			return m_path.operator bool();
+		}
 
-		dir& operator =(const dir&) = delete;
-		dir& operator =(dir&&) = delete; // possibly TODO
+		// Check whether the handle is valid (opened directory)
+		explicit operator bool() const
+		{
+			return is_opened();
+		}
 
-		operator bool() const { return m_path.operator bool(); }
-
-		void import(handle_type dd, const std::string& path);
-
+		// Open specified directory
 		bool open(const std::string& dirname);
-		bool is_opened() const { return *this; }
+		
+		// Close the directory explicitly (destructor automatically closes the directory)
 		bool close();
 
-		bool get_first(std::string& name, stat_t& info);
-		//bool get_first(std::string& name);
-		bool get_next(std::string& name, stat_t& info);
-		//bool get_next(std::string& name);
+		// Get next directory entry (UTF-8 name and file stat)
+		bool read(std::string& name, stat_t& info);
 	};
 }

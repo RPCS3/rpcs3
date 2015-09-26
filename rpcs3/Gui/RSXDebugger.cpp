@@ -333,9 +333,9 @@ void RSXDebugger::OnClickBuffer(wxMouseEvent& event)
 void RSXDebugger::GoToGet(wxCommandEvent& event)
 {
 	if (!RSXReady()) return;
-	//auto ctrl = vm::get_ptr<CellGcmControl>(Emu.GetGSManager().GetRender().ctrlAddress);
+	auto ctrl = Emu.GetGSManager().GetRender().ctrl;
 	u32 realAddr;
-	if (RSXIOMem.getRealAddr(0, realAddr)) {
+	if (RSXIOMem.getRealAddr(ctrl->get.load(), realAddr)) {
 		m_addr = realAddr;
 		t_addr->SetValue(wxString::Format("%08x", m_addr));
 		UpdateInformation();
@@ -421,7 +421,7 @@ void RSXDebugger::GetBuffers()
 		if(!vm::check_addr(RSXbuffer_addr))
 			continue;
 
-		auto RSXbuffer = vm::get_ptr<unsigned char>(RSXbuffer_addr);
+		auto RSXbuffer = vm::ps3::_ptr<u8>(RSXbuffer_addr);
 		
 		u32 width  = buffers[bufferId].width;
 		u32 height = buffers[bufferId].height;
@@ -473,12 +473,12 @@ void RSXDebugger::GetBuffers()
 	if(!vm::check_addr(TexBuffer_addr))
 		return;
 
-	unsigned char* TexBuffer = vm::get_ptr<unsigned char>(TexBuffer_addr);
+	unsigned char* TexBuffer = vm::ps3::_ptr<u8>(TexBuffer_addr);
 
 	u32 width  = render.textures[m_cur_texture].width();
 	u32 height = render.textures[m_cur_texture].height();
 	unsigned char* buffer = (unsigned char*)malloc(width * height * 3);
-	memcpy(buffer, TexBuffer, width * height * 3);
+	std::memcpy(buffer, vm::base(TexBuffer_addr), width * height * 3);
 
 	wxImage img(width, height, buffer);
 	wxClientDC dc_canvas(p_buffer_tex);

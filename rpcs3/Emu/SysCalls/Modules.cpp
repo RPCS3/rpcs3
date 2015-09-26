@@ -156,7 +156,7 @@ void execute_ppu_func_by_index(PPUThread& ppu, u32 index)
 				// CPU.LR = CPU.PC + 4;
 			}
 
-			const auto data = vm::get_ptr<be_t<u32>>(func->lle_func.addr());
+			const auto data = vm::_ptr<u32>(func->lle_func.addr());
 			ppu.PC = data[0] - 4;
 			ppu.GPR[2] = data[1]; // set rtoc
 
@@ -170,7 +170,7 @@ void execute_ppu_func_by_index(PPUThread& ppu, u32 index)
 		{
 			// call LLE function if available
 
-			const auto data = vm::get_ptr<be_t<u32>>(func->lle_func.addr());
+			const auto data = vm::_ptr<u32>(func->lle_func.addr());
 			const u32 pc = data[0];
 			const u32 rtoc = data[1];
 

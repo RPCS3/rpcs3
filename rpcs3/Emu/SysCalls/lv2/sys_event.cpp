@@ -98,7 +98,7 @@ s32 sys_event_queue_create(vm::ptr<u32> equeue_id, vm::ptr<sys_event_queue_attri
 		return CELL_EINVAL;
 	}
 
-	const auto queue = Emu.GetEventManager().MakeEventQueue(event_queue_key, protocol, type, attr->name_u64, event_queue_key, size);
+	const auto queue = Emu.GetEventManager().MakeEventQueue(event_queue_key, protocol, type, reinterpret_cast<u64&>(attr->name), event_queue_key, size);
 
 	if (!queue)
 	{

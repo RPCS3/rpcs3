@@ -12,23 +12,23 @@ extern Module<> cellSail;
 
 void playerBoot(vm::ptr<CellSailPlayer> pSelf, u64 userParam)
 {
-	Emu.GetCallbackManager().Async([=](CPUThread& cpu)
+	Emu.GetCallbackManager().Async([=](PPUThread& ppu)
 	{
 		CellSailEvent event;
 		event.u32x2.major = CELL_SAIL_EVENT_PLAYER_STATE_CHANGED;
 		event.u32x2.minor = 0;
-		pSelf->callback(static_cast<PPUThread&>(cpu), pSelf->callbackArg, event, CELL_SAIL_PLAYER_STATE_BOOT_TRANSITION, 0);
+		pSelf->callback(ppu, pSelf->callbackArg, event, CELL_SAIL_PLAYER_STATE_BOOT_TRANSITION, 0);
 	});
 
 	// TODO: Do stuff here
 	pSelf->booted = true;
 
-	Emu.GetCallbackManager().Async([=](CPUThread& cpu)
+	Emu.GetCallbackManager().Async([=](PPUThread& ppu)
 	{
 		CellSailEvent event;
 		event.u32x2.major = CELL_SAIL_EVENT_PLAYER_CALL_COMPLETED;
 		event.u32x2.minor = CELL_SAIL_PLAYER_CALL_BOOT;
-		pSelf->callback(static_cast<PPUThread&>(cpu), pSelf->callbackArg, event, 0, 0);
+		pSelf->callback(ppu, pSelf->callbackArg, event, 0, 0);
 	});
 }
 
@@ -633,12 +633,12 @@ s32 cellSailPlayerInitialize2(
 	pSelf->booted = false;
 	pSelf->paused = true;
 
-	Emu.GetCallbackManager().Async([=](CPUThread& cpu)
+	Emu.GetCallbackManager().Async([=](PPUThread& ppu)
 	{
 		CellSailEvent event;
 		event.u32x2.major = CELL_SAIL_EVENT_PLAYER_STATE_CHANGED;
 		event.u32x2.minor = 0;
-		pSelf->callback(static_cast<PPUThread&>(cpu), pSelf->callbackArg, event, CELL_SAIL_PLAYER_STATE_INITIALIZED, 0);
+		pSelf->callback(ppu, pSelf->callbackArg, event, CELL_SAIL_PLAYER_STATE_INITIALIZED, 0);
 	});
 
 	return CELL_OK;

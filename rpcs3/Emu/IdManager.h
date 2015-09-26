@@ -53,7 +53,7 @@ namespace idm
 	thread_local extern u32 g_tls_last_id;
 
 	// can be called from the constructor called through make() or make_ptr() to get the ID of the object being created
-	inline static u32 get_last_id()
+	static inline u32 get_last_id()
 	{
 		return g_tls_last_id;
 	}

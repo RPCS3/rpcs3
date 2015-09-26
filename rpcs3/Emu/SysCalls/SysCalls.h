@@ -1,4 +1,5 @@
 #pragma once
+
 #include "ErrorCodes.h"
 #include "LogBase.h"
 

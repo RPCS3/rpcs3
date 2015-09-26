@@ -15,9 +15,13 @@ std::string v128::to_xyzw() const
 	return fmt::format("x: %g y: %g z: %g w: %g", _f[3], _f[2], _f[1], _f[0]);
 }
 
-std::string fmt::to_hex(u64 value, size_t count)
+std::string fmt::to_hex(u64 value, u64 count)
 {
-	assert(count - 1 < 16);
+	if (count - 1 >= 16)
+	{
+		throw EXCEPTION("Invalid count: 0x%llx", count);
+	}
+
 	count = std::max<u64>(count, 16 - cntlz64(value) / 4);
 
 	char res[16] = {};

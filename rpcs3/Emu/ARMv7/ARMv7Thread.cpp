@@ -53,8 +53,8 @@ u32 armv7_get_tls(u32 thread)
 		if (g_armv7_tls_owners[i].compare_exchange_strong(old, thread))
 		{
 			const u32 addr = g_armv7_tls_start + i * Emu.GetTLSMemsz(); // get TLS address
-			std::memcpy(vm::get_ptr(addr), vm::get_ptr(Emu.GetTLSAddr()), Emu.GetTLSFilesz()); // initialize from TLS image
-			std::memset(vm::get_ptr(addr + Emu.GetTLSFilesz()), 0, Emu.GetTLSMemsz() - Emu.GetTLSFilesz()); // fill the rest with zeros
+			std::memcpy(vm::base(addr), vm::base(Emu.GetTLSAddr()), Emu.GetTLSFilesz()); // initialize from TLS image
+			std::memset(vm::base(addr + Emu.GetTLSFilesz()), 0, Emu.GetTLSMemsz() - Emu.GetTLSFilesz()); // fill the rest with zeros
 			return addr;
 		}
 	}
@@ -290,7 +290,7 @@ cpu_thread& armv7_thread::args(std::initializer_list<std::string> values)
 	}
 
 	argv = vm::alloc(argv_size, vm::main); // allocate arg list
-	memcpy(vm::get_ptr(argv), argv_data.data(), argv_size); // copy arg list
+	std::memcpy(vm::base(argv), argv_data.data(), argv_size); // copy arg list
 	
 	return *this;
 }

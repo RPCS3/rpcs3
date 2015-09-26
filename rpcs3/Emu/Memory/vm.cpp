@@ -25,59 +25,70 @@
 
 namespace vm
 {
-	void* initialize()
+	template<std::size_t Size> struct mapped_ptr_deleter
+	{
+		void operator ()(void* ptr)
+		{
+#ifdef _WIN32
+			::UnmapViewOfFile(ptr);
+#else
+			::munmap(ptr, Size);
+#endif
+		}
+	};
+
+	using mapped_ptr_t = std::unique_ptr<u8[], mapped_ptr_deleter<0x100000000>>;
+
+	std::array<mapped_ptr_t, 2> initialize()
 	{
 #ifdef _WIN32
-		HANDLE memory_handle = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE | SEC_RESERVE, 0x1, 0x0, NULL);
+		const HANDLE memory_handle = ::CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE | SEC_RESERVE, 0x1, 0x0, NULL);
 
-		void* base_addr = MapViewOfFile(memory_handle, FILE_MAP_WRITE, 0, 0, 0x100000000);
-		g_priv_addr = MapViewOfFile(memory_handle, FILE_MAP_WRITE, 0, 0, 0x100000000);
+		if (memory_handle == NULL)
+		{
+			std::printf("CreateFileMapping() failed\n");
+			return{};
+		}
 
-		CloseHandle(memory_handle);
+		mapped_ptr_t base_addr(static_cast<u8*>(::MapViewOfFile(memory_handle, FILE_MAP_WRITE, 0, 0, 0x100000000)));
+		mapped_ptr_t priv_addr(static_cast<u8*>(::MapViewOfFile(memory_handle, FILE_MAP_WRITE, 0, 0, 0x100000000)));
 
-		return base_addr;
+		::CloseHandle(memory_handle);
 #else
-		int memory_handle = shm_open("/rpcs3_vm", O_RDWR | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR);
+		const int memory_handle = ::shm_open("/rpcs3_vm", O_RDWR | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR);
 
 		if (memory_handle == -1)
 		{
 			std::printf("shm_open('/rpcs3_vm') failed\n");
-			return (void*)-1;
+			return{};
 		}
 
-		if (ftruncate(memory_handle, 0x100000000) == -1)
+		if (::ftruncate(memory_handle, 0x100000000) == -1)
 		{
 			std::printf("ftruncate(memory_handle) failed\n");
-			shm_unlink("/rpcs3_vm");
-			return (void*)-1;
+			::shm_unlink("/rpcs3_vm");
+			return{};
 		}
 
-		void* base_addr = mmap(nullptr, 0x100000000, PROT_NONE, MAP_SHARED, memory_handle, 0);
-		g_priv_addr = mmap(nullptr, 0x100000000, PROT_NONE, MAP_SHARED, memory_handle, 0);
+		mapped_ptr_t base_addr(static_cast<u8*>(::mmap(nullptr, 0x100000000, PROT_NONE, MAP_SHARED, memory_handle, 0)));
+		mapped_ptr_t priv_addr(static_cast<u8*>(::mmap(nullptr, 0x100000000, PROT_NONE, MAP_SHARED, memory_handle, 0)));
 
-		shm_unlink("/rpcs3_vm");
-
-		std::printf("/rpcs3_vm: g_base_addr = %p, g_priv_addr = %p\n", base_addr, g_priv_addr);
-
-		return base_addr;
+		::shm_unlink("/rpcs3_vm");
 #endif
+
+		std::printf("vm: base_addr = %p, priv_addr = %p\n", base_addr.get(), priv_addr.get());
+
+		return{ std::move(base_addr), std::move(priv_addr) };
 	}
 
-	void finalize()
-	{
-#ifdef _WIN32
-		UnmapViewOfFile(g_base_addr);
-		UnmapViewOfFile(g_priv_addr);
-#else
-		munmap(g_base_addr, 0x100000000);
-		munmap(g_priv_addr, 0x100000000);
-#endif
-	}
+	const auto g_addr_set = vm::initialize();
 
-	void* const g_base_addr = (atexit(finalize), initialize());
-	void* g_priv_addr;
+	u8* const g_base_addr = g_addr_set[0].get();
+	u8* const g_priv_addr = g_addr_set[1].get();
 
 	std::array<atomic_t<u8>, 0x100000000ull / 4096> g_pages{}; // information about every page
+
+	std::vector<std::shared_ptr<block_t>> g_locations; // memory locations
 
 	const thread_ctrl_t* const INVALID_THREAD = reinterpret_cast<const thread_ctrl_t*>(~0ull);
 	
@@ -361,9 +372,9 @@ namespace vm
 	{
 #ifdef _WIN32
 		DWORD old;
-		if (!VirtualProtect(get_ptr(addr & ~0xfff), 4096, no_access ? PAGE_NOACCESS : PAGE_READONLY, &old))
+		if (!::VirtualProtect(vm::base(addr & ~0xfff), 4096, no_access ? PAGE_NOACCESS : PAGE_READONLY, &old))
 #else
-		if (mprotect(get_ptr(addr & ~0xfff), 4096, no_access ? PROT_NONE : PROT_READ))
+		if (::mprotect(vm::base(addr & ~0xfff), 4096, no_access ? PROT_NONE : PROT_READ))
 #endif
 		{
 			throw EXCEPTION("System failure (addr=0x%x)", addr);
@@ -376,9 +387,9 @@ namespace vm
 		{
 #ifdef _WIN32
 			DWORD old;
-			if (!VirtualProtect(get_ptr(addr & ~0xfff), 4096, PAGE_READWRITE, &old))
+			if (!::VirtualProtect(vm::base(addr & ~0xfff), 4096, PAGE_READWRITE, &old))
 #else
-			if (mprotect(get_ptr(addr & ~0xfff), 4096, PROT_READ | PROT_WRITE))
+			if (::mprotect(vm::base(addr & ~0xfff), 4096, PROT_READ | PROT_WRITE))
 #endif
 			{
 				throw EXCEPTION("System failure (addr=0x%x)", addr);
@@ -443,7 +454,7 @@ namespace vm
 		g_reservation_owner = get_current_thread_ctrl();
 
 		// copy data
-		std::memcpy(data, get_ptr(addr), size);
+		std::memcpy(data, vm::base(addr), size);
 	}
 
 	bool reservation_update(u32 addr, const void* data, u32 size)
@@ -467,7 +478,7 @@ namespace vm
 		_reservation_set(addr, true);
 
 		// update memory using privileged access
-		std::memcpy(priv_ptr(addr), data, size);
+		std::memcpy(vm::base_priv(addr), data, size);
 
 		// free the reservation and restore memory protection
 		_reservation_break(addr);
@@ -578,7 +589,10 @@ namespace vm
 
 	void _page_map(u32 addr, u32 size, u8 flags)
 	{
-		assert(size && (size | addr) % 4096 == 0 && flags < page_allocated);
+		if (!size || (size | addr) % 4096 || flags & page_allocated)
+		{
+			throw EXCEPTION("Invalid arguments (addr=0x%x, size=0x%x)", addr, size);
+		}
 
 		for (u32 i = addr / 4096; i < addr / 4096 + size / 4096; i++)
 		{
@@ -588,15 +602,15 @@ namespace vm
 			}
 		}
 
-		void* real_addr = get_ptr(addr);
-		void* priv_addr = priv_ptr(addr);
+		void* real_addr = vm::base(addr);
+		void* priv_addr = vm::base_priv(addr);
 
 #ifdef _WIN32
 		auto protection = flags & page_writable ? PAGE_READWRITE : (flags & page_readable ? PAGE_READONLY : PAGE_NOACCESS);
-		if (!VirtualAlloc(priv_addr, size, MEM_COMMIT, PAGE_READWRITE) || !VirtualAlloc(real_addr, size, MEM_COMMIT, protection))
+		if (!::VirtualAlloc(priv_addr, size, MEM_COMMIT, PAGE_READWRITE) || !::VirtualAlloc(real_addr, size, MEM_COMMIT, protection))
 #else
 		auto protection = flags & page_writable ? PROT_WRITE | PROT_READ : (flags & page_readable ? PROT_READ : PROT_NONE);
-		if (mprotect(priv_addr, size, PROT_READ | PROT_WRITE) || mprotect(real_addr, size, protection))
+		if (::mprotect(priv_addr, size, PROT_READ | PROT_WRITE) || ::mprotect(real_addr, size, protection))
 #endif
 		{
 			throw EXCEPTION("System failure (addr=0x%x, size=0x%x, flags=0x%x)", addr, size, flags);
@@ -610,16 +624,19 @@ namespace vm
 			}
 		}
 
-		memset(priv_addr, 0, size); // ???
+		std::memset(priv_addr, 0, size); // ???
 	}
 
 	bool page_protect(u32 addr, u32 size, u8 flags_test, u8 flags_set, u8 flags_clear)
 	{
 		std::lock_guard<reservation_mutex_t> lock(g_reservation_mutex);
 
-		u8 flags_inv = flags_set & flags_clear;
+		if (!size || (size | addr) % 4096)
+		{
+			throw EXCEPTION("Invalid arguments (addr=0x%x, size=0x%x)", addr, size);
+		}
 
-		assert(size && (size | addr) % 4096 == 0);
+		const u8 flags_inv = flags_set & flags_clear;
 
 		flags_test |= page_allocated;
 
@@ -646,16 +663,16 @@ namespace vm
 
 			if (f1 != f2)
 			{
-				void* real_addr = get_ptr(i * 4096);
+				void* real_addr = vm::base(i * 4096);
 
 #ifdef _WIN32
 				DWORD old;
 
 				auto protection = f2 & page_writable ? PAGE_READWRITE : (f2 & page_readable ? PAGE_READONLY : PAGE_NOACCESS);
-				if (!VirtualProtect(real_addr, 4096, protection, &old))
+				if (!::VirtualProtect(real_addr, 4096, protection, &old))
 #else
 				auto protection = f2 & page_writable ? PROT_WRITE | PROT_READ : (f2 & page_readable ? PROT_READ : PROT_NONE);
-				if (mprotect(real_addr, 4096, protection))
+				if (::mprotect(real_addr, 4096, protection))
 #endif
 				{
 					throw EXCEPTION("System failure (addr=0x%x, size=0x%x, flags_test=0x%x, flags_set=0x%x, flags_clear=0x%x)", addr, size, flags_test, flags_set, flags_clear);
@@ -668,7 +685,10 @@ namespace vm
 
 	void _page_unmap(u32 addr, u32 size)
 	{
-		assert(size && (size | addr) % 4096 == 0);
+		if (!size || (size | addr) % 4096)
+		{
+			throw EXCEPTION("Invalid arguments (addr=0x%x, size=0x%x)", addr, size);
+		}
 
 		for (u32 i = addr / 4096; i < addr / 4096 + size / 4096; i++)
 		{
@@ -688,15 +708,15 @@ namespace vm
 			}
 		}
 
-		void* real_addr = get_ptr(addr);
-		void* priv_addr = priv_ptr(addr);
+		void* real_addr = vm::base(addr);
+		void* priv_addr = vm::base_priv(addr);
 
 #ifdef _WIN32
 		DWORD old;
 
-		if (!VirtualProtect(real_addr, size, PAGE_NOACCESS, &old) || !VirtualProtect(priv_addr, size, PAGE_NOACCESS, &old))
+		if (!::VirtualProtect(real_addr, size, PAGE_NOACCESS, &old) || !::VirtualProtect(priv_addr, size, PAGE_NOACCESS, &old))
 #else
-		if (mprotect(real_addr, size, PROT_NONE) || mprotect(priv_addr, size, PROT_NONE))
+		if (::mprotect(real_addr, size, PROT_NONE) || ::mprotect(priv_addr, size, PROT_NONE))
 #endif
 		{
 			throw EXCEPTION("System failure (addr=0x%x, size=0x%x)", addr, size);
@@ -705,8 +725,6 @@ namespace vm
 
 	bool check_addr(u32 addr, u32 size)
 	{
-		assert(size);
-
 		if (addr + (size - 1) < addr)
 		{
 			return false;
@@ -722,8 +740,6 @@ namespace vm
 		
 		return true;
 	}
-
-	std::vector<std::shared_ptr<block_t>> g_locations;
 
 	u32 alloc(u32 size, memory_location_t location, u32 align)
 	{
@@ -1003,8 +1019,7 @@ namespace vm
 				std::make_shared<block_t>(0x20000000, 0x10000000), // user
 				std::make_shared<block_t>(0xC0000000, 0x10000000), // video
 				std::make_shared<block_t>(0xD0000000, 0x10000000), // stack
-
-				std::make_shared<block_t>(0xE0000000, 0x20000000), // SPU
+				std::make_shared<block_t>(0xE0000000, 0x20000000), // SPU reserved
 			};
 
 			vm::start();
@@ -1019,8 +1034,8 @@ namespace vm
 			{
 				std::make_shared<block_t>(0x81000000, 0x10000000), // RAM
 				std::make_shared<block_t>(0x91000000, 0x2F000000), // user
-				nullptr, // video
-				nullptr, // stack
+				std::make_shared<block_t>(0xC0000000, 0x10000000), // video (arbitrarily)
+				std::make_shared<block_t>(0xD0000000, 0x10000000), // stack (arbitrarily)
 			};
 
 			vm::start();
@@ -1051,16 +1066,16 @@ namespace vm
 		g_locations.clear();
 	}
 
-	u32 stack_push(CPUThread& cpu, u32 size, u32 align_v, u32& old_pos)
+	u32 stack_push(u32 size, u32 align_v)
 	{
-		switch (cpu.get_type())
+		if (auto cpu = get_current_cpu_thread()) switch (cpu->get_type())
 		{
 		case CPU_THREAD_PPU:
 		{
-			PPUThread& context = static_cast<PPUThread&>(cpu);
+			PPUThread& context = static_cast<PPUThread&>(*cpu);
 
-			old_pos = VM_CAST(context.GPR[1]);
-			context.GPR[1] -= align(size, 8); // room minimal possible size
+			const u32 old_pos = VM_CAST(context.GPR[1]);
+			context.GPR[1] -= align(size + 4, 8); // room minimal possible size
 			context.GPR[1] &= ~(align_v - 1); // fix stack alignment
 
 			if (context.GPR[1] < context.stack_addr)
@@ -1069,17 +1084,19 @@ namespace vm
 			}
 			else
 			{
-				return static_cast<u32>(context.GPR[1]);
+				const u32 addr = static_cast<u32>(context.GPR[1]);
+				vm::ps3::_ref<nse_t<u32>>(addr + size) = old_pos;
+				return addr;
 			}
 		}
 
 		case CPU_THREAD_SPU:
 		case CPU_THREAD_RAW_SPU:
 		{
-			SPUThread& context = static_cast<SPUThread&>(cpu);
+			SPUThread& context = static_cast<SPUThread&>(*cpu);
 
-			old_pos = context.gpr[1]._u32[3];
-			context.gpr[1]._u32[3] -= align(size, 16);
+			const u32 old_pos = context.gpr[1]._u32[3];
+			context.gpr[1]._u32[3] -= align(size + 4, 16);
 			context.gpr[1]._u32[3] &= ~(align_v - 1);
 
 			if (context.gpr[1]._u32[3] >= 0x40000) // extremely rough
@@ -1088,16 +1105,18 @@ namespace vm
 			}
 			else
 			{
-				return context.gpr[1]._u32[3] + context.offset;
+				const u32 addr = context.gpr[1]._u32[3] + context.offset;
+				vm::ps3::_ref<nse_t<u32>>(addr + size) = old_pos;
+				return addr;
 			}
 		}
 
 		case CPU_THREAD_ARMv7:
 		{
-			ARMv7Context& context = static_cast<ARMv7Thread&>(cpu);
+			ARMv7Context& context = static_cast<ARMv7Thread&>(*cpu);
 
-			old_pos = context.SP;
-			context.SP -= align(size, 4); // room minimal possible size
+			const u32 old_pos = context.SP;
+			context.SP -= align(size + 4, 4); // room minimal possible size
 			context.SP &= ~(align_v - 1); // fix stack alignment
 
 			if (context.SP < context.stack_addr)
@@ -1106,65 +1125,70 @@ namespace vm
 			}
 			else
 			{
+				vm::psv::_ref<nse_t<u32>>(context.SP + size) = old_pos;
 				return context.SP;
 			}
 		}
 
 		default:
 		{
-			throw EXCEPTION("Invalid thread type (%d)", cpu.get_id());
+			throw EXCEPTION("Invalid thread type (%d)", cpu->get_type());
 		}
 		}
+
+		throw EXCEPTION("Invalid thread");
 	}
 
-	void stack_pop(CPUThread& cpu, u32 addr, u32 old_pos)
+	void stack_pop(u32 addr, u32 size)
 	{
-		switch (cpu.get_type())
+		if (auto cpu = get_current_cpu_thread()) switch (cpu->get_type())
 		{
 		case CPU_THREAD_PPU:
 		{
-			PPUThread& context = static_cast<PPUThread&>(cpu);
+			PPUThread& context = static_cast<PPUThread&>(*cpu);
 
 			if (context.GPR[1] != addr)
 			{
-				throw EXCEPTION("Stack inconsistency (addr=0x%x, SP=0x%llx, old_pos=0x%x)", addr, context.GPR[1], old_pos);
+				throw EXCEPTION("Stack inconsistency (addr=0x%x, SP=0x%llx, size=0x%x)", addr, context.GPR[1], size);
 			}
 
-			context.GPR[1] = old_pos;
+			context.GPR[1] = vm::ps3::_ref<nse_t<u32>>(context.GPR[1] + size);
 			return;
 		}
 
 		case CPU_THREAD_SPU:
 		case CPU_THREAD_RAW_SPU:
 		{
-			SPUThread& context = static_cast<SPUThread&>(cpu);
+			SPUThread& context = static_cast<SPUThread&>(*cpu);
 
 			if (context.gpr[1]._u32[3] + context.offset != addr)
 			{
-				throw EXCEPTION("Stack inconsistency (addr=0x%x, SP=LS:0x%05x, old_pos=LS:0x%05x)", addr, context.gpr[1]._u32[3], old_pos);
+				throw EXCEPTION("Stack inconsistency (addr=0x%x, SP=LS:0x%05x, size=0x%x)", addr, context.gpr[1]._u32[3], size);
 			}
 
-			context.gpr[1]._u32[3] = old_pos;
+			context.gpr[1]._u32[3] = vm::ps3::_ref<nse_t<u32>>(context.gpr[1]._u32[3] + context.offset + size);
 			return;
 		}
 
 		case CPU_THREAD_ARMv7:
 		{
-			ARMv7Context& context = static_cast<ARMv7Thread&>(cpu);
+			ARMv7Context& context = static_cast<ARMv7Thread&>(*cpu);
 
 			if (context.SP != addr)
 			{
-				throw EXCEPTION("Stack inconsistency (addr=0x%x, SP=0x%x, old_pos=0x%x)", addr, context.SP, old_pos);
+				throw EXCEPTION("Stack inconsistency (addr=0x%x, SP=0x%x, size=0x%x)", addr, context.SP, size);
 			}
 
-			context.SP = old_pos;
+			context.SP = vm::psv::_ref<nse_t<u32>>(context.SP + size);
 			return;
 		}
 
 		default:
 		{
-			throw EXCEPTION("Invalid thread type (%d)", cpu.get_type());
+			throw EXCEPTION("Invalid thread type (%d)", cpu->get_type());
 		}
 		}
+
+		throw EXCEPTION("Invalid thread");
 	}
 }

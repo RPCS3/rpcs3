@@ -1932,5 +1932,8 @@
     <ClInclude Include="Emu\state.h">
       <Filter>Emu</Filter>
     </ClInclude>
+    <ClInclude Include="..\Utilities\BitField.h">
+      <Filter>Utilities</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

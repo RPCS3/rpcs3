@@ -152,7 +152,7 @@ void ElementaryStream::push_au(u32 size, u64 dts, u64 pts, u64 userdata, bool ra
 			put = memAddr;
 		}
 
-		memcpy(vm::get_ptr<void>(put + 128), raw_data.data(), size);
+		std::memcpy(vm::base(put + 128), raw_data.data(), size);
 		raw_data.erase(raw_data.begin(), raw_data.begin() + size);
 
 		auto info = vm::ptr<CellDmuxAuInfoEx>::make(put);
@@ -197,7 +197,7 @@ void ElementaryStream::push(DemuxerStream& stream, u32 size)
 
 	raw_data.resize(old_size + size);
 
-	memcpy(raw_data.data() + old_size, vm::get_ptr<void>(stream.addr), size); // append bytes
+	std::memcpy(raw_data.data() + old_size, vm::base(stream.addr), size); // append bytes
 
 	stream.skip(size);
 }
@@ -352,7 +352,7 @@ void dmuxOpen(u32 dmux_id) // TODO: call from the constructor
 					continue;
 				}
 				
-				switch (code.value())
+				switch (code)
 				{
 				case PACK_START_CODE:
 				{

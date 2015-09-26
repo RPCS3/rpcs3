@@ -2,77 +2,137 @@
 
 namespace vm
 {
-	template<typename T, typename AT> struct _ptr_base;
+	// Tag which allows to construct vm objects from the address value
+	static struct addr_tag_t {} constexpr addr{};
 
-	template<typename T, typename AT = u32>
-	struct _ref_base
+	template<typename T, typename AT> class _ptr_base;
+
+	template<typename T, typename AT = u32> class _ref_base
 	{
-		AT m_addr; // don't access directly
+		AT m_addr;
 
 		static_assert(!std::is_pointer<T>::value, "vm::_ref_base<> error: invalid type (pointer)");
 		static_assert(!std::is_reference<T>::value, "vm::_ref_base<> error: invalid type (reference)");
 		static_assert(!std::is_function<T>::value, "vm::_ref_base<> error: invalid type (function)");
 		static_assert(!std::is_void<T>::value, "vm::_ref_base<> error: invalid type (void)");
 
-		AT addr() const
+	public:
+		using type = T;
+		using addr_type = std::remove_cv_t<AT>;
+
+		_ref_base() = default;
+
+		_ref_base(const _ref_base&) = default;
+
+		constexpr _ref_base(addr_type addr, const addr_tag_t&)
+			: m_addr(addr)
+		{
+		}
+
+		constexpr addr_type addr() const
 		{
 			return m_addr;
 		}
 
-		template<typename AT2 = AT> static std::enable_if_t<std::is_constructible<AT, AT2>::value, _ref_base> make(const AT2& addr)
-		{
-			return{ addr };
-		}
-
 		T& get_ref() const
 		{
-			return vm::get_ref<T>(VM_CAST(m_addr));
+			return *static_cast<T*>(vm::base(VM_CAST(m_addr)));
 		}
 
-		T& priv_ref() const
+		// convert to vm pointer
+		vm::_ptr_base<T, u32> ptr() const
 		{
-			return vm::priv_ref<T>(VM_CAST(m_addr));
+			return{ VM_CAST(m_addr), vm::addr };
 		}
-
-		// TODO: conversion operator (seems hard to define it correctly)
-		//template<typename CT, typename = std::enable_if_t<std::is_convertible<T, CT>::value || std::is_convertible<to_ne_t<T>, CT>::value>> operator CT() const
-		//{
-		//	return get_ref();
-		//}
 
 		operator to_ne_t<T>() const
 		{
 			return get_ref();
 		}
 
-		explicit operator T&() const
+		operator T&() const
 		{
 			return get_ref();
 		}
 
-		// convert to vm pointer
-		vm::_ptr_base<T, u32> operator &() const
-		{
-			return{ VM_CAST(m_addr) };
-		}
-
-		// copy assignment operator:
-		// returns T& by default, this may be wrong if called assignment operator has different return type
 		T& operator =(const _ref_base& right)
 		{
-			static_assert(!std::is_const<T>::value, "vm::_ref_base<> error: operator= is not available for const reference");
-
 			return get_ref() = right.get_ref();
 		}
 
-		template<typename CT, typename AT2> auto operator =(const _ref_base<CT, AT2>& right) const -> decltype(std::declval<T&>() = std::declval<CT>())
-		{
-			return get_ref() = right.get_ref();
-		}
-
-		template<typename CT> auto operator =(const CT& right) const -> decltype(std::declval<T&>() = std::declval<CT>())
+		T& operator =(const T& right) const
 		{
 			return get_ref() = right;
+		}
+
+		decltype(auto) operator ++(int)
+		{
+			return get_ref()++;
+		}
+
+		decltype(auto) operator ++()
+		{
+			return ++get_ref();
+		}
+
+		decltype(auto) operator --(int)
+		{
+			return get_ref()--;
+		}
+
+		decltype(auto) operator --()
+		{
+			return --get_ref();
+		}
+
+		template<typename T2> decltype(auto) operator +=(const T2& right)
+		{
+			return get_ref() += right;
+		}
+
+		template<typename T2> decltype(auto) operator -=(const T2& right)
+		{
+			return get_ref() -= right;
+		}
+
+		template<typename T2> decltype(auto) operator *=(const T2& right)
+		{
+			return get_ref() *= right;
+		}
+
+		template<typename T2> decltype(auto) operator /=(const T2& right)
+		{
+			return get_ref() /= right;
+		}
+
+		template<typename T2> decltype(auto) operator %=(const T2& right)
+		{
+			return get_ref() %= right;
+		}
+
+		template<typename T2> decltype(auto) operator &=(const T2& right)
+		{
+			return get_ref() &= right;
+		}
+
+		template<typename T2> decltype(auto) operator |=(const T2& right)
+		{
+			return get_ref() |= right;
+		}
+
+		template<typename T2> decltype(auto) operator ^=(const T2& right)
+		{
+			return get_ref() ^= right;
+		}
+
+		template<typename T2> decltype(auto) operator <<=(const T2& right)
+		{
+			return get_ref() <<= right;
+		}
+
+		template<typename T2> decltype(auto) operator >>=(const T2& right)
+		{
+			return get_ref() >>= right;
 		}
 	};
 
@@ -113,138 +173,29 @@ namespace vm
 	}
 }
 
-// postfix increment operator for vm::_ref_base
-template<typename T, typename AT> inline auto operator ++(const vm::_ref_base<T, AT>& ref, int) -> decltype(std::declval<T&>()++)
-{
-	return ref.get_ref()++;
-}
+// external specialization for to_se<> (change AT's endianness to BE/LE)
 
-// prefix increment operator for vm::_ref_base
-template<typename T, typename AT> inline auto operator ++(const vm::_ref_base<T, AT>& ref) -> decltype(++std::declval<T&>())
+template<typename T, typename AT, bool Se> struct to_se<vm::_ref_base<T, AT>, Se>
 {
-	return ++ref.get_ref();
-}
-
-// postfix decrement operator for vm::_ref_base
-template<typename T, typename AT> inline auto operator --(const vm::_ref_base<T, AT>& ref, int) -> decltype(std::declval<T&>()--)
-{
-	return ref.get_ref()--;
-}
-
-// prefix decrement operator for vm::_ref_base
-template<typename T, typename AT> inline auto operator --(const vm::_ref_base<T, AT>& ref) -> decltype(--std::declval<T&>())
-{
-	return --ref.get_ref();
-}
-
-// addition assignment operator for vm::_ref_base
-template<typename T, typename AT, typename T2> inline auto operator +=(const vm::_ref_base<T, AT>& ref, const T2& right) -> decltype(std::declval<T&>() += std::declval<T2>())
-{
-	return ref.get_ref() += right;
-}
-
-// subtraction assignment operator for vm::_ref_base
-template<typename T, typename AT, typename T2> inline auto operator -=(const vm::_ref_base<T, AT>& ref, const T2& right) -> decltype(std::declval<T&>() -= std::declval<T2>())
-{
-	return ref.get_ref() -= right;
-}
-
-// multiplication assignment operator for vm::_ref_base
-template<typename T, typename AT, typename T2> inline auto operator *=(const vm::_ref_base<T, AT>& ref, const T2& right) -> decltype(std::declval<T&>() *= std::declval<T2>())
-{
-	return ref.get_ref() *= right;
-}
-
-// division assignment operator for vm::_ref_base
-template<typename T, typename AT, typename T2> inline auto operator /=(const vm::_ref_base<T, AT>& ref, const T2& right) -> decltype(std::declval<T&>() /= std::declval<T2>())
-{
-	return ref.get_ref() /= right;
-}
-
-// modulo assignment operator for vm::_ref_base
-template<typename T, typename AT, typename T2> inline auto operator %=(const vm::_ref_base<T, AT>& ref, const T2& right) -> decltype(std::declval<T&>() %= std::declval<T2>())
-{
-	return ref.get_ref() %= right;
-}
-
-// bitwise AND assignment operator for vm::_ref_base
-template<typename T, typename AT, typename T2> inline auto operator &=(const vm::_ref_base<T, AT>& ref, const T2& right) -> decltype(std::declval<T&>() &= std::declval<T2>())
-{
-	return ref.get_ref() &= right;
-}
-
-// bitwise OR assignment operator for vm::_ref_base
-template<typename T, typename AT, typename T2> inline auto operator |=(const vm::_ref_base<T, AT>& ref, const T2& right) -> decltype(std::declval<T&>() |= std::declval<T2>())
-{
-	return ref.get_ref() |= right;
-}
-
-// bitwise XOR assignment operator for vm::_ref_base
-template<typename T, typename AT, typename T2> inline auto operator ^=(const vm::_ref_base<T, AT>& ref, const T2& right) -> decltype(std::declval<T&>() ^= std::declval<T2>())
-{
-	return ref.get_ref() ^= right;
-}
-
-// bitwise left shift assignment operator for vm::_ref_base
-template<typename T, typename AT, typename T2> inline auto operator <<=(const vm::_ref_base<T, AT>& ref, const T2& right) -> decltype(std::declval<T&>() <<= std::declval<T2>())
-{
-	return ref.get_ref() <<= right;
-}
-
-// bitwise right shift assignment operator for vm::_ref_base
-template<typename T, typename AT, typename T2> inline auto operator >>=(const vm::_ref_base<T, AT>& ref, const T2& right) -> decltype(std::declval<T&>() >>= std::declval<T2>())
-{
-	return ref.get_ref() >>= right;
-}
-
-// external specialization for is_be_t<> (true if AT's endianness is BE)
-
-template<typename T, typename AT>
-struct is_be_t<vm::_ref_base<T, AT>> : public std::integral_constant<bool, is_be_t<AT>::value>
-{
+	using type = vm::_ref_base<T, typename to_se<AT, Se>::type>;
 };
 
-// external specialization for is_le_t<> (true if AT's endianness is LE)
+// external specialization for to_ne<> (change AT's endianness to native)
 
-template<typename T, typename AT>
-struct is_le_t<vm::_ref_base<T, AT>> : public std::integral_constant<bool, is_le_t<AT>::value>
+template<typename T, typename AT> struct to_ne<vm::_ref_base<T, AT>>
 {
-};
-
-// external specialization for to_ne_t<> (change AT's endianness to native)
-
-template<typename T, typename AT>
-struct to_ne<vm::_ref_base<T, AT>>
-{
-	using type = vm::_ref_base<T, to_ne_t<AT>>;
-};
-
-// external specialization for to_be_t<> (change AT's endianness to BE)
-
-template<typename T, typename AT>
-struct to_be<vm::_ref_base<T, AT>>
-{
-	using type = vm::_ref_base<T, to_be_t<AT>>;
-};
-
-// external specialization for to_le_t<> (change AT's endianness to LE)
-
-template<typename T, typename AT>
-struct to_le<vm::_ref_base<T, AT>>
-{
-	using type = vm::_ref_base<T, to_le_t<AT>>;
+	using type = vm::_ref_base<T, typename to_ne<AT>::type>;
 };
 
 namespace fmt
 {
 	// external specialization for fmt::format function
 
-	template<typename T, typename AT>
-	struct unveil<vm::_ref_base<T, AT>, false>
+	template<typename T, typename AT> struct unveil<vm::_ref_base<T, AT>, false>
 	{
 		using result_type = typename unveil<AT>::result_type;
 
-		force_inline static result_type get_value(const vm::_ref_base<T, AT>& arg)
+		static inline result_type get_value(const vm::_ref_base<T, AT>& arg)
 		{
 			return unveil<AT>::get_value(arg.addr());
 		}
@@ -253,38 +204,34 @@ namespace fmt
 
 // external specializations for PPU GPR (SC_FUNC.h, CB_FUNC.h)
 
-template<typename T, bool is_enum>
-struct cast_ppu_gpr;
+template<typename T, bool is_enum> struct cast_ppu_gpr;
 
-template<typename T, typename AT>
-struct cast_ppu_gpr<vm::_ref_base<T, AT>, false>
+template<typename T, typename AT> struct cast_ppu_gpr<vm::_ref_base<T, AT>, false>
 {
-	force_inline static u64 to_gpr(const vm::_ref_base<T, AT>& value)
+	static inline u64 to_gpr(const vm::_ref_base<T, AT>& value)
 	{
 		return cast_ppu_gpr<AT, std::is_enum<AT>::value>::to_gpr(value.addr());
 	}
 
-	force_inline static vm::_ref_base<T, AT> from_gpr(const u64 reg)
+	static inline vm::_ref_base<T, AT> from_gpr(const u64 reg)
 	{
-		return vm::_ref_base<T, AT>::make(cast_ppu_gpr<AT, std::is_enum<AT>::value>::from_gpr(reg));
+		return{ cast_ppu_gpr<AT, std::is_enum<AT>::value>::from_gpr(reg), vm::addr };
 	}
 };
 
 // external specializations for ARMv7 GPR
 
-template<typename T, bool is_enum>
-struct cast_armv7_gpr;
+template<typename T, bool is_enum> struct cast_armv7_gpr;
 
-template<typename T, typename AT>
-struct cast_armv7_gpr<vm::_ref_base<T, AT>, false>
+template<typename T, typename AT> struct cast_armv7_gpr<vm::_ref_base<T, AT>, false>
 {
-	force_inline static u32 to_gpr(const vm::_ref_base<T, AT>& value)
+	static inline u32 to_gpr(const vm::_ref_base<T, AT>& value)
 	{
 		return cast_armv7_gpr<AT, std::is_enum<AT>::value>::to_gpr(value.addr());
 	}
 
-	force_inline static vm::_ref_base<T, AT> from_gpr(const u32 reg)
+	static inline vm::_ref_base<T, AT> from_gpr(const u32 reg)
 	{
-		return vm::_ref_base<T, AT>::make(cast_armv7_gpr<AT, std::is_enum<AT>::value>::from_gpr(reg));
+		return{ cast_armv7_gpr<AT, std::is_enum<AT>::value>::from_gpr(reg), vm::addr };
 	}
 };

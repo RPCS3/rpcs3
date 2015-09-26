@@ -536,9 +536,7 @@ public:
 
 	std::function<void(PPUThread& CPU)> custom_task;
 
-	/// When a thread has met an exception, this variable is used to retro propagate it through stack call.
-	/// Note that exception_ptr is similar to shared_ptr and doesn't need to be freed, but need a nullptr
-	/// to be assigned.
+	// When a thread has met an exception, this variable is used to retro propagate it through stack call.
 	std::exception_ptr pending_exception;
 
 public:
@@ -557,7 +555,7 @@ public:
 
 	virtual bool handle_interrupt() override;
 
-	inline u8 GetCR(const u8 n) const
+	u8 GetCR(const u8 n) const
 	{
 		switch(n)
 		{
@@ -574,7 +572,7 @@ public:
 		return 0;
 	}
 
-	inline void SetCR(const u8 n, const u32 value)
+	void SetCR(const u8 n, const u32 value)
 	{
 		switch(n)
 		{
@@ -589,7 +587,7 @@ public:
 		}
 	}
 
-	inline void SetCRBit(const u8 n, const u32 bit, const bool value)
+	void SetCRBit(const u8 n, const u32 bit, const bool value)
 	{
 		switch(n)
 		{
@@ -604,14 +602,14 @@ public:
 		}
 	}
 
-	inline void SetCR_EQ(const u8 n, const bool value) { SetCRBit(n, CR_EQ, value); }
-	inline void SetCR_GT(const u8 n, const bool value) { SetCRBit(n, CR_GT, value); }
-	inline void SetCR_LT(const u8 n, const bool value) { SetCRBit(n, CR_LT, value); }	
-	inline void SetCR_SO(const u8 n, const bool value) { SetCRBit(n, CR_SO, value); }
+	void SetCR_EQ(const u8 n, const bool value) { SetCRBit(n, CR_EQ, value); }
+	void SetCR_GT(const u8 n, const bool value) { SetCRBit(n, CR_GT, value); }
+	void SetCR_LT(const u8 n, const bool value) { SetCRBit(n, CR_LT, value); }	
+	void SetCR_SO(const u8 n, const bool value) { SetCRBit(n, CR_SO, value); }
 
-	inline bool IsCR_EQ(const u8 n) const { return (GetCR(n) & CR_EQ) ? 1 : 0; }
-	inline bool IsCR_GT(const u8 n) const { return (GetCR(n) & CR_GT) ? 1 : 0; }
-	inline bool IsCR_LT(const u8 n) const { return (GetCR(n) & CR_LT) ? 1 : 0; }
+	bool IsCR_EQ(const u8 n) const { return (GetCR(n) & CR_EQ) ? 1 : 0; }
+	bool IsCR_GT(const u8 n) const { return (GetCR(n) & CR_GT) ? 1 : 0; }
+	bool IsCR_LT(const u8 n) const { return (GetCR(n) & CR_LT) ? 1 : 0; }
 
 	template<typename T> void UpdateCRn(const u8 n, const T a, const T b)
 	{

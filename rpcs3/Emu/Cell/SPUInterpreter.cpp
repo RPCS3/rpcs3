@@ -210,45 +210,45 @@ void spu_interpreter::SHLH(SPUThread& spu, spu_opcode_t op)
 void spu_interpreter::ROTI(SPUThread& spu, spu_opcode_t op)
 {
 	const auto a = spu.gpr[op.ra].vi;
-	const s32 n = op.si7 & 0x1f;
+	const s32 n = op.i7 & 0x1f;
 	spu.gpr[op.rt].vi = _mm_or_si128(_mm_slli_epi32(a, n), _mm_srli_epi32(a, 32 - n));
 }
 
 void spu_interpreter::ROTMI(SPUThread& spu, spu_opcode_t op)
 {
-	spu.gpr[op.rt].vi = _mm_srli_epi32(spu.gpr[op.ra].vi, -op.si7 & 0x3f);
+	spu.gpr[op.rt].vi = _mm_srli_epi32(spu.gpr[op.ra].vi, 0-op.i7 & 0x3f);
 }
 
 void spu_interpreter::ROTMAI(SPUThread& spu, spu_opcode_t op)
 {
-	spu.gpr[op.rt].vi = _mm_srai_epi32(spu.gpr[op.ra].vi, -op.si7 & 0x3f);
+	spu.gpr[op.rt].vi = _mm_srai_epi32(spu.gpr[op.ra].vi, 0-op.i7 & 0x3f);
 }
 
 void spu_interpreter::SHLI(SPUThread& spu, spu_opcode_t op)
 {
-	spu.gpr[op.rt].vi = _mm_slli_epi32(spu.gpr[op.ra].vi, op.si7 & 0x3f);
+	spu.gpr[op.rt].vi = _mm_slli_epi32(spu.gpr[op.ra].vi, op.i7 & 0x3f);
 }
 
 void spu_interpreter::ROTHI(SPUThread& spu, spu_opcode_t op)
 {
 	const auto a = spu.gpr[op.ra].vi;
-	const s32 n = op.si7 & 0xf;
+	const s32 n = op.i7 & 0xf;
 	spu.gpr[op.rt].vi = _mm_or_si128(_mm_slli_epi16(a, n), _mm_srli_epi16(a, 16 - n));
 }
 
 void spu_interpreter::ROTHMI(SPUThread& spu, spu_opcode_t op)
 {
-	spu.gpr[op.rt].vi = _mm_srli_epi16(spu.gpr[op.ra].vi, -op.si7 & 0x1f);
+	spu.gpr[op.rt].vi = _mm_srli_epi16(spu.gpr[op.ra].vi, 0-op.i7 & 0x1f);
 }
 
 void spu_interpreter::ROTMAHI(SPUThread& spu, spu_opcode_t op)
 {
-	spu.gpr[op.rt].vi = _mm_srai_epi16(spu.gpr[op.ra].vi, -op.si7 & 0x1f);
+	spu.gpr[op.rt].vi = _mm_srai_epi16(spu.gpr[op.ra].vi, 0-op.i7 & 0x1f);
 }
 
 void spu_interpreter::SHLHI(SPUThread& spu, spu_opcode_t op)
 {
-	spu.gpr[op.rt].vi = _mm_slli_epi16(spu.gpr[op.ra].vi, op.si7 & 0x1f);
+	spu.gpr[op.rt].vi = _mm_slli_epi16(spu.gpr[op.ra].vi, op.i7 & 0x1f);
 }
 
 void spu_interpreter::A(SPUThread& spu, spu_opcode_t op)
@@ -336,7 +336,7 @@ void spu_interpreter::STOPD(SPUThread& spu, spu_opcode_t op)
 
 void spu_interpreter::STQX(SPUThread& spu, spu_opcode_t op)
 {
-	spu.write128((spu.gpr[op.ra]._u32[3] + spu.gpr[op.rb]._u32[3]) & 0x3fff0, spu.gpr[op.rt]);
+	spu._ref<v128>((spu.gpr[op.ra]._u32[3] + spu.gpr[op.rb]._u32[3]) & 0x3fff0) = spu.gpr[op.rt];
 }
 
 void spu_interpreter::BI(SPUThread& spu, spu_opcode_t op)
@@ -410,7 +410,7 @@ void spu_interpreter::fast::FRSQEST(SPUThread& spu, spu_opcode_t op)
 
 void spu_interpreter::LQX(SPUThread& spu, spu_opcode_t op)
 {
-	spu.gpr[op.rt] = spu.read128((spu.gpr[op.ra]._u32[3] + spu.gpr[op.rb]._u32[3]) & 0x3fff0);
+	spu.gpr[op.rt] = spu._ref<v128>((spu.gpr[op.ra]._u32[3] + spu.gpr[op.rb]._u32[3]) & 0x3fff0);
 }
 
 void spu_interpreter::ROTQBYBI(SPUThread& spu, spu_opcode_t op)
@@ -575,7 +575,7 @@ void spu_interpreter::ROTQBII(SPUThread& spu, spu_opcode_t op)
 void spu_interpreter::ROTQMBII(SPUThread& spu, spu_opcode_t op)
 {
 	const auto a = spu.gpr[op.ra].vi;
-	const s32 n = -op.si7 & 0x7;
+	const s32 n = 0-op.i7 & 0x7;
 	spu.gpr[op.rt].vi = _mm_or_si128(_mm_srli_epi64(a, n), _mm_slli_epi64(_mm_srli_si128(a, 8), 64 - n));
 }
 
@@ -593,7 +593,7 @@ void spu_interpreter::ROTQBYI(SPUThread& spu, spu_opcode_t op)
 
 void spu_interpreter::ROTQMBYI(SPUThread& spu, spu_opcode_t op)
 {
-	spu.gpr[op.rt].vi = _mm_shuffle_epi8(spu.gpr[op.ra].vi, g_spu_imm.srdq_pshufb[-op.si7 & 0x1f].vi);
+	spu.gpr[op.rt].vi = _mm_shuffle_epi8(spu.gpr[op.ra].vi, g_spu_imm.srdq_pshufb[0-op.i7 & 0x1f].vi);
 }
 
 void spu_interpreter::SHLQBYI(SPUThread& spu, spu_opcode_t op)
@@ -977,7 +977,7 @@ void spu_interpreter::BRZ(SPUThread& spu, spu_opcode_t op)
 
 void spu_interpreter::STQA(SPUThread& spu, spu_opcode_t op)
 {
-	spu.write128((op.i16 << 2) & 0x3fff0, spu.gpr[op.rt]);
+	spu._ref<v128>(spu_ls_target(0, op.i16)) = spu.gpr[op.rt];
 }
 
 void spu_interpreter::BRNZ(SPUThread& spu, spu_opcode_t op)
@@ -1006,7 +1006,7 @@ void spu_interpreter::BRHNZ(SPUThread& spu, spu_opcode_t op)
 
 void spu_interpreter::STQR(SPUThread& spu, spu_opcode_t op)
 {
-	spu.write128(spu_branch_target(spu.pc, op.i16) & 0x3fff0, spu.gpr[op.rt]);
+	spu._ref<v128>(spu_ls_target(spu.pc, op.i16)) = spu.gpr[op.rt];
 }
 
 void spu_interpreter::BRA(SPUThread& spu, spu_opcode_t op)
@@ -1016,7 +1016,7 @@ void spu_interpreter::BRA(SPUThread& spu, spu_opcode_t op)
 
 void spu_interpreter::LQA(SPUThread& spu, spu_opcode_t op)
 {
-	spu.gpr[op.rt] = spu.read128((op.i16 << 2) & 0x3fff0);
+	spu.gpr[op.rt] = spu._ref<v128>(spu_ls_target(0, op.i16));
 }
 
 void spu_interpreter::BRASL(SPUThread& spu, spu_opcode_t op)
@@ -1045,7 +1045,7 @@ void spu_interpreter::BRSL(SPUThread& spu, spu_opcode_t op)
 
 void spu_interpreter::LQR(SPUThread& spu, spu_opcode_t op)
 {
-	spu.gpr[op.rt] = spu.read128(spu_branch_target(spu.pc, op.i16) & 0x3fff0);
+	spu.gpr[op.rt] = spu._ref<v128>(spu_ls_target(spu.pc, op.i16));
 }
 
 void spu_interpreter::IL(SPUThread& spu, spu_opcode_t op)
@@ -1121,12 +1121,12 @@ void spu_interpreter::AHI(SPUThread& spu, spu_opcode_t op)
 
 void spu_interpreter::STQD(SPUThread& spu, spu_opcode_t op)
 {
-	spu.write128((spu.gpr[op.ra]._s32[3] + (op.si10 << 4)) & 0x3fff0, spu.gpr[op.rt]);
+	spu._ref<v128>((spu.gpr[op.ra]._s32[3] + (op.si10 << 4)) & 0x3fff0) = spu.gpr[op.rt];
 }
 
 void spu_interpreter::LQD(SPUThread& spu, spu_opcode_t op)
 {
-	spu.gpr[op.rt] = spu.read128((spu.gpr[op.ra]._s32[3] + (op.si10 << 4)) & 0x3fff0);
+	spu.gpr[op.rt] = spu._ref<v128>((spu.gpr[op.ra]._s32[3] + (op.si10 << 4)) & 0x3fff0);
 }
 
 void spu_interpreter::XORI(SPUThread& spu, spu_opcode_t op)
@@ -1242,14 +1242,12 @@ void spu_interpreter::ILA(SPUThread& spu, spu_opcode_t op)
 
 void spu_interpreter::SELB(SPUThread& spu, spu_opcode_t op)
 {
-	// rt <> rc
-	spu.gpr[op.rc] = (spu.gpr[op.rt] & spu.gpr[op.rb]) | v128::andnot(spu.gpr[op.rt], spu.gpr[op.ra]);
+	spu.gpr[op.rt4] = (spu.gpr[op.rc] & spu.gpr[op.rb]) | v128::andnot(spu.gpr[op.rc], spu.gpr[op.ra]);
 }
 
 void spu_interpreter::SHUFB(SPUThread& spu, spu_opcode_t op)
 {
-	// rt <> rc
-	const auto index = _mm_xor_si128(spu.gpr[op.rt].vi, _mm_set1_epi32(0x0f0f0f0f));
+	const auto index = _mm_xor_si128(spu.gpr[op.rc].vi, _mm_set1_epi32(0x0f0f0f0f));
 	const auto res1 = _mm_shuffle_epi8(spu.gpr[op.ra].vi, index);
 	const auto bit4 = _mm_set1_epi32(0x10101010);
 	const auto k1 = _mm_cmpeq_epi8(_mm_and_si128(index, bit4), bit4);
@@ -1259,32 +1257,28 @@ void spu_interpreter::SHUFB(SPUThread& spu, spu_opcode_t op)
 	const auto res3 = _mm_or_si128(res2, k2);
 	const auto bit567 = _mm_set1_epi32(0xe0e0e0e0);
 	const auto k3 = _mm_cmpeq_epi8(_mm_and_si128(index, bit567), bit567);
-	spu.gpr[op.rc].vi = _mm_sub_epi8(res3, _mm_and_si128(k3, _mm_set1_epi32(0x7f7f7f7f)));
+	spu.gpr[op.rt4].vi = _mm_sub_epi8(res3, _mm_and_si128(k3, _mm_set1_epi32(0x7f7f7f7f)));
 }
 
 void spu_interpreter::MPYA(SPUThread& spu, spu_opcode_t op)
 {
-	// rt <> rc
 	const auto mask = _mm_set1_epi32(0xffff);
-	spu.gpr[op.rc].vi = _mm_add_epi32(spu.gpr[op.rt].vi, _mm_madd_epi16(_mm_and_si128(spu.gpr[op.ra].vi, mask), _mm_and_si128(spu.gpr[op.rb].vi, mask)));
+	spu.gpr[op.rt4].vi = _mm_add_epi32(spu.gpr[op.rc].vi, _mm_madd_epi16(_mm_and_si128(spu.gpr[op.ra].vi, mask), _mm_and_si128(spu.gpr[op.rb].vi, mask)));
 }
 
 void spu_interpreter::fast::FNMS(SPUThread& spu, spu_opcode_t op)
 {
-	// rt <> rc
-	spu.gpr[op.rc].vf = _mm_sub_ps(spu.gpr[op.rt].vf, _mm_mul_ps(spu.gpr[op.ra].vf, spu.gpr[op.rb].vf));
+	spu.gpr[op.rt4].vf = _mm_sub_ps(spu.gpr[op.rc].vf, _mm_mul_ps(spu.gpr[op.ra].vf, spu.gpr[op.rb].vf));
 }
 
 void spu_interpreter::fast::FMA(SPUThread& spu, spu_opcode_t op)
 {
-	// rt <> rc
-	spu.gpr[op.rc].vf = _mm_add_ps(_mm_mul_ps(spu.gpr[op.ra].vf, spu.gpr[op.rb].vf), spu.gpr[op.rt].vf);
+	spu.gpr[op.rt4].vf = _mm_add_ps(_mm_mul_ps(spu.gpr[op.ra].vf, spu.gpr[op.rb].vf), spu.gpr[op.rc].vf);
 }
 
 void spu_interpreter::fast::FMS(SPUThread& spu, spu_opcode_t op)
 {
-	// rt <> rc
-	spu.gpr[op.rc].vf = _mm_sub_ps(_mm_mul_ps(spu.gpr[op.ra].vf, spu.gpr[op.rb].vf), spu.gpr[op.rt].vf);
+	spu.gpr[op.rt4].vf = _mm_sub_ps(_mm_mul_ps(spu.gpr[op.ra].vf, spu.gpr[op.rb].vf), spu.gpr[op.rc].vf);
 }
 
 static void SetHostRoundingMode(u32 rn)
@@ -1932,14 +1926,12 @@ void spu_interpreter::precise::CUFLT(SPUThread& spu, spu_opcode_t op)
 
 static void FMA(SPUThread& spu, spu_opcode_t op, bool neg, bool sub)
 {
-	// rt <> rc
-
 	SetHostRoundingMode(FPSCR_RN_ZERO);
 	for (int w = 0; w < 4; w++)
 	{
 		float a = spu.gpr[op.ra]._f[w];
 		float b = neg ? -spu.gpr[op.rb]._f[w] : spu.gpr[op.rb]._f[w];
-		float c = (neg != sub) ? -spu.gpr[op.rt]._f[w] : spu.gpr[op.rt]._f[w];
+		float c = (neg != sub) ? -spu.gpr[op.rc]._f[w] : spu.gpr[op.rc]._f[w];
 		if (isdenormal(a))
 		{
 			spu.fpscr.setSinglePrecisionExceptionFlags(w, FPSCR_SDIFF);
@@ -2073,7 +2065,7 @@ static void FMA(SPUThread& spu, spu_opcode_t op, bool neg, bool sub)
 		{
 			result = +0.0f;
 		}
-		spu.gpr[op.rc]._f[w] = result;
+		spu.gpr[op.rt4]._f[w] = result;
 	}
 }
 

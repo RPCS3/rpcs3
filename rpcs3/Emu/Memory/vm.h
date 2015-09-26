@@ -8,8 +8,8 @@ class named_thread_t;
 
 namespace vm
 {
-	extern void* const g_base_addr; // base address of ps3/psv virtual memory for common access
-	extern void* g_priv_addr; // base address of ps3/psv virtual memory for privileged access
+	extern u8* const g_base_addr;
+	extern u8* const g_priv_addr;
 
 	enum memory_location_t : uint
 	{
@@ -39,7 +39,7 @@ namespace vm
 		u32 addr = 0;
 		u32 mask = ~0;
 		named_thread_t* thread = nullptr;
-		
+
 		std::function<bool()> pred;
 
 		waiter_t() = default;
@@ -68,8 +68,6 @@ namespace vm
 		std::unique_lock<std::mutex> m_lock;
 
 	public:
-		waiter_lock_t() = delete;
-
 		waiter_lock_t(named_thread_t& thread, u32 addr, u32 size);
 
 		waiter_t* operator ->() const
@@ -82,7 +80,7 @@ namespace vm
 		~waiter_lock_t();
 	};
 
-	// wait until pred() returns true, addr must be aligned to size which must be a power of 2, pred() may be called by any thread
+	// Wait until pred() returns true, addr must be aligned to size which must be a power of 2, pred() may be called by any thread
 	template<typename F, typename... Args> auto wait_op(named_thread_t& thread, u32 addr, u32 size, F pred, Args&&... args) -> decltype(static_cast<void>(pred(args...)))
 	{
 		// return immediately if condition passed (optimistic case)
@@ -98,10 +96,10 @@ namespace vm
 		lock.wait();
 	}
 
-	// notify waiters on specific addr, addr must be aligned to size which must be a power of 2
+	// Notify waiters on specific addr, addr must be aligned to size which must be a power of 2
 	void notify_at(u32 addr, u32 size);
 
-	// try to poll each waiter's condition (false if try_lock failed)
+	// Try to poll each waiter's condition (false if try_lock failed)
 	bool notify_all();
 
 	// This flag is changed by various reservation functions and may have different meaning.
@@ -152,7 +150,7 @@ namespace vm
 	// dealloc() with no return value and no exceptions
 	void dealloc_verbose_nothrow(u32 addr, memory_location_t location = any) noexcept;
 
-	// Object that handles memory allocations inside specific constant bounds ("location"), currently non-virtual
+	// Object that handles memory allocations inside specific constant bounds ("location")
 	class block_t final
 	{
 		std::map<u32, u32> m_map; // addr -> size mapping of mapped locations
@@ -161,12 +159,11 @@ namespace vm
 		bool try_alloc(u32 addr, u32 size);
 
 	public:
-		block_t() = delete;
-
 		block_t(u32 addr, u32 size, u64 flags = 0)
 			: addr(addr)
 			, size(size)
 			, flags(flags)
+			, used(0)
 		{
 		}
 
@@ -177,7 +174,7 @@ namespace vm
 		const u32 size; // total size
 		const u64 flags; // currently unused
 
-		atomic_t<u32> used{}; // amount of memory used, may be increased manually to prevent some memory from allocating
+		atomic_t<u32> used; // amount of memory used, may be increased manually to prevent some memory from allocating
 
 		// Search and map memory (don't pass alignment smaller than 4096)
 		u32 alloc(u32 size, u32 align = 4096);
@@ -197,30 +194,16 @@ namespace vm
 
 	// get memory block associated with optionally specified memory location or optionally specified address
 	std::shared_ptr<block_t> get(memory_location_t location, u32 addr = 0);
-	
-	template<typename T = void> T* get_ptr(u32 addr)
-	{
-		return reinterpret_cast<T*>(static_cast<u8*>(g_base_addr) + addr);
-	}
 
-	template<typename T> T& get_ref(u32 addr)
+	// Get PS3/PSV virtual memory address from the provided pointer (nullptr always converted to 0)
+	inline u32 get_addr(const void* real_ptr)
 	{
-		return *get_ptr<T>(addr);
-	}
+		if (!real_ptr)
+		{
+			return 0;
+		}
 
-	template<typename T = void> T* priv_ptr(u32 addr)
-	{
-		return reinterpret_cast<T*>(static_cast<u8*>(g_priv_addr) + addr);
-	}
-
-	template<typename T> T& priv_ref(u32 addr)
-	{
-		return *priv_ptr<T>(addr);
-	}
-
-	inline u32 get_addr(const void* real_pointer)
-	{
-		const std::uintptr_t diff = reinterpret_cast<std::uintptr_t>(real_pointer) - reinterpret_cast<std::uintptr_t>(g_base_addr);
+		const std::ptrdiff_t diff = static_cast<const u8*>(real_ptr) - g_base_addr;
 		const u32 res = static_cast<u32>(diff);
 
 		if (res == diff)
@@ -228,27 +211,23 @@ namespace vm
 			return res;
 		}
 
-		if (real_pointer)
-		{
-			throw EXCEPTION("Not a virtual memory pointer (%p)", real_pointer);
-		}
+		throw EXCEPTION("Not a virtual memory pointer (%p)", real_ptr);
+	}
 
-		return 0;
+	// Convert pointer-to-member to a vm address compatible offset
+	template<typename MT, typename T> inline u32 get_offset(MT T::*const member_ptr)
+	{
+		return static_cast<u32>(reinterpret_cast<std::uintptr_t>(&(reinterpret_cast<T*>(0ull)->*member_ptr)));
 	}
 
 	template<typename T> struct cast_ptr
 	{
 		static_assert(std::is_same<T, u32>::value, "Unsupported VM_CAST() type");
-
-		force_inline static u32 cast(const T& addr, const char* file, int line, const char* func)
-		{
-			return 0;
-		}
 	};
 
 	template<> struct cast_ptr<u32>
 	{
-		force_inline static u32 cast(const u32 addr, const char* file, int line, const char* func)
+		static u32 cast(const u32 addr, const char* file, int line, const char* func)
 		{
 			return addr;
 		}
@@ -256,131 +235,157 @@ namespace vm
 
 	template<> struct cast_ptr<u64>
 	{
-		force_inline static u32 cast(const u64 addr, const char* file, int line, const char* func)
+		static u32 cast(const u64 addr, const char* file, int line, const char* func)
 		{
-			const u32 res = static_cast<u32>(addr);
-
-			if (res != addr)
-			{
-				throw fmt::exception(file, line, func, "VM_CAST failed (addr=0x%llx)", addr);
-			}
-
-			return res;
+			return static_cast<u32>(addr) == addr ? static_cast<u32>(addr) : throw fmt::exception(file, line, func, "VM_CAST failed (addr=0x%llx)", addr);
 		}
 	};
 
 	template<typename T, bool Se> struct cast_ptr<se_t<T, Se>>
 	{
-		force_inline static u32 cast(const se_t<T, Se>& addr, const char* file, int line, const char* func)
+		static u32 cast(const se_t<T, Se>& addr, const char* file, int line, const char* func)
 		{
 			return cast_ptr<T>::cast(addr, file, line, func);
 		}
 	};
 
-	// function for VM_CAST
-	template<typename T> force_inline static u32 impl_cast(const T& addr, const char* file, int line, const char* func)
+	template<typename T> u32 impl_cast(const T& addr, const char* file, int line, const char* func)
 	{
 		return cast_ptr<T>::cast(addr, file, line, func);
 	}
 
-	static const u8& read8(u32 addr)
+	// Convert specified PS3/PSV virtual memory address to a pointer for common access
+	inline void* base(u32 addr)
 	{
-		return get_ref<const u8>(addr);
+		return g_base_addr + addr;
 	}
 
-	static void write8(u32 addr, u8 value)
+	// Convert specified PS3/PSV virtual memory address to a pointer for privileged access (always readable/writable if allocated)
+	inline void* base_priv(u32 addr)
 	{
-		get_ref<u8>(addr) = value;
+		return g_priv_addr + addr;
+	}
+
+	inline const u8& read8(u32 addr)
+	{
+		return g_base_addr[addr];
+	}
+
+	inline void write8(u32 addr, u8 value)
+	{
+		g_base_addr[addr] = value;
 	}
 
 	namespace ps3
 	{
-		void init();
+		// Convert specified PS3 address to a pointer of specified (possibly converted to BE) type
+		template<typename T> inline to_be_t<T>* _ptr(u32 addr)
+		{
+			return static_cast<to_be_t<T>*>(base(addr));
+		}
+
+		template<typename T> inline to_be_t<T>* _ptr_priv(u32 addr)
+		{
+			return static_cast<to_be_t<T>*>(base_priv(addr));
+		}
+
+		// Convert specified PS3 address to a reference of specified (possibly converted to BE) type
+		template<typename T> inline to_be_t<T>& _ref(u32 addr)
+		{
+			return *_ptr<T>(addr);
+		}
+
+		template<typename T> inline to_be_t<T>& _ref_priv(u32 addr)
+		{
+			return *_ptr_priv<T>(addr);
+		}
 
 		inline const be_t<u16>& read16(u32 addr)
 		{
-			return get_ref<const be_t<u16>>(addr);
+			return _ref<u16>(addr);
 		}
 
 		inline void write16(u32 addr, be_t<u16> value)
 		{
-			get_ref<be_t<u16>>(addr) = value;
+			_ref<u16>(addr) = value;
 		}
 
 		inline const be_t<u32>& read32(u32 addr)
 		{
-			return get_ref<const be_t<u32>>(addr);
+			return _ref<u32>(addr);
 		}
 
 		inline void write32(u32 addr, be_t<u32> value)
 		{
-			get_ref<be_t<u32>>(addr) = value;
+			_ref<u32>(addr) = value;
 		}
 
 		inline const be_t<u64>& read64(u32 addr)
 		{
-			return get_ref<const be_t<u64>>(addr);
+			return _ref<u64>(addr);
 		}
 
 		inline void write64(u32 addr, be_t<u64> value)
 		{
-			get_ref<be_t<u64>>(addr) = value;
+			_ref<u64>(addr) = value;
 		}
 
-		inline const be_t<v128>& read128(u32 addr)
-		{
-			return get_ref<const be_t<v128>>(addr);
-		}
-
-		inline void write128(u32 addr, be_t<v128> value)
-		{
-			get_ref<be_t<v128>>(addr) = value;
-		}
+		void init();
 	}
 	
 	namespace psv
 	{
-		void init();
+		template<typename T> inline to_le_t<T>* _ptr(u32 addr)
+		{
+			return static_cast<to_le_t<T>*>(base(addr));
+		}
+
+		template<typename T> inline to_le_t<T>* _ptr_priv(u32 addr)
+		{
+			return static_cast<to_le_t<T>*>(base_priv(addr));
+		}
+
+		template<typename T> inline to_le_t<T>& _ref(u32 addr)
+		{
+			return *_ptr<T>(addr);
+		}
+
+		template<typename T> inline to_le_t<T>& _ref_priv(u32 addr)
+		{
+			return *_ptr_priv<T>(addr);
+		}
 
 		inline const le_t<u16>& read16(u32 addr)
 		{
-			return get_ref<const le_t<u16>>(addr);
+			return _ref<u16>(addr);
 		}
 
 		inline void write16(u32 addr, le_t<u16> value)
 		{
-			get_ref<le_t<u16>>(addr) = value;
+			_ref<u16>(addr) = value;
 		}
 
 		inline const le_t<u32>& read32(u32 addr)
 		{
-			return get_ref<const le_t<u32>>(addr);
+			return _ref<u32>(addr);
 		}
 
 		inline void write32(u32 addr, le_t<u32> value)
 		{
-			get_ref<le_t<u32>>(addr) = value;
+			_ref<u32>(addr) = value;
 		}
 
 		inline const le_t<u64>& read64(u32 addr)
 		{
-			return get_ref<const le_t<u64>>(addr);
+			return _ref<u64>(addr);
 		}
 
 		inline void write64(u32 addr, le_t<u64> value)
 		{
-			get_ref<le_t<u64>>(addr) = value;
+			_ref<u64>(addr) = value;
 		}
 
-		inline const le_t<v128>& read128(u32 addr)
-		{
-			return get_ref<const le_t<v128>>(addr);
-		}
-
-		inline void write128(u32 addr, le_t<v128> value)
-		{
-			get_ref<le_t<v128>>(addr) = value;
-		}
+		void init();
 	}
 
 	namespace psp
@@ -393,10 +398,7 @@ namespace vm
 	void close();
 }
 
-#include "vm_ref.h"
 #include "vm_ptr.h"
-
-class CPUThread;
 
 namespace vm
 {
@@ -433,8 +435,8 @@ namespace vm
 		}
 	};
 
-	u32 stack_push(CPUThread& cpu, u32 size, u32 align_v, u32& old_pos);
-	void stack_pop(CPUThread& cpu, u32 addr, u32 old_pos);
+	u32 stack_push(u32 size, u32 align_v);
+	void stack_pop(u32 addr, u32 size);
 }
 
 #include "vm_var.h"

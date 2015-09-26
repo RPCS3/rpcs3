@@ -69,7 +69,7 @@ struct lv2_event_flag_t
 		return true;
 	}
 
-	inline bool check_pattern(u64 bitptn, u32 mode)
+	bool check_pattern(u64 bitptn, u32 mode)
 	{
 		if ((mode & 0xf) == SYS_EVENT_FLAG_WAIT_AND)
 		{
@@ -85,7 +85,7 @@ struct lv2_event_flag_t
 		}
 	}
 
-	inline u64 clear_pattern(u64 bitptn, u32 mode)
+	u64 clear_pattern(u64 bitptn, u32 mode)
 	{
 		if ((mode & ~0xf) == SYS_EVENT_FLAG_WAIT_CLEAR)
 		{

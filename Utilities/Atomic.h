@@ -161,11 +161,7 @@ inline u128 sync_fetch_and_add(volatile u128* dest, u128 value)
 		old.lo = dest->lo;
 		old.hi = dest->hi;
 
-		u128 _new;
-		_new.lo = old.lo + value.lo;
-		_new.hi = old.hi + value.hi + (_new.lo < value.lo);
-
-		if (sync_bool_compare_and_swap(dest, old, _new)) return old;
+		if (sync_bool_compare_and_swap(dest, old, old + value)) return old;
 	}
 }
 
@@ -199,11 +195,7 @@ inline u128 sync_fetch_and_sub(volatile u128* dest, u128 value)
 		old.lo = dest->lo;
 		old.hi = dest->hi;
 
-		u128 _new;
-		_new.lo = old.lo - value.lo;
-		_new.hi = old.hi - value.hi - (old.lo < value.lo);
-
-		if (sync_bool_compare_and_swap(dest, old, _new)) return old;
+		if (sync_bool_compare_and_swap(dest, old, old - value)) return old;
 	}
 }
 
@@ -237,11 +229,7 @@ inline u128 sync_fetch_and_or(volatile u128* dest, u128 value)
 		old.lo = dest->lo;
 		old.hi = dest->hi;
 
-		u128 _new;
-		_new.lo = old.lo | value.lo;
-		_new.hi = old.hi | value.hi;
-
-		if (sync_bool_compare_and_swap(dest, old, _new)) return old;
+		if (sync_bool_compare_and_swap(dest, old, old | value)) return old;
 	}
 }
 
@@ -275,11 +263,7 @@ inline u128 sync_fetch_and_and(volatile u128* dest, u128 value)
 		old.lo = dest->lo;
 		old.hi = dest->hi;
 
-		u128 _new;
-		_new.lo = old.lo & value.lo;
-		_new.hi = old.hi & value.hi;
-
-		if (sync_bool_compare_and_swap(dest, old, _new)) return old;
+		if (sync_bool_compare_and_swap(dest, old, old & value)) return old;
 	}
 }
 
@@ -313,11 +297,7 @@ inline u128 sync_fetch_and_xor(volatile u128* dest, u128 value)
 		old.lo = dest->lo;
 		old.hi = dest->hi;
 
-		u128 _new;
-		_new.lo = old.lo ^ value.lo;
-		_new.hi = old.hi ^ value.hi;
-
-		if (sync_bool_compare_and_swap(dest, old, _new)) return old;
+		if (sync_bool_compare_and_swap(dest, old, old ^ value)) return old;
 	}
 }
 
@@ -355,17 +335,17 @@ template<typename T> struct atomic_storage<T, 16>
 
 template<typename T> using atomic_storage_t = typename atomic_storage<T>::type;
 
-// result wrapper to deal with void result type
+// atomic result wrapper; implements special behaviour for void result type
 template<typename T, typename RT, typename VT> struct atomic_op_result_t
 {
 	RT result;
 
-	template<typename... Args> inline atomic_op_result_t(T func, VT& var, Args&&... args)
+	template<typename... Args> atomic_op_result_t(T func, VT& var, Args&&... args)
 		: result(std::move(func(var, std::forward<Args>(args)...)))
 	{
 	}
 
-	inline RT move()
+	RT move()
 	{
 		return std::move(result);
 	}
@@ -376,13 +356,13 @@ template<typename T, typename VT> struct atomic_op_result_t<T, void, VT>
 {
 	VT result;
 
-	template<typename... Args> inline atomic_op_result_t(T func, VT& var, Args&&... args)
+	template<typename... Args> atomic_op_result_t(T func, VT& var, Args&&... args)
 		: result(var)
 	{
 		func(var, std::forward<Args>(args)...);
 	}
 
-	inline VT move()
+	VT move()
 	{
 		return std::move(result);
 	}
@@ -393,12 +373,12 @@ template<typename CT, typename... FArgs, typename RT, typename VT> struct atomic
 {
 	RT result;
 
-	template<typename... Args> inline atomic_op_result_t(RT(CT::*func)(FArgs...), VT& var, Args&&... args)
+	template<typename... Args> atomic_op_result_t(RT(CT::*func)(FArgs...), VT& var, Args&&... args)
 		: result(std::move((var.*func)(std::forward<Args>(args)...)))
 	{
 	}
 
-	inline RT move()
+	RT move()
 	{
 		return std::move(result);
 	}
@@ -409,18 +389,19 @@ template<typename CT, typename... FArgs, typename VT> struct atomic_op_result_t<
 {
 	VT result;
 
-	template<typename... Args> inline atomic_op_result_t(void(CT::*func)(FArgs...), VT& var, Args&&... args)
+	template<typename... Args> atomic_op_result_t(void(CT::*func)(FArgs...), VT& var, Args&&... args)
 		: result(var)
 	{
 		(var.*func)(std::forward<Args>(args)...);
 	}
 
-	inline VT move()
+	VT move()
 	{
 		return std::move(result);
 	}
 };
 
+// Atomic type with lock-free and standard layout guarantees (and appropriate limitations)
 template<typename T> class atomic_t
 {
 	using type = std::remove_cv_t<T>;
@@ -466,18 +447,14 @@ public:
 
 	atomic_t(const atomic_t&) = delete;
 
-	atomic_t(atomic_t&&) = delete;
-
-	inline atomic_t(type value)
+	atomic_t(type value)
 		: m_data(to_subtype(value))
 	{
 	}
 
 	atomic_t& operator =(const atomic_t&) = delete;
 
-	atomic_t& operator =(atomic_t&&) = delete;
-
-	inline atomic_t& operator =(type value)
+	atomic_t& operator =(type value)
 	{
 		return write_relaxed(m_data, to_subtype(value)), *this;
 	}
@@ -500,31 +477,31 @@ public:
 	}
 
 	// Atomically compare data with cmp, replace with exch if equal, return previous data value anyway
-	inline const type compare_and_swap(const type& cmp, const type& exch) volatile
+	type compare_and_swap(const type& cmp, const type& exch) volatile
 	{
 		return from_subtype(sync_val_compare_and_swap(&m_data, to_subtype(cmp), to_subtype(exch)));
 	}
 
 	// Atomically compare data with cmp, replace with exch if equal, return true if data was replaced
-	inline bool compare_and_swap_test(const type& cmp, const type& exch) volatile
+	bool compare_and_swap_test(const type& cmp, const type& exch) volatile
 	{
 		return sync_bool_compare_and_swap(&m_data, to_subtype(cmp), to_subtype(exch));
 	}
 
 	// Atomically replace data with exch, return previous data value
-	inline const type exchange(const type& exch) volatile
+	type exchange(const type& exch) volatile
 	{
 		return from_subtype(sync_lock_test_and_set(&m_data, to_subtype(exch)));
 	}
 
 	// Atomically read data, possibly without memory barrier (not for 128 bit)
-	inline const type load() const volatile
+	type load() const volatile
 	{
 		return from_subtype(read_relaxed(m_data));
 	}
 
 	// Atomically write data, possibly without memory barrier (not for 128 bit)
-	inline void store(const type& value) volatile
+	void store(const type& value) volatile
 	{
 		write_relaxed(m_data, to_subtype(value));
 	}
@@ -550,40 +527,40 @@ public:
 	}
 
 	// Atomic bitwise OR, returns previous data
-	inline const type _or(const type& right) volatile
+	type _or(const type& right) volatile
 	{
 		return from_subtype(sync_fetch_and_or(&m_data, to_subtype(right)));
 	}
 
 	// Atomic bitwise AND, returns previous data
-	inline const type _and(const type& right) volatile
+	type _and(const type& right) volatile
 	{
 		return from_subtype(sync_fetch_and_and(&m_data, to_subtype(right)));
 	}
 
 	// Atomic bitwise AND NOT (inverts right argument), returns previous data
-	inline const type _and_not(const type& right) volatile
+	type _and_not(const type& right) volatile
 	{
 		return from_subtype(sync_fetch_and_and(&m_data, ~to_subtype(right)));
 	}
 
 	// Atomic bitwise XOR, returns previous data
-	inline const type _xor(const type& right) volatile
+	type _xor(const type& right) volatile
 	{
 		return from_subtype(sync_fetch_and_xor(&m_data, to_subtype(right)));
 	}
 
-	inline const type operator |=(const type& right) volatile
+	type operator |=(const type& right) volatile
 	{
 		return from_subtype(sync_fetch_and_or(&m_data, to_subtype(right)) | to_subtype(right));
 	}
 
-	inline const type operator &=(const type& right) volatile
+	type operator &=(const type& right) volatile
 	{
 		return from_subtype(sync_fetch_and_and(&m_data, to_subtype(right)) & to_subtype(right));
 	}
 
-	inline const type operator ^=(const type& right) volatile
+	type operator ^=(const type& right) volatile
 	{
 		return from_subtype(sync_fetch_and_xor(&m_data, to_subtype(right)) ^ to_subtype(right));
 	}
@@ -697,9 +674,11 @@ template<typename T, typename T2> inline std::enable_if_t<IS_INTEGRAL(T) && std:
 	});
 }
 
-template<typename T> using atomic_be_t = atomic_t<be_t<T>>; // Atomic BE Type (for PS3 virtual memory)
+// Atomic BE Type (for PS3 virtual memory)
+template<typename T> using atomic_be_t = atomic_t<be_t<T>>;
 
-template<typename T> using atomic_le_t = atomic_t<le_t<T>>; // Atomic LE Type (for PSV virtual memory)
+// Atomic LE Type (for PSV virtual memory)
+template<typename T> using atomic_le_t = atomic_t<le_t<T>>;
 
 // Algorithm for std::atomic; similar to atomic_t::atomic_op()
 template<typename T, typename F, typename... Args, typename RT = std::result_of_t<F(T&, Args...)>> auto atomic_op(std::atomic<T>& var, F func, Args&&... args) -> decltype(atomic_op_result_t<F, RT, T>::result)

@@ -363,7 +363,7 @@ cpu_thread& ppu_thread::args(std::initializer_list<std::string> values)
 		const u32 arg_size = align(u32(arg.size() + 1), stack_align);
 		const u32 arg_addr = vm::alloc(arg_size, vm::main);
 
-		std::memcpy(vm::get_ptr(arg_addr), arg.c_str(), arg.size() + 1);
+		std::memcpy(vm::base(arg_addr), arg.c_str(), arg.size() + 1);
 
 		argv[argc++] = arg_addr;
 	}

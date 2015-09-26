@@ -1963,7 +1963,7 @@ void ARMv7_instrs::LDM(ARMv7Context& context, const ARMv7Code code, const ARMv7_
 
 	if (ConditionPassed(context, cond))
 	{
-		auto memory = vm::ptr<u32>::make(context.read_gpr(n));
+		vm::ptr<u32> memory{ context.read_gpr(n), vm::addr };
 
 		for (u32 i = 0; i < 16; i++)
 		{
@@ -3540,7 +3540,7 @@ void ARMv7_instrs::PUSH(ARMv7Context& context, const ARMv7Code code, const ARMv7
 
 	if (ConditionPassed(context, cond))
 	{
-		auto memory = vm::ptr<u32>::make(context.SP);
+		vm::ptr<u32> memory{ context.SP, vm::addr };
 
 		for (u32 i = 15; ~i; i--)
 		{

@@ -668,7 +668,8 @@ union CellSailEvent
 	{
 		be_t<u32> major;
 		be_t<u32> minor;
-	} u32x2;
+	}
+	u32x2;
 
 	be_t<u64> value;
 };
@@ -677,7 +678,7 @@ template<typename T, bool is_enum> struct cast_ppu_gpr;
 
 template<> struct cast_ppu_gpr<CellSailEvent, false>
 {
-	inline static u64 to_gpr(const CellSailEvent& event)
+	static inline u64 to_gpr(const CellSailEvent& event)
 	{
 		return event.value;
 	}

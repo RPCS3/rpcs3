@@ -55,7 +55,7 @@ s32 cellGifDecOpen(PMainHandle mainHandle, PPSubHandle subHandle, PSrc src, POpe
 	current_subHandle.fd = 0;
 	current_subHandle.src = *src;
 
-	switch (src->srcSelect.value())
+	switch (src->srcSelect)
 	{
 	case CELL_GIFDEC_BUFFER:
 		current_subHandle.fileSize = src->streamSize;
@@ -96,7 +96,7 @@ s32 cellGifDecReadHeader(PMainHandle mainHandle, PSubHandle subHandle, PInfo inf
 	// Write the header to buffer
 	u8 buffer[13];
 
-	switch (subHandle->src.srcSelect.value())
+	switch (subHandle->src.srcSelect)
 	{
 	case CELL_GIFDEC_BUFFER:
 		std::memcpy(buffer, subHandle->src.streamPtr.get_ptr(), sizeof(buffer));
@@ -180,7 +180,7 @@ s32 cellGifDecDecodeData(PMainHandle mainHandle, PSubHandle subHandle, vm::ptr<u
 	//Copy the GIF file to a buffer
 	std::unique_ptr<u8[]> gif(new u8[fileSize]);
 
-	switch (subHandle->src.srcSelect.value())
+	switch (subHandle->src.srcSelect)
 	{
 	case CELL_GIFDEC_BUFFER:
 		std::memcpy(gif.get(), subHandle->src.streamPtr.get_ptr(), fileSize);

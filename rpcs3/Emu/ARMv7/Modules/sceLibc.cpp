@@ -128,7 +128,7 @@ std::string armv7_fmt(ARMv7Context& context, vm::cptr<char> fmt, u32 g_count, u3
 			case 's':
 			{
 				// string
-				auto string = vm::cptr<char>::make(context.get_next_gpr_arg(g_count, f_count, v_count));
+				const vm::cptr<char> string{ context.get_next_gpr_arg(g_count, f_count, v_count), vm::addr };
 
 				if (plus_sign || minus_sign || space_sign || number_sign || zero_padding || width || prec) break;
 

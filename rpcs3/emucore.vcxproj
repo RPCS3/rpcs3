@@ -383,6 +383,7 @@
     <ClInclude Include="..\Utilities\Atomic.h" />
     <ClInclude Include="..\Utilities\AutoPause.h" />
     <ClInclude Include="..\Utilities\BEType.h" />
+    <ClInclude Include="..\Utilities\BitField.h" />
     <ClInclude Include="..\Utilities\config_context.h" />
     <ClInclude Include="..\Utilities\convert.h" />
     <ClInclude Include="..\Utilities\event.h" />

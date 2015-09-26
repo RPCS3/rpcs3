@@ -9,7 +9,7 @@ const spu_opcode_table_t<spu_itype_t> g_spu_itype{ DEFINE_SPU_OPCODES(spu_itype:
 
 std::shared_ptr<spu_function_t> SPUDatabase::find(const be_t<u32>* data, u64 key, u32 max_size)
 {
-	for (auto found = m_db.find(key); found != m_db.end(); found++)
+	for (auto found = m_db.find(key); found != m_db.end() && found->first == key; found++)
 	{
 		if (found->second->size > max_size)
 		{
@@ -249,7 +249,7 @@ std::shared_ptr<spu_function_t> SPUDatabase::analyse(const be_t<u32>* ls, u32 en
 		}
 		else // Other instructions (writing rt reg)
 		{
-			const u32 rt = type == SELB || type == SHUFB || type == MPYA || type == FNMS || type == FMA || type == FMS ? op.rc : op.rt;
+			const u32 rt = type == SELB || type == SHUFB || type == MPYA || type == FNMS || type == FMA || type == FMS ? +op.rc : +op.rt;
 
 			// Analyse link register access
 			if (rt == 0)

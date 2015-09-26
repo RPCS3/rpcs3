@@ -8,12 +8,7 @@ struct sys_lwmutex_attribute_t
 {
 	be_t<u32> protocol;
 	be_t<u32> recursive;
-
-	union
-	{
-		char name[8];
-		u64 name_u64;
-	};
+	char name[8];
 };
 
 enum : u32

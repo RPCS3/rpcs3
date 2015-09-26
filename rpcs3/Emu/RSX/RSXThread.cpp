@@ -277,7 +277,7 @@ namespace rsx
 			u32 offset = arg & 0xffffff;
 
 			//TODO: use DMA
-			vm::ptr<CellGcmReportData> result = { rsx->local_mem_addr + offset };
+			vm::ptr<CellGcmReportData> result = { rsx->local_mem_addr + offset, vm::addr };
 
 			result->timer = rsx->timestamp();
 
@@ -391,8 +391,8 @@ namespace rsx
 			const u16 u = arg; // inX (currently ignored)
 			const u16 v = arg >> 16; // inY (currently ignored)
 
-			u8* pixels_src = vm::get_ptr<u8>(get_address(src_offset, src_dma));
-			u8* pixels_dst = vm::get_ptr<u8>(get_address(dst_offset, dst_dma));
+			u8* pixels_src = vm::_ptr<u8>(get_address(src_offset, src_dma));
+			u8* pixels_dst = vm::_ptr<u8>(get_address(dst_offset, dst_dma));
 
 			if (method_registers[NV3062_SET_COLOR_FORMAT] != 4 /* CELL_GCM_TRANSFER_SURFACE_FORMAT_R5G6B5 */ &&
 				method_registers[NV3062_SET_COLOR_FORMAT] != 10 /* CELL_GCM_TRANSFER_SURFACE_FORMAT_A8R8G8B8 */)
@@ -406,10 +406,14 @@ namespace rsx
 			const s32 out_w = (s32)(u64(width) * (1 << 20) / method_registers[NV3089_DS_DX]);
 			const s32 out_h = (s32)(u64(height) * (1 << 20) / method_registers[NV3089_DT_DY]);
 
+			std::unique_ptr<u8[]> temp1, temp2;
+
 			if (method_registers[NV3089_SET_CONTEXT_SURFACE] == CELL_GCM_CONTEXT_SWIZZLE2D)
 			{
+				temp1.reset(new u8[in_bpp * width * height]);
+
 				u8* linear_pixels = pixels_src;
-				u8* swizzled_pixels = new u8[in_bpp * width * height];
+				u8* swizzled_pixels = temp1.get();
 
 				int sw_width = 1 << (int)log2(width);
 				int sw_height = 1 << (int)log2(height);
@@ -440,13 +444,11 @@ namespace rsx
 				width, height, pitch, src_offset, double(u) / 16, double(v) / 16, double(1 << 20) / (method_registers[NV3089_DS_DX]),
 				double(1 << 20) / (method_registers[NV3089_DT_DY]));
 
-			std::unique_ptr<u8[]> temp;
-
 			if (in_bpp != out_bpp && width != out_w && height != out_h)
 			{
 				// resize/convert if necessary
 
-				temp.reset(new u8[out_bpp * out_w * out_h]);
+				temp2.reset(new u8[out_bpp * out_w * out_h]);
 
 				AVPixelFormat in_format = method_registers[NV3062_SET_COLOR_FORMAT] == 4 ? AV_PIX_FMT_RGB565BE : AV_PIX_FMT_ARGB; // ???
 				AVPixelFormat out_format = method_registers[NV3089_SET_COLOR_FORMAT] == 7 ? AV_PIX_FMT_RGB565BE : AV_PIX_FMT_ARGB; // ???
@@ -455,12 +457,12 @@ namespace rsx
 					inter ? SWS_FAST_BILINEAR : SWS_POINT, NULL, NULL, NULL), sws_freeContext);
 
 				int in_line = in_bpp * width;
-				u8* out_ptr = temp.get();
+				u8* out_ptr = temp2.get();
 				int out_line = out_bpp * out_w;
 
 				sws_scale(sws.get(), &pixels_src, &in_line, 0, height, &out_ptr, &out_line);
 
-				pixels_src = temp.get(); // use resized image as a source
+				pixels_src = out_ptr; // use resized image as a source
 			}
 
 			if (method_registers[NV3089_CLIP_SIZE] != method_registers[NV3089_IMAGE_OUT_SIZE] ||
@@ -495,25 +497,20 @@ namespace rsx
 								d0 = { src_line + z0.second, std::min<size_t>(dst_max - z0.second, src_max) },
 								z1 = { src_line + d0.second, dst_max - z0.second - d0.second };
 
-							memset(z0.first, 0, z0.second);
-							memcpy(d0.first, src_line, d0.second);
-							memset(z1.first, 0, z1.second);
+							std::memset(z0.first, 0, z0.second);
+							std::memcpy(d0.first, src_line, d0.second);
+							std::memset(z1.first, 0, z1.second);
 						}
 						else
 						{
-							memset(dst_line, 0, dst_max);
+							std::memset(dst_line, 0, dst_max);
 						}
 					}
 				}
 			}
 			else
 			{
-				memcpy(pixels_dst, pixels_src, out_w * out_h * out_bpp);
-			}
-
-			if (method_registers[NV3089_SET_CONTEXT_SURFACE] == CELL_GCM_CONTEXT_SWIZZLE2D)
-			{
-				delete[] pixels_src;
+				std::memcpy(pixels_dst, pixels_src, out_w * out_h * out_bpp);
 			}
 		}
 	}
@@ -538,9 +535,9 @@ namespace rsx
 
 			if (lineCount == 1 && !inPitch && !outPitch && !notify)
 			{
-				memcpy(
-					vm::get_ptr(get_address(method_registers[NV0039_OFFSET_OUT], method_registers[NV0039_SET_CONTEXT_DMA_BUFFER_OUT])),
-					vm::get_ptr(get_address(method_registers[NV0039_OFFSET_IN], method_registers[NV0039_SET_CONTEXT_DMA_BUFFER_IN])),
+				std::memcpy(
+					vm::base(get_address(method_registers[NV0039_OFFSET_OUT], method_registers[NV0039_SET_CONTEXT_DMA_BUFFER_OUT])),
+					vm::base(get_address(method_registers[NV0039_OFFSET_IN], method_registers[NV0039_SET_CONTEXT_DMA_BUFFER_IN])),
 					lineLength);
 			}
 			else
@@ -560,11 +557,11 @@ namespace rsx
 		rsx->gcm_current_buffer = arg;
 		rsx->flip_status = 0;
 
-		if (auto cb = rsx->flip_handler)
+		if (rsx->flip_handler)
 		{
-			Emu.GetCallbackManager().Async([=](CPUThread& cpu)
+			Emu.GetCallbackManager().Async([func = rsx->flip_handler](PPUThread& ppu)
 			{
-				cb(static_cast<PPUThread&>(cpu), 1);
+				func(ppu, 1);
 			});
 		}
 
@@ -838,7 +835,7 @@ namespace rsx
 
 			for (u32 i = 0; i < count; ++i)
 			{
-				auto src = vm::get_ptr<const u8>(address + base_offset + info.stride * (first + i + base_index));
+				const u8* src = vm::_ptr<u8>(address + base_offset + info.stride * (first + i + base_index));
 				u8* dst = data.data() + dst_position + i * element_size;
 
 				switch (type_size)
@@ -942,11 +939,11 @@ namespace rsx
 				{
 					vblank_count++;
 
-					if (auto cb = vblank_handler)
+					if (vblank_handler)
 					{
-						Emu.GetCallbackManager().Async([=](CPUThread& cpu)
+						Emu.GetCallbackManager().Async([func = vblank_handler](PPUThread& ppu)
 						{
-							cb(static_cast<PPUThread&>(cpu), 1);
+							func(ppu, 1);
 						});
 					}
 
@@ -969,7 +966,6 @@ namespace rsx
 					LOG_WARNING(RSX, "RSX thread aborted");
 					break;
 				}
-				std::lock_guard<std::mutex> lock(cs_main);
 
 				inc = 1;
 
@@ -989,7 +985,7 @@ namespace rsx
 				{
 					u32 offs = cmd & 0x1fffffff;
 					//LOG_WARNING(RSX, "rsx jump(0x%x) #addr=0x%x, cmd=0x%x, get=0x%x, put=0x%x", offs, m_ioAddress + get, cmd, get, put);
-					ctrl->get.exchange(offs);
+					ctrl->get = offs;
 					continue;
 				}
 				if (cmd & CELL_GCM_METHOD_FLAG_CALL)
@@ -997,7 +993,7 @@ namespace rsx
 					m_call_stack.push(get + 4);
 					u32 offs = cmd & ~3;
 					//LOG_WARNING(RSX, "rsx call(0x%x) #0x%x - 0x%x", offs, cmd, get);
-					ctrl->get.exchange(offs);
+					ctrl->get = offs;
 					continue;
 				}
 				if (cmd == CELL_GCM_METHOD_FLAG_RETURN)
@@ -1005,7 +1001,7 @@ namespace rsx
 					u32 get = m_call_stack.top();
 					m_call_stack.pop();
 					//LOG_WARNING(RSX, "rsx return(0x%x)", get);
-					ctrl->get.exchange(get);
+					ctrl->get = get;
 					continue;
 				}
 				if (cmd & CELL_GCM_METHOD_FLAG_NON_INCREMENT)
@@ -1016,11 +1012,7 @@ namespace rsx
 
 				if (cmd == 0) //nop
 				{
-					ctrl->get.atomic_op([](be_t<u32>& value)
-					{
-						value += 4;
-					});
-
+					ctrl->get = get + 4;
 					continue;
 				}
 
@@ -1049,17 +1041,13 @@ namespace rsx
 						method(this, value);
 				}
 
-				ctrl->get.atomic_op([count](be_t<u32>& value)
-				{
-					value += (count + 1) * 4;
-				});
+				ctrl->get = get + (count + 1) * 4;
 			}
 		}
 		catch (const std::exception& ex)
 		{
 			LOG_ERROR(Log::RSX, ex.what());
-
-			std::rethrow_exception(std::current_exception());
+			throw;
 		}
 
 		LOG_NOTICE(RSX, "RSX thread ended");
@@ -1076,7 +1064,7 @@ namespace rsx
 	void thread::reset()
 	{
 		//setup method registers
-		memset(method_registers, 0, sizeof(method_registers));
+		std::memset(method_registers, 0, sizeof(method_registers));
 
 		method_registers[NV4097_SET_COLOR_MASK] = CELL_GCM_COLOR_MASK_R | CELL_GCM_COLOR_MASK_G | CELL_GCM_COLOR_MASK_B | CELL_GCM_COLOR_MASK_A;
 		method_registers[NV4097_SET_SCISSOR_HORIZONTAL] = (4096 << 16) | 0;
@@ -1145,7 +1133,7 @@ namespace rsx
 
 	void thread::init(const u32 ioAddress, const u32 ioSize, const u32 ctrlAddress, const u32 localAddress)
 	{
-		ctrl = vm::get_ptr<CellGcmControl>(ctrlAddress);
+		ctrl = vm::_ptr<CellGcmControl>(ctrlAddress);
 		this->ioAddress = ioAddress;
 		this->ioSize = ioSize;
 		local_mem_addr = localAddress;

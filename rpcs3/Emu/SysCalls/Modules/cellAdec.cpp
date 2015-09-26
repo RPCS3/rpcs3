@@ -164,7 +164,7 @@ next:
 		
 		case adecDecodeAu:
 		{
-			memcpy(buf, vm::get_ptr<void>(adec.reader.addr), adec.reader.size);
+			std::memcpy(buf, vm::base(adec.reader.addr), adec.reader.size);
 			
 			buf += adec.reader.size;
 			buf_size -= adec.reader.size;
@@ -203,7 +203,7 @@ next:
 	}
 	else
 	{
-		memcpy(buf, vm::get_ptr<void>(adec.reader.addr), buf_size);
+		std::memcpy(buf, vm::base(adec.reader.addr), buf_size);
 
 		adec.reader.addr += buf_size;
 		adec.reader.size -= buf_size;

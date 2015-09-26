@@ -8,6 +8,8 @@
 #include "CPUDecoder.h"
 #include "CPUThread.h"
 
+thread_local CPUThread* g_tls_current_cpu_thread = nullptr;
+
 CPUThread::CPUThread(CPUThreadType type, const std::string& name, std::function<std::string()> thread_name)
 	: m_id(idm::get_last_id())
 	, m_type(type)
@@ -15,6 +17,8 @@ CPUThread::CPUThread(CPUThreadType type, const std::string& name, std::function<
 {
 	start(std::move(thread_name), [this]
 	{
+		g_tls_current_cpu_thread = this;
+
 		Emu.SendDbgCommand(DID_CREATE_THREAD, this);
 
 		std::unique_lock<std::mutex> lock(mutex);
@@ -197,13 +201,13 @@ void CPUThread::sleep()
 
 void CPUThread::awake()
 {
-	// must be called after the balanced Sleep() call
+	// must be called after the balanced sleep() call
 
 	if (m_state.atomic_op([](u64& state) -> bool
 	{
 		if (state < CPU_STATE_MAX)
 		{
-			throw EXCEPTION("Sleep()/Awake() inconsistency");
+			throw EXCEPTION("sleep()/awake() inconsistency");
 		}
 
 		if ((state -= CPU_STATE_MAX) < CPU_STATE_MAX)

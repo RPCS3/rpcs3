@@ -66,13 +66,9 @@ namespace ppu_recompiler_llvm {
 		Compiler(RecompilationEngine & recompilation_engine, const Executable execute_unknown_function,
 			const Executable execute_unknown_block, bool(*poll_status_function)(PPUThread * ppu_state));
 
-		Compiler(const Compiler & other) = delete;
-		Compiler(Compiler && other) = delete;
+		Compiler(const Compiler&) = delete; // Delete copy/move constructors and copy/move operators
 
 		virtual ~Compiler();
-
-		Compiler & operator = (const Compiler & other) = delete;
-		Compiler & operator = (Compiler && other) = delete;
 
 		/**
 		 * Compile a code fragment described by a cfg and return an executable and the ExecutionEngine storing it
@@ -883,11 +879,7 @@ namespace ppu_recompiler_llvm {
 
 		RecompilationEngine();
 
-		RecompilationEngine(const RecompilationEngine & other) = delete;
-		RecompilationEngine(RecompilationEngine && other) = delete;
-
-		RecompilationEngine & operator = (const RecompilationEngine & other) = delete;
-		RecompilationEngine & operator = (RecompilationEngine && other) = delete;
+		RecompilationEngine(const RecompilationEngine&) = delete; // Delete copy/move constructors and copy/move operators
 
 		/// Increase usage counter for block starting at addr and compile it if threshold was reached.
 		/// Returns true if block was compiled
@@ -921,15 +913,10 @@ namespace ppu_recompiler_llvm {
 		friend class Compiler;
 	public:
 		CPUHybridDecoderRecompiler(PPUThread & ppu);
-		CPUHybridDecoderRecompiler() = delete;
 
-		CPUHybridDecoderRecompiler(const CPUHybridDecoderRecompiler & other) = delete;
-		CPUHybridDecoderRecompiler(CPUHybridDecoderRecompiler && other) = delete;
+		CPUHybridDecoderRecompiler(const CPUHybridDecoderRecompiler&) = delete; // Delete copy/move constructors and copy/move operators
 
 		virtual ~CPUHybridDecoderRecompiler();
-
-		CPUHybridDecoderRecompiler & operator = (const ExecutionEngine & other) = delete;
-		CPUHybridDecoderRecompiler & operator = (ExecutionEngine && other) = delete;
 
 		u32 DecodeMemory(const u32 address) override;
 

@@ -212,13 +212,13 @@ s32 sys_ppu_thread_restart(u32 thread_id)
 	return CELL_OK;
 }
 
-u32 ppu_thread_create(u32 entry, u64 arg, s32 prio, u32 stacksize, bool is_joinable, bool is_interrupt, std::string name, std::function<void(PPUThread&)> task)
+u32 ppu_thread_create(u32 entry, u64 arg, s32 prio, u32 stacksize, const std::string& name, std::function<void(PPUThread&)> task)
 {
 	const auto ppu = idm::make_ptr<PPUThread>(name);
 
 	ppu->prio = prio;
-	ppu->stack_size = stacksize < 0x4000 ? 0x4000 : stacksize; // (hack) adjust minimal stack size
-	ppu->custom_task = task;
+	ppu->stack_size = stacksize;
+	ppu->custom_task = std::move(task);
 	ppu->run();
 
 	if (entry)
@@ -227,11 +227,8 @@ u32 ppu_thread_create(u32 entry, u64 arg, s32 prio, u32 stacksize, bool is_joina
 		ppu->GPR[2] = vm::read32(entry + 4); // rtoc
 	}
 
-	if (!is_interrupt)
-	{
-		ppu->GPR[3] = arg;
-		ppu->exec();
-	}
+	ppu->GPR[3] = arg;
+	ppu->exec();
 
 	return ppu->get_id();
 }
@@ -259,7 +256,7 @@ s32 _sys_ppu_thread_create(vm::ptr<u64> thread_id, vm::ptr<ppu_thread_param_t> p
 	const auto ppu = idm::make_ptr<PPUThread>(threadname ? threadname.get_ptr() : "");
 
 	ppu->prio = prio;
-	ppu->stack_size = stacksize < 0x4000 ? 0x4000 : stacksize; // (hack) adjust minimal stack size
+	ppu->stack_size = std::max<u32>(stacksize, 0x4000);
 	ppu->run();
 
 	ppu->PC = vm::read32(param->entry);

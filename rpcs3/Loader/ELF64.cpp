@@ -619,7 +619,7 @@ namespace loader
 
 							if (Ini.HookStFunc.GetValue())
 							{
-								hook_ppu_funcs(vm::static_ptr_cast<be_t<u32>>(phdr.p_vaddr), phdr.p_filesz / 4);
+								hook_ppu_funcs(vm::static_ptr_cast<u32>(phdr.p_vaddr), phdr.p_filesz / 4);
 							}
 						}
 					}

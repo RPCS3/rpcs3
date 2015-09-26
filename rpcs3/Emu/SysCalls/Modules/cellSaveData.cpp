@@ -50,28 +50,14 @@ never_inline s32 savedata_op(PPUThread& ppu, u32 operation, u32 version, vm::cpt
 		return CELL_SAVEDATA_ERROR_BUSY;
 	}
 
-	struct _stack_t
-	{
-		CellSaveDataCBResult  result;
-		CellSaveDataListGet   listGet;
-		CellSaveDataListSet   listSet;
-		CellSaveDataFixedSet  fixedSet;
-		CellSaveDataStatGet   statGet;
-		CellSaveDataStatSet   statSet;
-		CellSaveDataFileGet   fileGet;
-		CellSaveDataFileSet   fileSet;
-	};
-
-	const vm::var<_stack_t> stack(ppu);
-
-	const auto result   = stack.ptr(&_stack_t::result);
-	const auto listGet  = stack.ptr(&_stack_t::listGet);
-	const auto listSet  = stack.ptr(&_stack_t::listSet);
-	const auto fixedSet = stack.ptr(&_stack_t::fixedSet);
-	const auto statGet  = stack.ptr(&_stack_t::statGet);
-	const auto statSet  = stack.ptr(&_stack_t::statSet);
-	const auto fileGet  = stack.ptr(&_stack_t::fileGet);
-	const auto fileSet  = stack.ptr(&_stack_t::fileSet);
+	vm::var<CellSaveDataCBResult> result;
+	vm::var<CellSaveDataListGet>  listGet;
+	vm::var<CellSaveDataListSet>  listSet;
+	vm::var<CellSaveDataFixedSet> fixedSet;
+	vm::var<CellSaveDataStatGet>  statGet;
+	vm::var<CellSaveDataStatSet>  statSet;
+	vm::var<CellSaveDataFileGet>  fileGet;
+	vm::var<CellSaveDataFileSet>  fileSet;
 
 	// path of the specified user (00000001 by default)
 	const std::string base_dir = fmt::format("/dev_hdd0/home/%08u/savedata/", userId ? userId : 1u);

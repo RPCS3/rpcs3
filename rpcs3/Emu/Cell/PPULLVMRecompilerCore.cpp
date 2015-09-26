@@ -3502,7 +3502,7 @@ void Compiler::STVLX(u32 vs, u32 ra, u32 rb) {
 	auto index_i64 = m_ir_builder->CreateAnd(addr_i64, 0xf);
 	auto size_i64 = m_ir_builder->CreateSub(m_ir_builder->getInt64(16), index_i64);
 	addr_i64 = m_ir_builder->CreateAnd(addr_i64, 0xFFFFFFFF);
-	addr_i64 = m_ir_builder->CreateAdd(addr_i64, m_ir_builder->getInt64((u64)vm::get_ptr<u8>(0)));
+	addr_i64 = m_ir_builder->CreateAdd(addr_i64, m_ir_builder->getInt64((u64)vm::base(0)));
 	auto addr_i8_ptr = m_ir_builder->CreateIntToPtr(addr_i64, m_ir_builder->getInt8PtrTy());
 
 	auto vs_i128 = GetVr(vs);
@@ -3562,7 +3562,7 @@ void Compiler::STVRX(u32 vs, u32 ra, u32 rb) {
 	auto size_i64 = m_ir_builder->CreateAnd(addr_i64, 0xf);
 	auto index_i64 = m_ir_builder->CreateSub(m_ir_builder->getInt64(16), size_i64);
 	addr_i64 = m_ir_builder->CreateAnd(addr_i64, 0xFFFFFFF0);
-	addr_i64 = m_ir_builder->CreateAdd(addr_i64, m_ir_builder->getInt64((u64)vm::get_ptr<u8>(0)));
+	addr_i64 = m_ir_builder->CreateAdd(addr_i64, m_ir_builder->getInt64((u64)vm::base(0)));
 	auto addr_i8_ptr = m_ir_builder->CreateIntToPtr(addr_i64, m_ir_builder->getInt8PtrTy());
 
 	auto vs_i128 = GetVr(vs);
@@ -3834,7 +3834,7 @@ void Compiler::DCBZ(u32 ra, u32 rb) {
 	}
 
 	addr_i64 = m_ir_builder->CreateAnd(addr_i64, ~(127ULL));
-	addr_i64 = m_ir_builder->CreateAdd(addr_i64, m_ir_builder->getInt64((u64)vm::get_ptr<u8>(0)));
+	addr_i64 = m_ir_builder->CreateAdd(addr_i64, m_ir_builder->getInt64((u64)vm::base(0)));
 	auto addr_i8_ptr = m_ir_builder->CreateIntToPtr(addr_i64, m_ir_builder->getInt8PtrTy());
 
 	std::vector<Type *> types = { (Type *)m_ir_builder->getInt8PtrTy(), (Type *)m_ir_builder->getInt32Ty() };
@@ -5312,7 +5312,7 @@ void Compiler::CreateBranch(llvm::Value * cmp_i1, llvm::Value * target_i32, bool
 
 Value * Compiler::ReadMemory(Value * addr_i64, u32 bits, u32 alignment, bool bswap, bool could_be_mmio) {
 	addr_i64 = m_ir_builder->CreateAnd(addr_i64, 0xFFFFFFFF);
-	auto eaddr_i64 = m_ir_builder->CreateAdd(addr_i64, m_ir_builder->getInt64((u64)vm::get_ptr<u8>(0)));
+	auto eaddr_i64 = m_ir_builder->CreateAdd(addr_i64, m_ir_builder->getInt64((u64)vm::base(0)));
 	auto eaddr_ix_ptr = m_ir_builder->CreateIntToPtr(eaddr_i64, m_ir_builder->getIntNTy(bits)->getPointerTo());
 	auto val_ix = (Value *)m_ir_builder->CreateLoad(eaddr_ix_ptr, alignment);
 	if (bits > 8 && bswap) {
@@ -5328,7 +5328,7 @@ void Compiler::WriteMemory(Value * addr_i64, Value * val_ix, u32 alignment, bool
 	}
 
 	addr_i64 = m_ir_builder->CreateAnd(addr_i64, 0xFFFFFFFF);
-	auto eaddr_i64 = m_ir_builder->CreateAdd(addr_i64, m_ir_builder->getInt64((u64)vm::get_ptr<u8>(0)));
+	auto eaddr_i64 = m_ir_builder->CreateAdd(addr_i64, m_ir_builder->getInt64((u64)vm::base(0)));
 	auto eaddr_ix_ptr = m_ir_builder->CreateIntToPtr(eaddr_i64, val_ix->getType()->getPointerTo());
 	m_ir_builder->CreateAlignedStore(val_ix, eaddr_ix_ptr, alignment);
 }

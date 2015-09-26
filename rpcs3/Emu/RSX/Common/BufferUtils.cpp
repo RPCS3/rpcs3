@@ -72,7 +72,7 @@ void uploadVertexData(const VertexBufferFormat &vbf, const rsx::data_array_forma
 			size_t offset = (size_t)addr + baseOffset - vbf.range.first;
 			size_t tsize = rsx::get_vertex_type_size(vertex_array_desc[attributeId].type);
 			size_t size = vertex_array_desc[attributeId].size;
-			auto src = vm::get_ptr<const u8>(addr + (u32)baseOffset + (u32)vbf.stride * vertex);
+			auto src = vm::ps3::_ptr<const u8>(addr + (u32)baseOffset + (u32)vbf.stride * vertex);
 			char* dst = (char*)bufferMap + offset + vbf.stride * vertex;
 
 			switch (tsize)

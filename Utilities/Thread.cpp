@@ -901,7 +901,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 					return false;
 				}
 
-				memcpy(vm::priv_ptr(addr), XMMREG(context, reg - X64R_XMM0), 16);
+				std::memcpy(vm::base_priv(addr), XMMREG(context, reg - X64R_XMM0), 16);
 				break;
 			}
 
@@ -911,7 +911,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 				return false;
 			}
 
-			memcpy(vm::priv_ptr(addr), &reg_value, d_size);
+			std::memcpy(vm::base_priv(addr), &reg_value, d_size);
 			break;
 		}
 		case X64OP_MOVS:
@@ -922,7 +922,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 				return false;
 			}
 
-			if (vm::get_ptr(addr) != (void*)RDI(context))
+			if (vm::base(addr) != (void*)RDI(context))
 			{
 				LOG_ERROR(MEMORY, "X64OP_MOVS: rdi=0x%llx, rsi=0x%llx, addr=0x%x", (u64)RDI(context), (u64)RSI(context), addr);
 				return false;
@@ -935,8 +935,8 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 				u64 value;
 
 				// copy data
-				memcpy(&value, (void*)RSI(context), d_size);
-				memcpy(vm::priv_ptr(a_addr), &value, d_size);
+				std::memcpy(&value, (void*)RSI(context), d_size);
+				std::memcpy(vm::base_priv(a_addr), &value, d_size);
 
 				// shift pointers
 				if (EFLAGS(context) & 0x400 /* direction flag */)
@@ -977,7 +977,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 				return false;
 			}
 
-			if (vm::get_ptr(addr) != (void*)RDI(context))
+			if (vm::base(addr) != (void*)RDI(context))
 			{
 				LOG_ERROR(MEMORY, "X64OP_STOS: rdi=0x%llx, addr=0x%x", (u64)RDI(context), addr);
 				return false;
@@ -994,7 +994,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 			while (a_addr >> 12 == addr >> 12)
 			{
 				// fill data with value
-				memcpy(vm::priv_ptr(a_addr), &value, d_size);
+				std::memcpy(vm::base_priv(a_addr), &value, d_size);
 
 				// shift pointers
 				if (EFLAGS(context) & 0x400 /* direction flag */)
@@ -1035,10 +1035,10 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 
 			switch (d_size)
 			{
-			case 1: reg_value = vm::priv_ref<atomic_t<u8>>(addr).exchange((u8)reg_value); break;
-			case 2: reg_value = vm::priv_ref<atomic_t<u16>>(addr).exchange((u16)reg_value); break;
-			case 4: reg_value = vm::priv_ref<atomic_t<u32>>(addr).exchange((u32)reg_value); break;
-			case 8: reg_value = vm::priv_ref<atomic_t<u64>>(addr).exchange((u64)reg_value); break;
+			case 1: reg_value = sync_lock_test_and_set((u8*)vm::base_priv(addr), (u8)reg_value); break;
+			case 2: reg_value = sync_lock_test_and_set((u16*)vm::base_priv(addr), (u16)reg_value); break;
+			case 4: reg_value = sync_lock_test_and_set((u32*)vm::base_priv(addr), (u32)reg_value); break;
+			case 8: reg_value = sync_lock_test_and_set((u64*)vm::base_priv(addr), (u64)reg_value); break;
 			default: return false;
 			}
 
@@ -1058,10 +1058,10 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 
 			switch (d_size)
 			{
-			case 1: old_value = vm::priv_ref<atomic_t<u8>>(addr).compare_and_swap((u8)cmp_value, (u8)reg_value); break;
-			case 2: old_value = vm::priv_ref<atomic_t<u16>>(addr).compare_and_swap((u16)cmp_value, (u16)reg_value); break;
-			case 4: old_value = vm::priv_ref<atomic_t<u32>>(addr).compare_and_swap((u32)cmp_value, (u32)reg_value); break;
-			case 8: old_value = vm::priv_ref<atomic_t<u64>>(addr).compare_and_swap((u64)cmp_value, (u64)reg_value); break;
+			case 1: old_value = sync_val_compare_and_swap((u8*)vm::base_priv(addr), (u8)cmp_value, (u8)reg_value); break;
+			case 2: old_value = sync_val_compare_and_swap((u16*)vm::base_priv(addr), (u16)cmp_value, (u16)reg_value); break;
+			case 4: old_value = sync_val_compare_and_swap((u32*)vm::base_priv(addr), (u32)cmp_value, (u32)reg_value); break;
+			case 8: old_value = sync_val_compare_and_swap((u64*)vm::base_priv(addr), (u64)cmp_value, (u64)reg_value); break;
 			default: return false;
 			}
 
@@ -1081,10 +1081,10 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 
 			switch (d_size)
 			{
-			case 1: value = vm::priv_ref<atomic_t<u8>>(addr) &= (u8)value; break;
-			case 2: value = vm::priv_ref<atomic_t<u16>>(addr) &= (u16)value; break;
-			case 4: value = vm::priv_ref<atomic_t<u32>>(addr) &= (u32)value; break;
-			case 8: value = vm::priv_ref<atomic_t<u64>>(addr) &= value; break;
+			case 1: value &= sync_fetch_and_and((u8*)vm::base_priv(addr), (u8)value); break;
+			case 2: value &= sync_fetch_and_and((u16*)vm::base_priv(addr), (u16)value); break;
+			case 4: value &= sync_fetch_and_and((u32*)vm::base_priv(addr), (u32)value); break;
+			case 8: value &= sync_fetch_and_and((u64*)vm::base_priv(addr), (u64)value); break;
 			default: return false;
 			}
 
@@ -1114,7 +1114,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 
 void _se_translator(unsigned int u, EXCEPTION_POINTERS* pExp)
 {
-	const u64 addr64 = (u64)pExp->ExceptionRecord->ExceptionInformation[1] - (u64)vm::g_base_addr;
+	const u64 addr64 = (u64)pExp->ExceptionRecord->ExceptionInformation[1] - (u64)vm::base(0);
 	const bool is_writing = pExp->ExceptionRecord->ExceptionInformation[0] != 0;
 
 	if (u == EXCEPTION_ACCESS_VIOLATION && (u32)addr64 == addr64)
@@ -1122,12 +1122,14 @@ void _se_translator(unsigned int u, EXCEPTION_POINTERS* pExp)
 		throw EXCEPTION("Access violation %s location 0x%llx", is_writing ? "writing" : "reading", addr64);
 	}
 
-	//__int2c(); // if it crashed there, check the callstack for the actual source of the crash
+	__debugbreak(); // if it reached there, there should probably be a possibility to check the callstack
+
+	throw EXCEPTION("Fatal error occured %s location %p at %p", is_writing ? "writing" : "reading", pExp->ExceptionRecord->ExceptionInformation[1], pExp->ExceptionRecord->ExceptionAddress);
 }
 
 const PVOID exception_handler = (atexit([]{ RemoveVectoredExceptionHandler(exception_handler); }), AddVectoredExceptionHandler(1, [](PEXCEPTION_POINTERS pExp) -> LONG
 {
-	const u64 addr64 = (u64)pExp->ExceptionRecord->ExceptionInformation[1] - (u64)vm::g_base_addr;
+	const u64 addr64 = (u64)pExp->ExceptionRecord->ExceptionInformation[1] - (u64)vm::base(0);
 	const bool is_writing = pExp->ExceptionRecord->ExceptionInformation[0] != 0;
 
 	if (pExp->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION &&
@@ -1154,7 +1156,7 @@ const auto exception_filter = SetUnhandledExceptionFilter([](PEXCEPTION_POINTERS
 
 void signal_handler(int sig, siginfo_t* info, void* uct)
 {
-	const u64 addr64 = (u64)info->si_addr - (u64)vm::g_base_addr;
+	const u64 addr64 = (u64)info->si_addr - (u64)vm::base(0);
 
 #ifdef __APPLE__
 	const bool is_writing = ((ucontext_t*)uct)->uc_mcontext->__es.__err & 0x2;
@@ -1203,14 +1205,14 @@ std::string thread_ctrl_t::get_name() const
 
 named_thread_t::named_thread_t(std::function<std::string()> name, std::function<void()> func)
 {
-	start(std::move(name), func);
+	start(std::move(name), std::move(func));
 }
 
 named_thread_t::~named_thread_t()
 {
 	if (m_thread)
 	{
-		std::printf("Fatal: thread '%s' is neither joined nor detached\n", this->get_name().c_str());
+		std::printf("Fatal: thread neither joined nor detached\n");
 		std::terminate();
 	}
 }

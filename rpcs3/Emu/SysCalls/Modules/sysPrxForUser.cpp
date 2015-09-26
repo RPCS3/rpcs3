@@ -54,9 +54,9 @@ u32 ppu_get_tls(u32 thread)
 		if (g_tls_owners[i].compare_exchange_strong(old, thread))
 		{
 			const u32 addr = g_tls_start + i * g_tls_size + TLS_SYS; // get TLS address
-			memset(vm::get_ptr(addr - TLS_SYS), 0, TLS_SYS); // initialize system area with zeros
-			memcpy(vm::get_ptr(addr), vm::get_ptr(Emu.GetTLSAddr()), Emu.GetTLSFilesz()); // initialize from TLS image
-			memset(vm::get_ptr(addr + Emu.GetTLSFilesz()), 0, Emu.GetTLSMemsz() - Emu.GetTLSFilesz()); // fill the rest with zeros
+			std::memset(vm::base(addr - TLS_SYS), 0, TLS_SYS); // initialize system area with zeros
+			std::memcpy(vm::base(addr), vm::base(Emu.GetTLSAddr()), Emu.GetTLSFilesz()); // initialize from TLS image
+			std::memset(vm::base(addr + Emu.GetTLSFilesz()), 0, Emu.GetTLSMemsz() - Emu.GetTLSFilesz()); // fill the rest with zeros
 			return addr;
 		}
 	}
@@ -101,7 +101,7 @@ s32 sys_interrupt_thread_disestablish(PPUThread& ppu, u32 ih)
 {
 	sysPrxForUser.Todo("sys_interrupt_thread_disestablish(ih=0x%x)", ih);
 
-	return _sys_interrupt_thread_disestablish(ppu, ih, vm::var<u64>(ppu));
+	return _sys_interrupt_thread_disestablish(ppu, ih, vm::var<u64>{});
 }
 
 s32 sys_process_is_stack(u32 p)

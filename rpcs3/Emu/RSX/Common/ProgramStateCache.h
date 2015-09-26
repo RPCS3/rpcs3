@@ -241,7 +241,7 @@ private:
 
 	typename BackendTraits::FragmentProgramData& SearchFp(RSXFragmentProgram* rsx_fp, bool& found)
 	{
-		typename binary2FS::iterator It = m_cacheFS.find(vm::get_ptr<void>(rsx_fp->addr));
+		typename binary2FS::iterator It = m_cacheFS.find(vm::base(rsx_fp->addr));
 		if (It != m_cacheFS.end())
 		{
 			found = true;
@@ -249,9 +249,9 @@ private:
 		}
 		found = false;
 		LOG_WARNING(RSX, "FP not found in buffer!");
-		size_t actualFPSize = ProgramHashUtil::FragmentProgramUtil::getFPBinarySize(vm::get_ptr<u8>(rsx_fp->addr));
+		size_t actualFPSize = ProgramHashUtil::FragmentProgramUtil::getFPBinarySize(vm::base(rsx_fp->addr));
 		void *fpShadowCopy = malloc(actualFPSize);
-		memcpy(fpShadowCopy, vm::get_ptr<u8>(rsx_fp->addr), actualFPSize);
+		std::memcpy(fpShadowCopy, vm::base(rsx_fp->addr), actualFPSize);
 		typename BackendTraits::FragmentProgramData &newShader = m_cacheFS[fpShadowCopy];
 		BackendTraits::RecompileFragmentProgram(rsx_fp, newShader, m_currentShaderId++);
 
@@ -339,7 +339,7 @@ public:
 
 	const std::vector<size_t> &getFragmentConstantOffsetsCache(const RSXFragmentProgram *fragmentShader) const
 	{
-		typename binary2FS::const_iterator It = m_cacheFS.find(vm::get_ptr<void>(fragmentShader->addr));
+		typename binary2FS::const_iterator It = m_cacheFS.find(vm::base(fragmentShader->addr));
 		if (It != m_cacheFS.end())
 			return It->second.FragmentConstantOffsetCache;
 		LOG_ERROR(RSX, "Can't retrieve constant offset cache");

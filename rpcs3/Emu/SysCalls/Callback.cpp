@@ -49,7 +49,7 @@ void CallbackManager::Init()
 {
 	std::lock_guard<std::mutex> lock(m_mutex);
 
-	auto task = [this](CPUThread& cpu)
+	auto task = [this](PPUThread& ppu)
 	{
 		std::unique_lock<std::mutex> lock(m_mutex);
 
@@ -71,27 +71,16 @@ void CallbackManager::Init()
 
 				if (lock) lock.unlock();
 
-				func(cpu);
+				func(ppu);
 
 				continue;
 			}
 
-			cpu.cv.wait(lock);
+			ppu.cv.wait(lock);
 		}
 	};
 
-	if (vm::get(vm::main)->addr != 0x10000)
-	{
-		auto thread = idm::make_ptr<ARMv7Thread>("Callback Thread");
-
-		thread->prio = 1001;
-		thread->stack_size = 0x10000;
-		thread->custom_task = task;
-		thread->run();
-
-		m_cb_thread = thread;
-	}
-	else
+	if (vm::get(vm::main)->addr == 0x10000)
 	{
 		auto thread = idm::make_ptr<PPUThread>("Callback Thread");
 

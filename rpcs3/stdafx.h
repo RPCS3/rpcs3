@@ -68,7 +68,9 @@ using s64 = std::int64_t;
 using f32 = float;
 using f64 = double;
 
+#ifndef _MSC_VER
 using u128 = __uint128_t;
+#endif
 
 CHECK_SIZE_ALIGN(u128, 16, 16);
 
@@ -129,12 +131,12 @@ struct explicit_bool_t
 {
 	const bool value;
 
-	explicit_bool_t(bool value)
+	constexpr explicit_bool_t(bool value)
 		: value(value)
 	{
 	}
 
-	explicit operator bool() const
+	explicit constexpr operator bool() const
 	{
 		return value;
 	}
@@ -158,6 +160,18 @@ template<typename T1, typename T2, typename T3 = const char*> struct triplet_t
 // return 32 bit alignof() to avoid widening/narrowing conversions with size_t
 #define alignof32(type) static_cast<u32>(alignof(type))
 
+// return 32 bit .size() for container
+template<typename T> inline auto size32(const T& container) -> decltype(static_cast<u32>(container.size()))
+{
+	return container.size() <= UINT32_MAX ? static_cast<u32>(container.size()) : throw std::length_error(__FUNCTION__);
+}
+
+// return 32 bit size for an array
+template<typename T, std::size_t Size> constexpr u32 size32(const T(&)[Size])
+{
+	return Size <= UINT32_MAX ? static_cast<u32>(Size) : throw std::length_error(__FUNCTION__);
+}
+
 #define WRAP_EXPR(expr) [&]{ return expr; }
 #define COPY_EXPR(expr) [=]{ return expr; }
 #define EXCEPTION(text, ...) fmt::exception(__FILE__, __LINE__, __FUNCTION__, text, ##__VA_ARGS__)
@@ -165,6 +179,8 @@ template<typename T1, typename T2, typename T3 = const char*> struct triplet_t
 #define IS_INTEGRAL(t) (std::is_integral<t>::value || std::is_same<std::decay_t<t>, u128>::value)
 #define IS_INTEGER(t) (std::is_integral<t>::value || std::is_enum<t>::value || std::is_same<std::decay_t<t>, u128>::value)
 #define IS_BINARY_COMPARABLE(t1, t2) (IS_INTEGER(t1) && IS_INTEGER(t2) && sizeof(t1) == sizeof(t2))
+#define CHECK_ASSERTION(expr) if (expr) {} else throw EXCEPTION("Assertion failed: " #expr)
+#define CHECK_SUCCESS(expr) if (s32 _r = (expr)) throw EXCEPTION(#expr " failed (0x%x)", _r)
 
 template<typename T> struct id_traits;
 
@@ -174,3 +190,4 @@ template<typename T> struct id_traits;
 #include "Utilities/BEType.h"
 #include "Utilities/Atomic.h"
 #include "Utilities/StrFmt.h"
+#include "Utilities/BitField.h"

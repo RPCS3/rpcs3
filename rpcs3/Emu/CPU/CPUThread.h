@@ -165,6 +165,13 @@ public:
 	virtual bool WriteRegString(const std::string& reg, std::string value) = 0;
 };
 
+inline CPUThread* get_current_cpu_thread()
+{
+	extern thread_local CPUThread* g_tls_current_cpu_thread;
+
+	return g_tls_current_cpu_thread;
+}
+
 class cpu_thread
 {
 protected:

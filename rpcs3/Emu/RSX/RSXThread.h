@@ -192,12 +192,11 @@ namespace rsx
 		double fps_limit = 59.94;
 
 	public:
-		std::mutex cs_main;
 		semaphore_t sem_flip;
 		u64 last_flip_time;
-		vm::ps3::ptr<void(u32)> flip_handler = { 0 };
-		vm::ps3::ptr<void(u32)> user_handler = { 0 };
-		vm::ps3::ptr<void(u32)> vblank_handler = { 0 };
+		vm::ps3::ptr<void(u32)> flip_handler = vm::null;
+		vm::ps3::ptr<void(u32)> user_handler = vm::null;
+		vm::ps3::ptr<void(u32)> vblank_handler = vm::null;
 		u64 vblank_count;
 
 	public:

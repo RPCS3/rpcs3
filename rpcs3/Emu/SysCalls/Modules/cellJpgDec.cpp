@@ -44,7 +44,7 @@ s32 cellJpgDecOpen(u32 mainHandle, vm::ptr<u32> subHandle, vm::ptr<CellJpgDecSrc
 	current_subHandle.fd = 0;
 	current_subHandle.src = *src;
 
-	switch(src->srcSelect.value())
+	switch (src->srcSelect)
 	{
 	case CELL_JPGDEC_BUFFER:
 		current_subHandle.fileSize = src->streamSize;
@@ -108,10 +108,10 @@ s32 cellJpgDecReadHeader(u32 mainHandle, u32 subHandle, vm::ptr<CellJpgDecInfo> 
 	// Write the header to buffer
 	std::unique_ptr<u8[]> buffer(new u8[fileSize]);
 
-	switch(subHandle_data->src.srcSelect.value())
+	switch (subHandle_data->src.srcSelect)
 	{
 	case CELL_JPGDEC_BUFFER:
-		std::memcpy(buffer.get(), vm::get_ptr(subHandle_data->src.streamPtr), fileSize);
+		std::memcpy(buffer.get(), vm::base(subHandle_data->src.streamPtr), fileSize);
 		break;
 
 	case CELL_JPGDEC_FILE:
@@ -187,10 +187,10 @@ s32 cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, vm::cp
 	//Copy the JPG file to a buffer
 	std::unique_ptr<u8[]> jpg(new u8[fileSize]);
 
-	switch(subHandle_data->src.srcSelect.value())
+	switch (subHandle_data->src.srcSelect)
 	{
 	case CELL_JPGDEC_BUFFER:
-		std::memcpy(jpg.get(), vm::get_ptr(subHandle_data->src.streamPtr), fileSize);
+		std::memcpy(jpg.get(), vm::base(subHandle_data->src.streamPtr), fileSize);
 		break;
 
 	case CELL_JPGDEC_FILE:

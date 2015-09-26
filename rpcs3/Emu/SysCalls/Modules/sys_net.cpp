@@ -121,7 +121,7 @@ namespace sys_net
 	// TODO
 	thread_local vm::ptr<_tls_data_t> g_tls_net_data{};
 
-	inline void initialize_tls()
+	static void initialize_tls()
 	{
 		// allocate if not initialized
 		if (!g_tls_net_data)
@@ -521,7 +521,7 @@ namespace sys_net
 	{
 		libnet.Warning("_sys_net_errno_loc()");
 
-		return &get_errno();
+		return get_errno().ptr();
 	}
 
 	s32 sys_net_set_resolver_configurations()

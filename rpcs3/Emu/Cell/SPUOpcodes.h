@@ -4,76 +4,23 @@ union spu_opcode_t
 {
 	u32 opcode;
 
-	struct
-	{
-		u32 rt : 7; // 25..31, it's actually RC in 4-op instructions
-		u32 ra : 7; // 18..24
-		u32 rb : 7; // 11..17
-		u32 rc : 7; // 4..10, it's actually RT in 4-op instructions
-	};
-
-	struct
-	{
-		u32    : 14; // 18..31
-		u32 i7 : 7;  // 11..17
-	};
-
-	struct
-	{
-		u32    : 14; // 18..31
-		u32 i8 : 8;  // 10..17
-	};
-
-	struct
-	{
-		u32     : 7; // 25..31
-		u32 i16 : 16; // 9..24
-	};
-
-	struct
-	{
-		u32     : 7; // 25..31
-		u32 i18 : 18; // 7..24
-	};
-
-	struct
-	{
-		s32     : 14; // 18..31
-		s32 si7 : 7;  // 11..17
-	};
-
-	struct
-	{
-		s32     : 14; // 18..31
-		s32 si8 : 8;  // 10..17
-	};
-
-	struct
-	{
-		s32      : 14; // 18..31
-		s32 si10 : 10; // 8..17
-	};
-
-	struct
-	{
-		s32      : 7; // 25..31
-		s32 si16 : 16; // 9..24
-		s32 r0h  : 2; // 7..8
-	};
-
-	struct
-	{
-		s32     : 14; // 18..31
-		s32 roh : 2;  // 16..17
-	};
-
-	struct
-	{
-		u32   : 18; // 14..31
-		u32 e : 1; // 13, "enable interrupts" bit
-		u32 d : 1; // 12, "disable interrupts" bit
-		u32 c : 1; // 11, "C" bit for SYNC instruction
-	};
+	bf_t<u32, 0, 7> rt; // 25..31, for 3-op instructions
+	bf_t<u32, 0, 7> rc; // 25..31
+	bf_t<u32, 7, 7> ra; // 18..24
+	bf_t<u32, 14, 7> rb; // 11..17
+	bf_t<u32, 21, 7> rt4; // 4..10, for 4-op instructions
+	bf_t<u32, 18, 1> e; // 13, "enable interrupts" bit
+	bf_t<u32, 19, 1> d; // 12, "disable interrupts" bit
+	bf_t<u32, 20, 1> c; // 11, "C" bit for SYNC instruction
+	bf_t<s32, 23, 2> r0h; // 7..8, signed
+	bf_t<s32, 14, 2> roh; // 16..17, signed
+	bf_t<u32, 14, 7> i7; // 11..17
+	bf_t<s32, 14, 7> si7; // 11..17, signed
+	bf_t<u32, 14, 8> i8; // 10..17
+	bf_t<s32, 14, 10> si10; // 8..17, signed
+	bf_t<u32, 7, 16> i16; // 9..24
+	bf_t<s32, 7, 16> si16; // 9..24, signed
+	bf_t<u32, 7, 18> i18; // 7..24
 };
 
 #define DEFINE_SPU_OPCODES(ns) { \
@@ -309,14 +256,19 @@ public:
 	}
 
 	// access opcode table
-	inline T operator [](u32 opcode_data) const
+	T operator [](u32 opcode_data) const
 	{
 		// the whole decoding process is shifting opcode data
 		return m_data[opcode_data >> 21];
 	}
 };
 
-inline u32 spu_branch_target(u32 pc, s32 imm = 0)
+inline u32 spu_branch_target(u32 pc, u32 imm = 0)
 {
 	return (pc + (imm << 2)) & 0x3fffc;
+}
+
+inline u32 spu_ls_target(u32 pc, u32 imm = 0)
+{
+	return (pc + (imm << 2)) & 0x3fff0;
 }

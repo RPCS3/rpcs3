@@ -126,7 +126,7 @@ enum
 };
 
 using CellMusicCallback = void(u32 event, vm::ptr<void> param, vm::ptr<void> userData);
-using CellMusic2Callback = void(u32 event, vm::ptr<u32> param, vm::ptr<void> userData);
+using CellMusic2Callback = void(u32 event, vm::ptr<void> param, vm::ptr<void> userData);
 
 struct CellMusicSelectionContext
 {

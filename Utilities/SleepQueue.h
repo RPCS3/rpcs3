@@ -27,19 +27,19 @@ public:
 	~sleep_queue_entry_t();
 
 	// add thread to the sleep queue
-	inline void enter()
+	void enter()
 	{
 		add_entry();
 	}
 
 	// remove thread from the sleep queue
-	inline void leave()
+	void leave()
 	{
 		remove_entry();
 	}
 
 	// check whether the thread exists in the sleep queue
-	inline explicit operator bool() const
+	explicit operator bool() const
 	{
 		return find();
 	}

@@ -1,13 +1,24 @@
 #include "stdafx_gui.h"
 #include "rpcs3.h"
+#include "Emu/System.h"
 #include "Emu/Memory/Memory.h"
 
 #include "Emu/SysCalls/lv2/sys_time.h"
 #include "MsgDialog.h"
 
-void MsgDialogFrame::Create(u32 type, const std::string& msg)
+MsgDialogFrame::~MsgDialogFrame()
 {
-	wxWindow* parent = nullptr; // TODO: align the window better
+	if (m_dialog) wxGetApp().CallAfter([dialog = m_dialog]
+	{
+		dialog->Destroy();
+	});
+}
+
+void MsgDialogFrame::Create(const std::string& msg)
+{
+	if (m_dialog) m_dialog->Destroy();
+
+	wxWindow* parent = wxGetApp().m_MainFrame; // TODO
 
 	m_gauge1 = nullptr;
 	m_gauge2 = nullptr;
@@ -17,27 +28,27 @@ void MsgDialogFrame::Create(u32 type, const std::string& msg)
 	m_button_yes = nullptr;
 	m_button_no = nullptr;
 
-	m_dialog = std::make_unique<wxDialog>(parent, wxID_ANY, type & CELL_MSGDIALOG_TYPE_SE_TYPE ? "" : "Error", wxDefaultPosition, wxDefaultSize);
+	m_dialog = new wxDialog(nullptr, wxID_ANY, type.se_normal ? "" : "Error", wxDefaultPosition, wxDefaultSize);
 
 	m_dialog->SetExtraStyle(m_dialog->GetExtraStyle() | wxWS_EX_TRANSIENT);
-	m_dialog->SetTransparent(127 + (type & CELL_MSGDIALOG_TYPE_BG) * (128 / CELL_MSGDIALOG_TYPE_BG_INVISIBLE));
+	m_dialog->SetTransparent(type.bg_invisible ? 255 : 160);
 
 	m_sizer1 = new wxBoxSizer(wxVERTICAL);
 
-	m_text = new wxStaticText(m_dialog.get(), wxID_ANY, wxString(msg.c_str(), wxConvUTF8));
+	m_text = new wxStaticText(m_dialog, wxID_ANY, wxString(msg.c_str(), wxConvUTF8));
 	m_sizer1->Add(m_text, 0, wxALIGN_CENTER_HORIZONTAL | wxLEFT | wxRIGHT | wxTOP, 16);
 
-	switch (type & CELL_MSGDIALOG_TYPE_PROGRESSBAR)
+	if (type.progress_bar_count >= 2)
 	{
-	case CELL_MSGDIALOG_TYPE_PROGRESSBAR_DOUBLE:
-		m_gauge2 = new wxGauge(m_dialog.get(), wxID_ANY, 100, wxDefaultPosition, wxSize(300, -1), wxGA_HORIZONTAL | wxGA_SMOOTH);
-		m_text2 = new wxStaticText(m_dialog.get(), wxID_ANY, "");
+		m_gauge2 = new wxGauge(m_dialog, wxID_ANY, 100, wxDefaultPosition, wxSize(300, -1), wxGA_HORIZONTAL | wxGA_SMOOTH);
+		m_text2 = new wxStaticText(m_dialog, wxID_ANY, "");
 		m_text2->SetAutoLayout(true);
-		// fallthrough
+	}
 
-	case CELL_MSGDIALOG_TYPE_PROGRESSBAR_SINGLE:
-		m_gauge1 = new wxGauge(m_dialog.get(), wxID_ANY, 100, wxDefaultPosition, wxSize(300, -1), wxGA_HORIZONTAL | wxGA_SMOOTH);
-		m_text1 = new wxStaticText(m_dialog.get(), wxID_ANY, "");
+	if (type.progress_bar_count >= 1)
+	{
+		m_gauge1 = new wxGauge(m_dialog, wxID_ANY, 100, wxDefaultPosition, wxSize(300, -1), wxGA_HORIZONTAL | wxGA_SMOOTH);
+		m_text1 = new wxStaticText(m_dialog, wxID_ANY, "");
 		m_text1->SetAutoLayout(true);
 	}
 
@@ -57,14 +68,14 @@ void MsgDialogFrame::Create(u32 type, const std::string& msg)
 
 	m_buttons = new wxBoxSizer(wxHORIZONTAL);
 
-	if (type & CELL_MSGDIALOG_TYPE_BUTTON_TYPE_YESNO)
+	if (type.button_type.unshifted() == CELL_MSGDIALOG_TYPE_BUTTON_TYPE_YESNO)
 	{
-		m_button_yes = new wxButton(m_dialog.get(), wxID_YES);
+		m_button_yes = new wxButton(m_dialog, wxID_YES);
 		m_buttons->Add(m_button_yes, 0, wxALIGN_CENTER_HORIZONTAL | wxRIGHT, 8);
-		m_button_no = new wxButton(m_dialog.get(), wxID_NO);
+		m_button_no = new wxButton(m_dialog, wxID_NO);
 		m_buttons->Add(m_button_no, 0, wxALIGN_CENTER_HORIZONTAL, 16);
 
-		if ((type & CELL_MSGDIALOG_TYPE_DEFAULT_CURSOR) == CELL_MSGDIALOG_TYPE_DEFAULT_CURSOR_NO)
+		if (type.default_cursor == 1)
 		{
 			m_button_no->SetFocus();
 		}
@@ -76,12 +87,12 @@ void MsgDialogFrame::Create(u32 type, const std::string& msg)
 		m_sizer1->Add(m_buttons, 0, wxALIGN_CENTER_HORIZONTAL | wxLEFT | wxRIGHT | wxTOP, 16);
 	}
 
-	if (type & CELL_MSGDIALOG_TYPE_BUTTON_TYPE_OK)
+	if (type.button_type.unshifted() == CELL_MSGDIALOG_TYPE_BUTTON_TYPE_OK)
 	{
-		m_button_ok = new wxButton(m_dialog.get(), wxID_OK);
+		m_button_ok = new wxButton(m_dialog, wxID_OK);
 		m_buttons->Add(m_button_ok, 0, wxALIGN_CENTER_HORIZONTAL, 16);
 
-		if ((type & CELL_MSGDIALOG_TYPE_DEFAULT_CURSOR) == CELL_MSGDIALOG_TYPE_DEFAULT_CURSOR_OK)
+		if (type.default_cursor == 0)
 		{
 			m_button_ok->SetFocus();
 		}
@@ -96,25 +107,18 @@ void MsgDialogFrame::Create(u32 type, const std::string& msg)
 	m_dialog->Show();
 	m_dialog->Enable();
 
-	m_dialog->Bind(wxEVT_BUTTON, [this](wxCommandEvent& event)
+	m_dialog->Bind(wxEVT_BUTTON, [on_close = on_close](wxCommandEvent& event)
 	{
-		this->Destroy();
-		this->Close(event.GetId() == wxID_NO ? CELL_MSGDIALOG_BUTTON_NO : CELL_MSGDIALOG_BUTTON_YES);
+		on_close(event.GetId() == wxID_NO ? CELL_MSGDIALOG_BUTTON_NO : CELL_MSGDIALOG_BUTTON_YES);
 	});
 
-	m_dialog->Bind(wxEVT_CLOSE_WINDOW, [this, type](wxCloseEvent& event)
+	m_dialog->Bind(wxEVT_CLOSE_WINDOW, [on_close = on_close, type = type](wxCloseEvent& event)
 	{
-		if (~type & CELL_MSGDIALOG_TYPE_DISABLE_CANCEL)
+		if (!type.disable_cancel)
 		{
-			this->Destroy();
-			this->Close(CELL_MSGDIALOG_BUTTON_ESCAPE);
+			on_close(CELL_MSGDIALOG_BUTTON_ESCAPE);
 		}
 	});
-}
-
-void MsgDialogFrame::Destroy()
-{
-	m_dialog.reset();
 }
 
 void MsgDialogFrame::ProgressBarSetMsg(u32 index, const std::string& msg)

@@ -35,7 +35,7 @@ public:
 	}
 
 	// check if UID is potentially valid (will return true even if the object doesn't exist)
-	inline static bool check(s32 uid)
+	static inline bool check(s32 uid)
 	{
 		const psv_uid_t id = psv_uid_t::make(uid);
 
@@ -44,7 +44,7 @@ public:
 	}
 
 	// share object with UID specified
-	inline std::shared_ptr<T> get(s32 uid)
+	std::shared_ptr<T> get(s32 uid)
 	{
 		if (!check(uid))
 		{
@@ -56,7 +56,7 @@ public:
 		return m_data[psv_uid_t::make(uid).number];
 	}
 
-	inline std::shared_ptr<T> operator [](s32 uid)
+	std::shared_ptr<T> operator [](s32 uid)
 	{
 		return this->get(uid);
 	}

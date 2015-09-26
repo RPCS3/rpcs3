@@ -10,14 +10,6 @@
 
 extern Module<> cellSysutil;
 
-void MsgDialogBase::Close(s32 status)
-{
-	if (state.compare_and_swap_test(MsgDialogState::Open, MsgDialogState::Close))
-	{
-		on_close(status);
-	}
-}
-
 s32 cellMsgDialogOpen()
 {
 	throw EXCEPTION("");
@@ -32,49 +24,37 @@ s32 cellMsgDialogOpen2(u32 type, vm::cptr<char> msgString, vm::ptr<CellMsgDialog
 		return CELL_MSGDIALOG_ERROR_PARAM;
 	}
 
-	switch (type & CELL_MSGDIALOG_TYPE_BUTTON_TYPE)
+	const MsgDialogType _type = { type };
+
+	switch (_type.button_type.unshifted())
 	{
 	case CELL_MSGDIALOG_TYPE_BUTTON_TYPE_NONE:
 	{
-		if (type & CELL_MSGDIALOG_TYPE_DEFAULT_CURSOR)
+		if (_type.default_cursor || _type.progress_bar_count > 2)
 		{
 			return CELL_MSGDIALOG_ERROR_PARAM;
 		}
-		switch (type & CELL_MSGDIALOG_TYPE_PROGRESSBAR)
-		{
-		case CELL_MSGDIALOG_TYPE_PROGRESSBAR_NONE: break;
-		case CELL_MSGDIALOG_TYPE_PROGRESSBAR_SINGLE: break;
-		case CELL_MSGDIALOG_TYPE_PROGRESSBAR_DOUBLE: break;
-		default: return CELL_MSGDIALOG_ERROR_PARAM;
-		}
+
 		break;
 	}
 
 	case CELL_MSGDIALOG_TYPE_BUTTON_TYPE_YESNO:
 	{
-		switch (type & CELL_MSGDIALOG_TYPE_DEFAULT_CURSOR)
-		{
-		case CELL_MSGDIALOG_TYPE_DEFAULT_CURSOR_YES: break;
-		case CELL_MSGDIALOG_TYPE_DEFAULT_CURSOR_NO: break;
-		default: return CELL_MSGDIALOG_ERROR_PARAM;
-		}
-		if (type & CELL_MSGDIALOG_TYPE_PROGRESSBAR)
+		if (_type.default_cursor > 1 || _type.progress_bar_count)
 		{
 			return CELL_MSGDIALOG_ERROR_PARAM;
 		}
+
 		break;
 	}
 
 	case CELL_MSGDIALOG_TYPE_BUTTON_TYPE_OK:
 	{
-		if (type & CELL_MSGDIALOG_TYPE_DEFAULT_CURSOR)
+		if (_type.default_cursor || _type.progress_bar_count)
 		{
 			return CELL_MSGDIALOG_ERROR_PARAM;
 		}
-		if (type & CELL_MSGDIALOG_TYPE_PROGRESSBAR)
-		{
-			return CELL_MSGDIALOG_ERROR_PARAM;
-		}
+
 		break;
 	}
 
@@ -88,49 +68,43 @@ s32 cellMsgDialogOpen2(u32 type, vm::cptr<char> msgString, vm::ptr<CellMsgDialog
 		return CELL_SYSUTIL_ERROR_BUSY;
 	}
 
-	dlg->type = type;
-
-	switch (type & CELL_MSGDIALOG_TYPE_PROGRESSBAR)
+	if (_type.se_mute_on)
 	{
-	case CELL_MSGDIALOG_TYPE_PROGRESSBAR_DOUBLE: dlg->progress_bar_count = 2; break;
-	case CELL_MSGDIALOG_TYPE_PROGRESSBAR_SINGLE: dlg->progress_bar_count = 1; break;
-	default: dlg->progress_bar_count = 0; break;
+		// TODO
 	}
 
-	switch (type & CELL_MSGDIALOG_TYPE_SE_MUTE) // TODO
+	if (_type.se_normal)
 	{
-	case CELL_MSGDIALOG_TYPE_SE_MUTE_OFF: break;
-	case CELL_MSGDIALOG_TYPE_SE_MUTE_ON: break;
+		cellSysutil.Warning(msgString.get_ptr());
+	}
+	else
+	{
+		cellSysutil.Error(msgString.get_ptr());
 	}
 
-	switch (type & CELL_MSGDIALOG_TYPE_SE_TYPE)
+	dlg->type = _type;
+
+	dlg->on_close = [callback, userData, wptr = std::weak_ptr<MsgDialogBase>(dlg)](s32 status)
 	{
-	case CELL_MSGDIALOG_TYPE_SE_TYPE_NORMAL: cellSysutil.Warning(msgString.get_ptr()); break;
-	case CELL_MSGDIALOG_TYPE_SE_TYPE_ERROR: cellSysutil.Error(msgString.get_ptr()); break;
-	}
+		const auto dlg = wptr.lock();
 
-	dlg->callback = callback;
-	dlg->user_data = userData;
-	dlg->extra_param = extParam;
-
-	dlg->on_close = [](s32 status)
-	{
-		const auto dlg = fxm::get<MsgDialogBase>();
-
-		if (dlg->callback)
+		if (dlg && dlg->state.compare_and_swap_test(MsgDialogState::Open, MsgDialogState::Close))
 		{
-			Emu.GetCallbackManager().Register([func = dlg->callback, status, arg = dlg->user_data](CPUThread& cpu)->s32
+			if (callback)
 			{
-				func(static_cast<PPUThread&>(cpu), status, arg);
-				return CELL_OK;
-			});
-		}
+				Emu.GetCallbackManager().Register([=](PPUThread& ppu) -> s32
+				{
+					callback(ppu, status, userData);
+					return CELL_OK;
+				});
+			}
 
-		fxm::remove<MsgDialogBase>();
+			fxm::remove<MsgDialogBase>();
+		}
 	};
 
 	// call initialization asynchronously from the GUI thread, wait for the "result"
-	Emu.CallAfter(WRAP_EXPR(dlg->Create(type, msgString.get_ptr()))).get();
+	Emu.CallAfter(WRAP_EXPR(dlg->Create(msgString.get_ptr()))).get();
 
 	return CELL_OK;
 }
@@ -209,11 +183,7 @@ s32 cellMsgDialogOpenErrorCode(PPUThread& ppu, u32 errorCode, vm::ptr<CellMsgDia
 
 	error.append(fmt::format("\n(%08x)", errorCode));
 
-	const vm::var<char> message(ppu, error.size() + 1);
-
-	std::memcpy(message.get_ptr(), error.c_str(), error.size() + 1);
-
-	return cellMsgDialogOpen2(CELL_MSGDIALOG_DIALOG_TYPE_ERROR | CELL_MSGDIALOG_TYPE_BUTTON_TYPE_OK, message, callback, userData, extParam);
+	return cellMsgDialogOpen2(CELL_MSGDIALOG_TYPE_SE_TYPE_ERROR | CELL_MSGDIALOG_TYPE_BUTTON_TYPE_OK, vm::make_str(error), callback, userData, extParam);
 }
 
 s32 cellMsgDialogOpenSimulViewWarning()
@@ -234,7 +204,7 @@ s32 cellMsgDialogClose(f32 delay)
 
 	extern u64 get_system_time();
 
-	const u64 wait_until = get_system_time() + static_cast<u64>(std::max<float>(delay, 0.0f) * 1000);
+	const u64 wait_until = get_system_time() + static_cast<s64>(std::max<float>(delay, 0.0f) * 1000);
 
 	named_thread_t(WRAP_EXPR("MsgDialog Thread"), [=]()
 	{
@@ -245,9 +215,7 @@ s32 cellMsgDialogClose(f32 delay)
 			std::this_thread::sleep_for(1ms);
 		}
 
-		Emu.CallAfter(COPY_EXPR(dlg->Destroy()));
-
-		dlg->Close(CELL_MSGDIALOG_BUTTON_NONE);
+		dlg->on_close(CELL_MSGDIALOG_BUTTON_NONE);
 
 	}).detach();
 
@@ -275,9 +243,6 @@ s32 cellMsgDialogAbort()
 		throw EXCEPTION("Failed to remove MsgDialog object");
 	}
 
-	// call finalization from the GUI thread
-	Emu.CallAfter(COPY_EXPR(dlg->Destroy()));
-
 	return CELL_OK;
 }
 
@@ -292,7 +257,7 @@ s32 cellMsgDialogProgressBarSetMsg(u32 progressBarIndex, vm::cptr<char> msgStrin
 		return CELL_MSGDIALOG_ERROR_DIALOG_NOT_OPENED;
 	}
 
-	if (progressBarIndex >= dlg->progress_bar_count)
+	if (progressBarIndex >= dlg->type.progress_bar_count)
 	{
 		return CELL_MSGDIALOG_ERROR_PARAM;
 	}
@@ -316,7 +281,7 @@ s32 cellMsgDialogProgressBarReset(u32 progressBarIndex)
 		return CELL_MSGDIALOG_ERROR_DIALOG_NOT_OPENED;
 	}
 
-	if (progressBarIndex >= dlg->progress_bar_count)
+	if (progressBarIndex >= dlg->type.progress_bar_count)
 	{
 		return CELL_MSGDIALOG_ERROR_PARAM;
 	}
@@ -337,7 +302,7 @@ s32 cellMsgDialogProgressBarInc(u32 progressBarIndex, u32 delta)
 		return CELL_MSGDIALOG_ERROR_DIALOG_NOT_OPENED;
 	}
 
-	if (progressBarIndex >= dlg->progress_bar_count)
+	if (progressBarIndex >= dlg->type.progress_bar_count)
 	{
 		return CELL_MSGDIALOG_ERROR_PARAM;
 	}

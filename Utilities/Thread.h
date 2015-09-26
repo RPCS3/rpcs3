@@ -2,20 +2,20 @@
 
 const class thread_ctrl_t* get_current_thread_ctrl();
 
-// named thread control class
+// Named thread control class
 class thread_ctrl_t final
 {
 	friend class named_thread_t;
 
 	template<typename T> friend void current_thread_register_atexit(T);
 
-	// thread handler
+	// Thread handler
 	std::thread m_thread;
 
-	// name getter
+	// Name getter
 	const std::function<std::string()> m_name;
 
-	// functions executed at thread exit (temporarily)
+	// Functions executed at thread exit (temporarily)
 	std::vector<std::function<void()>> m_atexit;
 
 public:
@@ -24,11 +24,13 @@ public:
 	{
 	}
 
-	// get thread name
+	thread_ctrl_t(const thread_ctrl_t&) = delete;
+
+	// Get thread name
 	std::string get_name() const;
 };
 
-// register function at thread exit (temporarily)
+// Register function at thread exit (temporarily)
 template<typename T> void current_thread_register_atexit(T func)
 {
 	extern thread_local thread_ctrl_t* g_tls_this_thread;
@@ -38,73 +40,69 @@ template<typename T> void current_thread_register_atexit(T func)
 
 class named_thread_t
 {
-	// pointer to managed resource (shared with actual thread)
+	// Pointer to managed resource (shared with actual thread)
 	std::shared_ptr<thread_ctrl_t> m_thread;
 
 public:
-	// thread mutex for external use
+	// Thread mutex for external use
 	std::mutex mutex;
 
-	// thread condition variable for external use
+	// Thread condition variable for external use
 	std::condition_variable cv;
 
 public:
-	// initialize in empty state
+	// Initialize in empty state
 	named_thread_t() = default;
 
-	// create named thread
+	// Create named thread
 	named_thread_t(std::function<std::string()> name, std::function<void()> func);
 
-	// destructor, will terminate if thread is neither joined nor detached
-	virtual ~named_thread_t();
-
+	// Deleted copy/move constructors + copy/move operators
 	named_thread_t(const named_thread_t&) = delete;
 
-	named_thread_t& operator =(const named_thread_t&) = delete;
+	// Destructor, calls std::terminate if the thread is neither joined nor detached
+	virtual ~named_thread_t();
 
 public:
-	// get thread name
+	// Get thread name
 	std::string get_name() const;
 
-	// create named thread (current state must be empty)
+	// Create named thread (current state must be empty)
 	void start(std::function<std::string()> name, std::function<void()> func);
 
-	// detach thread -> empty state
+	// Detach thread -> empty state
 	void detach();
 
-	// join thread -> empty state
+	// Join thread -> empty state
 	void join();
 
-	// check if not empty
+	// Check whether the thread is not in "empty state"
 	bool joinable() const { return m_thread.operator bool(); }
 
-	// check whether it is the current running thread
+	// Check whether it is the currently running thread
 	bool is_current() const;
 
-	// get internal thread pointer
+	// Get internal thread pointer
 	const thread_ctrl_t* get_thread_ctrl() const { return m_thread.get(); }
 };
 
-class autojoin_thread_t final : private named_thread_t
+// Wrapper for named_thread_t, joins automatically in the destructor
+class autojoin_thread_t final
 {
-public:
-	using named_thread_t::mutex;
-	using named_thread_t::cv;
+	named_thread_t m_thread;
 
 public:
-	autojoin_thread_t() = delete;
-
 	autojoin_thread_t(std::function<std::string()> name, std::function<void()> func)
+		: m_thread(std::move(name), std::move(func))
 	{
-		start(std::move(name), std::move(func));
 	}
 
-	virtual ~autojoin_thread_t() override
-	{
-		join();
-	}
+	autojoin_thread_t(const autojoin_thread_t&) = delete;
 
-	using named_thread_t::is_current;
+	~autojoin_thread_t() noexcept(false) // Allow exceptions
+	{
+		m_thread.join();
+	}
 };
 
 extern const std::function<bool()> SQUEUE_ALWAYS_EXIT;

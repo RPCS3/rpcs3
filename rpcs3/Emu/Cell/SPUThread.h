@@ -618,27 +618,22 @@ public:
 	void stop_and_signal(u32 code);
 	void halt();
 
-	u8 read8(u32 lsa) const { return vm::read8(lsa + offset); }
-	u16 read16(u32 lsa) const { return vm::ps3::read16(lsa + offset); }
-	u32 read32(u32 lsa) const { return vm::ps3::read32(lsa + offset); }
-	u64 read64(u32 lsa) const { return vm::ps3::read64(lsa + offset); }
-	v128 read128(u32 lsa) const { return vm::ps3::read128(lsa + offset); }
+	// Convert specified SPU LS address to a pointer of specified (possibly converted to BE) type
+	template<typename T> inline to_be_t<T>* _ptr(u32 lsa)
+	{
+		return static_cast<to_be_t<T>*>(vm::base(offset + lsa));
+	}
 
-	void write8(u32 lsa, u8 data) const { vm::write8(lsa + offset, data); }
-	void write16(u32 lsa, u16 data) const { vm::ps3::write16(lsa + offset, data); }
-	void write32(u32 lsa, u32 data) const { vm::ps3::write32(lsa + offset, data); }
-	void write64(u32 lsa, u64 data) const { vm::ps3::write64(lsa + offset, data); }
-	void write128(u32 lsa, v128 data) const { vm::ps3::write128(lsa + offset, data); }
-
-	void write16(u32 lsa, be_t<u16> data) const { vm::ps3::write16(lsa + offset, data); }
-	void write32(u32 lsa, be_t<u32> data) const { vm::ps3::write32(lsa + offset, data); }
-	void write64(u32 lsa, be_t<u64> data) const { vm::ps3::write64(lsa + offset, data); }
-	void write128(u32 lsa, be_t<v128> data) const { vm::ps3::write128(lsa + offset, data); }
+	// Convert specified SPU LS address to a reference of specified (possibly converted to BE) type
+	template<typename T> inline to_be_t<T>& _ref(u32 lsa)
+	{
+		return *_ptr<T>(lsa);
+	}
 
 	void RegisterHleFunction(u32 addr, std::function<bool(SPUThread & SPU)> function)
 	{
 		m_addr_to_hle_function_map[addr] = function;
-		write32(addr, 0x00000003); // STOP 3
+		_ref<u32>(addr) = 0x00000003; // STOP 3
 	}
 
 	void UnregisterHleFunction(u32 addr)

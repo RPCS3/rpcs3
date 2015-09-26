@@ -79,7 +79,6 @@ namespace Log
 		LogChannel();
 		LogChannel(const std::string& name);
 		LogChannel(LogChannel& other) = delete;
-		LogChannel& operator = (LogChannel& other) = delete;
 		void log(const LogMessage &msg);
 		void addListener(std::shared_ptr<LogListener> listener);
 		void removeListener(std::shared_ptr<LogListener> listener);

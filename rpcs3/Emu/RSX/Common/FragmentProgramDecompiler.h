@@ -86,7 +86,6 @@ protected:
 	virtual void insertMainEnd(std::stringstream &OS) = 0;
 public:
 	ParamArray m_parr;
-	FragmentProgramDecompiler() = delete;
 	FragmentProgramDecompiler(u32 addr, u32& size, u32 ctrl);
 	std::string Decompile();
 };

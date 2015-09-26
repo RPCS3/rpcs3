@@ -66,7 +66,7 @@ s32 sceKernelStartThread(s32 threadId, u32 argSize, vm::cptr<void> pArgBlock)
 
 	// push arg block onto the stack
 	const u32 pos = (thread->SP -= argSize);
-	memcpy(vm::get_ptr<void>(pos), pArgBlock.get_ptr(), argSize);
+	std::memcpy(vm::base(pos), pArgBlock.get_ptr(), argSize);
 
 	// set SceKernelThreadEntry function arguments
 	thread->GPR[0] = argSize;

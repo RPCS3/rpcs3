@@ -484,7 +484,7 @@ std::vector<MipmapLevelInfo> uploadPlacedTexture(const rsx::texture &texture, si
 	std::vector<MipmapLevelInfo> mipInfos;
 
 	const u32 texaddr = rsx::get_address(texture.offset(), texture.location());
-	auto pixels = vm::get_ptr<const u8>(texaddr);
+	auto pixels = vm::ps3::_ptr<const u8>(texaddr);
 	bool is_swizzled = !(texture.format() & CELL_GCM_TEXTURE_LN);
 	switch (format)
 	{
@@ -509,5 +509,4 @@ std::vector<MipmapLevelInfo> uploadPlacedTexture(const rsx::texture &texture, si
 	default:
 		return writeTexelsGeneric((char*)pixels, (char*)textureData, w, h, blockSizeInByte, texture.mipmap());
 	}
-
 }

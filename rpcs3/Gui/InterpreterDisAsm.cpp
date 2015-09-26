@@ -261,7 +261,7 @@ void InterpreterDisAsmFrame::ShowAddr(const u64 addr)
 	}
 	else
 	{
-		disasm->offset = vm::get_ptr<u8>(CPU->get_offset());
+		disasm->offset = (u8*)vm::base(CPU->get_offset());
 		for(uint i=0, count = 4; i<m_item_count; ++i, PC += count)
 		{
 			if(!vm::check_addr(CPU->get_offset() + PC, 4))

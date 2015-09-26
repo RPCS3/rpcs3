@@ -148,9 +148,9 @@ void sysutilSendSystemCommand(u64 status, u64 param)
 	{
 		if (cb.func)
 		{
-			Emu.GetCallbackManager().Register([=](CPUThread& CPU) -> s32
+			Emu.GetCallbackManager().Register([=](PPUThread& ppu) -> s32
 			{
-				cb.func(static_cast<PPUThread&>(CPU), status, param, cb.arg);
+				cb.func(ppu, status, param, cb.arg);
 				return CELL_OK;
 			});
 		}

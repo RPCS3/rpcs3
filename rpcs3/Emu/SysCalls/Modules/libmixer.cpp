@@ -429,7 +429,7 @@ s32 cellSurMixerCreate(vm::cptr<CellSurMixerConfig> config)
 
 				//u64 stamp2 = get_system_time();
 
-				auto buf = vm::get_ptr<be_t<float>>(port.addr + (g_surmx.mixcount % port.block) * port.channel * AUDIO_SAMPLES * sizeof(float));
+				auto buf = vm::_ptr<f32>(port.addr + (g_surmx.mixcount % port.block) * port.channel * AUDIO_SAMPLES * sizeof(float));
 
 				for (auto& mixdata : g_surmx.mixdata)
 				{

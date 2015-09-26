@@ -3,7 +3,6 @@
 // Constants
 enum
 {
-	BUF_SIZE         = 8192 * 1024, // 8 MB
 	PKG_HEADER_SIZE  = 0xC0, //sizeof(pkg_header) + sizeof(pkg_unk_checksum)
 	PKG_HEADER_SIZE2 = 0x280,
 };
@@ -58,4 +57,4 @@ struct PKGEntry
 	be_t<u32> pad;          // Padding (zeros)
 };
 
-bool UnpackPKG(const struct fs::file& pkg_f, const std::string& dir, volatile f64& progress);
+bool UnpackPKG(const class fs::file& pkg_f, const std::string& dir, volatile f64& progress);

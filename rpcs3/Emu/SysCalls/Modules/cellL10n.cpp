@@ -1056,7 +1056,7 @@ s32 UTF8toBIG5()
 	throw EXCEPTION("");
 }
 
-s32 UTF16stoUTF8s(vm::cptr<char16_t> utf16, vm::ref<u32> utf16_len, vm::ptr<char> utf8, vm::ref<u32> utf8_len)
+s32 UTF16stoUTF8s(vm::cptr<u16> utf16, vm::ref<u32> utf16_len, vm::ptr<u8> utf8, vm::ref<u32> utf8_len)
 {
 	cellL10n.Error("UTF16stoUTF8s(utf16=*0x%x, utf16_len=*0x%x, utf8=*0x%x, utf8_len=*0x%x)", utf16, utf16_len, utf8, utf8_len);
 
@@ -1064,7 +1064,7 @@ s32 UTF16stoUTF8s(vm::cptr<char16_t> utf16, vm::ref<u32> utf16_len, vm::ptr<char
 
 	for (u32 i = 0, len = 0; i < utf16_len; i++, utf8_len = len)
 	{
-		const char16_t ch = utf16[i];
+		const u16 ch = utf16[i];
 
 		// increase required length (TODO)
 		len = len + 1;
@@ -1086,7 +1086,7 @@ s32 UTF16stoUTF8s(vm::cptr<char16_t> utf16, vm::ref<u32> utf16_len, vm::ptr<char
 
 			if (ch <= 0x7f)
 			{
-				*utf8++ = static_cast<char>(ch);
+				*utf8++ = static_cast<u8>(ch);
 			}
 			else
 			{

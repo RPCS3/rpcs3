@@ -114,7 +114,7 @@ void SPUThread::task()
 		const auto& table = Ini.SPUDecoderMode.GetValue() == 0 ? spu_interpreter::precise::g_spu_opcode_table : spu_interpreter::fast::g_spu_opcode_table;
 
 		// LS base address
-		const auto base = vm::get_ptr<const be_t<u32>>(offset);
+		const auto base = vm::_ptr<const u32>(offset);
 
 		while (true)
 		{
@@ -238,7 +238,7 @@ void SPUThread::fast_call(u32 ls_addr)
 	}
 
 	// LS:0x0: this is originally the entry point of the interrupt handler, but interrupts are not implemented
-	write32(0x0, 2);
+	_ref<u32>(0) = 0x00000002; // STOP 2
 
 	auto old_pc = pc;
 	auto old_lr = gpr[0]._u32[3];
@@ -291,7 +291,7 @@ void SPUThread::do_dma_transfer(u32 cmd, spu_mfc_arg_t args)
 			}
 			else if ((cmd & MFC_PUT_CMD) && args.size == 4 && (offset == SYS_SPU_THREAD_SNR1 || offset == SYS_SPU_THREAD_SNR2))
 			{
-				spu.push_snr(SYS_SPU_THREAD_SNR2 == offset, read32(args.lsa));
+				spu.push_snr(SYS_SPU_THREAD_SNR2 == offset, _ref<u32>(args.lsa));
 				return;
 			}
 			else
@@ -310,13 +310,13 @@ void SPUThread::do_dma_transfer(u32 cmd, spu_mfc_arg_t args)
 	case MFC_PUT_CMD:
 	case MFC_PUTR_CMD:
 	{
-		memcpy(vm::get_ptr(eal), vm::get_ptr(offset + args.lsa), args.size);
+		std::memcpy(vm::base(eal), vm::base(offset + args.lsa), args.size);
 		return;
 	}
 
 	case MFC_GET_CMD:
 	{
-		memcpy(vm::get_ptr(offset + args.lsa), vm::get_ptr(eal), args.size);
+		std::memcpy(vm::base(offset + args.lsa), vm::base(eal), args.size);
 		return;
 	}
 	}
@@ -422,7 +422,7 @@ void SPUThread::process_mfc_cmd(u32 cmd)
 
 		const u32 raddr = VM_CAST(ch_mfc_args.ea);
 
-		vm::reservation_acquire(vm::get_ptr(offset + ch_mfc_args.lsa), raddr, 128);
+		vm::reservation_acquire(vm::base(offset + ch_mfc_args.lsa), raddr, 128);
 
 		if (last_raddr)
 		{
@@ -441,7 +441,7 @@ void SPUThread::process_mfc_cmd(u32 cmd)
 			break;
 		}
 
-		if (vm::reservation_update(VM_CAST(ch_mfc_args.ea), vm::get_ptr(offset + ch_mfc_args.lsa), 128))
+		if (vm::reservation_update(VM_CAST(ch_mfc_args.ea), vm::base(offset + ch_mfc_args.lsa), 128))
 		{
 			if (last_raddr == 0)
 			{
@@ -475,7 +475,7 @@ void SPUThread::process_mfc_cmd(u32 cmd)
 
 		vm::reservation_op(VM_CAST(ch_mfc_args.ea), 128, [this]()
 		{
-			std::memcpy(vm::priv_ptr(VM_CAST(ch_mfc_args.ea)), vm::get_ptr(offset + ch_mfc_args.lsa), 128);
+			std::memcpy(vm::base_priv(VM_CAST(ch_mfc_args.ea)), vm::base(offset + ch_mfc_args.lsa), 128);
 		});
 
 		if (last_raddr != 0 && vm::g_tls_did_break_reservation)

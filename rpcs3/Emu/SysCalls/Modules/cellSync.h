@@ -29,123 +29,128 @@ enum
 	CELL_SYNC_ERROR_NO_SPU_CONTEXT_STORAGE = 0x80410114,
 };
 
-struct alignas(4) sync_mutex_t // CellSyncMutex sync var
+namespace _sync
 {
-	be_t<u16> rel;
-	be_t<u16> acq;
-
-	be_t<u16> acquire()
+	struct alignas(4) mutex // CellSyncMutex control variable
 	{
-		return acq++;
-	}
+		be_t<u16> rel;
+		be_t<u16> acq;
 
-	bool try_lock()
-	{
-		return acq++ == rel;
-	}
+		static inline be_t<u16> acquire(mutex& ctrl)
+		{
+			return ctrl.acq++;
+		}
 
-	void unlock()
-	{
-		rel++;
-	}
+		static inline bool try_lock(mutex& ctrl)
+		{
+			return ctrl.acq++ == ctrl.rel;
+		}
+
+		static inline void unlock(mutex& ctrl)
+		{
+			ctrl.rel++;
+		}
+	};
+}
+
+struct CellSyncMutex
+{
+	atomic_t<_sync::mutex> ctrl;
 };
-
-using CellSyncMutex = atomic_t<sync_mutex_t>;
 
 CHECK_SIZE_ALIGN(CellSyncMutex, 4, 4);
 
-struct alignas(4) sync_barrier_t // CellSyncBarrier sync var
+namespace _sync
 {
-	be_t<s16> value;
-	be_t<u16> count;
-
-	bool try_notify()
+	struct alignas(4) barrier // CellSyncBarrier control variable
 	{
-		// extract m_value (repeat if < 0), increase, compare with second s16, set sign bit if equal, insert it back
-		s16 v = value;
+		be_t<s16> value;
+		be_t<u16> count;
 
-		if (v < 0)
+		static inline bool try_notify(barrier& ctrl)
 		{
-			return false;
-		}
+			if (ctrl.value & 0x8000)
+			{
+				return false;
+			}
 
-		if (++v == count)
+			if (++ctrl.value == ctrl.count)
+			{
+				ctrl.value |= 0x8000;
+			}
+
+			return true;
+		};
+
+		static inline bool try_wait(barrier& ctrl)
 		{
-			v |= 0x8000;
+			if ((ctrl.value & 0x8000) == 0)
+			{
+				return false;
+			}
+
+			if (--ctrl.value == -0x8000)
+			{
+				ctrl.value = 0;
+			}
+
+			return true;
 		}
-
-		value = v;
-
-		return true;
 	};
+}
 
-	bool try_wait()
-	{
-		// extract m_value (repeat if >= 0), decrease it, set 0 if == 0x8000, insert it back
-		s16 v = value;
-
-		if (v >= 0)
-		{
-			return false;
-		}
-
-		if (--v == -0x8000)
-		{
-			v = 0;
-		}
-
-		value = v;
-
-		return true;
-	}
+struct CellSyncBarrier
+{
+	atomic_t<_sync::barrier> ctrl;
 };
-
-using CellSyncBarrier = atomic_t<sync_barrier_t>;
 
 CHECK_SIZE_ALIGN(CellSyncBarrier, 4, 4);
 
-struct sync_rwm_t // CellSyncRwm sync var
+namespace _sync
 {
-	be_t<u16> readers;
-	be_t<u16> writers;
-
-	bool try_read_begin()
+	struct rwlock // CellSyncRwm control variable
 	{
-		if (writers)
+		be_t<u16> readers;
+		be_t<u16> writers;
+
+		static inline bool try_read_begin(rwlock& ctrl)
 		{
-			return false;
+			if (ctrl.writers)
+			{
+				return false;
+			}
+
+			ctrl.readers++;
+			return true;
 		}
 
-		readers++;
-		return true;
-	}
-
-	bool try_read_end()
-	{
-		if (!readers)
+		static inline bool try_read_end(rwlock& ctrl)
 		{
-			return false;
+			if (ctrl.readers == 0)
+			{
+				return false;
+			}
+
+			ctrl.readers--;
+			return true;
 		}
 
-		readers--;
-		return true;
-	}
-
-	bool try_write_begin()
-	{
-		if (writers)
+		static inline bool try_write_begin(rwlock& ctrl)
 		{
-			return false;
-		}
+			if (ctrl.writers)
+			{
+				return false;
+			}
 
-		writers = 1;
-		return true;
-	}
-};
+			ctrl.writers = 1;
+			return true;
+		}
+	};
+}
 
 struct alignas(16) CellSyncRwm
 {
-	atomic_t<sync_rwm_t> ctrl; // sync var
+	atomic_t<_sync::rwlock> ctrl;
 
 	be_t<u32> size;
 	vm::bptr<void, u64> buffer;
@@ -153,110 +158,109 @@ struct alignas(16) CellSyncRwm
 
 CHECK_SIZE_ALIGN(CellSyncRwm, 16, 16);
 
-struct sync_queue_t // CellSyncQueue sync var
+namespace _sync
 {
-	be_t<u32> m_v1;
-	be_t<u32> m_v2;
-
-	bool try_push_begin(u32 depth, u32& position)
+	struct queue // CellSyncQueue control variable
 	{
-		const u32 v1 = m_v1;
-		const u32 v2 = m_v2;
-
-		// compare 5th byte with zero (break if not zero)
-		// compare (second u32 (u24) + first byte) with depth (break if greater or equal)
-		if ((v2 >> 24) || ((v2 & 0xffffff) + (v1 >> 24)) >= depth)
+		union
 		{
-			return false;
+			be_t<u32> x0;
+
+			bf_be_t<u32, 0, 24> next;
+			bf_be_t<u32, 24, 8> _pop;
+		};
+
+		union
+		{
+			be_t<u32> x4;
+
+			bf_be_t<u32, 0, 24> count;
+			bf_be_t<u32, 24, 8> _push;
+		};
+
+		static inline bool try_push_begin(queue& ctrl, u32 depth, u32& position)
+		{
+			const u32 count = ctrl.count;
+
+			if (ctrl._push || count + ctrl._pop >= depth)
+			{
+				return false;
+			}
+
+			position = ctrl.next;
+			ctrl.next = position + 1 != depth ? position + 1 : 0;
+			ctrl.count = count + 1;
+			ctrl._push = 1;
+			return true;
 		}
 
-		// extract first u32 (u24) (-> position), calculate (position + 1) % depth, insert it back
-		// insert 1 in 5th u8
-		// extract second u32 (u24), increase it, insert it back
-		position = (v1 & 0xffffff);
-		m_v1 = (v1 & 0xff000000) | ((position + 1) % depth);
-		m_v2 = (1 << 24) | ((v2 & 0xffffff) + 1);
-
-		return true;
-	}
-
-	bool try_pop_begin(u32 depth, u32& position)
-	{
-		const u32 v1 = m_v1;
-		const u32 v2 = m_v2;
-
-		// extract first u8, repeat if not zero
-		// extract second u32 (u24), subtract 5th u8, compare with zero, repeat if less or equal
-		if ((v1 >> 24) || ((v2 & 0xffffff) <= (v2 >> 24)))
+		static inline bool try_pop_begin(queue& ctrl, u32 depth, u32& position)
 		{
-			return false;
+			const u32 count = ctrl.count;
+
+			if (ctrl._pop || count <= ctrl._push)
+			{
+				return false;
+			}
+
+			ctrl._pop = 1;
+			position = ctrl.next + depth - count;
+			ctrl.count = count - 1;
+			return true;
 		}
 
-		// insert 1 in first u8
-		// extract first u32 (u24), add depth, subtract second u32 (u24), calculate (% depth), save to position
-		// extract second u32 (u24), decrease it, insert it back
-		m_v1 = 0x1000000 | v1;
-		position = ((v1 & 0xffffff) + depth - (v2 & 0xffffff)) % depth;
-		m_v2 = (v2 & 0xff000000) | ((v2 & 0xffffff) - 1);
-
-		return true;
-	}
-
-	bool try_peek_begin(u32 depth, u32& position)
-	{
-		const u32 v1 = m_v1;
-		const u32 v2 = m_v2;
-
-		if ((v1 >> 24) || ((v2 & 0xffffff) <= (v2 >> 24)))
+		static inline bool try_peek_begin(queue& ctrl, u32 depth, u32& position)
 		{
-			return false;
+			const u32 count = ctrl.count;
+
+			if (ctrl._pop || count <= ctrl._push)
+			{
+				return false;
+			}
+
+			ctrl._pop = 1;
+			position = ctrl.next + depth - count;
+			return true;
 		}
 
-		m_v1 = 0x1000000 | v1;
-		position = ((v1 & 0xffffff) + depth - (v2 & 0xffffff)) % depth;
-
-		return true;
-	}
-
-	bool try_clear_begin_1()
-	{
-		if (m_v1 & 0xff000000)
+		static inline bool try_clear_begin_1(queue& ctrl)
 		{
-			return false;
+			if (ctrl._pop)
+			{
+				return false;
+			}
+
+			ctrl._pop = 1;
+			return true;
 		}
 
-		m_v1 |= 0x1000000;
-
-		return true;
-	}
-
-	bool try_clear_begin_2()
-	{
-		if (m_v2 & 0xff000000)
+		static inline bool try_clear_begin_2(queue& ctrl)
 		{
-			return false;
+			if (ctrl._push)
+			{
+				return false;
+			}
+
+			ctrl._push = 1;
+			return true;
 		}
-
-		m_v2 |= 0x1000000;
-
-		return true;
-	}
-};
+	};
+}
 
 struct alignas(32) CellSyncQueue
 {
-	atomic_t<sync_queue_t> ctrl;
+	atomic_t<_sync::queue> ctrl;
 
 	be_t<u32> size;
 	be_t<u32> depth;
 	vm::bptr<u8, u64> buffer;
 	be_t<u64> reserved;
 
-	u32 check_depth()
+	u32 check_depth() const
 	{
 		const auto data = ctrl.load();
 
-		if ((data.m_v1 & 0xffffff) > depth || (data.m_v2 & 0xffffff) > depth)
+		if (data.next > depth || data.count > depth)
 		{
 			throw EXCEPTION("Invalid queue pointers");
 		}

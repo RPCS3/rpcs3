@@ -133,7 +133,7 @@ std::pair<Executable, llvm::ExecutionEngine *> Compiler::Compile(const std::stri
 
 	// Used to decode instructions
 	PPUDisAsm dis_asm(CPUDisAsm_DumpMode);
-	dis_asm.offset = vm::get_ptr<u8>(start_address);
+	dis_asm.offset = vm::ps3::_ptr<u8>(start_address);
 
 	m_recompilation_engine.Log() << "Recompiling block :\n\n";
 

@@ -61,6 +61,8 @@ static bool CheckHeader(const fs::file& pkg_f, PKGHeader& header)
 // PKG Decryption
 bool UnpackPKG(const fs::file& pkg_f, const std::string& dir, volatile f64& progress)
 {
+	const std::size_t BUF_SIZE = 8192 * 1024; // 8 MB
+
 	// Save current file offset (probably zero)
 	const u64 start_offset = pkg_f.seek(0, fsm::cur);
 
@@ -108,13 +110,9 @@ bool UnpackPKG(const fs::file& pkg_f, const std::string& dir, volatile f64& prog
 				// Initialize "debug key" for current position
 				input[7] = offset / 16 + i;
 
-				union
-				{
-					u8 _key[0x14];
-					u128 key;
-				};
+				u128 key;
 				
-				sha1(reinterpret_cast<u8*>(input), sizeof(input), _key);
+				sha1(reinterpret_cast<const u8*>(input), sizeof(input), reinterpret_cast<u8*>(&key));
 
 				buf[i] ^= key;
 			}
@@ -133,13 +131,9 @@ bool UnpackPKG(const fs::file& pkg_f, const std::string& dir, volatile f64& prog
 			// Increment "release key" for every block
 			for (u64 i = 0; i < blocks; i++, input++)
 			{
-				union
-				{
-					u8 _key[16];
-					u128 key;
-				};
+				u128 key;
 
-				aes_crypt_ecb(&ctx, AES_ENCRYPT, reinterpret_cast<u8*>(&input), _key);
+				aes_crypt_ecb(&ctx, AES_ENCRYPT, reinterpret_cast<const u8*>(&input), reinterpret_cast<u8*>(&key));
 
 				buf[i] ^= key;
 			}

@@ -79,14 +79,9 @@ protected:
 	std::function<void()> on_alloc;
 
 public:
-	Module() = delete;
 	Module(const char* name, void(*init)());
 
-	Module(Module& other) = delete;
-	Module(Module&& other) = delete;
-
-	Module& operator =(Module& other) = delete;
-	Module& operator =(Module&& other) = delete;
+	Module(const Module&) = delete; // Delete copy/move constructors and copy/move operators
 
 	~Module();
 
@@ -121,13 +116,13 @@ public:
 			//static_assert(std::is_trivially_copy_assignable<T>::value, "Module<> instance must be trivially copy-assignable");
 
 			// Allocate module instance and call the default constructor
-			new(vm::get_ptr<T>(m_addr = vm::alloc(sizeof(T), vm::main)))T{};
+			new(vm::base(m_addr = vm::alloc(sizeof(T), vm::main))) T();
 		};
 	}
 
 	T* operator ->() const
 	{
-		return vm::get_ptr<T>(m_addr);
+		return vm::_ptr<T>(m_addr);
 	}
 };
 

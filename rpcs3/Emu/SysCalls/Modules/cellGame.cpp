@@ -64,20 +64,10 @@ s32 cellHddGameCheck(PPUThread& ppu, u32 version, vm::cptr<char> dirName, u32 er
 		return CELL_HDDGAME_ERROR_PARAM;
 	}
 
-	struct _stack_t
-	{
-		CellHddGameSystemFileParam param;
-		CellHddGameCBResult result;
-		CellHddGameStatGet get;
-		CellHddGameStatSet set;
-	};
-
-	const vm::var<_stack_t> stack(ppu);
-
-	const auto param = stack.ptr(&_stack_t::param);
-	const auto result = stack.ptr(&_stack_t::result);
-	const auto get = stack.ptr(&_stack_t::get);
-	const auto set = stack.ptr(&_stack_t::set);
+	vm::var<CellHddGameSystemFileParam> param;
+	vm::var<CellHddGameCBResult> result;
+	vm::var<CellHddGameStatGet> get;
+	vm::var<CellHddGameStatSet> set;
 
 	get->hddFreeSizeKB = 40 * 1024 * 1024; // 40 GB, TODO: Use the free space of the computer's HDD where RPCS3 is being run.
 	get->isNewData = CELL_HDDGAME_ISNEWDATA_EXIST;
@@ -403,20 +393,9 @@ s32 cellGameDataCheckCreate2(PPUThread& ppu, u32 version, vm::cptr<char> dirName
 		return CELL_GAMEDATA_ERROR_BROKEN;
 	}
 
-	struct _stack_t
-	{
-		CellGameDataCBResult result;
-		CellGameDataStatGet get;
-		CellGameDataStatSet set;
-	};
-
-	const vm::var<_stack_t> stack(ppu);
-
-	const auto cbResult = stack.ptr(&_stack_t::result);
-	const auto cbGet = stack.ptr(&_stack_t::get);
-	const auto cbSet = stack.ptr(&_stack_t::set);
-
-	*cbGet = {};
+	vm::var<CellGameDataCBResult> cbResult;
+	vm::var<CellGameDataStatGet>  cbGet;
+	vm::var<CellGameDataStatSet>  cbSet;
 
 	// TODO: Use the free space of the computer's HDD where RPCS3 is being run.
 	cbGet->hddFreeSizeKB = 40000000; //40 GB

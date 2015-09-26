@@ -45,8 +45,8 @@ s32 cellAudioInit()
 	g_audio.indexes = g_audio.indexes ? g_audio.indexes : vm::alloc(sizeof32(u64) * AUDIO_PORT_COUNT, vm::main);
 
 	// clear memory
-	memset(vm::get_ptr<void>(g_audio.buffer), 0, AUDIO_PORT_OFFSET * AUDIO_PORT_COUNT);
-	memset(vm::get_ptr<void>(g_audio.indexes), 0, sizeof32(u64) * AUDIO_PORT_COUNT);
+	std::memset(vm::base(g_audio.buffer), 0, AUDIO_PORT_OFFSET * AUDIO_PORT_COUNT);
+	std::memset(vm::base(g_audio.indexes), 0, sizeof32(u64) * AUDIO_PORT_COUNT);
 
 	// check thread status
 	if (g_audio.thread.joinable())
@@ -182,7 +182,7 @@ s32 cellAudioInit()
 				const u32 position = port.tag % port.block; // old value
 				const u32 buf_addr = port.addr + position * block_size * sizeof(float);
 
-				auto buf = vm::get_ptr<be_t<float>>(buf_addr);
+				auto buf = vm::_ptr<f32>(buf_addr);
 
 				static const float k = 1.0f; // may be 1.0f
 				const float& m = port.level;

@@ -138,7 +138,7 @@ next:
 		
 		case vdecDecodeAu:
 		{
-			memcpy(buf, vm::get_ptr<void>(vdec.reader.addr), vdec.reader.size);
+			std::memcpy(buf, vm::base(vdec.reader.addr), vdec.reader.size);
 
 			buf += vdec.reader.size;
 			buf_size -= vdec.reader.size;
@@ -176,7 +176,7 @@ next:
 	}
 	else
 	{
-		memcpy(buf, vm::get_ptr<void>(vdec.reader.addr), buf_size);
+		std::memcpy(buf, vm::base(vdec.reader.addr), buf_size);
 
 		vdec.reader.addr += buf_size;
 		vdec.reader.size -= buf_size;
@@ -767,7 +767,7 @@ s32 cellVdecGetPicture(u32 handle, vm::cptr<CellVdecPicFormat> format, vm::ptr<u
 	return CELL_OK;
 }
 
-s32 cellVdecGetPictureExt(PPUThread& ppu, u32 handle, vm::cptr<CellVdecPicFormat2> format2, vm::ptr<u8> outBuff, u32 arg4)
+s32 cellVdecGetPictureExt(u32 handle, vm::cptr<CellVdecPicFormat2> format2, vm::ptr<u8> outBuff, u32 arg4)
 {
 	cellVdec.Warning("cellVdecGetPictureExt(handle=0x%x, format2=*0x%x, outBuff=*0x%x, arg4=*0x%x)", handle, format2, outBuff, arg4);
 
@@ -776,7 +776,7 @@ s32 cellVdecGetPictureExt(PPUThread& ppu, u32 handle, vm::cptr<CellVdecPicFormat
 		throw EXCEPTION("Unknown arguments (arg4=*0x%x, unk0=0x%x, unk1=0x%x)", arg4, format2->unk0, format2->unk1);
 	}
 
-	const vm::var<CellVdecPicFormat> format(ppu);
+	vm::var<CellVdecPicFormat> format;
 	format->formatType = format2->formatType;
 	format->colorMatrixType = format2->colorMatrixType;
 	format->alpha = format2->alpha;
@@ -804,7 +804,7 @@ s32 cellVdecGetPicItem(u32 handle, vm::pptr<CellVdecPicItem> picItem)
 
 	AVFrame& frame = *vf.data;
 
-	const auto info = vm::ptr<CellVdecPicItem>::make(vdec->memAddr + vdec->memBias);
+	const vm::ptr<CellVdecPicItem> info{ vdec->memAddr + vdec->memBias, vm::addr };
 
 	vdec->memBias += 512;
 	if (vdec->memBias + 512 > vdec->memSize)
@@ -832,7 +832,7 @@ s32 cellVdecGetPicItem(u32 handle, vm::pptr<CellVdecPicItem> picItem)
 
 	if (vdec->type == CELL_VDEC_CODEC_TYPE_AVC)
 	{
-		auto avc = vm::ptr<CellVdecAvcInfo>::make(info.addr() + sizeof32(CellVdecPicItem));
+		const vm::ptr<CellVdecAvcInfo> avc{ info.addr() + sizeof32(CellVdecPicItem), vm::addr };
 
 		avc->horizontalSize = frame.width;
 		avc->verticalSize = frame.height;

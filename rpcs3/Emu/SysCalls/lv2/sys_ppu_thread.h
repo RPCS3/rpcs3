@@ -42,7 +42,7 @@ enum : u32
 };
 
 // Aux
-u32 ppu_thread_create(u32 entry, u64 arg, s32 prio, u32 stacksize, bool is_joinable, bool is_interrupt, std::string name, std::function<void(PPUThread&)> task = nullptr);
+u32 ppu_thread_create(u32 entry, u64 arg, s32 prio, u32 stacksize, const std::string& name, std::function<void(PPUThread&)> task = nullptr);
 
 // SysCalls
 void _sys_ppu_thread_exit(PPUThread& ppu, u64 errorcode);

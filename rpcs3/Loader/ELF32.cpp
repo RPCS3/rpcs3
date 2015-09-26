@@ -444,7 +444,7 @@ namespace loader
 						if (filesz)
 						{
 							m_stream->Seek(handler::get_stream_offset() + offset);
-							m_stream->Read(vm::get_ptr(vaddr), filesz);
+							m_stream->Read(vm::base(vaddr), filesz);
 						}
 					}
 					break;

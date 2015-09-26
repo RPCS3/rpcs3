@@ -89,7 +89,7 @@ s32 pngDecOpen(PMainHandle dec, PPSubHandle subHandle, PSrc src, POpenInfo openI
 	stream->fd = 0;
 	stream->src = *src;
 
-	switch (src->srcSelect.value())
+	switch (src->srcSelect)
 	{
 	case CELL_PNGDEC_BUFFER:
 		stream->fileSize = src->streamSize;
@@ -150,7 +150,7 @@ s32 pngReadHeader(PSubHandle stream, vm::ptr<CellPngDecInfo> info, PExtInfo extI
 	// Write the header to buffer
 	u8 buffer[34]; be_t<u32>* buffer_32 = reinterpret_cast<be_t<u32>*>(buffer);
 
-	switch (stream->src.srcSelect.value())
+	switch (stream->src.srcSelect)
 	{
 	case CELL_PNGDEC_BUFFER:
 		std::memcpy(buffer, stream->src.streamPtr.get_ptr(), sizeof(buffer));
@@ -209,7 +209,7 @@ s32 pngDecSetParameter(PSubHandle stream, PInParam inParam, POutParam outParam, 
 	current_outParam.outputHeight = current_info.imageHeight;
 	current_outParam.outputColorSpace = inParam->outputColorSpace;
 
-	switch (current_outParam.outputColorSpace.value())
+	switch (current_outParam.outputColorSpace)
 	{
 	case CELL_PNGDEC_PALETTE:
 	case CELL_PNGDEC_GRAYSCALE:
@@ -250,7 +250,7 @@ s32 pngDecodeData(PSubHandle stream, vm::ptr<u8> data, PDataCtrlParam dataCtrlPa
 	// Copy the PNG file to a buffer
 	std::unique_ptr<u8[]> png(new u8[fileSize]);
 
-	switch (stream->src.srcSelect.value())
+	switch (stream->src.srcSelect)
 	{
 	case CELL_PNGDEC_BUFFER:
 		std::memcpy(png.get(), stream->src.streamPtr.get_ptr(), fileSize);
@@ -282,7 +282,7 @@ s32 pngDecodeData(PSubHandle stream, vm::ptr<u8> data, PDataCtrlParam dataCtrlPa
 	const int bytesPerLine = (u32)dataCtrlParam->outputBytesPerLine;
 	uint image_size = width * height;
 
-	switch (current_outParam.outputColorSpace.value())
+	switch (current_outParam.outputColorSpace)
 	{
 	case CELL_PNGDEC_RGB:
 	case CELL_PNGDEC_RGBA:

@@ -73,7 +73,7 @@ void GLTexture::init(rsx::texture& tex)
 	int format = tex.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
 	bool is_swizzled = !(tex.format() & CELL_GCM_TEXTURE_LN);
 
-	auto pixels = vm::get_ptr<const u8>(texaddr);
+	const u8* pixels = vm::ps3::_ptr<u8>(texaddr);
 	u8 *unswizzledPixels;
 	static const GLint glRemapStandard[4] = { GL_ALPHA, GL_RED, GL_GREEN, GL_BLUE };
 	// NOTE: This must be in ARGB order in all forms below.
@@ -470,7 +470,7 @@ void GLTexture::save(rsx::texture& tex, const std::string& name)
 		return;
 	}
 
-	fs::file(name + ".raw", o_write | o_create | o_trunc).write(alldata, texPixelCount * 4);
+	fs::file(name + ".raw", fom::write | fom::create | fom::trunc).write(alldata, texPixelCount * 4);
 
 	u8* data = new u8[texPixelCount * 3];
 	u8* alpha = new u8[texPixelCount];
@@ -1300,7 +1300,7 @@ bool GLGSRender::load_program()
 
 	for (u32 constant_offset : m_prog_buffer.getFragmentConstantOffsetsCache(&fragment_program))
 	{
-		be_t<u32> *data = vm::get_ptr<be_t<u32>>(fragment_program.addr + constant_offset);
+		auto data = vm::ps3::_ptr<u32>(fragment_program.addr + constant_offset);
 
 		u32 c0 = (data[0] >> 16 | data[0] << 16);
 		u32 c1 = (data[1] >> 16 | data[1] << 16);
@@ -1544,7 +1544,7 @@ void GLGSRender::read_buffers()
 			for (int i = index; i < index + count; ++i)
 			{
 				u32 color_address = rsx::get_address(rsx::method_registers[mr_color_offset[i]], rsx::method_registers[mr_color_dma[i]]);
-				__glcheck m_draw_tex_color[i].copy_from(vm::get_ptr(color_address), color_format.format, color_format.type);
+				__glcheck m_draw_tex_color[i].copy_from(vm::base(color_address), color_format.format, color_format.type);
 			}
 		};
 
@@ -1591,7 +1591,7 @@ void GLGSRender::read_buffers()
 			if (m_surface.depth_format == CELL_GCM_SURFACE_Z16)
 			{
 				u16 *dst = (u16*)pixels;
-				const be_t<u16>* src = vm::get_ptr<const be_t<u16>>(depth_address);
+				const be_t<u16>* src = vm::ps3::_ptr<u16>(depth_address);
 				for (int i = 0, end = m_draw_tex_depth_stencil.width() * m_draw_tex_depth_stencil.height(); i < end; ++i)
 				{
 					dst[i] = src[i];
@@ -1600,7 +1600,7 @@ void GLGSRender::read_buffers()
 			else
 			{
 				u32 *dst = (u32*)pixels;
-				const be_t<u32>* src = vm::get_ptr<const be_t<u32>>(depth_address);
+				const be_t<u32>* src = vm::ps3::_ptr<u32>(depth_address);
 				for (int i = 0, end = m_draw_tex_depth_stencil.width() * m_draw_tex_depth_stencil.height(); i < end; ++i)
 				{
 					dst[i] = src[i];
@@ -1637,7 +1637,7 @@ void GLGSRender::write_buffers()
 				//	//u32 depth_address = rsx::get_address(rsx::method_registers[NV4097_SET_SURFACE_ZETA_OFFSET], rsx::method_registers[NV4097_SET_CONTEXT_DMA_ZETA]);
 
 				//	const u32 *src = (const u32*)pixels;
-				//	be_t<u32>* dst = vm::get_ptr<be_t<u32>>(color_address);
+				//	be_t<u32>* dst = vm::ps3::_ptr<u32>(color_address);
 				//	for (int i = 0, end = m_draw_tex_color[i].width() * m_draw_tex_color[i].height(); i < end; ++i)
 				//	{
 				//		dst[i] = src[i];
@@ -1646,7 +1646,7 @@ void GLGSRender::write_buffers()
 				//}, gl::buffer::access::read);
 
 				u32 color_address = rsx::get_address(rsx::method_registers[mr_color_offset[i]], rsx::method_registers[mr_color_dma[i]]);
-				__glcheck m_draw_tex_color[i].copy_to(vm::get_ptr(color_address), color_format.format, color_format.type);
+				__glcheck m_draw_tex_color[i].copy_to(vm::base(color_address), color_format.format, color_format.type);
 			}
 		};
 
@@ -1695,7 +1695,7 @@ void GLGSRender::write_buffers()
 			if (m_surface.depth_format == CELL_GCM_SURFACE_Z16)
 			{
 				const u16 *src = (const u16*)pixels;
-				be_t<u16>* dst = vm::get_ptr<be_t<u16>>(depth_address);
+				be_t<u16>* dst = vm::ps3::_ptr<u16>(depth_address);
 				for (int i = 0, end = m_draw_tex_depth_stencil.width() * m_draw_tex_depth_stencil.height(); i < end; ++i)
 				{
 					dst[i] = src[i];
@@ -1704,7 +1704,7 @@ void GLGSRender::write_buffers()
 			else
 			{
 				const u32 *src = (const u32*)pixels;
-				be_t<u32>* dst = vm::get_ptr<be_t<u32>>(depth_address);
+				be_t<u32>* dst = vm::ps3::_ptr<u32>(depth_address);
 				for (int i = 0, end = m_draw_tex_depth_stencil.width() * m_draw_tex_depth_stencil.height(); i < end; ++i)
 				{
 					dst[i] = src[i];
@@ -1771,8 +1771,7 @@ void GLGSRender::flip(int buffer)
 		glDisable(GL_LOGIC_OP);
 		glDisable(GL_CULL_FACE);
 
-		__glcheck m_flip_tex_color.copy_from(vm::get_ptr(buffer_address),
-			gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8);
+		__glcheck m_flip_tex_color.copy_from(vm::base(buffer_address), gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8);
 	}
 
 	areai screen_area = coordi({}, { (int)buffer_width, (int)buffer_height });

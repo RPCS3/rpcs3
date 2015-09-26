@@ -44,27 +44,18 @@ private:
 
 	class XmmLink
 	{
-		friend class spu_recompiler;
+		asmjit::X86XmmVar* m_var;
 
-		asmjit::X86XmmVar* const m_var;
-
+	public:
 		XmmLink(asmjit::X86XmmVar*& xmm_var)
 			: m_var(xmm_var)
 		{
 			xmm_var = nullptr;
 		}
 
-	public:
-		XmmLink() = delete;
+		XmmLink(XmmLink&&) = default; // MoveConstructible + delete copy constructor and copy/move operators
 
-		XmmLink(const XmmLink&) = delete;
-
-		XmmLink(XmmLink&& right)
-			: m_var(right.m_var)
-		{
-		}
-
-		inline operator const asmjit::X86XmmVar&() const
+		operator asmjit::X86XmmVar&() const
 		{
 			return *m_var;
 		}

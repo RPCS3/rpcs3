@@ -141,7 +141,7 @@ namespace fmt
 		return src;
 	}
 
-	std::string to_hex(u64 value, size_t count = 1);
+	std::string to_hex(u64 value, u64 count = 1);
 	std::string to_udec(u64 value);
 	std::string to_sdec(s64 value);
 

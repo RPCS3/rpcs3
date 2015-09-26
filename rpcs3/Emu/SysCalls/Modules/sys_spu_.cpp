@@ -84,7 +84,7 @@ s32 sys_raw_spu_image_load(PPUThread& ppu, s32 id, vm::ptr<sys_spu_image> img)
 
 	const auto stamp0 = get_system_time();
 
-	memcpy(vm::get_ptr<void>(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * id), vm::get_ptr<void>(img->addr), 256 * 1024);
+	std::memcpy(vm::base(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * id), vm::base(img->addr), 256 * 1024);
 
 	const auto stamp1 = get_system_time();
 

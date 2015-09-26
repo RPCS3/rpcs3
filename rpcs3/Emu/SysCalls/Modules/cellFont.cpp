@@ -51,7 +51,7 @@ s32 cellFontOpenFontMemory(vm::ptr<CellFontLibrary> library, u32 fontAddr, u32 f
 
 	font->stbfont = (stbtt_fontinfo*)((u8*)&(font->stbfont) + sizeof(void*)); // hack: use next bytes of the struct
 
-	if (!stbtt_InitFont(font->stbfont, vm::get_ptr<unsigned char>(fontAddr), 0))
+	if (!stbtt_InitFont(font->stbfont, vm::_ptr<unsigned char>(fontAddr), 0))
 		return CELL_FONT_ERROR_FONT_OPEN_FAILED;
 
 	font->renderer_addr = 0;
@@ -73,7 +73,7 @@ s32 cellFontOpenFontFile(vm::ptr<CellFontLibrary> library, vm::cptr<char> fontPa
 
 	u32 fileSize = (u32)f.GetSize();
 	u32 bufferAddr = vm::alloc(fileSize, vm::main); // Freed in cellFontCloseFont
-	f.Read(vm::get_ptr<void>(bufferAddr), fileSize);
+	f.Read(vm::base(bufferAddr), fileSize);
 	s32 ret = cellFontOpenFontMemory(library, bufferAddr, fileSize, subNum, uniqueId, font);
 	font->origin = CELL_FONT_OPEN_FONT_FILE;
 
@@ -155,9 +155,7 @@ s32 cellFontOpenFontset(PPUThread& ppu, vm::ptr<CellFontLibrary> library, vm::pt
 		return CELL_FONT_ERROR_NO_SUPPORT_FONTSET;
 	}
 
-	const vm::var<char> f(ppu, (u32)file.length() + 1);
-	memcpy(f.get_ptr(), file.c_str(), file.size() + 1);
-	s32 ret = cellFontOpenFontFile(library, f, 0, 0, font); //TODO: Find the correct values of subNum, uniqueId
+	s32 ret = cellFontOpenFontFile(library, vm::make_str(file), 0, 0, font); //TODO: Find the correct values of subNum, uniqueId
 	font->origin = CELL_FONT_OPEN_FONTSET;
 
 	return ret;
@@ -324,7 +322,7 @@ s32 cellFontRenderCharGlyphImage(vm::ptr<CellFont> font, u32 code, vm::ptr<CellF
 	baseLineY = (int)((float)ascent * scale); // ???
 
 	// Move the rendered character to the surface
-	unsigned char* buffer = vm::get_ptr<unsigned char>(surface->buffer.addr());
+	unsigned char* buffer = vm::_ptr<unsigned char>(surface->buffer.addr());
 	for (u32 ypos = 0; ypos < (u32)height; ypos++)
 	{
 		if ((u32)y + ypos + yoff + baseLineY >= surface->height)

@@ -24,20 +24,20 @@ s32 cellFsOpen(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, vm::cptr<void> a
 	return sys_fs_open(path, flags, fd, flags & CELL_FS_O_CREAT ? CELL_FS_S_IRUSR | CELL_FS_S_IWUSR : 0, arg, size);
 }
 
-s32 cellFsRead(PPUThread& ppu, u32 fd, vm::ptr<void> buf, u64 nbytes, vm::ptr<u64> nread)
+s32 cellFsRead(u32 fd, vm::ptr<void> buf, u64 nbytes, vm::ptr<u64> nread)
 {
 	cellFs.Log("cellFsRead(fd=0x%x, buf=0x%x, nbytes=0x%llx, nread=0x%x)", fd, buf, nbytes, nread);
 
 	// call the syscall
-	return sys_fs_read(fd, buf, nbytes, nread ? nread : vm::var<u64>(ppu));
+	return sys_fs_read(fd, buf, nbytes, nread ? nread : vm::var<u64>{});
 }
 
-s32 cellFsWrite(PPUThread& ppu, u32 fd, vm::cptr<void> buf, u64 nbytes, vm::ptr<u64> nwrite)
+s32 cellFsWrite(u32 fd, vm::cptr<void> buf, u64 nbytes, vm::ptr<u64> nwrite)
 {
 	cellFs.Log("cellFsWrite(fd=0x%x, buf=*0x%x, nbytes=0x%llx, nwrite=*0x%x)", fd, buf, nbytes, nwrite);
 
 	// call the syscall
-	return sys_fs_write(fd, buf, nbytes, nwrite ? nwrite : vm::var<u64>(ppu));
+	return sys_fs_write(fd, buf, nbytes, nwrite ? nwrite : vm::var<u64>{});
 }
 
 s32 cellFsClose(u32 fd)
@@ -147,22 +147,22 @@ s32 cellFsFsync(u32 fd)
 	return CELL_OK;
 }
 
-s32 cellFsFGetBlockSize(PPUThread& ppu, u32 fd, vm::ptr<u64> sector_size, vm::ptr<u64> block_size)
+s32 cellFsFGetBlockSize(u32 fd, vm::ptr<u64> sector_size, vm::ptr<u64> block_size)
 {
 	cellFs.Log("cellFsFGetBlockSize(fd=0x%x, sector_size=*0x%x, block_size=*0x%x)", fd, sector_size, block_size);
 
 	// call the syscall
-	return sector_size && block_size ? sys_fs_fget_block_size(fd, sector_size, block_size, vm::var<u64>(ppu), vm::var<u64>(ppu)) : CELL_FS_EFAULT;
+	return sector_size && block_size ? sys_fs_fget_block_size(fd, sector_size, block_size, vm::var<u64>{}, vm::var<u64>{}) : CELL_FS_EFAULT;
 }
 
-s32 cellFsGetBlockSize(PPUThread& ppu, vm::cptr<char> path, vm::ptr<u64> sector_size, vm::ptr<u64> block_size)
+s32 cellFsGetBlockSize(vm::cptr<char> path, vm::ptr<u64> sector_size, vm::ptr<u64> block_size)
 {
 	cellFs.Warning("cellFsGetBlockSize(path=*0x%x, sector_size=*0x%x, block_size=*0x%x) -> sys_fs_get_block_size()", path, sector_size, block_size);
 
 	// TODO
 
 	// call the syscall
-	return sys_fs_get_block_size(path, sector_size, block_size, vm::var<u64>(ppu));
+	return sys_fs_get_block_size(path, sector_size, block_size, vm::var<u64>{});
 }
 
 s32 cellFsTruncate(vm::cptr<char> path, u64 size)
@@ -494,7 +494,7 @@ s32 cellFsStReadStart(u32 fd, u64 offset, u64 size)
 
 	file->st_read_size = size;
 
-	file->st_thread.start([=]{ return fmt::format("FS ST Thread[0x%x]", fd); }, [=]()
+	file->st_thread.start(COPY_EXPR(fmt::format("FS ST Thread[0x%x]", fd)), [=]()
 	{
 		std::unique_lock<std::mutex> lock(file->mutex);
 
@@ -509,7 +509,7 @@ s32 cellFsStReadStart(u32 fd, u64 offset, u64 size)
 				// read data
 				auto old = file->file->Tell();
 				file->file->Seek(offset + file->st_total_read);
-				auto res = file->file->Read(vm::get_ptr(position), file->st_block_size);
+				auto res = file->file->Read(vm::base(position), file->st_block_size);
 				file->file->Seek(old);
 
 				// notify
@@ -526,9 +526,9 @@ s32 cellFsStReadStart(u32 fd, u64 offset, u64 size)
 				{
 					const auto func = file->st_callback.exchange({}).func;
 
-					Emu.GetCallbackManager().Async([=](CPUThread& ppu)
+					Emu.GetCallbackManager().Async([=](PPUThread& ppu)
 					{
-						func(static_cast<PPUThread&>(ppu), fd, available);
+						func(ppu, fd, available);
 					});
 				}
 			}
@@ -600,8 +600,8 @@ s32 cellFsStRead(u32 fd, vm::ptr<u8> buf, u64 size, vm::ptr<u64> rsize)
 	
 	// copy data
 	const u64 first_size = std::min<u64>(copy_size, file->st_ringbuf_size - (position - file->st_buffer));
-	memcpy(buf.get_ptr(), vm::get_ptr(position), first_size);
-	memcpy((buf + first_size).get_ptr(), vm::get_ptr(file->st_buffer), copy_size - first_size);
+	std::memcpy(buf.get_ptr(), vm::base(position), first_size);
+	std::memcpy((buf + first_size).get_ptr(), vm::base(file->st_buffer), copy_size - first_size);
 
 	// notify
 	file->st_copied += copy_size;
@@ -823,7 +823,7 @@ s32 sdata_unpack(const std::string& packed_file, const std::string& unpacked_fil
 	return CELL_OK;
 }
 
-s32 cellFsSdataOpen(PPUThread& ppu, vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, vm::cptr<void> arg, u64 size)
+s32 cellFsSdataOpen(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, vm::cptr<void> arg, u64 size)
 {
 	cellFs.Notice("cellFsSdataOpen(path=*0x%x, flags=%#o, fd=*0x%x, arg=*0x%x, size=0x%llx)", path, flags, fd, arg, size);
 
@@ -832,17 +832,7 @@ s32 cellFsSdataOpen(PPUThread& ppu, vm::cptr<char> path, s32 flags, vm::ptr<u32>
 		return CELL_FS_EINVAL;
 	}
 
-	struct _arg_t
-	{
-		be_t<u32> a, b;
-	};
-
-	const vm::var<_arg_t> _arg(ppu);
-
-	_arg->a = 0x180;
-	_arg->b = 0x10;
-
-	return cellFsOpen(path, CELL_FS_O_RDONLY, fd, _arg, 8);
+	return cellFsOpen(path, CELL_FS_O_RDONLY, fd, vm::make_var<be_t<u32>[2]>({ 0x180, 0x10 }), 8);
 
 	// Don't implement sdata decryption in this function, it should be done in sys_fs_open() syscall or somewhere else
 
@@ -901,9 +891,9 @@ void fsAio(vm::ptr<CellFsAio> aio, bool write, s32 xid, fs_aio_cb_t func)
 	}
 
 	// should be executed directly by FS AIO thread
-	Emu.GetCallbackManager().Async([=](CPUThread& ppu)
+	Emu.GetCallbackManager().Async([=](PPUThread& ppu)
 	{
-		func(static_cast<PPUThread&>(ppu), aio, error, xid, result);
+		func(ppu, aio, error, xid, result);
 	});
 }
 

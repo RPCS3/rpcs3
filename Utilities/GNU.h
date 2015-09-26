@@ -45,16 +45,16 @@
 #define _byteswap_uint64(x) __builtin_bswap64(x)
 #define INFINITE 0xFFFFFFFF
 
-inline uint64_t __umulh(uint64_t a, uint64_t b)
+inline std::uint64_t __umulh(std::uint64_t a, std::uint64_t b)
 {
-	uint64_t result;
+	std::uint64_t result;
 	__asm__("mulq %[b]" : "=d" (result) : [a] "a" (a), [b] "rm" (b));
 	return result;
 }
 
-inline int64_t  __mulh(int64_t a, int64_t b)
+inline std::int64_t  __mulh(std::int64_t a, std::int64_t b)
 {
-	int64_t result;
+	std::int64_t result;
 	__asm__("imulq %[b]" : "=d" (result) : [a] "a" (a), [b] "rm" (b));
 	return result;
 }
@@ -81,202 +81,186 @@ int clock_gettime(clockid_t clk_id, struct timespec *tp);
 #endif /* __GNUG__ */
 
 #if defined(_MSC_VER)
+
 // Unsigned 128-bit integer implementation
-struct alignas(16) uint128_t
+struct alignas(16) u128
 {
-	uint64_t lo, hi;
+	std::uint64_t lo, hi;
 
-	uint128_t() = default;
+	u128() = default;
 
-	uint128_t(uint64_t l)
+	u128(const u128&) = default;
+
+	u128(std::uint64_t l)
 		: lo(l)
 		, hi(0)
 	{
 	}
 
-	[[deprecated("Not implemented")]] inline uint128_t operator +(const uint128_t& r) const
+	u128 operator +(const u128& r) const
 	{
-		return{};
-	}
-
-	inline uint128_t operator +(uint64_t r) const
-	{
-		uint128_t value;
-		value.lo = lo + r;
-		value.hi = value.lo < r ? hi + 1 : hi;
+		u128 value;
+		_addcarry_u64(_addcarry_u64(0, r.lo, lo, &value.lo), r.hi, hi, &value.hi);
 		return value;
 	}
 
-	[[deprecated("Not implemented")]] inline uint128_t operator -(const uint128_t& r) const
+	friend u128 operator +(const u128& l, std::uint64_t r)
 	{
-		return{};
-	}
-
-	inline uint128_t operator -(uint64_t r) const
-	{
-		uint128_t value;
-		value.lo = lo - r;
-		value.hi = lo < r ? hi - 1 : hi;
+		u128 value;
+		_addcarry_u64(_addcarry_u64(0, r, l.lo, &value.lo), l.hi, 0, &value.hi);
 		return value;
 	}
 
-	inline uint128_t operator +() const
+	friend u128 operator +(std::uint64_t l, const u128& r)
+	{
+		u128 value;
+		_addcarry_u64(_addcarry_u64(0, r.lo, l, &value.lo), 0, r.hi, &value.hi);
+		return value;
+	}
+
+	u128 operator -(const u128& r) const
+	{
+		u128 value;
+		_subborrow_u64(_subborrow_u64(0, r.lo, lo, &value.lo), r.hi, hi, &value.hi);
+		return value;
+	}
+
+	friend u128 operator -(const u128& l, std::uint64_t r)
+	{
+		u128 value;
+		_subborrow_u64(_subborrow_u64(0, r, l.lo, &value.lo), 0, l.hi, &value.hi);
+		return value;
+	}
+
+	friend u128 operator -(std::uint64_t l, const u128& r)
+	{
+		u128 value;
+		_subborrow_u64(_subborrow_u64(0, r.lo, l, &value.lo), r.hi, 0, &value.hi);
+		return value;
+	}
+
+	u128 operator +() const
 	{
 		return *this;
 	}
 
-	inline uint128_t operator -() const
+	u128 operator -() const
 	{
-		uint128_t value;
-		value.lo = ~lo + 1;
-		value.hi = lo ? ~hi : ~hi + 1;
+		u128 value;
+		_subborrow_u64(_subborrow_u64(0, lo, 0, &value.lo), hi, 0, &value.hi);
 		return value;
 	}
 
-	inline uint128_t& operator ++()
+	u128& operator ++()
 	{
-		if (!++lo) ++hi;
+		_addcarry_u64(_addcarry_u64(0, 1, lo, &lo), 0, hi, &hi);
 		return *this;
 	}
 
-	inline uint128_t operator ++(int)
+	u128 operator ++(int)
 	{
-		uint128_t value = *this;
-		if (!++lo) ++hi;
+		u128 value = *this;
+		_addcarry_u64(_addcarry_u64(0, 1, lo, &lo), 0, hi, &hi);
 		return value;
 	}
 
-	inline uint128_t& operator --()
+	u128& operator --()
 	{
-		if (!lo--) hi--;
+		_subborrow_u64(_subborrow_u64(0, 1, lo, &lo), 0, hi, &hi);
 		return *this;
 	}
 
-	inline uint128_t operator --(int)
+	u128 operator --(int)
 	{
-		uint128_t value = *this;
-		if (!lo--) hi--;
+		u128 value = *this;
+		_subborrow_u64(_subborrow_u64(0, 1, lo, &lo), 0, hi, &hi);
 		return value;
 	}
 
-	inline uint128_t operator ~() const
+	u128 operator ~() const
 	{
-		uint128_t value;
+		u128 value;
 		value.lo = ~lo;
 		value.hi = ~hi;
 		return value;
 	}
 
-	inline uint128_t operator &(const uint128_t& r) const
+	u128 operator &(const u128& r) const
 	{
-		uint128_t value;
+		u128 value;
 		value.lo = lo & r.lo;
 		value.hi = hi & r.hi;
 		return value;
 	}
 
-	inline uint128_t operator |(const uint128_t& r) const
+	u128 operator |(const u128& r) const
 	{
-		uint128_t value;
+		u128 value;
 		value.lo = lo | r.lo;
 		value.hi = hi | r.hi;
 		return value;
 	}
 
-	inline uint128_t operator ^(const uint128_t& r) const
+	u128 operator ^(const u128& r) const
 	{
-		uint128_t value;
+		u128 value;
 		value.lo = lo ^ r.lo;
 		value.hi = hi ^ r.hi;
 		return value;
 	}
 
-	[[deprecated("Not implemented")]] inline uint128_t& operator +=(const uint128_t& r)
+	u128& operator +=(const u128& r)
 	{
+		_addcarry_u64(_addcarry_u64(0, r.lo, lo, &lo), r.hi, hi, &hi);
 		return *this;
 	}
 
-	inline uint128_t& operator +=(uint64_t r)
+	u128& operator +=(uint64_t r)
 	{
-		hi = (lo += r) < r ? hi + 1 : hi;
+		_addcarry_u64(_addcarry_u64(0, r, lo, &lo), 0, hi, &hi);
 		return *this;
 	}
 
-	[[deprecated("Not implemented")]] inline uint128_t& operator -=(const uint128_t& r)
-	{
-		return *this;
-	}
-
-	inline uint128_t& operator &=(const uint128_t& r)
+	u128& operator &=(const u128& r)
 	{
 		lo &= r.lo;
 		hi &= r.hi;
 		return *this;
 	}
 
-	inline uint128_t& operator |=(const uint128_t& r)
+	u128& operator |=(const u128& r)
 	{
 		lo |= r.lo;
 		hi |= r.hi;
 		return *this;
 	}
 
-	inline uint128_t& operator ^=(const uint128_t& r)
+	u128& operator ^=(const u128& r)
 	{
 		lo ^= r.lo;
 		hi ^= r.hi;
 		return *this;
 	}
 };
-
-using __uint128_t = uint128_t;
 #endif
 
-inline uint32_t cntlz32(uint32_t arg)
+inline std::uint32_t cntlz32(std::uint32_t arg)
 {
 #if defined(_MSC_VER)
 	unsigned long res;
-	if (!_BitScanReverse(&res, arg))
-	{
-		return 32;
-	}
-	else
-	{
-		return res ^ 31;
-	}
+	return _BitScanReverse(&res, arg) ? res ^ 31 : 32;
 #else
-	if (arg)
-	{
-		return __builtin_clzll((uint64_t)arg) - 32;
-	}
-	else
-	{
-		return 32;
-	}
+	return arg ? __builtin_clzll(arg) - 32 : 32;
 #endif
 }
 
-inline uint64_t cntlz64(uint64_t arg)
+inline std::uint64_t cntlz64(std::uint64_t arg)
 {
 #if defined(_MSC_VER)
 	unsigned long res;
-	if (!_BitScanReverse64(&res, arg))
-	{
-		return 64;
-	}
-	else
-	{
-		return res ^ 63;
-	}
+	return _BitScanReverse64(&res, arg) ? res ^ 63 : 64;
 #else
-	if (arg)
-	{
-		return __builtin_clzll(arg);
-	}
-	else
-	{
-		return 64;
-	}
+	return arg ? __builtin_clzll(arg) : 64;
 #endif
 }
 
