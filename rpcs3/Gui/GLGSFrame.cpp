@@ -10,6 +10,7 @@ GLGSFrame::GLGSFrame()
 	: GSFrame(nullptr, "GSFrame[OpenGL]")
 	, m_frames(0)
 {
+	SetIcon(wxICON(frame_icon));
 	canvas = new wxGLCanvas(this, wxID_ANY, NULL);
 	canvas->SetSize(GetClientSize());
 
