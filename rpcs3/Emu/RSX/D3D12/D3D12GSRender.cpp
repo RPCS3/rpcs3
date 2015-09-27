@@ -224,49 +224,28 @@ D3D12GSRender::D3D12GSRender()
 	// Common root signatures
 	for (unsigned textureCount = 0; textureCount < 17; textureCount++)
 	{
-		D3D12_DESCRIPTOR_RANGE descriptorRange[4] = {};
-		// Scale Offset data
-		descriptorRange[0].BaseShaderRegister = 0;
-		descriptorRange[0].NumDescriptors = 1;
-		descriptorRange[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
-		// Constants
-		descriptorRange[1].BaseShaderRegister = 1;
-		descriptorRange[1].NumDescriptors = 2;
-		descriptorRange[1].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
-		// Textures
-		descriptorRange[2].BaseShaderRegister = 0;
-		descriptorRange[2].NumDescriptors = textureCount;
-		descriptorRange[2].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-		// Samplers
-		descriptorRange[3].BaseShaderRegister = 0;
-		descriptorRange[3].NumDescriptors = textureCount;
-		descriptorRange[3].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
-		D3D12_ROOT_PARAMETER RP[4] = {};
-		RP[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-		RP[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-		RP[0].DescriptorTable.pDescriptorRanges = &descriptorRange[0];
-		RP[0].DescriptorTable.NumDescriptorRanges = 1;
-		RP[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-		RP[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-		RP[1].DescriptorTable.pDescriptorRanges = &descriptorRange[1];
-		RP[1].DescriptorTable.NumDescriptorRanges = 1;
-		RP[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-		RP[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-		RP[2].DescriptorTable.pDescriptorRanges = &descriptorRange[2];
-		RP[2].DescriptorTable.NumDescriptorRanges = 1;
-		RP[3].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-		RP[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-		RP[3].DescriptorTable.pDescriptorRanges = &descriptorRange[3];
-		RP[3].DescriptorTable.NumDescriptorRanges = 1;
-
-		D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc = {};
-		rootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
-		rootSignatureDesc.NumParameters = (textureCount > 0) ? 4 : 2;
-		rootSignatureDesc.pParameters = RP;
+		CD3DX12_DESCRIPTOR_RANGE descriptorRange[] =
+		{
+			// Scale Offset data
+			CD3DX12_DESCRIPTOR_RANGE(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0),
+			// Constants
+			CD3DX12_DESCRIPTOR_RANGE(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 2, 1),
+			// Textures
+			CD3DX12_DESCRIPTOR_RANGE(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, textureCount, 0),
+			// Samplers
+			CD3DX12_DESCRIPTOR_RANGE(D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER, textureCount, 0),
+		};
+		CD3DX12_ROOT_PARAMETER RP[4];
+		RP[0].InitAsDescriptorTable(1, &descriptorRange[0]);
+		RP[1].InitAsDescriptorTable(1, &descriptorRange[1]);
+		RP[2].InitAsDescriptorTable(1, &descriptorRange[2]);
+		RP[3].InitAsDescriptorTable(1, &descriptorRange[3]);
 
 		Microsoft::WRL::ComPtr<ID3DBlob> rootSignatureBlob;
 		Microsoft::WRL::ComPtr<ID3DBlob> errorBlob;
-		ThrowIfFailed(wrapD3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &rootSignatureBlob, &errorBlob));
+		ThrowIfFailed(wrapD3D12SerializeRootSignature(
+			&CD3DX12_ROOT_SIGNATURE_DESC((textureCount > 0) ? 4 : 2, RP, 0, 0, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT),
+			D3D_ROOT_SIGNATURE_VERSION_1, &rootSignatureBlob, &errorBlob));
 
 		m_device->CreateRootSignature(0,
 			rootSignatureBlob->GetBufferPointer(),

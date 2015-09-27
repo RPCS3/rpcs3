@@ -36,28 +36,20 @@ std::pair<ID3DBlob *, ID3DBlob *> compileF32toU8CS()
 		const char *tmp = (const char*)errorBlob->GetBufferPointer();
 		LOG_ERROR(RSX, tmp);
 	}
-	D3D12_DESCRIPTOR_RANGE descriptorRange[2] = {};
-	// Textures
-	descriptorRange[0].BaseShaderRegister = 0;
-	descriptorRange[0].NumDescriptors = 1;
-	descriptorRange[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-	descriptorRange[1].BaseShaderRegister = 0;
-	descriptorRange[1].NumDescriptors = 1;
-	descriptorRange[1].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
-	descriptorRange[1].OffsetInDescriptorsFromTableStart = 1;
-	D3D12_ROOT_PARAMETER RP[2] = {};
-	RP[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-	RP[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-	RP[0].DescriptorTable.pDescriptorRanges = &descriptorRange[0];
-	RP[0].DescriptorTable.NumDescriptorRanges = 2;
+	CD3DX12_DESCRIPTOR_RANGE descriptorRange[] =
+	{
+		// Textures
+		CD3DX12_DESCRIPTOR_RANGE(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0),
+		// UAV (same descriptor heap)
+		CD3DX12_DESCRIPTOR_RANGE(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0, 0, 1),
+	};
 
-	D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc = {};
-	rootSignatureDesc.NumParameters = 1;
-	rootSignatureDesc.pParameters = RP;
+	CD3DX12_ROOT_PARAMETER RP;
+	RP.InitAsDescriptorTable(2, &descriptorRange[0]);
 
 	ID3DBlob *rootSignatureBlob;
 
-	hr = wrapD3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &rootSignatureBlob, &errorBlob);
+	hr = wrapD3D12SerializeRootSignature(&CD3DX12_ROOT_SIGNATURE_DESC(1, &RP), D3D_ROOT_SIGNATURE_VERSION_1, &rootSignatureBlob, &errorBlob);
 	if (hr != S_OK)
 	{
 		const char *tmp = (const char*)errorBlob->GetBufferPointer();
