@@ -278,7 +278,7 @@ D3D12GSRender::D3D12GSRender()
 
 	m_constantsData.Init(m_device.Get(), 1024 * 1024 * 64, D3D12_HEAP_TYPE_UPLOAD, D3D12_HEAP_FLAG_NONE);
 	m_vertexIndexData.Init(m_device.Get(), 1024 * 1024 * 384, D3D12_HEAP_TYPE_UPLOAD, D3D12_HEAP_FLAG_NONE);
-	m_textureUploadData.Init(m_device.Get(), 1024 * 1024 * 256, D3D12_HEAP_TYPE_UPLOAD, D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS);
+	m_textureUploadData.Init(m_device.Get(), 1024 * 1024 * 256, D3D12_HEAP_TYPE_UPLOAD, D3D12_HEAP_FLAG_NONE);
 
 	if (Ini.GSOverlay.GetValue())
 		InitD2DStructures();
@@ -705,7 +705,7 @@ void D3D12GSRender::Flip()
 
 		size_t w = 0, h = 0, rowPitch = 0;
 
-		ID3D12Resource *stagingTexture;
+		size_t offset = 0;
 		if (m_read_buffer)
 		{
 			CellGcmDisplayInfo* buffers = vm::get_ptr<CellGcmDisplayInfo>(m_gcm_buffers_addr);
@@ -719,21 +719,13 @@ void D3D12GSRender::Flip()
 			assert(m_textureUploadData.canAlloc(textureSize));
 			size_t heapOffset = m_textureUploadData.alloc(textureSize);
 
-			ThrowIfFailed(m_device->CreatePlacedResource(
-				m_textureUploadData.m_heap,
-				heapOffset,
-				&CD3DX12_RESOURCE_DESC::Buffer(textureSize),
-				D3D12_RESOURCE_STATE_GENERIC_READ,
-				nullptr,
-				IID_PPV_ARGS(&stagingTexture)
-				));
-			getCurrentResourceStorage().m_singleFrameLifetimeResources.push_back(stagingTexture);
-
-			void *dstBuffer;
-			ThrowIfFailed(stagingTexture->Map(0, nullptr, &dstBuffer));
+			void *buffer;
+			ThrowIfFailed(m_textureUploadData.m_heap->Map(0, &CD3DX12_RANGE(heapOffset, heapOffset + textureSize), &buffer));
+			void *dstBuffer = (char*)buffer + heapOffset;
 			for (unsigned row = 0; row < h; row++)
 				memcpy((char*)dstBuffer + row * rowPitch, (char*)src_buffer + row * w * 4, w * 4);
-			stagingTexture->Unmap(0, nullptr);
+			m_textureUploadData.m_heap->Unmap(0, &CD3DX12_RANGE(heapOffset, heapOffset + textureSize));
+			offset = heapOffset;
 		}
 
 		ThrowIfFailed(
@@ -747,7 +739,7 @@ void D3D12GSRender::Flip()
 				)
 			);
 		getCurrentResourceStorage().m_commandList->CopyTextureRegion(&CD3DX12_TEXTURE_COPY_LOCATION(storage.m_RAMFramebuffer.Get(), 0), 0, 0, 0,
-			&CD3DX12_TEXTURE_COPY_LOCATION(stagingTexture, { 0, { DXGI_FORMAT_R8G8B8A8_UNORM, (UINT)w, (UINT)h, 1, (UINT)rowPitch} }), nullptr);
+			&CD3DX12_TEXTURE_COPY_LOCATION(m_textureUploadData.m_heap, { offset, { DXGI_FORMAT_R8G8B8A8_UNORM, (UINT)w, (UINT)h, 1, (UINT)rowPitch} }), nullptr);
 
 		getCurrentResourceStorage().m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(storage.m_RAMFramebuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ));
 		resourceToFlip = storage.m_RAMFramebuffer.Get();

@@ -394,8 +394,7 @@ ID3D12Resource *uploadSingleTexture(
 	const RSXTexture &texture,
 	ID3D12Device *device,
 	ID3D12GraphicsCommandList *commandList,
-	DataHeap<ID3D12Heap, 65536> &textureBuffersHeap,
-	std::vector<ComPtr<ID3D12Resource> > &stagingRamTexture)
+	DataHeap<ID3D12Resource, 65536> &textureBuffersHeap)
 {
 	ID3D12Resource *vramTexture;
 	size_t w = texture.GetWidth(), h = texture.GetHeight();
@@ -550,24 +549,14 @@ ID3D12Resource *uploadSingleTexture(
 	// Multiple of 256
 	size_t rowPitch = align(blockSizeInByte * widthInBlocks, 256);
 
-	ComPtr<ID3D12Resource> Texture;
 	size_t textureSize = rowPitch * heightInBlocks * 2; // * 4 for mipmap levels
 	assert(textureBuffersHeap.canAlloc(textureSize));
 	size_t heapOffset = textureBuffersHeap.alloc(textureSize);
 
-	ThrowIfFailed(device->CreatePlacedResource(
-		textureBuffersHeap.m_heap,
-		heapOffset,
-		&CD3DX12_RESOURCE_DESC::Buffer(textureSize),
-		D3D12_RESOURCE_STATE_GENERIC_READ,
-		nullptr,
-		IID_PPV_ARGS(Texture.GetAddressOf())
-		));
-	stagingRamTexture.push_back(Texture);
-
 	auto pixels = vm::get_ptr<const u8>(texaddr);
-	void *textureData;
-	ThrowIfFailed(Texture->Map(0, nullptr, (void**)&textureData));
+	void *buffer;
+	ThrowIfFailed(textureBuffersHeap.m_heap->Map(0, &CD3DX12_RANGE(heapOffset, heapOffset + textureSize), &buffer));
+	void *textureData = (char*)buffer + heapOffset;
 	std::vector<MipmapLevelInfo> mipInfos;
 
 	switch (format)
@@ -608,7 +597,7 @@ ID3D12Resource *uploadSingleTexture(
 		break;
 	}
 	}
-	Texture->Unmap(0, nullptr);
+	textureBuffersHeap.m_heap->Unmap(0, &CD3DX12_RANGE(heapOffset, heapOffset + textureSize));
 
 	D3D12_RESOURCE_DESC texturedesc = CD3DX12_RESOURCE_DESC::Tex2D(dxgiFormat, (UINT)w, (UINT)h, 1, texture.GetMipmap());
 	textureSize = device->GetResourceAllocationInfo(0, 1, &texturedesc).SizeInBytes;
@@ -626,7 +615,7 @@ ID3D12Resource *uploadSingleTexture(
 	for (const MipmapLevelInfo mli : mipInfos)
 	{
 		commandList->CopyTextureRegion(&CD3DX12_TEXTURE_COPY_LOCATION(vramTexture, (UINT)miplevel), 0, 0, 0,
-			&CD3DX12_TEXTURE_COPY_LOCATION(Texture.Get(), { mli.offset, { dxgiFormat, (UINT)mli.width, (UINT)mli.height, 1, (UINT)mli.rowPitch } }), nullptr);
+			&CD3DX12_TEXTURE_COPY_LOCATION(textureBuffersHeap.m_heap, { heapOffset + mli.offset, { dxgiFormat, (UINT)mli.width, (UINT)mli.height, 1, (UINT)mli.rowPitch } }), nullptr);
 		miplevel++;
 	}
 
@@ -738,7 +727,7 @@ size_t D3D12GSRender::UploadTextures(ID3D12GraphicsCommandList *cmdlist)
 		}
 		else
 		{
-			vramTexture = uploadSingleTexture(m_textures[i], m_device.Get(), cmdlist, m_textureUploadData, getCurrentResourceStorage().m_singleFrameLifetimeResources);
+			vramTexture = uploadSingleTexture(m_textures[i], m_device.Get(), cmdlist, m_textureUploadData);
 			m_texturesCache[texaddr] = vramTexture;
 
 			u32 s = (u32)align(getTextureSize(m_textures[i]), 4096);
