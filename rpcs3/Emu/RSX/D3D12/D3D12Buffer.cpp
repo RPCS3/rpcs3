@@ -505,22 +505,20 @@ void D3D12GSRender::setScaleOffset()
 
 	// Scale offset buffer
 	// Separate constant buffer
-	D3D12_RANGE range = { heapOffset, heapOffset + 256 };
-
 	void *scaleOffsetMap;
-	ThrowIfFailed(m_constantsData.m_heap->Map(0, &range, &scaleOffsetMap));
+	ThrowIfFailed(m_constantsData.m_heap->Map(0, &CD3DX12_RANGE(heapOffset, heapOffset + 256), &scaleOffsetMap));
 	streamToBuffer((char*)scaleOffsetMap + heapOffset, scaleOffsetMat, 16 * sizeof(float));
 	int isAlphaTested = m_set_alpha_test;
 	memcpy((char*)scaleOffsetMap + heapOffset + 16 * sizeof(float), &isAlphaTested, sizeof(int));
 	memcpy((char*)scaleOffsetMap + heapOffset + 17 * sizeof(float), &m_alpha_ref, sizeof(float));
-	m_constantsData.m_heap->Unmap(0, &range);
+	m_constantsData.m_heap->Unmap(0, &CD3DX12_RANGE(heapOffset, heapOffset + 256));
 
 	D3D12_CONSTANT_BUFFER_VIEW_DESC constantBufferViewDesc = {};
 	constantBufferViewDesc.BufferLocation = m_constantsData.m_heap->GetGPUVirtualAddress() + heapOffset;
 	constantBufferViewDesc.SizeInBytes = (UINT)256;
-	D3D12_CPU_DESCRIPTOR_HANDLE Handle = getCurrentResourceStorage().m_scaleOffsetDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
-	Handle.ptr += getCurrentResourceStorage().m_currentScaleOffsetBufferIndex * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-	m_device->CreateConstantBufferView(&constantBufferViewDesc, Handle);
+	m_device->CreateConstantBufferView(&constantBufferViewDesc,
+		CD3DX12_CPU_DESCRIPTOR_HANDLE(getCurrentResourceStorage().m_scaleOffsetDescriptorHeap->GetCPUDescriptorHandleForHeapStart())
+		.Offset((INT)getCurrentResourceStorage().m_currentScaleOffsetBufferIndex, g_descriptorStrideSRVCBVUAV));
 }
 
 void D3D12GSRender::FillVertexShaderConstantsBuffer()
@@ -536,10 +534,8 @@ void D3D12GSRender::FillVertexShaderConstantsBuffer()
 	assert(m_constantsData.canAlloc(bufferSize));
 	size_t heapOffset = m_constantsData.alloc(bufferSize);
 
-	D3D12_RANGE range = { heapOffset, heapOffset + bufferSize };
-
 	void *constantsBufferMap;
-	ThrowIfFailed(m_constantsData.m_heap->Map(0, &range, &constantsBufferMap));
+	ThrowIfFailed(m_constantsData.m_heap->Map(0, &CD3DX12_RANGE(heapOffset, heapOffset + bufferSize), &constantsBufferMap));
 	for (const auto &vertexConstants : m_vertexConstants)
 	{
 		float data[4] = {
@@ -550,14 +546,14 @@ void D3D12GSRender::FillVertexShaderConstantsBuffer()
 		};
 		streamToBuffer((char*)constantsBufferMap + heapOffset + vertexConstants.first, data, 4 * sizeof(float));
 	}
-	m_constantsData.m_heap->Unmap(0, &range);
+	m_constantsData.m_heap->Unmap(0, &CD3DX12_RANGE(heapOffset, heapOffset + bufferSize));
 
 	D3D12_CONSTANT_BUFFER_VIEW_DESC constantBufferViewDesc = {};
 	constantBufferViewDesc.BufferLocation = m_constantsData.m_heap->GetGPUVirtualAddress() + heapOffset;
 	constantBufferViewDesc.SizeInBytes = (UINT)bufferSize;
-	D3D12_CPU_DESCRIPTOR_HANDLE Handle = getCurrentResourceStorage().m_constantsBufferDescriptorsHeap->GetCPUDescriptorHandleForHeapStart();
-	Handle.ptr += getCurrentResourceStorage().m_constantsBufferIndex * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-	m_device->CreateConstantBufferView(&constantBufferViewDesc, Handle);
+	m_device->CreateConstantBufferView(&constantBufferViewDesc,
+		CD3DX12_CPU_DESCRIPTOR_HANDLE(getCurrentResourceStorage().m_constantsBufferDescriptorsHeap->GetCPUDescriptorHandleForHeapStart())
+		.Offset((INT)getCurrentResourceStorage().m_constantsBufferIndex, g_descriptorStrideSRVCBVUAV));
 }
 
 void D3D12GSRender::FillPixelShaderConstantsBuffer()
@@ -571,11 +567,9 @@ void D3D12GSRender::FillPixelShaderConstantsBuffer()
 	assert(m_constantsData.canAlloc(bufferSize));
 	size_t heapOffset = m_constantsData.alloc(bufferSize);
 
-	D3D12_RANGE range = { heapOffset, heapOffset + bufferSize };
-
 	size_t offset = 0;
 	void *constantsBufferMap;
-	ThrowIfFailed(m_constantsData.m_heap->Map(0, &range, &constantsBufferMap));
+	ThrowIfFailed(m_constantsData.m_heap->Map(0, &CD3DX12_RANGE(heapOffset, heapOffset + bufferSize), &constantsBufferMap));
 	for (size_t offsetInFP : fragmentOffset)
 	{
 		u32 vector[4];
@@ -613,14 +607,14 @@ void D3D12GSRender::FillPixelShaderConstantsBuffer()
 		streamToBuffer((char*)constantsBufferMap + heapOffset + offset, vector, 4 * sizeof(u32));
 		offset += 4 * sizeof(u32);
 	}
-	m_constantsData.m_heap->Unmap(0, &range);
+	m_constantsData.m_heap->Unmap(0, &CD3DX12_RANGE(heapOffset, heapOffset + bufferSize));
 
 	D3D12_CONSTANT_BUFFER_VIEW_DESC constantBufferViewDesc = {};
 	constantBufferViewDesc.BufferLocation = m_constantsData.m_heap->GetGPUVirtualAddress() + heapOffset;
 	constantBufferViewDesc.SizeInBytes = (UINT)bufferSize;
-	D3D12_CPU_DESCRIPTOR_HANDLE Handle = getCurrentResourceStorage().m_constantsBufferDescriptorsHeap->GetCPUDescriptorHandleForHeapStart();
-	Handle.ptr += getCurrentResourceStorage().m_constantsBufferIndex * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-	m_device->CreateConstantBufferView(&constantBufferViewDesc, Handle);
+	m_device->CreateConstantBufferView(&constantBufferViewDesc,
+		CD3DX12_CPU_DESCRIPTOR_HANDLE(getCurrentResourceStorage().m_constantsBufferDescriptorsHeap->GetCPUDescriptorHandleForHeapStart())
+		.Offset((INT)getCurrentResourceStorage().m_constantsBufferIndex, g_descriptorStrideSRVCBVUAV));
 }
 
 
