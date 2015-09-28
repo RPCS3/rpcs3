@@ -992,6 +992,9 @@
     <ClCompile Include="Emu\RSX\Common\TextureUtils.cpp">
       <Filter>Emu\GPU\RSX\Common</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\RSX\Common\BufferUtils.cpp">
+      <Filter>Emu\GPU\RSX\Common</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -1885,7 +1888,10 @@
     <ClInclude Include="Emu\RSX\D3D12\d3dx12.h">
       <Filter>Emu\GPU\RSX\D3D12</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\RSX\Common\TextureManagement.h">
+    <ClInclude Include="Emu\RSX\Common\TextureUtils.h">
+      <Filter>Emu\GPU\RSX\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Common\BufferUtils.h">
       <Filter>Emu\GPU\RSX\Common</Filter>
     </ClInclude>
   </ItemGroup>

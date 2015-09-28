@@ -60,6 +60,7 @@
     <ClCompile Include="Emu\IdManager.cpp" />
     <ClCompile Include="Emu\RSX\CgBinaryFragmentProgram.cpp" />
     <ClCompile Include="Emu\RSX\CgBinaryVertexProgram.cpp" />
+    <ClCompile Include="Emu\RSX\Common\BufferUtils.cpp" />
     <ClCompile Include="Emu\RSX\Common\FragmentProgramDecompiler.cpp" />
     <ClCompile Include="Emu\RSX\Common\ShaderParam.cpp" />
     <ClCompile Include="Emu\RSX\Common\TextureUtils.cpp" />
@@ -530,10 +531,11 @@
     <ClInclude Include="Emu\Memory\Memory.h" />
     <ClInclude Include="Emu\Memory\MemoryBlock.h" />
     <ClInclude Include="Emu\RSX\CgBinaryProgram.h" />
+    <ClInclude Include="Emu\RSX\Common\BufferUtils.h" />
     <ClInclude Include="Emu\RSX\Common\FragmentProgramDecompiler.h" />
     <ClInclude Include="Emu\RSX\Common\ProgramStateCache.h" />
     <ClInclude Include="Emu\RSX\Common\ShaderParam.h" />
-    <ClInclude Include="Emu\RSX\Common\TextureManagement.h" />
+    <ClInclude Include="Emu\RSX\Common\TextureUtils.h" />
     <ClInclude Include="Emu\RSX\Common\VertexProgramDecompiler.h" />
     <ClInclude Include="Emu\RSX\D3D12\D3D12.h" />
     <ClInclude Include="Emu\RSX\D3D12\D3D12Buffer.h" />

@@ -260,6 +260,21 @@ enum
 
 };
 
+// GCM Primitive
+enum
+{
+	CELL_GCM_PRIMITIVE_POINTS                  = 1,
+	CELL_GCM_PRIMITIVE_LINES                   = 2,
+	CELL_GCM_PRIMITIVE_LINE_LOOP               = 3,
+	CELL_GCM_PRIMITIVE_LINE_STRIP              = 4,
+	CELL_GCM_PRIMITIVE_TRIANGLES               = 5,
+	CELL_GCM_PRIMITIVE_TRIANGLE_STRIP          = 6,
+	CELL_GCM_PRIMITIVE_TRIANGLE_FAN            = 7,
+	CELL_GCM_PRIMITIVE_QUADS                   = 8,
+	CELL_GCM_PRIMITIVE_QUAD_STRIP              = 9,
+	CELL_GCM_PRIMITIVE_POLYGON                 = 10,
+};
+
 // GCM Reports
 enum
 {
