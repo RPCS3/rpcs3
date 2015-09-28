@@ -22,11 +22,12 @@ ComPtr<ID2D1SolidColorBrush> m_textBrush;
 
 #pragma comment (lib, "d2d1.lib")
 #pragma comment (lib, "dwrite.lib")
-#pragma comment (lib, "d3d11.lib")
+
+extern PFN_D3D11ON12_CREATE_DEVICE wrapD3D11On12CreateDevice;
 
 void D3D12GSRender::InitD2DStructures()
 {
-	D3D11On12CreateDevice(
+	wrapD3D11On12CreateDevice(
 		m_device.Get(),
 		D3D11_CREATE_DEVICE_BGRA_SUPPORT,
 		nullptr,
