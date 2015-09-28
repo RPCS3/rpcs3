@@ -189,7 +189,7 @@ void GameViewer::LoadPSF()
 		else if (game.category.substr(0, 2) == "GD")
 		{
 			game.category = "Game Data";
-			game.icon_path = local_path + "/" + m_games[i] + "/PS3_GAME/ICON0.PNG";
+			game.icon_path = local_path + "/" + m_games[i] + "/ICON0.PNG";
 		}
 			
 		m_game_data.push_back(game);
