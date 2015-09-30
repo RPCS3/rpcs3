@@ -169,7 +169,7 @@ template<typename T1, typename T2, typename T3 = const char*> struct triplet_t
 template<typename T> struct id_traits;
 
 #define _PRGNAME_ "RPCS3"
-#define _PRGVER_ "0.0.0.5"
+#define _PRGVER_ "0.0.6"
 
 #include "Utilities/BEType.h"
 #include "Utilities/Atomic.h"
