@@ -190,6 +190,26 @@ struct DataHeap
 	}
 };
 
+struct TextureEntry
+{
+	int m_format;
+	size_t m_width;
+	size_t m_height;
+	size_t m_mipmap;
+	bool m_isDirty;
+
+	TextureEntry() : m_format(0), m_width(0), m_height(0), m_isDirty(true)
+	{}
+
+	TextureEntry(int f, size_t w, size_t h, size_t m) : m_format(f), m_width(w), m_height(h), m_isDirty(false)
+	{}
+
+	bool operator==(const TextureEntry &other)
+	{
+		return (m_format == other.m_format && m_width == other.m_width && m_height == other.m_height);
+	}
+};
+
 /**
  * Manages cache of data (texture/vertex/index)
  */
@@ -203,14 +223,22 @@ private:
 	*/
 	std::mutex mut;
 
-	std::unordered_map<u64, ComPtr<ID3D12Resource> > m_dataCache; // Storage
+	std::unordered_map<u64, std::pair<TextureEntry, ComPtr<ID3D12Resource>> > m_dataCache; // Storage
 	std::list <std::tuple<u64, u32, u32> > m_protectedRange; // address, start of protected range, size of protected range
-	std::list<ComPtr<ID3D12Resource> > m_dataToDispose;
 public:
-	void storeAndProtectData(u64 key, u32 start, size_t size, ComPtr<ID3D12Resource> data)
+	void storeAndProtectData(u64 key, u32 start, size_t size, int format, size_t w, size_t h, size_t m, ComPtr<ID3D12Resource> data)
 	{
 		std::lock_guard<std::mutex> lock(mut);
-		m_dataCache[key] = data;
+		m_dataCache[key] = std::make_pair(TextureEntry(format, w, h, m), data);
+		protectData(key, start, size);
+	}
+
+	/**
+	 * Make memory from start to start + size write protected.
+	 * Associate key to this range so that when a write is detected, data at key is marked dirty.
+	 */
+	void protectData(u64 key, u32 start, size_t size)
+	{
 		/// align start to 4096 byte
 		u32 protected_range_start = align(start, 4096);
 		u32 protected_range_size = (u32)align(size, 4096);
@@ -233,8 +261,7 @@ public:
 			{
 				std::lock_guard<std::mutex> lock(mut);
 				u64 texadrr = std::get<0>(protectedTexture);
-				m_dataToDispose.push_back(m_dataCache[texadrr]);
-				m_dataCache.erase(texadrr);
+				m_dataCache[texadrr].first.m_isDirty = true;
 
 				vm::page_protect(protectedRangeStart, protectedRangeSize, 0, vm::page_writable, 0);
 				m_protectedRange.erase(currentIt);
@@ -244,13 +271,13 @@ public:
 		return handled;
 	}
 
-	ID3D12Resource *findDataIfAvailable(u64 key)
+	std::pair<TextureEntry, ComPtr<ID3D12Resource> > *findDataIfAvailable(u64 key)
 	{
 		std::lock_guard<std::mutex> lock(mut);
-		std::unordered_map<u64, ComPtr<ID3D12Resource> >::const_iterator It = m_dataCache.find(key);
+		auto It = m_dataCache.find(key);
 		if (It == m_dataCache.end())
 			return nullptr;
-		return It->second.Get();
+		return &It->second;
 	}
 
 	void unprotedAll()
@@ -263,10 +290,14 @@ public:
 		}
 	}
 
-	std::list<ComPtr<ID3D12Resource> > getCurrentDisposableTexture()
+	/**
+	 * Remove data stored at key, and returns a ComPtr owning it.
+	 * The caller is responsible for releasing the ComPtr.
+	 */
+	ComPtr<ID3D12Resource> removeFromCache(u64 key)
 	{
-		std::list<ComPtr<ID3D12Resource> > result;
-		result.swap(m_dataToDispose);
+		auto result = m_dataCache[key].second;
+		m_dataCache.erase(key);
 		return result;
 	}
 };

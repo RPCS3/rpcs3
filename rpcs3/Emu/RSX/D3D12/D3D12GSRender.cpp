@@ -822,7 +822,6 @@ void D3D12GSRender::Flip()
 	storage.m_frameFinishedFence->SetEventOnCompletion(storage.m_fenceValue, storage.m_frameFinishedHandle);
 	storage.m_fenceValue++;
 
-	storage.m_dirtyTextures = m_textureCache.getCurrentDisposableTexture();
 	storage.m_inUse = true;
 
 	// Get the put pos - 1. This way after cleaning we can set the get ptr to

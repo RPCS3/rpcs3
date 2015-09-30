@@ -172,6 +172,46 @@ ComPtr<ID3D12Resource> uploadSingleTexture(
 	return vramTexture;
 }
 
+
+
+/**
+*
+*/
+static
+void updateExistingTexture(
+	const RSXTexture &texture,
+	ID3D12GraphicsCommandList *commandList,
+	DataHeap<ID3D12Resource, 65536> &textureBuffersHeap,
+	ID3D12Resource *existingTexture)
+{
+	size_t w = texture.GetWidth(), h = texture.GetHeight();
+
+	int format = texture.GetFormat() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
+	DXGI_FORMAT dxgiFormat = getTextureDXGIFormat(format);
+
+	size_t textureSize = getPlacedTextureStorageSpace(texture, 256);
+	assert(textureBuffersHeap.canAlloc(textureSize));
+	size_t heapOffset = textureBuffersHeap.alloc(textureSize);
+
+	void *buffer;
+	ThrowIfFailed(textureBuffersHeap.m_heap->Map(0, &CD3DX12_RANGE(heapOffset, heapOffset + textureSize), &buffer));
+	void *textureData = (char*)buffer + heapOffset;
+	std::vector<MipmapLevelInfo> mipInfos = uploadPlacedTexture(texture, 256, textureData);
+	textureBuffersHeap.m_heap->Unmap(0, &CD3DX12_RANGE(heapOffset, heapOffset + textureSize));
+
+	commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(existingTexture, D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_COPY_DEST));
+	size_t miplevel = 0;
+	for (const MipmapLevelInfo mli : mipInfos)
+	{
+		commandList->CopyTextureRegion(&CD3DX12_TEXTURE_COPY_LOCATION(existingTexture, (UINT)miplevel), 0, 0, 0,
+			&CD3DX12_TEXTURE_COPY_LOCATION(textureBuffersHeap.m_heap, { heapOffset + mli.offset,{ dxgiFormat, (UINT)mli.width, (UINT)mli.height, 1, (UINT)mli.rowPitch } }), nullptr);
+		miplevel++;
+	}
+
+	commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(existingTexture, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ));
+}
+
+
 /**
  * Get number of bytes occupied by texture in RSX mem
  */
@@ -262,22 +302,29 @@ size_t D3D12GSRender::UploadTextures(ID3D12GraphicsCommandList *cmdlist)
 
 		ID3D12Resource *vramTexture;
 		std::unordered_map<u32, ID3D12Resource* >::const_iterator ItRTT = m_rtts.m_renderTargets.find(texaddr);
-		ID3D12Resource *cachedTex = m_textureCache.findDataIfAvailable(texaddr);
+		std::pair<TextureEntry, ComPtr<ID3D12Resource> > *cachedTex = m_textureCache.findDataIfAvailable(texaddr);
 		bool isRenderTarget = false;
 		if (ItRTT != m_rtts.m_renderTargets.end())
 		{
 			vramTexture = ItRTT->second;
 			isRenderTarget = true;
 		}
-		else if (cachedTex != nullptr)
+		else if (cachedTex != nullptr && (cachedTex->first == TextureEntry(format, w, h, m_textures[i].GetMipmap())))
 		{
-			vramTexture = cachedTex;
+			if (cachedTex->first.m_isDirty)
+			{
+				updateExistingTexture(m_textures[i], cmdlist, m_textureUploadData, cachedTex->second.Get());
+				m_textureCache.protectData(texaddr, texaddr, getTextureSize(m_textures[i]));
+			}
+			vramTexture = cachedTex->second.Get();
 		}
 		else
 		{
+			if (cachedTex != nullptr)
+				getCurrentResourceStorage().m_dirtyTextures.push_back(m_textureCache.removeFromCache(texaddr));
 			ComPtr<ID3D12Resource> tex = uploadSingleTexture(m_textures[i], m_device.Get(), cmdlist, m_textureUploadData);
 			vramTexture = tex.Get();
-			m_textureCache.storeAndProtectData(texaddr, texaddr, getTextureSize(m_textures[i]), tex);
+			m_textureCache.storeAndProtectData(texaddr, texaddr, getTextureSize(m_textures[i]), format, w, h, m_textures[i].GetMipmap(), tex);
 		}
 
 		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
