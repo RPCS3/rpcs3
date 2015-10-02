@@ -836,6 +836,10 @@ void D3D12GSRender::Flip()
 	if(Ini.GSOverlay.GetValue())
 		renderOverlay();
 
+	ResetTimer();
+
+	std::chrono::time_point<std::chrono::system_clock> flipStart = std::chrono::system_clock::now();
+
 	ThrowIfFailed(m_swapChain->Present(Ini.GSVSyncEnable.GetValue() ? 1 : 0, 0));
 	// Add an event signaling queue completion
 
@@ -874,7 +878,9 @@ void D3D12GSRender::Flip()
 
 	m_frame->Flip(nullptr);
 
-	ResetTimer();
+
+	std::chrono::time_point<std::chrono::system_clock> flipEnd = std::chrono::system_clock::now();
+	m_timers.m_flipDuration += std::chrono::duration_cast<std::chrono::microseconds>(flipEnd - flipStart).count();
 }
 
 void D3D12GSRender::ResetTimer()
@@ -887,6 +893,7 @@ void D3D12GSRender::ResetTimer()
 	m_timers.m_programLoadDuration = 0;
 	m_timers.m_constantsDuration = 0;
 	m_timers.m_textureDuration = 0;
+	m_timers.m_flipDuration = 0;
 }
 
 D3D12GSRender::ResourceStorage& D3D12GSRender::getCurrentResourceStorage()

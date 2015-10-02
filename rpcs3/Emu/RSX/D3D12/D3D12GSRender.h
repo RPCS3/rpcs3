@@ -244,6 +244,7 @@ private:
 		size_t m_programLoadDuration;
 		size_t m_constantsDuration;
 		size_t m_textureDuration;
+		size_t m_flipDuration;
 	} m_timers;
 
 	void ResetTimer();
