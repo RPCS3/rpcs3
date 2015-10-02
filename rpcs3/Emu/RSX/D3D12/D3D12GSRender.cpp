@@ -101,6 +101,8 @@ void D3D12GSRender::ResourceStorage::WaitAndClean()
 
 void D3D12GSRender::ResourceStorage::Release()
 {
+	for (auto tmp : m_dirtyTextures)
+		tmp->Release();
 	// NOTE: Should be released only after gfx pipeline last command has been finished.
 	CloseHandle(m_frameFinishedHandle);
 }
