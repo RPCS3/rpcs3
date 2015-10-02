@@ -872,11 +872,14 @@ void D3D12GSRender::Flip()
 	ResourceStorage &newStorage = getCurrentResourceStorage();
 
 	newStorage.WaitAndClean();
-	m_constantsData.m_getPos.store(newStorage.m_getPosConstantsHeap, std::memory_order_release);
-	m_vertexIndexData.m_getPos.store(newStorage.m_getPosVertexIndexHeap, std::memory_order_release);
-	m_textureUploadData.m_getPos.store(newStorage.m_getPosTextureUploadHeap, std::memory_order_release);
-	m_readbackResources.m_getPos.store(newStorage.m_getPosReadbackHeap, std::memory_order_release);
-	m_UAVHeap.m_getPos.store(newStorage.m_getPosUAVHeap, std::memory_order_release);
+	if (newStorage.m_inUse)
+	{
+		m_constantsData.m_getPos = newStorage.m_getPosConstantsHeap;
+		m_vertexIndexData.m_getPos = newStorage.m_getPosVertexIndexHeap;
+		m_textureUploadData.m_getPos = newStorage.m_getPosTextureUploadHeap;
+		m_readbackResources.m_getPos = newStorage.m_getPosReadbackHeap;
+		m_UAVHeap.m_getPos = newStorage.m_getPosUAVHeap;
+	}
 
 	m_frame->Flip(nullptr);
 
