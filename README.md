@@ -22,8 +22,7 @@ __Windows__
 * [Visual Studio 2015](https://www.visualstudio.com/en-us/downloads/download-visual-studio-vs.aspx)
 * [Visual C++ Redistributable Packages for Visual Studio 2015](http://www.microsoft.com/en-us/download/details.aspx?id=48145)
 * [Cmake 3.1.0+](http://www.cmake.org/download/) (add to PATH)
-* [Python 2.7+ Or 3+](https://www.python.org/downloads/) (add to PATH)
-* [Git] (https://git-scm.com/downloads) (Select "use Git from the Windows Command Prompt")
+* [Python 2.7+](https://www.python.org/downloads/) (add to PATH)
 
 __Linux__
 * Debian & Ubuntu: `sudo apt-get install libopenal-dev libwxgtk3.0-dev build-essential libglew-dev`

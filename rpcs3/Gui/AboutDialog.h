@@ -36,15 +36,15 @@ AboutDialog::AboutDialog(wxWindow *parent)
 	t_descr->SetForegroundColour(wxColor(255,255,255));
 	t_descr->SetPosition(wxPoint(12,50));
 
-	wxStaticText* t_version = new wxStaticText(this, wxID_ANY, wxString::Format(_PRGNAME_" Version : " _PRGVER_));
+	wxStaticText* t_version = new wxStaticText(this, wxID_ANY, wxString::Format(_PRGNAME_" Version : " RPCS3_GIT_VERSION));
 	t_version->SetBackgroundColour(wxColor(100,100,100));
 	t_version->SetForegroundColour(wxColor(200,200,200));
 	t_version->SetPosition(wxPoint(12,66));
 
 	//Credits
 	wxBoxSizer* s_panel_credits(new wxBoxSizer(wxHORIZONTAL));
-	wxStaticText* t_section1 = new wxStaticText(this, wxID_ANY, "\nDevelopers:\n\nDH\nAlexAltea\nHykem\nOil\nNekotekina\nelisha464\nBigpet\nvlj", wxDefaultPosition, wxSize(156,170));
-	wxStaticText* t_section2 = new wxStaticText(this, wxID_ANY, "\nThanks:\n\nBlackDaemon\nAishou\nkrofna\nxsacha", wxDefaultPosition, wxSize(156,170));
+	wxStaticText* t_section1 = new wxStaticText(this, wxID_ANY, "\nDevelopers:\n\nDH\nAlexAltea\nHykem\nOil\nNekotekina\nelisha464\nBigpet", wxDefaultPosition, wxSize(156,160));
+	wxStaticText* t_section2 = new wxStaticText(this, wxID_ANY, "\nThanks:\n\nBlackDaemon\nAishou\nkrofna\nxsacha", wxDefaultPosition, wxSize(156,160));
 
 	s_panel_credits->AddSpacer(12);
 	s_panel_credits->Add(t_section1);

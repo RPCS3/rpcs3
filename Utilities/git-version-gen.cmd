@@ -21,9 +21,9 @@ set GIT_VERSION_FILE=%~p0..\rpcs3\git-version.h
 if not defined GIT (
 	set GIT="git"
 )
-call %GIT% describe --always > NUL 2> NUL
+call %GIT% describe > NUL 2> NUL
 if errorlevel 1 (
-	echo Git not on path, trying default Git paths
+	echo Git not on path, trying default Msysgit paths
 	set GIT="%ProgramFiles(x86)%\Git\bin\git.exe"
 	call !GIT! describe > NUL 2> NUL
 	if errorlevel 1 (
