@@ -22,11 +22,12 @@ ComPtr<ID2D1SolidColorBrush> m_textBrush;
 
 #pragma comment (lib, "d2d1.lib")
 #pragma comment (lib, "dwrite.lib")
-#pragma comment (lib, "d3d11.lib")
+
+extern PFN_D3D11ON12_CREATE_DEVICE wrapD3D11On12CreateDevice;
 
 void D3D12GSRender::InitD2DStructures()
 {
-	D3D11On12CreateDevice(
+	wrapD3D11On12CreateDevice(
 		m_device.Get(),
 		D3D11_CREATE_DEVICE_BGRA_SUPPORT,
 		nullptr,
@@ -129,6 +130,7 @@ void D3D12GSRender::renderOverlay()
 	std::wstring constantDuration = L"Constants : " + std::to_wstring(m_timers.m_constantsDuration) + L" us (" + std::to_wstring(100.f * constantsPercent) + L" %)";
 	float rttPercent = (float)m_timers.m_rttDuration / (float)m_timers.m_drawCallDuration;
 	std::wstring rttDuration = L"RTT : " + std::to_wstring(m_timers.m_rttDuration) + L" us (" + std::to_wstring(100.f * rttPercent) + L" %)";
+	std::wstring flipDuration = L"Flip : " + std::to_wstring(m_timers.m_flipDuration) + L" us";
 
 	std::wstring count = L"Draw count : " + std::to_wstring(m_timers.m_drawCallCount);
 
@@ -193,6 +195,13 @@ void D3D12GSRender::renderOverlay()
 		(UINT32)texDuration.size(),
 		m_textFormat.Get(),
 		&D2D1::RectF(0, 98, rtSize.width, rtSize.height),
+		m_textBrush.Get()
+		);
+	m_d2dDeviceContext->DrawTextW(
+		flipDuration.c_str(),
+		(UINT32)flipDuration.size(),
+		m_textFormat.Get(),
+		&D2D1::RectF(0, 112, rtSize.width, rtSize.height),
 		m_textBrush.Get()
 		);
 	m_d2dDeviceContext->EndDraw();

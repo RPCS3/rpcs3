@@ -119,14 +119,14 @@ struct DataHeap
 	T *m_heap;
 	size_t m_size;
 	size_t m_putPos; // Start of free space
-	std::atomic<size_t> m_getPos; // End of free space
+	size_t m_getPos; // End of free space
 
 	void Init(ID3D12Device *device, size_t heapSize, D3D12_HEAP_TYPE type, D3D12_HEAP_FLAGS flags)
 	{
 		m_size = heapSize;
 		m_heap = InitHeap<T>::Init(device, heapSize, type, flags);
 		m_putPos = 0;
-		m_getPos = m_size - 1;
+		m_getPos = heapSize - 1;
 	}
 
 	/**
@@ -135,7 +135,7 @@ struct DataHeap
 	bool canAlloc(size_t size) const
 	{
 		size_t allocSize = align(size, Alignment);
-		size_t currentGetPos = m_getPos.load();
+		size_t currentGetPos = m_getPos;
 		if (m_putPos + allocSize < m_size)
 		{
 			// range before get
@@ -232,6 +232,8 @@ private:
 	PipelineStateObjectCache m_cachePSO;
 	std::pair<ID3D12PipelineState *, size_t> *m_PSO;
 
+	size_t m_vertexBufferSize[32];
+
 	struct
 	{
 		size_t m_drawCallDuration;
@@ -242,6 +244,7 @@ private:
 		size_t m_programLoadDuration;
 		size_t m_constantsDuration;
 		size_t m_textureDuration;
+		size_t m_flipDuration;
 	} m_timers;
 
 	void ResetTimer();
@@ -332,7 +335,7 @@ private:
 	// Vertex storage
 	DataHeap<ID3D12Resource, 65536> m_vertexIndexData;
 	// Texture storage
-	DataHeap<ID3D12Heap, 65536> m_textureUploadData;
+	DataHeap<ID3D12Resource, 65536> m_textureUploadData;
 	DataHeap<ID3D12Heap, 65536> m_UAVHeap;
 	DataHeap<ID3D12Heap, 65536> m_readbackResources;
 

@@ -7,12 +7,15 @@
 #include <thread>
 #include <chrono>
 #include "d3dx12.h"
+#include <d3d11on12.h>
 
 PFN_D3D12_CREATE_DEVICE wrapD3D12CreateDevice;
 PFN_D3D12_GET_DEBUG_INTERFACE wrapD3D12GetDebugInterface;
 PFN_D3D12_SERIALIZE_ROOT_SIGNATURE wrapD3D12SerializeRootSignature;
+PFN_D3D11ON12_CREATE_DEVICE wrapD3D11On12CreateDevice;
 
 static HMODULE D3D12Module;
+static HMODULE D3D11Module;
 
 static void loadD3D12FunctionPointers()
 {
@@ -20,11 +23,14 @@ static void loadD3D12FunctionPointers()
 	wrapD3D12CreateDevice = (PFN_D3D12_CREATE_DEVICE)GetProcAddress(D3D12Module, "D3D12CreateDevice");
 	wrapD3D12GetDebugInterface = (PFN_D3D12_GET_DEBUG_INTERFACE)GetProcAddress(D3D12Module, "D3D12GetDebugInterface");
 	wrapD3D12SerializeRootSignature = (PFN_D3D12_SERIALIZE_ROOT_SIGNATURE)GetProcAddress(D3D12Module, "D3D12SerializeRootSignature");
+	D3D11Module = LoadLibrary(L"d3d11.dll");
+	wrapD3D11On12CreateDevice = (PFN_D3D11ON12_CREATE_DEVICE)GetProcAddress(D3D11Module, "D3D11On12CreateDevice");
 }
 
 static void unloadD3D12FunctionPointers()
 {
 	FreeLibrary(D3D12Module);
+	FreeLibrary(D3D11Module);
 }
 
 GetGSFrameCb2 GetGSFrame = nullptr;
@@ -95,6 +101,8 @@ void D3D12GSRender::ResourceStorage::WaitAndClean()
 
 void D3D12GSRender::ResourceStorage::Release()
 {
+	for (auto tmp : m_dirtyTextures)
+		tmp->Release();
 	// NOTE: Should be released only after gfx pipeline last command has been finished.
 	CloseHandle(m_frameFinishedHandle);
 }
@@ -224,49 +232,28 @@ D3D12GSRender::D3D12GSRender()
 	// Common root signatures
 	for (unsigned textureCount = 0; textureCount < 17; textureCount++)
 	{
-		D3D12_DESCRIPTOR_RANGE descriptorRange[4] = {};
-		// Scale Offset data
-		descriptorRange[0].BaseShaderRegister = 0;
-		descriptorRange[0].NumDescriptors = 1;
-		descriptorRange[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
-		// Constants
-		descriptorRange[1].BaseShaderRegister = 1;
-		descriptorRange[1].NumDescriptors = 2;
-		descriptorRange[1].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
-		// Textures
-		descriptorRange[2].BaseShaderRegister = 0;
-		descriptorRange[2].NumDescriptors = textureCount;
-		descriptorRange[2].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-		// Samplers
-		descriptorRange[3].BaseShaderRegister = 0;
-		descriptorRange[3].NumDescriptors = textureCount;
-		descriptorRange[3].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
-		D3D12_ROOT_PARAMETER RP[4] = {};
-		RP[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-		RP[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-		RP[0].DescriptorTable.pDescriptorRanges = &descriptorRange[0];
-		RP[0].DescriptorTable.NumDescriptorRanges = 1;
-		RP[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-		RP[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-		RP[1].DescriptorTable.pDescriptorRanges = &descriptorRange[1];
-		RP[1].DescriptorTable.NumDescriptorRanges = 1;
-		RP[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-		RP[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-		RP[2].DescriptorTable.pDescriptorRanges = &descriptorRange[2];
-		RP[2].DescriptorTable.NumDescriptorRanges = 1;
-		RP[3].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-		RP[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-		RP[3].DescriptorTable.pDescriptorRanges = &descriptorRange[3];
-		RP[3].DescriptorTable.NumDescriptorRanges = 1;
-
-		D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc = {};
-		rootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
-		rootSignatureDesc.NumParameters = (textureCount > 0) ? 4 : 2;
-		rootSignatureDesc.pParameters = RP;
+		CD3DX12_DESCRIPTOR_RANGE descriptorRange[] =
+		{
+			// Scale Offset data
+			CD3DX12_DESCRIPTOR_RANGE(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0),
+			// Constants
+			CD3DX12_DESCRIPTOR_RANGE(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 2, 1),
+			// Textures
+			CD3DX12_DESCRIPTOR_RANGE(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, textureCount, 0),
+			// Samplers
+			CD3DX12_DESCRIPTOR_RANGE(D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER, textureCount, 0),
+		};
+		CD3DX12_ROOT_PARAMETER RP[4];
+		RP[0].InitAsDescriptorTable(1, &descriptorRange[0]);
+		RP[1].InitAsDescriptorTable(1, &descriptorRange[1]);
+		RP[2].InitAsDescriptorTable(1, &descriptorRange[2]);
+		RP[3].InitAsDescriptorTable(1, &descriptorRange[3]);
 
 		Microsoft::WRL::ComPtr<ID3DBlob> rootSignatureBlob;
 		Microsoft::WRL::ComPtr<ID3DBlob> errorBlob;
-		ThrowIfFailed(wrapD3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &rootSignatureBlob, &errorBlob));
+		ThrowIfFailed(wrapD3D12SerializeRootSignature(
+			&CD3DX12_ROOT_SIGNATURE_DESC((textureCount > 0) ? 4 : 2, RP, 0, 0, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT),
+			D3D_ROOT_SIGNATURE_VERSION_1, &rootSignatureBlob, &errorBlob));
 
 		m_device->CreateRootSignature(0,
 			rootSignatureBlob->GetBufferPointer(),
@@ -299,7 +286,7 @@ D3D12GSRender::D3D12GSRender()
 
 	m_constantsData.Init(m_device.Get(), 1024 * 1024 * 64, D3D12_HEAP_TYPE_UPLOAD, D3D12_HEAP_FLAG_NONE);
 	m_vertexIndexData.Init(m_device.Get(), 1024 * 1024 * 384, D3D12_HEAP_TYPE_UPLOAD, D3D12_HEAP_FLAG_NONE);
-	m_textureUploadData.Init(m_device.Get(), 1024 * 1024 * 256, D3D12_HEAP_TYPE_UPLOAD, D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS);
+	m_textureUploadData.Init(m_device.Get(), 1024 * 1024 * 256, D3D12_HEAP_TYPE_UPLOAD, D3D12_HEAP_FLAG_NONE);
 
 	if (Ini.GSOverlay.GetValue())
 		InitD2DStructures();
@@ -475,7 +462,6 @@ void D3D12GSRender::Draw()
 	std::chrono::time_point<std::chrono::system_clock> vertexIndexDurationStart = std::chrono::system_clock::now();
 
 	// Init vertex count
-	// TODO: Very hackish, clean this
 	if (m_indexed_array.m_count)
 	{
 		for (u32 i = 0; i < m_vertex_count; ++i)
@@ -484,7 +470,7 @@ void D3D12GSRender::Draw()
 			if (!m_vertex_data[i].addr) continue;
 
 			const u32 tsize = m_vertex_data[i].GetTypeSize();
-			m_vertex_data[i].data.resize((m_indexed_array.index_min + m_indexed_array.index_max - m_indexed_array.index_min + 1) * tsize * m_vertex_data[i].size);
+			m_vertexBufferSize[i] = (m_indexed_array.index_min + m_indexed_array.index_max - m_indexed_array.index_min + 1) * tsize * m_vertex_data[i].size;
 		}
 	}
 	else
@@ -495,7 +481,7 @@ void D3D12GSRender::Draw()
 			if (!m_vertex_data[i].addr) continue;
 
 			const u32 tsize = m_vertex_data[i].GetTypeSize();
-			m_vertex_data[i].data.resize((m_draw_array_first + m_draw_array_count) * tsize * m_vertex_data[i].size);
+			m_vertexBufferSize[i] = (m_draw_array_first + m_draw_array_count) * tsize * m_vertex_data[i].size;
 		}
 	}
 
@@ -727,7 +713,7 @@ void D3D12GSRender::Flip()
 
 		size_t w = 0, h = 0, rowPitch = 0;
 
-		ID3D12Resource *stagingTexture;
+		size_t offset = 0;
 		if (m_read_buffer)
 		{
 			CellGcmDisplayInfo* buffers = vm::get_ptr<CellGcmDisplayInfo>(m_gcm_buffers_addr);
@@ -741,21 +727,13 @@ void D3D12GSRender::Flip()
 			assert(m_textureUploadData.canAlloc(textureSize));
 			size_t heapOffset = m_textureUploadData.alloc(textureSize);
 
-			ThrowIfFailed(m_device->CreatePlacedResource(
-				m_textureUploadData.m_heap,
-				heapOffset,
-				&CD3DX12_RESOURCE_DESC::Buffer(textureSize),
-				D3D12_RESOURCE_STATE_GENERIC_READ,
-				nullptr,
-				IID_PPV_ARGS(&stagingTexture)
-				));
-			getCurrentResourceStorage().m_singleFrameLifetimeResources.push_back(stagingTexture);
-
-			void *dstBuffer;
-			ThrowIfFailed(stagingTexture->Map(0, nullptr, &dstBuffer));
+			void *buffer;
+			ThrowIfFailed(m_textureUploadData.m_heap->Map(0, &CD3DX12_RANGE(heapOffset, heapOffset + textureSize), &buffer));
+			void *dstBuffer = (char*)buffer + heapOffset;
 			for (unsigned row = 0; row < h; row++)
 				memcpy((char*)dstBuffer + row * rowPitch, (char*)src_buffer + row * w * 4, w * 4);
-			stagingTexture->Unmap(0, nullptr);
+			m_textureUploadData.m_heap->Unmap(0, &CD3DX12_RANGE(heapOffset, heapOffset + textureSize));
+			offset = heapOffset;
 		}
 
 		ThrowIfFailed(
@@ -769,7 +747,7 @@ void D3D12GSRender::Flip()
 				)
 			);
 		getCurrentResourceStorage().m_commandList->CopyTextureRegion(&CD3DX12_TEXTURE_COPY_LOCATION(storage.m_RAMFramebuffer.Get(), 0), 0, 0, 0,
-			&CD3DX12_TEXTURE_COPY_LOCATION(stagingTexture, { 0, { DXGI_FORMAT_R8G8B8A8_UNORM, (UINT)w, (UINT)h, 1, (UINT)rowPitch} }), nullptr);
+			&CD3DX12_TEXTURE_COPY_LOCATION(m_textureUploadData.m_heap, { offset, { DXGI_FORMAT_R8G8B8A8_UNORM, (UINT)w, (UINT)h, 1, (UINT)rowPitch} }), nullptr);
 
 		getCurrentResourceStorage().m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(storage.m_RAMFramebuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ));
 		resourceToFlip = storage.m_RAMFramebuffer.Get();
@@ -860,6 +838,10 @@ void D3D12GSRender::Flip()
 	if(Ini.GSOverlay.GetValue())
 		renderOverlay();
 
+	ResetTimer();
+
+	std::chrono::time_point<std::chrono::system_clock> flipStart = std::chrono::system_clock::now();
+
 	ThrowIfFailed(m_swapChain->Present(Ini.GSVSyncEnable.GetValue() ? 1 : 0, 0));
 	// Add an event signaling queue completion
 
@@ -890,15 +872,20 @@ void D3D12GSRender::Flip()
 	ResourceStorage &newStorage = getCurrentResourceStorage();
 
 	newStorage.WaitAndClean();
-	m_constantsData.m_getPos.store(newStorage.m_getPosConstantsHeap, std::memory_order_release);
-	m_vertexIndexData.m_getPos.store(newStorage.m_getPosVertexIndexHeap, std::memory_order_release);
-	m_textureUploadData.m_getPos.store(newStorage.m_getPosTextureUploadHeap, std::memory_order_release);
-	m_readbackResources.m_getPos.store(newStorage.m_getPosReadbackHeap, std::memory_order_release);
-	m_UAVHeap.m_getPos.store(newStorage.m_getPosUAVHeap, std::memory_order_release);
+	if (newStorage.m_inUse)
+	{
+		m_constantsData.m_getPos = newStorage.m_getPosConstantsHeap;
+		m_vertexIndexData.m_getPos = newStorage.m_getPosVertexIndexHeap;
+		m_textureUploadData.m_getPos = newStorage.m_getPosTextureUploadHeap;
+		m_readbackResources.m_getPos = newStorage.m_getPosReadbackHeap;
+		m_UAVHeap.m_getPos = newStorage.m_getPosUAVHeap;
+	}
 
 	m_frame->Flip(nullptr);
 
-	ResetTimer();
+
+	std::chrono::time_point<std::chrono::system_clock> flipEnd = std::chrono::system_clock::now();
+	m_timers.m_flipDuration += std::chrono::duration_cast<std::chrono::microseconds>(flipEnd - flipStart).count();
 }
 
 void D3D12GSRender::ResetTimer()
@@ -911,6 +898,7 @@ void D3D12GSRender::ResetTimer()
 	m_timers.m_programLoadDuration = 0;
 	m_timers.m_constantsDuration = 0;
 	m_timers.m_textureDuration = 0;
+	m_timers.m_flipDuration = 0;
 }
 
 D3D12GSRender::ResourceStorage& D3D12GSRender::getCurrentResourceStorage()
