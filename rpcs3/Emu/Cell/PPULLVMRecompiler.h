@@ -11,14 +11,14 @@
 #ifdef _MSC_VER
 #pragma warning(push, 0)
 #endif
-#include "llvm/ExecutionEngine/ExecutionEngine.h"
+#include "llvm/ExecutionEngine/MCJIT.h"
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
-#include "llvm/Support/raw_ostream.h"
-#include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/GlobalVariable.h"
-#include "llvm/PassManager.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/LegacyPassManager.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
+#include "llvm/Support/raw_ostream.h"
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
