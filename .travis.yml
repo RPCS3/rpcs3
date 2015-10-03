@@ -13,6 +13,10 @@ compiler:
 env:
   global:
    - secure: "jA29KvTCTR7q4BMzPPUBGazjJwrIWa7k4fo5ZSMlyxh2NbztZTKQYwodgDcXBoptCd1KJ9H3FXwBnNdMNVnTkvoPL9uWnN4K/3D1D20FCag1kmlBwnaVqVei5cRiZ9TOMuaxhjkdg8pcrQLTlXEEdMZf6A2OW0VgoBGDVSX9nYc="
+   # Which Travis environment to run Coverity on
+   - coverity_scan_run_condition='"$CC" = gcc -a "$TRAVIS_OS_NAME" != osx'
+   # Test mode is for testing if it's working with Coverity. Change to true if testing, to avoid reaching the quota.
+   - coverity_scan_script_test_mode=false
 
 branches:
   except:
@@ -37,9 +41,7 @@ before_install:
       sudo /etc/init.d/couchdb stop;
       sudo /etc/init.d/redis-server stop;
       sudo free -m -t;
-    fi;
 
-  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then
       echo "yes" | sudo apt-key adv --fetch-keys 'http://repos.codelite.org/CodeLite.asc';
       echo "yes" | sudo apt-add-repository 'deb http://repos.codelite.org/wx3.0/ubuntu/ precise universe';
       echo "yes" | sudo add-apt-repository 'deb http://ppa.launchpad.net/ubuntu-toolchain-r/test/ubuntu precise main';
@@ -78,27 +80,25 @@ before_script:
  - cd build
  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then cmake ..; else cmake .. -DLLVM_DIR=/usr/local/opt/llvm36/lib/llvm-3.6/share/llvm/cmake; fi
 
+script:
+# Add a command to show all the variables. May be useful for debugging Travis.
+# - echo "--Shell Export Lists START--" ; export -p; echo "--Shell Export Lists STOP--";
+# And to ensure the versions of toolchain
+- echo "--CXX version?"; "$CXX" --version; echo "--CXX version confirmed";
+- if [ "$COVERITY_SCAN_BRANCH" != 1 ]; then make -j 4; fi
+
 addons:
   coverity_scan:
     project:
-      name: "DHrpcs3/rpcs3"
-      description: "PS3 emulator/debugger"
+      name: $TRAVIS_REPO_SLUG
     notification_email: raul.tambre@gmail.com
     build_command_prepend: ""
     build_command:   "make -j 4"
-    branch_pattern: coverity_scan
+    branch_pattern: master
 
-# These modifys are from https://github.com/devernay/cminpack/blob/master/.travis.yml
-# It passed but when coverall it failed.
-script:
-# Add a command to show all the variables now. maybe only useful for debugging travis.
-# - echo "--Shell Export Lists START--" ; export -p; echo "--Shell Export Lists STOP--";
-# And to ensure the versions of toolchain
- - echo "--CXX version?"; "$CXX" --version; echo "--CXX version confirmed";
-# From https://github.com/devernay/cminpack/blob/master/.travis.yml: that is $COVERITY_SCAN_BRANCH not ${COVERITY_SCAN_BRANCH}
- - if [ "$COVERITY_SCAN_BRANCH" != 1 ]; then make -j 4; fi
 after_success:
- - if [ "$COVERITY_SCAN_BRANCH" != 1 ]; then coveralls --extension .c --extension .cpp --extension .h; fi
+- coveralls --extension .c --extension .cpp --extension .h;
+
 after_failure:
 # show memory usage again and show actions of the OOM killer
  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then
