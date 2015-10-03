@@ -12,9 +12,9 @@ compiler:
 
 env:
   global:
-   - secure: "jA29KvTCTR7q4BMzPPUBGazjJwrIWa7k4fo5ZSMlyxh2NbztZTKQYwodgDcXBoptCd1KJ9H3FXwBnNdMNVnTkvoPL9uWnN4K/3D1D20FCag1kmlBwnaVqVei5cRiZ9TOMuaxhjkdg8pcrQLTlXEEdMZf6A2OW0VgoBGDVSX9nYc="
+   - secure: "Vf+FY48nip9JppMnq11105NealdErSWsoUhHo63/V3V+LKfA9guenxCp93/qoSIdSGC/sJwb0yIIMGvkTT/rxDJNh6Z+BWUTb2E0WEIIQbvTJNOSUzoq7dfF1LT61XjVjByFzcbC2xjtaBowmcAYEs1jGUUuEjYVCMmD5lY8hUg="
    # Which Travis environment to run Coverity on
-   - coverity_scan_run_condition='"$CC" = gcc -a "$TRAVIS_OS_NAME" != osx'
+   - coverity_scan_run_condition='"$TRAVIS_OS_NAME" = linux -a "$CC" = gcc'
    # Test mode is for testing if it's working with Coverity. Change to true if testing, to avoid reaching the quota.
    - coverity_scan_script_test_mode=false
 
@@ -91,13 +91,13 @@ addons:
   coverity_scan:
     project:
       name: $TRAVIS_REPO_SLUG
+      description: "PS3 emulator/debugger"
     notification_email: raul.tambre@gmail.com
-    build_command_prepend: ""
-    build_command:   "make -j 4"
+    build_command: "make -j 4"
     branch_pattern: master
 
 after_success:
-- coveralls --extension .c --extension .cpp --extension .h;
+- if [ "$COVERITY_SCAN_BRANCH" != 1 ] && [ "$TRAVIS_OS_NAME" = linux ]; then coveralls --extension .c --extension .cpp --extension .h; fi
 
 after_failure:
 # show memory usage again and show actions of the OOM killer
