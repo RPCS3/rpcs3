@@ -13,7 +13,6 @@
 #include "llvm/Support/Host.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/ExecutionEngine/GenericValue.h"
-#include "llvm/ExecutionEngine/MCJIT.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Analysis/Passes.h"
@@ -64,10 +63,10 @@ std::unique_ptr<Module> Compiler::create_module(LLVMContext &llvm_context)
 
 void Compiler::optimise_module(llvm::Module *module)
 {
-	llvm::FunctionPassManager fpm(module);
+	llvm::legacy::FunctionPassManager fpm(module);
 	fpm.add(createNoAAPass());
 	fpm.add(createBasicAliasAnalysisPass());
-	fpm.add(createNoTargetTransformInfoPass());
+	fpm.add(createTargetTransformInfoWrapperPass(TargetIRAnalysis()));
 	fpm.add(createEarlyCSEPass());
 	fpm.add(createTailCallEliminationPass());
 	fpm.add(createReassociatePass());
@@ -78,7 +77,7 @@ void Compiler::optimise_module(llvm::Module *module)
 	fpm.add(createInstructionCombiningPass());
 	fpm.add(new MemoryDependenceAnalysis());
 	fpm.add(createDeadStoreEliminationPass());
-	fpm.add(new LoopInfo());
+	fpm.add(new LoopInfoWrapperPass());
 	fpm.add(new ScalarEvolution());
 	fpm.add(createSLPVectorizerPass());
 	fpm.add(createInstructionCombiningPass());
@@ -415,7 +414,7 @@ std::pair<Executable, llvm::ExecutionEngine *> RecompilationEngine::compile(cons
 		.setOptLevel(llvm::CodeGenOpt::Aggressive)
 		.setMCPU("nehalem")
 		.create();
-	module_ptr->setDataLayout(execution_engine->getDataLayout());
+	module_ptr->setDataLayout(*execution_engine->getDataLayout());
 
 	// Translate to machine code
 	execution_engine->finalizeObject();
