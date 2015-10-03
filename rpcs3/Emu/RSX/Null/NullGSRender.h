@@ -3,67 +3,29 @@
 
 class NullGSRender final : public GSRender
 {
-public:
-
-	NullGSRender()
-	{
-	}
-
-	virtual ~NullGSRender() override
-	{
-	}
-
 private:
-	virtual void OnInit() override
+	void oninit() override
 	{
 	}
 
-	virtual void OnInitThread() override
+	void oninit_thread() override
 	{
 	}
 
-	virtual void OnExitThread() override
+	void onexit_thread() override
 	{
 	}
 
-	virtual void OnReset() override
+	bool domethod(u32 cmd, u32 value) override
+	{
+		return false;
+	}
+
+	void flip(int buffer) override
 	{
 	}
 
-	virtual void Clear(u32 cmd) override
+	void close() override
 	{
 	}
-
-	virtual void Draw() override
-	{
-	}
-
-	virtual void Flip() override
-	{
-	}
-
-	virtual void Close() override
-	{
-		if (joinable())
-		{
-			join();
-		}
-	}
-
-	virtual void semaphorePGRAPHTextureReadRelease(u32 offset, u32 value) override
-	{
-	}
-
-	virtual void semaphorePGRAPHBackendRelease(u32 offset, u32 value) override
-	{
-	}
-
-	virtual void semaphorePFIFOAcquire(u32 offset, u32 value) override
-	{
-	}
-
-	virtual void notifyProgramChange() override {}
-	virtual void notifyBlendStateChange() override {}
-	virtual void notifyDepthStencilStateChange() override {}
-	virtual void notifyRasterizerStateChange() override {}
 };

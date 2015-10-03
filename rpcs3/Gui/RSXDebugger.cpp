@@ -1,11 +1,14 @@
 #include "stdafx_gui.h"
+
+#include "RSXDebugger.h"
+
+#if _USE_RSX_DEBUGGER
 #include "rpcs3/Ini.h"
 #include "Utilities/rPlatform.h"
 #include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 
-#include "RSXDebugger.h"
 #include "Emu/SysCalls/Modules/cellVideoOut.h"
 #include "Emu/RSX/GSManager.h"
 #include "Emu/RSX/GSRender.h"
@@ -1207,3 +1210,4 @@ bool RSXDebugger::RSXReady()
 {
 	return Emu.GetGSManager().IsInited();
 }
+#endif

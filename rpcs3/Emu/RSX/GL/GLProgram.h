@@ -1,7 +1,8 @@
 #pragma once
+
 #include "GLVertexProgram.h"
 #include "GLFragmentProgram.h"
-
+/*
 struct GLProgram
 {
 private:
@@ -27,3 +28,4 @@ public:
 	void SetVTex(u32 index);
 	void Delete();
 };
+*/

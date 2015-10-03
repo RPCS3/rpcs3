@@ -118,7 +118,8 @@ SettingsDialog::SettingsDialog(wxWindow *parent)
 	wxCheckBox* chbox_gs_log_prog = new wxCheckBox(p_graphics, wxID_ANY, "Log shader programs");
 	wxCheckBox* chbox_gs_dump_depth = new wxCheckBox(p_graphics, wxID_ANY, "Write Depth Buffer");
 	wxCheckBox* chbox_gs_dump_color = new wxCheckBox(p_graphics, wxID_ANY, "Write Color Buffers");
-	wxCheckBox* chbox_gs_read_color = new wxCheckBox(p_graphics, wxID_ANY, "Read Color Buffer");
+	wxCheckBox* chbox_gs_read_color = new wxCheckBox(p_graphics, wxID_ANY, "Read Color Buffers");
+	wxCheckBox* chbox_gs_read_depth = new wxCheckBox(p_graphics, wxID_ANY, "Read Depth Buffer");
 	wxCheckBox* chbox_gs_vsync = new wxCheckBox(p_graphics, wxID_ANY, "VSync");
 	wxCheckBox* chbox_gs_debug_output = new wxCheckBox(p_graphics, wxID_ANY, "Debug Output");
 	wxCheckBox* chbox_gs_3dmonitor = new wxCheckBox(p_graphics, wxID_ANY, "3D Monitor");
@@ -256,7 +257,8 @@ SettingsDialog::SettingsDialog(wxWindow *parent)
 	chbox_gs_log_prog->SetValue(Ini.GSLogPrograms.GetValue());
 	chbox_gs_dump_depth->SetValue(Ini.GSDumpDepthBuffer.GetValue());
 	chbox_gs_dump_color->SetValue(Ini.GSDumpColorBuffers.GetValue());
-	chbox_gs_read_color->SetValue(Ini.GSReadColorBuffer.GetValue());
+	chbox_gs_read_color->SetValue(Ini.GSReadColorBuffers.GetValue());
+	chbox_gs_read_depth->SetValue(Ini.GSReadDepthBuffer.GetValue());
 	chbox_gs_vsync->SetValue(Ini.GSVSyncEnable.GetValue());
 	chbox_gs_debug_output->SetValue(Ini.GSDebugOutputEnable.GetValue());
 	chbox_gs_3dmonitor->SetValue(Ini.GS3DTV.GetValue());
@@ -346,9 +348,10 @@ SettingsDialog::SettingsDialog(wxWindow *parent)
 	s_subpanel_graphics1->Add(s_round_gs_render, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_graphics1->Add(s_round_gs_res, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_graphics1->Add(s_round_gs_d3d_adaptater, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_subpanel_graphics1->Add(chbox_gs_dump_depth, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_graphics1->Add(chbox_gs_dump_color, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_graphics1->Add(chbox_gs_read_color, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_subpanel_graphics1->Add(chbox_gs_dump_depth, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_subpanel_graphics1->Add(chbox_gs_read_depth, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_graphics1->Add(chbox_gs_vsync, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_graphics2->Add(s_round_gs_aspect, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_graphics2->Add(s_round_gs_frame_limit, wxSizerFlags().Border(wxALL, 5).Expand());
@@ -437,7 +440,8 @@ SettingsDialog::SettingsDialog(wxWindow *parent)
 		Ini.GSLogPrograms.SetValue(chbox_gs_log_prog->GetValue());
 		Ini.GSDumpDepthBuffer.SetValue(chbox_gs_dump_depth->GetValue());
 		Ini.GSDumpColorBuffers.SetValue(chbox_gs_dump_color->GetValue());
-		Ini.GSReadColorBuffer.SetValue(chbox_gs_read_color->GetValue());
+		Ini.GSReadColorBuffers.SetValue(chbox_gs_read_color->GetValue());
+		Ini.GSReadDepthBuffer.SetValue(chbox_gs_read_depth->GetValue());
 		Ini.GSVSyncEnable.SetValue(chbox_gs_vsync->GetValue());
 		Ini.GSDebugOutputEnable.SetValue(chbox_gs_debug_output->GetValue());
 		Ini.GS3DTV.SetValue(chbox_gs_3dmonitor->GetValue());

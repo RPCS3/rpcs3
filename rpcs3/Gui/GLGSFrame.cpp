@@ -21,49 +21,45 @@ GLGSFrame::GLGSFrame()
 	canvas->Bind(wxEVT_LEFT_DCLICK, &GSFrame::OnLeftDclick, this);
 }
 
-GLGSFrame::~GLGSFrame()
-{
-}
-
-void GLGSFrame::Close()
+void GLGSFrame::close()
 {
 	GSFrame::Close();
 }
 
-bool GLGSFrame::IsShown()
+bool GLGSFrame::shown()
 {
 	return GSFrame::IsShown();
 }
 
-void GLGSFrame::Hide()
+void GLGSFrame::hide()
 {
 	GSFrame::Hide();
 }
 
-void GLGSFrame::Show()
+void GLGSFrame::show()
 {
 	GSFrame::Show();
 }
 
-void* GLGSFrame::GetNewContext()
+void* GLGSFrame::make_context()
 {
 	return new wxGLContext(GetCanvas());
 }
 
-void GLGSFrame::SetCurrent(void* ctx)
+void GLGSFrame::set_current(draw_context_t ctx)
 {
-	GetCanvas()->SetCurrent(*(wxGLContext*)ctx);
+	GetCanvas()->SetCurrent(*(wxGLContext*)ctx.get());
 }
 
-void GLGSFrame::DeleteContext(void* ctx)
+void GLGSFrame::delete_context(void* ctx)
 {
 	delete (wxGLContext*)ctx;
 }
 
-void GLGSFrame::Flip(void* context)
+void GLGSFrame::flip(draw_context_t context)
 {
 	if (!canvas) return;
-	canvas->SetCurrent(*(wxGLContext*)context);
+	canvas->SetCurrent(*(wxGLContext*)context.get());
 
 	static Timer fps_t;
 	canvas->SwapBuffers();
@@ -78,6 +74,12 @@ void GLGSFrame::Flip(void* context)
 		m_frames = 0;
 		fps_t.Start();
 	}
+}
+
+size2i GLGSFrame::client_size()
+{
+	wxSize size = GetClientSize();
+	return{ size.GetWidth(), size.GetHeight() };
 }
 
 void GLGSFrame::OnSize(wxSizeEvent& event)

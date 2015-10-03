@@ -9,18 +9,18 @@ struct GLGSFrame : public GSFrame, public GSFrameBase
 	u32 m_frames;
 
 	GLGSFrame();
-	~GLGSFrame();
 
-	virtual void Close() override;
+	void close() override;
 
-	virtual bool IsShown() override;
-	virtual void Hide() override;
-	virtual void Show() override;
+	bool shown() override;
+	void hide() override;
+	void show() override;
 
-	virtual void* GetNewContext() override;
-	virtual void SetCurrent(void* ctx) override;
-	virtual void DeleteContext(void* ctx) override;
-	virtual void Flip(void* context) override;
+	void* make_context() override;
+	void set_current(draw_context_t context) override;
+	void delete_context(void* context) override;
+	void flip(draw_context_t context) override;
+	size2i client_size() override;
 
 	wxGLCanvas* GetCanvas() const { return canvas; }
 
