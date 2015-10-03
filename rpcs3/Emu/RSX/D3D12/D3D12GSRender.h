@@ -463,6 +463,13 @@ private:
 	ID3D12Resource *m_dummyTexture;
 
 	size_t m_lastWidth, m_lastHeight, m_lastDepth;
+
+	// Store previous fbo addresses to detect RTT config changes.
+	u32 m_previous_address_a;
+	u32 m_previous_address_b;
+	u32 m_previous_address_c;
+	u32 m_previous_address_d;
+	u32 m_previous_address_z;
 public:
 	GSFrameBase2 *m_frame;
 	u32 m_draw_frames;

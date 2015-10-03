@@ -138,6 +138,11 @@ D3D12DLLManagement::~D3D12DLLManagement()
 D3D12GSRender::D3D12GSRender()
 	: GSRender(), m_D3D12Lib(), m_PSO(nullptr)
 {
+	m_previous_address_a = 0;
+	m_previous_address_b = 0;
+	m_previous_address_c = 0;
+	m_previous_address_d = 0;
+	m_previous_address_z = 0;
 	gfxHandler = [this](u32 addr) {
 		bool result = invalidateAddress(addr);
 		if (result)
