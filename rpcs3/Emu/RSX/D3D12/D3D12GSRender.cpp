@@ -159,20 +159,9 @@ D3D12GSRender::D3D12GSRender()
 	Microsoft::WRL::ComPtr<IDXGIFactory4> dxgiFactory;
 	ThrowIfFailed(CreateDXGIFactory(IID_PPV_ARGS(&dxgiFactory)));
 	// Create adapter
-	IDXGIAdapter* adaptater = nullptr;
-	switch (Ini.GSD3DAdaptater.GetValue())
-	{
-	case 0: // WARP
-		ThrowIfFailed(dxgiFactory->EnumWarpAdapter(IID_PPV_ARGS(&adaptater)));
-		break;
-	case 1: // Default
-		dxgiFactory->EnumAdapters(0, &adaptater);
-		break;
-	default: // Adaptater 0, 1, ...
-		dxgiFactory->EnumAdapters(Ini.GSD3DAdaptater.GetValue() - 2,&adaptater);
-		break;
-	}
-	ThrowIfFailed(wrapD3D12CreateDevice(adaptater, D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&m_device)));
+	ComPtr<IDXGIAdapter> adaptater = nullptr;
+	ThrowIfFailed(dxgiFactory->EnumAdapters(Ini.GSD3DAdaptater.GetValue(), adaptater.GetAddressOf()));
+	ThrowIfFailed(wrapD3D12CreateDevice(adaptater.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&m_device)));
 
 	// Queues
 	D3D12_COMMAND_QUEUE_DESC copyQueueDesc = {}, graphicQueueDesc = {};
@@ -186,9 +175,6 @@ D3D12GSRender::D3D12GSRender()
 	g_descriptorStrideSamplers = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
 
 	m_frame = GetGSFrame();
-	DXGI_ADAPTER_DESC adaptaterDesc;
-	adaptater->GetDesc(&adaptaterDesc);
-	m_frame->SetAdaptaterName(adaptaterDesc.Description);
 
 	// Create swap chain and put them in a descriptor heap as rendertarget
 	DXGI_SWAP_CHAIN_DESC swapChain = {};
