@@ -1118,8 +1118,8 @@ void GLGSRender::onexit_thread()
 {
 	glDisable(GL_VERTEX_PROGRAM_POINT_SIZE);
 
-	if (m_program)
-		m_program.remove();
+	//if (m_program)
+	//	m_program.remove();
 
 	if (draw_fbo)
 		draw_fbo.remove();
@@ -1445,8 +1445,8 @@ void GLGSRender::init_buffers()
 				.format(format.format)
 				.swizzle(format.swizzle.r, format.swizzle.g, format.swizzle.b, format.swizzle.a);
 
-			__glcheck m_draw_tex_color[i].pixel_pack_settings().swap_bytes(format.swap_bytes);
-			__glcheck m_draw_tex_color[i].pixel_unpack_settings().swap_bytes(format.swap_bytes);
+			__glcheck m_draw_tex_color[i].pixel_pack_settings().swap_bytes(format.swap_bytes).aligment(1);
+			__glcheck m_draw_tex_color[i].pixel_unpack_settings().swap_bytes(format.swap_bytes).aligment(1);
 
 			__glcheck draw_fbo.color[i] = m_draw_tex_color[i];
 			__glcheck draw_fbo.check();
@@ -1743,6 +1743,9 @@ void GLGSRender::flip(int buffer)
 				.type(gl::texture::type::uint_8_8_8_8)
 				.format(gl::texture::format::bgra);
 
+			m_flip_tex_color.pixel_unpack_settings().aligment(1);
+			m_flip_tex_color.pixel_pack_settings().aligment(1);
+
 			__glcheck m_flip_fbo.recreate();
 			__glcheck m_flip_fbo.color = m_flip_tex_color;
 		}
@@ -1759,7 +1762,7 @@ void GLGSRender::flip(int buffer)
 		glDisable(GL_CULL_FACE);
 
 		__glcheck m_flip_tex_color.copy_from(vm::get_ptr(buffer_address),
-			gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8, gl::pixel_unpack_settings().row_length(buffer_pitch / 4));
+			gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8);
 	}
 
 	areai screen_area = coordi({}, { (int)buffer_width, (int)buffer_height });

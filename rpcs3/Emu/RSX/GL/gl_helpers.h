@@ -1119,7 +1119,7 @@ namespace gl
 		{
 			save_binding_state save(*this);
 			pixel_settings.apply();
-			glTexSubImage2D((GLenum)get_target(), level(), 0, 0, width(), height(), (GLenum)format, (GLenum)type, src);
+			__glcheck glTexSubImage2D((GLenum)get_target(), level(), 0, 0, width(), height(), (GLenum)format, (GLenum)type, src);
 		}
 
 		void copy_from(const buffer& buf, texture::format format, texture::type type, class pixel_unpack_settings pixel_settings)
@@ -1142,7 +1142,7 @@ namespace gl
 		{
 			save_binding_state save(*this);
 			pixel_settings.apply();
-			glGetTexImage((GLenum)get_target(), level(), (GLenum)format, (GLenum)type, dst);
+			__glcheck glGetTexImage((GLenum)get_target(), level(), (GLenum)format, (GLenum)type, dst);
 		}
 
 		void copy_to(void* dst, texture::type type, class pixel_pack_settings pixel_settings) const
