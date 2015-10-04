@@ -1139,12 +1139,30 @@ void GLGSRender::onexit_thread()
 
 void nv4097_clear_surface(u32 arg, GLGSRender* renderer)
 {
+	if ((arg & 0xf3) == 0)
+	{
+		//do nothing
+		return;
+	}
+
+	glEnable(GL_SCISSOR_TEST);
+
+	/*
 	u16 clear_x = rsx::method_registers[NV4097_SET_CLEAR_RECT_HORIZONTAL];
 	u16 clear_y = rsx::method_registers[NV4097_SET_CLEAR_RECT_VERTICAL];
 	u16 clear_w = rsx::method_registers[NV4097_SET_CLEAR_RECT_HORIZONTAL] >> 16;
 	u16 clear_h = rsx::method_registers[NV4097_SET_CLEAR_RECT_VERTICAL] >> 16;
+	glScissor(clear_x, clear_y, clear_w, clear_h);
+	*/
 
-	//glScissor(clear_x, clear_y, clear_w, clear_h);
+	u32 scissor_horizontal = rsx::method_registers[NV4097_SET_SCISSOR_HORIZONTAL];
+	u32 scissor_vertical = rsx::method_registers[NV4097_SET_SCISSOR_VERTICAL];
+	u16 scissor_x = scissor_horizontal;
+	u16 scissor_w = scissor_horizontal >> 16;
+	u16 scissor_y = scissor_vertical;
+	u16 scissor_h = scissor_vertical >> 16;
+
+	glScissor(scissor_x, scissor_y, scissor_w, scissor_h);
 
 	GLbitfield mask = 0;
 
@@ -1164,7 +1182,7 @@ void nv4097_clear_surface(u32 arg, GLGSRender* renderer)
 	{
 		u8 clear_stencil = rsx::method_registers[NV4097_SET_ZSTENCIL_CLEAR_VALUE] & 0xff;
 
-		glStencilMask(0xff);
+		__glcheck glStencilMask(rsx::method_registers[NV4097_SET_STENCIL_MASK]);
 		glClearStencil(clear_stencil);
 
 		mask |= GLenum(gl::buffers::stencil);
@@ -1178,18 +1196,15 @@ void nv4097_clear_surface(u32 arg, GLGSRender* renderer)
 		u8 clear_g = clear_color >> 8;
 		u8 clear_b = clear_color;
 
-		glColorMask(arg & 0x20, arg & 0x40, arg & 0x80, arg & 0x10);
+		glColorMask(((arg & 0x20) ? 1 : 0), ((arg & 0x40) ? 1 : 0), ((arg & 0x80) ? 1 : 0), ((arg & 0x10) ? 1 : 0));
 		glClearColor(clear_r / 255.f, clear_g / 255.f, clear_b / 255.f, clear_a / 255.f);
 
 		mask |= GLenum(gl::buffers::color);
 	}
 
-	if (mask)
-	{
-		renderer->read_buffers();
-		renderer->draw_fbo.clear(gl::buffers(mask));
-		renderer->write_buffers();
-	}
+	renderer->init_buffers();
+	renderer->draw_fbo.clear(gl::buffers(mask));
+	renderer->write_buffers();
 }
 
 using rsx_method_impl_t = void(*)(u32, GLGSRender*);

@@ -19,7 +19,7 @@ namespace gl
 	{
 		bind_as(target::read_frame_buffer);
 		dst.bind_as(target::draw_frame_buffer);
-		glBlitFramebuffer(
+		__glcheck glBlitFramebuffer(
 			src_area.x1, src_area.y1, src_area.x2, src_area.y2,
 			dst_area.x1, dst_area.y1, dst_area.x2, dst_area.y2,
 			(GLbitfield)buffers_, (GLenum)filter_);
@@ -64,18 +64,13 @@ namespace gl
 	{
 		save_binding_state save(*this);
 		GLenum buf = buffer.id();
-		glDrawBuffers(1, &buf);
+		__glcheck glDrawBuffers(1, &buf);
 	}
 
 	void fbo::draw_buffers(const std::initializer_list<attachment>& indexes) const
 	{
 		save_binding_state save(*this);
-		std::vector<GLenum> ids;
-
-		for (auto &index : indexes)
-			ids.push_back(index.id());
-
-		glDrawBuffers((GLsizei)ids.size(), ids.data());
+		__glcheck glDrawBuffers((GLsizei)indexes.size(), (const GLenum*)indexes.begin());
 	}
 
 	void fbo::draw_arrays(draw_mode mode, GLsizei count, GLint first) const
@@ -99,19 +94,19 @@ namespace gl
 	void fbo::draw_elements(draw_mode mode, GLsizei count, indices_type type, const GLvoid *indices) const
 	{
 		save_binding_state save(*this);
-		glDrawElements((GLenum)mode, count, (GLenum)type, indices);
+		__glcheck glDrawElements((GLenum)mode, count, (GLenum)type, indices);
 	}
 
 	void fbo::draw_elements(const buffer& buffer, draw_mode mode, GLsizei count, indices_type type, const GLvoid *indices) const
 	{
 		buffer.bind(buffer::target::array);
-		glDrawElements((GLenum)mode, count, (GLenum)type, indices);
+		__glcheck glDrawElements((GLenum)mode, count, (GLenum)type, indices);
 	}
 
 	void fbo::draw_elements(draw_mode mode, GLsizei count, indices_type type, const buffer& indices, size_t indices_buffer_offset) const
 	{
 		indices.bind(buffer::target::element_array);
-		glDrawElements((GLenum)mode, count, (GLenum)type, (GLvoid*)indices_buffer_offset);
+		__glcheck glDrawElements((GLenum)mode, count, (GLenum)type, (GLvoid*)indices_buffer_offset);
 	}
 
 	void fbo::draw_elements(const buffer& buffer_, draw_mode mode, GLsizei count, indices_type type, const buffer& indices, size_t indices_buffer_offset) const
