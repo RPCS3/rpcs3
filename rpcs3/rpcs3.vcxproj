@@ -223,7 +223,7 @@
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
     </Link>
     <PreBuildEvent>
-      <Command>"$(SolutionDir)\Utilities\git-version-gen.cmd"</Command>
+      <Command>%windir%\sysnative\cmd.exe /c "$(SolutionDir)\Utilities\git-version-gen.cmd"</Command>
       <Message>Updating git-version.h</Message>
     </PreBuildEvent>
     <ProjectReference>
@@ -253,7 +253,7 @@
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
     </Link>
     <PreBuildEvent>
-      <Command>"$(SolutionDir)\Utilities\git-version-gen.cmd"</Command>
+      <Command>%windir%\sysnative\cmd.exe /c "$(SolutionDir)\Utilities\git-version-gen.cmd"</Command>
       <Message>Updating git-version.h</Message>
     </PreBuildEvent>
     <ProjectReference>
@@ -283,7 +283,7 @@
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
     </Link>
     <PreBuildEvent>
-      <Command>"$(SolutionDir)\Utilities\git-version-gen.cmd"</Command>
+      <Command>%windir%\sysnative\cmd.exe /c "$(SolutionDir)\Utilities\git-version-gen.cmd"</Command>
       <Message>Updating git-version.h</Message>
     </PreBuildEvent>
     <ProjectReference>
@@ -313,7 +313,7 @@
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
     </Link>
     <PreBuildEvent>
-      <Command>"$(SolutionDir)\Utilities\git-version-gen.cmd"</Command>
+      <Command>%windir%\sysnative\cmd.exe /c "$(SolutionDir)\Utilities\git-version-gen.cmd"</Command>
       <Message>Updating git-version.h</Message>
     </PreBuildEvent>
     <ProjectReference>
@@ -343,7 +343,7 @@
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
     </Link>
     <PreBuildEvent>
-      <Command>"$(SolutionDir)\Utilities\git-version-gen.cmd"</Command>
+      <Command>%windir%\sysnative\cmd.exe /c "$(SolutionDir)\Utilities\git-version-gen.cmd"</Command>
       <Message>Updating git-version.h</Message>
     </PreBuildEvent>
     <ProjectReference>
@@ -384,7 +384,7 @@
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
     </Link>
     <PreBuildEvent>
-      <Command>"$(SolutionDir)\Utilities\git-version-gen.cmd"</Command>
+      <Command>%windir%\sysnative\cmd.exe /c "$(SolutionDir)\Utilities\git-version-gen.cmd"</Command>
       <Message>Updating git-version.h</Message>
     </PreBuildEvent>
   </ItemDefinitionGroup>
@@ -422,7 +422,7 @@
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
     </Link>
     <PreBuildEvent>
-      <Command>"$(SolutionDir)\Utilities\git-version-gen.cmd"</Command>
+      <Command>%windir%\sysnative\cmd.exe /c "$(SolutionDir)\Utilities\git-version-gen.cmd"</Command>
       <Message>Updating git-version.h</Message>
     </PreBuildEvent>
   </ItemDefinitionGroup>
@@ -461,7 +461,7 @@
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
     </Link>
     <PreBuildEvent>
-      <Command>"$(SolutionDir)\Utilities\git-version-gen.cmd"</Command>
+      <Command>%windir%\sysnative\cmd.exe /c "$(SolutionDir)\Utilities\git-version-gen.cmd"</Command>
       <Message>Updating git-version.h</Message>
     </PreBuildEvent>
   </ItemDefinitionGroup>
@@ -500,7 +500,7 @@
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
     </Link>
     <PreBuildEvent>
-      <Command>"$(SolutionDir)\Utilities\git-version-gen.cmd"</Command>
+      <Command>%windir%\sysnative\cmd.exe /c "$(SolutionDir)\Utilities\git-version-gen.cmd"</Command>
       <Message>Updating git-version.h</Message>
     </PreBuildEvent>
   </ItemDefinitionGroup>

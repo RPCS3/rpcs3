@@ -53,7 +53,8 @@ if errorlevel 1 (
 	goto done
 )
 
-for /F %%I IN ('call %GIT% describe --always') do set GIT_VERSION=%%I
+for /F %%I IN ('call %GIT% rev-list HEAD --count') do set GIT_VERSION=%%I
+for /F %%I IN ('call %GIT% rev-parse --short HEAD') do set GIT_VERSION=%GIT_VERSION%-%%I
 
 rem // Don't modify the file if it already has the current version.
 if exist "%GIT_VERSION_FILE%" (
