@@ -179,14 +179,14 @@ ComPtr<ID3D12Resource> uploadSingleTexture(
 */
 static
 void updateExistingTexture(
-	const RSXTexture &texture,
+	const rsx::texture &texture,
 	ID3D12GraphicsCommandList *commandList,
 	DataHeap<ID3D12Resource, 65536> &textureBuffersHeap,
 	ID3D12Resource *existingTexture)
 {
-	size_t w = texture.GetWidth(), h = texture.GetHeight();
+	size_t w = texture.width(), h = texture.height();
 
-	int format = texture.GetFormat() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
+	int format = texture.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
 	DXGI_FORMAT dxgiFormat = getTextureDXGIFormat(format);
 
 	size_t textureSize = getPlacedTextureStorageSpace(texture, 256);
@@ -309,12 +309,12 @@ size_t D3D12GSRender::UploadTextures(ID3D12GraphicsCommandList *cmdlist)
 			vramTexture = ItRTT->second;
 			isRenderTarget = true;
 		}
-		else if (cachedTex != nullptr && (cachedTex->first == TextureEntry(format, w, h, m_textures[i].GetMipmap())))
+		else if (cachedTex != nullptr && (cachedTex->first == TextureEntry(format, w, h, textures[i].mipmap())))
 		{
 			if (cachedTex->first.m_isDirty)
 			{
-				updateExistingTexture(m_textures[i], cmdlist, m_textureUploadData, cachedTex->second.Get());
-				m_textureCache.protectData(texaddr, texaddr, getTextureSize(m_textures[i]));
+				updateExistingTexture(textures[i], cmdlist, m_textureUploadData, cachedTex->second.Get());
+				m_textureCache.protectData(texaddr, texaddr, getTextureSize(textures[i]));
 			}
 			vramTexture = cachedTex->second.Get();
 		}
@@ -322,9 +322,9 @@ size_t D3D12GSRender::UploadTextures(ID3D12GraphicsCommandList *cmdlist)
 		{
 			if (cachedTex != nullptr)
 				getCurrentResourceStorage().m_dirtyTextures.push_back(m_textureCache.removeFromCache(texaddr));
-			ComPtr<ID3D12Resource> tex = uploadSingleTexture(m_textures[i], m_device.Get(), cmdlist, m_textureUploadData);
+			ComPtr<ID3D12Resource> tex = uploadSingleTexture(textures[i], m_device.Get(), cmdlist, m_textureUploadData);
 			vramTexture = tex.Get();
-			m_textureCache.storeAndProtectData(texaddr, texaddr, getTextureSize(m_textures[i]), format, w, h, m_textures[i].mipmap(), tex);
+			m_textureCache.storeAndProtectData(texaddr, texaddr, getTextureSize(textures[i]), format, w, h, textures[i].mipmap(), tex);
 		}
 
 		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};

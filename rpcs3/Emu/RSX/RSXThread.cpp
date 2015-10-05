@@ -960,98 +960,107 @@ namespace rsx
 
 		reset();
 
-		while (joinable())
+		try
 		{
-			//TODO: async mode
-			if (Emu.IsStopped())
+			while (joinable())
 			{
-				LOG_WARNING(RSX, "RSX thread aborted");
-				break;
-			}
-			std::lock_guard<std::mutex> lock(cs_main);
-
-			inc = 1;
-
-			be_t<u32> get = ctrl->get;
-			be_t<u32> put = ctrl->put;
-
-			if (put == get || !Emu.IsRunning())
-			{
-				std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
-				continue;
-			}
-
-			const u32 cmd = ReadIO32(get);
-			const u32 count = (cmd >> 18) & 0x7ff;
-	
-			if (cmd & CELL_GCM_METHOD_FLAG_JUMP)
-			{
-				u32 offs = cmd & 0x1fffffff;
-				//LOG_WARNING(RSX, "rsx jump(0x%x) #addr=0x%x, cmd=0x%x, get=0x%x, put=0x%x", offs, m_ioAddress + get, cmd, get, put);
-				ctrl->get.exchange(offs);
-				continue;
-			}
-			if (cmd & CELL_GCM_METHOD_FLAG_CALL)
-			{
-				m_call_stack.push(get + 4);
-				u32 offs = cmd & ~3;
-				//LOG_WARNING(RSX, "rsx call(0x%x) #0x%x - 0x%x", offs, cmd, get);
-				ctrl->get.exchange(offs);
-				continue;
-			}
-			if (cmd == CELL_GCM_METHOD_FLAG_RETURN)
-			{
-				u32 get = m_call_stack.top();
-				m_call_stack.pop();
-				//LOG_WARNING(RSX, "rsx return(0x%x)", get);
-				ctrl->get.exchange(get);
-				continue;
-			}
-			if (cmd & CELL_GCM_METHOD_FLAG_NON_INCREMENT)
-			{
-				//LOG_WARNING(RSX, "rsx non increment cmd! 0x%x", cmd);
-				inc = 0;
-			}
-
-			if (cmd == 0) //nop
-			{
-				ctrl->get.atomic_op([](be_t<u32>& value)
+				//TODO: async mode
+				if (Emu.IsStopped())
 				{
-					value += 4;
-				});
+					LOG_WARNING(RSX, "RSX thread aborted");
+					break;
+				}
+				std::lock_guard<std::mutex> lock(cs_main);
 
-				continue;
-			}
+				inc = 1;
 
-			auto args = vm::ptr<u32>::make((u32)RSXIOMem.RealAddr(get + 4));
+				be_t<u32> get = ctrl->get;
+				be_t<u32> put = ctrl->put;
 
-			u32 first_cmd = (cmd & 0xffff) >> 2;
-
-			if (cmd & 0x3)
-			{
-				LOG_WARNING(Log::RSX, "unaligned command: %s (0x%x from 0x%x)", get_method_name(first_cmd).c_str(), first_cmd, cmd & 0xffff);
-			}
-
-			for (u32 i = 0; i < count; i++)
-			{
-				u32 reg = first_cmd + (i * inc);
-				u32 value = args[i];
-
-				if (Ini.RSXLogging.GetValue())
+				if (put == get || !Emu.IsRunning())
 				{
-					LOG_NOTICE(Log::RSX, "%s(0x%x) = 0x%x", get_method_name(reg).c_str(), reg, value);
+					std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
+					continue;
 				}
 
-				method_registers[reg] = value;
+				const u32 cmd = ReadIO32(get);
+				const u32 count = (cmd >> 18) & 0x7ff;
 
-				if (auto method = methods[reg])
-					method(this, value);
+				if (cmd & CELL_GCM_METHOD_FLAG_JUMP)
+				{
+					u32 offs = cmd & 0x1fffffff;
+					//LOG_WARNING(RSX, "rsx jump(0x%x) #addr=0x%x, cmd=0x%x, get=0x%x, put=0x%x", offs, m_ioAddress + get, cmd, get, put);
+					ctrl->get.exchange(offs);
+					continue;
+				}
+				if (cmd & CELL_GCM_METHOD_FLAG_CALL)
+				{
+					m_call_stack.push(get + 4);
+					u32 offs = cmd & ~3;
+					//LOG_WARNING(RSX, "rsx call(0x%x) #0x%x - 0x%x", offs, cmd, get);
+					ctrl->get.exchange(offs);
+					continue;
+				}
+				if (cmd == CELL_GCM_METHOD_FLAG_RETURN)
+				{
+					u32 get = m_call_stack.top();
+					m_call_stack.pop();
+					//LOG_WARNING(RSX, "rsx return(0x%x)", get);
+					ctrl->get.exchange(get);
+					continue;
+				}
+				if (cmd & CELL_GCM_METHOD_FLAG_NON_INCREMENT)
+				{
+					//LOG_WARNING(RSX, "rsx non increment cmd! 0x%x", cmd);
+					inc = 0;
+				}
+
+				if (cmd == 0) //nop
+				{
+					ctrl->get.atomic_op([](be_t<u32>& value)
+					{
+						value += 4;
+					});
+
+					continue;
+				}
+
+				auto args = vm::ptr<u32>::make((u32)RSXIOMem.RealAddr(get + 4));
+
+				u32 first_cmd = (cmd & 0xffff) >> 2;
+
+				if (cmd & 0x3)
+				{
+					LOG_WARNING(Log::RSX, "unaligned command: %s (0x%x from 0x%x)", get_method_name(first_cmd).c_str(), first_cmd, cmd & 0xffff);
+				}
+
+				for (u32 i = 0; i < count; i++)
+				{
+					u32 reg = first_cmd + (i * inc);
+					u32 value = args[i];
+
+					if (Ini.RSXLogging.GetValue())
+					{
+						LOG_NOTICE(Log::RSX, "%s(0x%x) = 0x%x", get_method_name(reg).c_str(), reg, value);
+					}
+
+					method_registers[reg] = value;
+
+					if (auto method = methods[reg])
+						method(this, value);
+				}
+
+				ctrl->get.atomic_op([count](be_t<u32>& value)
+				{
+					value += (count + 1) * 4;
+				});
 			}
+		}
+		catch (const std::exception& ex)
+		{
+			LOG_ERROR(Log::RSX, ex.what());
 
-			ctrl->get.atomic_op([count](be_t<u32>& value)
-			{
-				value += (count + 1) * 4;
-			});
+			std::rethrow_exception(std::current_exception());
 		}
 
 		LOG_NOTICE(RSX, "RSX thread ended");

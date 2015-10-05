@@ -605,28 +605,27 @@ void GLGSRender::begin()
 
 	__glcheck glScissor(scissor_x, scissor_y, scissor_w, scissor_h);
 
-	if (enable(rsx::method_registers[NV4097_SET_DEPTH_TEST_ENABLE], GL_DEPTH_TEST))
+	if (__glcheck enable(rsx::method_registers[NV4097_SET_DEPTH_TEST_ENABLE], GL_DEPTH_TEST))
 	{
 		__glcheck glDepthFunc(rsx::method_registers[NV4097_SET_DEPTH_FUNC]);
 		__glcheck glDepthMask(rsx::method_registers[NV4097_SET_DEPTH_MASK]);
 	}
 
-	if (enable(rsx::method_registers[NV4097_SET_DEPTH_BOUNDS_TEST_ENABLE], GL_DEPTH_BOUNDS_TEST_EXT))
+	if (glDepthBoundsEXT && (__glcheck enable(rsx::method_registers[NV4097_SET_DEPTH_BOUNDS_TEST_ENABLE], GL_DEPTH_BOUNDS_TEST_EXT)))
 	{
 		__glcheck glDepthBoundsEXT((f32&)rsx::method_registers[NV4097_SET_DEPTH_BOUNDS_MIN], (f32&)rsx::method_registers[NV4097_SET_DEPTH_BOUNDS_MAX]);
 	}
 
 	__glcheck glDepthRange((f32&)rsx::method_registers[NV4097_SET_CLIP_MIN], (f32&)rsx::method_registers[NV4097_SET_CLIP_MAX]);
-	__glcheck glDepthFunc(rsx::method_registers[NV4097_SET_DEPTH_FUNC]);
+	__glcheck enable(rsx::method_registers[NV4097_SET_DITHER_ENABLE], GL_DITHER);
 
-	enable(rsx::method_registers[NV4097_SET_DITHER_ENABLE], GL_DITHER);
-	if (enable(rsx::method_registers[NV4097_SET_ALPHA_TEST_ENABLE], GL_ALPHA_TEST))
+	if (__glcheck enable(rsx::method_registers[NV4097_SET_ALPHA_TEST_ENABLE], GL_ALPHA_TEST))
 	{
 		//TODO: NV4097_SET_ALPHA_REF must be converted to f32
 		//glcheck(glAlphaFunc(rsx::method_registers[NV4097_SET_ALPHA_FUNC], rsx::method_registers[NV4097_SET_ALPHA_REF]));
 	}
 
-	if (enable(rsx::method_registers[NV4097_SET_BLEND_ENABLE], GL_BLEND))
+	if (__glcheck enable(rsx::method_registers[NV4097_SET_BLEND_ENABLE], GL_BLEND))
 	{
 		u32 sfactor = rsx::method_registers[NV4097_SET_BLEND_FUNC_SFACTOR];
 		u32 dfactor = rsx::method_registers[NV4097_SET_BLEND_FUNC_DFACTOR];
@@ -667,14 +666,14 @@ void GLGSRender::begin()
 		__glcheck glBlendEquationSeparate(equation_rgb, equation_a);
 	}
 	
-	if (enable(rsx::method_registers[NV4097_SET_STENCIL_TEST_ENABLE], GL_STENCIL_TEST))
+	if (__glcheck enable(rsx::method_registers[NV4097_SET_STENCIL_TEST_ENABLE], GL_STENCIL_TEST))
 	{
 		__glcheck glStencilFunc(rsx::method_registers[NV4097_SET_STENCIL_FUNC], rsx::method_registers[NV4097_SET_STENCIL_FUNC_REF],
 			rsx::method_registers[NV4097_SET_STENCIL_FUNC_MASK]);
 		__glcheck glStencilOp(rsx::method_registers[NV4097_SET_STENCIL_OP_FAIL], rsx::method_registers[NV4097_SET_STENCIL_OP_ZFAIL],
 			rsx::method_registers[NV4097_SET_STENCIL_OP_ZPASS]);
 
-		if (enable(rsx::method_registers[NV4097_SET_TWO_SIDED_STENCIL_TEST_ENABLE], GL_STENCIL_TEST_TWO_SIDE_EXT))
+		if (__glcheck enable(rsx::method_registers[NV4097_SET_TWO_SIDED_STENCIL_TEST_ENABLE], GL_STENCIL_TEST_TWO_SIDE_EXT))
 		{
 			__glcheck glStencilMaskSeparate(GL_BACK, rsx::method_registers[NV4097_SET_BACK_STENCIL_MASK]);
 			__glcheck glStencilFuncSeparate(GL_BACK, rsx::method_registers[NV4097_SET_BACK_STENCIL_FUNC],
@@ -693,14 +692,14 @@ void GLGSRender::begin()
 		__glcheck enable(blend_mrt & 8, GL_BLEND, GL_COLOR_ATTACHMENT3);
 	}
 	
-	if (enable(rsx::method_registers[NV4097_SET_LOGIC_OP_ENABLE], GL_LOGIC_OP))
+	if (__glcheck enable(rsx::method_registers[NV4097_SET_LOGIC_OP_ENABLE], GL_LOGIC_OP))
 	{
 		__glcheck glLogicOp(rsx::method_registers[NV4097_SET_LOGIC_OP]);
 	}
 
 	u32 line_width = rsx::method_registers[NV4097_SET_LINE_WIDTH];
 	__glcheck glLineWidth((line_width >> 3) + (line_width & 7) / 8.f);
-	enable(rsx::method_registers[NV4097_SET_LINE_SMOOTH_ENABLE], GL_LINE_SMOOTH);
+	__glcheck enable(rsx::method_registers[NV4097_SET_LINE_SMOOTH_ENABLE], GL_LINE_SMOOTH);
 
 	//TODO
 	//NV4097_SET_ANISO_SPREAD
@@ -740,16 +739,16 @@ void GLGSRender::begin()
 	u8 clip_plane_5 = (clip_plane_control >> 20) & 0xf;
 
 	//TODO
-	if (enable(clip_plane_0, GL_CLIP_DISTANCE0)) {}
-	if (enable(clip_plane_1, GL_CLIP_DISTANCE1)) {}
-	if (enable(clip_plane_2, GL_CLIP_DISTANCE2)) {}
-	if (enable(clip_plane_3, GL_CLIP_DISTANCE3)) {}
-	if (enable(clip_plane_4, GL_CLIP_DISTANCE4)) {}
-	if (enable(clip_plane_5, GL_CLIP_DISTANCE5)) {}
+	if (__glcheck enable(clip_plane_0, GL_CLIP_DISTANCE0)) {}
+	if (__glcheck enable(clip_plane_1, GL_CLIP_DISTANCE1)) {}
+	if (__glcheck enable(clip_plane_2, GL_CLIP_DISTANCE2)) {}
+	if (__glcheck enable(clip_plane_3, GL_CLIP_DISTANCE3)) {}
+	if (__glcheck enable(clip_plane_4, GL_CLIP_DISTANCE4)) {}
+	if (__glcheck enable(clip_plane_5, GL_CLIP_DISTANCE5)) {}
 
-	__glcheck (enable(rsx::method_registers[NV4097_SET_POLY_OFFSET_FILL_ENABLE], GL_POLYGON_OFFSET_FILL));
+	__glcheck enable(rsx::method_registers[NV4097_SET_POLY_OFFSET_FILL_ENABLE], GL_POLYGON_OFFSET_FILL);
 
-	if (enable(rsx::method_registers[NV4097_SET_POLYGON_STIPPLE], GL_POLYGON_STIPPLE))
+	if (__glcheck enable(rsx::method_registers[NV4097_SET_POLYGON_STIPPLE], GL_POLYGON_STIPPLE))
 	{
 		__glcheck glPolygonStipple((GLubyte*)(rsx::method_registers + NV4097_SET_POLYGON_STIPPLE_PATTERN));
 	}
@@ -757,13 +756,13 @@ void GLGSRender::begin()
 	__glcheck glPolygonMode(GL_FRONT, rsx::method_registers[NV4097_SET_FRONT_POLYGON_MODE]);
 	__glcheck glPolygonMode(GL_BACK, rsx::method_registers[NV4097_SET_BACK_POLYGON_MODE]);
 
-	if (enable(rsx::method_registers[NV4097_SET_CULL_FACE_ENABLE], GL_CULL_FACE))
+	if (__glcheck enable(rsx::method_registers[NV4097_SET_CULL_FACE_ENABLE], GL_CULL_FACE))
 	{
 		__glcheck glCullFace(rsx::method_registers[NV4097_SET_CULL_FACE]);
 		__glcheck glFrontFace(rsx::method_registers[NV4097_SET_FRONT_FACE]);
 	}
 
-	enable(rsx::method_registers[NV4097_SET_POLY_SMOOTH_ENABLE], GL_POLYGON_SMOOTH);
+	__glcheck enable(rsx::method_registers[NV4097_SET_POLY_SMOOTH_ENABLE], GL_POLYGON_SMOOTH);
 
 	//NV4097_SET_COLOR_KEY_COLOR
 	//NV4097_SET_SHADER_CONTROL
@@ -771,12 +770,12 @@ void GLGSRender::begin()
 	//NV4097_SET_ANTI_ALIASING_CONTROL
 	//NV4097_SET_CLIP_ID_TEST_ENABLE
 
-	if (enable(rsx::method_registers[NV4097_SET_RESTART_INDEX_ENABLE], GL_PRIMITIVE_RESTART))
+	if (__glcheck enable(rsx::method_registers[NV4097_SET_RESTART_INDEX_ENABLE], GL_PRIMITIVE_RESTART))
 	{
 		__glcheck glPrimitiveRestartIndex(rsx::method_registers[NV4097_SET_RESTART_INDEX]);
 	}
 
-	if (enable(rsx::method_registers[NV4097_SET_LINE_STIPPLE], GL_LINE_STIPPLE))
+	if (__glcheck enable(rsx::method_registers[NV4097_SET_LINE_STIPPLE], GL_LINE_STIPPLE))
 	{
 		u32 line_stipple_pattern = rsx::method_registers[NV4097_SET_LINE_STIPPLE_PATTERN];
 		u16 factor = line_stipple_pattern;
@@ -791,45 +790,45 @@ struct apply_attrib_t;
 template<typename T>
 struct apply_attrib_t<T, 1>
 {
-	static void func(gl::glsl::program& program, int index, const T* data)
+	static void func(gl::glsl::program& program, int location, const T* data)
 	{
-		program.attribs[index] = data[0];
+		program.attribs[location] = data[0];
 	}
 };
 
 template<typename T>
 struct apply_attrib_t<T, 2>
 {
-	static void func(gl::glsl::program& program, int index, const T* data)
+	static void func(gl::glsl::program& program, int location, const T* data)
 	{
-		program.attribs[index] = color2_base<T>{ data[0], data[1] };
+		program.attribs[location] = color2_base<T>{ data[0], data[1] };
 	}
 };
 
 template<typename T>
 struct apply_attrib_t<T, 3>
 {
-	static void func(gl::glsl::program& program, int index, const T* data)
+	static void func(gl::glsl::program& program, int location, const T* data)
 	{
-		program.attribs[index] = color3_base<T>{ data[0], data[1], data[2] };
+		program.attribs[location] = color3_base<T>{ data[0], data[1], data[2] };
 	}
 };
 template<typename T>
 struct apply_attrib_t<T, 4>
 {
-	static void func(gl::glsl::program& program, int index, const T* data)
+	static void func(gl::glsl::program& program, int location, const T* data)
 	{
-		program.attribs[index] = color4_base<T>{ data[0], data[1], data[2], data[3] };
+		program.attribs[location] = color4_base<T>{ data[0], data[1], data[2], data[3] };
 	}
 };
 
 
 template<typename T, int count>
-void apply_attrib_array(gl::glsl::program& program, int index, const std::vector<u8>& data)
+void apply_attrib_array(gl::glsl::program& program, int location, const std::vector<u8>& data)
 {
 	for (size_t offset = 0; offset < data.size(); offset += count * sizeof(T))
 	{
-		apply_attrib_t<T, count>::func(program, index, (T*)(data.data() + offset));
+		apply_attrib_t<T, count>::func(program, location, (T*)(data.data() + offset));
 	}
 }
 
@@ -992,9 +991,21 @@ void GLGSRender::end()
 			continue;
 		}
 
-		if (0 || vertex_info.array)
+		static const std::string reg_table[] =
 		{
-			__glcheck m_program.attribs[index] =
+			"in_pos", "in_weight", "in_normal",
+			"in_diff_color", "in_spec_color",
+			"in_fog",
+			"in_point_size", "in_7",
+			"in_tc0", "in_tc1", "in_tc2", "in_tc3",
+			"in_tc4", "in_tc5", "in_tc6", "in_tc7"
+		};
+
+		int location = m_program.attribs.location(reg_table[index]);
+
+		if (vertex_info.array)
+		{
+			__glcheck m_program.attribs[location] =
 				(vao + vertex_arrays_offsets[index])
 				.config(gl_types[vertex_info.type], vertex_info.size, gl_normalized[vertex_info.type]);
 		}
@@ -1007,10 +1018,10 @@ void GLGSRender::end()
 			case CELL_GCM_VERTEX_F:
 				switch (vertex_info.size)
 				{
-				case 1: apply_attrib_array<f32, 1>(m_program, index, vertex_data); break;
-				case 2: apply_attrib_array<f32, 2>(m_program, index, vertex_data); break;
-				case 3: apply_attrib_array<f32, 3>(m_program, index, vertex_data); break;
-				case 4: apply_attrib_array<f32, 4>(m_program, index, vertex_data); break;
+				case 1: apply_attrib_array<f32, 1>(m_program, location, vertex_data); break;
+				case 2: apply_attrib_array<f32, 2>(m_program, location, vertex_data); break;
+				case 3: apply_attrib_array<f32, 3>(m_program, location, vertex_data); break;
+				case 4: apply_attrib_array<f32, 4>(m_program, location, vertex_data); break;
 				}
 				break;
 
@@ -1042,23 +1053,14 @@ void GLGSRender::end()
 	rsx::thread::end();
 }
 
-void GLGSRender::oninit()
-{
-	GSRender::oninit();
-
-	m_draw_frames = 1;
-	m_skip_frames = 0;
-}
-
 void GLGSRender::oninit_thread()
 {
 	GSRender::oninit_thread();
 
 	gl::init();
-	LOG_NOTICE(Log::RSX, "%s", glGetString(GL_VERSION));
-	LOG_NOTICE(Log::RSX, "%s", glGetString(GL_SHADING_LANGUAGE_VERSION));
-
-	is_intel_vendor = strstr((const char*)glGetString(GL_VENDOR), "Intel");
+	LOG_NOTICE(Log::RSX, (const char*)glGetString(GL_VERSION));
+	LOG_NOTICE(Log::RSX, (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION));
+	LOG_NOTICE(Log::RSX, (const char*)glGetString(GL_VENDOR));
 
 	glEnable(GL_VERTEX_PROGRAM_POINT_SIZE);
 }

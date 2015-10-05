@@ -8,7 +8,12 @@
 
 draw_context_t GSFrameBase::new_context()
 {
-	return std::shared_ptr<void>(make_context(), [this](void* ctxt) { delete_context(ctxt); });
+	if (void* context = make_context())
+	{
+		return std::shared_ptr<void>(context, [this](void* ctxt) { delete_context(ctxt); });
+	}
+
+	return nullptr;
 }
 
 void GSFrameBase::title_message(const std::wstring& msg)

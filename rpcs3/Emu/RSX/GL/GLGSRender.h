@@ -57,8 +57,6 @@ private:
 	GLTexture m_gl_textures[rsx::limits::textures_count];
 	GLTexture m_gl_vertex_textures[rsx::limits::vertex_textures_count];
 
-	draw_context_t m_context = nullptr;
-
 	//TODO: program cache
 	gl::glsl::program m_program;
 
@@ -78,11 +76,6 @@ private:
 	gl::texture m_flip_tex_color;
 
 public:
-	GSFrameBase* m_frame = nullptr;
-	u32 m_draw_frames;
-	u32 m_skip_frames;
-	bool is_intel_vendor;
-	
 	GLGSRender();
 
 private:
@@ -99,7 +92,6 @@ protected:
 	void begin() override;
 	void end() override;
 
-	void oninit() override;
 	void oninit_thread() override;
 	void onexit_thread() override;
 	bool domethod(u32 id, u32 arg) override;

@@ -40,6 +40,10 @@ struct GLTraits
 		__glcheck result->create()
 			.attach(gl::glsl::shader_view(vertexProgramData.id))
 			.attach(gl::glsl::shader_view(fragmentProgramData.id))
+			.bind_fragment_data_location("ocol0", 0)
+			.bind_fragment_data_location("ocol1", 1)
+			.bind_fragment_data_location("ocol2", 2)
+			.bind_fragment_data_location("ocol3", 3)
 			.make();
 		__glcheck result->use();
 
