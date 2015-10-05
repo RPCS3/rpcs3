@@ -141,7 +141,7 @@ void D3D12VertexProgramDecompiler::insertMainStart(std::stringstream & OS)
 
 void D3D12VertexProgramDecompiler::insertMainEnd(std::stringstream & OS)
 {
-	OS << "	PixelInput Out;" << std::endl;
+	OS << "	PixelInput Out = (PixelInput)0;" << std::endl;
 	// Declare inside main function
 	for (auto &i : reg_table)
 	{
