@@ -3,29 +3,10 @@
 
 class NullGSRender final : public GSRender
 {
+public:
+	NullGSRender();
+
 private:
-	void oninit() override
-	{
-	}
-
-	void oninit_thread() override
-	{
-	}
-
-	void onexit_thread() override
-	{
-	}
-
-	bool domethod(u32 cmd, u32 value) override
-	{
-		return false;
-	}
-
-	void flip(int buffer) override
-	{
-	}
-
-	void close() override
-	{
-	}
+	void onexit_thread() override;
+	bool domethod(u32 cmd, u32 value) override;
 };

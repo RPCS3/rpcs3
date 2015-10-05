@@ -47,13 +47,13 @@ namespace rsx
 		__forceinline void semaphore_acquire(thread* rsx, u32 arg)
 		{
 			//TODO: dma
-			while (vm::read32(rsx->label_addr + method_registers[NV406E_SEMAPHORE_OFFSET]) != arg)
+			/*while (vm::read32(rsx->label_addr + method_registers[NV406E_SEMAPHORE_OFFSET]) != arg)
 			{
 				if (Emu.IsStopped())
 					break;
 
 				std::this_thread::sleep_for(std::chrono::milliseconds(1));
-			}
+			}*/
 		}
 
 		__forceinline void semaphore_release(thread* rsx, u32 arg)
@@ -199,6 +199,42 @@ namespace rsx
 			{
 				rsx->begin();
 				return;
+			}
+
+			if (!rsx->vertex_draw_count)
+			{
+				bool has_array = false;
+
+				for (int i = 0; i < rsx::limits::vertex_count; ++i)
+				{
+					if (rsx->vertex_arrays_info[i].array)
+					{
+						has_array = true;
+						break;
+					}
+				}
+
+				if (!has_array)
+				{
+					u32 min_count = ~0;
+
+					for (int i = 0; i < rsx::limits::vertex_count; ++i)
+					{
+						if (!rsx->vertex_arrays_info[i].size)
+							continue;
+
+						u32 count = u32(rsx->vertex_arrays[i].size()) /
+							rsx::get_vertex_type_size(rsx->vertex_arrays_info[i].type) * rsx->vertex_arrays_info[i].size;
+
+						if (count < min_count)
+							min_count = count;
+					}
+
+					if (min_count && min_count < ~0)
+					{
+						rsx->vertex_draw_count = min_count;
+					}
+				}
 			}
 
 			rsx->end();

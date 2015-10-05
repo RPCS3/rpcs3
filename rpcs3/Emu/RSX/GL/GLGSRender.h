@@ -84,12 +84,10 @@ public:
 	bool is_intel_vendor;
 	
 	GLGSRender();
-	virtual ~GLGSRender();
 
 private:
 	static u32 enable(u32 enable, u32 cap);
 	static u32 enable(u32 enable, u32 cap, u32 index);
-	void close() override;
 
 public:
 	bool load_program();

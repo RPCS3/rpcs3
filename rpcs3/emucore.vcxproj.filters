@@ -992,6 +992,9 @@
     <ClCompile Include="Emu\RSX\GL\gl_helpers.cpp">
       <Filter>Emu\GPU\RSX\GL</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\RSX\Null\NullGSRender.cpp">
+      <Filter>Emu\GPU\RSX\Null</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">

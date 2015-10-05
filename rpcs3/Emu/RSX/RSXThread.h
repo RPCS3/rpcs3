@@ -32,11 +32,11 @@ namespace rsx
 		u8 _u8[0x10000];
 		u32 _u32[0x10000 >> 2];
 /*
-		struct
+		struct alignas(4)
 		{
 			u8 pad[NV4097_SET_TEXTURE_OFFSET - 4];
 
-			struct texture_t
+			struct alignas(4) texture_t
 			{
 				u32 offset;
 

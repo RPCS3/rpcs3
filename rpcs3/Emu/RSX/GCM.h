@@ -1,5 +1,6 @@
 #pragma once
 #include "Utilities/types.h"
+#include "Emu/Memory/vm.h"
 
 enum
 {
@@ -241,6 +242,15 @@ enum
 	CELL_GCM_TEXTURE_CYLINDRICAL_WRAP_ENABLE_TEX7_V = 1 << 29,
 	CELL_GCM_TEXTURE_CYLINDRICAL_WRAP_ENABLE_TEX7_P = 1 << 30,
 	CELL_GCM_TEXTURE_CYLINDRICAL_WRAP_ENABLE_TEX7_Q = 1 << 31,
+
+	// Texture Filter
+	CELL_GCM_TEXTURE_NEAREST = 1,
+	CELL_GCM_TEXTURE_LINEAR = 2,
+	CELL_GCM_TEXTURE_NEAREST_NEAREST = 3,
+	CELL_GCM_TEXTURE_LINEAR_NEAREST = 4,
+	CELL_GCM_TEXTURE_NEAREST_LINEAR = 5,
+	CELL_GCM_TEXTURE_LINEAR_LINEAR = 6,
+	CELL_GCM_TEXTURE_CONVOLUTION_MIN = 7,
 
 	CELL_GCM_PRIMITIVE_POINTS = 1,
 	CELL_GCM_PRIMITIVE_LINES = 2,
@@ -893,7 +903,7 @@ enum Method
 namespace rsx
 {
 	template<typename ...T>
-	static std::initializer_list<u32> make_command(u32 start_register, T... values)
+	static std::array<u32, sizeof...(T) + 1> make_command(u32 start_register, T... values)
 	{
 		return{ (start_register << 2) | (sizeof...(values) << 18), values... };
 	}
@@ -903,24 +913,23 @@ namespace rsx
 		return CELL_GCM_METHOD_FLAG_JUMP | offset;
 	}
 
-	template<typename ...T>
-	static size_t make_command(vm::ps3::ptr<u32>& dst, u32 start_register, T... values)
+	template<typename AT, typename ...T>
+	static size_t make_command(vm::ps3::ptr<u32, AT> &dst, u32 start_register, T... values)
 	{
-		std::initializer_list<u32> commands = make_command(start_register, values...);
+		auto commands = make_command(start_register, values...);
 
-		for (auto &&command : commands)
+		for (u32 command : commands)
 		{
-			vm::ps3::write32(dst.addr(), command);
-			dst++;
+			*dst++ = command;
 		}
 
 		return commands.size();
 	}
 
-	static size_t make_jump(vm::ps3::ptr<u32>& dst, u32 offset)
+	template<typename AT>
+	static size_t make_jump(vm::ps3::ptr<u32, AT> &dst, u32 offset)
 	{
-		vm::ps3::write32(dst.addr(), make_jump(offset));
-		dst++;
+		*dst++ = make_jump(offset);
 		return 1;
 	}
 

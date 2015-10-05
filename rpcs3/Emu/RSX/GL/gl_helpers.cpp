@@ -70,7 +70,13 @@ namespace gl
 	void fbo::draw_buffers(const std::initializer_list<attachment>& indexes) const
 	{
 		save_binding_state save(*this);
-		__glcheck glDrawBuffers((GLsizei)indexes.size(), (const GLenum*)indexes.begin());
+		std::vector<GLenum> ids;
+		ids.reserve(indexes.size());
+
+		for (auto &index : indexes)
+			ids.push_back(index.id());
+
+		__glcheck glDrawBuffers((GLsizei)ids.size(), ids.data());
 	}
 
 	void fbo::draw_arrays(draw_mode mode, GLsizei count, GLint first) const

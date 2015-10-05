@@ -505,12 +505,11 @@ s32 cellGcmSetPrepareFlip(PPUThread& ppu, vm::ptr<CellGcmContextData> ctxt, u32 
 		}
 	}
 
-	*ctxt->current++ = 0x3fead | (1 << 18);
-	*ctxt->current++ = id;
+	u32 command_size = rsx::make_command(ctxt->current, GCM_FLIP_COMMAND, id);
 
 	if (ctxt.addr() == gcm_info.context_addr)
 	{
-		vm::get_ref<CellGcmControl>(gcm_info.control_addr).put += 8;
+		vm::get_ref<CellGcmControl>(gcm_info.control_addr).put += command_size * sizeof(u32);
 	}
 
 	return id;

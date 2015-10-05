@@ -6,6 +6,9 @@ using draw_context_t = std::shared_ptr<void>;
 
 class GSFrameBase
 {
+protected:
+	std::wstring m_title_message;
+
 public:
 	GSFrameBase() = default;
 	GSFrameBase(const GSFrameBase&) = delete;
@@ -21,13 +24,34 @@ public:
 	virtual void flip(draw_context_t ctx) = 0;
 	virtual size2i client_size() = 0;
 
+	virtual void* handle() const = 0;
+	void title_message(const std::wstring&);
+
 protected:
 	virtual void delete_context(void* ctx) = 0;
 	virtual void* make_context() = 0;
 };
 
-struct GSRender : public rsx::thread
+enum class frame_type
 {
-	virtual ~GSRender() = default;
-	virtual void close()=0;
+	Null,
+	OpenGL,
+	DX12
+};
+
+class GSRender : public rsx::thread
+{
+protected:
+	GSFrameBase* m_frame;
+	draw_context_t m_context;
+
+public:
+	GSRender(frame_type type);
+	virtual ~GSRender();
+
+	void oninit() override;
+	void oninit_thread() override;
+
+	void close();
+	void flip(int buffer) override;
 };

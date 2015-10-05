@@ -530,15 +530,8 @@ u32 GLTexture::id() const
 	return m_id;
 }
 
-GLGSRender::GLGSRender()
+GLGSRender::GLGSRender() : GSRender(frame_type::OpenGL)
 {
-	m_frame = Emu.GetCallbacks().get_gs_frame().release();
-}
-
-GLGSRender::~GLGSRender()
-{
-	m_context = nullptr;
-	m_frame->close();
 }
 
 u32 GLGSRender::enable(u32 condition, u32 cap)
@@ -570,19 +563,6 @@ u32 GLGSRender::enable(u32 condition, u32 cap, u32 index)
 }
 
 extern CellGcmContextData current_context;
-
-void GLGSRender::close()
-{
-	if (joinable())
-	{
-		join();
-	}
-
-	if (m_frame->shown())
-	{
-		m_frame->hide();
-	}
-}
 
 void GLGSRender::begin()
 {
@@ -627,8 +607,8 @@ void GLGSRender::begin()
 
 	if (enable(rsx::method_registers[NV4097_SET_DEPTH_TEST_ENABLE], GL_DEPTH_TEST))
 	{
-		//glcheck(glDepthFunc(rsx::method_registers[NV4097_SET_DEPTH_FUNC]));
-		//glcheck(glDepthMask(rsx::method_registers[NV4097_SET_DEPTH_MASK]));
+		__glcheck glDepthFunc(rsx::method_registers[NV4097_SET_DEPTH_FUNC]);
+		__glcheck glDepthMask(rsx::method_registers[NV4097_SET_DEPTH_MASK]);
 	}
 
 	if (enable(rsx::method_registers[NV4097_SET_DEPTH_BOUNDS_TEST_ENABLE], GL_DEPTH_BOUNDS_TEST_EXT))
@@ -855,42 +835,6 @@ void apply_attrib_array(gl::glsl::program& program, int index, const std::vector
 
 void GLGSRender::end()
 {
-	if (!vertex_draw_count)
-	{
-		bool has_array = false;
-
-		for (int i = 0; i < rsx::limits::vertex_count; ++i)
-		{
-			if (vertex_arrays_info[i].array)
-			{
-				has_array = true;
-				break;
-			}
-		}
-
-		if (!has_array)
-		{
-			u32 min_count = ~0;
-
-			for (int i = 0; i < rsx::limits::vertex_count; ++i)
-			{
-				if (!vertex_arrays_info[i].size)
-					continue;
-
-				u32 count = u32(vertex_arrays[i].size()) /
-					rsx::get_vertex_type_size(vertex_arrays_info[i].type) * vertex_arrays_info[i].size;
-
-				if (count < min_count)
-					min_count = count;
-			}
-
-			if (min_count && min_count < ~0)
-			{
-				vertex_draw_count = min_count;
-			}
-		}
-	}
-
 	if (!draw_fbo || !vertex_draw_count)
 	{
 		rsx::thread::end();
@@ -906,8 +850,12 @@ void GLGSRender::end()
 		if (!textures[i].enabled())
 			continue;
 
-		__glcheck m_gl_textures[i].init(textures[i]);
-		__glcheck m_program.uniforms.texture("tex" + std::to_string(i), i, gl::texture_view(gl::texture::target::texture2D, m_gl_textures[i].id()));
+		int location;
+		if (m_program.uniforms.has_location("tex" + std::to_string(i), &location))
+		{
+			__glcheck m_gl_textures[i].init(textures[i]);
+			__glcheck m_program.uniforms.texture(location, i, gl::texture_view(gl::texture::target::texture2D, m_gl_textures[i].id()));
+		}
 	}
 
 	//initialize vertex attributes
@@ -1096,18 +1044,19 @@ void GLGSRender::end()
 
 void GLGSRender::oninit()
 {
+	GSRender::oninit();
+
 	m_draw_frames = 1;
 	m_skip_frames = 0;
-
-	m_frame->show();
 }
 
 void GLGSRender::oninit_thread()
 {
-	m_context = m_frame->new_context();
-	m_frame->set_current(m_context);
+	GSRender::oninit_thread();
 
 	gl::init();
+	LOG_NOTICE(Log::RSX, "%s", glGetString(GL_VERSION));
+	LOG_NOTICE(Log::RSX, "%s", glGetString(GL_SHADING_LANGUAGE_VERSION));
 
 	is_intel_vendor = strstr((const char*)glGetString(GL_VENDOR), "Intel");
 

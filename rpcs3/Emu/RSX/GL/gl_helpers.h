@@ -1831,6 +1831,21 @@ namespace gl
 					active_texture = 0;
 				}
 
+				bool has_location(const std::string &name, int *location = nullptr)
+				{
+					int result = glGetUniformLocation(m_program.id(), name.c_str());
+
+					if (result < 0)
+						return false;
+
+					locations[name] = result;
+
+					if (location)
+						*location = result;
+
+					return true;
+				}
+
 				GLint location(const std::string &name)
 				{
 					auto finded = locations.find(name);
@@ -1850,16 +1865,21 @@ namespace gl
 					return result;
 				}
 
-				int texture(const std::string &name, int active_texture, const gl::texture& texture)
+				int texture(GLint location, int active_texture, const gl::texture& texture)
 				{
 					glActiveTexture(GL_TEXTURE0 + active_texture);
 					texture.bind();
-					(*this)[name] = active_texture;
+					(*this)[location] = active_texture;
 
 					return active_texture;
 				}
 
-				int texture(const std::string &name, const gl::texture& tex)
+				int texture(const std::string &name, int active_texture, const gl::texture& texture_)
+				{
+					return texture(location(name), active_texture, texture_);
+				}
+
+				int texture(const std::string &name, const gl::texture& texture_)
 				{
 					int atex;
 					auto finded = locations.find(name);
@@ -1873,7 +1893,7 @@ namespace gl
 						atex = active_texture++;
 					}
 
-					return texture(name, atex, tex);
+					return texture(name, atex, texture_);
 				}
 
 				uniform_t operator[](GLint location)

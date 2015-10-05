@@ -33,13 +33,6 @@ static void unloadD3D12FunctionPointers()
 	FreeLibrary(D3D11Module);
 }
 
-GetGSFrameCb2 GetGSFrame = nullptr;
-
-void SetGetD3DGSFrameCallback(GetGSFrameCb2 value)
-{
-	GetGSFrame = value;
-}
-
 void D3D12GSRender::ResourceStorage::Reset()
 {
 	m_constantsBufferIndex = 0;
@@ -136,7 +129,7 @@ D3D12DLLManagement::~D3D12DLLManagement()
 }
 
 D3D12GSRender::D3D12GSRender()
-	: GSRender(), m_D3D12Lib(), m_PSO(nullptr)
+	: GSRender(frame_type::DX12), m_D3D12Lib(), m_PSO(nullptr)
 {
 	m_previous_address_a = 0;
 	m_previous_address_b = 0;
@@ -174,13 +167,14 @@ D3D12GSRender::D3D12GSRender()
 	g_descriptorStrideRTV = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 	g_descriptorStrideSamplers = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
 
-	m_frame = GetGSFrame();
-
+	DXGI_ADAPTER_DESC adaptaterDesc;
+	adaptater->GetDesc(&adaptaterDesc);
+	m_frame->title_message(adaptaterDesc.Description);
 	// Create swap chain and put them in a descriptor heap as rendertarget
 	DXGI_SWAP_CHAIN_DESC swapChain = {};
 	swapChain.BufferCount = 2;
 	swapChain.Windowed = true;
-	swapChain.OutputWindow = m_frame->getHandle();
+	swapChain.OutputWindow = (HWND)m_frame->handle();
 	swapChain.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	swapChain.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
 	swapChain.SampleDesc.Count = 1;
@@ -297,40 +291,20 @@ D3D12GSRender::~D3D12GSRender()
 	ReleaseD2DStructures();
 }
 
-void D3D12GSRender::Close()
-{
-	if (joinable())
-	{
-		join();
-	}
-
-	if (m_frame->IsShown())
-	{
-		m_frame->Hide();
-	}
-}
-
-void D3D12GSRender::OnInit()
-{
-	m_frame->Show();
-}
-
-void D3D12GSRender::OnInitThread()
+void D3D12GSRender::oninit_thread()
 {
 }
 
-void D3D12GSRender::OnExitThread()
+void D3D12GSRender::onexit_thread()
 {
 }
 
-void D3D12GSRender::OnReset()
+void D3D12GSRender::clear_surface(u32 arg)
 {
-}
+	if ((arg & 0xf3) == 0)
+		return;
 
-void D3D12GSRender::Clear(u32 cmd)
-{
 	std::chrono::time_point<std::chrono::system_clock> startDuration = std::chrono::system_clock::now();
-	assert(cmd == NV4097_CLEAR_SURFACE);
 
 	std::chrono::time_point<std::chrono::system_clock> rttDurationStart = std::chrono::system_clock::now();
 	PrepareRenderTargets(getCurrentResourceStorage().m_commandList.Get());
@@ -338,64 +312,77 @@ void D3D12GSRender::Clear(u32 cmd)
 	std::chrono::time_point<std::chrono::system_clock> rttDurationEnd = std::chrono::system_clock::now();
 	m_timers.m_rttDuration += std::chrono::duration_cast<std::chrono::microseconds>(rttDurationEnd - rttDurationStart).count();
 
-/*	if (m_set_color_mask)
-	{
-		glColorMask(m_color_mask_r, m_color_mask_g, m_color_mask_b, m_color_mask_a);
-		checkForGlError("glColorMask");
-	}
+	u32 scissor_horizontal = rsx::method_registers[NV4097_SET_SCISSOR_HORIZONTAL];
+	u32 scissor_vertical = rsx::method_registers[NV4097_SET_SCISSOR_VERTICAL];
+	u16 scissor_x = scissor_horizontal;
+	u16 scissor_w = scissor_horizontal >> 16;
+	u16 scissor_y = scissor_vertical;
+	u16 scissor_h = scissor_vertical >> 16;
 
-	if (m_set_scissor_horizontal && m_set_scissor_vertical)
-	{
-		glScissor(m_scissor_x, m_scissor_y, m_scissor_w, m_scissor_h);
-		checkForGlError("glScissor");
-	}*/
+	D3D12_RECT scissor;
+	scissor.left = scissor_x;
+	scissor.top = scissor_y;
+	scissor.right = scissor_x + scissor_w;
+	scissor.bottom = scissor_y + scissor_h;
 
 	// TODO: Merge depth and stencil clear when possible
-	if (m_clear_surface_mask & 0x1)
+	if (arg & 0x1)
 	{
-		u32 max_depth_value = m_surface_depth_format == CELL_GCM_SURFACE_Z16 ? 0x0000ffff : 0x00ffffff;
-		getCurrentResourceStorage().m_commandList->ClearDepthStencilView(m_rtts.m_depthStencilDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), D3D12_CLEAR_FLAG_DEPTH, m_clear_surface_z / (float)max_depth_value, 0, 0, nullptr);
+		u32 surface_depth_format = (rsx::method_registers[NV4097_SET_SURFACE_FORMAT] >> 5) & 0x7;
+		u32 max_depth_value = surface_depth_format == CELL_GCM_SURFACE_Z16 ? 0x0000ffff : 0x00ffffff;
+		u32 clear_depth = rsx::method_registers[NV4097_SET_ZSTENCIL_CLEAR_VALUE] >> 8;
+
+		getCurrentResourceStorage().m_commandList->ClearDepthStencilView(m_rtts.m_depthStencilDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), D3D12_CLEAR_FLAG_DEPTH, clear_depth / (float)max_depth_value, 0, 0, &scissor);
 	}
 
-	if (m_clear_surface_mask & 0x2)
-		getCurrentResourceStorage().m_commandList->ClearDepthStencilView(m_rtts.m_depthStencilDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), D3D12_CLEAR_FLAG_STENCIL, 0.f, m_clear_surface_s, 0, nullptr);
-
-	if (m_clear_surface_mask & 0xF0)
+	if (arg & 0x2)
 	{
+		u8 clear_stencil = rsx::method_registers[NV4097_SET_ZSTENCIL_CLEAR_VALUE] & 0xff;
+		getCurrentResourceStorage().m_commandList->ClearDepthStencilView(m_rtts.m_depthStencilDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), D3D12_CLEAR_FLAG_STENCIL, 0.f, clear_stencil, 0, &scissor);
+	}
+
+	if (arg & 0xF0)
+	{
+		u32 clear_color = rsx::method_registers[NV4097_SET_COLOR_CLEAR_VALUE];
+		u8 clear_a = clear_color >> 24;
+		u8 clear_r = clear_color >> 16;
+		u8 clear_g = clear_color >> 8;
+		u8 clear_b = clear_color;
+
 		float clearColor[] =
 		{
-			m_clear_surface_color_r / 255.0f,
-			m_clear_surface_color_g / 255.0f,
-			m_clear_surface_color_b / 255.0f,
-			m_clear_surface_color_a / 255.0f
+			clear_r / 255.0f,
+			clear_g / 255.0f,
+			clear_b / 255.0f,
+			clear_a / 255.0f
 		};
 
 		size_t g_RTTIncrement = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-		switch (m_surface_color_target)
+		switch (u32 color_target = rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET])
 		{
-			case CELL_GCM_SURFACE_TARGET_NONE: break;
+		case CELL_GCM_SURFACE_TARGET_NONE: break;
 
-			case CELL_GCM_SURFACE_TARGET_0:
-			case CELL_GCM_SURFACE_TARGET_1:
-				getCurrentResourceStorage().m_commandList->ClearRenderTargetView(CD3DX12_CPU_DESCRIPTOR_HANDLE(m_rtts.m_renderTargetsDescriptorsHeap->GetCPUDescriptorHandleForHeapStart()), clearColor, 0, nullptr);
-				break;
-			case CELL_GCM_SURFACE_TARGET_MRT1:
-				getCurrentResourceStorage().m_commandList->ClearRenderTargetView(CD3DX12_CPU_DESCRIPTOR_HANDLE(m_rtts.m_renderTargetsDescriptorsHeap->GetCPUDescriptorHandleForHeapStart()), clearColor, 0, nullptr);
-				getCurrentResourceStorage().m_commandList->ClearRenderTargetView(CD3DX12_CPU_DESCRIPTOR_HANDLE(m_rtts.m_renderTargetsDescriptorsHeap->GetCPUDescriptorHandleForHeapStart()).Offset(1, g_descriptorStrideRTV), clearColor, 0, nullptr);
-				break;
-			case CELL_GCM_SURFACE_TARGET_MRT2:
-				getCurrentResourceStorage().m_commandList->ClearRenderTargetView(CD3DX12_CPU_DESCRIPTOR_HANDLE(m_rtts.m_renderTargetsDescriptorsHeap->GetCPUDescriptorHandleForHeapStart()), clearColor, 0, nullptr);
-				getCurrentResourceStorage().m_commandList->ClearRenderTargetView(CD3DX12_CPU_DESCRIPTOR_HANDLE(m_rtts.m_renderTargetsDescriptorsHeap->GetCPUDescriptorHandleForHeapStart()).Offset(1, g_descriptorStrideRTV), clearColor, 0, nullptr);
-				getCurrentResourceStorage().m_commandList->ClearRenderTargetView(CD3DX12_CPU_DESCRIPTOR_HANDLE(m_rtts.m_renderTargetsDescriptorsHeap->GetCPUDescriptorHandleForHeapStart()).Offset(2, g_descriptorStrideRTV), clearColor, 0, nullptr);
-				break;
-			case CELL_GCM_SURFACE_TARGET_MRT3:
-				getCurrentResourceStorage().m_commandList->ClearRenderTargetView(CD3DX12_CPU_DESCRIPTOR_HANDLE(m_rtts.m_renderTargetsDescriptorsHeap->GetCPUDescriptorHandleForHeapStart()), clearColor, 0, nullptr);
-				getCurrentResourceStorage().m_commandList->ClearRenderTargetView(CD3DX12_CPU_DESCRIPTOR_HANDLE(m_rtts.m_renderTargetsDescriptorsHeap->GetCPUDescriptorHandleForHeapStart()).Offset(1, g_descriptorStrideRTV), clearColor, 0, nullptr);
-				getCurrentResourceStorage().m_commandList->ClearRenderTargetView(CD3DX12_CPU_DESCRIPTOR_HANDLE(m_rtts.m_renderTargetsDescriptorsHeap->GetCPUDescriptorHandleForHeapStart()).Offset(2, g_descriptorStrideRTV), clearColor, 0, nullptr);
-				getCurrentResourceStorage().m_commandList->ClearRenderTargetView(CD3DX12_CPU_DESCRIPTOR_HANDLE(m_rtts.m_renderTargetsDescriptorsHeap->GetCPUDescriptorHandleForHeapStart()).Offset(3, g_descriptorStrideRTV), clearColor, 0, nullptr);
-				break;
-			default:
-				LOG_ERROR(RSX, "Bad surface color target: %d", m_surface_color_target);
+		case CELL_GCM_SURFACE_TARGET_0:
+		case CELL_GCM_SURFACE_TARGET_1:
+			getCurrentResourceStorage().m_commandList->ClearRenderTargetView(CD3DX12_CPU_DESCRIPTOR_HANDLE(m_rtts.m_renderTargetsDescriptorsHeap->GetCPUDescriptorHandleForHeapStart()), clearColor, 0, &scissor);
+			break;
+		case CELL_GCM_SURFACE_TARGET_MRT1:
+			getCurrentResourceStorage().m_commandList->ClearRenderTargetView(CD3DX12_CPU_DESCRIPTOR_HANDLE(m_rtts.m_renderTargetsDescriptorsHeap->GetCPUDescriptorHandleForHeapStart()), clearColor, 0, &scissor);
+			getCurrentResourceStorage().m_commandList->ClearRenderTargetView(CD3DX12_CPU_DESCRIPTOR_HANDLE(m_rtts.m_renderTargetsDescriptorsHeap->GetCPUDescriptorHandleForHeapStart()).Offset(1, g_descriptorStrideRTV), clearColor, 0, &scissor);
+			break;
+		case CELL_GCM_SURFACE_TARGET_MRT2:
+			getCurrentResourceStorage().m_commandList->ClearRenderTargetView(CD3DX12_CPU_DESCRIPTOR_HANDLE(m_rtts.m_renderTargetsDescriptorsHeap->GetCPUDescriptorHandleForHeapStart()), clearColor, 0, &scissor);
+			getCurrentResourceStorage().m_commandList->ClearRenderTargetView(CD3DX12_CPU_DESCRIPTOR_HANDLE(m_rtts.m_renderTargetsDescriptorsHeap->GetCPUDescriptorHandleForHeapStart()).Offset(1, g_descriptorStrideRTV), clearColor, 0, &scissor);
+			getCurrentResourceStorage().m_commandList->ClearRenderTargetView(CD3DX12_CPU_DESCRIPTOR_HANDLE(m_rtts.m_renderTargetsDescriptorsHeap->GetCPUDescriptorHandleForHeapStart()).Offset(2, g_descriptorStrideRTV), clearColor, 0, &scissor);
+			break;
+		case CELL_GCM_SURFACE_TARGET_MRT3:
+			getCurrentResourceStorage().m_commandList->ClearRenderTargetView(CD3DX12_CPU_DESCRIPTOR_HANDLE(m_rtts.m_renderTargetsDescriptorsHeap->GetCPUDescriptorHandleForHeapStart()), clearColor, 0, &scissor);
+			getCurrentResourceStorage().m_commandList->ClearRenderTargetView(CD3DX12_CPU_DESCRIPTOR_HANDLE(m_rtts.m_renderTargetsDescriptorsHeap->GetCPUDescriptorHandleForHeapStart()).Offset(1, g_descriptorStrideRTV), clearColor, 0, &scissor);
+			getCurrentResourceStorage().m_commandList->ClearRenderTargetView(CD3DX12_CPU_DESCRIPTOR_HANDLE(m_rtts.m_renderTargetsDescriptorsHeap->GetCPUDescriptorHandleForHeapStart()).Offset(2, g_descriptorStrideRTV), clearColor, 0, &scissor);
+			getCurrentResourceStorage().m_commandList->ClearRenderTargetView(CD3DX12_CPU_DESCRIPTOR_HANDLE(m_rtts.m_renderTargetsDescriptorsHeap->GetCPUDescriptorHandleForHeapStart()).Offset(3, g_descriptorStrideRTV), clearColor, 0, &scissor);
+			break;
+		default:
+			LOG_ERROR(RSX, "Bad surface color target: %d", color_target);
 		}
 	}
 
@@ -411,7 +398,24 @@ void D3D12GSRender::Clear(u32 cmd)
 	}
 }
 
-void D3D12GSRender::Draw()
+bool D3D12GSRender::domethod(u32 id, u32 arg)
+{
+	switch (id)
+	{
+	case NV4097_CLEAR_SURFACE:
+		clear_surface(arg);
+		return true;
+
+	default:
+		return false;
+	}
+}
+
+void D3D12GSRender::begin()
+{
+}
+
+void D3D12GSRender::end()
 {
 	std::chrono::time_point<std::chrono::system_clock> startDuration = std::chrono::system_clock::now();
 
@@ -424,9 +428,10 @@ void D3D12GSRender::Draw()
 	std::chrono::time_point<std::chrono::system_clock> vertexIndexDurationStart = std::chrono::system_clock::now();
 
 	// Init vertex count
-	if (m_indexed_array.m_count)
+	if (!vertex_index_array.empty())
 	{
-		for (u32 i = 0; i < m_vertex_count; ++i)
+		/*
+		for (u32 i = 0; i < rsx::limits::vertex_count; ++i)
 		{
 			if (!m_vertex_data[i].IsEnabled()) continue;
 			if (!m_vertex_data[i].addr) continue;
@@ -434,24 +439,25 @@ void D3D12GSRender::Draw()
 			const u32 tsize = m_vertex_data[i].GetTypeSize();
 			m_vertexBufferSize[i] = (m_indexed_array.index_min + m_indexed_array.index_max - m_indexed_array.index_min + 1) * tsize * m_vertex_data[i].size;
 		}
+		*/
 	}
 	else
 	{
-		for (u32 i = 0; i < m_vertex_count; ++i)
+		for (u32 i = 0; i < rsx::limits::vertex_count; ++i)
 		{
-			if (!m_vertex_data[i].IsEnabled()) continue;
-			if (!m_vertex_data[i].addr) continue;
+			auto &info = vertex_arrays_info[i];
+			if (info.size == 0)
+				continue;
 
-			const u32 tsize = m_vertex_data[i].GetTypeSize();
-			m_vertexBufferSize[i] = (m_draw_array_first + m_draw_array_count) * tsize * m_vertex_data[i].size;
+			m_vertexBufferSize[i] = (draw_array_first + draw_array_count) * rsx::get_vertex_type_size(info.type) * info.size;
 		}
 	}
 
 
-	if (m_indexed_array.m_count || m_draw_array_count)
+	if (draw_array_count)
 	{
-		const std::vector<D3D12_VERTEX_BUFFER_VIEW> &vertexBufferViews = UploadVertexBuffers(m_indexed_array.m_count ? true : false);
-		const D3D12_INDEX_BUFFER_VIEW &indexBufferView = uploadIndexBuffers(m_indexed_array.m_count ? true : false);
+		const std::vector<D3D12_VERTEX_BUFFER_VIEW> &vertexBufferViews = UploadVertexBuffers(!vertex_index_array.empty());
+		const D3D12_INDEX_BUFFER_VIEW &indexBufferView = uploadIndexBuffers(!vertex_index_array.empty());
 		getCurrentResourceStorage().m_commandList->IASetVertexBuffers(0, (UINT)vertexBufferViews.size(), vertexBufferViews.data());
 		if (m_renderingInfo.m_indexed)
 			getCurrentResourceStorage().m_commandList->IASetIndexBuffer(&indexBufferView);
@@ -471,7 +477,7 @@ void D3D12GSRender::Draw()
 	m_timers.m_programLoadDuration += std::chrono::duration_cast<std::chrono::microseconds>(programLoadEnd - programLoadStart).count();
 
 	getCurrentResourceStorage().m_commandList->SetGraphicsRootSignature(m_rootSignatures[m_PSO->second].Get());
-	getCurrentResourceStorage().m_commandList->OMSetStencilRef(m_stencil_func_ref);
+	getCurrentResourceStorage().m_commandList->OMSetStencilRef(rsx::method_registers[NV4097_SET_STENCIL_FUNC_REF]);
 
 	std::chrono::time_point<std::chrono::system_clock> constantsDurationStart = std::chrono::system_clock::now();
 
@@ -553,7 +559,7 @@ void D3D12GSRender::Draw()
 	m_timers.m_textureDuration += std::chrono::duration_cast<std::chrono::microseconds>(textureDurationEnd - textureDurationStart).count();
 
 	size_t numRTT;
-	switch (m_surface_color_target)
+	switch (u32 color_target = rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET])
 	{
 	case CELL_GCM_SURFACE_TARGET_NONE: break;
 	case CELL_GCM_SURFACE_TARGET_0:
@@ -570,18 +576,24 @@ void D3D12GSRender::Draw()
 		numRTT = 4;
 		break;
 	default:
-		LOG_ERROR(RSX, "Bad surface color target: %d", m_surface_color_target);
+		LOG_ERROR(RSX, "Bad surface color target: %d", color_target);
 	}
 
 	getCurrentResourceStorage().m_commandList->OMSetRenderTargets((UINT)numRTT, &m_rtts.m_renderTargetsDescriptorsHeap->GetCPUDescriptorHandleForHeapStart(), true,
 		&CD3DX12_CPU_DESCRIPTOR_HANDLE(m_rtts.m_depthStencilDescriptorHeap->GetCPUDescriptorHandleForHeapStart()));
 
+	u32 clip_horizontal = rsx::method_registers[NV4097_SET_SURFACE_CLIP_HORIZONTAL];
+	u32 clip_vertical = rsx::method_registers[NV4097_SET_SURFACE_CLIP_VERTICAL];
+
+	u32 clip_width = clip_horizontal >> 16;
+	u32 clip_height = clip_vertical >> 16;
+
 	D3D12_VIEWPORT viewport =
 	{
 		0.f,
 		0.f,
-		(float)m_surface_clip_w,
-		(float)m_surface_clip_h,
+		(float)clip_width,
+		(float)clip_height,
 		-1.f,
 		1.f
 	};
@@ -591,12 +603,12 @@ void D3D12GSRender::Draw()
 	{
 		0,
 		0,
-		(LONG)m_surface_clip_w,
-		(LONG)m_surface_clip_h,
+		(LONG)clip_width,
+		(LONG)clip_height,
 	};
 	getCurrentResourceStorage().m_commandList->RSSetScissorRects(1, &box);
 
-	switch (m_draw_mode - 1)
+	switch (draw_mode - 1)
 	{
 	case GL_POINTS:
 		getCurrentResourceStorage().m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_POINTLIST);
@@ -633,7 +645,6 @@ void D3D12GSRender::Draw()
 	else
 		getCurrentResourceStorage().m_commandList->DrawInstanced((UINT)m_renderingInfo.m_count, 1, (UINT)m_renderingInfo.m_baseVertex, 0);
 
-	m_indexed_array.Reset();
 	std::chrono::time_point<std::chrono::system_clock> endDuration = std::chrono::system_clock::now();
 	m_timers.m_drawCallDuration += std::chrono::duration_cast<std::chrono::microseconds>(endDuration - startDuration).count();
 	m_timers.m_drawCallCount++;
@@ -663,12 +674,12 @@ isFlipSurfaceInLocalMemory(u32 surfaceColorTarget)
 	}
 }
 
-void D3D12GSRender::Flip()
+void D3D12GSRender::flip(int buffer)
 {
 	ID3D12Resource *resourceToFlip;
 	float viewport_w, viewport_h;
 
-	if (!isFlipSurfaceInLocalMemory(m_surface_color_target))
+	if (!isFlipSurfaceInLocalMemory(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET]))
 	{
 		ResourceStorage &storage = getCurrentResourceStorage();
 		assert(storage.m_RAMFramebuffer == nullptr);
@@ -676,12 +687,11 @@ void D3D12GSRender::Flip()
 		size_t w = 0, h = 0, rowPitch = 0;
 
 		size_t offset = 0;
-		if (m_read_buffer)
+		if (false/*m_read_buffer*/)
 		{
-			CellGcmDisplayInfo* buffers = vm::get_ptr<CellGcmDisplayInfo>(m_gcm_buffers_addr);
-			u32 addr = GetAddress(buffers[m_gcm_current_buffer].offset, CELL_GCM_LOCATION_LOCAL);
-			w = buffers[m_gcm_current_buffer].width;
-			h = buffers[m_gcm_current_buffer].height;
+			u32 addr = rsx::get_address(gcm_buffers[gcm_current_buffer].offset, CELL_GCM_LOCATION_LOCAL);
+			w = gcm_buffers[gcm_current_buffer].width;
+			h = gcm_buffers[gcm_current_buffer].height;
 			u8 *src_buffer = vm::get_ptr<u8>(addr);
 
 			rowPitch = align(w * 4, 256);
@@ -751,7 +761,7 @@ void D3D12GSRender::Flip()
 	srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 	srvDesc.Texture2D.MipLevels = 1;
-	if (isFlipSurfaceInLocalMemory(m_surface_color_target))
+	if (isFlipSurfaceInLocalMemory(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET]))
 		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 	else
 		srvDesc.Shader4ComponentMapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(
@@ -792,7 +802,7 @@ void D3D12GSRender::Flip()
 
 	if (!Ini.GSOverlay.GetValue())
 		getCurrentResourceStorage().m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_backBuffer[m_swapChain->GetCurrentBackBufferIndex()].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
-	if (isFlipSurfaceInLocalMemory(m_surface_color_target) && m_rtts.m_currentlyBoundRenderTargets[0] != nullptr)
+	if (isFlipSurfaceInLocalMemory(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET]) && m_rtts.m_currentlyBoundRenderTargets[0] != nullptr)
 		getCurrentResourceStorage().m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_rtts.m_currentlyBoundRenderTargets[0], D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET));
 	ThrowIfFailed(getCurrentResourceStorage().m_commandList->Close());
 	m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**)getCurrentResourceStorage().m_commandList.GetAddressOf());
@@ -841,8 +851,7 @@ void D3D12GSRender::Flip()
 		m_UAVHeap.m_getPos = newStorage.m_getPosUAVHeap;
 	}
 
-	m_frame->Flip(nullptr);
-
+	m_frame->flip(nullptr);
 
 	std::chrono::time_point<std::chrono::system_clock> flipEnd = std::chrono::system_clock::now();
 	m_timers.m_flipDuration += std::chrono::duration_cast<std::chrono::microseconds>(flipEnd - flipStart).count();
@@ -874,10 +883,14 @@ D3D12GSRender::ResourceStorage& D3D12GSRender::getNonCurrentResourceStorage()
 ID3D12Resource * D3D12GSRender::writeColorBuffer(ID3D12Resource * RTT, ID3D12GraphicsCommandList * cmdlist)
 {
 	ID3D12Resource *Result;
-	size_t w = m_surface_clip_w, h = m_surface_clip_h;
+
+	u32 clip_width = rsx::method_registers[NV4097_SET_SURFACE_CLIP_HORIZONTAL] >> 16;
+	u32 clip_height = rsx::method_registers[NV4097_SET_SURFACE_CLIP_VERTICAL] >> 16;
+
+	size_t w = clip_width, h = clip_height;
 	DXGI_FORMAT dxgiFormat;
 	size_t rowPitch;
-	switch (m_surface_color_format)
+	switch (rsx::method_registers[NV4097_SET_SURFACE_FORMAT] & 0x1f)
 	{
 	case CELL_GCM_SURFACE_A8R8G8B8:
 		dxgiFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
@@ -943,17 +956,33 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 	HANDLE handle = CreateEvent(0, FALSE, FALSE, 0);
 	fence->SetEventOnCompletion(1, handle);
 
+	u32 clip_width = rsx::method_registers[NV4097_SET_SURFACE_CLIP_HORIZONTAL] >> 16;
+	u32 clip_height = rsx::method_registers[NV4097_SET_SURFACE_CLIP_VERTICAL] >> 16;
+
 	ComPtr<ID3D12Resource> writeDest, depthConverted;
 	ComPtr<ID3D12DescriptorHeap> descriptorHeap;
-	size_t depthRowPitch = m_surface_clip_w;
+	size_t depthRowPitch = clip_width;
 	depthRowPitch = (depthRowPitch + 255) & ~255;
 
-	bool needTransfer = (m_set_context_dma_z && Ini.GSDumpDepthBuffer.GetValue()) ||
-		((m_set_context_dma_color_a || m_set_context_dma_color_b || m_set_context_dma_color_c || m_set_context_dma_color_d) && Ini.GSDumpColorBuffers.GetValue());
+	u32 dma_color_a = rsx::method_registers[NV4097_SET_CONTEXT_DMA_COLOR_A];
+	u32 dma_color_b = rsx::method_registers[NV4097_SET_CONTEXT_DMA_COLOR_B];
+	u32 dma_color_c = rsx::method_registers[NV4097_SET_CONTEXT_DMA_COLOR_C];
+	u32 dma_color_d = rsx::method_registers[NV4097_SET_CONTEXT_DMA_COLOR_D];
+	u32 dma_z = rsx::method_registers[NV4097_SET_CONTEXT_DMA_ZETA];
 
-	if (m_set_context_dma_z && Ini.GSDumpDepthBuffer.GetValue())
+	u32 offset_color_a = rsx::method_registers[NV4097_SET_SURFACE_COLOR_AOFFSET];
+	u32 offset_color_b = rsx::method_registers[NV4097_SET_SURFACE_COLOR_BOFFSET];
+	u32 offset_color_c = rsx::method_registers[NV4097_SET_SURFACE_COLOR_COFFSET];
+	u32 offset_color_d = rsx::method_registers[NV4097_SET_SURFACE_COLOR_DOFFSET];
+
+	u32 offset_z = rsx::method_registers[NV4097_SET_SURFACE_ZETA_OFFSET];
+
+	bool needTransfer = (dma_z && Ini.GSDumpDepthBuffer.GetValue()) ||
+		((dma_color_a || dma_color_b || dma_color_c || dma_color_d) && Ini.GSDumpColorBuffers.GetValue());
+
+	if (dma_z && Ini.GSDumpDepthBuffer.GetValue())
 	{
-		size_t sizeInByte = m_surface_clip_w * m_surface_clip_h * 2;
+		size_t sizeInByte = clip_width * clip_height * 2;
 		assert(m_UAVHeap.canAlloc(sizeInByte));
 		size_t heapOffset = m_UAVHeap.alloc(sizeInByte);
 
@@ -961,14 +990,14 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 			m_device->CreatePlacedResource(
 				m_UAVHeap.m_heap,
 				heapOffset,
-				&CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8_UNORM, m_surface_clip_w, m_surface_clip_h, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS),
+				&CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8_UNORM, clip_width, clip_height, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS),
 				D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
 				nullptr,
 				IID_PPV_ARGS(depthConverted.GetAddressOf())
 				)
 			);
 
-		sizeInByte = depthRowPitch * m_surface_clip_h;
+		sizeInByte = depthRowPitch * clip_height;
 		assert(m_readbackResources.canAlloc(sizeInByte));
 		heapOffset = m_readbackResources.alloc(sizeInByte);
 
@@ -988,7 +1017,7 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 			m_device->CreateDescriptorHeap(&descriptorHeapDesc, IID_PPV_ARGS(descriptorHeap.GetAddressOf()))
 			);
 		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-		switch (m_surface_depth_format)
+		switch (u32 depth_format = ((rsx::method_registers[NV4097_SET_SURFACE_FORMAT] >> 5) & 0x7))
 		{
 		case 0:
 			break;
@@ -999,7 +1028,7 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 			srvDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
 			break;
 		default:
-			LOG_ERROR(RSX, "Bad depth format! (%d)", m_surface_depth_format);
+			LOG_ERROR(RSX, "Bad depth format! (%d)", depth_format);
 			assert(0);
 		}
 		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
@@ -1020,7 +1049,7 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 		getCurrentResourceStorage().m_commandList->SetComputeRootSignature(m_convertRootSignature);
 		getCurrentResourceStorage().m_commandList->SetDescriptorHeaps(1, descriptorHeap.GetAddressOf());
 		getCurrentResourceStorage().m_commandList->SetComputeRootDescriptorTable(0, descriptorHeap->GetGPUDescriptorHandleForHeapStart());
-		getCurrentResourceStorage().m_commandList->Dispatch(m_surface_clip_w / 8, m_surface_clip_h / 8, 1);
+		getCurrentResourceStorage().m_commandList->Dispatch(clip_width / 8, clip_height / 8, 1);
 
 		D3D12_RESOURCE_BARRIER barriers[] =
 		{
@@ -1029,52 +1058,50 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 		};
 		getCurrentResourceStorage().m_commandList->ResourceBarrier(2, barriers);
 		getCurrentResourceStorage().m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(depthConverted.Get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COPY_SOURCE));
-		getCurrentResourceStorage().m_commandList->CopyTextureRegion(&CD3DX12_TEXTURE_COPY_LOCATION(writeDest.Get(), { 0, { DXGI_FORMAT_R8_UNORM, m_surface_clip_w, m_surface_clip_h, 1, (UINT)depthRowPitch } }), 0, 0, 0,
+		getCurrentResourceStorage().m_commandList->CopyTextureRegion(&CD3DX12_TEXTURE_COPY_LOCATION(writeDest.Get(), { 0, { DXGI_FORMAT_R8_UNORM, clip_width, clip_height, 1, (UINT)depthRowPitch } }), 0, 0, 0,
 			&CD3DX12_TEXTURE_COPY_LOCATION(depthConverted.Get(), 0), nullptr);
-
-		invalidateAddress(GetAddress(m_surface_offset_z, m_context_dma_z - 0xfeed0000));
-	}
+		invalidateTexture(rsx::get_address(offset_z, dma_z - 0xfeed0000));	}
 
 	ID3D12Resource *rtt0, *rtt1, *rtt2, *rtt3;
 	if (Ini.GSDumpColorBuffers.GetValue())
 	{
-		switch (m_surface_color_target)
+		switch (u32 color_target = rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET])
 		{
 		case CELL_GCM_SURFACE_TARGET_NONE:
 			break;
 
 		case CELL_GCM_SURFACE_TARGET_0:
-			if (m_context_dma_color_a) rtt0 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[0], getCurrentResourceStorage().m_commandList.Get());
+			if (dma_color_a) rtt0 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[0], getCurrentResourceStorage().m_commandList.Get());
 			break;
 
 		case CELL_GCM_SURFACE_TARGET_1:
-			if (m_context_dma_color_b) rtt1 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[0], getCurrentResourceStorage().m_commandList.Get());
+			if (dma_color_b) rtt1 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[0], getCurrentResourceStorage().m_commandList.Get());
 			break;
 
 		case CELL_GCM_SURFACE_TARGET_MRT1:
-			if (m_context_dma_color_a) rtt0 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[0], getCurrentResourceStorage().m_commandList.Get());
-			if (m_context_dma_color_b) rtt1 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[1], getCurrentResourceStorage().m_commandList.Get());
+			if (dma_color_a) rtt0 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[0], getCurrentResourceStorage().m_commandList.Get());
+			if (dma_color_b) rtt1 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[1], getCurrentResourceStorage().m_commandList.Get());
 			break;
 
 		case CELL_GCM_SURFACE_TARGET_MRT2:
-			if (m_context_dma_color_a) rtt0 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[0], getCurrentResourceStorage().m_commandList.Get());
-			if (m_context_dma_color_b) rtt1 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[1], getCurrentResourceStorage().m_commandList.Get());
-			if (m_context_dma_color_c) rtt2 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[2], getCurrentResourceStorage().m_commandList.Get());
+			if (dma_color_a) rtt0 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[0], getCurrentResourceStorage().m_commandList.Get());
+			if (dma_color_b) rtt1 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[1], getCurrentResourceStorage().m_commandList.Get());
+			if (dma_color_c) rtt2 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[2], getCurrentResourceStorage().m_commandList.Get());
 			break;
 
 		case CELL_GCM_SURFACE_TARGET_MRT3:
-			if (m_context_dma_color_a) rtt0 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[0], getCurrentResourceStorage().m_commandList.Get());
-			if (m_context_dma_color_b) rtt1 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[1], getCurrentResourceStorage().m_commandList.Get());
-			if (m_context_dma_color_c) rtt2 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[2], getCurrentResourceStorage().m_commandList.Get());
-			if (m_context_dma_color_d) rtt3 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[3], getCurrentResourceStorage().m_commandList.Get());
+			if (dma_color_a) rtt0 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[0], getCurrentResourceStorage().m_commandList.Get());
+			if (dma_color_b) rtt1 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[1], getCurrentResourceStorage().m_commandList.Get());
+			if (dma_color_c) rtt2 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[2], getCurrentResourceStorage().m_commandList.Get());
+			if (dma_color_d) rtt3 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[3], getCurrentResourceStorage().m_commandList.Get());
 			break;
 		}
 
-		if (m_context_dma_color_a) invalidateAddress(GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000));
-		if (m_context_dma_color_b) invalidateAddress(GetAddress(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000));
-		if (m_context_dma_color_c) invalidateAddress(GetAddress(m_surface_offset_c, m_context_dma_color_c - 0xfeed0000));
-		if (m_context_dma_color_d) invalidateAddress(GetAddress(m_surface_offset_d, m_context_dma_color_d - 0xfeed0000));
-	}
+		if (dma_color_a) invalidateTexture(rsx::get_address(offset_color_a, dma_color_a - 0xfeed0000));
+		if (dma_color_b) invalidateTexture(rsx::get_address(offset_color_b, dma_color_b - 0xfeed0000));
+		if (dma_color_c) invalidateTexture(rsx::get_address(offset_color_c, dma_color_c - 0xfeed0000));
+		if (dma_color_d) invalidateTexture(rsx::get_address(offset_color_d, dma_color_d - 0xfeed0000));
+		}
 	if (needTransfer)
 	{
 		ThrowIfFailed(getCurrentResourceStorage().m_commandList->Close());
@@ -1087,103 +1114,103 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 	WaitForSingleObject(handle, INFINITE);
 	CloseHandle(handle);
 
-	if (m_set_context_dma_z && Ini.GSDumpDepthBuffer.GetValue())
+	if (dma_z && Ini.GSDumpDepthBuffer.GetValue())
 	{
-		u32 address = GetAddress(m_surface_offset_z, m_context_dma_z - 0xfeed0000);
+		u32 address = rsx::get_address(offset_z, dma_z - 0xfeed0000);
 		auto ptr = vm::get_ptr<void>(address);
 		char *ptrAsChar = (char*)ptr;
 		unsigned char *writeDestPtr;
 		ThrowIfFailed(writeDest->Map(0, nullptr, (void**)&writeDestPtr));
 
-		for (unsigned row = 0; row < m_surface_clip_h; row++)
+		for (unsigned row = 0; row < clip_height; row++)
 		{
-			for (unsigned i = 0; i < m_surface_clip_w; i++)
+			for (unsigned i = 0; i < clip_width; i++)
 			{
 				unsigned char c = writeDestPtr[row * depthRowPitch + i];
-				ptrAsChar[4 * (row * m_surface_clip_w + i)] = c;
-				ptrAsChar[4 * (row * m_surface_clip_w + i) + 1] = c;
-				ptrAsChar[4 * (row * m_surface_clip_w + i) + 2] = c;
-				ptrAsChar[4 * (row * m_surface_clip_w + i) + 3] = c;
+				ptrAsChar[4 * (row * clip_width + i)] = c;
+				ptrAsChar[4 * (row * clip_width + i) + 1] = c;
+				ptrAsChar[4 * (row * clip_width + i) + 2] = c;
+				ptrAsChar[4 * (row * clip_width + i) + 3] = c;
 			}
 		}
 	}
 
 	size_t srcPitch, dstPitch;
-	switch (m_surface_color_format)
+	switch (rsx::method_registers[NV4097_SET_SURFACE_FORMAT] & 0x1f)
 	{
 	case CELL_GCM_SURFACE_A8R8G8B8:
-		srcPitch = align(m_surface_clip_w * 4, 256);
-		dstPitch = m_surface_clip_w * 4;
+		srcPitch = align(clip_width * 4, 256);
+		dstPitch = clip_width * 4;
 		break;
 	case CELL_GCM_SURFACE_F_W16Z16Y16X16:
-		srcPitch = align(m_surface_clip_w * 8, 256);
-		dstPitch = m_surface_clip_w * 8;
+		srcPitch = align(clip_width * 8, 256);
+		dstPitch = clip_width * 8;
 		break;
 	}
 
 	if (Ini.GSDumpColorBuffers.GetValue())
 	{
-		switch (m_surface_color_target)
+		switch (u32 color_target = rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET])
 		{
 		case CELL_GCM_SURFACE_TARGET_NONE:
 			break;
 		case CELL_GCM_SURFACE_TARGET_0:
 		{
-			u32 address = GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000);
+			u32 address = rsx::get_address(offset_color_a, dma_color_a - 0xfeed0000);
 			void *dstAddress = vm::get_ptr<void>(address);
-			copyToCellRamAndRelease(dstAddress, rtt0, srcPitch, dstPitch, m_surface_clip_w, m_surface_clip_h);
+			copyToCellRamAndRelease(dstAddress, rtt0, srcPitch, dstPitch, clip_width, clip_height);
 		}
 		break;
 		case CELL_GCM_SURFACE_TARGET_1:
 		{
-			u32 address = GetAddress(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000);
+			u32 address = rsx::get_address(offset_color_b, dma_color_b - 0xfeed0000);
 			void *dstAddress = vm::get_ptr<void>(address);
-			copyToCellRamAndRelease(dstAddress, rtt1, srcPitch, dstPitch, m_surface_clip_w, m_surface_clip_h);
+			copyToCellRamAndRelease(dstAddress, rtt1, srcPitch, dstPitch, clip_width, clip_height);
 		}
 		break;
 		case CELL_GCM_SURFACE_TARGET_MRT1:
 		{
-			u32 address = GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000);
+			u32 address = rsx::get_address(offset_color_a, dma_color_a - 0xfeed0000);
 			void *dstAddress = vm::get_ptr<void>(address);
-			copyToCellRamAndRelease(dstAddress, rtt0, srcPitch, dstPitch, m_surface_clip_w, m_surface_clip_h);
-			address = GetAddress(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000);
+			copyToCellRamAndRelease(dstAddress, rtt0, srcPitch, dstPitch, clip_width, clip_height);
+			address = rsx::get_address(offset_color_b, dma_color_b - 0xfeed0000);
 			dstAddress = vm::get_ptr<void>(address);
-			copyToCellRamAndRelease(dstAddress, rtt1, srcPitch, dstPitch, m_surface_clip_w, m_surface_clip_h);
+			copyToCellRamAndRelease(dstAddress, rtt1, srcPitch, dstPitch, clip_width, clip_height);
 		}
 		break;
 		case CELL_GCM_SURFACE_TARGET_MRT2:
 		{
-			u32 address = GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000);
+			u32 address = rsx::get_address(offset_color_a, dma_color_a - 0xfeed0000);
 			void *dstAddress = vm::get_ptr<void>(address);
-			copyToCellRamAndRelease(dstAddress, rtt0, srcPitch, dstPitch, m_surface_clip_w, m_surface_clip_h);
-			address = GetAddress(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000);
+			copyToCellRamAndRelease(dstAddress, rtt0, srcPitch, dstPitch, clip_width, clip_height);
+			address = rsx::get_address(offset_color_b, dma_color_b - 0xfeed0000);
 			dstAddress = vm::get_ptr<void>(address);
-			copyToCellRamAndRelease(dstAddress, rtt1, srcPitch, dstPitch, m_surface_clip_w, m_surface_clip_h);
-			address = GetAddress(m_surface_offset_c, m_context_dma_color_c - 0xfeed0000);
+			copyToCellRamAndRelease(dstAddress, rtt1, srcPitch, dstPitch, clip_width, clip_height);
+			address = rsx::get_address(offset_color_c, dma_color_c - 0xfeed0000);
 			dstAddress = vm::get_ptr<void>(address);
-			copyToCellRamAndRelease(dstAddress, rtt2, srcPitch, dstPitch, m_surface_clip_w, m_surface_clip_h);
+			copyToCellRamAndRelease(dstAddress, rtt2, srcPitch, dstPitch, clip_width, clip_height);
 		}
 		break;
 		case CELL_GCM_SURFACE_TARGET_MRT3:
 		{
-			u32 address = GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000);
+			u32 address = rsx::get_address(offset_color_a, dma_color_a - 0xfeed0000);
 			void *dstAddress = vm::get_ptr<void>(address);
-			copyToCellRamAndRelease(dstAddress, rtt0, srcPitch, dstPitch, m_surface_clip_w, m_surface_clip_h);
-			address = GetAddress(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000);
+			copyToCellRamAndRelease(dstAddress, rtt0, srcPitch, dstPitch, clip_width, clip_height);
+			address = rsx::get_address(offset_color_b, dma_color_b - 0xfeed0000);
 			dstAddress = vm::get_ptr<void>(address);
-			copyToCellRamAndRelease(dstAddress, rtt1, srcPitch, dstPitch, m_surface_clip_w, m_surface_clip_h);
-			address = GetAddress(m_surface_offset_c, m_context_dma_color_c - 0xfeed0000);
+			copyToCellRamAndRelease(dstAddress, rtt1, srcPitch, dstPitch, clip_width, clip_height);
+			address = rsx::get_address(offset_color_c, dma_color_c - 0xfeed0000);
 			dstAddress = vm::get_ptr<void>(address);
-			copyToCellRamAndRelease(dstAddress, rtt2, srcPitch, dstPitch, m_surface_clip_w, m_surface_clip_h);
-			address = GetAddress(m_surface_offset_d, m_context_dma_color_d - 0xfeed0000);
+			copyToCellRamAndRelease(dstAddress, rtt2, srcPitch, dstPitch, clip_width, clip_height);
+			address = rsx::get_address(offset_color_d, dma_color_d - 0xfeed0000);
 			dstAddress = vm::get_ptr<void>(address);
-			copyToCellRamAndRelease(dstAddress, rtt3, srcPitch, dstPitch, m_surface_clip_w, m_surface_clip_h);
+			copyToCellRamAndRelease(dstAddress, rtt3, srcPitch, dstPitch, clip_width, clip_height);
 		}
 		break;
 		}
 	}
 
-	vm::write32(m_label_addr + offset, value);
+	vm::ps3::write32(label_addr + offset, value);
 }
 
 void D3D12GSRender::semaphorePFIFOAcquire(u32 offset, u32 value)
@@ -1191,7 +1218,7 @@ void D3D12GSRender::semaphorePFIFOAcquire(u32 offset, u32 value)
 	const std::chrono::time_point<std::chrono::system_clock> enterWait = std::chrono::system_clock::now();
 	while (true)
 	{
-		volatile u32 val = vm::read32(m_label_addr + offset);
+		volatile u32 val = vm::ps3::read32(label_addr + offset);
 		if (val == value) break;
 		std::chrono::time_point<std::chrono::system_clock> waitPoint = std::chrono::system_clock::now();
 		long long elapsedTime = std::chrono::duration_cast<std::chrono::seconds>(waitPoint - enterWait).count();

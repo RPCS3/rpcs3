@@ -104,19 +104,19 @@ D3D12_FILTER getSamplerFilter(u32 minFilter, u32 magFilter)
 }
 
 static
-D3D12_SAMPLER_DESC getSamplerDesc(const RSXTexture &texture)
+D3D12_SAMPLER_DESC getSamplerDesc(const rsx::texture &texture)
 {
 	D3D12_SAMPLER_DESC samplerDesc = {};
-	samplerDesc.Filter = getSamplerFilter(texture.GetMinFilter(), texture.GetMagFilter());
-	samplerDesc.AddressU = getSamplerWrap(texture.GetWrapS());
-	samplerDesc.AddressV = getSamplerWrap(texture.GetWrapT());
-	samplerDesc.AddressW = getSamplerWrap(texture.GetWrapR());
-	samplerDesc.ComparisonFunc = getSamplerCompFunc[texture.GetZfunc()];
-	samplerDesc.MaxAnisotropy = (UINT)getSamplerMaxAniso(texture.GetMaxAniso());
-	samplerDesc.MipLODBias = texture.GetBias();
-	samplerDesc.BorderColor[4] = (FLOAT)texture.GetBorderColor();
-	samplerDesc.MinLOD = (FLOAT)(texture.GetMinLOD() >> 8);
-	samplerDesc.MaxLOD = (FLOAT)(texture.GetMaxLOD() >> 8);
+	samplerDesc.Filter = getSamplerFilter(texture.min_filter(), texture.mag_filter());
+	samplerDesc.AddressU = getSamplerWrap(texture.wrap_s());
+	samplerDesc.AddressV = getSamplerWrap(texture.wrap_t());
+	samplerDesc.AddressW = getSamplerWrap(texture.wrap_r());
+	samplerDesc.ComparisonFunc = getSamplerCompFunc[texture.zfunc()];
+	samplerDesc.MaxAnisotropy = (UINT)getSamplerMaxAniso(texture.max_aniso());
+	samplerDesc.MipLODBias = texture.bias();
+	samplerDesc.BorderColor[4] = (FLOAT)texture.border_color();
+	samplerDesc.MinLOD = (FLOAT)(texture.min_lod() >> 8);
+	samplerDesc.MaxLOD = (FLOAT)(texture.max_lod() >> 8);
 	return samplerDesc;
 }
 
@@ -127,15 +127,15 @@ D3D12_SAMPLER_DESC getSamplerDesc(const RSXTexture &texture)
  */
 static
 ComPtr<ID3D12Resource> uploadSingleTexture(
-	const RSXTexture &texture,
+	const rsx::texture &texture,
 	ID3D12Device *device,
 	ID3D12GraphicsCommandList *commandList,
 	DataHeap<ID3D12Resource, 65536> &textureBuffersHeap)
 {
 	ComPtr<ID3D12Resource> vramTexture;
-	size_t w = texture.GetWidth(), h = texture.GetHeight();
+	size_t w = texture.width(), h = texture.height();
 
-	int format = texture.GetFormat() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
+	int format = texture.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
 	DXGI_FORMAT dxgiFormat = getTextureDXGIFormat(format);
 
 	size_t textureSize = getPlacedTextureStorageSpace(texture, 256);
@@ -148,7 +148,7 @@ ComPtr<ID3D12Resource> uploadSingleTexture(
 	std::vector<MipmapLevelInfo> mipInfos = uploadPlacedTexture(texture, 256, textureData);
 	textureBuffersHeap.m_heap->Unmap(0, &CD3DX12_RANGE(heapOffset, heapOffset + textureSize));
 
-	D3D12_RESOURCE_DESC texturedesc = CD3DX12_RESOURCE_DESC::Tex2D(dxgiFormat, (UINT)w, (UINT)h, 1, texture.GetMipmap());
+	D3D12_RESOURCE_DESC texturedesc = CD3DX12_RESOURCE_DESC::Tex2D(dxgiFormat, (UINT)w, (UINT)h, 1, texture.mipmap());
 	textureSize = device->GetResourceAllocationInfo(0, 1, &texturedesc).SizeInBytes;
 
 	ThrowIfFailed(device->CreateCommittedResource(
@@ -216,11 +216,11 @@ void updateExistingTexture(
  * Get number of bytes occupied by texture in RSX mem
  */
 static
-size_t getTextureSize(const RSXTexture &texture)
+size_t getTextureSize(const rsx::texture &texture)
 {
-	size_t w = texture.GetWidth(), h = texture.GetHeight();
+	size_t w = texture.width(), h = texture.height();
 
-	int format = texture.GetFormat() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
+	int format = texture.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
 	// TODO: Take mipmaps into account
 	switch (format)
 	{
@@ -288,17 +288,17 @@ size_t D3D12GSRender::UploadTextures(ID3D12GraphicsCommandList *cmdlist)
 {
 	size_t usedTexture = 0;
 
-	for (u32 i = 0; i < m_textures_count; ++i)
+	for (u32 i = 0; i < rsx::limits::textures_count; ++i)
 	{
-		if (!m_textures[i].IsEnabled()) continue;
-		size_t w = m_textures[i].GetWidth(), h = m_textures[i].GetHeight();
+		if (!textures[i].enabled()) continue;
+		size_t w = textures[i].width(), h = textures[i].height();
 		if (!w || !h) continue;
 
-		const u32 texaddr = GetAddress(m_textures[i].GetOffset(), m_textures[i].GetLocation());
+		const u32 texaddr = rsx::get_address(textures[i].offset(), textures[i].location());
 
-		int format = m_textures[i].GetFormat() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
+		int format = textures[i].format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
 		DXGI_FORMAT dxgiFormat = getTextureDXGIFormat(format);
-		bool is_swizzled = !(m_textures[i].GetFormat() & CELL_GCM_TEXTURE_LN);
+		bool is_swizzled = !(textures[i].format() & CELL_GCM_TEXTURE_LN);
 
 		ID3D12Resource *vramTexture;
 		std::unordered_map<u32, ID3D12Resource* >::const_iterator ItRTT = m_rtts.m_renderTargets.find(texaddr);
@@ -324,13 +324,13 @@ size_t D3D12GSRender::UploadTextures(ID3D12GraphicsCommandList *cmdlist)
 				getCurrentResourceStorage().m_dirtyTextures.push_back(m_textureCache.removeFromCache(texaddr));
 			ComPtr<ID3D12Resource> tex = uploadSingleTexture(m_textures[i], m_device.Get(), cmdlist, m_textureUploadData);
 			vramTexture = tex.Get();
-			m_textureCache.storeAndProtectData(texaddr, texaddr, getTextureSize(m_textures[i]), format, w, h, m_textures[i].GetMipmap(), tex);
+			m_textureCache.storeAndProtectData(texaddr, texaddr, getTextureSize(m_textures[i]), format, w, h, m_textures[i].mipmap(), tex);
 		}
 
 		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 		srvDesc.Format = dxgiFormat;
-		srvDesc.Texture2D.MipLevels = m_textures[i].GetMipmap();
+		srvDesc.Texture2D.MipLevels = textures[i].mipmap();
 
 		switch (format)
 		{
@@ -357,10 +357,10 @@ size_t D3D12GSRender::UploadTextures(ID3D12GraphicsCommandList *cmdlist)
 		{
 
 
-			u8 remap_a = m_textures[i].GetRemap() & 0x3;
-			u8 remap_r = (m_textures[i].GetRemap() >> 2) & 0x3;
-			u8 remap_g = (m_textures[i].GetRemap() >> 4) & 0x3;
-			u8 remap_b = (m_textures[i].GetRemap() >> 6) & 0x3;
+			u8 remap_a = textures[i].remap() & 0x3;
+			u8 remap_r = (textures[i].remap() >> 2) & 0x3;
+			u8 remap_g = (textures[i].remap() >> 4) & 0x3;
+			u8 remap_b = (textures[i].remap() >> 6) & 0x3;
 			if (isRenderTarget)
 			{
 				// ARGB format
@@ -428,10 +428,10 @@ size_t D3D12GSRender::UploadTextures(ID3D12GraphicsCommandList *cmdlist)
 				D3D12_SHADER_COMPONENT_MAPPING_FORCE_VALUE_1
 			};
 
-			u8 remap_a = m_textures[i].GetRemap() & 0x3;
-			u8 remap_r = (m_textures[i].GetRemap() >> 2) & 0x3;
-			u8 remap_g = (m_textures[i].GetRemap() >> 4) & 0x3;
-			u8 remap_b = (m_textures[i].GetRemap() >> 6) & 0x3;
+			u8 remap_a = textures[i].remap() & 0x3;
+			u8 remap_r = (textures[i].remap() >> 2) & 0x3;
+			u8 remap_g = (textures[i].remap() >> 4) & 0x3;
+			u8 remap_b = (textures[i].remap() >> 6) & 0x3;
 
 			srvDesc.Shader4ComponentMapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(
 				RemapValue[remap_a],
@@ -459,7 +459,7 @@ size_t D3D12GSRender::UploadTextures(ID3D12GraphicsCommandList *cmdlist)
 			getCurrentResourceStorage().m_samplerDescriptorHeapIndex = 1;
 			getCurrentResourceStorage().m_currentSamplerIndex = 0;
 		}
-		m_device->CreateSampler(&getSamplerDesc(m_textures[i]),
+		m_device->CreateSampler(&getSamplerDesc(textures[i]),
 			CD3DX12_CPU_DESCRIPTOR_HANDLE(getCurrentResourceStorage().m_samplerDescriptorHeap[getCurrentResourceStorage().m_samplerDescriptorHeapIndex]->GetCPUDescriptorHandleForHeapStart())
 			.Offset((UINT)getCurrentResourceStorage().m_currentSamplerIndex + (UINT)usedTexture, g_descriptorStrideSamplers));
 
