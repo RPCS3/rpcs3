@@ -93,8 +93,7 @@ void D3D12GSRender::ResourceStorage::WaitAndClean()
 
 	Reset();
 
-	for (auto tmp : m_dirtyTextures)
-		tmp->Release();
+	m_dirtyTextures.clear();
 
 	m_RAMFramebuffer = nullptr;
 }
@@ -119,30 +118,11 @@ void D3D12GSRender::Shader::Release()
 
 extern std::function<bool(u32 addr)> gfxHandler;
 
-bool D3D12GSRender::invalidateTexture(u32 addr)
+bool D3D12GSRender::invalidateAddress(u32 addr)
 {
-	bool handled = false;
-	auto It = m_protectedTextures.begin(), E = m_protectedTextures.end();
-	for (; It != E;)
-	{
-		auto currentIt = It;
-		++It;
-		auto protectedTexture = *currentIt;
-		u32 protectedRangeStart = std::get<1>(protectedTexture), protectedRangeSize = std::get<2>(protectedTexture);
-		if (addr - protectedRangeStart < protectedRangeSize)
-		{
-			std::lock_guard<std::mutex> lock(mut);
-			u32 texadrr = std::get<0>(protectedTexture);
-			ID3D12Resource *texToErase = m_texturesCache[texadrr];
-			m_texturesCache.erase(texadrr);
-			m_texToClean.push_back(texToErase);
-
-			vm::page_protect(protectedRangeStart, protectedRangeSize, 0, vm::page_writable, 0);
-			m_protectedTextures.erase(currentIt);
-			handled = true;
-		}
-	}
-	return handled;
+	bool result = false;
+	result |= m_textureCache.invalidateAddress(addr);
+	return result;
 }
 
 D3D12DLLManagement::D3D12DLLManagement()
@@ -158,8 +138,13 @@ D3D12DLLManagement::~D3D12DLLManagement()
 D3D12GSRender::D3D12GSRender()
 	: GSRender(), m_D3D12Lib(), m_PSO(nullptr)
 {
+	m_previous_address_a = 0;
+	m_previous_address_b = 0;
+	m_previous_address_c = 0;
+	m_previous_address_d = 0;
+	m_previous_address_z = 0;
 	gfxHandler = [this](u32 addr) {
-		bool result = invalidateTexture(addr);
+		bool result = invalidateAddress(addr);
 		if (result)
 				LOG_WARNING(RSX, "Reporting Cell writing to %x", addr);
 		return result;
@@ -174,20 +159,9 @@ D3D12GSRender::D3D12GSRender()
 	Microsoft::WRL::ComPtr<IDXGIFactory4> dxgiFactory;
 	ThrowIfFailed(CreateDXGIFactory(IID_PPV_ARGS(&dxgiFactory)));
 	// Create adapter
-	IDXGIAdapter* adaptater = nullptr;
-	switch (Ini.GSD3DAdaptater.GetValue())
-	{
-	case 0: // WARP
-		ThrowIfFailed(dxgiFactory->EnumWarpAdapter(IID_PPV_ARGS(&adaptater)));
-		break;
-	case 1: // Default
-		dxgiFactory->EnumAdapters(0, &adaptater);
-		break;
-	default: // Adaptater 0, 1, ...
-		dxgiFactory->EnumAdapters(Ini.GSD3DAdaptater.GetValue() - 2,&adaptater);
-		break;
-	}
-	ThrowIfFailed(wrapD3D12CreateDevice(adaptater, D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&m_device)));
+	ComPtr<IDXGIAdapter> adaptater = nullptr;
+	ThrowIfFailed(dxgiFactory->EnumAdapters(Ini.GSD3DAdaptater.GetValue(), adaptater.GetAddressOf()));
+	ThrowIfFailed(wrapD3D12CreateDevice(adaptater.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&m_device)));
 
 	// Queues
 	D3D12_COMMAND_QUEUE_DESC copyQueueDesc = {}, graphicQueueDesc = {};
@@ -201,9 +175,6 @@ D3D12GSRender::D3D12GSRender()
 	g_descriptorStrideSamplers = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
 
 	m_frame = GetGSFrame();
-	DXGI_ADAPTER_DESC adaptaterDesc;
-	adaptater->GetDesc(&adaptaterDesc);
-	m_frame->SetAdaptaterName(adaptaterDesc.Description);
 
 	// Create swap chain and put them in a descriptor heap as rendertarget
 	DXGI_SWAP_CHAIN_DESC swapChain = {};
@@ -305,12 +276,7 @@ D3D12GSRender::~D3D12GSRender()
 	CloseHandle(handle);
 
 	{
-		std::lock_guard<std::mutex> lock(mut);
-		for (auto &protectedTexture : m_protectedTextures)
-		{
-			u32 protectedRangeStart = std::get<1>(protectedTexture), protectedRangeSize = std::get<2>(protectedTexture);
-			vm::page_protect(protectedRangeStart, protectedRangeSize, 0, vm::page_writable, 0);
-		}
+		m_textureCache.unprotedAll();
 	}
 
 	gfxHandler = [this](u32) { return false; };
@@ -326,10 +292,6 @@ D3D12GSRender::~D3D12GSRender()
 	m_perFrameStorage[0].Release();
 	m_perFrameStorage[1].Release();
 	m_rtts.Release();
-	for (auto &tmp : m_texToClean)
-		tmp->Release();
-	for (auto &tmp : m_texturesCache)
-		tmp.second->Release();
 	m_outputScalingPass.Release();
 
 	ReleaseD2DStructures();
@@ -851,9 +813,7 @@ void D3D12GSRender::Flip()
 	storage.m_frameFinishedFence->SetEventOnCompletion(storage.m_fenceValue, storage.m_frameFinishedHandle);
 	storage.m_fenceValue++;
 
-	storage.m_dirtyTextures = m_texToClean;
 	storage.m_inUse = true;
-	m_texToClean.clear();
 
 	// Get the put pos - 1. This way after cleaning we can set the get ptr to
 	// this value, allowing heap to proceed even if we cleant before allocating
@@ -1072,7 +1032,7 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 		getCurrentResourceStorage().m_commandList->CopyTextureRegion(&CD3DX12_TEXTURE_COPY_LOCATION(writeDest.Get(), { 0, { DXGI_FORMAT_R8_UNORM, m_surface_clip_w, m_surface_clip_h, 1, (UINT)depthRowPitch } }), 0, 0, 0,
 			&CD3DX12_TEXTURE_COPY_LOCATION(depthConverted.Get(), 0), nullptr);
 
-		invalidateTexture(GetAddress(m_surface_offset_z, m_context_dma_z - 0xfeed0000));
+		invalidateAddress(GetAddress(m_surface_offset_z, m_context_dma_z - 0xfeed0000));
 	}
 
 	ID3D12Resource *rtt0, *rtt1, *rtt2, *rtt3;
@@ -1110,10 +1070,10 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 			break;
 		}
 
-		if (m_context_dma_color_a) invalidateTexture(GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000));
-		if (m_context_dma_color_b) invalidateTexture(GetAddress(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000));
-		if (m_context_dma_color_c) invalidateTexture(GetAddress(m_surface_offset_c, m_context_dma_color_c - 0xfeed0000));
-		if (m_context_dma_color_d) invalidateTexture(GetAddress(m_surface_offset_d, m_context_dma_color_d - 0xfeed0000));
+		if (m_context_dma_color_a) invalidateAddress(GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000));
+		if (m_context_dma_color_b) invalidateAddress(GetAddress(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000));
+		if (m_context_dma_color_c) invalidateAddress(GetAddress(m_surface_offset_c, m_context_dma_color_c - 0xfeed0000));
+		if (m_context_dma_color_d) invalidateAddress(GetAddress(m_surface_offset_d, m_context_dma_color_d - 0xfeed0000));
 	}
 	if (needTransfer)
 	{

@@ -20,11 +20,15 @@ std::vector<VertexBufferFormat> FormatVertexData(const RSXVertexData *m_vertex_d
 		const RSXVertexData &vertexData = m_vertex_data[i];
 		if (!vertexData.IsEnabled()) continue;
 
-		size_t elementCount = vertex_data_size[i] / (vertexData.size * vertexData.GetTypeSize());
+		size_t elementCount = ((vertexData.addr) ? vertex_data_size[i] : m_vertex_data[i].data.size()) / (vertexData.size * vertexData.GetTypeSize());
+
 		// If there is a single element, stride is 0, use the size of element instead
 		size_t stride = vertexData.stride;
 		size_t elementSize = vertexData.GetTypeSize();
-		std::pair<size_t, size_t> range = std::make_pair(vertexData.addr + base_offset, vertexData.addr + base_offset + elementSize * vertexData.size + (elementCount - 1) * stride - 1);
+		size_t start = vertexData.addr + base_offset;
+		size_t end = start + elementSize * vertexData.size + (elementCount - 1) * stride - 1;
+		std::pair<size_t, size_t> range = std::make_pair(start, end);
+		assert(start < end);
 		bool isMerged = false;
 
 		for (VertexBufferFormat &vbf : Result)

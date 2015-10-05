@@ -7,6 +7,13 @@
 #include "Utilities/Log.h"
 #include <wx/radiobox.h>
 
+#if defined(DX12_SUPPORT)
+#undef GetHwnd
+#include <d3d12.h>
+#include <wrl/client.h>
+#include <dxgi1_4.h>
+#endif
+
 SettingsDialog::SettingsDialog(wxWindow *parent)
 	: wxDialog(parent, wxID_ANY, "Settings", wxDefaultPosition)
 {
@@ -159,11 +166,20 @@ SettingsDialog::SettingsDialog(wxWindow *parent)
 	cbox_gs_render->Append("DirectX 12");
 #endif
 
-	cbox_gs_d3d_adaptater->Append("WARP");
-	cbox_gs_d3d_adaptater->Append("Default");
-	cbox_gs_d3d_adaptater->Append("Renderer 0");
-	cbox_gs_d3d_adaptater->Append("Renderer 1");
-	cbox_gs_d3d_adaptater->Append("Renderer 2");
+#if defined(DX12_SUPPORT)
+	unsigned id = 0;
+	Microsoft::WRL::ComPtr<IDXGIFactory4> dxgiFactory;
+	CreateDXGIFactory(IID_PPV_ARGS(&dxgiFactory));
+	Microsoft::WRL::ComPtr<IDXGIAdapter> adapter;
+
+	while (dxgiFactory->EnumAdapters(id, adapter.GetAddressOf()) != DXGI_ERROR_NOT_FOUND)
+	{
+		DXGI_ADAPTER_DESC adapterDesc;
+		adapter->GetDesc(&adapterDesc);
+		cbox_gs_d3d_adaptater->Append(adapterDesc.Description);
+		id++;
+	}
+#endif
 
 #if !defined(DX12_SUPPORT)
 	cbox_gs_d3d_adaptater->Enable(false);

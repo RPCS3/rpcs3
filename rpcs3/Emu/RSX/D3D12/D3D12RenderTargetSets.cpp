@@ -14,6 +14,20 @@
 
 void D3D12GSRender::PrepareRenderTargets(ID3D12GraphicsCommandList *copycmdlist)
 {
+	// Exit early if there is no rtt changes
+	if ((m_previous_address_a == m_surface_offset_a) &&
+		(m_previous_address_b == m_surface_offset_b) &&
+		(m_previous_address_c == m_surface_offset_c) &&
+		(m_previous_address_d == m_surface_offset_d) &&
+		(m_previous_address_z == m_surface_offset_z))
+		return;
+
+	m_previous_address_a = m_surface_offset_a;
+	m_previous_address_b = m_surface_offset_b;
+	m_previous_address_c = m_surface_offset_c;
+	m_previous_address_d = m_surface_offset_d;
+	m_previous_address_z = m_surface_offset_z;
+
 	// FBO location has changed, previous data might be copied
 	u32 address_a = m_set_context_dma_color_a ? GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000) : 0;
 	u32 address_b = m_set_context_dma_color_b ? GetAddress(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000) : 0;
