@@ -96,7 +96,7 @@ addons:
       description: "PS3 emulator/debugger"
     notification_email: raul.tambre@gmail.com
     build_command: "make -j 4"
-    branch_pattern: master
+    branch_pattern: coverity_scan
 
 after_success:
 - if [ "$COVERITY_SCAN_BRANCH" != 1 ] && [ "$TRAVIS_OS_NAME" = linux ]; then coveralls --extension .c --extension .cpp --extension .h; fi
