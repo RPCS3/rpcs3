@@ -284,7 +284,7 @@ size_t getTextureSize(const rsx::texture &texture)
 	}
 }
 
-size_t D3D12GSRender::UploadTextures(ID3D12GraphicsCommandList *cmdlist)
+size_t D3D12GSRender::UploadTextures(ID3D12GraphicsCommandList *cmdlist, size_t descriptorIndex)
 {
 	size_t usedTexture = 0;
 
@@ -452,7 +452,8 @@ size_t D3D12GSRender::UploadTextures(ID3D12GraphicsCommandList *cmdlist)
 		}
 
 		m_device->CreateShaderResourceView(vramTexture, &srvDesc,
-			CD3DX12_CPU_DESCRIPTOR_HANDLE(getCurrentResourceStorage().m_textureDescriptorsHeap->GetCPUDescriptorHandleForHeapStart()).Offset((UINT)getCurrentResourceStorage().m_currentTextureIndex + (UINT)usedTexture, g_descriptorStrideSRVCBVUAV));
+			CD3DX12_CPU_DESCRIPTOR_HANDLE(getCurrentResourceStorage().m_descriptorsHeap->GetCPUDescriptorHandleForHeapStart())
+			.Offset((UINT)descriptorIndex + (UINT)usedTexture, g_descriptorStrideSRVCBVUAV));
 
 		if (getCurrentResourceStorage().m_currentSamplerIndex + 16 > 2048)
 		{

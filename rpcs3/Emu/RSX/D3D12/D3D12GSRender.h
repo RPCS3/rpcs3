@@ -374,15 +374,11 @@ private:
 		ComPtr<ID3D12CommandAllocator> m_commandAllocator;
 		ComPtr<ID3D12GraphicsCommandList> m_commandList;
 
-		// Constants storage
-		ComPtr<ID3D12DescriptorHeap> m_constantsBufferDescriptorsHeap;
-		size_t m_constantsBufferIndex;
-		ComPtr<ID3D12DescriptorHeap> m_scaleOffsetDescriptorHeap;
-		size_t m_currentScaleOffsetBufferIndex;
+		// Descriptor heap
+		ComPtr<ID3D12DescriptorHeap> m_descriptorsHeap;
+		size_t m_descriptorsHeapIndex;
 
-		// Texture storage
-		ComPtr<ID3D12DescriptorHeap> m_textureDescriptorsHeap;
-		size_t m_currentTextureIndex;
+		// Sampler heap
 		ComPtr<ID3D12DescriptorHeap> m_samplerDescriptorHeap[2];
 		size_t m_samplerDescriptorHeapIndex;
 		size_t m_currentSamplerIndex;
@@ -481,16 +477,16 @@ private:
 	D3D12_INDEX_BUFFER_VIEW uploadIndexBuffers(bool indexed_draw = false);
 
 
-	void setScaleOffset();
-	void FillVertexShaderConstantsBuffer();
-	void FillPixelShaderConstantsBuffer();
+	void setScaleOffset(size_t descriptorIndex);
+	void FillVertexShaderConstantsBuffer(size_t descriptorIndex);
+	void FillPixelShaderConstantsBuffer(size_t descriptorIndex);
 	/**
 	 * Fetch all textures recorded in the state in the render target cache and in the texture cache.
 	 * If a texture is not cached, populate cmdlist with uploads command.
 	 * Create necessary resource view/sampler descriptors in the per frame storage struct.
 	 * returns the number of texture uploaded.
 	 */
-	size_t UploadTextures(ID3D12GraphicsCommandList *cmdlist);
+	size_t UploadTextures(ID3D12GraphicsCommandList *cmdlist, size_t descriptorIndex);
 
 	/**
 	 * Creates render target if necessary.
