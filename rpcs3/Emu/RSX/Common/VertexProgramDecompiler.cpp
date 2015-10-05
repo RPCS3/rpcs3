@@ -232,16 +232,15 @@ std::string VertexProgramDecompiler::GetCond()
 	if (d0.cond == 0) return "false";
 	if (d0.cond == (lt | gt | eq)) return "true";
 
-	static const char* cond_string_table[(lt | gt | eq) + 1] =
+	static const COMPARE cond_string_table[(lt | gt | eq) + 1] =
 	{
-		"error",
-		"lessThan",
-		"equal",
-		"lessThanEqual",
-		"greaterThan",
-		"notEqual",
-		"greaterThanEqual",
-		"error"
+		COMPARE::FUNCTION_SLT, // "error"
+		COMPARE::FUNCTION_SLT,
+		COMPARE::FUNCTION_SEQ,
+		COMPARE::FUNCTION_SLE,
+		COMPARE::FUNCTION_SGT,
+		COMPARE::FUNCTION_SNE,
+		COMPARE::FUNCTION_SGE,
 	};
 
 	static const char f[4] = { 'x', 'y', 'z', 'w' };
@@ -253,8 +252,7 @@ std::string VertexProgramDecompiler::GetCond()
 	swizzle += f[d0.mask_w];
 
 	swizzle = swizzle == "xyzw" ? "" : "." + swizzle;
-
-	return fmt::format("any(%s(cc%d%s, vec4(0.0)%s))", cond_string_table[d0.cond], d0.cond_reg_sel_1, swizzle.c_str(), swizzle.c_str());
+	return "any(" + compareFunction(cond_string_table[d0.cond], "cc" + std::to_string(d0.cond_reg_sel_1), getFloatTypeName(4) + "(0., 0., 0., 0.)" + swizzle) + ")";
 }
 
 void VertexProgramDecompiler::AddCodeCond(const std::string& dst, const std::string& src)
@@ -330,7 +328,7 @@ std::string VertexProgramDecompiler::AddAddrMask()
 std::string VertexProgramDecompiler::AddAddrReg()
 {
 	static const char f[] = { 'x', 'y', 'z', 'w' };
-	return m_parr.AddParam(PF_PARAM_NONE, "ivec4", "a" + std::to_string(d0.addr_reg_sel_1), "ivec4(0)") + AddAddrMask();
+	return m_parr.AddParam(PF_PARAM_NONE, getFloatTypeName(4), "a" + std::to_string(d0.addr_reg_sel_1), getFloatTypeName(4) + "(0, 0, 0, 0)") + AddAddrMask();
 }
 
 u32 VertexProgramDecompiler::GetAddr()
@@ -659,7 +657,7 @@ std::string VertexProgramDecompiler::Decompile()
 		case RSX_VEC_OPCODE_MAX: SetDSTVec("max($0, $1)"); break;
 		case RSX_VEC_OPCODE_SLT: SetDSTVec(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SLT, "$0", "$1") + ")"); break;
 		case RSX_VEC_OPCODE_SGE: SetDSTVec(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SGE, "$0", "$1") + ")"); break;
-		case RSX_VEC_OPCODE_ARL: AddCode("$ifcond $a = ivec4($0)$am;");  break;
+		case RSX_VEC_OPCODE_ARL: AddCode("$ifcond $a = " + getIntTypeName(4) + "($0)$am;");  break;
 		case RSX_VEC_OPCODE_FRC: SetDSTVec(getFunction(FUNCTION::FUNCTION_FRACT)); break;
 		case RSX_VEC_OPCODE_FLR: SetDSTVec("floor($0)"); break;
 		case RSX_VEC_OPCODE_SEQ: SetDSTVec(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SEQ, "$0", "$1") + ")"); break;

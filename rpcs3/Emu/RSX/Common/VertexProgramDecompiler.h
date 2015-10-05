@@ -80,6 +80,10 @@ protected:
 	*/
 	virtual std::string getFloatTypeName(size_t elementCount) = 0;
 
+	/** returns the type name of int vectors.
+	*/
+	virtual std::string getIntTypeName(size_t elementCount) = 0;
+
 	/** returns string calling function where arguments are passed via
 	* $0 $1 $2 substring.
 	*/

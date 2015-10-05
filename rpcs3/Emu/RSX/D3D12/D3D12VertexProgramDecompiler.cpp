@@ -11,6 +11,11 @@ std::string D3D12VertexProgramDecompiler::getFloatTypeName(size_t elementCount)
 	return getFloatTypeNameImp(elementCount);
 }
 
+std::string D3D12VertexProgramDecompiler::getIntTypeName(size_t elementCount)
+{
+	return "int4";
+}
+
 std::string D3D12VertexProgramDecompiler::getFunction(enum class FUNCTION f)
 {
 	return getFunctionImp(f);

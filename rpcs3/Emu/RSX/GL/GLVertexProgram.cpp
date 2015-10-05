@@ -10,6 +10,12 @@ std::string GLVertexDecompilerThread::getFloatTypeName(size_t elementCount)
 	return getFloatTypeNameImpl(elementCount);
 }
 
+std::string GLVertexDecompilerThread::getIntTypeName(size_t elementCount)
+{
+	return "ivec4";
+}
+
+
 std::string GLVertexDecompilerThread::getFunction(FUNCTION f)
 {
 	return getFunctionImpl(f);
