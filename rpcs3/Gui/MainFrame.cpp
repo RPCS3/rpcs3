@@ -438,9 +438,7 @@ void MainFrame::OpenMemoryViewer(wxCommandEvent& WXUNUSED(event))
 
 void MainFrame::OpenRSXDebugger(wxCommandEvent& WXUNUSED(event))
 {
-#if _USE_RSX_DEBUGGER
 	(new RSXDebugger(this))->Show();
-#endif
 }
 
 void MainFrame::OpenStringSearch(wxCommandEvent& WXUNUSED(event))

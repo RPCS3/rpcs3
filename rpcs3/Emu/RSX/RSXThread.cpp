@@ -1150,6 +1150,7 @@ namespace rsx
 		this->ioAddress = ioAddress;
 		this->ioSize = ioSize;
 		local_mem_addr = localAddress;
+		flip_status = 0;
 
 		m_used_gcm_commands.clear();
 

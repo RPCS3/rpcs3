@@ -567,6 +567,7 @@ extern CellGcmContextData current_context;
 void GLGSRender::begin()
 {
 	rsx::thread::begin();
+
 	if (!load_program())
 	{
 		//no program - no drawing
@@ -575,13 +576,11 @@ void GLGSRender::begin()
 
 	init_buffers();
 
-	draw_fbo.bind();
-
 	u32 color_mask = rsx::method_registers[NV4097_SET_COLOR_MASK];
-	bool color_mask_b = rsx::method_registers[NV4097_SET_COLOR_MASK] & 0xff;
-	bool color_mask_g = (rsx::method_registers[NV4097_SET_COLOR_MASK]) >> 8;
-	bool color_mask_r = (rsx::method_registers[NV4097_SET_COLOR_MASK]) >> 16;
-	bool color_mask_a = rsx::method_registers[NV4097_SET_COLOR_MASK] >> 24;
+	bool color_mask_b = color_mask & 0xff;
+	bool color_mask_g = color_mask >> 8;
+	bool color_mask_r = color_mask >> 16;
+	bool color_mask_a = color_mask >> 24;
 
 	__glcheck glColorMask(color_mask_r, color_mask_g, color_mask_b, color_mask_a);
 	__glcheck glDepthMask(rsx::method_registers[NV4097_SET_DEPTH_MASK]);
@@ -840,6 +839,8 @@ void GLGSRender::end()
 		return;
 	}
 
+	LOG_NOTICE(Log::RSX, "draw()");
+
 	draw_fbo.bind();
 	m_program.use();
 
@@ -1090,12 +1091,15 @@ void GLGSRender::onexit_thread()
 
 void nv4097_clear_surface(u32 arg, GLGSRender* renderer)
 {
+	LOG_NOTICE(Log::RSX, "nv4097_clear_surface(0x%x)", arg);
+
 	if ((arg & 0xf3) == 0)
 	{
 		//do nothing
 		return;
 	}
 
+	renderer->draw_fbo.bind();
 	glEnable(GL_SCISSOR_TEST);
 
 	/*
@@ -1153,9 +1157,12 @@ void nv4097_clear_surface(u32 arg, GLGSRender* renderer)
 		mask |= GLenum(gl::buffers::color);
 	}
 
-	renderer->init_buffers();
-	renderer->draw_fbo.clear(gl::buffers(mask));
-	renderer->write_buffers();
+	renderer->clear_surface_buffers = (gl::buffers)mask;
+	//renderer->init_buffers();
+	//renderer->draw_fbo.draw_buffer(renderer->draw_fbo.color[0]);
+	//renderer->draw_fbo.clear(gl::buffers(mask));
+	//renderer->draw_fbo.draw_arrays(gl::draw_mode::lines, 0);
+	//renderer->write_buffers();
 }
 
 using rsx_method_impl_t = void(*)(u32, GLGSRender*);
@@ -1444,7 +1451,10 @@ void GLGSRender::init_buffers()
 		__glcheck m_draw_tex_depth_stencil.pixel_unpack_settings().aligment(1);
 	}
 
-	read_buffers();
+	if (clear_surface_buffers == gl::buffers::none)
+	{
+		read_buffers();
+	}
 
 	switch (rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET])
 	{
@@ -1474,6 +1484,13 @@ void GLGSRender::init_buffers()
 		LOG_ERROR(RSX, "Bad surface color target: %d", rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET]);
 		break;
 	}
+
+	if (clear_surface_buffers != gl::buffers::none)
+	{
+		draw_fbo.clear(clear_surface_buffers);
+
+		clear_surface_buffers = gl::buffers::none;
+	}
 }
 
 static const u32 mr_color_offset[rsx::limits::color_buffers_count] =
@@ -1496,6 +1513,8 @@ void GLGSRender::read_buffers()
 {
 	if (!draw_fbo)
 		return;
+
+	glDisable(GL_STENCIL_TEST);
 
 	if (Ini.GSReadColorBuffers.GetValue())
 	{
@@ -1581,6 +1600,9 @@ void GLGSRender::write_buffers()
 
 	if (Ini.GSDumpColorBuffers.GetValue())
 	{
+		//gl::buffer pbo_color;
+		//__glcheck pbo_color.create(m_draw_tex_color[0].width() * m_draw_tex_color[0].height() * 4);
+
 		auto color_format = surface_color_format_to_gl(m_surface.color_format);
 
 		auto write_color_buffers = [&](int index, int count)
@@ -1588,6 +1610,22 @@ void GLGSRender::write_buffers()
 			for (int i = index; i < index + count; ++i)
 			{
 				//TODO: swizzle
+				//__glcheck m_draw_tex_color[i].copy_to(pbo_color, color_format.format, color_format.type);
+
+				//pbo_color.map([&](GLubyte* pixels)
+				//{
+				//	u32 color_address = rsx::get_address(rsx::method_registers[mr_color_offset[i]], rsx::method_registers[mr_color_dma[i]]);
+				//	//u32 depth_address = rsx::get_address(rsx::method_registers[NV4097_SET_SURFACE_ZETA_OFFSET], rsx::method_registers[NV4097_SET_CONTEXT_DMA_ZETA]);
+
+				//	const u32 *src = (const u32*)pixels;
+				//	be_t<u32>* dst = vm::get_ptr<be_t<u32>>(color_address);
+				//	for (int i = 0, end = m_draw_tex_color[i].width() * m_draw_tex_color[i].height(); i < end; ++i)
+				//	{
+				//		dst[i] = src[i];
+				//	}
+
+				//}, gl::buffer::access::read);
+
 				u32 color_address = rsx::get_address(rsx::method_registers[mr_color_offset[i]], rsx::method_registers[mr_color_dma[i]]);
 				__glcheck m_draw_tex_color[i].copy_to(vm::get_ptr(color_address), color_format.format, color_format.type);
 			}
@@ -1660,6 +1698,7 @@ void GLGSRender::write_buffers()
 
 void GLGSRender::flip(int buffer)
 {
+	LOG_NOTICE(Log::RSX, "flip(%d)", buffer);
 	u32 buffer_width = gcm_buffers[buffer].width;
 	u32 buffer_height = gcm_buffers[buffer].height;
 	u32 buffer_pitch = gcm_buffers[buffer].pitch;
@@ -1683,8 +1722,6 @@ void GLGSRender::flip(int buffer)
 
 	if (!skip_read)
 	{
-		gl::screen.clear(gl::buffers::color_depth_stencil);
-
 		if (!m_flip_tex_color || m_flip_tex_color.size() != sizei{ (int)buffer_width, (int)buffer_height })
 		{
 			m_flip_tex_color.recreate(gl::texture::target::texture2D);
@@ -1745,6 +1782,8 @@ void GLGSRender::flip(int buffer)
 	{
 		aspect_ratio.size = m_frame->client_size();
 	}
+
+	gl::screen.clear(gl::buffers::color_depth_stencil);
 
 	if (!skip_read)
 	{

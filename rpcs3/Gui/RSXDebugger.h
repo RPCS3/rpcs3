@@ -1,8 +1,5 @@
 #pragma once
 
-#define _USE_RSX_DEBUGGER 0
-
-#if _USE_RSX_DEBUGGER
 #include <wx/listctrl.h>
 
 class RSXDebugger : public wxFrame
@@ -70,5 +67,3 @@ public:
 	bool RSXReady();
 	void SetPC(const uint pc) { m_addr = pc; }
 };
-
-#endif

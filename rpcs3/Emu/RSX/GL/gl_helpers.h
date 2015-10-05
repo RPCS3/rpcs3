@@ -104,6 +104,7 @@ namespace gl
 
 	enum class buffers
 	{
+		none = 0,
 		color = GL_COLOR_BUFFER_BIT,
 		depth = GL_DEPTH_BUFFER_BIT,
 		stencil = GL_STENCIL_BUFFER_BIT,

@@ -64,6 +64,7 @@ private:
 
 public:
 	gl::fbo draw_fbo;
+	gl::buffers clear_surface_buffers = gl::buffers::none;
 
 private:
 	GLProgramBuffer m_prog_buffer;
