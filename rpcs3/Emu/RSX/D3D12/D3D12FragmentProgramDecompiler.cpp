@@ -1,5 +1,5 @@
-#include "stdafx.h"
-#if defined(DX12_SUPPORT)
+#include "stdafx_d3d12.h"
+#ifdef _WIN64
 #include "D3D12FragmentProgramDecompiler.h"
 #include "D3D12CommonDecompiler.h"
 #include "Utilities/Log.h"
@@ -149,5 +149,4 @@ void D3D12FragmentDecompiler::insertMainEnd(std::stringstream & OS)
 	OS << "	return Out;" << std::endl;
 	OS << "}" << std::endl;
 }
-
 #endif

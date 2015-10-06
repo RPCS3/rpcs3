@@ -1,6 +1,5 @@
 #pragma once
-
-#if defined(DX12_SUPPORT)
+#ifdef _WIN64
 #include <d3d12.h>
 
 struct RenderTargets

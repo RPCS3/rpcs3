@@ -1,5 +1,5 @@
 #pragma once
-#if defined(DX12_SUPPORT)
+#ifdef _WIN64
 #include "Emu/RSX/RSXFragmentProgram.h"
 #include <sstream>
 
@@ -22,5 +22,4 @@ protected:
 public:
 	D3D12FragmentDecompiler(u32 addr, u32& size, u32 ctrl);
 };
-
 #endif

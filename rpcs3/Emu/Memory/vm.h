@@ -1,6 +1,5 @@
 #pragma once
 
-#include "stdafx.h"
 
 const class thread_ctrl_t* get_current_thread_ctrl();
 
