@@ -1,4 +1,4 @@
-#include "stdafx.h"
+#include "stdafx_d3d12.h"
 #if defined(DX12_SUPPORT)
 #include "D3D12GSRender.h"
 #include "d3dx12.h"
@@ -468,5 +468,4 @@ size_t D3D12GSRender::UploadTextures(ID3D12GraphicsCommandList *cmdlist)
 
 	return usedTexture;
 }
-
 #endif

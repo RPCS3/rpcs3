@@ -1,14 +1,11 @@
 #pragma once
 #if defined(DX12_SUPPORT)
-
 #include <d3d12.h>
 #include <cassert>
 #include <wrl/client.h>
 #include "utilities/Log.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/RSX/GCM.h"
-
-#pragma comment (lib, "dxgi.lib")
 
 using namespace Microsoft::WRL;
 
@@ -282,5 +279,4 @@ inline DXGI_FORMAT getTextureDXGIFormat(int format)
 		return DXGI_FORMAT_R8G8_B8G8_UNORM;
 	}
 }
-
 #endif

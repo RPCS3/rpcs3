@@ -1,6 +1,5 @@
 #pragma once
 #if defined(DX12_SUPPORT)
-
 #include "D3D12.h"
 #include "rpcs3/Ini.h"
 #include "Utilities/rPlatform.h" // only for rImage
@@ -14,9 +13,6 @@
 #include "D3D12PipelineState.h"
 #include "D3D12Buffer.h"
 #include "d3dx12.h"
-
-// Some constants are the same between RSX and GL
-#include <GL\GL.h>
 
 
 /**
@@ -542,5 +538,4 @@ protected:
 	virtual void Draw() override;
 	virtual void Flip() override;
 };
-
 #endif
