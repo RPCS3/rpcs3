@@ -379,6 +379,7 @@ void VHDDSetInfoDialog::GetResult(u64& size, u64& block_size)
 VHDDManagerDialog::VHDDManagerDialog(wxWindow* parent)
 	: wxDialog(parent, wxID_ANY, "Virtual HDD Manager")
 {
+	SetIcon(wxICON(frame_icon));
 	m_list = new wxListView(this);
 
 	wxBoxSizer* s_btns = new wxBoxSizer(wxHORIZONTAL);

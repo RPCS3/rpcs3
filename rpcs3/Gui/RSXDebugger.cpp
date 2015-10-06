@@ -33,6 +33,7 @@ RSXDebugger::RSXDebugger(wxWindow* parent)
 	, m_cur_texture(0)
 	, exit(false)
 {
+	SetIcon(wxICON(frame_icon));
 	this->SetBackgroundColour(wxColour(240,240,240)); //This fix the ugly background color under Windows
 	wxBoxSizer* s_panel = new wxBoxSizer(wxHORIZONTAL);
 

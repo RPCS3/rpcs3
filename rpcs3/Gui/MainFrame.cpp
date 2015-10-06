@@ -27,10 +27,6 @@
 #include <wx/dynlib.h>
 #include <wx/progdlg.h>
 
-#ifndef _WIN32
-#include "frame_icon.xpm"
-#endif
-
 BEGIN_EVENT_TABLE(MainFrame, FrameBase)
 	EVT_CLOSE(MainFrame::OnQuit)
 END_EVENT_TABLE()

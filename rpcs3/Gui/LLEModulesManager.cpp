@@ -9,6 +9,7 @@
 
 LLEModulesManagerFrame::LLEModulesManagerFrame(wxWindow* parent) : FrameBase(parent, wxID_ANY, "", "LLEModulesManagerFrame", wxSize(800, 600))
 {
+	SetIcon(wxICON(frame_icon));
 	wxBoxSizer *s_panel = new wxBoxSizer(wxVERTICAL);
 	wxBoxSizer *s_p_panel = new wxBoxSizer(wxVERTICAL);
 	wxPanel *p_main = new wxPanel(this);

@@ -12,6 +12,7 @@ MemoryViewerPanel::MemoryViewerPanel(wxWindow* parent)
 	m_colcount = 16;
 	m_rowcount = 16;
 
+	SetIcon(wxICON(frame_icon));
 	this->SetBackgroundColour(wxColour(240,240,240)); //This fix the ugly background color under Windows
 	wxBoxSizer* s_panel = new wxBoxSizer(wxVERTICAL);
 

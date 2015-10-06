@@ -22,6 +22,7 @@ CompilerELF::CompilerELF(wxWindow* parent)
 	: FrameBase(parent, wxID_ANY, "CompilerELF", "", wxSize(640, 680))
 	, m_status_bar(*CreateStatusBar())
 {
+	SetIcon(wxICON(frame_icon));
 	m_disable_scroll = false;
 
 	m_aui_mgr.SetManagedWindow(this);

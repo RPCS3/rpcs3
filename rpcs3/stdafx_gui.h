@@ -25,4 +25,8 @@
 #include <wx/aui/auibook.h>
 #endif
 
+#ifndef _WIN32
+#include "frame_icon.xpm"
+#endif
+
 #include "stdafx.h"

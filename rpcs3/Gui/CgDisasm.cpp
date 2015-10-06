@@ -11,6 +11,7 @@ END_EVENT_TABLE()
 CgDisasm::CgDisasm(wxWindow* parent)
 	: wxFrame(parent, wxID_ANY, "Cg Disasm", wxDefaultPosition, wxSize(640, 480))
 {
+	SetIcon(wxICON(frame_icon));
 	wxMenuBar* menubar = new wxMenuBar();
 
 	wxMenu* menu_general = new wxMenu();
