@@ -5,26 +5,68 @@
 #include "GSManager.h"
 #include "GSRender.h"
 
-GSLock::GSLock(GSRender& renderer, GSLockType type)
-	: m_renderer(renderer)
-	, m_type(type)
+
+draw_context_t GSFrameBase::new_context()
 {
-	switch (m_type)
+	if (void* context = make_context())
 	{
-	case GS_LOCK_NOT_WAIT: m_renderer.m_cs_main.lock(); break;
-	case GS_LOCK_WAIT_FLIP: m_renderer.m_sem_flip.wait(); break;
+		return std::shared_ptr<void>(context, [this](void* ctxt) { delete_context(ctxt); });
+	}
+
+	return nullptr;
+}
+
+void GSFrameBase::title_message(const std::wstring& msg)
+{
+	m_title_message = msg;
+}
+
+GSRender::GSRender(frame_type type) : m_frame(Emu.GetCallbacks().get_gs_frame(type).release())
+{
+}
+
+GSRender::~GSRender()
+{
+	m_context = nullptr;
+
+	if (m_frame)
+	{
+		m_frame->close();
 	}
 }
 
-GSLock::~GSLock()
+void GSRender::oninit()
 {
-	switch (m_type)
+	if (m_frame)
 	{
-	case GS_LOCK_NOT_WAIT: m_renderer.m_cs_main.unlock(); break;
-	case GS_LOCK_WAIT_FLIP: m_renderer.m_sem_flip.try_post(); break;
+		m_frame->show();
 	}
 }
 
-GSLockCurrent::GSLockCurrent(GSLockType type) : GSLock(Emu.GetGSManager().GetRender(), type)
+void GSRender::oninit_thread()
 {
+	if (m_frame)
+	{
+		m_context = m_frame->new_context();
+		m_frame->set_current(m_context);
+	}
+}
+
+void GSRender::close()
+{
+	if (m_frame && m_frame->shown())
+	{
+		m_frame->hide();
+	}
+
+	if (joinable())
+	{
+		join();
+	}
+}
+
+void GSRender::flip(int buffer)
+{
+	if (m_frame)
+		m_frame->flip(m_context);
 }

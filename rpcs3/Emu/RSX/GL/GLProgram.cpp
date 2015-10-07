@@ -3,7 +3,7 @@
 #include "Emu/Memory/Memory.h"
 #include "GLProgram.h"
 #include "GLGSRender.h"
-
+/*
 GLProgram::GLProgram() : id(0)
 {
 }
@@ -116,3 +116,4 @@ void GLProgram::Delete()
 	id = 0;
 	m_locations.clear();
 }
+*/

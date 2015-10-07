@@ -1,3 +1,4 @@
+#ifdef DX12_SUPPORT
 #pragma once
 #include <vector>
 #include "Emu/Memory/vm.h"
@@ -38,3 +39,4 @@ size_t getIndexCount(unsigned m_draw_mode, unsigned initial_index_count);
  * Write index information to bufferMap
  */
 void uploadIndexData(unsigned m_draw_mode, unsigned index_type, void* indexBuffer, void* bufferMap, unsigned element_count);
+#endif

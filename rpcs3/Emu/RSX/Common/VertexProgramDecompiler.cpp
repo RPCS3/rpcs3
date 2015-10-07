@@ -136,12 +136,12 @@ void VertexProgramDecompiler::SetDST(bool is_sca, std::string value)
 
 	std::string mask = GetMask(is_sca);
 
-	value += mask;
-
-	if (is_sca && d0.vec_result)
+	if (is_sca)
 	{
-		//value = "vec4(" + value + ")";
+		value = getFloatTypeName(4) + "(" + value + ")";
 	}
+
+	value += mask;
 
 	if (d0.staturate)
 	{
@@ -309,7 +309,7 @@ void VertexProgramDecompiler::AddCodeCond(const std::string& dst, const std::str
 
 	if (dst_var.swizzles[0].length() == 1)
 	{
-		AddCode("if (" + cond + ".x) " + dst + " = " + getFloatTypeName(4) + "(" + src + ".xxxx).x;");
+		AddCode("if (" + cond + ".x) " + dst + " = " + src + ";");
 	}
 	else
 	{
@@ -559,7 +559,7 @@ std::string VertexProgramDecompiler::Decompile()
 		case RSX_SCA_OPCODE_MOV: SetDSTSca("$s"); break;
 		case RSX_SCA_OPCODE_RCP: SetDSTSca("(1.0 / $s)"); break;
 		case RSX_SCA_OPCODE_RCC: SetDSTSca("clamp(1.0 / $s, 5.42101e-20, 1.884467e19)"); break;
-		case RSX_SCA_OPCODE_RSQ: SetDSTSca("1.f / sqrt($s)"); break;
+		case RSX_SCA_OPCODE_RSQ: SetDSTSca("(1.f / sqrt($s))"); break;
 		case RSX_SCA_OPCODE_EXP: SetDSTSca("exp($s)"); break;
 		case RSX_SCA_OPCODE_LOG: SetDSTSca("log($s)"); break;
 		case RSX_SCA_OPCODE_LIT: SetDSTSca(getFloatTypeName(4) + "(1.0, $s.x, ($s.x > 0.0 ? exp($s.w * log2($s.y)) : 0.0), 1.0)"); break;
