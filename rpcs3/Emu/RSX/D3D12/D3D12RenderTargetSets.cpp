@@ -1,4 +1,4 @@
-#include "stdafx.h"
+#include "stdafx_d3d12.h"
 #if defined(DX12_SUPPORT)
 #include "D3D12RenderTargetSets.h"
 #include "rpcs3/Ini.h"

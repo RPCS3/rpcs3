@@ -22,6 +22,12 @@
 #include "Emu/Io/XInput/XInputPadHandler.h"
 #endif
 
+#include "Emu/RSX/Null/NullGSRender.h"
+#include "Emu/RSX/GL/GLGSRender.h"
+#if defined(DX12_SUPPORT)
+#include "Emu/RSX/D3D12/D3D12GSRender.h"
+#endif
+
 #include "Gui/MsgDialog.h"
 #include "Gui/SaveDataDialog.h"
 
@@ -221,3 +227,16 @@ Rpcs3App::Rpcs3App()
 }
 
 GameInfo CurGameInfo;
+
+GSRender * createGSRender(u8 id)
+{
+	switch (id)
+	{
+	default:
+	case 0: return new NullGSRender(); break;
+	case 1: return new GLGSRender(); break;
+#if defined(DX12_SUPPORT)
+	case 2: return new D3D12GSRender(); break;
+#endif
+	}
+}

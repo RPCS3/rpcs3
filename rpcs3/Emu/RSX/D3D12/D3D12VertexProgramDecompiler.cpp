@@ -1,4 +1,4 @@
-#include "stdafx.h"
+#include "stdafx_d3d12.h"
 #if defined(DX12_SUPPORT)
 #include "D3D12VertexProgramDecompiler.h"
 #include "D3D12CommonDecompiler.h"
@@ -157,5 +157,4 @@ D3D12VertexProgramDecompiler::D3D12VertexProgramDecompiler(std::vector<u32>& dat
 	VertexProgramDecompiler(data)
 {
 }
-
 #endif

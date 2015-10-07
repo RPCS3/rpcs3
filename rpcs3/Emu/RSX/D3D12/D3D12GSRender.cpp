@@ -1,4 +1,4 @@
-#include "stdafx.h"
+#include "stdafx_d3d12.h"
 #if defined(DX12_SUPPORT)
 #include "D3D12GSRender.h"
 #include <wrl/client.h>
@@ -100,8 +100,7 @@ void D3D12GSRender::ResourceStorage::WaitAndClean()
 
 void D3D12GSRender::ResourceStorage::Release()
 {
-	for (auto tmp : m_dirtyTextures)
-		tmp->Release();
+	m_dirtyTextures.clear();
 	// NOTE: Should be released only after gfx pipeline last command has been finished.
 	CloseHandle(m_frameFinishedHandle);
 }
@@ -596,32 +595,32 @@ void D3D12GSRender::Draw()
 	};
 	getCurrentResourceStorage().m_commandList->RSSetScissorRects(1, &box);
 
-	switch (m_draw_mode - 1)
+	switch (m_draw_mode)
 	{
-	case GL_POINTS:
+	case CELL_GCM_PRIMITIVE_POINTS:
 		getCurrentResourceStorage().m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_POINTLIST);
 		break;
-	case GL_LINES:
+	case CELL_GCM_PRIMITIVE_LINES:
 		getCurrentResourceStorage().m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_LINELIST);
 		break;
-	case GL_LINE_LOOP:
+	case CELL_GCM_PRIMITIVE_LINE_LOOP:
 		getCurrentResourceStorage().m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_LINELIST_ADJ);
 		break;
-	case GL_LINE_STRIP:
+	case CELL_GCM_PRIMITIVE_LINE_STRIP:
 		getCurrentResourceStorage().m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_LINESTRIP);
 		break;
-	case GL_TRIANGLES:
+	case CELL_GCM_PRIMITIVE_TRIANGLES:
 		getCurrentResourceStorage().m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 		break;
-	case GL_TRIANGLE_STRIP:
+	case CELL_GCM_PRIMITIVE_TRIANGLE_STRIP:
 		getCurrentResourceStorage().m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 		break;
-	case GL_TRIANGLE_FAN:
-	case GL_QUADS:
+	case CELL_GCM_PRIMITIVE_TRIANGLE_FAN:
+	case CELL_GCM_PRIMITIVE_QUADS:
 		getCurrentResourceStorage().m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 		break;
-	case GL_QUAD_STRIP:
-	case GL_POLYGON:
+	case CELL_GCM_PRIMITIVE_QUAD_STRIP:
+	case CELL_GCM_PRIMITIVE_POLYGON:
 	default:
 		getCurrentResourceStorage().m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 		LOG_ERROR(RSX, "Unsupported primitive type");
@@ -1035,7 +1034,7 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 		invalidateAddress(GetAddress(m_surface_offset_z, m_context_dma_z - 0xfeed0000));
 	}
 
-	ID3D12Resource *rtt0, *rtt1, *rtt2, *rtt3;
+	ID3D12Resource *rtt0 = nullptr, *rtt1 = nullptr, *rtt2 = nullptr, *rtt3 = nullptr;
 	if (Ini.GSDumpColorBuffers.GetValue())
 	{
 		switch (m_surface_color_target)

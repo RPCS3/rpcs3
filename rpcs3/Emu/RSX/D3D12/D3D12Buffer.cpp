@@ -1,4 +1,4 @@
-#include "stdafx.h"
+#include "stdafx_d3d12.h"
 #if defined(DX12_SUPPORT)
 #include "D3D12Buffer.h"
 #include "Utilities/Log.h"
@@ -368,9 +368,8 @@ void D3D12GSRender::FillPixelShaderConstantsBuffer()
 	constantBufferViewDesc.BufferLocation = m_constantsData.m_heap->GetGPUVirtualAddress() + heapOffset;
 	constantBufferViewDesc.SizeInBytes = (UINT)bufferSize;
 	m_device->CreateConstantBufferView(&constantBufferViewDesc,
+
 		CD3DX12_CPU_DESCRIPTOR_HANDLE(getCurrentResourceStorage().m_constantsBufferDescriptorsHeap->GetCPUDescriptorHandleForHeapStart())
 		.Offset((INT)getCurrentResourceStorage().m_constantsBufferIndex, g_descriptorStrideSRVCBVUAV));
 }
-
-
 #endif
