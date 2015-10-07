@@ -796,7 +796,7 @@ namespace gl
 			clamp_to_edge = GL_CLAMP_TO_EDGE,
 			clamp_to_border = GL_CLAMP_TO_BORDER,
 			mirror_clamp = GL_MIRROR_CLAMP_EXT,
-			mirror_clamp_to_edge = GL_MIRROR_CLAMP_TO_EDGE,
+			//mirror_clamp_to_edge = GL_MIRROR_CLAMP_TO_EDGE,
 			mirror_clamp_to_border = GL_MIRROR_CLAMP_TO_BORDER_EXT
 		};
 

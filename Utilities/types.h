@@ -56,45 +56,47 @@ struct size2_base
 {
 	T width, height;
 
-	/*
-	size2_base() : width{}, height{}
+	constexpr size2_base() : width{}, height{}
 	{
 	}
 
-	size2_base(T width, T height) : width{ width }, height{ height }
+	constexpr size2_base(T width, T height) : width{ width }, height{ height }
 	{
 	}
-	*/
+	
+	constexpr size2_base(const size2_base& rhs) : width{ rhs.width }, height{ rhs.height }
+	{
+	}
 
-	size2_base operator -(const size2_base& rhs) const
+	constexpr size2_base operator -(const size2_base& rhs) const
 	{
 		return{ width - rhs.width, height - rhs.height };
 	}
-	size2_base operator -(T rhs) const
+	constexpr size2_base operator -(T rhs) const
 	{
 		return{ width - rhs, height - rhs };
 	}
-	size2_base operator +(const size2_base& rhs) const
+	constexpr size2_base operator +(const size2_base& rhs) const
 	{
 		return{ width + rhs.width, height + rhs.height };
 	}
-	size2_base operator +(T rhs) const
+	constexpr size2_base operator +(T rhs) const
 	{
 		return{ width + rhs, height + rhs };
 	}
-	size2_base operator /(const size2_base& rhs) const
+	constexpr size2_base operator /(const size2_base& rhs) const
 	{
 		return{ width / rhs.width, height / rhs.height };
 	}
-	size2_base operator /(T rhs) const
+	constexpr size2_base operator /(T rhs) const
 	{
 		return{ width / rhs, height / rhs };
 	}
-	size2_base operator *(const size2_base& rhs) const
+	constexpr size2_base operator *(const size2_base& rhs) const
 	{
 		return{ width * rhs.width, height * rhs.height };
 	}
-	size2_base operator *(T rhs) const
+	constexpr size2_base operator *(T rhs) const
 	{
 		return{ width * rhs, height * rhs };
 	}
@@ -148,18 +150,18 @@ struct size2_base
 		return *this;
 	}
 
-	bool operator == (const size2_base& rhs) const
+	constexpr bool operator == (const size2_base& rhs) const
 	{
 		return width == rhs.width && height == rhs.height;
 	}
 
-	bool operator != (const size2_base& rhs) const
+	constexpr bool operator != (const size2_base& rhs) const
 	{
 		return width != rhs.width || height != rhs.height;
 	}
 
 	template<typename NT>
-	operator size2_base<NT>() const
+	constexpr operator size2_base<NT>() const
 	{
 		return{ (NT)width, (NT)height };
 	}
@@ -285,84 +287,87 @@ template<typename T>
 struct position2_base
 {
 	T x, y;
-	/*
-	position2_base() : x{}, y{}
+
+	constexpr position2_base() : x{}, y{}
 	{
 	}
 
-	position2_base(T x, T y) : x{ x }, y{ y }
+	constexpr position2_base(T x, T y) : x{ x }, y{ y }
 	{
 	}
-	*/
 
-	bool operator >(const position2_base& rhs) const
+	constexpr position2_base(const position2_base& rhs) : x{ rhs.x }, y{ rhs.y }
+	{
+	}
+
+	constexpr bool operator >(const position2_base& rhs) const
 	{
 		return x > rhs.x && y > rhs.y;
 	}
-	bool operator >(T rhs) const
+	constexpr bool operator >(T rhs) const
 	{
 		return x > rhs && y > rhs;
 	}
-	bool operator <(const position2_base& rhs) const
+	constexpr bool operator <(const position2_base& rhs) const
 	{
 		return x < rhs.x && y < rhs.y;
 	}
-	bool operator <(T rhs) const
+	constexpr bool operator <(T rhs) const
 	{
 		return x < rhs && y < rhs;
 	}
-	bool operator >=(const position2_base& rhs) const
+	constexpr bool operator >=(const position2_base& rhs) const
 	{
 		return x >= rhs.x && y >= rhs.y;
 	}
-	bool operator >=(T rhs) const
+	constexpr bool operator >=(T rhs) const
 	{
 		return x >= rhs && y >= rhs;
 	}
-	bool operator <=(const position2_base& rhs) const
+	constexpr bool operator <=(const position2_base& rhs) const
 	{
 		return x <= rhs.x && y <= rhs.y;
 	}
-	bool operator <=(T rhs) const
+	constexpr bool operator <=(T rhs) const
 	{
 		return x <= rhs && y <= rhs;
 	}
 
-	position2_base operator -(const position2_base& rhs) const
+	constexpr position2_base operator -(const position2_base& rhs) const
 	{
 		return{ x - rhs.x, y - rhs.y };
 	}
-	position2_base operator -(T rhs) const
+	constexpr position2_base operator -(T rhs) const
 	{
 		return{ x - rhs, y - rhs };
 	}
-	position2_base operator +(const position2_base& rhs) const
+	constexpr position2_base operator +(const position2_base& rhs) const
 	{
 		return{ x + rhs.x, y + rhs.y };
 	}
-	position2_base operator +(T rhs) const
+	constexpr position2_base operator +(T rhs) const
 	{
 		return{ x + rhs, y + rhs };
 	}
 	template<typename RhsT>
-	position2_base operator *(RhsT rhs) const
+	constexpr position2_base operator *(RhsT rhs) const
 	{
 		return{ T(x * rhs), T(y * rhs) };
 	}
-	position2_base operator *(const position2_base& rhs) const
+	constexpr position2_base operator *(const position2_base& rhs) const
 	{
 		return{ T(x * rhs.x),  T(y * rhs.y) };
 	}
 	template<typename RhsT>
-	position2_base operator /(RhsT rhs) const
+	constexpr position2_base operator /(RhsT rhs) const
 	{
 		return{ x / rhs, y / rhs };
 	}
-	position2_base operator /(const position2_base& rhs) const
+	constexpr position2_base operator /(const position2_base& rhs) const
 	{
 		return{ x / rhs.x, y / rhs.y };
 	}
-	position2_base operator /(const size2_base<T>& rhs) const
+	constexpr position2_base operator /(const size2_base<T>& rhs) const
 	{
 		return{ x / rhs.width, y / rhs.height };
 	}
@@ -393,59 +398,59 @@ struct position2_base
 	}
 
 	template<typename RhsT>
-	position2_base& operator *=(RhsT rhs) const
+	position2_base& operator *=(RhsT rhs)
 	{
 		x *= rhs;
 		y *= rhs;
 		return *this;
 	}
-	position2_base& operator *=(const position2_base& rhs) const
+	position2_base& operator *=(const position2_base& rhs)
 	{
 		x *= rhs.x;
 		y *= rhs.y;
 		return *this;
 	}
 	template<typename RhsT>
-	position2_base& operator /=(RhsT rhs) const
+	position2_base& operator /=(RhsT rhs)
 	{
 		x /= rhs;
 		y /= rhs;
 		return *this;
 	}
-	position2_base& operator /=(const position2_base& rhs) const
+	position2_base& operator /=(const position2_base& rhs)
 	{
 		x /= rhs.x;
 		y /= rhs.y;
 		return *this;
 	}
 
-	bool operator ==(const position2_base& rhs) const
+	constexpr bool operator ==(const position2_base& rhs) const
 	{
 		return x == rhs.x && y == rhs.y;
 	}
 
-	bool operator ==(T rhs) const
+	constexpr bool operator ==(T rhs) const
 	{
 		return x == rhs && y == rhs;
 	}
 
-	bool operator !=(const position2_base& rhs) const
+	constexpr bool operator !=(const position2_base& rhs) const
 	{
 		return !(*this == rhs);
 	}
 
-	bool operator !=(T rhs) const
+	constexpr bool operator !=(T rhs) const
 	{
 		return !(*this == rhs);
 	}
 
 	template<typename NT>
-	operator position2_base<NT>() const
+	constexpr operator position2_base<NT>() const
 	{
 		return{ (NT)x, (NT)y };
 	}
 
-	double distance(const position2_base& to)
+	double distance(const position2_base& to) const
 	{
 		return std::sqrt(double((x - to.x) * (x - to.x) + (y - to.y) * (y - to.y)));
 	}
@@ -646,12 +651,19 @@ struct coord_base
 		struct { T width, height; };
 	};
 
-	constexpr coord_base() : x{}, y{}, position{}, width{}, height{}, size{}
+	constexpr coord_base() : position{}, size{}
+#ifdef _MSC_VER
+		//compiler error
+		, x{}, y{}, width{}, height{}
+#endif
 	{
 	}
 
 	constexpr coord_base(const position_base<T>& position, const size2_base<T>& size)
-		: x{ position.x }, y{ position.y }, position{ position }, width{ size.width }, height{ size.height }, size{ size }
+		: position{ position }, size{ size }
+#ifdef _MSC_VER
+		, x{ position.x }, y{ position.y }, width{ size.width }, height{ size.height }
+#endif
 	{
 	}
 

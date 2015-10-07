@@ -1,4 +1,5 @@
 #pragma once
+#ifdef DX12_SUPPORT
 #include "../RSXTexture.h"
 #include <vector>
 
@@ -22,3 +23,4 @@ size_t getPlacedTextureStorageSpace(const rsx::texture &texture, size_t rowPitch
 * Similarly, offset for every mipmaplevel is aligned to rowPitchAlignement boundary.
 */
 std::vector<MipmapLevelInfo> uploadPlacedTexture(const rsx::texture &texture, size_t rowPitchAlignement, void* textureData);
+#endif

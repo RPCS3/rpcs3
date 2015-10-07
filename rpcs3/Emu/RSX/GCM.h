@@ -903,9 +903,9 @@ enum Method
 namespace rsx
 {
 	template<typename ...T>
-	static std::array<u32, sizeof...(T) + 1> make_command(u32 start_register, T... values)
+	static auto make_command(u32 start_register, T... values) -> std::array<u32, sizeof...(values) + 1>
 	{
-		return{ (start_register << 2) | (sizeof...(values) << 18), values... };
+		return{ (start_register << 2) | u32(sizeof...(values) << 18), u32(values)... };
 	}
 
 	static u32 make_jump(u32 offset)
@@ -916,14 +916,12 @@ namespace rsx
 	template<typename AT, typename ...T>
 	static size_t make_command(vm::ps3::ptr<u32, AT> &dst, u32 start_register, T... values)
 	{
-		auto commands = make_command(start_register, values...);
-
-		for (u32 command : commands)
+		for (u32 command : { (start_register << 2) | u32(sizeof...(values) << 18), u32(values)... })
 		{
 			*dst++ = command;
 		}
 
-		return commands.size();
+		return sizeof...(values) + 1;
 	}
 
 	template<typename AT>

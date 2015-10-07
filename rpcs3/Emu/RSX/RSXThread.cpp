@@ -39,12 +39,12 @@ namespace rsx
 
 	namespace nv406e
 	{
-		__forceinline void set_reference(thread* rsx, u32 arg)
+		force_inline void set_reference(thread* rsx, u32 arg)
 		{
 			rsx->ctrl->ref.exchange(arg);
 		}
 
-		__forceinline void semaphore_acquire(thread* rsx, u32 arg)
+		force_inline void semaphore_acquire(thread* rsx, u32 arg)
 		{
 			//TODO: dma
 			while (vm::read32(rsx->label_addr + method_registers[NV406E_SEMAPHORE_OFFSET]) != arg)
@@ -56,7 +56,7 @@ namespace rsx
 			}
 		}
 
-		__forceinline void semaphore_release(thread* rsx, u32 arg)
+		force_inline void semaphore_release(thread* rsx, u32 arg)
 		{
 			//TODO: dma
 			vm::write32(rsx->label_addr + method_registers[NV406E_SEMAPHORE_OFFSET], arg);
@@ -65,13 +65,13 @@ namespace rsx
 
 	namespace nv4097
 	{
-		__forceinline void texture_read_semaphore_release(thread* rsx, u32 arg)
+		force_inline void texture_read_semaphore_release(thread* rsx, u32 arg)
 		{
 			//TODO: dma
 			vm::write32(rsx->label_addr + method_registers[NV4097_SET_SEMAPHORE_OFFSET], arg);
 		}
 
-		__forceinline void back_end_write_semaphore_release(thread* rsx, u32 arg)
+		force_inline void back_end_write_semaphore_release(thread* rsx, u32 arg)
 		{
 			//TODO: dma
 			vm::write32(rsx->label_addr + method_registers[NV4097_SET_SEMAPHORE_OFFSET],
@@ -80,7 +80,7 @@ namespace rsx
 
 		//fire only when all data passed to rsx cmd buffer
 		template<u32 id, u32 index, int count, typename type>
-		__forceinline void set_vertex_data_impl(thread* rsx, u32 arg)
+		force_inline void set_vertex_data_impl(thread* rsx, u32 arg)
 		{
 			static const size_t element_size = (count * sizeof(type));
 			static const size_t element_size_in_words = element_size / sizeof(u32);
@@ -105,56 +105,56 @@ namespace rsx
 		}
 
 		template<u32 index>
-		__forceinline void set_vertex_data4ub_m(thread* rsx, u32 arg)
+		force_inline void set_vertex_data4ub_m(thread* rsx, u32 arg)
 		{
 			set_vertex_data_impl<NV4097_SET_VERTEX_DATA4UB_M, index, 4, u8>(rsx, arg);
 		}
 
 		template<u32 index>
-		__forceinline void set_vertex_data1f_m(thread* rsx, u32 arg)
+		force_inline void set_vertex_data1f_m(thread* rsx, u32 arg)
 		{
 			set_vertex_data_impl<NV4097_SET_VERTEX_DATA1F_M, index, 1, f32>(rsx, arg);
 		}
 
 		template<u32 index>
-		__forceinline void set_vertex_data2f_m(thread* rsx, u32 arg)
+		force_inline void set_vertex_data2f_m(thread* rsx, u32 arg)
 		{
 			set_vertex_data_impl<NV4097_SET_VERTEX_DATA1F_M, index, 2, f32>(rsx, arg);
 		}
 
 		template<u32 index>
-		__forceinline void set_vertex_data3f_m(thread* rsx, u32 arg)
+		force_inline void set_vertex_data3f_m(thread* rsx, u32 arg)
 		{
 			set_vertex_data_impl<NV4097_SET_VERTEX_DATA1F_M, index, 3, f32>(rsx, arg);
 		}
 
 		template<u32 index>
-		__forceinline void set_vertex_data4f_m(thread* rsx, u32 arg)
+		force_inline void set_vertex_data4f_m(thread* rsx, u32 arg)
 		{
 			set_vertex_data_impl<NV4097_SET_VERTEX_DATA1F_M, index, 4, f32>(rsx, arg);
 		}
 
 		template<u32 index>
-		__forceinline void set_vertex_data2s_m(thread* rsx, u32 arg)
+		force_inline void set_vertex_data2s_m(thread* rsx, u32 arg)
 		{
 			set_vertex_data_impl<NV4097_SET_VERTEX_DATA2S_M, index, 2, u16>(rsx, arg);
 		}
 
 		template<u32 index>
-		__forceinline void set_vertex_data4s_m(thread* rsx, u32 arg)
+		force_inline void set_vertex_data4s_m(thread* rsx, u32 arg)
 		{
 			set_vertex_data_impl<NV4097_SET_VERTEX_DATA4S_M, index, 4, u16>(rsx, arg);
 		}
 
 		template<u32 index>
-		__forceinline void set_vertex_data_array_format(thread* rsx, u32 arg)
+		force_inline void set_vertex_data_array_format(thread* rsx, u32 arg)
 		{
 			auto& info = rsx->vertex_arrays_info[index];
 			info.unpack(arg);
 			info.array = info.size > 0;
 		}
 
-		__forceinline void draw_arrays(thread* rsx, u32 arg)
+		force_inline void draw_arrays(thread* rsx, u32 arg)
 		{
 			u32 first = arg & 0xffffff;
 			u32 count = (arg >> 24) + 1;
@@ -162,7 +162,7 @@ namespace rsx
 			rsx->load_vertex_data(first, count);
 		}
 
-		__forceinline void draw_index_array(thread* rsx, u32 arg)
+		force_inline void draw_index_array(thread* rsx, u32 arg)
 		{
 			u32 first = arg & 0xffffff;
 			u32 count = (arg >> 24) + 1;
@@ -172,7 +172,7 @@ namespace rsx
 		}
 
 		template<u32 index>
-		__forceinline void set_transform_constant(thread* rsxthr, u32 arg)
+		force_inline void set_transform_constant(thread* rsxthr, u32 arg)
 		{
 			u32& load = method_registers[NV4097_SET_TRANSFORM_CONSTANT_LOAD];
 
@@ -183,7 +183,7 @@ namespace rsx
 		}
 
 		template<u32 index>
-		__forceinline void set_transform_program(thread* rsx, u32 arg)
+		force_inline void set_transform_program(thread* rsx, u32 arg)
 		{
 			u32& load = method_registers[NV4097_SET_TRANSFORM_PROGRAM_LOAD];
 
@@ -193,7 +193,7 @@ namespace rsx
 			memcpy(rsx->transform_program + load++ * count, method_registers + NV4097_SET_TRANSFORM_PROGRAM + index * count, size);
 		}
 
-		__forceinline void set_begin_end(thread* rsx, u32 arg)
+		force_inline void set_begin_end(thread* rsx, u32 arg)
 		{
 			if (arg)
 			{
@@ -241,7 +241,7 @@ namespace rsx
 			rsx->vertex_draw_count = 0;
 		}
 
-		__forceinline void get_report(thread* rsx, u32 arg)
+		force_inline void get_report(thread* rsx, u32 arg)
 		{
 			u8 type = arg >> 24;
 			u32 offset = arg & 0xffffff;
@@ -271,7 +271,7 @@ namespace rsx
 			//result->padding = 0;
 		}
 
-		__forceinline void clear_report_value(thread* rsx, u32 arg)
+		force_inline void clear_report_value(thread* rsx, u32 arg)
 		{
 			switch (arg)
 			{
@@ -291,7 +291,7 @@ namespace rsx
 	namespace nv308a
 	{
 		template<u32 index>
-		__forceinline void color(u32 arg)
+		force_inline void color(u32 arg)
 		{
 			u32 point = method_registers[NV308A_POINT];
 			u16 x = point;
@@ -309,7 +309,7 @@ namespace rsx
 
 	namespace nv3089
 	{
-		__forceinline void image_in(u32 arg)
+		force_inline void image_in(u32 arg)
 		{
 			const u16 width = method_registers[NV3089_IMAGE_IN_SIZE];
 			const u16 height = method_registers[NV3089_IMAGE_IN_SIZE] >> 16;
@@ -487,7 +487,7 @@ namespace rsx
 
 	namespace nv0039
 	{
-		__forceinline void buffer_notify(u32 arg)
+		force_inline void buffer_notify(u32 arg)
 		{
 			const u32 inPitch = method_registers[NV0039_PITCH_IN];
 			const u32 outPitch = method_registers[NV0039_PITCH_OUT];
@@ -561,13 +561,13 @@ namespace rsx
 		using rsx_impl_method_t = void(*)(u32);
 
 		template<rsx_method_t impl_func>
-		__forceinline static void call_impl_func(thread *rsx, u32 arg)
+		force_inline static void call_impl_func(thread *rsx, u32 arg)
 		{
 			impl_func(rsx, arg);
 		}
 
 		template<rsx_impl_method_t impl_func>
-		__forceinline static void call_impl_func(thread *rsx, u32 arg)
+		force_inline static void call_impl_func(thread *rsx, u32 arg)
 		{
 			impl_func(arg);
 		}

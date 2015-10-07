@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#ifdef DX12_SUPPORT
 #include "Emu/Memory/vm.h"
 #include "TextureUtils.h"
 #include "../RSXThread.h"
@@ -542,3 +543,4 @@ std::vector<MipmapLevelInfo> uploadPlacedTexture(const RSXTexture &texture, size
 	}
 
 }
+#endif
