@@ -578,9 +578,9 @@ void GLGSRender::begin()
 
 	u32 color_mask = rsx::method_registers[NV4097_SET_COLOR_MASK];
 	bool color_mask_b = color_mask & 0xff;
-	bool color_mask_g = color_mask >> 8;
-	bool color_mask_r = color_mask >> 16;
-	bool color_mask_a = color_mask >> 24;
+	bool color_mask_g = (color_mask >> 8) & 0xff;
+	bool color_mask_r = (color_mask >> 16) & 0xff;
+	bool color_mask_a = (color_mask >> 24) & 0xff;
 
 	__glcheck glColorMask(color_mask_r, color_mask_g, color_mask_b, color_mask_a);
 	__glcheck glDepthMask(rsx::method_registers[NV4097_SET_DEPTH_MASK]);
@@ -591,7 +591,7 @@ void GLGSRender::begin()
 	int viewport_w = int(rsx::method_registers[NV4097_SET_VIEWPORT_HORIZONTAL] >> 16);
 	int viewport_h = int(rsx::method_registers[NV4097_SET_VIEWPORT_VERTICAL] >> 16);
 	glViewport(viewport_x, viewport_y, viewport_w, viewport_h);
-	
+
 	//scissor test is always enabled
 	glEnable(GL_SCISSOR_TEST);
 
@@ -1035,7 +1035,7 @@ void GLGSRender::end()
 
 	if (vertex_index_array.empty())
 	{
-		glDrawArrays(draw_mode - 1, 0, vertex_draw_count);
+		draw_fbo.draw_arrays(gl::draw_mode(draw_mode - 1), vertex_draw_count);\
 	}
 	else
 	{
@@ -1158,11 +1158,7 @@ void nv4097_clear_surface(u32 arg, GLGSRender* renderer)
 	}
 
 	renderer->clear_surface_buffers = (gl::buffers)mask;
-	//renderer->init_buffers();
-	//renderer->draw_fbo.draw_buffer(renderer->draw_fbo.color[0]);
-	//renderer->draw_fbo.clear(gl::buffers(mask));
-	//renderer->draw_fbo.draw_arrays(gl::draw_mode::lines, 0);
-	//renderer->write_buffers();
+	renderer->draw_fbo.clear((gl::buffers)mask);
 }
 
 using rsx_method_impl_t = void(*)(u32, GLGSRender*);
@@ -1289,6 +1285,18 @@ bool GLGSRender::load_program()
 	{
 		//LOG_WARNING(RSX, "vc[%u] = (%f, %f, %f, %f)", constant.first, constant.second.r, constant.second.g, constant.second.b, constant.second.a);
 		__glcheck m_program.uniforms["vc[" + std::to_string(constant.first) + "]"] = constant.second;
+	}
+
+	for (u32 constant_offset : m_prog_buffer.getFragmentConstantOffsetsCache(&fragment_program))
+	{
+		be_t<u32> *data = vm::get_ptr<be_t<u32>>(fragment_program.addr + constant_offset);
+
+		u32 c0 = (data[0] >> 16 | data[0] << 16);
+		u32 c1 = (data[1] >> 16 | data[1] << 16);
+		u32 c2 = (data[2] >> 16 | data[2] << 16);
+		u32 c3 = (data[3] >> 16 | data[3] << 16);
+
+		m_program.uniforms["fc" + std::to_string(constant_offset)] = color4f{ (f32&)c0, (f32&)c1, (f32&)c2, (f32&)c3 };
 	}
 
 	return true;
@@ -1461,11 +1469,11 @@ void GLGSRender::init_buffers()
 	case CELL_GCM_SURFACE_TARGET_NONE: break;
 
 	case CELL_GCM_SURFACE_TARGET_0:
-		__glcheck draw_fbo.draw_buffers({ draw_fbo.color[0] });
+		__glcheck draw_fbo.draw_buffer(draw_fbo.color[0]);
 		break;
 
 	case CELL_GCM_SURFACE_TARGET_1:
-		__glcheck draw_fbo.draw_buffers({ draw_fbo.color[1] });
+		__glcheck draw_fbo.draw_buffer(draw_fbo.color[1] );
 		break;
 
 	case CELL_GCM_SURFACE_TARGET_MRT1:
@@ -1487,7 +1495,7 @@ void GLGSRender::init_buffers()
 
 	if (clear_surface_buffers != gl::buffers::none)
 	{
-		draw_fbo.clear(clear_surface_buffers);
+		//draw_fbo.clear(clear_surface_buffers);
 
 		clear_surface_buffers = gl::buffers::none;
 	}
@@ -1707,6 +1715,8 @@ void GLGSRender::flip(int buffer)
 
 	if (draw_fbo && !Ini.GSDumpColorBuffers.GetValue())
 	{
+		skip_read = true;
+		/*
 		for (uint i = 0; i < rsx::limits::color_buffers_count; ++i)
 		{
 			u32 color_address = rsx::get_address(rsx::method_registers[mr_color_offset[i]], rsx::method_registers[mr_color_dma[i]]);
@@ -1718,6 +1728,7 @@ void GLGSRender::flip(int buffer)
 				break;
 			}
 		}
+		*/
 	}
 
 	if (!skip_read)

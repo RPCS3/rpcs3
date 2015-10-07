@@ -47,13 +47,13 @@ namespace rsx
 		__forceinline void semaphore_acquire(thread* rsx, u32 arg)
 		{
 			//TODO: dma
-			/*while (vm::read32(rsx->label_addr + method_registers[NV406E_SEMAPHORE_OFFSET]) != arg)
+			while (vm::read32(rsx->label_addr + method_registers[NV406E_SEMAPHORE_OFFSET]) != arg)
 			{
 				if (Emu.IsStopped())
 					break;
 
 				std::this_thread::sleep_for(std::chrono::milliseconds(1));
-			}*/
+			}
 		}
 
 		__forceinline void semaphore_release(thread* rsx, u32 arg)
@@ -246,7 +246,11 @@ namespace rsx
 			u8 type = arg >> 24;
 			u32 offset = arg & 0xffffff;
 
-			u32 value;
+			//TODO: use DMA
+			vm::ptr<CellGcmReportData> result = { rsx->local_mem_addr + offset };
+
+			result->timer = rsx->timestamp();
+
 			switch (type)
 			{
 			case CELL_GCM_ZPASS_PIXEL_CNT:
@@ -254,24 +258,17 @@ namespace rsx
 			case CELL_GCM_ZCULL_STATS1:
 			case CELL_GCM_ZCULL_STATS2:
 			case CELL_GCM_ZCULL_STATS3:
-				value = 0;
+				result->value = 0;
 				LOG_WARNING(RSX, "NV4097_GET_REPORT: Unimplemented type %d", type);
 				break;
 
 			default:
-				value = 0;
+				result->value = 0;
 				LOG_ERROR(RSX, "NV4097_GET_REPORT: Bad type %d", type);
 				break;
 			}
 
-			// NOTE: DMA broken, implement proper lpar mapping (sys_rsx)
-			//dma_write64(dma_report, offset + 0x0, rsx->timestamp());
-			//dma_write32(dma_report, offset + 0x8, value);
-			//dma_write32(dma_report, offset + 0xc, 0);
-
-			vm::write64(rsx->local_mem_addr + offset + 0x0, rsx->timestamp());
-			vm::write32(rsx->local_mem_addr + offset + 0x8, value);
-			vm::write32(rsx->local_mem_addr + offset + 0xc, 0);
+			//result->padding = 0;
 		}
 
 		__forceinline void clear_report_value(thread* rsx, u32 arg)
@@ -305,7 +302,7 @@ namespace rsx
 				LOG_ERROR(RSX, "%s: y is not null (0x%x)", __FUNCTION__, y);
 			}
 
-			u32 address = get_address(method_registers[NV3062_SET_OFFSET_DESTIN] + (x << 2) + index, method_registers[NV3062_SET_CONTEXT_DMA_IMAGE_DESTIN]);
+			u32 address = get_address(method_registers[NV3062_SET_OFFSET_DESTIN] + (x << 2) + index * 4, method_registers[NV3062_SET_CONTEXT_DMA_IMAGE_DESTIN]);
 			vm::write32(address, arg);
 		}
 	}
@@ -916,7 +913,6 @@ namespace rsx
 		for (auto &vertex_array : vertex_arrays)
 			vertex_array.clear();
 
-		fragment_constants.clear();
 		transform_constants.clear();
 	}
 

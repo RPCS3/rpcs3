@@ -159,7 +159,6 @@ namespace rsx
 		std::vector<u8> vertex_index_array;
 		u32 vertex_draw_count = 0;
 
-		std::unordered_map<u32, color4_base<f32>> fragment_constants;
 		std::unordered_map<u32, color4_base<f32>> transform_constants;
 
 		u32 transform_program[512 * 4] = {};
