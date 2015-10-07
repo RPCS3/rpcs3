@@ -1,6 +1,6 @@
 #pragma once
 
-struct GSRender;
+class GSRender;
 
 struct GSInfo
 {
