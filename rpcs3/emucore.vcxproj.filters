@@ -995,6 +995,12 @@
     <ClCompile Include="Emu\RSX\Null\NullGSRender.cpp">
       <Filter>Emu\GPU\RSX\Null</Filter>
     </ClCompile>
+    <ClCompile Include="..\Utilities\config_context.cpp">
+      <Filter>Utilities</Filter>
+    </ClCompile>
+    <ClCompile Include="config.cpp">
+      <Filter>Emu</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -1893,6 +1899,12 @@
     </ClInclude>
     <ClInclude Include="..\Utilities\types.h">
       <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utilities\config_context.h">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="config.h">
+      <Filter>Emu</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
