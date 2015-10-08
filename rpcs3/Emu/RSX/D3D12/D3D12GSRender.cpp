@@ -1183,7 +1183,7 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 		}
 	}
 
-	vm::write32(m_label_addr + offset, value);
+	vm::ps3::write32(m_label_addr + offset, value);
 }
 
 void D3D12GSRender::semaphorePFIFOAcquire(u32 offset, u32 value)
@@ -1191,7 +1191,7 @@ void D3D12GSRender::semaphorePFIFOAcquire(u32 offset, u32 value)
 	const std::chrono::time_point<std::chrono::system_clock> enterWait = std::chrono::system_clock::now();
 	while (true)
 	{
-		volatile u32 val = vm::read32(m_label_addr + offset);
+		volatile u32 val = vm::ps3::read32(m_label_addr + offset);
 		if (val == value) break;
 		std::chrono::time_point<std::chrono::system_clock> waitPoint = std::chrono::system_clock::now();
 		long long elapsedTime = std::chrono::duration_cast<std::chrono::seconds>(waitPoint - enterWait).count();

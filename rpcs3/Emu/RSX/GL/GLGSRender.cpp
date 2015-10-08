@@ -1090,7 +1090,7 @@ void GLGSRender::InitFragmentData()
 	const std::vector<size_t> &fragmentOffset = m_prog_buffer.getFragmentConstantOffsetsCache(m_cur_fragment_prog);
 	for (size_t offsetInFP : fragmentOffset)
 	{
-		auto data = vm::ptr<u32>::make(m_cur_fragment_prog->addr + (u32)offsetInFP);
+		auto data = vm::ps3::ptr<u32>::make(m_cur_fragment_prog->addr + (u32)offsetInFP);
 
 		u32 c0 = (data[0] >> 16 | data[0] << 16);
 		u32 c1 = (data[1] >> 16 | data[1] << 16);
@@ -2142,12 +2142,12 @@ void GLGSRender::Flip()
 
 void GLGSRender::semaphorePGRAPHTextureReadRelease(u32 offset, u32 value)
 {
-	vm::write32(m_label_addr + offset, value);
+	vm::ps3::write32(m_label_addr + offset, value);
 }
 
 void GLGSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 {
-	vm::write32(m_label_addr + offset, value);
+	vm::ps3::write32(m_label_addr + offset, value);
 }
 
 void GLGSRender::semaphorePFIFOAcquire(u32 offset, u32 value)

@@ -346,7 +346,7 @@ void D3D12GSRender::FillPixelShaderConstantsBuffer()
 		}
 		if (!isCommandBufferSetConstant)
 		{
-			auto data = vm::ptr<u32>::make(m_cur_fragment_prog->addr + (u32)offsetInFP);
+			auto data = vm::ps3::ptr<u32>::make(m_cur_fragment_prog->addr + (u32)offsetInFP);
 
 			u32 c0 = (data[0] >> 16 | data[0] << 16);
 			u32 c1 = (data[1] >> 16 | data[1] << 16);

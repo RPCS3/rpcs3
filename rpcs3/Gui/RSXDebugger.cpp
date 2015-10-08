@@ -269,7 +269,7 @@ void RSXDebugger::OnScrollMemory(wxMouseEvent& event)
 			u32 offset;
 			if(vm::check_addr(m_addr))
 			{
-				u32 cmd = vm::read32(m_addr);
+				u32 cmd = vm::ps3::read32(m_addr);
 				u32 count = (cmd & (CELL_GCM_METHOD_FLAG_JUMP | CELL_GCM_METHOD_FLAG_CALL))
 					|| cmd == CELL_GCM_METHOD_FLAG_RETURN ? 0 : (cmd >> 18) & 0x7ff;
 
@@ -296,7 +296,7 @@ void RSXDebugger::OnClickBuffer(wxMouseEvent& event)
 {
 	if (!RSXReady()) return;
 	const GSRender& render = Emu.GetGSManager().GetRender();
-	const auto buffers = vm::ptr<CellGcmDisplayInfo>::make(render.m_gcm_buffers_addr);
+	const auto buffers = vm::ps3::ptr<CellGcmDisplayInfo>::make(render.m_gcm_buffers_addr);
 
 	if(!buffers)
 		return;
@@ -383,7 +383,7 @@ void RSXDebugger::GetMemory()
 	
 		if (isReady && vm::check_addr(addr))
 		{
-			u32 cmd = vm::read32(addr);
+			u32 cmd = vm::ps3::read32(addr);
 			u32 count = (cmd >> 18) & 0x7ff;
 			m_list_commands->SetItem(i, 1, wxString::Format("%08x", cmd));
 			m_list_commands->SetItem(i, 3, wxString::Format("%d", count));
@@ -832,7 +832,7 @@ wxString RSXDebugger::DisAsmCommand(u32 cmd, u32 count, u32 currentAddr, u32 ioA
 	}
 	else if(!(cmd & (CELL_GCM_METHOD_FLAG_JUMP | CELL_GCM_METHOD_FLAG_CALL)) && cmd != CELL_GCM_METHOD_FLAG_RETURN)
 	{
-		auto args = vm::ptr<u32>::make(currentAddr + 4);
+		auto args = vm::ps3::ptr<u32>::make(currentAddr + 4);
 
 		u32 index = 0;
 		switch(cmd & 0x3ffff)

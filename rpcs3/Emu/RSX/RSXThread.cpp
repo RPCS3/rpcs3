@@ -139,7 +139,7 @@ u32 RSXVertexData::GetTypeSize() const
 
 u32 RSXThread::OutOfArgsCount(const uint x, const u32 cmd, const u32 count, const u32 args_addr)
 {
-	auto args = vm::ptr<u32>::make(args_addr);
+	auto args = vm::ps3::ptr<u32>::make(args_addr);
 	std::string debug = GetMethodName(cmd);
 	debug += "(";
 	for (u32 i = 0; i < count; ++i) debug += (i ? ", " : "") + fmt::format("0x%x", ARGS(i));
@@ -170,7 +170,7 @@ u32 RSXThread::OutOfArgsCount(const uint x, const u32 cmd, const u32 count, cons
 
 void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const u32 count)
 {
-	auto args = vm::ptr<u32>::make(args_addr);
+	auto args = vm::ps3::ptr<u32>::make(args_addr);
 
 #if	CMD_DEBUG
 	std::string debug = GetMethodName(cmd);
@@ -981,12 +981,12 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 				switch(m_indexed_array.m_type)
 				{
 				case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_32:
-					index = vm::read32(m_indexed_array.m_addr + i * 4);
+					index = vm::ps3::read32(m_indexed_array.m_addr + i * 4);
 					*(u32*)&m_indexed_array.m_data[i * 4] = index;
 					break;
 
 				case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_16:
-					index = vm::read16(m_indexed_array.m_addr + i * 2);
+					index = vm::ps3::read16(m_indexed_array.m_addr + i * 2);
 					*(u16*)&m_indexed_array.m_data[i * 2] = index;
 					break;
 				}
@@ -1847,9 +1847,9 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		//dma_write32(dma_report, offset + 0x8, value);
 		//dma_write32(dma_report, offset + 0xc, 0);
 
-		vm::write64(m_local_mem_addr + offset + 0x0, timestamp);
-		vm::write32(m_local_mem_addr + offset + 0x8, value);
-		vm::write32(m_local_mem_addr + offset + 0xc, 0);
+		vm::ps3::write64(m_local_mem_addr + offset + 0x0, timestamp);
+		vm::ps3::write32(m_local_mem_addr + offset + 0x8, value);
+		vm::ps3::write32(m_local_mem_addr + offset + 0xc, 0);
 		break;
 	}
 
@@ -2584,7 +2584,7 @@ void RSXThread::Task()
 			continue;
 		}
 
-		auto args = vm::ptr<u32>::make((u32)RSXIOMem.RealAddr(get + 4));
+		auto args = vm::ps3::ptr<u32>::make((u32)RSXIOMem.RealAddr(get + 4));
 
 		for (u32 i = 0; i < count; i++)
 		{

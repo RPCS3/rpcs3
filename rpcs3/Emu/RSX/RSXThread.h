@@ -157,10 +157,10 @@ public:
 	std::mutex m_cs_main;
 	semaphore_t m_sem_flip;
 	u64 m_last_flip_time;
-	vm::ptr<void(u32)> m_flip_handler;
-	vm::ptr<void(u32)> m_user_handler;
+	vm::ps3::ptr<void(u32)> m_flip_handler;
+	vm::ps3::ptr<void(u32)> m_user_handler;
 	u64 m_vblank_count;
-	vm::ptr<void(u32)> m_vblank_handler;
+	vm::ps3::ptr<void(u32)> m_vblank_handler;
 
 public:
 	// Dither
