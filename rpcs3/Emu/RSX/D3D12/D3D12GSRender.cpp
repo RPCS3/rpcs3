@@ -647,7 +647,7 @@ void D3D12GSRender::Flip()
 		if (m_read_buffer)
 		{
 			CellGcmDisplayInfo* buffers = vm::get_ptr<CellGcmDisplayInfo>(m_gcm_buffers_addr);
-			u32 addr = GetAddress(buffers[gcm_current_buffer].offset, CELL_GCM_LOCATION_LOCAL);
+			u32 addr = rsx::get_address(buffers[gcm_current_buffer].offset, CELL_GCM_LOCATION_LOCAL);
 			w = buffers[gcm_current_buffer].width;
 			h = buffers[gcm_current_buffer].height;
 			u8 *src_buffer = vm::get_ptr<u8>(addr);
@@ -1000,7 +1000,7 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 		getCurrentResourceStorage().m_commandList->CopyTextureRegion(&CD3DX12_TEXTURE_COPY_LOCATION(writeDest.Get(), { 0, { DXGI_FORMAT_R8_UNORM, m_surface_clip_w, m_surface_clip_h, 1, (UINT)depthRowPitch } }), 0, 0, 0,
 			&CD3DX12_TEXTURE_COPY_LOCATION(depthConverted.Get(), 0), nullptr);
 
-		invalidateAddress(GetAddress(m_surface_offset_z, m_context_dma_z - 0xfeed0000));
+		invalidateAddress(rsx::get_address(m_surface_offset_z, m_context_dma_z - 0xfeed0000));
 	}
 
 	ID3D12Resource *rtt0, *rtt1, *rtt2, *rtt3;
@@ -1038,10 +1038,10 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 			break;
 		}
 
-		if (m_context_dma_color_a) invalidateAddress(GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000));
-		if (m_context_dma_color_b) invalidateAddress(GetAddress(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000));
-		if (m_context_dma_color_c) invalidateAddress(GetAddress(m_surface_offset_c, m_context_dma_color_c - 0xfeed0000));
-		if (m_context_dma_color_d) invalidateAddress(GetAddress(m_surface_offset_d, m_context_dma_color_d - 0xfeed0000));
+		if (m_context_dma_color_a) invalidateAddress(rsx::get_address(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000));
+		if (m_context_dma_color_b) invalidateAddress(rsx::get_address(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000));
+		if (m_context_dma_color_c) invalidateAddress(rsx::get_address(m_surface_offset_c, m_context_dma_color_c - 0xfeed0000));
+		if (m_context_dma_color_d) invalidateAddress(rsx::get_address(m_surface_offset_d, m_context_dma_color_d - 0xfeed0000));
 	}
 	if (needTransfer)
 	{
@@ -1057,7 +1057,7 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 
 	if (m_set_context_dma_z && Ini.GSDumpDepthBuffer.GetValue())
 	{
-		u32 address = GetAddress(m_surface_offset_z, m_context_dma_z - 0xfeed0000);
+		u32 address = rsx::get_address(m_surface_offset_z, m_context_dma_z - 0xfeed0000);
 		auto ptr = vm::get_ptr<void>(address);
 		char *ptrAsChar = (char*)ptr;
 		unsigned char *writeDestPtr;
@@ -1097,53 +1097,53 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 			break;
 		case CELL_GCM_SURFACE_TARGET_0:
 		{
-			u32 address = GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000);
+			u32 address = rsx::get_address(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000);
 			void *dstAddress = vm::get_ptr<void>(address);
 			copyToCellRamAndRelease(dstAddress, rtt0, srcPitch, dstPitch, m_surface_clip_w, m_surface_clip_h);
 		}
 		break;
 		case CELL_GCM_SURFACE_TARGET_1:
 		{
-			u32 address = GetAddress(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000);
+			u32 address = rsx::get_address(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000);
 			void *dstAddress = vm::get_ptr<void>(address);
 			copyToCellRamAndRelease(dstAddress, rtt1, srcPitch, dstPitch, m_surface_clip_w, m_surface_clip_h);
 		}
 		break;
 		case CELL_GCM_SURFACE_TARGET_MRT1:
 		{
-			u32 address = GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000);
+			u32 address = rsx::get_address(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000);
 			void *dstAddress = vm::get_ptr<void>(address);
 			copyToCellRamAndRelease(dstAddress, rtt0, srcPitch, dstPitch, m_surface_clip_w, m_surface_clip_h);
-			address = GetAddress(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000);
+			address = rsx::get_address(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000);
 			dstAddress = vm::get_ptr<void>(address);
 			copyToCellRamAndRelease(dstAddress, rtt1, srcPitch, dstPitch, m_surface_clip_w, m_surface_clip_h);
 		}
 		break;
 		case CELL_GCM_SURFACE_TARGET_MRT2:
 		{
-			u32 address = GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000);
+			u32 address = rsx::get_address(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000);
 			void *dstAddress = vm::get_ptr<void>(address);
 			copyToCellRamAndRelease(dstAddress, rtt0, srcPitch, dstPitch, m_surface_clip_w, m_surface_clip_h);
-			address = GetAddress(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000);
+			address = rsx::get_address(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000);
 			dstAddress = vm::get_ptr<void>(address);
 			copyToCellRamAndRelease(dstAddress, rtt1, srcPitch, dstPitch, m_surface_clip_w, m_surface_clip_h);
-			address = GetAddress(m_surface_offset_c, m_context_dma_color_c - 0xfeed0000);
+			address = rsx::get_address(m_surface_offset_c, m_context_dma_color_c - 0xfeed0000);
 			dstAddress = vm::get_ptr<void>(address);
 			copyToCellRamAndRelease(dstAddress, rtt2, srcPitch, dstPitch, m_surface_clip_w, m_surface_clip_h);
 		}
 		break;
 		case CELL_GCM_SURFACE_TARGET_MRT3:
 		{
-			u32 address = GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000);
+			u32 address = rsx::get_address(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000);
 			void *dstAddress = vm::get_ptr<void>(address);
 			copyToCellRamAndRelease(dstAddress, rtt0, srcPitch, dstPitch, m_surface_clip_w, m_surface_clip_h);
-			address = GetAddress(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000);
+			address = rsx::get_address(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000);
 			dstAddress = vm::get_ptr<void>(address);
 			copyToCellRamAndRelease(dstAddress, rtt1, srcPitch, dstPitch, m_surface_clip_w, m_surface_clip_h);
-			address = GetAddress(m_surface_offset_c, m_context_dma_color_c - 0xfeed0000);
+			address = rsx::get_address(m_surface_offset_c, m_context_dma_color_c - 0xfeed0000);
 			dstAddress = vm::get_ptr<void>(address);
 			copyToCellRamAndRelease(dstAddress, rtt2, srcPitch, dstPitch, m_surface_clip_w, m_surface_clip_h);
-			address = GetAddress(m_surface_offset_d, m_context_dma_color_d - 0xfeed0000);
+			address = rsx::get_address(m_surface_offset_d, m_context_dma_color_d - 0xfeed0000);
 			dstAddress = vm::get_ptr<void>(address);
 			copyToCellRamAndRelease(dstAddress, rtt3, srcPitch, dstPitch, m_surface_clip_w, m_surface_clip_h);
 		}

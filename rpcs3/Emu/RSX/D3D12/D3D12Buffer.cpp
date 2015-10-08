@@ -243,14 +243,14 @@ void D3D12GSRender::setScaleOffset()
 	};
 
 	// Scale
-	scaleOffsetMat[0] *= (float&)methodRegisters[NV4097_SET_VIEWPORT_SCALE + (0x4 * 0)] / (m_surface_clip_w / 2.f);
-	scaleOffsetMat[5] *= (float&)methodRegisters[NV4097_SET_VIEWPORT_SCALE + (0x4 * 1)] / (m_surface_clip_h / 2.f);
-	scaleOffsetMat[10] = (float&)methodRegisters[NV4097_SET_VIEWPORT_SCALE + (0x4 * 2)];
+	scaleOffsetMat[0] *= (float&)rsx::method_registers[NV4097_SET_VIEWPORT_SCALE + (0x4 * 0)] / (m_surface_clip_w / 2.f);
+	scaleOffsetMat[5] *= (float&)rsx::method_registers[NV4097_SET_VIEWPORT_SCALE + (0x4 * 1)] / (m_surface_clip_h / 2.f);
+	scaleOffsetMat[10] = (float&)rsx::method_registers[NV4097_SET_VIEWPORT_SCALE + (0x4 * 2)];
 
 	// Offset
-	scaleOffsetMat[3] = (float&)methodRegisters[NV4097_SET_VIEWPORT_OFFSET + (0x4 * 0)] - (m_surface_clip_w / 2.f);
-	scaleOffsetMat[7] = -((float&)methodRegisters[NV4097_SET_VIEWPORT_OFFSET + (0x4 * 1)] - (m_surface_clip_h / 2.f));
-	scaleOffsetMat[11] = (float&)methodRegisters[NV4097_SET_VIEWPORT_OFFSET + (0x4 * 2)];
+	scaleOffsetMat[3] = (float&)rsx::method_registers[NV4097_SET_VIEWPORT_OFFSET + (0x4 * 0)] - (m_surface_clip_w / 2.f);
+	scaleOffsetMat[7] = -((float&)rsx::method_registers[NV4097_SET_VIEWPORT_OFFSET + (0x4 * 1)] - (m_surface_clip_h / 2.f));
+	scaleOffsetMat[11] = (float&)rsx::method_registers[NV4097_SET_VIEWPORT_OFFSET + (0x4 * 2)];
 
 	scaleOffsetMat[3] /= m_surface_clip_w / 2.f;
 	scaleOffsetMat[7] /= m_surface_clip_h / 2.f;

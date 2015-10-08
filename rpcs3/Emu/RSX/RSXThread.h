@@ -9,6 +9,29 @@
 #include "Utilities/Thread.h"
 #include "Utilities/Timer.h"
 
+
+namespace rsx
+{
+	namespace limits
+	{
+		enum
+		{
+			textures_count = 16,
+			vertex_textures_count = 4,
+			vertex_count = 16,
+			fragment_count = 32,
+			tiles_count = 15,
+			zculls_count = 8,
+			color_buffers_count = 4
+		};
+	}
+
+	extern u32 method_registers[0x10000 >> 2];
+
+	u32 get_address(u32 offset, u32 location);
+
+}
+
 enum Method
 {
 	CELL_GCM_METHOD_FLAG_NON_INCREMENT = 0x40000000,
@@ -16,9 +39,6 @@ enum Method
 	CELL_GCM_METHOD_FLAG_CALL          = 0x00000002,
 	CELL_GCM_METHOD_FLAG_RETURN        = 0x00020000,
 };
-
-extern u32 methodRegisters[0xffff];
-u32 GetAddress(u32 offset, u32 location);
 
 struct RSXVertexData
 {
@@ -107,8 +127,8 @@ protected:
 public:
 	GcmTileInfo tiles[m_tiles_count];
 	GcmZcullInfo zculls[m_zculls_count];
-	RSXTexture m_textures[m_textures_count];
-	RSXVertexTexture m_vertex_textures[m_textures_count];
+	rsx::texture m_textures[m_textures_count];
+	rsx::vertex_texture m_vertex_textures[m_textures_count];
 	RSXVertexData m_vertex_data[m_vertex_count];
 	RSXIndexArrayData m_indexed_array;
 	std::vector<RSXTransformConstant> m_fragment_constants;
@@ -543,7 +563,7 @@ protected:
 		// Construct Textures
 		for (int i = 0; i < 16; i++)
 		{
-			m_textures[i] = RSXTexture(i);
+			m_textures[i] = rsx::texture();
 		}
 
 		Reset();
@@ -632,7 +652,7 @@ protected:
 
 		for (uint i = 0; i < m_textures_count; ++i)
 		{
-			m_textures[i].Init();
+			m_textures[i].init(i);
 		}
 	}
 

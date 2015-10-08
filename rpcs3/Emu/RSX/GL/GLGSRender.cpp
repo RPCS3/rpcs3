@@ -89,24 +89,24 @@ float GLTexture::GetMaxAniso(int aniso)
 	return 1.0f;
 }
 
-void GLTexture::Init(RSXTexture& tex)
+void GLTexture::Init(rsx::texture& tex)
 {
-	if (tex.GetLocation() > 1)
+	if (tex.location() > 1)
 	{
 		return;
 	}
 
 	Bind();
 
-	const u32 texaddr = GetAddress(tex.GetOffset(), tex.GetLocation());
+	const u32 texaddr = rsx::get_address(tex.offset(), tex.location());
 	//LOG_WARNING(RSX, "texture addr = 0x%x, width = %d, height = %d, max_aniso=%d, mipmap=%d, remap=0x%x, zfunc=0x%x, wraps=0x%x, wrapt=0x%x, wrapr=0x%x, minlod=0x%x, maxlod=0x%x", 
 	//	m_offset, m_width, m_height, m_maxaniso, m_mipmap, m_remap, m_zfunc, m_wraps, m_wrapt, m_wrapr, m_minlod, m_maxlod);
 	
 	//TODO: safe init
 	checkForGlError("GLTexture::Init() -> glBindTexture");
 
-	int format = tex.GetFormat() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
-	bool is_swizzled = !(tex.GetFormat() & CELL_GCM_TEXTURE_LN);
+	int format = tex.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
+	bool is_swizzled = !(tex.format() & CELL_GCM_TEXTURE_LN);
 
 	auto pixels = vm::get_ptr<const u8>(texaddr);
 	u8 *unswizzledPixels;
@@ -118,7 +118,7 @@ void GLTexture::Init(RSXTexture& tex)
 	{
 	case CELL_GCM_TEXTURE_B8: // One 8-bit fixed-point number
 	{
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_BLUE, GL_UNSIGNED_BYTE, pixels);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.width(), tex.height(), 0, GL_BLUE, GL_UNSIGNED_BYTE, pixels);
 		checkForGlError("GLTexture::Init() -> glTexImage2D(CELL_GCM_TEXTURE_B8)");
 
 		static const GLint swizzleMaskB8[] = { GL_BLUE, GL_BLUE, GL_BLUE, GL_BLUE };
@@ -132,7 +132,7 @@ void GLTexture::Init(RSXTexture& tex)
 		checkForGlError("GLTexture::Init() -> glPixelStorei");
 
 		// TODO: texture swizzling
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_BGRA, GL_UNSIGNED_SHORT_1_5_5_5_REV, pixels);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.width(), tex.height(), 0, GL_BGRA, GL_UNSIGNED_SHORT_1_5_5_5_REV, pixels);
 		checkForGlError("GLTexture::Init() -> glTexImage2D(CELL_GCM_TEXTURE_A1R5G5B5)");
 
 		glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_FALSE);
@@ -142,7 +142,7 @@ void GLTexture::Init(RSXTexture& tex)
 
 	case CELL_GCM_TEXTURE_A4R4G4B4:
 	{
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_RGBA, GL_UNSIGNED_SHORT_4_4_4_4, pixels);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.width(), tex.height(), 0, GL_RGBA, GL_UNSIGNED_SHORT_4_4_4_4, pixels);
 		checkForGlError("GLTexture::Init() -> glTexImage2D(CELL_GCM_TEXTURE_A4R4G4B4)");
 
 		// We read it in as R4G4B4A4, so we need to remap each component.
@@ -156,7 +156,7 @@ void GLTexture::Init(RSXTexture& tex)
 		glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_TRUE);
 		checkForGlError("GLTexture::Init() -> glPixelStorei(CELL_GCM_TEXTURE_R5G6B5)");
 
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, tex.GetWidth(), tex.GetHeight(), 0, GL_RGB, GL_UNSIGNED_SHORT_5_6_5, pixels);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, tex.width(), tex.height(), 0, GL_RGB, GL_UNSIGNED_SHORT_5_6_5, pixels);
 		checkForGlError("GLTexture::Init() -> glTexImage2D(CELL_GCM_TEXTURE_R5G6B5)");
 
 		glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_FALSE);
@@ -171,57 +171,57 @@ void GLTexture::Init(RSXTexture& tex)
 			u32 *src, *dst;
 			u32 log2width, log2height;
 
-			unswizzledPixels = (u8*)malloc(tex.GetWidth() * tex.GetHeight() * 4);
+			unswizzledPixels = (u8*)malloc(tex.width() * tex.height() * 4);
 			src = (u32*)pixels;
 			dst = (u32*)unswizzledPixels;
 
-			log2width = log(tex.GetWidth()) / log(2);
-			log2height = log(tex.GetHeight()) / log(2);
+			log2width = log(tex.width()) / log(2);
+			log2height = log(tex.height()) / log(2);
 
-			for (int i = 0; i < tex.GetHeight(); i++)
+			for (int i = 0; i < tex.height(); i++)
 			{
-				for (int j = 0; j < tex.GetWidth(); j++)
+				for (int j = 0; j < tex.width(); j++)
 				{
-					dst[(i * tex.GetWidth()) + j] = src[LinearToSwizzleAddress(j, i, 0, log2width, log2height, 0)];
+					dst[(i * tex.width()) + j] = src[LinearToSwizzleAddress(j, i, 0, log2width, log2height, 0)];
 				}
 			}
 		}
 
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, is_swizzled ? unswizzledPixels : pixels);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.width(), tex.height(), 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, is_swizzled ? unswizzledPixels : pixels);
 		checkForGlError("GLTexture::Init() -> glTexImage2D(CELL_GCM_TEXTURE_A8R8G8B8)");
 		break;
 	}
 
 	case CELL_GCM_TEXTURE_COMPRESSED_DXT1: // Compressed 4x4 pixels into 8 bytes
 	{
-		u32 size = ((tex.GetWidth() + 3) / 4) * ((tex.GetHeight() + 3) / 4) * 8;
+		u32 size = ((tex.width() + 3) / 4) * ((tex.height() + 3) / 4) * 8;
 
-		glCompressedTexImage2D(GL_TEXTURE_2D, 0, GL_COMPRESSED_RGBA_S3TC_DXT1_EXT, tex.GetWidth(), tex.GetHeight(), 0, size, pixels);
+		glCompressedTexImage2D(GL_TEXTURE_2D, 0, GL_COMPRESSED_RGBA_S3TC_DXT1_EXT, tex.width(), tex.height(), 0, size, pixels);
 		checkForGlError("GLTexture::Init() -> glCompressedTexImage2D(CELL_GCM_TEXTURE_COMPRESSED_DXT1)");
 		break;
 	}
 
 	case CELL_GCM_TEXTURE_COMPRESSED_DXT23: // Compressed 4x4 pixels into 16 bytes
 	{
-		u32 size = ((tex.GetWidth() + 3) / 4) * ((tex.GetHeight() + 3) / 4) * 16;
+		u32 size = ((tex.width() + 3) / 4) * ((tex.height() + 3) / 4) * 16;
 
-		glCompressedTexImage2D(GL_TEXTURE_2D, 0, GL_COMPRESSED_RGBA_S3TC_DXT3_EXT, tex.GetWidth(), tex.GetHeight(), 0, size, pixels);
+		glCompressedTexImage2D(GL_TEXTURE_2D, 0, GL_COMPRESSED_RGBA_S3TC_DXT3_EXT, tex.width(), tex.height(), 0, size, pixels);
 		checkForGlError("GLTexture::Init() -> glCompressedTexImage2D(CELL_GCM_TEXTURE_COMPRESSED_DXT23)");
 	}
 		break;
 
 	case CELL_GCM_TEXTURE_COMPRESSED_DXT45: // Compressed 4x4 pixels into 16 bytes
 	{
-		u32 size = ((tex.GetWidth() + 3) / 4) * ((tex.GetHeight() + 3) / 4) * 16;
+		u32 size = ((tex.width() + 3) / 4) * ((tex.height() + 3) / 4) * 16;
 
-		glCompressedTexImage2D(GL_TEXTURE_2D, 0, GL_COMPRESSED_RGBA_S3TC_DXT5_EXT, tex.GetWidth(), tex.GetHeight(), 0, size, pixels);
+		glCompressedTexImage2D(GL_TEXTURE_2D, 0, GL_COMPRESSED_RGBA_S3TC_DXT5_EXT, tex.width(), tex.height(), 0, size, pixels);
 		checkForGlError("GLTexture::Init() -> glCompressedTexImage2D(CELL_GCM_TEXTURE_COMPRESSED_DXT45)");
 		break;
 	}
 
 	case CELL_GCM_TEXTURE_G8B8:
 	{
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_RG, GL_UNSIGNED_BYTE, pixels);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.width(), tex.height(), 0, GL_RG, GL_UNSIGNED_BYTE, pixels);
 		checkForGlError("GLTexture::Init() -> glTexImage2D(CELL_GCM_TEXTURE_G8B8)");
 
 		static const GLint swizzleMaskG8B8[] = { GL_RED, GL_GREEN, GL_RED, GL_GREEN };
@@ -232,7 +232,7 @@ void GLTexture::Init(RSXTexture& tex)
 	case CELL_GCM_TEXTURE_R6G5B5:
 	{
 		// TODO: Probably need to actually unswizzle if is_swizzled.
-		const u32 numPixels = tex.GetWidth() * tex.GetHeight();
+		const u32 numPixels = tex.width() * tex.height();
 		unswizzledPixels = (u8 *)malloc(numPixels * 4);
 		// TODO: Speed.
 		for (u32 i = 0; i < numPixels; ++i) {
@@ -243,7 +243,7 @@ void GLTexture::Init(RSXTexture& tex)
 			unswizzledPixels[i * 4 + 3] = 255;
 		}
 
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_RGBA, GL_UNSIGNED_BYTE, unswizzledPixels);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.width(), tex.height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, unswizzledPixels);
 		checkForGlError("GLTexture::Init() -> glTexImage2D(CELL_GCM_TEXTURE_R6G5B5)");
 
 		free(unswizzledPixels);
@@ -252,28 +252,28 @@ void GLTexture::Init(RSXTexture& tex)
 
 	case CELL_GCM_TEXTURE_DEPTH24_D8: //  24-bit unsigned fixed-point number and 8 bits of garbage
 	{
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, tex.GetWidth(), tex.GetHeight(), 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, pixels);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, tex.width(), tex.height(), 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, pixels);
 		checkForGlError("GLTexture::Init() -> glTexImage2D(CELL_GCM_TEXTURE_DEPTH24_D8)");
 		break;
 	}
 
 	case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT: // 24-bit unsigned float and 8 bits of garbage
 	{
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, tex.GetWidth(), tex.GetHeight(), 0, GL_DEPTH_COMPONENT, GL_FLOAT, pixels);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, tex.width(), tex.height(), 0, GL_DEPTH_COMPONENT, GL_FLOAT, pixels);
 		checkForGlError("GLTexture::Init() -> glTexImage2D(CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT)");
 		break;
 	}
 
 	case CELL_GCM_TEXTURE_DEPTH16: // 16-bit unsigned fixed-point number
 	{
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT16, tex.GetWidth(), tex.GetHeight(), 0, GL_DEPTH_COMPONENT, GL_SHORT, pixels);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT16, tex.width(), tex.height(), 0, GL_DEPTH_COMPONENT, GL_SHORT, pixels);
 		checkForGlError("GLTexture::Init() -> glTexImage2D(CELL_GCM_TEXTURE_DEPTH16)");
 		break;
 	}
 
 	case CELL_GCM_TEXTURE_DEPTH16_FLOAT: // 16-bit unsigned float
 	{
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT16, tex.GetWidth(), tex.GetHeight(), 0, GL_DEPTH_COMPONENT, GL_FLOAT, pixels);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT16, tex.width(), tex.height(), 0, GL_DEPTH_COMPONENT, GL_FLOAT, pixels);
 		checkForGlError("GLTexture::Init() -> glTexImage2D(CELL_GCM_TEXTURE_DEPTH16_FLOAT)");
 		break;
 	}
@@ -283,7 +283,7 @@ void GLTexture::Init(RSXTexture& tex)
 		glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_TRUE);
 		checkForGlError("GLTexture::Init() -> glPixelStorei(CELL_GCM_TEXTURE_X16)");
 
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_RED, GL_UNSIGNED_SHORT, pixels);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.width(), tex.height(), 0, GL_RED, GL_UNSIGNED_SHORT, pixels);
 		checkForGlError("GLTexture::Init() -> glTexImage2D(CELL_GCM_TEXTURE_X16)");
 
 		glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_FALSE);
@@ -299,7 +299,7 @@ void GLTexture::Init(RSXTexture& tex)
 		glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_TRUE);
 		checkForGlError("GLTexture::Init() -> glPixelStorei(CELL_GCM_TEXTURE_Y16_X16)");
 
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_RG, GL_UNSIGNED_SHORT, pixels);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.width(), tex.height(), 0, GL_RG, GL_UNSIGNED_SHORT, pixels);
 		checkForGlError("GLTexture::Init() -> glTexImage2D(CELL_GCM_TEXTURE_Y16_X16)");
 
 		glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_FALSE);
@@ -315,7 +315,7 @@ void GLTexture::Init(RSXTexture& tex)
 		glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_TRUE);
 		checkForGlError("GLTexture::Init() -> glPixelStorei(CELL_GCM_TEXTURE_R5G5B5A1)");
 
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_RGBA, GL_UNSIGNED_SHORT_5_5_5_1, pixels);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.width(), tex.height(), 0, GL_RGBA, GL_UNSIGNED_SHORT_5_5_5_1, pixels);
 		checkForGlError("GLTexture::Init() -> glTexImage2D(CELL_GCM_TEXTURE_R5G5B5A1)");
 
 		glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_FALSE);
@@ -328,7 +328,7 @@ void GLTexture::Init(RSXTexture& tex)
 		glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_TRUE);
 		checkForGlError("GLTexture::Init() -> glPixelStorei(CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT)");
 
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_RGBA, GL_HALF_FLOAT, pixels);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.width(), tex.height(), 0, GL_RGBA, GL_HALF_FLOAT, pixels);
 		checkForGlError("GLTexture::Init() -> glTexImage2D(CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT)");
 
 		glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_FALSE);
@@ -338,14 +338,14 @@ void GLTexture::Init(RSXTexture& tex)
 
 	case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT: // Four fp32 values
 	{
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_BGRA, GL_FLOAT, pixels);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.width(), tex.height(), 0, GL_BGRA, GL_FLOAT, pixels);
 		checkForGlError("GLTexture::Init() -> glTexImage2D(CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT)");
 		break;
 	}
 
 	case CELL_GCM_TEXTURE_X32_FLOAT: // One 32-bit floating-point number
 	{
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_RED, GL_FLOAT, pixels);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.width(), tex.height(), 0, GL_RED, GL_FLOAT, pixels);
 		checkForGlError("GLTexture::Init() -> glTexImage2D(CELL_GCM_TEXTURE_X32_FLOAT)");
 
 		static const GLint swizzleMaskX32_FLOAT[] = { GL_RED, GL_ONE, GL_ONE, GL_ONE };
@@ -359,7 +359,7 @@ void GLTexture::Init(RSXTexture& tex)
 		checkForGlError("GLTexture::Init() -> glPixelStorei(CELL_GCM_TEXTURE_D1R5G5B5)");
 
 		// TODO: Texture swizzling
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_BGRA, GL_UNSIGNED_SHORT_1_5_5_5_REV, pixels);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.width(), tex.height(), 0, GL_BGRA, GL_UNSIGNED_SHORT_1_5_5_5_REV, pixels);
 		checkForGlError("GLTexture::Init() -> glTexImage2D(CELL_GCM_TEXTURE_D1R5G5B5)");
 
 		static const GLint swizzleMaskX32_D1R5G5B5[] = { GL_ONE, GL_RED, GL_GREEN, GL_BLUE };
@@ -372,7 +372,7 @@ void GLTexture::Init(RSXTexture& tex)
 
 	case CELL_GCM_TEXTURE_D8R8G8B8: // 8 bits of garbage and three unsigned 8-bit fixed-point numbers
 	{
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, pixels);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.width(), tex.height(), 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, pixels);
 		checkForGlError("GLTexture::Init() -> glTexImage2D(CELL_GCM_TEXTURE_D8R8G8B8)");
 
 		static const GLint swizzleMaskX32_D8R8G8B8[] = { GL_ONE, GL_RED, GL_GREEN, GL_BLUE };
@@ -386,7 +386,7 @@ void GLTexture::Init(RSXTexture& tex)
 		glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_TRUE);
 		checkForGlError("GLTexture::Init() -> glPixelStorei(CELL_GCM_TEXTURE_Y16_X16_FLOAT)");
 
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_RG, GL_HALF_FLOAT, pixels);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.width(), tex.height(), 0, GL_RG, GL_HALF_FLOAT, pixels);
 		checkForGlError("GLTexture::Init() -> glTexImage2D(CELL_GCM_TEXTURE_Y16_X16_FLOAT)");
 
 		glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_FALSE);
@@ -399,7 +399,7 @@ void GLTexture::Init(RSXTexture& tex)
 
 	case ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN) & CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8:
 	{
-		const u32 numPixels = tex.GetWidth() * tex.GetHeight();
+		const u32 numPixels = tex.width() * tex.height();
 		unswizzledPixels = (u8 *)malloc(numPixels * 4);
 		// TODO: Speed.
 		for (u32 i = 0; i < numPixels; i += 2)
@@ -416,7 +416,7 @@ void GLTexture::Init(RSXTexture& tex)
 			unswizzledPixels[i * 4 + 4 + 3] = 255;
 		}
 
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_RGBA, GL_UNSIGNED_BYTE, unswizzledPixels);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.width(), tex.height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, unswizzledPixels);
 		checkForGlError("GLTexture::Init() -> glTexImage2D(CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8 & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN)");
 
 		free(unswizzledPixels);
@@ -425,7 +425,7 @@ void GLTexture::Init(RSXTexture& tex)
 
 	case ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN) & CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8:
 	{
-		const u32 numPixels = tex.GetWidth() * tex.GetHeight();
+		const u32 numPixels = tex.width() * tex.height();
 		unswizzledPixels = (u8 *)malloc(numPixels * 4);
 		// TODO: Speed.
 		for (u32 i = 0; i < numPixels; i += 2)
@@ -442,7 +442,7 @@ void GLTexture::Init(RSXTexture& tex)
 			unswizzledPixels[i * 4 + 4 + 3] = 255;
 		}
 
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_RGBA, GL_UNSIGNED_BYTE, unswizzledPixels);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.width(), tex.height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, unswizzledPixels);
 		checkForGlError("GLTexture::Init() -> glTexImage2D(CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8 & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN)");
 
 		free(unswizzledPixels);
@@ -451,20 +451,20 @@ void GLTexture::Init(RSXTexture& tex)
 
 	default:
 	{
-		LOG_ERROR(RSX, "Init tex error: Bad tex format (0x%x | %s | 0x%x)", format, (is_swizzled ? "swizzled" : "linear"), tex.GetFormat() & 0x40);
+		LOG_ERROR(RSX, "Init tex error: Bad tex format (0x%x | %s | 0x%x)", format, (is_swizzled ? "swizzled" : "linear"), tex.format() & 0x40);
 		break;
 	}
 	}
 
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, tex.GetMipmap() - 1);
-	glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, tex.GetMipmap() > 1);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, tex.mipmap() - 1);
+	glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, tex.mipmap() > 1);
 
 	if (format != CELL_GCM_TEXTURE_B8 && format != CELL_GCM_TEXTURE_X16 && format != CELL_GCM_TEXTURE_X32_FLOAT)
 	{
-		u8 remap_a = tex.GetRemap() & 0x3;
-		u8 remap_r = (tex.GetRemap() >> 2) & 0x3;
-		u8 remap_g = (tex.GetRemap() >> 4) & 0x3;
-		u8 remap_b = (tex.GetRemap() >> 6) & 0x3;
+		u8 remap_a = tex.remap() & 0x3;
+		u8 remap_r = (tex.remap() >> 2) & 0x3;
+		u8 remap_g = (tex.remap() >> 4) & 0x3;
+		u8 remap_b = (tex.remap() >> 6) & 0x3;
 
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, glRemap[remap_a]);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R, glRemap[remap_r]);
@@ -494,19 +494,19 @@ void GLTexture::Init(RSXTexture& tex)
 		GL_ALWAYS,
 	};
 
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GetGlWrap(tex.GetWrapS()));
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GetGlWrap(tex.GetWrapT()));
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GetGlWrap(tex.GetWrapR()));
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GetGlWrap(tex.wrap_s()));
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GetGlWrap(tex.wrap_t()));
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GetGlWrap(tex.wrap_r()));
 
 	checkForGlError("GLTexture::Init() -> wrap");
 
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, gl_tex_zfunc[tex.GetZfunc()]);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, gl_tex_zfunc[tex.zfunc()]);
 
 	checkForGlError("GLTexture::Init() -> compare");
 
-	glTexEnvi(GL_TEXTURE_FILTER_CONTROL, GL_TEXTURE_LOD_BIAS, tex.GetBias());
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_LOD, (tex.GetMinLOD() >> 8));
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, (tex.GetMaxLOD() >> 8));
+	glTexEnvi(GL_TEXTURE_FILTER_CONTROL, GL_TEXTURE_LOD_BIAS, tex.bias());
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_LOD, (tex.min_lod() >> 8));
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, (tex.max_lod() >> 8));
 
 	checkForGlError("GLTexture::Init() -> lod");
 
@@ -530,14 +530,14 @@ void GLTexture::Init(RSXTexture& tex)
 		GL_LINEAR  // CELL_GCM_TEXTURE_CONVOLUTION_MAG
 	};
 
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_tex_min_filter[tex.GetMinFilter()]);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_tex_min_filter[tex.min_filter()]);
 
 	checkForGlError("GLTexture::Init() -> min filters");
 
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_tex_mag_filter[tex.GetMagFilter()]);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_tex_mag_filter[tex.mag_filter()]);
 
 	checkForGlError("GLTexture::Init() -> mag filters");
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, GetMaxAniso(tex.GetMaxAniso()));
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, GetMaxAniso(tex.max_aniso()));
 
 	checkForGlError("GLTexture::Init() -> max anisotropy");
 
@@ -549,17 +549,17 @@ void GLTexture::Init(RSXTexture& tex)
 	}
 }
 
-void GLTexture::Save(RSXTexture& tex, const std::string& name)
+void GLTexture::Save(rsx::texture& tex, const std::string& name)
 {
-	if (!m_id || !tex.GetOffset() || !tex.GetWidth() || !tex.GetHeight()) return;
+	if (!m_id || !tex.offset() || !tex.width() || !tex.height()) return;
 
-	const u32 texPixelCount = tex.GetWidth() * tex.GetHeight();
+	const u32 texPixelCount = tex.width() * tex.height();
 
 	u32* alldata = new u32[texPixelCount];
 
 	Bind();
 
-	switch (tex.GetFormat() & ~(0x20 | 0x40))
+	switch (tex.format() & ~(0x20 | 0x40))
 	{
 	case CELL_GCM_TEXTURE_B8:
 		glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, alldata);
@@ -591,7 +591,7 @@ void GLTexture::Save(RSXTexture& tex, const std::string& name)
 	}
 
 	rImage out;
-	out.Create(tex.GetWidth(), tex.GetHeight(), data, alpha);
+	out.Create(tex.width(), tex.height(), data, alpha);
 	out.SaveFile(name, rBITMAP_TYPE_PNG);
 
 	delete[] alldata;
@@ -599,7 +599,7 @@ void GLTexture::Save(RSXTexture& tex, const std::string& name)
 	//free(alpha);
 }
 
-void GLTexture::Save(RSXTexture& tex)
+void GLTexture::Save(rsx::texture& tex)
 {
 	static const std::string& dir_path = "textures";
 	static const std::string& file_fmt = dir_path + "/" + "tex[%d].png";
@@ -813,7 +813,7 @@ void GLGSRender::EnableVertexData(bool indexed_draw)
 	{
 		if (0)
 		{
-			u32 data_format = methodRegisters[NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + i * 4];
+			u32 data_format = rsx::method_registers[NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + i * 4];
 			u16 frequency = data_format >> 16;
 			u8 stride = (data_format >> 8) & 0xff;
 			u8 size = (data_format >> 4) & 0xf;
@@ -1043,14 +1043,14 @@ void GLGSRender::InitVertexData()
 	}
 
 	// Scale
-	scaleOffsetMat[0]  = (GLfloat&)methodRegisters[NV4097_SET_VIEWPORT_SCALE + (0x4 * 0)] / (RSXThread::m_width / RSXThread::m_width_scale);
-	scaleOffsetMat[5]  = (GLfloat&)methodRegisters[NV4097_SET_VIEWPORT_SCALE + (0x4 * 1)] / (RSXThread::m_height / RSXThread::m_height_scale);
-	scaleOffsetMat[10] = (GLfloat&)methodRegisters[NV4097_SET_VIEWPORT_SCALE + (0x4 * 2)];
+	scaleOffsetMat[0]  = (GLfloat&)rsx::method_registers[NV4097_SET_VIEWPORT_SCALE + (0x4 * 0)] / (RSXThread::m_width / RSXThread::m_width_scale);
+	scaleOffsetMat[5]  = (GLfloat&)rsx::method_registers[NV4097_SET_VIEWPORT_SCALE + (0x4 * 1)] / (RSXThread::m_height / RSXThread::m_height_scale);
+	scaleOffsetMat[10] = (GLfloat&)rsx::method_registers[NV4097_SET_VIEWPORT_SCALE + (0x4 * 2)];
 
 	// Offset
-	scaleOffsetMat[3]  = (GLfloat&)methodRegisters[NV4097_SET_VIEWPORT_OFFSET + (0x4 * 0)] - (RSXThread::m_width / RSXThread::m_width_scale);
-	scaleOffsetMat[7]  = (GLfloat&)methodRegisters[NV4097_SET_VIEWPORT_OFFSET + (0x4 * 1)] - (RSXThread::m_height / RSXThread::m_height_scale);
-	scaleOffsetMat[11] = (GLfloat&)methodRegisters[NV4097_SET_VIEWPORT_OFFSET + (0x4 * 2)] - 1 / 2.0f;
+	scaleOffsetMat[3]  = (GLfloat&)rsx::method_registers[NV4097_SET_VIEWPORT_OFFSET + (0x4 * 0)] - (RSXThread::m_width / RSXThread::m_width_scale);
+	scaleOffsetMat[7]  = (GLfloat&)rsx::method_registers[NV4097_SET_VIEWPORT_OFFSET + (0x4 * 1)] - (RSXThread::m_height / RSXThread::m_height_scale);
+	scaleOffsetMat[11] = (GLfloat&)rsx::method_registers[NV4097_SET_VIEWPORT_OFFSET + (0x4 * 2)] - 1 / 2.0f;
 
 	scaleOffsetMat[3] /= RSXThread::m_width / RSXThread::m_width_scale;
 	scaleOffsetMat[7] /= RSXThread::m_height / RSXThread::m_height_scale;
@@ -1155,7 +1155,7 @@ void GLGSRender::WriteDepthBuffer()
 		return;
 	}
 
-	u32 address = GetAddress(m_surface_offset_z, m_context_dma_z - 0xfeed0000);
+	u32 address = rsx::get_address(m_surface_offset_z, m_context_dma_z - 0xfeed0000);
 
 	auto ptr = vm::get_ptr<void>(address);
 	glBindBuffer(GL_PIXEL_PACK_BUFFER, g_pbo[4]);
@@ -1187,7 +1187,7 @@ void GLGSRender::WriteColorBufferA()
 		return;
 	}
 
-	u32 address = GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000);
+	u32 address = rsx::get_address(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000);
 
 	glReadBuffer(GL_COLOR_ATTACHMENT0);
 	checkForGlError("WriteColorBufferA(): glReadBuffer");
@@ -1213,7 +1213,7 @@ void GLGSRender::WriteColorBufferB()
 		return;
 	}
 
-	u32 address = GetAddress(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000);
+	u32 address = rsx::get_address(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000);
 
 	glReadBuffer(GL_COLOR_ATTACHMENT1);
 	checkForGlError("WriteColorBufferB(): glReadBuffer");
@@ -1239,7 +1239,7 @@ void GLGSRender::WriteColorBufferC()
 		return;
 	}
 
-	u32 address = GetAddress(m_surface_offset_c, m_context_dma_color_c - 0xfeed0000);
+	u32 address = rsx::get_address(m_surface_offset_c, m_context_dma_color_c - 0xfeed0000);
 
 	glReadBuffer(GL_COLOR_ATTACHMENT2);
 	checkForGlError("WriteColorBufferC(): glReadBuffer");
@@ -1265,7 +1265,7 @@ void GLGSRender::WriteColorBufferD()
 		return;
 	}
 
-	u32 address = GetAddress(m_surface_offset_d, m_context_dma_color_d - 0xfeed0000);
+	u32 address = rsx::get_address(m_surface_offset_d, m_context_dma_color_d - 0xfeed0000);
 
 	glReadBuffer(GL_COLOR_ATTACHMENT3);
 	checkForGlError("WriteColorBufferD(): glReadBuffer");
@@ -1567,7 +1567,7 @@ void GLGSRender::InitDrawBuffers()
 	{
 		u32 format = GL_BGRA;
 		CellGcmDisplayInfo* buffers = vm::get_ptr<CellGcmDisplayInfo>(m_gcm_buffers_addr);
-		u32 addr = GetAddress(buffers[gcm_current_buffer].offset, CELL_GCM_LOCATION_LOCAL);
+		u32 addr = rsx::get_address(buffers[gcm_current_buffer].offset, CELL_GCM_LOCATION_LOCAL);
 		u32 width = buffers[gcm_current_buffer].width;
 		u32 height = buffers[gcm_current_buffer].height;
 		glDrawPixels(width, height, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, vm::get_ptr(addr));
@@ -1912,7 +1912,7 @@ void GLGSRender::Draw()
 
 	for (u32 i = 0; i < m_textures_count; ++i)
 	{
-		if (!m_textures[i].IsEnabled()) continue;
+		if (!m_textures[i].enabled()) continue;
 
 		glActiveTexture(GL_TEXTURE0 + i);
 		checkForGlError("glActiveTexture");
@@ -1926,7 +1926,7 @@ void GLGSRender::Draw()
 
 	for (u32 i = 0; i < m_textures_count; ++i)
 	{
-		if (!m_vertex_textures[i].IsEnabled()) continue;
+		if (!m_vertex_textures[i].enabled()) continue;
 
 		glActiveTexture(GL_TEXTURE0 + m_textures_count + i);
 		checkForGlError("glActiveTexture");
@@ -1934,7 +1934,7 @@ void GLGSRender::Draw()
 		m_gl_vertex_textures[i].Bind();
 		checkForGlError(fmt::format("m_gl_vertex_textures[%d].Bind", i));
 		m_program.SetVTex(i);
-		m_gl_vertex_textures[i].Init(m_vertex_textures[i]);
+//		m_gl_vertex_textures[i].Init(m_vertex_textures[i]);
 		checkForGlError(fmt::format("m_gl_vertex_textures[%d].Init", i));
 	}
 
@@ -2023,7 +2023,7 @@ void GLGSRender::Flip()
 		{
 			format = GL_BGRA;
 			CellGcmDisplayInfo* buffers = vm::get_ptr<CellGcmDisplayInfo>(m_gcm_buffers_addr);
-			u32 addr = GetAddress(buffers[gcm_current_buffer].offset, CELL_GCM_LOCATION_LOCAL);
+			u32 addr = rsx::get_address(buffers[gcm_current_buffer].offset, CELL_GCM_LOCATION_LOCAL);
 			width = buffers[gcm_current_buffer].width;
 			height = buffers[gcm_current_buffer].height;
 			src_buffer = vm::get_ptr<u8>(addr);

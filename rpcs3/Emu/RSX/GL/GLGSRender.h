@@ -53,11 +53,11 @@ public:
 		return (v << 2) | (v >> 4);
 	}
 
-	void Init(RSXTexture& tex);
+	void Init(rsx::texture& tex);
 
-	void Save(RSXTexture& tex, const std::string& name);
+	void Save(rsx::texture& tex, const std::string& name);
 
-	void Save(RSXTexture& tex);
+	void Save(rsx::texture& tex);
 
 	void Bind();
 

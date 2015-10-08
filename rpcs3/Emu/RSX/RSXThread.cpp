@@ -22,41 +22,46 @@ extern u64 get_system_time();
 #define ARGS(x) (x >= count ? OutOfArgsCount(x, cmd, count, args.addr()) : args[x].value())
 #define CMD_DEBUG 0
 
-u32 methodRegisters[0xffff];
 
-u32 GetAddress(u32 offset, u32 location)
+
+namespace rsx
 {
-	u32 res = 0;
+	u32 method_registers[0x10000 >> 2];
 
-	switch (location)
+	u32 get_address(u32 offset, u32 location)
 	{
-	case CELL_GCM_LOCATION_LOCAL:
-	{
-		res = 0xC0000000 + offset;
-		break;
-	}
-	case CELL_GCM_LOCATION_MAIN:
-	{
-		res = RSXIOMem.RealAddr(offset); // TODO: Error Check?
-		if (res == 0)
+		u32 res = 0;
+
+		switch (location)
 		{
-			throw EXCEPTION("RSXIO memory not mapped (offset=0x%x)", offset);
+		case CELL_GCM_LOCATION_LOCAL:
+		{
+			res = 0xC0000000 + offset;
+			break;
+		}
+		case CELL_GCM_LOCATION_MAIN:
+		{
+			res = RSXIOMem.RealAddr(offset); // TODO: Error Check?
+			if (res == 0)
+			{
+				throw EXCEPTION("RSXIO memory not mapped (offset=0x%x)", offset);
+			}
+
+			if (Emu.GetGSManager().GetRender().strict_ordering[offset >> 20])
+			{
+				_mm_mfence(); // probably doesn't have any effect on current implementation
+			}
+
+			break;
+		}
+		default:
+		{
+			throw EXCEPTION("Invalid location (offset=0x%x, location=0x%x)", offset, location);
+		}
 		}
 
-		if (Emu.GetGSManager().GetRender().strict_ordering[offset >> 20])
-		{
-			_mm_mfence(); // probably doesn't have any effect on current implementation
-		}
-
-		break;
+		return res;
 	}
-	default:
-	{
-		throw EXCEPTION("Invalid location (offset=0x%x, location=0x%x)", offset, location);
-	}
-	}
-
-	return res;
 }
 
 RSXVertexData::RSXVertexData()
@@ -366,11 +371,11 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 
 	case_range(16, NV4097_SET_TEXTURE_CONTROL3, 4);
 	{
-		RSXTexture& tex = m_textures[index];
+		rsx::texture& tex = m_textures[index];
 		const u32 a0 = ARGS(0);
 		u32 pitch = a0 & 0xFFFFF;
 		u16 depth = a0 >> 20;
-		tex.SetControl3(depth, pitch);
+		//tex.SetControl3(depth, pitch);
 		break;
 	}
 
@@ -389,11 +394,11 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 
 	case_range(4, NV4097_SET_VERTEX_TEXTURE_CONTROL3, 0x20);
 	{
-		RSXVertexTexture& tex = m_vertex_textures[index];
+		rsx::vertex_texture& tex = m_vertex_textures[index];
 		const u32 a0 = ARGS(0);
 		u32 pitch = a0 & 0xFFFFF;
 		u16 depth = a0 >> 20;
-		tex.SetControl3(depth, pitch);
+		//tex.SetControl3(depth, pitch);
 		break;
 	}
 
@@ -466,7 +471,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 
 	case_range(16, NV4097_SET_VERTEX_DATA_ARRAY_OFFSET, 4);
 	{
-		const u32 addr = GetAddress(ARGS(0) & 0x7fffffff, ARGS(0) >> 31);
+		const u32 addr = rsx::get_address(ARGS(0) & 0x7fffffff, ARGS(0) >> 31);
 
 		m_vertex_data[index].addr = addr;
 		m_vertex_data[index].data.clear();
@@ -949,7 +954,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 
 	case NV4097_SET_INDEX_ARRAY_ADDRESS:
 	{
-		m_indexed_array.m_addr = GetAddress(ARGS(0), ARGS(1) & 0xf);
+		m_indexed_array.m_addr = rsx::get_address(ARGS(0), ARGS(1) & 0xf);
 		m_indexed_array.m_type = ARGS(1) >> 4;
 		break;
 	}
@@ -1063,7 +1068,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 
 		const u32 a0 = ARGS(0);
 		m_cur_fragment_prog->offset = a0 & ~0x3;
-		m_cur_fragment_prog->addr = GetAddress(m_cur_fragment_prog->offset, (a0 & 0x3) - 1);
+		m_cur_fragment_prog->addr = rsx::get_address(m_cur_fragment_prog->offset, (a0 & 0x3) - 1);
 		m_cur_fragment_prog->ctrl = 0x40;
 		notifyProgramChange();
 		break;
@@ -1979,7 +1984,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 
 		if (lineCount == 1 && !inPitch && !outPitch && !notify)
 		{
-			memcpy(vm::get_ptr<void>(GetAddress(outOffset, 0)), vm::get_ptr<void>(GetAddress(inOffset, 0)), lineLength);
+			memcpy(vm::get_ptr<void>(rsx::get_address(outOffset, 0)), vm::get_ptr<void>(rsx::get_address(inOffset, 0)), lineLength);
 		}
 		else
 		{
@@ -2211,8 +2216,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		const u16 u = ARGS(3); // inX (currently ignored)
 		const u16 v = ARGS(3) >> 16; // inY (currently ignored)
 
-		u8* pixels_src = vm::get_ptr<u8>(GetAddress(offset, m_context_dma_img_src - 0xfeed0000));
-		u8* pixels_dst = vm::get_ptr<u8>(GetAddress(m_dst_offset, m_context_dma_img_dst - 0xfeed0000));
+		u8* pixels_src = vm::get_ptr<u8>(rsx::get_address(offset, m_context_dma_img_src - 0xfeed0000));
+		u8* pixels_dst = vm::get_ptr<u8>(rsx::get_address(m_dst_offset, m_context_dma_img_dst - 0xfeed0000));
 
 		if (m_context_surface == CELL_GCM_CONTEXT_SWIZZLE2D)
 		{
@@ -2588,7 +2593,7 @@ void RSXThread::Task()
 
 		for (u32 i = 0; i < count; i++)
 		{
-			methodRegisters[(cmd & 0xffff) + (i * 4 * inc)] = ARGS(i);
+			rsx::method_registers[(cmd & 0xffff) + (i * 4 * inc)] = ARGS(i);
 		}
 
 		DoCmd(cmd, cmd & 0x3ffff, args.addr(), count);
