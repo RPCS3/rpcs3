@@ -304,7 +304,7 @@ void RSXDebugger::OnClickBuffer(wxMouseEvent& event)
 	// TODO: Is there any better way to choose the color buffers
 #define SHOW_BUFFER(id) \
 	{ \
-		u32 addr = render.m_local_mem_addr + buffers[id].offset; \
+		u32 addr = render.local_mem_addr + buffers[id].offset; \
 		if (vm::check_addr(addr) && buffers[id].width && buffers[id].height) \
 			MemoryViewerPanel::ShowImage(this, addr, 3, buffers[id].width, buffers[id].height, true); \
 		return; \
@@ -408,13 +408,13 @@ void RSXDebugger::GetBuffers()
 
 	// Draw Buffers
 	// TODO: Currently it only supports color buffers
-	for (u32 bufferId=0; bufferId < render.m_gcm_buffers_count; bufferId++)
+	for (u32 bufferId=0; bufferId < render.gcm_buffers_count; bufferId++)
 	{
 		if(!vm::check_addr(render.m_gcm_buffers_addr))
 			continue;
 
 		auto buffers = vm::get_ptr<CellGcmDisplayInfo>(render.m_gcm_buffers_addr);
-		u32 RSXbuffer_addr = render.m_local_mem_addr + buffers[bufferId].offset;
+		u32 RSXbuffer_addr = render.local_mem_addr + buffers[bufferId].offset;
 
 		if(!vm::check_addr(RSXbuffer_addr))
 			continue;
@@ -616,8 +616,8 @@ void RSXDebugger::GetSettings()
 		render.m_depth_func,
 		ParseGCMEnum(render.m_depth_func, CELL_GCM_ENUM)));
 	LIST_SETTINGS_ADD("Draw mode", wxString::Format("%d (%s)",
-		render.m_draw_mode,
-		ParseGCMEnum(render.m_draw_mode, CELL_GCM_PRIMITIVE_ENUM)));
+		render.draw_mode,
+		ParseGCMEnum(render.draw_mode, CELL_GCM_PRIMITIVE_ENUM)));
 	LIST_SETTINGS_ADD("Scissor", wxString::Format("X:%d, Y:%d, W:%d, H:%d",
 		render.m_scissor_x,
 		render.m_scissor_y,

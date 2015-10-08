@@ -807,7 +807,7 @@ void GLGSRender::EnableVertexData(bool indexed_draw)
 	static u32 offset_list[m_vertex_count];
 	u32 cur_offset = 0;
 
-	const u32 data_offset = indexed_draw ? 0 : m_draw_array_first;
+	const u32 data_offset = indexed_draw ? 0 : draw_array_first;
 
 	for (u32 i = 0; i < m_vertex_count; ++i)
 	{
@@ -1567,9 +1567,9 @@ void GLGSRender::InitDrawBuffers()
 	{
 		u32 format = GL_BGRA;
 		CellGcmDisplayInfo* buffers = vm::get_ptr<CellGcmDisplayInfo>(m_gcm_buffers_addr);
-		u32 addr = GetAddress(buffers[m_gcm_current_buffer].offset, CELL_GCM_LOCATION_LOCAL);
-		u32 width = buffers[m_gcm_current_buffer].width;
-		u32 height = buffers[m_gcm_current_buffer].height;
+		u32 addr = GetAddress(buffers[gcm_current_buffer].offset, CELL_GCM_LOCATION_LOCAL);
+		u32 width = buffers[gcm_current_buffer].width;
+		u32 height = buffers[gcm_current_buffer].height;
 		glDrawPixels(width, height, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, vm::get_ptr(addr));
 	}
 }
@@ -1646,7 +1646,7 @@ void GLGSRender::Draw()
 		checkForGlError("glColorMask");
 	}
 
-	if (!m_indexed_array.m_count && !m_draw_array_count)
+	if (!m_indexed_array.m_count && !draw_array_count)
 	{
 		u32 min_vertex_size = ~0;
 		for (auto &i : m_vertex_data)
@@ -1660,8 +1660,8 @@ void GLGSRender::Draw()
 				min_vertex_size = vertex_size;
 		}
 
-		m_draw_array_count = min_vertex_size;
-		m_draw_array_first = 0;
+		draw_array_count = min_vertex_size;
+		draw_array_first = 0;
 	}
 
 	Enable(m_set_depth_test, GL_DEPTH_TEST);
@@ -1905,7 +1905,7 @@ void GLGSRender::Draw()
 		checkForGlError("glPrimitiveRestartIndex");
 	}
 
-	if (m_indexed_array.m_count && m_draw_array_count)
+	if (m_indexed_array.m_count && draw_array_count)
 	{
 		LOG_WARNING(RSX, "m_indexed_array.m_count && draw_array_count");
 	}
@@ -1943,9 +1943,9 @@ void GLGSRender::Draw()
 	if (m_indexed_array.m_count)
 		LoadVertexData(m_indexed_array.index_min, m_indexed_array.index_max - m_indexed_array.index_min + 1);
 	else
-		LoadVertexData(m_draw_array_first, m_draw_array_count);
+		LoadVertexData(draw_array_first, draw_array_count);
 
-	if (m_indexed_array.m_count || m_draw_array_count)
+	if (m_indexed_array.m_count || draw_array_count)
 	{
 		EnableVertexData(m_indexed_array.m_count ? true : false);
 
@@ -1958,12 +1958,12 @@ void GLGSRender::Draw()
 		switch(m_indexed_array.m_type)
 		{
 		case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_32:
-			glDrawElements(m_draw_mode - 1, m_indexed_array.m_count, GL_UNSIGNED_INT, nullptr);
+			glDrawElements(draw_mode - 1, m_indexed_array.m_count, GL_UNSIGNED_INT, nullptr);
 			checkForGlError("glDrawElements #4");
 			break;
 
 		case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_16:
-			glDrawElements(m_draw_mode - 1, m_indexed_array.m_count, GL_UNSIGNED_SHORT, nullptr);
+			glDrawElements(draw_mode - 1, m_indexed_array.m_count, GL_UNSIGNED_SHORT, nullptr);
 			checkForGlError("glDrawElements #2");
 			break;
 
@@ -1976,10 +1976,10 @@ void GLGSRender::Draw()
 		m_indexed_array.Reset();
 	}
 
-	if (m_draw_array_count)
+	if (draw_array_count)
 	{
 		//LOG_WARNING(RSX,"glDrawArrays(%d,%d,%d)", m_draw_mode - 1, m_draw_array_first, m_draw_array_count);
-		glDrawArrays(m_draw_mode - 1, 0, m_draw_array_count);
+		glDrawArrays(draw_mode - 1, 0, draw_array_count);
 		checkForGlError("glDrawArrays");
 		DisableVertexData();
 	}
@@ -2023,9 +2023,9 @@ void GLGSRender::Flip()
 		{
 			format = GL_BGRA;
 			CellGcmDisplayInfo* buffers = vm::get_ptr<CellGcmDisplayInfo>(m_gcm_buffers_addr);
-			u32 addr = GetAddress(buffers[m_gcm_current_buffer].offset, CELL_GCM_LOCATION_LOCAL);
-			width = buffers[m_gcm_current_buffer].width;
-			height = buffers[m_gcm_current_buffer].height;
+			u32 addr = GetAddress(buffers[gcm_current_buffer].offset, CELL_GCM_LOCATION_LOCAL);
+			width = buffers[gcm_current_buffer].width;
+			height = buffers[gcm_current_buffer].height;
 			src_buffer = vm::get_ptr<u8>(addr);
 		}
 		else if (m_fbo.IsCreated())
@@ -2120,12 +2120,12 @@ void GLGSRender::Flip()
 
 void GLGSRender::semaphorePGRAPHTextureReadRelease(u32 offset, u32 value)
 {
-	vm::ps3::write32(m_label_addr + offset, value);
+	vm::ps3::write32(label_addr + offset, value);
 }
 
 void GLGSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 {
-	vm::ps3::write32(m_label_addr + offset, value);
+	vm::ps3::write32(label_addr + offset, value);
 }
 
 void GLGSRender::semaphorePFIFOAcquire(u32 offset, u32 value)

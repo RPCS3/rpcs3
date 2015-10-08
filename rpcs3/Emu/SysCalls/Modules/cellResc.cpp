@@ -1075,21 +1075,21 @@ void cellRescSetFlipHandler(vm::ptr<void(u32)> handler)
 {
 	cellResc.Warning("cellRescSetFlipHandler(handler=*0x%x)", handler);
 
-	Emu.GetGSManager().GetRender().m_flip_handler = handler;
+	Emu.GetGSManager().GetRender().flip_handler = handler;
 }
 
 void cellRescResetFlipStatus()
 {
 	cellResc.Log("cellRescResetFlipStatus()");
 
-	Emu.GetGSManager().GetRender().m_flip_status = 1;
+	Emu.GetGSManager().GetRender().flip_status = 1;
 }
 
 s32 cellRescGetFlipStatus()
 {
 	cellResc.Log("cellRescGetFlipStatus()");
 
-	return Emu.GetGSManager().GetRender().m_flip_status;
+	return Emu.GetGSManager().GetRender().flip_status;
 }
 
 s32 cellRescGetRegisterCount()
@@ -1102,7 +1102,7 @@ u64 cellRescGetLastFlipTime()
 {
 	cellResc.Log("cellRescGetLastFlipTime()");
 
-	return Emu.GetGSManager().GetRender().m_last_flip_time;
+	return Emu.GetGSManager().GetRender().last_flip_time;
 }
 
 s32 cellRescSetRegisterCount()
@@ -1115,7 +1115,7 @@ void cellRescSetVBlankHandler(vm::ptr<void(u32)> handler)
 {
 	cellResc.Warning("cellRescSetVBlankHandler(handler=*0x%x)", handler);
 
-	Emu.GetGSManager().GetRender().m_vblank_handler = handler;
+	Emu.GetGSManager().GetRender().vblank_handler = handler;
 }
 
 u16 FloatToHalf(float val)

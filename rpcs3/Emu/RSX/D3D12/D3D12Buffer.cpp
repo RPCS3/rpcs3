@@ -145,7 +145,7 @@ std::vector<D3D12_VERTEX_BUFFER_VIEW> D3D12GSRender::UploadVertexBuffers(bool in
 	const std::vector<VertexBufferFormat> &vertexBufferFormat = FormatVertexData(m_vertex_data, m_vertexBufferSize, m_vertex_data_base_offset);
 	m_IASet = getIALayout(m_device.Get(), vertexBufferFormat, m_vertex_data, m_vertex_data_base_offset);
 
-	const u32 data_offset = indexed_draw ? 0 : m_draw_array_first;
+	const u32 data_offset = indexed_draw ? 0 : draw_array_first;
 
 	for (size_t buffer = 0; buffer < vertexBufferFormat.size(); buffer++)
 	{
@@ -173,11 +173,11 @@ D3D12_INDEX_BUFFER_VIEW D3D12GSRender::uploadIndexBuffers(bool indexed_draw)
 	D3D12_INDEX_BUFFER_VIEW indexBufferView = {};
 
 	// No need for index buffer
-	if (!indexed_draw && isNativePrimitiveMode(m_draw_mode))
+	if (!indexed_draw && isNativePrimitiveMode(draw_mode))
 	{
 		m_renderingInfo.m_indexed = false;
-		m_renderingInfo.m_count = m_draw_array_count;
-		m_renderingInfo.m_baseVertex = m_draw_array_first;
+		m_renderingInfo.m_count = draw_array_count;
+		m_renderingInfo.m_baseVertex = draw_array_first;
 		return indexBufferView;
 	}
 
@@ -207,11 +207,11 @@ D3D12_INDEX_BUFFER_VIEW D3D12GSRender::uploadIndexBuffers(bool indexed_draw)
 	}
 
 	// Index count
-	m_renderingInfo.m_count = getIndexCount(m_draw_mode, indexed_draw ? (u32)(m_indexed_array.m_data.size() / indexSize) : m_draw_array_count);
+	m_renderingInfo.m_count = getIndexCount(draw_mode, indexed_draw ? (u32)(m_indexed_array.m_data.size() / indexSize) : draw_array_count);
 
 	// Base vertex
-	if (!indexed_draw && isNativePrimitiveMode(m_draw_mode))
-		m_renderingInfo.m_baseVertex = m_draw_array_first;
+	if (!indexed_draw && isNativePrimitiveMode(draw_mode))
+		m_renderingInfo.m_baseVertex = draw_array_first;
 	else
 		m_renderingInfo.m_baseVertex = 0;
 
@@ -224,7 +224,7 @@ D3D12_INDEX_BUFFER_VIEW D3D12GSRender::uploadIndexBuffers(bool indexed_draw)
 	void *buffer;
 	ThrowIfFailed(m_vertexIndexData.m_heap->Map(0, &CD3DX12_RANGE(heapOffset, heapOffset + subBufferSize), (void**)&buffer));
 	void *bufferMap = (char*)buffer + heapOffset;
-	uploadIndexData(m_draw_mode, m_indexed_array.m_type, indexed_draw ? m_indexed_array.m_data.data() : nullptr, bufferMap, indexed_draw ? (u32)(m_indexed_array.m_data.size() / indexSize) : m_draw_array_count);
+	uploadIndexData(draw_mode, m_indexed_array.m_type, indexed_draw ? m_indexed_array.m_data.data() : nullptr, bufferMap, indexed_draw ? (u32)(m_indexed_array.m_data.size() / indexSize) : draw_array_count);
 	m_vertexIndexData.m_heap->Unmap(0, &CD3DX12_RANGE(heapOffset, heapOffset + subBufferSize));
 	m_timers.m_bufferUploadSize += subBufferSize;
 	indexBufferView.SizeInBytes = (UINT)subBufferSize;

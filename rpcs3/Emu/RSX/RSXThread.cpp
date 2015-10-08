@@ -43,7 +43,7 @@ u32 GetAddress(u32 offset, u32 location)
 			throw EXCEPTION("RSXIO memory not mapped (offset=0x%x)", offset);
 		}
 
-		if (Emu.GetGSManager().GetRender().m_strict_ordering[offset >> 20])
+		if (Emu.GetGSManager().GetRender().strict_ordering[offset >> 20])
 		{
 			_mm_mfence(); // probably doesn't have any effect on current implementation
 		}
@@ -245,12 +245,12 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	{
 		Flip();
 
-		m_last_flip_time = get_system_time();
-		m_gcm_current_buffer = ARGS(0);
+		last_flip_time = get_system_time();
+		gcm_current_buffer = ARGS(0);
 		m_read_buffer = true;
-		m_flip_status = 0;
+		flip_status = 0;
 
-		if (auto cb = m_flip_handler)
+		if (auto cb = flip_handler)
 		{
 			Emu.GetCallbackManager().Async([=](CPUThread& cpu)
 			{
@@ -258,7 +258,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 			});
 		}
 
-		m_sem_flip.post_and_wait();
+		sem_flip.post_and_wait();
 
 		auto sync = [&]()
 		{
@@ -937,12 +937,12 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 
 			//LOG_WARNING(RSX, "NV4097_DRAW_ARRAYS: %d - %d", first, _count);
 
-			if (first < m_draw_array_first)
+			if (first < draw_array_first)
 			{
-				m_draw_array_first = first;
+				draw_array_first = first;
 			}
 
-			m_draw_array_count += _count;
+			draw_array_count += _count;
 		}
 		break;
 	}
@@ -1025,7 +1025,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 
 		//LOG_WARNING(RSX, "NV4097_SET_BEGIN_END: 0x%x", a0);
 
-		if (!m_indexed_array.m_count && !m_draw_array_count)
+		if (!m_indexed_array.m_count && !draw_array_count)
 		{
 			u32 min_vertex_size = ~0;
 			for (auto &i : m_vertex_data)
@@ -1039,11 +1039,11 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 					min_vertex_size = vertex_size;
 			}
 
-			m_draw_array_count = min_vertex_size;
-			m_draw_array_first = 0;
+			draw_array_count = min_vertex_size;
+			draw_array_first = 0;
 		}
 
-		m_read_buffer = Ini.GSReadColorBuffer.GetValue() || (!m_indexed_array.m_count && !m_draw_array_count);
+		m_read_buffer = Ini.GSReadColorBuffer.GetValue() || (!m_indexed_array.m_count && !draw_array_count);
 
 		if (a0)
 		{
@@ -1505,8 +1505,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		}
 
 		auto buffers = vm::get_ptr<CellGcmDisplayInfo>(m_gcm_buffers_addr);
-		m_width = buffers[m_gcm_current_buffer].width;
-		m_height = buffers[m_gcm_current_buffer].height;
+		m_width = buffers[gcm_current_buffer].width;
+		m_height = buffers[gcm_current_buffer].height;
 
 		CellVideoOutResolution res = ResolutionTable[ResolutionIdToNum(Ini.GSResolution.GetValue())];
 		m_width_scale = (float)res.width / m_width  * 2.0f;
@@ -1847,9 +1847,9 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		//dma_write32(dma_report, offset + 0x8, value);
 		//dma_write32(dma_report, offset + 0xc, 0);
 
-		vm::ps3::write64(m_local_mem_addr + offset + 0x0, timestamp);
-		vm::ps3::write32(m_local_mem_addr + offset + 0x8, value);
-		vm::ps3::write32(m_local_mem_addr + offset + 0xc, 0);
+		vm::ps3::write64(local_mem_addr + offset + 0x0, timestamp);
+		vm::ps3::write32(local_mem_addr + offset + 0x8, value);
+		vm::ps3::write32(local_mem_addr + offset + 0xc, 0);
 		break;
 	}
 
@@ -2340,7 +2340,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	{
 		const u32 cause = ARGS(0);
 
-		if (auto cb = m_user_handler)
+		if (auto cb = user_handler)
 		{
 			Emu.GetCallbackManager().Async([=](CPUThread& cpu)
 			{
@@ -2460,12 +2460,12 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	}
 }
 
-void RSXThread::Begin(u32 draw_mode)
+void RSXThread::Begin(u32 drawMode)
 {
 	m_begin_end = 1;
-	m_draw_mode = draw_mode;
-	m_draw_array_count = 0;
-	m_draw_array_first = ~0;
+	draw_mode = drawMode;
+	draw_array_count = 0;
+	draw_array_first = ~0;
 }
 
 void RSXThread::End()
@@ -2495,23 +2495,23 @@ void RSXThread::Task()
 
 	oninit_thread();
 
-	m_last_flip_time = get_system_time() - 1000000;
+	last_flip_time = get_system_time() - 1000000;
 
 	autojoin_thread_t vblank(WRAP_EXPR("VBlank Thread"), [this]()
 	{
 		const u64 start_time = get_system_time();
 
-		m_vblank_count = 0;
+		vblank_count = 0;
 
 		while (joinable())
 		{
 			CHECK_EMU_STATUS;
 
-			if (get_system_time() - start_time > m_vblank_count * 1000000 / 60)
+			if (get_system_time() - start_time > vblank_count * 1000000 / 60)
 			{
-				m_vblank_count++;
+				vblank_count++;
 
-				if (auto cb = m_vblank_handler)
+				if (auto cb = vblank_handler)
 				{
 					Emu.GetCallbackManager().Async([=](CPUThread& cpu)
 					{
@@ -2528,7 +2528,7 @@ void RSXThread::Task()
 
 	while (joinable() && !Emu.IsStopped())
 	{
-		std::lock_guard<std::mutex> lock(m_cs_main);
+		std::lock_guard<std::mutex> lock(cs_main);
 
 		inc = 1;
 
@@ -2605,7 +2605,7 @@ void RSXThread::Init(const u32 ioAddress, const u32 ioSize, const u32 ctrlAddres
 	m_ioAddress = ioAddress;
 	m_ioSize = ioSize;
 	m_ctrlAddress = ctrlAddress;
-	m_local_mem_addr = localAddress;
+	local_mem_addr = localAddress;
 
 	m_cur_vertex_prog = nullptr;
 	m_cur_fragment_prog = nullptr;

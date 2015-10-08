@@ -105,8 +105,8 @@ protected:
 	Timer m_timer_sync;
 
 public:
-	GcmTileInfo m_tiles[m_tiles_count];
-	GcmZcullInfo m_zculls[m_zculls_count];
+	GcmTileInfo tiles[m_tiles_count];
+	GcmZcullInfo zculls[m_zculls_count];
 	RSXTexture m_textures[m_textures_count];
 	RSXVertexTexture m_vertex_textures[m_textures_count];
 	RSXVertexData m_vertex_data[m_vertex_count];
@@ -122,45 +122,45 @@ public:
 
 public:
 	u32 m_ioAddress, m_ioSize, m_ctrlAddress;
-	int m_flip_status;
-	int m_flip_mode;
-	int m_debug_level;
-	int m_frequency_mode;
+	int flip_status;
+	int flip_mode;
+	int debug_level;
+	int frequency_mode;
 
-	u32 m_tiles_addr;
-	u32 m_zculls_addr;
+	u32 tiles_addr;
+	u32 zculls_addr;
 	u32 m_gcm_buffers_addr;
-	u32 m_gcm_buffers_count;
-	u32 m_gcm_current_buffer;
-	u32 m_ctxt_addr;
-	u32 m_report_main_addr;
-	u32 m_label_addr;
+	u32 gcm_buffers_count;
+	u32 gcm_current_buffer;
+	u32 ctxt_addr;
+	u32 report_main_addr;
+	u32 label_addr;
+	u32 draw_mode;
 
 	// DMA
 	u32 dma_report;
 
-	u32 m_local_mem_addr, m_main_mem_addr;
-	bool m_strict_ordering[0x1000];
+	u32 local_mem_addr, main_mem_addr;
+	bool strict_ordering[0x1000];
 
 public:
-	uint m_draw_mode;
+	u32 draw_array_count;
+	u32 draw_array_first;
 
 	u32 m_width;
 	u32 m_height;
 	float m_width_scale;
 	float m_height_scale;
-	u32 m_draw_array_count;
-	u32 m_draw_array_first;
 	double m_fps_limit = 59.94;
 
 public:
-	std::mutex m_cs_main;
-	semaphore_t m_sem_flip;
-	u64 m_last_flip_time;
-	vm::ps3::ptr<void(u32)> m_flip_handler;
-	vm::ps3::ptr<void(u32)> m_user_handler;
-	u64 m_vblank_count;
-	vm::ps3::ptr<void(u32)> m_vblank_handler;
+	std::mutex cs_main;
+	semaphore_t sem_flip;
+	u64 last_flip_time;
+	vm::ps3::ptr<void(u32)> flip_handler = { 0 };
+	vm::ps3::ptr<void(u32)> user_handler = { 0 };
+	vm::ps3::ptr<void(u32)> vblank_handler = { 0 };
+	u64 vblank_count;
 
 public:
 	// Dither
@@ -450,22 +450,22 @@ protected:
 	RSXThread()
 		: m_ctrl(nullptr)
 		, m_shader_ctrl(0x40)
-		, m_flip_status(0)
-		, m_flip_mode(CELL_GCM_DISPLAY_VSYNC)
-		, m_debug_level(CELL_GCM_DEBUG_LEVEL0)
-		, m_frequency_mode(CELL_GCM_DISPLAY_FREQUENCY_DISABLE)
-		, m_report_main_addr(0)
-		, m_main_mem_addr(0)
-		, m_local_mem_addr(0)
-		, m_draw_mode(0)
-		, m_draw_array_count(0)
-		, m_draw_array_first(~0)
-		, m_gcm_current_buffer(0)
+		, flip_status(0)
+		, flip_mode(CELL_GCM_DISPLAY_VSYNC)
+		, debug_level(CELL_GCM_DEBUG_LEVEL0)
+		, frequency_mode(CELL_GCM_DISPLAY_FREQUENCY_DISABLE)
+		, report_main_addr(0)
+		, main_mem_addr(0)
+		, local_mem_addr(0)
+		, draw_mode(0)
+		, draw_array_count(0)
+		, draw_array_first(~0)
+		, gcm_current_buffer(0)
 		, m_read_buffer(true)
 	{
-		m_flip_handler.set(0);
-		m_vblank_handler.set(0);
-		m_user_handler.set(0);
+		flip_handler.set(0);
+		vblank_handler.set(0);
+		user_handler.set(0);
 		m_set_depth_test = false;
 		m_set_alpha_test = false;
 		m_set_depth_bounds_test = false;

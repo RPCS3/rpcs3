@@ -395,18 +395,18 @@ struct CellGcmTileInfo
 
 struct GcmZcullInfo
 {
-	u32 m_offset;
-	u32 m_width;
-	u32 m_height;
-	u32 m_cullStart;
-	u32 m_zFormat;
-	u32 m_aaFormat;
-	u32 m_zcullDir;
-	u32 m_zcullFormat;
-	u32 m_sFunc;
-	u32 m_sRef;
-	u32 m_sMask;
-	bool m_binded;
+	u32 offset;
+	u32 width;
+	u32 height;
+	u32 cullStart;
+	u32 zFormat;
+	u32 aaFormat;
+	u32 zcullDir;
+	u32 zcullFormat;
+	u32 sFunc;
+	u32 sRef;
+	u32 sMask;
+	bool binded;
 
 	GcmZcullInfo()
 	{
@@ -417,11 +417,11 @@ struct GcmZcullInfo
 	{
 		CellGcmZcullInfo ret;
 
-		ret.region = (1<<0) | (m_zFormat<<4) | (m_aaFormat<<8);
-		ret.size = ((m_width>>6)<<22) | ((m_height>>6)<<6);
-		ret.start = m_cullStart&(~0xFFF);
-		ret.offset = m_offset;
-		ret.status0 = (m_zcullDir<<1) | (m_zcullFormat<<2) | ((m_sFunc&0xF)<<12) | (m_sRef<<16) | (m_sMask<<24);
+		ret.region = (1<<0) | (zFormat<<4) | (aaFormat<<8);
+		ret.size = ((width>>6)<<22) | ((height>>6)<<6);
+		ret.start = cullStart&(~0xFFF);
+		ret.offset = offset;
+		ret.status0 = (zcullDir<<1) | (zcullFormat<<2) | ((sFunc&0xF)<<12) | (sRef<<16) | (sMask<<24);
 		ret.status1 = (0x2000<<0) | (0x20<<16);
 
 		return ret;
@@ -430,14 +430,14 @@ struct GcmZcullInfo
 
 struct GcmTileInfo
 {
-	u8 m_location;
-	u32 m_offset;
-	u32 m_size;
-	u32 m_pitch;
-	u8 m_comp;
-	u16 m_base;
-	u8 m_bank;
-	bool m_binded;
+	u8 location;
+	u32 offset;
+	u32 size;
+	u32 pitch;
+	u8 comp;
+	u16 base;
+	u8 bank;
+	bool binded;
 
 	GcmTileInfo()
 	{
@@ -448,10 +448,10 @@ struct GcmTileInfo
 	{
 		CellGcmTileInfo ret;
 
-		ret.tile = (m_location + 1) | (m_bank << 4) | ((m_offset / 0x10000) << 16) | (m_location << 31);
-		ret.limit = ((m_offset + m_size - 1) / 0x10000) << 16 | (m_location << 31);
-		ret.pitch = (m_pitch / 0x100) << 8;
-		ret.format = m_base | ((m_base + ((m_size - 1) / 0x10000)) << 13) | (m_comp << 26) | (1 << 30);
+		ret.tile = (location + 1) | (bank << 4) | ((offset / 0x10000) << 16) | (location << 31);
+		ret.limit = ((offset + size - 1) / 0x10000) << 16 | (location << 31);
+		ret.pitch = (pitch / 0x100) << 8;
+		ret.format = base | ((base + ((size - 1) / 0x10000)) << 13) | (comp << 26) | (1 << 30);
 
 		return ret;
 	}

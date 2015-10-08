@@ -411,12 +411,12 @@ void D3D12GSRender::Draw()
 			if (!m_vertex_data[i].addr) continue;
 
 			const u32 tsize = m_vertex_data[i].GetTypeSize();
-			m_vertexBufferSize[i] = (m_draw_array_first + m_draw_array_count) * tsize * m_vertex_data[i].size;
+			m_vertexBufferSize[i] = (draw_array_first + draw_array_count) * tsize * m_vertex_data[i].size;
 		}
 	}
 
 
-	if (m_indexed_array.m_count || m_draw_array_count)
+	if (m_indexed_array.m_count || draw_array_count)
 	{
 		const std::vector<D3D12_VERTEX_BUFFER_VIEW> &vertexBufferViews = UploadVertexBuffers(m_indexed_array.m_count ? true : false);
 		const D3D12_INDEX_BUFFER_VIEW &indexBufferView = uploadIndexBuffers(m_indexed_array.m_count ? true : false);
@@ -564,7 +564,7 @@ void D3D12GSRender::Draw()
 	};
 	getCurrentResourceStorage().m_commandList->RSSetScissorRects(1, &box);
 
-	switch (m_draw_mode - 1)
+	switch (draw_mode - 1)
 	{
 	case GL_POINTS:
 		getCurrentResourceStorage().m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_POINTLIST);
@@ -647,9 +647,9 @@ void D3D12GSRender::Flip()
 		if (m_read_buffer)
 		{
 			CellGcmDisplayInfo* buffers = vm::get_ptr<CellGcmDisplayInfo>(m_gcm_buffers_addr);
-			u32 addr = GetAddress(buffers[m_gcm_current_buffer].offset, CELL_GCM_LOCATION_LOCAL);
-			w = buffers[m_gcm_current_buffer].width;
-			h = buffers[m_gcm_current_buffer].height;
+			u32 addr = GetAddress(buffers[gcm_current_buffer].offset, CELL_GCM_LOCATION_LOCAL);
+			w = buffers[gcm_current_buffer].width;
+			h = buffers[gcm_current_buffer].height;
 			u8 *src_buffer = vm::get_ptr<u8>(addr);
 
 			rowPitch = align(w * 4, 256);
@@ -1151,7 +1151,7 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 		}
 	}
 
-	vm::ps3::write32(m_label_addr + offset, value);
+	vm::ps3::write32(label_addr + offset, value);
 }
 
 void D3D12GSRender::semaphorePFIFOAcquire(u32 offset, u32 value)
@@ -1159,7 +1159,7 @@ void D3D12GSRender::semaphorePFIFOAcquire(u32 offset, u32 value)
 	const std::chrono::time_point<std::chrono::system_clock> enterWait = std::chrono::system_clock::now();
 	while (true)
 	{
-		volatile u32 val = vm::ps3::read32(m_label_addr + offset);
+		volatile u32 val = vm::ps3::read32(label_addr + offset);
 		if (val == value) break;
 		std::chrono::time_point<std::chrono::system_clock> waitPoint = std::chrono::system_clock::now();
 		long long elapsedTime = std::chrono::duration_cast<std::chrono::seconds>(waitPoint - enterWait).count();

@@ -70,7 +70,7 @@ bool D3D12GSRender::LoadProgram()
 	}
 
 	D3D12PipelineProperties prop = {};
-	switch (m_draw_mode - 1)
+	switch (draw_mode - 1)
 	{
 	case GL_POINTS:
 		prop.Topology = D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
