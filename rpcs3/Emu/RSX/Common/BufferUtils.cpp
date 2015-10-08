@@ -20,11 +20,11 @@ std::vector<VertexBufferFormat> FormatVertexData(const RSXVertexData *m_vertex_d
 		const RSXVertexData &vertexData = m_vertex_data[i];
 		if (!vertexData.IsEnabled()) continue;
 
-		size_t elementCount = ((vertexData.addr) ? vertex_data_size[i] : m_vertex_data[i].data.size()) / (vertexData.size * vertexData.GetTypeSize());
+		size_t elementCount = ((vertexData.addr) ? vertex_data_size[i] : m_vertex_data[i].data.size()) / (vertexData.size * rsx::get_vertex_type_size(vertexData.type));
 
 		// If there is a single element, stride is 0, use the size of element instead
 		size_t stride = vertexData.stride;
-		size_t elementSize = vertexData.GetTypeSize();
+		size_t elementSize = rsx::get_vertex_type_size(vertexData.type);
 		size_t start = vertexData.addr + base_offset;
 		size_t end = start + elementSize * vertexData.size + (elementCount - 1) * stride - 1;
 		std::pair<size_t, size_t> range = std::make_pair(start, end);
@@ -65,7 +65,7 @@ void uploadVertexData(const VertexBufferFormat &vbf, const RSXVertexData *vertex
 				continue;
 			}
 			size_t offset = (size_t)vertexData[attributeId].addr + baseOffset - vbf.range.first;
-			size_t tsize = vertexData[attributeId].GetTypeSize();
+			size_t tsize = rsx::get_vertex_type_size(vertexData[attributeId].type);
 			size_t size = vertexData[attributeId].size;
 			auto src = vm::get_ptr<const u8>(vertexData[attributeId].addr + (u32)baseOffset + (u32)vbf.stride * vertex);
 			char* dst = (char*)bufferMap + offset + vbf.stride * vertex;

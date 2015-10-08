@@ -10,8 +10,6 @@ struct MipmapLevelInfo
 	size_t rowPitch;
 };
 
-unsigned LinearToSwizzleAddress(unsigned x, unsigned y, unsigned z, unsigned log2_width, unsigned log2_height, unsigned log2_depth);
-
 /**
 * Get size to store texture in a linear fashion.
 * Storage is assumed to use a rowPitchAlignement boundary for every row of texture.

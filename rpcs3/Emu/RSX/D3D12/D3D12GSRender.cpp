@@ -399,7 +399,7 @@ void D3D12GSRender::Draw()
 			if (!m_vertex_data[i].IsEnabled()) continue;
 			if (!m_vertex_data[i].addr) continue;
 
-			const u32 tsize = m_vertex_data[i].GetTypeSize();
+			const u32 tsize = rsx::get_vertex_type_size(m_vertex_data[i].type);
 			m_vertexBufferSize[i] = (m_indexed_array.index_min + m_indexed_array.index_max - m_indexed_array.index_min + 1) * tsize * m_vertex_data[i].size;
 		}
 	}
@@ -410,7 +410,7 @@ void D3D12GSRender::Draw()
 			if (!m_vertex_data[i].IsEnabled()) continue;
 			if (!m_vertex_data[i].addr) continue;
 
-			const u32 tsize = m_vertex_data[i].GetTypeSize();
+			const u32 tsize = rsx::get_vertex_type_size(m_vertex_data[i].type);
 			m_vertexBufferSize[i] = (draw_array_first + draw_array_count) * tsize * m_vertex_data[i].size;
 		}
 	}

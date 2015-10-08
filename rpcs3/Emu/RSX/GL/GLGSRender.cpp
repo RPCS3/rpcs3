@@ -182,7 +182,7 @@ void GLTexture::Init(rsx::texture& tex)
 			{
 				for (int j = 0; j < tex.width(); j++)
 				{
-					dst[(i * tex.width()) + j] = src[LinearToSwizzleAddress(j, i, 0, log2width, log2height, 0)];
+					dst[(i * tex.width()) + j] = src[rsx::linear_to_swizzle(j, i, 0, log2width, log2height, 0)];
 				}
 			}
 		}
@@ -841,7 +841,7 @@ void GLGSRender::EnableVertexData(bool indexed_draw)
 		offset_list[i] = cur_offset;
 
 		if (!m_vertex_data[i].IsEnabled()) continue;
-		const size_t item_size = m_vertex_data[i].GetTypeSize() * m_vertex_data[i].size;
+		const size_t item_size = rsx::get_vertex_type_size(m_vertex_data[i].type) * m_vertex_data[i].size;
 		const size_t data_size = m_vertex_data[i].data.size() - data_offset * item_size;
 		const u32 pos = m_vdata.size();
 
@@ -1654,7 +1654,7 @@ void GLGSRender::Draw()
 			if (!i.size)
 				continue;
 
-			u32 vertex_size = i.data.size() / (i.size * i.GetTypeSize());
+			u32 vertex_size = i.data.size() / (i.size * rsx::get_vertex_type_size(i.type));
 
 			if (min_vertex_size > vertex_size)
 				min_vertex_size = vertex_size;

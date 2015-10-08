@@ -28,29 +28,66 @@ namespace rsx
 {
 	u32 method_registers[0x10000 >> 2];
 
+	u32 linear_to_swizzle(u32 x, u32 y, u32 z, u32 log2_width, u32 log2_height, u32 log2_depth)
+	{
+		u32 offset = 0;
+		u32 shift_count = 0;
+		while (log2_width | log2_height | log2_depth)
+		{
+			if (log2_width)
+			{
+				offset |= (x & 0x01) << shift_count;
+				x >>= 1;
+				++shift_count;
+				--log2_width;
+			}
+
+			if (log2_height)
+			{
+				offset |= (y & 0x01) << shift_count;
+				y >>= 1;
+				++shift_count;
+				--log2_height;
+			}
+
+			if (log2_depth)
+			{
+				offset |= (z & 0x01) << shift_count;
+				z >>= 1;
+				++shift_count;
+				--log2_depth;
+			}
+		}
+		return offset;
+	}
+
 	u32 get_address(u32 offset, u32 location)
 	{
 		u32 res = 0;
 
 		switch (location)
 		{
+		case CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER:
 		case CELL_GCM_LOCATION_LOCAL:
 		{
+			//TODO: don't use not named constants like 0xC0000000
 			res = 0xC0000000 + offset;
 			break;
 		}
+
+		case CELL_GCM_CONTEXT_DMA_MEMORY_HOST_BUFFER:
 		case CELL_GCM_LOCATION_MAIN:
 		{
-			res = RSXIOMem.RealAddr(offset); // TODO: Error Check?
+			res = (u32)RSXIOMem.RealAddr(offset); // TODO: Error Check?
 			if (res == 0)
 			{
-				throw EXCEPTION("RSXIO memory not mapped (offset=0x%x)", offset);
+				throw fmt::format("GetAddress(offset=0x%x, location=0x%x): RSXIO memory not mapped", offset, location);
 			}
 
-			if (Emu.GetGSManager().GetRender().strict_ordering[offset >> 20])
-			{
-				_mm_mfence(); // probably doesn't have any effect on current implementation
-			}
+			//if (Emu.GetGSManager().GetRender().strict_ordering[offset >> 20])
+			//{
+			//	_mm_mfence(); // probably doesn't have any effect on current implementation
+			//}
 
 			break;
 		}
@@ -61,6 +98,25 @@ namespace rsx
 		}
 
 		return res;
+	}
+
+	u32 get_vertex_type_size(u32 type)
+	{
+		switch (type)
+		{
+		case CELL_GCM_VERTEX_S1:    return sizeof(u16);
+		case CELL_GCM_VERTEX_F:     return sizeof(f32);
+		case CELL_GCM_VERTEX_SF:    return sizeof(f16);
+		case CELL_GCM_VERTEX_UB:    return sizeof(u8);
+		case CELL_GCM_VERTEX_S32K:  return sizeof(u32);
+		case CELL_GCM_VERTEX_CMP:   return sizeof(u32);
+		case CELL_GCM_VERTEX_UB256: return sizeof(u8) * 4;
+
+		default:
+			LOG_ERROR(RSX, "RSXVertexData::GetTypeSize: Bad vertex data type (%d)!", type);
+			assert(0);
+			return 1;
+		}
 	}
 }
 
@@ -88,7 +144,7 @@ void RSXVertexData::Load(u32 start, u32 count, u32 baseOffset, u32 baseIndex = 0
 {
 	if (!addr) return;
 
-	const u32 tsize = GetTypeSize();
+	const u32 tsize = rsx::get_vertex_type_size(type);
 
 	data.resize((start + count) * tsize * size);
 
@@ -121,24 +177,6 @@ void RSXVertexData::Load(u32 start, u32 count, u32 baseOffset, u32 baseIndex = 0
 			break;
 		}
 		}
-	}
-}
-
-u32 RSXVertexData::GetTypeSize() const
-{
-	switch (type)
-	{
-	case CELL_GCM_VERTEX_S1:    return 2;
-	case CELL_GCM_VERTEX_F:     return 4;
-	case CELL_GCM_VERTEX_SF:    return 2;
-	case CELL_GCM_VERTEX_UB:    return 1;
-	case CELL_GCM_VERTEX_S32K:  return 2;
-	case CELL_GCM_VERTEX_CMP:   return 4;
-	case CELL_GCM_VERTEX_UB256: return 1;
-
-	default:
-		LOG_ERROR(RSX, "RSXVertexData::GetTypeSize: Bad vertex data type (%d)!", type);
-		return 1;
 	}
 }
 
@@ -1038,7 +1076,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 				if (!i.size)
 					continue;
 
-				u32 vertex_size = i.data.size() / (i.size * i.GetTypeSize());
+				u32 vertex_size = i.data.size() / (i.size * rsx::get_vertex_type_size(i.type));
 
 				if (min_vertex_size > vertex_size)
 					min_vertex_size = vertex_size;

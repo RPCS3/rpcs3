@@ -29,7 +29,9 @@ namespace rsx
 	extern u32 method_registers[0x10000 >> 2];
 
 	u32 get_address(u32 offset, u32 location);
+	u32 linear_to_swizzle(u32 x, u32 y, u32 z, u32 log2_width, u32 log2_height, u32 log2_depth);
 
+	u32 get_vertex_type_size(u32 type);
 }
 
 enum Method
@@ -56,8 +58,6 @@ struct RSXVertexData
 	void Reset();
 	bool IsEnabled() const { return size > 0; }
 	void Load(u32 start, u32 count, u32 baseOffset, u32 baseIndex);
-
-	u32 GetTypeSize() const;
 };
 
 struct RSXIndexArrayData
