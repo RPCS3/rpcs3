@@ -26,7 +26,6 @@
 #include "Gui/SaveDataDialog.h"
 
 #include "Gui/GLGSFrame.h"
-#include "Gui/D3DGSFrame.h"
 #include <wx/stdpaths.h>
 
 #ifdef _WIN32
@@ -112,18 +111,20 @@ bool Rpcs3App::OnInit()
 		}
 	};
 
-	callbacks.get_gs_frame = []() -> std::unique_ptr<GSFrameBase>
+	callbacks.get_gs_frame = [](frame_type type) -> std::unique_ptr<GSFrameBase>
 	{
-		return std::make_unique<GLGSFrame>();
-	};
+		switch (type)
+		{
+		case frame_type::OpenGL:
+			return std::make_unique<GLGSFrame>();
 
-	// TODO: unify with get_gs_frame callback
-#if defined(DX12_SUPPORT)
-	SetGetD3DGSFrameCallback([]() ->GSFrameBase2*
-	{
-		return new D3DGSFrame();
-	});
-#endif
+		case frame_type::DX12:
+			return std::make_unique<GSFrame>("DirectX 12");
+
+		case frame_type::Null:
+			return std::make_unique<GSFrame>("Null");
+		}
+	};
 
 	callbacks.get_msg_dialog = []() -> std::unique_ptr<MsgDialogBase>
 	{

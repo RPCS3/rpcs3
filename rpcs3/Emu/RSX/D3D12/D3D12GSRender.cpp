@@ -33,13 +33,6 @@ static void unloadD3D12FunctionPointers()
 	FreeLibrary(D3D11Module);
 }
 
-GetGSFrameCb2 GetGSFrame = nullptr;
-
-void SetGetD3DGSFrameCallback(GetGSFrameCb2 value)
-{
-	GetGSFrame = value;
-}
-
 void D3D12GSRender::ResourceStorage::Reset()
 {
 	m_constantsBufferIndex = 0;
@@ -136,7 +129,7 @@ D3D12DLLManagement::~D3D12DLLManagement()
 }
 
 D3D12GSRender::D3D12GSRender()
-	: GSRender(), m_D3D12Lib(), m_PSO(nullptr)
+	: GSRender(frame_type::DX12), m_D3D12Lib(), m_PSO(nullptr)
 {
 	m_previous_address_a = 0;
 	m_previous_address_b = 0;
@@ -174,13 +167,11 @@ D3D12GSRender::D3D12GSRender()
 	g_descriptorStrideRTV = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 	g_descriptorStrideSamplers = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
 
-	m_frame = GetGSFrame();
-
 	// Create swap chain and put them in a descriptor heap as rendertarget
 	DXGI_SWAP_CHAIN_DESC swapChain = {};
 	swapChain.BufferCount = 2;
 	swapChain.Windowed = true;
-	swapChain.OutputWindow = m_frame->getHandle();
+	swapChain.OutputWindow = (HWND)m_frame->handle();
 	swapChain.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	swapChain.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
 	swapChain.SampleDesc.Count = 1;
@@ -295,28 +286,6 @@ D3D12GSRender::~D3D12GSRender()
 	m_outputScalingPass.Release();
 
 	ReleaseD2DStructures();
-}
-
-void D3D12GSRender::Close()
-{
-	if (joinable())
-	{
-		join();
-	}
-
-	if (m_frame->IsShown())
-	{
-		m_frame->Hide();
-	}
-}
-
-void D3D12GSRender::OnInit()
-{
-	m_frame->Show();
-}
-
-void D3D12GSRender::OnInitThread()
-{
 }
 
 void D3D12GSRender::OnExitThread()
@@ -841,7 +810,7 @@ void D3D12GSRender::Flip()
 		m_UAVHeap.m_getPos = newStorage.m_getPosUAVHeap;
 	}
 
-	m_frame->Flip(nullptr);
+	m_frame->flip(nullptr);
 
 
 	std::chrono::time_point<std::chrono::system_clock> flipEnd = std::chrono::system_clock::now();

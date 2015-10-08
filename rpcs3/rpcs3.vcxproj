@@ -511,7 +511,6 @@
     <ClCompile Include="Gui\CgDisasm.cpp" />
     <ClCompile Include="Gui\CompilerELF.cpp" />
     <ClCompile Include="Gui\ConLogFrame.cpp" />
-    <ClCompile Include="Gui\D3DGSFrame.cpp" />
     <ClCompile Include="Gui\Debugger.cpp" />
     <ClCompile Include="Gui\DisAsmFrame.cpp" />
     <ClCompile Include="Gui\GameViewer.cpp" />
@@ -561,7 +560,6 @@
     <ClInclude Include="Gui\CgDisasm.h" />
     <ClInclude Include="Gui\CompilerELF.h" />
     <ClInclude Include="Gui\ConLogFrame.h" />
-    <ClInclude Include="Gui\D3DGSFrame.h" />
     <ClInclude Include="Gui\Debugger.h" />
     <ClInclude Include="Gui\DisAsmFrame.h" />
     <ClInclude Include="Gui\FrameBase.h" />

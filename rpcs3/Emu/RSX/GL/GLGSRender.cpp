@@ -777,19 +777,15 @@ void DrawCursorObj::InitializeLocations()
 }
 
 GLGSRender::GLGSRender()
-	: GSRender()
-	, m_frame(nullptr)
+	: GSRender(frame_type::OpenGL)
 	, m_fp_buf_num(-1)
 	, m_vp_buf_num(-1)
 	, m_context(nullptr)
 {
-	m_frame = Emu.GetCallbacks().get_gs_frame().release();
 }
 
 GLGSRender::~GLGSRender()
 {
-	m_frame->Close();
-	m_frame->DeleteContext(m_context);
 }
 
 void GLGSRender::Enable(bool enable, const u32 cap)
@@ -805,20 +801,6 @@ void GLGSRender::Enable(bool enable, const u32 cap)
 }
 
 extern CellGcmContextData current_context;
-
-void GLGSRender::Close()
-{
-	if (joinable())
-	{
-		join();
-	}
-
-	if (m_frame->IsShown())
-	{
-		m_frame->Hide();
-	}
-	m_ctrl = nullptr;
-}
 
 void GLGSRender::EnableVertexData(bool indexed_draw)
 {
@@ -1365,7 +1347,7 @@ void GLGSRender::WriteColorBuffers()
 	}
 }
 
-void GLGSRender::OnInit()
+void GLGSRender::oninit()
 {
 	m_draw_frames = 1;
 	m_skip_frames = 0;
@@ -1378,14 +1360,10 @@ void GLGSRender::OnInit()
 	last_height = 0;
 	last_depth_format = 0;
 
-	m_frame->Show();
 }
 
-void GLGSRender::OnInitThread()
+void GLGSRender::oninit_thread()
 {
-	m_context = m_frame->GetNewContext();
-	
-	m_frame->SetCurrent(m_context);
 
 	InitProcTable();
 
@@ -2129,7 +2107,7 @@ void GLGSRender::Flip()
 		m_post_draw_objs[i].Draw();
 	}
 
-	m_frame->Flip(m_context);
+	//	m_frame->Flip(m_context);
 
 	// Restore scissor
 	if (m_set_scissor_horizontal && m_set_scissor_vertical)

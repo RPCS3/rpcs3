@@ -2493,7 +2493,7 @@ void RSXThread::Task()
 	u8 inc;
 	LOG_NOTICE(RSX, "RSX thread started");
 
-	OnInitThread();
+	oninit_thread();
 
 	m_last_flip_time = get_system_time() - 1000000;
 
@@ -2613,7 +2613,7 @@ void RSXThread::Init(const u32 ioAddress, const u32 ioSize, const u32 ctrlAddres
 
 	m_used_gcm_commands.clear();
 
-	OnInit();
+	oninit();
 
 	start(WRAP_EXPR("RSXThread"), WRAP_EXPR(Task()));
 }

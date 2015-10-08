@@ -5,7 +5,7 @@ class NullGSRender final : public GSRender
 {
 public:
 
-	NullGSRender()
+	NullGSRender() : GSRender(frame_type::Null)
 	{
 	}
 
@@ -14,11 +14,11 @@ public:
 	}
 
 private:
-	virtual void OnInit() override
+	virtual void oninit() override
 	{
 	}
 
-	virtual void OnInitThread() override
+	virtual void oninit_thread() override
 	{
 	}
 
@@ -40,14 +40,6 @@ private:
 
 	virtual void Flip() override
 	{
-	}
-
-	virtual void Close() override
-	{
-		if (joinable())
-		{
-			join();
-		}
 	}
 
 	virtual void semaphorePGRAPHTextureReadRelease(u32 offset, u32 value) override

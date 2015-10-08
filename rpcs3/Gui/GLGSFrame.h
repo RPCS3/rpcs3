@@ -3,28 +3,18 @@
 #include "Gui/GSFrame.h"
 #include "wx/glcanvas.h"
 
-struct GLGSFrame : public GSFrame, public GSFrameBase
+class GLGSFrame : public GSFrame
 {
-	wxGLCanvas* canvas;
+	wxGLCanvas* m_canvas;
 	u32 m_frames;
-
+public:
 	GLGSFrame();
 	~GLGSFrame();
 
-	virtual void Close() override;
-
-	virtual bool IsShown() override;
-	virtual void Hide() override;
-	virtual void Show() override;
-
-	virtual void* GetNewContext() override;
-	virtual void SetCurrent(void* ctx) override;
-	virtual void DeleteContext(void* ctx) override;
-	virtual void Flip(void* context) override;
-
-	wxGLCanvas* GetCanvas() const { return canvas; }
-
-	virtual void SetViewport(int x, int y, u32 w, u32 h) override;
+	virtual void* make_context() override;
+	virtual void set_current(draw_context_t context) override;
+	virtual void delete_context(void* ctx) override;
+	virtual void flip(draw_context_t context) override;
 
 private:
 	virtual void OnSize(wxSizeEvent& event);

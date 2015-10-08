@@ -1,20 +1,32 @@
-#pragma once 
+#pragma once
+#include "Emu/Memory/vm.h"
+#include "Emu/RSX/GSRender.h"
 
-wxSize AspectRatio(wxSize rs, const wxSize as);
-
-class GSFrame : public wxFrame
+class GSFrame : public wxFrame, public GSFrameBase
 {
-protected:
-	GSFrame(wxWindow* parent, const wxString& title);
+	u64 m_frames;
+public:
+	GSFrame(const wxString& title);
 
-	virtual void SetViewport(int x, int y, u32 w, u32 h) {}
+protected:
 	virtual void OnPaint(wxPaintEvent& event);
 	virtual void OnClose(wxCloseEvent& event);
 
-	//virtual void OnSize(wxSizeEvent&);
-
 	void OnKeyDown(wxKeyEvent& event);
 	void OnFullScreen();
+
+	void close() override;
+
+	bool shown() override;
+	void hide() override;
+	void show() override;
+
+	void* handle() const override;
+
+	void* make_context() override;
+	void set_current(draw_context_t context) override;
+	void delete_context(void* context) override;
+	void flip(draw_context_t context) override;
 
 public:
 	void OnLeftDclick(wxMouseEvent&)

@@ -41,28 +41,6 @@
  * are not currently correctly signaled which leads to deadlock.
  */
 
-class GSFrameBase2
-{
-public:
-	GSFrameBase2() {}
-	GSFrameBase2(const GSFrameBase2&) = delete;
-	virtual void Close() = 0;
-
-	virtual bool IsShown() = 0;
-	virtual void Hide() = 0;
-	virtual void Show() = 0;
-
-	virtual void* GetNewContext() = 0;
-	virtual void SetCurrent(void* ctx) = 0;
-	virtual void DeleteContext(void* ctx) = 0;
-	virtual void Flip(void* ctx) = 0;
-	virtual HWND getHandle() const = 0;
-};
-
-typedef GSFrameBase2*(*GetGSFrameCb2)();
-
-void SetGetD3DGSFrameCallback(GetGSFrameCb2 value);
-
 template<typename T>
 struct InitHeap
 {
@@ -470,7 +448,6 @@ private:
 	u32 m_previous_address_d;
 	u32 m_previous_address_z;
 public:
-	GSFrameBase2 *m_frame;
 	u32 m_draw_frames;
 	u32 m_skip_frames;
 
@@ -491,7 +468,6 @@ private:
 	void InitD2DStructures();
 	void ReleaseD2DStructures();
 	ID3D12Resource *writeColorBuffer(ID3D12Resource *RTT, ID3D12GraphicsCommandList *cmdlist);
-	virtual void Close() override;
 
 	bool LoadProgram();
 
@@ -534,8 +510,6 @@ private:
 	void renderOverlay();
 
 protected:
-	virtual void OnInit() override;
-	virtual void OnInitThread() override;
 	virtual void OnExitThread() override;
 	virtual void OnReset() override;
 	virtual void Clear(u32 cmd) override;

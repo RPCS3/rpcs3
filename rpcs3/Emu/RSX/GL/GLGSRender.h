@@ -111,24 +111,6 @@ public:
 	void InitializeLocations();
 };
 
-class GSFrameBase
-{
-public:
-	GSFrameBase() {}
-	GSFrameBase(const GSFrameBase&) = delete;
-	virtual void Close() = 0;
-
-	virtual bool IsShown() = 0;
-	virtual void Hide() = 0;
-	virtual void Show() = 0;
-
-	virtual void* GetNewContext() = 0;
-	virtual void SetCurrent(void* ctx) = 0;
-	virtual void DeleteContext(void* ctx) = 0;
-	virtual void Flip(void* ctx) = 0;
-
-};
-
 class GLGSRender final : public GSRender
 {
 private:
@@ -154,7 +136,6 @@ private:
 	void* m_context;
 
 public:
-	GSFrameBase* m_frame;
 	u32 m_draw_frames;
 	u32 m_skip_frames;
 	bool is_intel_vendor;
@@ -169,7 +150,7 @@ private:
 	void InitFragmentData();
 
 	void Enable(bool enable, const u32 cap);
-	virtual void Close() override;
+
 	bool LoadProgram();
 	void WriteBuffers();
 	void WriteDepthBuffer();
@@ -183,8 +164,8 @@ private:
 	void InitDrawBuffers();
 
 protected:
-	virtual void OnInit() override;
-	virtual void OnInitThread() override;
+	virtual void oninit() override;
+	virtual void oninit_thread() override;
 	virtual void OnExitThread() override;
 	virtual void OnReset() override;
 	virtual void Clear(u32 cmd) override;

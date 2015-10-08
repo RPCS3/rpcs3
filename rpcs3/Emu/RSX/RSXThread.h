@@ -642,8 +642,8 @@ protected:
 	u32 OutOfArgsCount(const uint x, const u32 cmd, const u32 count, const u32 args_addr);
 	void DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const u32 count);
 
-	virtual void OnInit() = 0;
-	virtual void OnInitThread() = 0;
+	virtual void oninit() = 0;
+	virtual void oninit_thread() = 0;
 	virtual void OnExitThread() = 0;
 	virtual void OnReset() = 0;
 
