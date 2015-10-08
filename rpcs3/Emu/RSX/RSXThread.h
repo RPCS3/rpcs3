@@ -112,32 +112,25 @@ struct RSXTransformConstant
 
 class RSXThread : protected named_thread_t
 {
-public:
-	static const uint m_textures_count = 16;
-	static const uint m_vertex_count = 32;
-	static const uint m_fragment_count = 32;
-	static const uint m_tiles_count = 15;
-	static const uint m_zculls_count = 8;
-
 protected:
 	std::stack<u32> m_call_stack;
 	CellGcmControl* m_ctrl;
 	Timer m_timer_sync;
 
 public:
-	GcmTileInfo tiles[m_tiles_count];
-	GcmZcullInfo zculls[m_zculls_count];
-	rsx::texture m_textures[m_textures_count];
-	rsx::vertex_texture m_vertex_textures[m_textures_count];
-	RSXVertexData m_vertex_data[m_vertex_count];
+	GcmTileInfo tiles[rsx::limits::tiles_count];
+	GcmZcullInfo zculls[rsx::limits::zculls_count];
+	rsx::texture m_textures[rsx::limits::textures_count];
+	rsx::vertex_texture m_vertex_textures[rsx::limits::vertex_textures_count];
+	RSXVertexData m_vertex_data[rsx::limits::vertex_count];
 	RSXIndexArrayData m_indexed_array;
 	std::vector<RSXTransformConstant> m_fragment_constants;
 	std::vector<RSXTransformConstant> m_transform_constants;
 	
 	u32 m_shader_ctrl, m_cur_fragment_prog_num;
-	RSXFragmentProgram m_fragment_progs[m_fragment_count];
+	RSXFragmentProgram m_fragment_progs[rsx::limits::fragment_count];
 	RSXFragmentProgram* m_cur_fragment_prog;
-	RSXVertexProgram m_vertex_progs[m_vertex_count];
+	RSXVertexProgram m_vertex_progs[rsx::limits::vertex_count];
 	RSXVertexProgram* m_cur_vertex_prog;
 
 public:
@@ -650,7 +643,7 @@ protected:
 		m_clear_surface_mask = 0;
 		m_begin_end = 0;
 
-		for (uint i = 0; i < m_textures_count; ++i)
+		for (uint i = 0; i < rsx::limits::textures_count; ++i)
 		{
 			m_textures[i].init(i);
 		}
@@ -729,7 +722,7 @@ protected:
 
 	void LoadVertexData(u32 first, u32 count)
 	{
-		for (u32 i = 0; i < m_vertex_count; ++i)
+		for (u32 i = 0; i < rsx::limits::vertex_count; ++i)
 		{
 			if (!m_vertex_data[i].IsEnabled()) continue;
 

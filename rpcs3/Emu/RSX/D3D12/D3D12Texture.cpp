@@ -288,7 +288,7 @@ size_t D3D12GSRender::UploadTextures(ID3D12GraphicsCommandList *cmdlist)
 {
 	size_t usedTexture = 0;
 
-	for (u32 i = 0; i < m_textures_count; ++i)
+	for (u32 i = 0; i < rsx::limits::textures_count; ++i)
 	{
 		if (!m_textures[i].enabled()) continue;
 		size_t w = m_textures[i].width(), h = m_textures[i].height();

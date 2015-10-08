@@ -551,7 +551,7 @@ void RSXDebugger::GetTexture()
 	const GSRender& render = Emu.GetGSManager().GetRender();
 	m_list_texture->DeleteAllItems();
 
-	for(uint i=0; i<RSXThread::m_textures_count; ++i)
+	for(uint i=0; i<rsx::limits::textures_count; ++i)
 	{
 		if(render.m_textures[i].enabled())
 		{

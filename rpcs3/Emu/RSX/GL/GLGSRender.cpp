@@ -804,12 +804,12 @@ extern CellGcmContextData current_context;
 
 void GLGSRender::EnableVertexData(bool indexed_draw)
 {
-	static u32 offset_list[m_vertex_count];
+	static u32 offset_list[rsx::limits::vertex_count];
 	u32 cur_offset = 0;
 
 	const u32 data_offset = indexed_draw ? 0 : draw_array_first;
 
-	for (u32 i = 0; i < m_vertex_count; ++i)
+	for (u32 i = 0; i < rsx::limits::vertex_count; ++i)
 	{
 		if (0)
 		{
@@ -870,7 +870,7 @@ void GLGSRender::EnableVertexData(bool indexed_draw)
 	rFile dump("VertexDataArray.dump", rFile::write);
 #endif
 
-	for (u32 i = 0; i < m_vertex_count; ++i)
+	for (u32 i = 0; i < rsx::limits::vertex_count; ++i)
 	{
 		if (!m_vertex_data[i].IsEnabled()) continue;
 
@@ -1012,7 +1012,7 @@ void GLGSRender::EnableVertexData(bool indexed_draw)
 void GLGSRender::DisableVertexData()
 {
 	m_vdata.clear();
-	for (u32 i = 0; i < m_vertex_count; ++i)
+	for (u32 i = 0; i < rsx::limits::vertex_count; ++i)
 	{
 		if (!m_vertex_data[i].IsEnabled()) continue;
 		glDisableVertexAttribArray(i);
@@ -1910,7 +1910,7 @@ void GLGSRender::Draw()
 		LOG_WARNING(RSX, "m_indexed_array.m_count && draw_array_count");
 	}
 
-	for (u32 i = 0; i < m_textures_count; ++i)
+	for (u32 i = 0; i < rsx::limits::textures_count; ++i)
 	{
 		if (!m_textures[i].enabled()) continue;
 
@@ -1924,11 +1924,11 @@ void GLGSRender::Draw()
 		checkForGlError(fmt::format("m_gl_textures[%d].Init", i));
 	}
 
-	for (u32 i = 0; i < m_textures_count; ++i)
+	for (u32 i = 0; i < rsx::limits::vertex_textures_count; ++i)
 	{
 		if (!m_vertex_textures[i].enabled()) continue;
 
-		glActiveTexture(GL_TEXTURE0 + m_textures_count + i);
+		glActiveTexture(GL_TEXTURE0 + rsx::limits::textures_count + i);
 		checkForGlError("glActiveTexture");
 		m_gl_vertex_textures[i].Create();
 		m_gl_vertex_textures[i].Bind();

@@ -125,8 +125,8 @@ private:
 	GLFragmentProgram m_fragment_prog;
 	GLVertexProgram m_vertex_prog;
 
-	GLTexture m_gl_textures[m_textures_count];
-	GLTexture m_gl_vertex_textures[m_textures_count];
+	GLTexture m_gl_textures[rsx::limits::textures_count];
+	GLTexture m_gl_vertex_textures[rsx::limits::vertex_textures_count];
 
 	GLvao m_vao;
 	GLvbo m_vbo;

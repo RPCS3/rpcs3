@@ -394,7 +394,7 @@ void D3D12GSRender::Draw()
 	// Init vertex count
 	if (m_indexed_array.m_count)
 	{
-		for (u32 i = 0; i < m_vertex_count; ++i)
+		for (u32 i = 0; i < rsx::limits::vertex_count; ++i)
 		{
 			if (!m_vertex_data[i].IsEnabled()) continue;
 			if (!m_vertex_data[i].addr) continue;
@@ -405,7 +405,7 @@ void D3D12GSRender::Draw()
 	}
 	else
 	{
-		for (u32 i = 0; i < m_vertex_count; ++i)
+		for (u32 i = 0; i < rsx::limits::vertex_count; ++i)
 		{
 			if (!m_vertex_data[i].IsEnabled()) continue;
 			if (!m_vertex_data[i].addr) continue;

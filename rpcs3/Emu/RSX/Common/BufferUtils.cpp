@@ -15,7 +15,7 @@ bool overlaps(const std::pair<size_t, size_t> &range1, const std::pair<size_t, s
 std::vector<VertexBufferFormat> FormatVertexData(const RSXVertexData *m_vertex_data, size_t *vertex_data_size, size_t base_offset)
 {
 	std::vector<VertexBufferFormat> Result;
-	for (size_t i = 0; i < 32; ++i)
+	for (size_t i = 0; i < rsx::limits::vertex_count; ++i)
 	{
 		const RSXVertexData &vertexData = m_vertex_data[i];
 		if (!vertexData.IsEnabled()) continue;
