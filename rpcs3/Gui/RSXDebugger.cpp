@@ -501,7 +501,7 @@ void RSXDebugger::GetFlags()
 //	LIST_FLAGS_ADD("Depth test",         render.m_set_depth_test);
 	LIST_FLAGS_ADD("Dither",             render.m_set_dither);
 	LIST_FLAGS_ADD("Line smooth",        render.m_set_line_smooth);
-	LIST_FLAGS_ADD("Logic op",           render.m_set_logic_op);
+//	LIST_FLAGS_ADD("Logic op",           render.m_set_logic_op);
 	LIST_FLAGS_ADD("Poly smooth",        render.m_set_poly_smooth);
 	LIST_FLAGS_ADD("Poly offset fill",   render.m_set_poly_offset_fill);
 	LIST_FLAGS_ADD("Poly offset line",   render.m_set_poly_offset_line);
@@ -658,7 +658,7 @@ void RSXDebugger::SetFlags(wxListEvent& event)
 //	case 4:  render.m_set_depth_test		^= true; break;
 	case 5:  render.m_set_dither			^= true; break;
 	case 6:  render.m_set_line_smooth		^= true; break;
-	case 7:  render.m_set_logic_op			^= true; break;
+//	case 7:  render.m_set_logic_op			^= true; break;
 	case 8:  render.m_set_poly_smooth		^= true; break;
 	case 9:  render.m_set_poly_offset_fill		^= true; break;
 	case 10: render.m_set_poly_offset_line		^= true; break;

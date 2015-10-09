@@ -1666,7 +1666,7 @@ void GLGSRender::end()
 	Enable(m_set_alpha_test, GL_ALPHA_TEST);
 	Enable(m_set_blend || m_set_blend_mrt1 || m_set_blend_mrt2 || m_set_blend_mrt3, GL_BLEND);
 	Enable(m_set_scissor_horizontal && m_set_scissor_vertical, GL_SCISSOR_TEST);
-	Enable(m_set_logic_op, GL_LOGIC_OP);
+//	Enable(m_set_logic_op, GL_LOGIC_OP);
 	Enable(m_set_cull_face, GL_CULL_FACE);
 	Enable(m_set_dither, GL_DITHER);
 //	Enable(m_set_stencil_test, GL_STENCIL_TEST);
@@ -1724,9 +1724,9 @@ void GLGSRender::end()
 		checkForGlError("glPolygonOffset");
 	}
 
-	if (m_set_logic_op)
+//	if (m_set_logic_op)
 	{
-		glLogicOp(m_logic_op);
+//		glLogicOp(m_logic_op);
 		checkForGlError("glLogicOp");
 	}
 

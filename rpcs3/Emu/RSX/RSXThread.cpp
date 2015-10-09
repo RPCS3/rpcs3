@@ -1234,18 +1234,12 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 
 	// Logic Ops
 	case NV4097_SET_LOGIC_OP_ENABLE:
-	{
-		m_set_logic_op = ARGS(0) ? true : false;
 		notifyBlendStateChange();
 		break;
-	}
 
 	case NV4097_SET_LOGIC_OP:
-	{
-		m_logic_op = ARGS(0);
 		notifyBlendStateChange();
 		break;
-	}
 
 	// Dithering
 	case NV4097_SET_DITHER_ENABLE:

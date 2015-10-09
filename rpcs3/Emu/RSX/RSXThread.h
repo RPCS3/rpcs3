@@ -245,10 +245,7 @@ public:
 	bool m_set_polygon_stipple;
 	u32 m_polygon_stipple_pattern[32];
 
-	// Logic Ops
-	bool m_set_logic_op;
-	u32 m_logic_op;
-	
+
 	// Clearing
 	u32 m_clear_surface_mask;
 
@@ -435,7 +432,6 @@ protected:
 		m_set_blend_mrt1 = false;
 		m_set_blend_mrt2 = false;
 		m_set_blend_mrt3 = false;
-		m_set_logic_op = false;
 		m_set_cull_face = false;
 		m_set_dither = false;
 		m_set_scissor_horizontal = false;
@@ -467,7 +463,6 @@ protected:
 		m_cull_face = 0x0405; // GL_BACK
 		m_alpha_func = 0x0207; // GL_ALWAYS
 		m_alpha_ref = 0.0f;
-		m_logic_op = 0x1503; // GL_COPY
 		m_shade_mode = 0x1D01; // GL_SMOOTH
 
 		m_depth_bounds_min = 0.0;
@@ -561,7 +556,6 @@ protected:
 		m_set_specular = false;
 		m_set_line_stipple = false;
 		m_set_polygon_stipple = false;
-		m_set_logic_op = false;
 		m_set_surface_format = false;
 		m_set_surface_clip_horizontal = false;
 		m_set_surface_clip_vertical = false;

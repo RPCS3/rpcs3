@@ -473,7 +473,7 @@ void SetupRsxRenderingStates(vm::ptr<CellGcmContextData>& cntxt)
 	r.m_set_alpha_test = false;
 	r.m_set_blend = false;
 	r.m_set_blend_mrt1 = r.m_set_blend_mrt2 = r.m_set_blend_mrt3 = false;
-	r.m_set_logic_op = false;
+//	r.m_set_logic_op = false;
 	r.m_set_cull_face = false;
 	r.m_set_depth_bounds_test = false;
 	rsx::method_registers[NV4097_SET_DEPTH_TEST_ENABLE] = false;

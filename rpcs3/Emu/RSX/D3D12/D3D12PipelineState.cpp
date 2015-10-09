@@ -176,10 +176,10 @@ bool D3D12GSRender::LoadProgram()
 		}
 	}
 
-	if (m_set_logic_op)
+	if (rsx::method_registers[NV4097_SET_LOGIC_OP_ENABLE])
 	{
 		prop.Blend.RenderTarget[0].LogicOpEnable = true;
-		prop.Blend.RenderTarget[0].LogicOp = getLogicOp(m_logic_op);
+		prop.Blend.RenderTarget[0].LogicOp = getLogicOp(rsx::method_registers[NV4097_SET_LOGIC_OP]);
 	}
 
 	if (m_set_blend_color)
