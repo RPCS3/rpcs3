@@ -1407,10 +1407,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	}
 
 	case NV4097_SET_SURFACE_COLOR_TARGET:
-	{
-		m_surface_color_target = ARGS(0);
 		break;
-	}
 
 	case NV4097_SET_SURFACE_COLOR_AOFFSET:
 	{

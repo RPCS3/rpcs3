@@ -1290,7 +1290,7 @@ void GLGSRender::WriteColorBuffers()
 	glPixelStorei(GL_PACK_ROW_LENGTH, 0);
 	glPixelStorei(GL_PACK_ALIGNMENT, 4);
 
-	switch(m_surface_color_target)
+	switch(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET])
 	{
 	case CELL_GCM_SURFACE_TARGET_NONE:
 		return;
@@ -1516,7 +1516,7 @@ void GLGSRender::InitDrawBuffers()
 
 	static const GLenum draw_buffers[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3 };
 
-	switch (m_surface_color_target)
+	switch (u32 color_target = rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET])
 	{
 	case CELL_GCM_SURFACE_TARGET_NONE: break;
 
@@ -1557,7 +1557,7 @@ void GLGSRender::InitDrawBuffers()
 
 	default:
 	{
-		LOG_ERROR(RSX, "Bad surface color target: %d", m_surface_color_target);
+		LOG_ERROR(RSX, "Bad surface color target: %d", color_target);
 		break;
 	}
 		
@@ -1994,7 +1994,7 @@ void GLGSRender::flip(int buffer)
 		checkForGlError("glScissor");
 	}
 
-	switch (m_surface_color_target)
+	switch (rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET])
 	{
 	case CELL_GCM_SURFACE_TARGET_0:
 	case CELL_GCM_SURFACE_TARGET_1:

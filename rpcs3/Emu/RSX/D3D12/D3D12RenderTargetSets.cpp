@@ -82,7 +82,7 @@ void D3D12GSRender::PrepareRenderTargets(ID3D12GraphicsCommandList *copycmdlist)
 		clear_a / 255.0f
 	};
 
-	switch (m_surface_color_target)
+	switch (rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET])
 	{
 	case CELL_GCM_SURFACE_TARGET_0:
 	{

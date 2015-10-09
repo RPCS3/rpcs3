@@ -347,7 +347,7 @@ void D3D12GSRender::clear_surface(u32 arg)
 		};
 
 		size_t g_RTTIncrement = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-		switch (m_surface_color_target)
+		switch (u32 color_target = rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET])
 		{
 			case CELL_GCM_SURFACE_TARGET_NONE: break;
 
@@ -371,7 +371,7 @@ void D3D12GSRender::clear_surface(u32 arg)
 				getCurrentResourceStorage().m_commandList->ClearRenderTargetView(CD3DX12_CPU_DESCRIPTOR_HANDLE(m_rtts.m_renderTargetsDescriptorsHeap->GetCPUDescriptorHandleForHeapStart()).Offset(3, g_descriptorStrideRTV), clearColor, 0, nullptr);
 				break;
 			default:
-				LOG_ERROR(RSX, "Bad surface color target: %d", m_surface_color_target);
+				LOG_ERROR(RSX, "Bad surface color target: %d", color_target);
 		}
 	}
 
@@ -529,7 +529,7 @@ void D3D12GSRender::end()
 	m_timers.m_textureDuration += std::chrono::duration_cast<std::chrono::microseconds>(textureDurationEnd - textureDurationStart).count();
 
 	size_t numRTT;
-	switch (m_surface_color_target)
+	switch (u32 color_target = rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET])
 	{
 	case CELL_GCM_SURFACE_TARGET_NONE: break;
 	case CELL_GCM_SURFACE_TARGET_0:
@@ -546,7 +546,7 @@ void D3D12GSRender::end()
 		numRTT = 4;
 		break;
 	default:
-		LOG_ERROR(RSX, "Bad surface color target: %d", m_surface_color_target);
+		LOG_ERROR(RSX, "Bad surface color target: %d", color_target);
 	}
 
 	getCurrentResourceStorage().m_commandList->OMSetRenderTargets((UINT)numRTT, &m_rtts.m_renderTargetsDescriptorsHeap->GetCPUDescriptorHandleForHeapStart(), true,
@@ -644,7 +644,7 @@ void D3D12GSRender::flip(int buffer)
 	ID3D12Resource *resourceToFlip;
 	float viewport_w, viewport_h;
 
-	if (!isFlipSurfaceInLocalMemory(m_surface_color_target))
+	if (!isFlipSurfaceInLocalMemory(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET]))
 	{
 		ResourceStorage &storage = getCurrentResourceStorage();
 		assert(storage.m_RAMFramebuffer == nullptr);
@@ -727,7 +727,7 @@ void D3D12GSRender::flip(int buffer)
 	srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 	srvDesc.Texture2D.MipLevels = 1;
-	if (isFlipSurfaceInLocalMemory(m_surface_color_target))
+	if (isFlipSurfaceInLocalMemory(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET]))
 		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 	else
 		srvDesc.Shader4ComponentMapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(
@@ -768,7 +768,7 @@ void D3D12GSRender::flip(int buffer)
 
 	if (!Ini.GSOverlay.GetValue())
 		getCurrentResourceStorage().m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_backBuffer[m_swapChain->GetCurrentBackBufferIndex()].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
-	if (isFlipSurfaceInLocalMemory(m_surface_color_target) && m_rtts.m_currentlyBoundRenderTargets[0] != nullptr)
+	if (isFlipSurfaceInLocalMemory(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET]) && m_rtts.m_currentlyBoundRenderTargets[0] != nullptr)
 		getCurrentResourceStorage().m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_rtts.m_currentlyBoundRenderTargets[0], D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET));
 	ThrowIfFailed(getCurrentResourceStorage().m_commandList->Close());
 	m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**)getCurrentResourceStorage().m_commandList.GetAddressOf());
@@ -1014,7 +1014,7 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 	ID3D12Resource *rtt0, *rtt1, *rtt2, *rtt3;
 	if (Ini.GSDumpColorBuffers.GetValue())
 	{
-		switch (m_surface_color_target)
+		switch (rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET])
 		{
 		case CELL_GCM_SURFACE_TARGET_NONE:
 			break;
@@ -1099,7 +1099,7 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 
 	if (Ini.GSDumpColorBuffers.GetValue())
 	{
-		switch (m_surface_color_target)
+		switch (rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET])
 		{
 		case CELL_GCM_SURFACE_TARGET_NONE:
 			break;

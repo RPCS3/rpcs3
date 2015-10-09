@@ -213,7 +213,7 @@ bool D3D12GSRender::LoadProgram()
 		break;
 	}
 
-	switch (m_surface_color_target)
+	switch (u32 color_target = rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET])
 	{
 	case CELL_GCM_SURFACE_TARGET_0:
 	case CELL_GCM_SURFACE_TARGET_1:
@@ -229,7 +229,7 @@ bool D3D12GSRender::LoadProgram()
 		prop.numMRT = 4;
 		break;
 	default:
-		LOG_ERROR(RSX, "Bad surface color target: %d", m_surface_color_target);
+		LOG_ERROR(RSX, "Bad surface color target: %d", color_target);
 	}
 
 	prop.DepthStencil.DepthEnable = !!(rsx::method_registers[NV4097_SET_DEPTH_TEST_ENABLE]);

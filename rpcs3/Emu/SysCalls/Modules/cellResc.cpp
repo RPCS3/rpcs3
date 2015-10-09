@@ -502,7 +502,7 @@ void SetupRsxRenderingStates(vm::ptr<CellGcmContextData>& cntxt)
 	r.m_height = s_rescInternalInstance->m_dstHeight;
 
 	r.m_surface_depth_format = 2;
-	r.m_surface_color_target = 1;
+	rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET] = 1;
 
 	if (IsPalInterpolate()) 
 	{
@@ -541,7 +541,7 @@ void SetupSurfaces(vm::ptr<CellGcmContextData>& cntxt)
 	r.m_surface_type = CELL_GCM_SURFACE_PITCH;
 	r.m_surface_antialias = CELL_GCM_SURFACE_CENTER_1;
 	r.m_surface_color_format = (u8)s_rescInternalInstance->m_pRescDsts->format;
-	r.m_surface_color_target = (!isMrt) ? CELL_GCM_SURFACE_TARGET_0 : CELL_GCM_SURFACE_TARGET_MRT1;
+	rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET] = (!isMrt) ? CELL_GCM_SURFACE_TARGET_0 : CELL_GCM_SURFACE_TARGET_MRT1;
 	//surface.colorLocation[0] = CELL_GCM_LOCATION_LOCAL;
 	r.m_surface_offset_a = dstOffset0;
 	r.m_surface_pitch_a = s_rescInternalInstance->m_dstPitch;
