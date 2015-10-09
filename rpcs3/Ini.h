@@ -111,8 +111,7 @@ public:
 	IniEntry<bool> GSLogPrograms;
 	IniEntry<bool> GSDumpColorBuffers;
 	IniEntry<bool> GSDumpDepthBuffer;
-	IniEntry<bool> GSReadColorBuffers;
-	IniEntry<bool> GSReadDepthBuffer;
+	IniEntry<bool> GSReadColorBuffer;
 	IniEntry<bool> GSVSyncEnable;
 	IniEntry<bool> GS3DTV;
 	IniEntry<bool> GSDebugOutputEnable;
@@ -203,17 +202,16 @@ public:
 		GSLogPrograms.Init("GS_LogPrograms", path);
 		GSDumpColorBuffers.Init("GS_DumpColorBuffers", path);
 		GSDumpDepthBuffer.Init("GS_DumpDepthBuffer", path);
-		GSReadColorBuffers.Init("GS_ReadColorBuffer", path);
-		GSReadDepthBuffer.Init("GS_ReadDepthBuffer", path);
+		GSReadColorBuffer.Init("GS_GSReadColorBuffer", path);
 		GSVSyncEnable.Init("GS_VSyncEnable", path);
 		GSDebugOutputEnable.Init("GS_DebugOutputEnable", path);
 		GS3DTV.Init("GS_3DTV", path);
 		GSOverlay.Init("GS_Overlay", path);
 
 		// Audio
-		AudioOutMode.Init("Audio_OutMode", path);
-		AudioDumpToFile.Init("Audio_DumpToFile", path);
-		AudioConvertToU16.Init("Audio_ConvertToU16", path);
+		AudioOutMode.Init("Audio_AudioOutMode", path);
+		AudioDumpToFile.Init("Audio_AudioDumpToFile", path);
+		AudioConvertToU16.Init("Audio_AudioConvertToU16", path);
 
 		// Camera
 		Camera.Init("Camera", path);
@@ -291,8 +289,7 @@ public:
 		GSLogPrograms.Load(false);
 		GSDumpColorBuffers.Load(false);
 		GSDumpDepthBuffer.Load(false);
-		GSReadColorBuffers.Load(false);
-		GSReadDepthBuffer.Load(false);
+		GSReadColorBuffer.Load(false);
 		GSVSyncEnable.Load(false);
 		GSDebugOutputEnable.Load(false);
 		GS3DTV.Load(false);
@@ -379,8 +376,7 @@ public:
 		GSLogPrograms.Save();
 		GSDumpColorBuffers.Save();
 		GSDumpDepthBuffer.Save();
-		GSReadColorBuffers.Save();
-		GSReadDepthBuffer.Save();
+		GSReadColorBuffer.Save();
 		GSVSyncEnable.Save();
 		GSDebugOutputEnable.Save();
 		GS3DTV.Save();

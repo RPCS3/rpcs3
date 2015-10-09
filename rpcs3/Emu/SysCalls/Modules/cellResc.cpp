@@ -467,7 +467,7 @@ void InitMembers()
 void SetupRsxRenderingStates(vm::ptr<CellGcmContextData>& cntxt)
 {
 	//TODO: use cntxt
-	/*GSRender& r = Emu.GetGSManager().GetRender();
+	GSRender& r = Emu.GetGSManager().GetRender();
 	r.m_set_color_mask = true; r.m_color_mask_a = r.m_color_mask_r = r.m_color_mask_g = r.m_color_mask_b = true;
 	r.m_set_depth_mask = true; r.m_depth_mask = 0;
 	r.m_set_alpha_test = false;
@@ -502,7 +502,7 @@ void SetupRsxRenderingStates(vm::ptr<CellGcmContextData>& cntxt)
 	r.m_height = s_rescInternalInstance->m_dstHeight;
 
 	r.m_surface_depth_format = 2;
-	r.m_surface_color_target = 1;*/
+	r.m_surface_color_target = 1;
 
 	if (IsPalInterpolate()) 
 	{
@@ -536,32 +536,32 @@ void SetupSurfaces(vm::ptr<CellGcmContextData>& cntxt)
 		dstOffset1 = s_rescInternalInstance->m_dstOffsets[s_rescInternalInstance->m_bufIdPalMidNow];
 	}
 
-	//GSRender& r = Emu.GetGSManager().GetRender();
+	GSRender& r = Emu.GetGSManager().GetRender();
 
-	//r.m_surface_type = CELL_GCM_SURFACE_PITCH;
-	//r.m_surface_antialias = CELL_GCM_SURFACE_CENTER_1;
-	//r.m_surface_color_format = (u8)s_rescInternalInstance->m_pRescDsts->format;
-	//r.m_surface_color_target = (!isMrt) ? CELL_GCM_SURFACE_TARGET_0 : CELL_GCM_SURFACE_TARGET_MRT1;
-	////surface.colorLocation[0] = CELL_GCM_LOCATION_LOCAL;
-	//r.m_surface_offset_a = dstOffset0;
-	//r.m_surface_pitch_a = s_rescInternalInstance->m_dstPitch;
-	////surface.colorLocation[1] = CELL_GCM_LOCATION_LOCAL;
-	//r.m_surface_offset_b = (!isMrt) ? 0 : dstOffset1;
-	//r.m_surface_pitch_b = (!isMrt) ? 64 : s_rescInternalInstance->m_dstPitch;
-	////surface.colorLocation[2] = CELL_GCM_LOCATION_LOCAL;
-	//r.m_surface_offset_c = 0;
-	//r.m_surface_pitch_c = 64;
-	////surface.colorLocation[3] = CELL_GCM_LOCATION_LOCAL;
-	//r.m_surface_offset_d = 0;
-	//r.m_surface_pitch_d = 64;
-	//r.m_surface_depth_format = CELL_GCM_SURFACE_Z24S8;
-	////surface.depthLocation = CELL_GCM_LOCATION_LOCAL;
-	//r.m_surface_offset_z = 0;
-	//r.m_surface_pitch_z = 64;
-	//r.m_surface_width = s_rescInternalInstance->m_dstWidth;
-	//r.m_surface_height = s_rescInternalInstance->m_dstHeight;
-	//r.m_surface_clip_x = 0;
-	//r.m_surface_clip_y = 0;
+	r.m_surface_type = CELL_GCM_SURFACE_PITCH;
+	r.m_surface_antialias = CELL_GCM_SURFACE_CENTER_1;
+	r.m_surface_color_format = (u8)s_rescInternalInstance->m_pRescDsts->format;
+	r.m_surface_color_target = (!isMrt) ? CELL_GCM_SURFACE_TARGET_0 : CELL_GCM_SURFACE_TARGET_MRT1;
+	//surface.colorLocation[0] = CELL_GCM_LOCATION_LOCAL;
+	r.m_surface_offset_a = dstOffset0;
+	r.m_surface_pitch_a = s_rescInternalInstance->m_dstPitch;
+	//surface.colorLocation[1] = CELL_GCM_LOCATION_LOCAL;
+	r.m_surface_offset_b = (!isMrt) ? 0 : dstOffset1;
+	r.m_surface_pitch_b = (!isMrt) ? 64 : s_rescInternalInstance->m_dstPitch;
+	//surface.colorLocation[2] = CELL_GCM_LOCATION_LOCAL;
+	r.m_surface_offset_c = 0;
+	r.m_surface_pitch_c = 64;
+	//surface.colorLocation[3] = CELL_GCM_LOCATION_LOCAL;
+	r.m_surface_offset_d = 0;
+	r.m_surface_pitch_d = 64;
+	r.m_surface_depth_format = CELL_GCM_SURFACE_Z24S8;
+	//surface.depthLocation = CELL_GCM_LOCATION_LOCAL;
+	r.m_surface_offset_z = 0;
+	r.m_surface_pitch_z = 64;
+	r.m_surface_width = s_rescInternalInstance->m_dstWidth;
+	r.m_surface_height = s_rescInternalInstance->m_dstHeight;
+	r.m_surface_clip_x = 0;
+	r.m_surface_clip_y = 0;
 }
 
 // Module<> Functions
@@ -1075,21 +1075,21 @@ void cellRescSetFlipHandler(vm::ptr<void(u32)> handler)
 {
 	cellResc.Warning("cellRescSetFlipHandler(handler=*0x%x)", handler);
 
-	Emu.GetGSManager().GetRender().flip_handler = handler;
+	Emu.GetGSManager().GetRender().m_flip_handler = handler;
 }
 
 void cellRescResetFlipStatus()
 {
 	cellResc.Log("cellRescResetFlipStatus()");
 
-	Emu.GetGSManager().GetRender().flip_status = 1;
+	Emu.GetGSManager().GetRender().m_flip_status = 1;
 }
 
 s32 cellRescGetFlipStatus()
 {
 	cellResc.Log("cellRescGetFlipStatus()");
 
-	return Emu.GetGSManager().GetRender().flip_status;
+	return Emu.GetGSManager().GetRender().m_flip_status;
 }
 
 s32 cellRescGetRegisterCount()
@@ -1102,7 +1102,7 @@ u64 cellRescGetLastFlipTime()
 {
 	cellResc.Log("cellRescGetLastFlipTime()");
 
-	return Emu.GetGSManager().GetRender().last_flip_time;
+	return Emu.GetGSManager().GetRender().m_last_flip_time;
 }
 
 s32 cellRescSetRegisterCount()
@@ -1115,7 +1115,7 @@ void cellRescSetVBlankHandler(vm::ptr<void(u32)> handler)
 {
 	cellResc.Warning("cellRescSetVBlankHandler(handler=*0x%x)", handler);
 
-	Emu.GetGSManager().GetRender().vblank_handler = handler;
+	Emu.GetGSManager().GetRender().m_vblank_handler = handler;
 }
 
 u16 FloatToHalf(float val)
@@ -1142,7 +1142,7 @@ u16 FloatToHalf(float val)
 	return ((s >> 16) & 0x8000) | ((e << 10) & 0x7c00) | ((m >> 13) & 0x03ff);
 }
 
-static void blackman(float (&window)[4])
+static void blackman(float window[])
 {
 	const float x0 = ((1.f * 2.f*PI) / 5.f) - PI;
 	const float x1 = ((2.f * 2.f*PI) / 5.f) - PI;

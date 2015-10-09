@@ -22,7 +22,7 @@ std::string GLVertexDecompilerThread::compareFunction(COMPARE f, const std::stri
 
 void GLVertexDecompilerThread::insertHeader(std::stringstream &OS)
 {
-	OS << "#version 140" << std::endl << std::endl;
+	OS << "#version 420" << std::endl << std::endl;
 	OS << "uniform mat4 scaleOffsetMat = mat4(1.0);" << std::endl;
 }
 
@@ -31,7 +31,7 @@ void GLVertexDecompilerThread::insertInputs(std::stringstream & OS, const std::v
 	for (const ParamType PT : inputs)
 	{
 		for (const ParamItem &PI : PT.items)
-			OS << /*"layout(location = " << PI.location << ") "*/  "in " << PT.type << " " << PI.name << ";" << std::endl;
+			OS << "layout(location = " << PI.location << ") in " << PT.type << " " << PI.name << ";" << std::endl;
 	}
 }
 

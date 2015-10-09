@@ -423,27 +423,27 @@ void MainFrame::ConfigLLEModules(wxCommandEvent& event)
 
 void MainFrame::OpenELFCompiler(wxCommandEvent& WXUNUSED(event))
 {
-	(new CompilerELF(this))->Show();
+	(new CompilerELF(this)) -> Show();
 }
 
 void MainFrame::OpenKernelExplorer(wxCommandEvent& WXUNUSED(event))
 {
-	(new KernelExplorer(this))->Show();
+	(new KernelExplorer(this)) -> Show();
 }
 
 void MainFrame::OpenMemoryViewer(wxCommandEvent& WXUNUSED(event))
 {
-	(new MemoryViewerPanel(this))->Show();
+	(new MemoryViewerPanel(this)) -> Show();
 }
 
 void MainFrame::OpenRSXDebugger(wxCommandEvent& WXUNUSED(event))
 {
-	(new RSXDebugger(this))->Show();
+	(new RSXDebugger(this)) -> Show();
 }
 
 void MainFrame::OpenStringSearch(wxCommandEvent& WXUNUSED(event))
 {
-	(new MemoryStringSearcher(this))->Show();
+	(new MemoryStringSearcher(this)) -> Show();
 }
 
 void MainFrame::OpenCgDisasm(wxCommandEvent& WXUNUSED(event))

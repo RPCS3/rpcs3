@@ -1,101 +1,202 @@
 #pragma once
 #include "Emu/RSX/GSRender.h"
 #include "GLBuffers.h"
-#include "gl_helpers.h"
 
 #define RSX_DEBUG 1
+
 
 #include "GLProgramBuffer.h"
 
 #pragma comment(lib, "opengl32.lib")
 
+#if RSX_DEBUG
+#define checkForGlError(sit) if((g_last_gl_error = glGetError()) != GL_NO_ERROR) printGlError(g_last_gl_error, sit)
+#else
+#define checkForGlError(sit)
+#endif
+
+extern GLenum g_last_gl_error;
+void printGlError(GLenum err, const char* situation);
+void printGlError(GLenum err, const std::string& situation);
+
+
 class GLTexture
 {
-	u32 m_id = 0;
+	u32 m_id;
 
 public:
-	void create();
+	GLTexture() : m_id(0)
+	{
+	}
 
-	int gl_wrap(int wrap);
+	void Create();
 
-	float max_aniso(int aniso);
+	int GetGlWrap(int wrap);
 
-	inline static u8 convert_4_to_8(u8 v)
+	float GetMaxAniso(int aniso);
+
+	inline static u8 Convert4To8(u8 v)
 	{
 		// Swizzle bits: 00001234 -> 12341234
 		return (v << 4) | (v);
 	}
 
-	inline static u8 convert_5_to_8(u8 v)
+	inline static u8 Convert5To8(u8 v)
 	{
 		// Swizzle bits: 00012345 -> 12345123
 		return (v << 3) | (v >> 2);
 	}
 
-	inline static u8 convert_6_to_8(u8 v)
+	inline static u8 Convert6To8(u8 v)
 	{
 		// Swizzle bits: 00123456 -> 12345612
 		return (v << 2) | (v >> 4);
 	}
 
-	void init(rsx::texture& tex);
-	void save(rsx::texture& tex, const std::string& name);
-	void save(rsx::texture& tex);
-	void bind();
-	void unbind();
-	void remove();
+	void Init(RSXTexture& tex);
 
-	u32 id() const;
+	void Save(RSXTexture& tex, const std::string& name);
+
+	void Save(RSXTexture& tex);
+
+	void Bind();
+
+	void Unbind();
+
+	void Delete();
 };
 
-class GLGSRender : public GSRender
+class PostDrawObj
+{
+protected:
+	GLFragmentProgram m_fp;
+	GLVertexProgram m_vp;
+	GLProgram m_program;
+	GLfbo m_fbo;
+	GLrbo m_rbo;
+
+public:
+	virtual void Draw();
+
+	virtual void InitializeShaders() = 0;
+	virtual void InitializeLocations() = 0;
+
+	void Initialize();
+};
+
+class DrawCursorObj : public PostDrawObj
+{
+	u32 m_tex_id;
+	void* m_pixels;
+	u32 m_width, m_height;
+	double m_pos_x, m_pos_y, m_pos_z;
+	bool m_update_texture, m_update_pos;
+
+public:
+	DrawCursorObj() : PostDrawObj()
+		, m_tex_id(0)
+		, m_update_texture(false)
+		, m_update_pos(false)
+	{
+	}
+
+	virtual void Draw();
+
+	virtual void InitializeShaders();
+
+	void SetTexture(void* pixels, int width, int height);
+
+	void SetPosition(float x, float y, float z = 0.0f);
+
+	void InitializeLocations();
+};
+
+class GSFrameBase
+{
+public:
+	GSFrameBase() {}
+	GSFrameBase(const GSFrameBase&) = delete;
+	virtual void Close() = 0;
+
+	virtual bool IsShown() = 0;
+	virtual void Hide() = 0;
+	virtual void Show() = 0;
+
+	virtual void* GetNewContext() = 0;
+	virtual void SetCurrent(void* ctx) = 0;
+	virtual void DeleteContext(void* ctx) = 0;
+	virtual void Flip(void* ctx) = 0;
+
+};
+
+class GLGSRender final : public GSRender
 {
 private:
+	std::vector<u8> m_vdata;
+	std::vector<PostDrawObj> m_post_draw_objs;
+
+	GLProgram m_program;
+	int m_fp_buf_num;
+	int m_vp_buf_num;
+	GLProgramBuffer m_prog_buffer;
+
 	GLFragmentProgram m_fragment_prog;
 	GLVertexProgram m_vertex_prog;
 
-	GLTexture m_gl_textures[rsx::limits::textures_count];
-	GLTexture m_gl_vertex_textures[rsx::limits::vertex_textures_count];
+	GLTexture m_gl_textures[m_textures_count];
+	GLTexture m_gl_vertex_textures[m_textures_count];
 
-	//TODO: program cache
-	gl::glsl::program m_program;
+	GLvao m_vao;
+	GLvbo m_vbo;
+	GLrbo m_rbo;
+	GLfbo m_fbo;
 
-	rsx::surface_info m_surface;
-
-public:
-	gl::fbo draw_fbo;
-	gl::buffers clear_surface_buffers = gl::buffers::none;
-
-private:
-	GLProgramBuffer m_prog_buffer;
-
-	gl::texture m_draw_tex_color[rsx::limits::color_buffers_count];
-	gl::texture m_draw_tex_depth_stencil;
-
-	//buffer
-	gl::fbo m_flip_fbo;
-	gl::texture m_flip_tex_color;
+	void* m_context;
 
 public:
+	GSFrameBase* m_frame;
+	u32 m_draw_frames;
+	u32 m_skip_frames;
+	bool is_intel_vendor;
+	
 	GLGSRender();
+	virtual ~GLGSRender() override;
 
 private:
-	static u32 enable(u32 enable, u32 cap);
-	static u32 enable(u32 enable, u32 cap, u32 index);
+	void EnableVertexData(bool indexed_draw = false);
+	void DisableVertexData();
+	void InitVertexData();
+	void InitFragmentData();
 
-public:
-	bool load_program();
-	void init_buffers();
-	void read_buffers();
-	void write_buffers();
+	void Enable(bool enable, const u32 cap);
+	virtual void Close() override;
+	bool LoadProgram();
+	void WriteBuffers();
+	void WriteDepthBuffer();
+	void WriteColorBuffers();
+	void WriteColorBufferA();
+	void WriteColorBufferB();
+	void WriteColorBufferC();
+	void WriteColorBufferD();
+
+	void DrawObjects();
+	void InitDrawBuffers();
 
 protected:
-	void begin() override;
-	void end() override;
+	virtual void OnInit() override;
+	virtual void OnInitThread() override;
+	virtual void OnExitThread() override;
+	virtual void OnReset() override;
+	virtual void Clear(u32 cmd) override;
+	virtual void Draw() override;
+	virtual void Flip() override;
 
-	void oninit_thread() override;
-	void onexit_thread() override;
-	bool domethod(u32 id, u32 arg) override;
-	void flip(int buffer) override;
-	u64 timestamp() const override;
+	virtual void semaphorePGRAPHTextureReadRelease(u32 offset, u32 value) override;
+	virtual void semaphorePGRAPHBackendRelease(u32 offset, u32 value) override;
+	virtual void semaphorePFIFOAcquire(u32 offset, u32 value) override;
+
+	virtual void notifyProgramChange() override {}
+	virtual void notifyBlendStateChange() override {}
+	virtual void notifyDepthStencilStateChange() override {}
+	virtual void notifyRasterizerStateChange() override {}
 };

@@ -25,10 +25,7 @@ typedef BOOL (WINAPI* PFNWGLSWAPINTERVALEXTPROC) (int interval);
 #include <GL/glxext.h>
 #endif
 
-namespace gl
-{
-	void init();
-}
+void InitProcTable();
 
 struct OpenGL
 {

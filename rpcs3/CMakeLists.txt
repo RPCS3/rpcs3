@@ -107,7 +107,6 @@ ${LLVM_INCLUDE_DIRS}
 "${RPCS3_SRC_DIR}/Crypto"
 "${RPCS3_SRC_DIR}/.."
 "${RPCS3_SRC_DIR}/../asmjit/src/asmjit"
-"${RPCS3_SRC_DIR}/../glm"
 )
 if(WIN32)
 	include_directories(BEFORE "${RPCS3_SRC_DIR}/../minidx9/Include")

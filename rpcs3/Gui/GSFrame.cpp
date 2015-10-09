@@ -3,21 +3,32 @@
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules/cellVideoOut.h"
 #include "rpcs3.h"
-#include "Utilities/Timer.h"
-
-#ifndef _WIN32
-#include "frame_icon.xpm"
-#endif
 
 BEGIN_EVENT_TABLE(GSFrame, wxFrame)
 	EVT_PAINT(GSFrame::OnPaint)
 	EVT_SIZE(GSFrame::OnSize)
 END_EVENT_TABLE()
 
-GSFrame::GSFrame(const wxString& title) : wxFrame(nullptr, wxID_ANY, "GSFrame[" + title + "]")
+wxSize AspectRatio(wxSize rs, const wxSize as)
 {
-	SetIcon(wxICON(frame_icon));
+	const double aq = (double)as.x / as.y;
+	const double rq = (double)rs.x / rs.y;
+	const double q = aq / rq;
 
+	if (q > 1.0)
+	{
+		rs.y /= q;
+	}
+	else if (q < 1.0)
+	{
+		rs.x *= q;
+	}
+
+	return rs;
+}
+
+GSFrame::GSFrame(wxWindow* parent, const wxString& title) : wxFrame(parent, wxID_ANY, title)
+{
 	CellVideoOutResolution res = ResolutionTable[ResolutionIdToNum(Ini.GSResolution.GetValue())];
 	SetClientSize(res.width, res.height);
 	wxGetApp().Bind(wxEVT_KEY_DOWN, &GSFrame::OnKeyDown, this);
@@ -34,6 +45,19 @@ void GSFrame::OnClose(wxCloseEvent& event)
 	Emu.Stop();
 }
 
+/*
+void GSFrame::OnSize(wxSizeEvent&)
+{
+const wxSize client = GetClientSize();
+const wxSize viewport = AspectRatio(client, m_size);
+
+const int x = (client.GetX() - viewport.GetX()) / 2;
+const int y = (client.GetY() - viewport.GetY()) / 2;
+
+SetViewport(wxPoint(x, y), viewport);
+}
+*/
+
 void GSFrame::OnKeyDown(wxKeyEvent& event)
 {
 	switch (event.GetKeyCode())
@@ -49,72 +73,13 @@ void GSFrame::OnFullScreen()
 	ShowFullScreen(!IsFullScreen());
 }
 
-void GSFrame::close()
+
+/*
+void GSFrame::SetSize(int width, int height)
 {
-	wxFrame::Close();
+m_size.SetWidth(width);
+m_size.SetHeight(height);
+//wxFrame::SetSize(width, height);
+OnSize(wxSizeEvent());
 }
-
-bool GSFrame::shown()
-{
-	return wxFrame::IsShown();
-}
-
-void GSFrame::hide()
-{
-	wxFrame::Hide();
-}
-
-void GSFrame::show()
-{
-	wxFrame::Show();
-}
-
-void* GSFrame::handle() const
-{
-	return GetHandle();
-}
-
-void* GSFrame::make_context()
-{
-	return nullptr;
-}
-
-void GSFrame::set_current(draw_context_t ctx)
-{
-}
-
-void GSFrame::delete_context(void* ctx)
-{
-}
-
-size2i GSFrame::client_size()
-{
-	wxSize size = GetClientSize();
-	return{ size.GetWidth(), size.GetHeight() };
-}
-
-void GSFrame::flip(draw_context_t)
-{
-	++m_frames;
-
-	static Timer fps_t;
-
-	if (fps_t.GetElapsedTimeInSec() >= 0.5)
-	{
-		std::string title = fmt::format("FPS: %.2f", (double)m_frames / fps_t.GetElapsedTimeInSec());
-
-		if (!m_title_message.empty())
-			title += " | " + m_title_message;
-
-		if (!Emu.GetTitle().empty())
-			title += " | " + Emu.GetTitle();
-
-		if (!Emu.GetTitleID().empty())
-			title += " | [" + Emu.GetTitleID() + "]";
-
-		// can freeze on exit
-		SetTitle(wxString(title.c_str(), wxConvUTF8));
-		m_frames = 0;
-		fps_t.Start();
-	}
-}
+*/

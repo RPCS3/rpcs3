@@ -41,6 +41,28 @@
  * are not currently correctly signaled which leads to deadlock.
  */
 
+class GSFrameBase2
+{
+public:
+	GSFrameBase2() {}
+	GSFrameBase2(const GSFrameBase2&) = delete;
+	virtual void Close() = 0;
+
+	virtual bool IsShown() = 0;
+	virtual void Hide() = 0;
+	virtual void Show() = 0;
+
+	virtual void* GetNewContext() = 0;
+	virtual void SetCurrent(void* ctx) = 0;
+	virtual void DeleteContext(void* ctx) = 0;
+	virtual void Flip(void* ctx) = 0;
+	virtual HWND getHandle() const = 0;
+};
+
+typedef GSFrameBase2*(*GetGSFrameCb2)();
+
+void SetGetD3DGSFrameCallback(GetGSFrameCb2 value);
+
 template<typename T>
 struct InitHeap
 {
@@ -448,26 +470,28 @@ private:
 	u32 m_previous_address_d;
 	u32 m_previous_address_z;
 public:
+	GSFrameBase2 *m_frame;
 	u32 m_draw_frames;
 	u32 m_skip_frames;
 
-	std::unordered_map<size_t, color4f> m_vertexConstants;
+	std::unordered_map<size_t, RSXTransformConstant> m_vertexConstants;
 
 	D3D12GSRender();
 	virtual ~D3D12GSRender();
 
-	void semaphorePGRAPHTextureReadRelease(u32 offset, u32 value);
-	void semaphorePGRAPHBackendRelease(u32 offset, u32 value);
-	void semaphorePFIFOAcquire(u32 offset, u32 value);
-	void notifyProgramChange();
-	void notifyBlendStateChange();
-	void notifyDepthStencilStateChange();
-	void notifyRasterizerStateChange();
+	virtual void semaphorePGRAPHTextureReadRelease(u32 offset, u32 value) override;
+	virtual void semaphorePGRAPHBackendRelease(u32 offset, u32 value) override;
+	virtual void semaphorePFIFOAcquire(u32 offset, u32 value) override;
+	virtual void notifyProgramChange() override;
+	virtual void notifyBlendStateChange() override;
+	virtual void notifyDepthStencilStateChange() override;
+	virtual void notifyRasterizerStateChange() override;
 
 private:
 	void InitD2DStructures();
 	void ReleaseD2DStructures();
 	ID3D12Resource *writeColorBuffer(ID3D12Resource *RTT, ID3D12GraphicsCommandList *cmdlist);
+	virtual void Close() override;
 
 	bool LoadProgram();
 
@@ -509,19 +533,14 @@ private:
 	 */
 	void renderOverlay();
 
-	void clear_surface(u32 arg);
-
 protected:
-	void begin() override;
-	void end() override;
-
-	void oninit_thread() override;
-	void onexit_thread() override;
-	bool domethod(u32 id, u32 arg) override;
-	void flip(int buffer) override;
-	
-	//TODO
-	//u64 timestamp() const override;
+	virtual void OnInit() override;
+	virtual void OnInitThread() override;
+	virtual void OnExitThread() override;
+	virtual void OnReset() override;
+	virtual void Clear(u32 cmd) override;
+	virtual void Draw() override;
+	virtual void Flip() override;
 };
 
 #endif

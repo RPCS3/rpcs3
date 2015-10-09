@@ -1,15 +1,17 @@
 #pragma once
-#include "Emu/RSX/GL/GLGSRender.h"
-#include "Gui/GSFrame.h"
-#include "wx/glcanvas.h"
 
-struct GLGSFrame : public GSFrame, public GSFrameBase
+#if defined(DX12_SUPPORT)
+#include "Emu/RSX/D3D12/D3D12GSRender.h"
+#include "Gui/GSFrame.h"
+#include "wx/window.h"
+
+struct D3DGSFrame : public GSFrame, public GSFrameBase2
 {
-	wxGLCanvas* canvas;
+	wxWindow* canvas;
 	u32 m_frames;
 
-	GLGSFrame();
-	~GLGSFrame();
+	D3DGSFrame();
+	~D3DGSFrame();
 
 	virtual void Close() override;
 
@@ -22,10 +24,13 @@ struct GLGSFrame : public GSFrame, public GSFrameBase
 	virtual void DeleteContext(void* ctx) override;
 	virtual void Flip(void* context) override;
 
-	wxGLCanvas* GetCanvas() const { return canvas; }
+	wxWindow* GetCanvas() const { return canvas; }
 
 	virtual void SetViewport(int x, int y, u32 w, u32 h) override;
+	virtual HWND getHandle() const override;
 
 private:
 	virtual void OnSize(wxSizeEvent& event);
 };
+
+#endif

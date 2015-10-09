@@ -1,131 +1,122 @@
 #pragma once
-#include "Utilities/types.h"
 
-namespace rsx
+class RSXTexture
 {
-	class texture
-	{
-	protected:
-		u8 m_index;
+protected:
+	u8 m_index;
 
-	public:
-		//initialize texture registers with default values
-		void init(u8 index);
+public:
+	u32 m_pitch;
+	u16 m_depth;
 
-		// Offset
-		u32 offset() const;
+public:
+	RSXTexture();
+	RSXTexture(u8 index);
+	virtual void Init();
 
-		// Format
-		u8   location() const;
-		bool cubemap() const;
-		u8   border_type() const;
-		u8   dimension() const;
-		u8   format() const;
-		u16  mipmap() const;
+	// Offset
+	virtual u32 GetOffset() const;
 
-		// Address
-		u8 wrap_s() const;
-		u8 wrap_t() const;
-		u8 wrap_r() const;
-		u8 unsigned_remap() const;
-		u8 zfunc() const;
-		u8 gamma() const;
-		u8 aniso_bias() const;
-		u8 signed_remap() const;
+	// Format
+	virtual u8   GetLocation() const;
+	virtual bool isCubemap() const;
+	virtual u8   GetBorderType() const;
+	virtual u8   GetDimension() const;
+	virtual u8   GetFormat() const;
+	virtual u16  GetMipmap() const;
 
-		// Control0
-		bool enabled() const;
-		u16  min_lod() const;
-		u16  max_lod() const;
-		u8   max_aniso() const;
-		bool alpha_kill_enabled() const;
+	// Address
+	virtual u8 GetWrapS() const;
+	virtual u8 GetWrapT() const;
+	virtual u8 GetWrapR() const;
+	virtual u8 GetUnsignedRemap() const;
+	virtual u8 GetZfunc() const;
+	virtual u8 GetGamma() const;
+	virtual u8 GetAnisoBias() const;
+	virtual u8 GetSignedRemap() const;
 
-		// Control1
-		u32 remap() const;
+	// Control0
+	virtual bool IsEnabled() const;
+	virtual u16  GetMinLOD() const;
+	virtual u16  GetMaxLOD() const;
+	virtual u8   GetMaxAniso() const;
+	virtual bool IsAlphaKillEnabled() const;
 
-		// Filter
-		u16 bias() const;
-		u8  min_filter() const;
-		u8  mag_filter() const;
-		u8  convolution_filter() const;
-		bool a_signed() const;
-		bool r_signed() const;
-		bool g_signed() const;
-		bool b_signed() const;
+	// Control1
+	virtual u32 GetRemap() const;
 
-		// Image Rect
-		u16 width() const;
-		u16 height() const;
+	// Filter
+	virtual u16 GetBias() const;
+	virtual u8  GetMinFilter() const;
+	virtual u8  GetMagFilter() const;
+	virtual u8  GetConvolutionFilter() const;
+	virtual bool isASigned() const;
+	virtual bool isRSigned() const;
+	virtual bool isGSigned() const;
+	virtual bool isBSigned() const;
 
-		// Border Color
-		u32 border_color() const;
-		u16 depth() const;
-		u32 pitch() const;
+	// Image Rect
+	virtual u16 GetWidth() const;
+	virtual u16 GetHeight() const;
 
-		//custom info
-		u8 index() const;
-	};
+	// Border Color
+	virtual u32 GetBorderColor() const;
 
-	class vertex_texture
-	{
-	protected:
-		u8 m_index;
+	void SetControl3(u16 depth, u32 pitch);
+};
 
-	public:
-		//initialize texture registers with default values
-		void init(u8 index);
+class RSXVertexTexture : public RSXTexture
+{
+public:
+	RSXVertexTexture();
+	RSXVertexTexture(u8 index);
+	void Init();
 
-		// Offset
-		u32 offset() const;
+	// Offset
+	u32 GetOffset() const;
 
-		// Format
-		u8   location() const;
-		bool cubemap() const;
-		u8   border_type() const;
-		u8   dimension() const;
-		u8   format() const;
-		u16  mipmap() const;
+	// Format
+	u8   GetLocation() const;
+	bool isCubemap() const;
+	u8   GetBorderType() const;
+	u8   GetDimension() const;
+	u8   GetFormat() const;
+	u16  GetMipmap() const;
 
-		// Address
-		u8 wrap_s() const;
-		u8 wrap_t() const;
-		u8 wrap_r() const;
-		u8 unsigned_remap() const;
-		u8 zfunc() const;
-		u8 gamma() const;
-		u8 aniso_bias() const;
-		u8 signed_remap() const;
+	// Address
+	u8 GetWrapS() const;
+	u8 GetWrapT() const;
+	u8 GetWrapR() const;
+	u8 GetUnsignedRemap() const;
+	u8 GetZfunc() const;
+	u8 GetGamma() const;
+	u8 GetAnisoBias() const;
+	u8 GetSignedRemap() const;
 
-		// Control0
-		bool enabled() const;
-		u16  min_lod() const;
-		u16  max_lod() const;
-		u8   max_aniso() const;
-		bool alpha_kill_enabled() const;
+	// Control0
+	bool IsEnabled() const;
+	u16  GetMinLOD() const;
+	u16  GetMaxLOD() const;
+	u8   GetMaxAniso() const;
+	bool IsAlphaKillEnabled() const;
 
-		// Control1
-		u32 remap() const;
+	// Control1
+	u32 GetRemap() const;
 
-		// Filter
-		u16 bias() const;
-		u8  min_filter() const;
-		u8  mag_filter() const;
-		u8  convolution_filter() const;
-		bool a_signed() const;
-		bool r_signed() const;
-		bool g_signed() const;
-		bool b_signed() const;
+	// Filter
+	u16 GetBias() const;
+	u8  GetMinFilter() const;
+	u8  GetMagFilter() const;
+	u8  GetConvolutionFilter() const;
+	bool isASigned() const;
+	bool isRSigned() const;
+	bool isGSigned() const;
+	bool isBSigned() const;
 
-		// Image Rect
-		u16 width() const;
-		u16 height() const;
+	// Image Rect
+	u16 GetWidth() const;
+	u16 GetHeight() const;
 
-		// Border Color
-		u32 border_color() const;
-		u16 depth() const;
-		u32 pitch() const;
-
-		//custom info
-		u8 index() const;
-	};
-}
+	// Border Color
+	u32 GetBorderColor() const;
+};

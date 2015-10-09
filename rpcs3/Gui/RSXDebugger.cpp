@@ -1,13 +1,11 @@
 #include "stdafx_gui.h"
-
-#include "RSXDebugger.h"
-
 #include "rpcs3/Ini.h"
 #include "Utilities/rPlatform.h"
 #include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 
+#include "RSXDebugger.h"
 #include "Emu/SysCalls/Modules/cellVideoOut.h"
 #include "Emu/RSX/GSManager.h"
 #include "Emu/RSX/GSRender.h"
@@ -271,7 +269,7 @@ void RSXDebugger::OnScrollMemory(wxMouseEvent& event)
 			u32 offset;
 			if(vm::check_addr(m_addr))
 			{
-				u32 cmd = vm::ps3::read32(m_addr);
+				u32 cmd = vm::read32(m_addr);
 				u32 count = (cmd & (CELL_GCM_METHOD_FLAG_JUMP | CELL_GCM_METHOD_FLAG_CALL))
 					|| cmd == CELL_GCM_METHOD_FLAG_RETURN ? 0 : (cmd >> 18) & 0x7ff;
 
@@ -298,7 +296,7 @@ void RSXDebugger::OnClickBuffer(wxMouseEvent& event)
 {
 	if (!RSXReady()) return;
 	const GSRender& render = Emu.GetGSManager().GetRender();
-	const auto buffers = render.gcm_buffers;
+	const auto buffers = vm::ptr<CellGcmDisplayInfo>::make(render.m_gcm_buffers_addr);
 
 	if(!buffers)
 		return;
@@ -306,7 +304,7 @@ void RSXDebugger::OnClickBuffer(wxMouseEvent& event)
 	// TODO: Is there any better way to choose the color buffers
 #define SHOW_BUFFER(id) \
 	{ \
-		u32 addr = render.local_mem_addr + buffers[id].offset; \
+		u32 addr = render.m_local_mem_addr + buffers[id].offset; \
 		if (vm::check_addr(addr) && buffers[id].width && buffers[id].height) \
 			MemoryViewerPanel::ShowImage(this, addr, 3, buffers[id].width, buffers[id].height, true); \
 		return; \
@@ -318,13 +316,13 @@ void RSXDebugger::OnClickBuffer(wxMouseEvent& event)
 	if (event.GetId() == p_buffer_colorD->GetId()) SHOW_BUFFER(3);
 	if (event.GetId() == p_buffer_tex->GetId())
 	{
-		u8 location = render.textures[m_cur_texture].location();
-		if(location <= 1 && vm::check_addr(rsx::get_address(render.textures[m_cur_texture].offset(), location))
-			&& render.textures[m_cur_texture].width() && render.textures[m_cur_texture].height())
+		u8 location = render.m_textures[m_cur_texture].GetLocation();
+		if(location <= 1 && vm::check_addr(GetAddress(render.m_textures[m_cur_texture].GetOffset(), location))
+			&& render.m_textures[m_cur_texture].GetWidth() && render.m_textures[m_cur_texture].GetHeight())
 			MemoryViewerPanel::ShowImage(this,
-				rsx::get_address(render.textures[m_cur_texture].offset(), location), 1,
-				render.textures[m_cur_texture].width(),
-				render.textures[m_cur_texture].height(), false);
+				GetAddress(render.m_textures[m_cur_texture].GetOffset(), location), 1,
+				render.m_textures[m_cur_texture].GetWidth(),
+				render.m_textures[m_cur_texture].GetHeight(), false);
 	}
 
 #undef SHOW_BUFFER
@@ -333,9 +331,9 @@ void RSXDebugger::OnClickBuffer(wxMouseEvent& event)
 void RSXDebugger::GoToGet(wxCommandEvent& event)
 {
 	if (!RSXReady()) return;
-	//auto ctrl = vm::get_ptr<CellGcmControl>(Emu.GetGSManager().GetRender().ctrlAddress);
+	auto ctrl = vm::get_ptr<CellGcmControl>(Emu.GetGSManager().GetRender().m_ctrlAddress);
 	u32 realAddr;
-	if (RSXIOMem.getRealAddr(0, realAddr)) {
+	if (RSXIOMem.getRealAddr(ctrl->get.load(), realAddr)) {
 		m_addr = realAddr;
 		t_addr->SetValue(wxString::Format("%08x", m_addr));
 		UpdateInformation();
@@ -347,7 +345,7 @@ void RSXDebugger::GoToGet(wxCommandEvent& event)
 void RSXDebugger::GoToPut(wxCommandEvent& event)
 {
 	if (!RSXReady()) return;
-	auto ctrl = Emu.GetGSManager().GetRender().ctrl;
+	auto ctrl = vm::get_ptr<CellGcmControl>(Emu.GetGSManager().GetRender().m_ctrlAddress);
 	u32 realAddr;
 	if (RSXIOMem.getRealAddr(ctrl->put.load(), realAddr)) {
 		m_addr = realAddr;
@@ -385,7 +383,7 @@ void RSXDebugger::GetMemory()
 	
 		if (isReady && vm::check_addr(addr))
 		{
-			u32 cmd = vm::ps3::read32(addr);
+			u32 cmd = vm::read32(addr);
 			u32 count = (cmd >> 18) & 0x7ff;
 			m_list_commands->SetItem(i, 1, wxString::Format("%08x", cmd));
 			m_list_commands->SetItem(i, 3, wxString::Format("%d", count));
@@ -410,13 +408,13 @@ void RSXDebugger::GetBuffers()
 
 	// Draw Buffers
 	// TODO: Currently it only supports color buffers
-	for (u32 bufferId=0; bufferId < render.gcm_buffers_count; bufferId++)
+	for (u32 bufferId=0; bufferId < render.m_gcm_buffers_count; bufferId++)
 	{
-		if(!vm::check_addr(render.gcm_buffers.addr()))
+		if(!vm::check_addr(render.m_gcm_buffers_addr))
 			continue;
 
-		auto buffers = render.gcm_buffers;
-		u32 RSXbuffer_addr = render.local_mem_addr + buffers[bufferId].offset;
+		auto buffers = vm::get_ptr<CellGcmDisplayInfo>(render.m_gcm_buffers_addr);
+		u32 RSXbuffer_addr = render.m_local_mem_addr + buffers[bufferId].offset;
 
 		if(!vm::check_addr(RSXbuffer_addr))
 			continue;
@@ -455,28 +453,28 @@ void RSXDebugger::GetBuffers()
 	}
 
 	// Draw Texture
-	if(!render.textures[m_cur_texture].enabled())
+	if(!render.m_textures[m_cur_texture].IsEnabled())
 		return;
 
-	u32 offset = render.textures[m_cur_texture].offset();
+	u32 offset = render.m_textures[m_cur_texture].GetOffset();
 
 	if(!offset)
 		return;
 
-	u8 location = render.textures[m_cur_texture].location();
+	u8 location = render.m_textures[m_cur_texture].GetLocation();
 
 	if(location > 1)
 		return;
 
-	u32 TexBuffer_addr = rsx::get_address(offset, location);
+	u32 TexBuffer_addr = GetAddress(offset, location);
 
 	if(!vm::check_addr(TexBuffer_addr))
 		return;
 
 	unsigned char* TexBuffer = vm::get_ptr<unsigned char>(TexBuffer_addr);
 
-	u32 width  = render.textures[m_cur_texture].width();
-	u32 height = render.textures[m_cur_texture].height();
+	u32 width  = render.m_textures[m_cur_texture].GetWidth();
+	u32 height = render.m_textures[m_cur_texture].GetHeight();
 	unsigned char* buffer = (unsigned char*)malloc(width * height * 3);
 	memcpy(buffer, TexBuffer, width * height * 3);
 
@@ -494,7 +492,7 @@ void RSXDebugger::GetFlags()
 
 #define LIST_FLAGS_ADD(name, value) \
 	m_list_flags->InsertItem(i, name); m_list_flags->SetItem(i, 1, value ? "Enabled" : "Disabled"); i++;
-	/*
+
 	LIST_FLAGS_ADD("Alpha test",         render.m_set_alpha_test);
 	LIST_FLAGS_ADD("Blend",              render.m_set_blend);
 	LIST_FLAGS_ADD("Scissor",            render.m_set_scissor_horizontal && render.m_set_scissor_vertical);
@@ -513,7 +511,6 @@ void RSXDebugger::GetFlags()
 	LIST_FLAGS_ADD("Two sided lighting", render.m_set_two_side_light_enable);
 	LIST_FLAGS_ADD("Point Sprite",	     render.m_set_point_sprite_control);
 	LIST_FLAGS_ADD("Lighting ",	         render.m_set_specular);
-	*/
 
 #undef LIST_FLAGS_ADD
 }
@@ -543,7 +540,7 @@ void RSXDebugger::GetLightning()
 #define LIST_LIGHTNING_ADD(name, value) \
 	m_list_lightning->InsertItem(i, name); m_list_lightning->SetItem(i, 1, value); i++;
 
-	//LIST_LIGHTNING_ADD("Shade model", (render.m_shade_mode == 0x1D00) ? "Flat" : "Smooth");
+	LIST_LIGHTNING_ADD("Shade model", (render.m_shade_mode == 0x1D00) ? "Flat" : "Smooth");
 
 #undef LIST_LIGHTNING_ADD
 }
@@ -554,31 +551,31 @@ void RSXDebugger::GetTexture()
 	const GSRender& render = Emu.GetGSManager().GetRender();
 	m_list_texture->DeleteAllItems();
 
-	for(uint i=0; i<rsx::limits::textures_count; ++i)
+	for(uint i=0; i<RSXThread::m_textures_count; ++i)
 	{
-		if(render.textures[i].enabled())
+		if(render.m_textures[i].IsEnabled())
 		{
 			m_list_texture->InsertItem(i, wxString::Format("%d", i));
-			u8 location = render.textures[i].location();
+			u8 location = render.m_textures[i].GetLocation();
 			if(location > 1)
 			{
 				m_list_texture->SetItem(i, 1,
-					wxString::Format("Bad address (offset=0x%x, location=%d)", render.textures[i].offset(), location));
+					wxString::Format("Bad address (offset=0x%x, location=%d)", render.m_textures[i].GetOffset(), location));
 			}
 			else
 			{
-				m_list_texture->SetItem(i, 1, wxString::Format("0x%x", rsx::get_address(render.textures[i].offset(), location)));
+				m_list_texture->SetItem(i, 1, wxString::Format("0x%x", GetAddress(render.m_textures[i].GetOffset(), location)));
 			}
 
-			m_list_texture->SetItem(i, 2, render.textures[i].cubemap() ? "True" : "False");
-			m_list_texture->SetItem(i, 3, wxString::Format("%dD", render.textures[i].dimension()));
-			m_list_texture->SetItem(i, 4, render.textures[i].enabled() ? "True" : "False");
-			m_list_texture->SetItem(i, 5, wxString::Format("0x%x", render.textures[i].format()));
-			m_list_texture->SetItem(i, 6, wxString::Format("0x%x", render.textures[i].mipmap()));
-			m_list_texture->SetItem(i, 7, wxString::Format("0x%x", render.textures[i].pitch()));
+			m_list_texture->SetItem(i, 2, render.m_textures[i].isCubemap() ? "True" : "False");
+			m_list_texture->SetItem(i, 3, wxString::Format("%dD", render.m_textures[i].GetDimension()));
+			m_list_texture->SetItem(i, 4, render.m_textures[i].IsEnabled() ? "True" : "False");
+			m_list_texture->SetItem(i, 5, wxString::Format("0x%x", render.m_textures[i].GetFormat()));
+			m_list_texture->SetItem(i, 6, wxString::Format("0x%x", render.m_textures[i].GetMipmap()));
+			m_list_texture->SetItem(i, 7, wxString::Format("0x%x", render.m_textures[i].m_pitch));
 			m_list_texture->SetItem(i, 8, wxString::Format("%dx%d",
-				render.textures[i].width(),
-				render.textures[i].height()));
+				render.m_textures[i].GetWidth(),
+				render.m_textures[i].GetHeight()));
 
 			m_list_texture->SetItemBackgroundColour(i, wxColour(m_cur_texture == i ? "Wheat" : "White"));
 		}
@@ -594,7 +591,7 @@ void RSXDebugger::GetSettings()
 
 #define LIST_SETTINGS_ADD(name, value) \
 	m_list_settings->InsertItem(i, name); m_list_settings->SetItem(i, 1, value); i++;
-	/*
+
 	LIST_SETTINGS_ADD("Alpha func", !(render.m_set_alpha_func) ? "(none)" : wxString::Format("0x%x (%s)",
 		render.m_alpha_func,
 		ParseGCMEnum(render.m_alpha_func, CELL_GCM_ENUM)));
@@ -644,13 +641,12 @@ void RSXDebugger::GetSettings()
 		render.m_viewport_y,
 		render.m_viewport_w,
 		render.m_viewport_h));
-		*/
+
 #undef LIST_SETTINGS_ADD
 }
 
 void RSXDebugger::SetFlags(wxListEvent& event)
 {
-	/*
 	if (!RSXReady()) return;
 	GSRender& render = Emu.GetGSManager().GetRender();
 	switch(event.m_itemIndex)
@@ -674,7 +670,6 @@ void RSXDebugger::SetFlags(wxListEvent& event)
 	case 16: render.m_set_scissor_horizontal	^= true; break;
 	case 17: render.m_set_scissor_vertical		^= true; break;
 	}
-	*/
 
 	UpdateInformation();
 }
@@ -837,7 +832,7 @@ wxString RSXDebugger::DisAsmCommand(u32 cmd, u32 count, u32 currentAddr, u32 ioA
 	}
 	else if(!(cmd & (CELL_GCM_METHOD_FLAG_JUMP | CELL_GCM_METHOD_FLAG_CALL)) && cmd != CELL_GCM_METHOD_FLAG_RETURN)
 	{
-		auto args = vm::ps3::ptr<u32>::make(currentAddr + 4);
+		auto args = vm::ptr<u32>::make(currentAddr + 4);
 
 		u32 index = 0;
 		switch(cmd & 0x3ffff)

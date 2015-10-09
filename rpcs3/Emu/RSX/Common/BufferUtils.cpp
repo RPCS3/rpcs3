@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#ifdef DX12_SUPPORT
 #include "BufferUtils.h"
 
 
@@ -245,4 +244,3 @@ void uploadIndexData(unsigned m_draw_mode, unsigned index_type, void* indexBuffe
 		}
 	}
 }
-#endif

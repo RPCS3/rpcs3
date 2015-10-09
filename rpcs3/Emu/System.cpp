@@ -215,8 +215,7 @@ void Emulator::Load()
 	LOG_NOTICE(LOADER, "Resolution: %s", Ini.ResolutionIdToString(Ini.GSResolution.GetValue()));
 	LOG_NOTICE(LOADER, "Write Depth Buffer: %s", Ini.GSDumpDepthBuffer.GetValue() ? "Yes" : "No");
 	LOG_NOTICE(LOADER, "Write Color Buffers: %s", Ini.GSDumpColorBuffers.GetValue() ? "Yes" : "No");
-	LOG_NOTICE(LOADER, "Read Color Buffers: %s", Ini.GSReadColorBuffers.GetValue() ? "Yes" : "No");
-	LOG_NOTICE(LOADER, "Read Depth Buffer: %s", Ini.GSReadDepthBuffer.GetValue() ? "Yes" : "No");
+	LOG_NOTICE(LOADER, "Read Color Buffer: %s", Ini.GSReadColorBuffer.GetValue() ? "Yes" : "No");
 	LOG_NOTICE(LOADER, "Audio Out: %s", Ini.AudioOutIdToString(Ini.AudioOutMode.GetValue()));
 	LOG_NOTICE(LOADER, "Log Everything: %s", Ini.HLELogging.GetValue() ? "Yes" : "No");
 	LOG_NOTICE(LOADER, "RSX Logging: %s", Ini.RSXLogging.GetValue() ? "Yes" : "No");
