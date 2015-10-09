@@ -69,64 +69,77 @@ void D3D12GSRender::PrepareRenderTargets(ID3D12GraphicsCommandList *copycmdlist)
 	rttViewDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
 	rttViewDesc.Format = dxgiFormat;
 
+	u32 clear_color = rsx::method_registers[NV4097_SET_COLOR_CLEAR_VALUE];
+	u8 clear_a = clear_color >> 24;
+	u8 clear_r = clear_color >> 16;
+	u8 clear_g = clear_color >> 8;
+	u8 clear_b = clear_color;
+	std::array<float, 4> clearColor =
+	{
+		clear_r / 255.0f,
+		clear_g / 255.0f,
+		clear_b / 255.0f,
+		clear_a / 255.0f
+	};
+
 	switch (m_surface_color_target)
 	{
 	case CELL_GCM_SURFACE_TARGET_0:
 	{
 		ID3D12Resource *rttA = m_rtts.bindAddressAsRenderTargets(m_device.Get(), copycmdlist, 0, address_a, m_surface_clip_w, m_surface_clip_h, m_surface_color_format,
-			m_clear_surface_color_r / 255.0f, m_clear_surface_color_g / 255.0f, m_clear_surface_color_b / 255.0f, m_clear_surface_color_a / 255.0f);
+			clearColor);
 		m_device->CreateRenderTargetView(rttA, &rttViewDesc, Handle);
 		break;
 	}
 	case CELL_GCM_SURFACE_TARGET_1:
 	{
 		ID3D12Resource *rttB = m_rtts.bindAddressAsRenderTargets(m_device.Get(), copycmdlist, 0, address_b, m_surface_clip_w, m_surface_clip_h, m_surface_color_format,
-			m_clear_surface_color_r / 255.0f, m_clear_surface_color_g / 255.0f, m_clear_surface_color_b / 255.0f, m_clear_surface_color_a / 255.0f);
+			clearColor);
 		m_device->CreateRenderTargetView(rttB, &rttViewDesc, Handle);
 		break;
 	}
 	case CELL_GCM_SURFACE_TARGET_MRT1:
 	{
 		ID3D12Resource *rttA = m_rtts.bindAddressAsRenderTargets(m_device.Get(), copycmdlist, 0, address_a, m_surface_clip_w, m_surface_clip_h, m_surface_color_format,
-			m_clear_surface_color_r / 255.0f, m_clear_surface_color_g / 255.0f, m_clear_surface_color_b / 255.0f, m_clear_surface_color_a / 255.0f);
+			clearColor);
 		m_device->CreateRenderTargetView(rttA, &rttViewDesc, Handle);
 		Handle.ptr += g_RTTIncrement;
 		ID3D12Resource *rttB = m_rtts.bindAddressAsRenderTargets(m_device.Get(), copycmdlist, 1, address_b, m_surface_clip_w, m_surface_clip_h, m_surface_color_format,
-			m_clear_surface_color_r / 255.0f, m_clear_surface_color_g / 255.0f, m_clear_surface_color_b / 255.0f, m_clear_surface_color_a / 255.0f);
+			clearColor);
 		m_device->CreateRenderTargetView(rttB, &rttViewDesc, Handle);
 	}
 	break;
 	case CELL_GCM_SURFACE_TARGET_MRT2:
 	{
 		ID3D12Resource *rttA = m_rtts.bindAddressAsRenderTargets(m_device.Get(), copycmdlist, 0, address_a, m_surface_clip_w, m_surface_clip_h, m_surface_color_format,
-			m_clear_surface_color_r / 255.0f, m_clear_surface_color_g / 255.0f, m_clear_surface_color_b / 255.0f, m_clear_surface_color_a / 255.0f);
+			clearColor);
 		m_device->CreateRenderTargetView(rttA, &rttViewDesc, Handle);
 		Handle.ptr += g_RTTIncrement;
 		ID3D12Resource *rttB = m_rtts.bindAddressAsRenderTargets(m_device.Get(), copycmdlist, 1, address_b, m_surface_clip_w, m_surface_clip_h, m_surface_color_format,
-			m_clear_surface_color_r / 255.0f, m_clear_surface_color_g / 255.0f, m_clear_surface_color_b / 255.0f, m_clear_surface_color_a / 255.0f);
+			clearColor);
 		m_device->CreateRenderTargetView(rttB, &rttViewDesc, Handle);
 		Handle.ptr += g_RTTIncrement;
 		ID3D12Resource *rttC = m_rtts.bindAddressAsRenderTargets(m_device.Get(), copycmdlist, 2, address_c, m_surface_clip_w, m_surface_clip_h, m_surface_color_format,
-			m_clear_surface_color_r / 255.0f, m_clear_surface_color_g / 255.0f, m_clear_surface_color_b / 255.0f, m_clear_surface_color_a / 255.0f);
+			clearColor);
 		m_device->CreateRenderTargetView(rttC, &rttViewDesc, Handle);
 		break;
 	}
 	case CELL_GCM_SURFACE_TARGET_MRT3:
 	{
 		ID3D12Resource *rttA = m_rtts.bindAddressAsRenderTargets(m_device.Get(), copycmdlist, 0, address_a, m_surface_clip_w, m_surface_clip_h, m_surface_color_format,
-			m_clear_surface_color_r / 255.0f, m_clear_surface_color_g / 255.0f, m_clear_surface_color_b / 255.0f, m_clear_surface_color_a / 255.0f);
+			clearColor);
 		m_device->CreateRenderTargetView(rttA, &rttViewDesc, Handle);
 		Handle.ptr += g_RTTIncrement;
 		ID3D12Resource *rttB = m_rtts.bindAddressAsRenderTargets(m_device.Get(), copycmdlist, 1, address_b, m_surface_clip_w, m_surface_clip_h, m_surface_color_format,
-			m_clear_surface_color_r / 255.0f, m_clear_surface_color_g / 255.0f, m_clear_surface_color_b / 255.0f, m_clear_surface_color_a / 255.0f);
+			clearColor);
 		m_device->CreateRenderTargetView(rttB, &rttViewDesc, Handle);
 		Handle.ptr += g_RTTIncrement;
 		ID3D12Resource *rttC = m_rtts.bindAddressAsRenderTargets(m_device.Get(), copycmdlist, 2, address_c, m_surface_clip_w, m_surface_clip_h, m_surface_color_format,
-			m_clear_surface_color_r / 255.0f, m_clear_surface_color_g / 255.0f, m_clear_surface_color_b / 255.0f, m_clear_surface_color_a / 255.0f);
+			clearColor);
 		m_device->CreateRenderTargetView(rttC, &rttViewDesc, Handle);
 		Handle.ptr += g_RTTIncrement;
 		ID3D12Resource *rttD = m_rtts.bindAddressAsRenderTargets(m_device.Get(), copycmdlist, 3, address_d, m_surface_clip_w, m_surface_clip_h, m_surface_color_format,
-			m_clear_surface_color_r / 255.0f, m_clear_surface_color_g / 255.0f, m_clear_surface_color_b / 255.0f, m_clear_surface_color_a / 255.0f);
+			clearColor);
 		m_device->CreateRenderTargetView(rttD, &rttViewDesc, Handle);
 		break;
 	}
@@ -154,7 +167,7 @@ void D3D12GSRender::PrepareRenderTargets(ID3D12GraphicsCommandList *copycmdlist)
 }
 
 ID3D12Resource *RenderTargets::bindAddressAsRenderTargets(ID3D12Device *device, ID3D12GraphicsCommandList *cmdList, size_t slot, u32 address,
-	size_t width, size_t height, u8 surfaceColorFormat, float clearColorR, float clearColorG, float clearColorB, float clearColorA)
+	size_t width, size_t height, u8 surfaceColorFormat, const std::array<float, 4> &clearColor)
 {
 	ID3D12Resource* rtt;
 	auto It = m_renderTargets.find(address);
@@ -179,10 +192,10 @@ ID3D12Resource *RenderTargets::bindAddressAsRenderTargets(ID3D12Device *device, 
 		}
 		D3D12_CLEAR_VALUE clearColorValue = {};
 		clearColorValue.Format = dxgiFormat;
-		clearColorValue.Color[0] = clearColorR;
-		clearColorValue.Color[1] = clearColorG;
-		clearColorValue.Color[2] = clearColorB;
-		clearColorValue.Color[3] = clearColorA;
+		clearColorValue.Color[0] = clearColor[0];
+		clearColorValue.Color[1] = clearColor[1];
+		clearColorValue.Color[2] = clearColor[2];
+		clearColorValue.Color[3] = clearColor[3];
 
 		device->CreateCommittedResource(
 			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),

@@ -318,23 +318,32 @@ void D3D12GSRender::clear_surface(u32 arg)
 	}*/
 
 	// TODO: Merge depth and stencil clear when possible
-	if (m_clear_surface_mask & 0x1)
+	if (arg & 0x1)
 	{
+		u32 clear_depth = rsx::method_registers[NV4097_SET_ZSTENCIL_CLEAR_VALUE] >> 8;
 		u32 max_depth_value = m_surface_depth_format == CELL_GCM_SURFACE_Z16 ? 0x0000ffff : 0x00ffffff;
-		getCurrentResourceStorage().m_commandList->ClearDepthStencilView(m_rtts.m_depthStencilDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), D3D12_CLEAR_FLAG_DEPTH, m_clear_surface_z / (float)max_depth_value, 0, 0, nullptr);
+		getCurrentResourceStorage().m_commandList->ClearDepthStencilView(m_rtts.m_depthStencilDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), D3D12_CLEAR_FLAG_DEPTH, clear_depth / (float)max_depth_value, 0, 0, nullptr);
 	}
 
-	if (m_clear_surface_mask & 0x2)
-		getCurrentResourceStorage().m_commandList->ClearDepthStencilView(m_rtts.m_depthStencilDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), D3D12_CLEAR_FLAG_STENCIL, 0.f, m_clear_surface_s, 0, nullptr);
-
-	if (m_clear_surface_mask & 0xF0)
+	if (arg & 0x2)
 	{
+		u8 clear_stencil = rsx::method_registers[NV4097_SET_ZSTENCIL_CLEAR_VALUE] & 0xff;
+		getCurrentResourceStorage().m_commandList->ClearDepthStencilView(m_rtts.m_depthStencilDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), D3D12_CLEAR_FLAG_STENCIL, 0.f, clear_stencil, 0, nullptr);
+	}
+
+	if (arg & 0xF0)
+	{
+		u32 clear_color = rsx::method_registers[NV4097_SET_COLOR_CLEAR_VALUE];
+		u8 clear_a = clear_color >> 24;
+		u8 clear_r = clear_color >> 16;
+		u8 clear_g = clear_color >> 8;
+		u8 clear_b = clear_color;
 		float clearColor[] =
 		{
-			m_clear_surface_color_r / 255.0f,
-			m_clear_surface_color_g / 255.0f,
-			m_clear_surface_color_b / 255.0f,
-			m_clear_surface_color_a / 255.0f
+			clear_r / 255.0f,
+			clear_g / 255.0f,
+			clear_b / 255.0f,
+			clear_a / 255.0f
 		};
 
 		size_t g_RTTIncrement = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);

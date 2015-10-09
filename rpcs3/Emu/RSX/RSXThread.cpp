@@ -898,49 +898,17 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 
 	// Clearing
 	case NV4097_CLEAR_ZCULL_SURFACE:
-	{
-		u32 a0 = ARGS(0);
-
-		if (a0 & 0x01) m_clear_surface_z = m_clear_z;
-		if (a0 & 0x02) m_clear_surface_s = m_clear_s;
-
-		m_clear_surface_mask |= a0 & 0x3;
 		break;
-	}
-
 	case NV4097_CLEAR_SURFACE:
 	{
 		const u32 a0 = ARGS(0);
-
-		if (a0 & 0x01) m_clear_surface_z = m_clear_z;
-		if (a0 & 0x02) m_clear_surface_s = m_clear_s;
-		if (a0 & 0x10) m_clear_surface_color_r = m_clear_color_r;
-		if (a0 & 0x20) m_clear_surface_color_g = m_clear_color_g;
-		if (a0 & 0x40) m_clear_surface_color_b = m_clear_color_b;
-		if (a0 & 0x80) m_clear_surface_color_a = m_clear_color_a;
-
-		m_clear_surface_mask = a0;
 		clear_surface(a0);
 		break;
 	}
-
 	case NV4097_SET_ZSTENCIL_CLEAR_VALUE:
-	{
-		const u32 value = ARGS(0);
-		m_clear_s = value & 0xff;
-		m_clear_z = value >> 8;
 		break;
-	}
-
 	case NV4097_SET_COLOR_CLEAR_VALUE:
-	{
-		const u32 color = ARGS(0);
-		m_clear_color_a = (color >> 24) & 0xff;
-		m_clear_color_r = (color >> 16) & 0xff;
-		m_clear_color_g = (color >> 8) & 0xff;
-		m_clear_color_b = color & 0xff;
 		break;
-	}
 
 	case NV4097_SET_CLEAR_RECT_HORIZONTAL:
 	{

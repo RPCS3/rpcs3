@@ -1594,7 +1594,7 @@ void GLGSRender::clear_surface(u32 arg)
 
 	if (m_clear_surface_mask & 0x1)
 	{
-		glClearDepth(m_clear_surface_z / (float)0xffffff);
+//		glClearDepth(m_clear_surface_z / (float)0xffffff);
 		checkForGlError("glClearDepth");
 
 		f |= GL_DEPTH_BUFFER_BIT;
@@ -1602,7 +1602,7 @@ void GLGSRender::clear_surface(u32 arg)
 
 	if (m_clear_surface_mask & 0x2)
 	{
-		glClearStencil(m_clear_surface_s);
+//		glClearStencil(m_clear_surface_s);
 		checkForGlError("glClearStencil");
 
 		f |= GL_STENCIL_BUFFER_BIT;
@@ -1610,11 +1610,11 @@ void GLGSRender::clear_surface(u32 arg)
 
 	if (m_clear_surface_mask & 0xF0)
 	{
-		glClearColor(
+/*		glClearColor(
 			m_clear_surface_color_r / 255.0f,
 			m_clear_surface_color_g / 255.0f,
 			m_clear_surface_color_b / 255.0f,
-			m_clear_surface_color_a / 255.0f);
+			m_clear_surface_color_a / 255.0f);*/
 		checkForGlError("glClearColor");
 
 		f |= GL_COLOR_BUFFER_BIT;

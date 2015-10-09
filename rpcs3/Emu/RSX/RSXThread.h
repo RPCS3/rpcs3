@@ -258,18 +258,6 @@ public:
 	
 	// Clearing
 	u32 m_clear_surface_mask;
-	u32 m_clear_surface_z;
-	u8 m_clear_surface_s;
-	u8 m_clear_surface_color_r;
-	u8 m_clear_surface_color_g;
-	u8 m_clear_surface_color_b;
-	u8 m_clear_surface_color_a;
-	u8 m_clear_color_r;
-	u8 m_clear_color_g;
-	u8 m_clear_color_b;
-	u8 m_clear_color_a;
-	u8 m_clear_s;
-	u32 m_clear_z;
 
 	// Blending
 	bool m_set_blend;
@@ -509,12 +497,8 @@ protected:
 
 		// Default value 
 		// TODO: Check against the default value on PS3 
-		m_clear_color_r = 0;
-		m_clear_color_g = 0;
-		m_clear_color_b = 0;
-		m_clear_color_a = 0;
-		m_clear_z = 0xffffff;
-		m_clear_s = 0;
+		rsx::method_registers[NV4097_SET_COLOR_CLEAR_VALUE] = 0;
+		rsx::method_registers[NV4097_SET_ZSTENCIL_CLEAR_VALUE] = 0xffffff << 8;
 		m_poly_offset_scale_factor = 0.0;
 		m_poly_offset_bias = 0.0;
 		m_restart_index = 0xffffffff;
