@@ -1894,5 +1894,8 @@
     <ClInclude Include="Emu\RSX\Common\BufferUtils.h">
       <Filter>Emu\GPU\RSX\Common</Filter>
     </ClInclude>
+    <ClInclude Include="..\Utilities\types.h">
+      <Filter>Utilities</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

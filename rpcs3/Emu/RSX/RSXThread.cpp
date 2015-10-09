@@ -7,6 +7,7 @@
 #include "Emu/RSX/GSRender.h"
 #include "Emu/SysCalls/Modules/cellVideoOut.h"
 #include "RSXThread.h"
+#include "Utilities/types.h"
 
 #include "Emu/SysCalls/Callback.h"
 #include "Emu/SysCalls/CB_FUNC.h"

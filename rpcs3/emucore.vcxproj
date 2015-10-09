@@ -393,6 +393,7 @@
     <ClInclude Include="..\Utilities\StrFmt.h" />
     <ClInclude Include="..\Utilities\Thread.h" />
     <ClInclude Include="..\Utilities\Timer.h" />
+    <ClInclude Include="..\Utilities\types.h" />
     <ClInclude Include="..\Utilities\VirtualMemory.h" />
     <ClInclude Include="Crypto\aes.h" />
     <ClInclude Include="Crypto\ec.h" />
