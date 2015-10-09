@@ -22,7 +22,7 @@ private:
 	{
 	}
 
-	virtual void OnExitThread() override
+	virtual void onexit_thread() override
 	{
 	}
 
@@ -30,15 +30,15 @@ private:
 	{
 	}
 
-	virtual void Clear(u32 cmd) override
+	virtual void clear_surface(u32 arg) override
 	{
 	}
 
-	virtual void Draw() override
+	virtual void end() override
 	{
 	}
 
-	virtual void Flip() override
+	virtual void flip(int buffer) override
 	{
 	}
 

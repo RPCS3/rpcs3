@@ -510,11 +510,11 @@ private:
 	void renderOverlay();
 
 protected:
-	virtual void OnExitThread() override;
+	virtual void onexit_thread() override;
 	virtual void OnReset() override;
-	virtual void Clear(u32 cmd) override;
-	virtual void Draw() override;
-	virtual void Flip() override;
+	virtual void clear_surface(u32 arg) override;
+	virtual void end() override;
+	virtual void flip(int buffer) override;
 };
 
 #endif

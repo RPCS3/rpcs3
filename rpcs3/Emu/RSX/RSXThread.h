@@ -649,7 +649,7 @@ protected:
 		}
 	}
 
-	void Begin(u32 draw_mode);
+	void begin(u32 draw_mode);
 	void End();
 
 	u32 OutOfArgsCount(const uint x, const u32 cmd, const u32 count, const u32 args_addr);
@@ -657,25 +657,25 @@ protected:
 
 	virtual void oninit() = 0;
 	virtual void oninit_thread() = 0;
-	virtual void OnExitThread() = 0;
+	virtual void onexit_thread() = 0;
 	virtual void OnReset() = 0;
 
 	/**
 	 * This member is called when the backend is expected to render a draw call, either
 	 * indexed or not.
 	 */
-	virtual void Draw() = 0;
+	virtual void end() = 0;
 
 	/**
 	* This member is called when the backend is expected to clear a target surface.
 	*/
-	virtual void Clear(u32 cmd) = 0;
+	virtual void clear_surface(u32 arg) = 0;
 
 	/**
 	* This member is called when the backend is expected to present a target surface in
 	* either local or main memory.
 	*/
-	virtual void Flip() = 0;
+	virtual void flip(int buffer) = 0;
 
 	/**
 	 * This member is called when RSXThread parse a TEXTURE_READ_SEMAPHORE_RELEASE

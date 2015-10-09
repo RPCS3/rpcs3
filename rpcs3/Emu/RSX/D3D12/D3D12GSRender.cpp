@@ -287,7 +287,7 @@ D3D12GSRender::~D3D12GSRender()
 	ReleaseD2DStructures();
 }
 
-void D3D12GSRender::OnExitThread()
+void D3D12GSRender::onexit_thread()
 {
 }
 
@@ -295,10 +295,9 @@ void D3D12GSRender::OnReset()
 {
 }
 
-void D3D12GSRender::Clear(u32 cmd)
+void D3D12GSRender::clear_surface(u32 arg)
 {
 	std::chrono::time_point<std::chrono::system_clock> startDuration = std::chrono::system_clock::now();
-	assert(cmd == NV4097_CLEAR_SURFACE);
 
 	std::chrono::time_point<std::chrono::system_clock> rttDurationStart = std::chrono::system_clock::now();
 	PrepareRenderTargets(getCurrentResourceStorage().m_commandList.Get());
@@ -379,7 +378,7 @@ void D3D12GSRender::Clear(u32 cmd)
 	}
 }
 
-void D3D12GSRender::Draw()
+void D3D12GSRender::end()
 {
 	std::chrono::time_point<std::chrono::system_clock> startDuration = std::chrono::system_clock::now();
 
@@ -631,7 +630,7 @@ isFlipSurfaceInLocalMemory(u32 surfaceColorTarget)
 	}
 }
 
-void D3D12GSRender::Flip()
+void D3D12GSRender::flip(int buffer)
 {
 	ID3D12Resource *resourceToFlip;
 	float viewport_w, viewport_h;

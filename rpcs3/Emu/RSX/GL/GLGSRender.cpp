@@ -1382,7 +1382,7 @@ void GLGSRender::oninit_thread()
 
 }
 
-void GLGSRender::OnExitThread()
+void GLGSRender::onexit_thread()
 {
 	glDeleteTextures(1, &g_flip_tex);
 	glDeleteTextures(1, &g_depth_tex);
@@ -1574,10 +1574,8 @@ void GLGSRender::InitDrawBuffers()
 	}
 }
 
-void GLGSRender::Clear(u32 cmd)
+void GLGSRender::clear_surface(u32 arg)
 {
-	assert(cmd == NV4097_CLEAR_SURFACE);
-
 	InitDrawBuffers();
 
 	if (m_set_color_mask)
@@ -1628,7 +1626,7 @@ void GLGSRender::Clear(u32 cmd)
 	WriteBuffers();
 }
 
-void GLGSRender::Draw()
+void GLGSRender::end()
 {
 	//return;
 	if (!LoadProgram())
@@ -1987,7 +1985,7 @@ void GLGSRender::Draw()
 	WriteBuffers();
 }
 
-void GLGSRender::Flip()
+void GLGSRender::flip(int buffer)
 {
 	// Set scissor to FBO size 
 	if (m_set_scissor_horizontal && m_set_scissor_vertical)

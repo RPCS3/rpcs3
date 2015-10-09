@@ -51,7 +51,7 @@ public:
 	void oninit_thread() override;
 
 	void close();
-	void Flip() override;
+	void flip(int buffer) override;
 };
 
 enum GSLockType

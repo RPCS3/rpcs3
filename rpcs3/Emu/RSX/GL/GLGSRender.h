@@ -166,11 +166,11 @@ private:
 protected:
 	virtual void oninit() override;
 	virtual void oninit_thread() override;
-	virtual void OnExitThread() override;
+	virtual void onexit_thread() override;
 	virtual void OnReset() override;
-	virtual void Clear(u32 cmd) override;
-	virtual void Draw() override;
-	virtual void Flip() override;
+	virtual void clear_surface(u32 arg) override;
+	virtual void end() override;
+	virtual void flip(int buffer) override;
 
 	virtual void semaphorePGRAPHTextureReadRelease(u32 offset, u32 value) override;
 	virtual void semaphorePGRAPHBackendRelease(u32 offset, u32 value) override;

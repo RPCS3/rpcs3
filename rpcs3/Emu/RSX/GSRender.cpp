@@ -54,7 +54,7 @@ void GSRender::close()
 	}
 }
 
-void GSRender::Flip()
+void GSRender::flip(int buffer)
 {
 	if (m_frame)
 		m_frame->flip(m_context);

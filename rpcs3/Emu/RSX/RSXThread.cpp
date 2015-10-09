@@ -286,7 +286,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	// NV4097
 	case 0x0003fead:
 	{
-		Flip();
+		flip(0);
 
 		last_flip_time = get_system_time();
 		gcm_current_buffer = ARGS(0);
@@ -920,7 +920,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		if (a0 & 0x80) m_clear_surface_color_a = m_clear_color_a;
 
 		m_clear_surface_mask = a0;
-		Clear(NV4097_CLEAR_SURFACE);
+		clear_surface(a0);
 		break;
 	}
 
@@ -1090,7 +1090,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 
 		if (a0)
 		{
-			Begin(a0);
+			begin(a0);
 		}
 		else
 		{
@@ -2503,7 +2503,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	}
 }
 
-void RSXThread::Begin(u32 drawMode)
+void RSXThread::begin(u32 drawMode)
 {
 	m_begin_end = 1;
 	draw_mode = drawMode;
@@ -2513,7 +2513,7 @@ void RSXThread::Begin(u32 drawMode)
 
 void RSXThread::End()
 {
-	Draw();
+	end();
 
 	for (auto &vdata : m_vertex_data)
 	{
@@ -2639,7 +2639,7 @@ void RSXThread::Task()
 		m_ctrl->get += (count + 1) * 4;
 	}
 
-	OnExitThread();
+	onexit_thread();
 }
 
 void RSXThread::Init(const u32 ioAddress, const u32 ioSize, const u32 ctrlAddress, const u32 localAddress)
