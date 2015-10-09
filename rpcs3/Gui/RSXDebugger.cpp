@@ -498,7 +498,7 @@ void RSXDebugger::GetFlags()
 	LIST_FLAGS_ADD("Scissor",            render.m_set_scissor_horizontal && render.m_set_scissor_vertical);
 	LIST_FLAGS_ADD("Cull face",          render.m_set_cull_face);
 	LIST_FLAGS_ADD("Depth bounds test",  render.m_set_depth_bounds_test);
-	LIST_FLAGS_ADD("Depth test",         render.m_set_depth_test);
+//	LIST_FLAGS_ADD("Depth test",         render.m_set_depth_test);
 	LIST_FLAGS_ADD("Dither",             render.m_set_dither);
 	LIST_FLAGS_ADD("Line smooth",        render.m_set_line_smooth);
 	LIST_FLAGS_ADD("Logic op",           render.m_set_logic_op);
@@ -612,9 +612,9 @@ void RSXDebugger::GetSettings()
 	LIST_SETTINGS_ADD("Context DMA Color D", wxString::Format("0x%x", render.m_context_dma_color_d));
 	LIST_SETTINGS_ADD("Context DMA Zeta", wxString::Format("0x%x", render.m_context_dma_z));
 	LIST_SETTINGS_ADD("Depth bounds", wxString::Format("Min:%f, Max:%f", render.m_depth_bounds_min, render.m_depth_bounds_max));
-	LIST_SETTINGS_ADD("Depth func", !(render.m_set_depth_func) ? "(none)" : wxString::Format("0x%x (%s)",
-		render.m_depth_func,
-		ParseGCMEnum(render.m_depth_func, CELL_GCM_ENUM)));
+//	LIST_SETTINGS_ADD("Depth func", !(render.m_set_depth_func) ? "(none)" : wxString::Format("0x%x (%s)",
+//		render.m_depth_func,
+//		ParseGCMEnum(render.m_depth_func, CELL_GCM_ENUM)));
 	LIST_SETTINGS_ADD("Draw mode", wxString::Format("%d (%s)",
 		render.draw_mode,
 		ParseGCMEnum(render.draw_mode, CELL_GCM_PRIMITIVE_ENUM)));
@@ -655,7 +655,7 @@ void RSXDebugger::SetFlags(wxListEvent& event)
 	case 1:  render.m_set_blend			^= true; break;
 	case 2:  render.m_set_cull_face			^= true; break;
 	case 3:  render.m_set_depth_bounds_test		^= true; break;
-	case 4:  render.m_set_depth_test		^= true; break;
+//	case 4:  render.m_set_depth_test		^= true; break;
 	case 5:  render.m_set_dither			^= true; break;
 	case 6:  render.m_set_line_smooth		^= true; break;
 	case 7:  render.m_set_logic_op			^= true; break;

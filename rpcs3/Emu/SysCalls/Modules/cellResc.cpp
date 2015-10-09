@@ -469,14 +469,14 @@ void SetupRsxRenderingStates(vm::ptr<CellGcmContextData>& cntxt)
 	//TODO: use cntxt
 	GSRender& r = Emu.GetGSManager().GetRender();
 	r.m_set_color_mask = true; r.m_color_mask_a = r.m_color_mask_r = r.m_color_mask_g = r.m_color_mask_b = true;
-	r.m_set_depth_mask = true; r.m_depth_mask = 0;
+	rsx::method_registers[NV4097_SET_DEPTH_MASK] = 0;
 	r.m_set_alpha_test = false;
 	r.m_set_blend = false;
 	r.m_set_blend_mrt1 = r.m_set_blend_mrt2 = r.m_set_blend_mrt3 = false;
 	r.m_set_logic_op = false;
 	r.m_set_cull_face = false;
 	r.m_set_depth_bounds_test = false;
-	r.m_set_depth_test = false;
+	rsx::method_registers[NV4097_SET_DEPTH_TEST_ENABLE] = false;
 	r.m_set_poly_offset_fill = false;
 	r.m_set_stencil_test = false;
 	r.m_set_two_sided_stencil_test_enable = false;

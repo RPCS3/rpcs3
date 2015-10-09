@@ -1662,7 +1662,7 @@ void GLGSRender::end()
 		draw_array_first = 0;
 	}
 
-	Enable(m_set_depth_test, GL_DEPTH_TEST);
+//	Enable(m_set_depth_test, GL_DEPTH_TEST);
 	Enable(m_set_alpha_test, GL_ALPHA_TEST);
 	Enable(m_set_blend || m_set_blend_mrt1 || m_set_blend_mrt2 || m_set_blend_mrt3, GL_BLEND);
 	Enable(m_set_scissor_horizontal && m_set_scissor_vertical, GL_SCISSOR_TEST);
@@ -1805,15 +1805,15 @@ void GLGSRender::end()
 		checkForGlError("glShadeModel");
 	}
 
-	if (m_set_depth_mask)
+//	if (m_set_depth_mask)
 	{
-		glDepthMask(m_depth_mask);
+//		glDepthMask(m_depth_mask);
 		checkForGlError("glDepthMask");
 	}
 
-	if (m_set_depth_func)
+//	if (m_set_depth_func)
 	{
-		glDepthFunc(m_depth_func);
+//		glDepthFunc(m_depth_func);
 		checkForGlError("glDepthFunc");
 	}
 

@@ -807,26 +807,15 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 
 	// Depth testing
 	case NV4097_SET_DEPTH_TEST_ENABLE:
-	{
-		m_set_depth_test = ARGS(0) ? true : false;
 		break;
-	}
 
 	case NV4097_SET_DEPTH_FUNC:
-	{
-		m_set_depth_func = true;
-		m_depth_func = ARGS(0);
 		notifyDepthStencilStateChange();
 		break;
-	}
 
 	case NV4097_SET_DEPTH_MASK:
-	{
-		m_set_depth_mask = true;
-		m_depth_mask = ARGS(0);
 		notifyDepthStencilStateChange();
 		break;
-	}
 
 	// Polygon mode/offset
 	case NV4097_SET_FRONT_POLYGON_MODE:
@@ -863,7 +852,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 
 	case NV4097_SET_POLYGON_OFFSET_SCALE_FACTOR:
 	{
-		m_set_depth_test = true;
+		//m_set_depth_test = true;
 		m_set_poly_offset_mode = true;
 
 		const u32 a0 = ARGS(0);
@@ -879,7 +868,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 
 	case NV4097_SET_POLYGON_OFFSET_BIAS:
 	{
-		m_set_depth_test = true;
+		//m_set_depth_test = true;
 		m_set_poly_offset_mode = true;
 
 		const u32 a0 = ARGS(0);
@@ -1780,14 +1769,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 
 	// Zcull
 	case NV4097_SET_ZCULL_EN:
-	{
-		const u32 a0 = ARGS(0);
-
-		m_set_depth_test = a0 & 0x1 ? true : false;
-		m_set_stencil_test = a0 & 0x2 ? true : false;
 		notifyDepthStencilStateChange();
 		break;
-	}
 
 	case NV4097_SET_ZCULL_CONTROL0:
 	{

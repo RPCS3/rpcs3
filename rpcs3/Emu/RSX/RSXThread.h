@@ -191,13 +191,6 @@ public:
 	float m_clip_min;
 	float m_clip_max;
 
-	// Depth test
-	bool m_set_depth_test;
-	bool m_set_depth_func;
-	int m_depth_func;
-	bool m_set_depth_mask;
-	u32 m_depth_mask;
-
 	// Depth bound test
 	bool m_set_depth_bounds_test;
 	bool m_set_depth_bounds;
@@ -467,7 +460,6 @@ protected:
 		flip_handler.set(0);
 		vblank_handler.set(0);
 		user_handler.set(0);
-		m_set_depth_test = false;
 		m_set_alpha_test = false;
 		m_set_depth_bounds_test = false;
 		m_set_blend = false;
@@ -510,8 +502,7 @@ protected:
 		m_alpha_ref = 0.0f;
 		m_logic_op = 0x1503; // GL_COPY
 		m_shade_mode = 0x1D01; // GL_SMOOTH
-		m_depth_mask = 1;
-		m_depth_func = 0x0201; // GL_LESS
+
 		m_depth_bounds_min = 0.0;
 		m_depth_bounds_max = 1.0;
 		m_clip_min = 0.0;
@@ -552,12 +543,13 @@ protected:
 
 	void Reset()
 	{
+		rsx::method_registers[NV4097_SET_DEPTH_TEST_ENABLE] = false;
+		rsx::method_registers[NV4097_SET_DEPTH_MASK] = 1;
+		rsx::method_registers[NV4097_SET_DEPTH_FUNC] = 0x0201;
+
 		m_set_dither = false;
 		m_set_color_mask = false;
 		m_set_clip = false;
-		m_set_depth_test = false;
-		m_set_depth_func = false;
-		m_set_depth_mask = false;
 		m_set_depth_bounds_test = false;
 		m_set_depth_bounds = false;
 		m_set_viewport_horizontal = false;

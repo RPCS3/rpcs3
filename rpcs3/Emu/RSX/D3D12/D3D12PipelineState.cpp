@@ -232,9 +232,9 @@ bool D3D12GSRender::LoadProgram()
 		LOG_ERROR(RSX, "Bad surface color target: %d", m_surface_color_target);
 	}
 
-	prop.DepthStencil.DepthEnable = m_set_depth_test;
-	prop.DepthStencil.DepthWriteMask = m_depth_mask ? D3D12_DEPTH_WRITE_MASK_ALL : D3D12_DEPTH_WRITE_MASK_ZERO;
-	prop.DepthStencil.DepthFunc = getCompareFunc(m_depth_func);
+	prop.DepthStencil.DepthEnable = !!(rsx::method_registers[NV4097_SET_DEPTH_TEST_ENABLE]);
+	prop.DepthStencil.DepthWriteMask = !!(rsx::method_registers[NV4097_SET_DEPTH_MASK]) ? D3D12_DEPTH_WRITE_MASK_ALL : D3D12_DEPTH_WRITE_MASK_ZERO;
+	prop.DepthStencil.DepthFunc = getCompareFunc(rsx::method_registers[NV4097_SET_DEPTH_FUNC]);
 	prop.DepthStencil.StencilEnable = m_set_stencil_test;
 	prop.DepthStencil.StencilReadMask = m_stencil_func_mask;
 	prop.DepthStencil.StencilWriteMask = m_stencil_mask;
