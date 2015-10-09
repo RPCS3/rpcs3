@@ -563,17 +563,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 
 	// Color Mask
 	case NV4097_SET_COLOR_MASK:
-	{
-		const u32 a0 = ARGS(0);
-
-		m_set_color_mask = true;
-		m_color_mask_a = a0 & 0x1000000 ? true : false;
-		m_color_mask_r = a0 & 0x0010000 ? true : false;
-		m_color_mask_g = a0 & 0x0000100 ? true : false;
-		m_color_mask_b = a0 & 0x0000001 ? true : false;
 		notifyRasterizerStateChange();
 		break;
-	}
 
 	case NV4097_SET_COLOR_MASK_MRT:
 	{

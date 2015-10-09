@@ -297,16 +297,13 @@ bool D3D12GSRender::LoadProgram()
 		break;
 	}
 
-	if (m_set_color_mask)
-	{
-		UINT8 mask = 0;
-		mask |= m_color_mask_r ? D3D12_COLOR_WRITE_ENABLE_RED : 0;
-		mask |= m_color_mask_g ? D3D12_COLOR_WRITE_ENABLE_GREEN : 0;
-		mask |= m_color_mask_b ? D3D12_COLOR_WRITE_ENABLE_BLUE : 0;
-		mask |= m_color_mask_a ? D3D12_COLOR_WRITE_ENABLE_ALPHA : 0;
-		for (unsigned i = 0; i < prop.numMRT; i++)
-			prop.Blend.RenderTarget[i].RenderTargetWriteMask = mask;
-	}
+	UINT8 mask = 0;
+	mask |= (rsx::method_registers[NV4097_SET_COLOR_MASK] >> 16) & 0xFF ? D3D12_COLOR_WRITE_ENABLE_RED : 0;
+	mask |= (rsx::method_registers[NV4097_SET_COLOR_MASK] >> 8) & 0xFF ? D3D12_COLOR_WRITE_ENABLE_GREEN : 0;
+	mask |= rsx::method_registers[NV4097_SET_COLOR_MASK] & 0xFF ? D3D12_COLOR_WRITE_ENABLE_BLUE : 0;
+	mask |= (rsx::method_registers[NV4097_SET_COLOR_MASK] >> 24) & 0xFF ? D3D12_COLOR_WRITE_ENABLE_ALPHA : 0;
+	for (unsigned i = 0; i < prop.numMRT; i++)
+		prop.Blend.RenderTarget[i].RenderTargetWriteMask = mask;
 
 	prop.IASet = m_IASet;
 

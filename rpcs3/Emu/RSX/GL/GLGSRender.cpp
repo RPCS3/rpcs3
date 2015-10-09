@@ -1578,9 +1578,9 @@ void GLGSRender::clear_surface(u32 arg)
 {
 	InitDrawBuffers();
 
-	if (m_set_color_mask)
+//	if (m_set_color_mask)
 	{
-		glColorMask(m_color_mask_r, m_color_mask_g, m_color_mask_b, m_color_mask_a);
+//		glColorMask(m_color_mask_r, m_color_mask_g, m_color_mask_b, m_color_mask_a);
 		checkForGlError("glColorMask");
 	}
 
@@ -1638,9 +1638,9 @@ void GLGSRender::end()
 
 	InitDrawBuffers();
 
-	if (m_set_color_mask)
+//	if (m_set_color_mask)
 	{
-		glColorMask(m_color_mask_r, m_color_mask_g, m_color_mask_b, m_color_mask_a);
+//		glColorMask(m_color_mask_r, m_color_mask_g, m_color_mask_b, m_color_mask_a);
 		checkForGlError("glColorMask");
 	}
 

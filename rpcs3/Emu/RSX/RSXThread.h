@@ -179,13 +179,6 @@ public:
 	// Dither
 	bool m_set_dither;
 
-	// Color mask
-	bool m_set_color_mask;
-	bool m_color_mask_r;
-	bool m_color_mask_g;
-	bool m_color_mask_b;
-	bool m_color_mask_a;
-
 	// Clip 
 	bool m_set_clip;
 	float m_clip_min;
@@ -509,7 +502,7 @@ protected:
 		rsx::method_registers[NV4097_SET_DEPTH_FUNC] = 0x0201;
 
 		m_set_dither = false;
-		m_set_color_mask = false;
+		rsx::method_registers[NV4097_SET_COLOR_MASK] = -1;
 		m_set_clip = false;
 		m_set_depth_bounds_test = false;
 		m_set_depth_bounds = false;

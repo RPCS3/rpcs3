@@ -601,11 +601,11 @@ void RSXDebugger::GetSettings()
 		render.m_blend_color_b,
 		render.m_blend_color_a));
 	LIST_SETTINGS_ADD("Clipping", wxString::Format("Min:%f, Max:%f", render.m_clip_min, render.m_clip_max));
-	LIST_SETTINGS_ADD("Color mask", !(render.m_set_color_mask) ? "(none)" : wxString::Format("R:%d, G:%d, B:%d, A:%d",
-		render.m_color_mask_r,
-		render.m_color_mask_g,
-		render.m_color_mask_b,
-		render.m_color_mask_a));
+	LIST_SETTINGS_ADD("Color mask", !(rsx::method_registers[NV4097_SET_COLOR_MASK]) ? "(none)" : wxString::Format("R:%d, G:%d, B:%d, A:%d",
+		(rsx::method_registers[NV4097_SET_COLOR_MASK] >> 16) & 0xff,
+		(rsx::method_registers[NV4097_SET_COLOR_MASK] >> 8) & 0xff,
+		(rsx::method_registers[NV4097_SET_COLOR_MASK]) & 0xff,
+		(rsx::method_registers[NV4097_SET_COLOR_MASK] >> 24) & 0xff));
 	LIST_SETTINGS_ADD("Context DMA Color A", wxString::Format("0x%x", render.m_context_dma_color_a));
 	LIST_SETTINGS_ADD("Context DMA Color B", wxString::Format("0x%x", render.m_context_dma_color_b));
 	LIST_SETTINGS_ADD("Context DMA Color C", wxString::Format("0x%x", render.m_context_dma_color_c));
