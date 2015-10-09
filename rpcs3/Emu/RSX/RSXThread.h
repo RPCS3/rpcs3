@@ -120,7 +120,7 @@ protected:
 public:
 	GcmTileInfo tiles[rsx::limits::tiles_count];
 	GcmZcullInfo zculls[rsx::limits::zculls_count];
-	rsx::texture m_textures[rsx::limits::textures_count];
+	rsx::texture textures[rsx::limits::textures_count];
 	rsx::vertex_texture m_vertex_textures[rsx::limits::vertex_textures_count];
 	RSXVertexData m_vertex_data[rsx::limits::vertex_count];
 	RSXIndexArrayData m_indexed_array;
@@ -556,7 +556,7 @@ protected:
 		// Construct Textures
 		for (int i = 0; i < 16; i++)
 		{
-			m_textures[i] = rsx::texture();
+			textures[i] = rsx::texture();
 		}
 
 		Reset();
@@ -645,7 +645,7 @@ protected:
 
 		for (uint i = 0; i < rsx::limits::textures_count; ++i)
 		{
-			m_textures[i].init(i);
+			textures[i].init(i);
 		}
 	}
 

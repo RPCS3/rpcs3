@@ -409,7 +409,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 
 	case_range(16, NV4097_SET_TEXTURE_CONTROL3, 4);
 	{
-		rsx::texture& tex = m_textures[index];
+		rsx::texture& tex = textures[index];
 		const u32 a0 = ARGS(0);
 		u32 pitch = a0 & 0xFFFFF;
 		u16 depth = a0 >> 20;

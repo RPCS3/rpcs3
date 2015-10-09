@@ -290,15 +290,15 @@ size_t D3D12GSRender::UploadTextures(ID3D12GraphicsCommandList *cmdlist)
 
 	for (u32 i = 0; i < rsx::limits::textures_count; ++i)
 	{
-		if (!m_textures[i].enabled()) continue;
-		size_t w = m_textures[i].width(), h = m_textures[i].height();
+		if (!textures[i].enabled()) continue;
+		size_t w = textures[i].width(), h = textures[i].height();
 		if (!w || !h) continue;
 
-		const u32 texaddr = rsx::get_address(m_textures[i].offset(), m_textures[i].location());
+		const u32 texaddr = rsx::get_address(textures[i].offset(), textures[i].location());
 
-		int format = m_textures[i].format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
+		int format = textures[i].format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
 		DXGI_FORMAT dxgiFormat = getTextureDXGIFormat(format);
-		bool is_swizzled = !(m_textures[i].format() & CELL_GCM_TEXTURE_LN);
+		bool is_swizzled = !(textures[i].format() & CELL_GCM_TEXTURE_LN);
 
 		ID3D12Resource *vramTexture;
 		std::unordered_map<u32, ID3D12Resource* >::const_iterator ItRTT = m_rtts.m_renderTargets.find(texaddr);
@@ -309,12 +309,12 @@ size_t D3D12GSRender::UploadTextures(ID3D12GraphicsCommandList *cmdlist)
 			vramTexture = ItRTT->second;
 			isRenderTarget = true;
 		}
-		else if (cachedTex != nullptr && (cachedTex->first == TextureEntry(format, w, h, m_textures[i].mipmap())))
+		else if (cachedTex != nullptr && (cachedTex->first == TextureEntry(format, w, h, textures[i].mipmap())))
 		{
 			if (cachedTex->first.m_isDirty)
 			{
-				updateExistingTexture(m_textures[i], cmdlist, m_textureUploadData, cachedTex->second.Get());
-				m_textureCache.protectData(texaddr, texaddr, getTextureSize(m_textures[i]));
+				updateExistingTexture(textures[i], cmdlist, m_textureUploadData, cachedTex->second.Get());
+				m_textureCache.protectData(texaddr, texaddr, getTextureSize(textures[i]));
 			}
 			vramTexture = cachedTex->second.Get();
 		}
@@ -322,15 +322,15 @@ size_t D3D12GSRender::UploadTextures(ID3D12GraphicsCommandList *cmdlist)
 		{
 			if (cachedTex != nullptr)
 				getCurrentResourceStorage().m_dirtyTextures.push_back(m_textureCache.removeFromCache(texaddr));
-			ComPtr<ID3D12Resource> tex = uploadSingleTexture(m_textures[i], m_device.Get(), cmdlist, m_textureUploadData);
+			ComPtr<ID3D12Resource> tex = uploadSingleTexture(textures[i], m_device.Get(), cmdlist, m_textureUploadData);
 			vramTexture = tex.Get();
-			m_textureCache.storeAndProtectData(texaddr, texaddr, getTextureSize(m_textures[i]), format, w, h, m_textures[i].mipmap(), tex);
+			m_textureCache.storeAndProtectData(texaddr, texaddr, getTextureSize(textures[i]), format, w, h, textures[i].mipmap(), tex);
 		}
 
 		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 		srvDesc.Format = dxgiFormat;
-		srvDesc.Texture2D.MipLevels = m_textures[i].mipmap();
+		srvDesc.Texture2D.MipLevels = textures[i].mipmap();
 
 		switch (format)
 		{
@@ -357,10 +357,10 @@ size_t D3D12GSRender::UploadTextures(ID3D12GraphicsCommandList *cmdlist)
 		{
 
 
-			u8 remap_a = m_textures[i].remap() & 0x3;
-			u8 remap_r = (m_textures[i].remap() >> 2) & 0x3;
-			u8 remap_g = (m_textures[i].remap() >> 4) & 0x3;
-			u8 remap_b = (m_textures[i].remap() >> 6) & 0x3;
+			u8 remap_a = textures[i].remap() & 0x3;
+			u8 remap_r = (textures[i].remap() >> 2) & 0x3;
+			u8 remap_g = (textures[i].remap() >> 4) & 0x3;
+			u8 remap_b = (textures[i].remap() >> 6) & 0x3;
 			if (isRenderTarget)
 			{
 				// ARGB format
@@ -428,10 +428,10 @@ size_t D3D12GSRender::UploadTextures(ID3D12GraphicsCommandList *cmdlist)
 				D3D12_SHADER_COMPONENT_MAPPING_FORCE_VALUE_1
 			};
 
-			u8 remap_a = m_textures[i].remap() & 0x3;
-			u8 remap_r = (m_textures[i].remap() >> 2) & 0x3;
-			u8 remap_g = (m_textures[i].remap() >> 4) & 0x3;
-			u8 remap_b = (m_textures[i].remap() >> 6) & 0x3;
+			u8 remap_a = textures[i].remap() & 0x3;
+			u8 remap_r = (textures[i].remap() >> 2) & 0x3;
+			u8 remap_g = (textures[i].remap() >> 4) & 0x3;
+			u8 remap_b = (textures[i].remap() >> 6) & 0x3;
 
 			srvDesc.Shader4ComponentMapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(
 				RemapValue[remap_a],
@@ -459,7 +459,7 @@ size_t D3D12GSRender::UploadTextures(ID3D12GraphicsCommandList *cmdlist)
 			getCurrentResourceStorage().m_samplerDescriptorHeapIndex = 1;
 			getCurrentResourceStorage().m_currentSamplerIndex = 0;
 		}
-		m_device->CreateSampler(&getSamplerDesc(m_textures[i]),
+		m_device->CreateSampler(&getSamplerDesc(textures[i]),
 			CD3DX12_CPU_DESCRIPTOR_HANDLE(getCurrentResourceStorage().m_samplerDescriptorHeap[getCurrentResourceStorage().m_samplerDescriptorHeapIndex]->GetCPUDescriptorHandleForHeapStart())
 			.Offset((UINT)getCurrentResourceStorage().m_currentSamplerIndex + (UINT)usedTexture, g_descriptorStrideSamplers));
 

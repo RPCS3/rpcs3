@@ -1912,7 +1912,7 @@ void GLGSRender::Draw()
 
 	for (u32 i = 0; i < rsx::limits::textures_count; ++i)
 	{
-		if (!m_textures[i].enabled()) continue;
+		if (!textures[i].enabled()) continue;
 
 		glActiveTexture(GL_TEXTURE0 + i);
 		checkForGlError("glActiveTexture");
@@ -1920,7 +1920,7 @@ void GLGSRender::Draw()
 		m_gl_textures[i].Bind();
 		checkForGlError(fmt::format("m_gl_textures[%d].Bind", i));
 		m_program.SetTex(i);
-		m_gl_textures[i].Init(m_textures[i]);
+		m_gl_textures[i].Init(textures[i]);
 		checkForGlError(fmt::format("m_gl_textures[%d].Init", i));
 	}
 
