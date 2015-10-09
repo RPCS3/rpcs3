@@ -1256,17 +1256,11 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 
 	// Stencil testing
 	case NV4097_SET_STENCIL_TEST_ENABLE:
-	{
-		m_set_stencil_test = ARGS(0) ? true : false;
 		notifyDepthStencilStateChange();
 		break;
-	}
-
 	case NV4097_SET_TWO_SIDED_STENCIL_TEST_ENABLE:
-	{
-		m_set_two_sided_stencil_test_enable = ARGS(0) ? true : false;
 		break;
-	}
+
 
 	case NV4097_SET_TWO_SIDE_LIGHT_EN:
 	{
@@ -1275,133 +1269,35 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	}
 
 	case NV4097_SET_STENCIL_MASK:
-	{
-		m_set_stencil_mask = true;
-		m_stencil_mask = ARGS(0);
 		notifyDepthStencilStateChange();
 		break;
-	}
-
 	case NV4097_SET_STENCIL_FUNC:
-	{
-		m_set_stencil_func = true;
-		m_stencil_func = ARGS(0);
-
-		if (count >= 2)
-		{
-			m_set_stencil_func_ref = true;
-			m_stencil_func_ref = ARGS(1);
-
-			if (count >= 3)
-			{
-				m_set_stencil_func_mask = true;
-				m_stencil_func_mask = ARGS(2);
-			}
-		}
 		notifyDepthStencilStateChange();
 		break;
-	}
-
 	case NV4097_SET_STENCIL_FUNC_REF:
-	{
-		m_set_stencil_func_ref = true;
-		m_stencil_func_ref = ARGS(0);
 		notifyDepthStencilStateChange();
 		break;
-	}
-
 	case NV4097_SET_STENCIL_FUNC_MASK:
-	{
-		m_set_stencil_func_mask = true;
-		m_stencil_func_mask = ARGS(0);
 		notifyDepthStencilStateChange();
 		break;
-	}
-
 	case NV4097_SET_STENCIL_OP_FAIL:
-	{
-		m_set_stencil_fail = true;
-		m_stencil_fail = ARGS(0);
-
-		if (count >= 2)
-		{
-			m_set_stencil_zfail = true;
-			m_stencil_zfail = ARGS(1);
-
-			if (count >= 3)
-			{
-				m_set_stencil_zpass = true;
-				m_stencil_zpass = ARGS(2);
-			}
-		}
 		notifyDepthStencilStateChange();
 		break;
-	}
-
 	case NV4097_SET_BACK_STENCIL_MASK:
-	{
-		m_set_back_stencil_mask = true;
-		m_back_stencil_mask = ARGS(0);
 		notifyDepthStencilStateChange();
 		break;
-	}
-
 	case NV4097_SET_BACK_STENCIL_FUNC:
-	{
-		m_set_back_stencil_func = true;
-		m_back_stencil_func = ARGS(0);
-
-		if (count >= 2)
-		{
-			m_set_back_stencil_func_ref = true;
-			m_back_stencil_func_ref = ARGS(1);
-
-			if (count >= 3)
-			{
-				m_set_back_stencil_func_mask = true;
-				m_back_stencil_func_mask = ARGS(2);
-			}
-		}
 		notifyDepthStencilStateChange();
 		break;
-	}
-
 	case NV4097_SET_BACK_STENCIL_FUNC_REF:
-	{
-		m_set_back_stencil_func_ref = true;
-		m_back_stencil_func_ref = ARGS(0);
 		notifyDepthStencilStateChange();
 		break;
-	}
-
 	case NV4097_SET_BACK_STENCIL_FUNC_MASK:
-	{
-		m_set_back_stencil_func_mask = true;
-		m_back_stencil_func_mask = ARGS(0);
 		notifyDepthStencilStateChange();
 		break;
-	}
-
 	case NV4097_SET_BACK_STENCIL_OP_FAIL:
-	{
-		m_set_stencil_fail = true;
-		m_stencil_fail = ARGS(0);
-
-		if (count >= 2)
-		{
-			m_set_back_stencil_zfail = true;
-			m_back_stencil_zfail = ARGS(1);
-
-			if (count >= 3)
-			{
-				m_set_back_stencil_zpass = true;
-				m_back_stencil_zpass = ARGS(2);
-			}
-		}
 		notifyDepthStencilStateChange();
 		break;
-	}
-
 	case NV4097_SET_SCULL_CONTROL:
 	{
 		if (u32 value = ARGS(0))

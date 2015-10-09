@@ -478,8 +478,8 @@ void SetupRsxRenderingStates(vm::ptr<CellGcmContextData>& cntxt)
 	r.m_set_depth_bounds_test = false;
 	rsx::method_registers[NV4097_SET_DEPTH_TEST_ENABLE] = false;
 	r.m_set_poly_offset_fill = false;
-	r.m_set_stencil_test = false;
-	r.m_set_two_sided_stencil_test_enable = false;
+//	r.m_set_stencil_test = false;
+//	r.m_set_two_sided_stencil_test_enable = false;
 	r.m_set_two_side_light_enable = false;
 	r.m_set_point_sprite_control = false;
 	r.m_set_dither = true;

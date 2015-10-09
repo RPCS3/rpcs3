@@ -447,7 +447,7 @@ void D3D12GSRender::end()
 	m_timers.m_programLoadDuration += std::chrono::duration_cast<std::chrono::microseconds>(programLoadEnd - programLoadStart).count();
 
 	getCurrentResourceStorage().m_commandList->SetGraphicsRootSignature(m_rootSignatures[m_PSO->second].Get());
-	getCurrentResourceStorage().m_commandList->OMSetStencilRef(m_stencil_func_ref);
+	getCurrentResourceStorage().m_commandList->OMSetStencilRef(rsx::method_registers[NV4097_SET_STENCIL_FUNC_REF]);
 
 	std::chrono::time_point<std::chrono::system_clock> constantsDurationStart = std::chrono::system_clock::now();
 

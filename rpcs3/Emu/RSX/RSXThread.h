@@ -273,38 +273,7 @@ public:
 	bool m_set_blend_mrt3;
 
 	// Stencil Test
-	bool m_set_stencil_test;
-	bool m_set_stencil_mask;
-	u32 m_stencil_mask;
-	bool m_set_stencil_func;
-	u32 m_stencil_func;
-	bool m_set_stencil_func_ref;
-	u32 m_stencil_func_ref;
-	bool m_set_stencil_func_mask;
-	u32 m_stencil_func_mask;
-	bool m_set_stencil_fail;
-	u32 m_stencil_fail;
-	bool m_set_stencil_zfail;
-	u32 m_stencil_zfail;
-	bool m_set_stencil_zpass;
-	u32 m_stencil_zpass;
-	bool m_set_two_sided_stencil_test_enable;
 	bool m_set_two_side_light_enable;
-	bool m_set_back_stencil_mask;
-	u32 m_back_stencil_mask;
-	bool m_set_back_stencil_func;
-	u32 m_back_stencil_func;
-	bool m_set_back_stencil_func_ref;
-	u32 m_back_stencil_func_ref;
-	bool m_set_back_stencil_func_mask;
-	u32 m_back_stencil_func_mask;
-	bool m_set_back_stencil_fail;
-	u32 m_back_stencil_fail;
-	bool m_set_back_stencil_zfail;
-	u32 m_back_stencil_zfail;
-	bool m_set_back_stencil_zpass;
-	u32 m_back_stencil_zpass;
-	bool m_set_stencil_op_fail;
 
 	// Line width
 	bool m_set_line_width;
@@ -469,14 +438,12 @@ protected:
 		m_set_logic_op = false;
 		m_set_cull_face = false;
 		m_set_dither = false;
-		m_set_stencil_test = false;
 		m_set_scissor_horizontal = false;
 		m_set_scissor_vertical = false;
 		m_set_line_smooth = false;
 		m_set_poly_smooth = false;
 		m_set_point_sprite_control = false;
 		m_set_specular = false;
-		m_set_two_sided_stencil_test_enable = false;
 		m_set_two_side_light_enable = false;
 		m_set_surface_clip_horizontal = false;
 		m_set_surface_clip_vertical = false;
@@ -566,24 +533,7 @@ protected:
 		m_set_blend_dfactor = false;
 		m_set_blend_equation = false;
 		m_set_blend_color = false;
-		m_set_stencil_test = false;
-		m_set_two_sided_stencil_test_enable = false;
 		m_set_two_side_light_enable = false;
-		m_set_stencil_mask = false;
-		m_set_stencil_func = false;
-		m_set_stencil_func_ref = false;
-		m_set_stencil_func_mask = false;
-		m_set_stencil_fail = false;
-		m_set_stencil_zfail = false;
-		m_set_stencil_zpass = false;
-		m_set_back_stencil_mask = false;
-		m_set_back_stencil_func = false;
-		m_set_back_stencil_func_ref = false;
-		m_set_back_stencil_func_mask = false;
-		m_set_back_stencil_fail = false;
-		m_set_back_stencil_zfail = false;
-		m_set_back_stencil_zpass = false;
-		m_set_stencil_op_fail = false;
 		m_set_point_sprite_control = false;
 		m_set_point_size = false;
 		m_set_line_width = false;

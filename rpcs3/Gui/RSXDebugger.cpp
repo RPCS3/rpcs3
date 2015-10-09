@@ -506,7 +506,7 @@ void RSXDebugger::GetFlags()
 	LIST_FLAGS_ADD("Poly offset fill",   render.m_set_poly_offset_fill);
 	LIST_FLAGS_ADD("Poly offset line",   render.m_set_poly_offset_line);
 	LIST_FLAGS_ADD("Poly offset point",  render.m_set_poly_offset_point);
-	LIST_FLAGS_ADD("Stencil test",       render.m_set_stencil_test);
+//	LIST_FLAGS_ADD("Stencil test",       render.m_set_stencil_test);
 	LIST_FLAGS_ADD("Primitive restart",  render.m_set_restart_index);
 	LIST_FLAGS_ADD("Two sided lighting", render.m_set_two_side_light_enable);
 	LIST_FLAGS_ADD("Point Sprite",	     render.m_set_point_sprite_control);
@@ -623,9 +623,9 @@ void RSXDebugger::GetSettings()
 		render.m_scissor_y,
 		render.m_scissor_w,
 		render.m_scissor_h));
-	LIST_SETTINGS_ADD("Stencil func", !(render.m_set_stencil_func) ? "(none)" : wxString::Format("0x%x (%s)",
-		render.m_stencil_func,
-		ParseGCMEnum(render.m_stencil_func, CELL_GCM_ENUM)));
+//	LIST_SETTINGS_ADD("Stencil func", !(render.m_set_stencil_func) ? "(none)" : wxString::Format("0x%x (%s)",
+//		render.m_stencil_func,
+//		ParseGCMEnum(render.m_stencil_func, CELL_GCM_ENUM)));
 	LIST_SETTINGS_ADD("Surface Pitch A", wxString::Format("0x%x", render.m_surface_pitch_a));
 	LIST_SETTINGS_ADD("Surface Pitch B", wxString::Format("0x%x", render.m_surface_pitch_b));
 	LIST_SETTINGS_ADD("Surface Pitch C", wxString::Format("0x%x", render.m_surface_pitch_c));
@@ -663,7 +663,7 @@ void RSXDebugger::SetFlags(wxListEvent& event)
 	case 9:  render.m_set_poly_offset_fill		^= true; break;
 	case 10: render.m_set_poly_offset_line		^= true; break;
 	case 11: render.m_set_poly_offset_point		^= true; break;
-	case 12: render.m_set_stencil_test		^= true; break;
+//	case 12: render.m_set_stencil_test		^= true; break;
 	case 13: render.m_set_point_sprite_control	^= true; break;
 	case 14: render.m_set_restart_index		^= true; break;
 	case 15: render.m_set_specular			^= true; break;

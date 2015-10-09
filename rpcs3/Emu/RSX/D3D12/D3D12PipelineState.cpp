@@ -235,27 +235,27 @@ bool D3D12GSRender::LoadProgram()
 	prop.DepthStencil.DepthEnable = !!(rsx::method_registers[NV4097_SET_DEPTH_TEST_ENABLE]);
 	prop.DepthStencil.DepthWriteMask = !!(rsx::method_registers[NV4097_SET_DEPTH_MASK]) ? D3D12_DEPTH_WRITE_MASK_ALL : D3D12_DEPTH_WRITE_MASK_ZERO;
 	prop.DepthStencil.DepthFunc = getCompareFunc(rsx::method_registers[NV4097_SET_DEPTH_FUNC]);
-	prop.DepthStencil.StencilEnable = m_set_stencil_test;
-	prop.DepthStencil.StencilReadMask = m_stencil_func_mask;
-	prop.DepthStencil.StencilWriteMask = m_stencil_mask;
-	prop.DepthStencil.FrontFace.StencilPassOp = getStencilOp(m_stencil_zpass);
-	prop.DepthStencil.FrontFace.StencilDepthFailOp = getStencilOp(m_stencil_zfail);
-	prop.DepthStencil.FrontFace.StencilFailOp = getStencilOp(m_stencil_fail);
-	prop.DepthStencil.FrontFace.StencilFunc = getCompareFunc(m_stencil_func);
+	prop.DepthStencil.StencilEnable = !!(rsx::method_registers[NV4097_SET_STENCIL_TEST_ENABLE]);
+	prop.DepthStencil.StencilReadMask = rsx::method_registers[NV4097_SET_STENCIL_FUNC_MASK];
+	prop.DepthStencil.StencilWriteMask = rsx::method_registers[NV4097_SET_STENCIL_MASK];
+	prop.DepthStencil.FrontFace.StencilPassOp = getStencilOp(rsx::method_registers[NV4097_SET_STENCIL_OP_ZPASS]);
+	prop.DepthStencil.FrontFace.StencilDepthFailOp = getStencilOp(rsx::method_registers[NV4097_SET_STENCIL_OP_ZFAIL]);
+	prop.DepthStencil.FrontFace.StencilFailOp = getStencilOp(rsx::method_registers[NV4097_SET_STENCIL_OP_FAIL]);
+	prop.DepthStencil.FrontFace.StencilFunc = getCompareFunc(rsx::method_registers[NV4097_SET_STENCIL_FUNC]);
 
-	if (m_set_two_sided_stencil_test_enable)
+	if (rsx::method_registers[NV4097_SET_TWO_SIDED_STENCIL_TEST_ENABLE])
 	{
-		prop.DepthStencil.BackFace.StencilFailOp = getStencilOp(m_back_stencil_fail);
-		prop.DepthStencil.BackFace.StencilFunc = getCompareFunc(m_back_stencil_func);
-		prop.DepthStencil.BackFace.StencilPassOp = getStencilOp(m_back_stencil_zpass);
-		prop.DepthStencil.BackFace.StencilDepthFailOp = getStencilOp(m_back_stencil_zfail);
+		prop.DepthStencil.BackFace.StencilFailOp = getStencilOp(rsx::method_registers[NV4097_SET_BACK_STENCIL_OP_FAIL]);
+		prop.DepthStencil.BackFace.StencilFunc = getCompareFunc(rsx::method_registers[NV4097_SET_BACK_STENCIL_FUNC]);
+		prop.DepthStencil.BackFace.StencilPassOp = getStencilOp(rsx::method_registers[NV4097_SET_BACK_STENCIL_OP_ZPASS]);
+		prop.DepthStencil.BackFace.StencilDepthFailOp = getStencilOp(rsx::method_registers[NV4097_SET_BACK_STENCIL_OP_ZFAIL]);
 	}
 	else
 	{
-		prop.DepthStencil.BackFace.StencilPassOp = getStencilOp(m_stencil_zpass);
-		prop.DepthStencil.BackFace.StencilDepthFailOp = getStencilOp(m_stencil_zfail);
-		prop.DepthStencil.BackFace.StencilFailOp = getStencilOp(m_stencil_fail);
-		prop.DepthStencil.BackFace.StencilFunc = getCompareFunc(m_stencil_func);
+		prop.DepthStencil.BackFace.StencilPassOp = getStencilOp(rsx::method_registers[NV4097_SET_STENCIL_OP_ZPASS]);
+		prop.DepthStencil.BackFace.StencilDepthFailOp = getStencilOp(rsx::method_registers[NV4097_SET_STENCIL_OP_ZFAIL]);
+		prop.DepthStencil.BackFace.StencilFailOp = getStencilOp(rsx::method_registers[NV4097_SET_STENCIL_OP_FAIL]);
+		prop.DepthStencil.BackFace.StencilFunc = getCompareFunc(rsx::method_registers[NV4097_SET_STENCIL_FUNC]);
 	}
 
 	// Sensible default value

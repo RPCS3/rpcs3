@@ -1669,7 +1669,7 @@ void GLGSRender::end()
 	Enable(m_set_logic_op, GL_LOGIC_OP);
 	Enable(m_set_cull_face, GL_CULL_FACE);
 	Enable(m_set_dither, GL_DITHER);
-	Enable(m_set_stencil_test, GL_STENCIL_TEST);
+//	Enable(m_set_stencil_test, GL_STENCIL_TEST);
 	Enable(m_set_line_smooth, GL_LINE_SMOOTH);
 	Enable(m_set_poly_smooth, GL_POLYGON_SMOOTH);
 	Enable(m_set_point_sprite_control, GL_POINT_SPRITE);
@@ -1736,7 +1736,7 @@ void GLGSRender::end()
 		checkForGlError("glScissor");
 	}
 
-	if (m_set_two_sided_stencil_test_enable)
+/*	if (m_set_two_sided_stencil_test_enable)
 	{
 		if (m_set_stencil_fail && m_set_stencil_zfail && m_set_stencil_zpass)
 		{
@@ -1793,7 +1793,7 @@ void GLGSRender::end()
 			glStencilFunc(m_stencil_func, m_stencil_func_ref, m_stencil_func_mask);
 			checkForGlError("glStencilFunc");
 		}
-	}
+	}*/
 
 	// TODO: Use other glLightModel functions?
 	glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, m_set_two_side_light_enable ? GL_TRUE : GL_FALSE);
