@@ -32,6 +32,33 @@ namespace rsx
 	u32 linear_to_swizzle(u32 x, u32 y, u32 z, u32 log2_width, u32 log2_height, u32 log2_depth);
 
 	u32 get_vertex_type_size(u32 type);
+
+	struct surface_info
+	{
+		u8 log2height;
+		u8 log2width;
+		u8 antialias;
+		u8 depth_format;
+		u8 color_format;
+
+		u32 width;
+		u32 height;
+		u32 format;
+
+		void unpack(u32 surface_format)
+		{
+			format = surface_format;
+
+			log2height = surface_format >> 24;
+			log2width = (surface_format >> 16) & 0xff;
+			antialias = (surface_format >> 12) & 0xf;
+			depth_format = (surface_format >> 5) & 0x7;
+			color_format = surface_format & 0x1f;
+
+			width = 1 << (u32(log2width) + 1);
+			height = 1 << (u32(log2width) + 1);
+		}
+	};
 }
 
 enum Method
@@ -292,29 +319,9 @@ public:
 	bool m_clip_plane_5;
 
 	// Surface 
-	bool m_set_surface_format;
-	u8 m_surface_color_format;
-	u8 m_surface_depth_format;
-	u8 m_surface_type;
-	u8 m_surface_antialias;
-	u8 m_surface_width;
-	u8 m_surface_height;
+	rsx::surface_info m_surface;
 	bool m_set_surface_clip_horizontal;
-	u16 m_surface_clip_x;
-	u16 m_surface_clip_w;
 	bool m_set_surface_clip_vertical;
-	u16 m_surface_clip_y;
-	u16 m_surface_clip_h;
-	u32 m_surface_pitch_a;
-	u32 m_surface_pitch_b;
-	u32 m_surface_pitch_c;
-	u32 m_surface_pitch_d;
-	u32 m_surface_pitch_z;
-	u32 m_surface_offset_a;
-	u32 m_surface_offset_b;
-	u32 m_surface_offset_c;
-	u32 m_surface_offset_d;
-	u32 m_surface_offset_z;
 
 	// DMA context
 	bool m_set_context_dma_color_a;
@@ -509,7 +516,6 @@ protected:
 		m_set_specular = false;
 		m_set_line_stipple = false;
 		m_set_polygon_stipple = false;
-		m_set_surface_format = false;
 		m_set_surface_clip_horizontal = false;
 		m_set_surface_clip_vertical = false;
 

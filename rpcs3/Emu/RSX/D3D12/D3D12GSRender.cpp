@@ -321,7 +321,7 @@ void D3D12GSRender::clear_surface(u32 arg)
 	if (arg & 0x1)
 	{
 		u32 clear_depth = rsx::method_registers[NV4097_SET_ZSTENCIL_CLEAR_VALUE] >> 8;
-		u32 max_depth_value = m_surface_depth_format == CELL_GCM_SURFACE_Z16 ? 0x0000ffff : 0x00ffffff;
+		u32 max_depth_value = m_surface.depth_format == CELL_GCM_SURFACE_Z16 ? 0x0000ffff : 0x00ffffff;
 		getCurrentResourceStorage().m_commandList->ClearDepthStencilView(m_rtts.m_depthStencilDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), D3D12_CLEAR_FLAG_DEPTH, clear_depth / (float)max_depth_value, 0, 0, nullptr);
 	}
 
@@ -552,12 +552,15 @@ void D3D12GSRender::end()
 	getCurrentResourceStorage().m_commandList->OMSetRenderTargets((UINT)numRTT, &m_rtts.m_renderTargetsDescriptorsHeap->GetCPUDescriptorHandleForHeapStart(), true,
 		&CD3DX12_CPU_DESCRIPTOR_HANDLE(m_rtts.m_depthStencilDescriptorHeap->GetCPUDescriptorHandleForHeapStart()));
 
+	int clip_w = rsx::method_registers[NV4097_SET_SURFACE_CLIP_HORIZONTAL] >> 16;
+	int clip_h = rsx::method_registers[NV4097_SET_SURFACE_CLIP_VERTICAL] >> 16;
+
 	D3D12_VIEWPORT viewport =
 	{
 		0.f,
 		0.f,
-		(float)m_surface_clip_w,
-		(float)m_surface_clip_h,
+		(float)clip_w,
+		(float)clip_h,
 		-1.f,
 		1.f
 	};
@@ -567,8 +570,8 @@ void D3D12GSRender::end()
 	{
 		0,
 		0,
-		(LONG)m_surface_clip_w,
-		(LONG)m_surface_clip_h,
+		(LONG)clip_w,
+		(LONG)clip_h,
 	};
 	getCurrentResourceStorage().m_commandList->RSSetScissorRects(1, &box);
 
@@ -849,11 +852,13 @@ D3D12GSRender::ResourceStorage& D3D12GSRender::getNonCurrentResourceStorage()
 
 ID3D12Resource * D3D12GSRender::writeColorBuffer(ID3D12Resource * RTT, ID3D12GraphicsCommandList * cmdlist)
 {
+	int clip_w = rsx::method_registers[NV4097_SET_SURFACE_CLIP_HORIZONTAL] >> 16;
+	int clip_h = rsx::method_registers[NV4097_SET_SURFACE_CLIP_VERTICAL] >> 16;
 	ID3D12Resource *Result;
-	size_t w = m_surface_clip_w, h = m_surface_clip_h;
+	size_t w = clip_w, h = clip_h;
 	DXGI_FORMAT dxgiFormat;
 	size_t rowPitch;
-	switch (m_surface_color_format)
+	switch (m_surface.color_format)
 	{
 	case CELL_GCM_SURFACE_A8R8G8B8:
 		dxgiFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
@@ -910,7 +915,8 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 	// Add all buffer write
 	// Cell can't make any assumption about readyness of color/depth buffer
 	// Except when a semaphore is written by RSX
-
+	int clip_w = rsx::method_registers[NV4097_SET_SURFACE_CLIP_HORIZONTAL] >> 16;
+	int clip_h = rsx::method_registers[NV4097_SET_SURFACE_CLIP_VERTICAL] >> 16;
 
 	ComPtr<ID3D12Fence> fence;
 	ThrowIfFailed(
@@ -921,7 +927,7 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 
 	ComPtr<ID3D12Resource> writeDest, depthConverted;
 	ComPtr<ID3D12DescriptorHeap> descriptorHeap;
-	size_t depthRowPitch = m_surface_clip_w;
+	size_t depthRowPitch = clip_w;
 	depthRowPitch = (depthRowPitch + 255) & ~255;
 
 	bool needTransfer = (m_set_context_dma_z && Ini.GSDumpDepthBuffer.GetValue()) ||
@@ -929,7 +935,7 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 
 	if (m_set_context_dma_z && Ini.GSDumpDepthBuffer.GetValue())
 	{
-		size_t sizeInByte = m_surface_clip_w * m_surface_clip_h * 2;
+		size_t sizeInByte = clip_w * clip_h * 2;
 		assert(m_UAVHeap.canAlloc(sizeInByte));
 		size_t heapOffset = m_UAVHeap.alloc(sizeInByte);
 
@@ -937,14 +943,14 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 			m_device->CreatePlacedResource(
 				m_UAVHeap.m_heap,
 				heapOffset,
-				&CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8_UNORM, m_surface_clip_w, m_surface_clip_h, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS),
+				&CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8_UNORM, clip_w, clip_h, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS),
 				D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
 				nullptr,
 				IID_PPV_ARGS(depthConverted.GetAddressOf())
 				)
 			);
 
-		sizeInByte = depthRowPitch * m_surface_clip_h;
+		sizeInByte = depthRowPitch * clip_h;
 		assert(m_readbackResources.canAlloc(sizeInByte));
 		heapOffset = m_readbackResources.alloc(sizeInByte);
 
@@ -964,7 +970,7 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 			m_device->CreateDescriptorHeap(&descriptorHeapDesc, IID_PPV_ARGS(descriptorHeap.GetAddressOf()))
 			);
 		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-		switch (m_surface_depth_format)
+		switch (m_surface.depth_format)
 		{
 		case 0:
 			break;
@@ -975,7 +981,7 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 			srvDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
 			break;
 		default:
-			LOG_ERROR(RSX, "Bad depth format! (%d)", m_surface_depth_format);
+			LOG_ERROR(RSX, "Bad depth format! (%d)", m_surface.depth_format);
 			assert(0);
 		}
 		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
@@ -996,7 +1002,7 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 		getCurrentResourceStorage().m_commandList->SetComputeRootSignature(m_convertRootSignature);
 		getCurrentResourceStorage().m_commandList->SetDescriptorHeaps(1, descriptorHeap.GetAddressOf());
 		getCurrentResourceStorage().m_commandList->SetComputeRootDescriptorTable(0, descriptorHeap->GetGPUDescriptorHandleForHeapStart());
-		getCurrentResourceStorage().m_commandList->Dispatch(m_surface_clip_w / 8, m_surface_clip_h / 8, 1);
+		getCurrentResourceStorage().m_commandList->Dispatch(clip_w / 8, clip_h / 8, 1);
 
 		D3D12_RESOURCE_BARRIER barriers[] =
 		{
@@ -1005,10 +1011,10 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 		};
 		getCurrentResourceStorage().m_commandList->ResourceBarrier(2, barriers);
 		getCurrentResourceStorage().m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(depthConverted.Get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COPY_SOURCE));
-		getCurrentResourceStorage().m_commandList->CopyTextureRegion(&CD3DX12_TEXTURE_COPY_LOCATION(writeDest.Get(), { 0, { DXGI_FORMAT_R8_UNORM, m_surface_clip_w, m_surface_clip_h, 1, (UINT)depthRowPitch } }), 0, 0, 0,
+		getCurrentResourceStorage().m_commandList->CopyTextureRegion(&CD3DX12_TEXTURE_COPY_LOCATION(writeDest.Get(), { 0, { DXGI_FORMAT_R8_UNORM, (UINT)clip_w, (UINT)clip_h, 1, (UINT)depthRowPitch } }), 0, 0, 0,
 			&CD3DX12_TEXTURE_COPY_LOCATION(depthConverted.Get(), 0), nullptr);
 
-		invalidateAddress(rsx::get_address(m_surface_offset_z, m_context_dma_z - 0xfeed0000));
+		invalidateAddress(rsx::get_address(rsx::method_registers[NV4097_SET_SURFACE_ZETA_OFFSET], m_context_dma_z - 0xfeed0000));
 	}
 
 	ID3D12Resource *rtt0, *rtt1, *rtt2, *rtt3;
@@ -1046,10 +1052,10 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 			break;
 		}
 
-		if (m_context_dma_color_a) invalidateAddress(rsx::get_address(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000));
-		if (m_context_dma_color_b) invalidateAddress(rsx::get_address(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000));
-		if (m_context_dma_color_c) invalidateAddress(rsx::get_address(m_surface_offset_c, m_context_dma_color_c - 0xfeed0000));
-		if (m_context_dma_color_d) invalidateAddress(rsx::get_address(m_surface_offset_d, m_context_dma_color_d - 0xfeed0000));
+		if (m_context_dma_color_a) invalidateAddress(rsx::get_address(rsx::method_registers[NV4097_SET_SURFACE_COLOR_AOFFSET], m_context_dma_color_a - 0xfeed0000));
+		if (m_context_dma_color_b) invalidateAddress(rsx::get_address(rsx::method_registers[NV4097_SET_SURFACE_COLOR_BOFFSET], m_context_dma_color_b - 0xfeed0000));
+		if (m_context_dma_color_c) invalidateAddress(rsx::get_address(rsx::method_registers[NV4097_SET_SURFACE_COLOR_COFFSET], m_context_dma_color_c - 0xfeed0000));
+		if (m_context_dma_color_d) invalidateAddress(rsx::get_address(rsx::method_registers[NV4097_SET_SURFACE_COLOR_DOFFSET], m_context_dma_color_d - 0xfeed0000));
 	}
 	if (needTransfer)
 	{
@@ -1065,35 +1071,35 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 
 	if (m_set_context_dma_z && Ini.GSDumpDepthBuffer.GetValue())
 	{
-		u32 address = rsx::get_address(m_surface_offset_z, m_context_dma_z - 0xfeed0000);
+		u32 address = rsx::get_address(rsx::method_registers[NV4097_SET_SURFACE_ZETA_OFFSET], m_context_dma_z - 0xfeed0000);
 		auto ptr = vm::get_ptr<void>(address);
 		char *ptrAsChar = (char*)ptr;
 		unsigned char *writeDestPtr;
 		ThrowIfFailed(writeDest->Map(0, nullptr, (void**)&writeDestPtr));
 
-		for (unsigned row = 0; row < m_surface_clip_h; row++)
+		for (unsigned row = 0; row < (unsigned)clip_h; row++)
 		{
-			for (unsigned i = 0; i < m_surface_clip_w; i++)
+			for (unsigned i = 0; i < (unsigned)clip_w; i++)
 			{
 				unsigned char c = writeDestPtr[row * depthRowPitch + i];
-				ptrAsChar[4 * (row * m_surface_clip_w + i)] = c;
-				ptrAsChar[4 * (row * m_surface_clip_w + i) + 1] = c;
-				ptrAsChar[4 * (row * m_surface_clip_w + i) + 2] = c;
-				ptrAsChar[4 * (row * m_surface_clip_w + i) + 3] = c;
+				ptrAsChar[4 * (row * clip_w + i)] = c;
+				ptrAsChar[4 * (row * clip_w + i) + 1] = c;
+				ptrAsChar[4 * (row * clip_w + i) + 2] = c;
+				ptrAsChar[4 * (row * clip_w + i) + 3] = c;
 			}
 		}
 	}
 
 	size_t srcPitch, dstPitch;
-	switch (m_surface_color_format)
+	switch (m_surface.color_format)
 	{
 	case CELL_GCM_SURFACE_A8R8G8B8:
-		srcPitch = align(m_surface_clip_w * 4, 256);
-		dstPitch = m_surface_clip_w * 4;
+		srcPitch = align(clip_w * 4, 256);
+		dstPitch = clip_w * 4;
 		break;
 	case CELL_GCM_SURFACE_F_W16Z16Y16X16:
-		srcPitch = align(m_surface_clip_w * 8, 256);
-		dstPitch = m_surface_clip_w * 8;
+		srcPitch = align(clip_w * 8, 256);
+		dstPitch = clip_w * 8;
 		break;
 	}
 
@@ -1105,55 +1111,55 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 			break;
 		case CELL_GCM_SURFACE_TARGET_0:
 		{
-			u32 address = rsx::get_address(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000);
+			u32 address = rsx::get_address(rsx::method_registers[NV4097_SET_SURFACE_COLOR_AOFFSET], m_context_dma_color_a - 0xfeed0000);
 			void *dstAddress = vm::get_ptr<void>(address);
-			copyToCellRamAndRelease(dstAddress, rtt0, srcPitch, dstPitch, m_surface_clip_w, m_surface_clip_h);
+			copyToCellRamAndRelease(dstAddress, rtt0, srcPitch, dstPitch, clip_w, clip_h);
 		}
 		break;
 		case CELL_GCM_SURFACE_TARGET_1:
 		{
-			u32 address = rsx::get_address(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000);
+			u32 address = rsx::get_address(rsx::method_registers[NV4097_SET_SURFACE_COLOR_BOFFSET], m_context_dma_color_b - 0xfeed0000);
 			void *dstAddress = vm::get_ptr<void>(address);
-			copyToCellRamAndRelease(dstAddress, rtt1, srcPitch, dstPitch, m_surface_clip_w, m_surface_clip_h);
+			copyToCellRamAndRelease(dstAddress, rtt1, srcPitch, dstPitch, clip_w, clip_h);
 		}
 		break;
 		case CELL_GCM_SURFACE_TARGET_MRT1:
 		{
-			u32 address = rsx::get_address(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000);
+			u32 address = rsx::get_address(rsx::method_registers[NV4097_SET_SURFACE_COLOR_AOFFSET], m_context_dma_color_a - 0xfeed0000);
 			void *dstAddress = vm::get_ptr<void>(address);
-			copyToCellRamAndRelease(dstAddress, rtt0, srcPitch, dstPitch, m_surface_clip_w, m_surface_clip_h);
-			address = rsx::get_address(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000);
+			copyToCellRamAndRelease(dstAddress, rtt0, srcPitch, dstPitch, clip_w, clip_h);
+			address = rsx::get_address(rsx::method_registers[NV4097_SET_SURFACE_COLOR_BOFFSET], m_context_dma_color_b - 0xfeed0000);
 			dstAddress = vm::get_ptr<void>(address);
-			copyToCellRamAndRelease(dstAddress, rtt1, srcPitch, dstPitch, m_surface_clip_w, m_surface_clip_h);
+			copyToCellRamAndRelease(dstAddress, rtt1, srcPitch, dstPitch, clip_w, clip_h);
 		}
 		break;
 		case CELL_GCM_SURFACE_TARGET_MRT2:
 		{
-			u32 address = rsx::get_address(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000);
+			u32 address = rsx::get_address(rsx::method_registers[NV4097_SET_SURFACE_COLOR_AOFFSET], m_context_dma_color_a - 0xfeed0000);
 			void *dstAddress = vm::get_ptr<void>(address);
-			copyToCellRamAndRelease(dstAddress, rtt0, srcPitch, dstPitch, m_surface_clip_w, m_surface_clip_h);
-			address = rsx::get_address(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000);
+			copyToCellRamAndRelease(dstAddress, rtt0, srcPitch, dstPitch, clip_w, clip_h);
+			address = rsx::get_address(rsx::method_registers[NV4097_SET_SURFACE_COLOR_BOFFSET], m_context_dma_color_b - 0xfeed0000);
 			dstAddress = vm::get_ptr<void>(address);
-			copyToCellRamAndRelease(dstAddress, rtt1, srcPitch, dstPitch, m_surface_clip_w, m_surface_clip_h);
-			address = rsx::get_address(m_surface_offset_c, m_context_dma_color_c - 0xfeed0000);
+			copyToCellRamAndRelease(dstAddress, rtt1, srcPitch, dstPitch, clip_w, clip_h);
+			address = rsx::get_address(rsx::method_registers[NV4097_SET_SURFACE_COLOR_COFFSET], m_context_dma_color_c - 0xfeed0000);
 			dstAddress = vm::get_ptr<void>(address);
-			copyToCellRamAndRelease(dstAddress, rtt2, srcPitch, dstPitch, m_surface_clip_w, m_surface_clip_h);
+			copyToCellRamAndRelease(dstAddress, rtt2, srcPitch, dstPitch, clip_w, clip_h);
 		}
 		break;
 		case CELL_GCM_SURFACE_TARGET_MRT3:
 		{
-			u32 address = rsx::get_address(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000);
+			u32 address = rsx::get_address(rsx::method_registers[NV4097_SET_SURFACE_COLOR_AOFFSET], m_context_dma_color_a - 0xfeed0000);
 			void *dstAddress = vm::get_ptr<void>(address);
-			copyToCellRamAndRelease(dstAddress, rtt0, srcPitch, dstPitch, m_surface_clip_w, m_surface_clip_h);
-			address = rsx::get_address(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000);
+			copyToCellRamAndRelease(dstAddress, rtt0, srcPitch, dstPitch, clip_w, clip_h);
+			address = rsx::get_address(rsx::method_registers[NV4097_SET_SURFACE_COLOR_BOFFSET], m_context_dma_color_b - 0xfeed0000);
 			dstAddress = vm::get_ptr<void>(address);
-			copyToCellRamAndRelease(dstAddress, rtt1, srcPitch, dstPitch, m_surface_clip_w, m_surface_clip_h);
-			address = rsx::get_address(m_surface_offset_c, m_context_dma_color_c - 0xfeed0000);
+			copyToCellRamAndRelease(dstAddress, rtt1, srcPitch, dstPitch, clip_w, clip_h);
+			address = rsx::get_address(rsx::method_registers[NV4097_SET_SURFACE_COLOR_COFFSET], m_context_dma_color_c - 0xfeed0000);
 			dstAddress = vm::get_ptr<void>(address);
-			copyToCellRamAndRelease(dstAddress, rtt2, srcPitch, dstPitch, m_surface_clip_w, m_surface_clip_h);
-			address = rsx::get_address(m_surface_offset_d, m_context_dma_color_d - 0xfeed0000);
+			copyToCellRamAndRelease(dstAddress, rtt2, srcPitch, dstPitch, clip_w, clip_h);
+			address = rsx::get_address(rsx::method_registers[NV4097_SET_SURFACE_COLOR_DOFFSET], m_context_dma_color_d - 0xfeed0000);
 			dstAddress = vm::get_ptr<void>(address);
-			copyToCellRamAndRelease(dstAddress, rtt3, srcPitch, dstPitch, m_surface_clip_w, m_surface_clip_h);
+			copyToCellRamAndRelease(dstAddress, rtt3, srcPitch, dstPitch, clip_w, clip_h);
 		}
 		break;
 		}

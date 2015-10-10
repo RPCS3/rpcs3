@@ -182,7 +182,7 @@ bool D3D12GSRender::LoadProgram()
 		// checkForGlError("glBlendColor");
 	}
 
-	switch (m_surface_depth_format)
+	switch (m_surface.depth_format)
 	{
 	case 0:
 		break;
@@ -193,11 +193,11 @@ bool D3D12GSRender::LoadProgram()
 		prop.DepthStencilFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
 		break;
 	default:
-		LOG_ERROR(RSX, "Bad depth format! (%d)", m_surface_depth_format);
+		LOG_ERROR(RSX, "Bad depth format! (%d)", m_surface.depth_format);
 		assert(0);
 	}
 
-	switch (m_surface_color_format)
+	switch (m_surface.color_format)
 	{
 	case CELL_GCM_SURFACE_A8R8G8B8:
 		prop.RenderTargetsFormat = DXGI_FORMAT_R8G8B8A8_UNORM;

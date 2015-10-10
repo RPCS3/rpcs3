@@ -626,16 +626,16 @@ void RSXDebugger::GetSettings()
 //	LIST_SETTINGS_ADD("Stencil func", !(render.m_set_stencil_func) ? "(none)" : wxString::Format("0x%x (%s)",
 //		render.m_stencil_func,
 //		ParseGCMEnum(render.m_stencil_func, CELL_GCM_ENUM)));
-	LIST_SETTINGS_ADD("Surface Pitch A", wxString::Format("0x%x", render.m_surface_pitch_a));
-	LIST_SETTINGS_ADD("Surface Pitch B", wxString::Format("0x%x", render.m_surface_pitch_b));
-	LIST_SETTINGS_ADD("Surface Pitch C", wxString::Format("0x%x", render.m_surface_pitch_c));
-	LIST_SETTINGS_ADD("Surface Pitch D", wxString::Format("0x%x", render.m_surface_pitch_d));
-	LIST_SETTINGS_ADD("Surface Pitch Z", wxString::Format("0x%x", render.m_surface_pitch_z));
-	LIST_SETTINGS_ADD("Surface Offset A", wxString::Format("0x%x", render.m_surface_offset_a));
-	LIST_SETTINGS_ADD("Surface Offset B", wxString::Format("0x%x", render.m_surface_offset_b));
-	LIST_SETTINGS_ADD("Surface Offset C", wxString::Format("0x%x", render.m_surface_offset_c));
-	LIST_SETTINGS_ADD("Surface Offset D", wxString::Format("0x%x", render.m_surface_offset_d));
-	LIST_SETTINGS_ADD("Surface Offset Z", wxString::Format("0x%x", render.m_surface_offset_z));
+	LIST_SETTINGS_ADD("Surface Pitch A", wxString::Format("0x%x", rsx::method_registers[NV4097_SET_SURFACE_PITCH_A]));
+	LIST_SETTINGS_ADD("Surface Pitch B", wxString::Format("0x%x", rsx::method_registers[NV4097_SET_SURFACE_PITCH_B]));
+	LIST_SETTINGS_ADD("Surface Pitch C", wxString::Format("0x%x", rsx::method_registers[NV4097_SET_SURFACE_PITCH_C]));
+	LIST_SETTINGS_ADD("Surface Pitch D", wxString::Format("0x%x", rsx::method_registers[NV4097_SET_SURFACE_PITCH_D]));
+	LIST_SETTINGS_ADD("Surface Pitch Z", wxString::Format("0x%x", rsx::method_registers[NV4097_SET_SURFACE_PITCH_Z]));
+	LIST_SETTINGS_ADD("Surface Offset A", wxString::Format("0x%x", rsx::method_registers[NV4097_SET_SURFACE_COLOR_AOFFSET]));
+	LIST_SETTINGS_ADD("Surface Offset B", wxString::Format("0x%x", rsx::method_registers[NV4097_SET_SURFACE_COLOR_BOFFSET]));
+	LIST_SETTINGS_ADD("Surface Offset C", wxString::Format("0x%x", rsx::method_registers[NV4097_SET_SURFACE_COLOR_COFFSET]));
+	LIST_SETTINGS_ADD("Surface Offset D", wxString::Format("0x%x", rsx::method_registers[NV4097_SET_SURFACE_COLOR_DOFFSET]));
+	LIST_SETTINGS_ADD("Surface Offset Z", wxString::Format("0x%x", rsx::method_registers[NV4097_SET_SURFACE_ZETA_OFFSET]));
 	LIST_SETTINGS_ADD("Viewport", wxString::Format("X:%d, Y:%d, W:%d, H:%d",
 		rsx::method_registers[NV4097_SET_SURFACE_CLIP_HORIZONTAL] & 0xFFFF,
 		rsx::method_registers[NV4097_SET_SURFACE_CLIP_VERTICAL] & 0xFFFF,

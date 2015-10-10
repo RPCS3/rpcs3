@@ -1155,7 +1155,7 @@ void GLGSRender::WriteDepthBuffer()
 		return;
 	}
 
-	u32 address = rsx::get_address(m_surface_offset_z, m_context_dma_z - 0xfeed0000);
+	u32 address;// = rsx::get_address(m_surface_offset_z, m_context_dma_z - 0xfeed0000);
 
 	auto ptr = vm::get_ptr<void>(address);
 	glBindBuffer(GL_PIXEL_PACK_BUFFER, g_pbo[4]);
@@ -1187,7 +1187,7 @@ void GLGSRender::WriteColorBufferA()
 		return;
 	}
 
-	u32 address = rsx::get_address(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000);
+	u32 address;// = rsx::get_address(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000);
 
 	glReadBuffer(GL_COLOR_ATTACHMENT0);
 	checkForGlError("WriteColorBufferA(): glReadBuffer");
@@ -1213,7 +1213,7 @@ void GLGSRender::WriteColorBufferB()
 		return;
 	}
 
-	u32 address = rsx::get_address(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000);
+	u32 address;// = rsx::get_address(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000);
 
 	glReadBuffer(GL_COLOR_ATTACHMENT1);
 	checkForGlError("WriteColorBufferB(): glReadBuffer");
@@ -1239,7 +1239,7 @@ void GLGSRender::WriteColorBufferC()
 		return;
 	}
 
-	u32 address = rsx::get_address(m_surface_offset_c, m_context_dma_color_c - 0xfeed0000);
+	u32 address;// = rsx::get_address(m_surface_offset_c, m_context_dma_color_c - 0xfeed0000);
 
 	glReadBuffer(GL_COLOR_ATTACHMENT2);
 	checkForGlError("WriteColorBufferC(): glReadBuffer");
@@ -1265,7 +1265,7 @@ void GLGSRender::WriteColorBufferD()
 		return;
 	}
 
-	u32 address = rsx::get_address(m_surface_offset_d, m_context_dma_color_d - 0xfeed0000);
+	u32 address;// = rsx::get_address(m_surface_offset_d, m_context_dma_color_d - 0xfeed0000);
 
 	glReadBuffer(GL_COLOR_ATTACHMENT3);
 	checkForGlError("WriteColorBufferD(): glReadBuffer");
@@ -1413,12 +1413,12 @@ void GLGSRender::OnReset()
 
 void GLGSRender::InitDrawBuffers()
 {
-	if (!m_fbo.IsCreated() || RSXThread::m_width != last_width || RSXThread::m_height != last_height || last_depth_format != m_surface_depth_format)
+//	if (!m_fbo.IsCreated() || RSXThread::m_width != last_width || RSXThread::m_height != last_height || last_depth_format != m_surface_depth_format)
 	{
 		LOG_WARNING(RSX, "New FBO (%dx%d)", RSXThread::m_width, RSXThread::m_height);
 		last_width = RSXThread::m_width;
 		last_height = RSXThread::m_height;
-		last_depth_format = m_surface_depth_format;
+//		last_depth_format = m_surface_depth_format;
 
 		m_fbo.Create();
 		checkForGlError("m_fbo.Create");
@@ -1436,7 +1436,7 @@ void GLGSRender::InitDrawBuffers()
 
 		m_rbo.Bind(4);
 
-		switch (m_surface_depth_format)
+		switch (m_surface.depth_format)
 		{
 		case 0:
 		{
@@ -1478,7 +1478,7 @@ void GLGSRender::InitDrawBuffers()
 
 		default:
 		{
-			LOG_ERROR(RSX, "Bad depth format! (%d)", m_surface_depth_format);
+//			LOG_ERROR(RSX, "Bad depth format! (%d)", m_surface_depth_format);
 			assert(0);
 			break;
 		}
@@ -1502,14 +1502,14 @@ void GLGSRender::InitDrawBuffers()
 
 	if (!m_set_surface_clip_horizontal)
 	{
-		m_surface_clip_x = 0;
-		m_surface_clip_w = RSXThread::m_width;
+//		m_surface_clip_x = 0;
+//		m_surface_clip_w = RSXThread::m_width;
 	}
 
 	if (!m_set_surface_clip_vertical)
 	{
-		m_surface_clip_y = 0;
-		m_surface_clip_h = RSXThread::m_height;
+//		m_surface_clip_y = 0;
+//		m_surface_clip_h = RSXThread::m_height;
 	}
 
 	m_fbo.Bind();

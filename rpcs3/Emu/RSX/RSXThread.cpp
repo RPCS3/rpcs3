@@ -1296,24 +1296,6 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	// Depth/Color buffer usage 
 	case NV4097_SET_SURFACE_FORMAT:
 	{
-		const u32 a0 = ARGS(0);
-		m_set_surface_format = true;
-		m_surface_color_format = a0 & 0x1f;
-		m_surface_depth_format = (a0 >> 5) & 0x7;
-		m_surface_type = (a0 >> 8) & 0xf;
-		m_surface_antialias = (a0 >> 12) & 0xf;
-		m_surface_width = (a0 >> 16) & 0xff;
-		m_surface_height = (a0 >> 24) & 0xff;
-
-		switch (std::min((u32)6, count))
-		{
-		case 6: m_surface_pitch_b  = ARGS(5);
-		case 5: m_surface_offset_b = ARGS(4);
-		case 4: m_surface_offset_z = ARGS(3);
-		case 3: m_surface_offset_a = ARGS(2);
-		case 2: m_surface_pitch_a  = ARGS(1);
-		}
-
 		auto buffers = vm::get_ptr<CellGcmDisplayInfo>(m_gcm_buffers_addr);
 		m_width = buffers[gcm_current_buffer].width;
 		m_height = buffers[gcm_current_buffer].height;
@@ -1330,85 +1312,34 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		break;
 
 	case NV4097_SET_SURFACE_COLOR_AOFFSET:
-	{
-		m_surface_offset_a = ARGS(0);
 		break;
-	}
 
 	case NV4097_SET_SURFACE_COLOR_BOFFSET:
-	{
-		m_surface_offset_b = ARGS(0);
-		break;
-	}
+	break;
 
 	case NV4097_SET_SURFACE_COLOR_COFFSET:
-	{
-		m_surface_offset_c = ARGS(0);
 		break;
-	}
 
 	case NV4097_SET_SURFACE_COLOR_DOFFSET:
-	{
-		m_surface_offset_d = ARGS(0);
 		break;
-	}
 
 	case NV4097_SET_SURFACE_ZETA_OFFSET:
-	{
-		m_surface_offset_z = ARGS(0);
 		break;
-	}
 
 	case NV4097_SET_SURFACE_PITCH_A:
-	{
-		m_surface_pitch_a = ARGS(0);
 		break;
-	}
 
 	case NV4097_SET_SURFACE_PITCH_B:
-	{
-		m_surface_pitch_b = ARGS(0);
 		break;
-	}
 
 	case NV4097_SET_SURFACE_PITCH_C:
-	{
-		if (count != 4)
-		{
-			LOG_ERROR(RSX, "NV4097_SET_SURFACE_PITCH_C: Bad count (%d)", count);
-			break;
-		}
-
-		m_surface_pitch_c = ARGS(0);
-		m_surface_pitch_d = ARGS(1);
-		m_surface_offset_c = ARGS(2);
-		m_surface_offset_d = ARGS(3);
 		break;
-	}
 
 	case NV4097_SET_SURFACE_PITCH_D:
-	{
-		m_surface_pitch_d = ARGS(0);
-
-		if (count != 1)
-		{
-			LOG_ERROR(RSX, "NV4097_SET_SURFACE_PITCH_D: Bad count (%d)", count);
-			break;
-		}
 		break;
-	}
 
 	case NV4097_SET_SURFACE_PITCH_Z:
-	{
-		m_surface_pitch_z = ARGS(0);
-
-		if (count != 1)
-		{
-			LOG_ERROR(RSX, "NV4097_SET_SURFACE_PITCH_Z: Bad count (%d)", count);
-			break;
-		}
 		break;
-	}
 
 	case NV4097_SET_CONTEXT_DMA_COLOR_A:
 	{
@@ -1478,31 +1409,10 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	}
 
 	case NV4097_SET_SURFACE_CLIP_HORIZONTAL:
-	{
-		const u32 a0 = ARGS(0);
-
-		m_set_surface_clip_horizontal = true;
-		m_surface_clip_x = a0;
-		m_surface_clip_w = a0 >> 16;
-
-		if (count == 2)
-		{
-			const u32 a1 = ARGS(1);
-			m_set_surface_clip_vertical = true;
-			m_surface_clip_y = a1;
-			m_surface_clip_h = a1 >> 16;
-		}
 		break;
-	}
 
 	case NV4097_SET_SURFACE_CLIP_VERTICAL:
-	{
-		const u32 a0 = ARGS(0);
-		m_set_surface_clip_vertical = true;
-		m_surface_clip_y = a0;
-		m_surface_clip_h = a0 >> 16;
 		break;
-	}
 
 	// Anti-aliasing
 	case NV4097_SET_ANTI_ALIASING_CONTROL:
