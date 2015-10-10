@@ -59,6 +59,7 @@
     <ClCompile Include="Emu\Cell\SPUAnalyser.cpp" />
     <ClCompile Include="Emu\Cell\SPUASMJITRecompiler.cpp" />
     <ClCompile Include="Emu\Cell\SPUInterpreter.cpp" />
+    <ClCompile Include="Emu\emulator.cpp" />
     <ClCompile Include="Emu\IdManager.cpp" />
     <ClCompile Include="Emu\RSX\CgBinaryFragmentProgram.cpp" />
     <ClCompile Include="Emu\RSX\CgBinaryVertexProgram.cpp" />
@@ -380,6 +381,7 @@
     <ClInclude Include="..\Utilities\AutoPause.h" />
     <ClInclude Include="..\Utilities\BEType.h" />
     <ClInclude Include="..\Utilities\config_context.h" />
+    <ClInclude Include="..\Utilities\event.h" />
     <ClInclude Include="..\Utilities\GNU.h" />
     <ClInclude Include="..\Utilities\MTRingbuffer.h" />
     <ClInclude Include="..\Utilities\Log.h" />
@@ -509,6 +511,7 @@
     <ClInclude Include="Emu\CPU\CPUThread.h" />
     <ClInclude Include="Emu\CPU\CPUThreadManager.h" />
     <ClInclude Include="Emu\DbgCommand.h" />
+    <ClInclude Include="Emu\emulator.h" />
     <ClInclude Include="Emu\Event.h" />
     <ClInclude Include="Emu\FS\VFS.h" />
     <ClInclude Include="Emu\FS\vfsDevice.h" />

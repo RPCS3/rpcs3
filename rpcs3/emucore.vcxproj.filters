@@ -998,7 +998,8 @@
     <ClCompile Include="..\Utilities\config_context.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
-    <ClCompile Include="config.cpp">
+    <ClCompile Include="config.cpp" />
+    <ClCompile Include="Emu\emulator.cpp">
       <Filter>Emu</Filter>
     </ClCompile>
   </ItemGroup>
@@ -1903,7 +1904,11 @@
     <ClInclude Include="..\Utilities\config_context.h">
       <Filter>Utilities</Filter>
     </ClInclude>
-    <ClInclude Include="config.h">
+    <ClInclude Include="config.h" />
+    <ClInclude Include="..\Utilities\event.h">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\emulator.h">
       <Filter>Emu</Filter>
     </ClInclude>
   </ItemGroup>
