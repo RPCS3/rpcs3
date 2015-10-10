@@ -108,71 +108,65 @@ bool D3D12GSRender::LoadProgram()
 	};
 	prop.Blend = CD3D12_BLEND_DESC;
 
-	if (m_set_blend)
+	if (rsx::method_registers[NV4097_SET_BLEND_ENABLE])
 	{
 		prop.Blend.RenderTarget[0].BlendEnable = true;
 
-		if (m_set_blend_mrt1)
+		if (rsx::method_registers[NV4097_SET_BLEND_ENABLE_MRT] & 0x2)
 			prop.Blend.RenderTarget[1].BlendEnable = true;
-		if (m_set_blend_mrt2)
+		if (rsx::method_registers[NV4097_SET_BLEND_ENABLE_MRT] & 0x4)
 			prop.Blend.RenderTarget[2].BlendEnable = true;
-		if (m_set_blend_mrt3)
+		if (rsx::method_registers[NV4097_SET_BLEND_ENABLE_MRT] & 0x8)
 			prop.Blend.RenderTarget[3].BlendEnable = true;
-	}
 
-	if (m_set_blend_equation)
-	{
-		prop.Blend.RenderTarget[0].BlendOp = getBlendOp(m_blend_equation_rgb);
-		prop.Blend.RenderTarget[0].BlendOpAlpha = getBlendOp(m_blend_equation_alpha);
+		prop.Blend.RenderTarget[0].BlendOp = getBlendOp(rsx::method_registers[NV4097_SET_BLEND_EQUATION] & 0xFFFF);
+		prop.Blend.RenderTarget[0].BlendOpAlpha = getBlendOp(rsx::method_registers[NV4097_SET_BLEND_EQUATION] >> 16);
 
-		if (m_set_blend_mrt1)
+		if (rsx::method_registers[NV4097_SET_BLEND_ENABLE_MRT] & 0x2)
 		{
-			prop.Blend.RenderTarget[1].BlendOp = getBlendOp(m_blend_equation_rgb);
-			prop.Blend.RenderTarget[1].BlendOpAlpha = getBlendOp(m_blend_equation_alpha);
+			prop.Blend.RenderTarget[1].BlendOp = getBlendOp(rsx::method_registers[NV4097_SET_BLEND_EQUATION] & 0xFFFF);
+			prop.Blend.RenderTarget[1].BlendOpAlpha = getBlendOp(rsx::method_registers[NV4097_SET_BLEND_EQUATION] >> 16);
 		}
 
-		if (m_set_blend_mrt2)
+		if (rsx::method_registers[NV4097_SET_BLEND_ENABLE_MRT] & 0x4)
 		{
-			prop.Blend.RenderTarget[2].BlendOp = getBlendOp(m_blend_equation_rgb);
-			prop.Blend.RenderTarget[2].BlendOpAlpha = getBlendOp(m_blend_equation_alpha);
+			prop.Blend.RenderTarget[2].BlendOp = getBlendOp(rsx::method_registers[NV4097_SET_BLEND_EQUATION] & 0xFFFF);
+			prop.Blend.RenderTarget[2].BlendOpAlpha = getBlendOp(rsx::method_registers[NV4097_SET_BLEND_EQUATION] >> 16);
 		}
 
-		if (m_set_blend_mrt3)
+		if (rsx::method_registers[NV4097_SET_BLEND_ENABLE_MRT] & 0x8)
 		{
-			prop.Blend.RenderTarget[3].BlendOp = getBlendOp(m_blend_equation_rgb);
-			prop.Blend.RenderTarget[3].BlendOpAlpha = getBlendOp(m_blend_equation_alpha);
-		}
-	}
-
-	if (m_set_blend_sfactor && m_set_blend_dfactor)
-	{
-		prop.Blend.RenderTarget[0].SrcBlend = getBlendFactor(m_blend_sfactor_rgb);
-		prop.Blend.RenderTarget[0].DestBlend = getBlendFactor(m_blend_dfactor_rgb);
-		prop.Blend.RenderTarget[0].SrcBlendAlpha = getBlendFactorAlpha(m_blend_sfactor_alpha);
-		prop.Blend.RenderTarget[0].DestBlendAlpha = getBlendFactorAlpha(m_blend_dfactor_alpha);
-
-		if (m_set_blend_mrt1)
-		{
-			prop.Blend.RenderTarget[1].SrcBlend = getBlendFactor(m_blend_sfactor_rgb);
-			prop.Blend.RenderTarget[1].DestBlend = getBlendFactor(m_blend_dfactor_rgb);
-			prop.Blend.RenderTarget[1].SrcBlendAlpha = getBlendFactorAlpha(m_blend_sfactor_alpha);
-			prop.Blend.RenderTarget[1].DestBlendAlpha = getBlendFactorAlpha(m_blend_dfactor_alpha);
+			prop.Blend.RenderTarget[3].BlendOp = getBlendOp(rsx::method_registers[NV4097_SET_BLEND_EQUATION] & 0xFFFF);
+			prop.Blend.RenderTarget[3].BlendOpAlpha = getBlendOp(rsx::method_registers[NV4097_SET_BLEND_EQUATION] >> 16);
 		}
 
-		if (m_set_blend_mrt2)
+		prop.Blend.RenderTarget[0].SrcBlend = getBlendFactor(rsx::method_registers[NV4097_SET_BLEND_FUNC_SFACTOR] & 0xFFFF);
+		prop.Blend.RenderTarget[0].DestBlend = getBlendFactor(rsx::method_registers[NV4097_SET_BLEND_FUNC_DFACTOR] & 0xFFFF);
+		prop.Blend.RenderTarget[0].SrcBlendAlpha = getBlendFactorAlpha(rsx::method_registers[NV4097_SET_BLEND_FUNC_SFACTOR] >> 16);
+		prop.Blend.RenderTarget[0].DestBlendAlpha = getBlendFactorAlpha(rsx::method_registers[NV4097_SET_BLEND_FUNC_DFACTOR] >> 16);
+
+		if (rsx::method_registers[NV4097_SET_BLEND_ENABLE_MRT] & 0x2)
 		{
-			prop.Blend.RenderTarget[2].SrcBlend = getBlendFactor(m_blend_sfactor_rgb);
-			prop.Blend.RenderTarget[2].DestBlend = getBlendFactor(m_blend_dfactor_rgb);
-			prop.Blend.RenderTarget[2].SrcBlendAlpha = getBlendFactorAlpha(m_blend_sfactor_alpha);
-			prop.Blend.RenderTarget[2].DestBlendAlpha = getBlendFactorAlpha(m_blend_dfactor_alpha);
+			prop.Blend.RenderTarget[1].SrcBlend = getBlendFactor(rsx::method_registers[NV4097_SET_BLEND_FUNC_SFACTOR] & 0xFFFF);
+			prop.Blend.RenderTarget[1].DestBlend = getBlendFactor(rsx::method_registers[NV4097_SET_BLEND_FUNC_DFACTOR] & 0xFFFF);
+			prop.Blend.RenderTarget[1].SrcBlendAlpha = getBlendFactorAlpha(rsx::method_registers[NV4097_SET_BLEND_FUNC_SFACTOR] >> 16);
+			prop.Blend.RenderTarget[1].DestBlendAlpha = getBlendFactorAlpha(rsx::method_registers[NV4097_SET_BLEND_FUNC_DFACTOR] >> 16);
 		}
 
-		if (m_set_blend_mrt3)
+		if (rsx::method_registers[NV4097_SET_BLEND_ENABLE_MRT] & 0x4)
 		{
-			prop.Blend.RenderTarget[3].SrcBlend = getBlendFactor(m_blend_sfactor_rgb);
-			prop.Blend.RenderTarget[3].DestBlend = getBlendFactor(m_blend_dfactor_rgb);
-			prop.Blend.RenderTarget[3].SrcBlendAlpha = getBlendFactorAlpha(m_blend_sfactor_alpha);
-			prop.Blend.RenderTarget[3].DestBlendAlpha = getBlendFactorAlpha(m_blend_dfactor_alpha);
+			prop.Blend.RenderTarget[2].SrcBlend = getBlendFactor(rsx::method_registers[NV4097_SET_BLEND_FUNC_SFACTOR] & 0xFFFF);
+			prop.Blend.RenderTarget[2].DestBlend = getBlendFactor(rsx::method_registers[NV4097_SET_BLEND_FUNC_DFACTOR] & 0xFFFF);
+			prop.Blend.RenderTarget[2].SrcBlendAlpha = getBlendFactorAlpha(rsx::method_registers[NV4097_SET_BLEND_FUNC_SFACTOR] >> 16);
+			prop.Blend.RenderTarget[2].DestBlendAlpha = getBlendFactorAlpha(rsx::method_registers[NV4097_SET_BLEND_FUNC_DFACTOR] >> 16);
+		}
+
+		if (rsx::method_registers[NV4097_SET_BLEND_ENABLE_MRT] & 0x8)
+		{
+			prop.Blend.RenderTarget[3].SrcBlend = getBlendFactor(rsx::method_registers[NV4097_SET_BLEND_FUNC_SFACTOR] & 0xFFFF);
+			prop.Blend.RenderTarget[3].DestBlend = getBlendFactor(rsx::method_registers[NV4097_SET_BLEND_FUNC_DFACTOR] & 0xFFFF);
+			prop.Blend.RenderTarget[3].SrcBlendAlpha = getBlendFactorAlpha(rsx::method_registers[NV4097_SET_BLEND_FUNC_SFACTOR] >> 16);
+			prop.Blend.RenderTarget[3].DestBlendAlpha = getBlendFactorAlpha(rsx::method_registers[NV4097_SET_BLEND_FUNC_DFACTOR] >> 16);
 		}
 	}
 
@@ -182,7 +176,7 @@ bool D3D12GSRender::LoadProgram()
 		prop.Blend.RenderTarget[0].LogicOp = getLogicOp(rsx::method_registers[NV4097_SET_LOGIC_OP]);
 	}
 
-	if (m_set_blend_color)
+//	if (m_set_blend_color)
 	{
 		// glBlendColor(m_blend_color_r, m_blend_color_g, m_blend_color_b, m_blend_color_a);
 		// checkForGlError("glBlendColor");

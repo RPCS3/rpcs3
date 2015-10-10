@@ -494,7 +494,7 @@ void RSXDebugger::GetFlags()
 	m_list_flags->InsertItem(i, name); m_list_flags->SetItem(i, 1, value ? "Enabled" : "Disabled"); i++;
 
 	LIST_FLAGS_ADD("Alpha test",         render.m_set_alpha_test);
-	LIST_FLAGS_ADD("Blend",              render.m_set_blend);
+	LIST_FLAGS_ADD("Blend",              rsx::method_registers[NV4097_SET_BLEND_ENABLE]);
 	LIST_FLAGS_ADD("Scissor",            render.m_set_scissor_horizontal && render.m_set_scissor_vertical);
 	LIST_FLAGS_ADD("Cull face",          render.m_set_cull_face);
 	LIST_FLAGS_ADD("Depth bounds test",  render.m_set_depth_bounds_test);
@@ -595,11 +595,11 @@ void RSXDebugger::GetSettings()
 	LIST_SETTINGS_ADD("Alpha func", !(render.m_set_alpha_func) ? "(none)" : wxString::Format("0x%x (%s)",
 		render.m_alpha_func,
 		ParseGCMEnum(render.m_alpha_func, CELL_GCM_ENUM)));
-	LIST_SETTINGS_ADD("Blend color", !(render.m_set_blend_color) ? "(none)" : wxString::Format("R:%d, G:%d, B:%d, A:%d",
-		render.m_blend_color_r,
-		render.m_blend_color_g,
-		render.m_blend_color_b,
-		render.m_blend_color_a));
+	LIST_SETTINGS_ADD("Blend color", !(rsx::method_registers[NV4097_SET_BLEND_COLOR]) ? "(none)" : wxString::Format("R:%d, G:%d, B:%d, A:%d",
+		rsx::method_registers[NV4097_SET_BLEND_COLOR] & 0xFF,
+		(rsx::method_registers[NV4097_SET_BLEND_COLOR] >> 8) & 0xFF,
+		(rsx::method_registers[NV4097_SET_BLEND_COLOR] >> 16) & 0xFF,
+		(rsx::method_registers[NV4097_SET_BLEND_COLOR] >> 24) & 0xFF));
 	LIST_SETTINGS_ADD("Clipping", wxString::Format("Min:%f, Max:%f", render.m_clip_min, render.m_clip_max));
 	LIST_SETTINGS_ADD("Color mask", !(rsx::method_registers[NV4097_SET_COLOR_MASK]) ? "(none)" : wxString::Format("R:%d, G:%d, B:%d, A:%d",
 		(rsx::method_registers[NV4097_SET_COLOR_MASK] >> 16) & 0xff,
@@ -652,7 +652,7 @@ void RSXDebugger::SetFlags(wxListEvent& event)
 	switch(event.m_itemIndex)
 	{
 	case 0:  render.m_set_alpha_test		^= true; break;
-	case 1:  render.m_set_blend			^= true; break;
+	case 1:  rsx::method_registers[NV4097_SET_BLEND_ENABLE] ^= true; break;
 	case 2:  render.m_set_cull_face			^= true; break;
 	case 3:  render.m_set_depth_bounds_test		^= true; break;
 //	case 4:  render.m_set_depth_test		^= true; break;

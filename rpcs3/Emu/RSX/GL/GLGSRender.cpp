@@ -1664,7 +1664,7 @@ void GLGSRender::end()
 
 //	Enable(m_set_depth_test, GL_DEPTH_TEST);
 	Enable(m_set_alpha_test, GL_ALPHA_TEST);
-	Enable(m_set_blend || m_set_blend_mrt1 || m_set_blend_mrt2 || m_set_blend_mrt3, GL_BLEND);
+//	Enable(m_set_blend || m_set_blend_mrt1 || m_set_blend_mrt2 || m_set_blend_mrt3, GL_BLEND);
 	Enable(m_set_scissor_horizontal && m_set_scissor_vertical, GL_SCISSOR_TEST);
 //	Enable(m_set_logic_op, GL_LOGIC_OP);
 	Enable(m_set_cull_face, GL_CULL_FACE);
@@ -1847,21 +1847,21 @@ void GLGSRender::end()
 		checkForGlError("glPolygonStipple");
 	}
 
-	if (m_set_blend_equation)
+//	if (m_set_blend_equation)
 	{
-		glBlendEquationSeparate(m_blend_equation_rgb, m_blend_equation_alpha);
+//		glBlendEquationSeparate(m_blend_equation_rgb, m_blend_equation_alpha);
 		checkForGlError("glBlendEquationSeparate");
 	}
 
-	if (m_set_blend_sfactor && m_set_blend_dfactor)
+//	if (m_set_blend_sfactor && m_set_blend_dfactor)
 	{
-		glBlendFuncSeparate(m_blend_sfactor_rgb, m_blend_dfactor_rgb, m_blend_sfactor_alpha, m_blend_dfactor_alpha);
+//		glBlendFuncSeparate(m_blend_sfactor_rgb, m_blend_dfactor_rgb, m_blend_sfactor_alpha, m_blend_dfactor_alpha);
 		checkForGlError("glBlendFuncSeparate");
 	}
 
-	if (m_set_blend_color)
+//	if (m_set_blend_color)
 	{
-		glBlendColor(m_blend_color_r, m_blend_color_g, m_blend_color_b, m_blend_color_a);
+//		glBlendColor(m_blend_color_r, m_blend_color_g, m_blend_color_b, m_blend_color_a);
 		checkForGlError("glBlendColor");
 	}
 

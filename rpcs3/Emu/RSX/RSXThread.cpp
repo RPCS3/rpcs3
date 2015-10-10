@@ -629,83 +629,33 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 
 	// Blending
 	case NV4097_SET_BLEND_ENABLE:
-	{
-		m_set_blend = ARGS(0) ? true : false;
 		notifyBlendStateChange();
 		break;
-	}
 
 	case NV4097_SET_BLEND_ENABLE_MRT:
-	{
-		m_set_blend_mrt1 = ARGS(0) & 0x02 ? true : false;
-		m_set_blend_mrt2 = ARGS(0) & 0x04 ? true : false;
-		m_set_blend_mrt3 = ARGS(0) & 0x08 ? true : false;
 		notifyBlendStateChange();
 		break;
-	}
 
 	case NV4097_SET_BLEND_FUNC_SFACTOR:
-	{
-		m_set_blend_sfactor = true;
-		m_blend_sfactor_rgb = ARGS(0) & 0xffff;
-		m_blend_sfactor_alpha = ARGS(0) >> 16;
-
-		if (count == 2)
-		{
-			m_set_blend_dfactor = true;
-			m_blend_dfactor_rgb = ARGS(1) & 0xffff;
-			m_blend_dfactor_alpha = ARGS(1) >> 16;
-		}
 		notifyBlendStateChange();
 		break;
-	}
 
 	case NV4097_SET_BLEND_FUNC_DFACTOR:
-	{
-		m_set_blend_dfactor = true;
-		m_blend_dfactor_rgb = ARGS(0) & 0xffff;
-		m_blend_dfactor_alpha = ARGS(0) >> 16;
 		notifyBlendStateChange();
 		break;
-	}
 
 	case NV4097_SET_BLEND_COLOR:
-	{
-		m_set_blend_color = true;
-		m_blend_color_r = ARGS(0) & 0xff;
-		m_blend_color_g = (ARGS(0) >> 8) & 0xff;
-		m_blend_color_b = (ARGS(0) >> 16) & 0xff;
-		m_blend_color_a = (ARGS(0) >> 24) & 0xff;
 		notifyBlendStateChange();
 		break;
-	}
 
 	case NV4097_SET_BLEND_COLOR2:
-	{
-		if (u32 value = ARGS(0))
-		{
-			LOG_WARNING(RSX, "TODO : NV4097_SET_BLEND_COLOR2: 0x%x", value);
-		}
 		break;
-	}
 
 	case NV4097_SET_BLEND_EQUATION:
-	{
-		m_set_blend_equation = true;
-		m_blend_equation_rgb = ARGS(0) & 0xffff;
-		m_blend_equation_alpha = ARGS(0) >> 16;
 		notifyBlendStateChange();
 		break;
-	}
-
 	case NV4097_SET_REDUCE_DST_COLOR:
-	{
-		if (u32 value = ARGS(0))
-		{
-			LOG_WARNING(RSX, "TODO: NV4097_SET_REDUCE_DST_COLOR: 0x%x", value);
-		}
 		break;
-	}
 
 	// Depth bound testing
 	case NV4097_SET_DEPTH_BOUNDS_TEST_ENABLE:

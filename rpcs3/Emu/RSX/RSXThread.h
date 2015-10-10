@@ -242,26 +242,6 @@ public:
 	// Clearing
 	u32 m_clear_surface_mask;
 
-	// Blending
-	bool m_set_blend;
-	bool m_set_blend_dfactor;
-	u16 m_blend_dfactor_rgb;
-	u16 m_blend_dfactor_alpha;
-	bool m_set_blend_sfactor;
-	u16 m_blend_sfactor_rgb;
-	u16 m_blend_sfactor_alpha;
-	bool m_set_blend_equation;
-	u16 m_blend_equation_rgb;
-	u16 m_blend_equation_alpha;
-	bool m_set_blend_color;
-	u8 m_blend_color_r;
-	u8 m_blend_color_g;
-	u8 m_blend_color_b;
-	u8 m_blend_color_a;
-	bool m_set_blend_mrt1;
-	bool m_set_blend_mrt2;
-	bool m_set_blend_mrt3;
-
 	// Stencil Test
 	bool m_set_two_side_light_enable;
 
@@ -420,10 +400,8 @@ protected:
 		user_handler.set(0);
 		m_set_alpha_test = false;
 		m_set_depth_bounds_test = false;
-		m_set_blend = false;
-		m_set_blend_mrt1 = false;
-		m_set_blend_mrt2 = false;
-		m_set_blend_mrt3 = false;
+		rsx::method_registers[NV4097_SET_BLEND_ENABLE_MRT] = 0;
+		rsx::method_registers[NV4097_SET_BLEND_ENABLE] = false;
 		m_set_cull_face = false;
 		m_set_dither = false;
 		m_set_scissor_horizontal = false;
@@ -461,12 +439,9 @@ protected:
 		m_depth_bounds_max = 1.0;
 		m_clip_min = 0.0;
 		m_clip_max = 1.0;
-		m_blend_equation_rgb = 0x8006; // GL_FUNC_ADD
-		m_blend_equation_alpha = 0x8006; // GL_FUNC_ADD
-		m_blend_sfactor_rgb = 1; // GL_ONE
-		m_blend_dfactor_rgb = 0; // GL_ZERO
-		m_blend_sfactor_alpha = 1; // GL_ONE
-		m_blend_dfactor_alpha = 0; // GL_ZERO
+		rsx::method_registers[NV4097_SET_BLEND_EQUATION] = (0x8006) | (0x8006 << 16); // GL_FUNC_ADD
+		rsx::method_registers[NV4097_SET_BLEND_FUNC_SFACTOR] = 1 | (1 << 16);
+		rsx::method_registers[NV4097_SET_BLEND_FUNC_DFACTOR] = 0;
 		m_point_x = 0;
 		m_point_y = 0;
 		m_point_size = 1.0;
@@ -512,14 +487,8 @@ protected:
 		m_set_scissor_vertical = false;
 		m_set_front_polygon_mode = false;
 		m_set_back_polygon_mode = false;
-		m_set_blend = false;
-		m_set_blend_mrt1 = false;
-		m_set_blend_mrt2 = false;
-		m_set_blend_mrt3 = false;
-		m_set_blend_sfactor = false;
-		m_set_blend_dfactor = false;
-		m_set_blend_equation = false;
-		m_set_blend_color = false;
+		rsx::method_registers[NV4097_SET_BLEND_ENABLE_MRT] = 0;
+		rsx::method_registers[NV4097_SET_BLEND_ENABLE] = false;
 		m_set_two_side_light_enable = false;
 		m_set_point_sprite_control = false;
 		m_set_point_size = false;
