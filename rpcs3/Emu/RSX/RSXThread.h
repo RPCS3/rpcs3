@@ -352,13 +352,6 @@ public:
 	bool m_set_cull_face;
 	u32 m_cull_face;
 
-	// Alpha test
-	bool m_set_alpha_test;
-	bool m_set_alpha_func;
-	u32 m_alpha_func;
-	bool m_set_alpha_ref;
-	float m_alpha_ref;
-
 	// Shader
 	u16 m_shader_window_height;
 	u8 m_shader_window_origin;
@@ -400,7 +393,7 @@ protected:
 		flip_handler.set(0);
 		vblank_handler.set(0);
 		user_handler.set(0);
-		m_set_alpha_test = false;
+		rsx::method_registers[NV4097_SET_ALPHA_TEST_ENABLE] = false;
 		m_set_depth_bounds_test = false;
 		rsx::method_registers[NV4097_SET_BLEND_ENABLE_MRT] = 0;
 		rsx::method_registers[NV4097_SET_BLEND_ENABLE] = false;
@@ -433,8 +426,8 @@ protected:
 		m_back_polygon_mode = 0x1b02; // GL_FILL
 		m_front_face = 0x0901; // GL_CCW
 		m_cull_face = 0x0405; // GL_BACK
-		m_alpha_func = 0x0207; // GL_ALWAYS
-		m_alpha_ref = 0.0f;
+		rsx::method_registers[NV4097_SET_ALPHA_FUNC] = 0x0207; // GL_ALWAYS
+		rsx::method_registers[NV4097_SET_ALPHA_REF] = 0.0f;
 		m_shade_mode = 0x1D01; // GL_SMOOTH
 
 		m_depth_bounds_min = 0.0;
@@ -505,9 +498,9 @@ protected:
 		m_set_context_dma_z = false;
 		m_set_cull_face = false;
 		m_set_front_face = false;
-		m_set_alpha_test = false;
-		m_set_alpha_func = false;
-		m_set_alpha_ref = false;
+		rsx::method_registers[NV4097_SET_ALPHA_TEST_ENABLE] = false;
+		rsx::method_registers[NV4097_SET_ALPHA_FUNC] = false;
+		rsx::method_registers[NV4097_SET_ALPHA_REF] = false;
 		m_set_poly_smooth = false;
 		m_set_poly_offset_fill = false;
 		m_set_poly_offset_line = false;

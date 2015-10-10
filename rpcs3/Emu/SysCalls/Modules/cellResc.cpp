@@ -470,7 +470,7 @@ void SetupRsxRenderingStates(vm::ptr<CellGcmContextData>& cntxt)
 	GSRender& r = Emu.GetGSManager().GetRender();
 	rsx::method_registers[NV4097_SET_COLOR_MASK] = -1;
 	rsx::method_registers[NV4097_SET_DEPTH_MASK] = 0;
-	r.m_set_alpha_test = false;
+	rsx::method_registers[NV4097_SET_ALPHA_TEST_ENABLE] = false;
 	rsx::method_registers[NV4097_SET_BLEND_ENABLE] = false;
 	rsx::method_registers[NV4097_SET_BLEND_ENABLE_MRT] = false;
 //	r.m_set_logic_op = false;

@@ -268,9 +268,10 @@ void D3D12GSRender::setScaleOffset()
 	void *scaleOffsetMap;
 	ThrowIfFailed(m_constantsData.m_heap->Map(0, &CD3DX12_RANGE(heapOffset, heapOffset + 256), &scaleOffsetMap));
 	streamToBuffer((char*)scaleOffsetMap + heapOffset, scaleOffsetMat, 16 * sizeof(float));
-	int isAlphaTested = m_set_alpha_test;
+	int isAlphaTested = !!(rsx::method_registers[NV4097_SET_ALPHA_TEST_ENABLE]);
+	float alpha_ref = (float&)rsx::method_registers[NV4097_SET_ALPHA_REF];
 	memcpy((char*)scaleOffsetMap + heapOffset + 16 * sizeof(float), &isAlphaTested, sizeof(int));
-	memcpy((char*)scaleOffsetMap + heapOffset + 17 * sizeof(float), &m_alpha_ref, sizeof(float));
+	memcpy((char*)scaleOffsetMap + heapOffset + 17 * sizeof(float), &alpha_ref, sizeof(float));
 	m_constantsData.m_heap->Unmap(0, &CD3DX12_RANGE(heapOffset, heapOffset + 256));
 
 	D3D12_CONSTANT_BUFFER_VIEW_DESC constantBufferViewDesc = {};

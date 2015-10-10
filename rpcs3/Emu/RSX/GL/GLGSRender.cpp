@@ -1663,7 +1663,7 @@ void GLGSRender::end()
 	}
 
 //	Enable(m_set_depth_test, GL_DEPTH_TEST);
-	Enable(m_set_alpha_test, GL_ALPHA_TEST);
+//	Enable(m_set_alpha_test, GL_ALPHA_TEST);
 //	Enable(m_set_blend || m_set_blend_mrt1 || m_set_blend_mrt2 || m_set_blend_mrt3, GL_BLEND);
 	Enable(m_set_scissor_horizontal && m_set_scissor_vertical, GL_SCISSOR_TEST);
 //	Enable(m_set_logic_op, GL_LOGIC_OP);
@@ -1877,9 +1877,9 @@ void GLGSRender::end()
 		checkForGlError("glFrontFace");
 	}
 
-	if (m_set_alpha_func && m_set_alpha_ref)
+//	if (m_set_alpha_func && m_set_alpha_ref)
 	{
-		glAlphaFunc(m_alpha_func, m_alpha_ref);
+//		glAlphaFunc(m_alpha_func, m_alpha_ref);
 		checkForGlError("glAlphaFunc");
 	}
 

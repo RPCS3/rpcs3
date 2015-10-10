@@ -564,32 +564,13 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 
 	// Alpha testing
 	case NV4097_SET_ALPHA_TEST_ENABLE:
-	{
-		m_set_alpha_test = ARGS(0) ? true : false;
 		break;
-	}
 
 	case NV4097_SET_ALPHA_FUNC:
-	{
-		m_set_alpha_func = true;
-		m_alpha_func = ARGS(0);
-
-		if (count == 2)
-		{
-			m_set_alpha_ref = true;
-			const u32 a1 = ARGS(1);
-			m_alpha_ref = (float&)a1;
-		}
 		break;
-	}
 
 	case NV4097_SET_ALPHA_REF:
-	{
-		m_set_alpha_ref = true;
-		const u32 a0 = ARGS(0);
-		m_alpha_ref = (float&)a0;
 		break;
-	}
 
 	// Cull face
 	case NV4097_SET_CULL_FACE_ENABLE:
