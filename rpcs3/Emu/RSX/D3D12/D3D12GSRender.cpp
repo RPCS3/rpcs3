@@ -404,22 +404,22 @@ void D3D12GSRender::end()
 	{
 		for (u32 i = 0; i < rsx::limits::vertex_count; ++i)
 		{
-			if (!m_vertex_data[i].IsEnabled()) continue;
-			if (!m_vertex_data[i].addr) continue;
+			if (!vertex_arrays_info[i].size) continue;
+			if (!vertex_arrays_info[i].array) continue;
 
-			const u32 tsize = rsx::get_vertex_type_size(m_vertex_data[i].type);
-			m_vertexBufferSize[i] = (m_indexed_array.index_min + m_indexed_array.index_max - m_indexed_array.index_min + 1) * tsize * m_vertex_data[i].size;
+			const u32 tsize = rsx::get_vertex_type_size(vertex_arrays_info[i].type);
+			m_vertexBufferSize[i] = (m_indexed_array.index_min + m_indexed_array.index_max - m_indexed_array.index_min + 1) * tsize * vertex_arrays_info[i].size;
 		}
 	}
 	else
 	{
 		for (u32 i = 0; i < rsx::limits::vertex_count; ++i)
 		{
-			if (!m_vertex_data[i].IsEnabled()) continue;
-			if (!m_vertex_data[i].addr) continue;
+			if (!vertex_arrays_info[i].size) continue;
+			if (!vertex_arrays_info[i].array) continue;
 
-			const u32 tsize = rsx::get_vertex_type_size(m_vertex_data[i].type);
-			m_vertexBufferSize[i] = (draw_array_first + draw_array_count) * tsize * m_vertex_data[i].size;
+			const u32 tsize = rsx::get_vertex_type_size(vertex_arrays_info[i].type);
+			m_vertexBufferSize[i] = (draw_array_first + draw_array_count) * tsize * vertex_arrays_info[i].size;
 		}
 	}
 

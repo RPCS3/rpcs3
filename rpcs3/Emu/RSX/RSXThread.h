@@ -59,6 +59,23 @@ namespace rsx
 			height = 1 << (u32(log2width) + 1);
 		}
 	};
+
+	struct data_array_format_info
+	{
+		u16 frequency = 0;
+		u8 stride = 0;
+		u8 size = 0;
+		u8 type = CELL_GCM_VERTEX_F;
+		bool array = false;
+
+		void unpack(u32 data_array_format)
+		{
+			frequency = data_array_format >> 16;
+			stride = (data_array_format >> 8) & 0xff;
+			size = (data_array_format >> 4) & 0xf;
+			type = data_array_format & 0xf;
+		}
+	};
 }
 
 enum Method
@@ -67,24 +84,6 @@ enum Method
 	CELL_GCM_METHOD_FLAG_JUMP          = 0x20000000,
 	CELL_GCM_METHOD_FLAG_CALL          = 0x00000002,
 	CELL_GCM_METHOD_FLAG_RETURN        = 0x00020000,
-};
-
-struct RSXVertexData
-{
-	u32 frequency;
-	u32 stride;
-	u32 size;
-	u32 type;
-	u32 addr;
-	u32 constant_count;
-
-	std::vector<u8> data;
-
-	RSXVertexData();
-
-	void Reset();
-	bool IsEnabled() const { return size > 0; }
-	void Load(u32 start, u32 count, u32 baseOffset, u32 baseIndex);
 };
 
 struct RSXIndexArrayData
@@ -149,7 +148,9 @@ public:
 	GcmZcullInfo zculls[rsx::limits::zculls_count];
 	rsx::texture textures[rsx::limits::textures_count];
 	rsx::vertex_texture m_vertex_textures[rsx::limits::vertex_textures_count];
-	RSXVertexData m_vertex_data[rsx::limits::vertex_count];
+
+	rsx::data_array_format_info vertex_arrays_info[rsx::limits::vertex_count];
+	std::vector<u8> vertex_arrays[rsx::limits::vertex_count];
 	RSXIndexArrayData m_indexed_array;
 	std::vector<RSXTransformConstant> m_fragment_constants;
 	std::vector<RSXTransformConstant> m_transform_constants;
@@ -603,9 +604,9 @@ protected:
 	{
 		for (u32 i = 0; i < rsx::limits::vertex_count; ++i)
 		{
-			if (!m_vertex_data[i].IsEnabled()) continue;
+//			if (!m_vertex_data[i].IsEnabled()) continue;
 
-			m_vertex_data[i].Load(first, count, m_vertex_data_base_offset, m_vertex_data_base_index);
+//			m_vertex_data[i].Load(first, count, m_vertex_data_base_offset, m_vertex_data_base_index);
 		}
 	}
 

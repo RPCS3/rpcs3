@@ -92,7 +92,7 @@ DXGI_FORMAT getFormat(u8 type, u8 size)
 }
 
 static
-std::vector<D3D12_INPUT_ELEMENT_DESC> getIALayout(ID3D12Device *device, const std::vector<VertexBufferFormat> &vertexBufferFormat, const RSXVertexData *m_vertex_data, size_t baseOffset)
+std::vector<D3D12_INPUT_ELEMENT_DESC> getIALayout(ID3D12Device *device, const std::vector<VertexBufferFormat> &vertexBufferFormat, const rsx::data_array_format_info *m_vertex_data, size_t baseOffset)
 {
 	std::vector<D3D12_INPUT_ELEMENT_DESC> result;
 
@@ -100,15 +100,17 @@ std::vector<D3D12_INPUT_ELEMENT_DESC> getIALayout(ID3D12Device *device, const st
 	{
 		for (size_t attributeId : vertexBufferFormat[inputSlot].attributeId)
 		{
-			const RSXVertexData &vertexData = m_vertex_data[attributeId];
+			u32 addrRegVal = rsx::method_registers[NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 4 * attributeId];
+			u32 addr = rsx::get_address(addrRegVal & 0x7fffffff, addrRegVal >> 31);
+			const rsx::data_array_format_info &vertexData = m_vertex_data[attributeId];
 			D3D12_INPUT_ELEMENT_DESC IAElement = {};
 			IAElement.SemanticName = "TEXCOORD";
 			IAElement.SemanticIndex = (UINT)attributeId;
 			IAElement.InputSlot = (UINT)inputSlot;
 			IAElement.Format = getFormat(vertexData.type - 1, vertexData.size);
-			IAElement.AlignedByteOffset = (UINT)(vertexData.addr + baseOffset - vertexBufferFormat[inputSlot].range.first);
-			IAElement.InputSlotClass = (vertexData.addr > 0) ? D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA : D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA;
-			IAElement.InstanceDataStepRate = (vertexData.addr > 0) ? 0 : 0;
+			IAElement.AlignedByteOffset = (UINT)(addr + baseOffset - vertexBufferFormat[inputSlot].range.first);
+			IAElement.InputSlotClass = (addr > 0) ? D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA : D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA;
+			IAElement.InstanceDataStepRate = (addr > 0) ? 0 : 1;
 			result.push_back(IAElement);
 		}
 	}
@@ -122,7 +124,7 @@ std::vector<D3D12_INPUT_ELEMENT_DESC> getIALayout(ID3D12Device *device, const st
  * Suballocate a new vertex buffer with attributes from vbf using vertexIndexHeap as storage heap.
  */
 static
-D3D12_GPU_VIRTUAL_ADDRESS createVertexBuffer(const VertexBufferFormat &vbf, const RSXVertexData *vertexData, size_t baseOffset, ID3D12Device *device, DataHeap<ID3D12Resource, 65536> &vertexIndexHeap)
+D3D12_GPU_VIRTUAL_ADDRESS createVertexBuffer(const VertexBufferFormat &vbf, const rsx::data_array_format_info *vertex_array_desc, const std::vector<u8> *vertex_data, size_t baseOffset, ID3D12Device *device, DataHeap<ID3D12Resource, 65536> &vertexIndexHeap)
 {
 	size_t subBufferSize = vbf.range.second - vbf.range.first + 1;
 	// Make multiple of stride
@@ -134,7 +136,7 @@ D3D12_GPU_VIRTUAL_ADDRESS createVertexBuffer(const VertexBufferFormat &vbf, cons
 	void *buffer;
 	ThrowIfFailed(vertexIndexHeap.m_heap->Map(0, &CD3DX12_RANGE(heapOffset, heapOffset + subBufferSize), (void**)&buffer));
 	void *bufferMap = (char*)buffer + heapOffset;
-	uploadVertexData(vbf, vertexData, baseOffset, bufferMap);
+	uploadVertexData(vbf, vertex_array_desc, vertex_data, baseOffset, bufferMap);
 	vertexIndexHeap.m_heap->Unmap(0, &CD3DX12_RANGE(heapOffset, heapOffset + subBufferSize));
 	return vertexIndexHeap.m_heap->GetGPUVirtualAddress() + heapOffset;
 }
@@ -142,8 +144,8 @@ D3D12_GPU_VIRTUAL_ADDRESS createVertexBuffer(const VertexBufferFormat &vbf, cons
 std::vector<D3D12_VERTEX_BUFFER_VIEW> D3D12GSRender::UploadVertexBuffers(bool indexed_draw)
 {
 	std::vector<D3D12_VERTEX_BUFFER_VIEW> result;
-	const std::vector<VertexBufferFormat> &vertexBufferFormat = FormatVertexData(m_vertex_data, m_vertexBufferSize, m_vertex_data_base_offset);
-	m_IASet = getIALayout(m_device.Get(), vertexBufferFormat, m_vertex_data, m_vertex_data_base_offset);
+	const std::vector<VertexBufferFormat> &vertexBufferFormat = FormatVertexData(vertex_arrays_info, vertex_arrays, m_vertexBufferSize, m_vertex_data_base_offset);
+	m_IASet = getIALayout(m_device.Get(), vertexBufferFormat, vertex_arrays_info, m_vertex_data_base_offset);
 
 	const u32 data_offset = indexed_draw ? 0 : draw_array_first;
 
@@ -155,7 +157,7 @@ std::vector<D3D12_VERTEX_BUFFER_VIEW> D3D12GSRender::UploadVertexBuffers(bool in
 		if (vbf.stride)
 			subBufferSize = ((subBufferSize + vbf.stride - 1) / vbf.stride) * vbf.stride;
 
-		D3D12_GPU_VIRTUAL_ADDRESS virtualAddress = createVertexBuffer(vbf, m_vertex_data, m_vertex_data_base_offset, m_device.Get(), m_vertexIndexData);
+		D3D12_GPU_VIRTUAL_ADDRESS virtualAddress = createVertexBuffer(vbf, vertex_arrays_info, vertex_arrays, m_vertex_data_base_offset, m_device.Get(), m_vertexIndexData);
 		m_timers.m_bufferUploadSize += subBufferSize;
 
 		D3D12_VERTEX_BUFFER_VIEW vertexBufferView = {};

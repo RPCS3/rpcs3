@@ -17,12 +17,12 @@ struct VertexBufferFormat
  * Detect buffer containing interleaved vertex attribute.
  * This minimizes memory upload size.
  */
-std::vector<VertexBufferFormat> FormatVertexData(const RSXVertexData *m_vertex_data, size_t *vertex_data_size, size_t base_offset);
+std::vector<VertexBufferFormat> FormatVertexData(const rsx::data_array_format_info *vertex_array_desc, const std::vector<u8> *vertex_data, size_t *vertex_data_size, size_t base_offset);
 
 /*
  * Write vertex attributes to bufferMap, swapping data as required.
  */
-void uploadVertexData(const VertexBufferFormat &vbf, const RSXVertexData *vertexData, size_t baseOffset, void* bufferMap);
+void uploadVertexData(const VertexBufferFormat &vbf, const rsx::data_array_format_info *vertex_array_desc, const std::vector<u8> *vertex_data, size_t baseOffset, void* bufferMap);
 
 /*
  * If primitive mode is not supported and need to be emulated (using an index buffer) returns false.

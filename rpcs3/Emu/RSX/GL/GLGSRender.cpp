@@ -840,14 +840,14 @@ void GLGSRender::EnableVertexData(bool indexed_draw)
 
 		offset_list[i] = cur_offset;
 
-		if (!m_vertex_data[i].IsEnabled()) continue;
+/*		if (!m_vertex_data[i].IsEnabled()) continue;
 		const size_t item_size = rsx::get_vertex_type_size(m_vertex_data[i].type) * m_vertex_data[i].size;
 		const size_t data_size = m_vertex_data[i].data.size() - data_offset * item_size;
 		const u32 pos = m_vdata.size();
 
 		cur_offset += data_size;
 		m_vdata.resize(m_vdata.size() + data_size);
-		memcpy(&m_vdata[pos], &m_vertex_data[i].data[data_offset * item_size], data_size);
+		memcpy(&m_vdata[pos], &m_vertex_data[i].data[data_offset * item_size], data_size);*/
 	}
 
 	m_vao.Create();
@@ -872,7 +872,7 @@ void GLGSRender::EnableVertexData(bool indexed_draw)
 
 	for (u32 i = 0; i < rsx::limits::vertex_count; ++i)
 	{
-		if (!m_vertex_data[i].IsEnabled()) continue;
+//		if (!m_vertex_data[i].IsEnabled()) continue;
 
 #if	DUMP_VERTEX_DATA
 		dump.Write(wxString::Format("VertexData[%d]:\n", i));
@@ -958,7 +958,7 @@ void GLGSRender::EnableVertexData(bool indexed_draw)
 			GL_FALSE,
 		};
 
-		if (m_vertex_data[i].type < 1 || m_vertex_data[i].type > 7)
+/*		if (m_vertex_data[i].type < 1 || m_vertex_data[i].type > 7)
 		{
 			LOG_ERROR(RSX, "GLGSRender::EnableVertexData: Bad vertex data type (%d)!", m_vertex_data[i].type);
 		}
@@ -1005,7 +1005,7 @@ void GLGSRender::EnableVertexData(bool indexed_draw)
 			checkForGlError("glEnableVertexAttribArray");
 			glVertexAttribPointer(i, m_vertex_data[i].size, gltype, normalized, 0, reinterpret_cast<void*>(offset_list[i]));
 			checkForGlError("glVertexAttribPointer");
-		}
+		}*/
 	}
 }
 
@@ -1014,7 +1014,7 @@ void GLGSRender::DisableVertexData()
 	m_vdata.clear();
 	for (u32 i = 0; i < rsx::limits::vertex_count; ++i)
 	{
-		if (!m_vertex_data[i].IsEnabled()) continue;
+//		if (!m_vertex_data[i].IsEnabled()) continue;
 		glDisableVertexAttribArray(i);
 		checkForGlError("glDisableVertexAttribArray");
 	}
@@ -1647,7 +1647,7 @@ void GLGSRender::end()
 	if (!m_indexed_array.m_count && !draw_array_count)
 	{
 		u32 min_vertex_size = ~0;
-		for (auto &i : m_vertex_data)
+/*		for (auto &i : m_vertex_data)
 		{
 			if (!i.size)
 				continue;
@@ -1656,7 +1656,7 @@ void GLGSRender::end()
 
 			if (min_vertex_size > vertex_size)
 				min_vertex_size = vertex_size;
-		}
+		}*/
 
 		draw_array_count = min_vertex_size;
 		draw_array_first = 0;
