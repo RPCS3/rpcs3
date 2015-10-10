@@ -574,26 +574,17 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 
 	// Cull face
 	case NV4097_SET_CULL_FACE_ENABLE:
-	{
-		m_set_cull_face = ARGS(0) ? true : false;
 		notifyRasterizerStateChange();
 		break;
-	}
 
 	case NV4097_SET_CULL_FACE:
-	{
-		m_cull_face = ARGS(0);
 		notifyRasterizerStateChange();
 		break;
-	}
 
 	// Front face 
 	case NV4097_SET_FRONT_FACE:
-	{
-		m_front_face = ARGS(0);
 		notifyRasterizerStateChange();
 		break;
-	}
 
 	// Blending
 	case NV4097_SET_BLEND_ENABLE:

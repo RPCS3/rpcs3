@@ -474,7 +474,7 @@ void SetupRsxRenderingStates(vm::ptr<CellGcmContextData>& cntxt)
 	rsx::method_registers[NV4097_SET_BLEND_ENABLE] = false;
 	rsx::method_registers[NV4097_SET_BLEND_ENABLE_MRT] = false;
 //	r.m_set_logic_op = false;
-	r.m_set_cull_face = false;
+	rsx::method_registers[NV4097_SET_CULL_FACE_ENABLE] = false;
 	r.m_set_depth_bounds_test = false;
 	rsx::method_registers[NV4097_SET_DEPTH_TEST_ENABLE] = false;
 	r.m_set_poly_offset_fill = false;

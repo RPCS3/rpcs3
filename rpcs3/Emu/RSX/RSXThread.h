@@ -348,10 +348,6 @@ public:
 	u8 m_swizzle_height;
 	u32 m_swizzle_offset;
 
-	// Cull face
-	bool m_set_cull_face;
-	u32 m_cull_face;
-
 	// Shader
 	u16 m_shader_window_height;
 	u8 m_shader_window_origin;
@@ -360,10 +356,6 @@ public:
 	// Vertex Data
 	u32 m_vertex_data_base_offset;
 	u32 m_vertex_data_base_index;
-
-	// Front face
-	bool m_set_front_face;
-	u32 m_front_face;
 
 	// Frequency divider
 	u32 m_set_frequency_divider_operation;
@@ -397,7 +389,6 @@ protected:
 		m_set_depth_bounds_test = false;
 		rsx::method_registers[NV4097_SET_BLEND_ENABLE_MRT] = 0;
 		rsx::method_registers[NV4097_SET_BLEND_ENABLE] = false;
-		m_set_cull_face = false;
 		m_set_dither = false;
 		m_set_scissor_horizontal = false;
 		m_set_scissor_vertical = false;
@@ -424,8 +415,8 @@ protected:
 		m_restart_index = 0xffffffff;
 		m_front_polygon_mode = 0x1b02; // GL_FILL
 		m_back_polygon_mode = 0x1b02; // GL_FILL
-		m_front_face = 0x0901; // GL_CCW
-		m_cull_face = 0x0405; // GL_BACK
+		rsx::method_registers[NV4097_SET_FRONT_FACE] = 0x0901; // GL_CCW
+		rsx::method_registers[NV4097_SET_CULL_FACE] = 0x0405; // GL_BACK
 		rsx::method_registers[NV4097_SET_ALPHA_FUNC] = 0x0207; // GL_ALWAYS
 		rsx::method_registers[NV4097_SET_ALPHA_REF] = 0.0f;
 		m_shade_mode = 0x1D01; // GL_SMOOTH
@@ -496,8 +487,7 @@ protected:
 		m_set_context_dma_color_c = false;
 		m_set_context_dma_color_d = false;
 		m_set_context_dma_z = false;
-		m_set_cull_face = false;
-		m_set_front_face = false;
+		rsx::method_registers[NV4097_SET_CULL_FACE_ENABLE] = false;
 		rsx::method_registers[NV4097_SET_ALPHA_TEST_ENABLE] = false;
 		rsx::method_registers[NV4097_SET_ALPHA_FUNC] = false;
 		rsx::method_registers[NV4097_SET_ALPHA_REF] = false;

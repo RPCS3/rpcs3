@@ -496,7 +496,7 @@ void RSXDebugger::GetFlags()
 	LIST_FLAGS_ADD("Alpha test",         rsx::method_registers[NV4097_SET_ALPHA_TEST_ENABLE]);
 	LIST_FLAGS_ADD("Blend",              rsx::method_registers[NV4097_SET_BLEND_ENABLE]);
 	LIST_FLAGS_ADD("Scissor",            render.m_set_scissor_horizontal && render.m_set_scissor_vertical);
-	LIST_FLAGS_ADD("Cull face",          render.m_set_cull_face);
+	LIST_FLAGS_ADD("Cull face",          rsx::method_registers[NV4097_SET_CULL_FACE]);
 	LIST_FLAGS_ADD("Depth bounds test",  render.m_set_depth_bounds_test);
 //	LIST_FLAGS_ADD("Depth test",         render.m_set_depth_test);
 	LIST_FLAGS_ADD("Dither",             render.m_set_dither);
@@ -653,7 +653,7 @@ void RSXDebugger::SetFlags(wxListEvent& event)
 	{
 	case 0:  rsx::method_registers[NV4097_SET_ALPHA_TEST_ENABLE] ^= true; break;
 	case 1:  rsx::method_registers[NV4097_SET_BLEND_ENABLE] ^= true; break;
-	case 2:  render.m_set_cull_face			^= true; break;
+	case 2:  rsx::method_registers[NV4097_SET_CULL_FACE] ^= true; break;
 	case 3:  render.m_set_depth_bounds_test		^= true; break;
 //	case 4:  render.m_set_depth_test		^= true; break;
 	case 5:  render.m_set_dither			^= true; break;

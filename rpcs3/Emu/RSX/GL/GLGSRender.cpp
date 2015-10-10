@@ -1667,7 +1667,7 @@ void GLGSRender::end()
 //	Enable(m_set_blend || m_set_blend_mrt1 || m_set_blend_mrt2 || m_set_blend_mrt3, GL_BLEND);
 	Enable(m_set_scissor_horizontal && m_set_scissor_vertical, GL_SCISSOR_TEST);
 //	Enable(m_set_logic_op, GL_LOGIC_OP);
-	Enable(m_set_cull_face, GL_CULL_FACE);
+//	Enable(m_set_cull_face, GL_CULL_FACE);
 	Enable(m_set_dither, GL_DITHER);
 //	Enable(m_set_stencil_test, GL_STENCIL_TEST);
 	Enable(m_set_line_smooth, GL_LINE_SMOOTH);
@@ -1865,15 +1865,15 @@ void GLGSRender::end()
 		checkForGlError("glBlendColor");
 	}
 
-	if (m_set_cull_face)
+//	if (m_set_cull_face)
 	{
-		glCullFace(m_cull_face);
+//		glCullFace(m_cull_face);
 		checkForGlError("glCullFace");
 	}
 
-	if (m_set_front_face)
+//	if (m_set_front_face)
 	{
-		glFrontFace(m_front_face);
+//		glFrontFace(m_front_face);
 		checkForGlError("glFrontFace");
 	}
 
