@@ -637,10 +637,10 @@ void RSXDebugger::GetSettings()
 	LIST_SETTINGS_ADD("Surface Offset D", wxString::Format("0x%x", render.m_surface_offset_d));
 	LIST_SETTINGS_ADD("Surface Offset Z", wxString::Format("0x%x", render.m_surface_offset_z));
 	LIST_SETTINGS_ADD("Viewport", wxString::Format("X:%d, Y:%d, W:%d, H:%d",
-		render.m_viewport_x,
-		render.m_viewport_y,
-		render.m_viewport_w,
-		render.m_viewport_h));
+		rsx::method_registers[NV4097_SET_SURFACE_CLIP_HORIZONTAL] & 0xFFFF,
+		rsx::method_registers[NV4097_SET_SURFACE_CLIP_VERTICAL] & 0xFFFF,
+		rsx::method_registers[NV4097_SET_SURFACE_CLIP_HORIZONTAL] >> 16,
+		rsx::method_registers[NV4097_SET_SURFACE_CLIP_VERTICAL] >> 16));
 
 #undef LIST_SETTINGS_ADD
 }

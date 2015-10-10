@@ -205,12 +205,6 @@ public:
 	bool m_set_line_smooth;
 
 	// Viewport & scissor
-	bool m_set_viewport_horizontal;
-	bool m_set_viewport_vertical;
-	u16 m_viewport_x;
-	u16 m_viewport_y;
-	u16 m_viewport_w;
-	u16 m_viewport_h;
 	bool m_set_scissor_horizontal;
 	bool m_set_scissor_vertical;
 	u16 m_scissor_x;
@@ -481,8 +475,6 @@ protected:
 		m_set_clip = false;
 		m_set_depth_bounds_test = false;
 		m_set_depth_bounds = false;
-		m_set_viewport_horizontal = false;
-		m_set_viewport_vertical = false;
 		m_set_scissor_horizontal = false;
 		m_set_scissor_vertical = false;
 		m_set_front_polygon_mode = false;

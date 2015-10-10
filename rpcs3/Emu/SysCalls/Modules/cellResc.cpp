@@ -486,11 +486,8 @@ void SetupRsxRenderingStates(vm::ptr<CellGcmContextData>& cntxt)
 	r.m_set_shade_mode = true; r.m_shade_mode = CELL_GCM_SMOOTH;
 	r.m_set_frequency_divider_operation = CELL_GCM_FREQUENCY_DIVIDE;
 
-	r.m_set_viewport_horizontal = r.m_set_viewport_vertical = true;
-	r.m_viewport_x = 0;
-	r.m_viewport_y = 0;
-	r.m_viewport_w = s_rescInternalInstance->m_dstWidth;
-	r.m_viewport_h = s_rescInternalInstance->m_dstHeight;
+	rsx::method_registers[NV4097_SET_SURFACE_CLIP_HORIZONTAL] = s_rescInternalInstance->m_dstWidth << 16;
+	rsx::method_registers[NV4097_SET_SURFACE_CLIP_VERTICAL] = s_rescInternalInstance->m_dstHeight << 16;
 
 	r.m_set_scissor_horizontal = r.m_set_scissor_vertical = true;
 	r.m_scissor_x = 0;

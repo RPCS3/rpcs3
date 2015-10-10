@@ -688,31 +688,10 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 
 	// Viewport
 	case NV4097_SET_VIEWPORT_HORIZONTAL:
-	{
-		m_set_viewport_horizontal = true;
-		m_viewport_x = ARGS(0) & 0xffff;
-		m_viewport_w = ARGS(0) >> 16;
-
-		if (count == 2)
-		{
-			m_set_viewport_vertical = true;
-			m_viewport_y = ARGS(1) & 0xffff;
-			m_viewport_h = ARGS(1) >> 16;
-		}
-
-		//LOG_NOTICE(RSX, "NV4097_SET_VIEWPORT_HORIZONTAL: x=%d, y=%d, w=%d, h=%d", m_viewport_x, m_viewport_y, m_viewport_w, m_viewport_h);
 		break;
-	}
 
 	case NV4097_SET_VIEWPORT_VERTICAL:
-	{
-		m_set_viewport_vertical = true;
-		m_viewport_y = ARGS(0) & 0xffff;
-		m_viewport_h = ARGS(0) >> 16;
-
-		//LOG_NOTICE(RSX, "NV4097_SET_VIEWPORT_VERTICAL: y=%d, h=%d", m_viewport_y, m_viewport_h);
 		break;
-	}
 
 	case NV4097_SET_VIEWPORT_SCALE:
 	case NV4097_SET_VIEWPORT_OFFSET:
