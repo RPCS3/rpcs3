@@ -396,7 +396,7 @@ s32 _cellGcmInitBody(vm::pptr<CellGcmContextData> context, u32 cmdSize, u32 ioSi
 	render.gcm_current_buffer = 0;
 	render.main_mem_addr = 0;
 	render.label_addr = gcm_info.label_addr;
-	render.Init(g_defaultCommandBufferBegin, cmdSize, gcm_info.control_addr, local_addr);
+	render.init(g_defaultCommandBufferBegin, cmdSize, gcm_info.control_addr, local_addr);
 
 	return CELL_OK;
 }

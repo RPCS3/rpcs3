@@ -30,8 +30,9 @@ private:
 	{
 	}
 
-	virtual void clear_surface(u32 arg) override
+	virtual bool domethod(u32, u32) override
 	{
+		return false;
 	}
 
 	virtual void end() override

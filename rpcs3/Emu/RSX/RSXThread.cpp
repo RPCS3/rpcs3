@@ -38,7 +38,7 @@ namespace rsx
 	{
 		//fire only when all data passed to rsx cmd buffer
 		template<u32 id, u32 index, int count, typename type>
-		force_inline void set_vertex_data_impl(RSXThread* rsx, u32 arg)
+		force_inline void set_vertex_data_impl(thread* rsx, u32 arg)
 		{
 			static const size_t element_size = (count * sizeof(type));
 			static const size_t element_size_in_words = element_size / sizeof(u32);
@@ -63,49 +63,49 @@ namespace rsx
 		}
 
 		template<u32 index>
-		force_inline void set_vertex_data4ub_m(RSXThread* rsx, u32 arg)
+		force_inline void set_vertex_data4ub_m(thread* rsx, u32 arg)
 		{
 			set_vertex_data_impl<NV4097_SET_VERTEX_DATA4UB_M, index, 4, u8>(rsx, arg);
 		}
 
 		template<u32 index>
-		force_inline void set_vertex_data1f_m(RSXThread* rsx, u32 arg)
+		force_inline void set_vertex_data1f_m(thread* rsx, u32 arg)
 		{
 			set_vertex_data_impl<NV4097_SET_VERTEX_DATA1F_M, index, 1, f32>(rsx, arg);
 		}
 
 		template<u32 index>
-		force_inline void set_vertex_data2f_m(RSXThread* rsx, u32 arg)
+		force_inline void set_vertex_data2f_m(thread* rsx, u32 arg)
 		{
 			set_vertex_data_impl<NV4097_SET_VERTEX_DATA1F_M, index, 2, f32>(rsx, arg);
 		}
 
 		template<u32 index>
-		force_inline void set_vertex_data3f_m(RSXThread* rsx, u32 arg)
+		force_inline void set_vertex_data3f_m(thread* rsx, u32 arg)
 		{
 			set_vertex_data_impl<NV4097_SET_VERTEX_DATA1F_M, index, 3, f32>(rsx, arg);
 		}
 
 		template<u32 index>
-		force_inline void set_vertex_data4f_m(RSXThread* rsx, u32 arg)
+		force_inline void set_vertex_data4f_m(thread* rsx, u32 arg)
 		{
 			set_vertex_data_impl<NV4097_SET_VERTEX_DATA1F_M, index, 4, f32>(rsx, arg);
 		}
 
 		template<u32 index>
-		force_inline void set_vertex_data2s_m(RSXThread* rsx, u32 arg)
+		force_inline void set_vertex_data2s_m(thread* rsx, u32 arg)
 		{
 			set_vertex_data_impl<NV4097_SET_VERTEX_DATA2S_M, index, 2, u16>(rsx, arg);
 		}
 
 		template<u32 index>
-		force_inline void set_vertex_data4s_m(RSXThread* rsx, u32 arg)
+		force_inline void set_vertex_data4s_m(thread* rsx, u32 arg)
 		{
 			set_vertex_data_impl<NV4097_SET_VERTEX_DATA4S_M, index, 4, u16>(rsx, arg);
 		}
 
 		template<u32 index>
-		force_inline void set_vertex_data_array_format(RSXThread* rsx, u32 arg)
+		force_inline void set_vertex_data_array_format(thread* rsx, u32 arg)
 		{
 			auto& info = rsx->vertex_arrays_info[index];
 			info.unpack(arg);
@@ -203,9 +203,9 @@ namespace rsx
 			return 1;
 		}
 	}
-}
 
-u32 RSXThread::OutOfArgsCount(const uint x, const u32 cmd, const u32 count, const u32 args_addr)
+
+u32 thread::OutOfArgsCount(const uint x, const u32 cmd, const u32 count, const u32 args_addr)
 {
 	auto args = vm::ps3::ptr<u32>::make(args_addr);
 	std::string debug = GetMethodName(cmd);
@@ -236,7 +236,7 @@ u32 RSXThread::OutOfArgsCount(const uint x, const u32 cmd, const u32 count, cons
     case_##n(offset, step) \
     index = (cmd - offset) / step
 
-void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const u32 count)
+void thread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const u32 count)
 {
 	auto args = vm::ps3::ptr<u32>::make(args_addr);
 
@@ -770,7 +770,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	case NV4097_CLEAR_SURFACE:
 	{
 		const u32 a0 = ARGS(0);
-		clear_surface(a0);
+		domethod(NV4097_CLEAR_SURFACE, a0);
 		break;
 	}
 	case NV4097_SET_ZSTENCIL_CLEAR_VALUE:
@@ -921,7 +921,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		}
 		else
 		{
-			End();
+			end();
 		}
 		break;
 	}
@@ -2075,176 +2075,232 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	}
 }
 
-void RSXThread::begin(u32 drawMode)
-{
-	m_begin_end = 1;
-	draw_mode = drawMode;
-	draw_array_count = 0;
-	draw_array_first = ~0;
-}
-
-void RSXThread::End()
-{
-	end();
-
-	for (auto &vdata : vertex_arrays)
+	void thread::begin(u32 drawMode)
 	{
-		vdata.clear();
+		m_begin_end = 1;
+		draw_mode = drawMode;
+		draw_array_count = 0;
+		draw_array_first = ~0;
 	}
 
-	m_indexed_array.Reset();
-	fragment_constants.clear();
-
-	m_clear_surface_mask = 0;
-	m_begin_end = 0;
-
-	OnReset();
-}
-
-void RSXThread::Task()
-{
-	u8 inc;
-	LOG_NOTICE(RSX, "RSX thread started");
-
-	oninit_thread();
-
-	last_flip_time = get_system_time() - 1000000;
-
-	autojoin_thread_t vblank(WRAP_EXPR("VBlank Thread"), [this]()
+	void thread::end()
 	{
-		const u64 start_time = get_system_time();
-
-		vblank_count = 0;
-
-		while (joinable())
+		for (auto &vdata : vertex_arrays)
 		{
-			CHECK_EMU_STATUS;
+			vdata.clear();
+		}
 
-			if (get_system_time() - start_time > vblank_count * 1000000 / 60)
+		m_indexed_array.Reset();
+		fragment_constants.clear();
+
+		m_clear_surface_mask = 0;
+		m_begin_end = 0;
+
+		OnReset();
+	}
+
+	void thread::task()
+	{
+		u8 inc;
+		LOG_NOTICE(RSX, "RSX thread started");
+
+		oninit_thread();
+
+		last_flip_time = get_system_time() - 1000000;
+
+		autojoin_thread_t vblank(WRAP_EXPR("VBlank Thread"), [this]()
+		{
+			const u64 start_time = get_system_time();
+
+			vblank_count = 0;
+
+			while (joinable())
 			{
-				vblank_count++;
+				CHECK_EMU_STATUS;
 
-				if (auto cb = vblank_handler)
+				if (get_system_time() - start_time > vblank_count * 1000000 / 60)
 				{
-					Emu.GetCallbackManager().Async([=](CPUThread& cpu)
+					vblank_count++;
+
+					if (auto cb = vblank_handler)
 					{
-						cb(static_cast<PPUThread&>(cpu), 1);
-					});
+						Emu.GetCallbackManager().Async([=](CPUThread& cpu)
+						{
+							cb(static_cast<PPUThread&>(cpu), 1);
+						});
+					}
+				}
+				else
+				{
+					std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 				}
 			}
-			else
+		});
+
+		while (joinable() && !Emu.IsStopped())
+		{
+			std::lock_guard<std::mutex> lock(cs_main);
+
+			inc = 1;
+
+			const be_t<u32> put = ctrl->put;
+			const be_t<u32> get = ctrl->get;
+
+			if (put == get || !Emu.IsRunning())
 			{
 				std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
+				continue;
 			}
-		}
-	});
 
-	while (joinable() && !Emu.IsStopped())
-	{
-		std::lock_guard<std::mutex> lock(cs_main);
+			const u32 cmd = ReadIO32(get);
+			const u32 count = (cmd >> 18) & 0x7ff;
 
-		inc = 1;
-
-		const be_t<u32> put = ctrl->put;
-		const be_t<u32> get = ctrl->get;
-
-		if (put == get || !Emu.IsRunning())
-		{
-			std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
-			continue;
-		}
-
-		const u32 cmd = ReadIO32(get);
-		const u32 count = (cmd >> 18) & 0x7ff;
-
-		if (Ini.RSXLogging.GetValue())
-		{
-			LOG_NOTICE(Log::RSX, "%s (cmd=0x%x)", GetMethodName(cmd & 0xffff).c_str(), cmd);
-		}
+			if (Ini.RSXLogging.GetValue())
+			{
+				LOG_NOTICE(Log::RSX, "%s (cmd=0x%x)", GetMethodName(cmd & 0xffff).c_str(), cmd);
+			}
 	
-		if (cmd & CELL_GCM_METHOD_FLAG_JUMP)
-		{
-			u32 offs = cmd & 0x1fffffff;
-			//LOG_WARNING(RSX, "rsx jump(0x%x) #addr=0x%x, cmd=0x%x, get=0x%x, put=0x%x", offs, m_ioAddress + get, cmd, get, put);
-			ctrl->get.exchange(offs);
-			continue;
-		}
-		if (cmd & CELL_GCM_METHOD_FLAG_CALL)
-		{
-			m_call_stack.push(get + 4);
-			u32 offs = cmd & ~3;
-			//LOG_WARNING(RSX, "rsx call(0x%x) #0x%x - 0x%x", offs, cmd, get);
-			ctrl->get.exchange(offs);
-			continue;
-		}
-		if (cmd == CELL_GCM_METHOD_FLAG_RETURN)
-		{
-			u32 get = m_call_stack.top();
-			m_call_stack.pop();
-			//LOG_WARNING(RSX, "rsx return(0x%x)", get);
-			ctrl->get.exchange(get);
-			continue;
-		}
-		if (cmd & CELL_GCM_METHOD_FLAG_NON_INCREMENT)
-		{
-			//LOG_WARNING(RSX, "rsx non increment cmd! 0x%x", cmd);
-			inc = 0;
+			if (cmd & CELL_GCM_METHOD_FLAG_JUMP)
+			{
+				u32 offs = cmd & 0x1fffffff;
+				//LOG_WARNING(RSX, "rsx jump(0x%x) #addr=0x%x, cmd=0x%x, get=0x%x, put=0x%x", offs, m_ioAddress + get, cmd, get, put);
+				ctrl->get.exchange(offs);
+				continue;
+			}
+			if (cmd & CELL_GCM_METHOD_FLAG_CALL)
+			{
+				m_call_stack.push(get + 4);
+				u32 offs = cmd & ~3;
+				//LOG_WARNING(RSX, "rsx call(0x%x) #0x%x - 0x%x", offs, cmd, get);
+				ctrl->get.exchange(offs);
+				continue;
+			}
+			if (cmd == CELL_GCM_METHOD_FLAG_RETURN)
+			{
+				u32 get = m_call_stack.top();
+				m_call_stack.pop();
+				//LOG_WARNING(RSX, "rsx return(0x%x)", get);
+				ctrl->get.exchange(get);
+				continue;
+			}
+			if (cmd & CELL_GCM_METHOD_FLAG_NON_INCREMENT)
+			{
+				//LOG_WARNING(RSX, "rsx non increment cmd! 0x%x", cmd);
+				inc = 0;
+			}
+
+			if (cmd == 0) //nop
+			{
+				ctrl->get += 4;
+				continue;
+			}
+
+			auto args = vm::ps3::ptr<u32>::make((u32)RSXIOMem.RealAddr(get + 4));
+
+			for (u32 i = 0; i < count; i++)
+			{
+				rsx::method_registers[(cmd & 0xffff) + (i * 4 * inc)] = ARGS(i);
+			}
+
+			DoCmd(cmd, cmd & 0x3ffff, args.addr(), count);
+
+			ctrl->get += (count + 1) * 4;
 		}
 
-		if (cmd == 0) //nop
-		{
-			ctrl->get += 4;
-			continue;
-		}
-
-		auto args = vm::ps3::ptr<u32>::make((u32)RSXIOMem.RealAddr(get + 4));
-
-		for (u32 i = 0; i < count; i++)
-		{
-			rsx::method_registers[(cmd & 0xffff) + (i * 4 * inc)] = ARGS(i);
-		}
-
-		DoCmd(cmd, cmd & 0x3ffff, args.addr(), count);
-
-		ctrl->get += (count + 1) * 4;
+		onexit_thread();
 	}
 
-	onexit_thread();
-}
-
-void RSXThread::Init(const u32 ioAddress, const u32 io_size, const u32 ctrlAddress, const u32 localAddress)
-{
-	ctrl = vm::get_ptr<CellGcmControl>(ctrlAddress);
-	this->ioAddress = ioAddress;
-	this->ioSize = io_size;
-	m_ctrlAddress = ctrlAddress;
-	local_mem_addr = localAddress;
-
-	m_cur_vertex_prog = nullptr;
-
-	m_used_gcm_commands.clear();
-
-	oninit();
-
-	start(WRAP_EXPR("RSXThread"), WRAP_EXPR(Task()));
-}
-
-u32 RSXThread::ReadIO32(u32 addr)
-{
-	u32 value;
-
-	if (!RSXIOMem.Read32(addr, &value))
+	u64 thread::timestamp() const
 	{
-		throw EXCEPTION("RSXIO memory not mapped (addr=0x%x)", addr);
+		// Get timestamp, and convert it from microseconds to nanoseconds
+		return get_system_time() * 1000;
 	}
 
-	return value;
-}
-
-void RSXThread::WriteIO32(u32 addr, u32 value)
-{
-	if (!RSXIOMem.Write32(addr, value))
+	void thread::reset()
 	{
-		throw EXCEPTION("RSXIO memory not mapped (addr=0x%x)", addr);
+		rsx::method_registers[NV4097_SET_DEPTH_TEST_ENABLE] = false;
+		rsx::method_registers[NV4097_SET_DEPTH_MASK] = 1;
+		rsx::method_registers[NV4097_SET_DEPTH_FUNC] = 0x0201;
+
+		m_set_dither = false;
+		rsx::method_registers[NV4097_SET_COLOR_MASK] = -1;
+		m_set_clip = false;
+		m_set_depth_bounds_test = false;
+		m_set_depth_bounds = false;
+		m_set_scissor_horizontal = false;
+		m_set_scissor_vertical = false;
+		m_set_front_polygon_mode = false;
+		m_set_back_polygon_mode = false;
+		rsx::method_registers[NV4097_SET_BLEND_ENABLE_MRT] = 0;
+		rsx::method_registers[NV4097_SET_BLEND_ENABLE] = false;
+		m_set_two_side_light_enable = false;
+		m_set_point_sprite_control = false;
+		m_set_point_size = false;
+		m_set_line_width = false;
+		m_set_line_smooth = false;
+		m_set_shade_mode = false;
+		m_set_fog_mode = false;
+		m_set_fog_params = false;
+		m_set_clip_plane = false;
+		rsx::method_registers[NV4097_SET_CULL_FACE_ENABLE] = false;
+		rsx::method_registers[NV4097_SET_ALPHA_TEST_ENABLE] = false;
+		rsx::method_registers[NV4097_SET_ALPHA_FUNC] = false;
+		rsx::method_registers[NV4097_SET_ALPHA_REF] = false;
+		m_set_poly_smooth = false;
+		m_set_poly_offset_fill = false;
+		m_set_poly_offset_line = false;
+		m_set_poly_offset_point = false;
+		m_set_poly_offset_mode = false;
+		m_set_restart_index = false;
+		m_set_specular = false;
+		m_set_line_stipple = false;
+		m_set_polygon_stipple = false;
+		m_set_surface_clip_horizontal = false;
+		m_set_surface_clip_vertical = false;
+
+		m_clear_surface_mask = 0;
+		m_begin_end = 0;
+
+		for (uint i = 0; i < rsx::limits::textures_count; ++i)
+		{
+			textures[i].init(i);
+		}
+	}
+
+	void thread::init(const u32 ioAddress, const u32 io_size, const u32 ctrlAddress, const u32 localAddress)
+	{
+		ctrl = vm::get_ptr<CellGcmControl>(ctrlAddress);
+		this->ioAddress = ioAddress;
+		this->ioSize = io_size;
+		m_ctrlAddress = ctrlAddress;
+		local_mem_addr = localAddress;
+
+		m_cur_vertex_prog = nullptr;
+
+		m_used_gcm_commands.clear();
+
+		oninit();
+
+		start(WRAP_EXPR("RSXThread"), WRAP_EXPR(task()));
+	}
+
+	u32 thread::ReadIO32(u32 addr)
+	{
+		u32 value;
+
+		if (!RSXIOMem.Read32(addr, &value))
+		{
+			throw EXCEPTION("RSXIO memory not mapped (addr=0x%x)", addr);
+		}
+
+		return value;
+	}
+
+	void thread::WriteIO32(u32 addr, u32 value)
+	{
+		if (!RSXIOMem.Write32(addr, value))
+		{
+			throw EXCEPTION("RSXIO memory not mapped (addr=0x%x)", addr);
+		}
 	}
 }

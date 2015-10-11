@@ -1043,7 +1043,7 @@ void GLGSRender::InitVertexData()
 	}*/
 
 	// Scale
-	scaleOffsetMat[0]  = (GLfloat&)rsx::method_registers[NV4097_SET_VIEWPORT_SCALE + (0x4 * 0)] / (RSXThread::m_width / RSXThread::m_width_scale);
+/*	scaleOffsetMat[0]  = (GLfloat&)rsx::method_registers[NV4097_SET_VIEWPORT_SCALE + (0x4 * 0)] / (RSXThread::m_width / RSXThread::m_width_scale);
 	scaleOffsetMat[5]  = (GLfloat&)rsx::method_registers[NV4097_SET_VIEWPORT_SCALE + (0x4 * 1)] / (RSXThread::m_height / RSXThread::m_height_scale);
 	scaleOffsetMat[10] = (GLfloat&)rsx::method_registers[NV4097_SET_VIEWPORT_SCALE + (0x4 * 2)];
 
@@ -1053,7 +1053,7 @@ void GLGSRender::InitVertexData()
 	scaleOffsetMat[11] = (GLfloat&)rsx::method_registers[NV4097_SET_VIEWPORT_OFFSET + (0x4 * 2)] - 1 / 2.0f;
 
 	scaleOffsetMat[3] /= RSXThread::m_width / RSXThread::m_width_scale;
-	scaleOffsetMat[7] /= RSXThread::m_height / RSXThread::m_height_scale;
+	scaleOffsetMat[7] /= RSXThread::m_height / RSXThread::m_height_scale;*/
 
 	l = m_program.GetLocation("scaleOffsetMat");
 	glUniformMatrix4fv(l, 1, false, scaleOffsetMat);
@@ -1137,7 +1137,6 @@ void GLGSRender::WriteBuffers()
 	if (Ini.GSDumpDepthBuffer.GetValue())
 	{
 		glBindBuffer(GL_PIXEL_PACK_BUFFER, g_pbo[4]);
-		glBufferData(GL_PIXEL_PACK_BUFFER, RSXThread::m_width * RSXThread::m_height * 4, 0, GL_STREAM_READ);
 		glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
 		WriteDepthBuffer();
 	}
@@ -1150,212 +1149,38 @@ void GLGSRender::WriteBuffers()
 
 void GLGSRender::WriteDepthBuffer()
 {
-/*	if (!m_set_context_dma_z)
-	{
-		return;
-	}
 
-	u32 address;// = rsx::get_address(m_surface_offset_z, m_context_dma_z - 0xfeed0000);
 
-	auto ptr = vm::get_ptr<void>(address);
-	glBindBuffer(GL_PIXEL_PACK_BUFFER, g_pbo[4]);
-	checkForGlError("WriteDepthBuffer(): glBindBuffer");
-	glReadPixels(0, 0, RSXThread::m_width, RSXThread::m_height, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, 0);
-	checkForGlError("WriteDepthBuffer(): glReadPixels");
-	GLubyte *packed = (GLubyte *)glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY);
-	if (packed)
-	{
-		memcpy(ptr, packed, RSXThread::m_width * RSXThread::m_height * 4);
-		glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
-		checkForGlError("WriteDepthBuffer(): glUnmapBuffer");
-	}
-
-	glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
-
-	checkForGlError("WriteDepthBuffer(): glReadPixels");
-	glBindTexture(GL_TEXTURE_2D, g_depth_tex);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, RSXThread::m_width, RSXThread::m_height, 0, GL_ALPHA, GL_UNSIGNED_BYTE, ptr);
-	checkForGlError("WriteDepthBuffer(): glTexImage2D");
-	glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, ptr);
-	checkForGlError("WriteDepthBuffer(): glGetTexImage");*/
 }
 
 void GLGSRender::WriteColorBufferA()
 {
-	/*if (!m_set_context_dma_color_a)
-	{
-		return;
-	}
 
-	u32 address;// = rsx::get_address(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000);
-
-	glReadBuffer(GL_COLOR_ATTACHMENT0);
-	checkForGlError("WriteColorBufferA(): glReadBuffer");
-	glBindBuffer(GL_PIXEL_PACK_BUFFER, g_pbo[0]);
-	checkForGlError("WriteColorBufferA(): glBindBuffer");
-	glReadPixels(0, 0, RSXThread::m_width, RSXThread::m_height, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, 0);
-	checkForGlError("WriteColorBufferA(): glReadPixels");
-	GLubyte *packed = (GLubyte *)glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY);
-	if (packed)
-	{
-		memcpy(vm::get_ptr<void>(address), packed, RSXThread::m_width * RSXThread::m_height * 4);
-		glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
-		checkForGlError("WriteColorBufferA(): glUnmapBuffer");
-	}
-
-	glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);*/
 }
 
 void GLGSRender::WriteColorBufferB()
 {
-/*	if (!m_set_context_dma_color_b)
-	{
-		return;
-	}
 
-	u32 address;// = rsx::get_address(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000);
-
-	glReadBuffer(GL_COLOR_ATTACHMENT1);
-	checkForGlError("WriteColorBufferB(): glReadBuffer");
-	glBindBuffer(GL_PIXEL_PACK_BUFFER, g_pbo[1]);
-	checkForGlError("WriteColorBufferB(): glBindBuffer");
-	glReadPixels(0, 0, RSXThread::m_width, RSXThread::m_height, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, 0);
-	checkForGlError("WriteColorBufferB(): glReadPixels");
-	GLubyte *packed = (GLubyte *)glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY);
-	if (packed)
-	{
-		memcpy(vm::get_ptr<void>(address), packed, RSXThread::m_width * RSXThread::m_height * 4);
-		glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
-		checkForGlError("WriteColorBufferB(): glUnmapBuffer");
-	}
-
-	glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);*/
 }
 
 void GLGSRender::WriteColorBufferC()
 {
-/*	if (!m_set_context_dma_color_c)
-	{
-		return;
-	}
 
-	u32 address;// = rsx::get_address(m_surface_offset_c, m_context_dma_color_c - 0xfeed0000);
-
-	glReadBuffer(GL_COLOR_ATTACHMENT2);
-	checkForGlError("WriteColorBufferC(): glReadBuffer");
-	glBindBuffer(GL_PIXEL_PACK_BUFFER, g_pbo[2]);
-	checkForGlError("WriteColorBufferC(): glBindBuffer");
-	glReadPixels(0, 0, RSXThread::m_width, RSXThread::m_height, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, 0);
-	checkForGlError("WriteColorBufferC(): glReadPixels");
-	GLubyte *packed = (GLubyte *)glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY);
-	if (packed)
-	{
-		memcpy(vm::get_ptr<void>(address), packed, RSXThread::m_width * RSXThread::m_height * 4);
-		glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
-		checkForGlError("WriteColorBufferC(): glUnmapBuffer");
-	}
-
-	glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);*/
 }
 
 void GLGSRender::WriteColorBufferD()
 {
-/*	if (!m_set_context_dma_color_d)
-	{
-		return;
-	}
-
-	u32 address;// = rsx::get_address(m_surface_offset_d, m_context_dma_color_d - 0xfeed0000);
-
-	glReadBuffer(GL_COLOR_ATTACHMENT3);
-	checkForGlError("WriteColorBufferD(): glReadBuffer");
-	glBindBuffer(GL_PIXEL_PACK_BUFFER, g_pbo[3]);
-	checkForGlError("WriteColorBufferD(): glBindBuffer");
-	glReadPixels(0, 0, RSXThread::m_width, RSXThread::m_height, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, 0);
-	checkForGlError("WriteColorBufferD(): glReadPixels");
-	GLubyte *packed = (GLubyte *)glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY);
-	if (packed)
-	{
-		memcpy(vm::get_ptr<void>(address), packed, RSXThread::m_width * RSXThread::m_height * 4);
-		glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
-		checkForGlError("WriteColorBufferD(): glUnmapBuffer");
-	}
-
-	glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);*/
 
 }
 
 void GLGSRender::WriteColorBuffers()
 {
-	glPixelStorei(GL_PACK_ROW_LENGTH, 0);
-	glPixelStorei(GL_PACK_ALIGNMENT, 4);
-
-	switch(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET])
-	{
-	case CELL_GCM_SURFACE_TARGET_NONE:
-		return;
-
-	case CELL_GCM_SURFACE_TARGET_0:
-		glBindBuffer(GL_PIXEL_PACK_BUFFER, g_pbo[0]);
-		glBufferData(GL_PIXEL_PACK_BUFFER, RSXThread::m_width * RSXThread::m_height * 4, 0, GL_STREAM_READ);
-		glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
-		WriteColorBufferA();
-		break;
-
-	case CELL_GCM_SURFACE_TARGET_1:
-		glBindBuffer(GL_PIXEL_PACK_BUFFER, g_pbo[1]);
-		glBufferData(GL_PIXEL_PACK_BUFFER, RSXThread::m_width * RSXThread::m_height * 4, 0, GL_STREAM_READ);
-		glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
-		WriteColorBufferB();
-		break;
-
-	case CELL_GCM_SURFACE_TARGET_MRT1:
-		for (int i = 0; i < 2; i++)
-		{
-			glBindBuffer(GL_PIXEL_PACK_BUFFER, g_pbo[i]);
-			glBufferData(GL_PIXEL_PACK_BUFFER, RSXThread::m_width * RSXThread::m_height * 4, 0, GL_STREAM_READ);
-		}
-		glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
-		WriteColorBufferA();
-		WriteColorBufferB();
-		break;
-
-	case CELL_GCM_SURFACE_TARGET_MRT2:
-		for (int i = 0; i < 3; i++)
-		{
-			glBindBuffer(GL_PIXEL_PACK_BUFFER, g_pbo[i]);
-			glBufferData(GL_PIXEL_PACK_BUFFER, RSXThread::m_width * RSXThread::m_height * 4, 0, GL_STREAM_READ);
-		}
-		glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
-		WriteColorBufferA();
-		WriteColorBufferB();
-		WriteColorBufferC();
-		break;
-
-	case CELL_GCM_SURFACE_TARGET_MRT3:
-		for (int i = 0; i < 4; i++)
-		{
-			glBindBuffer(GL_PIXEL_PACK_BUFFER, g_pbo[i]);
-			glBufferData(GL_PIXEL_PACK_BUFFER, RSXThread::m_width * RSXThread::m_height * 4, 0, GL_STREAM_READ);
-		}
-		glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
-		WriteColorBufferA();
-		WriteColorBufferB();
-		WriteColorBufferC();
-		WriteColorBufferD();
-		break;
-	}
 }
 
 void GLGSRender::oninit()
 {
 	m_draw_frames = 1;
 	m_skip_frames = 0;
-	RSXThread::m_width = 720;
-	RSXThread::m_height = 576;
-	RSXThread::m_width_scale = 2.0f;
-	RSXThread::m_height_scale = 2.0f;
-
 	last_width = 0;
 	last_height = 0;
 	last_depth_format = 0;
@@ -1415,9 +1240,6 @@ void GLGSRender::InitDrawBuffers()
 {
 //	if (!m_fbo.IsCreated() || RSXThread::m_width != last_width || RSXThread::m_height != last_height || last_depth_format != m_surface_depth_format)
 	{
-		LOG_WARNING(RSX, "New FBO (%dx%d)", RSXThread::m_width, RSXThread::m_height);
-		last_width = RSXThread::m_width;
-		last_height = RSXThread::m_height;
 //		last_depth_format = m_surface_depth_format;
 
 		m_fbo.Create();
@@ -1430,7 +1252,6 @@ void GLGSRender::InitDrawBuffers()
 		for (int i = 0; i < 4; ++i)
 		{
 			m_rbo.Bind(i);
-			m_rbo.Storage(GL_RGBA, RSXThread::m_width, RSXThread::m_height);
 			checkForGlError("m_rbo.Storage(GL_RGBA)");
 		}
 
@@ -1444,14 +1265,12 @@ void GLGSRender::InitDrawBuffers()
 			// [E : RSXThread]: Bad depth format! (0)
 			// [E : RSXThread]: glEnable: opengl error 0x0506
 			// [E : RSXThread]: glDrawArrays: opengl error 0x0506
-			m_rbo.Storage(GL_DEPTH_COMPONENT, RSXThread::m_width, RSXThread::m_height);
 			checkForGlError("m_rbo.Storage(GL_DEPTH_COMPONENT)");
 			break;
 		}
 
 		case CELL_GCM_SURFACE_Z16:
 		{
-			m_rbo.Storage(GL_DEPTH_COMPONENT16, RSXThread::m_width, RSXThread::m_height);
 			checkForGlError("m_rbo.Storage(GL_DEPTH_COMPONENT16)");
 
 			m_fbo.Renderbuffer(GL_DEPTH_ATTACHMENT, m_rbo.GetId(4));
@@ -1462,7 +1281,6 @@ void GLGSRender::InitDrawBuffers()
 
 		case CELL_GCM_SURFACE_Z24S8:
 		{
-			m_rbo.Storage(GL_DEPTH24_STENCIL8, RSXThread::m_width, RSXThread::m_height);
 			checkForGlError("m_rbo.Storage(GL_DEPTH24_STENCIL8)");
 
 			m_fbo.Renderbuffer(GL_DEPTH_ATTACHMENT, m_rbo.GetId(4));
@@ -1574,8 +1392,9 @@ void GLGSRender::InitDrawBuffers()
 	}
 }
 
-void GLGSRender::clear_surface(u32 arg)
+bool GLGSRender::domethod(u32 arg, u32)
 {
+	return false;
 	InitDrawBuffers();
 
 //	if (m_set_color_mask)
@@ -1938,10 +1757,10 @@ void GLGSRender::end()
 
 	m_vao.Bind();
 
-	if (m_indexed_array.m_count)
+/*	if (m_indexed_array.m_count)
 		LoadVertexData(m_indexed_array.index_min, m_indexed_array.index_max - m_indexed_array.index_min + 1);
 	else
-		LoadVertexData(draw_array_first, draw_array_count);
+		LoadVertexData(draw_array_first, draw_array_count);*/
 
 	if (m_indexed_array.m_count || draw_array_count)
 	{
@@ -1990,7 +1809,6 @@ void GLGSRender::flip(int buffer)
 	// Set scissor to FBO size 
 	if (m_set_scissor_horizontal && m_set_scissor_vertical)
 	{
-		glScissor(0, 0, RSXThread::m_width, RSXThread::m_height);
 		checkForGlError("glScissor");
 	}
 
@@ -2005,7 +1823,6 @@ void GLGSRender::flip(int buffer)
 		// Fast path for non-MRT using glBlitFramebuffer.
 		GLfbo::Bind(GL_DRAW_FRAMEBUFFER, 0);
 		// Renderbuffer is upside turn , swapped srcY0 and srcY1
-		GLfbo::Blit(0, RSXThread::m_height, RSXThread::m_width, 0, 0, 0, RSXThread::m_width, RSXThread::m_height, GL_COLOR_BUFFER_BIT, GL_NEAREST);
 	}
 		break;
 
@@ -2030,24 +1847,18 @@ void GLGSRender::flip(int buffer)
 		{
 			format = GL_RGBA;
 			static std::vector<u8> pixels;
-			pixels.resize(RSXThread::m_width * RSXThread::m_height * 4);
 			m_fbo.Bind(GL_READ_FRAMEBUFFER);
 			glBindBuffer(GL_PIXEL_PACK_BUFFER, g_pbo[5]);
-			glBufferData(GL_PIXEL_PACK_BUFFER, RSXThread::m_width * RSXThread::m_height * 4, 0, GL_STREAM_READ);
-			glReadPixels(0, 0, RSXThread::m_width, RSXThread::m_height, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, 0);
 			checkForGlError("Flip(): glReadPixels(GL_BGRA, GL_UNSIGNED_INT_8_8_8_8)");
 			GLubyte *packed = (GLubyte *)glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY);
 			if (packed)
 			{
-				memcpy(pixels.data(), packed, RSXThread::m_width * RSXThread::m_height * 4);
 				glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
 				checkForGlError("Flip(): glUnmapBuffer");
 			}
 			glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
 
 			src_buffer = pixels.data();
-			width = RSXThread::m_width;
-			height = RSXThread::m_height;
 		}
 		else
 		{

@@ -37,7 +37,7 @@ enum class frame_type
 	DX12
 };
 
-class GSRender : public RSXThread
+class GSRender : public rsx::thread
 {
 protected:
 	GSFrameBase* m_frame;

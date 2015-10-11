@@ -295,6 +295,18 @@ void D3D12GSRender::OnReset()
 {
 }
 
+bool D3D12GSRender::domethod(u32 cmd, u32 arg)
+{
+	switch (cmd)
+	{
+	case NV4097_CLEAR_SURFACE:
+		clear_surface(arg);
+		return true;
+	default:
+		return false;
+	}
+}
+
 void D3D12GSRender::clear_surface(u32 arg)
 {
 	std::chrono::time_point<std::chrono::system_clock> startDuration = std::chrono::system_clock::now();
@@ -623,6 +635,8 @@ void D3D12GSRender::end()
 		m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**)getCurrentResourceStorage().m_commandList.GetAddressOf());
 		getCurrentResourceStorage().setNewCommandList();
 	}
+
+	thread::end();
 }
 
 static bool

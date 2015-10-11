@@ -508,10 +508,12 @@ private:
 	 */
 	void renderOverlay();
 
+	void clear_surface(u32 arg);
+
 protected:
 	virtual void onexit_thread() override;
 	virtual void OnReset() override;
-	virtual void clear_surface(u32 arg) override;
+	virtual bool domethod(u32 cmd, u32 arg) override;
 	virtual void end() override;
 	virtual void flip(int buffer) override;
 };
