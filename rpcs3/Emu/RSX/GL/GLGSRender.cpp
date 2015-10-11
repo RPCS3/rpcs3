@@ -1150,7 +1150,7 @@ void GLGSRender::WriteBuffers()
 
 void GLGSRender::WriteDepthBuffer()
 {
-	if (!m_set_context_dma_z)
+/*	if (!m_set_context_dma_z)
 	{
 		return;
 	}
@@ -1177,12 +1177,12 @@ void GLGSRender::WriteDepthBuffer()
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, RSXThread::m_width, RSXThread::m_height, 0, GL_ALPHA, GL_UNSIGNED_BYTE, ptr);
 	checkForGlError("WriteDepthBuffer(): glTexImage2D");
 	glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, ptr);
-	checkForGlError("WriteDepthBuffer(): glGetTexImage");
+	checkForGlError("WriteDepthBuffer(): glGetTexImage");*/
 }
 
 void GLGSRender::WriteColorBufferA()
 {
-	if (!m_set_context_dma_color_a)
+	/*if (!m_set_context_dma_color_a)
 	{
 		return;
 	}
@@ -1203,12 +1203,12 @@ void GLGSRender::WriteColorBufferA()
 		checkForGlError("WriteColorBufferA(): glUnmapBuffer");
 	}
 
-	glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+	glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);*/
 }
 
 void GLGSRender::WriteColorBufferB()
 {
-	if (!m_set_context_dma_color_b)
+/*	if (!m_set_context_dma_color_b)
 	{
 		return;
 	}
@@ -1229,12 +1229,12 @@ void GLGSRender::WriteColorBufferB()
 		checkForGlError("WriteColorBufferB(): glUnmapBuffer");
 	}
 
-	glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+	glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);*/
 }
 
 void GLGSRender::WriteColorBufferC()
 {
-	if (!m_set_context_dma_color_c)
+/*	if (!m_set_context_dma_color_c)
 	{
 		return;
 	}
@@ -1255,12 +1255,12 @@ void GLGSRender::WriteColorBufferC()
 		checkForGlError("WriteColorBufferC(): glUnmapBuffer");
 	}
 
-	glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+	glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);*/
 }
 
 void GLGSRender::WriteColorBufferD()
 {
-	if (!m_set_context_dma_color_d)
+/*	if (!m_set_context_dma_color_d)
 	{
 		return;
 	}
@@ -1281,7 +1281,7 @@ void GLGSRender::WriteColorBufferD()
 		checkForGlError("WriteColorBufferD(): glUnmapBuffer");
 	}
 
-	glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+	glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);*/
 
 }
 

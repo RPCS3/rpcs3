@@ -301,16 +301,6 @@ public:
 	bool m_set_surface_clip_vertical;
 
 	// DMA context
-	bool m_set_context_dma_color_a;
-	u32 m_context_dma_color_a;
-	bool m_set_context_dma_color_b;
-	u32 m_context_dma_color_b;
-	bool m_set_context_dma_color_c;
-	u32 m_context_dma_color_c;
-	bool m_set_context_dma_color_d;
-	u32 m_context_dma_color_d;
-	bool m_set_context_dma_z;
-	u32 m_context_dma_z;
 	u32 m_context_surface;
 	u32 m_context_dma_img_src;
 	u32 m_context_dma_img_dst;
@@ -457,11 +447,6 @@ protected:
 		m_set_fog_mode = false;
 		m_set_fog_params = false;
 		m_set_clip_plane = false;
-		m_set_context_dma_color_a = false;
-		m_set_context_dma_color_b = false;
-		m_set_context_dma_color_c = false;
-		m_set_context_dma_color_d = false;
-		m_set_context_dma_z = false;
 		rsx::method_registers[NV4097_SET_CULL_FACE_ENABLE] = false;
 		rsx::method_registers[NV4097_SET_ALPHA_TEST_ENABLE] = false;
 		rsx::method_registers[NV4097_SET_ALPHA_FUNC] = false;

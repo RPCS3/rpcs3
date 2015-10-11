@@ -1282,53 +1282,19 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		break;
 
 	case NV4097_SET_CONTEXT_DMA_COLOR_A:
-	{
-		m_set_context_dma_color_a = true;
-		m_context_dma_color_a = ARGS(0);
-
-		if (count != 1)
-		{
-			LOG_ERROR(RSX, "NV4097_SET_CONTEXT_DMA_COLOR_A: Bad count (%d)", count);
-			break;
-		}
 		break;
-	}
 
 	case NV4097_SET_CONTEXT_DMA_COLOR_B:
-	{
-		m_set_context_dma_color_b = true;
-		m_context_dma_color_b = ARGS(0);
 		break;
-	}
 
 	case NV4097_SET_CONTEXT_DMA_COLOR_C:
-	{
-		m_set_context_dma_color_c = true;
-		m_context_dma_color_c = ARGS(0);
-
-		if (count > 1)
-		{
-			m_set_context_dma_color_d = true;
-			m_context_dma_color_d = ARGS(1);
-		}
 		break;
-	}
 
 	case NV4097_SET_CONTEXT_DMA_COLOR_D:
-	{
-		if (ARGS(0))
-		{
-			LOG_WARNING(RSX, "TODO: NV4097_SET_CONTEXT_DMA_COLOR_D: 0x%x", ARGS(0));
-		}
 		break;
-	}
 
 	case NV4097_SET_CONTEXT_DMA_ZETA:
-	{
-		m_set_context_dma_z = true;
-		m_context_dma_z = ARGS(0);
 		break;
-	}
 
 	case NV4097_SET_CONTEXT_DMA_SEMAPHORE:
 	{

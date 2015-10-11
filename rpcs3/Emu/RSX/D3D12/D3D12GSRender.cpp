@@ -929,10 +929,16 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 	size_t depthRowPitch = clip_w;
 	depthRowPitch = (depthRowPitch + 255) & ~255;
 
-	bool needTransfer = (m_set_context_dma_z && Ini.GSDumpDepthBuffer.GetValue()) ||
-		((m_set_context_dma_color_a || m_set_context_dma_color_b || m_set_context_dma_color_c || m_set_context_dma_color_d) && Ini.GSDumpColorBuffers.GetValue());
+	u32 m_context_dma_color_a = rsx::method_registers[NV4097_SET_CONTEXT_DMA_COLOR_A];
+	u32 m_context_dma_color_b = rsx::method_registers[NV4097_SET_CONTEXT_DMA_COLOR_B];
+	u32 m_context_dma_color_c = rsx::method_registers[NV4097_SET_CONTEXT_DMA_COLOR_C];
+	u32 m_context_dma_color_d = rsx::method_registers[NV4097_SET_CONTEXT_DMA_COLOR_D];
+	u32 m_context_dma_z = rsx::method_registers[NV4097_SET_CONTEXT_DMA_ZETA];
 
-	if (m_set_context_dma_z && Ini.GSDumpDepthBuffer.GetValue())
+	bool needTransfer = (m_context_dma_z && Ini.GSDumpDepthBuffer.GetValue()) ||
+		((m_context_dma_color_a || m_context_dma_color_b || m_context_dma_color_c || m_context_dma_color_d) && Ini.GSDumpColorBuffers.GetValue());
+
+	if (m_context_dma_z && Ini.GSDumpDepthBuffer.GetValue())
 	{
 		size_t sizeInByte = clip_w * clip_h * 2;
 		assert(m_UAVHeap.canAlloc(sizeInByte));
@@ -1068,7 +1074,7 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 	WaitForSingleObject(handle, INFINITE);
 	CloseHandle(handle);
 
-	if (m_set_context_dma_z && Ini.GSDumpDepthBuffer.GetValue())
+	if (m_context_dma_z && Ini.GSDumpDepthBuffer.GetValue())
 	{
 		u32 address = rsx::get_address(rsx::method_registers[NV4097_SET_SURFACE_ZETA_OFFSET], m_context_dma_z - 0xfeed0000);
 		auto ptr = vm::get_ptr<void>(address);

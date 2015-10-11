@@ -606,11 +606,11 @@ void RSXDebugger::GetSettings()
 		(rsx::method_registers[NV4097_SET_COLOR_MASK] >> 8) & 0xff,
 		(rsx::method_registers[NV4097_SET_COLOR_MASK]) & 0xff,
 		(rsx::method_registers[NV4097_SET_COLOR_MASK] >> 24) & 0xff));
-	LIST_SETTINGS_ADD("Context DMA Color A", wxString::Format("0x%x", render.m_context_dma_color_a));
-	LIST_SETTINGS_ADD("Context DMA Color B", wxString::Format("0x%x", render.m_context_dma_color_b));
-	LIST_SETTINGS_ADD("Context DMA Color C", wxString::Format("0x%x", render.m_context_dma_color_c));
-	LIST_SETTINGS_ADD("Context DMA Color D", wxString::Format("0x%x", render.m_context_dma_color_d));
-	LIST_SETTINGS_ADD("Context DMA Zeta", wxString::Format("0x%x", render.m_context_dma_z));
+	LIST_SETTINGS_ADD("Context DMA Color A", wxString::Format("0x%x", rsx::method_registers[NV4097_SET_CONTEXT_DMA_COLOR_A]));
+	LIST_SETTINGS_ADD("Context DMA Color B", wxString::Format("0x%x", rsx::method_registers[NV4097_SET_CONTEXT_DMA_COLOR_B]));
+	LIST_SETTINGS_ADD("Context DMA Color C", wxString::Format("0x%x", rsx::method_registers[NV4097_SET_CONTEXT_DMA_COLOR_C]));
+	LIST_SETTINGS_ADD("Context DMA Color D", wxString::Format("0x%x", rsx::method_registers[NV4097_SET_CONTEXT_DMA_COLOR_D]));
+	LIST_SETTINGS_ADD("Context DMA Zeta", wxString::Format("0x%x", rsx::method_registers[NV4097_SET_CONTEXT_DMA_ZETA]));
 	LIST_SETTINGS_ADD("Depth bounds", wxString::Format("Min:%f, Max:%f", render.m_depth_bounds_min, render.m_depth_bounds_max));
 //	LIST_SETTINGS_ADD("Depth func", !(render.m_set_depth_func) ? "(none)" : wxString::Format("0x%x (%s)",
 //		render.m_depth_func,

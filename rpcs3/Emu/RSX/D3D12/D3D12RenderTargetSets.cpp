@@ -45,12 +45,18 @@ void D3D12GSRender::PrepareRenderTargets(ID3D12GraphicsCommandList *copycmdlist)
 	m_previous_address_d = rsx::method_registers[NV4097_SET_SURFACE_COLOR_DOFFSET];
 	m_previous_address_z = rsx::method_registers[NV4097_SET_SURFACE_ZETA_OFFSET];
 
+	u32 m_context_dma_color_a = rsx::method_registers[NV4097_SET_CONTEXT_DMA_COLOR_A];
+	u32 m_context_dma_color_b = rsx::method_registers[NV4097_SET_CONTEXT_DMA_COLOR_B];
+	u32 m_context_dma_color_c = rsx::method_registers[NV4097_SET_CONTEXT_DMA_COLOR_C];
+	u32 m_context_dma_color_d = rsx::method_registers[NV4097_SET_CONTEXT_DMA_COLOR_D];
+	u32 m_context_dma_z = rsx::method_registers[NV4097_SET_CONTEXT_DMA_ZETA];
+
 	// FBO location has changed, previous data might be copied
-	u32 address_a = m_set_context_dma_color_a ? rsx::get_address(m_previous_address_a, m_context_dma_color_a - 0xfeed0000) : 0;
-	u32 address_b = m_set_context_dma_color_b ? rsx::get_address(m_previous_address_b, m_context_dma_color_b - 0xfeed0000) : 0;
-	u32 address_c = m_set_context_dma_color_c ? rsx::get_address(m_previous_address_c, m_context_dma_color_c - 0xfeed0000) : 0;
-	u32 address_d = m_set_context_dma_color_d ? rsx::get_address(m_previous_address_d, m_context_dma_color_d - 0xfeed0000) : 0;
-	u32 address_z = m_set_context_dma_z ? rsx::get_address(m_previous_address_z, m_context_dma_z - 0xfeed0000) : 0;
+	u32 address_a = m_context_dma_color_a ? rsx::get_address(m_previous_address_a, m_context_dma_color_a - 0xfeed0000) : 0;
+	u32 address_b = m_context_dma_color_b ? rsx::get_address(m_previous_address_b, m_context_dma_color_b - 0xfeed0000) : 0;
+	u32 address_c = m_context_dma_color_c ? rsx::get_address(m_previous_address_c, m_context_dma_color_c - 0xfeed0000) : 0;
+	u32 address_d = m_context_dma_color_d ? rsx::get_address(m_previous_address_d, m_context_dma_color_d - 0xfeed0000) : 0;
+	u32 address_z = m_context_dma_z ? rsx::get_address(m_previous_address_z, m_context_dma_z - 0xfeed0000) : 0;
 
 	// Make previous RTTs sampleable
 	for (unsigned i = 0; i < 4; i++)
