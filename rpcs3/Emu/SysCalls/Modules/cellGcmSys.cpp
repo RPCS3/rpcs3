@@ -968,7 +968,7 @@ s32 cellGcmMapMainMemory(u32 ea, u32 size, vm::ptr<u32> offset)
 		return CELL_GCM_ERROR_NO_IO_PAGE_TABLE;
 	}
 
-	Emu.GetGSManager().GetRender().main_mem_addr = Emu.GetGSManager().GetRender().m_ioAddress;
+	Emu.GetGSManager().GetRender().main_mem_addr = Emu.GetGSManager().GetRender().ioAddress;
 
 	return CELL_OK;
 }

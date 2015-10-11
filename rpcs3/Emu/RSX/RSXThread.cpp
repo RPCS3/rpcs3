@@ -257,7 +257,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	// NV406E
 	case NV406E_SET_REFERENCE:
 	{
-		m_ctrl->ref.exchange(ARGS(0));
+		ctrl->ref.exchange(ARGS(0));
 		break;
 	}
 
@@ -344,8 +344,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 				return;
 			}
 
-			std::this_thread::sleep_for(std::chrono::milliseconds((s64)(1000.0 / limit - m_timer_sync.GetElapsedTimeInMilliSec())));
-			m_timer_sync.Start();
+			std::this_thread::sleep_for(std::chrono::milliseconds((s64)(1000.0 / limit - timer_sync.GetElapsedTimeInMilliSec())));
+			timer_sync.Start();
 		};
 
 		sync();
@@ -2145,8 +2145,8 @@ void RSXThread::Task()
 
 		inc = 1;
 
-		const be_t<u32> put = m_ctrl->put;
-		const be_t<u32> get = m_ctrl->get;
+		const be_t<u32> put = ctrl->put;
+		const be_t<u32> get = ctrl->get;
 
 		if (put == get || !Emu.IsRunning())
 		{
@@ -2166,7 +2166,7 @@ void RSXThread::Task()
 		{
 			u32 offs = cmd & 0x1fffffff;
 			//LOG_WARNING(RSX, "rsx jump(0x%x) #addr=0x%x, cmd=0x%x, get=0x%x, put=0x%x", offs, m_ioAddress + get, cmd, get, put);
-			m_ctrl->get.exchange(offs);
+			ctrl->get.exchange(offs);
 			continue;
 		}
 		if (cmd & CELL_GCM_METHOD_FLAG_CALL)
@@ -2174,7 +2174,7 @@ void RSXThread::Task()
 			m_call_stack.push(get + 4);
 			u32 offs = cmd & ~3;
 			//LOG_WARNING(RSX, "rsx call(0x%x) #0x%x - 0x%x", offs, cmd, get);
-			m_ctrl->get.exchange(offs);
+			ctrl->get.exchange(offs);
 			continue;
 		}
 		if (cmd == CELL_GCM_METHOD_FLAG_RETURN)
@@ -2182,7 +2182,7 @@ void RSXThread::Task()
 			u32 get = m_call_stack.top();
 			m_call_stack.pop();
 			//LOG_WARNING(RSX, "rsx return(0x%x)", get);
-			m_ctrl->get.exchange(get);
+			ctrl->get.exchange(get);
 			continue;
 		}
 		if (cmd & CELL_GCM_METHOD_FLAG_NON_INCREMENT)
@@ -2193,7 +2193,7 @@ void RSXThread::Task()
 
 		if (cmd == 0) //nop
 		{
-			m_ctrl->get += 4;
+			ctrl->get += 4;
 			continue;
 		}
 
@@ -2206,17 +2206,17 @@ void RSXThread::Task()
 
 		DoCmd(cmd, cmd & 0x3ffff, args.addr(), count);
 
-		m_ctrl->get += (count + 1) * 4;
+		ctrl->get += (count + 1) * 4;
 	}
 
 	onexit_thread();
 }
 
-void RSXThread::Init(const u32 ioAddress, const u32 ioSize, const u32 ctrlAddress, const u32 localAddress)
+void RSXThread::Init(const u32 ioAddress, const u32 io_size, const u32 ctrlAddress, const u32 localAddress)
 {
-	m_ctrl = vm::get_ptr<CellGcmControl>(ctrlAddress);
-	m_ioAddress = ioAddress;
-	m_ioSize = ioSize;
+	ctrl = vm::get_ptr<CellGcmControl>(ctrlAddress);
+	this->ioAddress = ioAddress;
+	this->ioSize = io_size;
 	m_ctrlAddress = ctrlAddress;
 	local_mem_addr = localAddress;
 

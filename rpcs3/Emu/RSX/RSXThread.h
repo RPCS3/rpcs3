@@ -117,10 +117,11 @@ class RSXThread : protected named_thread_t
 {
 protected:
 	std::stack<u32> m_call_stack;
-	CellGcmControl* m_ctrl;
-	Timer m_timer_sync;
 
 public:
+	CellGcmControl* ctrl = nullptr;
+	Timer timer_sync;
+
 	GcmTileInfo tiles[rsx::limits::tiles_count];
 	GcmZcullInfo zculls[rsx::limits::zculls_count];
 	rsx::texture textures[rsx::limits::textures_count];
@@ -138,7 +139,7 @@ public:
 	RSXVertexProgram* m_cur_vertex_prog;
 
 public:
-	u32 m_ioAddress, m_ioSize, m_ctrlAddress;
+	u32 ioAddress, ioSize, m_ctrlAddress;
 	int flip_status;
 	int flip_mode;
 	int debug_level;
@@ -332,8 +333,7 @@ public:
 
 protected:
 	RSXThread()
-		: m_ctrl(nullptr)
-		, m_shader_ctrl(0x40)
+		: m_shader_ctrl(0x40)
 		, flip_status(0)
 		, flip_mode(CELL_GCM_DISPLAY_VSYNC)
 		, debug_level(CELL_GCM_DEBUG_LEVEL0)
