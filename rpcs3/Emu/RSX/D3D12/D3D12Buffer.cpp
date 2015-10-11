@@ -143,6 +143,7 @@ D3D12_GPU_VIRTUAL_ADDRESS createVertexBuffer(const VertexBufferFormat &vbf, cons
 
 std::vector<D3D12_VERTEX_BUFFER_VIEW> D3D12GSRender::UploadVertexBuffers(bool indexed_draw)
 {
+	u32 m_vertex_data_base_offset = rsx::method_registers[NV4097_SET_VERTEX_DATA_BASE_OFFSET];
 	std::vector<D3D12_VERTEX_BUFFER_VIEW> result;
 	const std::vector<VertexBufferFormat> &vertexBufferFormat = FormatVertexData(vertex_arrays_info, vertex_arrays, m_vertexBufferSize, m_vertex_data_base_offset);
 	m_IASet = getIALayout(m_device.Get(), vertexBufferFormat, vertex_arrays_info, m_vertex_data_base_offset);

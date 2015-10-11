@@ -880,17 +880,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	}
 
 	case NV4097_SET_VERTEX_DATA_BASE_OFFSET:
-	{
-		m_vertex_data_base_offset = ARGS(0);
-
-		if (count >= 2)
-		{
-			m_vertex_data_base_index = ARGS(1);
-		}
-
-		//LOG_WARNING(RSX, "NV4097_SET_VERTEX_DATA_BASE_OFFSET: 0x%x", m_vertex_data_base_offset);
 		break;
-	}
 
 	case NV4097_SET_VERTEX_DATA_BASE_INDEX:
 	{

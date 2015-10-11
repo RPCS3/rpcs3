@@ -330,7 +330,6 @@ public:
 	u16 m_shader_window_pixel_centers;
 
 	// Vertex Data
-	u32 m_vertex_data_base_offset;
 	u32 m_vertex_data_base_index;
 
 	// Frequency divider
@@ -410,7 +409,7 @@ protected:
 		m_line_width = 1.0;
 		m_line_stipple_pattern = 0xffff;
 		m_line_stipple_factor = 1;
-		m_vertex_data_base_offset = 0;
+		rsx::method_registers[NV4097_SET_VERTEX_DATA_BASE_OFFSET] = 0;
 		m_vertex_data_base_index = 0;
 
 		// Construct Stipple Pattern
