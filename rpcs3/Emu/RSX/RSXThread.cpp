@@ -938,16 +938,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 
 	// Shader
 	case NV4097_SET_SHADER_PROGRAM:
-	{
-		m_cur_fragment_prog = &m_fragment_progs[m_cur_fragment_prog_num];
-
-		const u32 a0 = ARGS(0);
-		m_cur_fragment_prog->offset = a0 & ~0x3;
-		m_cur_fragment_prog->addr = rsx::get_address(m_cur_fragment_prog->offset, (a0 & 0x3) - 1);
-		m_cur_fragment_prog->ctrl = 0x40;
 		notifyProgramChange();
 		break;
-	}
 
 	case NV4097_SET_SHADER_CONTROL:
 	{
@@ -2146,7 +2138,6 @@ void RSXThread::End()
 
 	m_indexed_array.Reset();
 	fragment_constants.clear();
-	m_cur_fragment_prog_num = 0;
 
 	m_clear_surface_mask = 0;
 	m_begin_end = 0;
@@ -2274,8 +2265,6 @@ void RSXThread::Init(const u32 ioAddress, const u32 ioSize, const u32 ctrlAddres
 	local_mem_addr = localAddress;
 
 	m_cur_vertex_prog = nullptr;
-	m_cur_fragment_prog = nullptr;
-	m_cur_fragment_prog_num = 0;
 
 	m_used_gcm_commands.clear();
 

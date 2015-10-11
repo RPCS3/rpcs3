@@ -314,7 +314,7 @@ void D3D12GSRender::FillVertexShaderConstantsBuffer()
 void D3D12GSRender::FillPixelShaderConstantsBuffer()
 {
 	// Get constant from fragment program
-	const std::vector<size_t> &fragmentOffset = m_cachePSO.getFragmentConstantOffsetsCache(m_cur_fragment_prog);
+	const std::vector<size_t> &fragmentOffset = m_cachePSO.getFragmentConstantOffsetsCache(&fragment_program);
 	size_t bufferSize = fragmentOffset.size() * 4 * sizeof(float) + 1;
 	// Multiple of 256 never 0
 	bufferSize = (bufferSize + 255) & ~255;
@@ -333,7 +333,7 @@ void D3D12GSRender::FillPixelShaderConstantsBuffer()
 		bool isCommandBufferSetConstant = false;
 		for (const auto& entry : fragment_constants)
 		{
-			size_t fragmentId = entry.first - m_cur_fragment_prog->offset;
+			size_t fragmentId = entry.first - fragment_program.offset;
 			if (fragmentId == offsetInFP)
 			{
 				isCommandBufferSetConstant = true;
@@ -346,7 +346,7 @@ void D3D12GSRender::FillPixelShaderConstantsBuffer()
 		}
 		if (!isCommandBufferSetConstant)
 		{
-			auto data = vm::ps3::ptr<u32>::make(m_cur_fragment_prog->addr + (u32)offsetInFP);
+			auto data = vm::ps3::ptr<u32>::make(fragment_program.addr + (u32)offsetInFP);
 
 			u32 c0 = (data[0] >> 16 | data[0] << 16);
 			u32 c1 = (data[1] >> 16 | data[1] << 16);

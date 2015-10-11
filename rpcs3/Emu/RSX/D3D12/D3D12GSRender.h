@@ -310,6 +310,7 @@ private:
 	// Copy of RTT to be used as texture
 	std::unordered_map<u32, ID3D12Resource* > m_texturesRTTs;
 
+	RSXFragmentProgram fragment_program;
 	PipelineStateObjectCache m_cachePSO;
 	std::pair<ID3D12PipelineState *, size_t> *m_PSO;
 

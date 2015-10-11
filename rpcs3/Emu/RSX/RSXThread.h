@@ -156,9 +156,7 @@ public:
 	std::unordered_map<u32, color4_base<f32>> transform_constants;
 	std::unordered_map<u32, color4_base<f32>> fragment_constants;
 
-	u32 m_shader_ctrl, m_cur_fragment_prog_num;
-	RSXFragmentProgram m_fragment_progs[rsx::limits::fragment_count];
-	RSXFragmentProgram* m_cur_fragment_prog;
+	u32 m_shader_ctrl;
 	RSXVertexProgram m_vertex_progs[rsx::limits::vertex_count];
 	RSXVertexProgram* m_cur_vertex_prog;
 

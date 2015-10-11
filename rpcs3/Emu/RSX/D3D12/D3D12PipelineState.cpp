@@ -52,16 +52,10 @@ void D3D12GSRender::notifyRasterizerStateChange()
 
 bool D3D12GSRender::LoadProgram()
 {
-	if (m_PSO != nullptr)
-		return true;
-
-	if (!m_cur_fragment_prog)
-	{
-		LOG_WARNING(RSX, "LoadProgram: m_cur_shader_prog == NULL");
-		return false;
-	}
-
-	m_cur_fragment_prog->ctrl = m_shader_ctrl;
+	u32 shader_program = rsx::method_registers[NV4097_SET_SHADER_PROGRAM];
+	fragment_program.offset = shader_program & ~0x3;
+	fragment_program.addr = rsx::get_address(fragment_program.offset, (shader_program & 0x3) - 1);
+	fragment_program.ctrl = rsx::method_registers[NV4097_SET_SHADER_CONTROL];
 
 	if (!m_cur_vertex_prog)
 	{
@@ -306,7 +300,7 @@ bool D3D12GSRender::LoadProgram()
 
 	prop.IASet = m_IASet;
 
-	m_PSO = m_cachePSO.getGraphicPipelineState(m_cur_vertex_prog, m_cur_fragment_prog, prop, std::make_pair(m_device.Get(), m_rootSignatures));
+	m_PSO = m_cachePSO.getGraphicPipelineState(m_cur_vertex_prog, &fragment_program, prop, std::make_pair(m_device.Get(), m_rootSignatures));
 	return m_PSO != nullptr;
 }
 

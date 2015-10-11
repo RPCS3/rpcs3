@@ -1062,7 +1062,7 @@ void GLGSRender::InitVertexData()
 
 void GLGSRender::InitFragmentData()
 {
-	if (!m_cur_fragment_prog)
+/*	if (!m_cur_fragment_prog)
 	{
 		LOG_ERROR(RSX, "InitFragmentData: m_cur_shader_prog == NULL");
 		return;
@@ -1088,7 +1088,7 @@ void GLGSRender::InitFragmentData()
 		float f3 = (float&)c3;
 		glUniform4f(l, f0, f1, f2, f3);
 		checkForGlError("glUniform4f " + name + fmt::format(" %u [%f %f %f %f]", l, f0, f1, f2, f3));
-	}
+	}*/
 
 /*	for (const RSXTransformConstant& c : m_fragment_constants)
 	{
@@ -1111,7 +1111,7 @@ void GLGSRender::InitFragmentData()
 
 bool GLGSRender::LoadProgram()
 {
-	if (!m_cur_fragment_prog)
+/*	if (!m_cur_fragment_prog)
 	{
 		LOG_WARNING(RSX, "LoadProgram: m_cur_shader_prog == NULL");
 		return false;
@@ -1127,7 +1127,7 @@ bool GLGSRender::LoadProgram()
 
 	GLProgram *result = m_prog_buffer.getGraphicPipelineState(m_cur_vertex_prog, m_cur_fragment_prog, nullptr, nullptr);
 	m_program.id = result->id;
-	m_program.Use();
+	m_program.Use();*/
 
 	return true;
 }
