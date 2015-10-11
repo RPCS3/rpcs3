@@ -1090,7 +1090,7 @@ void GLGSRender::InitFragmentData()
 		checkForGlError("glUniform4f " + name + fmt::format(" %u [%f %f %f %f]", l, f0, f1, f2, f3));
 	}
 
-	for (const RSXTransformConstant& c : m_fragment_constants)
+/*	for (const RSXTransformConstant& c : m_fragment_constants)
 	{
 		u32 id = c.id - m_cur_fragment_prog->offset;
 
@@ -1102,7 +1102,7 @@ void GLGSRender::InitFragmentData()
 
 		glUniform4f(l, c.x, c.y, c.z, c.w);
 		checkForGlError("glUniform4f " + name + fmt::format(" %u [%f %f %f %f]", l, c.x, c.y, c.z, c.w));
-	}
+	}*/
 
 
 	//if (m_fragment_constants.GetCount())

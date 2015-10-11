@@ -1783,8 +1783,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 
 	case NV308A_COLOR:
 	{
-		RSXTransformConstant c;
-		c.id = m_dst_offset | ((u32)m_point_x << 2);
+		color4f c;
+		u32 id = m_dst_offset | ((u32)m_point_x << 2);
 
 		if (count >= 1)
 		{
@@ -1819,9 +1819,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 			LOG_ERROR(RSX, "NV308A_COLOR: unknown arg count (%d)", count);
 		}
 
-		m_fragment_constants.push_back(c);
-
-		//LOG_WARNING(RSX, "NV308A_COLOR: [%d]: %f, %f, %f, %f", c.id, c.x, c.y, c.z, c.w);
+		fragment_constants[id] = c;
 		break;
 	}
 
@@ -2147,7 +2145,7 @@ void RSXThread::End()
 	}
 
 	m_indexed_array.Reset();
-	m_fragment_constants.clear();
+	fragment_constants.clear();
 	m_cur_fragment_prog_num = 0;
 
 	m_clear_surface_mask = 0;

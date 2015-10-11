@@ -331,16 +331,16 @@ void D3D12GSRender::FillPixelShaderConstantsBuffer()
 		// Is it assigned by color register in command buffer ?
 		// TODO : we loop every iteration, we might do better...
 		bool isCommandBufferSetConstant = false;
-		for (const RSXTransformConstant& c : m_fragment_constants)
+		for (const auto& entry : fragment_constants)
 		{
-			size_t fragmentId = c.id - m_cur_fragment_prog->offset;
+			size_t fragmentId = entry.first - m_cur_fragment_prog->offset;
 			if (fragmentId == offsetInFP)
 			{
 				isCommandBufferSetConstant = true;
-				vector[0] = (u32&)c.x;
-				vector[1] = (u32&)c.y;
-				vector[2] = (u32&)c.z;
-				vector[3] = (u32&)c.w;
+				vector[0] = (u32&)entry.second.x;
+				vector[1] = (u32&)entry.second.y;
+				vector[2] = (u32&)entry.second.z;
+				vector[3] = (u32&)entry.second.w;
 				break;
 			}
 		}
