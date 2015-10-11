@@ -6,6 +6,7 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "GLGSRender.h"
+#include "Emu/state.h"
 
 #define DUMP_VERTEX_DATA 0
 
@@ -1524,7 +1525,7 @@ void GLGSRender::read_buffers()
 
 	glDisable(GL_STENCIL_TEST);
 
-	if (Ini.GSReadColorBuffers.GetValue())
+	if (rpcs3::state.config.rsx.opengl.read_color_buffers)
 	{
 		auto color_format = surface_color_format_to_gl(m_surface.color_format);
 
@@ -1564,7 +1565,7 @@ void GLGSRender::read_buffers()
 		}
 	}
 
-	if (Ini.GSReadDepthBuffer.GetValue())
+	if (rpcs3::state.config.rsx.opengl.read_depth_buffer)
 	{
 		auto depth_format = surface_depth_format_to_gl(m_surface.depth_format);
 
@@ -1606,7 +1607,7 @@ void GLGSRender::write_buffers()
 	if (!draw_fbo)
 		return;
 
-	if (Ini.GSDumpColorBuffers.GetValue())
+	if (rpcs3::state.config.rsx.opengl.write_color_buffers)
 	{
 		//gl::buffer pbo_color;
 		//__glcheck pbo_color.create(m_draw_tex_color[0].width() * m_draw_tex_color[0].height() * 4);
@@ -1666,7 +1667,7 @@ void GLGSRender::write_buffers()
 		}
 	}
 
-	if (Ini.GSDumpDepthBuffer.GetValue())
+	if (rpcs3::state.config.rsx.opengl.write_depth_buffer)
 	{
 		auto depth_format = surface_depth_format_to_gl(m_surface.depth_format);
 
@@ -1713,7 +1714,7 @@ void GLGSRender::flip(int buffer)
 	u32 buffer_address = rsx::get_address(gcm_buffers[buffer].offset, CELL_GCM_LOCATION_LOCAL);
 	bool skip_read = false;
 
-	if (draw_fbo && !Ini.GSDumpColorBuffers.GetValue())
+	if (draw_fbo && !rpcs3::state.config.rsx.opengl.write_color_buffers)
 	{
 		skip_read = true;
 		/*

@@ -124,4 +124,7 @@ public:
 	void load();
 	void save();
 	void set_defaults();
+
+	void serialize(std::ostream& stream) const;
+	std::string to_string() const;
 };
