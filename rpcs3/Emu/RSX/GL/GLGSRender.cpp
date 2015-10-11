@@ -1032,7 +1032,7 @@ void GLGSRender::InitVertexData()
 		0.0f, 0.0f, 0.0f, 1.0f
 	};
 
-	for (const RSXTransformConstant& c : m_transform_constants)
+/*	for (const RSXTransformConstant& c : m_transform_constants)
 	{
 		const std::string name = fmt::format("vc[%u]", c.id);
 		l = m_program.GetLocation(name);
@@ -1040,7 +1040,7 @@ void GLGSRender::InitVertexData()
 
 		glUniform4f(l, c.x, c.y, c.z, c.w);
 		checkForGlError("glUniform4f " + name + fmt::format(" %d [%f %f %f %f]", l, c.x, c.y, c.z, c.w));
-	}
+	}*/
 
 	// Scale
 	scaleOffsetMat[0]  = (GLfloat&)rsx::method_registers[NV4097_SET_VIEWPORT_SCALE + (0x4 * 0)] / (RSXThread::m_width / RSXThread::m_width_scale);

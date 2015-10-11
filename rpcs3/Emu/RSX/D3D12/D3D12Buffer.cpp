@@ -284,12 +284,6 @@ void D3D12GSRender::setScaleOffset()
 
 void D3D12GSRender::FillVertexShaderConstantsBuffer()
 {
-	for (const RSXTransformConstant& c : m_transform_constants)
-	{
-		size_t offset = c.id * 4 * sizeof(float);
-		m_vertexConstants[offset] = c;
-	}
-
 	size_t bufferSize = 512 * 4 * sizeof(float);
 
 	assert(m_constantsData.canAlloc(bufferSize));
@@ -297,15 +291,15 @@ void D3D12GSRender::FillVertexShaderConstantsBuffer()
 
 	void *constantsBufferMap;
 	ThrowIfFailed(m_constantsData.m_heap->Map(0, &CD3DX12_RANGE(heapOffset, heapOffset + bufferSize), &constantsBufferMap));
-	for (const auto &vertexConstants : m_vertexConstants)
+	for (const auto &entry : transform_constants)
 	{
 		float data[4] = {
-			vertexConstants.second.x,
-			vertexConstants.second.y,
-			vertexConstants.second.z,
-			vertexConstants.second.w
+			entry.second.x,
+			entry.second.y,
+			entry.second.z,
+			entry.second.w
 		};
-		streamToBuffer((char*)constantsBufferMap + heapOffset + vertexConstants.first, data, 4 * sizeof(float));
+		streamToBuffer((char*)constantsBufferMap + heapOffset + entry.first * 4 * sizeof(float), data, 4 * sizeof(float));
 	}
 	m_constantsData.m_heap->Unmap(0, &CD3DX12_RANGE(heapOffset, heapOffset + bufferSize));
 

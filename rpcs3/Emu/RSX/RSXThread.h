@@ -8,7 +8,7 @@
 #include "Utilities/Semaphore.h"
 #include "Utilities/Thread.h"
 #include "Utilities/Timer.h"
-
+#include "Utilities/types.h"
 
 namespace rsx
 {
@@ -152,9 +152,12 @@ public:
 	rsx::data_array_format_info vertex_arrays_info[rsx::limits::vertex_count];
 	std::vector<u8> vertex_arrays[rsx::limits::vertex_count];
 	RSXIndexArrayData m_indexed_array;
+
+	std::unordered_map<u32, color4_base<f32>> transform_constants;
+
 	std::vector<RSXTransformConstant> m_fragment_constants;
-	std::vector<RSXTransformConstant> m_transform_constants;
-	
+
+
 	u32 m_shader_ctrl, m_cur_fragment_prog_num;
 	RSXFragmentProgram m_fragment_progs[rsx::limits::fragment_count];
 	RSXFragmentProgram* m_cur_fragment_prog;

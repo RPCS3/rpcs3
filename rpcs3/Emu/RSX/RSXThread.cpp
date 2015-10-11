@@ -1066,11 +1066,9 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 			const u32 z = ARGS(i); i++;
 			const u32 w = ARGS(i); i++;
 
-			RSXTransformConstant c(id, (float&)x, (float&)y, (float&)z, (float&)w);
+			color4f c((float&)x, (float&)y, (float&)z, (float&)w);
 
-			m_transform_constants.push_back(c);
-
-			//LOG_NOTICE(RSX, "NV4097_SET_TRANSFORM_CONSTANT_LOAD: [%d : %d] = (%f, %f, %f, %f)", i, id, c.x, c.y, c.z, c.w);
+			transform_constants[id] = c;
 		}
 		break;
 	}
@@ -2150,7 +2148,6 @@ void RSXThread::End()
 
 	m_indexed_array.Reset();
 	m_fragment_constants.clear();
-	m_transform_constants.clear();
 	m_cur_fragment_prog_num = 0;
 
 	m_clear_surface_mask = 0;
