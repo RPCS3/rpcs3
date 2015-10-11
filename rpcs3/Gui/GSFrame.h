@@ -1,10 +1,10 @@
-#pragma once
-#include "Emu/Memory/vm.h"
+#pragma once 
 #include "Emu/RSX/GSRender.h"
 
 class GSFrame : public wxFrame, public GSFrameBase
 {
 	u64 m_frames;
+
 public:
 	GSFrame(const wxString& title);
 
@@ -27,6 +27,7 @@ protected:
 	void set_current(draw_context_t context) override;
 	void delete_context(void* context) override;
 	void flip(draw_context_t context) override;
+	size2i client_size() override;
 
 public:
 	void OnLeftDclick(wxMouseEvent&)

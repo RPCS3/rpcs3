@@ -310,11 +310,12 @@ private:
 	// Copy of RTT to be used as texture
 	std::unordered_map<u32, ID3D12Resource* > m_texturesRTTs;
 
+	rsx::surface_info m_surface;
+
 	RSXFragmentProgram fragment_program;
 	PipelineStateObjectCache m_cachePSO;
 	std::pair<ID3D12PipelineState *, size_t> *m_PSO;
-
-	size_t m_vertexBufferSize[32];
+	std::unordered_map<u32, color4f> local_transform_constants;
 
 	struct
 	{
@@ -455,13 +456,9 @@ public:
 	D3D12GSRender();
 	virtual ~D3D12GSRender();
 
-	virtual void semaphorePGRAPHTextureReadRelease(u32 offset, u32 value) override;
-	virtual void semaphorePGRAPHBackendRelease(u32 offset, u32 value) override;
-	virtual void semaphorePFIFOAcquire(u32 offset, u32 value) override;
-	virtual void notifyProgramChange() override;
-	virtual void notifyBlendStateChange() override;
-	virtual void notifyDepthStencilStateChange() override;
-	virtual void notifyRasterizerStateChange() override;
+	virtual void semaphorePGRAPHTextureReadRelease(u32 offset, u32 value);
+	virtual void semaphorePGRAPHBackendRelease(u32 offset, u32 value);
+	virtual void semaphorePFIFOAcquire(u32 offset, u32 value);
 
 private:
 	void InitD2DStructures();
@@ -512,7 +509,6 @@ private:
 
 protected:
 	virtual void onexit_thread() override;
-	virtual void OnReset() override;
 	virtual bool domethod(u32 cmd, u32 arg) override;
 	virtual void end() override;
 	virtual void flip(int buffer) override;

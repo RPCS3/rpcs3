@@ -76,6 +76,8 @@
     <ClCompile Include="Emu\RSX\D3D12\D3D12VertexProgramDecompiler.cpp" />
     <ClCompile Include="Emu\RSX\D3D12\D3D12CommonDecompiler.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLCommonDecompiler.cpp" />
+    <ClCompile Include="Emu\RSX\GL\gl_helpers.cpp" />
+    <ClCompile Include="Emu\RSX\Null\NullGSRender.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\sys_dbg.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\sys_fs.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellAtracMulti.cpp" />
@@ -557,6 +559,7 @@
     <ClInclude Include="Emu\RSX\GL\GLProgram.h" />
     <ClInclude Include="Emu\RSX\GL\GLProgramBuffer.h" />
     <ClInclude Include="Emu\RSX\GL\GLVertexProgram.h" />
+    <ClInclude Include="Emu\RSX\GL\gl_helpers.h" />
     <ClInclude Include="Emu\RSX\GL\OpenGL.h" />
     <ClInclude Include="Emu\RSX\GSManager.h" />
     <ClInclude Include="Emu\RSX\GSRender.h" />
@@ -834,8 +837,7 @@
       <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
       <ExceptionHandling>Async</ExceptionHandling>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <AdditionalIncludeDirectories>
-      </AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../glm</AdditionalIncludeDirectories>
       <IgnoreStandardIncludePath>false</IgnoreStandardIncludePath>
     </ClCompile>
     <Link>
@@ -852,8 +854,7 @@
       <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
       <ExceptionHandling>Async</ExceptionHandling>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <AdditionalIncludeDirectories>
-      </AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../glm</AdditionalIncludeDirectories>
       <IgnoreStandardIncludePath>false</IgnoreStandardIncludePath>
     </ClCompile>
     <Link>
@@ -870,8 +871,7 @@
       <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
       <ExceptionHandling>Async</ExceptionHandling>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <AdditionalIncludeDirectories>
-      </AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../glm</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -891,8 +891,7 @@
       <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
       <ExceptionHandling>Async</ExceptionHandling>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <AdditionalIncludeDirectories>
-      </AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../glm</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -912,8 +911,7 @@
       <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
       <ExceptionHandling>Async</ExceptionHandling>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <AdditionalIncludeDirectories>
-      </AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../glm</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -930,8 +928,7 @@
       <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
       <ExceptionHandling>Async</ExceptionHandling>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <AdditionalIncludeDirectories>
-      </AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../glm</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_UNICODE;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
@@ -951,8 +948,7 @@
       <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
       <ExceptionHandling>Async</ExceptionHandling>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <AdditionalIncludeDirectories>
-      </AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../glm</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_UNICODE;UNICODE;DX12_SUPPORT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <OpenMPSupport>false</OpenMPSupport>
     </ClCompile>
@@ -974,8 +970,7 @@
       <ExceptionHandling>Async</ExceptionHandling>
       <PreprocessorDefinitions>LLVM_AVAILABLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <AdditionalIncludeDirectories>
-      </AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../glm</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -999,8 +994,7 @@
       <ExceptionHandling>Async</ExceptionHandling>
       <PreprocessorDefinitions>LLVM_AVAILABLE;DX12_SUPPORT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <AdditionalIncludeDirectories>
-      </AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../glm</AdditionalIncludeDirectories>
       <OpenMPSupport>false</OpenMPSupport>
     </ClCompile>
     <Link>

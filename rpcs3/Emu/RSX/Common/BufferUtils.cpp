@@ -20,7 +20,7 @@ std::vector<VertexBufferFormat> FormatVertexData(const rsx::data_array_format_in
 		const rsx::data_array_format_info &vertexData = vertex_array_desc[i];
 		if (!vertexData.size) continue;
 
-		u32 addrRegVal = rsx::method_registers[NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 4 * i];
+		u32 addrRegVal = rsx::method_registers[NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + i];
 		u32 addr = rsx::get_address(addrRegVal & 0x7fffffff, addrRegVal >> 31);
 		size_t elementCount = ((vertexData.array) ? vertex_data_size[i] : vertex_data[i].size()) / (vertexData.size * rsx::get_vertex_type_size(vertexData.type));
 
@@ -61,7 +61,7 @@ void uploadVertexData(const VertexBufferFormat &vbf, const rsx::data_array_forma
 	{
 		for (size_t attributeId : vbf.attributeId)
 		{
-			u32 addrRegVal = rsx::method_registers[NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 4 * attributeId];
+			u32 addrRegVal = rsx::method_registers[NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + attributeId];
 			u32 addr = rsx::get_address(addrRegVal & 0x7fffffff, addrRegVal >> 31);
 
 			if (!vertex_array_desc[attributeId].array)

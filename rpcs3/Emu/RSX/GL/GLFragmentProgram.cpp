@@ -28,7 +28,7 @@ std::string GLFragmentDecompilerThread::compareFunction(COMPARE f, const std::st
 
 void GLFragmentDecompilerThread::insertHeader(std::stringstream & OS)
 {
-	OS << "#version 420" << std::endl;
+	OS << "#version 140" << std::endl;
 }
 
 void GLFragmentDecompilerThread::insertIntputs(std::stringstream & OS)
@@ -110,7 +110,7 @@ void GLFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 			OS << "	" << table[i].first << " = " << table[i].second << ";" << std::endl;
 	}
 
-	OS << "};" << std::endl;
+	OS << "}" << std::endl;
 }
 
 void GLFragmentDecompilerThread::Task()

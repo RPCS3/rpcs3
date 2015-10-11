@@ -2,8 +2,6 @@
 
 #include <wx/listctrl.h>
 
-
-
 class RSXDebugger : public wxFrame
 {
 	u32 m_addr;

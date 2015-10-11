@@ -18,7 +18,7 @@ namespace rsx
 		// Address
 		method_registers[NV4097_SET_TEXTURE_ADDRESS + (m_index * 8)] =
 			((/*wraps*/1) | ((/*anisoBias*/0) << 4) | ((/*wrapt*/1) << 8) | ((/*unsignedRemap*/0) << 12) |
-				((/*wrapr*/3) << 16) | ((/*gamma*/0) << 20) | ((/*signedRemap*/0) << 24) | ((/*zfunc*/0) << 28));
+			((/*wrapr*/3) << 16) | ((/*gamma*/0) << 20) | ((/*signedRemap*/0) << 24) | ((/*zfunc*/0) << 28));
 
 		// Control0
 		method_registers[NV4097_SET_TEXTURE_CONTROL0 + (m_index * 8)] =
@@ -30,7 +30,7 @@ namespace rsx
 		// Filter
 		method_registers[NV4097_SET_TEXTURE_FILTER + (m_index * 8)] =
 			((/*bias*/0) | ((/*conv*/1) << 13) | ((/*min*/5) << 16) | ((/*mag*/2) << 24)
-				| ((/*as*/0) << 28) | ((/*rs*/0) << 29) | ((/*gs*/0) << 30) | ((/*bs*/0) << 31));
+			| ((/*as*/0) << 28) | ((/*rs*/0) << 29) | ((/*gs*/0) << 30) | ((/*bs*/0) << 31));
 
 		// Image Rect
 		method_registers[NV4097_SET_TEXTURE_IMAGE_RECT + (m_index * 8)] = (/*height*/1) | ((/*width*/1) << 16);
@@ -222,7 +222,7 @@ namespace rsx
 		// Address
 		method_registers[NV4097_SET_VERTEX_TEXTURE_ADDRESS + (m_index * 8)] =
 			((/*wraps*/1) | ((/*anisoBias*/0) << 4) | ((/*wrapt*/1) << 8) | ((/*unsignedRemap*/0) << 12) |
-				((/*wrapr*/3) << 16) | ((/*gamma*/0) << 20) | ((/*signedRemap*/0) << 24) | ((/*zfunc*/0) << 28));
+			((/*wrapr*/3) << 16) | ((/*gamma*/0) << 20) | ((/*signedRemap*/0) << 24) | ((/*zfunc*/0) << 28));
 
 		// Control0
 		method_registers[NV4097_SET_VERTEX_TEXTURE_CONTROL0 + (m_index * 8)] =
@@ -234,7 +234,7 @@ namespace rsx
 		// Filter
 		method_registers[NV4097_SET_VERTEX_TEXTURE_FILTER + (m_index * 8)] =
 			((/*bias*/0) | ((/*conv*/1) << 13) | ((/*min*/5) << 16) | ((/*mag*/2) << 24)
-				| ((/*as*/0) << 28) | ((/*rs*/0) << 29) | ((/*gs*/0) << 30) | ((/*bs*/0) << 31));
+			| ((/*as*/0) << 28) | ((/*rs*/0) << 29) | ((/*gs*/0) << 30) | ((/*bs*/0) << 31));
 
 		// Image Rect
 		method_registers[NV4097_SET_VERTEX_TEXTURE_IMAGE_RECT + (m_index * 8)] = (/*height*/1) | ((/*width*/1) << 16);

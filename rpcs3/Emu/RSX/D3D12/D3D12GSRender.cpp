@@ -291,10 +291,6 @@ void D3D12GSRender::onexit_thread()
 {
 }
 
-void D3D12GSRender::OnReset()
-{
-}
-
 bool D3D12GSRender::domethod(u32 cmd, u32 arg)
 {
 	switch (cmd)
@@ -411,35 +407,10 @@ void D3D12GSRender::end()
 
 	std::chrono::time_point<std::chrono::system_clock> vertexIndexDurationStart = std::chrono::system_clock::now();
 
-	// Init vertex count
-	if (m_indexed_array.m_count)
+	if (!vertex_index_array.empty() || vertex_draw_count)
 	{
-		for (u32 i = 0; i < rsx::limits::vertex_count; ++i)
-		{
-			if (!vertex_arrays_info[i].size) continue;
-			if (!vertex_arrays_info[i].array) continue;
-
-			const u32 tsize = rsx::get_vertex_type_size(vertex_arrays_info[i].type);
-			m_vertexBufferSize[i] = (m_indexed_array.index_min + m_indexed_array.index_max - m_indexed_array.index_min + 1) * tsize * vertex_arrays_info[i].size;
-		}
-	}
-	else
-	{
-		for (u32 i = 0; i < rsx::limits::vertex_count; ++i)
-		{
-			if (!vertex_arrays_info[i].size) continue;
-			if (!vertex_arrays_info[i].array) continue;
-
-			const u32 tsize = rsx::get_vertex_type_size(vertex_arrays_info[i].type);
-			m_vertexBufferSize[i] = (draw_array_first + draw_array_count) * tsize * vertex_arrays_info[i].size;
-		}
-	}
-
-
-	if (m_indexed_array.m_count || draw_array_count)
-	{
-		const std::vector<D3D12_VERTEX_BUFFER_VIEW> &vertexBufferViews = UploadVertexBuffers(m_indexed_array.m_count ? true : false);
-		const D3D12_INDEX_BUFFER_VIEW &indexBufferView = uploadIndexBuffers(m_indexed_array.m_count ? true : false);
+		const std::vector<D3D12_VERTEX_BUFFER_VIEW> &vertexBufferViews = UploadVertexBuffers(!vertex_index_array.empty());
+		const D3D12_INDEX_BUFFER_VIEW &indexBufferView = uploadIndexBuffers(!vertex_index_array.empty());
 		getCurrentResourceStorage().m_commandList->IASetVertexBuffers(0, (UINT)vertexBufferViews.size(), vertexBufferViews.data());
 		if (m_renderingInfo.m_indexed)
 			getCurrentResourceStorage().m_commandList->IASetIndexBuffer(&indexBufferView);
@@ -624,7 +595,7 @@ void D3D12GSRender::end()
 	else
 		getCurrentResourceStorage().m_commandList->DrawInstanced((UINT)m_renderingInfo.m_count, 1, (UINT)m_renderingInfo.m_baseVertex, 0);
 
-	m_indexed_array.Reset();
+	vertex_index_array.clear();
 	std::chrono::time_point<std::chrono::system_clock> endDuration = std::chrono::system_clock::now();
 	m_timers.m_drawCallDuration += std::chrono::duration_cast<std::chrono::microseconds>(endDuration - startDuration).count();
 	m_timers.m_drawCallCount++;
@@ -669,9 +640,9 @@ void D3D12GSRender::flip(int buffer)
 		size_t w = 0, h = 0, rowPitch = 0;
 
 		size_t offset = 0;
-		if (m_read_buffer)
+		if (false)
 		{
-			CellGcmDisplayInfo* buffers = vm::get_ptr<CellGcmDisplayInfo>(m_gcm_buffers_addr);
+			CellGcmDisplayInfo* buffers;// = vm::get_ptr<CellGcmDisplayInfo>(m_gcm_buffers_addr);
 			u32 addr = rsx::get_address(buffers[gcm_current_buffer].offset, CELL_GCM_LOCATION_LOCAL);
 			w = buffers[gcm_current_buffer].width;
 			h = buffers[gcm_current_buffer].height;
@@ -818,6 +789,7 @@ void D3D12GSRender::flip(int buffer)
 	storage.m_getPosUAVHeap = m_UAVHeap.getCurrentPutPosMinusOne();
 
 	// Flush
+	local_transform_constants.clear();
 	m_texturesRTTs.clear();
 
 	// Now get ready for next frame

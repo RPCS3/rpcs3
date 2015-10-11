@@ -389,7 +389,7 @@ s32 _cellGcmInitBody(vm::pptr<CellGcmContextData> context, u32 cmdSize, u32 ioSi
 
 	auto& render = Emu.GetGSManager().GetRender();
 	render.ctxt_addr = context.addr();
-	render.m_gcm_buffers_addr = vm::alloc(sizeof(CellGcmDisplayInfo) * 8, vm::main);
+	render.gcm_buffers = { vm::alloc(sizeof(CellGcmDisplayInfo) * 8, vm::main) };
 	render.zculls_addr = vm::alloc(sizeof(CellGcmZcullInfo) * 8, vm::main);
 	render.tiles_addr = vm::alloc(sizeof(CellGcmTileInfo) * 15, vm::main);
 	render.gcm_buffers_count = 0;
@@ -438,7 +438,7 @@ s32 cellGcmSetDisplayBuffer(u32 id, u32 offset, u32 pitch, u32 width, u32 height
 		return CELL_EINVAL;
 	}
 
-	auto buffers = vm::get_ptr<CellGcmDisplayInfo>(Emu.GetGSManager().GetRender().m_gcm_buffers_addr);
+	auto buffers = Emu.GetGSManager().GetRender().gcm_buffers;
 
 	buffers[id].offset = offset;
 	buffers[id].pitch = pitch;
@@ -504,14 +504,23 @@ s32 cellGcmSetPrepareFlip(PPUThread& ppu, vm::ptr<CellGcmContextData> ctxt, u32 
 			return res;
 		}
 	}
-
-	*ctxt->current++ = 0x3fead | (1 << 18);
+#ifdef __GNUC__
+	//gcc internal compiler error, try to avoid it for now
+	*ctxt->current++ = (GCM_FLIP_COMMAND << 2) | (1 << 18);
 	*ctxt->current++ = id;
 
 	if (ctxt.addr() == gcm_info.context_addr)
 	{
-		vm::get_ref<CellGcmControl>(gcm_info.control_addr).put += 8;
+		vm::get_ref<CellGcmControl>(gcm_info.control_addr).put += 2 * sizeof(u32);
 	}
+#else
+	u32 command_size = rsx::make_command(ctxt->current, GCM_FLIP_COMMAND, id);
+
+	if (ctxt.addr() == gcm_info.context_addr)
+	{
+		vm::get_ref<CellGcmControl>(gcm_info.control_addr).put += command_size * sizeof(u32);
+	}
+#endif
 
 	return id;
 }
@@ -535,7 +544,7 @@ s32 cellGcmSetSecondVFrequency(u32 freq)
 	switch (freq)
 	{
 	case CELL_GCM_DISPLAY_FREQUENCY_59_94HZ:
-		Emu.GetGSManager().GetRender().frequency_mode = freq; Emu.GetGSManager().GetRender().m_fps_limit = 59.94; break;
+		Emu.GetGSManager().GetRender().frequency_mode = freq; Emu.GetGSManager().GetRender().fps_limit = 59.94; break;
 	case CELL_GCM_DISPLAY_FREQUENCY_SCANOUT:
 		Emu.GetGSManager().GetRender().frequency_mode = freq; cellGcmSys.Todo("Unimplemented display frequency: Scanout"); break;
 	case CELL_GCM_DISPLAY_FREQUENCY_DISABLE:
@@ -583,7 +592,7 @@ s32 cellGcmSetTileInfo(u8 index, u8 location, u32 offset, u32 size, u32 pitch, u
 	tile.base = base;
 	tile.bank = bank;
 
-	vm::get_ptr<CellGcmTileInfo>(Emu.GetGSManager().GetRender().tiles_addr)[index] = tile.Pack();
+	vm::get_ptr<CellGcmTileInfo>(Emu.GetGSManager().GetRender().tiles_addr)[index] = tile.pack();
 	return CELL_OK;
 }
 
@@ -644,7 +653,7 @@ s32 cellGcmSetZcull(u8 index, u32 offset, u32 width, u32 height, u32 cullStart, 
 	zcull.sRef = sRef;
 	zcull.sMask = sMask;
 
-	vm::get_ptr<CellGcmZcullInfo>(Emu.GetGSManager().GetRender().zculls_addr)[index] = zcull.Pack();
+	vm::get_ptr<CellGcmZcullInfo>(Emu.GetGSManager().GetRender().zculls_addr)[index] = zcull.pack();
 	return CELL_OK;
 }
 
@@ -694,8 +703,8 @@ u32 cellGcmGetZcullInfo()
 
 u32 cellGcmGetDisplayInfo()
 {
-	cellGcmSys.Warning("cellGcmGetDisplayInfo() = 0x%x", Emu.GetGSManager().GetRender().m_gcm_buffers_addr);
-	return Emu.GetGSManager().GetRender().m_gcm_buffers_addr;
+	cellGcmSys.Warning("cellGcmGetDisplayInfo() = 0x%x", Emu.GetGSManager().GetRender().gcm_buffers.addr());
+	return Emu.GetGSManager().GetRender().gcm_buffers.addr();
 }
 
 s32 cellGcmGetCurrentDisplayBufferId(vm::ptr<u8> id)
@@ -1174,7 +1183,7 @@ s32 cellGcmSetTile(u8 index, u8 location, u32 offset, u32 size, u32 pitch, u8 co
 	tile.base = base;
 	tile.bank = bank;
 
-	vm::get_ptr<CellGcmTileInfo>(Emu.GetGSManager().GetRender().tiles_addr)[index] = tile.Pack();
+	vm::get_ptr<CellGcmTileInfo>(Emu.GetGSManager().GetRender().tiles_addr)[index] = tile.pack();
 	return CELL_OK;
 }
 

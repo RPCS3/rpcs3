@@ -1,11 +1,13 @@
 #include "stdafx_gui.h"
+
+#include "RSXDebugger.h"
+
 #include "rpcs3/Ini.h"
 #include "Utilities/rPlatform.h"
 #include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 
-#include "RSXDebugger.h"
 #include "Emu/SysCalls/Modules/cellVideoOut.h"
 #include "Emu/RSX/GSManager.h"
 #include "Emu/RSX/GSRender.h"
@@ -296,7 +298,7 @@ void RSXDebugger::OnClickBuffer(wxMouseEvent& event)
 {
 	if (!RSXReady()) return;
 	const GSRender& render = Emu.GetGSManager().GetRender();
-	const auto buffers = vm::ps3::ptr<CellGcmDisplayInfo>::make(render.m_gcm_buffers_addr);
+	const auto buffers = render.gcm_buffers;
 
 	if(!buffers)
 		return;
@@ -331,9 +333,9 @@ void RSXDebugger::OnClickBuffer(wxMouseEvent& event)
 void RSXDebugger::GoToGet(wxCommandEvent& event)
 {
 	if (!RSXReady()) return;
-	auto ctrl = vm::get_ptr<CellGcmControl>(Emu.GetGSManager().GetRender().m_ctrlAddress);
+	//auto ctrl = vm::get_ptr<CellGcmControl>(Emu.GetGSManager().GetRender().ctrlAddress);
 	u32 realAddr;
-	if (RSXIOMem.getRealAddr(ctrl->get.load(), realAddr)) {
+	if (RSXIOMem.getRealAddr(0, realAddr)) {
 		m_addr = realAddr;
 		t_addr->SetValue(wxString::Format("%08x", m_addr));
 		UpdateInformation();
@@ -345,7 +347,7 @@ void RSXDebugger::GoToGet(wxCommandEvent& event)
 void RSXDebugger::GoToPut(wxCommandEvent& event)
 {
 	if (!RSXReady()) return;
-	auto ctrl = vm::get_ptr<CellGcmControl>(Emu.GetGSManager().GetRender().m_ctrlAddress);
+	auto ctrl = Emu.GetGSManager().GetRender().ctrl;
 	u32 realAddr;
 	if (RSXIOMem.getRealAddr(ctrl->put.load(), realAddr)) {
 		m_addr = realAddr;
@@ -410,10 +412,10 @@ void RSXDebugger::GetBuffers()
 	// TODO: Currently it only supports color buffers
 	for (u32 bufferId=0; bufferId < render.gcm_buffers_count; bufferId++)
 	{
-		if(!vm::check_addr(render.m_gcm_buffers_addr))
+		if(!vm::check_addr(render.gcm_buffers.addr()))
 			continue;
 
-		auto buffers = vm::get_ptr<CellGcmDisplayInfo>(render.m_gcm_buffers_addr);
+		auto buffers = render.gcm_buffers;
 		u32 RSXbuffer_addr = render.local_mem_addr + buffers[bufferId].offset;
 
 		if(!vm::check_addr(RSXbuffer_addr))
@@ -492,25 +494,26 @@ void RSXDebugger::GetFlags()
 
 #define LIST_FLAGS_ADD(name, value) \
 	m_list_flags->InsertItem(i, name); m_list_flags->SetItem(i, 1, value ? "Enabled" : "Disabled"); i++;
-
-	LIST_FLAGS_ADD("Alpha test",         rsx::method_registers[NV4097_SET_ALPHA_TEST_ENABLE]);
-	LIST_FLAGS_ADD("Blend",              rsx::method_registers[NV4097_SET_BLEND_ENABLE]);
+	/*
+	LIST_FLAGS_ADD("Alpha test",         render.m_set_alpha_test);
+	LIST_FLAGS_ADD("Blend",              render.m_set_blend);
 	LIST_FLAGS_ADD("Scissor",            render.m_set_scissor_horizontal && render.m_set_scissor_vertical);
-	LIST_FLAGS_ADD("Cull face",          rsx::method_registers[NV4097_SET_CULL_FACE]);
+	LIST_FLAGS_ADD("Cull face",          render.m_set_cull_face);
 	LIST_FLAGS_ADD("Depth bounds test",  render.m_set_depth_bounds_test);
-//	LIST_FLAGS_ADD("Depth test",         render.m_set_depth_test);
+	LIST_FLAGS_ADD("Depth test",         render.m_set_depth_test);
 	LIST_FLAGS_ADD("Dither",             render.m_set_dither);
 	LIST_FLAGS_ADD("Line smooth",        render.m_set_line_smooth);
-//	LIST_FLAGS_ADD("Logic op",           render.m_set_logic_op);
+	LIST_FLAGS_ADD("Logic op",           render.m_set_logic_op);
 	LIST_FLAGS_ADD("Poly smooth",        render.m_set_poly_smooth);
 	LIST_FLAGS_ADD("Poly offset fill",   render.m_set_poly_offset_fill);
 	LIST_FLAGS_ADD("Poly offset line",   render.m_set_poly_offset_line);
 	LIST_FLAGS_ADD("Poly offset point",  render.m_set_poly_offset_point);
-//	LIST_FLAGS_ADD("Stencil test",       render.m_set_stencil_test);
+	LIST_FLAGS_ADD("Stencil test",       render.m_set_stencil_test);
 	LIST_FLAGS_ADD("Primitive restart",  render.m_set_restart_index);
 	LIST_FLAGS_ADD("Two sided lighting", render.m_set_two_side_light_enable);
 	LIST_FLAGS_ADD("Point Sprite",	     render.m_set_point_sprite_control);
 	LIST_FLAGS_ADD("Lighting ",	         render.m_set_specular);
+	*/
 
 #undef LIST_FLAGS_ADD
 }
@@ -540,7 +543,7 @@ void RSXDebugger::GetLightning()
 #define LIST_LIGHTNING_ADD(name, value) \
 	m_list_lightning->InsertItem(i, name); m_list_lightning->SetItem(i, 1, value); i++;
 
-	LIST_LIGHTNING_ADD("Shade model", (render.m_shade_mode == 0x1D00) ? "Flat" : "Smooth");
+	//LIST_LIGHTNING_ADD("Shade model", (render.m_shade_mode == 0x1D00) ? "Flat" : "Smooth");
 
 #undef LIST_LIGHTNING_ADD
 }
@@ -591,85 +594,87 @@ void RSXDebugger::GetSettings()
 
 #define LIST_SETTINGS_ADD(name, value) \
 	m_list_settings->InsertItem(i, name); m_list_settings->SetItem(i, 1, value); i++;
-
-	LIST_SETTINGS_ADD("Alpha func", !(rsx::method_registers[NV4097_SET_ALPHA_FUNC]) ? "(none)" : wxString::Format("0x%x (%s)",
-		rsx::method_registers[NV4097_SET_ALPHA_FUNC],
-		ParseGCMEnum(rsx::method_registers[NV4097_SET_ALPHA_FUNC], CELL_GCM_ENUM)));
-	LIST_SETTINGS_ADD("Blend color", !(rsx::method_registers[NV4097_SET_BLEND_COLOR]) ? "(none)" : wxString::Format("R:%d, G:%d, B:%d, A:%d",
-		rsx::method_registers[NV4097_SET_BLEND_COLOR] & 0xFF,
-		(rsx::method_registers[NV4097_SET_BLEND_COLOR] >> 8) & 0xFF,
-		(rsx::method_registers[NV4097_SET_BLEND_COLOR] >> 16) & 0xFF,
-		(rsx::method_registers[NV4097_SET_BLEND_COLOR] >> 24) & 0xFF));
+	/*
+	LIST_SETTINGS_ADD("Alpha func", !(render.m_set_alpha_func) ? "(none)" : wxString::Format("0x%x (%s)",
+		render.m_alpha_func,
+		ParseGCMEnum(render.m_alpha_func, CELL_GCM_ENUM)));
+	LIST_SETTINGS_ADD("Blend color", !(render.m_set_blend_color) ? "(none)" : wxString::Format("R:%d, G:%d, B:%d, A:%d",
+		render.m_blend_color_r,
+		render.m_blend_color_g,
+		render.m_blend_color_b,
+		render.m_blend_color_a));
 	LIST_SETTINGS_ADD("Clipping", wxString::Format("Min:%f, Max:%f", render.m_clip_min, render.m_clip_max));
-	LIST_SETTINGS_ADD("Color mask", !(rsx::method_registers[NV4097_SET_COLOR_MASK]) ? "(none)" : wxString::Format("R:%d, G:%d, B:%d, A:%d",
-		(rsx::method_registers[NV4097_SET_COLOR_MASK] >> 16) & 0xff,
-		(rsx::method_registers[NV4097_SET_COLOR_MASK] >> 8) & 0xff,
-		(rsx::method_registers[NV4097_SET_COLOR_MASK]) & 0xff,
-		(rsx::method_registers[NV4097_SET_COLOR_MASK] >> 24) & 0xff));
-	LIST_SETTINGS_ADD("Context DMA Color A", wxString::Format("0x%x", rsx::method_registers[NV4097_SET_CONTEXT_DMA_COLOR_A]));
-	LIST_SETTINGS_ADD("Context DMA Color B", wxString::Format("0x%x", rsx::method_registers[NV4097_SET_CONTEXT_DMA_COLOR_B]));
-	LIST_SETTINGS_ADD("Context DMA Color C", wxString::Format("0x%x", rsx::method_registers[NV4097_SET_CONTEXT_DMA_COLOR_C]));
-	LIST_SETTINGS_ADD("Context DMA Color D", wxString::Format("0x%x", rsx::method_registers[NV4097_SET_CONTEXT_DMA_COLOR_D]));
-	LIST_SETTINGS_ADD("Context DMA Zeta", wxString::Format("0x%x", rsx::method_registers[NV4097_SET_CONTEXT_DMA_ZETA]));
+	LIST_SETTINGS_ADD("Color mask", !(render.m_set_color_mask) ? "(none)" : wxString::Format("R:%d, G:%d, B:%d, A:%d",
+		render.m_color_mask_r,
+		render.m_color_mask_g,
+		render.m_color_mask_b,
+		render.m_color_mask_a));
+	LIST_SETTINGS_ADD("Context DMA Color A", wxString::Format("0x%x", render.m_context_dma_color_a));
+	LIST_SETTINGS_ADD("Context DMA Color B", wxString::Format("0x%x", render.m_context_dma_color_b));
+	LIST_SETTINGS_ADD("Context DMA Color C", wxString::Format("0x%x", render.m_context_dma_color_c));
+	LIST_SETTINGS_ADD("Context DMA Color D", wxString::Format("0x%x", render.m_context_dma_color_d));
+	LIST_SETTINGS_ADD("Context DMA Zeta", wxString::Format("0x%x", render.m_context_dma_z));
 	LIST_SETTINGS_ADD("Depth bounds", wxString::Format("Min:%f, Max:%f", render.m_depth_bounds_min, render.m_depth_bounds_max));
-//	LIST_SETTINGS_ADD("Depth func", !(render.m_set_depth_func) ? "(none)" : wxString::Format("0x%x (%s)",
-//		render.m_depth_func,
-//		ParseGCMEnum(render.m_depth_func, CELL_GCM_ENUM)));
+	LIST_SETTINGS_ADD("Depth func", !(render.m_set_depth_func) ? "(none)" : wxString::Format("0x%x (%s)",
+		render.m_depth_func,
+		ParseGCMEnum(render.m_depth_func, CELL_GCM_ENUM)));
 	LIST_SETTINGS_ADD("Draw mode", wxString::Format("%d (%s)",
-		render.draw_mode,
-		ParseGCMEnum(render.draw_mode, CELL_GCM_PRIMITIVE_ENUM)));
+		render.m_draw_mode,
+		ParseGCMEnum(render.m_draw_mode, CELL_GCM_PRIMITIVE_ENUM)));
 	LIST_SETTINGS_ADD("Scissor", wxString::Format("X:%d, Y:%d, W:%d, H:%d",
 		render.m_scissor_x,
 		render.m_scissor_y,
 		render.m_scissor_w,
 		render.m_scissor_h));
-//	LIST_SETTINGS_ADD("Stencil func", !(render.m_set_stencil_func) ? "(none)" : wxString::Format("0x%x (%s)",
-//		render.m_stencil_func,
-//		ParseGCMEnum(render.m_stencil_func, CELL_GCM_ENUM)));
-	LIST_SETTINGS_ADD("Surface Pitch A", wxString::Format("0x%x", rsx::method_registers[NV4097_SET_SURFACE_PITCH_A]));
-	LIST_SETTINGS_ADD("Surface Pitch B", wxString::Format("0x%x", rsx::method_registers[NV4097_SET_SURFACE_PITCH_B]));
-	LIST_SETTINGS_ADD("Surface Pitch C", wxString::Format("0x%x", rsx::method_registers[NV4097_SET_SURFACE_PITCH_C]));
-	LIST_SETTINGS_ADD("Surface Pitch D", wxString::Format("0x%x", rsx::method_registers[NV4097_SET_SURFACE_PITCH_D]));
-	LIST_SETTINGS_ADD("Surface Pitch Z", wxString::Format("0x%x", rsx::method_registers[NV4097_SET_SURFACE_PITCH_Z]));
-	LIST_SETTINGS_ADD("Surface Offset A", wxString::Format("0x%x", rsx::method_registers[NV4097_SET_SURFACE_COLOR_AOFFSET]));
-	LIST_SETTINGS_ADD("Surface Offset B", wxString::Format("0x%x", rsx::method_registers[NV4097_SET_SURFACE_COLOR_BOFFSET]));
-	LIST_SETTINGS_ADD("Surface Offset C", wxString::Format("0x%x", rsx::method_registers[NV4097_SET_SURFACE_COLOR_COFFSET]));
-	LIST_SETTINGS_ADD("Surface Offset D", wxString::Format("0x%x", rsx::method_registers[NV4097_SET_SURFACE_COLOR_DOFFSET]));
-	LIST_SETTINGS_ADD("Surface Offset Z", wxString::Format("0x%x", rsx::method_registers[NV4097_SET_SURFACE_ZETA_OFFSET]));
+	LIST_SETTINGS_ADD("Stencil func", !(render.m_set_stencil_func) ? "(none)" : wxString::Format("0x%x (%s)",
+		render.m_stencil_func,
+		ParseGCMEnum(render.m_stencil_func, CELL_GCM_ENUM)));
+	LIST_SETTINGS_ADD("Surface Pitch A", wxString::Format("0x%x", render.m_surface_pitch_a));
+	LIST_SETTINGS_ADD("Surface Pitch B", wxString::Format("0x%x", render.m_surface_pitch_b));
+	LIST_SETTINGS_ADD("Surface Pitch C", wxString::Format("0x%x", render.m_surface_pitch_c));
+	LIST_SETTINGS_ADD("Surface Pitch D", wxString::Format("0x%x", render.m_surface_pitch_d));
+	LIST_SETTINGS_ADD("Surface Pitch Z", wxString::Format("0x%x", render.m_surface_pitch_z));
+	LIST_SETTINGS_ADD("Surface Offset A", wxString::Format("0x%x", render.m_surface_offset_a));
+	LIST_SETTINGS_ADD("Surface Offset B", wxString::Format("0x%x", render.m_surface_offset_b));
+	LIST_SETTINGS_ADD("Surface Offset C", wxString::Format("0x%x", render.m_surface_offset_c));
+	LIST_SETTINGS_ADD("Surface Offset D", wxString::Format("0x%x", render.m_surface_offset_d));
+	LIST_SETTINGS_ADD("Surface Offset Z", wxString::Format("0x%x", render.m_surface_offset_z));
 	LIST_SETTINGS_ADD("Viewport", wxString::Format("X:%d, Y:%d, W:%d, H:%d",
-		rsx::method_registers[NV4097_SET_SURFACE_CLIP_HORIZONTAL] & 0xFFFF,
-		rsx::method_registers[NV4097_SET_SURFACE_CLIP_VERTICAL] & 0xFFFF,
-		rsx::method_registers[NV4097_SET_SURFACE_CLIP_HORIZONTAL] >> 16,
-		rsx::method_registers[NV4097_SET_SURFACE_CLIP_VERTICAL] >> 16));
-
+		render.m_viewport_x,
+		render.m_viewport_y,
+		render.m_viewport_w,
+		render.m_viewport_h));
+		*/
 #undef LIST_SETTINGS_ADD
 }
 
 void RSXDebugger::SetFlags(wxListEvent& event)
 {
+	/*
 	if (!RSXReady()) return;
 	GSRender& render = Emu.GetGSManager().GetRender();
 	switch(event.m_itemIndex)
 	{
-	case 0:  rsx::method_registers[NV4097_SET_ALPHA_TEST_ENABLE] ^= true; break;
-	case 1:  rsx::method_registers[NV4097_SET_BLEND_ENABLE] ^= true; break;
-	case 2:  rsx::method_registers[NV4097_SET_CULL_FACE] ^= true; break;
+	case 0:  render.m_set_alpha_test		^= true; break;
+	case 1:  render.m_set_blend			^= true; break;
+	case 2:  render.m_set_cull_face			^= true; break;
 	case 3:  render.m_set_depth_bounds_test		^= true; break;
-//	case 4:  render.m_set_depth_test		^= true; break;
+	case 4:  render.m_set_depth_test		^= true; break;
 	case 5:  render.m_set_dither			^= true; break;
 	case 6:  render.m_set_line_smooth		^= true; break;
-//	case 7:  render.m_set_logic_op			^= true; break;
+	case 7:  render.m_set_logic_op			^= true; break;
 	case 8:  render.m_set_poly_smooth		^= true; break;
 	case 9:  render.m_set_poly_offset_fill		^= true; break;
 	case 10: render.m_set_poly_offset_line		^= true; break;
 	case 11: render.m_set_poly_offset_point		^= true; break;
-//	case 12: render.m_set_stencil_test		^= true; break;
+	case 12: render.m_set_stencil_test		^= true; break;
 	case 13: render.m_set_point_sprite_control	^= true; break;
 	case 14: render.m_set_restart_index		^= true; break;
 	case 15: render.m_set_specular			^= true; break;
 	case 16: render.m_set_scissor_horizontal	^= true; break;
 	case 17: render.m_set_scissor_vertical		^= true; break;
 	}
+	*/
 
 	UpdateInformation();
 }

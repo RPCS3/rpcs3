@@ -33,35 +33,28 @@ void Shader::Compile(const std::string &code, SHADER_TYPE st)
 	}
 }
 
-void D3D12GSRender::notifyProgramChange()
-{
-	m_PSO = nullptr;
-}
-void D3D12GSRender::notifyBlendStateChange()
-{
-	m_PSO = nullptr;
-}
-void D3D12GSRender::notifyDepthStencilStateChange()
-{
-	m_PSO = nullptr;
-}
-void D3D12GSRender::notifyRasterizerStateChange()
-{
-	m_PSO = nullptr;
-}
-
 bool D3D12GSRender::LoadProgram()
 {
+	RSXVertexProgram vertex_program;
+	u32 transform_program_start = rsx::method_registers[NV4097_SET_TRANSFORM_PROGRAM_START];
+	vertex_program.data.reserve((512 - transform_program_start) * 4);
+
+	for (int i = transform_program_start; i < 512; ++i)
+	{
+		vertex_program.data.resize((i - transform_program_start) * 4 + 4);
+		memcpy(vertex_program.data.data() + (i - transform_program_start) * 4, transform_program + i * 4, 4 * sizeof(u32));
+
+		D3 d3;
+		d3.HEX = transform_program[i * 4 + 3];
+
+		if (d3.end)
+			break;
+	}
+
 	u32 shader_program = rsx::method_registers[NV4097_SET_SHADER_PROGRAM];
 	fragment_program.offset = shader_program & ~0x3;
 	fragment_program.addr = rsx::get_address(fragment_program.offset, (shader_program & 0x3) - 1);
 	fragment_program.ctrl = rsx::method_registers[NV4097_SET_SHADER_CONTROL];
-
-	if (!m_cur_vertex_prog)
-	{
-		LOG_WARNING(RSX, "LoadProgram: m_cur_vertex_prog == NULL");
-		return false;
-	}
 
 	D3D12PipelineProperties prop = {};
 	switch (draw_mode - 1)
@@ -300,7 +293,7 @@ bool D3D12GSRender::LoadProgram()
 
 	prop.IASet = m_IASet;
 
-	m_PSO = m_cachePSO.getGraphicPipelineState(m_cur_vertex_prog, &fragment_program, prop, std::make_pair(m_device.Get(), m_rootSignatures));
+	m_PSO = m_cachePSO.getGraphicPipelineState(&vertex_program, &fragment_program, prop, std::make_pair(m_device.Get(), m_rootSignatures));
 	return m_PSO != nullptr;
 }
 

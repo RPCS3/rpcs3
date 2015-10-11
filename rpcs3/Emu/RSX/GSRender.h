@@ -1,5 +1,6 @@
 #pragma once
 #include "Emu/RSX/RSXThread.h"
+#include <memory>
 
 using draw_context_t = std::shared_ptr<void>;
 
@@ -21,6 +22,7 @@ public:
 
 	virtual void set_current(draw_context_t ctx) = 0;
 	virtual void flip(draw_context_t ctx) = 0;
+	virtual size2i client_size() = 0;
 
 	virtual void* handle() const = 0;
 	void title_message(const std::wstring&);
@@ -52,27 +54,4 @@ public:
 
 	void close();
 	void flip(int buffer) override;
-};
-
-enum GSLockType
-{
-	GS_LOCK_NOT_WAIT,
-	GS_LOCK_WAIT_FLIP,
-};
-
-struct GSLock
-{
-private:
-	GSRender& m_renderer;
-	GSLockType m_type;
-
-public:
-	GSLock(GSRender& renderer, GSLockType type);
-
-	~GSLock();
-};
-
-struct GSLockCurrent : GSLock
-{
-	GSLockCurrent(GSLockType type);
 };

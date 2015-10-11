@@ -92,27 +92,27 @@ DXGI_FORMAT getFormat(u8 type, u8 size)
 }
 
 static
-std::vector<D3D12_INPUT_ELEMENT_DESC> getIALayout(ID3D12Device *device, const std::vector<VertexBufferFormat> &vertexBufferFormat, const rsx::data_array_format_info *m_vertex_data, size_t baseOffset)
+std::vector<D3D12_INPUT_ELEMENT_DESC> getIALayout(const rsx::data_array_format_info *vertex_info, const std::vector<u8> *vertex_data)
 {
 	std::vector<D3D12_INPUT_ELEMENT_DESC> result;
 
-	for (size_t inputSlot = 0; inputSlot < vertexBufferFormat.size(); inputSlot++)
+	size_t inputSlot = 0;
+	for (size_t index = 0; index < rsx::limits::vertex_count; index++)
 	{
-		for (size_t attributeId : vertexBufferFormat[inputSlot].attributeId)
-		{
-			u32 addrRegVal = rsx::method_registers[NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 4 * attributeId];
-			u32 addr = rsx::get_address(addrRegVal & 0x7fffffff, addrRegVal >> 31);
-			const rsx::data_array_format_info &vertexData = m_vertex_data[attributeId];
+		const auto &info = vertex_info[index];
+
+		if (!info.size)
+			continue;
+
 			D3D12_INPUT_ELEMENT_DESC IAElement = {};
 			IAElement.SemanticName = "TEXCOORD";
-			IAElement.SemanticIndex = (UINT)attributeId;
-			IAElement.InputSlot = (UINT)inputSlot;
-			IAElement.Format = getFormat(vertexData.type - 1, vertexData.size);
-			IAElement.AlignedByteOffset = (UINT)(addr + baseOffset - vertexBufferFormat[inputSlot].range.first);
-			IAElement.InputSlotClass = (addr > 0) ? D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA : D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA;
-			IAElement.InstanceDataStepRate = (addr > 0) ? 0 : 1;
+			IAElement.SemanticIndex = (UINT)index;
+			IAElement.InputSlot = (UINT)inputSlot++;
+			IAElement.Format = getFormat(info.type - 1, info.size);
+			IAElement.AlignedByteOffset = 0;
+			IAElement.InputSlotClass = info.array ? D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA : D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA;
+			IAElement.InstanceDataStepRate = 0;
 			result.push_back(IAElement);
-		}
 	}
 	return result;
 }
@@ -121,22 +121,19 @@ std::vector<D3D12_INPUT_ELEMENT_DESC> getIALayout(ID3D12Device *device, const st
 
 
 /**
- * Suballocate a new vertex buffer with attributes from vbf using vertexIndexHeap as storage heap.
+ * 
  */
 static
-D3D12_GPU_VIRTUAL_ADDRESS createVertexBuffer(const VertexBufferFormat &vbf, const rsx::data_array_format_info *vertex_array_desc, const std::vector<u8> *vertex_data, size_t baseOffset, ID3D12Device *device, DataHeap<ID3D12Resource, 65536> &vertexIndexHeap)
+D3D12_GPU_VIRTUAL_ADDRESS createVertexBuffer(const rsx::data_array_format_info &vertex_array_desc, const std::vector<u8> &vertex_data, ID3D12Device *device, DataHeap<ID3D12Resource, 65536> &vertexIndexHeap)
 {
-	size_t subBufferSize = vbf.range.second - vbf.range.first + 1;
-	// Make multiple of stride
-	if (vbf.stride)
-		subBufferSize = ((subBufferSize + vbf.stride - 1) / vbf.stride) * vbf.stride;
+	size_t subBufferSize = vertex_data.size();
 	assert(vertexIndexHeap.canAlloc(subBufferSize));
 	size_t heapOffset = vertexIndexHeap.alloc(subBufferSize);
 
 	void *buffer;
 	ThrowIfFailed(vertexIndexHeap.m_heap->Map(0, &CD3DX12_RANGE(heapOffset, heapOffset + subBufferSize), (void**)&buffer));
 	void *bufferMap = (char*)buffer + heapOffset;
-	uploadVertexData(vbf, vertex_array_desc, vertex_data, baseOffset, bufferMap);
+	memcpy(bufferMap, vertex_data.data(), vertex_data.size());
 	vertexIndexHeap.m_heap->Unmap(0, &CD3DX12_RANGE(heapOffset, heapOffset + subBufferSize));
 	return vertexIndexHeap.m_heap->GetGPUVirtualAddress() + heapOffset;
 }
@@ -145,26 +142,21 @@ std::vector<D3D12_VERTEX_BUFFER_VIEW> D3D12GSRender::UploadVertexBuffers(bool in
 {
 	u32 m_vertex_data_base_offset = rsx::method_registers[NV4097_SET_VERTEX_DATA_BASE_OFFSET];
 	std::vector<D3D12_VERTEX_BUFFER_VIEW> result;
-	const std::vector<VertexBufferFormat> &vertexBufferFormat = FormatVertexData(vertex_arrays_info, vertex_arrays, m_vertexBufferSize, m_vertex_data_base_offset);
-	m_IASet = getIALayout(m_device.Get(), vertexBufferFormat, vertex_arrays_info, m_vertex_data_base_offset);
+	m_IASet = getIALayout(vertex_arrays_info, vertex_arrays);
 
-	const u32 data_offset = indexed_draw ? 0 : draw_array_first;
-
-	for (size_t buffer = 0; buffer < vertexBufferFormat.size(); buffer++)
+	for (int index = 0; index < rsx::limits::vertex_count; ++index)
 	{
-		const VertexBufferFormat &vbf = vertexBufferFormat[buffer];
-		// Make multiple of stride
-		size_t subBufferSize = vbf.range.second - vbf.range.first + 1;
-		if (vbf.stride)
-			subBufferSize = ((subBufferSize + vbf.stride - 1) / vbf.stride) * vbf.stride;
+		const auto &info = vertex_arrays_info[index];
 
-		D3D12_GPU_VIRTUAL_ADDRESS virtualAddress = createVertexBuffer(vbf, vertex_arrays_info, vertex_arrays, m_vertex_data_base_offset, m_device.Get(), m_vertexIndexData);
-		m_timers.m_bufferUploadSize += subBufferSize;
+		if (!info.size)
+			continue;
+
+		D3D12_GPU_VIRTUAL_ADDRESS virtualAddress = createVertexBuffer(info, vertex_arrays[index], m_device.Get(), m_vertexIndexData);
 
 		D3D12_VERTEX_BUFFER_VIEW vertexBufferView = {};
 		vertexBufferView.BufferLocation = virtualAddress;
-		vertexBufferView.SizeInBytes = (UINT)subBufferSize;
-		vertexBufferView.StrideInBytes = (UINT)vbf.stride;
+		vertexBufferView.SizeInBytes = (UINT)vertex_arrays[index].size();
+		vertexBufferView.StrideInBytes = (UINT)rsx::get_vertex_type_size(info.type) * info.size;
 		result.push_back(vertexBufferView);
 	}
 
@@ -179,12 +171,14 @@ D3D12_INDEX_BUFFER_VIEW D3D12GSRender::uploadIndexBuffers(bool indexed_draw)
 	if (!indexed_draw && isNativePrimitiveMode(draw_mode))
 	{
 		m_renderingInfo.m_indexed = false;
-		m_renderingInfo.m_count = draw_array_count;
-		m_renderingInfo.m_baseVertex = draw_array_first;
+		m_renderingInfo.m_count = vertex_draw_count;
+		m_renderingInfo.m_baseVertex = 0;
 		return indexBufferView;
 	}
 
 	m_renderingInfo.m_indexed = true;
+
+	u32 indexed_type = rsx::method_registers[NV4097_SET_INDEX_ARRAY_DMA] >> 4;
 
 	// Index type
 	size_t indexSize;
@@ -195,7 +189,7 @@ D3D12_INDEX_BUFFER_VIEW D3D12GSRender::uploadIndexBuffers(bool indexed_draw)
 	}
 	else
 	{
-		switch (m_indexed_array.m_type)
+		switch (indexed_type)
 		{
 		default: abort();
 		case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_16:
@@ -210,11 +204,11 @@ D3D12_INDEX_BUFFER_VIEW D3D12GSRender::uploadIndexBuffers(bool indexed_draw)
 	}
 
 	// Index count
-	m_renderingInfo.m_count = getIndexCount(draw_mode, indexed_draw ? (u32)(m_indexed_array.m_data.size() / indexSize) : draw_array_count);
+	m_renderingInfo.m_count = getIndexCount(draw_mode, indexed_draw ? (u32)(vertex_index_array.size() / indexSize) : vertex_draw_count);
 
 	// Base vertex
 	if (!indexed_draw && isNativePrimitiveMode(draw_mode))
-		m_renderingInfo.m_baseVertex = draw_array_first;
+		m_renderingInfo.m_baseVertex = 0;
 	else
 		m_renderingInfo.m_baseVertex = 0;
 
@@ -227,7 +221,7 @@ D3D12_INDEX_BUFFER_VIEW D3D12GSRender::uploadIndexBuffers(bool indexed_draw)
 	void *buffer;
 	ThrowIfFailed(m_vertexIndexData.m_heap->Map(0, &CD3DX12_RANGE(heapOffset, heapOffset + subBufferSize), (void**)&buffer));
 	void *bufferMap = (char*)buffer + heapOffset;
-	uploadIndexData(draw_mode, m_indexed_array.m_type, indexed_draw ? m_indexed_array.m_data.data() : nullptr, bufferMap, indexed_draw ? (u32)(m_indexed_array.m_data.size() / indexSize) : draw_array_count);
+	uploadIndexData(draw_mode, indexed_type, indexed_draw ? vertex_index_array.data() : nullptr, bufferMap, indexed_draw ? (u32)(vertex_index_array.size() / indexSize) : vertex_draw_count);
 	m_vertexIndexData.m_heap->Unmap(0, &CD3DX12_RANGE(heapOffset, heapOffset + subBufferSize));
 	m_timers.m_bufferUploadSize += subBufferSize;
 	indexBufferView.SizeInBytes = (UINT)subBufferSize;
@@ -249,14 +243,14 @@ void D3D12GSRender::setScaleOffset()
 	int clip_h = rsx::method_registers[NV4097_SET_SURFACE_CLIP_VERTICAL] >> 16;
 
 	// Scale
-	scaleOffsetMat[0] *= (float&)rsx::method_registers[NV4097_SET_VIEWPORT_SCALE + (0x4 * 0)] / (clip_w / 2.f);
-	scaleOffsetMat[5] *= (float&)rsx::method_registers[NV4097_SET_VIEWPORT_SCALE + (0x4 * 1)] / (clip_h / 2.f);
-	scaleOffsetMat[10] = (float&)rsx::method_registers[NV4097_SET_VIEWPORT_SCALE + (0x4 * 2)];
+	scaleOffsetMat[0] *= (float&)rsx::method_registers[NV4097_SET_VIEWPORT_SCALE] / (clip_w / 2.f);
+	scaleOffsetMat[5] *= (float&)rsx::method_registers[NV4097_SET_VIEWPORT_SCALE + 1] / (clip_h / 2.f);
+	scaleOffsetMat[10] = (float&)rsx::method_registers[NV4097_SET_VIEWPORT_SCALE + 2];
 
 	// Offset
-	scaleOffsetMat[3] = (float&)rsx::method_registers[NV4097_SET_VIEWPORT_OFFSET + (0x4 * 0)] - (clip_w / 2.f);
-	scaleOffsetMat[7] = -((float&)rsx::method_registers[NV4097_SET_VIEWPORT_OFFSET + (0x4 * 1)] - (clip_h / 2.f));
-	scaleOffsetMat[11] = (float&)rsx::method_registers[NV4097_SET_VIEWPORT_OFFSET + (0x4 * 2)];
+	scaleOffsetMat[3] = (float&)rsx::method_registers[NV4097_SET_VIEWPORT_OFFSET] - (clip_w / 2.f);
+	scaleOffsetMat[7] = -((float&)rsx::method_registers[NV4097_SET_VIEWPORT_OFFSET + 1] - (clip_h / 2.f));
+	scaleOffsetMat[11] = (float&)rsx::method_registers[NV4097_SET_VIEWPORT_OFFSET + 2];
 
 	scaleOffsetMat[3] /= clip_w / 2.f;
 	scaleOffsetMat[7] /= clip_h / 2.f;
@@ -285,6 +279,9 @@ void D3D12GSRender::setScaleOffset()
 
 void D3D12GSRender::FillVertexShaderConstantsBuffer()
 {
+	for (const auto &entry : transform_constants)
+		local_transform_constants[entry.first] = entry.second;
+
 	size_t bufferSize = 512 * 4 * sizeof(float);
 
 	assert(m_constantsData.canAlloc(bufferSize));
@@ -292,7 +289,7 @@ void D3D12GSRender::FillVertexShaderConstantsBuffer()
 
 	void *constantsBufferMap;
 	ThrowIfFailed(m_constantsData.m_heap->Map(0, &CD3DX12_RANGE(heapOffset, heapOffset + bufferSize), &constantsBufferMap));
-	for (const auto &entry : transform_constants)
+	for (const auto &entry : local_transform_constants)
 	{
 		float data[4] = {
 			entry.second.x,
@@ -332,7 +329,7 @@ void D3D12GSRender::FillPixelShaderConstantsBuffer()
 		// Is it assigned by color register in command buffer ?
 		// TODO : we loop every iteration, we might do better...
 		bool isCommandBufferSetConstant = false;
-		for (const auto& entry : fragment_constants)
+/*		for (const auto& entry : fragment_constants)
 		{
 			size_t fragmentId = entry.first - fragment_program.offset;
 			if (fragmentId == offsetInFP)
@@ -344,7 +341,7 @@ void D3D12GSRender::FillPixelShaderConstantsBuffer()
 				vector[3] = (u32&)entry.second.w;
 				break;
 			}
-		}
+		}*/
 		if (!isCommandBufferSetConstant)
 		{
 			auto data = vm::ps3::ptr<u32>::make(fragment_program.addr + (u32)offsetInFP);

@@ -475,28 +475,28 @@ void SetupRsxRenderingStates(vm::ptr<CellGcmContextData>& cntxt)
 	rsx::method_registers[NV4097_SET_BLEND_ENABLE_MRT] = false;
 //	r.m_set_logic_op = false;
 	rsx::method_registers[NV4097_SET_CULL_FACE_ENABLE] = false;
-	r.m_set_depth_bounds_test = false;
+//	r.m_set_depth_bounds_test = false;
 	rsx::method_registers[NV4097_SET_DEPTH_TEST_ENABLE] = false;
-	r.m_set_poly_offset_fill = false;
+//	r.m_set_poly_offset_fill = false;
 //	r.m_set_stencil_test = false;
 //	r.m_set_two_sided_stencil_test_enable = false;
-	r.m_set_two_side_light_enable = false;
-	r.m_set_point_sprite_control = false;
-	r.m_set_dither = true;
-	r.m_set_shade_mode = true; r.m_shade_mode = CELL_GCM_SMOOTH;
-	r.m_set_frequency_divider_operation = CELL_GCM_FREQUENCY_DIVIDE;
+//	r.m_set_two_side_light_enable = false;
+//	r.m_set_point_sprite_control = false;
+//	r.m_set_dither = true;
+//	r.m_set_shade_mode = true; r.m_shade_mode = CELL_GCM_SMOOTH;
+//	r.m_set_frequency_divider_operation = CELL_GCM_FREQUENCY_DIVIDE;
 
 	rsx::method_registers[NV4097_SET_SURFACE_CLIP_HORIZONTAL] = s_rescInternalInstance->m_dstWidth << 16;
 	rsx::method_registers[NV4097_SET_SURFACE_CLIP_VERTICAL] = s_rescInternalInstance->m_dstHeight << 16;
 
-	r.m_set_scissor_horizontal = r.m_set_scissor_vertical = true;
-	r.m_scissor_x = 0;
-	r.m_scissor_y = 0;
-	r.m_scissor_w = s_rescInternalInstance->m_dstWidth;
-	r.m_scissor_h = s_rescInternalInstance->m_dstHeight;
+//	r.m_set_scissor_horizontal = r.m_set_scissor_vertical = true;
+//	r.m_scissor_x = 0;
+//	r.m_scissor_y = 0;
+//	r.m_scissor_w = s_rescInternalInstance->m_dstWidth;
+//	r.m_scissor_h = s_rescInternalInstance->m_dstHeight;
 
-	r.m_width = s_rescInternalInstance->m_dstWidth;
-	r.m_height = s_rescInternalInstance->m_dstHeight;
+//	r.m_width = s_rescInternalInstance->m_dstWidth;
+//	r.m_height = s_rescInternalInstance->m_dstHeight;
 
 //	r.m_surface_depth_format = 2;
 	rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET] = 1;
