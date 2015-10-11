@@ -4,6 +4,7 @@
 #include "StrFmt.h"
 #include <iostream>
 #include <fstream>
+#include <sstream>
 
 void config_context_t::group::init()
 {
@@ -86,7 +87,7 @@ void config_context_t::load()
 			if (line.empty())
 				continue;
 
-			if (line[0] == '[')
+			if (line.front() == '[' && line.back() == ']')
 			{
 				std::string group_name = line.substr(1, line.length() - 2);
 
@@ -112,11 +113,11 @@ void config_context_t::load()
 			auto name_value = fmt::split(line, { "=" });
 			switch (name_value.size())
 			{
-			case 1: current_group->entries[name_value[0]]->string_value(""); break;
+			case 1: current_group->entries[fmt::trim(name_value[0])]->string_value({}); break;
 
 			default:
 				std::cerr << m_path << " " << line_index << ": line '" << line << "' has more than one symbol '='. used only first" << std::endl;
-			case 2: current_group->entries[name_value[0]]->string_value(name_value[1]); break;
+			case 2: current_group->entries[fmt::trim(name_value[0])]->string_value(fmt::trim(name_value[1])); break;
 
 			}
 
@@ -126,20 +127,7 @@ void config_context_t::load()
 
 void config_context_t::save()
 {
-	if (auto &stream = std::ofstream{ m_path })
-	{
-		for (auto &g : m_groups)
-		{
-			stream << "[" + g.first + "]" << std::endl;
-
-			for (auto &e : g.second->entries)
-			{
-				stream << e.first << "=" << e.second->string_value() << std::endl;
-			}
-
-			stream << std::endl;
-		}
-	}
+	serialize(std::ofstream{ m_path });
 }
 
 void config_context_t::set_defaults()
@@ -151,4 +139,28 @@ void config_context_t::set_defaults()
 			e.second->to_default();
 		}
 	}
+}
+
+void config_context_t::serialize(std::ostream& stream) const
+{
+	for (auto &g : m_groups)
+	{
+		stream << "[" + g.first + "]" << std::endl;
+
+		for (auto &e : g.second->entries)
+		{
+			stream << e.first << "=" << e.second->string_value() << std::endl;
+		}
+
+		stream << std::endl;
+	}
+}
+
+std::string config_context_t::to_string() const
+{
+	std::ostringstream result;
+	
+	serialize(result);
+
+	return result.str();
 }
