@@ -805,7 +805,6 @@ void D3D12GSRender::flip(int buffer)
 
 	// Flush
 	m_texturesRTTs.clear();
-	m_vertexConstants.clear();
 
 	// Now get ready for next frame
 	ResourceStorage &newStorage = getCurrentResourceStorage();

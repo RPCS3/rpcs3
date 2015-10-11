@@ -113,29 +113,6 @@ struct RSXIndexArrayData
 	}
 };
 
-struct RSXTransformConstant
-{
-	u32 id;
-	float x, y, z, w;
-
-	RSXTransformConstant()
-		: x(0.0f)
-		, y(0.0f)
-		, z(0.0f)
-		, w(0.0f)
-	{
-	}
-
-	RSXTransformConstant(u32 id, float x, float y, float z, float w)
-		: id(id)
-		, x(x)
-		, y(y)
-		, z(z)
-		, w(w)
-	{
-	}
-};
-
 class RSXThread : protected named_thread_t
 {
 protected:

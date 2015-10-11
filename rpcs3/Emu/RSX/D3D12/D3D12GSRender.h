@@ -452,8 +452,6 @@ public:
 	u32 m_draw_frames;
 	u32 m_skip_frames;
 
-	std::unordered_map<size_t, RSXTransformConstant> m_vertexConstants;
-
 	D3D12GSRender();
 	virtual ~D3D12GSRender();
 
