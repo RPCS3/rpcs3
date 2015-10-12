@@ -111,20 +111,17 @@ public:
 	};
 
 private:
-	std::string m_path;
 	std::unordered_map<std::string, group*> m_groups;
 
 public:
 	config_context_t() = default;
 
 	void assign(const config_context_t& rhs);
-	void path(const std::string &new_path);
-	std::string path() const;
-
-	void load();
-	void save();
-	void set_defaults();
 
 	void serialize(std::ostream& stream) const;
+	void deserialize(std::istream& stream);
+
+	void set_defaults();
+
 	std::string to_string() const;
 };

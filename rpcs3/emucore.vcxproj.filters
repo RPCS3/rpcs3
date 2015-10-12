@@ -999,10 +999,10 @@
       <Filter>Utilities</Filter>
     </ClCompile>
     <ClCompile Include="config.cpp" />
-    <ClCompile Include="Emu\emulator.cpp">
+    <ClCompile Include="Emu\state.cpp">
       <Filter>Emu</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\state.cpp">
+    <ClCompile Include="Emu\events.cpp">
       <Filter>Emu</Filter>
     </ClCompile>
   </ItemGroup>
@@ -1911,10 +1911,10 @@
     <ClInclude Include="..\Utilities\event.h">
       <Filter>Utilities</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\emulator.h">
+    <ClInclude Include="Emu\state.h">
       <Filter>Emu</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\state.h">
+    <ClInclude Include="Emu\events.h">
       <Filter>Emu</Filter>
     </ClInclude>
   </ItemGroup>

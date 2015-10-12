@@ -3,7 +3,6 @@
 #include "convert.h"
 #include "StrFmt.h"
 #include <iostream>
-#include <fstream>
 #include <sstream>
 
 void config_context_t::group::init()
@@ -59,17 +58,7 @@ void config_context_t::assign(const config_context_t& rhs)
 	}
 }
 
-void config_context_t::path(const std::string &new_path)
-{
-	m_path = new_path;
-}
-
-std::string config_context_t::path() const
-{
-	return m_path;
-}
-
-void config_context_t::load()
+void config_context_t::deserialize(std::istream& stream)
 {
 	set_defaults();
 
@@ -77,66 +66,46 @@ void config_context_t::load()
 	std::string line;
 	group *current_group = nullptr;
 
-	if (auto &stream = std::ifstream{ m_path })
+	while (std::getline(stream, line))
 	{
-		while (std::getline(stream, line))
+		++line_index;
+		line = fmt::trim(line);
+
+		if (line.empty())
+			continue;
+
+		if (line.front() == '[' && line.back() == ']')
 		{
-			++line_index;
-			line = fmt::trim(line);
+			std::string group_name = line.substr(1, line.length() - 2);
 
-			if (line.empty())
-				continue;
+			auto found = m_groups.find(group_name);
 
-			if (line.front() == '[' && line.back() == ']')
+			if (found == m_groups.end())
 			{
-				std::string group_name = line.substr(1, line.length() - 2);
-
-				auto found = m_groups.find(group_name);
-
-				if (found == m_groups.end())
-				{
-					std::cerr << m_path << " " << line_index << ": group '" << group_name << "' not exists. ignored" << std::endl;
-					current_group = nullptr;
-					continue;
-				}
-
-				current_group = found->second;
+				std::cerr << line_index << ": group '" << group_name << "' not exists. ignored" << std::endl;
+				current_group = nullptr;
 				continue;
 			}
 
-			if (current_group == nullptr)
-			{
-				std::cerr << m_path << " " << line_index << ": line '" << line << "' ignored, no group." << std::endl;
-				continue;
-			}
-
-			auto name_value = fmt::split(line, { "=" });
-			switch (name_value.size())
-			{
-			case 1: current_group->entries[fmt::trim(name_value[0])]->string_value({}); break;
-
-			default:
-				std::cerr << m_path << " " << line_index << ": line '" << line << "' has more than one symbol '='. used only first" << std::endl;
-			case 2: current_group->entries[fmt::trim(name_value[0])]->string_value(fmt::trim(name_value[1])); break;
-
-			}
-
+			current_group = found->second;
+			continue;
 		}
-	}
-}
 
-void config_context_t::save()
-{
-	serialize(std::ofstream{ m_path });
-}
-
-void config_context_t::set_defaults()
-{
-	for (auto &g : m_groups)
-	{
-		for (auto &e : g.second->entries)
+		if (current_group == nullptr)
 		{
-			e.second->to_default();
+			std::cerr << line_index << ": line '" << line << "' ignored, no group." << std::endl;
+			continue;
+		}
+
+		auto name_value = fmt::split(line, { "=" });
+		switch (name_value.size())
+		{
+		case 1: current_group->entries[fmt::trim(name_value[0])]->string_value({}); break;
+
+		default:
+			std::cerr << line_index << ": line '" << line << "' has more than one symbol '='. used only first" << std::endl;
+		case 2: current_group->entries[fmt::trim(name_value[0])]->string_value(fmt::trim(name_value[1])); break;
+
 		}
 	}
 }
@@ -153,6 +122,17 @@ void config_context_t::serialize(std::ostream& stream) const
 		}
 
 		stream << std::endl;
+	}
+}
+
+void config_context_t::set_defaults()
+{
+	for (auto &g : m_groups)
+	{
+		for (auto &e : g.second->entries)
+		{
+			e.second->to_default();
+		}
 	}
 }
 
