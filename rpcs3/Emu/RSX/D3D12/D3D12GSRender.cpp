@@ -298,6 +298,13 @@ bool D3D12GSRender::domethod(u32 cmd, u32 arg)
 	case NV4097_CLEAR_SURFACE:
 		clear_surface(arg);
 		return true;
+	case NV4097_TEXTURE_READ_SEMAPHORE_RELEASE:
+		semaphore_PGRAPH_texture_read_release(label_addr + rsx::method_registers[NV4097_SET_SEMAPHORE_OFFSET], arg);
+		return true;
+	case NV4097_BACK_END_WRITE_SEMAPHORE_RELEASE:
+		semaphore_PGRAPH_backend_release(label_addr + rsx::method_registers[NV4097_SET_SEMAPHORE_OFFSET],
+			(arg & 0xff00ff00) | ((arg & 0xff) << 16) | ((arg >> 16) & 0xff));
+		return true;;
 	default:
 		return false;
 	}
@@ -890,12 +897,12 @@ void copyToCellRamAndRelease(void *dstAddress, ID3D12Resource *res, size_t dstPi
 	res->Release();
 }
 
-void D3D12GSRender::semaphorePGRAPHTextureReadRelease(u32 offset, u32 value)
+void D3D12GSRender::semaphore_PGRAPH_texture_read_release(u32 offset, u32 value)
 {
-	semaphorePGRAPHBackendRelease(offset, value);
+	semaphore_PGRAPH_backend_release(offset, value);
 }
 
-void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
+void D3D12GSRender::semaphore_PGRAPH_backend_release(u32 offset, u32 value)
 {
 	// Add all buffer write
 	// Cell can't make any assumption about readyness of color/depth buffer
@@ -1156,21 +1163,6 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 		}
 	}
 
-	vm::ps3::write32(label_addr + offset, value);
-}
-
-void D3D12GSRender::semaphorePFIFOAcquire(u32 offset, u32 value)
-{
-	const std::chrono::time_point<std::chrono::system_clock> enterWait = std::chrono::system_clock::now();
-	while (true)
-	{
-		volatile u32 val = vm::ps3::read32(label_addr + offset);
-		if (val == value) break;
-		std::chrono::time_point<std::chrono::system_clock> waitPoint = std::chrono::system_clock::now();
-		long long elapsedTime = std::chrono::duration_cast<std::chrono::seconds>(waitPoint - enterWait).count();
-		if (elapsedTime > 0)
-			LOG_ERROR(RSX, "Has wait for more than a second for semaphore acquire");
-		std::this_thread::yield();
-	}
+	vm::ps3::write32(offset, value);
 }
 #endif
