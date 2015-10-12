@@ -7,6 +7,22 @@
 #include "Utilities/Log.h"
 #include <wx/radiobox.h>
 
+#ifdef _WIN32
+#include <windows.h>
+#include <iphlpapi.h>
+
+#pragma comment(lib, "iphlpapi.lib")
+#else
+
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#include <netdb.h>
+#include <ifaddrs.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#endif
+
 #if defined(DX12_SUPPORT)
 #undef GetHwnd
 #include <d3d12.h>

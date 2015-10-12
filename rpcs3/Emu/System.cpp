@@ -1,7 +1,7 @@
 #include "stdafx.h"
 
 #include "config.h"
-#include "emulator.h"
+#include "events.h"
 #include "state.h"
 
 #include "Utilities/Log.h"
@@ -67,6 +67,7 @@ Emulator::Emulator()
 void Emulator::Init()
 {
 	rpcs3::config.load();
+	rpcs3::oninit();
 }
 
 void Emulator::SetPath(const std::string& path, const std::string& elf_path)
@@ -297,6 +298,8 @@ void Emulator::Run()
 		return;
 	}
 
+	rpcs3::onstart();
+
 	SendDbgCommand(DID_START_EMU);
 
 	m_pause_start_time = 0;
@@ -316,6 +319,8 @@ bool Emulator::Pause()
 	{
 		return false;
 	}
+
+	rpcs3::onpause();
 
 	// update pause start time
 	if (m_pause_start_time.exchange(start))
@@ -364,6 +369,8 @@ void Emulator::Resume()
 		t->awake(); // untrigger status check and signal
 	}
 
+	rpcs3::onstart();
+
 	SendDbgCommand(DID_RESUMED_EMU);
 }
 
@@ -378,6 +385,7 @@ void Emulator::Stop()
 		return;
 	}
 
+	rpcs3::onstop();
 	SendDbgCommand(DID_STOP_EMU);
 
 	{

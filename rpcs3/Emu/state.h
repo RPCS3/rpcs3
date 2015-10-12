@@ -3,10 +3,12 @@
 
 namespace rpcs3
 {
-	class state_t
+	struct state_t
 	{
-	public:
 		config_t config;
+
+		std::string path_to_elf;
+		std::string virtual_path_to_elf;
 	};
 
 	extern state_t state;

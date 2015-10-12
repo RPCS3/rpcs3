@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "config.h"
+#include <fstream>
 
 namespace rpcs3
 {
@@ -16,6 +17,28 @@ namespace rpcs3
 	{
 		assign(rhs);
 		return *this;
+	}
+
+	void config_t::path(const std::string &new_path)
+	{
+		m_path = new_path;
+	}
+
+	std::string config_t::path() const
+	{
+		return m_path;
+	}
+
+	void config_t::load()
+	{
+		if (!m_path.empty())
+			deserialize(std::ifstream{ m_path });
+	}
+
+	void config_t::save() const
+	{
+		if (!m_path.empty())
+			serialize(std::ofstream{ m_path });
 	}
 
 	config_t config{ "rpcs3.new.ini" };

@@ -171,6 +171,8 @@ namespace rpcs3
 {
 	class config_t : public config_context_t
 	{
+		std::string m_path;
+
 	public:
 		struct core_group : protected group
 		{
@@ -227,6 +229,12 @@ namespace rpcs3
 
 		config_t& operator =(const config_t& rhs);
 		config_t& operator =(config_t&& rhs) = delete;
+
+		void path(const std::string &new_path);
+		std::string path() const;
+
+		void load();
+		void save() const;
 	};
 
 	extern config_t config;
