@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#ifdef DX12_SUPPORT
 #include "Emu/Memory/vm.h"
 #include "TextureUtils.h"
 #include "../RSXThread.h"
@@ -7,37 +6,6 @@
 
 
 #define MAX2(a, b) ((a) > (b)) ? (a) : (b)
-
-unsigned LinearToSwizzleAddress(unsigned x, unsigned y, unsigned z, unsigned log2_width, unsigned log2_height, unsigned log2_depth)
-{
-	unsigned offset = 0;
-	unsigned shift_count = 0;
-	while (log2_width | log2_height | log2_depth) {
-		if (log2_width)
-		{
-			offset |= (x & 0x01) << shift_count;
-			x >>= 1;
-			++shift_count;
-			--log2_width;
-		}
-		if (log2_height)
-		{
-			offset |= (y & 0x01) << shift_count;
-			y >>= 1;
-			++shift_count;
-			--log2_height;
-		}
-		if (log2_depth)
-		{
-			offset |= (z & 0x01) << shift_count;
-			z >>= 1;
-			++shift_count;
-			--log2_depth;
-		}
-	}
-	return offset;
-}
-
 
 /**
 * Write data, assume src pixels are packed but not mipmaplevel
@@ -102,7 +70,7 @@ writeTexelsSwizzled(const char *src, char *dst, size_t widthInBlock, size_t heig
 
 		for (int row = 0; row < currentHeight; row++)
 			for (int j = 0; j < currentWidth; j++)
-				castedDst[(row * rowPitch / 4) + j] = castedSrc[LinearToSwizzleAddress(j, row, 0, log2width, log2height, 0)];
+				castedDst[(row * rowPitch / 4) + j] = castedSrc[rsx::linear_to_swizzle(j, row, 0, log2width, log2height, 0)];
 
 		offsetInDst += currentHeight * rowPitch;
 		offsetInSrc += currentHeight * widthInBlock * blockSize;
@@ -177,7 +145,7 @@ write16bTexelsSwizzled(const char *src, char *dst, size_t widthInBlock, size_t h
 
 		for (int row = 0; row < currentHeight; row++)
 			for (int j = 0; j < currentWidth; j++)
-				castedDst[(row * rowPitch / 2) + j] = castedSrc[LinearToSwizzleAddress(j, row, 0, log2width, log2height, 0)];
+				castedDst[(row * rowPitch / 2) + j] = castedSrc[rsx::linear_to_swizzle(j, row, 0, log2width, log2height, 0)];
 
 		offsetInDst += currentHeight * rowPitch;
 		offsetInSrc += currentHeight * widthInBlock * blockSize;
@@ -264,12 +232,12 @@ write16bX4TexelsGeneric(const char *src, char *dst, size_t widthInBlock, size_t 
 }
 
 
-size_t getPlacedTextureStorageSpace(const RSXTexture &texture, size_t rowPitchAlignement)
+size_t getPlacedTextureStorageSpace(const rsx::texture &texture, size_t rowPitchAlignement)
 {
-	size_t w = texture.GetWidth(), h = texture.GetHeight();
+	size_t w = texture.width(), h = texture.height();
 
 	size_t blockSizeInByte, blockWidthInPixel, blockHeightInPixel;
-	int format = texture.GetFormat() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
+	int format = texture.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
 
 	switch (format)
 	{
@@ -391,11 +359,11 @@ size_t getPlacedTextureStorageSpace(const RSXTexture &texture, size_t rowPitchAl
 	return rowPitch * heightInBlocks * 2; // * 2 for mipmap levels
 }
 
-std::vector<MipmapLevelInfo> uploadPlacedTexture(const RSXTexture &texture, size_t rowPitchAlignement, void* textureData)
+std::vector<MipmapLevelInfo> uploadPlacedTexture(const rsx::texture &texture, size_t rowPitchAlignement, void* textureData)
 {
-	size_t w = texture.GetWidth(), h = texture.GetHeight();
+	size_t w = texture.width(), h = texture.height();
 
-	int format = texture.GetFormat() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
+	int format = texture.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
 
 	size_t blockSizeInByte, blockWidthInPixel, blockHeightInPixel;
 	switch (format)
@@ -515,32 +483,31 @@ std::vector<MipmapLevelInfo> uploadPlacedTexture(const RSXTexture &texture, size
 
 	std::vector<MipmapLevelInfo> mipInfos;
 
-	const u32 texaddr = GetAddress(texture.GetOffset(), texture.GetLocation());
+	const u32 texaddr = rsx::get_address(texture.offset(), texture.location());
 	auto pixels = vm::get_ptr<const u8>(texaddr);
-	bool is_swizzled = !(texture.GetFormat() & CELL_GCM_TEXTURE_LN);
+	bool is_swizzled = !(texture.format() & CELL_GCM_TEXTURE_LN);
 	switch (format)
 	{
 	case CELL_GCM_TEXTURE_A8R8G8B8:
 		if (is_swizzled)
-			return writeTexelsSwizzled((char*)pixels, (char*)textureData, w, h, 4, texture.GetMipmap());
+			return writeTexelsSwizzled((char*)pixels, (char*)textureData, w, h, 4, texture.mipmap());
 		else
-			return writeTexelsGeneric((char*)pixels, (char*)textureData, w, h, 4, texture.GetMipmap());
+			return writeTexelsGeneric((char*)pixels, (char*)textureData, w, h, 4, texture.mipmap());
 	case CELL_GCM_TEXTURE_A1R5G5B5:
 	case CELL_GCM_TEXTURE_A4R4G4B4:
 	case CELL_GCM_TEXTURE_R5G6B5:
 		if (is_swizzled)
-			return write16bTexelsSwizzled((char*)pixels, (char*)textureData, w, h, 2, texture.GetMipmap());
+			return write16bTexelsSwizzled((char*)pixels, (char*)textureData, w, h, 2, texture.mipmap());
 		else
-			return write16bTexelsGeneric((char*)pixels, (char*)textureData, w, h, 2, texture.GetMipmap());
+			return write16bTexelsGeneric((char*)pixels, (char*)textureData, w, h, 2, texture.mipmap());
 	case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT:
-		return write16bX4TexelsGeneric((char*)pixels, (char*)textureData, w, h, 8, texture.GetMipmap());
+		return write16bX4TexelsGeneric((char*)pixels, (char*)textureData, w, h, 8, texture.mipmap());
 	case CELL_GCM_TEXTURE_COMPRESSED_DXT1:
 	case CELL_GCM_TEXTURE_COMPRESSED_DXT23:
 	case CELL_GCM_TEXTURE_COMPRESSED_DXT45:
-		return writeCompressedTexel((char*)pixels, (char*)textureData, widthInBlocks, blockWidthInPixel, heightInBlocks, blockHeightInPixel, blockSizeInByte, texture.GetMipmap());
+		return writeCompressedTexel((char*)pixels, (char*)textureData, widthInBlocks, blockWidthInPixel, heightInBlocks, blockHeightInPixel, blockSizeInByte, texture.mipmap());
 	default:
-		return writeTexelsGeneric((char*)pixels, (char*)textureData, w, h, blockSizeInByte, texture.GetMipmap());
+		return writeTexelsGeneric((char*)pixels, (char*)textureData, w, h, blockSizeInByte, texture.mipmap());
 	}
 
 }
-#endif

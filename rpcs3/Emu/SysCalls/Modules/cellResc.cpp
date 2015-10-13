@@ -467,42 +467,39 @@ void InitMembers()
 void SetupRsxRenderingStates(vm::ptr<CellGcmContextData>& cntxt)
 {
 	//TODO: use cntxt
-	/*GSRender& r = Emu.GetGSManager().GetRender();
-	r.m_set_color_mask = true; r.m_color_mask_a = r.m_color_mask_r = r.m_color_mask_g = r.m_color_mask_b = true;
-	r.m_set_depth_mask = true; r.m_depth_mask = 0;
-	r.m_set_alpha_test = false;
-	r.m_set_blend = false;
-	r.m_set_blend_mrt1 = r.m_set_blend_mrt2 = r.m_set_blend_mrt3 = false;
-	r.m_set_logic_op = false;
-	r.m_set_cull_face = false;
-	r.m_set_depth_bounds_test = false;
-	r.m_set_depth_test = false;
-	r.m_set_poly_offset_fill = false;
-	r.m_set_stencil_test = false;
-	r.m_set_two_sided_stencil_test_enable = false;
-	r.m_set_two_side_light_enable = false;
-	r.m_set_point_sprite_control = false;
-	r.m_set_dither = true;
-	r.m_set_shade_mode = true; r.m_shade_mode = CELL_GCM_SMOOTH;
-	r.m_set_frequency_divider_operation = CELL_GCM_FREQUENCY_DIVIDE;
+	GSRender& r = Emu.GetGSManager().GetRender();
+	rsx::method_registers[NV4097_SET_COLOR_MASK] = -1;
+	rsx::method_registers[NV4097_SET_DEPTH_MASK] = 0;
+	rsx::method_registers[NV4097_SET_ALPHA_TEST_ENABLE] = false;
+	rsx::method_registers[NV4097_SET_BLEND_ENABLE] = false;
+	rsx::method_registers[NV4097_SET_BLEND_ENABLE_MRT] = false;
+//	r.m_set_logic_op = false;
+	rsx::method_registers[NV4097_SET_CULL_FACE_ENABLE] = false;
+//	r.m_set_depth_bounds_test = false;
+	rsx::method_registers[NV4097_SET_DEPTH_TEST_ENABLE] = false;
+//	r.m_set_poly_offset_fill = false;
+//	r.m_set_stencil_test = false;
+//	r.m_set_two_sided_stencil_test_enable = false;
+//	r.m_set_two_side_light_enable = false;
+//	r.m_set_point_sprite_control = false;
+//	r.m_set_dither = true;
+//	r.m_set_shade_mode = true; r.m_shade_mode = CELL_GCM_SMOOTH;
+//	r.m_set_frequency_divider_operation = CELL_GCM_FREQUENCY_DIVIDE;
 
-	r.m_set_viewport_horizontal = r.m_set_viewport_vertical = true;
-	r.m_viewport_x = 0;
-	r.m_viewport_y = 0;
-	r.m_viewport_w = s_rescInternalInstance->m_dstWidth;
-	r.m_viewport_h = s_rescInternalInstance->m_dstHeight;
+	rsx::method_registers[NV4097_SET_SURFACE_CLIP_HORIZONTAL] = s_rescInternalInstance->m_dstWidth << 16;
+	rsx::method_registers[NV4097_SET_SURFACE_CLIP_VERTICAL] = s_rescInternalInstance->m_dstHeight << 16;
 
-	r.m_set_scissor_horizontal = r.m_set_scissor_vertical = true;
-	r.m_scissor_x = 0;
-	r.m_scissor_y = 0;
-	r.m_scissor_w = s_rescInternalInstance->m_dstWidth;
-	r.m_scissor_h = s_rescInternalInstance->m_dstHeight;
+//	r.m_set_scissor_horizontal = r.m_set_scissor_vertical = true;
+//	r.m_scissor_x = 0;
+//	r.m_scissor_y = 0;
+//	r.m_scissor_w = s_rescInternalInstance->m_dstWidth;
+//	r.m_scissor_h = s_rescInternalInstance->m_dstHeight;
 
-	r.m_width = s_rescInternalInstance->m_dstWidth;
-	r.m_height = s_rescInternalInstance->m_dstHeight;
+//	r.m_width = s_rescInternalInstance->m_dstWidth;
+//	r.m_height = s_rescInternalInstance->m_dstHeight;
 
-	r.m_surface_depth_format = 2;
-	r.m_surface_color_target = 1;*/
+//	r.m_surface_depth_format = 2;
+	rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET] = 1;
 
 	if (IsPalInterpolate()) 
 	{
@@ -536,32 +533,32 @@ void SetupSurfaces(vm::ptr<CellGcmContextData>& cntxt)
 		dstOffset1 = s_rescInternalInstance->m_dstOffsets[s_rescInternalInstance->m_bufIdPalMidNow];
 	}
 
-	//GSRender& r = Emu.GetGSManager().GetRender();
+	GSRender& r = Emu.GetGSManager().GetRender();
 
-	//r.m_surface_type = CELL_GCM_SURFACE_PITCH;
-	//r.m_surface_antialias = CELL_GCM_SURFACE_CENTER_1;
-	//r.m_surface_color_format = (u8)s_rescInternalInstance->m_pRescDsts->format;
-	//r.m_surface_color_target = (!isMrt) ? CELL_GCM_SURFACE_TARGET_0 : CELL_GCM_SURFACE_TARGET_MRT1;
-	////surface.colorLocation[0] = CELL_GCM_LOCATION_LOCAL;
-	//r.m_surface_offset_a = dstOffset0;
-	//r.m_surface_pitch_a = s_rescInternalInstance->m_dstPitch;
-	////surface.colorLocation[1] = CELL_GCM_LOCATION_LOCAL;
-	//r.m_surface_offset_b = (!isMrt) ? 0 : dstOffset1;
-	//r.m_surface_pitch_b = (!isMrt) ? 64 : s_rescInternalInstance->m_dstPitch;
-	////surface.colorLocation[2] = CELL_GCM_LOCATION_LOCAL;
-	//r.m_surface_offset_c = 0;
-	//r.m_surface_pitch_c = 64;
-	////surface.colorLocation[3] = CELL_GCM_LOCATION_LOCAL;
-	//r.m_surface_offset_d = 0;
-	//r.m_surface_pitch_d = 64;
-	//r.m_surface_depth_format = CELL_GCM_SURFACE_Z24S8;
-	////surface.depthLocation = CELL_GCM_LOCATION_LOCAL;
-	//r.m_surface_offset_z = 0;
-	//r.m_surface_pitch_z = 64;
-	//r.m_surface_width = s_rescInternalInstance->m_dstWidth;
-	//r.m_surface_height = s_rescInternalInstance->m_dstHeight;
-	//r.m_surface_clip_x = 0;
-	//r.m_surface_clip_y = 0;
+//	r.m_surface_type = CELL_GCM_SURFACE_PITCH;
+//	r.m_surface_antialias = CELL_GCM_SURFACE_CENTER_1;
+//	r.m_surface_color_format = (u8)s_rescInternalInstance->m_pRescDsts->format;
+	rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET] = (!isMrt) ? CELL_GCM_SURFACE_TARGET_0 : CELL_GCM_SURFACE_TARGET_MRT1;
+	//surface.colorLocation[0] = CELL_GCM_LOCATION_LOCAL;
+	rsx::method_registers[NV4097_SET_SURFACE_COLOR_AOFFSET] = dstOffset0;
+	rsx::method_registers[NV4097_SET_SURFACE_PITCH_A] = s_rescInternalInstance->m_dstPitch;
+	//surface.colorLocation[1] = CELL_GCM_LOCATION_LOCAL;
+	rsx::method_registers[NV4097_SET_SURFACE_COLOR_BOFFSET] = (!isMrt) ? 0 : dstOffset1;
+	rsx::method_registers[NV4097_SET_SURFACE_PITCH_B] = (!isMrt) ? 64 : s_rescInternalInstance->m_dstPitch;
+	//surface.colorLocation[2] = CELL_GCM_LOCATION_LOCAL;
+	rsx::method_registers[NV4097_SET_SURFACE_COLOR_COFFSET] = 0;
+	rsx::method_registers[NV4097_SET_SURFACE_PITCH_C] = 64;
+	//surface.colorLocation[3] = CELL_GCM_LOCATION_LOCAL;
+	rsx::method_registers[NV4097_SET_SURFACE_COLOR_DOFFSET] = 0;
+	rsx::method_registers[NV4097_SET_SURFACE_PITCH_D] = 64;
+//	r.m_surface_depth_format = CELL_GCM_SURFACE_Z24S8;
+	//surface.depthLocation = CELL_GCM_LOCATION_LOCAL;
+	rsx::method_registers[NV4097_SET_SURFACE_ZETA_OFFSET];
+	rsx::method_registers[NV4097_SET_SURFACE_PITCH_Z] = 64;
+//	r.m_surface_width = s_rescInternalInstance->m_dstWidth;
+//	r.m_surface_height = s_rescInternalInstance->m_dstHeight;
+//	r.m_surface_clip_x = 0;
+//	r.m_surface_clip_y = 0;
 }
 
 // Module<> Functions
@@ -1142,7 +1139,7 @@ u16 FloatToHalf(float val)
 	return ((s >> 16) & 0x8000) | ((e << 10) & 0x7c00) | ((m >> 13) & 0x03ff);
 }
 
-static void blackman(float (&window)[4])
+static void blackman(float window[])
 {
 	const float x0 = ((1.f * 2.f*PI) / 5.f) - PI;
 	const float x1 = ((2.f * 2.f*PI) / 5.f) - PI;

@@ -989,11 +989,17 @@
     <ClCompile Include="..\Utilities\SharedMutex.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\RSX\GL\gl_helpers.cpp">
-      <Filter>Emu\GPU\RSX\GL</Filter>
+    <ClCompile Include="Emu\RSX\Common\TextureUtils.cpp">
+      <Filter>Emu\GPU\RSX\Common</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\Common\BufferUtils.cpp">
+      <Filter>Emu\GPU\RSX\Common</Filter>
     </ClCompile>
     <ClCompile Include="Emu\RSX\Null\NullGSRender.cpp">
       <Filter>Emu\GPU\RSX\Null</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\GL\gl_helpers.cpp">
+      <Filter>Emu\GPU\RSX\GL</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1888,11 +1894,17 @@
     <ClInclude Include="Emu\RSX\D3D12\d3dx12.h">
       <Filter>Emu\GPU\RSX\D3D12</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\RSX\GL\gl_helpers.h">
-      <Filter>Emu\GPU\RSX\GL</Filter>
+    <ClInclude Include="Emu\RSX\Common\TextureUtils.h">
+      <Filter>Emu\GPU\RSX\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Common\BufferUtils.h">
+      <Filter>Emu\GPU\RSX\Common</Filter>
     </ClInclude>
     <ClInclude Include="..\Utilities\types.h">
       <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\GL\gl_helpers.h">
+      <Filter>Emu\GPU\RSX\GL</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
