@@ -300,6 +300,7 @@ namespace fmt
 	std::vector<std::string> rSplit(const std::string& source, const std::string& delim);
 
 	std::vector<std::string> split(const std::string& source, std::initializer_list<std::string> separators, bool is_skip_empty = true);
+	std::string trim(const std::string& source, const std::string& values = " \t");
 
 	template<typename T>
 	std::string merge(const T& source, const std::string& separator)

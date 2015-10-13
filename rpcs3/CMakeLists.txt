@@ -139,6 +139,7 @@ file(
 GLOB_RECURSE
 RPCS3_SRC
 "${RPCS3_SRC_DIR}/rpcs3.cpp"
+"${RPCS3_SRC_DIR}/config.cpp"
 "${RPCS3_SRC_DIR}/Ini.cpp"
 "${RPCS3_SRC_DIR}/../Utilities/GNU.cpp"
 "${RPCS3_SRC_DIR}/Emu/*"

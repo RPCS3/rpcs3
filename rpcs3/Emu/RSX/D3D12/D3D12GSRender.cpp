@@ -8,6 +8,7 @@
 #include <chrono>
 #include "d3dx12.h"
 #include <d3d11on12.h>
+#include "Emu/state.h"
 
 PFN_D3D12_CREATE_DEVICE wrapD3D12CreateDevice;
 PFN_D3D12_GET_DEBUG_INTERFACE wrapD3D12GetDebugInterface;
@@ -299,12 +300,12 @@ bool D3D12GSRender::domethod(u32 cmd, u32 arg)
 		clear_surface(arg);
 		return true;
 	case NV4097_TEXTURE_READ_SEMAPHORE_RELEASE:
-		semaphore_PGRAPH_texture_read_release(label_addr + rsx::method_registers[NV4097_SET_SEMAPHORE_OFFSET], arg);
-		return true;
+		semaphore_PGRAPH_texture_read_release();
+		return false; //call rsx::thread method implementation
 	case NV4097_BACK_END_WRITE_SEMAPHORE_RELEASE:
-		semaphore_PGRAPH_backend_release(label_addr + rsx::method_registers[NV4097_SET_SEMAPHORE_OFFSET],
-			(arg & 0xff00ff00) | ((arg & 0xff) << 16) | ((arg >> 16) & 0xff));
-		return true;;
+		semaphore_PGRAPH_backend_release();
+		return false; //call rsx::thread method implementation
+
 	default:
 		return false;
 	}
@@ -897,12 +898,12 @@ void copyToCellRamAndRelease(void *dstAddress, ID3D12Resource *res, size_t dstPi
 	res->Release();
 }
 
-void D3D12GSRender::semaphore_PGRAPH_texture_read_release(u32 offset, u32 value)
+void D3D12GSRender::semaphore_PGRAPH_texture_read_release()
 {
-	semaphore_PGRAPH_backend_release(offset, value);
+	semaphore_PGRAPH_backend_release();
 }
 
-void D3D12GSRender::semaphore_PGRAPH_backend_release(u32 offset, u32 value)
+void D3D12GSRender::semaphore_PGRAPH_backend_release()
 {
 	// Add all buffer write
 	// Cell can't make any assumption about readyness of color/depth buffer
@@ -928,10 +929,10 @@ void D3D12GSRender::semaphore_PGRAPH_backend_release(u32 offset, u32 value)
 	u32 m_context_dma_color_d = rsx::method_registers[NV4097_SET_CONTEXT_DMA_COLOR_D];
 	u32 m_context_dma_z = rsx::method_registers[NV4097_SET_CONTEXT_DMA_ZETA];
 
-	bool needTransfer = (m_context_dma_z && Ini.GSDumpDepthBuffer.GetValue()) ||
-		((m_context_dma_color_a || m_context_dma_color_b || m_context_dma_color_c || m_context_dma_color_d) && Ini.GSDumpColorBuffers.GetValue());
+	bool needTransfer = (m_context_dma_z && rpcs3::state.config.rsx.opengl.write_depth_buffer) ||
+		((m_context_dma_color_a || m_context_dma_color_b || m_context_dma_color_c || m_context_dma_color_d) && rpcs3::state.config.rsx.opengl.write_color_buffers);
 
-	if (m_context_dma_z && Ini.GSDumpDepthBuffer.GetValue())
+	if (m_context_dma_z && rpcs3::state.config.rsx.opengl.write_depth_buffer)
 	{
 		size_t sizeInByte = clip_w * clip_h * 2;
 		assert(m_UAVHeap.canAlloc(sizeInByte));
@@ -1016,7 +1017,7 @@ void D3D12GSRender::semaphore_PGRAPH_backend_release(u32 offset, u32 value)
 	}
 
 	ID3D12Resource *rtt0, *rtt1, *rtt2, *rtt3;
-	if (Ini.GSDumpColorBuffers.GetValue())
+	if (rpcs3::state.config.rsx.opengl.write_color_buffers)
 	{
 		switch (rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET])
 		{
@@ -1067,7 +1068,7 @@ void D3D12GSRender::semaphore_PGRAPH_backend_release(u32 offset, u32 value)
 	WaitForSingleObject(handle, INFINITE);
 	CloseHandle(handle);
 
-	if (m_context_dma_z && Ini.GSDumpDepthBuffer.GetValue())
+	if (m_context_dma_z && rpcs3::state.config.rsx.opengl.write_depth_buffer)
 	{
 		u32 address = rsx::get_address(rsx::method_registers[NV4097_SET_SURFACE_ZETA_OFFSET], m_context_dma_z - 0xfeed0000);
 		auto ptr = vm::get_ptr<void>(address);
@@ -1101,7 +1102,7 @@ void D3D12GSRender::semaphore_PGRAPH_backend_release(u32 offset, u32 value)
 		break;
 	}
 
-	if (Ini.GSDumpColorBuffers.GetValue())
+	if (rpcs3::state.config.rsx.opengl.write_color_buffers)
 	{
 		switch (rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET])
 		{
@@ -1162,7 +1163,5 @@ void D3D12GSRender::semaphore_PGRAPH_backend_release(u32 offset, u32 value)
 		break;
 		}
 	}
-
-	vm::ps3::write32(offset, value);
 }
 #endif

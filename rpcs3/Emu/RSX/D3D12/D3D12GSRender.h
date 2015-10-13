@@ -456,8 +456,8 @@ public:
 	D3D12GSRender();
 	virtual ~D3D12GSRender();
 
-	void semaphore_PGRAPH_texture_read_release(u32 offset, u32 value);
-	void semaphore_PGRAPH_backend_release(u32 offset, u32 value);
+	void semaphore_PGRAPH_texture_read_release();
+	void semaphore_PGRAPH_backend_release();
 
 private:
 	void InitD2DStructures();

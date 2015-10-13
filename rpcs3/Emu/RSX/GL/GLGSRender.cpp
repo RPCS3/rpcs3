@@ -6,6 +6,7 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "GLGSRender.h"
+#include "Emu/state.h"
 
 #define DUMP_VERTEX_DATA 0
 
@@ -1161,23 +1162,11 @@ void nv4097_clear_surface(u32 arg, GLGSRender* renderer)
 	renderer->draw_fbo.clear((gl::buffers)mask);
 }
 
-static void nv4097_texture_read_semaphore_release(u32 arg, GLGSRender* render)
-{
-	vm::ps3::write32(render->label_addr + rsx::method_registers[NV4097_SET_SEMAPHORE_OFFSET], arg);
-}
-
-static void nv4097_backend_write_semaphore_release(u32 arg, GLGSRender* render)
-{
-	vm::ps3::write32(render->label_addr + rsx::method_registers[NV4097_SET_SEMAPHORE_OFFSET], (arg & 0xff00ff00) | ((arg & 0xff) << 16) | ((arg >> 16) & 0xff));
-}
-
 using rsx_method_impl_t = void(*)(u32, GLGSRender*);
 
 static const std::unordered_map<u32, rsx_method_impl_t> g_gl_method_tbl =
 {
-	{ NV4097_CLEAR_SURFACE, nv4097_clear_surface },
-	{ NV4097_TEXTURE_READ_SEMAPHORE_RELEASE, nv4097_texture_read_semaphore_release },
-	{ NV4097_BACK_END_WRITE_SEMAPHORE_RELEASE, nv4097_backend_write_semaphore_release },
+	{ NV4097_CLEAR_SURFACE, nv4097_clear_surface }
 };
 
 bool GLGSRender::domethod(u32 cmd, u32 arg)
@@ -1536,7 +1525,7 @@ void GLGSRender::read_buffers()
 
 	glDisable(GL_STENCIL_TEST);
 
-	if (Ini.GSReadColorBuffers.GetValue())
+	if (rpcs3::state.config.rsx.opengl.read_color_buffers)
 	{
 		auto color_format = surface_color_format_to_gl(m_surface.color_format);
 
@@ -1576,7 +1565,7 @@ void GLGSRender::read_buffers()
 		}
 	}
 
-	if (Ini.GSReadDepthBuffer.GetValue())
+	if (rpcs3::state.config.rsx.opengl.read_depth_buffer)
 	{
 		auto depth_format = surface_depth_format_to_gl(m_surface.depth_format);
 
@@ -1618,7 +1607,7 @@ void GLGSRender::write_buffers()
 	if (!draw_fbo)
 		return;
 
-	if (Ini.GSDumpColorBuffers.GetValue())
+	if (rpcs3::state.config.rsx.opengl.write_color_buffers)
 	{
 		//gl::buffer pbo_color;
 		//__glcheck pbo_color.create(m_draw_tex_color[0].width() * m_draw_tex_color[0].height() * 4);
@@ -1678,7 +1667,7 @@ void GLGSRender::write_buffers()
 		}
 	}
 
-	if (Ini.GSDumpDepthBuffer.GetValue())
+	if (rpcs3::state.config.rsx.opengl.write_depth_buffer)
 	{
 		auto depth_format = surface_depth_format_to_gl(m_surface.depth_format);
 
@@ -1725,7 +1714,7 @@ void GLGSRender::flip(int buffer)
 	u32 buffer_address = rsx::get_address(gcm_buffers[buffer].offset, CELL_GCM_LOCATION_LOCAL);
 	bool skip_read = false;
 
-	if (draw_fbo && !Ini.GSDumpColorBuffers.GetValue())
+	if (draw_fbo && !rpcs3::state.config.rsx.opengl.write_color_buffers)
 	{
 		skip_read = true;
 		/*
