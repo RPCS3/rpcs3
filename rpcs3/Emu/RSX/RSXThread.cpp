@@ -105,54 +105,78 @@ namespace rsx
 		}
 
 		template<u32 index>
-		force_inline void set_vertex_data4ub_m(thread* rsx, u32 arg)
+		struct set_vertex_data4ub_m
 		{
-			set_vertex_data_impl<NV4097_SET_VERTEX_DATA4UB_M, index, 4, u8>(rsx, arg);
-		}
+			force_inline static void impl(thread* rsx, u32 arg)
+			{
+				set_vertex_data_impl<NV4097_SET_VERTEX_DATA4UB_M, index, 4, u8>(rsx, arg);
+			}
+		};
 
 		template<u32 index>
-		force_inline void set_vertex_data1f_m(thread* rsx, u32 arg)
+		struct set_vertex_data1f_m
 		{
-			set_vertex_data_impl<NV4097_SET_VERTEX_DATA1F_M, index, 1, f32>(rsx, arg);
-		}
+			force_inline static void impl(thread* rsx, u32 arg)
+			{
+				set_vertex_data_impl<NV4097_SET_VERTEX_DATA1F_M, index, 1, f32>(rsx, arg);
+			}
+		};
 
 		template<u32 index>
-		force_inline void set_vertex_data2f_m(thread* rsx, u32 arg)
+		struct set_vertex_data2f_m
 		{
-			set_vertex_data_impl<NV4097_SET_VERTEX_DATA1F_M, index, 2, f32>(rsx, arg);
-		}
+			force_inline static void impl(thread* rsx, u32 arg)
+			{
+				set_vertex_data_impl<NV4097_SET_VERTEX_DATA1F_M, index, 2, f32>(rsx, arg);
+			}
+		};
 
 		template<u32 index>
-		force_inline void set_vertex_data3f_m(thread* rsx, u32 arg)
+		struct set_vertex_data3f_m
 		{
-			set_vertex_data_impl<NV4097_SET_VERTEX_DATA1F_M, index, 3, f32>(rsx, arg);
-		}
+			force_inline static void impl(thread* rsx, u32 arg)
+			{
+				set_vertex_data_impl<NV4097_SET_VERTEX_DATA1F_M, index, 3, f32>(rsx, arg);
+			}
+		};
 
 		template<u32 index>
-		force_inline void set_vertex_data4f_m(thread* rsx, u32 arg)
+		struct set_vertex_data4f_m
 		{
-			set_vertex_data_impl<NV4097_SET_VERTEX_DATA1F_M, index, 4, f32>(rsx, arg);
-		}
+			force_inline static void impl(thread* rsx, u32 arg)
+			{
+				set_vertex_data_impl<NV4097_SET_VERTEX_DATA1F_M, index, 4, f32>(rsx, arg);
+			}
+		};
 
 		template<u32 index>
-		force_inline void set_vertex_data2s_m(thread* rsx, u32 arg)
+		struct set_vertex_data2s_m
 		{
-			set_vertex_data_impl<NV4097_SET_VERTEX_DATA2S_M, index, 2, u16>(rsx, arg);
-		}
+			force_inline static void impl(thread* rsx, u32 arg)
+			{
+				set_vertex_data_impl<NV4097_SET_VERTEX_DATA2S_M, index, 2, u16>(rsx, arg);
+			}
+		};
 
 		template<u32 index>
-		force_inline void set_vertex_data4s_m(thread* rsx, u32 arg)
+		struct set_vertex_data4s_m
 		{
-			set_vertex_data_impl<NV4097_SET_VERTEX_DATA4S_M, index, 4, u16>(rsx, arg);
-		}
+			force_inline static void impl(thread* rsx, u32 arg)
+			{
+				set_vertex_data_impl<NV4097_SET_VERTEX_DATA4S_M, index, 4, u16>(rsx, arg);
+			}
+		};
 
 		template<u32 index>
-		force_inline void set_vertex_data_array_format(thread* rsx, u32 arg)
+		struct set_vertex_data_array_format
 		{
-			auto& info = rsx->vertex_arrays_info[index];
-			info.unpack(arg);
-			info.array = info.size > 0;
-		}
+			force_inline static void impl(thread* rsx, u32 arg)
+			{
+				auto& info = rsx->vertex_arrays_info[index];
+				info.unpack(arg);
+				info.array = info.size > 0;
+			}
+		};
 
 		force_inline void draw_arrays(thread* rsx, u32 arg)
 		{
@@ -172,26 +196,32 @@ namespace rsx
 		}
 
 		template<u32 index>
-		force_inline void set_transform_constant(thread* rsxthr, u32 arg)
+		struct set_transform_constant
 		{
-			u32& load = method_registers[NV4097_SET_TRANSFORM_CONSTANT_LOAD];
+			force_inline static void impl(thread* rsxthr, u32 arg)
+			{
+				u32& load = method_registers[NV4097_SET_TRANSFORM_CONSTANT_LOAD];
 
-			static const size_t count = 4;
-			static const size_t size = count * sizeof(f32);
+				static const size_t count = 4;
+				static const size_t size = count * sizeof(f32);
 
-			memcpy(rsxthr->transform_constants[load++].rgba, method_registers + NV4097_SET_TRANSFORM_CONSTANT + index * count, size);
-		}
+				memcpy(rsxthr->transform_constants[load++].rgba, method_registers + NV4097_SET_TRANSFORM_CONSTANT + index * count, size);
+			}
+		};
 
 		template<u32 index>
-		force_inline void set_transform_program(thread* rsx, u32 arg)
+		struct set_transform_program
 		{
-			u32& load = method_registers[NV4097_SET_TRANSFORM_PROGRAM_LOAD];
+			force_inline static void impl(thread* rsx, u32 arg)
+			{
+				u32& load = method_registers[NV4097_SET_TRANSFORM_PROGRAM_LOAD];
 
-			static const size_t count = 4;
-			static const size_t size = count * sizeof(u32);
+				static const size_t count = 4;
+				static const size_t size = count * sizeof(u32);
 
-			memcpy(rsx->transform_program + load++ * count, method_registers + NV4097_SET_TRANSFORM_PROGRAM + index * count, size);
-		}
+				memcpy(rsx->transform_program + load++ * count, method_registers + NV4097_SET_TRANSFORM_PROGRAM + index * count, size);
+			}
+		};
 
 		force_inline void set_begin_end(thread* rsx, u32 arg)
 		{
@@ -291,20 +321,23 @@ namespace rsx
 	namespace nv308a
 	{
 		template<u32 index>
-		force_inline void color(u32 arg)
+		struct color
 		{
-			u32 point = method_registers[NV308A_POINT];
-			u16 x = point;
-			u16 y = point >> 16;
-
-			if (y)
+			force_inline static void impl(u32 arg)
 			{
-				LOG_ERROR(RSX, "%s: y is not null (0x%x)", __FUNCTION__, y);
-			}
+				u32 point = method_registers[NV308A_POINT];
+				u16 x = point;
+				u16 y = point >> 16;
 
-			u32 address = get_address(method_registers[NV3062_SET_OFFSET_DESTIN] + (x << 2) + index * 4, method_registers[NV3062_SET_CONTEXT_DMA_IMAGE_DESTIN]);
-			vm::write32(address, arg);
-		}
+				if (y)
+				{
+					LOG_ERROR(RSX, "%s: y is not null (0x%x)", __FUNCTION__, y);
+				}
+
+				u32 address = get_address(method_registers[NV3062_SET_OFFSET_DESTIN] + (x << 2) + index * 4, method_registers[NV3062_SET_CONTEXT_DMA_IMAGE_DESTIN]);
+				vm::write32(address, arg);
+			}
+		};
 	}
 
 	namespace nv3089
@@ -585,22 +618,29 @@ namespace rsx
 				call_impl_func<impl_func>(rsx, arg);
 		}
 
-		/*
-		template<int id, int step, template<u32> class T, T impl_func = nullptr, int limit = 0>
-		static void bind_impl()
+		template<int id, int step, int count, template<u32> class T, int index = 0>
+		struct bind_range_impl_t
 		{
-		bind<id, impl_func<id>>();
+			force_inline static void impl()
+			{
+				bind_range_impl_t<id + step, step, count, T, index + 1>::impl();
+				bind<id, T<id>::impl>();
+			}
+		};
 
-		if (id + step < limit)
-		bind_impl<id + step, step, T, impl_func, limit>();
+		template<int id, int step, int count, template<u32> class T>
+		struct bind_range_impl_t<id, step, count, T, count>
+		{
+			force_inline static void impl()
+			{
+			}
+		};
+
+		template<int id, int step, int count, template<u32> class T, int index = 0>
+		force_inline static void bind_range()
+		{
+			bind_range_impl_t<id, step, count, T, index>::impl();
 		}
-
-		template<int id, int step, int count, template<u32> class rsx_impl_method_t impl_func = nullptr>
-		static void bind() { bind_impl<id, step, rsx_impl_method_t, impl_func, id + step * count>(); }
-
-		template<int id, int step, int count, template<u32> class rsx_method_t impl_func = nullptr>
-		static void bind() { bind_impl<id, step, rsx_method_t, impl_func, id + step * count>(); }
-		*/
 
 		template<int id, typename T, T impl_func>
 		static void bind_impl()
@@ -632,42 +672,6 @@ namespace rsx
 		//do not try process on gpu
 		template<int id, rsx_method_t impl_func = nullptr> static void bind_cpu_only() { bind_cpu_only_impl<id, rsx_method_t, impl_func>(); }
 
-#define bind_2(index, offset, step, func) \
-		bind<offset, func<index>>(); \
-		bind<offset + step, func<index + 1>>()
-
-#define bind_4(index, offset, step, func) \
-		bind_2(index, offset, step, func); \
-		bind_2(index + 2, offset + 2*step, step, func)
-
-#define bind_8(index, offset, step, func) \
-		bind_4(index, offset, step, func); \
-		bind_4(index + 4, offset + 4*step, step, func)
-
-#define bind_16(index, offset, step, func) \
-		bind_8(index, offset, step, func); \
-		bind_8(index + 8, offset + 8*step, step, func)
-
-#define bind_32(index, offset, step, func) \
-		bind_16(index, offset, step, func); \
-		bind_16(index + 16, offset + 16*step, step, func)
-
-#define bind_64(index, offset, step, func) \
-		bind_32(index, offset, step, func); \
-		bind_32(index + 32, offset + 32*step, step, func)
-
-#define bind_128(index, offset, step, func) \
-		bind_64(index, offset, step, func); \
-		bind_64(index + 64, offset + 64*step, step, func)
-
-#define bind_256(index, offset, step, func) \
-		bind_128(index, offset, step, func); \
-		bind_128(index + 128, offset + 128*step, step, func)
-
-#define bind_512(index, offset, step, func) \
-		bind_256(index, offset, step, func); \
-		bind_256(index + 256, offset + 256*step, step, func)
-
 		__rsx_methods_t()
 		{
 			// NV406E
@@ -682,22 +686,21 @@ namespace rsx
 			bind<NV4097_CLEAR_SURFACE>();
 			bind<NV4097_DRAW_ARRAYS, nv4097::draw_arrays>();
 			bind<NV4097_DRAW_INDEX_ARRAY, nv4097::draw_index_array>();
-			//bind<NV4097_SET_VERTEX_DATA4UB_M, 1, 16, nv4097::set_vertex_data4ub_m>();
-			bind_16(0, NV4097_SET_VERTEX_DATA_ARRAY_FORMAT, 1, nv4097::set_vertex_data_array_format);
-			bind_16(0, NV4097_SET_VERTEX_DATA4UB_M, 1, nv4097::set_vertex_data4ub_m);
-			bind_16(0, NV4097_SET_VERTEX_DATA1F_M, 1, nv4097::set_vertex_data1f_m);
-			bind_16(0, NV4097_SET_VERTEX_DATA2F_M + 1, 2, nv4097::set_vertex_data2f_m);
-			bind_16(0, NV4097_SET_VERTEX_DATA3F_M + 2, 3, nv4097::set_vertex_data3f_m);
-			bind_16(0, NV4097_SET_VERTEX_DATA4F_M + 3, 4, nv4097::set_vertex_data4f_m);
-			bind_16(0, NV4097_SET_VERTEX_DATA2S_M, 1, nv4097::set_vertex_data2s_m);
-			bind_16(0, NV4097_SET_VERTEX_DATA4S_M + 1, 2, nv4097::set_vertex_data4s_m);
-			bind_8(0, NV4097_SET_TRANSFORM_CONSTANT + 3, 4, nv4097::set_transform_constant);
-			bind_128(0, NV4097_SET_TRANSFORM_PROGRAM + 3, 4, nv4097::set_transform_program);
+			bind_range<NV4097_SET_VERTEX_DATA_ARRAY_FORMAT, 1, 16, nv4097::set_vertex_data_array_format>();
+			bind_range<NV4097_SET_VERTEX_DATA4UB_M, 1, 16, nv4097::set_vertex_data4ub_m>();
+			bind_range<NV4097_SET_VERTEX_DATA1F_M, 1, 16, nv4097::set_vertex_data1f_m>();
+			bind_range<NV4097_SET_VERTEX_DATA2F_M + 1, 2, 16, nv4097::set_vertex_data2f_m>();
+			bind_range<NV4097_SET_VERTEX_DATA3F_M + 2, 3, 16, nv4097::set_vertex_data3f_m>();
+			bind_range<NV4097_SET_VERTEX_DATA4F_M + 3, 4, 16, nv4097::set_vertex_data4f_m>();
+			bind_range<NV4097_SET_VERTEX_DATA2S_M, 1, 16, nv4097::set_vertex_data2s_m>();
+			bind_range<NV4097_SET_VERTEX_DATA4S_M + 1, 2, 16, nv4097::set_vertex_data4s_m>();
+			bind_range<NV4097_SET_TRANSFORM_CONSTANT + 3, 4, 8, nv4097::set_transform_constant>();
+			bind_range<NV4097_SET_TRANSFORM_PROGRAM + 3, 4, 128, nv4097::set_transform_program>();
 			bind_cpu_only<NV4097_GET_REPORT, nv4097::get_report>();
 			bind_cpu_only<NV4097_CLEAR_REPORT_VALUE, nv4097::clear_report_value>();
 
 			//NV308A
-			bind_512(0, NV308A_COLOR, 1, nv308a::color);
+			bind_range<NV308A_COLOR, 1, 512, nv308a::color>();
 
 			//NV3089
 			bind<NV3089_IMAGE_IN, nv3089::image_in>();
