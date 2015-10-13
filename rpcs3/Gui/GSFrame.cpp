@@ -23,6 +23,7 @@ GSFrame::GSFrame(const wxString& title) : wxFrame(nullptr, wxID_ANY, "GSFrame[" 
 	SetClientSize(res.width, res.height);
 	wxGetApp().Bind(wxEVT_KEY_DOWN, &GSFrame::OnKeyDown, this);
 	Bind(wxEVT_CLOSE_WINDOW, &GSFrame::OnClose, this);
+	Bind(wxEVT_LEFT_DCLICK, &GSFrame::OnLeftDclick, this);
 }
 
 void GSFrame::OnPaint(wxPaintEvent& event)
