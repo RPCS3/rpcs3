@@ -968,14 +968,8 @@ void GLGSRender::end()
 #endif
 	}
 
-	gl::vao vao;
-	vao.create();
-
-	gl::buffer vbo;
-	vbo.create(vertex_arrays_data.size(), vertex_arrays_data.data());
-
-	vao.array_buffer = vbo;
-	vao.bind();
+	m_vbo.data(vertex_arrays_data.size(), vertex_arrays_data.data());
+	m_vao.bind();
 
 	for (int index = 0; index < rsx::limits::vertex_count; ++index)
 	{
@@ -1008,7 +1002,7 @@ void GLGSRender::end()
 		if (vertex_info.array)
 		{
 			__glcheck m_program.attribs[location] =
-				(vao + vertex_arrays_offsets[index])
+				(m_vao + vertex_arrays_offsets[index])
 				.config(gl_types[vertex_info.type], vertex_info.size, gl_normalized[vertex_info.type]);
 		}
 		else
@@ -1036,13 +1030,11 @@ void GLGSRender::end()
 
 	if (vertex_index_array.empty())
 	{
-		draw_fbo.draw_arrays(gl::draw_mode(draw_mode - 1), vertex_draw_count);\
+		draw_fbo.draw_arrays(gl::draw_mode(draw_mode - 1), vertex_draw_count);
 	}
 	else
 	{
-		gl::buffer index_buffer;
-		index_buffer.create(vertex_index_array.size(), vertex_index_array.data());
-		vao.element_array_buffer = index_buffer;
+		m_ebo.data(vertex_index_array.size(), vertex_index_array.data());
 
 		u32 indexed_type = rsx::method_registers[NV4097_SET_INDEX_ARRAY_DMA] >> 4;
 
@@ -1065,6 +1057,12 @@ void GLGSRender::oninit_thread()
 	LOG_NOTICE(Log::RSX, (const char*)glGetString(GL_VENDOR));
 
 	glEnable(GL_VERTEX_PROGRAM_POINT_SIZE);
+	m_vao.create();
+	m_vbo.create();
+	m_ebo.create();
+
+	m_vao.array_buffer = m_vbo;
+	m_vao.element_array_buffer = m_ebo;
 }
 
 void GLGSRender::onexit_thread()
@@ -1088,6 +1086,15 @@ void GLGSRender::onexit_thread()
 
 	if (m_flip_tex_color)
 		m_flip_tex_color.remove();
+
+	if (m_vbo)
+		m_vbo.remove();
+
+	if (m_ebo)
+		m_ebo.remove();
+
+	if (m_vao)
+		m_vao.remove();
 }
 
 void nv4097_clear_surface(u32 arg, GLGSRender* renderer)
