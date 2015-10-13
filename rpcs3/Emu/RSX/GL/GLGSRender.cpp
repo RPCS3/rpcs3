@@ -1162,23 +1162,11 @@ void nv4097_clear_surface(u32 arg, GLGSRender* renderer)
 	renderer->draw_fbo.clear((gl::buffers)mask);
 }
 
-static void nv4097_texture_read_semaphore_release(u32 arg, GLGSRender* render)
-{
-	vm::ps3::write32(render->label_addr + rsx::method_registers[NV4097_SET_SEMAPHORE_OFFSET], arg);
-}
-
-static void nv4097_backend_write_semaphore_release(u32 arg, GLGSRender* render)
-{
-	vm::ps3::write32(render->label_addr + rsx::method_registers[NV4097_SET_SEMAPHORE_OFFSET], (arg & 0xff00ff00) | ((arg & 0xff) << 16) | ((arg >> 16) & 0xff));
-}
-
 using rsx_method_impl_t = void(*)(u32, GLGSRender*);
 
 static const std::unordered_map<u32, rsx_method_impl_t> g_gl_method_tbl =
 {
-	{ NV4097_CLEAR_SURFACE, nv4097_clear_surface },
-	{ NV4097_TEXTURE_READ_SEMAPHORE_RELEASE, nv4097_texture_read_semaphore_release },
-	{ NV4097_BACK_END_WRITE_SEMAPHORE_RELEASE, nv4097_backend_write_semaphore_release },
+	{ NV4097_CLEAR_SURFACE, nv4097_clear_surface }
 };
 
 bool GLGSRender::domethod(u32 cmd, u32 arg)

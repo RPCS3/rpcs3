@@ -68,13 +68,14 @@ namespace rsx
 		force_inline void texture_read_semaphore_release(thread* rsx, u32 arg)
 		{
 			//TODO: dma
-			rsx->domethod(NV4097_TEXTURE_READ_SEMAPHORE_RELEASE, arg);
+			vm::write32(rsx->label_addr + method_registers[NV4097_SET_SEMAPHORE_OFFSET], arg);
 		}
 
 		force_inline void back_end_write_semaphore_release(thread* rsx, u32 arg)
 		{
 			//TODO: dma
-			rsx->domethod(NV4097_BACK_END_WRITE_SEMAPHORE_RELEASE, arg);
+			vm::write32(rsx->label_addr + method_registers[NV4097_SET_SEMAPHORE_OFFSET],
+				(arg & 0xff00ff00) | ((arg & 0xff) << 16) | ((arg >> 16) & 0xff));
 		}
 
 		//fire only when all data passed to rsx cmd buffer
