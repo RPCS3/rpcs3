@@ -11,7 +11,7 @@
 #include "Emu/SysCalls/Modules/cellVideoOut.h"
 #include "Emu/RSX/GSManager.h"
 #include "Emu/RSX/GSRender.h"
-//#include "Emu/RSX/GCM.h"
+#include "Emu/RSX/GCM.h"
 
 #include "MemoryViewer.h"
 
@@ -840,20 +840,8 @@ wxString RSXDebugger::DisAsmCommand(u32 cmd, u32 count, u32 currentAddr, u32 ioA
 		auto args = vm::ps3::ptr<u32>::make(currentAddr + 4);
 
 		u32 index = 0;
-		switch(cmd & 0x3ffff)
+		switch((cmd & 0x3ffff) >> 2)
 		{
-		case NV406E_SEMAPHORE_OFFSET:
-			DISASM("PFIFO: Semaphore offset 0x%x", (u32)args[0]);
-			break;
-
-		case NV406E_SEMAPHORE_ACQUIRE:
-			DISASM("PFIFO: Semaphore acquire at 0x%x", (u32)args[0]);
-			break;
-
-		case NV406E_SEMAPHORE_RELEASE:
-			DISASM("PFIFO: Semaphore release value 0x%x", (u32)args[0]);
-			break;
-
 		case NV4097_SET_SURFACE_FORMAT:
 		{
 			const u32 a0 = (u32)args[0];
@@ -923,122 +911,6 @@ wxString RSXDebugger::DisAsmCommand(u32 cmd, u32 count, u32 currentAddr, u32 ioA
 		}
 			break;
 
-		case NV4097_SET_SURFACE_COLOR_TARGET:
-			DISASM("Set surface color target");
-			break;
-
-		case NV4097_SET_SHADER_WINDOW:
-			DISASM("Set shader windows");
-			break;
-
-		case NV4097_SET_DEPTH_TEST_ENABLE:
-			DISASM("Set depth test enable");
-			break;
-
-		case NV4097_SET_DEPTH_FUNC:
-			DISASM("Set depth func");
-			break;
-
-		case NV4097_SET_ZSTENCIL_CLEAR_VALUE:
-			DISASM("Set ZSTENCIL clear value");
-			break;
-
-		case NV4097_CLEAR_SURFACE:
-			DISASM("Clear surface");
-			break;
-
-		case NV4097_SET_TRANSFORM_CONSTANT_LOAD:
-			DISASM("Set transform constant load");
-			break;
-
-		case NV4097_SET_VERTEX_DATA_ARRAY_FORMAT:
-			DISASM("Set vertex data array format");
-			break;
-
-		case NV4097_SET_VERTEX_DATA_ARRAY_OFFSET:
-			DISASM("Set vertex data array offset");
-			break;
-
-		case NV4097_SET_SHADER_PROGRAM:
-			DISASM("Set shader program");
-			break;
-
-		case NV4097_SET_VERTEX_ATTRIB_OUTPUT_MASK:
-			DISASM("Set vertex attrib output mask");
-			break;
-
-		case NV4097_SET_TEX_COORD_CONTROL:
-			DISASM("Set tex coord control");
-			break;
-
-		case NV4097_SET_TRANSFORM_PROGRAM_LOAD:
-			DISASM("Set transform program load");
-			break;
-
-		case NV4097_SET_TRANSFORM_PROGRAM:
-			DISASM("Set transform program");
-			break;
-
-		case NV4097_SET_VERTEX_ATTRIB_INPUT_MASK:
-			DISASM("Set vertex attrib input mask");
-			break;
-
-		case NV4097_SET_TRANSFORM_TIMEOUT:
-			DISASM("Set transform timeout");
-			break;
-
-		case NV4097_INVALIDATE_VERTEX_CACHE_FILE:
-			DISASM("Invalidate vertex cache file");
-			break;
-
-		case NV4097_SET_SHADER_CONTROL:
-			DISASM("Set shader control");
-			break;
-
-		case NV4097_SET_SEMAPHORE_OFFSET:
-			DISASM("PGRAPH: Set semaphore offset 0x%x", (u32)args[0]);
-			break;
-
-		case NV4097_BACK_END_WRITE_SEMAPHORE_RELEASE:
-			DISASM("PGRAPH: Back end write semaphore release %x", (u32)args[0]);
-			break;
-
-		case NV4097_SET_COLOR_MASK_MRT:
-			DISASM("Set color mask MRT");
-			break;
-
-		case NV4097_SET_TEXTURE_IMAGE_RECT:
-			DISASM("Set texture image rect");
-			break;
-
-		case NV4097_SET_TEXTURE_CONTROL3:
-			DISASM("Set texture control 3");
-			break;
-
-		case NV4097_SET_TEXTURE_CONTROL1:
-			DISASM("Set texture control 1");
-			break;
-
-		case NV4097_SET_TEXTURE_CONTROL0:
-			DISASM("Set texture control 0");
-			break;
-
-		case NV4097_SET_TEXTURE_ADDRESS:
-			DISASM("Set texture address");
-			break;
-
-		case NV4097_SET_TEXTURE_FILTER:
-			DISASM("Set texture filter");
-			break;
-
-		case NV4097_SET_BLEND_FUNC_SFACTOR:
-			DISASM("Set blend func sfactor");
-			break;
-
-		case NV4097_SET_FRONT_POLYGON_MODE:
-			DISASM("Set front polygon mode");
-			break;
-
 		case NV4097_SET_VIEWPORT_HORIZONTAL:
 		{
 			u32 m_viewport_x = (u32)args[0] & 0xffff;
@@ -1054,38 +926,6 @@ wxString RSXDebugger::DisAsmCommand(u32 cmd, u32 count, u32 currentAddr, u32 ioA
 				DISASM("Set viewport horizontal %d", m_viewport_w);
 			break;
 		}
-
-		case NV4097_SET_CLIP_MIN:
-			DISASM("Set clip min");
-			break;
-
-		case NV4097_SET_VIEWPORT_OFFSET:
-			DISASM("Set viewport offset");
-			break;
-
-		case NV4097_SET_SCISSOR_HORIZONTAL:
-			DISASM("Set scissor horizontal");
-			break;
-
-		case NV4097_INVALIDATE_L2:
-			DISASM("Invalidate L2");
-			break;
-
-		case NV4097_INVALIDATE_VERTEX_FILE:
-			DISASM("Invalidate vertex file");
-			break;
-
-		case NV4097_SET_BEGIN_END:
-			DISASM("Set BEGIN END");
-			break;
-
-		case NV4097_DRAW_ARRAYS:
-			DISASM("Draw arrays");
-			break;
-
-		case NV4097_SET_WINDOW_OFFSET:
-			DISASM("Set window offset");
-			break;
 
 		case NV4097_SET_SURFACE_CLIP_HORIZONTAL:
 		{
@@ -1114,10 +954,6 @@ wxString RSXDebugger::DisAsmCommand(u32 cmd, u32 count, u32 currentAddr, u32 ioA
 
 		case NV4097_NO_OPERATION:
 			DISASM("NOP");
-		break;
-
-		case NV406E_SET_REFERENCE:
-			DISASM("Set reference: 0x%x", (u32)args[0]);
 		break;
 
 		case_16(NV4097_SET_TEXTURE_OFFSET, 0x20):
@@ -1154,38 +990,11 @@ wxString RSXDebugger::DisAsmCommand(u32 cmd, u32 count, u32 currentAddr, u32 ioA
 		case NV4097_SET_DEPTH_BOUNDS_TEST_ENABLE:
 			DISASM(args[0] ? "Depth bounds test: Enable" : "Depth bounds test: Disable");
 		break;
-
-		case NV4097_SET_CONTEXT_DMA_COLOR_A:
-			DISASM("Context DMA Color A: 0x%x", (u32)args[0]);
-		break;
-
-		case NV4097_SET_CONTEXT_DMA_COLOR_B:
-			DISASM("Context DMA Color B: 0x%x", (u32)args[0]);
-		break;
-
-		case NV4097_SET_CONTEXT_DMA_COLOR_C:
-			DISASM("Context DMA Color C: 0x%x", (u32)args[0]);
-			if(count > 1)
-				DISASM("0x%x", (u32)args[1]);
-		break;
-
-		case NV4097_SET_CONTEXT_DMA_ZETA:
-			DISASM("Context DMA Zeta: 0x%x", (u32)args[0]);
-		break;
-
-		case NV4097_SET_SURFACE_PITCH_C:
-			DISASM("Surface Pitch C: 0x%x;", (u32)args[0]);
-			DISASM("Surface Pitch D: 0x%x;", (u32)args[1]);
-			DISASM("Surface Offset C: 0x%x;", (u32)args[2]);
-			DISASM("Surface Offset D: 0x%x", (u32)args[3]);
-		break;
-
-		case NV4097_SET_SURFACE_PITCH_Z:
-			DISASM("Surface Pitch Z: 0x%x;", (u32)args[0]);
-		break;
-
 		default:
-			break;
+		{
+			std::string str = rsx::get_method_name((cmd & 0x3ffff) >> 2);
+			DISASM("%s : 0x%x", str.c_str(), (u32)args[0]);
+		}
 		}
 
 		if(cmd & CELL_GCM_METHOD_FLAG_NON_INCREMENT)

@@ -1166,7 +1166,7 @@ using rsx_method_impl_t = void(*)(u32, GLGSRender*);
 
 static const std::unordered_map<u32, rsx_method_impl_t> g_gl_method_tbl =
 {
-	{ NV4097_CLEAR_SURFACE, nv4097_clear_surface },
+	{ NV4097_CLEAR_SURFACE, nv4097_clear_surface }
 };
 
 bool GLGSRender::domethod(u32 cmd, u32 arg)

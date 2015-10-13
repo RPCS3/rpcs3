@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#ifdef DX12_SUPPORT
 #include "BufferUtils.h"
 
 
@@ -13,20 +12,22 @@ bool overlaps(const std::pair<size_t, size_t> &range1, const std::pair<size_t, s
 	return !(range1.second < range2.first || range2.second < range1.first);
 }
 
-std::vector<VertexBufferFormat> FormatVertexData(const RSXVertexData *m_vertex_data, size_t *vertex_data_size, size_t base_offset)
+std::vector<VertexBufferFormat> FormatVertexData(const rsx::data_array_format_info *vertex_array_desc, const std::vector<u8> *vertex_data, size_t *vertex_data_size, size_t base_offset)
 {
 	std::vector<VertexBufferFormat> Result;
-	for (size_t i = 0; i < 32; ++i)
+	for (size_t i = 0; i < rsx::limits::vertex_count; ++i)
 	{
-		const RSXVertexData &vertexData = m_vertex_data[i];
-		if (!vertexData.IsEnabled()) continue;
+		const rsx::data_array_format_info &vertexData = vertex_array_desc[i];
+		if (!vertexData.size) continue;
 
-		size_t elementCount = ((vertexData.addr) ? vertex_data_size[i] : m_vertex_data[i].data.size()) / (vertexData.size * vertexData.GetTypeSize());
+		u32 addrRegVal = rsx::method_registers[NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + i];
+		u32 addr = rsx::get_address(addrRegVal & 0x7fffffff, addrRegVal >> 31);
+		size_t elementCount = ((vertexData.array) ? vertex_data_size[i] : vertex_data[i].size()) / (vertexData.size * rsx::get_vertex_type_size(vertexData.type));
 
 		// If there is a single element, stride is 0, use the size of element instead
 		size_t stride = vertexData.stride;
-		size_t elementSize = vertexData.GetTypeSize();
-		size_t start = vertexData.addr + base_offset;
+		size_t elementSize = rsx::get_vertex_type_size(vertexData.type);
+		size_t start = addr + base_offset;
 		size_t end = start + elementSize * vertexData.size + (elementCount - 1) * stride - 1;
 		std::pair<size_t, size_t> range = std::make_pair(start, end);
 		assert(start < end);
@@ -54,21 +55,24 @@ std::vector<VertexBufferFormat> FormatVertexData(const RSXVertexData *m_vertex_d
 	return Result;
 }
 
-void uploadVertexData(const VertexBufferFormat &vbf, const RSXVertexData *vertexData, size_t baseOffset, void* bufferMap)
+void uploadVertexData(const VertexBufferFormat &vbf, const rsx::data_array_format_info *vertex_array_desc, const std::vector<u8> *vertex_data, size_t baseOffset, void* bufferMap)
 {
 	for (int vertex = 0; vertex < vbf.elementCount; vertex++)
 	{
 		for (size_t attributeId : vbf.attributeId)
 		{
-			if (!vertexData[attributeId].addr)
+			u32 addrRegVal = rsx::method_registers[NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + attributeId];
+			u32 addr = rsx::get_address(addrRegVal & 0x7fffffff, addrRegVal >> 31);
+
+			if (!vertex_array_desc[attributeId].array)
 			{
-				memcpy(bufferMap, vertexData[attributeId].data.data(), vertexData[attributeId].data.size());
+				memcpy(bufferMap, vertex_data[attributeId].data(), vertex_data[attributeId].size());
 				continue;
 			}
-			size_t offset = (size_t)vertexData[attributeId].addr + baseOffset - vbf.range.first;
-			size_t tsize = vertexData[attributeId].GetTypeSize();
-			size_t size = vertexData[attributeId].size;
-			auto src = vm::get_ptr<const u8>(vertexData[attributeId].addr + (u32)baseOffset + (u32)vbf.stride * vertex);
+			size_t offset = (size_t)addr + baseOffset - vbf.range.first;
+			size_t tsize = rsx::get_vertex_type_size(vertex_array_desc[attributeId].type);
+			size_t size = vertex_array_desc[attributeId].size;
+			auto src = vm::get_ptr<const u8>(addr + (u32)baseOffset + (u32)vbf.stride * vertex);
 			char* dst = (char*)bufferMap + offset + vbf.stride * vertex;
 
 			switch (tsize)
@@ -245,4 +249,3 @@ void uploadIndexData(unsigned m_draw_mode, unsigned index_type, void* indexBuffe
 		}
 	}
 }
-#endif
