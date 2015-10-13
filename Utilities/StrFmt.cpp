@@ -208,6 +208,16 @@ std::vector<std::string> fmt::split(const std::string& source, std::initializer_
 	return std::move(result);
 }
 
+std::string fmt::trim(const std::string& source, const std::string& values)
+{
+	std::size_t begin = source.find_first_not_of(values);
+
+	if (begin == source.npos)
+		return{};
+
+	return source.substr(begin, source.find_last_not_of(values) + 1);
+}
+
 std::string fmt::tolower(std::string source)
 {
 	std::transform(source.begin(), source.end(), source.begin(), ::tolower);

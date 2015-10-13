@@ -1001,6 +1001,16 @@
     <ClCompile Include="Emu\RSX\GL\gl_helpers.cpp">
       <Filter>Emu\GPU\RSX\GL</Filter>
     </ClCompile>
+    <ClCompile Include="..\Utilities\config_context.cpp">
+      <Filter>Utilities</Filter>
+    </ClCompile>
+    <ClCompile Include="config.cpp" />
+    <ClCompile Include="Emu\events.cpp">
+      <Filter>Emu</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\state.cpp">
+      <Filter>Emu</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -1905,6 +1915,22 @@
     </ClInclude>
     <ClInclude Include="Emu\RSX\GL\gl_helpers.h">
       <Filter>Emu\GPU\RSX\GL</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utilities\config_context.h">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utilities\convert.h">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utilities\event.h">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="config.h" />
+    <ClInclude Include="Emu\events.h">
+      <Filter>Emu</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\state.h">
+      <Filter>Emu</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
