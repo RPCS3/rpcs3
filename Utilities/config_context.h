@@ -94,7 +94,7 @@ public:
 			value(convert::to<T>(new_value));
 		}
 
-		void value_from(const entry_base* rhs)
+		void value_from(const entry_base* rhs) override
 		{
 			value(static_cast<const entry*>(rhs)->value());
 		}
