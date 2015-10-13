@@ -1,4 +1,9 @@
 #include "stdafx.h"
+
+#include "config.h"
+#include "events.h"
+#include "state.h"
+
 #include "Utilities/Log.h"
 #include "Utilities/File.h"
 #include "rpcs3/Ini.h"
@@ -61,6 +66,8 @@ Emulator::Emulator()
 
 void Emulator::Init()
 {
+	rpcs3::config.load();
+	rpcs3::oninit();
 }
 
 void Emulator::SetPath(const std::string& path, const std::string& elf_path)
@@ -166,6 +173,9 @@ void Emulator::Load()
 		}
 	}
 
+	//TODO: load custom config if exists
+	rpcs3::state.config = rpcs3::config;
+
 	LOG_NOTICE(LOADER, "Loading '%s'...", m_path.c_str());
 	ResetInfo();
 	GetVFS().Init(elf_dir);
@@ -213,13 +223,17 @@ void Emulator::Load()
 	}
 
 	LOG_NOTICE(LOADER, "Resolution: %s", Ini.ResolutionIdToString(Ini.GSResolution.GetValue()));
-	LOG_NOTICE(LOADER, "Write Depth Buffer: %s", Ini.GSDumpDepthBuffer.GetValue() ? "Yes" : "No");
+	/*LOG_NOTICE(LOADER, "Write Depth Buffer: %s", Ini.GSDumpDepthBuffer.GetValue() ? "Yes" : "No");
 	LOG_NOTICE(LOADER, "Write Color Buffers: %s", Ini.GSDumpColorBuffers.GetValue() ? "Yes" : "No");
 	LOG_NOTICE(LOADER, "Read Color Buffers: %s", Ini.GSReadColorBuffers.GetValue() ? "Yes" : "No");
-	LOG_NOTICE(LOADER, "Read Depth Buffer: %s", Ini.GSReadDepthBuffer.GetValue() ? "Yes" : "No");
+	LOG_NOTICE(LOADER, "Read Depth Buffer: %s", Ini.GSReadDepthBuffer.GetValue() ? "Yes" : "No");*/
 	LOG_NOTICE(LOADER, "Audio Out: %s", Ini.AudioOutIdToString(Ini.AudioOutMode.GetValue()));
 	LOG_NOTICE(LOADER, "Log Everything: %s", Ini.HLELogging.GetValue() ? "Yes" : "No");
 	LOG_NOTICE(LOADER, "RSX Logging: %s", Ini.RSXLogging.GetValue() ? "Yes" : "No");
+
+	LOG_NOTICE(LOADER, "");
+
+	LOG_NOTICE(LOADER, rpcs3::config.to_string().c_str());
 
 	LOG_NOTICE(LOADER, "");
 	f.Open("/app_home/../PARAM.SFO");
@@ -284,6 +298,8 @@ void Emulator::Run()
 		return;
 	}
 
+	rpcs3::onstart();
+
 	SendDbgCommand(DID_START_EMU);
 
 	m_pause_start_time = 0;
@@ -303,6 +319,8 @@ bool Emulator::Pause()
 	{
 		return false;
 	}
+
+	rpcs3::onpause();
 
 	// update pause start time
 	if (m_pause_start_time.exchange(start))
@@ -351,6 +369,8 @@ void Emulator::Resume()
 		t->awake(); // untrigger status check and signal
 	}
 
+	rpcs3::onstart();
+
 	SendDbgCommand(DID_RESUMED_EMU);
 }
 
@@ -365,6 +385,7 @@ void Emulator::Stop()
 		return;
 	}
 
+	rpcs3::onstop();
 	SendDbgCommand(DID_STOP_EMU);
 
 	{

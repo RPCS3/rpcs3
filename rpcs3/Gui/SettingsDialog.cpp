@@ -7,6 +7,22 @@
 #include "Utilities/Log.h"
 #include <wx/radiobox.h>
 
+#ifdef _WIN32
+#include <windows.h>
+#include <iphlpapi.h>
+
+#pragma comment(lib, "iphlpapi.lib")
+#else
+
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#include <netdb.h>
+#include <ifaddrs.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#endif
+
 #if defined(DX12_SUPPORT)
 #undef GetHwnd
 #include <d3d12.h>
@@ -14,7 +30,66 @@
 #include <dxgi1_4.h>
 #endif
 
-SettingsDialog::SettingsDialog(wxWindow *parent)
+std::vector<std::string> GetAdapters()
+{
+	std::vector<std::string> adapters;
+#ifdef _WIN32
+	PIP_ADAPTER_INFO pAdapterInfo;
+	pAdapterInfo = (IP_ADAPTER_INFO*)malloc(sizeof(IP_ADAPTER_INFO));
+	ULONG buflen = sizeof(IP_ADAPTER_INFO);
+
+	if (GetAdaptersInfo(pAdapterInfo, &buflen) == ERROR_BUFFER_OVERFLOW)
+	{
+		free(pAdapterInfo);
+		pAdapterInfo = (IP_ADAPTER_INFO*)malloc(buflen);
+	}
+
+	if (GetAdaptersInfo(pAdapterInfo, &buflen) == NO_ERROR)
+	{
+		PIP_ADAPTER_INFO pAdapter = pAdapterInfo;
+		while (pAdapter)
+		{
+			adapters.emplace_back(pAdapter->Description);
+			pAdapter = pAdapter->Next;
+		}
+	}
+	else
+	{
+		LOG_ERROR(HLE, "Call to GetAdaptersInfo failed.");
+	}
+#else
+	struct ifaddrs *ifaddr, *ifa;
+	int family, s, n;
+	char host[NI_MAXHOST];
+
+	if (getifaddrs(&ifaddr) == -1)
+	{
+		LOG_ERROR(HLE, "Call to getifaddrs returned negative.");
+	}
+
+	for (ifa = ifaddr, n = 0; ifa != NULL; ifa = ifa->ifa_next, n++)
+	{
+		if (ifa->ifa_addr == NULL)
+		{
+			continue;
+		}
+
+		family = ifa->ifa_addr->sa_family;
+
+		if (family == AF_INET || family == AF_INET6)
+		{
+			adapters.emplace_back(ifa->ifa_name);
+		}
+	}
+
+	freeifaddrs(ifaddr);
+#endif
+
+	return adapters;
+}
+
+
+SettingsDialog::SettingsDialog(wxWindow *parent, rpcs3::config_t* cfg)
 	: wxDialog(parent, wxID_ANY, "Settings", wxDefaultPosition)
 {
 	bool paused = false;
@@ -203,6 +278,7 @@ SettingsDialog::SettingsDialog(wxWindow *parent)
 #if defined (_WIN32)
 	cbox_pad_handler->Append("XInput");
 #endif
+
 	//cbox_pad_handler->Append("DirectInput");
 
 	cbox_keyboard_handler->Append("Null");
@@ -255,10 +331,10 @@ SettingsDialog::SettingsDialog(wxWindow *parent)
 	// Get values from .ini
 	chbox_core_llvm_exclud->SetValue(Ini.LLVMExclusionRange.GetValue());
 	chbox_gs_log_prog->SetValue(Ini.GSLogPrograms.GetValue());
-	chbox_gs_dump_depth->SetValue(Ini.GSDumpDepthBuffer.GetValue());
-	chbox_gs_dump_color->SetValue(Ini.GSDumpColorBuffers.GetValue());
-	chbox_gs_read_color->SetValue(Ini.GSReadColorBuffers.GetValue());
-	chbox_gs_read_depth->SetValue(Ini.GSReadDepthBuffer.GetValue());
+	chbox_gs_dump_depth->SetValue((bool)cfg->rsx.opengl.write_depth_buffer);
+	chbox_gs_dump_color->SetValue((bool)cfg->rsx.opengl.write_color_buffers);
+	chbox_gs_read_color->SetValue((bool)cfg->rsx.opengl.read_color_buffers);
+	chbox_gs_read_depth->SetValue((bool)cfg->rsx.opengl.read_depth_buffer);
 	chbox_gs_vsync->SetValue(Ini.GSVSyncEnable.GetValue());
 	chbox_gs_debug_output->SetValue(Ini.GSDebugOutputEnable.GetValue());
 	chbox_gs_3dmonitor->SetValue(Ini.GS3DTV.GetValue());
@@ -438,10 +514,10 @@ SettingsDialog::SettingsDialog(wxWindow *parent)
 		Ini.GSAspectRatio.SetValue(cbox_gs_aspect->GetSelection() + 1);
 		Ini.GSFrameLimit.SetValue(cbox_gs_frame_limit->GetSelection());
 		Ini.GSLogPrograms.SetValue(chbox_gs_log_prog->GetValue());
-		Ini.GSDumpDepthBuffer.SetValue(chbox_gs_dump_depth->GetValue());
-		Ini.GSDumpColorBuffers.SetValue(chbox_gs_dump_color->GetValue());
-		Ini.GSReadColorBuffers.SetValue(chbox_gs_read_color->GetValue());
-		Ini.GSReadDepthBuffer.SetValue(chbox_gs_read_depth->GetValue());
+		cfg->rsx.opengl.write_depth_buffer = chbox_gs_dump_depth->GetValue();
+		cfg->rsx.opengl.write_color_buffers = chbox_gs_dump_color->GetValue();
+		cfg->rsx.opengl.read_color_buffers = chbox_gs_read_color->GetValue();
+		cfg->rsx.opengl.read_depth_buffer = chbox_gs_read_depth->GetValue();
 		Ini.GSVSyncEnable.SetValue(chbox_gs_vsync->GetValue());
 		Ini.GSDebugOutputEnable.SetValue(chbox_gs_debug_output->GetValue());
 		Ini.GS3DTV.SetValue(chbox_gs_3dmonitor->GetValue());
@@ -472,6 +548,7 @@ SettingsDialog::SettingsDialog(wxWindow *parent)
 		Ini.SysEmulationDirPathEnable.SetValue(chbox_emulationdir_enable->GetValue());
 		Ini.SysEmulationDirPath.SetValue(txt_emulationdir_path->GetValue().ToStdString());
 
+		cfg->save();
 		Ini.Save();
 	}
 

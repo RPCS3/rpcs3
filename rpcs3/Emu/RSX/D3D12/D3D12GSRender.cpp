@@ -299,12 +299,11 @@ bool D3D12GSRender::domethod(u32 cmd, u32 arg)
 		clear_surface(arg);
 		return true;
 	case NV4097_TEXTURE_READ_SEMAPHORE_RELEASE:
-		semaphore_PGRAPH_texture_read_release(label_addr + rsx::method_registers[NV4097_SET_SEMAPHORE_OFFSET], arg);
-		return true;
+		semaphore_PGRAPH_texture_read_release();
+		return false; //call rsx::thread implementation
 	case NV4097_BACK_END_WRITE_SEMAPHORE_RELEASE:
-		semaphore_PGRAPH_backend_release(label_addr + rsx::method_registers[NV4097_SET_SEMAPHORE_OFFSET],
-			(arg & 0xff00ff00) | ((arg & 0xff) << 16) | ((arg >> 16) & 0xff));
-		return true;;
+		semaphore_PGRAPH_backend_release();
+		return false; //call rsx::thread implementation
 	default:
 		return false;
 	}
@@ -897,12 +896,12 @@ void copyToCellRamAndRelease(void *dstAddress, ID3D12Resource *res, size_t dstPi
 	res->Release();
 }
 
-void D3D12GSRender::semaphore_PGRAPH_texture_read_release(u32 offset, u32 value)
+void D3D12GSRender::semaphore_PGRAPH_texture_read_release()
 {
-	semaphore_PGRAPH_backend_release(offset, value);
+	semaphore_PGRAPH_backend_release();
 }
 
-void D3D12GSRender::semaphore_PGRAPH_backend_release(u32 offset, u32 value)
+void D3D12GSRender::semaphore_PGRAPH_backend_release()
 {
 	// Add all buffer write
 	// Cell can't make any assumption about readyness of color/depth buffer
@@ -1162,7 +1161,5 @@ void D3D12GSRender::semaphore_PGRAPH_backend_release(u32 offset, u32 value)
 		break;
 		}
 	}
-
-	vm::ps3::write32(offset, value);
 }
 #endif

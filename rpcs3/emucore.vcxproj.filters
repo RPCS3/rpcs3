@@ -998,8 +998,18 @@
     <ClCompile Include="Emu\RSX\Null\NullGSRender.cpp">
       <Filter>Emu\GPU\RSX\Null</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\RSX\GL\gl_helpers.cpp">
+	<ClCompile Include="Emu\RSX\GL\gl_helpers.cpp">
       <Filter>Emu\GPU\RSX\GL</Filter>
+    </ClCompile>
+	<ClCompile Include="config.cpp" />
+    <ClCompile Include="Emu\state.cpp">
+      <Filter>Emu</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\events.cpp">
+      <Filter>Emu</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Utilities\config_context.cpp">
+      <Filter>Utilities</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1905,6 +1915,19 @@
     </ClInclude>
     <ClInclude Include="Emu\RSX\GL\gl_helpers.h">
       <Filter>Emu\GPU\RSX\GL</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utilities\config_context.h">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="config.h" />
+    <ClInclude Include="..\Utilities\event.h">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\state.h">
+      <Filter>Emu</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\events.h">
+      <Filter>Emu</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

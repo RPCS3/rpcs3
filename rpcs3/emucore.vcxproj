@@ -40,6 +40,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\Utilities\AutoPause.cpp" />
+    <ClCompile Include="..\Utilities\config_context.cpp" />
     <ClCompile Include="..\Utilities\Log.cpp" />
     <ClCompile Include="..\Utilities\File.cpp" />
     <ClCompile Include="..\Utilities\rMsgBox.cpp" />
@@ -52,11 +53,13 @@
     <ClCompile Include="..\Utilities\StrFmt.cpp" />
     <ClCompile Include="..\Utilities\Thread.cpp" />
     <ClCompile Include="..\Utilities\VirtualMemory.cpp" />
+    <ClCompile Include="config.cpp" />
     <ClCompile Include="Emu\Cell\PPUInterpreter.cpp" />
     <ClCompile Include="Emu\Cell\PPULLVMRecompilerCore.cpp" />
     <ClCompile Include="Emu\Cell\SPUAnalyser.cpp" />
     <ClCompile Include="Emu\Cell\SPUASMJITRecompiler.cpp" />
     <ClCompile Include="Emu\Cell\SPUInterpreter.cpp" />
+    <ClCompile Include="Emu\events.cpp" />
     <ClCompile Include="Emu\IdManager.cpp" />
     <ClCompile Include="Emu\RSX\CgBinaryFragmentProgram.cpp" />
     <ClCompile Include="Emu\RSX\CgBinaryVertexProgram.cpp" />
@@ -78,6 +81,7 @@
     <ClCompile Include="Emu\RSX\GL\GLCommonDecompiler.cpp" />
     <ClCompile Include="Emu\RSX\GL\gl_helpers.cpp" />
     <ClCompile Include="Emu\RSX\Null\NullGSRender.cpp" />
+    <ClCompile Include="Emu\state.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\sys_dbg.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\sys_fs.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellAtracMulti.cpp" />
@@ -379,6 +383,8 @@
     <ClInclude Include="..\Utilities\Atomic.h" />
     <ClInclude Include="..\Utilities\AutoPause.h" />
     <ClInclude Include="..\Utilities\BEType.h" />
+    <ClInclude Include="..\Utilities\config_context.h" />
+    <ClInclude Include="..\Utilities\event.h" />
     <ClInclude Include="..\Utilities\GNU.h" />
     <ClInclude Include="..\Utilities\MTRingbuffer.h" />
     <ClInclude Include="..\Utilities\Log.h" />
@@ -397,6 +403,7 @@
     <ClInclude Include="..\Utilities\Timer.h" />
     <ClInclude Include="..\Utilities\types.h" />
     <ClInclude Include="..\Utilities\VirtualMemory.h" />
+    <ClInclude Include="config.h" />
     <ClInclude Include="Crypto\aes.h" />
     <ClInclude Include="Crypto\ec.h" />
     <ClInclude Include="Crypto\key_vault.h" />
@@ -508,6 +515,7 @@
     <ClInclude Include="Emu\CPU\CPUThreadManager.h" />
     <ClInclude Include="Emu\DbgCommand.h" />
     <ClInclude Include="Emu\Event.h" />
+    <ClInclude Include="Emu\events.h" />
     <ClInclude Include="Emu\FS\VFS.h" />
     <ClInclude Include="Emu\FS\vfsDevice.h" />
     <ClInclude Include="Emu\FS\vfsDeviceLocalFile.h" />
@@ -572,6 +580,7 @@
     <ClInclude Include="Emu\Memory\vm_ptr.h" />
     <ClInclude Include="Emu\Memory\vm_ref.h" />
     <ClInclude Include="Emu\Memory\vm_var.h" />
+    <ClInclude Include="Emu\state.h" />
     <ClInclude Include="Emu\SysCalls\Callback.h" />
     <ClInclude Include="Emu\SysCalls\CB_FUNC.h" />
     <ClInclude Include="Emu\SysCalls\ErrorCodes.h" />
