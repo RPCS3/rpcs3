@@ -129,20 +129,27 @@ namespace rsx
 			{
 				set_vertex_data_impl<NV4097_SET_VERTEX_DATA2F_M, index, 2, f32>(rsx, arg);
 			}
-		};		template<u32 index>
+		};
+
+		template<u32 index>
 		struct set_vertex_data3f_m
 		{
 			force_inline static void impl(thread* rsx, u32 arg)
 			{
 				set_vertex_data_impl<NV4097_SET_VERTEX_DATA3F_M, index, 3, f32>(rsx, arg);
 			}
-		};		template<u32 index>
+		};
+
+		template<u32 index>
 		struct set_vertex_data4f_m
 		{
 			force_inline static void impl(thread* rsx, u32 arg)
 			{
 				set_vertex_data_impl<NV4097_SET_VERTEX_DATA4F_M, index, 4, f32>(rsx, arg);
-			}		template<u32 index>
+			}
+		};
+		
+		template<u32 index>
 		struct set_vertex_data2s_m
 		{
 			force_inline static void impl(thread* rsx, u32 arg)
