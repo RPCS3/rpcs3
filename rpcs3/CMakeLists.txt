@@ -19,6 +19,7 @@ if(CMAKE_COMPILER_IS_GNUCXX)
 	# Warnings
 	add_compile_options(-Wno-attributes -Wno-enum-compare -Wno-invalid-offsetof)
 elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+	add_compile_options(-ftemplate-depth=1024)
 	if(APPLE)
 		add_compile_options(-stdlib=libc++)
 	endif()
