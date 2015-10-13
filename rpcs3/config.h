@@ -9,39 +9,42 @@ enum class audio_output_type
 	XAudio2
 };
 
-template<>
-struct convert::to_impl_t<std::string, audio_output_type>
+namespace convert
 {
-	static std::string func(audio_output_type value)
+	template<>
+	struct to_impl_t<std::string, audio_output_type>
 	{
-		switch (value)
+		static std::string func(audio_output_type value)
 		{
-		case audio_output_type::Null: return "Null";
-		case audio_output_type::OpenAL: return "OpenAL";
-		case audio_output_type::XAudio2: return "XAudio2";
+			switch (value)
+			{
+			case audio_output_type::Null: return "Null";
+			case audio_output_type::OpenAL: return "OpenAL";
+			case audio_output_type::XAudio2: return "XAudio2";
+			}
+
+			return "Unknown";
 		}
+	};
 
-		return "Unknown";
-	}
-};
-
-template<>
-struct convert::to_impl_t<audio_output_type, std::string>
-{
-	static audio_output_type func(const std::string &value)
+	template<>
+	struct to_impl_t<audio_output_type, std::string>
 	{
-		if (value == "Null")
+		static audio_output_type func(const std::string &value)
+		{
+			if (value == "Null")
+				return audio_output_type::Null;
+
+			if (value == "OpenAL")
+				return audio_output_type::OpenAL;
+
+			if (value == "XAudio2")
+				return audio_output_type::XAudio2;
+
 			return audio_output_type::Null;
-
-		if (value == "OpenAL")
-			return audio_output_type::OpenAL;
-
-		if (value == "XAudio2")
-			return audio_output_type::XAudio2;
-
-		return audio_output_type::Null;
-	}
-};
+		}
+	};
+}
 
 enum class rsx_renderer_type
 {
@@ -50,39 +53,42 @@ enum class rsx_renderer_type
 	DX12
 };
 
-template<>
-struct convert::to_impl_t<std::string, rsx_renderer_type>
+namespace convert
 {
-	static std::string func(rsx_renderer_type value)
+	template<>
+	struct to_impl_t<std::string, rsx_renderer_type>
 	{
-		switch (value)
+		static std::string func(rsx_renderer_type value)
 		{
-		case rsx_renderer_type::Null: return "Null";
-		case rsx_renderer_type::OpenGL: return "OpenGL";
-		case rsx_renderer_type::DX12: return "DX12";
+			switch (value)
+			{
+			case rsx_renderer_type::Null: return "Null";
+			case rsx_renderer_type::OpenGL: return "OpenGL";
+			case rsx_renderer_type::DX12: return "DX12";
+			}
+
+			return "Unknown";
 		}
+	};
 
-		return "Unknown";
-	}
-};
-
-template<>
-struct convert::to_impl_t<rsx_renderer_type, std::string>
-{
-	static rsx_renderer_type func(const std::string &value)
+	template<>
+	struct to_impl_t<rsx_renderer_type, std::string>
 	{
-		if (value == "Null")
+		static rsx_renderer_type func(const std::string &value)
+		{
+			if (value == "Null")
+				return rsx_renderer_type::Null;
+
+			if (value == "OpenGL")
+				return rsx_renderer_type::OpenGL;
+
+			if (value == "DX12")
+				return rsx_renderer_type::DX12;
+
 			return rsx_renderer_type::Null;
-
-		if (value == "OpenGL")
-			return rsx_renderer_type::OpenGL;
-
-		if (value == "DX12")
-			return rsx_renderer_type::DX12;
-
-		return rsx_renderer_type::Null;
-	}
-};
+		}
+	};
+}
 
 enum class ppu_decoder_type
 {
@@ -91,39 +97,42 @@ enum class ppu_decoder_type
 	recompiler_llvm
 };
 
-template<>
-struct convert::to_impl_t<std::string, ppu_decoder_type>
+namespace convert
 {
-	static std::string func(ppu_decoder_type value)
+	template<>
+	struct to_impl_t<std::string, ppu_decoder_type>
 	{
-		switch (value)
+		static std::string func(ppu_decoder_type value)
 		{
-		case ppu_decoder_type::interpreter: return "interpreter";
-		case ppu_decoder_type::interpreter2: return "interpreter2";
-		case ppu_decoder_type::recompiler_llvm: return "recompiler_llvm";
+			switch (value)
+			{
+			case ppu_decoder_type::interpreter: return "interpreter";
+			case ppu_decoder_type::interpreter2: return "interpreter2";
+			case ppu_decoder_type::recompiler_llvm: return "recompiler_llvm";
+			}
+
+			return "Unknown";
 		}
+	};
 
-		return "Unknown";
-	}
-};
-
-template<>
-struct convert::to_impl_t<ppu_decoder_type, std::string>
-{
-	static ppu_decoder_type func(const std::string &value)
+	template<>
+	struct to_impl_t<ppu_decoder_type, std::string>
 	{
-		if (value == "interpreter")
+		static ppu_decoder_type func(const std::string &value)
+		{
+			if (value == "interpreter")
+				return ppu_decoder_type::interpreter;
+
+			if (value == "interpreter2")
+				return ppu_decoder_type::interpreter2;
+
+			if (value == "DX12")
+				return ppu_decoder_type::recompiler_llvm;
+
 			return ppu_decoder_type::interpreter;
-
-		if (value == "interpreter2")
-			return ppu_decoder_type::interpreter2;
-
-		if (value == "DX12")
-			return ppu_decoder_type::recompiler_llvm;
-
-		return ppu_decoder_type::interpreter;
-	}
-};
+		}
+	};
+}
 
 
 enum class spu_decoder_type
@@ -133,39 +142,42 @@ enum class spu_decoder_type
 	recompiler_asmjit
 };
 
-template<>
-struct convert::to_impl_t<std::string, spu_decoder_type>
+namespace convert
 {
-	static std::string func(spu_decoder_type value)
+	template<>
+	struct to_impl_t<std::string, spu_decoder_type>
 	{
-		switch (value)
+		static std::string func(spu_decoder_type value)
 		{
-		case spu_decoder_type::interpreter_precise: return "interpreter_precise";
-		case spu_decoder_type::interpreter_fast: return "interpreter_fast";
-		case spu_decoder_type::recompiler_asmjit: return "recompiler_asmjit";
+			switch (value)
+			{
+			case spu_decoder_type::interpreter_precise: return "interpreter_precise";
+			case spu_decoder_type::interpreter_fast: return "interpreter_fast";
+			case spu_decoder_type::recompiler_asmjit: return "recompiler_asmjit";
+			}
+
+			return "Unknown";
 		}
+	};
 
-		return "Unknown";
-	}
-};
-
-template<>
-struct convert::to_impl_t<spu_decoder_type, std::string>
-{
-	static spu_decoder_type func(const std::string &value)
+	template<>
+	struct to_impl_t<spu_decoder_type, std::string>
 	{
-		if (value == "interpreter_precise")
+		static spu_decoder_type func(const std::string &value)
+		{
+			if (value == "interpreter_precise")
+				return spu_decoder_type::interpreter_precise;
+
+			if (value == "interpreter_fast")
+				return spu_decoder_type::interpreter_fast;
+
+			if (value == "recompiler_asmjit")
+				return spu_decoder_type::recompiler_asmjit;
+
 			return spu_decoder_type::interpreter_precise;
-
-		if (value == "interpreter_fast")
-			return spu_decoder_type::interpreter_fast;
-
-		if (value == "recompiler_asmjit")
-			return spu_decoder_type::recompiler_asmjit;
-
-		return spu_decoder_type::interpreter_precise;
-	}
-};
+		}
+	};
+}
 
 namespace rpcs3
 {

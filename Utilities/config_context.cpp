@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "config_context.h"
-#include "convert.h"
 #include "StrFmt.h"
 #include <iostream>
 #include <sstream>

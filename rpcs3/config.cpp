@@ -32,13 +32,21 @@ namespace rpcs3
 	void config_t::load()
 	{
 		if (!m_path.empty())
-			deserialize(std::ifstream{ m_path });
+		{
+			std::ifstream stream{ m_path };
+			if (stream)
+				deserialize(stream);
+		}
 	}
 
 	void config_t::save() const
 	{
 		if (!m_path.empty())
-			serialize(std::ofstream{ m_path });
+		{
+			std::ofstream stream{ m_path };
+			if (stream)
+				serialize(stream);
+		}
 	}
 
 	config_t config{ "rpcs3.new.ini" };
