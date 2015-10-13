@@ -118,19 +118,19 @@ namespace rsx
 		template<u32 index>
 		force_inline void set_vertex_data2f_m(thread* rsx, u32 arg)
 		{
-			set_vertex_data_impl<NV4097_SET_VERTEX_DATA1F_M, index, 2, f32>(rsx, arg);
+			set_vertex_data_impl<NV4097_SET_VERTEX_DATA2F_M, index, 2, f32>(rsx, arg);
 		}
 
 		template<u32 index>
 		force_inline void set_vertex_data3f_m(thread* rsx, u32 arg)
 		{
-			set_vertex_data_impl<NV4097_SET_VERTEX_DATA1F_M, index, 3, f32>(rsx, arg);
+			set_vertex_data_impl<NV4097_SET_VERTEX_DATA3F_M, index, 3, f32>(rsx, arg);
 		}
 
 		template<u32 index>
 		force_inline void set_vertex_data4f_m(thread* rsx, u32 arg)
 		{
-			set_vertex_data_impl<NV4097_SET_VERTEX_DATA1F_M, index, 4, f32>(rsx, arg);
+			set_vertex_data_impl<NV4097_SET_VERTEX_DATA4F_M, index, 4, f32>(rsx, arg);
 		}
 
 		template<u32 index>
