@@ -840,7 +840,7 @@ wxString RSXDebugger::DisAsmCommand(u32 cmd, u32 count, u32 currentAddr, u32 ioA
 		auto args = vm::ps3::ptr<u32>::make(currentAddr + 4);
 
 		u32 index = 0;
-		switch(cmd & 0x3ffff)
+		switch((cmd & 0x3ffff) >> 2)
 		{
 		case NV406E_SEMAPHORE_OFFSET:
 			DISASM("PFIFO: Semaphore offset 0x%x", (u32)args[0]);
