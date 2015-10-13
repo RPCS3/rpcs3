@@ -1008,6 +1008,9 @@
     <ClCompile Include="Emu\events.cpp">
       <Filter>Emu</Filter>
     </ClCompile>
+    <ClCompile Include="..\Utilities\config_context.cpp">
+      <Filter>Utilities</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -1925,5 +1928,6 @@
     </ClInclude>
     <ClInclude Include="Emu\events.h">
       <Filter>Emu</Filter>
-    </ClInclude>  </ItemGroup>
+    </ClInclude>
+  </ItemGroup>
 </Project>
