@@ -819,7 +819,7 @@ namespace rsx
 
 			auto &data = vertex_arrays[index];
 
-			if (info.frequency)
+			if (info.frequency > 1)
 			{
 				LOG_ERROR(RSX, "%s: frequency is not null (%d, index=%d)", __FUNCTION__, info.frequency, index);
 			}
@@ -915,6 +915,10 @@ namespace rsx
 		vertex_index_array.clear();
 		for (auto &vertex_array : vertex_arrays)
 			vertex_array.clear();
+
+		//disable all vertex data
+		for (auto &vertex_info : vertex_arrays_info)
+			vertex_info.size = 0;
 
 		transform_constants.clear();
 	}

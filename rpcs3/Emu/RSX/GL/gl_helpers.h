@@ -381,6 +381,7 @@ namespace gl
 
 	private:
 		GLuint m_id = GL_NONE;
+		GLsizei m_size = 0;
 		target m_target = target::array;
 
 	public:
@@ -466,6 +467,7 @@ namespace gl
 			target target_ = current_target();
 			save_binding_state save(target_, *this);
 			glBufferData((GLenum)target_, size, data_, GL_STREAM_COPY);
+			m_size = size;
 		}
 
 		void sub_data(GLintptr offset, GLsizeiptr size, const void* data_ = nullptr)
@@ -489,6 +491,11 @@ namespace gl
 		{
 			glDeleteBuffers(1, &m_id);
 			m_id = 0;
+		}
+
+		GLsizei size() const
+		{
+			return m_size;
 		}
 
 		uint id() const
@@ -1924,6 +1931,11 @@ namespace gl
 				{
 				}
 
+				void clear()
+				{
+					m_locations.clear();
+				}
+
 				GLint location(const std::string &name)
 				{
 					auto finded = m_locations.find(name);
@@ -2054,6 +2066,7 @@ namespace gl
 			void set_id(uint id)
 			{
 				uniforms.clear();
+				attribs.clear();
 				m_id = id;
 			}
 

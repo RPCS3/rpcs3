@@ -76,6 +76,10 @@ private:
 	gl::fbo m_flip_fbo;
 	gl::texture m_flip_tex_color;
 
+	gl::buffer m_vbo;
+	gl::buffer m_ebo;
+	gl::vao m_vao;
+
 public:
 	GLGSRender();
 
