@@ -624,7 +624,7 @@ namespace rsx
 			force_inline static void impl()
 			{
 				bind_range_impl_t<id + step, step, count, T, index + 1>::impl();
-				bind<id, T<id>::impl>();
+				bind<id, T<index>::impl>();
 			}
 		};
 
