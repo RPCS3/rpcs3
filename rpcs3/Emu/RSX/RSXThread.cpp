@@ -916,10 +916,6 @@ namespace rsx
 		for (auto &vertex_array : vertex_arrays)
 			vertex_array.clear();
 
-		//disable all vertex data
-		for (auto &vertex_info : vertex_arrays_info)
-			vertex_info.size = 0;
-
 		transform_constants.clear();
 	}
 
