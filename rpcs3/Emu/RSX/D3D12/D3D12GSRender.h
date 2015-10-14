@@ -428,6 +428,7 @@ private:
 	RenderTargets m_rtts;
 
 	std::vector<D3D12_INPUT_ELEMENT_DESC> m_IASet;
+	std::vector<D3D12_VERTEX_BUFFER_VIEW> m_vertex_buffer_views;
 
 	INT g_descriptorStrideSRVCBVUAV;
 	INT g_descriptorStrideDSV;
@@ -462,12 +463,11 @@ private:
 
 	bool LoadProgram();
 
+	std::vector<std::pair<u32, u32> > m_first_count_pairs;
 	/**
-	 * Create as little vertex buffer as possible to hold all vertex info (in upload heap),
-	 * create corresponding IA layout that can be used for load program and
-	 * returns a vector of vertex buffer view that can be passed to IASetVertexBufferView().
+	 * Upload all vertex attribute whose (first, count) info were previously accumulated.
 	 */
-	std::vector<D3D12_VERTEX_BUFFER_VIEW> UploadVertexBuffers(bool indexed_draw = false);
+	void upload_vertex_attributes();
 
 	/**
 	 * Create index buffer for indexed rendering and non native primitive format if nedded, and
@@ -507,6 +507,8 @@ protected:
 	virtual bool domethod(u32 cmd, u32 arg) override;
 	virtual void end() override;
 	virtual void flip(int buffer) override;
+
+	virtual void load_vertex_data(u32 first, u32 count) override;
 };
 
 #endif

@@ -91,32 +91,6 @@ DXGI_FORMAT getFormat(u8 type, u8 size)
 	}
 }
 
-static
-std::vector<D3D12_INPUT_ELEMENT_DESC> getIALayout(const rsx::data_array_format_info *vertex_info, const std::vector<u8> *vertex_data)
-{
-	std::vector<D3D12_INPUT_ELEMENT_DESC> result;
-
-	size_t inputSlot = 0;
-	for (size_t index = 0; index < rsx::limits::vertex_count; index++)
-	{
-		const auto &info = vertex_info[index];
-
-		if (!info.size)
-			continue;
-
-			D3D12_INPUT_ELEMENT_DESC IAElement = {};
-			IAElement.SemanticName = "TEXCOORD";
-			IAElement.SemanticIndex = (UINT)index;
-			IAElement.InputSlot = (UINT)inputSlot++;
-			IAElement.Format = getFormat(info.type - 1, info.size);
-			IAElement.AlignedByteOffset = 0;
-			IAElement.InputSlotClass = info.array ? D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA : D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA;
-			IAElement.InstanceDataStepRate = 0;
-			result.push_back(IAElement);
-	}
-	return result;
-}
-
 // D3D12GS member handling buffers
 
 
@@ -138,29 +112,105 @@ D3D12_GPU_VIRTUAL_ADDRESS createVertexBuffer(const rsx::data_array_format_info &
 	return vertexIndexHeap.m_heap->GetGPUVirtualAddress() + heapOffset;
 }
 
-std::vector<D3D12_VERTEX_BUFFER_VIEW> D3D12GSRender::UploadVertexBuffers(bool indexed_draw)
+void D3D12GSRender::load_vertex_data(u32 first, u32 count)
 {
-	u32 m_vertex_data_base_offset = rsx::method_registers[NV4097_SET_VERTEX_DATA_BASE_OFFSET];
-	std::vector<D3D12_VERTEX_BUFFER_VIEW> result;
-	m_IASet = getIALayout(vertex_arrays_info, vertex_arrays);
+	m_first_count_pairs.emplace_back(std::make_pair(first, count));
+	vertex_draw_count += count;
+}
 
+
+void D3D12GSRender::upload_vertex_attributes()
+{
+	m_vertex_buffer_views.clear();
+	m_IASet.clear();
+	size_t inputSlot = 0;
+
+	// First array attribute
 	for (int index = 0; index < rsx::limits::vertex_count; ++index)
 	{
 		const auto &info = vertex_arrays_info[index];
 
-		if (!info.size)
+		if (!info.array) // disabled or not a vertex array
 			continue;
 
-		D3D12_GPU_VIRTUAL_ADDRESS virtualAddress = createVertexBuffer(info, vertex_arrays[index], m_device.Get(), m_vertexIndexData);
+		u32 type_size = rsx::get_vertex_type_size(info.type);
+		u32 element_size = type_size * info.size;
+
+		size_t subBufferSize = element_size * vertex_draw_count;
+		assert(m_vertexIndexData.canAlloc(subBufferSize));
+		size_t heapOffset = m_vertexIndexData.alloc(subBufferSize);
+
+		void *buffer;
+		ThrowIfFailed(m_vertexIndexData.m_heap->Map(0, &CD3DX12_RANGE(heapOffset, heapOffset + subBufferSize), (void**)&buffer));
+		void *bufferMap = (char*)buffer + heapOffset;
+		for (const auto &range : m_first_count_pairs)
+		{
+			write_vertex_array_data_to_buffer(bufferMap, range.first, range.second, index, info);
+			bufferMap = (char*)bufferMap + range.second * element_size;
+		}
+		m_vertexIndexData.m_heap->Unmap(0, &CD3DX12_RANGE(heapOffset, heapOffset + subBufferSize));
 
 		D3D12_VERTEX_BUFFER_VIEW vertexBufferView = {};
-		vertexBufferView.BufferLocation = virtualAddress;
-		vertexBufferView.SizeInBytes = (UINT)vertex_arrays[index].size();
-		vertexBufferView.StrideInBytes = (UINT)rsx::get_vertex_type_size(info.type) * info.size;
-		result.push_back(vertexBufferView);
+		vertexBufferView.BufferLocation = m_vertexIndexData.m_heap->GetGPUVirtualAddress() + heapOffset;
+		vertexBufferView.SizeInBytes = (UINT)subBufferSize;
+		vertexBufferView.StrideInBytes = (UINT)element_size;
+		m_vertex_buffer_views.push_back(vertexBufferView);
+
+		m_timers.m_bufferUploadSize += subBufferSize;
+
+		D3D12_INPUT_ELEMENT_DESC IAElement = {};
+		IAElement.SemanticName = "TEXCOORD";
+		IAElement.SemanticIndex = (UINT)index;
+		IAElement.InputSlot = (UINT)inputSlot++;
+		IAElement.Format = getFormat(info.type - 1, info.size);
+		IAElement.AlignedByteOffset = 0;
+		IAElement.InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
+		IAElement.InstanceDataStepRate = 0;
+		m_IASet.push_back(IAElement);
 	}
 
-	return result;
+	// Now immediate vertex buffer
+	for (int index = 0; index < rsx::limits::vertex_count; ++index)
+	{
+		const auto &info = vertex_arrays_info[index];
+
+		if (info.array)
+			continue;
+		if (!info.size) // disabled
+			continue;
+
+		auto &data = vertex_arrays[index];
+
+		u32 type_size = rsx::get_vertex_type_size(info.type);
+		u32 element_size = type_size * info.size;
+
+		size_t subBufferSize = data.size();
+		assert(m_vertexIndexData.canAlloc(subBufferSize));
+		size_t heapOffset = m_vertexIndexData.alloc(subBufferSize);
+
+		void *buffer;
+		ThrowIfFailed(m_vertexIndexData.m_heap->Map(0, &CD3DX12_RANGE(heapOffset, heapOffset + subBufferSize), (void**)&buffer));
+		void *bufferMap = (char*)buffer + heapOffset;
+		memcpy(bufferMap, data.data(), data.size());
+		m_vertexIndexData.m_heap->Unmap(0, &CD3DX12_RANGE(heapOffset, heapOffset + subBufferSize));
+
+		D3D12_VERTEX_BUFFER_VIEW vertexBufferView = {};
+		vertexBufferView.BufferLocation = m_vertexIndexData.m_heap->GetGPUVirtualAddress() + heapOffset;
+		vertexBufferView.SizeInBytes = (UINT)subBufferSize;
+		vertexBufferView.StrideInBytes = (UINT)element_size;
+		m_vertex_buffer_views.push_back(vertexBufferView);
+
+		D3D12_INPUT_ELEMENT_DESC IAElement = {};
+		IAElement.SemanticName = "TEXCOORD";
+		IAElement.SemanticIndex = (UINT)index;
+		IAElement.InputSlot = (UINT)inputSlot++;
+		IAElement.Format = getFormat(info.type - 1, info.size);
+		IAElement.AlignedByteOffset = 0;
+		IAElement.InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA;
+		IAElement.InstanceDataStepRate = 1;
+		m_IASet.push_back(IAElement);
+	}
+	m_first_count_pairs.clear();
 }
 
 D3D12_INDEX_BUFFER_VIEW D3D12GSRender::uploadIndexBuffers(bool indexed_draw)

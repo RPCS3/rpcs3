@@ -411,9 +411,9 @@ void D3D12GSRender::end()
 
 	if (!vertex_index_array.empty() || vertex_draw_count)
 	{
-		const std::vector<D3D12_VERTEX_BUFFER_VIEW> &vertexBufferViews = UploadVertexBuffers(!vertex_index_array.empty());
+		upload_vertex_attributes();
 		const D3D12_INDEX_BUFFER_VIEW &indexBufferView = uploadIndexBuffers(!vertex_index_array.empty());
-		getCurrentResourceStorage().m_commandList->IASetVertexBuffers(0, (UINT)vertexBufferViews.size(), vertexBufferViews.data());
+		getCurrentResourceStorage().m_commandList->IASetVertexBuffers(0, (UINT)m_vertex_buffer_views.size(), m_vertex_buffer_views.data());
 		if (m_renderingInfo.m_indexed)
 			getCurrentResourceStorage().m_commandList->IASetIndexBuffer(&indexBufferView);
 	}
