@@ -412,7 +412,7 @@ private:
 	// Constants storage
 	DataHeap<ID3D12Resource, 256> m_constantsData;
 	// Vertex storage
-	DataHeap<ID3D12Resource, 65536> m_vertexIndexData;
+	DataHeap<ID3D12Resource, 256> m_vertexIndexData;
 	// Texture storage
 	DataHeap<ID3D12Resource, 65536> m_textureUploadData;
 	DataHeap<ID3D12Heap, 65536> m_UAVHeap;
