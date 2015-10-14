@@ -41,6 +41,7 @@
 #include <forward_list>
 #include <typeindex>
 #include <future>
+#include <chrono>
 
 using namespace std::string_literals;
 using namespace std::chrono_literals;

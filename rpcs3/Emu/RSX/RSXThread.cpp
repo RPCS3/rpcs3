@@ -11,9 +11,6 @@
 #include "Emu/SysCalls/lv2/sys_time.h"
 
 #include "Utilities/types.h"
-#include <chrono>
-
-using namespace std::chrono_literals;
 
 extern "C"
 {
@@ -342,7 +339,7 @@ namespace rsx
 
 	namespace nv3089
 	{
-		force_inline void image_in(u32 arg)
+		never_inline void image_in(u32 arg)
 		{
 			const u16 width = method_registers[NV3089_IMAGE_IN_SIZE];
 			const u16 height = method_registers[NV3089_IMAGE_IN_SIZE] >> 16;
@@ -384,7 +381,10 @@ namespace rsx
 			}
 
 			if (!dst_dma)
+			{
+				LOG_ERROR(RSX, "dst_dma not set");
 				return;
+			}
 
 			LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: src = 0x%x, dst = 0x%x", src_offset, dst_offset);
 
@@ -440,9 +440,9 @@ namespace rsx
 				pixels_src = swizzled_pixels;
 			}
 
-			LOG_WARNING(RSX, "NV3089_IMAGE_IN_SIZE: w=%d, h=%d, pitch=%d, offset=0x%x, inX=%f, inY=%f, scaleX=%f, scaleY=%f",
-				width, height, pitch, src_offset, double(u) / 16, double(v) / 16, double(1 << 20) / (method_registers[NV3089_DS_DX]),
-				double(1 << 20) / (method_registers[NV3089_DT_DY]));
+			LOG_WARNING(RSX, "NV3089_IMAGE_IN_SIZE: SIZE=0x%08x, pitch=0x%x, offset=0x%x, scaleX=%f, scaleY=%f, CLIP_SIZE=0x%08x, OUT_SIZE=0x%08x",
+				method_registers[NV3089_IMAGE_IN_SIZE], pitch, src_offset, double(1 << 20) / (method_registers[NV3089_DS_DX]), double(1 << 20) / (method_registers[NV3089_DT_DY]),
+				method_registers[NV3089_CLIP_SIZE], method_registers[NV3089_IMAGE_OUT_SIZE]);
 
 			if (in_bpp != out_bpp && width != out_w && height != out_h)
 			{
@@ -586,6 +586,21 @@ namespace rsx
 		rsx->timer_sync.Start();
 	}
 
+	void user_command(thread* rsx, u32 arg)
+	{
+		if (rsx->user_handler)
+		{
+			Emu.GetCallbackManager().Async([func = rsx->user_handler, arg](PPUThread& ppu)
+			{
+				func(ppu, arg);
+			});
+		}
+		else
+		{
+			throw EXCEPTION("User handler not set");
+		}
+	}
+
 	struct __rsx_methods_t
 	{
 		using rsx_impl_method_t = void(*)(u32);
@@ -707,6 +722,7 @@ namespace rsx
 
 			// custom methods
 			bind_cpu_only<GCM_FLIP_COMMAND, flip_command>();
+			bind_cpu_only<GCM_SET_USER_COMMAND, user_command>();
 		}
 	} __rsx_methods;
 
@@ -763,7 +779,7 @@ namespace rsx
 			res = (u32)RSXIOMem.RealAddr(offset); // TODO: Error Check?
 			if (res == 0)
 			{
-				throw fmt::format("GetAddress(offset=0x%x, location=0x%x): RSXIO memory not mapped", offset, location);
+				throw EXCEPTION("GetAddress(offset=0x%x, location=0x%x): RSXIO memory not mapped", offset, location);
 			}
 
 			//if (Emu.GetGSManager().GetRender().strict_ordering[offset >> 20])

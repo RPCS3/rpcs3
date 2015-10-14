@@ -15,13 +15,13 @@ class CallbackManager
 	std::shared_ptr<PPUThread> m_cb_thread;
 
 public:
-	// register checked callback (accepts CPUThread&, returns s32)
+	// Register checked callback
 	void Register(check_cb_t func);
 
-	// register async callback, called in callback thread (accepts CPUThread&)
+	// Register async callback, called in callback thread
 	void Async(async_cb_t func);
 
-	// get one registered callback
+	// Get one registered callback
 	check_cb_t Check();
 
 	void Init();
