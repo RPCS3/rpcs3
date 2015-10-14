@@ -291,10 +291,19 @@ public:
 	ProgramStateCache() : m_currentShaderId(0) {}
 	~ProgramStateCache()
 	{
+		clear();
+	}
+
+	void clear()
+	{
 		for (auto pair : m_cachePSO)
 			BackendTraits::DeleteProgram(pair.second);
+		m_cachePSO.clear();
+
 		for (auto pair : m_cacheFS)
 			free(pair.first);
+
+		m_cacheFS.clear();
 	}
 
 	typename BackendTraits::PipelineData *getGraphicPipelineState(

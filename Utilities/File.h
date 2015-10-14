@@ -94,6 +94,7 @@ namespace fs
 
 		u64 read(void* buffer, u64 count) const;
 		u64 write(const void* buffer, u64 count) const;
+		u64 write(const std::string &string) const;
 		u64 seek(s64 offset, fsm seek_mode = fsm::begin) const;
 		u64 size() const;
 	};

@@ -598,6 +598,11 @@ u64 fs::file::write(const void* buffer, u64 count) const
 #endif
 }
 
+u64 fs::file::write(const std::string &string) const
+{
+	return write(string.data(), string.size());
+}
+
 u64 fs::file::seek(s64 offset, fsm seek_mode) const
 {
 	g_tls_error = fse::ok;

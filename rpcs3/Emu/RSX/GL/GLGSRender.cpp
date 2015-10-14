@@ -587,11 +587,11 @@ void GLGSRender::begin()
 	__glcheck glDepthMask(rsx::method_registers[NV4097_SET_DEPTH_MASK]);
 	__glcheck glStencilMask(rsx::method_registers[NV4097_SET_STENCIL_MASK]);
 
-	int viewport_x = int(rsx::method_registers[NV4097_SET_VIEWPORT_HORIZONTAL] & 0xffff);
-	int viewport_y = int(rsx::method_registers[NV4097_SET_VIEWPORT_VERTICAL] & 0xffff);
-	int viewport_w = int(rsx::method_registers[NV4097_SET_VIEWPORT_HORIZONTAL] >> 16);
-	int viewport_h = int(rsx::method_registers[NV4097_SET_VIEWPORT_VERTICAL] >> 16);
-	glViewport(viewport_x, viewport_y, viewport_w, viewport_h);
+	//int viewport_x = int(rsx::method_registers[NV4097_SET_VIEWPORT_HORIZONTAL] & 0xffff);
+	//int viewport_y = int(rsx::method_registers[NV4097_SET_VIEWPORT_VERTICAL] & 0xffff);
+	//int viewport_w = int(rsx::method_registers[NV4097_SET_VIEWPORT_HORIZONTAL] >> 16);
+	//int viewport_h = int(rsx::method_registers[NV4097_SET_VIEWPORT_VERTICAL] >> 16);
+	//glViewport(viewport_x, viewport_y, viewport_w, viewport_h);
 
 	//scissor test is always enabled
 	glEnable(GL_SCISSOR_TEST);
@@ -672,15 +672,15 @@ void GLGSRender::begin()
 			rsx::method_registers[NV4097_SET_STENCIL_FUNC_MASK]);
 		__glcheck glStencilOp(rsx::method_registers[NV4097_SET_STENCIL_OP_FAIL], rsx::method_registers[NV4097_SET_STENCIL_OP_ZFAIL],
 			rsx::method_registers[NV4097_SET_STENCIL_OP_ZPASS]);
+	}
 
-		if (__glcheck enable(rsx::method_registers[NV4097_SET_TWO_SIDED_STENCIL_TEST_ENABLE], GL_STENCIL_TEST_TWO_SIDE_EXT))
-		{
-			__glcheck glStencilMaskSeparate(GL_BACK, rsx::method_registers[NV4097_SET_BACK_STENCIL_MASK]);
-			__glcheck glStencilFuncSeparate(GL_BACK, rsx::method_registers[NV4097_SET_BACK_STENCIL_FUNC],
-				rsx::method_registers[NV4097_SET_BACK_STENCIL_FUNC_REF], rsx::method_registers[NV4097_SET_BACK_STENCIL_FUNC_MASK]);
-			__glcheck glStencilOpSeparate(GL_BACK, rsx::method_registers[NV4097_SET_BACK_STENCIL_OP_FAIL],
-				rsx::method_registers[NV4097_SET_BACK_STENCIL_OP_ZFAIL], rsx::method_registers[NV4097_SET_BACK_STENCIL_OP_ZPASS]);
-		}
+	if (__glcheck enable(rsx::method_registers[NV4097_SET_TWO_SIDED_STENCIL_TEST_ENABLE], GL_STENCIL_TEST_TWO_SIDE_EXT))
+	{
+		__glcheck glStencilMaskSeparate(GL_BACK, rsx::method_registers[NV4097_SET_BACK_STENCIL_MASK]);
+		__glcheck glStencilFuncSeparate(GL_BACK, rsx::method_registers[NV4097_SET_BACK_STENCIL_FUNC],
+			rsx::method_registers[NV4097_SET_BACK_STENCIL_FUNC_REF], rsx::method_registers[NV4097_SET_BACK_STENCIL_FUNC_MASK]);
+		__glcheck glStencilOpSeparate(GL_BACK, rsx::method_registers[NV4097_SET_BACK_STENCIL_OP_FAIL],
+			rsx::method_registers[NV4097_SET_BACK_STENCIL_OP_ZFAIL], rsx::method_registers[NV4097_SET_BACK_STENCIL_OP_ZPASS]);
 	}
 
 	__glcheck glShadeModel(rsx::method_registers[NV4097_SET_SHADE_MODE]);
@@ -840,10 +840,10 @@ void GLGSRender::end()
 		return;
 	}
 
-	LOG_NOTICE(Log::RSX, "draw()");
+	//LOG_NOTICE(Log::RSX, "draw()");
 
 	draw_fbo.bind();
-	m_program.use();
+	m_program->use();
 
 	//setup textures
 	for (int i = 0; i < rsx::limits::textures_count; ++i)
@@ -852,10 +852,10 @@ void GLGSRender::end()
 			continue;
 
 		int location;
-		if (m_program.uniforms.has_location("tex" + std::to_string(i), &location))
+		if (m_program->uniforms.has_location("tex" + std::to_string(i), &location))
 		{
 			__glcheck m_gl_textures[i].init(textures[i]);
-			__glcheck m_program.uniforms.texture(location, i, gl::texture_view(gl::texture::target::texture2D, m_gl_textures[i].id()));
+			__glcheck m_program->uniforms.texture(location, i, gl::texture_view(gl::texture::target::texture2D, m_gl_textures[i].id()));
 		}
 	}
 
@@ -924,7 +924,7 @@ void GLGSRender::end()
 		case CELL_GCM_VERTEX_F:
 			for (u32 j = 0; j < vertex_arrays[index].size(); j += 4)
 			{
-				dump.write(fmt::Format("%.01f\n", *(float*)&vertex_arrays[index][j]));
+				dump.write(fmt::format("%.01f\n", *(float*)&vertex_arrays[index][j]));
 				if (!(((j + 4) / 4) % vertex_info.size)) dump.write("\n");
 			}
 			break;
@@ -932,7 +932,7 @@ void GLGSRender::end()
 		case CELL_GCM_VERTEX_SF:
 			for (u32 j = 0; j < vertex_arrays[index].size(); j += 2)
 			{
-				dump.write(fmt::Format("%.01f\n", *(float*)&vertex_arrays[index][j]));
+				dump.write(fmt::format("%.01f\n", *(float*)&vertex_arrays[index][j]));
 				if (!(((j + 2) / 2) % vertex_info.size)) dump.write("\n");
 			}
 			break;
@@ -940,7 +940,7 @@ void GLGSRender::end()
 		case CELL_GCM_VERTEX_UB:
 			for (u32 j = 0; j < vertex_arrays[index].size(); ++j)
 			{
-				dump.write(fmt::Format("%d\n", vertex_arrays[index][j]));
+				dump.write(fmt::format("%d\n", vertex_arrays[index][j]));
 				if (!((j + 1) % vertex_info.size)) dump.write("\n");
 			}
 			break;
@@ -948,7 +948,7 @@ void GLGSRender::end()
 		case CELL_GCM_VERTEX_S32K:
 			for (u32 j = 0; j < vertex_arrays[index].size(); j += 2)
 			{
-				dump.write(fmt::Format("%d\n", *(u16*)&vertex_arrays[index][j]));
+				dump.write(fmt::format("%d\n", *(u16*)&vertex_arrays[index][j]));
 				if (!(((j + 2) / 2) % vertex_info.size)) dump.write("\n");
 			}
 			break;
@@ -958,7 +958,7 @@ void GLGSRender::end()
 		case CELL_GCM_VERTEX_UB256:
 			for (u32 j = 0; j < vertex_arrays[index].size(); ++j)
 			{
-				dump.write(fmt::Format("%d\n", vertex_arrays[index][j]));
+				dump.write(fmt::format("%d\n", vertex_arrays[index][j]));
 				if (!((j + 1) % vertex_info.size)) dump.write("\n");
 			}
 			break;
@@ -997,11 +997,15 @@ void GLGSRender::end()
 			"in_tc4", "in_tc5", "in_tc6", "in_tc7"
 		};
 
-		int location = m_program.attribs.location(reg_table[index]);
+		int location;
+
+		//TODO: use attrib input mask register
+		if (!m_program->attribs.has_location(reg_table[index], &location))
+			continue;
 
 		if (vertex_info.array)
 		{
-			__glcheck m_program.attribs[location] =
+			__glcheck m_program->attribs[location] =
 				(m_vao + vertex_arrays_offsets[index])
 				.config(gl_types[vertex_info.type], vertex_info.size, gl_normalized[vertex_info.type]);
 		}
@@ -1014,10 +1018,10 @@ void GLGSRender::end()
 			case CELL_GCM_VERTEX_F:
 				switch (vertex_info.size)
 				{
-				case 1: apply_attrib_array<f32, 1>(m_program, location, vertex_data); break;
-				case 2: apply_attrib_array<f32, 2>(m_program, location, vertex_data); break;
-				case 3: apply_attrib_array<f32, 3>(m_program, location, vertex_data); break;
-				case 4: apply_attrib_array<f32, 4>(m_program, location, vertex_data); break;
+				case 1: apply_attrib_array<f32, 1>(*m_program, location, vertex_data); break;
+				case 2: apply_attrib_array<f32, 2>(*m_program, location, vertex_data); break;
+				case 3: apply_attrib_array<f32, 3>(*m_program, location, vertex_data); break;
+				case 4: apply_attrib_array<f32, 4>(*m_program, location, vertex_data); break;
 				}
 				break;
 
@@ -1095,11 +1099,13 @@ void GLGSRender::onexit_thread()
 
 	if (m_vao)
 		m_vao.remove();
+
+	m_prog_buffer.clear();
 }
 
 void nv4097_clear_surface(u32 arg, GLGSRender* renderer)
 {
-	LOG_NOTICE(Log::RSX, "nv4097_clear_surface(0x%x)", arg);
+	//LOG_NOTICE(Log::RSX, "nv4097_clear_surface(0x%x)", arg);
 
 	if ((arg & 0xf3) == 0)
 	{
@@ -1214,11 +1220,8 @@ bool GLGSRender::load_program()
 	fragment_program.addr = rsx::get_address(fragment_program.offset, (shader_program & 0x3) - 1);
 	fragment_program.ctrl = rsx::method_registers[NV4097_SET_SHADER_CONTROL];
 
-	gl::glsl::program *result;
-	__glcheck result = m_prog_buffer.getGraphicPipelineState(&vertex_program, &fragment_program, nullptr, nullptr);
-	__glcheck result->use();
-
-	m_program.set_id(result->id());
+	__glcheck m_program = m_prog_buffer.getGraphicPipelineState(&vertex_program, &fragment_program, nullptr, nullptr);
+	__glcheck m_program->use();
 
 #else
 	std::vector<u32> vertex_program;
@@ -1278,21 +1281,21 @@ bool GLGSRender::load_program()
 	glm::mat4 scaleOffsetMat(1.f);
 
 	//Scale
-	scaleOffsetMat[0][0] = viewport_scale_x * 2.f / viewport_w;
-	scaleOffsetMat[1][1] = viewport_scale_y * 2.f / viewport_h;
+	scaleOffsetMat[0][0] = viewport_scale_x * 2.f / width;
+	scaleOffsetMat[1][1] = viewport_scale_y * 2.f / height;
 	scaleOffsetMat[2][2] = viewport_scale_z;
 
 	// Offset
-	scaleOffsetMat[0][3] = viewport_offset_x * 2.f / viewport_w - 1.f;
-	scaleOffsetMat[1][3] = viewport_offset_y * 2.f / viewport_h - 1.f;
+	scaleOffsetMat[0][3] = viewport_offset_x * 2.f / width - 1.f;
+	scaleOffsetMat[1][3] = viewport_offset_y * 2.f / height - 1.f;
 	scaleOffsetMat[2][3] = viewport_offset_z - .5f;
 
-	__glcheck m_program.uniforms["scaleOffsetMat"] = scaleOffsetMat;
+	__glcheck m_program->uniforms["scaleOffsetMat"] = scaleOffsetMat;
 
 	for (auto &constant : transform_constants)
 	{
 		//LOG_WARNING(RSX, "vc[%u] = (%f, %f, %f, %f)", constant.first, constant.second.r, constant.second.g, constant.second.b, constant.second.a);
-		__glcheck m_program.uniforms["vc[" + std::to_string(constant.first) + "]"] = constant.second;
+		__glcheck m_program->uniforms["vc[" + std::to_string(constant.first) + "]"] = constant.second;
 	}
 
 	for (u32 constant_offset : m_prog_buffer.getFragmentConstantOffsetsCache(&fragment_program))
@@ -1304,7 +1307,7 @@ bool GLGSRender::load_program()
 		u32 c2 = (data[2] >> 16 | data[2] << 16);
 		u32 c3 = (data[3] >> 16 | data[3] << 16);
 
-		m_program.uniforms["fc" + std::to_string(constant_offset)] = color4f{ (f32&)c0, (f32&)c1, (f32&)c2, (f32&)c3 };
+		m_program->uniforms["fc" + std::to_string(constant_offset)] = color4f{ (f32&)c0, (f32&)c1, (f32&)c2, (f32&)c3 };
 	}
 
 	return true;
@@ -1714,7 +1717,7 @@ void GLGSRender::write_buffers()
 
 void GLGSRender::flip(int buffer)
 {
-	LOG_NOTICE(Log::RSX, "flip(%d)", buffer);
+	//LOG_NOTICE(Log::RSX, "flip(%d)", buffer);
 	u32 buffer_width = gcm_buffers[buffer].width;
 	u32 buffer_height = gcm_buffers[buffer].height;
 	u32 buffer_pitch = gcm_buffers[buffer].pitch;

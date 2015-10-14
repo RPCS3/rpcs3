@@ -1942,6 +1942,9 @@ namespace gl
 
 					if (finded != m_locations.end())
 					{
+						if (finded->second < 0)
+							throw not_found_exception(name);
+
 						return finded->second;
 					}
 
@@ -1953,6 +1956,30 @@ namespace gl
 					m_locations[name] = result;
 
 					return result;
+				}
+
+				bool has_location(const std::string &name, int *location_ = nullptr)
+				{
+					auto finded = m_locations.find(name);
+
+					if (finded != m_locations.end())
+					{
+						if (finded->second < 0)
+							return false;
+
+						*location_ = finded->second;
+						return true;
+					}
+
+					int loc = glGetAttribLocation(m_program.id(), name.c_str());
+
+					m_locations[name] = loc;
+
+					if (loc < 0)
+						return false;
+
+					*location_ = loc;
+					return true;
 				}
 
 				attrib_t operator[](GLint location)

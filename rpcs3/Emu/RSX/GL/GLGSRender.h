@@ -57,8 +57,7 @@ private:
 	GLTexture m_gl_textures[rsx::limits::textures_count];
 	GLTexture m_gl_vertex_textures[rsx::limits::vertex_textures_count];
 
-	//TODO: program cache
-	gl::glsl::program m_program;
+	gl::glsl::program *m_program;
 
 	rsx::surface_info m_surface;
 
