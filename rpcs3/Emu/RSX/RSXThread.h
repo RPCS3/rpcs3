@@ -164,7 +164,7 @@ namespace rsx
 		u32 transform_program[512 * 4] = {};
 
 		virtual void load_vertex_data(u32 first, u32 count);
-		void load_vertex_index_data(u32 first, u32 count);
+		virtual void load_vertex_index_data(u32 first, u32 count);
 
 	public:
 		u32 ioAddress, ioSize;

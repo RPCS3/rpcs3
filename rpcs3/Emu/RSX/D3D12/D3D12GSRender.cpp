@@ -413,13 +413,7 @@ void D3D12GSRender::end()
 	std::chrono::time_point<std::chrono::system_clock> vertexIndexDurationStart = std::chrono::system_clock::now();
 
 	if (!vertex_index_array.empty() || vertex_draw_count)
-	{
-		upload_vertex_attributes();
-		const D3D12_INDEX_BUFFER_VIEW &indexBufferView = uploadIndexBuffers(!vertex_index_array.empty());
-		getCurrentResourceStorage().m_commandList->IASetVertexBuffers(0, (UINT)m_vertex_buffer_views.size(), m_vertex_buffer_views.data());
-		if (m_renderingInfo.m_indexed)
-			getCurrentResourceStorage().m_commandList->IASetIndexBuffer(&indexBufferView);
-	}
+		upload_vertex_index_data(getCurrentResourceStorage().m_commandList.Get());
 
 	std::chrono::time_point<std::chrono::system_clock> vertexIndexDurationEnd = std::chrono::system_clock::now();
 	m_timers.m_vertexIndexDuration += std::chrono::duration_cast<std::chrono::microseconds>(vertexIndexDurationEnd - vertexIndexDurationStart).count();
@@ -595,9 +589,9 @@ void D3D12GSRender::end()
 	}
 
 	if (m_renderingInfo.m_indexed)
-		getCurrentResourceStorage().m_commandList->DrawIndexedInstanced((UINT)m_renderingInfo.m_count, 1, 0, (UINT)m_renderingInfo.m_baseVertex, 0);
+		getCurrentResourceStorage().m_commandList->DrawIndexedInstanced((UINT)m_renderingInfo.m_count, 1, 0, 0, 0);
 	else
-		getCurrentResourceStorage().m_commandList->DrawInstanced((UINT)m_renderingInfo.m_count, 1, (UINT)m_renderingInfo.m_baseVertex, 0);
+		getCurrentResourceStorage().m_commandList->DrawInstanced((UINT)m_renderingInfo.m_count, 1, 0, 0);
 
 	vertex_index_array.clear();
 	std::chrono::time_point<std::chrono::system_clock> endDuration = std::chrono::system_clock::now();
@@ -610,7 +604,8 @@ void D3D12GSRender::end()
 		m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**)getCurrentResourceStorage().m_commandList.GetAddressOf());
 		getCurrentResourceStorage().setNewCommandList();
 	}
-
+	m_first_count_pairs.clear();
+	m_renderingInfo.m_indexed = false;
 	thread::end();
 }
 

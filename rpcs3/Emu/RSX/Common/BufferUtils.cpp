@@ -109,34 +109,88 @@ void write_vertex_array_data_to_buffer(void *buffer, u32 first, u32 count, size_
 	}
 }
 
-template<typename IndexType, typename DstType, typename SrcType>
-void expandIndexedTriangleFan(DstType *dst, const SrcType *src, size_t indexCount)
+template<typename IndexType>
+void uploadAsIt(char *dst, u32 address, size_t indexCount, bool is_primitive_restart_enabled, u32 &min_index, u32 &max_index)
 {
-	IndexType *typedDst = reinterpret_cast<IndexType *>(dst);
-	const IndexType *typedSrc = reinterpret_cast<const IndexType *>(src);
-	for (unsigned i = 0; i < indexCount - 2; i++)
+	for (u32 i = 0; i < indexCount; ++i)
 	{
-		typedDst[3 * i] = typedSrc[0];
-		typedDst[3 * i + 1] = typedSrc[i + 2 - 1];
-		typedDst[3 * i + 2] = typedSrc[i + 2];
+		IndexType index = vm::ps3::_ref<IndexType>(address + i * sizeof(IndexType));
+		(IndexType&)dst[i * sizeof(IndexType)] = index;
+		if (is_primitive_restart_enabled && index == (IndexType)-1) // Cut
+			continue;
+		max_index = MAX2(max_index, index);
+		min_index = MIN2(min_index, index);
 	}
 }
 
-template<typename IndexType, typename DstType, typename SrcType>
-void expandIndexedQuads(DstType *dst, const SrcType *src, size_t indexCount)
+template<typename IndexType>
+void expandIndexedTriangleFan(char *dst, u32 address, size_t indexCount, bool is_primitive_restart_enabled, u32 &min_index, u32 &max_index)
 {
-	IndexType *typedDst = reinterpret_cast<IndexType *>(dst);
-	const IndexType *typedSrc = reinterpret_cast<const IndexType *>(src);
+	for (unsigned i = 0; i < indexCount - 2; i++)
+	{
+		IndexType index0 = vm::ps3::_ref<IndexType>(address);
+		(IndexType&)dst[(3 * i) * sizeof(IndexType)] = index0;
+		IndexType index1 = vm::ps3::_ref<IndexType>(address + (i + 2 - 1) * sizeof(IndexType));
+		(IndexType&)dst[(3 * i + 1) * sizeof(IndexType)] = index1;
+		IndexType index2 = vm::ps3::_ref<IndexType>(address + (i + 2) * sizeof(IndexType));
+		(IndexType&)dst[(3 * i + 2) * sizeof(IndexType)] = index2;
+
+		if (!is_primitive_restart_enabled || index0 != (IndexType)-1) // Cut
+		{
+			min_index = MIN2(min_index, index0);
+			max_index = MAX2(max_index, index0);
+		}
+		if (!is_primitive_restart_enabled || index1 != (IndexType)-1) // Cut
+		{
+			min_index = MIN2(min_index, index1);
+			max_index = MAX2(max_index, index1);
+		}
+		if (!is_primitive_restart_enabled || index2 != (IndexType)-1) // Cut
+		{
+			min_index = MIN2(min_index, index2);
+			max_index = MAX2(max_index, index2);
+		}
+	}
+}
+
+template<typename IndexType>
+void expandIndexedQuads(char *dst, u32 address, size_t indexCount, bool is_primitive_restart_enabled, u32 &min_index, u32 &max_index)
+{
 	for (unsigned i = 0; i < indexCount / 4; i++)
 	{
 		// First triangle
-		typedDst[6 * i] = typedSrc[4 * i];
-		typedDst[6 * i + 1] = typedSrc[4 * i + 1];
-		typedDst[6 * i + 2] = typedSrc[4 * i + 2];
+		IndexType index0 = vm::ps3::_ref<IndexType>(address + 4 * i * sizeof(IndexType));
+		(IndexType&)dst[(6 * i) * sizeof(IndexType)] = index0;
+		IndexType index1 = vm::ps3::_ref<IndexType>(address + (4 * i + 1) * sizeof(IndexType));
+		(IndexType&)dst[(6 * i + 1) * sizeof(IndexType)] = index1;
+		IndexType index2 = vm::ps3::_ref<IndexType>(address + (4 * i + 2) * sizeof(IndexType));
+		(IndexType&)dst[(6 * i + 2) * sizeof(IndexType)] = index2;
 		// Second triangle
-		typedDst[6 * i + 3] = typedSrc[4 * i + 2];
-		typedDst[6 * i + 4] = typedSrc[4 * i + 3];
-		typedDst[6 * i + 5] = typedSrc[4 * i];
+		(IndexType&)dst[(6 * i + 3) * sizeof(IndexType)] = index2;
+		IndexType index3 = vm::ps3::_ref<IndexType>(address + (4 * i + 3) * sizeof(IndexType));
+		(IndexType&)dst[(6 * i + 4) * sizeof(IndexType)] = index3;
+		(IndexType&)dst[(6 * i + 5) * sizeof(IndexType)] = index0;
+
+		if (!is_primitive_restart_enabled || index0 != (IndexType)-1) // Cut
+		{
+			min_index = MIN2(min_index, index0);
+			max_index = MAX2(max_index, index0);
+		}
+		if (!is_primitive_restart_enabled || index1 != (IndexType)-1) // Cut
+		{
+			min_index = MIN2(min_index, index1);
+			max_index = MAX2(max_index, index1);
+		}
+		if (!is_primitive_restart_enabled || index2 != (IndexType)-1) // Cut
+		{
+			min_index = MIN2(min_index, index2);
+			max_index = MAX2(max_index, index2);
+		}
+		if (!is_primitive_restart_enabled || index3 != (IndexType)-1) // Cut
+		{
+			min_index = MIN2(min_index, index3);
+			max_index = MAX2(max_index, index3);
+		}
 	}
 }
 
@@ -178,79 +232,84 @@ size_t getIndexCount(unsigned m_draw_mode, unsigned initial_index_count)
 	}
 }
 
-
-void uploadIndexData(unsigned m_draw_mode, unsigned index_type, void* indexBuffer, void* bufferMap, unsigned element_count)
+void write_index_array_for_non_indexed_non_native_primitive_to_buffer(char* dst, unsigned draw_mode, unsigned first, unsigned count)
 {
-	if (indexBuffer != nullptr)
+	unsigned short *typedDst = (unsigned short *)(dst);
+	switch (draw_mode)
 	{
-		switch (m_draw_mode)
+	case CELL_GCM_PRIMITIVE_TRIANGLE_FAN:
+		for (unsigned i = 0; i < (count - 2); i++)
 		{
-		case CELL_GCM_PRIMITIVE_POINTS:
-		case CELL_GCM_PRIMITIVE_LINES:
-		case CELL_GCM_PRIMITIVE_LINE_LOOP:
-		case CELL_GCM_PRIMITIVE_LINE_STRIP:
-		case CELL_GCM_PRIMITIVE_TRIANGLES:
-		case CELL_GCM_PRIMITIVE_TRIANGLE_STRIP:
-		case CELL_GCM_PRIMITIVE_QUAD_STRIP:
-		case CELL_GCM_PRIMITIVE_POLYGON:
+			typedDst[3 * i] = first;
+			typedDst[3 * i + 1] = i + 2 - 1;
+			typedDst[3 * i + 2] = i + 2;
+		}
+		return;
+	case CELL_GCM_PRIMITIVE_QUADS:
+		for (unsigned i = 0; i < count / 4; i++)
 		{
-			size_t indexSize = (index_type == CELL_GCM_DRAW_INDEX_ARRAY_TYPE_32) ? 4 : 2;
-			memcpy(bufferMap, indexBuffer, indexSize * element_count);
-			return;
+			// First triangle
+			typedDst[6 * i] = 4 * i + first;
+			typedDst[6 * i + 1] = 4 * i + 1 + first;
+			typedDst[6 * i + 2] = 4 * i + 2 + first;
+			// Second triangle
+			typedDst[6 * i + 3] = 4 * i + 2 + first;
+			typedDst[6 * i + 4] = 4 * i + 3 + first;
+			typedDst[6 * i + 5] = 4 * i + first;
 		}
-		case CELL_GCM_PRIMITIVE_TRIANGLE_FAN:
-			switch (index_type)
-			{
-			case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_32:
-				expandIndexedTriangleFan<unsigned int>(bufferMap, indexBuffer, element_count);
-				return;
-			case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_16:
-				expandIndexedTriangleFan<unsigned short>(bufferMap, indexBuffer, element_count);
-				return;
-			default:
-				abort();
-				return;
-			}
-		case CELL_GCM_PRIMITIVE_QUADS:
-			switch (index_type)
-			{
-			case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_32:
-				expandIndexedQuads<unsigned int>(bufferMap, indexBuffer, element_count);
-				return;
-			case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_16:
-				expandIndexedQuads<unsigned short>(bufferMap, indexBuffer, element_count);
-				return;
-			default:
-				abort();
-				return;
-			}
-		}
+		return;
 	}
-	else
+}
+
+void write_index_array_data_to_buffer(char* dst, unsigned m_draw_mode, unsigned first, unsigned count, unsigned &min_index, unsigned &max_index)
+{
+	u32 address = rsx::get_address(rsx::method_registers[NV4097_SET_INDEX_ARRAY_ADDRESS], rsx::method_registers[NV4097_SET_INDEX_ARRAY_DMA] & 0xf);
+	u32 type = rsx::method_registers[NV4097_SET_INDEX_ARRAY_DMA] >> 4;
+
+	u32 type_size = type == CELL_GCM_DRAW_INDEX_ARRAY_TYPE_32 ? sizeof(u32) : sizeof(u16);
+
+	u32 base_offset = rsx::method_registers[NV4097_SET_VERTEX_DATA_BASE_OFFSET];
+	u32 base_index = 0;//rsx::method_registers[NV4097_SET_VERTEX_DATA_BASE_INDEX];
+	bool is_primitive_restart_enabled = !!rsx::method_registers[NV4097_SET_RESTART_INDEX_ENABLE];
+
+	switch (m_draw_mode)
 	{
-		unsigned short *typedDst = static_cast<unsigned short *>(bufferMap);
-		switch (m_draw_mode)
+	case CELL_GCM_PRIMITIVE_POINTS:
+	case CELL_GCM_PRIMITIVE_LINES:
+	case CELL_GCM_PRIMITIVE_LINE_LOOP:
+	case CELL_GCM_PRIMITIVE_LINE_STRIP:
+	case CELL_GCM_PRIMITIVE_TRIANGLES:
+	case CELL_GCM_PRIMITIVE_TRIANGLE_STRIP:
+	case CELL_GCM_PRIMITIVE_QUAD_STRIP:
+	case CELL_GCM_PRIMITIVE_POLYGON:
+		switch (type)
 		{
-		case CELL_GCM_PRIMITIVE_TRIANGLE_FAN:
-			for (unsigned i = 0; i < (element_count - 2); i++)
-			{
-				typedDst[3 * i] = 0;
-				typedDst[3 * i + 1] = i + 2 - 1;
-				typedDst[3 * i + 2] = i + 2;
-			}
+		case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_32:
+			uploadAsIt<u32>(dst, address + (first + base_index) * sizeof(u32), count, is_primitive_restart_enabled, min_index, max_index);
 			return;
-		case CELL_GCM_PRIMITIVE_QUADS:
-			for (unsigned i = 0; i < element_count / 4; i++)
-			{
-				// First triangle
-				typedDst[6 * i] = 4 * i;
-				typedDst[6 * i + 1] = 4 * i + 1;
-				typedDst[6 * i + 2] = 4 * i + 2;
-				// Second triangle
-				typedDst[6 * i + 3] = 4 * i + 2;
-				typedDst[6 * i + 4] = 4 * i + 3;
-				typedDst[6 * i + 5] = 4 * i;
-			}
+		case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_16:
+			uploadAsIt<u16>(dst, address + (first + base_index) * sizeof(u16), count, is_primitive_restart_enabled, min_index, max_index);
+			return;
+		}
+		return;
+	case CELL_GCM_PRIMITIVE_TRIANGLE_FAN:
+		switch (type)
+		{
+		case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_32:
+			expandIndexedTriangleFan<u32>(dst, address + (first + base_index) * sizeof(u32), count, is_primitive_restart_enabled, min_index, max_index);
+			return;
+		case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_16:
+			expandIndexedTriangleFan<u16>(dst, address + (first + base_index) * sizeof(u16), count, is_primitive_restart_enabled, min_index, max_index);
+			return;
+		}
+	case CELL_GCM_PRIMITIVE_QUADS:
+		switch (type)
+		{
+		case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_32:
+			expandIndexedQuads<u32>(dst, address + (first + base_index) * sizeof(u32), count, is_primitive_restart_enabled, min_index, max_index);
+			return;
+		case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_16:
+			expandIndexedQuads<u16>(dst, address + (first + base_index) * sizeof(u16), count, is_primitive_restart_enabled, min_index, max_index);
 			return;
 		}
 	}

@@ -35,6 +35,13 @@ bool isNativePrimitiveMode(unsigned m_draw_mode);
 size_t getIndexCount(unsigned m_draw_mode, unsigned initial_index_count);
 
 /*
- * Write index information to bufferMap
+ * Write count indexes starting at first to dst buffer.
+ * Returns min/max index found during the process.
+ * The function expands index buffer for non native primitive type.
  */
-void uploadIndexData(unsigned m_draw_mode, unsigned index_type, void* indexBuffer, void* bufferMap, unsigned element_count);
+void write_index_array_data_to_buffer(char* dst, unsigned m_draw_mode, unsigned first, unsigned count, unsigned &min_index, unsigned &max_index);
+
+/*
+* Write index data needed to emulate non indexed non native primitive mode.
+*/
+void write_index_array_for_non_indexed_non_native_primitive_to_buffer(char* dst, unsigned m_draw_mode, unsigned first, unsigned count);
