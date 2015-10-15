@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "BufferUtils.h"
-
+#include "Utilities/Log.h"
 
 #define MIN2(x, y) ((x) < (y)) ? (x) : (y)
 #define MAX2(x, y) ((x) > (y)) ? (x) : (y)
@@ -55,50 +55,56 @@ std::vector<VertexBufferFormat> FormatVertexData(const rsx::data_array_format_in
 	return Result;
 }
 
-void uploadVertexData(const VertexBufferFormat &vbf, const rsx::data_array_format_info *vertex_array_desc, const std::vector<u8> *vertex_data, size_t baseOffset, void* bufferMap)
+void write_vertex_array_data_to_buffer(void *buffer, u32 first, u32 count, size_t index, const rsx::data_array_format_info &vertex_array_desc)
 {
-	for (int vertex = 0; vertex < vbf.elementCount; vertex++)
+	assert(vertex_array_desc.array);
+
+	if (vertex_array_desc.frequency > 1)
+		LOG_ERROR(RSX, "%s: frequency is not null (%d, index=%d)", __FUNCTION__, vertex_array_desc.frequency, index);
+
+	u32 offset = rsx::method_registers[NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + index];
+	u32 address = rsx::get_address(offset & 0x7fffffff, offset >> 31);
+
+	u32 type_size = rsx::get_vertex_type_size(vertex_array_desc.type);
+	u32 element_size = type_size * vertex_array_desc.size;
+
+	u32 base_offset = rsx::method_registers[NV4097_SET_VERTEX_DATA_BASE_OFFSET];
+	u32 base_index = rsx::method_registers[NV4097_SET_VERTEX_DATA_BASE_INDEX];
+
+	for (u32 i = 0; i < count; ++i)
 	{
-		for (size_t attributeId : vbf.attributeId)
+		auto src = vm::ps3::_ptr<const u8>(address + base_offset + vertex_array_desc.stride * (first + i + base_index));
+		u8* dst = (u8*)buffer + i * element_size;
+
+		switch (type_size)
 		{
-			u32 addrRegVal = rsx::method_registers[NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + attributeId];
-			u32 addr = rsx::get_address(addrRegVal & 0x7fffffff, addrRegVal >> 31);
+		case 1:
+			memcpy(dst, src, vertex_array_desc.size);
+			break;
 
-			if (!vertex_array_desc[attributeId].array)
-			{
-				memcpy(bufferMap, vertex_data[attributeId].data(), vertex_data[attributeId].size());
-				continue;
-			}
-			size_t offset = (size_t)addr + baseOffset - vbf.range.first;
-			size_t tsize = rsx::get_vertex_type_size(vertex_array_desc[attributeId].type);
-			size_t size = vertex_array_desc[attributeId].size;
-			auto src = vm::ps3::_ptr<const u8>(addr + (u32)baseOffset + (u32)vbf.stride * vertex);
-			char* dst = (char*)bufferMap + offset + vbf.stride * vertex;
+		case 2:
+		{
+			auto* c_src = (const be_t<u16>*)src;
+			u16* c_dst = (u16*)dst;
 
-			switch (tsize)
+			for (u32 j = 0; j < vertex_array_desc.size; ++j)
 			{
-			case 1:
-			{
-				memcpy(dst, src, size);
-				break;
+				*c_dst++ = *c_src++;
 			}
+			break;
+		}
 
-			case 2:
-			{
-				const u16* c_src = (const u16*)src;
-				u16* c_dst = (u16*)dst;
-				for (u32 j = 0; j < size; ++j) *c_dst++ = _byteswap_ushort(*c_src++);
-				break;
-			}
+		case 4:
+		{
+			auto* c_src = (const be_t<u32>*)src;
+			u32* c_dst = (u32*)dst;
 
-			case 4:
+			for (u32 j = 0; j < vertex_array_desc.size; ++j)
 			{
-				const u32* c_src = (const u32*)src;
-				u32* c_dst = (u32*)dst;
-				for (u32 j = 0; j < size; ++j) *c_dst++ = _byteswap_ulong(*c_src++);
-				break;
+				*c_dst++ = *c_src++;
 			}
-			}
+			break;
+		}
 		}
 	}
 }

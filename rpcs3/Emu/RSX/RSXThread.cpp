@@ -10,6 +10,8 @@
 #include "Emu/SysCalls/CB_FUNC.h"
 #include "Emu/SysCalls/lv2/sys_time.h"
 
+#include "Common/BufferUtils.h"
+
 #include "Utilities/types.h"
 
 extern "C"
@@ -823,68 +825,19 @@ namespace rsx
 
 		for (int index = 0; index < limits::vertex_count; ++index)
 		{
-			auto &info = vertex_arrays_info[index];
+			const auto &info = vertex_arrays_info[index];
 
 			if (!info.array) // disabled or not a vertex array
-			{
 				continue;
-			}
 
 			auto &data = vertex_arrays[index];
-
-			if (info.frequency > 1)
-			{
-				LOG_ERROR(RSX, "%s: frequency is not null (%d, index=%d)", __FUNCTION__, info.frequency, index);
-			}
-
-			u32 offset = method_registers[NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + index];
-			u32 address = get_address(offset & 0x7fffffff, offset >> 31);
 
 			u32 type_size = get_vertex_type_size(info.type);
 			u32 element_size = type_size * info.size;
 
 			u32 dst_position = (u32)data.size();
 			data.resize(dst_position + count * element_size);
-
-			u32 base_offset = method_registers[NV4097_SET_VERTEX_DATA_BASE_OFFSET];
-			u32 base_index = method_registers[NV4097_SET_VERTEX_DATA_BASE_INDEX];
-
-			for (u32 i = 0; i < count; ++i)
-			{
-				const u8* src = vm::_ptr<u8>(address + base_offset + info.stride * (first + i + base_index));
-				u8* dst = data.data() + dst_position + i * element_size;
-
-				switch (type_size)
-				{
-				case 1:
-					memcpy(dst, src, info.size);
-					break;
-
-				case 2:
-				{
-					auto* c_src = (const be_t<u16>*)src;
-					u16* c_dst = (u16*)dst;
-
-					for (u32 j = 0; j < info.size; ++j)
-					{
-						*c_dst++ = *c_src++;
-					}
-					break;
-				}
-
-				case 4:
-				{
-					auto* c_src = (const be_t<u32>*)src;
-					u32* c_dst = (u32*)dst;
-
-					for (u32 j = 0; j < info.size; ++j)
-					{
-						*c_dst++ = *c_src++;
-					}
-					break;
-				}
-				}
-			}
+			write_vertex_array_data_to_buffer(data.data() + dst_position, first, count, index, info);
 		}
 	}
 

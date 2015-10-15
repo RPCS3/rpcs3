@@ -9,6 +9,7 @@ struct GLVertexDecompilerThread : public VertexProgramDecompiler
 	std::string &m_shader;
 protected:
 	virtual std::string getFloatTypeName(size_t elementCount) override;
+	std::string getIntTypeName(size_t elementCount) override;
 	virtual std::string getFunction(FUNCTION) override;
 	virtual std::string compareFunction(COMPARE, const std::string&, const std::string&) override;
 

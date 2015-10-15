@@ -11,6 +11,11 @@ std::string D3D12VertexProgramDecompiler::getFloatTypeName(size_t elementCount)
 	return getFloatTypeNameImp(elementCount);
 }
 
+std::string D3D12VertexProgramDecompiler::getIntTypeName(size_t elementCount)
+{
+	return "int4";
+}
+
 std::string D3D12VertexProgramDecompiler::getFunction(enum class FUNCTION f)
 {
 	return getFunctionImp(f);
@@ -141,7 +146,7 @@ void D3D12VertexProgramDecompiler::insertMainStart(std::stringstream & OS)
 
 void D3D12VertexProgramDecompiler::insertMainEnd(std::stringstream & OS)
 {
-	OS << "	PixelInput Out;" << std::endl;
+	OS << "	PixelInput Out = (PixelInput)0;" << std::endl;
 	// Declare inside main function
 	for (auto &i : reg_table)
 	{

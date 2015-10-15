@@ -374,15 +374,11 @@ private:
 		ComPtr<ID3D12CommandAllocator> m_commandAllocator;
 		ComPtr<ID3D12GraphicsCommandList> m_commandList;
 
-		// Constants storage
-		ComPtr<ID3D12DescriptorHeap> m_constantsBufferDescriptorsHeap;
-		size_t m_constantsBufferIndex;
-		ComPtr<ID3D12DescriptorHeap> m_scaleOffsetDescriptorHeap;
-		size_t m_currentScaleOffsetBufferIndex;
+		// Descriptor heap
+		ComPtr<ID3D12DescriptorHeap> m_descriptorsHeap;
+		size_t m_descriptorsHeapIndex;
 
-		// Texture storage
-		ComPtr<ID3D12DescriptorHeap> m_textureDescriptorsHeap;
-		size_t m_currentTextureIndex;
+		// Sampler heap
 		ComPtr<ID3D12DescriptorHeap> m_samplerDescriptorHeap[2];
 		size_t m_samplerDescriptorHeapIndex;
 		size_t m_currentSamplerIndex;
@@ -416,7 +412,7 @@ private:
 	// Constants storage
 	DataHeap<ID3D12Resource, 256> m_constantsData;
 	// Vertex storage
-	DataHeap<ID3D12Resource, 65536> m_vertexIndexData;
+	DataHeap<ID3D12Resource, 256> m_vertexIndexData;
 	// Texture storage
 	DataHeap<ID3D12Resource, 65536> m_textureUploadData;
 	DataHeap<ID3D12Heap, 65536> m_UAVHeap;
@@ -432,6 +428,7 @@ private:
 	RenderTargets m_rtts;
 
 	std::vector<D3D12_INPUT_ELEMENT_DESC> m_IASet;
+	std::vector<D3D12_VERTEX_BUFFER_VIEW> m_vertex_buffer_views;
 
 	INT g_descriptorStrideSRVCBVUAV;
 	INT g_descriptorStrideDSV;
@@ -466,12 +463,11 @@ private:
 
 	bool LoadProgram();
 
+	std::vector<std::pair<u32, u32> > m_first_count_pairs;
 	/**
-	 * Create as little vertex buffer as possible to hold all vertex info (in upload heap),
-	 * create corresponding IA layout that can be used for load program and
-	 * returns a vector of vertex buffer view that can be passed to IASetVertexBufferView().
+	 * Upload all vertex attribute whose (first, count) info were previously accumulated.
 	 */
-	std::vector<D3D12_VERTEX_BUFFER_VIEW> UploadVertexBuffers(bool indexed_draw = false);
+	void upload_vertex_attributes();
 
 	/**
 	 * Create index buffer for indexed rendering and non native primitive format if nedded, and
@@ -481,16 +477,16 @@ private:
 	D3D12_INDEX_BUFFER_VIEW uploadIndexBuffers(bool indexed_draw = false);
 
 
-	void setScaleOffset();
-	void FillVertexShaderConstantsBuffer();
-	void FillPixelShaderConstantsBuffer();
+	void setScaleOffset(size_t descriptorIndex);
+	void FillVertexShaderConstantsBuffer(size_t descriptorIndex);
+	void FillPixelShaderConstantsBuffer(size_t descriptorIndex);
 	/**
 	 * Fetch all textures recorded in the state in the render target cache and in the texture cache.
 	 * If a texture is not cached, populate cmdlist with uploads command.
 	 * Create necessary resource view/sampler descriptors in the per frame storage struct.
 	 * returns the number of texture uploaded.
 	 */
-	size_t UploadTextures(ID3D12GraphicsCommandList *cmdlist);
+	size_t UploadTextures(ID3D12GraphicsCommandList *cmdlist, size_t descriptorIndex);
 
 	/**
 	 * Creates render target if necessary.
@@ -511,6 +507,8 @@ protected:
 	virtual bool domethod(u32 cmd, u32 arg) override;
 	virtual void end() override;
 	virtual void flip(int buffer) override;
+
+	virtual void load_vertex_data(u32 first, u32 count) override;
 };
 
 #endif
