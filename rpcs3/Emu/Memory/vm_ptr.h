@@ -44,9 +44,9 @@ namespace vm
 		}
 
 		// get vm pointer to a struct member with array subscription
-		template<typename MT, typename T2, typename = if_comparable_t<T, T2>> _ptr_base<std::remove_extent_t<MT>> ptr(MT T2::*const mptr, u32 index) const
+		template<typename MT, typename T2, typename ET = std::remove_extent_t<MT>, typename = if_comparable_t<T, T2>> _ptr_base<ET> ptr(MT T2::*const mptr, u32 index) const
 		{
-			return{ VM_CAST(m_addr) + get_offset(mptr) + sizeof32(T) * index, vm::addr };
+			return{ VM_CAST(m_addr) + get_offset(mptr) + sizeof32(ET) * index, vm::addr };
 		}
 
 		// get vm reference to a struct member
@@ -56,9 +56,9 @@ namespace vm
 		}
 
 		// get vm reference to a struct member with array subscription
-		template<typename MT, typename T2, typename = if_comparable_t<T, T2>> _ref_base<std::remove_extent_t<MT>> ref(MT T2::*const mptr, u32 index) const
+		template<typename MT, typename T2, typename ET = std::remove_extent_t<MT>, typename = if_comparable_t<T, T2>> _ref_base<ET> ref(MT T2::*const mptr, u32 index) const
 		{
-			return{ VM_CAST(m_addr) + get_offset(mptr) + sizeof32(T) * index, vm::addr };
+			return{ VM_CAST(m_addr) + get_offset(mptr) + sizeof32(ET) * index, vm::addr };
 		}
 
 		// get vm reference
@@ -117,13 +117,13 @@ namespace vm
 			return m_addr != 0;
 		}
 
-		// Test address for arbitrary alignment: (addr & (align - 1)) != 0
+		// Test address for arbitrary alignment: (addr & (align - 1)) == 0
 		bool aligned(u32 align) const
 		{
 			return (m_addr & (align - 1)) == 0;
 		}
 
-		// Test address for type's alignment using alignof(T)
+		// Test address alignment using alignof(T)
 		bool aligned() const
 		{
 			static_assert(!std::is_void<T>::value, "vm::_ptr_base<> error: aligned() is not available for void pointers");
@@ -131,10 +131,10 @@ namespace vm
 			return aligned(alignof32(T));
 		}
 
-		// Call aligned(value)
+		// Test address for arbitrary alignment: (addr & (align - 1)) != 0
 		explicit_bool_t operator %(u32 align) const
 		{
-			return aligned(align);
+			return !aligned(align);
 		}
 
 		// pointer increment (postfix)

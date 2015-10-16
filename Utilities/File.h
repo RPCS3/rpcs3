@@ -164,8 +164,8 @@ namespace fs
 
 		dir& operator =(dir&& right)
 		{
-			m_dd = right.m_dd;
-			m_path = std::move(right.m_path);
+			std::swap(m_dd, right.m_dd);
+			std::swap(m_path, right.m_path);
 			return *this;
 		}
 
