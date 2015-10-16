@@ -405,13 +405,13 @@ private:
 	ResourceStorage &getNonCurrentResourceStorage();
 
 	// Constants storage
-	DataHeap<ID3D12Resource, 256> m_constantsData;
+	DataHeap<ID3D12Resource, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT> m_constantsData;
 	// Vertex storage
-	DataHeap<ID3D12Resource, 256> m_vertexIndexData;
+	DataHeap<ID3D12Resource, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT> m_vertexIndexData;
 	// Texture storage
-	DataHeap<ID3D12Resource, 65536> m_textureUploadData;
-	DataHeap<ID3D12Heap, 65536> m_UAVHeap;
-	DataHeap<ID3D12Heap, 65536> m_readbackResources;
+	DataHeap<ID3D12Resource, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT> m_textureUploadData;
+	DataHeap<ID3D12Heap, D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT> m_UAVHeap;
+	DataHeap<ID3D12Heap, D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT> m_readbackResources;
 
 	struct
 	{

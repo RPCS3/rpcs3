@@ -130,7 +130,7 @@ ComPtr<ID3D12Resource> uploadSingleTexture(
 	const rsx::texture &texture,
 	ID3D12Device *device,
 	ID3D12GraphicsCommandList *commandList,
-	DataHeap<ID3D12Resource, 65536> &textureBuffersHeap)
+	DataHeap<ID3D12Resource, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT> &textureBuffersHeap)
 {
 	ComPtr<ID3D12Resource> vramTexture;
 	size_t w = texture.width(), h = texture.height();
@@ -181,7 +181,7 @@ static
 void updateExistingTexture(
 	const rsx::texture &texture,
 	ID3D12GraphicsCommandList *commandList,
-	DataHeap<ID3D12Resource, 65536> &textureBuffersHeap,
+	DataHeap<ID3D12Resource, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT> &textureBuffersHeap,
 	ID3D12Resource *existingTexture)
 {
 	size_t w = texture.width(), h = texture.height();
