@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "Utilities/Log.h"
 #include "VirtualMemory.h"
 #ifdef _WIN32
 #include <Windows.h>
@@ -21,13 +22,23 @@ namespace memory_helper
 #endif
 	}
 
-	void commit_page_memory(void* pointer, size_t page_size)
+	s32 commit_page_memory(void* pointer, size_t page_size)
 	{
 #ifdef _WIN32
-		VirtualAlloc((u8*)pointer, page_size, MEM_COMMIT, PAGE_READWRITE);
+		if (VirtualAlloc((u8*)pointer, page_size, MEM_COMMIT, PAGE_READWRITE) == NULL)
+		{
+			LOG_ERROR(HLE, "commit_page_memory VirtualAlloc failed.");
+			return -1;
+		}
 #else
-		mprotect((u8*)pointer, page_size, PROT_READ | PROT_WRITE);
+		s32 ret = mprotect((u8*)pointer, page_size, PROT_READ | PROT_WRITE)
+		if (ret < 0)
+		{
+			LOG_ERROR(HLE, "commit_page_memory mprotect failed. (%d)", ret);
+			return -1;
+		}
 #endif
+		return 0;
 	}
 
 	void free_reserved_memory(void* pointer, size_t size)

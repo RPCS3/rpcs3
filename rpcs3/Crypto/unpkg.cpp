@@ -86,7 +86,11 @@ bool UnpackPKG(const fs::file& pkg_f, const std::string& dir, volatile f64& prog
 	// Define decryption subfunction (`psp` arg selects the key for specific block)
 	auto decrypt = [&](u64 offset, u64 size, bool psp) -> u64
 	{
-		pkg_f.seek(start_offset + header.data_offset + offset);
+		if (pkg_f.seek(start_offset + header.data_offset + offset) < 0)
+		{
+			LOG_ERROR(LOADER, "PKG: Package file seek to %u failed.", start_offset + header.data_offset + offset);
+			return -1;
+		}
 
 		// Read the data and set available size
 		const u64 read = pkg_f.read(buf.get(), size);

@@ -890,7 +890,7 @@ bool SELFDecrypter::DecryptNPDRM(u8 *metadata, u32 metadata_size)
 	memcpy(klicensee_key, key_v.GetKlicenseeKey(), 0x10);
 
 	// Use klicensee if available.
-	if (klicensee_key != NULL)
+	if (memcmp(klicensee_key, key_v.GetKlicenseeKey(), 0x10) != 0)
 		memcpy(npdrm_key, klicensee_key, 0x10);
 
 	if (ctrl->npdrm.license == 1)  // Network license.
@@ -1077,7 +1077,7 @@ bool SELFDecrypter::MakeElf(const std::string& elf, bool isElf32)
 {
 	// Create a new ELF file.
 	fs::file e(elf, fom::write | fom::create | fom::trunc);
-	if(!e)
+	if (!e)
 	{
 		LOG_ERROR(LOADER, "Could not create ELF file! (%s)", elf.c_str());
 		return false;
@@ -1092,8 +1092,10 @@ bool SELFDecrypter::MakeElf(const std::string& elf, bool isElf32)
 		WriteEhdr(e, elf32_hdr);
 
 		// Write program headers.
-		for(u32 i = 0; i < elf32_hdr.e_phnum; ++i)
+		for (u32 i = 0; i < elf32_hdr.e_phnum; ++i)
+		{
 			WritePhdr(e, phdr32_arr[i]);
+		}
 
 		for (unsigned int i = 0; i < meta_hdr.section_count; i++)
 		{
@@ -1101,7 +1103,12 @@ bool SELFDecrypter::MakeElf(const std::string& elf, bool isElf32)
 			if (meta_shdr[i].type == 2)
 			{
 				// Seek to the program header data offset and write the data.
-				e.seek(phdr32_arr[meta_shdr[i].program_idx].p_offset);
+				if (e.seek(phdr32_arr[meta_shdr[i].program_idx].p_offset) < 0)
+				{
+					LOG_ERROR(LOADER, "MakeElf program header data seek to %u failed.", phdr32_arr[meta_shdr[i].program_idx].p_offset);
+					return false;
+				}
+
 				e.write(data_buf + data_buf_offset, meta_shdr[i].data_size);
 
 				// Advance the data buffer offset by data size.
@@ -1110,12 +1117,18 @@ bool SELFDecrypter::MakeElf(const std::string& elf, bool isElf32)
 		}
 
 		// Write section headers.
-		if(self_hdr.se_shdroff != 0)
+		if (self_hdr.se_shdroff != 0)
 		{
-			e.seek(elf32_hdr.e_shoff);
+			if (e.seek(elf32_hdr.e_shoff) < 0)
+			{
+				LOG_ERROR(LOADER, "MakeElf section header seek to %u failed.", elf32_hdr.e_shoff);
+				return false;
+			}
 
-			for(u32 i = 0; i < elf32_hdr.e_shnum; ++i)
+			for (u32 i = 0; i < elf32_hdr.e_shnum; ++i)
+			{
 				WriteShdr(e, shdr32_arr[i]);
+			}
 		}
 	}
 	else
@@ -1124,8 +1137,10 @@ bool SELFDecrypter::MakeElf(const std::string& elf, bool isElf32)
 		WriteEhdr(e, elf64_hdr);
 
 		// Write program headers.
-		for(u32 i = 0; i < elf64_hdr.e_phnum; ++i)
+		for (u32 i = 0; i < elf64_hdr.e_phnum; ++i)
+		{
 			WritePhdr(e, phdr64_arr[i]);
+		}
 
 		// Write data.
 		for (unsigned int i = 0; i < meta_hdr.section_count; i++)
@@ -1152,7 +1167,12 @@ bool SELFDecrypter::MakeElf(const std::string& elf, bool isElf32)
 					decomp_stream_out.CopyTo(decomp_buf, phdr64_arr[meta_shdr[i].program_idx].p_filesz);
 
 					// Seek to the program header data offset and write the data.
-					e.seek(phdr64_arr[meta_shdr[i].program_idx].p_offset);
+					if (e.seek(phdr64_arr[meta_shdr[i].program_idx].p_offset) < 0)
+					{
+						LOG_ERROR(LOADER, "MakeElf program header data seek to %u failed.", phdr64_arr[meta_shdr[i].program_idx].p_offset);
+						return false;
+					}
+
 					e.write(decomp_buf, phdr64_arr[meta_shdr[i].program_idx].p_filesz);
 
 					// Release the decompression buffer.
@@ -1161,7 +1181,12 @@ bool SELFDecrypter::MakeElf(const std::string& elf, bool isElf32)
 				else
 				{
 					// Seek to the program header data offset and write the data.
-					e.seek(phdr64_arr[meta_shdr[i].program_idx].p_offset);
+					if (e.seek(phdr64_arr[meta_shdr[i].program_idx].p_offset) < 0)
+					{
+						LOG_ERROR(LOADER, "MakeElf program header data seek to %u failed.", phdr64_arr[meta_shdr[i].program_idx].p_offset);
+						return false;
+					}
+					
 					e.write(data_buf + data_buf_offset, meta_shdr[i].data_size);
 				}
 
@@ -1171,12 +1196,18 @@ bool SELFDecrypter::MakeElf(const std::string& elf, bool isElf32)
 		}
 
 		// Write section headers.
-		if(self_hdr.se_shdroff != 0)
+		if (self_hdr.se_shdroff != 0)
 		{
-			e.seek(elf64_hdr.e_shoff);
+			if (e.seek(elf64_hdr.e_shoff) < 0)
+			{
+				LOG_ERROR(LOADER, "MakeElf section header seek to %u failed.", elf64_hdr.e_shoff);
+				return false;
+			}
 
-			for(u32 i = 0; i < elf64_hdr.e_shnum; ++i)
+			for (u32 i = 0; i < elf64_hdr.e_shnum; ++i)
+			{
 				WriteShdr(e, shdr64_arr[i]);
+			}
 		}
 	}
 
@@ -1246,7 +1277,13 @@ bool IsSelfElf32(const std::string& path)
 	
 	// Locate the class byte and check it.
 	u8 elf_class[0x8];
-	f.Seek(sh.se_elfoff);
+
+	if (f.Seek(sh.se_elfoff) < 0)
+	{
+		LOG_ERROR(LOADER, "IsSelfElf32 seek to %u failed.", sh.se_elfoff);
+		return false;
+	}
+
 	f.Read(elf_class, 0x8);
 
 	return (elf_class[4] == 1);
@@ -1257,34 +1294,49 @@ bool CheckDebugSelf(const std::string& self, const std::string& elf)
 	// Open the SELF file.
 	fs::file s(self);
 
-	if(!s)
+	if (!s)
 	{
 		LOG_ERROR(LOADER, "Could not open SELF file! (%s)", self.c_str());
 		return false;
 	}
 
 	// Get the key version.
-	s.seek(0x08);
+	if (s.seek(0x08) < 0)
+	{
+		LOG_ERROR(LOADER, "Seeking debug (S)ELF at 0x08 failed.");
+		return false;
+	}
+
 	u16 key_version;
 	s.read(&key_version, sizeof(key_version));
 
 	// Check for DEBUG version.
-	if(swap16(key_version) == 0x8000)
+	if (swap16(key_version) == 0x8000)
 	{
 		LOG_WARNING(LOADER, "Debug SELF detected! Removing fake header...");
 
 		// Get the real elf offset.
-		s.seek(0x10);
+		if (s.seek(0x10) < 0)
+		{
+			LOG_ERROR(LOADER, "Seeking debug (S)ELF at 0x10 failed.");
+			return false;
+		}
+
 		u64 elf_offset;
 		s.read(&elf_offset, sizeof(elf_offset));
 
 		// Start at the real elf offset.
 		elf_offset = swap64(elf_offset);
-		s.seek(elf_offset);
+
+		if (s.seek(elf_offset) < 0)
+		{
+			LOG_ERROR(LOADER, "Seeking debug (S)ELF at %u failed.", elf_offset);
+			return false;
+		}
 
 		// Write the real ELF file back.
 		fs::file e(elf, fom::write | fom::create | fom::trunc);
-		if(!e)
+		if (!e)
 		{
 			LOG_ERROR(LOADER, "Could not create ELF file! (%s)", elf.c_str());
 			return false;
@@ -1293,7 +1345,9 @@ bool CheckDebugSelf(const std::string& self, const std::string& elf)
 		// Copy the data.
 		char buf[2048];
 		while (ssize_t size = s.read(buf, 2048))
+		{
 			e.write(buf, size);
+		}
 
 		return true;
 	}

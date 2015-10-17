@@ -3,7 +3,7 @@
 
 class GSFrame : public wxFrame, public GSFrameBase
 {
-	u64 m_frames;
+	u64 m_frames = 0;
 
 public:
 	GSFrame(const wxString& title);

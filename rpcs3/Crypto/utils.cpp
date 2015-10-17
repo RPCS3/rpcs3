@@ -96,6 +96,7 @@ void hex_to_bytes(unsigned char *data, const char *hex_str, unsigned int str_len
 
 		// Copy back to our array.
 		memcpy(data, out, data_length);
+		free(out);
 	}
 }
 

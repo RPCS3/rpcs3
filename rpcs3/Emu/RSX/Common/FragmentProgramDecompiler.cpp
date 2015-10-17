@@ -291,6 +291,7 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 
 	case 3: // ??? Used by a few games, what is it?
 		LOG_ERROR(RSX, "Src type 3 used, please report this to a developer.");
+		break;
 
 	default:
 		LOG_ERROR(RSX, "Bad src type %d", u32{ src.reg_type });

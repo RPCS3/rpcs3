@@ -291,7 +291,10 @@ int decrypt_data(const fs::file* in, const fs::file* out, EDAT_HEADER *edat, NPD
 			{
 				if (verbose)
 					LOG_WARNING(LOADER, "EDAT: Block at offset 0x%llx has invalid hash!", (u64)offset);
-					
+				
+				delete[] enc_data;
+				delete[] dec_data;
+				delete[] b_key;
 				return 1;
 			}
 		}
@@ -337,6 +340,7 @@ int decrypt_data(const fs::file* in, const fs::file* out, EDAT_HEADER *edat, NPD
 
 		delete[] enc_data;
 		delete[] dec_data;
+		delete[] b_key;
 	}
 
 	return 0;
@@ -389,7 +393,11 @@ int check_data(unsigned char *key, EDAT_HEADER *edat, NPD_HEADER *npd, const fs:
 	f->read(header, 0xA0);
 
 	// Read in the header and metadata section hashes.
-	f->seek(0x90);
+	if (f->seek(0x90) < 0)
+	{
+		LOG_ERROR(LOADER, "EDAT: Seeking header at 0x90 failed.");
+	}
+
 	f->read(metadata_hash, 0x10);
 	f->read(header_hash, 0x10);
 
@@ -445,7 +453,10 @@ int check_data(unsigned char *key, EDAT_HEADER *edat, NPD_HEADER *npd, const fs:
 	while (bytes_to_read > 0)
 	{
 		// Locate the metadata blocks.
-		f->seek(metadata_section_offset);
+		if (f->seek(metadata_section_offset) < 0)
+		{
+			LOG_ERROR(LOADER, "EDAT: Seeking metadata blocks at %u failed.", metadata_section_offset);
+		}
 
 		// Read in the metadata.
 		f->read(metadata + bytes_read, metadata_section_size);

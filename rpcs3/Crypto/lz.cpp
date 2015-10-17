@@ -253,11 +253,17 @@ int decompress(unsigned char *out, unsigned char *in, unsigned int size)
 
 				// Underflow.
 				if (buf_start < out)
+				{
+					delete[] tmp;
 					return -1;
+				}
 
 				// Overflow.
 				if (buf_end > end)
+				{
+					delete[] tmp;
 					return -1;
+				}
 
 				// Update offset.
 				offset = ((((int)(buf_end - out)) + 1) & 1) + 6;

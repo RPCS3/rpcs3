@@ -19,7 +19,7 @@ void vfsHDDManager::CreateEntry(vfsHDD_Entry& entry)
 	CreateBlock(entry);
 }
 
-void vfsHDDManager::CreateHDD(const std::string& path, u64 size, u64 block_size)
+s32 vfsHDDManager::CreateHDD(const std::string& path, u64 size, u64 block_size)
 {
 	fs::file f(path, fom::write | fom::create | fom::trunc);
 
@@ -47,8 +47,16 @@ void vfsHDDManager::CreateHDD(const std::string& path, u64 size, u64 block_size)
 	}
 
 	u8 null = 0;
-	f.seek(hdr.block_count * hdr.block_size - sizeof(null));
+
+	if (f.seek(hdr.block_count * hdr.block_size - sizeof(null)) < 0)
+	{
+		LOG_ERROR(HLE, "CreateHDD seek to %u failed.", hdr.block_count * hdr.block_size - sizeof(null));
+		return -1;
+	}
+	
 	f.write(&null, sizeof(null));
+
+	return 0;
 }
 
 void vfsHDDManager::Format()
@@ -99,50 +107,99 @@ void vfsHDDFile::RemoveBlocks(u64 start_block)
 	}
 }
 
-void vfsHDDFile::WriteBlock(u64 block, const vfsHDD_Block& data)
+s32 vfsHDDFile::WriteBlock(u64 block, const vfsHDD_Block& data)
 {
-	m_hdd.Seek(block * m_hdd_info.block_size);
+	if (m_hdd.Seek(block * m_hdd_info.block_size) < 0)
+	{
+		LOG_ERROR(HLE, "WriteBlock seek to %u failed.", block * m_hdd_info.block_size);
+		return -1;
+	}
+	
 	m_hdd.Write(&data, sizeof(vfsHDD_Block));
+
+	return 0;
 }
 
-void vfsHDDFile::ReadBlock(u64 block, vfsHDD_Block& data)
+s32 vfsHDDFile::ReadBlock(u64 block, vfsHDD_Block& data)
 {
-	m_hdd.Seek(block * m_hdd_info.block_size);
+	if (m_hdd.Seek(block * m_hdd_info.block_size) < 0)
+	{
+		LOG_ERROR(HLE, "ReadBlock seek to %u failed.", block * m_hdd_info.block_size);
+		return -1;
+	}
+	
 	m_hdd.Read(&data, sizeof(vfsHDD_Block));
+
+	return 0;
 }
 
-void vfsHDDFile::WriteEntry(u64 block, const vfsHDD_Entry& data)
+s32 vfsHDDFile::WriteEntry(u64 block, const vfsHDD_Entry& data)
 {
-	m_hdd.Seek(block * m_hdd_info.block_size);
+	if (m_hdd.Seek(block * m_hdd_info.block_size) < 0)
+	{
+		LOG_ERROR(HLE, "WriteEntry seek to %u failed.", block * m_hdd_info.block_size);
+		return -1;
+	}
+	
 	m_hdd.Write(&data, sizeof(vfsHDD_Entry));
+
+	return 0;
 }
 
-void vfsHDDFile::ReadEntry(u64 block, vfsHDD_Entry& data)
+s32 vfsHDDFile::ReadEntry(u64 block, vfsHDD_Entry& data)
 {
-	m_hdd.Seek(block * m_hdd_info.block_size);
+	if (m_hdd.Seek(block * m_hdd_info.block_size) < 0)
+	{
+		LOG_ERROR(HLE, "ReadEntry seek to %u failed.", block * m_hdd_info.block_size);
+		return -1;
+	}
+	
 	m_hdd.Read(&data, sizeof(vfsHDD_Entry));
+
+	return 0;
 }
 
-void vfsHDDFile::ReadEntry(u64 block, vfsHDD_Entry& data, std::string& name)
+s32 vfsHDDFile::ReadEntry(u64 block, vfsHDD_Entry& data, std::string& name)
 {
-	m_hdd.Seek(block * m_hdd_info.block_size);
+	if (m_hdd.Seek(block * m_hdd_info.block_size) < 0)
+	{
+		LOG_ERROR(HLE, "ReadEntry seek to %u failed.", block * m_hdd_info.block_size);
+		return -1;
+	}
+	
 	m_hdd.Read(&data, sizeof(vfsHDD_Entry));
 	name.resize(GetMaxNameLen());
 	m_hdd.Read(&name.front(), GetMaxNameLen());
+
+	return 0;
 }
 
-void vfsHDDFile::ReadEntry(u64 block, std::string& name)
+s32 vfsHDDFile::ReadEntry(u64 block, std::string& name)
 {
-	m_hdd.Seek(block * m_hdd_info.block_size + sizeof(vfsHDD_Entry));
+	if (m_hdd.Seek(block * m_hdd_info.block_size + sizeof(vfsHDD_Entry)) < 0)
+	{
+		LOG_ERROR(HLE, "ReadEntry seek to %u failed.", block * m_hdd_info.block_size + sizeof(vfsHDD_Entry));
+		return -1;
+	}
+	
 	name.resize(GetMaxNameLen());
 	m_hdd.Read(&name.front(), GetMaxNameLen());
+
+	return 0;
 }
 
-void vfsHDDFile::WriteEntry(u64 block, const vfsHDD_Entry& data, const std::string& name)
+s32 vfsHDDFile::WriteEntry(u64 block, const vfsHDD_Entry& data, const std::string& name)
 {
-	m_hdd.Seek(block * m_hdd_info.block_size);
+	if (m_hdd.Seek(block * m_hdd_info.block_size) < 0)
+	{
+		LOG_ERROR(HLE, "WriteEntry seek to %u failed.", block * m_hdd_info.block_size);
+		return -1;
+	}
+	
 	m_hdd.Write(&data, sizeof(vfsHDD_Entry));
 	m_hdd.Write(name.c_str(), std::min<size_t>(GetMaxNameLen() - 1, name.length() + 1));
+
+	return 0;
 }
 
 void vfsHDDFile::Open(u64 info_block)
@@ -361,7 +418,13 @@ vfsHDD::vfsHDD(vfsDevice* device, const std::string& hdd_path)
 		LOG_ERROR(HLE, "Bad block size!");
 		m_hdd_info.block_size = 2048;
 	}
-	m_hdd_file.Seek(m_cur_dir_block * m_hdd_info.block_size);
+
+	if (m_hdd_file.Seek(m_cur_dir_block * m_hdd_info.block_size) < 0)
+	{
+		LOG_ERROR(HLE, "vfsHDD initialization seek to %u failed.", m_cur_dir_block * m_hdd_info.block_size);
+		return;
+	}
+	
 	m_hdd_file.Read(&m_cur_dir, sizeof(vfsHDD_Entry));
 }
 
@@ -392,14 +455,22 @@ bool vfsHDD::SearchEntry(const std::string& name, u64& entry_block, u64* parent_
 	return false;
 }
 
-int vfsHDD::OpenDir(const std::string& name)
+s32 vfsHDD::OpenDir(const std::string& name)
 {
 	LOG_WARNING(HLE, "OpenDir(%s)", name.c_str());
 	u64 entry_block;
 	if (!SearchEntry(name, entry_block))
+	{
+		LOG_ERROR(HLE, "OpenDir could not find the entry. (%s)", name);
 		return -1;
+	}
 
-	m_hdd_file.Seek(entry_block * m_hdd_info.block_size);
+	if (m_hdd_file.Seek(entry_block * m_hdd_info.block_size) < 0)
+	{
+		LOG_ERROR(HLE, "OpenDir seek to %u failed.", entry_block * m_hdd_info.block_size);
+		return -1;
+	}
+	
 	vfsHDD_Entry entry;
 	m_hdd_file.Read(&entry, sizeof(vfsHDD_Entry));
 	if (entry.type == vfsHDD_Entry_File)
@@ -443,50 +514,99 @@ u64 vfsHDD::FindFreeBlock()
 	return 0;
 }
 
-void vfsHDD::WriteBlock(u64 block, const vfsHDD_Block& data)
+s32 vfsHDD::WriteBlock(u64 block, const vfsHDD_Block& data)
 {
-	m_hdd_file.Seek(block * m_hdd_info.block_size);
+	if (m_hdd_file.Seek(block * m_hdd_info.block_size) < 0)
+	{
+		LOG_ERROR(HLE, "WriteBlock seek to %u failed.", block * m_hdd_info.block_size);
+		return -1;
+	}
+	
 	m_hdd_file.Write(&data, sizeof(vfsHDD_Block));
+
+	return 0;
 }
 
-void vfsHDD::ReadBlock(u64 block, vfsHDD_Block& data)
+s32 vfsHDD::ReadBlock(u64 block, vfsHDD_Block& data)
 {
-	m_hdd_file.Seek(block * m_hdd_info.block_size);
+	if (m_hdd_file.Seek(block * m_hdd_info.block_size) < 0)
+	{
+		LOG_ERROR(HLE, "ReadBlock seek to %u failed.", block * m_hdd_info.block_size);
+		return -1;
+	}
+	
 	m_hdd_file.Read(&data, sizeof(vfsHDD_Block));
+
+	return 0;
 }
 
-void vfsHDD::WriteEntry(u64 block, const vfsHDD_Entry& data)
+s32 vfsHDD::WriteEntry(u64 block, const vfsHDD_Entry& data)
 {
-	m_hdd_file.Seek(block * m_hdd_info.block_size);
+	if (m_hdd_file.Seek(block * m_hdd_info.block_size) < 0)
+	{
+		LOG_ERROR(HLE, "WriteEntry seek to %u failed.", block * m_hdd_info.block_size);
+		return -1;
+	}
+	
 	m_hdd_file.Write(&data, sizeof(vfsHDD_Entry));
+
+	return 0;
 }
 
-void vfsHDD::ReadEntry(u64 block, vfsHDD_Entry& data)
+s32 vfsHDD::ReadEntry(u64 block, vfsHDD_Entry& data)
 {
-	m_hdd_file.Seek(block * m_hdd_info.block_size);
+	if (m_hdd_file.Seek(block * m_hdd_info.block_size) < 0)
+	{
+		LOG_ERROR(HLE, "ReadEntry seek to %u failed.", block * m_hdd_info.block_size);
+		return -1;
+	}
+
 	m_hdd_file.Read(&data, sizeof(vfsHDD_Entry));
+
+	return 0;
 }
 
-void vfsHDD::ReadEntry(u64 block, vfsHDD_Entry& data, std::string& name)
+s32 vfsHDD::ReadEntry(u64 block, vfsHDD_Entry& data, std::string& name)
 {
-	m_hdd_file.Seek(block * m_hdd_info.block_size);
+	if (m_hdd_file.Seek(block * m_hdd_info.block_size) < 0)
+	{
+		LOG_ERROR(HLE, "ReadEntry seek to %u failed.", block * m_hdd_info.block_size);
+		return -1;
+	}
+
 	m_hdd_file.Read(&data, sizeof(vfsHDD_Entry));
 	name.resize(GetMaxNameLen());
 	m_hdd_file.Read(&name.front(), GetMaxNameLen());
+
+	return 0;
 }
 
-void vfsHDD::ReadEntry(u64 block, std::string& name)
+s32 vfsHDD::ReadEntry(u64 block, std::string& name)
 {
-	m_hdd_file.Seek(block * m_hdd_info.block_size + sizeof(vfsHDD_Entry));
+	if (m_hdd_file.Seek(block * m_hdd_info.block_size + sizeof(vfsHDD_Entry)) < 0)
+	{
+		LOG_ERROR(HLE, "ReadEntry seek to %u failed.", block * m_hdd_info.block_size + sizeof(vfsHDD_Entry));
+		return -1;
+	}
+	
 	name.resize(GetMaxNameLen());
 	m_hdd_file.Read(&name.front(), GetMaxNameLen());
+
+	return 0;
 }
 
-void vfsHDD::WriteEntry(u64 block, const vfsHDD_Entry& data, const std::string& name)
+s32 vfsHDD::WriteEntry(u64 block, const vfsHDD_Entry& data, const std::string& name)
 {
-	m_hdd_file.Seek(block * m_hdd_info.block_size);
+	if (m_hdd_file.Seek(block * m_hdd_info.block_size) < 0)
+	{
+		LOG_ERROR(HLE, "WriteEntry seek to %u failed.", block * m_hdd_info.block_size);
+		return -1;
+	}
+	
 	m_hdd_file.Write(&data, sizeof(vfsHDD_Entry));
 	m_hdd_file.Write(name.c_str(), std::min<size_t>(GetMaxNameLen() - 1, name.length() + 1));
+
+	return 0;
 }
 
 bool vfsHDD::Create(vfsHDD_EntryType type, const std::string& name)

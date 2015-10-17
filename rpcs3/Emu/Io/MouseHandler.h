@@ -92,6 +92,8 @@ struct Mouse
 		: m_data()
 		, m_rawdata()
 	{
+		x_pos = 0;
+		y_pos = 0;
 	}
 };
 

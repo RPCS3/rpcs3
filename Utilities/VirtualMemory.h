@@ -12,8 +12,11 @@ namespace memory_helper
 	* Commit page_size bytes of virtual memory starting at pointer.
 	* That is, bake reserved memory with physical memory.
 	* pointer should belong to a range of reserved memory.
+	*
+	* Returns 0, if was successful.
+	* Returns -1, if was unsuccessful.
 	*/
-	void commit_page_memory(void* pointer, size_t page_size);
+	s32 commit_page_memory(void* pointer, size_t page_size);
 
 	/**
 	* Free memory alloced via reserve_memory.
