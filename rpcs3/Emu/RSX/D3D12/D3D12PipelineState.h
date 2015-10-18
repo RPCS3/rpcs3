@@ -1,6 +1,5 @@
 #pragma once
-#if defined (DX12_SUPPORT)
-
+#ifdef _WIN64
 #include "D3D12.h"
 #include "../Common/ProgramStateCache.h"
 #include "D3D12VertexProgramDecompiler.h"
@@ -203,7 +202,4 @@ struct D3D12Traits
 class PipelineStateObjectCache : public ProgramStateCache<D3D12Traits>
 {
 };
-
-
-
 #endif

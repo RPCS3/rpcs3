@@ -1,6 +1,5 @@
-#include "stdafx.h"
-#if defined (DX12_SUPPORT)
-
+#include "stdafx_d3d12.h"
+#ifdef _WIN64
 #include "D3D12PipelineState.h"
 #include <d3dcompiler.h>
 #include "D3D12GSRender.h"
@@ -57,24 +56,24 @@ bool D3D12GSRender::LoadProgram()
 	fragment_program.ctrl = rsx::method_registers[NV4097_SET_SHADER_CONTROL];
 
 	D3D12PipelineProperties prop = {};
-	switch (draw_mode - 1)
+	switch (draw_mode)
 	{
-	case GL_POINTS:
+	case CELL_GCM_PRIMITIVE_POINTS:
 		prop.Topology = D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
 		break;
-	case GL_LINES:
-	case GL_LINE_LOOP:
-	case GL_LINE_STRIP:
+	case CELL_GCM_PRIMITIVE_LINES:
+	case CELL_GCM_PRIMITIVE_LINE_LOOP:
+	case CELL_GCM_PRIMITIVE_LINE_STRIP:
 		prop.Topology = D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
 		break;
-	case GL_TRIANGLES:
-	case GL_TRIANGLE_STRIP:
-	case GL_TRIANGLE_FAN:
+	case CELL_GCM_PRIMITIVE_TRIANGLES:
+	case CELL_GCM_PRIMITIVE_TRIANGLE_STRIP:
+	case CELL_GCM_PRIMITIVE_TRIANGLE_FAN:
 		prop.Topology = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 		break;
-	case GL_QUADS:
-	case GL_QUAD_STRIP:
-	case GL_POLYGON:
+	case CELL_GCM_PRIMITIVE_QUADS:
+	case CELL_GCM_PRIMITIVE_QUAD_STRIP:
+	case CELL_GCM_PRIMITIVE_POLYGON:
 	default:
 		//		LOG_ERROR(RSX, "Unsupported primitive type");
 		prop.Topology = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
@@ -296,6 +295,4 @@ bool D3D12GSRender::LoadProgram()
 	m_PSO = m_cachePSO.getGraphicPipelineState(&vertex_program, &fragment_program, prop, std::make_pair(m_device.Get(), m_rootSignatures));
 	return m_PSO != nullptr;
 }
-
-
 #endif

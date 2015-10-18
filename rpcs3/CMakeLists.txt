@@ -112,6 +112,7 @@ ${LLVM_INCLUDE_DIRS}
 )
 if(WIN32)
 	include_directories(BEFORE "${RPCS3_SRC_DIR}/../minidx9/Include")
+	include_directories(BEFORE "${RPCS3_SRC_DIR}/../minidx12/Include")
 endif()
 
 if(LLVM_FOUND)
@@ -129,7 +130,7 @@ if(LLVM_FOUND)
 	endif()
 endif()
 
-link_directories("${RPCS3_SRC_DIR}/../ffmpeg/${PLATFORM_ARCH}/lib" "${RPCS3_SRC_DIR}/../asmjit/")
+link_directories("${RPCS3_SRC_DIR}/../ffmpeg/${PLATFORM_ARCH}/lib" "${RPCS3_SRC_DIR}/../asmjit/" "${RPCS3_SRC_DIR}/../minidx12/")
 
 get_property(dirs DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY INCLUDE_DIRECTORIES)
 foreach(dir ${dirs})
@@ -160,7 +161,7 @@ else()
 	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /SUBSYSTEM:WINDOWS /NODEFAULTLIB:libc.lib /NODEFAULTLIB:libcmt.lib /NODEFAULTLIB:libcd.lib /NODEFAULTLIB:libcmtd.lib /NODEFAULTLIB:msvcrtd.lib")
 endif()
 if(WIN32) # I'm not sure we need all of these libs, but we link them in vs
-	target_link_libraries(rpcs3  odbc32.lib odbccp32.lib comctl32.lib ws2_32.lib shlwapi.lib winmm.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib)
+	target_link_libraries(rpcs3  odbc32.lib odbccp32.lib comctl32.lib ws2_32.lib shlwapi.lib winmm.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib dxgi.lib d2d1.lib dwrite.lib d3dcompiler.lib)
 	if(LLVM_FOUND)
 		target_link_libraries(rpcs3  asmjit.lib ${wxWidgets_LIBRARIES} ${OPENAL_LIBRARY} avformat.lib avcodec.lib avutil.lib swresample.lib swscale.lib ${LLVM_LIBS} ${ADDITIONAL_LIBS})
 	else()

@@ -1,5 +1,5 @@
-#include "stdafx.h"
-#if defined(DX12_SUPPORT)
+#include "stdafx_d3d12.h"
+#ifdef _WIN64
 #include "D3D12GSRender.h"
 #include <d2d1_3.h>
 #include <dwrite_3.h>
@@ -19,9 +19,6 @@ ComPtr<ID3D11Resource> m_wrappedBackBuffers[2];
 ComPtr<ID2D1Bitmap1> m_d2dRenderTargets[2];
 ComPtr<IDWriteTextFormat> m_textFormat;
 ComPtr<ID2D1SolidColorBrush> m_textBrush;
-
-#pragma comment (lib, "d2d1.lib")
-#pragma comment (lib, "dwrite.lib")
 
 extern PFN_D3D11ON12_CREATE_DEVICE wrapD3D11On12CreateDevice;
 
@@ -214,5 +211,4 @@ void D3D12GSRender::renderOverlay()
 	// Flush to submit the 11 command list to the shared command queue.
 	m_d3d11DeviceContext->Flush();
 }
-
 #endif

@@ -1,5 +1,5 @@
-#include "stdafx.h"
-#if defined(DX12_SUPPORT)
+#include "stdafx_d3d12.h"
+#ifdef _WIN64
 #include "D3D12Buffer.h"
 #include "Utilities/Log.h"
 
@@ -419,6 +419,4 @@ void D3D12GSRender::FillPixelShaderConstantsBuffer(size_t descriptorIndex)
 		CD3DX12_CPU_DESCRIPTOR_HANDLE(getCurrentResourceStorage().m_descriptorsHeap->GetCPUDescriptorHandleForHeapStart())
 		.Offset((INT)descriptorIndex, g_descriptorStrideSRVCBVUAV));
 }
-
-
 #endif
