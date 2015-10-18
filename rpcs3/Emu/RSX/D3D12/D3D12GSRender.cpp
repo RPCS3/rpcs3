@@ -434,7 +434,7 @@ void D3D12GSRender::end()
 	std::chrono::time_point<std::chrono::system_clock> programLoadEnd = std::chrono::system_clock::now();
 	m_timers.m_programLoadDuration += std::chrono::duration_cast<std::chrono::microseconds>(programLoadEnd - programLoadStart).count();
 
-	getCurrentResourceStorage().m_commandList->SetGraphicsRootSignature(m_rootSignatures[m_PSO->second].Get());
+	getCurrentResourceStorage().m_commandList->SetGraphicsRootSignature(m_rootSignatures[std::get<2>(*m_PSO)].Get());
 	getCurrentResourceStorage().m_commandList->OMSetStencilRef(rsx::method_registers[NV4097_SET_STENCIL_FUNC_REF]);
 
 	std::chrono::time_point<std::chrono::system_clock> constantsDurationStart = std::chrono::system_clock::now();
@@ -448,15 +448,15 @@ void D3D12GSRender::end()
 	std::chrono::time_point<std::chrono::system_clock> constantsDurationEnd = std::chrono::system_clock::now();
 	m_timers.m_constantsDuration += std::chrono::duration_cast<std::chrono::microseconds>(constantsDurationEnd - constantsDurationStart).count();
 
-	getCurrentResourceStorage().m_commandList->SetPipelineState(m_PSO->first);
+	getCurrentResourceStorage().m_commandList->SetPipelineState(std::get<0>(*m_PSO));
 
 	std::chrono::time_point<std::chrono::system_clock> textureDurationStart = std::chrono::system_clock::now();
-	if (m_PSO->second > 0)
+	if (std::get<2>(*m_PSO) > 0)
 	{
 		size_t usedTexture = UploadTextures(getCurrentResourceStorage().m_commandList.Get(), currentDescriptorIndex + 3);
 
 		// Fill empty slots
-		for (; usedTexture < m_PSO->second; usedTexture++)
+		for (; usedTexture < std::get<2>(*m_PSO); usedTexture++)
 		{
 			D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 			srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
