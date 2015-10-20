@@ -309,7 +309,10 @@ never_inline s32 savedata_op(PPUThread& ppu, u32 operation, u32 version, vm::cpt
 
 			if (selected == -1)
 			{
-				save_entry.dirName = fixedSet->dirName.get_ptr();
+				if (fixedSet->dirName)
+				{
+					save_entry.dirName = fixedSet->dirName.get_ptr();
+				}
 			}
 		}
 
