@@ -298,6 +298,11 @@ never_inline s32 savedata_op(PPUThread& ppu, u32 operation, u32 version, vm::cpt
 				return CELL_SAVEDATA_ERROR_CBRESULT;
 			}
 
+			if (!fixedSet->dirName)
+			{
+				return CELL_SAVEDATA_ERROR_PARAM;
+			}
+
 			for (s32 i = 0; i < save_entries.size(); i++)
 			{
 				if (save_entries[i].dirName == fixedSet->dirName.get_ptr())
@@ -309,10 +314,7 @@ never_inline s32 savedata_op(PPUThread& ppu, u32 operation, u32 version, vm::cpt
 
 			if (selected == -1)
 			{
-				if (fixedSet->dirName)
-				{
-					save_entry.dirName = fixedSet->dirName.get_ptr();
-				}
+				save_entry.dirName = fixedSet->dirName.get_ptr();
 			}
 		}
 
