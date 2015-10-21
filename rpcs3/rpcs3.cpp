@@ -24,9 +24,6 @@
 
 #include "Emu/RSX/Null/NullGSRender.h"
 #include "Emu/RSX/GL/GLGSRender.h"
-#if defined(DX12_SUPPORT)
-#include "Emu/RSX/D3D12/D3D12GSRender.h"
-#endif
 
 #include "Gui/MsgDialog.h"
 #include "Gui/SaveDataDialog.h"
@@ -130,6 +127,8 @@ bool Rpcs3App::OnInit()
 		case frame_type::Null:
 			return std::make_unique<GSFrame>("Null");
 		}
+
+		throw EXCEPTION("Invalid Frame Type");
 	};
 
 	callbacks.get_msg_dialog = []() -> std::unique_ptr<MsgDialogBase>
@@ -225,19 +224,4 @@ Rpcs3App::Rpcs3App()
 #if defined(__unix__) && !defined(__APPLE__)
 	XInitThreads();
 #endif
-}
-
-GameInfo CurGameInfo;
-
-GSRender * createGSRender(u8 id)
-{
-	switch (id)
-	{
-	default:
-	case 0: return new NullGSRender(); break;
-	case 1: return new GLGSRender(); break;
-#if defined(DX12_SUPPORT)
-	case 2: return new D3D12GSRender(); break;
-#endif
-	}
 }

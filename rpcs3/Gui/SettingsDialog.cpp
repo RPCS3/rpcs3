@@ -10,10 +10,13 @@
 #ifdef _WIN32
 #include <windows.h>
 #include <iphlpapi.h>
-
 #pragma comment(lib, "iphlpapi.lib")
-#else
 
+#undef GetHwnd
+#include <d3d12.h>
+#include <wrl/client.h>
+#include <dxgi1_4.h>
+#else
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <netdb.h>
@@ -21,13 +24,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#endif
-
-#if defined(DX12_SUPPORT)
-#undef GetHwnd
-#include <d3d12.h>
-#include <wrl/client.h>
-#include <dxgi1_4.h>
 #endif
 
 std::vector<std::string> GetAdapters()
@@ -92,13 +88,7 @@ std::vector<std::string> GetAdapters()
 SettingsDialog::SettingsDialog(wxWindow *parent, rpcs3::config_t* cfg)
 	: wxDialog(parent, wxID_ANY, "Settings", wxDefaultPosition)
 {
-	bool paused = false;
-
-	if (Emu.IsRunning())
-	{
-		Emu.Pause();
-		paused = true;
-	}
+	const bool was_paused = Emu.Pause();
 
 	static const u32 width = 458;
 	static const u32 height = 400;
@@ -238,28 +228,27 @@ SettingsDialog::SettingsDialog(wxWindow *parent, rpcs3::config_t* cfg)
 
 	cbox_gs_render->Append("Null");
 	cbox_gs_render->Append("OpenGL");
-#if defined(DX12_SUPPORT)
-	cbox_gs_render->Append("DirectX 12");
-#endif
 
-#if defined(DX12_SUPPORT)
-	unsigned id = 0;
+#ifdef _WIN32
 	Microsoft::WRL::ComPtr<IDXGIFactory4> dxgiFactory;
-	CreateDXGIFactory(IID_PPV_ARGS(&dxgiFactory));
 	Microsoft::WRL::ComPtr<IDXGIAdapter> adapter;
 
-	while (dxgiFactory->EnumAdapters(id, adapter.GetAddressOf()) != DXGI_ERROR_NOT_FOUND)
+	if (SUCCEEDED(CreateDXGIFactory(IID_PPV_ARGS(&dxgiFactory))))
 	{
-		DXGI_ADAPTER_DESC adapterDesc;
-		adapter->GetDesc(&adapterDesc);
-		cbox_gs_d3d_adaptater->Append(adapterDesc.Description);
-		id++;
-	}
-#endif
+		cbox_gs_render->Append("DirectX 12");
 
-#if !defined(DX12_SUPPORT)
-	cbox_gs_d3d_adaptater->Enable(false);
-	chbox_gs_overlay->Enable(false);
+		for (uint id = 0; dxgiFactory->EnumAdapters(id, adapter.GetAddressOf()) != DXGI_ERROR_NOT_FOUND; id++)
+		{
+			DXGI_ADAPTER_DESC adapterDesc;
+			adapter->GetDesc(&adapterDesc);
+			cbox_gs_d3d_adaptater->Append(adapterDesc.Description);
+		}
+	}
+	else
+	{
+		cbox_gs_d3d_adaptater->Enable(false);
+		chbox_gs_overlay->Enable(false);
+	}
 #endif
 
 	for (int i = 1; i < WXSIZEOF(ResolutionTable); ++i)
@@ -552,5 +541,5 @@ SettingsDialog::SettingsDialog(wxWindow *parent, rpcs3::config_t* cfg)
 		Ini.Save();
 	}
 
-	if (paused) Emu.Resume();
+	if (was_paused) Emu.Resume();
 }

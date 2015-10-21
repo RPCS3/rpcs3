@@ -1,9 +1,9 @@
 #pragma once
-#ifdef _WIN64
+
 #include <d3d12.h>
 #include <cassert>
 #include <wrl/client.h>
-#include "utilities/Log.h"
+#include "Utilities/Log.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/RSX/GCM.h"
 
@@ -279,4 +279,3 @@ inline DXGI_FORMAT getTextureDXGIFormat(int format)
 		return DXGI_FORMAT_R8G8_B8G8_UNORM;
 	}
 }
-#endif

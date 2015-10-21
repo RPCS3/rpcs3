@@ -1,5 +1,5 @@
 #include "stdafx_d3d12.h"
-#ifdef _WIN64
+#ifdef _WIN32
 #include "D3D12CommonDecompiler.h"
 
 std::string getFloatTypeNameImp(size_t elementCount)
@@ -71,3 +71,4 @@ std::string compareFunctionImp(COMPARE f, const std::string &Op0, const std::str
 	}
 }
 #endif
+

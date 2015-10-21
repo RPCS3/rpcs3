@@ -7,6 +7,9 @@
 #include "GSManager.h"
 #include "Null/NullGSRender.h"
 #include "GL/GLGSRender.h"
+#ifdef _WIN32
+#include "Emu/RSX/D3D12/D3D12GSRender.h"
+#endif
 
 void GSInfo::Init()
 {
@@ -23,15 +26,22 @@ GSManager::GSManager() : m_render(nullptr)
 {
 }
 
-extern GSRender * createGSRender(u8);
-
 void GSManager::Init()
 {
 	if(m_render) return;
 
 	m_info.Init();
 
-	m_render = createGSRender(Ini.GSRenderMode.GetValue());
+	switch (Ini.GSRenderMode.GetValue())
+	{
+	default:
+	case 0: m_render = new NullGSRender(); break;
+	case 1: m_render = new GLGSRender(); break;
+#ifdef _WIN32
+	case 2: m_render = new D3D12GSRender(); break;
+#endif
+	}
+
 	//m_render->Init(GetInfo().outresolution.width, GetInfo().outresolution.height);
 }
 

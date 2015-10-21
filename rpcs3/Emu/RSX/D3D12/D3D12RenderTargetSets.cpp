@@ -1,5 +1,5 @@
 #include "stdafx_d3d12.h"
-#ifdef _WIN64
+#ifdef _WIN32
 #include "D3D12RenderTargetSets.h"
 #include "rpcs3/Ini.h"
 #include "Utilities/rPlatform.h" // only for rImage

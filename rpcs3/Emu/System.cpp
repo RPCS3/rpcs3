@@ -445,7 +445,6 @@ void Emulator::Stop()
 	GetCallbackManager().Clear();
 	GetModuleManager().Close();
 
-	CurGameInfo.Reset();
 	RSXIOMem.Clear();
 	vm::close();
 

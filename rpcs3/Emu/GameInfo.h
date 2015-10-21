@@ -39,5 +39,3 @@ struct GameInfo
 		resolution = 0;
 	}
 };
-
-extern GameInfo CurGameInfo;

@@ -1,5 +1,5 @@
 #include "stdafx_d3d12.h"
-#ifdef _WIN64
+#ifdef _WIN32
 #include "D3D12GSRender.h"
 #include "d3dx12.h"
 #include "../Common/TextureUtils.h"

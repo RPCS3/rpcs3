@@ -1,5 +1,5 @@
 #pragma once
-#ifdef _WIN64
+
 #include <d3d12.h>
 
 struct RenderTargets
@@ -27,4 +27,4 @@ struct RenderTargets
 	void Init(ID3D12Device *device);
 	void Release();
 };
-#endif
+

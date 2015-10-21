@@ -1,7 +1,7 @@
 #include "stdafx_d3d12.h"
-#ifdef _WIN64
-#include "D3D12PipelineState.h"
+#ifdef _WIN32
 #include <d3dcompiler.h>
+#include "D3D12PipelineState.h"
 #include "D3D12GSRender.h"
 
 #pragma comment (lib, "d3dcompiler.lib")

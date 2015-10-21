@@ -1,5 +1,5 @@
 #pragma once
-#ifdef _WIN64
+
 #include "D3D12.h"
 #include "rpcs3/Ini.h"
 #include "Utilities/rPlatform.h" // only for rImage
@@ -506,4 +506,3 @@ protected:
 
 	virtual void load_vertex_data(u32 first, u32 count) override;
 };
-#endif

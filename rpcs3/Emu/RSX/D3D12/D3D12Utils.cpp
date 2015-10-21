@@ -2,9 +2,9 @@
 * Contains utility shaders
 */
 #include "stdafx_d3d12.h"
-#ifdef _WIN64
-#include "D3D12GSRender.h"
+#ifdef _WIN32
 #include <d3dcompiler.h>
+#include "D3D12GSRender.h"
 #include "d3dx12.h"
 #define STRINGIFY(x) #x
 

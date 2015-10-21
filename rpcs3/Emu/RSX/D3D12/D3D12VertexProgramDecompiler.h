@@ -1,5 +1,5 @@
 #pragma once
-#ifdef _WIN64
+
 #include <vector>
 #include <sstream>
 #include "../Common/VertexProgramDecompiler.h"
@@ -21,4 +21,3 @@ protected:
 public:
 	D3D12VertexProgramDecompiler(std::vector<u32>& data);
 };
-#endif

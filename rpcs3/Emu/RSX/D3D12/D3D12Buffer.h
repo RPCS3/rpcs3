@@ -1,8 +1,7 @@
 #pragma once
-#ifdef _WIN64
+
 #include <d3d12.h>
 #include "Emu/Memory/vm.h"
 #include "Emu/RSX/RSXThread.h"
 
 std::vector<D3D12_INPUT_ELEMENT_DESC> getIALayout(ID3D12Device *device, bool indexedDraw, const rsx::data_array_format_info *vertexData);
-#endif
