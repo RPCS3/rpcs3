@@ -11,6 +11,10 @@
 #define ASMJIT_STATIC
 #define ASMJIT_DEBUG
 
+#ifdef _MSC_VER
+#pragma comment(lib, "asmjit.lib")
+#endif
+
 #include "asmjit.h"
 
 #define OFFSET_OF(type, x) static_cast<s32>(reinterpret_cast<uintptr_t>(&(((type*)0)->x)))

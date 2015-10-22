@@ -4,16 +4,16 @@ RPCS3
 [![Build Status](https://travis-ci.org/RPCS3/rpcs3.svg?branch=master)](https://travis-ci.org/RPCS3/rpcs3)
 [![Build status](https://ci.appveyor.com/api/projects/status/411c4clmiohtx7eo/branch/master?svg=true)](https://ci.appveyor.com/project/rpcs3/rpcs3/branch/master)
 [![Coverity Status](https://scan.coverity.com/projects/3960/badge.svg)](https://scan.coverity.com/projects/3960)
-[![Coverage Status](https://coveralls.io/repos/DHrpcs3/rpcs3/badge.svg)](https://coveralls.io/r/DHrpcs3/rpcs3)
+[![Coverage Status](https://coveralls.io/repos/RPCS3/rpcs3/badge.svg)](https://coveralls.io/r/RPCS3/rpcs3)
 
 An open-source PlayStation 3 emulator/debugger written in C++.
 
-You can find some basic information in the [FAQ](https://github.com/DHrpcs3/rpcs3/wiki/FAQ). For discussion about this emulator and PS3 emulation please visit the [official forums](http://www.emunewz.net/forum/forumdisplay.php?fid=162).
+You can find some basic information in the [FAQ](https://github.com/RPCS3/rpcs3/wiki/FAQ). For discussion about this emulator and PS3 emulation please visit the [official forums](http://www.emunewz.net/forum/forumdisplay.php?fid=162).
 
 
 ### Development
 
-If you want to contribute please take a took at the [Coding Style](https://github.com/DHrpcs3/rpcs3/wiki/Coding-Style), [Roadmap](https://github.com/DHrpcs3/rpcs3/wiki/Roadmap) and [Developer Information](https://github.com/DHrpcs3/rpcs3/wiki/Developer-Information) pages. You should as well contact any of the developers in the forum in order to know about the current situation of the emulator.
+If you want to contribute please take a took at the [Coding Style](https://github.com/RPCS3/rpcs3/wiki/Coding-Style), [Roadmap](https://github.com/RPCS3/rpcs3/wiki/Roadmap) and [Developer Information](https://github.com/RPCS3/rpcs3/wiki/Developer-Information) pages. You should as well contact any of the developers in the forum in order to know about the current situation of the emulator.
 
 
 ### Dependencies
@@ -21,8 +21,8 @@ If you want to contribute please take a took at the [Coding Style](https://githu
 __Windows__
 * [Visual Studio 2015](https://www.visualstudio.com/en-us/downloads/download-visual-studio-vs.aspx)
 * [Visual C++ Redistributable Packages for Visual Studio 2015](http://www.microsoft.com/en-us/download/details.aspx?id=48145)
-* [Cmake 3.1.0+](http://www.cmake.org/download/) (add to PATH)
-* [Python 2.7+](https://www.python.org/downloads/) (add to PATH)
+* [Cmake 3.1.0+](http://www.cmake.org/download/) (optional, required only for LLVM build; add to PATH)
+* [Python](https://www.python.org/downloads/) (optional, required only for LLVM build; add to PATH)
 
 __Linux__
 * Debian & Ubuntu: `sudo apt-get install libopenal-dev libwxgtk3.0-dev build-essential libglew-dev`

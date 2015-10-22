@@ -88,7 +88,7 @@ std::vector<std::string> GetAdapters()
 SettingsDialog::SettingsDialog(wxWindow *parent, rpcs3::config_t* cfg)
 	: wxDialog(parent, wxID_ANY, "Settings", wxDefaultPosition)
 {
-	const bool was_paused = Emu.Pause();
+	const bool was_running = Emu.Pause();
 
 	static const u32 width = 458;
 	static const u32 height = 400;
@@ -541,5 +541,5 @@ SettingsDialog::SettingsDialog(wxWindow *parent, rpcs3::config_t* cfg)
 		Ini.Save();
 	}
 
-	if (was_paused) Emu.Resume();
+	if (was_running) Emu.Resume();
 }

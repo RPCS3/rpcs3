@@ -5,6 +5,10 @@
 
 #include "OpenALThread.h"
 
+#ifdef _MSC_VER
+#pragma comment(lib, "OpenAL32.lib")
+#endif
+
 ALenum g_last_al_error = AL_NO_ERROR;
 ALCenum g_last_alc_error = ALC_NO_ERROR;
 
