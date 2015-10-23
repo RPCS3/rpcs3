@@ -164,15 +164,19 @@ int decrypt_data(const fs::file* in, const fs::file* out, EDAT_HEADER *edat, NPD
 	unsigned char empty_iv[0x10] = {};
 
 	// Decrypt the metadata.
-	int i;
-	for (i = 0; i < block_num; i++)
+	for (int i = 0; i < block_num; i++)
 	{
 		memset(hash_result, 0, 0x14);
 
 		if ((edat->flags & EDAT_COMPRESSED_FLAG) != 0)
 		{
 			metadata_sec_offset = metadata_offset + (unsigned long long) i * metadata_section_size;
-			in->seek(metadata_sec_offset);
+
+			if (in->seek(metadata_sec_offset) < 0)
+			{
+				LOG_ERROR(LOADER, "EDAT: Seeking medata section offset at %u failed.", metadata_sec_offset);
+				return 1;
+			}
 
 			unsigned char metadata[0x20];
 			memset(metadata, 0, 0x20);
@@ -244,7 +248,12 @@ int decrypt_data(const fs::file* in, const fs::file* out, EDAT_HEADER *edat, NPD
 		memset(hash, 0, 0x10);
 		memset(key_result, 0, 0x10);
 
-		in->seek(offset);
+		if (in->seek(offset) < 0)
+		{
+			LOG_ERROR(LOADER, "EDAT: Seeking offset at %u failed.", offset);
+			return 1;
+		}
+
 		in->read(enc_data, length);
 
 		// Generate a key for the current block.

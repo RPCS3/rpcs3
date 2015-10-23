@@ -48,6 +48,7 @@ Emulator::Emulator()
 	: m_status(Stopped)
 	, m_mode(DisAsm)
 	, m_rsx_callback(0)
+	, m_cpu_thr_stop(0)
 	, m_thread_manager(new CPUThreadManager())
 	, m_pad_manager(new PadManager())
 	, m_keyboard_manager(new KeyboardManager())
@@ -453,6 +454,7 @@ void Emulator::Stop()
 	}
 
 	m_rsx_callback = 0;
+	m_cpu_thr_stop = 0;
 
 	// TODO: check finalization order
 

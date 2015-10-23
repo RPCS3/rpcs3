@@ -16,10 +16,20 @@ namespace memory_helper
 	void* reserve_memory(size_t size)
 	{
 #ifdef _WIN32
-		return VirtualAlloc(NULL, size, MEM_RESERVE, PAGE_NOACCESS);
+		void* ret = VirtualAlloc(NULL, size, MEM_RESERVE, PAGE_NOACCESS);
+		if (ret == NULL)
+		{
+			LOG_ERROR(HLE, "reserve_memory VirtualAlloc failed.");
+			return (void*)VM_FAILURE;
+		}
 #else
-		return mmap(nullptr, size, PROT_NONE, MAP_ANON | MAP_PRIVATE, -1, 0);
+		void* ret = mmap(nullptr, size, PROT_NONE, MAP_ANON | MAP_PRIVATE, -1, 0);
+		if (ret == (void*)VM_FAILURE)
+		{
+			LOG_ERROR(HLE, "reserve_memory mmap failed.");
+		}
 #endif
+		return ret;
 	}
 
 	s32 commit_page_memory(void* pointer, size_t page_size)
@@ -28,25 +38,34 @@ namespace memory_helper
 		if (VirtualAlloc((u8*)pointer, page_size, MEM_COMMIT, PAGE_READWRITE) == NULL)
 		{
 			LOG_ERROR(HLE, "commit_page_memory VirtualAlloc failed.");
-			return -1;
+			return VM_FAILURE;
 		}
 #else
-		s32 ret = mprotect((u8*)pointer, page_size, PROT_READ | PROT_WRITE)
-		if (ret < 0)
+		s32 ret = mprotect((u8*)pointer, page_size, PROT_READ | PROT_WRITE);
+		if (ret < VM_SUCCESS)
 		{
 			LOG_ERROR(HLE, "commit_page_memory mprotect failed. (%d)", ret);
-			return -1;
+			return VM_FAILURE;
 		}
 #endif
-		return 0;
+		return VM_SUCCESS;
 	}
 
-	void free_reserved_memory(void* pointer, size_t size)
+	s32 free_reserved_memory(void* pointer, size_t size)
 	{
 #ifdef _WIN32
-		VirtualFree(pointer, 0, MEM_RELEASE);
+		if (VirtualFree(pointer, 0, MEM_RELEASE) == 0)
+		{
+			LOG_ERROR(HLE, "free_reserved_memory VirtualFree failed.");
+			return VM_FAILURE;
+		}
 #else
-		munmap(pointer, size);
+		if (munmap(pointer, size) != VM_SUCCESS)
+		{
+			LOG_ERROR(HLE, "free_reserved_memory munmap failed.");
+			return VM_FAILURE;
+		}
 #endif
+		return VM_SUCCESS;
 	}
 }

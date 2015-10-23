@@ -5,6 +5,14 @@
 static const u64 g_hdd_magic = *(u64*)"PS3eHDD\0";
 static const u16 g_hdd_version = 0x0001;
 
+// Return codes
+enum
+{
+	HDD_OK              = 0,
+	HDD_SEEK_FAILURE    = 0x400,
+	HDD_ENTRY_NOT_FOUND = 0x401,
+};
+
 struct vfsHDD_Block
 {
 	struct
@@ -114,7 +122,7 @@ public:
 		return m_cur_block * m_hdd_info.block_size + m_position; // ???
 	}
 
-	void SaveInfo();
+	s32 SaveInfo();
 
 	u64 Read(void* dst, u64 size);
 

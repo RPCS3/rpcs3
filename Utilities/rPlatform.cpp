@@ -57,7 +57,7 @@ std::string rPlatform::getConfigDir()
 			dir = "./config";
 		dir = dir + "/rpcs3/";
 
-		s32 ret = mkdir(dir.c_str(), 0777)
+		s32 ret = mkdir(dir.c_str(), 0777);
 		if (ret == EEXIST)
 		{
 			LOG_WARNING(HLE, "Configuration directory already exists. (%s)", dir);

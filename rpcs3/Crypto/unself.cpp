@@ -890,8 +890,9 @@ bool SELFDecrypter::DecryptNPDRM(u8 *metadata, u32 metadata_size)
 	memcpy(klicensee_key, key_v.GetKlicenseeKey(), 0x10);
 
 	// Use klicensee if available.
-	if (memcmp(klicensee_key, key_v.GetKlicenseeKey(), 0x10) != 0)
-		memcpy(npdrm_key, klicensee_key, 0x10);
+	// FIXME: Check is always false.
+	/*if (klicensee_key != NULL)
+		memcpy(npdrm_key, klicensee_key, 0x10);*/
 
 	if (ctrl->npdrm.license == 1)  // Network license.
 	{
