@@ -256,11 +256,13 @@ void GameViewer::RightClick(wxListEvent& event)
 	m_popup->Destroy(1);
 	m_popup->Destroy(2);
 	
+	wxMenuItem* boot_item = new wxMenuItem(m_popup, 0, _T("Boot"));
+#if defined (_WIN32)
+	// wxMenuItem::Set(Get)Font only available for the wxMSW port
 	wxFont font = GetFont();
 	font.SetWeight(wxFONTWEIGHT_BOLD);
-	wxMenuItem* boot_item = new wxMenuItem(m_popup, 0, _T("Boot"));
 	boot_item->SetFont(font);
-
+#endif
 	m_popup->Append(boot_item);
 	m_popup->Append(1, _T("Configure"));
 	m_popup->Append(2, _T("Remove Game"));
