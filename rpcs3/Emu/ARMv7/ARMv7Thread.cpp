@@ -3,6 +3,7 @@
 #include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
+#include "Emu/state.h"
 #include "Emu/IdManager.h"
 #include "Emu/ARMv7/PSVFuncList.h"
 
@@ -179,14 +180,14 @@ void ARMv7Thread::do_run()
 {
 	m_dec.reset();
 
-	switch(Ini.CPUDecoderMode.GetValue())
+	switch((int)rpcs3::state.config.core.ppu_decoder.value())
 	{
 	case 0:
 	case 1:
 		m_dec.reset(new ARMv7Decoder(*this));
 		break;
 	default:
-		LOG_ERROR(ARMv7, "Invalid CPU decoder mode: %d", Ini.CPUDecoderMode.GetValue());
+		LOG_ERROR(ARMv7, "Invalid CPU decoder mode: %d", (int)rpcs3::state.config.core.ppu_decoder.value());
 		Emu.Pause();
 	}
 }

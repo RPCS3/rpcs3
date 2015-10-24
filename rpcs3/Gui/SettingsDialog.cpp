@@ -2,6 +2,7 @@
 
 #include "Ini.h"
 #include "Emu/System.h"
+#include "Emu/state.h"
 #include "Emu/SysCalls/Modules/cellVideoOut.h"
 #include "SettingsDialog.h"
 #include "Utilities/Log.h"
@@ -89,6 +90,7 @@ SettingsDialog::SettingsDialog(wxWindow *parent, rpcs3::config_t* cfg)
 	: wxDialog(parent, wxID_ANY, "Settings", wxDefaultPosition)
 {
 	const bool was_running = Emu.Pause();
+	if (was_running || Emu.IsReady()) cfg = &rpcs3::state.config;
 
 	static const u32 width = 458;
 	static const u32 height = 400;
@@ -348,11 +350,11 @@ SettingsDialog::SettingsDialog(wxWindow *parent, rpcs3::config_t* cfg)
 	chbox_emulationdir_enable->SetValue(Ini.SysEmulationDirPathEnable.GetValue());
 	txt_emulationdir_path->SetValue(Ini.SysEmulationDirPath.GetValue());
 
-	rbox_ppu_decoder->SetSelection(Ini.CPUDecoderMode.GetValue() ? Ini.CPUDecoderMode.GetValue() : 0);
+	rbox_ppu_decoder->SetSelection((int)cfg->core.ppu_decoder.value());
 	txt_dbg_range_min->SetValue(std::to_string(Ini.LLVMMinId.GetValue()));
 	txt_dbg_range_max->SetValue(std::to_string(Ini.LLVMMaxId.GetValue()));
 	txt_llvm_threshold->SetValue(std::to_string(Ini.LLVMThreshold.GetValue()));
-	rbox_spu_decoder->SetSelection(Ini.SPUDecoderMode.GetValue() ? Ini.SPUDecoderMode.GetValue() : 0);
+	rbox_spu_decoder->SetSelection((int)cfg->core.spu_decoder.value());
 	cbox_gs_render->SetSelection(Ini.GSRenderMode.GetValue());
 	cbox_gs_d3d_adaptater->SetSelection(Ini.GSD3DAdaptater.GetValue());
 	cbox_gs_resolution->SetSelection(ResolutionIdToNum(Ini.GSResolution.GetValue()) - 1);
@@ -487,7 +489,7 @@ SettingsDialog::SettingsDialog(wxWindow *parent, rpcs3::config_t* cfg)
 
 	if (ShowModal() == wxID_OK)
 	{
-		Ini.CPUDecoderMode.SetValue(rbox_ppu_decoder->GetSelection());
+		cfg->core.ppu_decoder = (ppu_decoder_type)rbox_ppu_decoder->GetSelection();
 		long minllvmid, maxllvmid;
 		txt_dbg_range_min->GetValue().ToLong(&minllvmid);
 		txt_dbg_range_max->GetValue().ToLong(&maxllvmid);
@@ -497,7 +499,7 @@ SettingsDialog::SettingsDialog(wxWindow *parent, rpcs3::config_t* cfg)
 		long llvmthreshold;
 		txt_llvm_threshold->GetValue().ToLong(&llvmthreshold);
 		Ini.LLVMThreshold.SetValue((u32)llvmthreshold);
-		Ini.SPUDecoderMode.SetValue(rbox_spu_decoder->GetSelection());
+		cfg->core.spu_decoder = (spu_decoder_type)rbox_spu_decoder->GetSelection();
 		Ini.HookStFunc.SetValue(chbox_core_hook_stfunc->GetValue());
 		Ini.LoadLibLv2.SetValue(chbox_core_load_liblv2->GetValue());
 		Ini.GSRenderMode.SetValue(cbox_gs_render->GetSelection());

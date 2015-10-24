@@ -191,9 +191,6 @@ void Emulator::Load()
 	ResetInfo();
 	GetVFS().Init(elf_dir);
 
-	// TODO: use state configuration instead of global config
-	rpcs3::state.config = rpcs3::config;
-
 	LOG_NOTICE(LOADER, "Loading '%s'...", m_path.c_str());
 
 	// /dev_bdvd/ mounting
@@ -229,8 +226,8 @@ void Emulator::Load()
 	LOG_NOTICE(LOADER, "");
 
 	LOG_NOTICE(LOADER, "Settings:");
-	LOG_NOTICE(LOADER, "CPU: %s", Ini.CPUIdToString(Ini.CPUDecoderMode.GetValue()));
-	LOG_NOTICE(LOADER, "SPU: %s", Ini.SPUIdToString(Ini.SPUDecoderMode.GetValue()));
+	//LOG_NOTICE(LOADER, "CPU: %s", Ini.CPUIdToString(Ini.CPUDecoderMode.GetValue()));
+	//LOG_NOTICE(LOADER, "SPU: %s", Ini.SPUIdToString(Ini.SPUDecoderMode.GetValue()));
 	LOG_NOTICE(LOADER, "Renderer: %s", Ini.RendererIdToString(Ini.GSRenderMode.GetValue()));
 
 	if (Ini.GSRenderMode.GetValue() == 2)
@@ -248,10 +245,6 @@ void Emulator::Load()
 	LOG_NOTICE(LOADER, "RSX Logging: %s", Ini.RSXLogging.GetValue() ? "Yes" : "No");
 
 	LOG_NOTICE(LOADER, "");
-
-	LOG_NOTICE(LOADER, rpcs3::config.to_string().c_str());
-
-	LOG_NOTICE(LOADER, "");
 	f.Open("/app_home/../PARAM.SFO");
 	const PSFLoader psf(f);
 	std::string title = psf.GetString("TITLE");
@@ -262,7 +255,9 @@ void Emulator::Load()
 	title.length() ? SetTitle(title) : SetTitle(m_path);
 	SetTitleID(title_id);
 
-	// load custom config as global
+	rpcs3::state.config = rpcs3::config;
+
+	// load custom config
 	if (!Ini.UseDefaultIni.GetValue())
 	{
 		std::string& name = title_id;
@@ -270,12 +265,15 @@ void Emulator::Load()
 		{
 			name = name.substr(0, 4) + "-" + name.substr(4, 5);
 			CreateConfig(name);
-			rpcs3::config.path("data/" + name + "/" + name + ".ini");
-			rpcs3::config.load();
+			rpcs3::config_t custom_config { "data/" + name + "/" + name + ".ini" };
+			custom_config.load();
+			rpcs3::state.config = custom_config;
 		}
 	}
 
-	LOG_NOTICE(LOADER, "Used configuration: '%s'", rpcs3::config.path().c_str());
+	LOG_NOTICE(LOADER, "Used configuration: '%s'", rpcs3::state.config.path().c_str());
+	LOG_NOTICE(LOADER, "");
+	LOG_NOTICE(LOADER, rpcs3::state.config.to_string().c_str());
 
 	if (m_elf_path.empty())
 	{
@@ -478,8 +476,7 @@ void Emulator::Stop()
 
 	RSXIOMem.Clear();
 	vm::close();
-	rpcs3::config.path("rpcs3.new.ini"); // fallback to default .ini
-	rpcs3::config.load();
+	rpcs3::state.config = rpcs3::config; // fallback to default .ini
 
 	SendDbgCommand(DID_STOPPED_EMU);
 }

@@ -16,6 +16,7 @@ namespace rpcs3
 	config_t& config_t::operator =(const config_t& rhs)
 	{
 		assign(rhs);
+		path(rhs.path());
 		return *this;
 	}
 

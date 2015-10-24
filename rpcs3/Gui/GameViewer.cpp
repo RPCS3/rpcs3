@@ -7,6 +7,7 @@
 #include "Emu/FS/VFS.h"
 #include "Emu/FS/vfsDir.h"
 #include "Emu/FS/vfsFile.h"
+#include "Emu/state.h"
 #include "GameViewer.h"
 #include "Loader/PSF.h"
 #include "SettingsDialog.h"
@@ -286,12 +287,10 @@ void GameViewer::ConfigureGame(wxCommandEvent& WXUNUSED(event))
 	if (i < 0) return;
 
 	Emu.CreateConfig(m_game_data[i].serial);
-	rpcs3::config.path("data/" + m_game_data[i].serial + "/" + m_game_data[i].serial + ".ini");
-	LOG_NOTICE(LOADER, "Configure: '%s'", rpcs3::config.path().c_str());
-	rpcs3::config.load();
-	SettingsDialog(this);
-	rpcs3::config.path("rpcs3.new.ini");
-	rpcs3::config.load();
+	rpcs3::config_t custom_config { "data/" + m_game_data[i].serial + "/" + m_game_data[i].serial + ".ini" };
+	custom_config.load();
+	LOG_NOTICE(LOADER, "Configure: '%s'", custom_config.path().c_str());
+	SettingsDialog(this, &custom_config);
 }
 
 void GameViewer::RemoveGame(wxCommandEvent& event)
