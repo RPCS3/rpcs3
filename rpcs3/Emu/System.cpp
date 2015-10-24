@@ -86,6 +86,21 @@ void Emulator::SetTitle(const std::string& title)
 	m_title = title;
 }
 
+void Emulator::CreateConfig(const std::string& name)
+{
+	const std::string& path = "data/" + name;
+	const std::string& ini_file = path + "/" + name + ".ini";
+
+	if (!fs::is_dir("data"))
+		fs::create_dir("data");
+
+	if (!fs::is_dir(path))
+		fs::create_dir(path);
+
+	if (!fs::is_file(ini_file))
+		rpcs3::config_t{ ini_file }.save();
+}
+
 bool Emulator::BootGame(const std::string& path, bool direct)
 {
 	static const char* elf_path[6] =
@@ -173,12 +188,27 @@ void Emulator::Load()
 		}
 	}
 
-	//TODO: load custom config if exists
+	ResetInfo();
+	GetVFS().Init(elf_dir);
+
+	// load custom config as global
+	if (!Ini.UseDefaultIni.GetValue())
+	{
+		std::string& name = PSFLoader{ vfsFile{ "/app_home/../PARAM.SFO" } }.GetString("TITLE_ID");
+		if (name.size())
+		{
+			name = name.substr(0, 4) + "-" + name.substr(4, 5);
+			CreateConfig(name);
+			rpcs3::config.path("data/" + name + "/" + name + ".ini");
+			rpcs3::config.load();
+		}
+	}
+
+	// TODO: use state configuration instead of global config
 	rpcs3::state.config = rpcs3::config;
 
 	LOG_NOTICE(LOADER, "Loading '%s'...", m_path.c_str());
-	ResetInfo();
-	GetVFS().Init(elf_dir);
+	LOG_NOTICE(LOADER, "Used configuration: '%s'", rpcs3::config.path().c_str());
 
 	// /dev_bdvd/ mounting
 	vfsFile f("/app_home/../dev_bdvd.path");
@@ -447,6 +477,8 @@ void Emulator::Stop()
 
 	RSXIOMem.Clear();
 	vm::close();
+	rpcs3::config.path("rpcs3.new.ini"); // fallback to default .ini
+	rpcs3::config.load();
 
 	SendDbgCommand(DID_STOPPED_EMU);
 }

@@ -196,6 +196,7 @@ SettingsDialog::SettingsDialog(wxWindow *parent, rpcs3::config_t* cfg)
 	wxCheckBox* chbox_hle_savetty = new wxCheckBox(p_misc, wxID_ANY, "Save TTY output to file");
 	wxCheckBox* chbox_hle_exitonstop = new wxCheckBox(p_misc, wxID_ANY, "Exit RPCS3 when process finishes");
 	wxCheckBox* chbox_hle_always_start = new wxCheckBox(p_misc, wxID_ANY, "Always start after boot");
+	wxCheckBox* chbox_hle_use_default_ini = new wxCheckBox(p_misc, wxID_ANY, "Use default configuration");
 
 	wxTextCtrl* txt_dbg_range_min = new wxTextCtrl(p_core, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(55, 20));
 	wxTextCtrl* txt_dbg_range_max = new wxTextCtrl(p_core, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(55, 20));
@@ -335,6 +336,7 @@ SettingsDialog::SettingsDialog(wxWindow *parent, rpcs3::config_t* cfg)
 	chbox_hle_savetty->SetValue(Ini.HLESaveTTY.GetValue());
 	chbox_hle_exitonstop->SetValue(Ini.HLEExitOnStop.GetValue());
 	chbox_hle_always_start->SetValue(Ini.HLEAlwaysStart.GetValue());
+	chbox_hle_use_default_ini->SetValue(Ini.UseDefaultIni.GetValue());
 	chbox_core_hook_stfunc->SetValue(Ini.HookStFunc.GetValue());
 	chbox_core_load_liblv2->SetValue(Ini.LoadLibLv2.GetValue());
 
@@ -449,6 +451,7 @@ SettingsDialog::SettingsDialog(wxWindow *parent, rpcs3::config_t* cfg)
 	s_subpanel_misc->Add(chbox_hle_savetty, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_misc->Add(chbox_hle_exitonstop, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_misc->Add(chbox_hle_always_start, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_subpanel_misc->Add(chbox_hle_use_default_ini, wxSizerFlags().Border(wxALL, 5).Expand());
 
 	// Auto Pause
 	s_subpanel_misc->Add(chbox_dbg_ap_systemcall, wxSizerFlags().Border(wxALL, 5).Expand());
@@ -528,6 +531,7 @@ SettingsDialog::SettingsDialog(wxWindow *parent, rpcs3::config_t* cfg)
 		Ini.NETInterface.SetValue(cbox_net_interface->GetSelection());
 		Ini.SysLanguage.SetValue(cbox_sys_lang->GetSelection());
 		Ini.HLEAlwaysStart.SetValue(chbox_hle_always_start->GetValue());
+		Ini.UseDefaultIni.SetValue(chbox_hle_use_default_ini->GetValue());
 
 		//Auto Pause
 		Ini.DBGAutoPauseFunctionCall.SetValue(chbox_dbg_ap_functioncall->GetValue());

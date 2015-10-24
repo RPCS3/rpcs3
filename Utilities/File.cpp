@@ -167,7 +167,8 @@ bool fs::is_file(const std::string& file)
 
 #ifdef _WIN32
 	DWORD attrs;
-	if ((attrs = GetFileAttributesW(to_wchar(file).get())) == INVALID_FILE_ATTRIBUTES)
+	const std::string path = fmt::replace_all(file, "/", "\\");
+	if ((attrs = GetFileAttributesW(to_wchar(path).get())) == INVALID_FILE_ATTRIBUTES)
 	{
 		return false;
 	}
@@ -190,7 +191,8 @@ bool fs::is_dir(const std::string& dir)
 
 #ifdef _WIN32
 	DWORD attrs;
-	if ((attrs = GetFileAttributesW(to_wchar(dir).get())) == INVALID_FILE_ATTRIBUTES)
+	const std::string path = fmt::replace_all(dir, "/", "\\");
+	if ((attrs = GetFileAttributesW(to_wchar(path).get())) == INVALID_FILE_ATTRIBUTES)
 	{
 		return false;
 	}
@@ -212,7 +214,8 @@ bool fs::create_dir(const std::string& dir)
 	g_tls_error = fse::ok;
 
 #ifdef _WIN32
-	if (!CreateDirectoryW(to_wchar(dir).get(), NULL))
+	const std::string path = fmt::replace_all(dir, "/", "\\");
+	if (!CreateDirectoryW(to_wchar(path).get(), NULL))
 #else
 	if (mkdir(dir.c_str(), 0777))
 #endif

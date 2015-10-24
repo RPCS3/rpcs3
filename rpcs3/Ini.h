@@ -161,6 +161,7 @@ public:
 	IniEntry<bool> HLESaveTTY;
 	IniEntry<bool> HLEExitOnStop;
 	IniEntry<bool> HLEAlwaysStart;
+	IniEntry<bool> UseDefaultIni;
 
 	// Auto Pause
 	IniEntry<bool> DBGAutoPauseSystemCall;
@@ -249,6 +250,7 @@ public:
 		HLEExitOnStop.Init("HLE_HLEExitOnStop", path);
 		HLELogLvl.Init("HLE_HLELogLvl", path);
 		HLEAlwaysStart.Init("HLE_HLEAlwaysStart", path);
+		UseDefaultIni.Init("HLE_UseDefaultIni", path);
 
 		// Auto Pause
 		DBGAutoPauseFunctionCall.Init("DBG_AutoPauseFunctionCall", path);
@@ -333,6 +335,7 @@ public:
 		HLEExitOnStop.Load(false);
 		HLELogLvl.Load(3);
 		HLEAlwaysStart.Load(true);
+		UseDefaultIni.Load(false);
 
 		//Auto Pause
 		DBGAutoPauseFunctionCall.Load(false);
@@ -417,6 +420,7 @@ public:
 		HLEExitOnStop.Save();
 		HLELogLvl.Save();
 		HLEAlwaysStart.Save();
+		UseDefaultIni.Save();
 
 		//Auto Pause
 		DBGAutoPauseFunctionCall.Save();
