@@ -427,7 +427,7 @@ namespace convert
 	};
 
 	template<>
-	struct to_impl_t<std::string, enum class io_handler_mode>
+	struct to_impl_t<std::string, io_handler_mode>
 	{
 		static std::string func(io_handler_mode value)
 		{
