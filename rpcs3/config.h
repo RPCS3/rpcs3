@@ -390,7 +390,7 @@ namespace convert
 	};
 
 	template<>
-	struct to_impl_t<std::string, enum class io_camera_type>
+	struct to_impl_t<std::string, io_camera_type>
 	{
 		static std::string func(io_camera_type value)
 		{
