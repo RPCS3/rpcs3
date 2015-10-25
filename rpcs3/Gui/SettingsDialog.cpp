@@ -546,6 +546,7 @@ SettingsDialog::SettingsDialog(wxWindow *parent, rpcs3::config_t* cfg)
 		txt_dbg_range_max->GetValue().ToLong(&maxllvmid);
 		txt_llvm_threshold->GetValue().ToLong(&llvmthreshold);
 
+		cfg->core.ppu_decoder = (ppu_decoder_type)rbox_ppu_decoder->GetSelection();
 		Ini.LLVMExclusionRange.SetValue(chbox_core_llvm_exclud->GetValue());
 		Ini.LLVMMinId.SetValue((u32)minllvmid);
 		Ini.LLVMMaxId.SetValue((u32)maxllvmid);

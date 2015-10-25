@@ -284,7 +284,7 @@ namespace convert
 			if (value == "interpreter2")
 				return ppu_decoder_type::interpreter2;
 
-			if (value == "DX12")
+			if (value == "recompiler_llvm")
 				return ppu_decoder_type::recompiler_llvm;
 
 			return ppu_decoder_type::interpreter;
