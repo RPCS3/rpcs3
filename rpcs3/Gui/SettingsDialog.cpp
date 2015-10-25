@@ -355,21 +355,72 @@ SettingsDialog::SettingsDialog(wxWindow *parent, rpcs3::config_t* cfg)
 	txt_dbg_range_max->SetValue(std::to_string(Ini.LLVMMaxId.GetValue()));
 	txt_llvm_threshold->SetValue(std::to_string(Ini.LLVMThreshold.GetValue()));
 	rbox_spu_decoder->SetSelection((int)cfg->core.spu_decoder.value());
-	cbox_gs_render->SetSelection(Ini.GSRenderMode.GetValue());
+	cbox_gs_render->SetSelection((int)cfg->rsx.renderer.value());
 	cbox_gs_d3d_adaptater->SetSelection(Ini.GSD3DAdaptater.GetValue());
 	cbox_gs_resolution->SetSelection(ResolutionIdToNum(Ini.GSResolution.GetValue()) - 1);
 	cbox_gs_aspect->SetSelection(Ini.GSAspectRatio.GetValue() - 1);
 	cbox_gs_frame_limit->SetSelection(Ini.GSFrameLimit.GetValue());
-	cbox_pad_handler->SetSelection(Ini.PadHandlerMode.GetValue());
-	cbox_keyboard_handler->SetSelection(Ini.KeyboardHandlerMode.GetValue());
-	cbox_mouse_handler->SetSelection(Ini.MouseHandlerMode.GetValue());
-	cbox_audio_out->SetSelection(Ini.AudioOutMode.GetValue());
+	cbox_pad_handler->SetSelection((int)cfg->io.pad_handler_mode.value());
+	cbox_keyboard_handler->SetSelection((int)cfg->io.keyboard_handler_mode.value());
+	cbox_mouse_handler->SetSelection((int)cfg->io.mouse_handler_mode.value());
+	cbox_audio_out->SetSelection((int)cfg->audio.out.value());
 	cbox_camera->SetSelection(Ini.Camera.GetValue());
 	cbox_camera_type->SetSelection(Ini.CameraType.GetValue());
 	cbox_hle_loglvl->SetSelection(Ini.HLELogLvl.GetValue());
 	cbox_net_status->SetSelection(Ini.NETStatus.GetValue());
 	cbox_net_interface->SetSelection(Ini.NETInterface.GetValue());
 	cbox_sys_lang->SetSelection(Ini.SysLanguage.GetValue());
+
+	// TODO: use later
+	/*chbox_core_llvm_exclud->SetValue(cfg->core.llvm.exclusion_range.value());
+	chbox_gs_log_prog->SetValue(rpcs3::config.rsx.log_programs.value());
+	chbox_gs_dump_depth->SetValue(cfg->rsx.opengl.write_depth_buffer.value());
+	chbox_gs_dump_color->SetValue(cfg->rsx.opengl.write_color_buffers.value());
+	chbox_gs_read_color->SetValue(cfg->rsx.opengl.read_color_buffers.value());
+	chbox_gs_read_depth->SetValue(cfg->rsx.opengl.read_depth_buffer.value());
+	chbox_gs_vsync->SetValue(rpcs3::config.rsx.vsync.value());
+	chbox_gs_debug_output->SetValue(cfg->rsx.d3d12.debug_output.value());
+	chbox_gs_3dmonitor->SetValue(rpcs3::config.rsx._3dtv.value());
+	chbox_gs_overlay->SetValue(cfg->rsx.d3d12.overlay.value());
+	chbox_audio_dump->SetValue(rpcs3::config.audio.dump_to_file.value());
+	chbox_audio_conv->SetValue(rpcs3::config.audio.convert_to_u16.value());
+	chbox_hle_logging->SetValue(rpcs3::config.misc.log.hle_logging.value());
+	chbox_rsx_logging->SetValue(rpcs3::config.misc.log.rsx_logging.value());
+	chbox_hle_savetty->SetValue(rpcs3::config.misc.log.save_tty.value());
+	chbox_hle_exitonstop->SetValue(rpcs3::config.misc.exit_on_stop.value());
+	chbox_hle_always_start->SetValue(rpcs3::config.misc.always_start.value());
+	chbox_hle_use_default_ini->SetValue(rpcs3::config.misc.use_default_ini.value());
+	chbox_core_hook_stfunc->SetValue(cfg->core.hook_st_func.value());
+	chbox_core_load_liblv2->SetValue(cfg->core.load_liblv2.value());
+
+	//Auto Pause related
+	chbox_dbg_ap_systemcall->SetValue(rpcs3::config.misc.debug.auto_pause_syscall.value());
+	chbox_dbg_ap_functioncall->SetValue(rpcs3::config.misc.debug.auto_pause_func_call.value());
+
+	//Custom EmulationDir
+	chbox_emulationdir_enable->SetValue(rpcs3::config.system.emulation_dir_path_enable.value());
+	txt_emulationdir_path->SetValue(rpcs3::config.system.emulation_dir_path.value());
+
+	rbox_ppu_decoder->SetSelection((int)cfg->core.ppu_decoder.value());
+	txt_dbg_range_min->SetValue(cfg->core.llvm.min_id.string_value());
+	txt_dbg_range_max->SetValue(cfg->core.llvm.max_id.string_value());
+	txt_llvm_threshold->SetValue(cfg->core.llvm.threshold.string_value());
+	rbox_spu_decoder->SetSelection((int)cfg->core.spu_decoder.value());
+	cbox_gs_render->SetSelection((int)cfg->rsx.renderer.value());
+	cbox_gs_d3d_adaptater->SetSelection(cfg->rsx.d3d12.adaptater.value());
+	cbox_gs_resolution->SetSelection(ResolutionIdToNum((int)cfg->rsx.resolution.value() - 1));
+	cbox_gs_aspect->SetSelection((int)cfg->rsx.aspect_ratio.value());
+	cbox_gs_frame_limit->SetSelection((int)cfg->rsx.frame_limit.value());
+	cbox_pad_handler->SetSelection((int)cfg->io.pad_handler_mode.value());
+	cbox_keyboard_handler->SetSelection((int)cfg->io.keyboard_handler_mode.value());
+	cbox_mouse_handler->SetSelection((int)cfg->io.mouse_handler_mode.value());
+	cbox_audio_out->SetSelection((int)cfg->audio.out.value());
+	cbox_camera->SetSelection((int)cfg->io.camera.value());
+	cbox_camera_type->SetSelection((int)cfg->io.camera_type.value());
+	cbox_hle_loglvl->SetSelection((int)rpcs3::config.misc.log.level.value());
+	cbox_net_status->SetSelection((int)rpcs3::config.misc.net.status.value());
+	cbox_net_interface->SetSelection((int)rpcs3::config.misc.net._interface.value());
+	cbox_sys_lang->SetSelection((int)rpcs3::config.system.language.value());*/
 
 	// Core
 	s_round_llvm->Add(chbox_core_llvm_exclud, wxSizerFlags().Border(wxALL, 5).Expand());
@@ -489,20 +540,20 @@ SettingsDialog::SettingsDialog(wxWindow *parent, rpcs3::config_t* cfg)
 
 	if (ShowModal() == wxID_OK)
 	{
-		cfg->core.ppu_decoder = (ppu_decoder_type)rbox_ppu_decoder->GetSelection();
+		long llvmthreshold;
 		long minllvmid, maxllvmid;
 		txt_dbg_range_min->GetValue().ToLong(&minllvmid);
 		txt_dbg_range_max->GetValue().ToLong(&maxllvmid);
+		txt_llvm_threshold->GetValue().ToLong(&llvmthreshold);
+
 		Ini.LLVMExclusionRange.SetValue(chbox_core_llvm_exclud->GetValue());
 		Ini.LLVMMinId.SetValue((u32)minllvmid);
 		Ini.LLVMMaxId.SetValue((u32)maxllvmid);
-		long llvmthreshold;
-		txt_llvm_threshold->GetValue().ToLong(&llvmthreshold);
 		Ini.LLVMThreshold.SetValue((u32)llvmthreshold);
 		cfg->core.spu_decoder = (spu_decoder_type)rbox_spu_decoder->GetSelection();
 		Ini.HookStFunc.SetValue(chbox_core_hook_stfunc->GetValue());
 		Ini.LoadLibLv2.SetValue(chbox_core_load_liblv2->GetValue());
-		Ini.GSRenderMode.SetValue(cbox_gs_render->GetSelection());
+		cfg->rsx.renderer = cbox_gs_render->GetSelection();
 		Ini.GSD3DAdaptater.SetValue(cbox_gs_d3d_adaptater->GetSelection());
 		Ini.GSResolution.SetValue(ResolutionNumToId(cbox_gs_resolution->GetSelection() + 1));
 		Ini.GSAspectRatio.SetValue(cbox_gs_aspect->GetSelection() + 1);
@@ -516,10 +567,10 @@ SettingsDialog::SettingsDialog(wxWindow *parent, rpcs3::config_t* cfg)
 		Ini.GSDebugOutputEnable.SetValue(chbox_gs_debug_output->GetValue());
 		Ini.GS3DTV.SetValue(chbox_gs_3dmonitor->GetValue());
 		Ini.GSOverlay.SetValue(chbox_gs_overlay->GetValue());
-		Ini.PadHandlerMode.SetValue(cbox_pad_handler->GetSelection());
-		Ini.KeyboardHandlerMode.SetValue(cbox_keyboard_handler->GetSelection());
-		Ini.MouseHandlerMode.SetValue(cbox_mouse_handler->GetSelection());
-		Ini.AudioOutMode.SetValue(cbox_audio_out->GetSelection());
+		cfg->io.pad_handler_mode = cbox_pad_handler->GetSelection();
+		cfg->io.keyboard_handler_mode = cbox_keyboard_handler->GetSelection();
+		cfg->io.mouse_handler_mode = cbox_mouse_handler->GetSelection();
+		cfg->audio.out = cbox_audio_out->GetSelection();
 		Ini.AudioDumpToFile.SetValue(chbox_audio_dump->GetValue());
 		Ini.AudioConvertToU16.SetValue(chbox_audio_conv->GetValue());
 		Ini.Camera.SetValue(cbox_camera->GetSelection());
@@ -542,6 +593,61 @@ SettingsDialog::SettingsDialog(wxWindow *parent, rpcs3::config_t* cfg)
 		//Custom EmulationDir
 		Ini.SysEmulationDirPathEnable.SetValue(chbox_emulationdir_enable->GetValue());
 		Ini.SysEmulationDirPath.SetValue(txt_emulationdir_path->GetValue().ToStdString());
+		
+
+		// TODO: use later
+		// individual settings
+		/*cfg->core.ppu_decoder = rbox_ppu_decoder->GetSelection();
+		cfg->core.llvm.exclusion_range = chbox_core_llvm_exclud->GetValue();
+		cfg->core.llvm.min_id = minllvmid;
+		cfg->core.llvm.max_id = maxllvmid;
+		cfg->core.llvm.threshold = llvmthreshold;
+		cfg->core.spu_decoder = rbox_spu_decoder->GetSelection();
+		cfg->core.hook_st_func = chbox_core_hook_stfunc->GetValue();
+		cfg->core.load_liblv2 = chbox_core_load_liblv2->GetValue();
+
+		cfg->rsx.renderer = cbox_gs_render->GetSelection();
+		cfg->rsx.d3d12.adaptater = cbox_gs_d3d_adaptater->GetSelection();
+		cfg->rsx.resolution = ResolutionNumToId(cbox_gs_resolution->GetSelection() + 1);
+		cfg->rsx.aspect_ratio = cbox_gs_aspect->GetSelection() + 1;
+		cfg->rsx.frame_limit = cbox_gs_frame_limit->GetSelection();
+		cfg->rsx.opengl.write_depth_buffer = chbox_gs_dump_depth->GetValue();
+		cfg->rsx.opengl.write_color_buffers = chbox_gs_dump_color->GetValue();
+		cfg->rsx.opengl.read_color_buffers = chbox_gs_read_color->GetValue();
+		cfg->rsx.opengl.read_depth_buffer = chbox_gs_read_depth->GetValue();
+		cfg->rsx.d3d12.debug_output = chbox_gs_debug_output->GetValue();
+		cfg->rsx.d3d12.overlay = chbox_gs_overlay->GetValue();
+
+		cfg->audio.out = cbox_audio_out->GetSelection();
+
+		cfg->io.pad_handler_mode = cbox_pad_handler->GetSelection();
+		cfg->io.keyboard_handler_mode = cbox_keyboard_handler->GetSelection();
+		cfg->io.mouse_handler_mode = cbox_mouse_handler->GetSelection();
+		cfg->io.camera = cbox_camera->GetSelection();
+		cfg->io.camera_type = cbox_camera_type->GetSelection();
+
+		
+		// global settings
+		rpcs3::config.rsx.log_programs = chbox_gs_log_prog->GetValue();
+		rpcs3::config.rsx.vsync = chbox_gs_vsync->GetValue();
+		rpcs3::config.rsx._3dtv = chbox_gs_3dmonitor->GetValue();
+		rpcs3::config.audio.dump_to_file = chbox_audio_dump->GetValue();
+		rpcs3::config.audio.convert_to_u16 = chbox_audio_conv->GetValue();
+		rpcs3::config.misc.log.level = cbox_hle_loglvl->GetSelection();
+		rpcs3::config.misc.log.hle_logging = chbox_hle_logging->GetValue();
+		rpcs3::config.misc.log.rsx_logging = chbox_rsx_logging->GetValue();
+		rpcs3::config.misc.log.save_tty = chbox_hle_savetty->GetValue();
+		rpcs3::config.misc.net.status = cbox_net_status->GetSelection();
+		rpcs3::config.misc.net._interface = cbox_net_interface->GetSelection();
+		rpcs3::config.misc.debug.auto_pause_syscall = chbox_dbg_ap_systemcall->GetValue();
+		rpcs3::config.misc.debug.auto_pause_func_call = chbox_dbg_ap_functioncall->GetValue();
+		rpcs3::config.misc.always_start = chbox_hle_always_start->GetValue();
+		rpcs3::config.misc.exit_on_stop = chbox_hle_exitonstop->GetValue();
+		rpcs3::config.misc.use_default_ini = chbox_hle_use_default_ini->GetValue();
+		rpcs3::config.system.language = cbox_sys_lang->GetSelection();
+		rpcs3::config.system.emulation_dir_path_enable = chbox_emulationdir_enable->GetValue();
+		rpcs3::config.system.emulation_dir_path = txt_emulationdir_path->GetValue().ToStdString();*/
+		//rpcs3::config.save();
 
 		cfg->save();
 		Ini.Save();

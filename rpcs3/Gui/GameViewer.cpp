@@ -287,7 +287,7 @@ void GameViewer::ConfigureGame(wxCommandEvent& WXUNUSED(event))
 	if (i < 0) return;
 
 	Emu.CreateConfig(m_game_data[i].serial);
-	rpcs3::config_t custom_config { "data/" + m_game_data[i].serial + "/" + m_game_data[i].serial + ".ini" };
+	rpcs3::config_t custom_config { "data/" + m_game_data[i].serial + "/settings.ini" };
 	custom_config.load();
 	LOG_NOTICE(LOADER, "Configure: '%s'", custom_config.path().c_str());
 	SettingsDialog(this, &custom_config);

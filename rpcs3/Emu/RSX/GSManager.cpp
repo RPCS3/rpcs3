@@ -3,6 +3,7 @@
 #include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/SysCalls/Modules/cellVideoOut.h"
+#include "Emu/state.h"
 
 #include "GSManager.h"
 #include "Null/NullGSRender.h"
@@ -32,13 +33,13 @@ void GSManager::Init()
 
 	m_info.Init();
 
-	switch (Ini.GSRenderMode.GetValue())
+	switch (rpcs3::state.config.rsx.renderer.value())
 	{
 	default:
-	case 0: m_render = new NullGSRender(); break;
-	case 1: m_render = new GLGSRender(); break;
+	case rsx_renderer_type::Null : m_render = new NullGSRender(); break;
+	case rsx_renderer_type::OpenGL: m_render = new GLGSRender(); break;
 #ifdef _WIN32
-	case 2: m_render = new D3D12GSRender(); break;
+	case rsx_renderer_type::DX12: m_render = new D3D12GSRender(); break;
 #endif
 	}
 

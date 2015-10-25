@@ -89,7 +89,7 @@ void Emulator::SetTitle(const std::string& title)
 void Emulator::CreateConfig(const std::string& name)
 {
 	const std::string& path = "data/" + name;
-	const std::string& ini_file = path + "/" + name + ".ini";
+	const std::string& ini_file = path + "/settings.ini";
 
 	if (!fs::is_dir("data"))
 		fs::create_dir("data");
@@ -265,7 +265,7 @@ void Emulator::Load()
 		{
 			name = name.substr(0, 4) + "-" + name.substr(4, 5);
 			CreateConfig(name);
-			rpcs3::config_t custom_config { "data/" + name + "/" + name + ".ini" };
+			rpcs3::config_t custom_config { "data/" + name + "/settings.ini" };
 			custom_config.load();
 			rpcs3::state.config = custom_config;
 		}
@@ -476,7 +476,6 @@ void Emulator::Stop()
 
 	RSXIOMem.Clear();
 	vm::close();
-	rpcs3::state.config = rpcs3::config; // fallback to default .ini
 
 	SendDbgCommand(DID_STOPPED_EMU);
 }

@@ -1,6 +1,7 @@
 #include "stdafx_gui.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
+#include "Emu/state.h"
 #include "rpcs3.h"
 #include "Ini.h"
 #include "Utilities/Log.h"
@@ -83,34 +84,34 @@ bool Rpcs3App::OnInit()
 
 	callbacks.get_kb_handler = []() -> std::unique_ptr<KeyboardHandlerBase>
 	{
-		switch (auto mode = Ini.KeyboardHandlerMode.GetValue())
+		switch (auto mode = rpcs3::config.io.pad_handler_mode.value())
 		{
-		case 0: return std::make_unique<NullKeyboardHandler>();
-		case 1: return std::make_unique<WindowsKeyboardHandler>();
-		default: throw EXCEPTION("Invalid Keyboard Handler Mode %d", +mode);
+		case io_handler_mode::null: return std::make_unique<NullKeyboardHandler>();
+		case io_handler_mode::windows: return std::make_unique<WindowsKeyboardHandler>();
+		default: throw EXCEPTION("Invalid Keyboard Handler Mode %d", +(u32)mode);
 		}
 	};
 
 	callbacks.get_mouse_handler = []() -> std::unique_ptr<MouseHandlerBase>
 	{
-		switch (auto mode = Ini.MouseHandlerMode.GetValue())
+		switch (auto mode = rpcs3::config.io.mouse_handler_mode.value())
 		{
-		case 0: return std::make_unique<NullMouseHandler>();
-		case 1: return std::make_unique<WindowsMouseHandler>();
-		default: throw EXCEPTION("Invalid Mouse Handler Mode %d", +mode);
+		case io_handler_mode::null: return std::make_unique<NullMouseHandler>();
+		case io_handler_mode::windows: return std::make_unique<WindowsMouseHandler>();
+		default: throw EXCEPTION("Invalid Mouse Handler Mode %d", +(u32)mode);
 		}
 	};
 
 	callbacks.get_pad_handler = []() -> std::unique_ptr<PadHandlerBase>
 	{
-		switch (auto mode = Ini.PadHandlerMode.GetValue())
+		switch (auto mode = rpcs3::config.io.pad_handler_mode.value())
 		{
-		case 0: return std::make_unique<NullPadHandler>();
-		case 1: return std::make_unique<WindowsPadHandler>();
+		case io_handler_mode::null: return std::make_unique<NullPadHandler>();
+		case io_handler_mode::windows: return std::make_unique<WindowsPadHandler>();
 #if defined(_WIN32)
-		case 2: return std::make_unique<XInputPadHandler>();
+		case io_handler_mode::xinput: return std::make_unique<XInputPadHandler>();
 #endif
-		default: throw EXCEPTION("Invalid Pad Handler Mode %d", +mode);
+		default: throw EXCEPTION("Invalid Pad Handler Mode %d", +(u32)mode);
 		}
 	};
 
@@ -173,8 +174,8 @@ void Rpcs3App::OnArguments(const wxCmdLineParser& parser)
 
 	if (parser.FoundSwitch("t"))
 	{
-		HLEExitOnStop = Ini.HLEExitOnStop.GetValue();
-		Ini.HLEExitOnStop.SetValue(true);
+		HLEExitOnStop = rpcs3::config.misc.exit_on_stop.value();
+		rpcs3::config.misc.exit_on_stop = true;
 		if (parser.GetParamCount() != 1)
 		{
 			wxLogDebug(wxT("A (S)ELF file needs to be given in test mode, exiting."));
@@ -194,7 +195,7 @@ void Rpcs3App::Exit()
 {
 	if (parser.FoundSwitch("t"))
 	{
-		Ini.HLEExitOnStop.SetValue(HLEExitOnStop);
+		rpcs3::config.misc.exit_on_stop = HLEExitOnStop;
 	}
 
 	Emu.Stop();
