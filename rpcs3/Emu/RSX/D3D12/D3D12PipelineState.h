@@ -16,6 +16,7 @@ struct D3D12PipelineProperties
 	unsigned numMRT : 3;
 	D3D12_DEPTH_STENCIL_DESC DepthStencil;
 	D3D12_RASTERIZER_DESC Rasterization;
+	D3D12_INDEX_BUFFER_STRIP_CUT_VALUE CutValue;
 
 	bool operator==(const D3D12PipelineProperties &in) const
 	{
@@ -218,6 +219,8 @@ struct D3D12Traits
 		graphicPipelineStateDesc.SampleDesc.Count = 1;
 		graphicPipelineStateDesc.SampleMask = UINT_MAX;
 		graphicPipelineStateDesc.NodeMask = 1;
+
+		graphicPipelineStateDesc.IBStripCutValue = pipelineProperties.CutValue;
 
 		extraData.first->CreateGraphicsPipelineState(&graphicPipelineStateDesc, IID_PPV_ARGS(&std::get<0>(*result)));
 		std::get<1>(*result) = vertexProgramData.vertex_shader_inputs;
