@@ -3,6 +3,7 @@
 #include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
+#include "Emu/state.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/PPUDecoder.h"
@@ -143,20 +144,20 @@ void PPUThread::do_run()
 {
 	m_dec.reset();
 
-	switch (auto mode = Ini.CPUDecoderMode.GetValue())
+	switch (auto mode = rpcs3::state.config.core.ppu_decoder.value())
 	{
-	case 0: // original interpreter
+	case ppu_decoder_type::interpreter: // original interpreter
 	{
 		m_dec.reset(new PPUDecoder(new PPUInterpreter(*this)));
 		break;
 	}
 
-	case 1: // alternative interpreter
+	case ppu_decoder_type::interpreter2: // alternative interpreter
 	{
 		break;
 	}
 
-	case 2:
+	case ppu_decoder_type::recompiler_llvm:
 	{
 #ifdef PPU_LLVM_RECOMPILER
 		m_dec.reset(new ppu_recompiler_llvm::CPUHybridDecoderRecompiler(*this));

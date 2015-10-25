@@ -279,8 +279,9 @@ public:
 	void LoadSettings();
 
 	void Refresh();
+	void BootGame(wxCommandEvent& event);
+	void ConfigureGame(wxCommandEvent& event);
 	void RemoveGame(wxCommandEvent& event);
-	bool RemoveFolder(std::string localPath);
 
 private:
 	virtual void DClick(wxListEvent& event);

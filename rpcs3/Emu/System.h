@@ -147,6 +147,7 @@ public:
 	void SetPath(const std::string& path, const std::string& elf_path = "");
 	void SetTitleID(const std::string& id);
 	void SetTitle(const std::string& title);
+	void CreateConfig(const std::string& name);
 
 	const std::string& GetPath() const
 	{

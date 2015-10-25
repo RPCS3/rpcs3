@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "rpcs3/Ini.h"
 #include "AudioManager.h"
+#include "Emu/state.h"
 #include "AL/OpenALThread.h"
 #include "Null/NullAudioThread.h"
 #include "XAudio2/XAudio2Thread.h"
@@ -20,13 +21,13 @@ void AudioManager::Init()
 
 	m_audio_info.Init();
 
-	switch (Ini.AudioOutMode.GetValue())
+	switch (rpcs3::state.config.audio.out.value())
 	{
 	default:
-	case 0: m_audio_out = new NullAudioThread(); break;
-	case 1: m_audio_out = new OpenALThread(); break;
+	case audio_output_type::Null: m_audio_out = new NullAudioThread(); break;
+	case audio_output_type::OpenAL: m_audio_out = new OpenALThread(); break;
 #if defined (_WIN32)
-	case 2: m_audio_out = new XAudio2Thread(); break;
+	case audio_output_type::XAudio2: m_audio_out = new XAudio2Thread(); break;
 #endif
 	}
 }

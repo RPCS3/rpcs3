@@ -105,6 +105,13 @@ public:
 			return *this;
 		}
 
+		template<typename T2>
+		entry& operator = (const T2& new_value)
+		{
+			value(static_cast<T>(new_value));
+			return *this;
+		}
+
 		explicit operator const T&() const
 		{
 			return m_value;

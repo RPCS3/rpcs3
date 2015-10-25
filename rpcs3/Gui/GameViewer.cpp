@@ -7,8 +7,10 @@
 #include "Emu/FS/VFS.h"
 #include "Emu/FS/vfsDir.h"
 #include "Emu/FS/vfsFile.h"
+#include "Emu/state.h"
 #include "GameViewer.h"
 #include "Loader/PSF.h"
+#include "SettingsDialog.h"
 #include <wx/dir.h>
 
 static const std::string m_class_name = "GameViewer";
@@ -251,11 +253,44 @@ void GameViewer::DClick(wxListEvent& event)
 
 void GameViewer::RightClick(wxListEvent& event)
 {
-	m_popup->Destroy(m_popup->FindItemByPosition(0));
+	m_popup->Destroy(0);
+	m_popup->Destroy(1);
+	m_popup->Destroy(2);
 	
-	wxMenuItem *pMenuItemA = m_popup->Append(event.GetIndex(), _T("Remove Game"));
-	Bind(wxEVT_MENU, &GameViewer::RemoveGame, this, event.GetIndex());
+	wxMenuItem* boot_item = new wxMenuItem(m_popup, 0, _T("Boot"));
+#if defined (_WIN32)
+	// wxMenuItem::Set(Get)Font only available for the wxMSW port
+	wxFont font = GetFont();
+	font.SetWeight(wxFONTWEIGHT_BOLD);
+	boot_item->SetFont(font);
+#endif
+	m_popup->Append(boot_item);
+	m_popup->Append(1, _T("Configure"));
+	m_popup->Append(2, _T("Remove Game"));
+
+	Bind(wxEVT_MENU, &GameViewer::BootGame, this, 0);
+	Bind(wxEVT_MENU, &GameViewer::ConfigureGame, this, 1);
+	Bind(wxEVT_MENU, &GameViewer::RemoveGame, this, 2);
+
 	PopupMenu(m_popup, event.GetPoint());
+}
+
+void GameViewer::BootGame(wxCommandEvent& WXUNUSED(event))
+{
+	wxListEvent unused_event;
+	DClick(unused_event);
+}
+
+void GameViewer::ConfigureGame(wxCommandEvent& WXUNUSED(event))
+{
+	long i = GetFirstSelected();
+	if (i < 0) return;
+
+	Emu.CreateConfig(m_game_data[i].serial);
+	rpcs3::config_t custom_config { "data/" + m_game_data[i].serial + "/settings.ini" };
+	custom_config.load();
+	LOG_NOTICE(LOADER, "Configure: '%s'", custom_config.path().c_str());
+	SettingsDialog(this, &custom_config);
 }
 
 void GameViewer::RemoveGame(wxCommandEvent& event)

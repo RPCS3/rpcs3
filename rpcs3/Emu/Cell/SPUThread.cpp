@@ -3,6 +3,7 @@
 #include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
+#include "Emu/state.h"
 
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUThread.h"
@@ -111,7 +112,7 @@ void SPUThread::task()
 	if (!custom_task && !m_dec)
 	{
 		// Select opcode table (TODO)
-		const auto& table = Ini.SPUDecoderMode.GetValue() == 0 ? spu_interpreter::precise::g_spu_opcode_table : spu_interpreter::fast::g_spu_opcode_table;
+		const auto& table = rpcs3::state.config.core.spu_decoder.value() == spu_decoder_type::interpreter_precise ? spu_interpreter::precise::g_spu_opcode_table : spu_interpreter::fast::g_spu_opcode_table;
 
 		// LS base address
 		const auto base = vm::_ptr<const u32>(offset);
@@ -208,15 +209,15 @@ void SPUThread::do_run()
 {
 	m_dec.reset();
 
-	switch (auto mode = Ini.SPUDecoderMode.GetValue())
+	switch (auto mode = rpcs3::state.config.core.spu_decoder.value())
 	{
-	case 0: // Interpreter 1 (Precise)
-	case 1: // Interpreter 2 (Fast)
+	case spu_decoder_type::interpreter_precise: // Interpreter 1 (Precise)
+	case spu_decoder_type::interpreter_fast: // Interpreter 2 (Fast)
 	{
 		break;
 	}
 
-	case 2:
+	case spu_decoder_type::recompiler_asmjit:
 	{
 		m_dec.reset(new SPURecompilerDecoder(*this));
 		break;
@@ -224,7 +225,7 @@ void SPUThread::do_run()
 
 	default:
 	{
-		LOG_ERROR(SPU, "Invalid SPU decoder mode: %d", mode);
+		LOG_ERROR(SPU, "Invalid SPU decoder mode: %d", (u8)mode);
 		Emu.Pause();
 	}
 	}

@@ -86,6 +86,21 @@ void Emulator::SetTitle(const std::string& title)
 	m_title = title;
 }
 
+void Emulator::CreateConfig(const std::string& name)
+{
+	const std::string& path = "data/" + name;
+	const std::string& ini_file = path + "/settings.ini";
+
+	if (!fs::is_dir("data"))
+		fs::create_dir("data");
+
+	if (!fs::is_dir(path))
+		fs::create_dir(path);
+
+	if (!fs::is_file(ini_file))
+		rpcs3::config_t{ ini_file }.save();
+}
+
 bool Emulator::BootGame(const std::string& path, bool direct)
 {
 	static const char* elf_path[6] =
@@ -173,12 +188,10 @@ void Emulator::Load()
 		}
 	}
 
-	//TODO: load custom config if exists
-	rpcs3::state.config = rpcs3::config;
-
-	LOG_NOTICE(LOADER, "Loading '%s'...", m_path.c_str());
 	ResetInfo();
 	GetVFS().Init(elf_dir);
+
+	LOG_NOTICE(LOADER, "Loading '%s'...", m_path.c_str());
 
 	// /dev_bdvd/ mounting
 	vfsFile f("/app_home/../dev_bdvd.path");
@@ -213,8 +226,8 @@ void Emulator::Load()
 	LOG_NOTICE(LOADER, "");
 
 	LOG_NOTICE(LOADER, "Settings:");
-	LOG_NOTICE(LOADER, "CPU: %s", Ini.CPUIdToString(Ini.CPUDecoderMode.GetValue()));
-	LOG_NOTICE(LOADER, "SPU: %s", Ini.SPUIdToString(Ini.SPUDecoderMode.GetValue()));
+	//LOG_NOTICE(LOADER, "CPU: %s", Ini.CPUIdToString(Ini.CPUDecoderMode.GetValue()));
+	//LOG_NOTICE(LOADER, "SPU: %s", Ini.SPUIdToString(Ini.SPUDecoderMode.GetValue()));
 	LOG_NOTICE(LOADER, "Renderer: %s", Ini.RendererIdToString(Ini.GSRenderMode.GetValue()));
 
 	if (Ini.GSRenderMode.GetValue() == 2)
@@ -232,10 +245,6 @@ void Emulator::Load()
 	LOG_NOTICE(LOADER, "RSX Logging: %s", Ini.RSXLogging.GetValue() ? "Yes" : "No");
 
 	LOG_NOTICE(LOADER, "");
-
-	LOG_NOTICE(LOADER, rpcs3::config.to_string().c_str());
-
-	LOG_NOTICE(LOADER, "");
 	f.Open("/app_home/../PARAM.SFO");
 	const PSFLoader psf(f);
 	std::string title = psf.GetString("TITLE");
@@ -245,6 +254,26 @@ void Emulator::Load()
 
 	title.length() ? SetTitle(title) : SetTitle(m_path);
 	SetTitleID(title_id);
+
+	rpcs3::state.config = rpcs3::config;
+
+	// load custom config
+	if (!Ini.UseDefaultIni.GetValue())
+	{
+		std::string& name = title_id;
+		if (name.size())
+		{
+			name = name.substr(0, 4) + "-" + name.substr(4, 5);
+			CreateConfig(name);
+			rpcs3::config_t custom_config { "data/" + name + "/settings.ini" };
+			custom_config.load();
+			rpcs3::state.config = custom_config;
+		}
+	}
+
+	LOG_NOTICE(LOADER, "Used configuration: '%s'", rpcs3::state.config.path().c_str());
+	LOG_NOTICE(LOADER, "");
+	LOG_NOTICE(LOADER, rpcs3::state.config.to_string().c_str());
 
 	if (m_elf_path.empty())
 	{
