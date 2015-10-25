@@ -560,7 +560,7 @@ s32 cellGcmSetTileInfo(u8 index, u8 location, u32 offset, u32 size, u32 pitch, u
 	cellGcmSys.Warning("cellGcmSetTileInfo(index=%d, location=%d, offset=%d, size=%d, pitch=%d, comp=%d, base=%d, bank=%d)",
 		index, location, offset, size, pitch, comp, base, bank);
 
-	if (index >= rsx::limits::tiles_count || base >= 800 || bank >= 4)
+	if (index >= rsx::limits::tiles_count || base >= 2048 || bank >= 4)
 	{
 		cellGcmSys.Error("cellGcmSetTileInfo: CELL_GCM_ERROR_INVALID_VALUE");
 		return CELL_GCM_ERROR_INVALID_VALUE;
@@ -1151,7 +1151,7 @@ s32 cellGcmSetTile(u8 index, u8 location, u32 offset, u32 size, u32 pitch, u8 co
 		index, location, offset, size, pitch, comp, base, bank);
 
 	// Copied form cellGcmSetTileInfo
-	if (index >= rsx::limits::tiles_count || base >= 800 || bank >= 4)
+	if (index >= rsx::limits::tiles_count || base >= 2048 || bank >= 4)
 	{
 		cellGcmSys.Error("cellGcmSetTile: CELL_GCM_ERROR_INVALID_VALUE");
 		return CELL_GCM_ERROR_INVALID_VALUE;
