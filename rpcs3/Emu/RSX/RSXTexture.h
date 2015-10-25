@@ -44,7 +44,7 @@ namespace rsx
 		u32 remap() const;
 
 		// Filter
-		u16 bias() const;
+		float bias() const;
 		u8  min_filter() const;
 		u8  mag_filter() const;
 		u8  convolution_filter() const;

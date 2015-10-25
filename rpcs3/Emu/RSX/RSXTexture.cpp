@@ -144,9 +144,9 @@ namespace rsx
 		return (method_registers[NV4097_SET_TEXTURE_CONTROL1 + (m_index * 8)]);
 	}
 
-	u16 texture::bias() const
+	float texture::bias() const
 	{
-		return ((method_registers[NV4097_SET_TEXTURE_FILTER + (m_index * 8)]) & 0x1fff);
+		return float(f16((method_registers[NV4097_SET_TEXTURE_FILTER + (m_index * 8)]) & 0x1fff));
 	}
 
 	u8  texture::min_filter() const

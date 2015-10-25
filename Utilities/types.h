@@ -26,6 +26,21 @@ union alignas(2) f16
 {
 	u16 _u16;
 	u8 _u8[2];
+
+	explicit f16(u16 raw)
+	{
+		_u16 = raw;
+	}
+
+	explicit operator float() const
+	{
+		// See http://stackoverflow.com/a/26779139
+		// The conversion doesn't handle NaN/Inf
+		u32 raw = ((_u16 & 0x8000) << 16) | // Sign (just moved)
+			(((_u16 & 0x7c00) + 0x1C000) << 13) | // Exponent ( exp - 15 + 127)
+			((_u16 & 0x03FF) << 13); // Mantissa
+		return (float&)raw;
+	}
 };
 
 using f32 = float;
