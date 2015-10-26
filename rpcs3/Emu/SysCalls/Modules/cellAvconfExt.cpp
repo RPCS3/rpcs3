@@ -1,8 +1,8 @@
 #include "stdafx.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/SysCalls/Modules.h"
+#include "Emu/state.h"
 
-#include "Ini.h"
 #include "cellAudioIn.h"
 #include "cellAudioOut.h"
 #include "cellVideoOut.h"
@@ -127,7 +127,7 @@ s32 cellVideoOutGetScreenSize(u32 videoOut, vm::ptr<float> screenSize)
 	// float diagonal = roundf(sqrtf((powf(wxGetDisplaySizeMM().GetWidth(), 2) + powf(wxGetDisplaySizeMM().GetHeight(), 2))) * 0.0393f);
 #endif
 
-	if (Ini.GS3DTV.GetValue())
+	if (rpcs3::config.rsx._3dtv.value())
 	{
 		*screenSize = 24.0f;
 		return CELL_OK;

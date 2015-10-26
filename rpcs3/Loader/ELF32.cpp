@@ -1,14 +1,14 @@
 #include "stdafx.h"
-#include "Ini.h"
+#include "ELF32.h"
 #include "Utilities/Log.h"
 #include "Emu/FS/vfsStream.h"
 #include "Emu/Memory/Memory.h"
-#include "ELF32.h"
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/ARMv7/ARMv7Thread.h"
 #include "Emu/ARMv7/ARMv7Decoder.h"
 #include "Emu/ARMv7/PSVFuncList.h"
 #include "Emu/System.h"
+#include "Emu/state.h"
 
 extern void armv7_init_tls();
 
@@ -323,7 +323,7 @@ namespace loader
 								{
 									LOG_ERROR(LOADER, ".sceRefs: movw writing failed (ref_addr=0x%x, addr=0x%x)", code, code[1]);
 								}
-								else //if (Ini.HLELogging.GetValue())
+								else //if (rpcs3::config.misc.log.hle_logging.value())
 								{
 									LOG_NOTICE(LOADER, ".sceRefs: movw written at 0x%x (ref_addr=0x%x, data=0x%x)", code[1], code, data);
 								}
@@ -339,7 +339,7 @@ namespace loader
 								{
 									LOG_ERROR(LOADER, ".sceRefs: movt writing failed (ref_addr=0x%x, addr=0x%x)", code, code[1]);
 								}
-								else //if (Ini.HLELogging.GetValue())
+								else //if (rpcs3::config.misc.log.hle_logging.value())
 								{
 									LOG_NOTICE(LOADER, ".sceRefs: movt written at 0x%x (ref_addr=0x%x, data=0x%x)", code[1], code, data);
 								}
@@ -353,7 +353,7 @@ namespace loader
 							{
 								data = 0;
 
-								if (Ini.HLELogging.GetValue())
+								if (rpcs3::config.misc.log.hle_logging.value())
 								{
 									LOG_NOTICE(LOADER, ".sceRefs: zero code found");
 								}

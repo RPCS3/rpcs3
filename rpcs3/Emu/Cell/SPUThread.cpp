@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "rpcs3/Ini.h"
 #include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
@@ -381,7 +380,7 @@ void SPUThread::do_dma_list_cmd(u32 cmd, spu_mfc_arg_t args)
 
 void SPUThread::process_mfc_cmd(u32 cmd)
 {
-	if (Ini.HLELogging.GetValue())
+	if (rpcs3::config.misc.log.hle_logging.value())
 	{
 		LOG_NOTICE(SPU, "DMA %s: cmd=0x%x, lsa=0x%x, ea=0x%llx, tag=0x%x, size=0x%x", get_mfc_cmd_name(cmd), cmd, ch_mfc_args.lsa, ch_mfc_args.ea, ch_mfc_args.tag, ch_mfc_args.size);
 	}
@@ -573,7 +572,7 @@ void SPUThread::set_interrupt_status(bool enable)
 
 u32 SPUThread::get_ch_count(u32 ch)
 {
-	if (Ini.HLELogging.GetValue())
+	if (rpcs3::config.misc.log.hle_logging.value())
 	{
 		LOG_NOTICE(SPU, "get_ch_count(ch=%d [%s])", ch, ch < 128 ? spu_ch_name[ch] : "???");
 	}
@@ -600,7 +599,7 @@ u32 SPUThread::get_ch_count(u32 ch)
 
 u32 SPUThread::get_ch_value(u32 ch)
 {
-	if (Ini.HLELogging.GetValue())
+	if (rpcs3::config.misc.log.hle_logging.value())
 	{
 		LOG_NOTICE(SPU, "get_ch_value(ch=%d [%s])", ch, ch < 128 ? spu_ch_name[ch] : "???");
 	}
@@ -764,7 +763,7 @@ u32 SPUThread::get_ch_value(u32 ch)
 
 void SPUThread::set_ch_value(u32 ch, u32 value)
 {
-	if (Ini.HLELogging.GetValue())
+	if (rpcs3::config.misc.log.hle_logging.value())
 	{
 		LOG_NOTICE(SPU, "set_ch_value(ch=%d [%s], value=0x%x)", ch, ch < 128 ? spu_ch_name[ch] : "???", value);
 	}
@@ -823,7 +822,7 @@ void SPUThread::set_ch_value(u32 ch, u32 value)
 
 				ch_out_mbox.set_value(data, 0);
 
-				if (Ini.HLELogging.GetValue())
+				if (rpcs3::config.misc.log.hle_logging.value())
 				{
 					LOG_NOTICE(SPU, "sys_spu_thread_send_event(spup=%d, data0=0x%x, data1=0x%x)", spup, value & 0x00ffffff, data);
 				}
@@ -862,7 +861,7 @@ void SPUThread::set_ch_value(u32 ch, u32 value)
 
 				ch_out_mbox.set_value(data, 0);
 
-				if (Ini.HLELogging.GetValue())
+				if (rpcs3::config.misc.log.hle_logging.value())
 				{
 					LOG_WARNING(SPU, "sys_spu_thread_throw_event(spup=%d, data0=0x%x, data1=0x%x)", spup, value & 0x00ffffff, data);
 				}
@@ -912,7 +911,7 @@ void SPUThread::set_ch_value(u32 ch, u32 value)
 					throw EXCEPTION("sys_event_flag_set_bit(id=%d, value=0x%x (flag=%d)): Invalid flag", data, value, flag);
 				}
 
-				if (Ini.HLELogging.GetValue())
+				if (rpcs3::config.misc.log.hle_logging.value())
 				{
 					LOG_WARNING(SPU, "sys_event_flag_set_bit(id=%d, value=0x%x (flag=%d))", data, value, flag);
 				}
@@ -956,7 +955,7 @@ void SPUThread::set_ch_value(u32 ch, u32 value)
 					throw EXCEPTION("sys_event_flag_set_bit_impatient(id=%d, value=0x%x (flag=%d)): Invalid flag", data, value, flag);
 				}
 
-				if (Ini.HLELogging.GetValue())
+				if (rpcs3::config.misc.log.hle_logging.value())
 				{
 					LOG_WARNING(SPU, "sys_event_flag_set_bit_impatient(id=%d, value=0x%x (flag=%d))", data, value, flag);
 				}
@@ -1155,7 +1154,7 @@ void SPUThread::set_ch_value(u32 ch, u32 value)
 
 void SPUThread::stop_and_signal(u32 code)
 {
-	if (Ini.HLELogging.GetValue())
+	if (rpcs3::config.misc.log.hle_logging.value())
 	{
 		LOG_NOTICE(SPU, "stop_and_signal(code=0x%x)", code);
 	}
@@ -1226,7 +1225,7 @@ void SPUThread::stop_and_signal(u32 code)
 
 		ch_out_mbox.set_value(spuq, 0);
 
-		if (Ini.HLELogging.GetValue())
+		if (rpcs3::config.misc.log.hle_logging.value())
 		{
 			LOG_NOTICE(SPU, "sys_spu_thread_receive_event(spuq=0x%x)", spuq);
 		}
@@ -1352,7 +1351,7 @@ void SPUThread::stop_and_signal(u32 code)
 
 		ch_out_mbox.set_value(value, 0);
 
-		if (Ini.HLELogging.GetValue())
+		if (rpcs3::config.misc.log.hle_logging.value())
 		{
 			LOG_NOTICE(SPU, "sys_spu_thread_group_exit(status=0x%x)", value);
 		}
@@ -1391,7 +1390,7 @@ void SPUThread::stop_and_signal(u32 code)
 			throw EXCEPTION("sys_spu_thread_exit(): Out_MBox is empty");
 		}
 
-		if (Ini.HLELogging.GetValue())
+		if (rpcs3::config.misc.log.hle_logging.value())
 		{
 			LOG_NOTICE(SPU, "sys_spu_thread_exit(status=0x%x)", ch_out_mbox.get_value());
 		}
@@ -1422,7 +1421,7 @@ void SPUThread::stop_and_signal(u32 code)
 
 void SPUThread::halt()
 {
-	if (Ini.HLELogging.GetValue())
+	if (rpcs3::config.misc.log.hle_logging.value())
 	{
 		LOG_NOTICE(SPU, "halt()");
 	}

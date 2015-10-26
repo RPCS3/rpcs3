@@ -141,7 +141,7 @@ D3D12GSRender::D3D12GSRender()
 				LOG_WARNING(RSX, "Reporting Cell writing to %x", addr);
 		return result;
 	};
-	if (Ini.GSDebugOutputEnable.GetValue())
+	if (rpcs3::config.rsx.d3d12.debug_output.value())
 	{
 		Microsoft::WRL::ComPtr<ID3D12Debug> debugInterface;
 		wrapD3D12GetDebugInterface(IID_PPV_ARGS(&debugInterface));
@@ -152,7 +152,7 @@ D3D12GSRender::D3D12GSRender()
 	ThrowIfFailed(CreateDXGIFactory(IID_PPV_ARGS(&dxgiFactory)));
 	// Create adapter
 	ComPtr<IDXGIAdapter> adaptater = nullptr;
-	ThrowIfFailed(dxgiFactory->EnumAdapters(Ini.GSD3DAdaptater.GetValue(), adaptater.GetAddressOf()));
+	ThrowIfFailed(dxgiFactory->EnumAdapters(rpcs3::state.config.rsx.d3d12.adaptater.value(), adaptater.GetAddressOf()));
 	ThrowIfFailed(wrapD3D12CreateDevice(adaptater.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&m_device)));
 
 	// Queues
@@ -247,7 +247,7 @@ D3D12GSRender::D3D12GSRender()
 	m_vertexIndexData.Init(m_device.Get(), 1024 * 1024 * 256, D3D12_HEAP_TYPE_UPLOAD, D3D12_HEAP_FLAG_NONE);
 	m_textureUploadData.Init(m_device.Get(), 1024 * 1024 * 512, D3D12_HEAP_TYPE_UPLOAD, D3D12_HEAP_FLAG_NONE);
 
-	if (Ini.GSOverlay.GetValue())
+	if (rpcs3::config.rsx.d3d12.overlay.value())
 		InitD2DStructures();
 }
 
@@ -392,7 +392,7 @@ void D3D12GSRender::clear_surface(u32 arg)
 	m_timers.m_drawCallDuration += std::chrono::duration_cast<std::chrono::microseconds>(endDuration - startDuration).count();
 	m_timers.m_drawCallCount++;
 
-	if (Ini.GSDebugOutputEnable.GetValue())
+	if (rpcs3::config.rsx.d3d12.debug_output.value())
 	{
 		ThrowIfFailed(getCurrentResourceStorage().m_commandList->Close());
 		m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**)getCurrentResourceStorage().m_commandList.GetAddressOf());
@@ -604,7 +604,7 @@ void D3D12GSRender::end()
 	m_timers.m_drawCallDuration += std::chrono::duration_cast<std::chrono::microseconds>(endDuration - startDuration).count();
 	m_timers.m_drawCallCount++;
 
-	if (Ini.GSDebugOutputEnable.GetValue())
+	if (rpcs3::config.rsx.d3d12.debug_output.value())
 	{
 		ThrowIfFailed(getCurrentResourceStorage().m_commandList->Close());
 		m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**)getCurrentResourceStorage().m_commandList.GetAddressOf());
@@ -758,21 +758,21 @@ void D3D12GSRender::flip(int buffer)
 	if (m_rtts.m_currentlyBoundRenderTargets[0] != nullptr)
 		getCurrentResourceStorage().m_commandList->DrawInstanced(4, 1, 0, 0);
 
-	if (!Ini.GSOverlay.GetValue())
+	if (!rpcs3::config.rsx.d3d12.overlay.value())
 		getCurrentResourceStorage().m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_backBuffer[m_swapChain->GetCurrentBackBufferIndex()].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
 	if (isFlipSurfaceInLocalMemory(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET]) && m_rtts.m_currentlyBoundRenderTargets[0] != nullptr)
 		getCurrentResourceStorage().m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_rtts.m_currentlyBoundRenderTargets[0], D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET));
 	ThrowIfFailed(getCurrentResourceStorage().m_commandList->Close());
 	m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**)getCurrentResourceStorage().m_commandList.GetAddressOf());
 
-	if(Ini.GSOverlay.GetValue())
+	if(rpcs3::config.rsx.d3d12.overlay.value())
 		renderOverlay();
 
 	ResetTimer();
 
 	std::chrono::time_point<std::chrono::system_clock> flipStart = std::chrono::system_clock::now();
 
-	ThrowIfFailed(m_swapChain->Present(Ini.GSVSyncEnable.GetValue() ? 1 : 0, 0));
+	ThrowIfFailed(m_swapChain->Present(rpcs3::state.config.rsx.vsync.value() ? 1 : 0, 0));
 	// Add an event signaling queue completion
 
 	ResourceStorage &storage = getNonCurrentResourceStorage();

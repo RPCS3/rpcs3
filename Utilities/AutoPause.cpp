@@ -1,9 +1,9 @@
 #include "stdafx.h"
-#include "rpcs3/Ini.h"
 #include "AutoPause.h"
 #include "Utilities/Log.h"
 #include "Utilities/File.h"
 #include "Emu/System.h"
+#include "Emu/state.h"
 
 using namespace Debug;
 
@@ -77,8 +77,8 @@ void AutoPause::Reload(void)
 		}
 	}
 
-	m_pause_syscall_enable = Ini.DBGAutoPauseSystemCall.GetValue();
-	m_pause_function_enable = Ini.DBGAutoPauseFunctionCall.GetValue();
+	m_pause_syscall_enable = rpcs3::config.misc.debug.auto_pause_syscall.value();
+	m_pause_function_enable = rpcs3::config.misc.debug.auto_pause_func_call.value();
 	initialized = true;
 }
 

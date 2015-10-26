@@ -1,12 +1,11 @@
 #include "stdafx.h"
-#include "rpcs3/Ini.h"
 #include "Utilities/rPlatform.h" // only for rImage
 #include "Utilities/File.h"
 #include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
-#include "GLGSRender.h"
 #include "Emu/state.h"
+#include "GLGSRender.h"
 
 #define DUMP_VERTEX_DATA 0
 

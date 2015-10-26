@@ -1,8 +1,8 @@
 #include "stdafx.h"
-#include "rpcs3/Ini.h"
 #include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
+#include "Emu/state.h"
 #include "Emu/RSX/GSManager.h"
 #include "RSXThread.h"
 
@@ -571,15 +571,15 @@ namespace rsx
 
 		//sync
 		double limit;
-		switch (Ini.GSFrameLimit.GetValue())
+		switch (rpcs3::state.config.rsx.frame_limit.value())
 		{
-		case 1: limit = 50.; break;
-		case 2: limit = 59.94; break;
-		case 3: limit = 30.; break;
-		case 4: limit = 60.; break;
-		case 5: limit = rsx->fps_limit; break; //TODO
+		case rsx_frame_limit::_50: limit = 50.; break;
+		case rsx_frame_limit::_59_94: limit = 59.94; break;
+		case rsx_frame_limit::_30: limit = 30.; break;
+		case rsx_frame_limit::_60: limit = 60.; break;
+		case rsx_frame_limit::Auto: limit = rsx->fps_limit; break; //TODO
 
-		case 0:
+		case rsx_frame_limit::Off:
 		default:
 			return;
 		}
@@ -999,7 +999,7 @@ namespace rsx
 					u32 reg = first_cmd + (i * inc);
 					u32 value = args[i];
 
-					if (Ini.RSXLogging.GetValue())
+					if (rpcs3::config.misc.log.rsx_logging.value())
 					{
 						LOG_NOTICE(Log::RSX, "%s(0x%x) = 0x%x", get_method_name(reg).c_str(), reg, value);
 					}

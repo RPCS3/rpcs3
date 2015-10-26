@@ -6,13 +6,13 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/IdManager.h"
 #include "Emu/System.h"
+#include "Emu/state.h"
 #include "Emu/SysCalls/SysCalls.h"
 #include "Emu/SysCalls/Modules.h"
 #include "Emu/SysCalls/ModuleManager.h"
 #include "Emu/SysCalls/lv2/sys_prx.h"
 #include "Emu/Cell/PPUInstrTable.h"
 #include "ELF64.h"
-#include "Ini.h"
 
 using namespace PPU_instr;
 
@@ -331,7 +331,7 @@ namespace loader
 					continue;
 				}
 
-				if (Ini.LoadLibLv2.GetValue())
+				if (rpcs3::state.config.core.load_liblv2.value())
 				{
 					if (module->name != "liblv2.sprx")
 					{
@@ -349,15 +349,15 @@ namespace loader
 
 					if (sprx_handler.is_sprx())
 					{
-						if (!Ini.LoadLibLv2.GetValue())
+						if (!rpcs3::state.config.core.load_liblv2.value())
 						{
-							IniEntry<bool> load_lib;
+							/*IniEntry<bool> load_lib;
 							load_lib.Init(sprx_handler.sprx_get_module_name(), "LLE");
 
 							if (!load_lib.LoadValue(false))
 							{
 								continue;
-							}
+							}*/
 						}
 
 						LOG_WARNING(LOADER, "Loading LLE library '%s'", sprx_handler.sprx_get_module_name().c_str());
@@ -617,7 +617,7 @@ namespace loader
 							m_stream->Seek(handler::get_stream_offset() + phdr.p_offset);
 							m_stream->Read(phdr.p_vaddr.get_ptr(), phdr.p_filesz);
 
-							if (Ini.HookStFunc.GetValue())
+							if (rpcs3::state.config.core.hook_st_func.value())
 							{
 								hook_ppu_funcs(vm::static_ptr_cast<u32>(phdr.p_vaddr), phdr.p_filesz / 4);
 							}

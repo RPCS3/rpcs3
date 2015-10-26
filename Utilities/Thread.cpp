@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "Log.h"
-#include "rpcs3/Ini.h"
 #include "Emu/System.h"
+#include "Emu/state.h"
 #include "Emu/CPU/CPUThreadManager.h"
 #include "Emu/CPU/CPUThread.h"
 #include "Emu/Cell/RawSPUThread.h"
@@ -1273,14 +1273,14 @@ void named_thread_t::start(std::function<std::string()> name, std::function<void
 		{
 			g_thread_count++;
 
-			if (Ini.HLELogging.GetValue())
+			if (rpcs3::config.misc.log.hle_logging.value())
 			{
 				LOG_NOTICE(GENERAL, "Thread started");
 			}
 
 			func();
 
-			if (Ini.HLELogging.GetValue())
+			if (rpcs3::config.misc.log.hle_logging.value())
 			{
 				LOG_NOTICE(GENERAL, "Thread ended");
 			}

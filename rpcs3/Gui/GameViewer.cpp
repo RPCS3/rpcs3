@@ -7,7 +7,6 @@
 #include "Emu/FS/VFS.h"
 #include "Emu/FS/vfsDir.h"
 #include "Emu/FS/vfsFile.h"
-#include "Emu/state.h"
 #include "GameViewer.h"
 #include "Loader/PSF.h"
 #include "SettingsDialog.h"
@@ -245,7 +244,7 @@ void GameViewer::DClick(wxListEvent& event)
 		return;
 	}
 
-	if (Ini.HLEAlwaysStart.GetValue() && Emu.IsReady())
+	if (rpcs3::config.misc.always_start.value() && Emu.IsReady())
 	{
 		Emu.Run();
 	}

@@ -2,7 +2,7 @@
 #include "Utilities/Log.h"
 #include "VHDDManager.h"
 #include "TextInputDialog.h"
-#include "Ini.h"
+#include "Emu/state.h"
 #include <wx/busyinfo.h>
 
 VHDDListDropTarget::VHDDListDropTarget(wxListView* parent) : m_parent(parent)
@@ -527,7 +527,7 @@ void VHDDManagerDialog::OnOk(wxCommandEvent& event)
 
 void VHDDManagerDialog::LoadPaths()
 {
-	IniEntry<int> path_count;
+	/*IniEntry<int> path_count;
 	path_count.Init("path_count", "HDDManager");
 	size_t count = 0;
 	count = path_count.LoadValue(count);
@@ -537,12 +537,12 @@ void VHDDManagerDialog::LoadPaths()
 		IniEntry<std::string> path_entry;
 		path_entry.Init(fmt::format("path[%d]", i), "HDDManager");
 		m_paths.emplace_back(path_entry.LoadValue(""));
-	}
+	}*/
 }
 
 void VHDDManagerDialog::SavePaths()
 {
-	IniEntry<int> path_count;
+	/*IniEntry<int> path_count;
 	path_count.Init("path_count", "HDDManager");
 	path_count.SaveValue(m_paths.size());
 
@@ -551,5 +551,5 @@ void VHDDManagerDialog::SavePaths()
 		IniEntry<std::string> path_entry;
 		path_entry.Init(fmt::format("path[%d]", i), "HDDManager");
 		path_entry.SaveValue(m_paths[i]);
-	}
+	}*/
 }

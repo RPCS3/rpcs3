@@ -55,8 +55,8 @@ enum class rsx_renderer_type
 
 enum class rsx_aspect_ratio
 {
-	_16x9 = 1,
-	_4x3
+	_4x3 = 1,
+	_16x9 
 };
 
 enum class rsx_frame_limit
@@ -71,14 +71,14 @@ enum class rsx_frame_limit
 
 enum class rsx_resolution
 {
-	_1920x1080,
-	_1280x720,
-	_720x480,
-	_720x576,
-	_1600x1080,
-	_1440x1080,
-	_1280x1080,
-	_960x1080
+	_1920x1080 = 1,
+	_1280x720 = 2,
+	_720x480 = 4,
+	_720x576 = 5,
+	_1600x1080 = 10,
+	_1440x1080 = 11,
+	_1280x1080 = 12,
+	_960x1080 = 13
 };
 
 namespace convert
@@ -284,7 +284,7 @@ namespace convert
 			if (value == "interpreter2")
 				return ppu_decoder_type::interpreter2;
 
-			if (value == "DX12")
+			if (value == "recompiler_llvm")
 				return ppu_decoder_type::recompiler_llvm;
 
 			return ppu_decoder_type::interpreter;
@@ -561,8 +561,6 @@ namespace convert
 }
 
 
-
-
 namespace rpcs3
 {
 	class config_t : public config_context_t
@@ -570,6 +568,30 @@ namespace rpcs3
 		std::string m_path;
 
 	public:
+		struct gui_group : protected group
+		{
+			gui_group(config_context_t *cfg) : group{ cfg, "gui" } {}
+
+			struct size_group : protected group
+			{
+				size_group(group *grp) : group{ grp, "size" } {}
+
+				entry<int> width{ this, "width", 900 };
+				entry<int> hight{ this, "hight", 600 };
+			} size{ this };
+
+			struct position_group : protected group
+			{
+				position_group(group *grp) : group{ grp, "position" } {}
+
+				entry<int> x{ this, "horizontal", -1 };
+				entry<int> y{ this, "vertical", -1 };
+			} position{ this };
+
+			entry<std::string> aui_mgr_perspective{ this, "MainFrameAui", "" };
+
+		} gui{ this };
+
 		struct core_group : protected group
 		{
 			core_group(config_context_t *cfg) : group{ cfg, "core" } {}
@@ -608,8 +630,8 @@ namespace rpcs3
 				d3d12_group(group *grp) : group{ grp, "d3d12" } {}
 				
 				entry<u32>  adaptater           { this, "D3D Adaptater",       1 };
-				entry<bool> debug_output        { this, "Debug Output",        true };
-				entry<bool> overlay             { this, "Debug overlay",       true };
+				entry<bool> debug_output        { this, "Debug Output",        false };
+				entry<bool> overlay             { this, "Debug overlay",       false };
 			} d3d12{ this };
 
 			rsx_group(config_context_t *cfg) : group{ cfg, "rsx" } {}
@@ -707,7 +729,7 @@ namespace rpcs3
 
 			entry<bool> exit_on_stop             { this, "Exit RPCS3 when process finishes", false };
 			entry<bool> always_start             { this, "Always start after boot",          true };
-			entry<bool> use_default_ini          { this, "Use default configuration",        false };
+			entry<bool> use_default_ini          { this, "Use default configuration",        true };
 		} misc{ this };
 
 		struct system_group : protected group

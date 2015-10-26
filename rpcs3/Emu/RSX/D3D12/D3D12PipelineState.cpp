@@ -3,6 +3,7 @@
 #include <d3dcompiler.h>
 #include "D3D12PipelineState.h"
 #include "D3D12GSRender.h"
+#include "Emu/state.h"
 
 #pragma comment (lib, "d3dcompiler.lib")
 
@@ -13,7 +14,7 @@ void Shader::Compile(const std::string &code, SHADER_TYPE st)
 	HRESULT hr;
 	ComPtr<ID3DBlob> errorBlob;
 	UINT compileFlags;
-	if (Ini.GSDebugOutputEnable.GetValue())
+	if (rpcs3::config.rsx.d3d12.debug_output.value())
 		compileFlags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
 	else
 		compileFlags = 0;

@@ -7,7 +7,7 @@
 
 bool LogBase::CheckLogging() const
 {
-	return Ini.HLELogging.GetValue() || m_logging;
+	return rpcs3::config.misc.log.hle_logging.value() || m_logging;
 }
 
 void LogBase::LogOutput(LogType type, std::string text) const

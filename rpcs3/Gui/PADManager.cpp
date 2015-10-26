@@ -2,6 +2,7 @@
 #include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
+#include "Emu/state.h"
 #include "rpcs3.h"
 #include "PADManager.h"
 
@@ -257,36 +258,36 @@ void PADManager::OnKeyDown(wxKeyEvent &keyEvent)
 
 	switch (m_button_id)
 	{
-	case id_pad_lstick_left: Ini.PadHandlerLStickLeft.SetValue(keyEvent.GetKeyCode()); break;
-	case id_pad_lstick_down: Ini.PadHandlerLStickDown.SetValue(keyEvent.GetKeyCode()); break;
-	case id_pad_lstick_right: Ini.PadHandlerLStickRight.SetValue(keyEvent.GetKeyCode()); break;
-	case id_pad_lstick_up: Ini.PadHandlerLStickUp.SetValue(keyEvent.GetKeyCode()); break;
+	case id_pad_lstick_left: rpcs3::config.io.pad.left_stick_left = keyEvent.GetKeyCode(); break;
+	case id_pad_lstick_down: rpcs3::config.io.pad.left_stick_down = keyEvent.GetKeyCode(); break;
+	case id_pad_lstick_right: rpcs3::config.io.pad.left_stick_right = keyEvent.GetKeyCode(); break;
+	case id_pad_lstick_up: rpcs3::config.io.pad.left_stick_up = keyEvent.GetKeyCode(); break;
 
-	case id_pad_left: Ini.PadHandlerLeft.SetValue(keyEvent.GetKeyCode()); break;
-	case id_pad_down: Ini.PadHandlerDown.SetValue(keyEvent.GetKeyCode()); break;
-	case id_pad_right: Ini.PadHandlerRight.SetValue(keyEvent.GetKeyCode()); break;
-	case id_pad_up: Ini.PadHandlerUp.SetValue(keyEvent.GetKeyCode()); break;
+	case id_pad_left: rpcs3::config.io.pad.left = keyEvent.GetKeyCode(); break;
+	case id_pad_down: rpcs3::config.io.pad.down = keyEvent.GetKeyCode(); break;
+	case id_pad_right: rpcs3::config.io.pad.right = keyEvent.GetKeyCode(); break;
+	case id_pad_up: rpcs3::config.io.pad.up = keyEvent.GetKeyCode(); break;
 	
-	case id_pad_l1: Ini.PadHandlerL1.SetValue(keyEvent.GetKeyCode()); break;
-	case id_pad_l2: Ini.PadHandlerL2.SetValue(keyEvent.GetKeyCode()); break;
-	case id_pad_l3: Ini.PadHandlerL3.SetValue(keyEvent.GetKeyCode()); break;
+	case id_pad_l1: rpcs3::config.io.pad.l1 = keyEvent.GetKeyCode(); break;
+	case id_pad_l2: rpcs3::config.io.pad.l2 = keyEvent.GetKeyCode(); break;
+	case id_pad_l3: rpcs3::config.io.pad.l3 = keyEvent.GetKeyCode(); break;
 
-	case id_pad_start: Ini.PadHandlerStart.SetValue(keyEvent.GetKeyCode()); break;
-	case id_pad_select: Ini.PadHandlerSelect.SetValue(keyEvent.GetKeyCode()); break;
+	case id_pad_start: rpcs3::config.io.pad.start = keyEvent.GetKeyCode(); break;
+	case id_pad_select: rpcs3::config.io.pad.select = keyEvent.GetKeyCode(); break;
 	
-	case id_pad_r1: Ini.PadHandlerR1.SetValue(keyEvent.GetKeyCode()); break;
-	case id_pad_r2: Ini.PadHandlerR2.SetValue(keyEvent.GetKeyCode()); break;
-	case id_pad_r3: Ini.PadHandlerR3.SetValue(keyEvent.GetKeyCode()); break;
+	case id_pad_r1: rpcs3::config.io.pad.r1 = keyEvent.GetKeyCode(); break;
+	case id_pad_r2: rpcs3::config.io.pad.r2 = keyEvent.GetKeyCode(); break;
+	case id_pad_r3: rpcs3::config.io.pad.r3 = keyEvent.GetKeyCode(); break;
 
-	case id_pad_square: Ini.PadHandlerSquare.SetValue(keyEvent.GetKeyCode()); break;
-	case id_pad_cross: Ini.PadHandlerCross.SetValue(keyEvent.GetKeyCode()); break;
-	case id_pad_circle: Ini.PadHandlerCircle.SetValue(keyEvent.GetKeyCode()); break;
-	case id_pad_triangle: Ini.PadHandlerTriangle.SetValue(keyEvent.GetKeyCode()); break;
+	case id_pad_square: rpcs3::config.io.pad.square = keyEvent.GetKeyCode(); break;
+	case id_pad_cross: rpcs3::config.io.pad.cross = keyEvent.GetKeyCode(); break;
+	case id_pad_circle: rpcs3::config.io.pad.circle = keyEvent.GetKeyCode(); break;
+	case id_pad_triangle: rpcs3::config.io.pad.triangle = keyEvent.GetKeyCode(); break;
 
-	case id_pad_rstick_left: Ini.PadHandlerRStickLeft.SetValue(keyEvent.GetKeyCode()); break;
-	case id_pad_rstick_down: Ini.PadHandlerRStickDown.SetValue(keyEvent.GetKeyCode()); break;
-	case id_pad_rstick_right: Ini.PadHandlerRStickRight.SetValue(keyEvent.GetKeyCode()); break;
-	case id_pad_rstick_up: Ini.PadHandlerRStickUp.SetValue(keyEvent.GetKeyCode()); break;
+	case id_pad_rstick_left: rpcs3::config.io.pad.right_stick_left = keyEvent.GetKeyCode(); break;
+	case id_pad_rstick_down: rpcs3::config.io.pad.right_stick_down = keyEvent.GetKeyCode(); break;
+	case id_pad_rstick_right: rpcs3::config.io.pad.right_stick_right = keyEvent.GetKeyCode(); break;
+	case id_pad_rstick_up: rpcs3::config.io.pad.right_stick_up = keyEvent.GetKeyCode(); break;
 
 	case 0: break;
 	default: LOG_ERROR(HLE, "Unknown button ID: %d", m_button_id); break;
@@ -320,7 +321,7 @@ void PADManager::OnButtonClicked(wxCommandEvent &event)
 		switch (event.GetId())
 		{
 		case id_reset_parameters: ResetParameters(); UpdateLabel(); break;
-		case wxID_OK: Ini.Save(); break;
+		case wxID_OK: rpcs3::config.save(); break;
 		case wxID_CANCEL: break;
 
 		default: LOG_ERROR(HLE, "Unknown button ID: %d", event.GetId()); break;
@@ -408,70 +409,70 @@ const wxString PADManager::GetKeyName(const u32 keyCode)
 void PADManager::UpdateLabel()
 {
 	// Get button labels from .ini
-	b_up_lstick->SetLabel(GetKeyName(Ini.PadHandlerLStickUp.GetValue()));
-	b_down_lstick->SetLabel(GetKeyName(Ini.PadHandlerLStickDown.GetValue()));
-	b_left_lstick->SetLabel(GetKeyName(Ini.PadHandlerLStickLeft.GetValue()));
-	b_right_lstick->SetLabel(GetKeyName(Ini.PadHandlerLStickRight.GetValue()));
+	b_up_lstick->SetLabel(GetKeyName(rpcs3::config.io.pad.left_stick_up.value()));
+	b_down_lstick->SetLabel(GetKeyName(rpcs3::config.io.pad.left_stick_down.value()));
+	b_left_lstick->SetLabel(GetKeyName(rpcs3::config.io.pad.left_stick_left.value()));
+	b_right_lstick->SetLabel(GetKeyName(rpcs3::config.io.pad.left_stick_right.value()));
 
-	b_up->SetLabel(GetKeyName(Ini.PadHandlerUp.GetValue()));
-	b_down->SetLabel(GetKeyName(Ini.PadHandlerDown.GetValue()));
-	b_left->SetLabel(GetKeyName(Ini.PadHandlerLeft.GetValue()));
-	b_right->SetLabel(GetKeyName(Ini.PadHandlerRight.GetValue()));
+	b_up->SetLabel(GetKeyName(rpcs3::config.io.pad.up.value()));
+	b_down->SetLabel(GetKeyName(rpcs3::config.io.pad.down.value()));
+	b_left->SetLabel(GetKeyName(rpcs3::config.io.pad.left.value()));
+	b_right->SetLabel(GetKeyName(rpcs3::config.io.pad.right.value()));
 	
-	b_shift_l1->SetLabel(GetKeyName(Ini.PadHandlerL1.GetValue()));
-	b_shift_l2->SetLabel(GetKeyName(Ini.PadHandlerL2.GetValue()));
-	b_shift_l3->SetLabel(GetKeyName(Ini.PadHandlerL3.GetValue()));
+	b_shift_l1->SetLabel(GetKeyName(rpcs3::config.io.pad.l1.value()));
+	b_shift_l2->SetLabel(GetKeyName(rpcs3::config.io.pad.l2.value()));
+	b_shift_l3->SetLabel(GetKeyName(rpcs3::config.io.pad.l3.value()));
 
-	b_start->SetLabel(GetKeyName(Ini.PadHandlerStart.GetValue()));
-	b_select->SetLabel(GetKeyName(Ini.PadHandlerSelect.GetValue()));
+	b_start->SetLabel(GetKeyName(rpcs3::config.io.pad.start.value()));
+	b_select->SetLabel(GetKeyName(rpcs3::config.io.pad.select.value()));
 
-	b_shift_r1->SetLabel(GetKeyName(Ini.PadHandlerR1.GetValue()));
-	b_shift_r2->SetLabel(GetKeyName(Ini.PadHandlerR2.GetValue()));
-	b_shift_r3->SetLabel(GetKeyName(Ini.PadHandlerR3.GetValue()));
+	b_shift_r1->SetLabel(GetKeyName(rpcs3::config.io.pad.r1.value()));
+	b_shift_r2->SetLabel(GetKeyName(rpcs3::config.io.pad.r2.value()));
+	b_shift_r3->SetLabel(GetKeyName(rpcs3::config.io.pad.r3.value()));
 
-	b_square->SetLabel(GetKeyName(Ini.PadHandlerSquare.GetValue()));
-	b_cross->SetLabel(GetKeyName(Ini.PadHandlerCross.GetValue()));
-	b_circle->SetLabel(GetKeyName(Ini.PadHandlerCircle.GetValue()));
-	b_triangle->SetLabel(GetKeyName(Ini.PadHandlerTriangle.GetValue()));
+	b_square->SetLabel(GetKeyName(rpcs3::config.io.pad.square.value()));
+	b_cross->SetLabel(GetKeyName(rpcs3::config.io.pad.cross.value()));
+	b_circle->SetLabel(GetKeyName(rpcs3::config.io.pad.circle.value()));
+	b_triangle->SetLabel(GetKeyName(rpcs3::config.io.pad.triangle.value()));
 
-	b_up_rstick->SetLabel(GetKeyName(Ini.PadHandlerRStickUp.GetValue()));
-	b_down_rstick->SetLabel(GetKeyName(Ini.PadHandlerRStickDown.GetValue()));
-	b_left_rstick->SetLabel(GetKeyName(Ini.PadHandlerRStickLeft.GetValue()));
-	b_right_rstick->SetLabel(GetKeyName(Ini.PadHandlerRStickRight.GetValue()));
+	b_up_rstick->SetLabel(GetKeyName(rpcs3::config.io.pad.right_stick_up.value()));
+	b_down_rstick->SetLabel(GetKeyName(rpcs3::config.io.pad.right_stick_down.value()));
+	b_left_rstick->SetLabel(GetKeyName(rpcs3::config.io.pad.right_stick_left.value()));
+	b_right_rstick->SetLabel(GetKeyName(rpcs3::config.io.pad.right_stick_right.value()));
 }
 
 void PADManager::ResetParameters()
 {
-	Ini.PadHandlerLStickUp.SetValue(315);
-	Ini.PadHandlerLStickDown.SetValue(317);
-	Ini.PadHandlerLStickLeft.SetValue(314);
-	Ini.PadHandlerLStickRight.SetValue(316);
+	rpcs3::config.io.pad.left_stick_up = 315;
+	rpcs3::config.io.pad.left_stick_down = 317;
+	rpcs3::config.io.pad.left_stick_left = 314;
+	rpcs3::config.io.pad.left_stick_right = 316;
 
-	Ini.PadHandlerUp.SetValue(static_cast<int>('W'));
-	Ini.PadHandlerDown.SetValue(static_cast<int>('S'));
-	Ini.PadHandlerLeft.SetValue(static_cast<int>('A'));
-	Ini.PadHandlerRight.SetValue(static_cast<int>('D'));
+	rpcs3::config.io.pad.up = static_cast<int>('W');
+	rpcs3::config.io.pad.down = static_cast<int>('S');
+	rpcs3::config.io.pad.left = static_cast<int>('A');
+	rpcs3::config.io.pad.right = static_cast<int>('D');
 	
-	Ini.PadHandlerL1.SetValue(static_cast<int>('1'));
-	Ini.PadHandlerL2.SetValue(static_cast<int>('Q'));
-	Ini.PadHandlerL3.SetValue(static_cast<int>('Z'));
+	rpcs3::config.io.pad.l1 = static_cast<int>('1');
+	rpcs3::config.io.pad.l2 = static_cast<int>('Q');
+	rpcs3::config.io.pad.l3 = static_cast<int>('Z');
 
-	Ini.PadHandlerStart.SetValue(13);
-	Ini.PadHandlerSelect.SetValue(32);
+	rpcs3::config.io.pad.start = 13;
+	rpcs3::config.io.pad.select = 32;
 
-	Ini.PadHandlerR1.SetValue(static_cast<int>('3'));
-	Ini.PadHandlerR2.SetValue(static_cast<int>('E'));
-	Ini.PadHandlerR3.SetValue(static_cast<int>('C'));
+	rpcs3::config.io.pad.r1 = static_cast<int>('3');
+	rpcs3::config.io.pad.r2 = static_cast<int>('E');
+	rpcs3::config.io.pad.r3 = static_cast<int>('C');
 
-	Ini.PadHandlerSquare.SetValue(static_cast<int>('J'));
-	Ini.PadHandlerCross.SetValue(static_cast<int>('K'));
-	Ini.PadHandlerCircle.SetValue(static_cast<int>('L'));
-	Ini.PadHandlerTriangle.SetValue(static_cast<int>('I'));
+	rpcs3::config.io.pad.square = static_cast<int>('J');
+	rpcs3::config.io.pad.cross = static_cast<int>('K');
+	rpcs3::config.io.pad.circle = static_cast<int>('L');
+	rpcs3::config.io.pad.triangle = static_cast<int>('I');
 
-	Ini.PadHandlerRStickUp.SetValue(366);
-	Ini.PadHandlerRStickDown.SetValue(367);
-	Ini.PadHandlerRStickLeft.SetValue(313);
-	Ini.PadHandlerRStickRight.SetValue(312);
+	rpcs3::config.io.pad.right_stick_up = 366;
+	rpcs3::config.io.pad.right_stick_down = 367;
+	rpcs3::config.io.pad.right_stick_left = 313;
+	rpcs3::config.io.pad.right_stick_right = 312;
 }
 
 void PADManager::UpdateTimerLabel(const u32 id)

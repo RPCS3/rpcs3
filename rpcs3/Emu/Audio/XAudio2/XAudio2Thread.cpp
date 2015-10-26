@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "Utilities/Log.h"
 #include "Emu/System.h"
+#include "Emu/state.h"
+
 #include "rpcs3/Ini.h"
 
 #if defined (_WIN32)
@@ -102,11 +104,11 @@ void XAudio2Thread::Open(const void* src, int size)
 {
 	HRESULT hr;
 
-	WORD sample_size = Ini.AudioConvertToU16.GetValue() ? sizeof(u16) : sizeof(float);
+	WORD sample_size = rpcs3::config.audio.convert_to_u16.value() ? sizeof(u16) : sizeof(float);
 	WORD channels = 8;
 
 	WAVEFORMATEX waveformatex;
-	waveformatex.wFormatTag = Ini.AudioConvertToU16.GetValue() ? WAVE_FORMAT_PCM : WAVE_FORMAT_IEEE_FLOAT;
+	waveformatex.wFormatTag = rpcs3::config.audio.convert_to_u16.value() ? WAVE_FORMAT_PCM : WAVE_FORMAT_IEEE_FLOAT;
 	waveformatex.nChannels = channels;
 	waveformatex.nSamplesPerSec = 48000;
 	waveformatex.nAvgBytesPerSec = 48000 * (DWORD)channels * (DWORD)sample_size;

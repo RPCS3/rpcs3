@@ -1,11 +1,10 @@
 #pragma once
 #include "rpcs3/Ini.h"
+#include "Emu/state.h"
 
 class FrameBase : public wxFrame
 {
 protected:
-	IniEntry<WindowInfo> m_ini;
-	WindowInfo m_default_info;
 	bool m_is_skip_resize;
 
 	FrameBase(
@@ -18,10 +17,8 @@ protected:
 		long style = wxDEFAULT_FRAME_STYLE,
 		bool is_skip_resize = false)
 		: wxFrame(parent, id, framename, defposition, defsize, style)
-		, m_default_info(std::pair<int, int>(defsize.GetWidth(), defsize.GetHeight()), std::pair<int, int>(defposition.x, defposition.y))
 		, m_is_skip_resize(is_skip_resize)
 	{
-		m_ini.Init(ininame.empty() ? fmt::ToUTF8(framename) : ininame, "GuiSettings");
 		LoadInfo();
 
 		Bind(wxEVT_CLOSE_WINDOW, &FrameBase::OnClose, this);
@@ -41,26 +38,29 @@ protected:
 
 	void LoadInfo()
 	{
-		const WindowInfo& info = m_ini.LoadValue(m_default_info);
-		SetSize(wxSize(info.size.first, info.size.second));
-		SetPosition(wxPoint(info.position.first, info.position.second));
+		SetSize(wxSize(rpcs3::config.gui.size.width.value(), rpcs3::config.gui.size.hight.value()));
+		SetPosition(wxPoint(rpcs3::config.gui.position.x.value(), rpcs3::config.gui.position.y.value()));
 	}
 
 	void OnMove(wxMoveEvent& event)
 	{
-		m_ini.SetValue(WindowInfo(m_ini.GetValue().size, std::pair<int, int>(GetPosition().x, GetPosition().y)));
+		rpcs3::config.gui.position.x = GetPosition().x;
+		rpcs3::config.gui.position.y = GetPosition().y;
 		event.Skip();
 	}
 
 	void OnResize(wxSizeEvent& event)
 	{
-		m_ini.SetValue(WindowInfo(std::pair<int, int>(GetSize().GetWidth(), GetSize().GetHeight()), m_ini.GetValue().position));
+		rpcs3::config.gui.size.width = GetSize().GetWidth();
+		rpcs3::config.gui.size.hight = GetSize().GetHeight();
+		rpcs3::config.gui.position.x = GetPosition().x;
+		rpcs3::config.gui.position.y = GetPosition().y;
 		if(m_is_skip_resize) event.Skip();
 	}
 
 	void OnClose(wxCloseEvent& event)
 	{
-		m_ini.Save();
+		rpcs3::config.save();
 		event.Skip();
 	}
 };

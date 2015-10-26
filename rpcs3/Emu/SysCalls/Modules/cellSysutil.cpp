@@ -2,10 +2,10 @@
 #include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
+#include "Emu/state.h"
 #include "Emu/SysCalls/Modules.h"
 #include "Emu/SysCalls/Callback.h"
 
-#include "Ini.h"
 #include "Emu/FS/VFS.h"
 #include "cellSysutil.h"
 
@@ -45,7 +45,7 @@ s32 cellSysutilGetSystemParamInt(s32 id, vm::ptr<s32> value)
 	switch(id)
 	{
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_LANG:
-		*value = Ini.SysLanguage.GetValue();
+		*value = rpcs3::config.system.language.value();
 	break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_ENTER_BUTTON_ASSIGN:

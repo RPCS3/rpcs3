@@ -1,5 +1,6 @@
 #pragma once
 #include "Emu/Io/PadHandler.h"
+#include "Emu/state.h"
 
 class WindowsPadHandler final
 	: public wxWindow
@@ -38,27 +39,27 @@ public:
 			CELL_PAD_CAPABILITY_PS3_CONFORMITY | CELL_PAD_CAPABILITY_PRESS_MODE,
 			CELL_PAD_DEV_TYPE_STANDARD);
 
-		m_pads[0].m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, Ini.PadHandlerLeft.GetValue(), CELL_PAD_CTRL_LEFT);
-		m_pads[0].m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, Ini.PadHandlerDown.GetValue(), CELL_PAD_CTRL_DOWN);
-		m_pads[0].m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, Ini.PadHandlerRight.GetValue(), CELL_PAD_CTRL_RIGHT);
-		m_pads[0].m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, Ini.PadHandlerUp.GetValue(), CELL_PAD_CTRL_UP);
-		m_pads[0].m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, Ini.PadHandlerStart.GetValue(), CELL_PAD_CTRL_START);
-		m_pads[0].m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, Ini.PadHandlerR3.GetValue(), CELL_PAD_CTRL_R3);
-		m_pads[0].m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, Ini.PadHandlerL3.GetValue(), CELL_PAD_CTRL_L3);
-		m_pads[0].m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, Ini.PadHandlerSelect.GetValue(), CELL_PAD_CTRL_SELECT);
+		m_pads[0].m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, rpcs3::config.io.pad.left.value(), CELL_PAD_CTRL_LEFT);
+		m_pads[0].m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, rpcs3::config.io.pad.down.value(), CELL_PAD_CTRL_DOWN);
+		m_pads[0].m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, rpcs3::config.io.pad.right.value(), CELL_PAD_CTRL_RIGHT);
+		m_pads[0].m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, rpcs3::config.io.pad.up.value(), CELL_PAD_CTRL_UP);
+		m_pads[0].m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, rpcs3::config.io.pad.start.value(), CELL_PAD_CTRL_START);
+		m_pads[0].m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, rpcs3::config.io.pad.r3.value(), CELL_PAD_CTRL_R3);
+		m_pads[0].m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, rpcs3::config.io.pad.l3.value(), CELL_PAD_CTRL_L3);
+		m_pads[0].m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, rpcs3::config.io.pad.select.value(), CELL_PAD_CTRL_SELECT);
 
-		m_pads[0].m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, Ini.PadHandlerSquare.GetValue(), CELL_PAD_CTRL_SQUARE);
-		m_pads[0].m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, Ini.PadHandlerCross.GetValue(), CELL_PAD_CTRL_CROSS);
-		m_pads[0].m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, Ini.PadHandlerCircle.GetValue(), CELL_PAD_CTRL_CIRCLE);
-		m_pads[0].m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, Ini.PadHandlerTriangle.GetValue(), CELL_PAD_CTRL_TRIANGLE);
-		m_pads[0].m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, Ini.PadHandlerR1.GetValue(), CELL_PAD_CTRL_R1);
-		m_pads[0].m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, Ini.PadHandlerL1.GetValue(), CELL_PAD_CTRL_L1);
-		m_pads[0].m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, Ini.PadHandlerR2.GetValue(), CELL_PAD_CTRL_R2);
-		m_pads[0].m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, Ini.PadHandlerL2.GetValue(), CELL_PAD_CTRL_L2);
+		m_pads[0].m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, rpcs3::config.io.pad.square.value(), CELL_PAD_CTRL_SQUARE);
+		m_pads[0].m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, rpcs3::config.io.pad.cross.value(), CELL_PAD_CTRL_CROSS);
+		m_pads[0].m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, rpcs3::config.io.pad.circle.value(), CELL_PAD_CTRL_CIRCLE);
+		m_pads[0].m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, rpcs3::config.io.pad.triangle.value(), CELL_PAD_CTRL_TRIANGLE);
+		m_pads[0].m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, rpcs3::config.io.pad.r1.value(), CELL_PAD_CTRL_R1);
+		m_pads[0].m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, rpcs3::config.io.pad.l1.value(), CELL_PAD_CTRL_L1);
+		m_pads[0].m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, rpcs3::config.io.pad.r2.value(), CELL_PAD_CTRL_R2);
+		m_pads[0].m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, rpcs3::config.io.pad.l2.value(), CELL_PAD_CTRL_L2);
 
-		m_pads[0].m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X, Ini.PadHandlerLStickLeft.GetValue(), Ini.PadHandlerLStickRight.GetValue());
-		m_pads[0].m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y, Ini.PadHandlerLStickUp.GetValue(), Ini.PadHandlerLStickDown.GetValue());
-		m_pads[0].m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X, Ini.PadHandlerRStickLeft.GetValue(), Ini.PadHandlerRStickRight.GetValue());
-		m_pads[0].m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y, Ini.PadHandlerRStickUp.GetValue(), Ini.PadHandlerRStickDown.GetValue());
+		m_pads[0].m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X, rpcs3::config.io.pad.left_stick_left.value(), rpcs3::config.io.pad.left_stick_right.value());
+		m_pads[0].m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y, rpcs3::config.io.pad.left_stick_up.value(), rpcs3::config.io.pad.left_stick_down.value());
+		m_pads[0].m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X, rpcs3::config.io.pad.right_stick_left.value(), rpcs3::config.io.pad.right_stick_right.value());
+		m_pads[0].m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y, rpcs3::config.io.pad.right_stick_up.value(), rpcs3::config.io.pad.right_stick_down.value());
 	}
 };

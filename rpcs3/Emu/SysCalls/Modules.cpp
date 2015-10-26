@@ -1,8 +1,8 @@
 #include "stdafx.h"
-#include "Ini.h"
 #include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
+#include "Emu/state.h"
 #include "Emu/SysCalls/Modules.h"
 #include "Emu/SysCalls/SysCalls.h"
 #include "Crypto/sha1.h"
@@ -145,7 +145,7 @@ void execute_ppu_func_by_index(PPUThread& ppu, u32 index)
 				throw EXCEPTION("Forced HLE enabled: %s (0x%llx)", get_ps3_function_name(func->id), func->id);
 			}
 
-			if (Ini.HLELogging.GetValue())
+			if (rpcs3::config.misc.log.hle_logging.value())
 			{
 				LOG_NOTICE(HLE, "Branch to LLE function: %s (0x%llx)", get_ps3_function_name(func->id), func->id);
 			}
@@ -174,28 +174,28 @@ void execute_ppu_func_by_index(PPUThread& ppu, u32 index)
 			const u32 pc = data[0];
 			const u32 rtoc = data[1];
 
-			if (Ini.HLELogging.GetValue())
+			if (rpcs3::config.misc.log.hle_logging.value())
 			{
 				LOG_NOTICE(HLE, "LLE function called: %s", get_ps3_function_name(func->id));
 			}
 			
 			ppu.fast_call(pc, rtoc);
 
-			if (Ini.HLELogging.GetValue())
+			if (rpcs3::config.misc.log.hle_logging.value())
 			{
 				LOG_NOTICE(HLE, "LLE function finished: %s -> 0x%llx", get_ps3_function_name(func->id), ppu.GPR[3]);
 			}
 		}
 		else if (func->func)
 		{
-			if (Ini.HLELogging.GetValue())
+			if (rpcs3::config.misc.log.hle_logging.value())
 			{
 				LOG_NOTICE(HLE, "HLE function called: %s", get_ps3_function_name(func->id));
 			}
 
 			func->func(ppu);
 
-			if (Ini.HLELogging.GetValue())
+			if (rpcs3::config.misc.log.hle_logging.value())
 			{
 				LOG_NOTICE(HLE, "HLE function finished: %s -> 0x%llx", get_ps3_function_name(func->id), ppu.GPR[3]);
 			}

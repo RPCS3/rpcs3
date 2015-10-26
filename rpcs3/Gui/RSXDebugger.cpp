@@ -2,11 +2,11 @@
 
 #include "RSXDebugger.h"
 
-#include "rpcs3/Ini.h"
 #include "Utilities/rPlatform.h"
 #include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
+#include "Emu/state.h"
 
 #include "Emu/SysCalls/Modules/cellVideoOut.h"
 #include "Emu/RSX/GSManager.h"
@@ -164,7 +164,7 @@ RSXDebugger::RSXDebugger(wxWindow* parent)
 	wxStaticBoxSizer* s_buffers_text    = new wxStaticBoxSizer(wxHORIZONTAL, this, "Texture");
 
 	//Buffers and textures
-	CellVideoOutResolution res  = ResolutionTable[ResolutionIdToNum(Ini.GSResolution.GetValue())];
+	CellVideoOutResolution res  = ResolutionTable[ResolutionIdToNum((u32)rpcs3::state.config.rsx.resolution.value())];
 	m_panel_width = (res.width*108)/res.height;
 	m_panel_height = 108;
 	m_text_width = 108;

@@ -81,13 +81,13 @@ void LLEModulesManagerFrame::Refresh()
 
 			m_funcs.push_back(name);
 
-			IniEntry<bool> load_lib;
-			load_lib.Init(name, "LLE");
+			//IniEntry<bool> load_lib;
+			//load_lib.Init(name, "LLE");
 
 			m_check_list->Check(m_check_list->Append(name +
 				" v" + std::to_string((int)sprx_loader.m_sprx_module_info.version[0]) +
 				"." + std::to_string((int)sprx_loader.m_sprx_module_info.version[1])),
-				load_lib.LoadValue(false));
+				false);
 		}
 	}
 
@@ -99,9 +99,9 @@ void LLEModulesManagerFrame::UpdateSelection(int index)
 	if (index < 0)
 		return;
 
-	IniEntry<bool> load_lib;
-	load_lib.Init(m_funcs[index], "LLE");
-	load_lib.SaveValue(m_check_list->IsChecked(index));
+	//IniEntry<bool> load_lib;
+	//load_lib.Init(m_funcs[index], "LLE");
+	//load_lib.SaveValue(m_check_list->IsChecked(index));
 }
 
 void LLEModulesManagerFrame::OnSelectAll(wxCommandEvent& WXUNUSED(event), bool is_checked)

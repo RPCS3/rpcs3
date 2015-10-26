@@ -6,7 +6,6 @@
 
 #include "Utilities/Log.h"
 #include "Utilities/File.h"
-#include "rpcs3/Ini.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 
@@ -67,6 +66,7 @@ Emulator::Emulator()
 void Emulator::Init()
 {
 	rpcs3::config.load();
+	rpcs3::config.save();
 	rpcs3::oninit();
 }
 
@@ -225,9 +225,9 @@ void Emulator::Load()
 
 	LOG_NOTICE(LOADER, "");
 
-	LOG_NOTICE(LOADER, "Settings:");
-	//LOG_NOTICE(LOADER, "CPU: %s", Ini.CPUIdToString(Ini.CPUDecoderMode.GetValue()));
-	//LOG_NOTICE(LOADER, "SPU: %s", Ini.SPUIdToString(Ini.SPUDecoderMode.GetValue()));
+	/*LOG_NOTICE(LOADER, "Settings:");
+	LOG_NOTICE(LOADER, "CPU: %s", Ini.CPUIdToString(Ini.CPUDecoderMode.GetValue()));
+	LOG_NOTICE(LOADER, "SPU: %s", Ini.SPUIdToString(Ini.SPUDecoderMode.GetValue()));
 	LOG_NOTICE(LOADER, "Renderer: %s", Ini.RendererIdToString(Ini.GSRenderMode.GetValue()));
 
 	if (Ini.GSRenderMode.GetValue() == 2)
@@ -236,13 +236,13 @@ void Emulator::Load()
 	}
 
 	LOG_NOTICE(LOADER, "Resolution: %s", Ini.ResolutionIdToString(Ini.GSResolution.GetValue()));
-	/*LOG_NOTICE(LOADER, "Write Depth Buffer: %s", Ini.GSDumpDepthBuffer.GetValue() ? "Yes" : "No");
+	LOG_NOTICE(LOADER, "Write Depth Buffer: %s", Ini.GSDumpDepthBuffer.GetValue() ? "Yes" : "No");
 	LOG_NOTICE(LOADER, "Write Color Buffers: %s", Ini.GSDumpColorBuffers.GetValue() ? "Yes" : "No");
 	LOG_NOTICE(LOADER, "Read Color Buffers: %s", Ini.GSReadColorBuffers.GetValue() ? "Yes" : "No");
-	LOG_NOTICE(LOADER, "Read Depth Buffer: %s", Ini.GSReadDepthBuffer.GetValue() ? "Yes" : "No");*/
+	LOG_NOTICE(LOADER, "Read Depth Buffer: %s", Ini.GSReadDepthBuffer.GetValue() ? "Yes" : "No");
 	LOG_NOTICE(LOADER, "Audio Out: %s", Ini.AudioOutIdToString(Ini.AudioOutMode.GetValue()));
 	LOG_NOTICE(LOADER, "Log Everything: %s", Ini.HLELogging.GetValue() ? "Yes" : "No");
-	LOG_NOTICE(LOADER, "RSX Logging: %s", Ini.RSXLogging.GetValue() ? "Yes" : "No");
+	LOG_NOTICE(LOADER, "RSX Logging: %s", Ini.RSXLogging.GetValue() ? "Yes" : "No");*/
 
 	LOG_NOTICE(LOADER, "");
 	f.Open("/app_home/../PARAM.SFO");
@@ -258,14 +258,13 @@ void Emulator::Load()
 	rpcs3::state.config = rpcs3::config;
 
 	// load custom config
-	if (!Ini.UseDefaultIni.GetValue())
+	if (!rpcs3::config.misc.use_default_ini.value())
 	{
-		std::string& name = title_id;
-		if (name.size())
+		if (title_id.size())
 		{
-			name = name.substr(0, 4) + "-" + name.substr(4, 5);
-			CreateConfig(name);
-			rpcs3::config_t custom_config { "data/" + name + "/settings.ini" };
+			title_id = title_id.substr(0, 4) + "-" + title_id.substr(4, 5);
+			CreateConfig(title_id);
+			rpcs3::config_t custom_config { "data/" + title_id + "/settings.ini" };
 			custom_config.load();
 			rpcs3::state.config = custom_config;
 		}

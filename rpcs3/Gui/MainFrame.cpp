@@ -1,6 +1,7 @@
 #include "stdafx_gui.h"
 #include "Ini.h"
 #include "rpcs3.h"
+#include "config.h"
 #include "MainFrame.h"
 #include "git-version.h"
 
@@ -182,16 +183,18 @@ void MainFrame::AddPane(wxWindow* wind, const wxString& caption, int flags)
 
 void MainFrame::DoSettings(bool load)
 {
-	IniEntry<std::string> ini;
-	ini.Init("Settings", "MainFrameAui");
-
 	if(load)
 	{
-		m_aui_mgr.LoadPerspective(fmt::FromUTF8(ini.LoadValue(fmt::ToUTF8(m_aui_mgr.SavePerspective()))));
+		// replace all '=' with '~' for ini-manager
+		if(!rpcs3::config.gui.aui_mgr_perspective.value().size())
+			rpcs3::config.gui.aui_mgr_perspective = fmt::replace_all(fmt::ToUTF8(m_aui_mgr.SavePerspective()), "=", "~");
+
+		m_aui_mgr.LoadPerspective(fmt::FromUTF8(fmt::replace_all(rpcs3::config.gui.aui_mgr_perspective.value(), "~", "=")));
 	}
 	else
 	{
-		ini.SaveValue(fmt::ToUTF8(m_aui_mgr.SavePerspective()));
+		rpcs3::config.gui.aui_mgr_perspective = fmt::replace_all(fmt::ToUTF8(m_aui_mgr.SavePerspective()), "=", "~");
+		rpcs3::config.save();
 	}
 }
 

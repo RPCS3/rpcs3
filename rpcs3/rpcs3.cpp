@@ -3,10 +3,11 @@
 #include "Emu/System.h"
 #include "Emu/state.h"
 #include "rpcs3.h"
-#include "Ini.h"
 #include "Utilities/Log.h"
 #include "Gui/ConLogFrame.h"
 #include "Emu/GameInfo.h"
+
+#include "Ini.h"
 
 #include "Emu/Io/Keyboard.h"
 #include "Emu/Io/Null/NullKeyboardHandler.h"
@@ -199,6 +200,7 @@ void Rpcs3App::Exit()
 	}
 
 	Emu.Stop();
+	rpcs3::config.save();
 	Ini.Save();
 
 	wxApp::Exit();
