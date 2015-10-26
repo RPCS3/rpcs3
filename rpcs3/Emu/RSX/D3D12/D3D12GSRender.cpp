@@ -401,6 +401,23 @@ void D3D12GSRender::clear_surface(u32 arg)
 	}
 }
 
+namespace
+{
+UINT get_num_rtt(u8 color_target) noexcept
+{
+	switch (color_target)
+	{
+	case CELL_GCM_SURFACE_TARGET_NONE: return 0;
+	case CELL_GCM_SURFACE_TARGET_0:
+	case CELL_GCM_SURFACE_TARGET_1: return 1;
+	case CELL_GCM_SURFACE_TARGET_MRT1: return 2;
+	case CELL_GCM_SURFACE_TARGET_MRT2: return 3;
+	case CELL_GCM_SURFACE_TARGET_MRT3: return 4;
+	}
+	unreachable("Wrong color target");
+}
+}
+
 void D3D12GSRender::end()
 {
 	std::chrono::time_point<std::chrono::system_clock> startDuration = std::chrono::system_clock::now();
@@ -510,27 +527,7 @@ void D3D12GSRender::end()
 	std::chrono::time_point<std::chrono::system_clock> textureDurationEnd = std::chrono::system_clock::now();
 	m_timers.m_textureDuration += std::chrono::duration_cast<std::chrono::microseconds>(textureDurationEnd - textureDurationStart).count();
 
-	size_t numRTT;
-	switch (u32 color_target = rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET])
-	{
-	case CELL_GCM_SURFACE_TARGET_NONE: break;
-	case CELL_GCM_SURFACE_TARGET_0:
-	case CELL_GCM_SURFACE_TARGET_1:
-		numRTT = 1;
-		break;
-	case CELL_GCM_SURFACE_TARGET_MRT1:
-		numRTT = 2;
-		break;
-	case CELL_GCM_SURFACE_TARGET_MRT2:
-		numRTT = 3;
-		break;
-	case CELL_GCM_SURFACE_TARGET_MRT3:
-		numRTT = 4;
-		break;
-	default:
-		LOG_ERROR(RSX, "Bad surface color target: %d", color_target);
-	}
-
+	size_t numRTT = get_num_rtt(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET]);
 	getCurrentResourceStorage().m_commandList->OMSetRenderTargets((UINT)numRTT, &m_rtts.m_renderTargetsDescriptorsHeap->GetCPUDescriptorHandleForHeapStart(), true,
 		&CD3DX12_CPU_DESCRIPTOR_HANDLE(m_rtts.m_depthStencilDescriptorHeap->GetCPUDescriptorHandleForHeapStart()));
 
