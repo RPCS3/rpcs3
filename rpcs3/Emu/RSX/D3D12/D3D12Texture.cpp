@@ -30,7 +30,10 @@ D3D12_SAMPLER_DESC getSamplerDesc(const rsx::texture &texture)
 	samplerDesc.ComparisonFunc = getSamplerCompFunc[texture.zfunc()];
 	samplerDesc.MaxAnisotropy = get_texture_max_aniso(texture.max_aniso());
 	samplerDesc.MipLODBias = texture.bias();
-	samplerDesc.BorderColor[4] = (FLOAT)texture.border_color();
+	samplerDesc.BorderColor[0] = (FLOAT)texture.border_color();
+	samplerDesc.BorderColor[1] = (FLOAT)texture.border_color();
+	samplerDesc.BorderColor[2] = (FLOAT)texture.border_color();
+	samplerDesc.BorderColor[3] = (FLOAT)texture.border_color();
 	samplerDesc.MinLOD = (FLOAT)(texture.min_lod() >> 8);
 	samplerDesc.MaxLOD = (FLOAT)(texture.max_lod() >> 8);
 	return samplerDesc;
