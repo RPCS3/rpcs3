@@ -577,7 +577,7 @@ namespace rpcs3
 				size_group(group *grp) : group{ grp, "size" } {}
 
 				entry<int> width{ this, "width", 900 };
-				entry<int> hight{ this, "hight", 600 };
+				entry<int> height{ this, "height", 600 };
 			} size{ this };
 
 			struct position_group : protected group

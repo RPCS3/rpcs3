@@ -200,7 +200,6 @@ void Rpcs3App::Exit()
 	}
 
 	Emu.Stop();
-	rpcs3::config.save();
 	Ini.Save();
 
 	wxApp::Exit();

@@ -66,7 +66,6 @@ Emulator::Emulator()
 void Emulator::Init()
 {
 	rpcs3::config.load();
-	rpcs3::config.save();
 	rpcs3::oninit();
 }
 

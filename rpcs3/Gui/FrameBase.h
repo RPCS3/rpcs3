@@ -38,7 +38,7 @@ protected:
 
 	void LoadInfo()
 	{
-		SetSize(wxSize(rpcs3::config.gui.size.width.value(), rpcs3::config.gui.size.hight.value()));
+		SetSize(wxSize(rpcs3::config.gui.size.width.value(), rpcs3::config.gui.size.height.value()));
 		SetPosition(wxPoint(rpcs3::config.gui.position.x.value(), rpcs3::config.gui.position.y.value()));
 	}
 
@@ -52,7 +52,7 @@ protected:
 	void OnResize(wxSizeEvent& event)
 	{
 		rpcs3::config.gui.size.width = GetSize().GetWidth();
-		rpcs3::config.gui.size.hight = GetSize().GetHeight();
+		rpcs3::config.gui.size.height = GetSize().GetHeight();
 		rpcs3::config.gui.position.x = GetPosition().x;
 		rpcs3::config.gui.position.y = GetPosition().y;
 		if(m_is_skip_resize) event.Skip();
