@@ -233,12 +233,14 @@ namespace fmt
 
 		for (std::size_t buf_size = fixed_buf.size();;)
 		{
+#ifndef _MSC_VER
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wformat-security"
+#endif
 			const std::size_t len = std::snprintf(buf_addr, buf_size, fmt, do_unveil(args)...);
-
+#ifndef _MSC_VER
 #pragma GCC diagnostic pop
-
+#endif
 			if (len > INT_MAX)
 			{
 				throw std::runtime_error("std::snprintf() failed");
