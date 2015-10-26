@@ -262,4 +262,13 @@ void D3D12GSRender::initConvertShader()
 	p.first->Release();
 	p.second->Release();
 }
+
+void unreachable_internal(const char *msg, const char *file, unsigned line)
+{
+	abort();
+	#ifdef LLVM_BUILTIN_UNREACHABLE
+		LLVM_BUILTIN_UNREACHABLE;
+	#endif
+}
+
 #endif
