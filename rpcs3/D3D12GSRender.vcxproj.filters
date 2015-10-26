@@ -41,6 +41,9 @@
     <ClInclude Include="Emu\RSX\D3D12\D3D12Utils.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\RSX\D3D12\D3D12Formats.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Emu\RSX\D3D12\D3D12Buffer.cpp">
@@ -74,6 +77,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="stdafx_d3d12.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\D3D12\D3D12Formats.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

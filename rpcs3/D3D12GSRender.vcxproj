@@ -81,6 +81,7 @@
     <ClInclude Include="Emu\RSX\D3D12\D3D12Utils.h" />
     <ClInclude Include="Emu\RSX\D3D12\D3D12Buffer.h" />
     <ClInclude Include="Emu\RSX\D3D12\D3D12CommonDecompiler.h" />
+    <ClInclude Include="Emu\RSX\D3D12\D3D12Formats.h" />
     <ClInclude Include="Emu\RSX\D3D12\D3D12FragmentProgramDecompiler.h" />
     <ClInclude Include="Emu\RSX\D3D12\D3D12GSRender.h" />
     <ClInclude Include="Emu\RSX\D3D12\D3D12PipelineState.h" />
@@ -93,6 +94,7 @@
   <ItemGroup>
     <ClCompile Include="Emu\RSX\D3D12\D3D12Buffer.cpp" />
     <ClCompile Include="Emu\RSX\D3D12\D3D12CommonDecompiler.cpp" />
+    <ClCompile Include="Emu\RSX\D3D12\D3D12Formats.cpp" />
     <ClCompile Include="Emu\RSX\D3D12\D3D12FragmentProgramDecompiler.cpp" />
     <ClCompile Include="Emu\RSX\D3D12\D3D12GSRender.cpp" />
     <ClCompile Include="Emu\RSX\D3D12\D3D12Overlay.cpp" />

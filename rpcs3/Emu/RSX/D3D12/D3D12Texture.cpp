@@ -4,6 +4,7 @@
 #include "d3dx12.h"
 #include "../Common/TextureUtils.h"
 // For clarity this code deals with texture but belongs to D3D12GSRender class
+#include "D3D12Formats.h"
 
 static
 D3D12_COMPARISON_FUNC getSamplerCompFunc[] =
@@ -19,100 +20,15 @@ D3D12_COMPARISON_FUNC getSamplerCompFunc[] =
 };
 
 static
-size_t getSamplerMaxAniso(size_t aniso)
-{
-	switch (aniso)
-	{
-	case CELL_GCM_TEXTURE_MAX_ANISO_1: return 1;
-	case CELL_GCM_TEXTURE_MAX_ANISO_2: return 2;
-	case CELL_GCM_TEXTURE_MAX_ANISO_4: return 4;
-	case CELL_GCM_TEXTURE_MAX_ANISO_6: return 6;
-	case CELL_GCM_TEXTURE_MAX_ANISO_8: return 8;
-	case CELL_GCM_TEXTURE_MAX_ANISO_10: return 10;
-	case CELL_GCM_TEXTURE_MAX_ANISO_12: return 12;
-	case CELL_GCM_TEXTURE_MAX_ANISO_16: return 16;
-	}
-
-	return 1;
-}
-
-static
-D3D12_TEXTURE_ADDRESS_MODE getSamplerWrap(size_t wrap)
-{
-	switch (wrap)
-	{
-	case CELL_GCM_TEXTURE_WRAP: return D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-	case CELL_GCM_TEXTURE_MIRROR: return D3D12_TEXTURE_ADDRESS_MODE_MIRROR;
-	case CELL_GCM_TEXTURE_CLAMP_TO_EDGE: return D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-	case CELL_GCM_TEXTURE_BORDER: return D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-	case CELL_GCM_TEXTURE_CLAMP: return D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-	case CELL_GCM_TEXTURE_MIRROR_ONCE_CLAMP_TO_EDGE: return D3D12_TEXTURE_ADDRESS_MODE_MIRROR_ONCE;
-	case CELL_GCM_TEXTURE_MIRROR_ONCE_BORDER: return D3D12_TEXTURE_ADDRESS_MODE_MIRROR_ONCE;
-	case CELL_GCM_TEXTURE_MIRROR_ONCE_CLAMP: return D3D12_TEXTURE_ADDRESS_MODE_MIRROR_ONCE;
-	}
-	return D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-}
-
-static
-D3D12_FILTER getSamplerFilter(u32 minFilter, u32 magFilter)
-{
-	D3D12_FILTER_TYPE min, mag, mip;
-	switch (minFilter)
-	{
-	case CELL_GCM_TEXTURE_NEAREST:
-		min = D3D12_FILTER_TYPE_POINT;
-		mip = D3D12_FILTER_TYPE_POINT;
-		break;
-	case CELL_GCM_TEXTURE_LINEAR:
-		min = D3D12_FILTER_TYPE_LINEAR;
-		mip = D3D12_FILTER_TYPE_POINT;
-		break;
-	case CELL_GCM_TEXTURE_NEAREST_NEAREST:
-		min = D3D12_FILTER_TYPE_POINT;
-		mip = D3D12_FILTER_TYPE_POINT;
-		break;
-	case CELL_GCM_TEXTURE_LINEAR_NEAREST:
-		min = D3D12_FILTER_TYPE_LINEAR;
-		mip = D3D12_FILTER_TYPE_POINT;
-		break;
-	case CELL_GCM_TEXTURE_NEAREST_LINEAR:
-		min = D3D12_FILTER_TYPE_POINT;
-		mip = D3D12_FILTER_TYPE_LINEAR;
-		break;
-	case CELL_GCM_TEXTURE_LINEAR_LINEAR:
-		min = D3D12_FILTER_TYPE_LINEAR;
-		mip = D3D12_FILTER_TYPE_LINEAR;
-		break;
-	case CELL_GCM_TEXTURE_CONVOLUTION_MIN:
-	default:
-		LOG_ERROR(RSX, "Unknow min filter %x", minFilter);
-	}
-
-	switch (magFilter)
-	{
-	case CELL_GCM_TEXTURE_NEAREST:
-		mag = D3D12_FILTER_TYPE_POINT;
-		break;
-	case CELL_GCM_TEXTURE_LINEAR:
-		mag = D3D12_FILTER_TYPE_LINEAR;
-		break;
-	default:
-		LOG_ERROR(RSX, "Unknow mag filter %x", magFilter);
-	}
-
-	return D3D12_ENCODE_BASIC_FILTER(min, mag, mip, D3D12_FILTER_REDUCTION_TYPE_STANDARD);
-}
-
-static
 D3D12_SAMPLER_DESC getSamplerDesc(const rsx::texture &texture)
 {
 	D3D12_SAMPLER_DESC samplerDesc = {};
-	samplerDesc.Filter = getSamplerFilter(texture.min_filter(), texture.mag_filter());
-	samplerDesc.AddressU = getSamplerWrap(texture.wrap_s());
-	samplerDesc.AddressV = getSamplerWrap(texture.wrap_t());
-	samplerDesc.AddressW = getSamplerWrap(texture.wrap_r());
+	samplerDesc.Filter = get_texture_filter(texture.min_filter(), texture.mag_filter());
+	samplerDesc.AddressU = get_texture_wrap_mode(texture.wrap_s());
+	samplerDesc.AddressV = get_texture_wrap_mode(texture.wrap_t());
+	samplerDesc.AddressW = get_texture_wrap_mode(texture.wrap_r());
 	samplerDesc.ComparisonFunc = getSamplerCompFunc[texture.zfunc()];
-	samplerDesc.MaxAnisotropy = (UINT)getSamplerMaxAniso(texture.max_aniso());
+	samplerDesc.MaxAnisotropy = get_texture_max_aniso(texture.max_aniso());
 	samplerDesc.MipLODBias = texture.bias();
 	samplerDesc.BorderColor[4] = (FLOAT)texture.border_color();
 	samplerDesc.MinLOD = (FLOAT)(texture.min_lod() >> 8);
@@ -136,7 +52,7 @@ ComPtr<ID3D12Resource> uploadSingleTexture(
 	size_t w = texture.width(), h = texture.height();
 
 	int format = texture.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
-	DXGI_FORMAT dxgiFormat = getTextureDXGIFormat(format);
+	DXGI_FORMAT dxgiFormat = get_texture_format(format);
 
 	size_t textureSize = getPlacedTextureStorageSpace(texture, 256);
 	assert(textureBuffersHeap.canAlloc(textureSize));
@@ -187,7 +103,7 @@ void updateExistingTexture(
 	size_t w = texture.width(), h = texture.height();
 
 	int format = texture.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
-	DXGI_FORMAT dxgiFormat = getTextureDXGIFormat(format);
+	DXGI_FORMAT dxgiFormat = get_texture_format(format);
 
 	size_t textureSize = getPlacedTextureStorageSpace(texture, 256);
 	assert(textureBuffersHeap.canAlloc(textureSize));
@@ -297,7 +213,7 @@ size_t D3D12GSRender::UploadTextures(ID3D12GraphicsCommandList *cmdlist, size_t 
 		const u32 texaddr = rsx::get_address(textures[i].offset(), textures[i].location());
 
 		int format = textures[i].format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
-		DXGI_FORMAT dxgiFormat = getTextureDXGIFormat(format);
+		DXGI_FORMAT dxgiFormat = get_texture_format(format);
 		bool is_swizzled = !(textures[i].format() & CELL_GCM_TEXTURE_LN);
 
 		ID3D12Resource *vramTexture;

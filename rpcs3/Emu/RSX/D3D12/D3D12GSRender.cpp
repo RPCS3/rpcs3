@@ -9,6 +9,7 @@
 #include "d3dx12.h"
 #include <d3d11on12.h>
 #include "Emu/state.h"
+#include "D3D12Formats.h"
 #pragma comment(lib, "d2d1")
 #pragma comment(lib, "DXGI")
 #pragma comment(lib, "Dwrite")
@@ -556,37 +557,7 @@ void D3D12GSRender::end()
 	};
 	getCurrentResourceStorage().m_commandList->RSSetScissorRects(1, &box);
 
-	switch (draw_mode)
-	{
-	case CELL_GCM_PRIMITIVE_POINTS:
-		getCurrentResourceStorage().m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_POINTLIST);
-		break;
-	case CELL_GCM_PRIMITIVE_LINES:
-		getCurrentResourceStorage().m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_LINELIST);
-		break;
-	case CELL_GCM_PRIMITIVE_LINE_LOOP:
-		getCurrentResourceStorage().m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_LINELIST_ADJ);
-		break;
-	case CELL_GCM_PRIMITIVE_LINE_STRIP:
-		getCurrentResourceStorage().m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_LINESTRIP);
-		break;
-	case CELL_GCM_PRIMITIVE_TRIANGLES:
-		getCurrentResourceStorage().m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		break;
-	case CELL_GCM_PRIMITIVE_TRIANGLE_STRIP:
-		getCurrentResourceStorage().m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-		break;
-	case CELL_GCM_PRIMITIVE_TRIANGLE_FAN:
-	case CELL_GCM_PRIMITIVE_QUADS:
-		getCurrentResourceStorage().m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		break;
-	case CELL_GCM_PRIMITIVE_QUAD_STRIP:
-	case CELL_GCM_PRIMITIVE_POLYGON:
-	default:
-		getCurrentResourceStorage().m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		LOG_ERROR(RSX, "Unsupported primitive type");
-		break;
-	}
+	getCurrentResourceStorage().m_commandList->IASetPrimitiveTopology(get_primitive_topology(draw_mode));
 
 	if (m_renderingInfo.m_indexed)
 		getCurrentResourceStorage().m_commandList->DrawIndexedInstanced((UINT)m_renderingInfo.m_count, 1, 0, 0, 0);
@@ -840,16 +811,14 @@ ID3D12Resource * D3D12GSRender::writeColorBuffer(ID3D12Resource * RTT, ID3D12Gra
 	int clip_h = rsx::method_registers[NV4097_SET_SURFACE_CLIP_VERTICAL] >> 16;
 	ID3D12Resource *Result;
 	size_t w = clip_w, h = clip_h;
-	DXGI_FORMAT dxgiFormat;
+	DXGI_FORMAT dxgiFormat = get_color_surface_format(m_surface.color_format);
 	size_t rowPitch;
 	switch (m_surface.color_format)
 	{
 	case CELL_GCM_SURFACE_A8R8G8B8:
-		dxgiFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
 		rowPitch = align(w * 4, 256);
 		break;
 	case CELL_GCM_SURFACE_F_W16Z16Y16X16:
-		dxgiFormat = DXGI_FORMAT_R16G16B16A16_FLOAT;
 		rowPitch = align(w * 8, 256);
 		break;
 	}
@@ -960,20 +929,7 @@ void D3D12GSRender::semaphore_PGRAPH_backend_release()
 			m_device->CreateDescriptorHeap(&descriptorHeapDesc, IID_PPV_ARGS(descriptorHeap.GetAddressOf()))
 			);
 		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-		switch (m_surface.depth_format)
-		{
-		case 0:
-			break;
-		case CELL_GCM_SURFACE_Z16:
-			srvDesc.Format = DXGI_FORMAT_R16_UNORM;
-			break;
-		case CELL_GCM_SURFACE_Z24S8:
-			srvDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
-			break;
-		default:
-			LOG_ERROR(RSX, "Bad depth format! (%d)", m_surface.depth_format);
-			assert(0);
-		}
+		m_surface.depth_format = get_depth_typeless_surface_format(m_surface.depth_format);
 		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 		srvDesc.Texture2D.MipLevels = 1;
 		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;

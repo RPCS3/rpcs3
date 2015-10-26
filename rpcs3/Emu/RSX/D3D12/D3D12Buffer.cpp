@@ -6,93 +6,12 @@
 #include "D3D12GSRender.h"
 #include "d3dx12.h"
 #include "../Common/BufferUtils.h"
+#include "D3D12Formats.h"
 
 const int g_vertexCount = 32;
 
-// Where are these type defined ???
-static
-DXGI_FORMAT getFormat(u8 type, u8 size)
-{
-	/*static const u32 gl_types[] =
-	{
-	GL_SHORT,
-	GL_FLOAT,
-	GL_HALF_FLOAT,
-	GL_UNSIGNED_BYTE,
-	GL_SHORT,
-	GL_FLOAT, // Needs conversion
-	GL_UNSIGNED_BYTE,
-	};
-
-	static const bool gl_normalized[] =
-	{
-	GL_TRUE,
-	GL_FALSE,
-	GL_FALSE,
-	GL_TRUE,
-	GL_FALSE,
-	GL_TRUE,
-	GL_FALSE,
-	};*/
-	static const DXGI_FORMAT typeX1[] =
-	{
-		DXGI_FORMAT_R16_SNORM,
-		DXGI_FORMAT_R32_FLOAT,
-		DXGI_FORMAT_R16_FLOAT,
-		DXGI_FORMAT_R8_UNORM,
-		DXGI_FORMAT_R16_SINT,
-		DXGI_FORMAT_R32_FLOAT,
-		DXGI_FORMAT_R8_UINT
-	};
-	static const DXGI_FORMAT typeX2[] =
-	{
-		DXGI_FORMAT_R16G16_SNORM,
-		DXGI_FORMAT_R32G32_FLOAT,
-		DXGI_FORMAT_R16G16_FLOAT,
-		DXGI_FORMAT_R8G8_UNORM,
-		DXGI_FORMAT_R16G16_SINT,
-		DXGI_FORMAT_R32G32_FLOAT,
-		DXGI_FORMAT_R8G8_UINT
-	};
-	static const DXGI_FORMAT typeX3[] =
-	{
-		DXGI_FORMAT_R16G16B16A16_SNORM,
-		DXGI_FORMAT_R32G32B32_FLOAT,
-		DXGI_FORMAT_R16G16B16A16_FLOAT,
-		DXGI_FORMAT_R8G8B8A8_UNORM,
-		DXGI_FORMAT_R16G16B16A16_SINT,
-		DXGI_FORMAT_R32G32B32_FLOAT,
-		DXGI_FORMAT_R8G8B8A8_UINT
-	};
-	static const DXGI_FORMAT typeX4[] =
-	{
-		DXGI_FORMAT_R16G16B16A16_SNORM,
-		DXGI_FORMAT_R32G32B32A32_FLOAT,
-		DXGI_FORMAT_R16G16B16A16_FLOAT,
-		DXGI_FORMAT_R8G8B8A8_UNORM,
-		DXGI_FORMAT_R16G16B16A16_SINT,
-		DXGI_FORMAT_R32G32B32A32_FLOAT,
-		DXGI_FORMAT_R8G8B8A8_UINT
-	};
-
-	switch (size)
-	{
-	case 1:
-		return typeX1[type];
-	case 2:
-		return typeX2[type];
-	case 3:
-		return typeX3[type];
-	case 4:
-		return typeX4[type];
-	default:
-		LOG_ERROR(RSX, "Wrong size for vertex attrib : %d", size);
-		return DXGI_FORMAT();
-	}
-}
 
 // D3D12GS member handling buffers
-
 
 /**
  * 
@@ -166,7 +85,7 @@ void D3D12GSRender::upload_vertex_attributes(const std::vector<std::pair<u32, u3
 		IAElement.SemanticName = "TEXCOORD";
 		IAElement.SemanticIndex = (UINT)index;
 		IAElement.InputSlot = (UINT)inputSlot++;
-		IAElement.Format = getFormat(info.type - 1, info.size);
+		IAElement.Format = get_vertex_attribute_format(info.type, info.size);
 		IAElement.AlignedByteOffset = 0;
 		IAElement.InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
 		IAElement.InstanceDataStepRate = 0;
@@ -208,7 +127,7 @@ void D3D12GSRender::upload_vertex_attributes(const std::vector<std::pair<u32, u3
 		IAElement.SemanticName = "TEXCOORD";
 		IAElement.SemanticIndex = (UINT)index;
 		IAElement.InputSlot = (UINT)inputSlot++;
-		IAElement.Format = getFormat(info.type - 1, info.size);
+		IAElement.Format = get_vertex_attribute_format(info.type, info.size);
 		IAElement.AlignedByteOffset = 0;
 		IAElement.InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA;
 		IAElement.InstanceDataStepRate = 1;
@@ -429,7 +348,7 @@ void D3D12GSRender::upload_vertex_index_data(ID3D12GraphicsCommandList *cmdlist)
 		D3D12_INDEX_BUFFER_VIEW indexBufferView = {
 			m_vertexIndexData.m_heap->GetGPUVirtualAddress() + heapOffset,
 			(UINT)subBufferSize,
-			(indexed_type == CELL_GCM_DRAW_INDEX_ARRAY_TYPE_16) ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT
+			get_index_type(indexed_type)
 		};
 		m_timers.m_bufferUploadSize += subBufferSize;
 		cmdlist->IASetIndexBuffer(&indexBufferView);
