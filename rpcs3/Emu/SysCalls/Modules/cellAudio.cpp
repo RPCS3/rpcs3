@@ -1,11 +1,11 @@
 #include "stdafx.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
+#include "Emu/state.h"
 #include "Emu/IdManager.h"
 #include "Emu/SysCalls/Modules.h"
 #include "Emu/SysCalls/Callback.h"
 
-#include "rpcs3/Ini.h"
 #include "Emu/SysCalls/lv2/sys_sync.h"
 #include "Emu/SysCalls/lv2/sys_event.h"
 #include "Emu/Event.h"
@@ -59,7 +59,7 @@ s32 cellAudioInit()
 	{
 		std::unique_lock<std::mutex> lock(g_audio.thread.mutex);
 
-		const bool do_dump = Ini.AudioDumpToFile.GetValue();
+		const bool do_dump = rpcs3::config.audio.dump_to_file.value();
 
 		AudioDumper m_dump;
 		if (do_dump && !m_dump.Init(2)) // Init AudioDumper for 2 channels
@@ -83,7 +83,7 @@ s32 cellAudioInit()
 
 		autojoin_thread_t iat(WRAP_EXPR("Internal Audio Thread"), [&out_queue]()
 		{
-			const bool use_u16 = Ini.AudioConvertToU16.GetValue();
+			const bool use_u16 = rpcs3::config.audio.convert_to_u16.value();;
 
 			Emu.GetAudioManager().GetAudioOut().Init();
 

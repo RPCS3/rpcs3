@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "Utilities/Log.h"
 #include "Emu/System.h"
-#include "rpcs3/Ini.h"
+#include "Emu/state.h"
 
 #include "OpenALThread.h"
 
@@ -104,7 +104,7 @@ void OpenALThread::Open(const void* src, int size)
 
 	for (uint i = 0; i<g_al_buffers_count; ++i)
 	{
-		alBufferData(m_buffers[i], Ini.AudioConvertToU16.GetValue() ? AL_FORMAT_71CHN16 : AL_FORMAT_71CHN32, src, m_buffer_size, 48000);
+		alBufferData(m_buffers[i], rpcs3::config.audio.convert_to_u16.value() ? AL_FORMAT_71CHN16 : AL_FORMAT_71CHN32, src, m_buffer_size, 48000);
 		checkForAlError("alBufferData");
 	}
 
@@ -139,7 +139,7 @@ void OpenALThread::AddData(const void* src, int size)
 
 		int bsize = size < m_buffer_size ? size : m_buffer_size;
 
-		alBufferData(buffer, Ini.AudioConvertToU16.GetValue() ? AL_FORMAT_71CHN16 : AL_FORMAT_71CHN32, bsrc, bsize, 48000);
+		alBufferData(buffer, rpcs3::config.audio.convert_to_u16.value() ? AL_FORMAT_71CHN16 : AL_FORMAT_71CHN32, bsrc, bsize, 48000);
 		checkForAlError("alBufferData");
 
 		alSourceQueueBuffers(m_source, 1, &buffer);

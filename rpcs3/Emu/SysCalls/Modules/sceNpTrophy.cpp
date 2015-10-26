@@ -1,10 +1,10 @@
 #include "stdafx.h"
 #include "Emu/Memory/Memory.h"
-#include "Emu/System.h"
 #include "Emu/IdManager.h"
+#include "Emu/System.h"
+#include "Emu/state.h"
 #include "Emu/SysCalls/Modules.h"
 
-#include "rpcs3/Ini.h"
 #include "Utilities/rXml.h"
 #include "Loader/TRP.h"
 #include "Loader/TROPUSR.h"
@@ -169,7 +169,7 @@ s32 sceNpTrophyRegisterContext(PPUThread& CPU, u32 context, u32 handle, vm::ptr<
 	const size_t kTargetBufferLength = 31;
 	char target[kTargetBufferLength + 1];
 	target[kTargetBufferLength] = 0;
-	strcpy_trunc(target, fmt::format("TROP_%02d.SFM", Ini.SysLanguage.GetValue()));
+	strcpy_trunc(target, fmt::format("TROP_%02d.SFM", rpcs3::config.system.language.value()));
 
 	if (trp.ContainsEntry(target))
 	{
@@ -191,7 +191,7 @@ s32 sceNpTrophyRegisterContext(PPUThread& CPU, u32 context, u32 handle, vm::ptr<
 	for (s32 i = 0; i <= 18; i++)
 	{
 		strcpy_trunc(target, fmt::format("TROP_%02d.SFM", i));
-		if (i != Ini.SysLanguage.GetValue())
+		if (i != rpcs3::config.system.language.value())
 		{
 			trp.RemoveEntry(target);
 		}

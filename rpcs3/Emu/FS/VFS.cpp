@@ -5,9 +5,11 @@
 #include "vfsDirBase.h"
 #include "Emu/HDD/HDD.h"
 #include "vfsDeviceLocalFile.h"
-#include "Ini.h"
 #include "Emu/System.h"
+#include "Emu/state.h"
 #include "Utilities/Log.h"
+
+#include "Ini.h"
 
 std::vector<std::string> simplify_path_blocks(const std::string& path)
 {
@@ -480,9 +482,9 @@ void VFS::Init(const std::string& path)
 		std::string mpath = entry.path;
 		// TODO: This shouldn't use current dir
 		// If no value assigned to SysEmulationDirPath in INI, use the path that with executable.
-		if (Ini.SysEmulationDirPathEnable.GetValue())
+		if (rpcs3::config.system.emulation_dir_path_enable.value())
 		{
-			fmt::Replace(mpath, "$(EmulatorDir)", Ini.SysEmulationDirPath.GetValue());
+			fmt::Replace(mpath, "$(EmulatorDir)", rpcs3::config.system.emulation_dir_path.value());
 		}
 		else
 		{
@@ -526,13 +528,13 @@ void VFS::SaveLoadDevices(std::vector<VFSManagerEntry>& res, bool is_load)
 	}
 
 	// Custom EmulationDir
-	if (Ini.SysEmulationDirPathEnable.GetValue())
+	if (rpcs3::config.system.emulation_dir_path_enable.value())
 	{
-		std::string dir = Ini.SysEmulationDirPath.GetValue();
+		std::string dir = rpcs3::config.system.emulation_dir_path.value();
 
 		if (dir.empty())
 		{
-			Ini.SysEmulationDirPath.SetValue(Emu.GetEmulatorPath());
+			rpcs3::config.system.emulation_dir_path = Emu.GetEmulatorPath();
 		}
 
 		if (!fs::is_dir(dir))

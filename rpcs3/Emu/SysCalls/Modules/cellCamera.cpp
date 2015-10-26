@@ -1,8 +1,8 @@
 #include "stdafx.h"
-#include "Ini.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/IdManager.h"
 #include "Emu/System.h"
+#include "Emu/state.h"
 #include "Emu/SysCalls/Modules.h"
 
 #include "cellCamera.h"
@@ -82,7 +82,7 @@ s32 cellCameraInit()
 {
 	cellCamera.Warning("cellCameraInit()");
 
-	if (Ini.Camera.GetValue() == 0)
+	if (rpcs3::config.io.camera.value() == io_camera_state::null)
 	{
 		return CELL_CAMERA_ERROR_DEVICE_NOT_FOUND;
 	}
@@ -94,7 +94,9 @@ s32 cellCameraInit()
 		return CELL_CAMERA_ERROR_ALREADY_INIT;
 	}
 
-	if (Ini.CameraType.GetValue() == 1)
+	switch (rpcs3::config.io.camera_type.value())
+	{
+	case io_camera_type::eye_toy:
 	{
 		camera->attr[CELL_CAMERA_SATURATION] = { 164 };
 		camera->attr[CELL_CAMERA_BRIGHTNESS] = { 96 };
@@ -111,7 +113,9 @@ s32 cellCameraInit()
 		camera->attr[CELL_CAMERA_422FLAG] = { 1 };
 		camera->attr[CELL_CAMERA_USBLOAD] = { 4 };
 	}
-	else if (Ini.CameraType.GetValue() == 2)
+	break;
+
+	case io_camera_type::play_station_eye:
 	{
 		camera->attr[CELL_CAMERA_SATURATION] = { 64 };
 		camera->attr[CELL_CAMERA_BRIGHTNESS] = { 8 };
@@ -129,6 +133,12 @@ s32 cellCameraInit()
 		camera->attr[CELL_CAMERA_AGCLOW] = { 48 };
 		camera->attr[CELL_CAMERA_AGCHIGH] = { 64 };
 	}
+
+	break;
+
+	default: break;
+	}
+
 	// TODO: Some other default attributes? Need to check the actual behaviour on a real PS3.
 
 	return CELL_OK;
@@ -181,11 +191,11 @@ s32 cellCameraGetType(s32 dev_num, vm::ptr<s32> type)
 		return CELL_CAMERA_ERROR_NOT_INIT;
 	}
 
-	switch (Ini.CameraType.GetValue())
+	switch (rpcs3::config.io.camera_type.value())
 	{
-	case 1: *type = CELL_CAMERA_EYETOY; break;
-	case 2: *type = CELL_CAMERA_EYETOY2; break;
-	case 3: *type = CELL_CAMERA_USBVIDEOCLASS; break;
+	case io_camera_type::eye_toy: *type = CELL_CAMERA_EYETOY; break;
+	case io_camera_type::play_station_eye: *type = CELL_CAMERA_EYETOY2; break;
+	case io_camera_type::usb_video_class_1_1: *type = CELL_CAMERA_USBVIDEOCLASS; break;
 	default: *type = CELL_CAMERA_TYPE_UNKNOWN; break;
 	}
 
@@ -202,7 +212,7 @@ s32 cellCameraIsAttached(s32 dev_num)
 {
 	cellCamera.Warning("cellCameraIsAttached(dev_num=%d)", dev_num);
 
-	if (Ini.Camera.GetValue() == 1)
+	if (rpcs3::config.io.camera.value() == io_camera_state::connected)
 	{
 		return 1;
 	}

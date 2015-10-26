@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "rpcs3/Ini.h"
 #include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/SysCalls/Modules/cellVideoOut.h"
@@ -14,10 +13,10 @@
 
 void GSInfo::Init()
 {
-	mode.resolutionId = Ini.GSResolution.GetValue();
+	mode.resolutionId = (u8)rpcs3::state.config.rsx.resolution.value();
 	mode.scanMode = CELL_VIDEO_OUT_SCAN_MODE_INTERLACE;
 	mode.conversion = CELL_VIDEO_OUT_DISPLAY_CONVERSION_NONE;
-	mode.aspect = Ini.GSAspectRatio.GetValue();
+	mode.aspect = (u8)rpcs3::state.config.rsx.aspect_ratio.value();
 	mode.refreshRates = CELL_VIDEO_OUT_REFRESH_RATE_50HZ;
 	mode.format = CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8R8G8B8;
 	mode.pitch = 4;

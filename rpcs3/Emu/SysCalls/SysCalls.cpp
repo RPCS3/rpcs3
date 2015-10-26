@@ -1,9 +1,9 @@
 #include "stdafx.h"
-#include "rpcs3/Ini.h"
 #include "Utilities/Log.h"
 #include "Utilities/AutoPause.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
+#include "Emu/state.h"
 #include "Modules.h"
 
 #include "lv2/sys_lwmutex.h"
@@ -901,14 +901,14 @@ void execute_syscall_by_index(PPUThread& ppu, u64 code)
 	auto last_code = ppu.hle_code;
 	ppu.hle_code = ~code;
 
-	if (Ini.HLELogging.GetValue())
+	if (rpcs3::config.misc.log.hle_logging.value())
 	{
 		LOG_NOTICE(PPU, "Syscall %lld called: %s", code, get_ps3_function_name(~code));
 	}
 
 	g_sc_table[code](ppu);
 
-	if (Ini.HLELogging.GetValue())
+	if (rpcs3::config.misc.log.hle_logging.value())
 	{
 		LOG_NOTICE(PPU, "Syscall %lld finished: %s -> 0x%llx", code, get_ps3_function_name(~code), ppu.GPR[3]);
 	}

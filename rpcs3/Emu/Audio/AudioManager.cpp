@@ -1,8 +1,7 @@
 #include "stdafx.h"
-#include "rpcs3/Ini.h"
 #include "AudioManager.h"
-#include "Emu/state.h"
 #include "AL/OpenALThread.h"
+#include "Emu/state.h"
 #include "Null/NullAudioThread.h"
 #include "XAudio2/XAudio2Thread.h"
 

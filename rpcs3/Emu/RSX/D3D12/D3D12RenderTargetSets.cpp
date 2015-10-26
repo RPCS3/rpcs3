@@ -1,12 +1,12 @@
 #include "stdafx_d3d12.h"
 #ifdef _WIN32
 #include "D3D12RenderTargetSets.h"
-#include "rpcs3/Ini.h"
 #include "Utilities/rPlatform.h" // only for rImage
 #include "Utilities/File.h"
 #include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
+#include "Emu/state.h"
 #include "Emu/RSX/GSRender.h"
 
 #include "D3D12.h"

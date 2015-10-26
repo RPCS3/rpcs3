@@ -1,10 +1,10 @@
 #include "stdafx.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
+#include "Emu/state.h"
 #include "Emu/SysCalls/Modules.h"
 #include "Utilities/Log.h"
 
-#include "rpcs3/Ini.h"
 #include "cellSysutil.h"
 #include "cellNetCtl.h"
 
@@ -48,21 +48,14 @@ s32 cellNetCtlGetState(vm::ptr<u32> state)
 {
 	cellNetCtl.Log("cellNetCtlGetState(state=*0x%x)", state);
 
-	if (Ini.NETStatus.GetValue() == 0)
+	switch (rpcs3::config.misc.net.status.value())
 	{
-		*state = CELL_NET_CTL_STATE_IPObtained;
-	}
-	else if (Ini.NETStatus.GetValue() == 1)
-	{
-		*state = CELL_NET_CTL_STATE_IPObtaining;
-	}
-	else if (Ini.NETStatus.GetValue() == 2)
-	{
-		*state = CELL_NET_CTL_STATE_Connecting;
-	}
-	else
-	{
-		*state = CELL_NET_CTL_STATE_Disconnected;
+	case misc_net_status::ip_obtained: *state = CELL_NET_CTL_STATE_IPObtained; break;
+	case misc_net_status::obtaining_ip: *state = CELL_NET_CTL_STATE_IPObtaining; break;
+	case misc_net_status::connecting: *state = CELL_NET_CTL_STATE_Connecting; break;
+	case misc_net_status::disconnected: *state = CELL_NET_CTL_STATE_Disconnected; break;
+
+	default: *state = CELL_NET_CTL_STATE_Disconnected; break;
 	}
 
 	return CELL_OK;
@@ -114,7 +107,7 @@ s32 cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 		{
 			PIP_ADAPTER_ADDRESSES pCurrAddresses = pAddresses;
 
-			for (int c = 0; c < Ini.NETInterface.GetValue(); c++)
+			for (int c = 0; c < rpcs3::config.misc.net._interface.value(); c++)
 			{
 				pCurrAddresses = pCurrAddresses->Next;
 			}
@@ -144,7 +137,7 @@ s32 cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 				continue;
 			}
 
-			if (n < Ini.NETInterface.GetValue())
+			if (n < rpcs3::config.misc.net._interface.value())
 			{
 				continue;
 			}
@@ -202,7 +195,7 @@ s32 cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 		{
 			PIP_ADAPTER_INFO pAdapter = pAdapterInfo;
 
-			for (int c = 0; c < Ini.NETInterface.GetValue(); c++)
+			for (int c = 0; c < rpcs3::config.misc.net._interface.value(); c++)
 			{
 				pAdapter = pAdapter->Next;
 			}
@@ -233,7 +226,7 @@ s32 cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 				continue;
 			}
 
-			if (n < Ini.NETInterface.GetValue())
+			if (n < rpcs3::config.misc.net._interface.value())
 			{
 				continue;
 			}
@@ -277,7 +270,7 @@ s32 cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 		{
 			PIP_ADAPTER_INFO pAdapter = pAdapterInfo;
 
-			for (int c = 0; c < Ini.NETInterface.GetValue(); c++)
+			for (int c = 0; c < rpcs3::config.misc.net._interface.value(); c++)
 			{
 				pAdapter = pAdapter->Next;
 			}
@@ -314,7 +307,7 @@ s32 cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 				continue;
 			}
 
-			if (n < Ini.NETInterface.GetValue())
+			if (n < rpcs3::config.misc.net._interface.value())
 			{
 				continue;
 			}

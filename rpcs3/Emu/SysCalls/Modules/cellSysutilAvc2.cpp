@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/SysCalls/Modules.h"
-#include "rpcs3/Ini.h"
+#include "Emu/state.h"
 
 #include "sceNp.h"
 #include "sceNp2.h"
@@ -133,7 +133,7 @@ s32 cellSysutilAvc2IsCameraAttached(vm::ptr<u8> status)
 {
 	cellSysutilAvc2.Todo("cellSysutilAvc2IsCameraAttached()");
 
-	if (Ini.Camera.GetValue() == 0)
+	if (rpcs3::config.io.camera.value() == io_camera_state::null)
 	{
 		*status = CELL_AVC2_CAMERA_STATUS_DETACHED;
 	}

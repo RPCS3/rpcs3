@@ -1,8 +1,8 @@
 #include "stdafx.h"
 #ifdef LLVM_AVAILABLE
-#include "rpcs3/Ini.h"
 #include "Utilities/Log.h"
 #include "Emu/System.h"
+#include "Emu/state.h"
 #include "Emu/Cell/PPUDisAsm.h"
 #include "Emu/Cell/PPULLVMRecompiler.h"
 #include "Emu/Memory/Memory.h"
@@ -292,8 +292,8 @@ const Executable RecompilationEngine::GetCompiledExecutableIfAvailable(u32 addre
 	if (!isAddressCommited(address / 4))
 		return nullptr;
 	u32 id = FunctionCache[address / 4].second;
-	if (Ini.LLVMExclusionRange.GetValue() &&
-		(id >= Ini.LLVMMinId.GetValue() && id <= Ini.LLVMMaxId.GetValue()))
+	if (rpcs3::state.config.core.llvm.exclusion_range.value() &&
+		(id >= rpcs3::state.config.core.llvm.min_id.value() && id <= rpcs3::state.config.core.llvm.max_id.value()))
 		return nullptr;
 	return FunctionCache[address / 4].first;
 }
@@ -377,7 +377,7 @@ bool RecompilationEngine::IncreaseHitCounterAndBuild(u32 address) {
 	BlockEntry &block = It->second;
 	if (!block.is_compiled) {
 		block.num_hits++;
-		if (block.num_hits >= Ini.LLVMThreshold.GetValue()) {
+		if (block.num_hits >= rpcs3::state.config.core.llvm.threshold.value()) {
 			CompileBlock(block);
 			return true;
 		}
