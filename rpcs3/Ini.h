@@ -93,12 +93,10 @@ private:
 
 public:
 	// Core
-	IniEntry<u8> CPUDecoderMode;
 	IniEntry<bool> LLVMExclusionRange;
 	IniEntry<u32> LLVMMinId;
 	IniEntry<u32> LLVMMaxId;
 	IniEntry<u32> LLVMThreshold;
-	IniEntry<u8> SPUDecoderMode;
 	IniEntry<bool> HookStFunc;
 	IniEntry<bool> LoadLibLv2;
 
@@ -182,12 +180,10 @@ public:
 		path = DefPath;
 
 		// Core
-		CPUDecoderMode.Init("CORE_DecoderMode", path);
 		LLVMExclusionRange.Init("LLVM_Exclusion_Range", path);
 		LLVMMinId.Init("LLVM_Min_ID", path);
 		LLVMMaxId.Init("LLVM_Max_ID", path);
 		LLVMThreshold.Init("LLVM_Threshold", path);
-		SPUDecoderMode.Init("CORE_SPUDecoderMode", path);
 		HookStFunc.Init("CORE_HookStFunc", path);
 		LoadLibLv2.Init("CORE_LoadLibLv2", path);
 
@@ -267,12 +263,10 @@ public:
 	void Load()
 	{
 		// Core
-		CPUDecoderMode.Load(0);
 		LLVMExclusionRange.Load(false);
 		LLVMMinId.Load(200);
 		LLVMMaxId.Load(250);
 		LLVMThreshold.Load(1000);
-		SPUDecoderMode.Load(0);
 		HookStFunc.Load(false);
 		LoadLibLv2.Load(false);
 
@@ -352,12 +346,10 @@ public:
 	void Save()
 	{
 		// Core
-		CPUDecoderMode.Save();
 		LLVMExclusionRange.Save();
 		LLVMMinId.Save();
 		LLVMMaxId.Save();
 		LLVMThreshold.Save();
-		SPUDecoderMode.Save();
 		HookStFunc.Save();
 		LoadLibLv2.Save();
 
@@ -435,27 +427,6 @@ public:
 	}
 
 	// For getting strings for certain options to display settings in the log.
-	inline static const char* CPUIdToString(u8 code)
-	{
-		switch (code)
-		{
-		case 0: return "PPU Interpreter";
-		case 1: return "PPU Interpreter 2";
-		case 2: return "PPU JIT (LLVM)";
-		default: return "Unknown";
-		}
-	}
-
-	inline static const char* SPUIdToString(u8 code)
-	{
-		switch (code)
-		{
-		case 0: return "SPU Interpreter (precise)";
-		case 1: return "SPU Interpreter (fast)";
-		case 2: return "SPU Recompiler (ASMJIT)";
-		default: return "Unknown";
-		}
-	}
 
 	inline static const char* RendererIdToString(u8 code)
 	{
@@ -472,11 +443,8 @@ public:
 	{
 		switch (code)
 		{
-		case 0: return "WARP";
-		case 1: return "Default";
-		case 2: return "Renderer 0";
-		case 3: return "Renderer 1";
-		case 4: return "Renderer 2";
+		case 0: return "Default";
+		case 1: return "Microsoft Basic Render";
 		default: return "Unknown";
 		}
 	}
