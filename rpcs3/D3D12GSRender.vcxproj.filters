@@ -8,9 +8,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Emu\RSX\D3D12\D3D12Buffer.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
     <ClInclude Include="Emu\RSX\D3D12\D3D12CommonDecompiler.h">
       <Filter>Source Files</Filter>
     </ClInclude>

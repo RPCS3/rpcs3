@@ -1,6 +1,5 @@
 #include "stdafx_d3d12.h"
 #ifdef _WIN32
-#include "D3D12Buffer.h"
 #include "Utilities/Log.h"
 
 #include "D3D12GSRender.h"
@@ -8,27 +7,25 @@
 #include "../Common/BufferUtils.h"
 #include "D3D12Formats.h"
 
-const int g_vertexCount = 32;
-
-
-// D3D12GS member handling buffers
-
+namespace
+{
 /**
  * 
  */
-static
-D3D12_GPU_VIRTUAL_ADDRESS createVertexBuffer(const rsx::data_array_format_info &vertex_array_desc, const std::vector<u8> &vertex_data, ID3D12Device *device, DataHeap<ID3D12Resource, 65536> &vertexIndexHeap)
+D3D12_GPU_VIRTUAL_ADDRESS createVertexBuffer(const rsx::data_array_format_info &vertex_array_desc, const std::vector<u8> &vertex_data, ID3D12Device *device, DataHeap<ID3D12Resource, 65536> &vertex_index_heap)
 {
-	size_t subBufferSize = vertex_data.size();
-	assert(vertexIndexHeap.canAlloc(subBufferSize));
-	size_t heapOffset = vertexIndexHeap.alloc(subBufferSize);
+	size_t buffer_size = vertex_data.size();
+	assert(vertex_index_heap.canAlloc(buffer_size));
+	size_t heap_offset = vertex_index_heap.alloc(buffer_size);
 
 	void *buffer;
-	ThrowIfFailed(vertexIndexHeap.m_heap->Map(0, &CD3DX12_RANGE(heapOffset, heapOffset + subBufferSize), (void**)&buffer));
-	void *bufferMap = (char*)buffer + heapOffset;
+	ThrowIfFailed(vertex_index_heap.m_heap->Map(0, &CD3DX12_RANGE(heap_offset, heap_offset + buffer_size), (void**)&buffer));
+	void *bufferMap = (char*)buffer + heap_offset;
 	memcpy(bufferMap, vertex_data.data(), vertex_data.size());
-	vertexIndexHeap.m_heap->Unmap(0, &CD3DX12_RANGE(heapOffset, heapOffset + subBufferSize));
-	return vertexIndexHeap.m_heap->GetGPUVirtualAddress() + heapOffset;
+	vertex_index_heap.m_heap->Unmap(0, &CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
+	return vertex_index_heap.m_heap->GetGPUVirtualAddress() + heap_offset;
+}
+
 }
 
 void D3D12GSRender::load_vertex_data(u32 first, u32 count)
@@ -41,7 +38,7 @@ void D3D12GSRender::upload_vertex_attributes(const std::vector<std::pair<u32, u3
 {
 	m_vertex_buffer_views.clear();
 	m_IASet.clear();
-	size_t inputSlot = 0;
+	size_t input_slot = 0;
 
 	size_t vertex_count = 0;
 
@@ -59,32 +56,34 @@ void D3D12GSRender::upload_vertex_attributes(const std::vector<std::pair<u32, u3
 		u32 type_size = rsx::get_vertex_type_size(info.type);
 		u32 element_size = type_size * info.size;
 
-		size_t subBufferSize = element_size * vertex_count;
-		assert(m_vertexIndexData.canAlloc(subBufferSize));
-		size_t heapOffset = m_vertexIndexData.alloc(subBufferSize);
+		size_t buffer_size = element_size * vertex_count;
+		assert(m_vertexIndexData.canAlloc(buffer_size));
+		size_t heap_offset = m_vertexIndexData.alloc(buffer_size);
 
 		void *buffer;
-		ThrowIfFailed(m_vertexIndexData.m_heap->Map(0, &CD3DX12_RANGE(heapOffset, heapOffset + subBufferSize), (void**)&buffer));
-		void *bufferMap = (char*)buffer + heapOffset;
+		ThrowIfFailed(m_vertexIndexData.m_heap->Map(0, &CD3DX12_RANGE(heap_offset, heap_offset + buffer_size), (void**)&buffer));
+		void *mapped_buffer = (char*)buffer + heap_offset;
 		for (const auto &range : vertex_ranges)
 		{
-			write_vertex_array_data_to_buffer(bufferMap, range.first, range.second, index, info);
-			bufferMap = (char*)bufferMap + range.second * element_size;
+			write_vertex_array_data_to_buffer(mapped_buffer, range.first, range.second, index, info);
+			mapped_buffer = (char*)mapped_buffer + range.second * element_size;
 		}
-		m_vertexIndexData.m_heap->Unmap(0, &CD3DX12_RANGE(heapOffset, heapOffset + subBufferSize));
+		m_vertexIndexData.m_heap->Unmap(0, &CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
 
-		D3D12_VERTEX_BUFFER_VIEW vertexBufferView = {};
-		vertexBufferView.BufferLocation = m_vertexIndexData.m_heap->GetGPUVirtualAddress() + heapOffset;
-		vertexBufferView.SizeInBytes = (UINT)subBufferSize;
-		vertexBufferView.StrideInBytes = (UINT)element_size;
-		m_vertex_buffer_views.push_back(vertexBufferView);
+		D3D12_VERTEX_BUFFER_VIEW vertex_buffer_view =
+		{
+			m_vertexIndexData.m_heap->GetGPUVirtualAddress() + heap_offset,
+			(UINT)buffer_size,
+			(UINT)element_size
+		};
+		m_vertex_buffer_views.push_back(vertex_buffer_view);
 
-		m_timers.m_bufferUploadSize += subBufferSize;
+		m_timers.m_bufferUploadSize += buffer_size;
 
 		D3D12_INPUT_ELEMENT_DESC IAElement = {};
 		IAElement.SemanticName = "TEXCOORD";
 		IAElement.SemanticIndex = (UINT)index;
-		IAElement.InputSlot = (UINT)inputSlot++;
+		IAElement.InputSlot = (UINT)input_slot++;
 		IAElement.Format = get_vertex_attribute_format(info.type, info.size);
 		IAElement.AlignedByteOffset = 0;
 		IAElement.InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
@@ -107,26 +106,27 @@ void D3D12GSRender::upload_vertex_attributes(const std::vector<std::pair<u32, u3
 		u32 type_size = rsx::get_vertex_type_size(info.type);
 		u32 element_size = type_size * info.size;
 
-		size_t subBufferSize = data.size();
-		assert(m_vertexIndexData.canAlloc(subBufferSize));
-		size_t heapOffset = m_vertexIndexData.alloc(subBufferSize);
+		size_t buffer_size = data.size();
+		assert(m_vertexIndexData.canAlloc(buffer_size));
+		size_t heap_offset = m_vertexIndexData.alloc(buffer_size);
 
 		void *buffer;
-		ThrowIfFailed(m_vertexIndexData.m_heap->Map(0, &CD3DX12_RANGE(heapOffset, heapOffset + subBufferSize), (void**)&buffer));
-		void *bufferMap = (char*)buffer + heapOffset;
-		memcpy(bufferMap, data.data(), data.size());
-		m_vertexIndexData.m_heap->Unmap(0, &CD3DX12_RANGE(heapOffset, heapOffset + subBufferSize));
+		ThrowIfFailed(m_vertexIndexData.m_heap->Map(0, &CD3DX12_RANGE(heap_offset, heap_offset + buffer_size), (void**)&buffer));
+		void *mapped_buffer = (char*)buffer + heap_offset;
+		memcpy(mapped_buffer, data.data(), data.size());
+		m_vertexIndexData.m_heap->Unmap(0, &CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
 
-		D3D12_VERTEX_BUFFER_VIEW vertexBufferView = {};
-		vertexBufferView.BufferLocation = m_vertexIndexData.m_heap->GetGPUVirtualAddress() + heapOffset;
-		vertexBufferView.SizeInBytes = (UINT)subBufferSize;
-		vertexBufferView.StrideInBytes = (UINT)element_size;
-		m_vertex_buffer_views.push_back(vertexBufferView);
+		D3D12_VERTEX_BUFFER_VIEW vertex_buffer_view = {
+			m_vertexIndexData.m_heap->GetGPUVirtualAddress() + heap_offset,
+			(UINT)buffer_size,
+			(UINT)element_size
+		};
+		m_vertex_buffer_views.push_back(vertex_buffer_view);
 
 		D3D12_INPUT_ELEMENT_DESC IAElement = {};
 		IAElement.SemanticName = "TEXCOORD";
 		IAElement.SemanticIndex = (UINT)index;
-		IAElement.InputSlot = (UINT)inputSlot++;
+		IAElement.InputSlot = (UINT)input_slot++;
 		IAElement.Format = get_vertex_attribute_format(info.type, info.size);
 		IAElement.AlignedByteOffset = 0;
 		IAElement.InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA;
@@ -142,7 +142,7 @@ void D3D12GSRender::load_vertex_index_data(u32 first, u32 count)
 
 void D3D12GSRender::setScaleOffset(size_t descriptorIndex)
 {
-	float scaleOffsetMat[16] =
+	float scale_offset_matrix[16] =
 	{
 		1.0f, 0.0f, 0.0f, 0.0f,
 		0.0f, -1.0f, 0.0f, 0.0f,
@@ -154,52 +154,53 @@ void D3D12GSRender::setScaleOffset(size_t descriptorIndex)
 	int clip_h = rsx::method_registers[NV4097_SET_SURFACE_CLIP_VERTICAL] >> 16;
 
 	// Scale
-	scaleOffsetMat[0] *= (float&)rsx::method_registers[NV4097_SET_VIEWPORT_SCALE] / (clip_w / 2.f);
-	scaleOffsetMat[5] *= (float&)rsx::method_registers[NV4097_SET_VIEWPORT_SCALE + 1] / (clip_h / 2.f);
-	scaleOffsetMat[10] = (float&)rsx::method_registers[NV4097_SET_VIEWPORT_SCALE + 2];
+	scale_offset_matrix[0] *= (float&)rsx::method_registers[NV4097_SET_VIEWPORT_SCALE] / (clip_w / 2.f);
+	scale_offset_matrix[5] *= (float&)rsx::method_registers[NV4097_SET_VIEWPORT_SCALE + 1] / (clip_h / 2.f);
+	scale_offset_matrix[10] = (float&)rsx::method_registers[NV4097_SET_VIEWPORT_SCALE + 2];
 
 	// Offset
-	scaleOffsetMat[3] = (float&)rsx::method_registers[NV4097_SET_VIEWPORT_OFFSET] - (clip_w / 2.f);
-	scaleOffsetMat[7] = -((float&)rsx::method_registers[NV4097_SET_VIEWPORT_OFFSET + 1] - (clip_h / 2.f));
-	scaleOffsetMat[11] = (float&)rsx::method_registers[NV4097_SET_VIEWPORT_OFFSET + 2];
+	scale_offset_matrix[3] = (float&)rsx::method_registers[NV4097_SET_VIEWPORT_OFFSET] - (clip_w / 2.f);
+	scale_offset_matrix[7] = -((float&)rsx::method_registers[NV4097_SET_VIEWPORT_OFFSET + 1] - (clip_h / 2.f));
+	scale_offset_matrix[11] = (float&)rsx::method_registers[NV4097_SET_VIEWPORT_OFFSET + 2];
 
-	scaleOffsetMat[3] /= clip_w / 2.f;
-	scaleOffsetMat[7] /= clip_h / 2.f;
+	scale_offset_matrix[3] /= clip_w / 2.f;
+	scale_offset_matrix[7] /= clip_h / 2.f;
 
 	assert(m_constantsData.canAlloc(256));
-	size_t heapOffset = m_constantsData.alloc(256);
+	size_t heap_offset = m_constantsData.alloc(256);
 
 	// Scale offset buffer
 	// Separate constant buffer
-	void *scaleOffsetMap;
-	ThrowIfFailed(m_constantsData.m_heap->Map(0, &CD3DX12_RANGE(heapOffset, heapOffset + 256), &scaleOffsetMap));
-	streamToBuffer((char*)scaleOffsetMap + heapOffset, scaleOffsetMat, 16 * sizeof(float));
-	int isAlphaTested = !!(rsx::method_registers[NV4097_SET_ALPHA_TEST_ENABLE]);
+	void *mapped_buffer;
+	ThrowIfFailed(m_constantsData.m_heap->Map(0, &CD3DX12_RANGE(heap_offset, heap_offset + 256), &mapped_buffer));
+	streamToBuffer((char*)mapped_buffer + heap_offset, scale_offset_matrix, 16 * sizeof(float));
+	int is_alpha_tested = !!(rsx::method_registers[NV4097_SET_ALPHA_TEST_ENABLE]);
 	float alpha_ref = (float&)rsx::method_registers[NV4097_SET_ALPHA_REF];
-	memcpy((char*)scaleOffsetMap + heapOffset + 16 * sizeof(float), &isAlphaTested, sizeof(int));
-	memcpy((char*)scaleOffsetMap + heapOffset + 17 * sizeof(float), &alpha_ref, sizeof(float));
-	m_constantsData.m_heap->Unmap(0, &CD3DX12_RANGE(heapOffset, heapOffset + 256));
+	memcpy((char*)mapped_buffer + heap_offset + 16 * sizeof(float), &is_alpha_tested, sizeof(int));
+	memcpy((char*)mapped_buffer + heap_offset + 17 * sizeof(float), &alpha_ref, sizeof(float));
+	m_constantsData.m_heap->Unmap(0, &CD3DX12_RANGE(heap_offset, heap_offset + 256));
 
-	D3D12_CONSTANT_BUFFER_VIEW_DESC constantBufferViewDesc = {};
-	constantBufferViewDesc.BufferLocation = m_constantsData.m_heap->GetGPUVirtualAddress() + heapOffset;
-	constantBufferViewDesc.SizeInBytes = (UINT)256;
-	m_device->CreateConstantBufferView(&constantBufferViewDesc,
+	D3D12_CONSTANT_BUFFER_VIEW_DESC constant_buffer_view_desc = {
+		m_constantsData.m_heap->GetGPUVirtualAddress() + heap_offset,
+		256
+	};
+	m_device->CreateConstantBufferView(&constant_buffer_view_desc,
 		CD3DX12_CPU_DESCRIPTOR_HANDLE(getCurrentResourceStorage().m_descriptorsHeap->GetCPUDescriptorHandleForHeapStart())
 		.Offset((INT)descriptorIndex, g_descriptorStrideSRVCBVUAV));
 }
 
-void D3D12GSRender::FillVertexShaderConstantsBuffer(size_t descriptorIndex)
+void D3D12GSRender::FillVertexShaderConstantsBuffer(size_t descriptor_index)
 {
 	for (const auto &entry : transform_constants)
 		local_transform_constants[entry.first] = entry.second;
 
-	size_t bufferSize = 512 * 4 * sizeof(float);
+	size_t buffer_size = 512 * 4 * sizeof(float);
 
-	assert(m_constantsData.canAlloc(bufferSize));
-	size_t heapOffset = m_constantsData.alloc(bufferSize);
+	assert(m_constantsData.canAlloc(buffer_size));
+	size_t heap_offset = m_constantsData.alloc(buffer_size);
 
-	void *constantsBufferMap;
-	ThrowIfFailed(m_constantsData.m_heap->Map(0, &CD3DX12_RANGE(heapOffset, heapOffset + bufferSize), &constantsBufferMap));
+	void *mapped_buffer;
+	ThrowIfFailed(m_constantsData.m_heap->Map(0, &CD3DX12_RANGE(heap_offset, heap_offset + buffer_size), &mapped_buffer));
 	for (const auto &entry : local_transform_constants)
 	{
 		float data[4] = {
@@ -208,118 +209,101 @@ void D3D12GSRender::FillVertexShaderConstantsBuffer(size_t descriptorIndex)
 			entry.second.z,
 			entry.second.w
 		};
-		streamToBuffer((char*)constantsBufferMap + heapOffset + entry.first * 4 * sizeof(float), data, 4 * sizeof(float));
+		streamToBuffer((char*)mapped_buffer + heap_offset + entry.first * 4 * sizeof(float), data, 4 * sizeof(float));
 	}
-	m_constantsData.m_heap->Unmap(0, &CD3DX12_RANGE(heapOffset, heapOffset + bufferSize));
+	m_constantsData.m_heap->Unmap(0, &CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
 
-	D3D12_CONSTANT_BUFFER_VIEW_DESC constantBufferViewDesc = {};
-	constantBufferViewDesc.BufferLocation = m_constantsData.m_heap->GetGPUVirtualAddress() + heapOffset;
-	constantBufferViewDesc.SizeInBytes = (UINT)bufferSize;
-	m_device->CreateConstantBufferView(&constantBufferViewDesc,
+	D3D12_CONSTANT_BUFFER_VIEW_DESC constant_buffer_view_desc = {
+		m_constantsData.m_heap->GetGPUVirtualAddress() + heap_offset,
+		(UINT)buffer_size
+	};
+	m_device->CreateConstantBufferView(&constant_buffer_view_desc,
 		CD3DX12_CPU_DESCRIPTOR_HANDLE(getCurrentResourceStorage().m_descriptorsHeap->GetCPUDescriptorHandleForHeapStart())
-		.Offset((INT)descriptorIndex, g_descriptorStrideSRVCBVUAV));
+		.Offset((INT)descriptor_index, g_descriptorStrideSRVCBVUAV));
 }
 
-void D3D12GSRender::FillPixelShaderConstantsBuffer(size_t descriptorIndex)
+void D3D12GSRender::FillPixelShaderConstantsBuffer(size_t descriptor_index)
 {
 	// Get constant from fragment program
-	const std::vector<size_t> &fragmentOffset = m_cachePSO.getFragmentConstantOffsetsCache(&fragment_program);
-	size_t bufferSize = fragmentOffset.size() * 4 * sizeof(float) + 1;
+	const std::vector<size_t> &fragment_constant_offsets = m_cachePSO.getFragmentConstantOffsetsCache(&fragment_program);
+	size_t buffer_size = fragment_constant_offsets.size() * 4 * sizeof(float) + 1;
 	// Multiple of 256 never 0
-	bufferSize = (bufferSize + 255) & ~255;
+	buffer_size = (buffer_size + 255) & ~255;
 
-	assert(m_constantsData.canAlloc(bufferSize));
-	size_t heapOffset = m_constantsData.alloc(bufferSize);
+	assert(m_constantsData.canAlloc(buffer_size));
+	size_t heap_offset = m_constantsData.alloc(buffer_size);
 
 	size_t offset = 0;
-	void *constantsBufferMap;
-	ThrowIfFailed(m_constantsData.m_heap->Map(0, &CD3DX12_RANGE(heapOffset, heapOffset + bufferSize), &constantsBufferMap));
-	for (size_t offsetInFP : fragmentOffset)
+	void *mapped_buffer;
+	ThrowIfFailed(m_constantsData.m_heap->Map(0, &CD3DX12_RANGE(heap_offset, heap_offset + buffer_size), &mapped_buffer));
+	for (size_t offset_in_fragment_program : fragment_constant_offsets)
 	{
 		u32 vector[4];
-		// Is it assigned by color register in command buffer ?
-		// TODO : we loop every iteration, we might do better...
-		bool isCommandBufferSetConstant = false;
-/*		for (const auto& entry : fragment_constants)
-		{
-			size_t fragmentId = entry.first - fragment_program.offset;
-			if (fragmentId == offsetInFP)
-			{
-				isCommandBufferSetConstant = true;
-				vector[0] = (u32&)entry.second.x;
-				vector[1] = (u32&)entry.second.y;
-				vector[2] = (u32&)entry.second.z;
-				vector[3] = (u32&)entry.second.w;
-				break;
-			}
-		}*/
-		if (!isCommandBufferSetConstant)
-		{
-			auto data = vm::ps3::ptr<u32>::make(fragment_program.addr + (u32)offsetInFP);
+		auto data = vm::ps3::ptr<u32>::make(fragment_program.addr + (u32)offset_in_fragment_program);
 
-			u32 c0 = (data[0] >> 16 | data[0] << 16);
-			u32 c1 = (data[1] >> 16 | data[1] << 16);
-			u32 c2 = (data[2] >> 16 | data[2] << 16);
-			u32 c3 = (data[3] >> 16 | data[3] << 16);
+		u32 c0 = (data[0] >> 16 | data[0] << 16);
+		u32 c1 = (data[1] >> 16 | data[1] << 16);
+		u32 c2 = (data[2] >> 16 | data[2] << 16);
+		u32 c3 = (data[3] >> 16 | data[3] << 16);
 
-			vector[0] = c0;
-			vector[1] = c1;
-			vector[2] = c2;
-			vector[3] = c3;
-		}
+		vector[0] = c0;
+		vector[1] = c1;
+		vector[2] = c2;
+		vector[3] = c3;
 
-		streamToBuffer((char*)constantsBufferMap + heapOffset + offset, vector, 4 * sizeof(u32));
+		streamToBuffer((char*)mapped_buffer + heap_offset + offset, vector, 4 * sizeof(u32));
 		offset += 4 * sizeof(u32);
 	}
-	m_constantsData.m_heap->Unmap(0, &CD3DX12_RANGE(heapOffset, heapOffset + bufferSize));
+	m_constantsData.m_heap->Unmap(0, &CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
 
-	D3D12_CONSTANT_BUFFER_VIEW_DESC constantBufferViewDesc = {};
-	constantBufferViewDesc.BufferLocation = m_constantsData.m_heap->GetGPUVirtualAddress() + heapOffset;
-	constantBufferViewDesc.SizeInBytes = (UINT)bufferSize;
-	m_device->CreateConstantBufferView(&constantBufferViewDesc,
+	D3D12_CONSTANT_BUFFER_VIEW_DESC constant_buffer_view_desc = {
+		m_constantsData.m_heap->GetGPUVirtualAddress() + heap_offset,
+		(UINT)buffer_size
+	};
+	m_device->CreateConstantBufferView(&constant_buffer_view_desc,
 		CD3DX12_CPU_DESCRIPTOR_HANDLE(getCurrentResourceStorage().m_descriptorsHeap->GetCPUDescriptorHandleForHeapStart())
-		.Offset((INT)descriptorIndex, g_descriptorStrideSRVCBVUAV));
+		.Offset((INT)descriptor_index, g_descriptorStrideSRVCBVUAV));
 }
 
-void D3D12GSRender::upload_vertex_index_data(ID3D12GraphicsCommandList *cmdlist)
+void D3D12GSRender::upload_vertex_index_data(ID3D12GraphicsCommandList *command_list)
 {
 	// Index count
 	m_renderingInfo.m_count = 0;
 	for (const auto &pair : m_first_count_pairs)
-		m_renderingInfo.m_count += getIndexCount(draw_mode, pair.second);
+		m_renderingInfo.m_count += get_index_count(draw_mode, pair.second);
 
 	if (!m_renderingInfo.m_indexed)
 	{
 		// Non indexed
 		upload_vertex_attributes(m_first_count_pairs);
-		cmdlist->IASetVertexBuffers(0, (UINT)m_vertex_buffer_views.size(), m_vertex_buffer_views.data());
-		if (isNativePrimitiveMode(draw_mode))
+		command_list->IASetVertexBuffers(0, (UINT)m_vertex_buffer_views.size(), m_vertex_buffer_views.data());
+		if (is_primitive_native(draw_mode))
 			return;
 		// Handle non native primitive
 
 		// Alloc
-		size_t subBufferSize = align(m_renderingInfo.m_count * sizeof(u16), 64);
-		assert(m_vertexIndexData.canAlloc(subBufferSize));
-		size_t heapOffset = m_vertexIndexData.alloc(subBufferSize);
+		size_t buffer_size = align(m_renderingInfo.m_count * sizeof(u16), 64);
+		assert(m_vertexIndexData.canAlloc(buffer_size));
+		size_t heap_offset = m_vertexIndexData.alloc(buffer_size);
 
 		void *buffer;
-		ThrowIfFailed(m_vertexIndexData.m_heap->Map(0, &CD3DX12_RANGE(heapOffset, heapOffset + subBufferSize), (void**)&buffer));
-		void *bufferMap = (char*)buffer + heapOffset;
+		ThrowIfFailed(m_vertexIndexData.m_heap->Map(0, &CD3DX12_RANGE(heap_offset, heap_offset + buffer_size), (void**)&buffer));
+		void *mapped_buffer = (char*)buffer + heap_offset;
 		size_t first = 0;
 		for (const auto &pair : m_first_count_pairs)
 		{
-			size_t element_count = getIndexCount(draw_mode, pair.second);
-			write_index_array_for_non_indexed_non_native_primitive_to_buffer((char*)bufferMap, draw_mode, first, pair.second);
-			bufferMap = (char*)bufferMap + element_count * sizeof(u16);
+			size_t element_count = get_index_count(draw_mode, pair.second);
+			write_index_array_for_non_indexed_non_native_primitive_to_buffer((char*)mapped_buffer, draw_mode, (u32)first, (u32)pair.second);
+			mapped_buffer = (char*)mapped_buffer + element_count * sizeof(u16);
 			first += pair.second;
 		}
-		m_vertexIndexData.m_heap->Unmap(0, &CD3DX12_RANGE(heapOffset, heapOffset + subBufferSize));
-		D3D12_INDEX_BUFFER_VIEW indexBufferView = {
-			m_vertexIndexData.m_heap->GetGPUVirtualAddress() + heapOffset,
-			(UINT)subBufferSize,
+		m_vertexIndexData.m_heap->Unmap(0, &CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
+		D3D12_INDEX_BUFFER_VIEW index_buffer_view = {
+			m_vertexIndexData.m_heap->GetGPUVirtualAddress() + heap_offset,
+			(UINT)buffer_size,
 			DXGI_FORMAT_R16_UINT
 		};
-		cmdlist->IASetIndexBuffer(&indexBufferView);
+		command_list->IASetIndexBuffer(&index_buffer_view);
 		m_renderingInfo.m_indexed = true;
 	}
 	else
@@ -327,35 +311,35 @@ void D3D12GSRender::upload_vertex_index_data(ID3D12GraphicsCommandList *cmdlist)
 		u32 indexed_type = rsx::method_registers[NV4097_SET_INDEX_ARRAY_DMA] >> 4;
 
 		// Index type
-		size_t indexSize = (indexed_type == CELL_GCM_DRAW_INDEX_ARRAY_TYPE_16) ? 2 : 4;
+		size_t index_size = get_index_type_size(indexed_type);
 
 		// Alloc
-		size_t subBufferSize = align(m_renderingInfo.m_count * indexSize, 64);
-		assert(m_vertexIndexData.canAlloc(subBufferSize));
-		size_t heapOffset = m_vertexIndexData.alloc(subBufferSize);
+		size_t buffer_size = align(m_renderingInfo.m_count * index_size, 64);
+		assert(m_vertexIndexData.canAlloc(buffer_size));
+		size_t heap_offset = m_vertexIndexData.alloc(buffer_size);
 
 		void *buffer;
-		ThrowIfFailed(m_vertexIndexData.m_heap->Map(0, &CD3DX12_RANGE(heapOffset, heapOffset + subBufferSize), (void**)&buffer));
-		void *bufferMap = (char*)buffer + heapOffset;
+		ThrowIfFailed(m_vertexIndexData.m_heap->Map(0, &CD3DX12_RANGE(heap_offset, heap_offset + buffer_size), (void**)&buffer));
+		void *mapped_buffer = (char*)buffer + heap_offset;
 		u32 min_index = (u32)-1, max_index = 0;
 		for (const auto &pair : m_first_count_pairs)
 		{
-			size_t element_count = getIndexCount(draw_mode, pair.second);
-			write_index_array_data_to_buffer((char*)bufferMap, draw_mode, pair.first, pair.second, min_index, max_index);
-			bufferMap = (char*)bufferMap + element_count * indexSize;
+			size_t element_count = get_index_count(draw_mode, pair.second);
+			write_index_array_data_to_buffer((char*)mapped_buffer, draw_mode, pair.first, pair.second, min_index, max_index);
+			mapped_buffer = (char*)mapped_buffer + element_count * index_size;
 		}
-		m_vertexIndexData.m_heap->Unmap(0, &CD3DX12_RANGE(heapOffset, heapOffset + subBufferSize));
-		D3D12_INDEX_BUFFER_VIEW indexBufferView = {
-			m_vertexIndexData.m_heap->GetGPUVirtualAddress() + heapOffset,
-			(UINT)subBufferSize,
+		m_vertexIndexData.m_heap->Unmap(0, &CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
+		D3D12_INDEX_BUFFER_VIEW index_buffer_view = {
+			m_vertexIndexData.m_heap->GetGPUVirtualAddress() + heap_offset,
+			(UINT)buffer_size,
 			get_index_type(indexed_type)
 		};
-		m_timers.m_bufferUploadSize += subBufferSize;
-		cmdlist->IASetIndexBuffer(&indexBufferView);
+		m_timers.m_bufferUploadSize += buffer_size;
+		command_list->IASetIndexBuffer(&index_buffer_view);
 		m_renderingInfo.m_indexed = true;
 
 		upload_vertex_attributes({ std::make_pair(0, max_index + 1) });
-		cmdlist->IASetVertexBuffers(0, (UINT)m_vertex_buffer_views.size(), m_vertex_buffer_views.data());
+		command_list->IASetVertexBuffers(0, (UINT)m_vertex_buffer_views.size(), m_vertex_buffer_views.data());
 	}
 }
 

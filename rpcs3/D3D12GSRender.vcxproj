@@ -79,7 +79,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Emu\RSX\D3D12\D3D12Utils.h" />
-    <ClInclude Include="Emu\RSX\D3D12\D3D12Buffer.h" />
     <ClInclude Include="Emu\RSX\D3D12\D3D12CommonDecompiler.h" />
     <ClInclude Include="Emu\RSX\D3D12\D3D12Formats.h" />
     <ClInclude Include="Emu\RSX\D3D12\D3D12FragmentProgramDecompiler.h" />
