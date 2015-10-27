@@ -86,7 +86,6 @@
     <ClInclude Include="Emu\RSX\D3D12\D3D12GSRender.h" />
     <ClInclude Include="Emu\RSX\D3D12\D3D12PipelineState.h" />
     <ClInclude Include="Emu\RSX\D3D12\D3D12RenderTargetSets.h" />
-    <ClInclude Include="Emu\RSX\D3D12\D3D12Texture.h" />
     <ClInclude Include="Emu\RSX\D3D12\D3D12VertexProgramDecompiler.h" />
     <ClInclude Include="Emu\RSX\D3D12\d3dx12.h" />
     <ClInclude Include="stdafx_d3d12.h" />

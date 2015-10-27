@@ -26,9 +26,6 @@
     <ClInclude Include="Emu\RSX\D3D12\D3D12RenderTargetSets.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\RSX\D3D12\D3D12Texture.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
     <ClInclude Include="Emu\RSX\D3D12\D3D12VertexProgramDecompiler.h">
       <Filter>Source Files</Filter>
     </ClInclude>

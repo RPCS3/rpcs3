@@ -6,11 +6,12 @@
 
 
 #define MAX2(a, b) ((a) > (b)) ? (a) : (b)
-
+namespace
+{
 /**
 * Write data, assume src pixels are packed but not mipmaplevel
 */
-inline std::vector<MipmapLevelInfo>
+std::vector<MipmapLevelInfo>
 writeTexelsGeneric(const char *src, char *dst, size_t widthInBlock, size_t heightInBlock, size_t blockSize, size_t mipmapCount)
 {
 	std::vector<MipmapLevelInfo> Result;
@@ -42,7 +43,7 @@ writeTexelsGeneric(const char *src, char *dst, size_t widthInBlock, size_t heigh
 /**
 * Write data, assume src pixels are swizzled and but not mipmaplevel
 */
-inline std::vector<MipmapLevelInfo>
+std::vector<MipmapLevelInfo>
 writeTexelsSwizzled(const char *src, char *dst, size_t widthInBlock, size_t heightInBlock, size_t blockSize, size_t mipmapCount)
 {
 	std::vector<MipmapLevelInfo> Result;
@@ -84,7 +85,7 @@ writeTexelsSwizzled(const char *src, char *dst, size_t widthInBlock, size_t heig
 /**
 * Write data, assume compressed (DXTCn) format
 */
-inline std::vector<MipmapLevelInfo>
+std::vector<MipmapLevelInfo>
 writeCompressedTexel(const char *src, char *dst, size_t widthInBlock, size_t blockWidth, size_t heightInBlock, size_t blockHeight, size_t blockSize, size_t mipmapCount)
 {
 	std::vector<MipmapLevelInfo> Result;
@@ -117,7 +118,7 @@ writeCompressedTexel(const char *src, char *dst, size_t widthInBlock, size_t blo
 /**
 * Write 16 bytes pixel textures, assume src pixels are swizzled and but not mipmaplevel
 */
-inline std::vector<MipmapLevelInfo>
+std::vector<MipmapLevelInfo>
 write16bTexelsSwizzled(const char *src, char *dst, size_t widthInBlock, size_t heightInBlock, size_t blockSize, size_t mipmapCount)
 {
 	std::vector<MipmapLevelInfo> Result;
@@ -158,7 +159,7 @@ write16bTexelsSwizzled(const char *src, char *dst, size_t widthInBlock, size_t h
 /**
 * Write 16 bytes pixel textures, assume src pixels are packed but not mipmaplevel
 */
-inline std::vector<MipmapLevelInfo>
+std::vector<MipmapLevelInfo>
 write16bTexelsGeneric(const char *src, char *dst, size_t widthInBlock, size_t heightInBlock, size_t blockSize, size_t mipmapCount)
 {
 	std::vector<MipmapLevelInfo> Result;
@@ -196,7 +197,7 @@ write16bTexelsGeneric(const char *src, char *dst, size_t widthInBlock, size_t he
 /**
 * Write 16 bytes pixel textures, assume src pixels are packed but not mipmaplevel
 */
-inline std::vector<MipmapLevelInfo>
+std::vector<MipmapLevelInfo>
 write16bX4TexelsGeneric(const char *src, char *dst, size_t widthInBlock, size_t heightInBlock, size_t blockSize, size_t mipmapCount)
 {
 	std::vector<MipmapLevelInfo> Result;
@@ -231,255 +232,117 @@ write16bX4TexelsGeneric(const char *src, char *dst, size_t widthInBlock, size_t 
 	return Result;
 }
 
-
-size_t getPlacedTextureStorageSpace(const rsx::texture &texture, size_t rowPitchAlignement)
+/**
+ * A texture is stored as an array of blocks, where a block is a pixel for standard texture
+ * but is a structure containing several pixels for compressed format
+ */
+size_t get_texture_block_size(u32 format) noexcept
 {
-	size_t w = texture.width(), h = texture.height();
-
-	size_t blockSizeInByte, blockWidthInPixel, blockHeightInPixel;
-	int format = texture.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
-
 	switch (format)
 	{
+	case CELL_GCM_TEXTURE_B8: return 1;
+	case CELL_GCM_TEXTURE_A1R5G5B5:
+	case CELL_GCM_TEXTURE_A4R4G4B4:
+	case CELL_GCM_TEXTURE_R5G6B5: return 2;
+	case CELL_GCM_TEXTURE_A8R8G8B8: return 4;
+	case CELL_GCM_TEXTURE_COMPRESSED_DXT1: return 8;
+	case CELL_GCM_TEXTURE_COMPRESSED_DXT23: return 16;
+	case CELL_GCM_TEXTURE_COMPRESSED_DXT45: return 16;
+	case CELL_GCM_TEXTURE_G8B8: return 2;
+	case CELL_GCM_TEXTURE_R6G5B5:
+	case CELL_GCM_TEXTURE_DEPTH24_D8:
+	case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT: return 4;
+	case CELL_GCM_TEXTURE_DEPTH16:
+	case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
+	case CELL_GCM_TEXTURE_X16: return 2;
+	case CELL_GCM_TEXTURE_Y16_X16: return 4;
+	case CELL_GCM_TEXTURE_R5G5B5A1: return 2;
+	case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT: return 8;
+	case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT: return 16;
+	case CELL_GCM_TEXTURE_X32_FLOAT: return 4;
+	case CELL_GCM_TEXTURE_D1R5G5B5: return 2;
+	case CELL_GCM_TEXTURE_Y16_X16_FLOAT:
+	case CELL_GCM_TEXTURE_D8R8G8B8:
+	case CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8:
+	case CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8: return 4;
 	case CELL_GCM_TEXTURE_COMPRESSED_HILO8:
 	case CELL_GCM_TEXTURE_COMPRESSED_HILO_S8:
 	case ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN) & CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8:
 	case ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN) & CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8:
 	default:
 		LOG_ERROR(RSX, "Unimplemented Texture format : %x", format);
-		break;
-	case CELL_GCM_TEXTURE_B8:
-		blockSizeInByte = 1;
-		blockWidthInPixel = 1, blockHeightInPixel = 1;
-		break;
-	case CELL_GCM_TEXTURE_A1R5G5B5:
-		blockSizeInByte = 2;
-		blockHeightInPixel = 1, blockWidthInPixel = 1;
-		break;
-	case CELL_GCM_TEXTURE_A4R4G4B4:
-		blockSizeInByte = 2;
-		blockWidthInPixel = 1, blockHeightInPixel = 1;
-		break;
-	case CELL_GCM_TEXTURE_R5G6B5:
-		blockSizeInByte = 2;
-		blockWidthInPixel = 1, blockHeightInPixel = 1;
-		break;
-	case CELL_GCM_TEXTURE_A8R8G8B8:
-		blockSizeInByte = 4;
-		blockWidthInPixel = 1, blockHeightInPixel = 1;
-		break;
-	case CELL_GCM_TEXTURE_COMPRESSED_DXT1:
-		blockSizeInByte = 8;
-		blockWidthInPixel = 4, blockHeightInPixel = 4;
-		break;
-	case CELL_GCM_TEXTURE_COMPRESSED_DXT23:
-		blockSizeInByte = 16;
-		blockWidthInPixel = 4, blockHeightInPixel = 4;
-		break;
-	case CELL_GCM_TEXTURE_COMPRESSED_DXT45:
-		blockSizeInByte = 16;
-		blockWidthInPixel = 4, blockHeightInPixel = 4;
-		break;
-	case CELL_GCM_TEXTURE_G8B8:
-		blockSizeInByte = 2;
-		blockWidthInPixel = 1, blockHeightInPixel = 1;
-		break;
-	case CELL_GCM_TEXTURE_R6G5B5:
-		// Not native
-		blockSizeInByte = 4;
-		blockWidthInPixel = 1, blockHeightInPixel = 1;
-		break;
-	case CELL_GCM_TEXTURE_DEPTH24_D8:
-		blockSizeInByte = 4;
-		blockWidthInPixel = 1, blockHeightInPixel = 1;
-		break;
-	case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
-		blockSizeInByte = 4;
-		blockWidthInPixel = 1, blockHeightInPixel = 1;
-		break;
-	case CELL_GCM_TEXTURE_DEPTH16:
-		blockSizeInByte = 2;
-		blockWidthInPixel = 1, blockHeightInPixel = 1;
-		break;
-	case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
-		blockSizeInByte = 2;
-		blockWidthInPixel = 1, blockHeightInPixel = 1;
-		break;
-	case CELL_GCM_TEXTURE_X16:
-		blockSizeInByte = 2;
-		blockWidthInPixel = 1, blockHeightInPixel = 1;
-		break;
-	case CELL_GCM_TEXTURE_Y16_X16:
-		blockSizeInByte = 4;
-		blockWidthInPixel = 1, blockHeightInPixel = 1;
-		break;
-	case CELL_GCM_TEXTURE_R5G5B5A1:
-		blockSizeInByte = 2;
-		blockWidthInPixel = 1, blockHeightInPixel = 1;
-		break;
-	case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT:
-		blockSizeInByte = 8;
-		blockWidthInPixel = 1, blockHeightInPixel = 1;
-		break;
-	case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT:
-		blockSizeInByte = 16;
-		blockWidthInPixel = 1, blockHeightInPixel = 1;
-		break;
-	case CELL_GCM_TEXTURE_X32_FLOAT:
-		blockSizeInByte = 4;
-		blockWidthInPixel = 1, blockHeightInPixel = 1;
-		break;
-	case CELL_GCM_TEXTURE_D1R5G5B5:
-		blockSizeInByte = 2;
-		blockWidthInPixel = 1, blockHeightInPixel = 1;
-		break;
-	case CELL_GCM_TEXTURE_Y16_X16_FLOAT:
-		blockSizeInByte = 4;
-		blockWidthInPixel = 1, blockHeightInPixel = 1;
-		break;
-	case CELL_GCM_TEXTURE_D8R8G8B8:
-		blockSizeInByte = 4;
-		blockWidthInPixel = 1, blockHeightInPixel = 1;
-		break;
-	case CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8:
-		blockSizeInByte = 4;
-		blockWidthInPixel = 2, blockHeightInPixel = 2;
-		break;
-	case CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8:
-		blockSizeInByte = 4;
-		blockWidthInPixel = 2, blockHeightInPixel = 2;
-		break;
+		return 0;
 	}
+}
 
-	size_t heightInBlocks = (h + blockHeightInPixel - 1) / blockHeightInPixel;
-	size_t widthInBlocks = (w + blockWidthInPixel - 1) / blockWidthInPixel;
+size_t get_texture_block_edge(u32 format) noexcept
+{
+	switch (format)
+	{
+	case CELL_GCM_TEXTURE_B8:
+	case CELL_GCM_TEXTURE_A1R5G5B5:
+	case CELL_GCM_TEXTURE_A4R4G4B4:
+	case CELL_GCM_TEXTURE_R5G6B5:
+	case CELL_GCM_TEXTURE_A8R8G8B8: return 1;
+	case CELL_GCM_TEXTURE_COMPRESSED_DXT1:
+	case CELL_GCM_TEXTURE_COMPRESSED_DXT23:
+	case CELL_GCM_TEXTURE_COMPRESSED_DXT45: return 4;
+	case CELL_GCM_TEXTURE_G8B8:
+	case CELL_GCM_TEXTURE_R6G5B5:
+	case CELL_GCM_TEXTURE_DEPTH24_D8:
+	case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
+	case CELL_GCM_TEXTURE_DEPTH16:
+	case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
+	case CELL_GCM_TEXTURE_X16:
+	case CELL_GCM_TEXTURE_Y16_X16:
+	case CELL_GCM_TEXTURE_R5G5B5A1:
+	case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT:
+	case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT:
+	case CELL_GCM_TEXTURE_X32_FLOAT:
+	case CELL_GCM_TEXTURE_D1R5G5B5:
+	case CELL_GCM_TEXTURE_Y16_X16_FLOAT:
+	case CELL_GCM_TEXTURE_D8R8G8B8: return 1;
+	case CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8:
+	case CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8: return 2;
+	case CELL_GCM_TEXTURE_COMPRESSED_HILO8:
+	case CELL_GCM_TEXTURE_COMPRESSED_HILO_S8:
+	case ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN) & CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8:
+	case ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN) & CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8:
+	default:
+		LOG_ERROR(RSX, "Unimplemented Texture format : %x", format);
+		return 0;
+	}
+}
+}
+
+
+size_t get_placed_texture_storage_size(const rsx::texture &texture, size_t rowPitchAlignement) noexcept
+{
+	size_t w = texture.width(), h = texture.height();
+
+	int format = texture.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
+	size_t blockEdge = get_texture_block_edge(format);
+	size_t blockSizeInByte = get_texture_block_size(format);
+
+	size_t heightInBlocks = (h + blockEdge - 1) / blockEdge;
+	size_t widthInBlocks = (w + blockEdge - 1) / blockEdge;
 
 	size_t rowPitch = align(blockSizeInByte * widthInBlocks, rowPitchAlignement);
 
 	return rowPitch * heightInBlocks * 2; // * 2 for mipmap levels
 }
 
-std::vector<MipmapLevelInfo> uploadPlacedTexture(const rsx::texture &texture, size_t rowPitchAlignement, void* textureData)
+std::vector<MipmapLevelInfo> upload_placed_texture(const rsx::texture &texture, size_t rowPitchAlignement, void* textureData) noexcept
 {
 	size_t w = texture.width(), h = texture.height();
 
 	int format = texture.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
 
-	size_t blockSizeInByte, blockWidthInPixel, blockHeightInPixel;
-	switch (format)
-	{
-	case CELL_GCM_TEXTURE_COMPRESSED_HILO8:
-	case CELL_GCM_TEXTURE_COMPRESSED_HILO_S8:
-	case ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN) & CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8:
-	case ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN) & CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8:
-	default:
-		LOG_ERROR(RSX, "Unimplemented Texture format : %x", format);
-		break;
-	case CELL_GCM_TEXTURE_B8:
-		blockSizeInByte = 1;
-		blockWidthInPixel = 1, blockHeightInPixel = 1;
-		break;
-	case CELL_GCM_TEXTURE_A1R5G5B5:
-		blockSizeInByte = 2;
-		blockHeightInPixel = 1, blockWidthInPixel = 1;
-		break;
-	case CELL_GCM_TEXTURE_A4R4G4B4:
-		blockSizeInByte = 2;
-		blockWidthInPixel = 1, blockHeightInPixel = 1;
-		break;
-	case CELL_GCM_TEXTURE_R5G6B5:
-		blockSizeInByte = 2;
-		blockWidthInPixel = 1, blockHeightInPixel = 1;
-		break;
-	case CELL_GCM_TEXTURE_A8R8G8B8:
-		blockSizeInByte = 4;
-		blockWidthInPixel = 1, blockHeightInPixel = 1;
-		break;
-	case CELL_GCM_TEXTURE_COMPRESSED_DXT1:
-		blockSizeInByte = 8;
-		blockWidthInPixel = 4, blockHeightInPixel = 4;
-		break;
-	case CELL_GCM_TEXTURE_COMPRESSED_DXT23:
-		blockSizeInByte = 16;
-		blockWidthInPixel = 4, blockHeightInPixel = 4;
-		break;
-	case CELL_GCM_TEXTURE_COMPRESSED_DXT45:
-		blockSizeInByte = 16;
-		blockWidthInPixel = 4, blockHeightInPixel = 4;
-		break;
-	case CELL_GCM_TEXTURE_G8B8:
-		blockSizeInByte = 2;
-		blockWidthInPixel = 1, blockHeightInPixel = 1;
-		break;
-	case CELL_GCM_TEXTURE_R6G5B5:
-		// Not native
-		blockSizeInByte = 4;
-		blockWidthInPixel = 1, blockHeightInPixel = 1;
-		break;
-	case CELL_GCM_TEXTURE_DEPTH24_D8:
-		blockSizeInByte = 4;
-		blockWidthInPixel = 1, blockHeightInPixel = 1;
-		break;
-	case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
-		blockSizeInByte = 4;
-		blockWidthInPixel = 1, blockHeightInPixel = 1;
-		break;
-	case CELL_GCM_TEXTURE_DEPTH16:
-		blockSizeInByte = 2;
-		blockWidthInPixel = 1, blockHeightInPixel = 1;
-		break;
-	case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
-		blockSizeInByte = 2;
-		blockWidthInPixel = 1, blockHeightInPixel = 1;
-		break;
-	case CELL_GCM_TEXTURE_X16:
-		blockSizeInByte = 2;
-		blockWidthInPixel = 1, blockHeightInPixel = 1;
-		break;
-	case CELL_GCM_TEXTURE_Y16_X16:
-		blockSizeInByte = 4;
-		blockWidthInPixel = 1, blockHeightInPixel = 1;
-		break;
-	case CELL_GCM_TEXTURE_R5G5B5A1:
-		blockSizeInByte = 2;
-		blockWidthInPixel = 1, blockHeightInPixel = 1;
-		break;
-	case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT:
-		blockSizeInByte = 8;
-		blockWidthInPixel = 1, blockHeightInPixel = 1;
-		break;
-	case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT:
-		blockSizeInByte = 16;
-		blockWidthInPixel = 1, blockHeightInPixel = 1;
-		break;
-	case CELL_GCM_TEXTURE_X32_FLOAT:
-		blockSizeInByte = 4;
-		blockWidthInPixel = 1, blockHeightInPixel = 1;
-		break;
-	case CELL_GCM_TEXTURE_D1R5G5B5:
-		blockSizeInByte = 2;
-		blockWidthInPixel = 1, blockHeightInPixel = 1;
-		break;
-	case CELL_GCM_TEXTURE_Y16_X16_FLOAT:
-		blockSizeInByte = 4;
-		blockWidthInPixel = 1, blockHeightInPixel = 1;
-		break;
-	case CELL_GCM_TEXTURE_D8R8G8B8:
-		blockSizeInByte = 4;
-		blockWidthInPixel = 1, blockHeightInPixel = 1;
-		break;
-	case CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8:
-		blockSizeInByte = 4;
-		blockWidthInPixel = 2, blockHeightInPixel = 2;
-		break;
-	case CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8:
-		blockSizeInByte = 4;
-		blockWidthInPixel = 2, blockHeightInPixel = 2;
-		break;
-	}
+	size_t blockSizeInByte = get_texture_block_size(format);
+	size_t blockEdge = get_texture_block_edge(format);
 
-	size_t heightInBlocks = (h + blockHeightInPixel - 1) / blockHeightInPixel;
-	size_t widthInBlocks = (w + blockWidthInPixel - 1) / blockWidthInPixel;
+	size_t heightInBlocks = (h + blockEdge - 1) / blockEdge;
+	size_t widthInBlocks = (w + blockEdge - 1) / blockEdge;
 
 	std::vector<MipmapLevelInfo> mipInfos;
 
@@ -505,8 +368,76 @@ std::vector<MipmapLevelInfo> uploadPlacedTexture(const rsx::texture &texture, si
 	case CELL_GCM_TEXTURE_COMPRESSED_DXT1:
 	case CELL_GCM_TEXTURE_COMPRESSED_DXT23:
 	case CELL_GCM_TEXTURE_COMPRESSED_DXT45:
-		return writeCompressedTexel((char*)pixels, (char*)textureData, widthInBlocks, blockWidthInPixel, heightInBlocks, blockHeightInPixel, blockSizeInByte, texture.mipmap());
+		return writeCompressedTexel((char*)pixels, (char*)textureData, widthInBlocks, blockEdge, heightInBlocks, blockEdge, blockSizeInByte, texture.mipmap());
 	default:
 		return writeTexelsGeneric((char*)pixels, (char*)textureData, w, h, blockSizeInByte, texture.mipmap());
+	}
+}
+
+size_t get_texture_size(const rsx::texture &texture) noexcept
+{
+	size_t w = texture.width(), h = texture.height();
+
+	int format = texture.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
+	// TODO: Take mipmaps into account
+	switch (format)
+	{
+	case CELL_GCM_TEXTURE_COMPRESSED_HILO8:
+	case CELL_GCM_TEXTURE_COMPRESSED_HILO_S8:
+	case ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN) & CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8:
+	case ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN) & CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8:
+	default:
+		LOG_ERROR(RSX, "Unimplemented Texture format : %x", format);
+		return 0;
+	case CELL_GCM_TEXTURE_B8:
+		return w * h;
+	case CELL_GCM_TEXTURE_A1R5G5B5:
+		return w * h * 2;
+	case CELL_GCM_TEXTURE_A4R4G4B4:
+		return w * h * 2;
+	case CELL_GCM_TEXTURE_R5G6B5:
+		return w * h * 2;
+	case CELL_GCM_TEXTURE_A8R8G8B8:
+		return w * h * 4;
+	case CELL_GCM_TEXTURE_COMPRESSED_DXT1:
+		return w * h / 6;
+	case CELL_GCM_TEXTURE_COMPRESSED_DXT23:
+		return w * h / 4;
+	case CELL_GCM_TEXTURE_COMPRESSED_DXT45:
+		return w * h / 4;
+	case CELL_GCM_TEXTURE_G8B8:
+		return w * h * 2;
+	case CELL_GCM_TEXTURE_R6G5B5:
+		return w * h * 2;
+	case CELL_GCM_TEXTURE_DEPTH24_D8:
+		return w * h * 4;
+	case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
+		return w * h * 4;
+	case CELL_GCM_TEXTURE_DEPTH16:
+		return w * h * 2;
+	case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
+		return w * h * 2;
+	case CELL_GCM_TEXTURE_X16:
+		return w * h * 2;
+	case CELL_GCM_TEXTURE_Y16_X16:
+		return w * h * 4;
+	case CELL_GCM_TEXTURE_R5G5B5A1:
+		return w * h * 2;
+	case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT:
+		return w * h * 8;
+	case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT:
+		return w * h * 16;
+	case CELL_GCM_TEXTURE_X32_FLOAT:
+		return w * h * 4;
+	case CELL_GCM_TEXTURE_D1R5G5B5:
+		return w * h * 2;
+	case CELL_GCM_TEXTURE_Y16_X16_FLOAT:
+		return w * h * 4;
+	case CELL_GCM_TEXTURE_D8R8G8B8:
+		return w * h * 4;
+	case CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8:
+		return w * h * 4;
+	case CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8:
+		return w * h * 4;
 	}
 }
