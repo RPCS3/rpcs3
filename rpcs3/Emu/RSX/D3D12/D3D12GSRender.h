@@ -452,7 +452,6 @@ public:
 private:
 	void InitD2DStructures();
 	void ReleaseD2DStructures();
-	ID3D12Resource *writeColorBuffer(ID3D12Resource *RTT, ID3D12GraphicsCommandList *cmdlist);
 
 	bool LoadProgram();
 
