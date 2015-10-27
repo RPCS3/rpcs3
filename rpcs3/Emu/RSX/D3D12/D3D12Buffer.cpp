@@ -118,12 +118,16 @@ void D3D12GSRender::load_vertex_data(u32 first, u32 count)
 	vertex_draw_count += count;
 }
 
-
-void D3D12GSRender::upload_vertex_attributes()
+void D3D12GSRender::upload_vertex_attributes(const std::vector<std::pair<u32, u32> > &vertex_ranges)
 {
 	m_vertex_buffer_views.clear();
 	m_IASet.clear();
 	size_t inputSlot = 0;
+
+	size_t vertex_count = 0;
+
+	for (const auto &pair : vertex_ranges)
+		vertex_count += pair.second;
 
 	// First array attribute
 	for (int index = 0; index < rsx::limits::vertex_count; ++index)
@@ -136,14 +140,14 @@ void D3D12GSRender::upload_vertex_attributes()
 		u32 type_size = rsx::get_vertex_type_size(info.type);
 		u32 element_size = type_size * info.size;
 
-		size_t subBufferSize = element_size * vertex_draw_count;
+		size_t subBufferSize = element_size * vertex_count;
 		assert(m_vertexIndexData.canAlloc(subBufferSize));
 		size_t heapOffset = m_vertexIndexData.alloc(subBufferSize);
 
 		void *buffer;
 		ThrowIfFailed(m_vertexIndexData.m_heap->Map(0, &CD3DX12_RANGE(heapOffset, heapOffset + subBufferSize), (void**)&buffer));
 		void *bufferMap = (char*)buffer + heapOffset;
-		for (const auto &range : m_first_count_pairs)
+		for (const auto &range : vertex_ranges)
 		{
 			write_vertex_array_data_to_buffer(bufferMap, range.first, range.second, index, info);
 			bufferMap = (char*)bufferMap + range.second * element_size;
@@ -210,73 +214,11 @@ void D3D12GSRender::upload_vertex_attributes()
 		IAElement.InstanceDataStepRate = 1;
 		m_IASet.push_back(IAElement);
 	}
-	m_first_count_pairs.clear();
 }
 
-D3D12_INDEX_BUFFER_VIEW D3D12GSRender::uploadIndexBuffers(bool indexed_draw)
+void D3D12GSRender::load_vertex_index_data(u32 first, u32 count)
 {
-	D3D12_INDEX_BUFFER_VIEW indexBufferView = {};
-
-	// No need for index buffer
-	if (!indexed_draw && isNativePrimitiveMode(draw_mode))
-	{
-		m_renderingInfo.m_indexed = false;
-		m_renderingInfo.m_count = vertex_draw_count;
-		m_renderingInfo.m_baseVertex = 0;
-		return indexBufferView;
-	}
-
 	m_renderingInfo.m_indexed = true;
-
-	u32 indexed_type = rsx::method_registers[NV4097_SET_INDEX_ARRAY_DMA] >> 4;
-
-	// Index type
-	size_t indexSize;
-	if (!indexed_draw)
-	{
-		indexBufferView.Format = DXGI_FORMAT_R16_UINT;
-		indexSize = 2;
-	}
-	else
-	{
-		switch (indexed_type)
-		{
-		default: abort();
-		case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_16:
-			indexBufferView.Format = DXGI_FORMAT_R16_UINT;
-			indexSize = 2;
-			break;
-		case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_32:
-			indexBufferView.Format = DXGI_FORMAT_R32_UINT;
-			indexSize = 4;
-			break;
-		}
-	}
-
-	// Index count
-	m_renderingInfo.m_count = getIndexCount(draw_mode, indexed_draw ? (u32)(vertex_index_array.size() / indexSize) : vertex_draw_count);
-
-	// Base vertex
-	if (!indexed_draw && isNativePrimitiveMode(draw_mode))
-		m_renderingInfo.m_baseVertex = 0;
-	else
-		m_renderingInfo.m_baseVertex = 0;
-
-	// Alloc
-	size_t subBufferSize = align(m_renderingInfo.m_count * indexSize, 64);
-
-	assert(m_vertexIndexData.canAlloc(subBufferSize));
-	size_t heapOffset = m_vertexIndexData.alloc(subBufferSize);
-
-	void *buffer;
-	ThrowIfFailed(m_vertexIndexData.m_heap->Map(0, &CD3DX12_RANGE(heapOffset, heapOffset + subBufferSize), (void**)&buffer));
-	void *bufferMap = (char*)buffer + heapOffset;
-	uploadIndexData(draw_mode, indexed_type, indexed_draw ? vertex_index_array.data() : nullptr, bufferMap, indexed_draw ? (u32)(vertex_index_array.size() / indexSize) : vertex_draw_count);
-	m_vertexIndexData.m_heap->Unmap(0, &CD3DX12_RANGE(heapOffset, heapOffset + subBufferSize));
-	m_timers.m_bufferUploadSize += subBufferSize;
-	indexBufferView.SizeInBytes = (UINT)subBufferSize;
-	indexBufferView.BufferLocation = m_vertexIndexData.m_heap->GetGPUVirtualAddress() + heapOffset;
-	return indexBufferView;
 }
 
 void D3D12GSRender::setScaleOffset(size_t descriptorIndex)
@@ -419,4 +361,83 @@ void D3D12GSRender::FillPixelShaderConstantsBuffer(size_t descriptorIndex)
 		CD3DX12_CPU_DESCRIPTOR_HANDLE(getCurrentResourceStorage().m_descriptorsHeap->GetCPUDescriptorHandleForHeapStart())
 		.Offset((INT)descriptorIndex, g_descriptorStrideSRVCBVUAV));
 }
+
+void D3D12GSRender::upload_vertex_index_data(ID3D12GraphicsCommandList *cmdlist)
+{
+	// Index count
+	m_renderingInfo.m_count = 0;
+	for (const auto &pair : m_first_count_pairs)
+		m_renderingInfo.m_count += getIndexCount(draw_mode, pair.second);
+
+	if (!m_renderingInfo.m_indexed)
+	{
+		// Non indexed
+		upload_vertex_attributes(m_first_count_pairs);
+		cmdlist->IASetVertexBuffers(0, (UINT)m_vertex_buffer_views.size(), m_vertex_buffer_views.data());
+		if (isNativePrimitiveMode(draw_mode))
+			return;
+		// Handle non native primitive
+
+		// Alloc
+		size_t subBufferSize = align(m_renderingInfo.m_count * sizeof(u16), 64);
+		assert(m_vertexIndexData.canAlloc(subBufferSize));
+		size_t heapOffset = m_vertexIndexData.alloc(subBufferSize);
+
+		void *buffer;
+		ThrowIfFailed(m_vertexIndexData.m_heap->Map(0, &CD3DX12_RANGE(heapOffset, heapOffset + subBufferSize), (void**)&buffer));
+		void *bufferMap = (char*)buffer + heapOffset;
+		size_t first = 0;
+		for (const auto &pair : m_first_count_pairs)
+		{
+			size_t element_count = getIndexCount(draw_mode, pair.second);
+			write_index_array_for_non_indexed_non_native_primitive_to_buffer((char*)bufferMap, draw_mode, first, pair.second);
+			bufferMap = (char*)bufferMap + element_count * sizeof(u16);
+			first += pair.second;
+		}
+		m_vertexIndexData.m_heap->Unmap(0, &CD3DX12_RANGE(heapOffset, heapOffset + subBufferSize));
+		D3D12_INDEX_BUFFER_VIEW indexBufferView = {
+			m_vertexIndexData.m_heap->GetGPUVirtualAddress() + heapOffset,
+			(UINT)subBufferSize,
+			DXGI_FORMAT_R16_UINT
+		};
+		cmdlist->IASetIndexBuffer(&indexBufferView);
+		m_renderingInfo.m_indexed = true;
+	}
+	else
+	{
+		u32 indexed_type = rsx::method_registers[NV4097_SET_INDEX_ARRAY_DMA] >> 4;
+
+		// Index type
+		size_t indexSize = (indexed_type == CELL_GCM_DRAW_INDEX_ARRAY_TYPE_16) ? 2 : 4;
+
+		// Alloc
+		size_t subBufferSize = align(m_renderingInfo.m_count * indexSize, 64);
+		assert(m_vertexIndexData.canAlloc(subBufferSize));
+		size_t heapOffset = m_vertexIndexData.alloc(subBufferSize);
+
+		void *buffer;
+		ThrowIfFailed(m_vertexIndexData.m_heap->Map(0, &CD3DX12_RANGE(heapOffset, heapOffset + subBufferSize), (void**)&buffer));
+		void *bufferMap = (char*)buffer + heapOffset;
+		u32 min_index = (u32)-1, max_index = 0;
+		for (const auto &pair : m_first_count_pairs)
+		{
+			size_t element_count = getIndexCount(draw_mode, pair.second);
+			write_index_array_data_to_buffer((char*)bufferMap, draw_mode, pair.first, pair.second, min_index, max_index);
+			bufferMap = (char*)bufferMap + element_count * indexSize;
+		}
+		m_vertexIndexData.m_heap->Unmap(0, &CD3DX12_RANGE(heapOffset, heapOffset + subBufferSize));
+		D3D12_INDEX_BUFFER_VIEW indexBufferView = {
+			m_vertexIndexData.m_heap->GetGPUVirtualAddress() + heapOffset,
+			(UINT)subBufferSize,
+			(indexed_type == CELL_GCM_DRAW_INDEX_ARRAY_TYPE_16) ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT
+		};
+		m_timers.m_bufferUploadSize += subBufferSize;
+		cmdlist->IASetIndexBuffer(&indexBufferView);
+		m_renderingInfo.m_indexed = true;
+
+		upload_vertex_attributes({ std::make_pair(0, max_index + 1) });
+		cmdlist->IASetVertexBuffers(0, (UINT)m_vertex_buffer_views.size(), m_vertex_buffer_views.data());
+	}
+}
+
 #endif

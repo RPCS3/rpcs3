@@ -244,7 +244,7 @@ D3D12GSRender::D3D12GSRender()
 	m_rtts.Init(m_device.Get());
 
 	m_constantsData.Init(m_device.Get(), 1024 * 1024 * 64, D3D12_HEAP_TYPE_UPLOAD, D3D12_HEAP_FLAG_NONE);
-	m_vertexIndexData.Init(m_device.Get(), 1024 * 1024 * 256, D3D12_HEAP_TYPE_UPLOAD, D3D12_HEAP_FLAG_NONE);
+	m_vertexIndexData.Init(m_device.Get(), 1024 * 1024 * 384, D3D12_HEAP_TYPE_UPLOAD, D3D12_HEAP_FLAG_NONE);
 	m_textureUploadData.Init(m_device.Get(), 1024 * 1024 * 512, D3D12_HEAP_TYPE_UPLOAD, D3D12_HEAP_FLAG_NONE);
 
 	if (rpcs3::config.rsx.d3d12.overlay.value())
@@ -413,13 +413,7 @@ void D3D12GSRender::end()
 	std::chrono::time_point<std::chrono::system_clock> vertexIndexDurationStart = std::chrono::system_clock::now();
 
 	if (!vertex_index_array.empty() || vertex_draw_count)
-	{
-		upload_vertex_attributes();
-		const D3D12_INDEX_BUFFER_VIEW &indexBufferView = uploadIndexBuffers(!vertex_index_array.empty());
-		getCurrentResourceStorage().m_commandList->IASetVertexBuffers(0, (UINT)m_vertex_buffer_views.size(), m_vertex_buffer_views.data());
-		if (m_renderingInfo.m_indexed)
-			getCurrentResourceStorage().m_commandList->IASetIndexBuffer(&indexBufferView);
-	}
+		upload_vertex_index_data(getCurrentResourceStorage().m_commandList.Get());
 
 	std::chrono::time_point<std::chrono::system_clock> vertexIndexDurationEnd = std::chrono::system_clock::now();
 	m_timers.m_vertexIndexDuration += std::chrono::duration_cast<std::chrono::microseconds>(vertexIndexDurationEnd - vertexIndexDurationStart).count();
@@ -434,7 +428,7 @@ void D3D12GSRender::end()
 	std::chrono::time_point<std::chrono::system_clock> programLoadEnd = std::chrono::system_clock::now();
 	m_timers.m_programLoadDuration += std::chrono::duration_cast<std::chrono::microseconds>(programLoadEnd - programLoadStart).count();
 
-	getCurrentResourceStorage().m_commandList->SetGraphicsRootSignature(m_rootSignatures[m_PSO->second].Get());
+	getCurrentResourceStorage().m_commandList->SetGraphicsRootSignature(m_rootSignatures[std::get<2>(*m_PSO)].Get());
 	getCurrentResourceStorage().m_commandList->OMSetStencilRef(rsx::method_registers[NV4097_SET_STENCIL_FUNC_REF]);
 
 	std::chrono::time_point<std::chrono::system_clock> constantsDurationStart = std::chrono::system_clock::now();
@@ -448,15 +442,15 @@ void D3D12GSRender::end()
 	std::chrono::time_point<std::chrono::system_clock> constantsDurationEnd = std::chrono::system_clock::now();
 	m_timers.m_constantsDuration += std::chrono::duration_cast<std::chrono::microseconds>(constantsDurationEnd - constantsDurationStart).count();
 
-	getCurrentResourceStorage().m_commandList->SetPipelineState(m_PSO->first);
+	getCurrentResourceStorage().m_commandList->SetPipelineState(std::get<0>(*m_PSO));
 
 	std::chrono::time_point<std::chrono::system_clock> textureDurationStart = std::chrono::system_clock::now();
-	if (m_PSO->second > 0)
+	if (std::get<2>(*m_PSO) > 0)
 	{
 		size_t usedTexture = UploadTextures(getCurrentResourceStorage().m_commandList.Get(), currentDescriptorIndex + 3);
 
 		// Fill empty slots
-		for (; usedTexture < m_PSO->second; usedTexture++)
+		for (; usedTexture < std::get<2>(*m_PSO); usedTexture++)
 		{
 			D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 			srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
@@ -595,9 +589,9 @@ void D3D12GSRender::end()
 	}
 
 	if (m_renderingInfo.m_indexed)
-		getCurrentResourceStorage().m_commandList->DrawIndexedInstanced((UINT)m_renderingInfo.m_count, 1, 0, (UINT)m_renderingInfo.m_baseVertex, 0);
+		getCurrentResourceStorage().m_commandList->DrawIndexedInstanced((UINT)m_renderingInfo.m_count, 1, 0, 0, 0);
 	else
-		getCurrentResourceStorage().m_commandList->DrawInstanced((UINT)m_renderingInfo.m_count, 1, (UINT)m_renderingInfo.m_baseVertex, 0);
+		getCurrentResourceStorage().m_commandList->DrawInstanced((UINT)m_renderingInfo.m_count, 1, 0, 0);
 
 	vertex_index_array.clear();
 	std::chrono::time_point<std::chrono::system_clock> endDuration = std::chrono::system_clock::now();
@@ -610,7 +604,8 @@ void D3D12GSRender::end()
 		m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**)getCurrentResourceStorage().m_commandList.GetAddressOf());
 		getCurrentResourceStorage().setNewCommandList();
 	}
-
+	m_first_count_pairs.clear();
+	m_renderingInfo.m_indexed = false;
 	thread::end();
 }
 

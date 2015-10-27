@@ -16,6 +16,7 @@ struct D3D12PipelineProperties
 	unsigned numMRT : 3;
 	D3D12_DEPTH_STENCIL_DESC DepthStencil;
 	D3D12_RASTERIZER_DESC Rasterization;
+	D3D12_INDEX_BUFFER_STRIP_CUT_VALUE CutValue;
 
 	bool operator==(const D3D12PipelineProperties &in) const
 	{
@@ -90,6 +91,7 @@ public:
 
 	u32 id;
 	ComPtr<ID3DBlob> bytecode;
+	std::vector<size_t> vertex_shader_inputs;
 	std::vector<size_t> FragmentConstantOffsetCache;
 	size_t m_textureCount;
 
@@ -103,11 +105,40 @@ public:
 	void Compile(const std::string &code, enum class SHADER_TYPE st);
 };
 
+static
+bool has_attribute(size_t attribute, const std::vector<D3D12_INPUT_ELEMENT_DESC> &desc)
+{
+	for (const auto &attribute_desc : desc)
+	{
+		if (attribute_desc.SemanticIndex == attribute)
+			return true;
+	}
+	return false;
+}
+
+static
+std::vector<D3D12_INPUT_ELEMENT_DESC> completes_IA_desc(const std::vector<D3D12_INPUT_ELEMENT_DESC> &desc, const std::vector<size_t> &inputs)
+{
+	std::vector<D3D12_INPUT_ELEMENT_DESC> result(desc);
+	for (size_t attribute : inputs)
+	{
+		if (has_attribute(attribute, desc))
+			continue;
+		D3D12_INPUT_ELEMENT_DESC extra_ia_desc = {};
+		extra_ia_desc.SemanticIndex = (UINT)attribute;
+		extra_ia_desc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+		extra_ia_desc.SemanticName = "TEXCOORD";
+		extra_ia_desc.InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
+		result.push_back(extra_ia_desc);
+	}
+	return result;
+}
+
 struct D3D12Traits
 {
 	typedef Shader VertexProgramData;
 	typedef Shader FragmentProgramData;
-	typedef std::pair<ID3D12PipelineState *, size_t> PipelineData;
+	typedef std::tuple<ID3D12PipelineState *, std::vector<size_t>, size_t> PipelineData;
 	typedef D3D12PipelineProperties PipelineProperties;
 	typedef std::pair<ID3D12Device *, ComPtr<ID3D12RootSignature> *> ExtraData;
 
@@ -144,7 +175,7 @@ struct D3D12Traits
 		D3D12VertexProgramDecompiler VS(RSXVP->data);
 		std::string shaderCode = VS.Decompile();
 		vertexProgramData.Compile(shaderCode, Shader::SHADER_TYPE::SHADER_TYPE_VERTEX);
-
+		vertexProgramData.vertex_shader_inputs = VS.input_slots;
 		// TODO: This shouldn't use current dir
 		std::string filename = "./VertexProgram" + std::to_string(ID) + ".hlsl";
 		fs::file(filename, fom::write | fom::create | fom::trunc).write(shaderCode.c_str(), shaderCode.size());
@@ -155,7 +186,7 @@ struct D3D12Traits
 	PipelineData *BuildProgram(VertexProgramData &vertexProgramData, FragmentProgramData &fragmentProgramData, const PipelineProperties &pipelineProperties, const ExtraData& extraData)
 	{
 
-		std::pair<ID3D12PipelineState *, size_t> *result = new std::pair<ID3D12PipelineState *, size_t>();
+		std::tuple<ID3D12PipelineState *, std::vector<size_t>, size_t> *result = new std::tuple<ID3D12PipelineState *, std::vector<size_t>, size_t>();
 		D3D12_GRAPHICS_PIPELINE_STATE_DESC graphicPipelineStateDesc = {};
 
 		if (vertexProgramData.bytecode == nullptr)
@@ -169,7 +200,7 @@ struct D3D12Traits
 		graphicPipelineStateDesc.PS.pShaderBytecode = fragmentProgramData.bytecode->GetBufferPointer();
 
 		graphicPipelineStateDesc.pRootSignature = extraData.second[fragmentProgramData.m_textureCount].Get();
-		result->second = fragmentProgramData.m_textureCount;
+		std::get<2>(*result) = fragmentProgramData.m_textureCount;
 
 		graphicPipelineStateDesc.BlendState = pipelineProperties.Blend;
 		graphicPipelineStateDesc.DepthStencilState = pipelineProperties.DepthStencil;
@@ -181,20 +212,25 @@ struct D3D12Traits
 			graphicPipelineStateDesc.RTVFormats[i] = pipelineProperties.RenderTargetsFormat;
 		graphicPipelineStateDesc.DSVFormat = pipelineProperties.DepthStencilFormat;
 
-		graphicPipelineStateDesc.InputLayout.pInputElementDescs = pipelineProperties.IASet.data();
-		graphicPipelineStateDesc.InputLayout.NumElements = (UINT)pipelineProperties.IASet.size();
+		const std::vector<D3D12_INPUT_ELEMENT_DESC> &completed_IA_desc = completes_IA_desc(pipelineProperties.IASet, vertexProgramData.vertex_shader_inputs);
+
+		graphicPipelineStateDesc.InputLayout.pInputElementDescs = completed_IA_desc.data();
+		graphicPipelineStateDesc.InputLayout.NumElements = (UINT)completed_IA_desc.size();
 		graphicPipelineStateDesc.SampleDesc.Count = 1;
 		graphicPipelineStateDesc.SampleMask = UINT_MAX;
 		graphicPipelineStateDesc.NodeMask = 1;
 
-		extraData.first->CreateGraphicsPipelineState(&graphicPipelineStateDesc, IID_PPV_ARGS(&result->first));
+		graphicPipelineStateDesc.IBStripCutValue = pipelineProperties.CutValue;
+
+		extraData.first->CreateGraphicsPipelineState(&graphicPipelineStateDesc, IID_PPV_ARGS(&std::get<0>(*result)));
+		std::get<1>(*result) = vertexProgramData.vertex_shader_inputs;
 		return result;
 	}
 
 	static
 	void DeleteProgram(PipelineData *ptr)
 	{
-		ptr->first->Release();
+		std::get<0>(*ptr)->Release();
 		delete ptr;
 	}
 };

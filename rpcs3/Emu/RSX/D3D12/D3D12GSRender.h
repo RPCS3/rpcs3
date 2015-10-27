@@ -309,7 +309,7 @@ private:
 
 	RSXFragmentProgram fragment_program;
 	PipelineStateObjectCache m_cachePSO;
-	std::pair<ID3D12PipelineState *, size_t> *m_PSO;
+	std::tuple<ID3D12PipelineState *, std::vector<size_t>, size_t> *m_PSO;
 	std::unordered_map<u32, color4f> local_transform_constants;
 
 	struct
@@ -405,19 +405,18 @@ private:
 	ResourceStorage &getNonCurrentResourceStorage();
 
 	// Constants storage
-	DataHeap<ID3D12Resource, 256> m_constantsData;
+	DataHeap<ID3D12Resource, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT> m_constantsData;
 	// Vertex storage
-	DataHeap<ID3D12Resource, 256> m_vertexIndexData;
+	DataHeap<ID3D12Resource, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT> m_vertexIndexData;
 	// Texture storage
-	DataHeap<ID3D12Resource, 65536> m_textureUploadData;
-	DataHeap<ID3D12Heap, 65536> m_UAVHeap;
-	DataHeap<ID3D12Heap, 65536> m_readbackResources;
+	DataHeap<ID3D12Resource, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT> m_textureUploadData;
+	DataHeap<ID3D12Heap, D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT> m_UAVHeap;
+	DataHeap<ID3D12Heap, D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT> m_readbackResources;
 
 	struct
 	{
 		bool m_indexed; /*<! is draw call using an index buffer */
 		size_t m_count; /*<! draw call vertex count */
-		size_t m_baseVertex; /*<! Starting vertex for draw call */
 	} m_renderingInfo;
 
 	RenderTargets m_rtts;
@@ -458,19 +457,19 @@ private:
 
 	bool LoadProgram();
 
+	/**
+	* Create vertex and index buffers (if needed) and set them to cmdlist.
+	* Non native primitive type are emulated by index buffers expansion.
+	*/
+	void upload_vertex_index_data(ID3D12GraphicsCommandList *cmdlist);
+
 	std::vector<std::pair<u32, u32> > m_first_count_pairs;
 	/**
-	 * Upload all vertex attribute whose (first, count) info were previously accumulated.
+	 * Upload all enabled vertex attributes for vertex in ranges described by vertex_ranges.
+	 * A range in vertex_range is a pair whose first element is the index of the beginning of the
+	 * range, and whose second element is the number of vertex in this range.
 	 */
-	void upload_vertex_attributes();
-
-	/**
-	 * Create index buffer for indexed rendering and non native primitive format if nedded, and
-	 * update m_renderingInfo member accordingly. If m_renderingInfo::m_indexed is true,
-	 * returns an index buffer view that can be passed to a command list.
-	 */
-	D3D12_INDEX_BUFFER_VIEW uploadIndexBuffers(bool indexed_draw = false);
-
+	void upload_vertex_attributes(const std::vector<std::pair<u32, u32> > &vertex_ranges);
 
 	void setScaleOffset(size_t descriptorIndex);
 	void FillVertexShaderConstantsBuffer(size_t descriptorIndex);
@@ -504,4 +503,5 @@ protected:
 	virtual void flip(int buffer) override;
 
 	virtual void load_vertex_data(u32 first, u32 count) override;
+	virtual void load_vertex_index_data(u32 first, u32 count) override;
 };

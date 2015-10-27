@@ -43,9 +43,13 @@ void D3D12VertexProgramDecompiler::insertInputs(std::stringstream & OS, const st
 	for (const ParamType PT : inputs)
 	{
 		for (const ParamItem &PI : PT.items)
+		{
 			OS << "	" << PT.type << " " << PI.name << ": TEXCOORD" << PI.location << ";" << std::endl;
+			input_slots.push_back(PI.location);
+		}
 	}
 	OS << "};" << std::endl;
+
 }
 
 void D3D12VertexProgramDecompiler::insertConstants(std::stringstream & OS, const std::vector<ParamType> & constants)
@@ -132,6 +136,8 @@ void D3D12VertexProgramDecompiler::insertMainStart(std::stringstream & OS)
 			OS << "	" << PT.type << " " << PI.name;
 			if (!PI.value.empty())
 				OS << " = " << PI.value;
+			else
+				OS << " = " << "float4(0., 0., 0., 0.);";
 			OS << ";" << std::endl;
 		}
 	}
