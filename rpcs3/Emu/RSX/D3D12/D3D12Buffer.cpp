@@ -12,10 +12,10 @@ namespace
 /**
  * 
  */
-D3D12_GPU_VIRTUAL_ADDRESS createVertexBuffer(const rsx::data_array_format_info &vertex_array_desc, const std::vector<u8> &vertex_data, ID3D12Device *device, DataHeap<ID3D12Resource, 65536> &vertex_index_heap)
+D3D12_GPU_VIRTUAL_ADDRESS createVertexBuffer(const rsx::data_array_format_info &vertex_array_desc, const std::vector<u8> &vertex_data, ID3D12Device *device, data_heap<ID3D12Resource, 65536> &vertex_index_heap)
 {
 	size_t buffer_size = vertex_data.size();
-	assert(vertex_index_heap.canAlloc(buffer_size));
+	assert(vertex_index_heap.can_alloc(buffer_size));
 	size_t heap_offset = vertex_index_heap.alloc(buffer_size);
 
 	void *buffer;
@@ -57,7 +57,7 @@ void D3D12GSRender::upload_vertex_attributes(const std::vector<std::pair<u32, u3
 		u32 element_size = type_size * info.size;
 
 		size_t buffer_size = element_size * vertex_count;
-		assert(m_vertexIndexData.canAlloc(buffer_size));
+		assert(m_vertexIndexData.can_alloc(buffer_size));
 		size_t heap_offset = m_vertexIndexData.alloc(buffer_size);
 
 		void *buffer;
@@ -107,7 +107,7 @@ void D3D12GSRender::upload_vertex_attributes(const std::vector<std::pair<u32, u3
 		u32 element_size = type_size * info.size;
 
 		size_t buffer_size = data.size();
-		assert(m_vertexIndexData.canAlloc(buffer_size));
+		assert(m_vertexIndexData.can_alloc(buffer_size));
 		size_t heap_offset = m_vertexIndexData.alloc(buffer_size);
 
 		void *buffer;
@@ -166,7 +166,7 @@ void D3D12GSRender::setScaleOffset(size_t descriptorIndex)
 	scale_offset_matrix[3] /= clip_w / 2.f;
 	scale_offset_matrix[7] /= clip_h / 2.f;
 
-	assert(m_constantsData.canAlloc(256));
+	assert(m_constantsData.can_alloc(256));
 	size_t heap_offset = m_constantsData.alloc(256);
 
 	// Scale offset buffer
@@ -185,7 +185,7 @@ void D3D12GSRender::setScaleOffset(size_t descriptorIndex)
 		256
 	};
 	m_device->CreateConstantBufferView(&constant_buffer_view_desc,
-		CD3DX12_CPU_DESCRIPTOR_HANDLE(getCurrentResourceStorage().m_descriptorsHeap->GetCPUDescriptorHandleForHeapStart())
+		CD3DX12_CPU_DESCRIPTOR_HANDLE(getCurrentResourceStorage().descriptors_heap->GetCPUDescriptorHandleForHeapStart())
 		.Offset((INT)descriptorIndex, g_descriptorStrideSRVCBVUAV));
 }
 
@@ -196,7 +196,7 @@ void D3D12GSRender::FillVertexShaderConstantsBuffer(size_t descriptor_index)
 
 	size_t buffer_size = 512 * 4 * sizeof(float);
 
-	assert(m_constantsData.canAlloc(buffer_size));
+	assert(m_constantsData.can_alloc(buffer_size));
 	size_t heap_offset = m_constantsData.alloc(buffer_size);
 
 	void *mapped_buffer;
@@ -218,7 +218,7 @@ void D3D12GSRender::FillVertexShaderConstantsBuffer(size_t descriptor_index)
 		(UINT)buffer_size
 	};
 	m_device->CreateConstantBufferView(&constant_buffer_view_desc,
-		CD3DX12_CPU_DESCRIPTOR_HANDLE(getCurrentResourceStorage().m_descriptorsHeap->GetCPUDescriptorHandleForHeapStart())
+		CD3DX12_CPU_DESCRIPTOR_HANDLE(getCurrentResourceStorage().descriptors_heap->GetCPUDescriptorHandleForHeapStart())
 		.Offset((INT)descriptor_index, g_descriptorStrideSRVCBVUAV));
 }
 
@@ -230,7 +230,7 @@ void D3D12GSRender::FillPixelShaderConstantsBuffer(size_t descriptor_index)
 	// Multiple of 256 never 0
 	buffer_size = (buffer_size + 255) & ~255;
 
-	assert(m_constantsData.canAlloc(buffer_size));
+	assert(m_constantsData.can_alloc(buffer_size));
 	size_t heap_offset = m_constantsData.alloc(buffer_size);
 
 	size_t offset = 0;
@@ -261,7 +261,7 @@ void D3D12GSRender::FillPixelShaderConstantsBuffer(size_t descriptor_index)
 		(UINT)buffer_size
 	};
 	m_device->CreateConstantBufferView(&constant_buffer_view_desc,
-		CD3DX12_CPU_DESCRIPTOR_HANDLE(getCurrentResourceStorage().m_descriptorsHeap->GetCPUDescriptorHandleForHeapStart())
+		CD3DX12_CPU_DESCRIPTOR_HANDLE(getCurrentResourceStorage().descriptors_heap->GetCPUDescriptorHandleForHeapStart())
 		.Offset((INT)descriptor_index, g_descriptorStrideSRVCBVUAV));
 }
 
@@ -283,7 +283,7 @@ void D3D12GSRender::upload_vertex_index_data(ID3D12GraphicsCommandList *command_
 
 		// Alloc
 		size_t buffer_size = align(m_renderingInfo.m_count * sizeof(u16), 64);
-		assert(m_vertexIndexData.canAlloc(buffer_size));
+		assert(m_vertexIndexData.can_alloc(buffer_size));
 		size_t heap_offset = m_vertexIndexData.alloc(buffer_size);
 
 		void *buffer;
@@ -315,7 +315,7 @@ void D3D12GSRender::upload_vertex_index_data(ID3D12GraphicsCommandList *command_
 
 		// Alloc
 		size_t buffer_size = align(m_renderingInfo.m_count * index_size, 64);
-		assert(m_vertexIndexData.canAlloc(buffer_size));
+		assert(m_vertexIndexData.can_alloc(buffer_size));
 		size_t heap_offset = m_vertexIndexData.alloc(buffer_size);
 
 		void *buffer;
