@@ -19,6 +19,7 @@ GSFrame::GSFrame(const wxString& title) : wxFrame(nullptr, wxID_ANY, "GSFrame[" 
 {
 	SetIcon(wxICON(frame_icon));
 
+	m_frames = 0;
 	CellVideoOutResolution res = ResolutionTable[ResolutionIdToNum((u32)rpcs3::state.config.rsx.resolution.value())];
 	SetClientSize(res.width, res.height);
 	wxGetApp().Bind(wxEVT_KEY_DOWN, &GSFrame::OnKeyDown, this);
