@@ -476,9 +476,9 @@ private:
 	 * Fetch all textures recorded in the state in the render target cache and in the texture cache.
 	 * If a texture is not cached, populate cmdlist with uploads command.
 	 * Create necessary resource view/sampler descriptors in the per frame storage struct.
-	 * returns the number of texture uploaded.
+	 * If the count of enabled texture is below texture_count, fills with dummy texture and sampler.
 	 */
-	size_t UploadTextures(ID3D12GraphicsCommandList *cmdlist, size_t descriptorIndex);
+	void upload_and_bind_textures(ID3D12GraphicsCommandList *command_list, size_t descriptor_index, size_t texture_count);
 
 	/**
 	 * Creates render target if necessary.

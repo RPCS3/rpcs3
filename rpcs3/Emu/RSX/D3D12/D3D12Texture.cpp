@@ -124,7 +124,7 @@ void update_existing_texture(
 }
 }
 
-size_t D3D12GSRender::UploadTextures(ID3D12GraphicsCommandList *cmdlist, size_t descriptor_index)
+void D3D12GSRender::upload_and_bind_textures(ID3D12GraphicsCommandList *command_list, size_t descriptor_index, size_t texture_count)
 {
 	size_t used_texture = 0;
 
@@ -152,7 +152,7 @@ size_t D3D12GSRender::UploadTextures(ID3D12GraphicsCommandList *cmdlist, size_t 
 		{
 			if (cached_texture->first.m_isDirty)
 			{
-				update_existing_texture(textures[i], cmdlist, m_textureUploadData, cached_texture->second.Get());
+				update_existing_texture(textures[i], command_list, m_textureUploadData, cached_texture->second.Get());
 				m_textureCache.protectData(texaddr, texaddr, get_texture_size(textures[i]));
 			}
 			vram_texture = cached_texture->second.Get();
@@ -161,7 +161,7 @@ size_t D3D12GSRender::UploadTextures(ID3D12GraphicsCommandList *cmdlist, size_t 
 		{
 			if (cached_texture != nullptr)
 				getCurrentResourceStorage().m_dirtyTextures.push_back(m_textureCache.removeFromCache(texaddr));
-			ComPtr<ID3D12Resource> tex = upload_single_texture(textures[i], m_device.Get(), cmdlist, m_textureUploadData);
+			ComPtr<ID3D12Resource> tex = upload_single_texture(textures[i], m_device.Get(), command_list, m_textureUploadData);
 			vram_texture = tex.Get();
 			m_textureCache.storeAndProtectData(texaddr, texaddr, get_texture_size(textures[i]), format, w, h, textures[i].mipmap(), tex);
 		}
@@ -306,6 +306,32 @@ size_t D3D12GSRender::UploadTextures(ID3D12GraphicsCommandList *cmdlist, size_t 
 		used_texture++;
 	}
 
-	return used_texture;
+	// Now fill remaining texture slots with dummy texture/sampler
+	for (; used_texture < texture_count; used_texture++)
+	{
+		D3D12_SHADER_RESOURCE_VIEW_DESC shader_resource_view_desc = {};
+		shader_resource_view_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+		shader_resource_view_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		shader_resource_view_desc.Texture2D.MipLevels = 1;
+		shader_resource_view_desc.Shader4ComponentMapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(
+			D3D12_SHADER_COMPONENT_MAPPING_FORCE_VALUE_0,
+			D3D12_SHADER_COMPONENT_MAPPING_FORCE_VALUE_0,
+			D3D12_SHADER_COMPONENT_MAPPING_FORCE_VALUE_0,
+			D3D12_SHADER_COMPONENT_MAPPING_FORCE_VALUE_0);
+		m_device->CreateShaderResourceView(m_dummyTexture, &shader_resource_view_desc,
+			CD3DX12_CPU_DESCRIPTOR_HANDLE(getCurrentResourceStorage().m_descriptorsHeap->GetCPUDescriptorHandleForHeapStart())
+			.Offset((INT)descriptor_index + (INT)used_texture, g_descriptorStrideSRVCBVUAV)
+			);
+
+		D3D12_SAMPLER_DESC sampler_desc = {};
+		sampler_desc.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
+		sampler_desc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+		sampler_desc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+		sampler_desc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+		m_device->CreateSampler(&sampler_desc,
+			CD3DX12_CPU_DESCRIPTOR_HANDLE(getCurrentResourceStorage().m_samplerDescriptorHeap[getCurrentResourceStorage().m_samplerDescriptorHeapIndex]->GetCPUDescriptorHandleForHeapStart())
+			.Offset((INT)getCurrentResourceStorage().m_currentSamplerIndex + (INT)used_texture, g_descriptorStrideSamplers)
+			);
+	}
 }
 #endif

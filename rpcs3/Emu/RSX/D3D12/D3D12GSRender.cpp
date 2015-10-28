@@ -471,35 +471,7 @@ void D3D12GSRender::end()
 	std::chrono::time_point<std::chrono::system_clock> texture_duration_start = std::chrono::system_clock::now();
 	if (std::get<2>(*m_PSO) > 0)
 	{
-		size_t used_texture = UploadTextures(getCurrentResourceStorage().m_commandList.Get(), currentDescriptorIndex + 3);
-
-		// Fill empty slots
-		for (; used_texture < std::get<2>(*m_PSO); used_texture++)
-		{
-			D3D12_SHADER_RESOURCE_VIEW_DESC shader_resource_view_desc = {};
-			shader_resource_view_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-			shader_resource_view_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-			shader_resource_view_desc.Texture2D.MipLevels = 1;
-			shader_resource_view_desc.Shader4ComponentMapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(
-				D3D12_SHADER_COMPONENT_MAPPING_FORCE_VALUE_0,
-				D3D12_SHADER_COMPONENT_MAPPING_FORCE_VALUE_0,
-				D3D12_SHADER_COMPONENT_MAPPING_FORCE_VALUE_0,
-				D3D12_SHADER_COMPONENT_MAPPING_FORCE_VALUE_0);
-			m_device->CreateShaderResourceView(m_dummyTexture, &shader_resource_view_desc,
-				CD3DX12_CPU_DESCRIPTOR_HANDLE(getCurrentResourceStorage().m_descriptorsHeap->GetCPUDescriptorHandleForHeapStart())
-				.Offset((INT)currentDescriptorIndex + 3 + (INT)used_texture, g_descriptorStrideSRVCBVUAV)
-				);
-
-			D3D12_SAMPLER_DESC sampler_desc = {};
-			sampler_desc.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
-			sampler_desc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-			sampler_desc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-			sampler_desc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-			m_device->CreateSampler(&sampler_desc,
-				CD3DX12_CPU_DESCRIPTOR_HANDLE(getCurrentResourceStorage().m_samplerDescriptorHeap[getCurrentResourceStorage().m_samplerDescriptorHeapIndex]->GetCPUDescriptorHandleForHeapStart())
-				.Offset((INT)getCurrentResourceStorage().m_currentSamplerIndex + (INT)used_texture, g_descriptorStrideSamplers)
-				);
-		}
+		upload_and_bind_textures(getCurrentResourceStorage().m_commandList.Get(), currentDescriptorIndex + 3, std::get<2>(*m_PSO) > 0);
 
 		ID3D12DescriptorHeap *descriptors[] =
 		{
@@ -517,8 +489,8 @@ void D3D12GSRender::end()
 			.Offset((INT)getCurrentResourceStorage().m_currentSamplerIndex, g_descriptorStrideSamplers)
 			);
 
-		getCurrentResourceStorage().m_currentSamplerIndex += used_texture;
-		getCurrentResourceStorage().m_descriptorsHeapIndex += used_texture + 3;
+		getCurrentResourceStorage().m_currentSamplerIndex += std::get<2>(*m_PSO);
+		getCurrentResourceStorage().m_descriptorsHeapIndex += std::get<2>(*m_PSO) + 3;
 	}
 	else
 	{
