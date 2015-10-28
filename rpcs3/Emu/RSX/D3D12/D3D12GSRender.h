@@ -87,7 +87,7 @@ private:
 		size_t m_flipDuration;
 	} m_timers;
 
-	void ResetTimer();
+	void reset_timer();
 
 	struct Shader
 	{
@@ -145,8 +145,6 @@ private:
 	// Used to fill unused texture slot
 	ID3D12Resource *m_dummyTexture;
 
-	size_t m_lastWidth, m_lastHeight, m_lastDepth;
-
 	// Store previous fbo addresses to detect RTT config changes.
 	u32 m_previous_address_a;
 	u32 m_previous_address_b;
@@ -154,26 +152,19 @@ private:
 	u32 m_previous_address_d;
 	u32 m_previous_address_z;
 public:
-	u32 m_draw_frames;
-	u32 m_skip_frames;
-
 	D3D12GSRender();
 	virtual ~D3D12GSRender();
-
-	void semaphore_PGRAPH_texture_read_release();
-	void semaphore_PGRAPH_backend_release();
-
 private:
-	void InitD2DStructures();
-	void ReleaseD2DStructures();
+	void init_d2d_structures();
+	void release_d2d_structures();
 
-	bool LoadProgram();
+	bool load_program();
 
 	/**
 	* Create vertex and index buffers (if needed) and set them to cmdlist.
 	* Non native primitive type are emulated by index buffers expansion.
 	*/
-	void upload_vertex_index_data(ID3D12GraphicsCommandList *cmdlist);
+	void upload_and_set_vertex_index_data(ID3D12GraphicsCommandList *command_list);
 
 	std::vector<std::pair<u32, u32> > m_first_count_pairs;
 	/**
@@ -183,9 +174,9 @@ private:
 	 */
 	void upload_vertex_attributes(const std::vector<std::pair<u32, u32> > &vertex_ranges);
 
-	void setScaleOffset(size_t descriptorIndex);
-	void FillVertexShaderConstantsBuffer(size_t descriptorIndex);
-	void FillPixelShaderConstantsBuffer(size_t descriptorIndex);
+	void upload_and_bind_scale_offset_matrix(size_t descriptor_index);
+	void upload_and_bind_vertex_shader_constants(size_t descriptor_index);
+	void upload_and_bind_fragment_shader_constants(size_t descriptorIndex);
 	/**
 	 * Fetch all textures recorded in the state in the render target cache and in the texture cache.
 	 * If a texture is not cached, populate cmdlist with uploads command.
@@ -199,14 +190,20 @@ private:
 	 * Populate cmdlist with render target state change (from RTT to generic read for previous rtt,
 	 * from generic to rtt for rtt in cache).
 	 */
-	void PrepareRenderTargets(ID3D12GraphicsCommandList *cmdlist);
+	void prepare_render_targets(ID3D12GraphicsCommandList *command_list);
 
 	/**
 	 * Render D2D overlay if enabled on top of the backbuffer.
 	 */
-	void renderOverlay();
+	void render_overlay();
 
 	void clear_surface(u32 arg);
+
+	/**
+	 * Copy currently bound current target to the dma location affecting them.
+	 * NOTE: We should also copy previously bound rtts.
+	 */
+	void copy_render_target_to_dma_location();
 
 protected:
 	virtual void onexit_thread() override;

@@ -140,7 +140,7 @@ void D3D12GSRender::load_vertex_index_data(u32 first, u32 count)
 	m_renderingInfo.m_indexed = true;
 }
 
-void D3D12GSRender::setScaleOffset(size_t descriptorIndex)
+void D3D12GSRender::upload_and_bind_scale_offset_matrix(size_t descriptorIndex)
 {
 	float scale_offset_matrix[16] =
 	{
@@ -189,7 +189,7 @@ void D3D12GSRender::setScaleOffset(size_t descriptorIndex)
 		.Offset((INT)descriptorIndex, g_descriptorStrideSRVCBVUAV));
 }
 
-void D3D12GSRender::FillVertexShaderConstantsBuffer(size_t descriptor_index)
+void D3D12GSRender::upload_and_bind_vertex_shader_constants(size_t descriptor_index)
 {
 	for (const auto &entry : transform_constants)
 		local_transform_constants[entry.first] = entry.second;
@@ -222,7 +222,7 @@ void D3D12GSRender::FillVertexShaderConstantsBuffer(size_t descriptor_index)
 		.Offset((INT)descriptor_index, g_descriptorStrideSRVCBVUAV));
 }
 
-void D3D12GSRender::FillPixelShaderConstantsBuffer(size_t descriptor_index)
+void D3D12GSRender::upload_and_bind_fragment_shader_constants(size_t descriptor_index)
 {
 	// Get constant from fragment program
 	const std::vector<size_t> &fragment_constant_offsets = m_cachePSO.getFragmentConstantOffsetsCache(&fragment_program);
@@ -265,7 +265,7 @@ void D3D12GSRender::FillPixelShaderConstantsBuffer(size_t descriptor_index)
 		.Offset((INT)descriptor_index, g_descriptorStrideSRVCBVUAV));
 }
 
-void D3D12GSRender::upload_vertex_index_data(ID3D12GraphicsCommandList *command_list)
+void D3D12GSRender::upload_and_set_vertex_index_data(ID3D12GraphicsCommandList *command_list)
 {
 	// Index count
 	m_renderingInfo.m_count = 0;

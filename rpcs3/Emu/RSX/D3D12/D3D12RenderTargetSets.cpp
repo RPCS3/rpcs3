@@ -13,7 +13,7 @@
 #include "D3D12GSRender.h"
 #include "D3D12Formats.h"
 
-void D3D12GSRender::PrepareRenderTargets(ID3D12GraphicsCommandList *copycmdlist)
+void D3D12GSRender::prepare_render_targets(ID3D12GraphicsCommandList *copycmdlist)
 {
 	u32 surface_format = rsx::method_registers[NV4097_SET_SURFACE_FORMAT];
 

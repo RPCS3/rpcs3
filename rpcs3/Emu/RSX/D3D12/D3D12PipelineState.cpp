@@ -34,7 +34,7 @@ void Shader::Compile(const std::string &code, SHADER_TYPE st)
 	}
 }
 
-bool D3D12GSRender::LoadProgram()
+bool D3D12GSRender::load_program()
 {
 	RSXVertexProgram vertex_program;
 	u32 transform_program_start = rsx::method_registers[NV4097_SET_TRANSFORM_PROGRAM_START];

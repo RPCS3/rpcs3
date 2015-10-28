@@ -22,7 +22,7 @@ ComPtr<ID2D1SolidColorBrush> m_textBrush;
 
 extern PFN_D3D11ON12_CREATE_DEVICE wrapD3D11On12CreateDevice;
 
-void D3D12GSRender::InitD2DStructures()
+void D3D12GSRender::init_d2d_structures()
 {
 	wrapD3D11On12CreateDevice(
 		m_device.Get(),
@@ -94,7 +94,7 @@ void D3D12GSRender::InitD2DStructures()
 	m_textFormat->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_NEAR);
 }
 
-void D3D12GSRender::ReleaseD2DStructures()
+void D3D12GSRender::release_d2d_structures()
 {
 	d3d11Device.Reset();
 	m_d3d11DeviceContext.Reset();
@@ -112,7 +112,7 @@ void D3D12GSRender::ReleaseD2DStructures()
 	m_textBrush.Reset();
 }
 
-void D3D12GSRender::renderOverlay()
+void D3D12GSRender::render_overlay()
 {
 	D2D1_SIZE_F rtSize = m_d2dRenderTargets[m_swapChain->GetCurrentBackBufferIndex()]->GetSize();
 	std::wstring duration = L"Draw duration : " + std::to_wstring(m_timers.m_drawCallDuration) + L" us";

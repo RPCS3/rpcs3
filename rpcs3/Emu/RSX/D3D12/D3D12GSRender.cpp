@@ -206,7 +206,7 @@ D3D12GSRender::D3D12GSRender()
 	m_textureUploadData.init(m_device.Get(), 1024 * 1024 * 512, D3D12_HEAP_TYPE_UPLOAD, D3D12_HEAP_FLAG_NONE);
 
 	if (rpcs3::config.rsx.d3d12.overlay.value())
-		InitD2DStructures();
+		init_d2d_structures();
 }
 
 D3D12GSRender::~D3D12GSRender()
@@ -230,7 +230,7 @@ D3D12GSRender::~D3D12GSRender()
 	m_rtts.Release();
 	m_outputScalingPass.Release();
 
-	ReleaseD2DStructures();
+	release_d2d_structures();
 }
 
 void D3D12GSRender::onexit_thread()
@@ -245,10 +245,10 @@ bool D3D12GSRender::domethod(u32 cmd, u32 arg)
 		clear_surface(arg);
 		return true;
 	case NV4097_TEXTURE_READ_SEMAPHORE_RELEASE:
-		semaphore_PGRAPH_texture_read_release();
+		copy_render_target_to_dma_location();
 		return false; //call rsx::thread method implementation
 	case NV4097_BACK_END_WRITE_SEMAPHORE_RELEASE:
-		semaphore_PGRAPH_backend_release();
+		copy_render_target_to_dma_location();
 		return false; //call rsx::thread method implementation
 
 	default:
@@ -312,7 +312,7 @@ void D3D12GSRender::clear_surface(u32 arg)
 	std::chrono::time_point<std::chrono::system_clock> start_duration = std::chrono::system_clock::now();
 
 	std::chrono::time_point<std::chrono::system_clock> rtt_duration_start = std::chrono::system_clock::now();
-	PrepareRenderTargets(getCurrentResourceStorage().command_list.Get());
+	prepare_render_targets(getCurrentResourceStorage().command_list.Get());
 
 	std::chrono::time_point<std::chrono::system_clock> rtt_duration_end = std::chrono::system_clock::now();
 	m_timers.m_rttDuration += std::chrono::duration_cast<std::chrono::microseconds>(rtt_duration_end - rtt_duration_start).count();
@@ -365,7 +365,7 @@ void D3D12GSRender::end()
 	std::chrono::time_point<std::chrono::system_clock> start_duration = std::chrono::system_clock::now();
 
 	std::chrono::time_point<std::chrono::system_clock> rtt_duration_start = std::chrono::system_clock::now();
-	PrepareRenderTargets(getCurrentResourceStorage().command_list.Get());
+	prepare_render_targets(getCurrentResourceStorage().command_list.Get());
 
 	std::chrono::time_point<std::chrono::system_clock> rtt_duration_end = std::chrono::system_clock::now();
 	m_timers.m_rttDuration += std::chrono::duration_cast<std::chrono::microseconds>(rtt_duration_end - rtt_duration_start).count();
@@ -373,13 +373,13 @@ void D3D12GSRender::end()
 	std::chrono::time_point<std::chrono::system_clock> vertex_index_duration_start = std::chrono::system_clock::now();
 
 	if (!vertex_index_array.empty() || vertex_draw_count)
-		upload_vertex_index_data(getCurrentResourceStorage().command_list.Get());
+		upload_and_set_vertex_index_data(getCurrentResourceStorage().command_list.Get());
 
 	std::chrono::time_point<std::chrono::system_clock> vertex_index_duration_end = std::chrono::system_clock::now();
 	m_timers.m_vertexIndexDuration += std::chrono::duration_cast<std::chrono::microseconds>(vertex_index_duration_end - vertex_index_duration_start).count();
 
 	std::chrono::time_point<std::chrono::system_clock> program_load_start = std::chrono::system_clock::now();
-	if (!LoadProgram())
+	if (!load_program())
 	{
 		LOG_ERROR(RSX, "LoadProgram failed.");
 		Emu.Pause();
@@ -395,9 +395,9 @@ void D3D12GSRender::end()
 
 	size_t currentDescriptorIndex = getCurrentResourceStorage().descriptors_heap_index;
 	// Constants
-	setScaleOffset(currentDescriptorIndex);
-	FillVertexShaderConstantsBuffer(currentDescriptorIndex + 1);
-	FillPixelShaderConstantsBuffer(currentDescriptorIndex + 2);
+	upload_and_bind_scale_offset_matrix(currentDescriptorIndex);
+	upload_and_bind_vertex_shader_constants(currentDescriptorIndex + 1);
+	upload_and_bind_fragment_shader_constants(currentDescriptorIndex + 2);
 
 	std::chrono::time_point<std::chrono::system_clock> constants_duration_end = std::chrono::system_clock::now();
 	m_timers.m_constantsDuration += std::chrono::duration_cast<std::chrono::microseconds>(constants_duration_end - constants_duration_start).count();
@@ -645,9 +645,9 @@ void D3D12GSRender::flip(int buffer)
 	m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**)getCurrentResourceStorage().command_list.GetAddressOf());
 
 	if(rpcs3::config.rsx.d3d12.overlay.value())
-		renderOverlay();
+		render_overlay();
 
-	ResetTimer();
+	reset_timer();
 
 	std::chrono::time_point<std::chrono::system_clock> flip_start = std::chrono::system_clock::now();
 
@@ -695,7 +695,7 @@ void D3D12GSRender::flip(int buffer)
 	m_timers.m_flipDuration += std::chrono::duration_cast<std::chrono::microseconds>(flip_end - flip_start).count();
 }
 
-void D3D12GSRender::ResetTimer()
+void D3D12GSRender::reset_timer()
 {
 	m_timers.m_drawCallCount = 0;
 	m_timers.m_drawCallDuration = 0;
@@ -785,12 +785,7 @@ void copy_readback_buffer_to_dest(void *dest, ID3D12Resource *res, size_t dst_pi
 }
 }
 
-void D3D12GSRender::semaphore_PGRAPH_texture_read_release()
-{
-	semaphore_PGRAPH_backend_release();
-}
-
-void D3D12GSRender::semaphore_PGRAPH_backend_release()
+void D3D12GSRender::copy_render_target_to_dma_location()
 {
 	// Add all buffer write
 	// Cell can't make any assumption about readyness of color/depth buffer
