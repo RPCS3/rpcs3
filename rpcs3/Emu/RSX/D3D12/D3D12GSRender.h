@@ -1,6 +1,6 @@
 #pragma once
 
-#include "D3D12.h"
+#include "D3D12Utils.h"
 #include "Utilities/rPlatform.h" // only for rImage
 #include "Utilities/File.h"
 #include "Utilities/Log.h"

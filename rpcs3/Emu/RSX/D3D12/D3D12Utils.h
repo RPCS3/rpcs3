@@ -9,8 +9,6 @@
 
 using namespace Microsoft::WRL;
 
-#define SAFE_RELEASE(x) if (x) x->Release();
-
 // From DX12 D3D11On12 Sample (MIT Licensed)
 inline void ThrowIfFailed(HRESULT hr)
 {
@@ -27,7 +25,6 @@ inline void ThrowIfFailed(HRESULT hr)
 inline
 void streamToBuffer(void* dst, void* src, size_t sizeInBytes)
 {
-#pragma omp parallel for
 	for (int i = 0; i < sizeInBytes / 16; i++)
 	{
 		const __m128i &srcPtr = _mm_loadu_si128((__m128i*) ((char*)src + i * 16));
@@ -45,7 +42,6 @@ void streamBuffer(void* dst, void* src, size_t sizeInBytes)
 	// Assume 64 bytes cache line
 	int offset = 0;
 	bool isAligned = !((size_t)src & 15);
-	#pragma omp parallel for
 	for (offset = 0; offset < sizeInBytes - 64; offset += 64)
 	{
 		char *line = (char*)src + offset;

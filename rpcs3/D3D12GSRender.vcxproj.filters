@@ -8,9 +8,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Emu\RSX\D3D12\D3D12.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
     <ClInclude Include="Emu\RSX\D3D12\D3D12Buffer.h">
       <Filter>Source Files</Filter>
     </ClInclude>
@@ -39,6 +36,9 @@
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="stdafx_d3d12.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\D3D12\D3D12Utils.h">
       <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>
