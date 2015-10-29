@@ -84,6 +84,7 @@ void D3D12VertexProgramDecompiler::insertOutputs(std::stringstream & OS, const s
 	OS << "	float4 dst_reg13 : TEXCOORD6;" << std::endl;
 	OS << "	float4 dst_reg14 : TEXCOORD7;" << std::endl;
 	OS << "	float4 dst_reg15 : TEXCOORD8;" << std::endl;
+	OS << "	float4 dst_reg16 : TEXCOORD9;" << std::endl;
 	OS << "};" << std::endl;
 }
 
