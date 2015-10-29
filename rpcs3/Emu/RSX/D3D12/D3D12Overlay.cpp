@@ -6,19 +6,55 @@
 #include <d3d11on12.h>
 #include <dxgi1_4.h>
 
+
+namespace
+{
 // D2D
-ComPtr<ID3D11Device> d3d11Device;
-ComPtr<ID3D11DeviceContext> m_d3d11DeviceContext;
-ComPtr<ID3D11On12Device> m_d3d11On12Device;
-ComPtr<ID3D12Device> m_d3d12Device;
-ComPtr<IDWriteFactory> m_dWriteFactory;
-ComPtr<ID2D1Factory3> m_d2dFactory;
-ComPtr<ID2D1Device2> m_d2dDevice;
-ComPtr<ID2D1DeviceContext2> m_d2dDeviceContext;
-ComPtr<ID3D11Resource> m_wrappedBackBuffers[2];
-ComPtr<ID2D1Bitmap1> m_d2dRenderTargets[2];
-ComPtr<IDWriteTextFormat> m_textFormat;
-ComPtr<ID2D1SolidColorBrush> m_textBrush;
+ComPtr<ID3D11Device> g_d3d11_device;
+ComPtr<ID3D11DeviceContext> g_d3d11_device_context;
+ComPtr<ID3D11On12Device> g_d3d11on12_device;
+ComPtr<ID3D12Device> g_d3d12_device;
+ComPtr<IDWriteFactory> g_dwrite_factory;
+ComPtr<ID2D1Factory3> g_d2d_factory;
+ComPtr<ID2D1Device2> g_d2d_device;
+ComPtr<ID2D1DeviceContext2> g_d2d_device_context;
+ComPtr<ID3D11Resource> g_wrapped_backbuffers[2];
+ComPtr<ID2D1Bitmap1> g_d2d_render_targets[2];
+ComPtr<IDWriteTextFormat> g_text_format;
+ComPtr<ID2D1SolidColorBrush> g_text_brush;
+
+void draw_strings(const D2D1_SIZE_F &rtSize, size_t backbuffer_id, const std::vector<std::wstring> &strings) noexcept
+{
+	// Acquire our wrapped render target resource for the current back buffer.
+	g_d3d11on12_device->AcquireWrappedResources(g_wrapped_backbuffers[backbuffer_id ].GetAddressOf(), 1);
+
+	// Render text directly to the back buffer.
+	g_d2d_device_context->SetTarget(g_d2d_render_targets[backbuffer_id].Get());
+	g_d2d_device_context->BeginDraw();
+	g_d2d_device_context->SetTransform(D2D1::Matrix3x2F::Identity());
+	float xpos = 0.f;
+	for (const std::wstring &str : strings)
+	{
+		g_d2d_device_context->DrawTextW(
+			str.c_str(),
+			(UINT32)str.size(),
+			g_text_format.Get(),
+			&D2D1::RectF(0, xpos, rtSize.width, rtSize.height),
+			g_text_brush.Get()
+			);
+		xpos += 14.f;
+	}
+	g_d2d_device_context->EndDraw();
+
+	// Release our wrapped render target resource. Releasing 
+	// transitions the back buffer resource to the state specified
+	// as the OutState when the wrapped resource was created.
+	g_d3d11on12_device->ReleaseWrappedResources(g_wrapped_backbuffers[backbuffer_id].GetAddressOf(), 1);
+
+	// Flush to submit the 11 command list to the shared command queue.
+	g_d3d11_device_context->Flush();
+}
+}
 
 extern PFN_D3D11ON12_CREATE_DEVICE wrapD3D11On12CreateDevice;
 
@@ -32,25 +68,25 @@ void D3D12GSRender::init_d2d_structures()
 		reinterpret_cast<IUnknown**>(m_commandQueueGraphic.GetAddressOf()),
 		1,
 		0,
-		&d3d11Device,
-		&m_d3d11DeviceContext,
+		&g_d3d11_device,
+		&g_d3d11_device_context,
 		nullptr
 		);
 
-	d3d11Device.As(&m_d3d11On12Device);
+	g_d3d11_device.As(&g_d3d11on12_device);
 
 	D2D1_DEVICE_CONTEXT_OPTIONS deviceOptions = D2D1_DEVICE_CONTEXT_OPTIONS_NONE;
 	D2D1_FACTORY_OPTIONS d2dFactoryOptions = {};
-	D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, __uuidof(ID2D1Factory3), &d2dFactoryOptions, &m_d2dFactory);
+	D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, __uuidof(ID2D1Factory3), &d2dFactoryOptions, &g_d2d_factory);
 	Microsoft::WRL::ComPtr<IDXGIDevice> dxgiDevice;
-	m_d3d11On12Device.As(&dxgiDevice);
-	m_d2dFactory->CreateDevice(dxgiDevice.Get(), &m_d2dDevice);
-	m_d2dDevice->CreateDeviceContext(deviceOptions, &m_d2dDeviceContext);
-	DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(IDWriteFactory), &m_dWriteFactory);
+	g_d3d11on12_device.As(&dxgiDevice);
+	g_d2d_factory->CreateDevice(dxgiDevice.Get(), &g_d2d_device);
+	g_d2d_device->CreateDeviceContext(deviceOptions, &g_d2d_device_context);
+	DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(IDWriteFactory), &g_dwrite_factory);
 
 	float dpiX;
 	float dpiY;
-	m_d2dFactory->GetDesktopDpi(&dpiX, &dpiY);
+	g_d2d_factory->GetDesktopDpi(&dpiX, &dpiY);
 	D2D1_BITMAP_PROPERTIES1 bitmapProperties = D2D1::BitmapProperties1(
 		D2D1_BITMAP_OPTIONS_TARGET | D2D1_BITMAP_OPTIONS_CANNOT_DRAW,
 		D2D1::PixelFormat(DXGI_FORMAT_UNKNOWN, D2D1_ALPHA_MODE_PREMULTIPLIED),
@@ -61,26 +97,26 @@ void D3D12GSRender::init_d2d_structures()
 	for (unsigned i = 0; i < 2; i++)
 	{
 		D3D11_RESOURCE_FLAGS d3d11Flags = { D3D11_BIND_RENDER_TARGET };
-		m_d3d11On12Device->CreateWrappedResource(
+		g_d3d11on12_device->CreateWrappedResource(
 			m_backBuffer[i].Get(),
 			&d3d11Flags,
 			D3D12_RESOURCE_STATE_RENDER_TARGET,
 			D3D12_RESOURCE_STATE_PRESENT,
-			IID_PPV_ARGS(&m_wrappedBackBuffers[i])
+			IID_PPV_ARGS(&g_wrapped_backbuffers[i])
 			);
 
 		// Create a render target for D2D to draw directly to this back buffer.
 		Microsoft::WRL::ComPtr<IDXGISurface> surface;
-		m_wrappedBackBuffers[i].As(&surface);
-		m_d2dDeviceContext->CreateBitmapFromDxgiSurface(
+		g_wrapped_backbuffers[i].As(&surface);
+		g_d2d_device_context->CreateBitmapFromDxgiSurface(
 			surface.Get(),
 			&bitmapProperties,
-			&m_d2dRenderTargets[i]
+			&g_d2d_render_targets[i]
 			);
 		}
 
-	m_d2dDeviceContext->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::DarkGreen), &m_textBrush);
-	m_dWriteFactory->CreateTextFormat(
+	g_d2d_device_context->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::DarkGreen), &g_text_brush);
+	g_dwrite_factory->CreateTextFormat(
 		L"Verdana",
 		NULL,
 		DWRITE_FONT_WEIGHT_BOLD,
@@ -88,33 +124,33 @@ void D3D12GSRender::init_d2d_structures()
 		DWRITE_FONT_STRETCH_NORMAL,
 		14,
 		L"en-us",
-		&m_textFormat
+		&g_text_format
 		);
-	m_textFormat->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_LEADING);
-	m_textFormat->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_NEAR);
+	g_text_format->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_LEADING);
+	g_text_format->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_NEAR);
 }
 
 void D3D12GSRender::release_d2d_structures()
 {
-	d3d11Device.Reset();
-	m_d3d11DeviceContext.Reset();
-	m_d3d11On12Device.Reset();
-	m_d3d12Device.Reset();
-	m_dWriteFactory.Reset();
-	m_d2dFactory.Reset();
-	m_d2dDevice.Reset();
-	m_d2dDeviceContext.Reset();
-	m_wrappedBackBuffers[0].Reset();
-	m_d2dRenderTargets[0].Reset();
-	m_wrappedBackBuffers[1].Reset();
-	m_d2dRenderTargets[1].Reset();
-	m_textFormat.Reset();
-	m_textBrush.Reset();
+	g_d3d11_device.Reset();
+	g_d3d11_device_context.Reset();
+	g_d3d11on12_device.Reset();
+	g_d3d12_device.Reset();
+	g_dwrite_factory.Reset();
+	g_d2d_factory.Reset();
+	g_d2d_device.Reset();
+	g_d2d_device_context.Reset();
+	g_wrapped_backbuffers[0].Reset();
+	g_d2d_render_targets[0].Reset();
+	g_wrapped_backbuffers[1].Reset();
+	g_d2d_render_targets[1].Reset();
+	g_text_format.Reset();
+	g_text_brush.Reset();
 }
 
 void D3D12GSRender::render_overlay()
 {
-	D2D1_SIZE_F rtSize = m_d2dRenderTargets[m_swapChain->GetCurrentBackBufferIndex()]->GetSize();
+	D2D1_SIZE_F rtSize = g_d2d_render_targets[m_swapChain->GetCurrentBackBufferIndex()]->GetSize();
 	std::wstring duration = L"Draw duration : " + std::to_wstring(m_timers.m_drawCallDuration) + L" us";
 	float vtxIdxPercent = (float)m_timers.m_vertexIndexDuration / (float)m_timers.m_drawCallDuration;
 	std::wstring vertexIndexDuration = L"Vtx/Idx upload : " + std::to_wstring(m_timers.m_vertexIndexDuration) + L" us (" + std::to_wstring(100.f * vtxIdxPercent) + L" %)";
@@ -130,85 +166,17 @@ void D3D12GSRender::render_overlay()
 	std::wstring flipDuration = L"Flip : " + std::to_wstring(m_timers.m_flipDuration) + L" us";
 
 	std::wstring count = L"Draw count : " + std::to_wstring(m_timers.m_drawCallCount);
-
-	// Acquire our wrapped render target resource for the current back buffer.
-	m_d3d11On12Device->AcquireWrappedResources(m_wrappedBackBuffers[m_swapChain->GetCurrentBackBufferIndex()].GetAddressOf(), 1);
-
-	// Render text directly to the back buffer.
-	m_d2dDeviceContext->SetTarget(m_d2dRenderTargets[m_swapChain->GetCurrentBackBufferIndex()].Get());
-	m_d2dDeviceContext->BeginDraw();
-	m_d2dDeviceContext->SetTransform(D2D1::Matrix3x2F::Identity());
-	m_d2dDeviceContext->DrawTextW(
-		duration.c_str(),
-		(UINT32)duration.size(),
-		m_textFormat.Get(),
-		&D2D1::RectF(0, 0, rtSize.width, rtSize.height),
-		m_textBrush.Get()
-		);
-	m_d2dDeviceContext->DrawTextW(
-		count.c_str(),
-		(UINT32)count.size(),
-		m_textFormat.Get(),
-		&D2D1::RectF(0, 14, rtSize.width, rtSize.height),
-		m_textBrush.Get()
-		);
-	m_d2dDeviceContext->DrawTextW(
-		rttDuration.c_str(),
-		(UINT32)rttDuration.size(),
-		m_textFormat.Get(),
-		&D2D1::RectF(0, 28, rtSize.width, rtSize.height),
-		m_textBrush.Get()
-		);
-	m_d2dDeviceContext->DrawTextW(
-		vertexIndexDuration.c_str(),
-		(UINT32)vertexIndexDuration.size(),
-		m_textFormat.Get(),
-		&D2D1::RectF(0, 42, rtSize.width, rtSize.height),
-		m_textBrush.Get()
-		);
-	m_d2dDeviceContext->DrawTextW(
-		size.c_str(),
-		(UINT32)size.size(),
-		m_textFormat.Get(),
-		&D2D1::RectF(0, 56, rtSize.width, rtSize.height),
-		m_textBrush.Get()
-		);
-	m_d2dDeviceContext->DrawTextW(
-		programDuration.c_str(),
-		(UINT32)programDuration.size(),
-		m_textFormat.Get(),
-		&D2D1::RectF(0, 70, rtSize.width, rtSize.height),
-		m_textBrush.Get()
-		);
-	m_d2dDeviceContext->DrawTextW(
-		constantDuration.c_str(),
-		(UINT32)constantDuration.size(),
-		m_textFormat.Get(),
-		&D2D1::RectF(0, 86, rtSize.width, rtSize.height),
-		m_textBrush.Get()
-		);
-	m_d2dDeviceContext->DrawTextW(
-		texDuration.c_str(),
-		(UINT32)texDuration.size(),
-		m_textFormat.Get(),
-		&D2D1::RectF(0, 98, rtSize.width, rtSize.height),
-		m_textBrush.Get()
-		);
-	m_d2dDeviceContext->DrawTextW(
-		flipDuration.c_str(),
-		(UINT32)flipDuration.size(),
-		m_textFormat.Get(),
-		&D2D1::RectF(0, 112, rtSize.width, rtSize.height),
-		m_textBrush.Get()
-		);
-	m_d2dDeviceContext->EndDraw();
-
-	// Release our wrapped render target resource. Releasing 
-	// transitions the back buffer resource to the state specified
-	// as the OutState when the wrapped resource was created.
-	m_d3d11On12Device->ReleaseWrappedResources(m_wrappedBackBuffers[m_swapChain->GetCurrentBackBufferIndex()].GetAddressOf(), 1);
-
-	// Flush to submit the 11 command list to the shared command queue.
-	m_d3d11DeviceContext->Flush();
+	draw_strings(rtSize, m_swapChain->GetCurrentBackBufferIndex(),
+		{
+			duration,
+			count,
+			rttDuration,
+			vertexIndexDuration,
+			size,
+			programDuration,
+			constantDuration,
+			texDuration,
+			flipDuration
+		});
 }
 #endif
