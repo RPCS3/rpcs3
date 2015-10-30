@@ -4,10 +4,10 @@
 
 struct RenderTargets
 {
-	std::unordered_map<u32, ID3D12Resource *> m_renderTargets;
+	std::unordered_map<u32, ID3D12Resource* > m_renderTargets;
 	ID3D12Resource *m_currentlyBoundRenderTargets[4];
 	u32 m_currentlyBoundRenderTargetsAddress[4];
-	std::unordered_map<u32, ID3D12Resource *> m_depthStencil;
+	std::unordered_map<u32, ComPtr<ID3D12Resource> > m_depthStencil;
 	ID3D12Resource *m_currentlyBoundDepthStencil;
 	u32 m_currentlyBoundDepthStencilAddress;
 	ID3D12DescriptorHeap *m_renderTargetsDescriptorsHeap;
@@ -22,7 +22,7 @@ struct RenderTargets
 		size_t width, size_t height, u8 surfaceColorFormat, const std::array<float, 4> &clearColor);
 
 	ID3D12Resource *bindAddressAsDepthStencil(ID3D12Device *device, ID3D12GraphicsCommandList *cmdList, u32 address,
-		size_t width, size_t height, u8 surfaceDepthFormat, float depthClear, u8 stencilClear);
+		size_t width, size_t height, u8 surfaceDepthFormat, float depthClear, u8 stencilClear, ComPtr<ID3D12Resource> &dirtyDS);
 
 	void Init(ID3D12Device *device);
 	void Release();

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "D3D12.h"
+#include "D3D12Utils.h"
 #include "../Common/ProgramStateCache.h"
 #include "D3D12VertexProgramDecompiler.h"
 #include "D3D12FragmentProgramDecompiler.h"

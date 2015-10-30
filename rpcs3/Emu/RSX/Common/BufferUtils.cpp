@@ -5,57 +5,7 @@
 #define MIN2(x, y) ((x) < (y)) ? (x) : (y)
 #define MAX2(x, y) ((x) > (y)) ? (x) : (y)
 
-
-inline
-bool overlaps(const std::pair<size_t, size_t> &range1, const std::pair<size_t, size_t> &range2)
-{
-	return !(range1.second < range2.first || range2.second < range1.first);
-}
-
-std::vector<VertexBufferFormat> FormatVertexData(const rsx::data_array_format_info *vertex_array_desc, const std::vector<u8> *vertex_data, size_t *vertex_data_size, size_t base_offset)
-{
-	std::vector<VertexBufferFormat> Result;
-	for (size_t i = 0; i < rsx::limits::vertex_count; ++i)
-	{
-		const rsx::data_array_format_info &vertexData = vertex_array_desc[i];
-		if (!vertexData.size) continue;
-
-		u32 addrRegVal = rsx::method_registers[NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + i];
-		u32 addr = rsx::get_address(addrRegVal & 0x7fffffff, addrRegVal >> 31);
-		size_t elementCount = ((vertexData.array) ? vertex_data_size[i] : vertex_data[i].size()) / (vertexData.size * rsx::get_vertex_type_size(vertexData.type));
-
-		// If there is a single element, stride is 0, use the size of element instead
-		size_t stride = vertexData.stride;
-		size_t elementSize = rsx::get_vertex_type_size(vertexData.type);
-		size_t start = addr + base_offset;
-		size_t end = start + elementSize * vertexData.size + (elementCount - 1) * stride - 1;
-		std::pair<size_t, size_t> range = std::make_pair(start, end);
-		assert(start < end);
-		bool isMerged = false;
-
-		for (VertexBufferFormat &vbf : Result)
-		{
-			if (overlaps(vbf.range, range) && vbf.stride == stride)
-			{
-				// Extend buffer if necessary
-				vbf.range.first = MIN2(vbf.range.first, range.first);
-				vbf.range.second = MAX2(vbf.range.second, range.second);
-				vbf.elementCount = MAX2(vbf.elementCount, elementCount);
-
-				vbf.attributeId.push_back(i);
-				isMerged = true;
-				break;
-			}
-		}
-		if (isMerged)
-			continue;
-		VertexBufferFormat newRange = { range, std::vector<size_t>{ i }, elementCount, stride };
-		Result.emplace_back(newRange);
-	}
-	return Result;
-}
-
-void write_vertex_array_data_to_buffer(void *buffer, u32 first, u32 count, size_t index, const rsx::data_array_format_info &vertex_array_desc)
+void write_vertex_array_data_to_buffer(void *buffer, u32 first, u32 count, size_t index, const rsx::data_array_format_info &vertex_array_desc) noexcept
 {
 	assert(vertex_array_desc.array);
 
@@ -109,8 +59,10 @@ void write_vertex_array_data_to_buffer(void *buffer, u32 first, u32 count, size_
 	}
 }
 
+namespace
+{
 template<typename IndexType>
-void uploadAsIt(char *dst, u32 address, size_t indexCount, bool is_primitive_restart_enabled, u32 &min_index, u32 &max_index)
+void uploadAsIt(char *dst, u32 address, size_t indexCount, bool is_primitive_restart_enabled, u32 &min_index, u32 &max_index) noexcept
 {
 	for (u32 i = 0; i < indexCount; ++i)
 	{
@@ -124,7 +76,7 @@ void uploadAsIt(char *dst, u32 address, size_t indexCount, bool is_primitive_res
 }
 
 template<typename IndexType>
-void expandIndexedTriangleFan(char *dst, u32 address, size_t indexCount, bool is_primitive_restart_enabled, u32 &min_index, u32 &max_index)
+void expandIndexedTriangleFan(char *dst, u32 address, size_t indexCount, bool is_primitive_restart_enabled, u32 &min_index, u32 &max_index) noexcept
 {
 	for (unsigned i = 0; i < indexCount - 2; i++)
 	{
@@ -154,7 +106,7 @@ void expandIndexedTriangleFan(char *dst, u32 address, size_t indexCount, bool is
 }
 
 template<typename IndexType>
-void expandIndexedQuads(char *dst, u32 address, size_t indexCount, bool is_primitive_restart_enabled, u32 &min_index, u32 &max_index)
+void expandIndexedQuads(char *dst, u32 address, size_t indexCount, bool is_primitive_restart_enabled, u32 &min_index, u32 &max_index) noexcept
 {
 	for (unsigned i = 0; i < indexCount / 4; i++)
 	{
@@ -193,9 +145,10 @@ void expandIndexedQuads(char *dst, u32 address, size_t indexCount, bool is_primi
 		}
 	}
 }
+}
 
 // Only handle quads and triangle fan now
-bool isNativePrimitiveMode(unsigned m_draw_mode)
+bool is_primitive_native(unsigned m_draw_mode) noexcept
 {
 	switch (m_draw_mode)
 	{
@@ -215,10 +168,10 @@ bool isNativePrimitiveMode(unsigned m_draw_mode)
 	}
 }
 
-size_t getIndexCount(unsigned m_draw_mode, unsigned initial_index_count)
+size_t get_index_count(unsigned m_draw_mode, unsigned initial_index_count) noexcept
 {
 	// Index count
-	if (isNativePrimitiveMode(m_draw_mode))
+	if (is_primitive_native(m_draw_mode))
 		return initial_index_count;
 
 	switch (m_draw_mode)
@@ -232,7 +185,17 @@ size_t getIndexCount(unsigned m_draw_mode, unsigned initial_index_count)
 	}
 }
 
-void write_index_array_for_non_indexed_non_native_primitive_to_buffer(char* dst, unsigned draw_mode, unsigned first, unsigned count)
+size_t get_index_type_size(u32 type) noexcept
+{
+	switch (type)
+	{
+	case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_16: return 2;
+	case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_32: return 4;
+	default: return 0;
+	}
+}
+
+void write_index_array_for_non_indexed_non_native_primitive_to_buffer(char* dst, unsigned draw_mode, unsigned first, unsigned count) noexcept
 {
 	unsigned short *typedDst = (unsigned short *)(dst);
 	switch (draw_mode)
@@ -261,7 +224,7 @@ void write_index_array_for_non_indexed_non_native_primitive_to_buffer(char* dst,
 	}
 }
 
-void write_index_array_data_to_buffer(char* dst, unsigned m_draw_mode, unsigned first, unsigned count, unsigned &min_index, unsigned &max_index)
+void write_index_array_data_to_buffer(char* dst, unsigned m_draw_mode, unsigned first, unsigned count, unsigned &min_index, unsigned &max_index) noexcept
 {
 	u32 address = rsx::get_address(rsx::method_registers[NV4097_SET_INDEX_ARRAY_ADDRESS], rsx::method_registers[NV4097_SET_INDEX_ARRAY_DMA] & 0xf);
 	u32 type = rsx::method_registers[NV4097_SET_INDEX_ARRAY_DMA] >> 4;

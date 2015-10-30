@@ -71,4 +71,3 @@ std::string compareFunctionImp(COMPARE f, const std::string &Op0, const std::str
 	}
 }
 #endif
-

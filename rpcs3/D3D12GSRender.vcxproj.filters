@@ -8,12 +8,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Emu\RSX\D3D12\D3D12.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\RSX\D3D12\D3D12Buffer.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
     <ClInclude Include="Emu\RSX\D3D12\D3D12CommonDecompiler.h">
       <Filter>Source Files</Filter>
     </ClInclude>
@@ -29,9 +23,6 @@
     <ClInclude Include="Emu\RSX\D3D12\D3D12RenderTargetSets.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\RSX\D3D12\D3D12Texture.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
     <ClInclude Include="Emu\RSX\D3D12\D3D12VertexProgramDecompiler.h">
       <Filter>Source Files</Filter>
     </ClInclude>
@@ -39,6 +30,15 @@
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="stdafx_d3d12.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\D3D12\D3D12Utils.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\D3D12\D3D12Formats.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\D3D12\D3D12MemoryHelpers.h">
       <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -74,6 +74,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="stdafx_d3d12.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\D3D12\D3D12Formats.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\D3D12\D3D12MemoryHelpers.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

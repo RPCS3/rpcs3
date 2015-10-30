@@ -78,14 +78,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="Emu\RSX\D3D12\D3D12.h" />
-    <ClInclude Include="Emu\RSX\D3D12\D3D12Buffer.h" />
+    <ClInclude Include="Emu\RSX\D3D12\D3D12Utils.h" />
     <ClInclude Include="Emu\RSX\D3D12\D3D12CommonDecompiler.h" />
+    <ClInclude Include="Emu\RSX\D3D12\D3D12Formats.h" />
     <ClInclude Include="Emu\RSX\D3D12\D3D12FragmentProgramDecompiler.h" />
     <ClInclude Include="Emu\RSX\D3D12\D3D12GSRender.h" />
+    <ClInclude Include="Emu\RSX\D3D12\D3D12MemoryHelpers.h" />
     <ClInclude Include="Emu\RSX\D3D12\D3D12PipelineState.h" />
     <ClInclude Include="Emu\RSX\D3D12\D3D12RenderTargetSets.h" />
-    <ClInclude Include="Emu\RSX\D3D12\D3D12Texture.h" />
     <ClInclude Include="Emu\RSX\D3D12\D3D12VertexProgramDecompiler.h" />
     <ClInclude Include="Emu\RSX\D3D12\d3dx12.h" />
     <ClInclude Include="stdafx_d3d12.h" />
@@ -93,8 +93,10 @@
   <ItemGroup>
     <ClCompile Include="Emu\RSX\D3D12\D3D12Buffer.cpp" />
     <ClCompile Include="Emu\RSX\D3D12\D3D12CommonDecompiler.cpp" />
+    <ClCompile Include="Emu\RSX\D3D12\D3D12Formats.cpp" />
     <ClCompile Include="Emu\RSX\D3D12\D3D12FragmentProgramDecompiler.cpp" />
     <ClCompile Include="Emu\RSX\D3D12\D3D12GSRender.cpp" />
+    <ClCompile Include="Emu\RSX\D3D12\D3D12MemoryHelpers.cpp" />
     <ClCompile Include="Emu\RSX\D3D12\D3D12Overlay.cpp" />
     <ClCompile Include="Emu\RSX\D3D12\D3D12PipelineState.cpp" />
     <ClCompile Include="Emu\RSX\D3D12\D3D12RenderTargetSets.cpp" />

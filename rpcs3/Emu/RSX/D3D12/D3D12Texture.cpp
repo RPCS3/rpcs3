@@ -4,9 +4,11 @@
 #include "d3dx12.h"
 #include "../Common/TextureUtils.h"
 // For clarity this code deals with texture but belongs to D3D12GSRender class
+#include "D3D12Formats.h"
 
-static
-D3D12_COMPARISON_FUNC getSamplerCompFunc[] =
+namespace
+{
+D3D12_COMPARISON_FUNC get_sampler_compare_func[] =
 {
 	D3D12_COMPARISON_FUNC_NEVER,
 	D3D12_COMPARISON_FUNC_LESS,
@@ -18,103 +20,20 @@ D3D12_COMPARISON_FUNC getSamplerCompFunc[] =
 	D3D12_COMPARISON_FUNC_ALWAYS
 };
 
-static
-size_t getSamplerMaxAniso(size_t aniso)
-{
-	switch (aniso)
-	{
-	case CELL_GCM_TEXTURE_MAX_ANISO_1: return 1;
-	case CELL_GCM_TEXTURE_MAX_ANISO_2: return 2;
-	case CELL_GCM_TEXTURE_MAX_ANISO_4: return 4;
-	case CELL_GCM_TEXTURE_MAX_ANISO_6: return 6;
-	case CELL_GCM_TEXTURE_MAX_ANISO_8: return 8;
-	case CELL_GCM_TEXTURE_MAX_ANISO_10: return 10;
-	case CELL_GCM_TEXTURE_MAX_ANISO_12: return 12;
-	case CELL_GCM_TEXTURE_MAX_ANISO_16: return 16;
-	}
-
-	return 1;
-}
-
-static
-D3D12_TEXTURE_ADDRESS_MODE getSamplerWrap(size_t wrap)
-{
-	switch (wrap)
-	{
-	case CELL_GCM_TEXTURE_WRAP: return D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-	case CELL_GCM_TEXTURE_MIRROR: return D3D12_TEXTURE_ADDRESS_MODE_MIRROR;
-	case CELL_GCM_TEXTURE_CLAMP_TO_EDGE: return D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-	case CELL_GCM_TEXTURE_BORDER: return D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-	case CELL_GCM_TEXTURE_CLAMP: return D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-	case CELL_GCM_TEXTURE_MIRROR_ONCE_CLAMP_TO_EDGE: return D3D12_TEXTURE_ADDRESS_MODE_MIRROR_ONCE;
-	case CELL_GCM_TEXTURE_MIRROR_ONCE_BORDER: return D3D12_TEXTURE_ADDRESS_MODE_MIRROR_ONCE;
-	case CELL_GCM_TEXTURE_MIRROR_ONCE_CLAMP: return D3D12_TEXTURE_ADDRESS_MODE_MIRROR_ONCE;
-	}
-	return D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-}
-
-static
-D3D12_FILTER getSamplerFilter(u32 minFilter, u32 magFilter)
-{
-	D3D12_FILTER_TYPE min, mag, mip;
-	switch (minFilter)
-	{
-	case CELL_GCM_TEXTURE_NEAREST:
-		min = D3D12_FILTER_TYPE_POINT;
-		mip = D3D12_FILTER_TYPE_POINT;
-		break;
-	case CELL_GCM_TEXTURE_LINEAR:
-		min = D3D12_FILTER_TYPE_LINEAR;
-		mip = D3D12_FILTER_TYPE_POINT;
-		break;
-	case CELL_GCM_TEXTURE_NEAREST_NEAREST:
-		min = D3D12_FILTER_TYPE_POINT;
-		mip = D3D12_FILTER_TYPE_POINT;
-		break;
-	case CELL_GCM_TEXTURE_LINEAR_NEAREST:
-		min = D3D12_FILTER_TYPE_LINEAR;
-		mip = D3D12_FILTER_TYPE_POINT;
-		break;
-	case CELL_GCM_TEXTURE_NEAREST_LINEAR:
-		min = D3D12_FILTER_TYPE_POINT;
-		mip = D3D12_FILTER_TYPE_LINEAR;
-		break;
-	case CELL_GCM_TEXTURE_LINEAR_LINEAR:
-		min = D3D12_FILTER_TYPE_LINEAR;
-		mip = D3D12_FILTER_TYPE_LINEAR;
-		break;
-	case CELL_GCM_TEXTURE_CONVOLUTION_MIN:
-	default:
-		LOG_ERROR(RSX, "Unknow min filter %x", minFilter);
-	}
-
-	switch (magFilter)
-	{
-	case CELL_GCM_TEXTURE_NEAREST:
-		mag = D3D12_FILTER_TYPE_POINT;
-		break;
-	case CELL_GCM_TEXTURE_LINEAR:
-		mag = D3D12_FILTER_TYPE_LINEAR;
-		break;
-	default:
-		LOG_ERROR(RSX, "Unknow mag filter %x", magFilter);
-	}
-
-	return D3D12_ENCODE_BASIC_FILTER(min, mag, mip, D3D12_FILTER_REDUCTION_TYPE_STANDARD);
-}
-
-static
-D3D12_SAMPLER_DESC getSamplerDesc(const rsx::texture &texture)
+D3D12_SAMPLER_DESC get_sampler_desc(const rsx::texture &texture) noexcept
 {
 	D3D12_SAMPLER_DESC samplerDesc = {};
-	samplerDesc.Filter = getSamplerFilter(texture.min_filter(), texture.mag_filter());
-	samplerDesc.AddressU = getSamplerWrap(texture.wrap_s());
-	samplerDesc.AddressV = getSamplerWrap(texture.wrap_t());
-	samplerDesc.AddressW = getSamplerWrap(texture.wrap_r());
-	samplerDesc.ComparisonFunc = getSamplerCompFunc[texture.zfunc()];
-	samplerDesc.MaxAnisotropy = (UINT)getSamplerMaxAniso(texture.max_aniso());
+	samplerDesc.Filter = get_texture_filter(texture.min_filter(), texture.mag_filter());
+	samplerDesc.AddressU = get_texture_wrap_mode(texture.wrap_s());
+	samplerDesc.AddressV = get_texture_wrap_mode(texture.wrap_t());
+	samplerDesc.AddressW = get_texture_wrap_mode(texture.wrap_r());
+	samplerDesc.ComparisonFunc = get_sampler_compare_func[texture.zfunc()];
+	samplerDesc.MaxAnisotropy = get_texture_max_aniso(texture.max_aniso());
 	samplerDesc.MipLODBias = texture.bias();
-	samplerDesc.BorderColor[4] = (FLOAT)texture.border_color();
+	samplerDesc.BorderColor[0] = (FLOAT)texture.border_color();
+	samplerDesc.BorderColor[1] = (FLOAT)texture.border_color();
+	samplerDesc.BorderColor[2] = (FLOAT)texture.border_color();
+	samplerDesc.BorderColor[3] = (FLOAT)texture.border_color();
 	samplerDesc.MinLOD = (FLOAT)(texture.min_lod() >> 8);
 	samplerDesc.MaxLOD = (FLOAT)(texture.max_lod() >> 8);
 	return samplerDesc;
@@ -125,168 +44,89 @@ D3D12_SAMPLER_DESC getSamplerDesc(const rsx::texture &texture)
  * Create a texture residing in default heap and generate uploads commands in commandList,
  * using a temporary texture buffer.
  */
-static
-ComPtr<ID3D12Resource> uploadSingleTexture(
+ComPtr<ID3D12Resource> upload_single_texture(
 	const rsx::texture &texture,
 	ID3D12Device *device,
-	ID3D12GraphicsCommandList *commandList,
-	DataHeap<ID3D12Resource, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT> &textureBuffersHeap)
+	ID3D12GraphicsCommandList *command_list,
+	data_heap<ID3D12Resource, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT> &texture_buffer_heap)
 {
-	ComPtr<ID3D12Resource> vramTexture;
 	size_t w = texture.width(), h = texture.height();
 
 	int format = texture.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
-	DXGI_FORMAT dxgiFormat = getTextureDXGIFormat(format);
+	DXGI_FORMAT dxgi_format = get_texture_format(format);
 
-	size_t textureSize = getPlacedTextureStorageSpace(texture, 256);
-	assert(textureBuffersHeap.canAlloc(textureSize));
-	size_t heapOffset = textureBuffersHeap.alloc(textureSize);
+	size_t buffer_size = get_placed_texture_storage_size(texture, 256);
+	assert(texture_buffer_heap.can_alloc(buffer_size));
+	size_t heap_offset = texture_buffer_heap.alloc(buffer_size);
 
 	void *buffer;
-	ThrowIfFailed(textureBuffersHeap.m_heap->Map(0, &CD3DX12_RANGE(heapOffset, heapOffset + textureSize), &buffer));
-	void *textureData = (char*)buffer + heapOffset;
-	std::vector<MipmapLevelInfo> mipInfos = uploadPlacedTexture(texture, 256, textureData);
-	textureBuffersHeap.m_heap->Unmap(0, &CD3DX12_RANGE(heapOffset, heapOffset + textureSize));
+	ThrowIfFailed(texture_buffer_heap.m_heap->Map(0, &CD3DX12_RANGE(heap_offset, heap_offset + buffer_size), &buffer));
+	void *mapped_buffer = (char*)buffer + heap_offset;
+	std::vector<MipmapLevelInfo> mipInfos = upload_placed_texture(texture, 256, mapped_buffer);
+	texture_buffer_heap.m_heap->Unmap(0, &CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
 
-	D3D12_RESOURCE_DESC texturedesc = CD3DX12_RESOURCE_DESC::Tex2D(dxgiFormat, (UINT)w, (UINT)h, 1, texture.mipmap());
-	textureSize = device->GetResourceAllocationInfo(0, 1, &texturedesc).SizeInBytes;
-
+	ComPtr<ID3D12Resource> result;
 	ThrowIfFailed(device->CreateCommittedResource(
 		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
 		D3D12_HEAP_FLAG_NONE,
-		&texturedesc,
+		&CD3DX12_RESOURCE_DESC::Tex2D(dxgi_format, (UINT)w, (UINT)h, 1, texture.mipmap()),
 		D3D12_RESOURCE_STATE_COPY_DEST,
 		nullptr,
-		IID_PPV_ARGS(vramTexture.GetAddressOf())
+		IID_PPV_ARGS(result.GetAddressOf())
 		));
 
-	size_t miplevel = 0;
+	size_t mip_level = 0;
 	for (const MipmapLevelInfo mli : mipInfos)
 	{
-		commandList->CopyTextureRegion(&CD3DX12_TEXTURE_COPY_LOCATION(vramTexture.Get(), (UINT)miplevel), 0, 0, 0,
-			&CD3DX12_TEXTURE_COPY_LOCATION(textureBuffersHeap.m_heap, { heapOffset + mli.offset, { dxgiFormat, (UINT)mli.width, (UINT)mli.height, 1, (UINT)mli.rowPitch } }), nullptr);
-		miplevel++;
+		command_list->CopyTextureRegion(&CD3DX12_TEXTURE_COPY_LOCATION(result.Get(), (UINT)mip_level), 0, 0, 0,
+			&CD3DX12_TEXTURE_COPY_LOCATION(texture_buffer_heap.m_heap, { heap_offset + mli.offset, { dxgi_format, (UINT)mli.width, (UINT)mli.height, 1, (UINT)mli.rowPitch } }), nullptr);
+		mip_level++;
 	}
 
-	commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(vramTexture.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ));
-	return vramTexture;
+	command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(result.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ));
+	return result;
 }
-
-
 
 /**
 *
 */
-static
-void updateExistingTexture(
+void update_existing_texture(
 	const rsx::texture &texture,
-	ID3D12GraphicsCommandList *commandList,
-	DataHeap<ID3D12Resource, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT> &textureBuffersHeap,
-	ID3D12Resource *existingTexture)
+	ID3D12GraphicsCommandList *command_list,
+	data_heap<ID3D12Resource, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT> &texture_buffer_heap,
+	ID3D12Resource *existing_texture)
 {
 	size_t w = texture.width(), h = texture.height();
 
 	int format = texture.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
-	DXGI_FORMAT dxgiFormat = getTextureDXGIFormat(format);
+	DXGI_FORMAT dxgi_format = get_texture_format(format);
 
-	size_t textureSize = getPlacedTextureStorageSpace(texture, 256);
-	assert(textureBuffersHeap.canAlloc(textureSize));
-	size_t heapOffset = textureBuffersHeap.alloc(textureSize);
+	size_t buffer_size = get_placed_texture_storage_size(texture, 256);
+	assert(texture_buffer_heap.can_alloc(buffer_size));
+	size_t heap_offset = texture_buffer_heap.alloc(buffer_size);
 
 	void *buffer;
-	ThrowIfFailed(textureBuffersHeap.m_heap->Map(0, &CD3DX12_RANGE(heapOffset, heapOffset + textureSize), &buffer));
-	void *textureData = (char*)buffer + heapOffset;
-	std::vector<MipmapLevelInfo> mipInfos = uploadPlacedTexture(texture, 256, textureData);
-	textureBuffersHeap.m_heap->Unmap(0, &CD3DX12_RANGE(heapOffset, heapOffset + textureSize));
+	ThrowIfFailed(texture_buffer_heap.m_heap->Map(0, &CD3DX12_RANGE(heap_offset, heap_offset + buffer_size), &buffer));
+	void *mapped_buffer = (char*)buffer + heap_offset;
+	std::vector<MipmapLevelInfo> mipInfos = upload_placed_texture(texture, 256, mapped_buffer);
+	texture_buffer_heap.m_heap->Unmap(0, &CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
 
-	commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(existingTexture, D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_COPY_DEST));
+	command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(existing_texture, D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_COPY_DEST));
 	size_t miplevel = 0;
 	for (const MipmapLevelInfo mli : mipInfos)
 	{
-		commandList->CopyTextureRegion(&CD3DX12_TEXTURE_COPY_LOCATION(existingTexture, (UINT)miplevel), 0, 0, 0,
-			&CD3DX12_TEXTURE_COPY_LOCATION(textureBuffersHeap.m_heap, { heapOffset + mli.offset,{ dxgiFormat, (UINT)mli.width, (UINT)mli.height, 1, (UINT)mli.rowPitch } }), nullptr);
+		command_list->CopyTextureRegion(&CD3DX12_TEXTURE_COPY_LOCATION(existing_texture, (UINT)miplevel), 0, 0, 0,
+			&CD3DX12_TEXTURE_COPY_LOCATION(texture_buffer_heap.m_heap, { heap_offset + mli.offset,{ dxgi_format, (UINT)mli.width, (UINT)mli.height, 1, (UINT)mli.rowPitch } }), nullptr);
 		miplevel++;
 	}
 
-	commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(existingTexture, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ));
+	command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(existing_texture, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ));
+}
 }
 
-
-/**
- * Get number of bytes occupied by texture in RSX mem
- */
-static
-size_t getTextureSize(const rsx::texture &texture)
+void D3D12GSRender::upload_and_bind_textures(ID3D12GraphicsCommandList *command_list, size_t descriptor_index, size_t texture_count)
 {
-	size_t w = texture.width(), h = texture.height();
-
-	int format = texture.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
-	// TODO: Take mipmaps into account
-	switch (format)
-	{
-	case CELL_GCM_TEXTURE_COMPRESSED_HILO8:
-	case CELL_GCM_TEXTURE_COMPRESSED_HILO_S8:
-	case ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN) & CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8:
-	case ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN) & CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8:
-	default:
-		LOG_ERROR(RSX, "Unimplemented Texture format : %x", format);
-		return 0;
-	case CELL_GCM_TEXTURE_B8:
-		return w * h;
-	case CELL_GCM_TEXTURE_A1R5G5B5:
-		return w * h * 2;
-	case CELL_GCM_TEXTURE_A4R4G4B4:
-		return w * h * 2;
-	case CELL_GCM_TEXTURE_R5G6B5:
-		return w * h * 2;
-	case CELL_GCM_TEXTURE_A8R8G8B8:
-		return w * h * 4;
-	case CELL_GCM_TEXTURE_COMPRESSED_DXT1:
-		return w * h / 6;
-	case CELL_GCM_TEXTURE_COMPRESSED_DXT23:
-		return w * h / 4;
-	case CELL_GCM_TEXTURE_COMPRESSED_DXT45:
-		return w * h / 4;
-	case CELL_GCM_TEXTURE_G8B8:
-		return w * h * 2;
-	case CELL_GCM_TEXTURE_R6G5B5:
-		return w * h * 2;
-	case CELL_GCM_TEXTURE_DEPTH24_D8:
-		return w * h * 4;
-	case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
-		return w * h * 4;
-	case CELL_GCM_TEXTURE_DEPTH16:
-		return w * h * 2;
-	case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
-		return w * h * 2;
-	case CELL_GCM_TEXTURE_X16:
-		return w * h * 2;
-	case CELL_GCM_TEXTURE_Y16_X16:
-		return w * h * 4;
-	case CELL_GCM_TEXTURE_R5G5B5A1:
-		return w * h * 2;
-	case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT:
-		return w * h * 8;
-	case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT:
-		return w * h * 16;
-	case CELL_GCM_TEXTURE_X32_FLOAT:
-		return w * h * 4;
-	case CELL_GCM_TEXTURE_D1R5G5B5:
-		return w * h * 2;
-	case CELL_GCM_TEXTURE_Y16_X16_FLOAT:
-		return w * h * 4;
-	case CELL_GCM_TEXTURE_D8R8G8B8:
-		return w * h * 4;
-	case CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8:
-		return w * h * 4;
-	case CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8:
-		return w * h * 4;
-	}
-}
-
-size_t D3D12GSRender::UploadTextures(ID3D12GraphicsCommandList *cmdlist, size_t descriptorIndex)
-{
-	size_t usedTexture = 0;
+	size_t used_texture = 0;
 
 	for (u32 i = 0; i < rsx::limits::textures_count; ++i)
 	{
@@ -297,40 +137,39 @@ size_t D3D12GSRender::UploadTextures(ID3D12GraphicsCommandList *cmdlist, size_t 
 		const u32 texaddr = rsx::get_address(textures[i].offset(), textures[i].location());
 
 		int format = textures[i].format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
-		DXGI_FORMAT dxgiFormat = getTextureDXGIFormat(format);
 		bool is_swizzled = !(textures[i].format() & CELL_GCM_TEXTURE_LN);
 
-		ID3D12Resource *vramTexture;
+		ID3D12Resource *vram_texture;
 		std::unordered_map<u32, ID3D12Resource* >::const_iterator ItRTT = m_rtts.m_renderTargets.find(texaddr);
-		std::pair<TextureEntry, ComPtr<ID3D12Resource> > *cachedTex = m_textureCache.findDataIfAvailable(texaddr);
+		std::pair<texture_entry, ComPtr<ID3D12Resource> > *cached_texture = m_textureCache.find_data_if_available(texaddr);
 		bool isRenderTarget = false;
 		if (ItRTT != m_rtts.m_renderTargets.end())
 		{
-			vramTexture = ItRTT->second;
+			vram_texture = ItRTT->second;
 			isRenderTarget = true;
 		}
-		else if (cachedTex != nullptr && (cachedTex->first == TextureEntry(format, w, h, textures[i].mipmap())))
+		else if (cached_texture != nullptr && (cached_texture->first == texture_entry(format, w, h, textures[i].mipmap())))
 		{
-			if (cachedTex->first.m_isDirty)
+			if (cached_texture->first.m_is_dirty)
 			{
-				updateExistingTexture(textures[i], cmdlist, m_textureUploadData, cachedTex->second.Get());
-				m_textureCache.protectData(texaddr, texaddr, getTextureSize(textures[i]));
+				update_existing_texture(textures[i], command_list, m_textureUploadData, cached_texture->second.Get());
+				m_textureCache.protect_data(texaddr, texaddr, get_texture_size(textures[i]));
 			}
-			vramTexture = cachedTex->second.Get();
+			vram_texture = cached_texture->second.Get();
 		}
 		else
 		{
-			if (cachedTex != nullptr)
-				getCurrentResourceStorage().m_dirtyTextures.push_back(m_textureCache.removeFromCache(texaddr));
-			ComPtr<ID3D12Resource> tex = uploadSingleTexture(textures[i], m_device.Get(), cmdlist, m_textureUploadData);
-			vramTexture = tex.Get();
-			m_textureCache.storeAndProtectData(texaddr, texaddr, getTextureSize(textures[i]), format, w, h, textures[i].mipmap(), tex);
+			if (cached_texture != nullptr)
+				getCurrentResourceStorage().dirty_textures.push_back(m_textureCache.remove_from_cache(texaddr));
+			ComPtr<ID3D12Resource> tex = upload_single_texture(textures[i], m_device.Get(), command_list, m_textureUploadData);
+			vram_texture = tex.Get();
+			m_textureCache.store_and_protect_data(texaddr, texaddr, get_texture_size(textures[i]), format, w, h, textures[i].mipmap(), tex);
 		}
 
-		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-		srvDesc.Format = dxgiFormat;
-		srvDesc.Texture2D.MipLevels = textures[i].mipmap();
+		D3D12_SHADER_RESOURCE_VIEW_DESC shared_resource_view_desc = {};
+		shared_resource_view_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+		shared_resource_view_desc.Format = get_texture_format(format);
+		shared_resource_view_desc.Texture2D.MipLevels = textures[i].mipmap();
 
 		switch (format)
 		{
@@ -342,7 +181,7 @@ size_t D3D12GSRender::UploadTextures(ID3D12GraphicsCommandList *cmdlist, size_t 
 			LOG_ERROR(RSX, "Unimplemented Texture format : %x", format);
 			break;
 		case CELL_GCM_TEXTURE_B8:
-			srvDesc.Shader4ComponentMapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(
+			shared_resource_view_desc.Shader4ComponentMapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(
 				D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_0,
 				D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_0,
 				D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_0,
@@ -351,7 +190,7 @@ size_t D3D12GSRender::UploadTextures(ID3D12GraphicsCommandList *cmdlist, size_t 
 		case CELL_GCM_TEXTURE_A1R5G5B5:
 		case CELL_GCM_TEXTURE_A4R4G4B4:
 		case CELL_GCM_TEXTURE_R5G6B5:
-			srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+			shared_resource_view_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 			break;
 		case CELL_GCM_TEXTURE_A8R8G8B8:
 		{
@@ -373,7 +212,7 @@ size_t D3D12GSRender::UploadTextures(ID3D12GraphicsCommandList *cmdlist, size_t 
 					D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_2
 				};
 
-				srvDesc.Shader4ComponentMapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(
+				shared_resource_view_desc.Shader4ComponentMapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(
 					RemapValue[remap_r],
 					RemapValue[remap_g],
 					RemapValue[remap_b],
@@ -391,7 +230,7 @@ size_t D3D12GSRender::UploadTextures(ID3D12GraphicsCommandList *cmdlist, size_t 
 					D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_3
 				};
 
-				srvDesc.Shader4ComponentMapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(
+				shared_resource_view_desc.Shader4ComponentMapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(
 					RemapValue[remap_r],
 					RemapValue[remap_g],
 					RemapValue[remap_b],
@@ -416,7 +255,7 @@ size_t D3D12GSRender::UploadTextures(ID3D12GraphicsCommandList *cmdlist, size_t 
 		case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT:
 		case CELL_GCM_TEXTURE_X32_FLOAT:
 		case CELL_GCM_TEXTURE_D1R5G5B5:
-			srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+			shared_resource_view_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 			break;
 		case CELL_GCM_TEXTURE_D8R8G8B8:
 		{
@@ -433,7 +272,7 @@ size_t D3D12GSRender::UploadTextures(ID3D12GraphicsCommandList *cmdlist, size_t 
 			u8 remap_g = (textures[i].remap() >> 4) & 0x3;
 			u8 remap_b = (textures[i].remap() >> 6) & 0x3;
 
-			srvDesc.Shader4ComponentMapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(
+			shared_resource_view_desc.Shader4ComponentMapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(
 				RemapValue[remap_a],
 				RemapValue[remap_r],
 				RemapValue[remap_g],
@@ -441,32 +280,58 @@ size_t D3D12GSRender::UploadTextures(ID3D12GraphicsCommandList *cmdlist, size_t 
 			break;
 		}
 		case CELL_GCM_TEXTURE_Y16_X16_FLOAT:
-			srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+			shared_resource_view_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 			break;
 		case CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8:
-			srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+			shared_resource_view_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 			break;
 		case CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8:
-			srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+			shared_resource_view_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 			break;
 		}
 
-		m_device->CreateShaderResourceView(vramTexture, &srvDesc,
-			CD3DX12_CPU_DESCRIPTOR_HANDLE(getCurrentResourceStorage().m_descriptorsHeap->GetCPUDescriptorHandleForHeapStart())
-			.Offset((UINT)descriptorIndex + (UINT)usedTexture, g_descriptorStrideSRVCBVUAV));
+		m_device->CreateShaderResourceView(vram_texture, &shared_resource_view_desc,
+			CD3DX12_CPU_DESCRIPTOR_HANDLE(getCurrentResourceStorage().descriptors_heap->GetCPUDescriptorHandleForHeapStart())
+			.Offset((UINT)descriptor_index + (UINT)used_texture, g_descriptorStrideSRVCBVUAV));
 
-		if (getCurrentResourceStorage().m_currentSamplerIndex + 16 > 2048)
+		if (getCurrentResourceStorage().current_sampler_index + 16 > 2048)
 		{
-			getCurrentResourceStorage().m_samplerDescriptorHeapIndex = 1;
-			getCurrentResourceStorage().m_currentSamplerIndex = 0;
+			getCurrentResourceStorage().sampler_descriptors_heap_index = 1;
+			getCurrentResourceStorage().current_sampler_index = 0;
 		}
-		m_device->CreateSampler(&getSamplerDesc(textures[i]),
-			CD3DX12_CPU_DESCRIPTOR_HANDLE(getCurrentResourceStorage().m_samplerDescriptorHeap[getCurrentResourceStorage().m_samplerDescriptorHeapIndex]->GetCPUDescriptorHandleForHeapStart())
-			.Offset((UINT)getCurrentResourceStorage().m_currentSamplerIndex + (UINT)usedTexture, g_descriptorStrideSamplers));
+		m_device->CreateSampler(&get_sampler_desc(textures[i]),
+			CD3DX12_CPU_DESCRIPTOR_HANDLE(getCurrentResourceStorage().sampler_descriptor_heap[getCurrentResourceStorage().sampler_descriptors_heap_index]->GetCPUDescriptorHandleForHeapStart())
+			.Offset((UINT)getCurrentResourceStorage().current_sampler_index + (UINT)used_texture, g_descriptorStrideSamplers));
 
-		usedTexture++;
+		used_texture++;
 	}
 
-	return usedTexture;
+	// Now fill remaining texture slots with dummy texture/sampler
+	for (; used_texture < texture_count; used_texture++)
+	{
+		D3D12_SHADER_RESOURCE_VIEW_DESC shader_resource_view_desc = {};
+		shader_resource_view_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+		shader_resource_view_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		shader_resource_view_desc.Texture2D.MipLevels = 1;
+		shader_resource_view_desc.Shader4ComponentMapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(
+			D3D12_SHADER_COMPONENT_MAPPING_FORCE_VALUE_0,
+			D3D12_SHADER_COMPONENT_MAPPING_FORCE_VALUE_0,
+			D3D12_SHADER_COMPONENT_MAPPING_FORCE_VALUE_0,
+			D3D12_SHADER_COMPONENT_MAPPING_FORCE_VALUE_0);
+		m_device->CreateShaderResourceView(m_dummyTexture, &shader_resource_view_desc,
+			CD3DX12_CPU_DESCRIPTOR_HANDLE(getCurrentResourceStorage().descriptors_heap->GetCPUDescriptorHandleForHeapStart())
+			.Offset((INT)descriptor_index + (INT)used_texture, g_descriptorStrideSRVCBVUAV)
+			);
+
+		D3D12_SAMPLER_DESC sampler_desc = {};
+		sampler_desc.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
+		sampler_desc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+		sampler_desc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+		sampler_desc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+		m_device->CreateSampler(&sampler_desc,
+			CD3DX12_CPU_DESCRIPTOR_HANDLE(getCurrentResourceStorage().sampler_descriptor_heap[getCurrentResourceStorage().sampler_descriptors_heap_index]->GetCPUDescriptorHandleForHeapStart())
+			.Offset((INT)getCurrentResourceStorage().current_sampler_index + (INT)used_texture, g_descriptorStrideSamplers)
+			);
+	}
 }
 #endif
