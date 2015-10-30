@@ -166,7 +166,7 @@ bool D3D12GSRender::load_program()
 		prop.numMRT = 4;
 		break;
 	default:
-		LOG_ERROR(RSX, "Bad surface color target: %d", color_target);
+		break;
 	}
 
 	prop.DepthStencil.DepthEnable = !!(rsx::method_registers[NV4097_SET_DEPTH_TEST_ENABLE]);
