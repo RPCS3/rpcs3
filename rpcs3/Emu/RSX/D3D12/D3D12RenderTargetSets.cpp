@@ -160,7 +160,10 @@ void D3D12GSRender::prepare_render_targets(ID3D12GraphicsCommandList *copycmdlis
 	}
 	}
 
-	ID3D12Resource *ds = m_rtts.bindAddressAsDepthStencil(m_device.Get(), copycmdlist, address_z, clip_width, clip_height, m_surface.depth_format, 1., 0);
+	ComPtr<ID3D12Resource> oldDS;
+	ID3D12Resource *ds = m_rtts.bindAddressAsDepthStencil(m_device.Get(), copycmdlist, address_z, clip_width, clip_height, m_surface.depth_format, 1., 0, oldDS);
+	if (oldDS)
+		getCurrentResourceStorage().dirty_textures.push_back(oldDS);
 
 	D3D12_DEPTH_STENCIL_VIEW_DESC depthStencilViewDesc = {};
 	depthStencilViewDesc.Format = get_depth_stencil_surface_format(m_surface.depth_format);
@@ -205,41 +208,51 @@ ID3D12Resource *RenderTargets::bindAddressAsRenderTargets(ID3D12Device *device, 
 	return rtt;
 }
 
-ID3D12Resource * RenderTargets::bindAddressAsDepthStencil(ID3D12Device * device, ID3D12GraphicsCommandList * cmdList, u32 address, size_t width, size_t height, u8 surfaceDepthFormat, float depthClear, u8 stencilClear)
+ID3D12Resource * RenderTargets::bindAddressAsDepthStencil(ID3D12Device * device, ID3D12GraphicsCommandList * cmdList, u32 address, size_t width, size_t height, u8 surfaceDepthFormat, float depthClear, u8 stencilClear, ComPtr<ID3D12Resource> &dirtyDS)
 {
-	ID3D12Resource* ds;
+
 	auto It = m_depthStencil.find(address);
-	// TODO: Check if sizes and surface depth format match
+	m_currentlyBoundDepthStencilAddress = address;
+
+	// TODO: Check if surface depth format match
 
 	if (It != m_depthStencil.end())
 	{
-		ds = It->second;
-		cmdList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(ds, D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_DEPTH_WRITE));
+		ComPtr<ID3D12Resource> ds = It->second;
+		if (ds->GetDesc().Width == width && ds->GetDesc().Height == height)
+		{
+			// set the resource as depth write
+			cmdList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(ds.Get(), D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_DEPTH_WRITE));
+			m_currentlyBoundDepthStencil = ds.Get();
+			return ds.Get();
+		}
+		// If size doesn't match, remove ds from cache
+		m_depthStencil.erase(address);
+		dirtyDS = ds;
 	}
-	else
-	{
-		D3D12_CLEAR_VALUE clearDepthValue = {};
-		clearDepthValue.DepthStencil.Depth = depthClear;
 
-		D3D12_HEAP_PROPERTIES heapProp = {};
-		heapProp.Type = D3D12_HEAP_TYPE_DEFAULT;
+	D3D12_CLEAR_VALUE clearDepthValue = {};
+	clearDepthValue.DepthStencil.Depth = depthClear;
 
-		DXGI_FORMAT dxgiFormat = get_depth_typeless_surface_format(surfaceDepthFormat);
-		clearDepthValue.Format = get_depth_stencil_surface_clear_format(surfaceDepthFormat);
+	D3D12_HEAP_PROPERTIES heapProp = {};
+	heapProp.Type = D3D12_HEAP_TYPE_DEFAULT;
 
-		device->CreateCommittedResource(
+	DXGI_FORMAT dxgiFormat = get_depth_typeless_surface_format(surfaceDepthFormat);
+	clearDepthValue.Format = get_depth_stencil_surface_clear_format(surfaceDepthFormat);
+
+	ComPtr<ID3D12Resource> newds;
+	device->CreateCommittedResource(
 		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
 		D3D12_HEAP_FLAG_NONE,
 		&CD3DX12_RESOURCE_DESC::Tex2D(dxgiFormat, (UINT)width, (UINT)height, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL),
 		D3D12_RESOURCE_STATE_DEPTH_WRITE,
 		&clearDepthValue,
-		IID_PPV_ARGS(&ds)
+		IID_PPV_ARGS(newds.GetAddressOf())
 		);
-		m_depthStencil[address] = ds;
-	}
-	m_currentlyBoundDepthStencil = ds;
-	m_currentlyBoundDepthStencilAddress = address;
-	return ds;
+	m_depthStencil[address] = newds;
+	m_currentlyBoundDepthStencil = newds.Get();
+
+	return newds.Get();
 }
 
 void RenderTargets::Init(ID3D12Device *device)//, u8 surfaceDepthFormat, size_t width, size_t height, float clearColor[4], float clearDepth)
