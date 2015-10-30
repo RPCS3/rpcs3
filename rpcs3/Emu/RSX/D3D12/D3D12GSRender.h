@@ -131,7 +131,7 @@ private:
 		size_t m_count; /*<! draw call vertex count */
 	} m_renderingInfo;
 
-	RenderTargets m_rtts;
+	render_targets m_rtts;
 
 	std::vector<D3D12_INPUT_ELEMENT_DESC> m_IASet;
 	std::vector<D3D12_VERTEX_BUFFER_VIEW> m_vertex_buffer_views;
@@ -158,6 +158,8 @@ private:
 	void release_d2d_structures();
 
 	bool load_program();
+
+	void set_rtt_and_ds(ID3D12GraphicsCommandList *command_list);
 
 	/**
 	* Create vertex and index buffers (if needed) and set them to cmdlist.
