@@ -74,6 +74,8 @@ void resource_storage::reset()
 	descriptors_heap_index = 0;
 	current_sampler_index = 0;
 	sampler_descriptors_heap_index = 0;
+	render_targets_descriptors_heap_index = 0;
+	depth_stencil_descriptor_heap_index = 0;
 
 	ThrowIfFailed(command_allocator->Reset());
 	set_new_command_list();
@@ -101,6 +103,12 @@ void resource_storage::init(ID3D12Device *device)
 	D3D12_DESCRIPTOR_HEAP_DESC sampler_heap_desc = { D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER , 2048, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE };
 	ThrowIfFailed(device->CreateDescriptorHeap(&sampler_heap_desc, IID_PPV_ARGS(&sampler_descriptor_heap[0])));
 	ThrowIfFailed(device->CreateDescriptorHeap(&sampler_heap_desc, IID_PPV_ARGS(&sampler_descriptor_heap[1])));
+
+	D3D12_DESCRIPTOR_HEAP_DESC ds_descriptor_heap_desc = { D3D12_DESCRIPTOR_HEAP_TYPE_DSV , 10000};
+	device->CreateDescriptorHeap(&ds_descriptor_heap_desc, IID_PPV_ARGS(&depth_stencil_descriptor_heap));
+
+	D3D12_DESCRIPTOR_HEAP_DESC rtv_descriptor_heap_desc = { D3D12_DESCRIPTOR_HEAP_TYPE_RTV , 10000 };
+	device->CreateDescriptorHeap(&rtv_descriptor_heap_desc, IID_PPV_ARGS(&render_targets_descriptors_heap));
 
 	frame_finished_handle = CreateEventEx(nullptr, FALSE, FALSE, EVENT_ALL_ACCESS);
 	fence_value = 0;

@@ -11,8 +11,6 @@ struct render_targets
 	std::unordered_map<u32, ComPtr<ID3D12Resource> > depth_stencil_storage;
 	ID3D12Resource *bound_depth_stencil;
 	u32 bound_depth_stencil_address;
-	ComPtr<ID3D12DescriptorHeap> render_targets_descriptors_heap;
-	ComPtr<ID3D12DescriptorHeap> depth_stencil_descriptor_heap;
 
 	size_t bind_render_targets(ID3D12Device *, u32 color_format, D3D12_CPU_DESCRIPTOR_HANDLE);
 	size_t bind_depth_stencil(ID3D12Device *, u32 depth_format, D3D12_CPU_DESCRIPTOR_HANDLE);

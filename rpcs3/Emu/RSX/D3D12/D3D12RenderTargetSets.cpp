@@ -76,24 +76,32 @@ void D3D12GSRender::clear_surface(u32 arg)
 	m_timers.m_rttDuration += std::chrono::duration_cast<std::chrono::microseconds>(rtt_duration_end - rtt_duration_start).count();
 
 	if (arg & 0x1 || arg & 0x2)
-		m_rtts.bind_depth_stencil(m_device.Get(), m_surface.depth_format, m_rtts.depth_stencil_descriptor_heap->GetCPUDescriptorHandleForHeapStart());
-
-	if (arg & 0x1)
 	{
-		u32 clear_depth = rsx::method_registers[NV4097_SET_ZSTENCIL_CLEAR_VALUE] >> 8;
-		u32 max_depth_value = m_surface.depth_format == CELL_GCM_SURFACE_Z16 ? 0x0000ffff : 0x00ffffff;
-		getCurrentResourceStorage().command_list->ClearDepthStencilView(m_rtts.depth_stencil_descriptor_heap->GetCPUDescriptorHandleForHeapStart(), D3D12_CLEAR_FLAG_DEPTH, clear_depth / (float)max_depth_value, 0, 0, nullptr);
-	}
+		CD3DX12_CPU_DESCRIPTOR_HANDLE handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(getCurrentResourceStorage().depth_stencil_descriptor_heap->GetCPUDescriptorHandleForHeapStart())
+			.Offset(getCurrentResourceStorage().depth_stencil_descriptor_heap_index * g_descriptorStrideRTV);
+		m_rtts.bind_depth_stencil(m_device.Get(), m_surface.depth_format, handle);
+		getCurrentResourceStorage().depth_stencil_descriptor_heap_index++;
 
-	if (arg & 0x2)
-		getCurrentResourceStorage().command_list->ClearDepthStencilView(m_rtts.depth_stencil_descriptor_heap->GetCPUDescriptorHandleForHeapStart(), D3D12_CLEAR_FLAG_STENCIL, 0.f,
-			get_clear_stencil(rsx::method_registers[NV4097_SET_ZSTENCIL_CLEAR_VALUE]), 0, nullptr);
+		if (arg & 0x1)
+		{
+			u32 clear_depth = rsx::method_registers[NV4097_SET_ZSTENCIL_CLEAR_VALUE] >> 8;
+			u32 max_depth_value = m_surface.depth_format == CELL_GCM_SURFACE_Z16 ? 0x0000ffff : 0x00ffffff;
+			getCurrentResourceStorage().command_list->ClearDepthStencilView(handle, D3D12_CLEAR_FLAG_DEPTH, clear_depth / (float)max_depth_value, 0, 0, nullptr);
+		}
+
+		if (arg & 0x2)
+			getCurrentResourceStorage().command_list->ClearDepthStencilView(handle, D3D12_CLEAR_FLAG_STENCIL, 0.f,
+				get_clear_stencil(rsx::method_registers[NV4097_SET_ZSTENCIL_CLEAR_VALUE]), 0, nullptr);
+	}
 
 	if (arg & 0xF0)
 	{
-		size_t rtt_index = m_rtts.bind_render_targets(m_device.Get(), m_surface.color_format, m_rtts.render_targets_descriptors_heap->GetCPUDescriptorHandleForHeapStart());
+		CD3DX12_CPU_DESCRIPTOR_HANDLE handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(getCurrentResourceStorage().render_targets_descriptors_heap->GetCPUDescriptorHandleForHeapStart())
+			.Offset(getCurrentResourceStorage().render_targets_descriptors_heap_index * g_descriptorStrideRTV);
+		size_t rtt_index = m_rtts.bind_render_targets(m_device.Get(), m_surface.color_format, handle);
+		getCurrentResourceStorage().render_targets_descriptors_heap_index += rtt_index;
 		for (unsigned i = 0; i < rtt_index; i++)
-			getCurrentResourceStorage().command_list->ClearRenderTargetView(CD3DX12_CPU_DESCRIPTOR_HANDLE(m_rtts.render_targets_descriptors_heap->GetCPUDescriptorHandleForHeapStart()).Offset(i, g_descriptorStrideRTV),
+			getCurrentResourceStorage().command_list->ClearRenderTargetView(handle.Offset(i, g_descriptorStrideRTV),
 				get_clear_color(rsx::method_registers[NV4097_SET_COLOR_CLEAR_VALUE]).data(), 0, nullptr);
 	}
 
@@ -220,7 +228,7 @@ size_t render_targets::bind_render_targets(ID3D12Device *device, u32 color_forma
 		if (bound_render_targets[i] == nullptr)
 			continue;
 		device->CreateRenderTargetView(bound_render_targets[i], &rtt_view_desc,
-			CD3DX12_CPU_DESCRIPTOR_HANDLE(render_targets_descriptors_heap->GetCPUDescriptorHandleForHeapStart()).Offset((INT)rtt_index * g_descriptor_stride_rtv));
+			CD3DX12_CPU_DESCRIPTOR_HANDLE(handle).Offset((INT)rtt_index * g_descriptor_stride_rtv));
 		rtt_index++;
 	}
 	return rtt_index;
@@ -233,16 +241,22 @@ size_t render_targets::bind_depth_stencil(ID3D12Device *device, u32 depth_format
 	D3D12_DEPTH_STENCIL_VIEW_DESC depth_stencil_view_desc = {};
 	depth_stencil_view_desc.Format = get_depth_stencil_surface_format(depth_format);
 	depth_stencil_view_desc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
-	device->CreateDepthStencilView(bound_depth_stencil, &depth_stencil_view_desc, depth_stencil_descriptor_heap->GetCPUDescriptorHandleForHeapStart());
+	device->CreateDepthStencilView(bound_depth_stencil, &depth_stencil_view_desc, handle);
 	return 1;
 }
 
 void D3D12GSRender::set_rtt_and_ds(ID3D12GraphicsCommandList *command_list)
 {
-	size_t num_rtt = m_rtts.bind_render_targets(m_device.Get(), m_surface.color_format, m_rtts.render_targets_descriptors_heap->GetCPUDescriptorHandleForHeapStart());
-	size_t num_ds = m_rtts.bind_depth_stencil(m_device.Get(), m_surface.depth_format, m_rtts.depth_stencil_descriptor_heap->GetCPUDescriptorHandleForHeapStart());
-	command_list->OMSetRenderTargets((UINT)num_rtt, num_rtt > 0 ? &m_rtts.render_targets_descriptors_heap->GetCPUDescriptorHandleForHeapStart() : nullptr, !!num_rtt,
-		num_ds > 0 ? &CD3DX12_CPU_DESCRIPTOR_HANDLE(m_rtts.depth_stencil_descriptor_heap->GetCPUDescriptorHandleForHeapStart()) : nullptr);
+	CD3DX12_CPU_DESCRIPTOR_HANDLE handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(getCurrentResourceStorage().render_targets_descriptors_heap->GetCPUDescriptorHandleForHeapStart())
+		.Offset(getCurrentResourceStorage().render_targets_descriptors_heap_index * g_descriptorStrideRTV);
+	size_t num_rtt = m_rtts.bind_render_targets(m_device.Get(), m_surface.color_format, handle);
+	getCurrentResourceStorage().render_targets_descriptors_heap_index += num_rtt;
+	CD3DX12_CPU_DESCRIPTOR_HANDLE depth_stencil_handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(getCurrentResourceStorage().depth_stencil_descriptor_heap->GetCPUDescriptorHandleForHeapStart())
+		.Offset(getCurrentResourceStorage().depth_stencil_descriptor_heap_index * g_descriptorStrideRTV);
+	size_t num_ds = m_rtts.bind_depth_stencil(m_device.Get(), m_surface.depth_format, depth_stencil_handle);
+	getCurrentResourceStorage().depth_stencil_descriptor_heap_index += num_ds;
+	command_list->OMSetRenderTargets((UINT)num_rtt, num_rtt > 0 ? &handle : nullptr, !!num_rtt,
+		num_ds > 0 ? &depth_stencil_handle : nullptr);
 }
 
 ID3D12Resource *render_targets::bind_address_as_render_targets(ID3D12Device *device, ID3D12GraphicsCommandList *cmdList, u32 address,
@@ -322,21 +336,13 @@ ID3D12Resource * render_targets::bind_address_as_depth_stencil(ID3D12Device * de
 
 void render_targets::init(ID3D12Device *device)//, u8 surfaceDepthFormat, size_t width, size_t height, float clearColor[4], float clearDepth)
 {
-	D3D12_DESCRIPTOR_HEAP_DESC descriptor_heap_desc = {};
-	descriptor_heap_desc.NumDescriptors = 1;
-	descriptor_heap_desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
-	device->CreateDescriptorHeap(&descriptor_heap_desc, IID_PPV_ARGS(depth_stencil_descriptor_heap.GetAddressOf()));
-
-	descriptor_heap_desc.NumDescriptors = 4;
-	descriptor_heap_desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-	device->CreateDescriptorHeap(&descriptor_heap_desc, IID_PPV_ARGS(render_targets_descriptors_heap.GetAddressOf()));
-
 	memset(bound_render_targets_address, 0, 4 * sizeof(u32));
 	memset(bound_render_targets, 0, 4 * sizeof(ID3D12Resource*));
 	bound_depth_stencil = nullptr;
 	bound_depth_stencil_address = 0;
 	g_descriptor_stride_rtv = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 }
+
 
 namespace
 {
