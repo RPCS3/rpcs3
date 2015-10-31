@@ -586,6 +586,7 @@ namespace rsx
 
 		std::this_thread::sleep_for(std::chrono::milliseconds((s64)(1000.0 / limit - rsx->timer_sync.GetElapsedTimeInMilliSec())));
 		rsx->timer_sync.Start();
+		rsx->local_transform_constants.clear();
 	}
 
 	void user_command(thread* rsx, u32 arg)
@@ -1046,6 +1047,18 @@ namespace rsx
 		stream_vector((char*)buffer + 16, 0, (u32&)scale_y, 0, (u32&)offset_y);
 		stream_vector((char*)buffer + 32, 0, 0, (u32&)scale_z, (u32&)offset_z);
 		stream_vector((char*)buffer + 48, 0, 0, 0, (u32&)one);
+	}
+
+	/**
+	* Fill buffer with vertex program constants.
+	* Buffer must be at least 512 float4 wide.
+	*/
+	void thread::fill_vertex_program_constants_data(void *buffer) noexcept
+	{
+		for (const auto &entry : transform_constants)
+			local_transform_constants[entry.first] = entry.second;
+		for (const auto &entry : local_transform_constants)
+			stream_vector_from_memory((char*)buffer + entry.first * 4 * sizeof(float), (void*)entry.second.rgba);
 	}
 
 	u64 thread::timestamp() const

@@ -167,9 +167,6 @@ void D3D12GSRender::upload_and_bind_scale_offset_matrix(size_t descriptorIndex)
 
 void D3D12GSRender::upload_and_bind_vertex_shader_constants(size_t descriptor_index)
 {
-	for (const auto &entry : transform_constants)
-		local_transform_constants[entry.first] = entry.second;
-
 	size_t buffer_size = 512 * 4 * sizeof(float);
 
 	assert(m_constantsData.can_alloc(buffer_size));
@@ -177,16 +174,7 @@ void D3D12GSRender::upload_and_bind_vertex_shader_constants(size_t descriptor_in
 
 	void *mapped_buffer;
 	ThrowIfFailed(m_constantsData.m_heap->Map(0, &CD3DX12_RANGE(heap_offset, heap_offset + buffer_size), &mapped_buffer));
-	for (const auto &entry : local_transform_constants)
-	{
-		float data[4] = {
-			entry.second.x,
-			entry.second.y,
-			entry.second.z,
-			entry.second.w
-		};
-		streamToBuffer((char*)mapped_buffer + heap_offset + entry.first * 4 * sizeof(float), data, 4 * sizeof(float));
-	}
+	fill_vertex_program_constants_data((char*)mapped_buffer + heap_offset);
 	m_constantsData.m_heap->Unmap(0, &CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
 
 	D3D12_CONSTANT_BUFFER_VIEW_DESC constant_buffer_view_desc = {

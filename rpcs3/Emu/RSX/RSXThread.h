@@ -161,6 +161,9 @@ namespace rsx
 
 		std::unordered_map<u32, color4_base<f32>> transform_constants;
 
+		// Constant stored for whole frame
+		std::unordered_map<u32, color4f> local_transform_constants;
+
 		u32 transform_program[512 * 4] = {};
 
 		virtual void load_vertex_data(u32 first, u32 count);
@@ -223,6 +226,12 @@ namespace rsx
 		 * Vertex shader's position is to be multiplied by this matrix.
 		 */
 		void fill_scale_offset_data(void *buffer) const noexcept;
+
+		/**
+		* Fill buffer with vertex program constants.
+		* Buffer must be at least 512 float4 wide.
+		*/
+		void fill_vertex_program_constants_data(void *buffer) noexcept;
 
 	public:
 		void reset();
