@@ -337,6 +337,36 @@ public:
 		return result;
 	}
 
+	size_t get_fragment_constants_buffer_size(const RSXFragmentProgram *fragmentShader) const noexcept
+	{
+		typename binary2FS::const_iterator It = m_cacheFS.find(vm::base(fragmentShader->addr));
+		if (It != m_cacheFS.end())
+			return It->second.FragmentConstantOffsetCache.size() * 4 * sizeof(float);
+		LOG_ERROR(RSX, "Can't retrieve constant offset cache");
+		return 0;
+	}
+
+	void fill_fragment_constans_buffer(void *buffer, const RSXFragmentProgram *fragment_program) const noexcept
+	{
+		typename binary2FS::const_iterator It = m_cacheFS.find(vm::base(fragment_program->addr));
+		if (It == m_cacheFS.end())
+			return;
+		__m128i mask = _mm_set_epi8(0xE, 0xF, 0xC, 0xD,
+			0xA, 0xB, 0x8, 0x9,
+			0x6, 0x7, 0x4, 0x5,
+			0x2, 0x3, 0x0, 0x1);
+
+		size_t offset = 0;
+		for (size_t offset_in_fragment_program : It->second.FragmentConstantOffsetCache)
+		{
+			void *data = vm::base(fragment_program->addr + (u32)offset_in_fragment_program);
+			const __m128i &vector = _mm_loadu_si128((__m128i*)data);
+			const __m128i &shuffled_vector = _mm_shuffle_epi8(vector, mask);
+			_mm_stream_si128((__m128i*)((char*)buffer + offset), shuffled_vector);
+			offset += 4 * sizeof(u32);
+		}
+	}
+
 	const std::vector<size_t> &getFragmentConstantOffsetsCache(const RSXFragmentProgram *fragmentShader) const
 	{
 		typename binary2FS::const_iterator It = m_cacheFS.find(vm::base(fragmentShader->addr));

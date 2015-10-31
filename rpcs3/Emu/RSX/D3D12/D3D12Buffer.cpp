@@ -189,8 +189,7 @@ void D3D12GSRender::upload_and_bind_vertex_shader_constants(size_t descriptor_in
 void D3D12GSRender::upload_and_bind_fragment_shader_constants(size_t descriptor_index)
 {
 	// Get constant from fragment program
-	const std::vector<size_t> &fragment_constant_offsets = m_cachePSO.getFragmentConstantOffsetsCache(&fragment_program);
-	size_t buffer_size = fragment_constant_offsets.size() * 4 * sizeof(float) + 1;
+	size_t buffer_size = m_cachePSO.get_fragment_constants_buffer_size(&fragment_program);
 	// Multiple of 256 never 0
 	buffer_size = (buffer_size + 255) & ~255;
 
@@ -200,24 +199,7 @@ void D3D12GSRender::upload_and_bind_fragment_shader_constants(size_t descriptor_
 	size_t offset = 0;
 	void *mapped_buffer;
 	ThrowIfFailed(m_constantsData.m_heap->Map(0, &CD3DX12_RANGE(heap_offset, heap_offset + buffer_size), &mapped_buffer));
-	for (size_t offset_in_fragment_program : fragment_constant_offsets)
-	{
-		u32 vector[4];
-		auto data = vm::ps3::ptr<u32>::make(fragment_program.addr + (u32)offset_in_fragment_program);
-
-		u32 c0 = (data[0] >> 16 | data[0] << 16);
-		u32 c1 = (data[1] >> 16 | data[1] << 16);
-		u32 c2 = (data[2] >> 16 | data[2] << 16);
-		u32 c3 = (data[3] >> 16 | data[3] << 16);
-
-		vector[0] = c0;
-		vector[1] = c1;
-		vector[2] = c2;
-		vector[3] = c3;
-
-		streamToBuffer((char*)mapped_buffer + heap_offset + offset, vector, 4 * sizeof(u32));
-		offset += 4 * sizeof(u32);
-	}
+	m_cachePSO.fill_fragment_constans_buffer((char*)mapped_buffer + heap_offset, &fragment_program);
 	m_constantsData.m_heap->Unmap(0, &CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
 
 	D3D12_CONSTANT_BUFFER_VIEW_DESC constant_buffer_view_desc = {
