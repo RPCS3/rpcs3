@@ -141,12 +141,18 @@ void D3D12GSRender::upload_and_bind_textures(ID3D12GraphicsCommandList *command_
 
 		ID3D12Resource *vram_texture;
 		std::unordered_map<u32, ComPtr<ID3D12Resource> >::const_iterator ItRTT = m_rtts.render_targets_storage.find(texaddr);
+		std::unordered_map<u32, ComPtr<ID3D12Resource> >::const_iterator ItDS = m_rtts.depth_stencil_storage.find(texaddr);
 		std::pair<texture_entry, ComPtr<ID3D12Resource> > *cached_texture = m_texture_cache.find_data_if_available(texaddr);
-		bool isRenderTarget = false;
+		bool is_render_target = false, is_depth_stencil_texture = false;
 		if (ItRTT != m_rtts.render_targets_storage.end())
 		{
 			vram_texture = ItRTT->second.Get();
-			isRenderTarget = true;
+			is_render_target = true;
+		}
+		else if (ItDS != m_rtts.depth_stencil_storage.end())
+		{
+			vram_texture = ItDS->second.Get();
+			is_depth_stencil_texture = true;
 		}
 		else if (cached_texture != nullptr && (cached_texture->first == texture_entry(format, w, h, textures[i].mipmap())))
 		{
@@ -200,7 +206,7 @@ void D3D12GSRender::upload_and_bind_textures(ID3D12GraphicsCommandList *command_
 			u8 remap_r = (textures[i].remap() >> 2) & 0x3;
 			u8 remap_g = (textures[i].remap() >> 4) & 0x3;
 			u8 remap_b = (textures[i].remap() >> 6) & 0x3;
-			if (isRenderTarget)
+			if (is_render_target)
 			{
 				// ARGB format
 				// Data comes from RTT, stored as RGBA already
@@ -217,6 +223,15 @@ void D3D12GSRender::upload_and_bind_textures(ID3D12GraphicsCommandList *command_
 					RemapValue[remap_g],
 					RemapValue[remap_b],
 					RemapValue[remap_a]);
+			}
+			else if (is_depth_stencil_texture)
+			{
+				shared_resource_view_desc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+				shared_resource_view_desc.Shader4ComponentMapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(
+					D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_0,
+					D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_0,
+					D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_0,
+					D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_0);
 			}
 			else
 			{
