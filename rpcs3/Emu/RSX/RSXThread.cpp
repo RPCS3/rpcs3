@@ -1024,6 +1024,30 @@ namespace rsx
 		onexit_thread();
 	}
 
+	void thread::fill_scale_offset_data(void *buffer) const noexcept
+	{
+		int clip_w = rsx::method_registers[NV4097_SET_SURFACE_CLIP_HORIZONTAL] >> 16;
+		int clip_h = rsx::method_registers[NV4097_SET_SURFACE_CLIP_VERTICAL] >> 16;
+
+		float scale_x = (float&)rsx::method_registers[NV4097_SET_VIEWPORT_SCALE] / (clip_w / 2.f);
+		float offset_x = (float&)rsx::method_registers[NV4097_SET_VIEWPORT_OFFSET] - (clip_w / 2.f);
+		offset_x /= clip_w / 2.f;
+
+		float scale_y = -(float&)rsx::method_registers[NV4097_SET_VIEWPORT_SCALE + 1] / (clip_h / 2.f);
+		float offset_y = -((float&)rsx::method_registers[NV4097_SET_VIEWPORT_OFFSET + 1] - (clip_h / 2.f));
+		offset_y /= clip_h / 2.f;
+
+		float scale_z = (float&)rsx::method_registers[NV4097_SET_VIEWPORT_SCALE + 2];
+		float offset_z = (float&)rsx::method_registers[NV4097_SET_VIEWPORT_OFFSET + 2];
+
+		float one = 1.f;
+
+		stream_vector(buffer, (u32&)scale_x, 0, 0, (u32&)offset_x);
+		stream_vector((char*)buffer + 16, 0, (u32&)scale_y, 0, (u32&)offset_y);
+		stream_vector((char*)buffer + 32, 0, 0, (u32&)scale_z, (u32&)offset_z);
+		stream_vector((char*)buffer + 48, 0, 0, 0, (u32&)one);
+	}
+
 	u64 thread::timestamp() const
 	{
 		// Get timestamp, and convert it from microseconds to nanoseconds

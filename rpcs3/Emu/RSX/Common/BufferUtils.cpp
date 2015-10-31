@@ -277,3 +277,9 @@ void write_index_array_data_to_buffer(char* dst, unsigned m_draw_mode, unsigned 
 		}
 	}
 }
+
+void stream_vector(void *dst, u32 x, u32 y, u32 z, u32 w) noexcept
+{
+	__m128i vector = _mm_set_epi32(w, z, y, x);
+	_mm_stream_si128((__m128i*)dst, vector);
+}

@@ -43,3 +43,8 @@ void write_index_array_data_to_buffer(char* dst, unsigned m_draw_mode, unsigned 
  * Write index data needed to emulate non indexed non native primitive mode.
  */
 void write_index_array_for_non_indexed_non_native_primitive_to_buffer(char* dst, unsigned m_draw_mode, unsigned first, unsigned count) noexcept;
+
+/**
+ * Stream a 128 bits vector to dst.
+ */
+void stream_vector(void *dst, u32 x, u32 y, u32 z, u32 w) noexcept;

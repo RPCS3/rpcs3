@@ -218,6 +218,12 @@ namespace rsx
 
 		void task();
 
+		/**
+		 * Fill buffer with 4x4 scale offset matrix.
+		 * Vertex shader's position is to be multiplied by this matrix.
+		 */
+		void fill_scale_offset_data(void *buffer) const noexcept;
+
 	public:
 		void reset();
 		void init(const u32 ioAddress, const u32 ioSize, const u32 ctrlAddress, const u32 localAddress);

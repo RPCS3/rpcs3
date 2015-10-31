@@ -142,30 +142,6 @@ void D3D12GSRender::load_vertex_index_data(u32 first, u32 count)
 
 void D3D12GSRender::upload_and_bind_scale_offset_matrix(size_t descriptorIndex)
 {
-	float scale_offset_matrix[16] =
-	{
-		1.0f, 0.0f, 0.0f, 0.0f,
-		0.0f, -1.0f, 0.0f, 0.0f,
-		0.0f, 0.0f, 1.0f, 0.0f,
-		0.0f, 0.0f, 0.0f, 1.0f
-	};
-
-	int clip_w = rsx::method_registers[NV4097_SET_SURFACE_CLIP_HORIZONTAL] >> 16;
-	int clip_h = rsx::method_registers[NV4097_SET_SURFACE_CLIP_VERTICAL] >> 16;
-
-	// Scale
-	scale_offset_matrix[0] *= (float&)rsx::method_registers[NV4097_SET_VIEWPORT_SCALE] / (clip_w / 2.f);
-	scale_offset_matrix[5] *= (float&)rsx::method_registers[NV4097_SET_VIEWPORT_SCALE + 1] / (clip_h / 2.f);
-	scale_offset_matrix[10] = (float&)rsx::method_registers[NV4097_SET_VIEWPORT_SCALE + 2];
-
-	// Offset
-	scale_offset_matrix[3] = (float&)rsx::method_registers[NV4097_SET_VIEWPORT_OFFSET] - (clip_w / 2.f);
-	scale_offset_matrix[7] = -((float&)rsx::method_registers[NV4097_SET_VIEWPORT_OFFSET + 1] - (clip_h / 2.f));
-	scale_offset_matrix[11] = (float&)rsx::method_registers[NV4097_SET_VIEWPORT_OFFSET + 2];
-
-	scale_offset_matrix[3] /= clip_w / 2.f;
-	scale_offset_matrix[7] /= clip_h / 2.f;
-
 	assert(m_constantsData.can_alloc(256));
 	size_t heap_offset = m_constantsData.alloc(256);
 
@@ -173,7 +149,7 @@ void D3D12GSRender::upload_and_bind_scale_offset_matrix(size_t descriptorIndex)
 	// Separate constant buffer
 	void *mapped_buffer;
 	ThrowIfFailed(m_constantsData.m_heap->Map(0, &CD3DX12_RANGE(heap_offset, heap_offset + 256), &mapped_buffer));
-	streamToBuffer((char*)mapped_buffer + heap_offset, scale_offset_matrix, 16 * sizeof(float));
+	fill_scale_offset_data((char*)mapped_buffer + heap_offset);
 	int is_alpha_tested = !!(rsx::method_registers[NV4097_SET_ALPHA_TEST_ENABLE]);
 	float alpha_ref = (float&)rsx::method_registers[NV4097_SET_ALPHA_REF];
 	memcpy((char*)mapped_buffer + heap_offset + 16 * sizeof(float), &is_alpha_tested, sizeof(int));
