@@ -58,8 +58,8 @@ LLVM_ATTRIBUTE_NORETURN void unreachable_internal(const char *msg = nullptr, con
 #ifndef NDEBUG
 #define unreachable(msg) \
 	unreachable_internal(msg, __FILE__, __LINE__)
-#elif defined(LLVM_BUILTIN_UNREACHABLE)
-#define unreachable(msg) LLVM_BUILTIN_UNREACHABLE
+//#elif defined(LLVM_BUILTIN_UNREACHABLE)
+//#define unreachable(msg) LLVM_BUILTIN_UNREACHABLE
 #else
 #define unreachable(msg) unreachable_internal()
 #endif

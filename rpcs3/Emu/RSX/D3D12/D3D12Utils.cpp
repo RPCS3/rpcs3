@@ -6,6 +6,7 @@
 #include <d3dcompiler.h>
 #include "D3D12GSRender.h"
 #include "d3dx12.h"
+#include "Utilities/Log.h"
 #define STRINGIFY(x) #x
 
 extern PFN_D3D12_SERIALIZE_ROOT_SIGNATURE wrapD3D12SerializeRootSignature;
@@ -265,6 +266,7 @@ void D3D12GSRender::initConvertShader()
 
 void unreachable_internal(const char *msg, const char *file, unsigned line)
 {
+	LOG_ERROR(RSX, "file %s line %d : %s", file, line, msg);
 	abort();
 	#ifdef LLVM_BUILTIN_UNREACHABLE
 		LLVM_BUILTIN_UNREACHABLE;
