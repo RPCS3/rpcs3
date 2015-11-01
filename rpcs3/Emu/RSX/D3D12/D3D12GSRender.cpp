@@ -1,6 +1,5 @@
 #include "stdafx_d3d12.h"
 #ifdef _WIN32
-#include <d3dcompiler.h>
 #include "D3D12GSRender.h"
 #include <wrl/client.h>
 #include <dxgi1_4.h>
@@ -10,9 +9,6 @@
 #include <d3d11on12.h>
 #include "Emu/state.h"
 #include "D3D12Formats.h"
-#pragma comment(lib, "d2d1")
-#pragma comment(lib, "DXGI")
-#pragma comment(lib, "Dwrite")
 
 PFN_D3D12_CREATE_DEVICE wrapD3D12CreateDevice;
 PFN_D3D12_GET_DEBUG_INTERFACE wrapD3D12GetDebugInterface;

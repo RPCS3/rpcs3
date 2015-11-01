@@ -3,7 +3,6 @@
 */
 #include "stdafx_d3d12.h"
 #ifdef _WIN32
-#include <d3dcompiler.h>
 #include "D3D12GSRender.h"
 #include "d3dx12.h"
 #include "Utilities/Log.h"

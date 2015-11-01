@@ -504,8 +504,7 @@ s32 cellGcmSetPrepareFlip(PPUThread& ppu, vm::ptr<CellGcmContextData> ctxt, u32 
 			return res;
 		}
 	}
-#ifdef __GNUC__
-	//gcc internal compiler error, try to avoid it for now
+#if 1
 	*ctxt->current++ = (GCM_FLIP_COMMAND << 2) | (1 << 18);
 	*ctxt->current++ = id;
 
@@ -514,6 +513,7 @@ s32 cellGcmSetPrepareFlip(PPUThread& ppu, vm::ptr<CellGcmContextData> ctxt, u32 
 		vm::_ref<CellGcmControl>(gcm_info.control_addr).put += 2 * sizeof(u32);
 	}
 #else
+	// internal compiler error, try to avoid it for now
 	u32 command_size = rsx::make_command(ctxt->current, GCM_FLIP_COMMAND, id);
 
 	if (ctxt.addr() == gcm_info.context_addr)

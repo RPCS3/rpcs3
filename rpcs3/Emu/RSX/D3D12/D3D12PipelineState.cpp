@@ -1,12 +1,9 @@
 #include "stdafx_d3d12.h"
 #ifdef _WIN32
-#include <d3dcompiler.h>
 #include "D3D12PipelineState.h"
 #include "D3D12GSRender.h"
 #include "Emu/state.h"
 #include "D3D12Formats.h"
-
-#pragma comment (lib, "d3dcompiler.lib")
 
 #define TO_STRING(x) #x
 
