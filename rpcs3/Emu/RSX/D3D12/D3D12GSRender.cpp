@@ -346,8 +346,8 @@ void D3D12GSRender::end()
 		0.f,
 		(float)clip_w,
 		(float)clip_h,
-		-1.f,
-		1.f
+		(f32&)rsx::method_registers[NV4097_SET_CLIP_MIN],
+		(f32&)rsx::method_registers[NV4097_SET_CLIP_MAX]
 	};
 	getCurrentResourceStorage().command_list->RSSetViewports(1, &viewport);
 
