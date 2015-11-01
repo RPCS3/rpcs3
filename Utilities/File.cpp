@@ -96,6 +96,7 @@ bool truncate_file(const std::string& file, u64 length)
 }
 
 #else
+#include <sys/mman.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <dirent.h>
@@ -306,14 +307,16 @@ bool fs::rename(const std::string& from, const std::string& to)
 
 int OSCopyFile(const char* source, const char* destination, bool overwrite)
 {
-	/* This function was taken from http://stackoverflow.com/questions/2180079/how-can-i-copy-a-file-on-unix-using-c */
+	/* Source: http://stackoverflow.com/questions/2180079/how-can-i-copy-a-file-on-unix-using-c */
 
-	int input, output;
-	if ((input = open(source, O_RDONLY)) == -1)
+	const int input = open(source, O_RDONLY);
+	if (input == -1)
 	{
 		return -1;
 	}
-	if ((output = open(destination, O_WRONLY | O_CREAT | (overwrite ? O_TRUNC : O_EXCL), 0666)) == -1)
+
+	const int output = open(destination, O_WRONLY | O_CREAT | (overwrite ? O_TRUNC : O_EXCL), 0666);
+	if (output == -1)
 	{
 		close(input);
 		return -1;
@@ -322,13 +325,12 @@ int OSCopyFile(const char* source, const char* destination, bool overwrite)
 	//Here we use kernel-space copying for performance reasons
 #if defined(__APPLE__) || defined(__FreeBSD__)
 	//fcopyfile works on FreeBSD and OS X 10.5+ 
-	int result = fcopyfile(input, output, 0, COPYFILE_ALL);
+	const int result = fcopyfile(input, output, 0, COPYFILE_ALL);
 #else
 	//sendfile will work with non-socket output (i.e. regular file) on Linux 2.6.33+
 	off_t bytesCopied = 0;
 	struct stat fileinfo = { 0 };
-	fstat(input, &fileinfo);
-	int result = sendfile(output, input, &bytesCopied, fileinfo.st_size) == -1 ? -1 : 0;
+	const int result = fstat(input, &fileinfo) == -1 || sendfile(output, input, &bytesCopied, fileinfo.st_size) == -1 ? -1 : 0;
 #endif
 
 	close(input);
@@ -658,6 +660,36 @@ fs::dir::~dir()
 		if (m_dd != -1) FindClose((HANDLE)m_dd);
 #else
 		::closedir((DIR*)m_dd);
+#endif
+	}
+}
+
+void fs::file_ptr::reset(const file& f)
+{
+	reset();
+
+	if (f)
+	{
+#ifdef _WIN32
+		const HANDLE handle = ::CreateFileMapping((HANDLE)f.m_fd, NULL, PAGE_READONLY, 0, 0, NULL);
+		m_ptr = (char*)::MapViewOfFile(handle, FILE_MAP_READ, 0, 0, 0);
+		m_size = f.size();
+		::CloseHandle(handle);
+#else
+		m_ptr = (char*)::mmap(nullptr, m_size = f.size(), PROT_READ, MAP_SHARED, f.m_fd, 0);
+		if (m_ptr == (void*)-1) m_ptr = nullptr;
+#endif
+	}
+}
+
+void fs::file_ptr::reset()
+{
+	if (m_ptr)
+	{
+#ifdef _WIN32
+		::UnmapViewOfFile(m_ptr);
+#else
+		::munmap(m_ptr, m_size);
 #endif
 	}
 }

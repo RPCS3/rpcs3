@@ -11,12 +11,14 @@ namespace fom // file open mode
 {
 	enum : u32
 	{
-		read = 1 << 0,
-		write = 1 << 1,
-		append = 1 << 2,
-		create = 1 << 3,
-		trunc = 1 << 4,
-		excl = 1 << 5,
+		read = 1 << 0, // enable reading
+		write = 1 << 1, // enable writing
+		append = 1 << 2, // enable appending (always write to the end of file)
+		create = 1 << 3, // create file if it doesn't exist
+		trunc = 1 << 4, // clear opened file if it's not empty
+		excl = 1 << 5, // failure if the file already exists (used with `create`)
+
+		rewrite = write | create | trunc, // write + create + trunc
 	};
 };
 
@@ -81,6 +83,8 @@ namespace fs
 
 		handle_type m_fd = null;
 
+		friend class file_ptr;
+
 	public:
 		file() = default;
 
@@ -133,14 +137,63 @@ namespace fs
 		// Write the data to the file and return the amount of data actually written
 		u64 write(const void* buffer, u64 count) const;
 
-		// Write std::string
-		u64 write(const std::string& string) const { return write(string.data(), string.size()); }
-
 		// Move file pointer
 		u64 seek(s64 offset, fsm seek_mode = fsm::begin) const;
 
 		// Get file size
 		u64 size() const;
+
+		// Write std::string
+		const file& operator <<(const std::string& str) const
+		{
+			CHECK_ASSERTION(write(str.data(), str.size()) == str.size());
+			return *this;
+		}
+	};
+
+	class file_ptr final
+	{
+		char* m_ptr = nullptr;
+		u64 m_size;
+
+	public:
+		file_ptr() = default;
+
+		file_ptr(file_ptr&& right)
+			: m_ptr(right.m_ptr)
+			, m_size(right.m_size)
+		{
+			right.m_ptr = 0;
+		}
+
+		file_ptr& operator =(file_ptr&& right)
+		{
+			std::swap(m_ptr, right.m_ptr);
+			std::swap(m_size, right.m_size);
+			return *this;
+		}
+
+		file_ptr(const file& f)
+		{
+			reset(f);
+		}
+
+		~file_ptr()
+		{
+			reset();
+		}
+
+		// Open file mapping
+		void reset(const file& f);
+		
+		// Close file mapping
+		void reset();
+
+		// Get pointer
+		operator char*() const
+		{
+			return m_ptr;
+		}
 	};
 
 	class dir final

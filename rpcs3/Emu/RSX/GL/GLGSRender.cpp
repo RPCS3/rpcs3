@@ -469,7 +469,7 @@ void GLTexture::save(rsx::texture& tex, const std::string& name)
 		return;
 	}
 
-	fs::file(name + ".raw", fom::write | fom::create | fom::trunc).write(alldata, texPixelCount * 4);
+	fs::file(name + ".raw", fom::rewrite).write(alldata, texPixelCount * 4);
 
 	u8* data = new u8[texPixelCount * 3];
 	u8* alpha = new u8[texPixelCount];

@@ -252,25 +252,20 @@ void MainFrame::InstallPkg(wxCommandEvent& WXUNUSED(event))
 	Emu.GetVFS().GetDevice("/dev_hdd0/game/", local_path);
 
 	// Open PKG file
-	fs::file pkg_f{ ctrl.GetPath().ToStdString() };
+	fs::file pkg_f(ctrl.GetPath().ToStdString());
 
-	if (!pkg_f)
+	// Open file mapping (test)
+	fs::file_ptr pkg_ptr(pkg_f);
+
+	if (!pkg_f || !pkg_ptr)
 	{
 		LOG_ERROR(LOADER, "PKG: Failed to open %s", ctrl.GetPath().ToStdString());
 		return;
 	}
 
-	// Fetch title ID from the header
-	char title_id[10] = "?????????";
-
-	CHECK_ASSERTION(pkg_f.seek(55) != -1);
-
-	pkg_f.read(title_id, 9);
-	pkg_f.seek(0);
-
 	// Append title ID to the path
 	local_path += '/';
-	local_path += title_id;
+	local_path += { pkg_ptr + 55, 9 };
 
 	if (!fs::create_dir(local_path))
 	{
@@ -294,7 +289,7 @@ void MainFrame::InstallPkg(wxCommandEvent& WXUNUSED(event))
 	volatile f64 progress = 0.0;
 
 	// Run PKG unpacking asynchronously
-	auto result = std::async(WRAP_EXPR(UnpackPKG(pkg_f, local_path + "/", progress)));
+	auto result = std::async(WRAP_EXPR(pkg_install(pkg_f, local_path + "/", progress)));
 
 	// Wait for the completion
 	while (result.wait_for(15ms) != std::future_status::ready)

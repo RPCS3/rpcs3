@@ -821,7 +821,7 @@ int DecryptEDAT(const std::string& input_file_name, const std::string& output_fi
 {
 	// Prepare the files.
 	fs::file input(input_file_name);
-	fs::file output(output_file_name, fom::write | fom::create | fom::trunc);
+	fs::file output(output_file_name, fom::rewrite);
 	fs::file rap(rap_file_name);
 
 	// Set keys (RIF and DEVKLIC).

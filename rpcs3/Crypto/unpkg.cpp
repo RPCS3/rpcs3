@@ -59,7 +59,7 @@ static bool CheckHeader(const fs::file& pkg_f, PKGHeader& header)
 }
 
 // PKG Decryption
-bool UnpackPKG(const fs::file& pkg_f, const std::string& dir, volatile f64& progress)
+bool pkg_install(const fs::file& pkg_f, const std::string& dir, volatile f64& progress)
 {
 	const std::size_t BUF_SIZE = 8192 * 1024; // 8 MB
 

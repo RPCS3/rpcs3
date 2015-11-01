@@ -57,4 +57,4 @@ struct PKGEntry
 	be_t<u32> pad;          // Padding (zeros)
 };
 
-bool UnpackPKG(const class fs::file& pkg_f, const std::string& dir, volatile f64& progress);
+bool pkg_install(const class fs::file& pkg_f, const std::string& dir, volatile f64& progress);

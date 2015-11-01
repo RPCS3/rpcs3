@@ -622,7 +622,7 @@ never_inline s32 savedata_op(PPUThread& ppu, u32 operation, u32 version, vm::cpt
 	// Write PARAM.SFO
 	if (psf)
 	{
-		vfsFile f(sfo_path, fom::write | fom::create | fom::trunc);
+		vfsFile f(sfo_path, fom::rewrite);
 		psf.Save(f);
 	}
 

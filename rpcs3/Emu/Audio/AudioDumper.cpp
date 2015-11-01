@@ -12,7 +12,7 @@ AudioDumper::~AudioDumper()
 
 bool AudioDumper::Init(u8 ch)
 {
-	if ((m_init = m_output.open("audio.wav", fom::write | fom::create | fom::trunc)))
+	if ((m_init = m_output.open("audio.wav", fom::rewrite)))
 	{
 		m_header = WAVHeader(ch);
 		WriteHeader();

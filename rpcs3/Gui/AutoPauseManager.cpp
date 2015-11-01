@@ -96,7 +96,7 @@ void AutoPauseManagerDialog::LoadEntries(void)
 //This would always use a 0xFFFFFFFF as end of the pause.bin
 void AutoPauseManagerDialog::SaveEntries(void)
 {
-	fs::file list("pause.bin", fom::write | fom::create | fom::trunc);
+	fs::file list("pause.bin", fom::rewrite);
 	//System calls ID and Function calls ID are all u32 iirc.
 	u32 num = 0;
 	CHECK_ASSERTION(list.seek(0) != -1);

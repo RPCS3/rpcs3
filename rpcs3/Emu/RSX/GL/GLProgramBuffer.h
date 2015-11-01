@@ -19,7 +19,7 @@ struct GLTraits
 		//checkForGlError("m_fragment_prog.Compile");
 
 		// TODO: This shouldn't use current dir
-		fs::file("./FragmentProgram.txt", fom::write | fom::create | fom::trunc).write(fragmentProgramData.shader.c_str(), fragmentProgramData.shader.size());
+		fs::file("./FragmentProgram.txt", fom::rewrite) << fragmentProgramData.shader;
 	}
 
 	static
@@ -30,7 +30,7 @@ struct GLTraits
 		//checkForGlError("m_vertex_prog.Compile");
 
 		// TODO: This shouldn't use current dir
-		fs::file("./VertexProgram.txt", fom::write | fom::create | fom::trunc).write(vertexProgramData.shader.c_str(), vertexProgramData.shader.size());
+		fs::file("./VertexProgram.txt", fom::rewrite) << vertexProgramData.shader;
 	}
 
 	static
