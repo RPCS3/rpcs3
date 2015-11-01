@@ -195,14 +195,9 @@ D3D12GSRender::D3D12GSRender()
 			IID_PPV_ARGS(&m_dummy_texture))
 			);
 
-	m_readback_resources.init(m_device.Get(), 1024 * 1024 * 128, D3D12_HEAP_TYPE_READBACK, D3D12_RESOURCE_STATE_COPY_DEST);
-	m_uav_heap.init(m_device.Get(), 1024 * 1024 * 128, D3D12_HEAP_TYPE_DEFAULT, D3D12_HEAP_FLAG_ALLOW_ONLY_NON_RT_DS_TEXTURES);
-
 	m_rtts.init(m_device.Get());
-
-	m_constants_data.init(m_device.Get(), 1024 * 1024 * 64, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ);
-	m_vertex_index_data.init(m_device.Get(), 1024 * 1024 * 384, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ);
-	m_texture_upload_data.init(m_device.Get(), 1024 * 1024 * 512, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ);
+	m_readback_resources.init(m_device.Get(), 1024 * 1024 * 128, D3D12_HEAP_TYPE_READBACK, D3D12_RESOURCE_STATE_COPY_DEST);
+	m_buffer_data.init(m_device.Get(), 1024 * 1024 * 896, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ);
 
 	if (rpcs3::config.rsx.d3d12.overlay.value())
 		init_d2d_structures();
@@ -215,11 +210,6 @@ D3D12GSRender::~D3D12GSRender()
 	m_texture_cache.unprotect_all();
 
 	gfxHandler = [this](u32) { return false; };
-	m_constants_data.release();
-	m_vertex_index_data.release();
-	m_texture_upload_data.release();
-	m_uav_heap.m_heap->Release();
-	m_readback_resources.m_heap->Release();
 	m_dummy_texture->Release();
 	m_convertPSO->Release();
 	m_convertRootSignature->Release();
@@ -405,15 +395,12 @@ void D3D12GSRender::flip(int buffer)
 
 			row_pitch = align(w * 4, 256);
 			size_t texture_size = row_pitch * h; // * 4 for mipmap levels
-			assert(m_texture_upload_data.can_alloc(texture_size));
-			size_t heap_offset = m_texture_upload_data.alloc(texture_size);
+			size_t heap_offset = m_buffer_data.alloc<D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT>(texture_size);
 
-			void *buffer;
-			CHECK_HRESULT(m_texture_upload_data.m_heap->Map(0, &CD3DX12_RANGE(heap_offset, heap_offset + texture_size), &buffer));
-			void *mapped_buffer = (char*)buffer + heap_offset;
+			void *mapped_buffer = m_buffer_data.map<void>(heap_offset);
 			for (unsigned row = 0; row < h; row++)
 				memcpy((char*)mapped_buffer + row * row_pitch, (char*)src_buffer + row * w * 4, w * 4);
-			m_texture_upload_data.m_heap->Unmap(0, &CD3DX12_RANGE(heap_offset, heap_offset + texture_size));
+			m_buffer_data.unmap(CD3DX12_RANGE(heap_offset, heap_offset + texture_size));
 			offset = heap_offset;
 		}
 
@@ -428,7 +415,7 @@ void D3D12GSRender::flip(int buffer)
 				)
 			);
 		get_current_resource_storage().command_list->CopyTextureRegion(&CD3DX12_TEXTURE_COPY_LOCATION(storage.ram_framebuffer.Get(), 0), 0, 0, 0,
-			&CD3DX12_TEXTURE_COPY_LOCATION(m_texture_upload_data.m_heap, { offset, { DXGI_FORMAT_R8G8B8A8_UNORM, (UINT)w, (UINT)h, 1, (UINT)row_pitch } }), nullptr);
+			&CD3DX12_TEXTURE_COPY_LOCATION(m_buffer_data.get_heap(), { offset, { DXGI_FORMAT_R8G8B8A8_UNORM, (UINT)w, (UINT)h, 1, (UINT)row_pitch } }), nullptr);
 
 		get_current_resource_storage().command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(storage.ram_framebuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ));
 		resource_to_flip = storage.ram_framebuffer.Get();
@@ -550,11 +537,8 @@ void D3D12GSRender::flip(int buffer)
 	// Get the put pos - 1. This way after cleaning we can set the get ptr to
 	// this value, allowing heap to proceed even if we cleant before allocating
 	// a new value (that's the reason of the -1)
-	storage.constants_heap_get_pos = m_constants_data.get_current_put_pos_minus_one();
-	storage.vertex_index_heap_get_pos = m_vertex_index_data.get_current_put_pos_minus_one();
-	storage.texture_upload_heap_get_pos = m_texture_upload_data.get_current_put_pos_minus_one();
+	storage.buffer_heap_get_pos = m_buffer_data.get_current_put_pos_minus_one();
 	storage.readback_heap_get_pos = m_readback_resources.get_current_put_pos_minus_one();
-	storage.uav_heap_get_pos = m_uav_heap.get_current_put_pos_minus_one();
 
 	// Now get ready for next frame
 	resource_storage &new_storage = get_current_resource_storage();
@@ -562,11 +546,8 @@ void D3D12GSRender::flip(int buffer)
 	new_storage.wait_and_clean();
 	if (new_storage.in_use)
 	{
-		m_constants_data.m_get_pos = new_storage.constants_heap_get_pos;
-		m_vertex_index_data.m_get_pos = new_storage.vertex_index_heap_get_pos;
-		m_texture_upload_data.m_get_pos = new_storage.texture_upload_heap_get_pos;
+		m_buffer_data.m_get_pos = new_storage.buffer_heap_get_pos;
 		m_readback_resources.m_get_pos = new_storage.readback_heap_get_pos;
-		m_uav_heap.m_get_pos = new_storage.uav_heap_get_pos;
 	}
 
 	m_frame->flip(nullptr);

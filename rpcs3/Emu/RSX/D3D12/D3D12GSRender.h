@@ -112,14 +112,9 @@ private:
 	resource_storage &get_current_resource_storage();
 	resource_storage &get_non_current_resource_storage();
 
-	// Constants storage
-	data_heap<ID3D12Resource, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT> m_constants_data;
-	// Vertex storage
-	data_heap<ID3D12Resource, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT> m_vertex_index_data;
-	// Texture storage
-	data_heap<ID3D12Resource, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT> m_texture_upload_data;
-	data_heap<ID3D12Heap, D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT> m_uav_heap;
-	data_heap<ID3D12Resource, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT> m_readback_resources;
+	// Textures, constants, index and vertex buffers storage
+	data_heap m_buffer_data;
+	data_heap m_readback_resources;
 
 	render_targets m_rtts;
 
