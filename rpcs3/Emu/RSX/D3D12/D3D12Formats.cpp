@@ -364,8 +364,8 @@ BOOL get_front_face_ccw(u32 set_front_face_value) noexcept
 {
 	switch (set_front_face_value)
 	{
-	case CELL_GCM_CW: return FALSE;
 	default: // Disgaea 3 pass some garbage value at startup, this is needed to survive.
+	case CELL_GCM_CW: return FALSE;
 	case CELL_GCM_CCW: return TRUE;
 	}
 	unreachable("Wrong front face value");
