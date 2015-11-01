@@ -353,12 +353,22 @@ DXGI_FORMAT get_depth_stencil_surface_clear_format(u8 format) noexcept
 	unreachable("Wrong depth stencil surface format");
 }
 
-DXGI_FORMAT get_depth_typeless_surface_format(u8 format) noexcept
+DXGI_FORMAT get_depth_stencil_typeless_surface_format(u8 format) noexcept
 {
 	switch (format)
 	{
 	case CELL_GCM_SURFACE_Z16: return DXGI_FORMAT_R16_TYPELESS;
 	case CELL_GCM_SURFACE_Z24S8: return DXGI_FORMAT_R24G8_TYPELESS;
+	}
+	unreachable("Wrong depth stencil surface format");
+}
+
+DXGI_FORMAT get_depth_samplable_surface_format(u8 format) noexcept
+{
+	switch (format)
+	{
+	case CELL_GCM_SURFACE_Z16: return DXGI_FORMAT_R16_FLOAT;
+	case CELL_GCM_SURFACE_Z24S8: return DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
 	}
 	unreachable("Wrong depth stencil surface format");
 }

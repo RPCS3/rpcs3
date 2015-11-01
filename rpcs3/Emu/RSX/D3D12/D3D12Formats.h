@@ -79,9 +79,14 @@ DXGI_FORMAT get_depth_stencil_surface_format(u8 format) noexcept;
 DXGI_FORMAT get_depth_stencil_surface_clear_format(u8 format) noexcept;
 
 /**
- * Convert depth surface format to DXGI_FORMAT using typeless for stencil
+ * Convert depth surface format to a typeless DXGI_FORMAT
  */
-DXGI_FORMAT get_depth_typeless_surface_format(u8 format) noexcept;
+DXGI_FORMAT get_depth_stencil_typeless_surface_format(u8 format) noexcept;
+
+/**
+* Convert depth surface format to a DXGI_FORMAT that can be depth sampled
+*/
+DXGI_FORMAT get_depth_samplable_surface_format(u8 format) noexcept;
 
 /**
  * Convert front face value to bool value telling wheter front face is counterclockwise or not

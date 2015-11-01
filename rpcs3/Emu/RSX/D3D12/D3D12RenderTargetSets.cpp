@@ -327,7 +327,7 @@ ID3D12Resource * render_targets::bind_address_as_depth_stencil(ID3D12Device * de
 	D3D12_CLEAR_VALUE clear_depth_value = {};
 	clear_depth_value.DepthStencil.Depth = depthClear;
 
-	DXGI_FORMAT dxgi_format = get_depth_typeless_surface_format(surfaceDepthFormat);
+	DXGI_FORMAT dxgi_format = get_depth_stencil_typeless_surface_format(surfaceDepthFormat);
 	clear_depth_value.Format = get_depth_stencil_surface_clear_format(surfaceDepthFormat);
 
 	ComPtr<ID3D12Resource> new_depth_stencil;
@@ -468,7 +468,7 @@ void D3D12GSRender::copy_render_target_to_dma_location()
 			m_device->CreateDescriptorHeap(&descriptor_heap_desc, IID_PPV_ARGS(descriptor_heap.GetAddressOf()))
 			);
 		D3D12_SHADER_RESOURCE_VIEW_DESC shader_resource_view_desc = {};
-		m_surface.depth_format = get_depth_typeless_surface_format(m_surface.depth_format);
+		shader_resource_view_desc.Format = get_depth_samplable_surface_format(m_surface.depth_format);
 		shader_resource_view_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 		shader_resource_view_desc.Texture2D.MipLevels = 1;
 		shader_resource_view_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
