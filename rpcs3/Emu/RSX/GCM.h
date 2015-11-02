@@ -1,6 +1,7 @@
 #pragma once
 #include "Utilities/types.h"
 #include "Emu/Memory/vm.h"
+#include <sstream>
 
 enum
 {
@@ -1643,5 +1644,354 @@ namespace rsx
 		}
 
 		return fmt::format("unknown/illegal method [0x%08x]", id);
+	}
+
+	static std::string get_blend_factor(u16 factor) noexcept
+	{
+		switch (factor)
+		{
+		case CELL_GCM_ZERO: return "0";
+		case CELL_GCM_ONE: return "1";
+		case CELL_GCM_SRC_COLOR: return "src.rgb";
+		case CELL_GCM_ONE_MINUS_SRC_COLOR: return "(1 - src.rgb)";
+		case CELL_GCM_SRC_ALPHA: return "src.a";
+		case CELL_GCM_ONE_MINUS_SRC_ALPHA: return "(1 - src.a)";
+		case CELL_GCM_DST_ALPHA: return "dst.a";
+		case CELL_GCM_ONE_MINUS_DST_ALPHA: return "(1 - dst.a)";
+		case CELL_GCM_DST_COLOR: return "dst.rgb";
+		case CELL_GCM_ONE_MINUS_DST_COLOR: return "(1 - dst.rgb)";
+		case CELL_GCM_SRC_ALPHA_SATURATE: return "sat(src.a)";
+		case CELL_GCM_CONSTANT_COLOR: return "const.rgb";
+		case CELL_GCM_ONE_MINUS_CONSTANT_COLOR: return "(1 - const.rgb)";
+		case CELL_GCM_CONSTANT_ALPHA: return "const.a";
+		case CELL_GCM_ONE_MINUS_CONSTANT_ALPHA: return "(1 - const.a)";
+		}
+		return "Error";
+	}
+
+	static std::string get_blend_op(u16 op) noexcept
+	{
+		switch (op)
+		{
+		case CELL_GCM_FUNC_ADD: return "Add";
+		case CELL_GCM_FUNC_SUBTRACT: return "Substract";
+		case CELL_GCM_FUNC_REVERSE_SUBTRACT: return "Reverse_substract";
+		case CELL_GCM_MIN: return "Min";
+		case CELL_GCM_MAX: return "Max";
+		case CELL_GCM_FUNC_ADD_SIGNED: return "Add_signed";
+		case CELL_GCM_FUNC_REVERSE_ADD_SIGNED: return "Reverse_add_signed";
+		case CELL_GCM_FUNC_REVERSE_SUBTRACT_SIGNED: return "Reverse_substract_signed";
+		}
+		return "Error";
+	}
+
+	static std::string get_logic_op(u32 op) noexcept
+	{
+		switch (op)
+		{
+		case CELL_GCM_CLEAR: return "Clear";
+		case CELL_GCM_AND: return "And";
+		case CELL_GCM_AND_REVERSE: return "And_reverse";
+		case CELL_GCM_COPY: return "Copy";
+		case CELL_GCM_AND_INVERTED: return "And_inverted";
+		case CELL_GCM_NOOP: return "Noop";
+		case CELL_GCM_XOR: return "Xor";
+		case CELL_GCM_OR: return "Or";
+		case CELL_GCM_NOR: return "Nor";
+		case CELL_GCM_EQUIV: return "Equiv";
+		case CELL_GCM_INVERT: return "Invert";
+		case CELL_GCM_OR_REVERSE: return "Or_reverse";
+		case CELL_GCM_COPY_INVERTED: return "Copy_inverted";
+		case CELL_GCM_OR_INVERTED: return "Or_inverted";
+		case CELL_GCM_NAND: return "Nand";
+		}
+		return "Error";
+	}
+
+	static std::string get_compare_func(u32 op) noexcept
+	{
+		switch (op)
+		{
+		case CELL_GCM_NEVER: return "Never";
+		case CELL_GCM_LESS: return "Less";
+		case CELL_GCM_EQUAL: return "Equal";
+		case CELL_GCM_LEQUAL: return "Less_equal";
+		case CELL_GCM_GREATER: return "Greater";
+		case CELL_GCM_NOTEQUAL: return "Not_equal";
+		case CELL_GCM_GEQUAL: return "Greater_equal";
+		case CELL_GCM_ALWAYS: return "Always";
+		}
+		return "Error";
+	}
+
+	static std::string get_primitive_mode(u8 draw_mode) noexcept
+	{
+		switch (draw_mode)
+		{
+		case CELL_GCM_PRIMITIVE_POINTS: return "Points";
+		case CELL_GCM_PRIMITIVE_LINES: return "Lines";
+		case CELL_GCM_PRIMITIVE_LINE_LOOP: return "Line_loop";
+		case CELL_GCM_PRIMITIVE_LINE_STRIP: return "Line_strip";
+		case CELL_GCM_PRIMITIVE_TRIANGLES: return "Triangles";
+		case CELL_GCM_PRIMITIVE_TRIANGLE_STRIP: return "Triangle_strip";
+		case CELL_GCM_PRIMITIVE_TRIANGLE_FAN: return "Triangle_fan";
+		case CELL_GCM_PRIMITIVE_QUADS: return "Quads";
+		case CELL_GCM_PRIMITIVE_QUAD_STRIP: return "Quad_strip";
+		case CELL_GCM_PRIMITIVE_POLYGON: return "Polygon";
+		}
+		return "Error";
+	}
+
+	static std::string ptr_to_string(u32 ptr) noexcept
+	{
+		std::stringstream ss;
+		ss << (void*)(u64)ptr;
+		return ss.str();
+	}
+
+	static std::string dma_mode(u32 arg) noexcept
+	{
+		switch (arg)
+		{
+		case CELL_GCM_LOCATION_LOCAL:
+		case CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER: return "Local memory";
+		case CELL_GCM_LOCATION_MAIN:
+		case CELL_GCM_CONTEXT_DMA_MEMORY_HOST_BUFFER: return "Main memory";
+		}
+		return "Error";
+	}
+
+
+	static std::string depth_stencil_surface_format(u32 format) noexcept
+	{
+		switch (format)
+		{
+		case CELL_GCM_SURFACE_Z16: return "CELL_GCM_SURFACE_Z16";
+		case CELL_GCM_SURFACE_Z24S8: return "CELL_GCM_SURFACE_Z24S8";
+		}
+		return "Error";
+	}
+
+	static std::string color_surface_format(u32 format) noexcept
+	{
+		switch (format)
+		{
+		case CELL_GCM_SURFACE_X1R5G5B5_Z1R5G5B5: return "CELL_GCM_SURFACE_X1R5G5B5_Z1R5G5B5";
+		case CELL_GCM_SURFACE_X1R5G5B5_O1R5G5B5: return "CELL_GCM_SURFACE_X1R5G5B5_O1R5G5B5";
+		case CELL_GCM_SURFACE_R5G6B5: return "CELL_GCM_SURFACE_R5G6B5";
+		case CELL_GCM_SURFACE_X8R8G8B8_Z8R8G8B8: return "CELL_GCM_SURFACE_X8R8G8B8_Z8R8G8B8";
+		case CELL_GCM_SURFACE_X8R8G8B8_O8R8G8B8: return "CELL_GCM_SURFACE_X8R8G8B8_O8R8G8B8";
+		case CELL_GCM_SURFACE_A8R8G8B8: return "CELL_GCM_SURFACE_A8R8G8B8";
+		case CELL_GCM_SURFACE_B8: return "CELL_GCM_SURFACE_B8";
+		case CELL_GCM_SURFACE_G8B8: return "CELL_GCM_SURFACE_G8B8";
+		case CELL_GCM_SURFACE_F_W16Z16Y16X16: return "CELL_GCM_SURFACE_F_W16Z16Y16X16";
+		case CELL_GCM_SURFACE_F_W32Z32Y32X32: return "CELL_GCM_SURFACE_F_W32Z32Y32X32";
+		case CELL_GCM_SURFACE_F_X32: return "CELL_GCM_SURFACE_F_X32";
+		case CELL_GCM_SURFACE_X8B8G8R8_Z8B8G8R8: return "CELL_GCM_SURFACE_X8B8G8R8_Z8B8G8R8";
+		case CELL_GCM_SURFACE_X8B8G8R8_O8B8G8R8: return "CELL_GCM_SURFACE_X8B8G8R8_O8B8G8R8";
+		case CELL_GCM_SURFACE_A8B8G8R8: return "CELL_GCM_SURFACE_A8B8G8R8";
+		}
+		return "Error";
+	}
+
+	static std::string surface_target(u32 target) noexcept
+	{
+		switch (target)
+		{
+		case CELL_GCM_SURFACE_TARGET_0: return "surface A";
+		case CELL_GCM_SURFACE_TARGET_1: return "surface B";
+		case CELL_GCM_SURFACE_TARGET_MRT1: return "surfaces A and B";
+		case CELL_GCM_SURFACE_TARGET_MRT2: return "surfaces A, B and C";
+		case CELL_GCM_SURFACE_TARGET_MRT3: return "surfaces A,B, C and D";
+		}
+		return "Error";
+	}
+
+	static std::string get_clear_color(u32 clear_color) noexcept
+	{
+		u8 clear_a = clear_color >> 24;
+		u8 clear_r = clear_color >> 16;
+		u8 clear_g = clear_color >> 8;
+		u8 clear_b = clear_color;
+		return "A = " + std::to_string(clear_a / 255.0f) + " R = " + std::to_string(clear_r / 255.0f) + " G = " + std::to_string(clear_g / 255.0f) + " B = " + std::to_string(clear_b / 255.0f);
+	}
+
+	static std::string get_zstencil_clear(u32 zstencil) noexcept
+	{
+		u32 depth = zstencil >> 8;
+		u32 stencil = zstencil & 0xff;
+		return "Z = " + std::to_string(depth) + " S = " + std::to_string(stencil);
+	}
+
+	static std::string get_stencil_op(u32 op) noexcept
+	{
+		switch (op)
+		{
+		case CELL_GCM_KEEP: return "Keep";
+		case CELL_GCM_ZERO: return "Zero";
+		case CELL_GCM_REPLACE: return "Replace";
+		case CELL_GCM_INCR: return "Incr";
+		case CELL_GCM_DECR: return "Decr";
+		case CELL_GCM_INCR_WRAP: return "Incr_wrap";
+		case CELL_GCM_DECR_WRAP: return "Decr_wrap";
+		}
+		return "Error";
+	}
+
+	static std::string get_vertex_attribute_format(u8 type) noexcept
+	{
+		switch (type)
+		{
+		case CELL_GCM_VERTEX_S1: return "Short";
+		case CELL_GCM_VERTEX_F: return "Float";
+		case CELL_GCM_VERTEX_SF: return "Half float";
+		case CELL_GCM_VERTEX_UB: return "Unsigned byte";
+		case CELL_GCM_VERTEX_S32K: return "Signed int";
+		case CELL_GCM_VERTEX_CMP: return "CMP";
+		case CELL_GCM_VERTEX_UB256: return "UB256";
+		}
+		return "Error";
+	}
+
+	static std::string unpack_vertex_format(u32 arg) noexcept
+	{
+		u32 frequency = arg >> 16;
+		u32 stride = (arg >> 8) & 0xff;
+		u32 size = (arg >> 4) & 0xf;
+		u32 type = arg & 0xf;
+		if (size == 0)
+			return "(disabled)";
+
+		return "Type = " + get_vertex_attribute_format(type) + " size = " + std::to_string(size) + " stride = " + std::to_string(stride) + " frequency = " + std::to_string(frequency);
+	}
+
+	static std::string index_type(u16 arg) noexcept
+	{
+		switch (arg)
+		{
+		case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_16: return "unsigned short";
+		case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_32: return "unsigned int";
+		}
+		return "Error";
+	}
+
+	static std::function<std::string(u32)> get_pretty_printing_function(const u32 id)
+	{
+		static const std::unordered_map<u32, std::function<std::string(u32)> > printing_functions =
+		{
+			{ NV4097_NO_OPERATION , [](u32) { return "(nop)"; } },
+			{ NV4097_SET_ALPHA_TEST_ENABLE, [](u32 arg) { return (!!arg) ? "Alpha: enable" : "Alpha: disable"; } },
+			{ NV4097_SET_DEPTH_TEST_ENABLE, [](u32 arg) { return (!!arg) ? "Depth: enable" : "Depth: disable"; } },
+			{ NV4097_SET_DEPTH_MASK, [](u32 arg) { return (!!arg) ? "Depth: write enabled" : "Depth: write disabled"; } },
+			{ NV4097_SET_DEPTH_FUNC, [](u32 arg) { return "Depth: " + get_compare_func(arg); } },
+			{ NV4097_SET_LOGIC_OP_ENABLE, [](u32 arg) { return (!!arg) ? "Logic Op: enable" : "Logic Op: disable"; } },
+			{ NV4097_SET_LOGIC_OP, [](u32 arg) { return "Logic Op: " + get_logic_op(arg); } },
+			{ NV4097_SET_BLEND_ENABLE , [](u32 arg) { return (!!arg) ? "Blend: enable" : "Blend: disable"; } },
+			{ NV4097_SET_BLEND_FUNC_SFACTOR, [](u32 arg) { return "Blend: sfactor.rgb = " + get_blend_factor(arg & 0xFFFF) + " sfactor.a = " + get_blend_factor(arg >> 16); } },
+			{ NV4097_SET_BLEND_FUNC_DFACTOR, [](u32 arg) { return "Blend: dfactor.rgb = " + get_blend_factor(arg & 0xFFFF) + " dfactor.a = " + get_blend_factor(arg >> 16); } },
+			{ NV4097_SET_BLEND_EQUATION , [](u32 arg) { return "Blend: op.rgb = " + get_blend_op(arg & 0xFFFF) + " op.a = " + get_blend_op(arg >> 16); } },
+			{ NV4097_SET_BLEND_ENABLE_MRT, [](u32 arg) { return "Blend: mrt0 = " + std::to_string(!!(arg & 0x2)) + " mrt1 = " + std::to_string(!!(arg & 0x4)) + " mrt2 = " + std::to_string(!!(arg & 0x8)); } },
+			{ NV4097_SET_COLOR_MASK , [](u32 arg) { return "Color mask: A = " + std::to_string(!!(arg & 0x1000000)) + " R = " + std::to_string(!!(arg & 0x10000)) + " G = " + std::to_string(!!(arg & 0x100)) + " B = " + std::to_string(!!(arg & 0x1)); } },
+			{ NV4097_SET_VIEWPORT_HORIZONTAL, [](u32 arg) { return "Viewport: x = " + std::to_string(arg & 0xFFFF) + " width = " + std::to_string(arg >> 16); } },
+			{ NV4097_SET_VIEWPORT_VERTICAL, [](u32 arg) { return "Viewport: y = " + std::to_string(arg & 0xFFFF) + " height = " + std::to_string(arg >> 16); } },
+			{ NV4097_SET_BEGIN_END, [](u32 arg) { return arg ? "- Begin: " + get_primitive_mode(arg) + " -" : "- End -"; } },
+			{ NV4097_DRAW_ARRAYS, [](u32 arg) { return "Draw " + std::to_string((arg >> 24) + 1) + " vertex starting from " + std::to_string(arg & 0xFFFFFF); } },
+			{ NV4097_DRAW_INDEX_ARRAY, [](u32 arg) { return "Draw " + std::to_string((arg >> 24) + 1) + " index starting from " + std::to_string(arg & 0xFFFFFF); } },
+			{ NV4097_SET_SEMAPHORE_OFFSET, [](u32 arg) { return "Semaphore: @ " + ptr_to_string(arg); } },
+			{ NV4097_TEXTURE_READ_SEMAPHORE_RELEASE, [](u32 arg) { return "Write semaphore value " + std::to_string(arg); } },
+			{ NV4097_CLEAR_SURFACE, [](u32 arg) { return "Clear surface " + std::string(arg & 0x1 ? "Depth " : "") + std::string(arg & 0x2 ? "Stencil " : "") + std::string(arg & 0xF0 ? "Color " : ""); } },
+			{ NV4097_SET_CONTEXT_DMA_COLOR_A, [](u32 arg) { return "Surface A: DMA mode = " + dma_mode(arg);} },
+			{ NV4097_SET_SURFACE_PITCH_A, [](u32 arg) { return "Surface A: Pitch = " + std::to_string(arg); } },
+			{ NV4097_SET_SURFACE_COLOR_AOFFSET, [](u32 arg) { return "Surface A: Offset = " + std::to_string(arg); } },
+			{ NV4097_SET_CONTEXT_DMA_COLOR_B, [](u32 arg) { return "Surface B: DMA mode = " + dma_mode(arg);} },
+			{ NV4097_SET_SURFACE_PITCH_B, [](u32 arg) { return "Surface B: Pitch = " + std::to_string(arg); } },
+			{ NV4097_SET_SURFACE_COLOR_BOFFSET, [](u32 arg) { return "Surface B: Offset = " + std::to_string(arg); } },
+			{ NV4097_SET_CONTEXT_DMA_COLOR_C, [](u32 arg) { return "Surface C: DMA mode = " + dma_mode(arg);} },
+			{ NV4097_SET_SURFACE_PITCH_C, [](u32 arg) { return "Surface C: Pitch = " + std::to_string(arg); } },
+			{ NV4097_SET_SURFACE_COLOR_COFFSET, [](u32 arg) { return "Surface C: Offset = " + std::to_string(arg); } },
+			{ NV4097_SET_SURFACE_PITCH_D, [](u32 arg) { return "Surface D: Pitch = " + std::to_string(arg); } },
+			{ NV4097_SET_SURFACE_COLOR_DOFFSET, [](u32 arg) { return "Surface D: Offset = " + std::to_string(arg); } },
+			{ NV4097_SET_CONTEXT_DMA_COLOR_D, [](u32 arg) { return "Surface D: DMA mode = " + dma_mode(arg);} },
+			{ NV4097_SET_SURFACE_PITCH_Z, [](u32 arg) { return "Surface Zeta: Pitch = " + std::to_string(arg); } },
+			{ NV4097_SET_SURFACE_ZETA_OFFSET, [](u32 arg) { return "Surface Zeta: Offset = " + std::to_string(arg); } },
+			{ NV4097_SET_CONTEXT_DMA_ZETA, [](u32 arg) { return "Surface Zeta: DMA mode = " + dma_mode(arg);} },
+			{ NV4097_SET_SURFACE_FORMAT, [](u32 arg) { return "Surface: Color format = " + color_surface_format(arg & 0x1F) + " DepthStencil format = " + depth_stencil_surface_format((arg >> 5) & 0x7); } },
+			{ NV4097_SET_SURFACE_CLIP_HORIZONTAL, [](u32 arg) { return "Surface: clip x = " + std::to_string(arg & 0xFFFF) + " width = " + std::to_string(arg >> 16); } },
+			{ NV4097_SET_SURFACE_CLIP_VERTICAL, [](u32 arg) { return "Surface: clip y = " + std::to_string(arg & 0xFFFF) + " height = " + std::to_string(arg >> 16); } },
+			{ NV4097_SET_SURFACE_COLOR_TARGET, [](u32 arg) { return "Surface: Targets " + surface_target(arg); } },
+			{ NV4097_SET_COLOR_CLEAR_VALUE, [](u32 arg) { return "Clear: " + get_clear_color(arg); } },
+			{ NV4097_SET_ZSTENCIL_CLEAR_VALUE, [](u32 arg) { return "Clear: " + get_zstencil_clear(arg); } },
+			{ NV4097_SET_CLIP_MIN, [](u32 arg) { return "Depth: Min = " + std::to_string((f32&)arg); } },
+			{ NV4097_SET_CLIP_MAX, [](u32 arg) { return "Depth: Max = " + std::to_string((f32&)arg); } },
+			{ NV4097_SET_VIEWPORT_SCALE, [](u32 arg) { return "Viewport: x scale  = " + std::to_string((f32&)arg); } },
+			{ NV4097_SET_VIEWPORT_SCALE + 1, [](u32 arg) { return "Viewport: y scale  = " + std::to_string((f32&)arg); } },
+			{ NV4097_SET_VIEWPORT_SCALE + 2, [](u32 arg) { return "Viewport: z scale  = " + std::to_string((f32&)arg); } },
+			{ NV4097_SET_VIEWPORT_OFFSET, [](u32 arg) { return "Viewport: x offset  = " + std::to_string((f32&)arg); } },
+			{ NV4097_SET_VIEWPORT_OFFSET + 1, [](u32 arg) { return "Viewport: y offset  = " + std::to_string((f32&)arg); } },
+			{ NV4097_SET_VIEWPORT_OFFSET + 2, [](u32 arg) { return "Viewport: z offset  = " + std::to_string((f32&)arg); } },
+			{ NV4097_SET_SCISSOR_HORIZONTAL, [](u32 arg) { return "Scissor: x = " + std::to_string(arg & 0xFFFF) + " width = " + std::to_string(arg >> 16); } },
+			{ NV4097_SET_SCISSOR_VERTICAL, [](u32 arg) { return "Scissor: y = " + std::to_string(arg & 0xFFFF) + " height = " + std::to_string(arg >> 16); } },
+			{ NV4097_SET_STENCIL_TEST_ENABLE, [](u32 arg) { return (!!arg) ? "Stencil: Enable" : "Stencil : Disable"; } },
+			{ NV4097_SET_STENCIL_FUNC, [](u32 arg) { return "Stencil: " + get_compare_func(arg); } },
+			{ NV4097_SET_BACK_STENCIL_OP_ZPASS, [](u32 arg) { return "Stencil: Back ZPass = " + get_stencil_op(arg); } },
+			{ NV4097_SET_BACK_STENCIL_OP_ZFAIL, [](u32 arg) { return "Stencil: Back ZFail = " + get_stencil_op(arg); } },
+			{ NV4097_SET_BACK_STENCIL_OP_FAIL, [](u32 arg) { return "Stencil: Back Fail = " + get_stencil_op(arg); } },
+			{ NV4097_SET_STENCIL_OP_ZPASS, [](u32 arg) { return "Stencil: ZPass = " + get_stencil_op(arg); } },
+			{ NV4097_SET_STENCIL_OP_ZFAIL, [](u32 arg) { return "Stencil: ZFail = " + get_stencil_op(arg); } },
+			{ NV4097_SET_STENCIL_OP_FAIL, [](u32 arg) { return "Stencil: Fail = " + get_stencil_op(arg); } },
+			{ NV4097_SET_STENCIL_FUNC_MASK, [](u32 arg) { return "Stencil: Func mask = " + ptr_to_string(arg); } },
+			{ NV4097_SET_STENCIL_MASK, [](u32 arg) { return "Stencil: Mask = " + ptr_to_string(arg); } },
+			{ NV4097_SET_STENCIL_FUNC_REF, [](u32 arg) { return "Stencil: Ref = " + std::to_string(arg); } },
+			{ NV4097_INVALIDATE_VERTEX_CACHE_FILE, [](u32) { return "(invalidate vertex cache file)"; } },
+			{ NV4097_INVALIDATE_VERTEX_FILE, [](u32) { return "(invalidate vertex file)"; } },
+			{ NV4097_SET_VERTEX_DATA_ARRAY_FORMAT, [](u32 arg) { return "Vertex array 0: " + unpack_vertex_format(arg); } },
+			{ NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 1, [](u32 arg) { return "Vertex array 1: " + unpack_vertex_format(arg); } },
+			{ NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 2, [](u32 arg) { return "Vertex array 2: " + unpack_vertex_format(arg); } },
+			{ NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 3, [](u32 arg) { return "Vertex array 3: " + unpack_vertex_format(arg); } },
+			{ NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 4, [](u32 arg) { return "Vertex array 4: " + unpack_vertex_format(arg); } },
+			{ NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 5, [](u32 arg) { return "Vertex array 5: " + unpack_vertex_format(arg); } },
+			{ NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 6, [](u32 arg) { return "Vertex array 6: " + unpack_vertex_format(arg); } },
+			{ NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 7, [](u32 arg) { return "Vertex array 7: " + unpack_vertex_format(arg); } },
+			{ NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 8, [](u32 arg) { return "Vertex array 8: " + unpack_vertex_format(arg); } },
+			{ NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 9, [](u32 arg) { return "Vertex array 9: " + unpack_vertex_format(arg); } },
+			{ NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 10, [](u32 arg) { return "Vertex array 10: " + unpack_vertex_format(arg); } },
+			{ NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 11, [](u32 arg) { return "Vertex array 11: " + unpack_vertex_format(arg); } },
+			{ NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 12, [](u32 arg) { return "Vertex array 12: " + unpack_vertex_format(arg); } },
+			{ NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 13, [](u32 arg) { return "Vertex array 13: " + unpack_vertex_format(arg); } },
+			{ NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 14, [](u32 arg) { return "Vertex array 14: " + unpack_vertex_format(arg); } },
+			{ NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 15, [](u32 arg) { return "Vertex array 15: " + unpack_vertex_format(arg); } },
+			{ NV4097_SET_VERTEX_DATA_ARRAY_OFFSET, [](u32 arg) { return "Vertex array 0: Offset = " + std::to_string(arg); } },
+			{ NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 1, [](u32 arg) { return "Vertex array 1: Offset = " + std::to_string(arg); } },
+			{ NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 2, [](u32 arg) { return "Vertex array 2: Offset = " + std::to_string(arg); } },
+			{ NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 3, [](u32 arg) { return "Vertex array 3: Offset = " + std::to_string(arg); } },
+			{ NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 4, [](u32 arg) { return "Vertex array 4: Offset = " + std::to_string(arg); } },
+			{ NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 5, [](u32 arg) { return "Vertex array 5: Offset = " + std::to_string(arg); } },
+			{ NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 6, [](u32 arg) { return "Vertex array 6: Offset = " + std::to_string(arg); } },
+			{ NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 7, [](u32 arg) { return "Vertex array 7: Offset = " + std::to_string(arg); } },
+			{ NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 8, [](u32 arg) { return "Vertex array 8: Offset = " + std::to_string(arg); } },
+			{ NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 9, [](u32 arg) { return "Vertex array 9: Offset = " + std::to_string(arg); } },
+			{ NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 10, [](u32 arg) { return "Vertex array 10: Offset = " + std::to_string(arg); } },
+			{ NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 11, [](u32 arg) { return "Vertex array 11: Offset = " + std::to_string(arg); } },
+			{ NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 12, [](u32 arg) { return "Vertex array 12: Offset = " + std::to_string(arg); } },
+			{ NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 13, [](u32 arg) { return "Vertex array 13: Offset = " + std::to_string(arg); } },
+			{ NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 14, [](u32 arg) { return "Vertex array 14: Offset = " + std::to_string(arg); } },
+			{ NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + 15, [](u32 arg) { return "Vertex array 15: Offset = " + std::to_string(arg); } },
+			{ NV4097_SET_INDEX_ARRAY_ADDRESS, [](u32 arg) { return "Index array: Address = " + ptr_to_string(arg); } },
+			{ NV4097_SET_INDEX_ARRAY_DMA, [](u32 arg) { return "Index array: DMA mode = " + dma_mode(arg & 0xF) + " type = " + index_type(arg >> 4); } },
+		};
+
+
+		auto found = printing_functions.find(id);
+		if (found != printing_functions.end())
+		{
+			return found->second;
+		}
+
+		return [=](u32 v)
+		{
+			std::stringstream ss;
+			ss << rsx::get_method_name(id) << " : " << (void*)(u64)v;
+			return ss.str();
+		};
 	}
 }

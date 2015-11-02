@@ -842,118 +842,8 @@ wxString RSXDebugger::DisAsmCommand(u32 cmd, u32 count, u32 currentAddr, u32 ioA
 		u32 index = 0;
 		switch((cmd & 0x3ffff) >> 2)
 		{
-		case NV4097_SET_SURFACE_FORMAT:
-		{
-			const u32 a0 = (u32)args[0];
-			const u32 surface_format = a0 & 0x1f;
-			const u32 surface_depth_format = (a0 >> 5) & 0x7;
-
-			const char *depth_type_name, *color_type_name;
-			switch (surface_depth_format)
-			{
-			case CELL_GCM_SURFACE_Z16:
-				depth_type_name = "CELL_GCM_SURFACE_Z16";
-				break;
-			case CELL_GCM_SURFACE_Z24S8:
-				depth_type_name = "CELL_GCM_SURFACE_Z24S8";
-				break;
-			default: depth_type_name = "";
-				break;
-			}
-			switch (surface_format)
-			{
-			case CELL_GCM_SURFACE_X1R5G5B5_Z1R5G5B5:
-				color_type_name = "CELL_GCM_SURFACE_X1R5G5B5_Z1R5G5B5";
-				break;
-			case CELL_GCM_SURFACE_X1R5G5B5_O1R5G5B5:
-				color_type_name = "CELL_GCM_SURFACE_X1R5G5B5_O1R5G5B5";
-				break;
-			case CELL_GCM_SURFACE_R5G6B5:
-				color_type_name = "CELL_GCM_SURFACE_R5G6B5";
-				break;
-			case CELL_GCM_SURFACE_X8R8G8B8_Z8R8G8B8:
-				color_type_name = "CELL_GCM_SURFACE_X8R8G8B8_Z8R8G8B8";
-				break;
-			case CELL_GCM_SURFACE_X8R8G8B8_O8R8G8B8:
-				color_type_name = "CELL_GCM_SURFACE_X8R8G8B8_O8R8G8B8";
-				break;
-			case CELL_GCM_SURFACE_A8R8G8B8:
-				color_type_name = "CELL_GCM_SURFACE_A8R8G8B8";
-				break;
-			case CELL_GCM_SURFACE_B8:
-				color_type_name = "CELL_GCM_SURFACE_B8";
-				break;
-			case CELL_GCM_SURFACE_G8B8:
-				color_type_name = "CELL_GCM_SURFACE_G8B8";
-				break;
-			case CELL_GCM_SURFACE_F_W16Z16Y16X16:
-				color_type_name = "CELL_GCM_SURFACE_F_W16Z16Y16X16";
-				break;
-			case CELL_GCM_SURFACE_F_W32Z32Y32X32:
-				color_type_name = "CELL_GCM_SURFACE_F_W32Z32Y32X32";
-				break;
-			case CELL_GCM_SURFACE_F_X32:
-				color_type_name = "CELL_GCM_SURFACE_F_X32";
-				break;
-			case CELL_GCM_SURFACE_X8B8G8R8_Z8B8G8R8:
-				color_type_name = "CELL_GCM_SURFACE_X8B8G8R8_Z8B8G8R8";
-				break;
-			case CELL_GCM_SURFACE_X8B8G8R8_O8B8G8R8:
-				color_type_name = "CELL_GCM_SURFACE_X8B8G8R8_O8B8G8R8";
-				break;
-			case CELL_GCM_SURFACE_A8B8G8R8:
-				color_type_name = "CELL_GCM_SURFACE_A8B8G8R8";
-				break;
-			default: color_type_name = "";
-				break;
-			}
-			DISASM("Set surface format : C %s Z %s", color_type_name, depth_type_name);
-		}
-			break;
-
-		case NV4097_SET_VIEWPORT_HORIZONTAL:
-		{
-			u32 m_viewport_x = (u32)args[0] & 0xffff;
-			u32 m_viewport_w = (u32)args[0] >> 16;
-
-			if (count == 2)
-			{
-				u32 m_viewport_y = (u32)args[1] & 0xffff;
-				u32 m_viewport_h = (u32)args[1] >> 16;
-				DISASM("Set viewport horizontal %d %d", m_viewport_w, m_viewport_h);
-			}
-			else
-				DISASM("Set viewport horizontal %d", m_viewport_w);
-			break;
-		}
-
-		case NV4097_SET_SURFACE_CLIP_HORIZONTAL:
-		{
-			const u32 a0 = (u32)args[0];
-
-			u32 clip_x = a0;
-			u32 clip_w = a0 >> 16;
-
-			if (count == 2)
-			{
-				const u32 a1 = (u32)args[1];
-				u32 clip_y = a1;
-				u32 clip_h = a1 >> 16;
-				DISASM("Set surface clip horizontal : %d %d", clip_w, clip_h);
-			}
-			else
-				DISASM("Set surface clip horizontal : %d", clip_w);
-			break;
-		}
-
-			break;
-
 		case 0x3fead:
 			DISASM("Flip and change current buffer: %d", (u32)args[0]);
-		break;
-
-		case NV4097_NO_OPERATION:
-			DISASM("NOP");
 		break;
 
 		case_16(NV4097_SET_TEXTURE_OFFSET, 0x20):
@@ -971,29 +861,13 @@ wxString RSXDebugger::DisAsmCommand(u32 cmd, u32 count, u32 currentAddr, u32 ioA
 				((args[1] >> 16) & 0xffff));
 		break;
 
-		case NV4097_SET_COLOR_MASK:
-			DISASM("    Color mask: True (A:%c, R:%c, G:%c, B:%c)",
-				args[0] & 0x1000000 ? '1' : '0',
-				args[0] & 0x0010000 ? '1' : '0',
-				args[0] & 0x0000100 ? '1' : '0',
-				args[0] & 0x0000001 ? '1' : '0');
-		break;
-
-		case NV4097_SET_ALPHA_TEST_ENABLE:
-			DISASM(args[0] ? "Alpha test: Enable" : "Alpha test: Disable");
-		break;
-
-		case NV4097_SET_BLEND_ENABLE:
-			DISASM(args[0] ? "Blend: Enable" : "Blend: Disable");
-		break;
-
 		case NV4097_SET_DEPTH_BOUNDS_TEST_ENABLE:
 			DISASM(args[0] ? "Depth bounds test: Enable" : "Depth bounds test: Disable");
 		break;
 		default:
 		{
-			std::string str = rsx::get_method_name((cmd & 0x3ffff) >> 2);
-			DISASM("%s : 0x%x", str.c_str(), (u32)args[0]);
+			std::string str = rsx::get_pretty_printing_function((cmd & 0x3ffff) >> 2)((u32)args[0]);
+			DISASM("%s", str.c_str());
 		}
 		}
 
