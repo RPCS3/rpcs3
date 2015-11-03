@@ -15,6 +15,8 @@ class RSXDebugger : public wxFrame
 
 	u32 m_item_count;
 	wxListView* m_list_commands;
+	wxListView* m_list_captured_frame;
+	wxListView* m_list_captured_draw_calls;
 	wxListView* m_list_flags;
 	wxListView* m_list_programs;
 	wxListView* m_list_lightning;
@@ -43,6 +45,7 @@ public:
 	virtual void OnChangeToolsAddr(wxCommandEvent& event);
 	virtual void OnScrollMemory(wxMouseEvent& event);
 	virtual void OnClickBuffer(wxMouseEvent& event);
+	virtual void OnClickDrawCalls(wxMouseEvent &event);
 
 	virtual void GoToGet(wxCommandEvent& event);
 	virtual void GoToPut(wxCommandEvent& event);

@@ -82,6 +82,8 @@ RSXDebugger::RSXDebugger(wxWindow* parent)
 	//Tabs
 	wxNotebook* nb_rsx = new wxNotebook(this, wxID_ANY, wxDefaultPosition, wxSize(732, 732));
 	wxPanel* p_commands  = new wxPanel(nb_rsx, wxID_ANY);
+	wxPanel* p_captured_frame = new wxPanel(nb_rsx, wxID_ANY);
+	wxPanel* p_captured_draw_calls = new wxPanel(nb_rsx, wxID_ANY);
 	wxPanel* p_flags     = new wxPanel(nb_rsx, wxID_ANY);
 	wxPanel* p_programs  = new wxPanel(nb_rsx, wxID_ANY);
 	wxPanel* p_lightning = new wxPanel(nb_rsx, wxID_ANY);
@@ -89,6 +91,8 @@ RSXDebugger::RSXDebugger(wxWindow* parent)
 	wxPanel* p_settings  = new wxPanel(nb_rsx, wxID_ANY);
 
 	nb_rsx->AddPage(p_commands,  wxT("RSX Commands"));
+	nb_rsx->AddPage(p_captured_frame, wxT("Captured Frame"));
+	nb_rsx->AddPage(p_captured_draw_calls, wxT("Captured Draw Calls"));
 	nb_rsx->AddPage(p_flags,     wxT("Flags"));
 	nb_rsx->AddPage(p_programs,  wxT("Programs"));
 	nb_rsx->AddPage(p_lightning, wxT("Lightning"));
@@ -97,6 +101,8 @@ RSXDebugger::RSXDebugger(wxWindow* parent)
 
 	//Tabs: Lists
 	m_list_commands  = new wxListView(p_commands,  wxID_ANY, wxPoint(1,3), wxSize(720, 720));
+	m_list_captured_frame = new wxListView(p_captured_frame, wxID_ANY, wxPoint(1, 3), wxSize(720, 720));
+	m_list_captured_draw_calls = new wxListView(p_captured_draw_calls, wxID_ANY, wxPoint(1, 3), wxSize(720, 720));
 	m_list_flags     = new wxListView(p_flags,     wxID_ANY, wxPoint(1,3), wxSize(720, 720));
 	m_list_programs  = new wxListView(p_programs,  wxID_ANY, wxPoint(1,3), wxSize(720, 720));
 	m_list_lightning = new wxListView(p_lightning, wxID_ANY, wxPoint(1,3), wxSize(720, 720));
@@ -105,6 +111,8 @@ RSXDebugger::RSXDebugger(wxWindow* parent)
 	
 	//Tabs: List Style
 	m_list_commands ->SetFont(wxFont(8, wxFONTFAMILY_MODERN, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL));
+	m_list_captured_frame->SetFont(wxFont(8, wxFONTFAMILY_MODERN, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL));
+	m_list_captured_draw_calls->SetFont(wxFont(8, wxFONTFAMILY_MODERN, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL));
 	m_list_flags    ->SetFont(wxFont(8, wxFONTFAMILY_MODERN, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL));
 	m_list_programs ->SetFont(wxFont(8, wxFONTFAMILY_MODERN, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL));
 	m_list_lightning->SetFont(wxFont(8, wxFONTFAMILY_MODERN, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL));
@@ -116,6 +124,8 @@ RSXDebugger::RSXDebugger(wxWindow* parent)
 	m_list_commands->InsertColumn(1, "Value", 0, 80);
 	m_list_commands->InsertColumn(2, "Command", 0, 500);
 	m_list_commands->InsertColumn(3, "Count", 0, 40);
+	m_list_captured_frame->InsertColumn(0, "Column", 0, 720);
+	m_list_captured_draw_calls->InsertColumn(0, "Draw calls", 0, 720);
 	m_list_flags->InsertColumn(0, "Name", 0, 170);
 	m_list_flags->InsertColumn(1, "Value", 0, 270);
 	m_list_programs->InsertColumn(0, "ID", 0, 70);
@@ -144,6 +154,8 @@ RSXDebugger::RSXDebugger(wxWindow* parent)
 	{
 		m_list_commands->InsertItem(m_list_commands->GetItemCount(), wxEmptyString);
 	}
+	for (u32 i = 0; i<frame_debug.command_queue.size(); i++)
+		m_list_captured_frame->InsertItem(1, wxEmptyString);
 
 	//Tools: Tools = Controls + Notebook Tabs
 	s_tools->AddSpacer(10);
@@ -228,6 +240,7 @@ RSXDebugger::RSXDebugger(wxWindow* parent)
 	//p_buffer_depth->Bind(wxEVT_BUTTON, &RSXDebugger::OnClickBuffer, this);
 	//p_buffer_stencil->Bind(wxEVT_BUTTON, &RSXDebugger::OnClickBuffer, this);
 	p_buffer_tex->Bind(wxEVT_LEFT_DOWN, &RSXDebugger::OnClickBuffer, this);
+	m_list_captured_draw_calls->Bind(wxEVT_LEFT_DOWN, &RSXDebugger::OnClickDrawCalls, this);
 
 	m_list_commands->Bind(wxEVT_MOUSEWHEEL, &RSXDebugger::OnScrollMemory, this);
 	m_list_flags->Bind(wxEVT_LIST_ITEM_ACTIVATED, &RSXDebugger::SetFlags, this);
@@ -330,6 +343,107 @@ void RSXDebugger::OnClickBuffer(wxMouseEvent& event)
 #undef SHOW_BUFFER
 }
 
+namespace
+{
+	/**
+	 * Return a new buffer that can be passed to wxImage ctor.
+	 * The pointer seems to be freed by wxImage.
+	 */
+	u8* convert_to_wximage_buffer(u8 *orig_buffer, size_t width, size_t height) noexcept
+	{
+		unsigned char* buffer = (unsigned char*)malloc(width * height * 3);
+		for (u32 i = 0; i < width * height; i++)
+		{
+			buffer[0 + i * 3] = orig_buffer[3 + i * 4];
+			buffer[1 + i * 3] = orig_buffer[2 + i * 4];
+			buffer[2 + i * 3] = orig_buffer[1 + i * 4];
+		}
+		return buffer;
+	}
+};
+
+void RSXDebugger::OnClickDrawCalls(wxMouseEvent& event)
+{
+	size_t draw_id = m_list_captured_draw_calls->GetFirstSelected();
+
+	wxPanel* p_buffers[] =
+	{
+		p_buffer_colorA,
+		p_buffer_colorB,
+		p_buffer_colorC,
+		p_buffer_colorD,
+	};
+
+	for (size_t i = 0; i < 4; i++)
+	{
+		size_t width = frame_debug.draw_calls[draw_id].color_buffer[i].width, height = frame_debug.draw_calls[draw_id].color_buffer[i].height;
+		if (width && height)
+		{
+			unsigned char *orig_buffer = frame_debug.draw_calls[draw_id].color_buffer[i].data.data();
+			wxImage img(width, height, convert_to_wximage_buffer(orig_buffer, width, height));
+			wxClientDC dc_canvas(p_buffers[i]);
+
+			if (img.IsOk())
+				dc_canvas.DrawBitmap(img.Scale(m_panel_width, m_panel_height), 0, 0, false);
+		}
+	}
+
+	// Buffer Z
+	{
+		size_t width = frame_debug.draw_calls[draw_id].depth.width, height = frame_debug.draw_calls[draw_id].depth.height;
+		if (width && height)
+		{
+			u32 *orig_buffer = (u32*)frame_debug.draw_calls[draw_id].depth.data.data();
+			unsigned char *buffer = (unsigned char *)malloc(width * height * 3);
+
+			for (u32 row = 0; row < height; row++)
+			{
+				for (u32 col = 0; col < width; col++)
+				{
+					u32 depth_val = orig_buffer[row * width + col];
+					u8 displayed_depth_val = 255 * depth_val / 0xFFFFFF;
+					buffer[3 * col + 0 + width * row * 3] = displayed_depth_val;
+					buffer[3 * col + 1 + width * row * 3] = displayed_depth_val;
+					buffer[3 * col + 2 + width * row * 3] = displayed_depth_val;
+				}
+			}
+
+			wxImage img(width, height, buffer);
+			wxClientDC dc_canvas(p_buffer_depth);
+
+			if (img.IsOk())
+				dc_canvas.DrawBitmap(img.Scale(m_panel_width, m_panel_height), 0, 0, false);
+		}
+	}
+
+	// Buffer S
+	{
+		size_t width = frame_debug.draw_calls[draw_id].stencil.width, height = frame_debug.draw_calls[draw_id].stencil.height;
+		if (width && height)
+		{
+			u8 *orig_buffer = frame_debug.draw_calls[draw_id].stencil.data.data();
+			unsigned char *buffer = (unsigned char *)malloc(width * height * 3);
+
+			for (u32 row = 0; row < height; row++)
+			{
+				for (u32 col = 0; col < width; col++)
+				{
+					u32 stencil_val = orig_buffer[row * width + col];
+					buffer[3 * col + 0 + width * row * 3] = stencil_val;
+					buffer[3 * col + 1 + width * row * 3] = stencil_val;
+					buffer[3 * col + 2 + width * row * 3] = stencil_val;
+				}
+			}
+
+			wxImage img(width, height, buffer);
+			wxClientDC dc_canvas(p_buffer_stencil);
+
+			if (img.IsOk())
+				dc_canvas.DrawBitmap(img.Scale(m_panel_width, m_panel_height), 0, 0, false);
+		}
+	}
+}
+
 void RSXDebugger::GoToGet(wxCommandEvent& event)
 {
 	if (!RSXReady()) return;
@@ -401,6 +515,15 @@ void RSXDebugger::GetMemory()
 			m_list_commands->SetItem(i, 1, "????????");
 		}
 	}
+
+	for (u32 i = 0; i < frame_debug.command_queue.size(); i++)
+	{
+		std::string str = rsx::get_pretty_printing_function(frame_debug.command_queue[i].first)(frame_debug.command_queue[i].second);
+		m_list_captured_frame->SetItem(i, 0, str);
+	}
+
+	for (u32 i = 0;i < frame_debug.draw_calls.size(); i++)
+		m_list_captured_draw_calls->InsertItem(0, std::to_string(frame_debug.draw_calls.size() - i - 1));
 }
 
 void RSXDebugger::GetBuffers()
