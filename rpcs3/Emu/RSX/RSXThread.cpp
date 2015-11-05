@@ -21,7 +21,8 @@ extern "C"
 
 #define CMD_DEBUG 0
 
-extern u64 get_system_time();
+bool user_asked_for_frame_capture = false;
+frame_capture_data frame_debug;
 
 namespace rsx
 {
@@ -552,6 +553,18 @@ namespace rsx
 
 	void flip_command(thread* rsx, u32 arg)
 	{
+		if (user_asked_for_frame_capture)
+		{
+			rsx->capture_current_frame = true;
+			user_asked_for_frame_capture = false;
+			frame_debug.reset();
+		}
+		else if (rsx->capture_current_frame)
+		{
+			rsx->capture_current_frame = false;
+			Emu.Pause();
+		}
+
 		rsx->gcm_current_buffer = arg;
 		rsx->flip(arg);
 
@@ -625,7 +638,11 @@ namespace rsx
 		{
 			// try process using gpu
 			if (rsx->domethod(id, arg))
+			{
+				if (rsx->capture_current_frame && id == NV4097_CLEAR_SURFACE)
+					rsx->capture_frame();
 				return;
+			}
 
 			// not handled by renderer
 			// try process using cpu
@@ -872,6 +889,53 @@ namespace rsx
 		}
 	}
 
+	void thread::capture_frame()
+	{
+		frame_capture_data::draw_state draw_state = {};
+
+		int clip_w = rsx::method_registers[NV4097_SET_SURFACE_CLIP_HORIZONTAL] >> 16;
+		int clip_h = rsx::method_registers[NV4097_SET_SURFACE_CLIP_VERTICAL] >> 16;
+		size_t pitch = clip_w * 4;
+		std::vector<size_t> color_index_to_record;
+		switch (method_registers[NV4097_SET_SURFACE_COLOR_TARGET])
+		{
+		case CELL_GCM_SURFACE_TARGET_0:
+			color_index_to_record = { 0 };
+			break;
+		case CELL_GCM_SURFACE_TARGET_1:
+			color_index_to_record = { 1 };
+			break;
+		case CELL_GCM_SURFACE_TARGET_MRT1:
+			color_index_to_record = { 0, 1 };
+			break;
+		case CELL_GCM_SURFACE_TARGET_MRT2:
+			color_index_to_record = { 0, 1, 2 };
+			break;
+		case CELL_GCM_SURFACE_TARGET_MRT3:
+			color_index_to_record = { 0, 1, 2, 3 };
+			break;
+		}
+		for (size_t i : color_index_to_record)
+		{
+			draw_state.color_buffer[i].width = clip_w;
+			draw_state.color_buffer[i].height = clip_h;
+			draw_state.color_buffer[i].data.resize(pitch * clip_h);
+			copy_render_targets_to_memory(draw_state.color_buffer[i].data.data(), i);
+		}
+		if (get_address(method_registers[NV4097_SET_SURFACE_ZETA_OFFSET], method_registers[NV4097_SET_CONTEXT_DMA_ZETA]))
+		{
+			draw_state.depth.width = clip_w;
+			draw_state.depth.height = clip_h;
+			draw_state.depth.data.resize(clip_w * clip_h * 4);
+			copy_depth_buffer_to_memory(draw_state.depth.data.data());
+			draw_state.stencil.width = clip_w;
+			draw_state.stencil.height = clip_h;
+			draw_state.stencil.data.resize(clip_w * clip_h * 4);
+			copy_stencil_buffer_to_memory(draw_state.stencil.data.data());
+		}
+		frame_debug.draw_calls.push_back(draw_state);
+	}
+
 	void thread::begin()
 	{
 		draw_mode = method_registers[NV4097_SET_BEGIN_END];
@@ -884,6 +948,9 @@ namespace rsx
 			vertex_array.clear();
 
 		transform_constants.clear();
+
+		if (capture_current_frame)
+			capture_frame();
 	}
 
 	void thread::task()
@@ -1006,6 +1073,8 @@ namespace rsx
 					}
 
 					method_registers[reg] = value;
+					if (capture_current_frame)
+						frame_debug.command_queue.push_back(std::make_pair(reg, value));
 
 					if (auto method = methods[reg])
 						method(this, value);

@@ -214,4 +214,8 @@ protected:
 
 	virtual void load_vertex_data(u32 first, u32 count) override;
 	virtual void load_vertex_index_data(u32 first, u32 count) override;
+
+	virtual void copy_render_targets_to_memory(void *buffer, u8 rtt) override;
+	virtual void copy_depth_buffer_to_memory(void *buffer) override;
+	virtual void copy_stencil_buffer_to_memory(void *buffer) override;
 };

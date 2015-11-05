@@ -10,6 +10,36 @@
 #include "Utilities/Timer.h"
 #include "Utilities/types.h"
 
+
+extern u64 get_system_time();
+
+struct frame_capture_data
+{
+	struct buffer
+	{
+		std::vector<u8> data;
+		size_t width = 0, height = 0;
+	};
+
+	struct draw_state
+	{
+		buffer color_buffer[4];
+		buffer depth;
+		buffer stencil;
+	};
+	std::vector<std::pair<u32, u32> > command_queue;
+	std::vector<draw_state> draw_calls;
+
+	void reset() noexcept
+	{
+		command_queue.clear();
+		draw_calls.clear();
+	}
+};
+
+extern bool user_asked_for_frame_capture;
+extern frame_capture_data frame_debug;
+
 namespace rsx
 {
 	namespace limits
@@ -169,6 +199,8 @@ namespace rsx
 		virtual void load_vertex_data(u32 first, u32 count);
 		virtual void load_vertex_index_data(u32 first, u32 count);
 
+		bool capture_current_frame = false;
+		void capture_frame();
 	public:
 		u32 ioAddress, ioSize;
 		int flip_status;
@@ -233,6 +265,23 @@ namespace rsx
 		*/
 		void fill_vertex_program_constants_data(void *buffer) noexcept;
 
+		/**
+		 * Copy rtt values to buffer.
+		 * TODO: It's more efficient to combine multiple call of this function into one.
+		 */
+		virtual void copy_render_targets_to_memory(void *buffer, u8 rtt) {};
+
+		/**
+		* Copy depth content to buffer.
+		* TODO: It's more efficient to combine multiple call of this function into one.
+		*/
+		virtual void copy_depth_buffer_to_memory(void *buffer) {};
+
+		/**
+		* Copy stencil content to buffer.
+		* TODO: It's more efficient to combine multiple call of this function into one.
+		*/
+		virtual void copy_stencil_buffer_to_memory(void *buffer) {};
 	public:
 		void reset();
 		void init(const u32 ioAddress, const u32 ioSize, const u32 ctrlAddress, const u32 localAddress);
