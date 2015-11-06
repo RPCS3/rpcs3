@@ -86,12 +86,13 @@ void D3D12GSRender::clear_surface(u32 arg)
 		{
 			u32 clear_depth = rsx::method_registers[NV4097_SET_ZSTENCIL_CLEAR_VALUE] >> 8;
 			u32 max_depth_value = m_surface.depth_format == CELL_GCM_SURFACE_Z16 ? 0x0000ffff : 0x00ffffff;
-			getCurrentResourceStorage().command_list->ClearDepthStencilView(handle, D3D12_CLEAR_FLAG_DEPTH, clear_depth / (float)max_depth_value, 0, 0, nullptr);
+			getCurrentResourceStorage().command_list->ClearDepthStencilView(handle, D3D12_CLEAR_FLAG_DEPTH, clear_depth / (float)max_depth_value, 0,
+				1, &get_scissor(rsx::method_registers[NV4097_SET_SCISSOR_HORIZONTAL], rsx::method_registers[NV4097_SET_SCISSOR_VERTICAL]));
 		}
 
 		if (arg & 0x2)
-			getCurrentResourceStorage().command_list->ClearDepthStencilView(handle, D3D12_CLEAR_FLAG_STENCIL, 0.f,
-				get_clear_stencil(rsx::method_registers[NV4097_SET_ZSTENCIL_CLEAR_VALUE]), 0, nullptr);
+			getCurrentResourceStorage().command_list->ClearDepthStencilView(handle, D3D12_CLEAR_FLAG_STENCIL, 0.f, get_clear_stencil(rsx::method_registers[NV4097_SET_ZSTENCIL_CLEAR_VALUE]),
+				1, &get_scissor(rsx::method_registers[NV4097_SET_SCISSOR_HORIZONTAL], rsx::method_registers[NV4097_SET_SCISSOR_VERTICAL]));
 	}
 
 	if (arg & 0xF0)
@@ -101,8 +102,8 @@ void D3D12GSRender::clear_surface(u32 arg)
 		size_t rtt_index = m_rtts.bind_render_targets(m_device.Get(), m_surface.color_format, handle);
 		getCurrentResourceStorage().render_targets_descriptors_heap_index += rtt_index;
 		for (unsigned i = 0; i < rtt_index; i++)
-			getCurrentResourceStorage().command_list->ClearRenderTargetView(handle.Offset(i, g_descriptorStrideRTV),
-				get_clear_color(rsx::method_registers[NV4097_SET_COLOR_CLEAR_VALUE]).data(), 0, nullptr);
+			getCurrentResourceStorage().command_list->ClearRenderTargetView(handle.Offset(i, g_descriptorStrideRTV), get_clear_color(rsx::method_registers[NV4097_SET_COLOR_CLEAR_VALUE]).data(),
+				1, &get_scissor(rsx::method_registers[NV4097_SET_SCISSOR_HORIZONTAL], rsx::method_registers[NV4097_SET_SCISSOR_VERTICAL]));
 	}
 
 	std::chrono::time_point<std::chrono::system_clock> end_duration = std::chrono::system_clock::now();

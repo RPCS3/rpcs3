@@ -465,4 +465,14 @@ DXGI_FORMAT get_vertex_attribute_format(u8 type, u8 size) noexcept
 	}
 	unreachable("Wrong type");
 }
+
+D3D12_RECT get_scissor(u32 horizontal, u32 vertical) noexcept
+{
+	return{
+		horizontal & 0xFFFF,
+		vertical & 0xFFFF,
+		(horizontal & 0xFFFF) + (horizontal >> 16),
+		(vertical & 0xFFFF) + (vertical >> 16)
+	};
+}
 #endif
