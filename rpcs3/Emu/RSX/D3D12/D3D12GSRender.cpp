@@ -672,7 +672,6 @@ void D3D12GSRender::flip(int buffer)
 	storage.uav_heap_get_pos = m_UAVHeap.get_current_put_pos_minus_one();
 
 	// Flush
-	local_transform_constants.clear();
 	m_texturesRTTs.clear();
 
 	// Now get ready for next frame

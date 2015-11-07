@@ -72,7 +72,6 @@ private:
 	RSXFragmentProgram fragment_program;
 	PipelineStateObjectCache m_cachePSO;
 	std::tuple<ID3D12PipelineState *, std::vector<size_t>, size_t> *m_PSO;
-	std::unordered_map<u32, color4f> local_transform_constants;
 
 	struct
 	{
