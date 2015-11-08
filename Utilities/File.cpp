@@ -327,13 +327,7 @@ int OSCopyFile(const char* source, const char* destination, bool overwrite)
 	//sendfile will work with non-socket output (i.e. regular file) on Linux 2.6.33+
 	off_t bytesCopied = 0;
 	struct stat fileinfo = { 0 };
-
-	s32 ret = fstat(input, &fileinfo);
-	if (ret < 0)
-	{
-		return -1;
-	}
-
+	fstat(input, &fileinfo);
 	int result = sendfile(output, input, &bytesCopied, fileinfo.st_size) == -1 ? -1 : 0;
 #endif
 

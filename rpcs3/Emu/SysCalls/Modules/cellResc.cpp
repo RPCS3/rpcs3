@@ -344,17 +344,14 @@ s32 CalculateSurfaceByteSize(u32 mode, CellRescDsts *dsts)
 
 s32 CalculateMaxColorBuffersSize()
 {
-	s32 index, oneBufSize, bufNum, totalBufSize, maxBufSize;
+	s32 oneBufSize, bufNum, totalBufSize, maxBufSize;
 	maxBufSize = 0;
 
 	for (u32 bufMode = CELL_RESC_720x480; bufMode <= CELL_RESC_1920x1080; bufMode <<= 1)
 	{
 		if (s_rescInternalInstance->m_initConfig.supportModes & bufMode) 
 		{
-			if ((index = GetRescDestsIndex(bufMode)) != 0)
-			{
-				oneBufSize = CalculateSurfaceByteSize(bufMode, &(s_rescInternalInstance->m_rescDsts[index]));
-			}
+			oneBufSize = CalculateSurfaceByteSize(bufMode, &(s_rescInternalInstance->m_rescDsts[GetRescDestsIndex(bufMode)]));
 			bufNum       = cellRescGetNumColorBuffers(bufMode, s_rescInternalInstance->m_initConfig.palTemporalMode, 0);
 			totalBufSize = oneBufSize * bufNum;
 			maxBufSize   = (maxBufSize > totalBufSize) ? maxBufSize : totalBufSize;

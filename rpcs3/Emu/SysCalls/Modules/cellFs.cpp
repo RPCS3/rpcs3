@@ -265,11 +265,11 @@ s32 cellFsReadWithOffset(u32 fd, u64 offset, vm::ptr<void> buf, u64 buffer_size,
 
 	const auto old_position = file->file->Tell();
 
-	file->file->Seek(offset);
+	CHECK_ASSERTION(file->file->Seek(offset) != -1);
 
 	const auto read = file->file->Read(buf.get_ptr(), buffer_size);
 
-	file->file->Seek(old_position);
+	CHECK_ASSERTION(file->file->Seek(old_position) != -1);
 
 	if (nread)
 	{
@@ -296,11 +296,11 @@ s32 cellFsWriteWithOffset(u32 fd, u64 offset, vm::cptr<void> buf, u64 data_size,
 
 	const auto old_position = file->file->Tell();
 
-	file->file->Seek(offset);
+	CHECK_ASSERTION(file->file->Seek(offset) != -1);
 
 	const auto written = file->file->Write(buf.get_ptr(), data_size);
 
-	file->file->Seek(old_position);
+	CHECK_ASSERTION(file->file->Seek(old_position) != -1);
 
 	if (nwrite)
 	{
@@ -508,9 +508,9 @@ s32 cellFsStReadStart(u32 fd, u64 offset, u64 size)
 
 				// read data
 				auto old = file->file->Tell();
-				file->file->Seek(offset + file->st_total_read);
+				CHECK_ASSERTION(file->file->Seek(offset + file->st_total_read) != -1);
 				auto res = file->file->Read(vm::base(position), file->st_block_size);
-				file->file->Seek(old);
+				CHECK_ASSERTION(file->file->Seek(old) != -1);
 
 				// notify
 				file->st_total_read += res;
@@ -803,17 +803,27 @@ s32 sdata_unpack(const std::string& packed_file, const std::string& unpacked_fil
 		}
 
 		if (flags & 0x20)
-			packed_stream->Seek(0x100);
+		{
+			CHECK_ASSERTION(packed_stream->Seek(0x100) != -1);
+		}
 		else
-			packed_stream->Seek(startOffset);
+		{
+			CHECK_ASSERTION(packed_stream->Seek(startOffset) != -1);
+		}
 
 		for (u32 i = 0; i < blockCount; i++)
 		{
 			if (flags & 0x20)
-				packed_stream->Seek(packed_stream->Tell() + t1);
+			{
+				s64 cur;
+				CHECK_ASSERTION((cur = packed_stream->Tell()) != -1);
+				CHECK_ASSERTION(packed_stream->Seek(cur + t1) != -1);
+			}
 
 			if (!(blockCount - i - 1))
+			{
 				blockSize = (u32)(filesizeOutput - i * blockSize);
+			}
 
 			packed_stream->Read(buffer + 256, blockSize);
 			unpacked_stream->Write(buffer + 256, blockSize);
@@ -883,11 +893,11 @@ void fsAio(vm::ptr<CellFsAio> aio, bool write, s32 xid, fs_aio_cb_t func)
 
 		const auto old_position = file->file->Tell();
 
-		file->file->Seek(aio->offset);
+		CHECK_ASSERTION(file->file->Seek(aio->offset) != -1);
 
 		result = write ? file->file->Write(aio->buf.get_ptr(), aio->size) : file->file->Read(aio->buf.get_ptr(), aio->size);
 
-		file->file->Seek(old_position);
+		CHECK_ASSERTION(file->file->Seek(old_position) != -1);
 	}
 
 	// should be executed directly by FS AIO thread

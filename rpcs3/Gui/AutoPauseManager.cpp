@@ -79,7 +79,7 @@ void AutoPauseManagerDialog::LoadEntries(void)
 		u32 num;
 		size_t fmax = list.size();
 		size_t fcur = 0;
-		list.seek(0);
+		CHECK_ASSERTION(list.seek(0) != -1);
 		while (fcur <= fmax - sizeof(u32))
 		{
 			list.read(&num, sizeof(u32));
@@ -99,7 +99,7 @@ void AutoPauseManagerDialog::SaveEntries(void)
 	fs::file list("pause.bin", fom::write | fom::create | fom::trunc);
 	//System calls ID and Function calls ID are all u32 iirc.
 	u32 num = 0;
-	list.seek(0);
+	CHECK_ASSERTION(list.seek(0) != -1);
 	for (size_t i = 0; i < m_entries.size(); ++i)
 	{
 		if (num == 0xFFFFFFFF) continue;

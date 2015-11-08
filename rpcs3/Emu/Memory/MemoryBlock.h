@@ -87,7 +87,7 @@ public:
 
 		if (!getRealAddr(addr, realAddr))
 		{
-			LOG_ERROR(HLE, "Getting the real address failed. (addr=%u)", addr);
+			LOG_ERROR(HLE, "Getting the real address failed. (addr=0x%x)", addr);
 			return 0;
 		}
 

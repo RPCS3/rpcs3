@@ -10,6 +10,7 @@
 
 #ifndef _WIN32
 #include <dirent.h>
+#include <errno.h>
 #endif
 
 #include "rPlatform.h"
@@ -57,14 +58,9 @@ std::string rPlatform::getConfigDir()
 			dir = "./config";
 		dir = dir + "/rpcs3/";
 
-		s32 ret = mkdir(dir.c_str(), 0777);
-		if (ret == EEXIST)
+		if (mkdir(dir.c_str(), 0777) == -1)
 		{
-			LOG_WARNING(HLE, "Configuration directory already exists. (%s)", dir);
-		}
-		else if (ret < 0)
-		{
-			LOG_ERROR(HLE, "An error occured during the creation of the configuration directory. (%d)", ret);
+			printf("An error occured during the creation of the configuration directory. (%d)", errno);
 		}
 #endif
 	}

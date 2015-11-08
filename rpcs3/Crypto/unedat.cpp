@@ -172,12 +172,8 @@ int decrypt_data(const fs::file* in, const fs::file* out, EDAT_HEADER *edat, NPD
 		{
 			metadata_sec_offset = metadata_offset + (unsigned long long) i * metadata_section_size;
 
-			if (in->seek(metadata_sec_offset) < 0)
-			{
-				LOG_ERROR(LOADER, "EDAT: Seeking medata section offset at %u failed.", metadata_sec_offset);
-				return 1;
-			}
-
+			CHECK_ASSERTION(in->seek(metadata_sec_offset) != -1);
+			
 			unsigned char metadata[0x20];
 			memset(metadata, 0, 0x20);
 			in->read(metadata, 0x20);
@@ -205,7 +201,7 @@ int decrypt_data(const fs::file* in, const fs::file* out, EDAT_HEADER *edat, NPD
 		{
 			// If FLAG 0x20, the metadata precedes each data block.
 			metadata_sec_offset = metadata_offset + (unsigned long long) i * (metadata_section_size + length);
-			in->seek(metadata_sec_offset);
+			CHECK_ASSERTION(in->seek(metadata_sec_offset) != -1);
 
 			unsigned char metadata[0x20];
 			memset(metadata, 0, 0x20);
@@ -226,7 +222,7 @@ int decrypt_data(const fs::file* in, const fs::file* out, EDAT_HEADER *edat, NPD
 		else
 		{
 			metadata_sec_offset = metadata_offset + (unsigned long long) i * metadata_section_size;
-			in->seek(metadata_sec_offset);
+			CHECK_ASSERTION(in->seek(metadata_sec_offset) != -1);
 
 			in->read(hash_result, 0x10);
 			offset = metadata_offset + (unsigned long long) i * edat->block_size + (unsigned long long) block_num * metadata_section_size;
@@ -248,11 +244,7 @@ int decrypt_data(const fs::file* in, const fs::file* out, EDAT_HEADER *edat, NPD
 		memset(hash, 0, 0x10);
 		memset(key_result, 0, 0x10);
 
-		if (in->seek(offset) < 0)
-		{
-			LOG_ERROR(LOADER, "EDAT: Seeking offset at %u failed.", offset);
-			return 1;
-		}
+		CHECK_ASSERTION(in->seek(offset) != -1);
 
 		in->read(enc_data, length);
 
@@ -357,7 +349,7 @@ int decrypt_data(const fs::file* in, const fs::file* out, EDAT_HEADER *edat, NPD
 
 int check_data(unsigned char *key, EDAT_HEADER *edat, NPD_HEADER *npd, const fs::file* f, bool verbose)
 {
-	f->seek(0);
+	CHECK_ASSERTION(f->seek(0) != -1);
 	unsigned char header[0xA0];
 	unsigned char empty_header[0xA0];
 	unsigned char header_hash[0x10];
@@ -402,10 +394,7 @@ int check_data(unsigned char *key, EDAT_HEADER *edat, NPD_HEADER *npd, const fs:
 	f->read(header, 0xA0);
 
 	// Read in the header and metadata section hashes.
-	if (f->seek(0x90) < 0)
-	{
-		LOG_ERROR(LOADER, "EDAT: Seeking header at 0x90 failed.");
-	}
+	CHECK_ASSERTION(f->seek(0x90) != -1);
 
 	f->read(metadata_hash, 0x10);
 	f->read(header_hash, 0x10);
@@ -462,10 +451,7 @@ int check_data(unsigned char *key, EDAT_HEADER *edat, NPD_HEADER *npd, const fs:
 	while (bytes_to_read > 0)
 	{
 		// Locate the metadata blocks.
-		if (f->seek(metadata_section_offset) < 0)
-		{
-			LOG_ERROR(LOADER, "EDAT: Seeking metadata blocks at %u failed.", metadata_section_offset);
-		}
+		CHECK_ASSERTION(f->seek(metadata_section_offset) != -1);
 
 		// Read in the metadata.
 		f->read(metadata + bytes_read, metadata_section_size);
@@ -512,9 +498,9 @@ int check_data(unsigned char *key, EDAT_HEADER *edat, NPD_HEADER *npd, const fs:
 
 
 		// Read in the metadata and header signatures.
-		f->seek(0xB0);
+		CHECK_ASSERTION(f->seek(0xB0) != -1);
 		f->read(metadata_signature, 0x28);
-		f->seek(0xD8);
+		CHECK_ASSERTION(f->seek(0xD8) != -1);
 		f->read(header_signature, 0x28);
 
 		// Checking metadata signature.
@@ -530,7 +516,7 @@ int check_data(unsigned char *key, EDAT_HEADER *edat, NPD_HEADER *npd, const fs:
 			{
 				int metadata_buf_size = block_num * 0x10;
 				unsigned char *metadata_buf = new unsigned char[metadata_buf_size];
-				f->seek(metadata_offset);
+				CHECK_ASSERTION(f->seek(metadata_offset) != -1);
 				f->read(metadata_buf, metadata_buf_size);
 				sha1(metadata_buf, metadata_buf_size, signature_hash);
 				delete[] metadata_buf;
@@ -563,7 +549,7 @@ int check_data(unsigned char *key, EDAT_HEADER *edat, NPD_HEADER *npd, const fs:
 			// Setup header signature hash.
 			memset(signature_hash, 0, 20);
 			unsigned char *header_buf = new unsigned char[0xD8];
-			f->seek(0x00);
+			CHECK_ASSERTION(f->seek(0x00) != -1);
 			f->read(header_buf, 0xD8);
 			sha1(header_buf, 0xD8, signature_hash );
 			delete[] header_buf;

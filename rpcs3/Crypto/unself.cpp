@@ -698,7 +698,7 @@ SELFDecrypter::SELFDecrypter(vfsStream& s)
 bool SELFDecrypter::LoadHeaders(bool isElf32)
 {
 	// Read SCE header.
-	self_f.Seek(0);
+	CHECK_ASSERTION(self_f.Seek(0) != -1);
 	sce_hdr.Load(self_f);
 
 	// Check SCE magic.
@@ -712,11 +712,12 @@ bool SELFDecrypter::LoadHeaders(bool isElf32)
 	self_hdr.Load(self_f);
 
 	// Read the APP INFO.
-	self_f.Seek(self_hdr.se_appinfooff);
+	CHECK_ASSERTION(self_f.Seek(self_hdr.se_appinfooff) != -1);
 	app_info.Load(self_f);
 
 	// Read ELF header.
-	self_f.Seek(self_hdr.se_elfoff);
+	CHECK_ASSERTION(self_f.Seek(self_hdr.se_elfoff) != -1);
+
 	if (isElf32)
 		elf32_hdr.Load(self_f);
 	else
@@ -741,13 +742,16 @@ bool SELFDecrypter::LoadHeaders(bool isElf32)
 	else
 	{
 		phdr64_arr.clear();
-		if(elf64_hdr.e_phoff == 0 && elf64_hdr.e_phnum)
+
+		if (elf64_hdr.e_phoff == 0 && elf64_hdr.e_phnum)
 		{
 			LOG_ERROR(LOADER, "SELF: ELF program header offset is null!");
 			return false;
 		}
-		self_f.Seek(self_hdr.se_phdroff);
-		for(u32 i = 0; i < elf64_hdr.e_phnum; ++i)
+
+		CHECK_ASSERTION(self_f.Seek(self_hdr.se_phdroff) != -1);
+
+		for (u32 i = 0; i < elf64_hdr.e_phnum; ++i)
 		{
 			phdr64_arr.emplace_back();
 			phdr64_arr.back().Load(self_f);
@@ -757,7 +761,7 @@ bool SELFDecrypter::LoadHeaders(bool isElf32)
 
 	// Read section info.
 	secinfo_arr.clear();
-	self_f.Seek(self_hdr.se_secinfoff);
+	CHECK_ASSERTION(self_f.Seek(self_hdr.se_secinfoff) != -1);
 
 	for(u32 i = 0; i < ((isElf32) ? elf32_hdr.e_phnum : elf64_hdr.e_phnum); ++i)
 	{
@@ -766,12 +770,12 @@ bool SELFDecrypter::LoadHeaders(bool isElf32)
 	}
 
 	// Read SCE version info.
-	self_f.Seek(self_hdr.se_sceveroff);
+	CHECK_ASSERTION(self_f.Seek(self_hdr.se_sceveroff) != -1);
 	scev_info.Load(self_f);
 
 	// Read control info.
 	ctrlinfo_arr.clear();
-	self_f.Seek(self_hdr.se_controloff);
+	CHECK_ASSERTION(self_f.Seek(self_hdr.se_controloff) != -1);
 
 	u32 i = 0;
 	while(i < self_hdr.se_controlsize)
@@ -786,12 +790,15 @@ bool SELFDecrypter::LoadHeaders(bool isElf32)
 	if (isElf32)
 	{
 		shdr32_arr.clear();
-		if(elf32_hdr.e_shoff == 0 && elf32_hdr.e_shnum)
+
+		if (elf32_hdr.e_shoff == 0 && elf32_hdr.e_shnum)
 		{
 			LOG_WARNING(LOADER, "SELF: ELF section header offset is null!");
 			return true;
 		}
-		self_f.Seek(self_hdr.se_shdroff);
+
+		CHECK_ASSERTION(self_f.Seek(self_hdr.se_shdroff) != -1);
+
 		for(u32 i = 0; i < elf32_hdr.e_shnum; ++i)
 		{
 			shdr32_arr.emplace_back();
@@ -801,12 +808,14 @@ bool SELFDecrypter::LoadHeaders(bool isElf32)
 	else
 	{
 		shdr64_arr.clear();
-		if(elf64_hdr.e_shoff == 0 && elf64_hdr.e_shnum)
+		if (elf64_hdr.e_shoff == 0 && elf64_hdr.e_shnum)
 		{
 			LOG_WARNING(LOADER, "SELF: ELF section header offset is null!");
 			return true;
 		}
-		self_f.Seek(self_hdr.se_shdroff);
+
+		CHECK_ASSERTION(self_f.Seek(self_hdr.se_shdroff) != -1);
+
 		for(u32 i = 0; i < elf64_hdr.e_shnum; ++i)
 		{
 			shdr64_arr.emplace_back();
@@ -890,9 +899,8 @@ bool SELFDecrypter::DecryptNPDRM(u8 *metadata, u32 metadata_size)
 	memcpy(klicensee_key, key_v.GetKlicenseeKey(), 0x10);
 
 	// Use klicensee if available.
-	// FIXME: Check is always false.
-	/*if (klicensee_key != NULL)
-		memcpy(npdrm_key, klicensee_key, 0x10);*/
+	if (klicensee_key != NULL)
+		memcpy(npdrm_key, klicensee_key, 0x10);
 
 	if (ctrl->npdrm.license == 1)  // Network license.
 	{
@@ -942,11 +950,11 @@ bool SELFDecrypter::LoadMetadata()
 	u8 *metadata_headers = (u8 *)malloc(metadata_headers_size);
 
 	// Locate and read the encrypted metadata info.
-	self_f.Seek(sce_hdr.se_meta + sizeof(sce_hdr));
+	CHECK_ASSERTION(self_f.Seek(sce_hdr.se_meta + sizeof(sce_hdr)) != -1);
 	self_f.Read(metadata_info, metadata_info_size);
 
 	// Locate and read the encrypted metadata header and section header.
-	self_f.Seek(sce_hdr.se_meta + sizeof(sce_hdr) + metadata_info_size);
+	CHECK_ASSERTION(self_f.Seek(sce_hdr.se_meta + sizeof(sce_hdr) + metadata_info_size) != -1);
 	self_f.Read(metadata_headers, metadata_headers_size);
 
 	// Find the right keyset from the key vault.
@@ -1049,7 +1057,7 @@ bool SELFDecrypter::DecryptData()
 				u8 *buf = (u8 *)malloc(meta_shdr[i].data_size);
 
 				// Seek to the section data offset and read the encrypted data.
-				self_f.Seek(meta_shdr[i].data_offset);
+				CHECK_ASSERTION(self_f.Seek(meta_shdr[i].data_offset) != -1);
 				self_f.Read(buf, meta_shdr[i].data_size);
 
 				// Zero out our ctr nonce.
@@ -1104,11 +1112,7 @@ bool SELFDecrypter::MakeElf(const std::string& elf, bool isElf32)
 			if (meta_shdr[i].type == 2)
 			{
 				// Seek to the program header data offset and write the data.
-				if (e.seek(phdr32_arr[meta_shdr[i].program_idx].p_offset) < 0)
-				{
-					LOG_ERROR(LOADER, "MakeElf program header data seek to %u failed.", phdr32_arr[meta_shdr[i].program_idx].p_offset);
-					return false;
-				}
+				CHECK_ASSERTION(e.seek(phdr32_arr[meta_shdr[i].program_idx].p_offset) != -1);
 
 				e.write(data_buf + data_buf_offset, meta_shdr[i].data_size);
 
@@ -1120,11 +1124,7 @@ bool SELFDecrypter::MakeElf(const std::string& elf, bool isElf32)
 		// Write section headers.
 		if (self_hdr.se_shdroff != 0)
 		{
-			if (e.seek(elf32_hdr.e_shoff) < 0)
-			{
-				LOG_ERROR(LOADER, "MakeElf section header seek to %u failed.", elf32_hdr.e_shoff);
-				return false;
-			}
+			CHECK_ASSERTION(e.seek(elf32_hdr.e_shoff) != -1);
 
 			for (u32 i = 0; i < elf32_hdr.e_shnum; ++i)
 			{
@@ -1168,11 +1168,8 @@ bool SELFDecrypter::MakeElf(const std::string& elf, bool isElf32)
 					decomp_stream_out.CopyTo(decomp_buf, phdr64_arr[meta_shdr[i].program_idx].p_filesz);
 
 					// Seek to the program header data offset and write the data.
-					if (e.seek(phdr64_arr[meta_shdr[i].program_idx].p_offset) < 0)
-					{
-						LOG_ERROR(LOADER, "MakeElf program header data seek to %u failed.", phdr64_arr[meta_shdr[i].program_idx].p_offset);
-						return false;
-					}
+
+					CHECK_ASSERTION(e.seek(phdr64_arr[meta_shdr[i].program_idx].p_offset) != -1);
 
 					e.write(decomp_buf, phdr64_arr[meta_shdr[i].program_idx].p_filesz);
 
@@ -1182,11 +1179,7 @@ bool SELFDecrypter::MakeElf(const std::string& elf, bool isElf32)
 				else
 				{
 					// Seek to the program header data offset and write the data.
-					if (e.seek(phdr64_arr[meta_shdr[i].program_idx].p_offset) < 0)
-					{
-						LOG_ERROR(LOADER, "MakeElf program header data seek to %u failed.", phdr64_arr[meta_shdr[i].program_idx].p_offset);
-						return false;
-					}
+					CHECK_ASSERTION(e.seek(phdr64_arr[meta_shdr[i].program_idx].p_offset) != -1);
 					
 					e.write(data_buf + data_buf_offset, meta_shdr[i].data_size);
 				}
@@ -1199,11 +1192,7 @@ bool SELFDecrypter::MakeElf(const std::string& elf, bool isElf32)
 		// Write section headers.
 		if (self_hdr.se_shdroff != 0)
 		{
-			if (e.seek(elf64_hdr.e_shoff) < 0)
-			{
-				LOG_ERROR(LOADER, "MakeElf section header seek to %u failed.", elf64_hdr.e_shoff);
-				return false;
-			}
+			CHECK_ASSERTION(e.seek(elf64_hdr.e_shoff) != -1);
 
 			for (u32 i = 0; i < elf64_hdr.e_shnum; ++i)
 			{
@@ -1279,11 +1268,7 @@ bool IsSelfElf32(const std::string& path)
 	// Locate the class byte and check it.
 	u8 elf_class[0x8];
 
-	if (f.Seek(sh.se_elfoff) < 0)
-	{
-		LOG_ERROR(LOADER, "IsSelfElf32 seek to %u failed.", sh.se_elfoff);
-		return false;
-	}
+	CHECK_ASSERTION(f.Seek(sh.se_elfoff) != -1);
 
 	f.Read(elf_class, 0x8);
 
@@ -1302,11 +1287,7 @@ bool CheckDebugSelf(const std::string& self, const std::string& elf)
 	}
 
 	// Get the key version.
-	if (s.seek(0x08) < 0)
-	{
-		LOG_ERROR(LOADER, "Seeking debug (S)ELF at 0x08 failed.");
-		return false;
-	}
+	CHECK_ASSERTION(s.seek(0x08) != -1);
 
 	u16 key_version;
 	s.read(&key_version, sizeof(key_version));
@@ -1317,11 +1298,7 @@ bool CheckDebugSelf(const std::string& self, const std::string& elf)
 		LOG_WARNING(LOADER, "Debug SELF detected! Removing fake header...");
 
 		// Get the real elf offset.
-		if (s.seek(0x10) < 0)
-		{
-			LOG_ERROR(LOADER, "Seeking debug (S)ELF at 0x10 failed.");
-			return false;
-		}
+		CHECK_ASSERTION(s.seek(0x10) != -1);
 
 		u64 elf_offset;
 		s.read(&elf_offset, sizeof(elf_offset));
@@ -1329,11 +1306,7 @@ bool CheckDebugSelf(const std::string& self, const std::string& elf)
 		// Start at the real elf offset.
 		elf_offset = swap64(elf_offset);
 
-		if (s.seek(elf_offset) < 0)
-		{
-			LOG_ERROR(LOADER, "Seeking debug (S)ELF at %u failed.", elf_offset);
-			return false;
-		}
+		CHECK_ASSERTION(s.seek(elf_offset) != -1);
 
 		// Write the real ELF file back.
 		fs::file e(elf, fom::write | fom::create | fom::trunc);

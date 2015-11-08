@@ -5,14 +5,6 @@
 static const u64 g_hdd_magic = *(u64*)"PS3eHDD\0";
 static const u16 g_hdd_version = 0x0001;
 
-// Return codes
-enum
-{
-	HDD_OK              = 0,
-	HDD_SEEK_FAILURE    = 0x400,
-	HDD_ENTRY_NOT_FOUND = 0x401,
-};
-
 struct vfsHDD_Block
 {
 	struct
@@ -55,7 +47,7 @@ public:
 
 	static void CreateEntry(vfsHDD_Entry& entry);
 
-	static s32 CreateHDD(const std::string& path, u64 size, u64 block_size);
+	static void CreateHDD(const std::string& path, u64 size, u64 block_size);
 
 	void Format();
 
@@ -76,19 +68,19 @@ class vfsHDDFile
 
 	void RemoveBlocks(u64 start_block);
 
-	s32 WriteBlock(u64 block, const vfsHDD_Block& data);
+	void WriteBlock(u64 block, const vfsHDD_Block& data);
 
-	s32 ReadBlock(u64 block, vfsHDD_Block& data);
+	void ReadBlock(u64 block, vfsHDD_Block& data);
 
-	s32 WriteEntry(u64 block, const vfsHDD_Entry& data);
+	void WriteEntry(u64 block, const vfsHDD_Entry& data);
 
-	s32 ReadEntry(u64 block, vfsHDD_Entry& data);
+	void ReadEntry(u64 block, vfsHDD_Entry& data);
 
-	s32 ReadEntry(u64 block, vfsHDD_Entry& data, std::string& name);
+	void ReadEntry(u64 block, vfsHDD_Entry& data, std::string& name);
 
-	s32 ReadEntry(u64 block, std::string& name);
+	void ReadEntry(u64 block, std::string& name);
 
-	s32 WriteEntry(u64 block, const vfsHDD_Entry& data, const std::string& name);
+	void WriteEntry(u64 block, const vfsHDD_Entry& data, const std::string& name);
 
 	force_inline u32 GetMaxNameLen() const
 	{
@@ -122,7 +114,7 @@ public:
 		return m_cur_block * m_hdd_info.block_size + m_position; // ???
 	}
 
-	s32 SaveInfo();
+	void SaveInfo();
 
 	u64 Read(void* dst, u64 size);
 
@@ -170,19 +162,19 @@ public:
 
 	u64 FindFreeBlock();
 
-	s32 WriteBlock(u64 block, const vfsHDD_Block& data);
+	void WriteBlock(u64 block, const vfsHDD_Block& data);
 
-	s32 ReadBlock(u64 block, vfsHDD_Block& data);
+	void ReadBlock(u64 block, vfsHDD_Block& data);
 
-	s32 WriteEntry(u64 block, const vfsHDD_Entry& data);
+	void WriteEntry(u64 block, const vfsHDD_Entry& data);
 
-	s32 ReadEntry(u64 block, vfsHDD_Entry& data);
+	void ReadEntry(u64 block, vfsHDD_Entry& data);
 
-	s32 ReadEntry(u64 block, vfsHDD_Entry& data, std::string& name);
+	void ReadEntry(u64 block, vfsHDD_Entry& data, std::string& name);
 
-	s32 ReadEntry(u64 block, std::string& name);
+	void ReadEntry(u64 block, std::string& name);
 
-	s32 WriteEntry(u64 block, const vfsHDD_Entry& data, const std::string& name);
+	void WriteEntry(u64 block, const vfsHDD_Entry& data, const std::string& name);
 
 	bool Create(vfsHDD_EntryType type, const std::string& name);
 
