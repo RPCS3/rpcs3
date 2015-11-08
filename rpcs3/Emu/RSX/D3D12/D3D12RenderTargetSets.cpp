@@ -587,4 +587,128 @@ void D3D12GSRender::copy_render_target_to_dma_location()
 	}
 }
 
+
+void D3D12GSRender::copy_render_targets_to_memory(void *buffer, u8 rtt)
+{
+	ComPtr<ID3D12Resource> readback_buffer = create_readback_buffer_and_download(m_device.Get(), getCurrentResourceStorage().command_list.Get(), m_readbackResources, m_rtts.bound_render_targets[rtt], m_surface.color_format);
+
+	ThrowIfFailed(getCurrentResourceStorage().command_list->Close());
+	m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**)getCurrentResourceStorage().command_list.GetAddressOf());
+	getCurrentResourceStorage().set_new_command_list();
+
+	wait_for_command_queue(m_device.Get(), m_commandQueueGraphic.Get());
+	m_readbackResources.m_get_pos = m_readbackResources.get_current_put_pos_minus_one();
+
+	int clip_w = rsx::method_registers[NV4097_SET_SURFACE_CLIP_HORIZONTAL] >> 16;
+	int clip_h = rsx::method_registers[NV4097_SET_SURFACE_CLIP_VERTICAL] >> 16;
+	size_t srcPitch, dstPitch;
+	switch (m_surface.color_format)
+	{
+	case CELL_GCM_SURFACE_A8R8G8B8:
+		srcPitch = align(clip_w * 4, 256);
+		dstPitch = clip_w * 4;
+		break;
+	case CELL_GCM_SURFACE_F_W16Z16Y16X16:
+		srcPitch = align(clip_w * 8, 256);
+		dstPitch = clip_w * 8;
+		break;
+	}
+	copy_readback_buffer_to_dest(buffer, readback_buffer.Get(), srcPitch, dstPitch, clip_h);
+}
+
+void D3D12GSRender::copy_depth_buffer_to_memory(void *buffer)
+{
+	int clip_w = rsx::method_registers[NV4097_SET_SURFACE_CLIP_HORIZONTAL] >> 16;
+	int clip_h = rsx::method_registers[NV4097_SET_SURFACE_CLIP_VERTICAL] >> 16;
+
+	size_t row_pitch = align(clip_w * 4, 256);
+
+	ComPtr<ID3D12Resource> readback_buffer;
+	size_t buffer_size = row_pitch * clip_h;
+	assert(m_readbackResources.can_alloc(buffer_size));
+	size_t heapOffset = m_readbackResources.alloc(buffer_size);
+	ThrowIfFailed(
+		m_device->CreatePlacedResource(
+			m_readbackResources.m_heap,
+			heapOffset,
+			&CD3DX12_RESOURCE_DESC::Buffer(buffer_size),
+			D3D12_RESOURCE_STATE_COPY_DEST,
+			nullptr,
+			IID_PPV_ARGS(readback_buffer.GetAddressOf())
+			)
+		);
+
+	getCurrentResourceStorage().command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_rtts.bound_depth_stencil, D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_COPY_SOURCE));
+
+	getCurrentResourceStorage().command_list->CopyTextureRegion(&CD3DX12_TEXTURE_COPY_LOCATION(readback_buffer.Get(), { 0,{ DXGI_FORMAT_R32_TYPELESS, (UINT)clip_w, (UINT)clip_h, 1, (UINT)row_pitch } }), 0, 0, 0,
+		&CD3DX12_TEXTURE_COPY_LOCATION(m_rtts.bound_depth_stencil, 0), nullptr);
+	getCurrentResourceStorage().command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_rtts.bound_depth_stencil, D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE));
+
+	ThrowIfFailed(getCurrentResourceStorage().command_list->Close());
+	m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**)getCurrentResourceStorage().command_list.GetAddressOf());
+	getCurrentResourceStorage().set_new_command_list();
+
+	wait_for_command_queue(m_device.Get(), m_commandQueueGraphic.Get());
+	m_readbackResources.m_get_pos = m_readbackResources.get_current_put_pos_minus_one();
+
+	void *mapped_buffer;
+	ThrowIfFailed(readback_buffer->Map(0, nullptr, &mapped_buffer));
+	for (unsigned row = 0; row < clip_h; row++)
+	{
+		u32 *casted_dest = (u32*)((char*)buffer + row * clip_w * 4);
+		u32 *casted_src = (u32*)((char*)mapped_buffer + row * row_pitch);
+		for (unsigned col = 0; col < row_pitch / 4; col++)
+			*casted_dest++ = *casted_src++;
+	}
+	readback_buffer->Unmap(0, nullptr);
+}
+
+
+void D3D12GSRender::copy_stencil_buffer_to_memory(void *buffer)
+{
+	int clip_w = rsx::method_registers[NV4097_SET_SURFACE_CLIP_HORIZONTAL] >> 16;
+	int clip_h = rsx::method_registers[NV4097_SET_SURFACE_CLIP_VERTICAL] >> 16;
+
+	size_t row_pitch = align(clip_w * 4, 256);
+
+	ComPtr<ID3D12Resource> readback_buffer;
+	size_t buffer_size = row_pitch * clip_h;
+	assert(m_readbackResources.can_alloc(buffer_size));
+	size_t heapOffset = m_readbackResources.alloc(buffer_size);
+	ThrowIfFailed(
+		m_device->CreatePlacedResource(
+			m_readbackResources.m_heap,
+			heapOffset,
+			&CD3DX12_RESOURCE_DESC::Buffer(buffer_size),
+			D3D12_RESOURCE_STATE_COPY_DEST,
+			nullptr,
+			IID_PPV_ARGS(readback_buffer.GetAddressOf())
+			)
+		);
+
+	getCurrentResourceStorage().command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_rtts.bound_depth_stencil, D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_COPY_SOURCE));
+
+	getCurrentResourceStorage().command_list->CopyTextureRegion(&CD3DX12_TEXTURE_COPY_LOCATION(readback_buffer.Get(), { 0,{ DXGI_FORMAT_R8_TYPELESS, (UINT)clip_w, (UINT)clip_h, 1, (UINT)row_pitch } }), 0, 0, 0,
+		&CD3DX12_TEXTURE_COPY_LOCATION(m_rtts.bound_depth_stencil, 1), nullptr);
+	getCurrentResourceStorage().command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_rtts.bound_depth_stencil, D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE));
+
+	ThrowIfFailed(getCurrentResourceStorage().command_list->Close());
+	m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**)getCurrentResourceStorage().command_list.GetAddressOf());
+	getCurrentResourceStorage().set_new_command_list();
+
+	wait_for_command_queue(m_device.Get(), m_commandQueueGraphic.Get());
+	m_readbackResources.m_get_pos = m_readbackResources.get_current_put_pos_minus_one();
+
+	void *mapped_buffer;
+	ThrowIfFailed(readback_buffer->Map(0, nullptr, &mapped_buffer));
+	for (unsigned row = 0; row < clip_h; row++)
+	{
+		char *casted_dest = (char*)buffer + row * clip_w;
+		char *casted_src = (char*)mapped_buffer + row * row_pitch;
+		for (unsigned col = 0; col < row_pitch; col++)
+			*casted_dest++ = *casted_src++;
+	}
+	readback_buffer->Unmap(0, nullptr);
+}
+
 #endif
