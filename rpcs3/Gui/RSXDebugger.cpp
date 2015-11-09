@@ -16,6 +16,7 @@
 #include "MemoryViewer.h"
 
 #include <wx/notebook.h>
+#include <fstream>
 
 // TODO: Clear the object when restarting the emulator
 std::vector<RSXDebuggerProgram> m_debug_programs;
@@ -515,15 +516,20 @@ void RSXDebugger::GetMemory()
 			m_list_commands->SetItem(i, 1, "????????");
 		}
 	}
-
+	std::ofstream command_dump;
+	command_dump.open("command_dump.log");
 	for (u32 i = 0; i < frame_debug.command_queue.size(); i++)
 	{
 		std::string str = rsx::get_pretty_printing_function(frame_debug.command_queue[i].first)(frame_debug.command_queue[i].second);
 		m_list_captured_frame->SetItem(i, 0, str);
+		command_dump << str << "\n";
 	}
+	command_dump.close();
 
 	for (u32 i = 0;i < frame_debug.draw_calls.size(); i++)
 		m_list_captured_draw_calls->InsertItem(0, std::to_string(frame_debug.draw_calls.size() - i - 1));
+
+
 }
 
 void RSXDebugger::GetBuffers()
