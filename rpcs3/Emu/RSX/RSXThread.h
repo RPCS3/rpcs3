@@ -23,6 +23,7 @@ struct frame_capture_data
 
 	struct draw_state
 	{
+		std::string name;
 		buffer color_buffer[4];
 		buffer depth;
 		buffer stencil;
@@ -200,7 +201,7 @@ namespace rsx
 		virtual void load_vertex_index_data(u32 first, u32 count);
 
 		bool capture_current_frame = false;
-		void capture_frame();
+		void capture_frame(const std::string &name);
 	public:
 		u32 ioAddress, ioSize;
 		int flip_status;

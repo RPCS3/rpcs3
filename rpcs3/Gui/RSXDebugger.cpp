@@ -527,7 +527,7 @@ void RSXDebugger::GetMemory()
 	command_dump.close();
 
 	for (u32 i = 0;i < frame_debug.draw_calls.size(); i++)
-		m_list_captured_draw_calls->InsertItem(0, std::to_string(frame_debug.draw_calls.size() - i - 1));
+		m_list_captured_draw_calls->InsertItem(i, frame_debug.draw_calls[i].name);
 
 
 }
