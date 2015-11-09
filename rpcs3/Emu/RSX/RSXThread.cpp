@@ -567,6 +567,9 @@ namespace rsx
 
 		rsx->gcm_current_buffer = arg;
 		rsx->flip(arg);
+		// After each flip PS3 system is executing a routine that changes registers value to some default.
+		// Some game use this default state (SH3).
+		rsx->reset();
 
 		rsx->last_flip_time = get_system_time() - 1000000;
 		rsx->gcm_current_buffer = arg;
