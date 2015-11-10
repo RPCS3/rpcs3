@@ -1100,7 +1100,7 @@ namespace rsx
 		onexit_thread();
 	}
 
-	void thread::fill_scale_offset_data(void *buffer) const noexcept
+	void thread::fill_scale_offset_data(void *buffer, bool is_d3d) const noexcept
 	{
 		int clip_w = rsx::method_registers[NV4097_SET_SURFACE_CLIP_HORIZONTAL] >> 16;
 		int clip_h = rsx::method_registers[NV4097_SET_SURFACE_CLIP_VERTICAL] >> 16;
@@ -1109,12 +1109,15 @@ namespace rsx
 		float offset_x = (float&)rsx::method_registers[NV4097_SET_VIEWPORT_OFFSET] - (clip_w / 2.f);
 		offset_x /= clip_w / 2.f;
 
-		float scale_y = -(float&)rsx::method_registers[NV4097_SET_VIEWPORT_SCALE + 1] / (clip_h / 2.f);
-		float offset_y = -((float&)rsx::method_registers[NV4097_SET_VIEWPORT_OFFSET + 1] - (clip_h / 2.f));
+		float scale_y = (float&)rsx::method_registers[NV4097_SET_VIEWPORT_SCALE + 1] / (clip_h / 2.f);
+		float offset_y = ((float&)rsx::method_registers[NV4097_SET_VIEWPORT_OFFSET + 1] - (clip_h / 2.f));
 		offset_y /= clip_h / 2.f;
+		if (is_d3d) scale_y *= -1;
+		if (is_d3d) offset_y *= -1;
 
 		float scale_z = (float&)rsx::method_registers[NV4097_SET_VIEWPORT_SCALE + 2];
 		float offset_z = (float&)rsx::method_registers[NV4097_SET_VIEWPORT_OFFSET + 2];
+		if (!is_d3d) offset_z -= .5;
 
 		float one = 1.f;
 
