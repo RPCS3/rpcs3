@@ -939,6 +939,7 @@ namespace rsx
 			draw_state.stencil.data.resize(clip_w * clip_h * 4);
 			copy_stencil_buffer_to_memory(draw_state.stencil.data.data());
 		}
+		draw_state.programs = get_programs();
 		draw_state.name = name;
 		frame_debug.draw_calls.push_back(draw_state);
 	}

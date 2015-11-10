@@ -91,6 +91,8 @@ public:
 
 	u32 id;
 	ComPtr<ID3DBlob> bytecode;
+	// For debugging
+	std::string content;
 	std::vector<size_t> vertex_shader_inputs;
 	std::vector<size_t> FragmentConstantOffsetCache;
 	size_t m_textureCount;

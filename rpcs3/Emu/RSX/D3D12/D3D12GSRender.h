@@ -66,6 +66,7 @@ private:
 
 	rsx::surface_info m_surface;
 
+	RSXVertexProgram vertex_program;
 	RSXFragmentProgram fragment_program;
 	PipelineStateObjectCache m_pso_cache;
 	std::tuple<ID3D12PipelineState *, std::vector<size_t>, size_t> *m_current_pso;
@@ -215,4 +216,5 @@ protected:
 	virtual void copy_render_targets_to_memory(void *buffer, u8 rtt) override;
 	virtual void copy_depth_buffer_to_memory(void *buffer) override;
 	virtual void copy_stencil_buffer_to_memory(void *buffer) override;
+	virtual std::pair<std::string, std::string> get_programs() const override;
 };
