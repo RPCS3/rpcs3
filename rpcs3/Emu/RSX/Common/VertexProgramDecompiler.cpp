@@ -200,6 +200,7 @@ std::string VertexProgramDecompiler::Format(const std::string& code)
 		{ "$1", std::bind(std::mem_fn(&VertexProgramDecompiler::GetSRC), this, 1) },
 		{ "$2", std::bind(std::mem_fn(&VertexProgramDecompiler::GetSRC), this, 2) },
 		{ "$s", std::bind(std::mem_fn(&VertexProgramDecompiler::GetSRC), this, 2) },
+		{ "$awm", std::bind(std::mem_fn(&VertexProgramDecompiler::AddAddrRegWithoutMask), this) },
 		{ "$am", std::bind(std::mem_fn(&VertexProgramDecompiler::AddAddrMask), this) },
 		{ "$a", std::bind(std::mem_fn(&VertexProgramDecompiler::AddAddrReg), this) },
 
@@ -328,7 +329,12 @@ std::string VertexProgramDecompiler::AddAddrMask()
 std::string VertexProgramDecompiler::AddAddrReg()
 {
 	static const char f[] = { 'x', 'y', 'z', 'w' };
-	return m_parr.AddParam(PF_PARAM_NONE, getFloatTypeName(4), "a" + std::to_string(d0.addr_reg_sel_1), getFloatTypeName(4) + "(0, 0, 0, 0)") + AddAddrMask();
+	return m_parr.AddParam(PF_PARAM_NONE, getIntTypeName(4), "a" + std::to_string(d0.addr_reg_sel_1), getFloatTypeName(4) + "(0, 0, 0, 0)") + AddAddrMask();
+}
+
+std::string VertexProgramDecompiler::AddAddrRegWithoutMask()
+{
+	return m_parr.AddParam(PF_PARAM_NONE, getIntTypeName(4), "a" + std::to_string(d0.addr_reg_sel_1), getFloatTypeName(4) + "(0, 0, 0, 0)");
 }
 
 u32 VertexProgramDecompiler::GetAddr()
@@ -657,7 +663,8 @@ std::string VertexProgramDecompiler::Decompile()
 		case RSX_VEC_OPCODE_MAX: SetDSTVec("max($0, $1)"); break;
 		case RSX_VEC_OPCODE_SLT: SetDSTVec(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SLT, "$0", "$1") + ")"); break;
 		case RSX_VEC_OPCODE_SGE: SetDSTVec(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SGE, "$0", "$1") + ")"); break;
-		case RSX_VEC_OPCODE_ARL: AddCode("$ifcond $a = " + getIntTypeName(4) + "($0)$am;");  break;
+			// Note: It looks like ARL opcode ignore input/output swizzle mask (SH3)
+		case RSX_VEC_OPCODE_ARL: AddCode("$ifcond $awm = " + getIntTypeName(4) + "($0);");  break;
 		case RSX_VEC_OPCODE_FRC: SetDSTVec(getFunction(FUNCTION::FUNCTION_FRACT)); break;
 		case RSX_VEC_OPCODE_FLR: SetDSTVec("floor($0)"); break;
 		case RSX_VEC_OPCODE_SEQ: SetDSTVec(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SEQ, "$0", "$1") + ")"); break;
