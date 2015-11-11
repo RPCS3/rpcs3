@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Utilities/Log.h"
+
 struct MemInfo
 {
 	u32 addr;
@@ -82,7 +84,13 @@ public:
 	u32 RealAddr(u32 addr)
 	{
 		u32 realAddr = 0;
-		getRealAddr(addr, realAddr);
+
+		if (!getRealAddr(addr, realAddr))
+		{
+			LOG_ERROR(HLE, "Getting the real address failed. (addr=0x%x)", addr);
+			return 0;
+		}
+
 		return realAddr;
 	}
 

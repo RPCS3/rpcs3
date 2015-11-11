@@ -51,9 +51,10 @@
 /bin/*.exp
 rpcs3/git-version.h
 
-# Visual Studio Profiler Files
+# Visual Studio Files
 *.vspx
 *.psess
+*.VC.*
 
 # Copyrighted files
 /bin/data/

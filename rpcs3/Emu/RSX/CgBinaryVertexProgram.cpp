@@ -116,7 +116,7 @@ std::string CgBinaryDisasm::GetSRCDisasm(const u32 n)
 
 	if (swizzle != f) ret += '.' + swizzle;
 
-	bool abs;
+	bool abs = false;
 
 	switch (n)
 	{

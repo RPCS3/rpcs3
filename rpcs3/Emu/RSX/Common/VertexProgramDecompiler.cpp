@@ -108,7 +108,7 @@ std::string VertexProgramDecompiler::GetSRC(const u32 n)
 
 	if (swizzle != f) ret += '.' + swizzle;
 
-	bool abs;
+	bool abs = false;
 
 	switch (n)
 	{

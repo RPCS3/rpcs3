@@ -224,8 +224,8 @@ s32 cellSysCacheMount(vm::ptr<CellSysCacheParam> param)
 	cellSysutil.Warning("cellSysCacheMount(param=*0x%x)", param);
 
 	// TODO: implement
-	char id[CELL_SYSCACHE_ID_SIZE];
-	strncpy(id, param->cacheId, CELL_SYSCACHE_ID_SIZE);
+	char id[CELL_SYSCACHE_ID_SIZE] = { '\0' };
+	strncpy(id, param->cacheId, CELL_SYSCACHE_ID_SIZE - 1);
 	strncpy(param->getCachePath, ("/dev_hdd1/cache/"s + id + "/").c_str(), CELL_SYSCACHE_PATH_MAX);
 	param->getCachePath[CELL_SYSCACHE_PATH_MAX - 1] = '\0';
 	Emu.GetVFS().CreateDir(param->getCachePath);

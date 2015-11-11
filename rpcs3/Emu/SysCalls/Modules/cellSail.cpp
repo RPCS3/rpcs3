@@ -866,7 +866,8 @@ s32 cellSailPlayerRemoveDescriptor(vm::ptr<CellSailPlayer> pSelf, vm::ptr<CellSa
 	if (pSelf->descriptors > 0)
 	{
 		ppDesc = pSelf->registeredDescriptors[pSelf->descriptors];
-		delete &pSelf->registeredDescriptors[pSelf->descriptors];
+		// TODO: Figure out how properly free a descriptor. Use game specified memory dealloc function?
+		//delete &pSelf->registeredDescriptors[pSelf->descriptors];
 		pSelf->descriptors--;
 	}
 

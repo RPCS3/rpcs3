@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "restore_new.h"
+#include "Utilities/Log.h"
 #pragma warning(push)
 #pragma message("TODO: remove wx dependency: <wx/image.h>")
 #pragma warning(disable : 4996)
@@ -9,6 +10,7 @@
 
 #ifndef _WIN32
 #include <dirent.h>
+#include <errno.h>
 #endif
 
 #include "rPlatform.h"
@@ -42,7 +44,8 @@ void rImage::SaveFile(const std::string& name, rImageType type)
 std::string rPlatform::getConfigDir()
 {
 	static std::string dir = ".";
-	if (dir == ".") {
+	if (dir == ".")
+	{
 #ifdef _WIN32
 		dir = "";
 		//mkdir(dir.c_str());
@@ -54,7 +57,11 @@ std::string rPlatform::getConfigDir()
 		else // Just in case
 			dir = "./config";
 		dir = dir + "/rpcs3/";
-		mkdir(dir.c_str(), 0777);
+
+		if (mkdir(dir.c_str(), 0777) == -1)
+		{
+			printf("An error occured during the creation of the configuration directory. (%d)", errno);
+		}
 #endif
 	}
 	return dir;

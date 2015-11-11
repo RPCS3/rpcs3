@@ -123,7 +123,7 @@ s32 cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 		free(pAddresses);
 #else
 		struct ifaddrs *ifaddr, *ifa;
-		int family, n;
+		s32 family, n;
 
 		if (getifaddrs(&ifaddr) == -1)
 		{
@@ -146,9 +146,7 @@ s32 cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 
 			if (family == AF_INET)
 			{
-				s32 fd, status;
-
-				fd = open("/proc/net/dev", O_RDONLY);
+				u32 fd = open("/proc/net/dev", O_RDONLY);
 				struct ifreq freq;
 
 				if (ioctl(fd, SIOCGIFMTU, &freq) == -1)
@@ -212,7 +210,7 @@ s32 cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 		free(pAdapterInfo);
 #else
 		struct ifaddrs *ifaddr, *ifa;
-		int family, n;
+		s32 family, n;
 
 		if (getifaddrs(&ifaddr) == -1)
 		{
@@ -293,7 +291,7 @@ s32 cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 		free(pAdapterInfo);
 #else
 		struct ifaddrs *ifaddr, *ifa;
-		int family, n;
+		s32 family, n;
 
 		if (getifaddrs(&ifaddr) == -1)
 		{

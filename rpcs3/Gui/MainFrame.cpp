@@ -262,7 +262,9 @@ void MainFrame::InstallPkg(wxCommandEvent& WXUNUSED(event))
 
 	// Fetch title ID from the header
 	char title_id[10] = "?????????";
-	pkg_f.seek(55);
+
+	CHECK_ASSERTION(pkg_f.seek(55) != -1);
+
 	pkg_f.read(title_id, 9);
 	pkg_f.seek(0);
 

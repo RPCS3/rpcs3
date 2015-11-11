@@ -156,7 +156,7 @@ public:
 
 	bool SearchEntry(const std::string& name, u64& entry_block, u64* parent_block = nullptr);
 
-	int OpenDir(const std::string& name);
+	s32 OpenDir(const std::string& name);
 
 	bool Rename(const std::string& from, const std::string& to);
 
