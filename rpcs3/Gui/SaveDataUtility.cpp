@@ -171,6 +171,7 @@ void SaveDataManageDialog::OnApplySort(wxCommandEvent& event)
 SaveDataListDialog::SaveDataListDialog(wxWindow* parent, bool enable_manage)
 	: wxDialog(parent, wxID_ANY, "Save Data Utility")
 {
+	SetIcon(wxICON(frame_icon));
 	SetMinSize(wxSize(400, 400));
 
 	wxBoxSizer* s_main = new wxBoxSizer(wxVERTICAL);

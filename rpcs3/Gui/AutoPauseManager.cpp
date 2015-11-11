@@ -17,6 +17,7 @@ enum
 AutoPauseManagerDialog::AutoPauseManagerDialog(wxWindow* parent)
 	: wxDialog(parent, wxID_ANY, "Auto Pause Manager")
 {
+	SetIcon(wxICON(frame_icon));
 	SetMinSize(wxSize(400, 360));
 
 	wxBoxSizer* s_main = new wxBoxSizer(wxVERTICAL);

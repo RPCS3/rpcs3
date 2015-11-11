@@ -88,6 +88,7 @@ std::vector<std::string> GetAdapters()
 SettingsDialog::SettingsDialog(wxWindow *parent, rpcs3::config_t* cfg)
 	: wxDialog(parent, wxID_ANY, "Settings", wxDefaultPosition)
 {
+	SetIcon(wxICON(frame_icon));
 	const bool was_running = Emu.Pause();
 	if (was_running || Emu.IsReady()) cfg = &rpcs3::state.config;
 

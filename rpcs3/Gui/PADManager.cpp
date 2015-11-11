@@ -12,6 +12,7 @@ PADManager::PADManager(wxWindow* parent)
 	, m_key_pressed(false)
 	, m_emu_paused(false)
 {
+	SetIcon(wxICON(frame_icon));
 	if(Emu.IsRunning())
 	{
 		Emu.Pause();

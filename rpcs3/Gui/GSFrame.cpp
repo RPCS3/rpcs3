@@ -6,10 +6,6 @@
 #include "rpcs3.h"
 #include "Utilities/Timer.h"
 
-#ifndef _WIN32
-#include "frame_icon.xpm"
-#endif
-
 BEGIN_EVENT_TABLE(GSFrame, wxFrame)
 	EVT_PAINT(GSFrame::OnPaint)
 	EVT_SIZE(GSFrame::OnSize)

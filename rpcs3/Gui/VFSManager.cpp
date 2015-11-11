@@ -118,6 +118,7 @@ enum
 VFSManagerDialog::VFSManagerDialog(wxWindow* parent)
 	: wxDialog(parent, wxID_ANY, "Virtual File System Manager")
 {
+	SetIcon(wxICON(frame_icon));
 	m_list = new wxListView(this);
 
 	wxBoxSizer* s_btns = new wxBoxSizer(wxHORIZONTAL);

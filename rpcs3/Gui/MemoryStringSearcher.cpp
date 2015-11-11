@@ -12,6 +12,7 @@ MemoryStringSearcher::MemoryStringSearcher(wxWindow* parent)
 	: wxFrame(parent, wxID_ANY, "String Searcher", wxDefaultPosition, wxSize(545, 64))
 	, exit(false)
 {
+	SetIcon(wxICON(frame_icon));
 	this->SetBackgroundColour(wxColour(240,240,240));
 	//wxBoxSizer* s_panel = new wxBoxSizer(wxHORIZONTAL);
 
