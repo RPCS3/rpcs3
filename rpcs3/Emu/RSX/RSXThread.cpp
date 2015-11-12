@@ -200,12 +200,15 @@ namespace rsx
 		{
 			force_inline static void impl(thread* rsxthr, u32 arg)
 			{
-				u32& load = method_registers[NV4097_SET_TRANSFORM_CONSTANT_LOAD];
+				u32 load = method_registers[NV4097_SET_TRANSFORM_CONSTANT_LOAD];
 
 				static const size_t count = 4;
 				static const size_t size = count * sizeof(f32);
 
-				memcpy(rsxthr->transform_constants[load++].rgba, method_registers + NV4097_SET_TRANSFORM_CONSTANT + index * count, size);
+				size_t reg = index / 4;
+				size_t subreg = index % 4;
+
+				memcpy(rsxthr->transform_constants[load + reg].rgba + subreg, method_registers + NV4097_SET_TRANSFORM_CONSTANT + reg * count + subreg, sizeof(f32));
 			}
 		};
 
@@ -729,7 +732,7 @@ namespace rsx
 			bind_range<NV4097_SET_VERTEX_DATA4F_M + 3, 4, 16, nv4097::set_vertex_data4f_m>();
 			bind_range<NV4097_SET_VERTEX_DATA2S_M, 1, 16, nv4097::set_vertex_data2s_m>();
 			bind_range<NV4097_SET_VERTEX_DATA4S_M + 1, 2, 16, nv4097::set_vertex_data4s_m>();
-			bind_range<NV4097_SET_TRANSFORM_CONSTANT + 3, 4, 8, nv4097::set_transform_constant>();
+			bind_range<NV4097_SET_TRANSFORM_CONSTANT, 1, 32, nv4097::set_transform_constant>();
 			bind_range<NV4097_SET_TRANSFORM_PROGRAM + 3, 4, 128, nv4097::set_transform_program>();
 			bind_cpu_only<NV4097_GET_REPORT, nv4097::get_report>();
 			bind_cpu_only<NV4097_CLEAR_REPORT_VALUE, nv4097::clear_report_value>();
