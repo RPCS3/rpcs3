@@ -74,7 +74,7 @@ void D3D12VertexProgramDecompiler::insertOutputs(std::stringstream & OS, const s
 	OS << "	float4 dst_reg3 : COLOR2;" << std::endl;
 	OS << "	float4 dst_reg4 : COLOR3;" << std::endl;
 	OS << "	float dst_reg5 : FOG;" << std::endl;
-	OS << "	float4 dst_reg6 : COLOR4;" << std::endl;
+	OS << "	float4 dst_reg6 : TEXCOORD9;" << std::endl;
 	OS << "	float4 dst_reg7 : TEXCOORD0;" << std::endl;
 	OS << "	float4 dst_reg8 : TEXCOORD1;" << std::endl;
 	OS << "	float4 dst_reg9 : TEXCOORD2;" << std::endl;
@@ -84,7 +84,6 @@ void D3D12VertexProgramDecompiler::insertOutputs(std::stringstream & OS, const s
 	OS << "	float4 dst_reg13 : TEXCOORD6;" << std::endl;
 	OS << "	float4 dst_reg14 : TEXCOORD7;" << std::endl;
 	OS << "	float4 dst_reg15 : TEXCOORD8;" << std::endl;
-	OS << "	float4 dst_reg16 : TEXCOORD9;" << std::endl;
 	OS << "};" << std::endl;
 }
 
@@ -108,10 +107,12 @@ static const reg_info reg_table[] =
 	{ "gl_ClipDistance[0]", false, "dst_reg5", ".y", false },
 	{ "gl_ClipDistance[1]", false, "dst_reg5", ".z", false },
 	{ "gl_ClipDistance[2]", false, "dst_reg5", ".w", false },
-	{ "gl_PointSize", false, "dst_reg6", ".x", false },
+	// TODO: Handle user clip distance properly
+/*	{ "gl_PointSize", false, "dst_reg6", ".x", false },
 	{ "gl_ClipDistance[3]", false, "dst_reg6", ".y", false },
 	{ "gl_ClipDistance[4]", false, "dst_reg6", ".z", false },
-	{ "gl_ClipDistance[5]", false, "dst_reg6", ".w", false },
+	{ "gl_ClipDistance[5]", false, "dst_reg6", ".w", false },*/
+	{ "tc9", false, "dst_reg6", "", false },
 	{ "tc0", true, "dst_reg7", "", false },
 	{ "tc1", true, "dst_reg8", "", false },
 	{ "tc2", true, "dst_reg9", "", false },
@@ -121,7 +122,6 @@ static const reg_info reg_table[] =
 	{ "tc6", true, "dst_reg13", "", false },
 	{ "tc7", true, "dst_reg14", "", false },
 	{ "tc8", true, "dst_reg15", "", false },
-	{ "tc9", true, "dst_reg6", "", false }  // In this line, dst_reg6 is correct since dst_reg goes from 0 to 15.
 };
 
 void D3D12VertexProgramDecompiler::insertMainStart(std::stringstream & OS)
