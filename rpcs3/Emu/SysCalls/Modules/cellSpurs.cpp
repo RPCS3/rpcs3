@@ -2951,7 +2951,7 @@ s32 cellSpursEventFlagWait(PPUThread& ppu, vm::ptr<CellSpursEventFlag> eventFlag
 {
 	cellSpurs.Warning("cellSpursEventFlagWait(eventFlag=*0x%x, mask=*0x%x, mode=%d)", eventFlag, mask, mode);
 
-	return _spurs::event_flag_wait(ppu, eventFlag, mask, mode, 1);
+	return _spurs::event_flag_wait(ppu, eventFlag, mask, mode, 0);
 }
 
 /// Check SPURS event flag
