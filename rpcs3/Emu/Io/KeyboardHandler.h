@@ -265,6 +265,7 @@ protected:
 public:
 	virtual void Init(const u32 max_connect)=0;
 	virtual void Close()=0;
+	virtual ~KeyboardHandlerBase() = default;
 
 	void Key(const u32 code, bool pressed)
 	{
