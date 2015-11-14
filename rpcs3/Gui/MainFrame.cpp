@@ -1,5 +1,4 @@
 #include "stdafx_gui.h"
-#include "Ini.h"
 #include "rpcs3.h"
 #include "config.h"
 #include "MainFrame.h"
@@ -222,7 +221,7 @@ void MainFrame::BootGame(wxCommandEvent& WXUNUSED(event))
 	{
 		LOG_SUCCESS(HLE, "Game: boot done.");
 
-		if (Ini.HLEAlwaysStart.GetValue() && Emu.IsReady())
+		if (rpcs3::config.misc.always_start.value())
 		{
 			Emu.Run();
 		}
@@ -346,7 +345,7 @@ void MainFrame::BootElf(wxCommandEvent& WXUNUSED(event))
 
 	LOG_SUCCESS(HLE, "(S)ELF: boot done.");
 	
-	if (Ini.HLEAlwaysStart.GetValue() && Emu.IsReady())
+	if (rpcs3::config.misc.always_start.value() && Emu.IsReady())
 	{
 		Emu.Run();
 	}
@@ -513,7 +512,7 @@ void MainFrame::UpdateUI(wxCommandEvent& event)
 
 		if (event.GetId() == DID_STOPPED_EMU)
 		{
-			if (Ini.HLEExitOnStop.GetValue())
+			if (rpcs3::config.misc.exit_on_stop.value())
 			{
 				wxGetApp().Exit();
 			}

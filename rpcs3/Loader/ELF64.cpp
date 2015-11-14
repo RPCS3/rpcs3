@@ -351,13 +351,10 @@ namespace loader
 					{
 						if (!rpcs3::state.config.core.load_liblv2.value())
 						{
-							/*IniEntry<bool> load_lib;
-							load_lib.Init(sprx_handler.sprx_get_module_name(), "LLE");
-
-							if (!load_lib.LoadValue(false))
+							if (rpcs3::config.lle.get_entry_value<bool>(sprx_handler.sprx_get_module_name(), false) == false)
 							{
 								continue;
-							}*/
+							}
 						}
 
 						LOG_WARNING(LOADER, "Loading LLE library '%s'", sprx_handler.sprx_get_module_name().c_str());

@@ -3,8 +3,6 @@
 #include "Emu/System.h"
 #include "Emu/state.h"
 
-#include "rpcs3/Ini.h"
-
 #if defined (_WIN32)
 #include "XAudio2Thread.h"
 

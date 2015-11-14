@@ -9,8 +9,6 @@
 #include "Emu/state.h"
 #include "Utilities/Log.h"
 
-#include "Ini.h"
-
 std::vector<std::string> simplify_path_blocks(const std::string& path)
 {
 	// fmt::tolower() removed
@@ -499,13 +497,10 @@ void VFS::Init(const std::string& path)
 
 void VFS::SaveLoadDevices(std::vector<VFSManagerEntry>& res, bool is_load)
 {
-	IniEntry<int> entries_count;
-	entries_count.Init("count", "VFSManager");
-
 	int count = 0;
 	if (is_load)
 	{
-		count = entries_count.LoadValue(count);
+		count = rpcs3::config.vfs.count.value();
 
 		if (!count)
 		{
@@ -524,7 +519,7 @@ void VFS::SaveLoadDevices(std::vector<VFSManagerEntry>& res, bool is_load)
 	else
 	{
 		count = (int)res.size();
-		entries_count.SaveValue(count);
+		rpcs3::config.vfs.count = count;
 	}
 
 	// Custom EmulationDir
@@ -549,30 +544,25 @@ void VFS::SaveLoadDevices(std::vector<VFSManagerEntry>& res, bool is_load)
 
 	for(int i=0; i<count; ++i)
 	{
-		IniEntry<std::string> entry_path;
-		IniEntry<std::string> entry_device_path;
-		IniEntry<std::string> entry_mount;
-		IniEntry<int> entry_device;
+		rpcs3::config.vfs.add_entry(fmt::format("path[%d]", i), std::string{});
+		rpcs3::config.vfs.add_entry(fmt::format("device_path[%d]", i), std::string{});
+		rpcs3::config.vfs.add_entry(fmt::format("mount[%d]", i), std::string{});
+		rpcs3::config.vfs.add_entry(fmt::format("device[%d]", i), 0);
 
-		entry_path.Init(fmt::format("path[%d]", i), "VFSManager");
-		entry_device_path.Init(fmt::format("device_path[%d]", i), "VFSManager");
-		entry_mount.Init(fmt::format("mount[%d]", i), "VFSManager");
-		entry_device.Init(fmt::format("device[%d]", i), "VFSManager");
-		
 		if (is_load)
 		{
 			res[i] = VFSManagerEntry();
-			res[i].path = entry_path.LoadValue("");
-			res[i].device_path = entry_device_path.LoadValue("");
-			res[i].mount = entry_mount.LoadValue("");
-			res[i].device = (vfsDeviceType)entry_device.LoadValue(vfsDevice_LocalFile);
+			res[i].path = rpcs3::config.vfs.get_entry_value<std::string>(fmt::format("path[%d]", i), std::string{});
+			res[i].device_path = rpcs3::config.vfs.get_entry_value<std::string>(fmt::format("device_path[%d]", i), std::string{});
+			res[i].mount = rpcs3::config.vfs.get_entry_value<std::string>(fmt::format("mount[%d]", i), std::string{});
+			res[i].device = (vfsDeviceType)rpcs3::config.vfs.get_entry_value<int>(fmt::format("device[%d]", i), 0);
 		}
 		else
 		{
-			entry_path.SaveValue(res[i].path);
-			entry_device_path.SaveValue(res[i].device_path);
-			entry_mount.SaveValue(res[i].mount);
-			entry_device.SaveValue(res[i].device);
+			rpcs3::config.vfs.set_entry_value(fmt::format("path[%d]", i), res[i].path);
+			rpcs3::config.vfs.set_entry_value(fmt::format("device_path[%d]", i), res[i].device_path);
+			rpcs3::config.vfs.set_entry_value(fmt::format("mount[%d]", i), res[i].mount);
+			rpcs3::config.vfs.set_entry_value(fmt::format("device[%d]", i), (int)res[i].device);
 		}
 	}
 }

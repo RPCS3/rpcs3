@@ -572,23 +572,9 @@ namespace rpcs3
 		{
 			gui_group(config_context_t *cfg) : group{ cfg, "gui" } {}
 
-			struct size_group : protected group
-			{
-				size_group(group *grp) : group{ grp, "size" } {}
-
-				entry<int> width{ this, "width", 900 };
-				entry<int> height{ this, "height", 600 };
-			} size{ this };
-
-			struct position_group : protected group
-			{
-				position_group(group *grp) : group{ grp, "position" } {}
-
-				entry<int> x{ this, "horizontal", -1 };
-				entry<int> y{ this, "vertical", -1 };
-			} position{ this };
-
-			entry<std::string> aui_mgr_perspective{ this, "MainFrameAui", "" };
+			entry<size2i> size{ this, "size",{ 900, 600 } };
+			entry<position2i> position{ this, "position",{ -1, -1 } };
+			entry<std::string> aui_mgr_perspective{ this, "main_frame_aui", "" };
 
 		} gui{ this };
 
@@ -740,6 +726,23 @@ namespace rpcs3
 			entry<std::string> emulation_dir_path{ this, "Emulation dir path",               "" };
 			entry<bool> emulation_dir_path_enable{ this, "Use path below as EmulationDir",   false };
 		} system{ this };
+
+		struct vfs_group : public group
+		{
+			vfs_group(config_context_t *cfg) : group{ cfg, "vfs" } {}
+			entry<int> count{ this, "count", 0 };
+			entry<int> hdd_count{ this, "hdd_count", 0 };
+		} vfs{ this };
+
+		struct lle_group : public group
+		{
+			lle_group(config_context_t *cfg) : group{ cfg, "lle" } {}
+		} lle{ this };
+
+		struct gw_group : public group
+		{
+			gw_group(config_context_t *cfg) : group{ cfg, "game_viewer" } {}
+		} game_viewer{ this };
 
 		config_t() = default;
 		config_t(const std::string &path);

@@ -7,8 +7,6 @@
 #include "Gui/ConLogFrame.h"
 #include "Emu/GameInfo.h"
 
-#include "Ini.h"
-
 #include "Emu/Io/Keyboard.h"
 #include "Emu/Io/Null/NullKeyboardHandler.h"
 #include "Emu/Io/Windows/WindowsKeyboardHandler.h"
@@ -153,7 +151,6 @@ bool Rpcs3App::OnInit()
 	const wxString executablePath = wxPathOnly(wxStandardPaths::Get().GetExecutablePath());
 	wxSetWorkingDirectory(executablePath);
 
-	Ini.Load();
 	Emu.Init();
 	Emu.SetEmulatorPath(executablePath.ToStdString());
 
@@ -200,8 +197,6 @@ void Rpcs3App::Exit()
 	}
 
 	Emu.Stop();
-	Ini.Save();
-
 	wxApp::Exit();
 }
 

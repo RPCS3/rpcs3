@@ -27,6 +27,31 @@ protected:
 		std::string name() const;
 		std::string full_name() const;
 
+		template<typename T>
+		void add_entry(const std::string& name, const T& def_value)
+		{
+			new entry<T>(this, name, def_value);
+		}
+
+		template<typename T>
+		T get_entry_value(const std::string& name, const T& def_value)
+		{
+			if (!entries[name])
+				add_entry(name, def_value);
+
+			return convert::to<T>(entries[name]->string_value());
+		}
+
+		template<typename T>
+		void set_entry_value(const std::string& name, const T& value)
+		{
+			if (entries[name])
+				entries[name]->string_value(convert::to<std::string>(value));
+
+			else
+				add_entry(name, value);
+		}
+
 		friend config_context_t;
 	};
 
@@ -56,7 +81,8 @@ public:
 			, m_default_value(default_value)
 			, m_value(default_value)
 		{
-			parent->entries[name] = this;
+			if(!parent->entries[name])
+				parent->entries[name] = this;
 		}
 
 		T default_value() const
@@ -132,4 +158,7 @@ public:
 	void set_defaults();
 
 	std::string to_string() const;
+
+	void add_group(const std::string& name);
+	group& get_group(const std::string& name);
 };

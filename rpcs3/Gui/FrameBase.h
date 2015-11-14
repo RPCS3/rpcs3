@@ -6,6 +6,7 @@ class FrameBase : public wxFrame
 {
 protected:
 	bool m_is_skip_resize;
+	std::string m_ini_name;
 
 	FrameBase(
 		wxWindow* parent,
@@ -19,6 +20,9 @@ protected:
 		: wxFrame(parent, id, framename, defposition, defsize, style)
 		, m_is_skip_resize(is_skip_resize)
 	{
+		//TODO
+		m_ini_name = ininame.empty() ? fmt::ToUTF8(framename) : ininame;
+
 		LoadInfo();
 
 		Bind(wxEVT_CLOSE_WINDOW, &FrameBase::OnClose, this);
@@ -38,23 +42,22 @@ protected:
 
 	void LoadInfo()
 	{
-		SetSize(wxSize(rpcs3::config.gui.size.width.value(), rpcs3::config.gui.size.height.value()));
-		SetPosition(wxPoint(rpcs3::config.gui.position.x.value(), rpcs3::config.gui.position.y.value()));
+		size2i size = rpcs3::config.gui.size.value();
+		position2i position = rpcs3::config.gui.position.value();
+		SetSize(wxSize(size.width, size.height));
+		SetPosition(wxPoint(position.x, position.y));
 	}
 
 	void OnMove(wxMoveEvent& event)
 	{
-		rpcs3::config.gui.position.x = GetPosition().x;
-		rpcs3::config.gui.position.y = GetPosition().y;
+		rpcs3::config.gui.position = position2i{ GetPosition().x, GetPosition().y };
 		event.Skip();
 	}
 
 	void OnResize(wxSizeEvent& event)
 	{
-		rpcs3::config.gui.size.width = GetSize().GetWidth();
-		rpcs3::config.gui.size.height = GetSize().GetHeight();
-		rpcs3::config.gui.position.x = GetPosition().x;
-		rpcs3::config.gui.position.y = GetPosition().y;
+		rpcs3::config.gui.size = size2i{ GetSize().GetWidth(), GetSize().GetHeight() };
+		rpcs3::config.gui.position = position2i{ GetPosition().x, GetPosition().y };
 		if(m_is_skip_resize) event.Skip();
 	}
 

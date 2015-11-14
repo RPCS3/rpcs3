@@ -5,7 +5,6 @@
 #include "Emu/GameInfo.h"
 #include "Emu/state.h"
 #include "Utilities/Log.h"
-#include "Ini.h"
 
 struct Column
 {
@@ -196,23 +195,28 @@ public:
 			}
 		}
 
-	#define ADD_COLUMN(v, dv, t, n, isshown) \
-		{ \
-			IniEntry<t> ini; \
-			ini.Init(m_columns[i].name + "_" + n, path); \
-			if(isLoad) m_columns[i].v = ini.LoadValue(dv); \
-			else if(isshown ? m_columns[i].shown : 1) \
-			{ \
-				ini.SetValue(m_columns[i].v); \
-				ini.Save(); \
-			} \
-		}
-
-		for (u32 i = 0; i < m_columns.size(); ++i)
+		auto add_column = [isLoad](Column& column, bool is_shown)
 		{
-			ADD_COLUMN(pos, m_columns[i].def_pos, int, "position", 1);
-			ADD_COLUMN(width, m_columns[i].def_width, int, "width", 1);
-			ADD_COLUMN(shown, true, bool, "shown", 0);
+			if (isLoad)
+			{
+				column.pos = rpcs3::config.game_viewer.get_entry_value<u32>(column.name + "_" + "position", column.def_pos);
+				column.width = rpcs3::config.game_viewer.get_entry_value<u32>(column.name + "_" + "width", column.def_width);
+				column.shown = rpcs3::config.game_viewer.get_entry_value<bool>(column.name + "_" + "shown", column.shown);
+			}
+
+			else if (is_shown ? column.shown : 1)
+			{
+				rpcs3::config.game_viewer.set_entry_value(column.name + "_" + "position", column.pos);
+				rpcs3::config.game_viewer.set_entry_value(column.name + "_" + "width", column.width);
+				rpcs3::config.game_viewer.set_entry_value(column.name + "_" + "shown", column.shown);
+
+				rpcs3::config.save();
+			}
+		};
+
+		for (auto& column : m_columns)
+		{
+			add_column(column, true);
 		}
 
 		if (isLoad)

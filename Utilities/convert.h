@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#include "types.h"
 
 namespace convert
 {
@@ -152,6 +153,24 @@ namespace convert
 	};
 
 	template<>
+	struct to_impl_t<std::string, size2i>
+	{
+		static std::string func(size2i value)
+		{
+			return std::to_string(value.width) + "x" + std::to_string(value.height);
+		}
+	};
+
+	template<>
+	struct to_impl_t<std::string, position2i>
+	{
+		static std::string func(position2i value)
+		{
+			return std::to_string(value.x) + ":" + std::to_string(value.y);
+		}
+	};
+
+	template<>
 	struct to_impl_t<int, std::string>
 	{
 		static int func(const std::string& value)
@@ -229,6 +248,26 @@ namespace convert
 		static long double func(const std::string& value)
 		{
 			return std::stold(value);
+		}
+	};
+
+	template<>
+	struct to_impl_t<size2i, std::string>
+	{
+		static size2i func(const std::string& value)
+		{
+			const auto& data = fmt::split(value, { "x" });
+			return { std::stoi(data[0]), std::stoi(data[1]) };
+		}
+	};
+
+	template<>
+	struct to_impl_t<position2i, std::string>
+	{
+		static position2i func(const std::string& value)
+		{
+			const auto& data = fmt::split(value, { ":" });
+			return { std::stoi(data[0]), std::stoi(data[1]) };
 		}
 	};
 	

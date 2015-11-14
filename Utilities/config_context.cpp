@@ -6,7 +6,8 @@
 
 void config_context_t::group::init()
 {
-	m_cfg->m_groups[full_name()] = this;
+	if(!m_cfg->m_groups[full_name()])
+		m_cfg->m_groups[full_name()] = this;
 }
 
 config_context_t::group::group(config_context_t* cfg, const std::string& name)
@@ -52,7 +53,10 @@ void config_context_t::assign(const config_context_t& rhs)
 
 		for (auto rhs_e : rhs_g.second->entries)
 		{
-			g->entries[rhs_e.first]->value_from(rhs_e.second);
+			if (g->entries[rhs_e.first])
+				g->entries[rhs_e.first]->value_from(rhs_e.second);
+			else
+				g->add_entry(rhs_e.first, rhs_e.second->string_value());
 		}
 	}
 }
@@ -99,11 +103,27 @@ void config_context_t::deserialize(std::istream& stream)
 		auto name_value = fmt::split(line, { "=" });
 		switch (name_value.size())
 		{
-		case 1: current_group->entries[fmt::trim(name_value[0])]->string_value({}); break;
+		case 1:
+		{
+			if (current_group->entries[fmt::trim(name_value[0])])
+				current_group->entries[fmt::trim(name_value[0])]->string_value({});
+
+			else
+				current_group->add_entry(fmt::trim(name_value[0]), std::string{});
+		}
+		break;
 
 		default:
 			std::cerr << line_index << ": line '" << line << "' has more than one symbol '='. used only first" << std::endl;
-		case 2: current_group->entries[fmt::trim(name_value[0])]->string_value(fmt::trim(name_value[1])); break;
+		case 2:
+		{
+			if (current_group->entries[fmt::trim(name_value[0])])
+				current_group->entries[fmt::trim(name_value[0])]->string_value(fmt::trim(name_value[1]));
+
+			else
+				current_group->add_entry(fmt::trim(name_value[0]), fmt::trim(name_value[1]));
+		}
+		break;
 
 		}
 	}
@@ -142,4 +162,17 @@ std::string config_context_t::to_string() const
 	serialize(result);
 
 	return result.str();
+}
+
+void config_context_t::add_group(const std::string& name)
+{
+	new group(this, name);
+}
+
+config_context_t::group& config_context_t::get_group(const std::string& name)
+{
+	if (!m_groups[name])
+		add_group(name);
+
+	return *m_groups[name];
 }

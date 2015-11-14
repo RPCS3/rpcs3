@@ -527,29 +527,20 @@ void VHDDManagerDialog::OnOk(wxCommandEvent& event)
 
 void VHDDManagerDialog::LoadPaths()
 {
-	/*IniEntry<int> path_count;
-	path_count.Init("path_count", "HDDManager");
-	size_t count = 0;
-	count = path_count.LoadValue(count);
+	size_t count = rpcs3::config.vfs.hdd_count.value();
 
-	for(size_t i=0; i<count; ++i)
+	for (size_t i = 0; i < count; ++i)
 	{
-		IniEntry<std::string> path_entry;
-		path_entry.Init(fmt::format("path[%d]", i), "HDDManager");
-		m_paths.emplace_back(path_entry.LoadValue(""));
-	}*/
+		m_paths.emplace_back(rpcs3::config.vfs.get_entry_value<std::string>(fmt::format("hdd_path[%d]", i), std::string{}));
+	}
 }
 
 void VHDDManagerDialog::SavePaths()
 {
-	/*IniEntry<int> path_count;
-	path_count.Init("path_count", "HDDManager");
-	path_count.SaveValue(m_paths.size());
+	rpcs3::config.vfs.hdd_count = (int)m_paths.size();
 
-	for(size_t i=0; i<m_paths.size(); ++i)
+	for (size_t i = 0; i < m_paths.size(); ++i)
 	{
-		IniEntry<std::string> path_entry;
-		path_entry.Init(fmt::format("path[%d]", i), "HDDManager");
-		path_entry.SaveValue(m_paths[i]);
-	}*/
+		rpcs3::config.vfs.set_entry_value(fmt::format("hdd_path[%d]", i), m_paths[i]);
+	}
 }
