@@ -214,6 +214,11 @@ struct resource_storage
 	size_t sampler_descriptors_heap_index;
 	size_t current_sampler_index;
 
+	size_t render_targets_descriptors_heap_index;
+	ComPtr<ID3D12DescriptorHeap> render_targets_descriptors_heap;
+	size_t depth_stencil_descriptor_heap_index;
+	ComPtr<ID3D12DescriptorHeap> depth_stencil_descriptor_heap;
+
 	ComPtr<ID3D12Resource> ram_framebuffer;
 
 	/// Texture that were invalidated

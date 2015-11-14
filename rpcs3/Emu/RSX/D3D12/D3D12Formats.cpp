@@ -364,8 +364,8 @@ BOOL get_front_face_ccw(u32 set_front_face_value) noexcept
 {
 	switch (set_front_face_value)
 	{
-	case CELL_GCM_CW: return FALSE;
 	default: // Disgaea 3 pass some garbage value at startup, this is needed to survive.
+	case CELL_GCM_CW: return FALSE;
 	case CELL_GCM_CCW: return TRUE;
 	}
 	unreachable("Wrong front face value");
@@ -464,5 +464,15 @@ DXGI_FORMAT get_vertex_attribute_format(u8 type, u8 size) noexcept
 	}
 	}
 	unreachable("Wrong type");
+}
+
+D3D12_RECT get_scissor(u32 horizontal, u32 vertical) noexcept
+{
+	return{
+		horizontal & 0xFFFF,
+		vertical & 0xFFFF,
+		(horizontal & 0xFFFF) + (horizontal >> 16),
+		(vertical & 0xFFFF) + (vertical >> 16)
+	};
 }
 #endif

@@ -346,19 +346,12 @@ void D3D12GSRender::end()
 		0.f,
 		(float)clip_w,
 		(float)clip_h,
-		-1.f,
-		1.f
+		(f32&)rsx::method_registers[NV4097_SET_CLIP_MIN],
+		(f32&)rsx::method_registers[NV4097_SET_CLIP_MAX]
 	};
 	getCurrentResourceStorage().command_list->RSSetViewports(1, &viewport);
 
-	D3D12_RECT box =
-	{
-		0,
-		0,
-		(LONG)clip_w,
-		(LONG)clip_h,
-	};
-	getCurrentResourceStorage().command_list->RSSetScissorRects(1, &box);
+	getCurrentResourceStorage().command_list->RSSetScissorRects(1, &get_scissor(rsx::method_registers[NV4097_SET_SCISSOR_HORIZONTAL], rsx::method_registers[NV4097_SET_SCISSOR_VERTICAL]));
 
 	getCurrentResourceStorage().command_list->IASetPrimitiveTopology(get_primitive_topology(draw_mode));
 
