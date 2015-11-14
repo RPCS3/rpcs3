@@ -289,7 +289,7 @@ void MainFrame::InstallPkg(wxCommandEvent& WXUNUSED(event))
 	volatile f64 progress = 0.0;
 
 	// Run PKG unpacking asynchronously
-	auto result = std::async(WRAP_EXPR(pkg_install(pkg_f, local_path + "/", progress)));
+	auto result = std::async(std::launch::async, WRAP_EXPR(pkg_install(pkg_f, local_path + "/", progress)));
 
 	// Wait for the completion
 	while (result.wait_for(15ms) != std::future_status::ready)
