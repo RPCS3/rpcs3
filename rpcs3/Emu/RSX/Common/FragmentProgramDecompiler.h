@@ -48,6 +48,27 @@ class FragmentProgramDecompiler
 	std::string BuildCode();
 
 	u32 GetData(const u32 d) const { return d << 16 | d >> 16; }
+
+	/**
+	 * Emits code if opcode is an SCT one and returns true,
+	 * otherwise do nothing and return false.
+	 * NOTE: What does SCT means ???
+	 */
+	bool handle_sct(u32 opcode);
+
+	/**
+	* Emits code if opcode is an SCB one and returns true,
+	* otherwise do nothing and return false.
+	* NOTE: What does SCB means ???
+	*/
+	bool handle_scb(u32 opcode);
+
+	/**
+	* Emits code if opcode is an TEX SRB one and returns true,
+	* otherwise do nothing and return false.
+	* NOTE: What does TEX SRB means ???
+	*/
+	bool handle_tex_srb(u32 opcode);
 protected:
 	u32 m_ctrl;
 	/** returns the type name of float vectors.
