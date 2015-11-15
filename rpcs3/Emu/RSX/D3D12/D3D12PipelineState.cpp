@@ -241,7 +241,7 @@ bool D3D12GSRender::load_program()
 		prop.CutValue = ((rsx::method_registers[NV4097_SET_INDEX_ARRAY_DMA] >> 4) == CELL_GCM_DRAW_INDEX_ARRAY_TYPE_32) ?
 			D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_0xFFFFFFFF : D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_0xFFFF;
 
-	m_PSO = m_cachePSO.getGraphicPipelineState(&vertex_program, &fragment_program, prop, std::make_pair(m_device.Get(), m_rootSignatures));
-	return m_PSO != nullptr;
+	m_current_pso = m_pso_cache.getGraphicPipelineState(&vertex_program, &fragment_program, prop, std::make_pair(m_device.Get(), m_root_signatures));
+	return m_current_pso != nullptr;
 }
 #endif

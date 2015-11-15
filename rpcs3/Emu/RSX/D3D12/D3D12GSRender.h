@@ -51,39 +51,36 @@ private:
 	/** D3D12 structures.
 	 * Note: they should be declared in reverse order of destruction
 	 */
-	D3D12DLLManagement m_D3D12Lib;
+	D3D12DLLManagement m_d3d12_lib;
 	ComPtr<ID3D12Device> m_device;
-	ComPtr<ID3D12CommandQueue> m_commandQueueGraphic;
-	ComPtr<struct IDXGISwapChain3> m_swapChain;
-	ComPtr<ID3D12Resource> m_backBuffer[2];
-	ComPtr<ID3D12DescriptorHeap> m_backbufferAsRendertarget[2];
+	ComPtr<ID3D12CommandQueue> m_command_queue;
+	ComPtr<struct IDXGISwapChain3> m_swap_chain;
+	ComPtr<ID3D12Resource> m_backbuffer[2];
+	ComPtr<ID3D12DescriptorHeap> m_backbuffer_descriptor_heap[2];
 	// m_rootSignatures[N] is RS with N texture/sample
-	ComPtr<ID3D12RootSignature> m_rootSignatures[17];
+	ComPtr<ID3D12RootSignature> m_root_signatures[17];
 
 	// TODO: Use a tree structure to parse more efficiently
-	data_cache m_textureCache;
-	bool invalidateAddress(u32 addr);
-
-	// Copy of RTT to be used as texture
-	std::unordered_map<u32, ID3D12Resource* > m_texturesRTTs;
+	data_cache m_texture_cache;
+	bool invalidate_address(u32 addr);
 
 	rsx::surface_info m_surface;
 
 	RSXFragmentProgram fragment_program;
-	PipelineStateObjectCache m_cachePSO;
-	std::tuple<ID3D12PipelineState *, std::vector<size_t>, size_t> *m_PSO;
+	PipelineStateObjectCache m_pso_cache;
+	std::tuple<ID3D12PipelineState *, std::vector<size_t>, size_t> *m_current_pso;
 
 	struct
 	{
-		size_t m_drawCallDuration;
-		size_t m_drawCallCount;
-		size_t m_rttDuration;
-		size_t m_vertexIndexDuration;
-		size_t m_bufferUploadSize;
-		size_t m_programLoadDuration;
-		size_t m_constantsDuration;
-		size_t m_textureDuration;
-		size_t m_flipDuration;
+		size_t m_draw_calls_duration;
+		size_t m_draw_calls_count;
+		size_t m_prepare_rtt_duration;
+		size_t m_vertex_index_duration;
+		size_t m_buffer_upload_size;
+		size_t m_program_load_duration;
+		size_t m_constants_duration;
+		size_t m_texture_duration;
+		size_t m_flip_duration;
 	} m_timers;
 
 	void reset_timer();
@@ -103,7 +100,7 @@ private:
 	 * Stores data related to the scaling pass that turns internal
 	 * render targets into presented buffers.
 	 */
-	Shader m_outputScalingPass;
+	Shader m_output_scaling_pass;
 
 	/**
 	 * Data used when depth buffer is converted to uchar textures.
@@ -112,37 +109,37 @@ private:
 	ID3D12RootSignature *m_convertRootSignature;
 	void initConvertShader();
 
-	resource_storage m_perFrameStorage[2];
-	resource_storage &getCurrentResourceStorage();
-	resource_storage &getNonCurrentResourceStorage();
+	resource_storage m_per_frame_storage[2];
+	resource_storage &get_current_resource_storage();
+	resource_storage &get_non_current_resource_storage();
 
 	// Constants storage
-	data_heap<ID3D12Resource, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT> m_constantsData;
+	data_heap<ID3D12Resource, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT> m_constants_data;
 	// Vertex storage
-	data_heap<ID3D12Resource, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT> m_vertexIndexData;
+	data_heap<ID3D12Resource, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT> m_vertex_index_data;
 	// Texture storage
-	data_heap<ID3D12Resource, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT> m_textureUploadData;
-	data_heap<ID3D12Heap, D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT> m_UAVHeap;
-	data_heap<ID3D12Heap, D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT> m_readbackResources;
+	data_heap<ID3D12Resource, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT> m_texture_upload_data;
+	data_heap<ID3D12Heap, D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT> m_uav_heap;
+	data_heap<ID3D12Heap, D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT> m_readback_resources;
 
 	struct
 	{
 		bool m_indexed; /*<! is draw call using an index buffer */
 		size_t m_count; /*<! draw call vertex count */
-	} m_renderingInfo;
+	} m_rendering_info;
 
 	render_targets m_rtts;
 
 	std::vector<D3D12_INPUT_ELEMENT_DESC> m_IASet;
 	std::vector<D3D12_VERTEX_BUFFER_VIEW> m_vertex_buffer_views;
 
-	INT g_descriptorStrideSRVCBVUAV;
-	INT g_descriptorStrideDSV;
-	INT g_descriptorStrideRTV;
-	INT g_descriptorStrideSamplers;
+	INT g_descriptor_stride_srv_cbv_uav;
+	INT g_descriptor_stride_dsv;
+	INT g_descriptor_stride_rtv;
+	INT g_descriptor_stride_samplers;
 
 	// Used to fill unused texture slot
-	ID3D12Resource *m_dummyTexture;
+	ID3D12Resource *m_dummy_texture;
 
 	// Store previous fbo addresses to detect RTT config changes.
 	u32 m_previous_address_a;

@@ -141,7 +141,7 @@ void D3D12GSRender::upload_and_bind_textures(ID3D12GraphicsCommandList *command_
 
 		ID3D12Resource *vram_texture;
 		std::unordered_map<u32, ComPtr<ID3D12Resource> >::const_iterator ItRTT = m_rtts.render_targets_storage.find(texaddr);
-		std::pair<texture_entry, ComPtr<ID3D12Resource> > *cached_texture = m_textureCache.find_data_if_available(texaddr);
+		std::pair<texture_entry, ComPtr<ID3D12Resource> > *cached_texture = m_texture_cache.find_data_if_available(texaddr);
 		bool isRenderTarget = false;
 		if (ItRTT != m_rtts.render_targets_storage.end())
 		{
@@ -152,18 +152,18 @@ void D3D12GSRender::upload_and_bind_textures(ID3D12GraphicsCommandList *command_
 		{
 			if (cached_texture->first.m_is_dirty)
 			{
-				update_existing_texture(textures[i], command_list, m_textureUploadData, cached_texture->second.Get());
-				m_textureCache.protect_data(texaddr, texaddr, get_texture_size(textures[i]));
+				update_existing_texture(textures[i], command_list, m_texture_upload_data, cached_texture->second.Get());
+				m_texture_cache.protect_data(texaddr, texaddr, get_texture_size(textures[i]));
 			}
 			vram_texture = cached_texture->second.Get();
 		}
 		else
 		{
 			if (cached_texture != nullptr)
-				getCurrentResourceStorage().dirty_textures.push_back(m_textureCache.remove_from_cache(texaddr));
-			ComPtr<ID3D12Resource> tex = upload_single_texture(textures[i], m_device.Get(), command_list, m_textureUploadData);
+				get_current_resource_storage().dirty_textures.push_back(m_texture_cache.remove_from_cache(texaddr));
+			ComPtr<ID3D12Resource> tex = upload_single_texture(textures[i], m_device.Get(), command_list, m_texture_upload_data);
 			vram_texture = tex.Get();
-			m_textureCache.store_and_protect_data(texaddr, texaddr, get_texture_size(textures[i]), format, w, h, textures[i].mipmap(), tex);
+			m_texture_cache.store_and_protect_data(texaddr, texaddr, get_texture_size(textures[i]), format, w, h, textures[i].mipmap(), tex);
 		}
 
 		D3D12_SHADER_RESOURCE_VIEW_DESC shared_resource_view_desc = {};
@@ -291,17 +291,17 @@ void D3D12GSRender::upload_and_bind_textures(ID3D12GraphicsCommandList *command_
 		}
 
 		m_device->CreateShaderResourceView(vram_texture, &shared_resource_view_desc,
-			CD3DX12_CPU_DESCRIPTOR_HANDLE(getCurrentResourceStorage().descriptors_heap->GetCPUDescriptorHandleForHeapStart())
-			.Offset((UINT)descriptor_index + (UINT)used_texture, g_descriptorStrideSRVCBVUAV));
+			CD3DX12_CPU_DESCRIPTOR_HANDLE(get_current_resource_storage().descriptors_heap->GetCPUDescriptorHandleForHeapStart())
+			.Offset((UINT)descriptor_index + (UINT)used_texture, g_descriptor_stride_srv_cbv_uav));
 
-		if (getCurrentResourceStorage().current_sampler_index + 16 > 2048)
+		if (get_current_resource_storage().current_sampler_index + 16 > 2048)
 		{
-			getCurrentResourceStorage().sampler_descriptors_heap_index = 1;
-			getCurrentResourceStorage().current_sampler_index = 0;
+			get_current_resource_storage().sampler_descriptors_heap_index = 1;
+			get_current_resource_storage().current_sampler_index = 0;
 		}
 		m_device->CreateSampler(&get_sampler_desc(textures[i]),
-			CD3DX12_CPU_DESCRIPTOR_HANDLE(getCurrentResourceStorage().sampler_descriptor_heap[getCurrentResourceStorage().sampler_descriptors_heap_index]->GetCPUDescriptorHandleForHeapStart())
-			.Offset((UINT)getCurrentResourceStorage().current_sampler_index + (UINT)used_texture, g_descriptorStrideSamplers));
+			CD3DX12_CPU_DESCRIPTOR_HANDLE(get_current_resource_storage().sampler_descriptor_heap[get_current_resource_storage().sampler_descriptors_heap_index]->GetCPUDescriptorHandleForHeapStart())
+			.Offset((UINT)get_current_resource_storage().current_sampler_index + (UINT)used_texture, g_descriptor_stride_samplers));
 
 		used_texture++;
 	}
@@ -318,9 +318,9 @@ void D3D12GSRender::upload_and_bind_textures(ID3D12GraphicsCommandList *command_
 			D3D12_SHADER_COMPONENT_MAPPING_FORCE_VALUE_0,
 			D3D12_SHADER_COMPONENT_MAPPING_FORCE_VALUE_0,
 			D3D12_SHADER_COMPONENT_MAPPING_FORCE_VALUE_0);
-		m_device->CreateShaderResourceView(m_dummyTexture, &shader_resource_view_desc,
-			CD3DX12_CPU_DESCRIPTOR_HANDLE(getCurrentResourceStorage().descriptors_heap->GetCPUDescriptorHandleForHeapStart())
-			.Offset((INT)descriptor_index + (INT)used_texture, g_descriptorStrideSRVCBVUAV)
+		m_device->CreateShaderResourceView(m_dummy_texture, &shader_resource_view_desc,
+			CD3DX12_CPU_DESCRIPTOR_HANDLE(get_current_resource_storage().descriptors_heap->GetCPUDescriptorHandleForHeapStart())
+			.Offset((INT)descriptor_index + (INT)used_texture, g_descriptor_stride_srv_cbv_uav)
 			);
 
 		D3D12_SAMPLER_DESC sampler_desc = {};
@@ -329,8 +329,8 @@ void D3D12GSRender::upload_and_bind_textures(ID3D12GraphicsCommandList *command_
 		sampler_desc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
 		sampler_desc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
 		m_device->CreateSampler(&sampler_desc,
-			CD3DX12_CPU_DESCRIPTOR_HANDLE(getCurrentResourceStorage().sampler_descriptor_heap[getCurrentResourceStorage().sampler_descriptors_heap_index]->GetCPUDescriptorHandleForHeapStart())
-			.Offset((INT)getCurrentResourceStorage().current_sampler_index + (INT)used_texture, g_descriptorStrideSamplers)
+			CD3DX12_CPU_DESCRIPTOR_HANDLE(get_current_resource_storage().sampler_descriptor_heap[get_current_resource_storage().sampler_descriptors_heap_index]->GetCPUDescriptorHandleForHeapStart())
+			.Offset((INT)get_current_resource_storage().current_sampler_index + (INT)used_texture, g_descriptor_stride_samplers)
 			);
 	}
 }
