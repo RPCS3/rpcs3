@@ -468,15 +468,20 @@ void SetupRsxRenderingStates(vm::ptr<CellGcmContextData>& cntxt)
 {
 	//TODO: use cntxt
 	GSRender& r = Emu.GetGSManager().GetRender();
-	rsx::method_registers[NV4097_SET_COLOR_MASK] = -1;
-	rsx::method_registers[NV4097_SET_DEPTH_MASK] = 0;
-	rsx::method_registers[NV4097_SET_ALPHA_TEST_ENABLE] = false;
-	rsx::method_registers[NV4097_SET_BLEND_ENABLE] = false;
-	rsx::method_registers[NV4097_SET_BLEND_ENABLE_MRT] = false;
+
+	// FIXME: only RSX Thread can write rsx::method_registers
+	// Others threads must fill the command buffer or use another
+	// mechanism.
+
+//	rsx::method_registers[NV4097_SET_COLOR_MASK] = -1;
+//	rsx::method_registers[NV4097_SET_DEPTH_MASK] = 0;
+//	rsx::method_registers[NV4097_SET_ALPHA_TEST_ENABLE] = false;
+//	rsx::method_registers[NV4097_SET_BLEND_ENABLE] = false;
+//	rsx::method_registers[NV4097_SET_BLEND_ENABLE_MRT] = false;
 //	r.m_set_logic_op = false;
-	rsx::method_registers[NV4097_SET_CULL_FACE_ENABLE] = false;
+//	rsx::method_registers[NV4097_SET_CULL_FACE_ENABLE] = false;
 //	r.m_set_depth_bounds_test = false;
-	rsx::method_registers[NV4097_SET_DEPTH_TEST_ENABLE] = false;
+//	rsx::method_registers[NV4097_SET_DEPTH_TEST_ENABLE] = false;
 //	r.m_set_poly_offset_fill = false;
 //	r.m_set_stencil_test = false;
 //	r.m_set_two_sided_stencil_test_enable = false;
@@ -486,8 +491,8 @@ void SetupRsxRenderingStates(vm::ptr<CellGcmContextData>& cntxt)
 //	r.m_set_shade_mode = true; r.m_shade_mode = CELL_GCM_SMOOTH;
 //	r.m_set_frequency_divider_operation = CELL_GCM_FREQUENCY_DIVIDE;
 
-	rsx::method_registers[NV4097_SET_SURFACE_CLIP_HORIZONTAL] = s_rescInternalInstance->m_dstWidth << 16;
-	rsx::method_registers[NV4097_SET_SURFACE_CLIP_VERTICAL] = s_rescInternalInstance->m_dstHeight << 16;
+//	rsx::method_registers[NV4097_SET_SURFACE_CLIP_HORIZONTAL] = s_rescInternalInstance->m_dstWidth << 16;
+//	rsx::method_registers[NV4097_SET_SURFACE_CLIP_VERTICAL] = s_rescInternalInstance->m_dstHeight << 16;
 
 //	r.m_set_scissor_horizontal = r.m_set_scissor_vertical = true;
 //	r.m_scissor_x = 0;
@@ -499,7 +504,7 @@ void SetupRsxRenderingStates(vm::ptr<CellGcmContextData>& cntxt)
 //	r.m_height = s_rescInternalInstance->m_dstHeight;
 
 //	r.m_surface_depth_format = 2;
-	rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET] = 1;
+//	rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET] = 1;
 
 	if (IsPalInterpolate()) 
 	{
@@ -535,10 +540,14 @@ void SetupSurfaces(vm::ptr<CellGcmContextData>& cntxt)
 
 	GSRender& r = Emu.GetGSManager().GetRender();
 
+	// FIXME: only RSX Thread can write rsx::method_registers
+	// Others threads must fill the command buffer or use another
+	// mechanism.
+
 //	r.m_surface_type = CELL_GCM_SURFACE_PITCH;
 //	r.m_surface_antialias = CELL_GCM_SURFACE_CENTER_1;
 //	r.m_surface_color_format = (u8)s_rescInternalInstance->m_pRescDsts->format;
-	rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET] = (!isMrt) ? CELL_GCM_SURFACE_TARGET_0 : CELL_GCM_SURFACE_TARGET_MRT1;
+/*	rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET] = (!isMrt) ? CELL_GCM_SURFACE_TARGET_0 : CELL_GCM_SURFACE_TARGET_MRT1;
 	//surface.colorLocation[0] = CELL_GCM_LOCATION_LOCAL;
 	rsx::method_registers[NV4097_SET_SURFACE_COLOR_AOFFSET] = dstOffset0;
 	rsx::method_registers[NV4097_SET_SURFACE_PITCH_A] = s_rescInternalInstance->m_dstPitch;
@@ -557,7 +566,7 @@ void SetupSurfaces(vm::ptr<CellGcmContextData>& cntxt)
 	rsx::method_registers[NV4097_SET_SURFACE_PITCH_Z] = 64;
 //	r.m_surface_width = s_rescInternalInstance->m_dstWidth;
 //	r.m_surface_height = s_rescInternalInstance->m_dstHeight;
-//	r.m_surface_clip_x = 0;
+//	r.m_surface_clip_x = 0;*/
 //	r.m_surface_clip_y = 0;
 }
 
