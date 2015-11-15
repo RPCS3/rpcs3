@@ -173,7 +173,7 @@ if(WIN32) # I'm not sure we need all of these libs, but we link them in vs
 	if(NOT MSVC)
 		target_link_libraries(rpcs3  ${OPENGL_LIBRARIES} ${GLEW_LIBRARY} opengl32.lib glu32.lib)
 	else()
-		target_link_libraries(rpcs3  dxgi.lib d2d1.lib dwrite.lib d3dcompiler.lib)
+		target_link_libraries(rpcs3  dxgi.lib d2d1.lib dwrite.lib)
 	endif()
 	target_link_libraries(rpcs3  asmjit.lib avformat.lib avcodec.lib avutil.lib swresample.lib swscale.lib ${wxWidgets_LIBRARIES} ${OPENAL_LIBRARY} ${ADDITIONAL_LIBS})
 else()

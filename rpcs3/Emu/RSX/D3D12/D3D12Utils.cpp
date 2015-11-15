@@ -9,6 +9,7 @@
 #define STRINGIFY(x) #x
 
 extern PFN_D3D12_SERIALIZE_ROOT_SIGNATURE wrapD3D12SerializeRootSignature;
+extern pD3DCompile wrapD3DCompile;
 
  /**
  * returns bytecode and root signature of a Compute Shader converting texture from
@@ -30,7 +31,7 @@ std::pair<ID3DBlob *, ID3DBlob *> compileF32toU8CS()
 
 	ID3DBlob *bytecode;
 	Microsoft::WRL::ComPtr<ID3DBlob> errorBlob;
-	HRESULT hr = D3DCompile(shaderCode, strlen(shaderCode), "test", nullptr, nullptr, "main", "cs_5_0", 0, 0, &bytecode, errorBlob.GetAddressOf());
+	HRESULT hr = wrapD3DCompile(shaderCode, strlen(shaderCode), "test", nullptr, nullptr, "main", "cs_5_0", 0, 0, &bytecode, errorBlob.GetAddressOf());
 	if (hr != S_OK)
 	{
 		const char *tmp = (const char*)errorBlob->GetBufferPointer();
@@ -80,7 +81,7 @@ void D3D12GSRender::Shader::Init(ID3D12Device *device, ID3D12CommandQueue *gfxco
 
 	Microsoft::WRL::ComPtr<ID3DBlob> fsBytecode;
 	Microsoft::WRL::ComPtr<ID3DBlob> errorBlob;
-	HRESULT hr = D3DCompile(fsCode, strlen(fsCode), "test", nullptr, nullptr, "main", "ps_5_0", 0, 0, &fsBytecode, errorBlob.GetAddressOf());
+	HRESULT hr = wrapD3DCompile(fsCode, strlen(fsCode), "test", nullptr, nullptr, "main", "ps_5_0", 0, 0, &fsBytecode, errorBlob.GetAddressOf());
 	if (hr != S_OK)
 	{
 		const char *tmp = (const char*)errorBlob->GetBufferPointer();
@@ -110,7 +111,7 @@ void D3D12GSRender::Shader::Init(ID3D12Device *device, ID3D12CommandQueue *gfxco
 	);
 
 	Microsoft::WRL::ComPtr<ID3DBlob> vsBytecode;
-	hr = D3DCompile(vsCode, strlen(vsCode), "test", nullptr, nullptr, "main", "vs_5_0", 0, 0, &vsBytecode, errorBlob.GetAddressOf());
+	hr = wrapD3DCompile(vsCode, strlen(vsCode), "test", nullptr, nullptr, "main", "vs_5_0", 0, 0, &vsBytecode, errorBlob.GetAddressOf());
 	if (hr != S_OK)
 	{
 		const char *tmp = (const char*)errorBlob->GetBufferPointer();

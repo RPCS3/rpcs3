@@ -14,11 +14,13 @@ PFN_D3D12_CREATE_DEVICE wrapD3D12CreateDevice;
 PFN_D3D12_GET_DEBUG_INTERFACE wrapD3D12GetDebugInterface;
 PFN_D3D12_SERIALIZE_ROOT_SIGNATURE wrapD3D12SerializeRootSignature;
 PFN_D3D11ON12_CREATE_DEVICE wrapD3D11On12CreateDevice;
+pD3DCompile wrapD3DCompile;
 
 namespace
 {
 HMODULE D3D12Module;
 HMODULE D3D11Module;
+HMODULE D3DCompiler;
 
 void loadD3D12FunctionPointers()
 {
@@ -32,12 +34,15 @@ void loadD3D12FunctionPointers()
 	if (!D3D11Module)
 		unreachable("Failed to load d3d11.dll");
 	wrapD3D11On12CreateDevice = (PFN_D3D11ON12_CREATE_DEVICE)GetProcAddress(D3D11Module, "D3D11On12CreateDevice");
+	CHECK_ASSERTION(D3DCompiler = LoadLibrary(L"d3dcompiler_47.dll"));
+	wrapD3DCompile = (pD3DCompile)GetProcAddress(D3DCompiler, "D3DCompile");
 }
 
 void unloadD3D12FunctionPointers()
 {
 	FreeLibrary(D3D12Module);
 	FreeLibrary(D3D11Module);
+	FreeLibrary(D3DCompiler);
 }
 
 /**

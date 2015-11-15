@@ -21,6 +21,7 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{00D36322-6188-4A66-B514-3B3F183E998D}</ProjectGuid>
     <RootNamespace>copy_setup_h</RootNamespace>
+    <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <Import Project="..\wxWidgets\build\msw\wx_config.props" />
