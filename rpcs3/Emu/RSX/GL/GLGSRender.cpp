@@ -1063,6 +1063,9 @@ void GLGSRender::oninit_thread()
 	m_vao.create();
 	m_vbo.create();
 	m_ebo.create();
+	m_scale_offset_buffer.create(16 * sizeof(float));
+
+	glBindBufferBase(GL_UNIFORM_BUFFER, 0, m_scale_offset_buffer.id());
 
 	m_vao.array_buffer = m_vbo;
 	m_vao.element_array_buffer = m_ebo;
@@ -1259,37 +1262,12 @@ bool GLGSRender::load_program()
 
 	(m_program.recreate() += { fp.compile(), vp.compile() }).make();
 #endif
+	glBindBuffer(GL_UNIFORM_BUFFER, m_scale_offset_buffer.id());
 
-	int viewport_x = int(rsx::method_registers[NV4097_SET_VIEWPORT_HORIZONTAL] & 0xffff);
-	int viewport_y = int(rsx::method_registers[NV4097_SET_VIEWPORT_VERTICAL] & 0xffff);
-	int viewport_w = int(rsx::method_registers[NV4097_SET_VIEWPORT_HORIZONTAL] >> 16);
-	int viewport_h = int(rsx::method_registers[NV4097_SET_VIEWPORT_VERTICAL] >> 16);
+	void *buffer = glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
+	fill_scale_offset_data(buffer, false);
+	glUnmapBuffer(GL_UNIFORM_BUFFER);
 
-	f32 viewport_offset_x = (f32&)rsx::method_registers[NV4097_SET_VIEWPORT_OFFSET + 0];
-	f32 viewport_offset_y = (f32&)rsx::method_registers[NV4097_SET_VIEWPORT_OFFSET + 1];
-	f32 viewport_offset_z = (f32&)rsx::method_registers[NV4097_SET_VIEWPORT_OFFSET + 2];
-	f32 viewport_offset_w = (f32&)rsx::method_registers[NV4097_SET_VIEWPORT_OFFSET + 3];
-
-	f32 viewport_scale_x = (f32&)rsx::method_registers[NV4097_SET_VIEWPORT_SCALE + 0];
-	f32 viewport_scale_y = (f32&)rsx::method_registers[NV4097_SET_VIEWPORT_SCALE + 1];
-	f32 viewport_scale_z = (f32&)rsx::method_registers[NV4097_SET_VIEWPORT_SCALE + 2];
-	f32 viewport_scale_w = (f32&)rsx::method_registers[NV4097_SET_VIEWPORT_SCALE + 3];
-
-	f32 width = f32(rsx::method_registers[NV4097_SET_SURFACE_CLIP_HORIZONTAL] >> 16);
-	f32 height = f32(rsx::method_registers[NV4097_SET_SURFACE_CLIP_VERTICAL] >> 16);
-	glm::mat4 scaleOffsetMat(1.f);
-
-	//Scale
-	scaleOffsetMat[0][0] = viewport_scale_x * 2.f / width;
-	scaleOffsetMat[1][1] = viewport_scale_y * 2.f / height;
-	scaleOffsetMat[2][2] = viewport_scale_z;
-
-	// Offset
-	scaleOffsetMat[0][3] = viewport_offset_x * 2.f / width - 1.f;
-	scaleOffsetMat[1][3] = viewport_offset_y * 2.f / height - 1.f;
-	scaleOffsetMat[2][3] = viewport_offset_z - .5f;
-
-	__glcheck m_program->uniforms["scaleOffsetMat"] = scaleOffsetMat;
 
 	for (auto &constant : transform_constants)
 	{

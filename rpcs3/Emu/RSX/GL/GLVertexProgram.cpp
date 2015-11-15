@@ -28,8 +28,11 @@ std::string GLVertexDecompilerThread::compareFunction(COMPARE f, const std::stri
 
 void GLVertexDecompilerThread::insertHeader(std::stringstream &OS)
 {
-	OS << "#version 140" << std::endl << std::endl;
-	OS << "uniform mat4 scaleOffsetMat = mat4(1.0);" << std::endl;
+	OS << "#version 420" << std::endl << std::endl;
+	OS << "layout(std140, binding = 0) uniform ScaleOffsetBuffer" << std::endl;
+	OS << "{" << std::endl;
+	OS << "	mat4 scaleOffsetMat;" << std::endl;
+	OS << "};" << std::endl;
 }
 
 void GLVertexDecompilerThread::insertInputs(std::stringstream & OS, const std::vector<ParamType>& inputs)

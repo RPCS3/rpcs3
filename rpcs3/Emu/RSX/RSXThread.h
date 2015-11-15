@@ -256,8 +256,9 @@ namespace rsx
 		/**
 		 * Fill buffer with 4x4 scale offset matrix.
 		 * Vertex shader's position is to be multiplied by this matrix.
+		 * if is_d3d is set, the matrix is modified to use d3d convention.
 		 */
-		void fill_scale_offset_data(void *buffer) const noexcept;
+		void fill_scale_offset_data(void *buffer, bool is_d3d = true) const noexcept;
 
 		/**
 		* Fill buffer with vertex program constants.
