@@ -142,7 +142,6 @@ GLOB_RECURSE
 RPCS3_SRC
 "${RPCS3_SRC_DIR}/rpcs3.cpp"
 "${RPCS3_SRC_DIR}/config.cpp"
-"${RPCS3_SRC_DIR}/Ini.cpp"
 "${RPCS3_SRC_DIR}/../Utilities/GNU.cpp"
 "${RPCS3_SRC_DIR}/Emu/*"
 "${RPCS3_SRC_DIR}/Gui/*"
@@ -150,8 +149,6 @@ RPCS3_SRC
 "${RPCS3_SRC_DIR}/Crypto/*"
 "${RPCS3_SRC_DIR}/../Utilities/*"
 )
-
-list(REMOVE_ITEM RPCS3_SRC ${RPCS3_SRC_DIR}/../Utilities/simpleini/ConvertUTF.c)
 
 add_executable(rpcs3 ${RPCS3_SRC})
 

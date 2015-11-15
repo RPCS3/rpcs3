@@ -51,9 +51,6 @@
     <Filter Include="Utilities">
       <UniqueIdentifier>{be701b55-2a3d-4692-a3bf-347681ab1c7e}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Utilities\SimpleIni">
-      <UniqueIdentifier>{84c34dd1-4c49-4ecf-8ee2-4165c14f24be}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Emu\Io\Null">
       <UniqueIdentifier>{fcac6852-b45f-4cf2-afee-cf56bcea14e5}</UniqueIdentifier>
     </Filter>
@@ -511,9 +508,6 @@
     </ClCompile>
     <ClCompile Include="Emu\SysCalls\LogBase.cpp">
       <Filter>Emu\SysCalls</Filter>
-    </ClCompile>
-    <ClCompile Include="Ini.cpp">
-      <Filter>Utilities</Filter>
     </ClCompile>
     <ClCompile Include="..\Utilities\rMsgBox.cpp">
       <Filter>Utilities</Filter>
@@ -1334,12 +1328,6 @@
     <ClInclude Include="Emu\SysCalls\ModuleManager.h">
       <Filter>Emu\SysCalls</Filter>
     </ClInclude>
-    <ClInclude Include="..\Utilities\simpleini\ConvertUTF.h">
-      <Filter>Utilities\SimpleIni</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Utilities\simpleini\SimpleIni.h">
-      <Filter>Utilities\SimpleIni</Filter>
-    </ClInclude>
     <ClInclude Include="Emu\DbgCommand.h">
       <Filter>Emu</Filter>
     </ClInclude>
@@ -1471,9 +1459,6 @@
     </ClInclude>
     <ClInclude Include="Emu\IdManager.h">
       <Filter>Emu</Filter>
-    </ClInclude>
-    <ClInclude Include="Ini.h">
-      <Filter>Utilities</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Io\Null\NullPadHandler.h">
       <Filter>Emu\Io\Null</Filter>

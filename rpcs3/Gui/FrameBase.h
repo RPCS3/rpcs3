@@ -1,5 +1,4 @@
 #pragma once
-#include "rpcs3/Ini.h"
 #include "Emu/state.h"
 
 class FrameBase : public wxFrame

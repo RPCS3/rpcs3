@@ -321,7 +321,6 @@
     <ClCompile Include="Emu\SysCalls\Modules\sys_spu_.cpp" />
     <ClCompile Include="Emu\SysCalls\SysCalls.cpp" />
     <ClCompile Include="Emu\System.cpp" />
-    <ClCompile Include="Ini.cpp" />
     <ClCompile Include="Loader\ELF32.cpp" />
     <ClCompile Include="Loader\ELF64.cpp" />
     <ClCompile Include="Loader\Loader.cpp" />
@@ -359,8 +358,6 @@
     <ClInclude Include="..\Utilities\rXml.h" />
     <ClInclude Include="..\Utilities\Semaphore.h" />
     <ClInclude Include="..\Utilities\SharedMutex.h" />
-    <ClInclude Include="..\Utilities\simpleini\ConvertUTF.h" />
-    <ClInclude Include="..\Utilities\simpleini\SimpleIni.h" />
     <ClInclude Include="..\Utilities\SleepQueue.h" />
     <ClInclude Include="..\Utilities\StrFmt.h" />
     <ClInclude Include="..\Utilities\Thread.h" />
@@ -630,7 +627,6 @@
     <ClInclude Include="Emu\SysCalls\SC_FUNC.h" />
     <ClInclude Include="Emu\SysCalls\SysCalls.h" />
     <ClInclude Include="Emu\System.h" />
-    <ClInclude Include="Ini.h" />
     <ClInclude Include="Loader\ELF32.h" />
     <ClInclude Include="Loader\ELF64.h" />
     <ClInclude Include="Loader\Loader.h" />
