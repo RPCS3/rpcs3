@@ -1,10 +1,21 @@
 #pragma once
 
 #include "Emu/Audio/AudioThread.h"
+#include "minidx12/Include/SDKDDKVer.h" // Use last SDKDDKVer in SDK 10.240 for Win10
 #if defined (_WIN32)
-#define _WIN32_WINNT 0x0601 // This is to be sure that correct (2.7) header is included
-#include "minidx9/Include/XAudio2.h" // XAudio2 2.8 available only on Win8+, used XAudio2 2.7 from dxsdk
-#undef _WIN32_WINNT
+
+#if (_WIN32_WINNT >= _WIN32_WINNT_WIN8) // XAudio2 2.8 and 2.9 available only on Win8+ and Win10.
+#include "minidx12/Include/XAudio2.h"
+
+#if (_WIN32_WINNT >= _WIN32_WINNT_WIN10)
+#pragma comment(lib,"../minidx12/Lib/xaudio2.lib") // Lib 2.9 for Only Windows 10
+#else
+#pragma comment(lib,"../minidx12/Lib/xaudio2_8.lib") // Lib 2.8 for Only Windows 8+
+#endif
+
+#else 
+#include "minidx9/Include/XAudio2.h" // XAudio 2.7 for Windows 7 Only
+#endif
 
 class XAudio2Thread : public AudioThread
 {
