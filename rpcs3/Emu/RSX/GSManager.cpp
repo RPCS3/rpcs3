@@ -7,7 +7,7 @@
 #include "GSManager.h"
 #include "Null/NullGSRender.h"
 #include "GL/GLGSRender.h"
-#ifdef _WIN32
+#ifdef _MSC_VER
 #include "Emu/RSX/D3D12/D3D12GSRender.h"
 #endif
 
@@ -37,7 +37,7 @@ void GSManager::Init()
 	default:
 	case rsx_renderer_type::Null : m_render = new NullGSRender(); break;
 	case rsx_renderer_type::OpenGL: m_render = new GLGSRender(); break;
-#ifdef _WIN32
+#ifdef _MSC_VER
 	case rsx_renderer_type::DX12: m_render = new D3D12GSRender(); break;
 #endif
 	}

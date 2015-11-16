@@ -1,9 +1,9 @@
 #include "stdafx.h"
+#ifdef _MSC_VER
 #include "Utilities/Log.h"
 #include "Emu/System.h"
 #include "Emu/state.h"
 
-#if defined (_WIN32)
 #include "XAudio2Thread.h"
 
 XAudio2Thread::~XAudio2Thread()

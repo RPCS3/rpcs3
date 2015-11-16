@@ -236,6 +236,8 @@ void VFS::DeleteAll(const std::string& ps3_path) const
 			DeleteAll(ps3_path + "/" + entry->name);
 		}
 	}
+
+	RemoveDir(ps3_path);
 }
 
 u64 VFS::GetDirSize(const std::string& ps3_path) const

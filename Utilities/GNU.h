@@ -41,23 +41,18 @@
 
 #define _fpclass(x) std::fpclassify(x)
 #define _byteswap_ushort(x) __builtin_bswap16(x)
-#define _byteswap_ulong(x) __builtin_bswap32(x)
 #define _byteswap_uint64(x) __builtin_bswap64(x)
 #define INFINITE 0xFFFFFFFF
 
-inline std::uint64_t __umulh(std::uint64_t a, std::uint64_t b)
+#if !defined(__MINGW32__)
+#define _byteswap_ulong(x) __builtin_bswap32(x)
+#else
+inline std::uint32_t _byteswap_ulong(std::uint32_t value)
 {
-	std::uint64_t result;
-	__asm__("mulq %[b]" : "=d" (result) : [a] "a" (a), [b] "rm" (b));
-	return result;
+	__asm__("bswap %0" : "+r"(value));
+	return value;
 }
-
-inline std::int64_t  __mulh(std::int64_t a, std::int64_t b)
-{
-	std::int64_t result;
-	__asm__("imulq %[b]" : "=d" (result) : [a] "a" (a), [b] "rm" (b));
-	return result;
-}
+#endif
 
 #ifdef __APPLE__
 

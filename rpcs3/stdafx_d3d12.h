@@ -1,7 +1,8 @@
 #pragma once
+#ifdef _MSC_VER
 
 #include "stdafx.h"
-#ifdef _WIN32
+
 // Must be included first
 #include <d3dcompiler.h>
 

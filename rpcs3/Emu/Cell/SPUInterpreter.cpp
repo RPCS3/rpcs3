@@ -1310,12 +1310,12 @@ static const double DOUBLE_NAN = (double&)DOUBLE_NAN_I;
 
 inline bool issnan(double x)
 {
-	return isnan(x) && ((s64&)x) << 12 > 0;
+	return std::isnan(x) && ((s64&)x) << 12 > 0;
 }
 
 inline bool issnan(float x)
 {
-	return isnan(x) && ((s32&)x) << 9 > 0;
+	return std::isnan(x) && ((s32&)x) << 9 > 0;
 }
 
 inline int fexpf(float x)
@@ -1631,7 +1631,7 @@ static void DFASM(SPUThread& spu, spu_opcode_t op, DoubleOp operation)
 			b = copysign(0.0, b);
 		}
 		double result;
-		if (isnan(a) || isnan(b))
+		if (std::isnan(a) || std::isnan(b))
 		{
 			spu.fpscr.setDoublePrecisionExceptionFlags(i, FPSCR_DNAN);
 			if (issnan(a) || issnan(b))
@@ -1696,10 +1696,10 @@ static void DFMA(SPUThread& spu, spu_opcode_t op, bool neg, bool sub)
 			c = copysign(0.0, c);
 		}
 		double result;
-		if (isnan(a) || isnan(b) || isnan(c))
+		if (std::isnan(a) || std::isnan(b) || std::isnan(c))
 		{
 			spu.fpscr.setDoublePrecisionExceptionFlags(i, FPSCR_DNAN);
-			if (issnan(a) || issnan(b) || issnan(c) || (isinf(a) && b == 0.0f) || (a == 0.0f && isinf(b)))
+			if (issnan(a) || issnan(b) || issnan(c) || (std::isinf(a) && b == 0.0f) || (a == 0.0f && std::isinf(b)))
 				spu.fpscr.setDoublePrecisionExceptionFlags(i, FPSCR_DINV);
 			result = DOUBLE_NAN;
 		}
@@ -1746,7 +1746,7 @@ void spu_interpreter::precise::FESD(SPUThread& spu, spu_opcode_t op)
 	for (int i = 0; i < 2; i++)
 	{
 		const float a = spu.gpr[op.ra]._f[i * 2 + 1];
-		if (isnan(a))
+		if (std::isnan(a))
 		{
 			spu.fpscr.setDoublePrecisionExceptionFlags(i, FPSCR_DNAN);
 			if (issnan(a))
@@ -1771,7 +1771,7 @@ void spu_interpreter::precise::FRDS(SPUThread& spu, spu_opcode_t op)
 	{
 		SetHostRoundingMode(spu.fpscr.checkSliceRounding(i));
 		const double a = spu.gpr[op.ra]._d[i];
-		if (isnan(a))
+		if (std::isnan(a))
 		{
 			spu.fpscr.setDoublePrecisionExceptionFlags(i, FPSCR_DNAN);
 			if (issnan(a))

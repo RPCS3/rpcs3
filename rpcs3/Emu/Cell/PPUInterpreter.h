@@ -3,12 +3,30 @@
 #include "Emu/Cell/PPUOpcodes.h"
 #include "Emu/Memory/Memory.h"
 
-#include <stdint.h>
-#ifdef _MSC_VER
+#if defined(_MSC_VER)
 #include <intrin.h>
 #else
 #include <x86intrin.h>
 #define _rotl64(x,r) (((u64)(x) << (r)) | ((u64)(x) >> (64 - (r))))
+#endif
+
+#if defined(__GNUG__)
+inline std::uint64_t UMULH64(std::uint64_t a, std::uint64_t b)
+{
+	std::uint64_t result;
+	__asm__("mulq %[b]" : "=d" (result) : [a] "a" (a), [b] "rm" (b));
+	return result;
+}
+
+inline std::int64_t  MULH64(std::int64_t a, std::int64_t b)
+{
+	std::int64_t result;
+	__asm__("imulq %[b]" : "=d" (result) : [a] "a" (a), [b] "rm" (b));
+	return result;
+}
+#else
+#define UMULH64 __umulh
+#define MULH64 __mulh
 #endif
 
 #include <fenv.h>
@@ -2453,7 +2471,7 @@ private:
 	}
 	void MULHDU(u32 rd, u32 ra, u32 rb, u32 rc)
 	{
-		CPU.GPR[rd] = __umulh(CPU.GPR[ra], CPU.GPR[rb]);
+		CPU.GPR[rd] = UMULH64(CPU.GPR[ra], CPU.GPR[rb]);
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
 	}
 	void ADDC(u32 rd, u32 ra, u32 rb, u32 oe, u32 rc)
@@ -2619,7 +2637,7 @@ private:
 	}
 	void MULHD(u32 rd, u32 ra, u32 rb, u32 rc)
 	{
-		CPU.GPR[rd] = __mulh(CPU.GPR[ra], CPU.GPR[rb]);
+		CPU.GPR[rd] = MULH64(CPU.GPR[ra], CPU.GPR[rb]);
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
 	}
 	void MULHW(u32 rd, u32 ra, u32 rb, u32 rc)
@@ -2823,7 +2841,7 @@ private:
 		CPU.GPR[rd] = (s64)(RA * RB);
 		if(oe)
 		{
-			const s64 high = __mulh(RA, RB);
+			const s64 high = MULH64(RA, RB);
 			CPU.SetOV(high != s64(CPU.GPR[rd]) >> 63);
 		}
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);

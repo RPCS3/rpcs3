@@ -2,7 +2,7 @@
 * Contains utility shaders
 */
 #include "stdafx_d3d12.h"
-#ifdef _WIN32
+#ifdef _MSC_VER
 #include "D3D12GSRender.h"
 #include "d3dx12.h"
 #include "Utilities/Log.h"

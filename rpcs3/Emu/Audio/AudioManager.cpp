@@ -25,7 +25,7 @@ void AudioManager::Init()
 	default:
 	case audio_output_type::Null: m_audio_out = new NullAudioThread(); break;
 	case audio_output_type::OpenAL: m_audio_out = new OpenALThread(); break;
-#if defined (_WIN32)
+#ifdef _MSC_VER
 	case audio_output_type::XAudio2: m_audio_out = new XAudio2Thread(); break;
 #endif
 	}

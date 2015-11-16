@@ -76,5 +76,12 @@ rpcs3-tests/x64/*
 .DS_Store
 rpcs3/Emu/SysCalls/Modules/prx_*.h
 
-/CMakeFiles/
+# cmake
+Makefile
+*CMakeFiles*
 CMakeCache.txt
+*cmake_install.cmake*
+
+# cotire
+rpcs3/cotire/*
+rpcs3/rpcs3_*_cotire.cmake

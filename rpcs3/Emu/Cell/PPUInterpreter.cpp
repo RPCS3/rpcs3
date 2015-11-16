@@ -1747,7 +1747,7 @@ void ppu_interpreter::SUBFC(PPUThread& CPU, ppu_opcode_t op)
 
 void ppu_interpreter::MULHDU(PPUThread& CPU, ppu_opcode_t op)
 {
-	CPU.GPR[op.rd] = __umulh(CPU.GPR[op.ra], CPU.GPR[op.rb]);
+	CPU.GPR[op.rd] = UMULH64(CPU.GPR[op.ra], CPU.GPR[op.rb]);
 	if (op.rc) CPU.UpdateCR0<s64>(CPU.GPR[op.rd]);
 }
 
@@ -1933,7 +1933,7 @@ void ppu_interpreter::LVEWX(PPUThread& CPU, ppu_opcode_t op)
 
 void ppu_interpreter::MULHD(PPUThread& CPU, ppu_opcode_t op)
 {
-	CPU.GPR[op.rd] = __mulh(CPU.GPR[op.ra], CPU.GPR[op.rb]);
+	CPU.GPR[op.rd] = MULH64(CPU.GPR[op.ra], CPU.GPR[op.rb]);
 	if (op.rc) CPU.UpdateCR0<s64>(CPU.GPR[op.rd]);
 }
 
@@ -2162,7 +2162,7 @@ void ppu_interpreter::MULLD(PPUThread& CPU, ppu_opcode_t op)
 	CPU.GPR[op.rd] = (s64)(RA * RB);
 	if (op.oe)
 	{
-		const s64 high = __mulh(RA, RB);
+		const s64 high = MULH64(RA, RB);
 		CPU.SetOV(high != s64(CPU.GPR[op.rd]) >> 63);
 	}
 	if (op.rc) CPU.UpdateCR0<s64>(CPU.GPR[op.rd]);

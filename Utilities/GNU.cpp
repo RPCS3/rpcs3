@@ -49,11 +49,3 @@ int clock_gettime(clockid_t clk_id, struct timespec *tp)
     return retval;
 }
 #endif /* __APPLE__ */
-#if defined(__GNUG__)
-
-void * _aligned_malloc(size_t size, size_t alignment) {
-	void *buffer;
-	return (posix_memalign(&buffer, alignment, size) == 0) ? buffer : 0;
-}
-#endif
-

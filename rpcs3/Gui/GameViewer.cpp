@@ -38,32 +38,6 @@ public:
 	}
 };
 
-class WxDirDeleteTraverser : public wxDirTraverser
-{
-public:
-	virtual wxDirTraverseResult OnFile(const wxString& filename) override
-	{
-		if (!wxRemoveFile(filename))
-		{
-			LOG_ERROR(HLE, "Couldn't delete File: %s", fmt::ToUTF8(filename).c_str());
-		}
-		return wxDIR_CONTINUE;
-	}
-	virtual wxDirTraverseResult OnDir(const wxString& dirname) override
-	{
-		wxDir dir(dirname);
-		dir.Traverse(*this);
-		if (!wxRmDir(dirname))
-		{
-			//this get triggered a few times while clearing folders
-			//but if this gets reimplented we should probably warn
-			//if directories can't be removed
-		}
-		return wxDIR_CONTINUE;
-	}
-};
-
-
 // GameViewer functions
 GameViewer::GameViewer(wxWindow* parent) : wxListView(parent)
 {
@@ -295,19 +269,8 @@ void GameViewer::ConfigureGame(wxCommandEvent& WXUNUSED(event))
 void GameViewer::RemoveGame(wxCommandEvent& event)
 {
 	Emu.GetVFS().Init("/");
-
-	// get local path from VFS
-	std::string local_path;
-	Emu.GetVFS().GetDevice(m_path, local_path);
-	std::string del_path = local_path + "/" + this->GetItemText(event.GetId(), 6).ToStdString();
-
+	Emu.GetVFS().DeleteAll(m_path + "/" + this->GetItemText(event.GetId(), 6).ToStdString());
 	Emu.GetVFS().UnMountAll();
-
-	// TODO: Replace wxWidgetsSpecific filesystem stuff?
-	WxDirDeleteTraverser deleter;
-	wxDir localDir(del_path);
-	localDir.Traverse(deleter);
-	wxRmdir(del_path); // delete empty directory
 
 	Refresh();
 }

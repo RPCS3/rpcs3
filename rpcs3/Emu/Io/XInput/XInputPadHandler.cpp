@@ -1,5 +1,5 @@
 #include "stdafx_gui.h"
-#if defined (_WIN32)
+#ifdef _MSC_VER
 #include "Utilities/Log.h"
 #include "XInputPadHandler.h"
 

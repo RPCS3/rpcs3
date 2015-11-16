@@ -8,6 +8,7 @@
 [submodule "asmjit"]
 	path = asmjit
 	url = https://github.com/kobalicek/asmjit
+	ignore = dirty
 [submodule "llvm"]
 	path = llvm
 	url = https://github.com/llvm-mirror/llvm

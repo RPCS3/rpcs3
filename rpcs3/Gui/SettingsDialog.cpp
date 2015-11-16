@@ -13,9 +13,11 @@
 #pragma comment(lib, "iphlpapi.lib")
 
 #undef GetHwnd
+#ifdef _MSC_VER
 #include <d3d12.h>
 #include <wrl/client.h>
 #include <dxgi1_4.h>
+#endif
 #else
 #include <arpa/inet.h>
 #include <sys/socket.h>
@@ -231,7 +233,7 @@ SettingsDialog::SettingsDialog(wxWindow *parent, rpcs3::config_t* cfg)
 	cbox_gs_render->Append("Null");
 	cbox_gs_render->Append("OpenGL");
 
-#ifdef _WIN32
+#ifdef _MSC_VER
 	Microsoft::WRL::ComPtr<IDXGIFactory4> dxgiFactory;
 	Microsoft::WRL::ComPtr<IDXGIAdapter> adapter;
 
@@ -266,7 +268,7 @@ SettingsDialog::SettingsDialog(wxWindow *parent, rpcs3::config_t* cfg)
 
 	cbox_pad_handler->Append("Null");
 	cbox_pad_handler->Append("Windows");
-#if defined (_WIN32)
+#ifdef _MSC_VER
 	cbox_pad_handler->Append("XInput");
 #endif
 
@@ -282,7 +284,7 @@ SettingsDialog::SettingsDialog(wxWindow *parent, rpcs3::config_t* cfg)
 
 	cbox_audio_out->Append("Null");
 	cbox_audio_out->Append("OpenAL");
-#if defined (_WIN32)
+#ifdef _MSC_VER
 	cbox_audio_out->Append("XAudio2");
 #endif
 

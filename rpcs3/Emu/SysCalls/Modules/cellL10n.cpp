@@ -2,9 +2,11 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/SysCalls/Modules.h"
 
-#ifdef _MSC_VER
+#ifdef _WIN32
 #include <windows.h>
-#else
+#endif
+
+#ifndef _MSC_VER
 #include <iconv.h>
 #endif
 

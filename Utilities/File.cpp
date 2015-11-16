@@ -3,6 +3,7 @@
 #include "File.h"
 
 #ifdef _WIN32
+#define _WIN32_WINNT 0x0601
 #include <Windows.h>
 
 #define GET_API_ERROR static_cast<u64>(GetLastError())

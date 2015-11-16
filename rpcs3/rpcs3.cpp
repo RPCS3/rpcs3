@@ -18,7 +18,7 @@
 #include "Emu/Io/Pad.h"
 #include "Emu/Io/Null/NullPadHandler.h"
 #include "Emu/Io/Windows/WindowsPadHandler.h"
-#if defined(_WIN32)
+#ifdef _MSC_VER
 #include "Emu/Io/XInput/XInputPadHandler.h"
 #endif
 
@@ -107,7 +107,7 @@ bool Rpcs3App::OnInit()
 		{
 		case io_handler_mode::null: return std::make_unique<NullPadHandler>();
 		case io_handler_mode::windows: return std::make_unique<WindowsPadHandler>();
-#if defined(_WIN32)
+#ifdef _MSC_VER
 		case io_handler_mode::xinput: return std::make_unique<XInputPadHandler>();
 #endif
 		default: throw EXCEPTION("Invalid Pad Handler Mode %d", +(u32)mode);

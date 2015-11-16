@@ -1,5 +1,5 @@
 #include "stdafx_d3d12.h"
-#ifdef _WIN32
+#ifdef _MSC_VER
 #include "D3D12Formats.h"
 #include "D3D12Utils.h"
 #include "Emu/RSX/GCM.h"
