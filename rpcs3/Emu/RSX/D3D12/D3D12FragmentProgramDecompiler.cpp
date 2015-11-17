@@ -52,7 +52,7 @@ void D3D12FragmentDecompiler::insertIntputs(std::stringstream & OS)
 	OS << "	float4 dst_reg3 : COLOR2;" << std::endl;
 	OS << "	float4 dst_reg4 : COLOR3;" << std::endl;
 	OS << "	float fogc : FOG;" << std::endl;
-	OS << "	float4 dummy : COLOR4;" << std::endl;
+	OS << "	float4 tc9 : TEXCOORD9;" << std::endl;
 	OS << "	float4 tc0 : TEXCOORD0;" << std::endl;
 	OS << "	float4 tc1 : TEXCOORD1;" << std::endl;
 	OS << "	float4 tc2 : TEXCOORD2;" << std::endl;
@@ -62,7 +62,6 @@ void D3D12FragmentDecompiler::insertIntputs(std::stringstream & OS)
 	OS << "	float4 tc6 : TEXCOORD6;" << std::endl;
 	OS << "	float4 tc7 : TEXCOORD7;" << std::endl;
 	OS << "	float4 tc8 : TEXCOORD8;" << std::endl;
-	OS << "	float4 tc9 : TEXCOORD9;" << std::endl;
 	OS << "};" << std::endl;
 }
 

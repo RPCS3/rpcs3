@@ -137,7 +137,7 @@ void D3D12GSRender::prepare_render_targets(ID3D12GraphicsCommandList *copycmdlis
 		rsx::method_registers[NV4097_SET_CONTEXT_DMA_COLOR_C],
 		rsx::method_registers[NV4097_SET_CONTEXT_DMA_COLOR_D]
 	};
-	u32 offset_zeta = rsx::method_registers[NV4097_SET_SURFACE_ZETA_OFFSET];
+	u32 m_context_dma_z = rsx::method_registers[NV4097_SET_CONTEXT_DMA_ZETA];
 
 	u32 offset_color[] =
 	{
@@ -146,17 +146,17 @@ void D3D12GSRender::prepare_render_targets(ID3D12GraphicsCommandList *copycmdlis
 		rsx::method_registers[NV4097_SET_SURFACE_COLOR_COFFSET],
 		rsx::method_registers[NV4097_SET_SURFACE_COLOR_DOFFSET]
 	};
-	u32 m_context_dma_z = rsx::method_registers[NV4097_SET_CONTEXT_DMA_ZETA];
+	u32 offset_zeta = rsx::method_registers[NV4097_SET_SURFACE_ZETA_OFFSET];
 
 	// FBO location has changed, previous data might be copied
 	u32 address_color[] =
 	{
-		context_dma_color[0] ? rsx::get_address(offset_color[0], context_dma_color[0]) : 0,
-		context_dma_color[1] ? rsx::get_address(offset_color[1], context_dma_color[1]) : 0,
-		context_dma_color[2] ? rsx::get_address(offset_color[2], context_dma_color[2]) : 0,
-		context_dma_color[3] ? rsx::get_address(offset_color[3], context_dma_color[3]) : 0,
+		rsx::get_address(offset_color[0], context_dma_color[0]),
+		rsx::get_address(offset_color[1], context_dma_color[1]),
+		rsx::get_address(offset_color[2], context_dma_color[2]),
+		rsx::get_address(offset_color[3], context_dma_color[3]),
 	};
-	u32 address_z = offset_zeta ? rsx::get_address(offset_zeta, m_context_dma_z) : 0;
+	u32 address_z = rsx::get_address(offset_zeta, m_context_dma_z);
 
 	// Exit early if there is no rtt changes
 	if (m_previous_address_a == address_color[0] &&
@@ -164,7 +164,7 @@ void D3D12GSRender::prepare_render_targets(ID3D12GraphicsCommandList *copycmdlis
 		m_previous_address_c == address_color[2] &&
 		m_previous_address_d == address_color[3] &&
 		m_previous_address_z == address_z &&
-		m_surface.format != surface_format)
+		m_surface.format == surface_format)
 		return;
 
 	m_previous_address_a = address_color[0];
