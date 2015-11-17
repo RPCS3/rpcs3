@@ -76,6 +76,7 @@ private:
 	gl::texture m_flip_tex_color;
 
 	gl::buffer m_scale_offset_buffer;
+	gl::buffer m_vertex_constants_buffer;
 
 	gl::buffer m_vbo;
 	gl::buffer m_ebo;

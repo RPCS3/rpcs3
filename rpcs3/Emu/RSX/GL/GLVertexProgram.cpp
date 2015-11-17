@@ -46,11 +46,10 @@ void GLVertexDecompilerThread::insertInputs(std::stringstream & OS, const std::v
 
 void GLVertexDecompilerThread::insertConstants(std::stringstream & OS, const std::vector<ParamType> & constants)
 {
-	for (const ParamType PT : constants)
-	{
-		for (const ParamItem &PI : PT.items)
-			OS << "uniform " << PT.type << " " << PI.name << ";" << std::endl;
-	}
+	OS << "layout(std140, binding = 1) uniform VertexConstantsBuffer" << std::endl;
+	OS << "{" << std::endl;
+	OS << "	vec4 vc[468];" << std::endl;
+	OS << "};" << std::endl;
 }
 
 struct reg_info

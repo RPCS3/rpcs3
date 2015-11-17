@@ -1064,8 +1064,10 @@ void GLGSRender::oninit_thread()
 	m_vbo.create();
 	m_ebo.create();
 	m_scale_offset_buffer.create(16 * sizeof(float));
+	m_vertex_constants_buffer.create(512 * 4 * sizeof(float));
 
 	glBindBufferBase(GL_UNIFORM_BUFFER, 0, m_scale_offset_buffer.id());
+	glBindBufferBase(GL_UNIFORM_BUFFER, 1, m_vertex_constants_buffer.id());
 
 	m_vao.array_buffer = m_vbo;
 	m_vao.element_array_buffer = m_ebo;
@@ -1268,12 +1270,10 @@ bool GLGSRender::load_program()
 	fill_scale_offset_data(buffer, false);
 	glUnmapBuffer(GL_UNIFORM_BUFFER);
 
-
-	for (auto &constant : transform_constants)
-	{
-		//LOG_WARNING(RSX, "vc[%u] = (%f, %f, %f, %f)", constant.first, constant.second.r, constant.second.g, constant.second.b, constant.second.a);
-		__glcheck m_program->uniforms["vc[" + std::to_string(constant.first) + "]"] = constant.second;
-	}
+	glBindBuffer(GL_UNIFORM_BUFFER, m_vertex_constants_buffer.id());
+	buffer = glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
+	fill_vertex_program_constants_data(buffer);
+	glUnmapBuffer(GL_UNIFORM_BUFFER);
 
 	for (u32 constant_offset : m_prog_buffer.getFragmentConstantOffsetsCache(&fragment_program))
 	{
