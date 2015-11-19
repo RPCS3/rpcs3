@@ -340,6 +340,103 @@ std::string FragmentProgramDecompiler::BuildCode()
 	return OS.str();
 }
 
+bool FragmentProgramDecompiler::handle_sct(u32 opcode)
+{
+	switch (opcode)
+	{
+	case RSX_FP_OPCODE_ADD: SetDst("($0 + $1)"); return true;
+	case RSX_FP_OPCODE_DIV: SetDst("($0 / $1)"); return true;
+	case RSX_FP_OPCODE_DIVSQ: SetDst("($0 / sqrt($1).xxxx)"); return true;
+	case RSX_FP_OPCODE_DP2: SetDst(getFunction(FUNCTION::FUNCTION_DP2)); return true;
+	case RSX_FP_OPCODE_DP3: SetDst(getFunction(FUNCTION::FUNCTION_DP3)); return true;
+	case RSX_FP_OPCODE_DP4: SetDst(getFunction(FUNCTION::FUNCTION_DP4)); return true;
+	case RSX_FP_OPCODE_DP2A: SetDst(getFunction(FUNCTION::FUNCTION_DP2A)); return true;
+	case RSX_FP_OPCODE_MAD: SetDst("($0 * $1 + $2)"); return true;
+	case RSX_FP_OPCODE_MAX: SetDst("max($0, $1)"); return true;
+	case RSX_FP_OPCODE_MIN: SetDst("min($0, $1)"); return true;
+	case RSX_FP_OPCODE_MOV: SetDst("$0"); return true;
+	case RSX_FP_OPCODE_MUL: SetDst("($0 * $1)"); return true;
+	case RSX_FP_OPCODE_RCP: SetDst("1.0 / $0"); return true;
+	case RSX_FP_OPCODE_RSQ: SetDst("1.f / sqrt($0)"); return true;
+	case RSX_FP_OPCODE_SEQ: SetDst(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SEQ, "$0", "$1") + ")"); return true;
+	case RSX_FP_OPCODE_SFL: SetDst(getFunction(FUNCTION::FUNCTION_SFL)); return true;
+	case RSX_FP_OPCODE_SGE: SetDst(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SGE, "$0", "$1") + ")"); return true;
+	case RSX_FP_OPCODE_SGT: SetDst(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SGT, "$0", "$1") + ")"); return true;
+	case RSX_FP_OPCODE_SLE: SetDst(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SLE, "$0", "$1") + ")"); return true;
+	case RSX_FP_OPCODE_SLT: SetDst(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SLT, "$0", "$1") + ")"); return true;
+	case RSX_FP_OPCODE_SNE: SetDst(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SNE, "$0", "$1") + ")"); return true;
+	case RSX_FP_OPCODE_STR: SetDst(getFunction(FUNCTION::FUNCTION_STR)); return true;
+	}
+	return false;
+}
+
+bool FragmentProgramDecompiler::handle_scb(u32 opcode)
+{
+	switch (opcode)
+	{
+	case RSX_FP_OPCODE_ADD: SetDst("($0 + $1)"); return true;
+	case RSX_FP_OPCODE_COS: SetDst("cos($0.xxxx)"); return true;
+	case RSX_FP_OPCODE_DIVSQ: SetDst("($0 / sqrt($1).xxxx)"); return true;
+	case RSX_FP_OPCODE_DP2: SetDst(getFunction(FUNCTION::FUNCTION_DP2)); return true;
+	case RSX_FP_OPCODE_DP3: SetDst(getFunction(FUNCTION::FUNCTION_DP3)); return true;
+	case RSX_FP_OPCODE_DP4: SetDst(getFunction(FUNCTION::FUNCTION_DP4)); return true;
+	case RSX_FP_OPCODE_DP2A: SetDst(getFunction(FUNCTION::FUNCTION_DP2A)); return true;
+	case RSX_FP_OPCODE_DST: SetDst("vec4(distance($0, $1))"); return true;
+	case RSX_FP_OPCODE_REFL: LOG_ERROR(RSX, "Unimplemented SCB instruction: REFL"); return true; // TODO: Is this in the right category?
+	case RSX_FP_OPCODE_EX2: SetDst("exp2($0.xxxx)"); return true;
+	case RSX_FP_OPCODE_FLR: SetDst("floor($0)"); return true;
+	case RSX_FP_OPCODE_FRC: SetDst(getFunction(FUNCTION::FUNCTION_FRACT)); return true;
+	case RSX_FP_OPCODE_LIT: SetDst(getFloatTypeName(4) + "(1.0, $0.x, ($0.x > 0.0 ? exp($0.w * log2($0.y)) : 0.0), 1.0)"); return true;
+	case RSX_FP_OPCODE_LIF: SetDst(getFloatTypeName(4) + "(1.0, $0.y, ($0.y > 0 ? pow(2.0, $0.w) : 0.0), 1.0)"); return true;
+	case RSX_FP_OPCODE_LRP: LOG_ERROR(RSX, "Unimplemented SCB instruction: LRP"); return true; // TODO: Is this in the right category?
+	case RSX_FP_OPCODE_LG2: SetDst("log2($0.xxxx)"); return true;
+	case RSX_FP_OPCODE_MAD: SetDst("($0 * $1 + $2)"); return true;
+	case RSX_FP_OPCODE_MAX: SetDst("max($0, $1)"); return true;
+	case RSX_FP_OPCODE_MIN: SetDst("min($0, $1)"); return true;
+	case RSX_FP_OPCODE_MOV: SetDst("$0"); return true;
+	case RSX_FP_OPCODE_MUL: SetDst("($0 * $1)"); return true;
+	case RSX_FP_OPCODE_PK2: SetDst("packSnorm2x16($0)"); return true; // TODO: More testing (Sonic The Hedgehog (NPUB-30442/NPEB-00478))
+	case RSX_FP_OPCODE_PK4: SetDst("packSnorm4x8($0)"); return true; // TODO: More testing (Sonic The Hedgehog (NPUB-30442/NPEB-00478))
+	case RSX_FP_OPCODE_PK16: LOG_ERROR(RSX, "Unimplemented SCB instruction: PK16"); return true;
+	case RSX_FP_OPCODE_PKB: LOG_ERROR(RSX, "Unimplemented SCB instruction: PKB"); return true;
+	case RSX_FP_OPCODE_PKG: LOG_ERROR(RSX, "Unimplemented SCB instruction: PKG"); return true;
+	case RSX_FP_OPCODE_SEQ: SetDst(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SEQ, "$0", "$1") + ")"); return true;
+	case RSX_FP_OPCODE_SFL: SetDst(getFunction(FUNCTION::FUNCTION_SFL)); return true;
+	case RSX_FP_OPCODE_SGE: SetDst(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SGE, "$0", "$1") + ")"); return true;
+	case RSX_FP_OPCODE_SGT: SetDst(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SGT, "$0", "$1") + ")"); return true;
+	case RSX_FP_OPCODE_SIN: SetDst("sin($0.xxxx)"); return true;
+	case RSX_FP_OPCODE_SLE: SetDst(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SLE, "$0", "$1") + ")"); return true;
+	case RSX_FP_OPCODE_SLT: SetDst(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SLT, "$0", "$1") + ")"); return true;
+	case RSX_FP_OPCODE_SNE: SetDst(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SNE, "$0", "$1") + ")"); return true;
+	case RSX_FP_OPCODE_STR: SetDst(getFunction(FUNCTION::FUNCTION_STR)); return true;
+	}
+	return false;
+}
+
+bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
+{
+	switch (opcode)
+	{
+	case RSX_FP_OPCODE_DDX: SetDst(getFunction(FUNCTION::FUNCTION_DFDX)); return true;
+	case RSX_FP_OPCODE_DDY: SetDst(getFunction(FUNCTION::FUNCTION_DFDY)); return true;
+	case RSX_FP_OPCODE_NRM: SetDst("normalize($0)"); return true;
+	case RSX_FP_OPCODE_BEM: LOG_ERROR(RSX, "Unimplemented TEX_SRB instruction: BEM"); return true;
+	case RSX_FP_OPCODE_TEX: SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE));  return true;
+	case RSX_FP_OPCODE_TEXBEM: SetDst("texture($t, $0.xy, $1.x)"); return true;
+	case RSX_FP_OPCODE_TXP: SetDst("textureProj($t, $0.xyz, $1.x)"); return true; //TODO: More testing (Sonic The Hedgehog (NPUB-30442/NPEB-00478) and The Simpsons Arcade Game (NPUB30563))
+	case RSX_FP_OPCODE_TXPBEM: SetDst("textureProj($t, $0.xyz, $1.x)"); return true;
+	case RSX_FP_OPCODE_TXD: LOG_ERROR(RSX, "Unimplemented TEX_SRB instruction: TXD"); return true;
+	case RSX_FP_OPCODE_TXB: SetDst("texture($t, $0.xy, $1.x)"); return true;
+	case RSX_FP_OPCODE_TXL: SetDst("textureLod($t, $0.xy, $1.x)"); return true;
+	case RSX_FP_OPCODE_UP2: SetDst("unpackSnorm2x16($0)"); return true; // TODO: More testing (Sonic The Hedgehog (NPUB-30442/NPEB-00478))
+	case RSX_FP_OPCODE_UP4: SetDst("unpackSnorm4x8($0)"); return true; // TODO: More testing (Sonic The Hedgehog (NPUB-30442/NPEB-00478))
+	case RSX_FP_OPCODE_UP16: LOG_ERROR(RSX, "Unimplemented TEX_SRB instruction: UP16"); return true;
+	case RSX_FP_OPCODE_UPB: LOG_ERROR(RSX, "Unimplemented TEX_SRB instruction: UPB"); return true;
+	case RSX_FP_OPCODE_UPG: LOG_ERROR(RSX, "Unimplemented TEX_SRB instruction: UPG"); return true;
+	}
+	return false;
+};
+
 std::string FragmentProgramDecompiler::Decompile()
 {
 	auto data = vm::ps3::ptr<u32>::make(m_addr);
@@ -389,114 +486,6 @@ std::string FragmentProgramDecompiler::Decompile()
 		m_offset = 4 * sizeof(u32);
 
 		const u32 opcode = dst.opcode | (src1.opcode_is_branch << 6);
-
-		auto SCT = [&]()
-		{
-			switch (opcode)
-			{
-			case RSX_FP_OPCODE_ADD: SetDst("($0 + $1)"); break;
-			case RSX_FP_OPCODE_DIV: SetDst("($0 / $1)"); break;
-			case RSX_FP_OPCODE_DIVSQ: SetDst("($0 / sqrt($1).xxxx)"); break;
-			case RSX_FP_OPCODE_DP2: SetDst(getFunction(FUNCTION::FUNCTION_DP2)); break;
-			case RSX_FP_OPCODE_DP3: SetDst(getFunction(FUNCTION::FUNCTION_DP3)); break;
-			case RSX_FP_OPCODE_DP4: SetDst(getFunction(FUNCTION::FUNCTION_DP4)); break;
-			case RSX_FP_OPCODE_DP2A: SetDst(getFunction(FUNCTION::FUNCTION_DP2A)); break;
-			case RSX_FP_OPCODE_MAD: SetDst("($0 * $1 + $2)"); break;
-			case RSX_FP_OPCODE_MAX: SetDst("max($0, $1)"); break;
-			case RSX_FP_OPCODE_MIN: SetDst("min($0, $1)"); break;
-			case RSX_FP_OPCODE_MOV: SetDst("$0"); break;
-			case RSX_FP_OPCODE_MUL: SetDst("($0 * $1)"); break;
-			case RSX_FP_OPCODE_RCP: SetDst("1.0 / $0"); break;
-			case RSX_FP_OPCODE_RSQ: SetDst("1.f / sqrt($0)"); break;
-			case RSX_FP_OPCODE_SEQ: SetDst(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SEQ, "$0", "$1") + ")"); break;
-			case RSX_FP_OPCODE_SFL: SetDst(getFunction(FUNCTION::FUNCTION_SFL)); break;
-			case RSX_FP_OPCODE_SGE: SetDst(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SGE, "$0", "$1") + ")"); break;
-			case RSX_FP_OPCODE_SGT: SetDst(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SGT, "$0", "$1") + ")"); break;
-			case RSX_FP_OPCODE_SLE: SetDst(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SLE, "$0", "$1") + ")"); break;
-			case RSX_FP_OPCODE_SLT: SetDst(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SLT, "$0", "$1") + ")"); break;
-			case RSX_FP_OPCODE_SNE: SetDst(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SNE, "$0", "$1") + ")"); break;
-			case RSX_FP_OPCODE_STR: SetDst(getFunction(FUNCTION::FUNCTION_STR)); break;
-
-			default:
-				return false;
-			}
-
-			return true;
-		};
-
-		auto SCB = [&]()
-		{
-			switch (opcode)
-			{
-			case RSX_FP_OPCODE_ADD: SetDst("($0 + $1)"); break;
-			case RSX_FP_OPCODE_COS: SetDst("cos($0.xxxx)"); break;
-			case RSX_FP_OPCODE_DP2: SetDst(getFunction(FUNCTION::FUNCTION_DP2)); break;
-			case RSX_FP_OPCODE_DP3: SetDst(getFunction(FUNCTION::FUNCTION_DP3)); break;
-			case RSX_FP_OPCODE_DP4: SetDst(getFunction(FUNCTION::FUNCTION_DP4)); break;
-			case RSX_FP_OPCODE_DP2A: SetDst(getFunction(FUNCTION::FUNCTION_DP2A)); break;
-			case RSX_FP_OPCODE_DST: SetDst("vec4(distance($0, $1))"); break;
-			case RSX_FP_OPCODE_REFL: LOG_ERROR(RSX, "Unimplemented SCB instruction: REFL"); break; // TODO: Is this in the right category?
-			case RSX_FP_OPCODE_EX2: SetDst("exp2($0.xxxx)"); break;
-			case RSX_FP_OPCODE_FLR: SetDst("floor($0)"); break;
-			case RSX_FP_OPCODE_FRC: SetDst(getFunction(FUNCTION::FUNCTION_FRACT)); break;
-			case RSX_FP_OPCODE_LIT: SetDst(getFloatTypeName(4) + "(1.0, $0.x, ($0.x > 0.0 ? exp($0.w * log2($0.y)) : 0.0), 1.0)"); break;
-			case RSX_FP_OPCODE_LIF: SetDst(getFloatTypeName(4) + "(1.0, $0.y, ($0.y > 0 ? pow(2.0, $0.w) : 0.0), 1.0)"); break;
-			case RSX_FP_OPCODE_LRP: LOG_ERROR(RSX, "Unimplemented SCB instruction: LRP"); break; // TODO: Is this in the right category?
-			case RSX_FP_OPCODE_LG2: SetDst("log2($0.xxxx)"); break;
-			case RSX_FP_OPCODE_MAD: SetDst("($0 * $1 + $2)"); break;
-			case RSX_FP_OPCODE_MAX: SetDst("max($0, $1)"); break;
-			case RSX_FP_OPCODE_MIN: SetDst("min($0, $1)"); break;
-			case RSX_FP_OPCODE_MOV: SetDst("$0"); break;
-			case RSX_FP_OPCODE_MUL: SetDst("($0 * $1)"); break;
-			case RSX_FP_OPCODE_PK2: SetDst("packSnorm2x16($0)"); break; // TODO: More testing (Sonic The Hedgehog (NPUB-30442/NPEB-00478))
-			case RSX_FP_OPCODE_PK4: SetDst("packSnorm4x8($0)"); break; // TODO: More testing (Sonic The Hedgehog (NPUB-30442/NPEB-00478))
-			case RSX_FP_OPCODE_PK16: LOG_ERROR(RSX, "Unimplemented SCB instruction: PK16"); break;
-			case RSX_FP_OPCODE_PKB: LOG_ERROR(RSX, "Unimplemented SCB instruction: PKB"); break;
-			case RSX_FP_OPCODE_PKG: LOG_ERROR(RSX, "Unimplemented SCB instruction: PKG"); break;
-			case RSX_FP_OPCODE_SEQ: SetDst(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SEQ, "$0", "$1") + ")"); break;
-			case RSX_FP_OPCODE_SFL: SetDst(getFunction(FUNCTION::FUNCTION_SFL)); break;
-			case RSX_FP_OPCODE_SGE: SetDst(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SGE, "$0", "$1") + ")"); break;
-			case RSX_FP_OPCODE_SGT: SetDst(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SGT, "$0", "$1") + ")"); break;
-			case RSX_FP_OPCODE_SIN: SetDst("sin($0.xxxx)"); break;
-			case RSX_FP_OPCODE_SLE: SetDst(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SLE, "$0", "$1") + ")"); break;
-			case RSX_FP_OPCODE_SLT: SetDst(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SLT, "$0", "$1") + ")"); break;
-			case RSX_FP_OPCODE_SNE: SetDst(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SNE, "$0", "$1") + ")"); break;
-			case RSX_FP_OPCODE_STR: SetDst(getFunction(FUNCTION::FUNCTION_STR)); break;
-
-			default:
-				return false;
-			}
-
-			return true;
-		};
-
-		auto TEX_SRB = [&]()
-		{
-			switch (opcode)
-			{
-			case RSX_FP_OPCODE_DDX: SetDst(getFunction(FUNCTION::FUNCTION_DFDX)); break;
-			case RSX_FP_OPCODE_DDY: SetDst(getFunction(FUNCTION::FUNCTION_DFDY)); break;
-			case RSX_FP_OPCODE_NRM: SetDst("normalize($0)"); break;
-			case RSX_FP_OPCODE_BEM: LOG_ERROR(RSX, "Unimplemented TEX_SRB instruction: BEM"); break;
-			case RSX_FP_OPCODE_TEX: SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE));  break;
-			case RSX_FP_OPCODE_TEXBEM: SetDst("texture($t, $0.xy, $1.x)"); break;
-			case RSX_FP_OPCODE_TXP: SetDst("textureProj($t, $0.xyz, $1.x)"); break; //TODO: More testing (Sonic The Hedgehog (NPUB-30442/NPEB-00478) and The Simpsons Arcade Game (NPUB30563))
-			case RSX_FP_OPCODE_TXPBEM: SetDst("textureProj($t, $0.xyz, $1.x)"); break;
-			case RSX_FP_OPCODE_TXD: LOG_ERROR(RSX, "Unimplemented TEX_SRB instruction: TXD"); break;
-			case RSX_FP_OPCODE_TXB: SetDst("texture($t, $0.xy, $1.x)"); break;
-			case RSX_FP_OPCODE_TXL: SetDst("textureLod($t, $0.xy, $1.x)"); break;
-			case RSX_FP_OPCODE_UP2: SetDst("unpackSnorm2x16($0)"); break; // TODO: More testing (Sonic The Hedgehog (NPUB-30442/NPEB-00478))
-			case RSX_FP_OPCODE_UP4: SetDst("unpackSnorm4x8($0)"); break; // TODO: More testing (Sonic The Hedgehog (NPUB-30442/NPEB-00478))
-			case RSX_FP_OPCODE_UP16: LOG_ERROR(RSX, "Unimplemented TEX_SRB instruction: UP16"); break;
-			case RSX_FP_OPCODE_UPB: LOG_ERROR(RSX, "Unimplemented TEX_SRB instruction: UPB"); break;
-			case RSX_FP_OPCODE_UPG: LOG_ERROR(RSX, "Unimplemented TEX_SRB instruction: UPG"); break;
-
-			default:
-				return false;
-			}
-
-			return true;
-		};
 
 		auto SIP = [&]()
 		{
@@ -564,19 +553,19 @@ std::string FragmentProgramDecompiler::Decompile()
 			if (forced_unit == FORCE_NONE)
 			{
 				if (SIP()) break;
-				if (SCT()) break;
-				if (TEX_SRB()) break;
-				if (SCB()) break;
+				if (handle_sct(opcode)) break;
+				if (handle_tex_srb(opcode)) break;
+				if (handle_scb(opcode)) break;
 			}
 			else if (forced_unit == FORCE_SCT)
 			{
 				forced_unit = FORCE_NONE;
-				if (SCT()) break;
+				if (handle_sct(opcode)) break;
 			}
 			else if (forced_unit == FORCE_SCB)
 			{
 				forced_unit = FORCE_NONE;
-				if (SCB()) break;
+				if (handle_scb(opcode)) break;
 			}
 
 			LOG_ERROR(RSX, "Unknown/illegal instruction: 0x%x (forced unit %d)", opcode, forced_unit);
