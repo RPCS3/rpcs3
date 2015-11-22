@@ -8,7 +8,7 @@
 extern KeyboardPadConfig g_kbpad_config;
 
 PADManager::PADManager(wxWindow* parent)
-	: wxDialog(parent, wxID_ANY, "PAD Settings")
+	: wxDialog(parent, wxID_ANY, "Controller settings")
 	, m_button_id(0)
 	, m_key_pressed(false)
 {
@@ -18,20 +18,20 @@ PADManager::PADManager(wxWindow* parent)
 	wxBoxSizer* s_subpanel = new wxBoxSizer(wxVERTICAL);
 	wxBoxSizer* s_subpanel2 = new wxBoxSizer(wxVERTICAL);
 
-	// Left Analog Stick
-	wxStaticBoxSizer* s_round_stick_l = new wxStaticBoxSizer(wxVERTICAL, this, "Left Analog Stick");
+	// Left analog Stick
+	wxStaticBoxSizer* s_round_stick_l = new wxStaticBoxSizer(wxVERTICAL, this, "Left analog stick");
 	wxBoxSizer* s_subpanel_lstick_1 = new wxBoxSizer(wxVERTICAL);
 	wxBoxSizer* s_subpanel_lstick_2 = new wxBoxSizer(wxHORIZONTAL);
 	wxBoxSizer* s_subpanel_lstick_3 = new wxBoxSizer(wxVERTICAL);
 
-	// D-Pad
-	wxStaticBoxSizer* s_round_pad_controls = new wxStaticBoxSizer(wxVERTICAL, this, "D-Pad");
+	// Directional pad
+	wxStaticBoxSizer* s_round_pad_controls = new wxStaticBoxSizer(wxVERTICAL, this, "Directional pad");
 	wxBoxSizer* s_subpanel_pad_1 = new wxBoxSizer(wxVERTICAL);
 	wxBoxSizer* s_subpanel_pad_2 = new wxBoxSizer(wxHORIZONTAL);
 	wxBoxSizer* s_subpanel_pad_3 = new wxBoxSizer(wxVERTICAL);
 
-	// Left shifts
-	wxStaticBoxSizer* s_round_pad_shifts_l = new wxStaticBoxSizer(wxVERTICAL, this, "Left Shifts");
+	// L buttons
+	wxStaticBoxSizer* s_round_pad_shifts_l = new wxStaticBoxSizer(wxVERTICAL, this, "L buttons");
 	wxStaticBoxSizer* s_round_pad_l1 = new wxStaticBoxSizer(wxVERTICAL, this, "L1");
 	wxStaticBoxSizer* s_round_pad_l2 = new wxStaticBoxSizer(wxVERTICAL, this, "L2");
 	wxStaticBoxSizer* s_round_pad_l3 = new wxStaticBoxSizer(wxVERTICAL, this, "L3");
@@ -41,8 +41,8 @@ PADManager::PADManager(wxWindow* parent)
 	wxStaticBoxSizer* s_round_pad_select = new wxStaticBoxSizer(wxVERTICAL, this, "Select");
 	wxStaticBoxSizer* s_round_pad_start = new wxStaticBoxSizer(wxVERTICAL, this, "Start");
 
-	// Right shifts
-	wxStaticBoxSizer* s_round_pad_shifts_r = new wxStaticBoxSizer(wxVERTICAL, this, "Right Shifts");
+	// R buttons
+	wxStaticBoxSizer* s_round_pad_shifts_r = new wxStaticBoxSizer(wxVERTICAL, this, "R buttons");
 	wxStaticBoxSizer* s_round_pad_r1 = new wxStaticBoxSizer(wxVERTICAL, this, "R1");
 	wxStaticBoxSizer* s_round_pad_r2 = new wxStaticBoxSizer(wxVERTICAL, this, "R2");
 	wxStaticBoxSizer* s_round_pad_r3 = new wxStaticBoxSizer(wxVERTICAL, this, "R3");
@@ -57,8 +57,8 @@ PADManager::PADManager(wxWindow* parent)
 	wxBoxSizer* s_subpanel_buttons_2 = new wxBoxSizer(wxHORIZONTAL);
 	wxBoxSizer* s_subpanel_buttons_3 = new wxBoxSizer(wxVERTICAL);
 
-	// Right Analog Stick
-	wxStaticBoxSizer* s_round_stick_r = new wxStaticBoxSizer(wxVERTICAL, this, "Right Analog Stick");
+	// Right analog stick
+	wxStaticBoxSizer* s_round_stick_r = new wxStaticBoxSizer(wxVERTICAL, this, "Right analog stick");
 	wxBoxSizer* s_subpanel_rstick_1 = new wxBoxSizer(wxVERTICAL);
 	wxBoxSizer* s_subpanel_rstick_2 = new wxBoxSizer(wxHORIZONTAL);
 	wxBoxSizer* s_subpanel_rstick_3 = new wxBoxSizer(wxVERTICAL);
@@ -119,13 +119,13 @@ PADManager::PADManager(wxWindow* parent)
 	s_subpanel_lstick_2->Add(b_right_lstick);
 	s_subpanel_lstick_3->Add(b_down_lstick);
 
-	// D-Pad
+	// Directional pad
 	s_subpanel_pad_1->Add(b_up);
 	s_subpanel_pad_2->Add(b_left);
 	s_subpanel_pad_2->Add(b_right);
 	s_subpanel_pad_3->Add(b_down);
 
-	// Left shifts
+	// L button
 	s_round_pad_l1->Add(b_shift_l1);
 	s_round_pad_l2->Add(b_shift_l2);
 	s_round_pad_l3->Add(b_shift_l3);
@@ -134,7 +134,7 @@ PADManager::PADManager(wxWindow* parent)
 	s_round_pad_select->Add(b_select);
 	s_round_pad_start->Add(b_start);
 
-	// Right shifts
+	// R button
 	s_round_pad_r1->Add(b_shift_r1);
 	s_round_pad_r2->Add(b_shift_r2);
 	s_round_pad_r3->Add(b_shift_r3);

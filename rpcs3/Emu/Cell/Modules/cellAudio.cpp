@@ -14,7 +14,7 @@
 logs::channel cellAudio("cellAudio", logs::level::notice);
 
 cfg::bool_entry g_cfg_audio_dump_to_file(cfg::root.audio, "Dump to file");
-cfg::bool_entry g_cfg_audio_convert_to_u16(cfg::root.audio, "Convert to 16 bit");
+cfg::bool_entry g_cfg_audio_convert_to_u16(cfg::root.audio, "Convert to 16-bit");
 
 void audio_config::on_init(const std::shared_ptr<void>& _this)
 {

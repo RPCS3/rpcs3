@@ -59,8 +59,8 @@ InterpreterDisAsmFrame::InterpreterDisAsmFrame(wxWindow* parent)
 	m_list = new wxListView(this);
 	m_choice_units = new wxChoice(this, wxID_ANY);
 
-	wxButton* b_go_to_addr = new wxButton(this, wxID_ANY, "Go To Address");
-	wxButton* b_go_to_pc = new wxButton(this, wxID_ANY, "Go To PC");
+	wxButton* b_go_to_addr = new wxButton(this, wxID_ANY, "Go to address");
+	wxButton* b_go_to_pc = new wxButton(this, wxID_ANY, "Go to PC");
 
 	m_btn_step = new wxButton(this, wxID_ANY, "Step");
 	m_btn_run = new wxButton(this, wxID_ANY, "Run");

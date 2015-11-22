@@ -10,13 +10,13 @@ BEGIN_EVENT_TABLE(CgDisasm, wxFrame)
 END_EVENT_TABLE()
 
 CgDisasm::CgDisasm(wxWindow* parent)
-	: wxFrame(parent, wxID_ANY, "Cg Disasm", wxDefaultPosition, wxSize(640, 480))
+	: wxFrame(parent, wxID_ANY, "Cg disassembler", wxDefaultPosition, wxSize(640, 480))
 {
 	wxMenuBar* menubar = new wxMenuBar();
 
 	wxMenu* menu_general = new wxMenu();
-	menubar->Append(menu_general, "&Open");
-	menu_general->Append(id_open_file, "Open &Cg binary program");
+	menubar->Append(menu_general, "&File");
+	menu_general->Append(id_open_file, "Open &Cg binary");
 
 	wxNotebook* nb_cg = new wxNotebook(this, wxID_ANY);
 	wxPanel* p_cg_disasm = new wxPanel(nb_cg, wxID_ANY);

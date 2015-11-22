@@ -8,7 +8,7 @@
 
 #include <algorithm>
 
-static const std::string m_class_name = "GameViewer";
+static const std::string m_class_name = "Game viewer";
 
 // Auxiliary classes
 class sortGameData
@@ -68,7 +68,7 @@ void GameViewer::InitPopupMenu()
 #endif
 	m_popup->Append(boot_item);
 	m_popup->Append(1, _T("Configure"));
-	m_popup->Append(2, _T("Remove Game"));
+	m_popup->Append(2, _T("Remove game"));
 
 	Bind(wxEVT_MENU, &GameViewer::BootGame, this, 0);
 	Bind(wxEVT_MENU, &GameViewer::ConfigureGame, this, 1);
@@ -283,12 +283,12 @@ void ColumnsArr::Init()
 	m_img_list = new wxImageList(80, 44);
 
 	m_columns.clear();
-	m_columns.emplace_back(0, 90, "Icon");
+	m_columns.emplace_back(0, 90, "");
 	m_columns.emplace_back(1, 160, "Name");
 	m_columns.emplace_back(2, 85, "Serial");
-	m_columns.emplace_back(3, 55, "FW");
-	m_columns.emplace_back(4, 55, "App version");
-	m_columns.emplace_back(5, 75, "Category");
+	m_columns.emplace_back(3, 60, "Min. FW");
+	m_columns.emplace_back(4, 80, "Soft. version");
+	m_columns.emplace_back(5, 75, "Soft. type");
 	m_columns.emplace_back(6, 160, "Path");
 	m_col_icon = &m_columns[0];
 	m_col_name = &m_columns[1];

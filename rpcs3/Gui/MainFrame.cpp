@@ -79,7 +79,7 @@ MainFrame::MainFrame()
 	wxMenuBar* menubar = new wxMenuBar();
 
 	wxMenu* menu_boot = new wxMenu();
-	menubar->Append(menu_boot, "&Boot");
+	menubar->Append(menu_boot, "&File");
 	menu_boot->Append(id_boot_elf, "Boot &ELF / SELF file");
 	menu_boot->Append(id_boot_game, "Boot &game");
 	menu_boot->AppendSeparator();
@@ -92,28 +92,28 @@ MainFrame::MainFrame()
 	menu_sys->Append(id_sys_pause, "&Pause")->Enable(false);
 	menu_sys->Append(id_sys_stop, "&Stop\tCtrl + S")->Enable(false);
 	menu_sys->AppendSeparator();
-	menu_sys->Append(id_sys_send_open_menu, "Send &open system menu cmd")->Enable(false);
+	menu_sys->Append(id_sys_send_open_menu, "Press &PS button")->Enable(false);
 	menu_sys->Append(id_sys_send_exit, "Send &exit cmd")->Enable(false);
 
 	wxMenu* menu_conf = new wxMenu();
 	menubar->Append(menu_conf, "&Config");
 	menu_conf->Append(id_config_emu, "&Settings");
-	menu_conf->Append(id_config_pad, "&PAD Settings");
+	menu_conf->Append(id_config_pad, "&Controller settings");
 	menu_conf->AppendSeparator();
-	menu_conf->Append(id_config_autopause_manager, "&Auto Pause Settings");
+	menu_conf->Append(id_config_autopause_manager, "&Auto pause settings");
 	//menu_conf->AppendSeparator();
-	//menu_conf->Append(id_config_vfs_manager, "Virtual &File System Manager");
-	//menu_conf->Append(id_config_vhdd_manager, "Virtual &HDD Manager");
-	//menu_conf->Append(id_config_savedata_manager, "Save &Data Utility");
+	//menu_conf->Append(id_config_vfs_manager, "Virtual &File system manager");
+	//menu_conf->Append(id_config_vhdd_manager, "Virtual &hard drive manager");
+	//menu_conf->Append(id_config_savedata_manager, "Save &data utility");
 
 	wxMenu* menu_tools = new wxMenu();
 	menubar->Append(menu_tools, "&Tools");
-	//menu_tools->Append(id_tools_compiler, "&ELF Compiler");
-	menu_tools->Append(id_tools_cg_disasm, "&Cg Disasm")->Enable();
-	menu_tools->Append(id_tools_kernel_explorer, "&Kernel Explorer")->Enable(false);
-	menu_tools->Append(id_tools_memory_viewer, "&Memory Viewer")->Enable(false);
-	menu_tools->Append(id_tools_rsx_debugger, "&RSX Debugger")->Enable(false);
-	menu_tools->Append(id_tools_string_search, "&String Search")->Enable(false);
+	//menu_tools->Append(id_tools_compiler, "&ELF compiler");
+	menu_tools->Append(id_tools_cg_disasm, "&Cg disasm")->Enable();
+	menu_tools->Append(id_tools_kernel_explorer, "&Kernel explorer")->Enable(false);
+	menu_tools->Append(id_tools_memory_viewer, "&Memory viewer")->Enable(false);
+	menu_tools->Append(id_tools_rsx_debugger, "&RSX debugger")->Enable(false);
+	menu_tools->Append(id_tools_string_search, "&String search")->Enable(false);
 	menu_tools->AppendSeparator();
 	menu_tools->Append(id_tools_decrypt_sprx_libraries, "&Decrypt SPRX libraries");
 	menu_tools->Append(id_tools_install_firmware, "&Install Firmware");
@@ -130,7 +130,7 @@ MainFrame::MainFrame()
 	m_game_viewer = new GameViewer(this);
 	m_debugger_frame = new DebuggerPanel(this);
 
-	AddPane(m_game_viewer, "Game List", wxAUI_DOCK_CENTRE);
+	AddPane(m_game_viewer, "PS3 software", wxAUI_DOCK_CENTRE);
 	AddPane(m_log_frame, "Log", wxAUI_DOCK_BOTTOM);
 	AddPane(m_debugger_frame, "Debugger", wxAUI_DOCK_RIGHT);
 	
@@ -634,7 +634,7 @@ void MainFrame::UpdateUI(wxEvent& event)
 	// Emulation
 	wxMenuItem& pause = *menubar.FindItem(id_sys_pause);
 	wxMenuItem& stop  = *menubar.FindItem(id_sys_stop);
-	pause.SetItemLabel(is_running ? "&Pause\tCtrl + P" : is_ready ? "&Start\tCtrl + E" : "&Resume\tCtrl + E");
+	pause.SetItemLabel(is_running ? "&Pause\tCtrl + P" : is_ready ? "&Start\tCtrl + F" : "&Resume\tCtrl + F");
 	pause.Enable(!is_stopped);
 	stop.Enable(!is_stopped);
 
@@ -642,7 +642,7 @@ void MainFrame::UpdateUI(wxEvent& event)
 	wxMenuItem& send_exit = *menubar.FindItem(id_sys_send_exit);
 	wxMenuItem& send_open_menu = *menubar.FindItem(id_sys_send_open_menu);
 	bool enable_commands = !is_stopped;
-	send_open_menu.SetItemLabel(wxString::Format("Send &%s system menu cmd", (m_sys_menu_opened ? "close" : "open")));
+	send_open_menu.SetItemLabel(wxString::Format("Press &PS buton %s", (m_sys_menu_opened ? "close" : "open")));
 	send_open_menu.Enable(enable_commands);
 	send_exit.Enable(enable_commands);
 
@@ -669,7 +669,7 @@ void MainFrame::OnKeyDown(wxKeyEvent& event)
 	{
 		switch(event.GetKeyCode())
 		{
-		case 'E': case 'e': if(Emu.IsPaused()) Emu.Resume(); else if(Emu.IsReady()) Emu.Run(); return;
+		case 'F': case 'f': if(Emu.IsPaused()) Emu.Resume(); else if(Emu.IsReady()) Emu.Run(); return;
 		case 'P': case 'p': if(Emu.IsRunning()) Emu.Pause(); return;
 		case 'S': case 's': if(!Emu.IsStopped()) Emu.Stop(); return;
 		case 'R': case 'r': if(!Emu.GetPath().empty()) {Emu.Stop(); Emu.Run();} return;

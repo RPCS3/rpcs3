@@ -27,7 +27,7 @@
 #include "KernelExplorer.h"
 
 KernelExplorer::KernelExplorer(wxWindow* parent) 
-	: wxDialog(parent, wxID_ANY, "Kernel Explorer", wxDefaultPosition, wxSize(700, 450))
+	: wxDialog(parent, wxID_ANY, "Kernel explorer", wxDefaultPosition, wxSize(700, 450))
 {
 	this->SetBackgroundColour(wxColour(240,240,240)); //This fix the ugly background color under Windows
 	wxBoxSizer* s_panel = new wxBoxSizer(wxVERTICAL);
@@ -71,7 +71,7 @@ void KernelExplorer::Update()
 
 	const u32 total_memory_usage = vm_block->used();
 
-	const auto& root = m_tree->AddRoot(fmt::format("Process, ID = 0x00000001, Total Memory Usage = 0x%x (%0.2f MB)", total_memory_usage, (float)total_memory_usage / (1024 * 1024)));
+	const auto& root = m_tree->AddRoot(fmt::format("Process, ID = 0x00000001, Total memory usage = 0x%x (%0.2f MB)", total_memory_usage, (float)total_memory_usage / (1024 * 1024)));
 
 	union name64
 	{
@@ -106,21 +106,21 @@ void KernelExplorer::Update()
 	std::vector<lv2_obj_rec> lv2_types(256);
 	lv2_types[SYS_MEM_OBJECT] = m_tree->AppendItem(root, "Memory");
 	lv2_types[SYS_MUTEX_OBJECT] = m_tree->AppendItem(root, "Mutexes");
-	lv2_types[SYS_COND_OBJECT] = m_tree->AppendItem(root, "Condition Variables");
-	lv2_types[SYS_RWLOCK_OBJECT] = m_tree->AppendItem(root, "Reader Writer Locks");
-	lv2_types[SYS_INTR_TAG_OBJECT] = m_tree->AppendItem(root, "Interrupt Tags");
-	lv2_types[SYS_INTR_SERVICE_HANDLE_OBJECT] = m_tree->AppendItem(root, "Interrupt Service Handles");
-	lv2_types[SYS_EVENT_QUEUE_OBJECT] = m_tree->AppendItem(root, "Event Queues");
-	lv2_types[SYS_EVENT_PORT_OBJECT] = m_tree->AppendItem(root, "Event Ports");
+	lv2_types[SYS_COND_OBJECT] = m_tree->AppendItem(root, "Condition variables");
+	lv2_types[SYS_RWLOCK_OBJECT] = m_tree->AppendItem(root, "Reader writer locks");
+	lv2_types[SYS_INTR_TAG_OBJECT] = m_tree->AppendItem(root, "Interrupt tags");
+	lv2_types[SYS_INTR_SERVICE_HANDLE_OBJECT] = m_tree->AppendItem(root, "Interrupt service handles");
+	lv2_types[SYS_EVENT_QUEUE_OBJECT] = m_tree->AppendItem(root, "Event queues");
+	lv2_types[SYS_EVENT_PORT_OBJECT] = m_tree->AppendItem(root, "Event ports");
 	lv2_types[SYS_TRACE_OBJECT] = m_tree->AppendItem(root, "Traces");
 	lv2_types[SYS_SPUIMAGE_OBJECT] = m_tree->AppendItem(root, "SPU Images");
 	lv2_types[SYS_PRX_OBJECT] = m_tree->AppendItem(root, "Modules");
 	lv2_types[SYS_SPUPORT_OBJECT] = m_tree->AppendItem(root, "SPU Ports");
-	lv2_types[SYS_LWMUTEX_OBJECT] = m_tree->AppendItem(root, "Light Weight Mutexes");
+	lv2_types[SYS_LWMUTEX_OBJECT] = m_tree->AppendItem(root, "Light weight mutexes");
 	lv2_types[SYS_TIMER_OBJECT] = m_tree->AppendItem(root, "Timers");
 	lv2_types[SYS_SEMAPHORE_OBJECT] = m_tree->AppendItem(root, "Semaphores");
-	lv2_types[SYS_LWCOND_OBJECT] = m_tree->AppendItem(root, "Light Weight Condition Variables");
-	lv2_types[SYS_EVENT_FLAG_OBJECT] = m_tree->AppendItem(root, "Event Flags");
+	lv2_types[SYS_LWCOND_OBJECT] = m_tree->AppendItem(root, "Light weight condition variables");
+	lv2_types[SYS_EVENT_FLAG_OBJECT] = m_tree->AppendItem(root, "Event flags");
 
 	idm::select<lv2_obj>([&](u32 id, lv2_obj& obj)
 	{
@@ -158,7 +158,7 @@ void KernelExplorer::Update()
 		case SYS_INTR_TAG_OBJECT:
 		{
 			auto& tag = static_cast<lv2_int_tag&>(obj);
-			m_tree->AppendItem(node, fmt::format("Intr Tag: ID = 0x%08x", id));
+			m_tree->AppendItem(node, fmt::format("Intr tag: ID = 0x%08x", id));
 			break;
 		}
 		case SYS_INTR_SERVICE_HANDLE_OBJECT:
@@ -170,14 +170,14 @@ void KernelExplorer::Update()
 		case SYS_EVENT_QUEUE_OBJECT:
 		{
 			auto& eq = static_cast<lv2_event_queue&>(obj);
-			m_tree->AppendItem(node, fmt::format("Event Queue: ID = 0x%08x \"%s\", %s, Key = %#llx, Events = %zu/%d, Waiters = %zu", id, +name64(eq.name),
+			m_tree->AppendItem(node, fmt::format("Event queue: ID = 0x%08x \"%s\", %s, Key = %#llx, Events = %zu/%d, Waiters = %zu", id, +name64(eq.name),
 				eq.type == SYS_SPU_QUEUE ? "SPU" : "PPU", eq.key, eq.events.size(), eq.size, eq.sq.size()));
 			break;
 		}
 		case SYS_EVENT_PORT_OBJECT:
 		{
 			auto& ep = static_cast<lv2_event_port&>(obj);
-			m_tree->AppendItem(node, fmt::format("Event Port: ID = 0x%08x, Name = %#llx", id, ep.name));
+			m_tree->AppendItem(node, fmt::format("Event port: ID = 0x%08x, Name = %#llx", id, ep.name));
 			break;
 		}
 		case SYS_TRACE_OBJECT:
@@ -216,7 +216,7 @@ void KernelExplorer::Update()
 		case SYS_SEMAPHORE_OBJECT:
 		{
 			auto& sema = static_cast<lv2_sema&>(obj);
-			m_tree->AppendItem(node, fmt::format("Semaphore: ID = 0x%08x \"%s\", Count = %d, Max Count = %d, Waiters = %#zu", id, +name64(sema.name),
+			m_tree->AppendItem(node, fmt::format("Semaphore: ID = 0x%08x \"%s\", Count = %d, Max count = %d, Waiters = %#zu", id, +name64(sema.name),
 				sema.val.load(), sema.max, sema.sq.size()));
 			break;
 		}
@@ -229,7 +229,7 @@ void KernelExplorer::Update()
 		case SYS_EVENT_FLAG_OBJECT:
 		{
 			auto& ef = static_cast<lv2_event_flag&>(obj);
-			m_tree->AppendItem(node, fmt::format("Event Flag: ID = 0x%08x \"%s\", Type = 0x%x, Pattern = 0x%llx, Wq = %zu", id, +name64(ef.name),
+			m_tree->AppendItem(node, fmt::format("Event flag: ID = 0x%08x \"%s\", Type = 0x%x, Pattern = 0x%llx, Wq = %zu", id, +name64(ef.name),
 				ef.type, ef.pattern.load(), +ef.waiters));
 			break;
 		}
@@ -240,12 +240,12 @@ void KernelExplorer::Update()
 		}
 	});
 
-	lv2_types.emplace_back(m_tree->AppendItem(root, "Memory Containers"));
+	lv2_types.emplace_back(m_tree->AppendItem(root, "Memory containers"));
 
 	idm::select<lv2_memory_container>([&](u32 id, lv2_memory_container&)
 	{
 		lv2_types.back().count++;
-		m_tree->AppendItem(lv2_types.back().node, fmt::format("Memory Container: ID = 0x%08x", id));
+		m_tree->AppendItem(lv2_types.back().node, fmt::format("Memory container: ID = 0x%08x", id));
 	});
 
 	lv2_types.emplace_back(m_tree->AppendItem(root, "PPU Threads"));
@@ -264,15 +264,15 @@ void KernelExplorer::Update()
 		m_tree->AppendItem(lv2_types.back().node, fmt::format("SPU Thread: ID = 0x%08x '%s'", id, spu.get_name()));
 	});
 
-	lv2_types.emplace_back(m_tree->AppendItem(root, "SPU Thread Groups"));
+	lv2_types.emplace_back(m_tree->AppendItem(root, "SPU Thread groups"));
 
 	idm::select<lv2_spu_group>([&](u32 id, lv2_spu_group& tg)
 	{
 		lv2_types.back().count++;
-		m_tree->AppendItem(lv2_types.back().node, fmt::format("SPU Thread Group: ID = 0x%08x '%s'", id, tg.name.c_str()));
+		m_tree->AppendItem(lv2_types.back().node, fmt::format("SPU Thread group: ID = 0x%08x '%s'", id, tg.name.c_str()));
 	});
 
-	lv2_types.emplace_back(m_tree->AppendItem(root, "File Descriptors"));
+	lv2_types.emplace_back(m_tree->AppendItem(root, "File descriptors"));
 
 	idm::select<lv2_fs_object>([&](u32 id, lv2_fs_object& fo)
 	{

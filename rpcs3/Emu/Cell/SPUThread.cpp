@@ -40,7 +40,7 @@ enum class spu_decoder_type
 	llvm,
 };
 
-cfg::map_entry<spu_decoder_type> g_cfg_spu_decoder(cfg::root.core, "SPU Decoder", 2,
+cfg::map_entry<spu_decoder_type> g_cfg_spu_decoder(cfg::root.core, "SPU decoder", 2,
 {
 	{ "Interpreter (precise)", spu_decoder_type::precise },
 	{ "Interpreter (fast)", spu_decoder_type::fast },

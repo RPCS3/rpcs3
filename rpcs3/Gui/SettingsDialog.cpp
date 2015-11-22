@@ -270,21 +270,21 @@ SettingsDialog::SettingsDialog(wxWindow* parent, const std::string& path)
 	s_module_search_box->Bind(wxEVT_TEXT, &SettingsDialog::OnSearchBoxTextChanged, this);
 
 	// Graphics
-	wxStaticBoxSizer* s_round_gs_render = new wxStaticBoxSizer(wxVERTICAL, p_graphics, "Render");
+	wxStaticBoxSizer* s_round_gs_render = new wxStaticBoxSizer(wxVERTICAL, p_graphics, "Rendering API");
 	wxStaticBoxSizer* s_round_gs_d3d_adapter = new wxStaticBoxSizer(wxVERTICAL, p_graphics, "D3D Adapter");
 	wxStaticBoxSizer* s_round_gs_res = new wxStaticBoxSizer(wxVERTICAL, p_graphics, "Resolution");
 	wxStaticBoxSizer* s_round_gs_aspect = new wxStaticBoxSizer(wxVERTICAL, p_graphics, "Aspect ratio");
 	wxStaticBoxSizer* s_round_gs_frame_limit = new wxStaticBoxSizer(wxVERTICAL, p_graphics, "Frame limit");
 
 	// Input / Output
-	wxStaticBoxSizer* s_round_io_pad_handler = new wxStaticBoxSizer(wxVERTICAL, p_io, "Pad Handler");
-	wxStaticBoxSizer* s_round_io_keyboard_handler = new wxStaticBoxSizer(wxVERTICAL, p_io, "Keyboard Handler");
-	wxStaticBoxSizer* s_round_io_mouse_handler = new wxStaticBoxSizer(wxVERTICAL, p_io, "Mouse Handler");
+	wxStaticBoxSizer* s_round_io_pad_handler = new wxStaticBoxSizer(wxVERTICAL, p_io, "Controller handler");
+	wxStaticBoxSizer* s_round_io_keyboard_handler = new wxStaticBoxSizer(wxVERTICAL, p_io, "Keyboard handler");
+	wxStaticBoxSizer* s_round_io_mouse_handler = new wxStaticBoxSizer(wxVERTICAL, p_io, "Mouse handler");
 	wxStaticBoxSizer* s_round_io_camera = new wxStaticBoxSizer(wxVERTICAL, p_io, "Camera");
 	wxStaticBoxSizer* s_round_io_camera_type = new wxStaticBoxSizer(wxVERTICAL, p_io, "Camera type");
 
 	// Audio
-	wxStaticBoxSizer* s_round_audio_out = new wxStaticBoxSizer(wxVERTICAL, p_audio, "Audio Out");
+	wxStaticBoxSizer* s_round_audio_out = new wxStaticBoxSizer(wxVERTICAL, p_audio, "Audio out");
 
 	// Networking
 	wxStaticBoxSizer* s_round_net_status = new wxStaticBoxSizer(wxVERTICAL, p_networking, "Connection status");
@@ -313,21 +313,21 @@ SettingsDialog::SettingsDialog(wxWindow* parent, const std::string& path)
 	wxCheckBox* chbox_core_load_liblv2 = new wxCheckBox(p_core, wxID_ANY, "Load liblv2.sprx only");
 	wxCheckBox* chbox_core_load_libreq = new wxCheckBox(p_core, wxID_ANY, "Load required libraries");
 	wxCheckBox* chbox_vfs_enable_host_root = new wxCheckBox(p_system, wxID_ANY, "Enable /host_root/");
-	wxCheckBox* chbox_gs_log_prog = new wxCheckBox(p_graphics, wxID_ANY, "Log Shader Programs");
-	wxCheckBox* chbox_gs_dump_depth = new wxCheckBox(p_graphics, wxID_ANY, "Write Depth Buffer");
-	wxCheckBox* chbox_gs_dump_color = new wxCheckBox(p_graphics, wxID_ANY, "Write Color Buffers");
-	wxCheckBox* chbox_gs_read_color = new wxCheckBox(p_graphics, wxID_ANY, "Read Color Buffers");
-	wxCheckBox* chbox_gs_read_depth = new wxCheckBox(p_graphics, wxID_ANY, "Read Depth Buffer");
+	wxCheckBox* chbox_gs_log_prog = new wxCheckBox(p_graphics, wxID_ANY, "Log shader programs");
+	wxCheckBox* chbox_gs_dump_depth = new wxCheckBox(p_graphics, wxID_ANY, "Write depth buffer");
+	wxCheckBox* chbox_gs_dump_color = new wxCheckBox(p_graphics, wxID_ANY, "Write color buffers");
+	wxCheckBox* chbox_gs_read_color = new wxCheckBox(p_graphics, wxID_ANY, "Read color buffers");
+	wxCheckBox* chbox_gs_read_depth = new wxCheckBox(p_graphics, wxID_ANY, "Read depth buffer");
 	wxCheckBox* chbox_gs_vsync = new wxCheckBox(p_graphics, wxID_ANY, "VSync");
-	wxCheckBox* chbox_gs_debug_output = new wxCheckBox(p_graphics, wxID_ANY, "Debug Output");
-	wxCheckBox* chbox_gs_overlay = new wxCheckBox(p_graphics, wxID_ANY, "Debug Overlay");
-	wxCheckBox* chbox_gs_gl_legacy_buffers = new wxCheckBox(p_graphics, wxID_ANY, "Use Legacy OpenGL Buffers");
+	wxCheckBox* chbox_gs_debug_output = new wxCheckBox(p_graphics, wxID_ANY, "Debug output");
+	wxCheckBox* chbox_gs_overlay = new wxCheckBox(p_graphics, wxID_ANY, "Debug overlay");
+	wxCheckBox* chbox_gs_gl_legacy_buffers = new wxCheckBox(p_graphics, wxID_ANY, "Use legacy OpenGL buffers");
 	wxCheckBox* chbox_audio_dump = new wxCheckBox(p_audio, wxID_ANY, "Dump to file");
-	wxCheckBox* chbox_audio_conv = new wxCheckBox(p_audio, wxID_ANY, "Convert to 16 bit");
+	wxCheckBox* chbox_audio_conv = new wxCheckBox(p_audio, wxID_ANY, "Convert to 16-bit");
 	wxCheckBox* chbox_hle_exitonstop = new wxCheckBox(p_misc, wxID_ANY, "Exit RPCS3 when process finishes");
 	wxCheckBox* chbox_hle_always_start = new wxCheckBox(p_misc, wxID_ANY, "Always start after boot");
-	wxCheckBox* chbox_dbg_ap_systemcall = new wxCheckBox(p_misc, wxID_ANY, "Auto Pause at System Call");
-	wxCheckBox* chbox_dbg_ap_functioncall = new wxCheckBox(p_misc, wxID_ANY, "Auto Pause at Function Call");
+	wxCheckBox* chbox_dbg_ap_systemcall = new wxCheckBox(p_misc, wxID_ANY, "Automatically pause at system call");
+	wxCheckBox* chbox_dbg_ap_functioncall = new wxCheckBox(p_misc, wxID_ANY, "Automatically pause at function call");
 
 	{
 		// Sort string vector alphabetically
@@ -371,13 +371,13 @@ SettingsDialog::SettingsDialog(wxWindow* parent, const std::string& path)
 		lle_module_list_unselected.clear();
 	}
 
-	radiobox_pad_helper ppu_decoder_modes({ "Core", "PPU Decoder" });
-	rbox_ppu_decoder = new wxRadioBox(p_core, wxID_ANY, "PPU Decoder", wxDefaultPosition, wxSize(-1, -1), ppu_decoder_modes, 1);
+	radiobox_pad_helper ppu_decoder_modes({ "Core", "PPU decoder" });
+	rbox_ppu_decoder = new wxRadioBox(p_core, wxID_ANY, "PPU decoder", wxDefaultPosition, wxSize(-1, -1), ppu_decoder_modes, 1);
 	pads.emplace_back(std::make_unique<radiobox_pad>(std::move(ppu_decoder_modes), rbox_ppu_decoder));
 	rbox_ppu_decoder->Enable(0, false); // TODO
 
-	radiobox_pad_helper spu_decoder_modes({ "Core", "SPU Decoder" });
-	rbox_spu_decoder = new wxRadioBox(p_core, wxID_ANY, "SPU Decoder", wxDefaultPosition, wxSize(-1, -1), spu_decoder_modes, 1);
+	radiobox_pad_helper spu_decoder_modes({ "Core", "SPU decoder" });
+	rbox_spu_decoder = new wxRadioBox(p_core, wxID_ANY, "SPU decoder", wxDefaultPosition, wxSize(-1, -1), spu_decoder_modes, 1);
 	pads.emplace_back(std::make_unique<radiobox_pad>(std::move(spu_decoder_modes), rbox_spu_decoder));
 	rbox_spu_decoder->Enable(3, false); // TODO
 
@@ -386,25 +386,25 @@ SettingsDialog::SettingsDialog(wxWindow* parent, const std::string& path)
 	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Core", "Load required libraries" }, chbox_core_load_libreq));
 	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "VFS", "Enable /host_root/" }, chbox_vfs_enable_host_root));
 
-	pads.emplace_back(std::make_unique<combobox_pad>(cfg_location{ "Video", "Renderer" }, cbox_gs_render));
+	pads.emplace_back(std::make_unique<combobox_pad>(cfg_location{ "Video", "Rendering API" }, cbox_gs_render));
 	pads.emplace_back(std::make_unique<combobox_pad>(cfg_location{ "Video", "Resolution" }, cbox_gs_resolution));
 	pads.emplace_back(std::make_unique<combobox_pad>(cfg_location{ "Video", "Aspect ratio" }, cbox_gs_aspect));
 	pads.emplace_back(std::make_unique<combobox_pad>(cfg_location{ "Video", "Frame limit" }, cbox_gs_frame_limit));
 	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Video", "Log shader programs" }, chbox_gs_log_prog));
-	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Video", "Write Depth Buffer" }, chbox_gs_dump_depth));
-	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Video", "Write Color Buffers" }, chbox_gs_dump_color));
-	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Video", "Read Color Buffers" }, chbox_gs_read_color));
-	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Video", "Read Depth Buffer" }, chbox_gs_read_depth));
+	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Video", "Write depth buffer" }, chbox_gs_dump_depth));
+	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Video", "Write color buffers" }, chbox_gs_dump_color));
+	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Video", "Read color buffers" }, chbox_gs_read_color));
+	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Video", "Read depth buffer" }, chbox_gs_read_depth));
 	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Video", "VSync" }, chbox_gs_vsync));
 	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Video", "Debug output" }, chbox_gs_debug_output));
 	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Video", "Debug overlay" }, chbox_gs_overlay));
-	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Video", "Use Legacy OpenGL Buffers (Debug)" }, chbox_gs_gl_legacy_buffers));
+	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Video", "Use legacy OpenGL buffers (Debug)" }, chbox_gs_gl_legacy_buffers));
 
 	pads.emplace_back(std::make_unique<combobox_pad>(cfg_location{ "Audio", "Renderer" }, cbox_audio_out));
 	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Audio", "Dump to file" }, chbox_audio_dump));
-	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Audio", "Convert to 16 bit" }, chbox_audio_conv));
+	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Audio", "Convert to 16-bit" }, chbox_audio_conv));
 
-	pads.emplace_back(std::make_unique<combobox_pad>(cfg_location{ "Input/Output", "Pad" }, cbox_pad_handler));
+	pads.emplace_back(std::make_unique<combobox_pad>(cfg_location{ "Input/Output", "Controller" }, cbox_pad_handler));
 	pads.emplace_back(std::make_unique<combobox_pad>(cfg_location{ "Input/Output", "Keyboard" }, cbox_keyboard_handler));
 	pads.emplace_back(std::make_unique<combobox_pad>(cfg_location{ "Input/Output", "Mouse" }, cbox_mouse_handler));
 	pads.emplace_back(std::make_unique<combobox_pad>(cfg_location{ "Input/Output", "Camera" }, cbox_camera));
@@ -416,8 +416,8 @@ SettingsDialog::SettingsDialog(wxWindow* parent, const std::string& path)
 
 	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Miscellaneous", "Exit RPCS3 when process finishes" }, chbox_hle_exitonstop));
 	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Miscellaneous", "Always start after boot" }, chbox_hle_always_start));
-	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Miscellaneous", "Auto Pause at System Call" }, chbox_dbg_ap_systemcall));
-	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Miscellaneous", "Auto Pause at Function Call" }, chbox_dbg_ap_functioncall));
+	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Miscellaneous", "Automatically pause at system call" }, chbox_dbg_ap_systemcall));
+	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Miscellaneous", "Automatically pause at function call" }, chbox_dbg_ap_functioncall));
 
 #ifdef _MSC_VER
 	Microsoft::WRL::ComPtr<IDXGIFactory4> dxgi_factory;

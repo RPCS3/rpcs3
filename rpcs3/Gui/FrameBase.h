@@ -8,7 +8,7 @@ protected:
 	FrameBase(
 		wxWindow* parent,
 		wxWindowID id = wxID_ANY,
-		const wxString& frame_name = "UnknownFrame",
+		const wxString& frame_name = "Unknown frame",
 		const std::string& ini_name = {},
 		wxSize defsize = wxDefaultSize,
 		wxPoint defposition = wxDefaultPosition,

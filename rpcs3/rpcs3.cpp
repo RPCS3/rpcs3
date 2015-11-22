@@ -80,7 +80,7 @@ cfg::map_entry<std::function<std::shared_ptr<MouseHandlerBase>()>> g_cfg_mouse_h
 	{ "Basic", &std::make_shared<BasicMouseHandler> },
 });
 
-cfg::map_entry<std::function<std::shared_ptr<PadHandlerBase>()>> g_cfg_pad_handler(cfg::root.io, "Pad", "Keyboard",
+cfg::map_entry<std::function<std::shared_ptr<PadHandlerBase>()>> g_cfg_pad_handler(cfg::root.io, "Controller", "Keyboard",
 {
 	{ "Null", &std::make_shared<NullPadHandler> },
 	{ "Keyboard", &std::make_shared<KeyboardPadHandler> },
@@ -90,12 +90,12 @@ cfg::map_entry<std::function<std::shared_ptr<PadHandlerBase>()>> g_cfg_pad_handl
 #endif
 });
 
-cfg::map_entry<std::function<std::shared_ptr<GSRender>()>> g_cfg_gs_render(cfg::root.video, "Renderer", "OpenGL",
+cfg::map_entry<std::function<std::shared_ptr<GSRender>()>> g_cfg_gs_render(cfg::root.video, "Rendering API", "OpenGL",
 {
 	{ "Null", &std::make_shared<NullGSRender> },
 	{ "OpenGL", &std::make_shared<GLGSRender> },
 #ifdef _MSC_VER
-	{ "D3D12", &std::make_shared<D3D12GSRender> },
+	{ "DirectX 12", &std::make_shared<D3D12GSRender> },
 #endif
 #ifdef _WIN32
 	{ "Vulkan", &std::make_shared<VKGSRender> },
