@@ -20,7 +20,7 @@ enum GCMEnumTypes
 };
 
 RSXDebugger::RSXDebugger(wxWindow* parent) 
-	: wxDialog(parent, wxID_ANY, "RSX Debugger", wxDefaultPosition, wxSize(700, 450))
+	: wxDialog(parent, wxID_ANY, "RSX debugger", wxDefaultPosition, wxSize(700, 450))
 	, m_item_count(37)
 	, m_addr(0x0)
 	, m_cur_texture(0)
@@ -33,7 +33,7 @@ RSXDebugger::RSXDebugger(wxWindow* parent)
 	wxBoxSizer* s_tools = new wxBoxSizer(wxVERTICAL);
 
 	// Controls
-	wxStaticBoxSizer* s_controls = new wxStaticBoxSizer(wxHORIZONTAL, this, "RSX Debugger Controls");
+	wxStaticBoxSizer* s_controls = new wxStaticBoxSizer(wxHORIZONTAL, this, "RSX debugger controls");
 
 	// Controls: Address
 	wxStaticBoxSizer* s_controls_addr = new wxStaticBoxSizer(wxHORIZONTAL, this, "Address:");
@@ -84,9 +84,9 @@ RSXDebugger::RSXDebugger(wxWindow* parent)
 	wxPanel* p_texture   = new wxPanel(nb_rsx, wxID_ANY);
 	wxPanel* p_settings  = new wxPanel(nb_rsx, wxID_ANY);
 
-	nb_rsx->AddPage(p_commands, "RSX Commands");
-	nb_rsx->AddPage(p_captured_frame, "Captured Frame");
-	nb_rsx->AddPage(p_captured_draw_calls, "Captured Draw Calls");
+	nb_rsx->AddPage(p_commands, "RSX commands");
+	nb_rsx->AddPage(p_captured_frame, "Captured frame");
+	nb_rsx->AddPage(p_captured_draw_calls, "Capturded draw calls");
 	nb_rsx->AddPage(p_flags, "Flags");
 
 	nb_rsx->AddPage(p_lightning, "Lightning");
@@ -177,12 +177,12 @@ RSXDebugger::RSXDebugger(wxWindow* parent)
 	//Buffers
 	wxBoxSizer* s_buffers1 = new wxBoxSizer(wxVERTICAL);
 	wxBoxSizer* s_buffers2 = new wxBoxSizer(wxVERTICAL);
-	wxStaticBoxSizer* s_buffers_colorA  = new wxStaticBoxSizer(wxHORIZONTAL, p_buffers, "Color Buffer A");
-	wxStaticBoxSizer* s_buffers_colorB  = new wxStaticBoxSizer(wxHORIZONTAL, p_buffers, "Color Buffer B");
-	wxStaticBoxSizer* s_buffers_colorC  = new wxStaticBoxSizer(wxHORIZONTAL, p_buffers, "Color Buffer C");
-	wxStaticBoxSizer* s_buffers_colorD  = new wxStaticBoxSizer(wxHORIZONTAL, p_buffers, "Color Buffer D");
-	wxStaticBoxSizer* s_buffers_depth   = new wxStaticBoxSizer(wxHORIZONTAL, p_buffers, "Depth Buffer");
-	wxStaticBoxSizer* s_buffers_stencil = new wxStaticBoxSizer(wxHORIZONTAL, p_buffers, "Stencil Buffer");
+	wxStaticBoxSizer* s_buffers_colorA  = new wxStaticBoxSizer(wxHORIZONTAL, p_buffers, "Color buffer A");
+	wxStaticBoxSizer* s_buffers_colorB  = new wxStaticBoxSizer(wxHORIZONTAL, p_buffers, "Color buffer B");
+	wxStaticBoxSizer* s_buffers_colorC  = new wxStaticBoxSizer(wxHORIZONTAL, p_buffers, "Color buffer C");
+	wxStaticBoxSizer* s_buffers_colorD  = new wxStaticBoxSizer(wxHORIZONTAL, p_buffers, "Color buffer D");
+	wxStaticBoxSizer* s_buffers_depth   = new wxStaticBoxSizer(wxHORIZONTAL, p_buffers, "Depth buffer");
+	wxStaticBoxSizer* s_buffers_stencil = new wxStaticBoxSizer(wxHORIZONTAL, p_buffers, "Stencil buffer");
 	wxStaticBoxSizer* s_buffers_text    = new wxStaticBoxSizer(wxHORIZONTAL, p_buffers, "Texture");
 	
 	//Buffers and textures
@@ -790,7 +790,7 @@ void RSXDebugger::GetFlags()
 	LIST_FLAGS_ADD("Stencil test",       render->m_set_stencil_test);
 	LIST_FLAGS_ADD("Primitive restart",  render->m_set_restart_index);
 	LIST_FLAGS_ADD("Two sided lighting", render->m_set_two_side_light_enable);
-	LIST_FLAGS_ADD("Point Sprite",	     render->m_set_point_sprite_control);
+	LIST_FLAGS_ADD("Point sprite",	     render->m_set_point_sprite_control);
 	LIST_FLAGS_ADD("Lighting ",	         render->m_set_specular);
 	*/
 
@@ -885,11 +885,11 @@ void RSXDebugger::GetSettings()
 		render->m_color_mask_g,
 		render->m_color_mask_b,
 		render->m_color_mask_a));
-	LIST_SETTINGS_ADD("Context DMA Color A", wxString::Format("0x%x", render->m_context_dma_color_a));
-	LIST_SETTINGS_ADD("Context DMA Color B", wxString::Format("0x%x", render->m_context_dma_color_b));
-	LIST_SETTINGS_ADD("Context DMA Color C", wxString::Format("0x%x", render->m_context_dma_color_c));
-	LIST_SETTINGS_ADD("Context DMA Color D", wxString::Format("0x%x", render->m_context_dma_color_d));
-	LIST_SETTINGS_ADD("Context DMA Zeta", wxString::Format("0x%x", render->m_context_dma_z));
+	LIST_SETTINGS_ADD("Context DMA color A", wxString::Format("0x%x", render->m_context_dma_color_a));
+	LIST_SETTINGS_ADD("Context DMA color B", wxString::Format("0x%x", render->m_context_dma_color_b));
+	LIST_SETTINGS_ADD("Context DMA color C", wxString::Format("0x%x", render->m_context_dma_color_c));
+	LIST_SETTINGS_ADD("Context DMA color D", wxString::Format("0x%x", render->m_context_dma_color_d));
+	LIST_SETTINGS_ADD("Context DMA zeta", wxString::Format("0x%x", render->m_context_dma_z));
 	LIST_SETTINGS_ADD("Depth bounds", wxString::Format("Min:%f, Max:%f", render->m_depth_bounds_min, render->m_depth_bounds_max));
 	LIST_SETTINGS_ADD("Depth func", !(render->m_set_depth_func) ? "(none)" : wxString::Format("0x%x (%s)",
 		render->m_depth_func,
@@ -905,16 +905,16 @@ void RSXDebugger::GetSettings()
 	LIST_SETTINGS_ADD("Stencil func", !(render->m_set_stencil_func) ? "(none)" : wxString::Format("0x%x (%s)",
 		render->m_stencil_func,
 		ParseGCMEnum(render->m_stencil_func, CELL_GCM_ENUM)));
-	LIST_SETTINGS_ADD("Surface Pitch A", wxString::Format("0x%x", render->m_surface_pitch_a));
-	LIST_SETTINGS_ADD("Surface Pitch B", wxString::Format("0x%x", render->m_surface_pitch_b));
-	LIST_SETTINGS_ADD("Surface Pitch C", wxString::Format("0x%x", render->m_surface_pitch_c));
-	LIST_SETTINGS_ADD("Surface Pitch D", wxString::Format("0x%x", render->m_surface_pitch_d));
-	LIST_SETTINGS_ADD("Surface Pitch Z", wxString::Format("0x%x", render->m_surface_pitch_z));
-	LIST_SETTINGS_ADD("Surface Offset A", wxString::Format("0x%x", render->m_surface_offset_a));
-	LIST_SETTINGS_ADD("Surface Offset B", wxString::Format("0x%x", render->m_surface_offset_b));
-	LIST_SETTINGS_ADD("Surface Offset C", wxString::Format("0x%x", render->m_surface_offset_c));
-	LIST_SETTINGS_ADD("Surface Offset D", wxString::Format("0x%x", render->m_surface_offset_d));
-	LIST_SETTINGS_ADD("Surface Offset Z", wxString::Format("0x%x", render->m_surface_offset_z));
+	LIST_SETTINGS_ADD("Surface pitch A", wxString::Format("0x%x", render->m_surface_pitch_a));
+	LIST_SETTINGS_ADD("Surface pitch B", wxString::Format("0x%x", render->m_surface_pitch_b));
+	LIST_SETTINGS_ADD("Surface pitch C", wxString::Format("0x%x", render->m_surface_pitch_c));
+	LIST_SETTINGS_ADD("Surface pitch D", wxString::Format("0x%x", render->m_surface_pitch_d));
+	LIST_SETTINGS_ADD("Surface pitch Z", wxString::Format("0x%x", render->m_surface_pitch_z));
+	LIST_SETTINGS_ADD("Surface offset A", wxString::Format("0x%x", render->m_surface_offset_a));
+	LIST_SETTINGS_ADD("Surface offset B", wxString::Format("0x%x", render->m_surface_offset_b));
+	LIST_SETTINGS_ADD("Surface offset C", wxString::Format("0x%x", render->m_surface_offset_c));
+	LIST_SETTINGS_ADD("Surface offset D", wxString::Format("0x%x", render->m_surface_offset_d));
+	LIST_SETTINGS_ADD("Surface offset Z", wxString::Format("0x%x", render->m_surface_offset_z));
 	LIST_SETTINGS_ADD("Viewport", wxString::Format("X:%d, Y:%d, W:%d, H:%d",
 		render->m_viewport_x,
 		render->m_viewport_y,
@@ -972,8 +972,8 @@ void RSXDebugger::SetPrograms(wxListEvent& event)
 	//	wxDEFAULT_DIALOG_STYLE | wxMINIMIZE_BOX | wxMAXIMIZE_BOX | wxRESIZE_BORDER);
 
 	//wxBoxSizer& s_panel = *new wxBoxSizer(wxHORIZONTAL);
-	//wxStaticBoxSizer& s_vp_box = *new wxStaticBoxSizer(wxHORIZONTAL, &d_editor, "Vertex Program");
-	//wxStaticBoxSizer& s_fp_box = *new wxStaticBoxSizer(wxHORIZONTAL, &d_editor, "Fragment Program");
+	//wxStaticBoxSizer& s_vp_box = *new wxStaticBoxSizer(wxHORIZONTAL, &d_editor, "Vertex program");
+	//wxStaticBoxSizer& s_fp_box = *new wxStaticBoxSizer(wxHORIZONTAL, &d_editor, "Fragment program");
 	//wxTextCtrl* t_vp_edit  = new wxTextCtrl(&d_editor, wxID_ANY, program.vp_shader, wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE);
 	//wxTextCtrl* t_fp_edit  = new wxTextCtrl(&d_editor, wxID_ANY, program.fp_shader, wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE);
 	//t_vp_edit->SetFont(wxFont(8, wxFONTFAMILY_MODERN, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL));
@@ -1017,10 +1017,10 @@ const char* RSXDebugger::ParseGCMEnum(u32 value, u32 type)
 		case 0x0200: return "Never";
 		case 0x0201: return "Less";
 		case 0x0202: return "Equal";
-		case 0x0203: return "Less or Equal";
+		case 0x0203: return "Less or equal";
 		case 0x0204: return "Greater";
-		case 0x0205: return "Not Equal";
-		case 0x0206: return "Greater or Equal";
+		case 0x0205: return "Not equal";
+		case 0x0206: return "Greater or equal";
 		case 0x0207: return "Always";
 
 		case 0x0:    return "Zero";
@@ -1043,12 +1043,12 @@ const char* RSXDebugger::ParseGCMEnum(u32 value, u32 type)
 		case 0x8007: return "Min";
 		case 0x8008: return "Max";
 		case 0x800A: return "Substract";
-		case 0x800B: return "Reverse Substract";
-		case 0xF005: return "Reverse Substract Signed";
-		case 0xF006: return "Add Signed";
-		case 0xF007: return "Reverse Add Signed";
+		case 0x800B: return "Reverse substract";
+		case 0xF005: return "Reverse substract signed";
+		case 0xF006: return "Add signed";
+		case 0xF007: return "Reverse add signed";
 
-		default: return "Wrong Value!";
+		default: return "Wrong value!";
 		}
 	}
 	case CELL_GCM_PRIMITIVE_ENUM:
@@ -1066,7 +1066,7 @@ const char* RSXDebugger::ParseGCMEnum(u32 value, u32 type)
 		case 9:  return "QUAD_STRIP";
 		case 10: return "POLYGON";
 
-		default: return "Wrong Value!"; 
+		default: return "Wrong value!"; 
 		}
 	}
 	default: return "Unknown!";
@@ -1136,7 +1136,7 @@ wxString RSXDebugger::DisAsmCommand(u32 cmd, u32 count, u32 currentAddr, u32 ioA
 		break;
 
 		case_16(NV4097_SET_TEXTURE_OFFSET, 0x20):
-			DISASM("Texture Offset[%d]: %08x", index, (u32)args[0]);
+			DISASM("Texture offset[%d]: %08x", index, (u32)args[0]);
 			switch ((args[1] & 0x3) - 1)
 			{
 			case CELL_GCM_LOCATION_LOCAL: DISASM("(Local memory);");  break;
@@ -1162,7 +1162,7 @@ wxString RSXDebugger::DisAsmCommand(u32 cmd, u32 count, u32 currentAddr, u32 ioA
 
 		if((cmd & RSX_METHOD_NON_INCREMENT_CMD_MASK) == RSX_METHOD_NON_INCREMENT_CMD)
 		{
-			DISASM("Non Increment cmd");
+			DISASM("Non increment cmd");
 		}
 
 		DISASM("[0x%08x(", cmd);

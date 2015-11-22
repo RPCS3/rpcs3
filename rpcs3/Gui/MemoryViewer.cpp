@@ -5,7 +5,7 @@
 #include "MemoryViewer.h"
 
 MemoryViewerPanel::MemoryViewerPanel(wxWindow* parent) 
-	: wxDialog(parent, wxID_ANY, "Memory Viewer", wxDefaultPosition, wxSize(700, 450))
+	: wxDialog(parent, wxID_ANY, "Memory viewer", wxDefaultPosition, wxSize(700, 450))
 {
 	exit = false;
 	m_addr = 0;
@@ -19,7 +19,7 @@ MemoryViewerPanel::MemoryViewerPanel(wxWindow* parent)
 	wxBoxSizer* s_tools = new wxBoxSizer(wxHORIZONTAL);
 
 	//Tools: Memory Viewer Options
-	wxStaticBoxSizer* s_tools_mem = new wxStaticBoxSizer(wxHORIZONTAL, this, "Memory Viewer Options");
+	wxStaticBoxSizer* s_tools_mem = new wxStaticBoxSizer(wxHORIZONTAL, this, "Memory viewer options");
 
 	wxStaticBoxSizer* s_tools_mem_addr = new wxStaticBoxSizer(wxHORIZONTAL, this, "Address");
 	t_addr = new wxTextCtrl(this, wxID_ANY, "00000000", wxDefaultPosition, wxSize(60, -1), wxTE_PROCESS_ENTER);
@@ -46,7 +46,7 @@ MemoryViewerPanel::MemoryViewerPanel(wxWindow* parent)
 	s_tools_mem->Add(s_tools_mem_buttons);
 
 	//Tools: Raw Image Preview Options
-	wxStaticBoxSizer* s_tools_img = new wxStaticBoxSizer(wxHORIZONTAL, this, "Raw Image Preview");
+	wxStaticBoxSizer* s_tools_img = new wxStaticBoxSizer(wxHORIZONTAL, this, "Raw image preview");
 
 	wxStaticBoxSizer* s_tools_img_size = new wxStaticBoxSizer(wxHORIZONTAL, this, "Size");
 	sc_img_size_x = new wxSpinCtrl(this, wxID_ANY, "256", wxDefaultPosition, wxSize(60, -1));
@@ -223,7 +223,7 @@ void MemoryViewerPanel::ShowMemory()
 
 void MemoryViewerPanel::ShowImage(wxWindow* parent, u32 addr, int mode, u32 width, u32 height, bool flipv)
 {
-	wxString title = wxString::Format("Raw Image @ 0x%x", addr);
+	wxString title = wxString::Format("Raw image @ 0x%x", addr);
 	
 	wxDialog* f_image_viewer = new wxDialog(parent, wxID_ANY,  title, wxDefaultPosition, wxDefaultSize, wxMINIMIZE_BOX | wxCLOSE_BOX | wxCAPTION | wxCLIP_CHILDREN);
 	f_image_viewer->SetBackgroundColour(wxColour(240,240,240)); //This fix the ugly background color under Windows

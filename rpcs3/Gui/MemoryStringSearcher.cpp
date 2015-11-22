@@ -6,7 +6,7 @@
 #include "MemoryStringSearcher.h"
 
 MemoryStringSearcher::MemoryStringSearcher(wxWindow* parent)
-	: wxDialog(parent, wxID_ANY, "String Searcher", wxDefaultPosition, wxSize(545, 64))
+	: wxDialog(parent, wxID_ANY, "String searcher", wxDefaultPosition, wxSize(545, 64))
 	, exit(false)
 {
 	this->SetBackgroundColour(wxColour(240,240,240));
