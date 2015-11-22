@@ -49,7 +49,7 @@ enum class ppu_decoder_type
 	llvm,
 };
 
-cfg::map_entry<ppu_decoder_type> g_cfg_ppu_decoder(cfg::root.core, "PPU Decoder", 1,
+cfg::map_entry<ppu_decoder_type> g_cfg_ppu_decoder(cfg::root.core, "PPU decoder", 1,
 {
 	{ "Interpreter (precise)", ppu_decoder_type::precise },
 	{ "Interpreter (fast)", ppu_decoder_type::fast },

@@ -3,8 +3,8 @@
 #include "Emu/System.h"
 #include "AutoPause.h"
 
-cfg::bool_entry g_cfg_debug_autopause_syscall(cfg::root.misc, "Auto Pause at System Call");
-cfg::bool_entry g_cfg_debug_autopause_func_call(cfg::root.misc, "Auto Pause at Function Call");
+cfg::bool_entry g_cfg_debug_autopause_syscall(cfg::root.misc, "Automatically pause at system call");
+cfg::bool_entry g_cfg_debug_autopause_func_call(cfg::root.misc, "Automatically pause at function call");
 
 debug::autopause& debug::autopause::get_instance()
 {

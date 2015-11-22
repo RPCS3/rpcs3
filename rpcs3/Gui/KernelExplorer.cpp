@@ -23,7 +23,7 @@
 #include "KernelExplorer.h"
 
 KernelExplorer::KernelExplorer(wxWindow* parent) 
-	: wxDialog(parent, wxID_ANY, "Kernel Explorer", wxDefaultPosition, wxSize(700, 450))
+	: wxDialog(parent, wxID_ANY, "Kernel explorer", wxDefaultPosition, wxSize(700, 450))
 {
 	this->SetBackgroundColour(wxColour(240,240,240)); //This fix the ugly background color under Windows
 	wxBoxSizer* s_panel = new wxBoxSizer(wxVERTICAL);
@@ -59,7 +59,7 @@ void KernelExplorer::Update()
 	m_tree->DeleteAllItems();
 	const u32 total_memory_usage = vm::get(vm::user_space)->used();
 
-	const auto& root = m_tree->AddRoot(fmt::format("Process, ID = 0x00000001, Total Memory Usage = 0x%x (%0.2f MB)", total_memory_usage, (float)total_memory_usage / (1024 * 1024)));
+	const auto& root = m_tree->AddRoot(fmt::format("Process, ID = 0x00000001, Total memory usage = 0x%x (%0.2f MB)", total_memory_usage, (float)total_memory_usage / (1024 * 1024)));
 
 	union name64
 	{
@@ -86,7 +86,7 @@ void KernelExplorer::Update()
 
 		idm::select<lv2_sema_t>([&](u32 id, lv2_sema_t& sema)
 		{
-			m_tree->AppendItem(node, fmt::format("Semaphore: ID = 0x%08x '%s', Count = %d, Max Count = %d, Waiters = %#zu", id,
+			m_tree->AppendItem(node, fmt::format("Semaphore: ID = 0x%08x '%s', Count = %d, Max count = %d, Waiters = %#zu", id,
 				&name64(sema.name), sema.value.load(), sema.max, sema.sq.size()));
 		});
 	}
@@ -106,7 +106,7 @@ void KernelExplorer::Update()
 	// Lightweight Mutexes
 	if (const u32 count = idm::get_count<lv2_lwmutex_t>())
 	{
-		const auto& node = m_tree->AppendItem(root, fmt::format("Lightweight Mutexes (%zu)", count));
+		const auto& node = m_tree->AppendItem(root, fmt::format("Lightweight mutexes (%zu)", count));
 
 		idm::select<lv2_lwmutex_t>([&](u32 id, lv2_lwmutex_t& lwm)
 		{
@@ -118,7 +118,7 @@ void KernelExplorer::Update()
 	// Condition Variables
 	if (const u32 count = idm::get_count<lv2_cond_t>())
 	{
-		const auto& node = m_tree->AppendItem(root, fmt::format("Condition Variables (%zu)", count));
+		const auto& node = m_tree->AppendItem(root, fmt::format("Condition variables (%zu)", count));
 
 		idm::select<lv2_cond_t>([&](u32 id, lv2_cond_t& cond)
 		{
@@ -130,7 +130,7 @@ void KernelExplorer::Update()
 	// Lightweight Condition Variables
 	if (const u32 count = idm::get_count<lv2_lwcond_t>())
 	{
-		const auto& node = m_tree->AppendItem(root, fmt::format("Lightweight Condition Variables (%zu)", count));
+		const auto& node = m_tree->AppendItem(root, fmt::format("Lightweight condition variables (%zu)", count));
 
 		idm::select<lv2_lwcond_t>([&](u32 id, lv2_lwcond_t& lwc)
 		{
@@ -146,7 +146,7 @@ void KernelExplorer::Update()
 
 		idm::select<lv2_event_queue_t>([&](u32 id, lv2_event_queue_t& eq)
 		{
-			m_tree->AppendItem(node, fmt::format("Event Queue: ID = 0x%08x '%s', %s, Key = %#llx, Events = %zu/%d, Waiters = %zu", id,
+			m_tree->AppendItem(node, fmt::format("Event queue: ID = 0x%08x '%s', %s, Key = %#llx, Events = %zu/%d, Waiters = %zu", id,
 				&name64(eq.name), eq.type == SYS_SPU_QUEUE ? "SPU" : "PPU", eq.ipc_key, eq.events(), eq.size, eq.waiters()));
 		});
 	}
@@ -154,7 +154,7 @@ void KernelExplorer::Update()
 	// Event Ports
 	if (const u32 count = idm::get_count<lv2_event_port_t>())
 	{
-		const auto& node = m_tree->AppendItem(root, fmt::format("Event Ports (%zu)", count));
+		const auto& node = m_tree->AppendItem(root, fmt::format("Event ports (%zu)", count));
 
 		idm::select<lv2_event_port_t>([&](u32 id, lv2_event_port_t& ep)
 		{
@@ -166,11 +166,11 @@ void KernelExplorer::Update()
 	// Event Flags
 	if (const u32 count = idm::get_count<lv2_event_flag_t>())
 	{
-		const auto& node = m_tree->AppendItem(root, fmt::format("Event Flags (%zu)", count));
+		const auto& node = m_tree->AppendItem(root, fmt::format("Event flags (%zu)", count));
 
 		idm::select<lv2_event_flag_t>([&](u32 id, lv2_event_flag_t& ef)
 		{
-			m_tree->AppendItem(node, fmt::format("Event Flag: ID = 0x%08x '%s', Type = 0x%x, Pattern = 0x%llx", id,
+			m_tree->AppendItem(node, fmt::format("Event flag: ID = 0x%08x '%s', Type = 0x%x, Pattern = 0x%llx", id,
 				&name64(ef.name), ef.type, ef.pattern.load()));
 		});
 	}
@@ -178,7 +178,7 @@ void KernelExplorer::Update()
 	// Reader/writer Locks
 	if (const u32 count = idm::get_count<lv2_rwlock_t>())
 	{
-		const auto& node = m_tree->AppendItem(root, fmt::format("Reader/writer Locks (%zu)", count));
+		const auto& node = m_tree->AppendItem(root, fmt::format("Reader/writer locks (%zu)", count));
 
 		idm::select<lv2_rwlock_t>([&](u32 id, lv2_rwlock_t&)
 		{
@@ -189,7 +189,7 @@ void KernelExplorer::Update()
 	// PRX Libraries
 	if (const u32 count = idm::get_count<lv2_prx_t>())
 	{
-		const auto& node = m_tree->AppendItem(root, fmt::format("PRX Libraries (%zu)", count));
+		const auto& node = m_tree->AppendItem(root, fmt::format("PRX libraries (%zu)", count));
 
 		idm::select<lv2_prx_t>([&](u32 id, lv2_prx_t&)
 		{
@@ -200,22 +200,22 @@ void KernelExplorer::Update()
 	// Memory Containers
 	if (const u32 count = idm::get_count<lv2_memory_container>())
 	{
-		const auto& node = m_tree->AppendItem(root, fmt::format("Memory Containers (%zu)", count));
+		const auto& node = m_tree->AppendItem(root, fmt::format("Memory containers (%zu)", count));
 
 		idm::select<lv2_memory_container>([&](u32 id, lv2_memory_container&)
 		{
-			m_tree->AppendItem(node, fmt::format("Memory Container: ID = 0x%08x", id));
+			m_tree->AppendItem(node, fmt::format("Memory container: ID = 0x%08x", id));
 		});
 	}
 
 	// Memory Objects
 	if (const u32 count = idm::get_count<lv2_memory>())
 	{
-		const auto& node = m_tree->AppendItem(root, fmt::format("Memory Objects (%zu)", count));
+		const auto& node = m_tree->AppendItem(root, fmt::format("Memory objects (%zu)", count));
 
 		idm::select<lv2_memory>([&](u32 id, lv2_memory&)
 		{
-			m_tree->AppendItem(node, fmt::format("Memory Object: ID = 0x%08x", id));
+			m_tree->AppendItem(node, fmt::format("Memory object: ID = 0x%08x", id));
 		});
 	}
 
@@ -233,11 +233,11 @@ void KernelExplorer::Update()
 	// SPU Thread Groups
 	if (const u32 count = idm::get_count<lv2_spu_group_t>())
 	{
-		const auto& node = m_tree->AppendItem(root, fmt::format("SPU Thread Groups (%d)", count));
+		const auto& node = m_tree->AppendItem(root, fmt::format("SPU Thread groups (%d)", count));
 
 		idm::select<lv2_spu_group_t>([&](u32 id, lv2_spu_group_t& tg)
 		{
-			m_tree->AppendItem(node, fmt::format("SPU Thread Group: ID = 0x%08x '%s'", id,
+			m_tree->AppendItem(node, fmt::format("SPU Thread group: ID = 0x%08x '%s'", id,
 				tg.name.c_str()));
 		});
 	}
