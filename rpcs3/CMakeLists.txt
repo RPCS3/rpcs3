@@ -13,7 +13,7 @@ add_custom_command(OUTPUT something_that_never_exists
 		-P ${CMAKE_CURRENT_SOURCE_DIR}/git-version.cmake)
 
 if(CMAKE_COMPILER_IS_GNUCXX)
-	if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.7.0)
+	if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.9.0) # TODO: the same for (apple) clang
 		message(FATAL_ERROR "GCC ${CMAKE_CXX_COMPILER_VERSION} is too old.")
 	endif()
 	# Warnings
