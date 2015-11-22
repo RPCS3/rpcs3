@@ -134,24 +134,24 @@ SettingsDialog::SettingsDialog(wxWindow *parent, rpcs3::config_t* cfg)
 	wxStaticBoxSizer* s_round_llvm_threshold = new wxStaticBoxSizer(wxHORIZONTAL, p_core, _("Compilation threshold"));
 
 	// Graphics
-	wxStaticBoxSizer* s_round_gs_render = new wxStaticBoxSizer(wxVERTICAL, p_graphics, _("Render"));
-	wxStaticBoxSizer* s_round_gs_d3d_adaptater = new wxStaticBoxSizer(wxVERTICAL, p_graphics, _("D3D Adaptater"));
+	wxStaticBoxSizer* s_round_gs_render = new wxStaticBoxSizer(wxVERTICAL, p_graphics, _("Rendering API"));
+	wxStaticBoxSizer* s_round_gs_d3d_adaptater = new wxStaticBoxSizer(wxVERTICAL, p_graphics, _("D3D Adapter"));
 	wxStaticBoxSizer* s_round_gs_res = new wxStaticBoxSizer(wxVERTICAL, p_graphics, _("Resolution"));
 	wxStaticBoxSizer* s_round_gs_aspect = new wxStaticBoxSizer(wxVERTICAL, p_graphics, _("Aspect ratio"));
 	wxStaticBoxSizer* s_round_gs_frame_limit = new wxStaticBoxSizer(wxVERTICAL, p_graphics, _("Frame limit"));
 
 	// Input / Output
-	wxStaticBoxSizer* s_round_io_pad_handler = new wxStaticBoxSizer(wxVERTICAL, p_io, _("Pad Handler"));
-	wxStaticBoxSizer* s_round_io_keyboard_handler = new wxStaticBoxSizer(wxVERTICAL, p_io, _("Keyboard Handler"));
-	wxStaticBoxSizer* s_round_io_mouse_handler = new wxStaticBoxSizer(wxVERTICAL, p_io, _("Mouse Handler"));
+	wxStaticBoxSizer* s_round_io_pad_handler = new wxStaticBoxSizer(wxVERTICAL, p_io, _("Controller handler"));
+	wxStaticBoxSizer* s_round_io_keyboard_handler = new wxStaticBoxSizer(wxVERTICAL, p_io, _("Keyboard handler"));
+	wxStaticBoxSizer* s_round_io_mouse_handler = new wxStaticBoxSizer(wxVERTICAL, p_io, _("Mouse handler"));
 	wxStaticBoxSizer* s_round_io_camera = new wxStaticBoxSizer(wxVERTICAL, p_io, _("Camera"));
 	wxStaticBoxSizer* s_round_io_camera_type = new wxStaticBoxSizer(wxVERTICAL, p_io, _("Camera type"));
 
 	// Audio
-	wxStaticBoxSizer* s_round_audio_out = new wxStaticBoxSizer(wxVERTICAL, p_audio, _("Audio Out"));
+	wxStaticBoxSizer* s_round_audio_out = new wxStaticBoxSizer(wxVERTICAL, p_audio, _("Audio out"));
 
 	// Miscellaneous
-	wxStaticBoxSizer* s_round_hle_log_lvl = new wxStaticBoxSizer(wxVERTICAL, p_misc, _("Log Level"));
+	wxStaticBoxSizer* s_round_hle_log_lvl = new wxStaticBoxSizer(wxVERTICAL, p_misc, _("Log level"));
 
 	// Networking
 	wxStaticBoxSizer* s_round_net_status = new wxStaticBoxSizer(wxVERTICAL, p_networking, _("Connection status"));
@@ -183,17 +183,17 @@ SettingsDialog::SettingsDialog(wxWindow *parent, rpcs3::config_t* cfg)
 	wxCheckBox* chbox_core_hook_stfunc = new wxCheckBox(p_core, wxID_ANY, "Hook static functions");
 	wxCheckBox* chbox_core_load_liblv2 = new wxCheckBox(p_core, wxID_ANY, "Load liblv2.sprx");
 	wxCheckBox* chbox_gs_log_prog = new wxCheckBox(p_graphics, wxID_ANY, "Log shader programs");
-	wxCheckBox* chbox_gs_dump_depth = new wxCheckBox(p_graphics, wxID_ANY, "Write Depth Buffer");
-	wxCheckBox* chbox_gs_dump_color = new wxCheckBox(p_graphics, wxID_ANY, "Write Color Buffers");
-	wxCheckBox* chbox_gs_read_color = new wxCheckBox(p_graphics, wxID_ANY, "Read Color Buffers");
-	wxCheckBox* chbox_gs_read_depth = new wxCheckBox(p_graphics, wxID_ANY, "Read Depth Buffer");
+	wxCheckBox* chbox_gs_dump_depth = new wxCheckBox(p_graphics, wxID_ANY, "Write depth buffer");
+	wxCheckBox* chbox_gs_dump_color = new wxCheckBox(p_graphics, wxID_ANY, "Write color buffers");
+	wxCheckBox* chbox_gs_read_color = new wxCheckBox(p_graphics, wxID_ANY, "Read color buffers");
+	wxCheckBox* chbox_gs_read_depth = new wxCheckBox(p_graphics, wxID_ANY, "Read depth buffer");
 	wxCheckBox* chbox_gs_vsync = new wxCheckBox(p_graphics, wxID_ANY, "VSync");
-	wxCheckBox* chbox_gs_debug_output = new wxCheckBox(p_graphics, wxID_ANY, "Debug Output");
-	wxCheckBox* chbox_gs_3dmonitor = new wxCheckBox(p_graphics, wxID_ANY, "3D Monitor");
+	wxCheckBox* chbox_gs_debug_output = new wxCheckBox(p_graphics, wxID_ANY, "Debug output");
+	wxCheckBox* chbox_gs_3dmonitor = new wxCheckBox(p_graphics, wxID_ANY, "3D monitor");
 	wxCheckBox* chbox_gs_overlay = new wxCheckBox(p_graphics, wxID_ANY, "Debug overlay");
 	wxCheckBox* chbox_audio_dump = new wxCheckBox(p_audio, wxID_ANY, "Dump to file");
-	wxCheckBox* chbox_audio_conv = new wxCheckBox(p_audio, wxID_ANY, "Convert to 16 bit");
-	wxCheckBox* chbox_rsx_logging = new wxCheckBox(p_misc, wxID_ANY, "RSX Logging");
+	wxCheckBox* chbox_audio_conv = new wxCheckBox(p_audio, wxID_ANY, "Convert to 16-bit");
+	wxCheckBox* chbox_rsx_logging = new wxCheckBox(p_misc, wxID_ANY, "RSX logging");
 	wxCheckBox* chbox_hle_exitonstop = new wxCheckBox(p_misc, wxID_ANY, "Exit RPCS3 when process finishes");
 	wxCheckBox* chbox_hle_always_start = new wxCheckBox(p_misc, wxID_ANY, "Always start after boot");
 	wxCheckBox* chbox_hle_use_default_ini = new wxCheckBox(p_misc, wxID_ANY, "Use default configuration");
@@ -203,8 +203,8 @@ SettingsDialog::SettingsDialog(wxWindow *parent, rpcs3::config_t* cfg)
 	wxTextCtrl* txt_llvm_threshold = new wxTextCtrl(p_core, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(55, 20));
 
 	//Auto Pause
-	wxCheckBox* chbox_dbg_ap_systemcall = new wxCheckBox(p_misc, wxID_ANY, "Auto Pause at System Call");
-	wxCheckBox* chbox_dbg_ap_functioncall = new wxCheckBox(p_misc, wxID_ANY, "Auto Pause at Function Call");
+	wxCheckBox* chbox_dbg_ap_systemcall = new wxCheckBox(p_misc, wxID_ANY, "Automatically pause at system call");
+	wxCheckBox* chbox_dbg_ap_functioncall = new wxCheckBox(p_misc, wxID_ANY, "Automatically pause at function call");
 
 	//Custom EmulationDir
 	wxCheckBox* chbox_emulationdir_enable = new wxCheckBox(p_system, wxID_ANY, "Use path below as EmulationDir. (Restart required)");
@@ -215,7 +215,7 @@ SettingsDialog::SettingsDialog(wxWindow *parent, rpcs3::config_t* cfg)
 	ppu_decoder_modes.Add("Interpreter");
 	ppu_decoder_modes.Add("Interpreter 2");
 	ppu_decoder_modes.Add("Recompiler (LLVM)");
-	rbox_ppu_decoder = new wxRadioBox(p_core, wxID_ANY, "PPU Decoder", wxDefaultPosition, wxSize(215, -1), ppu_decoder_modes, 1);
+	rbox_ppu_decoder = new wxRadioBox(p_core, wxID_ANY, "PPU decoder", wxDefaultPosition, wxSize(215, -1), ppu_decoder_modes, 1);
 
 #if !defined(LLVM_AVAILABLE)
 	rbox_ppu_decoder->Enable(2, false);
@@ -225,7 +225,7 @@ SettingsDialog::SettingsDialog(wxWindow *parent, rpcs3::config_t* cfg)
 	spu_decoder_modes.Add("Interpreter (precise)");
 	spu_decoder_modes.Add("Interpreter (fast)");
 	spu_decoder_modes.Add("Recompiler (ASMJIT)");
-	rbox_spu_decoder = new wxRadioBox(p_core, wxID_ANY, "SPU Decoder", wxDefaultPosition, wxSize(215, -1), spu_decoder_modes, 1);
+	rbox_spu_decoder = new wxRadioBox(p_core, wxID_ANY, "SPU decoder", wxDefaultPosition, wxSize(215, -1), spu_decoder_modes, 1);
 
 	cbox_gs_render->Append("Null");
 	cbox_gs_render->Append("OpenGL");
@@ -262,7 +262,7 @@ SettingsDialog::SettingsDialog(wxWindow *parent, rpcs3::config_t* cfg)
 	cbox_gs_aspect->Append("4:3");
 	cbox_gs_aspect->Append("16:9");
 
-	for (auto item : { "Off", "50", "59.94", "30", "60", "Auto" })
+	for (auto item : { "Off", "30", "50", "59.94", "60", "Auto" })
 		cbox_gs_frame_limit->Append(item);
 
 	cbox_pad_handler->Append("Null");
