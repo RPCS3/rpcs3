@@ -661,9 +661,9 @@ namespace rsx
 		double limit;
 		switch (rpcs3::state.config.rsx.frame_limit.value())
 		{
+		case rsx_frame_limit::_30: limit = 30.; break;
 		case rsx_frame_limit::_50: limit = 50.; break;
 		case rsx_frame_limit::_59_94: limit = 59.94; break;
-		case rsx_frame_limit::_30: limit = 30.; break;
 		case rsx_frame_limit::_60: limit = 60.; break;
 		case rsx_frame_limit::Auto: limit = rsx->fps_limit; break; //TODO
 

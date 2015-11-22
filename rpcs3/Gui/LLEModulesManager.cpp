@@ -9,7 +9,7 @@
 #include "Emu/FS/VFS.h"
 
 LLEModulesManagerFrame::LLEModulesManagerFrame(wxWindow* parent)
-	: wxDialog(parent, wxID_ANY, "LLEModulesManagerFrame", wxDefaultPosition, wxSize(480, 640))
+	: wxDialog(parent, wxID_ANY, "Modules LLE manager", wxDefaultPosition, wxSize(480, 640))
 {
 	wxBoxSizer *s_panel = new wxBoxSizer(wxVERTICAL);
 	wxBoxSizer *s_p_panel = new wxBoxSizer(wxVERTICAL);
@@ -18,8 +18,8 @@ LLEModulesManagerFrame::LLEModulesManagerFrame(wxWindow* parent)
 
 	// select / unselect
 	wxStaticBoxSizer* s_selection = new wxStaticBoxSizer(wxHORIZONTAL, p_main);
-	wxButton* b_select = new wxButton(p_main, wxID_ANY, "Select All", wxDefaultPosition, wxSize(80, -1));
-	wxButton* b_unselect = new wxButton(p_main, wxID_ANY, "Unselect All", wxDefaultPosition, wxSize(80, -1));
+	wxButton* b_select = new wxButton(p_main, wxID_ANY, "Select all", wxDefaultPosition, wxSize(80, -1));
+	wxButton* b_unselect = new wxButton(p_main, wxID_ANY, "Unselect all", wxDefaultPosition, wxSize(80, -1));
 	s_selection->Add(b_select);
 	s_selection->Add(b_unselect);
 

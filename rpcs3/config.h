@@ -62,9 +62,9 @@ enum class rsx_aspect_ratio
 enum class rsx_frame_limit
 {
 	Off,
+	_30,
 	_50,
 	_59_94,
-	_30,
 	_60,
 	Auto
 };
@@ -155,9 +155,9 @@ namespace convert
 			switch (value)
 			{
 			case rsx_frame_limit::Off: return "Off";
+			case rsx_frame_limit::_30: return "30";
 			case rsx_frame_limit::_50: return "50";
 			case rsx_frame_limit::_59_94: return "59.94";
-			case rsx_frame_limit::_30: return "30";
 			case rsx_frame_limit::_60: return "60";
 			case rsx_frame_limit::Auto: return "Auto";
 			}
@@ -174,14 +174,14 @@ namespace convert
 			if (value == "Off")
 				return rsx_frame_limit::Off;
 
+			if (value == "30")
+				return rsx_frame_limit::_30;
+
 			if (value == "50")
 				return rsx_frame_limit::_50;
 
 			if (value == "59.94")
 				return rsx_frame_limit::_59_94;
-
-			if (value == "30")
-				return rsx_frame_limit::_30;
 
 			if (value == "60")
 				return rsx_frame_limit::_60;
@@ -836,8 +836,8 @@ namespace rpcs3
 
 			} llvm{ this };
 
-			entry<ppu_decoder_type> ppu_decoder { this, "PPU Decoder",               ppu_decoder_type::interpreter };
-			entry<spu_decoder_type> spu_decoder { this, "SPU Decoder",               spu_decoder_type::interpreter_precise };
+			entry<ppu_decoder_type> ppu_decoder { this, "PPU decoder",               ppu_decoder_type::interpreter };
+			entry<spu_decoder_type> spu_decoder { this, "SPU decoder",               spu_decoder_type::interpreter_precise };
 			entry<bool> hook_st_func            { this, "Hook static functions",     false };
 			entry<bool> load_liblv2             { this, "Load liblv2.sprx",          false };
 
@@ -849,30 +849,30 @@ namespace rpcs3
 			{
 				opengl_group(group *grp) : group{ grp, "opengl" } {}
 
-				entry<bool> write_color_buffers { this, "Write Color Buffers", true };
-				entry<bool> write_depth_buffer  { this, "Write Depth Buffer",  true };
-				entry<bool> read_color_buffers  { this, "Read Color Buffers",  true };
-				entry<bool> read_depth_buffer   { this, "Read Depth Buffer",   true };
+				entry<bool> write_color_buffers { this, "Write color buffers", true };
+				entry<bool> write_depth_buffer  { this, "Write depth buffer",  true };
+				entry<bool> read_color_buffers  { this, "Read color buffers",  true };
+				entry<bool> read_depth_buffer   { this, "Read depth buffer",   true };
 			} opengl{ this };
 
 			struct d3d12_group : protected group
 			{
 				d3d12_group(group *grp) : group{ grp, "d3d12" } {}
 				
-				entry<u32>  adaptater           { this, "D3D Adaptater",       1 };
-				entry<bool> debug_output        { this, "Debug Output",        false };
+				entry<u32>  adaptater           { this, "D3D adapter",         0 };
+				entry<bool> debug_output        { this, "Debug output",        false };
 				entry<bool> overlay             { this, "Debug overlay",       false };
 			} d3d12{ this };
 
 			rsx_group(config_context_t *cfg) : group{ cfg, "rsx" } {}
 
-			entry<rsx_renderer_type> renderer   { this, "Renderer",            rsx_renderer_type::OpenGL };
+			entry<rsx_renderer_type> renderer   { this, "Rendering API",       rsx_renderer_type::OpenGL };
 			entry<rsx_resolution> resolution    { this, "Resolution",          rsx_resolution::_720x480 };
 			entry<rsx_aspect_ratio> aspect_ratio{ this, "Aspect ratio",        rsx_aspect_ratio::_16x9 };
 			entry<rsx_frame_limit> frame_limit  { this, "Frame limit",         rsx_frame_limit::Off };
 			entry<bool> log_programs            { this, "Log shader programs", false };
 			entry<bool> vsync                   { this, "VSync",               false };
-			entry<bool> _3dtv                   { this, "3D Monitor",          false };
+			entry<bool> _3dtv                   { this, "3D monitor",          false };
 
 		} rsx{ this };
 
@@ -880,33 +880,33 @@ namespace rpcs3
 		{
 			audio_group(config_context_t *cfg) : group{ cfg, "audio" } {}
 
-			entry<audio_output_type> out{ this, "Audio Out",         audio_output_type::OpenAL };
+			entry<audio_output_type> out{ this, "Audio out",         audio_output_type::OpenAL };
 			entry<bool> dump_to_file    { this, "Dump to file",      false };
-			entry<bool> convert_to_u16  { this, "Convert to 16 bit", false };
+			entry<bool> convert_to_u16  { this, "Convert to 16-bit", false };
 		} audio{ this };
 
 		struct io_group : protected group
 		{
 			io_group(config_context_t *cfg) : group{ cfg, "io" } {}
 
-			entry<io_camera_state> camera               { this, "Camera",           io_camera_state::connected };
-			entry<io_camera_type> camera_type           { this, "Camera type",      io_camera_type::play_station_eye };
-			entry<io_handler_mode> pad_handler_mode     { this, "Pad Handler",      io_handler_mode::windows };
-			entry<io_handler_mode> keyboard_handler_mode{ this, "Keyboard Handler", io_handler_mode::null };
-			entry<io_handler_mode> mouse_handler_mode   { this, "Mouse Handler",    io_handler_mode::null };
+			entry<io_camera_state> camera               { this, "Camera",              io_camera_state::connected };
+			entry<io_camera_type> camera_type           { this, "Camera type",         io_camera_type::play_station_eye };
+			entry<io_handler_mode> pad_handler_mode     { this, "Controller handler",  io_handler_mode::windows };
+			entry<io_handler_mode> keyboard_handler_mode{ this, "Keyboard handler",    io_handler_mode::null };
+			entry<io_handler_mode> mouse_handler_mode   { this, "Mouse handler",       io_handler_mode::null };
 
 			struct pad_group : protected group
 			{
 				pad_group(group *grp) : group{ grp, "pad" } {}
 
-				entry<int> left_stick_left  { this, "Left Analog Stick Left",     314 };
-				entry<int> left_stick_down  { this, "Left Analog Stick Down",     317 };
-				entry<int> left_stick_right { this, "Left Analog Stick Right",    316 };
-				entry<int> left_stick_up    { this, "Left Analog Stick Up",       315 };
-				entry<int> right_stick_left { this, "Right Analog Stick Left",    313 };
-				entry<int> right_stick_down { this, "Right Analog Stick Down",    367 };
-				entry<int> right_stick_right{ this, "Right Analog Stick Right",   312 };
-				entry<int> right_stick_up   { this, "Right Analog Stick Up",      366 };
+				entry<int> left_stick_left  { this, "Left analog stick Left",     314 };
+				entry<int> left_stick_down  { this, "Left analog stick Down",     317 };
+				entry<int> left_stick_right { this, "Left analog stick Right",    316 };
+				entry<int> left_stick_up    { this, "Left analog stick Up",       315 };
+				entry<int> right_stick_left { this, "Right analog stick Left",    313 };
+				entry<int> right_stick_down { this, "Right analog stick Down",    367 };
+				entry<int> right_stick_right{ this, "Right analog stick Right",   312 };
+				entry<int> right_stick_up   { this, "Right analog stick Up",      366 };
 				entry<int> start            { this, "Start",                       13 };
 				entry<int> select           { this, "Select",                      32 };
 				entry<int> square           { this, "Square",   static_cast<int>('J') };
@@ -935,8 +935,8 @@ namespace rpcs3
 			{
 				log_group(group *grp) : group{ grp, "log" } {}
 
-				entry<_log::level> level     { this, "Log Level",               _log::level::success };
-				entry<bool> rsx_logging      { this, "RSX Logging",             false };
+				entry<_log::level> level     { this, "Log level",               _log::level::success };
+				entry<bool> rsx_logging      { this, "RSX logging",             false };
 			} log{ this };
 
 			struct net_group : protected group
@@ -951,8 +951,8 @@ namespace rpcs3
 			{
 				debug_group(group *grp) : group{ grp, "debug" } {}
 
-				entry<bool> auto_pause_syscall   { this, "Auto Pause at System Call",        false };
-				entry<bool> auto_pause_func_call { this, "Auto Pause at Function Call",      false };
+				entry<bool> auto_pause_syscall   { this, "Automatically pause at system call",        false };
+				entry<bool> auto_pause_func_call { this, "Automatically pause at function call",      false };
 			} debug{ this };
 
 			entry<bool> exit_on_stop             { this, "Exit RPCS3 when process finishes", false };

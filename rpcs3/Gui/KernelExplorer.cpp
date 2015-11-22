@@ -23,7 +23,7 @@
 #include "KernelExplorer.h"
 
 KernelExplorer::KernelExplorer(wxWindow* parent) 
-	: wxDialog(parent, wxID_ANY, "Kernel Explorer", wxDefaultPosition, wxSize(700, 450))
+	: wxDialog(parent, wxID_ANY, "Kernel explorer", wxDefaultPosition, wxSize(700, 450))
 {
 	this->SetBackgroundColour(wxColour(240,240,240)); //This fix the ugly background color under Windows
 	wxBoxSizer* s_panel = new wxBoxSizer(wxVERTICAL);
@@ -59,7 +59,7 @@ void KernelExplorer::Update()
 	m_tree->DeleteAllItems();
 	const u32 total_memory_usage = vm::get(vm::user_space)->used.load();
 
-	const auto& root = m_tree->AddRoot(fmt::format("Process, ID = 0x00000001, Total Memory Usage = 0x%x (%0.2f MB)", total_memory_usage, (float)total_memory_usage / (1024 * 1024)));
+	const auto& root = m_tree->AddRoot(fmt::format("Process, ID = 0x00000001, Total memory usage = 0x%x (%0.2f MB)", total_memory_usage, (float)total_memory_usage / (1024 * 1024)));
 
 	union name64
 	{
@@ -116,7 +116,7 @@ void KernelExplorer::Update()
 
 	if (lwm_map.size())
 	{
-		const auto& node = m_tree->AppendItem(root, fmt::format("Lightweight Mutexes (%zu)", lwm_map.size()));
+		const auto& node = m_tree->AppendItem(root, fmt::format("Lightweight mutexes (%zu)", lwm_map.size()));
 
 		for (const auto& data : lwm_map)
 		{
@@ -132,7 +132,7 @@ void KernelExplorer::Update()
 
 	if (cond_map.size())
 	{
-		const auto& node = m_tree->AppendItem(root, fmt::format("Condition Variables (%zu)", cond_map.size()));
+		const auto& node = m_tree->AppendItem(root, fmt::format("Condition variables (%zu)", cond_map.size()));
 
 		for (const auto& data : cond_map)
 		{
@@ -148,7 +148,7 @@ void KernelExplorer::Update()
 
 	if (lwc_map.size())
 	{
-		const auto& node = m_tree->AppendItem(root, fmt::format("Lightweight Condition Variables (%zu)", lwc_map.size()));
+		const auto& node = m_tree->AppendItem(root, fmt::format("Lightweight condition variables (%zu)", lwc_map.size()));
 
 		for (const auto& data : lwc_map)
 		{
@@ -164,7 +164,7 @@ void KernelExplorer::Update()
 
 	if (eq_map.size())
 	{
-		const auto& node = m_tree->AppendItem(root, fmt::format("Event Queues (%zu)", eq_map.size()));
+		const auto& node = m_tree->AppendItem(root, fmt::format("Event queues (%zu)", eq_map.size()));
 
 		for (const auto& data : eq_map)
 		{
@@ -180,13 +180,13 @@ void KernelExplorer::Update()
 
 	if (ep_map.size())
 	{
-		const auto& node = m_tree->AppendItem(root, fmt::format("Event Ports (%zu)", ep_map.size()));
+		const auto& node = m_tree->AppendItem(root, fmt::format("Event ports (%zu)", ep_map.size()));
 
 		for (const auto& data : ep_map)
 		{
 			const auto& ep = *data.second;
 
-			m_tree->AppendItem(node, fmt::format("Event Port: ID = 0x%08x, Name = %#llx", data.first,
+			m_tree->AppendItem(node, fmt::format("Event port: ID = 0x%08x, Name = %#llx", data.first,
 				ep.name));
 		}
 	}
@@ -196,13 +196,13 @@ void KernelExplorer::Update()
 
 	if (ef_map.size())
 	{
-		const auto& node = m_tree->AppendItem(root, fmt::format("Event Flags (%zu)", ef_map.size()));
+		const auto& node = m_tree->AppendItem(root, fmt::format("Event flags (%zu)", ef_map.size()));
 
 		for (const auto& data : ef_map)
 		{
 			const auto& ef = *data.second;
 
-			m_tree->AppendItem(node, fmt::format("Event Flag: ID = 0x%08x", data.first));
+			m_tree->AppendItem(node, fmt::format("Event flag: ID = 0x%08x", data.first));
 		}
 	}
 
@@ -211,7 +211,7 @@ void KernelExplorer::Update()
 
 	if (rwlock_map.size())
 	{
-		const auto& node = m_tree->AppendItem(root, fmt::format("Reader/writer Locks (%zu)", rwlock_map.size()));
+		const auto& node = m_tree->AppendItem(root, fmt::format("Reader/writer locks (%zu)", rwlock_map.size()));
 
 		for (const auto& data : rwlock_map)
 		{
@@ -226,7 +226,7 @@ void KernelExplorer::Update()
 
 	if (prx_map.size())
 	{
-		const auto& node = m_tree->AppendItem(root, fmt::format("PRX Libraries (%zu)", prx_map.size()));
+		const auto& node = m_tree->AppendItem(root, fmt::format("PRX libraries (%zu)", prx_map.size()));
 
 		for (const auto& data : prx_map)
 		{
@@ -241,13 +241,13 @@ void KernelExplorer::Update()
 
 	if (ct_map.size())
 	{
-		const auto& node = m_tree->AppendItem(root, fmt::format("Memory Containers (%zu)", ct_map.size()));
+		const auto& node = m_tree->AppendItem(root, fmt::format("Memory containers (%zu)", ct_map.size()));
 
 		for (const auto& data : ct_map)
 		{
 			const auto& ct = *data.second;
 
-			m_tree->AppendItem(node, fmt::format("Memory Container: ID = 0x%08x", data.first));
+			m_tree->AppendItem(node, fmt::format("Memory container: ID = 0x%08x", data.first));
 		}
 	}
 
@@ -256,13 +256,13 @@ void KernelExplorer::Update()
 
 	if (mem_map.size())
 	{
-		const auto& node = m_tree->AppendItem(root, fmt::format("Memory Objects (%zu)", mem_map.size()));
+		const auto& node = m_tree->AppendItem(root, fmt::format("Memory objects (%zu)", mem_map.size()));
 
 		for (const auto& data : mem_map)
 		{
 			const auto& mem = *data.second;
 
-			m_tree->AppendItem(node, fmt::format("Memory Object: ID = 0x%08x", data.first));
+			m_tree->AppendItem(node, fmt::format("Memory object: ID = 0x%08x", data.first));
 		}
 	}
 
@@ -271,13 +271,13 @@ void KernelExplorer::Update()
 
 	if (ppu_map.size())
 	{
-		const auto& node = m_tree->AppendItem(root, fmt::format("PPU Threads (%zu)", ppu_map.size()));
+		const auto& node = m_tree->AppendItem(root, fmt::format("PPU threads (%zu)", ppu_map.size()));
 
 		for (const auto& data : ppu_map)
 		{
 			const auto& ppu = *data.second;
 
-			m_tree->AppendItem(node, fmt::format("PPU Thread: ID = 0x%08x '%s', - %s", data.first,
+			m_tree->AppendItem(node, fmt::format("PPU thread: ID = 0x%08x '%s', - %s", data.first,
 				ppu.get_name().c_str(), ppu.ThreadStatusToString()));
 		}
 	}
@@ -287,13 +287,13 @@ void KernelExplorer::Update()
 
 	if (spu_map.size())
 	{
-		const auto& node = m_tree->AppendItem(root, fmt::format("SPU Thread Groups (%d)", spu_map.size()));
+		const auto& node = m_tree->AppendItem(root, fmt::format("SPU thread groups (%d)", spu_map.size()));
 
 		for (const auto& data : spu_map)
 		{
 			const auto& tg = *data.second;
 
-			m_tree->AppendItem(node, fmt::format("SPU Thread Group: ID = 0x%08x '%s'", data.first,
+			m_tree->AppendItem(node, fmt::format("SPU thread group: ID = 0x%08x '%s'", data.first,
 				tg.name.c_str()));
 		}
 	}
