@@ -5,13 +5,13 @@
 
 //TODO::Get the enable configuration from ini.
 AutoPauseManagerDialog::AutoPauseManagerDialog(wxWindow* parent)
-	: wxDialog(parent, wxID_ANY, "Auto Pause Manager")
+	: wxDialog(parent, wxID_ANY, "Automatic pause settings")
 {
 	SetMinSize(wxSize(400, 360));
 
 	wxBoxSizer* s_main = new wxBoxSizer(wxVERTICAL);
 
-	wxStaticText* s_description = new wxStaticText(this, wxID_ANY, "To use auto pause: enter the ID(s) of a function or a system call. Restart of the game is required to apply. You can enable/disable this in the settings.", wxDefaultPosition, wxDefaultSize, 0);
+	wxStaticText* s_description = new wxStaticText(this, wxID_ANY, "To use auto pause: enter the ID(s) of a function or a system call. You must restart your emulated game or application for changed settings to take effect. You can enable/disable this in the settings.", wxDefaultPosition, wxDefaultSize, 0);
 	s_description->Wrap(400);
 	s_main->Add(s_description, 0, wxALL, 5);
 
@@ -114,11 +114,11 @@ void AutoPauseManagerDialog::UpdateList(void)
 		
 		if (m_entries[i] < 1024)
 		{
-			m_list->SetItem(i, 1, "System Call");
+			m_list->SetItem(i, 1, "System call");
 		}
 		else
 		{
-			m_list->SetItem(i, 1, "Function Call");
+			m_list->SetItem(i, 1, "Function call");
 		}
 	}
 	m_list->SetColumnWidth(0, wxLIST_AUTOSIZE_USEHEADER);
@@ -176,7 +176,7 @@ void AutoPauseManagerDialog::OnRemove(wxCommandEvent& event)
 void AutoPauseManagerDialog::OnSave(wxCommandEvent& event)
 {
 	SaveEntries();
-	LOG_SUCCESS(HLE,"Auto Pause: File pause.bin was updated.");
+	LOG_SUCCESS(HLE,"Automatic pause: file pause.bin was updated.");
 	//event.Skip();
 }
 
@@ -193,7 +193,7 @@ void AutoPauseManagerDialog::OnReload(wxCommandEvent& event)
 }
 
 AutoPauseSettingsDialog::AutoPauseSettingsDialog(wxWindow* parent, u32 *entry)
-	: wxDialog(parent, wxID_ANY, "Auto Pause Setting")
+	: wxDialog(parent, wxID_ANY, "Automatic pause Setting")
 	, m_presult(entry)
 {
 	m_entry = *m_presult;
@@ -202,7 +202,7 @@ AutoPauseSettingsDialog::AutoPauseSettingsDialog(wxWindow* parent, u32 *entry)
 
 	wxBoxSizer* s_main = new wxBoxSizer(wxVERTICAL);
 
-	wxStaticText* s_description = new wxStaticText(this, wxID_ANY, "Specify ID of System Call or Function Call below. You need to use a Hexadecimal ID.", wxDefaultPosition, wxDefaultSize, 0);
+	wxStaticText* s_description = new wxStaticText(this, wxID_ANY, "Specify ID of system call or function call below. You need to use a hexadecimal ID.", wxDefaultPosition, wxDefaultSize, 0);
 	s_description->Wrap(400);
 	s_main->Add(s_description, 0, wxALL, 5);
 
@@ -220,7 +220,7 @@ AutoPauseSettingsDialog::AutoPauseSettingsDialog(wxWindow* parent, u32 *entry)
 
 	m_id->SetValue(fmt::format("%08x", m_entry));
 
-	SetTitle("Auto Pause Setting: " + m_id->GetValue());
+	SetTitle("Automatic pause setting: " + m_id->GetValue());
 
 	Bind(wxEVT_BUTTON, &AutoPauseSettingsDialog::OnOk, this, wxID_OK);
 	Bind(wxEVT_TEXT, &AutoPauseSettingsDialog::OnUpdateValue, this, wxID_STATIC);
