@@ -25,7 +25,7 @@ public:
 		t_name->SetForegroundColour(wxColor(255, 255, 255));
 		t_name->SetPosition(wxPoint(10, 6));
 
-		wxStaticText* t_descr = new wxStaticText(this, wxID_ANY, "An early but promising PS3 emulator and debugger.");
+		wxStaticText* t_descr = new wxStaticText(this, wxID_ANY, "A PlayStation 3 emulator and debugger.");
 		t_descr->SetBackgroundColour(wxColor(100, 100, 100));
 		t_descr->SetForegroundColour(wxColor(255, 255, 255));
 		t_descr->SetPosition(wxPoint(12, 50));
@@ -62,7 +62,7 @@ public:
 		s_panel_buttons->AddStretchSpacer();
 		s_panel_buttons->Add(b_forum, 16, 0, 5);
 		s_panel_buttons->AddStretchSpacer(20);
-		s_panel_buttons->Add(new wxButton(this, wxID_OK), 16, 0, 5);
+		s_panel_buttons->Add(new wxButton(this, wxID_OK, "Close") , 16, 0, 5);
 		s_panel_buttons->AddSpacer(12);
 
 		//Panels
