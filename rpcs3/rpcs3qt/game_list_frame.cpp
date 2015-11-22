@@ -24,7 +24,7 @@ inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 inline QSize sizeFromSlider(const int& pos) { return gui::gl_icon_size_min + (gui::gl_icon_size_max - gui::gl_icon_size_min) * (pos / (float)gui::gl_max_slider_pos); }
 
 game_list_frame::game_list_frame(std::shared_ptr<gui_settings> guiSettings, std::shared_ptr<emu_settings> emuSettings, QWidget *parent)
-	: QDockWidget(tr("Game List"), parent), xgui_settings(guiSettings), xemu_settings(emuSettings)
+	: QDockWidget(tr("Game list"), parent), xgui_settings(guiSettings), xemu_settings(emuSettings)
 {
 	m_isListLayout    = xgui_settings->GetValue(gui::gl_listMode).toBool();
 	m_icon_size_index = xgui_settings->GetValue(gui::gl_iconSize).toInt();
@@ -87,10 +87,10 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> guiSettings, std:
 	m_categoryActs->setEnabled(m_isListLayout);
 
 	m_modeActList = { new QAction(""), QIcon(":/Icons/list_blue.png"), QIcon(":/Icons/list_gray.png") };
-	m_modeActList.action->setToolTip(tr("Enable List Mode"));
+	m_modeActList.action->setToolTip(tr("Enable list mode"));
 
 	m_modeActGrid = { new QAction(""), QIcon(":/Icons/grid_blue.png"), QIcon(":/Icons/grid_gray.png") };
-	m_modeActGrid.action->setToolTip(tr("Enable Grid Mode"));
+	m_modeActGrid.action->setToolTip(tr("Enable grid mode"));
 
 	m_modeActs = new QActionGroup(m_Tool_Bar);
 	m_modeActs->addAction(m_modeActList.action);
@@ -186,17 +186,17 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> guiSettings, std:
 	m_Game_Dock->setCentralWidget(m_Central_Widget);
 
 	// Actions regarding showing/hiding columns
-	QAction* showIconColAct          = new QAction(tr("Show Icons"), this);
-	QAction* showNameColAct          = new QAction(tr("Show Names"), this);
-	QAction* showSerialColAct        = new QAction(tr("Show Serials"), this);
-	QAction* showFWColAct            = new QAction(tr("Show Firmwares"), this);
-	QAction* showAppVersionColAct    = new QAction(tr("Show Versions"), this);
-	QAction* showCategoryColAct      = new QAction(tr("Show Categories"), this);
-	QAction* showPathColAct          = new QAction(tr("Show Paths"), this);
-	QAction* showResolutionColAct    = new QAction(tr("Show Supported Resolutions"), this);
-	QAction* showSoundFormatColAct   = new QAction(tr("Show Sound Formats"), this);
-	QAction* showParentalLevelColAct = new QAction(tr("Show Parental Levels"), this);
-	QAction* showCompatibilityAct    = new QAction(tr("Show Compatibilities"), this);
+	QAction* showIconColAct          = new QAction(tr("Show icons"), this);
+	QAction* showNameColAct          = new QAction(tr("Show names"), this);
+	QAction* showSerialColAct        = new QAction(tr("Show serials"), this);
+	QAction* showFWColAct            = new QAction(tr("Show firmwares"), this);
+	QAction* showAppVersionColAct    = new QAction(tr("Show versions"), this);
+	QAction* showCategoryColAct      = new QAction(tr("Show categories"), this);
+	QAction* showPathColAct          = new QAction(tr("Show paths"), this);
+	QAction* showResolutionColAct    = new QAction(tr("Show supported resolutions"), this);
+	QAction* showSoundFormatColAct   = new QAction(tr("Show sound formats"), this);
+	QAction* showParentalLevelColAct = new QAction(tr("Show parental levels"), this);
+	QAction* showCompatibilityAct    = new QAction(tr("Show compatibilities"), this);
 
 	m_columnActs = { showIconColAct, showNameColAct, showSerialColAct, showFWColAct, showAppVersionColAct, showCategoryColAct, showPathColAct,
 		showResolutionColAct, showSoundFormatColAct, showParentalLevelColAct, showCompatibilityAct };
@@ -670,15 +670,15 @@ void game_list_frame::ShowSpecifiedContextMenu(const QPoint &pos, int row)
 	QAction* configure = myMenu.addAction(tr("&Configure"));
 	myMenu.addSeparator();
 	QAction* removeGame = myMenu.addAction(tr("&Remove"));
-	QAction* removeConfig = myMenu.addAction(tr("&Remove Custom Configuration"));
-	QAction* deleteShadersCache = myMenu.addAction(tr("&Delete Shaders Cache"));
-	QAction* deleteLLVMCache = myMenu.addAction(tr("&Delete LLVM Cache"));
+	QAction* removeConfig = myMenu.addAction(tr("&Remove custom configuration"));
+	QAction* deleteShadersCache = myMenu.addAction(tr("&Delete shaders cache"));
+	QAction* deleteLLVMCache = myMenu.addAction(tr("&Delete LLVM cache"));
 	myMenu.addSeparator();
-	QAction* openGameFolder = myMenu.addAction(tr("&Open Install Folder"));
-	QAction* openConfig = myMenu.addAction(tr("&Open Config Folder"));
+	QAction* openGameFolder = myMenu.addAction(tr("&Open install folder"));
+	QAction* openConfig = myMenu.addAction(tr("&Open config folder"));
 	myMenu.addSeparator();
-	QAction* checkCompat = myMenu.addAction(tr("&Check Game Compatibility"));
-	QAction* downloadCompat = myMenu.addAction(tr("&Download Compatibility Database"));
+	QAction* checkCompat = myMenu.addAction(tr("&Check game compatibility"));
+	QAction* downloadCompat = myMenu.addAction(tr("&Download compatibility database"));
 
 	connect(boot, &QAction::triggered, [=]
 	{
@@ -717,7 +717,7 @@ void game_list_frame::ShowSpecifiedContextMenu(const QPoint &pos, int row)
 
 	connect(deleteLLVMCache, &QAction::triggered, [=]()
 	{
-		if (QMessageBox::question(this, tr("Confirm Delete"), tr("Delete LLVM cache?")) == QMessageBox::Yes)
+		if (QMessageBox::question(this, tr("Confirm delete"), tr("Delete LLVM cache?")) == QMessageBox::Yes)
 		{
 			const std::string config_base_dir = fs::get_config_dir() + "data/" + m_game_data[row].info.serial;
 
@@ -832,7 +832,7 @@ void game_list_frame::RemoveCustomConfiguration(int row)
 
 void game_list_frame::DeleteShadersCache(int row)
 {
-	if (QMessageBox::question(this, tr("Confirm Delete"), tr("Delete shaders cache?")) != QMessageBox::Yes)
+	if (QMessageBox::question(this, tr("Confirm delete"), tr("Delete shaders cache?")) != QMessageBox::Yes)
 		return;
 
 	const std::string config_base_dir = fs::get_config_dir() + "data/" + m_game_data[row].info.serial;

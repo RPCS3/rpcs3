@@ -9,7 +9,7 @@ constexpr auto qstr = QString::fromStdString;
 save_data_info_dialog::save_data_info_dialog(const SaveDataEntry& save, QWidget* parent)
 	: QDialog(parent), m_entry(save)
 {
-	setWindowTitle(tr("Save Data Information"));
+	setWindowTitle(tr("Save data information"));
 
 	// Table
 	m_list = new QTableWidget(this);

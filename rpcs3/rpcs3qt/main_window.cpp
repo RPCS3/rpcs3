@@ -290,7 +290,7 @@ void main_window::BootGame()
 	}
 
 	QString path_last_Game = guiSettings->GetValue(gui::fd_boot_game).toString();
-	QString dirPath = QFileDialog::getExistingDirectory(this, tr("Select Game Folder"), path_last_Game, QFileDialog::ShowDirsOnly);
+	QString dirPath = QFileDialog::getExistingDirectory(this, tr("Select game folder"), path_last_Game, QFileDialog::ShowDirsOnly);
 
 	if (dirPath == NULL)
 	{
@@ -727,7 +727,7 @@ void main_window::OnEmuPause()
 	m_thumb_playPause->setToolTip(tr("Resume emulation"));
 	m_thumb_playPause->setIcon(m_icon_thumb_play);
 #endif
-	ui->sysPauseAct->setText(tr("&Resume\tCtrl+E"));
+	ui->sysPauseAct->setText(tr("&Resume\tCtrl+F"));
 	ui->sysPauseAct->setIcon(m_icon_play);
 	ui->toolbar_start->setIcon(m_icon_play);
 	ui->toolbar_start->setToolTip(tr("Resume emulation"));
@@ -1099,7 +1099,7 @@ void main_window::CreateConnects()
 	{
 		sysutil_send_system_cmd(m_sys_menu_opened ? 0x0132 /* CELL_SYSUTIL_SYSTEM_MENU_CLOSE */ : 0x0131 /* CELL_SYSUTIL_SYSTEM_MENU_OPEN */, 0);
 		m_sys_menu_opened = !m_sys_menu_opened;
-		ui->sysSendOpenMenuAct->setText(tr("Send &%0 system menu cmd").arg(m_sys_menu_opened ? tr("close") : tr("open")));
+		ui->sysSendOpenMenuAct->setText(tr("Press &%0 PS button").arg(m_sys_menu_opened ? tr("close") : tr("open")));
 	});
 
 	connect(ui->sysSendExitAct, &QAction::triggered, [=]
@@ -1512,7 +1512,7 @@ void main_window::keyPressEvent(QKeyEvent *keyEvent)
 	{
 		switch (keyEvent->key())
 		{
-		case Qt::Key_E: if (Emu.IsPaused()) Emu.Resume(); else if (Emu.IsReady()) Emu.Run(); return;
+		case Qt::Key_F: if (Emu.IsPaused()) Emu.Resume(); else if (Emu.IsReady()) Emu.Run(); return;
 		case Qt::Key_P: if (Emu.IsRunning()) Emu.Pause(); return;
 		case Qt::Key_S: if (!Emu.IsStopped()) Emu.Stop(); return;
 		case Qt::Key_R: if (!Emu.GetBoot().empty()) Emu.Restart(); return;

@@ -43,8 +43,8 @@ debugger_frame::debugger_frame(std::shared_ptr<gui_settings> settings, QWidget *
 	m_breakpoints_list_delete->setShortcutContext(Qt::WidgetShortcut);
 	m_breakpoints_list->addAction(m_breakpoints_list_delete);
 
-	m_go_to_addr = new QPushButton(tr("Go To Address"), this);
-	m_go_to_pc = new QPushButton(tr("Go To PC"), this);
+	m_go_to_addr = new QPushButton(tr("Go to address"), this);
+	m_go_to_pc = new QPushButton(tr("Go to PC"), this);
 	m_btn_capture = new QPushButton(tr("Capture"), this);
 	m_btn_step = new QPushButton(tr("Step"), this);
 	m_btn_run = new QPushButton(Run, this);

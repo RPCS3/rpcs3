@@ -6,7 +6,7 @@
 memory_string_searcher::memory_string_searcher(QWidget* parent)
 	: QDialog(parent)
 {
-	setWindowTitle(tr("String Searcher"));
+	setWindowTitle(tr("String searcher"));
 	setAttribute(Qt::WA_DeleteOnClose);
 
 	m_addr_line = new QLineEdit(this);
