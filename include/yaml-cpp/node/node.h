@@ -63,9 +63,9 @@ class YAML_CPP_API Node {
 
   // access
   template <typename T>
-  const T as() const;
+  T as() const;
   template <typename T, typename S>
-  const T as(const S& fallback) const;
+  T as(const S& fallback) const;
   const std::string& Scalar() const;
 
   const std::string& Tag() const;

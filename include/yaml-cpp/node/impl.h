@@ -87,7 +87,7 @@ struct as_if {
   explicit as_if(const Node& node_) : node(node_) {}
   const Node& node;
 
-  const T operator()(const S& fallback) const {
+  T operator()(const S& fallback) const {
     if (!node.m_pNode)
       return fallback;
 
@@ -140,14 +140,14 @@ struct as_if<std::string, void> {
 
 // access functions
 template <typename T>
-inline const T Node::as() const {
+inline T Node::as() const {
   if (!m_isValid)
     throw InvalidNode();
   return as_if<T, void>(*this)();
 }
 
 template <typename T, typename S>
-inline const T Node::as(const S& fallback) const {
+inline T Node::as(const S& fallback) const {
   if (!m_isValid)
     return fallback;
   return as_if<T, S>(*this)(fallback);
