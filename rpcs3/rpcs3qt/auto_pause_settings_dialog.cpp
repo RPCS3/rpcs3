@@ -1,11 +1,11 @@
-
+﻿
 #include "auto_pause_settings_dialog.h"
 
 constexpr auto qstr = QString::fromStdString;
 
 auto_pause_settings_dialog::auto_pause_settings_dialog(QWidget *parent) : QDialog(parent)
 {
-	QLabel *description = new QLabel(tr("To use auto pause: enter the ID(s) of a function or a system call.\nRestart of the game is required to apply. You can enable/disable this in the settings."), this);
+	QLabel *description = new QLabel(tr("To use automatic pause: enter the ID(s) of a function or a system call. You must restart your emulated game or application for changed settings to take effect. You can enable/disable this in the settings."), this);
 
 	pauseList = new QTableWidget(this);
 	pauseList->setColumnCount(2);
@@ -36,7 +36,7 @@ auto_pause_settings_dialog::auto_pause_settings_dialog(QWidget *parent) : QDialo
 	setLayout(mainLayout);
 
 	setMinimumSize(QSize(400, 360));
-	setWindowTitle(tr("Auto Pause Manager"));
+	setWindowTitle(tr("Automatic pause settings"));
 
 	//Events
 	connect(pauseList, &QTableWidget::customContextMenuRequested, this, &auto_pause_settings_dialog::ShowContextMenu);
@@ -45,7 +45,7 @@ auto_pause_settings_dialog::auto_pause_settings_dialog(QWidget *parent) : QDialo
 	connect(saveButton, &QAbstractButton::clicked, [=]
 	{
 		SaveEntries();
-		LOG_SUCCESS(HLE, "Auto Pause: File pause.bin was updated.");
+		LOG_SUCCESS(HLE, "Automatic pause: file pause.bin was updated.");
 	});
 	connect(cancelButton, &QAbstractButton::clicked, this, &QWidget::close);
 
@@ -123,11 +123,11 @@ void auto_pause_settings_dialog::UpdateList(void)
 
 		if (m_entries[i] < 1024)
 		{
-			typeItem->setData(Qt::DisplayRole, tr("System Call"));
+			typeItem->setData(Qt::DisplayRole, tr("System call"));
 		}
 		else
 		{
-			typeItem->setData(Qt::DisplayRole, tr("Function Call"));
+			typeItem->setData(Qt::DisplayRole, tr("Function call"));
 		}
 
 		pauseList->setItem(i, 0, callItem);
@@ -205,7 +205,7 @@ AutoPauseConfigDialog::AutoPauseConfigDialog(QWidget* parent, auto_pause_setting
 	button_ok->setFixedWidth(50);
 	button_cancel->setFixedWidth(50);
 
-	QLabel* description = new QLabel(tr("Specify ID of System Call or Function Call below. You need to use a Hexadecimal ID."), this);
+	QLabel* description = new QLabel(tr("Specify ID of system call or function call below. You need to use a hexadecimal ID."), this);
 	description->setWordWrap(true);
 
 	m_current_converted = new QLabel(tr("Currently it gets an id of \"Unset\"."), this);
@@ -217,7 +217,7 @@ AutoPauseConfigDialog::AutoPauseConfigDialog(QWidget* parent, auto_pause_setting
 	m_id->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
 	m_id->setMaxLength(8);
 	m_id->setFixedWidth(65);
-	setWindowTitle("Auto Pause Setting: " + m_id->text());
+	setWindowTitle("Automatic pause setting: " + m_id->text());
 	
 	connect(button_cancel, &QAbstractButton::clicked, this, &AutoPauseConfigDialog::OnCancel);
 	connect(button_ok, &QAbstractButton::clicked, this, &AutoPauseConfigDialog::OnOk);

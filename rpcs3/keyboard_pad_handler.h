@@ -10,7 +10,7 @@
 
 struct keyboard_pad_config final : cfg::node
 {
-	const std::string cfg_name = fs::get_config_dir() + "/config_kbpad_qt.yml";
+	const std::string cfg_name = fs::get_config_dir() + "/config_kbpad.yml";
 
 	cfg::int32 left_stick_left{ this, "Left Analog Stick Left", Qt::Key_A };
 	cfg::int32 left_stick_down{ this, "Left Analog Stick Down", Qt::Key_S };

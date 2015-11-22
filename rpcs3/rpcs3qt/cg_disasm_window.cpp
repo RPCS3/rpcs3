@@ -21,7 +21,7 @@ inline std::string sstr(const QString& _in) { return _in.toUtf8().toStdString();
 
 cg_disasm_window::cg_disasm_window(std::shared_ptr<gui_settings> xSettings): xgui_settings(xSettings)
 {
-	setWindowTitle(tr("Cg Disasm"));
+	setWindowTitle(tr("Cg disassembler"));
 	setAttribute(Qt::WA_DeleteOnClose);
 	setAcceptDrops(true);
 	setMinimumSize(QSize(200, 150)); // seems fine on win 10

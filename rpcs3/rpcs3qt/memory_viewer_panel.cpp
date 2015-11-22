@@ -8,7 +8,7 @@ constexpr auto qstr = QString::fromStdString;
 memory_viewer_panel::memory_viewer_panel(QWidget* parent) 
 	: QDialog(parent)
 {
-	setWindowTitle(tr("Memory Viewer"));
+	setWindowTitle(tr("Memory viewer"));
 	setObjectName("memory_viewer");
 	setAttribute(Qt::WA_DeleteOnClose);
 	exit = false;
@@ -29,7 +29,7 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent)
 	QHBoxLayout* hbox_tools = new QHBoxLayout();
 
 	//Tools: Memory Viewer Options
-	QGroupBox* tools_mem = new QGroupBox(tr("Memory Viewer Options"));
+	QGroupBox* tools_mem = new QGroupBox(tr("Memory viewer options"));
 	QHBoxLayout* hbox_tools_mem = new QHBoxLayout();
 
 	//Tools: Memory Viewer Options: Address
@@ -81,7 +81,7 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent)
 	tools_mem->setLayout(hbox_tools_mem);
 
 	//Tools: Raw Image Preview Options
-	QGroupBox* tools_img = new QGroupBox(tr("Raw Image Preview Options"));
+	QGroupBox* tools_img = new QGroupBox(tr("Raw image preview options"));
 	QHBoxLayout* hbox_tools_img = new QHBoxLayout();;
 
 	//Tools: Raw Image Preview Options : Size
@@ -389,7 +389,7 @@ void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, int mode, u32 wid
 	layout->addWidget(canvas);
 
 	QDialog* f_image_viewer = new QDialog(parent);
-	f_image_viewer->setWindowTitle(qstr(fmt::format("Raw Image @ 0x%x", addr)));
+	f_image_viewer->setWindowTitle(qstr(fmt::format("Raw image @ 0x%x", addr)));
 	f_image_viewer->setFixedSize(QSize(width, height));
 	f_image_viewer->setLayout(layout);
 	f_image_viewer->show();

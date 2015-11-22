@@ -21,10 +21,10 @@ void fmt_class_string<frame_limit_type>::format(std::string& out, u64 arg)
 		switch (value)
 		{
 		case frame_limit_type::none: return "Off";
-		case frame_limit_type::_59_94: return "59.94";
-		case frame_limit_type::_50: return "50";
-		case frame_limit_type::_60: return "60";
 		case frame_limit_type::_30: return "30";
+		case frame_limit_type::_50: return "50";
+		case frame_limit_type::_59_94: return "59.94";
+		case frame_limit_type::_60: return "60";
 		case frame_limit_type::_auto: return "Auto";
 		}
 
@@ -918,10 +918,10 @@ namespace rsx
 		switch (g_cfg.video.frame_limit)
 		{
 		case frame_limit_type::none: limit = 0.; break;
-		case frame_limit_type::_59_94: limit = 59.94; break;
-		case frame_limit_type::_50: limit = 50.; break;
-		case frame_limit_type::_60: limit = 60.; break;
 		case frame_limit_type::_30: limit = 30.; break;
+		case frame_limit_type::_50: limit = 50.; break;
+		case frame_limit_type::_59_94: limit = 59.94; break;
+		case frame_limit_type::_60: limit = 60.; break;
 		case frame_limit_type::_auto: limit = rsx->fps_limit; break; // TODO
 		}
 		if (limit)

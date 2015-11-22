@@ -85,7 +85,7 @@ void gs_frame::keyPressEvent(QKeyEvent *keyEvent)
 		case Qt::Key_R:
 			if (keyEvent->modifiers() == Qt::ControlModifier && (!Emu.GetBoot().empty())) { Emu.Stop(); Emu.Load(); return; }
 			break;
-		case Qt::Key_E:
+		case Qt::Key_F:
 			if (keyEvent->modifiers() == Qt::ControlModifier)
 			{
 				if (Emu.IsReady()) { Emu.Run(); return; }

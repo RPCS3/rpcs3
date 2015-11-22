@@ -15,7 +15,7 @@ constexpr auto qstr = QString::fromStdString;
 save_data_list_dialog::save_data_list_dialog(const std::vector<SaveDataEntry>& entries, s32 focusedEntry, bool is_saving, QWidget* parent)
 	: QDialog(parent), m_save_entries(entries), m_entry(-1), m_entry_label(nullptr)
 {
-	setWindowTitle(tr("Save Data Interface"));
+	setWindowTitle(tr("Save data interface"));
 	setWindowIcon(QIcon(":/rpcs3.ico"));
 	setMinimumSize(QSize(400, 400));
 
@@ -34,7 +34,7 @@ save_data_list_dialog::save_data_list_dialog(const std::vector<SaveDataEntry>& e
 
 	if (entries.size() > 0)
 	{ // If there are no entries, don't add the selection widget or the selection label to the UI.
-		QPushButton *push_select = new QPushButton(tr("&Select Entry"), this);
+		QPushButton *push_select = new QPushButton(tr("&Select entry"), this);
 		connect(push_select, &QAbstractButton::clicked, this, &save_data_list_dialog::accept);
 		push_select->setAutoDefault(true);
 		push_select->setDefault(true);
@@ -46,7 +46,7 @@ save_data_list_dialog::save_data_list_dialog(const std::vector<SaveDataEntry>& e
 
 	if (is_saving)
 	{
-		QPushButton *saveNewEntry = new QPushButton(tr("Save New Entry"), this);
+		QPushButton *saveNewEntry = new QPushButton(tr("Save new entry"), this);
 		connect(saveNewEntry, &QAbstractButton::clicked, this, [&]()
 		{
 			m_entry = -1; // Set the return properly.
@@ -106,12 +106,12 @@ void save_data_list_dialog::UpdateSelectionLabel()
 	{
 		if (m_list->currentRow() == -1)
 		{
-			m_entry_label->setText(tr("Currently Selected: None"));
+			m_entry_label->setText(tr("Currently selected: None"));
 		}
 		else
 		{
 			int entry = m_list->item(m_list->currentRow(), 0)->data(Qt::UserRole).toInt();
-			m_entry_label->setText(tr("Currently Selected: ") + qstr(m_save_entries[entry].dirName));
+			m_entry_label->setText(tr("Currently selected: ") + qstr(m_save_entries[entry].dirName));
 		}
 	}
 }
