@@ -19,7 +19,7 @@ wxFont GetFont(int size)
 }
 
 CompilerELF::CompilerELF(wxWindow* parent)
-	: FrameBase(parent, wxID_ANY, "CompilerELF", "", wxSize(640, 680))
+	: FrameBase(parent, wxID_ANY, "ELF compiler", "", wxSize(640, 680))
 	, m_status_bar(*CreateStatusBar())
 {
 	m_disable_scroll = false;
@@ -28,11 +28,11 @@ CompilerELF::CompilerELF(wxWindow* parent)
 
 	wxMenuBar* menubar = new wxMenuBar();
 	wxMenu* menu_code = new wxMenu();
-	menubar->Append(menu_code, "Code");
+	menubar->Append(menu_code, "File");
 
 	//menu_code.Append(id_analyze_code, "Analyze");
-	menu_code->Append(id_compile_code, "Compile");
 	menu_code->Append(id_load_elf, "Load ELF");
+	menu_code->Append(id_compile_code, "Compile");
 
 	SetMenuBar(menubar);
 	asm_list = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(400, -1),  wxTE_MULTILINE | wxTE_DONTWRAP | wxTE_RICH2);

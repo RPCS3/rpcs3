@@ -87,12 +87,12 @@ public:
 		m_img_list = new wxImageList(80, 44);
 
 		m_columns.clear();
-		m_columns.emplace_back(m_columns.size(),  90, "Icon");
+		m_columns.emplace_back(m_columns.size(),  90, "");
 		m_columns.emplace_back(m_columns.size(), 160, "Name");
 		m_columns.emplace_back(m_columns.size(),  85, "Serial");
-		m_columns.emplace_back(m_columns.size(),  55, "FW");
-		m_columns.emplace_back(m_columns.size(),  55, "App version");
-		m_columns.emplace_back(m_columns.size(),  75, "Category");
+		m_columns.emplace_back(m_columns.size(),  60, "Min. FW");
+		m_columns.emplace_back(m_columns.size(),  80, "Soft. version");
+		m_columns.emplace_back(m_columns.size(),  75, "Soft. type");
 		m_columns.emplace_back(m_columns.size(), 160, "Path");
 		m_col_icon     = &m_columns[0];
 		m_col_name     = &m_columns[1];

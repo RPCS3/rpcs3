@@ -51,7 +51,7 @@ enum
 	id_add_hdd
 };
 
-VHDDExplorer::VHDDExplorer(wxWindow* parent, const std::string& hdd_path) : wxDialog(parent, wxID_ANY, "Virtual HDD Explorer", wxDefaultPosition)
+VHDDExplorer::VHDDExplorer(wxWindow* parent, const std::string& hdd_path) : wxDialog(parent, wxID_ANY, "Virtual hard drive explorer", wxDefaultPosition)
 {
 	m_list = new wxListView(this);
 	m_drop_target = new VHDDListDropTarget(m_list);
@@ -250,18 +250,18 @@ void VHDDExplorer::OnRemove(wxCommandEvent& event)
 void VHDDExplorer::OnCreateDir(wxCommandEvent& event)
 {
 	int i = 1;
-	while(m_hdd->HasEntry(fmt::format("New Dir (%d)", i))) i++;
+	while(m_hdd->HasEntry(fmt::format("New dir (%d)", i))) i++;
 
-	m_hdd->Create(vfsHDD_Entry_Dir, fmt::format("New Dir (%d)", i));
+	m_hdd->Create(vfsHDD_Entry_Dir, fmt::format("New dir (%d)", i));
 	UpdateList();
 }
 
 void VHDDExplorer::OnCreateFile(wxCommandEvent& event)
 {
 	int i = 1;
-	while (m_hdd->HasEntry(fmt::format("New File (%d)", i))) i++;
+	while (m_hdd->HasEntry(fmt::format("New file (%d)", i))) i++;
 
-	m_hdd->Create(vfsHDD_Entry_File, fmt::format("New File (%d)", i));
+	m_hdd->Create(vfsHDD_Entry_File, fmt::format("New file (%d)", i));
 	UpdateList();
 }
 
@@ -377,7 +377,7 @@ void VHDDSetInfoDialog::GetResult(u64& size, u64& block_size)
 }
 
 VHDDManagerDialog::VHDDManagerDialog(wxWindow* parent)
-	: wxDialog(parent, wxID_ANY, "Virtual HDD Manager")
+	: wxDialog(parent, wxID_ANY, "Virtual hard drive Manager")
 {
 	m_list = new wxListView(this);
 
@@ -439,7 +439,7 @@ void VHDDManagerDialog::DClick(wxListEvent& event)
 
 void VHDDManagerDialog::AddHDD(wxCommandEvent& event)
 {
-	wxFileDialog ctrl(this, "Select HDDs", wxEmptyString, wxEmptyString, "Virtual HDD (*.hdd) | *.hdd",
+	wxFileDialog ctrl(this, "Select hard drives", wxEmptyString, wxEmptyString, "Virtual hard drive (*.hdd) | *.hdd",
 		wxFD_OPEN | wxFD_FILE_MUST_EXIST | wxFD_MULTIPLE);
 
 	if(ctrl.ShowModal() == wxID_CANCEL)
@@ -499,7 +499,7 @@ void VHDDManagerDialog::OnRemove(wxCommandEvent& event)
 
 void VHDDManagerDialog::OnCreateHDD(wxCommandEvent& event)
 {
-	wxFileDialog ctrl(this, "Select HDD path", wxEmptyString, "new_hdd.hdd", "Virtual HDD (*.hdd) | *.hdd",
+	wxFileDialog ctrl(this, "Select hard drive path", wxEmptyString, "new_hdd.hdd", "Virtual hard drive (*.hdd) | *.hdd",
 		wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
 
 	if(ctrl.ShowModal() == wxID_CANCEL)

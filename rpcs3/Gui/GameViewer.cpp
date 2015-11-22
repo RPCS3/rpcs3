@@ -11,7 +11,7 @@
 #include "SettingsDialog.h"
 #include <wx/dir.h>
 
-static const std::string m_class_name = "GameViewer";
+static const std::string m_class_name = "Game viewer";
 
 // Auxiliary classes
 class sortGameData
@@ -237,7 +237,7 @@ void GameViewer::RightClick(wxListEvent& event)
 #endif
 	m_popup->Append(boot_item);
 	m_popup->Append(1, _T("Configure"));
-	m_popup->Append(2, _T("Remove Game"));
+	m_popup->Append(2, _T("Remove game"));
 
 	Bind(wxEVT_MENU, &GameViewer::BootGame, this, 0);
 	Bind(wxEVT_MENU, &GameViewer::ConfigureGame, this, 1);
