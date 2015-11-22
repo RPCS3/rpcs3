@@ -116,7 +116,7 @@ enum
 };
 
 VFSManagerDialog::VFSManagerDialog(wxWindow* parent)
-	: wxDialog(parent, wxID_ANY, "Virtual File System Manager")
+	: wxDialog(parent, wxID_ANY, "Virtual file system manager")
 {
 	m_list = new wxListView(this);
 
@@ -134,7 +134,7 @@ VFSManagerDialog::VFSManagerDialog(wxWindow* parent)
 
 	m_list->InsertColumn(0, "Path");
 	m_list->InsertColumn(1, "Device path");
-	m_list->InsertColumn(2, "Path to Device");
+	m_list->InsertColumn(2, "Path to device");
 	m_list->InsertColumn(3, "Device");
 
 	m_list->Bind(wxEVT_LIST_ITEM_ACTIVATED, &VFSManagerDialog::OnEntryConfig, this);
