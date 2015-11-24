@@ -196,8 +196,11 @@ void D3D12GSRender::prepare_render_targets(ID3D12GraphicsCommandList *copycmdlis
 	std::array<float, 4> clear_color = get_clear_color(rsx::method_registers[NV4097_SET_COLOR_CLEAR_VALUE]);
 	for (u8 i : get_rtt_indexes(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET]))
 	{
+		ComPtr<ID3D12Resource> old_render_target_resource;
 		m_rtts.bound_render_targets[i] = m_rtts.bind_address_as_render_targets(m_device.Get(), copycmdlist, address_color[i], clip_width, clip_height, m_surface.color_format,
-			clear_color);
+			clear_color, old_render_target_resource);
+		if (old_render_target_resource)
+			get_current_resource_storage().dirty_textures.push_back(old_render_target_resource);
 		m_rtts.bound_render_targets_address[i] = address_color[i];
 	}
 
@@ -261,20 +264,26 @@ void D3D12GSRender::set_rtt_and_ds(ID3D12GraphicsCommandList *command_list)
 }
 
 ID3D12Resource *render_targets::bind_address_as_render_targets(ID3D12Device *device, ID3D12GraphicsCommandList *cmdList, u32 address,
-	size_t width, size_t height, u8 surfaceColorFormat, const std::array<float, 4> &clear_color)
+	size_t width, size_t height, u8 surfaceColorFormat, const std::array<float, 4> &clear_color, ComPtr<ID3D12Resource> &dirtyRTT)
 {
+	DXGI_FORMAT dxgi_format = get_color_surface_format(surfaceColorFormat);
 	auto It = render_targets_storage.find(address);
 	// TODO: Check if format and size match
 	if (It != render_targets_storage.end())
 	{
-		ID3D12Resource* rtt;
+		ComPtr<ID3D12Resource> rtt;
 		rtt = It->second.Get();
-		cmdList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(rtt, D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET));
-		return rtt;
+		if (rtt->GetDesc().Format == dxgi_format)
+		{
+			cmdList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(rtt.Get(), D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET));
+			return rtt.Get();
+		}
+		render_targets_storage.erase(address);
+		dirtyRTT = rtt;
 	}
 	ComPtr<ID3D12Resource> rtt;
 		LOG_WARNING(RSX, "Creating RTT");
-	DXGI_FORMAT dxgi_format = get_color_surface_format(surfaceColorFormat);
+
 	D3D12_CLEAR_VALUE clear_color_value = {};
 	clear_color_value.Format = dxgi_format;
 	clear_color_value.Color[0] = clear_color[0];
