@@ -121,7 +121,7 @@ private:
 	// Texture storage
 	data_heap<ID3D12Resource, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT> m_texture_upload_data;
 	data_heap<ID3D12Heap, D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT> m_uav_heap;
-	data_heap<ID3D12Heap, D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT> m_readback_resources;
+	data_heap<ID3D12Resource, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT> m_readback_resources;
 
 	struct
 	{
