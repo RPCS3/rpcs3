@@ -23,6 +23,8 @@ struct frame_capture_data
 
 	struct draw_state
 	{
+		std::string name;
+		std::pair<std::string, std::string> programs;
 		buffer color_buffer[4];
 		buffer depth;
 		buffer stencil;
@@ -200,7 +202,7 @@ namespace rsx
 		virtual void load_vertex_index_data(u32 first, u32 count);
 
 		bool capture_current_frame = false;
-		void capture_frame();
+		void capture_frame(const std::string &name);
 	public:
 		u32 ioAddress, ioSize;
 		int flip_status;
@@ -283,6 +285,8 @@ namespace rsx
 		* TODO: It's more efficient to combine multiple call of this function into one.
 		*/
 		virtual void copy_stencil_buffer_to_memory(void *buffer) {};
+
+		virtual std::pair<std::string, std::string> get_programs() const { return std::make_pair("", ""); };
 	public:
 		void reset();
 		void init(const u32 ioAddress, const u32 ioSize, const u32 ctrlAddress, const u32 localAddress);

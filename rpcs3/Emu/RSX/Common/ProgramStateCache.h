@@ -294,6 +294,22 @@ public:
 		clear();
 	}
 
+	const typename BackendTraits::VertexProgramData* get_transform_program(const RSXVertexProgram& rsx_vp) const noexcept
+	{
+		typename binary2VS::const_iterator It = m_cacheVS.find(rsx_vp.data);
+		if (It == m_cacheVS.end())
+			return nullptr;
+		return &It->second;
+	}
+
+	const typename BackendTraits::FragmentProgramData* get_shader_program(const RSXFragmentProgram& rsx_fp) const noexcept
+	{
+		typename binary2FS::const_iterator It = m_cacheFS.find(vm::base(rsx_fp.addr));
+		if (It == m_cacheFS.end())
+			return nullptr;
+		return &It->second;
+	}
+
 	void clear()
 	{
 		for (auto pair : m_cachePSO)

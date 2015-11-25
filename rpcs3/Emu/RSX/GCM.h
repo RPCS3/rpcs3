@@ -1798,6 +1798,7 @@ namespace rsx
 	{
 		switch (target)
 		{
+		case CELL_GCM_SURFACE_TARGET_NONE: return "none";
 		case CELL_GCM_SURFACE_TARGET_0: return "surface A";
 		case CELL_GCM_SURFACE_TARGET_1: return "surface B";
 		case CELL_GCM_SURFACE_TARGET_MRT1: return "surfaces A and B";

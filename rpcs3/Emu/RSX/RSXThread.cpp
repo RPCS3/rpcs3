@@ -646,7 +646,7 @@ namespace rsx
 			if (rsx->domethod(id, arg))
 			{
 				if (rsx->capture_current_frame && id == NV4097_CLEAR_SURFACE)
-					rsx->capture_frame();
+					rsx->capture_frame("clear");
 				return;
 			}
 
@@ -895,7 +895,7 @@ namespace rsx
 		}
 	}
 
-	void thread::capture_frame()
+	void thread::capture_frame(const std::string &name)
 	{
 		frame_capture_data::draw_state draw_state = {};
 
@@ -939,6 +939,8 @@ namespace rsx
 			draw_state.stencil.data.resize(clip_w * clip_h * 4);
 			copy_stencil_buffer_to_memory(draw_state.stencil.data.data());
 		}
+		draw_state.programs = get_programs();
+		draw_state.name = name;
 		frame_debug.draw_calls.push_back(draw_state);
 	}
 
@@ -956,7 +958,7 @@ namespace rsx
 		transform_constants.clear();
 
 		if (capture_current_frame)
-			capture_frame();
+			capture_frame("Draw " + std::to_string(vertex_draw_count));
 	}
 
 	void thread::task()

@@ -18,7 +18,6 @@ class RSXDebugger : public wxFrame
 	wxListView* m_list_captured_frame;
 	wxListView* m_list_captured_draw_calls;
 	wxListView* m_list_flags;
-	wxListView* m_list_programs;
 	wxListView* m_list_lightning;
 	wxListView* m_list_texture;
 	wxListView* m_list_settings;
@@ -30,6 +29,9 @@ class RSXDebugger : public wxFrame
 	wxPanel* p_buffer_depth;
 	wxPanel* p_buffer_stencil;
 	wxPanel* p_buffer_tex;
+
+	wxTextCtrl* m_text_transform_program;
+	wxTextCtrl *m_text_shader_program;
 
 	uint m_cur_texture;
 
@@ -54,7 +56,6 @@ public:
 	virtual void GetMemory();
 	virtual void GetBuffers();
 	virtual void GetFlags();
-	virtual void GetPrograms();
 	virtual void GetLightning();
 	virtual void GetTexture();
 	virtual void GetSettings();
