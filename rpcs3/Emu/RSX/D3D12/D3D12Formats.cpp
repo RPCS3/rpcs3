@@ -238,7 +238,7 @@ namespace
 		case CELL_GCM_TEXTURE_NEAREST:
 			min = D3D12_FILTER_TYPE_POINT;
 			mip = D3D12_FILTER_TYPE_POINT;
-			return;;
+			return;
 		case CELL_GCM_TEXTURE_LINEAR:
 			min = D3D12_FILTER_TYPE_LINEAR;
 			mip = D3D12_FILTER_TYPE_POINT;
@@ -260,7 +260,10 @@ namespace
 			mip = D3D12_FILTER_TYPE_LINEAR;
 			return;
 		case CELL_GCM_TEXTURE_CONVOLUTION_MIN:
-			unreachable("Unsupported min filter");
+			LOG_WARNING(RSX, "CELL_GCM_TEXTURE_CONVOLUTION_MIN not supported, fallback to bilinear filtering");
+			min = D3D12_FILTER_TYPE_LINEAR;
+			mip = D3D12_FILTER_TYPE_POINT;
+			return;
 		}
 		unreachable("Wrong min filter");
 	}
