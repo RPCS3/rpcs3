@@ -263,7 +263,6 @@ RecompilationEngine::RecompilationEngine()
 
 RecompilationEngine::~RecompilationEngine() {
 	m_executable_storage.clear();
-	join();
 	memory_helper::free_reserved_memory(FunctionCache, VIRTUAL_INSTRUCTION_COUNT * sizeof(ExecutableStorageType));
 	free(FunctionCachePagesCommited);
 }
@@ -306,8 +305,8 @@ void RecompilationEngine::NotifyBlockStart(u32 address) {
 		m_pending_address_start.push_back(address);
 	}
 
-	if (!joinable()) {
-		start(WRAP_EXPR("PPU Recompilation Engine"), WRAP_EXPR(Task()));
+	if (!is_started()) {
+		start();
 	}
 
 	cv.notify_one();
@@ -324,12 +323,12 @@ raw_fd_ostream & RecompilationEngine::Log() {
 	return *m_log;
 }
 
-void RecompilationEngine::Task() {
+void RecompilationEngine::on_task() {
 	std::chrono::nanoseconds idling_time(0);
 	std::chrono::nanoseconds recompiling_time(0);
 
 	auto start = std::chrono::high_resolution_clock::now();
-	while (joinable() && !Emu.IsStopped()) {
+	while (!Emu.IsStopped()) {
 		bool             work_done_this_iteration = false;
 		std::list <u32> m_current_execution_traces;
 

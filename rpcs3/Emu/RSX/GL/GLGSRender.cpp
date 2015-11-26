@@ -1046,9 +1046,9 @@ void GLGSRender::end()
 	rsx::thread::end();
 }
 
-void GLGSRender::oninit_thread()
+void GLGSRender::on_init_thread()
 {
-	GSRender::oninit_thread();
+	GSRender::on_init_thread();
 
 	gl::init();
 	LOG_NOTICE(Log::RSX, (const char*)glGetString(GL_VERSION));
@@ -1071,7 +1071,7 @@ void GLGSRender::oninit_thread()
 	m_vao.element_array_buffer = m_ebo;
 }
 
-void GLGSRender::onexit_thread()
+void GLGSRender::on_exit()
 {
 	glDisable(GL_VERTEX_PROGRAM_POINT_SIZE);
 
@@ -1184,7 +1184,7 @@ static const std::unordered_map<u32, rsx_method_impl_t> g_gl_method_tbl =
 	{ NV4097_CLEAR_SURFACE, nv4097_clear_surface }
 };
 
-bool GLGSRender::domethod(u32 cmd, u32 arg)
+bool GLGSRender::do_method(u32 cmd, u32 arg)
 {
 	auto found = g_gl_method_tbl.find(cmd);
 

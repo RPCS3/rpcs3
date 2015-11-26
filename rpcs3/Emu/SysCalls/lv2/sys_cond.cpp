@@ -215,7 +215,7 @@ s32 sys_cond_wait(PPUThread& ppu, u32 cond_id, u64 timeout)
 				// try to reown mutex and exit if timed out
 				if (!cond->mutex->owner)
 				{
-					cond->mutex->owner = ppu.shared_from_this();
+					cond->mutex->owner = std::static_pointer_cast<CPUThread>(ppu.shared_from_this());
 					break;
 				}
 

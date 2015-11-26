@@ -90,13 +90,13 @@ namespace vm
 
 	std::vector<std::shared_ptr<block_t>> g_locations; // memory locations
 
-	const thread_ctrl_t* const INVALID_THREAD = reinterpret_cast<const thread_ctrl_t*>(~0ull);
-	
 	//using reservation_mutex_t = std::mutex;
 
 	class reservation_mutex_t
 	{
-		atomic_t<const thread_ctrl_t*> m_owner{ INVALID_THREAD };
+		std::atomic<bool> m_lock{ false };
+		std::thread::id m_owner{};
+
 		std::condition_variable m_cv;
 		std::mutex m_mutex;
 
@@ -105,13 +105,11 @@ namespace vm
 
 		never_inline void lock()
 		{
-			auto owner = get_current_thread_ctrl();
-
 			std::unique_lock<std::mutex> lock(m_mutex, std::defer_lock);
 
-			while (!m_owner.compare_and_swap_test(INVALID_THREAD, owner))
+			while (m_lock.exchange(true) == true)
 			{
-				if (m_owner == owner)
+				if (m_owner == std::this_thread::get_id())
 				{
 					throw EXCEPTION("Deadlock");
 				}
@@ -125,26 +123,33 @@ namespace vm
 				m_cv.wait_for(lock, std::chrono::milliseconds(1));
 			}
 
+			m_owner = std::this_thread::get_id();
 			do_notify = true;
 		}
 
 		never_inline void unlock()
 		{
-			auto owner = get_current_thread_ctrl();
+			if (m_owner != std::this_thread::get_id())
+			{
+				throw EXCEPTION("Mutex not owned");
+			}
 
-			if (!m_owner.compare_and_swap_test(owner, INVALID_THREAD))
+			m_owner = {};
+
+			if (m_lock.exchange(false) == false)
 			{
 				throw EXCEPTION("Lost lock");
 			}
 
 			if (do_notify)
 			{
+				std::lock_guard<std::mutex> lock(m_mutex);
 				m_cv.notify_one();
 			}
 		}
 	};
 
-	const thread_ctrl_t* volatile g_reservation_owner = nullptr;
+	const thread_ctrl* volatile g_reservation_owner = nullptr;
 
 	u32 g_reservation_addr = 0;
 	u32 g_reservation_size = 0;
@@ -352,7 +357,7 @@ namespace vm
 	void start()
 	{
 		// start notification thread
-		named_thread_t(COPY_EXPR("vm::start thread"), []()
+		thread_ctrl::spawn(PURE_EXPR("vm::start thread"s), []()
 		{
 			while (!Emu.IsStopped())
 			{
@@ -364,8 +369,7 @@ namespace vm
 
 				std::this_thread::sleep_for(std::chrono::milliseconds(1));
 			}
-
-		}).detach();
+		});
 	}
 
 	void _reservation_set(u32 addr, bool no_access = false)
@@ -436,9 +440,6 @@ namespace vm
 			throw EXCEPTION("Invalid page flags (addr=0x%x, size=0x%x, flags=0x%x)", addr, size, flags);
 		}
 
-		// silent unlocking to prevent priority boost for threads going to break reservation
-		//g_reservation_mutex.do_notify = false;
-
 		// break the reservation
 		g_tls_did_break_reservation = g_reservation_owner && _reservation_break(g_reservation_addr);
 
@@ -451,7 +452,7 @@ namespace vm
 		// set additional information
 		g_reservation_addr = addr;
 		g_reservation_size = size;
-		g_reservation_owner = get_current_thread_ctrl();
+		g_reservation_owner = thread_ctrl::get_current();
 
 		// copy data
 		std::memcpy(data, vm::base(addr), size);
@@ -468,7 +469,7 @@ namespace vm
 			throw EXCEPTION("Invalid arguments (addr=0x%x, size=0x%x)", addr, size);
 		}
 
-		if (g_reservation_owner != get_current_thread_ctrl() || g_reservation_addr != addr || g_reservation_size != size)
+		if (g_reservation_owner != thread_ctrl::get_current() || g_reservation_addr != addr || g_reservation_size != size)
 		{
 			// atomic update failed
 			return false;
@@ -522,7 +523,7 @@ namespace vm
 		return true;
 	}
 
-	bool reservation_test(const thread_ctrl_t* current)
+	bool reservation_test(const thread_ctrl* current)
 	{
 		const auto owner = g_reservation_owner;
 
@@ -535,7 +536,7 @@ namespace vm
 		{
 			std::lock_guard<reservation_mutex_t> lock(g_reservation_mutex);
 
-			if (g_reservation_owner && g_reservation_owner == get_current_thread_ctrl())
+			if (g_reservation_owner && g_reservation_owner == thread_ctrl::get_current())
 			{
 				g_tls_did_break_reservation = _reservation_break(g_reservation_addr);
 			}
@@ -556,7 +557,7 @@ namespace vm
 		g_tls_did_break_reservation = false;
 
 		// check and possibly break previous reservation
-		if (g_reservation_owner != get_current_thread_ctrl() || g_reservation_addr != addr || g_reservation_size != size)
+		if (g_reservation_owner != thread_ctrl::get_current() || g_reservation_addr != addr || g_reservation_size != size)
 		{
 			if (g_reservation_owner)
 			{
@@ -572,7 +573,7 @@ namespace vm
 		// set additional information
 		g_reservation_addr = addr;
 		g_reservation_size = size;
-		g_reservation_owner = get_current_thread_ctrl();
+		g_reservation_owner = thread_ctrl::get_current();
 
 		// may not be necessary
 		_mm_mfence();
@@ -783,13 +784,13 @@ namespace vm
 
 		if (!block)
 		{
-			LOG_ERROR(MEMORY, "%s(): invalid memory location (%d, addr=0x%x)\n", __func__, location, addr);
+			LOG_ERROR(MEMORY, "vm::dealloc(): invalid memory location (%d, addr=0x%x)\n", location, addr);
 			return;
 		}
 
 		if (!block->dealloc(addr))
 		{
-			LOG_ERROR(MEMORY, "%s(): deallocation failed (addr=0x%x)\n", __func__, addr);
+			LOG_ERROR(MEMORY, "vm::dealloc(): deallocation failed (addr=0x%x)\n", addr);
 			return;
 		}
 	}

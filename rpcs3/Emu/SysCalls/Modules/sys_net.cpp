@@ -128,7 +128,7 @@ namespace sys_net
 		{
 			g_tls_net_data.set(vm::alloc(sizeof(decltype(g_tls_net_data)::type), vm::main));
 
-			current_thread_register_atexit([addr = g_tls_net_data.addr()]
+			thread_ctrl::at_exit([addr = g_tls_net_data.addr()]
 			{
 				vm::dealloc_verbose_nothrow(addr, vm::main);
 			});

@@ -100,9 +100,9 @@ protected:
 	void begin() override;
 	void end() override;
 
-	void oninit_thread() override;
-	void onexit_thread() override;
-	bool domethod(u32 id, u32 arg) override;
+	void on_init_thread() override;
+	void on_exit() override;
+	bool do_method(u32 id, u32 arg) override;
 	void flip(int buffer) override;
 	u64 timestamp() const override;
 };

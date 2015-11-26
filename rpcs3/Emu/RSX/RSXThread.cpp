@@ -689,7 +689,7 @@ namespace rsx
 		static void wrapper(thread *rsx, u32 arg)
 		{
 			// try process using gpu
-			if (rsx->domethod(id, arg))
+			if (rsx->do_method(id, arg))
 			{
 				if (rsx->capture_current_frame && id == NV4097_CLEAR_SURFACE)
 					rsx->capture_frame("clear");
@@ -974,25 +974,23 @@ namespace rsx
 			capture_frame("Draw " + std::to_string(vertex_draw_count));
 	}
 
-	void thread::task()
+	void thread::on_task()
 	{
-		u8 inc;
-		LOG_NOTICE(RSX, "RSX thread started");
+		on_init_thread();
 
-		oninit_thread();
+		reset();
 
 		last_flip_time = get_system_time() - 1000000;
 
-		autojoin_thread_t  vblank(WRAP_EXPR("VBlank Thread"), [this]()
+		scope_thread_t vblank(PURE_EXPR("VBlank Thread"s), [this]()
 		{
 			const u64 start_time = get_system_time();
 
 			vblank_count = 0;
 
-			while (joinable())
+			// TODO: exit condition
+			while (!Emu.IsStopped())
 			{
-				CHECK_EMU_STATUS;
-
 				if (get_system_time() - start_time > vblank_count * 1000000 / 60)
 				{
 					vblank_count++;
@@ -1012,107 +1010,87 @@ namespace rsx
 			}
 		});
 
-		reset();
-
-		try
+		// TODO: exit condition
+		while (true)
 		{
-			while (joinable())
+			CHECK_EMU_STATUS;
+
+			be_t<u32> get = ctrl->get;
+			be_t<u32> put = ctrl->put;
+
+			if (put == get || !Emu.IsRunning())
 			{
-				//TODO: async mode
-				if (Emu.IsStopped())
-				{
-					LOG_WARNING(RSX, "RSX thread aborted");
-					break;
-				}
-
-				inc = 1;
-
-				be_t<u32> get = ctrl->get;
-				be_t<u32> put = ctrl->put;
-
-				if (put == get || !Emu.IsRunning())
-				{
-					std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
-					continue;
-				}
-
-				const u32 cmd = ReadIO32(get);
-				const u32 count = (cmd >> 18) & 0x7ff;
-
-				if (cmd & CELL_GCM_METHOD_FLAG_JUMP)
-				{
-					u32 offs = cmd & 0x1fffffff;
-					//LOG_WARNING(RSX, "rsx jump(0x%x) #addr=0x%x, cmd=0x%x, get=0x%x, put=0x%x", offs, m_ioAddress + get, cmd, get, put);
-					ctrl->get = offs;
-					continue;
-				}
-				if (cmd & CELL_GCM_METHOD_FLAG_CALL)
-				{
-					m_call_stack.push(get + 4);
-					u32 offs = cmd & ~3;
-					//LOG_WARNING(RSX, "rsx call(0x%x) #0x%x - 0x%x", offs, cmd, get);
-					ctrl->get = offs;
-					continue;
-				}
-				if (cmd == CELL_GCM_METHOD_FLAG_RETURN)
-				{
-					u32 get = m_call_stack.top();
-					m_call_stack.pop();
-					//LOG_WARNING(RSX, "rsx return(0x%x)", get);
-					ctrl->get = get;
-					continue;
-				}
-				if (cmd & CELL_GCM_METHOD_FLAG_NON_INCREMENT)
-				{
-					//LOG_WARNING(RSX, "rsx non increment cmd! 0x%x", cmd);
-					inc = 0;
-				}
-
-				if (cmd == 0) //nop
-				{
-					ctrl->get = get + 4;
-					continue;
-				}
-
-				auto args = vm::ptr<u32>::make((u32)RSXIOMem.RealAddr(get + 4));
-
-				u32 first_cmd = (cmd & 0xffff) >> 2;
-
-				if (cmd & 0x3)
-				{
-					LOG_WARNING(Log::RSX, "unaligned command: %s (0x%x from 0x%x)", get_method_name(first_cmd).c_str(), first_cmd, cmd & 0xffff);
-				}
-
-				for (u32 i = 0; i < count; i++)
-				{
-					u32 reg = first_cmd + (i * inc);
-					u32 value = args[i];
-
-					if (rpcs3::config.misc.log.rsx_logging.value())
-					{
-						LOG_NOTICE(Log::RSX, "%s(0x%x) = 0x%x", get_method_name(reg).c_str(), reg, value);
-					}
-
-					method_registers[reg] = value;
-					if (capture_current_frame)
-						frame_debug.command_queue.push_back(std::make_pair(reg, value));
-
-					if (auto method = methods[reg])
-						method(this, value);
-				}
-
-				ctrl->get = get + (count + 1) * 4;
+				std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
+				continue;
 			}
-		}
-		catch (const std::exception& ex)
-		{
-			LOG_ERROR(Log::RSX, ex.what());
-			throw;
-		}
 
-		LOG_NOTICE(RSX, "RSX thread ended");
+			const u32 cmd = ReadIO32(get);
+			const u32 count = (cmd >> 18) & 0x7ff;
 
-		onexit_thread();
+			if (cmd & CELL_GCM_METHOD_FLAG_JUMP)
+			{
+				u32 offs = cmd & 0x1fffffff;
+				//LOG_WARNING(RSX, "rsx jump(0x%x) #addr=0x%x, cmd=0x%x, get=0x%x, put=0x%x", offs, m_ioAddress + get, cmd, get, put);
+				ctrl->get = offs;
+				continue;
+			}
+			if (cmd & CELL_GCM_METHOD_FLAG_CALL)
+			{
+				m_call_stack.push(get + 4);
+				u32 offs = cmd & ~3;
+				//LOG_WARNING(RSX, "rsx call(0x%x) #0x%x - 0x%x", offs, cmd, get);
+				ctrl->get = offs;
+				continue;
+			}
+			if (cmd == CELL_GCM_METHOD_FLAG_RETURN)
+			{
+				u32 get = m_call_stack.top();
+				m_call_stack.pop();
+				//LOG_WARNING(RSX, "rsx return(0x%x)", get);
+				ctrl->get = get;
+				continue;
+			}
+
+			if (cmd == 0) //nop
+			{
+				ctrl->get = get + 4;
+				continue;
+			}
+
+			auto args = vm::ptr<u32>::make((u32)RSXIOMem.RealAddr(get + 4));
+
+			u32 first_cmd = (cmd & 0xffff) >> 2;
+
+			if (cmd & 0x3)
+			{
+				LOG_WARNING(Log::RSX, "unaligned command: %s (0x%x from 0x%x)", get_method_name(first_cmd).c_str(), first_cmd, cmd & 0xffff);
+			}
+
+			for (u32 i = 0; i < count; i++)
+			{
+				u32 reg = cmd & CELL_GCM_METHOD_FLAG_NON_INCREMENT ? first_cmd : first_cmd + i;
+				u32 value = args[i];
+
+				if (rpcs3::config.misc.log.rsx_logging.value())
+				{
+					LOG_NOTICE(Log::RSX, "%s(0x%x) = 0x%x", get_method_name(reg).c_str(), reg, value);
+				}
+
+				method_registers[reg] = value;
+				if (capture_current_frame)
+					frame_debug.command_queue.push_back(std::make_pair(reg, value));
+
+				if (auto method = methods[reg])
+					method(this, value);
+			}
+
+			ctrl->get = get + (count + 1) * 4;
+		}
+	}
+
+	std::string thread::get_name() const
+	{
+		return "rsx::thread"s;
 	}
 
 	void thread::fill_scale_offset_data(void *buffer, bool is_d3d) const noexcept
@@ -1240,8 +1218,8 @@ namespace rsx
 
 		m_used_gcm_commands.clear();
 
-		oninit();
-		named_thread_t::start(WRAP_EXPR("rsx::thread"), WRAP_EXPR(task()));
+		on_init();
+		start();
 	}
 
 	u32 thread::ReadIO32(u32 addr)

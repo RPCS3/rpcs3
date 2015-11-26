@@ -43,8 +43,14 @@ void sys_ppu_thread_exit(PPUThread& ppu, u64 val)
 	// (deallocate TLS)
 	// ...
 
-	// call the syscall
-	_sys_ppu_thread_exit(ppu, val);
+	if (ppu.hle_code == 0xaff080a4)
+	{
+		// Change sys_ppu_thread_exit code to the syscall code
+		ppu.hle_code = ~41;
+	}
+
+	// Call the syscall
+	return _sys_ppu_thread_exit(ppu, val);
 }
 
 std::mutex g_once_mutex;

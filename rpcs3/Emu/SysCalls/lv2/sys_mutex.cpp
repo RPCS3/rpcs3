@@ -132,7 +132,7 @@ s32 sys_mutex_lock(PPUThread& ppu, u32 mutex_id, u64 timeout)
 	// lock immediately if not locked
 	if (!mutex->owner)
 	{
-		mutex->owner = ppu.shared_from_this();
+		mutex->owner = std::static_pointer_cast<CPUThread>(ppu.shared_from_this());
 
 		return CELL_OK;
 	}
@@ -207,7 +207,7 @@ s32 sys_mutex_trylock(PPUThread& ppu, u32 mutex_id)
 	}
 
 	// own the mutex if free
-	mutex->owner = ppu.shared_from_this();
+	mutex->owner = std::static_pointer_cast<CPUThread>(ppu.shared_from_this());
 
 	return CELL_OK;
 }

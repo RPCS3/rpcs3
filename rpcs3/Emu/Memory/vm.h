@@ -1,9 +1,6 @@
 #pragma once
 
-
-const class thread_ctrl_t* get_current_thread_ctrl();
-
-class named_thread_t;
+#include "Utilities/Thread.h"
 
 namespace vm
 {
@@ -122,7 +119,7 @@ namespace vm
 	bool reservation_query(u32 addr, u32 size, bool is_writing, std::function<bool()> callback);
 
 	// Returns true if the current thread owns reservation
-	bool reservation_test(const thread_ctrl_t* current = get_current_thread_ctrl());
+	bool reservation_test(const thread_ctrl* current = thread_ctrl::get_current());
 
 	// Break all reservations created by the current thread
 	void reservation_free();

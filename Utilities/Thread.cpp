@@ -19,6 +19,27 @@
 #include <ucontext.h>
 #endif
 
+static const auto s_terminate_handler_set = std::set_terminate([]()
+{
+	if (std::uncaught_exception())
+	{
+		try
+		{
+			throw;
+		}
+		catch (const std::exception& ex)
+		{
+			std::printf("Unhandled exception: %s\n", ex.what());
+		}
+		catch (...)
+		{
+			std::printf("Unhandled exception of unknown type.\n");
+		}
+	}
+
+	std::abort();
+});
+
 void SetCurrentThreadDebugName(const char* threadName)
 {
 #if defined(_MSC_VER) // this is VS-specific way to set thread names for the debugger
@@ -113,10 +134,11 @@ enum x64_op_t : u32
 	X64OP_STOS,
 	X64OP_XCHG,
 	X64OP_CMPXCHG,
-	X64OP_LOAD_AND_STORE, // lock and [mem],reg
-	X64OP_LOAD_OR_STORE, // TODO: lock or [mem], reg
-	X64OP_INC, // TODO: lock inc [mem]
-	X64OP_DEC, // TODO: lock dec [mem]
+	X64OP_LOAD_AND_STORE, // lock and [mem], reg
+	X64OP_LOAD_OR_STORE,  // lock or  [mem], reg (TODO)
+	X64OP_LOAD_XOR_STORE, // lock xor [mem], reg (TODO)
+	X64OP_INC, // lock inc [mem] (TODO)
+	X64OP_DEC, // lock dec [mem] (TODO)
 };
 
 void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, size_t& out_size, size_t& out_length)
@@ -1132,10 +1154,7 @@ const PVOID exception_handler = (atexit([]{ RemoveVectoredExceptionHandler(excep
 	const u64 addr64 = (u64)pExp->ExceptionRecord->ExceptionInformation[1] - (u64)vm::base(0);
 	const bool is_writing = pExp->ExceptionRecord->ExceptionInformation[0] != 0;
 
-	if (pExp->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION &&
-		(u32)addr64 == addr64 &&
-		get_current_thread_ctrl() &&
-		handle_access_violation((u32)addr64, is_writing, pExp->ContextRecord))
+	if (pExp->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION && (u32)addr64 == addr64 && thread_ctrl::get_current() && handle_access_violation((u32)addr64, is_writing, pExp->ContextRecord))
 	{
 		return EXCEPTION_CONTINUE_EXECUTION;
 	}
@@ -1164,7 +1183,7 @@ void signal_handler(int sig, siginfo_t* info, void* uct)
 	const bool is_writing = ((ucontext_t*)uct)->uc_mcontext.gregs[REG_ERR] & 0x2;
 #endif
 
-	if ((u32)addr64 == addr64 && get_current_thread_ctrl())
+	if ((u32)addr64 == addr64 && thread_ctrl::get_current())
 	{
 		if (handle_access_violation((u32)addr64, is_writing, (ucontext_t*)uct))
 		{
@@ -1191,94 +1210,112 @@ const int sigaction_result = []() -> int
 
 #endif
 
-thread_local thread_ctrl_t* g_tls_this_thread = nullptr;
+thread_local thread_ctrl* thread_ctrl::g_tls_this_thread = nullptr;
 
-const thread_ctrl_t* get_current_thread_ctrl()
-{
-	return g_tls_this_thread;
-}
+// TODO
+std::atomic<u32> g_thread_count{ 0 };
 
-std::string thread_ctrl_t::get_name() const
+void thread_ctrl::initialize()
 {
-	return m_name();
-}
+	SetCurrentThreadDebugName(g_tls_this_thread->m_name().c_str());
 
-named_thread_t::named_thread_t(std::function<std::string()> name, std::function<void()> func)
-{
-	start(std::move(name), std::move(func));
-}
+#if defined(_MSC_VER)
+	_set_se_translator(_se_translator); // not essential, disable if necessary
+#endif
 
-named_thread_t::~named_thread_t()
-{
-	if (m_thread)
+#ifdef _WIN32
+	if (!exception_handler || !exception_filter)
+#else
+	if (sigaction_result == -1)
+#endif
 	{
-		std::printf("Fatal: thread neither joined nor detached\n");
+		std::printf("Exceptions handlers are not set correctly.\n");
 		std::terminate();
 	}
+
+	// TODO
+	g_thread_count++;
+}
+
+void thread_ctrl::finalize() noexcept
+{
+	// TODO
+	vm::reservation_free();
+
+	// TODO
+	g_thread_count--;
+
+	// Call atexit functions
+	for (const auto& func : decltype(m_atexit)(std::move(g_tls_this_thread->m_atexit)))
+	{
+		func();
+	}
+}
+
+thread_ctrl::~thread_ctrl()
+{
+	m_thread.detach();
+
+	if (m_future.valid())
+	{
+		try
+		{
+			m_future.get();
+		}
+		catch (const std::exception& ex)
+		{
+			LOG_ERROR(GENERAL, "Abandoned exception: %s", ex.what());
+		}
+		catch (EmulationStopped)
+		{
+		}
+	}
+}
+
+std::string thread_ctrl::get_name() const
+{
+	CHECK_ASSERTION(m_name);
+
+	return m_name();
 }
 
 std::string named_thread_t::get_name() const
 {
-	if (!m_thread)
-	{
-		throw EXCEPTION("Invalid thread");
-	}
-
-	if (!m_thread->m_name)
-	{
-		throw EXCEPTION("Invalid name getter");
-	}
-
-	return m_thread->m_name();
+	return fmt::format("('%s') Unnamed Thread", typeid(*this).name());
 }
 
-std::atomic<u32> g_thread_count{ 0 };
-
-void named_thread_t::start(std::function<std::string()> name, std::function<void()> func)
+void named_thread_t::start()
 {
-	if (m_thread)
+	CHECK_ASSERTION(m_thread == nullptr);
+
+	// Get shared_ptr instance (will throw if called from the constructor or the object has been created incorrectly)
+	auto ptr = shared_from_this();
+
+	// Make name getter
+	auto name = [wptr = std::weak_ptr<named_thread_t>(ptr), type = &typeid(*this)]()
 	{
-		throw EXCEPTION("Thread already exists");
-	}
+		// Return actual name if available
+		if (const auto ptr = wptr.lock())
+		{
+			return ptr->get_name();
+		}
+		else
+		{
+			return fmt::format("('%s') Deleted Thread", type->name());
+		}
+	};
 
-	// create new thread control variable
-	m_thread = std::make_shared<thread_ctrl_t>(std::move(name));
-
-	// start thread
-	m_thread->m_thread = std::thread([](std::shared_ptr<thread_ctrl_t> ctrl, std::function<void()> func)
+	// Run thread
+	m_thread = thread_ctrl::spawn(std::move(name), [thread = std::move(ptr)]()
 	{
-		g_tls_this_thread = ctrl.get();
-
-		SetCurrentThreadDebugName(ctrl->get_name().c_str());
-
-#if defined(_MSC_VER)
-		_set_se_translator(_se_translator);
-#endif
-
-#ifdef _WIN32
-		if (!exception_handler || !exception_filter)
-		{
-			LOG_ERROR(GENERAL, "exception_handler not set");
-			return;
-		}
-#else
-		if (sigaction_result == -1)
-		{
-			printf("sigaction() failed");
-			exit(EXIT_FAILURE);
-		}
-#endif
-
 		try
 		{
-			g_thread_count++;
-
 			if (rpcs3::config.misc.log.hle_logging.value())
 			{
 				LOG_NOTICE(GENERAL, "Thread started");
 			}
 
-			func();
+			thread->on_task();
 
 			if (rpcs3::config.misc.log.hle_logging.value())
 			{
@@ -1295,75 +1332,24 @@ void named_thread_t::start(std::function<std::string()> name, std::function<void
 			LOG_NOTICE(GENERAL, "Thread aborted");
 		}
 
-		for (auto& func : ctrl->m_atexit)
-		{
-			func();
-
-			func = nullptr;
-		}
-
-		vm::reservation_free();
-
-		g_thread_count--;
-
-	}, m_thread, std::move(func));
-}
-
-void named_thread_t::detach()
-{
-	if (!m_thread)
-	{
-		throw EXCEPTION("Invalid thread");
-	}
-
-	// +clear m_thread
-	const auto ctrl = std::move(m_thread);
-
-	// notify if detached by another thread
-	if (g_tls_this_thread != m_thread.get())
-	{
-		// lock for reliable notification
-		std::lock_guard<std::mutex> lock(mutex);
-
-		cv.notify_one();
-	}
-
-	ctrl->m_thread.detach();
+		thread->on_exit();
+	});
 }
 
 void named_thread_t::join()
 {
-	if (!m_thread)
+	CHECK_ASSERTION(m_thread != nullptr);
+
+	try
 	{
-		throw EXCEPTION("Invalid thread");
+		m_thread->join();
+		m_thread.reset();
 	}
-
-	if (g_tls_this_thread == m_thread.get())
+	catch (...)
 	{
-		throw EXCEPTION("Deadlock");
+		m_thread.reset();
+		throw;
 	}
-
-	// +clear m_thread
-	const auto ctrl = std::move(m_thread);
-
-	{
-		// lock for reliable notification
-		std::lock_guard<std::mutex> lock(mutex);
-
-		cv.notify_one();
-	}
-
-	ctrl->m_thread.join();
-}
-
-bool named_thread_t::is_current() const
-{
-	if (!m_thread)
-	{
-		throw EXCEPTION("Invalid thread");
-	}
-
-	return g_tls_this_thread == m_thread.get();
 }
 
 const std::function<bool()> SQUEUE_ALWAYS_EXIT = [](){ return true; };

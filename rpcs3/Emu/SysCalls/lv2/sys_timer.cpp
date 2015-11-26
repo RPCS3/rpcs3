@@ -13,55 +13,55 @@ SysCallBase sys_timer("sys_timer");
 
 extern u64 get_system_time();
 
-lv2_timer_t::lv2_timer_t()
-	: start(0)
-	, period(0)
-	, state(SYS_TIMER_STATE_STOP)
+void lv2_timer_t::on_task()
 {
-	auto name = fmt::format("Timer[0x%x] Thread", idm::get_last_id());
+	std::unique_lock<std::mutex> lock(mutex);
 
-	thread.start([name]{ return name; }, [this]()
+	while (state <= SYS_TIMER_STATE_RUN)
 	{
-		std::unique_lock<std::mutex> lock(thread.mutex);
+		CHECK_EMU_STATUS;
 
-		while (thread.joinable())
+		if (state == SYS_TIMER_STATE_RUN)
 		{
-			CHECK_EMU_STATUS;
+			if (lock) lock.unlock();
 
-			if (state == SYS_TIMER_STATE_RUN)
+			LV2_LOCK;
+
+			if (get_system_time() >= expire)
 			{
-				LV2_LOCK;
+				const auto queue = port.lock();
 
-				if (get_system_time() >= start)
+				if (queue)
 				{
-					const auto queue = port.lock();
+					queue->push(lv2_lock, source, data1, data2, expire);
+				}
 
-					if (queue)
-					{
-						queue->push(lv2_lock, source, data1, data2, start);
-					}
+				if (period && queue)
+				{
+					expire += period; // set next expiration time
 
-					if (period && queue)
-					{
-						start += period; // set next expiration time
-
-						continue; // hack: check again
-					}
-					else
-					{
-						state = SYS_TIMER_STATE_STOP; // stop if oneshot or the event port was disconnected (TODO: is it correct?)
-					}
+					continue; // hack: check again
+				}
+				else
+				{
+					state = SYS_TIMER_STATE_STOP; // stop if oneshot or the event port was disconnected (TODO: is it correct?)
 				}
 			}
-
-			thread.cv.wait_for(lock, std::chrono::milliseconds(1));
 		}
-	});
+
+		if (!lock)
+		{
+			lock.lock();
+			continue;
+		}
+
+		cv.wait_for(lock, std::chrono::milliseconds(1));
+	}
 }
 
-lv2_timer_t::~lv2_timer_t()
+lv2_timer_t::lv2_timer_t()
+	: id(idm::get_last_id())
 {
-	thread.join();
 }
 
 s32 sys_timer_create(vm::ptr<u32> timer_id)
@@ -109,7 +109,7 @@ s32 sys_timer_get_information(u32 timer_id, vm::ptr<sys_timer_information_t> inf
 		return CELL_ESRCH;
 	}
 
-	info->next_expiration_time = timer->start;
+	info->next_expiration_time = timer->expire;
 
 	info->period      = timer->period;
 	info->timer_state = timer->state;
@@ -163,11 +163,14 @@ s32 _sys_timer_start(u32 timer_id, u64 base_time, u64 period)
 
 	// sys_timer_start_periodic() will use current time (TODO: is it correct?)
 
-	timer->start  = base_time ? base_time : start_time + period;
+	// lock for reliable notification
+	std::lock_guard<std::mutex> lock(timer->mutex);
+
+	timer->expire = base_time ? base_time : start_time + period;
 	timer->period = period;
 	timer->state  = SYS_TIMER_STATE_RUN;
 
-	timer->thread.cv.notify_one();
+	timer->cv.notify_one();
 
 	return CELL_OK;
 }
@@ -196,8 +199,8 @@ s32 sys_timer_connect_event_queue(u32 timer_id, u32 queue_id, u64 name, u64 data
 
 	LV2_LOCK;
 
-	const auto timer = idm::get<lv2_timer_t>(timer_id);
-	const auto queue = idm::get<lv2_event_queue_t>(queue_id);
+	const auto timer(idm::get<lv2_timer_t>(timer_id));
+	const auto queue(idm::get<lv2_event_queue_t>(queue_id));
 
 	if (!timer || !queue)
 	{

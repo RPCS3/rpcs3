@@ -7,6 +7,5 @@ public:
 	NullGSRender();
 
 private:
-	void onexit_thread() override;
-	bool domethod(u32 cmd, u32 value) override;
+	bool do_method(u32 cmd, u32 value) override;
 };

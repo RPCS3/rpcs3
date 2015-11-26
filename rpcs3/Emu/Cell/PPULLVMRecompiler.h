@@ -773,7 +773,7 @@ namespace ppu_recompiler_llvm {
 	 * It then builds them asynchroneously and update the executable mapping
 	 * using atomic based locks to avoid undefined behavior.
 	 **/
-	class RecompilationEngine final : protected named_thread_t {
+	class RecompilationEngine final : public named_thread_t {
 		friend class CPUHybridDecoderRecompiler;
 	public:
 		virtual ~RecompilationEngine() override;
@@ -790,7 +790,9 @@ namespace ppu_recompiler_llvm {
 		/// Log
 		llvm::raw_fd_ostream & Log();
 
-		void Task();
+		std::string get_name() const override { return "PPU Recompilation Engine"; }
+
+		void on_task() override;
 
 		/// Get a pointer to the instance of this class
 		static std::shared_ptr<RecompilationEngine> GetInstance();

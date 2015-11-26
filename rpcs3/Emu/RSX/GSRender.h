@@ -49,9 +49,8 @@ public:
 	GSRender(frame_type type);
 	virtual ~GSRender();
 
-	void oninit() override;
-	void oninit_thread() override;
+	void on_init() override;
+	void on_init_thread() override;
 
-	void close();
 	void flip(int buffer) override;
 };

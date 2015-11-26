@@ -22,23 +22,19 @@ void GSInfo::Init()
 	mode.pitch = 4;
 }
 
-GSManager::GSManager() : m_render(nullptr)
-{
-}
-
 void GSManager::Init()
 {
-	if(m_render) return;
+	if (m_render) return;
 
 	m_info.Init();
 
 	switch (rpcs3::state.config.rsx.renderer.value())
 	{
 	default:
-	case rsx_renderer_type::Null : m_render = new NullGSRender(); break;
-	case rsx_renderer_type::OpenGL: m_render = new GLGSRender(); break;
+	case rsx_renderer_type::Null : m_render = std::make_shared<NullGSRender>(); break;
+	case rsx_renderer_type::OpenGL: m_render = std::make_shared<GLGSRender>(); break;
 #ifdef _MSC_VER
-	case rsx_renderer_type::DX12: m_render = new D3D12GSRender(); break;
+	case rsx_renderer_type::DX12: m_render = std::make_shared<D3D12GSRender>(); break;
 #endif
 	}
 
@@ -47,12 +43,7 @@ void GSManager::Init()
 
 void GSManager::Close()
 {
-	if(m_render)
-	{
-		m_render->close();
-		delete m_render;
-		m_render = nullptr;
-	}
+	m_render.reset();
 }
 
 u8 GSManager::GetState()

@@ -57,24 +57,20 @@ void ppu_decoder_cache_t::initialize(u32 addr, u32 size)
 }
 
 PPUThread::PPUThread(const std::string& name)
-	: CPUThread(CPU_THREAD_PPU, name, WRAP_EXPR(fmt::format("PPU[0x%x] Thread (%s)[0x%08x]", m_id, m_name.c_str(), PC)))
+	: CPUThread(CPU_THREAD_PPU, name)
 {
 	InitRotateMask();
 }
 
 PPUThread::~PPUThread()
 {
-	if (is_current())
-	{
-		detach();
-	}
-	else
-	{
-		join();
-	}
-
 	close_stack();
 	ppu_free_tls(m_id);
+}
+
+std::string PPUThread::get_name() const
+{
+	return fmt::format("PPU Thread[0x%x] (%s)[0x%08x]", m_id, CPUThread::get_name(), PC);
 }
 
 void PPUThread::dump_info() const
@@ -239,7 +235,7 @@ void PPUThread::fast_call(u32 addr, u32 rtoc)
 
 	try
 	{
-		task();
+		cpu_task();
 	}
 	catch (CPUThreadReturn)
 	{
@@ -264,7 +260,7 @@ void PPUThread::fast_stop()
 	m_state |= CPU_STATE_RETURN;
 }
 
-void PPUThread::task()
+void PPUThread::cpu_task()
 {
 	SetHostRoundingMode(FPSCR_RN_NEAR);
 

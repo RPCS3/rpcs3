@@ -10,20 +10,9 @@
 thread_local spu_mfc_arg_t raw_spu_mfc[8] = {};
 
 RawSPUThread::RawSPUThread(const std::string& name, u32 index)
-	: SPUThread(CPU_THREAD_RAW_SPU, name, COPY_EXPR(fmt::format("RawSPU[%d] Thread (0x%x)[0x%05x]", index, m_id, pc)), index, RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * index)
+	: SPUThread(CPU_THREAD_RAW_SPU, name, index, RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * index)
 {
-	if (!vm::falloc(offset, 0x40000))
-	{
-		throw EXCEPTION("Failed to allocate RawSPU local storage");
-	}
-}
-
-RawSPUThread::~RawSPUThread()
-{
-	join();
-
-	// Deallocate Local Storage
-	vm::dealloc_verbose_nothrow(offset);
+	CHECK_ASSERTION(vm::falloc(offset, 0x40000) == offset);
 }
 
 bool RawSPUThread::read_reg(const u32 addr, u32& value)
@@ -233,7 +222,7 @@ bool RawSPUThread::write_reg(const u32 addr, const u32 value)
 	return false;
 }
 
-void RawSPUThread::task()
+void RawSPUThread::cpu_task()
 {
 	// get next PC and SPU Interrupt status
 	pc = npc.exchange(0);
@@ -242,7 +231,7 @@ void RawSPUThread::task()
 
 	pc &= 0x3fffc;
 
-	SPUThread::task();
+	SPUThread::cpu_task();
 
 	// save next PC and current SPU Interrupt status
 	npc = pc | ((ch_event_stat & SPU_EVENT_INTR_ENABLED) != 0);

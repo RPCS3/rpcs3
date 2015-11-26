@@ -80,18 +80,20 @@ void armv7_free_tls(u32 thread)
 }
 
 ARMv7Thread::ARMv7Thread(const std::string& name)
-	: CPUThread(CPU_THREAD_ARMv7, name, WRAP_EXPR(fmt::format("ARMv7[0x%x] Thread (%s)[0x%08x]", m_id, m_name.c_str(), PC)))
+	: CPUThread(CPU_THREAD_ARMv7, name)
 	, ARMv7Context({})
 {
 }
 
 ARMv7Thread::~ARMv7Thread()
 {
-	cv.notify_one();
-	join();
-
 	close_stack();
 	armv7_free_tls(m_id);
+}
+
+std::string ARMv7Thread::get_name() const
+{
+	return fmt::format("ARMv7 Thread[0x%x] (%s)[0x%08x]", m_id, CPUThread::get_name(), PC);
 }
 
 void ARMv7Thread::dump_info() const
@@ -191,7 +193,7 @@ void ARMv7Thread::do_run()
 	}
 }
 
-void ARMv7Thread::task()
+void ARMv7Thread::cpu_task()
 {
 	if (custom_task)
 	{
@@ -225,7 +227,7 @@ void ARMv7Thread::fast_call(u32 addr)
 
 	try
 	{
-		task();
+		cpu_task();
 	}
 	catch (CPUThreadReturn)
 	{

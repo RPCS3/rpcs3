@@ -184,7 +184,7 @@ struct lv2_file_t
 	u64 st_trans_rate;
 	bool st_copyless;
 
-	named_thread_t st_thread;
+	std::shared_ptr<thread_ctrl> st_thread;
 
 	u32 st_buffer;
 	u64 st_read_size;

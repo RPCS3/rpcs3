@@ -199,7 +199,7 @@ void LogManager::log(LogMessage msg)
 			prefix = "E ";
 			break;
 		}
-		if (auto thr = get_current_thread_ctrl())
+		if (auto thr = thread_ctrl::get_current())
 		{
 			prefix += "{" + thr->get_name() + "} ";
 		}

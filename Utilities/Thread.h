@@ -1,107 +1,171 @@
 #pragma once
 
-const class thread_ctrl_t* get_current_thread_ctrl();
-
-// Named thread control class
-class thread_ctrl_t final
+// Thread control class
+class thread_ctrl final
 {
-	friend class named_thread_t;
-
-	template<typename T> friend void current_thread_register_atexit(T);
-
-	// Thread handler
-	std::thread m_thread;
+	static thread_local thread_ctrl* g_tls_this_thread;
 
 	// Name getter
-	const std::function<std::string()> m_name;
+	std::function<std::string()> m_name;
 
-	// Functions executed at thread exit (temporarily)
-	std::vector<std::function<void()>> m_atexit;
+	// Thread handle (be careful)
+	std::thread m_thread;
+
+	// Thread result
+	std::future<void> m_future;
+
+	// Functions scheduled at thread exit
+	std::deque<std::function<void()>> m_atexit;
+
+	// Called at the thread start
+	static void initialize();
+
+	// Called at the thread end
+	static void finalize() noexcept;
 
 public:
-	thread_ctrl_t(std::function<std::string()> name)
-		: m_name(std::move(name))
+	template<typename T>
+	thread_ctrl(T&& name)
+		: m_name(std::forward<T>(name))
 	{
 	}
 
-	thread_ctrl_t(const thread_ctrl_t&) = delete;
+	// Disable copy/move constructors and operators
+	thread_ctrl(const thread_ctrl&) = delete;
+
+	~thread_ctrl();
 
 	// Get thread name
 	std::string get_name() const;
+
+	// Get future result (may throw)
+	void join()
+	{
+		return m_future.get();
+	}
+
+	// Get current thread (may be nullptr)
+	static const thread_ctrl* get_current()
+	{
+		return g_tls_this_thread;
+	}
+
+	// Register function at thread exit (for the current thread)
+	template<typename T>
+	static inline void at_exit(T&& func)
+	{
+		CHECK_ASSERTION(g_tls_this_thread);
+
+		g_tls_this_thread->m_atexit.emplace_front(std::forward<T>(func));
+	}
+
+	// Named thread factory
+	template<typename N, typename F>
+	static inline std::shared_ptr<thread_ctrl> spawn(N&& name, F&& func)
+	{
+		auto ctrl = std::make_shared<thread_ctrl>(std::forward<N>(name));
+
+		std::promise<void> promise;
+
+		ctrl->m_future = promise.get_future();
+
+		ctrl->m_thread = std::thread([ctrl, task = std::forward<F>(func)](std::promise<void> promise)
+		{
+			g_tls_this_thread = ctrl.get();
+
+			try
+			{
+				initialize();
+				task();
+				finalize();
+				promise.set_value();
+			}
+			catch (...)
+			{
+				finalize();
+				promise.set_exception(std::current_exception());
+			}
+
+		}, std::move(promise));
+
+		return ctrl;
+	}
 };
 
-// Register function at thread exit (temporarily)
-template<typename T> void current_thread_register_atexit(T func)
-{
-	extern thread_local thread_ctrl_t* g_tls_this_thread;
-
-	g_tls_this_thread->m_atexit.emplace_back(func);
-}
-
-class named_thread_t
+class named_thread_t : public std::enable_shared_from_this<named_thread_t>
 {
 	// Pointer to managed resource (shared with actual thread)
-	std::shared_ptr<thread_ctrl_t> m_thread;
+	std::shared_ptr<thread_ctrl> m_thread;
 
 public:
-	// Thread mutex for external use
-	std::mutex mutex;
-
-	// Thread condition variable for external use
+	// Thread condition variable for external use (this thread waits on it, other threads may notify)
 	std::condition_variable cv;
 
+	// Thread mutex for external use (can be used with `cv`)
+	std::mutex mutex;
+
+protected:
+	// Thread task (called in the thread)
+	virtual void on_task() = 0;
+
+	// Thread finalization (called after on_task)
+	virtual void on_exit() {}
+
+	// ID initialization (called through id_aux_initialize)
+	virtual void on_id_aux_initialize() { start(); }
+
+	// ID finalization (called through id_aux_finalize)
+	virtual void on_id_aux_finalize() { join(); }
+
 public:
-	// Initialize in empty state
 	named_thread_t() = default;
 
-	// Create named thread
-	named_thread_t(std::function<std::string()> name, std::function<void()> func);
+	virtual ~named_thread_t() = default;
 
 	// Deleted copy/move constructors + copy/move operators
 	named_thread_t(const named_thread_t&) = delete;
 
-	// Destructor, calls std::terminate if the thread is neither joined nor detached
-	virtual ~named_thread_t();
-
-public:
 	// Get thread name
-	std::string get_name() const;
+	virtual std::string get_name() const;
 
-	// Create named thread (current state must be empty)
-	void start(std::function<std::string()> name, std::function<void()> func);
+	// Start thread (cannot be called from the constructor: should throw bad_weak_ptr in such case)
+	void start();
 
-	// Detach thread -> empty state
-	void detach();
-
-	// Join thread -> empty state
+	// Join thread (get future result)
 	void join();
 
 	// Check whether the thread is not in "empty state"
-	bool joinable() const { return m_thread.operator bool(); }
+	bool is_started() const { return m_thread.operator bool(); }
 
-	// Check whether it is the currently running thread
-	bool is_current() const;
+	// Compare with the current thread
+	bool is_current() const { CHECK_ASSERTION(m_thread); return thread_ctrl::get_current() == m_thread.get(); }
 
-	// Get internal thread pointer
-	const thread_ctrl_t* get_thread_ctrl() const { return m_thread.get(); }
+	// Get thread_ctrl
+	const thread_ctrl* get_thread_ctrl() const { return m_thread.get(); }
+
+	friend void id_aux_initialize(named_thread_t* ptr) { ptr->on_id_aux_initialize(); }
+	friend void id_aux_finalize(named_thread_t* ptr) { ptr->on_id_aux_finalize(); }
 };
 
-// Wrapper for named_thread_t, joins automatically in the destructor
-class autojoin_thread_t final
+// Wrapper for named thread, joins automatically in the destructor, can only be used in function scope
+class scope_thread_t final
 {
-	named_thread_t m_thread;
+	std::shared_ptr<thread_ctrl> m_thread;
 
 public:
-	autojoin_thread_t(std::function<std::string()> name, std::function<void()> func)
-		: m_thread(std::move(name), std::move(func))
+	template<typename N, typename F>
+	scope_thread_t(N&& name, F&& func)
+		: m_thread(thread_ctrl::spawn(std::forward<N>(name), std::forward<F>(func)))
 	{
 	}
 
-	autojoin_thread_t(const autojoin_thread_t&) = delete;
+	// Deleted copy/move constructors + copy/move operators
+	scope_thread_t(const scope_thread_t&) = delete;
 
-	~autojoin_thread_t() noexcept(false) // Allow exceptions
+	// Destructor with exceptions allowed
+	~scope_thread_t() noexcept(false)
 	{
-		m_thread.join();
+		m_thread->join();
 	}
 };
 

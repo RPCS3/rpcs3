@@ -61,9 +61,9 @@ s32 cellMsgDialogOpen2(u32 type, vm::cptr<char> msgString, vm::ptr<CellMsgDialog
 	default: return CELL_MSGDIALOG_ERROR_PARAM;
 	}
 
-	const auto dlg = fxm::import<MsgDialogBase>(Emu.GetCallbacks().get_msg_dialog());
+	const std::shared_ptr<MsgDialogBase> dlg(Emu.GetCallbacks().get_msg_dialog());
 
-	if (!dlg)
+	if (!fxm::import(dlg))
 	{
 		return CELL_SYSUTIL_ERROR_BUSY;
 	}
@@ -206,18 +206,17 @@ s32 cellMsgDialogClose(f32 delay)
 
 	const u64 wait_until = get_system_time() + static_cast<s64>(std::max<float>(delay, 0.0f) * 1000);
 
-	named_thread_t(WRAP_EXPR("MsgDialog Thread"), [=]()
+	thread_ctrl::spawn(PURE_EXPR("MsgDialog Thread"s), [=]()
 	{
 		while (dlg->state == MsgDialogState::Open && get_system_time() < wait_until)
 		{
-			CHECK_EMU_STATUS;
+			if (Emu.IsStopped()) return;
 
 			std::this_thread::sleep_for(1ms);
 		}
 
 		dlg->on_close(CELL_MSGDIALOG_BUTTON_NONE);
-
-	}).detach();
+	});
 
 	return CELL_OK;
 }

@@ -255,7 +255,7 @@ namespace rsx
 		}
 	};
 
-	class thread : protected named_thread_t
+	class thread : public named_thread_t
 	{
 	protected:
 		std::stack<u32> m_call_stack;
@@ -327,18 +327,19 @@ namespace rsx
 	protected:
 		virtual ~thread() {}
 
+		virtual void on_task() override;
+
 	public:
+		virtual std::string get_name() const override;
+
 		virtual void begin();
 		virtual void end();
 
-		virtual void oninit() = 0;
-		virtual void oninit_thread() = 0;
-		virtual void onexit_thread() = 0;
-		virtual bool domethod(u32 cmd, u32 value) { return false; }
+		virtual void on_init() = 0;
+		virtual void on_init_thread() = 0;
+		virtual bool do_method(u32 cmd, u32 value) { return false; }
 		virtual void flip(int buffer) = 0;
 		virtual u64 timestamp() const;
-
-		void task();
 
 		/**
 		 * Fill buffer with 4x4 scale offset matrix.

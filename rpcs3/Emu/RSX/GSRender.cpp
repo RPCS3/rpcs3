@@ -31,11 +31,12 @@ GSRender::~GSRender()
 
 	if (m_frame)
 	{
+		m_frame->hide();
 		m_frame->close();
 	}
 }
 
-void GSRender::oninit()
+void GSRender::on_init()
 {
 	if (m_frame)
 	{
@@ -43,7 +44,7 @@ void GSRender::oninit()
 	}
 }
 
-void GSRender::oninit_thread()
+void GSRender::on_init_thread()
 {
 	if (m_frame)
 	{
@@ -52,21 +53,10 @@ void GSRender::oninit_thread()
 	}
 }
 
-void GSRender::close()
-{
-	if (m_frame && m_frame->shown())
-	{
-		m_frame->hide();
-	}
-
-	if (joinable())
-	{
-		join();
-	}
-}
-
 void GSRender::flip(int buffer)
 {
 	if (m_frame)
+	{
 		m_frame->flip(m_context);
+	}
 }

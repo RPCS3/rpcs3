@@ -6,11 +6,7 @@ NullGSRender::NullGSRender() : GSRender(frame_type::Null)
 {
 }
 
-void NullGSRender::onexit_thread()
-{
-}
-
-bool NullGSRender::domethod(u32 cmd, u32 value)
+bool NullGSRender::do_method(u32 cmd, u32 value)
 {
 	return false;
 }

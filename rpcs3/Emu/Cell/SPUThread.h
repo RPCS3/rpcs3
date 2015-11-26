@@ -661,7 +661,7 @@ public:
 	u32 recursion_level = 0;
 
 protected:
-	SPUThread(CPUThreadType type, const std::string& name, std::function<std::string()> thread_name, u32 index, u32 offset);
+	SPUThread(CPUThreadType type, const std::string& name, u32 index, u32 offset);
 
 public:
 	SPUThread(const std::string& name, u32 index);
@@ -669,11 +669,12 @@ public:
 
 	virtual bool is_paused() const override;
 
+	virtual std::string get_name() const override;
 	virtual void dump_info() const override;
 	virtual u32 get_pc() const override { return pc; }
 	virtual u32 get_offset() const override { return offset; }
 	virtual void do_run() override;
-	virtual void task() override;
+	virtual void cpu_task() override;
 
 	virtual void init_regs() override;
 	virtual void init_stack() override;

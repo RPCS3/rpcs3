@@ -52,33 +52,25 @@ void spu_int_ctrl_t::clear(u64 ints)
 
 const spu_imm_table_t g_spu_imm;
 
-SPUThread::SPUThread(CPUThreadType type, const std::string& name, std::function<std::string()> thread_name, u32 index, u32 offset)
-	: CPUThread(type, name, std::move(thread_name))
+SPUThread::SPUThread(CPUThreadType type, const std::string& name, u32 index, u32 offset)
+	: CPUThread(type, name)
 	, index(index)
 	, offset(offset)
 {
 }
 
 SPUThread::SPUThread(const std::string& name, u32 index)
-	: CPUThread(CPU_THREAD_SPU, name, WRAP_EXPR(fmt::format("SPU[0x%x] Thread (%s)[0x%05x]", m_id, m_name.c_str(), pc)))
+	: CPUThread(CPU_THREAD_SPU, name)
 	, index(index)
 	, offset(vm::alloc(0x40000, vm::main))
 {
-	if (!offset)
-	{
-		throw EXCEPTION("Failed to allocate SPU local storage");
-	}
+	CHECK_ASSERTION(offset);
 }
 
 SPUThread::~SPUThread()
 {
-	if (m_type == CPU_THREAD_SPU)
-	{
-		join();
-
-		// Deallocate Local Storage
-		vm::dealloc_verbose_nothrow(offset, vm::main);
-	}
+	// Deallocate Local Storage
+	vm::dealloc_verbose_nothrow(offset);
 }
 
 bool SPUThread::is_paused() const
@@ -99,12 +91,17 @@ bool SPUThread::is_paused() const
 	return false;
 }
 
+std::string SPUThread::get_name() const
+{
+	return fmt::format("%s[0x%x] Thread (%s)[0x%05x]", CPUThread::GetTypeString(), m_id, CPUThread::get_name(), pc);
+}
+
 void SPUThread::dump_info() const
 {
 	CPUThread::dump_info();
 }
 
-void SPUThread::task()
+void SPUThread::cpu_task()
 {
 	std::fesetround(FE_TOWARDZERO);
 
@@ -251,7 +248,7 @@ void SPUThread::fast_call(u32 ls_addr)
 
 	try
 	{
-		task();
+		cpu_task();
 	}
 	catch (CPUThreadReturn)
 	{

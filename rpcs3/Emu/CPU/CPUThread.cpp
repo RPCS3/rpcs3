@@ -9,70 +9,76 @@
 
 thread_local CPUThread* g_tls_current_cpu_thread = nullptr;
 
-CPUThread::CPUThread(CPUThreadType type, const std::string& name, std::function<std::string()> thread_name)
+void CPUThread::on_task()
+{
+	g_tls_current_cpu_thread = this;
+
+	Emu.SendDbgCommand(DID_CREATE_THREAD, this);
+
+	std::unique_lock<std::mutex> lock(mutex);
+
+	// check thread status
+	while (is_alive())
+	{
+		CHECK_EMU_STATUS;
+
+		// check stop status
+		if (!is_stopped())
+		{
+			if (lock) lock.unlock();
+
+			try
+			{
+				cpu_task();
+			}
+			catch (CPUThreadReturn)
+			{
+				;
+			}
+			catch (CPUThreadStop)
+			{
+				m_state |= CPU_STATE_STOPPED;
+			}
+			catch (CPUThreadExit)
+			{
+				m_state |= CPU_STATE_DEAD;
+				break;
+			}
+			catch (...)
+			{
+				dump_info();
+				throw;
+			}
+
+			m_state &= ~CPU_STATE_RETURN;
+			continue;
+		}
+
+		if (!lock)
+		{
+			lock.lock();
+			continue;
+		}
+
+		cv.wait(lock);
+	}
+}
+
+CPUThread::CPUThread(CPUThreadType type, const std::string& name)
 	: m_id(idm::get_last_id())
 	, m_type(type)
 	, m_name(name)
 {
-	start(std::move(thread_name), [this]
-	{
-		g_tls_current_cpu_thread = this;
-
-		Emu.SendDbgCommand(DID_CREATE_THREAD, this);
-
-		std::unique_lock<std::mutex> lock(mutex);
-
-		// check thread status
-		while (joinable() && is_alive())
-		{
-			CHECK_EMU_STATUS;
-
-			// check stop status
-			if (!is_stopped())
-			{
-				if (lock) lock.unlock();
-
-				try
-				{
-					task();
-				}
-				catch (CPUThreadReturn)
-				{
-					;
-				}
-				catch (CPUThreadStop)
-				{
-					m_state |= CPU_STATE_STOPPED;
-				}
-				catch (CPUThreadExit)
-				{
-					m_state |= CPU_STATE_DEAD;
-					break;
-				}
-				catch (...)
-				{
-					dump_info();
-					throw;
-				}
-
-				m_state &= ~CPU_STATE_RETURN;
-				continue;
-			}
-
-			if (!lock)
-			{
-				lock.lock();
-				continue;
-			}
-
-			cv.wait(lock);
-		}
-	});
 }
 
 CPUThread::~CPUThread()
 {
 	Emu.SendDbgCommand(DID_REMOVE_THREAD, this);
+}
+
+std::string CPUThread::get_name() const
+{
+	return m_name;
 }
 
 bool CPUThread::is_paused() const
@@ -149,11 +155,11 @@ void CPUThread::exec()
 {
 	Emu.SendDbgCommand(DID_EXEC_THREAD, this);
 
+	m_state &= ~CPU_STATE_STOPPED;
+
 	{
 		// lock for reliable notification
 		std::lock_guard<std::mutex> lock(mutex);
-
-		m_state &= ~CPU_STATE_STOPPED;
 
 		cv.notify_one();
 	}
@@ -161,13 +167,14 @@ void CPUThread::exec()
 
 void CPUThread::exit()
 {
-	if (is_current())
+	m_state |= CPU_STATE_DEAD;
+
+	if (!is_current())
 	{
-		throw CPUThreadExit{};
-	}
-	else
-	{
-		throw EXCEPTION("Unable to exit another thread");
+		// lock for reliable notification
+		std::lock_guard<std::mutex> lock(mutex);
+		
+		cv.notify_one();
 	}
 }
 
@@ -258,6 +265,11 @@ bool CPUThread::check_status()
 	while (true)
 	{
 		CHECK_EMU_STATUS; // check at least once
+
+		if (!is_alive())
+		{
+			return true;
+		}
 
 		if (!is_paused() && (m_state & CPU_STATE_INTR) == 0)
 		{

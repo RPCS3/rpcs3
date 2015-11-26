@@ -19,11 +19,10 @@ class RawSPUThread final : public SPUThread
 {
 public:
 	RawSPUThread(const std::string& name, u32 index);
-	virtual ~RawSPUThread();
 
 	bool read_reg(const u32 addr, u32& value);
 	bool write_reg(const u32 addr, const u32 value);
 
 private:
-	virtual void task() override;
+	virtual void cpu_task() override;
 };

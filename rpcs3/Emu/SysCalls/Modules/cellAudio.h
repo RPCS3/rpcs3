@@ -99,8 +99,9 @@ enum AudioPortState : u32
 
 struct AudioPortConfig
 {
-	std::mutex mutex;
 	atomic_t<AudioPortState> state;
+
+	std::mutex mutex;
 
 	u32 channel;
 	u32 block;
@@ -124,7 +125,8 @@ struct AudioPortConfig
 struct AudioConfig final // custom structure
 {
 	atomic_t<AudioState> state;
-	named_thread_t thread;
+
+	std::mutex mutex;
 
 	AudioPortConfig ports[AUDIO_PORT_COUNT];
 	u32 buffer; // 1 MB memory for audio ports
@@ -132,16 +134,6 @@ struct AudioConfig final // custom structure
 	u64 counter;
 	u64 start_time;
 	std::vector<u64> keys;
-
-	AudioConfig() = default;
-
-	~AudioConfig()
-	{
-		if (thread.joinable())
-		{
-			thread.join();
-		}
-	}
 
 	u32 open_port()
 	{

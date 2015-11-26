@@ -543,11 +543,12 @@ public:
 	PPUThread(const std::string& name);
 	virtual ~PPUThread() override;
 
+	virtual std::string get_name() const override;
 	virtual void dump_info() const override;
 	virtual u32 get_pc() const override { return PC; }
 	virtual u32 get_offset() const override { return 0; }
 	virtual void do_run() override;
-	virtual void task() override;
+	virtual void cpu_task() override;
 
 	virtual void init_regs() override;
 	virtual void init_stack() override;

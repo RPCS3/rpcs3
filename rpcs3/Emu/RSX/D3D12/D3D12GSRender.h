@@ -205,8 +205,8 @@ private:
 	void copy_render_target_to_dma_location();
 
 protected:
-	virtual void onexit_thread() override;
-	virtual bool domethod(u32 cmd, u32 arg) override;
+	virtual void on_exit() override;
+	virtual bool do_method(u32 cmd, u32 arg) override;
 	virtual void end() override;
 	virtual void flip(int buffer) override;
 

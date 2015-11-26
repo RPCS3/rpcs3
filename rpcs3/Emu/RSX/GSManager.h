@@ -25,18 +25,16 @@ struct GSInfo
 class GSManager
 {
 	GSInfo m_info;
-	GSRender* m_render;
+	std::shared_ptr<GSRender> m_render;
 
 public:
-	GSManager();
-
 	void Init();
 	void Close();
 
 	bool IsInited() const { return m_render != nullptr; }
 
 	GSInfo& GetInfo() { return m_info; }
-	GSRender& GetRender() { assert(m_render); return *m_render; }
+	GSRender& GetRender() { return *m_render; }
 
 	u8 GetState();
 	u8 GetColorSpace();

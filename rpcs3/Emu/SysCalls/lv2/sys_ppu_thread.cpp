@@ -26,14 +26,20 @@ void _sys_ppu_thread_exit(PPUThread& ppu, u64 errorcode)
 		}
 	}
 
-	const auto thread = ppu.shared_from_this();
-
 	if (!ppu.is_joinable)
 	{
 		idm::remove<PPUThread>(ppu.get_id());
 	}
+	else
+	{
+		ppu.exit();
+	}
 
-	ppu.exit();
+	// Throw if this syscall was not called directly by the SC instruction
+	if (~ppu.hle_code != 41)
+	{
+		throw CPUThreadExit{};
+	}
 }
 
 void sys_ppu_thread_yield()

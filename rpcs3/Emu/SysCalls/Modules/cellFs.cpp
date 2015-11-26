@@ -494,7 +494,7 @@ s32 cellFsStReadStart(u32 fd, u64 offset, u64 size)
 
 	file->st_read_size = size;
 
-	file->st_thread.start(COPY_EXPR(fmt::format("FS ST Thread[0x%x]", fd)), [=]()
+	file->st_thread = thread_ctrl::spawn(PURE_EXPR("FS ST Thread"s), [=]()
 	{
 		std::unique_lock<std::mutex> lock(file->mutex);
 
@@ -572,7 +572,7 @@ s32 cellFsStReadStop(u32 fd)
 	}
 
 	file->cv.notify_all();
-	file->st_thread.join();
+	file->st_thread->join();
 
 	return CELL_OK;
 }
@@ -937,7 +937,7 @@ s32 cellFsAioRead(vm::ptr<CellFsAio> aio, vm::ptr<s32> id, fs_aio_cb_t func)
 
 	const s32 xid = (*id = ++g_fs_aio_id);
 
-	named_thread_t(WRAP_EXPR("FS AIO Read Thread"), [=]{ fsAio(aio, false, xid, func); }).detach();
+	thread_ctrl::spawn(PURE_EXPR("FS AIO Read Thread"s), COPY_EXPR(fsAio(aio, false, xid, func)));
 
 	return CELL_OK;
 }
@@ -950,7 +950,7 @@ s32 cellFsAioWrite(vm::ptr<CellFsAio> aio, vm::ptr<s32> id, fs_aio_cb_t func)
 
 	const s32 xid = (*id = ++g_fs_aio_id);
 
-	named_thread_t(WRAP_EXPR("FS AIO Write Thread"), [=]{ fsAio(aio, true, xid, func); }).detach();
+	thread_ctrl::spawn(PURE_EXPR("FS AIO Write Thread"s), COPY_EXPR(fsAio(aio, true, xid, func)));
 
 	return CELL_OK;
 }

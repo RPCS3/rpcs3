@@ -228,7 +228,7 @@ s32 sys_rwlock_wlock(PPUThread& ppu, u32 rw_lock_id, u64 timeout)
 
 	if (!rwlock->readers && !rwlock->writer)
 	{
-		rwlock->writer = ppu.shared_from_this();
+		rwlock->writer = std::static_pointer_cast<CPUThread>(ppu.shared_from_this());
 
 		return CELL_OK;
 	}
@@ -300,7 +300,7 @@ s32 sys_rwlock_trywlock(PPUThread& ppu, u32 rw_lock_id)
 		return CELL_EBUSY;
 	}
 
-	rwlock->writer = ppu.shared_from_this();
+	rwlock->writer = std::static_pointer_cast<CPUThread>(ppu.shared_from_this());
 
 	return CELL_OK;
 }

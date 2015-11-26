@@ -5,7 +5,7 @@
 
 void sleep_queue_entry_t::add_entry()
 {
-	m_queue.emplace_back(m_thread.shared_from_this());
+	m_queue.emplace_back(std::static_pointer_cast<CPUThread>(m_thread.shared_from_this()));
 }
 
 void sleep_queue_entry_t::remove_entry()
@@ -33,7 +33,7 @@ bool sleep_queue_entry_t::find() const
 	return false;
 }
 
-sleep_queue_entry_t::sleep_queue_entry_t(CPUThread& cpu, sleep_queue_t& queue)
+sleep_queue_entry_t::sleep_queue_entry_t(sleep_entry_t& cpu, sleep_queue_t& queue)
 	: m_thread(cpu)
 	, m_queue(queue)
 {
@@ -41,7 +41,7 @@ sleep_queue_entry_t::sleep_queue_entry_t(CPUThread& cpu, sleep_queue_t& queue)
 	cpu.sleep();
 }
 
-sleep_queue_entry_t::sleep_queue_entry_t(CPUThread& cpu, sleep_queue_t& queue, const defer_sleep_t&)
+sleep_queue_entry_t::sleep_queue_entry_t(sleep_entry_t& cpu, sleep_queue_t& queue, const defer_sleep_t&)
 	: m_thread(cpu)
 	, m_queue(queue)
 {
