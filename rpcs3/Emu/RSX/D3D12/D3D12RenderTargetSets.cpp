@@ -444,6 +444,24 @@ void D3D12GSRender::copy_render_target_to_dma_location()
 	};
 	u32 m_context_dma_z = rsx::method_registers[NV4097_SET_CONTEXT_DMA_ZETA];
 
+	u32 offset_color[] =
+	{
+		rsx::method_registers[NV4097_SET_SURFACE_COLOR_AOFFSET],
+		rsx::method_registers[NV4097_SET_SURFACE_COLOR_BOFFSET],
+		rsx::method_registers[NV4097_SET_SURFACE_COLOR_COFFSET],
+		rsx::method_registers[NV4097_SET_SURFACE_COLOR_DOFFSET]
+	};
+	u32 offset_zeta = rsx::method_registers[NV4097_SET_SURFACE_ZETA_OFFSET];
+
+	u32 address_color[] =
+	{
+		rsx::get_address(offset_color[0], context_dma_color[0]),
+		rsx::get_address(offset_color[1], context_dma_color[1]),
+		rsx::get_address(offset_color[2], context_dma_color[2]),
+		rsx::get_address(offset_color[3], context_dma_color[3]),
+	};
+	u32 address_z = rsx::get_address(offset_zeta, m_context_dma_z);
+
 	bool need_transfer = false;
 
 	if (m_context_dma_z && rpcs3::state.config.rsx.opengl.write_depth_buffer)
@@ -499,7 +517,7 @@ void D3D12GSRender::copy_render_target_to_dma_location()
 		get_current_resource_storage().command_list->CopyTextureRegion(&CD3DX12_TEXTURE_COPY_LOCATION(m_readback_resources.m_heap, { depth_buffer_offset_in_heap,{ DXGI_FORMAT_R8_UNORM, (UINT)clip_w, (UINT)clip_h, 1, (UINT)depth_row_pitch } }), 0, 0, 0,
 			&CD3DX12_TEXTURE_COPY_LOCATION(depth_format_conversion_buffer.Get(), 0), nullptr);
 
-		invalidate_address(rsx::get_address(rsx::method_registers[NV4097_SET_SURFACE_ZETA_OFFSET], m_context_dma_z - 0xfeed0000));
+		invalidate_address(address_z);
 
 		need_transfer = true;
 	}
@@ -509,10 +527,10 @@ void D3D12GSRender::copy_render_target_to_dma_location()
 	{
 		for (u8 i : get_rtt_indexes(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET]))
 		{
-			if (!context_dma_color[i])
+			if (!address_color[i])
 				continue;
 			color_buffer_offset_in_heap[i] = download_to_readback_buffer(m_device.Get(), get_current_resource_storage().command_list.Get(), m_readback_resources, m_rtts.bound_render_targets[i], m_surface.color_format);
-			invalidate_address(rsx::get_address(rsx::method_registers[NV4097_SET_SURFACE_COLOR_AOFFSET], context_dma_color[i] - 0xfeed0000));
+			invalidate_address(address_color[i]);
 			need_transfer = true;
 		}
 	}
@@ -526,10 +544,9 @@ void D3D12GSRender::copy_render_target_to_dma_location()
 	//Wait for result
 	wait_for_command_queue(m_device.Get(), m_command_queue.Get());
 
-	if (m_context_dma_z && rpcs3::state.config.rsx.opengl.write_depth_buffer)
+	if (address_z && rpcs3::state.config.rsx.opengl.write_depth_buffer)
 	{
-		u32 address = rsx::get_address(rsx::method_registers[NV4097_SET_SURFACE_ZETA_OFFSET], m_context_dma_z - 0xfeed0000);
-		auto ptr = vm::base(address);
+		auto ptr = vm::base(address_z);
 		char *depth_buffer = (char*)ptr;
 		void *buffer;
 		// TODO: Use exact range
@@ -567,15 +584,15 @@ void D3D12GSRender::copy_render_target_to_dma_location()
 	{
 		void *dest_buffer[] =
 		{
-			vm::base(rsx::get_address(rsx::method_registers[NV4097_SET_SURFACE_COLOR_AOFFSET], context_dma_color[0] - 0xfeed0000)),
-			vm::base(rsx::get_address(rsx::method_registers[NV4097_SET_SURFACE_COLOR_AOFFSET], context_dma_color[1] - 0xfeed0000)),
-			vm::base(rsx::get_address(rsx::method_registers[NV4097_SET_SURFACE_COLOR_AOFFSET], context_dma_color[2] - 0xfeed0000)),
-			vm::base(rsx::get_address(rsx::method_registers[NV4097_SET_SURFACE_COLOR_AOFFSET], context_dma_color[3] - 0xfeed0000))
+			vm::base(address_color[0]),
+			vm::base(address_color[1]),
+			vm::base(address_color[2]),
+			vm::base(address_color[3]),
 		};
 
 		for (u8 i : get_rtt_indexes(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET]))
 		{
-			if (!context_dma_color[i])
+			if (!address_color[i])
 				continue;
 			copy_readback_buffer_to_dest(dest_buffer[i], m_readback_resources, color_buffer_offset_in_heap[i], srcPitch, dstPitch, clip_h);
 		}
