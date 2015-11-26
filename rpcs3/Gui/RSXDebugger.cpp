@@ -28,7 +28,7 @@ enum GCMEnumTypes
 };
 
 RSXDebugger::RSXDebugger(wxWindow* parent) 
-	: wxFrame(parent, wxID_ANY, "RSX Debugger", wxDefaultPosition, wxSize(700, 450))
+	: wxDialog(parent, wxID_ANY, "RSX Debugger", wxDefaultPosition, wxSize(700, 450))
 	, m_item_count(37)
 	, m_addr(0x0)
 	, m_cur_texture(0)

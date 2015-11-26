@@ -1,7 +1,7 @@
 #pragma once
 #include <wx/listctrl.h>
 
-class MemoryStringSearcher : public wxFrame
+class MemoryStringSearcher : public wxDialog
 {
 	wxTextCtrl* t_addr;
 	wxBoxSizer* s_panel;

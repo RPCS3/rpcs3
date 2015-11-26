@@ -28,10 +28,10 @@ void MsgDialogFrame::Create(const std::string& msg)
 	m_button_yes = nullptr;
 	m_button_no = nullptr;
 
-	m_dialog = new wxDialog(nullptr, wxID_ANY, type.se_normal ? "" : "Error", wxDefaultPosition, wxDefaultSize);
+	m_dialog = new wxDialog(nullptr, wxID_ANY, type.se_normal ? "Normal dialog" : "Error dialog", wxDefaultPosition, wxDefaultSize);
 
 	m_dialog->SetExtraStyle(m_dialog->GetExtraStyle() | wxWS_EX_TRANSIENT);
-	m_dialog->SetTransparent(type.bg_invisible ? 255 : 160);
+	m_dialog->SetTransparent(type.bg_invisible ? 255 : 192);
 
 	m_sizer1 = new wxBoxSizer(wxVERTICAL);
 

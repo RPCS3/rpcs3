@@ -2,7 +2,7 @@
 
 #include <wx/treectrl.h>
 
-class KernelExplorer : public wxFrame
+class KernelExplorer : public wxDialog
 {
 	wxTreeCtrl* m_tree;
 

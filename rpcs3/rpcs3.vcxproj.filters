@@ -219,6 +219,12 @@
     <ClInclude Include="Gui\SignInDialog.h">
       <Filter>Gui</Filter>
     </ClInclude>
+    <ClInclude Include="Gui\MemoryStringSearcher.h">
+      <Filter>Gui</Filter>
+    </ClInclude>
+    <ClInclude Include="Gui\PADManager.h">
+      <Filter>Gui</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Image Include="rpcs3.ico" />

@@ -5,7 +5,7 @@
 #include "MemoryViewer.h"
 
 MemoryViewerPanel::MemoryViewerPanel(wxWindow* parent) 
-	: wxFrame(parent, wxID_ANY, "Memory Viewer", wxDefaultPosition, wxSize(700, 450))
+	: wxDialog(parent, wxID_ANY, "Memory Viewer", wxDefaultPosition, wxSize(700, 450))
 {
 	exit = false;
 	m_addr = 0;
@@ -22,7 +22,7 @@ MemoryViewerPanel::MemoryViewerPanel(wxWindow* parent)
 	wxStaticBoxSizer* s_tools_mem = new wxStaticBoxSizer(wxHORIZONTAL, this, "Memory Viewer Options");
 
 	wxStaticBoxSizer* s_tools_mem_addr = new wxStaticBoxSizer(wxHORIZONTAL, this, "Address");
-	t_addr = new wxTextCtrl(this, wxID_ANY, "00000000", wxDefaultPosition, wxSize(60, -1));
+	t_addr = new wxTextCtrl(this, wxID_ANY, "00000000", wxDefaultPosition, wxSize(60, -1), wxTE_PROCESS_ENTER);
 	t_addr->SetMaxLength(8);
 	s_tools_mem_addr->Add(t_addr);
 
@@ -124,8 +124,8 @@ MemoryViewerPanel::MemoryViewerPanel(wxWindow* parent)
 	//Events
 	t_addr  ->Bind(wxEVT_TEXT_ENTER, &MemoryViewerPanel::OnChangeToolsAddr, this);
 	sc_bytes->Bind(wxEVT_TEXT_ENTER, &MemoryViewerPanel::OnChangeToolsBytes, this);
-	t_addr  ->Bind(wxEVT_TEXT_ENTER, &MemoryViewerPanel::OnChangeToolsAddr, this);
-	sc_bytes->Bind(wxEVT_TEXT_ENTER, &MemoryViewerPanel::OnChangeToolsBytes, this);
+	//t_addr  ->Bind(wxEVT_TEXT_ENTER, &MemoryViewerPanel::OnChangeToolsAddr, this);
+	//sc_bytes->Bind(wxEVT_TEXT_ENTER, &MemoryViewerPanel::OnChangeToolsBytes, this);
 	sc_bytes->Bind(wxEVT_SPINCTRL,   &MemoryViewerPanel::OnChangeToolsBytes, this);
 
 	b_prev ->Bind(wxEVT_BUTTON, &MemoryViewerPanel::Prev, this);
@@ -225,8 +225,7 @@ void MemoryViewerPanel::ShowImage(wxWindow* parent, u32 addr, int mode, u32 widt
 {
 	wxString title = wxString::Format("Raw Image @ 0x%x", addr);
 	
-	wxFrame* f_image_viewer = new wxFrame(parent, wxID_ANY,  title, wxDefaultPosition, wxDefaultSize,
-		wxSYSTEM_MENU | wxMINIMIZE_BOX | wxCLOSE_BOX | wxCAPTION | wxCLIP_CHILDREN);
+	wxDialog* f_image_viewer = new wxDialog(parent, wxID_ANY,  title, wxDefaultPosition, wxDefaultSize, wxMINIMIZE_BOX | wxCLOSE_BOX | wxCAPTION | wxCLIP_CHILDREN);
 	f_image_viewer->SetBackgroundColour(wxColour(240,240,240)); //This fix the ugly background color under Windows
 	f_image_viewer->SetAutoLayout(true);
 	f_image_viewer->SetClientSize(wxSize(width, height));

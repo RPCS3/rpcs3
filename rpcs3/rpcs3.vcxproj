@@ -345,8 +345,10 @@
     <ClInclude Include="Gui\KernelExplorer.h" />
     <ClInclude Include="Gui\LLEModulesManager.h" />
     <ClInclude Include="Gui\MainFrame.h" />
+    <ClInclude Include="Gui\MemoryStringSearcher.h" />
     <ClInclude Include="Gui\MemoryViewer.h" />
     <ClInclude Include="Gui\MsgDialog.h" />
+    <ClInclude Include="Gui\PADManager.h" />
     <ClInclude Include="Gui\RegisterEditor.h" />
     <ClInclude Include="Gui\RSXDebugger.h" />
     <ClInclude Include="Gui\SaveDataDialog.h" />

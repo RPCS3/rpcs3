@@ -2,7 +2,7 @@
 #include "Gui/FrameBase.h"
 #include <wx/checklst.h>
 
-class LLEModulesManagerFrame : public wxFrame
+class LLEModulesManagerFrame : public wxDialog
 {
 	wxCheckListBox *m_check_list;
 	std::vector<std::string> m_funcs;
