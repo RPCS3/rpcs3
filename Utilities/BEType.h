@@ -383,19 +383,28 @@ template<typename T> struct se_storage<T, 2>
 {
 	using type = u16;
 
-	[[deprecated]] static constexpr u16 swap(u16 src) // for reference
+	[[deprecated]] static constexpr u16 _swap(u16 src) // for reference
 	{
 		return (src >> 8) | (src << 8);
 	}
 
+	static inline u16 swap(u16 src)
+	{
+#if defined(__GNUG__)
+		return __builtin_bswap16(src);
+#else
+		return _byteswap_ushort(src);
+#endif
+	}
+
 	static inline u16 to(const T& src)
 	{
-		return _byteswap_ushort(reinterpret_cast<const u16&>(src));
+		return swap(reinterpret_cast<const u16&>(src));
 	}
 
 	static inline T from(u16 src)
 	{
-		const u16 result = _byteswap_ushort(src);
+		const u16 result = swap(src);
 		return reinterpret_cast<const T&>(result);
 	}
 };
@@ -404,19 +413,28 @@ template<typename T> struct se_storage<T, 4>
 {
 	using type = u32;
 
-	[[deprecated]] static constexpr u32 swap(u32 src) // for reference
+	[[deprecated]] static constexpr u32 _swap(u32 src) // for reference
 	{
 		return (src >> 24) | (src << 24) | ((src >> 8) & 0x0000ff00) | ((src << 8) & 0x00ff0000);
 	}
 
+	static inline u32 swap(u32 src)
+	{
+#if defined(__GNUG__)
+		return __builtin_bswap32(src);
+#else
+		return _byteswap_ulong(src);
+#endif
+	}
+
 	static inline u32 to(const T& src)
 	{
-		return _byteswap_ulong(reinterpret_cast<const u32&>(src));
+		return swap(reinterpret_cast<const u32&>(src));
 	}
 
 	static inline T from(u32 src)
 	{
-		const u32 result = _byteswap_ulong(src);
+		const u32 result = swap(src);
 		return reinterpret_cast<const T&>(result);
 	}
 };
@@ -425,7 +443,7 @@ template<typename T> struct se_storage<T, 8>
 {
 	using type = u64;
 
-	[[deprecated]] static constexpr u64 swap(u64 src) // for reference
+	[[deprecated]] static constexpr u64 _swap(u64 src) // for reference
 	{
 		return (src >> 56) | (src << 56) |
 			((src >> 40) & 0x000000000000ff00) |
@@ -436,14 +454,23 @@ template<typename T> struct se_storage<T, 8>
 			((src << 40) & 0x00ff000000000000);
 	}
 
+	static inline u64 swap(u64 src)
+	{
+#if defined(__GNUG__)
+		return __builtin_bswap64(src);
+#else
+		return _byteswap_uint64(src);
+#endif
+	}
+
 	static inline u64 to(const T& src)
 	{
-		return _byteswap_uint64(reinterpret_cast<const u64&>(src));
+		return swap(reinterpret_cast<const u64&>(src));
 	}
 
 	static inline T from(u64 src)
 	{
-		const u64 result = _byteswap_uint64(src);
+		const u64 result = swap(src);
 		return reinterpret_cast<const T&>(result);
 	}
 };

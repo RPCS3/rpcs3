@@ -40,19 +40,7 @@
 #endif
 
 #define _fpclass(x) std::fpclassify(x)
-#define _byteswap_ushort(x) __builtin_bswap16(x)
-#define _byteswap_uint64(x) __builtin_bswap64(x)
 #define INFINITE 0xFFFFFFFF
-
-#if !defined(__MINGW32__)
-#define _byteswap_ulong(x) __builtin_bswap32(x)
-#else
-inline std::uint32_t _byteswap_ulong(std::uint32_t value)
-{
-	__asm__("bswap %0" : "+r"(value));
-	return value;
-}
-#endif
 
 #ifdef __APPLE__
 

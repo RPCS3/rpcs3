@@ -405,7 +405,7 @@ namespace
 			u32 *casted_dest = (u32*)((char*)dest + row * dst_pitch);
 			u32 *casted_src = (u32*)((char*)mapped_buffer + row * src_pitch);
 			for (unsigned col = 0; col < src_pitch / 4; col++)
-				*casted_dest++ = _byteswap_ulong(*casted_src++);
+				*casted_dest++ = se_storage<u32>::swap(*casted_src++);
 		}
 		readback_heap.m_heap->Unmap(0, nullptr);
 	}

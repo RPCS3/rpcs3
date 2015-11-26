@@ -868,7 +868,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 		case X64OP_LOAD:
 		{
 			u32 value;
-			if (is_writing || !thread->read_reg(addr, value) || !put_x64_reg_value(context, reg, d_size, _byteswap_ulong(value)))
+			if (is_writing || !thread->read_reg(addr, value) || !put_x64_reg_value(context, reg, d_size, se_storage<u32>::swap(value)))
 			{
 				return false;
 			}
@@ -878,7 +878,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 		case X64OP_STORE:
 		{
 			u64 reg_value;
-			if (!is_writing || !get_x64_reg_value(context, reg, d_size, i_size, reg_value) || !thread->write_reg(addr, _byteswap_ulong((u32)reg_value)))
+			if (!is_writing || !get_x64_reg_value(context, reg, d_size, i_size, reg_value) || !thread->write_reg(addr, se_storage<u32>::swap((u32)reg_value)))
 			{
 				return false;
 			}

@@ -3690,7 +3690,7 @@ void ARMv7_instrs::REV(ARMv7Context& context, const ARMv7Code code, const ARMv7_
 
 	if (ConditionPassed(context, cond))
 	{
-		context.write_gpr(d, _byteswap_ulong(context.read_gpr(m)), type == T1 ? 2 : 4);
+		context.write_gpr(d, se_storage<u32>::swap(context.read_gpr(m)), type == T1 ? 2 : 4);
 	}
 }
 

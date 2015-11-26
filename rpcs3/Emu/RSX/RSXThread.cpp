@@ -784,7 +784,8 @@ namespace rsx
 			bind_cpu_only<NV4097_CLEAR_REPORT_VALUE, nv4097::clear_report_value>();
 
 			//NV308A
-			bind_range<NV308A_COLOR, 1, 512, nv308a::color>();
+			bind_range<NV308A_COLOR, 1, 256, nv308a::color>();
+			bind_range<NV308A_COLOR + 256, 1, 512, nv308a::color, 256>();
 
 			//NV3089
 			bind<NV3089_IMAGE_IN, nv3089::image_in>();
