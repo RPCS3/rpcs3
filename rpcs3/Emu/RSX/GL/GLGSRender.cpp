@@ -1102,6 +1102,15 @@ void GLGSRender::on_exit()
 	if (m_vao)
 		m_vao.remove();
 
+	if (m_scale_offset_buffer)
+		m_scale_offset_buffer.remove();
+
+	if (m_vertex_constants_buffer)
+		m_vertex_constants_buffer.remove();
+
+	if (m_fragment_constants_buffer)
+		m_fragment_constants_buffer.remove();
+
 	m_prog_buffer.clear();
 }
 
