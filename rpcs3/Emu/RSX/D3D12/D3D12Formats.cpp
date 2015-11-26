@@ -275,7 +275,9 @@ namespace
 		case CELL_GCM_TEXTURE_NEAREST: return D3D12_FILTER_TYPE_POINT;
 		case CELL_GCM_TEXTURE_LINEAR: return D3D12_FILTER_TYPE_LINEAR;
 		}
-		unreachable("Wrong mag filter");
+		// Catherine uses this
+		LOG_WARNING(RSX, "Unknow mag filter used %x, fallback to bilinear filtering", mag_filter);
+		return D3D12_FILTER_TYPE_LINEAR;
 	}
 }
 
