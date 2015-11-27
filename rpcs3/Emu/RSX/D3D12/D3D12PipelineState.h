@@ -157,7 +157,8 @@ struct D3D12Traits
 			{
 				if (PT.type == "sampler2D")
 				{
-					fragmentProgramData.m_textureCount++;
+					size_t texture_unit = atoi(PI.name.c_str() + 3);
+					fragmentProgramData.m_textureCount = std::max(texture_unit + 1, fragmentProgramData.m_textureCount);
 					continue;
 				}
 				size_t offset = atoi(PI.name.c_str() + 2);
