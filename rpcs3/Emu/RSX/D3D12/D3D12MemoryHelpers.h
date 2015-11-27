@@ -27,15 +27,15 @@ struct init_heap<ID3D12Heap>
 template<>
 struct init_heap<ID3D12Resource>
 {
-	static ID3D12Resource* init(ID3D12Device *device, size_t heap_size, D3D12_HEAP_TYPE type, D3D12_HEAP_FLAGS flags)
+	static ID3D12Resource* init(ID3D12Device *device, size_t heap_size, D3D12_HEAP_TYPE type, D3D12_RESOURCE_STATES state)
 	{
 		ID3D12Resource *result;
 		D3D12_HEAP_PROPERTIES heap_properties = {};
 		heap_properties.Type = type;
 		ThrowIfFailed(device->CreateCommittedResource(&heap_properties,
-			flags,
+			D3D12_HEAP_FLAG_NONE,
 			&CD3DX12_RESOURCE_DESC::Buffer(heap_size),
-			D3D12_RESOURCE_STATE_GENERIC_READ,
+			state,
 			nullptr,
 			IID_PPV_ARGS(&result))
 			);
@@ -60,10 +60,11 @@ struct data_heap
 	size_t m_put_pos; // Start of free space
 	size_t m_get_pos; // End of free space
 
-	void init(ID3D12Device *device, size_t heap_size, D3D12_HEAP_TYPE type, D3D12_HEAP_FLAGS flags)
+	template <typename... arg_type>
+	void init(ID3D12Device *device, size_t heap_size, D3D12_HEAP_TYPE type, arg_type... args)
 	{
 		m_size = heap_size;
-		m_heap = init_heap<T>::init(device, heap_size, type, flags);
+		m_heap = init_heap<T>::init(device, heap_size, type, args...);
 		m_put_pos = 0;
 		m_get_pos = heap_size - 1;
 	}

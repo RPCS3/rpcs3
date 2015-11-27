@@ -106,14 +106,15 @@ D3D12_STENCIL_OP get_stencil_op(u32 op) noexcept
 	case CELL_GCM_KEEP: return D3D12_STENCIL_OP_KEEP;
 	case CELL_GCM_ZERO: return D3D12_STENCIL_OP_ZERO;
 	case CELL_GCM_REPLACE: return D3D12_STENCIL_OP_REPLACE;
-	default: // Jet Set Radio set some garbage, turns out OP_INCR is the intended behavior.
 	case CELL_GCM_INCR: return D3D12_STENCIL_OP_INCR;
 	case CELL_GCM_DECR: return D3D12_STENCIL_OP_DECR;
 	case CELL_GCM_INCR_WRAP:
 	case CELL_GCM_DECR_WRAP:
 		unreachable("Unsupported Stencil Op %d");
 	}
-	unreachable("Wrong Stencil Op %d");
+	// Jet Set Radio uses an unknow op but INCR seems to be the intended one
+	LOG_WARNING(RSX, "Unknow stencil op %x, fallback to INCR", op);
+	return D3D12_STENCIL_OP_INCR;
 }
 
 D3D12_COMPARISON_FUNC get_compare_func(u32 op) noexcept
@@ -237,7 +238,7 @@ namespace
 		case CELL_GCM_TEXTURE_NEAREST:
 			min = D3D12_FILTER_TYPE_POINT;
 			mip = D3D12_FILTER_TYPE_POINT;
-			return;;
+			return;
 		case CELL_GCM_TEXTURE_LINEAR:
 			min = D3D12_FILTER_TYPE_LINEAR;
 			mip = D3D12_FILTER_TYPE_POINT;
@@ -259,7 +260,10 @@ namespace
 			mip = D3D12_FILTER_TYPE_LINEAR;
 			return;
 		case CELL_GCM_TEXTURE_CONVOLUTION_MIN:
-			unreachable("Unsupported min filter");
+			LOG_WARNING(RSX, "CELL_GCM_TEXTURE_CONVOLUTION_MIN not supported, fallback to bilinear filtering");
+			min = D3D12_FILTER_TYPE_LINEAR;
+			mip = D3D12_FILTER_TYPE_POINT;
+			return;
 		}
 		unreachable("Wrong min filter");
 	}
@@ -271,7 +275,9 @@ namespace
 		case CELL_GCM_TEXTURE_NEAREST: return D3D12_FILTER_TYPE_POINT;
 		case CELL_GCM_TEXTURE_LINEAR: return D3D12_FILTER_TYPE_LINEAR;
 		}
-		unreachable("Wrong mag filter");
+		// Catherine uses this
+		LOG_WARNING(RSX, "Unknow mag filter used %x, fallback to bilinear filtering", mag_filter);
+		return D3D12_FILTER_TYPE_LINEAR;
 	}
 }
 
@@ -327,6 +333,7 @@ DXGI_FORMAT get_color_surface_format(u8 format) noexcept
 	{
 	case CELL_GCM_SURFACE_A8R8G8B8: return DXGI_FORMAT_R8G8B8A8_UNORM;
 	case CELL_GCM_SURFACE_F_W16Z16Y16X16: return DXGI_FORMAT_R16G16B16A16_FLOAT;
+	case CELL_GCM_SURFACE_F_X32: return DXGI_FORMAT_R32_FLOAT;
 	}
 	unreachable("Wrong color surface format");
 }
@@ -351,12 +358,22 @@ DXGI_FORMAT get_depth_stencil_surface_clear_format(u8 format) noexcept
 	unreachable("Wrong depth stencil surface format");
 }
 
-DXGI_FORMAT get_depth_typeless_surface_format(u8 format) noexcept
+DXGI_FORMAT get_depth_stencil_typeless_surface_format(u8 format) noexcept
 {
 	switch (format)
 	{
 	case CELL_GCM_SURFACE_Z16: return DXGI_FORMAT_R16_TYPELESS;
 	case CELL_GCM_SURFACE_Z24S8: return DXGI_FORMAT_R24G8_TYPELESS;
+	}
+	unreachable("Wrong depth stencil surface format");
+}
+
+DXGI_FORMAT get_depth_samplable_surface_format(u8 format) noexcept
+{
+	switch (format)
+	{
+	case CELL_GCM_SURFACE_Z16: return DXGI_FORMAT_R16_FLOAT;
+	case CELL_GCM_SURFACE_Z24S8: return DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
 	}
 	unreachable("Wrong depth stencil surface format");
 }
