@@ -121,6 +121,8 @@ void D3D12FragmentDecompiler::insertMainStart(std::stringstream & OS)
 		for (ParamItem PI : PT.items)
 			OS << "	" << PT.type << " " << PI.name << " = In." << PI.name << ";" << std::endl;
 	}
+	// A bit unclean, but works.
+	OS << "	" << "float4 gl_Position = In.Position;" << std::endl;
 	// Declare output
 	for (ParamType PT : m_parr.params[PF_PARAM_NONE])
 	{
