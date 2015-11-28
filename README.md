@@ -3,7 +3,7 @@ RPCS3
 
 [![Build Status](https://travis-ci.org/RPCS3/rpcs3.svg?branch=master)](https://travis-ci.org/RPCS3/rpcs3)
 [![Build status](https://ci.appveyor.com/api/projects/status/411c4clmiohtx7eo/branch/master?svg=true)](https://ci.appveyor.com/project/rpcs3/rpcs3/branch/master)
-[![Coverity Status](https://scan.coverity.com/projects/3960/badge.svg)](https://scan.coverity.com/projects/3960)
+[![Coverity Status](https://img.shields.io/coverity/scan/3960.svg)](https://scan.coverity.com/projects/3960)
 [![Coverage Status](https://coveralls.io/repos/RPCS3/rpcs3/badge.svg)](https://coveralls.io/r/RPCS3/rpcs3)
 
 An open-source PlayStation 3 emulator/debugger written in C++.
@@ -21,14 +21,16 @@ If you want to contribute please take a took at the [Coding Style](https://githu
 __Windows__
 * [Visual Studio 2015](https://www.visualstudio.com/en-us/downloads/download-visual-studio-vs.aspx)
 * [Visual C++ Redistributable Packages for Visual Studio 2015](http://www.microsoft.com/en-us/download/details.aspx?id=48145)
-* [Cmake 3.4.0+](http://www.cmake.org/download/) (optional, required only for LLVM build; add to PATH)
+* [Cmake 3.1.0+](http://www.cmake.org/download/) (optional, required only for LLVM build; add to PATH)
 * [Python](https://www.python.org/downloads/) (optional, required only for LLVM build; add to PATH)
 
 __Linux__
+* GCC 4.9.0+ or Clang 3.5.0+
 * Debian & Ubuntu: `sudo apt-get install libopenal-dev libwxgtk3.0-dev build-essential libglew-dev`
 * Arch: `sudo pacman -S glew openal wxgtk cmake llvm`
 
 __Mac OSX__
+* Xcode 6+ (tested with Xcode 6.4)
 * Install with Homebrew: `brew install glew wxwidgets` (add `llvm36` to that list if you want to build with ppu jit)
 * Remove '-framework QuickTime' from '_ldflags' in /usr/local/bin/wx-config
 
@@ -40,7 +42,7 @@ To initialize the repository don't forget to execute `git submodule update --ini
 Open the *.SLN* file, and press *Build* > *Rebuild Solution*.
 * __Linux & Mac OSX__:
 If you want to build with LLVM, then LLVM 3.6.2 is required.
-`cd rpcs3 && cmake CMakeLists.txt && make && cd ../` Then run with `cd bin && ./rpcs3`
+`cd rpcs3 && cmake CMakeLists.txt && make && cd ../` then run with `cd bin && ./rpcs3`.
 If you are on OSX and want to build with llvm don't forget to add `-DLLVM_DIR=/usr/local/opt/llvm36/lib/llvm-3.6/share/llvm/cmake` (or wherever llvm brew was installed) to cmake invocation.
 
 ### Support
