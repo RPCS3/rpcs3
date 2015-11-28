@@ -382,13 +382,4 @@ public:
 			offset += 4 * sizeof(u32);
 		}
 	}
-
-	const std::vector<size_t> &getFragmentConstantOffsetsCache(const RSXFragmentProgram *fragmentShader) const
-	{
-		typename binary2FS::const_iterator It = m_cacheFS.find(vm::base(fragmentShader->addr));
-		if (It != m_cacheFS.end())
-			return It->second.FragmentConstantOffsetCache;
-		LOG_ERROR(RSX, "Can't retrieve constant offset cache");
-		return dummyFragmentConstantCache;
-	}
 };
