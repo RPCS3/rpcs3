@@ -28,7 +28,7 @@ std::string GLFragmentDecompilerThread::compareFunction(COMPARE f, const std::st
 
 void GLFragmentDecompilerThread::insertHeader(std::stringstream & OS)
 {
-	OS << "#version 140" << std::endl;
+	OS << "#version 420" << std::endl;
 }
 
 void GLFragmentDecompilerThread::insertIntputs(std::stringstream & OS)
@@ -68,13 +68,18 @@ void GLFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 
 	}
 
+	OS << "layout(std140, binding = 2) uniform FragmentConstantsBuffer" << std::endl;
+	OS << "{" << std::endl;
 	for (ParamType PT : m_parr.params[PF_PARAM_UNIFORM])
 	{
 		if (PT.type == "sampler2D")
 			continue;
 		for (ParamItem PI : PT.items)
-			OS << "uniform " << PT.type << " " << PI.name << ";" << std::endl;
+			OS << "	 " << PT.type << " " << PI.name << ";" << std::endl;
 	}
+	// A dummy value otherwise it's invalid to create an empty uniform buffer
+	OS << "	vec4 void_value;" << std::endl;
+	OS << "};" << std::endl;
 }
 
 void GLFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
