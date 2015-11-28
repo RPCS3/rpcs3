@@ -44,6 +44,8 @@ std::string getFunctionImp(FUNCTION f)
 		return "frac($0)";
 	case FUNCTION::FUNCTION_TEXTURE_SAMPLE:
 		return "$t.Sample($tsampler, $0.xy * $t_scale)";
+	case FUNCTION::FUNCTION_TEXTURE_SAMPLE_PROJ:
+		return "$t.Sample($tsampler, ($0.xy / $0.z) * $t_scale)";
 	case FUNCTION::FUNCTION_DFDX:
 		return "ddx($0)";
 	case FUNCTION::FUNCTION_DFDY:

@@ -423,7 +423,7 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 	case RSX_FP_OPCODE_BEM: LOG_ERROR(RSX, "Unimplemented TEX_SRB instruction: BEM"); return true;
 	case RSX_FP_OPCODE_TEX: SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE));  return true;
 	case RSX_FP_OPCODE_TEXBEM: SetDst("texture($t, $0.xy, $1.x)"); return true;
-	case RSX_FP_OPCODE_TXP: SetDst("textureProj($t, $0.xyz, $1.x)"); return true; //TODO: More testing (Sonic The Hedgehog (NPUB-30442/NPEB-00478) and The Simpsons Arcade Game (NPUB30563))
+	case RSX_FP_OPCODE_TXP: SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE_PROJ)); return true; //TODO: More testing (Sonic The Hedgehog (NPUB-30442/NPEB-00478) and The Simpsons Arcade Game (NPUB30563))
 	case RSX_FP_OPCODE_TXPBEM: SetDst("textureProj($t, $0.xyz, $1.x)"); return true;
 	case RSX_FP_OPCODE_TXD: LOG_ERROR(RSX, "Unimplemented TEX_SRB instruction: TXD"); return true;
 	case RSX_FP_OPCODE_TXB: SetDst("texture($t, $0.xy, $1.x)"); return true;
