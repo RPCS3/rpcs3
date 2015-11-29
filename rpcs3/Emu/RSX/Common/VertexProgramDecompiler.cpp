@@ -329,12 +329,12 @@ std::string VertexProgramDecompiler::AddAddrMask()
 std::string VertexProgramDecompiler::AddAddrReg()
 {
 	static const char f[] = { 'x', 'y', 'z', 'w' };
-	return m_parr.AddParam(PF_PARAM_NONE, getIntTypeName(4), "a" + std::to_string(d0.addr_reg_sel_1), getFloatTypeName(4) + "(0, 0, 0, 0)") + AddAddrMask();
+	return m_parr.AddParam(PF_PARAM_NONE, getIntTypeName(4), "a" + std::to_string(d0.addr_reg_sel_1), getIntTypeName(4) + "(0, 0, 0, 0)") + AddAddrMask();
 }
 
 std::string VertexProgramDecompiler::AddAddrRegWithoutMask()
 {
-	return m_parr.AddParam(PF_PARAM_NONE, getIntTypeName(4), "a" + std::to_string(d0.addr_reg_sel_1), getFloatTypeName(4) + "(0, 0, 0, 0)");
+	return m_parr.AddParam(PF_PARAM_NONE, getIntTypeName(4), "a" + std::to_string(d0.addr_reg_sel_1), getIntTypeName(4) + "(0, 0, 0, 0)");
 }
 
 u32 VertexProgramDecompiler::GetAddr()
