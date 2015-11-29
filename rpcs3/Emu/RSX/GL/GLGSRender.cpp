@@ -586,11 +586,11 @@ void GLGSRender::begin()
 	__glcheck glDepthMask(rsx::method_registers[NV4097_SET_DEPTH_MASK]);
 	__glcheck glStencilMask(rsx::method_registers[NV4097_SET_STENCIL_MASK]);
 
-	//int viewport_x = int(rsx::method_registers[NV4097_SET_VIEWPORT_HORIZONTAL] & 0xffff);
-	//int viewport_y = int(rsx::method_registers[NV4097_SET_VIEWPORT_VERTICAL] & 0xffff);
-	//int viewport_w = int(rsx::method_registers[NV4097_SET_VIEWPORT_HORIZONTAL] >> 16);
-	//int viewport_h = int(rsx::method_registers[NV4097_SET_VIEWPORT_VERTICAL] >> 16);
-	//glViewport(viewport_x, viewport_y, viewport_w, viewport_h);
+	int viewport_x = int(rsx::method_registers[NV4097_SET_VIEWPORT_HORIZONTAL] & 0xffff);
+	int viewport_y = int(rsx::method_registers[NV4097_SET_VIEWPORT_VERTICAL] & 0xffff);
+	int viewport_w = int(rsx::method_registers[NV4097_SET_VIEWPORT_HORIZONTAL] >> 16);
+	int viewport_h = int(rsx::method_registers[NV4097_SET_VIEWPORT_VERTICAL] >> 16);
+	glViewport(viewport_x, viewport_y, viewport_w, viewport_h);
 
 	//scissor test is always enabled
 	glEnable(GL_SCISSOR_TEST);
