@@ -33,9 +33,9 @@ void GLFragmentDecompilerThread::insertHeader(std::stringstream & OS)
 
 void GLFragmentDecompilerThread::insertIntputs(std::stringstream & OS)
 {
-	for (ParamType PT : m_parr.params[PF_PARAM_IN])
+	for (const ParamType& PT : m_parr.params[PF_PARAM_IN])
 	{
-		for (ParamItem PI : PT.items)
+		for (const ParamItem& PI : PT.items)
 			OS << "in " << PT.type << " " << PI.name << ";" << std::endl;
 	}
 }
@@ -59,22 +59,22 @@ void GLFragmentDecompilerThread::insertOutputs(std::stringstream & OS)
 
 void GLFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 {
-	for (ParamType PT : m_parr.params[PF_PARAM_UNIFORM])
+	for (const ParamType& PT : m_parr.params[PF_PARAM_UNIFORM])
 	{
 		if (PT.type != "sampler2D")
 			continue;
-		for (ParamItem PI : PT.items)
+		for (const ParamItem& PI : PT.items)
 			OS << "uniform " << PT.type << " " << PI.name << ";" << std::endl;
 
 	}
 
 	OS << "layout(std140, binding = 2) uniform FragmentConstantsBuffer" << std::endl;
 	OS << "{" << std::endl;
-	for (ParamType PT : m_parr.params[PF_PARAM_UNIFORM])
+	for (const ParamType& PT : m_parr.params[PF_PARAM_UNIFORM])
 	{
 		if (PT.type == "sampler2D")
 			continue;
-		for (ParamItem PI : PT.items)
+		for (const ParamItem& PI : PT.items)
 			OS << "	 " << PT.type << " " << PI.name << ";" << std::endl;
 	}
 	// A dummy value otherwise it's invalid to create an empty uniform buffer
@@ -87,9 +87,9 @@ void GLFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 	OS << "void main ()" << std::endl;
 	OS << "{" << std::endl;
 
-	for (ParamType PT : m_parr.params[PF_PARAM_NONE])
+	for (const ParamType& PT : m_parr.params[PF_PARAM_NONE])
 	{
-		for (ParamItem PI : PT.items)
+		for (const ParamItem& PI : PT.items)
 		{
 			OS << "	" << PT.type << " " << PI.name;
 			if (!PI.value.empty())
@@ -158,7 +158,7 @@ void GLFragmentProgram::Decompile(RSXFragmentProgram& prog)
 	decompiler.Task();
 	for (const ParamType& PT : decompiler.m_parr.params[PF_PARAM_UNIFORM])
 	{
-		for (const ParamItem PI : PT.items)
+		for (const ParamItem& PI : PT.items)
 		{
 			if (PT.type == "sampler2D")
 				continue;
