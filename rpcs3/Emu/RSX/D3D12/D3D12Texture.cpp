@@ -239,6 +239,7 @@ void D3D12GSRender::upload_and_bind_textures(ID3D12GraphicsCommandList *command_
 			shared_resource_view_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 			break;
 		case CELL_GCM_TEXTURE_A8R8G8B8:
+		case CELL_GCM_TEXTURE_D8R8G8B8:
 		{
 
 
@@ -312,28 +313,6 @@ void D3D12GSRender::upload_and_bind_textures(ID3D12GraphicsCommandList *command_
 		case CELL_GCM_TEXTURE_D1R5G5B5:
 			shared_resource_view_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 			break;
-		case CELL_GCM_TEXTURE_D8R8G8B8:
-		{
-			const int RemapValue[4] =
-			{
-				D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_1,
-				D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_2,
-				D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_3,
-				D3D12_SHADER_COMPONENT_MAPPING_FORCE_VALUE_1
-			};
-
-			u8 remap_a = textures[i].remap() & 0x3;
-			u8 remap_r = (textures[i].remap() >> 2) & 0x3;
-			u8 remap_g = (textures[i].remap() >> 4) & 0x3;
-			u8 remap_b = (textures[i].remap() >> 6) & 0x3;
-
-			shared_resource_view_desc.Shader4ComponentMapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(
-				RemapValue[remap_a],
-				RemapValue[remap_r],
-				RemapValue[remap_g],
-				RemapValue[remap_b]);
-			break;
-		}
 		case CELL_GCM_TEXTURE_Y16_X16_FLOAT:
 			shared_resource_view_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 			break;
