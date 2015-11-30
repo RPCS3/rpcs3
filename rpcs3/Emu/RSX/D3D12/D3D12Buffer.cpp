@@ -154,6 +154,17 @@ void D3D12GSRender::upload_and_bind_scale_offset_matrix(size_t descriptorIndex)
 	float alpha_ref = (float&)rsx::method_registers[NV4097_SET_ALPHA_REF];
 	memcpy((char*)mapped_buffer + heap_offset + 16 * sizeof(float), &is_alpha_tested, sizeof(int));
 	memcpy((char*)mapped_buffer + heap_offset + 17 * sizeof(float), &alpha_ref, sizeof(float));
+
+	size_t tex_idx = 0;
+	for (u32 i = 0; i < rsx::limits::textures_count; ++i)
+	{
+		if (!textures[i].enabled()) continue;
+		size_t w = textures[i].width(), h = textures[i].height();
+		if (!w || !h) continue;
+
+		int is_unorm = (textures[i].format() & CELL_GCM_TEXTURE_UN);
+		memcpy((char*)mapped_buffer + heap_offset + (18 + tex_idx++) * sizeof(int), &is_unorm, sizeof(int));
+	}
 	m_constants_data.m_heap->Unmap(0, &CD3DX12_RANGE(heap_offset, heap_offset + 256));
 
 	D3D12_CONSTANT_BUFFER_VIEW_DESC constant_buffer_view_desc = {

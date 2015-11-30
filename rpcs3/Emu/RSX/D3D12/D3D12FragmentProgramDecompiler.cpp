@@ -39,6 +39,22 @@ void D3D12FragmentDecompiler::insertHeader(std::stringstream & OS)
 	OS << "	float4x4 scaleOffsetMat;" << std::endl;
 	OS << "	int isAlphaTested;" << std::endl;
 	OS << "	float alphaRef;" << std::endl;
+	OS << "	int tex0_is_unorm;" << std::endl;
+	OS << "	int tex1_is_unorm;" << std::endl;
+	OS << "	int tex2_is_unorm;" << std::endl;
+	OS << "	int tex3_is_unorm;" << std::endl;
+	OS << "	int tex4_is_unorm;" << std::endl;
+	OS << "	int tex5_is_unorm;" << std::endl;
+	OS << "	int tex6_is_unorm;" << std::endl;
+	OS << "	int tex7_is_unorm;" << std::endl;
+	OS << "	int tex8_is_unorm;" << std::endl;
+	OS << "	int tex9_is_unorm;" << std::endl;
+	OS << "	int tex10_is_unorm;" << std::endl;
+	OS << "	int tex11_is_unorm;" << std::endl;
+	OS << "	int tex12_is_unorm;" << std::endl;
+	OS << "	int tex13_is_unorm;" << std::endl;
+	OS << "	int tex14_is_unorm;" << std::endl;
+	OS << "	int tex15_is_unorm;" << std::endl;
 	OS << "};" << std::endl;
 }
 
@@ -107,7 +123,6 @@ void D3D12FragmentDecompiler::insertConstants(std::stringstream & OS)
 			size_t textureIndex = atoi(PI.name.data() + 3);
 			OS << "Texture2D " << PI.name << " : register(t" << textureIndex << ");" << std::endl;
 			OS << "sampler " << PI.name << "sampler : register(s" << textureIndex << ");" << std::endl;
-			textureIndex++;
 		}
 	}
 }
@@ -128,6 +143,21 @@ void D3D12FragmentDecompiler::insertMainStart(std::stringstream & OS)
 	{
 		for (ParamItem PI : PT.items)
 			OS << "	" << PT.type << " " << PI.name << " = float4(0., 0., 0., 0.);" << std::endl;
+	}
+
+	// Declare texture coordinate scaling component (to handle unormalized texture coordinates)
+
+	for (ParamType PT : m_parr.params[PF_PARAM_UNIFORM])
+	{
+		if (PT.type != "sampler2D")
+			continue;
+		for (const ParamItem& PI : PT.items)
+		{
+			size_t textureIndex = atoi(PI.name.data() + 3);
+			OS << "	float2  " << PI.name << "_dim;" << std::endl;
+			OS << "	" << PI.name << ".GetDimensions(" << PI.name << "_dim.x, " << PI.name << "_dim.y);" << std::endl;
+			OS << "	float2  " << PI.name << "_scale = (!!" << PI.name << "_is_unorm) ? float2(1., 1.) / " << PI.name << "_dim : float2(1., 1.);" << std::endl;
+		}
 	}
 }
 
