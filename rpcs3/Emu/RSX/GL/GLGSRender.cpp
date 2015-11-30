@@ -586,11 +586,11 @@ void GLGSRender::begin()
 	__glcheck glDepthMask(rsx::method_registers[NV4097_SET_DEPTH_MASK]);
 	__glcheck glStencilMask(rsx::method_registers[NV4097_SET_STENCIL_MASK]);
 
-	//int viewport_x = int(rsx::method_registers[NV4097_SET_VIEWPORT_HORIZONTAL] & 0xffff);
-	//int viewport_y = int(rsx::method_registers[NV4097_SET_VIEWPORT_VERTICAL] & 0xffff);
-	//int viewport_w = int(rsx::method_registers[NV4097_SET_VIEWPORT_HORIZONTAL] >> 16);
-	//int viewport_h = int(rsx::method_registers[NV4097_SET_VIEWPORT_VERTICAL] >> 16);
-	//glViewport(viewport_x, viewport_y, viewport_w, viewport_h);
+	int viewport_x = int(rsx::method_registers[NV4097_SET_VIEWPORT_HORIZONTAL] & 0xffff);
+	int viewport_y = int(rsx::method_registers[NV4097_SET_VIEWPORT_VERTICAL] & 0xffff);
+	int viewport_w = int(rsx::method_registers[NV4097_SET_VIEWPORT_HORIZONTAL] >> 16);
+	int viewport_h = int(rsx::method_registers[NV4097_SET_VIEWPORT_VERTICAL] >> 16);
+	glViewport(viewport_x, viewport_y, viewport_w, viewport_h);
 
 	//scissor test is always enabled
 	glEnable(GL_SCISSOR_TEST);
@@ -1065,9 +1065,11 @@ void GLGSRender::oninit_thread()
 	m_ebo.create();
 	m_scale_offset_buffer.create(16 * sizeof(float));
 	m_vertex_constants_buffer.create(512 * 4 * sizeof(float));
+	m_fragment_constants_buffer.create();
 
 	glBindBufferBase(GL_UNIFORM_BUFFER, 0, m_scale_offset_buffer.id());
 	glBindBufferBase(GL_UNIFORM_BUFFER, 1, m_vertex_constants_buffer.id());
+	glBindBufferBase(GL_UNIFORM_BUFFER, 2, m_fragment_constants_buffer.id());
 
 	m_vao.array_buffer = m_vbo;
 	m_vao.element_array_buffer = m_ebo;
@@ -1275,17 +1277,12 @@ bool GLGSRender::load_program()
 	fill_vertex_program_constants_data(buffer);
 	glUnmapBuffer(GL_UNIFORM_BUFFER);
 
-	for (u32 constant_offset : m_prog_buffer.getFragmentConstantOffsetsCache(&fragment_program))
-	{
-		auto data = vm::ps3::_ptr<u32>(fragment_program.addr + constant_offset);
-
-		u32 c0 = (data[0] >> 16 | data[0] << 16);
-		u32 c1 = (data[1] >> 16 | data[1] << 16);
-		u32 c2 = (data[2] >> 16 | data[2] << 16);
-		u32 c3 = (data[3] >> 16 | data[3] << 16);
-
-		m_program->uniforms["fc" + std::to_string(constant_offset)] = color4f{ (f32&)c0, (f32&)c1, (f32&)c2, (f32&)c3 };
-	}
+	glBindBuffer(GL_UNIFORM_BUFFER, m_fragment_constants_buffer.id());
+	size_t buffer_size = m_prog_buffer.get_fragment_constants_buffer_size(&fragment_program);
+	glBufferData(GL_UNIFORM_BUFFER, buffer_size, nullptr, GL_STATIC_DRAW);
+	buffer = glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
+	m_prog_buffer.fill_fragment_constans_buffer(buffer, &fragment_program);
+	glUnmapBuffer(GL_UNIFORM_BUFFER);
 
 	return true;
 }
