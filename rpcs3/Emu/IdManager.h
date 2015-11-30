@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Utilities/SharedMutex.h"
+
 #define ID_MANAGER_INCLUDED
 
 // TODO: make id_aux_initialize and id_aux_finalize safer against a possible ODR violation
@@ -109,12 +111,12 @@ namespace idm
 	template<typename T, typename Ptr>
 	std::shared_ptr<T> add(Ptr&& get_ptr)
 	{
-		extern std::mutex g_mutex;
+		extern shared_mutex g_mutex;
 		extern idm::map_t g_map;
 		extern u32 g_last_raw_id;
 		extern thread_local u32 g_tls_last_id;
 
-		std::lock_guard<std::mutex> lock(g_mutex);
+		std::lock_guard<shared_mutex> lock(g_mutex);
 
 		for (u32 raw_id = g_last_raw_id; (raw_id = id_traits<T>::next_id(raw_id)); /**/)
 		{
@@ -283,10 +285,10 @@ namespace fxm
 	template<typename T, bool Always, typename Ptr>
 	std::pair<std::shared_ptr<T>, std::shared_ptr<T>> add(Ptr&& get_ptr)
 	{
-		extern std::mutex g_mutex;
+		extern shared_mutex g_mutex;
 		extern fxm::map_t g_map;
 
-		std::lock_guard<std::mutex> lock(g_mutex);
+		std::lock_guard<shared_mutex> lock(g_mutex);
 
 		auto& item = g_map[get_id_type_index<T>()];
 

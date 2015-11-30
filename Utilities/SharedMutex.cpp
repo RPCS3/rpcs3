@@ -1,152 +1,103 @@
 #include "stdafx.h"
 #include "SharedMutex.h"
 
-static const u32 MAX_READERS = 0x7fffffff; // 2^31-1
-
-inline bool shared_mutex_t::try_lock_shared()
+void shared_mutex::impl_lock_shared(u32 old_value)
 {
-	return m_info.atomic_op([](ownership_info_t& info) -> bool
+	// Throw if reader count breaks the "second" limit (it should be impossible)
+	CHECK_ASSERTION((old_value & SM_READER_COUNT) != SM_READER_COUNT);
+
+	std::unique_lock<std::mutex> lock(m_mutex);
+
+	// Notify non-zero reader queue size
+	m_ctrl |= SM_READER_QUEUE;
+
+	// Compensate incorrectly increased reader count
+	if ((--m_ctrl & SM_READER_COUNT) == 0 && m_wq_size)
 	{
-		if (info.readers < MAX_READERS && !info.writers && !info.waiting_readers && !info.waiting_writers)
-		{
-			info.readers++;
-			return true;
-		}
+		// Notify current exclusive owner (condition passed)
+		m_ocv.notify_one();
+	}
 
-		return false;
-	});
-}
+	CHECK_ASSERTION(++m_rq_size);
 
-void shared_mutex_t::lock_shared()
-{
-	if (!try_lock_shared())
+	// Obtain the reader lock
+	while (!atomic_op(m_ctrl, op_lock_shared))
 	{
-		std::unique_lock<std::mutex> lock(m_mutex);
+		m_rcv.wait(lock);
+	}
 
-		m_wrcv.wait(lock, WRAP_EXPR(m_info.atomic_op([](ownership_info_t& info) -> bool
-		{
-			if (info.waiting_readers < UINT16_MAX)
-			{
-				info.waiting_readers++;
-				return true;
-			}
+	CHECK_ASSERTION(m_rq_size--);
 
-			return false;
-		})));
-
-		m_rcv.wait(lock, WRAP_EXPR(m_info.atomic_op([](ownership_info_t& info) -> bool
-		{
-			if (!info.writers && !info.waiting_writers && info.readers < MAX_READERS)
-			{
-				info.readers++;
-				return true;
-			}
-
-			return false;
-		})));
-
-		const auto info = m_info.atomic_op([](ownership_info_t& info)
-		{
-			if (!info.waiting_readers--)
-			{
-				throw EXCEPTION("Invalid value");
-			}
-		});
-
-		if (info.waiting_readers == UINT16_MAX)
-		{
-			m_wrcv.notify_one();
-		}
+	if (m_rq_size == 0)
+	{
+		m_ctrl &= ~SM_READER_QUEUE;
 	}
 }
 
-void shared_mutex_t::unlock_shared()
+void shared_mutex::impl_unlock_shared(u32 new_value)
 {
-	const auto info = m_info.atomic_op([](ownership_info_t& info)
+	// Throw if reader count was zero
+	CHECK_ASSERTION((new_value & SM_READER_COUNT) != SM_READER_COUNT);
+
+	// Mutex cannot be unlocked before notification because m_ctrl has been changed outside
+	std::lock_guard<std::mutex> lock(m_mutex);
+
+	if (m_wq_size && (new_value & SM_READER_COUNT) == 0)
 	{
-		if (!info.readers--)
-		{
-			throw EXCEPTION("Not locked");
-		}
-	});
-
-	const bool notify_writers = info.readers == 1 && info.writers;
-	const bool notify_readers = info.readers == UINT32_MAX && info.waiting_readers;
-
-	if (notify_writers || notify_readers)
+		// Notify current exclusive owner that the latest reader is gone
+		m_ocv.notify_one();
+	}
+	else if (m_rq_size)
 	{
-		std::lock_guard<std::mutex> lock(m_mutex);
-
-		if (notify_writers) m_wcv.notify_one();
-		if (notify_readers) m_rcv.notify_one();
+		m_rcv.notify_one();
 	}
 }
 
-inline bool shared_mutex_t::try_lock()
+void shared_mutex::impl_lock_excl(u32 value)
 {
-	return m_info.compare_and_swap_test({ 0, 0, 0, 0 }, { 0, 1, 0, 0 });
-}
+	std::unique_lock<std::mutex> lock(m_mutex);
 
-void shared_mutex_t::lock()
-{
-	if (!try_lock())
+	// Notify non-zero writer queue size
+	m_ctrl |= SM_WRITER_QUEUE;
+
+	CHECK_ASSERTION(++m_wq_size);
+
+	// Obtain the writer lock
+	while (!atomic_op(m_ctrl, op_lock_excl))
 	{
-		std::unique_lock<std::mutex> lock(m_mutex);
+		m_wcv.wait(lock);
+	}
 
-		m_wwcv.wait(lock, WRAP_EXPR(m_info.atomic_op([](ownership_info_t& info) -> bool
-		{
-			if (info.waiting_writers < UINT16_MAX)
-			{
-				info.waiting_writers++;
-				return true;
-			}
+	// Wait for remaining readers
+	while ((m_ctrl & SM_READER_COUNT) != 0)
+	{
+		m_ocv.wait(lock);
+	}
 
-			return false;
-		})));
+	CHECK_ASSERTION(m_wq_size--);
 
-		m_wcv.wait(lock, WRAP_EXPR(m_info.atomic_op([](ownership_info_t& info) -> bool
-		{
-			if (!info.writers)
-			{
-				info.writers++;
-				return true;
-			}
-
-			return false;
-		})));
-
-		m_wcv.wait(lock, WRAP_EXPR(m_info.load().readers == 0));
-
-		const auto info = m_info.atomic_op([](ownership_info_t& info)
-		{
-			if (!info.waiting_writers--)
-			{
-				throw EXCEPTION("Invalid value");
-			}
-		});
-
-		if (info.waiting_writers == UINT16_MAX)
-		{
-			m_wwcv.notify_one();
-		}
+	if (m_wq_size == 0)
+	{
+		m_ctrl &= ~SM_WRITER_QUEUE;
 	}
 }
 
-void shared_mutex_t::unlock()
+void shared_mutex::impl_unlock_excl(u32 value)
 {
-	const auto info = m_info.atomic_op([](ownership_info_t& info)
-	{
-		if (!info.writers--)
-		{
-			throw EXCEPTION("Not locked");
-		}
-	});
+	// Throw if was not locked exclusively
+	CHECK_ASSERTION(value & SM_WRITER_LOCK);
 
-	if (info.waiting_writers || info.waiting_readers)
+	// Mutex cannot be unlocked before notification because m_ctrl has been changed outside
+	std::lock_guard<std::mutex> lock(m_mutex);
+	
+	if (m_wq_size)
 	{
-		std::lock_guard<std::mutex> lock(m_mutex);
-
-		if (info.waiting_writers) m_wcv.notify_one();
-		else if (info.waiting_readers) m_rcv.notify_all();
+		// Notify next exclusive owner
+		m_wcv.notify_one();
+	}
+	else if (m_rq_size)
+	{
+		// Notify all readers
+		m_rcv.notify_all();
 	}
 }

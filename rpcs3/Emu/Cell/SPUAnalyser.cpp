@@ -50,7 +50,7 @@ std::shared_ptr<spu_function_t> SPUDatabase::analyse(const be_t<u32>* ls, u32 en
 	const u64 key = entry | u64{ ls[entry / 4] } << 32;
 
 	{
-		std::shared_lock<shared_mutex_t> lock(m_mutex);
+		reader_lock lock(m_mutex);
 
 		// Try to find existing function in the database
 		if (auto func = find(ls + entry / 4, key, max_limit - entry))
@@ -59,7 +59,7 @@ std::shared_ptr<spu_function_t> SPUDatabase::analyse(const be_t<u32>* ls, u32 en
 		}
 	}
 
-	std::lock_guard<shared_mutex_t> lock(m_mutex);
+	std::lock_guard<shared_mutex> lock(m_mutex);
 
 	// Double-check
 	if (auto func = find(ls + entry / 4, key, max_limit - entry))

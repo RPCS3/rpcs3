@@ -3,7 +3,7 @@
 
 namespace idm
 {
-	std::mutex g_mutex;
+	shared_mutex g_mutex;
 
 	idm::map_t g_map;
 
@@ -14,16 +14,16 @@ namespace idm
 
 namespace fxm
 {
-	std::mutex g_mutex;
+	shared_mutex g_mutex;
 
 	fxm::map_t g_map;
 }
 
 void idm::clear()
 {
-	std::lock_guard<std::mutex> lock{g_mutex};
+	std::lock_guard<shared_mutex> lock(g_mutex);
 
-	// Call recorded id_finalize functions for all IDs
+	// Call recorded finalization functions for all IDs
 	for (auto& id : idm::map_t(std::move(g_map)))
 	{
 		(*id.second.type_index)(id.second.data.get());
@@ -34,17 +34,16 @@ void idm::clear()
 
 bool idm::check(u32 in_id, id_type_index_t type)
 {
-	std::lock_guard<std::mutex> lock(g_mutex);
+	reader_lock lock(g_mutex);
 
 	const auto found = g_map.find(in_id);
 
 	return found != g_map.end() && found->second.type_index == type;
 }
 
-// check if ID exists and return its type or nullptr
 const std::type_info* idm::get_type(u32 raw_id)
 {
-	std::lock_guard<std::mutex> lock(g_mutex);
+	reader_lock lock(g_mutex);
 
 	const auto found = g_map.find(raw_id);
 
@@ -53,7 +52,7 @@ const std::type_info* idm::get_type(u32 raw_id)
 
 std::shared_ptr<void> idm::get(u32 in_id, id_type_index_t type)
 {
-	std::lock_guard<std::mutex> lock(g_mutex);
+	reader_lock lock(g_mutex);
 
 	const auto found = g_map.find(in_id);
 
@@ -67,7 +66,7 @@ std::shared_ptr<void> idm::get(u32 in_id, id_type_index_t type)
 
 idm::map_t idm::get_all(id_type_index_t type)
 {
-	std::lock_guard<std::mutex> lock(g_mutex);
+	reader_lock lock(g_mutex);
 
 	idm::map_t result;
 
@@ -84,7 +83,7 @@ idm::map_t idm::get_all(id_type_index_t type)
 
 std::shared_ptr<void> idm::withdraw(u32 in_id, id_type_index_t type)
 {
-	std::lock_guard<std::mutex> lock(g_mutex);
+	std::lock_guard<shared_mutex> lock(g_mutex);
 
 	const auto found = g_map.find(in_id);
 
@@ -102,7 +101,7 @@ std::shared_ptr<void> idm::withdraw(u32 in_id, id_type_index_t type)
 
 u32 idm::get_count(id_type_index_t type)
 {
-	std::lock_guard<std::mutex> lock(g_mutex);
+	reader_lock lock(g_mutex);
 
 	u32 result = 0;
 
@@ -120,9 +119,9 @@ u32 idm::get_count(id_type_index_t type)
 
 void fxm::clear()
 {
-	std::lock_guard<std::mutex> lock{g_mutex};
+	std::lock_guard<shared_mutex> lock(g_mutex);
 
-	// Call recorded id_finalize functions for all IDs
+	// Call recorded finalization functions for all IDs
 	for (auto& id : fxm::map_t(std::move(g_map)))
 	{
 		if (id.second) (*id.first)(id.second.get());
@@ -131,7 +130,7 @@ void fxm::clear()
 
 bool fxm::check(id_type_index_t type)
 {
-	std::lock_guard<std::mutex> lock(g_mutex);
+	reader_lock lock(g_mutex);
 
 	const auto found = g_map.find(type);
 
@@ -140,7 +139,7 @@ bool fxm::check(id_type_index_t type)
 
 std::shared_ptr<void> fxm::get(id_type_index_t type)
 {
-	std::lock_guard<std::mutex> lock(g_mutex);
+	reader_lock lock(g_mutex);
 
 	const auto found = g_map.find(type);
 
@@ -149,7 +148,7 @@ std::shared_ptr<void> fxm::get(id_type_index_t type)
 
 std::shared_ptr<void> fxm::withdraw(id_type_index_t type)
 {
-	std::unique_lock<std::mutex> lock(g_mutex);
+	std::unique_lock<shared_mutex> lock(g_mutex);
 
 	const auto found = g_map.find(type);
 

@@ -259,7 +259,7 @@ struct spu_function_t
 // SPU Function Database (must be global or PS3 process-local)
 class SPUDatabase final
 {
-	shared_mutex_t m_mutex;
+	shared_mutex m_mutex;
 
 	// All registered functions (uses addr and first instruction as a key)
 	std::unordered_multimap<u64, std::shared_ptr<spu_function_t>> m_db;
