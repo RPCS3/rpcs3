@@ -454,6 +454,12 @@ enum
 	CELL_GCM_FALSE = 0
 };
 
+enum
+{
+	CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT = 0xe, ///< shader program exports the depth of the shaded fragment
+	CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS = 0x40 ///< shader program exports 32 bits registers values (instead of 16 bits ones)
+};
+
 // GCM Reports
 enum
 {

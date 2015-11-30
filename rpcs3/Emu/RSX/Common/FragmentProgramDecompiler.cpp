@@ -319,11 +319,6 @@ std::string FragmentProgramDecompiler::BuildCode()
 {
 	//main += fmt::format("\tgl_FragColor = %c0;\n", m_ctrl & 0x40 ? 'r' : 'h');
 
-	if (m_ctrl & 0xe)
-	{
-		main += m_ctrl & 0x40 ? "\tgl_FragDepth = r1.z;\n" : "\tgl_FragDepth = h0.z;\n";
-	}
-
 	std::stringstream OS;
 	insertHeader(OS);
 	OS << std::endl;

@@ -5,6 +5,7 @@
 #include "GLFragmentProgram.h"
 
 #include "GLCommonDecompiler.h"
+#include "../GCM.h"
 
 std::string GLFragmentDecompilerThread::getFloatTypeName(size_t elementCount)
 {
@@ -44,10 +45,10 @@ void GLFragmentDecompilerThread::insertOutputs(std::stringstream & OS)
 {
 	const std::pair<std::string, std::string> table[] =
 	{
-		{ "ocol0", m_ctrl & 0x40 ? "r0" : "h0" },
-		{ "ocol1", m_ctrl & 0x40 ? "r2" : "h4" },
-		{ "ocol2", m_ctrl & 0x40 ? "r3" : "h6" },
-		{ "ocol3", m_ctrl & 0x40 ? "r4" : "h8" },
+		{ "ocol0", m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? "r0" : "h0" },
+		{ "ocol1", m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? "r2" : "h4" },
+		{ "ocol2", m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? "r3" : "h6" },
+		{ "ocol3", m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? "r4" : "h8" },
 	};
 
 	for (int i = 0; i < sizeof(table) / sizeof(*table); ++i)
@@ -103,10 +104,10 @@ void GLFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 {
 	const std::pair<std::string, std::string> table[] =
 	{
-		{ "ocol0", m_ctrl & 0x40 ? "r0" : "h0" },
-		{ "ocol1", m_ctrl & 0x40 ? "r2" : "h4" },
-		{ "ocol2", m_ctrl & 0x40 ? "r3" : "h6" },
-		{ "ocol3", m_ctrl & 0x40 ? "r4" : "h8" },
+		{ "ocol0", m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? "r0" : "h0" },
+		{ "ocol1", m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? "r2" : "h4" },
+		{ "ocol2", m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? "r3" : "h6" },
+		{ "ocol3", m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? "r4" : "h8" },
 	};
 
 	for (int i = 0; i < sizeof(table) / sizeof(*table); ++i)
@@ -114,6 +115,9 @@ void GLFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", table[i].second))
 			OS << "	" << table[i].first << " = " << table[i].second << ";" << std::endl;
 	}
+
+	if (m_ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT)
+		OS << ((m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS) ? "\tgl_FragDepth = r1.z;\n" : "\tgl_FragDepth = h0.z;\n") << std::endl;
 
 	OS << "}" << std::endl;
 }
