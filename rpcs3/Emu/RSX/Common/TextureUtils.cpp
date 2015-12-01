@@ -61,17 +61,14 @@ writeTexelsSwizzled(const char *src, char *dst, size_t widthInBlock, size_t heig
 		Result.push_back(currentMipmapLevelInfo);
 
 		u32 *castedSrc, *castedDst;
-		u32 log2width, log2height;
 
 		castedSrc = (u32*)src + offsetInSrc;
 		castedDst = (u32*)dst + offsetInDst;
 
-		log2width = (u32)(logf((float)currentWidth) / logf(2.f));
-		log2height = (u32)(logf((float)currentHeight) / logf(2.f));
-
-		for (int row = 0; row < currentHeight; row++)
-			for (int j = 0; j < currentWidth; j++)
-				castedDst[(row * rowPitch / 4) + j] = castedSrc[rsx::linear_to_swizzle(j, row, 0, log2width, log2height, 0)];
+		std::unique_ptr<u32[]> tempSwizzled(new u32[currentHeight * currentWidth]);
+		rsx::convert_linear_swizzle<u32>(castedSrc, tempSwizzled.get(), currentWidth, currentHeight, true);
+		for (unsigned row = 0; row < currentHeight; row++)
+			memcpy((char*)dst + offsetInDst + row * rowPitch, (char*)tempSwizzled.get() + offsetInSrc + row * widthInBlock * blockSize, currentWidth * blockSize);
 
 		offsetInDst += currentHeight * rowPitch;
 		offsetInSrc += currentHeight * widthInBlock * blockSize;
@@ -124,6 +121,7 @@ write16bTexelsSwizzled(const char *src, char *dst, size_t widthInBlock, size_t h
 	std::vector<MipmapLevelInfo> Result;
 	size_t offsetInDst = 0, offsetInSrc = 0;
 	size_t currentHeight = heightInBlock, currentWidth = widthInBlock;
+	size_t srcPitch = widthInBlock * blockSize;
 	for (unsigned mipLevel = 0; mipLevel < mipmapCount; mipLevel++)
 	{
 		size_t rowPitch = align(currentWidth * blockSize, 256);
@@ -141,12 +139,14 @@ write16bTexelsSwizzled(const char *src, char *dst, size_t widthInBlock, size_t h
 		castedSrc = (u16*)src + offsetInSrc;
 		castedDst = (u16*)dst + offsetInDst;
 
-		log2width = (u32)(logf((float)currentWidth) / logf(2.f));
-		log2height = (u32)(logf((float)currentHeight) / logf(2.f));
-
-		for (int row = 0; row < currentHeight; row++)
+		std::unique_ptr<u16[]> tempSwizzled(new u16[currentHeight * currentWidth]);
+		rsx::convert_linear_swizzle<u16>(castedSrc, tempSwizzled.get(), currentWidth, currentHeight, true);
+		for (unsigned row = 0; row < heightInBlock; row++)
 			for (int j = 0; j < currentWidth; j++)
-				castedDst[(row * rowPitch / 2) + j] = castedSrc[rsx::linear_to_swizzle(j, row, 0, log2width, log2height, 0)];
+			{
+				u16 tmp = tempSwizzled[offsetInSrc / 2 + row * srcPitch / 2 + j];
+				castedDst[offsetInDst / 2 + row * rowPitch / 2 + j] = (tmp >> 8) | (tmp << 8);
+			}
 
 		offsetInDst += currentHeight * rowPitch;
 		offsetInSrc += currentHeight * widthInBlock * blockSize;
