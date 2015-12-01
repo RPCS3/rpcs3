@@ -323,6 +323,23 @@ void RSXDebugger::OnScrollMemory(wxMouseEvent& event)
 	event.Skip();
 }
 
+namespace
+{
+	void display_buffer(wxWindow *parent, const wxImage &img)
+	{
+//		wxString title = wxString::Format("Raw Image @ 0x%x", addr);
+		size_t width = img.GetWidth(), height = img.GetHeight();
+		wxFrame* f_image_viewer = new wxFrame(parent, wxID_ANY, "", wxDefaultPosition, wxDefaultSize,
+			wxSYSTEM_MENU | wxMINIMIZE_BOX | wxCLOSE_BOX | wxCAPTION | wxCLIP_CHILDREN);
+		f_image_viewer->SetBackgroundColour(wxColour(240, 240, 240)); //This fix the ugly background color under Windows
+		f_image_viewer->SetAutoLayout(true);
+		f_image_viewer->SetClientSize(wxSize(width, height));
+		f_image_viewer->Show();
+		wxClientDC dc_canvas(f_image_viewer);
+		dc_canvas.DrawBitmap(img, 0, 0, false);
+	}
+}
+
 void RSXDebugger::OnClickBuffer(wxMouseEvent& event)
 {
 	if (!RSXReady()) return;
@@ -341,10 +358,15 @@ void RSXDebugger::OnClickBuffer(wxMouseEvent& event)
 		return; \
 	} \
 
-	if (event.GetId() == p_buffer_colorA->GetId()) SHOW_BUFFER(0);
+/*	if (event.GetId() == p_buffer_colorA->GetId()) SHOW_BUFFER(0);
 	if (event.GetId() == p_buffer_colorB->GetId()) SHOW_BUFFER(1);
 	if (event.GetId() == p_buffer_colorC->GetId()) SHOW_BUFFER(2);
-	if (event.GetId() == p_buffer_colorD->GetId()) SHOW_BUFFER(3);
+	if (event.GetId() == p_buffer_colorD->GetId()) SHOW_BUFFER(3);*/
+
+	if (event.GetId() == p_buffer_colorA->GetId()) display_buffer(this, buffer_img[0]);
+	if (event.GetId() == p_buffer_colorB->GetId()) display_buffer(this, buffer_img[1]);
+	if (event.GetId() == p_buffer_colorC->GetId()) display_buffer(this, buffer_img[2]);
+	if (event.GetId() == p_buffer_colorD->GetId()) display_buffer(this, buffer_img[3]);
 	if (event.GetId() == p_buffer_tex->GetId())
 	{
 		u8 location = render.textures[m_cur_texture].location();
@@ -396,11 +418,11 @@ void RSXDebugger::OnClickDrawCalls(wxMouseEvent& event)
 		if (width && height)
 		{
 			unsigned char *orig_buffer = frame_debug.draw_calls[draw_id].color_buffer[i].data.data();
-			wxImage img(width, height, convert_to_wximage_buffer(orig_buffer, width, height));
+			buffer_img[i] = wxImage(width, height, convert_to_wximage_buffer(orig_buffer, width, height));
 			wxClientDC dc_canvas(p_buffers[i]);
 
-			if (img.IsOk())
-				dc_canvas.DrawBitmap(img.Scale(m_panel_width, m_panel_height), 0, 0, false);
+			if (buffer_img[i].IsOk())
+				dc_canvas.DrawBitmap(buffer_img[i].Scale(m_panel_width, m_panel_height), 0, 0, false);
 		}
 	}
 

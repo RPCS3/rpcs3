@@ -30,6 +30,8 @@ class RSXDebugger : public wxFrame
 	wxPanel* p_buffer_stencil;
 	wxPanel* p_buffer_tex;
 
+	wxImage buffer_img[4];
+
 	wxTextCtrl* m_text_transform_program;
 	wxTextCtrl *m_text_shader_program;
 
