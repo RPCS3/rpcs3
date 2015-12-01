@@ -108,13 +108,13 @@ D3D12_STENCIL_OP get_stencil_op(u32 op) noexcept
 	case CELL_GCM_REPLACE: return D3D12_STENCIL_OP_REPLACE;
 	case CELL_GCM_INCR: return D3D12_STENCIL_OP_INCR;
 	case CELL_GCM_DECR: return D3D12_STENCIL_OP_DECR;
+	case CELL_GCM_INVERT: return D3D12_STENCIL_OP_INVERT;
 	case CELL_GCM_INCR_WRAP:
 	case CELL_GCM_DECR_WRAP:
-		unreachable("Unsupported Stencil Op %d");
+		LOG_WARNING(RSX, "Unsupported stencil op used %x, please report this to a developer.", op);
 	}
-	// Jet Set Radio uses an unknow op but INCR seems to be the intended one
-	LOG_WARNING(RSX, "Unknow stencil op %x, fallback to INCR", op);
-	return D3D12_STENCIL_OP_INCR;
+	LOG_ERROR(RSX, "Unknow stencil op used %x, please report this to a developer.", op);
+	unreachable("Wrong Stencil op");
 }
 
 D3D12_COMPARISON_FUNC get_compare_func(u32 op) noexcept
