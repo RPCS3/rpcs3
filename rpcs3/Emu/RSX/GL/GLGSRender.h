@@ -7,8 +7,6 @@
 
 #include "GLProgramBuffer.h"
 
-#pragma comment(lib, "opengl32.lib")
-
 class GLTexture
 {
 	u32 m_id = 0;
