@@ -81,7 +81,16 @@ namespace idm
 		}
 	};
 
-	using map_t = std::unordered_map<u32, id_data_t>;
+	// Custom hasher for ID values (map to itself)
+	struct id_hash_t final
+	{
+		std::size_t operator ()(u32 value) const
+		{
+			return value;
+		}
+	};
+
+	using map_t = std::unordered_map<u32, id_data_t, id_hash_t>;
 
 	// Can be called from the constructor called through make() or make_ptr() to get the ID of the object being created
 	inline u32 get_last_id()
@@ -276,7 +285,16 @@ namespace idm
 // object are deleted when the emulation is stopped
 namespace fxm
 {
-	using map_t = std::unordered_map<id_type_index_t, std::shared_ptr<void>>;
+	// Custom hasher for aligned pointer values
+	struct hash_t final
+	{
+		std::size_t operator()(id_type_index_t value) const
+		{
+			return reinterpret_cast<std::size_t>(value) >> 3;
+		}
+	};
+
+	using map_t = std::unordered_map<id_type_index_t, std::shared_ptr<void>, hash_t>;
 
 	// Remove all objects
 	void clear();
