@@ -1,12 +1,16 @@
 #pragma once
-#include <sstream>
 
 class AutoPauseManagerDialog : public wxDialog
 {
-	wxListView *m_list;
+	enum
+	{
+		id_add,
+		id_remove,
+		id_config,
+	};
+
+	wxListView* m_list;
 	std::vector<u32> m_entries;
-	//Used when i want to convert u32 id to string
-	std::stringstream m_entry_convert;
 
 public:
 	AutoPauseManagerDialog(wxWindow* parent);
@@ -29,13 +33,12 @@ public:
 class AutoPauseSettingsDialog : public wxDialog
 {
 	u32 m_entry;
-	u32 *m_presult;
+	u32* m_presult;
 	wxTextCtrl* m_id;
 	wxStaticText* m_current_converted;
-	std::stringstream m_entry_convert;
 
 public:
-	AutoPauseSettingsDialog(wxWindow* parent, u32 *entry);
+	AutoPauseSettingsDialog(wxWindow* parent, u32* entry);
 	void OnOk(wxCommandEvent& event);
 	void OnUpdateValue(wxCommandEvent& event);
 };

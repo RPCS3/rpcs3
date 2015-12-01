@@ -1,17 +1,8 @@
 #include "stdafx_gui.h"
 #include "Emu/System.h"
 #include "AutoPauseManager.h"
-#include <iomanip>
-#include <sstream>
 #include "Utilities/Log.h"
 #include "Utilities/File.h"
-
-enum
-{
-	id_add,
-	id_remove,
-	id_config
-};
 
 //TODO::Get the enable configuration from ini.
 AutoPauseManagerDialog::AutoPauseManagerDialog(wxWindow* parent)
@@ -21,11 +12,7 @@ AutoPauseManagerDialog::AutoPauseManagerDialog(wxWindow* parent)
 
 	wxBoxSizer* s_main = new wxBoxSizer(wxVERTICAL);
 
-	m_entry_convert.clear();
-	m_entry_convert.str("");
-	m_entry_convert << "To use auto pause: enter the ID(s) of a function or a system call. Restart of the game is required to apply. You can enable/disable this in the settings.";
-
-	wxStaticText* s_description = new wxStaticText(this, wxID_ANY, m_entry_convert.str(),wxDefaultPosition, wxDefaultSize, 0);
+	wxStaticText* s_description = new wxStaticText(this, wxID_ANY, "To use auto pause: enter the ID(s) of a function or a system call. Restart of the game is required to apply. You can enable/disable this in the settings.", wxDefaultPosition, wxDefaultSize, 0);
 	s_description->Wrap(400);
 	s_main->Add(s_description, 0, wxALL, 5);
 
@@ -119,10 +106,7 @@ void AutoPauseManagerDialog::UpdateList(void)
 		m_list->InsertItem(i, i);
 		if (m_entries[i] != 0xFFFFFFFF)
 		{
-			m_entry_convert.clear();
-			m_entry_convert.str("");
-			m_entry_convert << std::hex << std::setw(8) << std::setfill('0') << m_entries[i];
-			m_list->SetItem(i, 0, m_entry_convert.str());
+			m_list->SetItem(i, 0, fmt::format("%08x", m_entries[i]));
 		}
 		else
 		{
@@ -219,11 +203,7 @@ AutoPauseSettingsDialog::AutoPauseSettingsDialog(wxWindow* parent, u32 *entry)
 
 	wxBoxSizer* s_main = new wxBoxSizer(wxVERTICAL);
 
-	m_entry_convert.clear();
-	m_entry_convert.str("");
-	m_entry_convert << "Specify ID of System Call or Function Call below. You need to use a Hexadecimal ID.";
-
-	wxStaticText* s_description = new wxStaticText(this, wxID_ANY, m_entry_convert.str(), wxDefaultPosition, wxDefaultSize, 0);
+	wxStaticText* s_description = new wxStaticText(this, wxID_ANY, "Specify ID of System Call or Function Call below. You need to use a Hexadecimal ID.", wxDefaultPosition, wxDefaultSize, 0);
 	s_description->Wrap(400);
 	s_main->Add(s_description, 0, wxALL, 5);
 
@@ -239,12 +219,9 @@ AutoPauseSettingsDialog::AutoPauseSettingsDialog(wxWindow* parent, u32 *entry)
 	m_current_converted = new wxStaticText(this, wxID_ANY, wxT("Currently it gets an id of \"Unset\"."), wxDefaultPosition, wxDefaultSize, 0);
 	s_main->Add(m_current_converted, 0, wxALL, 5);
 
-	m_entry_convert.clear();
-	m_entry_convert.str("");
-	m_entry_convert << std::hex << std::setw(8) << std::setfill('0') << m_entry;
-	m_id->SetValue(m_entry_convert.str());
+	m_id->SetValue(fmt::format("%08x", m_entry));
 
-	SetTitle("Auto Pause Setting: "+m_entry_convert.str());
+	SetTitle("Auto Pause Setting: " + m_id->GetValue());
 
 	Bind(wxEVT_BUTTON, &AutoPauseSettingsDialog::OnOk, this, wxID_OK);
 	Bind(wxEVT_TEXT, &AutoPauseSettingsDialog::OnUpdateValue, this, wxID_STATIC);
@@ -260,12 +237,10 @@ AutoPauseSettingsDialog::AutoPauseSettingsDialog(wxWindow* parent, u32 *entry)
 
 void AutoPauseSettingsDialog::OnOk(wxCommandEvent& event)
 {
-	//Luckily StringStream omit those not hex.
-	m_entry_convert.clear();
-	m_entry_convert.str("");
-	m_entry_convert << std::hex << m_id->GetValue();
-	m_entry_convert >> m_entry;
+	ullong value = 0;
+	m_id->GetValue().ToULongLong(&value, 16);
 
+	m_entry = value;
 	*m_presult = m_entry;
 
 	EndModal(wxID_OK);
@@ -273,22 +248,9 @@ void AutoPauseSettingsDialog::OnOk(wxCommandEvent& event)
 
 void AutoPauseSettingsDialog::OnUpdateValue(wxCommandEvent& event)
 {
-	//Luckily StringStream omit those not hex.
-	m_entry_convert.clear();
-	m_entry_convert.str("");
-	m_entry_convert << std::hex << m_id->GetValue();
-	m_entry_convert >> m_entry;
+	ullong value;
+	const bool is_ok = m_id->GetValue().ToULongLong(&value, 16) && value <= UINT32_MAX;
 
-	m_entry_convert.clear();
-	m_entry_convert.str("");
-	m_entry_convert << std::hex << /*std::setw(8) << std::setfill('0') <<*/ m_entry;
-	m_entry_convert.clear();
-	if (m_entry_convert.str() == m_id->GetValue())
-	{
-		m_current_converted->SetLabelText("Currently it gets an id of \"" + m_entry_convert.str() + "\" - SAME.");
-	}
-	else {
-		m_current_converted->SetLabelText("Currently it gets an id of \"" + m_entry_convert.str() + "\".");
-	}
+	m_current_converted->SetLabelText(fmt::format("Current value: %08x (%s)", u32(value), is_ok ? "OK" : "conversion failed"));
 	event.Skip();
 }

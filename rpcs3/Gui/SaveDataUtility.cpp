@@ -1,7 +1,5 @@
 #include "stdafx_gui.h"
 #include "SaveDataUtility.h"
-#include <iomanip>
-#include <sstream>
 #include "Utilities/Log.h"
 //#include "Utilities/File.h"
 
@@ -175,10 +173,7 @@ SaveDataListDialog::SaveDataListDialog(wxWindow* parent, bool enable_manage)
 
 	wxBoxSizer* s_main = new wxBoxSizer(wxVERTICAL);
 
-	m_entry_convert.clear();
-	m_entry_convert.str("");
-	m_entry_convert << "This is only a stub for now. This doesn't work yet due to related functions not being implemented.";
-	wxStaticText* s_description = new wxStaticText(this, wxID_ANY, m_entry_convert.str(), wxDefaultPosition, wxDefaultSize, 0);
+	wxStaticText* s_description = new wxStaticText(this, wxID_ANY, "This is only a stub for now. This doesn't work yet due to related functions not being implemented.", wxDefaultPosition, wxDefaultSize, 0);
 	s_description->Wrap(400);
 	s_main->Add(s_description, 0, wxALL, 5);
 

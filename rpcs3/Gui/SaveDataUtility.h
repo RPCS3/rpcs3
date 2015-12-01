@@ -1,5 +1,4 @@
 #pragma once
-#include <sstream>
 
 //TODO: Implement function calls related to Save Data List.
 //Those function calls may be needed to use this GUI.
@@ -19,14 +18,6 @@ enum
 struct SaveDataEntry
 {
 
-};
-
-enum
-{
-	//Reserved some Ids for Sort-By Submenu.
-	id_copy = 64,
-	id_remove,
-	id_info
 };
 
 //Used to display the information of a savedata.
@@ -59,10 +50,17 @@ public:
 //Can also be used as a Save Data Chooser.
 class SaveDataListDialog : public wxDialog
 {
+	enum
+	{
+		//Reserved some Ids for Sort-By Submenu.
+		id_copy = 64,
+		id_remove,
+		id_info,
+	};
+
 	wxListView* m_list;
 	wxMenu* m_sort_options;
 	unsigned int m_sort_type;
-	std::stringstream m_entry_convert;
 
 	void OnSelect(wxCommandEvent& event);
 	void OnManage(wxCommandEvent& event);
