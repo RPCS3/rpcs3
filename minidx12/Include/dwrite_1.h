@@ -1714,7 +1714,7 @@ interface DWRITE_DECLARE_INTERFACE("80DAD800-E21F-4E83-96CE-BFCCE500DB7C") IDWri
 /// If any of these callbacks returns an error, the analysis functions will
 /// stop prematurely and return a callback error.
 /// </summary>
-interface DECLSPEC_UUID("{639CFAD8-0FB4-4B21-A58A-067920120009}") DECLSPEC_NOVTABLE IDWriteTextAnalysisSource1 : public IDWriteTextAnalysisSource
+interface DWRITE_DECLARE_INTERFACE("639CFAD8-0FB4-4B21-A58A-067920120009") IDWriteTextAnalysisSource1 : public IDWriteTextAnalysisSource
 {
     /// <summary>
     /// The text analyzer calls back to this to get the desired glyph
@@ -1753,7 +1753,7 @@ interface DECLSPEC_UUID("{639CFAD8-0FB4-4B21-A58A-067920120009}") DECLSPEC_NOVTA
 /// The interface implemented by the client to receive the
 /// output of the text analyzers.
 /// </summary>
-interface DECLSPEC_UUID("B0D941A0-85E7-4D8B-9FD3-5CED9934482A") DECLSPEC_NOVTABLE IDWriteTextAnalysisSink1 : public IDWriteTextAnalysisSink
+interface DWRITE_DECLARE_INTERFACE("B0D941A0-85E7-4D8B-9FD3-5CED9934482A") IDWriteTextAnalysisSink1 : public IDWriteTextAnalysisSink
 {
     /// <summary>
     /// The text analyzer calls back to this to report the actual orientation

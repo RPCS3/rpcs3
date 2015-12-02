@@ -4062,15 +4062,19 @@ interface ID2D1Resource
 
 #define ID2D1Resource_QueryInterface(This, riid, ppv) \
     ((This)->lpVtbl->Base.QueryInterface((IUnknown *)This, riid, ppv))
+#pragma deprecated("ID2D1Resource_QueryInterface")
 
 #define ID2D1Resource_AddRef(This) \
     ((This)->lpVtbl->Base.AddRef((IUnknown *)This))
+#pragma deprecated("ID2D1Resource_AddRef")
 
 #define ID2D1Resource_Release(This) \
     ((This)->lpVtbl->Base.Release((IUnknown *)This))
+#pragma deprecated("ID2D1Resource_Release")
 
 #define ID2D1Resource_GetFactory(This, factory) \
     ((This)->lpVtbl->GetFactory(This, factory))
+#pragma deprecated("ID2D1Resource_GetFactory")
 
 typedef interface ID2D1Image ID2D1Image;
 
@@ -4089,15 +4093,19 @@ interface ID2D1Image
 
 #define ID2D1Image_QueryInterface(This, riid, ppv) \
     ((This)->lpVtbl->Base.Base.QueryInterface((IUnknown *)This, riid, ppv))
+#pragma deprecated("ID2D1Image_QueryInterface")
 
 #define ID2D1Image_AddRef(This) \
     ((This)->lpVtbl->Base.Base.AddRef((IUnknown *)This))
+#pragma deprecated("ID2D1Image_AddRef")
 
 #define ID2D1Image_Release(This) \
     ((This)->lpVtbl->Base.Base.Release((IUnknown *)This))
+#pragma deprecated("ID2D1Image_Release")
 
 #define ID2D1Image_GetFactory(This, factory) \
     ((This)->lpVtbl->Base.GetFactory((ID2D1Resource *)This, factory))
+#pragma deprecated("ID2D1Image_GetFactory")
 
 typedef interface ID2D1Bitmap ID2D1Bitmap;
 
@@ -4155,36 +4163,47 @@ interface ID2D1Bitmap
 
 #define ID2D1Bitmap_QueryInterface(This, riid, ppv) \
     ((This)->lpVtbl->Base.Base.Base.QueryInterface((IUnknown *)This, riid, ppv))
+#pragma deprecated("ID2D1Bitmap_QueryInterface")
 
 #define ID2D1Bitmap_AddRef(This) \
     ((This)->lpVtbl->Base.Base.Base.AddRef((IUnknown *)This))
+#pragma deprecated("ID2D1Bitmap_AddRef")
 
 #define ID2D1Bitmap_Release(This) \
     ((This)->lpVtbl->Base.Base.Base.Release((IUnknown *)This))
+#pragma deprecated("ID2D1Bitmap_Release")
 
 #define ID2D1Bitmap_GetFactory(This, factory) \
     ((This)->lpVtbl->Base.Base.GetFactory((ID2D1Resource *)This, factory))
+#pragma deprecated("ID2D1Bitmap_GetFactory")
 
 #define ID2D1Bitmap_GetSize(This) \
     ((This)->lpVtbl->GetSize(This))
+#pragma deprecated("ID2D1Bitmap_GetSize")
 
 #define ID2D1Bitmap_GetPixelSize(This) \
     ((This)->lpVtbl->GetPixelSize(This))
+#pragma deprecated("ID2D1Bitmap_GetPixelSize")
 
 #define ID2D1Bitmap_GetPixelFormat(This) \
     ((This)->lpVtbl->GetPixelFormat(This))
+#pragma deprecated("ID2D1Bitmap_GetPixelFormat")
 
 #define ID2D1Bitmap_GetDpi(This, dpiX, dpiY) \
     ((This)->lpVtbl->GetDpi(This, dpiX, dpiY))
+#pragma deprecated("ID2D1Bitmap_GetDpi")
 
 #define ID2D1Bitmap_CopyFromBitmap(This, destPoint, bitmap, srcRect) \
     ((This)->lpVtbl->CopyFromBitmap(This, destPoint, bitmap, srcRect))
+#pragma deprecated("ID2D1Bitmap_CopyFromBitmap")
 
 #define ID2D1Bitmap_CopyFromRenderTarget(This, destPoint, renderTarget, srcRect) \
     ((This)->lpVtbl->CopyFromRenderTarget(This, destPoint, renderTarget, srcRect))
+#pragma deprecated("ID2D1Bitmap_CopyFromRenderTarget")
 
 #define ID2D1Bitmap_CopyFromMemory(This, dstRect, srcData, pitch) \
     ((This)->lpVtbl->CopyFromMemory(This, dstRect, srcData, pitch))
+#pragma deprecated("ID2D1Bitmap_CopyFromMemory")
 
 typedef interface ID2D1GradientStopCollection ID2D1GradientStopCollection;
 
@@ -4221,27 +4240,35 @@ interface ID2D1GradientStopCollection
 
 #define ID2D1GradientStopCollection_QueryInterface(This, riid, ppv) \
     ((This)->lpVtbl->Base.Base.QueryInterface((IUnknown *)This, riid, ppv))
+#pragma deprecated("ID2D1GradientStopCollection_QueryInterface")
 
 #define ID2D1GradientStopCollection_AddRef(This) \
     ((This)->lpVtbl->Base.Base.AddRef((IUnknown *)This))
+#pragma deprecated("ID2D1GradientStopCollection_AddRef")
 
 #define ID2D1GradientStopCollection_Release(This) \
     ((This)->lpVtbl->Base.Base.Release((IUnknown *)This))
+#pragma deprecated("ID2D1GradientStopCollection_Release")
 
 #define ID2D1GradientStopCollection_GetFactory(This, factory) \
     ((This)->lpVtbl->Base.GetFactory((ID2D1Resource *)This, factory))
+#pragma deprecated("ID2D1GradientStopCollection_GetFactory")
 
 #define ID2D1GradientStopCollection_GetGradientStopCount(This) \
     ((This)->lpVtbl->GetGradientStopCount(This))
+#pragma deprecated("ID2D1GradientStopCollection_GetGradientStopCount")
 
 #define ID2D1GradientStopCollection_GetGradientStops(This, gradientStops, gradientStopsCount) \
     ((This)->lpVtbl->GetGradientStops(This, gradientStops, gradientStopsCount))
+#pragma deprecated("ID2D1GradientStopCollection_GetGradientStops")
 
 #define ID2D1GradientStopCollection_GetColorInterpolationGamma(This) \
     ((This)->lpVtbl->GetColorInterpolationGamma(This))
+#pragma deprecated("ID2D1GradientStopCollection_GetColorInterpolationGamma")
 
 #define ID2D1GradientStopCollection_GetExtendMode(This) \
     ((This)->lpVtbl->GetExtendMode(This))
+#pragma deprecated("ID2D1GradientStopCollection_GetExtendMode")
 
 typedef interface ID2D1Brush ID2D1Brush;
 
@@ -4279,27 +4306,35 @@ interface ID2D1Brush
 
 #define ID2D1Brush_QueryInterface(This, riid, ppv) \
     ((This)->lpVtbl->Base.Base.QueryInterface((IUnknown *)This, riid, ppv))
+#pragma deprecated("ID2D1Brush_QueryInterface")
 
 #define ID2D1Brush_AddRef(This) \
     ((This)->lpVtbl->Base.Base.AddRef((IUnknown *)This))
+#pragma deprecated("ID2D1Brush_AddRef")
 
 #define ID2D1Brush_Release(This) \
     ((This)->lpVtbl->Base.Base.Release((IUnknown *)This))
+#pragma deprecated("ID2D1Brush_Release")
 
 #define ID2D1Brush_GetFactory(This, factory) \
     ((This)->lpVtbl->Base.GetFactory((ID2D1Resource *)This, factory))
+#pragma deprecated("ID2D1Brush_GetFactory")
 
 #define ID2D1Brush_SetOpacity(This, opacity) \
     ((This)->lpVtbl->SetOpacity(This, opacity))
+#pragma deprecated("ID2D1Brush_SetOpacity")
 
 #define ID2D1Brush_SetTransform(This, transform) \
     ((This)->lpVtbl->SetTransform(This, transform))
+#pragma deprecated("ID2D1Brush_SetTransform")
 
 #define ID2D1Brush_GetOpacity(This) \
     ((This)->lpVtbl->GetOpacity(This))
+#pragma deprecated("ID2D1Brush_GetOpacity")
 
 #define ID2D1Brush_GetTransform(This, transform) \
     ((This)->lpVtbl->GetTransform(This, transform))
+#pragma deprecated("ID2D1Brush_GetTransform")
 
 typedef interface ID2D1BitmapBrush ID2D1BitmapBrush;
 
@@ -4355,51 +4390,67 @@ interface ID2D1BitmapBrush
 
 #define ID2D1BitmapBrush_QueryInterface(This, riid, ppv) \
     ((This)->lpVtbl->Base.Base.Base.QueryInterface((IUnknown *)This, riid, ppv))
+#pragma deprecated("ID2D1BitmapBrush_QueryInterface")
 
 #define ID2D1BitmapBrush_AddRef(This) \
     ((This)->lpVtbl->Base.Base.Base.AddRef((IUnknown *)This))
+#pragma deprecated("ID2D1BitmapBrush_AddRef")
 
 #define ID2D1BitmapBrush_Release(This) \
     ((This)->lpVtbl->Base.Base.Base.Release((IUnknown *)This))
+#pragma deprecated("ID2D1BitmapBrush_Release")
 
 #define ID2D1BitmapBrush_GetFactory(This, factory) \
     ((This)->lpVtbl->Base.Base.GetFactory((ID2D1Resource *)This, factory))
+#pragma deprecated("ID2D1BitmapBrush_GetFactory")
 
 #define ID2D1BitmapBrush_SetOpacity(This, opacity) \
     ((This)->lpVtbl->Base.SetOpacity((ID2D1Brush *)This, opacity))
+#pragma deprecated("ID2D1BitmapBrush_SetOpacity")
 
 #define ID2D1BitmapBrush_SetTransform(This, transform) \
     ((This)->lpVtbl->Base.SetTransform((ID2D1Brush *)This, transform))
+#pragma deprecated("ID2D1BitmapBrush_SetTransform")
 
 #define ID2D1BitmapBrush_GetOpacity(This) \
     ((This)->lpVtbl->Base.GetOpacity((ID2D1Brush *)This))
+#pragma deprecated("ID2D1BitmapBrush_GetOpacity")
 
 #define ID2D1BitmapBrush_GetTransform(This, transform) \
     ((This)->lpVtbl->Base.GetTransform((ID2D1Brush *)This, transform))
+#pragma deprecated("ID2D1BitmapBrush_GetTransform")
 
 #define ID2D1BitmapBrush_SetExtendModeX(This, extendModeX) \
     ((This)->lpVtbl->SetExtendModeX(This, extendModeX))
+#pragma deprecated("ID2D1BitmapBrush_SetExtendModeX")
 
 #define ID2D1BitmapBrush_SetExtendModeY(This, extendModeY) \
     ((This)->lpVtbl->SetExtendModeY(This, extendModeY))
+#pragma deprecated("ID2D1BitmapBrush_SetExtendModeY")
 
 #define ID2D1BitmapBrush_SetInterpolationMode(This, interpolationMode) \
     ((This)->lpVtbl->SetInterpolationMode(This, interpolationMode))
+#pragma deprecated("ID2D1BitmapBrush_SetInterpolationMode")
 
 #define ID2D1BitmapBrush_SetBitmap(This, bitmap) \
     ((This)->lpVtbl->SetBitmap(This, bitmap))
+#pragma deprecated("ID2D1BitmapBrush_SetBitmap")
 
 #define ID2D1BitmapBrush_GetExtendModeX(This) \
     ((This)->lpVtbl->GetExtendModeX(This))
+#pragma deprecated("ID2D1BitmapBrush_GetExtendModeX")
 
 #define ID2D1BitmapBrush_GetExtendModeY(This) \
     ((This)->lpVtbl->GetExtendModeY(This))
+#pragma deprecated("ID2D1BitmapBrush_GetExtendModeY")
 
 #define ID2D1BitmapBrush_GetInterpolationMode(This) \
     ((This)->lpVtbl->GetInterpolationMode(This))
+#pragma deprecated("ID2D1BitmapBrush_GetInterpolationMode")
 
 #define ID2D1BitmapBrush_GetBitmap(This, bitmap) \
     ((This)->lpVtbl->GetBitmap(This, bitmap))
+#pragma deprecated("ID2D1BitmapBrush_GetBitmap")
 
 typedef interface ID2D1SolidColorBrush ID2D1SolidColorBrush;
 
@@ -4427,33 +4478,43 @@ interface ID2D1SolidColorBrush
 
 #define ID2D1SolidColorBrush_QueryInterface(This, riid, ppv) \
     ((This)->lpVtbl->Base.Base.Base.QueryInterface((IUnknown *)This, riid, ppv))
+#pragma deprecated("ID2D1SolidColorBrush_QueryInterface")
 
 #define ID2D1SolidColorBrush_AddRef(This) \
     ((This)->lpVtbl->Base.Base.Base.AddRef((IUnknown *)This))
+#pragma deprecated("ID2D1SolidColorBrush_AddRef")
 
 #define ID2D1SolidColorBrush_Release(This) \
     ((This)->lpVtbl->Base.Base.Base.Release((IUnknown *)This))
+#pragma deprecated("ID2D1SolidColorBrush_Release")
 
 #define ID2D1SolidColorBrush_GetFactory(This, factory) \
     ((This)->lpVtbl->Base.Base.GetFactory((ID2D1Resource *)This, factory))
+#pragma deprecated("ID2D1SolidColorBrush_GetFactory")
 
 #define ID2D1SolidColorBrush_SetOpacity(This, opacity) \
     ((This)->lpVtbl->Base.SetOpacity((ID2D1Brush *)This, opacity))
+#pragma deprecated("ID2D1SolidColorBrush_SetOpacity")
 
 #define ID2D1SolidColorBrush_SetTransform(This, transform) \
     ((This)->lpVtbl->Base.SetTransform((ID2D1Brush *)This, transform))
+#pragma deprecated("ID2D1SolidColorBrush_SetTransform")
 
 #define ID2D1SolidColorBrush_GetOpacity(This) \
     ((This)->lpVtbl->Base.GetOpacity((ID2D1Brush *)This))
+#pragma deprecated("ID2D1SolidColorBrush_GetOpacity")
 
 #define ID2D1SolidColorBrush_GetTransform(This, transform) \
     ((This)->lpVtbl->Base.GetTransform((ID2D1Brush *)This, transform))
+#pragma deprecated("ID2D1SolidColorBrush_GetTransform")
 
 #define ID2D1SolidColorBrush_SetColor(This, color) \
     ((This)->lpVtbl->SetColor(This, color))
+#pragma deprecated("ID2D1SolidColorBrush_SetColor")
 
 #define ID2D1SolidColorBrush_GetColor(This) \
     ((This)->lpVtbl->GetColor(This))
+#pragma deprecated("ID2D1SolidColorBrush_GetColor")
 
 typedef interface ID2D1LinearGradientBrush ID2D1LinearGradientBrush;
 
@@ -4495,42 +4556,55 @@ interface ID2D1LinearGradientBrush
 
 #define ID2D1LinearGradientBrush_QueryInterface(This, riid, ppv) \
     ((This)->lpVtbl->Base.Base.Base.QueryInterface((IUnknown *)This, riid, ppv))
+#pragma deprecated("ID2D1LinearGradientBrush_QueryInterface")
 
 #define ID2D1LinearGradientBrush_AddRef(This) \
     ((This)->lpVtbl->Base.Base.Base.AddRef((IUnknown *)This))
+#pragma deprecated("ID2D1LinearGradientBrush_AddRef")
 
 #define ID2D1LinearGradientBrush_Release(This) \
     ((This)->lpVtbl->Base.Base.Base.Release((IUnknown *)This))
+#pragma deprecated("ID2D1LinearGradientBrush_Release")
 
 #define ID2D1LinearGradientBrush_GetFactory(This, factory) \
     ((This)->lpVtbl->Base.Base.GetFactory((ID2D1Resource *)This, factory))
+#pragma deprecated("ID2D1LinearGradientBrush_GetFactory")
 
 #define ID2D1LinearGradientBrush_SetOpacity(This, opacity) \
     ((This)->lpVtbl->Base.SetOpacity((ID2D1Brush *)This, opacity))
+#pragma deprecated("ID2D1LinearGradientBrush_SetOpacity")
 
 #define ID2D1LinearGradientBrush_SetTransform(This, transform) \
     ((This)->lpVtbl->Base.SetTransform((ID2D1Brush *)This, transform))
+#pragma deprecated("ID2D1LinearGradientBrush_SetTransform")
 
 #define ID2D1LinearGradientBrush_GetOpacity(This) \
     ((This)->lpVtbl->Base.GetOpacity((ID2D1Brush *)This))
+#pragma deprecated("ID2D1LinearGradientBrush_GetOpacity")
 
 #define ID2D1LinearGradientBrush_GetTransform(This, transform) \
     ((This)->lpVtbl->Base.GetTransform((ID2D1Brush *)This, transform))
+#pragma deprecated("ID2D1LinearGradientBrush_GetTransform")
 
 #define ID2D1LinearGradientBrush_SetStartPoint(This, startPoint) \
     ((This)->lpVtbl->SetStartPoint(This, startPoint))
+#pragma deprecated("ID2D1LinearGradientBrush_SetStartPoint")
 
 #define ID2D1LinearGradientBrush_SetEndPoint(This, endPoint) \
     ((This)->lpVtbl->SetEndPoint(This, endPoint))
+#pragma deprecated("ID2D1LinearGradientBrush_SetEndPoint")
 
 #define ID2D1LinearGradientBrush_GetStartPoint(This) \
     ((This)->lpVtbl->GetStartPoint(This))
+#pragma deprecated("ID2D1LinearGradientBrush_GetStartPoint")
 
 #define ID2D1LinearGradientBrush_GetEndPoint(This) \
     ((This)->lpVtbl->GetEndPoint(This))
+#pragma deprecated("ID2D1LinearGradientBrush_GetEndPoint")
 
 #define ID2D1LinearGradientBrush_GetGradientStopCollection(This, gradientStopCollection) \
     ((This)->lpVtbl->GetGradientStopCollection(This, gradientStopCollection))
+#pragma deprecated("ID2D1LinearGradientBrush_GetGradientStopCollection")
 
 typedef interface ID2D1RadialGradientBrush ID2D1RadialGradientBrush;
 
@@ -4590,54 +4664,71 @@ interface ID2D1RadialGradientBrush
 
 #define ID2D1RadialGradientBrush_QueryInterface(This, riid, ppv) \
     ((This)->lpVtbl->Base.Base.Base.QueryInterface((IUnknown *)This, riid, ppv))
+#pragma deprecated("ID2D1RadialGradientBrush_QueryInterface")
 
 #define ID2D1RadialGradientBrush_AddRef(This) \
     ((This)->lpVtbl->Base.Base.Base.AddRef((IUnknown *)This))
+#pragma deprecated("ID2D1RadialGradientBrush_AddRef")
 
 #define ID2D1RadialGradientBrush_Release(This) \
     ((This)->lpVtbl->Base.Base.Base.Release((IUnknown *)This))
+#pragma deprecated("ID2D1RadialGradientBrush_Release")
 
 #define ID2D1RadialGradientBrush_GetFactory(This, factory) \
     ((This)->lpVtbl->Base.Base.GetFactory((ID2D1Resource *)This, factory))
+#pragma deprecated("ID2D1RadialGradientBrush_GetFactory")
 
 #define ID2D1RadialGradientBrush_SetOpacity(This, opacity) \
     ((This)->lpVtbl->Base.SetOpacity((ID2D1Brush *)This, opacity))
+#pragma deprecated("ID2D1RadialGradientBrush_SetOpacity")
 
 #define ID2D1RadialGradientBrush_SetTransform(This, transform) \
     ((This)->lpVtbl->Base.SetTransform((ID2D1Brush *)This, transform))
+#pragma deprecated("ID2D1RadialGradientBrush_SetTransform")
 
 #define ID2D1RadialGradientBrush_GetOpacity(This) \
     ((This)->lpVtbl->Base.GetOpacity((ID2D1Brush *)This))
+#pragma deprecated("ID2D1RadialGradientBrush_GetOpacity")
 
 #define ID2D1RadialGradientBrush_GetTransform(This, transform) \
     ((This)->lpVtbl->Base.GetTransform((ID2D1Brush *)This, transform))
+#pragma deprecated("ID2D1RadialGradientBrush_GetTransform")
 
 #define ID2D1RadialGradientBrush_SetCenter(This, center) \
     ((This)->lpVtbl->SetCenter(This, center))
+#pragma deprecated("ID2D1RadialGradientBrush_SetCenter")
 
 #define ID2D1RadialGradientBrush_SetGradientOriginOffset(This, gradientOriginOffset) \
     ((This)->lpVtbl->SetGradientOriginOffset(This, gradientOriginOffset))
+#pragma deprecated("ID2D1RadialGradientBrush_SetGradientOriginOffset")
 
 #define ID2D1RadialGradientBrush_SetRadiusX(This, radiusX) \
     ((This)->lpVtbl->SetRadiusX(This, radiusX))
+#pragma deprecated("ID2D1RadialGradientBrush_SetRadiusX")
 
 #define ID2D1RadialGradientBrush_SetRadiusY(This, radiusY) \
     ((This)->lpVtbl->SetRadiusY(This, radiusY))
+#pragma deprecated("ID2D1RadialGradientBrush_SetRadiusY")
 
 #define ID2D1RadialGradientBrush_GetCenter(This) \
     ((This)->lpVtbl->GetCenter(This))
+#pragma deprecated("ID2D1RadialGradientBrush_GetCenter")
 
 #define ID2D1RadialGradientBrush_GetGradientOriginOffset(This) \
     ((This)->lpVtbl->GetGradientOriginOffset(This))
+#pragma deprecated("ID2D1RadialGradientBrush_GetGradientOriginOffset")
 
 #define ID2D1RadialGradientBrush_GetRadiusX(This) \
     ((This)->lpVtbl->GetRadiusX(This))
+#pragma deprecated("ID2D1RadialGradientBrush_GetRadiusX")
 
 #define ID2D1RadialGradientBrush_GetRadiusY(This) \
     ((This)->lpVtbl->GetRadiusY(This))
+#pragma deprecated("ID2D1RadialGradientBrush_GetRadiusY")
 
 #define ID2D1RadialGradientBrush_GetGradientStopCollection(This, gradientStopCollection) \
     ((This)->lpVtbl->GetGradientStopCollection(This, gradientStopCollection))
+#pragma deprecated("ID2D1RadialGradientBrush_GetGradientStopCollection")
 
 typedef interface ID2D1StrokeStyle ID2D1StrokeStyle;
 
@@ -4694,42 +4785,55 @@ interface ID2D1StrokeStyle
 
 #define ID2D1StrokeStyle_QueryInterface(This, riid, ppv) \
     ((This)->lpVtbl->Base.Base.QueryInterface((IUnknown *)This, riid, ppv))
+#pragma deprecated("ID2D1StrokeStyle_QueryInterface")
 
 #define ID2D1StrokeStyle_AddRef(This) \
     ((This)->lpVtbl->Base.Base.AddRef((IUnknown *)This))
+#pragma deprecated("ID2D1StrokeStyle_AddRef")
 
 #define ID2D1StrokeStyle_Release(This) \
     ((This)->lpVtbl->Base.Base.Release((IUnknown *)This))
+#pragma deprecated("ID2D1StrokeStyle_Release")
 
 #define ID2D1StrokeStyle_GetFactory(This, factory) \
     ((This)->lpVtbl->Base.GetFactory((ID2D1Resource *)This, factory))
+#pragma deprecated("ID2D1StrokeStyle_GetFactory")
 
 #define ID2D1StrokeStyle_GetStartCap(This) \
     ((This)->lpVtbl->GetStartCap(This))
+#pragma deprecated("ID2D1StrokeStyle_GetStartCap")
 
 #define ID2D1StrokeStyle_GetEndCap(This) \
     ((This)->lpVtbl->GetEndCap(This))
+#pragma deprecated("ID2D1StrokeStyle_GetEndCap")
 
 #define ID2D1StrokeStyle_GetDashCap(This) \
     ((This)->lpVtbl->GetDashCap(This))
+#pragma deprecated("ID2D1StrokeStyle_GetDashCap")
 
 #define ID2D1StrokeStyle_GetMiterLimit(This) \
     ((This)->lpVtbl->GetMiterLimit(This))
+#pragma deprecated("ID2D1StrokeStyle_GetMiterLimit")
 
 #define ID2D1StrokeStyle_GetLineJoin(This) \
     ((This)->lpVtbl->GetLineJoin(This))
+#pragma deprecated("ID2D1StrokeStyle_GetLineJoin")
 
 #define ID2D1StrokeStyle_GetDashOffset(This) \
     ((This)->lpVtbl->GetDashOffset(This))
+#pragma deprecated("ID2D1StrokeStyle_GetDashOffset")
 
 #define ID2D1StrokeStyle_GetDashStyle(This) \
     ((This)->lpVtbl->GetDashStyle(This))
+#pragma deprecated("ID2D1StrokeStyle_GetDashStyle")
 
 #define ID2D1StrokeStyle_GetDashesCount(This) \
     ((This)->lpVtbl->GetDashesCount(This))
+#pragma deprecated("ID2D1StrokeStyle_GetDashesCount")
 
 #define ID2D1StrokeStyle_GetDashes(This, dashes, dashesCount) \
     ((This)->lpVtbl->GetDashes(This, dashes, dashesCount))
+#pragma deprecated("ID2D1StrokeStyle_GetDashes")
 
 typedef interface ID2D1Geometry ID2D1Geometry;
 
@@ -4852,54 +4956,71 @@ interface ID2D1Geometry
 
 #define ID2D1Geometry_QueryInterface(This, riid, ppv) \
     ((This)->lpVtbl->Base.Base.QueryInterface((IUnknown *)This, riid, ppv))
+#pragma deprecated("ID2D1Geometry_QueryInterface")
 
 #define ID2D1Geometry_AddRef(This) \
     ((This)->lpVtbl->Base.Base.AddRef((IUnknown *)This))
+#pragma deprecated("ID2D1Geometry_AddRef")
 
 #define ID2D1Geometry_Release(This) \
     ((This)->lpVtbl->Base.Base.Release((IUnknown *)This))
+#pragma deprecated("ID2D1Geometry_Release")
 
 #define ID2D1Geometry_GetFactory(This, factory) \
     ((This)->lpVtbl->Base.GetFactory((ID2D1Resource *)This, factory))
+#pragma deprecated("ID2D1Geometry_GetFactory")
 
 #define ID2D1Geometry_GetBounds(This, worldTransform, bounds) \
     ((This)->lpVtbl->GetBounds(This, worldTransform, bounds))
+#pragma deprecated("ID2D1Geometry_GetBounds")
 
 #define ID2D1Geometry_GetWidenedBounds(This, strokeWidth, strokeStyle, worldTransform, flatteningTolerance, bounds) \
     ((This)->lpVtbl->GetWidenedBounds(This, strokeWidth, strokeStyle, worldTransform, flatteningTolerance, bounds))
+#pragma deprecated("ID2D1Geometry_GetWidenedBounds")
 
 #define ID2D1Geometry_StrokeContainsPoint(This, point, strokeWidth, strokeStyle, worldTransform, flatteningTolerance, contains) \
     ((This)->lpVtbl->StrokeContainsPoint(This, point, strokeWidth, strokeStyle, worldTransform, flatteningTolerance, contains))
+#pragma deprecated("ID2D1Geometry_StrokeContainsPoint")
 
 #define ID2D1Geometry_FillContainsPoint(This, point, worldTransform, flatteningTolerance, contains) \
     ((This)->lpVtbl->FillContainsPoint(This, point, worldTransform, flatteningTolerance, contains))
+#pragma deprecated("ID2D1Geometry_FillContainsPoint")
 
 #define ID2D1Geometry_CompareWithGeometry(This, inputGeometry, inputGeometryTransform, flatteningTolerance, relation) \
     ((This)->lpVtbl->CompareWithGeometry(This, inputGeometry, inputGeometryTransform, flatteningTolerance, relation))
+#pragma deprecated("ID2D1Geometry_CompareWithGeometry")
 
 #define ID2D1Geometry_Simplify(This, simplificationOption, worldTransform, flatteningTolerance, geometrySink) \
     ((This)->lpVtbl->Simplify(This, simplificationOption, worldTransform, flatteningTolerance, geometrySink))
+#pragma deprecated("ID2D1Geometry_Simplify")
 
 #define ID2D1Geometry_Tessellate(This, worldTransform, flatteningTolerance, tessellationSink) \
     ((This)->lpVtbl->Tessellate(This, worldTransform, flatteningTolerance, tessellationSink))
+#pragma deprecated("ID2D1Geometry_Tessellate")
 
 #define ID2D1Geometry_CombineWithGeometry(This, inputGeometry, combineMode, inputGeometryTransform, flatteningTolerance, geometrySink) \
     ((This)->lpVtbl->CombineWithGeometry(This, inputGeometry, combineMode, inputGeometryTransform, flatteningTolerance, geometrySink))
+#pragma deprecated("ID2D1Geometry_CombineWithGeometry")
 
 #define ID2D1Geometry_Outline(This, worldTransform, flatteningTolerance, geometrySink) \
     ((This)->lpVtbl->Outline(This, worldTransform, flatteningTolerance, geometrySink))
+#pragma deprecated("ID2D1Geometry_Outline")
 
 #define ID2D1Geometry_ComputeArea(This, worldTransform, flatteningTolerance, area) \
     ((This)->lpVtbl->ComputeArea(This, worldTransform, flatteningTolerance, area))
+#pragma deprecated("ID2D1Geometry_ComputeArea")
 
 #define ID2D1Geometry_ComputeLength(This, worldTransform, flatteningTolerance, length) \
     ((This)->lpVtbl->ComputeLength(This, worldTransform, flatteningTolerance, length))
+#pragma deprecated("ID2D1Geometry_ComputeLength")
 
 #define ID2D1Geometry_ComputePointAtLength(This, length, worldTransform, flatteningTolerance, point, unitTangentVector) \
     ((This)->lpVtbl->ComputePointAtLength(This, length, worldTransform, flatteningTolerance, point, unitTangentVector))
+#pragma deprecated("ID2D1Geometry_ComputePointAtLength")
 
 #define ID2D1Geometry_Widen(This, strokeWidth, strokeStyle, worldTransform, flatteningTolerance, geometrySink) \
     ((This)->lpVtbl->Widen(This, strokeWidth, strokeStyle, worldTransform, flatteningTolerance, geometrySink))
+#pragma deprecated("ID2D1Geometry_Widen")
 
 typedef interface ID2D1RectangleGeometry ID2D1RectangleGeometry;
 
@@ -4923,57 +5044,75 @@ interface ID2D1RectangleGeometry
 
 #define ID2D1RectangleGeometry_QueryInterface(This, riid, ppv) \
     ((This)->lpVtbl->Base.Base.Base.QueryInterface((IUnknown *)This, riid, ppv))
+#pragma deprecated("ID2D1RectangleGeometry_QueryInterface")
 
 #define ID2D1RectangleGeometry_AddRef(This) \
     ((This)->lpVtbl->Base.Base.Base.AddRef((IUnknown *)This))
+#pragma deprecated("ID2D1RectangleGeometry_AddRef")
 
 #define ID2D1RectangleGeometry_Release(This) \
     ((This)->lpVtbl->Base.Base.Base.Release((IUnknown *)This))
+#pragma deprecated("ID2D1RectangleGeometry_Release")
 
 #define ID2D1RectangleGeometry_GetFactory(This, factory) \
     ((This)->lpVtbl->Base.Base.GetFactory((ID2D1Resource *)This, factory))
+#pragma deprecated("ID2D1RectangleGeometry_GetFactory")
 
 #define ID2D1RectangleGeometry_GetBounds(This, worldTransform, bounds) \
     ((This)->lpVtbl->Base.GetBounds((ID2D1Geometry *)This, worldTransform, bounds))
+#pragma deprecated("ID2D1RectangleGeometry_GetBounds")
 
 #define ID2D1RectangleGeometry_GetWidenedBounds(This, strokeWidth, strokeStyle, worldTransform, flatteningTolerance, bounds) \
     ((This)->lpVtbl->Base.GetWidenedBounds((ID2D1Geometry *)This, strokeWidth, strokeStyle, worldTransform, flatteningTolerance, bounds))
+#pragma deprecated("ID2D1RectangleGeometry_GetWidenedBounds")
 
 #define ID2D1RectangleGeometry_StrokeContainsPoint(This, point, strokeWidth, strokeStyle, worldTransform, flatteningTolerance, contains) \
     ((This)->lpVtbl->Base.StrokeContainsPoint((ID2D1Geometry *)This, point, strokeWidth, strokeStyle, worldTransform, flatteningTolerance, contains))
+#pragma deprecated("ID2D1RectangleGeometry_StrokeContainsPoint")
 
 #define ID2D1RectangleGeometry_FillContainsPoint(This, point, worldTransform, flatteningTolerance, contains) \
     ((This)->lpVtbl->Base.FillContainsPoint((ID2D1Geometry *)This, point, worldTransform, flatteningTolerance, contains))
+#pragma deprecated("ID2D1RectangleGeometry_FillContainsPoint")
 
 #define ID2D1RectangleGeometry_CompareWithGeometry(This, inputGeometry, inputGeometryTransform, flatteningTolerance, relation) \
     ((This)->lpVtbl->Base.CompareWithGeometry((ID2D1Geometry *)This, inputGeometry, inputGeometryTransform, flatteningTolerance, relation))
+#pragma deprecated("ID2D1RectangleGeometry_CompareWithGeometry")
 
 #define ID2D1RectangleGeometry_Simplify(This, simplificationOption, worldTransform, flatteningTolerance, geometrySink) \
     ((This)->lpVtbl->Base.Simplify((ID2D1Geometry *)This, simplificationOption, worldTransform, flatteningTolerance, geometrySink))
+#pragma deprecated("ID2D1RectangleGeometry_Simplify")
 
 #define ID2D1RectangleGeometry_Tessellate(This, worldTransform, flatteningTolerance, tessellationSink) \
     ((This)->lpVtbl->Base.Tessellate((ID2D1Geometry *)This, worldTransform, flatteningTolerance, tessellationSink))
+#pragma deprecated("ID2D1RectangleGeometry_Tessellate")
 
 #define ID2D1RectangleGeometry_CombineWithGeometry(This, inputGeometry, combineMode, inputGeometryTransform, flatteningTolerance, geometrySink) \
     ((This)->lpVtbl->Base.CombineWithGeometry((ID2D1Geometry *)This, inputGeometry, combineMode, inputGeometryTransform, flatteningTolerance, geometrySink))
+#pragma deprecated("ID2D1RectangleGeometry_CombineWithGeometry")
 
 #define ID2D1RectangleGeometry_Outline(This, worldTransform, flatteningTolerance, geometrySink) \
     ((This)->lpVtbl->Base.Outline((ID2D1Geometry *)This, worldTransform, flatteningTolerance, geometrySink))
+#pragma deprecated("ID2D1RectangleGeometry_Outline")
 
 #define ID2D1RectangleGeometry_ComputeArea(This, worldTransform, flatteningTolerance, area) \
     ((This)->lpVtbl->Base.ComputeArea((ID2D1Geometry *)This, worldTransform, flatteningTolerance, area))
+#pragma deprecated("ID2D1RectangleGeometry_ComputeArea")
 
 #define ID2D1RectangleGeometry_ComputeLength(This, worldTransform, flatteningTolerance, length) \
     ((This)->lpVtbl->Base.ComputeLength((ID2D1Geometry *)This, worldTransform, flatteningTolerance, length))
+#pragma deprecated("ID2D1RectangleGeometry_ComputeLength")
 
 #define ID2D1RectangleGeometry_ComputePointAtLength(This, length, worldTransform, flatteningTolerance, point, unitTangentVector) \
     ((This)->lpVtbl->Base.ComputePointAtLength((ID2D1Geometry *)This, length, worldTransform, flatteningTolerance, point, unitTangentVector))
+#pragma deprecated("ID2D1RectangleGeometry_ComputePointAtLength")
 
 #define ID2D1RectangleGeometry_Widen(This, strokeWidth, strokeStyle, worldTransform, flatteningTolerance, geometrySink) \
     ((This)->lpVtbl->Base.Widen((ID2D1Geometry *)This, strokeWidth, strokeStyle, worldTransform, flatteningTolerance, geometrySink))
+#pragma deprecated("ID2D1RectangleGeometry_Widen")
 
 #define ID2D1RectangleGeometry_GetRect(This, rect) \
     ((This)->lpVtbl->GetRect(This, rect))
+#pragma deprecated("ID2D1RectangleGeometry_GetRect")
 
 typedef interface ID2D1RoundedRectangleGeometry ID2D1RoundedRectangleGeometry;
 
@@ -4997,57 +5136,75 @@ interface ID2D1RoundedRectangleGeometry
 
 #define ID2D1RoundedRectangleGeometry_QueryInterface(This, riid, ppv) \
     ((This)->lpVtbl->Base.Base.Base.QueryInterface((IUnknown *)This, riid, ppv))
+#pragma deprecated("ID2D1RoundedRectangleGeometry_QueryInterface")
 
 #define ID2D1RoundedRectangleGeometry_AddRef(This) \
     ((This)->lpVtbl->Base.Base.Base.AddRef((IUnknown *)This))
+#pragma deprecated("ID2D1RoundedRectangleGeometry_AddRef")
 
 #define ID2D1RoundedRectangleGeometry_Release(This) \
     ((This)->lpVtbl->Base.Base.Base.Release((IUnknown *)This))
+#pragma deprecated("ID2D1RoundedRectangleGeometry_Release")
 
 #define ID2D1RoundedRectangleGeometry_GetFactory(This, factory) \
     ((This)->lpVtbl->Base.Base.GetFactory((ID2D1Resource *)This, factory))
+#pragma deprecated("ID2D1RoundedRectangleGeometry_GetFactory")
 
 #define ID2D1RoundedRectangleGeometry_GetBounds(This, worldTransform, bounds) \
     ((This)->lpVtbl->Base.GetBounds((ID2D1Geometry *)This, worldTransform, bounds))
+#pragma deprecated("ID2D1RoundedRectangleGeometry_GetBounds")
 
 #define ID2D1RoundedRectangleGeometry_GetWidenedBounds(This, strokeWidth, strokeStyle, worldTransform, flatteningTolerance, bounds) \
     ((This)->lpVtbl->Base.GetWidenedBounds((ID2D1Geometry *)This, strokeWidth, strokeStyle, worldTransform, flatteningTolerance, bounds))
+#pragma deprecated("ID2D1RoundedRectangleGeometry_GetWidenedBounds")
 
 #define ID2D1RoundedRectangleGeometry_StrokeContainsPoint(This, point, strokeWidth, strokeStyle, worldTransform, flatteningTolerance, contains) \
     ((This)->lpVtbl->Base.StrokeContainsPoint((ID2D1Geometry *)This, point, strokeWidth, strokeStyle, worldTransform, flatteningTolerance, contains))
+#pragma deprecated("ID2D1RoundedRectangleGeometry_StrokeContainsPoint")
 
 #define ID2D1RoundedRectangleGeometry_FillContainsPoint(This, point, worldTransform, flatteningTolerance, contains) \
     ((This)->lpVtbl->Base.FillContainsPoint((ID2D1Geometry *)This, point, worldTransform, flatteningTolerance, contains))
+#pragma deprecated("ID2D1RoundedRectangleGeometry_FillContainsPoint")
 
 #define ID2D1RoundedRectangleGeometry_CompareWithGeometry(This, inputGeometry, inputGeometryTransform, flatteningTolerance, relation) \
     ((This)->lpVtbl->Base.CompareWithGeometry((ID2D1Geometry *)This, inputGeometry, inputGeometryTransform, flatteningTolerance, relation))
+#pragma deprecated("ID2D1RoundedRectangleGeometry_CompareWithGeometry")
 
 #define ID2D1RoundedRectangleGeometry_Simplify(This, simplificationOption, worldTransform, flatteningTolerance, geometrySink) \
     ((This)->lpVtbl->Base.Simplify((ID2D1Geometry *)This, simplificationOption, worldTransform, flatteningTolerance, geometrySink))
+#pragma deprecated("ID2D1RoundedRectangleGeometry_Simplify")
 
 #define ID2D1RoundedRectangleGeometry_Tessellate(This, worldTransform, flatteningTolerance, tessellationSink) \
     ((This)->lpVtbl->Base.Tessellate((ID2D1Geometry *)This, worldTransform, flatteningTolerance, tessellationSink))
+#pragma deprecated("ID2D1RoundedRectangleGeometry_Tessellate")
 
 #define ID2D1RoundedRectangleGeometry_CombineWithGeometry(This, inputGeometry, combineMode, inputGeometryTransform, flatteningTolerance, geometrySink) \
     ((This)->lpVtbl->Base.CombineWithGeometry((ID2D1Geometry *)This, inputGeometry, combineMode, inputGeometryTransform, flatteningTolerance, geometrySink))
+#pragma deprecated("ID2D1RoundedRectangleGeometry_CombineWithGeometry")
 
 #define ID2D1RoundedRectangleGeometry_Outline(This, worldTransform, flatteningTolerance, geometrySink) \
     ((This)->lpVtbl->Base.Outline((ID2D1Geometry *)This, worldTransform, flatteningTolerance, geometrySink))
+#pragma deprecated("ID2D1RoundedRectangleGeometry_Outline")
 
 #define ID2D1RoundedRectangleGeometry_ComputeArea(This, worldTransform, flatteningTolerance, area) \
     ((This)->lpVtbl->Base.ComputeArea((ID2D1Geometry *)This, worldTransform, flatteningTolerance, area))
+#pragma deprecated("ID2D1RoundedRectangleGeometry_ComputeArea")
 
 #define ID2D1RoundedRectangleGeometry_ComputeLength(This, worldTransform, flatteningTolerance, length) \
     ((This)->lpVtbl->Base.ComputeLength((ID2D1Geometry *)This, worldTransform, flatteningTolerance, length))
+#pragma deprecated("ID2D1RoundedRectangleGeometry_ComputeLength")
 
 #define ID2D1RoundedRectangleGeometry_ComputePointAtLength(This, length, worldTransform, flatteningTolerance, point, unitTangentVector) \
     ((This)->lpVtbl->Base.ComputePointAtLength((ID2D1Geometry *)This, length, worldTransform, flatteningTolerance, point, unitTangentVector))
+#pragma deprecated("ID2D1RoundedRectangleGeometry_ComputePointAtLength")
 
 #define ID2D1RoundedRectangleGeometry_Widen(This, strokeWidth, strokeStyle, worldTransform, flatteningTolerance, geometrySink) \
     ((This)->lpVtbl->Base.Widen((ID2D1Geometry *)This, strokeWidth, strokeStyle, worldTransform, flatteningTolerance, geometrySink))
+#pragma deprecated("ID2D1RoundedRectangleGeometry_Widen")
 
 #define ID2D1RoundedRectangleGeometry_GetRoundedRect(This, roundedRect) \
     ((This)->lpVtbl->GetRoundedRect(This, roundedRect))
+#pragma deprecated("ID2D1RoundedRectangleGeometry_GetRoundedRect")
 
 typedef interface ID2D1EllipseGeometry ID2D1EllipseGeometry;
 
@@ -5071,57 +5228,75 @@ interface ID2D1EllipseGeometry
 
 #define ID2D1EllipseGeometry_QueryInterface(This, riid, ppv) \
     ((This)->lpVtbl->Base.Base.Base.QueryInterface((IUnknown *)This, riid, ppv))
+#pragma deprecated("ID2D1EllipseGeometry_QueryInterface")
 
 #define ID2D1EllipseGeometry_AddRef(This) \
     ((This)->lpVtbl->Base.Base.Base.AddRef((IUnknown *)This))
+#pragma deprecated("ID2D1EllipseGeometry_AddRef")
 
 #define ID2D1EllipseGeometry_Release(This) \
     ((This)->lpVtbl->Base.Base.Base.Release((IUnknown *)This))
+#pragma deprecated("ID2D1EllipseGeometry_Release")
 
 #define ID2D1EllipseGeometry_GetFactory(This, factory) \
     ((This)->lpVtbl->Base.Base.GetFactory((ID2D1Resource *)This, factory))
+#pragma deprecated("ID2D1EllipseGeometry_GetFactory")
 
 #define ID2D1EllipseGeometry_GetBounds(This, worldTransform, bounds) \
     ((This)->lpVtbl->Base.GetBounds((ID2D1Geometry *)This, worldTransform, bounds))
+#pragma deprecated("ID2D1EllipseGeometry_GetBounds")
 
 #define ID2D1EllipseGeometry_GetWidenedBounds(This, strokeWidth, strokeStyle, worldTransform, flatteningTolerance, bounds) \
     ((This)->lpVtbl->Base.GetWidenedBounds((ID2D1Geometry *)This, strokeWidth, strokeStyle, worldTransform, flatteningTolerance, bounds))
+#pragma deprecated("ID2D1EllipseGeometry_GetWidenedBounds")
 
 #define ID2D1EllipseGeometry_StrokeContainsPoint(This, point, strokeWidth, strokeStyle, worldTransform, flatteningTolerance, contains) \
     ((This)->lpVtbl->Base.StrokeContainsPoint((ID2D1Geometry *)This, point, strokeWidth, strokeStyle, worldTransform, flatteningTolerance, contains))
+#pragma deprecated("ID2D1EllipseGeometry_StrokeContainsPoint")
 
 #define ID2D1EllipseGeometry_FillContainsPoint(This, point, worldTransform, flatteningTolerance, contains) \
     ((This)->lpVtbl->Base.FillContainsPoint((ID2D1Geometry *)This, point, worldTransform, flatteningTolerance, contains))
+#pragma deprecated("ID2D1EllipseGeometry_FillContainsPoint")
 
 #define ID2D1EllipseGeometry_CompareWithGeometry(This, inputGeometry, inputGeometryTransform, flatteningTolerance, relation) \
     ((This)->lpVtbl->Base.CompareWithGeometry((ID2D1Geometry *)This, inputGeometry, inputGeometryTransform, flatteningTolerance, relation))
+#pragma deprecated("ID2D1EllipseGeometry_CompareWithGeometry")
 
 #define ID2D1EllipseGeometry_Simplify(This, simplificationOption, worldTransform, flatteningTolerance, geometrySink) \
     ((This)->lpVtbl->Base.Simplify((ID2D1Geometry *)This, simplificationOption, worldTransform, flatteningTolerance, geometrySink))
+#pragma deprecated("ID2D1EllipseGeometry_Simplify")
 
 #define ID2D1EllipseGeometry_Tessellate(This, worldTransform, flatteningTolerance, tessellationSink) \
     ((This)->lpVtbl->Base.Tessellate((ID2D1Geometry *)This, worldTransform, flatteningTolerance, tessellationSink))
+#pragma deprecated("ID2D1EllipseGeometry_Tessellate")
 
 #define ID2D1EllipseGeometry_CombineWithGeometry(This, inputGeometry, combineMode, inputGeometryTransform, flatteningTolerance, geometrySink) \
     ((This)->lpVtbl->Base.CombineWithGeometry((ID2D1Geometry *)This, inputGeometry, combineMode, inputGeometryTransform, flatteningTolerance, geometrySink))
+#pragma deprecated("ID2D1EllipseGeometry_CombineWithGeometry")
 
 #define ID2D1EllipseGeometry_Outline(This, worldTransform, flatteningTolerance, geometrySink) \
     ((This)->lpVtbl->Base.Outline((ID2D1Geometry *)This, worldTransform, flatteningTolerance, geometrySink))
+#pragma deprecated("ID2D1EllipseGeometry_Outline")
 
 #define ID2D1EllipseGeometry_ComputeArea(This, worldTransform, flatteningTolerance, area) \
     ((This)->lpVtbl->Base.ComputeArea((ID2D1Geometry *)This, worldTransform, flatteningTolerance, area))
+#pragma deprecated("ID2D1EllipseGeometry_ComputeArea")
 
 #define ID2D1EllipseGeometry_ComputeLength(This, worldTransform, flatteningTolerance, length) \
     ((This)->lpVtbl->Base.ComputeLength((ID2D1Geometry *)This, worldTransform, flatteningTolerance, length))
+#pragma deprecated("ID2D1EllipseGeometry_ComputeLength")
 
 #define ID2D1EllipseGeometry_ComputePointAtLength(This, length, worldTransform, flatteningTolerance, point, unitTangentVector) \
     ((This)->lpVtbl->Base.ComputePointAtLength((ID2D1Geometry *)This, length, worldTransform, flatteningTolerance, point, unitTangentVector))
+#pragma deprecated("ID2D1EllipseGeometry_ComputePointAtLength")
 
 #define ID2D1EllipseGeometry_Widen(This, strokeWidth, strokeStyle, worldTransform, flatteningTolerance, geometrySink) \
     ((This)->lpVtbl->Base.Widen((ID2D1Geometry *)This, strokeWidth, strokeStyle, worldTransform, flatteningTolerance, geometrySink))
+#pragma deprecated("ID2D1EllipseGeometry_Widen")
 
 #define ID2D1EllipseGeometry_GetEllipse(This, ellipse) \
     ((This)->lpVtbl->GetEllipse(This, ellipse))
+#pragma deprecated("ID2D1EllipseGeometry_GetEllipse")
 
 typedef interface ID2D1GeometryGroup ID2D1GeometryGroup;
 
@@ -5154,63 +5329,83 @@ interface ID2D1GeometryGroup
 
 #define ID2D1GeometryGroup_QueryInterface(This, riid, ppv) \
     ((This)->lpVtbl->Base.Base.Base.QueryInterface((IUnknown *)This, riid, ppv))
+#pragma deprecated("ID2D1GeometryGroup_QueryInterface")
 
 #define ID2D1GeometryGroup_AddRef(This) \
     ((This)->lpVtbl->Base.Base.Base.AddRef((IUnknown *)This))
+#pragma deprecated("ID2D1GeometryGroup_AddRef")
 
 #define ID2D1GeometryGroup_Release(This) \
     ((This)->lpVtbl->Base.Base.Base.Release((IUnknown *)This))
+#pragma deprecated("ID2D1GeometryGroup_Release")
 
 #define ID2D1GeometryGroup_GetFactory(This, factory) \
     ((This)->lpVtbl->Base.Base.GetFactory((ID2D1Resource *)This, factory))
+#pragma deprecated("ID2D1GeometryGroup_GetFactory")
 
 #define ID2D1GeometryGroup_GetBounds(This, worldTransform, bounds) \
     ((This)->lpVtbl->Base.GetBounds((ID2D1Geometry *)This, worldTransform, bounds))
+#pragma deprecated("ID2D1GeometryGroup_GetBounds")
 
 #define ID2D1GeometryGroup_GetWidenedBounds(This, strokeWidth, strokeStyle, worldTransform, flatteningTolerance, bounds) \
     ((This)->lpVtbl->Base.GetWidenedBounds((ID2D1Geometry *)This, strokeWidth, strokeStyle, worldTransform, flatteningTolerance, bounds))
+#pragma deprecated("ID2D1GeometryGroup_GetWidenedBounds")
 
 #define ID2D1GeometryGroup_StrokeContainsPoint(This, point, strokeWidth, strokeStyle, worldTransform, flatteningTolerance, contains) \
     ((This)->lpVtbl->Base.StrokeContainsPoint((ID2D1Geometry *)This, point, strokeWidth, strokeStyle, worldTransform, flatteningTolerance, contains))
+#pragma deprecated("ID2D1GeometryGroup_StrokeContainsPoint")
 
 #define ID2D1GeometryGroup_FillContainsPoint(This, point, worldTransform, flatteningTolerance, contains) \
     ((This)->lpVtbl->Base.FillContainsPoint((ID2D1Geometry *)This, point, worldTransform, flatteningTolerance, contains))
+#pragma deprecated("ID2D1GeometryGroup_FillContainsPoint")
 
 #define ID2D1GeometryGroup_CompareWithGeometry(This, inputGeometry, inputGeometryTransform, flatteningTolerance, relation) \
     ((This)->lpVtbl->Base.CompareWithGeometry((ID2D1Geometry *)This, inputGeometry, inputGeometryTransform, flatteningTolerance, relation))
+#pragma deprecated("ID2D1GeometryGroup_CompareWithGeometry")
 
 #define ID2D1GeometryGroup_Simplify(This, simplificationOption, worldTransform, flatteningTolerance, geometrySink) \
     ((This)->lpVtbl->Base.Simplify((ID2D1Geometry *)This, simplificationOption, worldTransform, flatteningTolerance, geometrySink))
+#pragma deprecated("ID2D1GeometryGroup_Simplify")
 
 #define ID2D1GeometryGroup_Tessellate(This, worldTransform, flatteningTolerance, tessellationSink) \
     ((This)->lpVtbl->Base.Tessellate((ID2D1Geometry *)This, worldTransform, flatteningTolerance, tessellationSink))
+#pragma deprecated("ID2D1GeometryGroup_Tessellate")
 
 #define ID2D1GeometryGroup_CombineWithGeometry(This, inputGeometry, combineMode, inputGeometryTransform, flatteningTolerance, geometrySink) \
     ((This)->lpVtbl->Base.CombineWithGeometry((ID2D1Geometry *)This, inputGeometry, combineMode, inputGeometryTransform, flatteningTolerance, geometrySink))
+#pragma deprecated("ID2D1GeometryGroup_CombineWithGeometry")
 
 #define ID2D1GeometryGroup_Outline(This, worldTransform, flatteningTolerance, geometrySink) \
     ((This)->lpVtbl->Base.Outline((ID2D1Geometry *)This, worldTransform, flatteningTolerance, geometrySink))
+#pragma deprecated("ID2D1GeometryGroup_Outline")
 
 #define ID2D1GeometryGroup_ComputeArea(This, worldTransform, flatteningTolerance, area) \
     ((This)->lpVtbl->Base.ComputeArea((ID2D1Geometry *)This, worldTransform, flatteningTolerance, area))
+#pragma deprecated("ID2D1GeometryGroup_ComputeArea")
 
 #define ID2D1GeometryGroup_ComputeLength(This, worldTransform, flatteningTolerance, length) \
     ((This)->lpVtbl->Base.ComputeLength((ID2D1Geometry *)This, worldTransform, flatteningTolerance, length))
+#pragma deprecated("ID2D1GeometryGroup_ComputeLength")
 
 #define ID2D1GeometryGroup_ComputePointAtLength(This, length, worldTransform, flatteningTolerance, point, unitTangentVector) \
     ((This)->lpVtbl->Base.ComputePointAtLength((ID2D1Geometry *)This, length, worldTransform, flatteningTolerance, point, unitTangentVector))
+#pragma deprecated("ID2D1GeometryGroup_ComputePointAtLength")
 
 #define ID2D1GeometryGroup_Widen(This, strokeWidth, strokeStyle, worldTransform, flatteningTolerance, geometrySink) \
     ((This)->lpVtbl->Base.Widen((ID2D1Geometry *)This, strokeWidth, strokeStyle, worldTransform, flatteningTolerance, geometrySink))
+#pragma deprecated("ID2D1GeometryGroup_Widen")
 
 #define ID2D1GeometryGroup_GetFillMode(This) \
     ((This)->lpVtbl->GetFillMode(This))
+#pragma deprecated("ID2D1GeometryGroup_GetFillMode")
 
 #define ID2D1GeometryGroup_GetSourceGeometryCount(This) \
     ((This)->lpVtbl->GetSourceGeometryCount(This))
+#pragma deprecated("ID2D1GeometryGroup_GetSourceGeometryCount")
 
 #define ID2D1GeometryGroup_GetSourceGeometries(This, geometries, geometriesCount) \
     ((This)->lpVtbl->GetSourceGeometries(This, geometries, geometriesCount))
+#pragma deprecated("ID2D1GeometryGroup_GetSourceGeometries")
 
 typedef interface ID2D1TransformedGeometry ID2D1TransformedGeometry;
 
@@ -5239,60 +5434,79 @@ interface ID2D1TransformedGeometry
 
 #define ID2D1TransformedGeometry_QueryInterface(This, riid, ppv) \
     ((This)->lpVtbl->Base.Base.Base.QueryInterface((IUnknown *)This, riid, ppv))
+#pragma deprecated("ID2D1TransformedGeometry_QueryInterface")
 
 #define ID2D1TransformedGeometry_AddRef(This) \
     ((This)->lpVtbl->Base.Base.Base.AddRef((IUnknown *)This))
+#pragma deprecated("ID2D1TransformedGeometry_AddRef")
 
 #define ID2D1TransformedGeometry_Release(This) \
     ((This)->lpVtbl->Base.Base.Base.Release((IUnknown *)This))
+#pragma deprecated("ID2D1TransformedGeometry_Release")
 
 #define ID2D1TransformedGeometry_GetFactory(This, factory) \
     ((This)->lpVtbl->Base.Base.GetFactory((ID2D1Resource *)This, factory))
+#pragma deprecated("ID2D1TransformedGeometry_GetFactory")
 
 #define ID2D1TransformedGeometry_GetBounds(This, worldTransform, bounds) \
     ((This)->lpVtbl->Base.GetBounds((ID2D1Geometry *)This, worldTransform, bounds))
+#pragma deprecated("ID2D1TransformedGeometry_GetBounds")
 
 #define ID2D1TransformedGeometry_GetWidenedBounds(This, strokeWidth, strokeStyle, worldTransform, flatteningTolerance, bounds) \
     ((This)->lpVtbl->Base.GetWidenedBounds((ID2D1Geometry *)This, strokeWidth, strokeStyle, worldTransform, flatteningTolerance, bounds))
+#pragma deprecated("ID2D1TransformedGeometry_GetWidenedBounds")
 
 #define ID2D1TransformedGeometry_StrokeContainsPoint(This, point, strokeWidth, strokeStyle, worldTransform, flatteningTolerance, contains) \
     ((This)->lpVtbl->Base.StrokeContainsPoint((ID2D1Geometry *)This, point, strokeWidth, strokeStyle, worldTransform, flatteningTolerance, contains))
+#pragma deprecated("ID2D1TransformedGeometry_StrokeContainsPoint")
 
 #define ID2D1TransformedGeometry_FillContainsPoint(This, point, worldTransform, flatteningTolerance, contains) \
     ((This)->lpVtbl->Base.FillContainsPoint((ID2D1Geometry *)This, point, worldTransform, flatteningTolerance, contains))
+#pragma deprecated("ID2D1TransformedGeometry_FillContainsPoint")
 
 #define ID2D1TransformedGeometry_CompareWithGeometry(This, inputGeometry, inputGeometryTransform, flatteningTolerance, relation) \
     ((This)->lpVtbl->Base.CompareWithGeometry((ID2D1Geometry *)This, inputGeometry, inputGeometryTransform, flatteningTolerance, relation))
+#pragma deprecated("ID2D1TransformedGeometry_CompareWithGeometry")
 
 #define ID2D1TransformedGeometry_Simplify(This, simplificationOption, worldTransform, flatteningTolerance, geometrySink) \
     ((This)->lpVtbl->Base.Simplify((ID2D1Geometry *)This, simplificationOption, worldTransform, flatteningTolerance, geometrySink))
+#pragma deprecated("ID2D1TransformedGeometry_Simplify")
 
 #define ID2D1TransformedGeometry_Tessellate(This, worldTransform, flatteningTolerance, tessellationSink) \
     ((This)->lpVtbl->Base.Tessellate((ID2D1Geometry *)This, worldTransform, flatteningTolerance, tessellationSink))
+#pragma deprecated("ID2D1TransformedGeometry_Tessellate")
 
 #define ID2D1TransformedGeometry_CombineWithGeometry(This, inputGeometry, combineMode, inputGeometryTransform, flatteningTolerance, geometrySink) \
     ((This)->lpVtbl->Base.CombineWithGeometry((ID2D1Geometry *)This, inputGeometry, combineMode, inputGeometryTransform, flatteningTolerance, geometrySink))
+#pragma deprecated("ID2D1TransformedGeometry_CombineWithGeometry")
 
 #define ID2D1TransformedGeometry_Outline(This, worldTransform, flatteningTolerance, geometrySink) \
     ((This)->lpVtbl->Base.Outline((ID2D1Geometry *)This, worldTransform, flatteningTolerance, geometrySink))
+#pragma deprecated("ID2D1TransformedGeometry_Outline")
 
 #define ID2D1TransformedGeometry_ComputeArea(This, worldTransform, flatteningTolerance, area) \
     ((This)->lpVtbl->Base.ComputeArea((ID2D1Geometry *)This, worldTransform, flatteningTolerance, area))
+#pragma deprecated("ID2D1TransformedGeometry_ComputeArea")
 
 #define ID2D1TransformedGeometry_ComputeLength(This, worldTransform, flatteningTolerance, length) \
     ((This)->lpVtbl->Base.ComputeLength((ID2D1Geometry *)This, worldTransform, flatteningTolerance, length))
+#pragma deprecated("ID2D1TransformedGeometry_ComputeLength")
 
 #define ID2D1TransformedGeometry_ComputePointAtLength(This, length, worldTransform, flatteningTolerance, point, unitTangentVector) \
     ((This)->lpVtbl->Base.ComputePointAtLength((ID2D1Geometry *)This, length, worldTransform, flatteningTolerance, point, unitTangentVector))
+#pragma deprecated("ID2D1TransformedGeometry_ComputePointAtLength")
 
 #define ID2D1TransformedGeometry_Widen(This, strokeWidth, strokeStyle, worldTransform, flatteningTolerance, geometrySink) \
     ((This)->lpVtbl->Base.Widen((ID2D1Geometry *)This, strokeWidth, strokeStyle, worldTransform, flatteningTolerance, geometrySink))
+#pragma deprecated("ID2D1TransformedGeometry_Widen")
 
 #define ID2D1TransformedGeometry_GetSourceGeometry(This, sourceGeometry) \
     ((This)->lpVtbl->GetSourceGeometry(This, sourceGeometry))
+#pragma deprecated("ID2D1TransformedGeometry_GetSourceGeometry")
 
 #define ID2D1TransformedGeometry_GetTransform(This, transform) \
     ((This)->lpVtbl->GetTransform(This, transform))
+#pragma deprecated("ID2D1TransformedGeometry_GetTransform")
 
 typedef interface ID2D1SimplifiedGeometrySink ID2D1SimplifiedGeometrySink;
 
@@ -5348,33 +5562,43 @@ interface ID2D1SimplifiedGeometrySink
 
 #define ID2D1SimplifiedGeometrySink_QueryInterface(This, riid, ppv) \
     ((This)->lpVtbl->Base.QueryInterface((IUnknown *)This, riid, ppv))
+#pragma deprecated("ID2D1SimplifiedGeometrySink_QueryInterface")
 
 #define ID2D1SimplifiedGeometrySink_AddRef(This) \
     ((This)->lpVtbl->Base.AddRef((IUnknown *)This))
+#pragma deprecated("ID2D1SimplifiedGeometrySink_AddRef")
 
 #define ID2D1SimplifiedGeometrySink_Release(This) \
     ((This)->lpVtbl->Base.Release((IUnknown *)This))
+#pragma deprecated("ID2D1SimplifiedGeometrySink_Release")
 
 #define ID2D1SimplifiedGeometrySink_SetFillMode(This, fillMode) \
     ((This)->lpVtbl->SetFillMode(This, fillMode))
+#pragma deprecated("ID2D1SimplifiedGeometrySink_SetFillMode")
 
 #define ID2D1SimplifiedGeometrySink_SetSegmentFlags(This, vertexFlags) \
     ((This)->lpVtbl->SetSegmentFlags(This, vertexFlags))
+#pragma deprecated("ID2D1SimplifiedGeometrySink_SetSegmentFlags")
 
 #define ID2D1SimplifiedGeometrySink_BeginFigure(This, startPoint, figureBegin) \
     ((This)->lpVtbl->BeginFigure(This, startPoint, figureBegin))
+#pragma deprecated("ID2D1SimplifiedGeometrySink_BeginFigure")
 
 #define ID2D1SimplifiedGeometrySink_AddLines(This, points, pointsCount) \
     ((This)->lpVtbl->AddLines(This, points, pointsCount))
+#pragma deprecated("ID2D1SimplifiedGeometrySink_AddLines")
 
 #define ID2D1SimplifiedGeometrySink_AddBeziers(This, beziers, beziersCount) \
     ((This)->lpVtbl->AddBeziers(This, beziers, beziersCount))
+#pragma deprecated("ID2D1SimplifiedGeometrySink_AddBeziers")
 
 #define ID2D1SimplifiedGeometrySink_EndFigure(This, figureEnd) \
     ((This)->lpVtbl->EndFigure(This, figureEnd))
+#pragma deprecated("ID2D1SimplifiedGeometrySink_EndFigure")
 
 #define ID2D1SimplifiedGeometrySink_Close(This) \
     ((This)->lpVtbl->Close(This))
+#pragma deprecated("ID2D1SimplifiedGeometrySink_Close")
 
 typedef interface ID2D1GeometrySink ID2D1GeometrySink;
 
@@ -5419,48 +5643,63 @@ interface ID2D1GeometrySink
 
 #define ID2D1GeometrySink_QueryInterface(This, riid, ppv) \
     ((This)->lpVtbl->Base.Base.QueryInterface((IUnknown *)This, riid, ppv))
+#pragma deprecated("ID2D1GeometrySink_QueryInterface")
 
 #define ID2D1GeometrySink_AddRef(This) \
     ((This)->lpVtbl->Base.Base.AddRef((IUnknown *)This))
+#pragma deprecated("ID2D1GeometrySink_AddRef")
 
 #define ID2D1GeometrySink_Release(This) \
     ((This)->lpVtbl->Base.Base.Release((IUnknown *)This))
+#pragma deprecated("ID2D1GeometrySink_Release")
 
 #define ID2D1GeometrySink_SetFillMode(This, fillMode) \
     ((This)->lpVtbl->Base.SetFillMode((ID2D1SimplifiedGeometrySink *)This, fillMode))
+#pragma deprecated("ID2D1GeometrySink_SetFillMode")
 
 #define ID2D1GeometrySink_SetSegmentFlags(This, vertexFlags) \
     ((This)->lpVtbl->Base.SetSegmentFlags((ID2D1SimplifiedGeometrySink *)This, vertexFlags))
+#pragma deprecated("ID2D1GeometrySink_SetSegmentFlags")
 
 #define ID2D1GeometrySink_BeginFigure(This, startPoint, figureBegin) \
     ((This)->lpVtbl->Base.BeginFigure((ID2D1SimplifiedGeometrySink *)This, startPoint, figureBegin))
+#pragma deprecated("ID2D1GeometrySink_BeginFigure")
 
 #define ID2D1GeometrySink_AddLines(This, points, pointsCount) \
     ((This)->lpVtbl->Base.AddLines((ID2D1SimplifiedGeometrySink *)This, points, pointsCount))
+#pragma deprecated("ID2D1GeometrySink_AddLines")
 
 #define ID2D1GeometrySink_AddBeziers(This, beziers, beziersCount) \
     ((This)->lpVtbl->Base.AddBeziers((ID2D1SimplifiedGeometrySink *)This, beziers, beziersCount))
+#pragma deprecated("ID2D1GeometrySink_AddBeziers")
 
 #define ID2D1GeometrySink_EndFigure(This, figureEnd) \
     ((This)->lpVtbl->Base.EndFigure((ID2D1SimplifiedGeometrySink *)This, figureEnd))
+#pragma deprecated("ID2D1GeometrySink_EndFigure")
 
 #define ID2D1GeometrySink_Close(This) \
     ((This)->lpVtbl->Base.Close((ID2D1SimplifiedGeometrySink *)This))
+#pragma deprecated("ID2D1GeometrySink_Close")
 
 #define ID2D1GeometrySink_AddLine(This, point) \
     ((This)->lpVtbl->AddLine(This, point))
+#pragma deprecated("ID2D1GeometrySink_AddLine")
 
 #define ID2D1GeometrySink_AddBezier(This, bezier) \
     ((This)->lpVtbl->AddBezier(This, bezier))
+#pragma deprecated("ID2D1GeometrySink_AddBezier")
 
 #define ID2D1GeometrySink_AddQuadraticBezier(This, bezier) \
     ((This)->lpVtbl->AddQuadraticBezier(This, bezier))
+#pragma deprecated("ID2D1GeometrySink_AddQuadraticBezier")
 
 #define ID2D1GeometrySink_AddQuadraticBeziers(This, beziers, beziersCount) \
     ((This)->lpVtbl->AddQuadraticBeziers(This, beziers, beziersCount))
+#pragma deprecated("ID2D1GeometrySink_AddQuadraticBeziers")
 
 #define ID2D1GeometrySink_AddArc(This, arc) \
     ((This)->lpVtbl->AddArc(This, arc))
+#pragma deprecated("ID2D1GeometrySink_AddArc")
 
 typedef interface ID2D1TessellationSink ID2D1TessellationSink;
 
@@ -5489,18 +5728,23 @@ interface ID2D1TessellationSink
 
 #define ID2D1TessellationSink_QueryInterface(This, riid, ppv) \
     ((This)->lpVtbl->Base.QueryInterface((IUnknown *)This, riid, ppv))
+#pragma deprecated("ID2D1TessellationSink_QueryInterface")
 
 #define ID2D1TessellationSink_AddRef(This) \
     ((This)->lpVtbl->Base.AddRef((IUnknown *)This))
+#pragma deprecated("ID2D1TessellationSink_AddRef")
 
 #define ID2D1TessellationSink_Release(This) \
     ((This)->lpVtbl->Base.Release((IUnknown *)This))
+#pragma deprecated("ID2D1TessellationSink_Release")
 
 #define ID2D1TessellationSink_AddTriangles(This, triangles, trianglesCount) \
     ((This)->lpVtbl->AddTriangles(This, triangles, trianglesCount))
+#pragma deprecated("ID2D1TessellationSink_AddTriangles")
 
 #define ID2D1TessellationSink_Close(This) \
     ((This)->lpVtbl->Close(This))
+#pragma deprecated("ID2D1TessellationSink_Close")
 
 typedef interface ID2D1PathGeometry ID2D1PathGeometry;
 
@@ -5539,66 +5783,87 @@ interface ID2D1PathGeometry
 
 #define ID2D1PathGeometry_QueryInterface(This, riid, ppv) \
     ((This)->lpVtbl->Base.Base.Base.QueryInterface((IUnknown *)This, riid, ppv))
+#pragma deprecated("ID2D1PathGeometry_QueryInterface")
 
 #define ID2D1PathGeometry_AddRef(This) \
     ((This)->lpVtbl->Base.Base.Base.AddRef((IUnknown *)This))
+#pragma deprecated("ID2D1PathGeometry_AddRef")
 
 #define ID2D1PathGeometry_Release(This) \
     ((This)->lpVtbl->Base.Base.Base.Release((IUnknown *)This))
+#pragma deprecated("ID2D1PathGeometry_Release")
 
 #define ID2D1PathGeometry_GetFactory(This, factory) \
     ((This)->lpVtbl->Base.Base.GetFactory((ID2D1Resource *)This, factory))
+#pragma deprecated("ID2D1PathGeometry_GetFactory")
 
 #define ID2D1PathGeometry_GetBounds(This, worldTransform, bounds) \
     ((This)->lpVtbl->Base.GetBounds((ID2D1Geometry *)This, worldTransform, bounds))
+#pragma deprecated("ID2D1PathGeometry_GetBounds")
 
 #define ID2D1PathGeometry_GetWidenedBounds(This, strokeWidth, strokeStyle, worldTransform, flatteningTolerance, bounds) \
     ((This)->lpVtbl->Base.GetWidenedBounds((ID2D1Geometry *)This, strokeWidth, strokeStyle, worldTransform, flatteningTolerance, bounds))
+#pragma deprecated("ID2D1PathGeometry_GetWidenedBounds")
 
 #define ID2D1PathGeometry_StrokeContainsPoint(This, point, strokeWidth, strokeStyle, worldTransform, flatteningTolerance, contains) \
     ((This)->lpVtbl->Base.StrokeContainsPoint((ID2D1Geometry *)This, point, strokeWidth, strokeStyle, worldTransform, flatteningTolerance, contains))
+#pragma deprecated("ID2D1PathGeometry_StrokeContainsPoint")
 
 #define ID2D1PathGeometry_FillContainsPoint(This, point, worldTransform, flatteningTolerance, contains) \
     ((This)->lpVtbl->Base.FillContainsPoint((ID2D1Geometry *)This, point, worldTransform, flatteningTolerance, contains))
+#pragma deprecated("ID2D1PathGeometry_FillContainsPoint")
 
 #define ID2D1PathGeometry_CompareWithGeometry(This, inputGeometry, inputGeometryTransform, flatteningTolerance, relation) \
     ((This)->lpVtbl->Base.CompareWithGeometry((ID2D1Geometry *)This, inputGeometry, inputGeometryTransform, flatteningTolerance, relation))
+#pragma deprecated("ID2D1PathGeometry_CompareWithGeometry")
 
 #define ID2D1PathGeometry_Simplify(This, simplificationOption, worldTransform, flatteningTolerance, geometrySink) \
     ((This)->lpVtbl->Base.Simplify((ID2D1Geometry *)This, simplificationOption, worldTransform, flatteningTolerance, geometrySink))
+#pragma deprecated("ID2D1PathGeometry_Simplify")
 
 #define ID2D1PathGeometry_Tessellate(This, worldTransform, flatteningTolerance, tessellationSink) \
     ((This)->lpVtbl->Base.Tessellate((ID2D1Geometry *)This, worldTransform, flatteningTolerance, tessellationSink))
+#pragma deprecated("ID2D1PathGeometry_Tessellate")
 
 #define ID2D1PathGeometry_CombineWithGeometry(This, inputGeometry, combineMode, inputGeometryTransform, flatteningTolerance, geometrySink) \
     ((This)->lpVtbl->Base.CombineWithGeometry((ID2D1Geometry *)This, inputGeometry, combineMode, inputGeometryTransform, flatteningTolerance, geometrySink))
+#pragma deprecated("ID2D1PathGeometry_CombineWithGeometry")
 
 #define ID2D1PathGeometry_Outline(This, worldTransform, flatteningTolerance, geometrySink) \
     ((This)->lpVtbl->Base.Outline((ID2D1Geometry *)This, worldTransform, flatteningTolerance, geometrySink))
+#pragma deprecated("ID2D1PathGeometry_Outline")
 
 #define ID2D1PathGeometry_ComputeArea(This, worldTransform, flatteningTolerance, area) \
     ((This)->lpVtbl->Base.ComputeArea((ID2D1Geometry *)This, worldTransform, flatteningTolerance, area))
+#pragma deprecated("ID2D1PathGeometry_ComputeArea")
 
 #define ID2D1PathGeometry_ComputeLength(This, worldTransform, flatteningTolerance, length) \
     ((This)->lpVtbl->Base.ComputeLength((ID2D1Geometry *)This, worldTransform, flatteningTolerance, length))
+#pragma deprecated("ID2D1PathGeometry_ComputeLength")
 
 #define ID2D1PathGeometry_ComputePointAtLength(This, length, worldTransform, flatteningTolerance, point, unitTangentVector) \
     ((This)->lpVtbl->Base.ComputePointAtLength((ID2D1Geometry *)This, length, worldTransform, flatteningTolerance, point, unitTangentVector))
+#pragma deprecated("ID2D1PathGeometry_ComputePointAtLength")
 
 #define ID2D1PathGeometry_Widen(This, strokeWidth, strokeStyle, worldTransform, flatteningTolerance, geometrySink) \
     ((This)->lpVtbl->Base.Widen((ID2D1Geometry *)This, strokeWidth, strokeStyle, worldTransform, flatteningTolerance, geometrySink))
+#pragma deprecated("ID2D1PathGeometry_Widen")
 
 #define ID2D1PathGeometry_Open(This, geometrySink) \
     ((This)->lpVtbl->Open(This, geometrySink))
+#pragma deprecated("ID2D1PathGeometry_Open")
 
 #define ID2D1PathGeometry_Stream(This, geometrySink) \
     ((This)->lpVtbl->Stream(This, geometrySink))
+#pragma deprecated("ID2D1PathGeometry_Stream")
 
 #define ID2D1PathGeometry_GetSegmentCount(This, count) \
     ((This)->lpVtbl->GetSegmentCount(This, count))
+#pragma deprecated("ID2D1PathGeometry_GetSegmentCount")
 
 #define ID2D1PathGeometry_GetFigureCount(This, count) \
     ((This)->lpVtbl->GetFigureCount(This, count))
+#pragma deprecated("ID2D1PathGeometry_GetFigureCount")
 
 typedef interface ID2D1Mesh ID2D1Mesh;
 
@@ -5622,18 +5887,23 @@ interface ID2D1Mesh
 
 #define ID2D1Mesh_QueryInterface(This, riid, ppv) \
     ((This)->lpVtbl->Base.Base.QueryInterface((IUnknown *)This, riid, ppv))
+#pragma deprecated("ID2D1Mesh_QueryInterface")
 
 #define ID2D1Mesh_AddRef(This) \
     ((This)->lpVtbl->Base.Base.AddRef((IUnknown *)This))
+#pragma deprecated("ID2D1Mesh_AddRef")
 
 #define ID2D1Mesh_Release(This) \
     ((This)->lpVtbl->Base.Base.Release((IUnknown *)This))
+#pragma deprecated("ID2D1Mesh_Release")
 
 #define ID2D1Mesh_GetFactory(This, factory) \
     ((This)->lpVtbl->Base.GetFactory((ID2D1Resource *)This, factory))
+#pragma deprecated("ID2D1Mesh_GetFactory")
 
 #define ID2D1Mesh_Open(This, tessellationSink) \
     ((This)->lpVtbl->Open(This, tessellationSink))
+#pragma deprecated("ID2D1Mesh_Open")
 
 typedef interface ID2D1Layer ID2D1Layer;
 
@@ -5656,18 +5926,23 @@ interface ID2D1Layer
 
 #define ID2D1Layer_QueryInterface(This, riid, ppv) \
     ((This)->lpVtbl->Base.Base.QueryInterface((IUnknown *)This, riid, ppv))
+#pragma deprecated("ID2D1Layer_QueryInterface")
 
 #define ID2D1Layer_AddRef(This) \
     ((This)->lpVtbl->Base.Base.AddRef((IUnknown *)This))
+#pragma deprecated("ID2D1Layer_AddRef")
 
 #define ID2D1Layer_Release(This) \
     ((This)->lpVtbl->Base.Base.Release((IUnknown *)This))
+#pragma deprecated("ID2D1Layer_Release")
 
 #define ID2D1Layer_GetFactory(This, factory) \
     ((This)->lpVtbl->Base.GetFactory((ID2D1Resource *)This, factory))
+#pragma deprecated("ID2D1Layer_GetFactory")
 
 #define ID2D1Layer_GetSize(This) \
     ((This)->lpVtbl->GetSize(This))
+#pragma deprecated("ID2D1Layer_GetSize")
 
 typedef interface ID2D1DrawingStateBlock ID2D1DrawingStateBlock;
 
@@ -5706,27 +5981,35 @@ interface ID2D1DrawingStateBlock
 
 #define ID2D1DrawingStateBlock_QueryInterface(This, riid, ppv) \
     ((This)->lpVtbl->Base.Base.QueryInterface((IUnknown *)This, riid, ppv))
+#pragma deprecated("ID2D1DrawingStateBlock_QueryInterface")
 
 #define ID2D1DrawingStateBlock_AddRef(This) \
     ((This)->lpVtbl->Base.Base.AddRef((IUnknown *)This))
+#pragma deprecated("ID2D1DrawingStateBlock_AddRef")
 
 #define ID2D1DrawingStateBlock_Release(This) \
     ((This)->lpVtbl->Base.Base.Release((IUnknown *)This))
+#pragma deprecated("ID2D1DrawingStateBlock_Release")
 
 #define ID2D1DrawingStateBlock_GetFactory(This, factory) \
     ((This)->lpVtbl->Base.GetFactory((ID2D1Resource *)This, factory))
+#pragma deprecated("ID2D1DrawingStateBlock_GetFactory")
 
 #define ID2D1DrawingStateBlock_GetDescription(This, stateDescription) \
     ((This)->lpVtbl->GetDescription(This, stateDescription))
+#pragma deprecated("ID2D1DrawingStateBlock_GetDescription")
 
 #define ID2D1DrawingStateBlock_SetDescription(This, stateDescription) \
     ((This)->lpVtbl->SetDescription(This, stateDescription))
+#pragma deprecated("ID2D1DrawingStateBlock_SetDescription")
 
 #define ID2D1DrawingStateBlock_SetTextRenderingParams(This, textRenderingParams) \
     ((This)->lpVtbl->SetTextRenderingParams(This, textRenderingParams))
+#pragma deprecated("ID2D1DrawingStateBlock_SetTextRenderingParams")
 
 #define ID2D1DrawingStateBlock_GetTextRenderingParams(This, textRenderingParams) \
     ((This)->lpVtbl->GetTextRenderingParams(This, textRenderingParams))
+#pragma deprecated("ID2D1DrawingStateBlock_GetTextRenderingParams")
 
 typedef interface ID2D1RenderTarget ID2D1RenderTarget;
 
@@ -6080,174 +6363,231 @@ interface ID2D1RenderTarget
 
 #define ID2D1RenderTarget_QueryInterface(This, riid, ppv) \
     ((This)->lpVtbl->Base.Base.QueryInterface((IUnknown *)This, riid, ppv))
+#pragma deprecated("ID2D1RenderTarget_QueryInterface")
 
 #define ID2D1RenderTarget_AddRef(This) \
     ((This)->lpVtbl->Base.Base.AddRef((IUnknown *)This))
+#pragma deprecated("ID2D1RenderTarget_AddRef")
 
 #define ID2D1RenderTarget_Release(This) \
     ((This)->lpVtbl->Base.Base.Release((IUnknown *)This))
+#pragma deprecated("ID2D1RenderTarget_Release")
 
 #define ID2D1RenderTarget_GetFactory(This, factory) \
     ((This)->lpVtbl->Base.GetFactory((ID2D1Resource *)This, factory))
+#pragma deprecated("ID2D1RenderTarget_GetFactory")
 
 #define ID2D1RenderTarget_CreateBitmap(This, size, srcData, pitch, bitmapProperties, bitmap) \
     ((This)->lpVtbl->CreateBitmap(This, size, srcData, pitch, bitmapProperties, bitmap))
+#pragma deprecated("ID2D1RenderTarget_CreateBitmap")
 
 #define ID2D1RenderTarget_CreateBitmapFromWicBitmap(This, wicBitmapSource, bitmapProperties, bitmap) \
     ((This)->lpVtbl->CreateBitmapFromWicBitmap(This, wicBitmapSource, bitmapProperties, bitmap))
+#pragma deprecated("ID2D1RenderTarget_CreateBitmapFromWicBitmap")
 
 #define ID2D1RenderTarget_CreateSharedBitmap(This, riid, data, bitmapProperties, bitmap) \
     ((This)->lpVtbl->CreateSharedBitmap(This, riid, data, bitmapProperties, bitmap))
+#pragma deprecated("ID2D1RenderTarget_CreateSharedBitmap")
 
 #define ID2D1RenderTarget_CreateBitmapBrush(This, bitmap, bitmapBrushProperties, brushProperties, bitmapBrush) \
     ((This)->lpVtbl->CreateBitmapBrush(This, bitmap, bitmapBrushProperties, brushProperties, bitmapBrush))
+#pragma deprecated("ID2D1RenderTarget_CreateBitmapBrush")
 
 #define ID2D1RenderTarget_CreateSolidColorBrush(This, color, brushProperties, solidColorBrush) \
     ((This)->lpVtbl->CreateSolidColorBrush(This, color, brushProperties, solidColorBrush))
+#pragma deprecated("ID2D1RenderTarget_CreateSolidColorBrush")
 
 #define ID2D1RenderTarget_CreateGradientStopCollection(This, gradientStops, gradientStopsCount, colorInterpolationGamma, extendMode, gradientStopCollection) \
     ((This)->lpVtbl->CreateGradientStopCollection(This, gradientStops, gradientStopsCount, colorInterpolationGamma, extendMode, gradientStopCollection))
+#pragma deprecated("ID2D1RenderTarget_CreateGradientStopCollection")
 
 #define ID2D1RenderTarget_CreateLinearGradientBrush(This, linearGradientBrushProperties, brushProperties, gradientStopCollection, linearGradientBrush) \
     ((This)->lpVtbl->CreateLinearGradientBrush(This, linearGradientBrushProperties, brushProperties, gradientStopCollection, linearGradientBrush))
+#pragma deprecated("ID2D1RenderTarget_CreateLinearGradientBrush")
 
 #define ID2D1RenderTarget_CreateRadialGradientBrush(This, radialGradientBrushProperties, brushProperties, gradientStopCollection, radialGradientBrush) \
     ((This)->lpVtbl->CreateRadialGradientBrush(This, radialGradientBrushProperties, brushProperties, gradientStopCollection, radialGradientBrush))
+#pragma deprecated("ID2D1RenderTarget_CreateRadialGradientBrush")
 
 #define ID2D1RenderTarget_CreateCompatibleRenderTarget(This, desiredSize, desiredPixelSize, desiredFormat, options, bitmapRenderTarget) \
     ((This)->lpVtbl->CreateCompatibleRenderTarget(This, desiredSize, desiredPixelSize, desiredFormat, options, bitmapRenderTarget))
+#pragma deprecated("ID2D1RenderTarget_CreateCompatibleRenderTarget")
 
 #define ID2D1RenderTarget_CreateLayer(This, size, layer) \
     ((This)->lpVtbl->CreateLayer(This, size, layer))
+#pragma deprecated("ID2D1RenderTarget_CreateLayer")
 
 #define ID2D1RenderTarget_CreateMesh(This, mesh) \
     ((This)->lpVtbl->CreateMesh(This, mesh))
+#pragma deprecated("ID2D1RenderTarget_CreateMesh")
 
 #define ID2D1RenderTarget_DrawLine(This, point0, point1, brush, strokeWidth, strokeStyle) \
     ((This)->lpVtbl->DrawLine(This, point0, point1, brush, strokeWidth, strokeStyle))
+#pragma deprecated("ID2D1RenderTarget_DrawLine")
 
 #define ID2D1RenderTarget_DrawRectangle(This, rect, brush, strokeWidth, strokeStyle) \
     ((This)->lpVtbl->DrawRectangle(This, rect, brush, strokeWidth, strokeStyle))
+#pragma deprecated("ID2D1RenderTarget_DrawRectangle")
 
 #define ID2D1RenderTarget_FillRectangle(This, rect, brush) \
     ((This)->lpVtbl->FillRectangle(This, rect, brush))
+#pragma deprecated("ID2D1RenderTarget_FillRectangle")
 
 #define ID2D1RenderTarget_DrawRoundedRectangle(This, roundedRect, brush, strokeWidth, strokeStyle) \
     ((This)->lpVtbl->DrawRoundedRectangle(This, roundedRect, brush, strokeWidth, strokeStyle))
+#pragma deprecated("ID2D1RenderTarget_DrawRoundedRectangle")
 
 #define ID2D1RenderTarget_FillRoundedRectangle(This, roundedRect, brush) \
     ((This)->lpVtbl->FillRoundedRectangle(This, roundedRect, brush))
+#pragma deprecated("ID2D1RenderTarget_FillRoundedRectangle")
 
 #define ID2D1RenderTarget_DrawEllipse(This, ellipse, brush, strokeWidth, strokeStyle) \
     ((This)->lpVtbl->DrawEllipse(This, ellipse, brush, strokeWidth, strokeStyle))
+#pragma deprecated("ID2D1RenderTarget_DrawEllipse")
 
 #define ID2D1RenderTarget_FillEllipse(This, ellipse, brush) \
     ((This)->lpVtbl->FillEllipse(This, ellipse, brush))
+#pragma deprecated("ID2D1RenderTarget_FillEllipse")
 
 #define ID2D1RenderTarget_DrawGeometry(This, geometry, brush, strokeWidth, strokeStyle) \
     ((This)->lpVtbl->DrawGeometry(This, geometry, brush, strokeWidth, strokeStyle))
+#pragma deprecated("ID2D1RenderTarget_DrawGeometry")
 
 #define ID2D1RenderTarget_FillGeometry(This, geometry, brush, opacityBrush) \
     ((This)->lpVtbl->FillGeometry(This, geometry, brush, opacityBrush))
+#pragma deprecated("ID2D1RenderTarget_FillGeometry")
 
 #define ID2D1RenderTarget_FillMesh(This, mesh, brush) \
     ((This)->lpVtbl->FillMesh(This, mesh, brush))
+#pragma deprecated("ID2D1RenderTarget_FillMesh")
 
 #define ID2D1RenderTarget_FillOpacityMask(This, opacityMask, brush, content, destinationRectangle, sourceRectangle) \
     ((This)->lpVtbl->FillOpacityMask(This, opacityMask, brush, content, destinationRectangle, sourceRectangle))
+#pragma deprecated("ID2D1RenderTarget_FillOpacityMask")
 
 #define ID2D1RenderTarget_DrawBitmap(This, bitmap, destinationRectangle, opacity, interpolationMode, sourceRectangle) \
     ((This)->lpVtbl->DrawBitmap(This, bitmap, destinationRectangle, opacity, interpolationMode, sourceRectangle))
+#pragma deprecated("ID2D1RenderTarget_DrawBitmap")
 
 #define ID2D1RenderTarget_DrawText(This, string, stringLength, textFormat, layoutRect, defaultForegroundBrush, options, measuringMode) \
     ((This)->lpVtbl->DrawText(This, string, stringLength, textFormat, layoutRect, defaultForegroundBrush, options, measuringMode))
+#pragma deprecated("ID2D1RenderTarget_DrawText")
 
 #define ID2D1RenderTarget_DrawTextLayout(This, origin, textLayout, defaultForegroundBrush, options) \
     ((This)->lpVtbl->DrawTextLayout(This, origin, textLayout, defaultForegroundBrush, options))
+#pragma deprecated("ID2D1RenderTarget_DrawTextLayout")
 
 #define ID2D1RenderTarget_DrawGlyphRun(This, baselineOrigin, glyphRun, foregroundBrush, measuringMode) \
     ((This)->lpVtbl->DrawGlyphRun(This, baselineOrigin, glyphRun, foregroundBrush, measuringMode))
+#pragma deprecated("ID2D1RenderTarget_DrawGlyphRun")
 
 #define ID2D1RenderTarget_SetTransform(This, transform) \
     ((This)->lpVtbl->SetTransform(This, transform))
+#pragma deprecated("ID2D1RenderTarget_SetTransform")
 
 #define ID2D1RenderTarget_GetTransform(This, transform) \
     ((This)->lpVtbl->GetTransform(This, transform))
+#pragma deprecated("ID2D1RenderTarget_GetTransform")
 
 #define ID2D1RenderTarget_SetAntialiasMode(This, antialiasMode) \
     ((This)->lpVtbl->SetAntialiasMode(This, antialiasMode))
+#pragma deprecated("ID2D1RenderTarget_SetAntialiasMode")
 
 #define ID2D1RenderTarget_GetAntialiasMode(This) \
     ((This)->lpVtbl->GetAntialiasMode(This))
+#pragma deprecated("ID2D1RenderTarget_GetAntialiasMode")
 
 #define ID2D1RenderTarget_SetTextAntialiasMode(This, textAntialiasMode) \
     ((This)->lpVtbl->SetTextAntialiasMode(This, textAntialiasMode))
+#pragma deprecated("ID2D1RenderTarget_SetTextAntialiasMode")
 
 #define ID2D1RenderTarget_GetTextAntialiasMode(This) \
     ((This)->lpVtbl->GetTextAntialiasMode(This))
+#pragma deprecated("ID2D1RenderTarget_GetTextAntialiasMode")
 
 #define ID2D1RenderTarget_SetTextRenderingParams(This, textRenderingParams) \
     ((This)->lpVtbl->SetTextRenderingParams(This, textRenderingParams))
+#pragma deprecated("ID2D1RenderTarget_SetTextRenderingParams")
 
 #define ID2D1RenderTarget_GetTextRenderingParams(This, textRenderingParams) \
     ((This)->lpVtbl->GetTextRenderingParams(This, textRenderingParams))
+#pragma deprecated("ID2D1RenderTarget_GetTextRenderingParams")
 
 #define ID2D1RenderTarget_SetTags(This, tag1, tag2) \
     ((This)->lpVtbl->SetTags(This, tag1, tag2))
+#pragma deprecated("ID2D1RenderTarget_SetTags")
 
 #define ID2D1RenderTarget_GetTags(This, tag1, tag2) \
     ((This)->lpVtbl->GetTags(This, tag1, tag2))
+#pragma deprecated("ID2D1RenderTarget_GetTags")
 
 #define ID2D1RenderTarget_PushLayer(This, layerParameters, layer) \
     ((This)->lpVtbl->PushLayer(This, layerParameters, layer))
+#pragma deprecated("ID2D1RenderTarget_PushLayer")
 
 #define ID2D1RenderTarget_PopLayer(This) \
     ((This)->lpVtbl->PopLayer(This))
+#pragma deprecated("ID2D1RenderTarget_PopLayer")
 
 #define ID2D1RenderTarget_Flush(This, tag1, tag2) \
     ((This)->lpVtbl->Flush(This, tag1, tag2))
+#pragma deprecated("ID2D1RenderTarget_Flush")
 
 #define ID2D1RenderTarget_SaveDrawingState(This, drawingStateBlock) \
     ((This)->lpVtbl->SaveDrawingState(This, drawingStateBlock))
+#pragma deprecated("ID2D1RenderTarget_SaveDrawingState")
 
 #define ID2D1RenderTarget_RestoreDrawingState(This, drawingStateBlock) \
     ((This)->lpVtbl->RestoreDrawingState(This, drawingStateBlock))
+#pragma deprecated("ID2D1RenderTarget_RestoreDrawingState")
 
 #define ID2D1RenderTarget_PushAxisAlignedClip(This, clipRect, antialiasMode) \
     ((This)->lpVtbl->PushAxisAlignedClip(This, clipRect, antialiasMode))
+#pragma deprecated("ID2D1RenderTarget_PushAxisAlignedClip")
 
 #define ID2D1RenderTarget_PopAxisAlignedClip(This) \
     ((This)->lpVtbl->PopAxisAlignedClip(This))
+#pragma deprecated("ID2D1RenderTarget_PopAxisAlignedClip")
 
 #define ID2D1RenderTarget_Clear(This, clearColor) \
     ((This)->lpVtbl->Clear(This, clearColor))
+#pragma deprecated("ID2D1RenderTarget_Clear")
 
 #define ID2D1RenderTarget_BeginDraw(This) \
     ((This)->lpVtbl->BeginDraw(This))
+#pragma deprecated("ID2D1RenderTarget_BeginDraw")
 
 #define ID2D1RenderTarget_EndDraw(This, tag1, tag2) \
     ((This)->lpVtbl->EndDraw(This, tag1, tag2))
+#pragma deprecated("ID2D1RenderTarget_EndDraw")
 
 #define ID2D1RenderTarget_GetPixelFormat(This) \
     ((This)->lpVtbl->GetPixelFormat(This))
+#pragma deprecated("ID2D1RenderTarget_GetPixelFormat")
 
 #define ID2D1RenderTarget_SetDpi(This, dpiX, dpiY) \
     ((This)->lpVtbl->SetDpi(This, dpiX, dpiY))
+#pragma deprecated("ID2D1RenderTarget_SetDpi")
 
 #define ID2D1RenderTarget_GetDpi(This, dpiX, dpiY) \
     ((This)->lpVtbl->GetDpi(This, dpiX, dpiY))
+#pragma deprecated("ID2D1RenderTarget_GetDpi")
 
 #define ID2D1RenderTarget_GetSize(This) \
     ((This)->lpVtbl->GetSize(This))
+#pragma deprecated("ID2D1RenderTarget_GetSize")
 
 #define ID2D1RenderTarget_GetPixelSize(This) \
     ((This)->lpVtbl->GetPixelSize(This))
+#pragma deprecated("ID2D1RenderTarget_GetPixelSize")
 
 #define ID2D1RenderTarget_GetMaximumBitmapSize(This) \
     ((This)->lpVtbl->GetMaximumBitmapSize(This))
+#pragma deprecated("ID2D1RenderTarget_GetMaximumBitmapSize")
 
 #define ID2D1RenderTarget_IsSupported(This, renderTargetProperties) \
     ((This)->lpVtbl->IsSupported(This, renderTargetProperties))
+#pragma deprecated("ID2D1RenderTarget_IsSupported")
 
 typedef interface ID2D1BitmapRenderTarget ID2D1BitmapRenderTarget;
 
@@ -6271,177 +6611,235 @@ interface ID2D1BitmapRenderTarget
 
 #define ID2D1BitmapRenderTarget_QueryInterface(This, riid, ppv) \
     ((This)->lpVtbl->Base.Base.Base.QueryInterface((IUnknown *)This, riid, ppv))
+#pragma deprecated("ID2D1BitmapRenderTarget_QueryInterface")
 
 #define ID2D1BitmapRenderTarget_AddRef(This) \
     ((This)->lpVtbl->Base.Base.Base.AddRef((IUnknown *)This))
+#pragma deprecated("ID2D1BitmapRenderTarget_AddRef")
 
 #define ID2D1BitmapRenderTarget_Release(This) \
     ((This)->lpVtbl->Base.Base.Base.Release((IUnknown *)This))
+#pragma deprecated("ID2D1BitmapRenderTarget_Release")
 
 #define ID2D1BitmapRenderTarget_GetFactory(This, factory) \
     ((This)->lpVtbl->Base.Base.GetFactory((ID2D1Resource *)This, factory))
+#pragma deprecated("ID2D1BitmapRenderTarget_GetFactory")
 
 #define ID2D1BitmapRenderTarget_CreateBitmap(This, size, srcData, pitch, bitmapProperties, bitmap) \
     ((This)->lpVtbl->Base.CreateBitmap((ID2D1RenderTarget *)This, size, srcData, pitch, bitmapProperties, bitmap))
+#pragma deprecated("ID2D1BitmapRenderTarget_CreateBitmap")
 
 #define ID2D1BitmapRenderTarget_CreateBitmapFromWicBitmap(This, wicBitmapSource, bitmapProperties, bitmap) \
     ((This)->lpVtbl->Base.CreateBitmapFromWicBitmap((ID2D1RenderTarget *)This, wicBitmapSource, bitmapProperties, bitmap))
+#pragma deprecated("ID2D1BitmapRenderTarget_CreateBitmapFromWicBitmap")
 
 #define ID2D1BitmapRenderTarget_CreateSharedBitmap(This, riid, data, bitmapProperties, bitmap) \
     ((This)->lpVtbl->Base.CreateSharedBitmap((ID2D1RenderTarget *)This, riid, data, bitmapProperties, bitmap))
+#pragma deprecated("ID2D1BitmapRenderTarget_CreateSharedBitmap")
 
 #define ID2D1BitmapRenderTarget_CreateBitmapBrush(This, bitmap, bitmapBrushProperties, brushProperties, bitmapBrush) \
     ((This)->lpVtbl->Base.CreateBitmapBrush((ID2D1RenderTarget *)This, bitmap, bitmapBrushProperties, brushProperties, bitmapBrush))
+#pragma deprecated("ID2D1BitmapRenderTarget_CreateBitmapBrush")
 
 #define ID2D1BitmapRenderTarget_CreateSolidColorBrush(This, color, brushProperties, solidColorBrush) \
     ((This)->lpVtbl->Base.CreateSolidColorBrush((ID2D1RenderTarget *)This, color, brushProperties, solidColorBrush))
+#pragma deprecated("ID2D1BitmapRenderTarget_CreateSolidColorBrush")
 
 #define ID2D1BitmapRenderTarget_CreateGradientStopCollection(This, gradientStops, gradientStopsCount, colorInterpolationGamma, extendMode, gradientStopCollection) \
     ((This)->lpVtbl->Base.CreateGradientStopCollection((ID2D1RenderTarget *)This, gradientStops, gradientStopsCount, colorInterpolationGamma, extendMode, gradientStopCollection))
+#pragma deprecated("ID2D1BitmapRenderTarget_CreateGradientStopCollection")
 
 #define ID2D1BitmapRenderTarget_CreateLinearGradientBrush(This, linearGradientBrushProperties, brushProperties, gradientStopCollection, linearGradientBrush) \
     ((This)->lpVtbl->Base.CreateLinearGradientBrush((ID2D1RenderTarget *)This, linearGradientBrushProperties, brushProperties, gradientStopCollection, linearGradientBrush))
+#pragma deprecated("ID2D1BitmapRenderTarget_CreateLinearGradientBrush")
 
 #define ID2D1BitmapRenderTarget_CreateRadialGradientBrush(This, radialGradientBrushProperties, brushProperties, gradientStopCollection, radialGradientBrush) \
     ((This)->lpVtbl->Base.CreateRadialGradientBrush((ID2D1RenderTarget *)This, radialGradientBrushProperties, brushProperties, gradientStopCollection, radialGradientBrush))
+#pragma deprecated("ID2D1BitmapRenderTarget_CreateRadialGradientBrush")
 
 #define ID2D1BitmapRenderTarget_CreateCompatibleRenderTarget(This, desiredSize, desiredPixelSize, desiredFormat, options, bitmapRenderTarget) \
     ((This)->lpVtbl->Base.CreateCompatibleRenderTarget((ID2D1RenderTarget *)This, desiredSize, desiredPixelSize, desiredFormat, options, bitmapRenderTarget))
+#pragma deprecated("ID2D1BitmapRenderTarget_CreateCompatibleRenderTarget")
 
 #define ID2D1BitmapRenderTarget_CreateLayer(This, size, layer) \
     ((This)->lpVtbl->Base.CreateLayer((ID2D1RenderTarget *)This, size, layer))
+#pragma deprecated("ID2D1BitmapRenderTarget_CreateLayer")
 
 #define ID2D1BitmapRenderTarget_CreateMesh(This, mesh) \
     ((This)->lpVtbl->Base.CreateMesh((ID2D1RenderTarget *)This, mesh))
+#pragma deprecated("ID2D1BitmapRenderTarget_CreateMesh")
 
 #define ID2D1BitmapRenderTarget_DrawLine(This, point0, point1, brush, strokeWidth, strokeStyle) \
     ((This)->lpVtbl->Base.DrawLine((ID2D1RenderTarget *)This, point0, point1, brush, strokeWidth, strokeStyle))
+#pragma deprecated("ID2D1BitmapRenderTarget_DrawLine")
 
 #define ID2D1BitmapRenderTarget_DrawRectangle(This, rect, brush, strokeWidth, strokeStyle) \
     ((This)->lpVtbl->Base.DrawRectangle((ID2D1RenderTarget *)This, rect, brush, strokeWidth, strokeStyle))
+#pragma deprecated("ID2D1BitmapRenderTarget_DrawRectangle")
 
 #define ID2D1BitmapRenderTarget_FillRectangle(This, rect, brush) \
     ((This)->lpVtbl->Base.FillRectangle((ID2D1RenderTarget *)This, rect, brush))
+#pragma deprecated("ID2D1BitmapRenderTarget_FillRectangle")
 
 #define ID2D1BitmapRenderTarget_DrawRoundedRectangle(This, roundedRect, brush, strokeWidth, strokeStyle) \
     ((This)->lpVtbl->Base.DrawRoundedRectangle((ID2D1RenderTarget *)This, roundedRect, brush, strokeWidth, strokeStyle))
+#pragma deprecated("ID2D1BitmapRenderTarget_DrawRoundedRectangle")
 
 #define ID2D1BitmapRenderTarget_FillRoundedRectangle(This, roundedRect, brush) \
     ((This)->lpVtbl->Base.FillRoundedRectangle((ID2D1RenderTarget *)This, roundedRect, brush))
+#pragma deprecated("ID2D1BitmapRenderTarget_FillRoundedRectangle")
 
 #define ID2D1BitmapRenderTarget_DrawEllipse(This, ellipse, brush, strokeWidth, strokeStyle) \
     ((This)->lpVtbl->Base.DrawEllipse((ID2D1RenderTarget *)This, ellipse, brush, strokeWidth, strokeStyle))
+#pragma deprecated("ID2D1BitmapRenderTarget_DrawEllipse")
 
 #define ID2D1BitmapRenderTarget_FillEllipse(This, ellipse, brush) \
     ((This)->lpVtbl->Base.FillEllipse((ID2D1RenderTarget *)This, ellipse, brush))
+#pragma deprecated("ID2D1BitmapRenderTarget_FillEllipse")
 
 #define ID2D1BitmapRenderTarget_DrawGeometry(This, geometry, brush, strokeWidth, strokeStyle) \
     ((This)->lpVtbl->Base.DrawGeometry((ID2D1RenderTarget *)This, geometry, brush, strokeWidth, strokeStyle))
+#pragma deprecated("ID2D1BitmapRenderTarget_DrawGeometry")
 
 #define ID2D1BitmapRenderTarget_FillGeometry(This, geometry, brush, opacityBrush) \
     ((This)->lpVtbl->Base.FillGeometry((ID2D1RenderTarget *)This, geometry, brush, opacityBrush))
+#pragma deprecated("ID2D1BitmapRenderTarget_FillGeometry")
 
 #define ID2D1BitmapRenderTarget_FillMesh(This, mesh, brush) \
     ((This)->lpVtbl->Base.FillMesh((ID2D1RenderTarget *)This, mesh, brush))
+#pragma deprecated("ID2D1BitmapRenderTarget_FillMesh")
 
 #define ID2D1BitmapRenderTarget_FillOpacityMask(This, opacityMask, brush, content, destinationRectangle, sourceRectangle) \
     ((This)->lpVtbl->Base.FillOpacityMask((ID2D1RenderTarget *)This, opacityMask, brush, content, destinationRectangle, sourceRectangle))
+#pragma deprecated("ID2D1BitmapRenderTarget_FillOpacityMask")
 
 #define ID2D1BitmapRenderTarget_DrawBitmap(This, bitmap, destinationRectangle, opacity, interpolationMode, sourceRectangle) \
     ((This)->lpVtbl->Base.DrawBitmap((ID2D1RenderTarget *)This, bitmap, destinationRectangle, opacity, interpolationMode, sourceRectangle))
+#pragma deprecated("ID2D1BitmapRenderTarget_DrawBitmap")
 
 #define ID2D1BitmapRenderTarget_DrawText(This, string, stringLength, textFormat, layoutRect, defaultForegroundBrush, options, measuringMode) \
     ((This)->lpVtbl->Base.DrawText((ID2D1RenderTarget *)This, string, stringLength, textFormat, layoutRect, defaultForegroundBrush, options, measuringMode))
+#pragma deprecated("ID2D1BitmapRenderTarget_DrawText")
 
 #define ID2D1BitmapRenderTarget_DrawTextLayout(This, origin, textLayout, defaultForegroundBrush, options) \
     ((This)->lpVtbl->Base.DrawTextLayout((ID2D1RenderTarget *)This, origin, textLayout, defaultForegroundBrush, options))
+#pragma deprecated("ID2D1BitmapRenderTarget_DrawTextLayout")
 
 #define ID2D1BitmapRenderTarget_DrawGlyphRun(This, baselineOrigin, glyphRun, foregroundBrush, measuringMode) \
     ((This)->lpVtbl->Base.DrawGlyphRun((ID2D1RenderTarget *)This, baselineOrigin, glyphRun, foregroundBrush, measuringMode))
+#pragma deprecated("ID2D1BitmapRenderTarget_DrawGlyphRun")
 
 #define ID2D1BitmapRenderTarget_SetTransform(This, transform) \
     ((This)->lpVtbl->Base.SetTransform((ID2D1RenderTarget *)This, transform))
+#pragma deprecated("ID2D1BitmapRenderTarget_SetTransform")
 
 #define ID2D1BitmapRenderTarget_GetTransform(This, transform) \
     ((This)->lpVtbl->Base.GetTransform((ID2D1RenderTarget *)This, transform))
+#pragma deprecated("ID2D1BitmapRenderTarget_GetTransform")
 
 #define ID2D1BitmapRenderTarget_SetAntialiasMode(This, antialiasMode) \
     ((This)->lpVtbl->Base.SetAntialiasMode((ID2D1RenderTarget *)This, antialiasMode))
+#pragma deprecated("ID2D1BitmapRenderTarget_SetAntialiasMode")
 
 #define ID2D1BitmapRenderTarget_GetAntialiasMode(This) \
     ((This)->lpVtbl->Base.GetAntialiasMode((ID2D1RenderTarget *)This))
+#pragma deprecated("ID2D1BitmapRenderTarget_GetAntialiasMode")
 
 #define ID2D1BitmapRenderTarget_SetTextAntialiasMode(This, textAntialiasMode) \
     ((This)->lpVtbl->Base.SetTextAntialiasMode((ID2D1RenderTarget *)This, textAntialiasMode))
+#pragma deprecated("ID2D1BitmapRenderTarget_SetTextAntialiasMode")
 
 #define ID2D1BitmapRenderTarget_GetTextAntialiasMode(This) \
     ((This)->lpVtbl->Base.GetTextAntialiasMode((ID2D1RenderTarget *)This))
+#pragma deprecated("ID2D1BitmapRenderTarget_GetTextAntialiasMode")
 
 #define ID2D1BitmapRenderTarget_SetTextRenderingParams(This, textRenderingParams) \
     ((This)->lpVtbl->Base.SetTextRenderingParams((ID2D1RenderTarget *)This, textRenderingParams))
+#pragma deprecated("ID2D1BitmapRenderTarget_SetTextRenderingParams")
 
 #define ID2D1BitmapRenderTarget_GetTextRenderingParams(This, textRenderingParams) \
     ((This)->lpVtbl->Base.GetTextRenderingParams((ID2D1RenderTarget *)This, textRenderingParams))
+#pragma deprecated("ID2D1BitmapRenderTarget_GetTextRenderingParams")
 
 #define ID2D1BitmapRenderTarget_SetTags(This, tag1, tag2) \
     ((This)->lpVtbl->Base.SetTags((ID2D1RenderTarget *)This, tag1, tag2))
+#pragma deprecated("ID2D1BitmapRenderTarget_SetTags")
 
 #define ID2D1BitmapRenderTarget_GetTags(This, tag1, tag2) \
     ((This)->lpVtbl->Base.GetTags((ID2D1RenderTarget *)This, tag1, tag2))
+#pragma deprecated("ID2D1BitmapRenderTarget_GetTags")
 
 #define ID2D1BitmapRenderTarget_PushLayer(This, layerParameters, layer) \
     ((This)->lpVtbl->Base.PushLayer((ID2D1RenderTarget *)This, layerParameters, layer))
+#pragma deprecated("ID2D1BitmapRenderTarget_PushLayer")
 
 #define ID2D1BitmapRenderTarget_PopLayer(This) \
     ((This)->lpVtbl->Base.PopLayer((ID2D1RenderTarget *)This))
+#pragma deprecated("ID2D1BitmapRenderTarget_PopLayer")
 
 #define ID2D1BitmapRenderTarget_Flush(This, tag1, tag2) \
     ((This)->lpVtbl->Base.Flush((ID2D1RenderTarget *)This, tag1, tag2))
+#pragma deprecated("ID2D1BitmapRenderTarget_Flush")
 
 #define ID2D1BitmapRenderTarget_SaveDrawingState(This, drawingStateBlock) \
     ((This)->lpVtbl->Base.SaveDrawingState((ID2D1RenderTarget *)This, drawingStateBlock))
+#pragma deprecated("ID2D1BitmapRenderTarget_SaveDrawingState")
 
 #define ID2D1BitmapRenderTarget_RestoreDrawingState(This, drawingStateBlock) \
     ((This)->lpVtbl->Base.RestoreDrawingState((ID2D1RenderTarget *)This, drawingStateBlock))
+#pragma deprecated("ID2D1BitmapRenderTarget_RestoreDrawingState")
 
 #define ID2D1BitmapRenderTarget_PushAxisAlignedClip(This, clipRect, antialiasMode) \
     ((This)->lpVtbl->Base.PushAxisAlignedClip((ID2D1RenderTarget *)This, clipRect, antialiasMode))
+#pragma deprecated("ID2D1BitmapRenderTarget_PushAxisAlignedClip")
 
 #define ID2D1BitmapRenderTarget_PopAxisAlignedClip(This) \
     ((This)->lpVtbl->Base.PopAxisAlignedClip((ID2D1RenderTarget *)This))
+#pragma deprecated("ID2D1BitmapRenderTarget_PopAxisAlignedClip")
 
 #define ID2D1BitmapRenderTarget_Clear(This, clearColor) \
     ((This)->lpVtbl->Base.Clear((ID2D1RenderTarget *)This, clearColor))
+#pragma deprecated("ID2D1BitmapRenderTarget_Clear")
 
 #define ID2D1BitmapRenderTarget_BeginDraw(This) \
     ((This)->lpVtbl->Base.BeginDraw((ID2D1RenderTarget *)This))
+#pragma deprecated("ID2D1BitmapRenderTarget_BeginDraw")
 
 #define ID2D1BitmapRenderTarget_EndDraw(This, tag1, tag2) \
     ((This)->lpVtbl->Base.EndDraw((ID2D1RenderTarget *)This, tag1, tag2))
+#pragma deprecated("ID2D1BitmapRenderTarget_EndDraw")
 
 #define ID2D1BitmapRenderTarget_GetPixelFormat(This) \
     ((This)->lpVtbl->Base.GetPixelFormat((ID2D1RenderTarget *)This))
+#pragma deprecated("ID2D1BitmapRenderTarget_GetPixelFormat")
 
 #define ID2D1BitmapRenderTarget_SetDpi(This, dpiX, dpiY) \
     ((This)->lpVtbl->Base.SetDpi((ID2D1RenderTarget *)This, dpiX, dpiY))
+#pragma deprecated("ID2D1BitmapRenderTarget_SetDpi")
 
 #define ID2D1BitmapRenderTarget_GetDpi(This, dpiX, dpiY) \
     ((This)->lpVtbl->Base.GetDpi((ID2D1RenderTarget *)This, dpiX, dpiY))
+#pragma deprecated("ID2D1BitmapRenderTarget_GetDpi")
 
 #define ID2D1BitmapRenderTarget_GetSize(This) \
     ((This)->lpVtbl->Base.GetSize((ID2D1RenderTarget *)This))
+#pragma deprecated("ID2D1BitmapRenderTarget_GetSize")
 
 #define ID2D1BitmapRenderTarget_GetPixelSize(This) \
     ((This)->lpVtbl->Base.GetPixelSize((ID2D1RenderTarget *)This))
+#pragma deprecated("ID2D1BitmapRenderTarget_GetPixelSize")
 
 #define ID2D1BitmapRenderTarget_GetMaximumBitmapSize(This) \
     ((This)->lpVtbl->Base.GetMaximumBitmapSize((ID2D1RenderTarget *)This))
+#pragma deprecated("ID2D1BitmapRenderTarget_GetMaximumBitmapSize")
 
 #define ID2D1BitmapRenderTarget_IsSupported(This, renderTargetProperties) \
     ((This)->lpVtbl->Base.IsSupported((ID2D1RenderTarget *)This, renderTargetProperties))
+#pragma deprecated("ID2D1BitmapRenderTarget_IsSupported")
 
 #define ID2D1BitmapRenderTarget_GetBitmap(This, bitmap) \
     ((This)->lpVtbl->GetBitmap(This, bitmap))
+#pragma deprecated("ID2D1BitmapRenderTarget_GetBitmap")
 
 typedef interface ID2D1HwndRenderTarget ID2D1HwndRenderTarget;
 
@@ -6473,183 +6871,243 @@ interface ID2D1HwndRenderTarget
 
 #define ID2D1HwndRenderTarget_QueryInterface(This, riid, ppv) \
     ((This)->lpVtbl->Base.Base.Base.QueryInterface((IUnknown *)This, riid, ppv))
+#pragma deprecated("ID2D1HwndRenderTarget_QueryInterface")
 
 #define ID2D1HwndRenderTarget_AddRef(This) \
     ((This)->lpVtbl->Base.Base.Base.AddRef((IUnknown *)This))
+#pragma deprecated("ID2D1HwndRenderTarget_AddRef")
 
 #define ID2D1HwndRenderTarget_Release(This) \
     ((This)->lpVtbl->Base.Base.Base.Release((IUnknown *)This))
+#pragma deprecated("ID2D1HwndRenderTarget_Release")
 
 #define ID2D1HwndRenderTarget_GetFactory(This, factory) \
     ((This)->lpVtbl->Base.Base.GetFactory((ID2D1Resource *)This, factory))
+#pragma deprecated("ID2D1HwndRenderTarget_GetFactory")
 
 #define ID2D1HwndRenderTarget_CreateBitmap(This, size, srcData, pitch, bitmapProperties, bitmap) \
     ((This)->lpVtbl->Base.CreateBitmap((ID2D1RenderTarget *)This, size, srcData, pitch, bitmapProperties, bitmap))
+#pragma deprecated("ID2D1HwndRenderTarget_CreateBitmap")
 
 #define ID2D1HwndRenderTarget_CreateBitmapFromWicBitmap(This, wicBitmapSource, bitmapProperties, bitmap) \
     ((This)->lpVtbl->Base.CreateBitmapFromWicBitmap((ID2D1RenderTarget *)This, wicBitmapSource, bitmapProperties, bitmap))
+#pragma deprecated("ID2D1HwndRenderTarget_CreateBitmapFromWicBitmap")
 
 #define ID2D1HwndRenderTarget_CreateSharedBitmap(This, riid, data, bitmapProperties, bitmap) \
     ((This)->lpVtbl->Base.CreateSharedBitmap((ID2D1RenderTarget *)This, riid, data, bitmapProperties, bitmap))
+#pragma deprecated("ID2D1HwndRenderTarget_CreateSharedBitmap")
 
 #define ID2D1HwndRenderTarget_CreateBitmapBrush(This, bitmap, bitmapBrushProperties, brushProperties, bitmapBrush) \
     ((This)->lpVtbl->Base.CreateBitmapBrush((ID2D1RenderTarget *)This, bitmap, bitmapBrushProperties, brushProperties, bitmapBrush))
+#pragma deprecated("ID2D1HwndRenderTarget_CreateBitmapBrush")
 
 #define ID2D1HwndRenderTarget_CreateSolidColorBrush(This, color, brushProperties, solidColorBrush) \
     ((This)->lpVtbl->Base.CreateSolidColorBrush((ID2D1RenderTarget *)This, color, brushProperties, solidColorBrush))
+#pragma deprecated("ID2D1HwndRenderTarget_CreateSolidColorBrush")
 
 #define ID2D1HwndRenderTarget_CreateGradientStopCollection(This, gradientStops, gradientStopsCount, colorInterpolationGamma, extendMode, gradientStopCollection) \
     ((This)->lpVtbl->Base.CreateGradientStopCollection((ID2D1RenderTarget *)This, gradientStops, gradientStopsCount, colorInterpolationGamma, extendMode, gradientStopCollection))
+#pragma deprecated("ID2D1HwndRenderTarget_CreateGradientStopCollection")
 
 #define ID2D1HwndRenderTarget_CreateLinearGradientBrush(This, linearGradientBrushProperties, brushProperties, gradientStopCollection, linearGradientBrush) \
     ((This)->lpVtbl->Base.CreateLinearGradientBrush((ID2D1RenderTarget *)This, linearGradientBrushProperties, brushProperties, gradientStopCollection, linearGradientBrush))
+#pragma deprecated("ID2D1HwndRenderTarget_CreateLinearGradientBrush")
 
 #define ID2D1HwndRenderTarget_CreateRadialGradientBrush(This, radialGradientBrushProperties, brushProperties, gradientStopCollection, radialGradientBrush) \
     ((This)->lpVtbl->Base.CreateRadialGradientBrush((ID2D1RenderTarget *)This, radialGradientBrushProperties, brushProperties, gradientStopCollection, radialGradientBrush))
+#pragma deprecated("ID2D1HwndRenderTarget_CreateRadialGradientBrush")
 
 #define ID2D1HwndRenderTarget_CreateCompatibleRenderTarget(This, desiredSize, desiredPixelSize, desiredFormat, options, bitmapRenderTarget) \
     ((This)->lpVtbl->Base.CreateCompatibleRenderTarget((ID2D1RenderTarget *)This, desiredSize, desiredPixelSize, desiredFormat, options, bitmapRenderTarget))
+#pragma deprecated("ID2D1HwndRenderTarget_CreateCompatibleRenderTarget")
 
 #define ID2D1HwndRenderTarget_CreateLayer(This, size, layer) \
     ((This)->lpVtbl->Base.CreateLayer((ID2D1RenderTarget *)This, size, layer))
+#pragma deprecated("ID2D1HwndRenderTarget_CreateLayer")
 
 #define ID2D1HwndRenderTarget_CreateMesh(This, mesh) \
     ((This)->lpVtbl->Base.CreateMesh((ID2D1RenderTarget *)This, mesh))
+#pragma deprecated("ID2D1HwndRenderTarget_CreateMesh")
 
 #define ID2D1HwndRenderTarget_DrawLine(This, point0, point1, brush, strokeWidth, strokeStyle) \
     ((This)->lpVtbl->Base.DrawLine((ID2D1RenderTarget *)This, point0, point1, brush, strokeWidth, strokeStyle))
+#pragma deprecated("ID2D1HwndRenderTarget_DrawLine")
 
 #define ID2D1HwndRenderTarget_DrawRectangle(This, rect, brush, strokeWidth, strokeStyle) \
     ((This)->lpVtbl->Base.DrawRectangle((ID2D1RenderTarget *)This, rect, brush, strokeWidth, strokeStyle))
+#pragma deprecated("ID2D1HwndRenderTarget_DrawRectangle")
 
 #define ID2D1HwndRenderTarget_FillRectangle(This, rect, brush) \
     ((This)->lpVtbl->Base.FillRectangle((ID2D1RenderTarget *)This, rect, brush))
+#pragma deprecated("ID2D1HwndRenderTarget_FillRectangle")
 
 #define ID2D1HwndRenderTarget_DrawRoundedRectangle(This, roundedRect, brush, strokeWidth, strokeStyle) \
     ((This)->lpVtbl->Base.DrawRoundedRectangle((ID2D1RenderTarget *)This, roundedRect, brush, strokeWidth, strokeStyle))
+#pragma deprecated("ID2D1HwndRenderTarget_DrawRoundedRectangle")
 
 #define ID2D1HwndRenderTarget_FillRoundedRectangle(This, roundedRect, brush) \
     ((This)->lpVtbl->Base.FillRoundedRectangle((ID2D1RenderTarget *)This, roundedRect, brush))
+#pragma deprecated("ID2D1HwndRenderTarget_FillRoundedRectangle")
 
 #define ID2D1HwndRenderTarget_DrawEllipse(This, ellipse, brush, strokeWidth, strokeStyle) \
     ((This)->lpVtbl->Base.DrawEllipse((ID2D1RenderTarget *)This, ellipse, brush, strokeWidth, strokeStyle))
+#pragma deprecated("ID2D1HwndRenderTarget_DrawEllipse")
 
 #define ID2D1HwndRenderTarget_FillEllipse(This, ellipse, brush) \
     ((This)->lpVtbl->Base.FillEllipse((ID2D1RenderTarget *)This, ellipse, brush))
+#pragma deprecated("ID2D1HwndRenderTarget_FillEllipse")
 
 #define ID2D1HwndRenderTarget_DrawGeometry(This, geometry, brush, strokeWidth, strokeStyle) \
     ((This)->lpVtbl->Base.DrawGeometry((ID2D1RenderTarget *)This, geometry, brush, strokeWidth, strokeStyle))
+#pragma deprecated("ID2D1HwndRenderTarget_DrawGeometry")
 
 #define ID2D1HwndRenderTarget_FillGeometry(This, geometry, brush, opacityBrush) \
     ((This)->lpVtbl->Base.FillGeometry((ID2D1RenderTarget *)This, geometry, brush, opacityBrush))
+#pragma deprecated("ID2D1HwndRenderTarget_FillGeometry")
 
 #define ID2D1HwndRenderTarget_FillMesh(This, mesh, brush) \
     ((This)->lpVtbl->Base.FillMesh((ID2D1RenderTarget *)This, mesh, brush))
+#pragma deprecated("ID2D1HwndRenderTarget_FillMesh")
 
 #define ID2D1HwndRenderTarget_FillOpacityMask(This, opacityMask, brush, content, destinationRectangle, sourceRectangle) \
     ((This)->lpVtbl->Base.FillOpacityMask((ID2D1RenderTarget *)This, opacityMask, brush, content, destinationRectangle, sourceRectangle))
+#pragma deprecated("ID2D1HwndRenderTarget_FillOpacityMask")
 
 #define ID2D1HwndRenderTarget_DrawBitmap(This, bitmap, destinationRectangle, opacity, interpolationMode, sourceRectangle) \
     ((This)->lpVtbl->Base.DrawBitmap((ID2D1RenderTarget *)This, bitmap, destinationRectangle, opacity, interpolationMode, sourceRectangle))
+#pragma deprecated("ID2D1HwndRenderTarget_DrawBitmap")
 
 #define ID2D1HwndRenderTarget_DrawText(This, string, stringLength, textFormat, layoutRect, defaultForegroundBrush, options, measuringMode) \
     ((This)->lpVtbl->Base.DrawText((ID2D1RenderTarget *)This, string, stringLength, textFormat, layoutRect, defaultForegroundBrush, options, measuringMode))
+#pragma deprecated("ID2D1HwndRenderTarget_DrawText")
 
 #define ID2D1HwndRenderTarget_DrawTextLayout(This, origin, textLayout, defaultForegroundBrush, options) \
     ((This)->lpVtbl->Base.DrawTextLayout((ID2D1RenderTarget *)This, origin, textLayout, defaultForegroundBrush, options))
+#pragma deprecated("ID2D1HwndRenderTarget_DrawTextLayout")
 
 #define ID2D1HwndRenderTarget_DrawGlyphRun(This, baselineOrigin, glyphRun, foregroundBrush, measuringMode) \
     ((This)->lpVtbl->Base.DrawGlyphRun((ID2D1RenderTarget *)This, baselineOrigin, glyphRun, foregroundBrush, measuringMode))
+#pragma deprecated("ID2D1HwndRenderTarget_DrawGlyphRun")
 
 #define ID2D1HwndRenderTarget_SetTransform(This, transform) \
     ((This)->lpVtbl->Base.SetTransform((ID2D1RenderTarget *)This, transform))
+#pragma deprecated("ID2D1HwndRenderTarget_SetTransform")
 
 #define ID2D1HwndRenderTarget_GetTransform(This, transform) \
     ((This)->lpVtbl->Base.GetTransform((ID2D1RenderTarget *)This, transform))
+#pragma deprecated("ID2D1HwndRenderTarget_GetTransform")
 
 #define ID2D1HwndRenderTarget_SetAntialiasMode(This, antialiasMode) \
     ((This)->lpVtbl->Base.SetAntialiasMode((ID2D1RenderTarget *)This, antialiasMode))
+#pragma deprecated("ID2D1HwndRenderTarget_SetAntialiasMode")
 
 #define ID2D1HwndRenderTarget_GetAntialiasMode(This) \
     ((This)->lpVtbl->Base.GetAntialiasMode((ID2D1RenderTarget *)This))
+#pragma deprecated("ID2D1HwndRenderTarget_GetAntialiasMode")
 
 #define ID2D1HwndRenderTarget_SetTextAntialiasMode(This, textAntialiasMode) \
     ((This)->lpVtbl->Base.SetTextAntialiasMode((ID2D1RenderTarget *)This, textAntialiasMode))
+#pragma deprecated("ID2D1HwndRenderTarget_SetTextAntialiasMode")
 
 #define ID2D1HwndRenderTarget_GetTextAntialiasMode(This) \
     ((This)->lpVtbl->Base.GetTextAntialiasMode((ID2D1RenderTarget *)This))
+#pragma deprecated("ID2D1HwndRenderTarget_GetTextAntialiasMode")
 
 #define ID2D1HwndRenderTarget_SetTextRenderingParams(This, textRenderingParams) \
     ((This)->lpVtbl->Base.SetTextRenderingParams((ID2D1RenderTarget *)This, textRenderingParams))
+#pragma deprecated("ID2D1HwndRenderTarget_SetTextRenderingParams")
 
 #define ID2D1HwndRenderTarget_GetTextRenderingParams(This, textRenderingParams) \
     ((This)->lpVtbl->Base.GetTextRenderingParams((ID2D1RenderTarget *)This, textRenderingParams))
+#pragma deprecated("ID2D1HwndRenderTarget_GetTextRenderingParams")
 
 #define ID2D1HwndRenderTarget_SetTags(This, tag1, tag2) \
     ((This)->lpVtbl->Base.SetTags((ID2D1RenderTarget *)This, tag1, tag2))
+#pragma deprecated("ID2D1HwndRenderTarget_SetTags")
 
 #define ID2D1HwndRenderTarget_GetTags(This, tag1, tag2) \
     ((This)->lpVtbl->Base.GetTags((ID2D1RenderTarget *)This, tag1, tag2))
+#pragma deprecated("ID2D1HwndRenderTarget_GetTags")
 
 #define ID2D1HwndRenderTarget_PushLayer(This, layerParameters, layer) \
     ((This)->lpVtbl->Base.PushLayer((ID2D1RenderTarget *)This, layerParameters, layer))
+#pragma deprecated("ID2D1HwndRenderTarget_PushLayer")
 
 #define ID2D1HwndRenderTarget_PopLayer(This) \
     ((This)->lpVtbl->Base.PopLayer((ID2D1RenderTarget *)This))
+#pragma deprecated("ID2D1HwndRenderTarget_PopLayer")
 
 #define ID2D1HwndRenderTarget_Flush(This, tag1, tag2) \
     ((This)->lpVtbl->Base.Flush((ID2D1RenderTarget *)This, tag1, tag2))
+#pragma deprecated("ID2D1HwndRenderTarget_Flush")
 
 #define ID2D1HwndRenderTarget_SaveDrawingState(This, drawingStateBlock) \
     ((This)->lpVtbl->Base.SaveDrawingState((ID2D1RenderTarget *)This, drawingStateBlock))
+#pragma deprecated("ID2D1HwndRenderTarget_SaveDrawingState")
 
 #define ID2D1HwndRenderTarget_RestoreDrawingState(This, drawingStateBlock) \
     ((This)->lpVtbl->Base.RestoreDrawingState((ID2D1RenderTarget *)This, drawingStateBlock))
+#pragma deprecated("ID2D1HwndRenderTarget_RestoreDrawingState")
 
 #define ID2D1HwndRenderTarget_PushAxisAlignedClip(This, clipRect, antialiasMode) \
     ((This)->lpVtbl->Base.PushAxisAlignedClip((ID2D1RenderTarget *)This, clipRect, antialiasMode))
+#pragma deprecated("ID2D1HwndRenderTarget_PushAxisAlignedClip")
 
 #define ID2D1HwndRenderTarget_PopAxisAlignedClip(This) \
     ((This)->lpVtbl->Base.PopAxisAlignedClip((ID2D1RenderTarget *)This))
+#pragma deprecated("ID2D1HwndRenderTarget_PopAxisAlignedClip")
 
 #define ID2D1HwndRenderTarget_Clear(This, clearColor) \
     ((This)->lpVtbl->Base.Clear((ID2D1RenderTarget *)This, clearColor))
+#pragma deprecated("ID2D1HwndRenderTarget_Clear")
 
 #define ID2D1HwndRenderTarget_BeginDraw(This) \
     ((This)->lpVtbl->Base.BeginDraw((ID2D1RenderTarget *)This))
+#pragma deprecated("ID2D1HwndRenderTarget_BeginDraw")
 
 #define ID2D1HwndRenderTarget_EndDraw(This, tag1, tag2) \
     ((This)->lpVtbl->Base.EndDraw((ID2D1RenderTarget *)This, tag1, tag2))
+#pragma deprecated("ID2D1HwndRenderTarget_EndDraw")
 
 #define ID2D1HwndRenderTarget_GetPixelFormat(This) \
     ((This)->lpVtbl->Base.GetPixelFormat((ID2D1RenderTarget *)This))
+#pragma deprecated("ID2D1HwndRenderTarget_GetPixelFormat")
 
 #define ID2D1HwndRenderTarget_SetDpi(This, dpiX, dpiY) \
     ((This)->lpVtbl->Base.SetDpi((ID2D1RenderTarget *)This, dpiX, dpiY))
+#pragma deprecated("ID2D1HwndRenderTarget_SetDpi")
 
 #define ID2D1HwndRenderTarget_GetDpi(This, dpiX, dpiY) \
     ((This)->lpVtbl->Base.GetDpi((ID2D1RenderTarget *)This, dpiX, dpiY))
+#pragma deprecated("ID2D1HwndRenderTarget_GetDpi")
 
 #define ID2D1HwndRenderTarget_GetSize(This) \
     ((This)->lpVtbl->Base.GetSize((ID2D1RenderTarget *)This))
+#pragma deprecated("ID2D1HwndRenderTarget_GetSize")
 
 #define ID2D1HwndRenderTarget_GetPixelSize(This) \
     ((This)->lpVtbl->Base.GetPixelSize((ID2D1RenderTarget *)This))
+#pragma deprecated("ID2D1HwndRenderTarget_GetPixelSize")
 
 #define ID2D1HwndRenderTarget_GetMaximumBitmapSize(This) \
     ((This)->lpVtbl->Base.GetMaximumBitmapSize((ID2D1RenderTarget *)This))
+#pragma deprecated("ID2D1HwndRenderTarget_GetMaximumBitmapSize")
 
 #define ID2D1HwndRenderTarget_IsSupported(This, renderTargetProperties) \
     ((This)->lpVtbl->Base.IsSupported((ID2D1RenderTarget *)This, renderTargetProperties))
+#pragma deprecated("ID2D1HwndRenderTarget_IsSupported")
 
 #define ID2D1HwndRenderTarget_CheckWindowState(This) \
     ((This)->lpVtbl->CheckWindowState(This))
+#pragma deprecated("ID2D1HwndRenderTarget_CheckWindowState")
 
 #define ID2D1HwndRenderTarget_Resize(This, pixelSize) \
     ((This)->lpVtbl->Resize(This, pixelSize))
+#pragma deprecated("ID2D1HwndRenderTarget_Resize")
 
 #define ID2D1HwndRenderTarget_GetHwnd(This) \
     ((This)->lpVtbl->GetHwnd(This))
+#pragma deprecated("ID2D1HwndRenderTarget_GetHwnd")
 
 
 #endif /* WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_APP) */
@@ -6686,18 +7144,23 @@ interface ID2D1GdiInteropRenderTarget
 
 #define ID2D1GdiInteropRenderTarget_QueryInterface(This, riid, ppv) \
     ((This)->lpVtbl->Base.QueryInterface((IUnknown *)This, riid, ppv))
+#pragma deprecated("ID2D1GdiInteropRenderTarget_QueryInterface")
 
 #define ID2D1GdiInteropRenderTarget_AddRef(This) \
     ((This)->lpVtbl->Base.AddRef((IUnknown *)This))
+#pragma deprecated("ID2D1GdiInteropRenderTarget_AddRef")
 
 #define ID2D1GdiInteropRenderTarget_Release(This) \
     ((This)->lpVtbl->Base.Release((IUnknown *)This))
+#pragma deprecated("ID2D1GdiInteropRenderTarget_Release")
 
 #define ID2D1GdiInteropRenderTarget_GetDC(This, mode, hdc) \
     ((This)->lpVtbl->GetDC(This, mode, hdc))
+#pragma deprecated("ID2D1GdiInteropRenderTarget_GetDC")
 
 #define ID2D1GdiInteropRenderTarget_ReleaseDC(This, update) \
     ((This)->lpVtbl->ReleaseDC(This, update))
+#pragma deprecated("ID2D1GdiInteropRenderTarget_ReleaseDC")
 
 
 #endif /* WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP) */
@@ -6729,177 +7192,235 @@ interface ID2D1DCRenderTarget
 
 #define ID2D1DCRenderTarget_QueryInterface(This, riid, ppv) \
     ((This)->lpVtbl->Base.Base.Base.QueryInterface((IUnknown *)This, riid, ppv))
+#pragma deprecated("ID2D1DCRenderTarget_QueryInterface")
 
 #define ID2D1DCRenderTarget_AddRef(This) \
     ((This)->lpVtbl->Base.Base.Base.AddRef((IUnknown *)This))
+#pragma deprecated("ID2D1DCRenderTarget_AddRef")
 
 #define ID2D1DCRenderTarget_Release(This) \
     ((This)->lpVtbl->Base.Base.Base.Release((IUnknown *)This))
+#pragma deprecated("ID2D1DCRenderTarget_Release")
 
 #define ID2D1DCRenderTarget_GetFactory(This, factory) \
     ((This)->lpVtbl->Base.Base.GetFactory((ID2D1Resource *)This, factory))
+#pragma deprecated("ID2D1DCRenderTarget_GetFactory")
 
 #define ID2D1DCRenderTarget_CreateBitmap(This, size, srcData, pitch, bitmapProperties, bitmap) \
     ((This)->lpVtbl->Base.CreateBitmap((ID2D1RenderTarget *)This, size, srcData, pitch, bitmapProperties, bitmap))
+#pragma deprecated("ID2D1DCRenderTarget_CreateBitmap")
 
 #define ID2D1DCRenderTarget_CreateBitmapFromWicBitmap(This, wicBitmapSource, bitmapProperties, bitmap) \
     ((This)->lpVtbl->Base.CreateBitmapFromWicBitmap((ID2D1RenderTarget *)This, wicBitmapSource, bitmapProperties, bitmap))
+#pragma deprecated("ID2D1DCRenderTarget_CreateBitmapFromWicBitmap")
 
 #define ID2D1DCRenderTarget_CreateSharedBitmap(This, riid, data, bitmapProperties, bitmap) \
     ((This)->lpVtbl->Base.CreateSharedBitmap((ID2D1RenderTarget *)This, riid, data, bitmapProperties, bitmap))
+#pragma deprecated("ID2D1DCRenderTarget_CreateSharedBitmap")
 
 #define ID2D1DCRenderTarget_CreateBitmapBrush(This, bitmap, bitmapBrushProperties, brushProperties, bitmapBrush) \
     ((This)->lpVtbl->Base.CreateBitmapBrush((ID2D1RenderTarget *)This, bitmap, bitmapBrushProperties, brushProperties, bitmapBrush))
+#pragma deprecated("ID2D1DCRenderTarget_CreateBitmapBrush")
 
 #define ID2D1DCRenderTarget_CreateSolidColorBrush(This, color, brushProperties, solidColorBrush) \
     ((This)->lpVtbl->Base.CreateSolidColorBrush((ID2D1RenderTarget *)This, color, brushProperties, solidColorBrush))
+#pragma deprecated("ID2D1DCRenderTarget_CreateSolidColorBrush")
 
 #define ID2D1DCRenderTarget_CreateGradientStopCollection(This, gradientStops, gradientStopsCount, colorInterpolationGamma, extendMode, gradientStopCollection) \
     ((This)->lpVtbl->Base.CreateGradientStopCollection((ID2D1RenderTarget *)This, gradientStops, gradientStopsCount, colorInterpolationGamma, extendMode, gradientStopCollection))
+#pragma deprecated("ID2D1DCRenderTarget_CreateGradientStopCollection")
 
 #define ID2D1DCRenderTarget_CreateLinearGradientBrush(This, linearGradientBrushProperties, brushProperties, gradientStopCollection, linearGradientBrush) \
     ((This)->lpVtbl->Base.CreateLinearGradientBrush((ID2D1RenderTarget *)This, linearGradientBrushProperties, brushProperties, gradientStopCollection, linearGradientBrush))
+#pragma deprecated("ID2D1DCRenderTarget_CreateLinearGradientBrush")
 
 #define ID2D1DCRenderTarget_CreateRadialGradientBrush(This, radialGradientBrushProperties, brushProperties, gradientStopCollection, radialGradientBrush) \
     ((This)->lpVtbl->Base.CreateRadialGradientBrush((ID2D1RenderTarget *)This, radialGradientBrushProperties, brushProperties, gradientStopCollection, radialGradientBrush))
+#pragma deprecated("ID2D1DCRenderTarget_CreateRadialGradientBrush")
 
 #define ID2D1DCRenderTarget_CreateCompatibleRenderTarget(This, desiredSize, desiredPixelSize, desiredFormat, options, bitmapRenderTarget) \
     ((This)->lpVtbl->Base.CreateCompatibleRenderTarget((ID2D1RenderTarget *)This, desiredSize, desiredPixelSize, desiredFormat, options, bitmapRenderTarget))
+#pragma deprecated("ID2D1DCRenderTarget_CreateCompatibleRenderTarget")
 
 #define ID2D1DCRenderTarget_CreateLayer(This, size, layer) \
     ((This)->lpVtbl->Base.CreateLayer((ID2D1RenderTarget *)This, size, layer))
+#pragma deprecated("ID2D1DCRenderTarget_CreateLayer")
 
 #define ID2D1DCRenderTarget_CreateMesh(This, mesh) \
     ((This)->lpVtbl->Base.CreateMesh((ID2D1RenderTarget *)This, mesh))
+#pragma deprecated("ID2D1DCRenderTarget_CreateMesh")
 
 #define ID2D1DCRenderTarget_DrawLine(This, point0, point1, brush, strokeWidth, strokeStyle) \
     ((This)->lpVtbl->Base.DrawLine((ID2D1RenderTarget *)This, point0, point1, brush, strokeWidth, strokeStyle))
+#pragma deprecated("ID2D1DCRenderTarget_DrawLine")
 
 #define ID2D1DCRenderTarget_DrawRectangle(This, rect, brush, strokeWidth, strokeStyle) \
     ((This)->lpVtbl->Base.DrawRectangle((ID2D1RenderTarget *)This, rect, brush, strokeWidth, strokeStyle))
+#pragma deprecated("ID2D1DCRenderTarget_DrawRectangle")
 
 #define ID2D1DCRenderTarget_FillRectangle(This, rect, brush) \
     ((This)->lpVtbl->Base.FillRectangle((ID2D1RenderTarget *)This, rect, brush))
+#pragma deprecated("ID2D1DCRenderTarget_FillRectangle")
 
 #define ID2D1DCRenderTarget_DrawRoundedRectangle(This, roundedRect, brush, strokeWidth, strokeStyle) \
     ((This)->lpVtbl->Base.DrawRoundedRectangle((ID2D1RenderTarget *)This, roundedRect, brush, strokeWidth, strokeStyle))
+#pragma deprecated("ID2D1DCRenderTarget_DrawRoundedRectangle")
 
 #define ID2D1DCRenderTarget_FillRoundedRectangle(This, roundedRect, brush) \
     ((This)->lpVtbl->Base.FillRoundedRectangle((ID2D1RenderTarget *)This, roundedRect, brush))
+#pragma deprecated("ID2D1DCRenderTarget_FillRoundedRectangle")
 
 #define ID2D1DCRenderTarget_DrawEllipse(This, ellipse, brush, strokeWidth, strokeStyle) \
     ((This)->lpVtbl->Base.DrawEllipse((ID2D1RenderTarget *)This, ellipse, brush, strokeWidth, strokeStyle))
+#pragma deprecated("ID2D1DCRenderTarget_DrawEllipse")
 
 #define ID2D1DCRenderTarget_FillEllipse(This, ellipse, brush) \
     ((This)->lpVtbl->Base.FillEllipse((ID2D1RenderTarget *)This, ellipse, brush))
+#pragma deprecated("ID2D1DCRenderTarget_FillEllipse")
 
 #define ID2D1DCRenderTarget_DrawGeometry(This, geometry, brush, strokeWidth, strokeStyle) \
     ((This)->lpVtbl->Base.DrawGeometry((ID2D1RenderTarget *)This, geometry, brush, strokeWidth, strokeStyle))
+#pragma deprecated("ID2D1DCRenderTarget_DrawGeometry")
 
 #define ID2D1DCRenderTarget_FillGeometry(This, geometry, brush, opacityBrush) \
     ((This)->lpVtbl->Base.FillGeometry((ID2D1RenderTarget *)This, geometry, brush, opacityBrush))
+#pragma deprecated("ID2D1DCRenderTarget_FillGeometry")
 
 #define ID2D1DCRenderTarget_FillMesh(This, mesh, brush) \
     ((This)->lpVtbl->Base.FillMesh((ID2D1RenderTarget *)This, mesh, brush))
+#pragma deprecated("ID2D1DCRenderTarget_FillMesh")
 
 #define ID2D1DCRenderTarget_FillOpacityMask(This, opacityMask, brush, content, destinationRectangle, sourceRectangle) \
     ((This)->lpVtbl->Base.FillOpacityMask((ID2D1RenderTarget *)This, opacityMask, brush, content, destinationRectangle, sourceRectangle))
+#pragma deprecated("ID2D1DCRenderTarget_FillOpacityMask")
 
 #define ID2D1DCRenderTarget_DrawBitmap(This, bitmap, destinationRectangle, opacity, interpolationMode, sourceRectangle) \
     ((This)->lpVtbl->Base.DrawBitmap((ID2D1RenderTarget *)This, bitmap, destinationRectangle, opacity, interpolationMode, sourceRectangle))
+#pragma deprecated("ID2D1DCRenderTarget_DrawBitmap")
 
 #define ID2D1DCRenderTarget_DrawText(This, string, stringLength, textFormat, layoutRect, defaultForegroundBrush, options, measuringMode) \
     ((This)->lpVtbl->Base.DrawText((ID2D1RenderTarget *)This, string, stringLength, textFormat, layoutRect, defaultForegroundBrush, options, measuringMode))
+#pragma deprecated("ID2D1DCRenderTarget_DrawText")
 
 #define ID2D1DCRenderTarget_DrawTextLayout(This, origin, textLayout, defaultForegroundBrush, options) \
     ((This)->lpVtbl->Base.DrawTextLayout((ID2D1RenderTarget *)This, origin, textLayout, defaultForegroundBrush, options))
+#pragma deprecated("ID2D1DCRenderTarget_DrawTextLayout")
 
 #define ID2D1DCRenderTarget_DrawGlyphRun(This, baselineOrigin, glyphRun, foregroundBrush, measuringMode) \
     ((This)->lpVtbl->Base.DrawGlyphRun((ID2D1RenderTarget *)This, baselineOrigin, glyphRun, foregroundBrush, measuringMode))
+#pragma deprecated("ID2D1DCRenderTarget_DrawGlyphRun")
 
 #define ID2D1DCRenderTarget_SetTransform(This, transform) \
     ((This)->lpVtbl->Base.SetTransform((ID2D1RenderTarget *)This, transform))
+#pragma deprecated("ID2D1DCRenderTarget_SetTransform")
 
 #define ID2D1DCRenderTarget_GetTransform(This, transform) \
     ((This)->lpVtbl->Base.GetTransform((ID2D1RenderTarget *)This, transform))
+#pragma deprecated("ID2D1DCRenderTarget_GetTransform")
 
 #define ID2D1DCRenderTarget_SetAntialiasMode(This, antialiasMode) \
     ((This)->lpVtbl->Base.SetAntialiasMode((ID2D1RenderTarget *)This, antialiasMode))
+#pragma deprecated("ID2D1DCRenderTarget_SetAntialiasMode")
 
 #define ID2D1DCRenderTarget_GetAntialiasMode(This) \
     ((This)->lpVtbl->Base.GetAntialiasMode((ID2D1RenderTarget *)This))
+#pragma deprecated("ID2D1DCRenderTarget_GetAntialiasMode")
 
 #define ID2D1DCRenderTarget_SetTextAntialiasMode(This, textAntialiasMode) \
     ((This)->lpVtbl->Base.SetTextAntialiasMode((ID2D1RenderTarget *)This, textAntialiasMode))
+#pragma deprecated("ID2D1DCRenderTarget_SetTextAntialiasMode")
 
 #define ID2D1DCRenderTarget_GetTextAntialiasMode(This) \
     ((This)->lpVtbl->Base.GetTextAntialiasMode((ID2D1RenderTarget *)This))
+#pragma deprecated("ID2D1DCRenderTarget_GetTextAntialiasMode")
 
 #define ID2D1DCRenderTarget_SetTextRenderingParams(This, textRenderingParams) \
     ((This)->lpVtbl->Base.SetTextRenderingParams((ID2D1RenderTarget *)This, textRenderingParams))
+#pragma deprecated("ID2D1DCRenderTarget_SetTextRenderingParams")
 
 #define ID2D1DCRenderTarget_GetTextRenderingParams(This, textRenderingParams) \
     ((This)->lpVtbl->Base.GetTextRenderingParams((ID2D1RenderTarget *)This, textRenderingParams))
+#pragma deprecated("ID2D1DCRenderTarget_GetTextRenderingParams")
 
 #define ID2D1DCRenderTarget_SetTags(This, tag1, tag2) \
     ((This)->lpVtbl->Base.SetTags((ID2D1RenderTarget *)This, tag1, tag2))
+#pragma deprecated("ID2D1DCRenderTarget_SetTags")
 
 #define ID2D1DCRenderTarget_GetTags(This, tag1, tag2) \
     ((This)->lpVtbl->Base.GetTags((ID2D1RenderTarget *)This, tag1, tag2))
+#pragma deprecated("ID2D1DCRenderTarget_GetTags")
 
 #define ID2D1DCRenderTarget_PushLayer(This, layerParameters, layer) \
     ((This)->lpVtbl->Base.PushLayer((ID2D1RenderTarget *)This, layerParameters, layer))
+#pragma deprecated("ID2D1DCRenderTarget_PushLayer")
 
 #define ID2D1DCRenderTarget_PopLayer(This) \
     ((This)->lpVtbl->Base.PopLayer((ID2D1RenderTarget *)This))
+#pragma deprecated("ID2D1DCRenderTarget_PopLayer")
 
 #define ID2D1DCRenderTarget_Flush(This, tag1, tag2) \
     ((This)->lpVtbl->Base.Flush((ID2D1RenderTarget *)This, tag1, tag2))
+#pragma deprecated("ID2D1DCRenderTarget_Flush")
 
 #define ID2D1DCRenderTarget_SaveDrawingState(This, drawingStateBlock) \
     ((This)->lpVtbl->Base.SaveDrawingState((ID2D1RenderTarget *)This, drawingStateBlock))
+#pragma deprecated("ID2D1DCRenderTarget_SaveDrawingState")
 
 #define ID2D1DCRenderTarget_RestoreDrawingState(This, drawingStateBlock) \
     ((This)->lpVtbl->Base.RestoreDrawingState((ID2D1RenderTarget *)This, drawingStateBlock))
+#pragma deprecated("ID2D1DCRenderTarget_RestoreDrawingState")
 
 #define ID2D1DCRenderTarget_PushAxisAlignedClip(This, clipRect, antialiasMode) \
     ((This)->lpVtbl->Base.PushAxisAlignedClip((ID2D1RenderTarget *)This, clipRect, antialiasMode))
+#pragma deprecated("ID2D1DCRenderTarget_PushAxisAlignedClip")
 
 #define ID2D1DCRenderTarget_PopAxisAlignedClip(This) \
     ((This)->lpVtbl->Base.PopAxisAlignedClip((ID2D1RenderTarget *)This))
+#pragma deprecated("ID2D1DCRenderTarget_PopAxisAlignedClip")
 
 #define ID2D1DCRenderTarget_Clear(This, clearColor) \
     ((This)->lpVtbl->Base.Clear((ID2D1RenderTarget *)This, clearColor))
+#pragma deprecated("ID2D1DCRenderTarget_Clear")
 
 #define ID2D1DCRenderTarget_BeginDraw(This) \
     ((This)->lpVtbl->Base.BeginDraw((ID2D1RenderTarget *)This))
+#pragma deprecated("ID2D1DCRenderTarget_BeginDraw")
 
 #define ID2D1DCRenderTarget_EndDraw(This, tag1, tag2) \
     ((This)->lpVtbl->Base.EndDraw((ID2D1RenderTarget *)This, tag1, tag2))
+#pragma deprecated("ID2D1DCRenderTarget_EndDraw")
 
 #define ID2D1DCRenderTarget_GetPixelFormat(This) \
     ((This)->lpVtbl->Base.GetPixelFormat((ID2D1RenderTarget *)This))
+#pragma deprecated("ID2D1DCRenderTarget_GetPixelFormat")
 
 #define ID2D1DCRenderTarget_SetDpi(This, dpiX, dpiY) \
     ((This)->lpVtbl->Base.SetDpi((ID2D1RenderTarget *)This, dpiX, dpiY))
+#pragma deprecated("ID2D1DCRenderTarget_SetDpi")
 
 #define ID2D1DCRenderTarget_GetDpi(This, dpiX, dpiY) \
     ((This)->lpVtbl->Base.GetDpi((ID2D1RenderTarget *)This, dpiX, dpiY))
+#pragma deprecated("ID2D1DCRenderTarget_GetDpi")
 
 #define ID2D1DCRenderTarget_GetSize(This) \
     ((This)->lpVtbl->Base.GetSize((ID2D1RenderTarget *)This))
+#pragma deprecated("ID2D1DCRenderTarget_GetSize")
 
 #define ID2D1DCRenderTarget_GetPixelSize(This) \
     ((This)->lpVtbl->Base.GetPixelSize((ID2D1RenderTarget *)This))
+#pragma deprecated("ID2D1DCRenderTarget_GetPixelSize")
 
 #define ID2D1DCRenderTarget_GetMaximumBitmapSize(This) \
     ((This)->lpVtbl->Base.GetMaximumBitmapSize((ID2D1RenderTarget *)This))
+#pragma deprecated("ID2D1DCRenderTarget_GetMaximumBitmapSize")
 
 #define ID2D1DCRenderTarget_IsSupported(This, renderTargetProperties) \
     ((This)->lpVtbl->Base.IsSupported((ID2D1RenderTarget *)This, renderTargetProperties))
+#pragma deprecated("ID2D1DCRenderTarget_IsSupported")
 
 #define ID2D1DCRenderTarget_BindDC(This, hDC, pSubRect) \
     ((This)->lpVtbl->BindDC(This, hDC, pSubRect))
+#pragma deprecated("ID2D1DCRenderTarget_BindDC")
 
 typedef interface ID2D1Factory ID2D1Factory;
 
@@ -7008,54 +7529,71 @@ interface ID2D1Factory
 
 #define ID2D1Factory_QueryInterface(This, riid, ppv) \
     ((This)->lpVtbl->Base.QueryInterface((IUnknown *)This, riid, ppv))
+#pragma deprecated("ID2D1Factory_QueryInterface")
 
 #define ID2D1Factory_AddRef(This) \
     ((This)->lpVtbl->Base.AddRef((IUnknown *)This))
+#pragma deprecated("ID2D1Factory_AddRef")
 
 #define ID2D1Factory_Release(This) \
     ((This)->lpVtbl->Base.Release((IUnknown *)This))
+#pragma deprecated("ID2D1Factory_Release")
 
 #define ID2D1Factory_ReloadSystemMetrics(This) \
     ((This)->lpVtbl->ReloadSystemMetrics(This))
+#pragma deprecated("ID2D1Factory_ReloadSystemMetrics")
 
 #define ID2D1Factory_GetDesktopDpi(This, dpiX, dpiY) \
     ((This)->lpVtbl->GetDesktopDpi(This, dpiX, dpiY))
+#pragma deprecated("ID2D1Factory_GetDesktopDpi")
 
 #define ID2D1Factory_CreateRectangleGeometry(This, rectangle, rectangleGeometry) \
     ((This)->lpVtbl->CreateRectangleGeometry(This, rectangle, rectangleGeometry))
+#pragma deprecated("ID2D1Factory_CreateRectangleGeometry")
 
 #define ID2D1Factory_CreateRoundedRectangleGeometry(This, roundedRectangle, roundedRectangleGeometry) \
     ((This)->lpVtbl->CreateRoundedRectangleGeometry(This, roundedRectangle, roundedRectangleGeometry))
+#pragma deprecated("ID2D1Factory_CreateRoundedRectangleGeometry")
 
 #define ID2D1Factory_CreateEllipseGeometry(This, ellipse, ellipseGeometry) \
     ((This)->lpVtbl->CreateEllipseGeometry(This, ellipse, ellipseGeometry))
+#pragma deprecated("ID2D1Factory_CreateEllipseGeometry")
 
 #define ID2D1Factory_CreateGeometryGroup(This, fillMode, geometries, geometriesCount, geometryGroup) \
     ((This)->lpVtbl->CreateGeometryGroup(This, fillMode, geometries, geometriesCount, geometryGroup))
+#pragma deprecated("ID2D1Factory_CreateGeometryGroup")
 
 #define ID2D1Factory_CreateTransformedGeometry(This, sourceGeometry, transform, transformedGeometry) \
     ((This)->lpVtbl->CreateTransformedGeometry(This, sourceGeometry, transform, transformedGeometry))
+#pragma deprecated("ID2D1Factory_CreateTransformedGeometry")
 
 #define ID2D1Factory_CreatePathGeometry(This, pathGeometry) \
     ((This)->lpVtbl->CreatePathGeometry(This, pathGeometry))
+#pragma deprecated("ID2D1Factory_CreatePathGeometry")
 
 #define ID2D1Factory_CreateStrokeStyle(This, strokeStyleProperties, dashes, dashesCount, strokeStyle) \
     ((This)->lpVtbl->CreateStrokeStyle(This, strokeStyleProperties, dashes, dashesCount, strokeStyle))
+#pragma deprecated("ID2D1Factory_CreateStrokeStyle")
 
 #define ID2D1Factory_CreateDrawingStateBlock(This, drawingStateDescription, textRenderingParams, drawingStateBlock) \
     ((This)->lpVtbl->CreateDrawingStateBlock(This, drawingStateDescription, textRenderingParams, drawingStateBlock))
+#pragma deprecated("ID2D1Factory_CreateDrawingStateBlock")
 
 #define ID2D1Factory_CreateWicBitmapRenderTarget(This, target, renderTargetProperties, renderTarget) \
     ((This)->lpVtbl->CreateWicBitmapRenderTarget(This, target, renderTargetProperties, renderTarget))
+#pragma deprecated("ID2D1Factory_CreateWicBitmapRenderTarget")
 
 #define ID2D1Factory_CreateHwndRenderTarget(This, renderTargetProperties, hwndRenderTargetProperties, hwndRenderTarget) \
     ((This)->lpVtbl->CreateHwndRenderTarget(This, renderTargetProperties, hwndRenderTargetProperties, hwndRenderTarget))
+#pragma deprecated("ID2D1Factory_CreateHwndRenderTarget")
 
 #define ID2D1Factory_CreateDxgiSurfaceRenderTarget(This, dxgiSurface, renderTargetProperties, renderTarget) \
     ((This)->lpVtbl->CreateDxgiSurfaceRenderTarget(This, dxgiSurface, renderTargetProperties, renderTarget))
+#pragma deprecated("ID2D1Factory_CreateDxgiSurfaceRenderTarget")
 
 #define ID2D1Factory_CreateDCRenderTarget(This, renderTargetProperties, dcRenderTarget) \
     ((This)->lpVtbl->CreateDCRenderTarget(This, renderTargetProperties, dcRenderTarget))
+#pragma deprecated("ID2D1Factory_CreateDCRenderTarget")
 
 
 #endif /* WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_APP) */
