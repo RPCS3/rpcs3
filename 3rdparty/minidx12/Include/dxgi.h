@@ -3,7 +3,7 @@
 /* this ALWAYS GENERATED file contains the definitions for the interfaces */
 
 
- /* File created by MIDL compiler version 8.00.0613 */
+ /* File created by MIDL compiler version 8.01.0618 */
 /* @@MIDL_FILE_HEADING(  ) */
 
 
@@ -273,7 +273,8 @@ enum DXGI_SWAP_CHAIN_FLAG
         DXGI_SWAP_CHAIN_FLAG_FOREGROUND_LAYER	= 128,
         DXGI_SWAP_CHAIN_FLAG_FULLSCREEN_VIDEO	= 256,
         DXGI_SWAP_CHAIN_FLAG_YUV_VIDEO	= 512,
-        DXGI_SWAP_CHAIN_FLAG_HW_PROTECTED	= 1024
+        DXGI_SWAP_CHAIN_FLAG_HW_PROTECTED	= 1024,
+        DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING	= 2048
     } 	DXGI_SWAP_CHAIN_FLAG;
 
 typedef struct DXGI_SWAP_CHAIN_DESC
@@ -1684,6 +1685,7 @@ EXTERN_C const IID IID_IDXGIOutput;
 #define DXGI_PRESENT_STEREO_TEMPORARY_MONO     0x00000020UL
 #define DXGI_PRESENT_RESTRICT_TO_OUTPUT        0x00000040UL
 #define DXGI_PRESENT_USE_DURATION              0x00000100UL
+#define DXGI_PRESENT_ALLOW_TEARING             0x00000200UL
 
 
 extern RPC_IF_HANDLE __MIDL_itf_dxgi_0000_0008_v0_0_c_ifspec;
