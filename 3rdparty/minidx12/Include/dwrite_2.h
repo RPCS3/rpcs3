@@ -554,8 +554,8 @@ interface DWRITE_DECLARE_INTERFACE("EFA008F9-F7A1-48BF-B05C-F224713CC0FF") IDWri
         DWRITE_FONT_WEIGHT baseWeight,
         DWRITE_FONT_STYLE baseStyle,
         DWRITE_FONT_STRETCH baseStretch,
-        _Deref_out_range_(0, textLength) UINT32* mappedLength,
-        _COM_Outptr_ IDWriteFont** mappedFont,
+        _Out_range_(0, textLength) UINT32* mappedLength,
+        _COM_Outptr_result_maybenull_ IDWriteFont** mappedFont,
         _Out_ FLOAT* scale
         ) PURE;
 };
@@ -653,8 +653,10 @@ typedef D3DCOLORVALUE DWRITE_COLOR_F;
 interface DWRITE_DECLARE_INTERFACE("29748ed6-8c9c-4a6a-be0b-d912e8538944") IDWriteFont2 : public IDWriteFont1
 {
     /// <summary>
-    /// Returns TRUE if the font contains color information (COLR and CPAL tables), 
-    /// or FALSE if not.
+    /// Returns TRUE if the font contains tables that can provide color information
+    /// (including COLR, CPAL, SVG, CBDT, sbix  tables), or FALSE if not. Note that
+    /// TRUE is returned even in the case when the font tables contain only grayscale
+    /// images.
     /// </summary>
     STDMETHOD_(BOOL, IsColorFont)() PURE;
 };
@@ -667,8 +669,10 @@ interface DWRITE_DECLARE_INTERFACE("29748ed6-8c9c-4a6a-be0b-d912e8538944") IDWri
 interface DWRITE_DECLARE_INTERFACE("d8b768ff-64bc-4e66-982b-ec8e87f693f7") IDWriteFontFace2 : public IDWriteFontFace1
 {
     /// <summary>
-    /// Returns TRUE if the font contains color information (COLR and CPAL tables), 
-    /// or FALSE if not.
+    /// Returns TRUE if the font contains tables that can provide color information
+    /// (including COLR, CPAL, SVG, CBDT, sbix  tables), or FALSE if not. Note that
+    /// TRUE is returned even in the case when the font tables contain only grayscale
+    /// images.
     /// </summary>
     STDMETHOD_(BOOL, IsColorFont)() PURE;
 

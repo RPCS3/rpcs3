@@ -10,9 +10,7 @@
 #ifndef DWRITE_3_H_INCLUDED
 #define DWRITE_3_H_INCLUDED
 
-#if _MSC_VER > 1000
 #pragma once
-#endif
 
 #include <DWrite_2.h>
 
@@ -1247,6 +1245,8 @@ interface DWRITE_DECLARE_INTERFACE("D37D7598-09BE-4222-A236-2081341CC1F2") IDWri
         _Out_ DWRITE_GRID_FIT_MODE* gridFitMode
         ) PURE;
 
+    using IDWriteFontFace2::GetRecommendedRenderingMode;
+
     /// <summary>
     /// Determines whether the character is locally downloaded from the font.
     /// </summary>
@@ -1740,4 +1740,320 @@ interface DWRITE_DECLARE_INTERFACE("07DDCD52-020E-4DE8-AC33-6C953D83F92D") IDWri
         ) PURE;
 };
 
-#endif /* DWRITE_3_H_INCLUDED */
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+#if NTDDI_VERSION >= NTDDI_WIN10_RS1
+
+
+/// <summary>
+/// Fonts may contain multiple drawable data formats for glyphs. These flags specify which formats
+/// are supported in the font, either at a font-wide level or per glyph, and the app may use them
+/// to tell DWrite which formats to return when splitting a color glyph run.
+/// </summary>
+enum DWRITE_GLYPH_IMAGE_FORMATS
+{
+    /// <summary>
+    /// Indicates no data is available for this glyph.
+    /// </summary>
+    DWRITE_GLYPH_IMAGE_FORMATS_NONE = 0x00000000,
+
+    /// <summary>
+    /// The glyph has TrueType outlines.
+    /// </summary>
+    DWRITE_GLYPH_IMAGE_FORMATS_TRUETYPE = 0x00000001,
+
+    /// <summary>
+    /// The glyph has CFF outlines.
+    /// </summary>
+    DWRITE_GLYPH_IMAGE_FORMATS_CFF = 0x00000002,
+
+    /// <summary>
+    /// The glyph has multilayered COLR data.
+    /// </summary>
+    DWRITE_GLYPH_IMAGE_FORMATS_COLR = 0x00000004,
+
+    /// <summary>
+    /// The glyph has SVG outlines as standard XML.
+    /// </summary>
+    /// <remarks>
+    /// Fonts may store the content gzip'd rather than plain text,
+    /// indicated by the first two bytes as gzip header {0x1F 0x8B}.
+    /// </remarks>
+    DWRITE_GLYPH_IMAGE_FORMATS_SVG = 0x00000008,
+
+    /// <summary>
+    /// The glyph has PNG image data, with standard PNG IHDR.
+    /// </summary>
+    DWRITE_GLYPH_IMAGE_FORMATS_PNG = 0x00000010,
+
+    /// <summary>
+    /// The glyph has JPEG image data, with standard JIFF SOI header.
+    /// </summary>
+    DWRITE_GLYPH_IMAGE_FORMATS_JPEG = 0x00000020,
+
+    /// <summary>
+    /// The glyph has TIFF image data.
+    /// </summary>
+    DWRITE_GLYPH_IMAGE_FORMATS_TIFF = 0x00000040,
+
+    /// <summary>
+    /// The glyph has raw 32-bit premultiplied BGRA data.
+    /// </summary>
+    DWRITE_GLYPH_IMAGE_FORMATS_PREMULTIPLIED_B8G8R8A8 = 0x00000080,
+};
+
+#ifdef DEFINE_ENUM_FLAG_OPERATORS
+DEFINE_ENUM_FLAG_OPERATORS(DWRITE_GLYPH_IMAGE_FORMATS);
+#endif
+
+
+/// <summary>
+/// Represents a color glyph run. The IDWriteFactory4::TranslateColorGlyphRun
+/// method returns an ordered collection of color glyph runs of varying types
+/// depending on what the font supports.
+/// </summary>
+/// <summary>
+/// For runs without any specific color, such as PNG data, the runColor field will be zero.
+/// </summary>
+struct DWRITE_COLOR_GLYPH_RUN1 : DWRITE_COLOR_GLYPH_RUN
+{
+    /// <summary>
+    /// Type of glyph image format for this color run. Exactly one type will be set since
+    /// TranslateColorGlyphRun has already broken down the run into separate parts.
+    /// </summary>
+    DWRITE_GLYPH_IMAGE_FORMATS glyphImageFormat;
+
+    /// <summary>
+    /// Measuring mode to use for this glyph run.
+    /// </summary>
+    DWRITE_MEASURING_MODE measuringMode;
+};
+
+
+/// <summary>
+/// Data for a single glyph from GetGlyphImageData.
+/// </summary>
+struct DWRITE_GLYPH_IMAGE_DATA
+{
+    /// <summary>
+    /// Pointer to the glyph data, be it SVG, PNG, JPEG, TIFF.
+    /// </summary>
+    _Field_size_bytes_(imageDataSize) void const* imageData;
+
+    /// <summary>
+    /// Size of glyph data in bytes.
+    /// </summary>
+    UINT32 imageDataSize;
+
+    /// <summary>
+    /// Unique identifier for the glyph data. Clients may use this to cache a parsed/decompressed
+    /// version and tell whether a repeated call to the same font returns the same data.
+    /// </summary>
+    UINT32 uniqueDataId;
+
+    /// <summary>
+    /// Pixels per em of the returned data. For non-scalable raster data (PNG/TIFF/JPG), this can be larger
+    /// or smaller than requested from GetGlyphImageData when there isn't an exact match.
+    /// For scaling intermediate sizes, use: desired pixels per em * font em size / actual pixels per em.
+    /// </summary>
+    UINT32 pixelsPerEm;
+
+    /// <summary>
+    /// Size of image when the format is pixel data.
+    /// </summary>
+    D2D1_SIZE_U pixelSize;
+
+    /// <summary>
+    /// Left origin along the horizontal Roman baseline.
+    /// </summary>
+    D2D1_POINT_2L horizontalLeftOrigin;
+
+    /// <summary>
+    /// Right origin along the horizontal Roman baseline.
+    /// </summary>
+    D2D1_POINT_2L horizontalRightOrigin;
+
+    /// <summary>
+    /// Top origin along the vertical central baseline.
+    /// </summary>
+    D2D1_POINT_2L verticalTopOrigin;
+
+    /// <summary>
+    /// Bottom origin along vertical central baseline.
+    /// </summary>
+    D2D1_POINT_2L verticalBottomOrigin;
+};
+
+
+/// <summary>
+/// Enumerator for an ordered collection of color glyph runs.
+/// </summary>
+interface DWRITE_DECLARE_INTERFACE("7C5F86DA-C7A1-4F05-B8E1-55A179FE5A35") IDWriteColorGlyphRunEnumerator1 : public IDWriteColorGlyphRunEnumerator
+{
+    /// <summary>
+    /// Gets the current color glyph run.
+    /// </summary>
+    /// <param name="colorGlyphRun">Receives a pointer to the color
+    /// glyph run. The pointer remains valid until the next call to
+    /// MoveNext or until the interface is released.</param>
+    /// <returns>
+    /// Standard HRESULT error code. An error is returned if there is
+    /// no current glyph run, i.e., if MoveNext has not yet been called
+    /// or if the end of the sequence has been reached.
+    /// </returns>
+    STDMETHOD(GetCurrentRun)(
+        _Outptr_ DWRITE_COLOR_GLYPH_RUN1 const** colorGlyphRun
+        ) PURE;
+
+    using IDWriteColorGlyphRunEnumerator::GetCurrentRun;
+};
+
+
+/// <summary>
+/// The interface that represents an absolute reference to a font face.
+/// It contains font face type, appropriate file references and face identification data.
+/// Various font data such as metrics, names and glyph outlines is obtained from IDWriteFontFace.
+/// </summary>
+interface DWRITE_DECLARE_INTERFACE("27F2A904-4EB8-441D-9678-0563F53E3E2F") IDWriteFontFace4 : public IDWriteFontFace3
+{
+    /// <summary>
+    /// Gets all the glyph image formats supported by the entire font (SVG, PNG, JPEG, ...).
+    /// </summary>
+    STDMETHOD_(DWRITE_GLYPH_IMAGE_FORMATS, GetGlyphImageFormats)() PURE;
+
+    /// <summary>
+    /// Gets the available image formats of a specific glyph and ppem. Glyphs often have at least TrueType
+    /// or CFF outlines, but they may also have SVG outlines, or they may have only bitmaps
+    /// with no TrueType/CFF outlines. Some image formats, notably the PNG/JPEG ones, are size
+    /// specific and will return no match when there isn't an entry in that size range.
+    /// </summary>
+    /// <remarks>
+    /// Glyph ids beyond the glyph count return DWRITE_GLYPH_IMAGE_FORMATS_NONE.
+    /// </remarks>
+    STDMETHOD(GetGlyphImageFormats)(
+        UINT16 glyphId,
+        UINT32 pixelsPerEmFirst,
+        UINT32 pixelsPerEmLast,
+        _Out_ DWRITE_GLYPH_IMAGE_FORMATS* glyphImageFormats
+        ) PURE;
+
+    /// <summary>
+    /// Gets a pointer to the glyph data based on the desired image format.
+    /// </summary>
+    /// <remarks>
+    /// The glyphDataContext must be released via ReleaseGlyphImageData when done if the data is not empty,
+    /// similar to IDWriteFontFileStream::ReadFileFragment and IDWriteFontFileStream::ReleaseFileFragment.
+    /// The data pointer is valid so long as the IDWriteFontFace exists and ReleaseGlyphImageData has not
+    /// been called.
+    /// </remarks>
+    /// <remarks>
+    /// The DWRITE_GLYPH_IMAGE_DATA::uniqueDataId is valuable for caching purposes so that if the same
+    /// resource is returned more than once, an existing resource can be quickly retrieved rather than
+    /// needing to reparse or decompress the data.
+    /// </remarks>
+    /// <remarks>
+    /// The function only returns SVG or raster data - requesting TrueType/CFF/COLR data returns
+    /// DWRITE_E_INVALIDARG. Those must be drawn via DrawGlyphRun or queried using GetGlyphOutline instead.
+    /// Exactly one format may be requested or else the function returns DWRITE_E_INVALIDARG.
+    /// If the glyph does not have that format, the call is not an error, but the function returns empty data. 
+    /// </remarks>
+    STDMETHOD(GetGlyphImageData)(
+        _In_ UINT16 glyphId,
+        UINT32 pixelsPerEm,
+        DWRITE_GLYPH_IMAGE_FORMATS glyphImageFormat,
+        _Out_ DWRITE_GLYPH_IMAGE_DATA* glyphData,
+        _Outptr_result_maybenull_ void** glyphDataContext
+        ) PURE;
+
+    /// <summary>
+    /// Releases the table data obtained earlier from ReadGlyphData.
+    /// </summary>
+    /// <param name="glyphDataContext">Opaque context from ReadGlyphData.</param>
+    STDMETHOD_(void, ReleaseGlyphImageData)(
+        void* glyphDataContext
+        ) PURE;
+};
+
+
+interface DWRITE_DECLARE_INTERFACE("4B0B5BD3-0797-4549-8AC5-FE915CC53856") IDWriteFactory4 : public IDWriteFactory3
+{
+    /// <summary>
+    /// Translates a glyph run to a sequence of color glyph runs, which can be
+    /// rendered to produce a color representation of the original "base" run.
+    /// </summary>
+    /// <param name="baselineOriginX">Horizontal and vertical origin of the base glyph run in
+    /// pre-transform coordinates.</param>
+    /// <param name="glyphRun">Pointer to the original "base" glyph run.</param>
+    /// <param name="glyphRunDescription">Optional glyph run description.</param>
+    /// <param name="glyphImageFormats">Which data formats TranslateColorGlyphRun
+    /// should split the runs into.</param>
+    /// <param name="measuringMode">Measuring mode, needed to compute the origins
+    /// of each glyph.</param>
+    /// <param name="worldToDeviceTransform">Matrix converting from the client's
+    /// coordinate space to device coordinates (pixels), i.e., the world transform
+    /// multiplied by any DPI scaling.</param>
+    /// <param name="colorPaletteIndex">Zero-based index of the color palette to use.
+    /// Valid indices are less than the number of palettes in the font, as returned
+    /// by IDWriteFontFace2::GetColorPaletteCount.</param>
+    /// <param name="colorLayers">If the function succeeds, receives a pointer
+    /// to an enumerator object that can be used to obtain the color glyph runs.
+    /// If the base run has no color glyphs, then the output pointer is NULL
+    /// and the method returns DWRITE_E_NOCOLOR.</param>
+    /// <returns>
+    /// Returns DWRITE_E_NOCOLOR if the font has no color information, the glyph run
+    /// does not contain any color glyphs, or the specified color palette index
+    /// is out of range. In this case, the client should render the original glyph 
+    /// run. Otherwise, returns a standard HRESULT error code.
+    /// </returns>
+    /// <remarks>
+    /// The old IDWriteFactory2::TranslateColorGlyphRun is equivalent to passing
+    /// DWRITE_GLYPH_IMAGE_FORMATS_TRUETYPE|CFF|COLR.
+    /// </remarks>
+    STDMETHOD(TranslateColorGlyphRun)(
+        D2D1_POINT_2F baselineOrigin,
+        _In_ DWRITE_GLYPH_RUN const* glyphRun,
+        _In_opt_ DWRITE_GLYPH_RUN_DESCRIPTION const* glyphRunDescription,
+        DWRITE_GLYPH_IMAGE_FORMATS desiredGlyphImageFormats,
+        DWRITE_MEASURING_MODE measuringMode,
+        _In_opt_ DWRITE_MATRIX const* worldAndDpiTransform,
+        UINT32 colorPaletteIndex,
+        _COM_Outptr_ IDWriteColorGlyphRunEnumerator1** colorLayers
+        ) PURE;
+
+    using IDWriteFactory2::TranslateColorGlyphRun;
+
+    /// <summary>
+    /// Converts glyph run placements to glyph origins.
+    /// </summary>
+    /// <returns>
+    /// Standard HRESULT error code.
+    /// </returns>
+    /// <remarks>
+    /// The transform and DPI have no affect on the origin scaling.
+    /// They are solely used to compute glyph advances when not supplied
+    /// and align glyphs in pixel aligned measuring modes.
+    /// </remarks>
+    STDMETHOD(ComputeGlyphOrigins)(
+        DWRITE_GLYPH_RUN const* glyphRun,
+        DWRITE_MEASURING_MODE measuringMode,
+        D2D1_POINT_2F baselineOrigin,
+        _In_opt_ DWRITE_MATRIX const* worldAndDpiTransform,
+        _Out_writes_(glyphRun->glyphCount) D2D1_POINT_2F* glyphOrigins
+        ) PURE;
+
+    /// <summary>
+    /// Converts glyph run placements to glyph origins. This overload is for natural metrics, which
+    /// includes SVG, TrueType natural modes, and bitmap placement.
+    /// </summary>
+    STDMETHOD(ComputeGlyphOrigins)(
+        DWRITE_GLYPH_RUN const* glyphRun,
+        D2D1_POINT_2F baselineOrigin,
+        _Out_writes_(glyphRun->glyphCount) D2D1_POINT_2F* glyphOrigins
+        ) PURE;
+};
+
+#endif // NTDDI_VERSION >= NTDDI_WIN10_RS1
+
+#endif // DWRITE_3_H_INCLUDED

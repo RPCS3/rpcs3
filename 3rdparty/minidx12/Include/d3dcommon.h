@@ -3,7 +3,7 @@
 /* this ALWAYS GENERATED file contains the definitions for the interfaces */
 
 
- /* File created by MIDL compiler version 8.00.0613 */
+ /* File created by MIDL compiler version 8.01.0618 */
 /* @@MIDL_FILE_HEADING(  ) */
 
 
@@ -44,6 +44,13 @@
 typedef interface ID3D10Blob ID3D10Blob;
 
 #endif 	/* __ID3D10Blob_FWD_DEFINED__ */
+
+
+#ifndef __ID3DDestructionNotifier_FWD_DEFINED__
+#define __ID3DDestructionNotifier_FWD_DEFINED__
+typedef interface ID3DDestructionNotifier ID3DDestructionNotifier;
+
+#endif 	/* __ID3DDestructionNotifier_FWD_DEFINED__ */
 
 
 /* header files for imported files */
@@ -442,6 +449,119 @@ typedef ID3D10Blob ID3DBlob;
 
 typedef ID3DBlob* LPD3DBLOB;
 #define IID_ID3DBlob IID_ID3D10Blob
+typedef void ( __stdcall *PFN_DESTRUCTION_CALLBACK )( 
+    void *pData);
+
+
+
+extern RPC_IF_HANDLE __MIDL_itf_d3dcommon_0000_0001_v0_0_c_ifspec;
+extern RPC_IF_HANDLE __MIDL_itf_d3dcommon_0000_0001_v0_0_s_ifspec;
+
+#ifndef __ID3DDestructionNotifier_INTERFACE_DEFINED__
+#define __ID3DDestructionNotifier_INTERFACE_DEFINED__
+
+/* interface ID3DDestructionNotifier */
+/* [unique][local][object][uuid] */ 
+
+
+EXTERN_C const IID IID_ID3DDestructionNotifier;
+
+#if defined(__cplusplus) && !defined(CINTERFACE)
+    
+    MIDL_INTERFACE("a06eb39a-50da-425b-8c31-4eecd6c270f3")
+    ID3DDestructionNotifier : public IUnknown
+    {
+    public:
+        virtual HRESULT STDMETHODCALLTYPE RegisterDestructionCallback( 
+            /* [annotation] */ 
+            _In_  PFN_DESTRUCTION_CALLBACK callbackFn,
+            /* [annotation] */ 
+            _In_  void *pData,
+            /* [annotation] */ 
+            _Out_  UINT *pCallbackID) = 0;
+        
+        virtual HRESULT STDMETHODCALLTYPE UnregisterDestructionCallback( 
+            /* [annotation] */ 
+            _In_  UINT callbackID) = 0;
+        
+    };
+    
+    
+#else 	/* C style interface */
+
+    typedef struct ID3DDestructionNotifierVtbl
+    {
+        BEGIN_INTERFACE
+        
+        HRESULT ( STDMETHODCALLTYPE *QueryInterface )( 
+            ID3DDestructionNotifier * This,
+            /* [in] */ REFIID riid,
+            /* [annotation][iid_is][out] */ 
+            _COM_Outptr_  void **ppvObject);
+        
+        ULONG ( STDMETHODCALLTYPE *AddRef )( 
+            ID3DDestructionNotifier * This);
+        
+        ULONG ( STDMETHODCALLTYPE *Release )( 
+            ID3DDestructionNotifier * This);
+        
+        HRESULT ( STDMETHODCALLTYPE *RegisterDestructionCallback )( 
+            ID3DDestructionNotifier * This,
+            /* [annotation] */ 
+            _In_  PFN_DESTRUCTION_CALLBACK callbackFn,
+            /* [annotation] */ 
+            _In_  void *pData,
+            /* [annotation] */ 
+            _Out_  UINT *pCallbackID);
+        
+        HRESULT ( STDMETHODCALLTYPE *UnregisterDestructionCallback )( 
+            ID3DDestructionNotifier * This,
+            /* [annotation] */ 
+            _In_  UINT callbackID);
+        
+        END_INTERFACE
+    } ID3DDestructionNotifierVtbl;
+
+    interface ID3DDestructionNotifier
+    {
+        CONST_VTBL struct ID3DDestructionNotifierVtbl *lpVtbl;
+    };
+
+    
+
+#ifdef COBJMACROS
+
+
+#define ID3DDestructionNotifier_QueryInterface(This,riid,ppvObject)	\
+    ( (This)->lpVtbl -> QueryInterface(This,riid,ppvObject) ) 
+
+#define ID3DDestructionNotifier_AddRef(This)	\
+    ( (This)->lpVtbl -> AddRef(This) ) 
+
+#define ID3DDestructionNotifier_Release(This)	\
+    ( (This)->lpVtbl -> Release(This) ) 
+
+
+#define ID3DDestructionNotifier_RegisterDestructionCallback(This,callbackFn,pData,pCallbackID)	\
+    ( (This)->lpVtbl -> RegisterDestructionCallback(This,callbackFn,pData,pCallbackID) ) 
+
+#define ID3DDestructionNotifier_UnregisterDestructionCallback(This,callbackID)	\
+    ( (This)->lpVtbl -> UnregisterDestructionCallback(This,callbackID) ) 
+
+#endif /* COBJMACROS */
+
+
+#endif 	/* C style interface */
+
+
+
+
+#endif 	/* __ID3DDestructionNotifier_INTERFACE_DEFINED__ */
+
+
+/* interface __MIDL_itf_d3dcommon_0000_0002 */
+/* [local] */ 
+
 typedef 
 enum _D3D_INCLUDE_TYPE
     {
@@ -866,8 +986,8 @@ DEFINE_GUID(WKPDID_CommentStringW,0xd0149dc0,0x90e8,0x4ec8,0x81, 0x44, 0xe9, 0x0
 #define D3D_COMPONENT_MASK_W   8
 
 
-extern RPC_IF_HANDLE __MIDL_itf_d3dcommon_0000_0001_v0_0_c_ifspec;
-extern RPC_IF_HANDLE __MIDL_itf_d3dcommon_0000_0001_v0_0_s_ifspec;
+extern RPC_IF_HANDLE __MIDL_itf_d3dcommon_0000_0002_v0_0_c_ifspec;
+extern RPC_IF_HANDLE __MIDL_itf_d3dcommon_0000_0002_v0_0_s_ifspec;
 
 /* Additional Prototypes for ALL interfaces */
 

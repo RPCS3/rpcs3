@@ -8,7 +8,7 @@
 /* this ALWAYS GENERATED file contains the definitions for the interfaces */
 
 
- /* File created by MIDL compiler version 8.00.0613 */
+ /* File created by MIDL compiler version 8.01.0618 */
 
 
 
@@ -69,6 +69,13 @@ typedef interface ID3D12RootSignature ID3D12RootSignature;
 typedef interface ID3D12RootSignatureDeserializer ID3D12RootSignatureDeserializer;
 
 #endif 	/* __ID3D12RootSignatureDeserializer_FWD_DEFINED__ */
+
+
+#ifndef __ID3D12VersionedRootSignatureDeserializer_FWD_DEFINED__
+#define __ID3D12VersionedRootSignatureDeserializer_FWD_DEFINED__
+typedef interface ID3D12VersionedRootSignatureDeserializer ID3D12VersionedRootSignatureDeserializer;
+
+#endif 	/* __ID3D12VersionedRootSignatureDeserializer_FWD_DEFINED__ */
 
 
 #ifndef __ID3D12Pageable_FWD_DEFINED__
@@ -160,6 +167,20 @@ typedef interface ID3D12CommandQueue ID3D12CommandQueue;
 typedef interface ID3D12Device ID3D12Device;
 
 #endif 	/* __ID3D12Device_FWD_DEFINED__ */
+
+
+#ifndef __ID3D12PipelineLibrary_FWD_DEFINED__
+#define __ID3D12PipelineLibrary_FWD_DEFINED__
+typedef interface ID3D12PipelineLibrary ID3D12PipelineLibrary;
+
+#endif 	/* __ID3D12PipelineLibrary_FWD_DEFINED__ */
+
+
+#ifndef __ID3D12Device1_FWD_DEFINED__
+#define __ID3D12Device1_FWD_DEFINED__
+typedef interface ID3D12Device1 ID3D12Device1;
+
+#endif 	/* __ID3D12Device1_FWD_DEFINED__ */
 
 
 /* header files for imported files */
@@ -1637,12 +1658,15 @@ typedef
 enum D3D12_FEATURE
     {
         D3D12_FEATURE_D3D12_OPTIONS	= 0,
-        D3D12_FEATURE_ARCHITECTURE	= ( D3D12_FEATURE_D3D12_OPTIONS + 1 ) ,
-        D3D12_FEATURE_FEATURE_LEVELS	= ( D3D12_FEATURE_ARCHITECTURE + 1 ) ,
-        D3D12_FEATURE_FORMAT_SUPPORT	= ( D3D12_FEATURE_FEATURE_LEVELS + 1 ) ,
-        D3D12_FEATURE_MULTISAMPLE_QUALITY_LEVELS	= ( D3D12_FEATURE_FORMAT_SUPPORT + 1 ) ,
-        D3D12_FEATURE_FORMAT_INFO	= ( D3D12_FEATURE_MULTISAMPLE_QUALITY_LEVELS + 1 ) ,
-        D3D12_FEATURE_GPU_VIRTUAL_ADDRESS_SUPPORT	= ( D3D12_FEATURE_FORMAT_INFO + 1 ) 
+        D3D12_FEATURE_ARCHITECTURE	= 1,
+        D3D12_FEATURE_FEATURE_LEVELS	= 2,
+        D3D12_FEATURE_FORMAT_SUPPORT	= 3,
+        D3D12_FEATURE_MULTISAMPLE_QUALITY_LEVELS	= 4,
+        D3D12_FEATURE_FORMAT_INFO	= 5,
+        D3D12_FEATURE_GPU_VIRTUAL_ADDRESS_SUPPORT	= 6,
+        D3D12_FEATURE_SHADER_MODEL	= 7,
+        D3D12_FEATURE_D3D12_OPTIONS1	= 8,
+        D3D12_FEATURE_ROOT_SIGNATURE	= 12
     } 	D3D12_FEATURE;
 
 typedef 
@@ -1777,6 +1801,29 @@ typedef struct D3D12_FEATURE_DATA_D3D12_OPTIONS
     _Out_  D3D12_RESOURCE_HEAP_TIER ResourceHeapTier;
     } 	D3D12_FEATURE_DATA_D3D12_OPTIONS;
 
+typedef struct D3D12_FEATURE_DATA_D3D12_OPTIONS1
+    {
+    _Out_  BOOL WaveOps;
+    _Out_  UINT WaveLaneCountMin;
+    _Out_  UINT WaveLaneCountMax;
+    _Out_  UINT TotalLaneCount;
+    _Out_  BOOL ExpandedComputeResourceStates;
+    _Out_  BOOL Int64ShaderOps;
+    } 	D3D12_FEATURE_DATA_D3D12_OPTIONS1;
+
+typedef 
+enum D3D_ROOT_SIGNATURE_VERSION
+    {
+        D3D_ROOT_SIGNATURE_VERSION_1	= 0x1,
+        D3D_ROOT_SIGNATURE_VERSION_1_0	= 0x1,
+        D3D_ROOT_SIGNATURE_VERSION_1_1	= 0x2
+    } 	D3D_ROOT_SIGNATURE_VERSION;
+
+typedef struct D3D12_FEATURE_DATA_ROOT_SIGNATURE
+    {
+    _Inout_  D3D_ROOT_SIGNATURE_VERSION HighestVersion;
+    } 	D3D12_FEATURE_DATA_ROOT_SIGNATURE;
+
 typedef struct D3D12_FEATURE_DATA_ARCHITECTURE
     {
     _In_  UINT NodeIndex;
@@ -1791,6 +1838,18 @@ typedef struct D3D12_FEATURE_DATA_FEATURE_LEVELS
     _In_reads_(NumFeatureLevels)  const D3D_FEATURE_LEVEL *pFeatureLevelsRequested;
     _Out_  D3D_FEATURE_LEVEL MaxSupportedFeatureLevel;
     } 	D3D12_FEATURE_DATA_FEATURE_LEVELS;
+
+typedef 
+enum D3D_SHADER_MODEL
+    {
+        D3D_SHADER_MODEL_5_1	= 0x51,
+        D3D_SHADER_MODEL_6_0	= 0x60
+    } 	D3D_SHADER_MODEL;
+
+typedef struct D3D12_FEATURE_DATA_SHADER_MODEL
+    {
+    _Inout_  D3D_SHADER_MODEL HighestShaderModel;
+    } 	D3D12_FEATURE_DATA_SHADER_MODEL;
 
 typedef struct D3D12_FEATURE_DATA_FORMAT_SUPPORT
     {
@@ -1870,6 +1929,7 @@ enum D3D12_HEAP_FLAGS
         D3D12_HEAP_FLAG_SHARED_CROSS_ADAPTER	= 0x20,
         D3D12_HEAP_FLAG_DENY_RT_DS_TEXTURES	= 0x40,
         D3D12_HEAP_FLAG_DENY_NON_RT_DS_TEXTURES	= 0x80,
+        D3D12_HEAP_FLAG_HARDWARE_PROTECTED	= 0x100,
         D3D12_HEAP_FLAG_ALLOW_ALL_BUFFERS_AND_TEXTURES	= 0,
         D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS	= 0xc0,
         D3D12_HEAP_FLAG_ALLOW_ONLY_NON_RT_DS_TEXTURES	= 0x44,
@@ -2799,10 +2859,79 @@ typedef struct D3D12_ROOT_SIGNATURE_DESC
     } 	D3D12_ROOT_SIGNATURE_DESC;
 
 typedef 
-enum D3D_ROOT_SIGNATURE_VERSION
+enum D3D12_DESCRIPTOR_RANGE_FLAGS
     {
-        D3D_ROOT_SIGNATURE_VERSION_1	= 0x1
-    } 	D3D_ROOT_SIGNATURE_VERSION;
+        D3D12_DESCRIPTOR_RANGE_FLAG_NONE	= 0,
+        D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE	= 0x1,
+        D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE	= 0x2,
+        D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC_WHILE_SET_AT_EXECUTE	= 0x4,
+        D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC	= 0x8
+    } 	D3D12_DESCRIPTOR_RANGE_FLAGS;
+
+DEFINE_ENUM_FLAG_OPERATORS( D3D12_DESCRIPTOR_RANGE_FLAGS );
+typedef struct D3D12_DESCRIPTOR_RANGE1
+    {
+    D3D12_DESCRIPTOR_RANGE_TYPE RangeType;
+    UINT NumDescriptors;
+    UINT BaseShaderRegister;
+    UINT RegisterSpace;
+    D3D12_DESCRIPTOR_RANGE_FLAGS Flags;
+    UINT OffsetInDescriptorsFromTableStart;
+    } 	D3D12_DESCRIPTOR_RANGE1;
+
+typedef struct D3D12_ROOT_DESCRIPTOR_TABLE1
+    {
+    UINT NumDescriptorRanges;
+    _Field_size_full_(NumDescriptorRanges)  const D3D12_DESCRIPTOR_RANGE1 *pDescriptorRanges;
+    } 	D3D12_ROOT_DESCRIPTOR_TABLE1;
+
+typedef 
+enum D3D12_ROOT_DESCRIPTOR_FLAGS
+    {
+        D3D12_ROOT_DESCRIPTOR_FLAG_NONE	= 0,
+        D3D12_ROOT_DESCRIPTOR_FLAG_DATA_VOLATILE	= 0x2,
+        D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC_WHILE_SET_AT_EXECUTE	= 0x4,
+        D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC	= 0x8
+    } 	D3D12_ROOT_DESCRIPTOR_FLAGS;
+
+DEFINE_ENUM_FLAG_OPERATORS( D3D12_ROOT_DESCRIPTOR_FLAGS );
+typedef struct D3D12_ROOT_DESCRIPTOR1
+    {
+    UINT ShaderRegister;
+    UINT RegisterSpace;
+    D3D12_ROOT_DESCRIPTOR_FLAGS Flags;
+    } 	D3D12_ROOT_DESCRIPTOR1;
+
+typedef struct D3D12_ROOT_PARAMETER1
+    {
+    D3D12_ROOT_PARAMETER_TYPE ParameterType;
+    union 
+        {
+        D3D12_ROOT_DESCRIPTOR_TABLE1 DescriptorTable;
+        D3D12_ROOT_CONSTANTS Constants;
+        D3D12_ROOT_DESCRIPTOR1 Descriptor;
+        } 	;
+    D3D12_SHADER_VISIBILITY ShaderVisibility;
+    } 	D3D12_ROOT_PARAMETER1;
+
+typedef struct D3D12_ROOT_SIGNATURE_DESC1
+    {
+    UINT NumParameters;
+    _Field_size_full_(NumParameters)  const D3D12_ROOT_PARAMETER1 *pParameters;
+    UINT NumStaticSamplers;
+    _Field_size_full_(NumStaticSamplers)  const D3D12_STATIC_SAMPLER_DESC *pStaticSamplers;
+    D3D12_ROOT_SIGNATURE_FLAGS Flags;
+    } 	D3D12_ROOT_SIGNATURE_DESC1;
+
+typedef struct D3D12_VERSIONED_ROOT_SIGNATURE_DESC
+    {
+    D3D_ROOT_SIGNATURE_VERSION Version;
+    union 
+        {
+        D3D12_ROOT_SIGNATURE_DESC Desc_1_0;
+        D3D12_ROOT_SIGNATURE_DESC1 Desc_1_1;
+        } 	;
+    } 	D3D12_VERSIONED_ROOT_SIGNATURE_DESC;
 
 
 
@@ -2886,7 +3015,96 @@ EXTERN_C const IID IID_ID3D12RootSignatureDeserializer;
 #endif 	/* __ID3D12RootSignatureDeserializer_INTERFACE_DEFINED__ */
 
 
-/* interface __MIDL_itf_d3d12_0000_0002 */
+#ifndef __ID3D12VersionedRootSignatureDeserializer_INTERFACE_DEFINED__
+#define __ID3D12VersionedRootSignatureDeserializer_INTERFACE_DEFINED__
+
+/* interface ID3D12VersionedRootSignatureDeserializer */
+/* [unique][local][object][uuid] */ 
+
+
+EXTERN_C const IID IID_ID3D12VersionedRootSignatureDeserializer;
+
+#if defined(__cplusplus) && !defined(CINTERFACE)
+    
+    MIDL_INTERFACE("7F91CE67-090C-4BB7-B78E-ED8FF2E31DA0")
+    ID3D12VersionedRootSignatureDeserializer : public IUnknown
+    {
+    public:
+        virtual HRESULT STDMETHODCALLTYPE GetRootSignatureDescAtVersion( 
+            D3D_ROOT_SIGNATURE_VERSION convertToVersion,
+            _Out_  const D3D12_VERSIONED_ROOT_SIGNATURE_DESC **ppDesc) = 0;
+        
+        virtual const D3D12_VERSIONED_ROOT_SIGNATURE_DESC *STDMETHODCALLTYPE GetUnconvertedRootSignatureDesc( void) = 0;
+        
+    };
+    
+    
+#else 	/* C style interface */
+
+    typedef struct ID3D12VersionedRootSignatureDeserializerVtbl
+    {
+        BEGIN_INTERFACE
+        
+        HRESULT ( STDMETHODCALLTYPE *QueryInterface )( 
+            ID3D12VersionedRootSignatureDeserializer * This,
+            REFIID riid,
+            _COM_Outptr_  void **ppvObject);
+        
+        ULONG ( STDMETHODCALLTYPE *AddRef )( 
+            ID3D12VersionedRootSignatureDeserializer * This);
+        
+        ULONG ( STDMETHODCALLTYPE *Release )( 
+            ID3D12VersionedRootSignatureDeserializer * This);
+        
+        HRESULT ( STDMETHODCALLTYPE *GetRootSignatureDescAtVersion )( 
+            ID3D12VersionedRootSignatureDeserializer * This,
+            D3D_ROOT_SIGNATURE_VERSION convertToVersion,
+            _Out_  const D3D12_VERSIONED_ROOT_SIGNATURE_DESC **ppDesc);
+        
+        const D3D12_VERSIONED_ROOT_SIGNATURE_DESC *( STDMETHODCALLTYPE *GetUnconvertedRootSignatureDesc )( 
+            ID3D12VersionedRootSignatureDeserializer * This);
+        
+        END_INTERFACE
+    } ID3D12VersionedRootSignatureDeserializerVtbl;
+
+    interface ID3D12VersionedRootSignatureDeserializer
+    {
+        CONST_VTBL struct ID3D12VersionedRootSignatureDeserializerVtbl *lpVtbl;
+    };
+
+    
+
+#ifdef COBJMACROS
+
+
+#define ID3D12VersionedRootSignatureDeserializer_QueryInterface(This,riid,ppvObject)	\
+    ( (This)->lpVtbl -> QueryInterface(This,riid,ppvObject) ) 
+
+#define ID3D12VersionedRootSignatureDeserializer_AddRef(This)	\
+    ( (This)->lpVtbl -> AddRef(This) ) 
+
+#define ID3D12VersionedRootSignatureDeserializer_Release(This)	\
+    ( (This)->lpVtbl -> Release(This) ) 
+
+
+#define ID3D12VersionedRootSignatureDeserializer_GetRootSignatureDescAtVersion(This,convertToVersion,ppDesc)	\
+    ( (This)->lpVtbl -> GetRootSignatureDescAtVersion(This,convertToVersion,ppDesc) ) 
+
+#define ID3D12VersionedRootSignatureDeserializer_GetUnconvertedRootSignatureDesc(This)	\
+    ( (This)->lpVtbl -> GetUnconvertedRootSignatureDesc(This) ) 
+
+#endif /* COBJMACROS */
+
+
+#endif 	/* C style interface */
+
+
+
+
+#endif 	/* __ID3D12VersionedRootSignatureDeserializer_INTERFACE_DEFINED__ */
+
+
+/* interface __MIDL_itf_d3d12_0000_0003 */
 /* [local] */ 
 
 typedef HRESULT (WINAPI* PFN_D3D12_SERIALIZE_ROOT_SIGNATURE)(
@@ -2912,6 +3130,29 @@ HRESULT WINAPI D3D12CreateRootSignatureDeserializer(
                                      _In_ SIZE_T SrcDataSizeInBytes,
                                      _In_ REFIID pRootSignatureDeserializerInterface,
                                      _Out_ void** ppRootSignatureDeserializer);
+
+typedef HRESULT (WINAPI* PFN_D3D12_SERIALIZE_VERSIONED_ROOT_SIGNATURE)(
+                            _In_ const D3D12_VERSIONED_ROOT_SIGNATURE_DESC* pRootSignature,
+                            _Out_ ID3DBlob** ppBlob,
+                            _Always_(_Outptr_opt_result_maybenull_) ID3DBlob** ppErrorBlob);
+
+HRESULT WINAPI D3D12SerializeVersionedRootSignature(
+                            _In_ const D3D12_VERSIONED_ROOT_SIGNATURE_DESC* pRootSignature,
+                            _Out_ ID3DBlob** ppBlob,
+                            _Always_(_Outptr_opt_result_maybenull_) ID3DBlob** ppErrorBlob);
+
+typedef HRESULT (WINAPI* PFN_D3D12_CREATE_VERSIONED_ROOT_SIGNATURE_DESERIALIZER)(
+                                     _In_reads_bytes_(SrcDataSizeInBytes) LPCVOID pSrcData,
+                                     _In_ SIZE_T SrcDataSizeInBytes,
+                                     _In_ REFIID pRootSignatureDeserializerInterface,
+                                     _Out_ void** ppRootSignatureDeserializer);
+
+HRESULT WINAPI D3D12CreateVersionedRootSignatureDeserializer(
+                                     _In_reads_bytes_(SrcDataSizeInBytes) LPCVOID pSrcData,
+                                     _In_ SIZE_T SrcDataSizeInBytes,
+                                     _In_ REFIID pRootSignatureDeserializerInterface,
+                                     _Out_ void** ppRootSignatureDeserializer);
+
 typedef struct D3D12_CPU_DESCRIPTOR_HANDLE
     {
     SIZE_T ptr;
@@ -3089,8 +3330,8 @@ typedef struct D3D12_COMMAND_SIGNATURE_DESC
 
 
 
-extern RPC_IF_HANDLE __MIDL_itf_d3d12_0000_0002_v0_0_c_ifspec;
-extern RPC_IF_HANDLE __MIDL_itf_d3d12_0000_0002_v0_0_s_ifspec;
+extern RPC_IF_HANDLE __MIDL_itf_d3d12_0000_0003_v0_0_c_ifspec;
+extern RPC_IF_HANDLE __MIDL_itf_d3d12_0000_0003_v0_0_s_ifspec;
 
 #ifndef __ID3D12Pageable_INTERFACE_DEFINED__
 #define __ID3D12Pageable_INTERFACE_DEFINED__
@@ -4523,13 +4764,13 @@ EXTERN_C const IID IID_ID3D12GraphicsCommandList;
         
         virtual void STDMETHODCALLTYPE SetDescriptorHeaps( 
             _In_  UINT NumDescriptorHeaps,
-            _In_reads_(NumDescriptorHeaps)  ID3D12DescriptorHeap **ppDescriptorHeaps) = 0;
+            _In_reads_(NumDescriptorHeaps)  ID3D12DescriptorHeap *const *ppDescriptorHeaps) = 0;
         
         virtual void STDMETHODCALLTYPE SetComputeRootSignature( 
-            _In_  ID3D12RootSignature *pRootSignature) = 0;
+            _In_opt_  ID3D12RootSignature *pRootSignature) = 0;
         
         virtual void STDMETHODCALLTYPE SetGraphicsRootSignature( 
-            _In_  ID3D12RootSignature *pRootSignature) = 0;
+            _In_opt_  ID3D12RootSignature *pRootSignature) = 0;
         
         virtual void STDMETHODCALLTYPE SetComputeRootDescriptorTable( 
             _In_  UINT RootParameterIndex,
@@ -4600,7 +4841,7 @@ EXTERN_C const IID IID_ID3D12GraphicsCommandList;
         
         virtual void STDMETHODCALLTYPE OMSetRenderTargets( 
             _In_  UINT NumRenderTargetDescriptors,
-            _In_  const D3D12_CPU_DESCRIPTOR_HANDLE *pRenderTargetDescriptors,
+            _In_opt_  const D3D12_CPU_DESCRIPTOR_HANDLE *pRenderTargetDescriptors,
             _In_  BOOL RTsSingleHandleToDescriptorRange,
             _In_opt_  const D3D12_CPU_DESCRIPTOR_HANDLE *pDepthStencilDescriptor) = 0;
         
@@ -4840,15 +5081,15 @@ EXTERN_C const IID IID_ID3D12GraphicsCommandList;
         void ( STDMETHODCALLTYPE *SetDescriptorHeaps )( 
             ID3D12GraphicsCommandList * This,
             _In_  UINT NumDescriptorHeaps,
-            _In_reads_(NumDescriptorHeaps)  ID3D12DescriptorHeap **ppDescriptorHeaps);
+            _In_reads_(NumDescriptorHeaps)  ID3D12DescriptorHeap *const *ppDescriptorHeaps);
         
         void ( STDMETHODCALLTYPE *SetComputeRootSignature )( 
             ID3D12GraphicsCommandList * This,
-            _In_  ID3D12RootSignature *pRootSignature);
+            _In_opt_  ID3D12RootSignature *pRootSignature);
         
         void ( STDMETHODCALLTYPE *SetGraphicsRootSignature )( 
             ID3D12GraphicsCommandList * This,
-            _In_  ID3D12RootSignature *pRootSignature);
+            _In_opt_  ID3D12RootSignature *pRootSignature);
         
         void ( STDMETHODCALLTYPE *SetComputeRootDescriptorTable )( 
             ID3D12GraphicsCommandList * This,
@@ -4935,7 +5176,7 @@ EXTERN_C const IID IID_ID3D12GraphicsCommandList;
         void ( STDMETHODCALLTYPE *OMSetRenderTargets )( 
             ID3D12GraphicsCommandList * This,
             _In_  UINT NumRenderTargetDescriptors,
-            _In_  const D3D12_CPU_DESCRIPTOR_HANDLE *pRenderTargetDescriptors,
+            _In_opt_  const D3D12_CPU_DESCRIPTOR_HANDLE *pRenderTargetDescriptors,
             _In_  BOOL RTsSingleHandleToDescriptorRange,
             _In_opt_  const D3D12_CPU_DESCRIPTOR_HANDLE *pDepthStencilDescriptor);
         
@@ -5625,7 +5866,7 @@ EXTERN_C const IID IID_ID3D12Device;
         virtual HRESULT STDMETHODCALLTYPE CreateCommittedResource( 
             _In_  const D3D12_HEAP_PROPERTIES *pHeapProperties,
             D3D12_HEAP_FLAGS HeapFlags,
-            _In_  const D3D12_RESOURCE_DESC *pResourceDesc,
+            _In_  const D3D12_RESOURCE_DESC *pDesc,
             D3D12_RESOURCE_STATES InitialResourceState,
             _In_opt_  const D3D12_CLEAR_VALUE *pOptimizedClearValue,
             REFIID riidResource,
@@ -5889,7 +6130,7 @@ EXTERN_C const IID IID_ID3D12Device;
             ID3D12Device * This,
             _In_  const D3D12_HEAP_PROPERTIES *pHeapProperties,
             D3D12_HEAP_FLAGS HeapFlags,
-            _In_  const D3D12_RESOURCE_DESC *pResourceDesc,
+            _In_  const D3D12_RESOURCE_DESC *pDesc,
             D3D12_RESOURCE_STATES InitialResourceState,
             _In_opt_  const D3D12_CLEAR_VALUE *pOptimizedClearValue,
             REFIID riidResource,
@@ -6097,8 +6338,8 @@ EXTERN_C const IID IID_ID3D12Device;
 #define ID3D12Device_GetCustomHeapProperties(This,nodeMask,heapType)	\
     ( (This)->lpVtbl -> GetCustomHeapProperties(This,nodeMask,heapType) ) 
 
-#define ID3D12Device_CreateCommittedResource(This,pHeapProperties,HeapFlags,pResourceDesc,InitialResourceState,pOptimizedClearValue,riidResource,ppvResource)	\
-    ( (This)->lpVtbl -> CreateCommittedResource(This,pHeapProperties,HeapFlags,pResourceDesc,InitialResourceState,pOptimizedClearValue,riidResource,ppvResource) ) 
+#define ID3D12Device_CreateCommittedResource(This,pHeapProperties,HeapFlags,pDesc,InitialResourceState,pOptimizedClearValue,riidResource,ppvResource)	\
+    ( (This)->lpVtbl -> CreateCommittedResource(This,pHeapProperties,HeapFlags,pDesc,InitialResourceState,pOptimizedClearValue,riidResource,ppvResource) ) 
 
 #define ID3D12Device_CreateHeap(This,pDesc,riid,ppvHeap)	\
     ( (This)->lpVtbl -> CreateHeap(This,pDesc,riid,ppvHeap) ) 
@@ -6171,7 +6412,712 @@ EXTERN_C const IID IID_ID3D12Device;
 #endif 	/* __ID3D12Device_INTERFACE_DEFINED__ */
 
 
-/* interface __MIDL_itf_d3d12_0000_0017 */
+#ifndef __ID3D12PipelineLibrary_INTERFACE_DEFINED__
+#define __ID3D12PipelineLibrary_INTERFACE_DEFINED__
+
+/* interface ID3D12PipelineLibrary */
+/* [unique][local][object][uuid] */ 
+
+
+EXTERN_C const IID IID_ID3D12PipelineLibrary;
+
+#if defined(__cplusplus) && !defined(CINTERFACE)
+    
+    MIDL_INTERFACE("c64226a8-9201-46af-b4cc-53fb9ff7414f")
+    ID3D12PipelineLibrary : public ID3D12DeviceChild
+    {
+    public:
+        virtual HRESULT STDMETHODCALLTYPE StorePipeline( 
+            _In_opt_  LPCWSTR pName,
+            _In_  ID3D12PipelineState *pPipeline) = 0;
+        
+        virtual HRESULT STDMETHODCALLTYPE LoadGraphicsPipeline( 
+            _In_  LPCWSTR pName,
+            _In_  const D3D12_GRAPHICS_PIPELINE_STATE_DESC *pDesc,
+            REFIID riid,
+            _COM_Outptr_  void **ppPipelineState) = 0;
+        
+        virtual HRESULT STDMETHODCALLTYPE LoadComputePipeline( 
+            _In_  LPCWSTR pName,
+            _In_  const D3D12_COMPUTE_PIPELINE_STATE_DESC *pDesc,
+            REFIID riid,
+            _COM_Outptr_  void **ppPipelineState) = 0;
+        
+        virtual SIZE_T STDMETHODCALLTYPE GetSerializedSize( void) = 0;
+        
+        virtual HRESULT STDMETHODCALLTYPE Serialize( 
+            _Out_writes_(DataSizeInBytes)  void *pData,
+            SIZE_T DataSizeInBytes) = 0;
+        
+    };
+    
+    
+#else 	/* C style interface */
+
+    typedef struct ID3D12PipelineLibraryVtbl
+    {
+        BEGIN_INTERFACE
+        
+        HRESULT ( STDMETHODCALLTYPE *QueryInterface )( 
+            ID3D12PipelineLibrary * This,
+            REFIID riid,
+            _COM_Outptr_  void **ppvObject);
+        
+        ULONG ( STDMETHODCALLTYPE *AddRef )( 
+            ID3D12PipelineLibrary * This);
+        
+        ULONG ( STDMETHODCALLTYPE *Release )( 
+            ID3D12PipelineLibrary * This);
+        
+        HRESULT ( STDMETHODCALLTYPE *GetPrivateData )( 
+            ID3D12PipelineLibrary * This,
+            _In_  REFGUID guid,
+            _Inout_  UINT *pDataSize,
+            _Out_writes_bytes_opt_( *pDataSize )  void *pData);
+        
+        HRESULT ( STDMETHODCALLTYPE *SetPrivateData )( 
+            ID3D12PipelineLibrary * This,
+            _In_  REFGUID guid,
+            _In_  UINT DataSize,
+            _In_reads_bytes_opt_( DataSize )  const void *pData);
+        
+        HRESULT ( STDMETHODCALLTYPE *SetPrivateDataInterface )( 
+            ID3D12PipelineLibrary * This,
+            _In_  REFGUID guid,
+            _In_opt_  const IUnknown *pData);
+        
+        HRESULT ( STDMETHODCALLTYPE *SetName )( 
+            ID3D12PipelineLibrary * This,
+            _In_z_  LPCWSTR Name);
+        
+        HRESULT ( STDMETHODCALLTYPE *GetDevice )( 
+            ID3D12PipelineLibrary * This,
+            REFIID riid,
+            _COM_Outptr_opt_  void **ppvDevice);
+        
+        HRESULT ( STDMETHODCALLTYPE *StorePipeline )( 
+            ID3D12PipelineLibrary * This,
+            _In_opt_  LPCWSTR pName,
+            _In_  ID3D12PipelineState *pPipeline);
+        
+        HRESULT ( STDMETHODCALLTYPE *LoadGraphicsPipeline )( 
+            ID3D12PipelineLibrary * This,
+            _In_  LPCWSTR pName,
+            _In_  const D3D12_GRAPHICS_PIPELINE_STATE_DESC *pDesc,
+            REFIID riid,
+            _COM_Outptr_  void **ppPipelineState);
+        
+        HRESULT ( STDMETHODCALLTYPE *LoadComputePipeline )( 
+            ID3D12PipelineLibrary * This,
+            _In_  LPCWSTR pName,
+            _In_  const D3D12_COMPUTE_PIPELINE_STATE_DESC *pDesc,
+            REFIID riid,
+            _COM_Outptr_  void **ppPipelineState);
+        
+        SIZE_T ( STDMETHODCALLTYPE *GetSerializedSize )( 
+            ID3D12PipelineLibrary * This);
+        
+        HRESULT ( STDMETHODCALLTYPE *Serialize )( 
+            ID3D12PipelineLibrary * This,
+            _Out_writes_(DataSizeInBytes)  void *pData,
+            SIZE_T DataSizeInBytes);
+        
+        END_INTERFACE
+    } ID3D12PipelineLibraryVtbl;
+
+    interface ID3D12PipelineLibrary
+    {
+        CONST_VTBL struct ID3D12PipelineLibraryVtbl *lpVtbl;
+    };
+
+    
+
+#ifdef COBJMACROS
+
+
+#define ID3D12PipelineLibrary_QueryInterface(This,riid,ppvObject)	\
+    ( (This)->lpVtbl -> QueryInterface(This,riid,ppvObject) ) 
+
+#define ID3D12PipelineLibrary_AddRef(This)	\
+    ( (This)->lpVtbl -> AddRef(This) ) 
+
+#define ID3D12PipelineLibrary_Release(This)	\
+    ( (This)->lpVtbl -> Release(This) ) 
+
+
+#define ID3D12PipelineLibrary_GetPrivateData(This,guid,pDataSize,pData)	\
+    ( (This)->lpVtbl -> GetPrivateData(This,guid,pDataSize,pData) ) 
+
+#define ID3D12PipelineLibrary_SetPrivateData(This,guid,DataSize,pData)	\
+    ( (This)->lpVtbl -> SetPrivateData(This,guid,DataSize,pData) ) 
+
+#define ID3D12PipelineLibrary_SetPrivateDataInterface(This,guid,pData)	\
+    ( (This)->lpVtbl -> SetPrivateDataInterface(This,guid,pData) ) 
+
+#define ID3D12PipelineLibrary_SetName(This,Name)	\
+    ( (This)->lpVtbl -> SetName(This,Name) ) 
+
+
+#define ID3D12PipelineLibrary_GetDevice(This,riid,ppvDevice)	\
+    ( (This)->lpVtbl -> GetDevice(This,riid,ppvDevice) ) 
+
+
+#define ID3D12PipelineLibrary_StorePipeline(This,pName,pPipeline)	\
+    ( (This)->lpVtbl -> StorePipeline(This,pName,pPipeline) ) 
+
+#define ID3D12PipelineLibrary_LoadGraphicsPipeline(This,pName,pDesc,riid,ppPipelineState)	\
+    ( (This)->lpVtbl -> LoadGraphicsPipeline(This,pName,pDesc,riid,ppPipelineState) ) 
+
+#define ID3D12PipelineLibrary_LoadComputePipeline(This,pName,pDesc,riid,ppPipelineState)	\
+    ( (This)->lpVtbl -> LoadComputePipeline(This,pName,pDesc,riid,ppPipelineState) ) 
+
+#define ID3D12PipelineLibrary_GetSerializedSize(This)	\
+    ( (This)->lpVtbl -> GetSerializedSize(This) ) 
+
+#define ID3D12PipelineLibrary_Serialize(This,pData,DataSizeInBytes)	\
+    ( (This)->lpVtbl -> Serialize(This,pData,DataSizeInBytes) ) 
+
+#endif /* COBJMACROS */
+
+
+#endif 	/* C style interface */
+
+
+
+
+#endif 	/* __ID3D12PipelineLibrary_INTERFACE_DEFINED__ */
+
+
+/* interface __MIDL_itf_d3d12_0000_0019 */
+/* [local] */ 
+
+typedef 
+enum D3D12_MULTIPLE_FENCE_WAIT_FLAGS
+    {
+        D3D12_MULTIPLE_FENCE_WAIT_FLAG_NONE	= 0,
+        D3D12_MULTIPLE_FENCE_WAIT_FLAG_ANY	= 0x1,
+        D3D12_MULTIPLE_FENCE_WAIT_FLAG_ALL	= 0
+    } 	D3D12_MULTIPLE_FENCE_WAIT_FLAGS;
+
+DEFINE_ENUM_FLAG_OPERATORS( D3D12_MULTIPLE_FENCE_WAIT_FLAGS );
+typedef 
+enum D3D12_RESIDENCY_PRIORITY
+    {
+        D3D12_RESIDENCY_PRIORITY_MINIMUM	= 0x28000000,
+        D3D12_RESIDENCY_PRIORITY_LOW	= 0x50000000,
+        D3D12_RESIDENCY_PRIORITY_NORMAL	= 0x78000000,
+        D3D12_RESIDENCY_PRIORITY_HIGH	= 0xa0000000,
+        D3D12_RESIDENCY_PRIORITY_MAXIMUM	= 0xc8000000
+    } 	D3D12_RESIDENCY_PRIORITY;
+
+
+
+extern RPC_IF_HANDLE __MIDL_itf_d3d12_0000_0019_v0_0_c_ifspec;
+extern RPC_IF_HANDLE __MIDL_itf_d3d12_0000_0019_v0_0_s_ifspec;
+
+#ifndef __ID3D12Device1_INTERFACE_DEFINED__
+#define __ID3D12Device1_INTERFACE_DEFINED__
+
+/* interface ID3D12Device1 */
+/* [unique][local][object][uuid] */ 
+
+
+EXTERN_C const IID IID_ID3D12Device1;
+
+#if defined(__cplusplus) && !defined(CINTERFACE)
+    
+    MIDL_INTERFACE("77acce80-638e-4e65-8895-c1f23386863e")
+    ID3D12Device1 : public ID3D12Device
+    {
+    public:
+        virtual HRESULT STDMETHODCALLTYPE CreatePipelineLibrary( 
+            _In_reads_(BlobLength)  const void *pLibraryBlob,
+            SIZE_T BlobLength,
+            REFIID riid,
+            _COM_Outptr_  void **ppPipelineLibrary) = 0;
+        
+        virtual HRESULT STDMETHODCALLTYPE SetEventOnMultipleFenceCompletion( 
+            _In_reads_(NumFences)  ID3D12Fence *const *ppFences,
+            _In_reads_(NumFences)  const UINT64 *pFenceValues,
+            UINT NumFences,
+            D3D12_MULTIPLE_FENCE_WAIT_FLAGS Flags,
+            HANDLE hEvent) = 0;
+        
+        virtual HRESULT STDMETHODCALLTYPE SetResidencyPriority( 
+            UINT NumObjects,
+            _In_reads_(NumObjects)  ID3D12Pageable *const *ppObjects,
+            _In_reads_(NumObjects)  const D3D12_RESIDENCY_PRIORITY *pPriorities) = 0;
+        
+    };
+    
+    
+#else 	/* C style interface */
+
+    typedef struct ID3D12Device1Vtbl
+    {
+        BEGIN_INTERFACE
+        
+        HRESULT ( STDMETHODCALLTYPE *QueryInterface )( 
+            ID3D12Device1 * This,
+            REFIID riid,
+            _COM_Outptr_  void **ppvObject);
+        
+        ULONG ( STDMETHODCALLTYPE *AddRef )( 
+            ID3D12Device1 * This);
+        
+        ULONG ( STDMETHODCALLTYPE *Release )( 
+            ID3D12Device1 * This);
+        
+        HRESULT ( STDMETHODCALLTYPE *GetPrivateData )( 
+            ID3D12Device1 * This,
+            _In_  REFGUID guid,
+            _Inout_  UINT *pDataSize,
+            _Out_writes_bytes_opt_( *pDataSize )  void *pData);
+        
+        HRESULT ( STDMETHODCALLTYPE *SetPrivateData )( 
+            ID3D12Device1 * This,
+            _In_  REFGUID guid,
+            _In_  UINT DataSize,
+            _In_reads_bytes_opt_( DataSize )  const void *pData);
+        
+        HRESULT ( STDMETHODCALLTYPE *SetPrivateDataInterface )( 
+            ID3D12Device1 * This,
+            _In_  REFGUID guid,
+            _In_opt_  const IUnknown *pData);
+        
+        HRESULT ( STDMETHODCALLTYPE *SetName )( 
+            ID3D12Device1 * This,
+            _In_z_  LPCWSTR Name);
+        
+        UINT ( STDMETHODCALLTYPE *GetNodeCount )( 
+            ID3D12Device1 * This);
+        
+        HRESULT ( STDMETHODCALLTYPE *CreateCommandQueue )( 
+            ID3D12Device1 * This,
+            _In_  const D3D12_COMMAND_QUEUE_DESC *pDesc,
+            REFIID riid,
+            _COM_Outptr_  void **ppCommandQueue);
+        
+        HRESULT ( STDMETHODCALLTYPE *CreateCommandAllocator )( 
+            ID3D12Device1 * This,
+            _In_  D3D12_COMMAND_LIST_TYPE type,
+            REFIID riid,
+            _COM_Outptr_  void **ppCommandAllocator);
+        
+        HRESULT ( STDMETHODCALLTYPE *CreateGraphicsPipelineState )( 
+            ID3D12Device1 * This,
+            _In_  const D3D12_GRAPHICS_PIPELINE_STATE_DESC *pDesc,
+            REFIID riid,
+            _COM_Outptr_  void **ppPipelineState);
+        
+        HRESULT ( STDMETHODCALLTYPE *CreateComputePipelineState )( 
+            ID3D12Device1 * This,
+            _In_  const D3D12_COMPUTE_PIPELINE_STATE_DESC *pDesc,
+            REFIID riid,
+            _COM_Outptr_  void **ppPipelineState);
+        
+        HRESULT ( STDMETHODCALLTYPE *CreateCommandList )( 
+            ID3D12Device1 * This,
+            _In_  UINT nodeMask,
+            _In_  D3D12_COMMAND_LIST_TYPE type,
+            _In_  ID3D12CommandAllocator *pCommandAllocator,
+            _In_opt_  ID3D12PipelineState *pInitialState,
+            REFIID riid,
+            _COM_Outptr_  void **ppCommandList);
+        
+        HRESULT ( STDMETHODCALLTYPE *CheckFeatureSupport )( 
+            ID3D12Device1 * This,
+            D3D12_FEATURE Feature,
+            _Inout_updates_bytes_(FeatureSupportDataSize)  void *pFeatureSupportData,
+            UINT FeatureSupportDataSize);
+        
+        HRESULT ( STDMETHODCALLTYPE *CreateDescriptorHeap )( 
+            ID3D12Device1 * This,
+            _In_  const D3D12_DESCRIPTOR_HEAP_DESC *pDescriptorHeapDesc,
+            REFIID riid,
+            _COM_Outptr_  void **ppvHeap);
+        
+        UINT ( STDMETHODCALLTYPE *GetDescriptorHandleIncrementSize )( 
+            ID3D12Device1 * This,
+            _In_  D3D12_DESCRIPTOR_HEAP_TYPE DescriptorHeapType);
+        
+        HRESULT ( STDMETHODCALLTYPE *CreateRootSignature )( 
+            ID3D12Device1 * This,
+            _In_  UINT nodeMask,
+            _In_reads_(blobLengthInBytes)  const void *pBlobWithRootSignature,
+            _In_  SIZE_T blobLengthInBytes,
+            REFIID riid,
+            _COM_Outptr_  void **ppvRootSignature);
+        
+        void ( STDMETHODCALLTYPE *CreateConstantBufferView )( 
+            ID3D12Device1 * This,
+            _In_opt_  const D3D12_CONSTANT_BUFFER_VIEW_DESC *pDesc,
+            _In_  D3D12_CPU_DESCRIPTOR_HANDLE DestDescriptor);
+        
+        void ( STDMETHODCALLTYPE *CreateShaderResourceView )( 
+            ID3D12Device1 * This,
+            _In_opt_  ID3D12Resource *pResource,
+            _In_opt_  const D3D12_SHADER_RESOURCE_VIEW_DESC *pDesc,
+            _In_  D3D12_CPU_DESCRIPTOR_HANDLE DestDescriptor);
+        
+        void ( STDMETHODCALLTYPE *CreateUnorderedAccessView )( 
+            ID3D12Device1 * This,
+            _In_opt_  ID3D12Resource *pResource,
+            _In_opt_  ID3D12Resource *pCounterResource,
+            _In_opt_  const D3D12_UNORDERED_ACCESS_VIEW_DESC *pDesc,
+            _In_  D3D12_CPU_DESCRIPTOR_HANDLE DestDescriptor);
+        
+        void ( STDMETHODCALLTYPE *CreateRenderTargetView )( 
+            ID3D12Device1 * This,
+            _In_opt_  ID3D12Resource *pResource,
+            _In_opt_  const D3D12_RENDER_TARGET_VIEW_DESC *pDesc,
+            _In_  D3D12_CPU_DESCRIPTOR_HANDLE DestDescriptor);
+        
+        void ( STDMETHODCALLTYPE *CreateDepthStencilView )( 
+            ID3D12Device1 * This,
+            _In_opt_  ID3D12Resource *pResource,
+            _In_opt_  const D3D12_DEPTH_STENCIL_VIEW_DESC *pDesc,
+            _In_  D3D12_CPU_DESCRIPTOR_HANDLE DestDescriptor);
+        
+        void ( STDMETHODCALLTYPE *CreateSampler )( 
+            ID3D12Device1 * This,
+            _In_  const D3D12_SAMPLER_DESC *pDesc,
+            _In_  D3D12_CPU_DESCRIPTOR_HANDLE DestDescriptor);
+        
+        void ( STDMETHODCALLTYPE *CopyDescriptors )( 
+            ID3D12Device1 * This,
+            _In_  UINT NumDestDescriptorRanges,
+            _In_reads_(NumDestDescriptorRanges)  const D3D12_CPU_DESCRIPTOR_HANDLE *pDestDescriptorRangeStarts,
+            _In_reads_opt_(NumDestDescriptorRanges)  const UINT *pDestDescriptorRangeSizes,
+            _In_  UINT NumSrcDescriptorRanges,
+            _In_reads_(NumSrcDescriptorRanges)  const D3D12_CPU_DESCRIPTOR_HANDLE *pSrcDescriptorRangeStarts,
+            _In_reads_opt_(NumSrcDescriptorRanges)  const UINT *pSrcDescriptorRangeSizes,
+            _In_  D3D12_DESCRIPTOR_HEAP_TYPE DescriptorHeapsType);
+        
+        void ( STDMETHODCALLTYPE *CopyDescriptorsSimple )( 
+            ID3D12Device1 * This,
+            _In_  UINT NumDescriptors,
+            _In_  D3D12_CPU_DESCRIPTOR_HANDLE DestDescriptorRangeStart,
+            _In_  D3D12_CPU_DESCRIPTOR_HANDLE SrcDescriptorRangeStart,
+            _In_  D3D12_DESCRIPTOR_HEAP_TYPE DescriptorHeapsType);
+        
+        D3D12_RESOURCE_ALLOCATION_INFO ( STDMETHODCALLTYPE *GetResourceAllocationInfo )( 
+            ID3D12Device1 * This,
+            _In_  UINT visibleMask,
+            _In_  UINT numResourceDescs,
+            _In_reads_(numResourceDescs)  const D3D12_RESOURCE_DESC *pResourceDescs);
+        
+        D3D12_HEAP_PROPERTIES ( STDMETHODCALLTYPE *GetCustomHeapProperties )( 
+            ID3D12Device1 * This,
+            _In_  UINT nodeMask,
+            D3D12_HEAP_TYPE heapType);
+        
+        HRESULT ( STDMETHODCALLTYPE *CreateCommittedResource )( 
+            ID3D12Device1 * This,
+            _In_  const D3D12_HEAP_PROPERTIES *pHeapProperties,
+            D3D12_HEAP_FLAGS HeapFlags,
+            _In_  const D3D12_RESOURCE_DESC *pDesc,
+            D3D12_RESOURCE_STATES InitialResourceState,
+            _In_opt_  const D3D12_CLEAR_VALUE *pOptimizedClearValue,
+            REFIID riidResource,
+            _COM_Outptr_opt_  void **ppvResource);
+        
+        HRESULT ( STDMETHODCALLTYPE *CreateHeap )( 
+            ID3D12Device1 * This,
+            _In_  const D3D12_HEAP_DESC *pDesc,
+            REFIID riid,
+            _COM_Outptr_opt_  void **ppvHeap);
+        
+        HRESULT ( STDMETHODCALLTYPE *CreatePlacedResource )( 
+            ID3D12Device1 * This,
+            _In_  ID3D12Heap *pHeap,
+            UINT64 HeapOffset,
+            _In_  const D3D12_RESOURCE_DESC *pDesc,
+            D3D12_RESOURCE_STATES InitialState,
+            _In_opt_  const D3D12_CLEAR_VALUE *pOptimizedClearValue,
+            REFIID riid,
+            _COM_Outptr_opt_  void **ppvResource);
+        
+        HRESULT ( STDMETHODCALLTYPE *CreateReservedResource )( 
+            ID3D12Device1 * This,
+            _In_  const D3D12_RESOURCE_DESC *pDesc,
+            D3D12_RESOURCE_STATES InitialState,
+            _In_opt_  const D3D12_CLEAR_VALUE *pOptimizedClearValue,
+            REFIID riid,
+            _COM_Outptr_opt_  void **ppvResource);
+        
+        HRESULT ( STDMETHODCALLTYPE *CreateSharedHandle )( 
+            ID3D12Device1 * This,
+            _In_  ID3D12DeviceChild *pObject,
+            _In_opt_  const SECURITY_ATTRIBUTES *pAttributes,
+            DWORD Access,
+            _In_opt_  LPCWSTR Name,
+            _Out_  HANDLE *pHandle);
+        
+        HRESULT ( STDMETHODCALLTYPE *OpenSharedHandle )( 
+            ID3D12Device1 * This,
+            _In_  HANDLE NTHandle,
+            REFIID riid,
+            _COM_Outptr_opt_  void **ppvObj);
+        
+        HRESULT ( STDMETHODCALLTYPE *OpenSharedHandleByName )( 
+            ID3D12Device1 * This,
+            _In_  LPCWSTR Name,
+            DWORD Access,
+            /* [annotation][out] */ 
+            _Out_  HANDLE *pNTHandle);
+        
+        HRESULT ( STDMETHODCALLTYPE *MakeResident )( 
+            ID3D12Device1 * This,
+            UINT NumObjects,
+            _In_reads_(NumObjects)  ID3D12Pageable *const *ppObjects);
+        
+        HRESULT ( STDMETHODCALLTYPE *Evict )( 
+            ID3D12Device1 * This,
+            UINT NumObjects,
+            _In_reads_(NumObjects)  ID3D12Pageable *const *ppObjects);
+        
+        HRESULT ( STDMETHODCALLTYPE *CreateFence )( 
+            ID3D12Device1 * This,
+            UINT64 InitialValue,
+            D3D12_FENCE_FLAGS Flags,
+            REFIID riid,
+            _COM_Outptr_  void **ppFence);
+        
+        HRESULT ( STDMETHODCALLTYPE *GetDeviceRemovedReason )( 
+            ID3D12Device1 * This);
+        
+        void ( STDMETHODCALLTYPE *GetCopyableFootprints )( 
+            ID3D12Device1 * This,
+            _In_  const D3D12_RESOURCE_DESC *pResourceDesc,
+            _In_range_(0,D3D12_REQ_SUBRESOURCES)  UINT FirstSubresource,
+            _In_range_(0,D3D12_REQ_SUBRESOURCES-FirstSubresource)  UINT NumSubresources,
+            UINT64 BaseOffset,
+            _Out_writes_opt_(NumSubresources)  D3D12_PLACED_SUBRESOURCE_FOOTPRINT *pLayouts,
+            _Out_writes_opt_(NumSubresources)  UINT *pNumRows,
+            _Out_writes_opt_(NumSubresources)  UINT64 *pRowSizeInBytes,
+            _Out_opt_  UINT64 *pTotalBytes);
+        
+        HRESULT ( STDMETHODCALLTYPE *CreateQueryHeap )( 
+            ID3D12Device1 * This,
+            _In_  const D3D12_QUERY_HEAP_DESC *pDesc,
+            REFIID riid,
+            _COM_Outptr_opt_  void **ppvHeap);
+        
+        HRESULT ( STDMETHODCALLTYPE *SetStablePowerState )( 
+            ID3D12Device1 * This,
+            BOOL Enable);
+        
+        HRESULT ( STDMETHODCALLTYPE *CreateCommandSignature )( 
+            ID3D12Device1 * This,
+            _In_  const D3D12_COMMAND_SIGNATURE_DESC *pDesc,
+            _In_opt_  ID3D12RootSignature *pRootSignature,
+            REFIID riid,
+            _COM_Outptr_opt_  void **ppvCommandSignature);
+        
+        void ( STDMETHODCALLTYPE *GetResourceTiling )( 
+            ID3D12Device1 * This,
+            _In_  ID3D12Resource *pTiledResource,
+            _Out_opt_  UINT *pNumTilesForEntireResource,
+            _Out_opt_  D3D12_PACKED_MIP_INFO *pPackedMipDesc,
+            _Out_opt_  D3D12_TILE_SHAPE *pStandardTileShapeForNonPackedMips,
+            _Inout_opt_  UINT *pNumSubresourceTilings,
+            _In_  UINT FirstSubresourceTilingToGet,
+            _Out_writes_(*pNumSubresourceTilings)  D3D12_SUBRESOURCE_TILING *pSubresourceTilingsForNonPackedMips);
+        
+        LUID ( STDMETHODCALLTYPE *GetAdapterLuid )( 
+            ID3D12Device1 * This);
+        
+        HRESULT ( STDMETHODCALLTYPE *CreatePipelineLibrary )( 
+            ID3D12Device1 * This,
+            _In_reads_(BlobLength)  const void *pLibraryBlob,
+            SIZE_T BlobLength,
+            REFIID riid,
+            _COM_Outptr_  void **ppPipelineLibrary);
+        
+        HRESULT ( STDMETHODCALLTYPE *SetEventOnMultipleFenceCompletion )( 
+            ID3D12Device1 * This,
+            _In_reads_(NumFences)  ID3D12Fence *const *ppFences,
+            _In_reads_(NumFences)  const UINT64 *pFenceValues,
+            UINT NumFences,
+            D3D12_MULTIPLE_FENCE_WAIT_FLAGS Flags,
+            HANDLE hEvent);
+        
+        HRESULT ( STDMETHODCALLTYPE *SetResidencyPriority )( 
+            ID3D12Device1 * This,
+            UINT NumObjects,
+            _In_reads_(NumObjects)  ID3D12Pageable *const *ppObjects,
+            _In_reads_(NumObjects)  const D3D12_RESIDENCY_PRIORITY *pPriorities);
+        
+        END_INTERFACE
+    } ID3D12Device1Vtbl;
+
+    interface ID3D12Device1
+    {
+        CONST_VTBL struct ID3D12Device1Vtbl *lpVtbl;
+    };
+
+    
+
+#ifdef COBJMACROS
+
+
+#define ID3D12Device1_QueryInterface(This,riid,ppvObject)	\
+    ( (This)->lpVtbl -> QueryInterface(This,riid,ppvObject) ) 
+
+#define ID3D12Device1_AddRef(This)	\
+    ( (This)->lpVtbl -> AddRef(This) ) 
+
+#define ID3D12Device1_Release(This)	\
+    ( (This)->lpVtbl -> Release(This) ) 
+
+
+#define ID3D12Device1_GetPrivateData(This,guid,pDataSize,pData)	\
+    ( (This)->lpVtbl -> GetPrivateData(This,guid,pDataSize,pData) ) 
+
+#define ID3D12Device1_SetPrivateData(This,guid,DataSize,pData)	\
+    ( (This)->lpVtbl -> SetPrivateData(This,guid,DataSize,pData) ) 
+
+#define ID3D12Device1_SetPrivateDataInterface(This,guid,pData)	\
+    ( (This)->lpVtbl -> SetPrivateDataInterface(This,guid,pData) ) 
+
+#define ID3D12Device1_SetName(This,Name)	\
+    ( (This)->lpVtbl -> SetName(This,Name) ) 
+
+
+#define ID3D12Device1_GetNodeCount(This)	\
+    ( (This)->lpVtbl -> GetNodeCount(This) ) 
+
+#define ID3D12Device1_CreateCommandQueue(This,pDesc,riid,ppCommandQueue)	\
+    ( (This)->lpVtbl -> CreateCommandQueue(This,pDesc,riid,ppCommandQueue) ) 
+
+#define ID3D12Device1_CreateCommandAllocator(This,type,riid,ppCommandAllocator)	\
+    ( (This)->lpVtbl -> CreateCommandAllocator(This,type,riid,ppCommandAllocator) ) 
+
+#define ID3D12Device1_CreateGraphicsPipelineState(This,pDesc,riid,ppPipelineState)	\
+    ( (This)->lpVtbl -> CreateGraphicsPipelineState(This,pDesc,riid,ppPipelineState) ) 
+
+#define ID3D12Device1_CreateComputePipelineState(This,pDesc,riid,ppPipelineState)	\
+    ( (This)->lpVtbl -> CreateComputePipelineState(This,pDesc,riid,ppPipelineState) ) 
+
+#define ID3D12Device1_CreateCommandList(This,nodeMask,type,pCommandAllocator,pInitialState,riid,ppCommandList)	\
+    ( (This)->lpVtbl -> CreateCommandList(This,nodeMask,type,pCommandAllocator,pInitialState,riid,ppCommandList) ) 
+
+#define ID3D12Device1_CheckFeatureSupport(This,Feature,pFeatureSupportData,FeatureSupportDataSize)	\
+    ( (This)->lpVtbl -> CheckFeatureSupport(This,Feature,pFeatureSupportData,FeatureSupportDataSize) ) 
+
+#define ID3D12Device1_CreateDescriptorHeap(This,pDescriptorHeapDesc,riid,ppvHeap)	\
+    ( (This)->lpVtbl -> CreateDescriptorHeap(This,pDescriptorHeapDesc,riid,ppvHeap) ) 
+
+#define ID3D12Device1_GetDescriptorHandleIncrementSize(This,DescriptorHeapType)	\
+    ( (This)->lpVtbl -> GetDescriptorHandleIncrementSize(This,DescriptorHeapType) ) 
+
+#define ID3D12Device1_CreateRootSignature(This,nodeMask,pBlobWithRootSignature,blobLengthInBytes,riid,ppvRootSignature)	\
+    ( (This)->lpVtbl -> CreateRootSignature(This,nodeMask,pBlobWithRootSignature,blobLengthInBytes,riid,ppvRootSignature) ) 
+
+#define ID3D12Device1_CreateConstantBufferView(This,pDesc,DestDescriptor)	\
+    ( (This)->lpVtbl -> CreateConstantBufferView(This,pDesc,DestDescriptor) ) 
+
+#define ID3D12Device1_CreateShaderResourceView(This,pResource,pDesc,DestDescriptor)	\
+    ( (This)->lpVtbl -> CreateShaderResourceView(This,pResource,pDesc,DestDescriptor) ) 
+
+#define ID3D12Device1_CreateUnorderedAccessView(This,pResource,pCounterResource,pDesc,DestDescriptor)	\
+    ( (This)->lpVtbl -> CreateUnorderedAccessView(This,pResource,pCounterResource,pDesc,DestDescriptor) ) 
+
+#define ID3D12Device1_CreateRenderTargetView(This,pResource,pDesc,DestDescriptor)	\
+    ( (This)->lpVtbl -> CreateRenderTargetView(This,pResource,pDesc,DestDescriptor) ) 
+
+#define ID3D12Device1_CreateDepthStencilView(This,pResource,pDesc,DestDescriptor)	\
+    ( (This)->lpVtbl -> CreateDepthStencilView(This,pResource,pDesc,DestDescriptor) ) 
+
+#define ID3D12Device1_CreateSampler(This,pDesc,DestDescriptor)	\
+    ( (This)->lpVtbl -> CreateSampler(This,pDesc,DestDescriptor) ) 
+
+#define ID3D12Device1_CopyDescriptors(This,NumDestDescriptorRanges,pDestDescriptorRangeStarts,pDestDescriptorRangeSizes,NumSrcDescriptorRanges,pSrcDescriptorRangeStarts,pSrcDescriptorRangeSizes,DescriptorHeapsType)	\
+    ( (This)->lpVtbl -> CopyDescriptors(This,NumDestDescriptorRanges,pDestDescriptorRangeStarts,pDestDescriptorRangeSizes,NumSrcDescriptorRanges,pSrcDescriptorRangeStarts,pSrcDescriptorRangeSizes,DescriptorHeapsType) ) 
+
+#define ID3D12Device1_CopyDescriptorsSimple(This,NumDescriptors,DestDescriptorRangeStart,SrcDescriptorRangeStart,DescriptorHeapsType)	\
+    ( (This)->lpVtbl -> CopyDescriptorsSimple(This,NumDescriptors,DestDescriptorRangeStart,SrcDescriptorRangeStart,DescriptorHeapsType) ) 
+
+#define ID3D12Device1_GetResourceAllocationInfo(This,visibleMask,numResourceDescs,pResourceDescs)	\
+    ( (This)->lpVtbl -> GetResourceAllocationInfo(This,visibleMask,numResourceDescs,pResourceDescs) ) 
+
+#define ID3D12Device1_GetCustomHeapProperties(This,nodeMask,heapType)	\
+    ( (This)->lpVtbl -> GetCustomHeapProperties(This,nodeMask,heapType) ) 
+
+#define ID3D12Device1_CreateCommittedResource(This,pHeapProperties,HeapFlags,pDesc,InitialResourceState,pOptimizedClearValue,riidResource,ppvResource)	\
+    ( (This)->lpVtbl -> CreateCommittedResource(This,pHeapProperties,HeapFlags,pDesc,InitialResourceState,pOptimizedClearValue,riidResource,ppvResource) ) 
+
+#define ID3D12Device1_CreateHeap(This,pDesc,riid,ppvHeap)	\
+    ( (This)->lpVtbl -> CreateHeap(This,pDesc,riid,ppvHeap) ) 
+
+#define ID3D12Device1_CreatePlacedResource(This,pHeap,HeapOffset,pDesc,InitialState,pOptimizedClearValue,riid,ppvResource)	\
+    ( (This)->lpVtbl -> CreatePlacedResource(This,pHeap,HeapOffset,pDesc,InitialState,pOptimizedClearValue,riid,ppvResource) ) 
+
+#define ID3D12Device1_CreateReservedResource(This,pDesc,InitialState,pOptimizedClearValue,riid,ppvResource)	\
+    ( (This)->lpVtbl -> CreateReservedResource(This,pDesc,InitialState,pOptimizedClearValue,riid,ppvResource) ) 
+
+#define ID3D12Device1_CreateSharedHandle(This,pObject,pAttributes,Access,Name,pHandle)	\
+    ( (This)->lpVtbl -> CreateSharedHandle(This,pObject,pAttributes,Access,Name,pHandle) ) 
+
+#define ID3D12Device1_OpenSharedHandle(This,NTHandle,riid,ppvObj)	\
+    ( (This)->lpVtbl -> OpenSharedHandle(This,NTHandle,riid,ppvObj) ) 
+
+#define ID3D12Device1_OpenSharedHandleByName(This,Name,Access,pNTHandle)	\
+    ( (This)->lpVtbl -> OpenSharedHandleByName(This,Name,Access,pNTHandle) ) 
+
+#define ID3D12Device1_MakeResident(This,NumObjects,ppObjects)	\
+    ( (This)->lpVtbl -> MakeResident(This,NumObjects,ppObjects) ) 
+
+#define ID3D12Device1_Evict(This,NumObjects,ppObjects)	\
+    ( (This)->lpVtbl -> Evict(This,NumObjects,ppObjects) ) 
+
+#define ID3D12Device1_CreateFence(This,InitialValue,Flags,riid,ppFence)	\
+    ( (This)->lpVtbl -> CreateFence(This,InitialValue,Flags,riid,ppFence) ) 
+
+#define ID3D12Device1_GetDeviceRemovedReason(This)	\
+    ( (This)->lpVtbl -> GetDeviceRemovedReason(This) ) 
+
+#define ID3D12Device1_GetCopyableFootprints(This,pResourceDesc,FirstSubresource,NumSubresources,BaseOffset,pLayouts,pNumRows,pRowSizeInBytes,pTotalBytes)	\
+    ( (This)->lpVtbl -> GetCopyableFootprints(This,pResourceDesc,FirstSubresource,NumSubresources,BaseOffset,pLayouts,pNumRows,pRowSizeInBytes,pTotalBytes) ) 
+
+#define ID3D12Device1_CreateQueryHeap(This,pDesc,riid,ppvHeap)	\
+    ( (This)->lpVtbl -> CreateQueryHeap(This,pDesc,riid,ppvHeap) ) 
+
+#define ID3D12Device1_SetStablePowerState(This,Enable)	\
+    ( (This)->lpVtbl -> SetStablePowerState(This,Enable) ) 
+
+#define ID3D12Device1_CreateCommandSignature(This,pDesc,pRootSignature,riid,ppvCommandSignature)	\
+    ( (This)->lpVtbl -> CreateCommandSignature(This,pDesc,pRootSignature,riid,ppvCommandSignature) ) 
+
+#define ID3D12Device1_GetResourceTiling(This,pTiledResource,pNumTilesForEntireResource,pPackedMipDesc,pStandardTileShapeForNonPackedMips,pNumSubresourceTilings,FirstSubresourceTilingToGet,pSubresourceTilingsForNonPackedMips)	\
+    ( (This)->lpVtbl -> GetResourceTiling(This,pTiledResource,pNumTilesForEntireResource,pPackedMipDesc,pStandardTileShapeForNonPackedMips,pNumSubresourceTilings,FirstSubresourceTilingToGet,pSubresourceTilingsForNonPackedMips) ) 
+
+#define ID3D12Device1_GetAdapterLuid(This)	\
+    ( (This)->lpVtbl -> GetAdapterLuid(This) ) 
+
+
+#define ID3D12Device1_CreatePipelineLibrary(This,pLibraryBlob,BlobLength,riid,ppPipelineLibrary)	\
+    ( (This)->lpVtbl -> CreatePipelineLibrary(This,pLibraryBlob,BlobLength,riid,ppPipelineLibrary) ) 
+
+#define ID3D12Device1_SetEventOnMultipleFenceCompletion(This,ppFences,pFenceValues,NumFences,Flags,hEvent)	\
+    ( (This)->lpVtbl -> SetEventOnMultipleFenceCompletion(This,ppFences,pFenceValues,NumFences,Flags,hEvent) ) 
+
+#define ID3D12Device1_SetResidencyPriority(This,NumObjects,ppObjects,pPriorities)	\
+    ( (This)->lpVtbl -> SetResidencyPriority(This,NumObjects,ppObjects,pPriorities) ) 
+
+#endif /* COBJMACROS */
+
+
+#endif 	/* C style interface */
+
+
+
+
+#endif 	/* __ID3D12Device1_INTERFACE_DEFINED__ */
+
+
+/* interface __MIDL_itf_d3d12_0000_0020 */
 /* [local] */ 
 
 typedef struct D3D12_SUBRESOURCE_DATA
@@ -6234,6 +7180,7 @@ DEFINE_GUID(IID_ID3D12Object,0xc4fec28f,0x7966,0x4e95,0x9f,0x94,0xf4,0x31,0xcb,0
 DEFINE_GUID(IID_ID3D12DeviceChild,0x905db94b,0xa00c,0x4140,0x9d,0xf5,0x2b,0x64,0xca,0x9e,0xa3,0x57);
 DEFINE_GUID(IID_ID3D12RootSignature,0xc54a6b66,0x72df,0x4ee8,0x8b,0xe5,0xa9,0x46,0xa1,0x42,0x92,0x14);
 DEFINE_GUID(IID_ID3D12RootSignatureDeserializer,0x34AB647B,0x3CC8,0x46AC,0x84,0x1B,0xC0,0x96,0x56,0x45,0xC0,0x46);
+DEFINE_GUID(IID_ID3D12VersionedRootSignatureDeserializer,0x7F91CE67,0x090C,0x4BB7,0xB7,0x8E,0xED,0x8F,0xF2,0xE3,0x1D,0xA0);
 DEFINE_GUID(IID_ID3D12Pageable,0x63ee58fb,0x1268,0x4835,0x86,0xda,0xf0,0x08,0xce,0x62,0xf0,0xd6);
 DEFINE_GUID(IID_ID3D12Heap,0x6b3b2502,0x6e51,0x45b3,0x90,0xee,0x98,0x84,0x26,0x5e,0x8d,0xf3);
 DEFINE_GUID(IID_ID3D12Resource,0x696442be,0xa72e,0x4059,0xbc,0x79,0x5b,0x5c,0x98,0x04,0x0f,0xad);
@@ -6247,10 +7194,12 @@ DEFINE_GUID(IID_ID3D12CommandList,0x7116d91c,0xe7e4,0x47ce,0xb8,0xc6,0xec,0x81,0
 DEFINE_GUID(IID_ID3D12GraphicsCommandList,0x5b160d0f,0xac1b,0x4185,0x8b,0xa8,0xb3,0xae,0x42,0xa5,0xa4,0x55);
 DEFINE_GUID(IID_ID3D12CommandQueue,0x0ec870a6,0x5d7e,0x4c22,0x8c,0xfc,0x5b,0xaa,0xe0,0x76,0x16,0xed);
 DEFINE_GUID(IID_ID3D12Device,0x189819f1,0x1db6,0x4b57,0xbe,0x54,0x18,0x21,0x33,0x9b,0x85,0xf7);
+DEFINE_GUID(IID_ID3D12PipelineLibrary,0xc64226a8,0x9201,0x46af,0xb4,0xcc,0x53,0xfb,0x9f,0xf7,0x41,0x4f);
+DEFINE_GUID(IID_ID3D12Device1,0x77acce80,0x638e,0x4e65,0x88,0x95,0xc1,0xf2,0x33,0x86,0x86,0x3e);
 
 
-extern RPC_IF_HANDLE __MIDL_itf_d3d12_0000_0017_v0_0_c_ifspec;
-extern RPC_IF_HANDLE __MIDL_itf_d3d12_0000_0017_v0_0_s_ifspec;
+extern RPC_IF_HANDLE __MIDL_itf_d3d12_0000_0020_v0_0_c_ifspec;
+extern RPC_IF_HANDLE __MIDL_itf_d3d12_0000_0020_v0_0_s_ifspec;
 
 /* Additional Prototypes for ALL interfaces */
 
