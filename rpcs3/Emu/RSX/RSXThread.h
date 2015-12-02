@@ -126,16 +126,19 @@ namespace rsx
 	u32 get_address(u32 offset, u32 location);
 
 	template<typename T>
-	void pad_texture(void* inputPixels, void* outputPixels, u16 inputWidth, u16 inputHeight, u16 outputWidth, u16 outputHeight) {
+	void pad_texture(void* inputPixels, void* outputPixels, u16 inputWidth, u16 inputHeight, u16 outputWidth, u16 outputHeight) 
+	{
 		T *src, *dst;
-		src = (T *)(inputPixels);
-		dst = (T *)(outputPixels);
+		src = static_cast<T*>(inputPixels);
+		dst = static_cast<T*>(outputPixels);
 
-		for (u16 h = 0; h < inputHeight; ++h) {
-			const u32 paddedPos = h * outputWidth;
+		for (u16 h = 0; h < inputHeight; ++h)
+		{
+			const u32 padded_pos = h * outputWidth;
 			const u32 pos = h * inputWidth;
-			for (u16 w = 0; w < inputWidth; ++w) {
-				dst[paddedPos + w] = src[pos + w];
+			for (u16 w = 0; w < inputWidth; ++w)
+			{
+				dst[padded_pos + w] = src[pos + w];
 			}
 		}
 	}
@@ -158,28 +161,31 @@ namespace rsx
 		u32 y_mask = 0xAAAAAAAA;
 
 		// We have to limit the masks to the lower of the two dimensions to allow for non-square textures
-		u32 limitMask = (log2width < log2height) ? log2width : log2height;
+		u32 limit_mask = (log2width < log2height) ? log2width : log2height;
 		// double the limit mask to account for bits in both x and y
-		limitMask = 1 << (limitMask << 1);
+		limit_mask = 1 << (limit_mask << 1);
 
 		//x_mask, bits above limit are 1's for x-carry
-		x_mask = (x_mask | ~(limitMask - 1));
+		x_mask = (x_mask | ~(limit_mask - 1));
 		//y_mask. bits above limit are 0'd, as we use a different method for y-carry over
-		y_mask = (y_mask & (limitMask - 1));
+		y_mask = (y_mask & (limit_mask - 1));
 
 		u32 offs_y = 0;
 		u32 offs_x = 0;
 		u32 offs_x0 = 0; //total y-carry offset for x
-		u32 y_incr = limitMask;
+		u32 y_incr = limit_mask;
 
 		T *src, *dst;
 
-		if (!inputIsSwizzled) {
-			for (int y = 0; y < height; ++y) {
-				src = (T *)((T*)inputPixels + y*width);
-				dst = (T *)((T*)outputPixels + offs_y);
+		if (!inputIsSwizzled)
+		{
+			for (int y = 0; y < height; ++y) 
+			{
+				src = static_cast<T*>(inputPixels) + y*width;
+				dst = static_cast<T*>(outputPixels) + offs_y;
 				offs_x = offs_x0;
-				for (int x = 0; x < width; ++x) {
+				for (int x = 0; x < width; ++x) 
+				{
 					dst[offs_x] = src[x];
 					offs_x = (offs_x - x_mask) & x_mask;
 				}
@@ -187,12 +193,15 @@ namespace rsx
 				if (offs_y == 0) offs_x0 += y_incr;
 			}
 		}
-		else {
-			for (int y = 0; y < height; ++y) {
-				src = (T *)((T*)inputPixels + offs_y);
-				dst = (T *)((T*)outputPixels + y*width);
+		else 
+		{
+			for (int y = 0; y < height; ++y) 
+			{
+				src = static_cast<T*>(inputPixels) + offs_y;
+				dst = static_cast<T*>(outputPixels) + y*width;
 				offs_x = offs_x0;
-				for (int x = 0; x < width; ++x) {
+				for (int x = 0; x < width; ++x) 
+				{
 					dst[x] = src[offs_x];
 					offs_x = (offs_x - x_mask) & x_mask;
 				}

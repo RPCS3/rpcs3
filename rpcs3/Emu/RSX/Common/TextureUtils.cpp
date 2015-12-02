@@ -65,10 +65,10 @@ writeTexelsSwizzled(const char *src, char *dst, size_t widthInBlock, size_t heig
 		castedSrc = (u32*)src + offsetInSrc;
 		castedDst = (u32*)dst + offsetInDst;
 
-		std::unique_ptr<u32[]> tempSwizzled(new u32[currentHeight * currentWidth]);
-		rsx::convert_linear_swizzle<u32>(castedSrc, tempSwizzled.get(), currentWidth, currentHeight, true);
+		std::unique_ptr<u32[]> temp_swizzled(new u32[currentHeight * currentWidth]);
+		rsx::convert_linear_swizzle<u32>(castedSrc, temp_swizzled.get(), currentWidth, currentHeight, true);
 		for (unsigned row = 0; row < currentHeight; row++)
-			memcpy((char*)dst + offsetInDst + row * rowPitch, (char*)tempSwizzled.get() + offsetInSrc + row * widthInBlock * blockSize, currentWidth * blockSize);
+			memcpy((char*)dst + offsetInDst + row * rowPitch, (char*)temp_swizzled.get() + offsetInSrc + row * widthInBlock * blockSize, currentWidth * blockSize);
 
 		offsetInDst += currentHeight * rowPitch;
 		offsetInSrc += currentHeight * widthInBlock * blockSize;
@@ -138,12 +138,12 @@ write16bTexelsSwizzled(const char *src, char *dst, size_t widthInBlock, size_t h
 		castedSrc = (u16*)src + offsetInSrc;
 		castedDst = (u16*)dst + offsetInDst;
 
-		std::unique_ptr<u16[]> tempSwizzled(new u16[currentHeight * currentWidth]);
-		rsx::convert_linear_swizzle<u16>(castedSrc, tempSwizzled.get(), currentWidth, currentHeight, true);
+		std::unique_ptr<u16[]> temp_swizzled(new u16[currentHeight * currentWidth]);
+		rsx::convert_linear_swizzle<u16>(castedSrc, temp_swizzled.get(), currentWidth, currentHeight, true);
 		for (unsigned row = 0; row < heightInBlock; row++)
 			for (int j = 0; j < currentWidth; j++)
 			{
-				u16 tmp = tempSwizzled[offsetInSrc / 2 + row * srcPitch / 2 + j];
+				u16 tmp = temp_swizzled[offsetInSrc / 2 + row * srcPitch / 2 + j];
 				castedDst[offsetInDst / 2 + row * rowPitch / 2 + j] = (tmp >> 8) | (tmp << 8);
 			}
 

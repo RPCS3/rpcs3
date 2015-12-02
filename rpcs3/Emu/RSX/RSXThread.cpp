@@ -359,7 +359,8 @@ namespace rsx
 
 			// handle weird RSX quirk, doesn't report less than 16 pixels width in some cases 
 			u16 src_width = method_registers[NV3089_IMAGE_IN_SIZE];
-			if (src_width == 16 && out_w < 16 && method_registers[NV3089_DS_DX] == (1 << 20)) {
+			if (src_width == 16 && out_w < 16 && method_registers[NV3089_DS_DX] == (1 << 20)) 
+			{
 				src_width = out_w;
 			}
 
@@ -524,10 +525,12 @@ namespace rsx
 				u8* swizzled_pixels = sw_temp.get();
 
 				// Check and pad texture out if we are given non square texture for swizzle to be correct
-				if (sw_width != out_w || sw_height != out_h) {
+				if (sw_width != out_w || sw_height != out_h) 
+				{
 					sw_temp2.reset(new u8[out_bpp * sw_width * sw_height]());
 
-					switch (out_bpp) {
+					switch (out_bpp) 
+					{
 					case 1:
 						pad_texture<u8>(linear_pixels, sw_temp2.get(), out_w, out_h, sw_width, sw_height);
 						break;
