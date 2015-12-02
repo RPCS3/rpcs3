@@ -726,12 +726,17 @@ namespace rsx
 			bind_range_impl_t<id, step, count, T, index>::impl();
 		}
 
+		[[noreturn]] never_inline static void bind_redefinition_error(int id)
+		{
+			throw EXCEPTION("RSX method implementation redefinition (0x%04x)", id);
+		}
+
 		template<int id, typename T, T impl_func>
 		static void bind_impl()
 		{
 			if (methods[id])
 			{
-				throw std::logic_error(fmt::format("redefinition rsx method implementation (0x%04x)", id));
+				bind_redefinition_error(id);
 			}
 
 			methods[id] = wrapper<id, T, impl_func>;
@@ -742,7 +747,7 @@ namespace rsx
 		{
 			if (methods[id])
 			{
-				throw std::logic_error(fmt::format("redefinition rsx method implementation(cpu only) (0x%04x)", id));
+				bind_redefinition_error(id);
 			}
 
 			methods[id] = call_impl_func<impl_func>;

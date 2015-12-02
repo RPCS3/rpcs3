@@ -1,4 +1,5 @@
 #pragma once
+
 #include <exception>
 #include <string>
 #include <functional>
@@ -9,7 +10,6 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include "Utilities/types.h"
 #include "OpenGL.h"
 
 namespace gl

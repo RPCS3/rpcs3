@@ -3,9 +3,7 @@
 #include "Loader/Loader.h"
 #include "DbgCommand.h"
 
-//just for frame_type
-//TODO: provide better way
-#include "Emu/RSX/GSRender.h"
+enum class frame_type;
 
 struct EmuCallbacks
 {

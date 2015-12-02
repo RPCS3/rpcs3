@@ -1,4 +1,5 @@
 #pragma once
+
 #include "GCM.h"
 #include "RSXTexture.h"
 #include "RSXVertexProgram.h"
@@ -8,8 +9,6 @@
 #include "Utilities/Semaphore.h"
 #include "Utilities/Thread.h"
 #include "Utilities/Timer.h"
-#include "Utilities/types.h"
-
 
 extern u64 get_system_time();
 

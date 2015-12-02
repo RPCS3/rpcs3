@@ -4,6 +4,7 @@
 
 #include "Utilities/rPlatform.h"
 #include "Utilities/Log.h"
+#include "Utilities/File.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/state.h"
@@ -16,7 +17,6 @@
 #include "MemoryViewer.h"
 
 #include <wx/notebook.h>
-#include <fstream>
 
 // TODO: Clear the object when restarting the emulator
 std::vector<RSXDebuggerProgram> m_debug_programs;
@@ -558,20 +558,22 @@ void RSXDebugger::GetMemory()
 			m_list_commands->SetItem(i, 1, "????????");
 		}
 	}
-	std::ofstream command_dump;
-	command_dump.open("command_dump.log");
+
+	std::string dump;
+
 	for (u32 i = 0; i < frame_debug.command_queue.size(); i++)
 	{
-		std::string str = rsx::get_pretty_printing_function(frame_debug.command_queue[i].first)(frame_debug.command_queue[i].second);
+		const std::string& str = rsx::get_pretty_printing_function(frame_debug.command_queue[i].first)(frame_debug.command_queue[i].second);
 		m_list_captured_frame->SetItem(i, 0, str);
-		command_dump << str << "\n";
+
+		dump += str;
+		dump += '\n';
 	}
-	command_dump.close();
+
+	fs::file("command_dump.log", fom::rewrite) << dump;
 
 	for (u32 i = 0;i < frame_debug.draw_calls.size(); i++)
 		m_list_captured_draw_calls->InsertItem(i, frame_debug.draw_calls[i].name);
-
-
 }
 
 void RSXDebugger::GetBuffers()

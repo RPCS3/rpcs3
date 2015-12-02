@@ -7,7 +7,10 @@
 #endif
 
 #define NOMINMAX
+
+#ifndef __STDC_CONSTANT_MACROS
 #define __STDC_CONSTANT_MACROS
+#endif
 
 #if defined(MSVC_CRT_MEMLEAK_DETECTION) && defined(_DEBUG) && !defined(DBG_NEW)
 	#define DBG_NEW new ( _NORMAL_BLOCK , __FILE__ , __LINE__ )
@@ -55,26 +58,13 @@ using namespace std::chrono_literals;
 #define CHECK_SIZE_ALIGN(type, size, align) CHECK_SIZE(type, size); CHECK_ALIGN(type, align)
 #define CHECK_ASCENDING(constexpr_array) static_assert(::is_ascending(constexpr_array), #constexpr_array " is not sorted in ascending order")
 
-using uint = unsigned int;
-
-using u8 = std::uint8_t;
-using u16 = std::uint16_t;
-using u32 = std::uint32_t;
-using u64 = std::uint64_t;
-
-using s8 = std::int8_t;
-using s16 = std::int16_t;
-using s32 = std::int32_t;
-using s64 = std::int64_t;
-
-using f32 = float;
-using f64 = double;
-
 #ifndef _MSC_VER
 using u128 = __uint128_t;
 #endif
 
 CHECK_SIZE_ALIGN(u128, 16, 16);
+
+#include "Utilities/types.h"
 
 // bool type replacement for PS3/PSV
 class b8

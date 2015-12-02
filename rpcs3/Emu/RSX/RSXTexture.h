@@ -1,5 +1,4 @@
 #pragma once
-#include "Utilities/types.h"
 
 namespace rsx
 {

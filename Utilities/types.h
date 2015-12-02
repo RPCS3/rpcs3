@@ -1,4 +1,5 @@
 #pragma once
+
 #include <typeinfo>
 #include <cstdint>
 #include <cmath>
@@ -12,15 +13,15 @@ using ullong = unsigned long long;
 
 using llong = long long;
 
-using u8 = uint8_t;
-using u16 = uint16_t;
-using u32 = uint32_t;
-using u64 = uint64_t;
+using u8 = std::uint8_t;
+using u16 = std::uint16_t;
+using u32 = std::uint32_t;
+using u64 = std::uint64_t;
 
-using s8 = int8_t;
-using s16 = int16_t;
-using s32 = int32_t;
-using s64 = int64_t;
+using s8 = std::int8_t;
+using s16 = std::int16_t;
+using s32 = std::int32_t;
+using s64 = std::int64_t;
 
 union alignas(2) f16
 {
@@ -45,18 +46,6 @@ union alignas(2) f16
 
 using f32 = float;
 using f64 = double;
-
-#include "BEType.h"
-
-template<typename T>
-class pi_t
-{
-public:
-	static constexpr T value = T(3.141592653589793238462643383279502884197169399375105820974944592307816406286);
-};
-
-template<typename T>
-using pi = pi_t<T>;
 
 struct ignore
 {
@@ -1103,12 +1092,11 @@ using color1d = color1_base<double>;
 namespace std
 {
 	template<>
-	class hash<position2i>
+	struct hash<::position2i>
 	{
-	public:
-		size_t operator()(const position2i& position) const
+		size_t operator()(const ::position2i& position) const
 		{
-			return ((size_t)position.x << 32) | position.y;
+			return (static_cast<size_t>(position.x) << 32) | position.y;
 		}
 	};
 }
