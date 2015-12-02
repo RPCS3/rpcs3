@@ -4523,7 +4523,7 @@ EXTERN_C const IID IID_ID3D12GraphicsCommandList;
         
         virtual void STDMETHODCALLTYPE SetDescriptorHeaps( 
             _In_  UINT NumDescriptorHeaps,
-            _In_reads_(NumDescriptorHeaps)  ID3D12DescriptorHeap **ppDescriptorHeaps) = 0;
+            _In_reads_(NumDescriptorHeaps)  ID3D12DescriptorHeap *const *ppDescriptorHeaps) = 0;
         
         virtual void STDMETHODCALLTYPE SetComputeRootSignature( 
             _In_  ID3D12RootSignature *pRootSignature) = 0;
@@ -4600,7 +4600,7 @@ EXTERN_C const IID IID_ID3D12GraphicsCommandList;
         
         virtual void STDMETHODCALLTYPE OMSetRenderTargets( 
             _In_  UINT NumRenderTargetDescriptors,
-            _In_  const D3D12_CPU_DESCRIPTOR_HANDLE *pRenderTargetDescriptors,
+            _In_opt_  const D3D12_CPU_DESCRIPTOR_HANDLE *pRenderTargetDescriptors,
             _In_  BOOL RTsSingleHandleToDescriptorRange,
             _In_opt_  const D3D12_CPU_DESCRIPTOR_HANDLE *pDepthStencilDescriptor) = 0;
         
@@ -4840,7 +4840,7 @@ EXTERN_C const IID IID_ID3D12GraphicsCommandList;
         void ( STDMETHODCALLTYPE *SetDescriptorHeaps )( 
             ID3D12GraphicsCommandList * This,
             _In_  UINT NumDescriptorHeaps,
-            _In_reads_(NumDescriptorHeaps)  ID3D12DescriptorHeap **ppDescriptorHeaps);
+            _In_reads_(NumDescriptorHeaps)  ID3D12DescriptorHeap *const *ppDescriptorHeaps);
         
         void ( STDMETHODCALLTYPE *SetComputeRootSignature )( 
             ID3D12GraphicsCommandList * This,
@@ -4935,7 +4935,7 @@ EXTERN_C const IID IID_ID3D12GraphicsCommandList;
         void ( STDMETHODCALLTYPE *OMSetRenderTargets )( 
             ID3D12GraphicsCommandList * This,
             _In_  UINT NumRenderTargetDescriptors,
-            _In_  const D3D12_CPU_DESCRIPTOR_HANDLE *pRenderTargetDescriptors,
+            _In_opt_  const D3D12_CPU_DESCRIPTOR_HANDLE *pRenderTargetDescriptors,
             _In_  BOOL RTsSingleHandleToDescriptorRange,
             _In_opt_  const D3D12_CPU_DESCRIPTOR_HANDLE *pDepthStencilDescriptor);
         
