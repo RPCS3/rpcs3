@@ -638,11 +638,6 @@
     <ClInclude Include="Emu\Cell\PPULLVMRecompiler.h" />
     <ClInclude Include="stdafx.h" />
   </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="D3D12GSRender.vcxproj">
-      <Project>{fac9b17b-f4b8-4b75-8aeb-c8c7cb92b078}</Project>
-    </ProjectReference>
-  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{C4A10229-4712-4BD2-B63E-50D93C67A038}</ProjectGuid>
     <RootNamespace>emucore</RootNamespace>
@@ -742,6 +737,8 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <AdditionalIncludeDirectories>../glm</AdditionalIncludeDirectories>
       <IgnoreStandardIncludePath>false</IgnoreStandardIncludePath>
+      <PrecompiledHeaderOutputFile>$(Platform)\$(Configuration).pch</PrecompiledHeaderOutputFile>
+      <ProgramDataBaseFileName>$(Platform)\$(Configuration).pdb</ProgramDataBaseFileName>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -758,6 +755,8 @@
       <ExceptionHandling>Async</ExceptionHandling>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <AdditionalIncludeDirectories>../glm</AdditionalIncludeDirectories>
+      <PrecompiledHeaderOutputFile>$(Platform)\$(Configuration).pch</PrecompiledHeaderOutputFile>
+      <ProgramDataBaseFileName>$(Platform)\$(Configuration).pdb</ProgramDataBaseFileName>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -778,6 +777,8 @@
       <ExceptionHandling>Async</ExceptionHandling>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <AdditionalIncludeDirectories>../glm</AdditionalIncludeDirectories>
+      <PrecompiledHeaderOutputFile>$(Platform)\$(Configuration).pch</PrecompiledHeaderOutputFile>
+      <ProgramDataBaseFileName>$(Platform)\$(Configuration).pdb</ProgramDataBaseFileName>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -796,6 +797,8 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <AdditionalIncludeDirectories>../glm</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_UNICODE;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeaderOutputFile>$(Platform)\$(Configuration).pch</PrecompiledHeaderOutputFile>
+      <ProgramDataBaseFileName>$(Platform)\$(Configuration).pdb</ProgramDataBaseFileName>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -813,9 +816,11 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
       <ExceptionHandling>Async</ExceptionHandling>
-      <PreprocessorDefinitions>LLVM_AVAILABLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_UNICODE;UNICODE;LLVM_AVAILABLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <AdditionalIncludeDirectories>../glm</AdditionalIncludeDirectories>
+      <PrecompiledHeaderOutputFile>$(Platform)\$(Configuration).pch</PrecompiledHeaderOutputFile>
+      <ProgramDataBaseFileName>$(Platform)\$(Configuration).pdb</ProgramDataBaseFileName>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>

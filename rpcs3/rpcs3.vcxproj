@@ -50,7 +50,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <WholeProgramOptimization>false</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
     <PlatformToolset>v140</PlatformToolset>
     <CLRSupport>false</CLRSupport>
@@ -58,7 +58,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <WholeProgramOptimization>false</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
     <PlatformToolset>v140</PlatformToolset>
     <CLRSupport>false</CLRSupport>
@@ -124,9 +124,10 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <AdditionalIncludeDirectories>..\wxWidgets\include\msvc;..\glm</AdditionalIncludeDirectories>
       <ExceptionHandling>Async</ExceptionHandling>
-      <PrecompiledHeaderFile>stdafx_gui.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName)_gui.pch</PrecompiledHeaderOutputFile>
+      <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(Platform)\$(Configuration).pch</PrecompiledHeaderOutputFile>
       <PreprocessorDefinitions>_UNICODE;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ProgramDataBaseFileName>$(Platform)\$(Configuration).pdb</ProgramDataBaseFileName>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -154,9 +155,10 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <AdditionalIncludeDirectories>..\wxWidgets\include\msvc;..\glm</AdditionalIncludeDirectories>
       <ExceptionHandling>Async</ExceptionHandling>
-      <PrecompiledHeaderFile>stdafx_gui.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName)_gui.pch</PrecompiledHeaderOutputFile>
+      <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(Platform)\$(Configuration).pch</PrecompiledHeaderOutputFile>
       <PreprocessorDefinitions>_UNICODE;UNICODE;LLVM_AVAILABLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ProgramDataBaseFileName>$(Platform)\$(Configuration).pdb</ProgramDataBaseFileName>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -183,10 +185,11 @@
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <AdditionalIncludeDirectories>..\wxWidgets\include\msvc;..\glm</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_UNICODE;UNICODE;MSVC_CRT_MEMLEAK_DETECTION;%(PreprocessorDefinitions);DX12_SUPPORT</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_UNICODE;UNICODE;MSVC_CRT_MEMLEAK_DETECTION;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ExceptionHandling>Async</ExceptionHandling>
-      <PrecompiledHeaderFile>stdafx_gui.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName)_gui.pch</PrecompiledHeaderOutputFile>
+      <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(Platform)\$(Configuration).pch</PrecompiledHeaderOutputFile>
+      <ProgramDataBaseFileName>$(Platform)\$(Configuration).pdb</ProgramDataBaseFileName>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -214,15 +217,15 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <AdditionalIncludeDirectories>..\wxWidgets\include\msvc;..\glm</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <DisableLanguageExtensions>false</DisableLanguageExtensions>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <ExceptionHandling>Async</ExceptionHandling>
       <EnablePREfast>false</EnablePREfast>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <PrecompiledHeaderFile>stdafx_gui.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName)_gui.pch</PrecompiledHeaderOutputFile>
+      <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(Platform)\$(Configuration).pch</PrecompiledHeaderOutputFile>
+      <ProgramDataBaseFileName>$(Platform)\$(Configuration).pdb</ProgramDataBaseFileName>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -252,15 +255,16 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <AdditionalIncludeDirectories>..\wxWidgets\include\msvc;..\glm</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;LLVM_AVAILABLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <DisableLanguageExtensions>false</DisableLanguageExtensions>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <ExceptionHandling>Async</ExceptionHandling>
       <EnablePREfast>false</EnablePREfast>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <PrecompiledHeaderFile>stdafx_gui.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName)_gui.pch</PrecompiledHeaderOutputFile>
+      <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(Platform)\$(Configuration).pch</PrecompiledHeaderOutputFile>
+      <ProgramDataBaseFileName>$(Platform)\$(Configuration).pdb</ProgramDataBaseFileName>
+      <PreprocessorDefinitions>_UNICODE;UNICODE;LLVM_AVAILABLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -311,13 +315,6 @@
     <ClCompile Include="Gui\VFSManager.cpp" />
     <ClCompile Include="Gui\VHDDManager.cpp" />
     <ClCompile Include="rpcs3.cpp" />
-    <ClCompile Include="stdafx_gui.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug - MemLeak|x64'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">Create</PrecompiledHeader>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="rpcs3.rc" />

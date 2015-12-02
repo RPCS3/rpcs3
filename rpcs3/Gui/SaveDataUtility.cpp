@@ -1,3 +1,4 @@
+#include "stdafx.h"
 #include "stdafx_gui.h"
 #include "SaveDataUtility.h"
 #include "Utilities/Log.h"

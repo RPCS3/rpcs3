@@ -81,9 +81,6 @@
     <ClCompile Include="Emu\Io\XInput\XInputPadHandler.cpp">
       <Filter>Io\XInput</Filter>
     </ClCompile>
-    <ClCompile Include="stdafx_gui.cpp">
-      <Filter>rpcs3</Filter>
-    </ClCompile>
     <ClCompile Include="Emu\Cell\PPUProgramCompiler.cpp">
       <Filter>Gui</Filter>
     </ClCompile>

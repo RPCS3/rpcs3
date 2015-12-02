@@ -1,3 +1,4 @@
+#include "stdafx.h"
 #include "stdafx_gui.h"
 #ifdef _MSC_VER
 #include "Utilities/Log.h"

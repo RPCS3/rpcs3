@@ -1,3 +1,4 @@
+#include "stdafx.h"
 #include "stdafx_gui.h"
 #if 0
 #include "Utilities/Log.h"

@@ -1,3 +1,4 @@
+#include "stdafx.h"
 #include "stdafx_gui.h"
 #include "rpcs3.h"
 #include "Emu/System.h"

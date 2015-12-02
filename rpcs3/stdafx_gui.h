@@ -1,6 +1,9 @@
 #pragma once
 
 #ifndef QT_UI
+#ifdef _MSC_VER
+#pragma warning(push, 0)
+#endif
 #include <wx/wxprec.h>
 #include <wx/config.h>
 #include <wx/string.h>
@@ -23,6 +26,7 @@
 #include <wx/checkbox.h>
 #include <wx/listctrl.h>
 #include <wx/aui/auibook.h>
+#ifdef _MSC_VER
+#pragma warning(pop)
 #endif
-
-#include "stdafx.h"
+#endif

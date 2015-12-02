@@ -1,3 +1,4 @@
+#include "stdafx.h"
 #include "stdafx_gui.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
@@ -29,6 +30,13 @@
 #include "Gui/SaveDataDialog.h"
 
 #include "Gui/GLGSFrame.h"
+
+#include "Emu/RSX/Null/NullGSRender.h"
+#include "Emu/RSX/GL/GLGSRender.h"
+#ifdef _MSC_VER
+#include "Emu/RSX/D3D12/D3D12GSRender.h"
+#endif
+
 #include <wx/stdpaths.h>
 
 #ifdef _WIN32
@@ -110,7 +118,7 @@ bool Rpcs3App::OnInit()
 #ifdef _MSC_VER
 		case io_handler_mode::xinput: return std::make_unique<XInputPadHandler>();
 #endif
-		default: throw EXCEPTION("Invalid Pad Handler Mode %d", +(u32)mode);
+		default: throw EXCEPTION("Invalid Pad Handler Mode %d", (int)mode);
 		}
 	};
 
@@ -118,17 +126,25 @@ bool Rpcs3App::OnInit()
 	{
 		switch (type)
 		{
-		case frame_type::OpenGL:
-			return std::make_unique<GLGSFrame>();
-
-		case frame_type::DX12:
-			return std::make_unique<GSFrame>("DirectX 12");
-
-		case frame_type::Null:
-			return std::make_unique<GSFrame>("Null");
+		case frame_type::OpenGL: return std::make_unique<GLGSFrame>();
+		case frame_type::DX12: return std::make_unique<GSFrame>("DirectX 12");
+		case frame_type::Null: return std::make_unique<GSFrame>("Null");
 		}
 
 		throw EXCEPTION("Invalid Frame Type");
+	};
+
+	callbacks.get_gs_render = []() -> std::shared_ptr<GSRender>
+	{
+		switch (auto mode = rpcs3::state.config.rsx.renderer.value())
+		{
+		case rsx_renderer_type::Null: return std::make_shared<NullGSRender>();
+		case rsx_renderer_type::OpenGL: return std::make_shared<GLGSRender>();
+#ifdef _MSC_VER
+		case rsx_renderer_type::DX12: return std::make_shared<D3D12GSRender>();
+#endif
+		default: throw EXCEPTION("Invalid GS Renderer %d", (int)mode);
+		}
 	};
 
 	callbacks.get_msg_dialog = []() -> std::unique_ptr<MsgDialogBase>

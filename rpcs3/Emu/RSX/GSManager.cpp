@@ -1,15 +1,11 @@
 #include "stdafx.h"
 #include "Utilities/Log.h"
+#include "Emu/System.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/SysCalls/Modules/cellVideoOut.h"
 #include "Emu/state.h"
 
 #include "GSManager.h"
-#include "Null/NullGSRender.h"
-#include "GL/GLGSRender.h"
-#ifdef _MSC_VER
-#include "Emu/RSX/D3D12/D3D12GSRender.h"
-#endif
 
 void GSInfo::Init()
 {
@@ -28,15 +24,7 @@ void GSManager::Init()
 
 	m_info.Init();
 
-	switch (rpcs3::state.config.rsx.renderer.value())
-	{
-	default:
-	case rsx_renderer_type::Null : m_render = std::make_shared<NullGSRender>(); break;
-	case rsx_renderer_type::OpenGL: m_render = std::make_shared<GLGSRender>(); break;
-#ifdef _MSC_VER
-	case rsx_renderer_type::DX12: m_render = std::make_shared<D3D12GSRender>(); break;
-#endif
-	}
+	m_render = Emu.GetCallbacks().get_gs_render();
 
 	//m_render->Init(GetInfo().outresolution.width, GetInfo().outresolution.height);
 }

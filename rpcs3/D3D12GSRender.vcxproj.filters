@@ -73,9 +73,6 @@
     <ClCompile Include="Emu\RSX\D3D12\D3D12VertexProgramDecompiler.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="stdafx_d3d12.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Emu\RSX\D3D12\D3D12Formats.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

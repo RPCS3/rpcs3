@@ -1,3 +1,4 @@
+#include "stdafx.h"
 #include "stdafx_gui.h"
 #include "GSFrame.h"
 #include "Emu/System.h"
