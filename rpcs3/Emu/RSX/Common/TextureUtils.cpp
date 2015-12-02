@@ -134,7 +134,6 @@ write16bTexelsSwizzled(const char *src, char *dst, size_t widthInBlock, size_t h
 		Result.push_back(currentMipmapLevelInfo);
 
 		u16 *castedSrc, *castedDst;
-		u16 log2width, log2height;
 
 		castedSrc = (u16*)src + offsetInSrc;
 		castedDst = (u16*)dst + offsetInDst;

@@ -121,7 +121,7 @@ namespace rsx
 
 	extern u32 method_registers[0x10000 >> 2];
 
-    u32 get_vertex_type_size(u32 type);
+	u32 get_vertex_type_size(u32 type);
 
 	u32 get_address(u32 offset, u32 location);
 
@@ -153,9 +153,9 @@ namespace rsx
 		log2width = log2(width);
 		log2height = log2(height);
 
-		// Max mask possible for square texture (should be 2^11, or 22 bits for x and y)
-		u32 x_mask = 0x555555;
-		u32 y_mask = 0xAAAAAA;
+		// Max mask possible for square texture
+		u32 x_mask = 0x55555555;
+		u32 y_mask = 0xAAAAAAAA;
 
 		// We have to limit the masks to the lower of the two dimensions to allow for non-square textures
 		u32 limitMask = (log2width < log2height) ? log2width : log2height;
@@ -174,7 +174,7 @@ namespace rsx
 
 		T *src, *dst;
 
-		if (inputIsSwizzled) {
+		if (!inputIsSwizzled) {
 			for (int y = 0; y < height; ++y) {
 				src = (T *)((T*)inputPixels + y*width);
 				dst = (T *)((T*)outputPixels + offs_y);
