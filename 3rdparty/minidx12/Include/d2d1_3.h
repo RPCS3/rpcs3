@@ -18,6 +18,9 @@
 #ifndef _D2D1_EFFECTS_2_
 #include <d2d1effects_2.h>
 #endif // #ifndef _D2D1_EFFECTS_2_
+#ifndef _D2D1_SVG_
+#include <d2d1svg.h>
+#endif // #ifndef _D2D1_SVG_
 
 #include <winapifamily.h>
 
@@ -25,161 +28,127 @@
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_APP)
 
 typedef interface IWICBitmapFrameDecode IWICBitmapFrameDecode;
+typedef interface IDWriteFontFace IDWriteFontFace;
 
-//+-----------------------------------------------------------------------------
-//
-//  Enum:
-//      D2D1_INK_NIB_SHAPE
-//
-//------------------------------------------------------------------------------
+/// <summary>
+/// Specifies the appearance of the ink nib (pen tip) as part of an
+/// D2D1_INK_STYLE_PROPERTIES structure.
+/// </summary>
 typedef enum D2D1_INK_NIB_SHAPE
 {
-        D2D1_INK_NIB_SHAPE_ROUND = 0,
-        D2D1_INK_NIB_SHAPE_SQUARE = 1,
-        D2D1_INK_NIB_SHAPE_FORCE_DWORD = 0xffffffff
+    D2D1_INK_NIB_SHAPE_ROUND = 0,
+    D2D1_INK_NIB_SHAPE_SQUARE = 1,
+    D2D1_INK_NIB_SHAPE_FORCE_DWORD = 0xffffffff
 
 } D2D1_INK_NIB_SHAPE;
 
 
-//+-----------------------------------------------------------------------------
-//
-//  Enum:
-//      D2D1_ORIENTATION
-//
-//  Synopsis:
-//      Specifies the orientation of an image.
-//
-//------------------------------------------------------------------------------
+/// <summary>
+/// Specifies the orientation of an image.
+/// </summary>
 typedef enum D2D1_ORIENTATION
 {
-        D2D1_ORIENTATION_DEFAULT = 1,
-        D2D1_ORIENTATION_FLIP_HORIZONTAL = 2,
-        D2D1_ORIENTATION_ROTATE_CLOCKWISE180 = 3,
-        D2D1_ORIENTATION_ROTATE_CLOCKWISE180_FLIP_HORIZONTAL = 4,
-        D2D1_ORIENTATION_ROTATE_CLOCKWISE90_FLIP_HORIZONTAL = 5,
-        D2D1_ORIENTATION_ROTATE_CLOCKWISE270 = 6,
-        D2D1_ORIENTATION_ROTATE_CLOCKWISE270_FLIP_HORIZONTAL = 7,
-        D2D1_ORIENTATION_ROTATE_CLOCKWISE90 = 8,
-        D2D1_ORIENTATION_FORCE_DWORD = 0xffffffff
+    D2D1_ORIENTATION_DEFAULT = 1,
+    D2D1_ORIENTATION_FLIP_HORIZONTAL = 2,
+    D2D1_ORIENTATION_ROTATE_CLOCKWISE180 = 3,
+    D2D1_ORIENTATION_ROTATE_CLOCKWISE180_FLIP_HORIZONTAL = 4,
+    D2D1_ORIENTATION_ROTATE_CLOCKWISE90_FLIP_HORIZONTAL = 5,
+    D2D1_ORIENTATION_ROTATE_CLOCKWISE270 = 6,
+    D2D1_ORIENTATION_ROTATE_CLOCKWISE270_FLIP_HORIZONTAL = 7,
+    D2D1_ORIENTATION_ROTATE_CLOCKWISE90 = 8,
+    D2D1_ORIENTATION_FORCE_DWORD = 0xffffffff
 
 } D2D1_ORIENTATION;
 
 
-//+-----------------------------------------------------------------------------
-//
-//  Flag:
-//      D2D1_IMAGE_SOURCE_LOADING_OPTIONS
-//
-//  Synopsis:
-//      Option flags controlling how images sources are loaded during
-//      CreateImageSourceFromWic.
-//
-//------------------------------------------------------------------------------
+/// <summary>
+/// Option flags controlling how images sources are loaded during
+/// CreateImageSourceFromWic.
+/// </summary>
 typedef enum D2D1_IMAGE_SOURCE_LOADING_OPTIONS
 {
-        D2D1_IMAGE_SOURCE_LOADING_OPTIONS_NONE = 0,
-        D2D1_IMAGE_SOURCE_LOADING_OPTIONS_RELEASE_SOURCE = 1,
-        D2D1_IMAGE_SOURCE_LOADING_OPTIONS_CACHE_ON_DEMAND = 2,
-        D2D1_IMAGE_SOURCE_LOADING_OPTIONS_FORCE_DWORD = 0xffffffff
+    D2D1_IMAGE_SOURCE_LOADING_OPTIONS_NONE = 0,
+    D2D1_IMAGE_SOURCE_LOADING_OPTIONS_RELEASE_SOURCE = 1,
+    D2D1_IMAGE_SOURCE_LOADING_OPTIONS_CACHE_ON_DEMAND = 2,
+    D2D1_IMAGE_SOURCE_LOADING_OPTIONS_FORCE_DWORD = 0xffffffff
 
 } D2D1_IMAGE_SOURCE_LOADING_OPTIONS;
 
 DEFINE_ENUM_FLAG_OPERATORS(D2D1_IMAGE_SOURCE_LOADING_OPTIONS);
 
 
-//+-----------------------------------------------------------------------------
-//
-//  Flag:
-//      D2D1_IMAGE_SOURCE_FROM_DXGI_OPTIONS
-//
-//  Synopsis:
-//      Option flags controlling primary conversion performed by
-//      CreateImageSourceFromDxgi, if any.
-//
-//------------------------------------------------------------------------------
+/// <summary>
+/// Option flags controlling primary conversion performed by
+/// CreateImageSourceFromDxgi, if any.
+/// </summary>
 typedef enum D2D1_IMAGE_SOURCE_FROM_DXGI_OPTIONS
 {
-        D2D1_IMAGE_SOURCE_FROM_DXGI_OPTIONS_NONE = 0,
-        D2D1_IMAGE_SOURCE_FROM_DXGI_OPTIONS_LOW_QUALITY_PRIMARY_CONVERSION = 1,
-        D2D1_IMAGE_SOURCE_FROM_DXGI_OPTIONS_FORCE_DWORD = 0xffffffff
+    D2D1_IMAGE_SOURCE_FROM_DXGI_OPTIONS_NONE = 0,
+    D2D1_IMAGE_SOURCE_FROM_DXGI_OPTIONS_LOW_QUALITY_PRIMARY_CONVERSION = 1,
+    D2D1_IMAGE_SOURCE_FROM_DXGI_OPTIONS_FORCE_DWORD = 0xffffffff
 
 } D2D1_IMAGE_SOURCE_FROM_DXGI_OPTIONS;
 
 DEFINE_ENUM_FLAG_OPERATORS(D2D1_IMAGE_SOURCE_FROM_DXGI_OPTIONS);
 
 
-//+-----------------------------------------------------------------------------
-//
-//  Flag:
-//      D2D1_TRANSFORMED_IMAGE_SOURCE_OPTIONS
-//
-//  Synopsis:
-//      Option flags for transformed image sources.
-//
-//------------------------------------------------------------------------------
+/// <summary>
+/// Option flags for transformed image sources.
+/// </summary>
 typedef enum D2D1_TRANSFORMED_IMAGE_SOURCE_OPTIONS
 {
-        D2D1_TRANSFORMED_IMAGE_SOURCE_OPTIONS_NONE = 0,
-        
-        //
-        // Prevents the image source from being automatically scaled (by a ratio of the
-        // context DPI divided by 96) while drawn.
-        //
-        D2D1_TRANSFORMED_IMAGE_SOURCE_OPTIONS_DISABLE_DPI_SCALE = 1,
-        D2D1_TRANSFORMED_IMAGE_SOURCE_OPTIONS_FORCE_DWORD = 0xffffffff
+    D2D1_TRANSFORMED_IMAGE_SOURCE_OPTIONS_NONE = 0,
+    
+    /// <summary>
+    /// Prevents the image source from being automatically scaled (by a ratio of the
+    /// context DPI divided by 96) while drawn.
+    /// </summary>
+    D2D1_TRANSFORMED_IMAGE_SOURCE_OPTIONS_DISABLE_DPI_SCALE = 1,
+    D2D1_TRANSFORMED_IMAGE_SOURCE_OPTIONS_FORCE_DWORD = 0xffffffff
 
 } D2D1_TRANSFORMED_IMAGE_SOURCE_OPTIONS;
 
 DEFINE_ENUM_FLAG_OPERATORS(D2D1_TRANSFORMED_IMAGE_SOURCE_OPTIONS);
 
 
-//+-----------------------------------------------------------------------------
-//
-//  Struct:
-//      D2D1_TRANSFORMED_IMAGE_SOURCE_PROPERTIES
-//
-//  Synopsis:
-//      Properties of a transformed image source.
-//
-//------------------------------------------------------------------------------
+/// <summary>
+/// Properties of a transformed image source.
+/// </summary>
 typedef struct D2D1_TRANSFORMED_IMAGE_SOURCE_PROPERTIES
 {
     
-    //
-    // The orientation at which the image source is drawn.
-    //
+    /// <summary>
+    /// The orientation at which the image source is drawn.
+    /// </summary>
     D2D1_ORIENTATION orientation;
     
-    //
-    // The horizontal scale factor at which the image source is drawn.
-    //
+    /// <summary>
+    /// The horizontal scale factor at which the image source is drawn.
+    /// </summary>
     FLOAT scaleX;
     
-    //
-    // The vertical scale factor at which the image source is drawn.
-    //
+    /// <summary>
+    /// The vertical scale factor at which the image source is drawn.
+    /// </summary>
     FLOAT scaleY;
     
-    //
-    // The interpolation mode used when the image source is drawn.  This is ignored if
-    // the image source is drawn using the DrawImage method, or using an image brush.
-    //
+    /// <summary>
+    /// The interpolation mode used when the image source is drawn.  This is ignored if
+    /// the image source is drawn using the DrawImage method, or using an image brush.
+    /// </summary>
     D2D1_INTERPOLATION_MODE interpolationMode;
     
-    //
-    // Option flags.
-    //
+    /// <summary>
+    /// Option flags.
+    /// </summary>
     D2D1_TRANSFORMED_IMAGE_SOURCE_OPTIONS options;
 
 } D2D1_TRANSFORMED_IMAGE_SOURCE_PROPERTIES;
 
 
-//+-----------------------------------------------------------------------------
-//
-//  Struct:
-//      D2D1_INK_POINT
-//
-//------------------------------------------------------------------------------
+/// <summary>
+/// Represents a point, radius pair that makes up part of a D2D1_INK_BEZIER_SEGMENT.
+/// </summary>
 typedef struct D2D1_INK_POINT
 {
     FLOAT x;
@@ -189,12 +158,11 @@ typedef struct D2D1_INK_POINT
 } D2D1_INK_POINT;
 
 
-//+-----------------------------------------------------------------------------
-//
-//  Struct:
-//      D2D1_INK_BEZIER_SEGMENT
-//
-//------------------------------------------------------------------------------
+/// <summary>
+/// Represents a Bezier segment to be used in the creation of an ID2D1Ink object.
+/// This structure differs from D2D1_BEZIER_SEGMENT in that it is composed of
+/// D2D1_INK_POINT s, which contain a radius in addition to x- and y-coordinates.
+/// </summary>
 typedef struct D2D1_INK_BEZIER_SEGMENT
 {
     D2D1_INK_POINT point1;
@@ -204,198 +172,337 @@ typedef struct D2D1_INK_BEZIER_SEGMENT
 } D2D1_INK_BEZIER_SEGMENT;
 
 
-//+-----------------------------------------------------------------------------
-//
-//  Struct:
-//      D2D1_INK_STYLE_PROPERTIES
-//
-//------------------------------------------------------------------------------
+/// <summary>
+/// Defines the general pen tip shape and the transform used in an ID2D1InkStyle
+/// object.
+/// </summary>
 typedef struct D2D1_INK_STYLE_PROPERTIES
 {
     
-    //
-    // The general shape of the nib used to draw a given ink object.
-    //
+    /// <summary>
+    /// The general shape of the nib used to draw a given ink object.
+    /// </summary>
     D2D1_INK_NIB_SHAPE nibShape;
     
-    //
-    // The transform applied to shape of the nib. _31 and _32 are ignored.
-    //
+    /// <summary>
+    /// The transform applied to shape of the nib. _31 and _32 are ignored.
+    /// </summary>
     D2D1_MATRIX_3X2_F nibTransform;
 
 } D2D1_INK_STYLE_PROPERTIES;
 
 
-//+-----------------------------------------------------------------------------
-//
-//  Enum:
-//      D2D1_PATCH_EDGE_MODE
-//
-//------------------------------------------------------------------------------
+/// <summary>
+/// Specifies how to render gradient mesh edges.
+/// </summary>
 typedef enum D2D1_PATCH_EDGE_MODE
 {
-        
-        //
-        // Render this edge aliased.
-        //
-        D2D1_PATCH_EDGE_MODE_ALIASED = 0,
-        
-        //
-        // Render this edge antialiased.
-        //
-        D2D1_PATCH_EDGE_MODE_ANTIALIASED = 1,
-        
-        //
-        // Render this edge aliased and inflated out slightly.
-        //
-        D2D1_PATCH_EDGE_MODE_ALIASED_INFLATED = 2,
-        D2D1_PATCH_EDGE_MODE_FORCE_DWORD = 0xffffffff
+    
+    /// <summary>
+    /// Render this edge aliased.
+    /// </summary>
+    D2D1_PATCH_EDGE_MODE_ALIASED = 0,
+    
+    /// <summary>
+    /// Render this edge antialiased.
+    /// </summary>
+    D2D1_PATCH_EDGE_MODE_ANTIALIASED = 1,
+    
+    /// <summary>
+    /// Render this edge aliased and inflated out slightly.
+    /// </summary>
+    D2D1_PATCH_EDGE_MODE_ALIASED_INFLATED = 2,
+    D2D1_PATCH_EDGE_MODE_FORCE_DWORD = 0xffffffff
 
 } D2D1_PATCH_EDGE_MODE;
 
 
-//+-----------------------------------------------------------------------------
-//
-//  Struct:
-//      D2D1_GRADIENT_MESH_PATCH
-//
-//------------------------------------------------------------------------------
+/// <summary>
+/// Represents a tensor patch with 16 control points, 4 corner colors, and boundary
+/// flags. An ID2D1GradientMesh is made up of 1 or more gradient mesh patches. Use
+/// the GradientMeshPatch function or the GradientMeshPatchFromCoonsPatch function
+/// to create one.
+/// </summary>
 typedef struct D2D1_GRADIENT_MESH_PATCH
 {
     
-    //
-    // The gradient mesh patch control point at position 00.
-    //
+    /// <summary>
+    /// The gradient mesh patch control point at position 00.
+    /// </summary>
     D2D1_POINT_2F point00;
     
-    //
-    // The gradient mesh patch control point at position 01.
-    //
+    /// <summary>
+    /// The gradient mesh patch control point at position 01.
+    /// </summary>
     D2D1_POINT_2F point01;
     
-    //
-    // The gradient mesh patch control point at position 02.
-    //
+    /// <summary>
+    /// The gradient mesh patch control point at position 02.
+    /// </summary>
     D2D1_POINT_2F point02;
     
-    //
-    // The gradient mesh patch control point at position 03.
-    //
+    /// <summary>
+    /// The gradient mesh patch control point at position 03.
+    /// </summary>
     D2D1_POINT_2F point03;
     
-    //
-    // The gradient mesh patch control point at position 10.
-    //
+    /// <summary>
+    /// The gradient mesh patch control point at position 10.
+    /// </summary>
     D2D1_POINT_2F point10;
     
-    //
-    // The gradient mesh patch control point at position 11.
-    //
+    /// <summary>
+    /// The gradient mesh patch control point at position 11.
+    /// </summary>
     D2D1_POINT_2F point11;
     
-    //
-    // The gradient mesh patch control point at position 12.
-    //
+    /// <summary>
+    /// The gradient mesh patch control point at position 12.
+    /// </summary>
     D2D1_POINT_2F point12;
     
-    //
-    // The gradient mesh patch control point at position 13.
-    //
+    /// <summary>
+    /// The gradient mesh patch control point at position 13.
+    /// </summary>
     D2D1_POINT_2F point13;
     
-    //
-    // The gradient mesh patch control point at position 20.
-    //
+    /// <summary>
+    /// The gradient mesh patch control point at position 20.
+    /// </summary>
     D2D1_POINT_2F point20;
     
-    //
-    // The gradient mesh patch control point at position 21.
-    //
+    /// <summary>
+    /// The gradient mesh patch control point at position 21.
+    /// </summary>
     D2D1_POINT_2F point21;
     
-    //
-    // The gradient mesh patch control point at position 22.
-    //
+    /// <summary>
+    /// The gradient mesh patch control point at position 22.
+    /// </summary>
     D2D1_POINT_2F point22;
     
-    //
-    // The gradient mesh patch control point at position 23.
-    //
+    /// <summary>
+    /// The gradient mesh patch control point at position 23.
+    /// </summary>
     D2D1_POINT_2F point23;
     
-    //
-    // The gradient mesh patch control point at position 30.
-    //
+    /// <summary>
+    /// The gradient mesh patch control point at position 30.
+    /// </summary>
     D2D1_POINT_2F point30;
     
-    //
-    // The gradient mesh patch control point at position 31.
-    //
+    /// <summary>
+    /// The gradient mesh patch control point at position 31.
+    /// </summary>
     D2D1_POINT_2F point31;
     
-    //
-    // The gradient mesh patch control point at position 32.
-    //
+    /// <summary>
+    /// The gradient mesh patch control point at position 32.
+    /// </summary>
     D2D1_POINT_2F point32;
     
-    //
-    // The gradient mesh patch control point at position 33.
-    //
+    /// <summary>
+    /// The gradient mesh patch control point at position 33.
+    /// </summary>
     D2D1_POINT_2F point33;
     
-    //
-    // The color associated with control point at position 00.
-    //
+    /// <summary>
+    /// The color associated with control point at position 00.
+    /// </summary>
     D2D1_COLOR_F color00;
     
-    //
-    // The color associated with control point at position 03.
-    //
+    /// <summary>
+    /// The color associated with control point at position 03.
+    /// </summary>
     D2D1_COLOR_F color03;
     
-    //
-    // The color associated with control point at position 30.
-    //
+    /// <summary>
+    /// The color associated with control point at position 30.
+    /// </summary>
     D2D1_COLOR_F color30;
     
-    //
-    // The color associated with control point at position 33.
-    //
+    /// <summary>
+    /// The color associated with control point at position 33.
+    /// </summary>
     D2D1_COLOR_F color33;
     
-    //
-    // The edge mode for the top edge of the patch.
-    //
+    /// <summary>
+    /// The edge mode for the top edge of the patch.
+    /// </summary>
     D2D1_PATCH_EDGE_MODE topEdgeMode;
     
-    //
-    // The edge mode for the left edge of the patch.
-    //
+    /// <summary>
+    /// The edge mode for the left edge of the patch.
+    /// </summary>
     D2D1_PATCH_EDGE_MODE leftEdgeMode;
     
-    //
-    // The edge mode for the bottom edge of the patch.
-    //
+    /// <summary>
+    /// The edge mode for the bottom edge of the patch.
+    /// </summary>
     D2D1_PATCH_EDGE_MODE bottomEdgeMode;
     
-    //
-    // The edge mode for the right edge of the patch.
-    //
+    /// <summary>
+    /// The edge mode for the right edge of the patch.
+    /// </summary>
     D2D1_PATCH_EDGE_MODE rightEdgeMode;
 
 } D2D1_GRADIENT_MESH_PATCH;
+
+typedef enum D2D1_SPRITE_OPTIONS
+{
+    
+    /// <summary>
+    /// Use default sprite rendering behavior.
+    /// </summary>
+    D2D1_SPRITE_OPTIONS_NONE = 0,
+    
+    /// <summary>
+    /// Bitmap interpolation will be clamped to the sprite's source rectangle.
+    /// </summary>
+    D2D1_SPRITE_OPTIONS_CLAMP_TO_SOURCE_RECTANGLE = 1,
+    D2D1_SPRITE_OPTIONS_FORCE_DWORD = 0xffffffff
+
+} D2D1_SPRITE_OPTIONS;
+
+DEFINE_ENUM_FLAG_OPERATORS(D2D1_SPRITE_OPTIONS);
+
+
+/// <summary>
+/// Specifies the pixel snapping policy when rendering color bitmap glyphs.
+/// </summary>
+typedef enum D2D1_COLOR_BITMAP_GLYPH_SNAP_OPTION
+{
+    
+    /// <summary>
+    /// Color bitmap glyph positions are snapped to the nearest pixel if the bitmap
+    /// resolution matches that of the device context.
+    /// </summary>
+    D2D1_COLOR_BITMAP_GLYPH_SNAP_OPTION_DEFAULT = 0,
+    
+    /// <summary>
+    /// Color bitmap glyph positions are not snapped.
+    /// </summary>
+    D2D1_COLOR_BITMAP_GLYPH_SNAP_OPTION_DISABLE = 1,
+    D2D1_COLOR_BITMAP_GLYPH_SNAP_OPTION_FORCE_DWORD = 0xffffffff
+
+} D2D1_COLOR_BITMAP_GLYPH_SNAP_OPTION;
+
+
+/// <summary>
+/// This determines what gamma is used for interpolation/blending.
+/// </summary>
+typedef enum D2D1_GAMMA1
+{
+    
+    /// <summary>
+    /// Colors are manipulated in 2.2 gamma color space.
+    /// </summary>
+    D2D1_GAMMA1_G22 = D2D1_GAMMA_2_2,
+    
+    /// <summary>
+    /// Colors are manipulated in 1.0 gamma color space.
+    /// </summary>
+    D2D1_GAMMA1_G10 = D2D1_GAMMA_1_0,
+    
+    /// <summary>
+    /// Colors are manipulated in ST.2084 PQ gamma color space.
+    /// </summary>
+    D2D1_GAMMA1_G2084 = 2,
+    D2D1_GAMMA1_FORCE_DWORD = 0xffffffff
+
+} D2D1_GAMMA1;
+
+
+/// <summary>
+/// Simple description of a color space.
+/// </summary>
+typedef struct D2D1_SIMPLE_COLOR_PROFILE
+{
+    
+    /// <summary>
+    /// The XY coordinates of the red primary in CIEXYZ space.
+    /// </summary>
+    D2D1_POINT_2F redPrimary;
+    
+    /// <summary>
+    /// The XY coordinates of the green primary in CIEXYZ space.
+    /// </summary>
+    D2D1_POINT_2F greenPrimary;
+    
+    /// <summary>
+    /// The XY coordinates of the blue primary in CIEXYZ space.
+    /// </summary>
+    D2D1_POINT_2F bluePrimary;
+    
+    /// <summary>
+    /// The X/Z tristimulus values for the whitepoint, normalized for relative
+    /// luminance.
+    /// </summary>
+    D2D1_POINT_2F whitePointXZ;
+    
+    /// <summary>
+    /// The gamma encoding to use for this color space.
+    /// </summary>
+    D2D1_GAMMA1 gamma;
+
+} D2D1_SIMPLE_COLOR_PROFILE;
+
+
+/// <summary>
+/// Specifies which way a color profile is defined.
+/// </summary>
+typedef enum D2D1_COLOR_CONTEXT_TYPE
+{
+    D2D1_COLOR_CONTEXT_TYPE_ICC = 0,
+    D2D1_COLOR_CONTEXT_TYPE_SIMPLE = 1,
+    D2D1_COLOR_CONTEXT_TYPE_DXGI = 2,
+    D2D1_COLOR_CONTEXT_TYPE_FORCE_DWORD = 0xffffffff
+
+} D2D1_COLOR_CONTEXT_TYPE;
+
+
+                
+typedef enum DWRITE_GLYPH_IMAGE_FORMATS DWRITE_GLYPH_IMAGE_FORMATS;
+
+                 
+
+EXTERN_C CONST IID IID_ID2D1InkStyle;
+EXTERN_C CONST IID IID_ID2D1Ink;
+EXTERN_C CONST IID IID_ID2D1GradientMesh;
+EXTERN_C CONST IID IID_ID2D1ImageSource;
+EXTERN_C CONST IID IID_ID2D1ImageSourceFromWic;
+EXTERN_C CONST IID IID_ID2D1TransformedImageSource;
+EXTERN_C CONST IID IID_ID2D1LookupTable3D;
+EXTERN_C CONST IID IID_ID2D1DeviceContext2;
+EXTERN_C CONST IID IID_ID2D1Device2;
+EXTERN_C CONST IID IID_ID2D1Factory3;
+EXTERN_C CONST IID IID_ID2D1CommandSink2;
+EXTERN_C CONST IID IID_ID2D1GdiMetafile1;
+EXTERN_C CONST IID IID_ID2D1GdiMetafileSink1;
+EXTERN_C CONST IID IID_ID2D1SpriteBatch;
+EXTERN_C CONST IID IID_ID2D1DeviceContext3;
+EXTERN_C CONST IID IID_ID2D1Device3;
+EXTERN_C CONST IID IID_ID2D1Factory4;
+EXTERN_C CONST IID IID_ID2D1CommandSink3;
+EXTERN_C CONST IID IID_ID2D1SvgGlyphStyle;
+EXTERN_C CONST IID IID_ID2D1DeviceContext4;
+EXTERN_C CONST IID IID_ID2D1Device4;
+EXTERN_C CONST IID IID_ID2D1Factory5;
+EXTERN_C CONST IID IID_ID2D1CommandSink4;
+EXTERN_C CONST IID IID_ID2D1ColorContext1;
+EXTERN_C CONST IID IID_ID2D1DeviceContext5;
+EXTERN_C CONST IID IID_ID2D1Device5;
+EXTERN_C CONST IID IID_ID2D1Factory6;
 
 
 #ifndef D2D_USE_C_DEFINITIONS
 
 
-
-//+-----------------------------------------------------------------------------
-//
-//  Interface:
-//      ID2D1InkStyle
-//
-//------------------------------------------------------------------------------
+/// <summary>
+/// Represents a collection of style properties to be used by methods like
+/// ID2D1DeviceContext2::DrawInk when rendering ink. The ink style defines the nib
+/// (pen tip) shape and transform.
+/// </summary>
 interface DX_DECLARE_INTERFACE("bae8b344-23fc-4071-8cb5-d05d6f073848") ID2D1InkStyle  : public ID2D1Resource
 {
     
@@ -425,87 +532,75 @@ interface DX_DECLARE_INTERFACE("bae8b344-23fc-4071-8cb5-d05d6f073848") ID2D1InkS
 }; // interface ID2D1InkStyle
 
 
-
-//+-----------------------------------------------------------------------------
-//
-//  Interface:
-//      ID2D1Ink
-//
-//------------------------------------------------------------------------------
+/// <summary>
+/// Represents a single continuous stroke of variable-width ink, as defined by a
+/// series of Bezier segments and widths.
+/// </summary>
 interface DX_DECLARE_INTERFACE("b499923b-7029-478f-a8b3-432c7c5f5312") ID2D1Ink  : public ID2D1Resource
 {
     
-    
-    //
-    // Resets the ink start point.
-    //
+    /// <summary>
+    /// Resets the ink start point.
+    /// </summary>
     STDMETHOD_(void, SetStartPoint)(
         _In_ CONST D2D1_INK_POINT *startPoint 
         ) PURE;
     
-    
-    //
-    // Retrieve the start point with which the ink was initialized.
-    //
+    /// <summary>
+    /// Retrieve the start point with which the ink was initialized.
+    /// </summary>
     STDMETHOD_(D2D1_INK_POINT, GetStartPoint)(
         ) CONST PURE;
     
-    
-    //
-    // Add one or more segments to the end of the ink.
-    //
+    /// <summary>
+    /// Add one or more segments to the end of the ink.
+    /// </summary>
     STDMETHOD(AddSegments)(
         _In_reads_(segmentsCount) CONST D2D1_INK_BEZIER_SEGMENT *segments,
         UINT32 segmentsCount 
         ) PURE;
     
-    
-    //
-    // Remove one or more segments from the end of the ink.
-    //
+    /// <summary>
+    /// Remove one or more segments from the end of the ink.
+    /// </summary>
     STDMETHOD(RemoveSegmentsAtEnd)(
         UINT32 segmentsCount 
         ) PURE;
     
-    
-    //
-    // Updates the specified segments with new control points.
-    //
+    /// <summary>
+    /// Updates the specified segments with new control points.
+    /// </summary>
     STDMETHOD(SetSegments)(
         UINT32 startSegment,
         _In_reads_(segmentsCount) CONST D2D1_INK_BEZIER_SEGMENT *segments,
         UINT32 segmentsCount 
         ) PURE;
     
-    
-    //
-    // Update the last segment with new control points.
-    //
+    /// <summary>
+    /// Update the last segment with new control points.
+    /// </summary>
     STDMETHOD(SetSegmentAtEnd)(
         _In_ CONST D2D1_INK_BEZIER_SEGMENT *segment 
         ) PURE;
     
-    
-    //
-    // Returns the number of segments the ink is composed of.
-    //
+    /// <summary>
+    /// Returns the number of segments the ink is composed of.
+    /// </summary>
     STDMETHOD_(UINT32, GetSegmentCount)(
         ) CONST PURE;
     
-    
-    //
-    // Retrieve the segments stored in the ink.
-    //
+    /// <summary>
+    /// Retrieve the segments stored in the ink.
+    /// </summary>
     STDMETHOD(GetSegments)(
         UINT32 startSegment,
         _Out_writes_(segmentsCount) D2D1_INK_BEZIER_SEGMENT *segments,
         UINT32 segmentsCount 
         ) CONST PURE;
     
-    
-    //
-    // Construct a geometric representation of the ink.
-    //
+    /// <summary>
+    /// Construct a geometric representation of the ink.
+    /// </summary>
     STDMETHOD(StreamAsGeometry)(
         _In_opt_ ID2D1InkStyle *inkStyle,
         _In_opt_ CONST D2D1_MATRIX_3X2_F *worldTransform,
@@ -513,20 +608,18 @@ interface DX_DECLARE_INTERFACE("b499923b-7029-478f-a8b3-432c7c5f5312") ID2D1Ink 
         _In_ ID2D1SimplifiedGeometrySink *geometrySink 
         ) CONST PURE;
     
-    
-    //
-    // Retrieve the bounds of the ink, with an optional applied transform.
-    //
+    /// <summary>
+    /// Retrieve the bounds of the ink, with an optional applied transform.
+    /// </summary>
     STDMETHOD(GetBounds)(
         _In_opt_ ID2D1InkStyle *inkStyle,
         _In_opt_ CONST D2D1_MATRIX_3X2_F *worldTransform,
         _Out_ D2D1_RECT_F *bounds 
         ) CONST PURE;
     
-    
-    //
-    // Resets the ink start point.
-    //
+    /// <summary>
+    /// Resets the ink start point.
+    /// </summary>
     COM_DECLSPEC_NOTHROW
     void
     SetStartPoint(
@@ -545,10 +638,9 @@ interface DX_DECLARE_INTERFACE("b499923b-7029-478f-a8b3-432c7c5f5312") ID2D1Ink 
         return SetSegmentAtEnd(&segment);
     }
     
-    
-    //
-    // Construct a geometric representation of the ink.
-    //
+    /// <summary>
+    /// Construct a geometric representation of the ink.
+    /// </summary>
     COM_DECLSPEC_NOTHROW
     HRESULT
     StreamAsGeometry(
@@ -561,10 +653,9 @@ interface DX_DECLARE_INTERFACE("b499923b-7029-478f-a8b3-432c7c5f5312") ID2D1Ink 
         return StreamAsGeometry(inkStyle,&worldTransform, flatteningTolerance, geometrySink);
     }
     
-    
-    //
-    // Construct a geometric representation of the ink.
-    //
+    /// <summary>
+    /// Construct a geometric representation of the ink.
+    /// </summary>
     COM_DECLSPEC_NOTHROW
     HRESULT
     StreamAsGeometry(
@@ -576,10 +667,9 @@ interface DX_DECLARE_INTERFACE("b499923b-7029-478f-a8b3-432c7c5f5312") ID2D1Ink 
         return StreamAsGeometry(inkStyle,worldTransform, D2D1_DEFAULT_FLATTENING_TOLERANCE, geometrySink);
     }
     
-    
-    //
-    // Construct a geometric representation of the ink.
-    //
+    /// <summary>
+    /// Construct a geometric representation of the ink.
+    /// </summary>
     COM_DECLSPEC_NOTHROW
     HRESULT
     StreamAsGeometry(
@@ -593,27 +683,23 @@ interface DX_DECLARE_INTERFACE("b499923b-7029-478f-a8b3-432c7c5f5312") ID2D1Ink 
 }; // interface ID2D1Ink
 
 
-
-//+-----------------------------------------------------------------------------
-//
-//  Interface:
-//      ID2D1GradientMesh
-//
-//------------------------------------------------------------------------------
+/// <summary>
+/// Represents a device-dependent representation of a gradient mesh composed of
+/// patches. Use the ID2D1DeviceContext2::CreateGradientMesh method to create an
+/// instance of ID2D1GradientMesh.
+/// </summary>
 interface DX_DECLARE_INTERFACE("f292e401-c050-4cde-83d7-04962d3b23c2") ID2D1GradientMesh  : public ID2D1Resource
 {
     
-    
-    //
-    // Returns the number of patches of the gradient mesh.
-    //
+    /// <summary>
+    /// Returns the number of patches of the gradient mesh.
+    /// </summary>
     STDMETHOD_(UINT32, GetPatchCount)(
         ) CONST PURE;
     
-    
-    //
-    // Retrieve the patch data stored in the gradient mesh.
-    //
+    /// <summary>
+    /// Retrieve the patch data stored in the gradient mesh.
+    /// </summary>
     STDMETHOD(GetPatches)(
         UINT32 startIndex,
         _Out_writes_(patchesCount) D2D1_GRADIENT_MESH_PATCH *patches,
@@ -622,13 +708,9 @@ interface DX_DECLARE_INTERFACE("f292e401-c050-4cde-83d7-04962d3b23c2") ID2D1Grad
 }; // interface ID2D1GradientMesh
 
 
-
-//+-----------------------------------------------------------------------------
-//
-//  Interface:
-//      ID2D1ImageSource
-//
-//------------------------------------------------------------------------------
+/// <summary>
+/// Represents a producer of pixels that can fill an arbitrary 2D plane.
+/// </summary>
 interface DX_DECLARE_INTERFACE("c9b664e5-74a1-4378-9ac2-eefc37a3f4d8") ID2D1ImageSource  : public ID2D1Image
 {
     
@@ -641,13 +723,9 @@ interface DX_DECLARE_INTERFACE("c9b664e5-74a1-4378-9ac2-eefc37a3f4d8") ID2D1Imag
 }; // interface ID2D1ImageSource
 
 
-
-//+-----------------------------------------------------------------------------
-//
-//  Interface:
-//      ID2D1ImageSourceFromWic
-//
-//------------------------------------------------------------------------------
+/// <summary>
+/// Produces 2D pixel data that has been sourced from WIC.
+/// </summary>
 interface DX_DECLARE_INTERFACE("77395441-1c8f-4555-8683-f50dab0fe792") ID2D1ImageSourceFromWic  : public ID2D1ImageSource
 {
     
@@ -683,13 +761,9 @@ interface DX_DECLARE_INTERFACE("77395441-1c8f-4555-8683-f50dab0fe792") ID2D1Imag
 }; // interface ID2D1ImageSourceFromWic
 
 
-
-//+-----------------------------------------------------------------------------
-//
-//  Interface:
-//      ID2D1TransformedImageSource
-//
-//------------------------------------------------------------------------------
+/// <summary>
+/// Represents an image source which shares resources with an original image source.
+/// </summary>
 interface DX_DECLARE_INTERFACE("7f1f79e5-2796-416c-8f55-700f911445e5") ID2D1TransformedImageSource  : public ID2D1Image
 {
     
@@ -703,71 +777,60 @@ interface DX_DECLARE_INTERFACE("7f1f79e5-2796-416c-8f55-700f911445e5") ID2D1Tran
 }; // interface ID2D1TransformedImageSource
 
 
-
-//+-----------------------------------------------------------------------------
-//
-//  Interface:
-//      ID2D1LookupTable3D
-//
-//  Synopsis:
-//      A container for 3D lookup table data that can be passed to the LookupTable3D
-//      effect.
-//
-//------------------------------------------------------------------------------
+/// <summary>
+/// A container for 3D lookup table data that can be passed to the LookupTable3D
+/// effect.
+/// </summary>
 interface DX_DECLARE_INTERFACE("53dd9855-a3b0-4d5b-82e1-26e25c5e5797") ID2D1LookupTable3D  : public ID2D1Resource
 {
 }; // interface ID2D1LookupTable3D
 
 
-
-//+-----------------------------------------------------------------------------
-//
-//  Interface:
-//      ID2D1DeviceContext2
-//
-//------------------------------------------------------------------------------
+/// <summary>
+/// This interface performs all the same functions as the ID2D1DeviceContext1
+/// interface, plus it enables functionality such as ink rendering, gradient mesh
+/// rendering, and improved image loading.
+/// </summary>
 interface DX_DECLARE_INTERFACE("394ea6a3-0c34-4321-950b-6ca20f0be6c7") ID2D1DeviceContext2  : public ID2D1DeviceContext1
 {
     
     STDMETHOD(CreateInk)(
         _In_ CONST D2D1_INK_POINT *startPoint,
-        _Outptr_ ID2D1Ink **ink 
+        _COM_Outptr_ ID2D1Ink **ink 
         ) PURE;
     
-    
-    //
-    // Creates a new ink style.
-    //
+    /// <summary>
+    /// Creates a new ink style.
+    /// </summary>
     STDMETHOD(CreateInkStyle)(
         _In_opt_ CONST D2D1_INK_STYLE_PROPERTIES *inkStyleProperties,
-        _Outptr_ ID2D1InkStyle **inkStyle 
+        _COM_Outptr_ ID2D1InkStyle **inkStyle 
         ) PURE;
     
     STDMETHOD(CreateGradientMesh)(
         _In_reads_(patchesCount) CONST D2D1_GRADIENT_MESH_PATCH *patches,
         UINT32 patchesCount,
-        _Outptr_ ID2D1GradientMesh **gradientMesh 
+        _COM_Outptr_ ID2D1GradientMesh **gradientMesh 
         ) PURE;
     
     STDMETHOD(CreateImageSourceFromWic)(
         _In_ IWICBitmapSource *wicBitmapSource,
         D2D1_IMAGE_SOURCE_LOADING_OPTIONS loadingOptions,
         D2D1_ALPHA_MODE alphaMode,
-        _Outptr_ ID2D1ImageSourceFromWic **imageSource 
+        _COM_Outptr_ ID2D1ImageSourceFromWic **imageSource 
         ) PURE;
     
-    
-    //
-    // Creates a 3D lookup table for mapping a 3-channel input to a 3-channel output.
-    // The table data must be provided in 4-channel format.
-    //
+    /// <summary>
+    /// Creates a 3D lookup table for mapping a 3-channel input to a 3-channel output.
+    /// The table data must be provided in 4-channel format.
+    /// </summary>
     STDMETHOD(CreateLookupTable3D)(
         D2D1_BUFFER_PRECISION precision,
         _In_reads_(3) CONST UINT32 *extents,
         _In_reads_(dataCount) CONST BYTE *data,
         UINT32 dataCount,
         _In_reads_(2) CONST UINT32 *strides,
-        _Outptr_ ID2D1LookupTable3D **lookupTable 
+        _COM_Outptr_ ID2D1LookupTable3D **lookupTable 
         ) PURE;
     
     STDMETHOD(CreateImageSourceFromDxgi)(
@@ -775,14 +838,13 @@ interface DX_DECLARE_INTERFACE("394ea6a3-0c34-4321-950b-6ca20f0be6c7") ID2D1Devi
         UINT32 surfaceCount,
         DXGI_COLOR_SPACE_TYPE colorSpace,
         D2D1_IMAGE_SOURCE_FROM_DXGI_OPTIONS options,
-        _Outptr_ ID2D1ImageSource **imageSource 
+        _COM_Outptr_ ID2D1ImageSource **imageSource 
         ) PURE;
     
-    
-    //
-    // Retrieves the world-space bounds in DIPs of the gradient mesh using the device
-    // context DPI.
-    //
+    /// <summary>
+    /// Retrieves the world-space bounds in DIPs of the gradient mesh using the device
+    /// context DPI.
+    /// </summary>
     STDMETHOD(GetGradientMeshWorldBounds)(
         _In_ ID2D1GradientMesh *gradientMesh,
         _Out_ D2D1_RECT_F *pBounds 
@@ -798,10 +860,9 @@ interface DX_DECLARE_INTERFACE("394ea6a3-0c34-4321-950b-6ca20f0be6c7") ID2D1Devi
         _In_ ID2D1GradientMesh *gradientMesh 
         ) PURE;
     
-    
-    //
-    // Draw a metafile to the device context.
-    //
+    /// <summary>
+    /// Draw a metafile to the device context.
+    /// </summary>
     STDMETHOD_(void, DrawGdiMetafile)(
         _In_ ID2D1GdiMetafile *gdiMetafile,
         _In_opt_ CONST D2D1_RECT_F *destinationRectangle,
@@ -810,35 +871,33 @@ interface DX_DECLARE_INTERFACE("394ea6a3-0c34-4321-950b-6ca20f0be6c7") ID2D1Devi
     
     using ID2D1DeviceContext::DrawGdiMetafile;
     
-    
-    //
-    // Creates an image source which shares resources with an original.
-    //
+    /// <summary>
+    /// Creates an image source which shares resources with an original.
+    /// </summary>
     STDMETHOD(CreateTransformedImageSource)(
         _In_ ID2D1ImageSource *imageSource,
         _In_ CONST D2D1_TRANSFORMED_IMAGE_SOURCE_PROPERTIES *properties,
-        _Outptr_ ID2D1TransformedImageSource **transformedImageSource 
+        _COM_Outptr_ ID2D1TransformedImageSource **transformedImageSource 
         ) PURE;
     
     COM_DECLSPEC_NOTHROW
     HRESULT
     CreateInk(
         CONST D2D1_INK_POINT &startPoint,
-        _Outptr_ ID2D1Ink **ink 
+        _COM_Outptr_ ID2D1Ink **ink 
         )  
     {
         return CreateInk(&startPoint, ink);
     }
     
-    
-    //
-    // Creates a new ink style.
-    //
+    /// <summary>
+    /// Creates a new ink style.
+    /// </summary>
     COM_DECLSPEC_NOTHROW
     HRESULT
     CreateInkStyle(
         CONST D2D1_INK_STYLE_PROPERTIES &inkStyleProperties,
-        _Outptr_ ID2D1InkStyle **inkStyle 
+        _COM_Outptr_ ID2D1InkStyle **inkStyle 
         )  
     {
         return CreateInkStyle(&inkStyleProperties, inkStyle);
@@ -849,7 +908,7 @@ interface DX_DECLARE_INTERFACE("394ea6a3-0c34-4321-950b-6ca20f0be6c7") ID2D1Devi
     CreateImageSourceFromWic(
         _In_ IWICBitmapSource *wicBitmapSource,
         D2D1_IMAGE_SOURCE_LOADING_OPTIONS loadingOptions,
-        _Outptr_ ID2D1ImageSourceFromWic **imageSource 
+        _COM_Outptr_ ID2D1ImageSourceFromWic **imageSource 
         )  
     {
         return CreateImageSourceFromWic(wicBitmapSource, loadingOptions, D2D1_ALPHA_MODE_UNKNOWN, imageSource);
@@ -859,16 +918,15 @@ interface DX_DECLARE_INTERFACE("394ea6a3-0c34-4321-950b-6ca20f0be6c7") ID2D1Devi
     HRESULT
     CreateImageSourceFromWic(
         _In_ IWICBitmapSource *wicBitmapSource,
-        _Outptr_ ID2D1ImageSourceFromWic **imageSource 
+        _COM_Outptr_ ID2D1ImageSourceFromWic **imageSource 
         )  
     {
         return CreateImageSourceFromWic(wicBitmapSource, D2D1_IMAGE_SOURCE_LOADING_OPTIONS_NONE, D2D1_ALPHA_MODE_UNKNOWN, imageSource);
     }
     
-    
-    //
-    // Draw a metafile to the device context.
-    //
+    /// <summary>
+    /// Draw a metafile to the device context.
+    /// </summary>
     COM_DECLSPEC_NOTHROW
     void
     DrawGdiMetafile(
@@ -880,10 +938,9 @@ interface DX_DECLARE_INTERFACE("394ea6a3-0c34-4321-950b-6ca20f0be6c7") ID2D1Devi
         return DrawGdiMetafile(gdiMetafile, &destinationRectangle, &sourceRectangle);
     }
     
-    
-    //
-    // Draw a metafile to the device context.
-    //
+    /// <summary>
+    /// Draw a metafile to the device context.
+    /// </summary>
     COM_DECLSPEC_NOTHROW
     void
     DrawGdiMetafile(
@@ -897,64 +954,56 @@ interface DX_DECLARE_INTERFACE("394ea6a3-0c34-4321-950b-6ca20f0be6c7") ID2D1Devi
 }; // interface ID2D1DeviceContext2
 
 
-
-//+-----------------------------------------------------------------------------
-//
-//  Interface:
-//      ID2D1Device2
-//
-//------------------------------------------------------------------------------
+/// <summary>
+/// Represents a resource domain whose objects and device contexts can be used
+/// together. This interface performs all the same functions as the existing
+/// ID2D1Device1 interface. It also enables the creation of ID2D1DeviceContext2
+/// objects.
+/// </summary>
 interface DX_DECLARE_INTERFACE("a44472e1-8dfb-4e60-8492-6e2861c9ca8b") ID2D1Device2  : public ID2D1Device1
 {
     
-    
-    //
-    // Creates a new device context with no initially assigned target.
-    //
+    /// <summary>
+    /// Creates a new device context with no initially assigned target.
+    /// </summary>
     STDMETHOD(CreateDeviceContext)(
         D2D1_DEVICE_CONTEXT_OPTIONS options,
-        _Outptr_ ID2D1DeviceContext2 **deviceContext2 
+        _COM_Outptr_ ID2D1DeviceContext2 **deviceContext2 
         ) PURE;
     
     using ID2D1Device1::CreateDeviceContext;
     
     using ID2D1Device::CreateDeviceContext;
     
-    
-    //
-    // Flush all device contexts that reference a given bitmap.
-    //
+    /// <summary>
+    /// Flush all device contexts that reference a given bitmap.
+    /// </summary>
     STDMETHOD_(void, FlushDeviceContexts)(
         _In_ ID2D1Bitmap *bitmap 
         ) PURE;
     
-    
-    //
-    // Returns the DXGI device associated with this D2D device.
-    //
+    /// <summary>
+    /// Returns the DXGI device associated with this D2D device.
+    /// </summary>
     STDMETHOD(GetDxgiDevice)(
-        _Outptr_ IDXGIDevice **dxgiDevice 
+        _COM_Outptr_ IDXGIDevice **dxgiDevice 
         ) PURE;
 }; // interface ID2D1Device2
 
 
-
-//+-----------------------------------------------------------------------------
-//
-//  Interface:
-//      ID2D1Factory3
-//
-//------------------------------------------------------------------------------
+/// <summary>
+/// Creates Direct2D resources. This interface also enables the creation of
+/// ID2D1Device2 objects.
+/// </summary>
 interface DX_DECLARE_INTERFACE("0869759f-4f00-413f-b03e-2bda45404d0f") ID2D1Factory3  : public ID2D1Factory2
 {
     
-    
-    //
-    // This creates a new Direct2D device from the given IDXGIDevice.
-    //
+    /// <summary>
+    /// This creates a new Direct2D device from the given IDXGIDevice.
+    /// </summary>
     STDMETHOD(CreateDevice)(
         _In_ IDXGIDevice *dxgiDevice,
-        _Outptr_ ID2D1Device2 **d2dDevice2 
+        _COM_Outptr_ ID2D1Device2 **d2dDevice2 
         ) PURE;
     
     using ID2D1Factory2::CreateDevice;
@@ -963,13 +1012,10 @@ interface DX_DECLARE_INTERFACE("0869759f-4f00-413f-b03e-2bda45404d0f") ID2D1Fact
 }; // interface ID2D1Factory3
 
 
-
-//+-----------------------------------------------------------------------------
-//
-//  Interface:
-//      ID2D1CommandSink2
-//
-//------------------------------------------------------------------------------
+/// <summary>
+/// This interface performs all the same functions as the existing ID2D1CommandSink1
+/// interface. It also enables access to ink rendering and gradient mesh rendering.
+/// </summary>
 interface DX_DECLARE_INTERFACE("3bab440e-417e-47df-a2e2-bc0be6a00916") ID2D1CommandSink2  : public ID2D1CommandSink1
 {
     
@@ -993,56 +1039,39 @@ interface DX_DECLARE_INTERFACE("3bab440e-417e-47df-a2e2-bc0be6a00916") ID2D1Comm
 }; // interface ID2D1CommandSink2
 
 
-
-//+-----------------------------------------------------------------------------
-//
-//  Interface:
-//      ID2D1GdiMetafile1
-//
-//  Synopsis:
-//      Interface encapsulating a GDI/GDI+ metafile.
-//
-//------------------------------------------------------------------------------
+/// <summary>
+/// Interface encapsulating a GDI/GDI+ metafile.
+/// </summary>
 interface DX_DECLARE_INTERFACE("2e69f9e8-dd3f-4bf9-95ba-c04f49d788df") ID2D1GdiMetafile1  : public ID2D1GdiMetafile
 {
     
-    
-    //
-    // Returns the DPI reported by the metafile.
-    //
+    /// <summary>
+    /// Returns the DPI reported by the metafile.
+    /// </summary>
     STDMETHOD(GetDpi)(
         _Out_ FLOAT *dpiX,
         _Out_ FLOAT *dpiY 
         ) PURE;
     
-    
-    //
-    // Gets the bounds (in DIPs) of the metafile (as specified by the frame rect
-    // declared in the metafile).
-    //
+    /// <summary>
+    /// Gets the bounds (in DIPs) of the metafile (as specified by the frame rect
+    /// declared in the metafile).
+    /// </summary>
     STDMETHOD(GetSourceBounds)(
         _Out_ D2D1_RECT_F *bounds 
         ) PURE;
 }; // interface ID2D1GdiMetafile1
 
 
-
-//+-----------------------------------------------------------------------------
-//
-//  Interface:
-//      ID2D1GdiMetafileSink1
-//
-//  Synopsis:
-//      User-implementable interface for introspecting on a metafile.
-//
-//------------------------------------------------------------------------------
+/// <summary>
+/// User-implementable interface for introspecting on a metafile.
+/// </summary>
 interface DX_DECLARE_INTERFACE("fd0ecb6b-91e6-411e-8655-395e760f91b4") ID2D1GdiMetafileSink1  : public ID2D1GdiMetafileSink
 {
     
-    
-    //
-    // Callback for examining a metafile record.
-    //
+    /// <summary>
+    /// Callback for examining a metafile record.
+    /// </summary>
     STDMETHOD(ProcessRecord)(
         DWORD recordType,
         _In_opt_ CONST void *recordData,
@@ -1054,23 +1083,625 @@ interface DX_DECLARE_INTERFACE("fd0ecb6b-91e6-411e-8655-395e760f91b4") ID2D1GdiM
 }; // interface ID2D1GdiMetafileSink1
 
 
+#if NTDDI_VERSION >= NTDDI_WIN10_TH2
+
+interface DX_DECLARE_INTERFACE("4dc583bf-3a10-438a-8722-e9765224f1f1") ID2D1SpriteBatch  : public ID2D1Resource
+{
+    
+    /// <summary>
+    /// Adds sprites to the end of the sprite batch.
+    /// </summary>
+    STDMETHOD(AddSprites)(
+        UINT32 spriteCount,
+        _In_reads_bytes_(sizeof(D2D1_RECT_F) + (spriteCount - 1) * destinationRectanglesStride) CONST D2D1_RECT_F *destinationRectangles,
+        _In_reads_bytes_opt_(sizeof(D2D1_RECT_U) + (spriteCount - 1) * sourceRectanglesStride) CONST D2D1_RECT_U *sourceRectangles = NULL,
+        _In_reads_bytes_opt_(sizeof(D2D1_COLOR_F) + (spriteCount - 1) * colorsStride) CONST D2D1_COLOR_F *colors = NULL,
+        _In_reads_bytes_opt_(sizeof(D2D1_MATRIX_3X2_F) + (spriteCount - 1) * transformsStride) CONST D2D1_MATRIX_3X2_F *transforms = NULL,
+        UINT32 destinationRectanglesStride = sizeof(D2D1_RECT_F),
+        UINT32 sourceRectanglesStride = sizeof(D2D1_RECT_U),
+        UINT32 colorsStride = sizeof(D2D1_COLOR_F),
+        UINT32 transformsStride = sizeof(D2D1_MATRIX_3X2_F) 
+        ) PURE;
+    
+    /// <summary>
+    /// Set properties for existing sprites. All properties not specified are
+    /// unmodified.
+    /// </summary>
+    STDMETHOD(SetSprites)(
+        UINT32 startIndex,
+        UINT32 spriteCount,
+        _In_reads_bytes_opt_(sizeof(D2D1_RECT_F) + (spriteCount - 1) * destinationRectanglesStride) CONST D2D1_RECT_F *destinationRectangles = NULL,
+        _In_reads_bytes_opt_(sizeof(D2D1_RECT_U) + (spriteCount - 1) * sourceRectanglesStride) CONST D2D1_RECT_U *sourceRectangles = NULL,
+        _In_reads_bytes_opt_(sizeof(D2D1_COLOR_F) + (spriteCount - 1) * colorsStride) CONST D2D1_COLOR_F *colors = NULL,
+        _In_reads_bytes_opt_(sizeof(D2D1_MATRIX_3X2_F) + (spriteCount - 1) * transformsStride) CONST D2D1_MATRIX_3X2_F *transforms = NULL,
+        UINT32 destinationRectanglesStride = sizeof(D2D1_RECT_F),
+        UINT32 sourceRectanglesStride = sizeof(D2D1_RECT_U),
+        UINT32 colorsStride = sizeof(D2D1_COLOR_F),
+        UINT32 transformsStride = sizeof(D2D1_MATRIX_3X2_F) 
+        ) PURE;
+    
+    /// <summary>
+    /// Retrieves sprite properties.
+    /// </summary>
+    STDMETHOD(GetSprites)(
+        UINT32 startIndex,
+        UINT32 spriteCount,
+        _Out_writes_opt_(spriteCount) D2D1_RECT_F *destinationRectangles = NULL,
+        _Out_writes_opt_(spriteCount) D2D1_RECT_U *sourceRectangles = NULL,
+        _Out_writes_opt_(spriteCount) D2D1_COLOR_F *colors = NULL,
+        _Out_writes_opt_(spriteCount) D2D1_MATRIX_3X2_F *transforms = NULL 
+        ) CONST PURE;
+    
+    /// <summary>
+    /// Retrieves the number of sprites in the sprite batch.
+    /// </summary>
+    STDMETHOD_(UINT32, GetSpriteCount)(
+        ) CONST PURE;
+    
+    /// <summary>
+    /// Removes all sprites from the sprite batch.
+    /// </summary>
+    STDMETHOD_(void, Clear)(
+        ) PURE;
+}; // interface ID2D1SpriteBatch
+
+
+interface DX_DECLARE_INTERFACE("235a7496-8351-414c-bcd4-6672ab2d8e00") ID2D1DeviceContext3  : public ID2D1DeviceContext2
+{
+    
+    /// <summary>
+    /// Creates a new sprite batch.
+    /// </summary>
+    STDMETHOD(CreateSpriteBatch)(
+        _COM_Outptr_ ID2D1SpriteBatch **spriteBatch 
+        ) PURE;
+    
+    /// <summary>
+    /// Draws sprites in a sprite batch.
+    /// </summary>
+    STDMETHOD_(void, DrawSpriteBatch)(
+        _In_ ID2D1SpriteBatch *spriteBatch,
+        UINT32 startIndex,
+        UINT32 spriteCount,
+        _In_ ID2D1Bitmap *bitmap,
+        D2D1_BITMAP_INTERPOLATION_MODE interpolationMode = D2D1_BITMAP_INTERPOLATION_MODE_LINEAR,
+        D2D1_SPRITE_OPTIONS spriteOptions = D2D1_SPRITE_OPTIONS_NONE 
+        ) PURE;
+    
+    /// <summary>
+    /// Draws all sprites in a sprite batch.
+    /// </summary>
+    COM_DECLSPEC_NOTHROW
+    void
+    DrawSpriteBatch(
+        _In_ ID2D1SpriteBatch *spriteBatch,
+        _In_ ID2D1Bitmap *bitmap,
+        D2D1_BITMAP_INTERPOLATION_MODE interpolationMode = D2D1_BITMAP_INTERPOLATION_MODE_LINEAR,
+        D2D1_SPRITE_OPTIONS spriteOptions = D2D1_SPRITE_OPTIONS_NONE 
+        )  
+    {
+        return DrawSpriteBatch(spriteBatch, 0, spriteBatch->GetSpriteCount(), bitmap, interpolationMode, spriteOptions);
+    }
+}; // interface ID2D1DeviceContext3
+
+
+interface DX_DECLARE_INTERFACE("852f2087-802c-4037-ab60-ff2e7ee6fc01") ID2D1Device3  : public ID2D1Device2
+{
+    
+    /// <summary>
+    /// Creates a new device context with no initially assigned target.
+    /// </summary>
+    STDMETHOD(CreateDeviceContext)(
+        D2D1_DEVICE_CONTEXT_OPTIONS options,
+        _COM_Outptr_ ID2D1DeviceContext3 **deviceContext3 
+        ) PURE;
+    
+    using ID2D1Device2::CreateDeviceContext;
+    
+    using ID2D1Device1::CreateDeviceContext;
+    
+    using ID2D1Device::CreateDeviceContext;
+}; // interface ID2D1Device3
+
+
+/// <summary>
+/// Creates Direct2D resources. This interface also enables the creation of
+/// ID2D1Device3 objects.
+/// </summary>
+interface DX_DECLARE_INTERFACE("bd4ec2d2-0662-4bee-ba8e-6f29f032e096") ID2D1Factory4  : public ID2D1Factory3
+{
+    
+    /// <summary>
+    /// This creates a new Direct2D device from the given IDXGIDevice.
+    /// </summary>
+    STDMETHOD(CreateDevice)(
+        _In_ IDXGIDevice *dxgiDevice,
+        _COM_Outptr_ ID2D1Device3 **d2dDevice3 
+        ) PURE;
+    
+    using ID2D1Factory3::CreateDevice;
+    
+    using ID2D1Factory2::CreateDevice;
+    
+    using ID2D1Factory1::CreateDevice;
+}; // interface ID2D1Factory4
+
+
+interface DX_DECLARE_INTERFACE("18079135-4cf3-4868-bc8e-06067e6d242d") ID2D1CommandSink3  : public ID2D1CommandSink2
+{
+    
+    STDMETHOD(DrawSpriteBatch)(
+        _In_ ID2D1SpriteBatch *spriteBatch,
+        UINT32 startIndex,
+        UINT32 spriteCount,
+        _In_ ID2D1Bitmap *bitmap,
+        D2D1_BITMAP_INTERPOLATION_MODE interpolationMode,
+        D2D1_SPRITE_OPTIONS spriteOptions 
+        ) PURE;
+}; // interface ID2D1CommandSink3
+
+
+#endif // #if NTDDI_VERSION >= NTDDI_WIN10_TH2
+#if NTDDI_VERSION >= NTDDI_WIN10_RS1
+
+/// <summary>
+/// This object supplies the values for context-fill, context-stroke, and
+/// context-value that are used when rendering SVG glyphs.
+/// </summary>
+interface DX_DECLARE_INTERFACE("af671749-d241-4db8-8e41-dcc2e5c1a438") ID2D1SvgGlyphStyle  : public ID2D1Resource
+{
+    
+    /// <summary>
+    /// Provides values to an SVG glyph for fill. The brush with opacity set to 1 is
+    /// used as the 'context-fill'. The opacity of the brush is used as the
+    /// 'context-fill-opacity' value.
+    /// </summary>
+    /// <param name="brush">A null brush will cause the context-fill value to come from
+    /// the defaultFillBrush. If the defaultFillBrush is also null, the context-fill
+    /// value will be 'none'.</param>
+    STDMETHOD(SetFill)(
+        _In_opt_ ID2D1Brush *brush 
+        ) PURE;
+    
+    /// <summary>
+    /// Returns the requested fill parameters.
+    /// </summary>
+    STDMETHOD_(void, GetFill)(
+        _Outptr_result_maybenull_ ID2D1Brush **brush 
+        ) PURE;
+    
+    /// <summary>
+    /// Provides values to an SVG glyph for stroke properties. The brush with opacity
+    /// set to 1 is used as the 'context-stroke'. The opacity of the brush is used as
+    /// the 'context-stroke-opacity' value.
+    /// </summary>
+    /// <param name="brush">A null brush will cause the context-stroke value to be
+    /// 'none'.</param>
+    /// <param name="strokeWidth">Specifies the 'context-value' for the 'stroke-width'
+    /// property.</param>
+    /// <param name="dashes">Specifies the 'context-value' for the 'stroke-dasharray'
+    /// property. A null value will cause the stroke-dasharray to be set to 'none'.
+    /// </param>
+    /// <param name="dashOffset">Specifies the 'context-value' for the
+    /// 'stroke-dashoffset' property.</param>
+    STDMETHOD(SetStroke)(
+        _In_opt_ ID2D1Brush *brush,
+        FLOAT strokeWidth = 1.0f,
+        _In_reads_opt_(dashesCount) CONST FLOAT *dashes = NULL,
+        UINT32 dashesCount = 0,
+        FLOAT dashOffset = 1.0f 
+        ) PURE;
+    
+    /// <summary>
+    /// Returns the number of dashes in the dash array.
+    /// </summary>
+    STDMETHOD_(UINT32, GetStrokeDashesCount)(
+        ) PURE;
+    
+    /// <summary>
+    /// Returns the requested stroke parameters.
+    /// </summary>
+    STDMETHOD_(void, GetStroke)(
+        _Outptr_opt_result_maybenull_ ID2D1Brush **brush,
+        _Out_opt_ FLOAT *strokeWidth = NULL,
+        _Out_writes_opt_(dashesCount) FLOAT *dashes = NULL,
+        UINT32 dashesCount = 0,
+        _Out_opt_ FLOAT *dashOffset = NULL 
+        ) PURE;
+}; // interface ID2D1SvgGlyphStyle
+
+
+interface DX_DECLARE_INTERFACE("8c427831-3d90-4476-b647-c4fae349e4db") ID2D1DeviceContext4  : public ID2D1DeviceContext3
+{
+    
+    /// <summary>
+    /// Creates an SVG glyph style object.
+    /// </summary>
+    STDMETHOD(CreateSvgGlyphStyle)(
+        _COM_Outptr_ ID2D1SvgGlyphStyle **svgGlyphStyle 
+        ) PURE;
+    
+    /// <summary>
+    /// Draws the text within the given layout rectangle. By default, this method
+    /// performs baseline snapping and renders color versions of glyphs in color fonts.
+    /// </summary>
+    /// <param name="svgGlyphStyle">Object used to style SVG glyphs.</param>
+    /// <param name="colorPaletteIndex">The index used to select a color palette within
+    /// a color font.</param>
+    STDMETHOD_(void, DrawText)(
+        _In_reads_(stringLength) CONST WCHAR *string,
+        UINT32 stringLength,
+        _In_ IDWriteTextFormat *textFormat,
+        _In_ CONST D2D1_RECT_F *layoutRect,
+        _In_opt_ ID2D1Brush *defaultFillBrush,
+        _In_opt_ ID2D1SvgGlyphStyle *svgGlyphStyle,
+        UINT32 colorPaletteIndex = 0,
+        D2D1_DRAW_TEXT_OPTIONS options = D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT,
+        DWRITE_MEASURING_MODE measuringMode = DWRITE_MEASURING_MODE_NATURAL 
+        ) PURE;
+    
+    using ID2D1RenderTarget::DrawText;
+    
+    /// <summary>
+    /// Draw a text layout object. If the layout is not subsequently changed, this can
+    /// be more efficient than DrawText when drawing the same layout repeatedly.
+    /// </summary>
+    /// <param name="svgGlyphStyle">Object used to style SVG glyphs.</param>
+    /// <param name="colorPaletteIndex">The index used to select a color palette within
+    /// a color font.</param>
+    /// <param name="options">The specified text options. If D2D1_DRAW_TEXT_OPTIONS_CLIP
+    /// is used, the text is clipped to the layout bounds. These bounds are derived from
+    /// the origin and the layout bounds of the corresponding IDWriteTextLayout object.
+    /// </param>
+    STDMETHOD_(void, DrawTextLayout)(
+        D2D1_POINT_2F origin,
+        _In_ IDWriteTextLayout *textLayout,
+        _In_opt_ ID2D1Brush *defaultFillBrush,
+        _In_opt_ ID2D1SvgGlyphStyle *svgGlyphStyle,
+        UINT32 colorPaletteIndex = 0,
+        D2D1_DRAW_TEXT_OPTIONS options = D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT 
+        ) PURE;
+    
+    using ID2D1RenderTarget::DrawTextLayout;
+    
+    /// <summary>
+    /// Draws a color glyph run using one (and only one) of the bitmap formats-
+    /// DWRITE_GLYPH_IMAGE_FORMATS_PNG, DWRITE_GLYPH_IMAGE_FORMATS_JPEG,
+    /// DWRITE_GLYPH_IMAGE_FORMATS_TIFF, or
+    /// DWRITE_GLYPH_IMAGE_FORMATS_PREMULTIPLIED_B8G8R8A8.
+    /// </summary>
+    STDMETHOD_(void, DrawColorBitmapGlyphRun)(
+        DWRITE_GLYPH_IMAGE_FORMATS glyphImageFormat,
+        D2D1_POINT_2F baselineOrigin,
+        _In_ CONST DWRITE_GLYPH_RUN *glyphRun,
+        DWRITE_MEASURING_MODE measuringMode = DWRITE_MEASURING_MODE_NATURAL,
+        D2D1_COLOR_BITMAP_GLYPH_SNAP_OPTION bitmapSnapOption = D2D1_COLOR_BITMAP_GLYPH_SNAP_OPTION_DEFAULT 
+        ) PURE;
+    
+    /// <summary>
+    /// Draws a color glyph run that has the format of DWRITE_GLYPH_IMAGE_FORMATS_SVG.
+    /// </summary>
+    /// <param name="svgGlyphStyle">Object used to style SVG glyphs.</param>
+    /// <param name="colorPaletteIndex">The index used to select a color palette within
+    /// a color font. Note that this not the same as the paletteIndex in the
+    /// DWRITE_COLOR_GLYPH_RUN struct, which is not relevant for SVG glyphs.</param>
+    STDMETHOD_(void, DrawSvgGlyphRun)(
+        D2D1_POINT_2F baselineOrigin,
+        _In_ CONST DWRITE_GLYPH_RUN *glyphRun,
+        _In_opt_ ID2D1Brush *defaultFillBrush = NULL,
+        _In_opt_ ID2D1SvgGlyphStyle *svgGlyphStyle = NULL,
+        UINT32 colorPaletteIndex = 0,
+        DWRITE_MEASURING_MODE measuringMode = DWRITE_MEASURING_MODE_NATURAL 
+        ) PURE;
+    
+    /// <summary>
+    /// Retrieves an image of the color bitmap glyph from the color glyph cache. If the
+    /// cache does not already contain the requested resource, it will be created. This
+    /// method may be used to extend the lifetime of a glyph image even after it is
+    /// evicted from the color glyph cache.
+    /// </summary>
+    /// <param name="fontEmSize">The specified font size affects the choice of which
+    /// bitmap to use from the font. It also affects the output glyphTransform, causing
+    /// it to properly scale the glyph.</param>
+    /// <param name="glyphTransform">Output transform, which transforms from the glyph's
+    /// space to the same output space as the worldTransform. This includes the input
+    /// glyphOrigin, the glyph's offset from the glyphOrigin, and any other required
+    /// transformations.</param>
+    STDMETHOD(GetColorBitmapGlyphImage)(
+        DWRITE_GLYPH_IMAGE_FORMATS glyphImageFormat,
+        D2D1_POINT_2F glyphOrigin,
+        _In_ IDWriteFontFace *fontFace,
+        FLOAT fontEmSize,
+        UINT16 glyphIndex,
+        BOOL isSideways,
+        _In_opt_ CONST D2D1_MATRIX_3X2_F *worldTransform,
+        FLOAT dpiX,
+        FLOAT dpiY,
+        _Out_ D2D1_MATRIX_3X2_F *glyphTransform,
+        _COM_Outptr_ ID2D1Image **glyphImage 
+        ) PURE;
+    
+    /// <summary>
+    /// Retrieves an image of the SVG glyph from the color glyph cache. If the cache
+    /// does not already contain the requested resource, it will be created. This method
+    /// may be used to extend the lifetime of a glyph image even after it is evicted
+    /// from the color glyph cache.
+    /// </summary>
+    /// <param name="fontEmSize">The specified font size affects the output
+    /// glyphTransform, causing it to properly scale the glyph.</param>
+    /// <param name="svgGlyphStyle">Object used to style SVG glyphs.</param>
+    /// <param name="colorPaletteIndex">The index used to select a color palette within
+    /// a color font. Note that this not the same as the paletteIndex in the
+    /// DWRITE_COLOR_GLYPH_RUN struct, which is not relevant for SVG glyphs.</param>
+    /// <param name="glyphTransform">Output transform, which transforms from the glyph's
+    /// space to the same output space as the worldTransform. This includes the input
+    /// glyphOrigin, the glyph's offset from the glyphOrigin, and any other required
+    /// transformations.</param>
+    STDMETHOD(GetSvgGlyphImage)(
+        D2D1_POINT_2F glyphOrigin,
+        _In_ IDWriteFontFace *fontFace,
+        FLOAT fontEmSize,
+        UINT16 glyphIndex,
+        BOOL isSideways,
+        _In_opt_ CONST D2D1_MATRIX_3X2_F *worldTransform,
+        _In_opt_ ID2D1Brush *defaultFillBrush,
+        _In_opt_ ID2D1SvgGlyphStyle *svgGlyphStyle,
+        UINT32 colorPaletteIndex,
+        _Out_ D2D1_MATRIX_3X2_F *glyphTransform,
+        _COM_Outptr_ ID2D1CommandList **glyphImage 
+        ) PURE;
+    
+    /// <summary>
+    /// Draws the text within the given layout rectangle. By default, this method
+    /// performs baseline snapping and renders color versions of glyphs in color fonts.
+    /// </summary>
+    /// <param name="svgGlyphStyle">Object used to style SVG glyphs.</param>
+    /// <param name="colorPaletteIndex">The index used to select a color palette within
+    /// a color font.</param>
+    COM_DECLSPEC_NOTHROW
+    void
+    DrawText(
+        _In_reads_(stringLength) CONST WCHAR *string,
+        UINT32 stringLength,
+        _In_ IDWriteTextFormat *textFormat,
+        CONST D2D1_RECT_F &layoutRect,
+        _In_opt_ ID2D1Brush *defaultFillBrush,
+        _In_opt_ ID2D1SvgGlyphStyle *svgGlyphStyle,
+        UINT32 colorPaletteIndex = 0,
+        D2D1_DRAW_TEXT_OPTIONS options = D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT,
+        DWRITE_MEASURING_MODE measuringMode = DWRITE_MEASURING_MODE_NATURAL 
+        )  
+    {
+        return DrawText(string, stringLength, textFormat, &layoutRect, defaultFillBrush, svgGlyphStyle, colorPaletteIndex, options, measuringMode);
+    }
+}; // interface ID2D1DeviceContext4
+
+
+interface DX_DECLARE_INTERFACE("d7bdb159-5683-4a46-bc9c-72dc720b858b") ID2D1Device4  : public ID2D1Device3
+{
+    
+    /// <summary>
+    /// Creates a new device context with no initially assigned target.
+    /// </summary>
+    STDMETHOD(CreateDeviceContext)(
+        D2D1_DEVICE_CONTEXT_OPTIONS options,
+        _COM_Outptr_ ID2D1DeviceContext4 **deviceContext4 
+        ) PURE;
+    
+    using ID2D1Device3::CreateDeviceContext;
+    
+    using ID2D1Device2::CreateDeviceContext;
+    
+    using ID2D1Device1::CreateDeviceContext;
+    
+    using ID2D1Device::CreateDeviceContext;
+    
+    /// <summary>
+    /// Sets the maximum capacity of the color glyph cache. This cache is used to store
+    /// color bitmap glyphs and SVG glyphs, enabling faster performance if the same
+    /// glyphs are needed again. If the application still references a glyph using
+    /// GetColorBitmapGlyphImage or GetSvgGlyphImage after it has been evicted, this
+    /// glyph does not count toward the cache capacity.
+    /// </summary>
+    STDMETHOD_(void, SetMaximumColorGlyphCacheMemory)(
+        UINT64 maximumInBytes 
+        ) PURE;
+    
+    /// <summary>
+    /// Gets the maximum capacity of the color glyph cache.
+    /// </summary>
+    STDMETHOD_(UINT64, GetMaximumColorGlyphCacheMemory)(
+        ) CONST PURE;
+}; // interface ID2D1Device4
+
+
+/// <summary>
+/// Creates Direct2D resources. This interface also enables the creation of
+/// ID2D1Device4 objects.
+/// </summary>
+interface DX_DECLARE_INTERFACE("c4349994-838e-4b0f-8cab-44997d9eeacc") ID2D1Factory5  : public ID2D1Factory4
+{
+    
+    /// <summary>
+    /// This creates a new Direct2D device from the given IDXGIDevice.
+    /// </summary>
+    STDMETHOD(CreateDevice)(
+        _In_ IDXGIDevice *dxgiDevice,
+        _COM_Outptr_ ID2D1Device4 **d2dDevice4 
+        ) PURE;
+    
+    using ID2D1Factory4::CreateDevice;
+    
+    using ID2D1Factory3::CreateDevice;
+    
+    using ID2D1Factory2::CreateDevice;
+    
+    using ID2D1Factory1::CreateDevice;
+}; // interface ID2D1Factory5
+
+
+#endif // #if NTDDI_VERSION >= NTDDI_WIN10_RS1
+#if NTDDI_VERSION >= NTDDI_WIN10_RS2
+
+interface DX_DECLARE_INTERFACE("c78a6519-40d6-4218-b2de-beeeb744bb3e") ID2D1CommandSink4  : public ID2D1CommandSink3
+{
+    
+    /// <summary>
+    /// A new function to set blend mode that respects the new MAX blend.
+    /// 
+    /// Implementers of SetPrimitiveBlend2 should expect and handle blend mode:
+    /// D2D1_PRIMITIVE_BLEND_MAX
+    /// 
+    /// Implementers of SetPrimitiveBlend1 should expect and handle blend modes:
+    /// D2D1_PRIMITIVE_BLEND_MIN and D2D1_PRIMITIVE_BLEND_ADD
+    /// 
+    /// Implementers of SetPrimitiveBlend should expect and handle blend modes:
+    /// D2D1_PRIMITIVE_BLEND_SOURCE_OVER and D2D1_PRIMITIVE_BLEND_COPY
+    /// </summary>
+    STDMETHOD(SetPrimitiveBlend2)(
+        D2D1_PRIMITIVE_BLEND primitiveBlend 
+        ) PURE;
+}; // interface ID2D1CommandSink4
+
+
+/// <summary>
+/// Represents a color context to be used with the Color Management Effect.
+/// </summary>
+interface DX_DECLARE_INTERFACE("1ab42875-c57f-4be9-bd85-9cd78d6f55ee") ID2D1ColorContext1  : public ID2D1ColorContext
+{
+    
+    /// <summary>
+    /// Retrieves the color context type.
+    /// </summary>
+    STDMETHOD_(D2D1_COLOR_CONTEXT_TYPE, GetColorContextType)(
+        ) CONST PURE;
+    
+    /// <summary>
+    /// Retrieves the DXGI color space of this context. Returns DXGI_COLOR_SPACE_CUSTOM
+    /// when color context type is ICC.
+    /// </summary>
+    STDMETHOD_(DXGI_COLOR_SPACE_TYPE, GetDXGIColorSpace)(
+        ) CONST PURE;
+    
+    /// <summary>
+    /// Retrieves a set simple color profile.
+    /// </summary>
+    STDMETHOD(GetSimpleColorProfile)(
+        _Out_ D2D1_SIMPLE_COLOR_PROFILE *simpleProfile 
+        ) CONST PURE;
+}; // interface ID2D1ColorContext1
+
+
+interface DX_DECLARE_INTERFACE("7836d248-68cc-4df6-b9e8-de991bf62eb7") ID2D1DeviceContext5  : public ID2D1DeviceContext4
+{
+    
+    /// <summary>
+    /// Creates an SVG document from a stream.
+    /// </summary>
+    /// <param name="inputXmlStream">An input stream containing the SVG XML document. If
+    /// null, an empty document is created.</param>
+    /// <param name="viewportSize">Size of the initial viewport of the document.</param>
+    /// <param name="svgDocument">When this method returns, contains a pointer to the
+    /// SVG document.</param>
+    STDMETHOD(CreateSvgDocument)(
+        _In_opt_ IStream *inputXmlStream,
+        D2D1_SIZE_F viewportSize,
+        _COM_Outptr_ ID2D1SvgDocument **svgDocument 
+        ) PURE;
+    
+    /// <summary>
+    /// Draw an SVG document.
+    /// </summary>
+    STDMETHOD_(void, DrawSvgDocument)(
+        _In_ ID2D1SvgDocument *svgDocument 
+        ) PURE;
+    
+    /// <summary>
+    /// Creates a color context from a DXGI color space type. It is only valid to use
+    /// this with the Color Management Effect in 'Best' mode.
+    /// </summary>
+    STDMETHOD(CreateColorContextFromDxgiColorSpace)(
+        DXGI_COLOR_SPACE_TYPE colorSpace,
+        _COM_Outptr_ ID2D1ColorContext1 **colorContext 
+        ) PURE;
+    
+    /// <summary>
+    /// Creates a color context from a simple color profile. It is only valid to use
+    /// this with the Color Management Effect in 'Best' mode.
+    /// </summary>
+    STDMETHOD(CreateColorContextFromSimpleColorProfile)(
+        _In_ CONST D2D1_SIMPLE_COLOR_PROFILE *simpleProfile,
+        _COM_Outptr_ ID2D1ColorContext1 **colorContext 
+        ) PURE;
+    
+    /// <summary>
+    /// Creates a color context from a simple color profile.
+    /// </summary>
+    COM_DECLSPEC_NOTHROW
+    HRESULT
+    CreateColorContextFromSimpleColorProfile(
+        CONST D2D1_SIMPLE_COLOR_PROFILE &simpleProfile,
+        _COM_Outptr_ ID2D1ColorContext1 **colorContext 
+        )  
+    {
+        return CreateColorContextFromSimpleColorProfile(&simpleProfile, colorContext);
+    }
+}; // interface ID2D1DeviceContext5
+
+
+interface DX_DECLARE_INTERFACE("d55ba0a4-6405-4694-aef5-08ee1a4358b4") ID2D1Device5  : public ID2D1Device4
+{
+    
+    /// <summary>
+    /// Creates a new device context with no initially assigned target.
+    /// </summary>
+    STDMETHOD(CreateDeviceContext)(
+        D2D1_DEVICE_CONTEXT_OPTIONS options,
+        _COM_Outptr_ ID2D1DeviceContext5 **deviceContext5 
+        ) PURE;
+    
+    using ID2D1Device4::CreateDeviceContext;
+    
+    using ID2D1Device3::CreateDeviceContext;
+    
+    using ID2D1Device2::CreateDeviceContext;
+    
+    using ID2D1Device1::CreateDeviceContext;
+    
+    using ID2D1Device::CreateDeviceContext;
+}; // interface ID2D1Device5
+
+
+/// <summary>
+/// Creates Direct2D resources. This interface also enables the creation of
+/// ID2D1Device5 objects.
+/// </summary>
+interface DX_DECLARE_INTERFACE("f9976f46-f642-44c1-97ca-da32ea2a2635") ID2D1Factory6  : public ID2D1Factory5
+{
+    
+    /// <summary>
+    /// This creates a new Direct2D device from the given IDXGIDevice.
+    /// </summary>
+    STDMETHOD(CreateDevice)(
+        _In_ IDXGIDevice *dxgiDevice,
+        _COM_Outptr_ ID2D1Device5 **d2dDevice5 
+        ) PURE;
+    
+    using ID2D1Factory5::CreateDevice;
+    
+    using ID2D1Factory4::CreateDevice;
+    
+    using ID2D1Factory3::CreateDevice;
+    
+    using ID2D1Factory2::CreateDevice;
+    
+    using ID2D1Factory1::CreateDevice;
+}; // interface ID2D1Factory6
+
 
 #endif
 
-
-EXTERN_C CONST IID IID_ID2D1InkStyle;
-EXTERN_C CONST IID IID_ID2D1Ink;
-EXTERN_C CONST IID IID_ID2D1GradientMesh;
-EXTERN_C CONST IID IID_ID2D1ImageSource;
-EXTERN_C CONST IID IID_ID2D1ImageSourceFromWic;
-EXTERN_C CONST IID IID_ID2D1TransformedImageSource;
-EXTERN_C CONST IID IID_ID2D1LookupTable3D;
-EXTERN_C CONST IID IID_ID2D1DeviceContext2;
-EXTERN_C CONST IID IID_ID2D1Device2;
-EXTERN_C CONST IID IID_ID2D1Factory3;
-EXTERN_C CONST IID IID_ID2D1CommandSink2;
-EXTERN_C CONST IID IID_ID2D1GdiMetafile1;
-EXTERN_C CONST IID IID_ID2D1GdiMetafileSink1;
+#endif
 
 
 #ifdef D2D_USE_C_DEFINITIONS
@@ -1078,1149 +1709,29 @@ EXTERN_C CONST IID IID_ID2D1GdiMetafileSink1;
 
 typedef interface ID2D1InkStyle ID2D1InkStyle;
 
-typedef struct ID2D1InkStyleVtbl
-{
-    
-    ID2D1ResourceVtbl Base;
-    
-    
-    STDMETHOD_(void, SetNibTransform)(
-        ID2D1InkStyle *This,
-        _In_ CONST D2D1_MATRIX_3X2_F *transform 
-        ) PURE;
-    
-    STDMETHOD_(void, GetNibTransform)(
-        ID2D1InkStyle *This,
-        _Out_ D2D1_MATRIX_3X2_F *transform 
-        ) PURE;
-    
-    STDMETHOD_(void, SetNibShape)(
-        ID2D1InkStyle *This,
-        D2D1_INK_NIB_SHAPE nibShape 
-        ) PURE;
-    
-    STDMETHOD_(D2D1_INK_NIB_SHAPE, GetNibShape)(
-        ID2D1InkStyle *This 
-        ) PURE;
-} ID2D1InkStyleVtbl;
-
-interface ID2D1InkStyle
-{
-    CONST struct ID2D1InkStyleVtbl *lpVtbl;
-};
-
-
-#define ID2D1InkStyle_QueryInterface(This, riid, ppv) \
-    ((This)->lpVtbl->Base.Base.QueryInterface((IUnknown *)This, riid, ppv))
-
-#define ID2D1InkStyle_AddRef(This) \
-    ((This)->lpVtbl->Base.Base.AddRef((IUnknown *)This))
-
-#define ID2D1InkStyle_Release(This) \
-    ((This)->lpVtbl->Base.Base.Release((IUnknown *)This))
-
-#define ID2D1InkStyle_GetFactory(This, factory) \
-    ((This)->lpVtbl->Base.GetFactory((ID2D1Resource *)This, factory))
-
-#define ID2D1InkStyle_SetNibTransform(This, transform) \
-    ((This)->lpVtbl->SetNibTransform(This, transform))
-
-#define ID2D1InkStyle_GetNibTransform(This, transform) \
-    ((This)->lpVtbl->GetNibTransform(This, transform))
-
-#define ID2D1InkStyle_SetNibShape(This, nibShape) \
-    ((This)->lpVtbl->SetNibShape(This, nibShape))
-
-#define ID2D1InkStyle_GetNibShape(This) \
-    ((This)->lpVtbl->GetNibShape(This))
-
 typedef interface ID2D1Ink ID2D1Ink;
-
-typedef struct ID2D1InkVtbl
-{
-    
-    ID2D1ResourceVtbl Base;
-    
-    
-    STDMETHOD_(void, SetStartPoint)(
-        ID2D1Ink *This,
-        _In_ CONST D2D1_INK_POINT *startPoint 
-        ) PURE;
-    
-    STDMETHOD_(D2D1_INK_POINT, GetStartPoint)(
-        ID2D1Ink *This 
-        ) PURE;
-    
-    STDMETHOD(AddSegments)(
-        ID2D1Ink *This,
-        _In_reads_(segmentsCount) CONST D2D1_INK_BEZIER_SEGMENT *segments,
-        UINT32 segmentsCount 
-        ) PURE;
-    
-    STDMETHOD(RemoveSegmentsAtEnd)(
-        ID2D1Ink *This,
-        UINT32 segmentsCount 
-        ) PURE;
-    
-    STDMETHOD(SetSegments)(
-        ID2D1Ink *This,
-        UINT32 startSegment,
-        _In_reads_(segmentsCount) CONST D2D1_INK_BEZIER_SEGMENT *segments,
-        UINT32 segmentsCount 
-        ) PURE;
-    
-    STDMETHOD(SetSegmentAtEnd)(
-        ID2D1Ink *This,
-        _In_ CONST D2D1_INK_BEZIER_SEGMENT *segment 
-        ) PURE;
-    
-    STDMETHOD_(UINT32, GetSegmentCount)(
-        ID2D1Ink *This 
-        ) PURE;
-    
-    STDMETHOD(GetSegments)(
-        ID2D1Ink *This,
-        UINT32 startSegment,
-        _Out_writes_(segmentsCount) D2D1_INK_BEZIER_SEGMENT *segments,
-        UINT32 segmentsCount 
-        ) PURE;
-    
-    STDMETHOD(StreamAsGeometry)(
-        ID2D1Ink *This,
-        _In_opt_ ID2D1InkStyle *inkStyle,
-        _In_opt_ CONST D2D1_MATRIX_3X2_F *worldTransform,
-        FLOAT flatteningTolerance,
-        _In_ ID2D1SimplifiedGeometrySink *geometrySink 
-        ) PURE;
-    
-    STDMETHOD(GetBounds)(
-        ID2D1Ink *This,
-        _In_opt_ ID2D1InkStyle *inkStyle,
-        _In_opt_ CONST D2D1_MATRIX_3X2_F *worldTransform,
-        _Out_ D2D1_RECT_F *bounds 
-        ) PURE;
-} ID2D1InkVtbl;
-
-interface ID2D1Ink
-{
-    CONST struct ID2D1InkVtbl *lpVtbl;
-};
-
-
-#define ID2D1Ink_QueryInterface(This, riid, ppv) \
-    ((This)->lpVtbl->Base.Base.QueryInterface((IUnknown *)This, riid, ppv))
-
-#define ID2D1Ink_AddRef(This) \
-    ((This)->lpVtbl->Base.Base.AddRef((IUnknown *)This))
-
-#define ID2D1Ink_Release(This) \
-    ((This)->lpVtbl->Base.Base.Release((IUnknown *)This))
-
-#define ID2D1Ink_GetFactory(This, factory) \
-    ((This)->lpVtbl->Base.GetFactory((ID2D1Resource *)This, factory))
-
-#define ID2D1Ink_SetStartPoint(This, startPoint) \
-    ((This)->lpVtbl->SetStartPoint(This, startPoint))
-
-#define ID2D1Ink_GetStartPoint(This) \
-    ((This)->lpVtbl->GetStartPoint(This))
-
-#define ID2D1Ink_AddSegments(This, segments, segmentsCount) \
-    ((This)->lpVtbl->AddSegments(This, segments, segmentsCount))
-
-#define ID2D1Ink_RemoveSegmentsAtEnd(This, segmentsCount) \
-    ((This)->lpVtbl->RemoveSegmentsAtEnd(This, segmentsCount))
-
-#define ID2D1Ink_SetSegments(This, startSegment, segments, segmentsCount) \
-    ((This)->lpVtbl->SetSegments(This, startSegment, segments, segmentsCount))
-
-#define ID2D1Ink_SetSegmentAtEnd(This, segment) \
-    ((This)->lpVtbl->SetSegmentAtEnd(This, segment))
-
-#define ID2D1Ink_GetSegmentCount(This) \
-    ((This)->lpVtbl->GetSegmentCount(This))
-
-#define ID2D1Ink_GetSegments(This, startSegment, segments, segmentsCount) \
-    ((This)->lpVtbl->GetSegments(This, startSegment, segments, segmentsCount))
-
-#define ID2D1Ink_StreamAsGeometry(This, inkStyle, worldTransform, flatteningTolerance, geometrySink) \
-    ((This)->lpVtbl->StreamAsGeometry(This, inkStyle, worldTransform, flatteningTolerance, geometrySink))
-
-#define ID2D1Ink_GetBounds(This, inkStyle, worldTransform, bounds) \
-    ((This)->lpVtbl->GetBounds(This, inkStyle, worldTransform, bounds))
 
 typedef interface ID2D1GradientMesh ID2D1GradientMesh;
 
-typedef struct ID2D1GradientMeshVtbl
-{
-    
-    ID2D1ResourceVtbl Base;
-    
-    
-    STDMETHOD_(UINT32, GetPatchCount)(
-        ID2D1GradientMesh *This 
-        ) PURE;
-    
-    STDMETHOD(GetPatches)(
-        ID2D1GradientMesh *This,
-        UINT32 startIndex,
-        _Out_writes_(patchesCount) D2D1_GRADIENT_MESH_PATCH *patches,
-        UINT32 patchesCount 
-        ) PURE;
-} ID2D1GradientMeshVtbl;
-
-interface ID2D1GradientMesh
-{
-    CONST struct ID2D1GradientMeshVtbl *lpVtbl;
-};
-
-
-#define ID2D1GradientMesh_QueryInterface(This, riid, ppv) \
-    ((This)->lpVtbl->Base.Base.QueryInterface((IUnknown *)This, riid, ppv))
-
-#define ID2D1GradientMesh_AddRef(This) \
-    ((This)->lpVtbl->Base.Base.AddRef((IUnknown *)This))
-
-#define ID2D1GradientMesh_Release(This) \
-    ((This)->lpVtbl->Base.Base.Release((IUnknown *)This))
-
-#define ID2D1GradientMesh_GetFactory(This, factory) \
-    ((This)->lpVtbl->Base.GetFactory((ID2D1Resource *)This, factory))
-
-#define ID2D1GradientMesh_GetPatchCount(This) \
-    ((This)->lpVtbl->GetPatchCount(This))
-
-#define ID2D1GradientMesh_GetPatches(This, startIndex, patches, patchesCount) \
-    ((This)->lpVtbl->GetPatches(This, startIndex, patches, patchesCount))
-
 typedef interface ID2D1ImageSource ID2D1ImageSource;
-
-typedef struct ID2D1ImageSourceVtbl
-{
-    
-    ID2D1ImageVtbl Base;
-    
-    
-    STDMETHOD(OfferResources)(
-        ID2D1ImageSource *This 
-        ) PURE;
-    
-    STDMETHOD(TryReclaimResources)(
-        ID2D1ImageSource *This,
-        _Out_ BOOL *resourcesDiscarded 
-        ) PURE;
-} ID2D1ImageSourceVtbl;
-
-interface ID2D1ImageSource
-{
-    CONST struct ID2D1ImageSourceVtbl *lpVtbl;
-};
-
-
-#define ID2D1ImageSource_QueryInterface(This, riid, ppv) \
-    ((This)->lpVtbl->Base.Base.Base.QueryInterface((IUnknown *)This, riid, ppv))
-
-#define ID2D1ImageSource_AddRef(This) \
-    ((This)->lpVtbl->Base.Base.Base.AddRef((IUnknown *)This))
-
-#define ID2D1ImageSource_Release(This) \
-    ((This)->lpVtbl->Base.Base.Base.Release((IUnknown *)This))
-
-#define ID2D1ImageSource_GetFactory(This, factory) \
-    ((This)->lpVtbl->Base.Base.GetFactory((ID2D1Resource *)This, factory))
-
-#define ID2D1ImageSource_OfferResources(This) \
-    ((This)->lpVtbl->OfferResources(This))
-
-#define ID2D1ImageSource_TryReclaimResources(This, resourcesDiscarded) \
-    ((This)->lpVtbl->TryReclaimResources(This, resourcesDiscarded))
 
 typedef interface ID2D1ImageSourceFromWic ID2D1ImageSourceFromWic;
 
-typedef struct ID2D1ImageSourceFromWicVtbl
-{
-    
-    ID2D1ImageSourceVtbl Base;
-    
-    
-    STDMETHOD(EnsureCached)(
-        ID2D1ImageSourceFromWic *This,
-        _In_opt_ CONST D2D1_RECT_U *rectangleToFill 
-        ) PURE;
-    
-    STDMETHOD(TrimCache)(
-        ID2D1ImageSourceFromWic *This,
-        _In_opt_ CONST D2D1_RECT_U *rectangleToPreserve 
-        ) PURE;
-    
-    STDMETHOD_(void, GetSource)(
-        ID2D1ImageSourceFromWic *This,
-        _Outptr_result_maybenull_ IWICBitmapSource **wicBitmapSource 
-        ) PURE;
-} ID2D1ImageSourceFromWicVtbl;
-
-interface ID2D1ImageSourceFromWic
-{
-    CONST struct ID2D1ImageSourceFromWicVtbl *lpVtbl;
-};
-
-
-#define ID2D1ImageSourceFromWic_QueryInterface(This, riid, ppv) \
-    ((This)->lpVtbl->Base.Base.Base.Base.QueryInterface((IUnknown *)This, riid, ppv))
-
-#define ID2D1ImageSourceFromWic_AddRef(This) \
-    ((This)->lpVtbl->Base.Base.Base.Base.AddRef((IUnknown *)This))
-
-#define ID2D1ImageSourceFromWic_Release(This) \
-    ((This)->lpVtbl->Base.Base.Base.Base.Release((IUnknown *)This))
-
-#define ID2D1ImageSourceFromWic_GetFactory(This, factory) \
-    ((This)->lpVtbl->Base.Base.Base.GetFactory((ID2D1Resource *)This, factory))
-
-#define ID2D1ImageSourceFromWic_OfferResources(This) \
-    ((This)->lpVtbl->Base.OfferResources((ID2D1ImageSource *)This))
-
-#define ID2D1ImageSourceFromWic_TryReclaimResources(This, resourcesDiscarded) \
-    ((This)->lpVtbl->Base.TryReclaimResources((ID2D1ImageSource *)This, resourcesDiscarded))
-
-#define ID2D1ImageSourceFromWic_EnsureCached(This, rectangleToFill) \
-    ((This)->lpVtbl->EnsureCached(This, rectangleToFill))
-
-#define ID2D1ImageSourceFromWic_TrimCache(This, rectangleToPreserve) \
-    ((This)->lpVtbl->TrimCache(This, rectangleToPreserve))
-
-#define ID2D1ImageSourceFromWic_GetSource(This, wicBitmapSource) \
-    ((This)->lpVtbl->GetSource(This, wicBitmapSource))
-
 typedef interface ID2D1TransformedImageSource ID2D1TransformedImageSource;
-
-typedef struct ID2D1TransformedImageSourceVtbl
-{
-    
-    ID2D1ImageVtbl Base;
-    
-    
-    STDMETHOD_(void, GetSource)(
-        ID2D1TransformedImageSource *This,
-        _Outptr_result_maybenull_ ID2D1ImageSource **imageSource 
-        ) PURE;
-    
-    STDMETHOD_(void, GetProperties)(
-        ID2D1TransformedImageSource *This,
-        _Out_ D2D1_TRANSFORMED_IMAGE_SOURCE_PROPERTIES *properties 
-        ) PURE;
-} ID2D1TransformedImageSourceVtbl;
-
-interface ID2D1TransformedImageSource
-{
-    CONST struct ID2D1TransformedImageSourceVtbl *lpVtbl;
-};
-
-
-#define ID2D1TransformedImageSource_QueryInterface(This, riid, ppv) \
-    ((This)->lpVtbl->Base.Base.Base.QueryInterface((IUnknown *)This, riid, ppv))
-
-#define ID2D1TransformedImageSource_AddRef(This) \
-    ((This)->lpVtbl->Base.Base.Base.AddRef((IUnknown *)This))
-
-#define ID2D1TransformedImageSource_Release(This) \
-    ((This)->lpVtbl->Base.Base.Base.Release((IUnknown *)This))
-
-#define ID2D1TransformedImageSource_GetFactory(This, factory) \
-    ((This)->lpVtbl->Base.Base.GetFactory((ID2D1Resource *)This, factory))
-
-#define ID2D1TransformedImageSource_GetSource(This, imageSource) \
-    ((This)->lpVtbl->GetSource(This, imageSource))
-
-#define ID2D1TransformedImageSource_GetProperties(This, properties) \
-    ((This)->lpVtbl->GetProperties(This, properties))
 
 typedef interface ID2D1LookupTable3D ID2D1LookupTable3D;
 
-typedef struct ID2D1LookupTable3DVtbl
-{
-    
-    ID2D1ResourceVtbl Base;
-    
-} ID2D1LookupTable3DVtbl;
-
-interface ID2D1LookupTable3D
-{
-    CONST struct ID2D1LookupTable3DVtbl *lpVtbl;
-};
-
-
-#define ID2D1LookupTable3D_QueryInterface(This, riid, ppv) \
-    ((This)->lpVtbl->Base.Base.QueryInterface((IUnknown *)This, riid, ppv))
-
-#define ID2D1LookupTable3D_AddRef(This) \
-    ((This)->lpVtbl->Base.Base.AddRef((IUnknown *)This))
-
-#define ID2D1LookupTable3D_Release(This) \
-    ((This)->lpVtbl->Base.Base.Release((IUnknown *)This))
-
-#define ID2D1LookupTable3D_GetFactory(This, factory) \
-    ((This)->lpVtbl->Base.GetFactory((ID2D1Resource *)This, factory))
-
 typedef interface ID2D1DeviceContext2 ID2D1DeviceContext2;
-
-typedef struct ID2D1DeviceContext2Vtbl
-{
-    
-    ID2D1DeviceContext1Vtbl Base;
-    
-    
-    STDMETHOD(CreateInk)(
-        ID2D1DeviceContext2 *This,
-        _In_ CONST D2D1_INK_POINT *startPoint,
-        _Outptr_ ID2D1Ink **ink 
-        ) PURE;
-    
-    STDMETHOD(CreateInkStyle)(
-        ID2D1DeviceContext2 *This,
-        _In_opt_ CONST D2D1_INK_STYLE_PROPERTIES *inkStyleProperties,
-        _Outptr_ ID2D1InkStyle **inkStyle 
-        ) PURE;
-    
-    STDMETHOD(CreateGradientMesh)(
-        ID2D1DeviceContext2 *This,
-        _In_reads_(patchesCount) CONST D2D1_GRADIENT_MESH_PATCH *patches,
-        UINT32 patchesCount,
-        _Outptr_ ID2D1GradientMesh **gradientMesh 
-        ) PURE;
-    
-    STDMETHOD(CreateImageSourceFromWic)(
-        ID2D1DeviceContext2 *This,
-        _In_ IWICBitmapSource *wicBitmapSource,
-        D2D1_IMAGE_SOURCE_LOADING_OPTIONS loadingOptions,
-        D2D1_ALPHA_MODE alphaMode,
-        _Outptr_ ID2D1ImageSourceFromWic **imageSource 
-        ) PURE;
-    
-    STDMETHOD(CreateLookupTable3D)(
-        ID2D1DeviceContext2 *This,
-        D2D1_BUFFER_PRECISION precision,
-        _In_reads_(3) CONST UINT32 *extents,
-        _In_reads_(dataCount) CONST BYTE *data,
-        UINT32 dataCount,
-        _In_reads_(2) CONST UINT32 *strides,
-        _Outptr_ ID2D1LookupTable3D **lookupTable 
-        ) PURE;
-    
-    STDMETHOD(CreateImageSourceFromDxgi)(
-        ID2D1DeviceContext2 *This,
-        _In_reads_(surfaceCount) IDXGISurface **surfaces,
-        UINT32 surfaceCount,
-        DXGI_COLOR_SPACE_TYPE colorSpace,
-        D2D1_IMAGE_SOURCE_FROM_DXGI_OPTIONS options,
-        _Outptr_ ID2D1ImageSource **imageSource 
-        ) PURE;
-    
-    STDMETHOD(GetGradientMeshWorldBounds)(
-        ID2D1DeviceContext2 *This,
-        _In_ ID2D1GradientMesh *gradientMesh,
-        _Out_ D2D1_RECT_F *pBounds 
-        ) PURE;
-    
-    STDMETHOD_(void, DrawInk)(
-        ID2D1DeviceContext2 *This,
-        _In_ ID2D1Ink *ink,
-        _In_ ID2D1Brush *brush,
-        _In_opt_ ID2D1InkStyle *inkStyle 
-        ) PURE;
-    
-    STDMETHOD_(void, DrawGradientMesh)(
-        ID2D1DeviceContext2 *This,
-        _In_ ID2D1GradientMesh *gradientMesh 
-        ) PURE;
-    
-    STDMETHOD_(void, DrawGdiMetafile)(
-        ID2D1DeviceContext2 *This,
-        _In_ ID2D1GdiMetafile *gdiMetafile,
-        _In_opt_ CONST D2D1_RECT_F *destinationRectangle,
-        _In_opt_ CONST D2D1_RECT_F *sourceRectangle 
-        ) PURE;
-    
-    STDMETHOD(CreateTransformedImageSource)(
-        ID2D1DeviceContext2 *This,
-        _In_ ID2D1ImageSource *imageSource,
-        _In_ CONST D2D1_TRANSFORMED_IMAGE_SOURCE_PROPERTIES *properties,
-        _Outptr_ ID2D1TransformedImageSource **transformedImageSource 
-        ) PURE;
-} ID2D1DeviceContext2Vtbl;
-
-interface ID2D1DeviceContext2
-{
-    CONST struct ID2D1DeviceContext2Vtbl *lpVtbl;
-};
-
-
-#define ID2D1DeviceContext2_QueryInterface(This, riid, ppv) \
-    ((This)->lpVtbl->Base.Base.Base.Base.Base.QueryInterface((IUnknown *)This, riid, ppv))
-
-#define ID2D1DeviceContext2_AddRef(This) \
-    ((This)->lpVtbl->Base.Base.Base.Base.Base.AddRef((IUnknown *)This))
-
-#define ID2D1DeviceContext2_Release(This) \
-    ((This)->lpVtbl->Base.Base.Base.Base.Base.Release((IUnknown *)This))
-
-#define ID2D1DeviceContext2_GetFactory(This, factory) \
-    ((This)->lpVtbl->Base.Base.Base.Base.GetFactory((ID2D1Resource *)This, factory))
-
-#define ID2D1DeviceContext2_CreateSharedBitmap(This, riid, data, bitmapProperties, bitmap) \
-    ((This)->lpVtbl->Base.Base.Base.CreateSharedBitmap((ID2D1RenderTarget *)This, riid, data, bitmapProperties, bitmap))
-
-#define ID2D1DeviceContext2_CreateSolidColorBrush(This, color, brushProperties, solidColorBrush) \
-    ((This)->lpVtbl->Base.Base.Base.CreateSolidColorBrush((ID2D1RenderTarget *)This, color, brushProperties, solidColorBrush))
-
-#define ID2D1DeviceContext2_CreateLinearGradientBrush(This, linearGradientBrushProperties, brushProperties, gradientStopCollection, linearGradientBrush) \
-    ((This)->lpVtbl->Base.Base.Base.CreateLinearGradientBrush((ID2D1RenderTarget *)This, linearGradientBrushProperties, brushProperties, gradientStopCollection, linearGradientBrush))
-
-#define ID2D1DeviceContext2_CreateRadialGradientBrush(This, radialGradientBrushProperties, brushProperties, gradientStopCollection, radialGradientBrush) \
-    ((This)->lpVtbl->Base.Base.Base.CreateRadialGradientBrush((ID2D1RenderTarget *)This, radialGradientBrushProperties, brushProperties, gradientStopCollection, radialGradientBrush))
-
-#define ID2D1DeviceContext2_CreateCompatibleRenderTarget(This, desiredSize, desiredPixelSize, desiredFormat, options, bitmapRenderTarget) \
-    ((This)->lpVtbl->Base.Base.Base.CreateCompatibleRenderTarget((ID2D1RenderTarget *)This, desiredSize, desiredPixelSize, desiredFormat, options, bitmapRenderTarget))
-
-#define ID2D1DeviceContext2_CreateLayer(This, size, layer) \
-    ((This)->lpVtbl->Base.Base.Base.CreateLayer((ID2D1RenderTarget *)This, size, layer))
-
-#define ID2D1DeviceContext2_CreateMesh(This, mesh) \
-    ((This)->lpVtbl->Base.Base.Base.CreateMesh((ID2D1RenderTarget *)This, mesh))
-
-#define ID2D1DeviceContext2_DrawLine(This, point0, point1, brush, strokeWidth, strokeStyle) \
-    ((This)->lpVtbl->Base.Base.Base.DrawLine((ID2D1RenderTarget *)This, point0, point1, brush, strokeWidth, strokeStyle))
-
-#define ID2D1DeviceContext2_DrawRectangle(This, rect, brush, strokeWidth, strokeStyle) \
-    ((This)->lpVtbl->Base.Base.Base.DrawRectangle((ID2D1RenderTarget *)This, rect, brush, strokeWidth, strokeStyle))
-
-#define ID2D1DeviceContext2_FillRectangle(This, rect, brush) \
-    ((This)->lpVtbl->Base.Base.Base.FillRectangle((ID2D1RenderTarget *)This, rect, brush))
-
-#define ID2D1DeviceContext2_DrawRoundedRectangle(This, roundedRect, brush, strokeWidth, strokeStyle) \
-    ((This)->lpVtbl->Base.Base.Base.DrawRoundedRectangle((ID2D1RenderTarget *)This, roundedRect, brush, strokeWidth, strokeStyle))
-
-#define ID2D1DeviceContext2_FillRoundedRectangle(This, roundedRect, brush) \
-    ((This)->lpVtbl->Base.Base.Base.FillRoundedRectangle((ID2D1RenderTarget *)This, roundedRect, brush))
-
-#define ID2D1DeviceContext2_DrawEllipse(This, ellipse, brush, strokeWidth, strokeStyle) \
-    ((This)->lpVtbl->Base.Base.Base.DrawEllipse((ID2D1RenderTarget *)This, ellipse, brush, strokeWidth, strokeStyle))
-
-#define ID2D1DeviceContext2_FillEllipse(This, ellipse, brush) \
-    ((This)->lpVtbl->Base.Base.Base.FillEllipse((ID2D1RenderTarget *)This, ellipse, brush))
-
-#define ID2D1DeviceContext2_DrawGeometry(This, geometry, brush, strokeWidth, strokeStyle) \
-    ((This)->lpVtbl->Base.Base.Base.DrawGeometry((ID2D1RenderTarget *)This, geometry, brush, strokeWidth, strokeStyle))
-
-#define ID2D1DeviceContext2_FillGeometry(This, geometry, brush, opacityBrush) \
-    ((This)->lpVtbl->Base.Base.Base.FillGeometry((ID2D1RenderTarget *)This, geometry, brush, opacityBrush))
-
-#define ID2D1DeviceContext2_FillMesh(This, mesh, brush) \
-    ((This)->lpVtbl->Base.Base.Base.FillMesh((ID2D1RenderTarget *)This, mesh, brush))
-
-#define ID2D1DeviceContext2_DrawText(This, string, stringLength, textFormat, layoutRect, defaultForegroundBrush, options, measuringMode) \
-    ((This)->lpVtbl->Base.Base.Base.DrawText((ID2D1RenderTarget *)This, string, stringLength, textFormat, layoutRect, defaultForegroundBrush, options, measuringMode))
-
-#define ID2D1DeviceContext2_DrawTextLayout(This, origin, textLayout, defaultForegroundBrush, options) \
-    ((This)->lpVtbl->Base.Base.Base.DrawTextLayout((ID2D1RenderTarget *)This, origin, textLayout, defaultForegroundBrush, options))
-
-#define ID2D1DeviceContext2_SetTransform(This, transform) \
-    ((This)->lpVtbl->Base.Base.Base.SetTransform((ID2D1RenderTarget *)This, transform))
-
-#define ID2D1DeviceContext2_GetTransform(This, transform) \
-    ((This)->lpVtbl->Base.Base.Base.GetTransform((ID2D1RenderTarget *)This, transform))
-
-#define ID2D1DeviceContext2_SetAntialiasMode(This, antialiasMode) \
-    ((This)->lpVtbl->Base.Base.Base.SetAntialiasMode((ID2D1RenderTarget *)This, antialiasMode))
-
-#define ID2D1DeviceContext2_GetAntialiasMode(This) \
-    ((This)->lpVtbl->Base.Base.Base.GetAntialiasMode((ID2D1RenderTarget *)This))
-
-#define ID2D1DeviceContext2_SetTextAntialiasMode(This, textAntialiasMode) \
-    ((This)->lpVtbl->Base.Base.Base.SetTextAntialiasMode((ID2D1RenderTarget *)This, textAntialiasMode))
-
-#define ID2D1DeviceContext2_GetTextAntialiasMode(This) \
-    ((This)->lpVtbl->Base.Base.Base.GetTextAntialiasMode((ID2D1RenderTarget *)This))
-
-#define ID2D1DeviceContext2_SetTextRenderingParams(This, textRenderingParams) \
-    ((This)->lpVtbl->Base.Base.Base.SetTextRenderingParams((ID2D1RenderTarget *)This, textRenderingParams))
-
-#define ID2D1DeviceContext2_GetTextRenderingParams(This, textRenderingParams) \
-    ((This)->lpVtbl->Base.Base.Base.GetTextRenderingParams((ID2D1RenderTarget *)This, textRenderingParams))
-
-#define ID2D1DeviceContext2_SetTags(This, tag1, tag2) \
-    ((This)->lpVtbl->Base.Base.Base.SetTags((ID2D1RenderTarget *)This, tag1, tag2))
-
-#define ID2D1DeviceContext2_GetTags(This, tag1, tag2) \
-    ((This)->lpVtbl->Base.Base.Base.GetTags((ID2D1RenderTarget *)This, tag1, tag2))
-
-#define ID2D1DeviceContext2_PopLayer(This) \
-    ((This)->lpVtbl->Base.Base.Base.PopLayer((ID2D1RenderTarget *)This))
-
-#define ID2D1DeviceContext2_Flush(This, tag1, tag2) \
-    ((This)->lpVtbl->Base.Base.Base.Flush((ID2D1RenderTarget *)This, tag1, tag2))
-
-#define ID2D1DeviceContext2_SaveDrawingState(This, drawingStateBlock) \
-    ((This)->lpVtbl->Base.Base.Base.SaveDrawingState((ID2D1RenderTarget *)This, drawingStateBlock))
-
-#define ID2D1DeviceContext2_RestoreDrawingState(This, drawingStateBlock) \
-    ((This)->lpVtbl->Base.Base.Base.RestoreDrawingState((ID2D1RenderTarget *)This, drawingStateBlock))
-
-#define ID2D1DeviceContext2_PushAxisAlignedClip(This, clipRect, antialiasMode) \
-    ((This)->lpVtbl->Base.Base.Base.PushAxisAlignedClip((ID2D1RenderTarget *)This, clipRect, antialiasMode))
-
-#define ID2D1DeviceContext2_PopAxisAlignedClip(This) \
-    ((This)->lpVtbl->Base.Base.Base.PopAxisAlignedClip((ID2D1RenderTarget *)This))
-
-#define ID2D1DeviceContext2_Clear(This, clearColor) \
-    ((This)->lpVtbl->Base.Base.Base.Clear((ID2D1RenderTarget *)This, clearColor))
-
-#define ID2D1DeviceContext2_BeginDraw(This) \
-    ((This)->lpVtbl->Base.Base.Base.BeginDraw((ID2D1RenderTarget *)This))
-
-#define ID2D1DeviceContext2_EndDraw(This, tag1, tag2) \
-    ((This)->lpVtbl->Base.Base.Base.EndDraw((ID2D1RenderTarget *)This, tag1, tag2))
-
-#define ID2D1DeviceContext2_GetPixelFormat(This) \
-    ((This)->lpVtbl->Base.Base.Base.GetPixelFormat((ID2D1RenderTarget *)This))
-
-#define ID2D1DeviceContext2_SetDpi(This, dpiX, dpiY) \
-    ((This)->lpVtbl->Base.Base.Base.SetDpi((ID2D1RenderTarget *)This, dpiX, dpiY))
-
-#define ID2D1DeviceContext2_GetDpi(This, dpiX, dpiY) \
-    ((This)->lpVtbl->Base.Base.Base.GetDpi((ID2D1RenderTarget *)This, dpiX, dpiY))
-
-#define ID2D1DeviceContext2_GetSize(This) \
-    ((This)->lpVtbl->Base.Base.Base.GetSize((ID2D1RenderTarget *)This))
-
-#define ID2D1DeviceContext2_GetPixelSize(This) \
-    ((This)->lpVtbl->Base.Base.Base.GetPixelSize((ID2D1RenderTarget *)This))
-
-#define ID2D1DeviceContext2_GetMaximumBitmapSize(This) \
-    ((This)->lpVtbl->Base.Base.Base.GetMaximumBitmapSize((ID2D1RenderTarget *)This))
-
-#define ID2D1DeviceContext2_IsSupported(This, renderTargetProperties) \
-    ((This)->lpVtbl->Base.Base.Base.IsSupported((ID2D1RenderTarget *)This, renderTargetProperties))
-
-#define ID2D1DeviceContext2_CreateBitmap(This, size, sourceData, pitch, bitmapProperties, bitmap) \
-    ((This)->lpVtbl->Base.Base.CreateBitmap((ID2D1DeviceContext *)This, size, sourceData, pitch, bitmapProperties, bitmap))
-
-#define ID2D1DeviceContext2_CreateBitmapFromWicBitmap(This, wicBitmapSource, bitmapProperties, bitmap) \
-    ((This)->lpVtbl->Base.Base.CreateBitmapFromWicBitmap((ID2D1DeviceContext *)This, wicBitmapSource, bitmapProperties, bitmap))
-
-#define ID2D1DeviceContext2_CreateColorContext(This, space, profile, profileSize, colorContext) \
-    ((This)->lpVtbl->Base.Base.CreateColorContext((ID2D1DeviceContext *)This, space, profile, profileSize, colorContext))
-
-#define ID2D1DeviceContext2_CreateColorContextFromFilename(This, filename, colorContext) \
-    ((This)->lpVtbl->Base.Base.CreateColorContextFromFilename((ID2D1DeviceContext *)This, filename, colorContext))
-
-#define ID2D1DeviceContext2_CreateColorContextFromWicColorContext(This, wicColorContext, colorContext) \
-    ((This)->lpVtbl->Base.Base.CreateColorContextFromWicColorContext((ID2D1DeviceContext *)This, wicColorContext, colorContext))
-
-#define ID2D1DeviceContext2_CreateBitmapFromDxgiSurface(This, surface, bitmapProperties, bitmap) \
-    ((This)->lpVtbl->Base.Base.CreateBitmapFromDxgiSurface((ID2D1DeviceContext *)This, surface, bitmapProperties, bitmap))
-
-#define ID2D1DeviceContext2_CreateEffect(This, effectId, effect) \
-    ((This)->lpVtbl->Base.Base.CreateEffect((ID2D1DeviceContext *)This, effectId, effect))
-
-#define ID2D1DeviceContext2_CreateGradientStopCollection(This, straightAlphaGradientStops, straightAlphaGradientStopsCount, preInterpolationSpace, postInterpolationSpace, bufferPrecision, extendMode, colorInterpolationMode, gradientStopCollection1) \
-    ((This)->lpVtbl->Base.Base.CreateGradientStopCollection((ID2D1DeviceContext *)This, straightAlphaGradientStops, straightAlphaGradientStopsCount, preInterpolationSpace, postInterpolationSpace, bufferPrecision, extendMode, colorInterpolationMode, gradientStopCollection1))
-
-#define ID2D1DeviceContext2_CreateImageBrush(This, image, imageBrushProperties, brushProperties, imageBrush) \
-    ((This)->lpVtbl->Base.Base.CreateImageBrush((ID2D1DeviceContext *)This, image, imageBrushProperties, brushProperties, imageBrush))
-
-#define ID2D1DeviceContext2_CreateBitmapBrush(This, bitmap, bitmapBrushProperties, brushProperties, bitmapBrush) \
-    ((This)->lpVtbl->Base.Base.CreateBitmapBrush((ID2D1DeviceContext *)This, bitmap, bitmapBrushProperties, brushProperties, bitmapBrush))
-
-#define ID2D1DeviceContext2_CreateCommandList(This, commandList) \
-    ((This)->lpVtbl->Base.Base.CreateCommandList((ID2D1DeviceContext *)This, commandList))
-
-#define ID2D1DeviceContext2_IsDxgiFormatSupported(This, format) \
-    ((This)->lpVtbl->Base.Base.IsDxgiFormatSupported((ID2D1DeviceContext *)This, format))
-
-#define ID2D1DeviceContext2_IsBufferPrecisionSupported(This, bufferPrecision) \
-    ((This)->lpVtbl->Base.Base.IsBufferPrecisionSupported((ID2D1DeviceContext *)This, bufferPrecision))
-
-#define ID2D1DeviceContext2_GetImageLocalBounds(This, image, localBounds) \
-    ((This)->lpVtbl->Base.Base.GetImageLocalBounds((ID2D1DeviceContext *)This, image, localBounds))
-
-#define ID2D1DeviceContext2_GetImageWorldBounds(This, image, worldBounds) \
-    ((This)->lpVtbl->Base.Base.GetImageWorldBounds((ID2D1DeviceContext *)This, image, worldBounds))
-
-#define ID2D1DeviceContext2_GetGlyphRunWorldBounds(This, baselineOrigin, glyphRun, measuringMode, bounds) \
-    ((This)->lpVtbl->Base.Base.GetGlyphRunWorldBounds((ID2D1DeviceContext *)This, baselineOrigin, glyphRun, measuringMode, bounds))
-
-#define ID2D1DeviceContext2_GetDevice(This, device) \
-    ((This)->lpVtbl->Base.Base.GetDevice((ID2D1DeviceContext *)This, device))
-
-#define ID2D1DeviceContext2_SetTarget(This, image) \
-    ((This)->lpVtbl->Base.Base.SetTarget((ID2D1DeviceContext *)This, image))
-
-#define ID2D1DeviceContext2_GetTarget(This, image) \
-    ((This)->lpVtbl->Base.Base.GetTarget((ID2D1DeviceContext *)This, image))
-
-#define ID2D1DeviceContext2_SetRenderingControls(This, renderingControls) \
-    ((This)->lpVtbl->Base.Base.SetRenderingControls((ID2D1DeviceContext *)This, renderingControls))
-
-#define ID2D1DeviceContext2_GetRenderingControls(This, renderingControls) \
-    ((This)->lpVtbl->Base.Base.GetRenderingControls((ID2D1DeviceContext *)This, renderingControls))
-
-#define ID2D1DeviceContext2_SetPrimitiveBlend(This, primitiveBlend) \
-    ((This)->lpVtbl->Base.Base.SetPrimitiveBlend((ID2D1DeviceContext *)This, primitiveBlend))
-
-#define ID2D1DeviceContext2_GetPrimitiveBlend(This) \
-    ((This)->lpVtbl->Base.Base.GetPrimitiveBlend((ID2D1DeviceContext *)This))
-
-#define ID2D1DeviceContext2_SetUnitMode(This, unitMode) \
-    ((This)->lpVtbl->Base.Base.SetUnitMode((ID2D1DeviceContext *)This, unitMode))
-
-#define ID2D1DeviceContext2_GetUnitMode(This) \
-    ((This)->lpVtbl->Base.Base.GetUnitMode((ID2D1DeviceContext *)This))
-
-#define ID2D1DeviceContext2_DrawGlyphRun(This, baselineOrigin, glyphRun, glyphRunDescription, foregroundBrush, measuringMode) \
-    ((This)->lpVtbl->Base.Base.DrawGlyphRun((ID2D1DeviceContext *)This, baselineOrigin, glyphRun, glyphRunDescription, foregroundBrush, measuringMode))
-
-#define ID2D1DeviceContext2_DrawImage(This, image, targetOffset, imageRectangle, interpolationMode, compositeMode) \
-    ((This)->lpVtbl->Base.Base.DrawImage((ID2D1DeviceContext *)This, image, targetOffset, imageRectangle, interpolationMode, compositeMode))
-
-#define ID2D1DeviceContext2_DrawBitmap(This, bitmap, destinationRectangle, opacity, interpolationMode, sourceRectangle, perspectiveTransform) \
-    ((This)->lpVtbl->Base.Base.DrawBitmap((ID2D1DeviceContext *)This, bitmap, destinationRectangle, opacity, interpolationMode, sourceRectangle, perspectiveTransform))
-
-#define ID2D1DeviceContext2_PushLayer(This, layerParameters, layer) \
-    ((This)->lpVtbl->Base.Base.PushLayer((ID2D1DeviceContext *)This, layerParameters, layer))
-
-#define ID2D1DeviceContext2_InvalidateEffectInputRectangle(This, effect, input, inputRectangle) \
-    ((This)->lpVtbl->Base.Base.InvalidateEffectInputRectangle((ID2D1DeviceContext *)This, effect, input, inputRectangle))
-
-#define ID2D1DeviceContext2_GetEffectInvalidRectangleCount(This, effect, rectangleCount) \
-    ((This)->lpVtbl->Base.Base.GetEffectInvalidRectangleCount((ID2D1DeviceContext *)This, effect, rectangleCount))
-
-#define ID2D1DeviceContext2_GetEffectInvalidRectangles(This, effect, rectangles, rectanglesCount) \
-    ((This)->lpVtbl->Base.Base.GetEffectInvalidRectangles((ID2D1DeviceContext *)This, effect, rectangles, rectanglesCount))
-
-#define ID2D1DeviceContext2_GetEffectRequiredInputRectangles(This, renderEffect, renderImageRectangle, inputDescriptions, requiredInputRects, inputCount) \
-    ((This)->lpVtbl->Base.Base.GetEffectRequiredInputRectangles((ID2D1DeviceContext *)This, renderEffect, renderImageRectangle, inputDescriptions, requiredInputRects, inputCount))
-
-#define ID2D1DeviceContext2_FillOpacityMask(This, opacityMask, brush, destinationRectangle, sourceRectangle) \
-    ((This)->lpVtbl->Base.Base.FillOpacityMask((ID2D1DeviceContext *)This, opacityMask, brush, destinationRectangle, sourceRectangle))
-
-#define ID2D1DeviceContext2_CreateFilledGeometryRealization(This, geometry, flatteningTolerance, geometryRealization) \
-    ((This)->lpVtbl->Base.CreateFilledGeometryRealization((ID2D1DeviceContext1 *)This, geometry, flatteningTolerance, geometryRealization))
-
-#define ID2D1DeviceContext2_CreateStrokedGeometryRealization(This, geometry, flatteningTolerance, strokeWidth, strokeStyle, geometryRealization) \
-    ((This)->lpVtbl->Base.CreateStrokedGeometryRealization((ID2D1DeviceContext1 *)This, geometry, flatteningTolerance, strokeWidth, strokeStyle, geometryRealization))
-
-#define ID2D1DeviceContext2_DrawGeometryRealization(This, geometryRealization, brush) \
-    ((This)->lpVtbl->Base.DrawGeometryRealization((ID2D1DeviceContext1 *)This, geometryRealization, brush))
-
-#define ID2D1DeviceContext2_CreateInk(This, startPoint, ink) \
-    ((This)->lpVtbl->CreateInk(This, startPoint, ink))
-
-#define ID2D1DeviceContext2_CreateInkStyle(This, inkStyleProperties, inkStyle) \
-    ((This)->lpVtbl->CreateInkStyle(This, inkStyleProperties, inkStyle))
-
-#define ID2D1DeviceContext2_CreateGradientMesh(This, patches, patchesCount, gradientMesh) \
-    ((This)->lpVtbl->CreateGradientMesh(This, patches, patchesCount, gradientMesh))
-
-#define ID2D1DeviceContext2_CreateImageSourceFromWic(This, wicBitmapSource, loadingOptions, alphaMode, imageSource) \
-    ((This)->lpVtbl->CreateImageSourceFromWic(This, wicBitmapSource, loadingOptions, alphaMode, imageSource))
-
-#define ID2D1DeviceContext2_CreateLookupTable3D(This, precision, extents, data, dataCount, strides, lookupTable) \
-    ((This)->lpVtbl->CreateLookupTable3D(This, precision, extents, data, dataCount, strides, lookupTable))
-
-#define ID2D1DeviceContext2_CreateImageSourceFromDxgi(This, surfaces, surfaceCount, colorSpace, options, imageSource) \
-    ((This)->lpVtbl->CreateImageSourceFromDxgi(This, surfaces, surfaceCount, colorSpace, options, imageSource))
-
-#define ID2D1DeviceContext2_GetGradientMeshWorldBounds(This, gradientMesh, pBounds) \
-    ((This)->lpVtbl->GetGradientMeshWorldBounds(This, gradientMesh, pBounds))
-
-#define ID2D1DeviceContext2_DrawInk(This, ink, brush, inkStyle) \
-    ((This)->lpVtbl->DrawInk(This, ink, brush, inkStyle))
-
-#define ID2D1DeviceContext2_DrawGradientMesh(This, gradientMesh) \
-    ((This)->lpVtbl->DrawGradientMesh(This, gradientMesh))
-
-#define ID2D1DeviceContext2_DrawGdiMetafile(This, gdiMetafile, destinationRectangle, sourceRectangle) \
-    ((This)->lpVtbl->DrawGdiMetafile(This, gdiMetafile, destinationRectangle, sourceRectangle))
-
-#define ID2D1DeviceContext2_CreateTransformedImageSource(This, imageSource, properties, transformedImageSource) \
-    ((This)->lpVtbl->CreateTransformedImageSource(This, imageSource, properties, transformedImageSource))
 
 typedef interface ID2D1Device2 ID2D1Device2;
 
-typedef struct ID2D1Device2Vtbl
-{
-    
-    ID2D1Device1Vtbl Base;
-    
-    
-    STDMETHOD(CreateDeviceContext)(
-        ID2D1Device2 *This,
-        D2D1_DEVICE_CONTEXT_OPTIONS options,
-        _Outptr_ ID2D1DeviceContext2 **deviceContext2 
-        ) PURE;
-    
-    STDMETHOD_(void, FlushDeviceContexts)(
-        ID2D1Device2 *This,
-        _In_ ID2D1Bitmap *bitmap 
-        ) PURE;
-    
-    STDMETHOD(GetDxgiDevice)(
-        ID2D1Device2 *This,
-        _Outptr_ IDXGIDevice **dxgiDevice 
-        ) PURE;
-} ID2D1Device2Vtbl;
-
-interface ID2D1Device2
-{
-    CONST struct ID2D1Device2Vtbl *lpVtbl;
-};
-
-
-#define ID2D1Device2_QueryInterface(This, riid, ppv) \
-    ((This)->lpVtbl->Base.Base.Base.Base.QueryInterface((IUnknown *)This, riid, ppv))
-
-#define ID2D1Device2_AddRef(This) \
-    ((This)->lpVtbl->Base.Base.Base.Base.AddRef((IUnknown *)This))
-
-#define ID2D1Device2_Release(This) \
-    ((This)->lpVtbl->Base.Base.Base.Base.Release((IUnknown *)This))
-
-#define ID2D1Device2_GetFactory(This, factory) \
-    ((This)->lpVtbl->Base.Base.Base.GetFactory((ID2D1Resource *)This, factory))
-
-#define ID2D1Device2_CreatePrintControl(This, wicFactory, documentTarget, printControlProperties, printControl) \
-    ((This)->lpVtbl->Base.Base.CreatePrintControl((ID2D1Device *)This, wicFactory, documentTarget, printControlProperties, printControl))
-
-#define ID2D1Device2_SetMaximumTextureMemory(This, maximumInBytes) \
-    ((This)->lpVtbl->Base.Base.SetMaximumTextureMemory((ID2D1Device *)This, maximumInBytes))
-
-#define ID2D1Device2_GetMaximumTextureMemory(This) \
-    ((This)->lpVtbl->Base.Base.GetMaximumTextureMemory((ID2D1Device *)This))
-
-#define ID2D1Device2_ClearResources(This, millisecondsSinceUse) \
-    ((This)->lpVtbl->Base.Base.ClearResources((ID2D1Device *)This, millisecondsSinceUse))
-
-#define ID2D1Device2_GetRenderingPriority(This) \
-    ((This)->lpVtbl->Base.GetRenderingPriority((ID2D1Device1 *)This))
-
-#define ID2D1Device2_SetRenderingPriority(This, renderingPriority) \
-    ((This)->lpVtbl->Base.SetRenderingPriority((ID2D1Device1 *)This, renderingPriority))
-
-#define ID2D1Device2_CreateDeviceContext(This, options, deviceContext2) \
-    ((This)->lpVtbl->CreateDeviceContext(This, options, deviceContext2))
-
-#define ID2D1Device2_FlushDeviceContexts(This, bitmap) \
-    ((This)->lpVtbl->FlushDeviceContexts(This, bitmap))
-
-#define ID2D1Device2_GetDxgiDevice(This, dxgiDevice) \
-    ((This)->lpVtbl->GetDxgiDevice(This, dxgiDevice))
-
 typedef interface ID2D1Factory3 ID2D1Factory3;
-
-typedef struct ID2D1Factory3Vtbl
-{
-    
-    ID2D1Factory2Vtbl Base;
-    
-    
-    STDMETHOD(CreateDevice)(
-        ID2D1Factory3 *This,
-        _In_ IDXGIDevice *dxgiDevice,
-        _Outptr_ ID2D1Device2 **d2dDevice2 
-        ) PURE;
-} ID2D1Factory3Vtbl;
-
-interface ID2D1Factory3
-{
-    CONST struct ID2D1Factory3Vtbl *lpVtbl;
-};
-
-
-#define ID2D1Factory3_QueryInterface(This, riid, ppv) \
-    ((This)->lpVtbl->Base.Base.Base.Base.QueryInterface((IUnknown *)This, riid, ppv))
-
-#define ID2D1Factory3_AddRef(This) \
-    ((This)->lpVtbl->Base.Base.Base.Base.AddRef((IUnknown *)This))
-
-#define ID2D1Factory3_Release(This) \
-    ((This)->lpVtbl->Base.Base.Base.Base.Release((IUnknown *)This))
-
-#define ID2D1Factory3_ReloadSystemMetrics(This) \
-    ((This)->lpVtbl->Base.Base.Base.ReloadSystemMetrics((ID2D1Factory *)This))
-
-#define ID2D1Factory3_GetDesktopDpi(This, dpiX, dpiY) \
-    ((This)->lpVtbl->Base.Base.Base.GetDesktopDpi((ID2D1Factory *)This, dpiX, dpiY))
-
-#define ID2D1Factory3_CreateRectangleGeometry(This, rectangle, rectangleGeometry) \
-    ((This)->lpVtbl->Base.Base.Base.CreateRectangleGeometry((ID2D1Factory *)This, rectangle, rectangleGeometry))
-
-#define ID2D1Factory3_CreateRoundedRectangleGeometry(This, roundedRectangle, roundedRectangleGeometry) \
-    ((This)->lpVtbl->Base.Base.Base.CreateRoundedRectangleGeometry((ID2D1Factory *)This, roundedRectangle, roundedRectangleGeometry))
-
-#define ID2D1Factory3_CreateEllipseGeometry(This, ellipse, ellipseGeometry) \
-    ((This)->lpVtbl->Base.Base.Base.CreateEllipseGeometry((ID2D1Factory *)This, ellipse, ellipseGeometry))
-
-#define ID2D1Factory3_CreateGeometryGroup(This, fillMode, geometries, geometriesCount, geometryGroup) \
-    ((This)->lpVtbl->Base.Base.Base.CreateGeometryGroup((ID2D1Factory *)This, fillMode, geometries, geometriesCount, geometryGroup))
-
-#define ID2D1Factory3_CreateTransformedGeometry(This, sourceGeometry, transform, transformedGeometry) \
-    ((This)->lpVtbl->Base.Base.Base.CreateTransformedGeometry((ID2D1Factory *)This, sourceGeometry, transform, transformedGeometry))
-
-#define ID2D1Factory3_CreateWicBitmapRenderTarget(This, target, renderTargetProperties, renderTarget) \
-    ((This)->lpVtbl->Base.Base.Base.CreateWicBitmapRenderTarget((ID2D1Factory *)This, target, renderTargetProperties, renderTarget))
-
-#define ID2D1Factory3_CreateHwndRenderTarget(This, renderTargetProperties, hwndRenderTargetProperties, hwndRenderTarget) \
-    ((This)->lpVtbl->Base.Base.Base.CreateHwndRenderTarget((ID2D1Factory *)This, renderTargetProperties, hwndRenderTargetProperties, hwndRenderTarget))
-
-#define ID2D1Factory3_CreateDxgiSurfaceRenderTarget(This, dxgiSurface, renderTargetProperties, renderTarget) \
-    ((This)->lpVtbl->Base.Base.Base.CreateDxgiSurfaceRenderTarget((ID2D1Factory *)This, dxgiSurface, renderTargetProperties, renderTarget))
-
-#define ID2D1Factory3_CreateDCRenderTarget(This, renderTargetProperties, dcRenderTarget) \
-    ((This)->lpVtbl->Base.Base.Base.CreateDCRenderTarget((ID2D1Factory *)This, renderTargetProperties, dcRenderTarget))
-
-#define ID2D1Factory3_CreateStrokeStyle(This, strokeStyleProperties, dashes, dashesCount, strokeStyle) \
-    ((This)->lpVtbl->Base.Base.CreateStrokeStyle((ID2D1Factory1 *)This, strokeStyleProperties, dashes, dashesCount, strokeStyle))
-
-#define ID2D1Factory3_CreatePathGeometry(This, pathGeometry) \
-    ((This)->lpVtbl->Base.Base.CreatePathGeometry((ID2D1Factory1 *)This, pathGeometry))
-
-#define ID2D1Factory3_CreateDrawingStateBlock(This, drawingStateDescription, textRenderingParams, drawingStateBlock) \
-    ((This)->lpVtbl->Base.Base.CreateDrawingStateBlock((ID2D1Factory1 *)This, drawingStateDescription, textRenderingParams, drawingStateBlock))
-
-#define ID2D1Factory3_CreateGdiMetafile(This, metafileStream, metafile) \
-    ((This)->lpVtbl->Base.Base.CreateGdiMetafile((ID2D1Factory1 *)This, metafileStream, metafile))
-
-#define ID2D1Factory3_RegisterEffectFromStream(This, classId, propertyXml, bindings, bindingsCount, effectFactory) \
-    ((This)->lpVtbl->Base.Base.RegisterEffectFromStream((ID2D1Factory1 *)This, classId, propertyXml, bindings, bindingsCount, effectFactory))
-
-#define ID2D1Factory3_RegisterEffectFromString(This, classId, propertyXml, bindings, bindingsCount, effectFactory) \
-    ((This)->lpVtbl->Base.Base.RegisterEffectFromString((ID2D1Factory1 *)This, classId, propertyXml, bindings, bindingsCount, effectFactory))
-
-#define ID2D1Factory3_UnregisterEffect(This, classId) \
-    ((This)->lpVtbl->Base.Base.UnregisterEffect((ID2D1Factory1 *)This, classId))
-
-#define ID2D1Factory3_GetRegisteredEffects(This, effects, effectsCount, effectsReturned, effectsRegistered) \
-    ((This)->lpVtbl->Base.Base.GetRegisteredEffects((ID2D1Factory1 *)This, effects, effectsCount, effectsReturned, effectsRegistered))
-
-#define ID2D1Factory3_GetEffectProperties(This, effectId, properties) \
-    ((This)->lpVtbl->Base.Base.GetEffectProperties((ID2D1Factory1 *)This, effectId, properties))
-
-#define ID2D1Factory3_CreateDevice(This, dxgiDevice, d2dDevice2) \
-    ((This)->lpVtbl->CreateDevice(This, dxgiDevice, d2dDevice2))
 
 typedef interface ID2D1CommandSink2 ID2D1CommandSink2;
 
-typedef struct ID2D1CommandSink2Vtbl
-{
-    
-    ID2D1CommandSink1Vtbl Base;
-    
-    
-    STDMETHOD(DrawInk)(
-        ID2D1CommandSink2 *This,
-        _In_ ID2D1Ink *ink,
-        _In_ ID2D1Brush *brush,
-        _In_opt_ ID2D1InkStyle *inkStyle 
-        ) PURE;
-    
-    STDMETHOD(DrawGradientMesh)(
-        ID2D1CommandSink2 *This,
-        _In_ ID2D1GradientMesh *gradientMesh 
-        ) PURE;
-    
-    STDMETHOD(DrawGdiMetafile)(
-        ID2D1CommandSink2 *This,
-        _In_ ID2D1GdiMetafile *gdiMetafile,
-        _In_opt_ CONST D2D1_RECT_F *destinationRectangle,
-        _In_opt_ CONST D2D1_RECT_F *sourceRectangle 
-        ) PURE;
-} ID2D1CommandSink2Vtbl;
-
-interface ID2D1CommandSink2
-{
-    CONST struct ID2D1CommandSink2Vtbl *lpVtbl;
-};
-
-
-#define ID2D1CommandSink2_QueryInterface(This, riid, ppv) \
-    ((This)->lpVtbl->Base.Base.Base.QueryInterface((IUnknown *)This, riid, ppv))
-
-#define ID2D1CommandSink2_AddRef(This) \
-    ((This)->lpVtbl->Base.Base.Base.AddRef((IUnknown *)This))
-
-#define ID2D1CommandSink2_Release(This) \
-    ((This)->lpVtbl->Base.Base.Base.Release((IUnknown *)This))
-
-#define ID2D1CommandSink2_BeginDraw(This) \
-    ((This)->lpVtbl->Base.Base.BeginDraw((ID2D1CommandSink *)This))
-
-#define ID2D1CommandSink2_EndDraw(This) \
-    ((This)->lpVtbl->Base.Base.EndDraw((ID2D1CommandSink *)This))
-
-#define ID2D1CommandSink2_SetAntialiasMode(This, antialiasMode) \
-    ((This)->lpVtbl->Base.Base.SetAntialiasMode((ID2D1CommandSink *)This, antialiasMode))
-
-#define ID2D1CommandSink2_SetTags(This, tag1, tag2) \
-    ((This)->lpVtbl->Base.Base.SetTags((ID2D1CommandSink *)This, tag1, tag2))
-
-#define ID2D1CommandSink2_SetTextAntialiasMode(This, textAntialiasMode) \
-    ((This)->lpVtbl->Base.Base.SetTextAntialiasMode((ID2D1CommandSink *)This, textAntialiasMode))
-
-#define ID2D1CommandSink2_SetTextRenderingParams(This, textRenderingParams) \
-    ((This)->lpVtbl->Base.Base.SetTextRenderingParams((ID2D1CommandSink *)This, textRenderingParams))
-
-#define ID2D1CommandSink2_SetTransform(This, transform) \
-    ((This)->lpVtbl->Base.Base.SetTransform((ID2D1CommandSink *)This, transform))
-
-#define ID2D1CommandSink2_SetPrimitiveBlend(This, primitiveBlend) \
-    ((This)->lpVtbl->Base.Base.SetPrimitiveBlend((ID2D1CommandSink *)This, primitiveBlend))
-
-#define ID2D1CommandSink2_SetUnitMode(This, unitMode) \
-    ((This)->lpVtbl->Base.Base.SetUnitMode((ID2D1CommandSink *)This, unitMode))
-
-#define ID2D1CommandSink2_Clear(This, color) \
-    ((This)->lpVtbl->Base.Base.Clear((ID2D1CommandSink *)This, color))
-
-#define ID2D1CommandSink2_DrawGlyphRun(This, baselineOrigin, glyphRun, glyphRunDescription, foregroundBrush, measuringMode) \
-    ((This)->lpVtbl->Base.Base.DrawGlyphRun((ID2D1CommandSink *)This, baselineOrigin, glyphRun, glyphRunDescription, foregroundBrush, measuringMode))
-
-#define ID2D1CommandSink2_DrawLine(This, point0, point1, brush, strokeWidth, strokeStyle) \
-    ((This)->lpVtbl->Base.Base.DrawLine((ID2D1CommandSink *)This, point0, point1, brush, strokeWidth, strokeStyle))
-
-#define ID2D1CommandSink2_DrawGeometry(This, geometry, brush, strokeWidth, strokeStyle) \
-    ((This)->lpVtbl->Base.Base.DrawGeometry((ID2D1CommandSink *)This, geometry, brush, strokeWidth, strokeStyle))
-
-#define ID2D1CommandSink2_DrawRectangle(This, rect, brush, strokeWidth, strokeStyle) \
-    ((This)->lpVtbl->Base.Base.DrawRectangle((ID2D1CommandSink *)This, rect, brush, strokeWidth, strokeStyle))
-
-#define ID2D1CommandSink2_DrawBitmap(This, bitmap, destinationRectangle, opacity, interpolationMode, sourceRectangle, perspectiveTransform) \
-    ((This)->lpVtbl->Base.Base.DrawBitmap((ID2D1CommandSink *)This, bitmap, destinationRectangle, opacity, interpolationMode, sourceRectangle, perspectiveTransform))
-
-#define ID2D1CommandSink2_DrawImage(This, image, targetOffset, imageRectangle, interpolationMode, compositeMode) \
-    ((This)->lpVtbl->Base.Base.DrawImage((ID2D1CommandSink *)This, image, targetOffset, imageRectangle, interpolationMode, compositeMode))
-
-#define ID2D1CommandSink2_FillMesh(This, mesh, brush) \
-    ((This)->lpVtbl->Base.Base.FillMesh((ID2D1CommandSink *)This, mesh, brush))
-
-#define ID2D1CommandSink2_FillOpacityMask(This, opacityMask, brush, destinationRectangle, sourceRectangle) \
-    ((This)->lpVtbl->Base.Base.FillOpacityMask((ID2D1CommandSink *)This, opacityMask, brush, destinationRectangle, sourceRectangle))
-
-#define ID2D1CommandSink2_FillGeometry(This, geometry, brush, opacityBrush) \
-    ((This)->lpVtbl->Base.Base.FillGeometry((ID2D1CommandSink *)This, geometry, brush, opacityBrush))
-
-#define ID2D1CommandSink2_FillRectangle(This, rect, brush) \
-    ((This)->lpVtbl->Base.Base.FillRectangle((ID2D1CommandSink *)This, rect, brush))
-
-#define ID2D1CommandSink2_PushAxisAlignedClip(This, clipRect, antialiasMode) \
-    ((This)->lpVtbl->Base.Base.PushAxisAlignedClip((ID2D1CommandSink *)This, clipRect, antialiasMode))
-
-#define ID2D1CommandSink2_PushLayer(This, layerParameters1, layer) \
-    ((This)->lpVtbl->Base.Base.PushLayer((ID2D1CommandSink *)This, layerParameters1, layer))
-
-#define ID2D1CommandSink2_PopAxisAlignedClip(This) \
-    ((This)->lpVtbl->Base.Base.PopAxisAlignedClip((ID2D1CommandSink *)This))
-
-#define ID2D1CommandSink2_PopLayer(This) \
-    ((This)->lpVtbl->Base.Base.PopLayer((ID2D1CommandSink *)This))
-
-#define ID2D1CommandSink2_SetPrimitiveBlend1(This, primitiveBlend) \
-    ((This)->lpVtbl->Base.SetPrimitiveBlend1((ID2D1CommandSink1 *)This, primitiveBlend))
-
-#define ID2D1CommandSink2_DrawInk(This, ink, brush, inkStyle) \
-    ((This)->lpVtbl->DrawInk(This, ink, brush, inkStyle))
-
-#define ID2D1CommandSink2_DrawGradientMesh(This, gradientMesh) \
-    ((This)->lpVtbl->DrawGradientMesh(This, gradientMesh))
-
-#define ID2D1CommandSink2_DrawGdiMetafile(This, gdiMetafile, destinationRectangle, sourceRectangle) \
-    ((This)->lpVtbl->DrawGdiMetafile(This, gdiMetafile, destinationRectangle, sourceRectangle))
-
 typedef interface ID2D1GdiMetafile1 ID2D1GdiMetafile1;
 
-typedef struct ID2D1GdiMetafile1Vtbl
-{
-    
-    ID2D1GdiMetafileVtbl Base;
-    
-    
-    STDMETHOD(GetDpi)(
-        ID2D1GdiMetafile1 *This,
-        _Out_ FLOAT *dpiX,
-        _Out_ FLOAT *dpiY 
-        ) PURE;
-    
-    STDMETHOD(GetSourceBounds)(
-        ID2D1GdiMetafile1 *This,
-        _Out_ D2D1_RECT_F *bounds 
-        ) PURE;
-} ID2D1GdiMetafile1Vtbl;
-
-interface ID2D1GdiMetafile1
-{
-    CONST struct ID2D1GdiMetafile1Vtbl *lpVtbl;
-};
-
-
-#define ID2D1GdiMetafile1_QueryInterface(This, riid, ppv) \
-    ((This)->lpVtbl->Base.Base.Base.QueryInterface((IUnknown *)This, riid, ppv))
-
-#define ID2D1GdiMetafile1_AddRef(This) \
-    ((This)->lpVtbl->Base.Base.Base.AddRef((IUnknown *)This))
-
-#define ID2D1GdiMetafile1_Release(This) \
-    ((This)->lpVtbl->Base.Base.Base.Release((IUnknown *)This))
-
-#define ID2D1GdiMetafile1_GetFactory(This, factory) \
-    ((This)->lpVtbl->Base.Base.GetFactory((ID2D1Resource *)This, factory))
-
-#define ID2D1GdiMetafile1_Stream(This, sink) \
-    ((This)->lpVtbl->Base.Stream((ID2D1GdiMetafile *)This, sink))
-
-#define ID2D1GdiMetafile1_GetBounds(This, bounds) \
-    ((This)->lpVtbl->Base.GetBounds((ID2D1GdiMetafile *)This, bounds))
-
-#define ID2D1GdiMetafile1_GetDpi(This, dpiX, dpiY) \
-    ((This)->lpVtbl->GetDpi(This, dpiX, dpiY))
-
-#define ID2D1GdiMetafile1_GetSourceBounds(This, bounds) \
-    ((This)->lpVtbl->GetSourceBounds(This, bounds))
-
 typedef interface ID2D1GdiMetafileSink1 ID2D1GdiMetafileSink1;
-
-typedef struct ID2D1GdiMetafileSink1Vtbl
-{
-    
-    ID2D1GdiMetafileSinkVtbl Base;
-    
-    
-    STDMETHOD(ProcessRecord)(
-        ID2D1GdiMetafileSink1 *This,
-        DWORD recordType,
-        _In_opt_ CONST void *recordData,
-        DWORD recordDataSize,
-        UINT32 flags 
-        ) PURE;
-} ID2D1GdiMetafileSink1Vtbl;
-
-interface ID2D1GdiMetafileSink1
-{
-    CONST struct ID2D1GdiMetafileSink1Vtbl *lpVtbl;
-};
-
-
-#define ID2D1GdiMetafileSink1_QueryInterface(This, riid, ppv) \
-    ((This)->lpVtbl->Base.Base.QueryInterface((IUnknown *)This, riid, ppv))
-
-#define ID2D1GdiMetafileSink1_AddRef(This) \
-    ((This)->lpVtbl->Base.Base.AddRef((IUnknown *)This))
-
-#define ID2D1GdiMetafileSink1_Release(This) \
-    ((This)->lpVtbl->Base.Base.Release((IUnknown *)This))
-
-#define ID2D1GdiMetafileSink1_ProcessRecord(This, recordType, recordData, recordDataSize, flags) \
-    ((This)->lpVtbl->ProcessRecord(This, recordType, recordData, recordDataSize, flags))
-
 
 #endif
 

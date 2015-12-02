@@ -215,6 +215,38 @@ namespace D2D1
 
         return inkStyleProperties;
     }
+
+    COM_DECLSPEC_NOTHROW
+    D2D1FORCEINLINE
+    D2D1_RECT_U
+    InfiniteRectU()
+    {
+        D2D1_RECT_U rect = { 0u, 0u, UINT_MAX, UINT_MAX };
+
+        return rect;
+    }
+
+    COM_DECLSPEC_NOTHROW
+    D2D1FORCEINLINE
+    D2D1_SIMPLE_COLOR_PROFILE
+    SimpleColorProfile(
+        const D2D1_POINT_2F &redPrimary,
+        const D2D1_POINT_2F &greenPrimary,
+        const D2D1_POINT_2F &bluePrimary,
+        const D2D1_GAMMA1 gamma,
+        const D2D1_POINT_2F &whitePointXZ
+        )
+    {
+        D2D1_SIMPLE_COLOR_PROFILE simpleColorProfile;
+
+        simpleColorProfile.redPrimary = redPrimary;
+        simpleColorProfile.greenPrimary = greenPrimary;
+        simpleColorProfile.bluePrimary = bluePrimary;
+        simpleColorProfile.gamma = gamma;
+        simpleColorProfile.whitePointXZ = whitePointXZ;
+
+        return simpleColorProfile;
+    }
 } // namespace D2D1
 
 #endif /* WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_APP) */

@@ -63,2240 +63,1839 @@ DEFINE_GUID(CLSID_D2D1Turbulence,               0xCF2BB6AE, 0x889A, 0x4ad7, 0xBA
 DEFINE_GUID(CLSID_D2D1UnPremultiply,            0xfb9ac489, 0xad8d, 0x41ed, 0x99, 0x99, 0xbb, 0x63, 0x47, 0xd1, 0x10, 0xf7);
 
 
-//+-----------------------------------------------------------------------------
-//
-//  Enum:
-//      D2D1_BORDER_MODE
-//
-//------------------------------------------------------------------------------
+/// <summary>
+/// Specifies how the Crop effect handles the crop rectangle falling on fractional
+/// pixel coordinates.
+/// </summary>
 typedef enum D2D1_BORDER_MODE
 {
-        D2D1_BORDER_MODE_SOFT = 0,
-        D2D1_BORDER_MODE_HARD = 1,
-        D2D1_BORDER_MODE_FORCE_DWORD = 0xffffffff
+    D2D1_BORDER_MODE_SOFT = 0,
+    D2D1_BORDER_MODE_HARD = 1,
+    D2D1_BORDER_MODE_FORCE_DWORD = 0xffffffff
 
 } D2D1_BORDER_MODE;
 
 
-//+-----------------------------------------------------------------------------
-//
-//  Enum:
-//      D2D1_CHANNEL_SELECTOR
-//
-//------------------------------------------------------------------------------
+/// <summary>
+/// Specifies the color channel the Displacement map effect extracts the intensity
+/// from and uses it to spatially displace the image in the X or Y direction.
+/// </summary>
 typedef enum D2D1_CHANNEL_SELECTOR
 {
-        D2D1_CHANNEL_SELECTOR_R = 0,
-        D2D1_CHANNEL_SELECTOR_G = 1,
-        D2D1_CHANNEL_SELECTOR_B = 2,
-        D2D1_CHANNEL_SELECTOR_A = 3,
-        D2D1_CHANNEL_SELECTOR_FORCE_DWORD = 0xffffffff
+    D2D1_CHANNEL_SELECTOR_R = 0,
+    D2D1_CHANNEL_SELECTOR_G = 1,
+    D2D1_CHANNEL_SELECTOR_B = 2,
+    D2D1_CHANNEL_SELECTOR_A = 3,
+    D2D1_CHANNEL_SELECTOR_FORCE_DWORD = 0xffffffff
 
 } D2D1_CHANNEL_SELECTOR;
 
 
-//+-----------------------------------------------------------------------------
-//
-//  Enum:
-//      D2D1_BITMAPSOURCE_ORIENTATION
-//
-//------------------------------------------------------------------------------
+/// <summary>
+/// Speficies whether a flip and/or rotation operation should be performed by the
+/// Bitmap source effect
+/// </summary>
 typedef enum D2D1_BITMAPSOURCE_ORIENTATION
 {
-        D2D1_BITMAPSOURCE_ORIENTATION_DEFAULT = 1,
-        D2D1_BITMAPSOURCE_ORIENTATION_FLIP_HORIZONTAL = 2,
-        D2D1_BITMAPSOURCE_ORIENTATION_ROTATE_CLOCKWISE180 = 3,
-        D2D1_BITMAPSOURCE_ORIENTATION_ROTATE_CLOCKWISE180_FLIP_HORIZONTAL = 4,
-        D2D1_BITMAPSOURCE_ORIENTATION_ROTATE_CLOCKWISE270_FLIP_HORIZONTAL = 5,
-        D2D1_BITMAPSOURCE_ORIENTATION_ROTATE_CLOCKWISE90 = 6,
-        D2D1_BITMAPSOURCE_ORIENTATION_ROTATE_CLOCKWISE90_FLIP_HORIZONTAL = 7,
-        D2D1_BITMAPSOURCE_ORIENTATION_ROTATE_CLOCKWISE270 = 8,
-        D2D1_BITMAPSOURCE_ORIENTATION_FORCE_DWORD = 0xffffffff
+    D2D1_BITMAPSOURCE_ORIENTATION_DEFAULT = 1,
+    D2D1_BITMAPSOURCE_ORIENTATION_FLIP_HORIZONTAL = 2,
+    D2D1_BITMAPSOURCE_ORIENTATION_ROTATE_CLOCKWISE180 = 3,
+    D2D1_BITMAPSOURCE_ORIENTATION_ROTATE_CLOCKWISE180_FLIP_HORIZONTAL = 4,
+    D2D1_BITMAPSOURCE_ORIENTATION_ROTATE_CLOCKWISE270_FLIP_HORIZONTAL = 5,
+    D2D1_BITMAPSOURCE_ORIENTATION_ROTATE_CLOCKWISE90 = 6,
+    D2D1_BITMAPSOURCE_ORIENTATION_ROTATE_CLOCKWISE90_FLIP_HORIZONTAL = 7,
+    D2D1_BITMAPSOURCE_ORIENTATION_ROTATE_CLOCKWISE270 = 8,
+    D2D1_BITMAPSOURCE_ORIENTATION_FORCE_DWORD = 0xffffffff
 
 } D2D1_BITMAPSOURCE_ORIENTATION;
 
 
-//+-----------------------------------------------------------------------------
-//
-//  Enum:
-//      D2D1_GAUSSIANBLUR_PROP
-//
-//  Synopsis:
-//      The enumeration of the Gaussian Blur effect's top level properties.
-//
-//------------------------------------------------------------------------------
+/// <summary>
+/// The enumeration of the Gaussian Blur effect's top level properties.
+/// </summary>
 typedef enum D2D1_GAUSSIANBLUR_PROP
 {
-        
-        //
-        // Property Name: "StandardDeviation"
-        // Property Type: FLOAT
-        //
-        D2D1_GAUSSIANBLUR_PROP_STANDARD_DEVIATION = 0,
-        
-        //
-        // Property Name: "Optimization"
-        // Property Type: D2D1_GAUSSIANBLUR_OPTIMIZATION
-        //
-        D2D1_GAUSSIANBLUR_PROP_OPTIMIZATION = 1,
-        
-        //
-        // Property Name: "BorderMode"
-        // Property Type: D2D1_BORDER_MODE
-        //
-        D2D1_GAUSSIANBLUR_PROP_BORDER_MODE = 2,
-        D2D1_GAUSSIANBLUR_PROP_FORCE_DWORD = 0xffffffff
+    
+    /// <summary>
+    /// Property Name: "StandardDeviation"
+    /// Property Type: FLOAT
+    /// </summary>
+    D2D1_GAUSSIANBLUR_PROP_STANDARD_DEVIATION = 0,
+    
+    /// <summary>
+    /// Property Name: "Optimization"
+    /// Property Type: D2D1_GAUSSIANBLUR_OPTIMIZATION
+    /// </summary>
+    D2D1_GAUSSIANBLUR_PROP_OPTIMIZATION = 1,
+    
+    /// <summary>
+    /// Property Name: "BorderMode"
+    /// Property Type: D2D1_BORDER_MODE
+    /// </summary>
+    D2D1_GAUSSIANBLUR_PROP_BORDER_MODE = 2,
+    D2D1_GAUSSIANBLUR_PROP_FORCE_DWORD = 0xffffffff
 
 } D2D1_GAUSSIANBLUR_PROP;
 
-
-//+-----------------------------------------------------------------------------
-//
-//  Enum:
-//      D2D1_GAUSSIANBLUR_OPTIMIZATION
-//
-//------------------------------------------------------------------------------
 typedef enum D2D1_GAUSSIANBLUR_OPTIMIZATION
 {
-        D2D1_GAUSSIANBLUR_OPTIMIZATION_SPEED = 0,
-        D2D1_GAUSSIANBLUR_OPTIMIZATION_BALANCED = 1,
-        D2D1_GAUSSIANBLUR_OPTIMIZATION_QUALITY = 2,
-        D2D1_GAUSSIANBLUR_OPTIMIZATION_FORCE_DWORD = 0xffffffff
+    D2D1_GAUSSIANBLUR_OPTIMIZATION_SPEED = 0,
+    D2D1_GAUSSIANBLUR_OPTIMIZATION_BALANCED = 1,
+    D2D1_GAUSSIANBLUR_OPTIMIZATION_QUALITY = 2,
+    D2D1_GAUSSIANBLUR_OPTIMIZATION_FORCE_DWORD = 0xffffffff
 
 } D2D1_GAUSSIANBLUR_OPTIMIZATION;
 
 
-//+-----------------------------------------------------------------------------
-//
-//  Enum:
-//      D2D1_DIRECTIONALBLUR_PROP
-//
-//  Synopsis:
-//      The enumeration of the Directional Blur effect's top level properties.
-//
-//------------------------------------------------------------------------------
+/// <summary>
+/// The enumeration of the Directional Blur effect's top level properties.
+/// </summary>
 typedef enum D2D1_DIRECTIONALBLUR_PROP
 {
-        
-        //
-        // Property Name: "StandardDeviation"
-        // Property Type: FLOAT
-        //
-        D2D1_DIRECTIONALBLUR_PROP_STANDARD_DEVIATION = 0,
-        
-        //
-        // Property Name: "Angle"
-        // Property Type: FLOAT
-        //
-        D2D1_DIRECTIONALBLUR_PROP_ANGLE = 1,
-        
-        //
-        // Property Name: "Optimization"
-        // Property Type: D2D1_DIRECTIONALBLUR_OPTIMIZATION
-        //
-        D2D1_DIRECTIONALBLUR_PROP_OPTIMIZATION = 2,
-        
-        //
-        // Property Name: "BorderMode"
-        // Property Type: D2D1_BORDER_MODE
-        //
-        D2D1_DIRECTIONALBLUR_PROP_BORDER_MODE = 3,
-        D2D1_DIRECTIONALBLUR_PROP_FORCE_DWORD = 0xffffffff
+    
+    /// <summary>
+    /// Property Name: "StandardDeviation"
+    /// Property Type: FLOAT
+    /// </summary>
+    D2D1_DIRECTIONALBLUR_PROP_STANDARD_DEVIATION = 0,
+    
+    /// <summary>
+    /// Property Name: "Angle"
+    /// Property Type: FLOAT
+    /// </summary>
+    D2D1_DIRECTIONALBLUR_PROP_ANGLE = 1,
+    
+    /// <summary>
+    /// Property Name: "Optimization"
+    /// Property Type: D2D1_DIRECTIONALBLUR_OPTIMIZATION
+    /// </summary>
+    D2D1_DIRECTIONALBLUR_PROP_OPTIMIZATION = 2,
+    
+    /// <summary>
+    /// Property Name: "BorderMode"
+    /// Property Type: D2D1_BORDER_MODE
+    /// </summary>
+    D2D1_DIRECTIONALBLUR_PROP_BORDER_MODE = 3,
+    D2D1_DIRECTIONALBLUR_PROP_FORCE_DWORD = 0xffffffff
 
 } D2D1_DIRECTIONALBLUR_PROP;
 
-
-//+-----------------------------------------------------------------------------
-//
-//  Enum:
-//      D2D1_DIRECTIONALBLUR_OPTIMIZATION
-//
-//------------------------------------------------------------------------------
 typedef enum D2D1_DIRECTIONALBLUR_OPTIMIZATION
 {
-        D2D1_DIRECTIONALBLUR_OPTIMIZATION_SPEED = 0,
-        D2D1_DIRECTIONALBLUR_OPTIMIZATION_BALANCED = 1,
-        D2D1_DIRECTIONALBLUR_OPTIMIZATION_QUALITY = 2,
-        D2D1_DIRECTIONALBLUR_OPTIMIZATION_FORCE_DWORD = 0xffffffff
+    D2D1_DIRECTIONALBLUR_OPTIMIZATION_SPEED = 0,
+    D2D1_DIRECTIONALBLUR_OPTIMIZATION_BALANCED = 1,
+    D2D1_DIRECTIONALBLUR_OPTIMIZATION_QUALITY = 2,
+    D2D1_DIRECTIONALBLUR_OPTIMIZATION_FORCE_DWORD = 0xffffffff
 
 } D2D1_DIRECTIONALBLUR_OPTIMIZATION;
 
 
-//+-----------------------------------------------------------------------------
-//
-//  Enum:
-//      D2D1_SHADOW_PROP
-//
-//  Synopsis:
-//      The enumeration of the Shadow effect's top level properties.
-//
-//------------------------------------------------------------------------------
+/// <summary>
+/// The enumeration of the Shadow effect's top level properties.
+/// </summary>
 typedef enum D2D1_SHADOW_PROP
 {
-        
-        //
-        // Property Name: "BlurStandardDeviation"
-        // Property Type: FLOAT
-        //
-        D2D1_SHADOW_PROP_BLUR_STANDARD_DEVIATION = 0,
-        
-        //
-        // Property Name: "Color"
-        // Property Type: D2D1_VECTOR_4F
-        //
-        D2D1_SHADOW_PROP_COLOR = 1,
-        
-        //
-        // Property Name: "Optimization"
-        // Property Type: D2D1_SHADOW_OPTIMIZATION
-        //
-        D2D1_SHADOW_PROP_OPTIMIZATION = 2,
-        D2D1_SHADOW_PROP_FORCE_DWORD = 0xffffffff
+    
+    /// <summary>
+    /// Property Name: "BlurStandardDeviation"
+    /// Property Type: FLOAT
+    /// </summary>
+    D2D1_SHADOW_PROP_BLUR_STANDARD_DEVIATION = 0,
+    
+    /// <summary>
+    /// Property Name: "Color"
+    /// Property Type: D2D1_VECTOR_4F
+    /// </summary>
+    D2D1_SHADOW_PROP_COLOR = 1,
+    
+    /// <summary>
+    /// Property Name: "Optimization"
+    /// Property Type: D2D1_SHADOW_OPTIMIZATION
+    /// </summary>
+    D2D1_SHADOW_PROP_OPTIMIZATION = 2,
+    D2D1_SHADOW_PROP_FORCE_DWORD = 0xffffffff
 
 } D2D1_SHADOW_PROP;
 
-
-//+-----------------------------------------------------------------------------
-//
-//  Enum:
-//      D2D1_SHADOW_OPTIMIZATION
-//
-//------------------------------------------------------------------------------
 typedef enum D2D1_SHADOW_OPTIMIZATION
 {
-        D2D1_SHADOW_OPTIMIZATION_SPEED = 0,
-        D2D1_SHADOW_OPTIMIZATION_BALANCED = 1,
-        D2D1_SHADOW_OPTIMIZATION_QUALITY = 2,
-        D2D1_SHADOW_OPTIMIZATION_FORCE_DWORD = 0xffffffff
+    D2D1_SHADOW_OPTIMIZATION_SPEED = 0,
+    D2D1_SHADOW_OPTIMIZATION_BALANCED = 1,
+    D2D1_SHADOW_OPTIMIZATION_QUALITY = 2,
+    D2D1_SHADOW_OPTIMIZATION_FORCE_DWORD = 0xffffffff
 
 } D2D1_SHADOW_OPTIMIZATION;
 
 
-//+-----------------------------------------------------------------------------
-//
-//  Enum:
-//      D2D1_BLEND_PROP
-//
-//  Synopsis:
-//      The enumeration of the Blend effect's top level properties.
-//
-//------------------------------------------------------------------------------
+/// <summary>
+/// The enumeration of the Blend effect's top level properties.
+/// </summary>
 typedef enum D2D1_BLEND_PROP
 {
-        
-        //
-        // Property Name: "Mode"
-        // Property Type: D2D1_BLEND_MODE
-        //
-        D2D1_BLEND_PROP_MODE = 0,
-        D2D1_BLEND_PROP_FORCE_DWORD = 0xffffffff
+    
+    /// <summary>
+    /// Property Name: "Mode"
+    /// Property Type: D2D1_BLEND_MODE
+    /// </summary>
+    D2D1_BLEND_PROP_MODE = 0,
+    D2D1_BLEND_PROP_FORCE_DWORD = 0xffffffff
 
 } D2D1_BLEND_PROP;
 
-
-//+-----------------------------------------------------------------------------
-//
-//  Enum:
-//      D2D1_BLEND_MODE
-//
-//------------------------------------------------------------------------------
 typedef enum D2D1_BLEND_MODE
 {
-        D2D1_BLEND_MODE_MULTIPLY = 0,
-        D2D1_BLEND_MODE_SCREEN = 1,
-        D2D1_BLEND_MODE_DARKEN = 2,
-        D2D1_BLEND_MODE_LIGHTEN = 3,
-        D2D1_BLEND_MODE_DISSOLVE = 4,
-        D2D1_BLEND_MODE_COLOR_BURN = 5,
-        D2D1_BLEND_MODE_LINEAR_BURN = 6,
-        D2D1_BLEND_MODE_DARKER_COLOR = 7,
-        D2D1_BLEND_MODE_LIGHTER_COLOR = 8,
-        D2D1_BLEND_MODE_COLOR_DODGE = 9,
-        D2D1_BLEND_MODE_LINEAR_DODGE = 10,
-        D2D1_BLEND_MODE_OVERLAY = 11,
-        D2D1_BLEND_MODE_SOFT_LIGHT = 12,
-        D2D1_BLEND_MODE_HARD_LIGHT = 13,
-        D2D1_BLEND_MODE_VIVID_LIGHT = 14,
-        D2D1_BLEND_MODE_LINEAR_LIGHT = 15,
-        D2D1_BLEND_MODE_PIN_LIGHT = 16,
-        D2D1_BLEND_MODE_HARD_MIX = 17,
-        D2D1_BLEND_MODE_DIFFERENCE = 18,
-        D2D1_BLEND_MODE_EXCLUSION = 19,
-        D2D1_BLEND_MODE_HUE = 20,
-        D2D1_BLEND_MODE_SATURATION = 21,
-        D2D1_BLEND_MODE_COLOR = 22,
-        D2D1_BLEND_MODE_LUMINOSITY = 23,
-        D2D1_BLEND_MODE_SUBTRACT = 24,
-        D2D1_BLEND_MODE_DIVISION = 25,
-        D2D1_BLEND_MODE_FORCE_DWORD = 0xffffffff
+    D2D1_BLEND_MODE_MULTIPLY = 0,
+    D2D1_BLEND_MODE_SCREEN = 1,
+    D2D1_BLEND_MODE_DARKEN = 2,
+    D2D1_BLEND_MODE_LIGHTEN = 3,
+    D2D1_BLEND_MODE_DISSOLVE = 4,
+    D2D1_BLEND_MODE_COLOR_BURN = 5,
+    D2D1_BLEND_MODE_LINEAR_BURN = 6,
+    D2D1_BLEND_MODE_DARKER_COLOR = 7,
+    D2D1_BLEND_MODE_LIGHTER_COLOR = 8,
+    D2D1_BLEND_MODE_COLOR_DODGE = 9,
+    D2D1_BLEND_MODE_LINEAR_DODGE = 10,
+    D2D1_BLEND_MODE_OVERLAY = 11,
+    D2D1_BLEND_MODE_SOFT_LIGHT = 12,
+    D2D1_BLEND_MODE_HARD_LIGHT = 13,
+    D2D1_BLEND_MODE_VIVID_LIGHT = 14,
+    D2D1_BLEND_MODE_LINEAR_LIGHT = 15,
+    D2D1_BLEND_MODE_PIN_LIGHT = 16,
+    D2D1_BLEND_MODE_HARD_MIX = 17,
+    D2D1_BLEND_MODE_DIFFERENCE = 18,
+    D2D1_BLEND_MODE_EXCLUSION = 19,
+    D2D1_BLEND_MODE_HUE = 20,
+    D2D1_BLEND_MODE_SATURATION = 21,
+    D2D1_BLEND_MODE_COLOR = 22,
+    D2D1_BLEND_MODE_LUMINOSITY = 23,
+    D2D1_BLEND_MODE_SUBTRACT = 24,
+    D2D1_BLEND_MODE_DIVISION = 25,
+    D2D1_BLEND_MODE_FORCE_DWORD = 0xffffffff
 
 } D2D1_BLEND_MODE;
 
 
-//+-----------------------------------------------------------------------------
-//
-//  Enum:
-//      D2D1_SATURATION_PROP
-//
-//  Synopsis:
-//      The enumeration of the Saturation effect's top level properties.
-//
-//------------------------------------------------------------------------------
+/// <summary>
+/// The enumeration of the Saturation effect's top level properties.
+/// </summary>
 typedef enum D2D1_SATURATION_PROP
 {
-        
-        //
-        // Property Name: "Saturation"
-        // Property Type: FLOAT
-        //
-        D2D1_SATURATION_PROP_SATURATION = 0,
-        D2D1_SATURATION_PROP_FORCE_DWORD = 0xffffffff
+    
+    /// <summary>
+    /// Property Name: "Saturation"
+    /// Property Type: FLOAT
+    /// </summary>
+    D2D1_SATURATION_PROP_SATURATION = 0,
+    D2D1_SATURATION_PROP_FORCE_DWORD = 0xffffffff
 
 } D2D1_SATURATION_PROP;
 
 
-//+-----------------------------------------------------------------------------
-//
-//  Enum:
-//      D2D1_HUEROTATION_PROP
-//
-//  Synopsis:
-//      The enumeration of the Hue Rotation effect's top level properties.
-//
-//------------------------------------------------------------------------------
+/// <summary>
+/// The enumeration of the Hue Rotation effect's top level properties.
+/// </summary>
 typedef enum D2D1_HUEROTATION_PROP
 {
-        
-        //
-        // Property Name: "Angle"
-        // Property Type: FLOAT
-        //
-        D2D1_HUEROTATION_PROP_ANGLE = 0,
-        D2D1_HUEROTATION_PROP_FORCE_DWORD = 0xffffffff
+    
+    /// <summary>
+    /// Property Name: "Angle"
+    /// Property Type: FLOAT
+    /// </summary>
+    D2D1_HUEROTATION_PROP_ANGLE = 0,
+    D2D1_HUEROTATION_PROP_FORCE_DWORD = 0xffffffff
 
 } D2D1_HUEROTATION_PROP;
 
 
-//+-----------------------------------------------------------------------------
-//
-//  Enum:
-//      D2D1_COLORMATRIX_PROP
-//
-//  Synopsis:
-//      The enumeration of the Color Matrix effect's top level properties.
-//
-//------------------------------------------------------------------------------
+/// <summary>
+/// The enumeration of the Color Matrix effect's top level properties.
+/// </summary>
 typedef enum D2D1_COLORMATRIX_PROP
 {
-        
-        //
-        // Property Name: "ColorMatrix"
-        // Property Type: D2D1_MATRIX_5X4_F
-        //
-        D2D1_COLORMATRIX_PROP_COLOR_MATRIX = 0,
-        
-        //
-        // Property Name: "AlphaMode"
-        // Property Type: D2D1_COLORMATRIX_ALPHA_MODE
-        //
-        D2D1_COLORMATRIX_PROP_ALPHA_MODE = 1,
-        
-        //
-        // Property Name: "ClampOutput"
-        // Property Type: BOOL
-        //
-        D2D1_COLORMATRIX_PROP_CLAMP_OUTPUT = 2,
-        D2D1_COLORMATRIX_PROP_FORCE_DWORD = 0xffffffff
+    
+    /// <summary>
+    /// Property Name: "ColorMatrix"
+    /// Property Type: D2D1_MATRIX_5X4_F
+    /// </summary>
+    D2D1_COLORMATRIX_PROP_COLOR_MATRIX = 0,
+    
+    /// <summary>
+    /// Property Name: "AlphaMode"
+    /// Property Type: D2D1_COLORMATRIX_ALPHA_MODE
+    /// </summary>
+    D2D1_COLORMATRIX_PROP_ALPHA_MODE = 1,
+    
+    /// <summary>
+    /// Property Name: "ClampOutput"
+    /// Property Type: BOOL
+    /// </summary>
+    D2D1_COLORMATRIX_PROP_CLAMP_OUTPUT = 2,
+    D2D1_COLORMATRIX_PROP_FORCE_DWORD = 0xffffffff
 
 } D2D1_COLORMATRIX_PROP;
 
-
-//+-----------------------------------------------------------------------------
-//
-//  Enum:
-//      D2D1_COLORMATRIX_ALPHA_MODE
-//
-//------------------------------------------------------------------------------
 typedef enum D2D1_COLORMATRIX_ALPHA_MODE
 {
-        D2D1_COLORMATRIX_ALPHA_MODE_PREMULTIPLIED = 1,
-        D2D1_COLORMATRIX_ALPHA_MODE_STRAIGHT = 2,
-        D2D1_COLORMATRIX_ALPHA_MODE_FORCE_DWORD = 0xffffffff
+    D2D1_COLORMATRIX_ALPHA_MODE_PREMULTIPLIED = 1,
+    D2D1_COLORMATRIX_ALPHA_MODE_STRAIGHT = 2,
+    D2D1_COLORMATRIX_ALPHA_MODE_FORCE_DWORD = 0xffffffff
 
 } D2D1_COLORMATRIX_ALPHA_MODE;
 
 
-//+-----------------------------------------------------------------------------
-//
-//  Enum:
-//      D2D1_BITMAPSOURCE_PROP
-//
-//  Synopsis:
-//      The enumeration of the Bitmap Source effect's top level properties.
-//
-//------------------------------------------------------------------------------
+/// <summary>
+/// The enumeration of the Bitmap Source effect's top level properties.
+/// </summary>
 typedef enum D2D1_BITMAPSOURCE_PROP
 {
-        
-        //
-        // Property Name: "WicBitmapSource"
-        // Property Type: IUnknown *
-        //
-        D2D1_BITMAPSOURCE_PROP_WIC_BITMAP_SOURCE = 0,
-        
-        //
-        // Property Name: "Scale"
-        // Property Type: D2D1_VECTOR_2F
-        //
-        D2D1_BITMAPSOURCE_PROP_SCALE = 1,
-        
-        //
-        // Property Name: "InterpolationMode"
-        // Property Type: D2D1_BITMAPSOURCE_INTERPOLATION_MODE
-        //
-        D2D1_BITMAPSOURCE_PROP_INTERPOLATION_MODE = 2,
-        
-        //
-        // Property Name: "EnableDPICorrection"
-        // Property Type: BOOL
-        //
-        D2D1_BITMAPSOURCE_PROP_ENABLE_DPI_CORRECTION = 3,
-        
-        //
-        // Property Name: "AlphaMode"
-        // Property Type: D2D1_BITMAPSOURCE_ALPHA_MODE
-        //
-        D2D1_BITMAPSOURCE_PROP_ALPHA_MODE = 4,
-        
-        //
-        // Property Name: "Orientation"
-        // Property Type: D2D1_BITMAPSOURCE_ORIENTATION
-        //
-        D2D1_BITMAPSOURCE_PROP_ORIENTATION = 5,
-        D2D1_BITMAPSOURCE_PROP_FORCE_DWORD = 0xffffffff
+    
+    /// <summary>
+    /// Property Name: "WicBitmapSource"
+    /// Property Type: IUnknown *
+    /// </summary>
+    D2D1_BITMAPSOURCE_PROP_WIC_BITMAP_SOURCE = 0,
+    
+    /// <summary>
+    /// Property Name: "Scale"
+    /// Property Type: D2D1_VECTOR_2F
+    /// </summary>
+    D2D1_BITMAPSOURCE_PROP_SCALE = 1,
+    
+    /// <summary>
+    /// Property Name: "InterpolationMode"
+    /// Property Type: D2D1_BITMAPSOURCE_INTERPOLATION_MODE
+    /// </summary>
+    D2D1_BITMAPSOURCE_PROP_INTERPOLATION_MODE = 2,
+    
+    /// <summary>
+    /// Property Name: "EnableDPICorrection"
+    /// Property Type: BOOL
+    /// </summary>
+    D2D1_BITMAPSOURCE_PROP_ENABLE_DPI_CORRECTION = 3,
+    
+    /// <summary>
+    /// Property Name: "AlphaMode"
+    /// Property Type: D2D1_BITMAPSOURCE_ALPHA_MODE
+    /// </summary>
+    D2D1_BITMAPSOURCE_PROP_ALPHA_MODE = 4,
+    
+    /// <summary>
+    /// Property Name: "Orientation"
+    /// Property Type: D2D1_BITMAPSOURCE_ORIENTATION
+    /// </summary>
+    D2D1_BITMAPSOURCE_PROP_ORIENTATION = 5,
+    D2D1_BITMAPSOURCE_PROP_FORCE_DWORD = 0xffffffff
 
 } D2D1_BITMAPSOURCE_PROP;
 
-
-//+-----------------------------------------------------------------------------
-//
-//  Enum:
-//      D2D1_BITMAPSOURCE_INTERPOLATION_MODE
-//
-//------------------------------------------------------------------------------
 typedef enum D2D1_BITMAPSOURCE_INTERPOLATION_MODE
 {
-        D2D1_BITMAPSOURCE_INTERPOLATION_MODE_NEAREST_NEIGHBOR = 0,
-        D2D1_BITMAPSOURCE_INTERPOLATION_MODE_LINEAR = 1,
-        D2D1_BITMAPSOURCE_INTERPOLATION_MODE_CUBIC = 2,
-        D2D1_BITMAPSOURCE_INTERPOLATION_MODE_FANT = 6,
-        D2D1_BITMAPSOURCE_INTERPOLATION_MODE_MIPMAP_LINEAR = 7,
-        D2D1_BITMAPSOURCE_INTERPOLATION_MODE_FORCE_DWORD = 0xffffffff
+    D2D1_BITMAPSOURCE_INTERPOLATION_MODE_NEAREST_NEIGHBOR = 0,
+    D2D1_BITMAPSOURCE_INTERPOLATION_MODE_LINEAR = 1,
+    D2D1_BITMAPSOURCE_INTERPOLATION_MODE_CUBIC = 2,
+    D2D1_BITMAPSOURCE_INTERPOLATION_MODE_FANT = 6,
+    D2D1_BITMAPSOURCE_INTERPOLATION_MODE_MIPMAP_LINEAR = 7,
+    D2D1_BITMAPSOURCE_INTERPOLATION_MODE_FORCE_DWORD = 0xffffffff
 
 } D2D1_BITMAPSOURCE_INTERPOLATION_MODE;
 
-
-//+-----------------------------------------------------------------------------
-//
-//  Enum:
-//      D2D1_BITMAPSOURCE_ALPHA_MODE
-//
-//------------------------------------------------------------------------------
 typedef enum D2D1_BITMAPSOURCE_ALPHA_MODE
 {
-        D2D1_BITMAPSOURCE_ALPHA_MODE_PREMULTIPLIED = 1,
-        D2D1_BITMAPSOURCE_ALPHA_MODE_STRAIGHT = 2,
-        D2D1_BITMAPSOURCE_ALPHA_MODE_FORCE_DWORD = 0xffffffff
+    D2D1_BITMAPSOURCE_ALPHA_MODE_PREMULTIPLIED = 1,
+    D2D1_BITMAPSOURCE_ALPHA_MODE_STRAIGHT = 2,
+    D2D1_BITMAPSOURCE_ALPHA_MODE_FORCE_DWORD = 0xffffffff
 
 } D2D1_BITMAPSOURCE_ALPHA_MODE;
 
 
-//+-----------------------------------------------------------------------------
-//
-//  Enum:
-//      D2D1_COMPOSITE_PROP
-//
-//  Synopsis:
-//      The enumeration of the Composite effect's top level properties.
-//
-//------------------------------------------------------------------------------
+/// <summary>
+/// The enumeration of the Composite effect's top level properties.
+/// </summary>
 typedef enum D2D1_COMPOSITE_PROP
 {
-        
-        //
-        // Property Name: "Mode"
-        // Property Type: D2D1_COMPOSITE_MODE
-        //
-        D2D1_COMPOSITE_PROP_MODE = 0,
-        D2D1_COMPOSITE_PROP_FORCE_DWORD = 0xffffffff
+    
+    /// <summary>
+    /// Property Name: "Mode"
+    /// Property Type: D2D1_COMPOSITE_MODE
+    /// </summary>
+    D2D1_COMPOSITE_PROP_MODE = 0,
+    D2D1_COMPOSITE_PROP_FORCE_DWORD = 0xffffffff
 
 } D2D1_COMPOSITE_PROP;
 
 
-//+-----------------------------------------------------------------------------
-//
-//  Enum:
-//      D2D1_3DTRANSFORM_PROP
-//
-//  Synopsis:
-//      The enumeration of the 3D Transform effect's top level properties.
-//
-//------------------------------------------------------------------------------
+/// <summary>
+/// The enumeration of the 3D Transform effect's top level properties.
+/// </summary>
 typedef enum D2D1_3DTRANSFORM_PROP
 {
-        
-        //
-        // Property Name: "InterpolationMode"
-        // Property Type: D2D1_3DTRANSFORM_INTERPOLATION_MODE
-        //
-        D2D1_3DTRANSFORM_PROP_INTERPOLATION_MODE = 0,
-        
-        //
-        // Property Name: "BorderMode"
-        // Property Type: D2D1_BORDER_MODE
-        //
-        D2D1_3DTRANSFORM_PROP_BORDER_MODE = 1,
-        
-        //
-        // Property Name: "TransformMatrix"
-        // Property Type: D2D1_MATRIX_4X4_F
-        //
-        D2D1_3DTRANSFORM_PROP_TRANSFORM_MATRIX = 2,
-        D2D1_3DTRANSFORM_PROP_FORCE_DWORD = 0xffffffff
+    
+    /// <summary>
+    /// Property Name: "InterpolationMode"
+    /// Property Type: D2D1_3DTRANSFORM_INTERPOLATION_MODE
+    /// </summary>
+    D2D1_3DTRANSFORM_PROP_INTERPOLATION_MODE = 0,
+    
+    /// <summary>
+    /// Property Name: "BorderMode"
+    /// Property Type: D2D1_BORDER_MODE
+    /// </summary>
+    D2D1_3DTRANSFORM_PROP_BORDER_MODE = 1,
+    
+    /// <summary>
+    /// Property Name: "TransformMatrix"
+    /// Property Type: D2D1_MATRIX_4X4_F
+    /// </summary>
+    D2D1_3DTRANSFORM_PROP_TRANSFORM_MATRIX = 2,
+    D2D1_3DTRANSFORM_PROP_FORCE_DWORD = 0xffffffff
 
 } D2D1_3DTRANSFORM_PROP;
 
-
-//+-----------------------------------------------------------------------------
-//
-//  Enum:
-//      D2D1_3DTRANSFORM_INTERPOLATION_MODE
-//
-//------------------------------------------------------------------------------
 typedef enum D2D1_3DTRANSFORM_INTERPOLATION_MODE
 {
-        D2D1_3DTRANSFORM_INTERPOLATION_MODE_NEAREST_NEIGHBOR = 0,
-        D2D1_3DTRANSFORM_INTERPOLATION_MODE_LINEAR = 1,
-        D2D1_3DTRANSFORM_INTERPOLATION_MODE_CUBIC = 2,
-        D2D1_3DTRANSFORM_INTERPOLATION_MODE_MULTI_SAMPLE_LINEAR = 3,
-        D2D1_3DTRANSFORM_INTERPOLATION_MODE_ANISOTROPIC = 4,
-        D2D1_3DTRANSFORM_INTERPOLATION_MODE_FORCE_DWORD = 0xffffffff
+    D2D1_3DTRANSFORM_INTERPOLATION_MODE_NEAREST_NEIGHBOR = 0,
+    D2D1_3DTRANSFORM_INTERPOLATION_MODE_LINEAR = 1,
+    D2D1_3DTRANSFORM_INTERPOLATION_MODE_CUBIC = 2,
+    D2D1_3DTRANSFORM_INTERPOLATION_MODE_MULTI_SAMPLE_LINEAR = 3,
+    D2D1_3DTRANSFORM_INTERPOLATION_MODE_ANISOTROPIC = 4,
+    D2D1_3DTRANSFORM_INTERPOLATION_MODE_FORCE_DWORD = 0xffffffff
 
 } D2D1_3DTRANSFORM_INTERPOLATION_MODE;
 
 
-//+-----------------------------------------------------------------------------
-//
-//  Enum:
-//      D2D1_3DPERSPECTIVETRANSFORM_PROP
-//
-//  Synopsis:
-//      The enumeration of the 3D Perspective Transform effect's top level properties.
-//
-//------------------------------------------------------------------------------
+/// <summary>
+/// The enumeration of the 3D Perspective Transform effect's top level properties.
+/// </summary>
 typedef enum D2D1_3DPERSPECTIVETRANSFORM_PROP
 {
-        
-        //
-        // Property Name: "InterpolationMode"
-        // Property Type: D2D1_3DPERSPECTIVETRANSFORM_INTERPOLATION_MODE
-        //
-        D2D1_3DPERSPECTIVETRANSFORM_PROP_INTERPOLATION_MODE = 0,
-        
-        //
-        // Property Name: "BorderMode"
-        // Property Type: D2D1_BORDER_MODE
-        //
-        D2D1_3DPERSPECTIVETRANSFORM_PROP_BORDER_MODE = 1,
-        
-        //
-        // Property Name: "Depth"
-        // Property Type: FLOAT
-        //
-        D2D1_3DPERSPECTIVETRANSFORM_PROP_DEPTH = 2,
-        
-        //
-        // Property Name: "PerspectiveOrigin"
-        // Property Type: D2D1_VECTOR_2F
-        //
-        D2D1_3DPERSPECTIVETRANSFORM_PROP_PERSPECTIVE_ORIGIN = 3,
-        
-        //
-        // Property Name: "LocalOffset"
-        // Property Type: D2D1_VECTOR_3F
-        //
-        D2D1_3DPERSPECTIVETRANSFORM_PROP_LOCAL_OFFSET = 4,
-        
-        //
-        // Property Name: "GlobalOffset"
-        // Property Type: D2D1_VECTOR_3F
-        //
-        D2D1_3DPERSPECTIVETRANSFORM_PROP_GLOBAL_OFFSET = 5,
-        
-        //
-        // Property Name: "RotationOrigin"
-        // Property Type: D2D1_VECTOR_3F
-        //
-        D2D1_3DPERSPECTIVETRANSFORM_PROP_ROTATION_ORIGIN = 6,
-        
-        //
-        // Property Name: "Rotation"
-        // Property Type: D2D1_VECTOR_3F
-        //
-        D2D1_3DPERSPECTIVETRANSFORM_PROP_ROTATION = 7,
-        D2D1_3DPERSPECTIVETRANSFORM_PROP_FORCE_DWORD = 0xffffffff
+    
+    /// <summary>
+    /// Property Name: "InterpolationMode"
+    /// Property Type: D2D1_3DPERSPECTIVETRANSFORM_INTERPOLATION_MODE
+    /// </summary>
+    D2D1_3DPERSPECTIVETRANSFORM_PROP_INTERPOLATION_MODE = 0,
+    
+    /// <summary>
+    /// Property Name: "BorderMode"
+    /// Property Type: D2D1_BORDER_MODE
+    /// </summary>
+    D2D1_3DPERSPECTIVETRANSFORM_PROP_BORDER_MODE = 1,
+    
+    /// <summary>
+    /// Property Name: "Depth"
+    /// Property Type: FLOAT
+    /// </summary>
+    D2D1_3DPERSPECTIVETRANSFORM_PROP_DEPTH = 2,
+    
+    /// <summary>
+    /// Property Name: "PerspectiveOrigin"
+    /// Property Type: D2D1_VECTOR_2F
+    /// </summary>
+    D2D1_3DPERSPECTIVETRANSFORM_PROP_PERSPECTIVE_ORIGIN = 3,
+    
+    /// <summary>
+    /// Property Name: "LocalOffset"
+    /// Property Type: D2D1_VECTOR_3F
+    /// </summary>
+    D2D1_3DPERSPECTIVETRANSFORM_PROP_LOCAL_OFFSET = 4,
+    
+    /// <summary>
+    /// Property Name: "GlobalOffset"
+    /// Property Type: D2D1_VECTOR_3F
+    /// </summary>
+    D2D1_3DPERSPECTIVETRANSFORM_PROP_GLOBAL_OFFSET = 5,
+    
+    /// <summary>
+    /// Property Name: "RotationOrigin"
+    /// Property Type: D2D1_VECTOR_3F
+    /// </summary>
+    D2D1_3DPERSPECTIVETRANSFORM_PROP_ROTATION_ORIGIN = 6,
+    
+    /// <summary>
+    /// Property Name: "Rotation"
+    /// Property Type: D2D1_VECTOR_3F
+    /// </summary>
+    D2D1_3DPERSPECTIVETRANSFORM_PROP_ROTATION = 7,
+    D2D1_3DPERSPECTIVETRANSFORM_PROP_FORCE_DWORD = 0xffffffff
 
 } D2D1_3DPERSPECTIVETRANSFORM_PROP;
 
-
-//+-----------------------------------------------------------------------------
-//
-//  Enum:
-//      D2D1_3DPERSPECTIVETRANSFORM_INTERPOLATION_MODE
-//
-//------------------------------------------------------------------------------
 typedef enum D2D1_3DPERSPECTIVETRANSFORM_INTERPOLATION_MODE
 {
-        D2D1_3DPERSPECTIVETRANSFORM_INTERPOLATION_MODE_NEAREST_NEIGHBOR = 0,
-        D2D1_3DPERSPECTIVETRANSFORM_INTERPOLATION_MODE_LINEAR = 1,
-        D2D1_3DPERSPECTIVETRANSFORM_INTERPOLATION_MODE_CUBIC = 2,
-        D2D1_3DPERSPECTIVETRANSFORM_INTERPOLATION_MODE_MULTI_SAMPLE_LINEAR = 3,
-        D2D1_3DPERSPECTIVETRANSFORM_INTERPOLATION_MODE_ANISOTROPIC = 4,
-        D2D1_3DPERSPECTIVETRANSFORM_INTERPOLATION_MODE_FORCE_DWORD = 0xffffffff
+    D2D1_3DPERSPECTIVETRANSFORM_INTERPOLATION_MODE_NEAREST_NEIGHBOR = 0,
+    D2D1_3DPERSPECTIVETRANSFORM_INTERPOLATION_MODE_LINEAR = 1,
+    D2D1_3DPERSPECTIVETRANSFORM_INTERPOLATION_MODE_CUBIC = 2,
+    D2D1_3DPERSPECTIVETRANSFORM_INTERPOLATION_MODE_MULTI_SAMPLE_LINEAR = 3,
+    D2D1_3DPERSPECTIVETRANSFORM_INTERPOLATION_MODE_ANISOTROPIC = 4,
+    D2D1_3DPERSPECTIVETRANSFORM_INTERPOLATION_MODE_FORCE_DWORD = 0xffffffff
 
 } D2D1_3DPERSPECTIVETRANSFORM_INTERPOLATION_MODE;
 
 
-//+-----------------------------------------------------------------------------
-//
-//  Enum:
-//      D2D1_2DAFFINETRANSFORM_PROP
-//
-//  Synopsis:
-//      The enumeration of the 2D Affine Transform effect's top level properties.
-//
-//------------------------------------------------------------------------------
+/// <summary>
+/// The enumeration of the 2D Affine Transform effect's top level properties.
+/// </summary>
 typedef enum D2D1_2DAFFINETRANSFORM_PROP
 {
-        
-        //
-        // Property Name: "InterpolationMode"
-        // Property Type: D2D1_2DAFFINETRANSFORM_INTERPOLATION_MODE
-        //
-        D2D1_2DAFFINETRANSFORM_PROP_INTERPOLATION_MODE = 0,
-        
-        //
-        // Property Name: "BorderMode"
-        // Property Type: D2D1_BORDER_MODE
-        //
-        D2D1_2DAFFINETRANSFORM_PROP_BORDER_MODE = 1,
-        
-        //
-        // Property Name: "TransformMatrix"
-        // Property Type: D2D1_MATRIX_3X2_F
-        //
-        D2D1_2DAFFINETRANSFORM_PROP_TRANSFORM_MATRIX = 2,
-        
-        //
-        // Property Name: "Sharpness"
-        // Property Type: FLOAT
-        //
-        D2D1_2DAFFINETRANSFORM_PROP_SHARPNESS = 3,
-        D2D1_2DAFFINETRANSFORM_PROP_FORCE_DWORD = 0xffffffff
+    
+    /// <summary>
+    /// Property Name: "InterpolationMode"
+    /// Property Type: D2D1_2DAFFINETRANSFORM_INTERPOLATION_MODE
+    /// </summary>
+    D2D1_2DAFFINETRANSFORM_PROP_INTERPOLATION_MODE = 0,
+    
+    /// <summary>
+    /// Property Name: "BorderMode"
+    /// Property Type: D2D1_BORDER_MODE
+    /// </summary>
+    D2D1_2DAFFINETRANSFORM_PROP_BORDER_MODE = 1,
+    
+    /// <summary>
+    /// Property Name: "TransformMatrix"
+    /// Property Type: D2D1_MATRIX_3X2_F
+    /// </summary>
+    D2D1_2DAFFINETRANSFORM_PROP_TRANSFORM_MATRIX = 2,
+    
+    /// <summary>
+    /// Property Name: "Sharpness"
+    /// Property Type: FLOAT
+    /// </summary>
+    D2D1_2DAFFINETRANSFORM_PROP_SHARPNESS = 3,
+    D2D1_2DAFFINETRANSFORM_PROP_FORCE_DWORD = 0xffffffff
 
 } D2D1_2DAFFINETRANSFORM_PROP;
 
-
-//+-----------------------------------------------------------------------------
-//
-//  Enum:
-//      D2D1_2DAFFINETRANSFORM_INTERPOLATION_MODE
-//
-//------------------------------------------------------------------------------
 typedef enum D2D1_2DAFFINETRANSFORM_INTERPOLATION_MODE
 {
-        D2D1_2DAFFINETRANSFORM_INTERPOLATION_MODE_NEAREST_NEIGHBOR = 0,
-        D2D1_2DAFFINETRANSFORM_INTERPOLATION_MODE_LINEAR = 1,
-        D2D1_2DAFFINETRANSFORM_INTERPOLATION_MODE_CUBIC = 2,
-        D2D1_2DAFFINETRANSFORM_INTERPOLATION_MODE_MULTI_SAMPLE_LINEAR = 3,
-        D2D1_2DAFFINETRANSFORM_INTERPOLATION_MODE_ANISOTROPIC = 4,
-        D2D1_2DAFFINETRANSFORM_INTERPOLATION_MODE_HIGH_QUALITY_CUBIC = 5,
-        D2D1_2DAFFINETRANSFORM_INTERPOLATION_MODE_FORCE_DWORD = 0xffffffff
+    D2D1_2DAFFINETRANSFORM_INTERPOLATION_MODE_NEAREST_NEIGHBOR = 0,
+    D2D1_2DAFFINETRANSFORM_INTERPOLATION_MODE_LINEAR = 1,
+    D2D1_2DAFFINETRANSFORM_INTERPOLATION_MODE_CUBIC = 2,
+    D2D1_2DAFFINETRANSFORM_INTERPOLATION_MODE_MULTI_SAMPLE_LINEAR = 3,
+    D2D1_2DAFFINETRANSFORM_INTERPOLATION_MODE_ANISOTROPIC = 4,
+    D2D1_2DAFFINETRANSFORM_INTERPOLATION_MODE_HIGH_QUALITY_CUBIC = 5,
+    D2D1_2DAFFINETRANSFORM_INTERPOLATION_MODE_FORCE_DWORD = 0xffffffff
 
 } D2D1_2DAFFINETRANSFORM_INTERPOLATION_MODE;
 
 
-//+-----------------------------------------------------------------------------
-//
-//  Enum:
-//      D2D1_DPICOMPENSATION_PROP
-//
-//  Synopsis:
-//      The enumeration of the DPI Compensation effect's top level properties.
-//
-//------------------------------------------------------------------------------
+/// <summary>
+/// The enumeration of the DPI Compensation effect's top level properties.
+/// </summary>
 typedef enum D2D1_DPICOMPENSATION_PROP
 {
-        
-        //
-        // Property Name: "InterpolationMode"
-        // Property Type: D2D1_DPICOMPENSATION_INTERPOLATION_MODE
-        //
-        D2D1_DPICOMPENSATION_PROP_INTERPOLATION_MODE = 0,
-        
-        //
-        // Property Name: "BorderMode"
-        // Property Type: D2D1_BORDER_MODE
-        //
-        D2D1_DPICOMPENSATION_PROP_BORDER_MODE = 1,
-        
-        //
-        // Property Name: "InputDpi"
-        // Property Type: D2D1_VECTOR_2F
-        //
-        D2D1_DPICOMPENSATION_PROP_INPUT_DPI = 2,
-        D2D1_DPICOMPENSATION_PROP_FORCE_DWORD = 0xffffffff
+    
+    /// <summary>
+    /// Property Name: "InterpolationMode"
+    /// Property Type: D2D1_DPICOMPENSATION_INTERPOLATION_MODE
+    /// </summary>
+    D2D1_DPICOMPENSATION_PROP_INTERPOLATION_MODE = 0,
+    
+    /// <summary>
+    /// Property Name: "BorderMode"
+    /// Property Type: D2D1_BORDER_MODE
+    /// </summary>
+    D2D1_DPICOMPENSATION_PROP_BORDER_MODE = 1,
+    
+    /// <summary>
+    /// Property Name: "InputDpi"
+    /// Property Type: D2D1_VECTOR_2F
+    /// </summary>
+    D2D1_DPICOMPENSATION_PROP_INPUT_DPI = 2,
+    D2D1_DPICOMPENSATION_PROP_FORCE_DWORD = 0xffffffff
 
 } D2D1_DPICOMPENSATION_PROP;
 
-
-//+-----------------------------------------------------------------------------
-//
-//  Enum:
-//      D2D1_DPICOMPENSATION_INTERPOLATION_MODE
-//
-//------------------------------------------------------------------------------
 typedef enum D2D1_DPICOMPENSATION_INTERPOLATION_MODE
 {
-        D2D1_DPICOMPENSATION_INTERPOLATION_MODE_NEAREST_NEIGHBOR = 0,
-        D2D1_DPICOMPENSATION_INTERPOLATION_MODE_LINEAR = 1,
-        D2D1_DPICOMPENSATION_INTERPOLATION_MODE_CUBIC = 2,
-        D2D1_DPICOMPENSATION_INTERPOLATION_MODE_MULTI_SAMPLE_LINEAR = 3,
-        D2D1_DPICOMPENSATION_INTERPOLATION_MODE_ANISOTROPIC = 4,
-        D2D1_DPICOMPENSATION_INTERPOLATION_MODE_HIGH_QUALITY_CUBIC = 5,
-        D2D1_DPICOMPENSATION_INTERPOLATION_MODE_FORCE_DWORD = 0xffffffff
+    D2D1_DPICOMPENSATION_INTERPOLATION_MODE_NEAREST_NEIGHBOR = 0,
+    D2D1_DPICOMPENSATION_INTERPOLATION_MODE_LINEAR = 1,
+    D2D1_DPICOMPENSATION_INTERPOLATION_MODE_CUBIC = 2,
+    D2D1_DPICOMPENSATION_INTERPOLATION_MODE_MULTI_SAMPLE_LINEAR = 3,
+    D2D1_DPICOMPENSATION_INTERPOLATION_MODE_ANISOTROPIC = 4,
+    D2D1_DPICOMPENSATION_INTERPOLATION_MODE_HIGH_QUALITY_CUBIC = 5,
+    D2D1_DPICOMPENSATION_INTERPOLATION_MODE_FORCE_DWORD = 0xffffffff
 
 } D2D1_DPICOMPENSATION_INTERPOLATION_MODE;
 
 
-//+-----------------------------------------------------------------------------
-//
-//  Enum:
-//      D2D1_SCALE_PROP
-//
-//  Synopsis:
-//      The enumeration of the Scale effect's top level properties.
-//
-//------------------------------------------------------------------------------
+/// <summary>
+/// The enumeration of the Scale effect's top level properties.
+/// </summary>
 typedef enum D2D1_SCALE_PROP
 {
-        
-        //
-        // Property Name: "Scale"
-        // Property Type: D2D1_VECTOR_2F
-        //
-        D2D1_SCALE_PROP_SCALE = 0,
-        
-        //
-        // Property Name: "CenterPoint"
-        // Property Type: D2D1_VECTOR_2F
-        //
-        D2D1_SCALE_PROP_CENTER_POINT = 1,
-        
-        //
-        // Property Name: "InterpolationMode"
-        // Property Type: D2D1_SCALE_INTERPOLATION_MODE
-        //
-        D2D1_SCALE_PROP_INTERPOLATION_MODE = 2,
-        
-        //
-        // Property Name: "BorderMode"
-        // Property Type: D2D1_BORDER_MODE
-        //
-        D2D1_SCALE_PROP_BORDER_MODE = 3,
-        
-        //
-        // Property Name: "Sharpness"
-        // Property Type: FLOAT
-        //
-        D2D1_SCALE_PROP_SHARPNESS = 4,
-        D2D1_SCALE_PROP_FORCE_DWORD = 0xffffffff
+    
+    /// <summary>
+    /// Property Name: "Scale"
+    /// Property Type: D2D1_VECTOR_2F
+    /// </summary>
+    D2D1_SCALE_PROP_SCALE = 0,
+    
+    /// <summary>
+    /// Property Name: "CenterPoint"
+    /// Property Type: D2D1_VECTOR_2F
+    /// </summary>
+    D2D1_SCALE_PROP_CENTER_POINT = 1,
+    
+    /// <summary>
+    /// Property Name: "InterpolationMode"
+    /// Property Type: D2D1_SCALE_INTERPOLATION_MODE
+    /// </summary>
+    D2D1_SCALE_PROP_INTERPOLATION_MODE = 2,
+    
+    /// <summary>
+    /// Property Name: "BorderMode"
+    /// Property Type: D2D1_BORDER_MODE
+    /// </summary>
+    D2D1_SCALE_PROP_BORDER_MODE = 3,
+    
+    /// <summary>
+    /// Property Name: "Sharpness"
+    /// Property Type: FLOAT
+    /// </summary>
+    D2D1_SCALE_PROP_SHARPNESS = 4,
+    D2D1_SCALE_PROP_FORCE_DWORD = 0xffffffff
 
 } D2D1_SCALE_PROP;
 
-
-//+-----------------------------------------------------------------------------
-//
-//  Enum:
-//      D2D1_SCALE_INTERPOLATION_MODE
-//
-//------------------------------------------------------------------------------
 typedef enum D2D1_SCALE_INTERPOLATION_MODE
 {
-        D2D1_SCALE_INTERPOLATION_MODE_NEAREST_NEIGHBOR = 0,
-        D2D1_SCALE_INTERPOLATION_MODE_LINEAR = 1,
-        D2D1_SCALE_INTERPOLATION_MODE_CUBIC = 2,
-        D2D1_SCALE_INTERPOLATION_MODE_MULTI_SAMPLE_LINEAR = 3,
-        D2D1_SCALE_INTERPOLATION_MODE_ANISOTROPIC = 4,
-        D2D1_SCALE_INTERPOLATION_MODE_HIGH_QUALITY_CUBIC = 5,
-        D2D1_SCALE_INTERPOLATION_MODE_FORCE_DWORD = 0xffffffff
+    D2D1_SCALE_INTERPOLATION_MODE_NEAREST_NEIGHBOR = 0,
+    D2D1_SCALE_INTERPOLATION_MODE_LINEAR = 1,
+    D2D1_SCALE_INTERPOLATION_MODE_CUBIC = 2,
+    D2D1_SCALE_INTERPOLATION_MODE_MULTI_SAMPLE_LINEAR = 3,
+    D2D1_SCALE_INTERPOLATION_MODE_ANISOTROPIC = 4,
+    D2D1_SCALE_INTERPOLATION_MODE_HIGH_QUALITY_CUBIC = 5,
+    D2D1_SCALE_INTERPOLATION_MODE_FORCE_DWORD = 0xffffffff
 
 } D2D1_SCALE_INTERPOLATION_MODE;
 
 
-//+-----------------------------------------------------------------------------
-//
-//  Enum:
-//      D2D1_TURBULENCE_PROP
-//
-//  Synopsis:
-//      The enumeration of the Turbulence effect's top level properties.
-//
-//------------------------------------------------------------------------------
+/// <summary>
+/// The enumeration of the Turbulence effect's top level properties.
+/// </summary>
 typedef enum D2D1_TURBULENCE_PROP
 {
-        
-        //
-        // Property Name: "Offset"
-        // Property Type: D2D1_VECTOR_2F
-        //
-        D2D1_TURBULENCE_PROP_OFFSET = 0,
-        
-        //
-        // Property Name: "Size"
-        // Property Type: D2D1_VECTOR_2F
-        //
-        D2D1_TURBULENCE_PROP_SIZE = 1,
-        
-        //
-        // Property Name: "BaseFrequency"
-        // Property Type: D2D1_VECTOR_2F
-        //
-        D2D1_TURBULENCE_PROP_BASE_FREQUENCY = 2,
-        
-        //
-        // Property Name: "NumOctaves"
-        // Property Type: UINT32
-        //
-        D2D1_TURBULENCE_PROP_NUM_OCTAVES = 3,
-        
-        //
-        // Property Name: "Seed"
-        // Property Type: INT32
-        //
-        D2D1_TURBULENCE_PROP_SEED = 4,
-        
-        //
-        // Property Name: "Noise"
-        // Property Type: D2D1_TURBULENCE_NOISE
-        //
-        D2D1_TURBULENCE_PROP_NOISE = 5,
-        
-        //
-        // Property Name: "Stitchable"
-        // Property Type: BOOL
-        //
-        D2D1_TURBULENCE_PROP_STITCHABLE = 6,
-        D2D1_TURBULENCE_PROP_FORCE_DWORD = 0xffffffff
+    
+    /// <summary>
+    /// Property Name: "Offset"
+    /// Property Type: D2D1_VECTOR_2F
+    /// </summary>
+    D2D1_TURBULENCE_PROP_OFFSET = 0,
+    
+    /// <summary>
+    /// Property Name: "Size"
+    /// Property Type: D2D1_VECTOR_2F
+    /// </summary>
+    D2D1_TURBULENCE_PROP_SIZE = 1,
+    
+    /// <summary>
+    /// Property Name: "BaseFrequency"
+    /// Property Type: D2D1_VECTOR_2F
+    /// </summary>
+    D2D1_TURBULENCE_PROP_BASE_FREQUENCY = 2,
+    
+    /// <summary>
+    /// Property Name: "NumOctaves"
+    /// Property Type: UINT32
+    /// </summary>
+    D2D1_TURBULENCE_PROP_NUM_OCTAVES = 3,
+    
+    /// <summary>
+    /// Property Name: "Seed"
+    /// Property Type: INT32
+    /// </summary>
+    D2D1_TURBULENCE_PROP_SEED = 4,
+    
+    /// <summary>
+    /// Property Name: "Noise"
+    /// Property Type: D2D1_TURBULENCE_NOISE
+    /// </summary>
+    D2D1_TURBULENCE_PROP_NOISE = 5,
+    
+    /// <summary>
+    /// Property Name: "Stitchable"
+    /// Property Type: BOOL
+    /// </summary>
+    D2D1_TURBULENCE_PROP_STITCHABLE = 6,
+    D2D1_TURBULENCE_PROP_FORCE_DWORD = 0xffffffff
 
 } D2D1_TURBULENCE_PROP;
 
-
-//+-----------------------------------------------------------------------------
-//
-//  Enum:
-//      D2D1_TURBULENCE_NOISE
-//
-//------------------------------------------------------------------------------
 typedef enum D2D1_TURBULENCE_NOISE
 {
-        D2D1_TURBULENCE_NOISE_FRACTAL_SUM = 0,
-        D2D1_TURBULENCE_NOISE_TURBULENCE = 1,
-        D2D1_TURBULENCE_NOISE_FORCE_DWORD = 0xffffffff
+    D2D1_TURBULENCE_NOISE_FRACTAL_SUM = 0,
+    D2D1_TURBULENCE_NOISE_TURBULENCE = 1,
+    D2D1_TURBULENCE_NOISE_FORCE_DWORD = 0xffffffff
 
 } D2D1_TURBULENCE_NOISE;
 
 
-//+-----------------------------------------------------------------------------
-//
-//  Enum:
-//      D2D1_DISPLACEMENTMAP_PROP
-//
-//  Synopsis:
-//      The enumeration of the Displacement Map effect's top level properties.
-//
-//------------------------------------------------------------------------------
+/// <summary>
+/// The enumeration of the Displacement Map effect's top level properties.
+/// </summary>
 typedef enum D2D1_DISPLACEMENTMAP_PROP
 {
-        
-        //
-        // Property Name: "Scale"
-        // Property Type: FLOAT
-        //
-        D2D1_DISPLACEMENTMAP_PROP_SCALE = 0,
-        
-        //
-        // Property Name: "XChannelSelect"
-        // Property Type: D2D1_CHANNEL_SELECTOR
-        //
-        D2D1_DISPLACEMENTMAP_PROP_X_CHANNEL_SELECT = 1,
-        
-        //
-        // Property Name: "YChannelSelect"
-        // Property Type: D2D1_CHANNEL_SELECTOR
-        //
-        D2D1_DISPLACEMENTMAP_PROP_Y_CHANNEL_SELECT = 2,
-        D2D1_DISPLACEMENTMAP_PROP_FORCE_DWORD = 0xffffffff
+    
+    /// <summary>
+    /// Property Name: "Scale"
+    /// Property Type: FLOAT
+    /// </summary>
+    D2D1_DISPLACEMENTMAP_PROP_SCALE = 0,
+    
+    /// <summary>
+    /// Property Name: "XChannelSelect"
+    /// Property Type: D2D1_CHANNEL_SELECTOR
+    /// </summary>
+    D2D1_DISPLACEMENTMAP_PROP_X_CHANNEL_SELECT = 1,
+    
+    /// <summary>
+    /// Property Name: "YChannelSelect"
+    /// Property Type: D2D1_CHANNEL_SELECTOR
+    /// </summary>
+    D2D1_DISPLACEMENTMAP_PROP_Y_CHANNEL_SELECT = 2,
+    D2D1_DISPLACEMENTMAP_PROP_FORCE_DWORD = 0xffffffff
 
 } D2D1_DISPLACEMENTMAP_PROP;
 
 
-//+-----------------------------------------------------------------------------
-//
-//  Enum:
-//      D2D1_COLORMANAGEMENT_PROP
-//
-//  Synopsis:
-//      The enumeration of the Color Management effect's top level properties.
-//
-//------------------------------------------------------------------------------
+/// <summary>
+/// The enumeration of the Color Management effect's top level properties.
+/// </summary>
 typedef enum D2D1_COLORMANAGEMENT_PROP
 {
-        
-        //
-        // Property Name: "SourceColorContext"
-        // Property Type: ID2D1ColorContext *
-        //
-        D2D1_COLORMANAGEMENT_PROP_SOURCE_COLOR_CONTEXT = 0,
-        
-        //
-        // Property Name: "SourceRenderingIntent"
-        // Property Type: D2D1_RENDERING_INTENT
-        //
-        D2D1_COLORMANAGEMENT_PROP_SOURCE_RENDERING_INTENT = 1,
-        
-        //
-        // Property Name: "DestinationColorContext"
-        // Property Type: ID2D1ColorContext *
-        //
-        D2D1_COLORMANAGEMENT_PROP_DESTINATION_COLOR_CONTEXT = 2,
-        
-        //
-        // Property Name: "DestinationRenderingIntent"
-        // Property Type: D2D1_RENDERING_INTENT
-        //
-        D2D1_COLORMANAGEMENT_PROP_DESTINATION_RENDERING_INTENT = 3,
-        
-        //
-        // Property Name: "AlphaMode"
-        // Property Type: D2D1_COLORMANAGEMENT_ALPHA_MODE
-        //
-        D2D1_COLORMANAGEMENT_PROP_ALPHA_MODE = 4,
-        
-        //
-        // Property Name: "Quality"
-        // Property Type: D2D1_COLORMANAGEMENT_QUALITY
-        //
-        D2D1_COLORMANAGEMENT_PROP_QUALITY = 5,
-        D2D1_COLORMANAGEMENT_PROP_FORCE_DWORD = 0xffffffff
+    
+    /// <summary>
+    /// Property Name: "SourceColorContext"
+    /// Property Type: ID2D1ColorContext *
+    /// </summary>
+    D2D1_COLORMANAGEMENT_PROP_SOURCE_COLOR_CONTEXT = 0,
+    
+    /// <summary>
+    /// Property Name: "SourceRenderingIntent"
+    /// Property Type: D2D1_RENDERING_INTENT
+    /// </summary>
+    D2D1_COLORMANAGEMENT_PROP_SOURCE_RENDERING_INTENT = 1,
+    
+    /// <summary>
+    /// Property Name: "DestinationColorContext"
+    /// Property Type: ID2D1ColorContext *
+    /// </summary>
+    D2D1_COLORMANAGEMENT_PROP_DESTINATION_COLOR_CONTEXT = 2,
+    
+    /// <summary>
+    /// Property Name: "DestinationRenderingIntent"
+    /// Property Type: D2D1_RENDERING_INTENT
+    /// </summary>
+    D2D1_COLORMANAGEMENT_PROP_DESTINATION_RENDERING_INTENT = 3,
+    
+    /// <summary>
+    /// Property Name: "AlphaMode"
+    /// Property Type: D2D1_COLORMANAGEMENT_ALPHA_MODE
+    /// </summary>
+    D2D1_COLORMANAGEMENT_PROP_ALPHA_MODE = 4,
+    
+    /// <summary>
+    /// Property Name: "Quality"
+    /// Property Type: D2D1_COLORMANAGEMENT_QUALITY
+    /// </summary>
+    D2D1_COLORMANAGEMENT_PROP_QUALITY = 5,
+    D2D1_COLORMANAGEMENT_PROP_FORCE_DWORD = 0xffffffff
 
 } D2D1_COLORMANAGEMENT_PROP;
 
-
-//+-----------------------------------------------------------------------------
-//
-//  Enum:
-//      D2D1_COLORMANAGEMENT_ALPHA_MODE
-//
-//------------------------------------------------------------------------------
 typedef enum D2D1_COLORMANAGEMENT_ALPHA_MODE
 {
-        D2D1_COLORMANAGEMENT_ALPHA_MODE_PREMULTIPLIED = 1,
-        D2D1_COLORMANAGEMENT_ALPHA_MODE_STRAIGHT = 2,
-        D2D1_COLORMANAGEMENT_ALPHA_MODE_FORCE_DWORD = 0xffffffff
+    D2D1_COLORMANAGEMENT_ALPHA_MODE_PREMULTIPLIED = 1,
+    D2D1_COLORMANAGEMENT_ALPHA_MODE_STRAIGHT = 2,
+    D2D1_COLORMANAGEMENT_ALPHA_MODE_FORCE_DWORD = 0xffffffff
 
 } D2D1_COLORMANAGEMENT_ALPHA_MODE;
 
-
-//+-----------------------------------------------------------------------------
-//
-//  Enum:
-//      D2D1_COLORMANAGEMENT_QUALITY
-//
-//------------------------------------------------------------------------------
 typedef enum D2D1_COLORMANAGEMENT_QUALITY
 {
-        D2D1_COLORMANAGEMENT_QUALITY_PROOF = 0,
-        D2D1_COLORMANAGEMENT_QUALITY_NORMAL = 1,
-        D2D1_COLORMANAGEMENT_QUALITY_BEST = 2,
-        D2D1_COLORMANAGEMENT_QUALITY_FORCE_DWORD = 0xffffffff
+    D2D1_COLORMANAGEMENT_QUALITY_PROOF = 0,
+    D2D1_COLORMANAGEMENT_QUALITY_NORMAL = 1,
+    D2D1_COLORMANAGEMENT_QUALITY_BEST = 2,
+    D2D1_COLORMANAGEMENT_QUALITY_FORCE_DWORD = 0xffffffff
 
 } D2D1_COLORMANAGEMENT_QUALITY;
 
 
-//+-----------------------------------------------------------------------------
-//
-//  Enum:
-//      D2D1_COLORMANAGEMENT_RENDERING_INTENT
-//
-//------------------------------------------------------------------------------
+/// <summary>
+/// Specifies which ICC rendering intent the Color management effect should use.
+/// </summary>
 typedef enum D2D1_COLORMANAGEMENT_RENDERING_INTENT
 {
-        D2D1_COLORMANAGEMENT_RENDERING_INTENT_PERCEPTUAL = 0,
-        D2D1_COLORMANAGEMENT_RENDERING_INTENT_RELATIVE_COLORIMETRIC = 1,
-        D2D1_COLORMANAGEMENT_RENDERING_INTENT_SATURATION = 2,
-        D2D1_COLORMANAGEMENT_RENDERING_INTENT_ABSOLUTE_COLORIMETRIC = 3,
-        D2D1_COLORMANAGEMENT_RENDERING_INTENT_FORCE_DWORD = 0xffffffff
+    D2D1_COLORMANAGEMENT_RENDERING_INTENT_PERCEPTUAL = 0,
+    D2D1_COLORMANAGEMENT_RENDERING_INTENT_RELATIVE_COLORIMETRIC = 1,
+    D2D1_COLORMANAGEMENT_RENDERING_INTENT_SATURATION = 2,
+    D2D1_COLORMANAGEMENT_RENDERING_INTENT_ABSOLUTE_COLORIMETRIC = 3,
+    D2D1_COLORMANAGEMENT_RENDERING_INTENT_FORCE_DWORD = 0xffffffff
 
 } D2D1_COLORMANAGEMENT_RENDERING_INTENT;
 
 
-//+-----------------------------------------------------------------------------
-//
-//  Enum:
-//      D2D1_HISTOGRAM_PROP
-//
-//  Synopsis:
-//      The enumeration of the Histogram effect's top level properties.
-//
-//------------------------------------------------------------------------------
+/// <summary>
+/// The enumeration of the Histogram effect's top level properties.
+/// </summary>
 typedef enum D2D1_HISTOGRAM_PROP
 {
-        
-        //
-        // Property Name: "NumBins"
-        // Property Type: UINT32
-        //
-        D2D1_HISTOGRAM_PROP_NUM_BINS = 0,
-        
-        //
-        // Property Name: "ChannelSelect"
-        // Property Type: D2D1_CHANNEL_SELECTOR
-        //
-        D2D1_HISTOGRAM_PROP_CHANNEL_SELECT = 1,
-        
-        //
-        // Property Name: "HistogramOutput"
-        // Property Type: (blob)
-        //
-        D2D1_HISTOGRAM_PROP_HISTOGRAM_OUTPUT = 2,
-        D2D1_HISTOGRAM_PROP_FORCE_DWORD = 0xffffffff
+    
+    /// <summary>
+    /// Property Name: "NumBins"
+    /// Property Type: UINT32
+    /// </summary>
+    D2D1_HISTOGRAM_PROP_NUM_BINS = 0,
+    
+    /// <summary>
+    /// Property Name: "ChannelSelect"
+    /// Property Type: D2D1_CHANNEL_SELECTOR
+    /// </summary>
+    D2D1_HISTOGRAM_PROP_CHANNEL_SELECT = 1,
+    
+    /// <summary>
+    /// Property Name: "HistogramOutput"
+    /// Property Type: (blob)
+    /// </summary>
+    D2D1_HISTOGRAM_PROP_HISTOGRAM_OUTPUT = 2,
+    D2D1_HISTOGRAM_PROP_FORCE_DWORD = 0xffffffff
 
 } D2D1_HISTOGRAM_PROP;
 
 
-//+-----------------------------------------------------------------------------
-//
-//  Enum:
-//      D2D1_POINTSPECULAR_PROP
-//
-//  Synopsis:
-//      The enumeration of the Point-Specular effect's top level properties.
-//
-//------------------------------------------------------------------------------
+/// <summary>
+/// The enumeration of the Point-Specular effect's top level properties.
+/// </summary>
 typedef enum D2D1_POINTSPECULAR_PROP
 {
-        
-        //
-        // Property Name: "LightPosition"
-        // Property Type: D2D1_VECTOR_3F
-        //
-        D2D1_POINTSPECULAR_PROP_LIGHT_POSITION = 0,
-        
-        //
-        // Property Name: "SpecularExponent"
-        // Property Type: FLOAT
-        //
-        D2D1_POINTSPECULAR_PROP_SPECULAR_EXPONENT = 1,
-        
-        //
-        // Property Name: "SpecularConstant"
-        // Property Type: FLOAT
-        //
-        D2D1_POINTSPECULAR_PROP_SPECULAR_CONSTANT = 2,
-        
-        //
-        // Property Name: "SurfaceScale"
-        // Property Type: FLOAT
-        //
-        D2D1_POINTSPECULAR_PROP_SURFACE_SCALE = 3,
-        
-        //
-        // Property Name: "Color"
-        // Property Type: D2D1_VECTOR_3F
-        //
-        D2D1_POINTSPECULAR_PROP_COLOR = 4,
-        
-        //
-        // Property Name: "KernelUnitLength"
-        // Property Type: D2D1_VECTOR_2F
-        //
-        D2D1_POINTSPECULAR_PROP_KERNEL_UNIT_LENGTH = 5,
-        
-        //
-        // Property Name: "ScaleMode"
-        // Property Type: D2D1_POINTSPECULAR_SCALE_MODE
-        //
-        D2D1_POINTSPECULAR_PROP_SCALE_MODE = 6,
-        D2D1_POINTSPECULAR_PROP_FORCE_DWORD = 0xffffffff
+    
+    /// <summary>
+    /// Property Name: "LightPosition"
+    /// Property Type: D2D1_VECTOR_3F
+    /// </summary>
+    D2D1_POINTSPECULAR_PROP_LIGHT_POSITION = 0,
+    
+    /// <summary>
+    /// Property Name: "SpecularExponent"
+    /// Property Type: FLOAT
+    /// </summary>
+    D2D1_POINTSPECULAR_PROP_SPECULAR_EXPONENT = 1,
+    
+    /// <summary>
+    /// Property Name: "SpecularConstant"
+    /// Property Type: FLOAT
+    /// </summary>
+    D2D1_POINTSPECULAR_PROP_SPECULAR_CONSTANT = 2,
+    
+    /// <summary>
+    /// Property Name: "SurfaceScale"
+    /// Property Type: FLOAT
+    /// </summary>
+    D2D1_POINTSPECULAR_PROP_SURFACE_SCALE = 3,
+    
+    /// <summary>
+    /// Property Name: "Color"
+    /// Property Type: D2D1_VECTOR_3F
+    /// </summary>
+    D2D1_POINTSPECULAR_PROP_COLOR = 4,
+    
+    /// <summary>
+    /// Property Name: "KernelUnitLength"
+    /// Property Type: D2D1_VECTOR_2F
+    /// </summary>
+    D2D1_POINTSPECULAR_PROP_KERNEL_UNIT_LENGTH = 5,
+    
+    /// <summary>
+    /// Property Name: "ScaleMode"
+    /// Property Type: D2D1_POINTSPECULAR_SCALE_MODE
+    /// </summary>
+    D2D1_POINTSPECULAR_PROP_SCALE_MODE = 6,
+    D2D1_POINTSPECULAR_PROP_FORCE_DWORD = 0xffffffff
 
 } D2D1_POINTSPECULAR_PROP;
 
-
-//+-----------------------------------------------------------------------------
-//
-//  Enum:
-//      D2D1_POINTSPECULAR_SCALE_MODE
-//
-//------------------------------------------------------------------------------
 typedef enum D2D1_POINTSPECULAR_SCALE_MODE
 {
-        D2D1_POINTSPECULAR_SCALE_MODE_NEAREST_NEIGHBOR = 0,
-        D2D1_POINTSPECULAR_SCALE_MODE_LINEAR = 1,
-        D2D1_POINTSPECULAR_SCALE_MODE_CUBIC = 2,
-        D2D1_POINTSPECULAR_SCALE_MODE_MULTI_SAMPLE_LINEAR = 3,
-        D2D1_POINTSPECULAR_SCALE_MODE_ANISOTROPIC = 4,
-        D2D1_POINTSPECULAR_SCALE_MODE_HIGH_QUALITY_CUBIC = 5,
-        D2D1_POINTSPECULAR_SCALE_MODE_FORCE_DWORD = 0xffffffff
+    D2D1_POINTSPECULAR_SCALE_MODE_NEAREST_NEIGHBOR = 0,
+    D2D1_POINTSPECULAR_SCALE_MODE_LINEAR = 1,
+    D2D1_POINTSPECULAR_SCALE_MODE_CUBIC = 2,
+    D2D1_POINTSPECULAR_SCALE_MODE_MULTI_SAMPLE_LINEAR = 3,
+    D2D1_POINTSPECULAR_SCALE_MODE_ANISOTROPIC = 4,
+    D2D1_POINTSPECULAR_SCALE_MODE_HIGH_QUALITY_CUBIC = 5,
+    D2D1_POINTSPECULAR_SCALE_MODE_FORCE_DWORD = 0xffffffff
 
 } D2D1_POINTSPECULAR_SCALE_MODE;
 
 
-//+-----------------------------------------------------------------------------
-//
-//  Enum:
-//      D2D1_SPOTSPECULAR_PROP
-//
-//  Synopsis:
-//      The enumeration of the Spot-Specular effect's top level properties.
-//
-//------------------------------------------------------------------------------
+/// <summary>
+/// The enumeration of the Spot-Specular effect's top level properties.
+/// </summary>
 typedef enum D2D1_SPOTSPECULAR_PROP
 {
-        
-        //
-        // Property Name: "LightPosition"
-        // Property Type: D2D1_VECTOR_3F
-        //
-        D2D1_SPOTSPECULAR_PROP_LIGHT_POSITION = 0,
-        
-        //
-        // Property Name: "PointsAt"
-        // Property Type: D2D1_VECTOR_3F
-        //
-        D2D1_SPOTSPECULAR_PROP_POINTS_AT = 1,
-        
-        //
-        // Property Name: "Focus"
-        // Property Type: FLOAT
-        //
-        D2D1_SPOTSPECULAR_PROP_FOCUS = 2,
-        
-        //
-        // Property Name: "LimitingConeAngle"
-        // Property Type: FLOAT
-        //
-        D2D1_SPOTSPECULAR_PROP_LIMITING_CONE_ANGLE = 3,
-        
-        //
-        // Property Name: "SpecularExponent"
-        // Property Type: FLOAT
-        //
-        D2D1_SPOTSPECULAR_PROP_SPECULAR_EXPONENT = 4,
-        
-        //
-        // Property Name: "SpecularConstant"
-        // Property Type: FLOAT
-        //
-        D2D1_SPOTSPECULAR_PROP_SPECULAR_CONSTANT = 5,
-        
-        //
-        // Property Name: "SurfaceScale"
-        // Property Type: FLOAT
-        //
-        D2D1_SPOTSPECULAR_PROP_SURFACE_SCALE = 6,
-        
-        //
-        // Property Name: "Color"
-        // Property Type: D2D1_VECTOR_3F
-        //
-        D2D1_SPOTSPECULAR_PROP_COLOR = 7,
-        
-        //
-        // Property Name: "KernelUnitLength"
-        // Property Type: D2D1_VECTOR_2F
-        //
-        D2D1_SPOTSPECULAR_PROP_KERNEL_UNIT_LENGTH = 8,
-        
-        //
-        // Property Name: "ScaleMode"
-        // Property Type: D2D1_SPOTSPECULAR_SCALE_MODE
-        //
-        D2D1_SPOTSPECULAR_PROP_SCALE_MODE = 9,
-        D2D1_SPOTSPECULAR_PROP_FORCE_DWORD = 0xffffffff
+    
+    /// <summary>
+    /// Property Name: "LightPosition"
+    /// Property Type: D2D1_VECTOR_3F
+    /// </summary>
+    D2D1_SPOTSPECULAR_PROP_LIGHT_POSITION = 0,
+    
+    /// <summary>
+    /// Property Name: "PointsAt"
+    /// Property Type: D2D1_VECTOR_3F
+    /// </summary>
+    D2D1_SPOTSPECULAR_PROP_POINTS_AT = 1,
+    
+    /// <summary>
+    /// Property Name: "Focus"
+    /// Property Type: FLOAT
+    /// </summary>
+    D2D1_SPOTSPECULAR_PROP_FOCUS = 2,
+    
+    /// <summary>
+    /// Property Name: "LimitingConeAngle"
+    /// Property Type: FLOAT
+    /// </summary>
+    D2D1_SPOTSPECULAR_PROP_LIMITING_CONE_ANGLE = 3,
+    
+    /// <summary>
+    /// Property Name: "SpecularExponent"
+    /// Property Type: FLOAT
+    /// </summary>
+    D2D1_SPOTSPECULAR_PROP_SPECULAR_EXPONENT = 4,
+    
+    /// <summary>
+    /// Property Name: "SpecularConstant"
+    /// Property Type: FLOAT
+    /// </summary>
+    D2D1_SPOTSPECULAR_PROP_SPECULAR_CONSTANT = 5,
+    
+    /// <summary>
+    /// Property Name: "SurfaceScale"
+    /// Property Type: FLOAT
+    /// </summary>
+    D2D1_SPOTSPECULAR_PROP_SURFACE_SCALE = 6,
+    
+    /// <summary>
+    /// Property Name: "Color"
+    /// Property Type: D2D1_VECTOR_3F
+    /// </summary>
+    D2D1_SPOTSPECULAR_PROP_COLOR = 7,
+    
+    /// <summary>
+    /// Property Name: "KernelUnitLength"
+    /// Property Type: D2D1_VECTOR_2F
+    /// </summary>
+    D2D1_SPOTSPECULAR_PROP_KERNEL_UNIT_LENGTH = 8,
+    
+    /// <summary>
+    /// Property Name: "ScaleMode"
+    /// Property Type: D2D1_SPOTSPECULAR_SCALE_MODE
+    /// </summary>
+    D2D1_SPOTSPECULAR_PROP_SCALE_MODE = 9,
+    D2D1_SPOTSPECULAR_PROP_FORCE_DWORD = 0xffffffff
 
 } D2D1_SPOTSPECULAR_PROP;
 
-
-//+-----------------------------------------------------------------------------
-//
-//  Enum:
-//      D2D1_SPOTSPECULAR_SCALE_MODE
-//
-//------------------------------------------------------------------------------
 typedef enum D2D1_SPOTSPECULAR_SCALE_MODE
 {
-        D2D1_SPOTSPECULAR_SCALE_MODE_NEAREST_NEIGHBOR = 0,
-        D2D1_SPOTSPECULAR_SCALE_MODE_LINEAR = 1,
-        D2D1_SPOTSPECULAR_SCALE_MODE_CUBIC = 2,
-        D2D1_SPOTSPECULAR_SCALE_MODE_MULTI_SAMPLE_LINEAR = 3,
-        D2D1_SPOTSPECULAR_SCALE_MODE_ANISOTROPIC = 4,
-        D2D1_SPOTSPECULAR_SCALE_MODE_HIGH_QUALITY_CUBIC = 5,
-        D2D1_SPOTSPECULAR_SCALE_MODE_FORCE_DWORD = 0xffffffff
+    D2D1_SPOTSPECULAR_SCALE_MODE_NEAREST_NEIGHBOR = 0,
+    D2D1_SPOTSPECULAR_SCALE_MODE_LINEAR = 1,
+    D2D1_SPOTSPECULAR_SCALE_MODE_CUBIC = 2,
+    D2D1_SPOTSPECULAR_SCALE_MODE_MULTI_SAMPLE_LINEAR = 3,
+    D2D1_SPOTSPECULAR_SCALE_MODE_ANISOTROPIC = 4,
+    D2D1_SPOTSPECULAR_SCALE_MODE_HIGH_QUALITY_CUBIC = 5,
+    D2D1_SPOTSPECULAR_SCALE_MODE_FORCE_DWORD = 0xffffffff
 
 } D2D1_SPOTSPECULAR_SCALE_MODE;
 
 
-//+-----------------------------------------------------------------------------
-//
-//  Enum:
-//      D2D1_DISTANTSPECULAR_PROP
-//
-//  Synopsis:
-//      The enumeration of the Distant-Specular effect's top level properties.
-//
-//------------------------------------------------------------------------------
+/// <summary>
+/// The enumeration of the Distant-Specular effect's top level properties.
+/// </summary>
 typedef enum D2D1_DISTANTSPECULAR_PROP
 {
-        
-        //
-        // Property Name: "Azimuth"
-        // Property Type: FLOAT
-        //
-        D2D1_DISTANTSPECULAR_PROP_AZIMUTH = 0,
-        
-        //
-        // Property Name: "Elevation"
-        // Property Type: FLOAT
-        //
-        D2D1_DISTANTSPECULAR_PROP_ELEVATION = 1,
-        
-        //
-        // Property Name: "SpecularExponent"
-        // Property Type: FLOAT
-        //
-        D2D1_DISTANTSPECULAR_PROP_SPECULAR_EXPONENT = 2,
-        
-        //
-        // Property Name: "SpecularConstant"
-        // Property Type: FLOAT
-        //
-        D2D1_DISTANTSPECULAR_PROP_SPECULAR_CONSTANT = 3,
-        
-        //
-        // Property Name: "SurfaceScale"
-        // Property Type: FLOAT
-        //
-        D2D1_DISTANTSPECULAR_PROP_SURFACE_SCALE = 4,
-        
-        //
-        // Property Name: "Color"
-        // Property Type: D2D1_VECTOR_3F
-        //
-        D2D1_DISTANTSPECULAR_PROP_COLOR = 5,
-        
-        //
-        // Property Name: "KernelUnitLength"
-        // Property Type: D2D1_VECTOR_2F
-        //
-        D2D1_DISTANTSPECULAR_PROP_KERNEL_UNIT_LENGTH = 6,
-        
-        //
-        // Property Name: "ScaleMode"
-        // Property Type: D2D1_DISTANTSPECULAR_SCALE_MODE
-        //
-        D2D1_DISTANTSPECULAR_PROP_SCALE_MODE = 7,
-        D2D1_DISTANTSPECULAR_PROP_FORCE_DWORD = 0xffffffff
+    
+    /// <summary>
+    /// Property Name: "Azimuth"
+    /// Property Type: FLOAT
+    /// </summary>
+    D2D1_DISTANTSPECULAR_PROP_AZIMUTH = 0,
+    
+    /// <summary>
+    /// Property Name: "Elevation"
+    /// Property Type: FLOAT
+    /// </summary>
+    D2D1_DISTANTSPECULAR_PROP_ELEVATION = 1,
+    
+    /// <summary>
+    /// Property Name: "SpecularExponent"
+    /// Property Type: FLOAT
+    /// </summary>
+    D2D1_DISTANTSPECULAR_PROP_SPECULAR_EXPONENT = 2,
+    
+    /// <summary>
+    /// Property Name: "SpecularConstant"
+    /// Property Type: FLOAT
+    /// </summary>
+    D2D1_DISTANTSPECULAR_PROP_SPECULAR_CONSTANT = 3,
+    
+    /// <summary>
+    /// Property Name: "SurfaceScale"
+    /// Property Type: FLOAT
+    /// </summary>
+    D2D1_DISTANTSPECULAR_PROP_SURFACE_SCALE = 4,
+    
+    /// <summary>
+    /// Property Name: "Color"
+    /// Property Type: D2D1_VECTOR_3F
+    /// </summary>
+    D2D1_DISTANTSPECULAR_PROP_COLOR = 5,
+    
+    /// <summary>
+    /// Property Name: "KernelUnitLength"
+    /// Property Type: D2D1_VECTOR_2F
+    /// </summary>
+    D2D1_DISTANTSPECULAR_PROP_KERNEL_UNIT_LENGTH = 6,
+    
+    /// <summary>
+    /// Property Name: "ScaleMode"
+    /// Property Type: D2D1_DISTANTSPECULAR_SCALE_MODE
+    /// </summary>
+    D2D1_DISTANTSPECULAR_PROP_SCALE_MODE = 7,
+    D2D1_DISTANTSPECULAR_PROP_FORCE_DWORD = 0xffffffff
 
 } D2D1_DISTANTSPECULAR_PROP;
 
-
-//+-----------------------------------------------------------------------------
-//
-//  Enum:
-//      D2D1_DISTANTSPECULAR_SCALE_MODE
-//
-//------------------------------------------------------------------------------
 typedef enum D2D1_DISTANTSPECULAR_SCALE_MODE
 {
-        D2D1_DISTANTSPECULAR_SCALE_MODE_NEAREST_NEIGHBOR = 0,
-        D2D1_DISTANTSPECULAR_SCALE_MODE_LINEAR = 1,
-        D2D1_DISTANTSPECULAR_SCALE_MODE_CUBIC = 2,
-        D2D1_DISTANTSPECULAR_SCALE_MODE_MULTI_SAMPLE_LINEAR = 3,
-        D2D1_DISTANTSPECULAR_SCALE_MODE_ANISOTROPIC = 4,
-        D2D1_DISTANTSPECULAR_SCALE_MODE_HIGH_QUALITY_CUBIC = 5,
-        D2D1_DISTANTSPECULAR_SCALE_MODE_FORCE_DWORD = 0xffffffff
+    D2D1_DISTANTSPECULAR_SCALE_MODE_NEAREST_NEIGHBOR = 0,
+    D2D1_DISTANTSPECULAR_SCALE_MODE_LINEAR = 1,
+    D2D1_DISTANTSPECULAR_SCALE_MODE_CUBIC = 2,
+    D2D1_DISTANTSPECULAR_SCALE_MODE_MULTI_SAMPLE_LINEAR = 3,
+    D2D1_DISTANTSPECULAR_SCALE_MODE_ANISOTROPIC = 4,
+    D2D1_DISTANTSPECULAR_SCALE_MODE_HIGH_QUALITY_CUBIC = 5,
+    D2D1_DISTANTSPECULAR_SCALE_MODE_FORCE_DWORD = 0xffffffff
 
 } D2D1_DISTANTSPECULAR_SCALE_MODE;
 
 
-//+-----------------------------------------------------------------------------
-//
-//  Enum:
-//      D2D1_POINTDIFFUSE_PROP
-//
-//  Synopsis:
-//      The enumeration of the Point-Diffuse effect's top level properties.
-//
-//------------------------------------------------------------------------------
+/// <summary>
+/// The enumeration of the Point-Diffuse effect's top level properties.
+/// </summary>
 typedef enum D2D1_POINTDIFFUSE_PROP
 {
-        
-        //
-        // Property Name: "LightPosition"
-        // Property Type: D2D1_VECTOR_3F
-        //
-        D2D1_POINTDIFFUSE_PROP_LIGHT_POSITION = 0,
-        
-        //
-        // Property Name: "DiffuseConstant"
-        // Property Type: FLOAT
-        //
-        D2D1_POINTDIFFUSE_PROP_DIFFUSE_CONSTANT = 1,
-        
-        //
-        // Property Name: "SurfaceScale"
-        // Property Type: FLOAT
-        //
-        D2D1_POINTDIFFUSE_PROP_SURFACE_SCALE = 2,
-        
-        //
-        // Property Name: "Color"
-        // Property Type: D2D1_VECTOR_3F
-        //
-        D2D1_POINTDIFFUSE_PROP_COLOR = 3,
-        
-        //
-        // Property Name: "KernelUnitLength"
-        // Property Type: D2D1_VECTOR_2F
-        //
-        D2D1_POINTDIFFUSE_PROP_KERNEL_UNIT_LENGTH = 4,
-        
-        //
-        // Property Name: "ScaleMode"
-        // Property Type: D2D1_POINTDIFFUSE_SCALE_MODE
-        //
-        D2D1_POINTDIFFUSE_PROP_SCALE_MODE = 5,
-        D2D1_POINTDIFFUSE_PROP_FORCE_DWORD = 0xffffffff
+    
+    /// <summary>
+    /// Property Name: "LightPosition"
+    /// Property Type: D2D1_VECTOR_3F
+    /// </summary>
+    D2D1_POINTDIFFUSE_PROP_LIGHT_POSITION = 0,
+    
+    /// <summary>
+    /// Property Name: "DiffuseConstant"
+    /// Property Type: FLOAT
+    /// </summary>
+    D2D1_POINTDIFFUSE_PROP_DIFFUSE_CONSTANT = 1,
+    
+    /// <summary>
+    /// Property Name: "SurfaceScale"
+    /// Property Type: FLOAT
+    /// </summary>
+    D2D1_POINTDIFFUSE_PROP_SURFACE_SCALE = 2,
+    
+    /// <summary>
+    /// Property Name: "Color"
+    /// Property Type: D2D1_VECTOR_3F
+    /// </summary>
+    D2D1_POINTDIFFUSE_PROP_COLOR = 3,
+    
+    /// <summary>
+    /// Property Name: "KernelUnitLength"
+    /// Property Type: D2D1_VECTOR_2F
+    /// </summary>
+    D2D1_POINTDIFFUSE_PROP_KERNEL_UNIT_LENGTH = 4,
+    
+    /// <summary>
+    /// Property Name: "ScaleMode"
+    /// Property Type: D2D1_POINTDIFFUSE_SCALE_MODE
+    /// </summary>
+    D2D1_POINTDIFFUSE_PROP_SCALE_MODE = 5,
+    D2D1_POINTDIFFUSE_PROP_FORCE_DWORD = 0xffffffff
 
 } D2D1_POINTDIFFUSE_PROP;
 
-
-//+-----------------------------------------------------------------------------
-//
-//  Enum:
-//      D2D1_POINTDIFFUSE_SCALE_MODE
-//
-//------------------------------------------------------------------------------
 typedef enum D2D1_POINTDIFFUSE_SCALE_MODE
 {
-        D2D1_POINTDIFFUSE_SCALE_MODE_NEAREST_NEIGHBOR = 0,
-        D2D1_POINTDIFFUSE_SCALE_MODE_LINEAR = 1,
-        D2D1_POINTDIFFUSE_SCALE_MODE_CUBIC = 2,
-        D2D1_POINTDIFFUSE_SCALE_MODE_MULTI_SAMPLE_LINEAR = 3,
-        D2D1_POINTDIFFUSE_SCALE_MODE_ANISOTROPIC = 4,
-        D2D1_POINTDIFFUSE_SCALE_MODE_HIGH_QUALITY_CUBIC = 5,
-        D2D1_POINTDIFFUSE_SCALE_MODE_FORCE_DWORD = 0xffffffff
+    D2D1_POINTDIFFUSE_SCALE_MODE_NEAREST_NEIGHBOR = 0,
+    D2D1_POINTDIFFUSE_SCALE_MODE_LINEAR = 1,
+    D2D1_POINTDIFFUSE_SCALE_MODE_CUBIC = 2,
+    D2D1_POINTDIFFUSE_SCALE_MODE_MULTI_SAMPLE_LINEAR = 3,
+    D2D1_POINTDIFFUSE_SCALE_MODE_ANISOTROPIC = 4,
+    D2D1_POINTDIFFUSE_SCALE_MODE_HIGH_QUALITY_CUBIC = 5,
+    D2D1_POINTDIFFUSE_SCALE_MODE_FORCE_DWORD = 0xffffffff
 
 } D2D1_POINTDIFFUSE_SCALE_MODE;
 
 
-//+-----------------------------------------------------------------------------
-//
-//  Enum:
-//      D2D1_SPOTDIFFUSE_PROP
-//
-//  Synopsis:
-//      The enumeration of the Spot-Diffuse effect's top level properties.
-//
-//------------------------------------------------------------------------------
+/// <summary>
+/// The enumeration of the Spot-Diffuse effect's top level properties.
+/// </summary>
 typedef enum D2D1_SPOTDIFFUSE_PROP
 {
-        
-        //
-        // Property Name: "LightPosition"
-        // Property Type: D2D1_VECTOR_3F
-        //
-        D2D1_SPOTDIFFUSE_PROP_LIGHT_POSITION = 0,
-        
-        //
-        // Property Name: "PointsAt"
-        // Property Type: D2D1_VECTOR_3F
-        //
-        D2D1_SPOTDIFFUSE_PROP_POINTS_AT = 1,
-        
-        //
-        // Property Name: "Focus"
-        // Property Type: FLOAT
-        //
-        D2D1_SPOTDIFFUSE_PROP_FOCUS = 2,
-        
-        //
-        // Property Name: "LimitingConeAngle"
-        // Property Type: FLOAT
-        //
-        D2D1_SPOTDIFFUSE_PROP_LIMITING_CONE_ANGLE = 3,
-        
-        //
-        // Property Name: "DiffuseConstant"
-        // Property Type: FLOAT
-        //
-        D2D1_SPOTDIFFUSE_PROP_DIFFUSE_CONSTANT = 4,
-        
-        //
-        // Property Name: "SurfaceScale"
-        // Property Type: FLOAT
-        //
-        D2D1_SPOTDIFFUSE_PROP_SURFACE_SCALE = 5,
-        
-        //
-        // Property Name: "Color"
-        // Property Type: D2D1_VECTOR_3F
-        //
-        D2D1_SPOTDIFFUSE_PROP_COLOR = 6,
-        
-        //
-        // Property Name: "KernelUnitLength"
-        // Property Type: D2D1_VECTOR_2F
-        //
-        D2D1_SPOTDIFFUSE_PROP_KERNEL_UNIT_LENGTH = 7,
-        
-        //
-        // Property Name: "ScaleMode"
-        // Property Type: D2D1_SPOTDIFFUSE_SCALE_MODE
-        //
-        D2D1_SPOTDIFFUSE_PROP_SCALE_MODE = 8,
-        D2D1_SPOTDIFFUSE_PROP_FORCE_DWORD = 0xffffffff
+    
+    /// <summary>
+    /// Property Name: "LightPosition"
+    /// Property Type: D2D1_VECTOR_3F
+    /// </summary>
+    D2D1_SPOTDIFFUSE_PROP_LIGHT_POSITION = 0,
+    
+    /// <summary>
+    /// Property Name: "PointsAt"
+    /// Property Type: D2D1_VECTOR_3F
+    /// </summary>
+    D2D1_SPOTDIFFUSE_PROP_POINTS_AT = 1,
+    
+    /// <summary>
+    /// Property Name: "Focus"
+    /// Property Type: FLOAT
+    /// </summary>
+    D2D1_SPOTDIFFUSE_PROP_FOCUS = 2,
+    
+    /// <summary>
+    /// Property Name: "LimitingConeAngle"
+    /// Property Type: FLOAT
+    /// </summary>
+    D2D1_SPOTDIFFUSE_PROP_LIMITING_CONE_ANGLE = 3,
+    
+    /// <summary>
+    /// Property Name: "DiffuseConstant"
+    /// Property Type: FLOAT
+    /// </summary>
+    D2D1_SPOTDIFFUSE_PROP_DIFFUSE_CONSTANT = 4,
+    
+    /// <summary>
+    /// Property Name: "SurfaceScale"
+    /// Property Type: FLOAT
+    /// </summary>
+    D2D1_SPOTDIFFUSE_PROP_SURFACE_SCALE = 5,
+    
+    /// <summary>
+    /// Property Name: "Color"
+    /// Property Type: D2D1_VECTOR_3F
+    /// </summary>
+    D2D1_SPOTDIFFUSE_PROP_COLOR = 6,
+    
+    /// <summary>
+    /// Property Name: "KernelUnitLength"
+    /// Property Type: D2D1_VECTOR_2F
+    /// </summary>
+    D2D1_SPOTDIFFUSE_PROP_KERNEL_UNIT_LENGTH = 7,
+    
+    /// <summary>
+    /// Property Name: "ScaleMode"
+    /// Property Type: D2D1_SPOTDIFFUSE_SCALE_MODE
+    /// </summary>
+    D2D1_SPOTDIFFUSE_PROP_SCALE_MODE = 8,
+    D2D1_SPOTDIFFUSE_PROP_FORCE_DWORD = 0xffffffff
 
 } D2D1_SPOTDIFFUSE_PROP;
 
-
-//+-----------------------------------------------------------------------------
-//
-//  Enum:
-//      D2D1_SPOTDIFFUSE_SCALE_MODE
-//
-//------------------------------------------------------------------------------
 typedef enum D2D1_SPOTDIFFUSE_SCALE_MODE
 {
-        D2D1_SPOTDIFFUSE_SCALE_MODE_NEAREST_NEIGHBOR = 0,
-        D2D1_SPOTDIFFUSE_SCALE_MODE_LINEAR = 1,
-        D2D1_SPOTDIFFUSE_SCALE_MODE_CUBIC = 2,
-        D2D1_SPOTDIFFUSE_SCALE_MODE_MULTI_SAMPLE_LINEAR = 3,
-        D2D1_SPOTDIFFUSE_SCALE_MODE_ANISOTROPIC = 4,
-        D2D1_SPOTDIFFUSE_SCALE_MODE_HIGH_QUALITY_CUBIC = 5,
-        D2D1_SPOTDIFFUSE_SCALE_MODE_FORCE_DWORD = 0xffffffff
+    D2D1_SPOTDIFFUSE_SCALE_MODE_NEAREST_NEIGHBOR = 0,
+    D2D1_SPOTDIFFUSE_SCALE_MODE_LINEAR = 1,
+    D2D1_SPOTDIFFUSE_SCALE_MODE_CUBIC = 2,
+    D2D1_SPOTDIFFUSE_SCALE_MODE_MULTI_SAMPLE_LINEAR = 3,
+    D2D1_SPOTDIFFUSE_SCALE_MODE_ANISOTROPIC = 4,
+    D2D1_SPOTDIFFUSE_SCALE_MODE_HIGH_QUALITY_CUBIC = 5,
+    D2D1_SPOTDIFFUSE_SCALE_MODE_FORCE_DWORD = 0xffffffff
 
 } D2D1_SPOTDIFFUSE_SCALE_MODE;
 
 
-//+-----------------------------------------------------------------------------
-//
-//  Enum:
-//      D2D1_DISTANTDIFFUSE_PROP
-//
-//  Synopsis:
-//      The enumeration of the Distant-Diffuse effect's top level properties.
-//
-//------------------------------------------------------------------------------
+/// <summary>
+/// The enumeration of the Distant-Diffuse effect's top level properties.
+/// </summary>
 typedef enum D2D1_DISTANTDIFFUSE_PROP
 {
-        
-        //
-        // Property Name: "Azimuth"
-        // Property Type: FLOAT
-        //
-        D2D1_DISTANTDIFFUSE_PROP_AZIMUTH = 0,
-        
-        //
-        // Property Name: "Elevation"
-        // Property Type: FLOAT
-        //
-        D2D1_DISTANTDIFFUSE_PROP_ELEVATION = 1,
-        
-        //
-        // Property Name: "DiffuseConstant"
-        // Property Type: FLOAT
-        //
-        D2D1_DISTANTDIFFUSE_PROP_DIFFUSE_CONSTANT = 2,
-        
-        //
-        // Property Name: "SurfaceScale"
-        // Property Type: FLOAT
-        //
-        D2D1_DISTANTDIFFUSE_PROP_SURFACE_SCALE = 3,
-        
-        //
-        // Property Name: "Color"
-        // Property Type: D2D1_VECTOR_3F
-        //
-        D2D1_DISTANTDIFFUSE_PROP_COLOR = 4,
-        
-        //
-        // Property Name: "KernelUnitLength"
-        // Property Type: D2D1_VECTOR_2F
-        //
-        D2D1_DISTANTDIFFUSE_PROP_KERNEL_UNIT_LENGTH = 5,
-        
-        //
-        // Property Name: "ScaleMode"
-        // Property Type: D2D1_DISTANTDIFFUSE_SCALE_MODE
-        //
-        D2D1_DISTANTDIFFUSE_PROP_SCALE_MODE = 6,
-        D2D1_DISTANTDIFFUSE_PROP_FORCE_DWORD = 0xffffffff
+    
+    /// <summary>
+    /// Property Name: "Azimuth"
+    /// Property Type: FLOAT
+    /// </summary>
+    D2D1_DISTANTDIFFUSE_PROP_AZIMUTH = 0,
+    
+    /// <summary>
+    /// Property Name: "Elevation"
+    /// Property Type: FLOAT
+    /// </summary>
+    D2D1_DISTANTDIFFUSE_PROP_ELEVATION = 1,
+    
+    /// <summary>
+    /// Property Name: "DiffuseConstant"
+    /// Property Type: FLOAT
+    /// </summary>
+    D2D1_DISTANTDIFFUSE_PROP_DIFFUSE_CONSTANT = 2,
+    
+    /// <summary>
+    /// Property Name: "SurfaceScale"
+    /// Property Type: FLOAT
+    /// </summary>
+    D2D1_DISTANTDIFFUSE_PROP_SURFACE_SCALE = 3,
+    
+    /// <summary>
+    /// Property Name: "Color"
+    /// Property Type: D2D1_VECTOR_3F
+    /// </summary>
+    D2D1_DISTANTDIFFUSE_PROP_COLOR = 4,
+    
+    /// <summary>
+    /// Property Name: "KernelUnitLength"
+    /// Property Type: D2D1_VECTOR_2F
+    /// </summary>
+    D2D1_DISTANTDIFFUSE_PROP_KERNEL_UNIT_LENGTH = 5,
+    
+    /// <summary>
+    /// Property Name: "ScaleMode"
+    /// Property Type: D2D1_DISTANTDIFFUSE_SCALE_MODE
+    /// </summary>
+    D2D1_DISTANTDIFFUSE_PROP_SCALE_MODE = 6,
+    D2D1_DISTANTDIFFUSE_PROP_FORCE_DWORD = 0xffffffff
 
 } D2D1_DISTANTDIFFUSE_PROP;
 
-
-//+-----------------------------------------------------------------------------
-//
-//  Enum:
-//      D2D1_DISTANTDIFFUSE_SCALE_MODE
-//
-//------------------------------------------------------------------------------
 typedef enum D2D1_DISTANTDIFFUSE_SCALE_MODE
 {
-        D2D1_DISTANTDIFFUSE_SCALE_MODE_NEAREST_NEIGHBOR = 0,
-        D2D1_DISTANTDIFFUSE_SCALE_MODE_LINEAR = 1,
-        D2D1_DISTANTDIFFUSE_SCALE_MODE_CUBIC = 2,
-        D2D1_DISTANTDIFFUSE_SCALE_MODE_MULTI_SAMPLE_LINEAR = 3,
-        D2D1_DISTANTDIFFUSE_SCALE_MODE_ANISOTROPIC = 4,
-        D2D1_DISTANTDIFFUSE_SCALE_MODE_HIGH_QUALITY_CUBIC = 5,
-        D2D1_DISTANTDIFFUSE_SCALE_MODE_FORCE_DWORD = 0xffffffff
+    D2D1_DISTANTDIFFUSE_SCALE_MODE_NEAREST_NEIGHBOR = 0,
+    D2D1_DISTANTDIFFUSE_SCALE_MODE_LINEAR = 1,
+    D2D1_DISTANTDIFFUSE_SCALE_MODE_CUBIC = 2,
+    D2D1_DISTANTDIFFUSE_SCALE_MODE_MULTI_SAMPLE_LINEAR = 3,
+    D2D1_DISTANTDIFFUSE_SCALE_MODE_ANISOTROPIC = 4,
+    D2D1_DISTANTDIFFUSE_SCALE_MODE_HIGH_QUALITY_CUBIC = 5,
+    D2D1_DISTANTDIFFUSE_SCALE_MODE_FORCE_DWORD = 0xffffffff
 
 } D2D1_DISTANTDIFFUSE_SCALE_MODE;
 
 
-//+-----------------------------------------------------------------------------
-//
-//  Enum:
-//      D2D1_FLOOD_PROP
-//
-//  Synopsis:
-//      The enumeration of the Flood effect's top level properties.
-//
-//------------------------------------------------------------------------------
+/// <summary>
+/// The enumeration of the Flood effect's top level properties.
+/// </summary>
 typedef enum D2D1_FLOOD_PROP
 {
-        
-        //
-        // Property Name: "Color"
-        // Property Type: D2D1_VECTOR_4F
-        //
-        D2D1_FLOOD_PROP_COLOR = 0,
-        D2D1_FLOOD_PROP_FORCE_DWORD = 0xffffffff
+    
+    /// <summary>
+    /// Property Name: "Color"
+    /// Property Type: D2D1_VECTOR_4F
+    /// </summary>
+    D2D1_FLOOD_PROP_COLOR = 0,
+    D2D1_FLOOD_PROP_FORCE_DWORD = 0xffffffff
 
 } D2D1_FLOOD_PROP;
 
 
-//+-----------------------------------------------------------------------------
-//
-//  Enum:
-//      D2D1_LINEARTRANSFER_PROP
-//
-//  Synopsis:
-//      The enumeration of the Linear Transfer effect's top level properties.
-//
-//------------------------------------------------------------------------------
+/// <summary>
+/// The enumeration of the Linear Transfer effect's top level properties.
+/// </summary>
 typedef enum D2D1_LINEARTRANSFER_PROP
 {
-        
-        //
-        // Property Name: "RedYIntercept"
-        // Property Type: FLOAT
-        //
-        D2D1_LINEARTRANSFER_PROP_RED_Y_INTERCEPT = 0,
-        
-        //
-        // Property Name: "RedSlope"
-        // Property Type: FLOAT
-        //
-        D2D1_LINEARTRANSFER_PROP_RED_SLOPE = 1,
-        
-        //
-        // Property Name: "RedDisable"
-        // Property Type: BOOL
-        //
-        D2D1_LINEARTRANSFER_PROP_RED_DISABLE = 2,
-        
-        //
-        // Property Name: "GreenYIntercept"
-        // Property Type: FLOAT
-        //
-        D2D1_LINEARTRANSFER_PROP_GREEN_Y_INTERCEPT = 3,
-        
-        //
-        // Property Name: "GreenSlope"
-        // Property Type: FLOAT
-        //
-        D2D1_LINEARTRANSFER_PROP_GREEN_SLOPE = 4,
-        
-        //
-        // Property Name: "GreenDisable"
-        // Property Type: BOOL
-        //
-        D2D1_LINEARTRANSFER_PROP_GREEN_DISABLE = 5,
-        
-        //
-        // Property Name: "BlueYIntercept"
-        // Property Type: FLOAT
-        //
-        D2D1_LINEARTRANSFER_PROP_BLUE_Y_INTERCEPT = 6,
-        
-        //
-        // Property Name: "BlueSlope"
-        // Property Type: FLOAT
-        //
-        D2D1_LINEARTRANSFER_PROP_BLUE_SLOPE = 7,
-        
-        //
-        // Property Name: "BlueDisable"
-        // Property Type: BOOL
-        //
-        D2D1_LINEARTRANSFER_PROP_BLUE_DISABLE = 8,
-        
-        //
-        // Property Name: "AlphaYIntercept"
-        // Property Type: FLOAT
-        //
-        D2D1_LINEARTRANSFER_PROP_ALPHA_Y_INTERCEPT = 9,
-        
-        //
-        // Property Name: "AlphaSlope"
-        // Property Type: FLOAT
-        //
-        D2D1_LINEARTRANSFER_PROP_ALPHA_SLOPE = 10,
-        
-        //
-        // Property Name: "AlphaDisable"
-        // Property Type: BOOL
-        //
-        D2D1_LINEARTRANSFER_PROP_ALPHA_DISABLE = 11,
-        
-        //
-        // Property Name: "ClampOutput"
-        // Property Type: BOOL
-        //
-        D2D1_LINEARTRANSFER_PROP_CLAMP_OUTPUT = 12,
-        D2D1_LINEARTRANSFER_PROP_FORCE_DWORD = 0xffffffff
+    
+    /// <summary>
+    /// Property Name: "RedYIntercept"
+    /// Property Type: FLOAT
+    /// </summary>
+    D2D1_LINEARTRANSFER_PROP_RED_Y_INTERCEPT = 0,
+    
+    /// <summary>
+    /// Property Name: "RedSlope"
+    /// Property Type: FLOAT
+    /// </summary>
+    D2D1_LINEARTRANSFER_PROP_RED_SLOPE = 1,
+    
+    /// <summary>
+    /// Property Name: "RedDisable"
+    /// Property Type: BOOL
+    /// </summary>
+    D2D1_LINEARTRANSFER_PROP_RED_DISABLE = 2,
+    
+    /// <summary>
+    /// Property Name: "GreenYIntercept"
+    /// Property Type: FLOAT
+    /// </summary>
+    D2D1_LINEARTRANSFER_PROP_GREEN_Y_INTERCEPT = 3,
+    
+    /// <summary>
+    /// Property Name: "GreenSlope"
+    /// Property Type: FLOAT
+    /// </summary>
+    D2D1_LINEARTRANSFER_PROP_GREEN_SLOPE = 4,
+    
+    /// <summary>
+    /// Property Name: "GreenDisable"
+    /// Property Type: BOOL
+    /// </summary>
+    D2D1_LINEARTRANSFER_PROP_GREEN_DISABLE = 5,
+    
+    /// <summary>
+    /// Property Name: "BlueYIntercept"
+    /// Property Type: FLOAT
+    /// </summary>
+    D2D1_LINEARTRANSFER_PROP_BLUE_Y_INTERCEPT = 6,
+    
+    /// <summary>
+    /// Property Name: "BlueSlope"
+    /// Property Type: FLOAT
+    /// </summary>
+    D2D1_LINEARTRANSFER_PROP_BLUE_SLOPE = 7,
+    
+    /// <summary>
+    /// Property Name: "BlueDisable"
+    /// Property Type: BOOL
+    /// </summary>
+    D2D1_LINEARTRANSFER_PROP_BLUE_DISABLE = 8,
+    
+    /// <summary>
+    /// Property Name: "AlphaYIntercept"
+    /// Property Type: FLOAT
+    /// </summary>
+    D2D1_LINEARTRANSFER_PROP_ALPHA_Y_INTERCEPT = 9,
+    
+    /// <summary>
+    /// Property Name: "AlphaSlope"
+    /// Property Type: FLOAT
+    /// </summary>
+    D2D1_LINEARTRANSFER_PROP_ALPHA_SLOPE = 10,
+    
+    /// <summary>
+    /// Property Name: "AlphaDisable"
+    /// Property Type: BOOL
+    /// </summary>
+    D2D1_LINEARTRANSFER_PROP_ALPHA_DISABLE = 11,
+    
+    /// <summary>
+    /// Property Name: "ClampOutput"
+    /// Property Type: BOOL
+    /// </summary>
+    D2D1_LINEARTRANSFER_PROP_CLAMP_OUTPUT = 12,
+    D2D1_LINEARTRANSFER_PROP_FORCE_DWORD = 0xffffffff
 
 } D2D1_LINEARTRANSFER_PROP;
 
 
-//+-----------------------------------------------------------------------------
-//
-//  Enum:
-//      D2D1_GAMMATRANSFER_PROP
-//
-//  Synopsis:
-//      The enumeration of the Gamma Transfer effect's top level properties.
-//
-//------------------------------------------------------------------------------
+/// <summary>
+/// The enumeration of the Gamma Transfer effect's top level properties.
+/// </summary>
 typedef enum D2D1_GAMMATRANSFER_PROP
 {
-        
-        //
-        // Property Name: "RedAmplitude"
-        // Property Type: FLOAT
-        //
-        D2D1_GAMMATRANSFER_PROP_RED_AMPLITUDE = 0,
-        
-        //
-        // Property Name: "RedExponent"
-        // Property Type: FLOAT
-        //
-        D2D1_GAMMATRANSFER_PROP_RED_EXPONENT = 1,
-        
-        //
-        // Property Name: "RedOffset"
-        // Property Type: FLOAT
-        //
-        D2D1_GAMMATRANSFER_PROP_RED_OFFSET = 2,
-        
-        //
-        // Property Name: "RedDisable"
-        // Property Type: BOOL
-        //
-        D2D1_GAMMATRANSFER_PROP_RED_DISABLE = 3,
-        
-        //
-        // Property Name: "GreenAmplitude"
-        // Property Type: FLOAT
-        //
-        D2D1_GAMMATRANSFER_PROP_GREEN_AMPLITUDE = 4,
-        
-        //
-        // Property Name: "GreenExponent"
-        // Property Type: FLOAT
-        //
-        D2D1_GAMMATRANSFER_PROP_GREEN_EXPONENT = 5,
-        
-        //
-        // Property Name: "GreenOffset"
-        // Property Type: FLOAT
-        //
-        D2D1_GAMMATRANSFER_PROP_GREEN_OFFSET = 6,
-        
-        //
-        // Property Name: "GreenDisable"
-        // Property Type: BOOL
-        //
-        D2D1_GAMMATRANSFER_PROP_GREEN_DISABLE = 7,
-        
-        //
-        // Property Name: "BlueAmplitude"
-        // Property Type: FLOAT
-        //
-        D2D1_GAMMATRANSFER_PROP_BLUE_AMPLITUDE = 8,
-        
-        //
-        // Property Name: "BlueExponent"
-        // Property Type: FLOAT
-        //
-        D2D1_GAMMATRANSFER_PROP_BLUE_EXPONENT = 9,
-        
-        //
-        // Property Name: "BlueOffset"
-        // Property Type: FLOAT
-        //
-        D2D1_GAMMATRANSFER_PROP_BLUE_OFFSET = 10,
-        
-        //
-        // Property Name: "BlueDisable"
-        // Property Type: BOOL
-        //
-        D2D1_GAMMATRANSFER_PROP_BLUE_DISABLE = 11,
-        
-        //
-        // Property Name: "AlphaAmplitude"
-        // Property Type: FLOAT
-        //
-        D2D1_GAMMATRANSFER_PROP_ALPHA_AMPLITUDE = 12,
-        
-        //
-        // Property Name: "AlphaExponent"
-        // Property Type: FLOAT
-        //
-        D2D1_GAMMATRANSFER_PROP_ALPHA_EXPONENT = 13,
-        
-        //
-        // Property Name: "AlphaOffset"
-        // Property Type: FLOAT
-        //
-        D2D1_GAMMATRANSFER_PROP_ALPHA_OFFSET = 14,
-        
-        //
-        // Property Name: "AlphaDisable"
-        // Property Type: BOOL
-        //
-        D2D1_GAMMATRANSFER_PROP_ALPHA_DISABLE = 15,
-        
-        //
-        // Property Name: "ClampOutput"
-        // Property Type: BOOL
-        //
-        D2D1_GAMMATRANSFER_PROP_CLAMP_OUTPUT = 16,
-        D2D1_GAMMATRANSFER_PROP_FORCE_DWORD = 0xffffffff
+    
+    /// <summary>
+    /// Property Name: "RedAmplitude"
+    /// Property Type: FLOAT
+    /// </summary>
+    D2D1_GAMMATRANSFER_PROP_RED_AMPLITUDE = 0,
+    
+    /// <summary>
+    /// Property Name: "RedExponent"
+    /// Property Type: FLOAT
+    /// </summary>
+    D2D1_GAMMATRANSFER_PROP_RED_EXPONENT = 1,
+    
+    /// <summary>
+    /// Property Name: "RedOffset"
+    /// Property Type: FLOAT
+    /// </summary>
+    D2D1_GAMMATRANSFER_PROP_RED_OFFSET = 2,
+    
+    /// <summary>
+    /// Property Name: "RedDisable"
+    /// Property Type: BOOL
+    /// </summary>
+    D2D1_GAMMATRANSFER_PROP_RED_DISABLE = 3,
+    
+    /// <summary>
+    /// Property Name: "GreenAmplitude"
+    /// Property Type: FLOAT
+    /// </summary>
+    D2D1_GAMMATRANSFER_PROP_GREEN_AMPLITUDE = 4,
+    
+    /// <summary>
+    /// Property Name: "GreenExponent"
+    /// Property Type: FLOAT
+    /// </summary>
+    D2D1_GAMMATRANSFER_PROP_GREEN_EXPONENT = 5,
+    
+    /// <summary>
+    /// Property Name: "GreenOffset"
+    /// Property Type: FLOAT
+    /// </summary>
+    D2D1_GAMMATRANSFER_PROP_GREEN_OFFSET = 6,
+    
+    /// <summary>
+    /// Property Name: "GreenDisable"
+    /// Property Type: BOOL
+    /// </summary>
+    D2D1_GAMMATRANSFER_PROP_GREEN_DISABLE = 7,
+    
+    /// <summary>
+    /// Property Name: "BlueAmplitude"
+    /// Property Type: FLOAT
+    /// </summary>
+    D2D1_GAMMATRANSFER_PROP_BLUE_AMPLITUDE = 8,
+    
+    /// <summary>
+    /// Property Name: "BlueExponent"
+    /// Property Type: FLOAT
+    /// </summary>
+    D2D1_GAMMATRANSFER_PROP_BLUE_EXPONENT = 9,
+    
+    /// <summary>
+    /// Property Name: "BlueOffset"
+    /// Property Type: FLOAT
+    /// </summary>
+    D2D1_GAMMATRANSFER_PROP_BLUE_OFFSET = 10,
+    
+    /// <summary>
+    /// Property Name: "BlueDisable"
+    /// Property Type: BOOL
+    /// </summary>
+    D2D1_GAMMATRANSFER_PROP_BLUE_DISABLE = 11,
+    
+    /// <summary>
+    /// Property Name: "AlphaAmplitude"
+    /// Property Type: FLOAT
+    /// </summary>
+    D2D1_GAMMATRANSFER_PROP_ALPHA_AMPLITUDE = 12,
+    
+    /// <summary>
+    /// Property Name: "AlphaExponent"
+    /// Property Type: FLOAT
+    /// </summary>
+    D2D1_GAMMATRANSFER_PROP_ALPHA_EXPONENT = 13,
+    
+    /// <summary>
+    /// Property Name: "AlphaOffset"
+    /// Property Type: FLOAT
+    /// </summary>
+    D2D1_GAMMATRANSFER_PROP_ALPHA_OFFSET = 14,
+    
+    /// <summary>
+    /// Property Name: "AlphaDisable"
+    /// Property Type: BOOL
+    /// </summary>
+    D2D1_GAMMATRANSFER_PROP_ALPHA_DISABLE = 15,
+    
+    /// <summary>
+    /// Property Name: "ClampOutput"
+    /// Property Type: BOOL
+    /// </summary>
+    D2D1_GAMMATRANSFER_PROP_CLAMP_OUTPUT = 16,
+    D2D1_GAMMATRANSFER_PROP_FORCE_DWORD = 0xffffffff
 
 } D2D1_GAMMATRANSFER_PROP;
 
 
-//+-----------------------------------------------------------------------------
-//
-//  Enum:
-//      D2D1_TABLETRANSFER_PROP
-//
-//  Synopsis:
-//      The enumeration of the Table Transfer effect's top level properties.
-//
-//------------------------------------------------------------------------------
+/// <summary>
+/// The enumeration of the Table Transfer effect's top level properties.
+/// </summary>
 typedef enum D2D1_TABLETRANSFER_PROP
 {
-        
-        //
-        // Property Name: "RedTable"
-        // Property Type: (blob)
-        //
-        D2D1_TABLETRANSFER_PROP_RED_TABLE = 0,
-        
-        //
-        // Property Name: "RedDisable"
-        // Property Type: BOOL
-        //
-        D2D1_TABLETRANSFER_PROP_RED_DISABLE = 1,
-        
-        //
-        // Property Name: "GreenTable"
-        // Property Type: (blob)
-        //
-        D2D1_TABLETRANSFER_PROP_GREEN_TABLE = 2,
-        
-        //
-        // Property Name: "GreenDisable"
-        // Property Type: BOOL
-        //
-        D2D1_TABLETRANSFER_PROP_GREEN_DISABLE = 3,
-        
-        //
-        // Property Name: "BlueTable"
-        // Property Type: (blob)
-        //
-        D2D1_TABLETRANSFER_PROP_BLUE_TABLE = 4,
-        
-        //
-        // Property Name: "BlueDisable"
-        // Property Type: BOOL
-        //
-        D2D1_TABLETRANSFER_PROP_BLUE_DISABLE = 5,
-        
-        //
-        // Property Name: "AlphaTable"
-        // Property Type: (blob)
-        //
-        D2D1_TABLETRANSFER_PROP_ALPHA_TABLE = 6,
-        
-        //
-        // Property Name: "AlphaDisable"
-        // Property Type: BOOL
-        //
-        D2D1_TABLETRANSFER_PROP_ALPHA_DISABLE = 7,
-        
-        //
-        // Property Name: "ClampOutput"
-        // Property Type: BOOL
-        //
-        D2D1_TABLETRANSFER_PROP_CLAMP_OUTPUT = 8,
-        D2D1_TABLETRANSFER_PROP_FORCE_DWORD = 0xffffffff
+    
+    /// <summary>
+    /// Property Name: "RedTable"
+    /// Property Type: (blob)
+    /// </summary>
+    D2D1_TABLETRANSFER_PROP_RED_TABLE = 0,
+    
+    /// <summary>
+    /// Property Name: "RedDisable"
+    /// Property Type: BOOL
+    /// </summary>
+    D2D1_TABLETRANSFER_PROP_RED_DISABLE = 1,
+    
+    /// <summary>
+    /// Property Name: "GreenTable"
+    /// Property Type: (blob)
+    /// </summary>
+    D2D1_TABLETRANSFER_PROP_GREEN_TABLE = 2,
+    
+    /// <summary>
+    /// Property Name: "GreenDisable"
+    /// Property Type: BOOL
+    /// </summary>
+    D2D1_TABLETRANSFER_PROP_GREEN_DISABLE = 3,
+    
+    /// <summary>
+    /// Property Name: "BlueTable"
+    /// Property Type: (blob)
+    /// </summary>
+    D2D1_TABLETRANSFER_PROP_BLUE_TABLE = 4,
+    
+    /// <summary>
+    /// Property Name: "BlueDisable"
+    /// Property Type: BOOL
+    /// </summary>
+    D2D1_TABLETRANSFER_PROP_BLUE_DISABLE = 5,
+    
+    /// <summary>
+    /// Property Name: "AlphaTable"
+    /// Property Type: (blob)
+    /// </summary>
+    D2D1_TABLETRANSFER_PROP_ALPHA_TABLE = 6,
+    
+    /// <summary>
+    /// Property Name: "AlphaDisable"
+    /// Property Type: BOOL
+    /// </summary>
+    D2D1_TABLETRANSFER_PROP_ALPHA_DISABLE = 7,
+    
+    /// <summary>
+    /// Property Name: "ClampOutput"
+    /// Property Type: BOOL
+    /// </summary>
+    D2D1_TABLETRANSFER_PROP_CLAMP_OUTPUT = 8,
+    D2D1_TABLETRANSFER_PROP_FORCE_DWORD = 0xffffffff
 
 } D2D1_TABLETRANSFER_PROP;
 
 
-//+-----------------------------------------------------------------------------
-//
-//  Enum:
-//      D2D1_DISCRETETRANSFER_PROP
-//
-//  Synopsis:
-//      The enumeration of the Discrete Transfer effect's top level properties.
-//
-//------------------------------------------------------------------------------
+/// <summary>
+/// The enumeration of the Discrete Transfer effect's top level properties.
+/// </summary>
 typedef enum D2D1_DISCRETETRANSFER_PROP
 {
-        
-        //
-        // Property Name: "RedTable"
-        // Property Type: (blob)
-        //
-        D2D1_DISCRETETRANSFER_PROP_RED_TABLE = 0,
-        
-        //
-        // Property Name: "RedDisable"
-        // Property Type: BOOL
-        //
-        D2D1_DISCRETETRANSFER_PROP_RED_DISABLE = 1,
-        
-        //
-        // Property Name: "GreenTable"
-        // Property Type: (blob)
-        //
-        D2D1_DISCRETETRANSFER_PROP_GREEN_TABLE = 2,
-        
-        //
-        // Property Name: "GreenDisable"
-        // Property Type: BOOL
-        //
-        D2D1_DISCRETETRANSFER_PROP_GREEN_DISABLE = 3,
-        
-        //
-        // Property Name: "BlueTable"
-        // Property Type: (blob)
-        //
-        D2D1_DISCRETETRANSFER_PROP_BLUE_TABLE = 4,
-        
-        //
-        // Property Name: "BlueDisable"
-        // Property Type: BOOL
-        //
-        D2D1_DISCRETETRANSFER_PROP_BLUE_DISABLE = 5,
-        
-        //
-        // Property Name: "AlphaTable"
-        // Property Type: (blob)
-        //
-        D2D1_DISCRETETRANSFER_PROP_ALPHA_TABLE = 6,
-        
-        //
-        // Property Name: "AlphaDisable"
-        // Property Type: BOOL
-        //
-        D2D1_DISCRETETRANSFER_PROP_ALPHA_DISABLE = 7,
-        
-        //
-        // Property Name: "ClampOutput"
-        // Property Type: BOOL
-        //
-        D2D1_DISCRETETRANSFER_PROP_CLAMP_OUTPUT = 8,
-        D2D1_DISCRETETRANSFER_PROP_FORCE_DWORD = 0xffffffff
+    
+    /// <summary>
+    /// Property Name: "RedTable"
+    /// Property Type: (blob)
+    /// </summary>
+    D2D1_DISCRETETRANSFER_PROP_RED_TABLE = 0,
+    
+    /// <summary>
+    /// Property Name: "RedDisable"
+    /// Property Type: BOOL
+    /// </summary>
+    D2D1_DISCRETETRANSFER_PROP_RED_DISABLE = 1,
+    
+    /// <summary>
+    /// Property Name: "GreenTable"
+    /// Property Type: (blob)
+    /// </summary>
+    D2D1_DISCRETETRANSFER_PROP_GREEN_TABLE = 2,
+    
+    /// <summary>
+    /// Property Name: "GreenDisable"
+    /// Property Type: BOOL
+    /// </summary>
+    D2D1_DISCRETETRANSFER_PROP_GREEN_DISABLE = 3,
+    
+    /// <summary>
+    /// Property Name: "BlueTable"
+    /// Property Type: (blob)
+    /// </summary>
+    D2D1_DISCRETETRANSFER_PROP_BLUE_TABLE = 4,
+    
+    /// <summary>
+    /// Property Name: "BlueDisable"
+    /// Property Type: BOOL
+    /// </summary>
+    D2D1_DISCRETETRANSFER_PROP_BLUE_DISABLE = 5,
+    
+    /// <summary>
+    /// Property Name: "AlphaTable"
+    /// Property Type: (blob)
+    /// </summary>
+    D2D1_DISCRETETRANSFER_PROP_ALPHA_TABLE = 6,
+    
+    /// <summary>
+    /// Property Name: "AlphaDisable"
+    /// Property Type: BOOL
+    /// </summary>
+    D2D1_DISCRETETRANSFER_PROP_ALPHA_DISABLE = 7,
+    
+    /// <summary>
+    /// Property Name: "ClampOutput"
+    /// Property Type: BOOL
+    /// </summary>
+    D2D1_DISCRETETRANSFER_PROP_CLAMP_OUTPUT = 8,
+    D2D1_DISCRETETRANSFER_PROP_FORCE_DWORD = 0xffffffff
 
 } D2D1_DISCRETETRANSFER_PROP;
 
 
-//+-----------------------------------------------------------------------------
-//
-//  Enum:
-//      D2D1_CONVOLVEMATRIX_PROP
-//
-//  Synopsis:
-//      The enumeration of the Convolve Matrix effect's top level properties.
-//
-//------------------------------------------------------------------------------
+/// <summary>
+/// The enumeration of the Convolve Matrix effect's top level properties.
+/// </summary>
 typedef enum D2D1_CONVOLVEMATRIX_PROP
 {
-        
-        //
-        // Property Name: "KernelUnitLength"
-        // Property Type: D2D1_VECTOR_2F
-        //
-        D2D1_CONVOLVEMATRIX_PROP_KERNEL_UNIT_LENGTH = 0,
-        
-        //
-        // Property Name: "ScaleMode"
-        // Property Type: D2D1_CONVOLVEMATRIX_SCALE_MODE
-        //
-        D2D1_CONVOLVEMATRIX_PROP_SCALE_MODE = 1,
-        
-        //
-        // Property Name: "KernelSizeX"
-        // Property Type: UINT32
-        //
-        D2D1_CONVOLVEMATRIX_PROP_KERNEL_SIZE_X = 2,
-        
-        //
-        // Property Name: "KernelSizeY"
-        // Property Type: UINT32
-        //
-        D2D1_CONVOLVEMATRIX_PROP_KERNEL_SIZE_Y = 3,
-        
-        //
-        // Property Name: "KernelMatrix"
-        // Property Type: (blob)
-        //
-        D2D1_CONVOLVEMATRIX_PROP_KERNEL_MATRIX = 4,
-        
-        //
-        // Property Name: "Divisor"
-        // Property Type: FLOAT
-        //
-        D2D1_CONVOLVEMATRIX_PROP_DIVISOR = 5,
-        
-        //
-        // Property Name: "Bias"
-        // Property Type: FLOAT
-        //
-        D2D1_CONVOLVEMATRIX_PROP_BIAS = 6,
-        
-        //
-        // Property Name: "KernelOffset"
-        // Property Type: D2D1_VECTOR_2F
-        //
-        D2D1_CONVOLVEMATRIX_PROP_KERNEL_OFFSET = 7,
-        
-        //
-        // Property Name: "PreserveAlpha"
-        // Property Type: BOOL
-        //
-        D2D1_CONVOLVEMATRIX_PROP_PRESERVE_ALPHA = 8,
-        
-        //
-        // Property Name: "BorderMode"
-        // Property Type: D2D1_BORDER_MODE
-        //
-        D2D1_CONVOLVEMATRIX_PROP_BORDER_MODE = 9,
-        
-        //
-        // Property Name: "ClampOutput"
-        // Property Type: BOOL
-        //
-        D2D1_CONVOLVEMATRIX_PROP_CLAMP_OUTPUT = 10,
-        D2D1_CONVOLVEMATRIX_PROP_FORCE_DWORD = 0xffffffff
+    
+    /// <summary>
+    /// Property Name: "KernelUnitLength"
+    /// Property Type: D2D1_VECTOR_2F
+    /// </summary>
+    D2D1_CONVOLVEMATRIX_PROP_KERNEL_UNIT_LENGTH = 0,
+    
+    /// <summary>
+    /// Property Name: "ScaleMode"
+    /// Property Type: D2D1_CONVOLVEMATRIX_SCALE_MODE
+    /// </summary>
+    D2D1_CONVOLVEMATRIX_PROP_SCALE_MODE = 1,
+    
+    /// <summary>
+    /// Property Name: "KernelSizeX"
+    /// Property Type: UINT32
+    /// </summary>
+    D2D1_CONVOLVEMATRIX_PROP_KERNEL_SIZE_X = 2,
+    
+    /// <summary>
+    /// Property Name: "KernelSizeY"
+    /// Property Type: UINT32
+    /// </summary>
+    D2D1_CONVOLVEMATRIX_PROP_KERNEL_SIZE_Y = 3,
+    
+    /// <summary>
+    /// Property Name: "KernelMatrix"
+    /// Property Type: (blob)
+    /// </summary>
+    D2D1_CONVOLVEMATRIX_PROP_KERNEL_MATRIX = 4,
+    
+    /// <summary>
+    /// Property Name: "Divisor"
+    /// Property Type: FLOAT
+    /// </summary>
+    D2D1_CONVOLVEMATRIX_PROP_DIVISOR = 5,
+    
+    /// <summary>
+    /// Property Name: "Bias"
+    /// Property Type: FLOAT
+    /// </summary>
+    D2D1_CONVOLVEMATRIX_PROP_BIAS = 6,
+    
+    /// <summary>
+    /// Property Name: "KernelOffset"
+    /// Property Type: D2D1_VECTOR_2F
+    /// </summary>
+    D2D1_CONVOLVEMATRIX_PROP_KERNEL_OFFSET = 7,
+    
+    /// <summary>
+    /// Property Name: "PreserveAlpha"
+    /// Property Type: BOOL
+    /// </summary>
+    D2D1_CONVOLVEMATRIX_PROP_PRESERVE_ALPHA = 8,
+    
+    /// <summary>
+    /// Property Name: "BorderMode"
+    /// Property Type: D2D1_BORDER_MODE
+    /// </summary>
+    D2D1_CONVOLVEMATRIX_PROP_BORDER_MODE = 9,
+    
+    /// <summary>
+    /// Property Name: "ClampOutput"
+    /// Property Type: BOOL
+    /// </summary>
+    D2D1_CONVOLVEMATRIX_PROP_CLAMP_OUTPUT = 10,
+    D2D1_CONVOLVEMATRIX_PROP_FORCE_DWORD = 0xffffffff
 
 } D2D1_CONVOLVEMATRIX_PROP;
 
-
-//+-----------------------------------------------------------------------------
-//
-//  Enum:
-//      D2D1_CONVOLVEMATRIX_SCALE_MODE
-//
-//------------------------------------------------------------------------------
 typedef enum D2D1_CONVOLVEMATRIX_SCALE_MODE
 {
-        D2D1_CONVOLVEMATRIX_SCALE_MODE_NEAREST_NEIGHBOR = 0,
-        D2D1_CONVOLVEMATRIX_SCALE_MODE_LINEAR = 1,
-        D2D1_CONVOLVEMATRIX_SCALE_MODE_CUBIC = 2,
-        D2D1_CONVOLVEMATRIX_SCALE_MODE_MULTI_SAMPLE_LINEAR = 3,
-        D2D1_CONVOLVEMATRIX_SCALE_MODE_ANISOTROPIC = 4,
-        D2D1_CONVOLVEMATRIX_SCALE_MODE_HIGH_QUALITY_CUBIC = 5,
-        D2D1_CONVOLVEMATRIX_SCALE_MODE_FORCE_DWORD = 0xffffffff
+    D2D1_CONVOLVEMATRIX_SCALE_MODE_NEAREST_NEIGHBOR = 0,
+    D2D1_CONVOLVEMATRIX_SCALE_MODE_LINEAR = 1,
+    D2D1_CONVOLVEMATRIX_SCALE_MODE_CUBIC = 2,
+    D2D1_CONVOLVEMATRIX_SCALE_MODE_MULTI_SAMPLE_LINEAR = 3,
+    D2D1_CONVOLVEMATRIX_SCALE_MODE_ANISOTROPIC = 4,
+    D2D1_CONVOLVEMATRIX_SCALE_MODE_HIGH_QUALITY_CUBIC = 5,
+    D2D1_CONVOLVEMATRIX_SCALE_MODE_FORCE_DWORD = 0xffffffff
 
 } D2D1_CONVOLVEMATRIX_SCALE_MODE;
 
 
-//+-----------------------------------------------------------------------------
-//
-//  Enum:
-//      D2D1_BRIGHTNESS_PROP
-//
-//  Synopsis:
-//      The enumeration of the Brightness effect's top level properties.
-//
-//------------------------------------------------------------------------------
+/// <summary>
+/// The enumeration of the Brightness effect's top level properties.
+/// </summary>
 typedef enum D2D1_BRIGHTNESS_PROP
 {
-        
-        //
-        // Property Name: "WhitePoint"
-        // Property Type: D2D1_VECTOR_2F
-        //
-        D2D1_BRIGHTNESS_PROP_WHITE_POINT = 0,
-        
-        //
-        // Property Name: "BlackPoint"
-        // Property Type: D2D1_VECTOR_2F
-        //
-        D2D1_BRIGHTNESS_PROP_BLACK_POINT = 1,
-        D2D1_BRIGHTNESS_PROP_FORCE_DWORD = 0xffffffff
+    
+    /// <summary>
+    /// Property Name: "WhitePoint"
+    /// Property Type: D2D1_VECTOR_2F
+    /// </summary>
+    D2D1_BRIGHTNESS_PROP_WHITE_POINT = 0,
+    
+    /// <summary>
+    /// Property Name: "BlackPoint"
+    /// Property Type: D2D1_VECTOR_2F
+    /// </summary>
+    D2D1_BRIGHTNESS_PROP_BLACK_POINT = 1,
+    D2D1_BRIGHTNESS_PROP_FORCE_DWORD = 0xffffffff
 
 } D2D1_BRIGHTNESS_PROP;
 
 
-//+-----------------------------------------------------------------------------
-//
-//  Enum:
-//      D2D1_ARITHMETICCOMPOSITE_PROP
-//
-//  Synopsis:
-//      The enumeration of the Arithmetic Composite effect's top level properties.
-//
-//------------------------------------------------------------------------------
+/// <summary>
+/// The enumeration of the Arithmetic Composite effect's top level properties.
+/// </summary>
 typedef enum D2D1_ARITHMETICCOMPOSITE_PROP
 {
-        
-        //
-        // Property Name: "Coefficients"
-        // Property Type: D2D1_VECTOR_4F
-        //
-        D2D1_ARITHMETICCOMPOSITE_PROP_COEFFICIENTS = 0,
-        
-        //
-        // Property Name: "ClampOutput"
-        // Property Type: BOOL
-        //
-        D2D1_ARITHMETICCOMPOSITE_PROP_CLAMP_OUTPUT = 1,
-        D2D1_ARITHMETICCOMPOSITE_PROP_FORCE_DWORD = 0xffffffff
+    
+    /// <summary>
+    /// Property Name: "Coefficients"
+    /// Property Type: D2D1_VECTOR_4F
+    /// </summary>
+    D2D1_ARITHMETICCOMPOSITE_PROP_COEFFICIENTS = 0,
+    
+    /// <summary>
+    /// Property Name: "ClampOutput"
+    /// Property Type: BOOL
+    /// </summary>
+    D2D1_ARITHMETICCOMPOSITE_PROP_CLAMP_OUTPUT = 1,
+    D2D1_ARITHMETICCOMPOSITE_PROP_FORCE_DWORD = 0xffffffff
 
 } D2D1_ARITHMETICCOMPOSITE_PROP;
 
 
-//+-----------------------------------------------------------------------------
-//
-//  Enum:
-//      D2D1_CROP_PROP
-//
-//  Synopsis:
-//      The enumeration of the Crop effect's top level properties.
-//
-//------------------------------------------------------------------------------
+/// <summary>
+/// The enumeration of the Crop effect's top level properties.
+/// </summary>
 typedef enum D2D1_CROP_PROP
 {
-        
-        //
-        // Property Name: "Rect"
-        // Property Type: D2D1_VECTOR_4F
-        //
-        D2D1_CROP_PROP_RECT = 0,
-        
-        //
-        // Property Name: "BorderMode"
-        // Property Type: D2D1_BORDER_MODE
-        //
-        D2D1_CROP_PROP_BORDER_MODE = 1,
-        D2D1_CROP_PROP_FORCE_DWORD = 0xffffffff
+    
+    /// <summary>
+    /// Property Name: "Rect"
+    /// Property Type: D2D1_VECTOR_4F
+    /// </summary>
+    D2D1_CROP_PROP_RECT = 0,
+    
+    /// <summary>
+    /// Property Name: "BorderMode"
+    /// Property Type: D2D1_BORDER_MODE
+    /// </summary>
+    D2D1_CROP_PROP_BORDER_MODE = 1,
+    D2D1_CROP_PROP_FORCE_DWORD = 0xffffffff
 
 } D2D1_CROP_PROP;
 
 
-//+-----------------------------------------------------------------------------
-//
-//  Enum:
-//      D2D1_BORDER_PROP
-//
-//  Synopsis:
-//      The enumeration of the Border effect's top level properties.
-//
-//------------------------------------------------------------------------------
+/// <summary>
+/// The enumeration of the Border effect's top level properties.
+/// </summary>
 typedef enum D2D1_BORDER_PROP
 {
-        
-        //
-        // Property Name: "EdgeModeX"
-        // Property Type: D2D1_BORDER_EDGE_MODE
-        //
-        D2D1_BORDER_PROP_EDGE_MODE_X = 0,
-        
-        //
-        // Property Name: "EdgeModeY"
-        // Property Type: D2D1_BORDER_EDGE_MODE
-        //
-        D2D1_BORDER_PROP_EDGE_MODE_Y = 1,
-        D2D1_BORDER_PROP_FORCE_DWORD = 0xffffffff
+    
+    /// <summary>
+    /// Property Name: "EdgeModeX"
+    /// Property Type: D2D1_BORDER_EDGE_MODE
+    /// </summary>
+    D2D1_BORDER_PROP_EDGE_MODE_X = 0,
+    
+    /// <summary>
+    /// Property Name: "EdgeModeY"
+    /// Property Type: D2D1_BORDER_EDGE_MODE
+    /// </summary>
+    D2D1_BORDER_PROP_EDGE_MODE_Y = 1,
+    D2D1_BORDER_PROP_FORCE_DWORD = 0xffffffff
 
 } D2D1_BORDER_PROP;
 
 
-//+-----------------------------------------------------------------------------
-//
-//  Enum:
-//      D2D1_BORDER_EDGE_MODE
-//
-//------------------------------------------------------------------------------
+/// <summary>
+/// The edge mode for the Border effect.
+/// </summary>
 typedef enum D2D1_BORDER_EDGE_MODE
 {
-        D2D1_BORDER_EDGE_MODE_CLAMP = 0,
-        D2D1_BORDER_EDGE_MODE_WRAP = 1,
-        D2D1_BORDER_EDGE_MODE_MIRROR = 2,
-        D2D1_BORDER_EDGE_MODE_FORCE_DWORD = 0xffffffff
+    D2D1_BORDER_EDGE_MODE_CLAMP = 0,
+    D2D1_BORDER_EDGE_MODE_WRAP = 1,
+    D2D1_BORDER_EDGE_MODE_MIRROR = 2,
+    D2D1_BORDER_EDGE_MODE_FORCE_DWORD = 0xffffffff
 
 } D2D1_BORDER_EDGE_MODE;
 
 
-//+-----------------------------------------------------------------------------
-//
-//  Enum:
-//      D2D1_MORPHOLOGY_PROP
-//
-//  Synopsis:
-//      The enumeration of the Morphology effect's top level properties.
-//
-//------------------------------------------------------------------------------
+/// <summary>
+/// The enumeration of the Morphology effect's top level properties.
+/// </summary>
 typedef enum D2D1_MORPHOLOGY_PROP
 {
-        
-        //
-        // Property Name: "Mode"
-        // Property Type: D2D1_MORPHOLOGY_MODE
-        //
-        D2D1_MORPHOLOGY_PROP_MODE = 0,
-        
-        //
-        // Property Name: "Width"
-        // Property Type: UINT32
-        //
-        D2D1_MORPHOLOGY_PROP_WIDTH = 1,
-        
-        //
-        // Property Name: "Height"
-        // Property Type: UINT32
-        //
-        D2D1_MORPHOLOGY_PROP_HEIGHT = 2,
-        D2D1_MORPHOLOGY_PROP_FORCE_DWORD = 0xffffffff
+    
+    /// <summary>
+    /// Property Name: "Mode"
+    /// Property Type: D2D1_MORPHOLOGY_MODE
+    /// </summary>
+    D2D1_MORPHOLOGY_PROP_MODE = 0,
+    
+    /// <summary>
+    /// Property Name: "Width"
+    /// Property Type: UINT32
+    /// </summary>
+    D2D1_MORPHOLOGY_PROP_WIDTH = 1,
+    
+    /// <summary>
+    /// Property Name: "Height"
+    /// Property Type: UINT32
+    /// </summary>
+    D2D1_MORPHOLOGY_PROP_HEIGHT = 2,
+    D2D1_MORPHOLOGY_PROP_FORCE_DWORD = 0xffffffff
 
 } D2D1_MORPHOLOGY_PROP;
 
-
-//+-----------------------------------------------------------------------------
-//
-//  Enum:
-//      D2D1_MORPHOLOGY_MODE
-//
-//------------------------------------------------------------------------------
 typedef enum D2D1_MORPHOLOGY_MODE
 {
-        D2D1_MORPHOLOGY_MODE_ERODE = 0,
-        D2D1_MORPHOLOGY_MODE_DILATE = 1,
-        D2D1_MORPHOLOGY_MODE_FORCE_DWORD = 0xffffffff
+    D2D1_MORPHOLOGY_MODE_ERODE = 0,
+    D2D1_MORPHOLOGY_MODE_DILATE = 1,
+    D2D1_MORPHOLOGY_MODE_FORCE_DWORD = 0xffffffff
 
 } D2D1_MORPHOLOGY_MODE;
 
 
-//+-----------------------------------------------------------------------------
-//
-//  Enum:
-//      D2D1_TILE_PROP
-//
-//  Synopsis:
-//      The enumeration of the Tile effect's top level properties.
-//
-//------------------------------------------------------------------------------
+/// <summary>
+/// The enumeration of the Tile effect's top level properties.
+/// </summary>
 typedef enum D2D1_TILE_PROP
 {
-        
-        //
-        // Property Name: "Rect"
-        // Property Type: D2D1_VECTOR_4F
-        //
-        D2D1_TILE_PROP_RECT = 0,
-        D2D1_TILE_PROP_FORCE_DWORD = 0xffffffff
+    
+    /// <summary>
+    /// Property Name: "Rect"
+    /// Property Type: D2D1_VECTOR_4F
+    /// </summary>
+    D2D1_TILE_PROP_RECT = 0,
+    D2D1_TILE_PROP_FORCE_DWORD = 0xffffffff
 
 } D2D1_TILE_PROP;
 
 
-//+-----------------------------------------------------------------------------
-//
-//  Enum:
-//      D2D1_ATLAS_PROP
-//
-//  Synopsis:
-//      The enumeration of the Atlas effect's top level properties.
-//
-//------------------------------------------------------------------------------
+/// <summary>
+/// The enumeration of the Atlas effect's top level properties.
+/// </summary>
 typedef enum D2D1_ATLAS_PROP
 {
-        
-        //
-        // Property Name: "InputRect"
-        // Property Type: D2D1_VECTOR_4F
-        //
-        D2D1_ATLAS_PROP_INPUT_RECT = 0,
-        
-        //
-        // Property Name: "InputPaddingRect"
-        // Property Type: D2D1_VECTOR_4F
-        //
-        D2D1_ATLAS_PROP_INPUT_PADDING_RECT = 1,
-        D2D1_ATLAS_PROP_FORCE_DWORD = 0xffffffff
+    
+    /// <summary>
+    /// Property Name: "InputRect"
+    /// Property Type: D2D1_VECTOR_4F
+    /// </summary>
+    D2D1_ATLAS_PROP_INPUT_RECT = 0,
+    
+    /// <summary>
+    /// Property Name: "InputPaddingRect"
+    /// Property Type: D2D1_VECTOR_4F
+    /// </summary>
+    D2D1_ATLAS_PROP_INPUT_PADDING_RECT = 1,
+    D2D1_ATLAS_PROP_FORCE_DWORD = 0xffffffff
 
 } D2D1_ATLAS_PROP;
 
 
-//+-----------------------------------------------------------------------------
-//
-//  Enum:
-//      D2D1_OPACITYMETADATA_PROP
-//
-//  Synopsis:
-//      The enumeration of the Opacity Metadata effect's top level properties.
-//
-//------------------------------------------------------------------------------
+/// <summary>
+/// The enumeration of the Opacity Metadata effect's top level properties.
+/// </summary>
 typedef enum D2D1_OPACITYMETADATA_PROP
 {
-        
-        //
-        // Property Name: "InputOpaqueRect"
-        // Property Type: D2D1_VECTOR_4F
-        //
-        D2D1_OPACITYMETADATA_PROP_INPUT_OPAQUE_RECT = 0,
-        D2D1_OPACITYMETADATA_PROP_FORCE_DWORD = 0xffffffff
+    
+    /// <summary>
+    /// Property Name: "InputOpaqueRect"
+    /// Property Type: D2D1_VECTOR_4F
+    /// </summary>
+    D2D1_OPACITYMETADATA_PROP_INPUT_OPAQUE_RECT = 0,
+    D2D1_OPACITYMETADATA_PROP_FORCE_DWORD = 0xffffffff
 
 } D2D1_OPACITYMETADATA_PROP;
 

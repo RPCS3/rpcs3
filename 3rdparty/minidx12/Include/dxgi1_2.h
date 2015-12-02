@@ -3,7 +3,7 @@
 /* this ALWAYS GENERATED file contains the definitions for the interfaces */
 
 
- /* File created by MIDL compiler version 8.00.0613 */
+ /* File created by MIDL compiler version 8.01.0622 */
 /* @@MIDL_FILE_HEADING(  ) */
 
 
@@ -360,7 +360,7 @@ EXTERN_C const IID IID_IDXGIOutputDuplication;
             /* [annotation][in] */ 
             _In_  REFGUID Name,
             /* [annotation][in] */ 
-            _In_  const IUnknown *pUnknown);
+            _In_opt_  const IUnknown *pUnknown);
         
         HRESULT ( STDMETHODCALLTYPE *GetPrivateData )( 
             IDXGIOutputDuplication * This,
@@ -582,7 +582,7 @@ EXTERN_C const IID IID_IDXGISurface2;
             /* [annotation][in] */ 
             _In_  REFGUID Name,
             /* [annotation][in] */ 
-            _In_  const IUnknown *pUnknown);
+            _In_opt_  const IUnknown *pUnknown);
         
         HRESULT ( STDMETHODCALLTYPE *GetPrivateData )( 
             IDXGISurface2 * This,
@@ -776,7 +776,7 @@ EXTERN_C const IID IID_IDXGIResource1;
             /* [annotation][in] */ 
             _In_  REFGUID Name,
             /* [annotation][in] */ 
-            _In_  const IUnknown *pUnknown);
+            _In_opt_  const IUnknown *pUnknown);
         
         HRESULT ( STDMETHODCALLTYPE *GetPrivateData )( 
             IDXGIResource1 * This,
@@ -991,7 +991,7 @@ EXTERN_C const IID IID_IDXGIDevice2;
             /* [annotation][in] */ 
             _In_  REFGUID Name,
             /* [annotation][in] */ 
-            _In_  const IUnknown *pUnknown);
+            _In_opt_  const IUnknown *pUnknown);
         
         HRESULT ( STDMETHODCALLTYPE *GetPrivateData )( 
             IDXGIDevice2 * This,
@@ -1209,7 +1209,8 @@ typedef struct DXGI_SWAP_CHAIN_FULLSCREEN_DESC
 typedef struct DXGI_PRESENT_PARAMETERS
     {
     UINT DirtyRectsCount;
-    RECT *pDirtyRects;
+    /* [annotation] */ 
+    _Field_size_full_opt_(DirtyRectsCount)  RECT *pDirtyRects;
     RECT *pScrollRect;
     POINT *pScrollOffset;
     } 	DXGI_PRESENT_PARAMETERS;
@@ -1314,7 +1315,7 @@ EXTERN_C const IID IID_IDXGISwapChain1;
             /* [annotation][in] */ 
             _In_  REFGUID Name,
             /* [annotation][in] */ 
-            _In_  const IUnknown *pUnknown);
+            _In_opt_  const IUnknown *pUnknown);
         
         HRESULT ( STDMETHODCALLTYPE *GetPrivateData )( 
             IDXGISwapChain1 * This,
@@ -1699,7 +1700,7 @@ EXTERN_C const IID IID_IDXGIFactory2;
             /* [annotation][in] */ 
             _In_  REFGUID Name,
             /* [annotation][in] */ 
-            _In_  const IUnknown *pUnknown);
+            _In_opt_  const IUnknown *pUnknown);
         
         HRESULT ( STDMETHODCALLTYPE *GetPrivateData )( 
             IDXGIFactory2 * This,
@@ -2048,7 +2049,7 @@ EXTERN_C const IID IID_IDXGIAdapter2;
             /* [annotation][in] */ 
             _In_  REFGUID Name,
             /* [annotation][in] */ 
-            _In_  const IUnknown *pUnknown);
+            _In_opt_  const IUnknown *pUnknown);
         
         HRESULT ( STDMETHODCALLTYPE *GetPrivateData )( 
             IDXGIAdapter2 * This,
@@ -2233,7 +2234,7 @@ EXTERN_C const IID IID_IDXGIOutput1;
             /* [annotation][in] */ 
             _In_  REFGUID Name,
             /* [annotation][in] */ 
-            _In_  const IUnknown *pUnknown);
+            _In_opt_  const IUnknown *pUnknown);
         
         HRESULT ( STDMETHODCALLTYPE *GetPrivateData )( 
             IDXGIOutput1 * This,

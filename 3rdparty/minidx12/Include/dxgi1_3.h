@@ -3,7 +3,7 @@
 /* this ALWAYS GENERATED file contains the definitions for the interfaces */
 
 
- /* File created by MIDL compiler version 8.00.0613 */
+ /* File created by MIDL compiler version 8.01.0622 */
 /* @@MIDL_FILE_HEADING(  ) */
 
 
@@ -168,7 +168,7 @@ EXTERN_C const IID IID_IDXGIDevice3;
             /* [annotation][in] */ 
             _In_  REFGUID Name,
             /* [annotation][in] */ 
-            _In_  const IUnknown *pUnknown);
+            _In_opt_  const IUnknown *pUnknown);
         
         HRESULT ( STDMETHODCALLTYPE *GetPrivateData )( 
             IDXGIDevice3 * This,
@@ -430,7 +430,7 @@ EXTERN_C const IID IID_IDXGISwapChain2;
             /* [annotation][in] */ 
             _In_  REFGUID Name,
             /* [annotation][in] */ 
-            _In_  const IUnknown *pUnknown);
+            _In_opt_  const IUnknown *pUnknown);
         
         HRESULT ( STDMETHODCALLTYPE *GetPrivateData )( 
             IDXGISwapChain2 * This,
@@ -792,7 +792,7 @@ EXTERN_C const IID IID_IDXGIOutput2;
             /* [annotation][in] */ 
             _In_  REFGUID Name,
             /* [annotation][in] */ 
-            _In_  const IUnknown *pUnknown);
+            _In_opt_  const IUnknown *pUnknown);
         
         HRESULT ( STDMETHODCALLTYPE *GetPrivateData )( 
             IDXGIOutput2 * This,
@@ -1059,7 +1059,7 @@ EXTERN_C const IID IID_IDXGIFactory3;
             /* [annotation][in] */ 
             _In_  REFGUID Name,
             /* [annotation][in] */ 
-            _In_  const IUnknown *pUnknown);
+            _In_opt_  const IUnknown *pUnknown);
         
         HRESULT ( STDMETHODCALLTYPE *GetPrivateData )( 
             IDXGIFactory3 * This,
@@ -1861,7 +1861,7 @@ EXTERN_C const IID IID_IDXGIOutput3;
             /* [annotation][in] */ 
             _In_  REFGUID Name,
             /* [annotation][in] */ 
-            _In_  const IUnknown *pUnknown);
+            _In_opt_  const IUnknown *pUnknown);
         
         HRESULT ( STDMETHODCALLTYPE *GetPrivateData )( 
             IDXGIOutput3 * This,
