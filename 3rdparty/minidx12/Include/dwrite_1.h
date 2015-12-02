@@ -10,9 +10,7 @@
 #ifndef DWRITE_1_H_INCLUDED
 #define DWRITE_1_H_INCLUDED
 
-#if _MSC_VER > 1000
 #pragma once
-#endif
 
 #include <DWrite.h>
 
@@ -1337,6 +1335,10 @@ interface DWRITE_DECLARE_INTERFACE("a71efdb4-9fdb-4838-ad90-cfc3be8c3daf") IDWri
     /// True if the font contains vertical glyph variants.
     /// </returns>
     STDMETHOD_(BOOL, HasVerticalGlyphVariants)() PURE;
+
+    using IDWriteFontFace::GetMetrics;
+    using IDWriteFontFace::GetGdiCompatibleMetrics;
+    using IDWriteFontFace::GetRecommendedRenderingMode;
 };
 
 
@@ -1354,6 +1356,8 @@ interface DWRITE_DECLARE_INTERFACE("acd16696-8c14-4f5d-877e-fe3fc1d32738") IDWri
     STDMETHOD_(void, GetMetrics)(
         _Out_ DWRITE_FONT_METRICS1* fontMetrics
         ) PURE;
+
+    using IDWriteFont::GetMetrics;
 
     /// <summary>
     /// Gets the PANOSE values from the font, used for font selection and
@@ -1714,7 +1718,7 @@ interface DWRITE_DECLARE_INTERFACE("80DAD800-E21F-4E83-96CE-BFCCE500DB7C") IDWri
 /// If any of these callbacks returns an error, the analysis functions will
 /// stop prematurely and return a callback error.
 /// </summary>
-interface DECLSPEC_UUID("{639CFAD8-0FB4-4B21-A58A-067920120009}") DECLSPEC_NOVTABLE IDWriteTextAnalysisSource1 : public IDWriteTextAnalysisSource
+interface DWRITE_DECLARE_INTERFACE("639CFAD8-0FB4-4B21-A58A-067920120009") IDWriteTextAnalysisSource1 : public IDWriteTextAnalysisSource
 {
     /// <summary>
     /// The text analyzer calls back to this to get the desired glyph
@@ -1753,7 +1757,7 @@ interface DECLSPEC_UUID("{639CFAD8-0FB4-4B21-A58A-067920120009}") DECLSPEC_NOVTA
 /// The interface implemented by the client to receive the
 /// output of the text analyzers.
 /// </summary>
-interface DECLSPEC_UUID("B0D941A0-85E7-4D8B-9FD3-5CED9934482A") DECLSPEC_NOVTABLE IDWriteTextAnalysisSink1 : public IDWriteTextAnalysisSink
+interface DWRITE_DECLARE_INTERFACE("B0D941A0-85E7-4D8B-9FD3-5CED9934482A") IDWriteTextAnalysisSink1 : public IDWriteTextAnalysisSink
 {
     /// <summary>
     /// The text analyzer calls back to this to report the actual orientation

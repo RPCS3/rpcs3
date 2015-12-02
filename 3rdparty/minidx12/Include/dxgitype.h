@@ -1,9 +1,10 @@
-//
+﻿//
 //    Copyright (C) Microsoft.  All rights reserved.
 //
 #ifndef __dxgitype_h__
 #define __dxgitype_h__
 
+#include "dxgicommon.h"
 #include "dxgiformat.h"
 
 #define _FACDXGI    0x87a
@@ -55,12 +56,6 @@ typedef struct DXGI_GAMMA_CONTROL_CAPABILITIES
     float ControlPointPositions[1025];
 } DXGI_GAMMA_CONTROL_CAPABILITIES;
 
-typedef struct DXGI_RATIONAL
-{
-    UINT Numerator;
-    UINT Denominator;
-} DXGI_RATIONAL;
-
 typedef enum DXGI_MODE_SCANLINE_ORDER
 {
     DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED        = 0,
@@ -94,33 +89,6 @@ typedef struct DXGI_MODE_DESC
     DXGI_MODE_SCANLINE_ORDER ScanlineOrdering;
     DXGI_MODE_SCALING Scaling;
 } DXGI_MODE_DESC;
-
-// The following values are used with DXGI_SAMPLE_DESC::Quality:
-#define DXGI_STANDARD_MULTISAMPLE_QUALITY_PATTERN 0xffffffff
-#define DXGI_CENTER_MULTISAMPLE_QUALITY_PATTERN 0xfffffffe
-
-typedef struct DXGI_SAMPLE_DESC
-{
-    UINT Count;
-    UINT Quality;
-} DXGI_SAMPLE_DESC;
-
-typedef enum DXGI_COLOR_SPACE_TYPE
-{
-    DXGI_COLOR_SPACE_RGB_FULL_G22_NONE_P709             = 0,
-    DXGI_COLOR_SPACE_RGB_FULL_G10_NONE_P709             = 1,
-    DXGI_COLOR_SPACE_RGB_STUDIO_G22_NONE_P709           = 2,
-    DXGI_COLOR_SPACE_RGB_STUDIO_G22_NONE_P2020          = 3,
-    DXGI_COLOR_SPACE_RESERVED                           = 4,
-    DXGI_COLOR_SPACE_YCBCR_FULL_G22_NONE_P709_X601      = 5,
-    DXGI_COLOR_SPACE_YCBCR_STUDIO_G22_LEFT_P601         = 6,
-    DXGI_COLOR_SPACE_YCBCR_FULL_G22_LEFT_P601           = 7,
-    DXGI_COLOR_SPACE_YCBCR_STUDIO_G22_LEFT_P709         = 8,
-    DXGI_COLOR_SPACE_YCBCR_FULL_G22_LEFT_P709           = 9,
-    DXGI_COLOR_SPACE_YCBCR_STUDIO_G22_LEFT_P2020        = 10,
-    DXGI_COLOR_SPACE_YCBCR_FULL_G22_LEFT_P2020          = 11,
-    DXGI_COLOR_SPACE_CUSTOM                             = 0xFFFFFFFF
-} DXGI_COLOR_SPACE_TYPE;
 
 typedef struct DXGI_JPEG_DC_HUFFMAN_TABLE
 {

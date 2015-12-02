@@ -10,9 +10,7 @@
 #ifndef DWRITE_H_INCLUDED
 #define DWRITE_H_INCLUDED
 
-#if _MSC_VER > 1000
 #pragma once
-#endif
 
 #ifndef DWRITE_NO_WINDOWS_H
 
@@ -56,7 +54,7 @@ enum DWRITE_FONT_FILE_TYPE
     /// <summary>
     /// OpenType font that contains a TrueType collection.
     /// </summary>
-    DWRITE_FONT_FILE_TYPE_TRUETYPE_COLLECTION,
+    DWRITE_FONT_FILE_TYPE_OPENTYPE_COLLECTION,
 
     /// <summary>
     /// Type 1 PFM font.
@@ -76,7 +74,10 @@ enum DWRITE_FONT_FILE_TYPE
     /// <summary>
     /// Bitmap .FON font.
     /// </summary>
-    DWRITE_FONT_FILE_TYPE_BITMAP
+    DWRITE_FONT_FILE_TYPE_BITMAP,
+
+    // The following name is obsolete, but kept as an alias to avoid breaking existing code.
+    DWRITE_FONT_FILE_TYPE_TRUETYPE_COLLECTION = DWRITE_FONT_FILE_TYPE_OPENTYPE_COLLECTION,
 };
 
 /// <summary>
@@ -97,9 +98,9 @@ enum DWRITE_FONT_FACE_TYPE
     DWRITE_FONT_FACE_TYPE_TRUETYPE,
 
     /// <summary>
-    /// OpenType font face that is a part of a TrueType collection.
+    /// OpenType font face that is a part of a TrueType or CFF collection.
     /// </summary>
-    DWRITE_FONT_FACE_TYPE_TRUETYPE_COLLECTION,
+    DWRITE_FONT_FACE_TYPE_OPENTYPE_COLLECTION,
 
     /// <summary>
     /// A Type 1 font face.
@@ -127,7 +128,10 @@ enum DWRITE_FONT_FACE_TYPE
     /// font file loaders) and the resulting font face object supports only the
     /// minimum functionality necessary to render glyphs.
     /// </summary>
-    DWRITE_FONT_FACE_TYPE_RAW_CFF
+    DWRITE_FONT_FACE_TYPE_RAW_CFF,
+
+    // The following name is obsolete, but kept as an alias to avoid breaking existing code.
+    DWRITE_FONT_FACE_TYPE_TRUETYPE_COLLECTION = DWRITE_FONT_FACE_TYPE_OPENTYPE_COLLECTION,
 };
 
 /// <summary>
@@ -2446,7 +2450,7 @@ enum DWRITE_NUMBER_SUBSTITUTION_METHOD
 /// <summary>
 /// Holds the appropriate digits and numeric punctuation for a given locale.
 /// </summary>
-interface DECLSPEC_UUID("14885CC9-BAB0-4f90-B6ED-5C366A2CD03D") DECLSPEC_NOVTABLE IDWriteNumberSubstitution : public IUnknown
+interface DWRITE_DECLARE_INTERFACE("14885CC9-BAB0-4f90-B6ED-5C366A2CD03D") IDWriteNumberSubstitution : public IUnknown
 {
 };
 
@@ -2511,7 +2515,7 @@ struct DWRITE_SHAPING_GLYPH_PROPERTIES
 /// stop prematurely and return a callback error. Rather than return E_NOTIMPL,
 /// an application should stub the method and return a constant/null and S_OK.
 /// </summary>
-interface DECLSPEC_UUID("688e1a58-5094-47c8-adc8-fbcea60ae92b") DECLSPEC_NOVTABLE IDWriteTextAnalysisSource : public IUnknown
+interface DWRITE_DECLARE_INTERFACE("688e1a58-5094-47c8-adc8-fbcea60ae92b") IDWriteTextAnalysisSource : public IUnknown
 {
     /// <summary>
     /// Get a block of text starting at the specified text position.
@@ -2620,7 +2624,7 @@ interface DECLSPEC_UUID("688e1a58-5094-47c8-adc8-fbcea60ae92b") DECLSPEC_NOVTABL
 /// state of the analysis sink, therefore a Set method call on a range
 /// overwrites the previously set analysis result of the same range. 
 /// </summary>
-interface DECLSPEC_UUID("5810cd44-0ca0-4701-b3fa-bec5182ae4f6") DECLSPEC_NOVTABLE IDWriteTextAnalysisSink : public IUnknown
+interface DWRITE_DECLARE_INTERFACE("5810cd44-0ca0-4701-b3fa-bec5182ae4f6") IDWriteTextAnalysisSink : public IUnknown
 {
     /// <summary>
     /// Report script analysis for the text range.
@@ -2918,7 +2922,7 @@ interface DWRITE_DECLARE_INTERFACE("b7e6163e-7f46-43b4-84b3-e4e6249c365d") IDWri
         _In_reads_(glyphCount) UINT16 const* glyphIndices,
         _In_reads_(glyphCount) DWRITE_SHAPING_GLYPH_PROPERTIES const* glyphProps,
         UINT32 glyphCount,
-        _In_ IDWriteFontFace * fontFace,
+        _In_ IDWriteFontFace* fontFace,
         FLOAT fontEmSize,
         BOOL isSideways,
         BOOL isRightToLeft,
@@ -4371,6 +4375,16 @@ interface DWRITE_DECLARE_INTERFACE("53737037-6d14-410b-9bfe-0b182bb70961") IDWri
         UINT32 maxHitTestMetricsCount,
         _Out_ UINT32* actualHitTestMetricsCount
         ) PURE;
+
+    using IDWriteTextFormat::GetFontCollection;
+    using IDWriteTextFormat::GetFontFamilyNameLength;
+    using IDWriteTextFormat::GetFontFamilyName;
+    using IDWriteTextFormat::GetFontWeight;
+    using IDWriteTextFormat::GetFontStyle;
+    using IDWriteTextFormat::GetFontStretch;
+    using IDWriteTextFormat::GetFontSize;
+    using IDWriteTextFormat::GetLocaleNameLength;
+    using IDWriteTextFormat::GetLocaleName;
 };
 
 

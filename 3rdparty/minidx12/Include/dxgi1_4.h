@@ -3,7 +3,7 @@
 /* this ALWAYS GENERATED file contains the definitions for the interfaces */
 
 
- /* File created by MIDL compiler version 8.00.0613 */
+ /* File created by MIDL compiler version 8.01.0622 */
 /* @@MIDL_FILE_HEADING(  ) */
 
 
@@ -170,7 +170,7 @@ EXTERN_C const IID IID_IDXGISwapChain3;
             /* [annotation][in] */ 
             _In_  REFGUID Name,
             /* [annotation][in] */ 
-            _In_  const IUnknown *pUnknown);
+            _In_opt_  const IUnknown *pUnknown);
         
         HRESULT ( STDMETHODCALLTYPE *GetPrivateData )( 
             IDXGISwapChain3 * This,
@@ -599,7 +599,7 @@ EXTERN_C const IID IID_IDXGIOutput4;
             /* [annotation][in] */ 
             _In_  REFGUID Name,
             /* [annotation][in] */ 
-            _In_  const IUnknown *pUnknown);
+            _In_opt_  const IUnknown *pUnknown);
         
         HRESULT ( STDMETHODCALLTYPE *GetPrivateData )( 
             IDXGIOutput4 * This,
@@ -906,7 +906,7 @@ EXTERN_C const IID IID_IDXGIFactory4;
             /* [annotation][in] */ 
             _In_  REFGUID Name,
             /* [annotation][in] */ 
-            _In_  const IUnknown *pUnknown);
+            _In_opt_  const IUnknown *pUnknown);
         
         HRESULT ( STDMETHODCALLTYPE *GetPrivateData )( 
             IDXGIFactory4 * This,
@@ -1296,7 +1296,7 @@ EXTERN_C const IID IID_IDXGIAdapter3;
             /* [annotation][in] */ 
             _In_  REFGUID Name,
             /* [annotation][in] */ 
-            _In_  const IUnknown *pUnknown);
+            _In_opt_  const IUnknown *pUnknown);
         
         HRESULT ( STDMETHODCALLTYPE *GetPrivateData )( 
             IDXGIAdapter3 * This,

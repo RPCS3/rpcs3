@@ -10,9 +10,7 @@
 #ifndef DWRITE_3_H_INCLUDED
 #define DWRITE_3_H_INCLUDED
 
-#if _MSC_VER > 1000
 #pragma once
-#endif
 
 #include <DWrite_2.h>
 
@@ -1247,6 +1245,8 @@ interface DWRITE_DECLARE_INTERFACE("D37D7598-09BE-4222-A236-2081341CC1F2") IDWri
         _Out_ DWRITE_GRID_FIT_MODE* gridFitMode
         ) PURE;
 
+    using IDWriteFontFace2::GetRecommendedRenderingMode;
+
     /// <summary>
     /// Determines whether the character is locally downloaded from the font.
     /// </summary>
@@ -1578,6 +1578,8 @@ interface DWRITE_DECLARE_INTERFACE("4556BE70-3ABD-4F70-90BE-421780A6F515") IDWri
         _In_ IDWriteFontSet* fontSet,
         _COM_Outptr_ IDWriteFontSet** filteredSet
         ) PURE;
+
+    using IDWriteGdiInterop::CreateFontFromLOGFONT;
 };
 
 /// <summary>
@@ -1684,6 +1686,9 @@ interface DWRITE_DECLARE_INTERFACE("F67E0EDD-9E3D-4ECC-8C32-4183253DFE70") IDWri
     /// Standard HRESULT error code.
     /// </returns>
     STDMETHOD(GetLineSpacing)(_Out_ DWRITE_LINE_SPACING* lineSpacingOptions) PURE;
+
+    using IDWriteTextFormat1::SetLineSpacing;
+    using IDWriteTextFormat1::GetLineSpacing;
 };
 
 interface DWRITE_DECLARE_INTERFACE("07DDCD52-020E-4DE8-AC33-6C953D83F92D") IDWriteTextLayout3 : public IDWriteTextLayout2
@@ -1738,6 +1743,682 @@ interface DWRITE_DECLARE_INTERFACE("07DDCD52-020E-4DE8-AC33-6C953D83F92D") IDWri
         UINT32 maxLineCount,
         _Out_ UINT32* actualLineCount
         ) PURE;
+
+    using IDWriteTextLayout2::SetLineSpacing;
+    using IDWriteTextLayout2::GetLineSpacing;
+    using IDWriteTextLayout2::GetLineMetrics;
 };
 
-#endif /* DWRITE_3_H_INCLUDED */
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+#if NTDDI_VERSION >= NTDDI_WIN10_RS1
+
+
+/// <summary>
+/// Fonts may contain multiple drawable data formats for glyphs. These flags specify which formats
+/// are supported in the font, either at a font-wide level or per glyph, and the app may use them
+/// to tell DWrite which formats to return when splitting a color glyph run.
+/// </summary>
+enum DWRITE_GLYPH_IMAGE_FORMATS
+{
+    /// <summary>
+    /// Indicates no data is available for this glyph.
+    /// </summary>
+    DWRITE_GLYPH_IMAGE_FORMATS_NONE = 0x00000000,
+
+    /// <summary>
+    /// The glyph has TrueType outlines.
+    /// </summary>
+    DWRITE_GLYPH_IMAGE_FORMATS_TRUETYPE = 0x00000001,
+
+    /// <summary>
+    /// The glyph has CFF outlines.
+    /// </summary>
+    DWRITE_GLYPH_IMAGE_FORMATS_CFF = 0x00000002,
+
+    /// <summary>
+    /// The glyph has multilayered COLR data.
+    /// </summary>
+    DWRITE_GLYPH_IMAGE_FORMATS_COLR = 0x00000004,
+
+    /// <summary>
+    /// The glyph has SVG outlines as standard XML.
+    /// </summary>
+    /// <remarks>
+    /// Fonts may store the content gzip'd rather than plain text,
+    /// indicated by the first two bytes as gzip header {0x1F 0x8B}.
+    /// </remarks>
+    DWRITE_GLYPH_IMAGE_FORMATS_SVG = 0x00000008,
+
+    /// <summary>
+    /// The glyph has PNG image data, with standard PNG IHDR.
+    /// </summary>
+    DWRITE_GLYPH_IMAGE_FORMATS_PNG = 0x00000010,
+
+    /// <summary>
+    /// The glyph has JPEG image data, with standard JIFF SOI header.
+    /// </summary>
+    DWRITE_GLYPH_IMAGE_FORMATS_JPEG = 0x00000020,
+
+    /// <summary>
+    /// The glyph has TIFF image data.
+    /// </summary>
+    DWRITE_GLYPH_IMAGE_FORMATS_TIFF = 0x00000040,
+
+    /// <summary>
+    /// The glyph has raw 32-bit premultiplied BGRA data.
+    /// </summary>
+    DWRITE_GLYPH_IMAGE_FORMATS_PREMULTIPLIED_B8G8R8A8 = 0x00000080,
+};
+
+#ifdef DEFINE_ENUM_FLAG_OPERATORS
+DEFINE_ENUM_FLAG_OPERATORS(DWRITE_GLYPH_IMAGE_FORMATS);
+#endif
+
+
+/// <summary>
+/// Represents a color glyph run. The IDWriteFactory4::TranslateColorGlyphRun
+/// method returns an ordered collection of color glyph runs of varying types
+/// depending on what the font supports.
+/// </summary>
+/// <summary>
+/// For runs without any specific color, such as PNG data, the runColor field will be zero.
+/// </summary>
+struct DWRITE_COLOR_GLYPH_RUN1 : DWRITE_COLOR_GLYPH_RUN
+{
+    /// <summary>
+    /// Type of glyph image format for this color run. Exactly one type will be set since
+    /// TranslateColorGlyphRun has already broken down the run into separate parts.
+    /// </summary>
+    DWRITE_GLYPH_IMAGE_FORMATS glyphImageFormat;
+
+    /// <summary>
+    /// Measuring mode to use for this glyph run.
+    /// </summary>
+    DWRITE_MEASURING_MODE measuringMode;
+};
+
+
+/// <summary>
+/// Data for a single glyph from GetGlyphImageData.
+/// </summary>
+struct DWRITE_GLYPH_IMAGE_DATA
+{
+    /// <summary>
+    /// Pointer to the glyph data, be it SVG, PNG, JPEG, TIFF.
+    /// </summary>
+    _Field_size_bytes_(imageDataSize) void const* imageData;
+
+    /// <summary>
+    /// Size of glyph data in bytes.
+    /// </summary>
+    UINT32 imageDataSize;
+
+    /// <summary>
+    /// Unique identifier for the glyph data. Clients may use this to cache a parsed/decompressed
+    /// version and tell whether a repeated call to the same font returns the same data.
+    /// </summary>
+    UINT32 uniqueDataId;
+
+    /// <summary>
+    /// Pixels per em of the returned data. For non-scalable raster data (PNG/TIFF/JPG), this can be larger
+    /// or smaller than requested from GetGlyphImageData when there isn't an exact match.
+    /// For scaling intermediate sizes, use: desired pixels per em * font em size / actual pixels per em.
+    /// </summary>
+    UINT32 pixelsPerEm;
+
+    /// <summary>
+    /// Size of image when the format is pixel data.
+    /// </summary>
+    D2D1_SIZE_U pixelSize;
+
+    /// <summary>
+    /// Left origin along the horizontal Roman baseline.
+    /// </summary>
+    D2D1_POINT_2L horizontalLeftOrigin;
+
+    /// <summary>
+    /// Right origin along the horizontal Roman baseline.
+    /// </summary>
+    D2D1_POINT_2L horizontalRightOrigin;
+
+    /// <summary>
+    /// Top origin along the vertical central baseline.
+    /// </summary>
+    D2D1_POINT_2L verticalTopOrigin;
+
+    /// <summary>
+    /// Bottom origin along vertical central baseline.
+    /// </summary>
+    D2D1_POINT_2L verticalBottomOrigin;
+};
+
+
+/// <summary>
+/// Enumerator for an ordered collection of color glyph runs.
+/// </summary>
+interface DWRITE_DECLARE_INTERFACE("7C5F86DA-C7A1-4F05-B8E1-55A179FE5A35") IDWriteColorGlyphRunEnumerator1 : public IDWriteColorGlyphRunEnumerator
+{
+    /// <summary>
+    /// Gets the current color glyph run.
+    /// </summary>
+    /// <param name="colorGlyphRun">Receives a pointer to the color
+    /// glyph run. The pointer remains valid until the next call to
+    /// MoveNext or until the interface is released.</param>
+    /// <returns>
+    /// Standard HRESULT error code. An error is returned if there is
+    /// no current glyph run, i.e., if MoveNext has not yet been called
+    /// or if the end of the sequence has been reached.
+    /// </returns>
+    STDMETHOD(GetCurrentRun)(
+        _Outptr_ DWRITE_COLOR_GLYPH_RUN1 const** colorGlyphRun
+        ) PURE;
+
+    using IDWriteColorGlyphRunEnumerator::GetCurrentRun;
+};
+
+
+/// <summary>
+/// The interface that represents an absolute reference to a font face.
+/// It contains font face type, appropriate file references and face identification data.
+/// Various font data such as metrics, names and glyph outlines is obtained from IDWriteFontFace.
+/// </summary>
+interface DWRITE_DECLARE_INTERFACE("27F2A904-4EB8-441D-9678-0563F53E3E2F") IDWriteFontFace4 : public IDWriteFontFace3
+{
+    /// <summary>
+    /// Gets all the glyph image formats supported by the entire font (SVG, PNG, JPEG, ...).
+    /// </summary>
+    STDMETHOD_(DWRITE_GLYPH_IMAGE_FORMATS, GetGlyphImageFormats)() PURE;
+
+    /// <summary>
+    /// Gets the available image formats of a specific glyph and ppem. Glyphs often have at least TrueType
+    /// or CFF outlines, but they may also have SVG outlines, or they may have only bitmaps
+    /// with no TrueType/CFF outlines. Some image formats, notably the PNG/JPEG ones, are size
+    /// specific and will return no match when there isn't an entry in that size range.
+    /// </summary>
+    /// <remarks>
+    /// Glyph ids beyond the glyph count return DWRITE_GLYPH_IMAGE_FORMATS_NONE.
+    /// </remarks>
+    STDMETHOD(GetGlyphImageFormats)(
+        UINT16 glyphId,
+        UINT32 pixelsPerEmFirst,
+        UINT32 pixelsPerEmLast,
+        _Out_ DWRITE_GLYPH_IMAGE_FORMATS* glyphImageFormats
+        ) PURE;
+
+    /// <summary>
+    /// Gets a pointer to the glyph data based on the desired image format.
+    /// </summary>
+    /// <remarks>
+    /// The glyphDataContext must be released via ReleaseGlyphImageData when done if the data is not empty,
+    /// similar to IDWriteFontFileStream::ReadFileFragment and IDWriteFontFileStream::ReleaseFileFragment.
+    /// The data pointer is valid so long as the IDWriteFontFace exists and ReleaseGlyphImageData has not
+    /// been called.
+    /// </remarks>
+    /// <remarks>
+    /// The DWRITE_GLYPH_IMAGE_DATA::uniqueDataId is valuable for caching purposes so that if the same
+    /// resource is returned more than once, an existing resource can be quickly retrieved rather than
+    /// needing to reparse or decompress the data.
+    /// </remarks>
+    /// <remarks>
+    /// The function only returns SVG or raster data - requesting TrueType/CFF/COLR data returns
+    /// DWRITE_E_INVALIDARG. Those must be drawn via DrawGlyphRun or queried using GetGlyphOutline instead.
+    /// Exactly one format may be requested or else the function returns DWRITE_E_INVALIDARG.
+    /// If the glyph does not have that format, the call is not an error, but the function returns empty data. 
+    /// </remarks>
+    STDMETHOD(GetGlyphImageData)(
+        _In_ UINT16 glyphId,
+        UINT32 pixelsPerEm,
+        DWRITE_GLYPH_IMAGE_FORMATS glyphImageFormat,
+        _Out_ DWRITE_GLYPH_IMAGE_DATA* glyphData,
+        _Outptr_result_maybenull_ void** glyphDataContext
+        ) PURE;
+
+    /// <summary>
+    /// Releases the table data obtained earlier from ReadGlyphData.
+    /// </summary>
+    /// <param name="glyphDataContext">Opaque context from ReadGlyphData.</param>
+    STDMETHOD_(void, ReleaseGlyphImageData)(
+        void* glyphDataContext
+        ) PURE;
+};
+
+
+interface DWRITE_DECLARE_INTERFACE("4B0B5BD3-0797-4549-8AC5-FE915CC53856") IDWriteFactory4 : public IDWriteFactory3
+{
+    /// <summary>
+    /// Translates a glyph run to a sequence of color glyph runs, which can be
+    /// rendered to produce a color representation of the original "base" run.
+    /// </summary>
+    /// <param name="baselineOriginX">Horizontal and vertical origin of the base glyph run in
+    /// pre-transform coordinates.</param>
+    /// <param name="glyphRun">Pointer to the original "base" glyph run.</param>
+    /// <param name="glyphRunDescription">Optional glyph run description.</param>
+    /// <param name="glyphImageFormats">Which data formats TranslateColorGlyphRun
+    /// should split the runs into.</param>
+    /// <param name="measuringMode">Measuring mode, needed to compute the origins
+    /// of each glyph.</param>
+    /// <param name="worldToDeviceTransform">Matrix converting from the client's
+    /// coordinate space to device coordinates (pixels), i.e., the world transform
+    /// multiplied by any DPI scaling.</param>
+    /// <param name="colorPaletteIndex">Zero-based index of the color palette to use.
+    /// Valid indices are less than the number of palettes in the font, as returned
+    /// by IDWriteFontFace2::GetColorPaletteCount.</param>
+    /// <param name="colorLayers">If the function succeeds, receives a pointer
+    /// to an enumerator object that can be used to obtain the color glyph runs.
+    /// If the base run has no color glyphs, then the output pointer is NULL
+    /// and the method returns DWRITE_E_NOCOLOR.</param>
+    /// <returns>
+    /// Returns DWRITE_E_NOCOLOR if the font has no color information, the glyph run
+    /// does not contain any color glyphs, or the specified color palette index
+    /// is out of range. In this case, the client should render the original glyph 
+    /// run. Otherwise, returns a standard HRESULT error code.
+    /// </returns>
+    /// <remarks>
+    /// The old IDWriteFactory2::TranslateColorGlyphRun is equivalent to passing
+    /// DWRITE_GLYPH_IMAGE_FORMATS_TRUETYPE|CFF|COLR.
+    /// </remarks>
+    STDMETHOD(TranslateColorGlyphRun)(
+        D2D1_POINT_2F baselineOrigin,
+        _In_ DWRITE_GLYPH_RUN const* glyphRun,
+        _In_opt_ DWRITE_GLYPH_RUN_DESCRIPTION const* glyphRunDescription,
+        DWRITE_GLYPH_IMAGE_FORMATS desiredGlyphImageFormats,
+        DWRITE_MEASURING_MODE measuringMode,
+        _In_opt_ DWRITE_MATRIX const* worldAndDpiTransform,
+        UINT32 colorPaletteIndex,
+        _COM_Outptr_ IDWriteColorGlyphRunEnumerator1** colorLayers
+        ) PURE;
+
+    using IDWriteFactory2::TranslateColorGlyphRun;
+
+    /// <summary>
+    /// Converts glyph run placements to glyph origins.
+    /// </summary>
+    /// <returns>
+    /// Standard HRESULT error code.
+    /// </returns>
+    /// <remarks>
+    /// The transform and DPI have no affect on the origin scaling.
+    /// They are solely used to compute glyph advances when not supplied
+    /// and align glyphs in pixel aligned measuring modes.
+    /// </remarks>
+    STDMETHOD(ComputeGlyphOrigins)(
+        DWRITE_GLYPH_RUN const* glyphRun,
+        DWRITE_MEASURING_MODE measuringMode,
+        D2D1_POINT_2F baselineOrigin,
+        _In_opt_ DWRITE_MATRIX const* worldAndDpiTransform,
+        _Out_writes_(glyphRun->glyphCount) D2D1_POINT_2F* glyphOrigins
+        ) PURE;
+
+    /// <summary>
+    /// Converts glyph run placements to glyph origins. This overload is for natural metrics, which
+    /// includes SVG, TrueType natural modes, and bitmap placement.
+    /// </summary>
+    STDMETHOD(ComputeGlyphOrigins)(
+        DWRITE_GLYPH_RUN const* glyphRun,
+        D2D1_POINT_2F baselineOrigin,
+        _Out_writes_(glyphRun->glyphCount) D2D1_POINT_2F* glyphOrigins
+        ) PURE;
+};
+
+#endif // NTDDI_VERSION >= NTDDI_WIN10_RS1
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+#if NTDDI_VERSION >= NTDDI_WIN10_RS2
+
+interface DWRITE_DECLARE_INTERFACE("3FF7715F-3CDC-4DC6-9B72-EC5621DCCAFD") IDWriteFontSetBuilder1 : public IDWriteFontSetBuilder
+{
+    /// <summary>
+    /// Adds references to all the fonts in the specified font file. The method
+    /// parses the font file to determine the fonts and their properties.
+    /// </summary>
+    /// <param name="fontFile">Font file reference object to add to the set.</param>
+    /// <returns>
+    /// Standard HRESULT error code.
+    /// </returns>
+    STDMETHOD(AddFontFile)(
+        _In_ IDWriteFontFile* fontFile
+        ) throw();
+};
+
+/// <summary>
+/// The IDWriteAsyncResult interface represents the result of an asynchronous
+/// operation. A client can use the interface to wait for the operation to
+/// complete and to get the result.
+/// </summary>
+interface DWRITE_DECLARE_INTERFACE("CE25F8FD-863B-4D13-9651-C1F88DC73FE2") IDWriteAsyncResult : public IUnknown
+{
+    /// <summary>
+    /// The GetWaitHandleMethod method returns a handle that can be used to wait 
+    /// for the asynchronous operation to complete. The handle remains valid
+    /// until the interface is released.
+    /// </summary>
+    STDMETHOD_(HANDLE, GetWaitHandle)() PURE;
+
+    /// <summary>
+    /// The GetResult method returns the result of the asynchronous operation.
+    /// The return value is E_PENDING if the operation has not yet completed.
+    /// </summary>
+    STDMETHOD(GetResult)() PURE;
+};
+
+
+/// <summary>
+/// DWRITE_FILE_FRAGMENT represents a range of bytes in a font file.
+/// </summary>
+struct DWRITE_FILE_FRAGMENT
+{
+    /// <summary>
+    /// Starting offset of the fragment from the beginning of the file.
+    /// </summary>
+    UINT64 fileOffset;
+
+    /// <summary>
+    /// Size of the file fragment, in bytes.
+    /// </summary>
+    UINT64 fragmentSize;
+};
+
+
+/// <summary>
+/// IDWriteRemoteFontFileStream represents a font file stream parts of which may be 
+/// non-local. Non-local data must be downloaded before it can be accessed using 
+/// ReadFragment. The interface exposes methods to download font data and query the 
+/// locality of font data.
+/// </summary>
+/// <remarks>
+/// For more information, see the description of IDWriteRemoteFontFileLoader.
+/// </remarks>
+interface DWRITE_DECLARE_INTERFACE("4DB3757A-2C72-4ED9-B2B6-1ABABE1AFF9C") IDWriteRemoteFontFileStream : public IDWriteFontFileStream
+{
+    /// <summary>
+    /// GetLocalFileSize returns the number of bytes of the font file that are
+    /// currently local, which should always be less than or equal to the full
+    /// file size returned by GetFileSize. If the locality is remote, the return
+    /// value is zero. If the file is fully local, the return value must be the
+    /// same as GetFileSize.
+    /// </summary>
+    /// <param name="localFileSize">Receives the local size of the file.</param>
+    /// <returns>
+    /// Standard HRESULT error code.
+    /// </returns>
+    STDMETHOD(GetLocalFileSize)(
+        _Out_ UINT64* localFileSize
+        ) PURE;
+
+    /// <summary>
+    /// GetFileFragmentLocality returns information about the locality of a byte range (i.e.,
+    /// font fragment) within the font file stream.
+    /// </summary>
+    /// <param name="fileOffset">Offset of the fragment from the beginning of the font file.</param>
+    /// <param name="fragmentSize">Size of the fragment in bytes.</param>
+    /// <param name="isLocal">Receives TRUE if the first byte of the fragment is local, FALSE if not.</param>
+    /// <param name="partialSize">Receives the number of contiguous bytes from the start of the
+    /// fragment that have the same locality as the first byte.</param>
+    /// <returns>
+    /// Standard HRESULT error code.
+    /// </returns>
+    STDMETHOD(GetFileFragmentLocality)(
+        UINT64 fileOffset,
+        UINT64 fragmentSize,
+        _Out_ BOOL* isLocal,
+        _Out_range_(0, fragmentSize) UINT64* partialSize
+        ) PURE;
+
+    /// <summary>
+    /// Gets the current locality of the file.
+    /// </summary>
+    /// <returns>
+    /// Returns the locality enumeration (i.e., remote, partial, or local).
+    /// </returns>
+    STDMETHOD_(DWRITE_LOCALITY, GetLocality)() PURE;
+
+    /// <summary>
+    /// BeginDownload begins downloading all or part of the font file.
+    /// </summary>
+    /// <param name="fileFragments">Array of structures, each specifying a byte
+    /// range to download.</param>
+    /// <param name="fragmentCount">Number of elements in the fileFragments array.
+    /// This can be zero to just download file information, such as the size.</param>
+    /// <param name="asyncResult">Receives an object that can be used to wait for
+    /// the asynchronous download to complete and to get the download result upon 
+    /// completion. The result may be NULL if the download completes synchronously.
+    /// For example, this can happen if method determines that the requested data
+    /// is already local.</param>
+    /// <returns>
+    /// Standard HRESULT error code.
+    /// </returns>
+    STDMETHOD(BeginDownload)(
+        _In_ UUID const* downloadOperationID,
+        _In_reads_(fragmentCount) DWRITE_FILE_FRAGMENT const* fileFragments,
+        UINT32 fragmentCount,
+        _COM_Outptr_result_maybenull_ IDWriteAsyncResult** asyncResult
+        ) PURE;
+};
+
+
+/// <summary>
+/// Specifies the container format of a font resource. A container format is distinct from
+/// a font file format (DWRITE_FONT_FILE_TYPE) because the container describes the container
+/// in which the underlying font file is packaged.
+/// </summary>
+enum DWRITE_CONTAINER_TYPE
+{
+    DWRITE_CONTAINER_TYPE_UNKNOWN,
+    DWRITE_CONTAINER_TYPE_WOFF,
+    DWRITE_CONTAINER_TYPE_WOFF2
+};
+
+
+/// <summary>
+/// The IDWriteRemoteFontFileLoader interface represents a font file loader that can access 
+/// remote (i.e., downloadable) fonts. The IDWriteFactory5::CreateHttpFontFileLoader method
+/// returns an instance of this interface, or a client can create its own implementation.
+/// </summary>
+/// <remarks>
+/// Calls to a remote file loader or stream should never block waiting for network operations.
+/// Any call that cannot succeeded immediately using local (e.g., cached) must should return
+/// DWRITE_E_REMOTEFONT. This error signifies to DWrite that it should add requests to the 
+/// font download queue.
+/// </remarks>
+interface DWRITE_DECLARE_INTERFACE("68648C83-6EDE-46C0-AB46-20083A887FDE") IDWriteRemoteFontFileLoader : public IDWriteFontFileLoader
+{
+    /// <summary>
+    /// Creates a remote font file stream object that encapsulates an open file resource
+    /// and can be used to download remote file data.
+    /// </summary>
+    /// <param name="fontFileReferenceKey">Font file reference key that uniquely identifies the font file resource
+    /// within the scope of the font loader being used.</param>
+    /// <param name="fontFileReferenceKeySize">Size of font file reference key in bytes.</param>
+    /// <param name="fontFileStream">Pointer to the newly created font file stream.</param>
+    /// <returns>
+    /// Standard HRESULT error code.
+    /// </returns>
+    /// <remarks>
+    /// Unlike CreateStreamFromKey, this method can be used to create a stream for a remote file.
+    /// If the file is remote, the client must call IDWriteRemoteFontFileStream::DownloadFileInformation
+    /// before the stream can be used to get the file size or access data.
+    /// </remarks>
+    STDMETHOD(CreateRemoteStreamFromKey)(
+        _In_reads_bytes_(fontFileReferenceKeySize) void const* fontFileReferenceKey,
+        UINT32 fontFileReferenceKeySize,
+        _COM_Outptr_ IDWriteRemoteFontFileStream** fontFileStream
+        ) PURE;
+
+    /// <summary>
+    /// Gets the locality of the file resource identified by the unique key.
+    /// </summary>
+    /// <param name="fontFileReferenceKey">Font file reference key that uniquely identifies the font file resource
+    /// within the scope of the font loader being used.</param>
+    /// <param name="fontFileReferenceKeySize">Size of font file reference key in bytes.</param>
+    /// <param name="locality">Locality of the file.</param>
+    /// <returns>
+    /// Standard HRESULT error code.
+    /// </returns>
+    STDMETHOD(GetLocalityFromKey)(
+        _In_reads_bytes_(fontFileReferenceKeySize) void const* fontFileReferenceKey,
+        UINT32 fontFileReferenceKeySize,
+        _Out_ DWRITE_LOCALITY* locality
+        ) PURE;
+
+    /// <summary>
+    /// Creates a font file reference from a URL if the loader supports this capability.
+    /// </summary>
+    /// <param name="factory">Factory used to create the font file reference.</param>
+    /// <param name="baseUrl">Optional base URL. The base URL is used to resolve the fontFileUrl
+    /// if it is relative. For example, the baseUrl might be the URL of the referring document
+    /// that contained the fontFileUrl.</param>
+    /// <param name="fontFileUrl">URL of the font resource.</param>
+    /// <param name="fontFile">Receives a pointer to the newly created font file reference.</param>
+    /// <returns>
+    /// Standard HRESULT error code, or E_NOTIMPL if the loader does not implement this method.
+    /// </returns>
+    STDMETHOD(CreateFontFileReferenceFromUrl)(
+        IDWriteFactory* factory,
+        _In_opt_z_ WCHAR const* baseUrl,
+        _In_z_ WCHAR const* fontFileUrl,
+        _COM_Outptr_ IDWriteFontFile** fontFile
+        ) PURE;
+};
+
+
+/// <summary>
+/// The IDWriteInMemoryFontFileLoader interface enables clients to reference
+/// in-memory fonts without having to implement a custom loader. The 
+/// IDWriteFactory5::CreateInMemoryFontFileLoader method returns an instance
+/// of this interface, which the client is responsible for registering and
+/// unregistering using IDWriteFactory::RegisterFontFileLoader and 
+/// IDWriteFactory::UnregisterFontFileLoader.
+/// </summary>
+interface DWRITE_DECLARE_INTERFACE("DC102F47-A12D-4B1C-822D-9E117E33043F") IDWriteInMemoryFontFileLoader : public IDWriteFontFileLoader
+{
+    /// <summary>
+    /// The CreateInMemoryFontFileReference method creates a font file reference
+    /// (IDWriteFontFile object) from an array of bytes. The font file reference
+    /// is bound to the IDWRiteInMemoryFontFileLoader instance with which it was
+    /// created and remains valid for as long as that loader is registered with
+    /// the factory.
+    /// </summary>
+    /// <param name="factory">Factory object used to create the font file reference.</param>
+    /// <param name="fontData">Pointer to a memory block containing the font data.</param>
+    /// <param name="fontDataSize">Size of the font data.</param>
+    /// <param name="ownerObject">Optional object that owns the memory specified by
+    /// the fontData parameter. If this parameter is not NULL, the method stores a
+    /// pointer to the font data and adds a reference to the owner object. The
+    /// fontData pointer must remain valid until the owner object is released. If
+    /// this parameter is NULL, the method makes a copy of the font data.</param>
+    /// <param name="fontFile">Receives a pointer to the newly-created font file
+    /// reference.</param>
+    /// <returns>
+    /// Standard HRESULT error code.
+    /// </returns>
+    STDMETHOD(CreateInMemoryFontFileReference)(
+        IDWriteFactory* factory,
+        _In_reads_bytes_(fontDataSize) void const* fontData,
+        UINT32 fontDataSize,
+        _In_opt_ IUnknown* ownerObject,
+        _COM_Outptr_ IDWriteFontFile** fontFile
+        ) PURE;
+
+    /// <summary>
+    /// The GetFileCount method returns the number of font file references that
+    /// have been created using this loader instance.
+    /// </summary>
+    STDMETHOD_(UINT32, GetFileCount)() PURE;
+};
+
+
+/// <summary>
+/// The root factory interface for all DWrite objects.
+/// </summary>
+interface DWRITE_DECLARE_INTERFACE("958DB99A-BE2A-4F09-AF7D-65189803D1D3") IDWriteFactory5 : public IDWriteFactory4
+{
+    /// <summary>
+    /// Creates an empty font set builder to add font face references
+    /// and create a custom font set.
+    /// </summary>
+    /// <param name="fontSetBuilder">Holds the newly created font set builder object, or NULL in case of failure.</param>
+    /// <returns>
+    /// Standard HRESULT error code.
+    /// </returns>
+    STDMETHOD(CreateFontSetBuilder)(
+        _COM_Outptr_ IDWriteFontSetBuilder1** fontSetBuilder
+        ) PURE;
+
+    using IDWriteFactory3::CreateFontSetBuilder;
+
+    /// <summary>
+    /// The CreateInMemoryFontFileLoader method creates a loader object that can
+    /// be used to create font file references to in-memory fonts. The caller is 
+    /// responsible for registering and unregistering the loader.
+    /// </summary>
+    /// <param name="newLoader">Receives a pointer to the newly-created loader object.</param>
+    /// <returns>
+    /// Standard HRESULT error code.
+    /// </returns>
+    STDMETHOD(CreateInMemoryFontFileLoader)(
+        _COM_Outptr_ IDWriteInMemoryFontFileLoader** newLoader
+        ) PURE;
+
+    /// <summary>
+    /// The CreateHttpFontFileLoader function creates a remote font file loader 
+    /// that can create font file references from HTTP or HTTPS URLs. The caller
+    /// is responsible for registering and unregistering the loader.
+    /// </summary>
+    /// <param name="referrerUrl">Optional referrer URL for HTTP requests.</param>
+    /// <param name="extraHeaders">Optional additional header fields to include 
+    /// in HTTP requests. Each header field consists of a name followed by a colon
+    /// (":") and the field value, as specified by RFC 2616. Multiple header fields 
+    /// may be separated by newlines.</param>
+    /// <param name="newLoader">Receives a pointer to the newly-created loader object.</param>
+    /// <returns>
+    /// Standard HRESULT error code.
+    /// </returns>
+    STDMETHOD(CreateHttpFontFileLoader)(
+        _In_opt_z_ wchar_t const* referrerUrl,
+        _In_opt_z_ wchar_t const* extraHeaders,
+        _COM_Outptr_ IDWriteRemoteFontFileLoader** newLoader
+        );
+
+    /// <summary>
+    /// The AnalyzeContainerType method analyzes the specified file data to determine
+    /// whether it is a known font container format (e.g., WOFF or WOFF2).
+    /// </summary>
+    /// <returns>
+    /// Returns the container type if recognized. DWRITE_CONTAINER_TYPE_UNKOWNN is
+    /// returned for all other files, including uncompressed font files.
+    /// </returns>
+    STDMETHOD_(DWRITE_CONTAINER_TYPE, AnalyzeContainerType)(
+        _In_reads_bytes_(fileDataSize) void const* fileData,
+        UINT32 fileDataSize
+        ) PURE;
+
+    /// <summary>
+    /// The UnpackFontFile method unpacks font data from a container file (WOFF or
+    /// WOFF2) and returns the unpacked font data in the form of a font file stream.
+    /// </summary>
+    /// <param name="containerType">Container type returned by AnalyzeContainerType.</param>
+    /// <param name="fileData">Pointer to the compressed data.</param>
+    /// <param name="fileDataSize">Size of the compressed data, in bytes.</param>
+    /// <param name="unpackedFontStream">Receives a pointer to a newly created font
+    /// file stream containing the uncompressed data.</param>
+    /// <returns>
+    /// Standard HRESULT error code. The return value is E_INVALIDARG if the container
+    /// type is DWRITE_CONTAINER_TYPE_UNKNOWN.
+    /// </returns>
+    STDMETHOD(UnpackFontFile)(
+        DWRITE_CONTAINER_TYPE containerType,
+        _In_reads_bytes_(fileDataSize) void const* fileData,
+        UINT32 fileDataSize,
+        _COM_Outptr_ IDWriteFontFileStream** unpackedFontStream
+        ) PURE;
+};
+
+#endif // NTDDI_VERSION >= NTDDI_WIN10_RS2
+
+#endif // DWRITE_3_H_INCLUDED
