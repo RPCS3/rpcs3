@@ -122,22 +122,19 @@ void GLTexture::init(rsx::texture& tex)
 		if (is_swizzled)
 		{
 			u32 *src, *dst;
-			u32 log2width, log2height;
+			u16 height = tex.height();
+			u16 width = tex.width();
 
-			unswizzledPixels = (u8*)malloc(tex.width() * tex.height() * 4);
+			unswizzledPixels = (u8*)malloc(width * height * 4);
 			src = (u32*)pixels;
 			dst = (u32*)unswizzledPixels;
-
-			log2width = (u32)log2(tex.width());
-			log2height = (u32)log2(tex.height());
-
-			for (int i = 0; i < tex.height(); i++)
+			
+			if ((height & (height - 1)) || (width & (width - 1)))
 			{
-				for (int j = 0; j < tex.width(); j++)
-				{
-					dst[(i*tex.height()) + j] = src[rsx::linear_to_swizzle(j, i, 0, log2width, log2height, 0)];
-				}
+				LOG_ERROR(RSX, "Swizzle Texture: Width or height not power of 2! (h=%d,w=%d).", height, width);
 			}
+
+			rsx::convert_linear_swizzle<u32>(src, dst, width, height, true);
 		}
 
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.width(), tex.height(), 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, is_swizzled ? unswizzledPixels : pixels);
@@ -671,15 +668,14 @@ void GLGSRender::begin()
 			rsx::method_registers[NV4097_SET_STENCIL_FUNC_MASK]);
 		__glcheck glStencilOp(rsx::method_registers[NV4097_SET_STENCIL_OP_FAIL], rsx::method_registers[NV4097_SET_STENCIL_OP_ZFAIL],
 			rsx::method_registers[NV4097_SET_STENCIL_OP_ZPASS]);
-	}
 
-	if (__glcheck enable(rsx::method_registers[NV4097_SET_TWO_SIDED_STENCIL_TEST_ENABLE], GL_STENCIL_TEST_TWO_SIDE_EXT))
-	{
-		__glcheck glStencilMaskSeparate(GL_BACK, rsx::method_registers[NV4097_SET_BACK_STENCIL_MASK]);
-		__glcheck glStencilFuncSeparate(GL_BACK, rsx::method_registers[NV4097_SET_BACK_STENCIL_FUNC],
-			rsx::method_registers[NV4097_SET_BACK_STENCIL_FUNC_REF], rsx::method_registers[NV4097_SET_BACK_STENCIL_FUNC_MASK]);
-		__glcheck glStencilOpSeparate(GL_BACK, rsx::method_registers[NV4097_SET_BACK_STENCIL_OP_FAIL],
-			rsx::method_registers[NV4097_SET_BACK_STENCIL_OP_ZFAIL], rsx::method_registers[NV4097_SET_BACK_STENCIL_OP_ZPASS]);
+		if (rsx::method_registers[NV4097_SET_TWO_SIDED_STENCIL_TEST_ENABLE]) {
+			__glcheck glStencilMaskSeparate(GL_BACK, rsx::method_registers[NV4097_SET_BACK_STENCIL_MASK]);
+			__glcheck glStencilFuncSeparate(GL_BACK, rsx::method_registers[NV4097_SET_BACK_STENCIL_FUNC],
+				rsx::method_registers[NV4097_SET_BACK_STENCIL_FUNC_REF], rsx::method_registers[NV4097_SET_BACK_STENCIL_FUNC_MASK]);
+			__glcheck glStencilOpSeparate(GL_BACK, rsx::method_registers[NV4097_SET_BACK_STENCIL_OP_FAIL],
+				rsx::method_registers[NV4097_SET_BACK_STENCIL_OP_ZFAIL], rsx::method_registers[NV4097_SET_BACK_STENCIL_OP_ZPASS]);
+		}
 	}
 
 	__glcheck glShadeModel(rsx::method_registers[NV4097_SET_SHADE_MODE]);

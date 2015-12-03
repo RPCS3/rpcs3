@@ -347,20 +347,39 @@ namespace rsx
 	{
 		never_inline void image_in(u32 arg)
 		{
-			const u16 width = method_registers[NV3089_IMAGE_IN_SIZE];
-			const u16 height = method_registers[NV3089_IMAGE_IN_SIZE] >> 16;
-			const u16 pitch = method_registers[NV3089_IMAGE_IN_FORMAT];
-			const u8 origin = method_registers[NV3089_IMAGE_IN_FORMAT] >> 16;
-			const u8 inter = method_registers[NV3089_IMAGE_IN_FORMAT] >> 24;
+			const u16 src_height = method_registers[NV3089_IMAGE_IN_SIZE] >> 16;
+			const u16 src_pitch = method_registers[NV3089_IMAGE_IN_FORMAT];
+			const u8 src_origin = method_registers[NV3089_IMAGE_IN_FORMAT] >> 16;
+			const u8 src_inter = method_registers[NV3089_IMAGE_IN_FORMAT] >> 24;
+			const u32 src_color_format = method_registers[NV3089_SET_COLOR_FORMAT];
+			const u32 operation = method_registers[NV3089_SET_OPERATION];
 
-			if (origin != 2 /* CELL_GCM_TRANSFER_ORIGIN_CORNER */)
+			const u16 out_w = method_registers[NV3089_IMAGE_OUT_SIZE];
+			const u16 out_h = method_registers[NV3089_IMAGE_OUT_SIZE] >> 16;
+
+			// handle weird RSX quirk, doesn't report less than 16 pixels width in some cases 
+			u16 src_width = method_registers[NV3089_IMAGE_IN_SIZE];
+			if (src_width == 16 && out_w < 16 && method_registers[NV3089_DS_DX] == (1 << 20)) 
 			{
-				LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown origin (%d)", origin);
+				src_width = out_w;
 			}
 
-			if (inter != 0 /* CELL_GCM_TRANSFER_INTERPOLATOR_ZOH */ && inter != 1 /* CELL_GCM_TRANSFER_INTERPOLATOR_FOH */)
+			const u16 u = method_registers[NV3089_IMAGE_IN]; // inX (currently ignored)
+			const u16 v = method_registers[NV3089_IMAGE_IN] >> 16; // inY (currently ignored)
+
+			if (src_origin != CELL_GCM_TRANSFER_ORIGIN_CORNER)
 			{
-				LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown inter (%d)", inter);
+				LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown origin (%d)", src_origin);
+			}
+
+			if (src_inter != CELL_GCM_TRANSFER_INTERPOLATOR_ZOH && src_inter != CELL_GCM_TRANSFER_INTERPOLATOR_FOH)
+			{
+				LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown inter (%d)", src_inter);
+			}
+
+			if (operation != CELL_GCM_TRANSFER_OPERATION_SRCCOPY)
+			{
+				LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown operation (%d)", operation);
 			}
 
 			const u32 src_offset = method_registers[NV3089_IMAGE_IN_OFFSET];
@@ -368,17 +387,20 @@ namespace rsx
 
 			u32 dst_offset;
 			u32 dst_dma = 0;
+			u16 dst_color_format;
 
 			switch (method_registers[NV3089_SET_CONTEXT_SURFACE])
 			{
 			case CELL_GCM_CONTEXT_SURFACE2D:
 				dst_dma = method_registers[NV3062_SET_CONTEXT_DMA_IMAGE_DESTIN];
 				dst_offset = method_registers[NV3062_SET_OFFSET_DESTIN];
+				dst_color_format = method_registers[NV3062_SET_COLOR_FORMAT];
 				break;
 
 			case CELL_GCM_CONTEXT_SWIZZLE2D:
 				dst_dma = method_registers[NV309E_SET_CONTEXT_DMA_IMAGE];
 				dst_offset = method_registers[NV309E_SET_OFFSET];
+				dst_color_format = method_registers[NV309E_SET_FORMAT];
 				break;
 
 			default:
@@ -394,95 +416,61 @@ namespace rsx
 
 			LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: src = 0x%x, dst = 0x%x", src_offset, dst_offset);
 
-			const u16 u = arg; // inX (currently ignored)
-			const u16 v = arg >> 16; // inY (currently ignored)
-
 			u8* pixels_src = vm::_ptr<u8>(get_address(src_offset, src_dma));
 			u8* pixels_dst = vm::_ptr<u8>(get_address(dst_offset, dst_dma));
 
-			if (method_registers[NV3062_SET_COLOR_FORMAT] != 4 /* CELL_GCM_TRANSFER_SURFACE_FORMAT_R5G6B5 */ &&
-				method_registers[NV3062_SET_COLOR_FORMAT] != 10 /* CELL_GCM_TRANSFER_SURFACE_FORMAT_A8R8G8B8 */)
+			if (dst_color_format != CELL_GCM_TRANSFER_SURFACE_FORMAT_R5G6B5 &&
+				dst_color_format != CELL_GCM_TRANSFER_SURFACE_FORMAT_A8R8G8B8)
 			{
-				LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown m_color_format (%d)", method_registers[NV3062_SET_COLOR_FORMAT]);
+				LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown dst_color_format (%d)", dst_color_format);
 			}
 
-			const u32 in_bpp = method_registers[NV3062_SET_COLOR_FORMAT] == 4 ? 2 : 4; // bytes per pixel
-			const u32 out_bpp = method_registers[NV3089_SET_COLOR_FORMAT] == 7 ? 2 : 4;
-
-			const s32 out_w = (s32)(u64(width) * (1 << 20) / method_registers[NV3089_DS_DX]);
-			const s32 out_h = (s32)(u64(height) * (1 << 20) / method_registers[NV3089_DT_DY]);
-
-			std::unique_ptr<u8[]> temp1, temp2;
-
-			if (method_registers[NV3089_SET_CONTEXT_SURFACE] == CELL_GCM_CONTEXT_SWIZZLE2D)
+			if (src_color_format != CELL_GCM_TRANSFER_SCALE_FORMAT_R5G6B5 &&
+				src_color_format != CELL_GCM_TRANSFER_SCALE_FORMAT_A8R8G8B8)
 			{
-				temp1.reset(new u8[in_bpp * width * height]);
-
-				u8* linear_pixels = pixels_src;
-				u8* swizzled_pixels = temp1.get();
-
-				int sw_width = 1 << (int)log2(width);
-				int sw_height = 1 << (int)log2(height);
-
-				for (int y = 0; y < sw_height; y++)
-				{
-					for (int x = 0; x < sw_width; x++)
-					{
-						switch (in_bpp)
-						{
-						case 1:
-							swizzled_pixels[linear_to_swizzle(x, y, 0, sw_width, sw_height, 0)] = linear_pixels[y * sw_height + x];
-							break;
-						case 2:
-							((u16*)swizzled_pixels)[linear_to_swizzle(x, y, 0, sw_width, sw_height, 0)] = ((u16*)linear_pixels)[y * sw_height + x];
-							break;
-						case 4:
-							((u32*)swizzled_pixels)[linear_to_swizzle(x, y, 0, sw_width, sw_height, 0)] = ((u32*)linear_pixels)[y * sw_height + x];
-							break;
-						}
-					}
-				}
-
-				pixels_src = swizzled_pixels;
+				LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown src_color_format (%d)", src_color_format);
 			}
 
 			LOG_WARNING(RSX, "NV3089_IMAGE_IN_SIZE: SIZE=0x%08x, pitch=0x%x, offset=0x%x, scaleX=%f, scaleY=%f, CLIP_SIZE=0x%08x, OUT_SIZE=0x%08x",
-				method_registers[NV3089_IMAGE_IN_SIZE], pitch, src_offset, double(1 << 20) / (method_registers[NV3089_DS_DX]), double(1 << 20) / (method_registers[NV3089_DT_DY]),
+				method_registers[NV3089_IMAGE_IN_SIZE], src_pitch, src_offset, double(1 << 20) / (method_registers[NV3089_DS_DX]), double(1 << 20) / (method_registers[NV3089_DT_DY]),
 				method_registers[NV3089_CLIP_SIZE], method_registers[NV3089_IMAGE_OUT_SIZE]);
 
-			if (in_bpp != out_bpp && width != out_w && height != out_h)
+			const u32 in_bpp = src_color_format == CELL_GCM_TRANSFER_SCALE_FORMAT_R5G6B5 ? 2 : 4; // bytes per pixel
+			const u32 out_bpp = dst_color_format == CELL_GCM_TRANSFER_SURFACE_FORMAT_R5G6B5 ? 2 : 4;
+
+			std::unique_ptr<u8[]> temp1, temp2;
+
+			// resize/convert if necessary
+			if (in_bpp != out_bpp && src_width != out_w && src_height != out_h)
 			{
-				// resize/convert if necessary
+				temp1.reset(new u8[out_bpp * out_w * out_h]);
 
-				temp2.reset(new u8[out_bpp * out_w * out_h]);
+				AVPixelFormat in_format = src_color_format == CELL_GCM_TRANSFER_SCALE_FORMAT_R5G6B5 ? AV_PIX_FMT_RGB565BE : AV_PIX_FMT_ARGB;
+				AVPixelFormat out_format = dst_color_format == CELL_GCM_TRANSFER_SURFACE_FORMAT_R5G6B5 ? AV_PIX_FMT_RGB565BE : AV_PIX_FMT_ARGB;
 
-				AVPixelFormat in_format = method_registers[NV3062_SET_COLOR_FORMAT] == 4 ? AV_PIX_FMT_RGB565BE : AV_PIX_FMT_ARGB; // ???
-				AVPixelFormat out_format = method_registers[NV3089_SET_COLOR_FORMAT] == 7 ? AV_PIX_FMT_RGB565BE : AV_PIX_FMT_ARGB; // ???
+				std::unique_ptr<SwsContext, void(*)(SwsContext*)> sws(sws_getContext(src_width, src_height, in_format, out_w, out_h, out_format,
+					src_inter ? SWS_FAST_BILINEAR : SWS_POINT, NULL, NULL, NULL), sws_freeContext);
 
-				std::unique_ptr<SwsContext, void(*)(SwsContext*)> sws(sws_getContext(width, height, in_format, out_w, out_h, out_format,
-					inter ? SWS_FAST_BILINEAR : SWS_POINT, NULL, NULL, NULL), sws_freeContext);
-
-				int in_line = in_bpp * width;
-				u8* out_ptr = temp2.get();
+				int in_line = in_bpp * src_width;
+				u8* out_ptr = temp1.get();
 				int out_line = out_bpp * out_w;
 
-				sws_scale(sws.get(), &pixels_src, &in_line, 0, height, &out_ptr, &out_line);
+				sws_scale(sws.get(), &pixels_src, &in_line, 0, src_height, &out_ptr, &out_line);
 
 				pixels_src = out_ptr; // use resized image as a source
 			}
 
+			// clip if necessary
 			if (method_registers[NV3089_CLIP_SIZE] != method_registers[NV3089_IMAGE_OUT_SIZE] ||
-				method_registers[NV3089_IMAGE_OUT_SIZE] != (out_w | (out_h << 16)) ||
-				method_registers[NV3089_IMAGE_OUT_POINT] || method_registers[NV3089_CLIP_POINT])
+				method_registers[NV3089_CLIP_POINT] != method_registers[NV3089_IMAGE_OUT_POINT])
 			{
-				// clip if necessary
-
-				for (s32 y = method_registers[NV3089_CLIP_POINT] >> 16, dst_y = method_registers[NV3089_IMAGE_OUT_POINT] >> 16; y < out_h; y++, dst_y++)
+				temp2.reset(new u8[out_bpp * out_w * out_h]);
+				for (s32 y = (method_registers[NV3089_CLIP_POINT] >> 16), dst_y = (method_registers[NV3089_IMAGE_OUT_POINT] >> 16); y < out_h; y++, dst_y++)
 				{
 					if (dst_y >= 0 && dst_y < method_registers[NV3089_IMAGE_OUT_SIZE] >> 16)
 					{
 						// destination line
-						u8* dst_line = pixels_dst + dst_y * out_bpp * (method_registers[NV3089_IMAGE_OUT_SIZE] & 0xffff)
+						u8* dst_line = temp2.get() + dst_y * out_bpp * (method_registers[NV3089_IMAGE_OUT_SIZE] & 0xffff)
 							+ std::min<s32>(std::max<s32>(method_registers[NV3089_IMAGE_OUT_POINT] & 0xffff, 0), method_registers[NV3089_IMAGE_OUT_SIZE] & 0xffff);
 
 						size_t dst_max = std::min<s32>(
@@ -513,8 +501,66 @@ namespace rsx
 						}
 					}
 				}
+				pixels_src = temp2.get();
 			}
-			else
+
+			// Swizzle texture last after scaling is done
+			if (method_registers[NV3089_SET_CONTEXT_SURFACE] == CELL_GCM_CONTEXT_SWIZZLE2D)
+			{
+				u8 sw_width_log2 = method_registers[NV309E_SET_FORMAT] >> 16;
+				u8 sw_height_log2 = method_registers[NV309E_SET_FORMAT] >> 24;
+
+				// 0 indicates height of 1 pixel
+				sw_height_log2 = sw_height_log2 == 0 ? 1 : sw_height_log2;
+
+				// swizzle based on destination size
+				u16 sw_width = 1 << sw_width_log2;
+				u16 sw_height =  1 << sw_height_log2;
+
+				std::unique_ptr<u8[]> sw_temp, sw_temp2;
+
+				sw_temp.reset(new u8[out_bpp * sw_width * sw_height]);
+
+				u8* linear_pixels = pixels_src;
+				u8* swizzled_pixels = sw_temp.get();
+
+				// Check and pad texture out if we are given non square texture for swizzle to be correct
+				if (sw_width != out_w || sw_height != out_h) 
+				{
+					sw_temp2.reset(new u8[out_bpp * sw_width * sw_height]());
+
+					switch (out_bpp) 
+					{
+					case 1:
+						pad_texture<u8>(linear_pixels, sw_temp2.get(), out_w, out_h, sw_width, sw_height);
+						break;
+					case 2:
+						pad_texture<u16>(linear_pixels, sw_temp2.get(), out_w, out_h, sw_width, sw_height);
+						break;
+					case 4:
+						pad_texture<u32>(linear_pixels, sw_temp2.get(), out_w, out_h, sw_width, sw_height);
+						break;
+					}
+					
+					linear_pixels = sw_temp2.get();
+				}
+
+				switch (out_bpp)
+				{
+				case 1:
+					convert_linear_swizzle<u8>(linear_pixels, swizzled_pixels, sw_width, sw_height, false);
+					break;
+				case 2:
+					convert_linear_swizzle<u16>(linear_pixels, swizzled_pixels, sw_width, sw_height, false);
+					break;
+				case 4:
+					convert_linear_swizzle<u32>(linear_pixels, swizzled_pixels, sw_width, sw_height, false);
+					break;
+				}
+
+				std::memcpy(pixels_dst, swizzled_pixels, out_bpp * sw_width * sw_height);
+			}
+			else 
 			{
 				std::memcpy(pixels_dst, pixels_src, out_w * out_h * out_bpp);
 			}
@@ -751,39 +797,6 @@ namespace rsx
 			bind_cpu_only<GCM_SET_USER_COMMAND, user_command>();
 		}
 	} __rsx_methods;
-
-	u32 linear_to_swizzle(u32 x, u32 y, u32 z, u32 log2_width, u32 log2_height, u32 log2_depth)
-	{
-		u32 offset = 0;
-		u32 shift_count = 0;
-		while (log2_width | log2_height | log2_depth)
-		{
-			if (log2_width)
-			{
-				offset |= (x & 0x01) << shift_count;
-				x >>= 1;
-				++shift_count;
-				--log2_width;
-			}
-
-			if (log2_height)
-			{
-				offset |= (y & 0x01) << shift_count;
-				y >>= 1;
-				++shift_count;
-				--log2_height;
-			}
-
-			if (log2_depth)
-			{
-				offset |= (z & 0x01) << shift_count;
-				z >>= 1;
-				++shift_count;
-				--log2_depth;
-			}
-		}
-		return offset;
-	}
 
 	u32 get_address(u32 offset, u32 location)
 	{
