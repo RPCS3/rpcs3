@@ -265,34 +265,6 @@ namespace rpcs3
 				}
 			}
 
-			struct exception : public std::exception
-			{
-				std::unique_ptr<char[]> message;
-
-				template<typename... Args> never_inline safe_buffers exception(const char* file, int line, const char* func, const char* text, Args... args) noexcept
-				{
-					const std::string data = format(text, args...) + format("\n(in file %s:%d, in function %s)", file, line, func);
-
-					message.reset(new char[data.size() + 1]);
-
-					std::memcpy(message.get(), data.c_str(), data.size() + 1);
-				}
-
-				exception(const exception& other) noexcept
-				{
-					const std::size_t size = std::strlen(other.message.get());
-
-					message.reset(new char[size + 1]);
-
-					std::memcpy(message.get(), other.message.get(), size + 1);
-				}
-
-				virtual const char* what() const noexcept override
-				{
-					return message.get();
-				}
-			};
-
 			std::vector<std::string> split(const std::string& source, std::initializer_list<std::string> separators, bool is_skip_empty = true);
 			std::string trim(const std::string& source, const std::string& values = " \t");
 

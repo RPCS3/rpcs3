@@ -1,6 +1,7 @@
 #pragma once
 
 #include <emmintrin.h>
+#include "defines.h"
 
 #if defined(_MSC_VER) && _MSC_VER <= 1800
 #define thread_local __declspec(thread)
@@ -74,6 +75,7 @@ int clock_gettime(clockid_t clk_id, struct timespec *tp);
 
 #endif /* __APPLE__ */
 #endif /* __GNUG__ */
+
 /*
 #if defined(_MSC_VER)
 
@@ -237,7 +239,11 @@ struct alignas(16) u128
 		return *this;
 	}
 };
+#else
+using u128 = __uint128_t;
 #endif
+
+CHECK_SIZE_ALIGN(u128, 16, 16);
 
 inline std::uint32_t cntlz32(std::uint32_t arg)
 {
