@@ -74,7 +74,7 @@ int clock_gettime(clockid_t clk_id, struct timespec *tp);
 
 #endif /* __APPLE__ */
 #endif /* __GNUG__ */
-
+/*
 #if defined(_MSC_VER)
 
 // Unsigned 128-bit integer implementation
@@ -306,3 +306,4 @@ inline __m128 sse_log2_ps(__m128 A)
 	const auto x8 = _mm_cvtepi32_ps(_mm_sub_epi32(_mm_srli_epi32(_mm_castps_si128(x0), 23), _mm_set1_epi32(127)));
 	return _mm_add_ps(_mm_mul_ps(_mm_mul_ps(_mm_mul_ps(_mm_mul_ps(x5, x6), x7), x4), _c), _mm_add_ps(_mm_mul_ps(x4, _c), x8));
 }
+*/

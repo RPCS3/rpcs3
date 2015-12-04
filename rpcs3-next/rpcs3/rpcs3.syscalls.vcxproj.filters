@@ -10,4 +10,41 @@
       <Extensions>h</Extensions>
     </Filter>
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="internal\rpcs3\syscalls\cb_func.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="internal\rpcs3\syscalls\error_codes.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="internal\rpcs3\syscalls\log_base.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="internal\rpcs3\syscalls\module_manager.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="internal\rpcs3\syscalls\modules.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="internal\rpcs3\syscalls\sc_func.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="internal\rpcs3\syscalls\syscalls.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="internal\rpcs3\syscalls\сallback.h">
+      <Filter>include</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="internal\rpcs3\syscalls\func_list.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\syscalls\log_base.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\syscalls\syscalls.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+  </ItemGroup>
 </Project>

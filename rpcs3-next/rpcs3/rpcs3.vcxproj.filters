@@ -11,7 +11,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\rpcs3\main.cpp">
+    <ClCompile Include="internal\rpcs3\main.cpp">
       <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>

@@ -11,8 +11,37 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="internal\rpcs3\core\Source.cpp">
+    <ClCompile Include="internal\rpcs3\core\platform.cpp">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="internal\rpcs3\core\fmt.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\core\extension_types.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="external\include\rpcs3\core\extension_types.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\core\fmt.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\core\geometry_types.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\core\basic_types.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\core\platform.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\core\safe_ring_buffer.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\core\log.h">
+      <Filter>include</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

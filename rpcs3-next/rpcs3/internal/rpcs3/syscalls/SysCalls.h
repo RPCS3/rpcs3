@@ -1,24 +1,29 @@
 #pragma once
 
-#include "ErrorCodes.h"
-#include "LogBase.h"
+#include "error_codes.h"
+#include "log_base.h"
+#include <rpcs3/core/basic_types.h>
+#include <string>
 
-class SysCallBase : public LogBase
+namespace rpcs3::syscalls
 {
-private:
-	std::string m_module_name;
-
-public:
-	SysCallBase(const std::string& name)
-		: m_module_name(name)
+	class syscall : public log_base
 	{
-	}
+	private:
+		std::string m_module_name;
 
-	virtual const std::string& GetName() const override
-	{
-		return m_module_name;
-	}
-};
+	public:
+		syscall(const std::string& name)
+			: m_module_name(name)
+		{
+		}
 
-void execute_syscall_by_index(class PPUThread& ppu, u64 code);
-std::string get_ps3_function_name(u64 fid);
+		virtual const std::string& name() const override
+		{
+			return m_module_name;
+		}
+	};
+
+	void execute_by_index(class PPUThread& ppu, u64 code);
+	std::string get_ps3_function_name(u64 fid);
+}

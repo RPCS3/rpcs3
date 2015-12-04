@@ -1,12 +1,6 @@
-#include "stdafx.h"
-#include "Utilities/Log.h"
-#include "Emu/Memory/Memory.h"
-#include "Emu/System.h"
-#include "Emu/IdManager.h"
+#include <rpcs3/core/log.h>
 
-#include "Emu/Cell/PPUThread.h"
-#include "Emu/ARMv7/ARMv7Thread.h"
-#include "Callback.h"
+#include <rpcs3/vm/vm.h>
 
 void CallbackManager::Register(check_cb_t func)
 {

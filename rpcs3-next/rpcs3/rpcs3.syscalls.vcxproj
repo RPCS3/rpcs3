@@ -18,6 +18,21 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="internal\rpcs3\syscalls\cb_func.h" />
+    <ClInclude Include="internal\rpcs3\syscalls\error_codes.h" />
+    <ClInclude Include="internal\rpcs3\syscalls\log_base.h" />
+    <ClInclude Include="internal\rpcs3\syscalls\modules.h" />
+    <ClInclude Include="internal\rpcs3\syscalls\module_manager.h" />
+    <ClInclude Include="internal\rpcs3\syscalls\sc_func.h" />
+    <ClInclude Include="internal\rpcs3\syscalls\syscalls.h" />
+    <ClInclude Include="internal\rpcs3\syscalls\сallback.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="internal\rpcs3\syscalls\func_list.cpp" />
+    <ClCompile Include="internal\rpcs3\syscalls\log_base.cpp" />
+    <ClCompile Include="internal\rpcs3\syscalls\syscalls.cpp" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{79fc25c3-13e9-4807-859a-239518e862bd}</ProjectGuid>
     <Keyword>Clang</Keyword>

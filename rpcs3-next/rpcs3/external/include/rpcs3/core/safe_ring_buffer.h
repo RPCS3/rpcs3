@@ -1,4 +1,5 @@
 #pragma once
+#include <mutex>
 
 //Simple non-resizable FIFO Ringbuffer that can be simultaneously be read from and written to
 //if we ever get to use boost please replace this with boost::circular_buffer, there's no reason
