@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="include">
+      <UniqueIdentifier>{613648a6-1a54-4ea7-b3a0-bcabac8d385a}</UniqueIdentifier>
+      <Extensions>h</Extensions>
+    </Filter>
+    <Filter Include="src">
+      <UniqueIdentifier>{635276dc-d87d-4cbf-8b0d-b8baddaaaedc}</UniqueIdentifier>
+      <Extensions>cpp</Extensions>
+    </Filter>
+  </ItemGroup>
+</Project>

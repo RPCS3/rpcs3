@@ -1,0 +1,139 @@
+#include "stdafx_d3d12.h"
+#ifdef _MSC_VER
+#include "D3D12MemoryHelpers.h"
+
+
+void data_cache::store_and_protect_data(u64 key, u32 start, size_t size, int format, size_t w, size_t h, size_t m, ComPtr<ID3D12Resource> data) noexcept
+{
+	std::lock_guard<std::mutex> lock(m_mut);
+	m_address_to_data[key] = std::make_pair(texture_entry(format, w, h, m), data);
+	protect_data(key, start, size);
+}
+
+void data_cache::protect_data(u64 key, u32 start, size_t size) noexcept
+{
+	/// align start to 4096 byte
+	u32 protected_range_start = align(start, 4096);
+	u32 protected_range_size = (u32)align(size, 4096);
+	m_protected_ranges.push_back(std::make_tuple(key, protected_range_start, protected_range_size));
+	vm::page_protect(protected_range_start, protected_range_size, 0, 0, vm::page_writable);
+}
+
+bool data_cache::invalidate_address(u32 addr) noexcept
+{
+	bool handled = false;
+	auto It = m_protected_ranges.begin(), E = m_protected_ranges.end();
+	for (; It != E;)
+	{
+		auto currentIt = It;
+		++It;
+		auto protectedTexture = *currentIt;
+		u32 protectedRangeStart = std::get<1>(protectedTexture), protectedRangeSize = std::get<2>(protectedTexture);
+		if (addr >= protectedRangeStart && addr <= protectedRangeSize + protectedRangeStart)
+		{
+			std::lock_guard<std::mutex> lock(m_mut);
+			u64 texadrr = std::get<0>(protectedTexture);
+			m_address_to_data[texadrr].first.m_is_dirty = true;
+
+			vm::page_protect(protectedRangeStart, protectedRangeSize, 0, vm::page_writable, 0);
+			m_protected_ranges.erase(currentIt);
+			handled = true;
+		}
+	}
+	return handled;
+}
+
+std::pair<texture_entry, ComPtr<ID3D12Resource> > *data_cache::find_data_if_available(u64 key) noexcept
+{
+	std::lock_guard<std::mutex> lock(m_mut);
+	auto It = m_address_to_data.find(key);
+	if (It == m_address_to_data.end())
+		return nullptr;
+	return &It->second;
+}
+
+void data_cache::unprotect_all() noexcept
+{
+	std::lock_guard<std::mutex> lock(m_mut);
+	for (auto &protectedTexture : m_protected_ranges)
+	{
+		u32 protectedRangeStart = std::get<1>(protectedTexture), protectedRangeSize = std::get<2>(protectedTexture);
+		vm::page_protect(protectedRangeStart, protectedRangeSize, 0, vm::page_writable, 0);
+	}
+}
+
+ComPtr<ID3D12Resource> data_cache::remove_from_cache(u64 key) noexcept
+{
+	auto result = m_address_to_data[key].second;
+	m_address_to_data.erase(key);
+	return result;
+}
+
+void resource_storage::reset()
+{
+	descriptors_heap_index = 0;
+	current_sampler_index = 0;
+	sampler_descriptors_heap_index = 0;
+	render_targets_descriptors_heap_index = 0;
+	depth_stencil_descriptor_heap_index = 0;
+
+	ThrowIfFailed(command_allocator->Reset());
+	set_new_command_list();
+}
+
+void resource_storage::set_new_command_list()
+{
+	ThrowIfFailed(command_list->Reset(command_allocator.Get(), nullptr));
+}
+
+void resource_storage::init(ID3D12Device *device)
+{
+	in_use = false;
+	m_device = device;
+	ram_framebuffer = nullptr;
+	// Create a global command allocator
+	ThrowIfFailed(device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(command_allocator.GetAddressOf())));
+
+	ThrowIfFailed(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, command_allocator.Get(), nullptr, IID_PPV_ARGS(command_list.GetAddressOf())));
+	ThrowIfFailed(command_list->Close());
+
+	D3D12_DESCRIPTOR_HEAP_DESC descriptor_heap_desc = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 10000, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE };
+	ThrowIfFailed(device->CreateDescriptorHeap(&descriptor_heap_desc, IID_PPV_ARGS(&descriptors_heap)));
+
+	D3D12_DESCRIPTOR_HEAP_DESC sampler_heap_desc = { D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER , 2048, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE };
+	ThrowIfFailed(device->CreateDescriptorHeap(&sampler_heap_desc, IID_PPV_ARGS(&sampler_descriptor_heap[0])));
+	ThrowIfFailed(device->CreateDescriptorHeap(&sampler_heap_desc, IID_PPV_ARGS(&sampler_descriptor_heap[1])));
+
+	D3D12_DESCRIPTOR_HEAP_DESC ds_descriptor_heap_desc = { D3D12_DESCRIPTOR_HEAP_TYPE_DSV , 10000};
+	device->CreateDescriptorHeap(&ds_descriptor_heap_desc, IID_PPV_ARGS(&depth_stencil_descriptor_heap));
+
+	D3D12_DESCRIPTOR_HEAP_DESC rtv_descriptor_heap_desc = { D3D12_DESCRIPTOR_HEAP_TYPE_RTV , 10000 };
+	device->CreateDescriptorHeap(&rtv_descriptor_heap_desc, IID_PPV_ARGS(&render_targets_descriptors_heap));
+
+	frame_finished_handle = CreateEventEx(nullptr, FALSE, FALSE, EVENT_ALL_ACCESS);
+	fence_value = 0;
+	ThrowIfFailed(device->CreateFence(fence_value++, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(frame_finished_fence.GetAddressOf())));
+}
+
+void resource_storage::wait_and_clean()
+{
+	if (in_use)
+		WaitForSingleObjectEx(frame_finished_handle, INFINITE, FALSE);
+	else
+		ThrowIfFailed(command_list->Close());
+
+	reset();
+
+	dirty_textures.clear();
+
+	ram_framebuffer = nullptr;
+}
+
+void resource_storage::release()
+{
+	dirty_textures.clear();
+	// NOTE: Should be released only after gfx pipeline last command has been finished.
+	CloseHandle(frame_finished_handle);
+}
+
+#endif
