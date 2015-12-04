@@ -121,7 +121,7 @@ public:
 
 	void SendDbgCommand(DbgCommand cmd, class CPUThread* thread = nullptr)
 	{
-		m_cb.send_dbg_command(cmd, thread);
+		if (m_cb.send_dbg_command) m_cb.send_dbg_command(cmd, thread);
 	}
 
 	// Returns a future object associated with the result of the function called from the GUI thread
