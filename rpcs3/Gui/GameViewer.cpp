@@ -49,7 +49,6 @@ GameViewer::GameViewer(wxWindow* parent) : wxListView(parent)
 	m_sortAscending = true;
 	m_path = "/dev_hdd0/game/";
 	m_popup = new wxMenu();
-	m_popup->Append(0, _T("Remove Game"));
 
 	Bind(wxEVT_LIST_ITEM_ACTIVATED, &GameViewer::DClick, this);
 	Bind(wxEVT_LIST_COL_CLICK, &GameViewer::OnColClick, this);
@@ -227,9 +226,9 @@ void GameViewer::DClick(wxListEvent& event)
 
 void GameViewer::RightClick(wxListEvent& event)
 {
-	m_popup->Destroy(0);
-	m_popup->Destroy(1);
-	m_popup->Destroy(2);
+	for (wxMenuItem *item : m_popup->GetMenuItems()) {
+		m_popup->Destroy(item);
+	}
 	
 	wxMenuItem* boot_item = new wxMenuItem(m_popup, 0, _T("Boot"));
 #if defined (_WIN32)
