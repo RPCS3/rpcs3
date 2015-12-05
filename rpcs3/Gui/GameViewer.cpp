@@ -269,8 +269,11 @@ void GameViewer::ConfigureGame(wxCommandEvent& WXUNUSED(event))
 
 void GameViewer::RemoveGame(wxCommandEvent& event)
 {
+	long i = GetFirstSelected();
+	if (i < 0) return;
+	
 	Emu.GetVFS().Init("/");
-	Emu.GetVFS().DeleteAll(m_path + "/" + this->GetItemText(event.GetId(), 6).ToStdString());
+	Emu.GetVFS().DeleteAll(m_path + "/" + this->GetItemText(i, 6).ToStdString());
 	Emu.GetVFS().UnMountAll();
 
 	Refresh();
