@@ -19,18 +19,12 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\extension_types.cpp" />
-    <ClCompile Include="src\file.cpp" />
-    <ClCompile Include="src\fmt.cpp" />
-    <ClCompile Include="src\semaphore.cpp" />
-    <ClCompile Include="src\shared_mutex.cpp" />
-    <ClCompile Include="src\sleep_queue.cpp" />
-  </ItemGroup>
-  <ItemGroup>
+    <ClInclude Include="include\common\atomic.h" />
     <ClInclude Include="include\common\basic_types.h" />
-    <ClInclude Include="include\common\bit_field.h" />
+    <ClInclude Include="include\common\bitfield.h" />
     <ClInclude Include="include\common\config_context.h" />
     <ClInclude Include="include\common\convert.h" />
+    <ClInclude Include="include\common\defines.h" />
     <ClInclude Include="include\common\endianness.h" />
     <ClInclude Include="include\common\event.h" />
     <ClInclude Include="include\common\exception.h" />
@@ -38,10 +32,26 @@
     <ClInclude Include="include\common\file.h" />
     <ClInclude Include="include\common\fmt.h" />
     <ClInclude Include="include\common\geometry_types.h" />
+    <ClInclude Include="include\common\geometry_types_convert.h" />
+    <ClInclude Include="include\common\platform.h" />
     <ClInclude Include="include\common\range.h" />
     <ClInclude Include="include\common\safe_ring_buffer.h" />
     <ClInclude Include="include\common\semaphore.h" />
+    <ClInclude Include="include\common\shared_mutex.h" />
+    <ClInclude Include="include\common\sleep_queue.h" />
+    <ClInclude Include="include\common\u128.h" />
+    <ClInclude Include="include\common\v128.h" />
     <ClInclude Include="include\common\virtual_memory.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\config_context.cpp" />
+    <ClCompile Include="src\extension_types.cpp" />
+    <ClCompile Include="src\file.cpp" />
+    <ClCompile Include="src\fmt.cpp" />
+    <ClCompile Include="src\semaphore.cpp" />
+    <ClCompile Include="src\shared_mutex.cpp" />
+    <ClCompile Include="src\sleep_queue.cpp" />
+    <ClCompile Include="src\virtual_memory.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{64ace59b-f89a-4b6a-982c-62591e33c39c}</ProjectGuid>
@@ -54,22 +64,22 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v140_clang_3_7</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v140_clang_3_7</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v140_Clang_3_7</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v140_Clang_3_7</PlatformToolset>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings" />
@@ -79,30 +89,35 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <IntDir>$(SolutionDir)tmp\$(ProjectName)-$(Platform)-$(Configuration)\</IntDir>
     <OutDir>$(SolutionDir)lib\$(Configuration)-$(Platform)\</OutDir>
-    <IncludePath>$(ProjectDir)include\common\;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir)include/common/;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <IntDir>$(SolutionDir)tmp\$(ProjectName)-$(Platform)-$(Configuration)\</IntDir>
     <OutDir>$(SolutionDir)lib\$(Configuration)-$(Platform)\</OutDir>
-    <IncludePath>$(ProjectDir)include\common\;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir)include/common/;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <IntDir>$(SolutionDir)tmp\$(ProjectName)-$(Platform)-$(Configuration)\</IntDir>
     <OutDir>$(SolutionDir)lib\$(Configuration)-$(Platform)\</OutDir>
-    <IncludePath>$(ProjectDir)include\common\;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir)include/common/;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <IntDir>$(SolutionDir)tmp\$(ProjectName)-$(Platform)-$(Configuration)\</IntDir>
     <OutDir>$(SolutionDir)lib\$(Configuration)-$(Platform)\</OutDir>
-    <IncludePath>$(ProjectDir)include\common\;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir)include/common/;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
-      <ExceptionHandling>Sync</ExceptionHandling>
+      <ExceptionHandling>Enabled</ExceptionHandling>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">pch.h</PrecompiledHeaderFile>
+      <MSCompatibility Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</MSCompatibility>
+      <MSCompatibility Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</MSCompatibility>
+      <MSCompatibility Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</MSCompatibility>
+      <MSCompatibility Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</MSCompatibility>
     </ClCompile>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

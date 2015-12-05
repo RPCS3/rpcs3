@@ -1,9 +1,11 @@
 
 #include "fmt.h"
 #include <algorithm>
-namespace rpcs3
+#include <cstring>
+
+namespace common
 {
-	inline namespace core
+	namespace fmt
 	{
 		/*
 		std::string v128::to_hex() const
@@ -82,7 +84,7 @@ namespace rpcs3
 		*/
 		//extern const std::string fmt::placeholder = "???";
 
-		std::string fmt::replace_first(const std::string& src, const std::string& from, const std::string& to)
+		std::string replace_first(const std::string& src, const std::string& from, const std::string& to)
 		{
 			auto pos = src.find(from);
 
@@ -94,7 +96,7 @@ namespace rpcs3
 			return (pos ? src.substr(0, pos) + to : to) + std::string(src.c_str() + pos + from.length());
 		}
 
-		std::string fmt::replace_all(const std::string &src, const std::string& from, const std::string& to)
+		std::string replace_all(const std::string &src, const std::string& from, const std::string& to)
 		{
 			std::string target = src;
 			for (auto pos = target.find(from); pos != std::string::npos; pos = target.find(from, pos + 1))
@@ -106,7 +108,7 @@ namespace rpcs3
 			return target;
 		}
 
-		std::vector<std::string> fmt::split(const std::string& source, std::initializer_list<std::string> separators, bool is_skip_empty)
+		std::vector<std::string> split(const std::string& source, std::initializer_list<std::string> separators, bool is_skip_empty)
 		{
 			std::vector<std::string> result;
 
@@ -137,7 +139,7 @@ namespace rpcs3
 			return result;
 		}
 
-		std::string fmt::trim(const std::string& source, const std::string& values)
+		std::string trim(const std::string& source, const std::string& values)
 		{
 			std::size_t begin = source.find_first_not_of(values);
 
@@ -147,21 +149,21 @@ namespace rpcs3
 			return source.substr(begin, source.find_last_not_of(values) + 1);
 		}
 
-		std::string fmt::tolower(std::string source)
+		std::string tolower(std::string source)
 		{
 			std::transform(source.begin(), source.end(), source.begin(), ::tolower);
 
 			return source;
 		}
 
-		std::string fmt::toupper(std::string source)
+		std::string toupper(std::string source)
 		{
 			std::transform(source.begin(), source.end(), source.begin(), ::toupper);
 
 			return source;
 		}
 
-		std::string fmt::escape(std::string source)
+		std::string escape(std::string source)
 		{
 			const std::pair<std::string, std::string> escape_list[] =
 			{
@@ -175,11 +177,11 @@ namespace rpcs3
 				{ "\v", "\\v" },
 			};
 
-			source = fmt::replace_all(source, escape_list);
+			source = replace_all(source, escape_list);
 
 			for (char c = 0; c < 32; c++)
 			{
-				if (c != '\n') source = fmt::replace_all(source, std::string(1, c), fmt::format("\\x%02X", c));
+				if (c != '\n') source = replace_all(source, std::string(1, c), format("\\x%02X", c));
 			}
 
 			return source;

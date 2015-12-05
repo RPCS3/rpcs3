@@ -1,55 +1,70 @@
-#include "stdafx.h"
-#include "Emu/CPU/CPUThread.h"
+#include "sleep_queue.h"
 
-#include "SleepQueue.h"
-
-void sleep_queue_entry_t::add_entry()
+namespace common
 {
-	m_queue.emplace_back(m_thread.shared_from_this());
-}
-
-void sleep_queue_entry_t::remove_entry()
-{
-	for (auto it = m_queue.begin(); it != m_queue.end(); it++)
+	void sleep_queue_entry::add_entry()
 	{
-		if (it->get() == &m_thread)
-		{
-			m_queue.erase(it);
-			return;
-		}
+		m_queue.emplace_back(m_sleepable.shared_from_this());
 	}
-}
 
-bool sleep_queue_entry_t::find() const
-{
-	for (auto it = m_queue.begin(); it != m_queue.end(); it++)
+	void sleep_queue_entry::remove_entry()
 	{
-		if (it->get() == &m_thread)
+		for (auto it = m_queue.begin(); it != m_queue.end(); it++)
 		{
-			return true;
+			if (it->get() == &m_sleepable)
+			{
+				m_queue.erase(it);
+				return;
+			}
 		}
 	}
 
-	return false;
-}
+	bool sleep_queue_entry::find() const
+	{
+		for (auto it = m_queue.begin(); it != m_queue.end(); it++)
+		{
+			if (it->get() == &m_sleepable)
+			{
+				return true;
+			}
+		}
 
-sleep_queue_entry_t::sleep_queue_entry_t(CPUThread& cpu, sleep_queue_t& queue)
-	: m_thread(cpu)
-	, m_queue(queue)
-{
-	add_entry();
-	cpu.sleep();
-}
+		return false;
+	}
 
-sleep_queue_entry_t::sleep_queue_entry_t(CPUThread& cpu, sleep_queue_t& queue, const defer_sleep_t&)
-	: m_thread(cpu)
-	, m_queue(queue)
-{
-	cpu.sleep();
-}
+	sleep_queue_entry::sleep_queue_entry(sleepable& obj, sleep_queue& queue)
+		: m_sleepable(obj)
+		, m_queue(queue)
+	{
+		add_entry();
+		obj.sleep();
+	}
 
-sleep_queue_entry_t::~sleep_queue_entry_t()
-{
-	remove_entry();
-	m_thread.awake();
+	sleep_queue_entry::sleep_queue_entry(sleepable& obj, sleep_queue& queue, const defer_sleep_t&)
+		: m_sleepable(obj)
+		, m_queue(queue)
+	{
+		obj.sleep();
+	}
+
+	sleep_queue_entry::~sleep_queue_entry()
+	{
+		remove_entry();
+		m_sleepable.awake();
+	}
+
+	inline void sleep_queue_entry::enter()
+	{
+		add_entry();
+	}
+
+	inline void sleep_queue_entry::leave()
+	{
+		remove_entry();
+	}
+
+	inline sleep_queue_entry::operator bool() const
+	{
+		return find();
+	}
 }

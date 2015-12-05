@@ -11,16 +11,19 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="internal\rpcs3\cell\ppu\interpreter\interpreter2.h">
-      <Filter>include</Filter>
-    </ClInclude>
-    <ClInclude Include="internal\rpcs3\cell\ppu\interpreter\interpreter.h">
-      <Filter>include</Filter>
-    </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
+    <ClCompile Include="Source.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
     <ClCompile Include="internal\rpcs3\cell\ppu\interpreter\interpreter.cpp">
       <Filter>src</Filter>
     </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="internal\rpcs3\cell\ppu\interpreter\interpreter.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="internal\rpcs3\cell\ppu\interpreter\interpreter2.h">
+      <Filter>include</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

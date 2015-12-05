@@ -25,12 +25,14 @@
   <ItemGroup>
     <ClCompile Include="internal\rpcs3\cell\ppu\interpreter\interpreter.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Source.cpp" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{ae53bb67-5153-48c9-80ca-9f74580776df}</ProjectGuid>
     <Keyword>Clang</Keyword>
-    <RootNamespace>rpcs3_cell_ppu_interpreter</RootNamespace>
+    <RootNamespace>StaticLibrary1</RootNamespace>
     <MinimumVisualStudioVersion>14.0</MinimumVisualStudioVersion>
-    <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -61,26 +63,26 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <OutDir>$(SolutionDir)lib\$(Configuration)-$(Platform)\</OutDir>
     <IntDir>$(SolutionDir)tmp\$(ProjectName)-$(Platform)-$(Configuration)\</IntDir>
-    <IncludePath>$(SolutionDir)common\include\;$(ProjectDir)external\include\;$(ProjectDir)external\include\rpcs3\cell\ppu\interpreter\;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)lib\$(Configuration)-$(Platform)\;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDir)common/include/;$(ProjectDir)external/include/;$(ProjectDir)external/include/cell/ppu/interpreter/;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)lib/$(Configuration)-$(Platform)/;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <OutDir>$(SolutionDir)lib\$(Configuration)-$(Platform)\</OutDir>
     <IntDir>$(SolutionDir)tmp\$(ProjectName)-$(Platform)-$(Configuration)\</IntDir>
-    <IncludePath>$(SolutionDir)common\include\;$(ProjectDir)external\include\;$(ProjectDir)external\include\rpcs3\cell\ppu\interpreter\;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)lib\$(Configuration)-$(Platform)\;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDir)common/include/;$(ProjectDir)external/include/;$(ProjectDir)external/include/cell/ppu/interpreter/;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)lib/$(Configuration)-$(Platform)/;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <OutDir>$(SolutionDir)lib\$(Configuration)-$(Platform)\</OutDir>
     <IntDir>$(SolutionDir)tmp\$(ProjectName)-$(Platform)-$(Configuration)\</IntDir>
-    <IncludePath>$(SolutionDir)common\include\;$(ProjectDir)external\include\;$(ProjectDir)external\include\rpcs3\cell\ppu\interpreter\;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)lib\$(Configuration)-$(Platform)\;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDir)common/include/;$(ProjectDir)external/include/;$(ProjectDir)external/include/cell/ppu/interpreter/;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)lib/$(Configuration)-$(Platform)/;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>$(SolutionDir)lib\$(Configuration)-$(Platform)\</OutDir>
     <IntDir>$(SolutionDir)tmp\$(ProjectName)-$(Platform)-$(Configuration)\</IntDir>
-    <IncludePath>$(SolutionDir)common\include\;$(ProjectDir)external\include\;$(ProjectDir)external\include\rpcs3\cell\ppu\interpreter\;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)lib\$(Configuration)-$(Platform)\;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDir)common/include/;$(ProjectDir)external/include/;$(ProjectDir)external/include/cell/ppu/interpreter/;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)lib/$(Configuration)-$(Platform)/;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>

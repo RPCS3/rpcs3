@@ -11,27 +11,58 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\extension_types.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="src\file.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="src\fmt.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="src\semaphore.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="src\shared_mutex.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="src\sleep_queue.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
+    <ClInclude Include="include\common\fmt.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="include\common\geometry_types.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="include\common\geometry_types_convert.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="include\common\platform.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="include\common\range.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="include\common\safe_ring_buffer.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="include\common\semaphore.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="include\common\shared_mutex.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="include\common\sleep_queue.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="include\common\u128.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="include\common\v128.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="include\common\virtual_memory.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="include\common\atomic.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="include\common\basic_types.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="include\common\bitfield.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="include\common\config_context.h">
+      <Filter>include</Filter>
+    </ClInclude>
     <ClInclude Include="include\common\convert.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="include\common\defines.h">
       <Filter>include</Filter>
     </ClInclude>
     <ClInclude Include="include\common\endianness.h">
@@ -49,32 +80,31 @@
     <ClInclude Include="include\common\file.h">
       <Filter>include</Filter>
     </ClInclude>
-    <ClInclude Include="include\common\fmt.h">
-      <Filter>include</Filter>
-    </ClInclude>
-    <ClInclude Include="include\common\geometry_types.h">
-      <Filter>include</Filter>
-    </ClInclude>
-    <ClInclude Include="include\common\range.h">
-      <Filter>include</Filter>
-    </ClInclude>
-    <ClInclude Include="include\common\safe_ring_buffer.h">
-      <Filter>include</Filter>
-    </ClInclude>
-    <ClInclude Include="include\common\semaphore.h">
-      <Filter>include</Filter>
-    </ClInclude>
-    <ClInclude Include="include\common\virtual_memory.h">
-      <Filter>include</Filter>
-    </ClInclude>
-    <ClInclude Include="include\common\basic_types.h">
-      <Filter>include</Filter>
-    </ClInclude>
-    <ClInclude Include="include\common\bit_field.h">
-      <Filter>include</Filter>
-    </ClInclude>
-    <ClInclude Include="include\common\config_context.h">
-      <Filter>include</Filter>
-    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\sleep_queue.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\virtual_memory.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\config_context.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\extension_types.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\file.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\fmt.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\semaphore.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\shared_mutex.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>
