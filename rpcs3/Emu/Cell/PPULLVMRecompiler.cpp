@@ -257,8 +257,6 @@ RecompilationEngine::RecompilationEngine()
 	// Each char can store 8 page status
 	FunctionCachePagesCommited = (char *)malloc(VIRTUAL_INSTRUCTION_COUNT / (8 * PAGE_SIZE));
 	memset(FunctionCachePagesCommited, 0, VIRTUAL_INSTRUCTION_COUNT / (8 * PAGE_SIZE));
-
-	m_compiler.RunAllTests();
 }
 
 RecompilationEngine::~RecompilationEngine() {

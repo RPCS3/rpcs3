@@ -530,9 +530,6 @@
     <ClCompile Include="Emu\Cell\PPULLVMRecompiler.cpp">
       <Filter>Emu\CPU\Cell</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\Cell\PPULLVMRecompilerTests.cpp">
-      <Filter>Emu\CPU\Cell</Filter>
-    </ClCompile>
     <ClCompile Include="Emu\ARMv7\ARMv7Interpreter.cpp">
       <Filter>Emu\CPU\ARMv7</Filter>
     </ClCompile>

@@ -79,9 +79,6 @@ namespace ppu_recompiler_llvm {
 		/// Retrieve compiler stats
 		Stats GetStats();
 
-		/// Execute all tests
-		void RunAllTests();
-
 	protected:
 		void Decode(const u32 code) override;
 
