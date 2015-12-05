@@ -18,6 +18,17 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="internal\rpcs3\cell\decoder.cpp" />
+    <ClCompile Include="internal\rpcs3\cell\thread_manager.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="external\include\rpcs3\cell\common.h" />
+    <ClInclude Include="external\include\rpcs3\cell\decoder.h" />
+    <ClInclude Include="external\include\rpcs3\cell\disasm.h" />
+    <ClInclude Include="external\include\rpcs3\cell\instr_table.h" />
+    <ClInclude Include="external\include\rpcs3\cell\thread_manager.h" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{678F1671-4FC0-4523-8C34-342182E23C42}</ProjectGuid>
     <Keyword>Clang</Keyword>
@@ -54,25 +65,25 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <OutDir>$(SolutionDir)lib\$(Configuration)-$(Platform)\</OutDir>
     <IntDir>$(SolutionDir)tmp\$(ProjectName)-$(Platform)-$(Configuration)\</IntDir>
-    <IncludePath>$(ProjectDir)external\include\;$(ProjectDir)external\include\rpcs3\cell\ppu\interpreter\;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)common\include\;$(ProjectDir)external\include\;$(ProjectDir)external\include\rpcs3\cell\ppu\interpreter\;$(IncludePath)</IncludePath>
     <LibraryPath>$(SolutionDir)lib\$(Configuration)-$(Platform)\;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <OutDir>$(SolutionDir)lib\$(Configuration)-$(Platform)\</OutDir>
     <IntDir>$(SolutionDir)tmp\$(ProjectName)-$(Platform)-$(Configuration)\</IntDir>
-    <IncludePath>$(ProjectDir)external\include\;$(ProjectDir)external\include\rpcs3\cell\ppu\interpreter\;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)common\include\;$(ProjectDir)external\include\;$(ProjectDir)external\include\rpcs3\cell\ppu\interpreter\;$(IncludePath)</IncludePath>
     <LibraryPath>$(SolutionDir)lib\$(Configuration)-$(Platform)\;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <OutDir>$(SolutionDir)lib\$(Configuration)-$(Platform)\</OutDir>
     <IntDir>$(SolutionDir)tmp\$(ProjectName)-$(Platform)-$(Configuration)\</IntDir>
-    <IncludePath>$(ProjectDir)external\include\;$(ProjectDir)external\include\rpcs3\cell\ppu\interpreter\;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)common\include\;$(ProjectDir)external\include\;$(ProjectDir)external\include\rpcs3\cell\ppu\interpreter\;$(IncludePath)</IncludePath>
     <LibraryPath>$(SolutionDir)lib\$(Configuration)-$(Platform)\;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>$(SolutionDir)lib\$(Configuration)-$(Platform)\</OutDir>
     <IntDir>$(SolutionDir)tmp\$(ProjectName)-$(Platform)-$(Configuration)\</IntDir>
-    <IncludePath>$(ProjectDir)external\include\;$(ProjectDir)external\include\rpcs3\cell\ppu\interpreter\;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)common\include\;$(ProjectDir)external\include\;$(ProjectDir)external\include\rpcs3\cell\ppu\interpreter\;$(IncludePath)</IncludePath>
     <LibraryPath>$(SolutionDir)lib\$(Configuration)-$(Platform)\;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup>

@@ -1,0 +1,80 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="include">
+      <UniqueIdentifier>{15d131af-66e6-4f0e-9e3f-59fc18a76ab5}</UniqueIdentifier>
+      <Extensions>h</Extensions>
+    </Filter>
+    <Filter Include="src">
+      <UniqueIdentifier>{9d4bec47-5c39-4a73-8876-ca5f0a37f6df}</UniqueIdentifier>
+      <Extensions>cpp</Extensions>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\extension_types.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\file.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\fmt.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\semaphore.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\shared_mutex.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\sleep_queue.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="include\common\convert.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="include\common\endianness.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="include\common\event.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="include\common\exception.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="include\common\extension_types.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="include\common\file.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="include\common\fmt.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="include\common\geometry_types.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="include\common\range.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="include\common\safe_ring_buffer.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="include\common\semaphore.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="include\common\virtual_memory.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="include\common\basic_types.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="include\common\bit_field.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="include\common\config_context.h">
+      <Filter>include</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

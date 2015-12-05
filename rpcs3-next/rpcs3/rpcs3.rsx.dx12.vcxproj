@@ -18,13 +18,33 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="internal\rpcs3\rsx\renderer\d3d12\d3dx12.h" />
+    <ClInclude Include="internal\rpcs3\rsx\renderer\d3d12\formats.h" />
+    <ClInclude Include="internal\rpcs3\rsx\renderer\d3d12\memory_helpers.h" />
+    <ClInclude Include="internal\rpcs3\rsx\renderer\d3d12\pipeline_state.h" />
+    <ClInclude Include="internal\rpcs3\rsx\renderer\d3d12\render.h" />
+    <ClInclude Include="internal\rpcs3\rsx\renderer\d3d12\render_target_sets.h" />
+    <ClInclude Include="internal\rpcs3\rsx\renderer\d3d12\utils.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="internal\rpcs3\rsx\renderer\d3d12\buffer.cpp" />
+    <ClCompile Include="internal\rpcs3\rsx\renderer\d3d12\formats.cpp" />
+    <ClCompile Include="internal\rpcs3\rsx\renderer\d3d12\memory_helpers.cpp" />
+    <ClCompile Include="internal\rpcs3\rsx\renderer\d3d12\overlay.cpp" />
+    <ClCompile Include="internal\rpcs3\rsx\renderer\d3d12\pipeline_state.cpp" />
+    <ClCompile Include="internal\rpcs3\rsx\renderer\d3d12\render.cpp" />
+    <ClCompile Include="internal\rpcs3\rsx\renderer\d3d12\render_target_sets.cpp" />
+    <ClCompile Include="internal\rpcs3\rsx\renderer\d3d12\texture.cpp" />
+    <ClCompile Include="internal\rpcs3\rsx\renderer\d3d12\utils.cpp" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{5b2fc6c0-ae03-4a1b-855e-265533dd8aed}</ProjectGuid>
     <Keyword>Clang</Keyword>
     <RootNamespace>rpcs3_rsx_dx12</RootNamespace>
     <MinimumVisualStudioVersion>14.0</MinimumVisualStudioVersion>
     <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
-    <ProjectName>rpcs3.rsx.renderer.dx12</ProjectName>
+    <ProjectName>rpcs3.rsx.renderer.d3d12</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -55,25 +75,25 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <OutDir>$(SolutionDir)lib\$(Configuration)-$(Platform)\</OutDir>
     <IntDir>$(SolutionDir)tmp\$(ProjectName)-$(Platform)-$(Configuration)\</IntDir>
-    <IncludePath>$(ProjectDir)external\include\;$(ProjectDir)external\include\rpcs3\rsx\renderer\dx12\;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)common\include\;$(ProjectDir)external\include\;$(ProjectDir)external\include\rpcs3\rsx\renderer\d3d12\;$(IncludePath)</IncludePath>
     <LibraryPath>$(SolutionDir)lib\$(Configuration)-$(Platform)\;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <OutDir>$(SolutionDir)lib\$(Configuration)-$(Platform)\</OutDir>
     <IntDir>$(SolutionDir)tmp\$(ProjectName)-$(Platform)-$(Configuration)\</IntDir>
-    <IncludePath>$(ProjectDir)external\include\;$(ProjectDir)external\include\rpcs3\rsx\renderer\dx12\;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)common\include\;$(ProjectDir)external\include\;$(ProjectDir)external\include\rpcs3\rsx\renderer\d3d12\;$(IncludePath)</IncludePath>
     <LibraryPath>$(SolutionDir)lib\$(Configuration)-$(Platform)\;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <OutDir>$(SolutionDir)lib\$(Configuration)-$(Platform)\</OutDir>
     <IntDir>$(SolutionDir)tmp\$(ProjectName)-$(Platform)-$(Configuration)\</IntDir>
-    <IncludePath>$(ProjectDir)external\include\;$(ProjectDir)external\include\rpcs3\rsx\renderer\dx12\;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)common\include\;$(ProjectDir)external\include\;$(ProjectDir)external\include\rpcs3\rsx\renderer\d3d12\;$(IncludePath)</IncludePath>
     <LibraryPath>$(SolutionDir)lib\$(Configuration)-$(Platform)\;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>$(SolutionDir)lib\$(Configuration)-$(Platform)\</OutDir>
     <IntDir>$(SolutionDir)tmp\$(ProjectName)-$(Platform)-$(Configuration)\</IntDir>
-    <IncludePath>$(ProjectDir)external\include\;$(ProjectDir)external\include\rpcs3\rsx\renderer\dx12\;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)common\include\;$(ProjectDir)external\include\;$(ProjectDir)external\include\rpcs3\rsx\renderer\d3d12\;$(IncludePath)</IncludePath>
     <LibraryPath>$(SolutionDir)lib\$(Configuration)-$(Platform)\;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup>

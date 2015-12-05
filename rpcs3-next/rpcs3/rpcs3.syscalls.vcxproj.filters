@@ -46,5 +46,11 @@
     <ClCompile Include="internal\rpcs3\syscalls\syscalls.cpp">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="internal\rpcs3\syscalls\сallback.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\syscalls\module_manager.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

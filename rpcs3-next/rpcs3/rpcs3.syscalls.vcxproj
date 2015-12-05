@@ -31,7 +31,9 @@
   <ItemGroup>
     <ClCompile Include="internal\rpcs3\syscalls\func_list.cpp" />
     <ClCompile Include="internal\rpcs3\syscalls\log_base.cpp" />
+    <ClCompile Include="internal\rpcs3\syscalls\module_manager.cpp" />
     <ClCompile Include="internal\rpcs3\syscalls\syscalls.cpp" />
+    <ClCompile Include="internal\rpcs3\syscalls\сallback.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{79fc25c3-13e9-4807-859a-239518e862bd}</ProjectGuid>
@@ -69,25 +71,25 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <OutDir>$(SolutionDir)lib\$(Configuration)-$(Platform)\</OutDir>
     <IntDir>$(SolutionDir)tmp\$(ProjectName)-$(Platform)-$(Configuration)\</IntDir>
-    <IncludePath>$(ProjectDir)external\include\;$(ProjectDir)external\include\rpcs3\syscalls\;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)common\include\;$(ProjectDir)external\include\;$(ProjectDir)external\include\rpcs3\syscalls\;$(IncludePath)</IncludePath>
     <LibraryPath>$(SolutionDir)lib\$(Configuration)-$(Platform)\;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <OutDir>$(SolutionDir)lib\$(Configuration)-$(Platform)\</OutDir>
     <IntDir>$(SolutionDir)tmp\$(ProjectName)-$(Platform)-$(Configuration)\</IntDir>
-    <IncludePath>$(ProjectDir)external\include\;$(ProjectDir)external\include\rpcs3\syscalls\;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)common\include\;$(ProjectDir)external\include\;$(ProjectDir)external\include\rpcs3\syscalls\;$(IncludePath)</IncludePath>
     <LibraryPath>$(SolutionDir)lib\$(Configuration)-$(Platform)\;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <OutDir>$(SolutionDir)lib\$(Configuration)-$(Platform)\</OutDir>
     <IntDir>$(SolutionDir)tmp\$(ProjectName)-$(Platform)-$(Configuration)\</IntDir>
-    <IncludePath>$(ProjectDir)external\include\;$(ProjectDir)external\include\rpcs3\syscalls\;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)common\include\;$(ProjectDir)external\include\;$(ProjectDir)external\include\rpcs3\syscalls\;$(IncludePath)</IncludePath>
     <LibraryPath>$(SolutionDir)lib\$(Configuration)-$(Platform)\;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>$(SolutionDir)lib\$(Configuration)-$(Platform)\</OutDir>
     <IntDir>$(SolutionDir)tmp\$(ProjectName)-$(Platform)-$(Configuration)\</IntDir>
-    <IncludePath>$(ProjectDir)external\include\;$(ProjectDir)external\include\rpcs3\syscalls\;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)common\include\;$(ProjectDir)external\include\;$(ProjectDir)external\include\rpcs3\syscalls\;$(IncludePath)</IncludePath>
     <LibraryPath>$(SolutionDir)lib\$(Configuration)-$(Platform)\;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup>

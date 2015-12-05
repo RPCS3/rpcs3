@@ -18,6 +18,22 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="internal\rpcs3\loader\elf32.cpp" />
+    <ClCompile Include="internal\rpcs3\loader\elf64.cpp" />
+    <ClCompile Include="internal\rpcs3\loader\loader.cpp" />
+    <ClCompile Include="internal\rpcs3\loader\psf.cpp" />
+    <ClCompile Include="internal\rpcs3\loader\tropusr.cpp" />
+    <ClCompile Include="internal\rpcs3\loader\trp.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="external\include\rpcs3\loader\elf32.h" />
+    <ClInclude Include="external\include\rpcs3\loader\elf64.h" />
+    <ClInclude Include="external\include\rpcs3\loader\loader.h" />
+    <ClInclude Include="external\include\rpcs3\loader\psf.h" />
+    <ClInclude Include="external\include\rpcs3\loader\tropusr.h" />
+    <ClInclude Include="external\include\rpcs3\loader\trp.h" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{ef4f4400-9aeb-4dab-ad00-81dfb2f2ada5}</ProjectGuid>
     <Keyword>Clang</Keyword>
@@ -54,25 +70,25 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <OutDir>$(SolutionDir)lib\$(Configuration)-$(Platform)\</OutDir>
     <IntDir>$(SolutionDir)tmp\$(ProjectName)-$(Platform)-$(Configuration)\</IntDir>
-    <IncludePath>$(ProjectDir)external\include\;$(ProjectDir)external\include\rpcs3\loader\;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)common\include\;$(ProjectDir)external\include\;$(ProjectDir)external\include\rpcs3\loader\;$(IncludePath)</IncludePath>
     <LibraryPath>$(SolutionDir)lib\$(Configuration)-$(Platform)\;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <OutDir>$(SolutionDir)lib\$(Configuration)-$(Platform)\</OutDir>
     <IntDir>$(SolutionDir)tmp\$(ProjectName)-$(Platform)-$(Configuration)\</IntDir>
-    <IncludePath>$(ProjectDir)external\include\;$(ProjectDir)external\include\rpcs3\loader\;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)common\include\;$(ProjectDir)external\include\;$(ProjectDir)external\include\rpcs3\loader\;$(IncludePath)</IncludePath>
     <LibraryPath>$(SolutionDir)lib\$(Configuration)-$(Platform)\;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <OutDir>$(SolutionDir)lib\$(Configuration)-$(Platform)\</OutDir>
     <IntDir>$(SolutionDir)tmp\$(ProjectName)-$(Platform)-$(Configuration)\</IntDir>
-    <IncludePath>$(ProjectDir)external\include\;$(ProjectDir)external\include\rpcs3\loader\;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)common\include\;$(ProjectDir)external\include\;$(ProjectDir)external\include\rpcs3\loader\;$(IncludePath)</IncludePath>
     <LibraryPath>$(SolutionDir)lib\$(Configuration)-$(Platform)\;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>$(SolutionDir)lib\$(Configuration)-$(Platform)\</OutDir>
     <IntDir>$(SolutionDir)tmp\$(ProjectName)-$(Platform)-$(Configuration)\</IntDir>
-    <IncludePath>$(ProjectDir)external\include\;$(ProjectDir)external\include\rpcs3\loader\;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)common\include\;$(ProjectDir)external\include\;$(ProjectDir)external\include\rpcs3\loader\;$(IncludePath)</IncludePath>
     <LibraryPath>$(SolutionDir)lib\$(Configuration)-$(Platform)\;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup>

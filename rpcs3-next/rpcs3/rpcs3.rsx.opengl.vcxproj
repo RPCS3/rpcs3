@@ -18,6 +18,23 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="internal\rpcs3\rsx\renderer\opengl\buffers.cpp" />
+    <ClCompile Include="internal\rpcs3\rsx\renderer\opengl\helpers.cpp" />
+    <ClCompile Include="internal\rpcs3\rsx\renderer\opengl\opengl.cpp" />
+    <ClCompile Include="internal\rpcs3\rsx\renderer\opengl\program.cpp" />
+    <ClCompile Include="internal\rpcs3\rsx\renderer\opengl\program_buffer.cpp" />
+    <ClCompile Include="internal\rpcs3\rsx\renderer\opengl\render.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="internal\rpcs3\rsx\renderer\opengl\buffers.h" />
+    <ClInclude Include="internal\rpcs3\rsx\renderer\opengl\helpers.h" />
+    <ClInclude Include="internal\rpcs3\rsx\renderer\opengl\opengl.h" />
+    <ClInclude Include="internal\rpcs3\rsx\renderer\opengl\opengl_proc_table.h" />
+    <ClInclude Include="internal\rpcs3\rsx\renderer\opengl\program.h" />
+    <ClInclude Include="internal\rpcs3\rsx\renderer\opengl\program_buffer.h" />
+    <ClInclude Include="internal\rpcs3\rsx\renderer\opengl\render.h" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{bc886ee0-900f-44fd-bcc8-5377837e85d8}</ProjectGuid>
     <Keyword>Clang</Keyword>
@@ -55,25 +72,25 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <OutDir>$(SolutionDir)lib\$(Configuration)-$(Platform)\</OutDir>
     <IntDir>$(SolutionDir)tmp\$(ProjectName)-$(Platform)-$(Configuration)\</IntDir>
-    <IncludePath>$(ProjectDir)external\include\;$(ProjectDir)external\include\rpcs3\rsx\renderer\opengl\;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)common\include\;$(ProjectDir)external\include\;$(ProjectDir)external\include\rpcs3\rsx\renderer\opengl\;$(IncludePath)</IncludePath>
     <LibraryPath>$(SolutionDir)lib\$(Configuration)-$(Platform)\;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <OutDir>$(SolutionDir)lib\$(Configuration)-$(Platform)\</OutDir>
     <IntDir>$(SolutionDir)tmp\$(ProjectName)-$(Platform)-$(Configuration)\</IntDir>
-    <IncludePath>$(ProjectDir)external\include\;$(ProjectDir)external\include\rpcs3\rsx\renderer\opengl\;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)common\include\;$(ProjectDir)external\include\;$(ProjectDir)external\include\rpcs3\rsx\renderer\opengl\;$(IncludePath)</IncludePath>
     <LibraryPath>$(SolutionDir)lib\$(Configuration)-$(Platform)\;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <OutDir>$(SolutionDir)lib\$(Configuration)-$(Platform)\</OutDir>
     <IntDir>$(SolutionDir)tmp\$(ProjectName)-$(Platform)-$(Configuration)\</IntDir>
-    <IncludePath>$(ProjectDir)external\include\;$(ProjectDir)external\include\rpcs3\rsx\renderer\opengl\;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)common\include\;$(ProjectDir)external\include\;$(ProjectDir)external\include\rpcs3\rsx\renderer\opengl\;$(IncludePath)</IncludePath>
     <LibraryPath>$(SolutionDir)lib\$(Configuration)-$(Platform)\;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>$(SolutionDir)lib\$(Configuration)-$(Platform)\</OutDir>
     <IntDir>$(SolutionDir)tmp\$(ProjectName)-$(Platform)-$(Configuration)\</IntDir>
-    <IncludePath>$(ProjectDir)external\include\;$(ProjectDir)external\include\rpcs3\rsx\renderer\opengl\;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)common\include\;$(ProjectDir)external\include\;$(ProjectDir)external\include\rpcs3\rsx\renderer\opengl\;$(IncludePath)</IncludePath>
     <LibraryPath>$(SolutionDir)lib\$(Configuration)-$(Platform)\;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup>

@@ -19,19 +19,34 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="internal\rpcs3\cell\spu\recompiler\analyser.cpp" />
-    <ClCompile Include="internal\rpcs3\cell\spu\recompiler\asmjit_recompiler.cpp" />
-    <ClCompile Include="internal\rpcs3\cell\spu\recompiler\recompiler.cpp" />
+    <ClCompile Include="src\extension_types.cpp" />
+    <ClCompile Include="src\file.cpp" />
+    <ClCompile Include="src\fmt.cpp" />
+    <ClCompile Include="src\semaphore.cpp" />
+    <ClCompile Include="src\shared_mutex.cpp" />
+    <ClCompile Include="src\sleep_queue.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="internal\rpcs3\cell\spu\recompiler\analyser.h" />
-    <ClInclude Include="internal\rpcs3\cell\spu\recompiler\asmjit_recompiler.h" />
-    <ClInclude Include="internal\rpcs3\cell\spu\recompiler\recompiler.h" />
+    <ClInclude Include="include\common\basic_types.h" />
+    <ClInclude Include="include\common\bit_field.h" />
+    <ClInclude Include="include\common\config_context.h" />
+    <ClInclude Include="include\common\convert.h" />
+    <ClInclude Include="include\common\endianness.h" />
+    <ClInclude Include="include\common\event.h" />
+    <ClInclude Include="include\common\exception.h" />
+    <ClInclude Include="include\common\extension_types.h" />
+    <ClInclude Include="include\common\file.h" />
+    <ClInclude Include="include\common\fmt.h" />
+    <ClInclude Include="include\common\geometry_types.h" />
+    <ClInclude Include="include\common\range.h" />
+    <ClInclude Include="include\common\safe_ring_buffer.h" />
+    <ClInclude Include="include\common\semaphore.h" />
+    <ClInclude Include="include\common\virtual_memory.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{9e350e8e-7ff0-4db8-bbb5-c69c524a47eb}</ProjectGuid>
+    <ProjectGuid>{64ace59b-f89a-4b6a-982c-62591e33c39c}</ProjectGuid>
     <Keyword>Clang</Keyword>
-    <RootNamespace>rpcs3_cell_spu_recompiler</RootNamespace>
+    <RootNamespace>common</RootNamespace>
     <MinimumVisualStudioVersion>14.0</MinimumVisualStudioVersion>
     <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
   </PropertyGroup>
@@ -39,22 +54,22 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v140_clang_3_7</PlatformToolset>
+    <PlatformToolset>v140</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v140_clang_3_7</PlatformToolset>
+    <PlatformToolset>v140</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v140_Clang_3_7</PlatformToolset>
+    <PlatformToolset>v140</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v140_Clang_3_7</PlatformToolset>
+    <PlatformToolset>v140</PlatformToolset>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings" />
@@ -62,32 +77,28 @@
   <ImportGroup Label="PropertySheets" />
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <OutDir>$(SolutionDir)lib\$(Configuration)-$(Platform)\</OutDir>
     <IntDir>$(SolutionDir)tmp\$(ProjectName)-$(Platform)-$(Configuration)\</IntDir>
-    <IncludePath>$(SolutionDir)common\include\;$(ProjectDir)external\include\;$(ProjectDir)external\include\rpcs3\cell\spu\recompiler\;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)lib\$(Configuration)-$(Platform)\;$(LibraryPath)</LibraryPath>
+    <OutDir>$(SolutionDir)lib\$(Configuration)-$(Platform)\</OutDir>
+    <IncludePath>$(ProjectDir)include\common\;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <OutDir>$(SolutionDir)lib\$(Configuration)-$(Platform)\</OutDir>
     <IntDir>$(SolutionDir)tmp\$(ProjectName)-$(Platform)-$(Configuration)\</IntDir>
-    <IncludePath>$(SolutionDir)common\include\;$(ProjectDir)external\include\;$(ProjectDir)external\include\rpcs3\cell\spu\recompiler\;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)lib\$(Configuration)-$(Platform)\;$(LibraryPath)</LibraryPath>
+    <OutDir>$(SolutionDir)lib\$(Configuration)-$(Platform)\</OutDir>
+    <IncludePath>$(ProjectDir)include\common\;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <OutDir>$(SolutionDir)lib\$(Configuration)-$(Platform)\</OutDir>
     <IntDir>$(SolutionDir)tmp\$(ProjectName)-$(Platform)-$(Configuration)\</IntDir>
-    <IncludePath>$(SolutionDir)common\include\;$(ProjectDir)external\include\;$(ProjectDir)external\include\rpcs3\cell\spu\recompiler\;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)lib\$(Configuration)-$(Platform)\;$(LibraryPath)</LibraryPath>
+    <OutDir>$(SolutionDir)lib\$(Configuration)-$(Platform)\</OutDir>
+    <IncludePath>$(ProjectDir)include\common\;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <OutDir>$(SolutionDir)lib\$(Configuration)-$(Platform)\</OutDir>
     <IntDir>$(SolutionDir)tmp\$(ProjectName)-$(Platform)-$(Configuration)\</IntDir>
-    <IncludePath>$(SolutionDir)common\include\;$(ProjectDir)external\include\;$(ProjectDir)external\include\rpcs3\cell\spu\recompiler\;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)lib\$(Configuration)-$(Platform)\;$(LibraryPath)</LibraryPath>
+    <OutDir>$(SolutionDir)lib\$(Configuration)-$(Platform)\</OutDir>
+    <IncludePath>$(ProjectDir)include\common\;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
-      <ExceptionHandling>Enabled</ExceptionHandling>
+      <ExceptionHandling>Sync</ExceptionHandling>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>

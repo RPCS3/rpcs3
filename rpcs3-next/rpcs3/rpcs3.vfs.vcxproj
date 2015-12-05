@@ -18,6 +18,32 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="internal\rpcs3\vfs\device.cpp" />
+    <ClCompile Include="internal\rpcs3\vfs\device_local_file.cpp" />
+    <ClCompile Include="internal\rpcs3\vfs\dir.cpp" />
+    <ClCompile Include="internal\rpcs3\vfs\dir_base.cpp" />
+    <ClCompile Include="internal\rpcs3\vfs\file.cpp" />
+    <ClCompile Include="internal\rpcs3\vfs\file_base.cpp" />
+    <ClCompile Include="internal\rpcs3\vfs\local_dir.cpp" />
+    <ClCompile Include="internal\rpcs3\vfs\local_file.cpp" />
+    <ClCompile Include="internal\rpcs3\vfs\stream.cpp" />
+    <ClCompile Include="internal\rpcs3\vfs\stream_memory.cpp" />
+    <ClCompile Include="internal\rpcs3\vfs\vfs.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="external\include\rpcs3\vfs\device.h" />
+    <ClInclude Include="external\include\rpcs3\vfs\device_local_file.h" />
+    <ClInclude Include="external\include\rpcs3\vfs\dir.h" />
+    <ClInclude Include="external\include\rpcs3\vfs\file.h" />
+    <ClInclude Include="external\include\rpcs3\vfs\local_dir.h" />
+    <ClInclude Include="external\include\rpcs3\vfs\local_file.h" />
+    <ClInclude Include="external\include\rpcs3\vfs\stream.h" />
+    <ClInclude Include="external\include\rpcs3\vfs\stream_memory.h" />
+    <ClInclude Include="external\include\rpcs3\vfs\vfs.h" />
+    <ClInclude Include="internal\rpcs3\vfs\dir_base.h" />
+    <ClInclude Include="internal\rpcs3\vfs\file_base.h" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{bc87ce33-e14c-4a50-88a8-8e4a75d3d1d9}</ProjectGuid>
     <Keyword>Clang</Keyword>
@@ -54,25 +80,25 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <OutDir>$(SolutionDir)lib\$(Configuration)-$(Platform)\</OutDir>
     <IntDir>$(SolutionDir)tmp\$(ProjectName)-$(Platform)-$(Configuration)\</IntDir>
-    <IncludePath>$(ProjectDir)external\include\;$(ProjectDir)external\include\rpcs3\vfs\;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)common\include\;$(ProjectDir)external\include\;$(ProjectDir)external\include\rpcs3\vfs\;$(IncludePath)</IncludePath>
     <LibraryPath>$(SolutionDir)lib\$(Configuration)-$(Platform)\;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <OutDir>$(SolutionDir)lib\$(Configuration)-$(Platform)\</OutDir>
     <IntDir>$(SolutionDir)tmp\$(ProjectName)-$(Platform)-$(Configuration)\</IntDir>
-    <IncludePath>$(ProjectDir)external\include\;$(ProjectDir)external\include\rpcs3\vfs\;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)common\include\;$(ProjectDir)external\include\;$(ProjectDir)external\include\rpcs3\vfs\;$(IncludePath)</IncludePath>
     <LibraryPath>$(SolutionDir)lib\$(Configuration)-$(Platform)\;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <OutDir>$(SolutionDir)lib\$(Configuration)-$(Platform)\</OutDir>
     <IntDir>$(SolutionDir)tmp\$(ProjectName)-$(Platform)-$(Configuration)\</IntDir>
-    <IncludePath>$(ProjectDir)external\include\;$(ProjectDir)external\include\rpcs3\vfs\;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)common\include\;$(ProjectDir)external\include\;$(ProjectDir)external\include\rpcs3\vfs\;$(IncludePath)</IncludePath>
     <LibraryPath>$(SolutionDir)lib\$(Configuration)-$(Platform)\;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>$(SolutionDir)lib\$(Configuration)-$(Platform)\</OutDir>
     <IntDir>$(SolutionDir)tmp\$(ProjectName)-$(Platform)-$(Configuration)\</IntDir>
-    <IncludePath>$(ProjectDir)external\include\;$(ProjectDir)external\include\rpcs3\vfs\;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)common\include\;$(ProjectDir)external\include\;$(ProjectDir)external\include\rpcs3\vfs\;$(IncludePath)</IncludePath>
     <LibraryPath>$(SolutionDir)lib\$(Configuration)-$(Platform)\;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup>
