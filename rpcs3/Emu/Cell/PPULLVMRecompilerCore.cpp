@@ -29,9 +29,6 @@
 #pragma warning(pop)
 #endif
 
-extern void execute_ppu_func_by_index(PPUThread& ppu, u32 id);
-extern void execute_syscall_by_index(PPUThread& ppu, u64 code);
-
 using namespace llvm;
 using namespace ppu_recompiler_llvm;
 
@@ -1755,24 +1752,8 @@ void Compiler::BC(u32 bo, u32 bi, s32 bd, u32 aa, u32 lk) {
 	CreateBranch(CheckBranchCondition(bo, bi), target_i32, lk ? true : false);
 }
 
-
-
-static u32 
-wrappedExecutePPUFuncByIndex(PPUThread &CPU, u32 index) noexcept {
-	try
-	{
-		execute_ppu_func_by_index(CPU, index);
-		return ExecutionStatus::ExecutionStatusBlockEnded;
-	}
-	catch (...)
-	{
-		CPU.pending_exception = std::current_exception();
-		return ExecutionStatus::ExecutionStatusPropagateException;
-	}
-}
-
 void Compiler::HACK(u32 index) {
-	llvm::Value *status = Call<u32>("wrappedExecutePPUFuncByIndex", &wrappedExecutePPUFuncByIndex, m_state.args[CompileTaskState::Args::State], m_ir_builder->getInt32(index & EIF_USE_BRANCH ? index : index & ~EIF_PERFORM_BLR));
+	llvm::Value *status = Call<u32>("wrappedExecutePPUFuncByIndex", m_state.args[CompileTaskState::Args::State], m_ir_builder->getInt32(index & EIF_USE_BRANCH ? index : index & ~EIF_PERFORM_BLR));
 	llvm::BasicBlock *cputhreadexitblock = GetBasicBlockFromAddress(m_state.current_instruction_address, "early_exit");
 	llvm::Value *isCPUThreadExit = m_ir_builder->CreateICmpEQ(status, m_ir_builder->getInt32(ExecutionStatus::ExecutionStatusPropagateException));
 	llvm::BasicBlock *normal_execution  = GetBasicBlockFromAddress(m_state.current_instruction_address, "normal_execution");
@@ -1787,24 +1768,11 @@ void Compiler::HACK(u32 index) {
 	}
 }
 
-static u32 wrappedDoSyscall(PPUThread &CPU, u64 code) noexcept {
-	try
-	{
-		execute_syscall_by_index(CPU, code);
-		return ExecutionStatus::ExecutionStatusBlockEnded;
-	}
-	catch (...)
-	{
-		CPU.pending_exception = std::current_exception();
-		return ExecutionStatus::ExecutionStatusPropagateException;
-	}
-}
-
 void Compiler::SC(u32 lev) {
 	switch (lev) {
 	case 0:
 		{
-		llvm::Value *status = Call<u32>("wrappedDoSyscall", &wrappedDoSyscall, m_state.args[CompileTaskState::Args::State], GetGpr(11));
+		llvm::Value *status = Call<u32>("wrappedDoSyscall", m_state.args[CompileTaskState::Args::State], GetGpr(11));
 		llvm::BasicBlock *cputhreadexitblock = GetBasicBlockFromAddress(m_state.current_instruction_address, "early_exit");
 		llvm::Value *isCPUThreadExit = m_ir_builder->CreateICmpEQ(status, m_ir_builder->getInt32(ExecutionStatus::ExecutionStatusPropagateException));
 		llvm::BasicBlock *normal_execution = GetBasicBlockFromAddress(m_state.current_instruction_address, "normal_execution");
@@ -1815,14 +1783,14 @@ void Compiler::SC(u32 lev) {
 		}
 		break;
 	case 3:
-		Call<void>("PPUThread.fast_stop", &PPUThread::fast_stop, m_state.args[CompileTaskState::Args::State]);
+		Call<void>("PPUThread.fast_stop", m_state.args[CompileTaskState::Args::State]);
 		break;
 	default:
 		CompilationError(fmt::format("SC %u", lev));
 		break;
 	}
 
-	auto ret_i1 = Call<bool>("PollStatus", m_poll_status_function, m_state.args[CompileTaskState::Args::State]);
+	auto ret_i1 = Call<bool>("PollStatus", m_state.args[CompileTaskState::Args::State]);
 	auto cmp_i1 = m_ir_builder->CreateICmpEQ(ret_i1, m_ir_builder->getInt1(true));
 	auto then_bb = GetBasicBlockFromAddress(m_state.current_instruction_address, "then_true");
 	auto merge_bb = GetBasicBlockFromAddress(m_state.current_instruction_address, "merge_true");
@@ -2293,7 +2261,7 @@ void Compiler::LWARX(u32 rd, u32 ra, u32 rb) {
 	auto addr_i32 = m_ir_builder->CreateTrunc(addr_i64, m_ir_builder->getInt32Ty());
 	auto val_i32_ptr = m_ir_builder->CreateAlloca(m_ir_builder->getInt32Ty());
 	val_i32_ptr->setAlignment(4);
-	Call<bool>("vm.reservation_acquire", vm::reservation_acquire, m_ir_builder->CreateBitCast(val_i32_ptr, m_ir_builder->getInt8PtrTy()), addr_i32, m_ir_builder->getInt32(4));
+	Call<bool>("vm.reservation_acquire", m_ir_builder->CreateBitCast(val_i32_ptr, m_ir_builder->getInt8PtrTy()), addr_i32, m_ir_builder->getInt32(4));
 	auto val_i32 = (Value *)m_ir_builder->CreateLoad(val_i32_ptr);
 	val_i32 = m_ir_builder->CreateCall(Intrinsic::getDeclaration(m_module, Intrinsic::bswap, m_ir_builder->getInt32Ty()), val_i32);
 	auto val_i64 = m_ir_builder->CreateZExt(val_i32, m_ir_builder->getInt64Ty());
@@ -2565,7 +2533,7 @@ void Compiler::LDARX(u32 rd, u32 ra, u32 rb) {
 	auto addr_i32 = m_ir_builder->CreateTrunc(addr_i64, m_ir_builder->getInt32Ty());
 	auto val_i64_ptr = m_ir_builder->CreateAlloca(m_ir_builder->getInt64Ty());
 	val_i64_ptr->setAlignment(8);
-	Call<bool>("vm.reservation_acquire", vm::reservation_acquire, m_ir_builder->CreateBitCast(val_i64_ptr, m_ir_builder->getInt8PtrTy()), addr_i32, m_ir_builder->getInt32(8));
+	Call<bool>("vm.reservation_acquire", m_ir_builder->CreateBitCast(val_i64_ptr, m_ir_builder->getInt8PtrTy()), addr_i32, m_ir_builder->getInt32(8));
 	auto val_i64 = (Value *)m_ir_builder->CreateLoad(val_i64_ptr);
 	val_i64 = m_ir_builder->CreateCall(Intrinsic::getDeclaration(m_module, Intrinsic::bswap, m_ir_builder->getInt64Ty()), val_i64);
 	SetGpr(rd, val_i64);
@@ -2744,7 +2712,7 @@ void Compiler::STWCX_(u32 rs, u32 ra, u32 rb) {
 	auto rs_i32_ptr = m_ir_builder->CreateAlloca(m_ir_builder->getInt32Ty());
 	rs_i32_ptr->setAlignment(4);
 	m_ir_builder->CreateStore(rs_i32, rs_i32_ptr);
-	auto success_i1 = Call<bool>("vm.reservation_update", vm::reservation_update, addr_i32, m_ir_builder->CreateBitCast(rs_i32_ptr, m_ir_builder->getInt8PtrTy()), m_ir_builder->getInt32(4));
+	auto success_i1 = Call<bool>("vm.reservation_update", addr_i32, m_ir_builder->CreateBitCast(rs_i32_ptr, m_ir_builder->getInt8PtrTy()), m_ir_builder->getInt32(4));
 
 	auto cr_i32 = GetCr();
 	cr_i32 = SetBit(cr_i32, 2, success_i1);
@@ -2863,7 +2831,7 @@ void Compiler::STDCX_(u32 rs, u32 ra, u32 rb) {
 	auto rs_i64_ptr = m_ir_builder->CreateAlloca(m_ir_builder->getInt64Ty());
 	rs_i64_ptr->setAlignment(8);
 	m_ir_builder->CreateStore(rs_i64, rs_i64_ptr);
-	auto success_i1 = Call<bool>("vm.reservation_update", vm::reservation_update, addr_i32, m_ir_builder->CreateBitCast(rs_i64_ptr, m_ir_builder->getInt8PtrTy()), m_ir_builder->getInt32(8));
+	auto success_i1 = Call<bool>("vm.reservation_update", addr_i32, m_ir_builder->CreateBitCast(rs_i64_ptr, m_ir_builder->getInt8PtrTy()), m_ir_builder->getInt32(8));
 
 	auto cr_i32 = GetCr();
 	cr_i32 = SetBit(cr_i32, 2, success_i1);
@@ -3084,10 +3052,10 @@ void Compiler::MFSPR(u32 rd, u32 spr) {
 		rd_i64 = GetVrsave();
 		break;
 	case 0x10C:
-		rd_i64 = Call<u64>("get_timebased_time", get_timebased_time);
+		rd_i64 = Call<u64>("get_timebased_time");
 		break;
 	case 0x10D:
-		rd_i64 = Call<u64>("get_timebased_time", get_timebased_time);
+		rd_i64 = Call<u64>("get_timebased_time");
 		rd_i64 = m_ir_builder->CreateLShr(rd_i64, 32);
 		break;
 	default:
@@ -3132,7 +3100,7 @@ void Compiler::LVXL(u32 vd, u32 ra, u32 rb) {
 }
 
 void Compiler::MFTB(u32 rd, u32 spr) {
-	auto tb_i64 = Call<u64>("get_timebased_time", get_timebased_time);
+	auto tb_i64 = Call<u64>("get_timebased_time");
 
 	u32 n = (spr >> 5) | ((spr & 0x1f) << 5);
 	if (n == 0x10D) {
@@ -5244,7 +5212,7 @@ void Compiler::CreateBranch(llvm::Value * cmp_i1, llvm::Value * target_i32, bool
 //			if (fn)
 //				execStatus = m_ir_builder->CreateCall2(fn, m_state.args[CompileTaskState::Args::State], m_ir_builder->getInt64(0));
 //			else
-				execStatus = Call<u32>("execute_unknown_function", nullptr, m_state.args[CompileTaskState::Args::State], m_ir_builder->getInt64(0));
+				execStatus = Call<u32>("execute_unknown_function", m_state.args[CompileTaskState::Args::State], m_ir_builder->getInt64(0));
 
 			llvm::BasicBlock *cputhreadexitblock = GetBasicBlockFromAddress(m_state.current_instruction_address, "early_exit");
 			llvm::Value *isCPUThreadExit = m_ir_builder->CreateICmpEQ(execStatus, m_ir_builder->getInt32(ExecutionStatus::ExecutionStatusPropagateException));

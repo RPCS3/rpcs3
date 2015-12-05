@@ -46,38 +46,22 @@ namespace ppu_recompiler_llvm {
 	/// Pointer to an executable
 	typedef u32(*Executable)(PPUThread * ppu_state, u64 context);
 
-	/// PPU compiler that uses LLVM for code generation and optimization
+	/// Parses PPU opcodes and translate them into llvm ir.
 	class Compiler : protected PPUOpcodes, protected PPCDecoder {
 	public:
-		struct Stats {
-			/// Time spent building the LLVM IR
-			std::chrono::nanoseconds ir_build_time;
-
-			/// Time spent optimizing
-			std::chrono::nanoseconds optimization_time;
-
-			/// Time spent translating LLVM IR to machine code
-			std::chrono::nanoseconds translation_time;
-
-			/// Total time
-			std::chrono::nanoseconds total_time;
-		};
-
-		Compiler(RecompilationEngine & recompilation_engine, const Executable execute_unknown_function,
-			const Executable execute_unknown_block, bool(*poll_status_function)(PPUThread * ppu_state));
+		Compiler(llvm::LLVMContext *context, llvm::IRBuilder<> *builder, std::unordered_map<std::string, void*> &function_ptrs);
 
 		Compiler(const Compiler&) = delete; // Delete copy/move constructors and copy/move operators
 
 		virtual ~Compiler();
 
-		/**
-		 * Compile a code fragment described by a cfg and return an executable and the ExecutionEngine storing it
-		 * Pointer to function can be retrieved with getPointerToFunction
-		 */
-		std::pair<Executable, llvm::ExecutionEngine *> Compile(const std::string & name, u32 start_address, u32 instruction_count);
+		/// Create a module setting target triples and some callbacks
+		static std::unique_ptr<llvm::Module> create_module(llvm::LLVMContext &llvm_context);
 
-		/// Retrieve compiler stats
-		Stats GetStats();
+		/// Create a function called name in module and populates it by translating block at start_address with instruction_count length.
+		void translate_to_llvm_ir(llvm::Module *module, const std::string & name, u32 start_address, u32 instruction_count);
+
+		static void optimise_module(llvm::Module *module);
 
 	protected:
 		void Decode(const u32 code) override;
@@ -484,7 +468,10 @@ namespace ppu_recompiler_llvm {
 
 		void UNK(const u32 code, const u32 opcode, const u32 gcode) override;
 
-	private:
+		/// Utility function creating a function called name with Executable signature
+		void initiate_function(const std::string &name);
+
+	protected:
 		/// State of a compilation task
 		struct CompileTaskState {
 			enum Args {
@@ -508,12 +495,6 @@ namespace ppu_recompiler_llvm {
 			bool hit_branch_instruction;
 		};
 
-		/// Recompilation engine
-		RecompilationEngine & m_recompilation_engine;
-
-		/// The function that should be called to check the status of the thread
-		bool(*m_poll_status_function)(PPUThread * ppu_state);
-
 		/// The function that will be called to execute unknown functions
 		llvm::Function * m_execute_unknown_function;
 
@@ -521,7 +502,7 @@ namespace ppu_recompiler_llvm {
 		llvm::Function *  m_execute_unknown_block;
 
 		/// Maps function name to executable memory pointer
-		std::unordered_map<std::string, Executable> m_executableMap;
+		std::unordered_map<std::string, void*> &m_executable_map;
 
 		/// LLVM context
 		llvm::LLVMContext * m_llvm_context;
@@ -537,9 +518,6 @@ namespace ppu_recompiler_llvm {
 
 		/// State of the current compilation task
 		CompileTaskState m_state;
-
-		/// Compiler stats
-		Stats m_stats;
 
 		/// Get the name of the basic block for the specified address
 		std::string GetBasicBlockNameFromAddress(u32 address, const std::string & suffix = "") const;
@@ -726,28 +704,21 @@ namespace ppu_recompiler_llvm {
 		}
 
 		/// Call a function
-		template<class ReturnType, class Func, class... Args>
-		llvm::Value * Call(const char * name, Func function, Args... args) {
+		template<class ReturnType, class... Args>
+		llvm::Value * Call(const char * name, Args... args) {
 			auto fn = m_module->getFunction(name);
 			if (!fn) {
 				std::vector<llvm::Type *> fn_args_type = { args->getType()... };
 				auto fn_type = llvm::FunctionType::get(CppToLlvmType<ReturnType>(), fn_args_type, false);
 				fn = llvm::cast<llvm::Function>(m_module->getOrInsertFunction(name, fn_type));
 				fn->setCallingConv(llvm::CallingConv::X86_64_Win64);
-				// Note: not threadsafe
-				m_executableMap[name] = (Executable)(void *&)function;
+				// Create an entry in m_executable_map that will be populated outside of compiler
+				(void)m_executable_map[name];
 			}
 
 			std::vector<llvm::Value *> fn_args = { args... };
 			return m_ir_builder->CreateCall(fn, fn_args);
 		}
-
-		/// Test an instruction against the interpreter
-		template <class... Args>
-		void VerifyInstructionAgainstInterpreter(const char * name, void (Compiler::*recomp_fn)(Args...), void (PPUInterpreter::*interp_fn)(Args...), PPUState & input_state, Args... args);
-
-		/// Excute a test
-		void RunTest(const char * name, std::function<void()> test_case, std::function<void()> input, std::function<bool(std::string & msg)> check_result);
 
 		/// Handle compilation errors
 		void CompilationError(const std::string & error);
@@ -870,11 +841,21 @@ namespace ppu_recompiler_llvm {
 		/// vector storing all exec engine
 		std::vector<std::unique_ptr<llvm::ExecutionEngine> > m_executable_storage;
 
+
+		/// LLVM context
+		llvm::LLVMContext &m_llvm_context;
+
+		/// LLVM IR builder
+		llvm::IRBuilder<> m_ir_builder;
+
+		/**
+		* Compile a code fragment described by a cfg and return an executable and the ExecutionEngine storing it
+		* Pointer to function can be retrieved with getPointerToFunction
+		*/
+		std::pair<Executable, llvm::ExecutionEngine *> compile(const std::string & name, u32 start_address, u32 instruction_count);
+
 		/// The time at which the m_address_to_ordinal cache was last cleared
 		std::chrono::high_resolution_clock::time_point m_last_cache_clear_time;
-
-		/// PPU Compiler
-		Compiler m_compiler;
 
 		RecompilationEngine();
 
@@ -944,16 +925,16 @@ namespace ppu_recompiler_llvm {
 
 	class CustomSectionMemoryManager : public llvm::SectionMemoryManager {
 	private:
-		std::unordered_map<std::string, Executable> &executableMap;
+		std::unordered_map<std::string, void*> &executableMap;
 	public:
-		CustomSectionMemoryManager(std::unordered_map<std::string, Executable> &map) :
+		CustomSectionMemoryManager(std::unordered_map<std::string, void*> &map) :
 			executableMap(map)
 		{}
 		~CustomSectionMemoryManager() override {}
 
 		virtual uint64_t getSymbolAddress(const std::string &Name) override
 		{
-			std::unordered_map<std::string, Executable>::const_iterator It = executableMap.find(Name);
+			std::unordered_map<std::string, void*>::const_iterator It = executableMap.find(Name);
 			if (It != executableMap.end())
 				return (uint64_t)It->second;
 			return getSymbolAddressInProcess(Name);
