@@ -151,6 +151,14 @@ public:
 		return future;
 	}
 
+	/** Set emulator mode to running unconditionnaly.
+	 * Required to execute various part (PPUInterpreter, memory manager...) outside of rpcs3.
+	 */
+	void SetTestMode()
+	{
+		m_status = Running;
+	}
+
 	void Init();
 	void SetPath(const std::string& path, const std::string& elf_path = "");
 	void SetTitleID(const std::string& id);
