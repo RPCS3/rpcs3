@@ -1,14 +1,12 @@
 #pragma once
-
-#include "basic_types.h"
-#include "platform.h"
-
-#include <functional>
-#include <string>
 #include <memory>
 #include <vector>
 #include <array>
 
+#include <string>
+
+#include "basic_types.h"
+#include "platform.h"
 namespace common
 {
 	namespace fmt
@@ -122,7 +120,7 @@ namespace common
 			return src;
 		}
 
-		template<size_t list_size>
+	/*	template<size_t list_size>
 		std::string replace_all(std::string src, const std::pair<std::string, std::function<std::string()>>(&list)[list_size])
 		{
 			for (size_t pos = 0; pos < src.length(); ++pos)
@@ -144,7 +142,7 @@ namespace common
 			}
 
 			return src;
-		}
+		}*/
 
 		//std::string to_hex(u64 value, u64 count = 1);
 		//std::string to_udec(u64 value);

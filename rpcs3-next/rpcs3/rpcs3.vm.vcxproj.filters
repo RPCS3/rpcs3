@@ -11,9 +11,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="internal\rpcs3\vm\memory.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="internal\rpcs3\vm\vm.cpp">
       <Filter>src</Filter>
     </ClCompile>

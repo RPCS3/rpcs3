@@ -1,12 +1,22 @@
 #pragma once
-
-
-const class thread_ctrl_t* get_current_thread_ctrl();
-
-class named_thread_t;
+#include <common/basic_types.h>
+#include <common/exception.h>
+#include <common/atomic.h>
+#include <functional>
+#include <mutex>
+#include <map>
+#include <cassert>
 
 namespace rpcs3
 {
+	using namespace common;
+
+	inline namespace core
+	{
+		const class thread_ctrl_t* get_current_thread_ctrl();
+		class named_thread_t;
+	}
+
 	namespace vm
 	{
 		extern u8* const g_base_addr;
@@ -25,14 +35,14 @@ namespace rpcs3
 
 		enum page_info_t : u8
 		{
-			page_readable           = (1 << 0),
-			page_writable           = (1 << 1),
-			page_executable         = (1 << 2),
+			page_readable = (1 << 0),
+			page_writable = (1 << 1),
+			page_executable = (1 << 2),
 
 			page_fault_notification = (1 << 3),
-			page_no_reservations    = (1 << 4),
+			page_no_reservations = (1 << 4),
 
-			page_allocated          = (1 << 7),
+			page_allocated = (1 << 7),
 		};
 
 		struct waiter_t
@@ -175,7 +185,7 @@ namespace rpcs3
 			const u32 size; // total size
 			const u64 flags; // currently unused
 
-			atomic_t<u32> used; // amount of memory used, may be increased manually to prevent some memory from allocating
+			atomic<u32> used; // amount of memory used, may be increased manually to prevent some memory from allocating
 
 			// Search and map memory (don't pass alignment smaller than 4096)
 			u32 alloc(u32 size, u32 align = 4096);
@@ -238,7 +248,7 @@ namespace rpcs3
 		{
 			static u32 cast(const u64 addr, const char* file, int line, const char* func)
 			{
-				return static_cast<u32>(addr) == addr ? static_cast<u32>(addr) : throw fmt::exception(file, line, func, "VM_CAST failed (addr=0x%llx)", addr);
+				return static_cast<u32>(addr) == addr ? static_cast<u32>(addr) : throw rpcs3::exception(file, line, func, "VM_CAST failed (addr=0x%llx)", addr);
 			}
 		};
 
@@ -333,7 +343,7 @@ namespace rpcs3
 
 			void init();
 		}
-		
+
 		namespace psv
 		{
 			template<typename T> inline to_le_t<T>* _ptr(u32 addr)
@@ -398,9 +408,12 @@ namespace rpcs3
 
 		void close();
 	}
+}
 
-	#include "vm_ptr.h"
+#include "vm_ptr.h"
 
+namespace rpcs3
+{
 	namespace vm
 	{
 		class stack

@@ -1,32 +1,36 @@
 #pragma once
-#include "Emu/CPU/CPUDecoder.h"
-#include "PPCInstrTable.h"
+#include "instr_table.h"
+#include <common/basic_types.h>
 
-class PPCDecoder : public CPUDecoder
+namespace rpcs3
 {
-public:
-	virtual void Decode(const u32 code) = 0;
+	using namespace common;
 
-	virtual u32 DecodeMemory(const u32 address);
+	namespace cell
+	{
+		class decoder
+		{
+		public:
+			virtual void decode(const u32 code) = 0;
+			virtual u32 decode_memory(const u32 address);
+		};
 
-	virtual ~PPCDecoder() = default;
-};
+		template<typename TO, uint from, uint to>
+		static InstrList<(1 << (CodeField<from, to>::size)), TO>* new_list(const CodeField<from, to>& func, InstrCaller<TO>* error_func = nullptr)
+		{
+			return new InstrList<(1 << (CodeField<from, to>::size)), TO>(func, error_func);
+		}
 
+		template<int count, typename TO, uint from, uint to>
+		static InstrList<(1 << (CodeField<from, to>::size)), TO>* new_list(InstrList<count, TO>* parent, int opcode, const CodeField<from, to>& func, InstrCaller<TO>* error_func = nullptr)
+		{
+			return connect_list(parent, new InstrList<(1 << (CodeField<from, to>::size)), TO>(func, error_func), opcode);
+		}
 
-template<typename TO, uint from, uint to>
-static InstrList<(1 << (CodeField<from, to>::size)), TO>* new_list(const CodeField<from, to>& func, InstrCaller<TO>* error_func = nullptr)
-{
-	return new InstrList<(1 << (CodeField<from, to>::size)), TO>(func, error_func);
-}
-
-template<int count, typename TO, uint from, uint to>
-static InstrList<(1 << (CodeField<from, to>::size)), TO>* new_list(InstrList<count, TO>* parent, int opcode, const CodeField<from, to>& func, InstrCaller<TO>* error_func = nullptr)
-{
-	return connect_list(parent, new InstrList<(1 << (CodeField<from, to>::size)), TO>(func, error_func), opcode);
-}
-
-template<int count, typename TO, uint from, uint to>
-static InstrList<(1 << (CodeField<from, to>::size)), TO>* new_list(InstrList<count, TO>* parent, const CodeField<from, to>& func, InstrCaller<TO>* error_func = nullptr)
-{
-	return connect_list(parent, new InstrList<(1 << (CodeField<from, to>::size)), TO>(func, error_func));
+		template<int count, typename TO, uint from, uint to>
+		static InstrList<(1 << (CodeField<from, to>::size)), TO>* new_list(InstrList<count, TO>* parent, const CodeField<from, to>& func, InstrCaller<TO>* error_func = nullptr)
+		{
+			return connect_list(parent, new InstrList<(1 << (CodeField<from, to>::size)), TO>(func, error_func));
+		}
+	}
 }

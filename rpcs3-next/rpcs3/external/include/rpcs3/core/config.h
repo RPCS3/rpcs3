@@ -1,6 +1,7 @@
 #pragma once
-#include "Utilities/convert.h"
-#include "Utilities/config_context.h"
+#include <common/convert.h>
+#include <common/config_context.h>
+#include <common/geometry_types_convert.h>
 
 enum class audio_output_type
 {
@@ -9,7 +10,7 @@ enum class audio_output_type
 	XAudio2
 };
 
-namespace convert
+namespace common::convert
 {
 	template<>
 	struct to_impl_t<std::string, audio_output_type>
@@ -81,7 +82,7 @@ enum class rsx_resolution
 	_960x1080 = 13
 };
 
-namespace convert
+namespace common::convert
 {
 	template<>
 	struct to_impl_t<std::string, rsx_renderer_type>
@@ -255,7 +256,7 @@ enum class ppu_decoder_type
 	recompiler_llvm
 };
 
-namespace convert
+namespace common::convert
 {
 	template<>
 	struct to_impl_t<std::string, ppu_decoder_type>
@@ -299,7 +300,7 @@ enum class spu_decoder_type
 	recompiler_asmjit
 };
 
-namespace convert
+namespace common::convert
 {
 	template<>
 	struct to_impl_t<std::string, spu_decoder_type>
@@ -357,7 +358,7 @@ enum class io_handler_mode
 	xinput
 };
 
-namespace convert
+namespace common::convert
 {
 	template<>
 	struct to_impl_t<std::string, io_camera_state>
@@ -477,7 +478,7 @@ enum class misc_net_status
 	disconnected
 };
 
-namespace convert
+namespace common::convert
 {
 	template<>
 	struct to_impl_t<std::string, misc_log_level>
@@ -563,24 +564,25 @@ namespace convert
 
 namespace rpcs3
 {
-	class config_t : public config_context_t
+	using namespace common;
+	class config_t : public config_context
 	{
 		std::string m_path;
 
 	public:
 		struct gui_group : protected group
 		{
-			gui_group(config_context_t *cfg) : group{ cfg, "gui" } {}
+			gui_group(config_context *cfg) : group{ cfg, "gui" } {}
 
 			entry<size2i> size{ this, "size",{ 900, 600 } };
-			entry<position2i> position{ this, "position",{ -1, -1 } };
+			entry<point2i> position{ this, "position",{ -1, -1 } };
 			entry<std::string> aui_mgr_perspective{ this, "main_frame_aui", "" };
 
 		} gui{ this };
 
 		struct core_group : protected group
 		{
-			core_group(config_context_t *cfg) : group{ cfg, "core" } {}
+			core_group(config_context *cfg) : group{ cfg, "core" } {}
 
 			struct llvm_group : protected group
 			{
@@ -620,7 +622,7 @@ namespace rpcs3
 				entry<bool> overlay             { this, "Debug overlay",       false };
 			} d3d12{ this };
 
-			rsx_group(config_context_t *cfg) : group{ cfg, "rsx" } {}
+			rsx_group(config_context *cfg) : group{ cfg, "rsx" } {}
 
 			entry<rsx_renderer_type> renderer   { this, "Renderer",            rsx_renderer_type::OpenGL };
 			entry<rsx_resolution> resolution    { this, "Resolution",          rsx_resolution::_720x480 };
@@ -634,7 +636,7 @@ namespace rpcs3
 
 		struct audio_group : protected group
 		{
-			audio_group(config_context_t *cfg) : group{ cfg, "audio" } {}
+			audio_group(config_context *cfg) : group{ cfg, "audio" } {}
 
 			entry<audio_output_type> out{ this, "Audio Out",         audio_output_type::OpenAL };
 			entry<bool> dump_to_file    { this, "Dump to file",      false };
@@ -643,7 +645,7 @@ namespace rpcs3
 
 		struct io_group : protected group
 		{
-			io_group(config_context_t *cfg) : group{ cfg, "io" } {}
+			io_group(config_context *cfg) : group{ cfg, "io" } {}
 
 			entry<io_camera_state> camera               { this, "Camera",           io_camera_state::connected };
 			entry<io_camera_type> camera_type           { this, "Camera type",      io_camera_type::play_station_eye };
@@ -685,7 +687,7 @@ namespace rpcs3
 
 		struct misc_group : protected group
 		{
-			misc_group(config_context_t *cfg) : group{ cfg, "misc" } {}
+			misc_group(config_context *cfg) : group{ cfg, "misc" } {}
 
 			struct log_group : protected group
 			{
@@ -720,28 +722,29 @@ namespace rpcs3
 
 		struct system_group : protected group
 		{
-			system_group(config_context_t *cfg) : group{ cfg, "system" } {}
+			system_group(config_context *cfg) : group{ cfg, "system" } {}
 
 			entry<u32> language                  { this, "Language",                         1 };
 			entry<std::string> emulation_dir_path{ this, "Emulation dir path",               "" };
 			entry<bool> emulation_dir_path_enable{ this, "Use path below as EmulationDir",   false };
+			entry<std::string> log_path{ this, "Log path", std::string("./") }; //TODO
 		} system{ this };
 
 		struct vfs_group : public group
 		{
-			vfs_group(config_context_t *cfg) : group{ cfg, "vfs" } {}
+			vfs_group(config_context *cfg) : group{ cfg, "vfs" } {}
 			entry<int> count{ this, "count", 0 };
 			entry<int> hdd_count{ this, "hdd_count", 0 };
 		} vfs{ this };
 
 		struct lle_group : public group
 		{
-			lle_group(config_context_t *cfg) : group{ cfg, "lle" } {}
+			lle_group(config_context *cfg) : group{ cfg, "lle" } {}
 		} lle{ this };
 
 		struct gw_group : public group
 		{
-			gw_group(config_context_t *cfg) : group{ cfg, "game_viewer" } {}
+			gw_group(config_context *cfg) : group{ cfg, "game_viewer" } {}
 		} game_viewer{ this };
 
 		config_t() = default;

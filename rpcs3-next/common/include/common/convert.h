@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#include <type_traits>
 
 namespace common
 {
@@ -16,6 +17,7 @@ namespace common
 				return value;
 			}
 		};
+
 
 		template<>
 		struct to_impl_t<std::string, bool>
@@ -234,11 +236,20 @@ namespace common
 			}
 		};
 
+		template<typename TypeFrom, typename TypeFromBasic, typename TypeTo>
+		struct convert::to_impl_t<TypeTo, std::enable_if_t<std::is_convertible<TypeFromBasic, TypeFrom>::value, TypeFromBasic>>
+		{
+			static TypeTo func(const TypeFrom& value)
+			{
+				return convert::to_impl_t<TypeTo, TypeFrom>(value);
+			}
+		};
 
 		template<typename ReturnType, typename FromType>
 		ReturnType to(FromType value)
 		{
 			return to_impl_t<std::remove_all_extents_t<ReturnType>, std::remove_all_extents_t<FromType>>::func(value);
 		}
+
 	}
 }

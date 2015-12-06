@@ -1,37 +1,49 @@
 #pragma once
 
-#include "Emu/IdManager.h"
+#include <common/basic_types.h>
+#include <rpcs3/core/id_manager.h>
+#include <mutex>
+#include <unordered_map>
 
-struct lv2_event_queue_t;
-
-class EventManager
+namespace rpcs3
 {
-	std::mutex m_mutex;
-	std::unordered_map<u64, std::shared_ptr<lv2_event_queue_t>> m_map;
+	using namespace common;
 
-public:
-	void Init();
-	void Clear();
-	bool UnregisterKey(u64 key);
-
-	template<typename... Args, typename = std::enable_if_t<std::is_constructible<lv2_event_queue_t, Args...>::value>> std::shared_ptr<lv2_event_queue_t> MakeEventQueue(u64 key, Args&&... args)
+	inline namespace core
 	{
-		std::lock_guard<std::mutex> lock(m_mutex);
+		struct lv2_event_queue_t;
 
-		if (key && m_map.find(key) != m_map.end())
+		class event_manager
 		{
-			return nullptr;
-		}
+			std::mutex m_mutex;
+			std::unordered_map<u64, std::shared_ptr<lv2_event_queue_t>> m_map;
 
-		auto queue = idm::make_ptr<lv2_event_queue_t>(std::forward<Args>(args)...);
+		public:
+			void init();
+			void clear();
+			bool unregister_key(u64 key);
 
-		if (key)
-		{
-			m_map[key] = queue;
-		}
+			template<typename... Args, typename = std::enable_if_t<std::is_constructible<lv2_event_queue_t, Args...>::value>>
+			std::shared_ptr<lv2_event_queue_t> make_event_queue(u64 key, Args&&... args)
+			{
+				std::lock_guard<std::mutex> lock(m_mutex);
 
-		return queue;
+				if (key && m_map.find(key) != m_map.end())
+				{
+					return nullptr;
+				}
+
+				auto queue = idm::make_ptr<lv2_event_queue_t>(std::forward<Args>(args)...);
+
+				if (key)
+				{
+					m_map[key] = queue;
+				}
+
+				return queue;
+			}
+
+			std::shared_ptr<lv2_event_queue_t> get_event_queue(u64 key);
+		};
 	}
-
-	std::shared_ptr<lv2_event_queue_t> GetEventQueue(u64 key);
-};
+}

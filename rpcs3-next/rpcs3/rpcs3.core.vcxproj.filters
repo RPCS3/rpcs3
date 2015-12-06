@@ -11,36 +11,60 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="internal\rpcs3\core\platform.cpp">
+    <ClCompile Include="internal\rpcs3\core\auto_pause.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="internal\rpcs3\core\fmt.cpp">
+    <ClCompile Include="internal\rpcs3\core\event.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="internal\rpcs3\core\extension_types.cpp">
+    <ClCompile Include="internal\rpcs3\core\events.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\core\id_manager.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\core\log.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\core\state.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="internal\rpcs3\core\thread.cpp">
       <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="external\include\rpcs3\core\extension_types.h">
+    <None Include="internal\rpcs3\core\git-version-gen.cmd" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="external\include\rpcs3\core\config.h">
       <Filter>include</Filter>
     </ClInclude>
-    <ClInclude Include="external\include\rpcs3\core\fmt.h">
+    <ClInclude Include="external\include\rpcs3\core\event.h">
       <Filter>include</Filter>
     </ClInclude>
-    <ClInclude Include="external\include\rpcs3\core\geometry_types.h">
+    <ClInclude Include="external\include\rpcs3\core\events.h">
       <Filter>include</Filter>
     </ClInclude>
-    <ClInclude Include="external\include\rpcs3\core\basic_types.h">
+    <ClInclude Include="external\include\rpcs3\core\game_info.h">
       <Filter>include</Filter>
     </ClInclude>
-    <ClInclude Include="external\include\rpcs3\core\platform.h">
-      <Filter>include</Filter>
-    </ClInclude>
-    <ClInclude Include="external\include\rpcs3\core\safe_ring_buffer.h">
+    <ClInclude Include="external\include\rpcs3\core\id_manager.h">
       <Filter>include</Filter>
     </ClInclude>
     <ClInclude Include="external\include\rpcs3\core\log.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\core\state.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\core\thread.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\core\timer.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="external\include\rpcs3\core\auto_pause.h">
       <Filter>include</Filter>
     </ClInclude>
   </ItemGroup>

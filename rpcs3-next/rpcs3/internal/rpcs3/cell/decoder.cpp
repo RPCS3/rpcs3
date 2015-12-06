@@ -1,11 +1,16 @@
-#include "stdafx.h"
-#include "Emu/Memory/Memory.h"
-#include "PPCDecoder.h"
+#include <rpcs3/vm/vm.h>
+#include "decoder.h"
 
-u32 PPCDecoder::DecodeMemory(const u32 address)
+namespace common
 {
-	u32 instr = vm::ps3::read32(address);
-	Decode(instr);
+	namespace cell
+	{
+		u32 decoder::decode_memory(const u32 address)
+		{
+			u32 instr = vm::ps3::read32(address);
+			Decode(instr);
 
-	return sizeof(u32);
+			return sizeof(u32);
+		}
+	}
 }

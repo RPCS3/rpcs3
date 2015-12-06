@@ -106,5 +106,8 @@
     <ClCompile Include="src\shared_mutex.cpp">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="src\platform.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

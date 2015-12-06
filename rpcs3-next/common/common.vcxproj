@@ -48,6 +48,7 @@
     <ClCompile Include="src\extension_types.cpp" />
     <ClCompile Include="src\file.cpp" />
     <ClCompile Include="src\fmt.cpp" />
+    <ClCompile Include="src\platform.cpp" />
     <ClCompile Include="src\semaphore.cpp" />
     <ClCompile Include="src\shared_mutex.cpp" />
     <ClCompile Include="src\sleep_queue.cpp" />
@@ -114,10 +115,10 @@
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">pch.h</PrecompiledHeaderFile>
-      <MSCompatibility Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</MSCompatibility>
-      <MSCompatibility Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</MSCompatibility>
-      <MSCompatibility Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</MSCompatibility>
-      <MSCompatibility Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</MSCompatibility>
+      <MSCompatibility Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</MSCompatibility>
+      <MSCompatibility Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</MSCompatibility>
+      <MSCompatibility Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</MSCompatibility>
+      <MSCompatibility Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</MSCompatibility>
     </ClCompile>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

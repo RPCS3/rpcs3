@@ -13,7 +13,7 @@
 
 namespace common
 {
-#if defined(__GNUG__)
+#if defined(__GNUG__) && !defined(_MSC_VER)
 	template<typename T, typename T2> inline std::enable_if_t<IS_INTEGRAL(T), T> sync_val_compare_and_swap(volatile T* dest, T2 comp, T2 exch)
 	{
 		return __sync_val_compare_and_swap(dest, comp, exch);

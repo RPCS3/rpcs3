@@ -19,7 +19,6 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="internal\rpcs3\vm\memory.cpp" />
     <ClCompile Include="internal\rpcs3\vm\vm.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -66,25 +65,25 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <OutDir>$(SolutionDir)lib\$(Configuration)-$(Platform)\</OutDir>
     <IntDir>$(SolutionDir)tmp\$(ProjectName)-$(Platform)-$(Configuration)\</IntDir>
-    <IncludePath>$(SolutionDir)common/include/;$(ProjectDir)external/include/;$(ProjectDir)external/include/vm/;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)common/include/;$(ProjectDir)external/include/;$(ProjectDir)external/include/rpcs3/vm/;$(IncludePath)</IncludePath>
     <LibraryPath>$(SolutionDir)lib/$(Configuration)-$(Platform)/;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <OutDir>$(SolutionDir)lib\$(Configuration)-$(Platform)\</OutDir>
     <IntDir>$(SolutionDir)tmp\$(ProjectName)-$(Platform)-$(Configuration)\</IntDir>
-    <IncludePath>$(SolutionDir)common/include/;$(ProjectDir)external/include/;$(ProjectDir)external/include/vm/;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)common/include/;$(ProjectDir)external/include/;$(ProjectDir)external/include/rpcs3/vm/;$(IncludePath)</IncludePath>
     <LibraryPath>$(SolutionDir)lib/$(Configuration)-$(Platform)/;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <OutDir>$(SolutionDir)lib\$(Configuration)-$(Platform)\</OutDir>
     <IntDir>$(SolutionDir)tmp\$(ProjectName)-$(Platform)-$(Configuration)\</IntDir>
-    <IncludePath>$(SolutionDir)common/include/;$(ProjectDir)external/include/;$(ProjectDir)external/include/vm/;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)common/include/;$(ProjectDir)external/include/;$(ProjectDir)external/include/rpcs3/vm/;$(IncludePath)</IncludePath>
     <LibraryPath>$(SolutionDir)lib/$(Configuration)-$(Platform)/;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>$(SolutionDir)lib\$(Configuration)-$(Platform)\</OutDir>
     <IntDir>$(SolutionDir)tmp\$(ProjectName)-$(Platform)-$(Configuration)\</IntDir>
-    <IncludePath>$(SolutionDir)common/include/;$(ProjectDir)external/include/;$(ProjectDir)external/include/vm/;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)common/include/;$(ProjectDir)external/include/;$(ProjectDir)external/include/rpcs3/vm/;$(IncludePath)</IncludePath>
     <LibraryPath>$(SolutionDir)lib/$(Configuration)-$(Platform)/;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup>

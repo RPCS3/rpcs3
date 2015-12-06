@@ -1,140 +1,151 @@
 #pragma once
-#include "safe_ring_buffer.h"
-#include "basic_types.h"
+#include <common/safe_ring_buffer.h>
+#include <common/basic_types.h>
+#include <common/fmt.h>
+
 #include <array>
 #include <set>
-#include "fmt.h"
+#include <atomic>
 
-//#define BUFFERED_LOGGING 1
+
+#define BUFFERED_LOGGING 1
 
 //first parameter is of type Log::LogType and text is of type std::string
 
-#define LOG_SUCCESS(logType, text, ...)           log_message(logType, log::Severity::Success, text, ##__VA_ARGS__)
-#define LOG_NOTICE(logType, text, ...)            log_message(logType, log::Severity::Notice,  text, ##__VA_ARGS__) 
-#define LOG_WARNING(logType, text, ...)           log_message(logType, log::Severity::Warning, text, ##__VA_ARGS__) 
-#define LOG_ERROR(logType, text, ...)             log_message(logType, log::Severity::Error,   text, ##__VA_ARGS__)
+#define LOG_SUCCESS(logType, text, ...)     ::rpcs3::core::log_message(::rpcs3::core::logType, ::rpcs3::core::log::severity::success, text, ##__VA_ARGS__)
+#define LOG_NOTICE(logType, text, ...)      ::rpcs3::core::log_message(::rpcs3::core::logType, ::rpcs3::core::log::severity::notice,  text, ##__VA_ARGS__) 
+#define LOG_WARNING(logType, text, ...)     ::rpcs3::core::log_message(::rpcs3::core::logType, ::rpcs3::core::log::severity::warning, text, ##__VA_ARGS__) 
+#define LOG_ERROR(logType, text, ...)       ::rpcs3::core::log_message(::rpcs3::core::logType, ::rpcs3::core::log::severity::error,   text, ##__VA_ARGS__)
 
 namespace rpcs3
 {
-	namespace log
+	using namespace common;
+
+	inline namespace core
 	{
-		const unsigned int MAX_LOG_BUFFER_LENGTH = 1024 * 1024;
-		const unsigned int gBuffSize = 1000;
 
-		enum LogType : u32
+		namespace log
 		{
-			GENERAL = 0,
-			LOADER,
-			MEMORY,
-			RSX,
-			HLE,
-			PPU,
-			SPU,
-			ARMv7,
-			TTY,
-		};
+			static constexpr unsigned int g_max_buffer_size = 1024 * 1024;
+			static constexpr unsigned int g_buffer_size = 1000;
 
-		struct LogTypeName
-		{
-			LogType mType;
-			std::string mName;
-		};
+			enum type : u32
+			{
+				general = 0,
+				loader,
+				memory,
+				rsx,
+				hle,
+				ppu,
+				spu,
+				armv7,
+				tty,
+			};
 
-		//well I'd love make_array() but alas manually counting is not the end of the world
-		static const std::array<LogTypeName, 9> gTypeNameTable = { {
-				{ GENERAL, "G: " },
-				{ LOADER, "LDR: " },
-				{ MEMORY, "MEM: " },
-				{ RSX, "RSX: " },
-				{ HLE, "HLE: " },
-				{ PPU, "PPU: " },
-				{ SPU, "SPU: " },
-				{ ARMv7, "ARM: " },
-				{ TTY, "TTY: " }
-				} };
+			struct type_name
+			{
+				type type;
+				std::string name;
+			};
 
-		enum class Severity : u32
-		{
-			Notice = 0,
-			Warning,
-			Success,
-			Error,
-		};
+			//well I'd love make_array() but alas manually counting is not the end of the world
+			static const std::array<type_name, 9> g_type_name_table = { {
+					{ type::general, "G: " },
+					{ type::loader, "LDR: " },
+					{ type::memory, "MEM: " },
+					{ type::rsx, "RSX: " },
+					{ type::hle, "HLE: " },
+					{ type::ppu, "PPU: " },
+					{ type::spu, "SPU: " },
+					{ type::armv7, "ARM: " },
+					{ type::tty, "TTY: " }
+					} };
 
-		struct LogMessage
-		{
-			using size_type = u32;
-			LogType mType;
-			Severity mServerity;
-			std::string mText;
+			enum class severity : u32
+			{
+				notice = 0,
+				warning,
+				success,
+				error,
+			};
 
-			u32 size() const;
-			void serialize(char *output) const;
-			static LogMessage deserialize(char *input, u32* size_out = nullptr);
-		};
+			struct message
+			{
+				using size_type = u32;
+				type type;
+				severity serverity;
+				std::string text;
 
-		struct LogListener
-		{
-			virtual ~LogListener() {};
-			virtual void log(const LogMessage &msg) = 0;
-		};
+				u32 size() const;
+				void serialize(char *output) const;
+				static message deserialize(char *input, u32* size_out = nullptr);
+			};
 
-		struct LogChannel
-		{
-			LogChannel();
-			LogChannel(const std::string& name);
-			LogChannel(LogChannel& other) = delete;
-			void log(const LogMessage &msg);
-			void addListener(std::shared_ptr<LogListener> listener);
-			void removeListener(std::shared_ptr<LogListener> listener);
-			std::string name;
-		private:
-			bool mEnabled;
-			Severity mLogLevel;
-			std::mutex mListenerLock;
-			std::set<std::shared_ptr<LogListener>> mListeners;
-		};
+			struct listener
+			{
+				virtual ~listener() {};
+				virtual void log(const message &msg) = 0;
+			};
 
-		struct LogManager
-		{
-			LogManager();
-			~LogManager();
-			static LogManager& getInstance();
-			LogChannel& getChannel(LogType type);
-			void log(LogMessage msg);
-			void addListener(std::shared_ptr<LogListener> listener);
-			void removeListener(std::shared_ptr<LogListener> listener);
+			struct channel
+			{
+				channel();
+				channel(const std::string& name);
+				channel(channel& other) = delete;
+				void log(const message &msg);
+				void add_listener(std::shared_ptr<listener> listener);
+				void remove_listener(std::shared_ptr<listener> listener);
+				std::string name;
+
+			private:
+				bool m_enabled;
+				severity m_log_level;
+				std::mutex m_mtx_listener;
+				std::set<std::shared_ptr<listener>> m_listeners;
+			};
+
+			struct manager
+			{
+				manager();
+				~manager();
+				static manager& instance();
+				log::channel& channel(type type);
+
+				void log(message msg);
+				void add_listener(std::shared_ptr<listener> listener);
+				void remove_listener(std::shared_ptr<listener> listener);
 #ifdef BUFFERED_LOGGING
-			void consumeLog();
+				void consume_log();
 #endif
-		private:
+			private:
 #ifdef BUFFERED_LOGGING
-			MTRingbuffer<char, MAX_LOG_BUFFER_LENGTH> mBuffer;
-			std::condition_variable mBufferReady;
-			std::mutex mStatusMut;
-			std::atomic<bool> mExiting;
-			std::thread mLogConsumer;
+				safe_ring_buffer<char, g_max_buffer_size> m_buffer;
+				std::condition_variable m_buffer_ready;
+				std::mutex m_mtx_status;
+				std::atomic<bool> m_exiting;
+				std::thread m_log_consumer;
 #endif
-			std::array<LogChannel, std::tuple_size<decltype(gTypeNameTable)>::value> mChannels;
-			//std::array<LogChannel,gTypeNameTable.size()> mChannels; //TODO: use this once Microsoft sorts their shit out
-		};
-	}
+				std::array<log::channel, std::tuple_size<decltype(g_type_name_table)>::value> m_channels;
+				//std::array<log::channel,g_type_name_table.size()> m_channels; //TODO: use this once Microsoft sorts their shit out
+			};
+		}
 
-	static struct { inline operator log::LogType() { return log::LogType::GENERAL; } } GENERAL;
-	static struct { inline operator log::LogType() { return log::LogType::LOADER; } } LOADER;
-	static struct { inline operator log::LogType() { return log::LogType::MEMORY; } } MEMORY;
-	static struct { inline operator log::LogType() { return log::LogType::RSX; } } RSX;
-	static struct { inline operator log::LogType() { return log::LogType::HLE; } } HLE;
-	static struct { inline operator log::LogType() { return log::LogType::PPU; } } PPU;
-	static struct { inline operator log::LogType() { return log::LogType::SPU; } } SPU;
-	static struct { inline operator log::LogType() { return log::LogType::ARMv7; } } ARMv7;
-	static struct { inline operator log::LogType() { return log::LogType::TTY; } } TTY;
+		static struct { inline operator log::type() { return log::type::general; } } general;
+		static struct { inline operator log::type() { return log::type::loader; } } loader;
+		static struct { inline operator log::type() { return log::type::memory; } } memory;
+		static struct { inline operator log::type() { return log::type::rsx; } } rsx;
+		static struct { inline operator log::type() { return log::type::hle; } } hle;
+		static struct { inline operator log::type() { return log::type::ppu; } } ppu;
+		static struct { inline operator log::type() { return log::type::spu; } } spu;
+		static struct { inline operator log::type() { return log::type::armv7; } } armv7;
+		static struct { inline operator log::type() { return log::type::tty; } } tty;
 
-	void log_message(log::LogType type, log::Severity sev, const char* text);
-	void log_message(log::LogType type, log::Severity sev, std::string text);
+		void log_message(log::type type, log::severity sev, const char* text);
+		void log_message(log::type type, log::severity sev, std::string text);
 
-	template<typename... Args> never_inline void log_message(log::LogType type, log::Severity sev, const char* fmt, Args... args)
-	{
-		log_message(type, sev, fmt::format(fmt, fmt::do_unveil(args)...));
+		template<typename... Args> never_inline void log_message(log::type type, log::severity sev, const char* fmt, Args... args)
+		{
+			log_message(type, sev, fmt::format(fmt, fmt::do_unveil(args)...));
+		}
 	}
 }

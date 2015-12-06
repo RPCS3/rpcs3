@@ -1,6 +1,7 @@
 #pragma once
 
 #include <emmintrin.h>
+#include <cstdint>
 
 #ifdef _MSC_VER
 #include <intrin.h>
@@ -8,7 +9,6 @@
 #include <x86intrin.h>
 #endif
 
-#include "defines.h"
 
 #if defined(_MSC_VER) && _MSC_VER <= 1800
 #define thread_local __declspec(thread)
@@ -47,7 +47,9 @@
 #include <malloc.h>
 #endif
 
+#ifndef _MSC_VER
 #define _fpclass(x) std::fpclassify(x)
+#endif
 #define _byteswap_ushort(x) __builtin_bswap16(x)
 #define _byteswap_uint64(x) __builtin_bswap64(x)
 #define INFINITE 0xFFFFFFFF

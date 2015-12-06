@@ -1191,24 +1191,4 @@ namespace common
 	using coord2i = coord<2, int>;
 	using coord2f = coord<2, float>;
 	using coord2d = coord<2, double>;
-
-	template<>
-	struct to_impl_t<size2i, std::string>
-	{
-		static size2i func(const std::string& value)
-		{
-			const auto& data = fmt::split(value, { "x" });
-			return{ std::stoi(data[0]), std::stoi(data[1]) };
-		}
-	};
-
-	template<>
-	struct to_impl_t<position2i, std::string>
-	{
-		static position2i func(const std::string& value)
-		{
-			const auto& data = fmt::split(value, { ":" });
-			return{ std::stoi(data[0]), std::stoi(data[1]) };
-		}
-	};
 }

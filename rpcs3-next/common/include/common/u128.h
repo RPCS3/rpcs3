@@ -1,5 +1,6 @@
 #pragma once
 #include "platform.h"
+#include "defines.h"
 
 namespace common
 {

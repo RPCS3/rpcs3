@@ -1,8 +1,10 @@
 #pragma once
-#include "Utilities/event.h"
+#include <common/event.h>
 
 namespace rpcs3
 {
+	using namespace common;
+
 	extern event<void> oninit;
 	extern event<void> onstart;
 	extern event<void> onstop;

@@ -26,7 +26,7 @@ class safe_ring_buffer
 		return (m_get + by) % MaxBufferSize;
 	}
 
-	size_t movePut(size_t by = 1)
+	size_t move_put(size_t by = 1)
 	{
 		return (m_put + by) % MaxBufferSize;
 	}

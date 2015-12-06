@@ -5,7 +5,7 @@ namespace rpcs3
 {
 	namespace
 	{
-		constexpr int version_hi { return 0; }
+		constexpr int version_hi() { return 0; }
 		constexpr int version_mid() { return 0; }
 		constexpr int version_lo() { return 1; }
 

@@ -19,18 +19,28 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="internal\rpcs3\core\extension_types.cpp" />
-    <ClCompile Include="internal\rpcs3\core\fmt.cpp" />
-    <ClCompile Include="internal\rpcs3\core\platform.cpp" />
+    <ClCompile Include="internal\rpcs3\core\auto_pause.cpp" />
+    <ClCompile Include="internal\rpcs3\core\event.cpp" />
+    <ClCompile Include="internal\rpcs3\core\events.cpp" />
+    <ClCompile Include="internal\rpcs3\core\id_manager.cpp" />
+    <ClCompile Include="internal\rpcs3\core\log.cpp" />
+    <ClCompile Include="internal\rpcs3\core\state.cpp" />
+    <ClCompile Include="internal\rpcs3\core\thread.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="external\include\rpcs3\core\basic_types.h" />
-    <ClInclude Include="external\include\rpcs3\core\extension_types.h" />
-    <ClInclude Include="external\include\rpcs3\core\fmt.h" />
-    <ClInclude Include="external\include\rpcs3\core\geometry_types.h" />
+    <None Include="internal\rpcs3\core\git-version-gen.cmd" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="external\include\rpcs3\core\auto_pause.h" />
+    <ClInclude Include="external\include\rpcs3\core\config.h" />
+    <ClInclude Include="external\include\rpcs3\core\event.h" />
+    <ClInclude Include="external\include\rpcs3\core\events.h" />
+    <ClInclude Include="external\include\rpcs3\core\game_info.h" />
+    <ClInclude Include="external\include\rpcs3\core\id_manager.h" />
     <ClInclude Include="external\include\rpcs3\core\log.h" />
-    <ClInclude Include="external\include\rpcs3\core\platform.h" />
-    <ClInclude Include="external\include\rpcs3\core\safe_ring_buffer.h" />
+    <ClInclude Include="external\include\rpcs3\core\state.h" />
+    <ClInclude Include="external\include\rpcs3\core\thread.h" />
+    <ClInclude Include="external\include\rpcs3\core\timer.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{7a675e5e-b7f3-4b29-90b8-f6a12c0be59a}</ProjectGuid>
@@ -68,25 +78,25 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <OutDir>$(SolutionDir)lib\$(Configuration)-$(Platform)\</OutDir>
     <IntDir>$(SolutionDir)tmp\$(ProjectName)-$(Platform)-$(Configuration)\</IntDir>
-    <IncludePath>$(SolutionDir)common/include/;$(ProjectDir)external/include/;$(ProjectDir)external/include/core/;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)common/include/;$(ProjectDir)external/include/;$(ProjectDir)external/include/rpcs3/core/;$(IncludePath)</IncludePath>
     <LibraryPath>$(SolutionDir)lib/$(Configuration)-$(Platform)/;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <OutDir>$(SolutionDir)lib\$(Configuration)-$(Platform)\</OutDir>
     <IntDir>$(SolutionDir)tmp\$(ProjectName)-$(Platform)-$(Configuration)\</IntDir>
-    <IncludePath>$(SolutionDir)common/include/;$(ProjectDir)external/include/;$(ProjectDir)external/include/core/;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)common/include/;$(ProjectDir)external/include/;$(ProjectDir)external/include/rpcs3/core/;$(IncludePath)</IncludePath>
     <LibraryPath>$(SolutionDir)lib/$(Configuration)-$(Platform)/;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <OutDir>$(SolutionDir)lib\$(Configuration)-$(Platform)\</OutDir>
     <IntDir>$(SolutionDir)tmp\$(ProjectName)-$(Platform)-$(Configuration)\</IntDir>
-    <IncludePath>$(SolutionDir)common/include/;$(ProjectDir)external/include/;$(ProjectDir)external/include/core/;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)common/include/;$(ProjectDir)external/include/;$(ProjectDir)external/include/rpcs3/core/;$(IncludePath)</IncludePath>
     <LibraryPath>$(SolutionDir)lib/$(Configuration)-$(Platform)/;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>$(SolutionDir)lib\$(Configuration)-$(Platform)\</OutDir>
     <IntDir>$(SolutionDir)tmp\$(ProjectName)-$(Platform)-$(Configuration)\</IntDir>
-    <IncludePath>$(SolutionDir)common/include/;$(ProjectDir)external/include/;$(ProjectDir)external/include/core/;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)common/include/;$(ProjectDir)external/include/;$(ProjectDir)external/include/rpcs3/core/;$(IncludePath)</IncludePath>
     <LibraryPath>$(SolutionDir)lib/$(Configuration)-$(Platform)/;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup>
@@ -100,6 +110,10 @@
       <MSCompatibility Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</MSCompatibility>
       <MSCompatibility Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</MSCompatibility>
       <MSCompatibility Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</MSCompatibility>
+      <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</RuntimeTypeInfo>
+      <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</RuntimeTypeInfo>
+      <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</RuntimeTypeInfo>
+      <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</RuntimeTypeInfo>
     </ClCompile>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

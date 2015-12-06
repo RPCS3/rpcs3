@@ -1,4 +1,3 @@
-#include "stdafx.h"
 #include "events.h"
 
 namespace rpcs3
