@@ -14,6 +14,7 @@ protected:
 		group* m_parent;
 		config_context_t* m_cfg;
 		std::string m_name;
+		std::vector<std::unique_ptr<entry_base>> m_entries;
 
 		void init();
 
@@ -30,7 +31,7 @@ protected:
 		template<typename T>
 		void add_entry(const std::string& name, const T& def_value)
 		{
-			new entry<T>(this, name, def_value);
+			m_entries.emplace_back(std::make_unique<entry<T>>(this, name, def_value));
 		}
 
 		template<typename T>
@@ -158,7 +159,4 @@ public:
 	void set_defaults();
 
 	std::string to_string() const;
-
-	void add_group(const std::string& name);
-	group& get_group(const std::string& name);
 };

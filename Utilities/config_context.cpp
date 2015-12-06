@@ -163,16 +163,3 @@ std::string config_context_t::to_string() const
 
 	return result.str();
 }
-
-void config_context_t::add_group(const std::string& name)
-{
-	new group(this, name);
-}
-
-config_context_t::group& config_context_t::get_group(const std::string& name)
-{
-	if (!m_groups[name])
-		add_group(name);
-
-	return *m_groups[name];
-}
