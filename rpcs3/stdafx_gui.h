@@ -1,5 +1,7 @@
 #pragma once
 
+#include "restore_new.h"
+
 #ifndef QT_UI
 #ifdef _MSC_VER
 #pragma warning(push, 0)
@@ -30,3 +32,5 @@
 #pragma warning(pop)
 #endif
 #endif
+
+#include "define_new_memleakdetect.h"

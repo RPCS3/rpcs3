@@ -73,9 +73,6 @@ x64/*
 rpcs3/x64/*
 rpcs3-tests/x64/*
 
-.DS_Store
-rpcs3/Emu/SysCalls/Modules/prx_*.h
-
 # cmake
 Makefile
 *CMakeFiles*

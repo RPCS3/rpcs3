@@ -101,11 +101,13 @@ namespace vm
 		using pointer = _ptr_base<T, const u32>;
 
 	public:
+		// Call the constructor with specified arguments
 		template<typename... Args, typename = std::enable_if_t<std::is_constructible<T, Args...>::value>> _var_base(Args&&... args)
 			: pointer(A::alloc(sizeof32(T), alignof32(T)), vm::addr)
 		{
-			// Call the constructor with specified arguments
+#include "restore_new.h"
 			new(pointer::get_ptr()) T(std::forward<Args>(args)...);
+#include "define_new_memleakdetect.h"
 		}
 
 		_var_base(const _var_base&) = delete; // Delete copy/move constructors and copy/move operators
@@ -131,20 +133,24 @@ namespace vm
 		u32 m_count;
 
 	public:
+		// Call the default constructor for each element
 		_var_base(u32 count)
 			: pointer(A::alloc(sizeof32(T) * count, alignof32(T)), vm::addr)
 			, m_count(count)
 		{
-			// Call the default constructor for each element
+#include "restore_new.h"
 			new(pointer::get_ptr()) T[count]();
+#include "define_new_memleakdetect.h"
 		}
 
+		// Call the constructor for each element using [it, it + count)
 		template<typename T2> _var_base(u32 count, T2 it)
 			: pointer(A::alloc(sizeof32(T) * count, alignof32(T)), vm::addr)
 			, m_count(count)
 		{
-			// Initialize each element using iterator
-			std::uninitialized_copy_n<T2>(it, count, const_cast<std::remove_cv_t<T>*>(pointer::get_ptr()));
+#include "restore_new.h"
+			for (u32 i = 0; i < m_count; i++, it++) new(pointer::get_ptr() + i) T(*it);
+#include "define_new_memleakdetect.h"
 		}
 
 		_var_base(const _var_base&) = delete; // Delete copy/move constructors and copy/move operators
@@ -180,18 +186,22 @@ namespace vm
 		using pointer = _ptr_base<T, const u32>;
 
 	public:
+		// Call the default constructor for each element
 		_var_base()
 			: pointer(A::alloc(sizeof32(T) * N, alignof32(T)), vm::addr)
 		{
-			// Call the default constructor for each element
+#include "restore_new.h"
 			new(pointer::get_ptr()) T[N]();
+#include "define_new_memleakdetect.h"
 		}
 
+		// Call the constructor for each element using array
 		template<typename T2> _var_base(const T2(&array)[N])
 			: pointer(A::alloc(sizeof32(T) * N, alignof32(T)), vm::addr)
 		{
-			// Copy the array
-			std::uninitialized_copy_n(array + 0, N, const_cast<std::remove_cv_t<T>*>(pointer::get_ptr()));
+#include "restore_new.h"
+			for (u32 i = 0; i < N; i++) new(pointer::get_ptr() + i) T(array[i]);
+#include "define_new_memleakdetect.h"
 		}
 
 		_var_base(const _var_base&) = delete; // Delete copy/move constructors and copy/move operators

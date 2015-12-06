@@ -116,7 +116,9 @@ public:
 			//static_assert(std::is_trivially_copy_assignable<T>::value, "Module<> instance must be trivially copy-assignable");
 
 			// Allocate module instance and call the default constructor
+#include "restore_new.h"
 			new(vm::base(m_addr = vm::alloc(sizeof(T), vm::main))) T();
+#include "define_new_memleakdetect.h"
 		};
 	}
 

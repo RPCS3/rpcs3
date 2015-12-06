@@ -532,50 +532,32 @@ uint64_t* darwin_x64reg(x64_context *context, int reg)
 	auto *state = &context->uc_mcontext->__ss;
 	switch(reg)
 	{
-	case 0: // RAX
-		return &state->__rax;
-	case 1: // RCX
-		return &state->__rcx;
-	case 2: // RDX
-		return &state->__rdx;
-	case 3: // RBX
-		return &state->__rbx;
-	case 4: // RSP
-		return &state->__rsp;
-	case 5: // RBP
-		return &state->__rbp;
-	case 6: // RSI
-		return &state->__rsi;
-	case 7: // RDI
-		return &state->__rdi;
-	case 8: // R8
-		return &state->__r8;
-	case 9: // R9
-		return &state->__r9;
-	case 10: // R10
-		return &state->__r10;
-	case 11: // R11
-		return &state->__r11;
-	case 12: // R12
-		return &state->__r12;
-	case 13: // R13
-		return &state->__r13;
-	case 14: // R14
-		return &state->__r14;
-	case 15: // R15
-		return &state->__r15;
-	case 16: // RIP
-		return &state->__rip;
-	default: // FAIL
-		assert(0);
+	case 0: return &state->__rax;
+	case 1: return &state->__rcx;
+	case 2: return &state->__rdx;
+	case 3: return &state->__rbx;
+	case 4: return &state->__rsp;
+	case 5: return &state->__rbp;
+	case 6: return &state->__rsi;
+	case 7: return &state->__rdi;
+	case 8: return &state->__r8;
+	case 9: return &state->__r9;
+	case 10: return &state->__r10;
+	case 11: return &state->__r11;
+	case 12: return &state->__r12;
+	case 13: return &state->__r13;
+	case 14: return &state->__r14;
+	case 15: return &state->__r15;
+	case 16: return &state->__rip;
+	default:
+		LOG_ERROR(GENERAL, "Invalid register index: %d", reg);
+		return nullptr;
 	}
 }
 
 #else
 
-typedef decltype(REG_RIP) reg_table_t;
-
-static const reg_table_t reg_table[17] =
+static const decltype(REG_RAX) reg_table[] =
 {
 	REG_RAX, REG_RCX, REG_RDX, REG_RBX, REG_RSP, REG_RBP, REG_RSI, REG_RDI,
 	REG_R8, REG_R9, REG_R10, REG_R11, REG_R12, REG_R13, REG_R14, REG_R15, REG_RIP
@@ -1139,14 +1121,16 @@ void _se_translator(unsigned int u, EXCEPTION_POINTERS* pExp)
 	const u64 addr64 = (u64)pExp->ExceptionRecord->ExceptionInformation[1] - (u64)vm::base(0);
 	const bool is_writing = pExp->ExceptionRecord->ExceptionInformation[0] != 0;
 
-	if (u == EXCEPTION_ACCESS_VIOLATION && (u32)addr64 == addr64)
+	if (u == EXCEPTION_ACCESS_VIOLATION)
 	{
-		throw EXCEPTION("Access violation %s location 0x%llx", is_writing ? "writing" : "reading", addr64);
+		if ((u32)addr64 == addr64)
+		{
+			throw EXCEPTION("Access violation %s location 0x%llx", is_writing ? "writing" : "reading", addr64);
+		}
+		
+		std::printf("Access violation %s location %p at %p\n", is_writing ? "writing" : "reading", (void*)pExp->ExceptionRecord->ExceptionInformation[1], pExp->ExceptionRecord->ExceptionAddress);
+		std::abort();
 	}
-
-	__debugbreak(); // if it reached there, there should probably be a possibility to check the callstack
-
-	throw EXCEPTION("Fatal error occured %s location %p at %p", is_writing ? "writing" : "reading", pExp->ExceptionRecord->ExceptionInformation[1], pExp->ExceptionRecord->ExceptionAddress);
 }
 
 const PVOID exception_handler = (atexit([]{ RemoveVectoredExceptionHandler(exception_handler); }), AddVectoredExceptionHandler(1, [](PEXCEPTION_POINTERS pExp) -> LONG
@@ -1195,7 +1179,8 @@ void signal_handler(int sig, siginfo_t* info, void* uct)
 	}
 
 	// else some fatal error
-	exit(EXIT_FAILURE);
+	std::printf("Access violation %s location %p at %p\n", is_writing ? "writing" : "reading", info->si_addr, RIP((ucontext_t*)uct));
+	std::abort();
 }
 
 const int sigaction_result = []() -> int
@@ -1218,10 +1203,6 @@ std::atomic<u32> g_thread_count{ 0 };
 void thread_ctrl::initialize()
 {
 	SetCurrentThreadDebugName(g_tls_this_thread->m_name().c_str());
-
-#if defined(_MSC_VER)
-	_set_se_translator(_se_translator); // not essential, disable if necessary
-#endif
 
 #ifdef _WIN32
 	if (!exception_handler || !exception_filter)
