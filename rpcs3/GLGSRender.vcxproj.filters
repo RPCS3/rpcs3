@@ -1,0 +1,69 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="Emu\RSX\GL\gl_helpers.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\GL\GLBuffers.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\GL\GLCommonDecompiler.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\GL\GLFragmentProgram.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\GL\GLGSRender.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\GL\GLProgram.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\GL\GLProgramBuffer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\GL\GLVertexProgram.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\GL\OpenGL.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Emu\RSX\GL\gl_helpers.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\GL\GLBuffers.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\GL\GLCommonDecompiler.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\GL\GLFragmentProgram.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\GL\GLGSRender.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\GL\GLProcTable.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\GL\GLProgram.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\GL\GLProgramBuffer.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\GL\GLVertexProgram.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\GL\OpenGL.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{f2f80d8a-5c1d-461d-963f-5de8c8fdf860}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

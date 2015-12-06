@@ -183,6 +183,9 @@
     <ProjectReference Include="emucore.vcxproj">
       <Project>{c4a10229-4712-4bd2-b63e-50d93c67a038}</Project>
     </ProjectReference>
+    <ProjectReference Include="GLGSRender.vcxproj">
+      <Project>{3384223a-6d97-4799-9862-359f85312892}</Project>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <Image Include="rpcs3.ico" />
