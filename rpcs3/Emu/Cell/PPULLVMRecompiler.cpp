@@ -45,24 +45,61 @@ using namespace ppu_recompiler_llvm;
 u64  Compiler::s_rotate_mask[64][64];
 bool Compiler::s_rotate_mask_inited = false;
 
-Compiler::Compiler(RecompilationEngine & recompilation_engine, const Executable execute_unknown_function,
-	const Executable execute_unknown_block, bool(*poll_status_function)(PPUThread * ppu_state))
-	: m_recompilation_engine(recompilation_engine)
-	, m_poll_status_function(poll_status_function) {
-	InitializeNativeTarget();
-	InitializeNativeTargetAsmPrinter();
-	InitializeNativeTargetDisassembler();
+std::unique_ptr<Module> Compiler::create_module(LLVMContext &llvm_context)
+{
+	const std::vector<Type *> arg_types = { Type::getInt8PtrTy(llvm_context), Type::getInt64Ty(llvm_context) };
+	FunctionType *compiled_function_type = FunctionType::get(Type::getInt32Ty(llvm_context), arg_types, false);
 
-	m_llvm_context = new LLVMContext();
-	m_ir_builder = new IRBuilder<>(*m_llvm_context);
+	std::unique_ptr<llvm::Module> result(new llvm::Module("Module", llvm_context));
+	Function *execute_unknown_function = (Function *)result->getOrInsertFunction("execute_unknown_function", compiled_function_type);
+	execute_unknown_function->setCallingConv(CallingConv::X86_64_Win64);
+
+	Function *execute_unknown_block = (Function *)result->getOrInsertFunction("execute_unknown_block", compiled_function_type);
+	execute_unknown_block->setCallingConv(CallingConv::X86_64_Win64);
+
+	std::string targetTriple = "x86_64-pc-windows-elf";
+	result->setTargetTriple(targetTriple);
+
+	return result;
+}
+
+void Compiler::optimise_module(llvm::Module *module)
+{
+	llvm::FunctionPassManager fpm(module);
+	fpm.add(createNoAAPass());
+	fpm.add(createBasicAliasAnalysisPass());
+	fpm.add(createNoTargetTransformInfoPass());
+	fpm.add(createEarlyCSEPass());
+	fpm.add(createTailCallEliminationPass());
+	fpm.add(createReassociatePass());
+	fpm.add(createInstructionCombiningPass());
+	fpm.add(new DominatorTreeWrapperPass());
+	fpm.add(new MemoryDependenceAnalysis());
+	fpm.add(createGVNPass());
+	fpm.add(createInstructionCombiningPass());
+	fpm.add(new MemoryDependenceAnalysis());
+	fpm.add(createDeadStoreEliminationPass());
+	fpm.add(new LoopInfo());
+	fpm.add(new ScalarEvolution());
+	fpm.add(createSLPVectorizerPass());
+	fpm.add(createInstructionCombiningPass());
+	fpm.add(createCFGSimplificationPass());
+	fpm.doInitialization();
+
+	for (auto I = module->begin(), E = module->end(); I != E; ++I)
+		fpm.run(*I);
+}
+
+
+Compiler::Compiler(LLVMContext *context, llvm::IRBuilder<> *builder, std::unordered_map<std::string, void*> &function_ptrs)
+	: m_llvm_context(context),
+	m_ir_builder(builder),
+	m_executable_map(function_ptrs) {
 
 	std::vector<Type *> arg_types;
 	arg_types.push_back(m_ir_builder->getInt8PtrTy());
 	arg_types.push_back(m_ir_builder->getInt64Ty());
 	m_compiled_function_type = FunctionType::get(m_ir_builder->getInt32Ty(), arg_types, false);
-
-	m_executableMap["execute_unknown_function"] = execute_unknown_function;
-	m_executableMap["execute_unknown_block"] = execute_unknown_block;
 
 	if (!s_rotate_mask_inited) {
 		InitRotateMask();
@@ -71,54 +108,10 @@ Compiler::Compiler(RecompilationEngine & recompilation_engine, const Executable 
 }
 
 Compiler::~Compiler() {
-	delete m_ir_builder;
-	delete m_llvm_context;
 }
 
-std::pair<Executable, llvm::ExecutionEngine *> Compiler::Compile(const std::string & name, u32 start_address, u32 instruction_count) {
-	auto compilation_start = std::chrono::high_resolution_clock::now();
-
-	m_module = new llvm::Module("Module", *m_llvm_context);
-	m_execute_unknown_function = (Function *)m_module->getOrInsertFunction("execute_unknown_function", m_compiled_function_type);
-	m_execute_unknown_function->setCallingConv(CallingConv::X86_64_Win64);
-
-	m_execute_unknown_block = (Function *)m_module->getOrInsertFunction("execute_unknown_block", m_compiled_function_type);
-	m_execute_unknown_block->setCallingConv(CallingConv::X86_64_Win64);
-
-	std::string targetTriple = "x86_64-pc-windows-elf";
-	m_module->setTargetTriple(targetTriple);
-
-	llvm::ExecutionEngine *execution_engine =
-		EngineBuilder(std::unique_ptr<llvm::Module>(m_module))
-		.setEngineKind(EngineKind::JIT)
-		.setMCJITMemoryManager(std::unique_ptr<llvm::SectionMemoryManager>(new CustomSectionMemoryManager(m_executableMap)))
-		.setOptLevel(llvm::CodeGenOpt::Aggressive)
-		.setMCPU("nehalem")
-		.create();
-	m_module->setDataLayout(execution_engine->getDataLayout());
-
-	llvm::FunctionPassManager *fpm = new llvm::FunctionPassManager(m_module);
-	fpm->add(createNoAAPass());
-	fpm->add(createBasicAliasAnalysisPass());
-	fpm->add(createNoTargetTransformInfoPass());
-	fpm->add(createEarlyCSEPass());
-	fpm->add(createTailCallEliminationPass());
-	fpm->add(createReassociatePass());
-	fpm->add(createInstructionCombiningPass());
-	fpm->add(new DominatorTreeWrapperPass());
-	fpm->add(new MemoryDependenceAnalysis());
-	fpm->add(createGVNPass());
-	fpm->add(createInstructionCombiningPass());
-	fpm->add(new MemoryDependenceAnalysis());
-	fpm->add(createDeadStoreEliminationPass());
-	fpm->add(new LoopInfo());
-	fpm->add(new ScalarEvolution());
-	fpm->add(createSLPVectorizerPass());
-	fpm->add(createInstructionCombiningPass());
-	fpm->add(createCFGSimplificationPass());
-	fpm->doInitialization();
-
-	// Create the function
+void Compiler::initiate_function(const std::string &name)
+{
 	m_state.function = (Function *)m_module->getOrInsertFunction(name, m_compiled_function_type);
 	m_state.function->setCallingConv(CallingConv::X86_64_Win64);
 	auto arg_i = m_state.function->arg_begin();
@@ -126,6 +119,16 @@ std::pair<Executable, llvm::ExecutionEngine *> Compiler::Compile(const std::stri
 	m_state.args[CompileTaskState::Args::State] = arg_i;
 	(++arg_i)->setName("context");
 	m_state.args[CompileTaskState::Args::Context] = arg_i;
+}
+
+void ppu_recompiler_llvm::Compiler::translate_to_llvm_ir(llvm::Module *module, const std::string & name, u32 start_address, u32 instruction_count)
+{
+	m_module = module;
+
+	m_execute_unknown_function = module->getFunction("execute_unknown_function");
+	m_execute_unknown_block = module->getFunction("execute_unknown_block");
+
+	initiate_function(name);
 
 	// Create the entry block and add code to branch to the first instruction
 	m_ir_builder->SetInsertPoint(GetBasicBlockFromAddress(0));
@@ -135,7 +138,7 @@ std::pair<Executable, llvm::ExecutionEngine *> Compiler::Compile(const std::stri
 	PPUDisAsm dis_asm(CPUDisAsm_DumpMode);
 	dis_asm.offset = vm::ps3::_ptr<u8>(start_address);
 
-	m_recompilation_engine.Log() << "Recompiling block :\n\n";
+//	m_recompilation_engine.Log() << "Recompiling block :\n\n";
 
 	// Convert each instruction in the CFG to LLVM IR
 	std::vector<PHINode *> exit_instr_list;
@@ -150,7 +153,7 @@ std::pair<Executable, llvm::ExecutionEngine *> Compiler::Compile(const std::stri
 		// Dump PPU opcode
 		dis_asm.dump_pc = instructionAddress;
 		(*PPU_instr::main_list)(&dis_asm, instr);
-		m_recompilation_engine.Log() << dis_asm.last_opcode;
+//		m_recompilation_engine.Log() << dis_asm.last_opcode;
 
 		Decode(instr);
 		if (!m_state.hit_branch_instruction)
@@ -194,51 +197,17 @@ std::pair<Executable, llvm::ExecutionEngine *> Compiler::Compile(const std::stri
 		}
 	}
 
-	m_recompilation_engine.Log() << "LLVM bytecode:\n";
-	m_recompilation_engine.Log() << *m_module;
+//	m_recompilation_engine.Log() << "LLVM bytecode:\n";
+//	m_recompilation_engine.Log() << *m_module;
 
 	std::string        verify;
 	raw_string_ostream verify_ostream(verify);
 	if (verifyFunction(*m_state.function, &verify_ostream)) {
-		m_recompilation_engine.Log() << "Verification failed: " << verify_ostream.str() << "\n";
+//		m_recompilation_engine.Log() << "Verification failed: " << verify_ostream.str() << "\n";
 	}
 
-	auto ir_build_end = std::chrono::high_resolution_clock::now();
-	m_stats.ir_build_time += std::chrono::duration_cast<std::chrono::nanoseconds>(ir_build_end - compilation_start);
-
-	// Optimize this function
-	fpm->run(*m_state.function);
-	auto optimize_end = std::chrono::high_resolution_clock::now();
-	m_stats.optimization_time += std::chrono::duration_cast<std::chrono::nanoseconds>(optimize_end - ir_build_end);
-
-	// Translate to machine code
-	execution_engine->finalizeObject();
-	void *function = execution_engine->getPointerToFunction(m_state.function);
-	auto translate_end = std::chrono::high_resolution_clock::now();
-	m_stats.translation_time += std::chrono::duration_cast<std::chrono::nanoseconds>(translate_end - optimize_end);
-
-	/*    m_recompilation_engine.Log() << "\nDisassembly:\n";
-		auto disassembler = LLVMCreateDisasm(sys::getProcessTriple().c_str(), nullptr, 0, nullptr, nullptr);
-		for (size_t pc = 0; pc < mci.size();) {
-			char str[1024];
-
-			auto size = LLVMDisasmInstruction(disassembler, ((u8 *)mci.address()) + pc, mci.size() - pc, (uint64_t)(((u8 *)mci.address()) + pc), str, sizeof(str));
-			m_recompilation_engine.Log() << fmt::format("0x%08X: ", (u64)(((u8 *)mci.address()) + pc)) << str << '\n';
-			pc += size;
-		}
-
-		LLVMDisasmDispose(disassembler);*/
-
-	auto compilation_end = std::chrono::high_resolution_clock::now();
-	m_stats.total_time += std::chrono::duration_cast<std::chrono::nanoseconds>(compilation_end - compilation_start);
-	delete fpm;
-
-	assert(function != nullptr);
-	return std::make_pair((Executable)function, execution_engine);
-}
-
-Compiler::Stats Compiler::GetStats() {
-	return m_stats;
+	m_module = nullptr;
+	m_state.function = nullptr;
 }
 
 void Compiler::Decode(const u32 code) {
@@ -252,13 +221,16 @@ RecompilationEngine::RecompilationEngine()
 	: m_log(nullptr)
 	, m_currentId(0)
 	, m_last_cache_clear_time(std::chrono::high_resolution_clock::now())
-	, m_compiler(*this, CPUHybridDecoderRecompiler::ExecuteFunction, CPUHybridDecoderRecompiler::ExecuteTillReturn, CPUHybridDecoderRecompiler::PollStatus) {
+	, m_llvm_context(getGlobalContext())
+	, m_ir_builder(getGlobalContext()) {
+	InitializeNativeTarget();
+	InitializeNativeTargetAsmPrinter();
+	InitializeNativeTargetDisassembler();
+
 	FunctionCache = (ExecutableStorageType *)memory_helper::reserve_memory(VIRTUAL_INSTRUCTION_COUNT * sizeof(ExecutableStorageType));
 	// Each char can store 8 page status
 	FunctionCachePagesCommited = (char *)malloc(VIRTUAL_INSTRUCTION_COUNT / (8 * PAGE_SIZE));
 	memset(FunctionCachePagesCommited, 0, VIRTUAL_INSTRUCTION_COUNT / (8 * PAGE_SIZE));
-
-	m_compiler.RunAllTests();
 }
 
 RecompilationEngine::~RecompilationEngine() {
@@ -352,20 +324,6 @@ void RecompilationEngine::on_task() {
 		}
 	}
 
-	std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
-	auto total_time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start);
-	auto compiler_stats = m_compiler.GetStats();
-
-	Log() << "Total time                      = " << total_time.count() / 1000000 << "ms\n";
-	Log() << "    Time spent compiling        = " << compiler_stats.total_time.count() / 1000000 << "ms\n";
-	Log() << "        Time spent building IR  = " << compiler_stats.ir_build_time.count() / 1000000 << "ms\n";
-	Log() << "        Time spent optimizing   = " << compiler_stats.optimization_time.count() / 1000000 << "ms\n";
-	Log() << "        Time spent translating  = " << compiler_stats.translation_time.count() / 1000000 << "ms\n";
-	Log() << "    Time spent recompiling      = " << recompiling_time.count() / 1000000 << "ms\n";
-	Log() << "    Time spent idling           = " << idling_time.count() / 1000000 << "ms\n";
-	Log() << "    Time spent doing misc tasks = " << (total_time.count() - idling_time.count() - compiler_stats.total_time.count()) / 1000000 << "ms\n";
-
-	LOG_NOTICE(PPU, "PPU LLVM Recompilation thread exiting.");
 	s_the_instance = nullptr; // Can cause deadlock if this is the last instance. Need to fix this.
 }
 
@@ -382,6 +340,92 @@ bool RecompilationEngine::IncreaseHitCounterAndBuild(u32 address) {
 		}
 	}
 	return false;
+}
+
+extern void execute_ppu_func_by_index(PPUThread& ppu, u32 id);
+extern void execute_syscall_by_index(PPUThread& ppu, u64 code);
+
+static u32
+wrappedExecutePPUFuncByIndex(PPUThread &CPU, u32 index) noexcept {
+	try
+	{
+		execute_ppu_func_by_index(CPU, index);
+		return ExecutionStatus::ExecutionStatusBlockEnded;
+	}
+	catch (...)
+	{
+		CPU.pending_exception = std::current_exception();
+		return ExecutionStatus::ExecutionStatusPropagateException;
+	}
+}
+
+static u32 wrappedDoSyscall(PPUThread &CPU, u64 code) noexcept {
+	try
+	{
+		execute_syscall_by_index(CPU, code);
+		return ExecutionStatus::ExecutionStatusBlockEnded;
+	}
+	catch (...)
+	{
+		CPU.pending_exception = std::current_exception();
+		return ExecutionStatus::ExecutionStatusPropagateException;
+	}
+}
+
+static void wrapped_fast_stop(PPUThread &CPU)
+{
+	CPU.fast_stop();
+}
+
+std::pair<Executable, llvm::ExecutionEngine *> RecompilationEngine::compile(const std::string & name, u32 start_address, u32 instruction_count) {
+	std::unique_ptr<llvm::Module> module = Compiler::create_module(m_llvm_context);
+
+	std::unordered_map<std::string, void*> function_ptrs;
+	function_ptrs["execute_unknown_function"] = reinterpret_cast<void*>(CPUHybridDecoderRecompiler::ExecuteFunction);
+	function_ptrs["execute_unknown_block"] = reinterpret_cast<void*>(CPUHybridDecoderRecompiler::ExecuteTillReturn);
+	function_ptrs["PollStatus"] = reinterpret_cast<void*>(CPUHybridDecoderRecompiler::PollStatus);
+	function_ptrs["PPUThread.fast_stop"] = reinterpret_cast<void*>(wrapped_fast_stop);
+	function_ptrs["vm.reservation_acquire"] = reinterpret_cast<void*>(vm::reservation_acquire);
+	function_ptrs["vm.reservation_update"] = reinterpret_cast<void*>(vm::reservation_update);
+	function_ptrs["get_timebased_time"] = reinterpret_cast<void*>(get_timebased_time);
+	function_ptrs["wrappedExecutePPUFuncByIndex"] = reinterpret_cast<void*>(wrappedExecutePPUFuncByIndex);
+	function_ptrs["wrappedDoSyscall"] = reinterpret_cast<void*>(wrappedDoSyscall);
+
+	Compiler(&m_llvm_context, &m_ir_builder, function_ptrs)
+		.translate_to_llvm_ir(module.get(), name, start_address, instruction_count);
+	Compiler::optimise_module(module.get());
+	llvm::Module *module_ptr = module.get();
+
+
+	llvm::ExecutionEngine *execution_engine =
+		EngineBuilder(std::move(module))
+		.setEngineKind(EngineKind::JIT)
+		.setMCJITMemoryManager(std::unique_ptr<llvm::SectionMemoryManager>(new CustomSectionMemoryManager(function_ptrs)))
+		.setOptLevel(llvm::CodeGenOpt::Aggressive)
+		.setMCPU("nehalem")
+		.create();
+	module_ptr->setDataLayout(execution_engine->getDataLayout());
+
+	// Translate to machine code
+	execution_engine->finalizeObject();
+
+	Function *llvm_function = module_ptr->getFunction(name);
+	void *function = execution_engine->getPointerToFunction(llvm_function);
+
+	/*    m_recompilation_engine.Log() << "\nDisassembly:\n";
+	auto disassembler = LLVMCreateDisasm(sys::getProcessTriple().c_str(), nullptr, 0, nullptr, nullptr);
+	for (size_t pc = 0; pc < mci.size();) {
+	char str[1024];
+
+	auto size = LLVMDisasmInstruction(disassembler, ((u8 *)mci.address()) + pc, mci.size() - pc, (uint64_t)(((u8 *)mci.address()) + pc), str, sizeof(str));
+	m_recompilation_engine.Log() << fmt::format("0x%08X: ", (u64)(((u8 *)mci.address()) + pc)) << str << '\n';
+	pc += size;
+	}
+
+	LLVMDisasmDispose(disassembler);*/
+
+	assert(function != nullptr);
+	return std::make_pair((Executable)function, execution_engine);
 }
 
 /**
@@ -466,7 +510,7 @@ void RecompilationEngine::CompileBlock(BlockEntry & block_entry) {
 		std::unique_lock<std::mutex> lock(local_mutex);
 
 		const std::pair<Executable, llvm::ExecutionEngine *> &compileResult =
-			m_compiler.Compile(fmt::format("fn_0x%08X", block_entry.address), block_entry.address, block_entry.instructionCount);
+			compile(fmt::format("fn_0x%08X", block_entry.address), block_entry.address, block_entry.instructionCount);
 
 		if (!isAddressCommited(block_entry.address / 4))
 			commitAddress(block_entry.address / 4);

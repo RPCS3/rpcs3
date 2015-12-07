@@ -101,10 +101,13 @@ namespace ppu_recompiler_llvm {
 	class Compiler;
 }
 
+class ppu_llvm_test_class;
+
 class PPUInterpreter : public PPUOpcodes
 {
 #ifdef PPU_LLVM_RECOMPILER
 	friend class ppu_recompiler_llvm::Compiler;
+	friend class ppu_llvm_test_class;
 #endif
 private:
 	PPUThread& CPU;
