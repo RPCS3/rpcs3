@@ -11,222 +11,136 @@ namespace
 /**
 * Write data, assume src pixels are packed but not mipmaplevel
 */
-std::vector<MipmapLevelInfo>
-writeTexelsGeneric(const char *src, char *dst, size_t widthInBlock, size_t heightInBlock, size_t blockSize, size_t mipmapCount)
+struct texel_rgba
 {
-	std::vector<MipmapLevelInfo> Result;
-	size_t offsetInDst = 0, offsetInSrc = 0;
-	size_t currentHeight = heightInBlock, currentWidth = widthInBlock;
-	for (unsigned mipLevel = 0; mipLevel < mipmapCount; mipLevel++)
+	template<size_t block_size>
+	static size_t copy_mipmap_level(void *dst, void *src, size_t row_count, size_t width_in_block, size_t dst_pitch_in_block, size_t src_pitch_in_block) noexcept
 	{
-		size_t rowPitch = align(currentWidth * blockSize, 256);
-
-		MipmapLevelInfo currentMipmapLevelInfo = {};
-		currentMipmapLevelInfo.offset = offsetInDst;
-		currentMipmapLevelInfo.height = currentHeight;
-		currentMipmapLevelInfo.width = currentWidth;
-		currentMipmapLevelInfo.rowPitch = rowPitch;
-		Result.push_back(currentMipmapLevelInfo);
-
-		for (unsigned row = 0; row < currentHeight; row++)
-			memcpy((char*)dst + offsetInDst + row * rowPitch, (char*)src + offsetInSrc + row * widthInBlock * blockSize, currentWidth * blockSize);
-
-		offsetInDst += currentHeight * rowPitch;
-		offsetInDst = align(offsetInDst, 512);
-		offsetInSrc += currentHeight * widthInBlock * blockSize;
-		currentHeight = MAX2(currentHeight / 2, 1);
-		currentWidth = MAX2(currentWidth / 2, 1);
+		for (unsigned row = 0; row < row_count; row++)
+			memcpy((char*)dst + row * dst_pitch_in_block * block_size, (char*)src + row * src_pitch_in_block * block_size, width_in_block * block_size);
+		return row_count * src_pitch_in_block * block_size;
 	}
-	return Result;
-}
-
-/**
-* Write data, assume src pixels are swizzled and but not mipmaplevel
-*/
-std::vector<MipmapLevelInfo>
-writeTexelsSwizzled(const char *src, char *dst, size_t widthInBlock, size_t heightInBlock, size_t blockSize, size_t mipmapCount)
-{
-	std::vector<MipmapLevelInfo> Result;
-	size_t offsetInDst = 0, offsetInSrc = 0;
-	size_t currentHeight = heightInBlock, currentWidth = widthInBlock;
-	for (unsigned mipLevel = 0; mipLevel < mipmapCount; mipLevel++)
-	{
-		size_t rowPitch = align(currentWidth * blockSize, 256);
-
-		MipmapLevelInfo currentMipmapLevelInfo = {};
-		currentMipmapLevelInfo.offset = offsetInDst;
-		currentMipmapLevelInfo.height = currentHeight;
-		currentMipmapLevelInfo.width = currentWidth;
-		currentMipmapLevelInfo.rowPitch = rowPitch;
-		Result.push_back(currentMipmapLevelInfo);
-
-		u32 *castedSrc, *castedDst;
-
-		castedSrc = (u32*)src + offsetInSrc;
-		castedDst = (u32*)dst + offsetInDst;
-
-		std::unique_ptr<u32[]> temp_swizzled(new u32[currentHeight * currentWidth]);
-		rsx::convert_linear_swizzle<u32>(castedSrc, temp_swizzled.get(), currentWidth, currentHeight, true);
-		for (unsigned row = 0; row < currentHeight; row++)
-			memcpy((char*)dst + offsetInDst + row * rowPitch, (char*)temp_swizzled.get() + offsetInSrc + row * widthInBlock * blockSize, currentWidth * blockSize);
-
-		offsetInDst += currentHeight * rowPitch;
-		offsetInSrc += currentHeight * widthInBlock * blockSize;
-		currentHeight = MAX2(currentHeight / 2, 1);
-		currentWidth = MAX2(currentWidth / 2, 1);
-	}
-	return Result;
-}
-
-
-/**
-* Write data, assume compressed (DXTCn) format
-*/
-std::vector<MipmapLevelInfo>
-writeCompressedTexel(const char *src, char *dst, size_t widthInBlock, size_t blockWidth, size_t heightInBlock, size_t blockHeight, size_t blockSize, size_t mipmapCount)
-{
-	std::vector<MipmapLevelInfo> Result;
-	size_t offsetInDst = 0, offsetInSrc = 0;
-	size_t currentHeight = heightInBlock, currentWidth = widthInBlock;
-	for (unsigned mipLevel = 0; mipLevel < mipmapCount; mipLevel++)
-	{
-		size_t rowPitch = align(currentWidth * blockSize, 256);
-
-		MipmapLevelInfo currentMipmapLevelInfo = {};
-		currentMipmapLevelInfo.offset = offsetInDst;
-		currentMipmapLevelInfo.height = currentHeight * blockHeight;
-		currentMipmapLevelInfo.width = currentWidth * blockWidth;
-		currentMipmapLevelInfo.rowPitch = rowPitch;
-		Result.push_back(currentMipmapLevelInfo);
-
-		for (unsigned row = 0; row < currentHeight; row++)
-			memcpy((char*)dst + offsetInDst + row * rowPitch, (char*)src + offsetInSrc + row * currentWidth * blockSize, currentWidth * blockSize);
-
-		offsetInDst += currentHeight * rowPitch;
-		offsetInDst = align(offsetInDst, 512);
-		offsetInSrc += currentHeight * currentWidth * blockSize;
-		currentHeight = MAX2(currentHeight / 2, 1);
-		currentWidth = MAX2(currentWidth / 2, 1);
-	}
-	return Result;
-}
+};
 
 
 /**
 * Write 16 bytes pixel textures, assume src pixels are swizzled and but not mipmaplevel
 */
-std::vector<MipmapLevelInfo>
-write16bTexelsSwizzled(const char *src, char *dst, size_t widthInBlock, size_t heightInBlock, size_t blockSize, size_t mipmapCount)
+struct texel_16b_swizzled
 {
-	std::vector<MipmapLevelInfo> Result;
-	size_t offsetInDst = 0, offsetInSrc = 0;
-	size_t currentHeight = heightInBlock, currentWidth = widthInBlock;
-	size_t srcPitch = widthInBlock * blockSize;
-	for (unsigned mipLevel = 0; mipLevel < mipmapCount; mipLevel++)
+	template<size_t block_size>
+	static size_t copy_mipmap_level(void *dst, void *src, size_t row_count, size_t width_in_block, size_t dst_pitch_in_block, size_t src_pitch_in_block) noexcept
 	{
-		size_t rowPitch = align(currentWidth * blockSize, 256);
+		u16 *castedSrc = static_cast<u16*>(src), *castedDst = static_cast<u16*>(dst);
 
-		MipmapLevelInfo currentMipmapLevelInfo = {};
-		currentMipmapLevelInfo.offset = offsetInDst;
-		currentMipmapLevelInfo.height = currentHeight;
-		currentMipmapLevelInfo.width = currentWidth;
-		currentMipmapLevelInfo.rowPitch = rowPitch;
-		Result.push_back(currentMipmapLevelInfo);
-
-		u16 *castedSrc, *castedDst;
-
-		castedSrc = (u16*)src + offsetInSrc;
-		castedDst = (u16*)dst + offsetInDst;
-
-		std::unique_ptr<u16[]> temp_swizzled(new u16[currentHeight * currentWidth]);
-		rsx::convert_linear_swizzle<u16>(castedSrc, temp_swizzled.get(), currentWidth, currentHeight, true);
-		for (unsigned row = 0; row < heightInBlock; row++)
-			for (int j = 0; j < currentWidth; j++)
+		std::unique_ptr<u16[]> temp_swizzled(new u16[row_count * width_in_block]);
+		rsx::convert_linear_swizzle<u16>(castedSrc, temp_swizzled.get(), src_pitch_in_block, row_count, true);
+		for (unsigned row = 0; row < row_count; row++)
+			for (int j = 0; j < width_in_block; j++)
 			{
-				u16 tmp = temp_swizzled[offsetInSrc / 2 + row * srcPitch / 2 + j];
-				castedDst[offsetInDst / 2 + row * rowPitch / 2 + j] = (tmp >> 8) | (tmp << 8);
+				u16 tmp = temp_swizzled[row * src_pitch_in_block + j];
+				castedDst[row * dst_pitch_in_block + j] = (tmp >> 8) | (tmp << 8);
 			}
-
-		offsetInDst += currentHeight * rowPitch;
-		offsetInSrc += currentHeight * widthInBlock * blockSize;
-		currentHeight = MAX2(currentHeight / 2, 1);
-		currentWidth = MAX2(currentWidth / 2, 1);
+		return row_count * src_pitch_in_block * block_size;
 	}
-	return Result;
-}
+};
+
+/**
+* Write data, assume src pixels are swizzled and but not mipmaplevel
+*/
+struct texel_rgba_swizzled
+{
+	template<size_t block_size>
+	static size_t copy_mipmap_level(void *dst, void *src, size_t row_count, size_t width_in_block, size_t dst_pitch_in_block, size_t src_pitch_in_block) noexcept
+	{
+		u32 *castedSrc, *castedDst;
+		castedSrc = (u32*)src;
+		castedDst = (u32*)dst ;
+		std::unique_ptr<u32[]> temp_swizzled(new u32[src_pitch_in_block * row_count]);
+		rsx::convert_linear_swizzle<u32>(castedSrc, temp_swizzled.get(), src_pitch_in_block, row_count, true);
+		for (unsigned row = 0; row < row_count; row++)
+			memcpy((char*)dst + row * dst_pitch_in_block * block_size, (char*)temp_swizzled.get() + row * src_pitch_in_block * block_size, width_in_block * block_size);
+		return row_count * src_pitch_in_block * block_size;
+	}
+};
+
+/**
+ * Write data, assume compressed (DXTCn) format
+ * Data are tightly packed
+ */
+struct texel_bc_format {
+	template<size_t block_size>
+	static size_t copy_mipmap_level(void *dst, void *src, size_t row_count, size_t width_in_block, size_t dst_pitch_in_block, size_t src_pitch_in_block) noexcept
+	{
+		for (unsigned row = 0; row < row_count; row++)
+			memcpy((char*)dst + row * dst_pitch_in_block * block_size, (char*)src + row * width_in_block * block_size, width_in_block * block_size);
+		return width_in_block * row_count * block_size;
+	}
+};
 
 /**
 * Write 16 bytes pixel textures, assume src pixels are packed but not mipmaplevel
 */
-std::vector<MipmapLevelInfo>
-write16bTexelsGeneric(const char *src, char *dst, size_t widthInBlock, size_t heightInBlock, size_t blockSize, size_t mipmapCount)
-{
-	std::vector<MipmapLevelInfo> Result;
-	size_t offsetInDst = 0, offsetInSrc = 0;
-	size_t currentHeight = heightInBlock, currentWidth = widthInBlock;
-	size_t srcPitch = widthInBlock * blockSize;
-	for (unsigned mipLevel = 0; mipLevel < mipmapCount; mipLevel++)
+struct texel_16b_format {
+	template<size_t block_size>
+	static size_t copy_mipmap_level(void *dst, void *src, size_t row_count, size_t width_in_block, size_t dst_pitch_in_block, size_t src_pitch_in_block) noexcept
 	{
-		size_t rowPitch = align(currentWidth * blockSize, 256);
-
-		MipmapLevelInfo currentMipmapLevelInfo = {};
-		currentMipmapLevelInfo.offset = offsetInDst;
-		currentMipmapLevelInfo.height = currentHeight;
-		currentMipmapLevelInfo.width = currentWidth;
-		currentMipmapLevelInfo.rowPitch = rowPitch;
-		Result.push_back(currentMipmapLevelInfo);
-
 		unsigned short *castedDst = (unsigned short *)dst, *castedSrc = (unsigned short *)src;
 
-		for (unsigned row = 0; row < heightInBlock; row++)
-			for (int j = 0; j < currentWidth; j++)
+		for (unsigned row = 0; row < row_count; row++)
+			for (int j = 0; j < width_in_block; j++)
 			{
-				u16 tmp = castedSrc[offsetInSrc / 2 + row * srcPitch / 2 + j];
-				castedDst[offsetInDst / 2 + row * rowPitch / 2 + j] = (tmp >> 8) | (tmp << 8);
+				u16 tmp = castedSrc[row * src_pitch_in_block + j];
+				castedDst[row * dst_pitch_in_block + j] = (tmp >> 8) | (tmp << 8);
 			}
-
-		offsetInDst += currentHeight * rowPitch;
-		offsetInSrc += currentHeight * widthInBlock * blockSize;
-		currentHeight = MAX2(currentHeight / 2, 1);
-		currentWidth = MAX2(currentWidth / 2, 1);
+		return row_count * src_pitch_in_block * block_size;
 	}
-	return Result;
-}
+};
 
 /**
-* Write 16 bytes pixel textures, assume src pixels are packed but not mipmaplevel
+* Write 16 bytes X 4 pixel textures, assume src pixels are packed but not mipmaplevel
 */
-std::vector<MipmapLevelInfo>
-write16bX4TexelsGeneric(const char *src, char *dst, size_t widthInBlock, size_t heightInBlock, size_t blockSize, size_t mipmapCount)
+struct texel_16bX4_format {
+	template<size_t block_size>
+	static size_t copy_mipmap_level(void *dst, void *src, size_t row_count, size_t width_in_block, size_t dst_pitch_in_block, size_t src_pitch_in_block) noexcept
+	{
+		unsigned short *casted_dst = (unsigned short *)dst, *casted_src = (unsigned short *)src;
+		for (unsigned row = 0; row < row_count; row++)
+			for (int j = 0; j < width_in_block * 4; j++)
+			{
+				u16 tmp = casted_src[row * src_pitch_in_block * 4 + j];
+				casted_dst[row * dst_pitch_in_block * 4 + j] = (tmp >> 8) | (tmp << 8);
+			}
+		return row_count * src_pitch_in_block * block_size;
+	}
+};
+
+template <typename T, size_t block_size_in_bytes, size_t block_edge_in_texel = 1>
+std::vector<MipmapLevelInfo> copy_texture_data(void *dst, const void *src, size_t widthInBlock, size_t heightInBlock, size_t depth, size_t mipmapCount) noexcept
 {
 	std::vector<MipmapLevelInfo> Result;
 	size_t offsetInDst = 0, offsetInSrc = 0;
-	size_t currentHeight = heightInBlock, currentWidth = widthInBlock;
-	size_t srcPitch = widthInBlock * blockSize;
-	for (unsigned mipLevel = 0; mipLevel < mipmapCount; mipLevel++)
+	// Every mipmap level of rsx textures use the same rowpitch.
+	size_t src_pitch = widthInBlock;
+	for (unsigned depth_level = 0; depth_level < depth; depth_level++)
 	{
-		size_t rowPitch = align(currentWidth * blockSize, 256);
+		size_t miplevel_height_in_block = heightInBlock, miplevel_width_in_block = widthInBlock;
+		for (unsigned mip_level = 0; mip_level < mipmapCount; mip_level++)
+		{
+			size_t dst_pitch = align(miplevel_width_in_block * block_size_in_bytes, 256) / block_size_in_bytes;
 
-		MipmapLevelInfo currentMipmapLevelInfo = {};
-		currentMipmapLevelInfo.offset = offsetInDst;
-		currentMipmapLevelInfo.height = currentHeight;
-		currentMipmapLevelInfo.width = currentWidth;
-		currentMipmapLevelInfo.rowPitch = rowPitch;
-		Result.push_back(currentMipmapLevelInfo);
+			MipmapLevelInfo currentMipmapLevelInfo = {};
+			currentMipmapLevelInfo.offset = offsetInDst;
+			currentMipmapLevelInfo.height = miplevel_height_in_block * block_edge_in_texel;
+			currentMipmapLevelInfo.width = miplevel_width_in_block * block_edge_in_texel;
+			currentMipmapLevelInfo.rowPitch = dst_pitch * block_size_in_bytes;
+			Result.push_back(currentMipmapLevelInfo);
 
-		unsigned short *castedDst = (unsigned short *)dst, *castedSrc = (unsigned short *)src;
-
-		for (unsigned row = 0; row < heightInBlock; row++)
-			for (int j = 0; j < currentWidth * 4; j++)
-			{
-				u16 tmp = castedSrc[offsetInSrc / 2 + row * srcPitch / 2 + j];
-				castedDst[offsetInDst / 2 + row * rowPitch / 2 + j] = (tmp >> 8) | (tmp << 8);
-			}
-
-		offsetInDst += currentHeight * rowPitch;
-		offsetInSrc += currentHeight * widthInBlock * blockSize;
-		currentHeight = MAX2(currentHeight / 2, 1);
-		currentWidth = MAX2(currentWidth / 2, 1);
+			offsetInSrc += T::template copy_mipmap_level<block_size_in_bytes>((char*)dst + offsetInDst, (char*)src + offsetInSrc, miplevel_height_in_block, miplevel_width_in_block, dst_pitch, src_pitch);
+			offsetInDst += align(miplevel_height_in_block * dst_pitch * block_size_in_bytes, 512);
+			miplevel_height_in_block = MAX2(miplevel_height_in_block / 2, 1);
+			miplevel_width_in_block = MAX2(miplevel_width_in_block / 2, 1);
+		}
 	}
 	return Result;
 }
@@ -328,12 +242,13 @@ size_t get_placed_texture_storage_size(const rsx::texture &texture, size_t rowPi
 
 	size_t rowPitch = align(blockSizeInByte * widthInBlocks, rowPitchAlignement);
 
-	return rowPitch * heightInBlocks * 2; // * 2 for mipmap levels
+	return rowPitch * heightInBlocks * (texture.cubemap() ? 6 : 1) * 2; // * 2 for mipmap levels
 }
 
 std::vector<MipmapLevelInfo> upload_placed_texture(const rsx::texture &texture, size_t rowPitchAlignement, void* textureData) noexcept
 {
 	size_t w = texture.width(), h = texture.height();
+	size_t depth = texture.depth();
 
 	int format = texture.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
 
@@ -352,24 +267,28 @@ std::vector<MipmapLevelInfo> upload_placed_texture(const rsx::texture &texture, 
 	{
 	case CELL_GCM_TEXTURE_A8R8G8B8:
 		if (is_swizzled)
-			return writeTexelsSwizzled((char*)pixels, (char*)textureData, w, h, 4, texture.mipmap());
+			return copy_texture_data<texel_rgba_swizzled, 4, 1>(textureData, pixels, widthInBlocks, heightInBlocks, depth, texture.mipmap());
 		else
-			return writeTexelsGeneric((char*)pixels, (char*)textureData, w, h, 4, texture.mipmap());
+			return copy_texture_data<texel_rgba, 4, 1>(textureData, pixels, widthInBlocks, heightInBlocks, depth, texture.mipmap());
 	case CELL_GCM_TEXTURE_A1R5G5B5:
 	case CELL_GCM_TEXTURE_A4R4G4B4:
 	case CELL_GCM_TEXTURE_R5G6B5:
 		if (is_swizzled)
-			return write16bTexelsSwizzled((char*)pixels, (char*)textureData, w, h, 2, texture.mipmap());
+			return copy_texture_data<texel_16b_swizzled, 2, 1>(textureData, pixels, widthInBlocks, heightInBlocks, depth, texture.mipmap());
 		else
-			return write16bTexelsGeneric((char*)pixels, (char*)textureData, w, h, 2, texture.mipmap());
+			return copy_texture_data<texel_16b_format, 2, 1>(textureData, pixels, widthInBlocks, heightInBlocks, depth, texture.mipmap());
 	case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT:
-		return write16bX4TexelsGeneric((char*)pixels, (char*)textureData, w, h, 8, texture.mipmap());
+		return copy_texture_data<texel_16bX4_format, 8, 1>(textureData, pixels, widthInBlocks, heightInBlocks, depth, texture.mipmap());
 	case CELL_GCM_TEXTURE_COMPRESSED_DXT1:
+		return copy_texture_data<texel_bc_format, 8, 4>(textureData, pixels, widthInBlocks, heightInBlocks, depth, texture.mipmap());
 	case CELL_GCM_TEXTURE_COMPRESSED_DXT23:
+		return copy_texture_data<texel_bc_format, 16, 4>(textureData, pixels, widthInBlocks, heightInBlocks, depth, texture.mipmap());
 	case CELL_GCM_TEXTURE_COMPRESSED_DXT45:
-		return writeCompressedTexel((char*)pixels, (char*)textureData, widthInBlocks, blockEdge, heightInBlocks, blockEdge, blockSizeInByte, texture.mipmap());
+		return copy_texture_data<texel_bc_format, 16, 4>(textureData, pixels, widthInBlocks, heightInBlocks, depth, texture.mipmap());
+	case CELL_GCM_TEXTURE_B8:
+		return copy_texture_data<texel_rgba, 1, 1>(textureData, pixels, widthInBlocks, heightInBlocks, depth, texture.mipmap());
 	default:
-		return writeTexelsGeneric((char*)pixels, (char*)textureData, w, h, blockSizeInByte, texture.mipmap());
+		return copy_texture_data<texel_rgba, 4, 1>(textureData, pixels, widthInBlocks, heightInBlocks, depth, texture.mipmap());
 	}
 }
 
