@@ -215,6 +215,16 @@ namespace D2D1
 
         return inkStyleProperties;
     }
+
+    COM_DECLSPEC_NOTHROW
+    D2D1FORCEINLINE
+    D2D1_RECT_U
+    InfiniteRectU()
+    {
+        D2D1_RECT_U rect = { 0u, 0u, UINT_MAX, UINT_MAX };
+
+        return rect;
+    }
 } // namespace D2D1
 
 #endif /* WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_APP) */
