@@ -180,13 +180,18 @@ bool is_primitive_native(unsigned m_draw_mode) noexcept
 	case CELL_GCM_PRIMITIVE_TRIANGLES:
 	case CELL_GCM_PRIMITIVE_TRIANGLE_STRIP:
 	case CELL_GCM_PRIMITIVE_QUAD_STRIP:
-	case CELL_GCM_PRIMITIVE_POLYGON:
 		return true;
+	case CELL_GCM_PRIMITIVE_POLYGON:
 	case CELL_GCM_PRIMITIVE_TRIANGLE_FAN:
 	case CELL_GCM_PRIMITIVE_QUADS:
 		return false;
 	}
 }
+
+/** We assume that polygon is convex in polygon mode (constraints in OpenGL)
+ *In such case polygon triangulation equates to triangle fan with arbitrary start vertex
+ * see http://www.gamedev.net/page/resources/_/technical/graphics-programming-and-theory/polygon-triangulation-r3334
+ */
 
 size_t get_index_count(unsigned m_draw_mode, unsigned initial_index_count) noexcept
 {
@@ -196,6 +201,7 @@ size_t get_index_count(unsigned m_draw_mode, unsigned initial_index_count) noexc
 
 	switch (m_draw_mode)
 	{
+	case CELL_GCM_PRIMITIVE_POLYGON:
 	case CELL_GCM_PRIMITIVE_TRIANGLE_FAN:
 		return (initial_index_count - 2) * 3;
 	case CELL_GCM_PRIMITIVE_QUADS:
@@ -221,6 +227,7 @@ void write_index_array_for_non_indexed_non_native_primitive_to_buffer(char* dst,
 	switch (draw_mode)
 	{
 	case CELL_GCM_PRIMITIVE_TRIANGLE_FAN:
+	case CELL_GCM_PRIMITIVE_POLYGON:
 		for (unsigned i = 0; i < (count - 2); i++)
 		{
 			typedDst[3 * i] = first;
