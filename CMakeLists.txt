@@ -171,6 +171,10 @@ if("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU" OR
 	#
 	set(GCC_EXTRA_OPTIONS "")
 	#
+	if(BUILD_SHARED_LIBS)
+		set(GCC_EXTRA_OPTIONS "${GCC_EXTRA_OPTIONS} -fPIC")
+	endif()
+	#
 	set(FLAG_TESTED "-Wextra")
 	check_cxx_compiler_flag(${FLAG_TESTED} FLAG_WEXTRA)
 	if(FLAG_WEXTRA)
