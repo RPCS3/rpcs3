@@ -56,6 +56,17 @@ bool D3D12GSRender::load_program()
 	fragment_program.offset = shader_program & ~0x3;
 	fragment_program.addr = rsx::get_address(fragment_program.offset, (shader_program & 0x3) - 1);
 	fragment_program.ctrl = rsx::method_registers[NV4097_SET_SHADER_CONTROL];
+	fragment_program.texture_dimensions.clear();
+
+	for (u32 i = 0; i < rsx::limits::textures_count; ++i)
+	{
+		if (!textures[i].enabled())
+			fragment_program.texture_dimensions.push_back(texture_dimension::texture_dimension_2d);
+		else if (textures[i].cubemap())
+			fragment_program.texture_dimensions.push_back(texture_dimension::texture_dimension_cubemap);
+		else
+			fragment_program.texture_dimensions.push_back(texture_dimension::texture_dimension_2d);
+	}
 
 	D3D12PipelineProperties prop = {};
 	prop.Topology = get_primitive_topology_type(draw_mode);

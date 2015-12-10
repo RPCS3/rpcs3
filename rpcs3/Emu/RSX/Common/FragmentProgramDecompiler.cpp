@@ -5,12 +5,13 @@
 
 #include "FragmentProgramDecompiler.h"
 
-FragmentProgramDecompiler::FragmentProgramDecompiler(u32 addr, u32& size, u32 ctrl) :
+FragmentProgramDecompiler::FragmentProgramDecompiler(u32 addr, u32& size, u32 ctrl, const std::vector<texture_dimension> &texture_dimensions) :
 	m_addr(addr),
 	m_size(size),
 	m_const_index(0),
 	m_location(0),
-	m_ctrl(ctrl)
+	m_ctrl(ctrl),
+	m_texture_dimensions(texture_dimensions)
 {
 	m_size = 0;
 }
@@ -128,7 +129,7 @@ std::string FragmentProgramDecompiler::AddConst()
 
 std::string FragmentProgramDecompiler::AddTex()
 {
-	return m_parr.AddParam(PF_PARAM_UNIFORM, "sampler2D", std::string("tex") + std::to_string(dst.tex_num));
+	return m_parr.AddParam(PF_PARAM_UNIFORM, (m_texture_dimensions[dst.tex_num] == texture_dimension::texture_dimension_cubemap) ? "samplerCube" : "sampler2D", std::string("tex") + std::to_string(dst.tex_num));
 }
 
 std::string FragmentProgramDecompiler::Format(const std::string& code)
@@ -416,9 +417,39 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 	case RSX_FP_OPCODE_DDY: SetDst(getFunction(FUNCTION::FUNCTION_DFDY)); return true;
 	case RSX_FP_OPCODE_NRM: SetDst("normalize($0)"); return true;
 	case RSX_FP_OPCODE_BEM: LOG_ERROR(RSX, "Unimplemented TEX_SRB instruction: BEM"); return true;
-	case RSX_FP_OPCODE_TEX: SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE));  return true;
+	case RSX_FP_OPCODE_TEX:
+		if (dst.tex_num >= m_texture_dimensions.size())
+		{
+			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE));
+			return true;
+		}
+		switch (m_texture_dimensions[dst.tex_num])
+		{
+		case texture_dimension::texture_dimension_2d:
+			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE));
+			return true;
+		case texture_dimension::texture_dimension_cubemap:
+			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_CUBE_SAMPLE));
+			return true;
+		}
+		return false;
 	case RSX_FP_OPCODE_TEXBEM: SetDst("texture($t, $0.xy, $1.x)"); return true;
-	case RSX_FP_OPCODE_TXP: SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE_PROJ)); return true; //TODO: More testing (Sonic The Hedgehog (NPUB-30442/NPEB-00478) and The Simpsons Arcade Game (NPUB30563))
+	case RSX_FP_OPCODE_TXP:
+		if (dst.tex_num >= m_texture_dimensions.size())
+		{
+			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE_PROJ));
+			return true;
+		}
+		switch (m_texture_dimensions[dst.tex_num])
+		{
+		case texture_dimension::texture_dimension_2d:
+			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE_PROJ));
+			return true;
+		case texture_dimension::texture_dimension_cubemap:
+			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_CUBE_SAMPLE_PROJ));
+			return true;
+		}
+		return false;
 	case RSX_FP_OPCODE_TXPBEM: SetDst("textureProj($t, $0.xyz, $1.x)"); return true;
 	case RSX_FP_OPCODE_TXD: LOG_ERROR(RSX, "Unimplemented TEX_SRB instruction: TXD"); return true;
 	case RSX_FP_OPCODE_TXB: SetDst("texture($t, $0.xy, $1.x)"); return true;

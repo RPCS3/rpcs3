@@ -115,6 +115,13 @@ struct texel_16bX4_format {
 	}
 };
 
+/**
+ * Texture upload template.
+ * The template iterates over all depth (including cubemap) and over all mipmaps.
+ * The alignment is 256 for mipmap levels and 512 for depth (TODO: make this customisable for Vulkan ?)
+ * The template takes a struct with a "copy_mipmap_level" static function that copy the given mipmap level and returns the offset to add to the src buffer for next
+ * mipmap level (to allow same code for packed/non packed texels)
+ */
 template <typename T, size_t block_size_in_bytes, size_t block_edge_in_texel = 1>
 std::vector<MipmapLevelInfo> copy_texture_data(void *dst, const void *src, size_t widthInBlock, size_t heightInBlock, size_t depth, size_t mipmapCount) noexcept
 {
@@ -141,6 +148,7 @@ std::vector<MipmapLevelInfo> copy_texture_data(void *dst, const void *src, size_
 			miplevel_height_in_block = MAX2(miplevel_height_in_block / 2, 1);
 			miplevel_width_in_block = MAX2(miplevel_width_in_block / 2, 1);
 		}
+		offsetInSrc = align(offsetInSrc, 128);
 	}
 	return Result;
 }
@@ -249,6 +257,7 @@ std::vector<MipmapLevelInfo> upload_placed_texture(const rsx::texture &texture, 
 {
 	size_t w = texture.width(), h = texture.height();
 	size_t depth = texture.depth();
+	if (texture.cubemap()) depth *= 6;
 
 	int format = texture.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
 

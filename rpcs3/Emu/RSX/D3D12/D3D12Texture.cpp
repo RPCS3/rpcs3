@@ -52,6 +52,8 @@ ComPtr<ID3D12Resource> upload_single_texture(
 	data_heap<ID3D12Resource, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT> &texture_buffer_heap)
 {
 	size_t w = texture.width(), h = texture.height();
+	size_t depth = texture.depth();
+	if (texture.cubemap()) depth *= 6;
 
 	int format = texture.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
 	DXGI_FORMAT dxgi_format = get_texture_format(format);
@@ -70,7 +72,7 @@ ComPtr<ID3D12Resource> upload_single_texture(
 	ThrowIfFailed(device->CreateCommittedResource(
 		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
 		D3D12_HEAP_FLAG_NONE,
-		&CD3DX12_RESOURCE_DESC::Tex2D(dxgi_format, (UINT)w, (UINT)h, 1, texture.mipmap()),
+		&CD3DX12_RESOURCE_DESC::Tex2D(dxgi_format, (UINT)w, (UINT)h, depth, texture.mipmap()),
 		D3D12_RESOURCE_STATE_COPY_DEST,
 		nullptr,
 		IID_PPV_ARGS(result.GetAddressOf())
@@ -174,9 +176,17 @@ void D3D12GSRender::upload_and_bind_textures(ID3D12GraphicsCommandList *command_
 		}
 
 		D3D12_SHADER_RESOURCE_VIEW_DESC shared_resource_view_desc = {};
-		shared_resource_view_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+		if (textures[i].cubemap())
+		{
+			shared_resource_view_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE;
+			shared_resource_view_desc.TextureCube.MipLevels = textures[i].mipmap();
+		}
+		else
+		{
+			shared_resource_view_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+			shared_resource_view_desc.Texture2D.MipLevels = textures[i].mipmap();
+		}
 		shared_resource_view_desc.Format = get_texture_format(format);
-		shared_resource_view_desc.Texture2D.MipLevels = textures[i].mipmap();
 
 		switch (format)
 		{

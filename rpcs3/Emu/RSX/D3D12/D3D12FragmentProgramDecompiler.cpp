@@ -7,8 +7,8 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 
-D3D12FragmentDecompiler::D3D12FragmentDecompiler(u32 addr, u32& size, u32 ctrl) :
-	FragmentProgramDecompiler(addr, size, ctrl)
+D3D12FragmentDecompiler::D3D12FragmentDecompiler(u32 addr, u32& size, u32 ctrl, const std::vector<texture_dimension> &texture_dimensions) :
+	FragmentProgramDecompiler(addr, size, ctrl, texture_dimensions)
 {
 
 }
@@ -110,7 +110,7 @@ void D3D12FragmentDecompiler::insertConstants(std::stringstream & OS)
 	OS << "{" << std::endl;
 	for (ParamType PT : m_parr.params[PF_PARAM_UNIFORM])
 	{
-		if (PT.type == "sampler2D")
+		if (PT.type == "sampler2D" || PT.type == "samplerCube")
 			continue;
 		for (ParamItem PI : PT.items)
 			OS << "	" << PT.type << " " << PI.name << ";" << std::endl;
@@ -119,13 +119,23 @@ void D3D12FragmentDecompiler::insertConstants(std::stringstream & OS)
 
 	for (ParamType PT : m_parr.params[PF_PARAM_UNIFORM])
 	{
-		if (PT.type != "sampler2D")
-			continue;
-		for (ParamItem PI : PT.items)
+		if (PT.type == "sampler2D")
 		{
-			size_t textureIndex = atoi(PI.name.data() + 3);
-			OS << "Texture2D " << PI.name << " : register(t" << textureIndex << ");" << std::endl;
-			OS << "sampler " << PI.name << "sampler : register(s" << textureIndex << ");" << std::endl;
+			for (ParamItem PI : PT.items)
+			{
+				size_t textureIndex = atoi(PI.name.data() + 3);
+				OS << "Texture2D " << PI.name << " : register(t" << textureIndex << ");" << std::endl;
+				OS << "sampler " << PI.name << "sampler : register(s" << textureIndex << ");" << std::endl;
+			}
+		}
+		else if (PT.type == "samplerCube")
+		{
+			for (ParamItem PI : PT.items)
+			{
+				size_t textureIndex = atoi(PI.name.data() + 3);
+				OS << "TextureCube " << PI.name << " : register(t" << textureIndex << ");" << std::endl;
+				OS << "sampler " << PI.name << "sampler : register(s" << textureIndex << ");" << std::endl;
+			}
 		}
 	}
 }

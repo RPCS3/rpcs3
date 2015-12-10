@@ -14,7 +14,7 @@ struct GLTraits
 	static
 	void RecompileFragmentProgram(RSXFragmentProgram *RSXFP, FragmentProgramData& fragmentProgramData, size_t ID)
 	{
-		fragmentProgramData.Decompile(*RSXFP);
+		fragmentProgramData.Decompile(*RSXFP, RSXFP->texture_dimensions);
 		fragmentProgramData.Compile();
 		//checkForGlError("m_fragment_prog.Compile");
 
