@@ -359,7 +359,7 @@ namespace rsx
 
 			// handle weird RSX quirk, doesn't report less than 16 pixels width in some cases 
 			u16 src_width = method_registers[NV3089_IMAGE_IN_SIZE];
-			if (src_width == 16 && out_w < 16 && method_registers[NV3089_DS_DX] == (1 << 20)) 
+			if (src_width == 16 && out_w < 16 && method_registers[NV3089_DS_DX] == (1 << 20))
 			{
 				src_width = out_w;
 			}
@@ -460,17 +460,79 @@ namespace rsx
 				pixels_src = out_ptr; // use resized image as a source
 			}
 
+			// Not sure if swizzle should be after clipping or not
+			if (method_registers[NV3089_SET_CONTEXT_SURFACE] == CELL_GCM_CONTEXT_SWIZZLE2D)
+			{
+				u8 sw_width_log2 = method_registers[NV309E_SET_FORMAT] >> 16;
+				u8 sw_height_log2 = method_registers[NV309E_SET_FORMAT] >> 24;
+
+				// 0 indicates height of 1 pixel
+				sw_height_log2 = sw_height_log2 == 0 ? 1 : sw_height_log2;
+
+				// swizzle based on destination size
+				u16 sw_width = 1 << sw_width_log2;
+				u16 sw_height = 1 << sw_height_log2;
+
+				std::unique_ptr<u8[]> sw_temp;
+
+				temp2.reset(new u8[out_bpp * sw_width * sw_height]);
+
+				u8* linear_pixels = pixels_src;
+				u8* swizzled_pixels = temp2.get();
+
+				// Check and pad texture out if we are given non square texture for swizzle to be correct
+				if (sw_width != out_w || sw_height != out_h)
+				{
+					sw_temp.reset(new u8[out_bpp * sw_width * sw_height]);
+
+					switch (out_bpp)
+					{
+					case 1:
+						pad_texture<u8>(linear_pixels, sw_temp.get(), out_w, out_h, sw_width, sw_height);
+						break;
+					case 2:
+						pad_texture<u16>(linear_pixels, sw_temp.get(), out_w, out_h, sw_width, sw_height);
+						break;
+					case 4:
+						pad_texture<u32>(linear_pixels, sw_temp.get(), out_w, out_h, sw_width, sw_height);
+						break;
+					}
+
+					linear_pixels = sw_temp.get();
+				}
+
+				switch (out_bpp)
+				{
+				case 1:
+					convert_linear_swizzle<u8>(linear_pixels, swizzled_pixels, sw_width, sw_height, false);
+					break;
+				case 2:
+					convert_linear_swizzle<u16>(linear_pixels, swizzled_pixels, sw_width, sw_height, false);
+					break;
+				case 4:
+					convert_linear_swizzle<u32>(linear_pixels, swizzled_pixels, sw_width, sw_height, false);
+					break;
+				}
+
+				//pixels_src = swizzled_pixels;
+
+				// TODO: Handle Clipping/Image out when swizzled
+				std::memcpy(pixels_dst, swizzled_pixels, out_bpp * sw_width * sw_height);
+				return;
+			}
+
 			// clip if necessary
 			if (method_registers[NV3089_CLIP_SIZE] != method_registers[NV3089_IMAGE_OUT_SIZE] ||
-				method_registers[NV3089_CLIP_POINT] != method_registers[NV3089_IMAGE_OUT_POINT])
+				method_registers[NV3089_CLIP_POINT] || method_registers[NV3089_IMAGE_OUT_POINT])
 			{
-				temp2.reset(new u8[out_bpp * out_w * out_h]);
+				// Note: There are cases currently where the if statement above is true, but this for loop doesn't hit, leading to nothing getting copied to pixels_dst
+				// Currently it seems needed to avoid some errors/crashes
 				for (s32 y = (method_registers[NV3089_CLIP_POINT] >> 16), dst_y = (method_registers[NV3089_IMAGE_OUT_POINT] >> 16); y < out_h; y++, dst_y++)
 				{
 					if (dst_y >= 0 && dst_y < method_registers[NV3089_IMAGE_OUT_SIZE] >> 16)
 					{
 						// destination line
-						u8* dst_line = temp2.get() + dst_y * out_bpp * (method_registers[NV3089_IMAGE_OUT_SIZE] & 0xffff)
+						u8* dst_line = pixels_dst + dst_y * out_bpp * (method_registers[NV3089_IMAGE_OUT_SIZE] & 0xffff)
 							+ std::min<s32>(std::max<s32>(method_registers[NV3089_IMAGE_OUT_POINT] & 0xffff, 0), method_registers[NV3089_IMAGE_OUT_SIZE] & 0xffff);
 
 						size_t dst_max = std::min<s32>(
@@ -501,66 +563,8 @@ namespace rsx
 						}
 					}
 				}
-				pixels_src = temp2.get();
 			}
-
-			// Swizzle texture last after scaling is done
-			if (method_registers[NV3089_SET_CONTEXT_SURFACE] == CELL_GCM_CONTEXT_SWIZZLE2D)
-			{
-				u8 sw_width_log2 = method_registers[NV309E_SET_FORMAT] >> 16;
-				u8 sw_height_log2 = method_registers[NV309E_SET_FORMAT] >> 24;
-
-				// 0 indicates height of 1 pixel
-				sw_height_log2 = sw_height_log2 == 0 ? 1 : sw_height_log2;
-
-				// swizzle based on destination size
-				u16 sw_width = 1 << sw_width_log2;
-				u16 sw_height =  1 << sw_height_log2;
-
-				std::unique_ptr<u8[]> sw_temp, sw_temp2;
-
-				sw_temp.reset(new u8[out_bpp * sw_width * sw_height]);
-
-				u8* linear_pixels = pixels_src;
-				u8* swizzled_pixels = sw_temp.get();
-
-				// Check and pad texture out if we are given non square texture for swizzle to be correct
-				if (sw_width != out_w || sw_height != out_h) 
-				{
-					sw_temp2.reset(new u8[out_bpp * sw_width * sw_height]());
-
-					switch (out_bpp) 
-					{
-					case 1:
-						pad_texture<u8>(linear_pixels, sw_temp2.get(), out_w, out_h, sw_width, sw_height);
-						break;
-					case 2:
-						pad_texture<u16>(linear_pixels, sw_temp2.get(), out_w, out_h, sw_width, sw_height);
-						break;
-					case 4:
-						pad_texture<u32>(linear_pixels, sw_temp2.get(), out_w, out_h, sw_width, sw_height);
-						break;
-					}
-					
-					linear_pixels = sw_temp2.get();
-				}
-
-				switch (out_bpp)
-				{
-				case 1:
-					convert_linear_swizzle<u8>(linear_pixels, swizzled_pixels, sw_width, sw_height, false);
-					break;
-				case 2:
-					convert_linear_swizzle<u16>(linear_pixels, swizzled_pixels, sw_width, sw_height, false);
-					break;
-				case 4:
-					convert_linear_swizzle<u32>(linear_pixels, swizzled_pixels, sw_width, sw_height, false);
-					break;
-				}
-
-				std::memcpy(pixels_dst, swizzled_pixels, out_bpp * sw_width * sw_height);
-			}
-			else 
+			else
 			{
 				std::memcpy(pixels_dst, pixels_src, out_w * out_h * out_bpp);
 			}
