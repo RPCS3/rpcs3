@@ -107,12 +107,11 @@ D3D12_STENCIL_OP get_stencil_op(u32 op) noexcept
 	case CELL_GCM_KEEP: return D3D12_STENCIL_OP_KEEP;
 	case CELL_GCM_ZERO: return D3D12_STENCIL_OP_ZERO;
 	case CELL_GCM_REPLACE: return D3D12_STENCIL_OP_REPLACE;
-	case CELL_GCM_INCR: return D3D12_STENCIL_OP_INCR;
-	case CELL_GCM_DECR: return D3D12_STENCIL_OP_DECR;
+	case CELL_GCM_INCR: return D3D12_STENCIL_OP_INCR_SAT;
+	case CELL_GCM_DECR: return D3D12_STENCIL_OP_DECR_SAT;
 	case CELL_GCM_INVERT: return D3D12_STENCIL_OP_INVERT;
-	case CELL_GCM_INCR_WRAP:
-	case CELL_GCM_DECR_WRAP:
-		LOG_WARNING(RSX, "Unsupported stencil op used %x, please report this to a developer.", op);
+	case CELL_GCM_INCR_WRAP: return D3D12_STENCIL_OP_INCR;
+	case CELL_GCM_DECR_WRAP: return D3D12_STENCIL_OP_DECR;
 	}
 	LOG_ERROR(RSX, "Unknow stencil op used %x, please report this to a developer.", op);
 	unreachable("Wrong Stencil op");
