@@ -133,9 +133,38 @@ void D3D12GSRender::upload_and_bind_textures(ID3D12GraphicsCommandList *command_
 
 	for (u32 i = 0; i < rsx::limits::textures_count; ++i)
 	{
-		if (!textures[i].enabled()) continue;
+		if (!textures[i].enabled())
+		{
+			// Now fill remaining texture slots with dummy texture/sampler
+
+			D3D12_SHADER_RESOURCE_VIEW_DESC shader_resource_view_desc = {};
+			shader_resource_view_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+			shader_resource_view_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+			shader_resource_view_desc.Texture2D.MipLevels = 1;
+			shader_resource_view_desc.Shader4ComponentMapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(
+				D3D12_SHADER_COMPONENT_MAPPING_FORCE_VALUE_0,
+				D3D12_SHADER_COMPONENT_MAPPING_FORCE_VALUE_0,
+				D3D12_SHADER_COMPONENT_MAPPING_FORCE_VALUE_0,
+				D3D12_SHADER_COMPONENT_MAPPING_FORCE_VALUE_0);
+			m_device->CreateShaderResourceView(m_dummy_texture, &shader_resource_view_desc,
+				CD3DX12_CPU_DESCRIPTOR_HANDLE(get_current_resource_storage().descriptors_heap->GetCPUDescriptorHandleForHeapStart())
+				.Offset((INT)descriptor_index + (INT)used_texture, g_descriptor_stride_srv_cbv_uav)
+				);
+
+			D3D12_SAMPLER_DESC sampler_desc = {};
+			sampler_desc.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
+			sampler_desc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+			sampler_desc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+			sampler_desc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+			m_device->CreateSampler(&sampler_desc,
+				CD3DX12_CPU_DESCRIPTOR_HANDLE(get_current_resource_storage().sampler_descriptor_heap[get_current_resource_storage().sampler_descriptors_heap_index]->GetCPUDescriptorHandleForHeapStart())
+				.Offset((INT)get_current_resource_storage().current_sampler_index + (INT)used_texture, g_descriptor_stride_samplers)
+				);
+			used_texture++;
+			continue;
+		}
 		size_t w = textures[i].width(), h = textures[i].height();
-		if (!w || !h) continue;
+//		if (!w || !h) continue;
 
 		const u32 texaddr = rsx::get_address(textures[i].offset(), textures[i].location());
 
@@ -332,32 +361,6 @@ void D3D12GSRender::upload_and_bind_textures(ID3D12GraphicsCommandList *command_
 		used_texture++;
 	}
 
-	// Now fill remaining texture slots with dummy texture/sampler
-	for (; used_texture < texture_count; used_texture++)
-	{
-		D3D12_SHADER_RESOURCE_VIEW_DESC shader_resource_view_desc = {};
-		shader_resource_view_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-		shader_resource_view_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-		shader_resource_view_desc.Texture2D.MipLevels = 1;
-		shader_resource_view_desc.Shader4ComponentMapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(
-			D3D12_SHADER_COMPONENT_MAPPING_FORCE_VALUE_0,
-			D3D12_SHADER_COMPONENT_MAPPING_FORCE_VALUE_0,
-			D3D12_SHADER_COMPONENT_MAPPING_FORCE_VALUE_0,
-			D3D12_SHADER_COMPONENT_MAPPING_FORCE_VALUE_0);
-		m_device->CreateShaderResourceView(m_dummy_texture, &shader_resource_view_desc,
-			CD3DX12_CPU_DESCRIPTOR_HANDLE(get_current_resource_storage().descriptors_heap->GetCPUDescriptorHandleForHeapStart())
-			.Offset((INT)descriptor_index + (INT)used_texture, g_descriptor_stride_srv_cbv_uav)
-			);
 
-		D3D12_SAMPLER_DESC sampler_desc = {};
-		sampler_desc.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
-		sampler_desc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-		sampler_desc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-		sampler_desc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-		m_device->CreateSampler(&sampler_desc,
-			CD3DX12_CPU_DESCRIPTOR_HANDLE(get_current_resource_storage().sampler_descriptor_heap[get_current_resource_storage().sampler_descriptors_heap_index]->GetCPUDescriptorHandleForHeapStart())
-			.Offset((INT)get_current_resource_storage().current_sampler_index + (INT)used_texture, g_descriptor_stride_samplers)
-			);
-	}
 }
 #endif

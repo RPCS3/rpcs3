@@ -159,9 +159,14 @@ void D3D12GSRender::upload_and_bind_scale_offset_matrix(size_t descriptorIndex)
 	size_t tex_idx = 0;
 	for (u32 i = 0; i < rsx::limits::textures_count; ++i)
 	{
-		if (!textures[i].enabled()) continue;
+		if (!textures[i].enabled())
+		{
+			int is_unorm = false;
+			memcpy((char*)mapped_buffer + heap_offset + (18 + tex_idx++) * sizeof(int), &is_unorm, sizeof(int));
+			continue;
+		}
 		size_t w = textures[i].width(), h = textures[i].height();
-		if (!w || !h) continue;
+//		if (!w || !h) continue;
 
 		int is_unorm = (textures[i].format() & CELL_GCM_TEXTURE_UN);
 		memcpy((char*)mapped_buffer + heap_offset + (18 + tex_idx++) * sizeof(int), &is_unorm, sizeof(int));
