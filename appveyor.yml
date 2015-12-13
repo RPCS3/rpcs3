@@ -18,14 +18,14 @@ before_build:
  - 7z x wxWidgets.7z -aos -oC:\rpcs3\wxWidgets > null
  - 7z x zlib.7z -aos -oC:\rpcs3\ > null
  - if %configuration%==Release (cmake -G "Visual Studio 14 Win64" -DZLIB_ROOT=C:/rpcs3/zlib/)
-   else (7z x llvmlibs.7z -aos -oC:\rpcs3 > null && cmake -G "Visual Studio 14 Win64" -DLLVM_DIR=C:/rpcs3/llvm_build/share/llvm/cmake -DZLIB_ROOT=C:/rpcs3/zlib/)
+   else (7z x llvmlibs37.7z -aos -oC:\rpcs3 > null && cmake -G "Visual Studio 14 Win64" -DLLVM_DIR=C:/rpcs3/llvm_build/share/llvm/cmake -DZLIB_ROOT=C:/rpcs3/zlib/)
 
 build_script:
  - cmake --build . --config Release -- /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
 
 install:
  - ps: Start-FileDownload 'https://402331b94f8e4b87ae2ef4677347f7956cf3861f.googledrive.com/host/0B6v_qtb9hkicfmt0NG0wTTRtUmF4X3VTQk5Oc2JidEVKVnUteDA1dXdrYlNsVW9kREpsSHc/wxWidgets.7z'
- - ps: Start-FileDownload 'https://402331b94f8e4b87ae2ef4677347f7956cf3861f.googledrive.com/host/0B6v_qtb9hkicfmt0NG0wTTRtUmF4X3VTQk5Oc2JidEVKVnUteDA1dXdrYlNsVW9kREpsSHc/llvmlibs.7z'
+ - ps: Start-FileDownload 'https://402331b94f8e4b87ae2ef4677347f7956cf3861f.googledrive.com/host/0B6v_qtb9hkicfmt0NG0wTTRtUmF4X3VTQk5Oc2JidEVKVnUteDA1dXdrYlNsVW9kREpsSHc/llvmlibs37.7z'
  - ps: Start-FileDownload 'https://402331b94f8e4b87ae2ef4677347f7956cf3861f.googledrive.com/host/0B6v_qtb9hkicfmt0NG0wTTRtUmF4X3VTQk5Oc2JidEVKVnUteDA1dXdrYlNsVW9kREpsSHc/zlib.7z'
  - set WXWIN=C:\rpcs3\wxWidgets
  - set OPENALDIR=C:\rpcs3\3rdparty\OpenAL
