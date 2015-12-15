@@ -13,10 +13,16 @@ s32 cellUserInfoGetStat(u32 id, vm::ptr<CellUserInfoUserStat> stat)
 {
 	cellUserInfo.Warning("cellUserInfoGetStat(id=%d, stat=*0x%x)", id, stat);
 
-	if (id > CELL_USERINFO_USER_MAX)
+	if (id > CELL_SYSUTIL_USERID_MAX)
 		return CELL_USERINFO_ERROR_NOUSER;
 
-	char path [256];
+	if (id == CELL_SYSUTIL_USERID_CURRENT)
+	{
+		// TODO: Return current user/profile when that is implemented
+		id = 1;
+	}
+
+	char path[256];
 	sprintf(path, "/dev_hdd0/home/%08d", id);
 	if (!Emu.GetVFS().ExistsDir(path))
 		return CELL_USERINFO_ERROR_NOUSER;

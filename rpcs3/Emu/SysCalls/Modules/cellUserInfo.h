@@ -27,6 +27,12 @@ enum  CellUserInfoListType
 	CELL_USERINFO_LISTTYPE_NOCURRENT = 1,
 };
 
+enum
+{
+	CELL_SYSUTIL_USERID_CURRENT  = 0,
+	CELL_SYSUTIL_USERID_MAX      = 99999999,
+};
+
 // Structs
 struct CellUserInfoUserStat
 {
