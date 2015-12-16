@@ -45,7 +45,14 @@
 # define LLVM_BUILTIN_UNREACHABLE __assume(false)
 #endif
 
-LLVM_ATTRIBUTE_NORETURN void unreachable_internal(const char *msg = nullptr, const char *file = nullptr, unsigned line = 0);
+LLVM_ATTRIBUTE_NORETURN void unreachable_internal();
+
+template<typename... Args>
+void unreachable_internal_verbose(const char *file, unsigned line, const Args &...args)
+{
+	LOG_ERROR(RSX, "file %s line %d : %s", file, line, fmt::format(args...));
+	unreachable_internal();
+}
 
 /// Marks that the current location is not supposed to be reachable.
 /// In !NDEBUG builds, prints the message and location info to stderr.
@@ -56,8 +63,8 @@ LLVM_ATTRIBUTE_NORETURN void unreachable_internal(const char *msg = nullptr, con
 /// Use this instead of assert(0).  It conveys intent more clearly and
 /// allows compilers to omit some unnecessary code.
 #ifndef NDEBUG
-#define unreachable(msg) \
-	unreachable_internal(msg, __FILE__, __LINE__)
+#define unreachable(...) \
+	unreachable_internal_verbose(__FILE__, __LINE__, ##__VA_ARGS__)
 //#elif defined(LLVM_BUILTIN_UNREACHABLE)
 //#define unreachable(msg) LLVM_BUILTIN_UNREACHABLE
 #else

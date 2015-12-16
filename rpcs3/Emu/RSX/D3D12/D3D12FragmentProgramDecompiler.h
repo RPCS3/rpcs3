@@ -20,5 +20,5 @@ protected:
 	virtual void insertMainStart(std::stringstream &OS) override;
 	virtual void insertMainEnd(std::stringstream &OS) override;
 public:
-	D3D12FragmentDecompiler(u32 addr, u32& size, u32 ctrl);
+	D3D12FragmentDecompiler(u32 addr, u32& size, u32 ctrl, const std::vector<texture_dimension> &texture_dimensions);
 };

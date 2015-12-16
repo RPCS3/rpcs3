@@ -147,7 +147,7 @@ struct D3D12Traits
 	static
 	void RecompileFragmentProgram(RSXFragmentProgram *RSXFP, FragmentProgramData& fragmentProgramData, size_t ID)
 	{
-		D3D12FragmentDecompiler FS(RSXFP->addr, RSXFP->size, RSXFP->ctrl);
+		D3D12FragmentDecompiler FS(RSXFP->addr, RSXFP->size, RSXFP->ctrl, RSXFP->texture_dimensions);
 		const std::string &shader = FS.Decompile();
 		fragmentProgramData.Compile(shader, Shader::SHADER_TYPE::SHADER_TYPE_FRAGMENT);
 		fragmentProgramData.m_textureCount = 0;
@@ -155,7 +155,7 @@ struct D3D12Traits
 		{
 			for (const ParamItem PI : PT.items)
 			{
-				if (PT.type == "sampler2D")
+				if (PT.type == "sampler2D" || PT.type == "samplerCube")
 				{
 					size_t texture_unit = atoi(PI.name.c_str() + 3);
 					fragmentProgramData.m_textureCount = std::max(texture_unit + 1, fragmentProgramData.m_textureCount);

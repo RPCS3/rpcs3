@@ -204,12 +204,20 @@ static const std::string rsx_fp_op_names[] =
 	"NULL", "BRK", "CAL", "IFE", "LOOP", "REP", "RET"
 };
 
+enum class texture_dimension
+{
+	texture_dimension_2d,
+	texture_dimension_2d_array,
+	texture_dimension_cubemap,
+};
+
 struct RSXFragmentProgram
 {
 	u32 size;
 	u32 addr;
 	u32 offset;
 	u32 ctrl;
+	std::vector<texture_dimension> texture_dimensions;
 
 	RSXFragmentProgram()
 		: size(0)

@@ -325,7 +325,8 @@ public:
 				auto& vmfprog = vm::ps3::_ref<CgBinaryFragmentProgram>(ptr + vmprog.program);
 				u32 size;
 				u32 ctrl = (vmfprog.outputFromH0 ? 0 : 0x40) | (vmfprog.depthReplace ? 0xe : 0);
-				GLFragmentDecompilerThread(m_glsl_shader, param_array, ptr + vmprog.ucode, size, ctrl).Task();
+				std::vector<texture_dimension> td;
+				GLFragmentDecompilerThread(m_glsl_shader, param_array, ptr + vmprog.ucode, size, ctrl, td).Task();
 				vm::close();
 			}
 		}

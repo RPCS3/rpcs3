@@ -253,7 +253,7 @@ std::string VertexProgramDecompiler::GetCond()
 	swizzle += f[d0.mask_w];
 
 	swizzle = swizzle == "xyzw" ? "" : "." + swizzle;
-	return "any(" + compareFunction(cond_string_table[d0.cond], "cc" + std::to_string(d0.cond_reg_sel_1), getFloatTypeName(4) + "(0., 0., 0., 0.)" + swizzle) + ")";
+	return "any(" + compareFunction(cond_string_table[d0.cond], "cc" + std::to_string(d0.cond_reg_sel_1) + swizzle, getFloatTypeName(4) + "(0., 0., 0., 0.)" + swizzle) + ")";
 }
 
 void VertexProgramDecompiler::AddCodeCond(const std::string& dst, const std::string& src)

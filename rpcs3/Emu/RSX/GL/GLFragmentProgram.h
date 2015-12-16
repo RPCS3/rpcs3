@@ -9,8 +9,8 @@ struct GLFragmentDecompilerThread : public FragmentProgramDecompiler
 	std::string& m_shader;
 	ParamArray& m_parrDummy;
 public:
-	GLFragmentDecompilerThread(std::string& shader, ParamArray& parr, u32 addr, u32& size, u32 ctrl)
-		: FragmentProgramDecompiler(addr, size, ctrl)
+	GLFragmentDecompilerThread(std::string& shader, ParamArray& parr, u32 addr, u32& size, u32 ctrl, const std::vector<texture_dimension> &texture_dimensions)
+		: FragmentProgramDecompiler(addr, size, ctrl, texture_dimensions)
 		, m_shader(shader)
 		, m_parrDummy(parr)
 	{
@@ -49,8 +49,9 @@ public:
 	/**
 	 * Decompile a fragment shader located in the PS3's Memory.  This function operates synchronously.
 	 * @param prog RSXShaderProgram specifying the location and size of the shader in memory
+	 * @param td texture dimensions of input textures
 	 */
-	void Decompile(RSXFragmentProgram& prog);
+	void Decompile(RSXFragmentProgram& prog, const std::vector<texture_dimension> &td);
 
 	/** Compile the decompiled fragment shader into a format we can use with OpenGL. */
 	void Compile();

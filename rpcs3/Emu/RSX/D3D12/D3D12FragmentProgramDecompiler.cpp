@@ -7,8 +7,8 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 
-D3D12FragmentDecompiler::D3D12FragmentDecompiler(u32 addr, u32& size, u32 ctrl) :
-	FragmentProgramDecompiler(addr, size, ctrl)
+D3D12FragmentDecompiler::D3D12FragmentDecompiler(u32 addr, u32& size, u32 ctrl, const std::vector<texture_dimension> &texture_dimensions) :
+	FragmentProgramDecompiler(addr, size, ctrl, texture_dimensions)
 {
 
 }
@@ -88,10 +88,10 @@ void D3D12FragmentDecompiler::insertOutputs(std::stringstream & OS)
 	OS << "{" << std::endl;
 	const std::pair<std::string, std::string> table[] =
 	{
-		{ "ocol0", m_ctrl & 0x40 ? "r0" : "h0" },
-		{ "ocol1", m_ctrl & 0x40 ? "r2" : "h4" },
-		{ "ocol2", m_ctrl & 0x40 ? "r3" : "h6" },
-		{ "ocol3", m_ctrl & 0x40 ? "r4" : "h8" },
+		{ "ocol0", m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? "r0" : "h0" },
+		{ "ocol1", m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? "r2" : "h4" },
+		{ "ocol2", m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? "r3" : "h6" },
+		{ "ocol3", m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? "r4" : "h8" },
 	};
 
 	for (int i = 0; i < sizeof(table) / sizeof(*table); ++i)
@@ -99,6 +99,8 @@ void D3D12FragmentDecompiler::insertOutputs(std::stringstream & OS)
 		if (m_parr.HasParam(PF_PARAM_NONE, "float4", table[i].second))
 			OS << "	" << "float4" << " " << table[i].first << " : SV_TARGET" << i << ";" << std::endl;
 	}
+	if (m_ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT)
+		OS << "	float depth : SV_Depth;" << std::endl;
 	OS << "};" << std::endl;
 }
 
@@ -108,7 +110,7 @@ void D3D12FragmentDecompiler::insertConstants(std::stringstream & OS)
 	OS << "{" << std::endl;
 	for (ParamType PT : m_parr.params[PF_PARAM_UNIFORM])
 	{
-		if (PT.type == "sampler2D")
+		if (PT.type == "sampler2D" || PT.type == "samplerCube")
 			continue;
 		for (ParamItem PI : PT.items)
 			OS << "	" << PT.type << " " << PI.name << ";" << std::endl;
@@ -117,13 +119,23 @@ void D3D12FragmentDecompiler::insertConstants(std::stringstream & OS)
 
 	for (ParamType PT : m_parr.params[PF_PARAM_UNIFORM])
 	{
-		if (PT.type != "sampler2D")
-			continue;
-		for (ParamItem PI : PT.items)
+		if (PT.type == "sampler2D")
 		{
-			size_t textureIndex = atoi(PI.name.data() + 3);
-			OS << "Texture2D " << PI.name << " : register(t" << textureIndex << ");" << std::endl;
-			OS << "sampler " << PI.name << "sampler : register(s" << textureIndex << ");" << std::endl;
+			for (ParamItem PI : PT.items)
+			{
+				size_t textureIndex = atoi(PI.name.data() + 3);
+				OS << "Texture2D " << PI.name << " : register(t" << textureIndex << ");" << std::endl;
+				OS << "sampler " << PI.name << "sampler : register(s" << textureIndex << ");" << std::endl;
+			}
+		}
+		else if (PT.type == "samplerCube")
+		{
+			for (ParamItem PI : PT.items)
+			{
+				size_t textureIndex = atoi(PI.name.data() + 3);
+				OS << "TextureCube " << PI.name << " : register(t" << textureIndex << ");" << std::endl;
+				OS << "sampler " << PI.name << "sampler : register(s" << textureIndex << ");" << std::endl;
+			}
 		}
 	}
 }
@@ -166,19 +178,27 @@ void D3D12FragmentDecompiler::insertMainEnd(std::stringstream & OS)
 {
 	const std::pair<std::string, std::string> table[] =
 	{
-		{ "ocol0", m_ctrl & 0x40 ? "r0" : "h0" },
-		{ "ocol1", m_ctrl & 0x40 ? "r2" : "h4" },
-		{ "ocol2", m_ctrl & 0x40 ? "r3" : "h6" },
-		{ "ocol3", m_ctrl & 0x40 ? "r4" : "h8" },
+		{ "ocol0", m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? "r0" : "h0" },
+		{ "ocol1", m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? "r2" : "h4" },
+		{ "ocol2", m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? "r3" : "h6" },
+		{ "ocol3", m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? "r4" : "h8" },
 	};
 
 	OS << "	PixelOutput Out;" << std::endl;
+	size_t num_output = 0;
 	for (int i = 0; i < sizeof(table) / sizeof(*table); ++i)
 	{
 		if (m_parr.HasParam(PF_PARAM_NONE, "float4", table[i].second))
+		{
 			OS << "	Out." << table[i].first << " = " << table[i].second << ";" << std::endl;
+			num_output++;
+		}
 	}
-	OS << "	if (isAlphaTested && Out.ocol0.a <= alphaRef) discard;" << std::endl;
+	if (m_ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT)
+		OS << "	Out.depth = " << ((m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS) ? "r1.z;" : "h0.z;") << std::endl;
+	// Shaders don't always output colors (for instance if they write to depth only)
+	if (num_output > 0)
+		OS << "	if (isAlphaTested && Out.ocol0.a <= alphaRef) discard;" << std::endl;
 	OS << "	return Out;" << std::endl;
 	OS << "}" << std::endl;
 }
