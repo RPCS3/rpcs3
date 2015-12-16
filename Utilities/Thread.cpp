@@ -517,6 +517,9 @@ typedef CONTEXT x64_context;
 #define XMMREG(context, reg) (reinterpret_cast<v128*>(&(&(context)->Xmm0)[reg]))
 #define EFLAGS(context) ((context)->EFlags)
 
+#define ARG1(context) RCX(context)
+#define ARG2(context) RDX(context)
+
 #else
 
 typedef ucontext_t x64_context;
@@ -569,11 +572,15 @@ static const decltype(REG_RAX) reg_table[] =
 
 #endif // __APPLE__
 
+#define ARG1(context) RDI(context)
+#define ARG2(context) RSI(context)
+
 #endif
 
 #define RAX(c) (*X64REG((c), 0))
 #define RCX(c) (*X64REG((c), 1))
 #define RDX(c) (*X64REG((c), 2))
+#define RSP(c) (*X64REG((c), 4))
 #define RSI(c) (*X64REG((c), 6))
 #define RDI(c) (*X64REG((c), 7))
 #define RIP(c) (*X64REG((c), 16))
@@ -1114,31 +1121,32 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 	// TODO: allow recovering from a page fault as a feature of PS3 virtual memory
 }
 
-#ifdef _WIN32
-
-void _se_translator(unsigned int u, EXCEPTION_POINTERS* pExp)
+// Throw virtual memory access violation exception
+[[noreturn]] void throw_access_violation(const char* cause, u32 address) // Don't change function definition
 {
-	const u64 addr64 = (u64)pExp->ExceptionRecord->ExceptionInformation[1] - (u64)vm::base(0);
-	const bool is_writing = pExp->ExceptionRecord->ExceptionInformation[0] != 0;
-
-	if (u == EXCEPTION_ACCESS_VIOLATION)
-	{
-		if ((u32)addr64 == addr64)
-		{
-			throw EXCEPTION("Access violation %s location 0x%llx", is_writing ? "writing" : "reading", addr64);
-		}
-		
-		std::printf("Access violation %s location %p at %p\n", is_writing ? "writing" : "reading", (void*)pExp->ExceptionRecord->ExceptionInformation[1], pExp->ExceptionRecord->ExceptionAddress);
-		std::abort();
-	}
+	throw EXCEPTION("Access violation %s location 0x%08x", cause, address);
 }
 
-const PVOID exception_handler = (atexit([]{ RemoveVectoredExceptionHandler(exception_handler); }), AddVectoredExceptionHandler(1, [](PEXCEPTION_POINTERS pExp) -> LONG
+// Modify context in order to convert hardware exception to C++ exception
+void prepare_throw_access_violation(x64_context* context, const char* cause, u32 address)
 {
-	const u64 addr64 = (u64)pExp->ExceptionRecord->ExceptionInformation[1] - (u64)vm::base(0);
+	// Set throw_access_violation() call args (old register values are lost)
+	ARG1(context) = (u64)cause;
+	ARG2(context) = address;
+
+	// Push the exception address as a "return" address (throw_access_violation() shall not return)
+	*--(u64*&)(RSP(context)) = RIP(context);
+	RIP(context) = (u64)std::addressof(throw_access_violation);
+}
+
+#ifdef _WIN32
+
+const auto g_exception_handler = AddVectoredExceptionHandler(1, [](PEXCEPTION_POINTERS pExp) -> LONG
+{
+	const u64 addr64 = pExp->ExceptionRecord->ExceptionInformation[1] - (u64)vm::base(0);
 	const bool is_writing = pExp->ExceptionRecord->ExceptionInformation[0] != 0;
 
-	if (pExp->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION && (u32)addr64 == addr64 && thread_ctrl::get_current() && handle_access_violation((u32)addr64, is_writing, pExp->ContextRecord))
+	if (pExp->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION && addr64 < 0x100000000ull && thread_ctrl::get_current() && handle_access_violation((u32)addr64, is_writing, pExp->ContextRecord))
 	{
 		return EXCEPTION_CONTINUE_EXECUTION;
 	}
@@ -1146,12 +1154,41 @@ const PVOID exception_handler = (atexit([]{ RemoveVectoredExceptionHandler(excep
 	{
 		return EXCEPTION_CONTINUE_SEARCH;
 	}
-}));
+});
 
-const auto exception_filter = SetUnhandledExceptionFilter([](PEXCEPTION_POINTERS pExp) -> LONG
+const auto g_exception_filter = SetUnhandledExceptionFilter([](PEXCEPTION_POINTERS pExp) -> LONG
 {
-	_se_translator(pExp->ExceptionRecord->ExceptionCode, pExp);
+	std::string msg;
 
+	if (pExp->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION)
+	{
+		const u64 addr64 = pExp->ExceptionRecord->ExceptionInformation[1] - (u64)vm::base(0);
+		const auto cause = pExp->ExceptionRecord->ExceptionInformation[0] != 0 ? "writing" : "reading";
+
+		if (addr64 < 0x100000000ull)
+		{
+			// Setup throw_access_violation() call on the context
+			prepare_throw_access_violation(pExp->ContextRecord, cause, (u32)addr64);
+			return EXCEPTION_CONTINUE_EXECUTION;
+		}
+
+		msg += fmt::format("Access violation %s location %p at %p.\n", cause, pExp->ExceptionRecord->ExceptionInformation[1], pExp->ExceptionRecord->ExceptionAddress);
+	}
+	else
+	{
+		msg += fmt::format("Exception address: %p.\n", pExp->ExceptionRecord->ExceptionAddress);
+
+		for (DWORD i = 0; i < pExp->ExceptionRecord->NumberParameters; i++)
+		{
+			msg += fmt::format("ExceptionInformation[0x%x]: %p.\n", i, pExp->ExceptionRecord->ExceptionInformation[i]);
+		}
+	}
+
+	msg += fmt::format("Image base: %p.\n\n", GetModuleHandle(NULL));
+	msg += "Report this error to the developers. Press (Ctrl+C) to copy this message.";
+
+	// Report fatal error
+	MessageBoxA(0, msg.c_str(), fmt::format("Win32 Exception 0x%08X", pExp->ExceptionRecord->ExceptionCode).c_str(), MB_ICONERROR);
 	return EXCEPTION_CONTINUE_SEARCH;
 });
 
@@ -1159,31 +1196,35 @@ const auto exception_filter = SetUnhandledExceptionFilter([](PEXCEPTION_POINTERS
 
 void signal_handler(int sig, siginfo_t* info, void* uct)
 {
-	const u64 addr64 = (u64)info->si_addr - (u64)vm::base(0);
+	x64_context* context = (ucontext_t*)uct;
 
 #ifdef __APPLE__
-	const bool is_writing = ((ucontext_t*)uct)->uc_mcontext->__es.__err & 0x2;
+	const bool is_writing = context->uc_mcontext->__es.__err & 0x2;
 #else
-	const bool is_writing = ((ucontext_t*)uct)->uc_mcontext.gregs[REG_ERR] & 0x2;
+	const bool is_writing = context->uc_mcontext.gregs[REG_ERR] & 0x2;
 #endif
 
-	if ((u32)addr64 == addr64 && thread_ctrl::get_current())
+	const u64 addr64 = (u64)info->si_addr - (u64)vm::base(0);
+	const auto cause = is_writing ? "writing" : "reading";
+
+	if (addr64 < 0x100000000ull && thread_ctrl::get_current())
 	{
-		if (handle_access_violation((u32)addr64, is_writing, (ucontext_t*)uct))
+		// Try to process access violation
+		if (!handle_access_violation((u32)addr64, is_writing, context))
 		{
-			return; // proceed execution
+			// Setup throw_access_violation() call on the context
+			prepare_throw_access_violation(context, cause, (u32)addr64);
 		}
-
-		// TODO: this may be wrong
-		throw EXCEPTION("Access violation %s location 0x%llx", is_writing ? "writing" : "reading", addr64);
 	}
-
-	// else some fatal error
-	std::printf("Access violation %s location %p at %p\n", is_writing ? "writing" : "reading", info->si_addr, RIP((ucontext_t*)uct));
-	std::abort();
+	else
+	{
+		// Report fatal error (TODO)
+		std::printf("Access violation %s location %p at %p.\n", cause, info->si_addr, RIP(context));
+		std::abort();
+	}
 }
 
-const int sigaction_result = []() -> int
+int setup_signal_handler()
 {
 	struct sigaction sa;
 
@@ -1191,7 +1232,9 @@ const int sigaction_result = []() -> int
 	sigemptyset(&sa.sa_mask);
 	sa.sa_sigaction = signal_handler;
 	return sigaction(SIGSEGV, &sa, NULL);
-}();
+}
+
+const int g_sigaction_result = setup_signal_handler();
 
 #endif
 
@@ -1205,9 +1248,9 @@ void thread_ctrl::initialize()
 	SetCurrentThreadDebugName(g_tls_this_thread->m_name().c_str());
 
 #ifdef _WIN32
-	if (!exception_handler || !exception_filter)
+	if (!g_exception_handler || !g_exception_filter)
 #else
-	if (sigaction_result == -1)
+	if (g_sigaction_result == -1)
 #endif
 	{
 		std::printf("Exceptions handlers are not set correctly.\n");

@@ -44,6 +44,7 @@ Open the *.SLN* file, and press *Build* > *Clean Solution*, then *Build Solution
 If you want to build with LLVM, then LLVM 3.6.2 is required.
 `cd rpcs3 && cmake CMakeLists.txt && make && cd ../` then run with `cd bin && ./rpcs3`.
 If you are on OSX and want to build with llvm don't forget to add `-DLLVM_DIR=/usr/local/opt/llvm36/lib/llvm-3.6/share/llvm/cmake` (or wherever llvm brew was installed) to cmake invocation.
+When using GDB, configure it to ignore SIGSEGV signal (`handle SIGSEGV nostop noprint`).
 
 ### Support
 * [Donate by PayPal](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=MPJ3S9XQXCE3G)
