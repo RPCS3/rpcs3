@@ -43,14 +43,14 @@ AutoPause::~AutoPause(void)
 //This would be able to create in a GUI window.
 void AutoPause::Reload(void)
 {
-	if (fs::is_file("pause.bin"))
+	if (fs::is_file(fs::get_config_dir() + "pause.bin"))
 	{
 		m_pause_function.clear();
 		m_pause_function.reserve(16);
 		m_pause_syscall.clear();
 		m_pause_syscall.reserve(16);
 
-		fs::file list("pause.bin");
+		fs::file list(fs::get_config_dir() + "pause.bin");
 		//System calls ID and Function calls ID are all u32 iirc.
 		u32 num;
 		size_t fmax = list.size();

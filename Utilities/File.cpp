@@ -8,7 +8,7 @@
 
 #define GET_API_ERROR static_cast<u64>(GetLastError())
 
-std::unique_ptr<wchar_t[]> to_wchar(const std::string& source)
+static std::unique_ptr<wchar_t[]> to_wchar(const std::string& source)
 {
 	const auto length = source.size() + 1; // size + null terminator
 
@@ -24,7 +24,7 @@ std::unique_ptr<wchar_t[]> to_wchar(const std::string& source)
 	return buffer;
 }
 
-void to_utf8(std::string& result, const wchar_t* source)
+static void to_utf8(std::string& result, const wchar_t* source)
 {
 	const int length = lstrlenW(source); // source length
 
@@ -48,30 +48,30 @@ void to_utf8(std::string& result, const wchar_t* source)
 	}
 }
 
-time_t to_time_t(const ULARGE_INTEGER& ft)
+static time_t to_time(const ULARGE_INTEGER& ft)
 {
 	return ft.QuadPart / 10000000ULL - 11644473600ULL;
 }
 
-time_t to_time_t(const LARGE_INTEGER& ft)
+static time_t to_time(const LARGE_INTEGER& ft)
 {
 	ULARGE_INTEGER v;
 	v.LowPart = ft.LowPart;
 	v.HighPart = ft.HighPart;
 
-	return to_time_t(v);
+	return to_time(v);
 }
 
-time_t to_time_t(const FILETIME& ft)
+static time_t to_time(const FILETIME& ft)
 {
 	ULARGE_INTEGER v;
 	v.LowPart = ft.dwLowDateTime;
 	v.HighPart = ft.dwHighDateTime;
 
-	return to_time_t(v);
+	return to_time(v);
 }
 
-bool truncate_file(const std::string& file, u64 length)
+static bool truncate_file(const std::string& file, u64 length)
 {
 	// open the file
 	const auto handle = CreateFileW(to_wchar(file).get(), GENERIC_WRITE, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
@@ -105,6 +105,7 @@ bool truncate_file(const std::string& file, u64 length)
 #include <unistd.h>
 #if defined(__APPLE__) || defined(__FreeBSD__)
 #include <copyfile.h>
+#include <mach-o/dyld.h>
 #else
 #include <sys/sendfile.h>
 #endif
@@ -130,9 +131,9 @@ bool fs::stat(const std::string& path, stat_t& info)
 	info.is_directory = (attrs.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
 	info.is_writable = (attrs.dwFileAttributes & FILE_ATTRIBUTE_READONLY) == 0;
 	info.size = (u64)attrs.nFileSizeLow | ((u64)attrs.nFileSizeHigh << 32);
-	info.atime = to_time_t(attrs.ftLastAccessTime);
-	info.mtime = to_time_t(attrs.ftLastWriteTime);
-	info.ctime = to_time_t(attrs.ftCreationTime);
+	info.atime = to_time(attrs.ftLastAccessTime);
+	info.mtime = to_time(attrs.ftLastWriteTime);
+	info.ctime = to_time(attrs.ftCreationTime);
 #else
 	struct stat file_info;
 	if (stat(path.c_str(), &file_info) < 0)
@@ -306,7 +307,7 @@ bool fs::rename(const std::string& from, const std::string& to)
 
 #ifndef _WIN32
 
-int OSCopyFile(const char* source, const char* destination, bool overwrite)
+static int OSCopyFile(const char* source, const char* destination, bool overwrite)
 {
 	/* Source: http://stackoverflow.com/questions/2180079/how-can-i-copy-a-file-on-unix-using-c */
 
@@ -521,9 +522,9 @@ bool fs::file::stat(stat_t& info) const
 	info.is_directory = (basic_info.FileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
 	info.is_writable = (basic_info.FileAttributes & FILE_ATTRIBUTE_READONLY) == 0;
 	info.size = this->size();
-	info.atime = to_time_t(basic_info.LastAccessTime);
-	info.mtime = to_time_t(basic_info.ChangeTime);
-	info.ctime = to_time_t(basic_info.CreationTime);
+	info.atime = to_time(basic_info.LastAccessTime);
+	info.mtime = to_time(basic_info.ChangeTime);
+	info.ctime = to_time(basic_info.CreationTime);
 #else
 	struct stat file_info;
 	if (fstat(m_fd, &file_info) < 0)
@@ -565,6 +566,7 @@ u64 fs::file::read(void* buffer, u64 count) const
 {
 	g_tls_error = fse::ok;
 
+	// TODO (call ReadFile multiple times if count is too big)
 	const int size = count <= INT_MAX ? static_cast<int>(count) : throw EXCEPTION("Invalid count (0x%llx)", count);
 
 #ifdef _WIN32
@@ -584,6 +586,7 @@ u64 fs::file::write(const void* buffer, u64 count) const
 {
 	g_tls_error = fse::ok;
 
+	// TODO (call WriteFile multiple times if count is too big)
 	const int size = count <= INT_MAX ? static_cast<int>(count) : throw EXCEPTION("Invalid count (0x%llx)", count);
 
 #ifdef _WIN32
@@ -769,9 +772,9 @@ bool fs::dir::read(std::string& name, stat_t& info)
 	info.is_directory = (found.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
 	info.is_writable = (found.dwFileAttributes & FILE_ATTRIBUTE_READONLY) == 0;
 	info.size = ((u64)found.nFileSizeHigh << 32) | (u64)found.nFileSizeLow;
-	info.atime = to_time_t(found.ftLastAccessTime);
-	info.mtime = to_time_t(found.ftLastWriteTime);
-	info.ctime = to_time_t(found.ftCreationTime);
+	info.atime = to_time(found.ftLastAccessTime);
+	info.mtime = to_time(found.ftLastWriteTime);
+	info.ctime = to_time(found.ftCreationTime);
 #else
 	const auto found = ::readdir((DIR*)m_dd);
 
@@ -792,4 +795,88 @@ bool fs::dir::read(std::string& name, stat_t& info)
 #endif
 
 	return true;
+}
+
+std::string fs::get_config_dir()
+{
+	// Use magic static for dir initialization
+	static const std::string s_dir = []
+	{
+#ifdef _WIN32
+		return get_executable_dir(); // ?
+#else
+		std::string dir;
+
+		if (const char* home = ::getenv("XDG_CONFIG_HOME"))
+			dir = home;
+		else if (const char* home = ::getenv("HOME"))
+			dir = home + "/.config"s;
+		else // Just in case
+			dir = "./config";
+
+		dir += "/rpcs3/";
+
+		if (::mkdir(dir.c_str(), 0777) == -1 && errno != EEXIST)
+		{
+			std::printf("Failed to create configuration directory '%s' (%d).\n", dir.c_str(), errno);
+		}
+
+		return dir;
+#endif
+	}();
+
+	return s_dir;
+}
+
+std::string fs::get_executable_dir()
+{
+	// Use magic static for dir initialization
+	static const std::string s_dir = []
+	{
+		std::string dir;
+
+#ifdef _WIN32
+		wchar_t buf[2048];
+		if (GetModuleFileName(NULL, buf, ::size32(buf)) - 1 >= ::size32(buf) - 1)
+		{
+			MessageBoxA(0, fmt::format("GetModuleFileName() failed: 0x%x.", GetLastError()).c_str(), "fs::get_config_dir()", MB_ICONERROR);
+			return dir; // empty
+		}
+	
+		to_utf8(dir, buf); // Convert to UTF-8
+
+#elif __APPLE__
+		char buf[4096];
+		u32 size = sizeof(buf);
+		if (_NSGetExecutablePath(buf, &size))
+		{
+			std::printf("_NSGetExecutablePath() failed (size=0x%x).\n", size);
+			return dir; // empty
+		}
+
+		dir = buf;
+#else
+		char buf[4096];
+		const auto size = ::readlink("/proc/self/exe", buf, sizeof(buf));
+		if (size <= 0 || size >= sizeof(buf))
+		{
+			std::printf("readlink(/proc/self/exe) failed (%d).\n", errno);
+			return dir; // empty
+		}
+
+		dir = { buf, static_cast<std::size_t>(size) };
+#endif
+
+		// Replace "\"
+		for (auto& c : dir)
+		{
+			if (c == '\\') c = '/';
+		}
+
+		// Leave only path
+		dir.resize(dir.rfind('/') + 1);
+		return dir;
+	}();
+
+	return s_dir;
 }

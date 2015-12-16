@@ -18,8 +18,7 @@ struct GLTraits
 		fragmentProgramData.Compile();
 		//checkForGlError("m_fragment_prog.Compile");
 
-		// TODO: This shouldn't use current dir
-		fs::file("./FragmentProgram.txt", fom::rewrite) << fragmentProgramData.shader;
+		fs::file(fs::get_config_dir() + "FragmentProgram.txt", fom::rewrite) << fragmentProgramData.shader;
 	}
 
 	static
@@ -29,8 +28,7 @@ struct GLTraits
 		vertexProgramData.Compile();
 		//checkForGlError("m_vertex_prog.Compile");
 
-		// TODO: This shouldn't use current dir
-		fs::file("./VertexProgram.txt", fom::rewrite) << vertexProgramData.shader;
+		fs::file(fs::get_config_dir() + "VertexProgram.txt", fom::rewrite) << vertexProgramData.shader;
 	}
 
 	static

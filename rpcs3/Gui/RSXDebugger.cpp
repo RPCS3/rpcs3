@@ -571,7 +571,7 @@ void RSXDebugger::GetMemory()
 		dump += '\n';
 	}
 
-	fs::file("command_dump.log", fom::rewrite) << dump;
+	fs::file(fs::get_config_dir() + "command_dump.log", fom::rewrite) << dump;
 
 	for (u32 i = 0;i < frame_debug.draw_calls.size(); i++)
 		m_list_captured_draw_calls->InsertItem(i, frame_debug.draw_calls[i].name);

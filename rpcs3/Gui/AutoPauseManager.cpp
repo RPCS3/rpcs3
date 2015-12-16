@@ -59,7 +59,7 @@ void AutoPauseManagerDialog::LoadEntries(void)
 	m_entries.clear();
 	m_entries.reserve(16);
 
-	fs::file list("pause.bin");
+	fs::file list(fs::get_config_dir() + "pause.bin");
 
 	if (list)
 	{
@@ -84,7 +84,7 @@ void AutoPauseManagerDialog::LoadEntries(void)
 //This would always use a 0xFFFFFFFF as end of the pause.bin
 void AutoPauseManagerDialog::SaveEntries(void)
 {
-	fs::file list("pause.bin", fom::rewrite);
+	fs::file list(fs::get_config_dir() + "pause.bin", fom::rewrite);
 	//System calls ID and Function calls ID are all u32 iirc.
 	u32 num = 0;
 	CHECK_ASSERTION(list.seek(0) != -1);

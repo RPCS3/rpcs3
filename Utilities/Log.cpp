@@ -94,7 +94,7 @@ struct FileListener : LogListener
 	bool mPrependChannelName;
 
 	FileListener(const std::string& name = _PRGNAME_, bool prependChannel = true)
-		: mFile(rPlatform::getConfigDir() + name + ".log", fom::rewrite)
+		: mFile(fs::get_config_dir() + name + ".log", fom::rewrite)
 		, mPrependChannelName(prependChannel)
 	{
 		if (!mFile)

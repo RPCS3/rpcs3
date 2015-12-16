@@ -40,29 +40,3 @@ void rImage::SaveFile(const std::string& name, rImageType type)
 		throw EXCEPTION("unsupported type");
 	}
 }
-
-std::string rPlatform::getConfigDir()
-{
-	static std::string dir = ".";
-	if (dir == ".")
-	{
-#ifdef _WIN32
-		dir = "";
-		//mkdir(dir.c_str());
-#else
-		if (getenv("XDG_CONFIG_HOME") != NULL)
-			dir = getenv("XDG_CONFIG_HOME");
-		else if (getenv("HOME") != NULL)
-			dir = getenv("HOME") + std::string("/.config");
-		else // Just in case
-			dir = "./config";
-		dir = dir + "/rpcs3/";
-
-		if (mkdir(dir.c_str(), 0777) == -1)
-		{
-			printf("An error occured during the creation of the configuration directory. (%d)", errno);
-		}
-#endif
-	}
-	return dir;
-}

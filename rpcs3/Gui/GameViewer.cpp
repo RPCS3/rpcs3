@@ -2,7 +2,7 @@
 #include "stdafx_gui.h"
 #include "Utilities/AutoPause.h"
 #include "Utilities/Log.h"
-//#include "Utilities/File.h"
+#include "Utilities/File.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/FS/VFS.h"
@@ -260,7 +260,7 @@ void GameViewer::ConfigureGame(wxCommandEvent& WXUNUSED(event))
 	if (i < 0) return;
 
 	Emu.CreateConfig(m_game_data[i].serial);
-	rpcs3::config_t custom_config { "data/" + m_game_data[i].serial + "/settings.ini" };
+	rpcs3::config_t custom_config { fs::get_config_dir() + "data/" + m_game_data[i].serial + "/settings.ini" };
 	custom_config.load();
 	LOG_NOTICE(LOADER, "Configure: '%s'", custom_config.path().c_str());
 	SettingsDialog(this, &custom_config);
