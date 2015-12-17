@@ -91,7 +91,7 @@ bool Rpcs3App::OnInit()
 
 	callbacks.get_kb_handler = []() -> std::unique_ptr<KeyboardHandlerBase>
 	{
-		switch (auto mode = rpcs3::config.io.pad_handler_mode.value())
+		switch (auto mode = rpcs3::config.io.keyboard_handler_mode.value())
 		{
 		case io_handler_mode::null: return std::make_unique<NullKeyboardHandler>();
 		case io_handler_mode::windows: return std::make_unique<WindowsKeyboardHandler>();
