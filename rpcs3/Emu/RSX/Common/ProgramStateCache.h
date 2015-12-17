@@ -294,7 +294,7 @@ public:
 		clear();
 	}
 
-	const typename BackendTraits::VertexProgramData* get_transform_program(const RSXVertexProgram& rsx_vp) const noexcept
+	const typename BackendTraits::VertexProgramData* get_transform_program(const RSXVertexProgram& rsx_vp) const
 	{
 		typename binary2VS::const_iterator It = m_cacheVS.find(rsx_vp.data);
 		if (It == m_cacheVS.end())
@@ -302,7 +302,7 @@ public:
 		return &It->second;
 	}
 
-	const typename BackendTraits::FragmentProgramData* get_shader_program(const RSXFragmentProgram& rsx_fp) const noexcept
+	const typename BackendTraits::FragmentProgramData* get_shader_program(const RSXFragmentProgram& rsx_fp) const
 	{
 		typename binary2FS::const_iterator It = m_cacheFS.find(vm::base(rsx_fp.addr));
 		if (It == m_cacheFS.end())
@@ -353,7 +353,7 @@ public:
 		return result;
 	}
 
-	size_t get_fragment_constants_buffer_size(const RSXFragmentProgram *fragmentShader) const noexcept
+	size_t get_fragment_constants_buffer_size(const RSXFragmentProgram *fragmentShader) const
 	{
 		typename binary2FS::const_iterator It = m_cacheFS.find(vm::base(fragmentShader->addr));
 		if (It != m_cacheFS.end())
@@ -362,7 +362,7 @@ public:
 		return 0;
 	}
 
-	void fill_fragment_constans_buffer(void *buffer, const RSXFragmentProgram *fragment_program) const noexcept
+	void fill_fragment_constans_buffer(void *buffer, const RSXFragmentProgram *fragment_program) const
 	{
 		typename binary2FS::const_iterator It = m_cacheFS.find(vm::base(fragment_program->addr));
 		if (It == m_cacheFS.end())

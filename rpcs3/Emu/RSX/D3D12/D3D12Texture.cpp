@@ -21,7 +21,7 @@ D3D12_COMPARISON_FUNC get_sampler_compare_func[] =
 	D3D12_COMPARISON_FUNC_ALWAYS
 };
 
-D3D12_SAMPLER_DESC get_sampler_desc(const rsx::texture &texture) noexcept
+D3D12_SAMPLER_DESC get_sampler_desc(const rsx::texture &texture)
 {
 	D3D12_SAMPLER_DESC samplerDesc = {};
 	samplerDesc.Filter = get_texture_filter(texture.min_filter(), texture.mag_filter());
@@ -55,7 +55,7 @@ ComPtr<ID3D12Resource> upload_single_texture(
 	size_t depth = texture.depth();
 	if (texture.cubemap()) depth *= 6;
 
-	int format = texture.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
+	const u8 format = texture.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
 	DXGI_FORMAT dxgi_format = get_texture_format(format);
 
 	size_t buffer_size = get_placed_texture_storage_size(texture, 256);
@@ -101,7 +101,7 @@ void update_existing_texture(
 {
 	size_t w = texture.width(), h = texture.height();
 
-	int format = texture.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
+	const u8 format = texture.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
 	DXGI_FORMAT dxgi_format = get_texture_format(format);
 
 	size_t buffer_size = get_placed_texture_storage_size(texture, 256);
@@ -168,7 +168,7 @@ void D3D12GSRender::upload_and_bind_textures(ID3D12GraphicsCommandList *command_
 
 		const u32 texaddr = rsx::get_address(textures[i].offset(), textures[i].location());
 
-		int format = textures[i].format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
+		const u8 format = textures[i].format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
 		bool is_swizzled = !(textures[i].format() & CELL_GCM_TEXTURE_LN);
 
 		ID3D12Resource *vram_texture;
@@ -224,7 +224,7 @@ void D3D12GSRender::upload_and_bind_textures(ID3D12GraphicsCommandList *command_
 		case ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN) & CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8:
 		case ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN) & CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8:
 		default:
-			LOG_ERROR(RSX, "Unimplemented Texture format : %x", format);
+			LOG_ERROR(RSX, "Unimplemented Texture format : 0x%x", format);
 			break;
 		case CELL_GCM_TEXTURE_B8:
 			shared_resource_view_desc.Shader4ComponentMapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(

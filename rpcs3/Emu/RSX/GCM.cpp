@@ -721,7 +721,7 @@ std::string rsx::get_method_name(const u32 id)
 // Various parameter pretty printing function
 namespace
 {
-	std::string get_blend_factor(u16 factor) noexcept
+	std::string get_blend_factor(u16 factor)
 	{
 		switch (factor)
 		{
@@ -744,7 +744,7 @@ namespace
 		return "Error";
 	}
 
-	std::string get_blend_op(u16 op) noexcept
+	std::string get_blend_op(u16 op)
 	{
 		switch (op)
 		{
@@ -760,7 +760,7 @@ namespace
 		return "Error";
 	}
 
-	std::string get_logic_op(u32 op) noexcept
+	std::string get_logic_op(u32 op)
 	{
 		switch (op)
 		{
@@ -783,7 +783,7 @@ namespace
 		return "Error";
 	}
 
-	std::string get_compare_func(u32 op) noexcept
+	std::string get_compare_func(u32 op)
 	{
 		switch (op)
 		{
@@ -799,7 +799,7 @@ namespace
 		return "Error";
 	}
 
-	std::string get_primitive_mode(u8 draw_mode) noexcept
+	std::string get_primitive_mode(u8 draw_mode)
 	{
 		switch (draw_mode)
 		{
@@ -817,12 +817,12 @@ namespace
 		return "Error";
 	}
 
-	std::string ptr_to_string(u32 ptr) noexcept
+	std::string ptr_to_string(u32 ptr)
 	{
 		return fmt::format("0x%08x", ptr);
 	}
 
-	std::string dma_mode(u32 arg) noexcept
+	std::string dma_mode(u32 arg)
 	{
 		switch (arg)
 		{
@@ -835,7 +835,7 @@ namespace
 	}
 
 
-	std::string depth_stencil_surface_format(u32 format) noexcept
+	std::string depth_stencil_surface_format(u32 format)
 	{
 		switch (format)
 		{
@@ -845,7 +845,7 @@ namespace
 		return "Error";
 	}
 
-	std::string color_surface_format(u32 format) noexcept
+	std::string color_surface_format(u32 format)
 	{
 		switch (format)
 		{
@@ -867,7 +867,7 @@ namespace
 		return "Error";
 	}
 
-	std::string surface_target(u32 target) noexcept
+	std::string surface_target(u32 target)
 	{
 		switch (target)
 		{
@@ -881,7 +881,7 @@ namespace
 		return "Error";
 	}
 
-	std::string get_clear_color(u32 clear_color) noexcept
+	std::string get_clear_color(u32 clear_color)
 	{
 		u8 clear_a = clear_color >> 24;
 		u8 clear_r = clear_color >> 16;
@@ -890,14 +890,14 @@ namespace
 		return "A = " + std::to_string(clear_a / 255.0f) + " R = " + std::to_string(clear_r / 255.0f) + " G = " + std::to_string(clear_g / 255.0f) + " B = " + std::to_string(clear_b / 255.0f);
 	}
 
-	static std::string get_zstencil_clear(u32 zstencil) noexcept
+	static std::string get_zstencil_clear(u32 zstencil)
 	{
 		u32 depth = zstencil >> 8;
 		u32 stencil = zstencil & 0xff;
 		return "Z = " + std::to_string(depth) + " S = " + std::to_string(stencil);
 	}
 
-	std::string get_stencil_op(u32 op) noexcept
+	std::string get_stencil_op(u32 op)
 	{
 		switch (op)
 		{
@@ -912,7 +912,7 @@ namespace
 		return "Error";
 	}
 
-	std::string get_vertex_attribute_format(u8 type) noexcept
+	std::string get_vertex_attribute_format(u8 type)
 	{
 		switch (type)
 		{
@@ -927,7 +927,7 @@ namespace
 		return "Error";
 	}
 
-	std::string unpack_vertex_format(u32 arg) noexcept
+	std::string unpack_vertex_format(u32 arg)
 	{
 		u32 frequency = arg >> 16;
 		u32 stride = (arg >> 8) & 0xff;
@@ -939,7 +939,7 @@ namespace
 		return "Type = " + get_vertex_attribute_format(type) + " size = " + std::to_string(size) + " stride = " + std::to_string(stride) + " frequency = " + std::to_string(frequency);
 	}
 
-	std::string index_type(u16 arg) noexcept
+	std::string index_type(u16 arg)
 	{
 		switch (arg)
 		{
@@ -949,22 +949,22 @@ namespace
 		return "Error";
 	}
 
-	std::string transform_constant(size_t index, u32 arg) noexcept
+	std::string transform_constant(size_t index, u32 arg)
 	{
 		return "Transform constant " + std::to_string(index) + ": " + std::to_string(arg) + "/" + std::to_string((float&)arg);
 	}
 
-	std::string texture_offset(size_t index, u32 arg) noexcept
+	std::string texture_offset(size_t index, u32 arg)
 	{
 		return "Texture " + std::to_string(index) + ": Offset @" + ptr_to_string(arg);
 	}
 
-	std::string texture_size(size_t index, u32 arg) noexcept
+	std::string texture_size(size_t index, u32 arg)
 	{
 		return "Texture " + std::to_string(index) + ": width = " + std::to_string(arg & 0xffff) + " height = " + std::to_string(arg >> 16);
 	}
 
-	static std::string get_texture_format_name(u32 format) noexcept
+	static std::string get_texture_format_name(u32 format)
 	{
 		switch (format)
 		{
@@ -999,7 +999,7 @@ namespace
 		return "Error";
 	}
 
-	std::string texture_format(size_t index, u32 arg) noexcept
+	std::string texture_format(size_t index, u32 arg)
 	{
 		int format = ((arg >> 8) & 0xFF);
 		return "Texture " + std::to_string(index) + ": location = " + ptr_to_string((arg & 0x3) - 1) +
@@ -1012,7 +1012,7 @@ namespace
 			" mipmap levels = " + std::to_string((arg >> 16) & 0xFFFF);
 	}
 
-	std::string get_texture_wrap_mode(u8 wrap) noexcept
+	std::string get_texture_wrap_mode(u8 wrap)
 	{
 		switch (wrap)
 		{
@@ -1028,7 +1028,7 @@ namespace
 		return "Error";
 	}
 
-	std::string get_zfunc_name(u8 op) noexcept
+	std::string get_zfunc_name(u8 op)
 	{
 		switch (op)
 		{
@@ -1044,7 +1044,7 @@ namespace
 		return "Error";
 	}
 
-	std::string texture_address(size_t index, u32 arg) noexcept
+	std::string texture_address(size_t index, u32 arg)
 	{
 		return "Texture " + std::to_string(index) + ": wrap_s = " + get_texture_wrap_mode(arg & 0xF) +
 			" wrap_t = " + get_texture_wrap_mode((arg >> 8) & 0xF) +
@@ -1056,7 +1056,7 @@ namespace
 			" signed remap = " + std::to_string((arg >> 24) & 0xF);
 	}
 
-	std::string get_texture_max_aniso_name(u8 aniso) noexcept
+	std::string get_texture_max_aniso_name(u8 aniso)
 	{
 		switch (aniso)
 		{
@@ -1072,7 +1072,7 @@ namespace
 		return "Error";
 	}
 
-	std::string texture_control0(size_t index, u32 arg) noexcept
+	std::string texture_control0(size_t index, u32 arg)
 	{
 		std::string result = "Texture " + std::to_string(index);
 		if ((arg >> 31) & 0x1)
@@ -1087,26 +1087,26 @@ namespace
 		return result;
 	}
 
-	std::string texture_control1(size_t index, u32 arg) noexcept
+	std::string texture_control1(size_t index, u32 arg)
 	{
 		return "Texture " + std::to_string(index) +
 			" remap = " + std::to_string(arg);
 	}
 
-	std::string texture_control3(size_t index, u32 arg) noexcept
+	std::string texture_control3(size_t index, u32 arg)
 	{
 		return "Texture " + std::to_string(index) +
 			" depth = " + std::to_string(arg >> 20) +
 			" pitch = " + std::to_string(arg & 0xFFFFF);
 	}
 
-	std::string texture_border_color(size_t index, u32 arg) noexcept
+	std::string texture_border_color(size_t index, u32 arg)
 	{
 		return "Texture " + std::to_string(index) +
 			" border color = " + std::to_string(arg);
 	}
 
-	std::string texture_filter(size_t index, u32 arg) noexcept
+	std::string texture_filter(size_t index, u32 arg)
 	{
 		return "Texture " + std::to_string(index) +
 			" filter = " + std::to_string(arg);

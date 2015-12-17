@@ -1103,7 +1103,7 @@ namespace rsx
 		return "rsx::thread"s;
 	}
 
-	void thread::fill_scale_offset_data(void *buffer, bool is_d3d) const noexcept
+	void thread::fill_scale_offset_data(void *buffer, bool is_d3d) const
 	{
 		int clip_w = rsx::method_registers[NV4097_SET_SURFACE_CLIP_HORIZONTAL] >> 16;
 		int clip_h = rsx::method_registers[NV4097_SET_SURFACE_CLIP_VERTICAL] >> 16;
@@ -1134,7 +1134,7 @@ namespace rsx
 	* Fill buffer with vertex program constants.
 	* Buffer must be at least 512 float4 wide.
 	*/
-	void thread::fill_vertex_program_constants_data(void *buffer) noexcept
+	void thread::fill_vertex_program_constants_data(void *buffer)
 	{
 		for (const auto &entry : transform_constants)
 			local_transform_constants[entry.first] = entry.second;

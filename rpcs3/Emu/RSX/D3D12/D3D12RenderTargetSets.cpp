@@ -17,7 +17,7 @@
 
 namespace
 {
-	UINT get_num_rtt(u8 color_target) noexcept
+	UINT get_num_rtt(u8 color_target)
 	{
 		switch (color_target)
 		{
@@ -28,10 +28,10 @@ namespace
 		case CELL_GCM_SURFACE_TARGET_MRT2: return 3;
 		case CELL_GCM_SURFACE_TARGET_MRT3: return 4;
 		}
-		unreachable("Wrong color target");
+		throw EXCEPTION("Wrong color_target (%d)", color_target);
 	}
 
-	std::vector<u8> get_rtt_indexes(u8 color_target) noexcept
+	std::vector<u8> get_rtt_indexes(u8 color_target)
 	{
 		switch (color_target)
 		{
@@ -42,10 +42,10 @@ namespace
 		case CELL_GCM_SURFACE_TARGET_MRT2: return{ 0, 1, 2 };
 		case CELL_GCM_SURFACE_TARGET_MRT3: return{ 0, 1, 2, 3 };
 		}
-		unreachable("Wrong color target");
+		throw EXCEPTION("Wrong color_target (%d)", color_target);
 	}
 
-	std::array<float, 4> get_clear_color(u32 clear_color) noexcept
+	std::array<float, 4> get_clear_color(u32 clear_color)
 	{
 		u8 clear_a = clear_color >> 24;
 		u8 clear_r = clear_color >> 16;
@@ -60,7 +60,7 @@ namespace
 		};
 	}
 
-	u8 get_clear_stencil(u32 register_value) noexcept
+	u8 get_clear_stencil(u32 register_value)
 	{
 		return register_value & 0xff;
 	}

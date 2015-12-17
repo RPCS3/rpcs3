@@ -5,7 +5,7 @@
 #define MIN2(x, y) ((x) < (y)) ? (x) : (y)
 #define MAX2(x, y) ((x) > (y)) ? (x) : (y)
 
-void write_vertex_array_data_to_buffer(void *buffer, u32 first, u32 count, size_t index, const rsx::data_array_format_info &vertex_array_desc) noexcept
+void write_vertex_array_data_to_buffer(void *buffer, u32 first, u32 count, size_t index, const rsx::data_array_format_info &vertex_array_desc)
 {
 	assert(vertex_array_desc.array);
 
@@ -62,7 +62,7 @@ void write_vertex_array_data_to_buffer(void *buffer, u32 first, u32 count, size_
 namespace
 {
 template<typename IndexType>
-void uploadAsIt(char *dst, u32 address, size_t indexCount, bool is_primitive_restart_enabled, u32 primitive_restart_index, u32 &min_index, u32 &max_index) noexcept
+void uploadAsIt(char *dst, u32 address, size_t indexCount, bool is_primitive_restart_enabled, u32 primitive_restart_index, u32 &min_index, u32 &max_index)
 {
 	for (u32 i = 0; i < indexCount; ++i)
 	{
@@ -80,7 +80,7 @@ void uploadAsIt(char *dst, u32 address, size_t indexCount, bool is_primitive_res
 // FIXME: expanded primitive type may not support primitive restart correctly
 
 template<typename IndexType>
-void expandIndexedTriangleFan(char *dst, u32 address, size_t indexCount, bool is_primitive_restart_enabled, u32 primitive_restart_index, u32 &min_index, u32 &max_index) noexcept
+void expandIndexedTriangleFan(char *dst, u32 address, size_t indexCount, bool is_primitive_restart_enabled, u32 primitive_restart_index, u32 &min_index, u32 &max_index)
 {
 	for (unsigned i = 0; i < indexCount - 2; i++)
 	{
@@ -117,7 +117,7 @@ void expandIndexedTriangleFan(char *dst, u32 address, size_t indexCount, bool is
 }
 
 template<typename IndexType>
-void expandIndexedQuads(char *dst, u32 address, size_t indexCount, bool is_primitive_restart_enabled, u32 primitive_restart_index, u32 &min_index, u32 &max_index) noexcept
+void expandIndexedQuads(char *dst, u32 address, size_t indexCount, bool is_primitive_restart_enabled, u32 primitive_restart_index, u32 &min_index, u32 &max_index)
 {
 	for (unsigned i = 0; i < indexCount / 4; i++)
 	{
@@ -168,7 +168,7 @@ void expandIndexedQuads(char *dst, u32 address, size_t indexCount, bool is_primi
 }
 
 // Only handle quads and triangle fan now
-bool is_primitive_native(unsigned m_draw_mode) noexcept
+bool is_primitive_native(unsigned m_draw_mode)
 {
 	switch (m_draw_mode)
 	{
@@ -193,7 +193,7 @@ bool is_primitive_native(unsigned m_draw_mode) noexcept
  * see http://www.gamedev.net/page/resources/_/technical/graphics-programming-and-theory/polygon-triangulation-r3334
  */
 
-size_t get_index_count(unsigned m_draw_mode, unsigned initial_index_count) noexcept
+size_t get_index_count(unsigned m_draw_mode, unsigned initial_index_count)
 {
 	// Index count
 	if (is_primitive_native(m_draw_mode))
@@ -211,7 +211,7 @@ size_t get_index_count(unsigned m_draw_mode, unsigned initial_index_count) noexc
 	}
 }
 
-size_t get_index_type_size(u32 type) noexcept
+size_t get_index_type_size(u32 type)
 {
 	switch (type)
 	{
@@ -221,7 +221,7 @@ size_t get_index_type_size(u32 type) noexcept
 	}
 }
 
-void write_index_array_for_non_indexed_non_native_primitive_to_buffer(char* dst, unsigned draw_mode, unsigned first, unsigned count) noexcept
+void write_index_array_for_non_indexed_non_native_primitive_to_buffer(char* dst, unsigned draw_mode, unsigned first, unsigned count)
 {
 	unsigned short *typedDst = (unsigned short *)(dst);
 	switch (draw_mode)
@@ -251,7 +251,7 @@ void write_index_array_for_non_indexed_non_native_primitive_to_buffer(char* dst,
 	}
 }
 
-void write_index_array_data_to_buffer(char* dst, unsigned m_draw_mode, unsigned first, unsigned count, unsigned &min_index, unsigned &max_index) noexcept
+void write_index_array_data_to_buffer(char* dst, unsigned m_draw_mode, unsigned first, unsigned count, unsigned &min_index, unsigned &max_index)
 {
 	u32 address = rsx::get_address(rsx::method_registers[NV4097_SET_INDEX_ARRAY_ADDRESS], rsx::method_registers[NV4097_SET_INDEX_ARRAY_DMA] & 0xf);
 	u32 type = rsx::method_registers[NV4097_SET_INDEX_ARRAY_DMA] >> 4;
@@ -306,13 +306,13 @@ void write_index_array_data_to_buffer(char* dst, unsigned m_draw_mode, unsigned 
 	}
 }
 
-void stream_vector(void *dst, u32 x, u32 y, u32 z, u32 w) noexcept
+void stream_vector(void *dst, u32 x, u32 y, u32 z, u32 w)
 {
 	__m128i vector = _mm_set_epi32(w, z, y, x);
 	_mm_stream_si128((__m128i*)dst, vector);
 }
 
-void stream_vector_from_memory(void *dst, void *src) noexcept
+void stream_vector_from_memory(void *dst, void *src)
 {
 	const __m128i &vector = _mm_loadu_si128((__m128i*)src);
 	_mm_stream_si128((__m128i*)dst, vector);

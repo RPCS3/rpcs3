@@ -4,14 +4,14 @@
 #include "D3D12MemoryHelpers.h"
 
 
-void data_cache::store_and_protect_data(u64 key, u32 start, size_t size, int format, size_t w, size_t h, size_t m, ComPtr<ID3D12Resource> data) noexcept
+void data_cache::store_and_protect_data(u64 key, u32 start, size_t size, u8 format, size_t w, size_t h, size_t m, ComPtr<ID3D12Resource> data)
 {
 	std::lock_guard<std::mutex> lock(m_mut);
 	m_address_to_data[key] = std::make_pair(texture_entry(format, w, h, m), data);
 	protect_data(key, start, size);
 }
 
-void data_cache::protect_data(u64 key, u32 start, size_t size) noexcept
+void data_cache::protect_data(u64 key, u32 start, size_t size)
 {
 	/// align start to 4096 byte
 	u32 protected_range_start = align(start, 4096);
@@ -20,7 +20,7 @@ void data_cache::protect_data(u64 key, u32 start, size_t size) noexcept
 	vm::page_protect(protected_range_start, protected_range_size, 0, 0, vm::page_writable);
 }
 
-bool data_cache::invalidate_address(u32 addr) noexcept
+bool data_cache::invalidate_address(u32 addr)
 {
 	bool handled = false;
 	auto It = m_protected_ranges.begin(), E = m_protected_ranges.end();
@@ -44,7 +44,7 @@ bool data_cache::invalidate_address(u32 addr) noexcept
 	return handled;
 }
 
-std::pair<texture_entry, ComPtr<ID3D12Resource> > *data_cache::find_data_if_available(u64 key) noexcept
+std::pair<texture_entry, ComPtr<ID3D12Resource> > *data_cache::find_data_if_available(u64 key)
 {
 	std::lock_guard<std::mutex> lock(m_mut);
 	auto It = m_address_to_data.find(key);
@@ -53,7 +53,7 @@ std::pair<texture_entry, ComPtr<ID3D12Resource> > *data_cache::find_data_if_avai
 	return &It->second;
 }
 
-void data_cache::unprotect_all() noexcept
+void data_cache::unprotect_all()
 {
 	std::lock_guard<std::mutex> lock(m_mut);
 	for (auto &protectedTexture : m_protected_ranges)
@@ -63,7 +63,7 @@ void data_cache::unprotect_all() noexcept
 	}
 }
 
-ComPtr<ID3D12Resource> data_cache::remove_from_cache(u64 key) noexcept
+ComPtr<ID3D12Resource> data_cache::remove_from_cache(u64 key)
 {
 	auto result = m_address_to_data[key].second;
 	m_address_to_data.erase(key);
