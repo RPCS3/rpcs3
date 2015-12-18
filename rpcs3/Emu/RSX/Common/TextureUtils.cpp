@@ -13,11 +13,10 @@ namespace
 struct texel_rgba
 {
 	template<size_t block_size>
-	static size_t copy_mipmap_level(void *dst, void *src, size_t row_count, size_t width_in_block, size_t dst_pitch_in_block, size_t src_pitch_in_block)
+	static void copy_mipmap_level(void *dst, void *src, size_t row_count, size_t width_in_block, size_t dst_pitch_in_block, size_t src_pitch_in_block)
 	{
 		for (unsigned row = 0; row < row_count; row++)
 			memcpy((char*)dst + row * dst_pitch_in_block * block_size, (char*)src + row * src_pitch_in_block * block_size, width_in_block * block_size);
-		return row_count * src_pitch_in_block * block_size;
 	}
 };
 
@@ -28,7 +27,7 @@ struct texel_rgba
 struct texel_16b_swizzled
 {
 	template<size_t block_size>
-	static size_t copy_mipmap_level(void *dst, void *src, size_t row_count, size_t width_in_block, size_t dst_pitch_in_block, size_t src_pitch_in_block)
+	static void copy_mipmap_level(void *dst, void *src, size_t row_count, size_t width_in_block, size_t dst_pitch_in_block, size_t src_pitch_in_block)
 	{
 		u16 *castedSrc = static_cast<u16*>(src), *castedDst = static_cast<u16*>(dst);
 
@@ -40,7 +39,6 @@ struct texel_16b_swizzled
 				u16 tmp = temp_swizzled[row * src_pitch_in_block + j];
 				castedDst[row * dst_pitch_in_block + j] = (tmp >> 8) | (tmp << 8);
 			}
-		return row_count * src_pitch_in_block * block_size;
 	}
 };
 
@@ -50,7 +48,7 @@ struct texel_16b_swizzled
 struct texel_rgba_swizzled
 {
 	template<size_t block_size>
-	static size_t copy_mipmap_level(void *dst, void *src, size_t row_count, size_t width_in_block, size_t dst_pitch_in_block, size_t src_pitch_in_block)
+	static void copy_mipmap_level(void *dst, void *src, size_t row_count, size_t width_in_block, size_t dst_pitch_in_block, size_t src_pitch_in_block)
 	{
 		u32 *castedSrc, *castedDst;
 		castedSrc = (u32*)src;
@@ -59,7 +57,6 @@ struct texel_rgba_swizzled
 		rsx::convert_linear_swizzle<u32>(castedSrc, temp_swizzled.get(), src_pitch_in_block, row_count, true);
 		for (unsigned row = 0; row < row_count; row++)
 			memcpy((char*)dst + row * dst_pitch_in_block * block_size, (char*)temp_swizzled.get() + row * src_pitch_in_block * block_size, width_in_block * block_size);
-		return row_count * src_pitch_in_block * block_size;
 	}
 };
 
@@ -69,11 +66,10 @@ struct texel_rgba_swizzled
  */
 struct texel_bc_format {
 	template<size_t block_size>
-	static size_t copy_mipmap_level(void *dst, void *src, size_t row_count, size_t width_in_block, size_t dst_pitch_in_block, size_t src_pitch_in_block)
+	static void copy_mipmap_level(void *dst, void *src, size_t row_count, size_t width_in_block, size_t dst_pitch_in_block, size_t src_pitch_in_block)
 	{
 		for (unsigned row = 0; row < row_count; row++)
-			memcpy((char*)dst + row * dst_pitch_in_block * block_size, (char*)src + row * width_in_block * block_size, width_in_block * block_size);
-		return width_in_block * row_count * block_size;
+			memcpy((char*)dst + row * dst_pitch_in_block * block_size, (char*)src + row * src_pitch_in_block * block_size, width_in_block * block_size);
 	}
 };
 
@@ -82,7 +78,7 @@ struct texel_bc_format {
 */
 struct texel_16b_format {
 	template<size_t block_size>
-	static size_t copy_mipmap_level(void *dst, void *src, size_t row_count, size_t width_in_block, size_t dst_pitch_in_block, size_t src_pitch_in_block)
+	static void copy_mipmap_level(void *dst, void *src, size_t row_count, size_t width_in_block, size_t dst_pitch_in_block, size_t src_pitch_in_block)
 	{
 		unsigned short *castedDst = (unsigned short *)dst, *castedSrc = (unsigned short *)src;
 
@@ -92,7 +88,6 @@ struct texel_16b_format {
 				u16 tmp = castedSrc[row * src_pitch_in_block + j];
 				castedDst[row * dst_pitch_in_block + j] = (tmp >> 8) | (tmp << 8);
 			}
-		return row_count * src_pitch_in_block * block_size;
 	}
 };
 
@@ -101,7 +96,7 @@ struct texel_16b_format {
 */
 struct texel_16bX4_format {
 	template<size_t block_size>
-	static size_t copy_mipmap_level(void *dst, void *src, size_t row_count, size_t width_in_block, size_t dst_pitch_in_block, size_t src_pitch_in_block)
+	static void copy_mipmap_level(void *dst, void *src, size_t row_count, size_t width_in_block, size_t dst_pitch_in_block, size_t src_pitch_in_block)
 	{
 		unsigned short *casted_dst = (unsigned short *)dst, *casted_src = (unsigned short *)src;
 		for (unsigned row = 0; row < row_count; row++)
@@ -110,28 +105,34 @@ struct texel_16bX4_format {
 				u16 tmp = casted_src[row * src_pitch_in_block * 4 + j];
 				casted_dst[row * dst_pitch_in_block * 4 + j] = (tmp >> 8) | (tmp << 8);
 			}
-		return row_count * src_pitch_in_block * block_size;
 	}
 };
 
 /**
  * Texture upload template.
+ *
+ * Source textures are stored as following (for power of 2 textures):
+ * - For linear texture every mipmap level share rowpitch (which is the one of mipmap 0). This means that for non 0 mipmap there's padding between row.
+ * - For swizzled texture row pitch is texture width X pixel/block size. There's not padding between row.
+ * - There is no padding between 2 mipmap levels. This means that next mipmap level starts at offset rowpitch X row count
+ * - Cubemap images are 128 bytes aligned.
+ *
  * The template iterates over all depth (including cubemap) and over all mipmaps.
  * The alignment is 256 for mipmap levels and 512 for depth (TODO: make this customisable for Vulkan ?)
  * The template takes a struct with a "copy_mipmap_level" static function that copy the given mipmap level and returns the offset to add to the src buffer for next
  * mipmap level (to allow same code for packed/non packed texels)
  */
-template <typename T, size_t block_size_in_bytes, size_t block_edge_in_texel = 1>
-std::vector<MipmapLevelInfo> copy_texture_data(void *dst, const void *src, size_t widthInBlock, size_t heightInBlock, size_t depth, size_t mipmapCount)
+template <typename T, bool padded_row, size_t block_size_in_bytes, size_t block_edge_in_texel>
+std::vector<MipmapLevelInfo> copy_texture_data(void *dst, const void *src, size_t width_in_texel, size_t height_in_texel, size_t depth, size_t mipmap_count)
 {
 	std::vector<MipmapLevelInfo> Result;
 	size_t offsetInDst = 0, offsetInSrc = 0;
-	// Every mipmap level of rsx textures use the same rowpitch.
-	size_t src_pitch = widthInBlock;
+	size_t texture_height_in_block = (height_in_texel + block_edge_in_texel - 1) / block_edge_in_texel;
+	size_t texture_width_in_block = (width_in_texel + block_edge_in_texel - 1) / block_edge_in_texel;
 	for (unsigned depth_level = 0; depth_level < depth; depth_level++)
 	{
-		size_t miplevel_height_in_block = heightInBlock, miplevel_width_in_block = widthInBlock;
-		for (unsigned mip_level = 0; mip_level < mipmapCount; mip_level++)
+		size_t miplevel_height_in_block = texture_height_in_block, miplevel_width_in_block = texture_width_in_block;
+		for (unsigned mip_level = 0; mip_level < mipmap_count; mip_level++)
 		{
 			size_t dst_pitch = align(miplevel_width_in_block * block_size_in_bytes, 256) / block_size_in_bytes;
 
@@ -142,7 +143,16 @@ std::vector<MipmapLevelInfo> copy_texture_data(void *dst, const void *src, size_
 			currentMipmapLevelInfo.rowPitch = dst_pitch * block_size_in_bytes;
 			Result.push_back(currentMipmapLevelInfo);
 
-			offsetInSrc += T::template copy_mipmap_level<block_size_in_bytes>((char*)dst + offsetInDst, (char*)src + offsetInSrc, miplevel_height_in_block, miplevel_width_in_block, dst_pitch, src_pitch);
+			if (!padded_row)
+			{
+				T::template copy_mipmap_level<block_size_in_bytes>((char*)dst + offsetInDst, (char*)src + offsetInSrc, miplevel_height_in_block, miplevel_width_in_block, dst_pitch, miplevel_width_in_block);
+				offsetInSrc += miplevel_height_in_block * miplevel_width_in_block * block_size_in_bytes;
+			}
+			else
+			{
+				T::template copy_mipmap_level<block_size_in_bytes>((char*)dst + offsetInDst, (char*)src + offsetInSrc, miplevel_height_in_block, miplevel_width_in_block, dst_pitch, texture_width_in_block);
+				offsetInSrc += miplevel_height_in_block * texture_width_in_block * block_size_in_bytes;
+			}
 			offsetInDst += align(miplevel_height_in_block * dst_pitch * block_size_in_bytes, 512);
 			miplevel_height_in_block = MAX2(miplevel_height_in_block / 2, 1);
 			miplevel_width_in_block = MAX2(miplevel_width_in_block / 2, 1);
@@ -260,12 +270,6 @@ std::vector<MipmapLevelInfo> upload_placed_texture(const rsx::texture &texture, 
 
 	int format = texture.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
 
-	size_t blockSizeInByte = get_texture_block_size(format);
-	size_t blockEdge = get_texture_block_edge(format);
-
-	size_t heightInBlocks = (h + blockEdge - 1) / blockEdge;
-	size_t widthInBlocks = (w + blockEdge - 1) / blockEdge;
-
 	std::vector<MipmapLevelInfo> mipInfos;
 
 	const u32 texaddr = rsx::get_address(texture.offset(), texture.location());
@@ -275,28 +279,37 @@ std::vector<MipmapLevelInfo> upload_placed_texture(const rsx::texture &texture, 
 	{
 	case CELL_GCM_TEXTURE_A8R8G8B8:
 		if (is_swizzled)
-			return copy_texture_data<texel_rgba_swizzled, 4, 1>(textureData, pixels, widthInBlocks, heightInBlocks, depth, texture.mipmap());
+			return copy_texture_data<texel_rgba_swizzled, false, 4, 1>(textureData, pixels, w, h, depth, texture.mipmap());
 		else
-			return copy_texture_data<texel_rgba, 4, 1>(textureData, pixels, widthInBlocks, heightInBlocks, depth, texture.mipmap());
+			return copy_texture_data<texel_rgba, true, 4, 1>(textureData, pixels, w, h, depth, texture.mipmap());
 	case CELL_GCM_TEXTURE_A1R5G5B5:
 	case CELL_GCM_TEXTURE_A4R4G4B4:
 	case CELL_GCM_TEXTURE_R5G6B5:
 		if (is_swizzled)
-			return copy_texture_data<texel_16b_swizzled, 2, 1>(textureData, pixels, widthInBlocks, heightInBlocks, depth, texture.mipmap());
+			return copy_texture_data<texel_16b_swizzled, false, 2, 1>(textureData, pixels, w, h, depth, texture.mipmap());
 		else
-			return copy_texture_data<texel_16b_format, 2, 1>(textureData, pixels, widthInBlocks, heightInBlocks, depth, texture.mipmap());
+			return copy_texture_data<texel_16b_format, true, 2, 1>(textureData, pixels, w, h, depth, texture.mipmap());
 	case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT:
-		return copy_texture_data<texel_16bX4_format, 8, 1>(textureData, pixels, widthInBlocks, heightInBlocks, depth, texture.mipmap());
+		return copy_texture_data<texel_16bX4_format, true, 8, 1>(textureData, pixels, w, h, depth, texture.mipmap());
 	case CELL_GCM_TEXTURE_COMPRESSED_DXT1:
-		return copy_texture_data<texel_bc_format, 8, 4>(textureData, pixels, widthInBlocks, heightInBlocks, depth, texture.mipmap());
+		if (is_swizzled)
+			return copy_texture_data<texel_bc_format, false, 8, 4>(textureData, pixels, w, h, depth, texture.mipmap());
+		else
+			return copy_texture_data<texel_bc_format, true, 8, 4>(textureData, pixels, w, h, depth, texture.mipmap());
 	case CELL_GCM_TEXTURE_COMPRESSED_DXT23:
-		return copy_texture_data<texel_bc_format, 16, 4>(textureData, pixels, widthInBlocks, heightInBlocks, depth, texture.mipmap());
+		if (is_swizzled)
+			return copy_texture_data<texel_bc_format, false, 16, 4>(textureData, pixels, w, h, depth, texture.mipmap());
+		else
+			return copy_texture_data<texel_bc_format, true, 16, 4>(textureData, pixels, w, h, depth, texture.mipmap());
 	case CELL_GCM_TEXTURE_COMPRESSED_DXT45:
-		return copy_texture_data<texel_bc_format, 16, 4>(textureData, pixels, widthInBlocks, heightInBlocks, depth, texture.mipmap());
+		if (is_swizzled)
+			return copy_texture_data<texel_bc_format, false, 16, 4>(textureData, pixels, w, h, depth, texture.mipmap());
+		else
+			return copy_texture_data<texel_bc_format, true, 16, 4>(textureData, pixels, w, h, depth, texture.mipmap());
 	case CELL_GCM_TEXTURE_B8:
-		return copy_texture_data<texel_rgba, 1, 1>(textureData, pixels, widthInBlocks, heightInBlocks, depth, texture.mipmap());
+		return copy_texture_data<texel_rgba, true, 1, 1>(textureData, pixels, w, h, depth, texture.mipmap());
 	default:
-		return copy_texture_data<texel_rgba, 4, 1>(textureData, pixels, widthInBlocks, heightInBlocks, depth, texture.mipmap());
+		return copy_texture_data<texel_rgba, true, 4, 1>(textureData, pixels, w, h, depth, texture.mipmap());
 	}
 }
 
