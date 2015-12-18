@@ -19,26 +19,33 @@
 #include <ucontext.h>
 #endif
 
-static const auto s_terminate_handler_set = std::set_terminate([]()
+void report_fatal_error(const std::string& msg)
 {
-	if (std::uncaught_exception())
+#ifdef _WIN32
+	const auto& text = msg + "\n\nPlease report this error to the developers. Press (Ctrl+C) to copy this message.";
+	MessageBoxA(0, text.c_str(), "Fatal error", MB_ICONERROR); // TODO: unicode message
+#else
+	std::printf("Fatal error: %s\nPlease report this error to the developers.\n", msg.c_str());
+#endif
+}
+
+[[noreturn]] void catch_all_exceptions()
+{
+	try
 	{
-		try
-		{
-			throw;
-		}
-		catch (const std::exception& ex)
-		{
-			std::printf("Unhandled exception: %s\n", ex.what());
-		}
-		catch (...)
-		{
-			std::printf("Unhandled exception of unknown type.\n");
-		}
+		throw;
+	}
+	catch (const std::exception& ex)
+	{
+		report_fatal_error("Unhandled exception: "s + ex.what());
+	}
+	catch (...)
+	{
+		report_fatal_error("Unhandled exception (unknown)");
 	}
 
 	std::abort();
-});
+}
 
 void SetCurrentThreadDebugName(const char* threadName)
 {
@@ -1158,7 +1165,7 @@ const auto g_exception_handler = AddVectoredExceptionHandler(1, [](PEXCEPTION_PO
 
 const auto g_exception_filter = SetUnhandledExceptionFilter([](PEXCEPTION_POINTERS pExp) -> LONG
 {
-	std::string msg;
+	std::string msg = fmt::format("Unhandled Win32 exception 0x%08X.\n", pExp->ExceptionRecord->ExceptionCode);
 
 	if (pExp->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION)
 	{
@@ -1184,11 +1191,10 @@ const auto g_exception_filter = SetUnhandledExceptionFilter([](PEXCEPTION_POINTE
 		}
 	}
 
-	msg += fmt::format("Image base: %p.\n\n", GetModuleHandle(NULL));
-	msg += "Report this error to the developers. Press (Ctrl+C) to copy this message.";
+	msg += fmt::format("Image base: %p.", GetModuleHandle(NULL));
 
 	// Report fatal error
-	MessageBoxA(0, msg.c_str(), fmt::format("Win32 Exception 0x%08X", pExp->ExceptionRecord->ExceptionCode).c_str(), MB_ICONERROR);
+	report_fatal_error(msg);
 	return EXCEPTION_CONTINUE_SEARCH;
 });
 
@@ -1218,8 +1224,8 @@ void signal_handler(int sig, siginfo_t* info, void* uct)
 	}
 	else
 	{
-		// Report fatal error (TODO)
-		std::printf("Access violation %s location %p at %p.\n", cause, info->si_addr, RIP(context));
+		// TODO (debugger interaction)
+		report_fatal_error(fmt::format("Access violation %s location %p at %p.", cause, info->si_addr, RIP(context)));
 		std::abort();
 	}
 }
@@ -1253,8 +1259,8 @@ void thread_ctrl::initialize()
 	if (g_sigaction_result == -1)
 #endif
 	{
-		std::printf("Exceptions handlers are not set correctly.\n");
-		std::terminate();
+		report_fatal_error("Exception handler is not set correctly.");
+		std::abort();
 	}
 
 	// TODO
@@ -1286,12 +1292,9 @@ thread_ctrl::~thread_ctrl()
 		{
 			m_future.get();
 		}
-		catch (const std::exception& ex)
+		catch (...)
 		{
-			LOG_ERROR(GENERAL, "Abandoned exception: %s", ex.what());
-		}
-		catch (EmulationStopped)
-		{
+			catch_all_exceptions();
 		}
 	}
 }
@@ -1310,7 +1313,7 @@ std::string named_thread_t::get_name() const
 
 void named_thread_t::start()
 {
-	CHECK_ASSERTION(m_thread == nullptr);
+	CHECK_ASSERTION(!m_thread);
 
 	// Get shared_ptr instance (will throw if called from the constructor or the object has been created incorrectly)
 	auto ptr = shared_from_this();
@@ -1348,7 +1351,7 @@ void named_thread_t::start()
 		}
 		catch (const std::exception& e)
 		{
-			LOG_ERROR(GENERAL, "Exception: %s", e.what());
+			LOG_ERROR(GENERAL, "Exception: %s\nPlease report this to the developers.", e.what());
 			Emu.Pause();
 		}
 		catch (EmulationStopped)

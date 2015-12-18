@@ -109,7 +109,7 @@ static bool truncate_file(const std::string& file, u64 length)
 #else
 #include <sys/sendfile.h>
 #endif
-#include "errno.h"
+#include <errno.h>
 
 #define GET_API_ERROR static_cast<u64>(errno)
 
@@ -839,7 +839,7 @@ std::string fs::get_executable_dir()
 		wchar_t buf[2048];
 		if (GetModuleFileName(NULL, buf, ::size32(buf)) - 1 >= ::size32(buf) - 1)
 		{
-			MessageBoxA(0, fmt::format("GetModuleFileName() failed: 0x%x.", GetLastError()).c_str(), "fs::get_config_dir()", MB_ICONERROR);
+			MessageBoxA(0, fmt::format("GetModuleFileName() failed (0x%x).", GetLastError()).c_str(), "fs::get_config_dir()", MB_ICONERROR);
 			return dir; // empty
 		}
 	

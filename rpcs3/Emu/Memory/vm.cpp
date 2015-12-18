@@ -16,6 +16,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/types.h>
+#include <errno.h>
 
 /* OS X uses MAP_ANON instead of MAP_ANONYMOUS */
 #ifndef MAP_ANONYMOUS
@@ -46,8 +47,8 @@ namespace vm
 
 		if (memory_handle == NULL)
 		{
-			std::printf("CreateFileMapping() failed\n");
-			return{};
+			MessageBoxA(0, fmt::format("CreateFileMapping() failed (0x%x).", GetLastError()).c_str(), "vm::initialize()", MB_ICONERROR);
+			std::abort();
 		}
 
 		mapped_ptr_t base_addr(static_cast<u8*>(::MapViewOfFile(memory_handle, FILE_MAP_WRITE, 0, 0, 0x100000000)));
@@ -59,15 +60,15 @@ namespace vm
 
 		if (memory_handle == -1)
 		{
-			std::printf("shm_open('/rpcs3_vm') failed\n");
-			return{};
+			std::printf("shm_open('/rpcs3_vm') failed (%d).\n", errno);
+			std::abort();
 		}
 
 		if (::ftruncate(memory_handle, 0x100000000) == -1)
 		{
-			std::printf("ftruncate(memory_handle) failed\n");
+			std::printf("ftruncate(memory_handle) failed (%d).\n", errno);
 			::shm_unlink("/rpcs3_vm");
-			return{};
+			std::abort();
 		}
 
 		mapped_ptr_t base_addr(static_cast<u8*>(::mmap(nullptr, 0x100000000, PROT_NONE, MAP_SHARED, memory_handle, 0)));
@@ -76,7 +77,7 @@ namespace vm
 		::shm_unlink("/rpcs3_vm");
 #endif
 
-		std::printf("vm: base_addr = %p, priv_addr = %p\n", base_addr.get(), priv_addr.get());
+		std::printf("vm::g_base_addr = %p\nvm::g_priv_addr = %p\n", base_addr.get(), priv_addr.get());
 
 		return{ std::move(base_addr), std::move(priv_addr) };
 	}
