@@ -53,6 +53,7 @@ ComPtr<ID3D12Resource> upload_single_texture(
 {
 	size_t w = texture.width(), h = texture.height();
 	size_t depth = texture.depth();
+	if (depth == 0) depth = 1;
 	if (texture.cubemap()) depth *= 6;
 
 	const u8 format = texture.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
