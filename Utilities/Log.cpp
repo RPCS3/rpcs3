@@ -1,11 +1,13 @@
 #include "stdafx.h"
-#include "rPlatform.h"
-#include "Log.h"
-#include "rMsgBox.h"
 #include <iostream>
 #include <cinttypes>
 #include "Thread.h"
 #include "File.h"
+#include "Log.h"
+
+#ifdef _WIN32
+#include <Windows.h>
+#endif
 
 using namespace Log;
 
@@ -93,13 +95,17 @@ struct FileListener : LogListener
 	fs::file mFile;
 	bool mPrependChannelName;
 
-	FileListener(const std::string& name = _PRGNAME_, bool prependChannel = true)
-		: mFile(fs::get_config_dir() + name + ".log", fom::rewrite)
+	FileListener(const std::string& name = _PRGNAME_ ".log", bool prependChannel = true)
+		: mFile(fs::get_config_dir() + name, fom::rewrite)
 		, mPrependChannelName(prependChannel)
 	{
 		if (!mFile)
 		{
-			rMessageBox("Can't create log file! (" + name + ".log)", "Error", rICON_ERROR);
+#ifdef _WIN32
+			MessageBoxA(0, ("Can't create log file: " + name).c_str(), "Error", MB_ICONERROR);
+#else
+			std::printf("Can't create log file: %s\n", name.c_str());
+#endif
 		}
 	}
 
@@ -137,7 +143,7 @@ LogManager::LogManager()
 		it->addListener(listener);
 		it++;
 	}
-	std::shared_ptr<LogListener> TTYListener(new FileListener("TTY",false));
+	std::shared_ptr<LogListener> TTYListener(new FileListener("TTY.log", false));
 	getChannel(TTY).addListener(TTYListener);
 #ifdef BUFFERED_LOGGING
 	mLogConsumer = std::thread(&LogManager::consumeLog, this);
@@ -257,20 +263,23 @@ void log_message(Log::LogType type, Log::Severity sev, std::string text)
 {
 	if (g_log_manager)
 	{
-		// another msvc bug makes this not work, uncomment this when it's fixed
-		//g_log_manager->log({logType, severity, text});
-		Log::LogMessage msg{ type, sev, std::move(text) };
-		g_log_manager->log(msg);
+		g_log_manager->log({ type, sev, std::move(text) });
 	}
 	else
 	{
-		rMessageBox(text,
+		const auto severity =
 			sev == Severity::Notice ? "Notice" :
 			sev == Severity::Warning ? "Warning" :
 			sev == Severity::Success ? "Success" :
-			sev == Severity::Error ? "Error" : "Unknown",
-			sev == Severity::Notice ? rICON_INFORMATION :
-			sev == Severity::Warning ? rICON_EXCLAMATION :
-			sev == Severity::Error ? rICON_ERROR : rICON_INFORMATION);
+			sev == Severity::Error ? "Error" : "Unknown";
+
+#ifdef _WIN32
+		MessageBoxA(0, text.c_str(), severity,
+			sev == Severity::Notice ? MB_ICONINFORMATION :
+			sev == Severity::Warning ? MB_ICONEXCLAMATION :
+			sev == Severity::Error ? MB_ICONERROR : MB_ICONINFORMATION);
+#else
+		std::printf("[Log:%s] %s\n", severity, text.c_str());
+#endif
 	}
 }

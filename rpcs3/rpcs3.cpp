@@ -145,9 +145,9 @@ bool Rpcs3App::OnInit()
 		}
 	};
 
-	callbacks.get_msg_dialog = []() -> std::unique_ptr<MsgDialogBase>
+	callbacks.get_msg_dialog = []() -> std::shared_ptr<MsgDialogBase>
 	{
-		return std::make_unique<MsgDialogFrame>();
+		return std::make_shared<MsgDialogFrame>();
 	};
 
 	callbacks.get_save_dialog = []() -> std::unique_ptr<SaveDialogBase>

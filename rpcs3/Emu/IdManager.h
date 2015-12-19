@@ -335,10 +335,9 @@ namespace fxm
 		if (pair.second)
 		{
 			id_aux_initialize(pair.second.get());
-			return std::move(pair.second);
 		}
 
-		return nullptr;
+		return std::move(pair.second);
 	}
 
 	// Create the object unconditionally (old object will be removed if it exists)
@@ -356,30 +355,29 @@ namespace fxm
 		return std::move(pair.second);
 	}
 
-	// Emplace the object
-	template<typename T>
-	bool import(const std::shared_ptr<T>& ptr)
+	// Emplace the object returned by provider() and return it if no object exists
+	template<typename T, typename F>
+	auto import(F&& provider) -> decltype(static_cast<std::shared_ptr<T>>(provider()))
 	{
 		static const auto size = sizeof(T); // forbid forward declarations
 
-		auto pair = add<T, false>(WRAP_EXPR(ptr));
+		auto pair = add<T, false>(std::forward<F>(provider));
 
 		if (pair.second)
 		{
 			id_aux_initialize(pair.second.get());
-			return true;
 		}
 
-		return false;
+		return std::move(pair.second);
 	}
 
-	// Emplace the object unconditionally (old object will be removed if it exists)
-	template<typename T>
-	void import_always(const std::shared_ptr<T>& ptr)
+	// Emplace the object return by provider() (old object will be removed if it exists)
+	template<typename T, typename F>
+	auto import_always(F&& provider) -> decltype(static_cast<std::shared_ptr<T>>(provider()))
 	{
 		static const auto size = sizeof(T); // forbid forward declarations
 
-		auto pair = add<T, true>(WRAP_EXPR(ptr));
+		auto pair = add<T, true>(std::forward<F>(provider));
 
 		if (pair.first)
 		{
@@ -387,6 +385,7 @@ namespace fxm
 		}
 
 		id_aux_initialize(pair.second.get());
+		return std::move(pair.second);
 	}
 
 	// Get the object unconditionally (create an object if it doesn't exist)

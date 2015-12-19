@@ -4,17 +4,14 @@
 #include "Emu/IdManager.h"
 #include "Emu/SysCalls/Modules.h"
 
-#include "Utilities/rMsgBox.h"
 #include "Emu/FS/VFS.h"
 #include "Emu/FS/vfsFile.h"
 #include "Loader/PSF.h"
 #include "cellSysutil.h"
+#include "cellMsgDialog.h"
 #include "cellGame.h"
 
 extern Module<> cellGame;
-
-// Specified as second content_permission_t constructor argument to inform temporary directory
-static struct temporary_content_dir_tag_t{} const temporary_content_dir_tag{};
 
 // Normal content directory (if is_temporary is not involved):
 // contentInfo = dir
@@ -33,14 +30,9 @@ struct content_permission_t final
 	// true if temporary directory is created and must be moved or deleted
 	bool is_temporary = false;
 
-	content_permission_t(const std::string& dir)
+	content_permission_t(const std::string& dir, bool is_temp)
 		: dir(dir)
-	{
-	}
-
-	content_permission_t(const std::string& dir, const temporary_content_dir_tag_t&)
-		: dir(dir)
-		, is_temporary(true)
+		, is_temporary(is_temp)
 	{
 	}
 
@@ -191,7 +183,7 @@ s32 cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr<CellGa
 		*attributes = 0; // TODO
 		if (dirName) strcpy_trunc(*dirName, ""); // ???
 
-		if (!fxm::make<content_permission_t>("/dev_bdvd/PS3_GAME"))
+		if (!fxm::make<content_permission_t>("/dev_bdvd/PS3_GAME", false))
 		{
 			return CELL_GAME_ERROR_BUSY;
 		}
@@ -203,7 +195,7 @@ s32 cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr<CellGa
 		*attributes = 0; // TODO
 		if (dirName) strcpy_trunc(*dirName, titleId); 
 
-		if (!fxm::make<content_permission_t>("/dev_hdd0/game/" + titleId))
+		if (!fxm::make<content_permission_t>("/dev_hdd0/game/" + titleId, false))
 		{
 			return CELL_GAME_ERROR_BUSY;
 		}
@@ -215,7 +207,7 @@ s32 cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr<CellGa
 		*attributes = CELL_GAME_ATTRIBUTE_PATCH; // TODO
 		if (dirName) strcpy_trunc(*dirName, titleId); // ???
 
-		if (!fxm::make<content_permission_t>("/dev_bdvd/PS3_GAME"))
+		if (!fxm::make<content_permission_t>("/dev_bdvd/PS3_GAME", false))
 		{
 			return CELL_GAME_ERROR_BUSY;
 		}
@@ -257,7 +249,7 @@ s32 cellGamePatchCheck(vm::ptr<CellGameContentSize> size, vm::ptr<void> reserved
 		return CELL_GAME_ERROR_NOTPATCH;
 	}
 
-	if (!fxm::make<content_permission_t>("/dev_hdd0/game/" + psf.GetString("TITLE_ID")))
+	if (!fxm::make<content_permission_t>("/dev_hdd0/game/" + psf.GetString("TITLE_ID"), false))
 	{
 		return CELL_GAME_ERROR_BUSY;
 	}
@@ -295,7 +287,7 @@ s32 cellGameDataCheck(u32 type, vm::cptr<char> dirName, vm::ptr<CellGameContentS
 			return CELL_GAME_RET_NONE;
 		}
 
-		if (!fxm::make<content_permission_t>("/dev_bdvd/PS3_GAME"))
+		if (!fxm::make<content_permission_t>("/dev_bdvd/PS3_GAME", false))
 		{
 			return CELL_GAME_ERROR_BUSY;
 		}
@@ -310,7 +302,7 @@ s32 cellGameDataCheck(u32 type, vm::cptr<char> dirName, vm::ptr<CellGameContentS
 			return CELL_GAME_RET_NONE;
 		}
 
-		if (!fxm::make<content_permission_t>(dir))
+		if (!fxm::make<content_permission_t>(dir, false))
 		{
 			return CELL_GAME_ERROR_BUSY;
 		}
@@ -487,7 +479,7 @@ s32 cellGameCreateGameData(vm::ptr<CellGameSetInitParams> init, vm::ptr<char[CEL
 		return CELL_GAME_ERROR_ACCESS_ERROR; // ???
 	}
 
-	if (!fxm::make<content_permission_t>(dir, temporary_content_dir_tag))
+	if (!fxm::make<content_permission_t>(dir, true))
 	{
 		return CELL_GAME_ERROR_BUSY;
 	}
@@ -639,7 +631,23 @@ s32 cellGameContentErrorDialog(s32 type, s32 errNeedSizeKB, vm::cptr<char> dirNa
 		errorMsg += fmt::format("\nDirectory name: %s", dirName.get_ptr());
 	}
 
-	rMessageBox(errorMsg, "Error", rICON_ERROR | rOK);
+	const auto dlg = Emu.GetCallbacks().get_msg_dialog();
+
+	dlg->type.bg_invisible = true;
+	dlg->type.button_type = 2; // OK
+	dlg->type.disable_cancel = true;
+
+	const auto p = std::make_shared<std::promise<void>>();
+	std::future<void> future = p->get_future();
+
+	dlg->on_close = [=](s32 status)
+	{
+		p->set_value();
+	};
+
+	dlg->Create(errorMsg);
+
+	future.get();
 
 	return CELL_OK;
 }

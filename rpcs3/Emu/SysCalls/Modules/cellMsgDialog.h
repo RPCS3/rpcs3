@@ -74,7 +74,7 @@ class MsgDialogBase
 public:
 	atomic_t<MsgDialogState> state{ MsgDialogState::Open };
 
-	MsgDialogType type;
+	MsgDialogType type{};
 
 	std::function<void(s32 status)> on_close;
 
