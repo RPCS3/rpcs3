@@ -299,6 +299,8 @@ ID3D12Resource *render_targets::bind_address_as_render_targets(ID3D12Device *dev
 		IID_PPV_ARGS(rtt.GetAddressOf())
 		);
 	render_targets_storage[address] = rtt;
+	std::wstring name = L"rtt_@" + std::to_wstring(address);
+	rtt->SetName(name.c_str());
 
 	return rtt.Get();
 }
@@ -339,6 +341,8 @@ ID3D12Resource * render_targets::bind_address_as_depth_stencil(ID3D12Device * de
 		IID_PPV_ARGS(new_depth_stencil.GetAddressOf())
 		);
 	depth_stencil_storage[address] = new_depth_stencil;
+	std::wstring name = L"ds_@" + std::to_wstring(address);
+	new_depth_stencil->SetName(name.c_str());
 
 	return new_depth_stencil.Get();
 }

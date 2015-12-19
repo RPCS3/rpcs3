@@ -201,6 +201,8 @@ void D3D12GSRender::upload_and_bind_textures(ID3D12GraphicsCommandList *command_
 			if (cached_texture != nullptr)
 				get_current_resource_storage().dirty_textures.push_back(m_texture_cache.remove_from_cache(texaddr));
 			ComPtr<ID3D12Resource> tex = upload_single_texture(textures[i], m_device.Get(), command_list, m_texture_upload_data);
+			std::wstring name = L"texture_@" + std::to_wstring(texaddr);
+			tex->SetName(name.c_str());
 			vram_texture = tex.Get();
 			m_texture_cache.store_and_protect_data(texaddr, texaddr, get_texture_size(textures[i]), format, w, h, textures[i].mipmap(), tex);
 		}
