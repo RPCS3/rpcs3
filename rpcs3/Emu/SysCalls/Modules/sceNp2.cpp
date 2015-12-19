@@ -235,7 +235,8 @@ s32 sceNpMatching2SetSignalingOptParam()
 
 s32 sceNpMatching2RegisterContextCallback()
 {
-	throw EXCEPTION("");
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 s32 sceNpMatching2SendRoomChatMessage()
@@ -275,7 +276,8 @@ s32 sceNpMatching2GrantRoomOwner()
 
 s32 sceNpMatching2CreateContext()
 {
-	throw EXCEPTION("");
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 s32 sceNpMatching2GetSignalingOptParamLocal()
@@ -325,12 +327,14 @@ s32 sceNpMatching2DeleteServerContext()
 
 s32 sceNpMatching2SetDefaultRequestOptParam()
 {
-	throw EXCEPTION("");
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 s32 sceNpMatching2RegisterRoomEventCallback()
 {
-	throw EXCEPTION("");
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 s32 sceNpMatching2GetRoomPasswordLocal()
@@ -380,7 +384,8 @@ s32 sceNpMatching2SetLobbyMemberDataInternal()
 
 s32 sceNpMatching2RegisterRoomMessageCallback()
 {
-	throw EXCEPTION("");
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 

@@ -27,7 +27,7 @@ s32 cellMusicSetSelectionContext2()
 
 s32 cellMusicSetVolume2()
 {
-	throw EXCEPTION("");
+	return CELL_OK; //throw EXCEPTION("");
 }
 
 s32 cellMusicGetContentsId()

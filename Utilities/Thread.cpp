@@ -1131,7 +1131,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 // Throw virtual memory access violation exception
 [[noreturn]] void throw_access_violation(const char* cause, u32 address) // Don't change function definition
 {
-	throw EXCEPTION("Access violation %s location 0x%08x", cause, address);
+	//throw EXCEPTION("Access violation %s location 0x%08x", cause, address);
 }
 
 // Modify context in order to convert hardware exception to C++ exception

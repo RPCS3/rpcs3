@@ -144,7 +144,7 @@ s32 cellFsFsync(u32 fd)
 {
 	cellFs.todo("cellFsFsync(fd=0x%x)", fd);
 
-	return CELL_OK;
+	return -1; //CELL_OK;
 }
 
 s32 cellFsFGetBlockSize(u32 fd, vm::ptr<u64> sector_size, vm::ptr<u64> block_size)
@@ -987,7 +987,8 @@ s32 cellFsSetIoBufferFromDefaultContainer(u32 fd, u32 buffer_size, u32 page_type
 
 s32 cellFsUtime()
 {
-	throw EXCEPTION("");
+	UNIMPLEMENTED_FUNC(cellFs);
+	return CELL_OK;
 }
 
 s32 cellFsArcadeHddSerialNumber()
@@ -1027,7 +1028,8 @@ s32 cellFsChangeFileSizeWithoutAllocation()
 
 s32 cellFsAllocateFileAreaWithoutZeroFill()
 {
-	throw EXCEPTION("");
+	UNIMPLEMENTED_FUNC(cellFs);
+	return CELL_OK;
 }
 
 s32 cellFsChangeFileSizeByFdWithoutAllocation()
@@ -1037,7 +1039,8 @@ s32 cellFsChangeFileSizeByFdWithoutAllocation()
 
 s32 cellFsSetDiscReadRetrySetting()
 {
-	throw EXCEPTION("");
+	UNIMPLEMENTED_FUNC(cellFs);
+	return CELL_OK;
 }
 
 s32 cellFsRegisterConversionCallback()

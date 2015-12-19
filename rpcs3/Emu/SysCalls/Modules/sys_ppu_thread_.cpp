@@ -70,12 +70,14 @@ void sys_ppu_thread_once(PPUThread& ppu, vm::ptr<atomic_be_t<u32>> once_ctrl, vm
 
 s32 sys_ppu_thread_register_atexit()
 {
-	throw EXCEPTION("");
+	UNIMPLEMENTED_FUNC(sysPrxForUser);
+	return CELL_OK;
 }
 
 s32 sys_ppu_thread_unregister_atexit()
 {
-	throw EXCEPTION("");
+	UNIMPLEMENTED_FUNC(sysPrxForUser);
+	return CELL_OK;
 }
 
 void sysPrxForUser_sys_ppu_thread_init()

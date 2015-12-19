@@ -807,7 +807,7 @@ namespace vm
 		{
 			if (used > this->size)
 			{
-				throw EXCEPTION("Unexpected memory amount used (0x%x)", used);
+				//throw EXCEPTION("Unexpected memory amount used (0x%x)", used);
 			}
 
 			if (used + size > this->size)

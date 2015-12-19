@@ -249,7 +249,6 @@ bool fs::is_dir(const std::string& path)
 		{
 		case ERROR_FILE_NOT_FOUND: errno = ENOENT; break;
 		case ERROR_PATH_NOT_FOUND: errno = ENOENT; break;
-		default: throw EXCEPTION("Unknown Win32 error: 0x%x (%s).", error, path);
 		}
 
 		return false;
@@ -687,10 +686,8 @@ u64 fs::file::read(void* buffer, u64 count) const
 		switch (DWORD error = GetLastError())
 		{
 		case ERROR_INVALID_HANDLE: errno = EBADF; break;
-		default: throw EXCEPTION("Unknown Win32 error: 0x%x.", error);
 		}
 
-		return -1;
 	}
 
 	return nread;

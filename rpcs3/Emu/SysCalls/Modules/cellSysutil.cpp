@@ -302,12 +302,12 @@ s32 cellSysutilGetBgmPlaybackStatus2(vm::ptr<CellSysutilBgmPlaybackStatus2> stat
 
 s32 cellSysutilSetBgmPlaybackExtraParam()
 {
-	throw EXCEPTION("");
+	return CELL_OK; //throw EXCEPTION("");
 }
 
 s32 cellSysutilRegisterCallbackDispatcher()
 {
-	throw EXCEPTION("");
+	return CELL_OK; //throw EXCEPTION("");
 }
 
 s32 cellSysutilPacketWrite()
