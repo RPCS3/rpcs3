@@ -73,12 +73,14 @@ void ppu_interpreter::TWI(PPUThread& CPU, ppu_opcode_t op)
 
 void ppu_interpreter::MFVSCR(PPUThread& CPU, ppu_opcode_t op)
 {
-	throw EXCEPTION("");
+	CPU.VPR[op.vd]._u32[0] = CPU.VSCR.VSCR;
+	CPU.VPR[op.vd].clear();
 }
 
 void ppu_interpreter::MTVSCR(PPUThread& CPU, ppu_opcode_t op)
 {
-	// ignored (MFVSCR disabled)
+	CPU.VSCR.VSCR = CPU.VPR[op.vb]._u32[0];
+	CPU.VSCR.X = CPU.VSCR.Y = 0;
 }
 
 void ppu_interpreter::VADDCUW(PPUThread& CPU, ppu_opcode_t op)
@@ -1696,7 +1698,7 @@ void ppu_interpreter::TW(PPUThread& CPU, ppu_opcode_t op)
 		((u32)a < (u32)b && (op.bo & 0x2)) ||
 		((u32)a >(u32)b && (op.bo & 0x1)))
 	{
-		throw EXCEPTION("");
+		//throw EXCEPTION("");
 	}
 }
 

@@ -640,6 +640,11 @@ s32 cellVdecDecodeAu(u32 handle, CellVdecDecodeMode mode, vm::cptr<CellVdecAuInf
 	{
 		return CELL_VDEC_ERROR_ARG;
 	}
+	
+	if (!vdec || mode == CELL_VDEC_DEC_MODE_B_SKIP)
+	{
+		return CELL_VDEC_ERROR_BUSY;
+	}
 
 	if (mode != CELL_VDEC_DEC_MODE_NORMAL)
 	{

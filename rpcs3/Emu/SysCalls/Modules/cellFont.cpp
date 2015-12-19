@@ -453,7 +453,7 @@ s32 cellFontSetEffectWeight()
 
 s32 cellFontGlyphSetupVertexesGlyph()
 {
-	UNIMPLEMENTED_FUNC(cellFont);
+	//UNIMPLEMENTED_FUNC(cellFont);
 	return CELL_OK;
 }
 
@@ -478,7 +478,7 @@ s32 cellFontSetScalePoint()
 s32 cellFontSetupRenderEffectSlant()
 {
 	UNIMPLEMENTED_FUNC(cellFont);
-	return CELL_OK;
+	return -1;
 }
 
 s32 cellFontGraphicsSetLineRGBA()
@@ -508,30 +508,30 @@ s32 cellFontGraphicsSetupDrawContext()
 s32 cellFontSetupRenderEffectWeight()
 {
 	UNIMPLEMENTED_FUNC(cellFont);
-	return CELL_OK;
+	return -1;
 }
 
 s32 cellFontGlyphGetOutlineControlDistance()
 {
-	UNIMPLEMENTED_FUNC(cellFont);
+	//UNIMPLEMENTED_FUNC(cellFont);
 	return CELL_OK;
 }
 
 s32 cellFontGlyphGetVertexesGlyphSize()
 {
-	UNIMPLEMENTED_FUNC(cellFont);
+	//UNIMPLEMENTED_FUNC(cellFont);
 	return CELL_OK;
 }
 
 s32 cellFontGenerateCharGlyph()
 {
-	UNIMPLEMENTED_FUNC(cellFont);
+	//UNIMPLEMENTED_FUNC(cellFont);
 	return CELL_OK;
 }
 
 s32 cellFontDeleteGlyph()
 {
-	UNIMPLEMENTED_FUNC(cellFont);
+	//UNIMPLEMENTED_FUNC(cellFont);
 	return CELL_OK;
 }
 
@@ -552,7 +552,7 @@ s32 cellFontExtend(u32 a1, u32 a2, u32 a3)
 		//Something happens
 	}
 	//Something happens?
-	return CELL_OK;
+	return -1;
 }
 
 s32 cellFontRenderCharGlyphImageVertical()
@@ -585,12 +585,14 @@ s32 cellFontGraphicsGetDrawType()
 
 s32 cellFontGetKerning()
 {
-	throw EXCEPTION("");
+	UNIMPLEMENTED_FUNC(cellFont);
+	return -1;//throw EXCEPTION("");
 }
 
 s32 cellFontGetRenderScaledKerning()
 {
-	throw EXCEPTION("");
+	UNIMPLEMENTED_FUNC(cellFont);
+	return -1;//throw EXCEPTION("");
 }
 
 s32 cellFontGetRenderScalePixel()
@@ -620,7 +622,8 @@ s32 cellFontGetEffectWeight()
 
 s32 cellFontGetScalePixel()
 {
-	throw EXCEPTION("");
+	UNIMPLEMENTED_FUNC(cellFont);
+	return -1;//throw EXCEPTION("");
 }
 
 s32 cellFontClearFileCache()
@@ -635,7 +638,8 @@ s32 cellFontAdjustFontScaling()
 
 s32 cellFontSetupRenderScalePoint()
 {
-	throw EXCEPTION("");
+	UNIMPLEMENTED_FUNC(cellFont);
+	return CELL_OK; //throw EXCEPTION("");
 }
 
 s32 cellFontGlyphGetVerticalShift()

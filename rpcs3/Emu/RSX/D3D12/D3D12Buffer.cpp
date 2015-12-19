@@ -337,7 +337,7 @@ std::tuple<bool, size_t> D3D12GSRender::upload_and_set_vertex_index_data(ID3D12G
 	m_timers.m_buffer_upload_size += buffer_size;
 	command_list->IASetIndexBuffer(&index_buffer_view);
 
-	const std::vector<D3D12_VERTEX_BUFFER_VIEW> &vertex_buffer_views = upload_vertex_attributes({ std::make_pair(0, max_index + 1) });
+	const std::vector<D3D12_VERTEX_BUFFER_VIEW> &vertex_buffer_views = upload_vertex_attributes({ std::make_pair(min_index, max_index + 1) });
 	command_list->IASetVertexBuffers(0, (UINT)vertex_buffer_views.size(), vertex_buffer_views.data());
 
 	return std::make_tuple(true, index_count);

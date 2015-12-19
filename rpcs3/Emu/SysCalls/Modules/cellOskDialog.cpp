@@ -6,7 +6,8 @@ extern Module<> cellOskDialog;
 
 s32 cellOskDialogLoadAsync()
 {
-	throw EXCEPTION("");
+	UNIMPLEMENTED_FUNC(cellOskDialog);
+	return -1; //CELL_OK;
 }
 
 s32 cellOskDialogUnloadAsync()
@@ -51,7 +52,8 @@ s32 cellOskDialogDisableDimmer()
 
 s32 cellOskDialogSetKeyLayoutOption()
 {
-	throw EXCEPTION("");
+	UNIMPLEMENTED_FUNC(cellOskDialog);
+	return -1; //CELL_OK;
 }
 
 s32 cellOskDialogAddSupportLanguage()
@@ -61,7 +63,8 @@ s32 cellOskDialogAddSupportLanguage()
 
 s32 cellOskDialogSetLayoutMode()
 {
-	throw EXCEPTION("");
+	UNIMPLEMENTED_FUNC(cellOskDialog);
+	return -1; //CELL_OK;
 }
 
 s32 cellOskDialogGetInputText()

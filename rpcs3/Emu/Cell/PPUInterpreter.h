@@ -2571,14 +2571,11 @@ private:
 		s32 a = (s32)CPU.GPR[ra];
 		s32 b = (s32)CPU.GPR[rb];
 
-		if( (a < b  && (to & 0x10)) ||
-			(a > b  && (to & 0x8))  ||
-			(a == b && (to & 0x4))  ||
+		if ((a < b && (to & 0x10)) ||
+			(a > b && (to & 0x8)) ||
+			(a == b && (to & 0x4)) ||
 			((u32)a < (u32)b && (to & 0x2)) ||
-			((u32)a > (u32)b && (to & 0x1)) )
-		{
-			throw EXCEPTION("Trap! (tw 0x%x, r%d, r%d)", to, ra, rb);
-		}
+			((u32)a >(u32)b && (to & 0x1)));
 	}
 	void LVSL(u32 vd, u32 ra, u32 rb) override
 	{

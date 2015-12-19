@@ -193,7 +193,7 @@ s32 _sys_memchr()
 
 s32 _sys_memmove()
 {
-	throw EXCEPTION("");
+	return CELL_OK; //throw EXCEPTION("");
 }
 
 s64 _sys_strlen(vm::cptr<char> str)

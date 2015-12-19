@@ -139,7 +139,8 @@ s32 cellHddGameExitBroken()
 
 s32 cellGameDataGetSizeKB()
 {
-	throw EXCEPTION("");
+	UNIMPLEMENTED_FUNC(cellGame);
+	return CELL_OK;
 }
 
 s32 cellGameDataSetSystemVer()
@@ -670,12 +671,14 @@ s32 cellGameThemeInstallFromBuffer()
 
 s32 cellDiscGameGetBootDiscInfo()
 {
-	throw EXCEPTION("");
+	UNIMPLEMENTED_FUNC(cellGame);
+	return CELL_OK;
 }
 
 s32 cellDiscGameRegisterDiscChangeCallback()
 {
-	throw EXCEPTION("");
+	UNIMPLEMENTED_FUNC(cellGame);
+	return CELL_OK;
 }
 
 s32 cellDiscGameUnregisterDiscChangeCallback()

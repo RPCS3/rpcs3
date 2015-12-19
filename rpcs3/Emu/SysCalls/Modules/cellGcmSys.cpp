@@ -1189,12 +1189,14 @@ s32 cellGcmSetTile(u8 index, u8 location, u32 offset, u32 size, u32 pitch, u8 co
 
 s32 _cellGcmFunc2()
 {
-	throw EXCEPTION("");
+	UNIMPLEMENTED_FUNC(cellGcmSys);
+	return CELL_OK;
 }
 
 s32 _cellGcmFunc3()
 {
-	throw EXCEPTION("");
+	UNIMPLEMENTED_FUNC(cellGcmSys);
+	return -1;
 }
 
 s32 _cellGcmFunc4()
@@ -1204,7 +1206,8 @@ s32 _cellGcmFunc4()
 
 s32 _cellGcmFunc13()
 {
-	throw EXCEPTION("");
+	UNIMPLEMENTED_FUNC(cellGcmSys);
+	return -1;
 }
 
 s32 _cellGcmFunc38()

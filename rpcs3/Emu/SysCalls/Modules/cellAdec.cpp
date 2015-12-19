@@ -39,6 +39,7 @@ AudioDecoder::AudioDecoder(s32 type, u32 addr, u32 size, vm::ptr<CellAdecCbMsg> 
 
 	switch (type)
 	{
+	case CELL_ADEC_TYPE_LPCM_PAMF:
 	case CELL_ADEC_TYPE_ATRACX:
 	case CELL_ADEC_TYPE_ATRACX_2CH:
 	case CELL_ADEC_TYPE_ATRACX_6CH:
@@ -49,6 +50,7 @@ AudioDecoder::AudioDecoder(s32 type, u32 addr, u32 size, vm::ptr<CellAdecCbMsg> 
 		break;
 	}
 	case CELL_ADEC_TYPE_MP3:
+	case CELL_ADEC_TYPE_MPEG_L2:
 	{
 		codec = avcodec_find_decoder(AV_CODEC_ID_MP3);
 		input_format = av_find_input_format("mp3");
@@ -475,16 +477,16 @@ bool adecCheckType(s32 type)
 {
 	switch (type)
 	{
+	case CELL_ADEC_TYPE_LPCM_PAMF: cellAdec.notice("adecCheckType(): LPCM pamf"); break;
 	case CELL_ADEC_TYPE_ATRACX: cellAdec.notice("adecCheckType(): ATRAC3plus"); break;
 	case CELL_ADEC_TYPE_ATRACX_2CH: cellAdec.notice("adecCheckType(): ATRAC3plus 2ch"); break;
 	case CELL_ADEC_TYPE_ATRACX_6CH: cellAdec.notice("adecCheckType(): ATRAC3plus 6ch"); break;
 	case CELL_ADEC_TYPE_ATRACX_8CH: cellAdec.notice("adecCheckType(): ATRAC3plus 8ch"); break;
 	case CELL_ADEC_TYPE_MP3: cellAdec.notice("adecCheckType(): MP3"); break;
+	case CELL_ADEC_TYPE_MPEG_L2: cellAdec.notice("adecCheckType(): Mpeg L2"); break;
 
-	case CELL_ADEC_TYPE_LPCM_PAMF:
 	case CELL_ADEC_TYPE_AC3:
 	case CELL_ADEC_TYPE_ATRAC3:
-	case CELL_ADEC_TYPE_MPEG_L2:
 	case CELL_ADEC_TYPE_CELP:
 	case CELL_ADEC_TYPE_M4AAC:
 	case CELL_ADEC_TYPE_CELP8:
@@ -592,6 +594,7 @@ s32 cellAdecStartSeq(u32 handle, u32 param)
 
 	switch (adec->type)
 	{
+	case CELL_ADEC_TYPE_LPCM_PAMF:
 	case CELL_ADEC_TYPE_ATRACX:
 	case CELL_ADEC_TYPE_ATRACX_2CH:
 	case CELL_ADEC_TYPE_ATRACX_6CH:
@@ -612,6 +615,7 @@ s32 cellAdecStartSeq(u32 handle, u32 param)
 		break;
 	}
 	case CELL_ADEC_TYPE_MP3:
+	case CELL_ADEC_TYPE_MPEG_L2:
 	{
 		const auto mp3 = vm::cptr<CellAdecParamMP3>::make(param);
 

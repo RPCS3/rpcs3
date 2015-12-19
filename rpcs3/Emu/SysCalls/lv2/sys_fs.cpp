@@ -100,7 +100,18 @@ s32 sys_fs_open(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, s32 mode, vm::c
 		throw EXCEPTION("Invalid or unimplemented flags (%#o): '%s'", flags, path.get_ptr());
 	}
 
-	std::shared_ptr<vfsStream> file(Emu.GetVFS().OpenFile(path.get_ptr(), open_mode));
+	const char *path_ptr = path.get_ptr();
+
+	if (strstr(path.get_ptr(), "/dev_hdd0") &&
+		strncmp(path.get_ptr(), "/dev_hdd0", 9))
+	{
+		path_ptr = strstr(path_ptr, "/dev_hdd0");
+
+		LOG_ERROR(HLE, "Path contains device root path but not at the start!");
+		LOG_ERROR(HLE, "Path given is (%s), modified to (%s)", path.get_ptr(), path_ptr);
+	}
+
+	std::shared_ptr<vfsStream> file(Emu.GetVFS().OpenFile(path_ptr, open_mode));
 
 	if (!file || !file->IsOpened())
 	{

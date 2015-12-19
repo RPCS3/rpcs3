@@ -656,26 +656,26 @@ void dmuxOpen(u32 dmux_id) // TODO: call from the constructor
 				{
 					esAVC[es.fidMajor % 16] = task.es.es_ptr;
 				}
-				//else if ((es.fidMajor & -0x10) == 0xe0 && es.fidMinor == 0 && !es.sup1 && !es.sup2)
-				//{
-				//	esM2V[es.fidMajor % 16] = task.es.es_ptr;
-				//}
+				else if ((es.fidMajor & -0x10) == 0xe0 && es.fidMinor == 0 && !es.sup1 && !es.sup2)
+				{
+					esM2V[es.fidMajor % 16] = task.es.es_ptr;
+				}
 				else if (es.fidMajor == 0xbd && (es.fidMinor & -0x10) == 0 && !es.sup1 && !es.sup2)
 				{
 					esATX[es.fidMinor % 16] = task.es.es_ptr;
 				}
-				//else if (es.fidMajor == 0xbd && (es.fidMinor & -0x10) == 0x20 && !es.sup1 && !es.sup2)
-				//{
-				//	esDATA[es.fidMinor % 16] = task.es.es_ptr;
-				//}
-				//else if (es.fidMajor == 0xbd && (es.fidMinor & -0x10) == 0x30 && !es.sup1 && !es.sup2)
-				//{
-				//	esAC3[es.fidMinor % 16] = task.es.es_ptr;
-				//}
-				//else if (es.fidMajor == 0xbd && (es.fidMinor & -0x10) == 0x40 && !es.sup1 && !es.sup2)
-				//{
-				//	esPCM[es.fidMinor % 16] = task.es.es_ptr;
-				//}
+				else if (es.fidMajor == 0xbd && (es.fidMinor & -0x10) == 0x20 && !es.sup1 && !es.sup2)
+				{
+					esDATA[es.fidMinor % 16] = task.es.es_ptr;
+				}
+				else if (es.fidMajor == 0xbd && (es.fidMinor & -0x10) == 0x30 && !es.sup1 && !es.sup2)
+				{
+					esAC3[es.fidMinor % 16] = task.es.es_ptr;
+				}
+				else if (es.fidMajor == 0xbd && (es.fidMinor & -0x10) == 0x40 && !es.sup1 && !es.sup2)
+				{
+					esPCM[es.fidMinor % 16] = task.es.es_ptr;
+				}
 				else
 				{
 					throw EXCEPTION("dmuxEnableEs: unknown filter (0x%x, 0x%x, 0x%x, 0x%x)", es.fidMajor, es.fidMinor, es.sup1, es.sup2);
