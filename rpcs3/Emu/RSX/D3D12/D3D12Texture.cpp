@@ -63,13 +63,13 @@ ComPtr<ID3D12Resource> upload_single_texture(
 	size_t heap_offset = texture_buffer_heap.alloc(buffer_size);
 
 	void *buffer;
-	ThrowIfFailed(texture_buffer_heap.m_heap->Map(0, &CD3DX12_RANGE(heap_offset, heap_offset + buffer_size), &buffer));
+	CHECK_HRESULT(texture_buffer_heap.m_heap->Map(0, &CD3DX12_RANGE(heap_offset, heap_offset + buffer_size), &buffer));
 	void *mapped_buffer = (char*)buffer + heap_offset;
 	std::vector<MipmapLevelInfo> mipInfos = upload_placed_texture(texture, 256, mapped_buffer);
 	texture_buffer_heap.m_heap->Unmap(0, &CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
 
 	ComPtr<ID3D12Resource> result;
-	ThrowIfFailed(device->CreateCommittedResource(
+	CHECK_HRESULT(device->CreateCommittedResource(
 		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
 		D3D12_HEAP_FLAG_NONE,
 		&CD3DX12_RESOURCE_DESC::Tex2D(dxgi_format, (UINT)w, (UINT)h, depth, texture.mipmap()),
@@ -109,7 +109,7 @@ void update_existing_texture(
 	size_t heap_offset = texture_buffer_heap.alloc(buffer_size);
 
 	void *buffer;
-	ThrowIfFailed(texture_buffer_heap.m_heap->Map(0, &CD3DX12_RANGE(heap_offset, heap_offset + buffer_size), &buffer));
+	CHECK_HRESULT(texture_buffer_heap.m_heap->Map(0, &CD3DX12_RANGE(heap_offset, heap_offset + buffer_size), &buffer));
 	void *mapped_buffer = (char*)buffer + heap_offset;
 	std::vector<MipmapLevelInfo> mipInfos = upload_placed_texture(texture, 256, mapped_buffer);
 	texture_buffer_heap.m_heap->Unmap(0, &CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));

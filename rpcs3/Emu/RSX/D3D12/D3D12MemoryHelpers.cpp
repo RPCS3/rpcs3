@@ -78,13 +78,13 @@ void resource_storage::reset()
 	render_targets_descriptors_heap_index = 0;
 	depth_stencil_descriptor_heap_index = 0;
 
-	ThrowIfFailed(command_allocator->Reset());
+	CHECK_HRESULT(command_allocator->Reset());
 	set_new_command_list();
 }
 
 void resource_storage::set_new_command_list()
 {
-	ThrowIfFailed(command_list->Reset(command_allocator.Get(), nullptr));
+	CHECK_HRESULT(command_list->Reset(command_allocator.Get(), nullptr));
 }
 
 void resource_storage::init(ID3D12Device *device)
@@ -93,17 +93,17 @@ void resource_storage::init(ID3D12Device *device)
 	m_device = device;
 	ram_framebuffer = nullptr;
 	// Create a global command allocator
-	ThrowIfFailed(device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(command_allocator.GetAddressOf())));
+	CHECK_HRESULT(device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(command_allocator.GetAddressOf())));
 
-	ThrowIfFailed(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, command_allocator.Get(), nullptr, IID_PPV_ARGS(command_list.GetAddressOf())));
-	ThrowIfFailed(command_list->Close());
+	CHECK_HRESULT(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, command_allocator.Get(), nullptr, IID_PPV_ARGS(command_list.GetAddressOf())));
+	CHECK_HRESULT(command_list->Close());
 
 	D3D12_DESCRIPTOR_HEAP_DESC descriptor_heap_desc = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 10000, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE };
-	ThrowIfFailed(device->CreateDescriptorHeap(&descriptor_heap_desc, IID_PPV_ARGS(&descriptors_heap)));
+	CHECK_HRESULT(device->CreateDescriptorHeap(&descriptor_heap_desc, IID_PPV_ARGS(&descriptors_heap)));
 
 	D3D12_DESCRIPTOR_HEAP_DESC sampler_heap_desc = { D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER , 2048, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE };
-	ThrowIfFailed(device->CreateDescriptorHeap(&sampler_heap_desc, IID_PPV_ARGS(&sampler_descriptor_heap[0])));
-	ThrowIfFailed(device->CreateDescriptorHeap(&sampler_heap_desc, IID_PPV_ARGS(&sampler_descriptor_heap[1])));
+	CHECK_HRESULT(device->CreateDescriptorHeap(&sampler_heap_desc, IID_PPV_ARGS(&sampler_descriptor_heap[0])));
+	CHECK_HRESULT(device->CreateDescriptorHeap(&sampler_heap_desc, IID_PPV_ARGS(&sampler_descriptor_heap[1])));
 
 	D3D12_DESCRIPTOR_HEAP_DESC ds_descriptor_heap_desc = { D3D12_DESCRIPTOR_HEAP_TYPE_DSV , 10000};
 	device->CreateDescriptorHeap(&ds_descriptor_heap_desc, IID_PPV_ARGS(&depth_stencil_descriptor_heap));
@@ -113,7 +113,7 @@ void resource_storage::init(ID3D12Device *device)
 
 	frame_finished_handle = CreateEventEx(nullptr, FALSE, FALSE, EVENT_ALL_ACCESS);
 	fence_value = 0;
-	ThrowIfFailed(device->CreateFence(fence_value++, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(frame_finished_fence.GetAddressOf())));
+	CHECK_HRESULT(device->CreateFence(fence_value++, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(frame_finished_fence.GetAddressOf())));
 }
 
 void resource_storage::wait_and_clean()
@@ -121,7 +121,7 @@ void resource_storage::wait_and_clean()
 	if (in_use)
 		WaitForSingleObjectEx(frame_finished_handle, INFINITE, FALSE);
 	else
-		ThrowIfFailed(command_list->Close());
+		CHECK_HRESULT(command_list->Close());
 
 	reset();
 

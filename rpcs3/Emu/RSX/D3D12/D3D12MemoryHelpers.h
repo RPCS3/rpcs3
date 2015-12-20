@@ -19,7 +19,7 @@ struct init_heap<ID3D12Heap>
 		heap_desc.SizeInBytes = heap_size;
 		heap_desc.Properties.Type = type;
 		heap_desc.Flags = flags;
-		ThrowIfFailed(device->CreateHeap(&heap_desc, IID_PPV_ARGS(&result)));
+		CHECK_HRESULT(device->CreateHeap(&heap_desc, IID_PPV_ARGS(&result)));
 		return result;
 	}
 };
@@ -32,7 +32,7 @@ struct init_heap<ID3D12Resource>
 		ID3D12Resource *result;
 		D3D12_HEAP_PROPERTIES heap_properties = {};
 		heap_properties.Type = type;
-		ThrowIfFailed(device->CreateCommittedResource(&heap_properties,
+		CHECK_HRESULT(device->CreateCommittedResource(&heap_properties,
 			D3D12_HEAP_FLAG_NONE,
 			&CD3DX12_RESOURCE_DESC::Buffer(heap_size),
 			state,

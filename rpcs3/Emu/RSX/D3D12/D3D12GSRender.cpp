@@ -48,7 +48,7 @@ void unloadD3D12FunctionPointers()
 void wait_for_command_queue(ID3D12Device *device, ID3D12CommandQueue *command_queue)
 {
 	ComPtr<ID3D12Fence> fence;
-	ThrowIfFailed(device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(fence.GetAddressOf())));
+	CHECK_HRESULT(device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(fence.GetAddressOf())));
 	HANDLE handle = CreateEventEx(nullptr, FALSE, FALSE, EVENT_ALL_ACCESS);
 	fence->SetEventOnCompletion(1, handle);
 	command_queue->Signal(fence.Get(), 1);
@@ -107,15 +107,15 @@ D3D12GSRender::D3D12GSRender()
 	}
 
 	Microsoft::WRL::ComPtr<IDXGIFactory4> dxgi_factory;
-	ThrowIfFailed(CreateDXGIFactory(IID_PPV_ARGS(&dxgi_factory)));
+	CHECK_HRESULT(CreateDXGIFactory(IID_PPV_ARGS(&dxgi_factory)));
 	// Create adapter
 	ComPtr<IDXGIAdapter> adaptater = nullptr;
-	ThrowIfFailed(dxgi_factory->EnumAdapters(rpcs3::state.config.rsx.d3d12.adaptater.value(), adaptater.GetAddressOf()));
-	ThrowIfFailed(wrapD3D12CreateDevice(adaptater.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&m_device)));
+	CHECK_HRESULT(dxgi_factory->EnumAdapters(rpcs3::state.config.rsx.d3d12.adaptater.value(), adaptater.GetAddressOf()));
+	CHECK_HRESULT(wrapD3D12CreateDevice(adaptater.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&m_device)));
 
 	// Queues
 	D3D12_COMMAND_QUEUE_DESC graphic_queue_desc = { D3D12_COMMAND_LIST_TYPE_DIRECT };
-	ThrowIfFailed(m_device->CreateCommandQueue(&graphic_queue_desc, IID_PPV_ARGS(m_command_queue.GetAddressOf())));
+	CHECK_HRESULT(m_device->CreateCommandQueue(&graphic_queue_desc, IID_PPV_ARGS(m_command_queue.GetAddressOf())));
 
 	g_descriptor_stride_srv_cbv_uav = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	g_descriptor_stride_dsv = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
@@ -133,7 +133,7 @@ D3D12GSRender::D3D12GSRender()
 	swap_chain.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
 	swap_chain.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
 
-	ThrowIfFailed(dxgi_factory->CreateSwapChain(m_command_queue.Get(), &swap_chain, (IDXGISwapChain**)m_swap_chain.GetAddressOf()));
+	CHECK_HRESULT(dxgi_factory->CreateSwapChain(m_command_queue.Get(), &swap_chain, (IDXGISwapChain**)m_swap_chain.GetAddressOf()));
 	m_swap_chain->GetBuffer(0, IID_PPV_ARGS(&m_backbuffer[0]));
 	m_swap_chain->GetBuffer(1, IID_PPV_ARGS(&m_backbuffer[1]));
 
@@ -166,7 +166,7 @@ D3D12GSRender::D3D12GSRender()
 
 		Microsoft::WRL::ComPtr<ID3DBlob> rootSignatureBlob;
 		Microsoft::WRL::ComPtr<ID3DBlob> errorBlob;
-		ThrowIfFailed(wrapD3D12SerializeRootSignature(
+		CHECK_HRESULT(wrapD3D12SerializeRootSignature(
 			&CD3DX12_ROOT_SIGNATURE_DESC((texture_count > 0) ? 2 : 1, RP, 0, 0, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT),
 			D3D_ROOT_SIGNATURE_VERSION_1, &rootSignatureBlob, &errorBlob));
 
@@ -184,7 +184,7 @@ D3D12GSRender::D3D12GSRender()
 	initConvertShader();
 	m_output_scaling_pass.Init(m_device.Get(), m_command_queue.Get());
 
-	ThrowIfFailed(
+	CHECK_HRESULT(
 		m_device->CreateCommittedResource(
 			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
 			D3D12_HEAP_FLAG_NONE,
@@ -364,7 +364,7 @@ void D3D12GSRender::end()
 
 	if (rpcs3::config.rsx.d3d12.debug_output.value())
 	{
-		ThrowIfFailed(get_current_resource_storage().command_list->Close());
+		CHECK_HRESULT(get_current_resource_storage().command_list->Close());
 		m_command_queue->ExecuteCommandLists(1, (ID3D12CommandList**)get_current_resource_storage().command_list.GetAddressOf());
 		get_current_resource_storage().set_new_command_list();
 	}
@@ -419,7 +419,7 @@ void D3D12GSRender::flip(int buffer)
 			size_t heap_offset = m_texture_upload_data.alloc(texture_size);
 
 			void *buffer;
-			ThrowIfFailed(m_texture_upload_data.m_heap->Map(0, &CD3DX12_RANGE(heap_offset, heap_offset + texture_size), &buffer));
+			CHECK_HRESULT(m_texture_upload_data.m_heap->Map(0, &CD3DX12_RANGE(heap_offset, heap_offset + texture_size), &buffer));
 			void *mapped_buffer = (char*)buffer + heap_offset;
 			for (unsigned row = 0; row < h; row++)
 				memcpy((char*)mapped_buffer + row * row_pitch, (char*)src_buffer + row * w * 4, w * 4);
@@ -427,7 +427,7 @@ void D3D12GSRender::flip(int buffer)
 			offset = heap_offset;
 		}
 
-		ThrowIfFailed(
+		CHECK_HRESULT(
 			m_device->CreateCommittedResource(
 				&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
 				D3D12_HEAP_FLAG_NONE,
@@ -536,7 +536,7 @@ void D3D12GSRender::flip(int buffer)
 		get_current_resource_storage().command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_backbuffer[m_swap_chain->GetCurrentBackBufferIndex()].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
 	if (is_flip_surface_in_global_memory(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET]) && resource_to_flip != nullptr)
 		get_current_resource_storage().command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(resource_to_flip, D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET));
-	ThrowIfFailed(get_current_resource_storage().command_list->Close());
+	CHECK_HRESULT(get_current_resource_storage().command_list->Close());
 	m_command_queue->ExecuteCommandLists(1, (ID3D12CommandList**)get_current_resource_storage().command_list.GetAddressOf());
 
 	if(rpcs3::config.rsx.d3d12.overlay.value())
@@ -546,7 +546,7 @@ void D3D12GSRender::flip(int buffer)
 
 	std::chrono::time_point<std::chrono::system_clock> flip_start = std::chrono::system_clock::now();
 
-	ThrowIfFailed(m_swap_chain->Present(rpcs3::state.config.rsx.vsync.value() ? 1 : 0, 0));
+	CHECK_HRESULT(m_swap_chain->Present(rpcs3::state.config.rsx.vsync.value() ? 1 : 0, 0));
 	// Add an event signaling queue completion
 
 	resource_storage &storage = get_non_current_resource_storage();

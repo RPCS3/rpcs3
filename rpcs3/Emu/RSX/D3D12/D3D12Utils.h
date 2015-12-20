@@ -10,14 +10,7 @@
 
 using namespace Microsoft::WRL;
 
-// From DX12 D3D11On12 Sample (MIT Licensed)
-inline void ThrowIfFailed(HRESULT hr)
-{
-	if (FAILED(hr))
-	{
-		throw;
-	}
-}
+#define CHECK_HRESULT(expr) if (HRESULT hr = (expr)) if (FAILED(hr)) throw EXCEPTION("HRESULT = 0x%x", hr)
 
 /**
  * Send data to dst pointer without polluting cache.

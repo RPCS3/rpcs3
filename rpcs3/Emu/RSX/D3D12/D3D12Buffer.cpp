@@ -20,7 +20,7 @@ D3D12_GPU_VIRTUAL_ADDRESS createVertexBuffer(const rsx::data_array_format_info &
 	size_t heap_offset = vertex_index_heap.alloc(buffer_size);
 
 	void *buffer;
-	ThrowIfFailed(vertex_index_heap.m_heap->Map(0, &CD3DX12_RANGE(heap_offset, heap_offset + buffer_size), (void**)&buffer));
+	CHECK_HRESULT(vertex_index_heap.m_heap->Map(0, &CD3DX12_RANGE(heap_offset, heap_offset + buffer_size), (void**)&buffer));
 	void *bufferMap = (char*)buffer + heap_offset;
 	memcpy(bufferMap, vertex_data.data(), vertex_data.size());
 	vertex_index_heap.m_heap->Unmap(0, &CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
@@ -62,7 +62,7 @@ void D3D12GSRender::upload_vertex_attributes(const std::vector<std::pair<u32, u3
 		size_t heap_offset = m_vertex_index_data.alloc(buffer_size);
 
 		void *buffer;
-		ThrowIfFailed(m_vertex_index_data.m_heap->Map(0, &CD3DX12_RANGE(heap_offset, heap_offset + buffer_size), (void**)&buffer));
+		CHECK_HRESULT(m_vertex_index_data.m_heap->Map(0, &CD3DX12_RANGE(heap_offset, heap_offset + buffer_size), (void**)&buffer));
 		void *mapped_buffer = (char*)buffer + heap_offset;
 		for (const auto &range : vertex_ranges)
 		{
@@ -112,7 +112,7 @@ void D3D12GSRender::upload_vertex_attributes(const std::vector<std::pair<u32, u3
 		size_t heap_offset = m_vertex_index_data.alloc(buffer_size);
 
 		void *buffer;
-		ThrowIfFailed(m_vertex_index_data.m_heap->Map(0, &CD3DX12_RANGE(heap_offset, heap_offset + buffer_size), (void**)&buffer));
+		CHECK_HRESULT(m_vertex_index_data.m_heap->Map(0, &CD3DX12_RANGE(heap_offset, heap_offset + buffer_size), (void**)&buffer));
 		void *mapped_buffer = (char*)buffer + heap_offset;
 		memcpy(mapped_buffer, data.data(), data.size());
 		m_vertex_index_data.m_heap->Unmap(0, &CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
@@ -149,7 +149,7 @@ void D3D12GSRender::upload_and_bind_scale_offset_matrix(size_t descriptorIndex)
 	// Scale offset buffer
 	// Separate constant buffer
 	void *mapped_buffer;
-	ThrowIfFailed(m_constants_data.m_heap->Map(0, &CD3DX12_RANGE(heap_offset, heap_offset + 256), &mapped_buffer));
+	CHECK_HRESULT(m_constants_data.m_heap->Map(0, &CD3DX12_RANGE(heap_offset, heap_offset + 256), &mapped_buffer));
 	fill_scale_offset_data((char*)mapped_buffer + heap_offset);
 	int is_alpha_tested = !!(rsx::method_registers[NV4097_SET_ALPHA_TEST_ENABLE]);
 	float alpha_ref = (float&)rsx::method_registers[NV4097_SET_ALPHA_REF];
@@ -190,7 +190,7 @@ void D3D12GSRender::upload_and_bind_vertex_shader_constants(size_t descriptor_in
 	size_t heap_offset = m_constants_data.alloc(buffer_size);
 
 	void *mapped_buffer;
-	ThrowIfFailed(m_constants_data.m_heap->Map(0, &CD3DX12_RANGE(heap_offset, heap_offset + buffer_size), &mapped_buffer));
+	CHECK_HRESULT(m_constants_data.m_heap->Map(0, &CD3DX12_RANGE(heap_offset, heap_offset + buffer_size), &mapped_buffer));
 	fill_vertex_program_constants_data((char*)mapped_buffer + heap_offset);
 	m_constants_data.m_heap->Unmap(0, &CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
 
@@ -215,7 +215,7 @@ void D3D12GSRender::upload_and_bind_fragment_shader_constants(size_t descriptor_
 
 	size_t offset = 0;
 	void *mapped_buffer;
-	ThrowIfFailed(m_constants_data.m_heap->Map(0, &CD3DX12_RANGE(heap_offset, heap_offset + buffer_size), &mapped_buffer));
+	CHECK_HRESULT(m_constants_data.m_heap->Map(0, &CD3DX12_RANGE(heap_offset, heap_offset + buffer_size), &mapped_buffer));
 	m_pso_cache.fill_fragment_constans_buffer((char*)mapped_buffer + heap_offset, &fragment_program);
 	m_constants_data.m_heap->Unmap(0, &CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
 
@@ -250,7 +250,7 @@ void D3D12GSRender::upload_and_set_vertex_index_data(ID3D12GraphicsCommandList *
 		size_t heap_offset = m_vertex_index_data.alloc(buffer_size);
 
 		void *buffer;
-		ThrowIfFailed(m_vertex_index_data.m_heap->Map(0, &CD3DX12_RANGE(heap_offset, heap_offset + buffer_size), (void**)&buffer));
+		CHECK_HRESULT(m_vertex_index_data.m_heap->Map(0, &CD3DX12_RANGE(heap_offset, heap_offset + buffer_size), (void**)&buffer));
 		void *mapped_buffer = (char*)buffer + heap_offset;
 		size_t first = 0;
 		for (const auto &pair : m_first_count_pairs)
@@ -282,7 +282,7 @@ void D3D12GSRender::upload_and_set_vertex_index_data(ID3D12GraphicsCommandList *
 		size_t heap_offset = m_vertex_index_data.alloc(buffer_size);
 
 		void *buffer;
-		ThrowIfFailed(m_vertex_index_data.m_heap->Map(0, &CD3DX12_RANGE(heap_offset, heap_offset + buffer_size), (void**)&buffer));
+		CHECK_HRESULT(m_vertex_index_data.m_heap->Map(0, &CD3DX12_RANGE(heap_offset, heap_offset + buffer_size), (void**)&buffer));
 		void *mapped_buffer = (char*)buffer + heap_offset;
 		u32 min_index = (u32)-1, max_index = 0;
 		for (const auto &pair : m_first_count_pairs)

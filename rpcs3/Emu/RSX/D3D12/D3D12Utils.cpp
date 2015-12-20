@@ -177,19 +177,19 @@ void D3D12GSRender::Shader::Init(ID3D12Device *device, ID3D12CommandQueue *gfxco
 	psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 	psoDesc.BlendState.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
 
-	ThrowIfFailed(device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_PSO)));
+	CHECK_HRESULT(device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_PSO)));
 
 	D3D12_DESCRIPTOR_HEAP_DESC textureHeapDesc = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV , 2, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE };
-	ThrowIfFailed(
+	CHECK_HRESULT(
 		device->CreateDescriptorHeap(&textureHeapDesc, IID_PPV_ARGS(&m_textureDescriptorHeap))
 		);
 	D3D12_DESCRIPTOR_HEAP_DESC samplerHeapDesc = { D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER , 2, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE };
-	ThrowIfFailed(
+	CHECK_HRESULT(
 		device->CreateDescriptorHeap(&samplerHeapDesc, IID_PPV_ARGS(&m_samplerDescriptorHeap))
 		);
 
 	ComPtr<ID3D12Fence> fence;
-	ThrowIfFailed(device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(fence.GetAddressOf())));
+	CHECK_HRESULT(device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(fence.GetAddressOf())));
 	HANDLE handle = CreateEventEx(nullptr, FALSE, FALSE, EVENT_ALL_ACCESS);
 	fence->SetEventOnCompletion(1, handle);
 
@@ -201,15 +201,15 @@ void D3D12GSRender::Shader::Init(ID3D12Device *device, ID3D12CommandQueue *gfxco
 	};
 
 	ComPtr<ID3D12CommandAllocator> cmdlistAllocator;
-	ThrowIfFailed(
+	CHECK_HRESULT(
 		device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(cmdlistAllocator.GetAddressOf()))
 			);
 	ComPtr<ID3D12GraphicsCommandList> cmdList;
-	ThrowIfFailed(
+	CHECK_HRESULT(
 		device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, cmdlistAllocator.Get(),nullptr, IID_PPV_ARGS(cmdList.GetAddressOf()))
 			);
 	ComPtr<ID3D12Resource> intermediateBuffer;
-	ThrowIfFailed(device->CreateCommittedResource(
+	CHECK_HRESULT(device->CreateCommittedResource(
 		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
 		D3D12_HEAP_FLAG_NONE,
 		&CD3DX12_RESOURCE_DESC::Buffer(16 * sizeof(float)),
@@ -218,7 +218,7 @@ void D3D12GSRender::Shader::Init(ID3D12Device *device, ID3D12CommandQueue *gfxco
 		IID_PPV_ARGS(intermediateBuffer.GetAddressOf())
 		));
 
-	ThrowIfFailed(
+	CHECK_HRESULT(
 		device->CreateCommittedResource(
 			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
 			D3D12_HEAP_FLAG_NONE,
@@ -232,7 +232,7 @@ void D3D12GSRender::Shader::Init(ID3D12Device *device, ID3D12CommandQueue *gfxco
 
 	UpdateSubresources(cmdList.Get(), m_vertexBuffer, intermediateBuffer.Get(), 0, 0, 1, &vertexData);
 	cmdList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_vertexBuffer, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER));
-	ThrowIfFailed(cmdList->Close());
+	CHECK_HRESULT(cmdList->Close());
 
 	gfxcommandqueue->ExecuteCommandLists(1, CommandListCast(cmdList.GetAddressOf()));
 
@@ -245,7 +245,7 @@ void D3D12GSRender::Shader::Init(ID3D12Device *device, ID3D12CommandQueue *gfxco
 void D3D12GSRender::initConvertShader()
 {
 	const auto &p = compileF32toU8CS();
-	ThrowIfFailed(
+	CHECK_HRESULT(
 		m_device->CreateRootSignature(0, p.second->GetBufferPointer(), p.second->GetBufferSize(), IID_PPV_ARGS(&m_convertRootSignature))
 		);
 
@@ -254,7 +254,7 @@ void D3D12GSRender::initConvertShader()
 	computePipelineStateDesc.CS.pShaderBytecode = p.first->GetBufferPointer();
 	computePipelineStateDesc.pRootSignature = m_convertRootSignature;
 
-	ThrowIfFailed(
+	CHECK_HRESULT(
 		m_device->CreateComputePipelineState(&computePipelineStateDesc, IID_PPV_ARGS(&m_convertPSO))
 		);
 
