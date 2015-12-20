@@ -35,10 +35,6 @@
 #include <stdlib.h>
 #include <cstdint>
 
-#ifndef __APPLE__
-#include <malloc.h>
-#endif
-
 #define _fpclass(x) std::fpclassify(x)
 #define INFINITE 0xFFFFFFFF
 
