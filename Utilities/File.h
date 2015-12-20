@@ -149,6 +149,51 @@ namespace fs
 			CHECK_ASSERTION(write(str.data(), str.size()) == str.size());
 			return *this;
 		}
+
+		// Write POD
+		template<typename T>
+		std::enable_if_t<std::is_pod<T>::value && !std::is_pointer<T>::value, const file&> operator <<(const T& data) const
+		{
+			CHECK_ASSERTION(write(std::addressof(data), sizeof(T)) == sizeof(T));
+			return *this;
+		}
+
+		// Write POD std::vector
+		template<typename T>
+		std::enable_if_t<std::is_pod<T>::value && !std::is_pointer<T>::value, const file&> operator <<(const std::vector<T>& vec) const
+		{
+			CHECK_ASSERTION(write(vec.data(), vec.size() * sizeof(T)) == vec.size() * sizeof(T));
+			return *this;
+		}
+
+		// Read std::string
+		bool read(std::string& str) const
+		{
+			return read(&str[0], str.size()) == str.size();
+		}
+
+		// Read POD
+		template<typename T>
+		std::enable_if_t<std::is_pod<T>::value && !std::is_pointer<T>::value, bool> read(T& data) const
+		{
+			return read(&data, sizeof(T)) == sizeof(T);
+		}
+
+		// Read POD std::vector
+		template<typename T>
+		std::enable_if_t<std::is_pod<T>::value && !std::is_pointer<T>::value, bool> read(std::vector<T>& vec) const
+		{
+			return read(vec.data(), sizeof(T) * vec.size()) == sizeof(T) * vec.size();
+		}
+
+		// Convert to std::string
+		operator std::string() const
+		{
+			std::string result;
+			result.resize(size() - seek(0, fsm::cur));
+			CHECK_ASSERTION(read(result));
+			return result;
+		}
 	};
 
 	class file_ptr final
@@ -245,4 +290,10 @@ namespace fs
 		// Get next directory entry (UTF-8 name and file stat)
 		bool read(std::string& name, stat_t& info);
 	};
+
+	// Get configuration directory
+	std::string get_config_dir();
+
+	// Get executable directory
+	std::string get_executable_dir();
 }

@@ -19,7 +19,7 @@ struct init_heap<ID3D12Heap>
 		heap_desc.SizeInBytes = heap_size;
 		heap_desc.Properties.Type = type;
 		heap_desc.Flags = flags;
-		ThrowIfFailed(device->CreateHeap(&heap_desc, IID_PPV_ARGS(&result)));
+		CHECK_HRESULT(device->CreateHeap(&heap_desc, IID_PPV_ARGS(&result)));
 		return result;
 	}
 };
@@ -32,7 +32,7 @@ struct init_heap<ID3D12Resource>
 		ID3D12Resource *result;
 		D3D12_HEAP_PROPERTIES heap_properties = {};
 		heap_properties.Type = type;
-		ThrowIfFailed(device->CreateCommittedResource(&heap_properties,
+		CHECK_HRESULT(device->CreateCommittedResource(&heap_properties,
 			D3D12_HEAP_FLAG_NONE,
 			&CD3DX12_RESOURCE_DESC::Buffer(heap_size),
 			state,
@@ -72,7 +72,7 @@ struct data_heap
 	/**
 	* Does alloc cross get position ?
 	*/
-	bool can_alloc(size_t size) const noexcept
+	bool can_alloc(size_t size) const
 	{
 		size_t alloc_size = align(size, alignment);
 		if (m_put_pos + alloc_size < m_size)
@@ -98,7 +98,7 @@ struct data_heap
 		}
 	}
 
-	size_t alloc(size_t size) noexcept
+	size_t alloc(size_t size)
 	{
 		assert(can_alloc(size));
 		size_t alloc_size = align(size, alignment);
@@ -115,7 +115,7 @@ struct data_heap
 		}
 	}
 
-	void release() noexcept
+	void release()
 	{
 		m_heap->Release();
 	}
@@ -123,7 +123,7 @@ struct data_heap
 	/**
 	* return current putpos - 1
 	*/
-	size_t get_current_put_pos_minus_one() const noexcept
+	size_t get_current_put_pos_minus_one() const
 	{
 		return (m_put_pos - 1 > 0) ? m_put_pos - 1 : m_size - 1;
 	}
@@ -131,16 +131,16 @@ struct data_heap
 
 struct texture_entry
 {
-	int m_format;
+	u8 m_format;
+	bool m_is_dirty;
 	size_t m_width;
 	size_t m_height;
 	size_t m_mipmap;
-	bool m_is_dirty;
 
 	texture_entry() : m_format(0), m_width(0), m_height(0), m_is_dirty(true)
 	{}
 
-	texture_entry(int f, size_t w, size_t h, size_t m) : m_format(f), m_width(w), m_height(h), m_is_dirty(false)
+	texture_entry(u8 f, size_t w, size_t h, size_t m) : m_format(f), m_width(w), m_height(h), m_is_dirty(false)
 	{}
 
 	bool operator==(const texture_entry &other)
@@ -165,28 +165,28 @@ private:
 	std::unordered_map<u64, std::pair<texture_entry, ComPtr<ID3D12Resource>> > m_address_to_data; // Storage
 	std::list <std::tuple<u64, u32, u32> > m_protected_ranges; // address, start of protected range, size of protected range
 public:
-	void store_and_protect_data(u64 key, u32 start, size_t size, int format, size_t w, size_t h, size_t m, ComPtr<ID3D12Resource> data) noexcept;
+	void store_and_protect_data(u64 key, u32 start, size_t size, u8 format, size_t w, size_t h, size_t m, ComPtr<ID3D12Resource> data);
 
 	/**
 	* Make memory from start to start + size write protected.
 	* Associate key to this range so that when a write is detected, data at key is marked dirty.
 	*/
-	void protect_data(u64 key, u32 start, size_t size) noexcept;
+	void protect_data(u64 key, u32 start, size_t size);
 
 	/**
 	 * Remove all data containing addr from cache, unprotect them. Returns false if no data is modified.
 	 */
-	bool invalidate_address(u32 addr) noexcept;
+	bool invalidate_address(u32 addr);
 
-	std::pair<texture_entry, ComPtr<ID3D12Resource> > *find_data_if_available(u64 key) noexcept;
+	std::pair<texture_entry, ComPtr<ID3D12Resource> > *find_data_if_available(u64 key);
 
-	void unprotect_all() noexcept;
+	void unprotect_all();
 
 	/**
 	* Remove data stored at key, and returns a ComPtr owning it.
 	* The caller is responsible for releasing the ComPtr.
 	*/
-	ComPtr<ID3D12Resource> remove_from_cache(u64 key) noexcept;
+	ComPtr<ID3D12Resource> remove_from_cache(u64 key);
 };
 
 /**

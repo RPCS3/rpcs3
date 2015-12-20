@@ -24,7 +24,7 @@ ComPtr<ID2D1Bitmap1> g_d2d_render_targets[2];
 ComPtr<IDWriteTextFormat> g_text_format;
 ComPtr<ID2D1SolidColorBrush> g_text_brush;
 
-void draw_strings(const D2D1_SIZE_F &rtSize, size_t backbuffer_id, const std::vector<std::wstring> &strings) noexcept
+void draw_strings(const D2D1_SIZE_F &rtSize, size_t backbuffer_id, const std::vector<std::wstring> &strings)
 {
 	// Acquire our wrapped render target resource for the current back buffer.
 	g_d3d11on12_device->AcquireWrappedResources(g_wrapped_backbuffers[backbuffer_id ].GetAddressOf(), 1);

@@ -1,5 +1,8 @@
 #pragma once
 
+// Will report exception and call std::abort() if put in catch(...)
+[[noreturn]] void catch_all_exceptions();
+
 // Thread control class
 class thread_ctrl final
 {

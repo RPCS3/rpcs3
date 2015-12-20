@@ -33,7 +33,7 @@ spu_recompiler::spu_recompiler()
 
 	LOG_SUCCESS(SPU, "SPU Recompiler (ASMJIT) created...");
 
-	fs::file("SPUJIT.log", fom::rewrite) << fmt::format("SPU JIT initialization...\n\nTitle: %s\nTitle ID: %s\n\n", Emu.GetTitle().c_str(), Emu.GetTitleID().c_str());
+	fs::file(fs::get_config_dir() + "SPUJIT.log", fom::rewrite) << fmt::format("SPU JIT initialization...\n\nTitle: %s\nTitle ID: %s\n\n", Emu.GetTitle().c_str(), Emu.GetTitleID().c_str());
 }
 
 void spu_recompiler::compile(spu_function_t& f)
@@ -218,7 +218,7 @@ void spu_recompiler::compile(spu_function_t& f)
 	log += "\n\n\n";
 
 	// Append log file
-	fs::file("SPUJIT.log", fom::write | fom::append) << log;
+	fs::file(fs::get_config_dir() + "SPUJIT.log", fom::write | fom::append) << log;
 }
 
 spu_recompiler::XmmLink spu_recompiler::XmmAlloc() // get empty xmm register

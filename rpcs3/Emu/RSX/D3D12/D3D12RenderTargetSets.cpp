@@ -17,7 +17,7 @@
 
 namespace
 {
-	UINT get_num_rtt(u8 color_target) noexcept
+	UINT get_num_rtt(u8 color_target)
 	{
 		switch (color_target)
 		{
@@ -28,10 +28,10 @@ namespace
 		case CELL_GCM_SURFACE_TARGET_MRT2: return 3;
 		case CELL_GCM_SURFACE_TARGET_MRT3: return 4;
 		}
-		unreachable("Wrong color target");
+		throw EXCEPTION("Wrong color_target (%d)", color_target);
 	}
 
-	std::vector<u8> get_rtt_indexes(u8 color_target) noexcept
+	std::vector<u8> get_rtt_indexes(u8 color_target)
 	{
 		switch (color_target)
 		{
@@ -42,10 +42,10 @@ namespace
 		case CELL_GCM_SURFACE_TARGET_MRT2: return{ 0, 1, 2 };
 		case CELL_GCM_SURFACE_TARGET_MRT3: return{ 0, 1, 2, 3 };
 		}
-		unreachable("Wrong color target");
+		throw EXCEPTION("Wrong color_target (%d)", color_target);
 	}
 
-	std::array<float, 4> get_clear_color(u32 clear_color) noexcept
+	std::array<float, 4> get_clear_color(u32 clear_color)
 	{
 		u8 clear_a = clear_color >> 24;
 		u8 clear_r = clear_color >> 16;
@@ -60,7 +60,7 @@ namespace
 		};
 	}
 
-	u8 get_clear_stencil(u32 register_value) noexcept
+	u8 get_clear_stencil(u32 register_value)
 	{
 		return register_value & 0xff;
 	}
@@ -113,7 +113,7 @@ void D3D12GSRender::clear_surface(u32 arg)
 
 	if (rpcs3::config.rsx.d3d12.debug_output.value())
 	{
-		ThrowIfFailed(get_current_resource_storage().command_list->Close());
+		CHECK_HRESULT(get_current_resource_storage().command_list->Close());
 		m_command_queue->ExecuteCommandLists(1, (ID3D12CommandList**)get_current_resource_storage().command_list.GetAddressOf());
 		get_current_resource_storage().set_new_command_list();
 	}
@@ -402,7 +402,7 @@ namespace
 	{
 		void *buffer;
 		// TODO: Use exact range
-		ThrowIfFailed(readback_heap.m_heap->Map(0, nullptr, &buffer));
+		CHECK_HRESULT(readback_heap.m_heap->Map(0, nullptr, &buffer));
 		void *mapped_buffer = (char*)buffer + offset_in_heap;
 		for (unsigned row = 0; row < height; row++)
 		{
@@ -417,7 +417,7 @@ namespace
 	void wait_for_command_queue(ID3D12Device *device, ID3D12CommandQueue *command_queue)
 	{
 		ComPtr<ID3D12Fence> fence;
-		ThrowIfFailed(device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(fence.GetAddressOf())));
+		CHECK_HRESULT(device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(fence.GetAddressOf())));
 		HANDLE handle = CreateEventEx(nullptr, FALSE, FALSE, EVENT_ALL_ACCESS);
 		fence->SetEventOnCompletion(1, handle);
 		command_queue->Signal(fence.Get(), 1);
@@ -474,7 +474,7 @@ void D3D12GSRender::copy_render_target_to_dma_location()
 		assert(m_uav_heap.can_alloc(uav_size));
 		size_t heap_offset = m_uav_heap.alloc(uav_size);
 
-		ThrowIfFailed(
+		CHECK_HRESULT(
 			m_device->CreatePlacedResource(
 				m_uav_heap.m_heap,
 				heap_offset,
@@ -486,7 +486,7 @@ void D3D12GSRender::copy_render_target_to_dma_location()
 			);
 
 		D3D12_DESCRIPTOR_HEAP_DESC descriptor_heap_desc = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV , 2, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE };
-		ThrowIfFailed(
+		CHECK_HRESULT(
 			m_device->CreateDescriptorHeap(&descriptor_heap_desc, IID_PPV_ARGS(descriptor_heap.GetAddressOf()))
 			);
 		D3D12_SHADER_RESOURCE_VIEW_DESC shader_resource_view_desc = {};
@@ -540,7 +540,7 @@ void D3D12GSRender::copy_render_target_to_dma_location()
 	}
 	if (need_transfer)
 	{
-		ThrowIfFailed(get_current_resource_storage().command_list->Close());
+		CHECK_HRESULT(get_current_resource_storage().command_list->Close());
 		m_command_queue->ExecuteCommandLists(1, (ID3D12CommandList**)get_current_resource_storage().command_list.GetAddressOf());
 		get_current_resource_storage().set_new_command_list();
 	}
@@ -554,7 +554,7 @@ void D3D12GSRender::copy_render_target_to_dma_location()
 		char *depth_buffer = (char*)ptr;
 		void *buffer;
 		// TODO: Use exact range
-		ThrowIfFailed(m_readback_resources.m_heap->Map(0, nullptr, &buffer));
+		CHECK_HRESULT(m_readback_resources.m_heap->Map(0, nullptr, &buffer));
 		unsigned char *mapped_buffer = (unsigned char*)buffer + depth_buffer_offset_in_heap;
 
 		for (unsigned row = 0; row < (unsigned)clip_h; row++)
@@ -612,7 +612,7 @@ void D3D12GSRender::copy_render_targets_to_memory(void *buffer, u8 rtt)
 {
 	size_t heap_offset = download_to_readback_buffer(m_device.Get(), get_current_resource_storage().command_list.Get(), m_readback_resources, m_rtts.bound_render_targets[rtt], m_surface.color_format);
 
-	ThrowIfFailed(get_current_resource_storage().command_list->Close());
+	CHECK_HRESULT(get_current_resource_storage().command_list->Close());
 	m_command_queue->ExecuteCommandLists(1, (ID3D12CommandList**)get_current_resource_storage().command_list.GetAddressOf());
 	get_current_resource_storage().set_new_command_list();
 
@@ -657,7 +657,7 @@ void D3D12GSRender::copy_depth_buffer_to_memory(void *buffer)
 		&CD3DX12_TEXTURE_COPY_LOCATION(m_rtts.bound_depth_stencil, 0), nullptr);
 	get_current_resource_storage().command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_rtts.bound_depth_stencil, D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE));
 
-	ThrowIfFailed(get_current_resource_storage().command_list->Close());
+	CHECK_HRESULT(get_current_resource_storage().command_list->Close());
 	m_command_queue->ExecuteCommandLists(1, (ID3D12CommandList**)get_current_resource_storage().command_list.GetAddressOf());
 	get_current_resource_storage().set_new_command_list();
 
@@ -665,7 +665,7 @@ void D3D12GSRender::copy_depth_buffer_to_memory(void *buffer)
 	m_readback_resources.m_get_pos = m_readback_resources.get_current_put_pos_minus_one();
 
 	void *temp_buffer;
-	ThrowIfFailed(m_readback_resources.m_heap->Map(0, nullptr, &temp_buffer));
+	CHECK_HRESULT(m_readback_resources.m_heap->Map(0, nullptr, &temp_buffer));
 	void *mapped_buffer = (char*)temp_buffer + heap_offset;
 	for (unsigned row = 0; row < clip_h; row++)
 	{
@@ -695,7 +695,7 @@ void D3D12GSRender::copy_stencil_buffer_to_memory(void *buffer)
 		&CD3DX12_TEXTURE_COPY_LOCATION(m_rtts.bound_depth_stencil, 1), nullptr);
 	get_current_resource_storage().command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_rtts.bound_depth_stencil, D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE));
 
-	ThrowIfFailed(get_current_resource_storage().command_list->Close());
+	CHECK_HRESULT(get_current_resource_storage().command_list->Close());
 	m_command_queue->ExecuteCommandLists(1, (ID3D12CommandList**)get_current_resource_storage().command_list.GetAddressOf());
 	get_current_resource_storage().set_new_command_list();
 
@@ -703,7 +703,7 @@ void D3D12GSRender::copy_stencil_buffer_to_memory(void *buffer)
 	m_readback_resources.m_get_pos = m_readback_resources.get_current_put_pos_minus_one();
 
 	void *temp_buffer;
-	ThrowIfFailed(m_readback_resources.m_heap->Map(0, nullptr, &temp_buffer));
+	CHECK_HRESULT(m_readback_resources.m_heap->Map(0, nullptr, &temp_buffer));
 	void *mapped_buffer = (char*)temp_buffer + heap_offset;
 	for (unsigned row = 0; row < clip_h; row++)
 	{

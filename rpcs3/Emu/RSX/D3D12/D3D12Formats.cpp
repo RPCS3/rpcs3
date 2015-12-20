@@ -6,7 +6,7 @@
 #include "Emu/RSX/GCM.h"
 
 
-D3D12_BLEND_OP get_blend_op(u16 op) noexcept
+D3D12_BLEND_OP get_blend_op(u16 op)
 {
 	switch (op)
 	{
@@ -18,12 +18,12 @@ D3D12_BLEND_OP get_blend_op(u16 op) noexcept
 	case CELL_GCM_FUNC_ADD_SIGNED:
 	case CELL_GCM_FUNC_REVERSE_ADD_SIGNED:
 	case CELL_GCM_FUNC_REVERSE_SUBTRACT_SIGNED:
-		unreachable("Unsupported blend op used %x, please report this to a developer.", op);
+		break;
 	}
-	unreachable("Unimplemented blend op used %x, please report this to a developer.", op);
+	throw EXCEPTION("Invalid or unsupported blend op (0x%x)", op);
 }
 
-D3D12_BLEND get_blend_factor(u16 factor) noexcept
+D3D12_BLEND get_blend_factor(u16 factor)
 {
 	switch (factor)
 	{
@@ -42,12 +42,12 @@ D3D12_BLEND get_blend_factor(u16 factor) noexcept
 	case CELL_GCM_ONE_MINUS_CONSTANT_COLOR:
 	case CELL_GCM_CONSTANT_ALPHA:
 	case CELL_GCM_ONE_MINUS_CONSTANT_ALPHA:
-		unreachable("Unsupported blend color factor used %x, please report this to a developer.", factor);
+		break;
 	}
-	unreachable("Unimplemented blend color factor used %x, please report this to a developer.", factor);
+	throw EXCEPTION("Invalid or unsupported blend factor (0x%x)", factor);
 }
 
-D3D12_BLEND get_blend_factor_alpha(u16 factor) noexcept
+D3D12_BLEND get_blend_factor_alpha(u16 factor)
 {
 	switch (factor)
 	{
@@ -66,15 +66,15 @@ D3D12_BLEND get_blend_factor_alpha(u16 factor) noexcept
 	case CELL_GCM_ONE_MINUS_CONSTANT_COLOR:
 	case CELL_GCM_CONSTANT_ALPHA:
 	case CELL_GCM_ONE_MINUS_CONSTANT_ALPHA:
-		unreachable("Unsupported blend alpha factor used %x, please report this to a developer.", factor);
+		break;
 	}
-	unreachable("Unimplemented blend alpha factor used %x, please report this to a developer.", factor);
+	throw EXCEPTION("Invalid or unsupported blend alpha factor (0x%x)", factor);
 }
 
 /**
 * Convert GCM logic op code to D3D12 one
 */
-D3D12_LOGIC_OP get_logic_op(u32 op) noexcept
+D3D12_LOGIC_OP get_logic_op(u32 op)
 {
 	switch (op)
 	{
@@ -94,13 +94,13 @@ D3D12_LOGIC_OP get_logic_op(u32 op) noexcept
 	case CELL_GCM_OR_INVERTED: return D3D12_LOGIC_OP_OR_INVERTED;
 	case CELL_GCM_NAND: return D3D12_LOGIC_OP_NAND;
 	}
-	unreachable("Unimplemented logic op used %x, please report this to a developer.", op);
+	throw EXCEPTION("Invalid logic op (0x%x)", op);
 }
 
 /**
 * Convert GCM stencil op code to D3D12 one
 */
-D3D12_STENCIL_OP get_stencil_op(u32 op) noexcept
+D3D12_STENCIL_OP get_stencil_op(u32 op)
 {
 	switch (op)
 	{
@@ -113,10 +113,10 @@ D3D12_STENCIL_OP get_stencil_op(u32 op) noexcept
 	case CELL_GCM_INCR_WRAP: return D3D12_STENCIL_OP_INCR;
 	case CELL_GCM_DECR_WRAP: return D3D12_STENCIL_OP_DECR;
 	}
-	unreachable("Unimplemented stencil op used %x, please report this to a developer.", op);
+	throw EXCEPTION("Invalid stencil op (0x%x)", op);
 }
 
-D3D12_COMPARISON_FUNC get_compare_func(u32 op) noexcept
+D3D12_COMPARISON_FUNC get_compare_func(u32 op)
 {
 	switch (op)
 	{
@@ -129,12 +129,12 @@ D3D12_COMPARISON_FUNC get_compare_func(u32 op) noexcept
 	case CELL_GCM_GEQUAL: return D3D12_COMPARISON_FUNC_GREATER_EQUAL;
 	case CELL_GCM_ALWAYS: return D3D12_COMPARISON_FUNC_ALWAYS;
 	case CELL_GCM_ZERO:
-		unreachable("Unsupported compare function used %x, please report this to a developer.", op);
+		break;
 	}
-	unreachable("Unimplemented compare function used %x, please report this to a developer.", op);
+	throw EXCEPTION("Invalid or unsupported compare func (0x%x)", op);
 }
 
-DXGI_FORMAT get_texture_format(int format) noexcept
+DXGI_FORMAT get_texture_format(u8 format)
 {
 	switch (format)
 	{
@@ -167,12 +167,12 @@ DXGI_FORMAT get_texture_format(int format) noexcept
 	case CELL_GCM_TEXTURE_COMPRESSED_HILO_S8:
 	case ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN) & CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8:
 	case ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN) & CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8:
-		unreachable("Unsupported texture format used %x, please report this to a developer.", format);
+		break;
 	}
-	unreachable("Unimplemented texture format used %x, please report this to a developer.", format);
+	throw EXCEPTION("Invalid or unsupported texture format (0x%x)", format);
 }
 
-UINT get_texture_max_aniso(u8 aniso) noexcept
+UINT get_texture_max_aniso(u8 aniso)
 {
 	switch (aniso)
 	{
@@ -185,10 +185,10 @@ UINT get_texture_max_aniso(u8 aniso) noexcept
 	case CELL_GCM_TEXTURE_MAX_ANISO_12: return 12;
 	case CELL_GCM_TEXTURE_MAX_ANISO_16: return 16;
 	}
-	unreachable("Unimplemented texture max aniso used %x, please report this to a developer.", aniso);
+	throw EXCEPTION("Invalid texture max aniso (0x%x)", aniso);
 }
 
-D3D12_TEXTURE_ADDRESS_MODE get_texture_wrap_mode(u8 wrap) noexcept
+D3D12_TEXTURE_ADDRESS_MODE get_texture_wrap_mode(u8 wrap)
 {
 	switch (wrap)
 	{
@@ -201,12 +201,12 @@ D3D12_TEXTURE_ADDRESS_MODE get_texture_wrap_mode(u8 wrap) noexcept
 	case CELL_GCM_TEXTURE_MIRROR_ONCE_BORDER: return D3D12_TEXTURE_ADDRESS_MODE_MIRROR_ONCE;
 	case CELL_GCM_TEXTURE_MIRROR_ONCE_CLAMP: return D3D12_TEXTURE_ADDRESS_MODE_MIRROR_ONCE;
 	}
-	unreachable("Unimplemented texture wrap mode used %x, please report this to a developer.", wrap);
+	throw EXCEPTION("Invalid texture wrap mode (0x%x)", wrap);
 }
 
 namespace
 {
-	void get_min_filter(u8 min_filter, D3D12_FILTER_TYPE &min, D3D12_FILTER_TYPE &mip) noexcept
+	void get_min_filter(u8 min_filter, D3D12_FILTER_TYPE &min, D3D12_FILTER_TYPE &mip)
 	{
 		switch (min_filter)
 		{
@@ -239,21 +239,21 @@ namespace
 			mip = D3D12_FILTER_TYPE_POINT;
 			return;
 		}
-		unreachable("Unimplemented min filter used %x, please report this to a developer.", min_filter);
+		throw EXCEPTION("Invalid max filter (0x%x)", min_filter);
 	}
 
-	D3D12_FILTER_TYPE get_mag_filter(u8 mag_filter) noexcept
+	D3D12_FILTER_TYPE get_mag_filter(u8 mag_filter)
 	{
 		switch (mag_filter)
 		{
 		case CELL_GCM_TEXTURE_NEAREST: return D3D12_FILTER_TYPE_POINT;
 		case CELL_GCM_TEXTURE_LINEAR: return D3D12_FILTER_TYPE_LINEAR;
 		}
-		unreachable("Unimplemented mag filter used %x, please report this to a developer.", mag_filter);
+		throw EXCEPTION("Invalid mag filter (0x%x)", mag_filter);
 	}
 }
 
-D3D12_FILTER get_texture_filter(u8 min_filter, u8 mag_filter) noexcept
+D3D12_FILTER get_texture_filter(u8 min_filter, u8 mag_filter)
 {
 	D3D12_FILTER_TYPE min, mip;
 	get_min_filter(min_filter, min, mip);
@@ -261,7 +261,7 @@ D3D12_FILTER get_texture_filter(u8 min_filter, u8 mag_filter) noexcept
 	return D3D12_ENCODE_BASIC_FILTER(min, mag, mip, D3D12_FILTER_REDUCTION_TYPE_STANDARD);
 }
 
-D3D12_PRIMITIVE_TOPOLOGY get_primitive_topology(u8 draw_mode) noexcept
+D3D12_PRIMITIVE_TOPOLOGY get_primitive_topology(u8 draw_mode)
 {
 	switch (draw_mode)
 	{
@@ -276,10 +276,10 @@ D3D12_PRIMITIVE_TOPOLOGY get_primitive_topology(u8 draw_mode) noexcept
 	case CELL_GCM_PRIMITIVE_QUAD_STRIP: return D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 	case CELL_GCM_PRIMITIVE_POLYGON: return D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 	}
-	unreachable("Unimplemented draw mode used %x, please report this to a developer.", draw_mode);
+	throw EXCEPTION("Invalid draw mode (0x%x)", draw_mode);
 }
 
-D3D12_PRIMITIVE_TOPOLOGY_TYPE get_primitive_topology_type(u8 draw_mode) noexcept
+D3D12_PRIMITIVE_TOPOLOGY_TYPE get_primitive_topology_type(u8 draw_mode)
 {
 	switch (draw_mode)
 	{
@@ -293,12 +293,12 @@ D3D12_PRIMITIVE_TOPOLOGY_TYPE get_primitive_topology_type(u8 draw_mode) noexcept
 	case CELL_GCM_PRIMITIVE_QUAD_STRIP: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 	case CELL_GCM_PRIMITIVE_POLYGON: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 	case CELL_GCM_PRIMITIVE_LINE_LOOP:
-		unreachable("Unsupported draw mode used %x, please report this to a developer.", draw_mode);
+		break;
 	}
-	unreachable("Unimplemented draw mode used %x, please report this to a developer.", draw_mode);
+	throw EXCEPTION("Invalid or unsupported draw mode (0x%x)", draw_mode);
 }
 
-DXGI_FORMAT get_color_surface_format(u8 format) noexcept
+DXGI_FORMAT get_color_surface_format(u8 format)
 {
 	switch (format)
 	{
@@ -307,71 +307,71 @@ DXGI_FORMAT get_color_surface_format(u8 format) noexcept
 	case CELL_GCM_SURFACE_F_W16Z16Y16X16: return DXGI_FORMAT_R16G16B16A16_FLOAT;
 	case CELL_GCM_SURFACE_F_X32: return DXGI_FORMAT_R32_FLOAT;
 	}
-	unreachable("Unimplemented color surface format used %x, please report this to a developer.", format);
+	throw EXCEPTION("Invalid format (0x%x)", format);
 }
 
-DXGI_FORMAT get_depth_stencil_surface_format(u8 format) noexcept
+DXGI_FORMAT get_depth_stencil_surface_format(u8 format)
 {
 	switch (format)
 	{
 	case CELL_GCM_SURFACE_Z16: return DXGI_FORMAT_D16_UNORM;
 	case CELL_GCM_SURFACE_Z24S8: return DXGI_FORMAT_D24_UNORM_S8_UINT;
 	}
-	unreachable("Unimplemented depth stencil surface format used %x, please report this to a developer.", format);
+	throw EXCEPTION("Invalid format (0x%x)", format);
 }
 
-DXGI_FORMAT get_depth_stencil_surface_clear_format(u8 format) noexcept
+DXGI_FORMAT get_depth_stencil_surface_clear_format(u8 format)
 {
 	switch (format)
 	{
 	case CELL_GCM_SURFACE_Z16: return DXGI_FORMAT_D16_UNORM;
 	case CELL_GCM_SURFACE_Z24S8: return DXGI_FORMAT_D24_UNORM_S8_UINT;
 	}
-	unreachable("Unimplemented depth stencil surface format used %x, please report this to a developer.", format);
+	throw EXCEPTION("Invalid format (0x%x)", format);
 }
 
-DXGI_FORMAT get_depth_stencil_typeless_surface_format(u8 format) noexcept
+DXGI_FORMAT get_depth_stencil_typeless_surface_format(u8 format)
 {
 	switch (format)
 	{
 	case CELL_GCM_SURFACE_Z16: return DXGI_FORMAT_R16_TYPELESS;
 	case CELL_GCM_SURFACE_Z24S8: return DXGI_FORMAT_R24G8_TYPELESS;
 	}
-	unreachable("Unimplemented depth stencil surface format used %x, please report this to a developer.", format);
+	throw EXCEPTION("Invalid format (0x%x)", format);
 }
 
-DXGI_FORMAT get_depth_samplable_surface_format(u8 format) noexcept
+DXGI_FORMAT get_depth_samplable_surface_format(u8 format)
 {
 	switch (format)
 	{
 	case CELL_GCM_SURFACE_Z16: return DXGI_FORMAT_R16_FLOAT;
 	case CELL_GCM_SURFACE_Z24S8: return DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
 	}
-	unreachable("Unimplemented depth stencil surface format used %x, please report this to a developer.", format);
+	throw EXCEPTION("Invalid format (0x%x)", format);
 }
 
-BOOL get_front_face_ccw(u32 set_front_face_value) noexcept
+BOOL get_front_face_ccw(u32 ffv)
 {
-	switch (set_front_face_value)
+	switch (ffv)
 	{
 	default: // Disgaea 3 pass some garbage value at startup, this is needed to survive.
 	case CELL_GCM_CW: return FALSE;
 	case CELL_GCM_CCW: return TRUE;
 	}
-	unreachable("Unimplemented front face value used %x, please report this to a developer.", set_front_face_value);
+	throw EXCEPTION("Invalid front face value (0x%x)", ffv);
 }
 
-DXGI_FORMAT get_index_type(u8 index_type) noexcept
+DXGI_FORMAT get_index_type(u8 index_type)
 {
 	switch (index_type)
 	{
 	case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_16: return DXGI_FORMAT_R16_UINT;
 	case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_32: return DXGI_FORMAT_R32_UINT;
 	}
-	unreachable("Unimplemented index type used %x, please report this to a developer.", index_type);
+	throw EXCEPTION("Invalid index_type (0x%x)", index_type);
 }
 
-DXGI_FORMAT get_vertex_attribute_format(u8 type, u8 size) noexcept
+DXGI_FORMAT get_vertex_attribute_format(u8 type, u8 size)
 {
 	switch (type)
 	{
@@ -384,7 +384,7 @@ DXGI_FORMAT get_vertex_attribute_format(u8 type, u8 size) noexcept
 		case 3: return DXGI_FORMAT_R16G16B16A16_SNORM; // No 3 channel type
 		case 4: return DXGI_FORMAT_R16G16B16A16_SNORM;
 		}
-		unreachable("Unimplemented type size used %x, please report this to a developer.", size);
+		break;
 	}
 	case CELL_GCM_VERTEX_F:
 	{
@@ -395,7 +395,7 @@ DXGI_FORMAT get_vertex_attribute_format(u8 type, u8 size) noexcept
 		case 3: return DXGI_FORMAT_R32G32B32_FLOAT;
 		case 4: return DXGI_FORMAT_R32G32B32A32_FLOAT;
 		}
-		unreachable("Unimplemented type size used %x, please report this to a developer.", size);
+		break;
 	}
 	case CELL_GCM_VERTEX_SF:
 	{
@@ -406,7 +406,7 @@ DXGI_FORMAT get_vertex_attribute_format(u8 type, u8 size) noexcept
 		case 3: return DXGI_FORMAT_R16G16B16A16_FLOAT; // No 3 channel type
 		case 4: return DXGI_FORMAT_R16G16B16A16_FLOAT;
 		}
-		unreachable("Unimplemented type size used %x, please report this to a developer.", size);
+		break;
 	}
 	case CELL_GCM_VERTEX_UB:
 	{
@@ -417,7 +417,7 @@ DXGI_FORMAT get_vertex_attribute_format(u8 type, u8 size) noexcept
 		case 3: return DXGI_FORMAT_R8G8B8A8_UNORM; // No 3 channel type
 		case 4: return DXGI_FORMAT_R8G8B8A8_UNORM;
 		}
-		unreachable("Unimplemented type size used %x, please report this to a developer.", size);
+		break;
 	}
 	case CELL_GCM_VERTEX_S32K:
 	{
@@ -428,7 +428,7 @@ DXGI_FORMAT get_vertex_attribute_format(u8 type, u8 size) noexcept
 		case 3: return DXGI_FORMAT_R16G16B16A16_SINT; // No 3 channel type
 		case 4: return DXGI_FORMAT_R16G16B16A16_SINT;
 		}
-		unreachable("Unimplemented type size used %x, please report this to a developer.", size);
+		break;
 	}
 	case CELL_GCM_VERTEX_CMP:
 	{
@@ -439,7 +439,7 @@ DXGI_FORMAT get_vertex_attribute_format(u8 type, u8 size) noexcept
 		case 3: return DXGI_FORMAT_R32G32B32_FLOAT;
 		case 4: return DXGI_FORMAT_R32G32B32A32_FLOAT;
 		}
-		unreachable("Unimplemented type size used %x, please report this to a developer.", size);
+		break;
 	}
 	case CELL_GCM_VERTEX_UB256:
 	{
@@ -450,13 +450,14 @@ DXGI_FORMAT get_vertex_attribute_format(u8 type, u8 size) noexcept
 		case 3: return DXGI_FORMAT_R8G8B8A8_UINT; // No 3 channel type
 		case 4: return DXGI_FORMAT_R8G8B8A8_UINT;
 		}
-		unreachable("Unimplemented type size used %x, please report this to a developer.", size);
+		break;
 	}
 	}
-	unreachable("Unimplemented type used %x, please report this to a developer.", size);
+
+	throw EXCEPTION("Invalid or unsupported type or size (type=0x%x, size=0x%x)", type, size);
 }
 
-D3D12_RECT get_scissor(u32 horizontal, u32 vertical) noexcept
+D3D12_RECT get_scissor(u32 horizontal, u32 vertical)
 {
 	return{
 		horizontal & 0xFFFF,

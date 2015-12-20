@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "config.h"
-#include <fstream>
+
+#include "Utilities/File.h"
 
 namespace rpcs3
 {
@@ -32,23 +33,13 @@ namespace rpcs3
 
 	void config_t::load()
 	{
-		if (!m_path.empty())
-		{
-			std::ifstream stream{ m_path };
-			if (stream)
-				deserialize(stream);
-		}
+		from_string(fs::file(m_path));
 	}
 
 	void config_t::save() const
 	{
-		if (!m_path.empty())
-		{
-			std::ofstream stream{ m_path };
-			if (stream)
-				serialize(stream);
-		}
+		fs::file(m_path, fom::rewrite) << to_string();
 	}
 
-	config_t config{ "rpcs3.new.ini" };
+	config_t config{ fs::get_config_dir() + "rpcs3.new.ini" };
 }

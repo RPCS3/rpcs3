@@ -37,8 +37,6 @@
 #include "Emu/RSX/D3D12/D3D12GSRender.h"
 #endif
 
-#include <wx/stdpaths.h>
-
 #ifdef _WIN32
 #include <wx/msw/wrapwin.h>
 #endif
@@ -147,9 +145,9 @@ bool Rpcs3App::OnInit()
 		}
 	};
 
-	callbacks.get_msg_dialog = []() -> std::unique_ptr<MsgDialogBase>
+	callbacks.get_msg_dialog = []() -> std::shared_ptr<MsgDialogBase>
 	{
-		return std::make_unique<MsgDialogFrame>();
+		return std::make_shared<MsgDialogFrame>();
 	};
 
 	callbacks.get_save_dialog = []() -> std::unique_ptr<SaveDialogBase>
@@ -163,12 +161,7 @@ bool Rpcs3App::OnInit()
 	SetAppName(_PRGNAME_);
 	wxInitAllImageHandlers();
 
-	// RPCS3 assumes the current working directory is the folder where it is contained, so we make sure this is true
-	const wxString executablePath = wxPathOnly(wxStandardPaths::Get().GetExecutablePath());
-	wxSetWorkingDirectory(executablePath);
-
 	Emu.Init();
-	Emu.SetEmulatorPath(executablePath.ToStdString());
 
 	m_MainFrame = new MainFrame();
 	SetTopWindow(m_MainFrame);

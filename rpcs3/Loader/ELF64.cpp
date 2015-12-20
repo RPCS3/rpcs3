@@ -132,7 +132,7 @@ namespace loader
 							info.name = std::string(module_info.name, 28);
 							info.rtoc = module_info.toc + segment.begin.addr();
 
-							LOG_WARNING(LOADER, "%s (rtoc=%x):", info.name, info.rtoc);
+							LOG_WARNING(LOADER, "%s (rtoc=0x%x):", info.name, info.rtoc);
 
 							sys_prx_library_info_t lib;
 							for (u32 e = module_info.exports_start.addr();

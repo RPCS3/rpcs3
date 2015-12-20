@@ -485,9 +485,6 @@
     <ClCompile Include="Emu\SysCalls\LogBase.cpp">
       <Filter>Emu\SysCalls</Filter>
     </ClCompile>
-    <ClCompile Include="..\Utilities\rMsgBox.cpp">
-      <Filter>Utilities</Filter>
-    </ClCompile>
     <ClCompile Include="..\Utilities\rPlatform.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
@@ -1416,9 +1413,6 @@
       <Filter>Emu\Io\Null</Filter>
     </ClInclude>
     <ClInclude Include="..\Utilities\MTRingbuffer.h">
-      <Filter>Utilities</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Utilities\rMsgBox.h">
       <Filter>Utilities</Filter>
     </ClInclude>
     <ClInclude Include="..\Utilities\rPlatform.h">

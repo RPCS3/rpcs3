@@ -4,14 +4,14 @@
 #include "D3D12MemoryHelpers.h"
 
 
-void data_cache::store_and_protect_data(u64 key, u32 start, size_t size, int format, size_t w, size_t h, size_t m, ComPtr<ID3D12Resource> data) noexcept
+void data_cache::store_and_protect_data(u64 key, u32 start, size_t size, u8 format, size_t w, size_t h, size_t m, ComPtr<ID3D12Resource> data)
 {
 	std::lock_guard<std::mutex> lock(m_mut);
 	m_address_to_data[key] = std::make_pair(texture_entry(format, w, h, m), data);
 	protect_data(key, start, size);
 }
 
-void data_cache::protect_data(u64 key, u32 start, size_t size) noexcept
+void data_cache::protect_data(u64 key, u32 start, size_t size)
 {
 	/// align start to 4096 byte
 	u32 protected_range_start = align(start, 4096);
@@ -20,7 +20,7 @@ void data_cache::protect_data(u64 key, u32 start, size_t size) noexcept
 	vm::page_protect(protected_range_start, protected_range_size, 0, 0, vm::page_writable);
 }
 
-bool data_cache::invalidate_address(u32 addr) noexcept
+bool data_cache::invalidate_address(u32 addr)
 {
 	bool handled = false;
 	auto It = m_protected_ranges.begin(), E = m_protected_ranges.end();
@@ -44,7 +44,7 @@ bool data_cache::invalidate_address(u32 addr) noexcept
 	return handled;
 }
 
-std::pair<texture_entry, ComPtr<ID3D12Resource> > *data_cache::find_data_if_available(u64 key) noexcept
+std::pair<texture_entry, ComPtr<ID3D12Resource> > *data_cache::find_data_if_available(u64 key)
 {
 	std::lock_guard<std::mutex> lock(m_mut);
 	auto It = m_address_to_data.find(key);
@@ -53,7 +53,7 @@ std::pair<texture_entry, ComPtr<ID3D12Resource> > *data_cache::find_data_if_avai
 	return &It->second;
 }
 
-void data_cache::unprotect_all() noexcept
+void data_cache::unprotect_all()
 {
 	std::lock_guard<std::mutex> lock(m_mut);
 	for (auto &protectedTexture : m_protected_ranges)
@@ -63,7 +63,7 @@ void data_cache::unprotect_all() noexcept
 	}
 }
 
-ComPtr<ID3D12Resource> data_cache::remove_from_cache(u64 key) noexcept
+ComPtr<ID3D12Resource> data_cache::remove_from_cache(u64 key)
 {
 	auto result = m_address_to_data[key].second;
 	m_address_to_data.erase(key);
@@ -78,13 +78,13 @@ void resource_storage::reset()
 	render_targets_descriptors_heap_index = 0;
 	depth_stencil_descriptor_heap_index = 0;
 
-	ThrowIfFailed(command_allocator->Reset());
+	CHECK_HRESULT(command_allocator->Reset());
 	set_new_command_list();
 }
 
 void resource_storage::set_new_command_list()
 {
-	ThrowIfFailed(command_list->Reset(command_allocator.Get(), nullptr));
+	CHECK_HRESULT(command_list->Reset(command_allocator.Get(), nullptr));
 }
 
 void resource_storage::init(ID3D12Device *device)
@@ -93,17 +93,17 @@ void resource_storage::init(ID3D12Device *device)
 	m_device = device;
 	ram_framebuffer = nullptr;
 	// Create a global command allocator
-	ThrowIfFailed(device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(command_allocator.GetAddressOf())));
+	CHECK_HRESULT(device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(command_allocator.GetAddressOf())));
 
-	ThrowIfFailed(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, command_allocator.Get(), nullptr, IID_PPV_ARGS(command_list.GetAddressOf())));
-	ThrowIfFailed(command_list->Close());
+	CHECK_HRESULT(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, command_allocator.Get(), nullptr, IID_PPV_ARGS(command_list.GetAddressOf())));
+	CHECK_HRESULT(command_list->Close());
 
 	D3D12_DESCRIPTOR_HEAP_DESC descriptor_heap_desc = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 10000, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE };
-	ThrowIfFailed(device->CreateDescriptorHeap(&descriptor_heap_desc, IID_PPV_ARGS(&descriptors_heap)));
+	CHECK_HRESULT(device->CreateDescriptorHeap(&descriptor_heap_desc, IID_PPV_ARGS(&descriptors_heap)));
 
 	D3D12_DESCRIPTOR_HEAP_DESC sampler_heap_desc = { D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER , 2048, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE };
-	ThrowIfFailed(device->CreateDescriptorHeap(&sampler_heap_desc, IID_PPV_ARGS(&sampler_descriptor_heap[0])));
-	ThrowIfFailed(device->CreateDescriptorHeap(&sampler_heap_desc, IID_PPV_ARGS(&sampler_descriptor_heap[1])));
+	CHECK_HRESULT(device->CreateDescriptorHeap(&sampler_heap_desc, IID_PPV_ARGS(&sampler_descriptor_heap[0])));
+	CHECK_HRESULT(device->CreateDescriptorHeap(&sampler_heap_desc, IID_PPV_ARGS(&sampler_descriptor_heap[1])));
 
 	D3D12_DESCRIPTOR_HEAP_DESC ds_descriptor_heap_desc = { D3D12_DESCRIPTOR_HEAP_TYPE_DSV , 10000};
 	device->CreateDescriptorHeap(&ds_descriptor_heap_desc, IID_PPV_ARGS(&depth_stencil_descriptor_heap));
@@ -113,7 +113,7 @@ void resource_storage::init(ID3D12Device *device)
 
 	frame_finished_handle = CreateEventEx(nullptr, FALSE, FALSE, EVENT_ALL_ACCESS);
 	fence_value = 0;
-	ThrowIfFailed(device->CreateFence(fence_value++, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(frame_finished_fence.GetAddressOf())));
+	CHECK_HRESULT(device->CreateFence(fence_value++, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(frame_finished_fence.GetAddressOf())));
 }
 
 void resource_storage::wait_and_clean()
@@ -121,7 +121,7 @@ void resource_storage::wait_and_clean()
 	if (in_use)
 		WaitForSingleObjectEx(frame_finished_handle, INFINITE, FALSE);
 	else
-		ThrowIfFailed(command_list->Close());
+		CHECK_HRESULT(command_list->Close());
 
 	reset();
 

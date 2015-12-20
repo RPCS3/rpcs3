@@ -159,4 +159,5 @@ public:
 	void set_defaults();
 
 	std::string to_string() const;
+	void from_string(const std::string&);
 };

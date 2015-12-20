@@ -34,11 +34,32 @@
 #include "Loader/ELF32.h"
 
 #include "../Crypto/unself.h"
-#include <fstream>
+
 using namespace PPU_instr;
 
 static const std::string& BreakPointsDBName = "BreakPoints.dat";
 static const u16 bpdb_version = 0x1000;
+
+// Draft (not used)
+struct bpdb_header_t
+{
+	le_t<u32> magic;
+	le_t<u32> version;
+	le_t<u32> count;
+	le_t<u32> marked;
+
+	// POD
+	bpdb_header_t() = default;
+
+	bpdb_header_t(u32 count, u32 marked)
+		: magic(*reinterpret_cast<const u32*>("BPDB"))
+		, version(0x00010000)
+		, count(count)
+		, marked(marked)
+	{
+	}
+};
+
 extern std::atomic<u32> g_thread_count;
 
 extern u64 get_system_time();
@@ -88,7 +109,7 @@ void Emulator::SetTitle(const std::string& title)
 
 void Emulator::CreateConfig(const std::string& name)
 {
-	const std::string& path = "data/" + name;
+	const std::string& path = fs::get_config_dir() + "data/" + name;
 	const std::string& ini_file = path + "/settings.ini";
 
 	if (!fs::is_dir("data"))
@@ -264,7 +285,7 @@ void Emulator::Load()
 		{
 			title_id = title_id.substr(0, 4) + "-" + title_id.substr(4, 5);
 			CreateConfig(title_id);
-			rpcs3::config_t custom_config { "data/" + title_id + "/settings.ini" };
+			rpcs3::config_t custom_config { fs::get_config_dir() + "data/" + title_id + "/settings.ini" };
 			custom_config.load();
 			rpcs3::state.config = custom_config;
 		}
@@ -300,7 +321,7 @@ void Emulator::Load()
 		return;
 	}
 	
-	LoadPoints(BreakPointsDBName);
+	LoadPoints(fs::get_config_dir() + BreakPointsDBName);
 
 	GetGSManager().Init();
 	GetCallbackManager().Init();
@@ -458,7 +479,7 @@ void Emulator::Stop()
 
 	// TODO: check finalization order
 
-	SavePoints(BreakPointsDBName);
+	SavePoints(fs::get_config_dir() + BreakPointsDBName);
 	m_break_points.clear();
 	m_marked_points.clear();
 
@@ -482,84 +503,50 @@ void Emulator::Stop()
 
 void Emulator::SavePoints(const std::string& path)
 {
-	std::ofstream f(path, std::ios::binary | std::ios::trunc);
+	const u32 break_count = size32(m_break_points);
+	const u32 marked_count = size32(m_marked_points);
 
-	u32 break_count = (u32)m_break_points.size();
-	u32 marked_count = (u32)m_marked_points.size();
-
-	f.write((char*)(&bpdb_version), sizeof(bpdb_version));
-	f.write((char*)(&break_count), sizeof(break_count));
-	f.write((char*)(&marked_count), sizeof(marked_count));
-	
-	if (break_count)
-	{
-		f.write((char*)(m_break_points.data()), sizeof(u64) * break_count);
-	}
-
-	if (marked_count)
-	{
-		f.write((char*)(m_marked_points.data()), sizeof(u64) * marked_count);
-	}
+	fs::file(path, fom::rewrite)
+		<< bpdb_version
+		<< break_count
+		<< marked_count
+		<< m_break_points
+		<< m_marked_points;
 }
 
 bool Emulator::LoadPoints(const std::string& path)
 {
-	if (!fs::is_file(path)) return false;
-	std::ifstream f(path, std::ios::binary);
-	if (!f.is_open())
-		return false;
-	f.seekg(0, std::ios::end);
-	u64 length = (u64)f.tellg();
-	f.seekg(0, std::ios::beg);
-
-	u16 version;
-	u32 break_count, marked_count;
-
-	u64 expected_length = sizeof(bpdb_version) + sizeof(break_count) + sizeof(marked_count);
-
-	if (length < expected_length)
+	if (fs::file f{ path })
 	{
-		LOG_ERROR(LOADER,
-			"'%s' breakpoint db is broken (file is too short, length=0x%x)",
-			path, length);
-		return false;
-	}
+		u16 version;
+		u32 break_count;
+		u32 marked_count;
 
-	f.read((char*)(&version), sizeof(version));
+		if (!f.read(version) || !f.read(break_count) || !f.read(marked_count))
+		{
+			LOG_ERROR(LOADER, "BP file '%s' is broken (length=0x%llx)", path, f.size());
+			return false;
+		}
 
-	if (version != bpdb_version)
-	{
-		LOG_ERROR(LOADER,
-			"'%s' breakpoint db version is unsupported (version=0x%x, length=0x%x)",
-			path, version, length);
-		return false;
-	}
+		if (version != bpdb_version)
+		{
+			LOG_ERROR(LOADER, "BP file '%s' has unsupported version (version=0x%x)", path, version);
+			return false;
+		}
 
-	f.read((char*)(&break_count), sizeof(break_count));
-	f.read((char*)(&marked_count), sizeof(marked_count));
-	expected_length += break_count * sizeof(u64) + marked_count * sizeof(u64);
-
-	if (expected_length != length)
-	{
-		LOG_ERROR(LOADER,
-			"'%s' breakpoint db format is incorrect "
-			"(version=0x%x, break_count=0x%x, marked_count=0x%x, length=0x%x)",
-			path, version, break_count, marked_count, length);
-		return false;
-	}
-
-	if (break_count > 0)
-	{
 		m_break_points.resize(break_count);
-		f.read((char*)(m_break_points.data()), sizeof(u64) * break_count);
+		m_marked_points.resize(marked_count);
+
+		if (!f.read(m_break_points) || !f.read(m_marked_points))
+		{
+			LOG_ERROR(LOADER, "'BP file %s' is broken (length=0x%llx, break_count=%u, marked_count=%u)", path, f.size(), break_count, marked_count);
+			return false;
+		}
+
+		return true;
 	}
 
-	if (marked_count > 0)
-	{
-		m_marked_points.resize(marked_count);
-		f.read((char*)(m_marked_points.data()), sizeof(u64) * marked_count);
-	}
-	return true;
+	return false;
 }
 
 Emulator Emu;

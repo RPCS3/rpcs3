@@ -15,7 +15,7 @@ struct EmuCallbacks
 	std::function<std::unique_ptr<class PadHandlerBase>()> get_pad_handler;
 	std::function<std::unique_ptr<class GSFrameBase>(frame_type)> get_gs_frame;
 	std::function<std::shared_ptr<class GSRender>()> get_gs_render;
-	std::function<std::unique_ptr<class MsgDialogBase>()> get_msg_dialog;
+	std::function<std::shared_ptr<class MsgDialogBase>()> get_msg_dialog;
 	std::function<std::unique_ptr<class SaveDialogBase>()> get_save_dialog;
 };
 
@@ -102,7 +102,6 @@ class Emulator final
 
 	std::string m_path;
 	std::string m_elf_path;
-	std::string m_emu_path;
 	std::string m_title_id;
 	std::string m_title;
 
@@ -170,11 +169,6 @@ public:
 		return m_elf_path;
 	}
 
-	const std::string& GetEmulatorPath() const
-	{
-		return m_emu_path;
-	}
-
 	const std::string& GetTitleID() const
 	{
 		return m_title_id;
@@ -183,11 +177,6 @@ public:
 	const std::string& GetTitle() const
 	{
 		return m_title;
-	}
-
-	void SetEmulatorPath(const std::string& path)
-	{
-		m_emu_path = path;
 	}
 
 	u64 GetPauseTime()

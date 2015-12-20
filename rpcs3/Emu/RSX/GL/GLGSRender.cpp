@@ -466,7 +466,7 @@ void GLTexture::save(rsx::texture& tex, const std::string& name)
 		return;
 	}
 
-	fs::file(name + ".raw", fom::rewrite).write(alldata, texPixelCount * 4);
+	fs::file(fs::get_config_dir() + name + ".raw", fom::rewrite).write(alldata, texPixelCount * 4);
 
 	u8* data = new u8[texPixelCount * 3];
 	u8* alpha = new u8[texPixelCount];
@@ -496,10 +496,10 @@ void GLTexture::save(rsx::texture& tex)
 	static const std::string& dir_path = "textures";
 	static const std::string& file_fmt = dir_path + "/" + "tex[%d].png";
 
-	if (!fs::exists(dir_path)) fs::create_dir(dir_path);
+	if (!fs::is_dir(dir_path)) fs::create_dir(dir_path);
 
 	u32 count = 0;
-	while (fs::exists(fmt::format(file_fmt.c_str(), count))) count++;
+	while (fs::is_file(fmt::format(file_fmt.c_str(), count))) count++;
 	save(tex, fmt::format(file_fmt.c_str(), count));
 }
 
@@ -886,7 +886,7 @@ void GLGSRender::end()
 	size_t vertex_arrays_offsets[rsx::limits::vertex_count];
 
 #if	DUMP_VERTEX_DATA
-	fs::file dump("VertexDataArray.dump", o_create | o_write);
+	fs::file dump(fs::get_config_dir() + "VertexDataArray.dump", fom::rewrite);
 	Emu.Pause();
 #endif
 

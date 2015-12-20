@@ -14,7 +14,7 @@ namespace
 struct texel_rgba
 {
 	template<size_t block_size>
-	static size_t copy_mipmap_level(void *dst, void *src, size_t row_count, size_t width_in_block, size_t dst_pitch_in_block, size_t src_pitch_in_block) noexcept
+	static size_t copy_mipmap_level(void *dst, void *src, size_t row_count, size_t width_in_block, size_t dst_pitch_in_block, size_t src_pitch_in_block)
 	{
 		for (unsigned row = 0; row < row_count; row++)
 			memcpy((char*)dst + row * dst_pitch_in_block * block_size, (char*)src + row * src_pitch_in_block * block_size, width_in_block * block_size);
@@ -29,7 +29,7 @@ struct texel_rgba
 struct texel_16b_swizzled
 {
 	template<size_t block_size>
-	static size_t copy_mipmap_level(void *dst, void *src, size_t row_count, size_t width_in_block, size_t dst_pitch_in_block, size_t src_pitch_in_block) noexcept
+	static size_t copy_mipmap_level(void *dst, void *src, size_t row_count, size_t width_in_block, size_t dst_pitch_in_block, size_t src_pitch_in_block)
 	{
 		u16 *castedSrc = static_cast<u16*>(src), *castedDst = static_cast<u16*>(dst);
 
@@ -51,7 +51,7 @@ struct texel_16b_swizzled
 struct texel_rgba_swizzled
 {
 	template<size_t block_size>
-	static size_t copy_mipmap_level(void *dst, void *src, size_t row_count, size_t width_in_block, size_t dst_pitch_in_block, size_t src_pitch_in_block) noexcept
+	static size_t copy_mipmap_level(void *dst, void *src, size_t row_count, size_t width_in_block, size_t dst_pitch_in_block, size_t src_pitch_in_block)
 	{
 		u32 *castedSrc, *castedDst;
 		castedSrc = (u32*)src;
@@ -70,7 +70,7 @@ struct texel_rgba_swizzled
  */
 struct texel_bc_format {
 	template<size_t block_size>
-	static size_t copy_mipmap_level(void *dst, void *src, size_t row_count, size_t width_in_block, size_t dst_pitch_in_block, size_t src_pitch_in_block) noexcept
+	static size_t copy_mipmap_level(void *dst, void *src, size_t row_count, size_t width_in_block, size_t dst_pitch_in_block, size_t src_pitch_in_block)
 	{
 		for (unsigned row = 0; row < row_count; row++)
 			memcpy((char*)dst + row * dst_pitch_in_block * block_size, (char*)src + row * width_in_block * block_size, width_in_block * block_size);
@@ -83,7 +83,7 @@ struct texel_bc_format {
 */
 struct texel_16b_format {
 	template<size_t block_size>
-	static size_t copy_mipmap_level(void *dst, void *src, size_t row_count, size_t width_in_block, size_t dst_pitch_in_block, size_t src_pitch_in_block) noexcept
+	static size_t copy_mipmap_level(void *dst, void *src, size_t row_count, size_t width_in_block, size_t dst_pitch_in_block, size_t src_pitch_in_block)
 	{
 		unsigned short *castedDst = (unsigned short *)dst, *castedSrc = (unsigned short *)src;
 
@@ -102,7 +102,7 @@ struct texel_16b_format {
 */
 struct texel_16bX4_format {
 	template<size_t block_size>
-	static size_t copy_mipmap_level(void *dst, void *src, size_t row_count, size_t width_in_block, size_t dst_pitch_in_block, size_t src_pitch_in_block) noexcept
+	static size_t copy_mipmap_level(void *dst, void *src, size_t row_count, size_t width_in_block, size_t dst_pitch_in_block, size_t src_pitch_in_block)
 	{
 		unsigned short *casted_dst = (unsigned short *)dst, *casted_src = (unsigned short *)src;
 		for (unsigned row = 0; row < row_count; row++)
@@ -123,7 +123,7 @@ struct texel_16bX4_format {
  * mipmap level (to allow same code for packed/non packed texels)
  */
 template <typename T, size_t block_size_in_bytes, size_t block_edge_in_texel = 1>
-std::vector<MipmapLevelInfo> copy_texture_data(void *dst, const void *src, size_t widthInBlock, size_t heightInBlock, size_t depth, size_t mipmapCount) noexcept
+std::vector<MipmapLevelInfo> copy_texture_data(void *dst, const void *src, size_t widthInBlock, size_t heightInBlock, size_t depth, size_t mipmapCount)
 {
 	std::vector<MipmapLevelInfo> Result;
 	size_t offsetInDst = 0, offsetInSrc = 0;
@@ -157,7 +157,7 @@ std::vector<MipmapLevelInfo> copy_texture_data(void *dst, const void *src, size_
  * A texture is stored as an array of blocks, where a block is a pixel for standard texture
  * but is a structure containing several pixels for compressed format
  */
-size_t get_texture_block_size(u32 format) noexcept
+size_t get_texture_block_size(u32 format)
 {
 	switch (format)
 	{
@@ -191,12 +191,12 @@ size_t get_texture_block_size(u32 format) noexcept
 	case ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN) & CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8:
 	case ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN) & CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8:
 	default:
-		LOG_ERROR(RSX, "Unimplemented Texture format : %x", format);
+		LOG_ERROR(RSX, "Unimplemented Texture format : 0x%x", format);
 		return 0;
 	}
 }
 
-size_t get_texture_block_edge(u32 format) noexcept
+size_t get_texture_block_edge(u32 format)
 {
 	switch (format)
 	{
@@ -230,14 +230,14 @@ size_t get_texture_block_edge(u32 format) noexcept
 	case ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN) & CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8:
 	case ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN) & CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8:
 	default:
-		LOG_ERROR(RSX, "Unimplemented Texture format : %x", format);
+		LOG_ERROR(RSX, "Unimplemented Texture format : 0x%x", format);
 		return 0;
 	}
 }
 }
 
 
-size_t get_placed_texture_storage_size(const rsx::texture &texture, size_t rowPitchAlignement) noexcept
+size_t get_placed_texture_storage_size(const rsx::texture &texture, size_t rowPitchAlignement)
 {
 	size_t w = texture.width(), h = texture.height();
 
@@ -253,7 +253,7 @@ size_t get_placed_texture_storage_size(const rsx::texture &texture, size_t rowPi
 	return rowPitch * heightInBlocks * (texture.cubemap() ? 6 : 1) * 2; // * 2 for mipmap levels
 }
 
-std::vector<MipmapLevelInfo> upload_placed_texture(const rsx::texture &texture, size_t rowPitchAlignement, void* textureData) noexcept
+std::vector<MipmapLevelInfo> upload_placed_texture(const rsx::texture &texture, size_t rowPitchAlignement, void* textureData)
 {
 	size_t w = texture.width(), h = texture.height();
 	size_t depth = texture.depth();
@@ -301,7 +301,7 @@ std::vector<MipmapLevelInfo> upload_placed_texture(const rsx::texture &texture, 
 	}
 }
 
-size_t get_texture_size(const rsx::texture &texture) noexcept
+size_t get_texture_size(const rsx::texture &texture)
 {
 	size_t w = texture.width(), h = texture.height();
 
@@ -314,7 +314,7 @@ size_t get_texture_size(const rsx::texture &texture) noexcept
 	case ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN) & CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8:
 	case ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN) & CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8:
 	default:
-		LOG_ERROR(RSX, "Unimplemented Texture format : %x", format);
+		LOG_ERROR(RSX, "Unimplemented Texture format : 0x%x", format);
 		return 0;
 	case CELL_GCM_TEXTURE_B8:
 		return w * h;

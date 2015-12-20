@@ -163,3 +163,10 @@ std::string config_context_t::to_string() const
 
 	return result.str();
 }
+
+void config_context_t::from_string(const std::string& str)
+{
+	std::istringstream source(str);
+
+	deserialize(source);
+}

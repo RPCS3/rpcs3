@@ -31,7 +31,7 @@ struct frame_capture_data
 	std::vector<std::pair<u32, u32> > command_queue;
 	std::vector<draw_state> draw_calls;
 
-	void reset() noexcept
+	void reset()
 	{
 		command_queue.clear();
 		draw_calls.clear();
@@ -345,13 +345,13 @@ namespace rsx
 		 * Vertex shader's position is to be multiplied by this matrix.
 		 * if is_d3d is set, the matrix is modified to use d3d convention.
 		 */
-		void fill_scale_offset_data(void *buffer, bool is_d3d = true) const noexcept;
+		void fill_scale_offset_data(void *buffer, bool is_d3d = true) const;
 
 		/**
 		* Fill buffer with vertex program constants.
 		* Buffer must be at least 512 float4 wide.
 		*/
-		void fill_vertex_program_constants_data(void *buffer) noexcept;
+		void fill_vertex_program_constants_data(void *buffer);
 
 		/**
 		 * Copy rtt values to buffer.

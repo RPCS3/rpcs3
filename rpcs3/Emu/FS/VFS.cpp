@@ -480,7 +480,6 @@ void VFS::Init(const std::string& path)
 		}
 		
 		std::string mpath = entry.path;
-		// TODO: This shouldn't use current dir
 		// If no value assigned to SysEmulationDirPath in INI, use the path that with executable.
 		if (rpcs3::config.system.emulation_dir_path_enable.value())
 		{
@@ -488,7 +487,7 @@ void VFS::Init(const std::string& path)
 		}
 		else
 		{
-			fmt::Replace(mpath, "$(EmulatorDir)", Emu.GetEmulatorPath());
+			fmt::Replace(mpath, "$(EmulatorDir)", fs::get_executable_dir());
 		}
 		fmt::Replace(mpath, "$(GameDir)", cwd);
 		Mount(entry.mount, mpath, dev);
@@ -531,7 +530,7 @@ void VFS::SaveLoadDevices(std::vector<VFSManagerEntry>& res, bool is_load)
 
 		if (dir.empty())
 		{
-			rpcs3::config.system.emulation_dir_path = Emu.GetEmulatorPath();
+			rpcs3::config.system.emulation_dir_path = fs::get_executable_dir();
 		}
 
 		if (!fs::is_dir(dir))
