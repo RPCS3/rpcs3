@@ -36,7 +36,7 @@ s32 sys_mmapper_allocate_address(u64 size, u64 flags, u64 alignment, vm::ptr<u32
 	// This is a 'hack' / workaround for psl1ght, which gives us an alignment of 0, which is technically invalid, 
 	//  but apparently is allowed on actual ps3
 	//  https://github.com/ps3dev/PSL1GHT/blob/534e58950732c54dc6a553910b653c99ba6e9edc/ppu/librt/sbrk.c#L71 
-	if (!alignment && size == 0x10000000)
+	if (!alignment)
 	{
 		alignment = 0x10000000;
 	}
@@ -283,7 +283,8 @@ s32 sys_mmapper_map_memory(u32 addr, u32 mem_id, u64 flags)
 
 	if (const u32 old_addr = mem->addr)
 	{
-		throw EXCEPTION("Already mapped (mem_id=0x%x, addr=0x%x)", mem_id, old_addr);
+		sys_mmapper.Warning("sys_mmapper_map_memory: Already mapped (mem_id=0x%x, addr=0x%x)", mem_id, old_addr);
+		return CELL_OK;
 	}
 
 	if (!area->falloc(addr, mem->size))
