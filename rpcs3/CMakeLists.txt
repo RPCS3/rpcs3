@@ -17,7 +17,7 @@ if(CMAKE_COMPILER_IS_GNUCXX)
 		message(FATAL_ERROR "GCC ${CMAKE_CXX_COMPILER_VERSION} is too old.")
 	endif()
 	# Warnings
-	add_compile_options(-Wno-attributes -Wno-enum-compare -Wno-invalid-offsetof)
+	add_compile_options(-fpermissive -Wno-attributes -Wno-enum-compare -Wno-invalid-offsetof)
 elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
 	add_compile_options(-ftemplate-depth=1024)
 	if(APPLE)
