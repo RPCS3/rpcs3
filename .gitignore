@@ -33,6 +33,7 @@
 /build
 /bin
 /lib
+/tmp
 /ipch
 /rpcs3/Debug
 /rpcs3/Release
