@@ -112,6 +112,9 @@ ${LLVM_INCLUDE_DIRS}
 "${RPCS3_SRC_DIR}/.."
 "${RPCS3_SRC_DIR}/../asmjit/src/asmjit"
 "${RPCS3_SRC_DIR}/../glm"
+"${RPCS3_SRC_DIR}/../common/include"
+"${RPCS3_SRC_DIR}/../rsx_program_decompiler/rsx_decompiler"
+"${RPCS3_SRC_DIR}/../rsx_program_decompiler/shader_code"
 )
 if(WIN32)
 	include_directories(BEFORE "${RPCS3_SRC_DIR}/../minidx9/Include")
@@ -159,6 +162,9 @@ RPCS3_SRC
 "${RPCS3_SRC_DIR}/Loader/*"
 "${RPCS3_SRC_DIR}/Crypto/*"
 "${RPCS3_SRC_DIR}/../Utilities/*"
+"${RPCS3_SRC_DIR}/../common/src/*"
+"${RPCS3_SRC_DIR}/../rsx_program_decompiler/rsx_decompiler/*"
+"${RPCS3_SRC_DIR}/../rsx_program_decompiler/shader_code/*"
 )
 
 add_executable(rpcs3 ${RPCS3_SRC})
