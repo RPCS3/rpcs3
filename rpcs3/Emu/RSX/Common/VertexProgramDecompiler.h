@@ -19,6 +19,12 @@
 */
 struct VertexProgramDecompiler
 {
+	D0 d0;
+	D1 d1;
+	D2 d2;
+	D3 d3;
+	SRC src[3];
+
 	struct FuncInfo
 	{
 		u32 offset;
