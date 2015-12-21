@@ -51,38 +51,40 @@ namespace rsx
 	};
 }
 
-template<>
-struct convert::to_impl_t<rsx::shader_language, std::string>
+namespace convert
 {
-	static rsx::shader_language func(const std::string &from)
+	template<>
+	struct to_impl_t<rsx::shader_language, std::string>
 	{
-		if (from == "glsl")
-			return rsx::shader_language::glsl;
-
-		if (from == "hlsl")
-			return rsx::shader_language::hlsl;
-
-		throw;
-	}
-};
-
-template<>
-struct convert::to_impl_t<std::string, rsx::shader_language>
-{
-	static std::string func(rsx::shader_language from)
-	{
-		switch (from)
+		static rsx::shader_language func(const std::string &from)
 		{
-		case rsx::shader_language::glsl:
-			return "glsl";
-		case rsx::shader_language::hlsl:
-			return "hlsl";
+			if (from == "glsl")
+				return rsx::shader_language::glsl;
+
+			if (from == "hlsl")
+				return rsx::shader_language::hlsl;
+
+			throw;
 		}
+	};
 
-		throw;
-	}
-};
+	template<>
+	struct to_impl_t<std::string, rsx::shader_language>
+	{
+		static std::string func(rsx::shader_language from)
+		{
+			switch (from)
+			{
+			case rsx::shader_language::glsl:
+				return "glsl";
+			case rsx::shader_language::hlsl:
+				return "hlsl";
+			}
 
+			throw;
+		}
+	};
+}
 namespace rsx
 {
 	namespace limits
