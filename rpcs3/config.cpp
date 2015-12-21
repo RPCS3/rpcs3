@@ -33,7 +33,10 @@ namespace rpcs3
 
 	void config_t::load()
 	{
-		from_string(fs::file(m_path));
+		fs::file file(m_path);
+
+		if (file)
+			from_string((const std::string)file);
 	}
 
 	void config_t::save() const

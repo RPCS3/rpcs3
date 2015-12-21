@@ -19,6 +19,11 @@
  */
 class FragmentProgramDecompiler
 {
+	OPDEST dst;
+	SRC0 src0;
+	SRC1 src1;
+	SRC2 src2;
+
 	std::string main;
 	u32 m_addr;
 	u32& m_size;
