@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Utilities/Thread.h"
-#include <common/SleepQueue.h>
 
 enum CPUThreadType
 {
@@ -49,7 +48,10 @@ protected:
 	CPUThread(CPUThreadType type, const std::string& name);
 
 public:
-	using named_thread_t::shared_from_this;
+	std::shared_ptr<sleep_entry_t> shared_sleep_entry() override
+	{
+		return std::static_pointer_cast<CPUThread>(shared_from_this());
+	}
 
 	virtual ~CPUThread() override;
 
