@@ -133,12 +133,6 @@ void ppu_recompiler_llvm::Compiler::translate_to_llvm_ir(llvm::Module *module, c
 	m_ir_builder->SetInsertPoint(GetBasicBlockFromAddress(0));
 	m_ir_builder->CreateBr(GetBasicBlockFromAddress(start_address));
 
-	// Used to decode instructions
-	PPUDisAsm dis_asm(CPUDisAsm_DumpMode);
-	dis_asm.offset = vm::ps3::_ptr<u8>(start_address);
-
-//	m_recompilation_engine.Log() << "Recompiling block :\n\n";
-
 	// Convert each instruction in the CFG to LLVM IR
 	std::vector<PHINode *> exit_instr_list;
 	for (u32 instructionAddress = start_address; instructionAddress < start_address + instruction_count * 4; instructionAddress += 4) {
@@ -148,11 +142,6 @@ void ppu_recompiler_llvm::Compiler::translate_to_llvm_ir(llvm::Module *module, c
 		m_ir_builder->SetInsertPoint(instr_bb);
 
 		u32 instr = vm::ps3::read32(instructionAddress);
-
-		// Dump PPU opcode
-		dis_asm.dump_pc = instructionAddress;
-		(*PPU_instr::main_list)(&dis_asm, instr);
-//		m_recompilation_engine.Log() << dis_asm.last_opcode;
 
 		Decode(instr);
 		if (!m_state.hit_branch_instruction)
@@ -195,9 +184,6 @@ void ppu_recompiler_llvm::Compiler::translate_to_llvm_ir(llvm::Module *module, c
 			exit_instr_i->addIncoming(m_ir_builder->getInt32(pred_address), *pred_i);
 		}
 	}
-
-//	m_recompilation_engine.Log() << "LLVM bytecode:\n";
-//	m_recompilation_engine.Log() << *m_module;
 
 	std::string        verify;
 	raw_string_ostream verify_ostream(verify);
@@ -392,9 +378,11 @@ std::pair<Executable, llvm::ExecutionEngine *> RecompilationEngine::compile(cons
 
 	Compiler(&m_llvm_context, &m_ir_builder, function_ptrs)
 		.translate_to_llvm_ir(module.get(), name, start_address, instruction_count);
-	Compiler::optimise_module(module.get());
+
 	llvm::Module *module_ptr = module.get();
 
+	Log() << *module_ptr;
+	Compiler::optimise_module(module_ptr);
 
 	llvm::ExecutionEngine *execution_engine =
 		EngineBuilder(std::move(module))
@@ -441,10 +429,17 @@ bool RecompilationEngine::AnalyseBlock(BlockEntry &functionData, size_t maxSize)
 	functionData.calledFunctions.clear();
 	functionData.is_analysed = true;
 	functionData.is_compilable_function = true;
-	Log() << "Analysing " << (void*)(uint64_t)startAddress << "\n";
+	Log() << "Analysing " << (void*)(uint64_t)startAddress << "hit " << functionData.num_hits << "\n";
+	// Used to decode instructions
+	PPUDisAsm dis_asm(CPUDisAsm_DumpMode);
+	dis_asm.offset = vm::ps3::_ptr<u8>(startAddress);
 	for (size_t instructionAddress = startAddress; instructionAddress < startAddress + maxSize; instructionAddress += 4)
 	{
 		u32 instr = vm::ps3::read32((u32)instructionAddress);
+
+		dis_asm.dump_pc = instructionAddress - startAddress;
+		(*PPU_instr::main_list)(&dis_asm, instr);
+		Log() << dis_asm.last_opcode;
 		functionData.instructionCount++;
 		if (instr == PPU_instr::implicts::BLR() && instructionAddress >= farthestBranchTarget && functionData.is_compilable_function)
 		{
