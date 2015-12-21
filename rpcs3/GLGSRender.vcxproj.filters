@@ -19,6 +19,7 @@
     <ClCompile Include="Emu\RSX\GL\OpenGL.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\RSX\GL\rsx_gl_texture.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Emu\RSX\GL\gl_helpers.h">
@@ -45,6 +46,7 @@
     <ClInclude Include="Emu\RSX\GL\OpenGL.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\RSX\GL\rsx_gl_texture.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Source Files">

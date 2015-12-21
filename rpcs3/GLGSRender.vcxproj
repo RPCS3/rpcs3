@@ -124,6 +124,7 @@
     <ClInclude Include="Emu\RSX\GL\GLVertexProgram.h" />
     <ClInclude Include="Emu\RSX\GL\gl_helpers.h" />
     <ClInclude Include="Emu\RSX\GL\OpenGL.h" />
+    <ClInclude Include="Emu\RSX\GL\rsx_gl_texture.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Emu\RSX\GL\GLCommonDecompiler.cpp" />
@@ -132,6 +133,7 @@
     <ClCompile Include="Emu\RSX\GL\GLVertexProgram.cpp" />
     <ClCompile Include="Emu\RSX\GL\gl_helpers.cpp" />
     <ClCompile Include="Emu\RSX\GL\OpenGL.cpp" />
+    <ClCompile Include="Emu\RSX\GL\rsx_gl_texture.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

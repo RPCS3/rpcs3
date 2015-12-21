@@ -1,6 +1,7 @@
 #pragma once
 #include "Emu/RSX/GSRender.h"
 #include "gl_helpers.h"
+#include "rsx_gl_texture.h"
 
 #define RSX_DEBUG 1
 
@@ -8,53 +9,14 @@
 
 #pragma comment(lib, "opengl32.lib")
 
-class GLTexture
-{
-	u32 m_id = 0;
-
-public:
-	void create();
-
-	int gl_wrap(int wrap);
-
-	float max_aniso(int aniso);
-
-	inline static u8 convert_4_to_8(u8 v)
-	{
-		// Swizzle bits: 00001234 -> 12341234
-		return (v << 4) | (v);
-	}
-
-	inline static u8 convert_5_to_8(u8 v)
-	{
-		// Swizzle bits: 00012345 -> 12345123
-		return (v << 3) | (v >> 2);
-	}
-
-	inline static u8 convert_6_to_8(u8 v)
-	{
-		// Swizzle bits: 00123456 -> 12345612
-		return (v << 2) | (v >> 4);
-	}
-
-	void init(rsx::texture& tex);
-	void save(rsx::texture& tex, const std::string& name);
-	void save(rsx::texture& tex);
-	void bind();
-	void unbind();
-	void remove();
-
-	u32 id() const;
-};
-
 class GLGSRender : public GSRender
 {
 private:
 	GLFragmentProgram m_fragment_prog;
 	GLVertexProgram m_vertex_prog;
 
-	GLTexture m_gl_textures[rsx::limits::textures_count];
-	GLTexture m_gl_vertex_textures[rsx::limits::vertex_textures_count];
+	rsx::gl::texture m_gl_textures[rsx::limits::textures_count];
+	rsx::gl::texture m_gl_vertex_textures[rsx::limits::vertex_textures_count];
 
 	gl::glsl::program *m_program;
 
