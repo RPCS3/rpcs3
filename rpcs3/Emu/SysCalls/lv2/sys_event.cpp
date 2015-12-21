@@ -43,7 +43,7 @@ void lv2_event_queue_t::push(lv2_lock_t& lv2_lock, u64 source, u64 data1, u64 da
 	// notify waiter; protocol is ignored in current implementation
 	auto& thread = sq.front();
 
-	if (type == SYS_PPU_QUEUE && thread->get_type() == CPU_THREAD_PPU)
+	if (type == SYS_PPU_QUEUE && std::static_pointer_cast<CPUThread>(thread)->get_type() == CPU_THREAD_PPU)
 	{
 		// store event data in registers
 		auto& ppu = static_cast<PPUThread&>(*thread);
@@ -53,7 +53,7 @@ void lv2_event_queue_t::push(lv2_lock_t& lv2_lock, u64 source, u64 data1, u64 da
 		ppu.GPR[6] = data2;
 		ppu.GPR[7] = data3;
 	}
-	else if (type == SYS_SPU_QUEUE && thread->get_type() == CPU_THREAD_SPU)
+	else if (type == SYS_SPU_QUEUE && std::static_pointer_cast<CPUThread>(thread)->get_type() == CPU_THREAD_SPU)
 	{
 		// store event data in In_MBox
 		auto& spu = static_cast<SPUThread&>(*thread);
@@ -62,10 +62,10 @@ void lv2_event_queue_t::push(lv2_lock_t& lv2_lock, u64 source, u64 data1, u64 da
 	}
 	else
 	{
-		throw EXCEPTION("Unexpected (queue_type=%d, thread_type=%d)", type, thread->get_type());
+		throw EXCEPTION("Unexpected (queue_type=%d, thread_type=%d)", type, std::static_pointer_cast<CPUThread>(thread)->get_type());
 	}
 
-	if (!sq.front()->signal())
+	if (!std::static_pointer_cast<CPUThread>(sq.front())->signal())
 	{
 		throw EXCEPTION("Thread already signaled");
 	}
@@ -140,20 +140,20 @@ s32 sys_event_queue_destroy(u32 equeue_id, s32 mode)
 	// signal all threads to return CELL_ECANCELED
 	for (auto& thread : queue->sq)
 	{
-		if (queue->type == SYS_PPU_QUEUE && thread->get_type() == CPU_THREAD_PPU)
+		if (queue->type == SYS_PPU_QUEUE && std::static_pointer_cast<CPUThread>(thread)->get_type() == CPU_THREAD_PPU)
 		{
 			static_cast<PPUThread&>(*thread).GPR[3] = 1;
 		}
-		else if (queue->type == SYS_SPU_QUEUE && thread->get_type() == CPU_THREAD_SPU)
+		else if (queue->type == SYS_SPU_QUEUE && std::static_pointer_cast<CPUThread>(thread)->get_type() == CPU_THREAD_SPU)
 		{
 			static_cast<SPUThread&>(*thread).ch_in_mbox.set_values(1, CELL_ECANCELED);
 		}
 		else
 		{
-			throw EXCEPTION("Unexpected (queue_type=%d, thread_type=%d)", queue->type, thread->get_type());
+			throw EXCEPTION("Unexpected (queue_type=%d, thread_type=%d)", queue->type, std::static_pointer_cast<CPUThread>(thread)->get_type());
 		}
 
-		thread->signal();
+		std::static_pointer_cast<CPUThread>(thread)->signal();
 	}
 
 	return CELL_OK;

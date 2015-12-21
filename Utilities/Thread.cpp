@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "Log.h"
+#include <common/Log.h>
 #include "Emu/System.h"
 #include "Emu/state.h"
 #include "Emu/CPU/CPUThreadManager.h"

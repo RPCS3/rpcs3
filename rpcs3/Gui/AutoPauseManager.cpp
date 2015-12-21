@@ -2,8 +2,6 @@
 #include "stdafx_gui.h"
 #include "Emu/System.h"
 #include "AutoPauseManager.h"
-#include "Utilities/Log.h"
-#include "Utilities/File.h"
 
 //TODO::Get the enable configuration from ini.
 AutoPauseManagerDialog::AutoPauseManagerDialog(wxWindow* parent)

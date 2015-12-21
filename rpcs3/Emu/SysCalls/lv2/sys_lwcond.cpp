@@ -94,7 +94,7 @@ s32 _sys_lwcond_signal(u32 lwcond_id, u32 lwmutex_id, u32 ppu_thread_id, u32 mod
 	// pick waiter; protocol is ignored in current implementation
 	const auto found = !~ppu_thread_id ? cond->sq.begin() : std::find_if(cond->sq.begin(), cond->sq.end(), [=](sleep_queue_t::value_type& thread)
 	{
-		return thread->get_id() == ppu_thread_id;
+		return std::static_pointer_cast<CPUThread>(thread)->get_id() == ppu_thread_id;
 	});
 
 	if (found == cond->sq.end())

@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #ifdef LLVM_AVAILABLE
-#include "Utilities/Log.h"
 #include "Emu/System.h"
 #include "Emu/Cell/PPULLVMRecompiler.h"
 #include "Emu/Memory/Memory.h"

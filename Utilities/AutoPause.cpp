@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "AutoPause.h"
-#include "Utilities/Log.h"
-#include "Utilities/File.h"
+#include <common/Log.h>
+#include <common/File.h>
 #include "Emu/System.h"
 #include "Emu/state.h"
 

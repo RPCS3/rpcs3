@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "Utilities/Log.h"
 #include "Loader.h"
 #include "PSF.h"
 #include "Emu/FS/vfsLocalFile.h"

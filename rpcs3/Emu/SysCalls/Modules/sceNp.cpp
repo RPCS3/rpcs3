@@ -6,7 +6,6 @@
 #include "Emu/SysCalls/lv2/sys_process.h"
 
 #include "Emu/FS/VFS.h"
-#include "Utilities/File.h"
 #include "Emu/FS/vfsDir.h"
 #include "Crypto/unedat.h"
 #include "sceNp.h"

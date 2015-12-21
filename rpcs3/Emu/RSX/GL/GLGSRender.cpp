@@ -1,7 +1,5 @@
 #include "stdafx.h"
 #include "Utilities/rPlatform.h" // only for rImage
-#include "Utilities/File.h"
-#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/state.h"
@@ -11,6 +9,7 @@
 
 GLGSRender::GLGSRender() : GSRender(frame_type::OpenGL)
 {
+	shaders_cache.load(rsx::shader_language::glsl);
 }
 
 u32 GLGSRender::enable(u32 condition, u32 cap)

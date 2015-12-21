@@ -1,5 +1,6 @@
 #include "stdafx.h"
-#include "Utilities/rXml.h"
+#include "rXml.h"
+#include "wxfmt.h"
 #pragma warning(push)
 #pragma message("TODO: remove wx dependency: <wx/xml/xml.h>")
 #pragma warning(disable : 4996)

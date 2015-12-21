@@ -4,7 +4,6 @@
 #include "../Common/ProgramStateCache.h"
 #include "D3D12VertexProgramDecompiler.h"
 #include "D3D12FragmentProgramDecompiler.h"
-#include "Utilities/File.h"
 
 struct D3D12PipelineProperties
 {

@@ -31,7 +31,7 @@ class CPUThreadExit {}; // CPUThread::Exit exception event
 
 class CPUDecoder;
 
-class CPUThread : public named_thread_t
+class CPUThread : public named_thread_t, public sleep_entry_t
 {
 	void on_task() override;
 	void on_id_aux_finalize() override { exit(); } // call exit() instead of join()
@@ -48,6 +48,11 @@ protected:
 	CPUThread(CPUThreadType type, const std::string& name);
 
 public:
+	std::shared_ptr<sleep_entry_t> shared_sleep_entry() override
+	{
+		return std::static_pointer_cast<CPUThread>(shared_from_this());
+	}
+
 	virtual ~CPUThread() override;
 
 	virtual std::string get_name() const override;
@@ -90,10 +95,10 @@ public:
 	void step();
 
 	// trigger thread status check
-	void sleep();
+	void sleep() override;
 
 	// untrigger thread status check
-	void awake();
+	void awake() override;
 
 	// set SIGNAL and notify (returns true if set)
 	bool signal();

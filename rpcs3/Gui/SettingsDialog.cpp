@@ -5,8 +5,6 @@
 #include "Emu/state.h"
 #include "Emu/SysCalls/Modules/cellVideoOut.h"
 #include "SettingsDialog.h"
-#include "Utilities/Log.h"
-#include "Utilities/File.h"
 #include <wx/radiobox.h>
 
 #ifdef _WIN32

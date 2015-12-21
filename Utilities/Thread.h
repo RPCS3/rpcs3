@@ -1,4 +1,5 @@
 #pragma once
+#include <common/SleepQueue.h>
 
 // Will report exception and call std::abort() if put in catch(...)
 [[noreturn]] void catch_all_exceptions();

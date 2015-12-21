@@ -17,7 +17,7 @@ if(CMAKE_COMPILER_IS_GNUCXX)
 		message(FATAL_ERROR "GCC ${CMAKE_CXX_COMPILER_VERSION} is too old.")
 	endif()
 	# Warnings
-	add_compile_options(-Wno-attributes -Wno-enum-compare -Wno-invalid-offsetof)
+	add_compile_options(-fpermissive -Wno-attributes -Wno-enum-compare -Wno-invalid-offsetof)
 elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
 	add_compile_options(-ftemplate-depth=1024)
 	if(APPLE)
@@ -112,6 +112,10 @@ ${LLVM_INCLUDE_DIRS}
 "${RPCS3_SRC_DIR}/.."
 "${RPCS3_SRC_DIR}/../asmjit/src/asmjit"
 "${RPCS3_SRC_DIR}/../glm"
+"${RPCS3_SRC_DIR}/../common/include"
+"${RPCS3_SRC_DIR}/../common/include/common" #TODO: remove me
+"${RPCS3_SRC_DIR}/../rsx_program_decompiler/rsx_decompiler"
+"${RPCS3_SRC_DIR}/../rsx_program_decompiler/shader_code"
 )
 if(WIN32)
 	include_directories(BEFORE "${RPCS3_SRC_DIR}/../minidx9/Include")
@@ -159,6 +163,9 @@ RPCS3_SRC
 "${RPCS3_SRC_DIR}/Loader/*"
 "${RPCS3_SRC_DIR}/Crypto/*"
 "${RPCS3_SRC_DIR}/../Utilities/*"
+"${RPCS3_SRC_DIR}/../common/src/*"
+"${RPCS3_SRC_DIR}/../rsx_program_decompiler/rsx_decompiler/*"
+"${RPCS3_SRC_DIR}/../rsx_program_decompiler/shader_code/*"
 )
 
 add_executable(rpcs3 ${RPCS3_SRC})

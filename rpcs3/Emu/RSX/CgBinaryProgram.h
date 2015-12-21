@@ -1,7 +1,5 @@
 #pragma once
 #include <sstream>
-#include "Utilities/File.h"
-#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/RSX/GL/GLVertexProgram.h"
 #include "Emu/RSX/GL/GLFragmentProgram.h"

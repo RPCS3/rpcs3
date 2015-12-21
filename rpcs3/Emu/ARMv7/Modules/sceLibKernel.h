@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Utilities/SleepQueue.h"
+#include <common/SleepQueue.h>
 
 // Error Codes
 
@@ -479,7 +479,7 @@ struct psv_event_flag_t
 		{
 			static_cast<ARMv7Thread&>(*thread).GPR[0] = SCE_KERNEL_ERROR_WAIT_DELETE;
 			static_cast<ARMv7Thread&>(*thread).GPR[1] = pattern;
-			thread->signal();
+			static_cast<ARMv7Thread&>(*thread).signal();
 		}
 	}
 };

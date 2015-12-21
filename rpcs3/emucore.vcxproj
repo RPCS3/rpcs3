@@ -100,18 +100,11 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\Utilities\AutoPause.cpp" />
-    <ClCompile Include="..\Utilities\config_context.cpp" />
-    <ClCompile Include="..\Utilities\Log.cpp" />
-    <ClCompile Include="..\Utilities\File.cpp" />
     <ClCompile Include="..\Utilities\rPlatform.cpp" />
     <ClCompile Include="..\Utilities\rTime.cpp" />
     <ClCompile Include="..\Utilities\rXml.cpp" />
-    <ClCompile Include="..\Utilities\Semaphore.cpp" />
-    <ClCompile Include="..\Utilities\SharedMutex.cpp" />
-    <ClCompile Include="..\Utilities\SleepQueue.cpp" />
-    <ClCompile Include="..\Utilities\StrFmt.cpp" />
     <ClCompile Include="..\Utilities\Thread.cpp" />
-    <ClCompile Include="..\Utilities\VirtualMemory.cpp" />
+    <ClCompile Include="..\Utilities\wxfmt.cpp" />
     <ClCompile Include="config.cpp" />
     <ClCompile Include="Emu\Cell\PPUInterpreter.cpp" />
     <ClCompile Include="Emu\Cell\PPULLVMRecompilerCore.cpp" />
@@ -399,28 +392,12 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\Utilities\Atomic.h" />
     <ClInclude Include="..\Utilities\AutoPause.h" />
-    <ClInclude Include="..\Utilities\BEType.h" />
-    <ClInclude Include="..\Utilities\BitField.h" />
-    <ClInclude Include="..\Utilities\config_context.h" />
-    <ClInclude Include="..\Utilities\convert.h" />
-    <ClInclude Include="..\Utilities\event.h" />
-    <ClInclude Include="..\Utilities\GNU.h" />
-    <ClInclude Include="..\Utilities\MTRingbuffer.h" />
-    <ClInclude Include="..\Utilities\Log.h" />
-    <ClInclude Include="..\Utilities\File.h" />
     <ClInclude Include="..\Utilities\rPlatform.h" />
     <ClInclude Include="..\Utilities\rTime.h" />
     <ClInclude Include="..\Utilities\rXml.h" />
-    <ClInclude Include="..\Utilities\Semaphore.h" />
-    <ClInclude Include="..\Utilities\SharedMutex.h" />
-    <ClInclude Include="..\Utilities\SleepQueue.h" />
-    <ClInclude Include="..\Utilities\StrFmt.h" />
     <ClInclude Include="..\Utilities\Thread.h" />
-    <ClInclude Include="..\Utilities\Timer.h" />
-    <ClInclude Include="..\Utilities\types.h" />
-    <ClInclude Include="..\Utilities\VirtualMemory.h" />
+    <ClInclude Include="..\Utilities\wxfmt.h" />
     <ClInclude Include="config.h" />
     <ClInclude Include="Crypto\aes.h" />
     <ClInclude Include="Crypto\ec.h" />
@@ -688,22 +665,27 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug - MemLeak|x64'">
     <IntDir>$(SolutionDir)tmp\$(ProjectName)-$(Configuration)-$(Platform)\</IntDir>
     <OutDir>$(SolutionDir)lib\$(Configuration)-$(Platform)\</OutDir>
+    <IncludePath>$(SolutionDir)common\include\;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">
     <IntDir>$(SolutionDir)tmp\$(ProjectName)-$(Configuration)-$(Platform)\</IntDir>
     <OutDir>$(SolutionDir)lib\$(Configuration)-$(Platform)\</OutDir>
+    <IncludePath>$(SolutionDir)common\include\;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <IntDir>$(SolutionDir)tmp\$(ProjectName)-$(Configuration)-$(Platform)\</IntDir>
     <OutDir>$(SolutionDir)lib\$(Configuration)-$(Platform)\</OutDir>
+    <IncludePath>$(SolutionDir)common\include\;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <IntDir>$(SolutionDir)tmp\$(ProjectName)-$(Configuration)-$(Platform)\</IntDir>
     <OutDir>$(SolutionDir)lib\$(Configuration)-$(Platform)\</OutDir>
+    <IncludePath>$(SolutionDir)common\include\;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">
     <IntDir>$(SolutionDir)tmp\$(ProjectName)-$(Configuration)-$(Platform)\</IntDir>
     <OutDir>$(SolutionDir)lib\$(Configuration)-$(Platform)\</OutDir>
+    <IncludePath>$(SolutionDir)common\include\;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

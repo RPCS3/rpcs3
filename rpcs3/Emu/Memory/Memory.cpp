@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "Utilities/Log.h"
 #include "Memory.h"
 
 VirtualMemoryBlock RSXIOMem;

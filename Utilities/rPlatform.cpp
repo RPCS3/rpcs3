@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "restore_new.h"
-#include "Utilities/Log.h"
+#include <common/Log.h>
 #pragma warning(push)
 #pragma message("TODO: remove wx dependency: <wx/image.h>")
 #pragma warning(disable : 4996)
@@ -14,6 +14,7 @@
 #endif
 
 #include "rPlatform.h"
+#include "wxfmt.h"
 
 rImage::rImage()
 {

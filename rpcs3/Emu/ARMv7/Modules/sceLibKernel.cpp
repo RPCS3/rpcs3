@@ -619,7 +619,7 @@ s32 sceKernelCancelEventFlag(s32 evfId, u32 setPattern, vm::ptr<s32> pNumWaitThr
 	{
 		static_cast<ARMv7Thread&>(*thread).GPR[0] = SCE_KERNEL_ERROR_WAIT_CANCEL;
 		static_cast<ARMv7Thread&>(*thread).GPR[1] = setPattern;
-		thread->signal();
+		static_cast<ARMv7Thread&>(*thread).signal();
 	}
 
 	*pNumWaitThreads = static_cast<u32>(evf->sq.size());

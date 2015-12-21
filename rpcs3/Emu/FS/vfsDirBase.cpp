@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "Utilities/File.h"
 #include "vfsDirBase.h"
 
 vfsDirBase::vfsDirBase(vfsDevice* device)

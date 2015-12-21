@@ -295,7 +295,7 @@ s32 sys_event_flag_cancel(u32 id, vm::ptr<u32> num)
 		// clear "mode" as a sign of cancellation
 		ppu.GPR[5] = 0;
 
-		if (!thread->signal())
+		if (!std::static_pointer_cast<CPUThread>(thread)->signal())
 		{
 			throw EXCEPTION("Thread already signaled");
 		}

@@ -1,6 +1,6 @@
 #pragma once
-#include "Utilities/convert.h"
-#include "Utilities/config_context.h"
+#include <common/convert.h>
+#include <common/config_context.h>
 
 enum class audio_output_type
 {
