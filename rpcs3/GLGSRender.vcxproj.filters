@@ -4,9 +4,6 @@
     <ClCompile Include="Emu\RSX\GL\gl_helpers.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\RSX\GL\GLBuffers.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Emu\RSX\GL\GLCommonDecompiler.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -14,12 +11,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Emu\RSX\GL\GLGSRender.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\RSX\GL\GLProgram.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\RSX\GL\GLProgramBuffer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Emu\RSX\GL\GLVertexProgram.cpp">
@@ -33,9 +24,6 @@
     <ClInclude Include="Emu\RSX\GL\gl_helpers.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\RSX\GL\GLBuffers.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
     <ClInclude Include="Emu\RSX\GL\GLCommonDecompiler.h">
       <Filter>Source Files</Filter>
     </ClInclude>
@@ -46,9 +34,6 @@
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\GL\GLProcTable.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\RSX\GL\GLProgram.h">
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\GL\GLProgramBuffer.h">

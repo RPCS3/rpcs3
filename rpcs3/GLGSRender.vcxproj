@@ -67,24 +67,19 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Emu\RSX\GL\GLBuffers.h" />
     <ClInclude Include="Emu\RSX\GL\GLCommonDecompiler.h" />
     <ClInclude Include="Emu\RSX\GL\GLFragmentProgram.h" />
     <ClInclude Include="Emu\RSX\GL\GLGSRender.h" />
     <ClInclude Include="Emu\RSX\GL\GLProcTable.h" />
-    <ClInclude Include="Emu\RSX\GL\GLProgram.h" />
     <ClInclude Include="Emu\RSX\GL\GLProgramBuffer.h" />
     <ClInclude Include="Emu\RSX\GL\GLVertexProgram.h" />
     <ClInclude Include="Emu\RSX\GL\gl_helpers.h" />
     <ClInclude Include="Emu\RSX\GL\OpenGL.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Emu\RSX\GL\GLBuffers.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLCommonDecompiler.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLFragmentProgram.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLGSRender.cpp" />
-    <ClCompile Include="Emu\RSX\GL\GLProgram.cpp" />
-    <ClCompile Include="Emu\RSX\GL\GLProgramBuffer.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLVertexProgram.cpp" />
     <ClCompile Include="Emu\RSX\GL\gl_helpers.cpp" />
     <ClCompile Include="Emu\RSX\GL\OpenGL.cpp" />

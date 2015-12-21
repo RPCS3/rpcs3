@@ -1,6 +1,5 @@
 #pragma once
 #include "Emu/RSX/GSRender.h"
-#include "GLBuffers.h"
 #include "gl_helpers.h"
 
 #define RSX_DEBUG 1
