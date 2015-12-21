@@ -1,12 +1,12 @@
 #include "stdafx.h"
 #ifdef LLVM_AVAILABLE
-#include "Utilities/Log.h"
+#include "common/Log.h"
 #include "Emu/System.h"
 #include "Emu/state.h"
 #include "Emu/Cell/PPUDisAsm.h"
 #include "Emu/Cell/PPULLVMRecompiler.h"
 #include "Emu/Memory/Memory.h"
-#include "Utilities/VirtualMemory.h"
+#include "common/VirtualMemory.h"
 #ifdef _MSC_VER
 #pragma warning(push, 0)
 #endif

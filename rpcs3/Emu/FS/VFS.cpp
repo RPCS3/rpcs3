@@ -7,7 +7,6 @@
 #include "vfsDeviceLocalFile.h"
 #include "Emu/System.h"
 #include "Emu/state.h"
-#include "Utilities/Log.h"
 
 std::vector<std::string> simplify_path_blocks(const std::string& path)
 {

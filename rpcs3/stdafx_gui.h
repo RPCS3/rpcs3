@@ -34,3 +34,4 @@
 #endif
 
 #include "define_new_memleakdetect.h"
+#include "Utilities/wxfmt.h"

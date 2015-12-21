@@ -6,9 +6,10 @@
 #include "RSXFragmentProgram.h"
 
 #include <stack>
-#include "Utilities/Semaphore.h"
+#include <common/Semaphore.h>
 #include "Utilities/Thread.h"
-#include "Utilities/Timer.h"
+#include <common/Timer.h>
+#include <common/convert.h>
 
 extern u64 get_system_time();
 
@@ -43,6 +44,47 @@ extern frame_capture_data frame_debug;
 
 namespace rsx
 {
+	enum class shader_language
+	{
+		glsl,
+		hlsl
+	};
+}
+
+template<>
+struct convert::to_impl_t<rsx::shader_language, std::string>
+{
+	static rsx::shader_language func(const std::string &from)
+	{
+		if (from == "glsl")
+			return rsx::shader_language::glsl;
+
+		if (from == "hlsl")
+			return rsx::shader_language::hlsl;
+
+		throw;
+	}
+};
+
+template<>
+struct convert::to_impl_t<std::string, rsx::shader_language>
+{
+	static std::string func(rsx::shader_language from)
+	{
+		switch (from)
+		{
+		case rsx::shader_language::glsl:
+			return "glsl";
+		case rsx::shader_language::hlsl:
+			return "hlsl";
+		}
+
+		throw;
+	}
+};
+
+namespace rsx
+{
 	namespace limits
 	{
 		enum
@@ -56,6 +98,53 @@ namespace rsx
 			color_buffers_count = 4
 		};
 	}
+
+	struct decompiled_shader
+	{
+		std::string code;
+	};
+
+	struct finalized_shader
+	{
+		u64 ucode_hash;
+		std::string code;
+	};
+
+	template<typename Type, typename KeyType = u64, typename Hasher = std::hash<KeyType>>
+	struct cache
+	{
+	private:
+		std::unordered_map<KeyType, Type, Hasher> m_entries;
+
+	public:
+		const Type* find(u64 key) const
+		{
+			auto found = m_entries.find(key);
+
+			if (found == m_entries.end())
+				return nullptr;
+
+			return &found->second;
+		}
+
+		void insert(KeyType key, const Type &shader)
+		{
+			m_entries.insert({ key, shader });
+		}
+	};
+
+	struct shaders_cache
+	{
+		cache<decompiled_shader> decompiled_fragment_shaders;
+		cache<decompiled_shader> decompiled_vertex_shaders;
+		cache<finalized_shader> finailized_fragment_shaders;
+		cache<finalized_shader> finailized_vertex_shaders;
+
+		void load(const std::string &path, shader_language lang);
+		void load(shader_language lang);
+
+		static std::string path_to_root();
+	};
 
 	//TODO
 	union alignas(4) method_registers_t
@@ -260,6 +349,8 @@ namespace rsx
 		std::stack<u32> m_call_stack;
 
 	public:
+		struct shaders_cache shaders_cache;
+
 		CellGcmControl* ctrl = nullptr;
 
 		Timer timer_sync;

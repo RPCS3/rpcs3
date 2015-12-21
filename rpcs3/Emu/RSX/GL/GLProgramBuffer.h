@@ -2,7 +2,6 @@
 #include "GLVertexProgram.h"
 #include "GLFragmentProgram.h"
 #include "../Common/ProgramStateCache.h"
-#include "Utilities/File.h"
 
 struct GLTraits
 {

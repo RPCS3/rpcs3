@@ -3,8 +3,6 @@
 #ifdef _MSC_VER
 #include "D3D12RenderTargetSets.h"
 #include "Utilities/rPlatform.h" // only for rImage
-#include "Utilities/File.h"
-#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/state.h"

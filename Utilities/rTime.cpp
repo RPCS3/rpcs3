@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "rTime.h"
+#include "wxfmt.h"
 #pragma warning(push)
 #pragma message("TODO: remove wx dependency: <wx/datetime.h>")
 #pragma warning(disable : 4996)

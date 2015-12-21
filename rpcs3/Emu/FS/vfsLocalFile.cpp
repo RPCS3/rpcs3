@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "Utilities/Log.h"
 #include "vfsLocalFile.h"
 
 vfsLocalFile::vfsLocalFile(vfsDevice* device) : vfsFileBase(device)

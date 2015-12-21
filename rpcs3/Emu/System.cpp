@@ -4,8 +4,8 @@
 #include "events.h"
 #include "state.h"
 
-#include "Utilities/Log.h"
-#include "Utilities/File.h"
+#include <common/Log.h>
+#include <common/File.h>
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 

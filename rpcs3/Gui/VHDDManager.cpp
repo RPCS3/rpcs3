@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "stdafx_gui.h"
-#include "Utilities/Log.h"
 #include "VHDDManager.h"
 #include "TextInputDialog.h"
 #include "Emu/state.h"

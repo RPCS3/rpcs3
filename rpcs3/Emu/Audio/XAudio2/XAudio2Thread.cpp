@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #ifdef _MSC_VER
-#include "Utilities/Log.h"
 #include "Emu/System.h"
 #include "Emu/state.h"
 

@@ -21,7 +21,7 @@ void lv2_mutex_t::unlock(lv2_lock_t& lv2_lock)
 	if (sq.size())
 	{
 		// pick new owner; protocol is ignored in current implementation
-		owner = sq.front();
+		owner = std::static_pointer_cast<CPUThread>(sq.front());
 
 		if (!owner->signal())
 		{

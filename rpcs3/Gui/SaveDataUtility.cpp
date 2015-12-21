@@ -1,8 +1,6 @@
 #include "stdafx.h"
 #include "stdafx_gui.h"
 #include "SaveDataUtility.h"
-#include "Utilities/Log.h"
-//#include "Utilities/File.h"
 
 //Cause i can not decide what struct to be used to fill those. Just use no real data now.
 //Currently variable info isn't used. it supposed to be a container for the information passed by other.

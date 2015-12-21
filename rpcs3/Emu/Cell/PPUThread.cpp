@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/state.h"
@@ -10,7 +9,7 @@
 #include "Emu/Cell/PPUInterpreter2.h"
 #include "Emu/Cell/PPULLVMRecompiler.h"
 //#include "Emu/Cell/PPURecompiler.h"
-#include "Utilities/VirtualMemory.h"
+#include <common/VirtualMemory.h>
 
 #ifdef _WIN32
 #include <Windows.h>

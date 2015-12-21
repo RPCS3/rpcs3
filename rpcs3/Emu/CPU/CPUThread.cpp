@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "Utilities/Log.h"
+#include <common/Log.h>
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"

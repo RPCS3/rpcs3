@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Emu/Cell/SPUOpcodes.h"
-#include "Utilities/SharedMutex.h"
+#include <common/SharedMutex.h>
 
 class SPUThread;
 

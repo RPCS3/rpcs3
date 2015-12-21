@@ -3,7 +3,6 @@
 #include "Emu/System.h"
 #include "Emu/state.h"
 #include "Emu/SysCalls/Modules.h"
-#include "Utilities/Log.h"
 
 #include "cellSysutil.h"
 #include "cellNetCtl.h"

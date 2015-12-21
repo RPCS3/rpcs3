@@ -3,7 +3,6 @@
 #ifdef _MSC_VER
 #include "D3D12VertexProgramDecompiler.h"
 #include "D3D12CommonDecompiler.h"
-#include "Utilities/Log.h"
 #include "Emu/System.h"
 
 

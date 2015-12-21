@@ -3,7 +3,6 @@
 #include <d3d12.h>
 #include <cassert>
 #include <wrl/client.h>
-#include "Utilities/Log.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/RSX/GCM.h"
 

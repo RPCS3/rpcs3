@@ -4,8 +4,6 @@
 #include "RSXDebugger.h"
 
 #include "Utilities/rPlatform.h"
-#include "Utilities/Log.h"
-#include "Utilities/File.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/state.h"

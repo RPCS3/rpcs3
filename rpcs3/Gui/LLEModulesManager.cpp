@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "stdafx_gui.h"
-#include "Utilities/Log.h"
 #include "Loader/ELF64.h"
 #include "Emu/FS/vfsDir.h"
 #include "Emu/FS/vfsFile.h"

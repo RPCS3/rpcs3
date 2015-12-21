@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "Utilities/Log.h"
 #include "Emu/FS/vfsStream.h"
 #include "Emu/FS/vfsFile.h"
 #include "Emu/FS/vfsDir.h"

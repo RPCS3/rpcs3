@@ -19,7 +19,7 @@ void lv2_rwlock_t::notify_all(lv2_lock_t& lv2_lock)
 	// pick a new writer if possible; protocol is ignored in current implementation
 	if (!readers && !writer && wsq.size())
 	{
-		writer = wsq.front();
+		writer = std::static_pointer_cast<CPUThread>(wsq.front());
 
 		if (!writer->signal())
 		{
@@ -36,7 +36,7 @@ void lv2_rwlock_t::notify_all(lv2_lock_t& lv2_lock)
 
 		for (auto& thread : rsq)
 		{
-			if (!thread->signal())
+			if (!std::static_pointer_cast<CPUThread>(thread)->signal())
 			{
 				throw EXCEPTION("Reader already signaled");
 			}

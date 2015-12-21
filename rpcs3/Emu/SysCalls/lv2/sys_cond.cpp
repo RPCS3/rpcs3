@@ -24,9 +24,9 @@ void lv2_cond_t::notify(lv2_lock_t& lv2_lock, sleep_queue_t::value_type& thread)
 	}
 	else
 	{
-		mutex->owner = thread;
+		mutex->owner = std::static_pointer_cast<CPUThread>(thread);
 
-		if (!thread->signal())
+		if (!std::static_pointer_cast<CPUThread>(thread)->signal())
 		{
 			throw EXCEPTION("Thread already signaled");
 		}
@@ -152,7 +152,7 @@ s32 sys_cond_signal_to(u32 cond_id, u32 thread_id)
 
 	const auto found = std::find_if(cond->sq.begin(), cond->sq.end(), [=](sleep_queue_t::value_type& thread)
 	{
-		return thread->get_id() == thread_id;
+		return std::static_pointer_cast<CPUThread>(thread)->get_id() == thread_id;
 	});
 
 	// TODO: check if CELL_ESRCH is returned if thread_id is invalid

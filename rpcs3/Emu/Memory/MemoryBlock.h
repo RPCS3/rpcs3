@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Utilities/Log.h"
+#include <common/Log.h>
 
 struct MemInfo
 {

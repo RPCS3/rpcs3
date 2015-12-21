@@ -5,7 +5,7 @@
 #include "Emu/state.h"
 #include "Emu/SysCalls/Modules/cellVideoOut.h"
 #include "rpcs3.h"
-#include "Utilities/Timer.h"
+#include <common/Timer.h>
 
 BEGIN_EVENT_TABLE(GSFrame, wxFrame)
 	EVT_PAINT(GSFrame::OnPaint)

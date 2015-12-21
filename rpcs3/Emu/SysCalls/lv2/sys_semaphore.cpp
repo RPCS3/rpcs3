@@ -173,7 +173,7 @@ s32 sys_semaphore_post(u32 sem_id, s32 count)
 	{
 		count--;
 
-		if (!sem->sq.front()->signal())
+		if (!std::static_pointer_cast<CPUThread>(sem->sq.front())->signal())
 		{
 			throw EXCEPTION("Thread already signaled");
 		}

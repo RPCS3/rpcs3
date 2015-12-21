@@ -23,7 +23,7 @@ void lv2_lwmutex_t::unlock(lv2_lock_t& lv2_lock)
 
 	if (sq.size())
 	{
-		if (!sq.front()->signal())
+		if (!std::static_pointer_cast<CPUThread>(sq.front())->signal())
 		{
 			throw EXCEPTION("Thread already signaled");
 		}
