@@ -32,7 +32,7 @@
 
 /build
 /bin
-/libs
+/lib
 /ipch
 /rpcs3/Debug
 /rpcs3/Release
