@@ -14,7 +14,7 @@ branches:
 
 before_build:
  # until git for win 2.5 release with commit checkout
- - git submodule update --init ffmpeg asmjit minidx9
+ - git submodule update --init ffmpeg asmjit minidx9 common rsx_program_decompiler
  - 7z x wxWidgets.7z -aos -oC:\rpcs3\wxWidgets > null
  - if %configuration%==Release (cmake -G "Visual Studio 14 Win64")
    else (7z x llvmlibs.7z -aos -oC:\rpcs3 > null && cmake -G "Visual Studio 14 Win64" -DLLVM_DIR=C:/rpcs3/llvm_build/share/llvm/cmake)
