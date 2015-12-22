@@ -591,7 +591,10 @@ u32 ppu_recompiler_llvm::CPUHybridDecoderRecompiler::ExecuteTillReturn(PPUThread
 			auto entry = ppu_state->PC;
 			u32 exit = (u32)executable(ppu_state, 0);
 			if (exit == ExecutionStatus::ExecutionStatusReturn)
+			{
+				if (Emu.GetCPUThreadStop() == ppu_state->PC) ppu_state->fast_stop();
 				return ExecutionStatus::ExecutionStatusReturn;
+			}
 			if (exit == ExecutionStatus::ExecutionStatusPropagateException)
 				return ExecutionStatus::ExecutionStatusPropagateException;
 			previousInstContigousAndInterp = false;
