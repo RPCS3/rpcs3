@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "Utilities/Log.h"
 #include "Utilities/AutoPause.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"

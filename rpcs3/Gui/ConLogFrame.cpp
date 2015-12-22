@@ -5,7 +5,6 @@
 #include <wx/clipbrd.h>
 
 #include "Emu/state.h"
-#include "Utilities/Log.h"
 #include "Gui/ConLogFrame.h"
 
 wxDEFINE_EVENT(EVT_LOG_COMMAND, wxCommandEvent);

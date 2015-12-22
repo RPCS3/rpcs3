@@ -1,7 +1,5 @@
 #pragma once
 
-#include "Utilities/Log.h"
-
 struct MemInfo
 {
 	u32 addr;

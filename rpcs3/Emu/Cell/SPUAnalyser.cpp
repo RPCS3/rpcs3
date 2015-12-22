@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "Utilities/Log.h"
 
 #include "Crypto/sha1.h"
 #include "SPURecompiler.h"

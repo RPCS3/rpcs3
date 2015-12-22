@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "ELF32.h"
-#include "Utilities/Log.h"
 #include "Emu/FS/vfsStream.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/Cell/SPUThread.h"

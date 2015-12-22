@@ -1,7 +1,5 @@
 #pragma once
 
-#include "Utilities/File.h"
-
 struct vfsStream
 {
 	vfsStream() = default;

@@ -1,7 +1,6 @@
 #include "stdafx.h"
 
 #include "Emu/System.h"
-#include "Utilities/Log.h"
 #include "CgBinaryProgram.h"
 #include "Emu/RSX/RSXVertexProgram.h"
 

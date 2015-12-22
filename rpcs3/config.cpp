@@ -1,8 +1,6 @@
 #include "stdafx.h"
 #include "config.h"
 
-#include "Utilities/File.h"
-
 namespace rpcs3
 {
 	config_t::config_t(const std::string &path_)

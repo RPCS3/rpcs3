@@ -6,7 +6,6 @@
 #include "Emu/FS/VFS.h"
 #include "Emu/FS/vfsFile.h"
 #include "Emu/FS/vfsDir.h"
-#include "Utilities/File.h"
 #include "Loader/PSF.h"
 #include "cellSaveData.h"
 

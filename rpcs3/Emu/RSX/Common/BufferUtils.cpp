@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "BufferUtils.h"
-#include "Utilities/Log.h"
 
 #define MIN2(x, y) ((x) < (y)) ? (x) : (y)
 #define MAX2(x, y) ((x) > (y)) ? (x) : (y)

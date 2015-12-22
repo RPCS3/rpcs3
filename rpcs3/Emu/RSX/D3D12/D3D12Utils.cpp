@@ -3,7 +3,6 @@
 #ifdef _MSC_VER
 #include "D3D12GSRender.h"
 #include "d3dx12.h"
-#include "Utilities/Log.h"
 #define STRINGIFY(x) #x
 
 extern PFN_D3D12_SERIALIZE_ROOT_SIGNATURE wrapD3D12SerializeRootSignature;

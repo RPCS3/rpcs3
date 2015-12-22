@@ -186,3 +186,5 @@ template<typename T> struct id_traits;
 #include "Utilities/Atomic.h"
 #include "Utilities/StrFmt.h"
 #include "Utilities/BitField.h"
+#include "Utilities/File.h"
+#include "Utilities/Log.h"

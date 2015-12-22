@@ -354,4 +354,5 @@ namespace fmt
 	std::string tolower(std::string source);
 	std::string toupper(std::string source);
 	std::string escape(std::string source);
+	bool match(const std::string &source, const std::string &mask);
 }

@@ -259,3 +259,42 @@ std::string fmt::escape(std::string source)
 
 	return source;
 }
+
+bool fmt::match(const std::string &source, const std::string &mask)
+{
+	std::size_t source_position = 0, mask_position = 0;
+
+	for (; source_position < source.size() && mask_position < mask.size(); ++mask_position, ++source_position)
+	{
+		switch (mask[mask_position])
+		{
+		case '?': break;
+
+		case '*':
+			for (std::size_t test_source_position = source_position; test_source_position < source.size(); ++test_source_position)
+			{
+				if (match(source.substr(test_source_position), mask.substr(mask_position + 1)))
+				{
+					return true;
+				}
+			}
+			return false;
+
+		default:
+			if (source[source_position] != mask[mask_position])
+			{
+				return false;
+			}
+
+			break;
+		}
+	}
+
+	if (source_position != source.size())
+		return false;
+
+	if (mask_position != mask.size())
+		return false;
+
+	return true;
+}

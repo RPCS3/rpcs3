@@ -1,6 +1,4 @@
 #include "stdafx.h"
-#include "Utilities/Log.h"
-#include "Utilities/File.h"
 #include "Emu/System.h"
 
 #include "SPUDisAsm.h"

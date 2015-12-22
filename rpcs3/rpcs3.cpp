@@ -4,7 +4,6 @@
 #include "Emu/System.h"
 #include "Emu/state.h"
 #include "rpcs3.h"
-#include "Utilities/Log.h"
 #include "Gui/ConLogFrame.h"
 #include "Emu/GameInfo.h"
 

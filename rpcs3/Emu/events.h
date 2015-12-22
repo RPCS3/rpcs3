@@ -1,5 +1,6 @@
 #pragma once
-#include "Utilities/event.h"
+
+#include <Utilities/event.h>
 
 namespace rpcs3
 {

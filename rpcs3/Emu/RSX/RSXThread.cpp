@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/state.h"
@@ -11,8 +10,6 @@
 #include "Emu/SysCalls/lv2/sys_time.h"
 
 #include "Common/BufferUtils.h"
-
-#include "Utilities/types.h"
 
 extern "C"
 {
@@ -807,6 +804,68 @@ namespace rsx
 			bind_cpu_only<GCM_SET_USER_COMMAND, user_command>();
 		}
 	} __rsx_methods;
+
+	std::string shaders_cache::path_to_root()
+	{
+		return fs::get_executable_dir() + "data/";
+	}
+
+	void shaders_cache::load(const std::string &path, shader_language lang)
+	{
+		std::string lang_name = convert::to<std::string>(lang);
+
+		auto extract_hash = [](const std::string &string)
+		{
+			return std::stoull(string.substr(0, string.find('.')).c_str(), 0, 16);
+		};
+
+		for (const fs::dir::entry &entry : fs::dir{ path })
+		{
+			if (entry.name == "." || entry.name == "..")
+				continue;
+
+			u64 hash;
+
+			try
+			{
+				hash = extract_hash(entry.name);
+			}
+			catch (...)
+			{
+				LOG_ERROR(RSX, "Cache file '%s' ignored", entry.name);
+				continue;
+			}
+
+			if (fmt::match(entry.name, "*.fs." + lang_name))
+			{
+				fs::file file{ path + entry.name };
+				decompiled_fragment_shaders.insert(hash, { (const std::string)file });
+				continue;
+			}
+
+			if (fmt::match(entry.name, "*.vs." + lang_name))
+			{
+				fs::file file{ path + entry.name };
+				decompiled_vertex_shaders.insert(hash, { (const std::string)file });
+				continue;
+			}
+		}
+	}
+
+	void shaders_cache::load(shader_language lang)
+	{
+		std::string root = path_to_root();
+
+		//shared cache
+		load(root + "cache/", lang);
+
+		std::string title_id = Emu.GetTitleID();
+
+		if (!title_id.empty())
+		{
+			load(root + title_id + "/cache/", lang);
+		}
+	}
 
 	u32 get_address(u32 offset, u32 location)
 	{

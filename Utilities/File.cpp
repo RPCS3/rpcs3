@@ -797,6 +797,24 @@ bool fs::dir::read(std::string& name, stat_t& info)
 	return true;
 }
 
+bool fs::dir::first(std::string& name, stat_t& info)
+{
+#ifdef _WIN32
+	if (m_path && m_dd != -1)
+	{
+		CHECK_ASSERTION(FindClose((HANDLE)m_dd));
+		m_dd = -1;
+	}
+#else
+	if (m_path)
+	{
+		::rewinddir((DIR*)m_dd);
+	}
+#endif
+
+	return read(name, info);
+}
+
 std::string fs::get_config_dir()
 {
 	// Use magic static for dir initialization

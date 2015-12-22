@@ -16,3 +16,6 @@
 [submodule "minidx9"]
 	path = minidx9
 	url = https://github.com/hrydgard/minidx9.git
+[submodule "rsx_program_decompiler"]
+	path = rsx_program_decompiler
+	url = https://github.com/RPCS3/rsx_program_decompiler

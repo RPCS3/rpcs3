@@ -289,6 +289,78 @@ namespace fs
 
 		// Get next directory entry (UTF-8 name and file stat)
 		bool read(std::string& name, stat_t& info);
+
+		bool first(std::string& name, stat_t& info);
+
+		struct entry
+		{
+			std::string name;
+			stat_t info;
+		};
+
+		class iterator
+		{
+			entry m_entry;
+			dir* m_parent;
+
+		public:
+			enum class mode
+			{
+				from_first,
+				from_current
+			};
+
+			iterator(dir* parent, mode mode_ = mode::from_first)
+				: m_parent(parent)
+			{
+				if (!m_parent)
+				{
+					return;
+				}
+
+				bool is_ok;
+
+				if (mode_ == mode::from_first)
+				{
+					is_ok = m_parent->first(m_entry.name, m_entry.info);
+				}
+				else
+				{
+					is_ok = m_parent->read(m_entry.name, m_entry.info);
+				}
+
+				if (!is_ok)
+				{
+					m_parent = nullptr;
+				}
+			}
+
+			entry& operator *()
+			{
+				return m_entry;
+			}
+
+			iterator& operator++()
+			{
+				*this = { m_parent, mode::from_current };
+				return *this;
+			}
+
+			bool operator !=(const iterator& rhs) const
+			{
+				return m_parent != rhs.m_parent;
+			}
+		};
+
+		iterator begin()
+		{
+			return{ this };
+		}
+
+		iterator end()
+		{
+			return{ nullptr };
+		}
 	};
 
 	// Get configuration directory

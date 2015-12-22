@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "Utilities/Log.h"
 #include "HDD.h"
 
 void vfsHDDManager::CreateBlock(vfsHDD_Block& block)
