@@ -77,7 +77,7 @@ void D3D12GSRender::clear_surface(u32 arg)
 	if (arg & 0x1 || arg & 0x2)
 	{
 		CD3DX12_CPU_DESCRIPTOR_HANDLE handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(get_current_resource_storage().depth_stencil_descriptor_heap->GetCPUDescriptorHandleForHeapStart())
-			.Offset(get_current_resource_storage().depth_stencil_descriptor_heap_index * g_descriptor_stride_rtv);
+			.Offset((INT)get_current_resource_storage().depth_stencil_descriptor_heap_index * g_descriptor_stride_rtv);
 		m_rtts.bind_depth_stencil(m_device.Get(), m_surface.depth_format, handle);
 		get_current_resource_storage().depth_stencil_descriptor_heap_index++;
 
@@ -97,7 +97,7 @@ void D3D12GSRender::clear_surface(u32 arg)
 	if (arg & 0xF0)
 	{
 		CD3DX12_CPU_DESCRIPTOR_HANDLE handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(get_current_resource_storage().render_targets_descriptors_heap->GetCPUDescriptorHandleForHeapStart())
-			.Offset(get_current_resource_storage().render_targets_descriptors_heap_index * g_descriptor_stride_rtv);
+			.Offset((INT)get_current_resource_storage().render_targets_descriptors_heap_index * g_descriptor_stride_rtv);
 		size_t rtt_index = m_rtts.bind_render_targets(m_device.Get(), m_surface.color_format, handle);
 		get_current_resource_storage().render_targets_descriptors_heap_index += rtt_index;
 		for (unsigned i = 0; i < rtt_index; i++)
@@ -251,11 +251,11 @@ size_t render_targets::bind_depth_stencil(ID3D12Device *device, u32 depth_format
 void D3D12GSRender::set_rtt_and_ds(ID3D12GraphicsCommandList *command_list)
 {
 	CD3DX12_CPU_DESCRIPTOR_HANDLE handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(get_current_resource_storage().render_targets_descriptors_heap->GetCPUDescriptorHandleForHeapStart())
-		.Offset(get_current_resource_storage().render_targets_descriptors_heap_index * g_descriptor_stride_rtv);
+		.Offset((INT)get_current_resource_storage().render_targets_descriptors_heap_index * g_descriptor_stride_rtv);
 	size_t num_rtt = m_rtts.bind_render_targets(m_device.Get(), m_surface.color_format, handle);
 	get_current_resource_storage().render_targets_descriptors_heap_index += num_rtt;
 	CD3DX12_CPU_DESCRIPTOR_HANDLE depth_stencil_handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(get_current_resource_storage().depth_stencil_descriptor_heap->GetCPUDescriptorHandleForHeapStart())
-		.Offset(get_current_resource_storage().depth_stencil_descriptor_heap_index * g_descriptor_stride_rtv);
+		.Offset((INT)get_current_resource_storage().depth_stencil_descriptor_heap_index * g_descriptor_stride_rtv);
 	size_t num_ds = m_rtts.bind_depth_stencil(m_device.Get(), m_surface.depth_format, depth_stencil_handle);
 	get_current_resource_storage().depth_stencil_descriptor_heap_index += num_ds;
 	command_list->OMSetRenderTargets((UINT)num_rtt, num_rtt > 0 ? &handle : nullptr, !!num_rtt,
@@ -644,8 +644,8 @@ void D3D12GSRender::copy_render_targets_to_memory(void *buffer, u8 rtt)
 
 void D3D12GSRender::copy_depth_buffer_to_memory(void *buffer)
 {
-	int clip_w = rsx::method_registers[NV4097_SET_SURFACE_CLIP_HORIZONTAL] >> 16;
-	int clip_h = rsx::method_registers[NV4097_SET_SURFACE_CLIP_VERTICAL] >> 16;
+	unsigned clip_w = rsx::method_registers[NV4097_SET_SURFACE_CLIP_HORIZONTAL] >> 16;
+	unsigned clip_h = rsx::method_registers[NV4097_SET_SURFACE_CLIP_VERTICAL] >> 16;
 
 	size_t row_pitch = align(clip_w * 4, 256);
 
@@ -682,8 +682,8 @@ void D3D12GSRender::copy_depth_buffer_to_memory(void *buffer)
 
 void D3D12GSRender::copy_stencil_buffer_to_memory(void *buffer)
 {
-	int clip_w = rsx::method_registers[NV4097_SET_SURFACE_CLIP_HORIZONTAL] >> 16;
-	int clip_h = rsx::method_registers[NV4097_SET_SURFACE_CLIP_VERTICAL] >> 16;
+	unsigned clip_w = rsx::method_registers[NV4097_SET_SURFACE_CLIP_HORIZONTAL] >> 16;
+	unsigned clip_h = rsx::method_registers[NV4097_SET_SURFACE_CLIP_VERTICAL] >> 16;
 
 	size_t row_pitch = align(clip_w * 4, 256);
 
