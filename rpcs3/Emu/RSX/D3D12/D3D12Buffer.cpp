@@ -45,93 +45,93 @@ void D3D12GSRender::upload_vertex_attributes(const std::vector<std::pair<u32, u3
 	for (const auto &pair : vertex_ranges)
 		vertex_count += pair.second;
 
-	// First array attribute
+	u32 input_mask = rsx::method_registers[NV4097_SET_VERTEX_ATTRIB_INPUT_MASK];
+
 	for (int index = 0; index < rsx::limits::vertex_count; ++index)
 	{
-		const auto &info = vertex_arrays_info[index];
-
-		if (!info.array) // disabled or not a vertex array
+		bool enabled = !!(input_mask & (1 << index));
+		if (!enabled)
 			continue;
 
-		u32 type_size = rsx::get_vertex_type_size(info.type);
-		u32 element_size = type_size * info.size;
-
-		size_t buffer_size = element_size * vertex_count;
-		assert(m_vertex_index_data.can_alloc(buffer_size));
-		size_t heap_offset = m_vertex_index_data.alloc(buffer_size);
-
-		void *buffer;
-		CHECK_HRESULT(m_vertex_index_data.m_heap->Map(0, &CD3DX12_RANGE(heap_offset, heap_offset + buffer_size), (void**)&buffer));
-		void *mapped_buffer = (char*)buffer + heap_offset;
-		for (const auto &range : vertex_ranges)
+		if (vertex_arrays_info[index].size > 0)
 		{
-			write_vertex_array_data_to_buffer(mapped_buffer, range.first, range.second, index, info);
-			mapped_buffer = (char*)mapped_buffer + range.second * element_size;
+			// Active vertex array
+			const rsx::data_array_format_info &info = vertex_arrays_info[index];
+
+			u32 type_size = rsx::get_vertex_type_size(info.type);
+			u32 element_size = type_size * info.size;
+
+			size_t buffer_size = element_size * vertex_count;
+			assert(m_vertex_index_data.can_alloc(buffer_size));
+			size_t heap_offset = m_vertex_index_data.alloc(buffer_size);
+
+			void *buffer;
+			CHECK_HRESULT(m_vertex_index_data.m_heap->Map(0, &CD3DX12_RANGE(heap_offset, heap_offset + buffer_size), (void**)&buffer));
+			void *mapped_buffer = (char*)buffer + heap_offset;
+			for (const auto &range : vertex_ranges)
+			{
+				write_vertex_array_data_to_buffer(mapped_buffer, range.first, range.second, index, info);
+				mapped_buffer = (char*)mapped_buffer + range.second * element_size;
+			}
+			m_vertex_index_data.m_heap->Unmap(0, &CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
+
+			D3D12_VERTEX_BUFFER_VIEW vertex_buffer_view =
+			{
+				m_vertex_index_data.m_heap->GetGPUVirtualAddress() + heap_offset,
+				(UINT)buffer_size,
+				(UINT)element_size
+			};
+			m_vertex_buffer_views.push_back(vertex_buffer_view);
+
+			m_timers.m_buffer_upload_size += buffer_size;
+
+			D3D12_INPUT_ELEMENT_DESC IAElement = {};
+			IAElement.SemanticName = "TEXCOORD";
+			IAElement.SemanticIndex = (UINT)index;
+			IAElement.InputSlot = (UINT)input_slot++;
+			IAElement.Format = get_vertex_attribute_format(info.type, info.size);
+			IAElement.AlignedByteOffset = 0;
+			IAElement.InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
+			IAElement.InstanceDataStepRate = 0;
+			m_IASet.push_back(IAElement);
 		}
-		m_vertex_index_data.m_heap->Unmap(0, &CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
-
-		D3D12_VERTEX_BUFFER_VIEW vertex_buffer_view =
+		else if (register_vertex_info[index].size > 0)
 		{
-			m_vertex_index_data.m_heap->GetGPUVirtualAddress() + heap_offset,
-			(UINT)buffer_size,
-			(UINT)element_size
-		};
-		m_vertex_buffer_views.push_back(vertex_buffer_view);
+			// In register vertex attribute
+			const rsx::data_array_format_info &info = register_vertex_info[index];
 
-		m_timers.m_buffer_upload_size += buffer_size;
+			const std::vector<u8> &data = register_vertex_data[index];
 
-		D3D12_INPUT_ELEMENT_DESC IAElement = {};
-		IAElement.SemanticName = "TEXCOORD";
-		IAElement.SemanticIndex = (UINT)index;
-		IAElement.InputSlot = (UINT)input_slot++;
-		IAElement.Format = get_vertex_attribute_format(info.type, info.size);
-		IAElement.AlignedByteOffset = 0;
-		IAElement.InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
-		IAElement.InstanceDataStepRate = 0;
-		m_IASet.push_back(IAElement);
-	}
+			u32 type_size = rsx::get_vertex_type_size(info.type);
+			u32 element_size = type_size * info.size;
 
-	// Now immediate vertex buffer
-	for (int index = 0; index < rsx::limits::vertex_count; ++index)
-	{
-		const auto &info = vertex_arrays_info[index];
+			size_t buffer_size = data.size();
+			assert(m_vertex_index_data.can_alloc(buffer_size));
+			size_t heap_offset = m_vertex_index_data.alloc(buffer_size);
 
-		if (info.array)
-			continue;
-		if (!info.size) // disabled
-			continue;
+			void *buffer;
+			CHECK_HRESULT(m_vertex_index_data.m_heap->Map(0, &CD3DX12_RANGE(heap_offset, heap_offset + buffer_size), (void**)&buffer));
+			void *mapped_buffer = (char*)buffer + heap_offset;
+			memcpy(mapped_buffer, data.data(), data.size());
+			m_vertex_index_data.m_heap->Unmap(0, &CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
 
-		auto &data = vertex_arrays[index];
+			D3D12_VERTEX_BUFFER_VIEW vertex_buffer_view = {
+				m_vertex_index_data.m_heap->GetGPUVirtualAddress() + heap_offset,
+				(UINT)buffer_size,
+				(UINT)element_size
+			};
+			m_vertex_buffer_views.push_back(vertex_buffer_view);
 
-		u32 type_size = rsx::get_vertex_type_size(info.type);
-		u32 element_size = type_size * info.size;
-
-		size_t buffer_size = data.size();
-		assert(m_vertex_index_data.can_alloc(buffer_size));
-		size_t heap_offset = m_vertex_index_data.alloc(buffer_size);
-
-		void *buffer;
-		CHECK_HRESULT(m_vertex_index_data.m_heap->Map(0, &CD3DX12_RANGE(heap_offset, heap_offset + buffer_size), (void**)&buffer));
-		void *mapped_buffer = (char*)buffer + heap_offset;
-		memcpy(mapped_buffer, data.data(), data.size());
-		m_vertex_index_data.m_heap->Unmap(0, &CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
-
-		D3D12_VERTEX_BUFFER_VIEW vertex_buffer_view = {
-			m_vertex_index_data.m_heap->GetGPUVirtualAddress() + heap_offset,
-			(UINT)buffer_size,
-			(UINT)element_size
-		};
-		m_vertex_buffer_views.push_back(vertex_buffer_view);
-
-		D3D12_INPUT_ELEMENT_DESC IAElement = {};
-		IAElement.SemanticName = "TEXCOORD";
-		IAElement.SemanticIndex = (UINT)index;
-		IAElement.InputSlot = (UINT)input_slot++;
-		IAElement.Format = get_vertex_attribute_format(info.type, info.size);
-		IAElement.AlignedByteOffset = 0;
-		IAElement.InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA;
-		IAElement.InstanceDataStepRate = 1;
-		m_IASet.push_back(IAElement);
+			D3D12_INPUT_ELEMENT_DESC IAElement = {};
+			IAElement.SemanticName = "TEXCOORD";
+			IAElement.SemanticIndex = (UINT)index;
+			IAElement.InputSlot = (UINT)input_slot++;
+			IAElement.Format = get_vertex_attribute_format(info.type, info.size);
+			IAElement.AlignedByteOffset = 0;
+			IAElement.InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA;
+			IAElement.InstanceDataStepRate = 1;
+			m_IASet.push_back(IAElement);
+		}
 	}
 }
 

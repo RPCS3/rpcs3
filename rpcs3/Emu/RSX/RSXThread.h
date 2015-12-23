@@ -334,9 +334,8 @@ namespace rsx
 		u8 stride = 0;
 		u8 size = 0;
 		u8 type = CELL_GCM_VERTEX_F;
-		bool array = false;
 
-		void unpack(u32 data_array_format)
+		void unpack_array(u32 data_array_format)
 		{
 			frequency = data_array_format >> 16;
 			stride = (data_array_format >> 8) & 0xff;
@@ -363,6 +362,25 @@ namespace rsx
 		rsx::texture textures[limits::textures_count];
 		rsx::vertex_texture vertex_textures[limits::vertex_textures_count];
 
+
+		/**
+		 * RSX can sources vertex attributes from 2 places:
+		 * - Immediate values passed by NV4097_SET_VERTEX_DATA*_M + ARRAY_ID write.
+		 * For a given ARRAY_ID the last command of this type defines the actual type of the immediate value.
+		 * Since there can be only a single value per ARRAY_ID passed this way, all vertex in the draw call
+		 * shares it.
+		 * - Vertex array values passed by offset/stride/size/format description.
+		 *
+		 * A given ARRAY_ID can have both an immediate value and a vertex array enabled at the same time
+		 * (See After Burner Climax intro cutscene). In such case the vertex array has precedence over the
+		 * immediate value. As soon as the vertex array is disabled (size set to 0) the immediate value
+		 * must be used if the vertex attrib mask request it.
+		 *
+		 * Note that behavior when both vertex array and immediate value system are disabled but vertex attrib mask
+		 * request inputs is unknow.
+		 */
+		data_array_format_info register_vertex_info[limits::vertex_count];
+		std::vector<u8> register_vertex_data[limits::vertex_count];
 		data_array_format_info vertex_arrays_info[limits::vertex_count];
 		std::vector<u8> vertex_arrays[limits::vertex_count];
 		std::vector<u8> vertex_index_array;

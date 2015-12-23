@@ -366,133 +366,58 @@ void GLGSRender::end()
 	std::vector<u8> vertex_arrays_data;
 	size_t vertex_arrays_offsets[rsx::limits::vertex_count];
 
-#if	DUMP_VERTEX_DATA
-	fs::file dump(fs::get_config_dir() + "VertexDataArray.dump", fom::rewrite);
-	Emu.Pause();
-#endif
-
-	for (int index = 0; index < rsx::limits::vertex_count; ++index)
+	const std::string reg_table[] =
 	{
-		size_t position = vertex_arrays_data.size();
-		vertex_arrays_offsets[index] = position;
+		"in_pos", "in_weight", "in_normal",
+		"in_diff_color", "in_spec_color",
+		"in_fog",
+		"in_point_size", "in_7",
+		"in_tc0", "in_tc1", "in_tc2", "in_tc3",
+		"in_tc4", "in_tc5", "in_tc6", "in_tc7"
+	};
 
-		if (vertex_arrays[index].empty())
-			continue;
-
-		size_t size = vertex_arrays[index].size();
-		vertex_arrays_data.resize(position + size);
-
-		memcpy(vertex_arrays_data.data() + position, vertex_arrays[index].data(), size);
-
-#if	DUMP_VERTEX_DATA
-		auto &vertex_info = vertex_arrays_info[index];
-		dump.write(fmt::format("VertexData[%d]:\n", index));
-		switch (vertex_info.type)
-		{
-		case CELL_GCM_VERTEX_S1:
-			for (u32 j = 0; j < vertex_arrays[index].size(); j += 2)
-			{
-				dump.write(fmt::format("%d\n", *(u16*)&vertex_arrays[index][j]));
-				if (!(((j + 2) / 2) % vertex_info.size)) dump.write("\n");
-			}
-			break;
-
-		case CELL_GCM_VERTEX_F:
-			for (u32 j = 0; j < vertex_arrays[index].size(); j += 4)
-			{
-				dump.write(fmt::format("%.01f\n", *(float*)&vertex_arrays[index][j]));
-				if (!(((j + 4) / 4) % vertex_info.size)) dump.write("\n");
-			}
-			break;
-
-		case CELL_GCM_VERTEX_SF:
-			for (u32 j = 0; j < vertex_arrays[index].size(); j += 2)
-			{
-				dump.write(fmt::format("%.01f\n", *(float*)&vertex_arrays[index][j]));
-				if (!(((j + 2) / 2) % vertex_info.size)) dump.write("\n");
-			}
-			break;
-
-		case CELL_GCM_VERTEX_UB:
-			for (u32 j = 0; j < vertex_arrays[index].size(); ++j)
-			{
-				dump.write(fmt::format("%d\n", vertex_arrays[index][j]));
-				if (!((j + 1) % vertex_info.size)) dump.write("\n");
-			}
-			break;
-
-		case CELL_GCM_VERTEX_S32K:
-			for (u32 j = 0; j < vertex_arrays[index].size(); j += 2)
-			{
-				dump.write(fmt::format("%d\n", *(u16*)&vertex_arrays[index][j]));
-				if (!(((j + 2) / 2) % vertex_info.size)) dump.write("\n");
-			}
-			break;
-
-			// case CELL_GCM_VERTEX_CMP:
-
-		case CELL_GCM_VERTEX_UB256:
-			for (u32 j = 0; j < vertex_arrays[index].size(); ++j)
-			{
-				dump.write(fmt::format("%d\n", vertex_arrays[index][j]));
-				if (!((j + 1) % vertex_info.size)) dump.write("\n");
-			}
-			break;
-		}
-
-		dump.write("\n");
-#endif
-	}
-
-	m_vbo.data(vertex_arrays_data.size(), vertex_arrays_data.data());
+	u32 input_mask = rsx::method_registers[NV4097_SET_VERTEX_ATTRIB_INPUT_MASK];
 	m_vao.bind();
 
 	for (int index = 0; index < rsx::limits::vertex_count; ++index)
 	{
-		auto &vertex_info = vertex_arrays_info[index];
-
-		if (!vertex_info.size)
-		{
-			//disabled
+		bool enabled = !!(input_mask & (1 << index));
+		if (!enabled)
 			continue;
-		}
-
-		if (vertex_info.type < 1 || vertex_info.type > 7)
-		{
-			LOG_ERROR(RSX, "GLGSRender::EnableVertexData: Bad vertex data type (%d)!", vertex_info.type);
-			continue;
-		}
-
-		static const std::string reg_table[] =
-		{
-			"in_pos", "in_weight", "in_normal",
-			"in_diff_color", "in_spec_color",
-			"in_fog",
-			"in_point_size", "in_7",
-			"in_tc0", "in_tc1", "in_tc2", "in_tc3",
-			"in_tc4", "in_tc5", "in_tc6", "in_tc7"
-		};
 
 		int location;
-
-		//TODO: use attrib input mask register
 		if (!m_program->attribs.has_location(reg_table[index], &location))
 			continue;
 
-		if (vertex_info.array)
+		if (vertex_arrays_info[index].size > 0)
 		{
+			auto &vertex_info = vertex_arrays_info[index];
+			// Active vertex array
+
+			size_t position = vertex_arrays_data.size();
+			vertex_arrays_offsets[index] = position;
+
+			if (vertex_arrays[index].empty())
+				continue;
+
+			size_t size = vertex_arrays[index].size();
+			vertex_arrays_data.resize(position + size);
+
+			memcpy(vertex_arrays_data.data() + position, vertex_arrays[index].data(), size);
+
 			__glcheck m_program->attribs[location] =
 				(m_vao + vertex_arrays_offsets[index])
 				.config(gl_types[vertex_info.type], vertex_info.size, gl_normalized[vertex_info.type]);
 		}
-		else
+		else if (register_vertex_info[index].size > 0)
 		{
-			auto &vertex_data = vertex_arrays[index];
+			auto &vertex_data = register_vertex_data[index];
+			auto &vertex_info = register_vertex_info[index];
 
 			switch (vertex_info.type)
 			{
 			case CELL_GCM_VERTEX_F:
-				switch (vertex_info.size)
+				switch (register_vertex_info[index].size)
 				{
 				case 1: apply_attrib_array<f32, 1>(*m_program, location, vertex_data); break;
 				case 2: apply_attrib_array<f32, 2>(*m_program, location, vertex_data); break;
@@ -507,6 +432,8 @@ void GLGSRender::end()
 			}
 		}
 	}
+	m_vbo.data(vertex_arrays_data.size(), vertex_arrays_data.data());
+
 
 	if (vertex_index_array.empty())
 	{
