@@ -222,6 +222,9 @@ struct D3D12Traits
 
 		extraData.first->CreateGraphicsPipelineState(&graphicPipelineStateDesc, IID_PPV_ARGS(&std::get<0>(*result)));
 		std::get<1>(*result) = vertexProgramData.vertex_shader_inputs;
+
+		std::wstring name = L"PSO_" + std::to_wstring(vertexProgramData.id) + L"_" + std::to_wstring(fragmentProgramData.id);
+		std::get<0>(*result)->SetName(name.c_str());
 		return result;
 	}
 

@@ -53,6 +53,7 @@ ComPtr<ID3D12Resource> upload_single_texture(
 {
 	size_t w = texture.width(), h = texture.height();
 	size_t depth = texture.depth();
+	if (depth == 0) depth = 1;
 	if (texture.cubemap()) depth *= 6;
 
 	const u8 format = texture.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
@@ -72,7 +73,7 @@ ComPtr<ID3D12Resource> upload_single_texture(
 	CHECK_HRESULT(device->CreateCommittedResource(
 		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
 		D3D12_HEAP_FLAG_NONE,
-		&CD3DX12_RESOURCE_DESC::Tex2D(dxgi_format, (UINT)w, (UINT)h, depth, texture.mipmap()),
+		&CD3DX12_RESOURCE_DESC::Tex2D(dxgi_format, (UINT)w, (UINT)h, (UINT)depth, texture.mipmap()),
 		D3D12_RESOURCE_STATE_COPY_DEST,
 		nullptr,
 		IID_PPV_ARGS(result.GetAddressOf())
@@ -200,6 +201,8 @@ void D3D12GSRender::upload_and_bind_textures(ID3D12GraphicsCommandList *command_
 			if (cached_texture != nullptr)
 				get_current_resource_storage().dirty_textures.push_back(m_texture_cache.remove_from_cache(texaddr));
 			ComPtr<ID3D12Resource> tex = upload_single_texture(textures[i], m_device.Get(), command_list, m_texture_upload_data);
+			std::wstring name = L"texture_@" + std::to_wstring(texaddr);
+			tex->SetName(name.c_str());
 			vram_texture = tex.Get();
 			m_texture_cache.store_and_protect_data(texaddr, texaddr, get_texture_size(textures[i]), format, w, h, textures[i].mipmap(), tex);
 		}
