@@ -207,30 +207,61 @@ s32 _ConvertStr(s32 src_code, const void *src, s32 src_len, s32 dst_code, void *
 	std::string wrapped_source = std::string(static_cast<const char *>(src), src_len);
 	std::string target = _OemToOem(srcCode, dstCode, wrapped_source);
 
-	if (target.length() > *dst_len) return DSTExhausted;
-
-	memcpy(dst, target.c_str(), target.length());
+	if (dst != NULL)
+	{
+		if (target.length() > *dst_len) return DSTExhausted;
+		memcpy(dst, target.c_str(), target.length());
+	}
 	*dst_len = target.length();
 
 	return ConversionOK;
 #else
 	s32 retValue = ConversionOK;
 	iconv_t ict = iconv_open(dstCode, srcCode);
-	size_t srcLen = src_len, dstLen = *dst_len;
-	size_t ictd = iconv(ict, (char **)&src, &srcLen, (char **)&dst, &dstLen);
-	*dst_len -= dstLen;
-	if (ictd == -1)
+	size_t srcLen = src_len;
+	if (dst != NULL)
 	{
-		if (errno == EILSEQ)
-			retValue = SRCIllegal;  //Invalid multi-byte sequence
-		else if (errno == E2BIG)
-			retValue = DSTExhausted;//Not enough space
-		else if (errno == EINVAL)
+		size_t dstLen = *dst_len;
+		size_t ictd = iconv(ict, (char **)&src, &srcLen, (char **)&dst, &dstLen);
+		*dst_len -= dstLen;
+		if (ictd == -1)
 		{
-			if (allowIncomplete)
-				*dst_len = -1;  // TODO: correct value?
-			else
-				retValue = SRCIllegal;
+			if (errno == EILSEQ)
+				retValue = SRCIllegal;  //Invalid multi-byte sequence
+			else if (errno == E2BIG)
+				retValue = DSTExhausted;//Not enough space
+			else if (errno == EINVAL)
+			{
+				if (allowIncomplete)
+					*dst_len = -1;  // TODO: correct value?
+				else
+					retValue = SRCIllegal;
+			}
+		}
+	}
+	else
+	{
+		*dst_len = 0;
+		char buf[16];
+		while (srcLen > 0)
+		{
+			char *bufPtr = buf;
+			size_t bufLeft = sizeof(buf);
+			size_t ictd = iconv(ict, (char **)&src, &srcLen, (char **)&bufPtr, &bufLeft);
+			*dst_len += sizeof(buf) - bufLeft;
+			if (ictd == -1 && errno != E2BIG)
+			{
+				if (errno == EILSEQ)
+					retValue = SRCIllegal;
+				else if (errno == EINVAL)
+				{
+					if (allowIncomplete)
+						*dst_len = -1;  // TODO: correct value?
+					else
+						retValue = SRCIllegal;
+				}
+				break;
+			}
 		}
 	}
 	iconv_close(ict);
@@ -241,7 +272,7 @@ s32 _ConvertStr(s32 src_code, const void *src, s32 src_len, s32 dst_code, void *
 s32 _L10nConvertStr(s32 src_code, vm::cptr<void> src, vm::cptr<s32> src_len, s32 dst_code, vm::ptr<void> dst, vm::ptr<s32> dst_len)
 {
 	s32 dstLen = *dst_len;
-	s32 result = _ConvertStr(src_code, src.get_ptr(), *src_len, dst_code, dst.get_ptr(), &dstLen, false);
+	s32 result = _ConvertStr(src_code, src.get_ptr(), *src_len, dst_code, dst == vm::null ? NULL : dst.get_ptr(), &dstLen, false);
 	*dst_len = dstLen;
 	return result;
 }
