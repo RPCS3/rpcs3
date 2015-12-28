@@ -271,12 +271,7 @@ void D3D12GSRender::end()
 	m_timers.m_vertex_index_duration += std::chrono::duration_cast<std::chrono::microseconds>(vertex_index_duration_end - vertex_index_duration_start).count();
 
 	std::chrono::time_point<std::chrono::system_clock> program_load_start = std::chrono::system_clock::now();
-	if (!load_program())
-	{
-		LOG_ERROR(RSX, "LoadProgram failed.");
-		Emu.Pause();
-		return;
-	}
+	load_program();
 	std::chrono::time_point<std::chrono::system_clock> program_load_end = std::chrono::system_clock::now();
 	m_timers.m_program_load_duration += std::chrono::duration_cast<std::chrono::microseconds>(program_load_end - program_load_start).count();
 
