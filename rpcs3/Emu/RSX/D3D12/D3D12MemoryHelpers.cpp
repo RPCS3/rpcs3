@@ -85,6 +85,13 @@ void resource_storage::reset()
 void resource_storage::set_new_command_list()
 {
 	CHECK_HRESULT(command_list->Reset(command_allocator.Get(), nullptr));
+
+	ID3D12DescriptorHeap *descriptors[] =
+	{
+		descriptors_heap.Get(),
+		sampler_descriptor_heap[sampler_descriptors_heap_index].Get(),
+	};
+	command_list->SetDescriptorHeaps(2, descriptors);
 }
 
 void resource_storage::init(ID3D12Device *device)

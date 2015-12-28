@@ -301,12 +301,6 @@ void D3D12GSRender::end()
 	{
 		upload_and_bind_textures(get_current_resource_storage().command_list.Get(), currentDescriptorIndex + 3, std::get<2>(*m_current_pso) > 0);
 
-		ID3D12DescriptorHeap *descriptors[] =
-		{
-			get_current_resource_storage().descriptors_heap.Get(),
-			get_current_resource_storage().sampler_descriptor_heap[get_current_resource_storage().sampler_descriptors_heap_index].Get(),
-		};
-		get_current_resource_storage().command_list->SetDescriptorHeaps(2, descriptors);
 
 		get_current_resource_storage().command_list->SetGraphicsRootDescriptorTable(0,
 			CD3DX12_GPU_DESCRIPTOR_HANDLE(get_current_resource_storage().descriptors_heap->GetGPUDescriptorHandleForHeapStart())
