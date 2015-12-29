@@ -48,11 +48,67 @@ void Compiler::NOP() {
 }
 
 void Compiler::TDI(u32 to, u32 ra, s32 simm16) {
-	CompilationError("TDI");
+	llvm::Value *gpr_a = GetGpr(ra);
+	llvm::Value *cst_simm16 = m_ir_builder->getInt64(simm16);
+	llvm::Value *trap_condition = m_ir_builder->getFalse();
+
+	if (to & 0x10)
+		trap_condition = m_ir_builder->CreateOr(trap_condition,
+			m_ir_builder->CreateICmpSLT(gpr_a, cst_simm16));
+	if (to & 0x8)
+		trap_condition = m_ir_builder->CreateOr(trap_condition,
+			m_ir_builder->CreateICmpSGT(gpr_a, cst_simm16));
+	if (to & 0x4)
+		trap_condition = m_ir_builder->CreateOr(trap_condition,
+			m_ir_builder->CreateICmpEQ(gpr_a, cst_simm16));
+	if (to & 0x2)
+		trap_condition = m_ir_builder->CreateOr(trap_condition,
+			m_ir_builder->CreateICmpULT(gpr_a, cst_simm16));
+	if (to & 0x1)
+		trap_condition = m_ir_builder->CreateOr(trap_condition,
+			m_ir_builder->CreateICmpUGT(gpr_a, cst_simm16));
+
+	llvm::BasicBlock *trap_block = GetBasicBlockFromAddress(m_state.current_instruction_address, "trap_block");
+	llvm::BasicBlock *normal_execution = GetBasicBlockFromAddress(m_state.current_instruction_address, "normal_execution");
+	m_ir_builder->CreateCondBr(trap_condition, trap_block, normal_execution);
+
+	m_ir_builder->SetInsertPoint(trap_block);
+	Call<void>("trap");
+	m_ir_builder->CreateRet(m_ir_builder->getInt32(ExecutionStatus::ExecutionStatusPropagateException));
+
+	m_ir_builder->SetInsertPoint(normal_execution);
 }
 
 void Compiler::TWI(u32 to, u32 ra, s32 simm16) {
-	CompilationError("TWI");
+	llvm::Value *gpr_a = GetGpr(ra, 32);
+	llvm::Value *cst_simm16 = m_ir_builder->getInt32(simm16);
+	llvm::Value *trap_condition = m_ir_builder->getFalse();
+
+	if (to & 0x10)
+		trap_condition = m_ir_builder->CreateOr(trap_condition,
+			m_ir_builder->CreateICmpSLT(gpr_a, cst_simm16));
+	if (to & 0x8)
+		trap_condition = m_ir_builder->CreateOr(trap_condition,
+			m_ir_builder->CreateICmpSGT(gpr_a, cst_simm16));
+	if (to & 0x4)
+		trap_condition = m_ir_builder->CreateOr(trap_condition,
+			m_ir_builder->CreateICmpEQ(gpr_a, cst_simm16));
+	if (to & 0x2)
+		trap_condition = m_ir_builder->CreateOr(trap_condition,
+			m_ir_builder->CreateICmpULT(gpr_a, cst_simm16));
+	if (to & 0x1)
+		trap_condition = m_ir_builder->CreateOr(trap_condition,
+			m_ir_builder->CreateICmpUGT(gpr_a, cst_simm16));
+
+	llvm::BasicBlock *trap_block = GetBasicBlockFromAddress(m_state.current_instruction_address, "trap_block");
+	llvm::BasicBlock *normal_execution = GetBasicBlockFromAddress(m_state.current_instruction_address, "normal_execution");
+	m_ir_builder->CreateCondBr(trap_condition, trap_block, normal_execution);
+
+	m_ir_builder->SetInsertPoint(trap_block);
+	Call<void>("trap");
+	m_ir_builder->CreateRet(m_ir_builder->getInt32(ExecutionStatus::ExecutionStatusPropagateException));
+
+	m_ir_builder->SetInsertPoint(normal_execution);
 }
 
 void Compiler::MFVSCR(u32 vd) {
@@ -2198,7 +2254,35 @@ void Compiler::CMP(u32 crfd, u32 l, u32 ra, u32 rb) {
 }
 
 void Compiler::TW(u32 to, u32 ra, u32 rb) {
-	CompilationError("TW");
+	llvm::Value *gpr_a = GetGpr(ra, 32);
+	llvm::Value *gpr_b = GetGpr(rb, 32);
+	llvm::Value *trap_condition = m_ir_builder->getFalse();
+
+	if (to & 0x10)
+		trap_condition = m_ir_builder->CreateOr(trap_condition,
+			m_ir_builder->CreateICmpSLT(gpr_a, gpr_b));
+	if (to & 0x8)
+		trap_condition = m_ir_builder->CreateOr(trap_condition,
+			m_ir_builder->CreateICmpSGT(gpr_a, gpr_b));
+	if (to & 0x4)
+		trap_condition = m_ir_builder->CreateOr(trap_condition,
+			m_ir_builder->CreateICmpEQ(gpr_a, gpr_b));
+	if (to & 0x2)
+		trap_condition = m_ir_builder->CreateOr(trap_condition,
+			m_ir_builder->CreateICmpULT(gpr_a, gpr_b));
+	if (to & 0x1)
+		trap_condition = m_ir_builder->CreateOr(trap_condition,
+			m_ir_builder->CreateICmpUGT(gpr_a, gpr_b));
+
+	llvm::BasicBlock *trap_block = GetBasicBlockFromAddress(m_state.current_instruction_address, "trap_block");
+	llvm::BasicBlock *normal_execution = GetBasicBlockFromAddress(m_state.current_instruction_address, "normal_execution");
+	m_ir_builder->CreateCondBr(trap_condition, trap_block, normal_execution);
+
+	m_ir_builder->SetInsertPoint(trap_block);
+	Call<void>("trap");
+	m_ir_builder->CreateRet(m_ir_builder->getInt32(ExecutionStatus::ExecutionStatusPropagateException));
+
+	m_ir_builder->SetInsertPoint(normal_execution);
 }
 
 void Compiler::LVSL(u32 vd, u32 ra, u32 rb) {
@@ -2555,7 +2639,8 @@ void Compiler::ANDC(u32 ra, u32 rs, u32 rb, u32 rc) {
 }
 
 void Compiler::TD(u32 to, u32 ra, u32 rb) {
-	CompilationError("TD");
+	Call<void>("trap");
+	m_ir_builder->CreateRet(m_ir_builder->getInt32(ExecutionStatus::ExecutionStatusPropagateException));
 }
 
 void Compiler::LVEWX(u32 vd, u32 ra, u32 rb) {

@@ -362,6 +362,17 @@ static void wrapped_fast_stop(PPUThread &CPU)
 	CPU.fast_stop();
 }
 
+static void wrapped_trap(PPUThread &CPU, u32) noexcept {
+	try
+	{
+		throw EXCEPTION("trap");
+	}
+	catch (...)
+	{
+		CPU.pending_exception = std::current_exception();
+	}
+}
+
 std::pair<Executable, llvm::ExecutionEngine *> RecompilationEngine::compile(const std::string & name, u32 start_address, u32 instruction_count) {
 	std::unique_ptr<llvm::Module> module = Compiler::create_module(m_llvm_context);
 
@@ -375,6 +386,7 @@ std::pair<Executable, llvm::ExecutionEngine *> RecompilationEngine::compile(cons
 	function_ptrs["get_timebased_time"] = reinterpret_cast<void*>(get_timebased_time);
 	function_ptrs["wrappedExecutePPUFuncByIndex"] = reinterpret_cast<void*>(wrappedExecutePPUFuncByIndex);
 	function_ptrs["wrappedDoSyscall"] = reinterpret_cast<void*>(wrappedDoSyscall);
+	function_ptrs["trap"] = reinterpret_cast<void*>(wrapped_trap);
 
 #define REGISTER_FUNCTION_PTR(name) \
 	function_ptrs[#name] = reinterpret_cast<void*>(PPUInterpreter::name##_impl);
