@@ -92,11 +92,11 @@ void D3D12FragmentDecompiler::insertOutputs(std::stringstream & OS)
 		{ "ocol2", m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? "r3" : "h6" },
 		{ "ocol3", m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? "r4" : "h8" },
 	};
-
+	size_t idx = 0;
 	for (int i = 0; i < sizeof(table) / sizeof(*table); ++i)
 	{
 		if (m_parr.HasParam(PF_PARAM_NONE, "float4", table[i].second))
-			OS << "	" << "float4" << " " << table[i].first << " : SV_TARGET" << i << ";" << std::endl;
+			OS << "	" << "float4" << " " << table[i].first << " : SV_TARGET" << idx++ << ";" << std::endl;
 	}
 	if (m_ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT)
 		OS << "	float depth : SV_Depth;" << std::endl;
@@ -141,7 +141,12 @@ void D3D12FragmentDecompiler::insertConstants(std::stringstream & OS)
 
 void D3D12FragmentDecompiler::insertMainStart(std::stringstream & OS)
 {
-	OS << "PixelOutput main(PixelInput In)" << std::endl;
+	const std::set<std::string> output_value =
+	{
+		"r0", "r1", "r2", "r3", "r4",
+		"h0", "h4", "h6", "h8"
+	};
+	OS << "void ps_impl(PixelInput In, inout float4 r0, inout float4 h0, inout float4 r1, inout float4 r2, inout float4 h4, inout float4 r3, inout float4 h6, inout float4 r4, inout float4 h8)" << std::endl;
 	OS << "{" << std::endl;
 	for (ParamType PT : m_parr.params[PF_PARAM_IN])
 	{
@@ -154,9 +159,9 @@ void D3D12FragmentDecompiler::insertMainStart(std::stringstream & OS)
 	for (ParamType PT : m_parr.params[PF_PARAM_NONE])
 	{
 		for (ParamItem PI : PT.items)
-			OS << "	" << PT.type << " " << PI.name << " = float4(0., 0., 0., 0.);" << std::endl;
+			if (output_value.find(PI.name) == output_value.end())
+				OS << "	" << PT.type << " " << PI.name << " = float4(0., 0., 0., 0.);" << std::endl;
 	}
-
 	// Declare texture coordinate scaling component (to handle unormalized texture coordinates)
 
 	for (ParamType PT : m_parr.params[PF_PARAM_UNIFORM])
@@ -175,6 +180,22 @@ void D3D12FragmentDecompiler::insertMainStart(std::stringstream & OS)
 
 void D3D12FragmentDecompiler::insertMainEnd(std::stringstream & OS)
 {
+	OS << "}" << std::endl;
+	OS << std::endl;
+	OS << "PixelOutput main(PixelInput In)" << std::endl;
+	OS << "{" << std::endl;
+	OS << "	float4 r0 = float4(0., 0., 0., 0.);" << std::endl;
+	OS << "	float4 r1 = float4(0., 0., 0., 0.);" << std::endl;
+	OS << "	float4 r2 = float4(0., 0., 0., 0.);" << std::endl;
+	OS << "	float4 r3 = float4(0., 0., 0., 0.);" << std::endl;
+	OS << "	float4 r4 = float4(0., 0., 0., 0.);" << std::endl;
+	OS << "	float4 h0 = float4(0., 0., 0., 0.);" << std::endl;
+	OS << "	float4 h2 = float4(0., 0., 0., 0.);" << std::endl;
+	OS << "	float4 h4 = float4(0., 0., 0., 0.);" << std::endl;
+	OS << "	float4 h6 = float4(0., 0., 0., 0.);" << std::endl;
+	OS << "	float4 h8 = float4(0., 0., 0., 0.);" << std::endl;
+	OS << "	ps_impl(In, r0, h0, r1, r2, h4, r3, h6, r4, h8);" << std::endl;
+
 	const std::pair<std::string, std::string> table[] =
 	{
 		{ "ocol0", m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? "r0" : "h0" },
@@ -183,8 +204,8 @@ void D3D12FragmentDecompiler::insertMainEnd(std::stringstream & OS)
 		{ "ocol3", m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? "r4" : "h8" },
 	};
 
-	OS << "	PixelOutput Out;" << std::endl;
 	size_t num_output = 0;
+	OS << "	PixelOutput Out = (PixelOutput)0;" << std::endl;
 	for (int i = 0; i < sizeof(table) / sizeof(*table); ++i)
 	{
 		if (m_parr.HasParam(PF_PARAM_NONE, "float4", table[i].second))
