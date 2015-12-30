@@ -108,6 +108,12 @@
     <ProjectReference Include="..\rpcs3\emucore.vcxproj">
       <Project>{c4a10229-4712-4bd2-b63e-50d93c67a038}</Project>
     </ProjectReference>
+    <ProjectReference Include="..\rpcs3\OpenAL.vcxproj">
+      <Project>{30a05c4d-f5fd-421c-a864-17a64bdeaa75}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\rpcs3\XAudio.vcxproj">
+      <Project>{78cb2f39-b809-4a06-8329-8c0a19119d3d}</Project>
+    </ProjectReference>
     <ProjectReference Include="..\wxWidgets\build\msw\wx_adv.vcxproj">
       <Project>{24c45343-fd20-5c92-81c1-35a2ae841e79}</Project>
     </ProjectReference>

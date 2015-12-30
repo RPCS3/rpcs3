@@ -17,7 +17,7 @@ struct AudioInfo
 class AudioManager
 {
 	AudioInfo m_audio_info;
-	AudioThread* m_audio_out;
+	std::shared_ptr<AudioThread> m_audio_out;
 public:
 	AudioManager();
 	~AudioManager();

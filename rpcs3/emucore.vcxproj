@@ -223,10 +223,8 @@
     <ClCompile Include="Emu\ARMv7\Modules\sceVoiceQoS.cpp" />
     <ClCompile Include="Emu\ARMv7\Modules\sceXml.cpp" />
     <ClCompile Include="Emu\ARMv7\PSVFuncList.cpp" />
-    <ClCompile Include="Emu\Audio\AL\OpenALThread.cpp" />
     <ClCompile Include="Emu\Audio\AudioDumper.cpp" />
     <ClCompile Include="Emu\Audio\AudioManager.cpp" />
-    <ClCompile Include="Emu\Audio\XAudio2\XAudio2Thread.cpp" />
     <ClCompile Include="Emu\Cell\MFC.cpp" />
     <ClCompile Include="Emu\Cell\PPCDecoder.cpp" />
     <ClCompile Include="Emu\Cell\PPUThread.cpp" />
@@ -499,12 +497,10 @@
     <ClInclude Include="Emu\ARMv7\Modules\sceXml.h" />
     <ClInclude Include="Emu\ARMv7\PSVFuncList.h" />
     <ClInclude Include="Emu\ARMv7\PSVObjectList.h" />
-    <ClInclude Include="Emu\Audio\AL\OpenALThread.h" />
     <ClInclude Include="Emu\Audio\AudioDumper.h" />
     <ClInclude Include="Emu\Audio\AudioManager.h" />
     <ClInclude Include="Emu\Audio\AudioThread.h" />
     <ClInclude Include="Emu\Audio\Null\NullAudioThread.h" />
-    <ClInclude Include="Emu\Audio\XAudio2\XAudio2Thread.h" />
     <ClInclude Include="Emu\Cell\Common.h" />
     <ClInclude Include="Emu\Cell\MFC.h" />
     <ClInclude Include="Emu\Cell\PPCDecoder.h" />

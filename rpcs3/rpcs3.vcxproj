@@ -107,6 +107,36 @@
     <ProjectReference>
       <UseLibraryDependencyInputs>false</UseLibraryDependencyInputs>
     </ProjectReference>
+    <ClCompile>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug - MemLeak|x64'">..\minidx9\Include;..\OpenAL\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <ClCompile>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">..\minidx9\Include;..\OpenAL\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <ClCompile>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\minidx9\Include;..\OpenAL\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <ClCompile>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\minidx9\Include;..\OpenAL\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <ClCompile>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">..\minidx9\Include;..\OpenAL\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <AdditionalLibraryDirectories Condition="'$(Configuration)|$(Platform)'=='Debug - MemLeak|x64'">..\OpenAL\libs\Win64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Link>
+    <Link>
+      <AdditionalLibraryDirectories Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">..\OpenAL\libs\Win64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Link>
+    <Link>
+      <AdditionalLibraryDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\OpenAL\libs\Win64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Link>
+    <Link>
+      <AdditionalLibraryDirectories Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\OpenAL\libs\Win64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Link>
+    <Link>
+      <AdditionalLibraryDirectories Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">..\OpenAL\libs\Win64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Emu\Cell\PPUProgramCompiler.cpp" />
@@ -190,6 +220,12 @@
     </ProjectReference>
     <ProjectReference Include="GLGSRender.vcxproj">
       <Project>{3384223a-6d97-4799-9862-359f85312892}</Project>
+    </ProjectReference>
+    <ProjectReference Include="OpenAL.vcxproj">
+      <Project>{30a05c4d-f5fd-421c-a864-17a64bdeaa75}</Project>
+    </ProjectReference>
+    <ProjectReference Include="XAudio.vcxproj">
+      <Project>{78cb2f39-b809-4a06-8329-8c0a19119d3d}</Project>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
