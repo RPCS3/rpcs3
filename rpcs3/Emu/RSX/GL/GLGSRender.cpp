@@ -379,61 +379,84 @@ void GLGSRender::end()
 	u32 input_mask = rsx::method_registers[NV4097_SET_VERTEX_ATTRIB_INPUT_MASK];
 	m_vao.bind();
 
-	for (int index = 0; index < rsx::limits::vertex_count; ++index)
+	if (draw_command == Draw_command::draw_command_inlined_array)
 	{
-		bool enabled = !!(input_mask & (1 << index));
-		if (!enabled)
-			continue;
-
-		int location;
-		if (!m_program->attribs.has_location(reg_table[index], &location))
-			continue;
-
-		if (vertex_arrays_info[index].size > 0)
+		write_inline_array_to_buffer(vertex_arrays_data.data());
+		size_t offset = 0;
+		for (int index = 0; index < rsx::limits::vertex_count; ++index)
 		{
 			auto &vertex_info = vertex_arrays_info[index];
-			// Active vertex array
 
-			size_t position = vertex_arrays_data.size();
-			vertex_arrays_offsets[index] = position;
-
-			if (vertex_arrays[index].empty())
+			if (!vertex_info.size) // disabled
 				continue;
 
-			size_t size = vertex_arrays[index].size();
-			vertex_arrays_data.resize(position + size);
-
-			memcpy(vertex_arrays_data.data() + position, vertex_arrays[index].data(), size);
+			int location;
+			if (!m_program->attribs.has_location(reg_table[index], &location))
+				continue;
 
 			__glcheck m_program->attribs[location] =
-				(m_vao + vertex_arrays_offsets[index])
+				(m_vao + offset)
 				.config(gl_types[vertex_info.type], vertex_info.size, gl_normalized[vertex_info.type]);
+			offset += rsx::get_vertex_type_size(vertex_info.type) * vertex_info.size;
 		}
-		else if (register_vertex_info[index].size > 0)
+	}
+	else
+	{
+		for (int index = 0; index < rsx::limits::vertex_count; ++index)
 		{
-			auto &vertex_data = register_vertex_data[index];
-			auto &vertex_info = register_vertex_info[index];
+			bool enabled = !!(input_mask & (1 << index));
+			if (!enabled)
+				continue;
 
-			switch (vertex_info.type)
+			int location;
+			if (!m_program->attribs.has_location(reg_table[index], &location))
+				continue;
+
+			if (vertex_arrays_info[index].size > 0)
 			{
-			case CELL_GCM_VERTEX_F:
-				switch (register_vertex_info[index].size)
-				{
-				case 1: apply_attrib_array<f32, 1>(*m_program, location, vertex_data); break;
-				case 2: apply_attrib_array<f32, 2>(*m_program, location, vertex_data); break;
-				case 3: apply_attrib_array<f32, 3>(*m_program, location, vertex_data); break;
-				case 4: apply_attrib_array<f32, 4>(*m_program, location, vertex_data); break;
-				}
-				break;
+				auto &vertex_info = vertex_arrays_info[index];
+				// Active vertex array
 
-			default:
-				LOG_ERROR(RSX, "bad non array vertex data format (type = %d, size = %d)", vertex_info.type, vertex_info.size);
-				break;
+				size_t position = vertex_arrays_data.size();
+				vertex_arrays_offsets[index] = position;
+
+				if (vertex_arrays[index].empty())
+					continue;
+
+				size_t size = vertex_arrays[index].size();
+				vertex_arrays_data.resize(position + size);
+
+				memcpy(vertex_arrays_data.data() + position, vertex_arrays[index].data(), size);
+
+				__glcheck m_program->attribs[location] =
+					(m_vao + vertex_arrays_offsets[index])
+					.config(gl_types[vertex_info.type], vertex_info.size, gl_normalized[vertex_info.type]);
+			}
+			else if (register_vertex_info[index].size > 0)
+			{
+				auto &vertex_data = register_vertex_data[index];
+				auto &vertex_info = register_vertex_info[index];
+
+				switch (vertex_info.type)
+				{
+				case CELL_GCM_VERTEX_F:
+					switch (register_vertex_info[index].size)
+					{
+					case 1: apply_attrib_array<f32, 1>(*m_program, location, vertex_data); break;
+					case 2: apply_attrib_array<f32, 2>(*m_program, location, vertex_data); break;
+					case 3: apply_attrib_array<f32, 3>(*m_program, location, vertex_data); break;
+					case 4: apply_attrib_array<f32, 4>(*m_program, location, vertex_data); break;
+					}
+					break;
+
+				default:
+					LOG_ERROR(RSX, "bad non array vertex data format (type = %d, size = %d)", vertex_info.type, vertex_info.size);
+					break;
+				}
 			}
 		}
 	}
 	m_vbo.data(vertex_arrays_data.size(), vertex_arrays_data.data());
-
 
 	if (vertex_index_array.empty())
 	{

@@ -413,10 +413,20 @@ namespace rsx
 		u32 ctxt_addr;
 		u32 report_main_addr;
 		u32 label_addr;
+		enum class Draw_command
+		{
+			draw_command_array,
+			draw_command_inlined_array,
+			draw_command_indexed,
+		} draw_command;
 		u32 draw_mode;
 
 		u32 local_mem_addr, main_mem_addr;
 		bool strict_ordering[0x1000];
+
+
+		bool draw_inline_vertex_array;
+		std::vector<u32> inline_vertex_array;
 
 	public:
 		u32 draw_array_count;
@@ -463,6 +473,13 @@ namespace rsx
 		* Buffer must be at least 512 float4 wide.
 		*/
 		void fill_vertex_program_constants_data(void *buffer);
+
+		/**
+		* Write inlined array data to buffer.
+		* The storage of inlined data looks different from memory stored arrays.
+		* There is no swapping required except for 4 u8 (according to Bleach Soul Resurection)
+		*/
+		void write_inline_array_to_buffer(void *dst_buffer);
 
 		/**
 		 * Copy rtt values to buffer.
