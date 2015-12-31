@@ -82,20 +82,19 @@ namespace rsx
 			static const size_t element_size = (count * sizeof(type));
 			static const size_t element_size_in_words = element_size / sizeof(u32);
 
-			auto& info = rsx->vertex_arrays_info[index];
+			auto& info = rsx->register_vertex_info[index];
 
 			info.type = vertex_data_type_from_element_type<type>::type;
 			info.size = count;
 			info.frequency = 0;
 			info.stride = 0;
-			info.array = false;
 
-			auto& entry = rsx->vertex_arrays[index];
+			auto& entry = rsx->register_vertex_data[index];
 
 			//find begin of data
 			size_t begin = id + index * element_size_in_words;
 
-			size_t position = entry.size();
+			size_t position = 0;//entry.size();
 			entry.resize(position + element_size);
 
 			memcpy(entry.data() + position, method_registers + begin, element_size);
@@ -170,8 +169,7 @@ namespace rsx
 			force_inline static void impl(thread* rsx, u32 arg)
 			{
 				auto& info = rsx->vertex_arrays_info[index];
-				info.unpack(arg);
-				info.array = info.size > 0;
+				info.unpack_array(arg);
 			}
 		};
 
@@ -237,7 +235,7 @@ namespace rsx
 
 				for (int i = 0; i < rsx::limits::vertex_count; ++i)
 				{
-					if (rsx->vertex_arrays_info[i].array)
+					if (rsx->vertex_arrays_info[i].size > 0)
 					{
 						has_array = true;
 						break;
@@ -250,11 +248,11 @@ namespace rsx
 
 					for (int i = 0; i < rsx::limits::vertex_count; ++i)
 					{
-						if (!rsx->vertex_arrays_info[i].size)
+						if (!rsx->register_vertex_info[i].size)
 							continue;
 
-						u32 count = u32(rsx->vertex_arrays[i].size()) /
-							rsx::get_vertex_type_size(rsx->vertex_arrays_info[i].type) * rsx->vertex_arrays_info[i].size;
+						u32 count = u32(rsx->register_vertex_data[i].size()) /
+							rsx::get_vertex_type_size(rsx->register_vertex_info[i].type) * rsx->register_vertex_info[i].size;
 
 						if (count < min_count)
 							min_count = count;
@@ -933,7 +931,7 @@ namespace rsx
 		{
 			const auto &info = vertex_arrays_info[index];
 
-			if (!info.array) // disabled or not a vertex array
+			if (info.size == 0) // disabled
 				continue;
 
 			auto &data = vertex_arrays[index];
@@ -1269,6 +1267,10 @@ namespace rsx
 		method_registers[NV4097_SET_CLEAR_RECT_VERTICAL] = (4096 << 16) | 0;
 
 		method_registers[NV4097_SET_ZSTENCIL_CLEAR_VALUE] = 0xffffffff;
+
+		// Reset vertex attrib array
+		for (int i = 0; i < limits::vertex_count; i++)
+			vertex_arrays_info[i].size = 0;
 
 		// Construct Textures
 		for (int i = 0; i < limits::textures_count; i++)

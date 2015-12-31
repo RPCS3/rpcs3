@@ -6,7 +6,7 @@
 
 void write_vertex_array_data_to_buffer(void *buffer, u32 first, u32 count, size_t index, const rsx::data_array_format_info &vertex_array_desc)
 {
-	assert(vertex_array_desc.array);
+	assert(vertex_array_desc.size > 0);
 
 	if (vertex_array_desc.frequency > 1)
 		LOG_ERROR(RSX, "%s: frequency is not null (%d, index=%d)", __FUNCTION__, vertex_array_desc.frequency, index);
