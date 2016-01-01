@@ -9,7 +9,7 @@
 
 using namespace Microsoft::WRL;
 
-#define CHECK_HRESULT(expr) if (HRESULT hr = (expr)) if (FAILED(hr)) throw EXCEPTION("HRESULT = 0x%x", hr)
+#define CHECK_HRESULT(expr) { HRESULT hr = (expr); if (FAILED(hr)) throw EXCEPTION("HRESULT = 0x%x", hr); }
 
 /**
  * Send data to dst pointer without polluting cache.
