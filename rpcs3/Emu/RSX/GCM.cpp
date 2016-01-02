@@ -1271,7 +1271,7 @@ namespace
 		{ NV4097_SET_SURFACE_PITCH_Z, [](u32 arg) -> std::string { return "Surface Zeta: Pitch = " + std::to_string(arg); } },
 		{ NV4097_SET_SURFACE_ZETA_OFFSET, [](u32 arg) -> std::string { return "Surface Zeta: Offset = " + ptr_to_string(arg); } },
 		{ NV4097_SET_CONTEXT_DMA_ZETA, [](u32 arg) -> std::string { return "Surface Zeta: DMA mode = " + dma_mode(arg);} },
-		{ NV4097_SET_SURFACE_FORMAT, [](u32 arg) -> std::string { return "Surface: Color format = " + color_surface_format(arg & 0x1F) + " DepthStencil format = " + depth_stencil_surface_format((arg >> 5) & 0x7); } },
+		{ NV4097_SET_SURFACE_FORMAT, [](u32 arg) -> std::string { return "Surface: Color format = " + color_surface_format(arg & 0x1F) + " DepthStencil format = " + depth_stencil_surface_format((arg >> 5) & 0x7) + " Anti aliasing =" + std::to_string((arg >> 12) & 0x7); } },
 		{ NV4097_SET_SURFACE_CLIP_HORIZONTAL, [](u32 arg) -> std::string { return "Surface: clip x = " + std::to_string(arg & 0xFFFF) + " width = " + std::to_string(arg >> 16); } },
 		{ NV4097_SET_SURFACE_CLIP_VERTICAL, [](u32 arg) -> std::string { return "Surface: clip y = " + std::to_string(arg & 0xFFFF) + " height = " + std::to_string(arg >> 16); } },
 		{ NV4097_SET_SURFACE_COLOR_TARGET, [](u32 arg) -> std::string { return "Surface: Targets " + surface_target(arg); } },
