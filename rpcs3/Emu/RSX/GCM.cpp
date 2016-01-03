@@ -704,6 +704,18 @@ namespace
 		{ NV4097_SET_VERTEX_ATTRIB_INPUT_MASK, "NV4097_SET_VERTEX_ATTRIB_INPUT_MASK" },
 		{ NV4097_SET_VERTEX_ATTRIB_OUTPUT_MASK, "NV4097_SET_VERTEX_ATTRIB_OUTPUT_MASK" },
 		{ NV4097_SET_TRANSFORM_BRANCH_BITS, "NV4097_SET_TRANSFORM_BRANCH_BITS" },
+		{ NV3062_SET_OBJECT, "NV3062_SET_OBJECT" },
+		{ NV3062_SET_CONTEXT_DMA_NOTIFIES, "NV3062_SET_CONTEXT_DMA_NOTIFIES" },
+		{ NV3062_SET_CONTEXT_DMA_IMAGE_SOURCE, "NV3062_SET_CONTEXT_DMA_IMAGE_SOURCE" },
+		{ NV3062_SET_CONTEXT_DMA_IMAGE_DESTIN, "NV3062_SET_CONTEXT_DMA_IMAGE_DESTIN" },
+		{ NV3062_SET_COLOR_FORMAT, "NV3062_SET_COLOR_FORMAT" },
+		{ NV3062_SET_PITCH, "NV3062_SET_PITCH" },
+		{ NV3062_SET_OFFSET_SOURCE, "NV3062_SET_OFFSET_SOURCE" },
+		{ NV3062_SET_OFFSET_DESTIN, "NV3062_SET_OFFSET_DESTIN" },
+		{ NV308A_POINT, "NV308A_POINT" },
+		{ NV308A_SIZE_OUT, "NV308A_SIZE_OUT" },
+		{ NV308A_SIZE_IN, "NV308A_SIZE_IN" },
+		{ NV308A_COLOR, "NV308A_COLOR" },
 	};
 }
 
@@ -1087,10 +1099,25 @@ namespace
 		return result;
 	}
 
-	std::string texture_control1(size_t index, u32 arg)
+	std::string get_remap_channel(u8 op) noexcept
+	{
+		switch (op)
+		{
+		case 0: return "A";
+		case 1: return "R";
+		case 2: return "G";
+		case 3: return "B";
+		}
+		return "Error";
+	}
+
+	std::string texture_control1(size_t index, u32 arg) noexcept
 	{
 		return "Texture " + std::to_string(index) +
-			" remap = " + std::to_string(arg);
+			" Component 0 = " + get_remap_channel(arg & 0x3) +
+			" Component 1 = " + get_remap_channel((arg >> 2) & 0x3) +
+			" Component 2 = " + get_remap_channel((arg >> 4) & 0x3) +
+			" Component 3 = " + get_remap_channel((arg >> 6) & 0x3);
 	}
 
 	std::string texture_control3(size_t index, u32 arg)
@@ -1109,7 +1136,95 @@ namespace
 	std::string texture_filter(size_t index, u32 arg)
 	{
 		return "Texture " + std::to_string(index) +
-			" filter = " + std::to_string(arg);
+			" bias = " + std::to_string(arg & 0x1fff) +
+			" min_filter = " + std::to_string((arg >> 16) & 0x7) +
+			" mag_filter = " + std::to_string((arg >> 24) & 0x7) +
+			" convolution_filter = " + std::to_string((arg >> 13) & 0xF) +
+			" a_signed = " + std::to_string((arg >> 28) & 0x1) +
+			" r_signed = " + std::to_string((arg >> 29) & 0x1) +
+			" g_signed = " + std::to_string((arg >> 30) & 0x1) +
+			" b_signed = " + std::to_string((arg >> 31) & 0x1);
+	}
+
+	std::string vertex_input_mask(u32 arg)
+	{
+		const std::string input_names[] =
+		{
+		"in_pos", "in_weight", "in_normal",
+			"in_diff_color", "in_spec_color",
+			"in_fog",
+			"in_point_size", "in_7",
+			"in_tc0", "in_tc1", "in_tc2", "in_tc3",
+			"in_tc4", "in_tc5", "in_tc6", "in_tc7"
+		};
+		std::string result = "Transform program enabled inputs:";
+		for (unsigned i = 0; i < 16; i++)
+			if (arg & (1 << i))
+				result += input_names[i] + " ";
+		return result;
+	}
+
+	std::string vertex_output_mask(u32 arg)
+	{
+		const std::string output_names[] =
+		{
+		"diffuse_color",
+		"specular_color",
+		"back_diffuse_color",
+		"back_specular_color",
+		"fog",
+		"point_size",
+		"clip_distance[0]",
+		"clip_distance[1]",
+		"clip_distance[2]",
+		"clip_distance[3]",
+		"clip_distance[4]",
+		"clip_distance[5]",
+		"tc8",
+		"tc9",
+		"tc0",
+		"tc1",
+		"tc2",
+		"tc3",
+		"tc4",
+		"tc5",
+		"tc6",
+		"tc7"
+		};
+		std::string result = "Transform program outputs:";
+		for (unsigned i = 0; i < 22; i++)
+			if (arg & (1 << i))
+				result += output_names[i] + " ";
+		return result;
+	}
+
+	std::string shader_control(u32 arg)
+	{
+		return "Shader control: raw_value =" + std::to_string(arg) +
+			" reg_count = " + std::to_string((arg >> 24) & 0xFF) +
+			((arg & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT) ? " depth_replace " : "") +
+			((arg & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS) ? " 32b_exports " : "");
+	}
+
+	std::string anti_aliasing_control(u32 arg)
+	{
+		std::string result = "Anti_aliasing: ";
+		if (arg & 0x1)
+			result += "enabled";
+		else
+			result += "disabled";
+		result += " alpha_to_coverage = ";
+		if ((arg >> 4) & 0x1)
+			result += "enabled";
+		else
+			result += "disabled";
+		result += " alpha_to_one = ";
+		if ((arg >> 8) & 0x1)
+			result += "enabled";
+		else
+			result += "disabled";
+		result += " sample_mask = " + ptr_to_string(arg >> 16);
+		return result;
 	}
 
 #define OPCODE_RANGE_1(opcode, increment, index, printing_function) \
@@ -1134,6 +1249,10 @@ namespace
 #define OPCODE_RANGE_32(opcode, increment, index, printing_function) \
 	OPCODE_RANGE_16((opcode), (increment), (index), (printing_function)) \
 	OPCODE_RANGE_16((opcode), (increment), (index) + 16, (printing_function))
+
+#define OPCODE_RANGE_64(opcode, increment, index, printing_function) \
+	OPCODE_RANGE_32((opcode), (increment), (index), (printing_function)) \
+	OPCODE_RANGE_32((opcode), (increment), (index) + 32, (printing_function))
 
 	const std::unordered_map<u32, std::string(*)(u32)> printing_functions =
 	{
@@ -1173,7 +1292,7 @@ namespace
 		{ NV4097_SET_SURFACE_PITCH_Z, [](u32 arg) -> std::string { return "Surface Zeta: Pitch = " + std::to_string(arg); } },
 		{ NV4097_SET_SURFACE_ZETA_OFFSET, [](u32 arg) -> std::string { return "Surface Zeta: Offset = " + ptr_to_string(arg); } },
 		{ NV4097_SET_CONTEXT_DMA_ZETA, [](u32 arg) -> std::string { return "Surface Zeta: DMA mode = " + dma_mode(arg);} },
-		{ NV4097_SET_SURFACE_FORMAT, [](u32 arg) -> std::string { return "Surface: Color format = " + color_surface_format(arg & 0x1F) + " DepthStencil format = " + depth_stencil_surface_format((arg >> 5) & 0x7); } },
+		{ NV4097_SET_SURFACE_FORMAT, [](u32 arg) -> std::string { return "Surface: Color format = " + color_surface_format(arg & 0x1F) + " DepthStencil format = " + depth_stencil_surface_format((arg >> 5) & 0x7) + " Anti aliasing =" + std::to_string((arg >> 12) & 0x7); } },
 		{ NV4097_SET_SURFACE_CLIP_HORIZONTAL, [](u32 arg) -> std::string { return "Surface: clip x = " + std::to_string(arg & 0xFFFF) + " width = " + std::to_string(arg >> 16); } },
 		{ NV4097_SET_SURFACE_CLIP_VERTICAL, [](u32 arg) -> std::string { return "Surface: clip y = " + std::to_string(arg & 0xFFFF) + " height = " + std::to_string(arg >> 16); } },
 		{ NV4097_SET_SURFACE_COLOR_TARGET, [](u32 arg) -> std::string { return "Surface: Targets " + surface_target(arg); } },
@@ -1202,6 +1321,10 @@ namespace
 		{ NV4097_SET_STENCIL_FUNC_REF, [](u32 arg) -> std::string { return "Stencil: Ref = " + std::to_string(arg); } },
 		{ NV4097_INVALIDATE_VERTEX_CACHE_FILE, [](u32) -> std::string { return "(invalidate vertex cache file)"; } },
 		{ NV4097_INVALIDATE_VERTEX_FILE, [](u32) -> std::string { return "(invalidate vertex file)"; } },
+		{ NV4097_SET_VERTEX_ATTRIB_INPUT_MASK, vertex_input_mask},
+		{ NV4097_SET_VERTEX_ATTRIB_OUTPUT_MASK, vertex_output_mask },
+		{ NV4097_SET_SHADER_CONTROL, shader_control },
+		{ NV4097_SET_ANTI_ALIASING_CONTROL, anti_aliasing_control },
 		{ NV4097_SET_VERTEX_DATA_ARRAY_FORMAT, [](u32 arg) -> std::string { return "Vertex array 0: " + unpack_vertex_format(arg); } },
 		{ NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 1, [](u32 arg) -> std::string { return "Vertex array 1: " + unpack_vertex_format(arg); } },
 		{ NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 2, [](u32 arg) -> std::string { return "Vertex array 2: " + unpack_vertex_format(arg); } },
