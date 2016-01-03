@@ -1206,6 +1206,27 @@ namespace
 			((arg & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS) ? " 32b_exports " : "");
 	}
 
+	std::string anti_aliasing_control(u32 arg)
+	{
+		std::string result = "Anti_aliasing: ";
+		if (arg & 0x1)
+			result += "enabled";
+		else
+			result += "disabled";
+		result += " alpha_to_coverage = ";
+		if ((arg >> 4) & 0x1)
+			result += "enabled";
+		else
+			result += "disabled";
+		result += " alpha_to_one = ";
+		if ((arg >> 8) & 0x1)
+			result += "enabled";
+		else
+			result += "disabled";
+		result += " sample_mask = " + ptr_to_string(arg >> 16);
+		return result;
+	}
+
 #define OPCODE_RANGE_1(opcode, increment, index, printing_function) \
 	{ (opcode) + (index) * (increment), [](u32 arg) -> std::string { return (printing_function)((index), arg); } },
 
@@ -1303,6 +1324,7 @@ namespace
 		{ NV4097_SET_VERTEX_ATTRIB_INPUT_MASK, vertex_input_mask},
 		{ NV4097_SET_VERTEX_ATTRIB_OUTPUT_MASK, vertex_output_mask },
 		{ NV4097_SET_SHADER_CONTROL, shader_control },
+		{ NV4097_SET_ANTI_ALIASING_CONTROL, anti_aliasing_control },
 		{ NV4097_SET_VERTEX_DATA_ARRAY_FORMAT, [](u32 arg) -> std::string { return "Vertex array 0: " + unpack_vertex_format(arg); } },
 		{ NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 1, [](u32 arg) -> std::string { return "Vertex array 1: " + unpack_vertex_format(arg); } },
 		{ NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 2, [](u32 arg) -> std::string { return "Vertex array 2: " + unpack_vertex_format(arg); } },
