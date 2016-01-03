@@ -46,6 +46,7 @@
 #include <typeindex>
 #include <future>
 #include <chrono>
+#include <gsl.h>
 
 using namespace std::string_literals;
 using namespace std::chrono_literals;
