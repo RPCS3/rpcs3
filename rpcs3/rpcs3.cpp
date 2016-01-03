@@ -32,8 +32,11 @@
 
 #include "Emu/RSX/Null/NullGSRender.h"
 #include "Emu/RSX/GL/GLGSRender.h"
+#include "Emu/Audio/Null/NullAudioThread.h"
+#include "Emu/Audio/AL/OpenALThread.h"
 #ifdef _MSC_VER
 #include "Emu/RSX/D3D12/D3D12GSRender.h"
+#include "Emu/Audio/XAudio2/XAudio2Thread.h"
 #endif
 
 #ifdef _WIN32
@@ -141,6 +144,19 @@ bool Rpcs3App::OnInit()
 		case rsx_renderer_type::DX12: return std::make_shared<D3D12GSRender>();
 #endif
 		default: throw EXCEPTION("Invalid GS Renderer %d", (int)mode);
+		}
+	};
+
+	callbacks.get_audio = []() -> std::shared_ptr<AudioThread>
+	{
+		switch (rpcs3::state.config.audio.out.value())
+		{
+		default:
+		case audio_output_type::Null: return std::make_shared<NullAudioThread>();
+		case audio_output_type::OpenAL: return std::make_shared<OpenALThread>();
+#ifdef _MSC_VER
+		case audio_output_type::XAudio2: return std::make_shared<XAudio2Thread>();
+#endif
 		}
 	};
 
