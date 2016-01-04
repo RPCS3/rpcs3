@@ -164,18 +164,32 @@ s32 cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 		freeifaddrs(ifaddr);
 #endif
 	}
+	else if (code == CELL_NET_CTL_INFO_LINK)
+	{
+		if (rpcs3::config.misc.net.status.value() == misc_net_status::ip_obtained)
+		{
+			info->link = CELL_NET_CTL_LINK_CONNECTED;
+		}
+		else
+		{
+			info->link = CELL_NET_CTL_LINK_DISCONNECTED;
+		}
+	}
 	else if (code == CELL_NET_CTL_INFO_IP_ADDRESS)
 	{
+		// 0.0.0.0 seems to be the default address when no ethernet cables are connected to the PS3
+		strcpy_trunc(info->ip_address, "0.0.0.0");
+
 #ifdef _WIN32
-		ULONG bufLen = sizeof(IP_ADAPTER_INFO) + 1;
-		PIP_ADAPTER_INFO pAdapterInfo = (PIP_ADAPTER_INFO)malloc(bufLen);
+		ULONG bufLen = sizeof(IP_ADAPTER_INFO);
+		PIP_ADAPTER_INFO pAdapterInfo = (IP_ADAPTER_INFO*)malloc(bufLen);
 		DWORD ret;
 
 		ret = GetAdaptersInfo(pAdapterInfo, &bufLen);
 		
 		if (ret == ERROR_BUFFER_OVERFLOW)
 		{
-			cellNetCtl.Error("cellNetCtlGetInfo(IP_ADDRESS): GetAdaptersAddresses buffer overflow.");
+			cellNetCtl.Error("cellNetCtlGetInfo(IP_ADDRESS): GetAdaptersInfo buffer overflow.");
 			free(pAdapterInfo);
 			pAdapterInfo = (IP_ADAPTER_INFO*)malloc(bufLen);
 
@@ -202,8 +216,6 @@ s32 cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 		else
 		{
 			cellNetCtl.Error("cellNetCtlGetInfo(IP_ADDRESS): Call to GetAdaptersInfo failed. (%d)", ret);
-			// 0.0.0.0 seems to be the default address when no ethernet cables are connected to the PS3
-			strcpy_trunc(info->ip_address, "0.0.0.0");
 		}
 
 		free(pAdapterInfo);
@@ -250,7 +262,7 @@ s32 cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 
 		if (ret == ERROR_BUFFER_OVERFLOW)
 		{
-			cellNetCtl.Error("cellNetCtlGetInfo(INFO_NETMASK): GetAdaptersAddresses buffer overflow.");
+			cellNetCtl.Error("cellNetCtlGetInfo(INFO_NETMASK): GetAdaptersInfo buffer overflow.");
 			free(pAdapterInfo);
 			pAdapterInfo = (IP_ADAPTER_INFO*)malloc(bufLen);
 

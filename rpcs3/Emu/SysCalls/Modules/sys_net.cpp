@@ -276,16 +276,22 @@ namespace sys_net
 		return CELL_OK;
 	}
 
-	s32 inet_ntop()
+	vm::cptr<char> inet_ntop(s32 af, vm::ptr<void> src, vm::ptr<char> dst, u32 size)
 	{
-		UNIMPLEMENTED_FUNC(libnet);
-		return CELL_OK;
+		libnet.Warning("inet_ntop(af=%d, src=*0x%x, dst=*0x%x, size=%d)", af, src, dst, size);
+		const char* result = ::inet_ntop(af, src.get_ptr(), dst.get_ptr(), size);
+
+		if (result == nullptr)
+		{
+			return vm::null;
+		}
+
+		return dst;
 	}
 
 	s32 inet_pton(s32 af, vm::cptr<char> src, vm::ptr<char> dst)
 	{
 		libnet.Warning("inet_pton(af=%d, src=*0x%x, dst=*0x%x)", af, src, dst);
-
 		return ::inet_pton(af, src.get_ptr(), dst.get_ptr());
 	}
 
