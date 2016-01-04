@@ -220,7 +220,7 @@ struct D3D12Traits
 
 		graphicPipelineStateDesc.IBStripCutValue = pipelineProperties.CutValue;
 
-		extraData.first->CreateGraphicsPipelineState(&graphicPipelineStateDesc, IID_PPV_ARGS(&std::get<0>(*result)));
+		CHECK_HRESULT(extraData.first->CreateGraphicsPipelineState(&graphicPipelineStateDesc, IID_PPV_ARGS(&std::get<0>(*result))));
 		std::get<1>(*result) = vertexProgramData.vertex_shader_inputs;
 
 		std::wstring name = L"PSO_" + std::to_wstring(vertexProgramData.id) + L"_" + std::to_wstring(fragmentProgramData.id);

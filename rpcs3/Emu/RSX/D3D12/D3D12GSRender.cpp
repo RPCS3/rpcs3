@@ -271,12 +271,7 @@ void D3D12GSRender::end()
 	m_timers.m_vertex_index_duration += std::chrono::duration_cast<std::chrono::microseconds>(vertex_index_duration_end - vertex_index_duration_start).count();
 
 	std::chrono::time_point<std::chrono::system_clock> program_load_start = std::chrono::system_clock::now();
-	if (!load_program())
-	{
-		LOG_ERROR(RSX, "LoadProgram failed.");
-		Emu.Pause();
-		return;
-	}
+	load_program();
 	std::chrono::time_point<std::chrono::system_clock> program_load_end = std::chrono::system_clock::now();
 	m_timers.m_program_load_duration += std::chrono::duration_cast<std::chrono::microseconds>(program_load_end - program_load_start).count();
 
@@ -301,12 +296,6 @@ void D3D12GSRender::end()
 	{
 		upload_and_bind_textures(get_current_resource_storage().command_list.Get(), currentDescriptorIndex + 3, std::get<2>(*m_current_pso) > 0);
 
-		ID3D12DescriptorHeap *descriptors[] =
-		{
-			get_current_resource_storage().descriptors_heap.Get(),
-			get_current_resource_storage().sampler_descriptor_heap[get_current_resource_storage().sampler_descriptors_heap_index].Get(),
-		};
-		get_current_resource_storage().command_list->SetDescriptorHeaps(2, descriptors);
 
 		get_current_resource_storage().command_list->SetGraphicsRootDescriptorTable(0,
 			CD3DX12_GPU_DESCRIPTOR_HANDLE(get_current_resource_storage().descriptors_heap->GetGPUDescriptorHandleForHeapStart())
