@@ -1220,19 +1220,19 @@ s32 cellRescCreateInterlaceTable(u32 ea_addr, float srcH, CellRescTableElement d
 
 	if (!s_rescInternalInstance->m_bInitialized)
 	{
-		cellResc.Error("cellRescCreateInterlaceTable : CELL_RESC_ERROR_NOT_INITIALIZED");
+		cellResc.Error("cellRescCreateInterlaceTable: CELL_RESC_ERROR_NOT_INITIALIZED");
 		return CELL_RESC_ERROR_NOT_INITIALIZED;
 	}
 
 	if ((ea_addr == 0) || (srcH <= 0.f) || (!(depth == CELL_RESC_ELEMENT_HALF || depth == CELL_RESC_ELEMENT_FLOAT)) || (length <= 0))
 	{
-		cellResc.Error("cellRescCreateInterlaceTable : CELL_RESC_ERROR_NOT_INITIALIZED");
+		cellResc.Error("cellRescCreateInterlaceTable: CELL_RESC_ERROR_BAD_ARGUMENT");
 		return CELL_RESC_ERROR_BAD_ARGUMENT;
 	}
 
 	if (s_rescInternalInstance->m_dstHeight == 0)
 	{
-		cellResc.Error("cellRescCreateInterlaceTable : CELL_RESC_ERROR_BAD_COMBINATION");
+		cellResc.Error("cellRescCreateInterlaceTable: CELL_RESC_ERROR_BAD_COMBINATION");
 		return CELL_RESC_ERROR_BAD_COMBINATION;
 	}
 

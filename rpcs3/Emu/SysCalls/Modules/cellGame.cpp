@@ -508,6 +508,7 @@ s32 cellGameGetParamInt(u32 id, vm::ptr<u32> value)
 	// TODO: Access through cellGame***Check functions
 	vfsFile f("/app_home/../PARAM.SFO");
 	const PSFLoader psf(f);
+
 	if (!psf)
 	{
 		return CELL_GAME_ERROR_FAILURE;
@@ -515,11 +516,12 @@ s32 cellGameGetParamInt(u32 id, vm::ptr<u32> value)
 
 	switch(id)
 	{
-	case CELL_GAME_PARAMID_PARENTAL_LEVEL:  *value = psf.GetInteger("PARENTAL_LEVEL"); break;
-	case CELL_GAME_PARAMID_RESOLUTION:      *value = psf.GetInteger("RESOLUTION");     break;
-	case CELL_GAME_PARAMID_SOUND_FORMAT:    *value = psf.GetInteger("SOUND_FORMAT");   break;
+	case CELL_GAME_PARAMID_PARENTAL_LEVEL: *value = psf.GetInteger("PARENTAL_LEVEL"); break;
+	case CELL_GAME_PARAMID_RESOLUTION:     *value = psf.GetInteger("RESOLUTION");     break;
+	case CELL_GAME_PARAMID_SOUND_FORMAT:   *value = psf.GetInteger("SOUND_FORMAT");   break;
 
 	default:
+		cellGame.Error("cellGameGetParamInt(): Unimplemented parameter (%d)", id);
 		return CELL_GAME_ERROR_INVALID_ID;
 	}
 
@@ -568,6 +570,7 @@ s32 cellGameGetParamString(u32 id, vm::ptr<char> buf, u32 bufsize)
 	case CELL_GAME_PARAMID_APP_VER:                  data = psf.GetString("APP_VER");        break;
 
 	default:
+		cellGame.Error("cellGameGetParamString(): Unimplemented parameter (%d)", id);
 		return CELL_GAME_ERROR_INVALID_ID;
 	}
 

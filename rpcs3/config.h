@@ -942,7 +942,7 @@ namespace rpcs3
 			{
 				net_group(group *grp) : group{ grp, "net" } {}
 
-				entry<misc_net_status> status{ this, "Connection status", misc_net_status::connecting };
+				entry<misc_net_status> status{ this, "Connection status", misc_net_status::ip_obtained };
 				entry<u32> _interface        { this, "Network adapter",   0 };
 			} net{ this };
 
