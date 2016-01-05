@@ -129,6 +129,7 @@
     <ClCompile Include="Emu\RSX\Common\VertexProgramDecompiler.cpp" />
     <ClCompile Include="Emu\RSX\GCM.cpp" />
     <ClCompile Include="Emu\RSX\Null\NullGSRender.cpp" />
+    <ClCompile Include="Emu\RSX\rsx_utils.cpp" />
     <ClCompile Include="Emu\state.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\sys_dbg.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\sys_fs.cpp" />
@@ -574,6 +575,7 @@
     <ClInclude Include="Emu\Memory\vm_ptr.h" />
     <ClInclude Include="Emu\Memory\vm_ref.h" />
     <ClInclude Include="Emu\Memory\vm_var.h" />
+    <ClInclude Include="Emu\RSX\rsx_utils.h" />
     <ClInclude Include="Emu\state.h" />
     <ClInclude Include="Emu\SysCalls\Callback.h" />
     <ClInclude Include="Emu\SysCalls\CB_FUNC.h" />

@@ -927,6 +927,9 @@
     <ClCompile Include="Emu\RSX\GCM.cpp">
       <Filter>Emu\GPU\RSX</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\RSX\rsx_utils.cpp">
+      <Filter>Emu\GPU\RSX</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -1772,6 +1775,9 @@
     </ClInclude>
     <ClInclude Include="..\Utilities\BitField.h">
       <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\rsx_utils.h">
+      <Filter>Emu\GPU\RSX</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

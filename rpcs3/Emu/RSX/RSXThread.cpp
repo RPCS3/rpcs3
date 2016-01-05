@@ -10,6 +10,7 @@
 #include "Emu/SysCalls/lv2/sys_time.h"
 
 #include "Common/BufferUtils.h"
+#include "rsx_utils.h"
 
 extern "C"
 {
