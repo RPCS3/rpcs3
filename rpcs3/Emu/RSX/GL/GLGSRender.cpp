@@ -971,6 +971,10 @@ void GLGSRender::read_buffers()
 
 		auto read_color_buffers = [&](int index, int count)
 		{
+			u32 width = rsx::method_registers[NV4097_SET_SURFACE_CLIP_HORIZONTAL] >> 16;
+			u32 height = rsx::method_registers[NV4097_SET_SURFACE_CLIP_VERTICAL] >> 16;
+
+
 			for (int i = index; i < index + count; ++i)
 			{
 				u32 offset = rsx::method_registers[mr_color_offset[i]];
@@ -982,8 +986,19 @@ void GLGSRender::read_buffers()
 
 				m_draw_tex_color[i].pixel_unpack_settings().row_length(pitch / (color_format.channel_size * color_format.channel_count));
 
-				u32 color_address = rsx::get_address(offset, location);
-				__glcheck m_draw_tex_color[i].copy_from(vm::base(color_address), color_format.format, color_format.type);
+				rsx::tiled_region color_buffer = get_tiled_address(offset, location & 0xf);
+
+				if (!color_buffer.tile)
+				{
+					__glcheck m_draw_tex_color[i].copy_from(color_buffer.ptr, color_format.format, color_format.type);
+				}
+				else
+				{
+					std::unique_ptr<u8[]> buffer(new u8[pitch * height]);
+					color_buffer.read(buffer.get(), width, height, pitch);
+
+					__glcheck m_draw_tex_color[i].copy_from(buffer.get(), color_format.format, color_format.type);
+				}
 			}
 		};
 
@@ -1016,6 +1031,12 @@ void GLGSRender::read_buffers()
 
 	if (rpcs3::state.config.rsx.opengl.read_depth_buffer)
 	{
+		//TODO: use pitch
+		u32 pitch = rsx::method_registers[NV4097_SET_SURFACE_PITCH_Z];
+
+		if (pitch <= 64)
+			return;
+
 		auto depth_format = surface_depth_format_to_gl(m_surface.depth_format);
 
 		int pixel_size = m_surface.depth_format == CELL_GCM_SURFACE_Z16 ? 2 : 4;
@@ -1065,6 +1086,9 @@ void GLGSRender::write_buffers()
 
 		auto write_color_buffers = [&](int index, int count)
 		{
+			u32 width = rsx::method_registers[NV4097_SET_SURFACE_CLIP_HORIZONTAL] >> 16;
+			u32 height = rsx::method_registers[NV4097_SET_SURFACE_CLIP_VERTICAL] >> 16;
+
 			for (int i = index; i < index + count; ++i)
 			{
 				//TODO: swizzle
@@ -1093,8 +1117,20 @@ void GLGSRender::write_buffers()
 
 				m_draw_tex_color[i].pixel_pack_settings().row_length(pitch / (color_format.channel_size * color_format.channel_count));
 
-				u32 color_address = rsx::get_address(offset, location);
-				__glcheck m_draw_tex_color[i].copy_to(vm::base(color_address), color_format.format, color_format.type);
+				rsx::tiled_region color_buffer = get_tiled_address(offset, location & 0xf);
+
+				if (!color_buffer.tile)
+				{
+					__glcheck m_draw_tex_color[i].copy_to(color_buffer.ptr, color_format.format, color_format.type);
+				}
+				else
+				{
+					std::unique_ptr<u8[]> buffer(new u8[pitch * height]);
+
+					__glcheck m_draw_tex_color[i].copy_to(buffer.get(), color_format.format, color_format.type);
+
+					color_buffer.write(buffer.get(), width, height, pitch);
+				}
 			}
 		};
 
@@ -1127,6 +1163,12 @@ void GLGSRender::write_buffers()
 
 	if (rpcs3::state.config.rsx.opengl.write_depth_buffer)
 	{
+		//TODO: use pitch
+		u32 pitch = rsx::method_registers[NV4097_SET_SURFACE_PITCH_Z];
+
+		if (pitch <= 64)
+			return;
+
 		auto depth_format = surface_depth_format_to_gl(m_surface.depth_format);
 
 		gl::buffer pbo_depth;
@@ -1169,7 +1211,9 @@ void GLGSRender::flip(int buffer)
 	u32 buffer_width = gcm_buffers[buffer].width;
 	u32 buffer_height = gcm_buffers[buffer].height;
 	u32 buffer_pitch = gcm_buffers[buffer].pitch;
-	u32 buffer_address = rsx::get_address(gcm_buffers[buffer].offset, CELL_GCM_LOCATION_LOCAL);
+
+	rsx::tiled_region buffer_region = get_tiled_address(gcm_buffers[buffer].offset, CELL_GCM_LOCATION_LOCAL);
+
 	bool skip_read = false;
 
 	if (draw_fbo && !rpcs3::state.config.rsx.opengl.write_color_buffers)
@@ -1201,7 +1245,7 @@ void GLGSRender::flip(int buffer)
 				.type(gl::texture::type::uint_8_8_8_8)
 				.format(gl::texture::format::bgra);
 
-			m_flip_tex_color.pixel_unpack_settings().aligment(1).row_length(buffer_pitch);
+			m_flip_tex_color.pixel_unpack_settings().aligment(1).row_length(buffer_pitch / 4);
 
 			__glcheck m_flip_fbo.recreate();
 			__glcheck m_flip_fbo.color = m_flip_tex_color;
@@ -1218,7 +1262,16 @@ void GLGSRender::flip(int buffer)
 		glDisable(GL_LOGIC_OP);
 		glDisable(GL_CULL_FACE);
 
-		__glcheck m_flip_tex_color.copy_from(vm::base(buffer_address), gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8);
+		if (buffer_region.tile)
+		{
+			std::unique_ptr<u8> temp(new u8[buffer_height * buffer_pitch]);
+			buffer_region.read(temp.get(), buffer_width, buffer_height, buffer_pitch);
+			__glcheck m_flip_tex_color.copy_from(temp.get(), gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8);
+		}
+		else
+		{
+			__glcheck m_flip_tex_color.copy_from(buffer_region.ptr, gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8);
+		}
 	}
 
 	areai screen_area = coordi({}, { (int)buffer_width, (int)buffer_height });

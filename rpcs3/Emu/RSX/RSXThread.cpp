@@ -968,7 +968,7 @@ namespace rsx
 		}
 	}
 	
-	void tiled_address::write(const void *src, u32 width, u32 height, u32 pitch)
+	void tiled_region::write(const void *src, u32 width, u32 height, u32 pitch)
 	{
 		if (!tile)
 		{
@@ -1021,7 +1021,7 @@ namespace rsx
 		}
 	}
 
-	void tiled_address::read(void *dst, u32 width, u32 height, u32 pitch)
+	void tiled_region::read(void *dst, u32 width, u32 height, u32 pitch)
 	{
 		if (!tile)
 		{
@@ -1494,7 +1494,7 @@ namespace rsx
 		return nullptr;
 	}
 
-	tiled_address thread::get_tiled_address(u32 offset, u32 location)
+	tiled_region thread::get_tiled_address(u32 offset, u32 location)
 	{
 		u32 address = get_address(offset, location);
 

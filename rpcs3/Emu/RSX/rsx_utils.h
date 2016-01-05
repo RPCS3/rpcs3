@@ -13,7 +13,7 @@ namespace rsx
 		T *src = static_cast<T*>(input_pixels);
 		T *dst = static_cast<T*>(output_pixels);
 
-		for (u16 h = 0; h < inputHeight; ++h)
+		for (u16 h = 0; h < input_height; ++h)
 		{
 			const u32 padded_pos = h * output_width;
 			const u32 pos = h * input_width;
