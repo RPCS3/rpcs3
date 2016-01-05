@@ -4,6 +4,7 @@
 #include "Emu/System.h"
 #include "Emu/state.h"
 #include "GLGSRender.h"
+#include "../rsx_methods.h"
 
 #define DUMP_VERTEX_DATA 0
 

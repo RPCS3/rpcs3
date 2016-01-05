@@ -5,6 +5,7 @@
 #include "D3D12GSRender.h"
 #include "Emu/state.h"
 #include "D3D12Formats.h"
+#include "../rsx_methods.h"
 
 #define TO_STRING(x) #x
 

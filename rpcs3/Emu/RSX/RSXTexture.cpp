@@ -2,6 +2,7 @@
 #include "Emu/Memory/Memory.h"
 #include "RSXThread.h"
 #include "RSXTexture.h"
+#include "rsx_methods.h"
 
 namespace rsx
 {

@@ -377,9 +377,6 @@
     <ClCompile Include="Loader\TRP.cpp">
       <Filter>Loader</Filter>
     </ClCompile>
-    <ClCompile Include="stdafx.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\Utilities\StrFmt.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
@@ -929,6 +926,12 @@
     </ClCompile>
     <ClCompile Include="Emu\RSX\rsx_utils.cpp">
       <Filter>Emu\GPU\RSX</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\rsx_methods.cpp">
+      <Filter>Emu\GPU\RSX</Filter>
+    </ClCompile>
+    <ClCompile Include="stdafx.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1777,6 +1780,9 @@
       <Filter>Utilities</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\rsx_utils.h">
+      <Filter>Emu\GPU\RSX</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\rsx_methods.h">
       <Filter>Emu\GPU\RSX</Filter>
     </ClInclude>
   </ItemGroup>
