@@ -948,6 +948,14 @@ static const u32 mr_color_dma[rsx::limits::color_buffers_count] =
 	NV4097_SET_CONTEXT_DMA_COLOR_D
 };
 
+static const u32 mr_color_pitch[rsx::limits::color_buffers_count] =
+{
+	NV4097_SET_SURFACE_PITCH_A,
+	NV4097_SET_SURFACE_PITCH_B,
+	NV4097_SET_SURFACE_PITCH_C,
+	NV4097_SET_SURFACE_PITCH_D
+};
+
 void GLGSRender::read_buffers()
 {
 	if (!draw_fbo)
@@ -963,7 +971,16 @@ void GLGSRender::read_buffers()
 		{
 			for (int i = index; i < index + count; ++i)
 			{
-				u32 color_address = rsx::get_address(rsx::method_registers[mr_color_offset[i]], rsx::method_registers[mr_color_dma[i]]);
+				u32 offset = rsx::method_registers[mr_color_offset[i]];
+				u32 location = rsx::method_registers[mr_color_dma[i]];
+				u32 pitch = rsx::method_registers[mr_color_pitch[i]];
+
+				if (pitch <= 64)
+					continue;
+
+				m_draw_tex_color[i].pixel_unpack_settings().row_length(pitch / (color_format.channel_size * color_format.channel_count));
+
+				u32 color_address = rsx::get_address(offset, location);
 				__glcheck m_draw_tex_color[i].copy_from(vm::base(color_address), color_format.format, color_format.type);
 			}
 		};
@@ -1065,7 +1082,16 @@ void GLGSRender::write_buffers()
 
 				//}, gl::buffer::access::read);
 
-				u32 color_address = rsx::get_address(rsx::method_registers[mr_color_offset[i]], rsx::method_registers[mr_color_dma[i]]);
+				u32 offset = rsx::method_registers[mr_color_offset[i]];
+				u32 location = rsx::method_registers[mr_color_dma[i]];
+				u32 pitch = rsx::method_registers[mr_color_pitch[i]];
+
+				if (pitch <= 64)
+					continue;
+
+				m_draw_tex_color[i].pixel_pack_settings().row_length(pitch / (color_format.channel_size * color_format.channel_count));
+
+				u32 color_address = rsx::get_address(offset, location);
 				__glcheck m_draw_tex_color[i].copy_to(vm::base(color_address), color_format.format, color_format.type);
 			}
 		};
@@ -1173,8 +1199,7 @@ void GLGSRender::flip(int buffer)
 				.type(gl::texture::type::uint_8_8_8_8)
 				.format(gl::texture::format::bgra);
 
-			m_flip_tex_color.pixel_unpack_settings().aligment(1);
-			m_flip_tex_color.pixel_pack_settings().aligment(1);
+			m_flip_tex_color.pixel_unpack_settings().aligment(1).row_length(buffer_pitch);
 
 			__glcheck m_flip_fbo.recreate();
 			__glcheck m_flip_fbo.color = m_flip_tex_color;

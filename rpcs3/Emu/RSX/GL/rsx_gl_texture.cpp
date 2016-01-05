@@ -4,11 +4,45 @@
 #include "../GCM.h"
 #include "../RSXThread.h"
 #include "../RSXTexture.h"
+#include "../rsx_utils.h"
 
 namespace rsx
 {
 	namespace gl
 	{
+		static const int gl_tex_min_filter[] =
+		{
+			GL_NEAREST, // unused
+			GL_NEAREST,
+			GL_LINEAR,
+			GL_NEAREST_MIPMAP_NEAREST,
+			GL_LINEAR_MIPMAP_NEAREST,
+			GL_NEAREST_MIPMAP_LINEAR,
+			GL_LINEAR_MIPMAP_LINEAR,
+			GL_NEAREST, // CELL_GCM_TEXTURE_CONVOLUTION_MIN
+		};
+
+		static const int gl_tex_mag_filter[] =
+		{
+			GL_NEAREST, // unused
+			GL_NEAREST,
+			GL_LINEAR,
+			GL_NEAREST, // unused
+			GL_LINEAR  // CELL_GCM_TEXTURE_CONVOLUTION_MAG
+		};
+
+		static const int gl_tex_zfunc[] =
+		{
+			GL_NEVER,
+			GL_LESS,
+			GL_EQUAL,
+			GL_LEQUAL,
+			GL_GREATER,
+			GL_NOTEQUAL,
+			GL_GEQUAL,
+			GL_ALWAYS,
+		};
+
 		void texture::create()
 		{
 			if (m_id)
@@ -59,7 +93,9 @@ namespace rsx
 		void texture::init(rsx::texture& tex)
 		{
 			if (!m_id)
+			{
 				create();
+			}
 
 			bind();
 
@@ -69,8 +105,10 @@ namespace rsx
 
 			//TODO: safe init
 
-			int format = tex.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
-			bool is_swizzled = !(tex.format() & CELL_GCM_TEXTURE_LN);
+			u32 full_format = tex.format();
+
+			u32 format = full_format & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
+			bool is_swizzled = ~full_format & CELL_GCM_TEXTURE_LN;
 
 			const u8* pixels = vm::ps3::_ptr<u8>(texaddr);
 			u8 *unswizzledPixels;
@@ -78,10 +116,16 @@ namespace rsx
 			// NOTE: This must be in ARGB order in all forms below.
 			const GLint *glRemap = glRemapStandard;
 
+			::gl::pixel_pack_settings().apply();
+			::gl::pixel_unpack_settings().apply();
+
+			u32 pitch = tex.pitch();
+
 			switch (format)
 			{
 			case CELL_GCM_TEXTURE_B8: // One 8-bit fixed-point number
 			{
+				glPixelStorei(GL_UNPACK_ROW_LENGTH, pitch);
 				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.width(), tex.height(), 0, GL_BLUE, GL_UNSIGNED_BYTE, pixels);
 
 				static const GLint swizzleMaskB8[] = { GL_BLUE, GL_BLUE, GL_BLUE, GL_BLUE };
@@ -92,6 +136,7 @@ namespace rsx
 			case CELL_GCM_TEXTURE_A1R5G5B5:
 			{
 				glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_TRUE);
+				glPixelStorei(GL_UNPACK_ROW_LENGTH, pitch / 2);
 
 				// TODO: texture swizzling
 				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.width(), tex.height(), 0, GL_BGRA, GL_UNSIGNED_SHORT_1_5_5_5_REV, pixels);
@@ -101,6 +146,7 @@ namespace rsx
 
 			case CELL_GCM_TEXTURE_A4R4G4B4:
 			{
+				glPixelStorei(GL_UNPACK_ROW_LENGTH, pitch / 2);
 				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.width(), tex.height(), 0, GL_RGBA, GL_UNSIGNED_SHORT_4_4_4_4, pixels);
 
 				// We read it in as R4G4B4A4, so we need to remap each component.
@@ -111,6 +157,7 @@ namespace rsx
 
 			case CELL_GCM_TEXTURE_R5G6B5:
 			{
+				glPixelStorei(GL_UNPACK_ROW_LENGTH, pitch / 2);
 				glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_TRUE);
 				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, tex.width(), tex.height(), 0, GL_RGB, GL_UNSIGNED_SHORT_5_6_5, pixels);
 				glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_FALSE);
@@ -119,6 +166,8 @@ namespace rsx
 
 			case CELL_GCM_TEXTURE_A8R8G8B8:
 			{
+				glPixelStorei(GL_UNPACK_ROW_LENGTH, pitch / 4);
+
 				if (is_swizzled)
 				{
 					u32 *src, *dst;
@@ -167,6 +216,7 @@ namespace rsx
 
 			case CELL_GCM_TEXTURE_G8B8:
 			{
+				glPixelStorei(GL_UNPACK_ROW_LENGTH, pitch / 2);
 				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.width(), tex.height(), 0, GL_RG, GL_UNSIGNED_BYTE, pixels);
 
 				static const GLint swizzleMaskG8B8[] = { GL_RED, GL_GREEN, GL_RED, GL_GREEN };
@@ -176,6 +226,8 @@ namespace rsx
 
 			case CELL_GCM_TEXTURE_R6G5B5:
 			{
+				glPixelStorei(GL_UNPACK_ROW_LENGTH, pitch / 2);
+
 				// TODO: Probably need to actually unswizzle if is_swizzled.
 				const u32 numPixels = tex.width() * tex.height();
 				unswizzledPixels = (u8 *)malloc(numPixels * 4);
@@ -196,30 +248,36 @@ namespace rsx
 
 			case CELL_GCM_TEXTURE_DEPTH24_D8: //  24-bit unsigned fixed-point number and 8 bits of garbage
 			{
+				glPixelStorei(GL_UNPACK_ROW_LENGTH, pitch / 4);
+
 				glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, tex.width(), tex.height(), 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, pixels);
 				break;
 			}
 
 			case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT: // 24-bit unsigned float and 8 bits of garbage
 			{
+				glPixelStorei(GL_UNPACK_ROW_LENGTH, pitch / 4);
 				glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, tex.width(), tex.height(), 0, GL_DEPTH_COMPONENT, GL_FLOAT, pixels);
 				break;
 			}
 
 			case CELL_GCM_TEXTURE_DEPTH16: // 16-bit unsigned fixed-point number
 			{
+				glPixelStorei(GL_UNPACK_ROW_LENGTH, pitch / 2);
 				glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT16, tex.width(), tex.height(), 0, GL_DEPTH_COMPONENT, GL_SHORT, pixels);
 				break;
 			}
 
 			case CELL_GCM_TEXTURE_DEPTH16_FLOAT: // 16-bit unsigned float
 			{
+				glPixelStorei(GL_UNPACK_ROW_LENGTH, pitch / 2);
 				glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT16, tex.width(), tex.height(), 0, GL_DEPTH_COMPONENT, GL_FLOAT, pixels);
 				break;
 			}
 
 			case CELL_GCM_TEXTURE_X16: // A 16-bit fixed-point number
 			{
+				glPixelStorei(GL_UNPACK_ROW_LENGTH, pitch / 2);
 				glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_TRUE);
 				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.width(), tex.height(), 0, GL_RED, GL_UNSIGNED_SHORT, pixels);
 				glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_FALSE);
@@ -231,6 +289,7 @@ namespace rsx
 
 			case CELL_GCM_TEXTURE_Y16_X16: // Two 16-bit fixed-point numbers
 			{
+				glPixelStorei(GL_UNPACK_ROW_LENGTH, pitch / 4);
 				glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_TRUE);
 				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.width(), tex.height(), 0, GL_RG, GL_UNSIGNED_SHORT, pixels);
 				glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_FALSE);
@@ -241,6 +300,7 @@ namespace rsx
 
 			case CELL_GCM_TEXTURE_R5G5B5A1:
 			{
+				glPixelStorei(GL_UNPACK_ROW_LENGTH, pitch / 2);
 				glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_TRUE);
 				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.width(), tex.height(), 0, GL_RGBA, GL_UNSIGNED_SHORT_5_5_5_1, pixels);
 				glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_FALSE);
@@ -249,6 +309,7 @@ namespace rsx
 
 			case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT: // Four fp16 values
 			{
+				glPixelStorei(GL_UNPACK_ROW_LENGTH, pitch / 8);
 				glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_TRUE);
 				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.width(), tex.height(), 0, GL_RGBA, GL_HALF_FLOAT, pixels);
 				glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_FALSE);
@@ -257,12 +318,16 @@ namespace rsx
 
 			case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT: // Four fp32 values
 			{
-				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.width(), tex.height(), 0, GL_BGRA, GL_FLOAT, pixels);
+				glPixelStorei(GL_UNPACK_ROW_LENGTH, pitch / 16);
+				glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_TRUE);
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.width(), tex.height(), 0, GL_RGBA, GL_FLOAT, pixels);
+				glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_FALSE);
 				break;
 			}
 
 			case CELL_GCM_TEXTURE_X32_FLOAT: // One 32-bit floating-point number
 			{
+				glPixelStorei(GL_UNPACK_ROW_LENGTH, pitch / 4);
 				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.width(), tex.height(), 0, GL_RED, GL_FLOAT, pixels);
 
 				static const GLint swizzleMaskX32_FLOAT[] = { GL_RED, GL_ONE, GL_ONE, GL_ONE };
@@ -272,8 +337,8 @@ namespace rsx
 
 			case CELL_GCM_TEXTURE_D1R5G5B5:
 			{
+				glPixelStorei(GL_UNPACK_ROW_LENGTH, pitch / 2);
 				glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_TRUE);
-
 
 				// TODO: Texture swizzling
 				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.width(), tex.height(), 0, GL_BGRA, GL_UNSIGNED_SHORT_1_5_5_5_REV, pixels);
@@ -287,6 +352,7 @@ namespace rsx
 
 			case CELL_GCM_TEXTURE_D8R8G8B8: // 8 bits of garbage and three unsigned 8-bit fixed-point numbers
 			{
+				glPixelStorei(GL_UNPACK_ROW_LENGTH, pitch / 4);
 				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.width(), tex.height(), 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, pixels);
 
 				static const GLint swizzleMaskX32_D8R8G8B8[] = { GL_ONE, GL_RED, GL_GREEN, GL_BLUE };
@@ -297,6 +363,7 @@ namespace rsx
 
 			case CELL_GCM_TEXTURE_Y16_X16_FLOAT: // Two fp16 values
 			{
+				glPixelStorei(GL_UNPACK_ROW_LENGTH, pitch / 4);
 				glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_TRUE);
 				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.width(), tex.height(), 0, GL_RG, GL_HALF_FLOAT, pixels);
 				glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_FALSE);
@@ -308,6 +375,8 @@ namespace rsx
 
 			case ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN) & CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8:
 			{
+				glPixelStorei(GL_UNPACK_ROW_LENGTH, pitch / 4);
+
 				const u32 numPixels = tex.width() * tex.height();
 				unswizzledPixels = (u8 *)malloc(numPixels * 4);
 				// TODO: Speed.
@@ -332,6 +401,8 @@ namespace rsx
 
 			case ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN) & CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8:
 			{
+				glPixelStorei(GL_UNPACK_ROW_LENGTH, pitch / 4);
+
 				const u32 numPixels = tex.width() * tex.height();
 				unswizzledPixels = (u8 *)malloc(numPixels * 4);
 				// TODO: Speed.
@@ -385,18 +456,6 @@ namespace rsx
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_B, glRemap[3]);
 			}
 
-			static const int gl_tex_zfunc[] =
-			{
-				GL_NEVER,
-				GL_LESS,
-				GL_EQUAL,
-				GL_LEQUAL,
-				GL_GREATER,
-				GL_NOTEQUAL,
-				GL_GEQUAL,
-				GL_ALWAYS,
-			};
-
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, gl_wrap(tex.wrap_s()));
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, gl_wrap(tex.wrap_t()));
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, gl_wrap(tex.wrap_r()));
@@ -407,33 +466,9 @@ namespace rsx
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_LOD, (tex.min_lod() >> 8));
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, (tex.max_lod() >> 8));
 
-
-
-			static const int gl_tex_min_filter[] =
-			{
-				GL_NEAREST, // unused
-				GL_NEAREST,
-				GL_LINEAR,
-				GL_NEAREST_MIPMAP_NEAREST,
-				GL_LINEAR_MIPMAP_NEAREST,
-				GL_NEAREST_MIPMAP_LINEAR,
-				GL_LINEAR_MIPMAP_LINEAR,
-				GL_NEAREST, // CELL_GCM_TEXTURE_CONVOLUTION_MIN
-			};
-
-			static const int gl_tex_mag_filter[] = {
-				GL_NEAREST, // unused
-				GL_NEAREST,
-				GL_LINEAR,
-				GL_NEAREST, // unused
-				GL_LINEAR  // CELL_GCM_TEXTURE_CONVOLUTION_MAG
-			};
-
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_tex_min_filter[tex.min_filter()]);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_tex_mag_filter[tex.mag_filter()]);
 			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, max_aniso(tex.max_aniso()));
-
-			//Unbind();
 
 			if (is_swizzled && format == CELL_GCM_TEXTURE_A8R8G8B8)
 			{

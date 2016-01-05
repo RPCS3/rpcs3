@@ -8,17 +8,16 @@ extern "C"
 namespace rsx
 {
 	template<typename T>
-	void pad_texture(void* inputPixels, void* outputPixels, u16 inputWidth, u16 inputHeight, u16 outputWidth, u16 outputHeight)
+	void pad_texture(void* input_pixels, void* output_pixels, u16 input_width, u16 input_height, u16 output_width, u16 output_height)
 	{
-		T *src, *dst;
-		src = static_cast<T*>(inputPixels);
-		dst = static_cast<T*>(outputPixels);
+		T *src = static_cast<T*>(input_pixels);
+		T *dst = static_cast<T*>(output_pixels);
 
 		for (u16 h = 0; h < inputHeight; ++h)
 		{
-			const u32 padded_pos = h * outputWidth;
-			const u32 pos = h * inputWidth;
-			for (u16 w = 0; w < inputWidth; ++w)
+			const u32 padded_pos = h * output_width;
+			const u32 pos = h * input_width;
+			for (u16 w = 0; w < input_width; ++w)
 			{
 				dst[padded_pos + w] = src[pos + w];
 			}
@@ -31,12 +30,10 @@ namespace rsx
 	*	 Restriction: It has mixed results if the height or width is not a power of 2
 	*/
 	template<typename T>
-	void convert_linear_swizzle(void* inputPixels, void* outputPixels, u16 width, u16 height, bool inputIsSwizzled)
+	void convert_linear_swizzle(void* input_pixels, void* output_pixels, u16 width, u16 height, bool input_is_swizzled)
 	{
-		u32 log2width, log2height;
-
-		log2width = log2(width);
-		log2height = log2(height);
+		u32 log2width = log2(width);
+		u32 log2height = log2(height);
 
 		// Max mask possible for square texture
 		u32 x_mask = 0x55555555;
@@ -57,38 +54,48 @@ namespace rsx
 		u32 offs_x0 = 0; //total y-carry offset for x
 		u32 y_incr = limit_mask;
 
-		T *src, *dst;
-
-		if (!inputIsSwizzled)
+		if (!input_is_swizzled)
 		{
 			for (int y = 0; y < height; ++y)
 			{
-				src = static_cast<T*>(inputPixels) + y*width;
-				dst = static_cast<T*>(outputPixels) + offs_y;
+				T *src = static_cast<T*>(input_pixels) + y * width;
+				T *dst = static_cast<T*>(output_pixels) + offs_y;
 				offs_x = offs_x0;
+
 				for (int x = 0; x < width; ++x)
 				{
 					dst[offs_x] = src[x];
 					offs_x = (offs_x - x_mask) & x_mask;
 				}
+
 				offs_y = (offs_y - y_mask) & y_mask;
-				if (offs_y == 0) offs_x0 += y_incr;
+
+				if (offs_y == 0)
+				{
+					offs_x0 += y_incr;
+				}
 			}
 		}
 		else
 		{
 			for (int y = 0; y < height; ++y)
 			{
-				src = static_cast<T*>(inputPixels) + offs_y;
-				dst = static_cast<T*>(outputPixels) + y*width;
+				T *src = static_cast<T*>(input_pixels) + offs_y;
+				T *dst = static_cast<T*>(output_pixels) + y * width;
 				offs_x = offs_x0;
+
 				for (int x = 0; x < width; ++x)
 				{
 					dst[x] = src[offs_x];
 					offs_x = (offs_x - x_mask) & x_mask;
 				}
+
 				offs_y = (offs_y - y_mask) & y_mask;
-				if (offs_y == 0) offs_x0 += y_incr;
+
+				if (offs_y == 0)
+				{
+					offs_x0 += y_incr;
+				}
 			}
 		}
 	}
