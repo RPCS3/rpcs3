@@ -65,24 +65,6 @@ void GLGSRender::begin()
 	__glcheck glDepthMask(rsx::method_registers[NV4097_SET_DEPTH_MASK]);
 	__glcheck glStencilMask(rsx::method_registers[NV4097_SET_STENCIL_MASK]);
 
-	int viewport_x = int(rsx::method_registers[NV4097_SET_VIEWPORT_HORIZONTAL] & 0xffff);
-	int viewport_y = int(rsx::method_registers[NV4097_SET_VIEWPORT_VERTICAL] & 0xffff);
-	int viewport_w = int(rsx::method_registers[NV4097_SET_VIEWPORT_HORIZONTAL] >> 16);
-	int viewport_h = int(rsx::method_registers[NV4097_SET_VIEWPORT_VERTICAL] >> 16);
-	glViewport(viewport_x, viewport_y, viewport_w, viewport_h);
-
-	//scissor test is always enabled
-	glEnable(GL_SCISSOR_TEST);
-
-	u32 scissor_horizontal = rsx::method_registers[NV4097_SET_SCISSOR_HORIZONTAL];
-	u32 scissor_vertical = rsx::method_registers[NV4097_SET_SCISSOR_VERTICAL];
-	u16 scissor_x = scissor_horizontal;
-	u16 scissor_w = scissor_horizontal >> 16;
-	u16 scissor_y = scissor_vertical;
-	u16 scissor_h = scissor_vertical >> 16;
-
-	__glcheck glScissor(scissor_x, scissor_y, scissor_w, scissor_h);
-
 	if (__glcheck enable(rsx::method_registers[NV4097_SET_DEPTH_TEST_ENABLE], GL_DEPTH_TEST))
 	{
 		__glcheck glDepthFunc(rsx::method_registers[NV4097_SET_DEPTH_FUNC]);
@@ -236,8 +218,9 @@ void GLGSRender::begin()
 	if (__glcheck enable(rsx::method_registers[NV4097_SET_CULL_FACE_ENABLE], GL_CULL_FACE))
 	{
 		__glcheck glCullFace(rsx::method_registers[NV4097_SET_CULL_FACE]);
-		__glcheck glFrontFace(rsx::method_registers[NV4097_SET_FRONT_FACE]);
 	}
+
+	__glcheck glFrontFace(rsx::method_registers[NV4097_SET_FRONT_FACE] ^ 1);
 
 	__glcheck enable(rsx::method_registers[NV4097_SET_POLY_SMOOTH_ENABLE], GL_POLYGON_SMOOTH);
 
@@ -480,6 +463,44 @@ void GLGSRender::end()
 	rsx::thread::end();
 }
 
+void GLGSRender::set_viewport()
+{
+	u32 viewport_horizontal = rsx::method_registers[NV4097_SET_VIEWPORT_HORIZONTAL];
+	u32 viewport_vertical = rsx::method_registers[NV4097_SET_VIEWPORT_VERTICAL];
+
+	u16 viewport_x = viewport_horizontal & 0xffff;
+	u16 viewport_y = viewport_vertical & 0xffff;
+	u16 viewport_w = viewport_horizontal >> 16;
+	u16 viewport_h = viewport_vertical >> 16;
+
+	u32 scissor_horizontal = rsx::method_registers[NV4097_SET_SCISSOR_HORIZONTAL];
+	u32 scissor_vertical = rsx::method_registers[NV4097_SET_SCISSOR_VERTICAL];
+	u16 scissor_x = scissor_horizontal;
+	u16 scissor_w = scissor_horizontal >> 16;
+	u16 scissor_y = scissor_vertical;
+	u16 scissor_h = scissor_vertical >> 16;
+
+	u32 shader_window = rsx::method_registers[NV4097_SET_SHADER_WINDOW];
+
+	u8 shader_window_origin = (shader_window >> 12) & 0xf;
+
+	//TODO
+	if (true || shader_window_origin == CELL_GCM_WINDOW_ORIGIN_BOTTOM)
+	{
+		__glcheck glViewport(viewport_x, viewport_y, viewport_w, viewport_h);
+		__glcheck glScissor(scissor_x, scissor_y, scissor_w, scissor_h);
+	}
+	else
+	{
+		u16 shader_window_height = shader_window & 0xfff;
+
+		__glcheck glViewport(viewport_x, shader_window_height - viewport_y - viewport_h - 1, viewport_w, viewport_h);
+		__glcheck glScissor(scissor_x, shader_window_height - scissor_y - scissor_h - 1, scissor_w, scissor_h);
+	}
+
+	glEnable(GL_SCISSOR_TEST);
+}
+
 void GLGSRender::on_init_thread()
 {
 	GSRender::on_init_thread();
@@ -558,9 +579,6 @@ void nv4097_clear_surface(u32 arg, GLGSRender* renderer)
 		return;
 	}
 
-	renderer->draw_fbo.bind();
-	glEnable(GL_SCISSOR_TEST);
-
 	/*
 	u16 clear_x = rsx::method_registers[NV4097_SET_CLEAR_RECT_HORIZONTAL];
 	u16 clear_y = rsx::method_registers[NV4097_SET_CLEAR_RECT_VERTICAL];
@@ -569,14 +587,8 @@ void nv4097_clear_surface(u32 arg, GLGSRender* renderer)
 	glScissor(clear_x, clear_y, clear_w, clear_h);
 	*/
 
-	u32 scissor_horizontal = rsx::method_registers[NV4097_SET_SCISSOR_HORIZONTAL];
-	u32 scissor_vertical = rsx::method_registers[NV4097_SET_SCISSOR_VERTICAL];
-	u16 scissor_x = scissor_horizontal;
-	u16 scissor_w = scissor_horizontal >> 16;
-	u16 scissor_y = scissor_vertical;
-	u16 scissor_h = scissor_vertical >> 16;
-
-	glScissor(scissor_x, scissor_y, scissor_w, scissor_h);
+	renderer->init_buffers(true);
+	renderer->draw_fbo.bind();
 
 	GLbitfield mask = 0;
 
@@ -616,8 +628,8 @@ void nv4097_clear_surface(u32 arg, GLGSRender* renderer)
 		mask |= GLenum(gl::buffers::color);
 	}
 
-	renderer->clear_surface_buffers = (gl::buffers)mask;
-	renderer->draw_fbo.clear((gl::buffers)mask);
+	glClear(mask);
+	renderer->write_buffers();
 }
 
 using rsx_method_impl_t = void(*)(u32, GLGSRender*);
@@ -811,7 +823,7 @@ std::pair<gl::texture::type, gl::texture::format> surface_depth_format_to_gl(int
 	}
 }
 
-void GLGSRender::init_buffers()
+void GLGSRender::init_buffers(bool skip_reading)
 {
 	u32 surface_format = rsx::method_registers[NV4097_SET_SURFACE_FORMAT];
 
@@ -893,10 +905,12 @@ void GLGSRender::init_buffers()
 		__glcheck m_draw_tex_depth_stencil.pixel_unpack_settings().aligment(1);
 	}
 
-	if (clear_surface_buffers == gl::buffers::none)
+	if (!skip_reading)
 	{
 		read_buffers();
 	}
+
+	set_viewport();
 
 	switch (rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET])
 	{
@@ -925,13 +939,6 @@ void GLGSRender::init_buffers()
 	default:
 		LOG_ERROR(RSX, "Bad surface color target: %d", rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET]);
 		break;
-	}
-
-	if (clear_surface_buffers != gl::buffers::none)
-	{
-		//draw_fbo.clear(clear_surface_buffers);
-
-		clear_surface_buffers = gl::buffers::none;
 	}
 }
 
