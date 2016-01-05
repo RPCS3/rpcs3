@@ -1,6 +1,6 @@
 #pragma once
+
 #include "Gui/FrameBase.h"
-#include <wx/checklst.h>
 
 class LLEModulesManagerFrame : public wxDialog
 {

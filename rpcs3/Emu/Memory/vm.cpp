@@ -15,7 +15,6 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/types.h>
-#include <errno.h>
 
 /* OS X uses MAP_ANON instead of MAP_ANONYMOUS */
 #ifndef MAP_ANONYMOUS
@@ -239,13 +238,10 @@ namespace vm
 		catch (...)
 		{
 			// capture any exception possibly thrown by predicate
-			pred = [exception = std::current_exception()]
+			pred = [exception = std::current_exception()]() -> bool
 			{
 				// new predicate will throw the captured exception from the original thread
 				std::rethrow_exception(exception);
-
-				// dummy return value, remove when std::rethrow_exception gains [[noreturn]] attribute in MSVC
-				return true;
 			};
 		}
 

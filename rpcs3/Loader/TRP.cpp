@@ -124,7 +124,7 @@ void TRPLoader::RenameEntry(const char *oldname, const char *newname)
 	}
 }
 
-bool TRPLoader::Close()
+void TRPLoader::Close()
 {
-	return trp_f.Close();
+	trp_f.Close();
 }

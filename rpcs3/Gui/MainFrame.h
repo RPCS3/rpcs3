@@ -4,8 +4,6 @@
 #include "Gui/ConLogFrame.h"
 #include "Gui/FrameBase.h"
 
-#include <wx/aui/aui.h>
-
 class GameViewer;
 
 class MainFrame : public FrameBase

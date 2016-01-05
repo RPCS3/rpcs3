@@ -30,14 +30,14 @@ namespace convert
 	{
 		static bool func(const std::string& value)
 		{
-			return value == "true" ? true : false;
+			return value == "true" ? true : value == "false" ? false : throw std::invalid_argument(__FUNCTION__);
 		}
 	};
 
 	template<>
-	struct to_impl_t<std::string, char>
+	struct to_impl_t<std::string, signed char>
 	{
-		static std::string func(char value)
+		static std::string func(signed char value)
 		{
 			return std::to_string(value);
 		}

@@ -979,7 +979,7 @@ namespace rsx
 	template<typename AT, typename ...T>
 	static size_t make_command(vm::ps3::ptr<u32, AT> &dst, u32 start_register, T... values)
 	{
-		for (u32 command : { (start_register << 2) | u32(sizeof...(values) << 18), u32(values)... })
+		for (u32 command : { (start_register << 2) | u32(sizeof...(values) << 18), static_cast<u32>(values)... })
 		{
 			*dst++ = command;
 		}

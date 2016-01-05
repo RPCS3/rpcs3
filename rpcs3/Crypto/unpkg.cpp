@@ -62,7 +62,7 @@ bool pkg_install(const fs::file& pkg_f, const std::string& dir, volatile f64& pr
 	const std::size_t BUF_SIZE = 8192 * 1024; // 8 MB
 
 	// Save current file offset (probably zero)
-	const u64 start_offset = pkg_f.seek(0, fsm::cur);
+	const u64 start_offset = pkg_f.seek(0, fs::seek_cur);
 
 	// Get basic PKG information
 	PKGHeader header;

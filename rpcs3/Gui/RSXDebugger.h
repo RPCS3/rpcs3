@@ -1,7 +1,5 @@
 #pragma once
 
-#include <wx/listctrl.h>
-
 class RSXDebugger : public wxDialog
 {
 	u32 m_addr;

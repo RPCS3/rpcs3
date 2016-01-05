@@ -122,36 +122,31 @@ void Emulator::CreateConfig(const std::string& name)
 
 bool Emulator::BootGame(const std::string& path, bool direct)
 {
-	static const char* elf_path[6] =
+	static const char* boot_list[] =
 	{
 		"/PS3_GAME/USRDIR/BOOT.BIN",
 		"/USRDIR/BOOT.BIN",
 		"/BOOT.BIN",
 		"/PS3_GAME/USRDIR/EBOOT.BIN",
 		"/USRDIR/EBOOT.BIN",
-		"/EBOOT.BIN"
+		"/EBOOT.BIN",
 	};
 
-	auto curpath = path;
-
-	if (direct)
+	if (direct && fs::is_file(path))
 	{
-		if (fs::is_file(curpath))
-		{
-			SetPath(curpath);
-			Load();
+		SetPath(path);
+		Load();
 
-			return true;
-		}
+		return true;
 	}
 
-	for (int i = 0; i < sizeof(elf_path) / sizeof(*elf_path); i++)
+	for (std::string elf : boot_list)
 	{
-		curpath = path + elf_path[i];
-		
-		if (fs::is_file(curpath))
+		elf = path + elf;
+
+		if (fs::is_file(elf))
 		{
-			SetPath(curpath);
+			SetPath(elf);
 			Load();
 
 			return true;
@@ -171,36 +166,28 @@ void Emulator::Load()
 		return;
 	}
 
-	const std::string elf_dir = m_path.substr(0, m_path.find_last_of("/\\", std::string::npos, 2) + 1);
+	const std::string& elf_dir = fs::get_parent_dir(m_path);
 
 	if (IsSelf(m_path))
 	{
-		const std::string full_name = m_path.substr(elf_dir.length());
+		const std::size_t elf_ext_pos = m_path.find_last_of('.');
+		const std::string& elf_ext = fmt::toupper(m_path.substr(elf_ext_pos != -1 ? elf_ext_pos : m_path.size()));
+		const std::string& elf_name = m_path.substr(elf_dir.size());
 
-		const std::string base_name = full_name.substr(0, full_name.find_last_of('.', std::string::npos));
-
-		const std::string ext = full_name.substr(base_name.length());
-
-		if (fmt::toupper(full_name) == "EBOOT.BIN")
+		if (elf_name.compare(elf_name.find_last_of("/\\", -1, 2) + 1, 9, "EBOOT.BIN", 9) == 0)
 		{
-			m_path = elf_dir + "BOOT.BIN";
+			m_path.erase(m_path.size() - 9, 1); // change EBOOT.BIN to BOOT.BIN
 		}
-		else if (fmt::toupper(ext) == ".SELF")
+		else if (elf_ext == ".SELF" || elf_ext == ".SPRX")
 		{
-			m_path = elf_dir + base_name + ".elf";
-		}
-		else if (fmt::toupper(ext) == ".SPRX")
-		{
-			m_path = elf_dir + base_name + ".prx";
+			m_path.erase(m_path.size() - 4, 1); // change *.self to *.elf, *.sprx to *.prx
 		}
 		else
 		{
-			m_path = elf_dir + base_name + ".decrypted" + ext;
+			m_path += ".decrypted.elf";
 		}
 
-		LOG_NOTICE(LOADER, "Decrypting '%s%s'...", elf_dir, full_name);
-
-		if (!DecryptSelf(m_path, elf_dir + full_name))
+		if (!DecryptSelf(m_path, elf_dir + elf_name))
 		{
 			m_status = Stopped;
 			return;
@@ -223,7 +210,7 @@ void Emulator::Load()
 
 		Emu.GetVFS().Mount("/dev_bdvd/", bdvd, new vfsDeviceLocalFile());
 	}
-	else if (fs::is_file(elf_dir + "../../PS3_DISC.SFB")) // guess loading disc game
+	else if (fs::is_file(elf_dir + "/../../PS3_DISC.SFB")) // guess loading disc game
 	{
 		const auto dir_list = fmt::split(elf_dir, { "/", "\\" });
 
@@ -241,27 +228,6 @@ void Emulator::Load()
 	{
 		LOG_NOTICE(LOADER, "%s -> %s", GetVFS().m_devices[i]->GetPs3Path().c_str(), GetVFS().m_devices[i]->GetLocalPath().c_str());
 	}
-
-	LOG_NOTICE(LOADER, "");
-
-	/*LOG_NOTICE(LOADER, "Settings:");
-	LOG_NOTICE(LOADER, "CPU: %s", Ini.CPUIdToString(Ini.CPUDecoderMode.GetValue()));
-	LOG_NOTICE(LOADER, "SPU: %s", Ini.SPUIdToString(Ini.SPUDecoderMode.GetValue()));
-	LOG_NOTICE(LOADER, "Renderer: %s", Ini.RendererIdToString(Ini.GSRenderMode.GetValue()));
-
-	if (Ini.GSRenderMode.GetValue() == 2)
-	{
-		LOG_NOTICE(LOADER, "D3D Adapter: %s", Ini.AdapterIdToString(Ini.GSD3DAdaptater.GetValue()));
-	}
-
-	LOG_NOTICE(LOADER, "Resolution: %s", Ini.ResolutionIdToString(Ini.GSResolution.GetValue()));
-	LOG_NOTICE(LOADER, "Write Depth Buffer: %s", Ini.GSDumpDepthBuffer.GetValue() ? "Yes" : "No");
-	LOG_NOTICE(LOADER, "Write Color Buffers: %s", Ini.GSDumpColorBuffers.GetValue() ? "Yes" : "No");
-	LOG_NOTICE(LOADER, "Read Color Buffers: %s", Ini.GSReadColorBuffers.GetValue() ? "Yes" : "No");
-	LOG_NOTICE(LOADER, "Read Depth Buffer: %s", Ini.GSReadDepthBuffer.GetValue() ? "Yes" : "No");
-	LOG_NOTICE(LOADER, "Audio Out: %s", Ini.AudioOutIdToString(Ini.AudioOutMode.GetValue()));
-	LOG_NOTICE(LOADER, "Log Everything: %s", Ini.HLELogging.GetValue() ? "Yes" : "No");
-	LOG_NOTICE(LOADER, "RSX Logging: %s", Ini.RSXLogging.GetValue() ? "Yes" : "No");*/
 
 	LOG_NOTICE(LOADER, "");
 	f.Open("/app_home/../PARAM.SFO");
@@ -505,11 +471,11 @@ void Emulator::SavePoints(const std::string& path)
 	const u32 marked_count = size32(m_marked_points);
 
 	fs::file(path, fom::rewrite)
-		<< bpdb_version
-		<< break_count
-		<< marked_count
-		<< m_break_points
-		<< m_marked_points;
+		.write(bpdb_version)
+		.write(break_count)
+		.write(marked_count)
+		.write(m_break_points)
+		.write(m_marked_points);
 }
 
 bool Emulator::LoadPoints(const std::string& path)

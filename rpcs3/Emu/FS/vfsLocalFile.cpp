@@ -12,9 +12,10 @@ bool vfsLocalFile::Open(const std::string& path, u32 mode)
 	return m_file.open(path, mode) && vfsFileBase::Open(path, mode);
 }
 
-bool vfsLocalFile::Close()
+void vfsLocalFile::Close()
 {
-	return m_file.close() && vfsFileBase::Close();
+	m_file.close();
+	vfsFileBase::Close();
 }
 
 u64 vfsLocalFile::GetSize() const
@@ -32,14 +33,14 @@ u64 vfsLocalFile::Read(void* dst, u64 size)
 	return m_file.read(dst, size);
 }
 
-u64 vfsLocalFile::Seek(s64 offset, fsm mode)
+u64 vfsLocalFile::Seek(s64 offset, fs::seek_mode whence)
 {
-	return m_file.seek(offset, mode);
+	return m_file.seek(offset, whence);
 }
 
 u64 vfsLocalFile::Tell() const
 {
-	return m_file.seek(0, fsm::cur);
+	return m_file.seek(0, fs::seek_cur);
 }
 
 bool vfsLocalFile::IsOpened() const

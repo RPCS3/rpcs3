@@ -430,7 +430,7 @@ s32 sys_fs_lseek(u32 fd, s64 offset, s32 whence, vm::ptr<u64> pos)
 
 	std::lock_guard<std::mutex> lock(file->mutex);
 
-	*pos = file->file->Seek(offset, (fsm)whence);
+	*pos = file->file->Seek(offset, (fs::seek_mode)whence);
 
 	return CELL_OK;
 }

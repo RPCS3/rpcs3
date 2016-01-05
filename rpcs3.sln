@@ -139,12 +139,6 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "xrc", "wxWidgets\build\msw\
 		{24C45343-FD20-5C92-81C1-35A2AE841E79} = {24C45343-FD20-5C92-81C1-35A2AE841E79}
 	EndProjectSection
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "stblib", "stblib", "{9D839DFB-76E6-4F10-8EED-BA2AC7CC3FB6}"
-	ProjectSection(SolutionItems) = preProject
-		stblib\stb_image.c = stblib\stb_image.c
-		stblib\stb_image.h = stblib\stb_image.h
-	EndProjectSection
-EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ribbon", "wxWidgets\build\msw\wx_ribbon.vcxproj", "{87B42A9C-3F5C-53D7-9017-2B1CAE39457D}"
 	ProjectSection(ProjectDependencies) = postProject
 		{24C45343-FD20-5C92-81C1-35A2AE841E79} = {24C45343-FD20-5C92-81C1-35A2AE841E79}
@@ -180,8 +174,6 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "_custom_build", "wxWidgets\
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "copy_setup_h", "rpcs3\copy_setup_h.vcxproj", "{00D36322-6188-4A66-B514-3B3F183E998D}"
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "GSRender", "GSRender", "{1A43FD7A-C7DD-4D04-A4D6-FAA194AAD9D2}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "D3D12GSRender", "rpcs3\D3D12GSRender.vcxproj", "{FAC9B17B-F4B8-4B75-8AEB-C8C7CB92B078}"
 EndProject

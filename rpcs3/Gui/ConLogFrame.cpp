@@ -1,9 +1,6 @@
 #include "stdafx.h"
 #include "stdafx_gui.h"
 
-#include <wx/listctrl.h>
-#include <wx/clipbrd.h>
-
 #include "Emu/state.h"
 #include "Gui/ConLogFrame.h"
 

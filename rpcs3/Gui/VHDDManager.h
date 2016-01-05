@@ -1,5 +1,5 @@
 #pragma once
-#include <wx/dnd.h>
+
 #include "Emu/HDD/HDD.h"
 
 class VHDDListDropTarget : public wxDropTarget

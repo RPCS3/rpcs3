@@ -9,7 +9,6 @@
 #include "GameViewer.h"
 #include "Loader/PSF.h"
 #include "SettingsDialog.h"
-#include <wx/dir.h>
 
 static const std::string m_class_name = "GameViewer";
 

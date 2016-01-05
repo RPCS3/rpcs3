@@ -31,16 +31,16 @@ public:
 
 	virtual u64 Read(void* dst, u64 count) override;
 
-	virtual u64 Seek(s64 offset, fsm seek_mode = fsm::begin) override
+	virtual u64 Seek(s64 offset, fs::seek_mode whence) override
 	{
-		switch (seek_mode)
+		switch (whence)
 		{
-		case fsm::begin: return m_pos = offset;
-		case fsm::cur: return m_pos += offset;
-		case fsm::end: return m_pos = m_size + offset;
+		case fs::seek_set: return m_pos = offset;
+		case fs::seek_cur: return m_pos += offset;
+		case fs::seek_end: return m_pos = m_size + offset;
 		}
 
-		throw EXCEPTION("Unknown seek_mode (0x%x)", seek_mode);
+		throw EXCEPTION("Unknown seek_mode (0x%x)", whence);
 	}
 
 	virtual u64 Tell() const override

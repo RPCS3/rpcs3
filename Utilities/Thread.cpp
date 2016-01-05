@@ -19,7 +19,7 @@
 #include <ucontext.h>
 #endif
 
-void report_fatal_error(const std::string& msg)
+static void report_fatal_error(const std::string& msg)
 {
 #ifdef _WIN32
 	const auto& text = msg + "\n\nPlease report this error to the developers. Press (Ctrl+C) to copy this message.";
@@ -1148,7 +1148,7 @@ void prepare_throw_access_violation(x64_context* context, const char* cause, u32
 
 #ifdef _WIN32
 
-const auto g_exception_handler = AddVectoredExceptionHandler(1, [](PEXCEPTION_POINTERS pExp) -> LONG
+static LONG exception_handler(PEXCEPTION_POINTERS pExp)
 {
 	const u64 addr64 = pExp->ExceptionRecord->ExceptionInformation[1] - (u64)vm::base(0);
 	const bool is_writing = pExp->ExceptionRecord->ExceptionInformation[0] != 0;
@@ -1161,9 +1161,9 @@ const auto g_exception_handler = AddVectoredExceptionHandler(1, [](PEXCEPTION_PO
 	{
 		return EXCEPTION_CONTINUE_SEARCH;
 	}
-});
+}
 
-const auto g_exception_filter = SetUnhandledExceptionFilter([](PEXCEPTION_POINTERS pExp) -> LONG
+static LONG exception_filter(PEXCEPTION_POINTERS pExp)
 {
 	std::string msg = fmt::format("Unhandled Win32 exception 0x%08X.\n", pExp->ExceptionRecord->ExceptionCode);
 
@@ -1191,16 +1191,36 @@ const auto g_exception_filter = SetUnhandledExceptionFilter([](PEXCEPTION_POINTE
 		}
 	}
 
+	msg += fmt::format("Instruction address: %p.\n", pExp->ContextRecord->Rip);
 	msg += fmt::format("Image base: %p.", GetModuleHandle(NULL));
+
+	// TODO: print registers and the callstack
 
 	// Report fatal error
 	report_fatal_error(msg);
 	return EXCEPTION_CONTINUE_SEARCH;
-});
+}
+
+const bool g_exception_handler_set = []() -> bool
+{
+	if (!AddVectoredExceptionHandler(1, (PVECTORED_EXCEPTION_HANDLER)exception_handler))
+	{
+		report_fatal_error("AddVectoredExceptionHandler() failed.");
+		std::abort();
+	}
+
+	if (!SetUnhandledExceptionFilter((LPTOP_LEVEL_EXCEPTION_FILTER)exception_filter))
+	{
+		report_fatal_error("SetUnhandledExceptionFilter() failed.");
+		std::abort();
+	}
+
+	return true;
+}();
 
 #else
 
-void signal_handler(int sig, siginfo_t* info, void* uct)
+static void signal_handler(int sig, siginfo_t* info, void* uct)
 {
 	x64_context* context = (ucontext_t*)uct;
 
@@ -1230,17 +1250,21 @@ void signal_handler(int sig, siginfo_t* info, void* uct)
 	}
 }
 
-int setup_signal_handler()
+const bool g_exception_handler_set = []() -> bool
 {
-	struct sigaction sa;
-
+	struct ::sigaction sa;
 	sa.sa_flags = SA_SIGINFO;
 	sigemptyset(&sa.sa_mask);
 	sa.sa_sigaction = signal_handler;
-	return sigaction(SIGSEGV, &sa, NULL);
-}
 
-const int g_sigaction_result = setup_signal_handler();
+	if (::sigaction(SIGSEGV, &sa, NULL) == -1)
+	{
+		std::printf("sigaction() failed (0x%x).", errno);
+		std::abort();
+	}
+
+	return true;
+}();
 
 #endif
 
@@ -1252,16 +1276,6 @@ std::atomic<u32> g_thread_count{ 0 };
 void thread_ctrl::initialize()
 {
 	SetCurrentThreadDebugName(g_tls_this_thread->m_name().c_str());
-
-#ifdef _WIN32
-	if (!g_exception_handler || !g_exception_filter)
-#else
-	if (g_sigaction_result == -1)
-#endif
-	{
-		report_fatal_error("Exception handler is not set correctly.");
-		std::abort();
-	}
 
 	// TODO
 	g_thread_count++;

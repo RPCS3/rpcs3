@@ -7,7 +7,6 @@
 extern "C"
 {
 #include "stblib/stb_image.h"
-#include "stblib/stb_image.c"
 }
 
 #include "Emu/FS/VFS.h"

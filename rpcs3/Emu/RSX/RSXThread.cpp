@@ -53,14 +53,14 @@ namespace rsx
 			if (fmt::match(entry.name, "*.fs." + lang_name))
 			{
 				fs::file file{ path + entry.name };
-				decompiled_fragment_shaders.insert(hash, { (const std::string)file });
+				decompiled_fragment_shaders.insert(hash, { file.to_string() });
 				continue;
 			}
 
 			if (fmt::match(entry.name, "*.vs." + lang_name))
 			{
 				fs::file file{ path + entry.name };
-				decompiled_vertex_shaders.insert(hash, { (const std::string)file });
+				decompiled_vertex_shaders.insert(hash, { file.to_string() });
 				continue;
 			}
 		}

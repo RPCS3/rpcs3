@@ -74,7 +74,7 @@ public:
 
 	virtual bool Load(const std::string& filepath, const std::string& configpath);
 	virtual bool Save(const std::string& filepath);
-	virtual bool Close();
+	virtual void Close();
 
 	virtual u32 GetTrophiesCount();
 

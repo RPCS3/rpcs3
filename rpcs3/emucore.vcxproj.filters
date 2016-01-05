@@ -930,6 +930,9 @@
     <ClCompile Include="Emu\RSX\rsx_methods.cpp">
       <Filter>Emu\GPU\RSX</Filter>
     </ClCompile>
+    <ClCompile Include="stb_image.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="stdafx.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -1787,6 +1790,12 @@
     </ClInclude>
     <ClInclude Include="Emu\RSX\rsx_methods.h">
       <Filter>Emu\GPU\RSX</Filter>
+    </ClInclude>
+    <ClInclude Include="..\stblib\stb_image.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\stblib\stb_image.c">
+      <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

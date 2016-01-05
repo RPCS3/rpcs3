@@ -3,7 +3,6 @@
 #include "VHDDManager.h"
 #include "TextInputDialog.h"
 #include "Emu/state.h"
-#include <wx/busyinfo.h>
 
 VHDDListDropTarget::VHDDListDropTarget(wxListView* parent) : m_parent(parent)
 {

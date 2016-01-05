@@ -5,6 +5,8 @@
 #include "sys_net.h"
 
 #ifdef _WIN32
+#undef _WIN32_WINNT
+#define _WIN32_WINNT 0x0601
 #include <winsock2.h>
 #include <WS2tcpip.h>
 #else

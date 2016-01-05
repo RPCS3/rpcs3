@@ -126,7 +126,7 @@ struct FileListener : LogListener
 			}
 		}
 
-		mFile << text;
+		mFile.write(text);
 	}
 };
 
@@ -261,25 +261,5 @@ void log_message(Log::LogType type, Log::Severity sev, const char* text)
 
 void log_message(Log::LogType type, Log::Severity sev, std::string text)
 {
-	if (g_log_manager)
-	{
-		g_log_manager->log({ type, sev, std::move(text) });
-	}
-	else
-	{
-		const auto severity =
-			sev == Severity::Notice ? "Notice" :
-			sev == Severity::Warning ? "Warning" :
-			sev == Severity::Success ? "Success" :
-			sev == Severity::Error ? "Error" : "Unknown";
-
-#ifdef _WIN32
-		MessageBoxA(0, text.c_str(), severity,
-			sev == Severity::Notice ? MB_ICONINFORMATION :
-			sev == Severity::Warning ? MB_ICONEXCLAMATION :
-			sev == Severity::Error ? MB_ICONERROR : MB_ICONINFORMATION);
-#else
-		std::printf("[Log:%s] %s\n", severity, text.c_str());
-#endif
-	}
+	g_log_manager->log({ type, sev, std::move(text) });
 }

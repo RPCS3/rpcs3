@@ -20,11 +20,10 @@ bool vfsFileBase::Open(const std::string& path, u32 mode)
 	return true;
 }
 
-bool vfsFileBase::Close()
+void vfsFileBase::Close()
 {
 	m_path = "";
-
-	return vfsStream::Close();
+	vfsStream::Close();
 }
 
 std::string vfsFileBase::GetPath() const

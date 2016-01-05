@@ -26,11 +26,9 @@ bool vfsFile::Open(const std::string& path, u32 mode)
 	return m_stream && m_stream->IsOpened();
 }
 
-bool vfsFile::Close()
+void vfsFile::Close()
 {
 	m_stream.reset();
-
-	return true;
 }
 
 u64 vfsFile::GetSize() const
@@ -48,9 +46,9 @@ u64 vfsFile::Read(void* dst, u64 size)
 	return m_stream->Read(dst, size);
 }
 
-u64 vfsFile::Seek(s64 offset, fsm mode)
+u64 vfsFile::Seek(s64 offset, fs::seek_mode whence)
 {
-	return m_stream->Seek(offset, mode);
+	return m_stream->Seek(offset, whence);
 }
 
 u64 vfsFile::Tell() const

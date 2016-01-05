@@ -593,7 +593,7 @@ never_inline s32 savedata_op(PPUThread& ppu, u32 operation, u32 version, vm::cpt
 			fs::file file(local_path, fom::write | fom::create);
 			file.seek(fileSet->fileOffset);
 			fileGet->excSize = static_cast<u32>(file.write(fileSet->fileBuf.get_ptr(), std::min<u32>(fileSet->fileSize, fileSet->fileBufSize)));
-			file.trunc(file.seek(0, fsm::cur)); // truncate
+			file.trunc(file.seek(0, fs::seek_cur)); // truncate
 			break;
 		}
 

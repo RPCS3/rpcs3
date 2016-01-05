@@ -1,7 +1,5 @@
 #pragma once
 
-#include <wx/wx.h>
-
 enum CgDisasmIds
 {
 	id_open_file,
