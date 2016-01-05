@@ -12,11 +12,6 @@
 #include "Common/BufferUtils.h"
 #include "rsx_utils.h"
 
-extern "C"
-{
-#include "libswscale/swscale.h"
-}
-
 #define CMD_DEBUG 0
 
 bool user_asked_for_frame_capture = false;
@@ -354,34 +349,36 @@ namespace rsx
 	{
 		never_inline void image_in(u32 arg)
 		{
-			const u16 src_height = method_registers[NV3089_IMAGE_IN_SIZE] >> 16;
-			const u16 src_pitch = method_registers[NV3089_IMAGE_IN_FORMAT];
-			const u8 src_origin = method_registers[NV3089_IMAGE_IN_FORMAT] >> 16;
-			const u8 src_inter = method_registers[NV3089_IMAGE_IN_FORMAT] >> 24;
-			const u32 src_color_format = method_registers[NV3089_SET_COLOR_FORMAT];
-			const u32 operation = method_registers[NV3089_SET_OPERATION];
+			u32 operation = method_registers[NV3089_SET_OPERATION];
 
-			const u16 out_w = method_registers[NV3089_IMAGE_OUT_SIZE];
-			const u16 out_h = method_registers[NV3089_IMAGE_OUT_SIZE] >> 16;
+			u32 clip_x = method_registers[NV3089_CLIP_POINT] & 0xffff;
+			u32 clip_y = method_registers[NV3089_CLIP_POINT] >> 16;
+			u32 clip_w = method_registers[NV3089_CLIP_SIZE] & 0xffff;
+			u32 clip_h = method_registers[NV3089_CLIP_SIZE] >> 16;
 
-			// handle weird RSX quirk, doesn't report less than 16 pixels width in some cases 
-			u16 src_width = method_registers[NV3089_IMAGE_IN_SIZE];
-			if (src_width == 16 && out_w < 16 && method_registers[NV3089_DS_DX] == (1 << 20))
+			u32 out_x = method_registers[NV3089_IMAGE_OUT_POINT] & 0xffff;
+			u32 out_y = method_registers[NV3089_IMAGE_OUT_POINT] >> 16;
+			u32 out_w = method_registers[NV3089_IMAGE_OUT_SIZE] & 0xffff;
+			u32 out_h = method_registers[NV3089_IMAGE_OUT_SIZE] >> 16;
+
+			u16 in_w = method_registers[NV3089_IMAGE_IN_SIZE];
+			u16 in_h = method_registers[NV3089_IMAGE_IN_SIZE] >> 16;
+			u16 in_pitch = method_registers[NV3089_IMAGE_IN_FORMAT];
+			u8 in_origin = method_registers[NV3089_IMAGE_IN_FORMAT] >> 16;
+			u8 in_inter = method_registers[NV3089_IMAGE_IN_FORMAT] >> 24;
+			u32 src_color_format = method_registers[NV3089_SET_COLOR_FORMAT];
+
+			f32 in_x = (method_registers[NV3089_IMAGE_IN] & 0xffff) / 16.f;
+			f32 in_y = (method_registers[NV3089_IMAGE_IN] >> 16) / 16.f;
+
+			if (in_origin != CELL_GCM_TRANSFER_ORIGIN_CORNER)
 			{
-				src_width = out_w;
+				LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown origin (%d)", in_origin);
 			}
 
-			const u16 u = method_registers[NV3089_IMAGE_IN]; // inX (currently ignored)
-			const u16 v = method_registers[NV3089_IMAGE_IN] >> 16; // inY (currently ignored)
-
-			if (src_origin != CELL_GCM_TRANSFER_ORIGIN_CORNER)
+			if (in_inter != CELL_GCM_TRANSFER_INTERPOLATOR_ZOH && in_inter != CELL_GCM_TRANSFER_INTERPOLATOR_FOH)
 			{
-				LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown origin (%d)", src_origin);
-			}
-
-			if (src_inter != CELL_GCM_TRANSFER_INTERPOLATOR_ZOH && src_inter != CELL_GCM_TRANSFER_INTERPOLATOR_FOH)
-			{
-				LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown inter (%d)", src_inter);
+				LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown inter (%d)", in_inter);
 			}
 
 			if (operation != CELL_GCM_TRANSFER_OPERATION_SRCCOPY)
@@ -395,6 +392,8 @@ namespace rsx
 			u32 dst_offset;
 			u32 dst_dma = 0;
 			u16 dst_color_format;
+			u32 out_pitch = 0;
+			u32 out_aligment = 64;
 
 			switch (method_registers[NV3089_SET_CONTEXT_SURFACE])
 			{
@@ -402,6 +401,8 @@ namespace rsx
 				dst_dma = method_registers[NV3062_SET_CONTEXT_DMA_IMAGE_DESTIN];
 				dst_offset = method_registers[NV3062_SET_OFFSET_DESTIN];
 				dst_color_format = method_registers[NV3062_SET_COLOR_FORMAT];
+				out_pitch = method_registers[NV3062_SET_PITCH] >> 16;
+				out_aligment = method_registers[NV3062_SET_PITCH] & 0xffff;
 				break;
 
 			case CELL_GCM_CONTEXT_SWIZZLE2D:
@@ -412,19 +413,39 @@ namespace rsx
 
 			default:
 				LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown m_context_surface (0x%x)", method_registers[NV3089_SET_CONTEXT_SURFACE]);
-				break;
-			}
-
-			if (!dst_dma)
-			{
-				LOG_ERROR(RSX, "dst_dma not set");
 				return;
 			}
 
-			LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: src = 0x%x, dst = 0x%x", src_offset, dst_offset);
+			u32 src_address = get_address(src_offset, src_dma);
+			u32 dst_address = get_address(dst_offset, dst_dma);
 
-			u8* pixels_src = vm::_ptr<u8>(get_address(src_offset, src_dma));
-			u8* pixels_dst = vm::_ptr<u8>(get_address(dst_offset, dst_dma));
+			u32 in_bpp = src_color_format == CELL_GCM_TRANSFER_SCALE_FORMAT_R5G6B5 ? 2 : 4; // bytes per pixel
+			u32 out_bpp = dst_color_format == CELL_GCM_TRANSFER_SURFACE_FORMAT_R5G6B5 ? 2 : 4;
+
+			if (out_pitch == 0)
+			{
+				out_pitch = out_bpp * out_w;
+			}
+
+			if (in_pitch == 0)
+			{
+				in_pitch = in_bpp * in_w;
+			}
+
+			if (clip_w > out_w)
+			{
+				clip_w = out_w;
+			}
+
+			if (clip_h > out_h)
+			{
+				clip_h = out_h;
+			}
+
+			//LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: src = 0x%x, dst = 0x%x", src_address, dst_address);
+
+			u8* pixels_src = vm::_ptr<u8>(src_address);
+			u8* pixels_dst = vm::_ptr<u8>(dst_address);
 
 			if (dst_color_format != CELL_GCM_TRANSFER_SURFACE_FORMAT_R5G6B5 &&
 				dst_color_format != CELL_GCM_TRANSFER_SURFACE_FORMAT_A8R8G8B8)
@@ -438,38 +459,103 @@ namespace rsx
 				LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown src_color_format (%d)", src_color_format);
 			}
 
-			LOG_WARNING(RSX, "NV3089_IMAGE_IN_SIZE: SIZE=0x%08x, pitch=0x%x, offset=0x%x, scaleX=%f, scaleY=%f, CLIP_SIZE=0x%08x, OUT_SIZE=0x%08x",
-				method_registers[NV3089_IMAGE_IN_SIZE], src_pitch, src_offset, double(1 << 20) / (method_registers[NV3089_DS_DX]), double(1 << 20) / (method_registers[NV3089_DT_DY]),
-				method_registers[NV3089_CLIP_SIZE], method_registers[NV3089_IMAGE_OUT_SIZE]);
-
-			const u32 in_bpp = src_color_format == CELL_GCM_TRANSFER_SCALE_FORMAT_R5G6B5 ? 2 : 4; // bytes per pixel
-			const u32 out_bpp = dst_color_format == CELL_GCM_TRANSFER_SURFACE_FORMAT_R5G6B5 ? 2 : 4;
+			//LOG_WARNING(RSX, "NV3089_IMAGE_IN_SIZE: SIZE=0x%08x, pitch=0x%x, offset=0x%x, scaleX=%f, scaleY=%f, CLIP_SIZE=0x%08x, OUT_SIZE=0x%08x",
+			//	method_registers[NV3089_IMAGE_IN_SIZE], in_pitch, src_offset, double(1 << 20) / (method_registers[NV3089_DS_DX]), double(1 << 20) / (method_registers[NV3089_DT_DY]),
+			//	method_registers[NV3089_CLIP_SIZE], method_registers[NV3089_IMAGE_OUT_SIZE]);
 
 			std::unique_ptr<u8[]> temp1, temp2;
 
-			// resize/convert if necessary
-			if (in_bpp != out_bpp && src_width != out_w && src_height != out_h)
+			AVPixelFormat in_format = src_color_format == CELL_GCM_TRANSFER_SCALE_FORMAT_R5G6B5 ? AV_PIX_FMT_RGB565BE : AV_PIX_FMT_ARGB;
+			AVPixelFormat out_format = dst_color_format == CELL_GCM_TRANSFER_SURFACE_FORMAT_R5G6B5 ? AV_PIX_FMT_RGB565BE : AV_PIX_FMT_ARGB;
+
+			u32 out_offset = out_x * out_bpp + out_pitch * out_y;
+
+			bool need_clip = method_registers[NV3089_CLIP_SIZE] != method_registers[NV3089_IMAGE_IN_SIZE] || method_registers[NV3089_CLIP_POINT];
+			bool need_convert = out_format != in_format || out_w != in_w || out_h != in_h;
+
+			u32 slice_h = (u32)(clip_h * (method_registers[NV3089_DS_DX] / 1048576.f));
+
+			if (slice_h)
 			{
-				temp1.reset(new u8[out_bpp * out_w * out_h]);
-
-				AVPixelFormat in_format = src_color_format == CELL_GCM_TRANSFER_SCALE_FORMAT_R5G6B5 ? AV_PIX_FMT_RGB565BE : AV_PIX_FMT_ARGB;
-				AVPixelFormat out_format = dst_color_format == CELL_GCM_TRANSFER_SURFACE_FORMAT_R5G6B5 ? AV_PIX_FMT_RGB565BE : AV_PIX_FMT_ARGB;
-
-				std::unique_ptr<SwsContext, void(*)(SwsContext*)> sws(sws_getContext(src_width, src_height, in_format, out_w, out_h, out_format,
-					src_inter ? SWS_FAST_BILINEAR : SWS_POINT, NULL, NULL, NULL), sws_freeContext);
-
-				int in_line = in_bpp * src_width;
-				u8* out_ptr = temp1.get();
-				int out_line = out_bpp * out_w;
-
-				sws_scale(sws.get(), &pixels_src, &in_line, 0, src_height, &out_ptr, &out_line);
-
-				pixels_src = out_ptr; // use resized image as a source
+				if (clip_h < out_h)
+				{
+					--slice_h;
+				}
+			}
+			else
+			{
+				slice_h = clip_h;
 			}
 
-			// Not sure if swizzle should be after clipping or not
-			if (method_registers[NV3089_SET_CONTEXT_SURFACE] == CELL_GCM_CONTEXT_SWIZZLE2D)
+			if (method_registers[NV3089_SET_CONTEXT_SURFACE] != CELL_GCM_CONTEXT_SWIZZLE2D)
 			{
+				if (need_convert || need_clip)
+				{
+					if (need_clip)
+					{
+						if (need_convert)
+						{
+							convert_scale_image(temp1, out_format, out_w, out_h, out_pitch,
+								pixels_src, in_format, in_w, in_h, in_pitch, slice_h, in_inter ? true : false);
+
+							clip_image(pixels_dst + out_offset, temp1.get(), clip_x, clip_y, clip_w, clip_h, out_bpp, out_pitch, out_pitch);
+						}
+						else
+						{
+							clip_image(pixels_dst + out_offset, pixels_src, clip_x, clip_y, clip_w, clip_h, out_bpp, in_pitch, out_pitch);
+						}
+					}
+					else
+					{
+						convert_scale_image(pixels_dst + out_offset, out_format, out_w, out_h, out_pitch,
+							pixels_src, in_format, in_w, in_h, in_pitch, slice_h, in_inter ? true : false);
+					}
+				}
+				else
+				{
+					if (out_pitch != in_pitch || out_pitch != out_bpp * out_w)
+					{
+						for (u32 y = 0; y < out_h; ++y)
+						{
+							u8 *dst = pixels_dst + out_x * out_bpp + out_pitch * (y + out_y);
+							u8 *src = pixels_src + in_pitch * y;
+
+							std::memmove(dst, src, out_w * out_bpp);
+						}
+					}
+					else
+					{
+						std::memmove(pixels_dst + out_offset, pixels_src, out_pitch * out_h);
+					}
+				}
+			}
+			else
+			{
+				if (need_convert || need_clip)
+				{
+					if (need_clip)
+					{
+						if (need_convert)
+						{
+							convert_scale_image(temp1, out_format, out_w, out_h, out_pitch,
+								pixels_src, in_format, in_w, in_h, in_pitch, slice_h, in_inter ? true : false);
+
+							clip_image(temp2, temp1.get(), clip_x, clip_y, clip_w, clip_h, out_bpp, out_pitch, out_pitch);
+						}
+						else
+						{
+							clip_image(temp2, pixels_src, clip_x, clip_y, clip_w, clip_h, out_bpp, in_pitch, out_pitch);
+						}
+					}
+					else
+					{
+						convert_scale_image(temp2, out_format, out_w, out_h, out_pitch,
+							pixels_src, in_format, in_w, in_h, in_pitch, clip_h, in_inter ? true : false);
+					}
+
+					pixels_src = temp2.get();
+				}
+
 				u8 sw_width_log2 = method_registers[NV309E_SET_FORMAT] >> 16;
 				u8 sw_height_log2 = method_registers[NV309E_SET_FORMAT] >> 24;
 
@@ -480,8 +566,6 @@ namespace rsx
 				u16 sw_width = 1 << sw_width_log2;
 				u16 sw_height = 1 << sw_height_log2;
 
-				std::unique_ptr<u8[]> sw_temp;
-
 				temp2.reset(new u8[out_bpp * sw_width * sw_height]);
 
 				u8* linear_pixels = pixels_src;
@@ -490,7 +574,7 @@ namespace rsx
 				// Check and pad texture out if we are given non square texture for swizzle to be correct
 				if (sw_width != out_w || sw_height != out_h)
 				{
-					sw_temp.reset(new u8[out_bpp * sw_width * sw_height]);
+					std::unique_ptr<u8[]> sw_temp(new u8[out_bpp * sw_width * sw_height]);
 
 					switch (out_bpp)
 					{
@@ -521,59 +605,7 @@ namespace rsx
 					break;
 				}
 
-				//pixels_src = swizzled_pixels;
-
-				// TODO: Handle Clipping/Image out when swizzled
 				std::memcpy(pixels_dst, swizzled_pixels, out_bpp * sw_width * sw_height);
-				return;
-			}
-
-			// clip if necessary
-			if (method_registers[NV3089_CLIP_SIZE] != method_registers[NV3089_IMAGE_OUT_SIZE] ||
-				method_registers[NV3089_CLIP_POINT] || method_registers[NV3089_IMAGE_OUT_POINT])
-			{
-				// Note: There are cases currently where the if statement above is true, but this for loop doesn't hit, leading to nothing getting copied to pixels_dst
-				// Currently it seems needed to avoid some errors/crashes
-				for (s32 y = (method_registers[NV3089_CLIP_POINT] >> 16), dst_y = (method_registers[NV3089_IMAGE_OUT_POINT] >> 16); y < out_h; y++, dst_y++)
-				{
-					if (dst_y >= 0 && dst_y < method_registers[NV3089_IMAGE_OUT_SIZE] >> 16)
-					{
-						// destination line
-						u8* dst_line = pixels_dst + dst_y * out_bpp * (method_registers[NV3089_IMAGE_OUT_SIZE] & 0xffff)
-							+ std::min<s32>(std::max<s32>(method_registers[NV3089_IMAGE_OUT_POINT] & 0xffff, 0), method_registers[NV3089_IMAGE_OUT_SIZE] & 0xffff);
-
-						size_t dst_max = std::min<s32>(
-							std::max<s32>((s32)(method_registers[NV3089_IMAGE_OUT_SIZE] & 0xffff) - (method_registers[NV3089_IMAGE_OUT_POINT] & 0xffff), 0),
-							method_registers[NV3089_IMAGE_OUT_SIZE] & 0xffff) * out_bpp;
-
-						if (y >= 0 && y < std::min<s32>(method_registers[NV3089_CLIP_SIZE] >> 16, out_h))
-						{
-							// source line
-							u8* src_line = pixels_src + y * out_bpp * out_w +
-								std::min<s32>(std::max<s32>(method_registers[NV3089_CLIP_POINT] & 0xffff, 0), method_registers[NV3089_CLIP_SIZE] & 0xffff);
-							size_t src_max = std::min<s32>(
-								std::max<s32>((s32)(method_registers[NV3089_CLIP_SIZE] & 0xffff) - (method_registers[NV3089_CLIP_POINT] & 0xffff), 0),
-								method_registers[NV3089_CLIP_SIZE] & 0xffff) * out_bpp;
-
-							std::pair<u8*, size_t>
-								z0 = { src_line + 0, std::min<size_t>(dst_max, std::max<s64>(0, method_registers[NV3089_CLIP_POINT] & 0xffff)) },
-								d0 = { src_line + z0.second, std::min<size_t>(dst_max - z0.second, src_max) },
-								z1 = { src_line + d0.second, dst_max - z0.second - d0.second };
-
-							std::memset(z0.first, 0, z0.second);
-							std::memcpy(d0.first, src_line, d0.second);
-							std::memset(z1.first, 0, z1.second);
-						}
-						else
-						{
-							std::memset(dst_line, 0, dst_max);
-						}
-					}
-				}
-			}
-			else
-			{
-				std::memcpy(pixels_dst, pixels_src, out_w * out_h * out_bpp);
 			}
 		}
 	}
