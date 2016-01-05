@@ -934,6 +934,108 @@ namespace rsx
 			return 1;
 		}
 	}
+	
+	void tiled_address::write(const void *src, u32 width, u32 height, u32 pitch)
+	{
+		if (!tile)
+		{
+			memcpy(ptr, src, height * pitch);
+			return;
+		}
+
+		u32 offset_x = base % tile->pitch;
+		u32 offset_y = base / tile->pitch;
+
+		switch (tile->comp)
+		{
+		case CELL_GCM_COMPMODE_C32_2X1:
+		case CELL_GCM_COMPMODE_DISABLED:
+			for (int y = 0; y < height; ++y)
+			{
+				memcpy(ptr + (offset_y + y) * tile->pitch + offset_x, (u8*)src + pitch * y, pitch);
+			}
+			break;
+			/*
+		case CELL_GCM_COMPMODE_C32_2X1:
+			for (u32 y = 0; y < height; ++y)
+			{
+				for (u32 x = 0; x < width; ++x)
+				{
+					u32 value = *(u32*)((u8*)src + pitch * y + x * sizeof(u32));
+
+					*(u32*)(ptr + (offset_y + y) * tile->pitch + offset_x + (x * 2 + 0) * sizeof(u32)) = value;
+					*(u32*)(ptr + (offset_y + y) * tile->pitch + offset_x + (x * 2 + 1) * sizeof(u32)) = value;
+				}
+			}
+			break;
+			*/
+		case CELL_GCM_COMPMODE_C32_2X2:
+			for (u32 y = 0; y < height; ++y)
+			{
+				for (u32 x = 0; x < width; ++x)
+				{
+					u32 value = *(u32*)((u8*)src + pitch * y + x * sizeof(u32));
+
+					*(u32*)(ptr + (offset_y + y * 2 + 0) * tile->pitch + offset_x + (x * 2 + 0) * sizeof(u32)) = value;
+					*(u32*)(ptr + (offset_y + y * 2 + 0) * tile->pitch + offset_x + (x * 2 + 1) * sizeof(u32)) = value;
+					*(u32*)(ptr + (offset_y + y * 2 + 1) * tile->pitch + offset_x + (x * 2 + 0) * sizeof(u32)) = value;
+					*(u32*)(ptr + (offset_y + y * 2 + 1) * tile->pitch + offset_x + (x * 2 + 1) * sizeof(u32)) = value;
+				}
+			}
+			break;
+		default:
+			throw;
+		}
+	}
+
+	void tiled_address::read(void *dst, u32 width, u32 height, u32 pitch)
+	{
+		if (!tile)
+		{
+			memcpy(dst, ptr, height * pitch);
+			return;
+		}
+
+		u32 offset_x = base % tile->pitch;
+		u32 offset_y = base / tile->pitch;
+
+		switch (tile->comp)
+		{
+		case CELL_GCM_COMPMODE_C32_2X1:
+		case CELL_GCM_COMPMODE_DISABLED:
+			for (int y = 0; y < height; ++y)
+			{
+				memcpy((u8*)dst + pitch * y, ptr + (offset_y + y) * tile->pitch + offset_x, pitch);
+			}
+			break;
+			/*
+		case CELL_GCM_COMPMODE_C32_2X1:
+			for (u32 y = 0; y < height; ++y)
+			{
+				for (u32 x = 0; x < width; ++x)
+				{
+					u32 value = *(u32*)(ptr + (offset_y + y) * tile->pitch + offset_x + (x * 2 + 0) * sizeof(u32));
+
+					*(u32*)((u8*)dst + pitch * y + x * sizeof(u32)) = value;
+				}
+			}
+			break;
+			*/
+		case CELL_GCM_COMPMODE_C32_2X2:
+			for (u32 y = 0; y < height; ++y)
+			{
+				for (u32 x = 0; x < width; ++x)
+				{
+					u32 value = *(u32*)(ptr + (offset_y + y * 2 + 0) * tile->pitch + offset_x + (x * 2 + 0) * sizeof(u32));
+
+					*(u32*)((u8*)dst + pitch * y + x * sizeof(u32)) = value;
+				}
+			}
+			break;
+		default:
+			throw;
+		}
+	}
 
 	void thread::load_vertex_data(u32 first, u32 count)
 	{
@@ -1339,6 +1441,40 @@ namespace rsx
 
 		on_init();
 		start();
+	}
+
+	GcmTileInfo *thread::find_tile(u32 offset, u32 location)
+	{
+		for (GcmTileInfo &tile : tiles)
+		{
+			if (!tile.binded || tile.location != location)
+			{
+				continue;
+			}
+
+			if (offset >= tile.offset && offset < tile.offset + tile.size)
+			{
+				return &tile;
+			}
+		}
+
+		return nullptr;
+	}
+
+	tiled_address thread::get_tiled_address(u32 offset, u32 location)
+	{
+		u32 address = get_address(offset, location);
+
+		GcmTileInfo *tile = find_tile(offset, location);
+		u32 base = 0;
+		
+		if (tile)
+		{
+			base = offset - tile->offset;
+			address = get_address(tile->offset, location);
+		}
+
+		return{ address, base, tile, (u8*)vm::base(address) };
 	}
 
 	u32 thread::ReadIO32(u32 addr)

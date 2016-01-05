@@ -215,6 +215,17 @@ namespace rsx
 
 	u32 get_address(u32 offset, u32 location);
 
+	struct tiled_address
+	{
+		u32 address;
+		u32 base;
+		GcmTileInfo *tile;
+		u8 *ptr;
+
+		void write(const void *src, u32 width, u32 height, u32 pitch);
+		void read(void *dst, u32 width, u32 height, u32 pitch);
+	};
+
 	template<typename T>
 	void pad_texture(void* inputPixels, void* outputPixels, u16 inputWidth, u16 inputHeight, u16 outputWidth, u16 outputHeight) 
 	{
@@ -503,6 +514,9 @@ namespace rsx
 	public:
 		void reset();
 		void init(const u32 ioAddress, const u32 ioSize, const u32 ctrlAddress, const u32 localAddress);
+
+		tiled_address get_tiled_address(u32 offset, u32 location);
+		GcmTileInfo *find_tile(u32 offset, u32 location);
 
 		u32 ReadIO32(u32 addr);
 		void WriteIO32(u32 addr, u32 value);
