@@ -325,13 +325,15 @@ void GLGSRender::end()
 	for (int i = 0; i < rsx::limits::textures_count; ++i)
 	{
 		if (!textures[i].enabled())
+		{
 			continue;
+		}
 
 		int location;
 		if (m_program->uniforms.has_location("tex" + std::to_string(i), &location))
 		{
-			__glcheck m_gl_textures[i].init(textures[i]);
-			__glcheck m_program->uniforms.texture(location, i, gl::texture_view(gl::texture::target::texture2D, m_gl_textures[i].id()));
+			__glcheck m_gl_textures[i].init(i, textures[i]);
+			glProgramUniform1i(m_program->id(), location, i);
 		}
 	}
 

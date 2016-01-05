@@ -34,7 +34,7 @@ namespace rsx
 				return (v << 2) | (v >> 4);
 			}
 
-			void init(rsx::texture& tex);
+			void init(int index, rsx::texture& tex);
 			void bind();
 			void unbind();
 			void remove();

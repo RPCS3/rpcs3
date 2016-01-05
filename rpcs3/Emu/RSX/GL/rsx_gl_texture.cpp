@@ -51,7 +51,6 @@ namespace rsx
 			}
 
 			glGenTextures(1, &m_id);
-			bind();
 		}
 
 		int texture::gl_wrap(int wrap)
@@ -90,13 +89,14 @@ namespace rsx
 			return 1.0f;
 		}
 
-		void texture::init(rsx::texture& tex)
+		void texture::init(int index, rsx::texture& tex)
 		{
 			if (!m_id)
 			{
 				create();
 			}
 
+			glActiveTexture(GL_TEXTURE0 + index);
 			bind();
 
 			const u32 texaddr = rsx::get_address(tex.offset(), tex.location());
