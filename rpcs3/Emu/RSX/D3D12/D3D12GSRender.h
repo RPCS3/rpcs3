@@ -121,16 +121,9 @@ private:
 	data_heap<ID3D12Heap, D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT> m_uav_heap;
 	data_heap<ID3D12Resource, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT> m_readback_resources;
 
-	struct
-	{
-		bool m_indexed; /*<! is draw call using an index buffer */
-		size_t m_count; /*<! draw call vertex count */
-	} m_rendering_info;
-
 	render_targets m_rtts;
 
 	std::vector<D3D12_INPUT_ELEMENT_DESC> m_IASet;
-	std::vector<D3D12_VERTEX_BUFFER_VIEW> m_vertex_buffer_views;
 
 	INT g_descriptor_stride_srv_cbv_uav;
 	INT g_descriptor_stride_dsv;
@@ -158,10 +151,11 @@ private:
 	void set_rtt_and_ds(ID3D12GraphicsCommandList *command_list);
 
 	/**
-	* Create vertex and index buffers (if needed) and set them to cmdlist.
-	* Non native primitive type are emulated by index buffers expansion.
+	 * Create vertex and index buffers (if needed) and set them to cmdlist.
+	 * Non native primitive type are emulated by index buffers expansion.
+	 * Returns whether the draw call is indexed or not and the vertex count to draw.
 	*/
-	void upload_and_set_vertex_index_data(ID3D12GraphicsCommandList *command_list);
+	std::tuple<bool, size_t> upload_and_set_vertex_index_data(ID3D12GraphicsCommandList *command_list);
 
 	std::vector<std::pair<u32, u32> > m_first_count_pairs;
 	/**
@@ -169,7 +163,11 @@ private:
 	 * A range in vertex_range is a pair whose first element is the index of the beginning of the
 	 * range, and whose second element is the number of vertex in this range.
 	 */
-	void upload_vertex_attributes(const std::vector<std::pair<u32, u32> > &vertex_ranges);
+	std::vector<D3D12_VERTEX_BUFFER_VIEW> upload_vertex_attributes(const std::vector<std::pair<u32, u32> > &vertex_ranges);
+
+	std::tuple<D3D12_VERTEX_BUFFER_VIEW, size_t> upload_inlined_vertex_array();
+
+	std::tuple<D3D12_INDEX_BUFFER_VIEW, size_t> generate_index_buffer_for_emulated_primitives_array(const std::vector<std::pair<u32, u32> > &vertex_ranges);
 
 	void upload_and_bind_scale_offset_matrix(size_t descriptor_index);
 	void upload_and_bind_vertex_shader_constants(size_t descriptor_index);
