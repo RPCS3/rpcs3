@@ -279,24 +279,6 @@ namespace rsx
 		return ((method_registers[NV4097_SET_VERTEX_TEXTURE_FORMAT + (m_index * 8)] >> 16) & 0xffff);
 	}
 
-	u8 vertex_texture::wrap_s() const
-	{
-		return 1;
-		//return ((method_registers[NV4097_SET_VERTEX_TEXTURE_ADDRESS + (m_index * 8)]) & 0xf);
-	}
-
-	u8 vertex_texture::wrap_t() const
-	{
-		return 1;
-		//return ((method_registers[NV4097_SET_VERTEX_TEXTURE_ADDRESS + (m_index * 8)] >> 8) & 0xf);
-	}
-
-	u8 vertex_texture::wrap_r() const
-	{
-		return 1;
-		//return ((method_registers[NV4097_SET_VERTEX_TEXTURE_ADDRESS + (m_index * 8)] >> 16) & 0xf);
-	}
-
 	u8 vertex_texture::unsigned_remap() const
 	{
 		return ((method_registers[NV4097_SET_VERTEX_TEXTURE_ADDRESS + (m_index * 8)] >> 12) & 0xf);
@@ -345,11 +327,6 @@ namespace rsx
 	bool vertex_texture::alpha_kill_enabled() const
 	{
 		return ((method_registers[NV4097_SET_VERTEX_TEXTURE_CONTROL0 + (m_index * 8)] >> 2) & 0x1);
-	}
-
-	u32 vertex_texture::remap() const
-	{
-		return 0 | (1 << 2) | (2 << 4) | (3 << 6);//(method_registers[NV4097_SET_VERTEX_TEXTURE_CONTROL1 + (m_index * 8)]);
 	}
 
 	u16 vertex_texture::bias() const

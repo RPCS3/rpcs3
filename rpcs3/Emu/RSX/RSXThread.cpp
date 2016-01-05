@@ -624,12 +624,19 @@ namespace rsx
 
 		// Reset vertex attrib array
 		for (int i = 0; i < limits::vertex_count; i++)
+		{
 			vertex_arrays_info[i].size = 0;
+		}
 
 		// Construct Textures
 		for (int i = 0; i < limits::textures_count; i++)
 		{
 			textures[i].init(i);
+		}
+
+		for (int i = 0; i < limits::vertex_textures_count; i++)
+		{
+			vertex_textures[i].init(i);
 		}
 	}
 
