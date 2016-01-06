@@ -336,7 +336,7 @@ namespace rsx
 
 	namespace nv3089
 	{
-		never_inline void image_in(u32 arg)
+		never_inline void image_in(thread *rsx, u32 arg)
 		{
 			u32 operation = method_registers[NV3089_SET_OPERATION];
 
@@ -405,7 +405,7 @@ namespace rsx
 				return;
 			}
 
-			u32 src_address = get_address(src_offset, src_dma);
+			tiled_region src_region = rsx->get_tiled_address(src_offset, src_dma & 0xf);//get_address(src_offset, src_dma);
 			u32 dst_address = get_address(dst_offset, dst_dma);
 
 			u32 in_bpp = src_color_format == CELL_GCM_TRANSFER_SCALE_FORMAT_R5G6B5 ? 2 : 4; // bytes per pixel
@@ -433,7 +433,7 @@ namespace rsx
 
 			//LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: src = 0x%x, dst = 0x%x", src_address, dst_address);
 
-			u8* pixels_src = vm::ps3::_ptr<u8>(src_address);
+			u8* pixels_src = src_region.tile ? src_region.ptr + src_region.base : src_region.ptr;
 			u8* pixels_dst = vm::ps3::_ptr<u8>(dst_address);
 
 			if (dst_color_format != CELL_GCM_TRANSFER_SURFACE_FORMAT_R5G6B5 &&
@@ -462,8 +462,6 @@ namespace rsx
 			f32 scale_x = 1048576.f / method_registers[NV3089_DS_DX];
 			f32 scale_y = 1048576.f / method_registers[NV3089_DT_DY];
 
-			u32 slice_h = (u32)(clip_h * (1.0 / scale_y));
-
 			u32 convert_w = (u32)(scale_x * in_w);
 			u32 convert_h = (u32)(scale_y * in_h);
 
@@ -473,16 +471,22 @@ namespace rsx
 
 			bool need_convert = out_format != in_format || scale_x != 1.0 || scale_y != 1.0;
 
-			if (slice_h)
+			u32 slice_h = clip_h;
+
+			if (src_region.tile)
 			{
-				if (clip_h < out_h)
+				if (src_region.tile->comp == CELL_GCM_COMPMODE_C32_2X2)
 				{
-					--slice_h;
+					slice_h *= 2;
 				}
-			}
-			else
-			{
-				slice_h = clip_h;
+
+				u32 size = slice_h * in_pitch;
+
+				if (size > src_region.tile->size - src_region.base)
+				{
+					u32 diff = size - (src_region.tile->size - src_region.base);
+					slice_h -= diff / in_pitch + (diff % in_pitch ? 1 : 0);
+				}
 			}
 
 			if (method_registers[NV3089_SET_CONTEXT_SURFACE] != CELL_GCM_CONTEXT_SWIZZLE2D)
