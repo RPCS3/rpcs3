@@ -405,11 +405,14 @@ namespace rsx
 				return;
 			}
 
-			tiled_region src_region = rsx->get_tiled_address(src_offset, src_dma & 0xf);//get_address(src_offset, src_dma);
-			u32 dst_address = get_address(dst_offset, dst_dma);
-
 			u32 in_bpp = src_color_format == CELL_GCM_TRANSFER_SCALE_FORMAT_R5G6B5 ? 2 : 4; // bytes per pixel
 			u32 out_bpp = dst_color_format == CELL_GCM_TRANSFER_SURFACE_FORMAT_R5G6B5 ? 2 : 4;
+
+			u32 in_offset = u32(in_x * in_bpp + in_pitch * in_y);
+			u32 out_offset = out_x * out_bpp + out_pitch * out_y;
+
+			tiled_region src_region = rsx->get_tiled_address(src_offset + in_offset, src_dma & 0xf);//get_address(src_offset, src_dma);
+			u32 dst_address = get_address(dst_offset + out_offset, dst_dma);
 
 			if (out_pitch == 0)
 			{
@@ -434,7 +437,7 @@ namespace rsx
 			//LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: src = 0x%x, dst = 0x%x", src_address, dst_address);
 
 			u8* pixels_src = src_region.tile ? src_region.ptr + src_region.base : src_region.ptr;
-			u8* pixels_dst = vm::ps3::_ptr<u8>(dst_address);
+			u8* pixels_dst = vm::ps3::_ptr<u8>(dst_address + out_offset);
 
 			if (dst_color_format != CELL_GCM_TRANSFER_SURFACE_FORMAT_R5G6B5 &&
 				dst_color_format != CELL_GCM_TRANSFER_SURFACE_FORMAT_A8R8G8B8)
@@ -456,8 +459,6 @@ namespace rsx
 
 			AVPixelFormat in_format = src_color_format == CELL_GCM_TRANSFER_SCALE_FORMAT_R5G6B5 ? AV_PIX_FMT_RGB565BE : AV_PIX_FMT_ARGB;
 			AVPixelFormat out_format = dst_color_format == CELL_GCM_TRANSFER_SURFACE_FORMAT_R5G6B5 ? AV_PIX_FMT_RGB565BE : AV_PIX_FMT_ARGB;
-
-			u32 out_offset = out_x * out_bpp + out_pitch * out_y;
 
 			f32 scale_x = 1048576.f / method_registers[NV3089_DS_DX];
 			f32 scale_y = 1048576.f / method_registers[NV3089_DT_DY];
@@ -519,7 +520,7 @@ namespace rsx
 					{
 						for (u32 y = 0; y < out_h; ++y)
 						{
-							u8 *dst = pixels_dst + out_x * out_bpp + out_pitch * (y + out_y);
+							u8 *dst = pixels_dst + out_pitch * y;
 							u8 *src = pixels_src + in_pitch * y;
 
 							std::memmove(dst, src, out_w * out_bpp);
