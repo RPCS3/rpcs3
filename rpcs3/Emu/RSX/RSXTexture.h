@@ -86,9 +86,6 @@ namespace rsx
 		u16  mipmap() const;
 
 		// Address
-		u8 wrap_s() const;
-		u8 wrap_t() const;
-		u8 wrap_r() const;
 		u8 unsigned_remap() const;
 		u8 zfunc() const;
 		u8 gamma() const;
@@ -101,9 +98,6 @@ namespace rsx
 		u16  max_lod() const;
 		u8   max_aniso() const;
 		bool alpha_kill_enabled() const;
-
-		// Control1
-		u32 remap() const;
 
 		// Filter
 		u16 bias() const;

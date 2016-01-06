@@ -7,6 +7,7 @@
 #include "Emu/System.h"
 #include "Emu/state.h"
 #include "Emu/RSX/GSRender.h"
+#include "../rsx_methods.h"
 
 #include "D3D12.h"
 #include "D3D12GSRender.h"

@@ -6,6 +6,7 @@
 #include "d3dx12.h"
 #include "../Common/BufferUtils.h"
 #include "D3D12Formats.h"
+#include "../rsx_methods.h"
 
 namespace
 {

@@ -24,7 +24,6 @@ private:
 
 public:
 	gl::fbo draw_fbo;
-	gl::buffers clear_surface_buffers = gl::buffers::none;
 
 private:
 	GLProgramBuffer m_prog_buffer;
@@ -53,9 +52,10 @@ private:
 
 public:
 	bool load_program();
-	void init_buffers();
+	void init_buffers(bool skip_reading = false);
 	void read_buffers();
 	void write_buffers();
+	void set_viewport();
 
 protected:
 	void begin() override;

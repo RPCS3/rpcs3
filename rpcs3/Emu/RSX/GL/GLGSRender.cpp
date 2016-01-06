@@ -4,6 +4,7 @@
 #include "Emu/System.h"
 #include "Emu/state.h"
 #include "GLGSRender.h"
+#include "../rsx_methods.h"
 
 #define DUMP_VERTEX_DATA 0
 
@@ -63,24 +64,6 @@ void GLGSRender::begin()
 	__glcheck glColorMask(color_mask_r, color_mask_g, color_mask_b, color_mask_a);
 	__glcheck glDepthMask(rsx::method_registers[NV4097_SET_DEPTH_MASK]);
 	__glcheck glStencilMask(rsx::method_registers[NV4097_SET_STENCIL_MASK]);
-
-	int viewport_x = int(rsx::method_registers[NV4097_SET_VIEWPORT_HORIZONTAL] & 0xffff);
-	int viewport_y = int(rsx::method_registers[NV4097_SET_VIEWPORT_VERTICAL] & 0xffff);
-	int viewport_w = int(rsx::method_registers[NV4097_SET_VIEWPORT_HORIZONTAL] >> 16);
-	int viewport_h = int(rsx::method_registers[NV4097_SET_VIEWPORT_VERTICAL] >> 16);
-	glViewport(viewport_x, viewport_y, viewport_w, viewport_h);
-
-	//scissor test is always enabled
-	glEnable(GL_SCISSOR_TEST);
-
-	u32 scissor_horizontal = rsx::method_registers[NV4097_SET_SCISSOR_HORIZONTAL];
-	u32 scissor_vertical = rsx::method_registers[NV4097_SET_SCISSOR_VERTICAL];
-	u16 scissor_x = scissor_horizontal;
-	u16 scissor_w = scissor_horizontal >> 16;
-	u16 scissor_y = scissor_vertical;
-	u16 scissor_h = scissor_vertical >> 16;
-
-	__glcheck glScissor(scissor_x, scissor_y, scissor_w, scissor_h);
 
 	if (__glcheck enable(rsx::method_registers[NV4097_SET_DEPTH_TEST_ENABLE], GL_DEPTH_TEST))
 	{
@@ -235,8 +218,9 @@ void GLGSRender::begin()
 	if (__glcheck enable(rsx::method_registers[NV4097_SET_CULL_FACE_ENABLE], GL_CULL_FACE))
 	{
 		__glcheck glCullFace(rsx::method_registers[NV4097_SET_CULL_FACE]);
-		__glcheck glFrontFace(rsx::method_registers[NV4097_SET_FRONT_FACE]);
 	}
+
+	__glcheck glFrontFace(rsx::method_registers[NV4097_SET_FRONT_FACE] ^ 1);
 
 	__glcheck enable(rsx::method_registers[NV4097_SET_POLY_SMOOTH_ENABLE], GL_POLYGON_SMOOTH);
 
@@ -325,13 +309,15 @@ void GLGSRender::end()
 	for (int i = 0; i < rsx::limits::textures_count; ++i)
 	{
 		if (!textures[i].enabled())
+		{
 			continue;
+		}
 
 		int location;
 		if (m_program->uniforms.has_location("tex" + std::to_string(i), &location))
 		{
-			__glcheck m_gl_textures[i].init(textures[i]);
-			__glcheck m_program->uniforms.texture(location, i, gl::texture_view(gl::texture::target::texture2D, m_gl_textures[i].id()));
+			__glcheck m_gl_textures[i].init(i, textures[i]);
+			glProgramUniform1i(m_program->id(), location, i);
 		}
 	}
 
@@ -477,6 +463,44 @@ void GLGSRender::end()
 	rsx::thread::end();
 }
 
+void GLGSRender::set_viewport()
+{
+	u32 viewport_horizontal = rsx::method_registers[NV4097_SET_VIEWPORT_HORIZONTAL];
+	u32 viewport_vertical = rsx::method_registers[NV4097_SET_VIEWPORT_VERTICAL];
+
+	u16 viewport_x = viewport_horizontal & 0xffff;
+	u16 viewport_y = viewport_vertical & 0xffff;
+	u16 viewport_w = viewport_horizontal >> 16;
+	u16 viewport_h = viewport_vertical >> 16;
+
+	u32 scissor_horizontal = rsx::method_registers[NV4097_SET_SCISSOR_HORIZONTAL];
+	u32 scissor_vertical = rsx::method_registers[NV4097_SET_SCISSOR_VERTICAL];
+	u16 scissor_x = scissor_horizontal;
+	u16 scissor_w = scissor_horizontal >> 16;
+	u16 scissor_y = scissor_vertical;
+	u16 scissor_h = scissor_vertical >> 16;
+
+	u32 shader_window = rsx::method_registers[NV4097_SET_SHADER_WINDOW];
+
+	u8 shader_window_origin = (shader_window >> 12) & 0xf;
+
+	//TODO
+	if (true || shader_window_origin == CELL_GCM_WINDOW_ORIGIN_BOTTOM)
+	{
+		__glcheck glViewport(viewport_x, viewport_y, viewport_w, viewport_h);
+		__glcheck glScissor(scissor_x, scissor_y, scissor_w, scissor_h);
+	}
+	else
+	{
+		u16 shader_window_height = shader_window & 0xfff;
+
+		__glcheck glViewport(viewport_x, shader_window_height - viewport_y - viewport_h - 1, viewport_w, viewport_h);
+		__glcheck glScissor(scissor_x, shader_window_height - scissor_y - scissor_h - 1, scissor_w, scissor_h);
+	}
+
+	glEnable(GL_SCISSOR_TEST);
+}
+
 void GLGSRender::on_init_thread()
 {
 	GSRender::on_init_thread();
@@ -555,9 +579,6 @@ void nv4097_clear_surface(u32 arg, GLGSRender* renderer)
 		return;
 	}
 
-	renderer->draw_fbo.bind();
-	glEnable(GL_SCISSOR_TEST);
-
 	/*
 	u16 clear_x = rsx::method_registers[NV4097_SET_CLEAR_RECT_HORIZONTAL];
 	u16 clear_y = rsx::method_registers[NV4097_SET_CLEAR_RECT_VERTICAL];
@@ -566,14 +587,8 @@ void nv4097_clear_surface(u32 arg, GLGSRender* renderer)
 	glScissor(clear_x, clear_y, clear_w, clear_h);
 	*/
 
-	u32 scissor_horizontal = rsx::method_registers[NV4097_SET_SCISSOR_HORIZONTAL];
-	u32 scissor_vertical = rsx::method_registers[NV4097_SET_SCISSOR_VERTICAL];
-	u16 scissor_x = scissor_horizontal;
-	u16 scissor_w = scissor_horizontal >> 16;
-	u16 scissor_y = scissor_vertical;
-	u16 scissor_h = scissor_vertical >> 16;
-
-	glScissor(scissor_x, scissor_y, scissor_w, scissor_h);
+	renderer->init_buffers(true);
+	renderer->draw_fbo.bind();
 
 	GLbitfield mask = 0;
 
@@ -613,8 +628,8 @@ void nv4097_clear_surface(u32 arg, GLGSRender* renderer)
 		mask |= GLenum(gl::buffers::color);
 	}
 
-	renderer->clear_surface_buffers = (gl::buffers)mask;
-	renderer->draw_fbo.clear((gl::buffers)mask);
+	glClear(mask);
+	renderer->write_buffers();
 }
 
 using rsx_method_impl_t = void(*)(u32, GLGSRender*);
@@ -808,7 +823,7 @@ std::pair<gl::texture::type, gl::texture::format> surface_depth_format_to_gl(int
 	}
 }
 
-void GLGSRender::init_buffers()
+void GLGSRender::init_buffers(bool skip_reading)
 {
 	u32 surface_format = rsx::method_registers[NV4097_SET_SURFACE_FORMAT];
 
@@ -890,10 +905,12 @@ void GLGSRender::init_buffers()
 		__glcheck m_draw_tex_depth_stencil.pixel_unpack_settings().aligment(1);
 	}
 
-	if (clear_surface_buffers == gl::buffers::none)
+	if (!skip_reading)
 	{
 		read_buffers();
 	}
+
+	set_viewport();
 
 	switch (rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET])
 	{
@@ -923,13 +940,6 @@ void GLGSRender::init_buffers()
 		LOG_ERROR(RSX, "Bad surface color target: %d", rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET]);
 		break;
 	}
-
-	if (clear_surface_buffers != gl::buffers::none)
-	{
-		//draw_fbo.clear(clear_surface_buffers);
-
-		clear_surface_buffers = gl::buffers::none;
-	}
 }
 
 static const u32 mr_color_offset[rsx::limits::color_buffers_count] =
@@ -948,6 +958,14 @@ static const u32 mr_color_dma[rsx::limits::color_buffers_count] =
 	NV4097_SET_CONTEXT_DMA_COLOR_D
 };
 
+static const u32 mr_color_pitch[rsx::limits::color_buffers_count] =
+{
+	NV4097_SET_SURFACE_PITCH_A,
+	NV4097_SET_SURFACE_PITCH_B,
+	NV4097_SET_SURFACE_PITCH_C,
+	NV4097_SET_SURFACE_PITCH_D
+};
+
 void GLGSRender::read_buffers()
 {
 	if (!draw_fbo)
@@ -961,10 +979,34 @@ void GLGSRender::read_buffers()
 
 		auto read_color_buffers = [&](int index, int count)
 		{
+			u32 width = rsx::method_registers[NV4097_SET_SURFACE_CLIP_HORIZONTAL] >> 16;
+			u32 height = rsx::method_registers[NV4097_SET_SURFACE_CLIP_VERTICAL] >> 16;
+
+
 			for (int i = index; i < index + count; ++i)
 			{
-				u32 color_address = rsx::get_address(rsx::method_registers[mr_color_offset[i]], rsx::method_registers[mr_color_dma[i]]);
-				__glcheck m_draw_tex_color[i].copy_from(vm::base(color_address), color_format.format, color_format.type);
+				u32 offset = rsx::method_registers[mr_color_offset[i]];
+				u32 location = rsx::method_registers[mr_color_dma[i]];
+				u32 pitch = rsx::method_registers[mr_color_pitch[i]];
+
+				if (pitch <= 64)
+					continue;
+
+				m_draw_tex_color[i].pixel_unpack_settings().row_length(pitch / (color_format.channel_size * color_format.channel_count));
+
+				rsx::tiled_region color_buffer = get_tiled_address(offset, location & 0xf);
+
+				if (!color_buffer.tile)
+				{
+					__glcheck m_draw_tex_color[i].copy_from(color_buffer.ptr, color_format.format, color_format.type);
+				}
+				else
+				{
+					std::unique_ptr<u8[]> buffer(new u8[pitch * height]);
+					color_buffer.read(buffer.get(), width, height, pitch);
+
+					__glcheck m_draw_tex_color[i].copy_from(buffer.get(), color_format.format, color_format.type);
+				}
 			}
 		};
 
@@ -997,6 +1039,12 @@ void GLGSRender::read_buffers()
 
 	if (rpcs3::state.config.rsx.opengl.read_depth_buffer)
 	{
+		//TODO: use pitch
+		u32 pitch = rsx::method_registers[NV4097_SET_SURFACE_PITCH_Z];
+
+		if (pitch <= 64)
+			return;
+
 		auto depth_format = surface_depth_format_to_gl(m_surface.depth_format);
 
 		int pixel_size = m_surface.depth_format == CELL_GCM_SURFACE_Z16 ? 2 : 4;
@@ -1046,6 +1094,9 @@ void GLGSRender::write_buffers()
 
 		auto write_color_buffers = [&](int index, int count)
 		{
+			u32 width = rsx::method_registers[NV4097_SET_SURFACE_CLIP_HORIZONTAL] >> 16;
+			u32 height = rsx::method_registers[NV4097_SET_SURFACE_CLIP_VERTICAL] >> 16;
+
 			for (int i = index; i < index + count; ++i)
 			{
 				//TODO: swizzle
@@ -1065,8 +1116,29 @@ void GLGSRender::write_buffers()
 
 				//}, gl::buffer::access::read);
 
-				u32 color_address = rsx::get_address(rsx::method_registers[mr_color_offset[i]], rsx::method_registers[mr_color_dma[i]]);
-				__glcheck m_draw_tex_color[i].copy_to(vm::base(color_address), color_format.format, color_format.type);
+				u32 offset = rsx::method_registers[mr_color_offset[i]];
+				u32 location = rsx::method_registers[mr_color_dma[i]];
+				u32 pitch = rsx::method_registers[mr_color_pitch[i]];
+
+				if (pitch <= 64)
+					continue;
+
+				m_draw_tex_color[i].pixel_pack_settings().row_length(pitch / (color_format.channel_size * color_format.channel_count));
+
+				rsx::tiled_region color_buffer = get_tiled_address(offset, location & 0xf);
+
+				if (!color_buffer.tile)
+				{
+					__glcheck m_draw_tex_color[i].copy_to(color_buffer.ptr, color_format.format, color_format.type);
+				}
+				else
+				{
+					std::unique_ptr<u8[]> buffer(new u8[pitch * height]);
+
+					__glcheck m_draw_tex_color[i].copy_to(buffer.get(), color_format.format, color_format.type);
+
+					color_buffer.write(buffer.get(), width, height, pitch);
+				}
 			}
 		};
 
@@ -1099,6 +1171,12 @@ void GLGSRender::write_buffers()
 
 	if (rpcs3::state.config.rsx.opengl.write_depth_buffer)
 	{
+		//TODO: use pitch
+		u32 pitch = rsx::method_registers[NV4097_SET_SURFACE_PITCH_Z];
+
+		if (pitch <= 64)
+			return;
+
 		auto depth_format = surface_depth_format_to_gl(m_surface.depth_format);
 
 		gl::buffer pbo_depth;
@@ -1141,7 +1219,9 @@ void GLGSRender::flip(int buffer)
 	u32 buffer_width = gcm_buffers[buffer].width;
 	u32 buffer_height = gcm_buffers[buffer].height;
 	u32 buffer_pitch = gcm_buffers[buffer].pitch;
-	u32 buffer_address = rsx::get_address(gcm_buffers[buffer].offset, CELL_GCM_LOCATION_LOCAL);
+
+	rsx::tiled_region buffer_region = get_tiled_address(gcm_buffers[buffer].offset, CELL_GCM_LOCATION_LOCAL);
+
 	bool skip_read = false;
 
 	if (draw_fbo && !rpcs3::state.config.rsx.opengl.write_color_buffers)
@@ -1173,8 +1253,7 @@ void GLGSRender::flip(int buffer)
 				.type(gl::texture::type::uint_8_8_8_8)
 				.format(gl::texture::format::bgra);
 
-			m_flip_tex_color.pixel_unpack_settings().aligment(1);
-			m_flip_tex_color.pixel_pack_settings().aligment(1);
+			m_flip_tex_color.pixel_unpack_settings().aligment(1).row_length(buffer_pitch / 4);
 
 			__glcheck m_flip_fbo.recreate();
 			__glcheck m_flip_fbo.color = m_flip_tex_color;
@@ -1191,7 +1270,16 @@ void GLGSRender::flip(int buffer)
 		glDisable(GL_LOGIC_OP);
 		glDisable(GL_CULL_FACE);
 
-		__glcheck m_flip_tex_color.copy_from(vm::base(buffer_address), gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8);
+		if (buffer_region.tile)
+		{
+			std::unique_ptr<u8> temp(new u8[buffer_height * buffer_pitch]);
+			buffer_region.read(temp.get(), buffer_width, buffer_height, buffer_pitch);
+			__glcheck m_flip_tex_color.copy_from(temp.get(), gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8);
+		}
+		else
+		{
+			__glcheck m_flip_tex_color.copy_from(buffer_region.ptr, gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8);
+		}
 	}
 
 	areai screen_area = coordi({}, { (int)buffer_width, (int)buffer_height });

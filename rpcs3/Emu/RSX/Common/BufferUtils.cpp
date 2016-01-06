@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "BufferUtils.h"
+#include "../rsx_methods.h"
 
 #define MIN2(x, y) ((x) < (y)) ? (x) : (y)
 #define MAX2(x, y) ((x) > (y)) ? (x) : (y)

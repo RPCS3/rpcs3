@@ -148,158 +148,20 @@ namespace rsx
 		static std::string path_to_root();
 	};
 
-	//TODO
-	union alignas(4) method_registers_t
-	{
-		u8 _u8[0x10000];
-		u32 _u32[0x10000 >> 2];
-/*
-		struct alignas(4)
-		{
-			u8 pad[NV4097_SET_TEXTURE_OFFSET - 4];
-
-			struct alignas(4) texture_t
-			{
-				u32 offset;
-
-				union format_t
-				{
-					u32 _u32;
-
-					struct
-					{
-						u32: 1;
-						u32 location : 1;
-						u32 cubemap : 1;
-						u32 border_type : 1;
-						u32 dimension : 4;
-						u32 format : 8;
-						u32 mipmap : 16;
-					};
-				} format;
-
-				union address_t
-				{
-					u32 _u32;
-
-					struct
-					{
-						u32 wrap_s : 4;
-						u32 aniso_bias : 4;
-						u32 wrap_t : 4;
-						u32 unsigned_remap : 4;
-						u32 wrap_r : 4;
-						u32 gamma : 4;
-						u32 signed_remap : 4;
-						u32 zfunc : 4;
-					};
-				} address;
-
-				u32 control0;
-				u32 control1;
-				u32 filter;
-				u32 image_rect;
-				u32 border_color;
-			} textures[limits::textures_count];
-		};
-*/
-		u32& operator[](int index)
-		{
-			return _u32[index >> 2];
-		}
-	};
-
-	extern u32 method_registers[0x10000 >> 2];
-
 	u32 get_vertex_type_size(u32 type);
 
 	u32 get_address(u32 offset, u32 location);
 
-	template<typename T>
-	void pad_texture(void* inputPixels, void* outputPixels, u16 inputWidth, u16 inputHeight, u16 outputWidth, u16 outputHeight) 
+	struct tiled_region
 	{
-		T *src, *dst;
-		src = static_cast<T*>(inputPixels);
-		dst = static_cast<T*>(outputPixels);
+		u32 address;
+		u32 base;
+		GcmTileInfo *tile;
+		u8 *ptr;
 
-		for (u16 h = 0; h < inputHeight; ++h)
-		{
-			const u32 padded_pos = h * outputWidth;
-			const u32 pos = h * inputWidth;
-			for (u16 w = 0; w < inputWidth; ++w)
-			{
-				dst[padded_pos + w] = src[pos + w];
-			}
-		}
-	}
-
-	/*   Note: What the ps3 calls swizzling in this case is actually z-ordering / morton ordering of pixels
-	*       - Input can be swizzled or linear, bool flag handles conversion to and from
-	*       - It will handle any width and height that are a power of 2, square or non square
-	*	 Restriction: It has mixed results if the height or width is not a power of 2
-	*/
-	template<typename T>
-	void convert_linear_swizzle(void* inputPixels, void* outputPixels, u16 width, u16 height, bool inputIsSwizzled)
-	{
-		u32 log2width, log2height;
-
-		log2width = log2(width);
-		log2height = log2(height);
-
-		// Max mask possible for square texture
-		u32 x_mask = 0x55555555;
-		u32 y_mask = 0xAAAAAAAA;
-
-		// We have to limit the masks to the lower of the two dimensions to allow for non-square textures
-		u32 limit_mask = (log2width < log2height) ? log2width : log2height;
-		// double the limit mask to account for bits in both x and y
-		limit_mask = 1 << (limit_mask << 1);
-
-		//x_mask, bits above limit are 1's for x-carry
-		x_mask = (x_mask | ~(limit_mask - 1));
-		//y_mask. bits above limit are 0'd, as we use a different method for y-carry over
-		y_mask = (y_mask & (limit_mask - 1));
-
-		u32 offs_y = 0;
-		u32 offs_x = 0;
-		u32 offs_x0 = 0; //total y-carry offset for x
-		u32 y_incr = limit_mask;
-
-		T *src, *dst;
-
-		if (!inputIsSwizzled)
-		{
-			for (int y = 0; y < height; ++y) 
-			{
-				src = static_cast<T*>(inputPixels) + y*width;
-				dst = static_cast<T*>(outputPixels) + offs_y;
-				offs_x = offs_x0;
-				for (int x = 0; x < width; ++x) 
-				{
-					dst[offs_x] = src[x];
-					offs_x = (offs_x - x_mask) & x_mask;
-				}
-				offs_y = (offs_y - y_mask) & y_mask;
-				if (offs_y == 0) offs_x0 += y_incr;
-			}
-		}
-		else 
-		{
-			for (int y = 0; y < height; ++y) 
-			{
-				src = static_cast<T*>(inputPixels) + offs_y;
-				dst = static_cast<T*>(outputPixels) + y*width;
-				offs_x = offs_x0;
-				for (int x = 0; x < width; ++x) 
-				{
-					dst[x] = src[offs_x];
-					offs_x = (offs_x - x_mask) & x_mask;
-				}
-				offs_y = (offs_y - y_mask) & y_mask;
-				if (offs_y == 0) offs_x0 += y_incr;
-			}
-		}
-	}
+		void write(const void *src, u32 width, u32 height, u32 pitch);
+		void read(void *dst, u32 width, u32 height, u32 pitch);
+	};
 
 	struct surface_info
 	{
@@ -503,6 +365,9 @@ namespace rsx
 	public:
 		void reset();
 		void init(const u32 ioAddress, const u32 ioSize, const u32 ctrlAddress, const u32 localAddress);
+
+		tiled_region get_tiled_address(u32 offset, u32 location);
+		GcmTileInfo *find_tile(u32 offset, u32 location);
 
 		u32 ReadIO32(u32 addr);
 		void WriteIO32(u32 addr, u32 value);

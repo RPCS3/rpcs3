@@ -2,6 +2,7 @@
 #include "Emu/Memory/vm.h"
 #include "TextureUtils.h"
 #include "../RSXThread.h"
+#include "../rsx_utils.h"
 
 
 #define MAX2(a, b) ((a) > (b)) ? (a) : (b)
