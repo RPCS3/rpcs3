@@ -89,11 +89,6 @@ D3D12DLLManagement::~D3D12DLLManagement()
 D3D12GSRender::D3D12GSRender()
 	: GSRender(frame_type::DX12), m_d3d12_lib(), m_current_pso({})
 {
-	m_previous_address_a = 0;
-	m_previous_address_b = 0;
-	m_previous_address_c = 0;
-	m_previous_address_d = 0;
-	m_previous_address_z = 0;
 	gfxHandler = [this](u32 addr) {
 		bool result = invalidate_address(addr);
 		if (result)
@@ -423,15 +418,15 @@ void D3D12GSRender::flip(int buffer)
 	}
 	else
 	{
-		if (m_rtts.bound_render_targets[0] != nullptr)
+		if (std::get<1>(m_rtts.m_bound_render_targets[0]) != nullptr)
 		{
-			get_current_resource_storage().command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_rtts.bound_render_targets[0], D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
-			resource_to_flip = m_rtts.bound_render_targets[0];
+			get_current_resource_storage().command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(std::get<1>(m_rtts.m_bound_render_targets[0]), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
+			resource_to_flip = std::get<1>(m_rtts.m_bound_render_targets[0]);
 		}
-		else if (m_rtts.bound_render_targets[1] != nullptr)
+		else if (std::get<1>(m_rtts.m_bound_render_targets[1]) != nullptr)
 		{
-			get_current_resource_storage().command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_rtts.bound_render_targets[1], D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
-			resource_to_flip = m_rtts.bound_render_targets[1];
+			get_current_resource_storage().command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(std::get<1>(m_rtts.m_bound_render_targets[1]), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
+			resource_to_flip = std::get<1>(m_rtts.m_bound_render_targets[1]);
 		}
 		else
 			resource_to_flip = nullptr;
@@ -533,6 +528,8 @@ void D3D12GSRender::flip(int buffer)
 	storage.fence_value++;
 
 	storage.in_use = true;
+	storage.dirty_textures.merge(m_rtts.invalidated_resources);
+	m_rtts.invalidated_resources.clear();
 
 	// Get the put pos - 1. This way after cleaning we can set the get ptr to
 	// this value, allowing heap to proceed even if we cleant before allocating

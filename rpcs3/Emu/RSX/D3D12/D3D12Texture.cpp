@@ -167,18 +167,15 @@ void D3D12GSRender::upload_and_bind_textures(ID3D12GraphicsCommandList *command_
 		bool is_swizzled = !(textures[i].format() & CELL_GCM_TEXTURE_LN);
 
 		ID3D12Resource *vram_texture;
-		std::unordered_map<u32, ComPtr<ID3D12Resource> >::const_iterator ItRTT = m_rtts.render_targets_storage.find(texaddr);
-		std::unordered_map<u32, ComPtr<ID3D12Resource> >::const_iterator ItDS = m_rtts.depth_stencil_storage.find(texaddr);
 		std::pair<texture_entry, ComPtr<ID3D12Resource> > *cached_texture = m_texture_cache.find_data_if_available(texaddr);
 		bool is_render_target = false, is_depth_stencil_texture = false;
-		if (ItRTT != m_rtts.render_targets_storage.end())
+
+		if (vram_texture = m_rtts.get_texture_from_render_target_if_applicable(texaddr))
 		{
-			vram_texture = ItRTT->second.Get();
 			is_render_target = true;
 		}
-		else if (ItDS != m_rtts.depth_stencil_storage.end())
+		else if (vram_texture = m_rtts.get_texture_from_depth_stencil_if_applicable(texaddr))
 		{
-			vram_texture = ItDS->second.Get();
 			is_depth_stencil_texture = true;
 		}
 		else if (cached_texture != nullptr && (cached_texture->first == texture_entry(format, w, h, textures[i].mipmap())))

@@ -129,11 +129,11 @@ private:
 	ID3D12Resource *m_dummy_texture;
 
 	// Store previous fbo addresses to detect RTT config changes.
-	u32 m_previous_address_a;
-	u32 m_previous_address_b;
-	u32 m_previous_address_c;
-	u32 m_previous_address_d;
-	u32 m_previous_address_z;
+	std::array<u32, 4> m_previous_color_address = {};
+	u32 m_previous_address_z = 0;
+	u32 m_previous_target = 0;
+	u32 m_previous_clip_horizontal = 0;
+	u32 m_previous_clip_vertical = 0;
 public:
 	D3D12GSRender();
 	virtual ~D3D12GSRender();
