@@ -10,6 +10,7 @@
 #include "Utilities/Thread.h"
 #include "Utilities/Timer.h"
 #include "Utilities/convert.h"
+#include <rsx_decompiler.h>
 
 extern u64 get_system_time();
 
@@ -42,49 +43,41 @@ struct frame_capture_data
 extern bool user_asked_for_frame_capture;
 extern frame_capture_data frame_debug;
 
-namespace rsx
-{
-	enum class shader_language
-	{
-		glsl,
-		hlsl
-	};
-}
-
 namespace convert
 {
 	template<>
-	struct to_impl_t<rsx::shader_language, std::string>
+	struct to_impl_t<rsx::decompile_language, std::string>
 	{
-		static rsx::shader_language func(const std::string &from)
+		static rsx::decompile_language func(const std::string &from)
 		{
 			if (from == "glsl")
-				return rsx::shader_language::glsl;
+				return rsx::decompile_language::glsl;
 
-			if (from == "hlsl")
-				return rsx::shader_language::hlsl;
+			//if (from == "hlsl")
+			//	return rsx::decompile_language::hlsl;
 
 			throw;
 		}
 	};
 
 	template<>
-	struct to_impl_t<std::string, rsx::shader_language>
+	struct to_impl_t<std::string, rsx::decompile_language>
 	{
-		static std::string func(rsx::shader_language from)
+		static std::string func(rsx::decompile_language from)
 		{
 			switch (from)
 			{
-			case rsx::shader_language::glsl:
+			case rsx::decompile_language::glsl:
 				return "glsl";
-			case rsx::shader_language::hlsl:
-				return "hlsl";
+				//case rsx::decompile_language::hlsl:
+				//	return "hlsl";
 			}
 
 			throw;
 		}
 	};
 }
+
 namespace rsx
 {
 	namespace limits
@@ -100,17 +93,6 @@ namespace rsx
 			color_buffers_count = 4
 		};
 	}
-
-	struct decompiled_shader
-	{
-		std::string code;
-	};
-
-	struct finalized_shader
-	{
-		u64 ucode_hash;
-		std::string code;
-	};
 
 	template<typename Type, typename KeyType = u64, typename Hasher = std::hash<KeyType>>
 	struct cache
@@ -129,24 +111,29 @@ namespace rsx
 			return &found->second;
 		}
 
-		void insert(KeyType key, const Type &shader)
+		const Type& insert(KeyType key, const Type &shader)
 		{
-			m_entries.insert({ key, shader });
+			return m_entries.insert({ key, shader }).first->second;
 		}
+	};
+
+	struct shaders_cache_entry
+	{
+		cache<decompiled_shader> decompiled;
+		cache<complete_shader> complete;
 	};
 
 	struct shaders_cache
 	{
-		cache<decompiled_shader> decompiled_fragment_shaders;
-		cache<decompiled_shader> decompiled_vertex_shaders;
-		cache<finalized_shader> finailized_fragment_shaders;
-		cache<finalized_shader> finailized_vertex_shaders;
+		shaders_cache_entry fragment_shaders;
+		shaders_cache_entry vertex_shaders;
 
-		void load(const std::string &path, shader_language lang);
-		void load(shader_language lang);
+		void load(const std::string &path, decompile_language lang);
+		void load(decompile_language lang);
 
 		static std::string path_to_root();
 	};
+
 
 	u32 get_vertex_type_size(u32 type);
 

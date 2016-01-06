@@ -24,8 +24,12 @@ namespace rsx
 		return fs::get_executable_dir() + "data/";
 	}
 
-	void shaders_cache::load(const std::string &path, shader_language lang)
+	void shaders_cache::load(const std::string &path, decompile_language lang)
 	{
+		fs::create_path(path);
+
+		return;
+
 		std::string lang_name = convert::to<std::string>(lang);
 
 		auto extract_hash = [](const std::string &string)
@@ -53,20 +57,27 @@ namespace rsx
 			if (fmt::match(entry.name, "*.fs." + lang_name))
 			{
 				fs::file file{ path + entry.name };
-				decompiled_fragment_shaders.insert(hash, { (const std::string)file });
+				decompiled_shader shader;
+				shader.code_language = lang;
+				shader.code = (const std::string)file;
+				fragment_shaders.decompiled.insert(hash, shader);
 				continue;
 			}
 
 			if (fmt::match(entry.name, "*.vs." + lang_name))
 			{
 				fs::file file{ path + entry.name };
-				decompiled_vertex_shaders.insert(hash, { (const std::string)file });
+				decompiled_shader shader;
+				shader.code_language = lang;
+				shader.code = (const std::string)file;
+				vertex_shaders.decompiled.insert(hash, shader);
+
 				continue;
 			}
 		}
 	}
 
-	void shaders_cache::load(shader_language lang)
+	void shaders_cache::load(decompile_language lang)
 	{
 		std::string root = path_to_root();
 

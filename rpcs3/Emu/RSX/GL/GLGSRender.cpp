@@ -5,12 +5,13 @@
 #include "Emu/state.h"
 #include "GLGSRender.h"
 #include "../rsx_methods.h"
+#include <rsx_decompiler.h>
 
 #define DUMP_VERTEX_DATA 0
 
 GLGSRender::GLGSRender() : GSRender(frame_type::OpenGL)
 {
-	shaders_cache.load(rsx::shader_language::glsl);
+	shaders_cache.load(rsx::decompile_language::glsl);
 }
 
 u32 GLGSRender::enable(u32 condition, u32 cap)
