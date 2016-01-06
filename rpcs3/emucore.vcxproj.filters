@@ -933,6 +933,9 @@
     <ClCompile Include="stdafx.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\RSX\rsx_cache.cpp">
+      <Filter>Emu\GPU\RSX</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -1783,6 +1786,9 @@
       <Filter>Emu\GPU\RSX</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\rsx_methods.h">
+      <Filter>Emu\GPU\RSX</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\rsx_cache.h">
       <Filter>Emu\GPU\RSX</Filter>
     </ClInclude>
   </ItemGroup>
