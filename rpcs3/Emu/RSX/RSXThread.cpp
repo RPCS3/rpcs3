@@ -350,13 +350,18 @@ namespace rsx
 	void thread::end()
 	{
 		vertex_index_array.clear();
+
 		for (auto &vertex_array : vertex_arrays)
+		{
 			vertex_array.clear();
+		}
 
 		transform_constants.clear();
 
 		if (capture_current_frame)
+		{
 			capture_frame("Draw " + std::to_string(vertex_draw_count));
+		}
 	}
 
 	void thread::on_task()

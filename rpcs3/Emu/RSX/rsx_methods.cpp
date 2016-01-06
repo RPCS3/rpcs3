@@ -459,10 +459,19 @@ namespace rsx
 
 			u32 out_offset = out_x * out_bpp + out_pitch * out_y;
 
-			bool need_clip = method_registers[NV3089_CLIP_SIZE] != method_registers[NV3089_IMAGE_IN_SIZE] || method_registers[NV3089_CLIP_POINT];
-			bool need_convert = out_format != in_format || out_w != in_w || out_h != in_h;
+			f32 scale_x = 1048576.f / method_registers[NV3089_DS_DX];
+			f32 scale_y = 1048576.f / method_registers[NV3089_DT_DY];
 
-			u32 slice_h = (u32)(clip_h * (method_registers[NV3089_DS_DX] / 1048576.f));
+			u32 slice_h = (u32)(clip_h * (1.0 / scale_y));
+
+			u32 convert_w = (u32)(scale_x * in_w);
+			u32 convert_h = (u32)(scale_y * in_h);
+
+			bool need_clip =
+				method_registers[NV3089_CLIP_SIZE] != method_registers[NV3089_IMAGE_IN_SIZE] ||
+				method_registers[NV3089_CLIP_POINT] || convert_w != out_w || convert_h != out_h;
+
+			bool need_convert = out_format != in_format || scale_x != 1.0 || scale_y != 1.0;
 
 			if (slice_h)
 			{
@@ -484,7 +493,7 @@ namespace rsx
 					{
 						if (need_convert)
 						{
-							convert_scale_image(temp1, out_format, out_w, out_h, out_pitch,
+							convert_scale_image(temp1, out_format, convert_w, convert_h, out_pitch,
 								pixels_src, in_format, in_w, in_h, in_pitch, slice_h, in_inter ? true : false);
 
 							clip_image(pixels_dst + out_offset, temp1.get(), clip_x, clip_y, clip_w, clip_h, out_bpp, out_pitch, out_pitch);
@@ -526,7 +535,7 @@ namespace rsx
 					{
 						if (need_convert)
 						{
-							convert_scale_image(temp1, out_format, out_w, out_h, out_pitch,
+							convert_scale_image(temp1, out_format, convert_w, convert_h, out_pitch,
 								pixels_src, in_format, in_w, in_h, in_pitch, slice_h, in_inter ? true : false);
 
 							clip_image(temp2, temp1.get(), clip_x, clip_y, clip_w, clip_h, out_bpp, out_pitch, out_pitch);
