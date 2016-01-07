@@ -2,299 +2,367 @@
 #include "Emu/FS/vfsStream.h"
 #include "PSF.h"
 
-bool PSFLoader::Load(vfsStream& stream)
+namespace psf
 {
-	PSFHeader header;
-
-	// load header
-	if (!stream.SRead(header))
+	u32 entry::max_size() const
 	{
-		return false;
+		return m_max_size;
 	}
 
-	// check magic
-	if (header.magic != *(u32*)"\0PSF")
+	entry& entry::max_size(u32 value)
 	{
-		LOG_ERROR(LOADER, "PSFLoader::Load() failed: unknown magic (0x%x)", header.magic);
-		return false;
+		m_max_size = value;
+		return *this;
 	}
 
-	// check version
-	if (header.version != 0x101)
+	entry_format entry::format() const
 	{
-		LOG_ERROR(LOADER, "PSFLoader::Load() failed: unknown version (0x%x)", header.version);
-		return false;
+		return m_format;
 	}
 
-	// load indices
-	std::vector<PSFDefTable> indices;
-
-	indices.resize(header.entries_num);
-
-	if (!stream.SRead(indices[0], sizeof(PSFDefTable) * header.entries_num))
+	entry& entry::format(entry_format value)
 	{
-		return false;
+		m_format = value;
+		return *this;
 	}
 
-	// load key table
-	if (header.off_key_table > header.off_data_table)
+	std::string entry::as_string() const
 	{
-		LOG_ERROR(LOADER, "PSFLoader::Load() failed: off_key_table=0x%x, off_data_table=0x%x", header.off_key_table, header.off_data_table);
-		return false;
+		if (m_format != entry_format::string || m_format != entry_format::string_not_null_term)
+		{
+			throw std::logic_error("psf entry as_string() error: bad format");
+		}
+
+		return m_value_string;
 	}
 
-	const u32 key_table_size = header.off_data_table - header.off_key_table;
-
-	std::unique_ptr<char[]> keys(new char[key_table_size + 1]);
-
-	stream.Seek(header.off_key_table);
-
-	if (stream.Read(keys.get(), key_table_size) != key_table_size)
+	u32 entry::as_integer() const
 	{
-		return false;
+		if (m_format != entry_format::integer)
+		{
+			throw std::logic_error("psf entry as_integer() error: bad format");
+		}
+
+		return m_value_integer;
 	}
 
-	keys.get()[key_table_size] = 0;
-
-	// load entries
-	std::vector<PSFEntry> entries;
-
-	entries.resize(header.entries_num);
-
-	for (u32 i = 0; i < header.entries_num; ++i)
+	std::string entry::to_string() const
 	{
-		entries[i].fmt = indices[i].param_fmt;
+		switch (m_format)
+		{
+		case entry_format::string:
+		case entry_format::string_not_null_term:
+			return m_value_string;
 
-		if (indices[i].key_off >= key_table_size)
+		case entry_format::integer:
+			return std::to_string(m_value_integer);
+		}
+
+		throw std::logic_error("psf entry to_string() error: bad format");
+	}
+
+	u32 entry::to_integer() const
+	{
+		switch (m_format)
+		{
+		case entry_format::string:
+		case entry_format::string_not_null_term:
+			return std::stoul(m_value_string);
+
+		case entry_format::integer:
+			return m_value_integer;
+		}
+
+		throw std::logic_error("psf entry to_integer() error: bad format");
+	}
+
+	entry& entry::value(const std::string &value_)
+	{
+		if (m_format != entry_format::string_not_null_term)
+		{
+			m_format = entry_format::string;
+		}
+
+		m_value_string = value_;
+
+		if (m_max_size)
+		{
+			if (m_format != entry_format::string_not_null_term)
+			{
+				m_value_string.resize(m_max_size);
+			}
+			else
+			{
+				m_value_string.resize(m_max_size - 1);
+			}
+		}
+
+		return *this;
+	}
+
+	entry& entry::value(u32 value_)
+	{
+		m_format = entry_format::integer;
+		m_value_integer = value_;
+
+		if (m_max_size && m_max_size != 4)
+		{
+			throw std::logic_error("entry::value() error: bad integer max length");
+		}
+
+		return *this;
+	}
+
+	entry& entry::operator = (const std::string &value_)
+	{
+		return value(value_);
+	}
+
+	entry& entry::operator = (u32 value_)
+	{
+		return value(value_);
+	}
+
+	std::size_t entry::size() const
+	{
+		switch (m_format)
+		{
+		case entry_format::string:
+			return m_value_string.size() + 1;
+
+		case entry_format::string_not_null_term:
+			return m_value_string.size();
+
+		case entry_format::integer:
+			return sizeof(u32);
+		}
+
+		throw std::logic_error("entry::size(): bad format");
+	}
+
+	bool object::load(vfsStream& stream)
+	{
+		clear();
+
+		header header_;
+
+		// load header
+		if (!stream.SRead(header_))
 		{
 			return false;
 		}
 
-		entries[i].name = keys.get() + indices[i].key_off;
-
-		// load data
-		stream.Seek(header.off_data_table + indices[i].data_off);
-
-		if (indices[i].param_fmt == psf_entry_format::integer && indices[i].param_len == 4 && indices[i].param_max >= indices[i].param_len)
+		// check magic
+		if (header_.magic != *(u32*)"\0PSF")
 		{
-			// load int data
-
-			if (!stream.SRead(entries[i].vint))
-			{
-				return false;
-			}
-		}
-		else if ((indices[i].param_fmt == psf_entry_format::string || indices[i].param_fmt == psf_entry_format::string_not_null_term)
-			&& indices[i].param_max >= indices[i].param_len)
-		{
-			// load str data
-
-			const u32 size = indices[i].param_len;
-
-			std::unique_ptr<char[]> str(new char[size + 1]);
-
-			if (stream.Read(str.get(), size) != size)
-			{
-				return false;
-			}
-
-			str.get()[size] = 0;
-
-			entries[i].vstr = str.get();
-		}
-		else
-		{
-			LOG_ERROR(LOADER, "PSFLoader::Load() failed: (i=%d) fmt=0x%x, len=0x%x, max=0x%x", i, indices[i].param_fmt, indices[i].param_len, indices[i].param_max);
+			LOG_ERROR(LOADER, "psf::load() failed: unknown magic (0x%x)", header_.magic);
 			return false;
 		}
-	}
 
-	// reset data
-	m_entries = std::move(entries);
-
-	return true;
-}
-
-bool PSFLoader::Save(vfsStream& stream) const
-{
-	std::vector<PSFDefTable> indices;
-
-	indices.resize(m_entries.size());
-
-	// generate header
-	PSFHeader header;
-	header.magic = *(u32*)"\0PSF";
-	header.version = 0x101;
-	header.entries_num = static_cast<u32>(m_entries.size());
-	header.off_key_table = sizeof(PSFHeader) + sizeof(PSFDefTable) * header.entries_num;
-
-	{
-		// calculate key table length and generate indices
-
-		u32& key_offset = header.off_data_table = 0;
-		u32 data_offset = 0;
-
-		for (u32 i = 0; i < m_entries.size(); i++)
+		// check version
+		if (header_.version != 0x101)
 		{
-			indices[i].key_off = key_offset;
-			indices[i].data_off = data_offset;
-			indices[i].param_fmt = m_entries[i].fmt;
-
-			key_offset += static_cast<u32>(m_entries[i].name.size()) + 1; // key size
-
-			switch (m_entries[i].fmt) // calculate data size
-			{
-			case psf_entry_format::string_not_null_term:
-			{
-				data_offset += (indices[i].param_len = indices[i].param_max = static_cast<u32>(m_entries[i].vstr.size()));
-				break;
-			}
-			case psf_entry_format::string:
-			{
-				data_offset += (indices[i].param_len = indices[i].param_max = static_cast<u32>(m_entries[i].vstr.size()) + 1);
-				break;
-			}
-			case psf_entry_format::integer:
-			{
-				data_offset += (indices[i].param_len = indices[i].param_max = 4);
-				break;
-			}
-			default:
-			{
-				data_offset += (indices[i].param_len = indices[i].param_max = 0);
-				LOG_ERROR(LOADER, "PSFLoader::Save(): (i=%d) unknown entry format (0x%x, key='%s')", i, m_entries[i].fmt, m_entries[i].name);
-			}
-			}
+			LOG_ERROR(LOADER, "psf::load() failed: unknown version (0x%x)", header_.version);
+			return false;
 		}
-	}
 
-	header.off_data_table += header.off_key_table;
+		// load indices
+		std::vector<def_table> indices;
 
-	// save header
-	if (!stream.SWrite(header))
-	{
-		return false;
-	}
+		indices.resize(header_.entries_num);
 
-	// save indices
-	if (!stream.SWrite(indices[0], sizeof(PSFDefTable) * m_entries.size()))
-	{
-		return false;
-	}
-
-	// save key table
-	for (const auto& entry : m_entries)
-	{
-		if (!stream.SWrite(entry.name[0], entry.name.size() + 1))
+		if (!stream.SRead(indices[0], sizeof(def_table) * header_.entries_num))
 		{
 			return false;
 		}
-	}
 
-	// save data
-	for (const auto& entry : m_entries)
-	{
-		switch (entry.fmt)
+		// load key table
+		if (header_.off_key_table > header_.off_data_table)
 		{
-		case psf_entry_format::string:
+			LOG_ERROR(LOADER, "psf::load() failed: off_key_table=0x%x, off_data_table=0x%x", header_.off_key_table, header_.off_data_table);
+			return false;
+		}
+
+		const u32 key_table_size = header_.off_data_table - header_.off_key_table;
+
+		std::unique_ptr<char[]> keys(new char[key_table_size + 1]);
+
+		stream.Seek(header_.off_key_table);
+
+		if (stream.Read(keys.get(), key_table_size) != key_table_size)
 		{
-			if (!stream.SWrite(entry.vstr[0], entry.vstr.size() + 1))
+			return false;
+		}
+
+		keys.get()[key_table_size] = 0;
+
+		// load entries
+		for (u32 i = 0; i < header_.entries_num; ++i)
+		{
+			if (indices[i].key_off >= key_table_size)
 			{
 				return false;
 			}
-			break;
+
+			std::string key = keys.get() + indices[i].key_off;
+
+			entry &entry_ = (*this)[key];
+
+			entry_.format(indices[i].param_fmt);
+			entry_.max_size(indices[i].param_max);
+
+			// load data
+			stream.Seek(header_.off_data_table + indices[i].data_off);
+
+			if (indices[i].param_fmt == entry_format::integer && indices[i].param_len == 4 && indices[i].param_max >= indices[i].param_len)
+			{
+				// load int data
+
+				u32 value;
+				if (!stream.SRead(value))
+				{
+					return false;
+				}
+
+				entry_.value(value);
+			}
+			else if ((indices[i].param_fmt == entry_format::string || indices[i].param_fmt == entry_format::string_not_null_term)
+				&& indices[i].param_max >= indices[i].param_len)
+			{
+				// load str data
+
+				const u32 size = indices[i].param_len;
+
+				std::unique_ptr<char[]> str(new char[size + 1]);
+
+				if (stream.Read(str.get(), size) != size)
+				{
+					return false;
+				}
+
+				str.get()[size] = '\0';
+
+				entry_.value(str.get());
+			}
+			else
+			{
+				LOG_ERROR(LOADER, "psf::load() failed: (i=%d) fmt=0x%x, len=0x%x, max=0x%x", i, indices[i].param_fmt, indices[i].param_len, indices[i].param_max);
+				return false;
+			}
 		}
-		case psf_entry_format::string_not_null_term:
+
+		return true;
+	}
+
+	bool object::save(vfsStream& stream) const
+	{
+		std::vector<def_table> indices;
+
+		indices.resize(m_entries.size());
+
+		// generate header
+		header header_;
+		header_.magic = *(u32*)"\0PSF";
+		header_.version = 0x101;
+		header_.entries_num = static_cast<u32>(m_entries.size());
+		header_.off_key_table = sizeof(header) + sizeof(def_table) * header_.entries_num;
+
 		{
-			if (!stream.SWrite(entry.vstr[0], entry.vstr.size()))
+			// calculate key table length and generate indices
+
+			u32& key_offset = header_.off_data_table = 0;
+			u32 data_offset = 0;
+			std::size_t index = 0;
+			for (auto &entry : m_entries)
+			{
+				indices[index].key_off = key_offset;
+				indices[index].data_off = data_offset;
+				indices[index].param_fmt = entry.second.format();
+
+				key_offset += static_cast<u32>(entry.first.size()) + 1; // key size
+
+				u32 max_size = entry.second.max_size();
+				if (max_size == 0)
+				{
+					max_size = entry.second.size();
+				}
+
+				data_offset += max_size;
+			}
+		}
+
+		header_.off_data_table += header_.off_key_table;
+
+		// save header
+		if (!stream.SWrite(header_))
+		{
+			return false;
+		}
+
+		// save indices
+		if (!stream.SWrite(indices[0], sizeof(def_table) * m_entries.size()))
+		{
+			return false;
+		}
+
+		// save key table
+		for (const auto& entry : m_entries)
+		{
+			if (!stream.SWrite(entry.first, entry.first.size() + 1))
 			{
 				return false;
 			}
-			break;
 		}
-		case psf_entry_format::integer:
+
+		// save data
+		for (const auto& entry : m_entries)
 		{
-			if (!stream.SWrite(entry.vint))
+			switch (entry.second.format())
 			{
-				return false;
+			case entry_format::string:
+			{
+				std::string value = entry.second.as_string();
+				if (!stream.SWrite(value.data(), value.size() + 1))
+				{
+					return false;
+				}
+				break;
 			}
-			break;
+			case entry_format::string_not_null_term:
+			{
+				std::string value = entry.second.as_string();
+				if (!stream.SWrite(value.data(), value.size()))
+				{
+					return false;
+				}
+				break;
+			}
+			case entry_format::integer:
+			{
+				if (!stream.SWrite(entry.second.as_integer()))
+				{
+					return false;
+				}
+				break;
+			}
+			}
 		}
-		}
+
+		return true;
 	}
 
-	return true;
-}
-
-void PSFLoader::Clear()
-{
-	m_entries.clear();
-}
-
-const PSFEntry* PSFLoader::SearchEntry(const std::string& key) const
-{
-	for (auto& entry : m_entries)
+	void object::clear()
 	{
-		if (key == entry.name)
-		{
-			return &entry;
-		}
+		m_entries.clear();
 	}
 
-	return nullptr;
-}
-
-PSFEntry& PSFLoader::AddEntry(const std::string& key, psf_entry_format fmt)
-{
-	for (auto& entry : m_entries)
+	entry& object::operator[](const std::string &key)
 	{
-		if (key == entry.name)
-		{
-			entry.fmt = fmt;
-			return entry;
-		}
+		return m_entries[key];
 	}
 
-	PSFEntry new_entry = {};
-	new_entry.fmt = fmt;
-	new_entry.name = key;
-	m_entries.push_back(new_entry);
-
-	return m_entries.back();
-}
-
-std::string PSFLoader::GetString(const std::string& key, std::string def) const
-{
-	if (const auto entry = SearchEntry(key))
+	const entry& object::operator[](const std::string &key) const
 	{
-		if (entry->fmt == psf_entry_format::string || entry->fmt == psf_entry_format::string_not_null_term)
-		{
-			return entry->vstr;
-		}
+		return m_entries.at(key);
 	}
-
-	return def;
-}
-
-s32 PSFLoader::GetInteger(const std::string& key, s32 def) const
-{
-	if (const auto entry = SearchEntry(key))
-	{
-		if (entry->fmt == psf_entry_format::integer)
-		{
-			return entry->vint;
-		}
-	}
-	
-	return def;
-}
-
-void PSFLoader::SetString(const std::string& key, std::string value)
-{
-	AddEntry(key, psf_entry_format::string).vstr = value;
-}
-
-void PSFLoader::SetInteger(const std::string& key, s32 value)
-{
-	AddEntry(key, psf_entry_format::integer).vint = value;
 }

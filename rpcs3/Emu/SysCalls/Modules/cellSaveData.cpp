@@ -96,7 +96,7 @@ never_inline s32 savedata_op(PPUThread& ppu, u32 operation, u32 version, vm::cpt
 
 						// PSF parameters
 						vfsFile f(base_dir + entry->name + "/PARAM.SFO");
-						const PSFLoader psf(f);
+						const psf::object psf(f);
 
 						if (!psf)
 						{
@@ -104,11 +104,11 @@ never_inline s32 savedata_op(PPUThread& ppu, u32 operation, u32 version, vm::cpt
 						}
 
 						SaveDataEntry save_entry2;
-						save_entry2.dirName = psf.GetString("SAVEDATA_DIRECTORY");
-						save_entry2.listParam = psf.GetString("SAVEDATA_LIST_PARAM");
-						save_entry2.title = psf.GetString("TITLE");
-						save_entry2.subtitle = psf.GetString("SUB_TITLE");
-						save_entry2.details = psf.GetString("DETAIL");
+						save_entry2.dirName = psf["SAVEDATA_DIRECTORY"].as_string();
+						save_entry2.listParam = psf["SAVEDATA_LIST_PARAM"].as_string();
+						save_entry2.title = psf["TITLE"].as_string();
+						save_entry2.subtitle = psf["SUB_TITLE"].as_string();
+						save_entry2.details = psf["DETAIL"].as_string();
 
 						save_entry2.size = 0;
 
@@ -340,13 +340,14 @@ never_inline s32 savedata_op(PPUThread& ppu, u32 operation, u32 version, vm::cpt
 	std::string dir_path = base_dir + save_entry.dirName + "/";
 	std::string sfo_path = dir_path + "PARAM.SFO";
 
-	PSFLoader psf;
+	psf::object psf;
 
-	// Load PARAM.SFO
 	{
-		vfsFile f(sfo_path);
-		psf.Load(f);
+		vfsFile file(sfo_path);
+		psf.load(file);
 	}
+
+	const psf::object& psf_readonly = psf;
 
 	// Get save stats
 	{
@@ -368,11 +369,11 @@ never_inline s32 savedata_op(PPUThread& ppu, u32 operation, u32 version, vm::cpt
 		statGet->dir.ctime = save_entry.ctime = dir_info.ctime;
 		strcpy_trunc(statGet->dir.dirName, save_entry.dirName);
 
-		statGet->getParam.attribute = psf.GetInteger("ATTRIBUTE"); // ???
-		strcpy_trunc(statGet->getParam.title, save_entry.title = psf.GetString("TITLE"));
-		strcpy_trunc(statGet->getParam.subTitle, save_entry.subtitle = psf.GetString("SUB_TITLE"));
-		strcpy_trunc(statGet->getParam.detail, save_entry.details = psf.GetString("DETAIL"));
-		strcpy_trunc(statGet->getParam.listParam, save_entry.listParam = psf.GetString("SAVEDATA_LIST_PARAM"));
+		statGet->getParam.attribute = psf_readonly["ATTRIBUTE"].as_integer(); // ???
+		strcpy_trunc(statGet->getParam.title, save_entry.title = psf_readonly["TITLE"].as_string());
+		strcpy_trunc(statGet->getParam.subTitle, save_entry.subtitle = psf_readonly["SUB_TITLE"].as_string());
+		strcpy_trunc(statGet->getParam.detail, save_entry.details = psf_readonly["DETAIL"].as_string());
+		strcpy_trunc(statGet->getParam.listParam, save_entry.listParam = psf_readonly["SAVEDATA_LIST_PARAM"].as_string());
 
 		statGet->bind = 0;
 		statGet->sizeKB = save_entry.size / 1024;
@@ -410,7 +411,7 @@ never_inline s32 savedata_op(PPUThread& ppu, u32 operation, u32 version, vm::cpt
 				{
 					file.fileType = CELL_SAVEDATA_FILETYPE_CONTENT_SND0;
 				}
-				else if (psf.GetInteger("*" + entry->name)) // let's put the list of protected files in PARAM.SFO (int param = 1 if protected)
+				else if (psf["*" + entry->name].as_integer()) // let's put the list of protected files in PARAM.SFO (int param = 1 if protected)
 				{
 					file.fileType = CELL_SAVEDATA_FILETYPE_SECUREFILE;
 				}
@@ -438,20 +439,20 @@ never_inline s32 savedata_op(PPUThread& ppu, u32 operation, u32 version, vm::cpt
 
 		if (statSet->setParam)
 		{
-			psf.Clear();
+			psf.clear();
 
 			// Update PARAM.SFO
-			psf.SetString("ACCOUNT_ID", ""); // ???
-			psf.SetInteger("ATTRIBUTE", statSet->setParam->attribute);
-			psf.SetString("CATEGORY", "SD"); // ???
-			psf.SetString("PARAMS", ""); // ???
-			psf.SetString("PARAMS2", ""); // ???
-			psf.SetInteger("PARENTAL_LEVEL", 0); // ???
-			psf.SetString("DETAIL", statSet->setParam->detail);
-			psf.SetString("SAVEDATA_DIRECTORY", save_entry.dirName);
-			psf.SetString("SAVEDATA_LIST_PARAM", statSet->setParam->listParam);
-			psf.SetString("SUB_TITLE", statSet->setParam->subTitle);
-			psf.SetString("TITLE", statSet->setParam->title);
+			psf["ACCOUNT_ID"] = ""; // ???
+			psf["ATTRIBUTE"] = statSet->setParam->attribute;
+			psf["CATEGORY"] = "SD"; // ???
+			psf["PARAMS"] = ""; // ???
+			psf["PARAMS2"] = ""; // ???
+			psf["PARENTAL_LEVEL"] = 0; // ???
+			psf["DETAIL"] = statSet->setParam->detail;
+			psf["SAVEDATA_DIRECTORY"] = save_entry.dirName;
+			psf["SAVEDATA_LIST_PARAM"] = statSet->setParam->listParam;
+			psf["SUB_TITLE"] = statSet->setParam->subTitle;
+			psf["TITLE"] = statSet->setParam->title;
 		}
 		else if (!psf)
 		{
@@ -572,7 +573,7 @@ never_inline s32 savedata_op(PPUThread& ppu, u32 operation, u32 version, vm::cpt
 		}
 		}
 
-		psf.SetInteger("*" + file_path, fileSet->fileType == CELL_SAVEDATA_FILETYPE_SECUREFILE);
+		psf["*" + file_path] = fileSet->fileType == CELL_SAVEDATA_FILETYPE_SECUREFILE;
 
 		std::string local_path;
 
@@ -623,8 +624,8 @@ never_inline s32 savedata_op(PPUThread& ppu, u32 operation, u32 version, vm::cpt
 	// Write PARAM.SFO
 	if (psf)
 	{
-		vfsFile f(sfo_path, fom::rewrite);
-		psf.Save(f);
+		vfsFile file(sfo_path, fom::rewrite);
+		psf.save(file);
 	}
 
 	return CELL_OK;

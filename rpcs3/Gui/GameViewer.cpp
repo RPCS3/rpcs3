@@ -111,7 +111,7 @@ void GameViewer::LoadPSF()
 			continue;
 		}
 
-		const PSFLoader psf(f);
+		const psf::object psf(f);
 
 		if (!psf)
 		{
@@ -124,14 +124,14 @@ void GameViewer::LoadPSF()
 
 		GameInfo game;
 		game.root = m_games[i];
-		game.serial = psf.GetString("TITLE_ID");
-		game.name = psf.GetString("TITLE");
-		game.app_ver = psf.GetString("APP_VER");
-		game.category = psf.GetString("CATEGORY");
-		game.fw = psf.GetString("PS3_SYSTEM_VER");
-		game.parental_lvl = psf.GetInteger("PARENTAL_LEVEL");
-		game.resolution = psf.GetInteger("RESOLUTION");
-		game.sound_format = psf.GetInteger("SOUND_FORMAT");
+		game.serial = psf["TITLE_ID"].as_string();
+		game.name = psf["TITLE"].as_string();
+		game.app_ver = psf["APP_VER"].as_string();
+		game.category = psf["CATEGORY"].as_string();
+		game.fw = psf["PS3_SYSTEM_VER"].as_string();
+		game.parental_lvl = psf["PARENTAL_LEVEL"].as_integer();
+		game.resolution = psf["RESOLUTION"].as_integer();
+		game.sound_format = psf["SOUND_FORMAT"].as_integer();
 		
 		if (game.serial.length() == 9)
 		{

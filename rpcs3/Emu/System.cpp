@@ -231,9 +231,9 @@ void Emulator::Load()
 
 	LOG_NOTICE(LOADER, "");
 	f.Open("/app_home/../PARAM.SFO");
-	const PSFLoader psf(f);
-	std::string title = psf.GetString("TITLE");
-	std::string title_id = psf.GetString("TITLE_ID");
+	const psf::object psf(f);
+	std::string title = psf["TITLE"].as_string();
+	std::string title_id = psf["TITLE_ID"].as_string();
 	LOG_NOTICE(LOADER, "Title: %s", title.c_str());
 	LOG_NOTICE(LOADER, "Serial: %s", title_id.c_str());
 

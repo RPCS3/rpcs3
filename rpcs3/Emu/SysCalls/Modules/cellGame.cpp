@@ -79,25 +79,25 @@ s32 cellHddGameCheck(PPUThread& ppu, u32 version, vm::cptr<char> dirName, u32 er
 	{
 		// TODO: Is cellHddGameCheck really responsible for writing the information in get->getParam ? (If not, delete this else)
 		vfsFile f("/dev_hdd0/game/" + dir + "/PARAM.SFO");
-		const PSFLoader psf(f);
+		const psf::object psf(f);
 		if (!psf)
 		{
 			return CELL_HDDGAME_ERROR_BROKEN;
 		}
 
-		get->getParam.parentalLevel = psf.GetInteger("PARENTAL_LEVEL");
-		get->getParam.attribute = psf.GetInteger("ATTRIBUTE");
-		get->getParam.resolution = psf.GetInteger("RESOLUTION");
-		get->getParam.soundFormat = psf.GetInteger("SOUND_FORMAT");
-		std::string title = psf.GetString("TITLE");
+		get->getParam.parentalLevel = psf["PARENTAL_LEVEL"].as_integer();
+		get->getParam.attribute = psf["ATTRIBUTE"].as_integer();
+		get->getParam.resolution = psf["RESOLUTION"].as_integer();
+		get->getParam.soundFormat = psf["SOUND_FORMAT"].as_integer();
+		std::string title = psf["TITLE"].as_string();
 		strcpy_trunc(get->getParam.title, title);
-		std::string app_ver = psf.GetString("APP_VER");
+		std::string app_ver = psf["APP_VER"].as_string();
 		strcpy_trunc(get->getParam.dataVersion, app_ver);
 		strcpy_trunc(get->getParam.titleId, dir);
 
 		for (u32 i = 0; i < CELL_HDDGAME_SYSP_LANGUAGE_NUM; i++)
 		{
-			title = psf.GetString(fmt::format("TITLE_%02d", i));
+			title = psf[fmt::format("TITLE_%02d", i)].as_string();
 			strcpy_trunc(get->getParam.titleLang[i], title);
 		}
 	}
@@ -168,7 +168,7 @@ s32 cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr<CellGa
 	}
 
 	vfsFile f("/app_home/../PARAM.SFO");
-	const PSFLoader psf(f);
+	const psf::object psf(f);
 
 	if (!psf)
 	{
@@ -176,7 +176,7 @@ s32 cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr<CellGa
 		cellGame.error("cellGameBootCheck(): Cannot read PARAM.SFO.");
 	}
 
-	std::string category = psf.GetString("CATEGORY");
+	std::string category = psf["CATEGORY"].as_string();
 	if (category.substr(0, 2) == "DG")
 	{
 		*type = CELL_GAME_GAMETYPE_DISC;
@@ -190,7 +190,7 @@ s32 cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr<CellGa
 	}
 	else if (category.substr(0, 2) == "HG")
 	{
-		std::string titleId = psf.GetString("TITLE_ID");
+		std::string titleId = psf["TITLE_ID"].as_string();
 		*type = CELL_GAME_GAMETYPE_HDD;
 		*attributes = 0; // TODO
 		if (dirName) strcpy_trunc(*dirName, titleId); 
@@ -202,7 +202,7 @@ s32 cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr<CellGa
 	}
 	else if (category.substr(0, 2) == "GD")
 	{
-		std::string titleId = psf.GetString("TITLE_ID");
+		std::string titleId = psf["TITLE_ID"].as_string();
 		*type = CELL_GAME_GAMETYPE_DISC;
 		*attributes = CELL_GAME_ATTRIBUTE_PATCH; // TODO
 		if (dirName) strcpy_trunc(*dirName, titleId); // ???
@@ -235,21 +235,21 @@ s32 cellGamePatchCheck(vm::ptr<CellGameContentSize> size, vm::ptr<void> reserved
 	}
 
 	vfsFile f("/app_home/../PARAM.SFO");
-	const PSFLoader psf(f);
+	const psf::object psf(f);
 	if (!psf)
 	{
 		cellGame.error("cellGamePatchCheck(): CELL_GAME_ERROR_ACCESS_ERROR (cannot read PARAM.SFO)");
 		return CELL_GAME_ERROR_ACCESS_ERROR;
 	}
 
-	std::string category = psf.GetString("CATEGORY");
+	std::string category = psf["CATEGORY"].as_string();
 	if (category.substr(0, 2) != "GD")
 	{
 		cellGame.error("cellGamePatchCheck(): CELL_GAME_ERROR_NOTPATCH");
 		return CELL_GAME_ERROR_NOTPATCH;
 	}
 
-	if (!fxm::make<content_permission_t>("/dev_hdd0/game/" + psf.GetString("TITLE_ID"), false))
+	if (!fxm::make<content_permission_t>("/dev_hdd0/game/" + psf["TITLE_ID"].as_string(), false))
 	{
 		return CELL_GAME_ERROR_BUSY;
 	}
@@ -378,7 +378,7 @@ s32 cellGameDataCheckCreate2(PPUThread& ppu, u32 version, vm::cptr<char> dirName
 	}
 
 	vfsFile f("/app_home/../PARAM.SFO");
-	const PSFLoader psf(f);
+	const psf::object psf(f);
 	if (!psf)
 	{
 		cellGame.error("cellGameDataCheckCreate2(): CELL_GAMEDATA_ERROR_BROKEN (cannot read PARAM.SFO)");
@@ -406,10 +406,10 @@ s32 cellGameDataCheckCreate2(PPUThread& ppu, u32 version, vm::cptr<char> dirName
 	cbGet->sysSizeKB = 0;
 
 	cbGet->getParam.attribute = CELL_GAMEDATA_ATTR_NORMAL;
-	cbGet->getParam.parentalLevel = psf.GetInteger("PARENTAL_LEVEL");
-	strcpy_trunc(cbGet->getParam.dataVersion, psf.GetString("APP_VER"));
-	strcpy_trunc(cbGet->getParam.titleId, psf.GetString("TITLE_ID"));
-	strcpy_trunc(cbGet->getParam.title, psf.GetString("TITLE"));
+	cbGet->getParam.parentalLevel = psf["PARENTAL_LEVEL"].as_integer();
+	strcpy_trunc(cbGet->getParam.dataVersion, psf["APP_VER"].as_string());
+	strcpy_trunc(cbGet->getParam.titleId, psf["TITLE_ID"].as_string());
+	strcpy_trunc(cbGet->getParam.title, psf["TITLE"].as_string());
 	// TODO: write lang titles
 
 	funcStat(ppu, cbResult, cbGet, cbSet);
@@ -507,24 +507,26 @@ s32 cellGameGetParamInt(u32 id, vm::ptr<u32> value)
 
 	// TODO: Access through cellGame***Check functions
 	vfsFile f("/app_home/../PARAM.SFO");
-	const PSFLoader psf(f);
-
+	const psf::object psf(f);
 	if (!psf)
 	{
 		return CELL_GAME_ERROR_FAILURE;
 	}
 
+	std::string key;
+
 	switch(id)
 	{
-	case CELL_GAME_PARAMID_PARENTAL_LEVEL: *value = psf.GetInteger("PARENTAL_LEVEL"); break;
-	case CELL_GAME_PARAMID_RESOLUTION:     *value = psf.GetInteger("RESOLUTION");     break;
-	case CELL_GAME_PARAMID_SOUND_FORMAT:   *value = psf.GetInteger("SOUND_FORMAT");   break;
-
+	case CELL_GAME_PARAMID_PARENTAL_LEVEL:  key = "PARENTAL_LEVEL"; break;
+	case CELL_GAME_PARAMID_RESOLUTION:      key = "RESOLUTION";     break;
+	case CELL_GAME_PARAMID_SOUND_FORMAT:    key = "SOUND_FORMAT";   break;
 	default:
 		cellGame.error("cellGameGetParamInt(): Unimplemented parameter (%d)", id);
 		return CELL_GAME_ERROR_INVALID_ID;
 	}
 
+	//TODO: check format?
+	*value = psf[key].as_integer();
 	return CELL_OK;
 }
 
@@ -534,48 +536,56 @@ s32 cellGameGetParamString(u32 id, vm::ptr<char> buf, u32 bufsize)
 
 	// TODO: Access through cellGame***Check functions
 	vfsFile f("/app_home/../PARAM.SFO");
-	const PSFLoader psf(f);
+	const psf::object psf(f);
 	if (!psf)
 	{
 		return CELL_GAME_ERROR_FAILURE;
 	}
 
-	std::string data;
+	std::string key;
 	switch(id)
 	{
-	case CELL_GAME_PARAMID_TITLE:                    data = psf.GetString("TITLE");    break; // TODO: Is this value correct?
-	case CELL_GAME_PARAMID_TITLE_DEFAULT:            data = psf.GetString("TITLE");    break;
-	case CELL_GAME_PARAMID_TITLE_JAPANESE:           data = psf.GetString("TITLE_00"); break;
-	case CELL_GAME_PARAMID_TITLE_ENGLISH:            data = psf.GetString("TITLE_01"); break;
-	case CELL_GAME_PARAMID_TITLE_FRENCH:             data = psf.GetString("TITLE_02"); break;
-	case CELL_GAME_PARAMID_TITLE_SPANISH:            data = psf.GetString("TITLE_03"); break;
-	case CELL_GAME_PARAMID_TITLE_GERMAN:             data = psf.GetString("TITLE_04"); break;
-	case CELL_GAME_PARAMID_TITLE_ITALIAN:            data = psf.GetString("TITLE_05"); break;
-	case CELL_GAME_PARAMID_TITLE_DUTCH:              data = psf.GetString("TITLE_06"); break;
-	case CELL_GAME_PARAMID_TITLE_PORTUGUESE:         data = psf.GetString("TITLE_07"); break;
-	case CELL_GAME_PARAMID_TITLE_RUSSIAN:            data = psf.GetString("TITLE_08"); break;
-	case CELL_GAME_PARAMID_TITLE_KOREAN:             data = psf.GetString("TITLE_09"); break;
-	case CELL_GAME_PARAMID_TITLE_CHINESE_T:          data = psf.GetString("TITLE_10"); break;
-	case CELL_GAME_PARAMID_TITLE_CHINESE_S:          data = psf.GetString("TITLE_11"); break;
-	case CELL_GAME_PARAMID_TITLE_FINNISH:            data = psf.GetString("TITLE_12"); break;
-	case CELL_GAME_PARAMID_TITLE_SWEDISH:            data = psf.GetString("TITLE_13"); break;
-	case CELL_GAME_PARAMID_TITLE_DANISH:             data = psf.GetString("TITLE_14"); break;
-	case CELL_GAME_PARAMID_TITLE_NORWEGIAN:          data = psf.GetString("TITLE_15"); break;
-	case CELL_GAME_PARAMID_TITLE_POLISH:             data = psf.GetString("TITLE_16"); break;
-	case CELL_GAME_PARAMID_TITLE_PORTUGUESE_BRAZIL:  data = psf.GetString("TITLE_17"); break;
-	case CELL_GAME_PARAMID_TITLE_ENGLISH_UK:         data = psf.GetString("TITLE_18"); break;
+	case CELL_GAME_PARAMID_TITLE:                    key = "TITLE";    break; // TODO: Is this value correct?
+	case CELL_GAME_PARAMID_TITLE_DEFAULT:            key = "TITLE";    break;
+	case CELL_GAME_PARAMID_TITLE_JAPANESE:           key = "TITLE_00"; break;
+	case CELL_GAME_PARAMID_TITLE_ENGLISH:            key = "TITLE_01"; break;
+	case CELL_GAME_PARAMID_TITLE_FRENCH:             key = "TITLE_02"; break;
+	case CELL_GAME_PARAMID_TITLE_SPANISH:            key = "TITLE_03"; break;
+	case CELL_GAME_PARAMID_TITLE_GERMAN:             key = "TITLE_04"; break;
+	case CELL_GAME_PARAMID_TITLE_ITALIAN:            key = "TITLE_05"; break;
+	case CELL_GAME_PARAMID_TITLE_DUTCH:              key = "TITLE_06"; break;
+	case CELL_GAME_PARAMID_TITLE_PORTUGUESE:         key = "TITLE_07"; break;
+	case CELL_GAME_PARAMID_TITLE_RUSSIAN:            key = "TITLE_08"; break;
+	case CELL_GAME_PARAMID_TITLE_KOREAN:             key = "TITLE_09"; break;
+	case CELL_GAME_PARAMID_TITLE_CHINESE_T:          key = "TITLE_10"; break;
+	case CELL_GAME_PARAMID_TITLE_CHINESE_S:          key = "TITLE_11"; break;
+	case CELL_GAME_PARAMID_TITLE_FINNISH:            key = "TITLE_12"; break;
+	case CELL_GAME_PARAMID_TITLE_SWEDISH:            key = "TITLE_13"; break;
+	case CELL_GAME_PARAMID_TITLE_DANISH:             key = "TITLE_14"; break;
+	case CELL_GAME_PARAMID_TITLE_NORWEGIAN:          key = "TITLE_15"; break;
+	case CELL_GAME_PARAMID_TITLE_POLISH:             key = "TITLE_16"; break;
+	case CELL_GAME_PARAMID_TITLE_PORTUGUESE_BRAZIL:  key = "TITLE_17"; break;
+	case CELL_GAME_PARAMID_TITLE_ENGLISH_UK:         key = "TITLE_18"; break;
 
-	case CELL_GAME_PARAMID_TITLE_ID:                 data = psf.GetString("TITLE_ID");       break;
-	case CELL_GAME_PARAMID_VERSION:                  data = psf.GetString("PS3_SYSTEM_VER"); break;
-	case CELL_GAME_PARAMID_APP_VER:                  data = psf.GetString("APP_VER");        break;
+	case CELL_GAME_PARAMID_TITLE_ID:                 key = "TITLE_ID";       break;
+	case CELL_GAME_PARAMID_VERSION:                  key = "PS3_SYSTEM_VER"; break;
+	case CELL_GAME_PARAMID_APP_VER:                  key = "APP_VER";        break;
 
 	default:
 		cellGame.error("cellGameGetParamString(): Unimplemented parameter (%d)", id);
 		return CELL_GAME_ERROR_INVALID_ID;
 	}
 
-	if (data.size() >= bufsize) data.resize(bufsize - 1);
-	memcpy(buf.get_ptr(), data.c_str(), data.size() + 1);
+	//TODO: check format?
+	std::string value = psf[key].as_string();
+
+	if (value.size() >= bufsize)
+	{
+		value.resize(bufsize - 1);
+	}
+
+	std::copy_n(value.c_str(), value.size() + 1, buf.get_ptr());
+
 	return CELL_OK;
 }
 
