@@ -28,7 +28,7 @@ namespace psf
 
 	std::string entry::as_string() const
 	{
-		if (m_format != entry_format::string || m_format != entry_format::string_not_null_term)
+		if (m_format != entry_format::string && m_format != entry_format::string_not_null_term)
 		{
 			throw std::logic_error("psf entry as_string() error: bad format");
 		}
@@ -85,15 +85,15 @@ namespace psf
 
 		m_value_string = value_;
 
-		if (m_max_size)
+		if (m_max_size && m_value_string.size() > m_max_size)
 		{
 			if (m_format != entry_format::string_not_null_term)
 			{
-				m_value_string.resize(m_max_size);
+				m_value_string.erase(m_max_size);
 			}
 			else
 			{
-				m_value_string.resize(m_max_size - 1);
+				m_value_string.erase(m_max_size - 1);
 			}
 		}
 
@@ -233,16 +233,25 @@ namespace psf
 
 				const u32 size = indices[i].param_len;
 
-				std::unique_ptr<char[]> str(new char[size + 1]);
-
-				if (stream.Read(str.get(), size) != size)
+				if (size > 0)
 				{
-					return false;
+					std::unique_ptr<char[]> str(new char[size]);
+
+					if (stream.Read(str.get(), size) != size)
+					{
+						return false;
+					}
+
+					if (indices[i].param_fmt == entry_format::string)
+					{
+						str.get()[size - 1] = '\0';
+						entry_.value(str.get());
+					}
+					else
+					{
+						entry_.value(std::string{ str.get(), size });
+					}
 				}
-
-				str.get()[size] = '\0';
-
-				entry_.value(str.get());
 			}
 			else
 			{
@@ -376,5 +385,25 @@ namespace psf
 		}
 
 		return &found->second;
+	}
+
+	std::string object::get_string_or(const std::string &key, const std::string &default_value) const
+	{
+		if (const psf::entry *found = get(key))
+		{
+			return found->as_string();
+		}
+
+		return default_value;
+	}
+
+	u32 object::get_integer_or(const std::string &key, u32 default_value) const
+	{
+		if (const psf::entry *found = get(key))
+		{
+			return found->as_integer();
+		}
+
+		return default_value;
 	}
 }

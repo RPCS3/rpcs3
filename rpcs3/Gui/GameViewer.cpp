@@ -124,14 +124,14 @@ void GameViewer::LoadPSF()
 
 		GameInfo game;
 		game.root = m_games[i];
-		game.serial = psf["TITLE_ID"].as_string();
-		game.name = psf["TITLE"].as_string();
-		game.app_ver = psf["APP_VER"].as_string();
-		game.category = psf["CATEGORY"].as_string();
-		game.fw = psf["PS3_SYSTEM_VER"].as_string();
-		game.parental_lvl = psf["PARENTAL_LEVEL"].as_integer();
-		game.resolution = psf["RESOLUTION"].as_integer();
-		game.sound_format = psf["SOUND_FORMAT"].as_integer();
+		game.serial = psf.get_string_or("TITLE_ID", "unknown");
+		game.name = psf.get_string_or("TITLE", "unknown");
+		game.app_ver = psf.get_string_or("APP_VER", "unknown");
+		game.category = psf.get_string_or("CATEGORY", "unknown");
+		game.fw = psf.get_string_or("PS3_SYSTEM_VER", "unknown");
+		game.parental_lvl = psf.get_integer_or("PARENTAL_LEVEL", 0);
+		game.resolution = psf.get_integer_or("RESOLUTION", 0);
+		game.sound_format = psf.get_integer_or("SOUND_FORMAT", 0);
 		
 		if (game.serial.length() == 9)
 		{

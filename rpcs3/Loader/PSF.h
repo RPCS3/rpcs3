@@ -84,6 +84,9 @@ namespace psf
 		//returns pointer to entry or null, if not exists
 		const entry *get(const std::string &key) const;
 
+		std::string get_string_or(const std::string &key, const std::string &default_value) const;
+		u32 get_integer_or(const std::string &key, u32 default_value) const;
+
 		bool exists(const std::string &key) const
 		{
 			return m_entries.find(key) != m_entries.end();
