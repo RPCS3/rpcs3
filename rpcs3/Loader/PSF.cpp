@@ -75,7 +75,7 @@ bool PSFLoader::Load(vfsStream& stream)
 		// load data
 		stream.Seek(header.off_data_table + indices[i].data_off);
 
-		if (indices[i].param_fmt == PSF_PARAM_INT && indices[i].param_len == 4 && indices[i].param_max == 4)
+		if (indices[i].param_fmt == psf_entry_format::integer && indices[i].param_len == 4 && indices[i].param_max >= indices[i].param_len)
 		{
 			// load int data
 
@@ -84,7 +84,8 @@ bool PSFLoader::Load(vfsStream& stream)
 				return false;
 			}
 		}
-		else if (indices[i].param_fmt == PSF_PARAM_STR && indices[i].param_max >= indices[i].param_len)
+		else if ((indices[i].param_fmt == psf_entry_format::string || indices[i].param_fmt == psf_entry_format::string_not_null_term)
+			&& indices[i].param_max >= indices[i].param_len)
 		{
 			// load str data
 
@@ -143,12 +144,17 @@ bool PSFLoader::Save(vfsStream& stream) const
 
 			switch (m_entries[i].fmt) // calculate data size
 			{
-			case PSF_PARAM_STR:
+			case psf_entry_format::string_not_null_term:
+			{
+				data_offset += (indices[i].param_len = indices[i].param_max = static_cast<u32>(m_entries[i].vstr.size()));
+				break;
+			}
+			case psf_entry_format::string:
 			{
 				data_offset += (indices[i].param_len = indices[i].param_max = static_cast<u32>(m_entries[i].vstr.size()) + 1);
 				break;
 			}
-			case PSF_PARAM_INT:
+			case psf_entry_format::integer:
 			{
 				data_offset += (indices[i].param_len = indices[i].param_max = 4);
 				break;
@@ -190,7 +196,7 @@ bool PSFLoader::Save(vfsStream& stream) const
 	{
 		switch (entry.fmt)
 		{
-		case PSF_PARAM_STR:
+		case psf_entry_format::string:
 		{
 			if (!stream.SWrite(entry.vstr[0], entry.vstr.size() + 1))
 			{
@@ -198,7 +204,15 @@ bool PSFLoader::Save(vfsStream& stream) const
 			}
 			break;
 		}
-		case PSF_PARAM_INT:
+		case psf_entry_format::string_not_null_term:
+		{
+			if (!stream.SWrite(entry.vstr[0], entry.vstr.size()))
+			{
+				return false;
+			}
+			break;
+		}
+		case psf_entry_format::integer:
 		{
 			if (!stream.SWrite(entry.vint))
 			{
@@ -230,7 +244,7 @@ const PSFEntry* PSFLoader::SearchEntry(const std::string& key) const
 	return nullptr;
 }
 
-PSFEntry& PSFLoader::AddEntry(const std::string& key, u16 fmt)
+PSFEntry& PSFLoader::AddEntry(const std::string& key, psf_entry_format fmt)
 {
 	for (auto& entry : m_entries)
 	{
@@ -253,7 +267,7 @@ std::string PSFLoader::GetString(const std::string& key, std::string def) const
 {
 	if (const auto entry = SearchEntry(key))
 	{
-		if (entry->fmt == PSF_PARAM_STR)
+		if (entry->fmt == psf_entry_format::string || entry->fmt == psf_entry_format::string_not_null_term)
 		{
 			return entry->vstr;
 		}
@@ -266,7 +280,7 @@ s32 PSFLoader::GetInteger(const std::string& key, s32 def) const
 {
 	if (const auto entry = SearchEntry(key))
 	{
-		if (entry->fmt == PSF_PARAM_INT)
+		if (entry->fmt == psf_entry_format::integer)
 		{
 			return entry->vint;
 		}
@@ -277,10 +291,10 @@ s32 PSFLoader::GetInteger(const std::string& key, s32 def) const
 
 void PSFLoader::SetString(const std::string& key, std::string value)
 {
-	AddEntry(key, PSF_PARAM_STR).vstr = value;
+	AddEntry(key, psf_entry_format::string).vstr = value;
 }
 
 void PSFLoader::SetInteger(const std::string& key, s32 value)
 {
-	AddEntry(key, PSF_PARAM_INT).vint = value;
+	AddEntry(key, psf_entry_format::integer).vint = value;
 }
