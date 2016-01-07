@@ -101,7 +101,7 @@ DXGI_FORMAT get_index_type(u8 index_type);
 /**
  * Convert vertex attribute format and size to DXGI_FORMAT
  */
-DXGI_FORMAT get_vertex_attribute_format(u8 type, u8 size);
+DXGI_FORMAT get_vertex_attribute_format(Vertex_base_type type, u8 size);
 
 /**
  * Convert scissor register value to D3D12_RECT

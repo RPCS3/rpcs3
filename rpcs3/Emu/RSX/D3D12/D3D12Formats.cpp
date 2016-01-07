@@ -372,11 +372,11 @@ DXGI_FORMAT get_index_type(u8 index_type)
 	throw EXCEPTION("Invalid index_type (0x%x)", index_type);
 }
 
-DXGI_FORMAT get_vertex_attribute_format(u8 type, u8 size)
+DXGI_FORMAT get_vertex_attribute_format(Vertex_base_type type, u8 size)
 {
 	switch (type)
 	{
-	case CELL_GCM_VERTEX_S1:
+	case Vertex_base_type::s1:
 	{
 		switch (size)
 		{
@@ -387,7 +387,7 @@ DXGI_FORMAT get_vertex_attribute_format(u8 type, u8 size)
 		}
 		break;
 	}
-	case CELL_GCM_VERTEX_F:
+	case Vertex_base_type::f:
 	{
 		switch (size)
 		{
@@ -398,7 +398,7 @@ DXGI_FORMAT get_vertex_attribute_format(u8 type, u8 size)
 		}
 		break;
 	}
-	case CELL_GCM_VERTEX_SF:
+	case Vertex_base_type::sf:
 	{
 		switch (size)
 		{
@@ -409,7 +409,7 @@ DXGI_FORMAT get_vertex_attribute_format(u8 type, u8 size)
 		}
 		break;
 	}
-	case CELL_GCM_VERTEX_UB:
+	case Vertex_base_type::ub:
 	{
 		switch (size)
 		{
@@ -420,7 +420,7 @@ DXGI_FORMAT get_vertex_attribute_format(u8 type, u8 size)
 		}
 		break;
 	}
-	case CELL_GCM_VERTEX_S32K:
+	case Vertex_base_type::s32k:
 	{
 		switch (size)
 		{
@@ -431,18 +431,18 @@ DXGI_FORMAT get_vertex_attribute_format(u8 type, u8 size)
 		}
 		break;
 	}
-	case CELL_GCM_VERTEX_CMP:
+	case Vertex_base_type::cmp:
 	{
 		switch (size)
 		{
-		case 1: return DXGI_FORMAT_R32_FLOAT;
-		case 2: return DXGI_FORMAT_R32G32_FLOAT;
-		case 3: return DXGI_FORMAT_R32G32B32_FLOAT;
-		case 4: return DXGI_FORMAT_R32G32B32A32_FLOAT;
+		case 1: return DXGI_FORMAT_R16G16B16A16_SNORM;
+		case 2:
+		case 3:
+		case 4: throw EXCEPTION("Unsupported CMP vertex format with size > 1");
 		}
 		break;
 	}
-	case CELL_GCM_VERTEX_UB256:
+	case Vertex_base_type::ub256:
 	{
 		switch (size)
 		{

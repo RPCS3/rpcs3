@@ -719,6 +719,21 @@ namespace
 	};
 }
 
+Vertex_base_type to_vertex_base_type(u8 in)
+{
+	switch (in)
+	{
+	case 1: return Vertex_base_type::s1;
+	case 2: return Vertex_base_type::f;
+	case 3: return Vertex_base_type::sf;
+	case 4: return Vertex_base_type::ub;
+	case 5: return Vertex_base_type::s32k;
+	case 6: return Vertex_base_type::cmp;
+	case 7: return Vertex_base_type::ub256;
+	}
+	throw new EXCEPTION("Unknow vertex base type %d", in);
+}
+
 std::string rsx::get_method_name(const u32 id)
 {
 	auto found = methods.find(id);
@@ -926,17 +941,16 @@ namespace
 
 	std::string get_vertex_attribute_format(u8 type)
 	{
-		switch (type)
+		switch (to_vertex_base_type(type))
 		{
-		case CELL_GCM_VERTEX_S1: return "Short";
-		case CELL_GCM_VERTEX_F: return "Float";
-		case CELL_GCM_VERTEX_SF: return "Half float";
-		case CELL_GCM_VERTEX_UB: return "Unsigned byte";
-		case CELL_GCM_VERTEX_S32K: return "Signed int";
-		case CELL_GCM_VERTEX_CMP: return "CMP";
-		case CELL_GCM_VERTEX_UB256: return "UB256";
+		case Vertex_base_type::s1: return "Short";
+		case Vertex_base_type::f: return "Float";
+		case Vertex_base_type::sf: return "Half float";
+		case Vertex_base_type::ub: return "Unsigned byte";
+		case Vertex_base_type::s32k: return "Signed int";
+		case Vertex_base_type::cmp: return "CMP";
+		case Vertex_base_type::ub256: return "UB256";
 		}
-		return "Error";
 	}
 
 	std::string unpack_vertex_format(u32 arg)

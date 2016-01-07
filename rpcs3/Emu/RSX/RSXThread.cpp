@@ -120,22 +120,51 @@ namespace rsx
 		return res;
 	}
 
-	u32 get_vertex_type_size(u32 type)
+	u32 get_vertex_type_size_on_host(Vertex_base_type type, u32 size)
 	{
 		switch (type)
 		{
-		case CELL_GCM_VERTEX_S1:    return sizeof(u16);
-		case CELL_GCM_VERTEX_F:     return sizeof(f32);
-		case CELL_GCM_VERTEX_SF:    return sizeof(f16);
-		case CELL_GCM_VERTEX_UB:    return sizeof(u8);
-		case CELL_GCM_VERTEX_S32K:  return sizeof(u32);
-		case CELL_GCM_VERTEX_CMP:   return sizeof(u32);
-		case CELL_GCM_VERTEX_UB256: return sizeof(u8) * 4;
+		case Vertex_base_type::s1:
+			switch (size)
+			{
+			case 1:
+			case 2:
+			case 4:
+				return sizeof(u16) * size;
+			case 3:
+				return sizeof(u16) * 4;
+			}
+			throw new EXCEPTION("Wrong vector size");
+		case Vertex_base_type::f:     return sizeof(f32) * size;
+		case Vertex_base_type::sf:
+			switch (size)
+			{
+			case 1:
+			case 2:
+			case 4:
+				return sizeof(f16) * size;
+			case 3:
+				return sizeof(f16) * 4;
+			}
+			throw new EXCEPTION("Wrong vector size");
+		case Vertex_base_type::ub:
+			switch (size)
+			{
+			case 1:
+			case 2:
+			case 4:
+				return sizeof(u8) * size;
+			case 3:
+				return sizeof(u8) * 4;
+			}
+			throw new EXCEPTION("Wrong vector size");
+		case Vertex_base_type::s32k:  return sizeof(u32) * size;
+		case Vertex_base_type::cmp:   return sizeof(u16) * 4;
+		case Vertex_base_type::ub256: return sizeof(u8) * 4;
 
 		default:
-			LOG_ERROR(RSX, "RSXVertexData::GetTypeSize: Bad vertex data type (%d)!", type);
-			assert(0);
-			return 1;
+			throw new EXCEPTION("RSXVertexData::GetTypeSize: Bad vertex data type (%d)!", type);
+			return 0;
 		}
 	}
 	
@@ -254,8 +283,7 @@ namespace rsx
 
 			auto &data = vertex_arrays[index];
 
-			u32 type_size = get_vertex_type_size(info.type);
-			u32 element_size = type_size * info.size;
+			u32 element_size = get_vertex_type_size_on_host(info.type, info.size);
 
 			u32 dst_position = (u32)data.size();
 			data.resize(dst_position + count * element_size);
@@ -537,10 +565,9 @@ namespace rsx
 				if (!info.size) // disabled
 					continue;
 
-				u32 type_size = rsx::get_vertex_type_size(info.type);
-				u32 element_size = type_size * info.size;
+				u32 element_size = rsx::get_vertex_type_size_on_host(info.type, info.size);
 
-				if (type_size == 1 && info.size == 4)
+				if (info.type == Vertex_base_type::ub && info.size == 4)
 				{
 					dst[0] = src[3];
 					dst[1] = src[2];

@@ -5,6 +5,27 @@
 #define MIN2(x, y) ((x) < (y)) ? (x) : (y)
 #define MAX2(x, y) ((x) > (y)) ? (x) : (y)
 
+
+namespace
+{
+	/**
+	 * Convert CMP vector to RGBA16.
+	 * A vector in CMP (compressed) format is stored as X11Y11Z10 and has a W component of 1.
+	 * X11 and Y11 channels are int between -1024 and 1023 interpreted as -1.f, 1.f
+	 * Z10 is int between -512 and 511 interpreted as -1.f, 1.f
+	 */
+	std::array<u16, 4> decode_cmp_vector(u32 encoded_vector)
+	{
+		u16 Z = encoded_vector >> 22;
+		Z = Z << 6;
+		u16 Y = (encoded_vector >> 11) & 0x7FF;
+		Y = Y << 5;
+		u16 X = encoded_vector & 0x7FF;
+		X = X << 5;
+		return{ X, Y, Z, 1 };
+	}
+}
+
 void write_vertex_array_data_to_buffer(void *buffer, u32 first, u32 count, size_t index, const rsx::data_array_format_info &vertex_array_desc)
 {
 	assert(vertex_array_desc.size > 0);
@@ -15,8 +36,7 @@ void write_vertex_array_data_to_buffer(void *buffer, u32 first, u32 count, size_
 	u32 offset = rsx::method_registers[NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + index];
 	u32 address = rsx::get_address(offset & 0x7fffffff, offset >> 31);
 
-	u32 type_size = rsx::get_vertex_type_size(vertex_array_desc.type);
-	u32 element_size = type_size * vertex_array_desc.size;
+	u32 element_size = rsx::get_vertex_type_size_on_host(vertex_array_desc.type, vertex_array_desc.size);
 
 	u32 base_offset = rsx::method_registers[NV4097_SET_VERTEX_DATA_BASE_OFFSET];
 	u32 base_index = rsx::method_registers[NV4097_SET_VERTEX_DATA_BASE_INDEX];
@@ -26,13 +46,14 @@ void write_vertex_array_data_to_buffer(void *buffer, u32 first, u32 count, size_
 		auto src = vm::ps3::_ptr<const u8>(address + base_offset + vertex_array_desc.stride * (first + i + base_index));
 		u8* dst = (u8*)buffer + i * element_size;
 
-		switch (type_size)
+		switch (vertex_array_desc.type)
 		{
-		case 1:
+		case Vertex_base_type::ub:
 			memcpy(dst, src, vertex_array_desc.size);
 			break;
 
-		case 2:
+		case Vertex_base_type::s1:
+		case Vertex_base_type::sf:
 		{
 			auto* c_src = (const be_t<u16>*)src;
 			u16* c_dst = (u16*)dst;
@@ -41,10 +62,14 @@ void write_vertex_array_data_to_buffer(void *buffer, u32 first, u32 count, size_
 			{
 				*c_dst++ = *c_src++;
 			}
+			if (vertex_array_desc.size * sizeof(u16) < element_size)
+				*c_dst++ = 0x3800;
 			break;
 		}
 
-		case 4:
+		case Vertex_base_type::f:
+		case Vertex_base_type::s32k:
+		case Vertex_base_type::ub256:
 		{
 			auto* c_src = (const be_t<u32>*)src;
 			u32* c_dst = (u32*)dst;
@@ -53,6 +78,17 @@ void write_vertex_array_data_to_buffer(void *buffer, u32 first, u32 count, size_
 			{
 				*c_dst++ = *c_src++;
 			}
+			break;
+		}
+		case Vertex_base_type::cmp:
+		{
+			auto* c_src = (const be_t<u32>*)src;
+			const auto& decoded_vector = decode_cmp_vector(*c_src);
+			u16* c_dst = (u16*)dst;
+			c_dst[0] = decoded_vector[0];
+			c_dst[1] = decoded_vector[1];
+			c_dst[2] = decoded_vector[2];
+			c_dst[3] = decoded_vector[3];
 			break;
 		}
 		}

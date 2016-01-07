@@ -292,6 +292,39 @@ void apply_attrib_array(gl::glsl::program& program, int location, const std::vec
 	}
 }
 
+namespace
+{
+	gl::buffer_pointer::type gl_types(Vertex_base_type type)
+	{
+		switch (type)
+		{
+			case Vertex_base_type::s1: return gl::buffer_pointer::type::s16;
+			case Vertex_base_type::f: return gl::buffer_pointer::type::f32;
+			case Vertex_base_type::sf: return gl::buffer_pointer::type::f16;
+			case Vertex_base_type::ub: return gl::buffer_pointer::type::u8;
+			case Vertex_base_type::s32k: return gl::buffer_pointer::type::s32;
+			case Vertex_base_type::cmp: return gl::buffer_pointer::type::s16; // Needs conversion
+			case Vertex_base_type::ub256: gl::buffer_pointer::type::u8;
+		}
+	}
+
+	bool gl_normalized(Vertex_base_type type)
+	{
+		switch (type)
+		{
+		case Vertex_base_type::s1:
+		case Vertex_base_type::ub:
+		case Vertex_base_type::cmp:
+			return true;
+		case Vertex_base_type::f:
+		case Vertex_base_type::sf:
+		case Vertex_base_type::ub256:
+		case Vertex_base_type::s32k:
+			return false;
+		}
+	}
+}
+
 void GLGSRender::end()
 {
 	if (!draw_fbo || !vertex_draw_count)
@@ -322,31 +355,9 @@ void GLGSRender::end()
 	}
 
 	//initialize vertex attributes
-	static const gl::buffer_pointer::type gl_types[] =
-	{
-		gl::buffer_pointer::type::f32,
 
-		gl::buffer_pointer::type::s16,
-		gl::buffer_pointer::type::f32,
-		gl::buffer_pointer::type::f16,
-		gl::buffer_pointer::type::u8,
-		gl::buffer_pointer::type::s16,
-		gl::buffer_pointer::type::f32, // Needs conversion
-		gl::buffer_pointer::type::u8
-	};
 
-	static const bool gl_normalized[] =
-	{
-		false,
 
-		true,
-		false,
-		false,
-		true,
-		false,
-		true,
-		false
-	};
 
 	//merge all vertex arrays
 	std::vector<u8> vertex_arrays_data;
@@ -382,8 +393,8 @@ void GLGSRender::end()
 
 			__glcheck m_program->attribs[location] =
 				(m_vao + offset)
-				.config(gl_types[vertex_info.type], vertex_info.size, gl_normalized[vertex_info.type]);
-			offset += rsx::get_vertex_type_size(vertex_info.type) * vertex_info.size;
+				.config(gl_types(vertex_info.type), vertex_info.size, gl_normalized(vertex_info.type));
+			offset += rsx::get_vertex_type_size_on_host(vertex_info.type, vertex_info.size);
 		}
 	}
 	else
@@ -416,7 +427,7 @@ void GLGSRender::end()
 
 				__glcheck m_program->attribs[location] =
 					(m_vao + vertex_arrays_offsets[index])
-					.config(gl_types[vertex_info.type], vertex_info.size, gl_normalized[vertex_info.type]);
+					.config(gl_types(vertex_info.type), vertex_info.size, gl_normalized(vertex_info.type));
 			}
 			else if (register_vertex_info[index].size > 0)
 			{
@@ -425,7 +436,7 @@ void GLGSRender::end()
 
 				switch (vertex_info.type)
 				{
-				case CELL_GCM_VERTEX_F:
+				case Vertex_base_type::f:
 					switch (register_vertex_info[index].size)
 					{
 					case 1: apply_attrib_array<f32, 1>(*m_program, location, vertex_data); break;

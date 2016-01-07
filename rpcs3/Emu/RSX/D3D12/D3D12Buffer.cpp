@@ -60,8 +60,7 @@ std::vector<D3D12_VERTEX_BUFFER_VIEW> D3D12GSRender::upload_vertex_attributes(co
 			// Active vertex array
 			const rsx::data_array_format_info &info = vertex_arrays_info[index];
 
-			u32 type_size = rsx::get_vertex_type_size(info.type);
-			u32 element_size = type_size * info.size;
+			u32 element_size = rsx::get_vertex_type_size_on_host(info.type, info.size);
 
 			size_t buffer_size = element_size * vertex_count;
 			assert(m_vertex_index_data.can_alloc(buffer_size));
@@ -104,8 +103,7 @@ std::vector<D3D12_VERTEX_BUFFER_VIEW> D3D12GSRender::upload_vertex_attributes(co
 
 			const std::vector<u8> &data = register_vertex_data[index];
 
-			u32 type_size = rsx::get_vertex_type_size(info.type);
-			u32 element_size = type_size * info.size;
+			u32 element_size = rsx::get_vertex_type_size_on_host(info.type, info.size);
 
 			size_t buffer_size = data.size();
 			assert(m_vertex_index_data.can_alloc(buffer_size));
@@ -253,7 +251,7 @@ std::tuple<D3D12_VERTEX_BUFFER_VIEW, size_t> D3D12GSRender::upload_inlined_verte
 		IAElement.InstanceDataStepRate = 0;
 		m_IASet.push_back(IAElement);
 
-		offset += rsx::get_vertex_type_size(info.type) * info.size;
+		offset += rsx::get_vertex_type_size_on_host(info.type, info.size);
 	}
 
 	// Copy inline buffer

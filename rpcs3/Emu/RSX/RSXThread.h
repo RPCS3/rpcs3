@@ -148,7 +148,7 @@ namespace rsx
 		static std::string path_to_root();
 	};
 
-	u32 get_vertex_type_size(u32 type);
+	u32 get_vertex_type_size_on_host(Vertex_base_type type, u32 size);
 
 	u32 get_address(u32 offset, u32 location);
 
@@ -195,14 +195,14 @@ namespace rsx
 		u16 frequency = 0;
 		u8 stride = 0;
 		u8 size = 0;
-		u8 type = CELL_GCM_VERTEX_F;
+		Vertex_base_type type = Vertex_base_type::f;
 
 		void unpack_array(u32 data_array_format)
 		{
 			frequency = data_array_format >> 16;
 			stride = (data_array_format >> 8) & 0xff;
 			size = (data_array_format >> 4) & 0xf;
-			type = data_array_format & 0xf;
+			type = to_vertex_base_type(data_array_format & 0xf);
 		}
 	};
 
