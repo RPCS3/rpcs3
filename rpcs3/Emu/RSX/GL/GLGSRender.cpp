@@ -5,379 +5,14 @@
 #include "Emu/state.h"
 #include "GLGSRender.h"
 #include "../rsx_methods.h"
-#include "../rsx_cache.h"
+#include "rsx_gl_cache.h"
+#include "../rsx_utils.h"
 
 #define DUMP_VERTEX_DATA 0
 
-rsx::complete_shader finalize_shader(const rsx::decompiled_shader &shader, u32 ctrl, u32 attrib_input, u32 attrib_output)
-{
-	rsx::complete_shader result{ "#version 420\n\n" };
-
-	if (shader.type == rsx::program_type::vertex)
-	{
-		result.code += "layout(std140, binding = 0) uniform MatrixBuffer\n{\n"
-			"\tmat4 viewport_scale_offset_matrix;\n"
-			"\tmat4 window_matrix;\n"
-			"\tmat4 normalize_matrix;\n"
-			"};\n";
-	}
-
-	if (!shader.constants.empty())
-	{
-		if (shader.type == rsx::program_type::vertex)
-		{
-			result.code += "layout(std140, binding = 1) uniform VertexConstantsBuffer\n";
-		}
-		else
-		{
-			result.code += "layout(std140, binding = 2) uniform FragmentConstantsBuffer\n";
-		}
-
-		result.code += "{\n";
-
-		for (const rsx::constant_info& constant : shader.constants)
-		{
-			result.code += "\tvec4 " + constant.name + ";\n";
-		}
-
-		result.code += "};\n\n";
-	}
-
-	for (const rsx::register_info& temporary : shader.temporary_registers)
-	{
-		std::string value;
-		std::string type;
-		switch (temporary.type)
-		{
-		case rsx::register_type::half_float_point:
-		case rsx::register_type::single_float_point:
-			type = "vec4";
-			if (temporary.name == "o0")
-			{
-				value = "vec4(vec3(0.0), 1.0)";
-			}
-			else
-			{
-				value = "vec4(0.0)";
-			}
-			break;
-
-		case rsx::register_type::integer:
-			type = "ivec4";
-			value = "ivec4(0)";
-			break;
-
-		default:
-			throw;
-		}
-
-		result.code += type + " " + temporary.name + " = " + value + ";\n";
-	}
-
-	result.code += "\n";
-
-	for (const rsx::texture_info& texture : shader.textures)
-	{
-		result.code += "uniform vec4 " + texture.name + "_cm = vec4(1.0);\n";
-		result.code += "uniform sampler2D " + texture.name + ";\n";
-	}
-
-	std::string prepare;
-	std::string finalize;
-
-	switch (shader.type)
-	{
-	case rsx::program_type::fragment:
-		result.code += "layout(location = 0) out vec4 ocol;\n";
-
-		if (ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS)
-		{
-			if (0)
-			{
-				finalize += "\tocol = vec4(1.0, 0.0, 1.0, 1.0);\n";
-			}
-			else
-			{
-				finalize += "\tocol = r0;\n";
-			}
-
-			if (shader.temporary_registers.find({ "r2" }) != shader.temporary_registers.end())
-			{
-				result.code += "layout(location = 1) out vec4 ocol1;\n";
-				finalize += "\tocol1 = r2;\n";
-			}
-			if (shader.temporary_registers.find({ "r3" }) != shader.temporary_registers.end())
-			{
-				result.code += "layout(location = 2) out vec4 ocol2;\n";
-				finalize += "\tocol2 = r3;\n";
-			}
-			if (shader.temporary_registers.find({ "r4" }) != shader.temporary_registers.end())
-			{
-				result.code += "layout(location = 3) out vec4 ocol3;\n";
-				finalize += "\tocol3 = r4;\n";
-			}
-		}
-		else
-		{
-			finalize += "\tocol = h0;\n";
-
-			if (shader.temporary_registers.find({ "h4" }) != shader.temporary_registers.end())
-			{
-				result.code += "layout(location = 1) out vec4 ocol1;\n";
-				finalize += "\tocol1 = h4;\n";
-			}
-			if (shader.temporary_registers.find({ "h6" }) != shader.temporary_registers.end())
-			{
-				result.code += "layout(location = 2) out vec4 ocol2;\n";
-				finalize += "\tocol2 = h6;\n";
-			}
-			if (shader.temporary_registers.find({ "h8" }) != shader.temporary_registers.end())
-			{
-				result.code += "layout(location = 3) out vec4 ocol3;\n";
-				finalize += "\tocol3 = h8;\n";
-			}
-		}
-
-		if (ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT)
-		{
-			if (ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS)
-			{
-				if (shader.temporary_registers.find({ "r1" }) != shader.temporary_registers.end())
-				{
-					finalize += "\tgl_FragDepth = r1.z;\n";
-				}
-			}
-			else
-			{
-				if (shader.temporary_registers.find({ "h2" }) != shader.temporary_registers.end())
-				{
-					finalize += "\tgl_FragDepth = h2.z;\n";
-				}
-			}
-		}
-
-		{
-			u32 diffuse_color = attrib_output & (CELL_GCM_ATTRIB_OUTPUT_MASK_FRONTDIFFUSE | CELL_GCM_ATTRIB_OUTPUT_MASK_BACKDIFFUSE);
-			u32 specular_color = attrib_output & (CELL_GCM_ATTRIB_OUTPUT_MASK_FRONTSPECULAR | CELL_GCM_ATTRIB_OUTPUT_MASK_BACKSPECULAR);
-
-			if (diffuse_color)
-			{
-				result.code += "vec4 col0;\n";
-			}
-
-			if (specular_color)
-			{
-				result.code += "vec4 col1;\n";
-			}
-
-			if (diffuse_color == (CELL_GCM_ATTRIB_OUTPUT_MASK_FRONTDIFFUSE | CELL_GCM_ATTRIB_OUTPUT_MASK_BACKDIFFUSE) &&
-				specular_color == (CELL_GCM_ATTRIB_OUTPUT_MASK_FRONTSPECULAR | CELL_GCM_ATTRIB_OUTPUT_MASK_BACKSPECULAR))
-			{
-				prepare += "\tif (gl_FrontFacing)\n\t{";
-				prepare += "\t\tcol0 = front_diffuse_color;\n";
-				prepare += "\t\tcol1 = front_specular_color;\n";
-				prepare += "\t}\nelse\n\t{\n";
-				prepare += "\t\tcol0 = back_diffuse_color;\n";
-				prepare += "\t\tcol1 = back_specular_color;\n";
-				prepare += "\t}";
-			}
-			else
-			{
-				switch (diffuse_color)
-				{
-				case CELL_GCM_ATTRIB_OUTPUT_MASK_FRONTDIFFUSE | CELL_GCM_ATTRIB_OUTPUT_MASK_BACKDIFFUSE:
-					prepare += "\tcol0 = gl_FrontFacing ? front_diffuse_color : back_diffuse_color;\n";
-					break;
-
-				case CELL_GCM_ATTRIB_OUTPUT_MASK_FRONTDIFFUSE:
-					prepare += "\tcol0 = front_diffuse_color;\n";
-					break;
-
-				case CELL_GCM_ATTRIB_OUTPUT_MASK_BACKDIFFUSE:
-					prepare += "\tcol0 = back_diffuse_color;\n";
-					break;
-
-				default:
-					if (shader.input_attributes & (1 << 1))
-					{
-						result.code += "vec4 col0 = vec4(0.0);\n";
-					}
-					break;
-				}
-
-				switch (specular_color)
-				{
-				case CELL_GCM_ATTRIB_OUTPUT_MASK_FRONTSPECULAR | CELL_GCM_ATTRIB_OUTPUT_MASK_BACKSPECULAR:
-					prepare += "\tcol1 = gl_FrontFacing ? front_specular_color : back_specular_color;\n";
-					break;
-
-				case CELL_GCM_ATTRIB_OUTPUT_MASK_FRONTSPECULAR:
-					prepare += "\tcol1 = front_specular_color;\n";
-					break;
-
-				case CELL_GCM_ATTRIB_OUTPUT_MASK_BACKSPECULAR:
-					prepare += "\tcol1 = back_specular_color;\n";
-					break;
-
-				default:
-					if (shader.input_attributes & (1 << 2))
-					{
-						result.code += "vec4 col1 = vec4(0.0);\n";
-
-						if (diffuse_color)
-						{
-							prepare += "\tcol1 = col0;\n";
-						}
-					}
-					break;
-				}
-			}
-		}
-
-		result.code += "in vec4 " + rsx::fragment_program::input_attrib_names[0] + ";\n";
-
-		for (std::size_t index = 0; index < 22; ++index)
-		{
-			if (attrib_output & (1 << index))
-			{
-				result.code += "in vec4 " + rsx::vertex_program::output_attrib_names[index] + ";\n";
-			}
-		}
-		break;
-
-	case rsx::program_type::vertex:
-		result.code += "out vec4 wpos;\n";
-
-		if (0)
-		{
-			finalize += "\tgl_Position = o0;\n";
-		}
-		else
-		{
-			finalize +=
-				"	wpos = window_matrix * viewport_scale_offset_matrix * vec4(o0.xyz, 1.0);\n"
-				"	gl_Position = normalize_matrix * vec4(wpos.xyz, 1.0);\n"
-				"	gl_Position.w = wpos.w = o0.w;\n";
-		}
-
-		for (std::size_t index = 0; index < 16; ++index)
-		{
-			if (shader.input_attributes & (1 << index))
-			{
-				result.code += "in vec4 " + rsx::vertex_program::input_attrib_names[index] + ";\n";
-			}
-		}
-
-		{
-			auto map_register = [&](int to, int from)
-			{
-				if (shader.output_attributes & (1 << from))
-				{
-					result.code += "out vec4 " + rsx::vertex_program::output_attrib_names[to] + ";\n";
-					finalize += "\t" + rsx::vertex_program::output_attrib_names[to] + " = o" + std::to_string(from) + ";\n";
-				}
-				else if (attrib_output & (1 << to))
-				{
-					result.code += "out vec4 " + rsx::vertex_program::output_attrib_names[to] + ";\n";
-
-					if ((1 << to) == CELL_GCM_ATTRIB_OUTPUT_MASK_BACKDIFFUSE && shader.output_attributes & (1 << 1))
-					{
-						finalize += "\t" + rsx::vertex_program::output_attrib_names[to] + " = o1;\n";
-					}
-					else if ((1 << to) == CELL_GCM_ATTRIB_OUTPUT_MASK_BACKSPECULAR && shader.output_attributes & (1 << 2))
-					{
-						finalize += "\t" + rsx::vertex_program::output_attrib_names[to] + " = o2;\n";
-					}
-					else
-					{
-						finalize += "\t" + rsx::vertex_program::output_attrib_names[to] + " = vec4(0.0);\n";
-					}
-				}
-			};
-
-			map_register(0, 1);
-			map_register(1, 2);
-			map_register(2, 3);
-			map_register(3, 4);
-			map_register(14, 7);
-			map_register(15, 8);
-			map_register(16, 9);
-			map_register(17, 10);
-			map_register(18, 11);
-			map_register(19, 12);
-			map_register(20, 13);
-			map_register(21, 14);
-			map_register(12, 15);
-
-			if (shader.output_attributes & (1 << 5))
-			{
-				if (attrib_output & CELL_GCM_ATTRIB_OUTPUT_MASK_UC0)
-				{
-					result.code += "uniform int uc_m0 = 0;\n";
-					finalize += "\tgl_ClipDistance[0] = uc_m0 * o5.y;\n";
-				}
-
-				if (attrib_output & CELL_GCM_ATTRIB_OUTPUT_MASK_UC1)
-				{
-					result.code += "uniform int uc_m1 = 0;\n";
-					finalize += "\tgl_ClipDistance[1] = uc_m1 * o5.z;\n";
-				}
-
-				if (attrib_output & CELL_GCM_ATTRIB_OUTPUT_MASK_UC2)
-				{
-					result.code += "uniform int uc_m2 = 0;\n";
-					finalize += "\tgl_ClipDistance[2] = uc_m2 * o5.w;\n";
-				}
-			}
-
-			if (shader.output_attributes & (1 << 6))
-			{
-				if (attrib_output & CELL_GCM_ATTRIB_OUTPUT_MASK_POINTSIZE)
-				{
-					finalize += "\tgl_PointSize = o6.x;\n";
-				}
-
-				if (attrib_output & CELL_GCM_ATTRIB_OUTPUT_MASK_UC3)
-				{
-					result.code += "uniform int uc_m3 = 0;\n";
-					finalize += "\tgl_ClipDistance[3] = uc_m3 * o6.y;\n";
-				}
-
-				if (attrib_output & CELL_GCM_ATTRIB_OUTPUT_MASK_UC4)
-				{
-					result.code += "uniform int uc_m4 = 0;\n";
-					finalize += "\tgl_ClipDistance[4] = uc_m4 * o6.z;\n";
-				}
-
-				if (attrib_output & CELL_GCM_ATTRIB_OUTPUT_MASK_UC4)
-				{
-					result.code += "uniform int uc_m5 = 0;\n";
-					finalize += "\tgl_ClipDistance[5] = uc_m5 * o6.w;\n";
-				}
-			}
-
-			if (attrib_output & CELL_GCM_ATTRIB_OUTPUT_MASK_FOG)
-			{
-				//TODO
-			}
-		}
-		break;
-
-	default:
-		throw;
-	}
-
-	result.code += "\n";
-	result.code += shader.code;
-
-	result.code += "void main()\n{\n" + prepare + "\t" + shader.entry_function + "();\n" + finalize + "}";
-	return result;
-}
-
 GLGSRender::GLGSRender() : GSRender(frame_type::OpenGL)
 {
-	shaders_cache.reset(new rsx::shaders_cache());
-	shaders_cache->load(rsx::decompile_language::glsl);
+	init_glsl_cache_program_context(programs_cache.context);
 }
 
 u32 GLGSRender::enable(u32 condition, u32 cap)
@@ -446,10 +81,9 @@ void GLGSRender::begin()
 	__glcheck glDepthRange((f32&)rsx::method_registers[NV4097_SET_CLIP_MIN], (f32&)rsx::method_registers[NV4097_SET_CLIP_MAX]);
 	__glcheck enable(rsx::method_registers[NV4097_SET_DITHER_ENABLE], GL_DITHER);
 
-	if (__glcheck enable(rsx::method_registers[NV4097_SET_ALPHA_TEST_ENABLE], GL_ALPHA_TEST))
+	if (__glcheck enable(rsx::method_registers[NV4097_SET_ALPHA_FUNC] && rsx::method_registers[NV4097_SET_ALPHA_TEST_ENABLE], GL_ALPHA_TEST))
 	{
-		//TODO: NV4097_SET_ALPHA_REF must be converted to f32
-		//glcheck(glAlphaFunc(rsx::method_registers[NV4097_SET_ALPHA_FUNC], rsx::method_registers[NV4097_SET_ALPHA_REF]));
+		__glcheck glAlphaFunc(rsx::method_registers[NV4097_SET_ALPHA_FUNC], rsx::method_registers[NV4097_SET_ALPHA_REF] / 255.0f);
 	}
 
 	if (__glcheck enable(rsx::method_registers[NV4097_SET_BLEND_ENABLE], GL_BLEND))
@@ -564,13 +198,42 @@ void GLGSRender::begin()
 	u8 clip_plane_4 = (clip_plane_control >> 16) & 0xf;
 	u8 clip_plane_5 = (clip_plane_control >> 20) & 0xf;
 
-	//TODO
-	if (__glcheck enable(clip_plane_0, GL_CLIP_DISTANCE0)) {}
-	if (__glcheck enable(clip_plane_1, GL_CLIP_DISTANCE1)) {}
-	if (__glcheck enable(clip_plane_2, GL_CLIP_DISTANCE2)) {}
-	if (__glcheck enable(clip_plane_3, GL_CLIP_DISTANCE3)) {}
-	if (__glcheck enable(clip_plane_4, GL_CLIP_DISTANCE4)) {}
-	if (__glcheck enable(clip_plane_5, GL_CLIP_DISTANCE5)) {}
+	auto set_clip_plane_control = [&](int index, u8 control)
+	{
+		int value = 0;
+		int location;
+		if (m_program->uniforms.has_location("uc_m" + std::to_string(index), &location))
+		{
+			switch (control)
+			{
+			default:
+				LOG_ERROR(RSX, "bad clip plane control (0x%x)", control);
+
+			case CELL_GCM_USER_CLIP_PLANE_DISABLE:
+				value = 0;
+				break;
+
+			case CELL_GCM_USER_CLIP_PLANE_ENABLE_GE:
+				value = 1;
+				break;
+
+			case CELL_GCM_USER_CLIP_PLANE_ENABLE_LT:
+				value = -1;
+				break;
+			}
+
+			__glcheck m_program->uniforms[location] = value;
+		}
+
+		__glcheck enable(value, GL_CLIP_DISTANCE0 + index);
+	};
+
+	set_clip_plane_control(0, clip_plane_0);
+	set_clip_plane_control(1, clip_plane_1);
+	set_clip_plane_control(2, clip_plane_2);
+	set_clip_plane_control(3, clip_plane_3);
+	set_clip_plane_control(4, clip_plane_4);
+	set_clip_plane_control(5, clip_plane_5);
 
 	__glcheck enable(rsx::method_registers[NV4097_SET_POLY_OFFSET_FILL_ENABLE], GL_POLYGON_OFFSET_FILL);
 
@@ -673,19 +336,48 @@ void GLGSRender::end()
 	m_program->use();
 
 	//setup textures
-	for (int i = 0; i < rsx::limits::textures_count; ++i)
 	{
-		if (!textures[i].enabled())
+		int texture_index = 0;
+		for (int i = 0; i < rsx::limits::textures_count; ++i)
 		{
-			continue;
-		}
+			if (!textures[i].enabled())
+			{
+				continue;
+			}
 
-		int location;
-		if (m_program->uniforms.has_location("tex" + std::to_string(i), &location))
-		{
-			__glcheck m_gl_textures[i].init(i, textures[i]);
-			glProgramUniform1i(m_program->id(), location, i);
+			int location;
+			if (m_program->uniforms.has_location("texture" + std::to_string(i), &location))
+			{
+				glProgramUniform1i(m_program->id(), location, texture_index);
+				m_gl_textures[i].init(texture_index, textures[i]);
+
+				texture_index++;
+
+				if (m_program->uniforms.has_location("texture" + std::to_string(i) + "_cm", &location))
+				{
+					if (textures[i].format() & CELL_GCM_TEXTURE_UN)
+					{
+						//glProgramUniform4f(m_program->id(), location, textures[i].width(), textures[i].height(), textures[i].depth(), 1.0f);
+					}
+				}
+			}
 		}
+		/*
+		for (int i = 0; i < rsx::limits::vertex_textures_count; ++i)
+		{
+			if (vertex_textures[i].enabled())
+			{
+				int location;
+				if (m_program->uniforms.has_location("vtexture" + std::to_string(i), &location))
+				{
+					glProgramUniform1i(m_program->id(), location, texture_index);
+					m_gl_vertex_textures[i].init(texture_index, vertex_textures[i]);
+
+					texture_index++;
+				}
+			}
+		}
+		*/
 	}
 
 	//initialize vertex attributes
@@ -719,16 +411,6 @@ void GLGSRender::end()
 	std::vector<u8> vertex_arrays_data;
 	size_t vertex_arrays_offsets[rsx::limits::vertex_count];
 
-	const std::string reg_table[] =
-	{
-		"in_pos", "in_weight", "in_normal",
-		"in_diff_color", "in_spec_color",
-		"in_fog",
-		"in_point_size", "in_7",
-		"in_tc0", "in_tc1", "in_tc2", "in_tc3",
-		"in_tc4", "in_tc5", "in_tc6", "in_tc7"
-	};
-
 	u32 input_mask = rsx::method_registers[NV4097_SET_VERTEX_ATTRIB_INPUT_MASK];
 	m_vao.bind();
 
@@ -744,7 +426,7 @@ void GLGSRender::end()
 				continue;
 
 			int location;
-			if (!m_program->attribs.has_location(reg_table[index], &location))
+			if (!m_program->attribs.has_location(rsx::vertex_program::input_attrib_names[index], &location))
 				continue;
 
 			__glcheck m_program->attribs[location] =
@@ -762,7 +444,7 @@ void GLGSRender::end()
 				continue;
 
 			int location;
-			if (!m_program->attribs.has_location(reg_table[index], &location))
+			if (!m_program->attribs.has_location(rsx::vertex_program::input_attrib_names[index], &location))
 				continue;
 
 			if (vertex_arrays_info[index].size > 0)
@@ -851,8 +533,7 @@ void GLGSRender::set_viewport()
 
 	u8 shader_window_origin = (shader_window >> 12) & 0xf;
 
-	//TODO
-	if (true || shader_window_origin == CELL_GCM_WINDOW_ORIGIN_BOTTOM)
+	if (shader_window_origin == CELL_GCM_WINDOW_ORIGIN_BOTTOM)
 	{
 		__glcheck glViewport(viewport_x, viewport_y, viewport_w, viewport_h);
 		__glcheck glScissor(scissor_x, scissor_y, scissor_w, scissor_h);
@@ -881,7 +562,8 @@ void GLGSRender::on_init_thread()
 	m_vao.create();
 	m_vbo.create();
 	m_ebo.create();
-	m_scale_offset_buffer.create(16 * sizeof(float));
+
+	m_scale_offset_buffer.create(sizeof(glsl_shader_matrix_buffer));
 	m_vertex_constants_buffer.create(512 * 4 * sizeof(float));
 	m_fragment_constants_buffer.create();
 
@@ -897,6 +579,7 @@ void GLGSRender::on_exit()
 {
 	glDisable(GL_VERTEX_PROGRAM_POINT_SIZE);
 
+	programs_cache.clear();
 	//if (m_program)
 	//	m_program.remove();
 
@@ -1021,96 +704,97 @@ bool GLGSRender::do_method(u32 cmd, u32 arg)
 
 bool GLGSRender::load_program()
 {
-#if 1
-	RSXVertexProgram vertex_program;
-	u32 transform_program_start = rsx::method_registers[NV4097_SET_TRANSFORM_PROGRAM_START];
-	vertex_program.data.reserve((512 - transform_program_start) * 4);
+	rsx::program_info info = programs_cache.get(get_raw_program(), rsx::decompile_language::glsl);
+	m_program = (gl::glsl::program*)info.program;
+	m_program->use();
 
-	for (int i = transform_program_start; i < 512; ++i)
 	{
-		vertex_program.data.resize((i - transform_program_start) * 4 + 4);
-		memcpy(vertex_program.data.data() + (i - transform_program_start) * 4, transform_program + i * 4, 4 * sizeof(u32));
+		glBindBuffer(GL_UNIFORM_BUFFER, m_scale_offset_buffer.id());
+		auto buffer = (glsl_shader_matrix_buffer*)glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
+		rsx::fill_viewport_matrix(buffer->viewport_matrix, true);
+		rsx::fill_window_matrix(buffer->window_matrix, true);
 
-		D3 d3;
-		d3.HEX = transform_program[i * 4 + 3];
+		u32 viewport_horizontal = rsx::method_registers[NV4097_SET_VIEWPORT_HORIZONTAL];
+		u32 viewport_vertical = rsx::method_registers[NV4097_SET_VIEWPORT_VERTICAL];
 
-		if (d3.end)
-			break;
+		f32 viewport_x = f32(viewport_horizontal & 0xffff);
+		f32 viewport_y = f32(viewport_vertical & 0xffff);
+		f32 viewport_w = f32(viewport_horizontal >> 16);
+		f32 viewport_h = f32(viewport_vertical >> 16);
+
+		u32 shader_window = rsx::method_registers[NV4097_SET_SHADER_WINDOW];
+
+		u8 shader_window_origin = (shader_window >> 12) & 0xf;
+		u16 shader_window_height = shader_window & 0xfff;
+
+		f32 left = viewport_x;
+		f32 right = viewport_x + viewport_w;
+		f32 top = viewport_y;
+		f32 bottom = viewport_y + viewport_h;
+		//f32 far_ = (f32&)rsx::method_registers[NV4097_SET_CLIP_MAX];
+		//f32 near_ = (f32&)rsx::method_registers[NV4097_SET_CLIP_MIN];
+
+		if (shader_window_origin == CELL_GCM_WINDOW_ORIGIN_BOTTOM)
+		{
+			top = shader_window_height - (viewport_y + viewport_h) - 1;
+			bottom = shader_window_height - viewport_y - 1;
+		}
+
+		f32 scale_x = 2.0f / (right - left);
+		f32 scale_y = 2.0f / (top - bottom);
+		f32 scale_z = 1.0f;
+
+		f32 offset_x = -(right + left) / (right - left);
+		f32 offset_y = -(top + bottom) / (top - bottom);
+		f32 offset_z = -0.5f;
+
+		rsx::fill_scale_offset_matrix(buffer->normalize_matrix, true, offset_x, offset_y, offset_z, scale_x, scale_y, scale_z);
+
+		glUnmapBuffer(GL_UNIFORM_BUFFER);
 	}
-
-	RSXFragmentProgram fragment_program;
-	u32 shader_program = rsx::method_registers[NV4097_SET_SHADER_PROGRAM];
-	fragment_program.offset = shader_program & ~0x3;
-	fragment_program.addr = rsx::get_address(fragment_program.offset, (shader_program & 0x3) - 1);
-	fragment_program.ctrl = rsx::method_registers[NV4097_SET_SHADER_CONTROL];
-
-	for (u32 i = 0; i < rsx::limits::textures_count; ++i)
-	{
-		if (!textures[i].enabled())
-			fragment_program.texture_dimensions.push_back(texture_dimension::texture_dimension_2d);
-		else if (textures[i].cubemap())
-			fragment_program.texture_dimensions.push_back(texture_dimension::texture_dimension_cubemap);
-		else
-			fragment_program.texture_dimensions.push_back(texture_dimension::texture_dimension_2d);
-	}
-
-	__glcheck m_program = m_prog_buffer.getGraphicPipelineState(&vertex_program, &fragment_program, nullptr, nullptr);
-	__glcheck m_program->use();
-
-#else
-	std::vector<u32> vertex_program;
-	u32 transform_program_start = rsx::method_registers[NV4097_SET_TRANSFORM_PROGRAM_START];
-	vertex_program.reserve((512 - transform_program_start) * 4);
-
-	for (int i = transform_program_start; i < 512; ++i)
-	{
-		vertex_program.resize((i - transform_program_start) * 4 + 4);
-		memcpy(vertex_program.data() + (i - transform_program_start) * 4, transform_program + i * 4, 4 * sizeof(u32));
-
-		D3 d3;
-		d3.HEX = transform_program[i * 4 + 3];
-
-		if (d3.end)
-			break;
-	}
-
-	u32 shader_program = rsx::method_registers[NV4097_SET_SHADER_PROGRAM];
-
-	std::string fp_shader; ParamArray fp_parr; u32 fp_size;
-	GLFragmentDecompilerThread decompile_fp(fp_shader, fp_parr,
-		rsx::get_address(shader_program & ~0x3, (shader_program & 0x3) - 1), fp_size, rsx::method_registers[NV4097_SET_SHADER_CONTROL]);
-
-	std::string vp_shader; ParamArray vp_parr;
-	GLVertexDecompilerThread decompile_vp(vertex_program, vp_shader, vp_parr);
-	decompile_fp.Task();
-	decompile_vp.Task();
-
-	LOG_NOTICE(RSX, "fp: %s", fp_shader.c_str());
-	LOG_NOTICE(RSX, "vp: %s", vp_shader.c_str());
-
-	static bool first = true;
-	gl::glsl::shader fp(gl::glsl::shader::type::fragment, fp_shader);
-	gl::glsl::shader vp(gl::glsl::shader::type::vertex, vp_shader);
-
-	(m_program.recreate() += { fp.compile(), vp.compile() }).make();
-#endif
-	glBindBuffer(GL_UNIFORM_BUFFER, m_scale_offset_buffer.id());
-
-	void *buffer = glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
-	fill_scale_offset_data(buffer, false);
-	glUnmapBuffer(GL_UNIFORM_BUFFER);
 
 	glBindBuffer(GL_UNIFORM_BUFFER, m_vertex_constants_buffer.id());
-	buffer = glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
+	void *buffer = glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
 	fill_vertex_program_constants_data(buffer);
 	glUnmapBuffer(GL_UNIFORM_BUFFER);
 
-	glBindBuffer(GL_UNIFORM_BUFFER, m_fragment_constants_buffer.id());
-	size_t buffer_size = m_prog_buffer.get_fragment_constants_buffer_size(&fragment_program);
-	glBufferData(GL_UNIFORM_BUFFER, buffer_size, nullptr, GL_STATIC_DRAW);
-	buffer = glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
-	m_prog_buffer.fill_fragment_constans_buffer(buffer, &fragment_program);
-	glUnmapBuffer(GL_UNIFORM_BUFFER);
+	if (!info.fragment_shader.decompiled->constants.empty())
+	{
+		glBindBuffer(GL_UNIFORM_BUFFER, m_fragment_constants_buffer.id());
+		size_t buffer_size = info.fragment_shader.decompiled->constants.size() * sizeof(f32) * 4;
+		m_fragment_constants_buffer.recreate(buffer_size);
+		glBindBufferBase(GL_UNIFORM_BUFFER, 2, m_fragment_constants_buffer.id());
+
+		buffer = glMapBuffer(GL_UNIFORM_BUFFER, GL_READ_WRITE);
+		{
+			u32 buffer_offset = 0;
+
+			static const __m128i mask = _mm_set_epi8(
+				0xE, 0xF, 0xC, 0xD,
+				0xA, 0xB, 0x8, 0x9,
+				0x6, 0x7, 0x4, 0x5,
+				0x2, 0x3, 0x0, 0x1);
+
+			auto ucode = (const rsx::fragment_program::ucode_instr*)info.fragment_shader.decompiled->raw->ucode_ptr;
+
+			for (auto constant : info.fragment_shader.decompiled->constants)
+			{
+				const void *data = ucode + (u32)(constant.id / (sizeof(f32) * 4));
+				const __m128i &vector = _mm_loadu_si128((const __m128i*)data);
+				const __m128i &shuffled_vector = _mm_shuffle_epi8(vector, mask);
+				_mm_stream_si128((__m128i*)((char*)buffer + buffer_offset), shuffled_vector);
+
+				//float x = ((float*)((char*)buffer + buffer_offset))[0];
+				//float y = ((float*)((char*)buffer + buffer_offset))[1];
+				//float z = ((float*)((char*)buffer + buffer_offset))[2];
+				//float w = ((float*)((char*)buffer + buffer_offset))[3];
+
+				//LOG_WARNING(RSX, "fc%u = {%g, %g, %g, %g}", constant.id, x, y, z, w);
+				buffer_offset += 4 * sizeof(f32);
+			}
+		}
+		glUnmapBuffer(GL_UNIFORM_BUFFER);
+	}
 
 	return true;
 }
@@ -1199,16 +883,17 @@ void GLGSRender::init_buffers(bool skip_reading)
 
 	u32 clip_width = clip_horizontal >> 16;
 	u32 clip_height = clip_vertical >> 16;
-	u32 clip_x = clip_horizontal;
-	u32 clip_y = clip_vertical;
+	u32 clip_x = clip_horizontal & 0xffff;
+	u32 clip_y = clip_vertical & 0xffff;
 
-	if (!draw_fbo || m_surface.format != surface_format)
+	if (!draw_fbo || m_surface.format != surface_format || 
+		m_surface.width != clip_x + clip_width || m_surface.height != clip_y + clip_height)
 	{
 		m_surface.unpack(surface_format);
-		m_surface.width = clip_width;
-		m_surface.height = clip_height;
+		m_surface.width = clip_x + clip_width;
+		m_surface.height = clip_y + clip_height;
 
-		LOG_WARNING(RSX, "surface: %dx%d", clip_width, clip_height);
+		//LOG_WARNING(RSX, "surface: %dx%d", clip_width, clip_height);
 
 		draw_fbo.recreate();
 		m_draw_tex_depth_stencil.recreate(gl::texture::target::texture2D);
@@ -1272,41 +957,51 @@ void GLGSRender::init_buffers(bool skip_reading)
 		__glcheck m_draw_tex_depth_stencil.pixel_unpack_settings().aligment(1);
 	}
 
+	draw_fbo.bind();
+
 	if (!skip_reading)
 	{
 		read_buffers();
 	}
 
-	set_viewport();
+	static const GLenum color_buffers[rsx::limits::color_buffers_count] =
+	{
+		GL_COLOR_ATTACHMENT0,
+		GL_COLOR_ATTACHMENT1,
+		GL_COLOR_ATTACHMENT2,
+		GL_COLOR_ATTACHMENT3
+	};
 
 	switch (rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET])
 	{
-	case CELL_GCM_SURFACE_TARGET_NONE: break;
+	case CELL_GCM_SURFACE_TARGET_NONE: glDrawBuffer(GL_NONE); break;
 
 	case CELL_GCM_SURFACE_TARGET_0:
-		__glcheck draw_fbo.draw_buffer(draw_fbo.color[0]);
+		glDrawBuffers(1, color_buffers + 0);
 		break;
 
 	case CELL_GCM_SURFACE_TARGET_1:
-		__glcheck draw_fbo.draw_buffer(draw_fbo.color[1] );
+		glDrawBuffers(1, color_buffers + 1);
 		break;
 
 	case CELL_GCM_SURFACE_TARGET_MRT1:
-		__glcheck draw_fbo.draw_buffers({ draw_fbo.color[0], draw_fbo.color[1] });
+		glDrawBuffers(2, color_buffers);
 		break;
 
 	case CELL_GCM_SURFACE_TARGET_MRT2:
-		__glcheck draw_fbo.draw_buffers({ draw_fbo.color[0], draw_fbo.color[1], draw_fbo.color[2] });
+		glDrawBuffers(3, color_buffers);
 		break;
 
 	case CELL_GCM_SURFACE_TARGET_MRT3:
-		__glcheck draw_fbo.draw_buffers({ draw_fbo.color[0], draw_fbo.color[1], draw_fbo.color[2], draw_fbo.color[3] });
+		glDrawBuffers(4, color_buffers);
 		break;
 
 	default:
 		LOG_ERROR(RSX, "Bad surface color target: %d", rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET]);
 		break;
 	}
+
+	set_viewport();
 }
 
 static const u32 mr_color_offset[rsx::limits::color_buffers_count] =

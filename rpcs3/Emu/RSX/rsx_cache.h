@@ -1,120 +1,61 @@
 #pragma once
-#include "Utilities/convert.h"
 #include <rsx_decompiler.h>
-
-namespace convert
-{
-	template<>
-	struct to_impl_t<rsx::decompile_language, std::string>
-	{
-		static rsx::decompile_language func(const std::string &from)
-		{
-			if (from == "glsl")
-				return rsx::decompile_language::glsl;
-
-			//if (from == "hlsl")
-			//	return rsx::decompile_language::hlsl;
-
-			throw;
-		}
-	};
-
-	template<>
-	struct to_impl_t<std::string, rsx::decompile_language>
-	{
-		static std::string func(rsx::decompile_language from)
-		{
-			switch (from)
-			{
-			case rsx::decompile_language::glsl:
-				return "glsl";
-				//case rsx::decompile_language::hlsl:
-				//	return "hlsl";
-			}
-
-			throw;
-		}
-	};
-}
 
 namespace rsx
 {
-	template<typename Type, typename KeyType = u64, typename Hasher = std::hash<KeyType>>
-	struct cache
+	struct shader_info
 	{
-	private:
-		std::unordered_map<KeyType, Type, Hasher> m_entries;
-
-	public:
-		const Type* find(u64 key) const
-		{
-			auto found = m_entries.find(key);
-
-			if (found == m_entries.end())
-				return nullptr;
-
-			return &found->second;
-		}
-
-		const Type& insert(KeyType key, const Type &entry)
-		{
-			return m_entries.insert({ key, entry }).first->second;
-		}
+		decompiled_shader *decompiled;
+		complete_shader *complete;
 	};
 
-	struct shaders_cache_entry
+	struct program_info
 	{
-		cache<decompiled_shader> decompiled;
-		cache<complete_shader> complete;
+		shader_info vertex_shader;
+		shader_info fragment_shader;
+
+		void *program;
+	};
+
+	struct program_cache_context
+	{
+		decompile_language lang;
+
+		void*(*compile_shader)(program_type type, const std::string &code);
+		complete_shader(*complete_shader)(const decompiled_shader &shader, program_state state);
+		void*(*make_program)(const void *vertex_shader, const void *fragment_shader);
+		void(*remove_program)(void *ptr);
+		void(*remove_shader)(void *ptr);
 	};
 
 	struct shaders_cache
 	{
-		shaders_cache_entry fragment_shaders;
-		shaders_cache_entry vertex_shaders;
+		struct entry_t
+		{
+			decompiled_shader decompiled;
+			std::unordered_map<program_state, complete_shader, hasher> complete;
+		};
 
-		void load(const std::string &path, decompile_language lang);
-		void load(decompile_language lang);
+		std::unordered_map<raw_shader, entry_t, hasher> m_entries;
 
-		static std::string path_to_root();
+	public:
+		shader_info get(const program_cache_context &ctxt, raw_shader &raw_shader, const program_state& state);
+		void clear(const program_cache_context& context);
 	};
 
-	template<typename UcodeType>
-	std::pair<const rsx::complete_shader&, const rsx::decompiled_shader&> find_shader(rsx::decompile_language lang, u64 hash,
-		rsx::shaders_cache_entry &cache, u32 offset, UcodeType *ucode, rsx::decompiled_shader(*decompile)(std::size_t, UcodeType*, rsx::decompile_language),
-		u32 ctrl, u32 attrib_input, u32 attrib_output)
+	class programs_cache
 	{
-		const rsx::decompiled_shader *decompiled = cache.decompiled.find(hash);
+		std::unordered_map<raw_program, program_info, hasher> m_program_cache;
 
-		if (!decompiled)
-		{
-			decompiled = &cache.decompiled.insert(hash, decompile(offset, ucode, lang));
+		shaders_cache m_vertex_shaders_cache;
+		shaders_cache m_fragment_shader_cache;
 
-			fs::file(fmt::format("data/cache/%016llx.", hash) + (decompiled->type == rsx::program_type::vertex ? "vp" : "fp")
-				+ ".ucode", fom::rewrite).write(ucode + offset, decompiled->ucode_size);
-		}
+	public:
+		program_cache_context context;
 
-		const rsx::complete_shader *complete = cache.complete.find(hash);
+		~programs_cache();
 
-		if (!complete)
-		{
-			const std::string path = fmt::format("data/cache/%016llx.", hash)
-				+ (decompiled->type == rsx::program_type::vertex ? "vp" : "fp") + "." + convert::to<std::string>(lang);
-
-			if (false && fs::is_file(path))
-			{
-				rsx::complete_shader new_complete = finalize_shader(*decompiled, ctrl, attrib_input, attrib_output);
-				new_complete.code = (std::string)fs::file(path);
-				complete = &cache.complete.insert(hash, new_complete);
-			}
-			else
-			{
-				complete = &cache.complete.insert(hash, finalize_shader(*decompiled, ctrl, attrib_input, attrib_output));
-
-				fs::file(path, fom::rewrite) << complete->code;
-			}
-		}
-
-		return{ *complete, *decompiled };
-	}
+		program_info get(raw_program &raw_program, decompile_language lang);
+		void clear();
+	};
 }

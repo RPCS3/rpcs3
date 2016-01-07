@@ -306,9 +306,9 @@ void write_index_array_data_to_buffer(char* dst, unsigned m_draw_mode, unsigned 
 	}
 }
 
-void stream_vector(void *dst, u32 x, u32 y, u32 z, u32 w)
+void stream_vector(void *dst, f32 x, f32 y, f32 z, f32 w)
 {
-	__m128i vector = _mm_set_epi32(w, z, y, x);
+	__m128i vector = _mm_set_epi32((u32&)w, (u32&)z, (u32&)y, (u32&)x);
 	_mm_stream_si128((__m128i*)dst, vector);
 }
 

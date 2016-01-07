@@ -9,6 +9,7 @@
 #include "Utilities/Semaphore.h"
 #include "Utilities/Thread.h"
 #include "Utilities/Timer.h"
+#include "rsx_cache.h"
 
 extern u64 get_system_time();
 
@@ -122,7 +123,7 @@ namespace rsx
 		std::stack<u32> m_call_stack;
 
 	public:
-		std::unique_ptr<struct shaders_cache> shaders_cache;
+		rsx::programs_cache programs_cache;
 
 		CellGcmControl* ctrl = nullptr;
 
@@ -238,7 +239,7 @@ namespace rsx
 		 * Vertex shader's position is to be multiplied by this matrix.
 		 * if is_d3d is set, the matrix is modified to use d3d convention.
 		 */
-		void fill_scale_offset_data(void *buffer, bool is_d3d = true) const;
+		void fill_scale_offset_data(void *buffer) const;
 
 		/**
 		* Fill buffer with vertex program constants.
@@ -272,6 +273,8 @@ namespace rsx
 		virtual void copy_stencil_buffer_to_memory(void *buffer) {};
 
 		virtual std::pair<std::string, std::string> get_programs() const { return std::make_pair("", ""); };
+
+		struct raw_program get_raw_program() const;
 
 	public:
 		void reset();
