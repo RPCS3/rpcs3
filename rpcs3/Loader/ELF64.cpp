@@ -664,7 +664,7 @@ namespace loader
 							LOG_NOTICE(LOADER, "*** ppc seg: 0x%x", info.ppc_seg);
 							//LOG_NOTICE(LOADER, "*** crash dump param addr: 0x%x", info.crash_dump_param_addr);
 
-							Emu.SetParams(info.sdk_version, info.malloc_pagesize, info.primary_stacksize, info.primary_prio);
+							Emu.SetParams(info.sdk_version, info.malloc_pagesize, std::max<u32>(info.primary_stacksize, 0x4000), info.primary_prio);
 						}
 					}
 					break;
