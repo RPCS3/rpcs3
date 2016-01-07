@@ -365,4 +365,16 @@ namespace psf
 	{
 		return m_entries.at(key);
 	}
+
+	const entry* object::get(const std::string &key) const
+	{
+		auto found = m_entries.find(key);
+
+		if (found == m_entries.end())
+		{
+			return nullptr;
+		}
+
+		return &found->second;
+	}
 }

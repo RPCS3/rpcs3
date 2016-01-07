@@ -81,6 +81,9 @@ namespace psf
 		entry& operator[](const std::string &key);
 		const entry& operator[](const std::string &key) const;
 
+		//returns pointer to entry or null, if not exists
+		const entry *get(const std::string &key) const;
+
 		bool exists(const std::string &key) const
 		{
 			return m_entries.find(key) != m_entries.end();
