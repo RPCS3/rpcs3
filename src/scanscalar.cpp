@@ -28,13 +28,17 @@ std::string ScanScalar(Stream& INPUT, ScanScalarParams& params) {
   std::string scalar;
   params.leadingSpaces = false;
 
+  if (!params.end) {
+    params.end = &Exp::Empty();
+  }
+
   while (INPUT) {
     // ********************************
     // Phase #1: scan until line ending
 
     std::size_t lastNonWhitespaceChar = scalar.size();
     bool escapedNewline = false;
-    while (!params.end.Matches(INPUT) && !Exp::Break().Matches(INPUT)) {
+    while (!params.end->Matches(INPUT) && !Exp::Break().Matches(INPUT)) {
       if (!INPUT)
         break;
 
@@ -87,7 +91,7 @@ std::string ScanScalar(Stream& INPUT, ScanScalarParams& params) {
       break;
 
     // are we done via character match?
-    int n = params.end.Match(INPUT);
+    int n = params.end->Match(INPUT);
     if (n >= 0) {
       if (params.eatEnd)
         INPUT.eat(n);

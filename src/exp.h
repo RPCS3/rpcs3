@@ -20,6 +20,10 @@ namespace YAML {
 
 namespace Exp {
 // misc
+inline const RegEx& Empty() {
+  static const RegEx e;
+  return e;
+}
 inline const RegEx& Space() {
   static const RegEx e = RegEx(' ');
   return e;

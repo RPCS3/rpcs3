@@ -19,7 +19,8 @@ enum FOLD { DONT_FOLD, FOLD_BLOCK, FOLD_FLOW };
 
 struct ScanScalarParams {
   ScanScalarParams()
-      : eatEnd(false),
+      : end(nullptr),
+        eatEnd(false),
         indent(0),
         detectIndent(false),
         eatLeadingWhitespace(0),
@@ -32,7 +33,8 @@ struct ScanScalarParams {
         leadingSpaces(false) {}
 
   // input:
-  RegEx end;          // what condition ends this scalar?
+  const RegEx* end;   // what condition ends this scalar?
+                      // unowned.
   bool eatEnd;        // should we eat that condition when we see it?
   int indent;         // what level of indentation should be eaten and ignored?
   bool detectIndent;  // should we try to autodetect the indent?
