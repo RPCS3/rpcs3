@@ -1,3 +1,4 @@
+#include <fstream>
 #include <iostream>
 
 #include "yaml-cpp/emitterstyle.h"
@@ -25,9 +26,19 @@ class NullEventHandler : public YAML::EventHandler {
   virtual void OnMapEnd() {}
 };
 
-int main() {
-  YAML::Parser parser(std::cin);
+void run(YAML::Parser& parser) {
   NullEventHandler handler;
   parser.HandleNextDocument(handler);
+}
+
+int main(int argc, char** argv) {
+  if (argc > 1) {
+    std::ifstream in(argv[1]);
+    YAML::Parser parser(in);
+    run(parser);
+  } else {
+    YAML::Parser parser(std::cin);
+    run(parser);
+  }
   return 0;
 }
