@@ -64,22 +64,27 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug - MemLeak|x64'">
     <IntDir>$(SolutionDir)tmp\$(ProjectName)-$(Configuration)-$(Platform)\</IntDir>
     <OutDir>$(SolutionDir)lib\$(Configuration)-$(Platform)\</OutDir>
+    <IncludePath>$(SolutionDir)rsx_program_decompiler\rsx_decompiler;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">
     <IntDir>$(SolutionDir)tmp\$(ProjectName)-$(Configuration)-$(Platform)\</IntDir>
     <OutDir>$(SolutionDir)lib\$(Configuration)-$(Platform)\</OutDir>
+    <IncludePath>$(SolutionDir)rsx_program_decompiler\rsx_decompiler;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <IntDir>$(SolutionDir)tmp\$(ProjectName)-$(Configuration)-$(Platform)\</IntDir>
     <OutDir>$(SolutionDir)lib\$(Configuration)-$(Platform)\</OutDir>
+    <IncludePath>$(SolutionDir)rsx_program_decompiler\rsx_decompiler;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <IntDir>$(SolutionDir)tmp\$(ProjectName)-$(Configuration)-$(Platform)\</IntDir>
     <OutDir>$(SolutionDir)lib\$(Configuration)-$(Platform)\</OutDir>
+    <IncludePath>$(SolutionDir)rsx_program_decompiler\rsx_decompiler;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">
     <IntDir>$(SolutionDir)tmp\$(ProjectName)-$(Configuration)-$(Platform)\</IntDir>
     <OutDir>$(SolutionDir)lib\$(Configuration)-$(Platform)\</OutDir>
+    <IncludePath>$(SolutionDir)rsx_program_decompiler\rsx_decompiler;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug - MemLeak|x64'">
     <Lib>
@@ -124,6 +129,7 @@
     <ClInclude Include="Emu\RSX\GL\GLVertexProgram.h" />
     <ClInclude Include="Emu\RSX\GL\gl_helpers.h" />
     <ClInclude Include="Emu\RSX\GL\OpenGL.h" />
+    <ClInclude Include="Emu\RSX\GL\rsx_gl_cache.h" />
     <ClInclude Include="Emu\RSX\GL\rsx_gl_texture.h" />
   </ItemGroup>
   <ItemGroup>
@@ -133,6 +139,7 @@
     <ClCompile Include="Emu\RSX\GL\GLVertexProgram.cpp" />
     <ClCompile Include="Emu\RSX\GL\gl_helpers.cpp" />
     <ClCompile Include="Emu\RSX\GL\OpenGL.cpp" />
+    <ClCompile Include="Emu\RSX\GL\rsx_gl_cache.cpp" />
     <ClCompile Include="Emu\RSX\GL\rsx_gl_texture.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

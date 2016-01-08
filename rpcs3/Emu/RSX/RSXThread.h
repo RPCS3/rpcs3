@@ -9,7 +9,7 @@
 #include "Utilities/Semaphore.h"
 #include "Utilities/Thread.h"
 #include "Utilities/Timer.h"
-#include "Utilities/convert.h"
+#include "rsx_cache.h"
 
 extern u64 get_system_time();
 
@@ -29,6 +29,7 @@ struct frame_capture_data
 		buffer depth;
 		buffer stencil;
 	};
+
 	std::vector<std::pair<u32, u32> > command_queue;
 	std::vector<draw_state> draw_calls;
 
@@ -44,49 +45,6 @@ extern frame_capture_data frame_debug;
 
 namespace rsx
 {
-	enum class shader_language
-	{
-		glsl,
-		hlsl
-	};
-}
-
-namespace convert
-{
-	template<>
-	struct to_impl_t<rsx::shader_language, std::string>
-	{
-		static rsx::shader_language func(const std::string &from)
-		{
-			if (from == "glsl")
-				return rsx::shader_language::glsl;
-
-			if (from == "hlsl")
-				return rsx::shader_language::hlsl;
-
-			throw;
-		}
-	};
-
-	template<>
-	struct to_impl_t<std::string, rsx::shader_language>
-	{
-		static std::string func(rsx::shader_language from)
-		{
-			switch (from)
-			{
-			case rsx::shader_language::glsl:
-				return "glsl";
-			case rsx::shader_language::hlsl:
-				return "hlsl";
-			}
-
-			throw;
-		}
-	};
-}
-namespace rsx
-{
 	namespace limits
 	{
 		enum
@@ -100,53 +58,6 @@ namespace rsx
 			color_buffers_count = 4
 		};
 	}
-
-	struct decompiled_shader
-	{
-		std::string code;
-	};
-
-	struct finalized_shader
-	{
-		u64 ucode_hash;
-		std::string code;
-	};
-
-	template<typename Type, typename KeyType = u64, typename Hasher = std::hash<KeyType>>
-	struct cache
-	{
-	private:
-		std::unordered_map<KeyType, Type, Hasher> m_entries;
-
-	public:
-		const Type* find(u64 key) const
-		{
-			auto found = m_entries.find(key);
-
-			if (found == m_entries.end())
-				return nullptr;
-
-			return &found->second;
-		}
-
-		void insert(KeyType key, const Type &shader)
-		{
-			m_entries.insert({ key, shader });
-		}
-	};
-
-	struct shaders_cache
-	{
-		cache<decompiled_shader> decompiled_fragment_shaders;
-		cache<decompiled_shader> decompiled_vertex_shaders;
-		cache<finalized_shader> finailized_fragment_shaders;
-		cache<finalized_shader> finailized_vertex_shaders;
-
-		void load(const std::string &path, shader_language lang);
-		void load(shader_language lang);
-
-		static std::string path_to_root();
-	};
 
 	u32 get_vertex_type_size(u32 type);
 
@@ -212,7 +123,7 @@ namespace rsx
 		std::stack<u32> m_call_stack;
 
 	public:
-		struct shaders_cache shaders_cache;
+		rsx::programs_cache programs_cache;
 
 		CellGcmControl* ctrl = nullptr;
 
@@ -223,7 +134,6 @@ namespace rsx
 
 		rsx::texture textures[limits::textures_count];
 		rsx::vertex_texture vertex_textures[limits::vertex_textures_count];
-
 
 		/**
 		 * RSX can sources vertex attributes from 2 places:
@@ -260,6 +170,7 @@ namespace rsx
 
 		bool capture_current_frame = false;
 		void capture_frame(const std::string &name);
+
 	public:
 		u32 ioAddress, ioSize;
 		int flip_status;
@@ -307,7 +218,7 @@ namespace rsx
 		std::set<u32> m_used_gcm_commands;
 
 	protected:
-		virtual ~thread() {}
+		virtual ~thread();
 
 		virtual void on_task() override;
 
@@ -328,7 +239,7 @@ namespace rsx
 		 * Vertex shader's position is to be multiplied by this matrix.
 		 * if is_d3d is set, the matrix is modified to use d3d convention.
 		 */
-		void fill_scale_offset_data(void *buffer, bool is_d3d = true) const;
+		void fill_scale_offset_data(void *buffer) const;
 
 		/**
 		* Fill buffer with vertex program constants.
@@ -362,6 +273,9 @@ namespace rsx
 		virtual void copy_stencil_buffer_to_memory(void *buffer) {};
 
 		virtual std::pair<std::string, std::string> get_programs() const { return std::make_pair("", ""); };
+
+		struct raw_program get_raw_program() const;
+
 	public:
 		void reset();
 		void init(const u32 ioAddress, const u32 ioSize, const u32 ctrlAddress, const u32 localAddress);

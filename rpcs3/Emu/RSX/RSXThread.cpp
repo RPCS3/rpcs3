@@ -11,6 +11,7 @@
 
 #include "Common/BufferUtils.h"
 #include "rsx_methods.h"
+#include "rsx_cache.h"
 
 #define CMD_DEBUG 0
 
@@ -19,68 +20,6 @@ frame_capture_data frame_debug;
 
 namespace rsx
 {
-	std::string shaders_cache::path_to_root()
-	{
-		return fs::get_executable_dir() + "data/";
-	}
-
-	void shaders_cache::load(const std::string &path, shader_language lang)
-	{
-		std::string lang_name = convert::to<std::string>(lang);
-
-		auto extract_hash = [](const std::string &string)
-		{
-			return std::stoull(string.substr(0, string.find('.')).c_str(), 0, 16);
-		};
-
-		for (const fs::dir::entry &entry : fs::dir{ path })
-		{
-			if (entry.name == "." || entry.name == "..")
-				continue;
-
-			u64 hash;
-
-			try
-			{
-				hash = extract_hash(entry.name);
-			}
-			catch (...)
-			{
-				LOG_ERROR(RSX, "Cache file '%s' ignored", entry.name);
-				continue;
-			}
-
-			if (fmt::match(entry.name, "*.fs." + lang_name))
-			{
-				fs::file file{ path + entry.name };
-				decompiled_fragment_shaders.insert(hash, { (const std::string)file });
-				continue;
-			}
-
-			if (fmt::match(entry.name, "*.vs." + lang_name))
-			{
-				fs::file file{ path + entry.name };
-				decompiled_vertex_shaders.insert(hash, { (const std::string)file });
-				continue;
-			}
-		}
-	}
-
-	void shaders_cache::load(shader_language lang)
-	{
-		std::string root = path_to_root();
-
-		//shared cache
-		load(root + "cache/", lang);
-
-		std::string title_id = Emu.GetTitleID();
-
-		if (!title_id.empty())
-		{
-			load(root + title_id + "/cache/", lang);
-		}
-	}
-
 	u32 get_address(u32 offset, u32 location)
 	{
 		u32 res = 0;
@@ -239,6 +178,10 @@ namespace rsx
 		default:
 			throw;
 		}
+	}
+
+	thread::~thread()
+	{
 	}
 
 	void thread::load_vertex_data(u32 first, u32 count)
@@ -483,7 +426,7 @@ namespace rsx
 		return "rsx::thread"s;
 	}
 
-	void thread::fill_scale_offset_data(void *buffer, bool is_d3d) const
+	void thread::fill_scale_offset_data(void *buffer) const
 	{
 		int clip_w = rsx::method_registers[NV4097_SET_SURFACE_CLIP_HORIZONTAL] >> 16;
 		int clip_h = rsx::method_registers[NV4097_SET_SURFACE_CLIP_VERTICAL] >> 16;
@@ -495,19 +438,16 @@ namespace rsx
 		float scale_y = (float&)rsx::method_registers[NV4097_SET_VIEWPORT_SCALE + 1] / (clip_h / 2.f);
 		float offset_y = ((float&)rsx::method_registers[NV4097_SET_VIEWPORT_OFFSET + 1] - (clip_h / 2.f));
 		offset_y /= clip_h / 2.f;
-		if (is_d3d) scale_y *= -1;
-		if (is_d3d) offset_y *= -1;
+		scale_y *= -1;
+		offset_y *= -1;
 
 		float scale_z = (float&)rsx::method_registers[NV4097_SET_VIEWPORT_SCALE + 2];
 		float offset_z = (float&)rsx::method_registers[NV4097_SET_VIEWPORT_OFFSET + 2];
-		if (!is_d3d) offset_z -= .5;
 
-		float one = 1.f;
-
-		stream_vector(buffer, (u32&)scale_x, 0, 0, (u32&)offset_x);
-		stream_vector((char*)buffer + 16, 0, (u32&)scale_y, 0, (u32&)offset_y);
-		stream_vector((char*)buffer + 32, 0, 0, (u32&)scale_z, (u32&)offset_z);
-		stream_vector((char*)buffer + 48, 0, 0, 0, (u32&)one);
+		stream_vector(buffer, scale_x, 0, 0, offset_x);
+		stream_vector((char*)buffer + 16, 0, scale_y, 0, offset_y);
+		stream_vector((char*)buffer + 32, 0, 0, scale_z, offset_z);
+		stream_vector((char*)buffer + 48, 0, 0, 0, 1.0f);
 	}
 
 	/**
@@ -562,6 +502,24 @@ namespace rsx
 	{
 		// Get timestamp, and convert it from microseconds to nanoseconds
 		return get_system_time() * 1000;
+	}
+
+	raw_program thread::get_raw_program() const
+	{
+		raw_program result;
+
+		u32 fp_info = rsx::method_registers[NV4097_SET_SHADER_PROGRAM];
+
+		result.state.output_attributes = rsx::method_registers[NV4097_SET_VERTEX_ATTRIB_OUTPUT_MASK];
+		result.state.ctrl = rsx::method_registers[NV4097_SET_SHADER_CONTROL];
+
+		result.vertex_shader.ucode_ptr = transform_program;
+		result.vertex_shader.offset = rsx::method_registers[NV4097_SET_TRANSFORM_PROGRAM_START];
+
+		result.fragment_shader.ucode_ptr = vm::base(rsx::get_address(fp_info & ~0x3, (fp_info & 0x3) - 1));
+		result.fragment_shader.offset = 0;
+
+		return result;
 	}
 
 	void thread::reset()

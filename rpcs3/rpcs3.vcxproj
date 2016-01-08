@@ -61,21 +61,21 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>.\;..\wxWidgets\include;..\SDL-1.3.0-5538\include;..\SDL_image-1.2.10;..\pthreads-2.8.0;..\;..\ffmpeg\WindowsInclude;..\ffmpeg\Windows\x86_64\Include;.\OpenAL\include;$(IncludePath);..\asmjit\src\asmjit;$(UniversalCRT_IncludePath);..\minidx12\Include</IncludePath>
+    <IncludePath>$(SolutionDir)rsx_program_decompiler\rsx_decompiler;.\;..\wxWidgets\include;..\SDL-1.3.0-5538\include;..\SDL_image-1.2.10;..\pthreads-2.8.0;..\;..\ffmpeg\WindowsInclude;..\ffmpeg\Windows\x86_64\Include;.\OpenAL\include;$(IncludePath);..\asmjit\src\asmjit;$(UniversalCRT_IncludePath);..\minidx12\Include</IncludePath>
     <OutDir>$(SolutionDir)bin\</OutDir>
     <LibraryPath>$(SolutionDir)lib\$(Configuration)-$(Platform)\;$(UniversalCRT_LibraryPath_x64);$(LibraryPath)</LibraryPath>
     <TargetName>$(ProjectName)-dbg</TargetName>
     <IntDir>$(SolutionDir)tmp\$(ProjectName)-$(Configuration)-$(Platform)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">
-    <IncludePath>.\;..\wxWidgets\include;..\SDL-1.3.0-5538\include;..\SDL_image-1.2.10;..\pthreads-2.8.0;..\;..\ffmpeg\WindowsInclude;..\ffmpeg\Windows\x86_64\Include;.\OpenAL\include;$(IncludePath);..\asmjit\src\asmjit;$(UniversalCRT_IncludePath);..\minidx12\Include</IncludePath>
+    <IncludePath>$(SolutionDir)rsx_program_decompiler\rsx_decompiler;.\;..\wxWidgets\include;..\SDL-1.3.0-5538\include;..\SDL_image-1.2.10;..\pthreads-2.8.0;..\;..\ffmpeg\WindowsInclude;..\ffmpeg\Windows\x86_64\Include;.\OpenAL\include;$(IncludePath);..\asmjit\src\asmjit;$(UniversalCRT_IncludePath);..\minidx12\Include</IncludePath>
     <OutDir>$(SolutionDir)bin\</OutDir>
     <LibraryPath>$(SolutionDir)lib\$(Configuration)-$(Platform)\;$(SolutionDir)lib\Debug-$(Platform)\;$(UniversalCRT_LibraryPath_x64);$(LibraryPath);$(SolutionDir)lib\$(Configuration)-$(Platform)\</LibraryPath>
     <TargetName>$(ProjectName)-dbg</TargetName>
     <IntDir>$(SolutionDir)tmp\$(ProjectName)-$(Configuration)-$(Platform)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug - MemLeak|x64'">
-    <IncludePath>.\;..\wxWidgets\include;..\SDL-1.3.0-5538\include;..\SDL_image-1.2.10;..\pthreads-2.8.0;..\;..\ffmpeg\WindowsInclude;..\ffmpeg\Windows\x86_64\Include;.\OpenAL\include;$(UniversalCRT_IncludePath);$(IncludePath);..\minidx12\Include</IncludePath>
+    <IncludePath>$(SolutionDir)rsx_program_decompiler\rsx_decompiler;.\;..\wxWidgets\include;..\SDL-1.3.0-5538\include;..\SDL_image-1.2.10;..\pthreads-2.8.0;..\;..\ffmpeg\WindowsInclude;..\ffmpeg\Windows\x86_64\Include;.\OpenAL\include;$(UniversalCRT_IncludePath);$(IncludePath);..\minidx12\Include</IncludePath>
     <OutDir>$(SolutionDir)bin\</OutDir>
     <LibraryPath>$(SolutionDir)lib\$(Configuration)-$(Platform)\;$(SolutionDir)lib\Debug-$(Platform)\;$(UniversalCRT_LibraryPath_x64);$(LibraryPath);$(SolutionDir)lib\$(Configuration)-$(Platform)\</LibraryPath>
     <TargetName>$(ProjectName)-dbg</TargetName>
@@ -83,7 +83,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>.\;..\wxWidgets\include;..\SDL-1.3.0-5538\include;..\SDL_image-1.2.10;..\pthreads-2.8.0;..\;..\ffmpeg\WindowsInclude;..\ffmpeg\Windows\x86_64\Include;.\OpenAL\include;$(IncludePath);..\asmjit\src\asmjit;$(UniversalCRT_IncludePath);..\minidx12\Include</IncludePath>
+    <IncludePath>$(SolutionDir)rsx_program_decompiler\rsx_decompiler;.\;..\wxWidgets\include;..\SDL-1.3.0-5538\include;..\SDL_image-1.2.10;..\pthreads-2.8.0;..\;..\ffmpeg\WindowsInclude;..\ffmpeg\Windows\x86_64\Include;.\OpenAL\include;$(IncludePath);..\asmjit\src\asmjit;$(UniversalCRT_IncludePath);..\minidx12\Include</IncludePath>
     <OutDir>$(SolutionDir)bin\</OutDir>
     <LibraryPath>$(SolutionDir)lib\$(Configuration)-$(Platform)\;$(UniversalCRT_LibraryPath_x64);$(LibraryPath)</LibraryPath>
     <LinkIncremental>false</LinkIncremental>
@@ -92,7 +92,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>.\;..\wxWidgets\include;..\SDL-1.3.0-5538\include;..\SDL_image-1.2.10;..\pthreads-2.8.0;..\;..\ffmpeg\WindowsInclude;..\ffmpeg\Windows\x86_64\Include;.\OpenAL\include;$(IncludePath);..\asmjit\src\asmjit;$(UniversalCRT_IncludePath);..\minidx12\Include</IncludePath>
+    <IncludePath>$(SolutionDir)rsx_program_decompiler\rsx_decompiler;.\;..\wxWidgets\include;..\SDL-1.3.0-5538\include;..\SDL_image-1.2.10;..\pthreads-2.8.0;..\;..\ffmpeg\WindowsInclude;..\ffmpeg\Windows\x86_64\Include;.\OpenAL\include;$(IncludePath);..\asmjit\src\asmjit;$(UniversalCRT_IncludePath);..\minidx12\Include</IncludePath>
     <OutDir>$(SolutionDir)bin\</OutDir>
     <LibraryPath>$(SolutionDir)lib\$(Configuration)-$(Platform)\;$(SolutionDir)lib\Release-$(Platform)\;$(UniversalCRT_LibraryPath_x64);$(LibraryPath)</LibraryPath>
     <LinkIncremental>false</LinkIncremental>
@@ -124,18 +124,23 @@
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories Condition="'$(Configuration)|$(Platform)'=='Debug - MemLeak|x64'">..\OpenAL\libs\Win64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Debug - MemLeak|x64'">rsx_decompiler.lib;shader_code.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <Link>
       <AdditionalLibraryDirectories Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">..\OpenAL\libs\Win64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">rsx_decompiler.lib;shader_code.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <Link>
       <AdditionalLibraryDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\OpenAL\libs\Win64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">rsx_decompiler.lib;shader_code.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <Link>
       <AdditionalLibraryDirectories Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\OpenAL\libs\Win64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Release|x64'">rsx_decompiler.lib;shader_code.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <Link>
       <AdditionalLibraryDirectories Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">..\OpenAL\libs\Win64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">rsx_decompiler.lib;shader_code.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>

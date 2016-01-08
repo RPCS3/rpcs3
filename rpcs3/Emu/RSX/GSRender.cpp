@@ -4,6 +4,7 @@
 
 #include "GSManager.h"
 #include "GSRender.h"
+#include "rsx_cache.h"
 
 
 draw_context_t GSFrameBase::new_context()
