@@ -19,3 +19,6 @@
 [submodule "rsx_program_decompiler"]
 	path = rsx_program_decompiler
 	url = https://github.com/RPCS3/rsx_program_decompiler
+[submodule "GSL"]
+	path = GSL
+	url = https://github.com/Microsoft/GSL.git

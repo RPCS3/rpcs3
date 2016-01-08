@@ -25,7 +25,7 @@ __Windows__
 * [Python](https://www.python.org/downloads/) (optional, required only for LLVM build; add to PATH)
 
 __Linux__
-* GCC 4.9.0+ or Clang 3.5.0+
+* GCC 5.1+ or Clang 3.5.0+
 * Debian & Ubuntu: `sudo apt-get install libopenal-dev libwxgtk3.0-dev build-essential libglew-dev`
 * Arch: `sudo pacman -S glew openal wxgtk cmake llvm`
 

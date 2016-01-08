@@ -112,6 +112,7 @@ ${LLVM_INCLUDE_DIRS}
 "${RPCS3_SRC_DIR}/.."
 "${RPCS3_SRC_DIR}/../asmjit/src/asmjit"
 "${RPCS3_SRC_DIR}/../glm"
+"${RPCS3_SRC_DIR}/../GSL/include"
 "${RPCS3_SRC_DIR}/../rsx_program_decompiler/rsx_decompiler"
 "${RPCS3_SRC_DIR}/../rsx_program_decompiler/shader_code"
 )
