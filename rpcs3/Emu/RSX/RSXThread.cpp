@@ -347,7 +347,7 @@ namespace rsx
 			color_index_to_record = { 0, 1, 2, 3 };
 			break;
 		}
-/*		for (size_t i : color_index_to_record)
+		for (size_t i : color_index_to_record)
 		{
 			draw_state.color_buffer[i].width = clip_w;
 			draw_state.color_buffer[i].height = clip_h;
@@ -364,7 +364,7 @@ namespace rsx
 			draw_state.stencil.height = clip_h;
 			draw_state.stencil.data.resize(clip_w * clip_h * 4);
 			copy_stencil_buffer_to_memory(draw_state.stencil.data.data());
-		}*/
+		}
 		draw_state.programs = get_programs();
 		draw_state.name = name;
 		frame_debug.draw_calls.push_back(draw_state);
