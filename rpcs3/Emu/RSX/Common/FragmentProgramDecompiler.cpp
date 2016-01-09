@@ -460,7 +460,22 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 	case RSX_FP_OPCODE_TXPBEM: SetDst("textureProj($t, $0.xyz, $1.x)"); return true;
 	case RSX_FP_OPCODE_TXD: LOG_ERROR(RSX, "Unimplemented TEX_SRB instruction: TXD"); return true;
 	case RSX_FP_OPCODE_TXB: SetDst("texture($t, $0.xy, $1.x)"); return true;
-	case RSX_FP_OPCODE_TXL: SetDst("textureLod($t, $0.xy, $1.x)"); return true;
+	case RSX_FP_OPCODE_TXL:
+		if (dst.tex_num >= m_texture_dimensions.size())
+		{
+			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE_LOD));
+			return true;
+		}
+		switch (m_texture_dimensions[dst.tex_num])
+		{
+		case texture_dimension::texture_dimension_2d:
+			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE_LOD));
+			return true;
+		case texture_dimension::texture_dimension_cubemap:
+			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_CUBE_SAMPLE_LOD));
+			return true;
+		}
+		return false;
 	case RSX_FP_OPCODE_UP2: SetDst("unpackSnorm2x16($0)"); return true; // TODO: More testing (Sonic The Hedgehog (NPUB-30442/NPEB-00478))
 	case RSX_FP_OPCODE_UP4: SetDst("unpackSnorm4x8($0)"); return true; // TODO: More testing (Sonic The Hedgehog (NPUB-30442/NPEB-00478))
 	case RSX_FP_OPCODE_UP16: LOG_ERROR(RSX, "Unimplemented TEX_SRB instruction: UP16"); return true;
