@@ -269,9 +269,19 @@ namespace rsx
 		{
 			u8 type = arg >> 24;
 			u32 offset = arg & 0xffffff;
+			u32 report_dma = method_registers[NV4097_SET_CONTEXT_DMA_REPORT];
+			u32 location;
 
-			//TODO: use DMA
-			vm::ps3::ptr<CellGcmReportData> result = { rsx->local_mem_addr + offset, vm::addr };
+			switch (report_dma)
+			{
+			case CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_REPORT: location = CELL_GCM_LOCATION_LOCAL; break;
+			case CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_MAIN: location = CELL_GCM_LOCATION_MAIN; break;
+			default:
+				LOG_WARNING(RSX, "nv4097::get_report: bad report dma: 0x%x", report_dma);
+				return;
+			}
+
+			vm::ps3::ptr<CellGcmReportData> result = { get_address(offset, location), vm::addr };
 
 			result->timer = rsx->timestamp();
 

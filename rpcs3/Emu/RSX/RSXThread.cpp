@@ -654,6 +654,8 @@ namespace rsx
 
 		method_registers[NV4097_SET_ZSTENCIL_CLEAR_VALUE] = 0xffffffff;
 
+		method_registers[NV4097_SET_CONTEXT_DMA_REPORT] = CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_REPORT;
+
 		// Reset vertex attrib array
 		for (int i = 0; i < limits::vertex_count; i++)
 		{
