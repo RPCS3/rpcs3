@@ -962,6 +962,14 @@ TEST_F(EmitterTest, QuoteNull) {
   ExpectEmit("\"null\"");
 }
 
+TEST_F(EmitterTest, ValueOfDoubleQuote) {
+  out << YAML::BeginMap;
+  out << YAML::Key << "foo" << YAML::Value << '"';
+  out << YAML::EndMap;
+
+  ExpectEmit("foo: \"\\\"\"");
+}
+
 class EmitterErrorTest : public ::testing::Test {
  protected:
   void ExpectEmitError(const std::string& expectedError) {
