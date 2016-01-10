@@ -248,6 +248,7 @@ namespace
 		{
 		case CELL_GCM_TEXTURE_NEAREST: return D3D12_FILTER_TYPE_POINT;
 		case CELL_GCM_TEXTURE_LINEAR: return D3D12_FILTER_TYPE_LINEAR;
+		case CELL_GCM_TEXTURE_UNKNOWN_MAG_FILTER: return D3D12_FILTER_TYPE_LINEAR;
 		}
 		throw EXCEPTION("Invalid mag filter (0x%x)", mag_filter);
 	}
