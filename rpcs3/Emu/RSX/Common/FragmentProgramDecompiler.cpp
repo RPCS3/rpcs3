@@ -341,7 +341,9 @@ bool FragmentProgramDecompiler::handle_sct(u32 opcode)
 	{
 	case RSX_FP_OPCODE_ADD: SetDst("($0 + $1)"); return true;
 	case RSX_FP_OPCODE_DIV: SetDst("($0 / $1)"); return true;
-	case RSX_FP_OPCODE_DIVSQ: SetDst("($0 / sqrt($1).xxxx)"); return true;
+	// Note: DIVSQ is not IEEE compliant. divsq(0, 0) is 0 (Super Puzzle Fighter II Turbo HD Remix).
+	// sqrt(x, 0) might be equal to some big value (in absolute) whose sign is sign(x) but it has to be proven.
+	case RSX_FP_OPCODE_DIVSQ: SetDst("divsq_legacy($0, $1)"); return true;
 	case RSX_FP_OPCODE_DP2: SetDst(getFunction(FUNCTION::FUNCTION_DP2)); return true;
 	case RSX_FP_OPCODE_DP3: SetDst(getFunction(FUNCTION::FUNCTION_DP3)); return true;
 	case RSX_FP_OPCODE_DP4: SetDst(getFunction(FUNCTION::FUNCTION_DP4)); return true;
@@ -351,8 +353,11 @@ bool FragmentProgramDecompiler::handle_sct(u32 opcode)
 	case RSX_FP_OPCODE_MIN: SetDst("min($0, $1)"); return true;
 	case RSX_FP_OPCODE_MOV: SetDst("$0"); return true;
 	case RSX_FP_OPCODE_MUL: SetDst("($0 * $1)"); return true;
-	case RSX_FP_OPCODE_RCP: SetDst("1.0 / $0"); return true;
-	case RSX_FP_OPCODE_RSQ: SetDst("1.f / sqrt($0)"); return true;
+	// Note: It's higly likely that RCP is not IEEE compliant but a game that uses rcp(0) has to be found
+	case RSX_FP_OPCODE_RCP: SetDst("rcp_legacy($0)"); return true;
+	// Note: RSQ is not IEEE compliant. rsq(0) is some big number (Silent Hill 3 HD)
+	// It is not know what happens if 0 is negative.
+	case RSX_FP_OPCODE_RSQ: SetDst("rsq_legacy($0)"); return true;
 	case RSX_FP_OPCODE_SEQ: SetDst(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SEQ, "$0", "$1") + ")"); return true;
 	case RSX_FP_OPCODE_SFL: SetDst(getFunction(FUNCTION::FUNCTION_SFL)); return true;
 	case RSX_FP_OPCODE_SGE: SetDst(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SGE, "$0", "$1") + ")"); return true;
@@ -372,7 +377,9 @@ bool FragmentProgramDecompiler::handle_scb(u32 opcode)
 	case RSX_FP_OPCODE_ADD: SetDst("($0 + $1)"); return true;
 	case RSX_FP_OPCODE_COS: SetDst("cos($0.xxxx)"); return true;
 	case RSX_FP_OPCODE_DIV: SetDst("($0 / $1)"); return true;
-	case RSX_FP_OPCODE_DIVSQ: SetDst("($0 / sqrt($1).xxxx)"); return true;
+	// Note: DIVSQ is not IEEE compliant. sqrt(0, 0) is 0 (Super Puzzle Fighter II Turbo HD Remix).
+	// sqrt(x, 0) might be equal to some big value (in absolute) whose sign is sign(x) but it has to be proven.
+	case RSX_FP_OPCODE_DIVSQ: SetDst("divsq_legacy($0, sqrt($1).xxxx)"); return true;
 	case RSX_FP_OPCODE_DP2: SetDst(getFunction(FUNCTION::FUNCTION_DP2)); return true;
 	case RSX_FP_OPCODE_DP3: SetDst(getFunction(FUNCTION::FUNCTION_DP3)); return true;
 	case RSX_FP_OPCODE_DP4: SetDst(getFunction(FUNCTION::FUNCTION_DP4)); return true;
@@ -453,7 +460,22 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 	case RSX_FP_OPCODE_TXPBEM: SetDst("textureProj($t, $0.xyz, $1.x)"); return true;
 	case RSX_FP_OPCODE_TXD: LOG_ERROR(RSX, "Unimplemented TEX_SRB instruction: TXD"); return true;
 	case RSX_FP_OPCODE_TXB: SetDst("texture($t, $0.xy, $1.x)"); return true;
-	case RSX_FP_OPCODE_TXL: SetDst("textureLod($t, $0.xy, $1.x)"); return true;
+	case RSX_FP_OPCODE_TXL:
+		if (dst.tex_num >= m_texture_dimensions.size())
+		{
+			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE_LOD));
+			return true;
+		}
+		switch (m_texture_dimensions[dst.tex_num])
+		{
+		case texture_dimension::texture_dimension_2d:
+			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE_LOD));
+			return true;
+		case texture_dimension::texture_dimension_cubemap:
+			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_CUBE_SAMPLE_LOD));
+			return true;
+		}
+		return false;
 	case RSX_FP_OPCODE_UP2: SetDst("unpackSnorm2x16($0)"); return true; // TODO: More testing (Sonic The Hedgehog (NPUB-30442/NPEB-00478))
 	case RSX_FP_OPCODE_UP4: SetDst("unpackSnorm4x8($0)"); return true; // TODO: More testing (Sonic The Hedgehog (NPUB-30442/NPEB-00478))
 	case RSX_FP_OPCODE_UP16: LOG_ERROR(RSX, "Unimplemented TEX_SRB instruction: UP16"); return true;

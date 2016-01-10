@@ -14,10 +14,10 @@ namespace rsx
 	rsx_method_t methods[0x10000 >> 2]{};
 
 	template<typename Type> struct vertex_data_type_from_element_type;
-	template<> struct vertex_data_type_from_element_type<float> { enum { type = CELL_GCM_VERTEX_F }; };
-	template<> struct vertex_data_type_from_element_type<f16> { enum { type = CELL_GCM_VERTEX_SF }; };
-	template<> struct vertex_data_type_from_element_type<u8> { enum { type = CELL_GCM_VERTEX_UB }; };
-	template<> struct vertex_data_type_from_element_type<u16> { enum { type = CELL_GCM_VERTEX_S1 }; };
+	template<> struct vertex_data_type_from_element_type<float> { static const Vertex_base_type type = Vertex_base_type::f; };
+	template<> struct vertex_data_type_from_element_type<f16> { static const Vertex_base_type type = Vertex_base_type::sf; };
+	template<> struct vertex_data_type_from_element_type<u8> { static const Vertex_base_type type = Vertex_base_type::ub; };
+	template<> struct vertex_data_type_from_element_type<u16> { static const Vertex_base_type type = Vertex_base_type::s1; };
 
 	namespace nv406e
 	{
@@ -248,7 +248,7 @@ namespace rsx
 							continue;
 
 						u32 count = u32(rsx->register_vertex_data[i].size()) /
-							rsx::get_vertex_type_size(rsx->register_vertex_info[i].type) * rsx->register_vertex_info[i].size;
+							rsx::get_vertex_type_size_on_host(rsx->register_vertex_info[i].type, rsx->register_vertex_info[i].size);
 
 						if (count < min_count)
 							min_count = count;
