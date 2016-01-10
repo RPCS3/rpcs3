@@ -576,8 +576,6 @@ void GLGSRender::on_exit()
 
 	if (m_fragment_constants_buffer)
 		m_fragment_constants_buffer.remove();
-
-	m_prog_buffer.clear();
 }
 
 void nv4097_clear_surface(u32 arg, GLGSRender* renderer)
@@ -698,7 +696,7 @@ bool GLGSRender::load_program()
 			fragment_program.texture_dimensions.push_back(texture_dimension::texture_dimension_2d);
 	}
 
-	__glcheck m_program = m_prog_buffer.getGraphicPipelineState(&vertex_program, &fragment_program, nullptr, nullptr);
+	__glcheck m_program = &m_prog_buffer.getGraphicPipelineState(vertex_program, fragment_program, nullptr);
 	__glcheck m_program->use();
 
 #else
@@ -750,10 +748,10 @@ bool GLGSRender::load_program()
 	glUnmapBuffer(GL_UNIFORM_BUFFER);
 
 	glBindBuffer(GL_UNIFORM_BUFFER, m_fragment_constants_buffer.id());
-	size_t buffer_size = m_prog_buffer.get_fragment_constants_buffer_size(&fragment_program);
+	size_t buffer_size = m_prog_buffer.get_fragment_constants_buffer_size(fragment_program);
 	glBufferData(GL_UNIFORM_BUFFER, buffer_size, nullptr, GL_STATIC_DRAW);
 	buffer = glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
-	m_prog_buffer.fill_fragment_constans_buffer(buffer, &fragment_program);
+	m_prog_buffer.fill_fragment_constans_buffer({ static_cast<float*>(buffer), gsl::narrow<int>(buffer_size) }, fragment_program);
 	glUnmapBuffer(GL_UNIFORM_BUFFER);
 
 	return true;

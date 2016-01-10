@@ -57,7 +57,7 @@ struct VertexProgramDecompiler
 
 	//wxString main;
 
-	std::vector<u32>& m_data;
+	const std::vector<u32>& m_data;
 	ParamArray m_parr;
 
 	std::string GetMask(bool is_sca);
@@ -124,6 +124,6 @@ protected:
 	*/
 	virtual void insertMainEnd(std::stringstream &OS) = 0;
 public:
-	VertexProgramDecompiler(std::vector<u32>& data);
+	VertexProgramDecompiler(const RSXVertexProgram& prog);
 	std::string Decompile();
 };

@@ -20,5 +20,5 @@ protected:
 	virtual void insertMainEnd(std::stringstream &OS);
 public:
 	std::vector<size_t> input_slots;
-	D3D12VertexProgramDecompiler(std::vector<u32>& data);
+	D3D12VertexProgramDecompiler(const RSXVertexProgram &prog);
 };

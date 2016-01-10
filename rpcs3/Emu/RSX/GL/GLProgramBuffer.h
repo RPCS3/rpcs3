@@ -5,16 +5,15 @@
 
 struct GLTraits
 {
-	typedef GLVertexProgram VertexProgramData;
-	typedef GLFragmentProgram FragmentProgramData;
-	typedef gl::glsl::program PipelineData;
-	typedef void* PipelineProperties;
-	typedef void* ExtraData;
+	using vertex_program_type = GLVertexProgram;
+	using fragment_program_type = GLFragmentProgram;
+	using pipeline_storage_type = gl::glsl::program;
+	using pipeline_properties = void*;
 
 	static
-	void RecompileFragmentProgram(RSXFragmentProgram *RSXFP, FragmentProgramData& fragmentProgramData, size_t ID)
+	void recompile_fragment_program(const RSXFragmentProgram &RSXFP, fragment_program_type& fragmentProgramData, size_t ID)
 	{
-		fragmentProgramData.Decompile(*RSXFP, RSXFP->texture_dimensions);
+		fragmentProgramData.Decompile(RSXFP);
 		fragmentProgramData.Compile();
 		//checkForGlError("m_fragment_prog.Compile");
 
@@ -22,9 +21,9 @@ struct GLTraits
 	}
 
 	static
-	void RecompileVertexProgram(RSXVertexProgram *RSXVP, VertexProgramData& vertexProgramData, size_t ID)
+	void recompile_vertex_program(const RSXVertexProgram &RSXVP, vertex_program_type& vertexProgramData, size_t ID)
 	{
-		vertexProgramData.Decompile(*RSXVP);
+		vertexProgramData.Decompile(RSXVP);
 		vertexProgramData.Compile();
 		//checkForGlError("m_vertex_prog.Compile");
 
@@ -32,10 +31,10 @@ struct GLTraits
 	}
 
 	static
-	PipelineData *BuildProgram(VertexProgramData &vertexProgramData, FragmentProgramData &fragmentProgramData, const PipelineProperties &pipelineProperties, const ExtraData& extraData)
+	pipeline_storage_type build_pipeline(const vertex_program_type &vertexProgramData, const fragment_program_type &fragmentProgramData, const pipeline_properties &pipelineProperties)
 	{
-		PipelineData *result = new PipelineData();
-		__glcheck result->create()
+		pipeline_storage_type result;
+		__glcheck result.create()
 			.attach(gl::glsl::shader_view(vertexProgramData.id))
 			.attach(gl::glsl::shader_view(fragmentProgramData.id))
 			.bind_fragment_data_location("ocol0", 0)
@@ -43,9 +42,9 @@ struct GLTraits
 			.bind_fragment_data_location("ocol2", 2)
 			.bind_fragment_data_location("ocol3", 3)
 			.make();
-		__glcheck result->use();
+		__glcheck result.use();
 
-		LOG_NOTICE(RSX, "*** prog id = %d", result->id());
+		LOG_NOTICE(RSX, "*** prog id = %d", result.id());
 		LOG_NOTICE(RSX, "*** vp id = %d", vertexProgramData.id);
 		LOG_NOTICE(RSX, "*** fp id = %d", fragmentProgramData.id);
 
@@ -54,14 +53,8 @@ struct GLTraits
 
 		return result;
 	}
-
-	static
-	void DeleteProgram(PipelineData *ptr)
-	{
-		ptr->remove();
-	}
 };
 
-class GLProgramBuffer : public ProgramStateCache<GLTraits>
+class GLProgramBuffer : public program_state_cache<GLTraits>
 {
 };

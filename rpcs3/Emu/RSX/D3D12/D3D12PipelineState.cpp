@@ -36,7 +36,7 @@ void Shader::Compile(const std::string &code, SHADER_TYPE st)
 	}
 }
 
-bool D3D12GSRender::load_program()
+void D3D12GSRender::load_program()
 {
 	u32 transform_program_start = rsx::method_registers[NV4097_SET_TRANSFORM_PROGRAM_START];
 	vertex_program.data.reserve((512 - transform_program_start) * 4);
@@ -256,12 +256,12 @@ bool D3D12GSRender::load_program()
 		prop.CutValue = ((rsx::method_registers[NV4097_SET_INDEX_ARRAY_DMA] >> 4) == CELL_GCM_DRAW_INDEX_ARRAY_TYPE_32) ?
 			D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_0xFFFFFFFF : D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_0xFFFF;
 
-	m_current_pso = m_pso_cache.getGraphicPipelineState(&vertex_program, &fragment_program, prop, std::make_pair(m_device.Get(), m_root_signatures));
-	return m_current_pso != nullptr;
+	m_current_pso = m_pso_cache.getGraphicPipelineState(vertex_program, fragment_program, prop, m_device.Get(), m_root_signatures);
+	return;
 }
 
 std::pair<std::string, std::string> D3D12GSRender::get_programs() const
 {
-	return std::make_pair(m_pso_cache.get_transform_program(vertex_program)->content, m_pso_cache.get_shader_program(fragment_program)->content);
+	return std::make_pair(m_pso_cache.get_transform_program(vertex_program).content, m_pso_cache.get_shader_program(fragment_program).content);
 }
 #endif

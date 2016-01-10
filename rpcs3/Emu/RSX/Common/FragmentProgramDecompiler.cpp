@@ -4,13 +4,13 @@
 
 #include "FragmentProgramDecompiler.h"
 
-FragmentProgramDecompiler::FragmentProgramDecompiler(u32 addr, u32& size, u32 ctrl, const std::vector<texture_dimension> &texture_dimensions) :
-	m_addr(addr),
+FragmentProgramDecompiler::FragmentProgramDecompiler(const RSXFragmentProgram &prog, u32& size) :
+	m_addr(prog.addr),
 	m_size(size),
 	m_const_index(0),
 	m_location(0),
-	m_ctrl(ctrl),
-	m_texture_dimensions(texture_dimensions)
+	m_ctrl(prog.ctrl),
+	m_texture_dimensions(prog.texture_dimensions)
 {
 	m_size = 0;
 }

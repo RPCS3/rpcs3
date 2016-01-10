@@ -181,8 +181,8 @@ void D3D12VertexProgramDecompiler::insertMainEnd(std::stringstream & OS)
 	OS << "}" << std::endl;
 }
 
-D3D12VertexProgramDecompiler::D3D12VertexProgramDecompiler(std::vector<u32>& data) :
-	VertexProgramDecompiler(data)
+D3D12VertexProgramDecompiler::D3D12VertexProgramDecompiler(const RSXVertexProgram &prog) :
+	VertexProgramDecompiler(prog)
 {
 }
 #endif

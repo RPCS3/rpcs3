@@ -334,7 +334,9 @@ public:
 				u32 size;
 				u32 ctrl = (vmfprog.outputFromH0 ? 0 : 0x40) | (vmfprog.depthReplace ? 0xe : 0);
 				std::vector<texture_dimension> td;
-				GLFragmentDecompilerThread(m_glsl_shader, param_array, ptr + vmprog.ucode, size, ctrl, td).Task();
+				RSXFragmentProgram prog;
+				prog.size = 0, prog.addr = ptr + vmprog.ucode, prog.offset = 0, prog.ctrl = ctrl;
+				GLFragmentDecompilerThread(m_glsl_shader, param_array, prog, size).Task();
 				vm::close();
 			}
 		}
@@ -383,7 +385,9 @@ public:
 			}
 
 			TaskVP();
-			GLVertexDecompilerThread(m_data, m_glsl_shader, param_array).Task();
+			RSXVertexProgram prog;
+			prog.data = m_data;
+			GLVertexDecompilerThread(prog, m_glsl_shader, param_array).Task();
 		}
 	}
 

@@ -6,8 +6,8 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 
-D3D12FragmentDecompiler::D3D12FragmentDecompiler(u32 addr, u32& size, u32 ctrl, const std::vector<texture_dimension> &texture_dimensions) :
-	FragmentProgramDecompiler(addr, size, ctrl, texture_dimensions)
+D3D12FragmentDecompiler::D3D12FragmentDecompiler(const RSXFragmentProgram &prog, u32& size) :
+	FragmentProgramDecompiler(prog, size)
 {
 
 }

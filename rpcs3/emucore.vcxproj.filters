@@ -933,6 +933,9 @@
     <ClCompile Include="stdafx.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\RSX\Common\ProgramStateCache.cpp">
+      <Filter>Emu\GPU\RSX\Common</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
