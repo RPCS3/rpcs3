@@ -112,14 +112,9 @@ private:
 	resource_storage &get_current_resource_storage();
 	resource_storage &get_non_current_resource_storage();
 
-	// Constants storage
-	data_heap<ID3D12Resource, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT> m_constants_data;
-	// Vertex storage
-	data_heap<ID3D12Resource, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT> m_vertex_index_data;
-	// Texture storage
-	data_heap<ID3D12Resource, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT> m_texture_upload_data;
-	data_heap<ID3D12Heap, D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT> m_uav_heap;
-	data_heap<ID3D12Resource, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT> m_readback_resources;
+	// Textures, constants, index and vertex buffers storage
+	data_heap m_buffer_data;
+	data_heap m_readback_resources;
 
 	render_targets m_rtts;
 
@@ -134,11 +129,11 @@ private:
 	ID3D12Resource *m_dummy_texture;
 
 	// Store previous fbo addresses to detect RTT config changes.
-	u32 m_previous_address_a;
-	u32 m_previous_address_b;
-	u32 m_previous_address_c;
-	u32 m_previous_address_d;
-	u32 m_previous_address_z;
+	std::array<u32, 4> m_previous_color_address = {};
+	u32 m_previous_address_z = 0;
+	u32 m_previous_target = 0;
+	u32 m_previous_clip_horizontal = 0;
+	u32 m_previous_clip_vertical = 0;
 public:
 	D3D12GSRender();
 	virtual ~D3D12GSRender();

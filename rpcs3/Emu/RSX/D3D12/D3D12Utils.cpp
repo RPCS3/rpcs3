@@ -28,12 +28,7 @@ std::pair<ID3DBlob *, ID3DBlob *> compileF32toU8CS()
 
 	ID3DBlob *bytecode;
 	Microsoft::WRL::ComPtr<ID3DBlob> errorBlob;
-	HRESULT hr = wrapD3DCompile(shaderCode, strlen(shaderCode), "test", nullptr, nullptr, "main", "cs_5_0", 0, 0, &bytecode, errorBlob.GetAddressOf());
-	if (hr != S_OK)
-	{
-		const char *tmp = (const char*)errorBlob->GetBufferPointer();
-		LOG_ERROR(RSX, tmp);
-	}
+	CHECK_HRESULT(wrapD3DCompile(shaderCode, strlen(shaderCode), "test", nullptr, nullptr, "main", "cs_5_0", 0, 0, &bytecode, errorBlob.GetAddressOf()));
 	CD3DX12_DESCRIPTOR_RANGE descriptorRange[] =
 	{
 		// Textures
@@ -47,13 +42,7 @@ std::pair<ID3DBlob *, ID3DBlob *> compileF32toU8CS()
 
 	ID3DBlob *rootSignatureBlob;
 
-	hr = wrapD3D12SerializeRootSignature(&CD3DX12_ROOT_SIGNATURE_DESC(1, &RP), D3D_ROOT_SIGNATURE_VERSION_1, &rootSignatureBlob, &errorBlob);
-	if (hr != S_OK)
-	{
-		const char *tmp = (const char*)errorBlob->GetBufferPointer();
-		LOG_ERROR(RSX, tmp);
-	}
-
+	CHECK_HRESULT(wrapD3D12SerializeRootSignature(&CD3DX12_ROOT_SIGNATURE_DESC(1, &RP), D3D_ROOT_SIGNATURE_VERSION_1, &rootSignatureBlob, &errorBlob));
 	return std::make_pair(bytecode, rootSignatureBlob);
 }
 
@@ -78,12 +67,7 @@ void D3D12GSRender::Shader::Init(ID3D12Device *device, ID3D12CommandQueue *gfxco
 
 	Microsoft::WRL::ComPtr<ID3DBlob> fsBytecode;
 	Microsoft::WRL::ComPtr<ID3DBlob> errorBlob;
-	HRESULT hr = wrapD3DCompile(fsCode, strlen(fsCode), "test", nullptr, nullptr, "main", "ps_5_0", 0, 0, &fsBytecode, errorBlob.GetAddressOf());
-	if (hr != S_OK)
-	{
-		const char *tmp = (const char*)errorBlob->GetBufferPointer();
-		LOG_ERROR(RSX, tmp);
-	}
+	CHECK_HRESULT(wrapD3DCompile(fsCode, strlen(fsCode), "test", nullptr, nullptr, "main", "ps_5_0", 0, 0, &fsBytecode, errorBlob.GetAddressOf()));
 
 	const char *vsCode = STRINGIFY(
 	struct VertexInput \n
@@ -108,12 +92,7 @@ void D3D12GSRender::Shader::Init(ID3D12Device *device, ID3D12CommandQueue *gfxco
 	);
 
 	Microsoft::WRL::ComPtr<ID3DBlob> vsBytecode;
-	hr = wrapD3DCompile(vsCode, strlen(vsCode), "test", nullptr, nullptr, "main", "vs_5_0", 0, 0, &vsBytecode, errorBlob.GetAddressOf());
-	if (hr != S_OK)
-	{
-		const char *tmp = (const char*)errorBlob->GetBufferPointer();
-		LOG_ERROR(RSX, tmp);
-	}
+	CHECK_HRESULT(wrapD3DCompile(vsCode, strlen(vsCode), "test", nullptr, nullptr, "main", "vs_5_0", 0, 0, &vsBytecode, errorBlob.GetAddressOf()));
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
 	psoDesc.PS.BytecodeLength = fsBytecode->GetBufferSize();
@@ -163,14 +142,8 @@ void D3D12GSRender::Shader::Init(ID3D12Device *device, ID3D12CommandQueue *gfxco
 
 	Microsoft::WRL::ComPtr<ID3DBlob> rootSignatureBlob;
 
-	hr = wrapD3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &rootSignatureBlob, &errorBlob);
-	if (hr != S_OK)
-	{
-		const char *tmp = (const char*)errorBlob->GetBufferPointer();
-		LOG_ERROR(RSX, tmp);
-	}
-
-	hr = device->CreateRootSignature(0, rootSignatureBlob->GetBufferPointer(), rootSignatureBlob->GetBufferSize(), IID_PPV_ARGS(&m_rootSignature));
+	CHECK_HRESULT(wrapD3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &rootSignatureBlob, &errorBlob));
+	CHECK_HRESULT(device->CreateRootSignature(0, rootSignatureBlob->GetBufferPointer(), rootSignatureBlob->GetBufferSize(), IID_PPV_ARGS(&m_rootSignature)));
 
 	psoDesc.pRootSignature = m_rootSignature;
 	psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;

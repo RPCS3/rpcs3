@@ -3,48 +3,6 @@
 #include "d3dx12.h"
 
 
-template<typename T>
-struct init_heap
-{
-	static T* init(ID3D12Device *device, size_t heapSize, D3D12_HEAP_TYPE type, D3D12_HEAP_FLAGS flags);
-};
-
-template<>
-struct init_heap<ID3D12Heap>
-{
-	static ID3D12Heap* init(ID3D12Device *device, size_t heap_size, D3D12_HEAP_TYPE type, D3D12_HEAP_FLAGS flags)
-	{
-		ID3D12Heap *result;
-		D3D12_HEAP_DESC heap_desc = {};
-		heap_desc.SizeInBytes = heap_size;
-		heap_desc.Properties.Type = type;
-		heap_desc.Flags = flags;
-		CHECK_HRESULT(device->CreateHeap(&heap_desc, IID_PPV_ARGS(&result)));
-		return result;
-	}
-};
-
-template<>
-struct init_heap<ID3D12Resource>
-{
-	static ID3D12Resource* init(ID3D12Device *device, size_t heap_size, D3D12_HEAP_TYPE type, D3D12_RESOURCE_STATES state)
-	{
-		ID3D12Resource *result;
-		D3D12_HEAP_PROPERTIES heap_properties = {};
-		heap_properties.Type = type;
-		CHECK_HRESULT(device->CreateCommittedResource(&heap_properties,
-			D3D12_HEAP_FLAG_NONE,
-			&CD3DX12_RESOURCE_DESC::Buffer(heap_size),
-			state,
-			nullptr,
-			IID_PPV_ARGS(&result))
-			);
-
-		return result;
-	}
-};
-
-
 /**
 * Wrapper around a ID3D12Resource or a ID3D12Heap.
 * Acts as a ring buffer : hold a get and put pointers,
@@ -52,43 +10,30 @@ struct init_heap<ID3D12Resource>
 * and get is used as beginning of in use data space.
 * This wrapper checks that put pointer doesn't cross get one.
 */
-template<typename T, size_t alignment>
-struct data_heap
+class data_heap
 {
-	T *m_heap;
-	size_t m_size;
-	size_t m_put_pos; // Start of free space
-	size_t m_get_pos; // End of free space
-
-	template <typename... arg_type>
-	void init(ID3D12Device *device, size_t heap_size, D3D12_HEAP_TYPE type, arg_type... args)
-	{
-		m_size = heap_size;
-		m_heap = init_heap<T>::init(device, heap_size, type, args...);
-		m_put_pos = 0;
-		m_get_pos = heap_size - 1;
-	}
-
 	/**
 	* Does alloc cross get position ?
 	*/
+	template<int Alignement>
 	bool can_alloc(size_t size) const
 	{
-		size_t alloc_size = align(size, alignment);
-		if (m_put_pos + alloc_size < m_size)
+		size_t alloc_size = align(size, Alignement);
+		size_t aligned_put_pos = align(m_put_pos, Alignement);
+		if (aligned_put_pos + alloc_size < m_size)
 		{
 			// range before get
-			if (m_put_pos + alloc_size < m_get_pos)
+			if (aligned_put_pos + alloc_size < m_get_pos)
 				return true;
 			// range after get
-			if (m_put_pos > m_get_pos)
+			if (aligned_put_pos > m_get_pos)
 				return true;
 			return false;
 		}
 		else
 		{
 			// ..]....[..get..
-			if (m_put_pos < m_get_pos)
+			if (aligned_put_pos < m_get_pos)
 				return false;
 			// ..get..]...[...
 			// Actually all resources extending beyond heap space starts at 0
@@ -98,15 +43,40 @@ struct data_heap
 		}
 	}
 
+	size_t m_size;
+	size_t m_put_pos; // Start of free space
+	ComPtr<ID3D12Resource> m_heap;
+public:
+	size_t m_get_pos; // End of free space
+
+	template <typename... arg_type>
+	void init(ID3D12Device *device, size_t heap_size, D3D12_HEAP_TYPE type, D3D12_RESOURCE_STATES state)
+	{
+		m_size = heap_size;
+		m_put_pos = 0;
+		m_get_pos = heap_size - 1;
+
+		D3D12_HEAP_PROPERTIES heap_properties = {};
+		heap_properties.Type = type;
+		CHECK_HRESULT(device->CreateCommittedResource(&heap_properties,
+			D3D12_HEAP_FLAG_NONE,
+			&CD3DX12_RESOURCE_DESC::Buffer(heap_size),
+			state,
+			nullptr,
+			IID_PPV_ARGS(m_heap.GetAddressOf()))
+			);
+	}
+
+	template<int Alignement>
 	size_t alloc(size_t size)
 	{
-		assert(can_alloc(size));
-		size_t alloc_size = align(size, alignment);
-		if (m_put_pos + alloc_size < m_size)
+		if (!can_alloc<Alignement>(size)) throw EXCEPTION("Working buffer not big enough");
+		size_t alloc_size = align(size, Alignement);
+		size_t aligned_put_pos  = align(m_put_pos, Alignement);
+		if (aligned_put_pos + alloc_size < m_size)
 		{
-			size_t old_put_pos = m_put_pos;
-			m_put_pos += alloc_size;
-			return old_put_pos;
+			m_put_pos = aligned_put_pos + alloc_size;
+			return aligned_put_pos;
 		}
 		else
 		{
@@ -115,9 +85,37 @@ struct data_heap
 		}
 	}
 
-	void release()
+	template<typename T>
+	T* map(const D3D12_RANGE &range)
 	{
-		m_heap->Release();
+		void *buffer;
+		CHECK_HRESULT(m_heap->Map(0, &range, &buffer));
+		void *mapped_buffer = (char*)buffer + range.Begin;
+		return static_cast<T*>(mapped_buffer);
+	}
+
+	template<typename T>
+	T* map(size_t heap_offset)
+	{
+		void *buffer;
+		CHECK_HRESULT(m_heap->Map(0, nullptr, &buffer));
+		void *mapped_buffer = (char*)buffer + heap_offset;
+		return static_cast<T*>(mapped_buffer);
+	}
+
+	void unmap(const D3D12_RANGE &range)
+	{
+		m_heap->Unmap(0, &range);
+	}
+
+	void unmap()
+	{
+		m_heap->Unmap(0, nullptr);
+	}
+
+	ID3D12Resource* get_heap()
+	{
+		return m_heap.Get();
 	}
 
 	/**
@@ -230,11 +228,8 @@ struct resource_storage
 	 * This means newer resources shouldn't allocate memory crossing this position
 	 * until the frame rendering is over.
 	 */
-	size_t constants_heap_get_pos;
-	size_t vertex_index_heap_get_pos;
-	size_t texture_upload_heap_get_pos;
+	size_t buffer_heap_get_pos;
 	size_t readback_heap_get_pos;
-	size_t uav_heap_get_pos;
 
 	void reset();
 	void init(ID3D12Device *device);
