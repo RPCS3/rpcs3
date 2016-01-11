@@ -23,7 +23,7 @@ enum
 	CELL_GCM_DISPLAY_FREQUENCY_DISABLE = 3,
 };
 
-enum class Vertex_base_type
+enum class Vertex_base_type : u8
 {
 	s1, ///< signed byte
 	f, ///< float
@@ -36,11 +36,29 @@ enum class Vertex_base_type
 
 Vertex_base_type to_vertex_base_type(u8 in);
 
-enum
+enum class Index_array_type : u8
 {
-	CELL_GCM_DRAW_INDEX_ARRAY_TYPE_32 = 0,
-	CELL_GCM_DRAW_INDEX_ARRAY_TYPE_16 = 1,
+	unsigned_32b,
+	unsigned_16b,
 };
+
+Index_array_type to_index_array_type(u8 in);
+
+enum class Primitive_type : u8
+{
+	points,
+	lines,
+	line_loop, // line strip with last end being joined with first end.
+	line_strip,
+	triangles,
+	triangle_strip,
+	triangle_fan, // like strip except that every triangle share the first vertex and one instead of 2 from previous triangle.
+	quads,
+	quad_strip,
+	polygon, // convex polygon
+};
+
+Primitive_type to_primitive_type(u8 in);
 
 enum
 {
@@ -291,17 +309,6 @@ enum
 	CELL_GCM_TEXTURE_LINEAR_LINEAR = 6,
 	CELL_GCM_TEXTURE_CONVOLUTION_MIN = 7,
 	CELL_GCM_TEXTURE_UNKNOWN_MAG_FILTER = 4,
-
-	CELL_GCM_PRIMITIVE_POINTS = 1,
-	CELL_GCM_PRIMITIVE_LINES = 2,
-	CELL_GCM_PRIMITIVE_LINE_LOOP = 3,
-	CELL_GCM_PRIMITIVE_LINE_STRIP = 4,
-	CELL_GCM_PRIMITIVE_TRIANGLES = 5,
-	CELL_GCM_PRIMITIVE_TRIANGLE_STRIP = 6,
-	CELL_GCM_PRIMITIVE_TRIANGLE_FAN = 7,
-	CELL_GCM_PRIMITIVE_QUADS = 8,
-	CELL_GCM_PRIMITIVE_QUAD_STRIP = 9,
-	CELL_GCM_PRIMITIVE_POLYGON = 10,
 
 	CELL_GCM_COLOR_MASK_B = 1 << 0,
 	CELL_GCM_COLOR_MASK_G = 1 << 8,

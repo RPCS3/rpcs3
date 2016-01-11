@@ -333,7 +333,6 @@ void D3D12GSRender::end()
 	else
 		get_current_resource_storage().command_list->DrawInstanced((UINT)vertex_count, 1, 0, 0);
 
-	vertex_index_array.clear();
 	std::chrono::time_point<std::chrono::system_clock> end_duration = std::chrono::system_clock::now();
 	m_timers.m_draw_calls_duration += std::chrono::duration_cast<std::chrono::microseconds>(end_duration - start_duration).count();
 	m_timers.m_draw_calls_count++;
@@ -344,7 +343,6 @@ void D3D12GSRender::end()
 		m_command_queue->ExecuteCommandLists(1, (ID3D12CommandList**)get_current_resource_storage().command_list.GetAddressOf());
 		get_current_resource_storage().set_new_command_list();
 	}
-	m_first_count_pairs.clear();
 	thread::end();
 }
 
