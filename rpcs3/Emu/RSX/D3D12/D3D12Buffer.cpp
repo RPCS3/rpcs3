@@ -206,7 +206,7 @@ void D3D12GSRender::upload_and_bind_vertex_shader_constants(size_t descriptor_in
 void D3D12GSRender::upload_and_bind_fragment_shader_constants(size_t descriptor_index)
 {
 	// Get constant from fragment program
-	size_t buffer_size = m_pso_cache.get_fragment_constants_buffer_size(&fragment_program);
+	size_t buffer_size = m_pso_cache.get_fragment_constants_buffer_size(fragment_program);
 	// Multiple of 256 never 0
 	buffer_size = (buffer_size + 255) & ~255;
 
@@ -216,7 +216,8 @@ void D3D12GSRender::upload_and_bind_fragment_shader_constants(size_t descriptor_
 	size_t offset = 0;
 	void *mapped_buffer;
 	CHECK_HRESULT(m_constants_data.m_heap->Map(0, &CD3DX12_RANGE(heap_offset, heap_offset + buffer_size), &mapped_buffer));
-	m_pso_cache.fill_fragment_constans_buffer((char*)mapped_buffer + heap_offset, &fragment_program);
+	float *buffer = (float*)((char*)mapped_buffer + heap_offset);
+	m_pso_cache.fill_fragment_constans_buffer({ buffer, gsl::narrow<int>(buffer_size) }, fragment_program);
 	m_constants_data.m_heap->Unmap(0, &CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
 
 	D3D12_CONSTANT_BUFFER_VIEW_DESC constant_buffer_view_desc = {

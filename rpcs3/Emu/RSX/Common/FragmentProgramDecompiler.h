@@ -113,6 +113,8 @@ protected:
 	virtual void insertMainEnd(std::stringstream &OS) = 0;
 public:
 	ParamArray m_parr;
-	FragmentProgramDecompiler(u32 addr, u32& size, u32 ctrl, const std::vector<texture_dimension> &texture_dimensions);
+	FragmentProgramDecompiler(const RSXFragmentProgram &prog, u32& size);
+	FragmentProgramDecompiler(const FragmentProgramDecompiler&) = delete;
+	FragmentProgramDecompiler(FragmentProgramDecompiler&&) = delete;
 	std::string Decompile();
 };

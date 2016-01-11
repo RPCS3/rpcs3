@@ -20,8 +20,8 @@ protected:
 	virtual void insertMainStart(std::stringstream &OS) override;
 	virtual void insertMainEnd(std::stringstream &OS) override;
 public:
-	GLVertexDecompilerThread(std::vector<u32>& data, std::string& shader, ParamArray& parr)
-		: VertexProgramDecompiler(data)
+	GLVertexDecompilerThread(const RSXVertexProgram &prog, std::string& shader, ParamArray& parr)
+		: VertexProgramDecompiler(prog)
 		, m_shader(shader)
 	{
 	}
@@ -39,7 +39,7 @@ public:
 	u32 id = 0;
 	std::string shader;
 
-	void Decompile(RSXVertexProgram& prog);
+	void Decompile(const RSXVertexProgram& prog);
 	void Compile();
 
 private:

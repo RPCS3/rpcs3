@@ -87,7 +87,7 @@ D3D12DLLManagement::~D3D12DLLManagement()
 }
 
 D3D12GSRender::D3D12GSRender()
-	: GSRender(frame_type::DX12), m_d3d12_lib(), m_current_pso(nullptr)
+	: GSRender(frame_type::DX12), m_d3d12_lib(), m_current_pso({})
 {
 	m_previous_address_a = 0;
 	m_previous_address_b = 0;
@@ -277,7 +277,7 @@ void D3D12GSRender::end()
 	std::chrono::time_point<std::chrono::system_clock> program_load_end = std::chrono::system_clock::now();
 	m_timers.m_program_load_duration += std::chrono::duration_cast<std::chrono::microseconds>(program_load_end - program_load_start).count();
 
-	get_current_resource_storage().command_list->SetGraphicsRootSignature(m_root_signatures[std::get<2>(*m_current_pso)].Get());
+	get_current_resource_storage().command_list->SetGraphicsRootSignature(m_root_signatures[std::get<2>(m_current_pso)].Get());
 	get_current_resource_storage().command_list->OMSetStencilRef(rsx::method_registers[NV4097_SET_STENCIL_FUNC_REF]);
 
 	std::chrono::time_point<std::chrono::system_clock> constants_duration_start = std::chrono::system_clock::now();
@@ -291,12 +291,12 @@ void D3D12GSRender::end()
 	std::chrono::time_point<std::chrono::system_clock> constants_duration_end = std::chrono::system_clock::now();
 	m_timers.m_constants_duration += std::chrono::duration_cast<std::chrono::microseconds>(constants_duration_end - constants_duration_start).count();
 
-	get_current_resource_storage().command_list->SetPipelineState(std::get<0>(*m_current_pso));
+	get_current_resource_storage().command_list->SetPipelineState(std::get<0>(m_current_pso).Get());
 
 	std::chrono::time_point<std::chrono::system_clock> texture_duration_start = std::chrono::system_clock::now();
-	if (std::get<2>(*m_current_pso) > 0)
+	if (std::get<2>(m_current_pso) > 0)
 	{
-		upload_and_bind_textures(get_current_resource_storage().command_list.Get(), currentDescriptorIndex + 3, std::get<2>(*m_current_pso) > 0);
+		upload_and_bind_textures(get_current_resource_storage().command_list.Get(), currentDescriptorIndex + 3, std::get<2>(m_current_pso) > 0);
 
 
 		get_current_resource_storage().command_list->SetGraphicsRootDescriptorTable(0,
@@ -308,8 +308,8 @@ void D3D12GSRender::end()
 			.Offset((INT)get_current_resource_storage().current_sampler_index, g_descriptor_stride_samplers)
 			);
 
-		get_current_resource_storage().current_sampler_index += std::get<2>(*m_current_pso);
-		get_current_resource_storage().descriptors_heap_index += std::get<2>(*m_current_pso) + 3;
+		get_current_resource_storage().current_sampler_index += std::get<2>(m_current_pso);
+		get_current_resource_storage().descriptors_heap_index += std::get<2>(m_current_pso) + 3;
 	}
 	else
 	{

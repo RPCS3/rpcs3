@@ -2148,7 +2148,7 @@ namespace gl
 			}
 
 			program() = default;
-			program(program&) = delete;
+			program(const program&) = delete;
 			program(program&& program_)
 			{
 				swap(program_);

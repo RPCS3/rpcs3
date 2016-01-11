@@ -166,9 +166,9 @@ GLVertexProgram::~GLVertexProgram()
 //	}
 //}
 
-void GLVertexProgram::Decompile(RSXVertexProgram& prog)
+void GLVertexProgram::Decompile(const RSXVertexProgram& prog)
 {
-	GLVertexDecompilerThread decompiler(prog.data, shader, parr);
+	GLVertexDecompilerThread decompiler(prog, shader, parr);
 	decompiler.Task();
 }
 

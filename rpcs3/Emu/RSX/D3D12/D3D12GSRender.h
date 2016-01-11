@@ -67,7 +67,7 @@ private:
 	RSXVertexProgram vertex_program;
 	RSXFragmentProgram fragment_program;
 	PipelineStateObjectCache m_pso_cache;
-	std::tuple<ID3D12PipelineState *, std::vector<size_t>, size_t> *m_current_pso;
+	std::tuple<ComPtr<ID3D12PipelineState>, std::vector<size_t>, size_t> m_current_pso;
 
 	struct
 	{
@@ -146,7 +146,7 @@ private:
 	void init_d2d_structures();
 	void release_d2d_structures();
 
-	bool load_program();
+	void load_program();
 
 	void set_rtt_and_ds(ID3D12GraphicsCommandList *command_list);
 

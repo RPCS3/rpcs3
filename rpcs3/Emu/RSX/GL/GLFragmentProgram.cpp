@@ -172,9 +172,10 @@ GLFragmentProgram::~GLFragmentProgram()
 //	}
 //}
 
-void GLFragmentProgram::Decompile(RSXFragmentProgram& prog, const std::vector<texture_dimension> &td)
+void GLFragmentProgram::Decompile(const RSXFragmentProgram& prog)
 {
-	GLFragmentDecompilerThread decompiler(shader, parr, prog.addr, prog.size, prog.ctrl, td);
+	u32 size;
+	GLFragmentDecompilerThread decompiler(shader, parr, prog, size);
 	decompiler.Task();
 	for (const ParamType& PT : decompiler.m_parr.params[PF_PARAM_UNIFORM])
 	{

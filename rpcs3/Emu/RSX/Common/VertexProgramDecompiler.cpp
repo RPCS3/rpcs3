@@ -435,8 +435,8 @@ std::string VertexProgramDecompiler::BuildCode()
 	return OS.str();
 }
 
-VertexProgramDecompiler::VertexProgramDecompiler(std::vector<u32>& data) :
-	m_data(data)
+VertexProgramDecompiler::VertexProgramDecompiler(const RSXVertexProgram& prog) :
+	m_data(prog.data)
 {
 	m_funcs.emplace_back();
 	m_funcs[0].offset = 0;
