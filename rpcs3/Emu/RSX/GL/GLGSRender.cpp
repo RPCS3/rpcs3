@@ -57,10 +57,10 @@ void GLGSRender::begin()
 	init_buffers();
 
 	u32 color_mask = rsx::method_registers[NV4097_SET_COLOR_MASK];
-	bool color_mask_b = color_mask & 0xff;
-	bool color_mask_g = (color_mask >> 8) & 0xff;
-	bool color_mask_r = (color_mask >> 16) & 0xff;
-	bool color_mask_a = (color_mask >> 24) & 0xff;
+	bool color_mask_b = !!(color_mask & 0xff);
+	bool color_mask_g = !!((color_mask >> 8) & 0xff);
+	bool color_mask_r = !!((color_mask >> 16) & 0xff);
+	bool color_mask_a = !!((color_mask >> 24) & 0xff);
 
 	__glcheck glColorMask(color_mask_r, color_mask_g, color_mask_b, color_mask_a);
 	__glcheck glDepthMask(rsx::method_registers[NV4097_SET_DEPTH_MASK]);
@@ -307,6 +307,7 @@ namespace
 			case Vertex_base_type::cmp: return gl::buffer_pointer::type::s16; // Needs conversion
 			case Vertex_base_type::ub256: gl::buffer_pointer::type::u8;
 		}
+		throw EXCEPTION("unknow vertex type");
 	}
 
 	bool gl_normalized(Vertex_base_type type)
@@ -323,6 +324,7 @@ namespace
 		case Vertex_base_type::s32k:
 			return false;
 		}
+		throw EXCEPTION("unknow vertex type");
 	}
 }
 
@@ -359,7 +361,7 @@ void GLGSRender::end()
 
 	//merge all vertex arrays
 	std::vector<u8> vertex_arrays_data;
-	size_t vertex_arrays_offsets[rsx::limits::vertex_count];
+	u32 vertex_arrays_offsets[rsx::limits::vertex_count];
 
 	const std::string reg_table[] =
 	{
@@ -380,7 +382,7 @@ void GLGSRender::end()
 	if (draw_command == Draw_command::draw_command_indexed)
 	{
 		Index_array_type type = to_index_array_type(rsx::method_registers[NV4097_SET_INDEX_ARRAY_DMA] >> 4);
-		u32 type_size = get_index_type_size(type);
+		u32 type_size = gsl::narrow<u32>(get_index_type_size(type));
 		for (const auto& first_count : first_count_commands)
 		{
 			vertex_draw_count += first_count.second;
@@ -402,7 +404,7 @@ void GLGSRender::end()
 	if (draw_command == Draw_command::draw_command_inlined_array)
 	{
 		write_inline_array_to_buffer(vertex_arrays_data.data());
-		size_t offset = 0;
+		u32 offset = 0;
 		for (int index = 0; index < rsx::limits::vertex_count; ++index)
 		{
 			auto &vertex_info = vertex_arrays_info[index];
@@ -467,7 +469,7 @@ void GLGSRender::end()
 
 				size_t size = vertex_array.size();
 				size_t position = vertex_arrays_data.size();
-				vertex_arrays_offsets[index] = position;
+				vertex_arrays_offsets[index] = gsl::narrow<u32>(position);
 				vertex_arrays_data.resize(position + size);
 
 				memcpy(vertex_arrays_data.data() + position, vertex_array.data(), size);
