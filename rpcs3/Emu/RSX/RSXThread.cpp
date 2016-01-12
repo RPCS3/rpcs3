@@ -424,7 +424,7 @@ namespace rsx
 
 			if (cmd & 0x3)
 			{
-				LOG_WARNING(Log::RSX, "unaligned command: %s (0x%x from 0x%x)", get_method_name(first_cmd).c_str(), first_cmd, cmd & 0xffff);
+				LOG_WARNING(RSX, "unaligned command: %s (0x%x from 0x%x)", get_method_name(first_cmd).c_str(), first_cmd, cmd & 0xffff);
 			}
 
 			for (u32 i = 0; i < count; i++)
@@ -434,7 +434,7 @@ namespace rsx
 
 				if (rpcs3::config.misc.log.rsx_logging.value())
 				{
-					LOG_NOTICE(Log::RSX, "%s(0x%x) = 0x%x", get_method_name(reg).c_str(), reg, value);
+					LOG_NOTICE(RSX, "%s(0x%x) = 0x%x", get_method_name(reg).c_str(), reg, value);
 				}
 
 				method_registers[reg] = value;

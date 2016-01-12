@@ -1,144 +1,40 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "stdafx_gui.h"
 
 #include "Emu/state.h"
 #include "Gui/ConLogFrame.h"
 
-wxDEFINE_EVENT(EVT_LOG_COMMAND, wxCommandEvent);
-
-//amount of memory in bytes used to buffer log messages for the gui
-const int BUFFER_MAX_SIZE = 1048576; // 1MB
-
-//amount of characters in the TextCtrl text-buffer for the emulation log
-const int GUI_BUFFER_MAX_SIZE = 1048576; // 1MB
-
 enum
 {
-	id_log_copy,	//Copy log to ClipBoard
-	id_log_clear	//Clear log
-};
-
-struct wxWriter : Log::LogListener
-{
-	wxTextCtrl *m_log;
-	wxTextCtrl *m_tty;
-	wxTextAttr m_color_white;
-	wxTextAttr m_color_yellow;
-	wxTextAttr m_color_red;
-	wxTextAttr m_color_green;
-	MTRingbuffer<char, BUFFER_MAX_SIZE> messages;
-	std::atomic<bool> newLog;
-	bool inited;
-
-	wxWriter(wxTextCtrl* p_log, wxTextCtrl* p_tty)
-		: m_color_white(wxColour(255, 255, 255))
-		, m_color_yellow(wxColour(255, 255, 0))
-		, m_color_red(wxColour(255, 0, 0))
-		, m_color_green(wxColour(0, 255, 0))
-		, m_log(p_log)
-		, m_tty(p_tty)
-		, newLog(false)
-		, inited(false)
-	{
-		m_log->Bind(EVT_LOG_COMMAND, [this](wxCommandEvent &evt){ this->write(evt); });
-	}
-
-	wxWriter(wxWriter &other) = delete;
-
-	//read messages from buffer and write them to the screen
-	void write(wxCommandEvent &)
-	{
-		if (messages.size() > 0)
-		{
-			messages.lockGet();
-			size_t size = messages.size();
-			std::vector<char> local_messages(size);
-			messages.popN(&local_messages.front(), size);
-			messages.unlockGet();
-			newLog = false;
-
-			u32 cursor = 0;
-			u32 removed = 0;
-			while (cursor < local_messages.size())
-			{
-				Log::LogMessage msg = Log::LogMessage::deserialize(local_messages.data() + cursor, &removed);
-				cursor += removed;
-				if (removed <= 0)
-				{
-					break;
-				}
-				wxTextCtrl *llogcon = (msg.mType == Log::TTY) ? m_tty : m_log;
-				if (llogcon)
-				{
-					switch (msg.mServerity)
-					{
-					case Log::Severity::Notice:
-						llogcon->SetDefaultStyle(m_color_white);
-						break;
-					case Log::Severity::Warning:
-						llogcon->SetDefaultStyle(m_color_yellow);
-						break;
-					case Log::Severity::Error:
-						llogcon->SetDefaultStyle(m_color_red);
-						break;
-					case Log::Severity::Success:
-						llogcon->SetDefaultStyle(m_color_green);
-						break;
-					default:
-						break;
-					}
-					llogcon->AppendText(fmt::FromUTF8(msg.mText));
-				}
-			}
-			if (m_log->GetLastPosition() > GUI_BUFFER_MAX_SIZE)
-			{
-				m_log->Remove(0, m_log->GetLastPosition() - (GUI_BUFFER_MAX_SIZE/2));
-			}
-		}
-	}
-
-	//put message into the log buffer
-	void log(const Log::LogMessage &msg) override
-	{
-		u8 logLevel = (u8)rpcs3::config.misc.log.level.value();
-		if (msg.mType != Log::TTY && logLevel != 0)
-		{
-			if (logLevel > static_cast<u32>(msg.mServerity))
-			{
-				return;
-			}
-		}
-
-		size_t size = msg.size();
-		std::vector<char> temp_buffer(size);
-		msg.serialize(temp_buffer.data());
-		messages.pushRange(temp_buffer.begin(), temp_buffer.end());
-		if (!newLog.load())
-		{
-			newLog = true;
-			m_log->GetEventHandler()->QueueEvent(new wxCommandEvent(EVT_LOG_COMMAND));
-		}
-	}
+	id_log_copy,  // Copy log to ClipBoard
+	id_log_clear, // Clear log
+	id_timer,
 };
 
 BEGIN_EVENT_TABLE(LogFrame, wxPanel)
 EVT_CLOSE(LogFrame::OnQuit)
+EVT_TIMER(id_timer, LogFrame::OnTimer)
 END_EVENT_TABLE()
 
 LogFrame::LogFrame(wxWindow* parent)
-: wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(600, 500))
-, m_tabs(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxAUI_NB_TOP | wxAUI_NB_TAB_SPLIT | wxAUI_NB_TAB_MOVE | wxAUI_NB_SCROLL_BUTTONS)
-, m_log(new wxTextCtrl(&m_tabs, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE | wxTE_READONLY | wxTE_RICH2))
-, m_tty(new wxTextCtrl(&m_tabs, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE | wxTE_READONLY | wxTE_RICH2))
+	: wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(600, 500))
+	, m_tabs(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxAUI_NB_TOP | wxAUI_NB_TAB_SPLIT | wxAUI_NB_TAB_MOVE | wxAUI_NB_SCROLL_BUTTONS)
+	, m_log(new wxTextCtrl(&m_tabs, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE | wxTE_READONLY | wxTE_RICH2))
+	, m_tty(new wxTextCtrl(&m_tabs, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE | wxTE_READONLY | wxTE_RICH2))
+	, m_timer(this, id_timer)
 {
-	listener.reset(new wxWriter(m_log,m_tty));
+	// Open or create RPCS3.log; TTY.log
+	m_log_file.open(fs::get_config_dir() + "RPCS3.log", fom::read | fom::create);
+	m_tty_file.open(fs::get_config_dir() + "TTY.log",   fom::read | fom::create);
+
+	// Check for updates every ~10 ms
+	m_timer.Start(10);
+
 	m_tty->SetBackgroundColour(wxColour("Black"));
 	m_log->SetBackgroundColour(wxColour("Black"));
 	m_tty->SetFont(wxFont(8, wxFONTFAMILY_MODERN, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL));
 	m_tabs.AddPage(m_log, "Log");
 	m_tabs.AddPage(m_tty, "TTY");
-
-	Log::LogManager::getInstance().addListener(listener);
 
 	wxBoxSizer* s_main = new wxBoxSizer(wxVERTICAL);
 	s_main->Add(&m_tabs, 1, wxEXPAND);
@@ -154,7 +50,6 @@ LogFrame::LogFrame(wxWindow* parent)
 
 LogFrame::~LogFrame()
 {
-	Log::LogManager::getInstance().removeListener(listener);
 }
 
 bool LogFrame::Close(bool force)
@@ -167,7 +62,7 @@ void LogFrame::OnQuit(wxCloseEvent& event)
 	event.Skip();
 }
 
-//Deals with the RightClick on Log Console, shows up the Context Menu.
+// Deals with the RightClick on Log Console, shows up the Context Menu.
 void LogFrame::OnRightClick(wxMouseEvent& event)
 {
 	wxMenu* menu = new wxMenu();
@@ -178,7 +73,8 @@ void LogFrame::OnRightClick(wxMouseEvent& event)
 
 	PopupMenu(menu);
 }
-//Well you can bind more than one control to a single handler.
+
+// Well you can bind more than one control to a single handler.
 void LogFrame::OnContextMenu(wxCommandEvent& event)
 {
 	int id = event.GetId();
@@ -200,5 +96,115 @@ void LogFrame::OnContextMenu(wxCommandEvent& event)
 		break;
 	default:
 		event.Skip();
+	}
+}
+
+void LogFrame::OnTimer(wxTimerEvent& event)
+{
+	char buf[8192];
+
+	const auto stamp0 = std::chrono::high_resolution_clock::now();
+
+	auto get_utf8 = [&](const fs::file& file, u64 size) -> wxString
+	{
+		// Bruteforce valid UTF-8 (TODO)
+		for (u64 read = file.read(buf, size); read; read--)
+		{
+			wxString text = wxString::FromUTF8(buf, read);
+			if (!text.empty())
+			{
+				file.seek(read - size, fs::seek_cur);
+				return text;
+			}
+		}
+
+		return{};
+	};
+
+	// Check TTY logs
+	while (const u64 size = std::min<u64>(sizeof(buf), _log::g_tty_file.size() - m_tty_file.seek(0, fs::seek_cur)))
+	{
+		const wxString& text = get_utf8(m_tty_file, size);
+
+		if (text.size())
+		{
+			m_tty->SetDefaultStyle(wxColour(255, 255, 255));
+			m_tty->AppendText(text);
+		}
+
+		// Limit processing time
+		if (std::chrono::high_resolution_clock::now() >= stamp0 + 4ms)
+		{
+			break;
+		}
+	}
+
+	const auto stamp1 = std::chrono::high_resolution_clock::now();
+
+	// Check main logs
+	while (const u64 size = std::min<u64>(sizeof(buf), _log::g_log_file.size() - m_log_file.seek(0, fs::seek_cur)))
+	{
+		const wxString& text = get_utf8(m_log_file, size);
+
+		std::size_t start = 0, pos = 0;
+
+		for (; pos < text.size(); pos++)
+		{
+			if (text[pos] == L'·')
+			{
+				if (text.size() - pos <= 3)
+				{
+					// Cannot get log string: abort
+					m_log_file.seek(0 - text.substr(pos).ToUTF8().length(), fs::seek_cur);
+					break;
+				}
+
+				if (text[pos + 2] == ' ')
+				{
+					_log::level level;
+					wxColour color;
+
+					switch (text[pos + 1].GetValue())
+					{
+					case 'A': level = _log::level::always; color.Set(0x00, 0xFF, 0xFF); break; // Cyan
+					case 'F': level = _log::level::fatal; color.Set(0xFF, 0x00, 0xFF); break; // Fuchsia
+					case 'E': level = _log::level::error; color.Set(0xFF, 0x00, 0x00); break; // Red
+					case 'U': level = _log::level::todo; color.Set(0xFF, 0x60, 0x00); break; // Orange
+					case 'S': level = _log::level::success; color.Set(0x00, 0xFF, 0x00); break; // Green
+					case 'W': level = _log::level::warning; color.Set(0xFF, 0xFF, 0x00); break; // Yellow
+					case '!': level = _log::level::notice; color.Set(0xFF, 0xFF, 0xFF); break; // White
+					case 'T': level = _log::level::trace; color.Set(0x80, 0x80, 0x80); break; // Gray
+					default: continue;
+					}
+
+					if (pos != start && m_level <= rpcs3::config.misc.log.level.value())
+					{
+						m_log->SetDefaultStyle(m_color);
+						m_log->AppendText(text.substr(start, pos - start));
+					}
+
+					start = pos + 3;
+					m_level = level;
+					m_color = color;
+				}
+			}
+		}
+
+		if (pos != start && m_level <= rpcs3::config.misc.log.level.value())
+		{
+			m_log->SetDefaultStyle(m_color);
+			m_log->AppendText(text.substr(start, pos - start));
+		}
+
+		if (m_log->GetLastPosition() > 1024 * 1024)
+		{
+			m_log->Remove(0, m_log->GetLastPosition() - 512 * 1024);
+		}
+
+		// Limit processing time
+		if (std::chrono::high_resolution_clock::now() >= stamp1 + 3ms)
+		{
+			break;
+		}
 	}
 }

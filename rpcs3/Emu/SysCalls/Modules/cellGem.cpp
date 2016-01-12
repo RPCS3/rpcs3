@@ -50,7 +50,7 @@ s32 cellGemEnableMagnetometer()
 
 s32 cellGemEnd()
 {
-	cellGem.Warning("cellGemEnd()");
+	cellGem.warning("cellGemEnd()");
 
 	if (!fxm::remove<gem_t>())
 	{
@@ -116,7 +116,7 @@ s32 cellGemGetInertialState()
 
 s32 cellGemGetInfo(vm::ptr<CellGemInfo> info)
 {
-	cellGem.Todo("cellGemGetInfo(info=*0x%x)", info);
+	cellGem.todo("cellGemGetInfo(info=*0x%x)", info);
 
 	const auto gem = fxm::get<gem_t>();
 
@@ -139,7 +139,7 @@ s32 cellGemGetInfo(vm::ptr<CellGemInfo> info)
 
 s32 cellGemGetMemorySize(s32 max_connect)
 {
-	cellGem.Warning("cellGemGetMemorySize(max_connect=%d)", max_connect);
+	cellGem.warning("cellGemGetMemorySize(max_connect=%d)", max_connect);
 
 	if (max_connect > CELL_GEM_MAX_NUM || max_connect <= 0)
 	{
@@ -187,7 +187,7 @@ s32 cellGemHSVtoRGB()
 
 s32 cellGemInit(vm::cptr<CellGemAttribute> attribute)
 {
-	cellGem.Warning("cellGemInit(attribute=*0x%x)", attribute);
+	cellGem.warning("cellGemInit(attribute=*0x%x)", attribute);
 
 	const auto gem = fxm::make<gem_t>();
 

@@ -48,7 +48,7 @@ void lv2_rwlock_t::notify_all(lv2_lock_t& lv2_lock)
 
 s32 sys_rwlock_create(vm::ptr<u32> rw_lock_id, vm::ptr<sys_rwlock_attribute_t> attr)
 {
-	sys_rwlock.Warning("sys_rwlock_create(rw_lock_id=*0x%x, attr=*0x%x)", rw_lock_id, attr);
+	sys_rwlock.warning("sys_rwlock_create(rw_lock_id=*0x%x, attr=*0x%x)", rw_lock_id, attr);
 
 	if (!rw_lock_id || !attr)
 	{
@@ -59,13 +59,13 @@ s32 sys_rwlock_create(vm::ptr<u32> rw_lock_id, vm::ptr<sys_rwlock_attribute_t> a
 
 	if (protocol != SYS_SYNC_FIFO && protocol != SYS_SYNC_PRIORITY && protocol != SYS_SYNC_PRIORITY_INHERIT)
 	{
-		sys_rwlock.Error("sys_rwlock_create(): unknown protocol (0x%x)", protocol);
+		sys_rwlock.error("sys_rwlock_create(): unknown protocol (0x%x)", protocol);
 		return CELL_EINVAL;
 	}
 
 	if (attr->pshared != SYS_SYNC_NOT_PROCESS_SHARED || attr->ipc_key || attr->flags)
 	{
-		sys_rwlock.Error("sys_rwlock_create(): unknown attributes (pshared=0x%x, ipc_key=0x%llx, flags=0x%x)", attr->pshared, attr->ipc_key, attr->flags);
+		sys_rwlock.error("sys_rwlock_create(): unknown attributes (pshared=0x%x, ipc_key=0x%llx, flags=0x%x)", attr->pshared, attr->ipc_key, attr->flags);
 		return CELL_EINVAL;
 	}
 
@@ -76,7 +76,7 @@ s32 sys_rwlock_create(vm::ptr<u32> rw_lock_id, vm::ptr<sys_rwlock_attribute_t> a
 
 s32 sys_rwlock_destroy(u32 rw_lock_id)
 {
-	sys_rwlock.Warning("sys_rwlock_destroy(rw_lock_id=0x%x)", rw_lock_id);
+	sys_rwlock.warning("sys_rwlock_destroy(rw_lock_id=0x%x)", rw_lock_id);
 
 	LV2_LOCK;
 
@@ -99,7 +99,7 @@ s32 sys_rwlock_destroy(u32 rw_lock_id)
 
 s32 sys_rwlock_rlock(PPUThread& ppu, u32 rw_lock_id, u64 timeout)
 {
-	sys_rwlock.Log("sys_rwlock_rlock(rw_lock_id=0x%x, timeout=0x%llx)", rw_lock_id, timeout);
+	sys_rwlock.trace("sys_rwlock_rlock(rw_lock_id=0x%x, timeout=0x%llx)", rw_lock_id, timeout);
 
 	const u64 start_time = get_system_time();
 
@@ -156,7 +156,7 @@ s32 sys_rwlock_rlock(PPUThread& ppu, u32 rw_lock_id, u64 timeout)
 
 s32 sys_rwlock_tryrlock(u32 rw_lock_id)
 {
-	sys_rwlock.Log("sys_rwlock_tryrlock(rw_lock_id=0x%x)", rw_lock_id);
+	sys_rwlock.trace("sys_rwlock_tryrlock(rw_lock_id=0x%x)", rw_lock_id);
 
 	LV2_LOCK;
 
@@ -182,7 +182,7 @@ s32 sys_rwlock_tryrlock(u32 rw_lock_id)
 
 s32 sys_rwlock_runlock(u32 rw_lock_id)
 {
-	sys_rwlock.Log("sys_rwlock_runlock(rw_lock_id=0x%x)", rw_lock_id);
+	sys_rwlock.trace("sys_rwlock_runlock(rw_lock_id=0x%x)", rw_lock_id);
 
 	LV2_LOCK;
 
@@ -208,7 +208,7 @@ s32 sys_rwlock_runlock(u32 rw_lock_id)
 
 s32 sys_rwlock_wlock(PPUThread& ppu, u32 rw_lock_id, u64 timeout)
 {
-	sys_rwlock.Log("sys_rwlock_wlock(rw_lock_id=0x%x, timeout=0x%llx)", rw_lock_id, timeout);
+	sys_rwlock.trace("sys_rwlock_wlock(rw_lock_id=0x%x, timeout=0x%llx)", rw_lock_id, timeout);
 
 	const u64 start_time = get_system_time();
 
@@ -279,7 +279,7 @@ s32 sys_rwlock_wlock(PPUThread& ppu, u32 rw_lock_id, u64 timeout)
 
 s32 sys_rwlock_trywlock(PPUThread& ppu, u32 rw_lock_id)
 {
-	sys_rwlock.Log("sys_rwlock_trywlock(rw_lock_id=0x%x)", rw_lock_id);
+	sys_rwlock.trace("sys_rwlock_trywlock(rw_lock_id=0x%x)", rw_lock_id);
 
 	LV2_LOCK;
 
@@ -307,7 +307,7 @@ s32 sys_rwlock_trywlock(PPUThread& ppu, u32 rw_lock_id)
 
 s32 sys_rwlock_wunlock(PPUThread& ppu, u32 rw_lock_id)
 {
-	sys_rwlock.Log("sys_rwlock_wunlock(rw_lock_id=0x%x)", rw_lock_id);
+	sys_rwlock.trace("sys_rwlock_wunlock(rw_lock_id=0x%x)", rw_lock_id);
 
 	LV2_LOCK;
 

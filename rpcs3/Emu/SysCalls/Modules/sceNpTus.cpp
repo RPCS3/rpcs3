@@ -9,14 +9,14 @@ extern Module<> sceNpTus;
 
 s32 sceNpTusInit()
 {
-	sceNpTus.Warning("sceNpTusInit()");
+	sceNpTus.warning("sceNpTusInit()");
 
 	return CELL_OK;
 }
 
 s32 sceNpTusTerm()
 {
-	sceNpTus.Warning("sceNpTusTerm()");
+	sceNpTus.warning("sceNpTusTerm()");
 
 	return CELL_OK;
 }

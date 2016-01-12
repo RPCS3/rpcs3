@@ -1351,21 +1351,15 @@ void named_thread_t::start()
 	{
 		try
 		{
-			if (rpcs3::config.misc.log.hle_logging.value())
-			{
-				LOG_NOTICE(GENERAL, "Thread started");
-			}
+			LOG_TRACE(GENERAL, "Thread started");
 
 			thread->on_task();
 
-			if (rpcs3::config.misc.log.hle_logging.value())
-			{
-				LOG_NOTICE(GENERAL, "Thread ended");
-			}
+			LOG_TRACE(GENERAL, "Thread ended");
 		}
 		catch (const std::exception& e)
 		{
-			LOG_ERROR(GENERAL, "Exception: %s\nPlease report this to the developers.", e.what());
+			LOG_FATAL(GENERAL, "Exception: %s\nPlease report this to the developers.", e.what());
 			Emu.Pause();
 		}
 		catch (EmulationStopped)

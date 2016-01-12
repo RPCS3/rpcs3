@@ -131,25 +131,25 @@ const char* get_module_id(u16 id)
 
 s32 cellSysmoduleInitialize()
 {
-	cellSysmodule.Warning("cellSysmoduleInitialize()");
+	cellSysmodule.warning("cellSysmoduleInitialize()");
 	return CELL_OK;
 }
 
 s32 cellSysmoduleFinalize()
 {
-	cellSysmodule.Warning("cellSysmoduleFinalize()");
+	cellSysmodule.warning("cellSysmoduleFinalize()");
 	return CELL_OK;
 }
 
 s32 cellSysmoduleSetMemcontainer(u32 ct_id)
 {
-	cellSysmodule.Todo("cellSysmoduleSetMemcontainer(ct_id=0x%x)", ct_id);
+	cellSysmodule.todo("cellSysmoduleSetMemcontainer(ct_id=0x%x)", ct_id);
 	return CELL_OK;
 }
 
 s32 cellSysmoduleLoadModule(u16 id)
 {
-	cellSysmodule.Warning("cellSysmoduleLoadModule(id=0x%04x: %s)", id, get_module_id(id));
+	cellSysmodule.warning("cellSysmoduleLoadModule(id=0x%04x: %s)", id, get_module_id(id));
 
 	if (!Emu.GetModuleManager().CheckModuleId(id))
 	{
@@ -167,7 +167,7 @@ s32 cellSysmoduleLoadModule(u16 id)
 
 s32 cellSysmoduleUnloadModule(u16 id)
 {
-	cellSysmodule.Warning("cellSysmoduleUnloadModule(id=0x%04x: %s)", id, get_module_id(id));
+	cellSysmodule.warning("cellSysmoduleUnloadModule(id=0x%04x: %s)", id, get_module_id(id));
 
 	if (!Emu.GetModuleManager().CheckModuleId(id))
 	{
@@ -178,7 +178,7 @@ s32 cellSysmoduleUnloadModule(u16 id)
 	{
 		if (!m->IsLoaded())
 		{
-			cellSysmodule.Error("cellSysmoduleUnloadModule() failed: module not loaded (id=0x%04x)", id);
+			cellSysmodule.error("cellSysmoduleUnloadModule() failed: module not loaded (id=0x%04x)", id);
 			return CELL_SYSMODULE_ERROR_FATAL;
 		}
 
@@ -190,11 +190,11 @@ s32 cellSysmoduleUnloadModule(u16 id)
 
 s32 cellSysmoduleIsLoaded(u16 id)
 {
-	cellSysmodule.Warning("cellSysmoduleIsLoaded(id=0x%04x: %s)", id, get_module_id(id));
+	cellSysmodule.warning("cellSysmoduleIsLoaded(id=0x%04x: %s)", id, get_module_id(id));
 
 	if (!Emu.GetModuleManager().CheckModuleId(id))
 	{
-		cellSysmodule.Error("cellSysmoduleIsLoaded(): unknown module (id=0x%04x)", id);
+		cellSysmodule.error("cellSysmoduleIsLoaded(): unknown module (id=0x%04x)", id);
 		return CELL_SYSMODULE_ERROR_UNKNOWN;
 	}
 
@@ -202,7 +202,7 @@ s32 cellSysmoduleIsLoaded(u16 id)
 	{
 		if (!m->IsLoaded())
 		{
-			cellSysmodule.Warning("cellSysmoduleIsLoaded(): module not loaded (id=0x%04x)", id);
+			cellSysmodule.warning("cellSysmoduleIsLoaded(): module not loaded (id=0x%04x)", id);
 			return CELL_SYSMODULE_ERROR_UNLOADED;
 		}
 	}

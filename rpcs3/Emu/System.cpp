@@ -435,7 +435,7 @@ void Emulator::Stop()
 
 	for (auto& v : decltype(g_armv7_dump)(std::move(g_armv7_dump)))
 	{
-		LOG_NOTICE(ARMv7, v.second);
+		LOG_NOTICE(ARMv7, "%s", v.second);
 	}
 
 	m_rsx_callback = 0;

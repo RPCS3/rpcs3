@@ -80,7 +80,7 @@ struct camera_t
 
 s32 cellCameraInit()
 {
-	cellCamera.Warning("cellCameraInit()");
+	cellCamera.warning("cellCameraInit()");
 
 	if (rpcs3::config.io.camera.value() == io_camera_state::null)
 	{
@@ -146,7 +146,7 @@ s32 cellCameraInit()
 
 s32 cellCameraEnd()
 {
-	cellCamera.Warning("cellCameraEnd()");
+	cellCamera.warning("cellCameraEnd()");
 
 	if (!fxm::remove<camera_t>())
 	{
@@ -182,7 +182,7 @@ s32 cellCameraGetDeviceGUID(s32 dev_num, vm::ptr<u32> guid)
 
 s32 cellCameraGetType(s32 dev_num, vm::ptr<s32> type)
 {
-	cellCamera.Warning("cellCameraGetType(dev_num=%d, type=*0x%x)", dev_num, type);
+	cellCamera.warning("cellCameraGetType(dev_num=%d, type=*0x%x)", dev_num, type);
 
 	const auto camera = fxm::get<camera_t>();
 
@@ -204,13 +204,13 @@ s32 cellCameraGetType(s32 dev_num, vm::ptr<s32> type)
 
 s32 cellCameraIsAvailable(s32 dev_num)
 {
-	cellCamera.Todo("cellCameraIsAvailable(dev_num=%d)", dev_num);
+	cellCamera.todo("cellCameraIsAvailable(dev_num=%d)", dev_num);
 	return CELL_OK;
 }
 
 s32 cellCameraIsAttached(s32 dev_num)
 {
-	cellCamera.Warning("cellCameraIsAttached(dev_num=%d)", dev_num);
+	cellCamera.warning("cellCameraIsAttached(dev_num=%d)", dev_num);
 
 	if (rpcs3::config.io.camera.value() == io_camera_state::connected)
 	{
@@ -222,19 +222,19 @@ s32 cellCameraIsAttached(s32 dev_num)
 
 s32 cellCameraIsOpen(s32 dev_num)
 {
-	cellCamera.Todo("cellCameraIsOpen(dev_num=%d)", dev_num);
+	cellCamera.todo("cellCameraIsOpen(dev_num=%d)", dev_num);
 	return CELL_OK;
 }
 
 s32 cellCameraIsStarted(s32 dev_num)
 {
-	cellCamera.Todo("cellCameraIsStarted(dev_num=%d)", dev_num);
+	cellCamera.todo("cellCameraIsStarted(dev_num=%d)", dev_num);
 	return CELL_OK;
 }
 
 s32 cellCameraGetAttribute(s32 dev_num, s32 attrib, vm::ptr<u32> arg1, vm::ptr<u32> arg2)
 {
-	cellCamera.Warning("cellCameraGetAttribute(dev_num=%d, attrib=%d, arg1=*0x%x, arg2=*0x%x)", dev_num, attrib, arg1, arg2);
+	cellCamera.warning("cellCameraGetAttribute(dev_num=%d, attrib=%d, arg1=*0x%x, arg2=*0x%x)", dev_num, attrib, arg1, arg2);
 
 	const auto attr_name = get_camera_attr_name(attrib);
 
@@ -258,7 +258,7 @@ s32 cellCameraGetAttribute(s32 dev_num, s32 attrib, vm::ptr<u32> arg1, vm::ptr<u
 
 s32 cellCameraSetAttribute(s32 dev_num, s32 attrib, u32 arg1, u32 arg2)
 {
-	cellCamera.Warning("cellCameraSetAttribute(dev_num=%d, attrib=%d, arg1=%d, arg2=%d)", dev_num, attrib, arg1, arg2);
+	cellCamera.warning("cellCameraSetAttribute(dev_num=%d, attrib=%d, arg1=%d, arg2=%d)", dev_num, attrib, arg1, arg2);
 
 	const auto attr_name = get_camera_attr_name(attrib);
 

@@ -33,7 +33,7 @@ s32 sceKernelGetMemBlockInfoByAddr(vm::ptr<void> vbase, vm::ptr<SceKernelMemBloc
 
 s32 sceKernelCreateThread(vm::cptr<char> pName, vm::ptr<SceKernelThreadEntry> entry, s32 initPriority, u32 stackSize, u32 attr, s32 cpuAffinityMask, vm::cptr<SceKernelThreadOptParam> pOptParam)
 {
-	sceLibKernel.Warning("sceKernelCreateThread(pName=*0x%x, entry=*0x%x, initPriority=%d, stackSize=0x%x, attr=0x%x, cpuAffinityMask=0x%x, pOptParam=*0x%x)",
+	sceLibKernel.warning("sceKernelCreateThread(pName=*0x%x, entry=*0x%x, initPriority=%d, stackSize=0x%x, attr=0x%x, cpuAffinityMask=0x%x, pOptParam=*0x%x)",
 		pName, entry, initPriority, stackSize, attr, cpuAffinityMask, pOptParam);
 
 	auto armv7 = idm::make_ptr<ARMv7Thread>(pName.get_ptr());
@@ -48,7 +48,7 @@ s32 sceKernelCreateThread(vm::cptr<char> pName, vm::ptr<SceKernelThreadEntry> en
 
 s32 sceKernelStartThread(s32 threadId, u32 argSize, vm::cptr<void> pArgBlock)
 {
-	sceLibKernel.Warning("sceKernelStartThread(threadId=0x%x, argSize=0x%x, pArgBlock=*0x%x)", threadId, argSize, pArgBlock);
+	sceLibKernel.warning("sceKernelStartThread(threadId=0x%x, argSize=0x%x, pArgBlock=*0x%x)", threadId, argSize, pArgBlock);
 
 	const auto thread = idm::get<ARMv7Thread>(threadId);
 
@@ -78,7 +78,7 @@ s32 sceKernelStartThread(s32 threadId, u32 argSize, vm::cptr<void> pArgBlock)
 
 s32 sceKernelExitThread(ARMv7Thread& context, s32 exitStatus)
 {
-	sceLibKernel.Warning("sceKernelExitThread(exitStatus=0x%x)", exitStatus);
+	sceLibKernel.warning("sceKernelExitThread(exitStatus=0x%x)", exitStatus);
 
 	// exit status is stored in r0
 	context.exit();
@@ -88,7 +88,7 @@ s32 sceKernelExitThread(ARMv7Thread& context, s32 exitStatus)
 
 s32 sceKernelDeleteThread(s32 threadId)
 {
-	sceLibKernel.Warning("sceKernelDeleteThread(threadId=0x%x)", threadId);
+	sceLibKernel.warning("sceKernelDeleteThread(threadId=0x%x)", threadId);
 
 	const auto thread = idm::get<ARMv7Thread>(threadId);
 
@@ -110,7 +110,7 @@ s32 sceKernelDeleteThread(s32 threadId)
 
 s32 sceKernelExitDeleteThread(ARMv7Thread& context, s32 exitStatus)
 {
-	sceLibKernel.Warning("sceKernelExitDeleteThread(exitStatus=0x%x)", exitStatus);
+	sceLibKernel.warning("sceKernelExitDeleteThread(exitStatus=0x%x)", exitStatus);
 
 	// exit status is stored in r0
 	context.stop();
@@ -123,91 +123,91 @@ s32 sceKernelExitDeleteThread(ARMv7Thread& context, s32 exitStatus)
 
 s32 sceKernelChangeThreadCpuAffinityMask(s32 threadId, s32 cpuAffinityMask)
 {
-	sceLibKernel.Todo("sceKernelChangeThreadCpuAffinityMask(threadId=0x%x, cpuAffinityMask=0x%x)", threadId, cpuAffinityMask);
+	sceLibKernel.todo("sceKernelChangeThreadCpuAffinityMask(threadId=0x%x, cpuAffinityMask=0x%x)", threadId, cpuAffinityMask);
 
 	throw EXCEPTION("");
 }
 
 s32 sceKernelGetThreadCpuAffinityMask(s32 threadId)
 {
-	sceLibKernel.Todo("sceKernelGetThreadCpuAffinityMask(threadId=0x%x)", threadId);
+	sceLibKernel.todo("sceKernelGetThreadCpuAffinityMask(threadId=0x%x)", threadId);
 
 	throw EXCEPTION("");
 }
 
 s32 sceKernelChangeThreadPriority(s32 threadId, s32 priority)
 {
-	sceLibKernel.Todo("sceKernelChangeThreadPriority(threadId=0x%x, priority=%d)", threadId, priority);
+	sceLibKernel.todo("sceKernelChangeThreadPriority(threadId=0x%x, priority=%d)", threadId, priority);
 
 	throw EXCEPTION("");
 }
 
 s32 sceKernelGetThreadCurrentPriority()
 {
-	sceLibKernel.Todo("sceKernelGetThreadCurrentPriority()");
+	sceLibKernel.todo("sceKernelGetThreadCurrentPriority()");
 
 	throw EXCEPTION("");
 }
 
 u32 sceKernelGetThreadId(ARMv7Thread& context)
 {
-	sceLibKernel.Log("sceKernelGetThreadId()");
+	sceLibKernel.trace("sceKernelGetThreadId()");
 
 	return context.get_id();
 }
 
 s32 sceKernelChangeCurrentThreadAttr(u32 clearAttr, u32 setAttr)
 {
-	sceLibKernel.Todo("sceKernelChangeCurrentThreadAttr()");
+	sceLibKernel.todo("sceKernelChangeCurrentThreadAttr()");
 
 	throw EXCEPTION("");
 }
 
 s32 sceKernelGetThreadExitStatus(s32 threadId, vm::ptr<s32> pExitStatus)
 {
-	sceLibKernel.Todo("sceKernelGetThreadExitStatus(threadId=0x%x, pExitStatus=*0x%x)", threadId, pExitStatus);
+	sceLibKernel.todo("sceKernelGetThreadExitStatus(threadId=0x%x, pExitStatus=*0x%x)", threadId, pExitStatus);
 
 	throw EXCEPTION("");
 }
 
 s32 sceKernelGetProcessId()
 {
-	sceLibKernel.Todo("sceKernelGetProcessId()");
+	sceLibKernel.todo("sceKernelGetProcessId()");
 
 	throw EXCEPTION("");
 }
 
 s32 sceKernelCheckWaitableStatus()
 {
-	sceLibKernel.Todo("sceKernelCheckWaitableStatus()");
+	sceLibKernel.todo("sceKernelCheckWaitableStatus()");
 
 	throw EXCEPTION("");
 }
 
 s32 sceKernelGetThreadInfo(s32 threadId, vm::ptr<SceKernelThreadInfo> pInfo)
 {
-	sceLibKernel.Todo("sceKernelGetThreadInfo(threadId=0x%x, pInfo=*0x%x)", threadId, pInfo);
+	sceLibKernel.todo("sceKernelGetThreadInfo(threadId=0x%x, pInfo=*0x%x)", threadId, pInfo);
 
 	throw EXCEPTION("");
 }
 
 s32 sceKernelGetThreadRunStatus(vm::ptr<SceKernelThreadRunStatus> pStatus)
 {
-	sceLibKernel.Todo("sceKernelGetThreadRunStatus(pStatus=*0x%x)", pStatus);
+	sceLibKernel.todo("sceKernelGetThreadRunStatus(pStatus=*0x%x)", pStatus);
 
 	throw EXCEPTION("");
 }
 
 s32 sceKernelGetSystemInfo(vm::ptr<SceKernelSystemInfo> pInfo)
 {
-	sceLibKernel.Todo("sceKernelGetSystemInfo(pInfo=*0x%x)", pInfo);
+	sceLibKernel.todo("sceKernelGetSystemInfo(pInfo=*0x%x)", pInfo);
 
 	throw EXCEPTION("");
 }
 
 s32 sceKernelGetThreadmgrUIDClass(s32 uid)
 {
-	sceLibKernel.Error("sceKernelGetThreadmgrUIDClass(uid=0x%x)", uid);
+	sceLibKernel.error("sceKernelGetThreadmgrUIDClass(uid=0x%x)", uid);
 
 	const auto type = idm::get_type(uid);
 
@@ -227,35 +227,35 @@ s32 sceKernelGetThreadmgrUIDClass(s32 uid)
 
 s32 sceKernelChangeThreadVfpException(s32 clearMask, s32 setMask)
 {
-	sceLibKernel.Todo("sceKernelChangeThreadVfpException(clearMask=0x%x, setMask=0x%x)", clearMask, setMask);
+	sceLibKernel.todo("sceKernelChangeThreadVfpException(clearMask=0x%x, setMask=0x%x)", clearMask, setMask);
 
 	throw EXCEPTION("");
 }
 
 s32 sceKernelGetCurrentThreadVfpException()
 {
-	sceLibKernel.Todo("sceKernelGetCurrentThreadVfpException()");
+	sceLibKernel.todo("sceKernelGetCurrentThreadVfpException()");
 
 	throw EXCEPTION("");
 }
 
 s32 sceKernelDelayThread(u32 usec)
 {
-	sceLibKernel.Todo("sceKernelDelayThread()");
+	sceLibKernel.todo("sceKernelDelayThread()");
 
 	throw EXCEPTION("");
 }
 
 s32 sceKernelDelayThreadCB(u32 usec)
 {
-	sceLibKernel.Todo("sceKernelDelayThreadCB()");
+	sceLibKernel.todo("sceKernelDelayThreadCB()");
 
 	throw EXCEPTION("");
 }
 
 s32 sceKernelWaitThreadEnd(s32 threadId, vm::ptr<s32> pExitStatus, vm::ptr<u32> pTimeout)
 {
-	sceLibKernel.Warning("sceKernelWaitThreadEnd(threadId=0x%x, pExitStatus=*0x%x, pTimeout=*0x%x)", threadId, pExitStatus, pTimeout);
+	sceLibKernel.warning("sceKernelWaitThreadEnd(threadId=0x%x, pExitStatus=*0x%x, pTimeout=*0x%x)", threadId, pExitStatus, pTimeout);
 
 	const auto thread = idm::get<ARMv7Thread>(threadId);
 
@@ -285,7 +285,7 @@ s32 sceKernelWaitThreadEnd(s32 threadId, vm::ptr<s32> pExitStatus, vm::ptr<u32> 
 
 s32 sceKernelWaitThreadEndCB(s32 threadId, vm::ptr<s32> pExitStatus, vm::ptr<u32> pTimeout)
 {
-	sceLibKernel.Todo("sceKernelWaitThreadEndCB(threadId=0x%x, pExitStatus=*0x%x, pTimeout=*0x%x)", threadId, pExitStatus, pTimeout);
+	sceLibKernel.todo("sceKernelWaitThreadEndCB(threadId=0x%x, pExitStatus=*0x%x, pTimeout=*0x%x)", threadId, pExitStatus, pTimeout);
 
 	throw EXCEPTION("");
 }
@@ -383,14 +383,14 @@ s32 sceKernelWaitMultipleEventsCB(vm::ptr<SceKernelWaitEvent> pWaitEventList, s3
 
 s32 sceKernelCreateEventFlag(vm::cptr<char> pName, u32 attr, u32 initPattern, vm::cptr<SceKernelEventFlagOptParam> pOptParam)
 {
-	sceLibKernel.Error("sceKernelCreateEventFlag(pName=*0x%x, attr=0x%x, initPattern=0x%x, pOptParam=*0x%x)", pName, attr, initPattern, pOptParam);
+	sceLibKernel.error("sceKernelCreateEventFlag(pName=*0x%x, attr=0x%x, initPattern=0x%x, pOptParam=*0x%x)", pName, attr, initPattern, pOptParam);
 
 	return idm::make<psv_event_flag_t>(pName.get_ptr(), attr, initPattern);
 }
 
 s32 sceKernelDeleteEventFlag(s32 evfId)
 {
-	sceLibKernel.Error("sceKernelDeleteEventFlag(evfId=0x%x)", evfId);
+	sceLibKernel.error("sceKernelDeleteEventFlag(evfId=0x%x)", evfId);
 
 	const auto evf = idm::withdraw<psv_event_flag_t>(evfId);
 
@@ -410,7 +410,7 @@ s32 sceKernelDeleteEventFlag(s32 evfId)
 
 s32 sceKernelOpenEventFlag(vm::cptr<char> pName)
 {
-	sceLibKernel.Error("sceKernelOpenEventFlag(pName=*0x%x)", pName);
+	sceLibKernel.error("sceKernelOpenEventFlag(pName=*0x%x)", pName);
 
 	// For now, go through all objects to find the name
 	for (const auto& data : idm::get_map<psv_event_flag_t>())
@@ -428,7 +428,7 @@ s32 sceKernelOpenEventFlag(vm::cptr<char> pName)
 
 s32 sceKernelCloseEventFlag(s32 evfId)
 {
-	sceLibKernel.Error("sceKernelCloseEventFlag(evfId=0x%x)", evfId);
+	sceLibKernel.error("sceKernelCloseEventFlag(evfId=0x%x)", evfId);
 
 	const auto evf = idm::withdraw<psv_event_flag_t>(evfId);
 
@@ -448,7 +448,7 @@ s32 sceKernelCloseEventFlag(s32 evfId)
 
 s32 sceKernelWaitEventFlag(ARMv7Thread& context, s32 evfId, u32 bitPattern, u32 waitMode, vm::ptr<u32> pResultPat, vm::ptr<u32> pTimeout)
 {
-	sceLibKernel.Error("sceKernelWaitEventFlag(evfId=0x%x, bitPattern=0x%x, waitMode=0x%x, pResultPat=*0x%x, pTimeout=*0x%x)", evfId, bitPattern, waitMode, pResultPat, pTimeout);
+	sceLibKernel.error("sceKernelWaitEventFlag(evfId=0x%x, bitPattern=0x%x, waitMode=0x%x, pResultPat=*0x%x, pTimeout=*0x%x)", evfId, bitPattern, waitMode, pResultPat, pTimeout);
 
 	const u64 start_time = pTimeout ? get_system_time() : 0;
 	const u32 timeout = pTimeout ? pTimeout->value() : 0;
@@ -509,14 +509,14 @@ s32 sceKernelWaitEventFlag(ARMv7Thread& context, s32 evfId, u32 bitPattern, u32 
 
 s32 sceKernelWaitEventFlagCB(ARMv7Thread& context, s32 evfId, u32 bitPattern, u32 waitMode, vm::ptr<u32> pResultPat, vm::ptr<u32> pTimeout)
 {
-	sceLibKernel.Todo("sceKernelWaitEventFlagCB(evfId=0x%x, bitPattern=0x%x, waitMode=0x%x, pResultPat=*0x%x, pTimeout=*0x%x)", evfId, bitPattern, waitMode, pResultPat, pTimeout);
+	sceLibKernel.todo("sceKernelWaitEventFlagCB(evfId=0x%x, bitPattern=0x%x, waitMode=0x%x, pResultPat=*0x%x, pTimeout=*0x%x)", evfId, bitPattern, waitMode, pResultPat, pTimeout);
 
 	return sceKernelWaitEventFlag(context, evfId, bitPattern, waitMode, pResultPat, pTimeout);
 }
 
 s32 sceKernelPollEventFlag(s32 evfId, u32 bitPattern, u32 waitMode, vm::ptr<u32> pResultPat)
 {
-	sceLibKernel.Error("sceKernelPollEventFlag(evfId=0x%x, bitPattern=0x%x, waitMode=0x%x, pResultPat=*0x%x)", evfId, bitPattern, waitMode, pResultPat);
+	sceLibKernel.error("sceKernelPollEventFlag(evfId=0x%x, bitPattern=0x%x, waitMode=0x%x, pResultPat=*0x%x)", evfId, bitPattern, waitMode, pResultPat);
 
 	const auto evf = idm::get<psv_event_flag_t>(evfId);
 
@@ -541,7 +541,7 @@ s32 sceKernelPollEventFlag(s32 evfId, u32 bitPattern, u32 waitMode, vm::ptr<u32>
 
 s32 sceKernelSetEventFlag(s32 evfId, u32 bitPattern)
 {
-	sceLibKernel.Error("sceKernelSetEventFlag(evfId=0x%x, bitPattern=0x%x)", evfId, bitPattern);
+	sceLibKernel.error("sceKernelSetEventFlag(evfId=0x%x, bitPattern=0x%x)", evfId, bitPattern);
 
 	const auto evf = idm::get<psv_event_flag_t>(evfId);
 
@@ -586,7 +586,7 @@ s32 sceKernelSetEventFlag(s32 evfId, u32 bitPattern)
 
 s32 sceKernelClearEventFlag(s32 evfId, u32 bitPattern)
 {
-	sceLibKernel.Error("sceKernelClearEventFlag(evfId=0x%x, bitPattern=0x%x)", evfId, bitPattern);
+	sceLibKernel.error("sceKernelClearEventFlag(evfId=0x%x, bitPattern=0x%x)", evfId, bitPattern);
 
 	const auto evf = idm::get<psv_event_flag_t>(evfId);
 
@@ -604,7 +604,7 @@ s32 sceKernelClearEventFlag(s32 evfId, u32 bitPattern)
 
 s32 sceKernelCancelEventFlag(s32 evfId, u32 setPattern, vm::ptr<s32> pNumWaitThreads)
 {
-	sceLibKernel.Error("sceKernelCancelEventFlag(evfId=0x%x, setPattern=0x%x, pNumWaitThreads=*0x%x)", evfId, setPattern, pNumWaitThreads);
+	sceLibKernel.error("sceKernelCancelEventFlag(evfId=0x%x, setPattern=0x%x, pNumWaitThreads=*0x%x)", evfId, setPattern, pNumWaitThreads);
 
 	const auto evf = idm::get<psv_event_flag_t>(evfId);
 
@@ -632,7 +632,7 @@ s32 sceKernelCancelEventFlag(s32 evfId, u32 setPattern, vm::ptr<s32> pNumWaitThr
 
 s32 sceKernelGetEventFlagInfo(s32 evfId, vm::ptr<SceKernelEventFlagInfo> pInfo)
 {
-	sceLibKernel.Error("sceKernelGetEventFlagInfo(evfId=0x%x, pInfo=*0x%x)", evfId, pInfo);
+	sceLibKernel.error("sceKernelGetEventFlagInfo(evfId=0x%x, pInfo=*0x%x)", evfId, pInfo);
 
 	const auto evf = idm::get<psv_event_flag_t>(evfId);
 
@@ -660,14 +660,14 @@ s32 sceKernelGetEventFlagInfo(s32 evfId, vm::ptr<SceKernelEventFlagInfo> pInfo)
 
 s32 sceKernelCreateSema(vm::cptr<char> pName, u32 attr, s32 initCount, s32 maxCount, vm::cptr<SceKernelSemaOptParam> pOptParam)
 {
-	sceLibKernel.Error("sceKernelCreateSema(pName=*0x%x, attr=0x%x, initCount=%d, maxCount=%d, pOptParam=*0x%x)", pName, attr, initCount, maxCount, pOptParam);
+	sceLibKernel.error("sceKernelCreateSema(pName=*0x%x, attr=0x%x, initCount=%d, maxCount=%d, pOptParam=*0x%x)", pName, attr, initCount, maxCount, pOptParam);
 
 	return idm::make<psv_semaphore_t>(pName.get_ptr(), attr, initCount, maxCount);
 }
 
 s32 sceKernelDeleteSema(s32 semaId)
 {
-	sceLibKernel.Error("sceKernelDeleteSema(semaId=0x%x)", semaId);
+	sceLibKernel.error("sceKernelDeleteSema(semaId=0x%x)", semaId);
 
 	const auto sema = idm::withdraw<psv_semaphore_t>(semaId);
 
@@ -693,7 +693,7 @@ s32 sceKernelCloseSema(s32 semaId)
 
 s32 sceKernelWaitSema(s32 semaId, s32 needCount, vm::ptr<u32> pTimeout)
 {
-	sceLibKernel.Error("sceKernelWaitSema(semaId=0x%x, needCount=%d, pTimeout=*0x%x)", semaId, needCount, pTimeout);
+	sceLibKernel.error("sceKernelWaitSema(semaId=0x%x, needCount=%d, pTimeout=*0x%x)", semaId, needCount, pTimeout);
 
 	const auto sema = idm::get<psv_semaphore_t>(semaId);
 
@@ -702,7 +702,7 @@ s32 sceKernelWaitSema(s32 semaId, s32 needCount, vm::ptr<u32> pTimeout)
 		return SCE_KERNEL_ERROR_INVALID_UID;
 	}
 
-	sceLibKernel.Error("*** name = %s", sema->name);
+	sceLibKernel.error("*** name = %s", sema->name);
 	Emu.Pause();
 	return SCE_OK;
 }
@@ -736,14 +736,14 @@ s32 sceKernelGetSemaInfo(s32 semaId, vm::ptr<SceKernelSemaInfo> pInfo)
 
 s32 sceKernelCreateMutex(vm::cptr<char> pName, u32 attr, s32 initCount, vm::cptr<SceKernelMutexOptParam> pOptParam)
 {
-	sceLibKernel.Error("sceKernelCreateMutex(pName=*0x%x, attr=0x%x, initCount=%d, pOptParam=*0x%x)", pName, attr, initCount, pOptParam);
+	sceLibKernel.error("sceKernelCreateMutex(pName=*0x%x, attr=0x%x, initCount=%d, pOptParam=*0x%x)", pName, attr, initCount, pOptParam);
 
 	return idm::make<psv_mutex_t>(pName.get_ptr(), attr, initCount);
 }
 
 s32 sceKernelDeleteMutex(s32 mutexId)
 {
-	sceLibKernel.Error("sceKernelDeleteMutex(mutexId=0x%x)", mutexId);
+	sceLibKernel.error("sceKernelDeleteMutex(mutexId=0x%x)", mutexId);
 
 	const auto mutex = idm::withdraw<psv_mutex_t>(mutexId);
 
@@ -843,7 +843,7 @@ s32 sceKernelGetLwMutexInfoById(s32 lwMutexId, vm::ptr<SceKernelLwMutexInfo> pIn
 
 s32 sceKernelCreateCond(vm::cptr<char> pName, u32 attr, s32 mutexId, vm::cptr<SceKernelCondOptParam> pOptParam)
 {
-	sceLibKernel.Error("sceKernelCreateCond(pName=*0x%x, attr=0x%x, mutexId=0x%x, pOptParam=*0x%x)", pName, attr, mutexId, pOptParam);
+	sceLibKernel.error("sceKernelCreateCond(pName=*0x%x, attr=0x%x, mutexId=0x%x, pOptParam=*0x%x)", pName, attr, mutexId, pOptParam);
 
 	const auto mutex = idm::get<psv_mutex_t>(mutexId);
 
@@ -857,7 +857,7 @@ s32 sceKernelCreateCond(vm::cptr<char> pName, u32 attr, s32 mutexId, vm::cptr<Sc
 
 s32 sceKernelDeleteCond(s32 condId)
 {
-	sceLibKernel.Error("sceKernelDeleteCond(condId=0x%x)", condId);
+	sceLibKernel.error("sceKernelDeleteCond(condId=0x%x)", condId);
 
 	const auto cond = idm::withdraw<psv_cond_t>(condId);
 

@@ -16,7 +16,7 @@ extern Module<> cellFs;
 
 s32 cellFsOpen(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, vm::cptr<void> arg, u64 size)
 {
-	cellFs.Warning("cellFsOpen(path=*0x%x, flags=%#o, fd=*0x%x, arg=*0x%x, size=0x%llx) -> sys_fs_open()", path, flags, fd, arg, size);
+	cellFs.warning("cellFsOpen(path=*0x%x, flags=%#o, fd=*0x%x, arg=*0x%x, size=0x%llx) -> sys_fs_open()", path, flags, fd, arg, size);
 
 	// TODO
 
@@ -26,7 +26,7 @@ s32 cellFsOpen(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, vm::cptr<void> a
 
 s32 cellFsRead(u32 fd, vm::ptr<void> buf, u64 nbytes, vm::ptr<u64> nread)
 {
-	cellFs.Log("cellFsRead(fd=0x%x, buf=0x%x, nbytes=0x%llx, nread=0x%x)", fd, buf, nbytes, nread);
+	cellFs.trace("cellFsRead(fd=0x%x, buf=0x%x, nbytes=0x%llx, nread=0x%x)", fd, buf, nbytes, nread);
 
 	// call the syscall
 	return sys_fs_read(fd, buf, nbytes, nread ? nread : vm::var<u64>{});
@@ -34,7 +34,7 @@ s32 cellFsRead(u32 fd, vm::ptr<void> buf, u64 nbytes, vm::ptr<u64> nread)
 
 s32 cellFsWrite(u32 fd, vm::cptr<void> buf, u64 nbytes, vm::ptr<u64> nwrite)
 {
-	cellFs.Log("cellFsWrite(fd=0x%x, buf=*0x%x, nbytes=0x%llx, nwrite=*0x%x)", fd, buf, nbytes, nwrite);
+	cellFs.trace("cellFsWrite(fd=0x%x, buf=*0x%x, nbytes=0x%llx, nwrite=*0x%x)", fd, buf, nbytes, nwrite);
 
 	// call the syscall
 	return sys_fs_write(fd, buf, nbytes, nwrite ? nwrite : vm::var<u64>{});
@@ -42,7 +42,7 @@ s32 cellFsWrite(u32 fd, vm::cptr<void> buf, u64 nbytes, vm::ptr<u64> nwrite)
 
 s32 cellFsClose(u32 fd)
 {
-	cellFs.Log("cellFsClose(fd=0x%x)", fd);
+	cellFs.trace("cellFsClose(fd=0x%x)", fd);
 
 	// call the syscall
 	return sys_fs_close(fd);
@@ -50,7 +50,7 @@ s32 cellFsClose(u32 fd)
 
 s32 cellFsOpendir(vm::cptr<char> path, vm::ptr<u32> fd)
 {
-	cellFs.Warning("cellFsOpendir(path=*0x%x, fd=*0x%x) -> sys_fs_opendir()", path, fd);
+	cellFs.warning("cellFsOpendir(path=*0x%x, fd=*0x%x) -> sys_fs_opendir()", path, fd);
 
 	// TODO
 
@@ -60,7 +60,7 @@ s32 cellFsOpendir(vm::cptr<char> path, vm::ptr<u32> fd)
 
 s32 cellFsReaddir(u32 fd, vm::ptr<CellFsDirent> dir, vm::ptr<u64> nread)
 {
-	cellFs.Log("cellFsReaddir(fd=0x%x, dir=*0x%x, nread=*0x%x)", fd, dir, nread);
+	cellFs.trace("cellFsReaddir(fd=0x%x, dir=*0x%x, nread=*0x%x)", fd, dir, nread);
 
 	// call the syscall
 	return dir && nread ? sys_fs_readdir(fd, dir, nread) : CELL_FS_EFAULT;
@@ -68,7 +68,7 @@ s32 cellFsReaddir(u32 fd, vm::ptr<CellFsDirent> dir, vm::ptr<u64> nread)
 
 s32 cellFsClosedir(u32 fd)
 {
-	cellFs.Log("cellFsClosedir(fd=0x%x)", fd);
+	cellFs.trace("cellFsClosedir(fd=0x%x)", fd);
 
 	// call the syscall
 	return sys_fs_closedir(fd);
@@ -76,7 +76,7 @@ s32 cellFsClosedir(u32 fd)
 
 s32 cellFsStat(vm::cptr<char> path, vm::ptr<CellFsStat> sb)
 {
-	cellFs.Warning("cellFsStat(path=*0x%x, sb=*0x%x) -> sys_fs_stat()", path, sb);
+	cellFs.warning("cellFsStat(path=*0x%x, sb=*0x%x) -> sys_fs_stat()", path, sb);
 
 	// TODO
 
@@ -86,7 +86,7 @@ s32 cellFsStat(vm::cptr<char> path, vm::ptr<CellFsStat> sb)
 
 s32 cellFsFstat(u32 fd, vm::ptr<CellFsStat> sb)
 {
-	cellFs.Log("cellFsFstat(fd=0x%x, sb=*0x%x)", fd, sb);
+	cellFs.trace("cellFsFstat(fd=0x%x, sb=*0x%x)", fd, sb);
 
 	// call the syscall
 	return sys_fs_fstat(fd, sb);
@@ -94,7 +94,7 @@ s32 cellFsFstat(u32 fd, vm::ptr<CellFsStat> sb)
 
 s32 cellFsMkdir(vm::cptr<char> path, s32 mode)
 {
-	cellFs.Warning("cellFsMkdir(path=*0x%x, mode=%#o) -> sys_fs_mkdir()", path, mode);
+	cellFs.warning("cellFsMkdir(path=*0x%x, mode=%#o) -> sys_fs_mkdir()", path, mode);
 
 	// TODO
 
@@ -104,7 +104,7 @@ s32 cellFsMkdir(vm::cptr<char> path, s32 mode)
 
 s32 cellFsRename(vm::cptr<char> from, vm::cptr<char> to)
 {
-	cellFs.Warning("cellFsRename(from=*0x%x, to=*0x%x) -> sys_fs_rename()", from, to);
+	cellFs.warning("cellFsRename(from=*0x%x, to=*0x%x) -> sys_fs_rename()", from, to);
 
 	// TODO
 
@@ -114,7 +114,7 @@ s32 cellFsRename(vm::cptr<char> from, vm::cptr<char> to)
 
 s32 cellFsRmdir(vm::cptr<char> path)
 {
-	cellFs.Warning("cellFsRmdir(path=*0x%x) -> sys_fs_rmdir()", path);
+	cellFs.warning("cellFsRmdir(path=*0x%x) -> sys_fs_rmdir()", path);
 
 	// TODO
 
@@ -124,7 +124,7 @@ s32 cellFsRmdir(vm::cptr<char> path)
 
 s32 cellFsUnlink(vm::cptr<char> path)
 {
-	cellFs.Warning("cellFsUnlink(path=*0x%x) -> sys_fs_unlink()", path);
+	cellFs.warning("cellFsUnlink(path=*0x%x) -> sys_fs_unlink()", path);
 
 	// TODO
 
@@ -134,7 +134,7 @@ s32 cellFsUnlink(vm::cptr<char> path)
 
 s32 cellFsLseek(u32 fd, s64 offset, u32 whence, vm::ptr<u64> pos)
 {
-	cellFs.Log("cellFsLseek(fd=0x%x, offset=0x%llx, whence=0x%x, pos=*0x%x)", fd, offset, whence, pos);
+	cellFs.trace("cellFsLseek(fd=0x%x, offset=0x%llx, whence=0x%x, pos=*0x%x)", fd, offset, whence, pos);
 
 	// call the syscall
 	return pos ? sys_fs_lseek(fd, offset, whence, pos) : CELL_FS_EFAULT;
@@ -142,14 +142,14 @@ s32 cellFsLseek(u32 fd, s64 offset, u32 whence, vm::ptr<u64> pos)
 
 s32 cellFsFsync(u32 fd)
 {
-	cellFs.Todo("cellFsFsync(fd=0x%x)", fd);
+	cellFs.todo("cellFsFsync(fd=0x%x)", fd);
 
 	return CELL_OK;
 }
 
 s32 cellFsFGetBlockSize(u32 fd, vm::ptr<u64> sector_size, vm::ptr<u64> block_size)
 {
-	cellFs.Log("cellFsFGetBlockSize(fd=0x%x, sector_size=*0x%x, block_size=*0x%x)", fd, sector_size, block_size);
+	cellFs.trace("cellFsFGetBlockSize(fd=0x%x, sector_size=*0x%x, block_size=*0x%x)", fd, sector_size, block_size);
 
 	// call the syscall
 	return sector_size && block_size ? sys_fs_fget_block_size(fd, sector_size, block_size, vm::var<u64>{}, vm::var<u64>{}) : CELL_FS_EFAULT;
@@ -157,7 +157,7 @@ s32 cellFsFGetBlockSize(u32 fd, vm::ptr<u64> sector_size, vm::ptr<u64> block_siz
 
 s32 cellFsGetBlockSize(vm::cptr<char> path, vm::ptr<u64> sector_size, vm::ptr<u64> block_size)
 {
-	cellFs.Warning("cellFsGetBlockSize(path=*0x%x, sector_size=*0x%x, block_size=*0x%x) -> sys_fs_get_block_size()", path, sector_size, block_size);
+	cellFs.warning("cellFsGetBlockSize(path=*0x%x, sector_size=*0x%x, block_size=*0x%x) -> sys_fs_get_block_size()", path, sector_size, block_size);
 
 	// TODO
 
@@ -167,7 +167,7 @@ s32 cellFsGetBlockSize(vm::cptr<char> path, vm::ptr<u64> sector_size, vm::ptr<u6
 
 s32 cellFsTruncate(vm::cptr<char> path, u64 size)
 {
-	cellFs.Warning("cellFsTruncate(path=*0x%x, size=0x%llx) -> sys_fs_truncate()", path, size);
+	cellFs.warning("cellFsTruncate(path=*0x%x, size=0x%llx) -> sys_fs_truncate()", path, size);
 
 	// TODO
 
@@ -177,7 +177,7 @@ s32 cellFsTruncate(vm::cptr<char> path, u64 size)
 
 s32 cellFsFtruncate(u32 fd, u64 size)
 {
-	cellFs.Log("cellFsFtruncate(fd=0x%x, size=0x%llx)", fd, size);
+	cellFs.trace("cellFsFtruncate(fd=0x%x, size=0x%llx)", fd, size);
 
 	// call the syscall
 	return sys_fs_ftruncate(fd, size);
@@ -185,7 +185,7 @@ s32 cellFsFtruncate(u32 fd, u64 size)
 
 s32 cellFsChmod(vm::cptr<char> path, s32 mode)
 {
-	cellFs.Warning("cellFsChmod(path=*0x%x, mode=%#o) -> sys_fs_chmod()", path, mode);
+	cellFs.warning("cellFsChmod(path=*0x%x, mode=%#o) -> sys_fs_chmod()", path, mode);
 
 	// TODO
 
@@ -195,8 +195,8 @@ s32 cellFsChmod(vm::cptr<char> path, s32 mode)
 
 s32 cellFsGetFreeSize(vm::cptr<char> path, vm::ptr<u32> block_size, vm::ptr<u64> block_count)
 {
-	cellFs.Warning("cellFsGetFreeSize(path=*0x%x, block_size=*0x%x, block_count=*0x%x)", path, block_size, block_count);
-	cellFs.Warning("*** path = '%s'", path.get_ptr());
+	cellFs.warning("cellFsGetFreeSize(path=*0x%x, block_size=*0x%x, block_count=*0x%x)", path, block_size, block_count);
+	cellFs.warning("*** path = '%s'", path.get_ptr());
 
 	// TODO: Get real values. Currently, it always returns 40 GB of free space divided in 4 KB blocks
 	*block_size = 4096; // ?
@@ -207,7 +207,7 @@ s32 cellFsGetFreeSize(vm::cptr<char> path, vm::ptr<u32> block_size, vm::ptr<u64>
 
 s32 cellFsGetDirectoryEntries(u32 fd, vm::ptr<CellFsDirectoryEntry> entries, u32 entries_size, vm::ptr<u32> data_count)
 {
-	cellFs.Warning("cellFsGetDirectoryEntries(fd=%d, entries=*0x%x, entries_size=0x%x, data_count=*0x%x)", fd, entries, entries_size, data_count);
+	cellFs.warning("cellFsGetDirectoryEntries(fd=%d, entries=*0x%x, entries_size=0x%x, data_count=*0x%x)", fd, entries, entries_size, data_count);
 
 	const auto directory = idm::get<lv2_dir_t>(fd);
 
@@ -250,7 +250,7 @@ s32 cellFsGetDirectoryEntries(u32 fd, vm::ptr<CellFsDirectoryEntry> entries, u32
 
 s32 cellFsReadWithOffset(u32 fd, u64 offset, vm::ptr<void> buf, u64 buffer_size, vm::ptr<u64> nread)
 {
-	cellFs.Log("cellFsReadWithOffset(fd=%d, offset=0x%llx, buf=*0x%x, buffer_size=0x%llx, nread=*0x%x)", fd, offset, buf, buffer_size, nread);
+	cellFs.trace("cellFsReadWithOffset(fd=%d, offset=0x%llx, buf=*0x%x, buffer_size=0x%llx, nread=*0x%x)", fd, offset, buf, buffer_size, nread);
 
 	// TODO: use single sys_fs_fcntl syscall
 
@@ -281,7 +281,7 @@ s32 cellFsReadWithOffset(u32 fd, u64 offset, vm::ptr<void> buf, u64 buffer_size,
 
 s32 cellFsWriteWithOffset(u32 fd, u64 offset, vm::cptr<void> buf, u64 data_size, vm::ptr<u64> nwrite)
 {
-	cellFs.Log("cellFsWriteWithOffset(fd=%d, offset=0x%llx, buf=*0x%x, data_size=0x%llx, nwrite=*0x%x)", fd, offset, buf, data_size, nwrite);
+	cellFs.trace("cellFsWriteWithOffset(fd=%d, offset=0x%llx, buf=*0x%x, data_size=0x%llx, nwrite=*0x%x)", fd, offset, buf, data_size, nwrite);
 
 	// TODO: use single sys_fs_fcntl syscall
 
@@ -312,7 +312,7 @@ s32 cellFsWriteWithOffset(u32 fd, u64 offset, vm::cptr<void> buf, u64 data_size,
 
 s32 cellFsStReadInit(u32 fd, vm::cptr<CellFsRingBuffer> ringbuf)
 {
-	cellFs.Warning("cellFsStReadInit(fd=%d, ringbuf=*0x%x)", fd, ringbuf);
+	cellFs.warning("cellFsStReadInit(fd=%d, ringbuf=*0x%x)", fd, ringbuf);
 
 	if (ringbuf->copy & ~CELL_FS_ST_COPYLESS)
 	{
@@ -365,7 +365,7 @@ s32 cellFsStReadInit(u32 fd, vm::cptr<CellFsRingBuffer> ringbuf)
 
 s32 cellFsStReadFinish(u32 fd)
 {
-	cellFs.Warning("cellFsStReadFinish(fd=%d)", fd);
+	cellFs.warning("cellFsStReadFinish(fd=%d)", fd);
 
 	const auto file = idm::get<lv2_file_t>(fd);
 
@@ -388,7 +388,7 @@ s32 cellFsStReadFinish(u32 fd)
 
 s32 cellFsStReadGetRingBuf(u32 fd, vm::ptr<CellFsRingBuffer> ringbuf)
 {
-	cellFs.Warning("cellFsStReadGetRingBuf(fd=%d, ringbuf=*0x%x)", fd, ringbuf);
+	cellFs.warning("cellFsStReadGetRingBuf(fd=%d, ringbuf=*0x%x)", fd, ringbuf);
 
 	const auto file = idm::get<lv2_file_t>(fd);
 
@@ -412,7 +412,7 @@ s32 cellFsStReadGetRingBuf(u32 fd, vm::ptr<CellFsRingBuffer> ringbuf)
 
 s32 cellFsStReadGetStatus(u32 fd, vm::ptr<u64> status)
 {
-	cellFs.Warning("cellFsStReadGetRingBuf(fd=%d, status=*0x%x)", fd, status);
+	cellFs.warning("cellFsStReadGetRingBuf(fd=%d, status=*0x%x)", fd, status);
 
 	const auto file = idm::get<lv2_file_t>(fd);
 
@@ -446,7 +446,7 @@ s32 cellFsStReadGetStatus(u32 fd, vm::ptr<u64> status)
 
 s32 cellFsStReadGetRegid(u32 fd, vm::ptr<u64> regid)
 {
-	cellFs.Warning("cellFsStReadGetRingBuf(fd=%d, regid=*0x%x)", fd, regid);
+	cellFs.warning("cellFsStReadGetRingBuf(fd=%d, regid=*0x%x)", fd, regid);
 
 	const auto file = idm::get<lv2_file_t>(fd);
 
@@ -467,7 +467,7 @@ s32 cellFsStReadGetRegid(u32 fd, vm::ptr<u64> regid)
 
 s32 cellFsStReadStart(u32 fd, u64 offset, u64 size)
 {
-	cellFs.Warning("cellFsStReadStart(fd=%d, offset=0x%llx, size=0x%llx)", fd, offset, size);
+	cellFs.warning("cellFsStReadStart(fd=%d, offset=0x%llx, size=0x%llx)", fd, offset, size);
 
 	const auto file = idm::get<lv2_file_t>(fd);
 
@@ -548,7 +548,7 @@ s32 cellFsStReadStart(u32 fd, u64 offset, u64 size)
 
 s32 cellFsStReadStop(u32 fd)
 {
-	cellFs.Warning("cellFsStReadStop(fd=%d)", fd);
+	cellFs.warning("cellFsStReadStop(fd=%d)", fd);
 
 	const auto file = idm::get<lv2_file_t>(fd);
 
@@ -579,7 +579,7 @@ s32 cellFsStReadStop(u32 fd)
 
 s32 cellFsStRead(u32 fd, vm::ptr<u8> buf, u64 size, vm::ptr<u64> rsize)
 {
-	cellFs.Warning("cellFsStRead(fd=%d, buf=*0x%x, size=0x%llx, rsize=*0x%x)", fd, buf, size, rsize);
+	cellFs.warning("cellFsStRead(fd=%d, buf=*0x%x, size=0x%llx, rsize=*0x%x)", fd, buf, size, rsize);
 	
 	const auto file = idm::get<lv2_file_t>(fd);
 
@@ -613,7 +613,7 @@ s32 cellFsStRead(u32 fd, vm::ptr<u8> buf, u64 size, vm::ptr<u64> rsize)
 
 s32 cellFsStReadGetCurrentAddr(u32 fd, vm::ptr<u32> addr, vm::ptr<u64> size)
 {
-	cellFs.Warning("cellFsStReadGetCurrentAddr(fd=%d, addr=*0x%x, size=*0x%x)", fd, addr, size);
+	cellFs.warning("cellFsStReadGetCurrentAddr(fd=%d, addr=*0x%x, size=*0x%x)", fd, addr, size);
 
 	const auto file = idm::get<lv2_file_t>(fd);
 
@@ -646,7 +646,7 @@ s32 cellFsStReadGetCurrentAddr(u32 fd, vm::ptr<u32> addr, vm::ptr<u64> size)
 
 s32 cellFsStReadPutCurrentAddr(u32 fd, vm::ptr<u8> addr, u64 size)
 {
-	cellFs.Warning("cellFsStReadPutCurrentAddr(fd=%d, addr=*0x%x, size=0x%llx)", fd, addr, size);
+	cellFs.warning("cellFsStReadPutCurrentAddr(fd=%d, addr=*0x%x, size=0x%llx)", fd, addr, size);
 	
 	const auto file = idm::get<lv2_file_t>(fd);
 
@@ -673,7 +673,7 @@ s32 cellFsStReadPutCurrentAddr(u32 fd, vm::ptr<u8> addr, u64 size)
 
 s32 cellFsStReadWait(u32 fd, u64 size)
 {
-	cellFs.Warning("cellFsStReadWait(fd=%d, size=0x%llx)", fd, size);
+	cellFs.warning("cellFsStReadWait(fd=%d, size=0x%llx)", fd, size);
 	
 	const auto file = idm::get<lv2_file_t>(fd);
 
@@ -702,7 +702,7 @@ s32 cellFsStReadWait(u32 fd, u64 size)
 
 s32 cellFsStReadWaitCallback(u32 fd, u64 size, fs_st_cb_t func)
 {
-	cellFs.Warning("cellFsStReadWaitCallback(fd=%d, size=0x%llx, func=*0x%x)", fd, size, func);
+	cellFs.warning("cellFsStReadWaitCallback(fd=%d, size=0x%llx, func=*0x%x)", fd, size, func);
 
 	const auto file = idm::get<lv2_file_t>(fd);
 
@@ -757,13 +757,13 @@ s32 sdata_unpack(const std::string& packed_file, const std::string& unpacked_fil
 
 	if (!packed_stream || !packed_stream->IsOpened())
 	{
-		cellFs.Error("File '%s' not found!", packed_file.c_str());
+		cellFs.error("File '%s' not found!", packed_file.c_str());
 		return CELL_ENOENT;
 	}
 
 	if (!unpacked_stream || !unpacked_stream->IsOpened())
 	{
-		cellFs.Error("File '%s' couldn't be created!", unpacked_file.c_str());
+		cellFs.error("File '%s' couldn't be created!", unpacked_file.c_str());
 		return CELL_ENOENT;
 	}
 
@@ -772,7 +772,7 @@ s32 sdata_unpack(const std::string& packed_file, const std::string& unpacked_fil
 	u32 format = *(be_t<u32>*)&buffer[0];
 	if (format != 0x4E504400) // "NPD\x00"
 	{
-		cellFs.Error("Illegal format. Expected 0x4E504400, but got 0x%08x", format);
+		cellFs.error("Illegal format. Expected 0x4E504400, but got 0x%08x", format);
 		return CELL_EFSSPECIFIC;
 	}
 
@@ -786,7 +786,7 @@ s32 sdata_unpack(const std::string& packed_file, const std::string& unpacked_fil
 	// SDATA file is compressed
 	if (flags & 0x1)
 	{
-		cellFs.Warning("cellFsSdataOpen: Compressed SDATA files are not supported yet.");
+		cellFs.warning("cellFsSdataOpen: Compressed SDATA files are not supported yet.");
 		return CELL_EFSSPECIFIC;
 	}
 	// SDATA file is NOT compressed
@@ -798,7 +798,7 @@ s32 sdata_unpack(const std::string& packed_file, const std::string& unpacked_fil
 
 		if (!sdata_check(version, flags, filesizeInput, filesizeTmp))
 		{
-			cellFs.Error("cellFsSdataOpen: Wrong header information.");
+			cellFs.error("cellFsSdataOpen: Wrong header information.");
 			return CELL_EFSSPECIFIC;
 		}
 
@@ -835,7 +835,7 @@ s32 sdata_unpack(const std::string& packed_file, const std::string& unpacked_fil
 
 s32 cellFsSdataOpen(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, vm::cptr<void> arg, u64 size)
 {
-	cellFs.Notice("cellFsSdataOpen(path=*0x%x, flags=%#o, fd=*0x%x, arg=*0x%x, size=0x%llx)", path, flags, fd, arg, size);
+	cellFs.notice("cellFsSdataOpen(path=*0x%x, flags=%#o, fd=*0x%x, arg=*0x%x, size=0x%llx)", path, flags, fd, arg, size);
 
 	if (flags != CELL_FS_O_RDONLY)
 	{
@@ -865,7 +865,7 @@ s32 cellFsSdataOpen(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, vm::cptr<vo
 
 s32 cellFsSdataOpenByFd(u32 mself_fd, s32 flags, vm::ptr<u32> sdata_fd, u64 offset, vm::cptr<void> arg, u64 size)
 {
-	cellFs.Todo("cellFsSdataOpenByFd(mself_fd=0x%x, flags=%#o, sdata_fd=*0x%x, offset=0x%llx, arg=*0x%x, size=0x%llx)", mself_fd, flags, sdata_fd, offset, arg, size);
+	cellFs.todo("cellFsSdataOpenByFd(mself_fd=0x%x, flags=%#o, sdata_fd=*0x%x, offset=0x%llx, arg=*0x%x, size=0x%llx)", mself_fd, flags, sdata_fd, offset, arg, size);
 
 	// TODO:
 
@@ -876,7 +876,7 @@ using fs_aio_cb_t = vm::ptr<void(vm::ptr<CellFsAio> xaio, s32 error, s32 xid, u6
 
 void fsAio(vm::ptr<CellFsAio> aio, bool write, s32 xid, fs_aio_cb_t func)
 {
-	cellFs.Notice("FS AIO Request(%d): fd=%d, offset=0x%llx, buf=*0x%x, size=0x%llx, user_data=0x%llx", xid, aio->fd, aio->offset, aio->buf, aio->size, aio->user_data);
+	cellFs.notice("FS AIO Request(%d): fd=%d, offset=0x%llx, buf=*0x%x, size=0x%llx, user_data=0x%llx", xid, aio->fd, aio->offset, aio->buf, aio->size, aio->user_data);
 
 	s32 error = CELL_OK;
 	u64 result = 0;
@@ -909,8 +909,8 @@ void fsAio(vm::ptr<CellFsAio> aio, bool write, s32 xid, fs_aio_cb_t func)
 
 s32 cellFsAioInit(vm::cptr<char> mount_point)
 {
-	cellFs.Warning("cellFsAioInit(mount_point=*0x%x)", mount_point);
-	cellFs.Warning("*** mount_point = '%s'", mount_point.get_ptr());
+	cellFs.warning("cellFsAioInit(mount_point=*0x%x)", mount_point);
+	cellFs.warning("*** mount_point = '%s'", mount_point.get_ptr());
 
 	// TODO: create AIO thread (if not exists) for specified mount point
 
@@ -919,8 +919,8 @@ s32 cellFsAioInit(vm::cptr<char> mount_point)
 
 s32 cellFsAioFinish(vm::cptr<char> mount_point)
 {
-	cellFs.Warning("cellFsAioFinish(mount_point=*0x%x)", mount_point);
-	cellFs.Warning("*** mount_point = '%s'", mount_point.get_ptr());
+	cellFs.warning("cellFsAioFinish(mount_point=*0x%x)", mount_point);
+	cellFs.warning("*** mount_point = '%s'", mount_point.get_ptr());
 
 	// TODO: delete existing AIO thread for specified mount point
 
@@ -931,7 +931,7 @@ std::atomic<s32> g_fs_aio_id;
 
 s32 cellFsAioRead(vm::ptr<CellFsAio> aio, vm::ptr<s32> id, fs_aio_cb_t func)
 {
-	cellFs.Warning("cellFsAioRead(aio=*0x%x, id=*0x%x, func=*0x%x)", aio, id, func);
+	cellFs.warning("cellFsAioRead(aio=*0x%x, id=*0x%x, func=*0x%x)", aio, id, func);
 
 	// TODO: detect mount point and send AIO request to the AIO thread of this mount point
 
@@ -944,7 +944,7 @@ s32 cellFsAioRead(vm::ptr<CellFsAio> aio, vm::ptr<s32> id, fs_aio_cb_t func)
 
 s32 cellFsAioWrite(vm::ptr<CellFsAio> aio, vm::ptr<s32> id, fs_aio_cb_t func)
 {
-	cellFs.Warning("cellFsAioWrite(aio=*0x%x, id=*0x%x, func=*0x%x)", aio, id, func);
+	cellFs.warning("cellFsAioWrite(aio=*0x%x, id=*0x%x, func=*0x%x)", aio, id, func);
 
 	// TODO: detect mount point and send AIO request to the AIO thread of this mount point
 
@@ -957,7 +957,7 @@ s32 cellFsAioWrite(vm::ptr<CellFsAio> aio, vm::ptr<s32> id, fs_aio_cb_t func)
 
 s32 cellFsAioCancel(s32 id)
 {
-	cellFs.Warning("cellFsAioCancel(id=%d) -> CELL_FS_EINVAL", id);
+	cellFs.warning("cellFsAioCancel(id=%d) -> CELL_FS_EINVAL", id);
 
 	// TODO: cancelled requests return CELL_FS_ECANCELED through their own callbacks
 
@@ -966,14 +966,14 @@ s32 cellFsAioCancel(s32 id)
 
 s32 cellFsSetDefaultContainer(u32 id, u32 total_limit)
 {
-	cellFs.Todo("cellFsSetDefaultContainer(id=0x%x, total_limit=%d)", id, total_limit);
+	cellFs.todo("cellFsSetDefaultContainer(id=0x%x, total_limit=%d)", id, total_limit);
 
 	return CELL_OK;
 }
 
 s32 cellFsSetIoBufferFromDefaultContainer(u32 fd, u32 buffer_size, u32 page_type)
 {
-	cellFs.Todo("cellFsSetIoBufferFromDefaultContainer(fd=%d, buffer_size=%d, page_type=%d)", fd, buffer_size, page_type);
+	cellFs.todo("cellFsSetIoBufferFromDefaultContainer(fd=%d, buffer_size=%d, page_type=%d)", fd, buffer_size, page_type);
 
 	const auto file = idm::get<lv2_file_t>(fd);
 

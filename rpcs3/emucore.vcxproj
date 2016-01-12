@@ -217,7 +217,6 @@
     <ClCompile Include="Emu\Memory\vm.cpp" />
     <ClCompile Include="Emu\SysCalls\Callback.cpp" />
     <ClCompile Include="Emu\SysCalls\FuncList.cpp" />
-    <ClCompile Include="Emu\SysCalls\LogBase.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\sys_cond.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\sys_event.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\sys_event_flag.cpp" />
@@ -363,7 +362,6 @@
     <ClInclude Include="..\Utilities\convert.h" />
     <ClInclude Include="..\Utilities\event.h" />
     <ClInclude Include="..\Utilities\GNU.h" />
-    <ClInclude Include="..\Utilities\MTRingbuffer.h" />
     <ClInclude Include="..\Utilities\Log.h" />
     <ClInclude Include="..\Utilities\File.h" />
     <ClInclude Include="..\Utilities\rPlatform.h" />
@@ -538,7 +536,6 @@
     <ClInclude Include="Emu\SysCalls\Callback.h" />
     <ClInclude Include="Emu\SysCalls\CB_FUNC.h" />
     <ClInclude Include="Emu\SysCalls\ErrorCodes.h" />
-    <ClInclude Include="Emu\SysCalls\LogBase.h" />
     <ClInclude Include="Emu\SysCalls\lv2\sys_sync.h" />
     <ClInclude Include="Emu\SysCalls\lv2\sys_cond.h" />
     <ClInclude Include="Emu\SysCalls\lv2\sys_dbg.h" />

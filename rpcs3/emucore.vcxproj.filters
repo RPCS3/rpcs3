@@ -470,9 +470,6 @@
     <ClCompile Include="..\Utilities\AutoPause.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\SysCalls\LogBase.cpp">
-      <Filter>Emu\SysCalls</Filter>
-    </ClCompile>
     <ClCompile Include="..\Utilities\rPlatform.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
@@ -1361,9 +1358,6 @@
     <ClInclude Include="..\Utilities\Log.h">
       <Filter>Utilities</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\SysCalls\LogBase.h">
-      <Filter>Emu\SysCalls</Filter>
-    </ClInclude>
     <ClInclude Include="Emu\RSX\Null\NullGSRender.h">
       <Filter>Emu\GPU\RSX\Null</Filter>
     </ClInclude>
@@ -1408,9 +1402,6 @@
     </ClInclude>
     <ClInclude Include="Emu\Io\Null\NullMouseHandler.h">
       <Filter>Emu\Io\Null</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Utilities\MTRingbuffer.h">
-      <Filter>Utilities</Filter>
     </ClInclude>
     <ClInclude Include="..\Utilities\rPlatform.h">
       <Filter>Utilities</Filter>

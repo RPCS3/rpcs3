@@ -218,7 +218,7 @@ void MainFrame::BootGame(wxCommandEvent& WXUNUSED(event))
 	
 	if(Emu.BootGame(ctrl.GetPath().ToStdString()))
 	{
-		LOG_SUCCESS(HLE, "Game: boot done.");
+		LOG_SUCCESS(GENERAL, "Game: boot done.");
 
 		if (rpcs3::config.misc.always_start.value())
 		{
@@ -227,7 +227,7 @@ void MainFrame::BootGame(wxCommandEvent& WXUNUSED(event))
 	}
 	else
 	{
-		LOG_ERROR(HLE, "PS3 executable not found in selected folder (%s)", fmt::ToUTF8(ctrl.GetPath())); // passing std::string (test)
+		LOG_ERROR(GENERAL, "PS3 executable not found in selected folder (%s)", fmt::ToUTF8(ctrl.GetPath())); // passing std::string (test)
 	}
 }
 
@@ -336,13 +336,13 @@ void MainFrame::BootElf(wxCommandEvent& WXUNUSED(event))
 		return;
 	}
 
-	LOG_NOTICE(HLE, "(S)ELF: booting...");
+	LOG_NOTICE(LOADER, "(S)ELF: booting...");
 
 	Emu.Stop();
 	Emu.SetPath(fmt::ToUTF8(ctrl.GetPath()));
 	Emu.Load();
 
-	LOG_SUCCESS(HLE, "(S)ELF: boot done.");
+	LOG_SUCCESS(LOADER, "(S)ELF: boot done.");
 	
 	if (rpcs3::config.misc.always_start.value() && Emu.IsReady())
 	{

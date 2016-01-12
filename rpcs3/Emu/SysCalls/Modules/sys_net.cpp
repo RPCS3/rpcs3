@@ -104,7 +104,7 @@ void copy_fdset(fd_set* set, vm::ptr<sys_net::fd_set> src)
 				if (src->fds_bits[i] & (1 << bit))
 				{
 					u32 sock = (i << 5) | bit;
-					//libnet.Error("setting: fd %d", sock);
+					//libnet.error("setting: fd %d", sock);
 					FD_SET(g_socketMap[sock], set);
 				}
 			}
@@ -154,7 +154,7 @@ namespace sys_net
 	// Functions
 	s32 accept(s32 s, vm::ptr<sockaddr> addr, vm::ptr<u32> paddrlen)
 	{
-		libnet.Warning("accept(s=%d, family=*0x%x, paddrlen=*0x%x)", s, addr, paddrlen);
+		libnet.warning("accept(s=%d, family=*0x%x, paddrlen=*0x%x)", s, addr, paddrlen);
 		s = g_socketMap[s];
 
 		if (!addr) {
@@ -176,14 +176,14 @@ namespace sys_net
 
 	s32 bind(s32 s, vm::cptr<sockaddr> addr, u32 addrlen)
 	{
-		libnet.Warning("bind(s=%d, family=*0x%x, addrlen=%d)", s, addr, addrlen);
+		libnet.warning("bind(s=%d, family=*0x%x, addrlen=%d)", s, addr, addrlen);
 		s = g_socketMap[s];
 
 		::sockaddr_in saddr;
 		memcpy(&saddr, addr.get_ptr(), sizeof(::sockaddr_in));
 		saddr.sin_family = addr->sa_family;
 		const char *ipaddr = ::inet_ntoa(saddr.sin_addr);
-		libnet.Warning("binding on %s to port %d", ipaddr, ntohs(saddr.sin_port));
+		libnet.warning("binding on %s to port %d", ipaddr, ntohs(saddr.sin_port));
 		s32 ret = ::bind(s, (const ::sockaddr*)&saddr, addrlen);
 		get_errno() = getLastError();
 
@@ -192,14 +192,14 @@ namespace sys_net
 
 	s32 connect(s32 s, vm::ptr<sockaddr> addr, u32 addrlen)
 	{
-		libnet.Warning("connect(s=%d, family=*0x%x, addrlen=%d)", s, addr, addrlen);
+		libnet.warning("connect(s=%d, family=*0x%x, addrlen=%d)", s, addr, addrlen);
 		s = g_socketMap[s];
 
 		::sockaddr_in saddr;
 		memcpy(&saddr, addr.get_ptr(), sizeof(::sockaddr_in));
 		saddr.sin_family = addr->sa_family;
 		const char *ipaddr = ::inet_ntoa(saddr.sin_addr);
-		libnet.Warning("connecting on %s to port %d", ipaddr, ntohs(saddr.sin_port));
+		libnet.warning("connecting on %s to port %d", ipaddr, ntohs(saddr.sin_port));
 		s32 ret = ::connect(s, (const ::sockaddr*)&saddr, addrlen);
 		get_errno() = getLastError();
 
@@ -238,7 +238,7 @@ namespace sys_net
 
 	u32 inet_addr(vm::cptr<char> cp)
 	{
-		libnet.Warning("inet_addr(cp=*0x%x)", cp);
+		libnet.warning("inet_addr(cp=*0x%x)", cp);
 		return htonl(::inet_addr(cp.get_ptr())); // return a big-endian IP address (WTF? function should return LITTLE-ENDIAN value)
 	}
 
@@ -280,7 +280,7 @@ namespace sys_net
 
 	vm::cptr<char> inet_ntop(s32 af, vm::ptr<void> src, vm::ptr<char> dst, u32 size)
 	{
-		libnet.Warning("inet_ntop(af=%d, src=*0x%x, dst=*0x%x, size=%d)", af, src, dst, size);
+		libnet.warning("inet_ntop(af=%d, src=*0x%x, dst=*0x%x, size=%d)", af, src, dst, size);
 		const char* result = ::inet_ntop(af, src.get_ptr(), dst.get_ptr(), size);
 
 		if (result == nullptr)
@@ -293,13 +293,13 @@ namespace sys_net
 
 	s32 inet_pton(s32 af, vm::cptr<char> src, vm::ptr<char> dst)
 	{
-		libnet.Warning("inet_pton(af=%d, src=*0x%x, dst=*0x%x)", af, src, dst);
+		libnet.warning("inet_pton(af=%d, src=*0x%x, dst=*0x%x)", af, src, dst);
 		return ::inet_pton(af, src.get_ptr(), dst.get_ptr());
 	}
 
 	s32 listen(s32 s, s32 backlog)
 	{
-		libnet.Warning("listen(s=%d, backlog=%d)", s, backlog);
+		libnet.warning("listen(s=%d, backlog=%d)", s, backlog);
 		s = g_socketMap[s];
 		s32 ret = ::listen(s, backlog);
 		get_errno() = getLastError();
@@ -309,7 +309,7 @@ namespace sys_net
 
 	s32 recv(s32 s, vm::ptr<char> buf, u32 len, s32 flags)
 	{
-		libnet.Warning("recv(s=%d, buf=*0x%x, len=%d, flags=0x%x)", s, buf, len, flags);
+		libnet.warning("recv(s=%d, buf=*0x%x, len=%d, flags=0x%x)", s, buf, len, flags);
 		s = g_socketMap[s];
 
 		s32 ret = ::recv(s, buf.get_ptr(), len, flags);
@@ -320,7 +320,7 @@ namespace sys_net
 
 	s32 recvfrom(s32 s, vm::ptr<char> buf, u32 len, s32 flags, vm::ptr<sockaddr> addr, vm::ptr<u32> paddrlen)
 	{
-		libnet.Warning("recvfrom(s=%d, buf=*0x%x, len=%d, flags=0x%x, addr=*0x%x, paddrlen=*0x%x)", s, buf, len, flags, addr, paddrlen);
+		libnet.warning("recvfrom(s=%d, buf=*0x%x, len=%d, flags=0x%x, addr=*0x%x, paddrlen=*0x%x)", s, buf, len, flags, addr, paddrlen);
 		s = g_socketMap[s];
 
 		::sockaddr _addr;
@@ -342,7 +342,7 @@ namespace sys_net
 
 	s32 send(s32 s, vm::cptr<char> buf, u32 len, s32 flags)
 	{
-		libnet.Warning("send(s=%d, buf=*0x%x, len=%d, flags=0x%x)", s, buf, len, flags);
+		libnet.warning("send(s=%d, buf=*0x%x, len=%d, flags=0x%x)", s, buf, len, flags);
 		s = g_socketMap[s];
 
 		s32 ret = ::send(s, buf.get_ptr(), len, flags);
@@ -359,7 +359,7 @@ namespace sys_net
 
 	s32 sendto(s32 s, vm::cptr<char> buf, u32 len, s32 flags, vm::ptr<sockaddr> addr, u32 addrlen)
 	{
-		libnet.Warning("sendto(s=%d, buf=*0x%x, len=%d, flags=0x%x, addr=*0x%x, addrlen=%d)", s, buf, len, flags, addr, addrlen);
+		libnet.warning("sendto(s=%d, buf=*0x%x, len=%d, flags=0x%x, addr=*0x%x, addrlen=%d)", s, buf, len, flags, addr, addrlen);
 		s = g_socketMap[s];
 
 		::sockaddr _addr;
@@ -373,7 +373,7 @@ namespace sys_net
 
 	s32 setsockopt(s32 s, s32 level, s32 optname, vm::cptr<char> optval, u32 optlen)
 	{
-		libnet.Warning("socket(s=%d, level=%d, optname=%d, optval=*0x%x, optlen=%d)", s, level, optname, optval, optlen);
+		libnet.warning("socket(s=%d, level=%d, optname=%d, optval=*0x%x, optlen=%d)", s, level, optname, optval, optlen);
 		s = g_socketMap[s];
 
 		s32 ret = ::setsockopt(s, level, optname, optval.get_ptr(), optlen);
@@ -384,7 +384,7 @@ namespace sys_net
 
 	s32 shutdown(s32 s, s32 how)
 	{
-		libnet.Warning("shutdown(s=%d, how=%d)", s, how);
+		libnet.warning("shutdown(s=%d, how=%d)", s, how);
 		s = g_socketMap[s];
 
 		s32 ret = ::shutdown(s, how);
@@ -395,7 +395,7 @@ namespace sys_net
 
 	s32 socket(s32 family, s32 type, s32 protocol)
 	{
-		libnet.Warning("socket(family=%d, type=%d, protocol=%d)", family, type, protocol);
+		libnet.warning("socket(family=%d, type=%d, protocol=%d)", family, type, protocol);
 
 		s32 sock = ::socket(family, type, protocol);
 		get_errno() = getLastError();
@@ -406,7 +406,7 @@ namespace sys_net
 
 	s32 socketclose(s32 s)
 	{
-		libnet.Warning("socket(s=%d)", s);
+		libnet.warning("socket(s=%d)", s);
 		s = g_socketMap[s];
 
 #ifdef _WIN32
@@ -426,7 +426,7 @@ namespace sys_net
 
 	s32 socketselect(s32 nfds, vm::ptr<fd_set> readfds, vm::ptr<fd_set> writefds, vm::ptr<fd_set> exceptfds, vm::ptr<timeval> timeout)
 	{
-		libnet.Warning("socketselect(nfds=%d, readfds=*0x%x, writefds=*0x%x, exceptfds=*0x%x, timeout=*0x%x)", nfds, readfds, writefds, exceptfds, timeout);
+		libnet.warning("socketselect(nfds=%d, readfds=*0x%x, writefds=*0x%x, exceptfds=*0x%x, timeout=*0x%x)", nfds, readfds, writefds, exceptfds, timeout);
 
 		::timeval _timeout;
 
@@ -436,7 +436,7 @@ namespace sys_net
 			_timeout.tv_usec = timeout->tv_usec;
 		}
 
-		//libnet.Error("timeval: %d . %d", _timeout.tv_sec, _timeout.tv_usec);
+		//libnet.error("timeval: %d . %d", _timeout.tv_sec, _timeout.tv_usec);
 
 		::fd_set _readfds;
 		::fd_set _writefds;
@@ -452,7 +452,7 @@ namespace sys_net
 
 		if (getLastError() >= 0)
 		{
-			libnet.Error("socketselect(): error %d", getLastError());
+			libnet.error("socketselect(): error %d", getLastError());
 		}
 
 		//return ret;
@@ -461,7 +461,7 @@ namespace sys_net
 
 	s32 sys_net_initialize_network_ex(vm::ptr<sys_net_initialize_parameter_t> param)
 	{
-		libnet.Warning("sys_net_initialize_network_ex(param=*0x%x)", param);
+		libnet.warning("sys_net_initialize_network_ex(param=*0x%x)", param);
 
 #ifdef _WIN32
 		WSADATA wsaData;
@@ -527,7 +527,7 @@ namespace sys_net
 
 	vm::ptr<s32> _sys_net_errno_loc()
 	{
-		libnet.Warning("_sys_net_errno_loc()");
+		libnet.warning("_sys_net_errno_loc()");
 
 		return get_errno().ptr();
 	}
@@ -594,7 +594,7 @@ namespace sys_net
 
 	s32 sys_net_finalize_network()
 	{
-		libnet.Warning("sys_net_initialize_network_ex()");
+		libnet.warning("sys_net_initialize_network_ex()");
 
 #ifdef _WIN32
 		WSACleanup();

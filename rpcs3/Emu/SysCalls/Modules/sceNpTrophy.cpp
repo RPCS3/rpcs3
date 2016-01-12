@@ -33,21 +33,21 @@ struct trophy_handle_t
 // Functions
 s32 sceNpTrophyInit(vm::ptr<void> pool, u32 poolSize, u32 containerId, u64 options)
 {
-	sceNpTrophy.Warning("sceNpTrophyInit(pool=*0x%x, poolSize=0x%x, containerId=0x%x, options=0x%llx)", pool, poolSize, containerId, options);
+	sceNpTrophy.warning("sceNpTrophyInit(pool=*0x%x, poolSize=0x%x, containerId=0x%x, options=0x%llx)", pool, poolSize, containerId, options);
 
 	return CELL_OK;
 }
 
 s32 sceNpTrophyTerm()
 {
-	sceNpTrophy.Warning("sceNpTrophyTerm()");
+	sceNpTrophy.warning("sceNpTrophyTerm()");
 
 	return CELL_OK;
 }
 
 s32 sceNpTrophyCreateHandle(vm::ptr<u32> handle)
 {
-	sceNpTrophy.Warning("sceNpTrophyCreateHandle(handle=*0x%x)", handle);
+	sceNpTrophy.warning("sceNpTrophyCreateHandle(handle=*0x%x)", handle);
 
 	if (!handle)
 	{
@@ -61,7 +61,7 @@ s32 sceNpTrophyCreateHandle(vm::ptr<u32> handle)
 
 s32 sceNpTrophyDestroyHandle(u32 handle)
 {
-	sceNpTrophy.Warning("sceNpTrophyDestroyHandle(handle=0x%x)", handle);
+	sceNpTrophy.warning("sceNpTrophyDestroyHandle(handle=0x%x)", handle);
 
 	const auto hndl = idm::get<trophy_handle_t>(handle);
 
@@ -77,7 +77,7 @@ s32 sceNpTrophyDestroyHandle(u32 handle)
 
 s32 sceNpTrophyAbortHandle(u32 handle)
 {
-	sceNpTrophy.Todo("sceNpTrophyAbortHandle(handle=0x%x)", handle);
+	sceNpTrophy.todo("sceNpTrophyAbortHandle(handle=0x%x)", handle);
 
 	const auto hndl = idm::get<trophy_handle_t>(handle);
 
@@ -91,7 +91,7 @@ s32 sceNpTrophyAbortHandle(u32 handle)
 
 s32 sceNpTrophyCreateContext(vm::ptr<u32> context, vm::cptr<SceNpCommunicationId> commId, vm::cptr<SceNpCommunicationSignature> commSign, u64 options)
 {
-	sceNpTrophy.Warning("sceNpTrophyCreateContext(context=*0x%x, commId=*0x%x, commSign=*0x%x, options=0x%llx)", context, commId, commSign, options);
+	sceNpTrophy.warning("sceNpTrophyCreateContext(context=*0x%x, commId=*0x%x, commSign=*0x%x, options=0x%llx)", context, commId, commSign, options);
 
 	// rough checks for further fmt::format call
 	if (commId->term || commId->num > 99)
@@ -124,7 +124,7 @@ s32 sceNpTrophyCreateContext(vm::ptr<u32> context, vm::cptr<SceNpCommunicationId
 
 s32 sceNpTrophyDestroyContext(u32 context)
 {
-	sceNpTrophy.Warning("sceNpTrophyDestroyContext(context=0x%x)", context);
+	sceNpTrophy.warning("sceNpTrophyDestroyContext(context=0x%x)", context);
 
 	const auto ctxt = idm::get<trophy_context_t>(context);
 
@@ -140,13 +140,13 @@ s32 sceNpTrophyDestroyContext(u32 context)
 
 s32 sceNpTrophyRegisterContext(PPUThread& CPU, u32 context, u32 handle, vm::ptr<SceNpTrophyStatusCallback> statusCb, vm::ptr<u32> arg, u64 options)
 {
-	sceNpTrophy.Error("sceNpTrophyRegisterContext(context=0x%x, handle=0x%x, statusCb=*0x%x, arg=*0x%x, options=0x%llx)", context, handle, statusCb, arg, options);
+	sceNpTrophy.error("sceNpTrophyRegisterContext(context=0x%x, handle=0x%x, statusCb=*0x%x, arg=*0x%x, options=0x%llx)", context, handle, statusCb, arg, options);
 
 	const auto ctxt = idm::get<trophy_context_t>(context);
 
 	if (!ctxt)
 	{
-		sceNpTrophy.Error("sceNpTrophyRegisterContext(): SCE_NP_TROPHY_ERROR_UNKNOWN_CONTEXT");
+		sceNpTrophy.error("sceNpTrophyRegisterContext(): SCE_NP_TROPHY_ERROR_UNKNOWN_CONTEXT");
 		return SCE_NP_TROPHY_ERROR_UNKNOWN_CONTEXT;
 	}
 
@@ -154,14 +154,14 @@ s32 sceNpTrophyRegisterContext(PPUThread& CPU, u32 context, u32 handle, vm::ptr<
 
 	if (!hndl)
 	{
-		sceNpTrophy.Error("sceNpTrophyRegisterContext(): SCE_NP_TROPHY_ERROR_UNKNOWN_HANDLE");
+		sceNpTrophy.error("sceNpTrophyRegisterContext(): SCE_NP_TROPHY_ERROR_UNKNOWN_HANDLE");
 		return SCE_NP_TROPHY_ERROR_UNKNOWN_HANDLE;
 	}
 
 	TRPLoader trp(*ctxt->trp_stream);
 	if (!trp.LoadHeader())
 	{
-		sceNpTrophy.Error("sceNpTrophyRegisterContext(): SCE_NP_TROPHY_ERROR_ILLEGAL_UPDATE");
+		sceNpTrophy.error("sceNpTrophyRegisterContext(): SCE_NP_TROPHY_ERROR_ILLEGAL_UPDATE");
 		return SCE_NP_TROPHY_ERROR_ILLEGAL_UPDATE;
 	}
 
@@ -201,7 +201,7 @@ s32 sceNpTrophyRegisterContext(PPUThread& CPU, u32 context, u32 handle, vm::ptr<
 	std::string trophyPath = "/dev_hdd0/home/00000001/trophy/" + ctxt->trp_name;
 	if (!trp.Install(trophyPath))
 	{
-		sceNpTrophy.Error("sceNpTrophyRegisterContext(): SCE_NP_TROPHY_ERROR_ILLEGAL_UPDATE");
+		sceNpTrophy.error("sceNpTrophyRegisterContext(): SCE_NP_TROPHY_ERROR_ILLEGAL_UPDATE");
 		return SCE_NP_TROPHY_ERROR_ILLEGAL_UPDATE;
 	}
 	
@@ -220,7 +220,7 @@ s32 sceNpTrophyRegisterContext(PPUThread& CPU, u32 context, u32 handle, vm::ptr<
 
 s32 sceNpTrophyGetRequiredDiskSpace(u32 context, u32 handle, vm::ptr<u64> reqspace, u64 options)
 {
-	sceNpTrophy.Todo("sceNpTrophyGetRequiredDiskSpace(context=0x%x, handle=0x%x, reqspace=*0x%x, options=0x%llx)", context, handle, reqspace, options);
+	sceNpTrophy.todo("sceNpTrophyGetRequiredDiskSpace(context=0x%x, handle=0x%x, reqspace=*0x%x, options=0x%llx)", context, handle, reqspace, options);
 
 	const auto ctxt = idm::get<trophy_context_t>(context);
 
@@ -244,14 +244,14 @@ s32 sceNpTrophyGetRequiredDiskSpace(u32 context, u32 handle, vm::ptr<u64> reqspa
 
 s32 sceNpTrophySetSoundLevel(u32 context, u32 handle, u32 level, u64 options)
 {
-	sceNpTrophy.Todo("sceNpTrophySetSoundLevel(context=0x%x, handle=0x%x, level=%d, options=0x%llx)", context, handle, level, options);
+	sceNpTrophy.todo("sceNpTrophySetSoundLevel(context=0x%x, handle=0x%x, level=%d, options=0x%llx)", context, handle, level, options);
 
 	return CELL_OK;
 }
 
 s32 sceNpTrophyGetGameInfo(u32 context, u32 handle, vm::ptr<SceNpTrophyGameDetails> details, vm::ptr<SceNpTrophyGameData> data)
 {
-	sceNpTrophy.Error("sceNpTrophyGetGameInfo(context=0x%x, handle=0x%x, details=*0x%x, data=*0x%x)", context, handle, details, data);
+	sceNpTrophy.error("sceNpTrophyGetGameInfo(context=0x%x, handle=0x%x, details=*0x%x, data=*0x%x)", context, handle, details, data);
 
 	const auto ctxt = idm::get<trophy_context_t>(context);
 
@@ -312,7 +312,7 @@ s32 sceNpTrophyGetGameInfo(u32 context, u32 handle, vm::ptr<SceNpTrophyGameDetai
 
 s32 sceNpTrophyUnlockTrophy(u32 context, u32 handle, s32 trophyId, vm::ptr<u32> platinumId)
 {
-	sceNpTrophy.Error("sceNpTrophyUnlockTrophy(context=0x%x, handle=0x%x, trophyId=%d, platinumId=*0x%x)", context, handle, trophyId, platinumId);
+	sceNpTrophy.error("sceNpTrophyUnlockTrophy(context=0x%x, handle=0x%x, trophyId=%d, platinumId=*0x%x)", context, handle, trophyId, platinumId);
 
 	const auto ctxt = idm::get<trophy_context_t>(context);
 
@@ -343,7 +343,7 @@ s32 sceNpTrophyUnlockTrophy(u32 context, u32 handle, s32 trophyId, vm::ptr<u32> 
 
 s32 sceNpTrophyGetTrophyUnlockState(u32 context, u32 handle, vm::ptr<SceNpTrophyFlagArray> flags, vm::ptr<u32> count)
 {
-	sceNpTrophy.Error("sceNpTrophyGetTrophyUnlockState(context=0x%x, handle=0x%x, flags=*0x%x, count=*0x%x)", context, handle, flags, count);
+	sceNpTrophy.error("sceNpTrophyGetTrophyUnlockState(context=0x%x, handle=0x%x, flags=*0x%x, count=*0x%x)", context, handle, flags, count);
 
 	const auto ctxt = idm::get<trophy_context_t>(context);
 
@@ -362,7 +362,7 @@ s32 sceNpTrophyGetTrophyUnlockState(u32 context, u32 handle, vm::ptr<SceNpTrophy
 	u32 count_ = ctxt->tropusr->GetTrophiesCount();
 	*count = count_;
 	if (count_ > 128)
-		sceNpTrophy.Error("sceNpTrophyGetTrophyUnlockState: More than 128 trophies detected!");
+		sceNpTrophy.error("sceNpTrophyGetTrophyUnlockState: More than 128 trophies detected!");
 
 	// Pack up to 128 bools in u32 flag_bits[4]
 	for (u32 id = 0; id < count_; id++)
@@ -378,7 +378,7 @@ s32 sceNpTrophyGetTrophyUnlockState(u32 context, u32 handle, vm::ptr<SceNpTrophy
 
 s32 sceNpTrophyGetTrophyInfo(u32 context, u32 handle, s32 trophyId, vm::ptr<SceNpTrophyDetails> details, vm::ptr<SceNpTrophyData> data)
 {
-	sceNpTrophy.Warning("sceNpTrophyGetTrophyInfo(context=0x%x, handle=0x%x, trophyId=%d, details=*0x%x, data=*0x%x)", context, handle, trophyId, details, data);
+	sceNpTrophy.warning("sceNpTrophyGetTrophyInfo(context=0x%x, handle=0x%x, trophyId=%d, details=*0x%x, data=*0x%x)", context, handle, trophyId, details, data);
 
 	const auto ctxt = idm::get<trophy_context_t>(context);
 
@@ -435,21 +435,21 @@ s32 sceNpTrophyGetTrophyInfo(u32 context, u32 handle, s32 trophyId, vm::ptr<SceN
 
 s32 sceNpTrophyGetGameProgress(u32 context, u32 handle, vm::ptr<s32> percentage)
 {
-	sceNpTrophy.Todo("sceNpTrophyGetGameProgress(context=0x%x, handle=0x%x, percentage=*0x%x)", context, handle, percentage);
+	sceNpTrophy.todo("sceNpTrophyGetGameProgress(context=0x%x, handle=0x%x, percentage=*0x%x)", context, handle, percentage);
 
 	return CELL_OK;
 }
 
 s32 sceNpTrophyGetGameIcon(u32 context, u32 handle, vm::ptr<void> buffer, vm::ptr<u32> size)
 {
-	sceNpTrophy.Todo("sceNpTrophyGetGameIcon(context=0x%x, handle=0x%x, buffer=*0x%x, size=*0x%x)", context, handle, buffer, size);
+	sceNpTrophy.todo("sceNpTrophyGetGameIcon(context=0x%x, handle=0x%x, buffer=*0x%x, size=*0x%x)", context, handle, buffer, size);
 
 	return CELL_OK;
 }
 
 s32 sceNpTrophyGetTrophyIcon(u32 context, u32 handle, s32 trophyId, vm::ptr<void> buffer, vm::ptr<u32> size)
 {
-	sceNpTrophy.Todo("sceNpTrophyGetTrophyIcon(context=0x%x, handle=0x%x, trophyId=%d, buffer=*0x%x, size=*0x%x)", context, handle, trophyId, buffer, size);
+	sceNpTrophy.todo("sceNpTrophyGetTrophyIcon(context=0x%x, handle=0x%x, trophyId=%d, buffer=*0x%x, size=*0x%x)", context, handle, trophyId, buffer, size);
 
 	return CELL_OK;
 }

@@ -566,9 +566,9 @@ void GLGSRender::on_init_thread()
 	GSRender::on_init_thread();
 
 	gl::init();
-	LOG_NOTICE(Log::RSX, (const char*)glGetString(GL_VERSION));
-	LOG_NOTICE(Log::RSX, (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION));
-	LOG_NOTICE(Log::RSX, (const char*)glGetString(GL_VENDOR));
+	LOG_NOTICE(RSX, "%s", (const char*)glGetString(GL_VERSION));
+	LOG_NOTICE(RSX, "%s", (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION));
+	LOG_NOTICE(RSX, "%s", (const char*)glGetString(GL_VENDOR));
 
 	glEnable(GL_VERTEX_PROGRAM_POINT_SIZE);
 	m_vao.create();

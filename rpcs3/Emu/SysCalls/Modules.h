@@ -3,7 +3,6 @@
 #include "Emu/SysCalls/SC_FUNC.h"
 #include "Emu/SysCalls/CB_FUNC.h"
 #include "ErrorCodes.h"
-#include "LogBase.h"
 
 namespace vm { using namespace ps3; }
 
@@ -67,11 +66,10 @@ struct StaticFunc
 	std::unordered_map<u32, u32> labels;
 };
 
-template<> class Module<void> : public LogBase
+template<> class Module<void> : public _log::channel
 {
 	friend class ModuleManager;
 
-	std::string m_name;
 	bool m_is_loaded;
 	void(*m_init)();
 
@@ -79,7 +77,7 @@ protected:
 	std::function<void()> on_alloc;
 
 public:
-	Module(const char* name, void(*init)());
+	Module(const std::string& name, void(*init)());
 
 	Module(const Module&) = delete; // Delete copy/move constructors and copy/move operators
 
@@ -96,9 +94,6 @@ public:
 
 	void SetLoaded(bool loaded = true);
 	bool IsLoaded() const;
-
-	virtual const std::string& GetName() const override;
-	void SetName(const std::string& name);
 };
 
 // Module<> with an instance of specified type in PS3 memory
@@ -187,4 +182,4 @@ template<typename T, T Func, typename... Args, typename RT = std::result_of_t<T(
 #define SP_LABEL_BR(op, label) SP_OP(SPET_BRANCH_TO_LABEL, op, label)
 #define SP_CALL(op, name) SP_OP(SPET_BRANCH_TO_FUNC, op, get_function_id(#name))
 
-#define UNIMPLEMENTED_FUNC(module) module.Error("%s", __FUNCTION__)
+#define UNIMPLEMENTED_FUNC(module) module.todo("%s", __FUNCTION__)

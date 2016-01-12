@@ -36,7 +36,7 @@
 void null_func(PPUThread& ppu)
 {
 	const u64 code = ppu.GPR[11];
-	LOG_ERROR(HLE, "Unimplemented syscall %lld: %s -> CELL_OK", code, get_ps3_function_name(~code));
+	LOG_TODO(HLE, "Unimplemented syscall %lld: %s -> CELL_OK", code, get_ps3_function_name(~code));
 	ppu.GPR[3] = 0;
 }
 
@@ -900,17 +900,11 @@ void execute_syscall_by_index(PPUThread& ppu, u64 code)
 	auto last_code = ppu.hle_code;
 	ppu.hle_code = ~code;
 
-	if (rpcs3::config.misc.log.hle_logging.value())
-	{
-		LOG_NOTICE(PPU, "Syscall %lld called: %s", code, get_ps3_function_name(~code));
-	}
+	LOG_TRACE(PPU, "Syscall %lld called: %s", code, get_ps3_function_name(~code));
 
 	g_sc_table[code](ppu);
 
-	if (rpcs3::config.misc.log.hle_logging.value())
-	{
-		LOG_NOTICE(PPU, "Syscall %lld finished: %s -> 0x%llx", code, get_ps3_function_name(~code), ppu.GPR[3]);
-	}
+	LOG_TRACE(PPU, "Syscall %lld finished: %s -> 0x%llx", code, get_ps3_function_name(~code), ppu.GPR[3]);
 
 	ppu.hle_code = last_code;
 }

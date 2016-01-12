@@ -14,7 +14,7 @@ extern u64 get_system_time();
 
 s32 sys_semaphore_create(vm::ptr<u32> sem_id, vm::ptr<sys_semaphore_attribute_t> attr, s32 initial_val, s32 max_val)
 {
-	sys_semaphore.Warning("sys_semaphore_create(sem_id=*0x%x, attr=*0x%x, initial_val=%d, max_val=%d)", sem_id, attr, initial_val, max_val);
+	sys_semaphore.warning("sys_semaphore_create(sem_id=*0x%x, attr=*0x%x, initial_val=%d, max_val=%d)", sem_id, attr, initial_val, max_val);
 
 	if (!sem_id || !attr)
 	{
@@ -23,7 +23,7 @@ s32 sys_semaphore_create(vm::ptr<u32> sem_id, vm::ptr<sys_semaphore_attribute_t>
 
 	if (max_val <= 0 || initial_val > max_val || initial_val < 0)
 	{
-		sys_semaphore.Error("sys_semaphore_create(): invalid parameters (initial_val=%d, max_val=%d)", initial_val, max_val);
+		sys_semaphore.error("sys_semaphore_create(): invalid parameters (initial_val=%d, max_val=%d)", initial_val, max_val);
 		return CELL_EINVAL;
 	}
 
@@ -31,13 +31,13 @@ s32 sys_semaphore_create(vm::ptr<u32> sem_id, vm::ptr<sys_semaphore_attribute_t>
 
 	if (protocol != SYS_SYNC_FIFO && protocol != SYS_SYNC_PRIORITY && protocol != SYS_SYNC_PRIORITY_INHERIT)
 	{
-		sys_semaphore.Error("sys_semaphore_create(): unknown protocol (0x%x)", protocol);
+		sys_semaphore.error("sys_semaphore_create(): unknown protocol (0x%x)", protocol);
 		return CELL_EINVAL;
 	}
 
 	if (attr->pshared != SYS_SYNC_NOT_PROCESS_SHARED || attr->ipc_key || attr->flags)
 	{
-		sys_semaphore.Error("sys_semaphore_create(): unknown attributes (pshared=0x%x, ipc_key=0x%x, flags=0x%x)", attr->pshared, attr->ipc_key, attr->flags);
+		sys_semaphore.error("sys_semaphore_create(): unknown attributes (pshared=0x%x, ipc_key=0x%x, flags=0x%x)", attr->pshared, attr->ipc_key, attr->flags);
 		return CELL_EINVAL;
 	}
 
@@ -48,7 +48,7 @@ s32 sys_semaphore_create(vm::ptr<u32> sem_id, vm::ptr<sys_semaphore_attribute_t>
 
 s32 sys_semaphore_destroy(u32 sem_id)
 {
-	sys_semaphore.Warning("sys_semaphore_destroy(sem_id=0x%x)", sem_id);
+	sys_semaphore.warning("sys_semaphore_destroy(sem_id=0x%x)", sem_id);
 
 	LV2_LOCK;
 
@@ -71,7 +71,7 @@ s32 sys_semaphore_destroy(u32 sem_id)
 
 s32 sys_semaphore_wait(PPUThread& ppu, u32 sem_id, u64 timeout)
 {
-	sys_semaphore.Log("sys_semaphore_wait(sem_id=0x%x, timeout=0x%llx)", sem_id, timeout);
+	sys_semaphore.trace("sys_semaphore_wait(sem_id=0x%x, timeout=0x%llx)", sem_id, timeout);
 
 	const u64 start_time = get_system_time();
 
@@ -120,7 +120,7 @@ s32 sys_semaphore_wait(PPUThread& ppu, u32 sem_id, u64 timeout)
 
 s32 sys_semaphore_trywait(u32 sem_id)
 {
-	sys_semaphore.Log("sys_semaphore_trywait(sem_id=0x%x)", sem_id);
+	sys_semaphore.trace("sys_semaphore_trywait(sem_id=0x%x)", sem_id);
 
 	LV2_LOCK;
 
@@ -143,7 +143,7 @@ s32 sys_semaphore_trywait(u32 sem_id)
 
 s32 sys_semaphore_post(u32 sem_id, s32 count)
 {
-	sys_semaphore.Log("sys_semaphore_post(sem_id=0x%x, count=%d)", sem_id, count);
+	sys_semaphore.trace("sys_semaphore_post(sem_id=0x%x, count=%d)", sem_id, count);
 
 	LV2_LOCK;
 
@@ -189,7 +189,7 @@ s32 sys_semaphore_post(u32 sem_id, s32 count)
 
 s32 sys_semaphore_get_value(u32 sem_id, vm::ptr<s32> count)
 {
-	sys_semaphore.Log("sys_semaphore_get_value(sem_id=0x%x, count=*0x%x)", sem_id, count);
+	sys_semaphore.trace("sys_semaphore_get_value(sem_id=0x%x, count=*0x%x)", sem_id, count);
 
 	LV2_LOCK;
 

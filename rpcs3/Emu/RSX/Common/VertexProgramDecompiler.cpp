@@ -47,7 +47,7 @@ std::string VertexProgramDecompiler::GetDST(bool isSca)
 
 	default:
 		if (d3.dst > 15)
-			LOG_ERROR(RSX, fmt::format("dst index out of range: %u", d3.dst));
+			LOG_ERROR(RSX, "dst index out of range: %u", d3.dst);
 		ret += m_parr.AddParam(PF_PARAM_NONE, getFloatTypeName(4), std::string("dst_reg") + std::to_string(d3.dst), d3.dst == 0 ? getFloatTypeName(4) + "(0.0f, 0.0f, 0.0f, 1.0f)" : getFloatTypeName(4) + "(0.0, 0.0, 0.0, 0.0)");
 		break;
 	}
@@ -91,7 +91,7 @@ std::string VertexProgramDecompiler::GetSRC(const u32 n)
 		break;
 
 	default:
-		LOG_ERROR(RSX, fmt::format("Bad src%u reg type: %d", n, u32{ src[n].reg_type }));
+		LOG_ERROR(RSX, "Bad src%u reg type: %d", n, u32{ src[n].reg_type });
 		Emu.Pause();
 		break;
 	}

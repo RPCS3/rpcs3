@@ -1330,7 +1330,7 @@ bool CheckDebugSelf(const std::string& self, const std::string& elf)
 
 bool DecryptSelf(const std::string& elf, const std::string& self)
 {
-	LOG_NOTICE(GENERAL, "Decrypting %s", self);
+	LOG_NOTICE(LOADER, "Decrypting %s", self);
 
 	// Check for a debug SELF first.
 	if (!CheckDebugSelf(self, elf))

@@ -31,21 +31,21 @@ extern Module<> cellNetCtl;
 
 s32 cellNetCtlInit()
 {
-	cellNetCtl.Warning("cellNetCtlInit()");
+	cellNetCtl.warning("cellNetCtlInit()");
 
 	return CELL_OK;
 }
 
 s32 cellNetCtlTerm()
 {
-	cellNetCtl.Warning("cellNetCtlTerm()");
+	cellNetCtl.warning("cellNetCtlTerm()");
 
 	return CELL_OK;
 }
 
 s32 cellNetCtlGetState(vm::ptr<u32> state)
 {
-	cellNetCtl.Log("cellNetCtlGetState(state=*0x%x)", state);
+	cellNetCtl.trace("cellNetCtlGetState(state=*0x%x)", state);
 
 	switch (rpcs3::config.misc.net.status.value())
 	{
@@ -62,21 +62,21 @@ s32 cellNetCtlGetState(vm::ptr<u32> state)
 
 s32 cellNetCtlAddHandler(vm::ptr<cellNetCtlHandler> handler, vm::ptr<void> arg, vm::ptr<s32> hid)
 {
-	cellNetCtl.Todo("cellNetCtlAddHandler(handler=*0x%x, arg=*0x%x, hid=*0x%x)", handler, arg, hid);
+	cellNetCtl.todo("cellNetCtlAddHandler(handler=*0x%x, arg=*0x%x, hid=*0x%x)", handler, arg, hid);
 
 	return CELL_OK;
 }
 
 s32 cellNetCtlDelHandler(s32 hid)
 {
-	cellNetCtl.Todo("cellNetCtlDelHandler(hid=0x%x)", hid);
+	cellNetCtl.todo("cellNetCtlDelHandler(hid=0x%x)", hid);
 
 	return CELL_OK;
 }
 
 s32 cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 {
-	cellNetCtl.Todo("cellNetCtlGetInfo(code=0x%x (%s), info=*0x%x)", code, InfoCodeToName(code), info);
+	cellNetCtl.todo("cellNetCtlGetInfo(code=0x%x (%s), info=*0x%x)", code, InfoCodeToName(code), info);
 
 	if (code == CELL_NET_CTL_INFO_MTU)
 	{
@@ -89,13 +89,13 @@ s32 cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 
 		if (ret == ERROR_BUFFER_OVERFLOW)
 		{
-			cellNetCtl.Error("cellNetCtlGetInfo(INFO_MTU): GetAdaptersAddresses buffer overflow.");
+			cellNetCtl.error("cellNetCtlGetInfo(INFO_MTU): GetAdaptersAddresses buffer overflow.");
 			free(pAddresses);
 			pAddresses = (PIP_ADAPTER_ADDRESSES)malloc(bufLen);
 
 			if (pAddresses == nullptr)
 			{
-				cellNetCtl.Error("cellNetCtlGetInfo(INFO_MTU): Unable to allocate memory for pAddresses.");
+				cellNetCtl.error("cellNetCtlGetInfo(INFO_MTU): Unable to allocate memory for pAddresses.");
 				return CELL_NET_CTL_ERROR_NET_CABLE_NOT_CONNECTED;
 			}
 		}
@@ -115,7 +115,7 @@ s32 cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 		}
 		else
 		{
-			cellNetCtl.Error("cellNetCtlGetInfo(INFO_MTU): Call to GetAdaptersAddresses failed. (%d)", ret);
+			cellNetCtl.error("cellNetCtlGetInfo(INFO_MTU): Call to GetAdaptersAddresses failed. (%d)", ret);
 			info->mtu = 1500; // Seems to be the default value on Windows 10.
 		}
 
@@ -126,7 +126,7 @@ s32 cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 
 		if (getifaddrs(&ifaddr) == -1)
 		{
-			cellNetCtl.Error("cellNetCtlGetInfo(INFO_MTU): Call to getifaddrs returned negative.");
+			cellNetCtl.error("cellNetCtlGetInfo(INFO_MTU): Call to getifaddrs returned negative.");
 		}
 
 		for (ifa = ifaddr, n = 0; ifa != nullptr; ifa = ifa->ifa_next, n++)
@@ -150,7 +150,7 @@ s32 cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 
 				if (ioctl(fd, SIOCGIFMTU, &freq) == -1)
 				{
-					cellNetCtl.Error("cellNetCtlGetInfo(INFO_MTU): Call to ioctl failed.");
+					cellNetCtl.error("cellNetCtlGetInfo(INFO_MTU): Call to ioctl failed.");
 				}
 				else
 				{
@@ -189,13 +189,13 @@ s32 cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 		
 		if (ret == ERROR_BUFFER_OVERFLOW)
 		{
-			cellNetCtl.Error("cellNetCtlGetInfo(IP_ADDRESS): GetAdaptersInfo buffer overflow.");
+			cellNetCtl.error("cellNetCtlGetInfo(IP_ADDRESS): GetAdaptersInfo buffer overflow.");
 			free(pAdapterInfo);
 			pAdapterInfo = (IP_ADAPTER_INFO*)malloc(bufLen);
 
 			if (pAdapterInfo == nullptr)
 			{
-				cellNetCtl.Error("cellNetCtlGetInfo(IP_ADDRESS): Unable to allocate memory for pAddresses.");
+				cellNetCtl.error("cellNetCtlGetInfo(IP_ADDRESS): Unable to allocate memory for pAddresses.");
 				return CELL_NET_CTL_ERROR_NET_CABLE_NOT_CONNECTED;
 			}
 		}
@@ -215,7 +215,7 @@ s32 cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 		}
 		else
 		{
-			cellNetCtl.Error("cellNetCtlGetInfo(IP_ADDRESS): Call to GetAdaptersInfo failed. (%d)", ret);
+			cellNetCtl.error("cellNetCtlGetInfo(IP_ADDRESS): Call to GetAdaptersInfo failed. (%d)", ret);
 		}
 
 		free(pAdapterInfo);
@@ -225,7 +225,7 @@ s32 cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 
 		if (getifaddrs(&ifaddr) == -1)
 		{
-			cellNetCtl.Error("cellNetCtlGetInfo(IP_ADDRESS): Call to getifaddrs returned negative.");
+			cellNetCtl.error("cellNetCtlGetInfo(IP_ADDRESS): Call to getifaddrs returned negative.");
 		}
 
 		for (ifa = ifaddr, n = 0; ifa != nullptr; ifa = ifa->ifa_next, n++)
@@ -262,13 +262,13 @@ s32 cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 
 		if (ret == ERROR_BUFFER_OVERFLOW)
 		{
-			cellNetCtl.Error("cellNetCtlGetInfo(INFO_NETMASK): GetAdaptersInfo buffer overflow.");
+			cellNetCtl.error("cellNetCtlGetInfo(INFO_NETMASK): GetAdaptersInfo buffer overflow.");
 			free(pAdapterInfo);
 			pAdapterInfo = (IP_ADAPTER_INFO*)malloc(bufLen);
 
 			if (pAdapterInfo == nullptr)
 			{
-				cellNetCtl.Error("cellNetCtlGetInfo(INFO_NETMASK): Unable to allocate memory for pAddresses.");
+				cellNetCtl.error("cellNetCtlGetInfo(INFO_NETMASK): Unable to allocate memory for pAddresses.");
 				return CELL_NET_CTL_ERROR_NET_CABLE_NOT_CONNECTED;
 			}
 		}
@@ -291,7 +291,7 @@ s32 cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 		}
 		else
 		{
-			cellNetCtl.Error("cellNetCtlGetInfo(INFO_NETMASK): Call to GetAdaptersInfo failed. (%d)", ret);
+			cellNetCtl.error("cellNetCtlGetInfo(INFO_NETMASK): Call to GetAdaptersInfo failed. (%d)", ret);
 			// TODO: Is this the default netmask?
 			info->netmask[0] = 255;
 			info->netmask[1] = 255;
@@ -306,7 +306,7 @@ s32 cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 
 		if (getifaddrs(&ifaddr) == -1)
 		{
-			cellNetCtl.Error("cellNetCtlGetInfo(INFO_NETMASK): Call to getifaddrs returned negative.");
+			cellNetCtl.error("cellNetCtlGetInfo(INFO_NETMASK): Call to getifaddrs returned negative.");
 		}
 
 		for (ifa = ifaddr, n = 0; ifa != nullptr; ifa = ifa->ifa_next, n++)
@@ -338,7 +338,7 @@ s32 cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 
 s32 cellNetCtlNetStartDialogLoadAsync(vm::ptr<CellNetCtlNetStartDialogParam> param)
 {
-	cellNetCtl.Error("cellNetCtlNetStartDialogLoadAsync(param=*0x%x)", param);
+	cellNetCtl.error("cellNetCtlNetStartDialogLoadAsync(param=*0x%x)", param);
 
 	// TODO: Actually sign into PSN or an emulated network similar to PSN (ESN)
 	// TODO: Properly open the dialog prompt for sign in
@@ -350,14 +350,14 @@ s32 cellNetCtlNetStartDialogLoadAsync(vm::ptr<CellNetCtlNetStartDialogParam> par
 
 s32 cellNetCtlNetStartDialogAbortAsync()
 {
-	cellNetCtl.Error("cellNetCtlNetStartDialogAbortAsync()");
+	cellNetCtl.error("cellNetCtlNetStartDialogAbortAsync()");
 
 	return CELL_OK;
 }
 
 s32 cellNetCtlNetStartDialogUnloadAsync(vm::ptr<CellNetCtlNetStartDialogResult> result)
 {
-	cellNetCtl.Warning("cellNetCtlNetStartDialogUnloadAsync(result=*0x%x)", result);
+	cellNetCtl.warning("cellNetCtlNetStartDialogUnloadAsync(result=*0x%x)", result);
 
 	result->result = CELL_NET_CTL_ERROR_DIALOG_CANCELED;
 	sysutilSendSystemCommand(CELL_SYSUTIL_NET_CTL_NETSTART_UNLOADED, 0);
@@ -367,11 +367,11 @@ s32 cellNetCtlNetStartDialogUnloadAsync(vm::ptr<CellNetCtlNetStartDialogResult> 
 
 s32 cellNetCtlGetNatInfo(vm::ptr<CellNetCtlNatInfo> natInfo)
 {
-	cellNetCtl.Todo("cellNetCtlGetNatInfo(natInfo=*0x%x)", natInfo);
+	cellNetCtl.todo("cellNetCtlGetNatInfo(natInfo=*0x%x)", natInfo);
 
 	if (natInfo->size == 0)
 	{
-		cellNetCtl.Error("cellNetCtlGetNatInfo : CELL_NET_CTL_ERROR_INVALID_SIZE");
+		cellNetCtl.error("cellNetCtlGetNatInfo : CELL_NET_CTL_ERROR_INVALID_SIZE");
 		return CELL_NET_CTL_ERROR_INVALID_SIZE;
 	}
 	

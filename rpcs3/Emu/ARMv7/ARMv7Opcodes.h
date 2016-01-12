@@ -2005,7 +2005,7 @@ static void execute_main_group(ARMv7Thread* thr)
 	case 0xe: (*g_table_0xe).func(thr, (*g_table_0xe).type); break;
 	case 0xf: (*g_table_0xf).func(thr, (*g_table_0xf).type); break;
 
-	default: LOG_ERROR(GENERAL, "ARMv7Decoder: unknown group 0x%x", (thr->code.code0 & 0xf000) >> 12); Emu.Pause(); break;
+	default: LOG_ERROR(ARMv7, "ARMv7Decoder: unknown group 0x%x", (thr->code.code0 & 0xf000) >> 12); Emu.Pause(); break;
 	}
 }
 

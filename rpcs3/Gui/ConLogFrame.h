@@ -1,19 +1,21 @@
 #pragma once
 
-namespace Log
+class LogFrame : public wxPanel
 {
-	struct LogListener;
-}
+	fs::file m_log_file;
+	fs::file m_tty_file;
 
-class LogFrame
-	: public wxPanel
-{
-	std::shared_ptr<Log::LogListener> listener;
+	_log::level m_level{ _log::level::always }; // current log level
+	wxColour m_color{ 0, 255, 255 }; // current log color
+
 	wxAuiNotebook m_tabs;
 	wxTextCtrl *m_log;
 	wxTextCtrl *m_tty;
+
 	//Copy Action in Context Menu
 	wxTextDataObject* m_tdo;
+
+	wxTimer m_timer;
 
 public:
 	LogFrame(wxWindow* parent);
@@ -26,8 +28,9 @@ private:
 	virtual void Task(){};
 
 	void OnQuit(wxCloseEvent& event);
-	void OnRightClick(wxMouseEvent& event);	//Show context menu
-	void OnContextMenu(wxCommandEvent& event);	//After select
+	void OnRightClick(wxMouseEvent& event); // Show context menu
+	void OnContextMenu(wxCommandEvent& event); // After select
+	void OnTimer(wxTimerEvent& event);
 
 	DECLARE_EVENT_TABLE();
 };

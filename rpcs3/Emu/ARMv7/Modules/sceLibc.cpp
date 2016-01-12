@@ -150,7 +150,7 @@ namespace sce_libc_func
 {
 	void __cxa_atexit(vm::ptr<atexit_func_t> func, vm::ptr<void> arg, vm::ptr<void> dso)
 	{
-		sceLibc.Warning("__cxa_atexit(func=*0x%x, arg=*0x%x, dso=*0x%x)", func, arg, dso);
+		sceLibc.warning("__cxa_atexit(func=*0x%x, arg=*0x%x, dso=*0x%x)", func, arg, dso);
 		
 		std::lock_guard<std::mutex> lock(g_atexit_mutex);
 
@@ -162,7 +162,7 @@ namespace sce_libc_func
 
 	void __aeabi_atexit(vm::ptr<void> arg, vm::ptr<atexit_func_t> func, vm::ptr<void> dso)
 	{
-		sceLibc.Warning("__aeabi_atexit(arg=*0x%x, func=*0x%x, dso=*0x%x)", arg, func, dso);
+		sceLibc.warning("__aeabi_atexit(arg=*0x%x, func=*0x%x, dso=*0x%x)", arg, func, dso);
 
 		std::lock_guard<std::mutex> lock(g_atexit_mutex);
 
@@ -174,7 +174,7 @@ namespace sce_libc_func
 
 	void exit(ARMv7Thread& context)
 	{
-		sceLibc.Warning("exit()");
+		sceLibc.warning("exit()");
 
 		std::lock_guard<std::mutex> lock(g_atexit_mutex);
 
@@ -185,7 +185,7 @@ namespace sce_libc_func
 			func(context);
 		}
 
-		sceLibc.Success("Process finished");
+		sceLibc.success("Process finished");
 
 		Emu.CallAfter([]()
 		{
@@ -202,52 +202,52 @@ namespace sce_libc_func
 
 	void printf(ARMv7Thread& context, vm::cptr<char> fmt, armv7_va_args_t va_args)
 	{
-		sceLibc.Warning("printf(fmt=*0x%x)", fmt);
-		sceLibc.Log("*** *fmt = '%s'", fmt.get_ptr());
+		sceLibc.warning("printf(fmt=*0x%x)", fmt);
+		sceLibc.trace("*** *fmt = '%s'", fmt.get_ptr());
 
 		const std::string& result = armv7_fmt(context, fmt, va_args.g_count, va_args.f_count, va_args.v_count);
-		sceLibc.Log("***     -> '%s'", result);
+		sceLibc.trace("***     -> '%s'", result);
 
-		LOG_NOTICE(TTY, result);
+		_log::g_tty_file.log(result);
 	}
 
 	void sprintf(ARMv7Thread& context, vm::ptr<char> str, vm::cptr<char> fmt, armv7_va_args_t va_args)
 	{
-		sceLibc.Warning("sprintf(str=*0x%x, fmt=*0x%x)", str, fmt);
-		sceLibc.Log("*** *fmt = '%s'", fmt.get_ptr());
+		sceLibc.warning("sprintf(str=*0x%x, fmt=*0x%x)", str, fmt);
+		sceLibc.trace("*** *fmt = '%s'", fmt.get_ptr());
 
 		const std::string& result = armv7_fmt(context, fmt, va_args.g_count, va_args.f_count, va_args.v_count);
-		sceLibc.Log("***     -> '%s'", result);
+		sceLibc.trace("***     -> '%s'", result);
 
 		::memcpy(str.get_ptr(), result.c_str(), result.size() + 1);
 	}
 
 	void __cxa_set_dso_handle_main(vm::ptr<void> dso)
 	{
-		sceLibc.Warning("__cxa_set_dso_handle_main(dso=*0x%x)", dso);
+		sceLibc.warning("__cxa_set_dso_handle_main(dso=*0x%x)", dso);
 
 		g_dso = dso;
 	}
 
 	void memcpy(vm::ptr<void> dst, vm::cptr<void> src, u32 size)
 	{
-		sceLibc.Warning("memcpy(dst=*0x%x, src=*0x%x, size=0x%x)", dst, src, size);
+		sceLibc.warning("memcpy(dst=*0x%x, src=*0x%x, size=0x%x)", dst, src, size);
 
 		::memcpy(dst.get_ptr(), src.get_ptr(), size);
 	}
 
 	void memset(vm::ptr<void> dst, s32 value, u32 size)
 	{
-		sceLibc.Warning("memset(dst=*0x%x, value=%d, size=0x%x)", dst, value, size);
+		sceLibc.warning("memset(dst=*0x%x, value=%d, size=0x%x)", dst, value, size);
 
 		::memset(dst.get_ptr(), value, size);
 	}
 
 	void _Assert(vm::cptr<char> text, vm::cptr<char> func)
 	{
-		sceLibc.Error("_Assert(text=*0x%x, func=*0x%x)", text, func);
+		sceLibc.error("_Assert(text=*0x%x, func=*0x%x)", text, func);
 
-		LOG_ERROR(TTY, "%s : %s\n", func.get_ptr(), text.get_ptr());
+		LOG_FATAL(HLE, "%s : %s\n", func.get_ptr(), text.get_ptr());
 		Emu.Pause();
 	}
 }

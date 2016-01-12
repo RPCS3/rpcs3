@@ -1,22 +1,12 @@
 #pragma once
 
 #include "ErrorCodes.h"
-#include "LogBase.h"
 
-class SysCallBase : public LogBase
+struct SysCallBase : public _log::channel
 {
-private:
-	std::string m_module_name;
-
-public:
 	SysCallBase(const std::string& name)
-		: m_module_name(name)
+		: _log::channel(name, _log::level::notice)
 	{
-	}
-
-	virtual const std::string& GetName() const override
-	{
-		return m_module_name;
 	}
 };
 

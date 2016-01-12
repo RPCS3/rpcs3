@@ -376,10 +376,7 @@ void SPUThread::do_dma_list_cmd(u32 cmd, spu_mfc_arg_t args)
 
 void SPUThread::process_mfc_cmd(u32 cmd)
 {
-	if (rpcs3::config.misc.log.hle_logging.value())
-	{
-		LOG_NOTICE(SPU, "DMA %s: cmd=0x%x, lsa=0x%x, ea=0x%llx, tag=0x%x, size=0x%x", get_mfc_cmd_name(cmd), cmd, ch_mfc_args.lsa, ch_mfc_args.ea, ch_mfc_args.tag, ch_mfc_args.size);
-	}
+	LOG_TRACE(SPU, "DMA %s: cmd=0x%x, lsa=0x%x, ea=0x%llx, tag=0x%x, size=0x%x", get_mfc_cmd_name(cmd), cmd, ch_mfc_args.lsa, ch_mfc_args.ea, ch_mfc_args.tag, ch_mfc_args.size);
 
 	switch (cmd)
 	{
@@ -576,10 +573,7 @@ void SPUThread::set_interrupt_status(bool enable)
 
 u32 SPUThread::get_ch_count(u32 ch)
 {
-	if (rpcs3::config.misc.log.hle_logging.value())
-	{
-		LOG_NOTICE(SPU, "get_ch_count(ch=%d [%s])", ch, ch < 128 ? spu_ch_name[ch] : "???");
-	}
+	LOG_TRACE(SPU, "get_ch_count(ch=%d [%s])", ch, ch < 128 ? spu_ch_name[ch] : "???");
 
 	switch (ch)
 	{
@@ -603,10 +597,7 @@ u32 SPUThread::get_ch_count(u32 ch)
 
 u32 SPUThread::get_ch_value(u32 ch)
 {
-	if (rpcs3::config.misc.log.hle_logging.value())
-	{
-		LOG_NOTICE(SPU, "get_ch_value(ch=%d [%s])", ch, ch < 128 ? spu_ch_name[ch] : "???");
-	}
+	LOG_TRACE(SPU, "get_ch_value(ch=%d [%s])", ch, ch < 128 ? spu_ch_name[ch] : "???");
 
 	auto read_channel = [this](spu_channel_t& channel) -> u32
 	{
@@ -767,10 +758,7 @@ u32 SPUThread::get_ch_value(u32 ch)
 
 void SPUThread::set_ch_value(u32 ch, u32 value)
 {
-	if (rpcs3::config.misc.log.hle_logging.value())
-	{
-		LOG_NOTICE(SPU, "set_ch_value(ch=%d [%s], value=0x%x)", ch, ch < 128 ? spu_ch_name[ch] : "???", value);
-	}
+	LOG_TRACE(SPU, "set_ch_value(ch=%d [%s], value=0x%x)", ch, ch < 128 ? spu_ch_name[ch] : "???", value);
 
 	switch (ch)
 	{
@@ -826,10 +814,7 @@ void SPUThread::set_ch_value(u32 ch, u32 value)
 
 				ch_out_mbox.set_value(data, 0);
 
-				if (rpcs3::config.misc.log.hle_logging.value())
-				{
-					LOG_NOTICE(SPU, "sys_spu_thread_send_event(spup=%d, data0=0x%x, data1=0x%x)", spup, value & 0x00ffffff, data);
-				}
+				LOG_TRACE(SPU, "sys_spu_thread_send_event(spup=%d, data0=0x%x, data1=0x%x)", spup, value & 0x00ffffff, data);
 
 				const auto queue = this->spup[spup].lock();
 
@@ -865,10 +850,7 @@ void SPUThread::set_ch_value(u32 ch, u32 value)
 
 				ch_out_mbox.set_value(data, 0);
 
-				if (rpcs3::config.misc.log.hle_logging.value())
-				{
-					LOG_WARNING(SPU, "sys_spu_thread_throw_event(spup=%d, data0=0x%x, data1=0x%x)", spup, value & 0x00ffffff, data);
-				}
+				LOG_TRACE(SPU, "sys_spu_thread_throw_event(spup=%d, data0=0x%x, data1=0x%x)", spup, value & 0x00ffffff, data);
 
 				const auto queue = this->spup[spup].lock();
 
@@ -915,10 +897,7 @@ void SPUThread::set_ch_value(u32 ch, u32 value)
 					throw EXCEPTION("sys_event_flag_set_bit(id=%d, value=0x%x (flag=%d)): Invalid flag", data, value, flag);
 				}
 
-				if (rpcs3::config.misc.log.hle_logging.value())
-				{
-					LOG_WARNING(SPU, "sys_event_flag_set_bit(id=%d, value=0x%x (flag=%d))", data, value, flag);
-				}
+				LOG_TRACE(SPU, "sys_event_flag_set_bit(id=%d, value=0x%x (flag=%d))", data, value, flag);
 
 				const auto eflag = idm::get<lv2_event_flag_t>(data);
 
@@ -959,10 +938,7 @@ void SPUThread::set_ch_value(u32 ch, u32 value)
 					throw EXCEPTION("sys_event_flag_set_bit_impatient(id=%d, value=0x%x (flag=%d)): Invalid flag", data, value, flag);
 				}
 
-				if (rpcs3::config.misc.log.hle_logging.value())
-				{
-					LOG_WARNING(SPU, "sys_event_flag_set_bit_impatient(id=%d, value=0x%x (flag=%d))", data, value, flag);
-				}
+				LOG_TRACE(SPU, "sys_event_flag_set_bit_impatient(id=%d, value=0x%x (flag=%d))", data, value, flag);
 
 				const auto eflag = idm::get<lv2_event_flag_t>(data);
 
@@ -1158,10 +1134,7 @@ void SPUThread::set_ch_value(u32 ch, u32 value)
 
 void SPUThread::stop_and_signal(u32 code)
 {
-	if (rpcs3::config.misc.log.hle_logging.value())
-	{
-		LOG_NOTICE(SPU, "stop_and_signal(code=0x%x)", code);
-	}
+	LOG_TRACE(SPU, "stop_and_signal(code=0x%x)", code);
 
 	if (m_type == CPU_THREAD_RAW_SPU)
 	{
@@ -1229,10 +1202,7 @@ void SPUThread::stop_and_signal(u32 code)
 
 		ch_out_mbox.set_value(spuq, 0);
 
-		if (rpcs3::config.misc.log.hle_logging.value())
-		{
-			LOG_NOTICE(SPU, "sys_spu_thread_receive_event(spuq=0x%x)", spuq);
-		}
+		LOG_TRACE(SPU, "sys_spu_thread_receive_event(spuq=0x%x)", spuq);
 
 		const auto group = tg.lock();
 
@@ -1355,10 +1325,7 @@ void SPUThread::stop_and_signal(u32 code)
 
 		ch_out_mbox.set_value(value, 0);
 
-		if (rpcs3::config.misc.log.hle_logging.value())
-		{
-			LOG_NOTICE(SPU, "sys_spu_thread_group_exit(status=0x%x)", value);
-		}
+		LOG_TRACE(SPU, "sys_spu_thread_group_exit(status=0x%x)", value);
 
 		const auto group = tg.lock();
 
@@ -1394,10 +1361,7 @@ void SPUThread::stop_and_signal(u32 code)
 			throw EXCEPTION("sys_spu_thread_exit(): Out_MBox is empty");
 		}
 
-		if (rpcs3::config.misc.log.hle_logging.value())
-		{
-			LOG_NOTICE(SPU, "sys_spu_thread_exit(status=0x%x)", ch_out_mbox.get_value());
-		}
+		LOG_TRACE(SPU, "sys_spu_thread_exit(status=0x%x)", ch_out_mbox.get_value());
 
 		const auto group = tg.lock();
 
@@ -1425,10 +1389,7 @@ void SPUThread::stop_and_signal(u32 code)
 
 void SPUThread::halt()
 {
-	if (rpcs3::config.misc.log.hle_logging.value())
-	{
-		LOG_NOTICE(SPU, "halt()");
-	}
+	LOG_TRACE(SPU, "halt()");
 
 	if (m_type == CPU_THREAD_RAW_SPU)
 	{
