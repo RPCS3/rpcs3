@@ -138,7 +138,24 @@ namespace rsx
 				glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_TRUE);
 				glPixelStorei(GL_UNPACK_ROW_LENGTH, pitch / 2);
 
-				// TODO: texture swizzling
+				if (is_swizzled)
+				{
+					u16 *src, *dst;
+					u16 height = tex.height();
+					u16 width = tex.width();
+
+					unswizzledPixels = (u8*)malloc(width * height * 2);
+					src = (u16*)pixels;
+					dst = (u16*)unswizzledPixels;
+
+					rsx::convert_linear_swizzle<u16>(src, dst, width, height, true);
+
+					glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.width(), tex.height(), 0, GL_BGRA, GL_UNSIGNED_SHORT_1_5_5_5_REV, unswizzledPixels);
+					glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_FALSE);
+					free(unswizzledPixels);
+					break;
+				}
+				
 				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.width(), tex.height(), 0, GL_BGRA, GL_UNSIGNED_SHORT_1_5_5_5_REV, pixels);
 				glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_FALSE);
 				break;
@@ -147,7 +164,24 @@ namespace rsx
 			case CELL_GCM_TEXTURE_A4R4G4B4:
 			{
 				glPixelStorei(GL_UNPACK_ROW_LENGTH, pitch / 2);
-				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.width(), tex.height(), 0, GL_RGBA, GL_UNSIGNED_SHORT_4_4_4_4, pixels);
+				
+				if (is_swizzled)
+				{
+					u16 *src, *dst;
+					u16 height = tex.height();
+					u16 width = tex.width();
+
+					unswizzledPixels = (u8*)malloc(width * height * 2);
+					src = (u16*)pixels;
+					dst = (u16*)unswizzledPixels;
+
+					rsx::convert_linear_swizzle<u16>(src, dst, width, height, true);
+
+					glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.width(), tex.height(), 0, GL_RGBA, GL_UNSIGNED_SHORT_4_4_4_4, unswizzledPixels);
+					free(unswizzledPixels);
+				}
+				else
+					glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.width(), tex.height(), 0, GL_RGBA, GL_UNSIGNED_SHORT_4_4_4_4, pixels);
 
 				// We read it in as R4G4B4A4, so we need to remap each component.
 				static const GLint swizzleMaskA4R4G4B4[] = { GL_BLUE, GL_ALPHA, GL_RED, GL_GREEN };
