@@ -32,15 +32,15 @@ namespace rsx
 	template<typename T>
 	void convert_linear_swizzle(void* input_pixels, void* output_pixels, u16 width, u16 height, bool input_is_swizzled)
 	{
-		u32 log2width = log2(width);
-		u32 log2height = log2(height);
+		u16 log2width = gsl::narrow<u16>(ceil(log2(width)));
+		u16 log2height = gsl::narrow<u16>(ceil(log2(height)));
 
 		// Max mask possible for square texture
 		u32 x_mask = 0x55555555;
 		u32 y_mask = 0xAAAAAAAA;
 
 		// We have to limit the masks to the lower of the two dimensions to allow for non-square textures
-		u32 limit_mask = (log2width < log2height) ? log2width : log2height;
+		u16 limit_mask = (log2width < log2height) ? log2width : log2height;
 		// double the limit mask to account for bits in both x and y
 		limit_mask = 1 << (limit_mask << 1);
 
