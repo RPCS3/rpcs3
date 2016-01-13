@@ -278,21 +278,21 @@ namespace rsx
 		int clip_h = rsx::method_registers[NV4097_SET_SURFACE_CLIP_VERTICAL] >> 16;
 		size_t pitch = clip_w * 4;
 		std::vector<size_t> color_index_to_record;
-		switch (method_registers[NV4097_SET_SURFACE_COLOR_TARGET])
+		switch (to_surface_target(method_registers[NV4097_SET_SURFACE_COLOR_TARGET]))
 		{
-		case CELL_GCM_SURFACE_TARGET_0:
+		case Surface_target::surface_a:
 			color_index_to_record = { 0 };
 			break;
-		case CELL_GCM_SURFACE_TARGET_1:
+		case Surface_target::surface_b:
 			color_index_to_record = { 1 };
 			break;
-		case CELL_GCM_SURFACE_TARGET_MRT1:
+		case Surface_target::surfaces_a_b:
 			color_index_to_record = { 0, 1 };
 			break;
-		case CELL_GCM_SURFACE_TARGET_MRT2:
+		case Surface_target::surfaces_a_b_c:
 			color_index_to_record = { 0, 1, 2 };
 			break;
-		case CELL_GCM_SURFACE_TARGET_MRT3:
+		case Surface_target::surfaces_a_b_c_d:
 			color_index_to_record = { 0, 1, 2, 3 };
 			break;
 		}

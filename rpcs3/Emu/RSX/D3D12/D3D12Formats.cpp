@@ -298,56 +298,63 @@ D3D12_PRIMITIVE_TOPOLOGY_TYPE get_primitive_topology_type(Primitive_type draw_mo
 	throw EXCEPTION("Invalid or unsupported draw mode (0x%x)", draw_mode);
 }
 
-DXGI_FORMAT get_color_surface_format(u8 format)
+DXGI_FORMAT get_color_surface_format(Surface_color_format format)
 {
 	switch (format)
 	{
-	case CELL_GCM_SURFACE_R5G6B5: return DXGI_FORMAT_B5G6R5_UNORM;
-	case CELL_GCM_SURFACE_X8R8G8B8_O8R8G8B8: return DXGI_FORMAT_B8G8R8X8_UNORM; //BIT.TRIP Runner2 use this
-	case CELL_GCM_SURFACE_A8R8G8B8: return DXGI_FORMAT_R8G8B8A8_UNORM;
-	case CELL_GCM_SURFACE_F_W16Z16Y16X16: return DXGI_FORMAT_R16G16B16A16_FLOAT;
-	case CELL_GCM_SURFACE_F_X32: return DXGI_FORMAT_R32_FLOAT;
-	case CELL_GCM_SURFACE_A8B8G8R8: return DXGI_FORMAT_R8G8B8A8_UNORM;
+	case Surface_color_format::r5g6b5: return DXGI_FORMAT_B5G6R5_UNORM;
+	case Surface_color_format::x8r8g8b8_o8r8g8b8:
+	case Surface_color_format::x8r8g8b8_z8r8g8b8:
+	case Surface_color_format::x8b8g8r8_o8b8g8r8:
+	case Surface_color_format::x8b8g8r8_z8b8g8r8:
+			return DXGI_FORMAT_B8G8R8X8_UNORM; //BIT.TRIP Runner2 use this
+	case Surface_color_format::a8b8g8r8:
+	case Surface_color_format::a8r8g8b8: return DXGI_FORMAT_R8G8B8A8_UNORM;
+	case Surface_color_format::b8: return DXGI_FORMAT_R8_UNORM;
+	case Surface_color_format::g8b8: return DXGI_FORMAT_R8G8_UNORM;
+	case Surface_color_format::w16z16y16x16: return DXGI_FORMAT_R16G16B16A16_FLOAT;
+	case Surface_color_format::w32z32y32x32: return DXGI_FORMAT_R32G32B32A32_FLOAT;
+	case Surface_color_format::x32: return DXGI_FORMAT_R32_FLOAT;
 	}
 	throw EXCEPTION("Invalid format (0x%x)", format);
 }
 
-DXGI_FORMAT get_depth_stencil_surface_format(u8 format)
+DXGI_FORMAT get_depth_stencil_surface_format(Surface_depth_format format)
 {
 	switch (format)
 	{
-	case CELL_GCM_SURFACE_Z16: return DXGI_FORMAT_D16_UNORM;
-	case CELL_GCM_SURFACE_Z24S8: return DXGI_FORMAT_D24_UNORM_S8_UINT;
+	case Surface_depth_format::z16: return DXGI_FORMAT_D16_UNORM;
+	case Surface_depth_format::z24s8: return DXGI_FORMAT_D24_UNORM_S8_UINT;
 	}
 	throw EXCEPTION("Invalid format (0x%x)", format);
 }
 
-DXGI_FORMAT get_depth_stencil_surface_clear_format(u8 format)
+DXGI_FORMAT get_depth_stencil_surface_clear_format(Surface_depth_format format)
 {
 	switch (format)
 	{
-	case CELL_GCM_SURFACE_Z16: return DXGI_FORMAT_D16_UNORM;
-	case CELL_GCM_SURFACE_Z24S8: return DXGI_FORMAT_D24_UNORM_S8_UINT;
+	case Surface_depth_format::z16: return DXGI_FORMAT_D16_UNORM;
+	case Surface_depth_format::z24s8: return DXGI_FORMAT_D24_UNORM_S8_UINT;
 	}
 	throw EXCEPTION("Invalid format (0x%x)", format);
 }
 
-DXGI_FORMAT get_depth_stencil_typeless_surface_format(u8 format)
+DXGI_FORMAT get_depth_stencil_typeless_surface_format(Surface_depth_format format)
 {
 	switch (format)
 	{
-	case CELL_GCM_SURFACE_Z16: return DXGI_FORMAT_R16_TYPELESS;
-	case CELL_GCM_SURFACE_Z24S8: return DXGI_FORMAT_R24G8_TYPELESS;
+	case Surface_depth_format::z16: return DXGI_FORMAT_R16_TYPELESS;
+	case Surface_depth_format::z24s8: return DXGI_FORMAT_R24G8_TYPELESS;
 	}
 	throw EXCEPTION("Invalid format (0x%x)", format);
 }
 
-DXGI_FORMAT get_depth_samplable_surface_format(u8 format)
+DXGI_FORMAT get_depth_samplable_surface_format(Surface_depth_format format)
 {
 	switch (format)
 	{
-	case CELL_GCM_SURFACE_Z16: return DXGI_FORMAT_R16_FLOAT;
-	case CELL_GCM_SURFACE_Z24S8: return DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+	case Surface_depth_format::z16: return DXGI_FORMAT_R16_UNORM;
+	case Surface_depth_format::z24s8: return DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
 	}
 	throw EXCEPTION("Invalid format (0x%x)", format);
 }

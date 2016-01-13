@@ -167,9 +167,9 @@ namespace rsx
 	{
 		u8 log2height;
 		u8 log2width;
-		u8 antialias;
-		u8 depth_format;
-		u8 color_format;
+		Surface_antialiasing antialias;
+		Surface_depth_format depth_format;
+		Surface_color_format color_format;
 
 		u32 width;
 		u32 height;
@@ -181,9 +181,9 @@ namespace rsx
 
 			log2height = surface_format >> 24;
 			log2width = (surface_format >> 16) & 0xff;
-			antialias = (surface_format >> 12) & 0xf;
-			depth_format = (surface_format >> 5) & 0x7;
-			color_format = surface_format & 0x1f;
+			antialias = to_surface_antialiasing((surface_format >> 12) & 0xf);
+			depth_format = to_surface_depth_format((surface_format >> 5) & 0x7);
+			color_format = to_surface_color_format(surface_format & 0x1f);
 
 			width = 1 << (u32(log2width) + 1);
 			height = 1 << (u32(log2width) + 1);

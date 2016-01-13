@@ -60,6 +60,56 @@ enum class Primitive_type : u8
 
 Primitive_type to_primitive_type(u8 in);
 
+enum class Surface_target : u8
+{
+	none,
+	surface_a,
+	surface_b,
+	surfaces_a_b,
+	surfaces_a_b_c,
+	surfaces_a_b_c_d,
+};
+
+Surface_target to_surface_target(u8 in);
+
+enum class Surface_depth_format : u8
+{
+	z16, // unsigned 16 bits depth
+	z24s8, // unsigned 24 bits depth + 8 bits stencil
+};
+
+Surface_depth_format to_surface_depth_format(u8 in);
+
+enum class Surface_antialiasing : u8
+{
+	center_1_sample,
+	diagonal_centered_2_samples,
+	square_centered_4_samples,
+	square_rotated_4_samples,
+};
+
+Surface_antialiasing to_surface_antialiasing(u8 in);
+
+enum class Surface_color_format : u8
+{
+	x1r5g5b5_z1r5g5b5,
+	x1r5g5b5_o1r5g5b5,
+	r5g6b5,
+	x8r8g8b8_z8r8g8b8,
+	x8r8g8b8_o8r8g8b8,
+	a8r8g8b8,
+	b8,
+	g8b8,
+	w16z16y16x16,
+	w32z32y32x32,
+	x32,
+	x8b8g8r8_z8b8g8r8,
+	x8b8g8r8_o8b8g8r8,
+	a8b8g8r8,
+};
+
+Surface_color_format to_surface_color_format(u8 in);
+
 enum
 {
 	CELL_GCM_DISPLAY_FLIP_STATUS_        = 0,
@@ -159,44 +209,9 @@ enum
 // GCM Surface
 enum
 {
-	// Surface Target
-	CELL_GCM_SURFACE_TARGET_NONE   = 0,
-	CELL_GCM_SURFACE_TARGET_0      = 1,
-	CELL_GCM_SURFACE_TARGET_1      = 2,
-	CELL_GCM_SURFACE_TARGET_MRT1   = 0x13,
-	CELL_GCM_SURFACE_TARGET_MRT2   = 0x17,
-	CELL_GCM_SURFACE_TARGET_MRT3   = 0x1f,
-
-	// Surface Depth
-	CELL_GCM_SURFACE_Z16    = 1,
-	CELL_GCM_SURFACE_Z24S8  = 2,
-
-	// Surface Antialias
-	CELL_GCM_SURFACE_CENTER_1            = 0,
-	CELL_GCM_SURFACE_DIAGONAL_CENTERED_2 = 3,
-	CELL_GCM_SURFACE_SQUARE_CENTERED_4   = 4,
-	CELL_GCM_SURFACE_SQUARE_ROTATED_4    = 5,
-
 	// Surface type
 	CELL_GCM_SURFACE_PITCH    = 1,
 	CELL_GCM_SURFACE_SWIZZLE  = 2,
-
-	// Surface format
-	CELL_GCM_SURFACE_X1R5G5B5_Z1R5G5B5 = 1,
-	CELL_GCM_SURFACE_X1R5G5B5_O1R5G5B5 = 2,
-	CELL_GCM_SURFACE_R5G6B5            = 3,
-	CELL_GCM_SURFACE_X8R8G8B8_Z8R8G8B8 = 4,
-	CELL_GCM_SURFACE_X8R8G8B8_O8R8G8B8 = 5,
-	CELL_GCM_SURFACE_A8R8G8B8          = 8,
-	CELL_GCM_SURFACE_B8                = 9,
-	CELL_GCM_SURFACE_G8B8              = 10,
-	CELL_GCM_SURFACE_F_W16Z16Y16X16    = 11,
-	CELL_GCM_SURFACE_F_W32Z32Y32X32    = 12,
-	CELL_GCM_SURFACE_F_X32             = 13,
-	CELL_GCM_SURFACE_X8B8G8R8_Z8B8G8R8 = 14,
-	CELL_GCM_SURFACE_X8B8G8R8_O8B8G8R8 = 15,
-	CELL_GCM_SURFACE_A8B8G8R8          = 16,
-
 };
 
 enum

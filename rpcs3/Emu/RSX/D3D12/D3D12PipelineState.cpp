@@ -162,19 +162,19 @@ void D3D12GSRender::load_program()
 	prop.DepthStencilFormat = get_depth_stencil_surface_format(m_surface.depth_format);
 	prop.RenderTargetsFormat = get_color_surface_format(m_surface.color_format);
 
-	switch (u32 color_target = rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET])
+	switch (to_surface_target(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET]))
 	{
-	case CELL_GCM_SURFACE_TARGET_0:
-	case CELL_GCM_SURFACE_TARGET_1:
+	case Surface_target::surface_a:
+	case Surface_target::surface_b:
 		prop.numMRT = 1;
 		break;
-	case CELL_GCM_SURFACE_TARGET_MRT1:
+	case Surface_target::surfaces_a_b:
 		prop.numMRT = 2;
 		break;
-	case CELL_GCM_SURFACE_TARGET_MRT2:
+	case Surface_target::surfaces_a_b_c:
 		prop.numMRT = 3;
 		break;
-	case CELL_GCM_SURFACE_TARGET_MRT3:
+	case Surface_target::surfaces_a_b_c_d:
 		prop.numMRT = 4;
 		break;
 	default:
