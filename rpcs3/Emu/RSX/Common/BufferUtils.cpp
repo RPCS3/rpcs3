@@ -26,6 +26,8 @@ namespace
 	}
 }
 
+// FIXME: these functions shouldn't access rsx::method_registers (global)
+
 void write_vertex_array_data_to_buffer(void *buffer, u32 first, u32 count, size_t index, const rsx::data_array_format_info &vertex_array_desc)
 {
 	assert(vertex_array_desc.size > 0);
@@ -97,131 +99,169 @@ void write_vertex_array_data_to_buffer(void *buffer, u32 first, u32 count, size_
 
 namespace
 {
-template<typename IndexType>
-void uploadAsIt(char *dst, u32 address, size_t indexCount, bool is_primitive_restart_enabled, u32 primitive_restart_index, u32 &min_index, u32 &max_index)
+template<typename T>
+std::tuple<T, T> upload_untouched(gsl::span<to_be_t<const T>> src, gsl::span<T> dst, bool is_primitive_restart_enabled, T primitive_restart_index)
 {
-	for (u32 i = 0; i < indexCount; ++i)
+	T min_index = -1;
+	T max_index = 0;
+
+	Expects(dst.size_bytes() >= src.size_bytes());
+
+	size_t dst_idx = 0;
+	for (T index : src)
 	{
-		IndexType index = vm::ps3::_ref<IndexType>(address + i * sizeof(IndexType));
-		if (is_primitive_restart_enabled && index == (IndexType)primitive_restart_index)
-			index = (IndexType)-1;
-		(IndexType&)dst[i * sizeof(IndexType)] = index;
-		if (is_primitive_restart_enabled && index == (IndexType)-1) // Cut
-			continue;
-		max_index = MAX2(max_index, index);
-		min_index = MIN2(min_index, index);
+		if (is_primitive_restart_enabled && index == primitive_restart_index)
+		{
+			index = -1;
+		}
+		else
+		{
+			max_index = MAX2(max_index, index);
+			min_index = MIN2(min_index, index);
+		}
+		dst[dst_idx++] = index;
 	}
+	return std::make_tuple(min_index, max_index);
 }
 
 // FIXME: expanded primitive type may not support primitive restart correctly
-
-template<typename IndexType>
-void expandIndexedTriangleFan(char *dst, u32 address, size_t indexCount, bool is_primitive_restart_enabled, u32 primitive_restart_index, u32 &min_index, u32 &max_index)
+template<typename T>
+std::tuple<T, T> expand_indexed_triangle_fan(gsl::span<to_be_t<const T>> src, gsl::span<T> dst, bool is_primitive_restart_enabled, T primitive_restart_index)
 {
-	for (unsigned i = 0; i < indexCount - 2; i++)
+	T min_index = -1;
+	T max_index = 0;
+
+	Expects(dst.size() >= 3 * (src.size() - 2));
+
+	const T index0 = src[0];
+	if (!is_primitive_restart_enabled || index0 != -1) // Cut
 	{
-		IndexType index0 = vm::ps3::_ref<IndexType>(address);
-		if (index0 == (IndexType)primitive_restart_index)
-			index0 = (IndexType)-1;
-		IndexType index1 = vm::ps3::_ref<IndexType>(address + (i + 2 - 1) * sizeof(IndexType));
-		if (index1 == (IndexType)primitive_restart_index)
-			index1 = (IndexType)-1;
-		IndexType index2 = vm::ps3::_ref<IndexType>(address + (i + 2) * sizeof(IndexType));
-		if (index2 == (IndexType)primitive_restart_index)
-			index2 = (IndexType)-1;
+		min_index = MIN2(min_index, index0);
+		max_index = MAX2(max_index, index0);
+	}
 
-		(IndexType&)dst[(3 * i) * sizeof(IndexType)] = index0;
-		(IndexType&)dst[(3 * i + 1) * sizeof(IndexType)] = index1;
-		(IndexType&)dst[(3 * i + 2) * sizeof(IndexType)] = index2;
-
-		if (!is_primitive_restart_enabled || index0 != (IndexType)-1) // Cut
+	size_t dst_idx = 0;
+	while (src.size() > 2)
+	{
+		gsl::span<to_be_t<const T>> tri_indexes = src.subspan(0, 2);
+		T index1 = tri_indexes[0];
+		if (is_primitive_restart_enabled && index1 == primitive_restart_index)
 		{
-			min_index = MIN2(min_index, index0);
-			max_index = MAX2(max_index, index0);
+			index1 = -1;
 		}
-		if (!is_primitive_restart_enabled || index1 != (IndexType)-1) // Cut
+		else
 		{
 			min_index = MIN2(min_index, index1);
 			max_index = MAX2(max_index, index1);
 		}
-		if (!is_primitive_restart_enabled || index2 != (IndexType)-1) // Cut
+		T index2 = tri_indexes[1];
+		if (is_primitive_restart_enabled && index2 == primitive_restart_index)
+		{
+			index2 = -1;
+		}
+		else
 		{
 			min_index = MIN2(min_index, index2);
 			max_index = MAX2(max_index, index2);
 		}
+
+		dst[dst_idx++] = index0;
+		dst[dst_idx++] = index1;
+		dst[dst_idx++] = index2;
+
+		src = src.subspan(2);
 	}
+	return std::make_tuple(min_index, max_index);
 }
 
-template<typename IndexType>
-void expandIndexedQuads(char *dst, u32 address, size_t indexCount, bool is_primitive_restart_enabled, u32 primitive_restart_index, u32 &min_index, u32 &max_index)
+// FIXME: expanded primitive type may not support primitive restart correctly
+template<typename T>
+std::tuple<T, T> expand_indexed_quads(gsl::span<to_be_t<const T>> src, gsl::span<T> dst, bool is_primitive_restart_enabled, T primitive_restart_index)
 {
-	for (unsigned i = 0; i < indexCount / 4; i++)
+	T min_index = -1;
+	T max_index = 0;
+
+	Expects(4 * dst.size_bytes() >= 6 * src.size_bytes());
+
+	size_t dst_idx = 0;
+	while (!src.empty())
 	{
-		IndexType index0 = vm::ps3::_ref<IndexType>(address + 4 * i * sizeof(IndexType));
-		if (is_primitive_restart_enabled && index0 == (IndexType)primitive_restart_index)
-			index0 = (IndexType)-1;
-		IndexType index1 = vm::ps3::_ref<IndexType>(address + (4 * i + 1) * sizeof(IndexType));
-		if (is_primitive_restart_enabled && index1 == (IndexType)primitive_restart_index)
-			index1 = (IndexType)-1;
-		IndexType index2 = vm::ps3::_ref<IndexType>(address + (4 * i + 2) * sizeof(IndexType));
-		if (is_primitive_restart_enabled && index2 == (IndexType)primitive_restart_index)
-			index2 = (IndexType)-1;
-		IndexType index3 = vm::ps3::_ref<IndexType>(address + (4 * i + 3) * sizeof(IndexType));
-		if (is_primitive_restart_enabled &&index3 == (IndexType)primitive_restart_index)
-			index3 = (IndexType)-1;
-
-		// First triangle
-		(IndexType&)dst[(6 * i) * sizeof(IndexType)] = index0;
-		(IndexType&)dst[(6 * i + 1) * sizeof(IndexType)] = index1;
-		(IndexType&)dst[(6 * i + 2) * sizeof(IndexType)] = index2;
-		// Second triangle
-		(IndexType&)dst[(6 * i + 3) * sizeof(IndexType)] = index2;
-		(IndexType&)dst[(6 * i + 4) * sizeof(IndexType)] = index3;
-		(IndexType&)dst[(6 * i + 5) * sizeof(IndexType)] = index0;
-
-		if (!is_primitive_restart_enabled || index0 != (IndexType)-1) // Cut
+		gsl::span<to_be_t<const T>> quad_indexes = src.subspan(0, 4);
+		T index0 = quad_indexes[0];
+		if (is_primitive_restart_enabled && index0 == primitive_restart_index)
+		{
+			index0 = -1;
+		}
+		else
 		{
 			min_index = MIN2(min_index, index0);
 			max_index = MAX2(max_index, index0);
 		}
-		if (!is_primitive_restart_enabled || index1 != (IndexType)-1) // Cut
+		T index1 = quad_indexes[1];
+		if (is_primitive_restart_enabled && index1 == primitive_restart_index)
+		{
+			index1 = -1;
+		}
+		else
 		{
 			min_index = MIN2(min_index, index1);
 			max_index = MAX2(max_index, index1);
 		}
-		if (!is_primitive_restart_enabled || index2 != (IndexType)-1) // Cut
+		T index2 = quad_indexes[2];
+		if (is_primitive_restart_enabled && index2 == primitive_restart_index)
+		{
+			index2 = -1;
+		}
+		else
 		{
 			min_index = MIN2(min_index, index2);
 			max_index = MAX2(max_index, index2);
 		}
-		if (!is_primitive_restart_enabled || index3 != (IndexType)-1) // Cut
+		T index3 = quad_indexes[3];
+		if (is_primitive_restart_enabled &&index3 == primitive_restart_index)
+		{
+			index3 = -1;
+		}
+		else
 		{
 			min_index = MIN2(min_index, index3);
 			max_index = MAX2(max_index, index3);
 		}
+
+		// First triangle
+		dst[dst_idx++] = index0;
+		dst[dst_idx++] = index1;
+		dst[dst_idx++] = index2;
+		// Second triangle
+		dst[dst_idx++] = index2;
+		dst[dst_idx++] = index3;
+		dst[dst_idx++] = index0;
+
+		src = src.subspan(4);
 	}
+	return std::make_tuple(min_index, max_index);
 }
 }
 
 // Only handle quads and triangle fan now
-bool is_primitive_native(unsigned m_draw_mode)
+bool is_primitive_native(Primitive_type m_draw_mode)
 {
 	switch (m_draw_mode)
 	{
-	default:
-	case CELL_GCM_PRIMITIVE_POINTS:
-	case CELL_GCM_PRIMITIVE_LINES:
-	case CELL_GCM_PRIMITIVE_LINE_LOOP:
-	case CELL_GCM_PRIMITIVE_LINE_STRIP:
-	case CELL_GCM_PRIMITIVE_TRIANGLES:
-	case CELL_GCM_PRIMITIVE_TRIANGLE_STRIP:
-	case CELL_GCM_PRIMITIVE_QUAD_STRIP:
+	case Primitive_type::points:
+	case Primitive_type::lines:
+	case Primitive_type::line_loop:
+	case Primitive_type::line_strip:
+	case Primitive_type::triangles:
+	case Primitive_type::triangle_strip:
+	case Primitive_type::quad_strip:
 		return true;
-	case CELL_GCM_PRIMITIVE_POLYGON:
-	case CELL_GCM_PRIMITIVE_TRIANGLE_FAN:
-	case CELL_GCM_PRIMITIVE_QUADS:
+	case Primitive_type::polygon:
+	case Primitive_type::triangle_fan:
+	case Primitive_type::quads:
 		return false;
 	}
+	throw new EXCEPTION("Wrong primitive type");
 }
 
 /** We assume that polygon is convex in polygon mode (constraints in OpenGL)
@@ -229,7 +269,7 @@ bool is_primitive_native(unsigned m_draw_mode)
  * see http://www.gamedev.net/page/resources/_/technical/graphics-programming-and-theory/polygon-triangulation-r3334
  */
 
-size_t get_index_count(unsigned m_draw_mode, unsigned initial_index_count)
+size_t get_index_count(Primitive_type m_draw_mode, unsigned initial_index_count)
 {
 	// Index count
 	if (is_primitive_native(m_draw_mode))
@@ -237,33 +277,33 @@ size_t get_index_count(unsigned m_draw_mode, unsigned initial_index_count)
 
 	switch (m_draw_mode)
 	{
-	case CELL_GCM_PRIMITIVE_POLYGON:
-	case CELL_GCM_PRIMITIVE_TRIANGLE_FAN:
+	case Primitive_type::polygon:
+	case Primitive_type::triangle_fan:
 		return (initial_index_count - 2) * 3;
-	case CELL_GCM_PRIMITIVE_QUADS:
+	case Primitive_type::quads:
 		return (6 * initial_index_count) / 4;
 	default:
 		return 0;
 	}
 }
 
-size_t get_index_type_size(u32 type)
+size_t get_index_type_size(Index_array_type type)
 {
 	switch (type)
 	{
-	case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_16: return 2;
-	case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_32: return 4;
-	default: return 0;
+	case Index_array_type::unsigned_16b: return 2;
+	case Index_array_type::unsigned_32b: return 4;
 	}
+	throw new EXCEPTION("Wrong index type");
 }
 
-void write_index_array_for_non_indexed_non_native_primitive_to_buffer(char* dst, unsigned draw_mode, unsigned first, unsigned count)
+void write_index_array_for_non_indexed_non_native_primitive_to_buffer(char* dst, Primitive_type draw_mode, unsigned first, unsigned count)
 {
 	unsigned short *typedDst = (unsigned short *)(dst);
 	switch (draw_mode)
 	{
-	case CELL_GCM_PRIMITIVE_TRIANGLE_FAN:
-	case CELL_GCM_PRIMITIVE_POLYGON:
+	case Primitive_type::triangle_fan:
+	case Primitive_type::polygon:
 		for (unsigned i = 0; i < (count - 2); i++)
 		{
 			typedDst[3 * i] = first;
@@ -271,7 +311,7 @@ void write_index_array_for_non_indexed_non_native_primitive_to_buffer(char* dst,
 			typedDst[3 * i + 2] = i + 2;
 		}
 		return;
-	case CELL_GCM_PRIMITIVE_QUADS:
+	case Primitive_type::quads:
 		for (unsigned i = 0; i < count / 4; i++)
 		{
 			// First triangle
@@ -284,62 +324,118 @@ void write_index_array_for_non_indexed_non_native_primitive_to_buffer(char* dst,
 			typedDst[6 * i + 5] = 4 * i + first;
 		}
 		return;
+	case Primitive_type::points:
+	case Primitive_type::lines:
+	case Primitive_type::line_loop:
+	case Primitive_type::line_strip:
+	case Primitive_type::triangles:
+	case Primitive_type::triangle_strip:
+	case Primitive_type::quad_strip:
+		throw new EXCEPTION("Native primitive type doesn't require expansion");
 	}
 }
 
-void write_index_array_data_to_buffer(char* dst, unsigned m_draw_mode, unsigned first, unsigned count, unsigned &min_index, unsigned &max_index)
+// TODO: Unify indexed and non indexed primitive expansion ?
+
+template<typename T>
+std::tuple<T, T> write_index_array_data_to_buffer_impl(gsl::span<T, gsl::dynamic_range> dst, Primitive_type m_draw_mode, const std::vector<std::pair<u32, u32> > &first_count_arguments)
 {
 	u32 address = rsx::get_address(rsx::method_registers[NV4097_SET_INDEX_ARRAY_ADDRESS], rsx::method_registers[NV4097_SET_INDEX_ARRAY_DMA] & 0xf);
-	u32 type = rsx::method_registers[NV4097_SET_INDEX_ARRAY_DMA] >> 4;
+	Index_array_type type = to_index_array_type(rsx::method_registers[NV4097_SET_INDEX_ARRAY_DMA] >> 4);
 
-	u32 type_size = type == CELL_GCM_DRAW_INDEX_ARRAY_TYPE_32 ? sizeof(u32) : sizeof(u16);
+	u32 type_size = gsl::narrow<u32>(get_index_type_size(type));
 
-	u32 base_offset = rsx::method_registers[NV4097_SET_VERTEX_DATA_BASE_OFFSET];
-	u32 base_index = 0;//rsx::method_registers[NV4097_SET_VERTEX_DATA_BASE_INDEX];
+	Expects(rsx::method_registers[NV4097_SET_VERTEX_DATA_BASE_OFFSET] == 0);
+	Expects(rsx::method_registers[NV4097_SET_VERTEX_DATA_BASE_INDEX] == 0);
+
 	bool is_primitive_restart_enabled = !!rsx::method_registers[NV4097_SET_RESTART_INDEX_ENABLE];
 	u32 primitive_restart_index = rsx::method_registers[NV4097_SET_RESTART_INDEX];
 
+	// Disjoint first_counts ranges not supported atm
+	for (int i = 0; i < first_count_arguments.size() - 1; i++)
+	{
+		const std::tuple<u32, u32> &range = first_count_arguments[i];
+		const std::tuple<u32, u32> &next_range = first_count_arguments[i + 1];
+		Expects(std::get<0>(range) + std::get<1>(range) == std::get<0>(next_range));
+	}
+	u32 first = std::get<0>(first_count_arguments.front());
+	u32 count = std::get<0>(first_count_arguments.back()) + std::get<1>(first_count_arguments.back()) - first;
+	auto ptr = vm::ps3::_ptr<const T>(address + first * type_size);
+
 	switch (m_draw_mode)
 	{
-	case CELL_GCM_PRIMITIVE_POINTS:
-	case CELL_GCM_PRIMITIVE_LINES:
-	case CELL_GCM_PRIMITIVE_LINE_LOOP:
-	case CELL_GCM_PRIMITIVE_LINE_STRIP:
-	case CELL_GCM_PRIMITIVE_TRIANGLES:
-	case CELL_GCM_PRIMITIVE_TRIANGLE_STRIP:
-	case CELL_GCM_PRIMITIVE_QUAD_STRIP:
-	case CELL_GCM_PRIMITIVE_POLYGON:
-		switch (type)
-		{
-		case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_32:
-			uploadAsIt<u32>(dst, address + (first + base_index) * sizeof(u32), count, is_primitive_restart_enabled, primitive_restart_index, min_index, max_index);
-			return;
-		case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_16:
-			uploadAsIt<u16>(dst, address + (first + base_index) * sizeof(u16), count, is_primitive_restart_enabled, primitive_restart_index, min_index, max_index);
-			return;
-		}
-		return;
-	case CELL_GCM_PRIMITIVE_TRIANGLE_FAN:
-		switch (type)
-		{
-		case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_32:
-			expandIndexedTriangleFan<u32>(dst, address + (first + base_index) * sizeof(u32), count, is_primitive_restart_enabled, primitive_restart_index, min_index, max_index);
-			return;
-		case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_16:
-			expandIndexedTriangleFan<u16>(dst, address + (first + base_index) * sizeof(u16), count, is_primitive_restart_enabled, primitive_restart_index, min_index, max_index);
-			return;
-		}
-	case CELL_GCM_PRIMITIVE_QUADS:
-		switch (type)
-		{
-		case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_32:
-			expandIndexedQuads<u32>(dst, address + (first + base_index) * sizeof(u32), count, is_primitive_restart_enabled, primitive_restart_index, min_index, max_index);
-			return;
-		case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_16:
-			expandIndexedQuads<u16>(dst, address + (first + base_index) * sizeof(u16), count, is_primitive_restart_enabled, primitive_restart_index, min_index, max_index);
-			return;
-		}
+	case Primitive_type::points:
+	case Primitive_type::lines:
+	case Primitive_type::line_loop:
+	case Primitive_type::line_strip:
+	case Primitive_type::triangles:
+	case Primitive_type::triangle_strip:
+	case Primitive_type::quad_strip:
+		return upload_untouched<T>({ ptr, count }, dst, is_primitive_restart_enabled, primitive_restart_index);
+	case Primitive_type::polygon:
+	case Primitive_type::triangle_fan:
+		return expand_indexed_triangle_fan<T>({ ptr, count }, dst, is_primitive_restart_enabled, primitive_restart_index);
+	case Primitive_type::quads:
+		return expand_indexed_quads<T>({ ptr, count }, dst, is_primitive_restart_enabled, primitive_restart_index);
 	}
+
+	throw new EXCEPTION("Unknow draw mode");
+}
+
+std::tuple<u32, u32> write_index_array_data_to_buffer(gsl::span<u32, gsl::dynamic_range> dst, Primitive_type m_draw_mode, const std::vector<std::pair<u32, u32> > &first_count_arguments)
+{
+	return write_index_array_data_to_buffer_impl(dst, m_draw_mode, first_count_arguments);
+}
+
+std::tuple<u16, u16> write_index_array_data_to_buffer(gsl::span<u16, gsl::dynamic_range> dst, Primitive_type m_draw_mode, const std::vector<std::pair<u32, u32> > &first_count_arguments)
+{
+	return write_index_array_data_to_buffer_impl(dst, m_draw_mode, first_count_arguments);
+}
+
+std::tuple<u32, u32> write_index_array_data_to_buffer_untouched(gsl::span<u32, gsl::dynamic_range> dst, const std::vector<std::pair<u32, u32> > &first_count_arguments)
+{
+	u32 address = rsx::get_address(rsx::method_registers[NV4097_SET_INDEX_ARRAY_ADDRESS], rsx::method_registers[NV4097_SET_INDEX_ARRAY_DMA] & 0xf);
+	Index_array_type type = to_index_array_type(rsx::method_registers[NV4097_SET_INDEX_ARRAY_DMA] >> 4);
+
+	u32 type_size = gsl::narrow<u32>(get_index_type_size(type));
+	bool is_primitive_restart_enabled = !!rsx::method_registers[NV4097_SET_RESTART_INDEX_ENABLE];
+	u32 primitive_restart_index = rsx::method_registers[NV4097_SET_RESTART_INDEX];
+
+	// Disjoint first_counts ranges not supported atm
+	for (int i = 0; i < first_count_arguments.size() - 1; i++)
+	{
+		const std::tuple<u32, u32> &range = first_count_arguments[i];
+		const std::tuple<u32, u32> &next_range = first_count_arguments[i + 1];
+		Expects(std::get<0>(range) + std::get<1>(range) == std::get<0>(next_range));
+	}
+	u32 first = std::get<0>(first_count_arguments.front());
+	u32 count = std::get<0>(first_count_arguments.back()) + std::get<1>(first_count_arguments.back()) - first;
+	auto ptr = vm::ps3::_ptr<const u32>(address + first * type_size);
+
+	return upload_untouched<u32>({ ptr, count }, dst, is_primitive_restart_enabled, primitive_restart_index);
+}
+
+std::tuple<u16, u16> write_index_array_data_to_buffer_untouched(gsl::span<u16, gsl::dynamic_range> dst, const std::vector<std::pair<u32, u32> > &first_count_arguments)
+{
+	u32 address = rsx::get_address(rsx::method_registers[NV4097_SET_INDEX_ARRAY_ADDRESS], rsx::method_registers[NV4097_SET_INDEX_ARRAY_DMA] & 0xf);
+	Index_array_type type = to_index_array_type(rsx::method_registers[NV4097_SET_INDEX_ARRAY_DMA] >> 4);
+
+	u32 type_size = gsl::narrow<u32>(get_index_type_size(type));
+	bool is_primitive_restart_enabled = !!rsx::method_registers[NV4097_SET_RESTART_INDEX_ENABLE];
+	u16 primitive_restart_index = rsx::method_registers[NV4097_SET_RESTART_INDEX];
+
+	// Disjoint first_counts ranges not supported atm
+	for (int i = 0; i < first_count_arguments.size() - 1; i++)
+	{
+		const std::tuple<u32, u32> &range = first_count_arguments[i];
+		const std::tuple<u32, u32> &next_range = first_count_arguments[i + 1];
+		Expects(std::get<0>(range) + std::get<1>(range) == std::get<0>(next_range));
+	}
+	u32 first = std::get<0>(first_count_arguments.front());
+	u32 count = std::get<0>(first_count_arguments.back()) + std::get<1>(first_count_arguments.back()) - first;
+	auto ptr = vm::ps3::_ptr<const u16>(address + first * type_size);
+
+	return upload_untouched<u16>({ ptr, count }, dst, is_primitive_restart_enabled, primitive_restart_index);
 }
 
 void stream_vector(void *dst, u32 x, u32 y, u32 z, u32 w)

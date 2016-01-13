@@ -9,14 +9,14 @@ SysCallBase sys_rsx("sys_rsx");
 
 s32 sys_rsx_device_open()
 {
-	sys_rsx.Todo("sys_rsx_device_open()");
+	sys_rsx.todo("sys_rsx_device_open()");
 
 	return CELL_OK;
 }
 
 s32 sys_rsx_device_close()
 {
-	sys_rsx.Todo("sys_rsx_device_close()");
+	sys_rsx.todo("sys_rsx_device_close()");
 
 	return CELL_OK;
 }
@@ -33,7 +33,7 @@ s32 sys_rsx_device_close()
  */
 s32 sys_rsx_memory_allocate(vm::ptr<u32> mem_handle, vm::ptr<u64> mem_addr, u32 size, u64 flags, u64 a5, u64 a6, u64 a7)
 {
-	sys_rsx.Todo("sys_rsx_memory_allocate(mem_handle=*0x%x, mem_addr=*0x%x, size=0x%x, flags=0x%llx, a5=0x%llx, a6=0x%llx, a7=0x%llx)", mem_handle, mem_addr, size, flags, a5, a6, a7);
+	sys_rsx.todo("sys_rsx_memory_allocate(mem_handle=*0x%x, mem_addr=*0x%x, size=0x%x, flags=0x%llx, a5=0x%llx, a6=0x%llx, a7=0x%llx)", mem_handle, mem_addr, size, flags, a5, a6, a7);
 
 	return CELL_OK;
 }
@@ -44,7 +44,7 @@ s32 sys_rsx_memory_allocate(vm::ptr<u32> mem_handle, vm::ptr<u64> mem_addr, u32 
  */
 s32 sys_rsx_memory_free(u32 mem_handle)
 {
-	sys_rsx.Todo("sys_rsx_memory_free(mem_handle=0x%x)", mem_handle);
+	sys_rsx.todo("sys_rsx_memory_free(mem_handle=0x%x)", mem_handle);
 
 	return CELL_OK;
 }
@@ -60,7 +60,7 @@ s32 sys_rsx_memory_free(u32 mem_handle)
  */
 s32 sys_rsx_context_allocate(vm::ptr<u32> context_id, vm::ptr<u32> lpar_dma_control, vm::ptr<u32> lpar_driver_info, vm::ptr<u32> lpar_reports, u64 mem_ctx, u64 system_mode)
 {
-	sys_rsx.Todo("sys_rsx_context_allocate(context_id=*0x%x, lpar_dma_control=*0x%x, lpar_driver_info=*0x%x, lpar_reports=*0x%x, mem_ctx=0x%llx, system_mode=0x%llx)",
+	sys_rsx.todo("sys_rsx_context_allocate(context_id=*0x%x, lpar_dma_control=*0x%x, lpar_driver_info=*0x%x, lpar_reports=*0x%x, mem_ctx=0x%llx, system_mode=0x%llx)",
 		context_id, lpar_dma_control, lpar_driver_info, lpar_reports, mem_ctx, system_mode);
 
 	return CELL_OK;
@@ -72,7 +72,7 @@ s32 sys_rsx_context_allocate(vm::ptr<u32> context_id, vm::ptr<u32> lpar_dma_cont
  */
 s32 sys_rsx_context_free(u32 context_id)
 {
-	sys_rsx.Todo("sys_rsx_context_free(context_id=0x%x)", context_id);
+	sys_rsx.todo("sys_rsx_context_free(context_id=0x%x)", context_id);
 
 	return CELL_OK;
 }
@@ -87,7 +87,7 @@ s32 sys_rsx_context_free(u32 context_id)
  */
 s32 sys_rsx_context_iomap(u32 context_id, u32 io, u32 ea, u32 size, u64 flags)
 {
-	sys_rsx.Todo("sys_rsx_context_iomap(context_id=0x%x, io=0x%x, ea=0x%x, size=0x%x, flags=0x%llx)", context_id, io, ea, size, flags);
+	sys_rsx.todo("sys_rsx_context_iomap(context_id=0x%x, io=0x%x, ea=0x%x, size=0x%x, flags=0x%llx)", context_id, io, ea, size, flags);
 
 	return CELL_OK;
 }
@@ -101,7 +101,7 @@ s32 sys_rsx_context_iomap(u32 context_id, u32 io, u32 ea, u32 size, u64 flags)
  */
 s32 sys_rsx_context_iounmap(u32 context_id, u32 a2, u32 io_addr, u32 size)
 {
-	sys_rsx.Todo("sys_rsx_context_iounmap(context_id=0x%x, a2=0x%x, io_addr=0x%x, size=0x%x)", context_id, a2, io_addr, size);
+	sys_rsx.todo("sys_rsx_context_iounmap(context_id=0x%x, a2=0x%x, io_addr=0x%x, size=0x%x)", context_id, a2, io_addr, size);
 
 	return CELL_OK;
 }
@@ -117,7 +117,7 @@ s32 sys_rsx_context_iounmap(u32 context_id, u32 a2, u32 io_addr, u32 size)
  */
 s32 sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64 a4, u64 a5, u64 a6)
 {
-	sys_rsx.Todo("sys_rsx_context_attribute(context_id=0x%x, package_id=0x%x, a3=0x%llx, a4=0x%llx, a5=0x%llx, a6=0x%llx)", context_id, package_id, a3, a4, a5, a6);
+	sys_rsx.todo("sys_rsx_context_attribute(context_id=0x%x, package_id=0x%x, a3=0x%llx, a4=0x%llx, a5=0x%llx, a6=0x%llx)", context_id, package_id, a3, a4, a5, a6);
 
 	switch(package_id)
 	{
@@ -175,7 +175,7 @@ s32 sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64 a4, u6
  */
 s32 sys_rsx_device_map(vm::ptr<u32> addr, vm::ptr<u32> a2, u32 dev_id)
 {
-	sys_rsx.Todo("sys_rsx_device_map(addr=*0x%x, a2=0x%x, dev_id=0x%x)", addr, a2, dev_id);
+	sys_rsx.todo("sys_rsx_device_map(addr=*0x%x, a2=0x%x, dev_id=0x%x)", addr, a2, dev_id);
 
 	if (dev_id > 15) {
 		// TODO: Throw RSX error
@@ -196,14 +196,14 @@ s32 sys_rsx_device_map(vm::ptr<u32> addr, vm::ptr<u32> a2, u32 dev_id)
  */
 s32 sys_rsx_device_unmap(u32 dev_id)
 {
-	sys_rsx.Todo("sys_rsx_device_unmap(dev_id=0x%x)", dev_id);
+	sys_rsx.todo("sys_rsx_device_unmap(dev_id=0x%x)", dev_id);
 
 	return CELL_OK;
 }
 
 s32 sys_rsx_attribute(u32 a1, u32 a2, u32 a3, u32 a4, u32 a5)
 {
-	sys_rsx.Todo("sys_rsx_attribute(a1=0x%x, a2=0x%x, a3=0x%x, a4=0x%x, a5=0x%x)", a1, a2, a3, a4, a5);
+	sys_rsx.todo("sys_rsx_attribute(a1=0x%x, a2=0x%x, a3=0x%x, a4=0x%x, a5=0x%x)", a1, a2, a3, a4, a5);
 
 	return CELL_OK;
 }

@@ -20,14 +20,14 @@ void sys_game_process_exitspawn(vm::cptr<char> path, u32 argv_addr, u32 envp_add
 		start_pos += to.length();
 	}
 
-	sysPrxForUser.Todo("sys_game_process_exitspawn()");
-	sysPrxForUser.Warning("path: %s", _path.c_str());
-	sysPrxForUser.Warning("argv: 0x%x", argv_addr);
-	sysPrxForUser.Warning("envp: 0x%x", envp_addr);
-	sysPrxForUser.Warning("data: 0x%x", data_addr);
-	sysPrxForUser.Warning("data_size: 0x%x", data_size);
-	sysPrxForUser.Warning("prio: %d", prio);
-	sysPrxForUser.Warning("flags: %d", flags);
+	sysPrxForUser.todo("sys_game_process_exitspawn()");
+	sysPrxForUser.warning("path: %s", _path.c_str());
+	sysPrxForUser.warning("argv: 0x%x", argv_addr);
+	sysPrxForUser.warning("envp: 0x%x", envp_addr);
+	sysPrxForUser.warning("data: 0x%x", data_addr);
+	sysPrxForUser.warning("data_size: 0x%x", data_size);
+	sysPrxForUser.warning("prio: %d", prio);
+	sysPrxForUser.warning("flags: %d", flags);
 
 	std::vector<std::string> argv;
 	std::vector<std::string> env;
@@ -43,7 +43,7 @@ void sys_game_process_exitspawn(vm::cptr<char> path, u32 argv_addr, u32 envp_add
 
 		for (auto &arg : argv)
 		{
-			sysPrxForUser.Log("argument: %s", arg.c_str());
+			sysPrxForUser.trace("argument: %s", arg.c_str());
 		}
 	}
 
@@ -58,7 +58,7 @@ void sys_game_process_exitspawn(vm::cptr<char> path, u32 argv_addr, u32 envp_add
 
 		for (auto &en : env)
 		{
-			sysPrxForUser.Log("env_argument: %s", en.c_str());
+			sysPrxForUser.trace("env_argument: %s", en.c_str());
 		}
 	}
 
@@ -68,7 +68,7 @@ void sys_game_process_exitspawn(vm::cptr<char> path, u32 argv_addr, u32 envp_add
 	// then kill the current process
 
 	Emu.Pause();
-	sysPrxForUser.Success("Process finished");
+	sysPrxForUser.success("Process finished");
 
 	Emu.CallAfter([=]()
 	{
@@ -96,14 +96,14 @@ void sys_game_process_exitspawn2(vm::cptr<char> path, u32 argv_addr, u32 envp_ad
 		start_pos += to.length();
 	}
 
-	sysPrxForUser.Warning("sys_game_process_exitspawn2()");
-	sysPrxForUser.Warning("path: %s", _path.c_str());
-	sysPrxForUser.Warning("argv: 0x%x", argv_addr);
-	sysPrxForUser.Warning("envp: 0x%x", envp_addr);
-	sysPrxForUser.Warning("data: 0x%x", data_addr);
-	sysPrxForUser.Warning("data_size: 0x%x", data_size);
-	sysPrxForUser.Warning("prio: %d", prio);
-	sysPrxForUser.Warning("flags: %d", flags);
+	sysPrxForUser.warning("sys_game_process_exitspawn2()");
+	sysPrxForUser.warning("path: %s", _path.c_str());
+	sysPrxForUser.warning("argv: 0x%x", argv_addr);
+	sysPrxForUser.warning("envp: 0x%x", envp_addr);
+	sysPrxForUser.warning("data: 0x%x", data_addr);
+	sysPrxForUser.warning("data_size: 0x%x", data_size);
+	sysPrxForUser.warning("prio: %d", prio);
+	sysPrxForUser.warning("flags: %d", flags);
 
 	std::vector<std::string> argv;
 	std::vector<std::string> env;
@@ -119,7 +119,7 @@ void sys_game_process_exitspawn2(vm::cptr<char> path, u32 argv_addr, u32 envp_ad
 
 		for (auto &arg : argv)
 		{
-			sysPrxForUser.Log("argument: %s", arg.c_str());
+			sysPrxForUser.trace("argument: %s", arg.c_str());
 		}
 	}
 
@@ -134,7 +134,7 @@ void sys_game_process_exitspawn2(vm::cptr<char> path, u32 argv_addr, u32 envp_ad
 
 		for (auto &en : env)
 		{
-			sysPrxForUser.Log("env_argument: %s", en.c_str());
+			sysPrxForUser.trace("env_argument: %s", en.c_str());
 		}
 	}
 
@@ -144,7 +144,7 @@ void sys_game_process_exitspawn2(vm::cptr<char> path, u32 argv_addr, u32 envp_ad
 	// then kill the current process
 
 	Emu.Pause();
-	sysPrxForUser.Success("Process finished");
+	sysPrxForUser.success("Process finished");
 
 	Emu.CallAfter([=]()
 	{

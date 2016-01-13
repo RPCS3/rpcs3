@@ -7,7 +7,7 @@ extern Module<> sceNpSns;
 
 s32 sceNpSnsFbInit(vm::ptr<const SceNpSnsFbInitParams> params)
 {
-	sceNpSns.Todo("sceNpSnsFbInit(params=*0x%x)", params);
+	sceNpSns.todo("sceNpSnsFbInit(params=*0x%x)", params);
 
 	// TODO: Use the initialization parameters somewhere
 
@@ -16,7 +16,7 @@ s32 sceNpSnsFbInit(vm::ptr<const SceNpSnsFbInitParams> params)
 
 s32 sceNpSnsFbTerm()
 {
-	sceNpSns.Warning("sceNpSnsFbTerm()");
+	sceNpSns.warning("sceNpSnsFbTerm()");
 
 	return CELL_OK;
 }

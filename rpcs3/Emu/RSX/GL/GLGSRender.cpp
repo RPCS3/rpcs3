@@ -5,6 +5,7 @@
 #include "Emu/state.h"
 #include "GLGSRender.h"
 #include "../rsx_methods.h"
+#include "../Common/BufferUtils.h"
 
 #define DUMP_VERTEX_DATA 0
 
@@ -327,7 +328,7 @@ namespace
 
 void GLGSRender::end()
 {
-	if (!draw_fbo || !vertex_draw_count)
+	if (!draw_fbo)
 	{
 		rsx::thread::end();
 		return;
@@ -356,9 +357,6 @@ void GLGSRender::end()
 
 	//initialize vertex attributes
 
-
-
-
 	//merge all vertex arrays
 	std::vector<u8> vertex_arrays_data;
 	size_t vertex_arrays_offsets[rsx::limits::vertex_count];
@@ -375,6 +373,31 @@ void GLGSRender::end()
 
 	u32 input_mask = rsx::method_registers[NV4097_SET_VERTEX_ATTRIB_INPUT_MASK];
 	m_vao.bind();
+
+	std::vector<u8> vertex_index_array;
+	vertex_draw_count = 0;
+	u32 min_index, max_index;
+	if (draw_command == Draw_command::draw_command_indexed)
+	{
+		Index_array_type type = to_index_array_type(rsx::method_registers[NV4097_SET_INDEX_ARRAY_DMA] >> 4);
+		u32 type_size = get_index_type_size(type);
+		for (const auto& first_count : first_count_commands)
+		{
+			vertex_draw_count += first_count.second;
+		}
+
+		vertex_index_array.resize(vertex_draw_count * type_size);
+
+		switch (type)
+		{
+		case Index_array_type::unsigned_32b:
+			std::tie(min_index, max_index) = write_index_array_data_to_buffer_untouched(gsl::span<u32>((u32*)vertex_index_array.data(), vertex_draw_count), first_count_commands);
+			break;
+		case Index_array_type::unsigned_16b:
+			std::tie(min_index, max_index) = write_index_array_data_to_buffer_untouched(gsl::span<u16>((u16*)vertex_index_array.data(), vertex_draw_count), first_count_commands);
+			break;
+		}
+	}
 
 	if (draw_command == Draw_command::draw_command_inlined_array)
 	{
@@ -397,7 +420,16 @@ void GLGSRender::end()
 			offset += rsx::get_vertex_type_size_on_host(vertex_info.type, vertex_info.size);
 		}
 	}
-	else
+
+	if (draw_command == Draw_command::draw_command_array)
+	{
+		for (const auto &first_count : first_count_commands)
+		{
+			vertex_draw_count += first_count.second;
+		}
+	}
+
+	if (draw_command == Draw_command::draw_command_array || draw_command == Draw_command::draw_command_indexed)
 	{
 		for (int index = 0; index < rsx::limits::vertex_count; ++index)
 		{
@@ -413,17 +445,32 @@ void GLGSRender::end()
 			{
 				auto &vertex_info = vertex_arrays_info[index];
 				// Active vertex array
+				std::vector<u8> vertex_array;
 
+				// Fill vertex_array
+				u32 element_size = rsx::get_vertex_type_size_on_host(vertex_info.type, vertex_info.size);
+				vertex_array.resize(vertex_draw_count * element_size);
+				if (draw_command == Draw_command::draw_command_array)
+				{
+					size_t offset = 0;
+					for (const auto &first_count : first_count_commands)
+					{
+						write_vertex_array_data_to_buffer(vertex_array.data() + offset, first_count.first, first_count.second, index, vertex_info);
+						offset += first_count.second * element_size;
+					}
+				}
+				if (draw_command == Draw_command::draw_command_indexed)
+				{
+					vertex_array.resize((max_index + 1) * element_size);
+					write_vertex_array_data_to_buffer(vertex_array.data(), 0, max_index + 1, index, vertex_info);
+				}
+
+				size_t size = vertex_array.size();
 				size_t position = vertex_arrays_data.size();
 				vertex_arrays_offsets[index] = position;
-
-				if (vertex_arrays[index].empty())
-					continue;
-
-				size_t size = vertex_arrays[index].size();
 				vertex_arrays_data.resize(position + size);
 
-				memcpy(vertex_arrays_data.data() + position, vertex_arrays[index].data(), size);
+				memcpy(vertex_arrays_data.data() + position, vertex_array.data(), size);
 
 				__glcheck m_program->attribs[location] =
 					(m_vao + vertex_arrays_offsets[index])
@@ -455,18 +502,20 @@ void GLGSRender::end()
 	}
 	m_vbo.data(vertex_arrays_data.size(), vertex_arrays_data.data());
 
-	if (vertex_index_array.empty())
-	{
-		draw_fbo.draw_arrays(gl::draw_mode(draw_mode - 1), vertex_draw_count);
-	}
-	else
+	if (draw_command == Draw_command::draw_command_indexed)
 	{
 		m_ebo.data(vertex_index_array.size(), vertex_index_array.data());
 
-		u32 indexed_type = rsx::method_registers[NV4097_SET_INDEX_ARRAY_DMA] >> 4;
+		Index_array_type indexed_type = to_index_array_type(rsx::method_registers[NV4097_SET_INDEX_ARRAY_DMA] >> 4);
 
-		__glcheck glDrawElements(draw_mode - 1, vertex_draw_count,
-			(indexed_type == CELL_GCM_DRAW_INDEX_ARRAY_TYPE_32 ? GL_UNSIGNED_INT : GL_UNSIGNED_SHORT), nullptr);
+		if (indexed_type == Index_array_type::unsigned_32b)
+			__glcheck glDrawElements(gl::draw_mode(draw_mode), vertex_draw_count, GL_UNSIGNED_INT, nullptr);
+		if (indexed_type == Index_array_type::unsigned_16b)
+			__glcheck glDrawElements(gl::draw_mode(draw_mode), vertex_draw_count, GL_UNSIGNED_SHORT, nullptr);
+	}
+	else
+	{
+		draw_fbo.draw_arrays(draw_mode, vertex_draw_count);
 	}
 
 	write_buffers();
@@ -517,9 +566,9 @@ void GLGSRender::on_init_thread()
 	GSRender::on_init_thread();
 
 	gl::init();
-	LOG_NOTICE(Log::RSX, (const char*)glGetString(GL_VERSION));
-	LOG_NOTICE(Log::RSX, (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION));
-	LOG_NOTICE(Log::RSX, (const char*)glGetString(GL_VENDOR));
+	LOG_NOTICE(RSX, "%s", (const char*)glGetString(GL_VERSION));
+	LOG_NOTICE(RSX, "%s", (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION));
+	LOG_NOTICE(RSX, "%s", (const char*)glGetString(GL_VENDOR));
 
 	glEnable(GL_VERTEX_PROGRAM_POINT_SIZE);
 	m_vao.create();

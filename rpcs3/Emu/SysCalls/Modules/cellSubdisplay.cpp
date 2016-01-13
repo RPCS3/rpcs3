@@ -20,7 +20,7 @@ s32 cellSubDisplayEnd()
 
 s32 cellSubDisplayGetRequiredMemory(vm::ptr<CellSubDisplayParam> pParam)
 {
-	cellSubdisplay.Warning("cellSubDisplayGetRequiredMemory(pParam=*0x%x)", pParam);
+	cellSubdisplay.warning("cellSubDisplayGetRequiredMemory(pParam=*0x%x)", pParam);
 
 	if (pParam->version == CELL_SUBDISPLAY_VERSION_0002)
 	{

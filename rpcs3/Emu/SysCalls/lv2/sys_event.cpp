@@ -75,7 +75,7 @@ void lv2_event_queue_t::push(lv2_lock_t& lv2_lock, u64 source, u64 data1, u64 da
 
 s32 sys_event_queue_create(vm::ptr<u32> equeue_id, vm::ptr<sys_event_queue_attribute_t> attr, u64 event_queue_key, s32 size)
 {
-	sys_event.Warning("sys_event_queue_create(equeue_id=*0x%x, attr=*0x%x, event_queue_key=0x%llx, size=%d)", equeue_id, attr, event_queue_key, size);
+	sys_event.warning("sys_event_queue_create(equeue_id=*0x%x, attr=*0x%x, event_queue_key=0x%llx, size=%d)", equeue_id, attr, event_queue_key, size);
 
 	if (size <= 0 || size > 127)
 	{
@@ -86,7 +86,7 @@ s32 sys_event_queue_create(vm::ptr<u32> equeue_id, vm::ptr<sys_event_queue_attri
 
 	if (protocol != SYS_SYNC_FIFO && protocol != SYS_SYNC_PRIORITY)
 	{
-		sys_event.Error("sys_event_queue_create(): unknown protocol (0x%x)", protocol);
+		sys_event.error("sys_event_queue_create(): unknown protocol (0x%x)", protocol);
 		return CELL_EINVAL;
 	}
 
@@ -94,7 +94,7 @@ s32 sys_event_queue_create(vm::ptr<u32> equeue_id, vm::ptr<sys_event_queue_attri
 
 	if (type != SYS_PPU_QUEUE && type != SYS_SPU_QUEUE)
 	{
-		sys_event.Error("sys_event_queue_create(): unknown type (0x%x)", type);
+		sys_event.error("sys_event_queue_create(): unknown type (0x%x)", type);
 		return CELL_EINVAL;
 	}
 
@@ -112,7 +112,7 @@ s32 sys_event_queue_create(vm::ptr<u32> equeue_id, vm::ptr<sys_event_queue_attri
 
 s32 sys_event_queue_destroy(u32 equeue_id, s32 mode)
 {
-	sys_event.Warning("sys_event_queue_destroy(equeue_id=0x%x, mode=%d)", equeue_id, mode);
+	sys_event.warning("sys_event_queue_destroy(equeue_id=0x%x, mode=%d)", equeue_id, mode);
 
 	LV2_LOCK;
 
@@ -161,7 +161,7 @@ s32 sys_event_queue_destroy(u32 equeue_id, s32 mode)
 
 s32 sys_event_queue_tryreceive(u32 equeue_id, vm::ptr<sys_event_t> event_array, s32 size, vm::ptr<u32> number)
 {
-	sys_event.Log("sys_event_queue_tryreceive(equeue_id=0x%x, event_array=*0x%x, size=%d, number=*0x%x)", equeue_id, event_array, size, number);
+	sys_event.trace("sys_event_queue_tryreceive(equeue_id=0x%x, event_array=*0x%x, size=%d, number=*0x%x)", equeue_id, event_array, size, number);
 
 	LV2_LOCK;
 
@@ -200,7 +200,7 @@ s32 sys_event_queue_tryreceive(u32 equeue_id, vm::ptr<sys_event_t> event_array, 
 
 s32 sys_event_queue_receive(PPUThread& ppu, u32 equeue_id, vm::ptr<sys_event_t> dummy_event, u64 timeout)
 {
-	sys_event.Log("sys_event_queue_receive(equeue_id=0x%x, *0x%x, timeout=0x%llx)", equeue_id, dummy_event, timeout);
+	sys_event.trace("sys_event_queue_receive(equeue_id=0x%x, *0x%x, timeout=0x%llx)", equeue_id, dummy_event, timeout);
 
 	const u64 start_time = get_system_time();
 
@@ -271,7 +271,7 @@ s32 sys_event_queue_receive(PPUThread& ppu, u32 equeue_id, vm::ptr<sys_event_t> 
 
 s32 sys_event_queue_drain(u32 equeue_id)
 {
-	sys_event.Log("sys_event_queue_drain(equeue_id=0x%x)", equeue_id);
+	sys_event.trace("sys_event_queue_drain(equeue_id=0x%x)", equeue_id);
 
 	LV2_LOCK;
 
@@ -289,11 +289,11 @@ s32 sys_event_queue_drain(u32 equeue_id)
 
 s32 sys_event_port_create(vm::ptr<u32> eport_id, s32 port_type, u64 name)
 {
-	sys_event.Warning("sys_event_port_create(eport_id=*0x%x, port_type=%d, name=0x%llx)", eport_id, port_type, name);
+	sys_event.warning("sys_event_port_create(eport_id=*0x%x, port_type=%d, name=0x%llx)", eport_id, port_type, name);
 
 	if (port_type != SYS_EVENT_PORT_LOCAL)
 	{
-		sys_event.Error("sys_event_port_create(): unknown port type (%d)", port_type);
+		sys_event.error("sys_event_port_create(): unknown port type (%d)", port_type);
 		return CELL_EINVAL;
 	}
 
@@ -304,7 +304,7 @@ s32 sys_event_port_create(vm::ptr<u32> eport_id, s32 port_type, u64 name)
 
 s32 sys_event_port_destroy(u32 eport_id)
 {
-	sys_event.Warning("sys_event_port_destroy(eport_id=0x%x)", eport_id);
+	sys_event.warning("sys_event_port_destroy(eport_id=0x%x)", eport_id);
 
 	LV2_LOCK;
 
@@ -327,7 +327,7 @@ s32 sys_event_port_destroy(u32 eport_id)
 
 s32 sys_event_port_connect_local(u32 eport_id, u32 equeue_id)
 {
-	sys_event.Warning("sys_event_port_connect_local(eport_id=0x%x, equeue_id=0x%x)", eport_id, equeue_id);
+	sys_event.warning("sys_event_port_connect_local(eport_id=0x%x, equeue_id=0x%x)", eport_id, equeue_id);
 
 	LV2_LOCK;
 
@@ -356,7 +356,7 @@ s32 sys_event_port_connect_local(u32 eport_id, u32 equeue_id)
 
 s32 sys_event_port_disconnect(u32 eport_id)
 {
-	sys_event.Warning("sys_event_port_disconnect(eport_id=0x%x)", eport_id);
+	sys_event.warning("sys_event_port_disconnect(eport_id=0x%x)", eport_id);
 
 	LV2_LOCK;
 
@@ -383,7 +383,7 @@ s32 sys_event_port_disconnect(u32 eport_id)
 
 s32 sys_event_port_send(u32 eport_id, u64 data1, u64 data2, u64 data3)
 {
-	sys_event.Log("sys_event_port_send(eport_id=0x%x, data1=0x%llx, data2=0x%llx, data3=0x%llx)", eport_id, data1, data2, data3);
+	sys_event.trace("sys_event_port_send(eport_id=0x%x, data1=0x%llx, data2=0x%llx, data3=0x%llx)", eport_id, data1, data2, data3);
 
 	LV2_LOCK;
 

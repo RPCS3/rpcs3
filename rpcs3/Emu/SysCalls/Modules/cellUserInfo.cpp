@@ -11,7 +11,7 @@ extern Module<> cellUserInfo;
 
 s32 cellUserInfoGetStat(u32 id, vm::ptr<CellUserInfoUserStat> stat)
 {
-	cellUserInfo.Warning("cellUserInfoGetStat(id=%d, stat=*0x%x)", id, stat);
+	cellUserInfo.warning("cellUserInfoGetStat(id=%d, stat=*0x%x)", id, stat);
 
 	if (id > CELL_SYSUTIL_USERID_MAX)
 		return CELL_USERINFO_ERROR_NOUSER;
@@ -63,7 +63,7 @@ s32 cellUserInfoEnableOverlay()
 
 s32 cellUserInfoGetList(vm::ptr<u32> listNum, vm::ptr<CellUserInfoUserList> listBuf, vm::ptr<u32> currentUserId)
 {
-	cellUserInfo.Warning("cellUserInfoGetList(listNum=*0x%x, listBuf=*0x%x, currentUserId=*0x%x)", listNum, listBuf, currentUserId);
+	cellUserInfo.warning("cellUserInfoGetList(listNum=*0x%x, listBuf=*0x%x, currentUserId=*0x%x)", listNum, listBuf, currentUserId);
 
 	// If only listNum is NULL, an error will be returned
 	if (listBuf && !listNum)

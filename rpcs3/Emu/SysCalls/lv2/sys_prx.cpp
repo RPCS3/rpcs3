@@ -23,7 +23,7 @@ lv2_prx_t::lv2_prx_t()
 
 s32 prx_load_module(std::string path, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt)
 {
-	sys_prx.Warning("prx_load_module(path='%s', flags=0x%llx, pOpt=*0x%x)", path.c_str(), flags, pOpt);
+	sys_prx.warning("prx_load_module(path='%s', flags=0x%llx, pOpt=*0x%x)", path.c_str(), flags, pOpt);
 
 	loader::handlers::elf64 loader;
 
@@ -57,7 +57,7 @@ s32 prx_load_module(std::string path, u64 flags, vm::ptr<sys_prx_load_module_opt
 
 		if (!module)
 		{
-			sys_prx.Error("Unknown module '%s'", module_.first.c_str());
+			sys_prx.error("Unknown module '%s'", module_.first.c_str());
 		}
 
 		for (auto& f : module_.second.exports)
@@ -83,7 +83,7 @@ s32 prx_load_module(std::string path, u64 flags, vm::ptr<sys_prx_load_module_opt
 
 					if (!vm::check_addr(addr, 8) || !vm::check_addr(i_addr = vm::read32(addr), 4))
 					{
-						sys_prx.Error("Failed to inject code for exported function '%s' (opd=0x%x, 0x%x)", get_ps3_function_name(nid), addr, i_addr);
+						sys_prx.error("Failed to inject code for exported function '%s' (opd=0x%x, 0x%x)", get_ps3_function_name(nid), addr, i_addr);
 					}
 					else
 					{
@@ -104,7 +104,7 @@ s32 prx_load_module(std::string path, u64 flags, vm::ptr<sys_prx_load_module_opt
 
 			if (!func)
 			{
-				sys_prx.Error("Unknown function '%s' in '%s' module (0x%x)", get_ps3_function_name(nid), module_.first);
+				sys_prx.error("Unknown function '%s' in '%s' module (0x%x)", get_ps3_function_name(nid), module_.first);
 
 				index = add_ppu_func(ModuleFunc(nid, 0, module, nullptr, nullptr));
 			}
@@ -112,12 +112,12 @@ s32 prx_load_module(std::string path, u64 flags, vm::ptr<sys_prx_load_module_opt
 			{
 				const bool is_lle = func->lle_func && !(func->flags & MFF_FORCED_HLE);
 
-				sys_prx.Error("Imported %sfunction '%s' in '%s' module (0x%x)", (is_lle ? "LLE " : ""), get_ps3_function_name(nid), module_.first, addr);
+				sys_prx.error("Imported %sfunction '%s' in '%s' module (0x%x)", (is_lle ? "LLE " : ""), get_ps3_function_name(nid), module_.first, addr);
 			}
 
 			if (!patch_ppu_import(addr, index))
 			{
-				sys_prx.Error("Failed to inject code at address 0x%x", addr);
+				sys_prx.error("Failed to inject code at address 0x%x", addr);
 			}
 		}
 	}
@@ -135,7 +135,7 @@ s32 prx_load_module(std::string path, u64 flags, vm::ptr<sys_prx_load_module_opt
 		}
 		else
 		{
-			sys_prx.Error("Failed to process executable area (addr=0x%x, size=0x%x)", addr, size);
+			sys_prx.error("Failed to process executable area (addr=0x%x, size=0x%x)", addr, size);
 		}
 	}
 
@@ -144,14 +144,14 @@ s32 prx_load_module(std::string path, u64 flags, vm::ptr<sys_prx_load_module_opt
 
 s32 sys_prx_load_module(vm::cptr<char> path, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt)
 {
-	sys_prx.Warning("sys_prx_load_module(path=*0x%x, flags=0x%llx, pOpt=*0x%x)", path, flags, pOpt);
+	sys_prx.warning("sys_prx_load_module(path=*0x%x, flags=0x%llx, pOpt=*0x%x)", path, flags, pOpt);
 
 	return prx_load_module(path.get_ptr(), flags, pOpt);
 }
 
 s32 sys_prx_load_module_list(s32 count, vm::cpptr<char> path_list, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt, vm::ptr<u32> id_list)
 {
-	sys_prx.Warning("sys_prx_load_module_list(count=%d, path_list=*0x%x, flags=0x%llx, pOpt=*0x%x, id_list=*0x%x)", count, path_list, flags, pOpt, id_list);
+	sys_prx.warning("sys_prx_load_module_list(count=%d, path_list=*0x%x, flags=0x%llx, pOpt=*0x%x, id_list=*0x%x)", count, path_list, flags, pOpt, id_list);
 
 	for (s32 i = 0; i < count; ++i)
 	{
@@ -170,25 +170,25 @@ s32 sys_prx_load_module_list(s32 count, vm::cpptr<char> path_list, u64 flags, vm
 
 s32 sys_prx_load_module_on_memcontainer()
 {
-	sys_prx.Todo("sys_prx_load_module_on_memcontainer()");
+	sys_prx.todo("sys_prx_load_module_on_memcontainer()");
 	return CELL_OK;
 }
 
 s32 sys_prx_load_module_by_fd()
 {
-	sys_prx.Todo("sys_prx_load_module_by_fd()");
+	sys_prx.todo("sys_prx_load_module_by_fd()");
 	return CELL_OK;
 }
 
 s32 sys_prx_load_module_on_memcontainer_by_fd()
 {
-	sys_prx.Todo("sys_prx_load_module_on_memcontainer_by_fd()");
+	sys_prx.todo("sys_prx_load_module_on_memcontainer_by_fd()");
 	return CELL_OK;
 }
 
 s32 sys_prx_start_module(s32 id, u64 flags, vm::ptr<sys_prx_start_module_option_t> pOpt)
 {
-	sys_prx.Warning("sys_prx_start_module(id=0x%x, flags=0x%llx, pOpt=*0x%x)", id, flags, pOpt);
+	sys_prx.warning("sys_prx_start_module(id=0x%x, flags=0x%llx, pOpt=*0x%x)", id, flags, pOpt);
 
 	const auto prx = idm::get<lv2_prx_t>(id);
 
@@ -208,7 +208,7 @@ s32 sys_prx_start_module(s32 id, u64 flags, vm::ptr<sys_prx_start_module_option_
 
 s32 sys_prx_stop_module(s32 id, u64 flags, vm::ptr<sys_prx_stop_module_option_t> pOpt)
 {
-	sys_prx.Warning("sys_prx_stop_module(id=0x%x, flags=0x%llx, pOpt=*0x%x)", id, flags, pOpt);
+	sys_prx.warning("sys_prx_stop_module(id=0x%x, flags=0x%llx, pOpt=*0x%x)", id, flags, pOpt);
 
 	const auto prx = idm::get<lv2_prx_t>(id);
 
@@ -228,7 +228,7 @@ s32 sys_prx_stop_module(s32 id, u64 flags, vm::ptr<sys_prx_stop_module_option_t>
 
 s32 sys_prx_unload_module(s32 id, u64 flags, vm::ptr<sys_prx_unload_module_option_t> pOpt)
 {
-	sys_prx.Warning("sys_prx_unload_module(id=0x%x, flags=0x%llx, pOpt=*0x%x)", id, flags, pOpt);
+	sys_prx.warning("sys_prx_unload_module(id=0x%x, flags=0x%llx, pOpt=*0x%x)", id, flags, pOpt);
 
 	// Get the PRX, free the used memory and delete the object and its ID
 	const auto prx = idm::get<lv2_prx_t>(id);
@@ -248,26 +248,26 @@ s32 sys_prx_unload_module(s32 id, u64 flags, vm::ptr<sys_prx_unload_module_optio
 
 s32 sys_prx_get_module_list(u64 flags, vm::ptr<sys_prx_get_module_list_t> pInfo)
 {
-	sys_prx.Todo("sys_prx_get_module_list(flags=%d, pInfo=*0x%x)", flags, pInfo);
+	sys_prx.todo("sys_prx_get_module_list(flags=%d, pInfo=*0x%x)", flags, pInfo);
 	return CELL_OK;
 }
 
 s32 sys_prx_get_my_module_id()
 {
-	sys_prx.Todo("sys_prx_get_my_module_id()");
+	sys_prx.todo("sys_prx_get_my_module_id()");
 	return CELL_OK;
 }
 
 s32 sys_prx_get_module_id_by_address()
 {
-	sys_prx.Todo("sys_prx_get_module_id_by_address()");
+	sys_prx.todo("sys_prx_get_module_id_by_address()");
 	return CELL_OK;
 }
 
 s32 sys_prx_get_module_id_by_name(vm::cptr<char> name, u64 flags, vm::ptr<sys_prx_get_module_id_by_name_option_t> pOpt)
 {
 	const char *realName = name.get_ptr();
-	sys_prx.Todo("sys_prx_get_module_id_by_name(name=%s, flags=%d, pOpt=*0x%x)", realName, flags, pOpt);
+	sys_prx.todo("sys_prx_get_module_id_by_name(name=%s, flags=%d, pOpt=*0x%x)", realName, flags, pOpt);
 
 	//if (realName == "?") ...
 
@@ -276,66 +276,66 @@ s32 sys_prx_get_module_id_by_name(vm::cptr<char> name, u64 flags, vm::ptr<sys_pr
 
 s32 sys_prx_get_module_info(s32 id, u64 flags, vm::ptr<sys_prx_module_info_t> info)
 {
-	sys_prx.Todo("sys_prx_get_module_info(id=%d, flags=%d, info=*0x%x)", id, flags, info);
+	sys_prx.todo("sys_prx_get_module_info(id=%d, flags=%d, info=*0x%x)", id, flags, info);
 	return CELL_OK;
 }
 
 s32 sys_prx_register_library(vm::ptr<void> library)
 {
-	sys_prx.Todo("sys_prx_register_library(library=*0x%x)", library);
+	sys_prx.todo("sys_prx_register_library(library=*0x%x)", library);
 	return CELL_OK;
 }
 
 s32 sys_prx_unregister_library(vm::ptr<void> library)
 {
-	sys_prx.Todo("sys_prx_unregister_library(library=*0x%x)", library);
+	sys_prx.todo("sys_prx_unregister_library(library=*0x%x)", library);
 	return CELL_OK;
 }
 
 s32 sys_prx_get_ppu_guid()
 {
-	sys_prx.Todo("sys_prx_get_ppu_guid()");
+	sys_prx.todo("sys_prx_get_ppu_guid()");
 	return CELL_OK;
 }
 
 s32 sys_prx_register_module()
 {
-	sys_prx.Todo("sys_prx_register_module()");
+	sys_prx.todo("sys_prx_register_module()");
 	return CELL_OK;
 }
 
 s32 sys_prx_query_module()
 {
-	sys_prx.Todo("sys_prx_query_module()");
+	sys_prx.todo("sys_prx_query_module()");
 	return CELL_OK;
 }
 
 s32 sys_prx_link_library()
 {
-	sys_prx.Todo("sys_prx_link_library()");
+	sys_prx.todo("sys_prx_link_library()");
 	return CELL_OK;
 }
 
 s32 sys_prx_unlink_library()
 {
-	sys_prx.Todo("sys_prx_unlink_library()");
+	sys_prx.todo("sys_prx_unlink_library()");
 	return CELL_OK;
 }
 
 s32 sys_prx_query_library()
 {
-	sys_prx.Todo("sys_prx_query_library()");
+	sys_prx.todo("sys_prx_query_library()");
 	return CELL_OK;
 }
 
 s32 sys_prx_start()
 {
-	sys_prx.Todo("sys_prx_start()");
+	sys_prx.todo("sys_prx_start()");
 	return CELL_OK;
 }
 
 s32 sys_prx_stop()
 {
-	sys_prx.Todo("sys_prx_stop()");
+	sys_prx.todo("sys_prx_stop()");
 	return CELL_OK;
 }

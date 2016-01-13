@@ -164,7 +164,7 @@ namespace rsx
 			u32 first = arg & 0xffffff;
 			u32 count = (arg >> 24) + 1;
 
-			rsx->load_vertex_data(first, count);
+			rsx->first_count_commands.emplace_back(std::make_pair(first, count));
 		}
 
 		force_inline void draw_index_array(thread* rsx, u32 arg)
@@ -173,8 +173,7 @@ namespace rsx
 			u32 first = arg & 0xffffff;
 			u32 count = (arg >> 24) + 1;
 
-			rsx->load_vertex_data(first, count);
-			rsx->load_vertex_index_data(first, count);
+			rsx->first_count_commands.emplace_back(std::make_pair(first, count));
 		}
 
 		force_inline void draw_inline_array(thread* rsx, u32 arg)
@@ -225,44 +224,7 @@ namespace rsx
 				return;
 			}
 
-			if (!rsx->vertex_draw_count)
-			{
-				bool has_array = false;
-
-				for (int i = 0; i < rsx::limits::vertex_count; ++i)
-				{
-					if (rsx->vertex_arrays_info[i].size > 0)
-					{
-						has_array = true;
-						break;
-					}
-				}
-
-				if (!has_array)
-				{
-					u32 min_count = ~0;
-
-					for (int i = 0; i < rsx::limits::vertex_count; ++i)
-					{
-						if (!rsx->register_vertex_info[i].size)
-							continue;
-
-						u32 count = u32(rsx->register_vertex_data[i].size()) /
-							rsx::get_vertex_type_size_on_host(rsx->register_vertex_info[i].type, rsx->register_vertex_info[i].size);
-
-						if (count < min_count)
-							min_count = count;
-					}
-
-					if (min_count && min_count < ~0)
-					{
-						rsx->vertex_draw_count = min_count;
-					}
-				}
-			}
-
 			rsx->end();
-			rsx->vertex_draw_count = 0;
 		}
 
 		force_inline void get_report(thread* rsx, u32 arg)

@@ -196,7 +196,7 @@ public:
 
 	virtual u64 Read(void* dst, u64 count) override;
 
-	virtual u64 Seek(s64 offset, fsm seek_mode = fsm::begin) override;
+	virtual u64 Seek(s64 offset, fs::seek_mode whence = fs::seek_set) override;
 
 	virtual u64 Tell() const override;
 

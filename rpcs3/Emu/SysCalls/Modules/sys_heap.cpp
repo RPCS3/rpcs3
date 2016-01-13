@@ -20,14 +20,14 @@ struct HeapInfo
 
 u32 _sys_heap_create_heap(vm::cptr<char> name, u32 arg2, u32 arg3, u32 arg4)
 {
-	sysPrxForUser.Warning("_sys_heap_create_heap(name=*0x%x, arg2=0x%x, arg3=0x%x, arg4=0x%x)", name, arg2, arg3, arg4);
+	sysPrxForUser.warning("_sys_heap_create_heap(name=*0x%x, arg2=0x%x, arg3=0x%x, arg4=0x%x)", name, arg2, arg3, arg4);
 
 	return idm::make<HeapInfo>(name.get_ptr());
 }
 
 s32 _sys_heap_delete_heap(u32 heap)
 {
-	sysPrxForUser.Warning("_sys_heap_delete_heap(heap=0x%x)", heap);
+	sysPrxForUser.warning("_sys_heap_delete_heap(heap=0x%x)", heap);
 
 	idm::remove<HeapInfo>(heap);
 
@@ -36,21 +36,21 @@ s32 _sys_heap_delete_heap(u32 heap)
 
 u32 _sys_heap_malloc(u32 heap, u32 size)
 {
-	sysPrxForUser.Warning("_sys_heap_malloc(heap=0x%x, size=0x%x)", heap, size);
+	sysPrxForUser.warning("_sys_heap_malloc(heap=0x%x, size=0x%x)", heap, size);
 
 	return vm::alloc(size, vm::main);
 }
 
 u32 _sys_heap_memalign(u32 heap, u32 align, u32 size)
 {
-	sysPrxForUser.Warning("_sys_heap_memalign(heap=0x%x, align=0x%x, size=0x%x)", heap, align, size);
+	sysPrxForUser.warning("_sys_heap_memalign(heap=0x%x, align=0x%x, size=0x%x)", heap, align, size);
 
 	return vm::alloc(size, vm::main, std::max<u32>(align, 4096));
 }
 
 s32 _sys_heap_free(u32 heap, u32 addr)
 {
-	sysPrxForUser.Warning("_sys_heap_free(heap=0x%x, addr=0x%x)", heap, addr);
+	sysPrxForUser.warning("_sys_heap_free(heap=0x%x, addr=0x%x)", heap, addr);
 
 	vm::dealloc(addr, vm::main);
 

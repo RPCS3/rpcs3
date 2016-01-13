@@ -112,11 +112,11 @@ s32 cellMusicSelectContents()
 
 s32 cellMusicInitialize2(s32 mode, s32 spuPriority, vm::ptr<CellMusic2Callback> func, vm::ptr<void> userData)
 {
-	cellMusic.Todo("cellMusicInitialize2(mode=%d, spuPriority=%d, func=*0x%x, userData=*0x%x)", mode, spuPriority, func, userData);
+	cellMusic.todo("cellMusicInitialize2(mode=%d, spuPriority=%d, func=*0x%x, userData=*0x%x)", mode, spuPriority, func, userData);
 
 	if (mode != CELL_MUSIC2_PLAYER_MODE_NORMAL)
 	{
-		cellMusic.Todo("Unknown player mode: 0x%x", mode);
+		cellMusic.todo("Unknown player mode: 0x%x", mode);
 		return CELL_MUSIC2_ERROR_PARAM;
 	}
 

@@ -10,7 +10,7 @@ extern Module<> sysPrxForUser;
 
 s64 sys_prx_exitspawn_with_level()
 {
-	sysPrxForUser.Log("sys_prx_exitspawn_with_level()");
+	sysPrxForUser.trace("sys_prx_exitspawn_with_level()");
 	return CELL_OK;
 }
 

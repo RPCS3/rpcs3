@@ -239,14 +239,12 @@ bool TROPUSRLoader::UnlockTrophy(u32 id, u64 timestamp1, u64 timestamp2)
 	return true;
 }
 
-bool TROPUSRLoader::Close()
+void TROPUSRLoader::Close()
 {
-	if (m_file && m_file->Close())
+	if (m_file)
 	{
+		m_file->Close();
 		delete m_file;
 		m_file = nullptr;
-		return true;
 	}
-
-	return false;
 }

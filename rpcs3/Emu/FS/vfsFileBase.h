@@ -16,7 +16,7 @@ public:
 	virtual ~vfsFileBase() override;
 
 	virtual bool Open(const std::string& path, u32 mode);
-	virtual bool Close() override;
+	virtual void Close() override;
 	virtual bool IsOpened() const override { return !m_path.empty(); }
 
 	std::string GetPath() const;

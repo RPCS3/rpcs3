@@ -787,16 +787,16 @@ u64 vfsHDD::Read(void* dst, u64 size)
 	return m_file.Read(dst, size); // ???
 }
 
-u64 vfsHDD::Seek(s64 offset, fsm seek_mode)
+u64 vfsHDD::Seek(s64 offset, fs::seek_mode whence)
 {
-	switch (seek_mode)
+	switch (whence)
 	{
-	case fsm::begin: return m_file.Seek(offset);
-	case fsm::cur: return m_file.Seek(Tell() + offset);
-	case fsm::end: return m_file.Seek(m_file.GetSize() + offset);
+	case fs::seek_set: return m_file.Seek(offset);
+	case fs::seek_cur: return m_file.Seek(Tell() + offset);
+	case fs::seek_end: return m_file.Seek(m_file.GetSize() + offset);
 	}
 
-	throw EXCEPTION("Unknown seek_mode(0x%x)", seek_mode);
+	throw EXCEPTION("Unknown whence (0x%x)", whence);
 }
 
 u64 vfsHDD::Tell() const

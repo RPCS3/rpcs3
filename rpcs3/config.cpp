@@ -34,12 +34,12 @@ namespace rpcs3
 		fs::file file(m_path, fom::create | fom::read);
 
 		if (file)
-			from_string((const std::string)file);
+			from_string(file.to_string());
 	}
 
 	void config_t::save() const
 	{
-		fs::file(m_path, fom::rewrite) << to_string();
+		fs::file(m_path, fom::rewrite).write(to_string());
 	}
 
 	config_t config{ fs::get_config_dir() + "rpcs3.new.ini" };

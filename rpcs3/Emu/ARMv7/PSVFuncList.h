@@ -2,16 +2,14 @@
 
 #include "Emu/Memory/Memory.h"
 #include "ARMv7Thread.h"
-#include "Emu/SysCalls/LogBase.h"
 
 namespace vm { using namespace psv; }
 
 // PSV module class
-class psv_log_base : public LogBase
+class psv_log_base : public _log::channel
 {
 	using init_func_t = void(*)();
 
-	std::string m_name;
 	init_func_t m_init;
 
 public:
@@ -32,12 +30,6 @@ public:
 
 		m_init();
 	}
-
-	virtual const std::string& GetName() const override
-	{
-		return m_name;
-	}
-
 };
 
 using armv7_func_caller = void(*)(ARMv7Thread&);

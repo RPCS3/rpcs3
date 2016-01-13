@@ -1,134 +1,155 @@
 #pragma once
-#include "Utilities/MTRingbuffer.h"
 
-//#define BUFFERED_LOGGING 1
+#include "SharedMutex.h"
 
-//first parameter is of type Log::LogType and text is of type std::string
-
-#define LOG_SUCCESS(logType, text, ...)           log_message(logType, Log::Severity::Success, text, ##__VA_ARGS__)
-#define LOG_NOTICE(logType, text, ...)            log_message(logType, Log::Severity::Notice,  text, ##__VA_ARGS__) 
-#define LOG_WARNING(logType, text, ...)           log_message(logType, Log::Severity::Warning, text, ##__VA_ARGS__) 
-#define LOG_ERROR(logType, text, ...)             log_message(logType, Log::Severity::Error,   text, ##__VA_ARGS__)
-
-namespace Log
+namespace _log
 {
-	const unsigned int MAX_LOG_BUFFER_LENGTH = 1024*1024;
-	const unsigned int gBuffSize = 1000;
-
-	enum LogType : u32
+	enum class level : uint
 	{
-		GENERAL = 0,
-		LOADER,
-		MEMORY,
-		RSX,
-		HLE,
-		PPU,
-		SPU,
-		ARMv7,
-		TTY,
+		always, // highest level (unused, cannot be disabled)
+		fatal,
+		error,
+		todo,
+		success,
+		warning,
+		notice,
+		trace, // lowest level (usually disabled)
 	};
 
+	struct channel;
+	struct listener;
 
-	struct LogTypeName
+	// Log manager
+	class logger final
 	{
-		LogType mType;
-		std::string mName;
+		mutable shared_mutex m_mutex;
+
+		std::set<listener*> m_listeners;
+
+	public:
+		// Register listener
+		void add_listener(listener* listener);
+
+		// Unregister listener
+		void remove_listener(listener* listener);
+
+		// Send log message to all listeners
+		void broadcast(const channel& ch, level sev, const std::string& text) const;
 	};
 
-	//well I'd love make_array() but alas manually counting is not the end of the world
-	static const std::array<LogTypeName, 9> gTypeNameTable = { {
-			{ GENERAL, "G: " },
-			{ LOADER, "LDR: " },
-			{ MEMORY, "MEM: " },
-			{ RSX, "RSX: " },
-			{ HLE, "HLE: " },
-			{ PPU, "PPU: " },
-			{ SPU, "SPU: " },
-			{ ARMv7, "ARM: " },
-			{ TTY, "TTY: " }
-			} };
+	// Send log message to global logger instance
+	void broadcast(const channel& ch, level sev, const std::string& text);
 
-	enum class Severity : u32
+	// Log channel (source)
+	struct channel
 	{
-		Notice = 0,
-		Warning,
-		Success,
-		Error,
+		// Channel prefix (also used for identification)
+		const std::string name;
+
+		// The lowest logging level enabled for this channel (used for early filtering)
+		std::atomic<level> enabled;
+
+		// Initialization (max level enabled by default)
+		channel(const std::string& name, level = level::trace);
+
+		virtual ~channel() = default;
+
+		// Log without formatting
+		force_inline void log(level sev, const std::string& text) const
+		{
+			if (sev <= enabled)
+				broadcast(*this, sev, text);
+		}
+
+		// Log with formatting
+		template<typename... Args>
+		force_inline safe_buffers void format(level sev, const char* fmt, const Args&... args) const
+		{
+			if (sev <= enabled)
+				broadcast(*this, sev, fmt::format(fmt, fmt::do_unveil(args)...));
+		}
+
+#define GEN_LOG_METHOD(_sev)\
+		template<typename... Args>\
+		force_inline void _sev(const char* fmt, const Args&... args)\
+		{\
+			return format<Args...>(level::_sev, fmt, args...);\
+		}
+
+		GEN_LOG_METHOD(fatal)
+		GEN_LOG_METHOD(error)
+		GEN_LOG_METHOD(todo)
+		GEN_LOG_METHOD(success)
+		GEN_LOG_METHOD(warning)
+		GEN_LOG_METHOD(notice)
+		GEN_LOG_METHOD(trace)
+
+#undef GEN_LOG_METHOD
 	};
 
-	struct LogMessage
+	// Log listener (destination)
+	struct listener
 	{
-		using size_type = u32;
-		LogType mType;
-		Severity mServerity;
-		std::string mText;
+		listener();
+		
+		virtual ~listener();
 
-		u32 size() const;
-		void serialize(char *output) const;
-		static LogMessage deserialize(char *input, u32* size_out=nullptr);
+		virtual void log(const channel& ch, level sev, const std::string& text) = 0;
 	};
 
-	struct LogListener
+	class file_writer
 	{
-		virtual ~LogListener() {};
-		virtual void log(const LogMessage &msg) = 0;
+		// Could be memory-mapped file
+		fs::file m_file;
+
+	public:
+		file_writer(const std::string& name);
+
+		virtual ~file_writer() = default;
+
+		// Append raw data
+		void log(const std::string& text);
+
+		// Get current file size (may be used by secondary readers)
+		std::size_t size() const;
 	};
 
-	struct LogChannel
+	struct file_listener : public file_writer, public listener
 	{
-		LogChannel();
-		LogChannel(const std::string& name);
-		LogChannel(LogChannel& other) = delete;
-		void log(const LogMessage &msg);
-		void addListener(std::shared_ptr<LogListener> listener);
-		void removeListener(std::shared_ptr<LogListener> listener);
-		std::string name;
-	private:
-		bool mEnabled;
-		Severity mLogLevel;
-		std::mutex mListenerLock;
-		std::set<std::shared_ptr<LogListener>> mListeners;
+		file_listener(const std::string& name)
+			: file_writer(name)
+			, listener()
+		{
+		}
+
+		// Encode level, current thread name, channel name and write log message
+		virtual void log(const channel& ch, level sev, const std::string& text) override;
 	};
 
-	struct LogManager
-	{
-		LogManager();
-		~LogManager();
-		static LogManager& getInstance();
-		LogChannel& getChannel(LogType type);
-		void log(LogMessage msg);
-		void addListener(std::shared_ptr<LogListener> listener);
-		void removeListener(std::shared_ptr<LogListener> listener);
-#ifdef BUFFERED_LOGGING
-		void consumeLog();
-#endif
-	private:
-#ifdef BUFFERED_LOGGING
-		MTRingbuffer<char, MAX_LOG_BUFFER_LENGTH> mBuffer;
-		std::condition_variable mBufferReady;
-		std::mutex mStatusMut;
-		std::atomic<bool> mExiting;
-		std::thread mLogConsumer;
-#endif
-		std::array<LogChannel, std::tuple_size<decltype(gTypeNameTable)>::value> mChannels;
-		//std::array<LogChannel,gTypeNameTable.size()> mChannels; //TODO: use this once Microsoft sorts their shit out
-	};
+	// Global variable for RPCS3.log
+	extern file_listener g_log_file;
+
+	// Global variable for TTY.log
+	extern file_writer g_tty_file;
+
+	// Small set of predefined channels:
+
+	extern channel GENERAL;
+	extern channel LOADER;
+	extern channel MEMORY;
+	extern channel RSX;
+	extern channel HLE;
+	extern channel PPU;
+	extern channel SPU;
+	extern channel ARMv7;
 }
 
-static struct { inline operator Log::LogType() { return Log::LogType::GENERAL; } } GENERAL;
-static struct { inline operator Log::LogType() { return Log::LogType::LOADER; } } LOADER;
-static struct { inline operator Log::LogType() { return Log::LogType::MEMORY; } } MEMORY;
-static struct { inline operator Log::LogType() { return Log::LogType::RSX; } } RSX;
-static struct { inline operator Log::LogType() { return Log::LogType::HLE; } } HLE;
-static struct { inline operator Log::LogType() { return Log::LogType::PPU; } } PPU;
-static struct { inline operator Log::LogType() { return Log::LogType::SPU; } } SPU;
-static struct { inline operator Log::LogType() { return Log::LogType::ARMv7; } } ARMv7;
-static struct { inline operator Log::LogType() { return Log::LogType::TTY; } } TTY;
+// Legacy:
 
-void log_message(Log::LogType type, Log::Severity sev, const char* text);
-void log_message(Log::LogType type, Log::Severity sev, std::string text);
-
-template<typename... Args> never_inline void log_message(Log::LogType type, Log::Severity sev, const char* fmt, Args... args)
-{
-	log_message(type, sev, fmt::format(fmt, fmt::do_unveil(args)...));
-}
+#define LOG_SUCCESS(ch, fmt, ...) _log::ch.success(fmt, ##__VA_ARGS__)
+#define LOG_NOTICE(ch, fmt, ...)  _log::ch.notice (fmt, ##__VA_ARGS__)
+#define LOG_WARNING(ch, fmt, ...) _log::ch.warning(fmt, ##__VA_ARGS__)
+#define LOG_ERROR(ch, fmt, ...)   _log::ch.error  (fmt, ##__VA_ARGS__)
+#define LOG_TODO(ch, fmt, ...)    _log::ch.todo   (fmt, ##__VA_ARGS__)
+#define LOG_TRACE(ch, fmt, ...)   _log::ch.trace  (fmt, ##__VA_ARGS__)
+#define LOG_FATAL(ch, fmt, ...)   _log::ch.fatal  (fmt, ##__VA_ARGS__)

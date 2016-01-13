@@ -9,7 +9,7 @@ SysCallBase sys_tty("sys_tty");
 
 s32 sys_tty_read(s32 ch, vm::ptr<char> buf, u32 len, vm::ptr<u32> preadlen)
 {
-	sys_tty.Error("sys_tty_read(ch=%d, buf=*0x%x, len=%d, preadlen=*0x%x)", ch, buf, len, preadlen);
+	sys_tty.todo("sys_tty_read(ch=%d, buf=*0x%x, len=%d, preadlen=*0x%x)", ch, buf, len, preadlen);
 
 	// We currently do not support reading from the Console
 	*preadlen = 0;
@@ -19,7 +19,7 @@ s32 sys_tty_read(s32 ch, vm::ptr<char> buf, u32 len, vm::ptr<u32> preadlen)
 
 s32 sys_tty_write(s32 ch, vm::cptr<char> buf, u32 len, vm::ptr<u32> pwritelen)
 {
-	sys_tty.Log("sys_tty_write(ch=%d, buf=*0x%x, len=%d, pwritelen=*0x%x)", ch, buf, len, pwritelen);
+	sys_tty.notice("sys_tty_write(ch=%d, buf=*0x%x, len=%d, pwritelen=*0x%x)", ch, buf, len, pwritelen);
 
 	if (ch > 15)
 	{
@@ -33,8 +33,8 @@ s32 sys_tty_write(s32 ch, vm::cptr<char> buf, u32 len, vm::ptr<u32> pwritelen)
 		return CELL_OK;
 	}
 
-	log_message(Log::LogType::TTY, ch == SYS_TTYP_PPU_STDERR ? Log::Severity::Error : Log::Severity::Notice, { buf.get_ptr(), len });
-		
+	_log::g_tty_file.log({ buf.get_ptr(), len });
+
 	*pwritelen = len;
 
 	return CELL_OK;

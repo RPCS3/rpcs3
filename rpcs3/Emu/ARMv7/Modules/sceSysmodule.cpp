@@ -6,21 +6,21 @@
 
 s32 sceSysmoduleLoadModule(u16 id)
 {
-	sceSysmodule.Warning("sceSysmoduleLoadModule(id=0x%04x) -> SCE_OK", id);
+	sceSysmodule.warning("sceSysmoduleLoadModule(id=0x%04x) -> SCE_OK", id);
 
 	return SCE_OK; // loading succeeded
 }
 
 s32 sceSysmoduleUnloadModule(u16 id)
 {
-	sceSysmodule.Warning("sceSysmoduleUnloadModule(id=0x%04x) -> SCE_OK", id);
+	sceSysmodule.warning("sceSysmoduleUnloadModule(id=0x%04x) -> SCE_OK", id);
 
 	return SCE_OK; // unloading succeeded
 }
 
 s32 sceSysmoduleIsLoaded(u16 id)
 {
-	sceSysmodule.Warning("sceSysmoduleIsLoaded(id=0x%04x) -> SCE_OK", id);
+	sceSysmodule.warning("sceSysmoduleIsLoaded(id=0x%04x) -> SCE_OK", id);
 
 	return SCE_OK; // module is loaded
 }

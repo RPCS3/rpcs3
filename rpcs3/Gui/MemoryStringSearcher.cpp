@@ -6,8 +6,6 @@
 
 #include "MemoryStringSearcher.h"
 
-#include <wx/notebook.h>
-
 MemoryStringSearcher::MemoryStringSearcher(wxWindow* parent)
 	: wxDialog(parent, wxID_ANY, "String Searcher", wxDefaultPosition, wxSize(545, 64))
 	, exit(false)

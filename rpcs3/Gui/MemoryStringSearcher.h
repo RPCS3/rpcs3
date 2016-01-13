@@ -1,5 +1,4 @@
 #pragma once
-#include <wx/listctrl.h>
 
 class MemoryStringSearcher : public wxDialog
 {

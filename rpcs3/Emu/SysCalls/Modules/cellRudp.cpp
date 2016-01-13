@@ -21,7 +21,7 @@ struct rudp_t
 
 s32 cellRudpInit(vm::ptr<CellRudpAllocator> allocator)
 {
-	cellRudp.Warning("cellRudpInit(allocator=*0x%x)", allocator);
+	cellRudp.warning("cellRudpInit(allocator=*0x%x)", allocator);
 
 	const auto rudp = fxm::make<rudp_t>();
 
@@ -56,7 +56,7 @@ s32 cellRudpInit(vm::ptr<CellRudpAllocator> allocator)
 
 s32 cellRudpEnd()
 {
-	cellRudp.Warning("cellRudpEnd()");
+	cellRudp.warning("cellRudpEnd()");
 
 	if (!fxm::remove<rudp_t>())
 	{
@@ -74,7 +74,7 @@ s32 cellRudpEnableInternalIOThread()
 
 s32 cellRudpSetEventHandler(vm::ptr<CellRudpEventHandler> handler, vm::ptr<void> arg)
 {
-	cellRudp.Todo("cellRudpSetEventHandler(handler=*0x%x, arg=*0x%x)", handler, arg);
+	cellRudp.todo("cellRudpSetEventHandler(handler=*0x%x, arg=*0x%x)", handler, arg);
 
 	const auto rudp = fxm::get<rudp_t>();
 
@@ -91,7 +91,7 @@ s32 cellRudpSetEventHandler(vm::ptr<CellRudpEventHandler> handler, vm::ptr<void>
 
 s32 cellRudpSetMaxSegmentSize(u16 mss)
 {
-	cellRudp.Todo("cellRudpSetMaxSegmentSize(mss=%d)", mss);
+	cellRudp.todo("cellRudpSetMaxSegmentSize(mss=%d)", mss);
 	return CELL_OK;
 }
 

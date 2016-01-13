@@ -53,14 +53,14 @@ namespace rsx
 			if (fmt::match(entry.name, "*.fs." + lang_name))
 			{
 				fs::file file{ path + entry.name };
-				decompiled_fragment_shaders.insert(hash, { (const std::string)file });
+				decompiled_fragment_shaders.insert(hash, { file.to_string() });
 				continue;
 			}
 
 			if (fmt::match(entry.name, "*.vs." + lang_name))
 			{
 				fs::file file{ path + entry.name };
-				decompiled_vertex_shaders.insert(hash, { (const std::string)file });
+				decompiled_vertex_shaders.insert(hash, { file.to_string() });
 				continue;
 			}
 		}
@@ -270,57 +270,6 @@ namespace rsx
 		}
 	}
 
-	void thread::load_vertex_data(u32 first, u32 count)
-	{
-		vertex_draw_count += count;
-
-		for (int index = 0; index < limits::vertex_count; ++index)
-		{
-			const auto &info = vertex_arrays_info[index];
-
-			if (info.size == 0) // disabled
-				continue;
-
-			auto &data = vertex_arrays[index];
-
-			u32 element_size = get_vertex_type_size_on_host(info.type, info.size);
-
-			u32 dst_position = (u32)data.size();
-			data.resize(dst_position + count * element_size);
-			write_vertex_array_data_to_buffer(data.data() + dst_position, first, count, index, info);
-		}
-	}
-
-	void thread::load_vertex_index_data(u32 first, u32 count)
-	{
-		u32 address = get_address(method_registers[NV4097_SET_INDEX_ARRAY_ADDRESS], method_registers[NV4097_SET_INDEX_ARRAY_DMA] & 0xf);
-		u32 type = method_registers[NV4097_SET_INDEX_ARRAY_DMA] >> 4;
-
-		u32 type_size = type == CELL_GCM_DRAW_INDEX_ARRAY_TYPE_32 ? sizeof(u32) : sizeof(u16);
-		u32 dst_offset = (u32)vertex_index_array.size();
-		vertex_index_array.resize(dst_offset + count * type_size);
-
-		u32 base_offset = method_registers[NV4097_SET_VERTEX_DATA_BASE_OFFSET];
-		u32 base_index = method_registers[NV4097_SET_VERTEX_DATA_BASE_INDEX];
-
-		switch (type)
-		{
-		case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_32:
-			for (u32 i = 0; i < count; ++i)
-			{
-				(u32&)vertex_index_array[dst_offset + i * sizeof(u32)] = vm::read32(address + (first + i) * sizeof(u32));
-			}
-			break;
-
-		case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_16:
-			for (u32 i = 0; i < count; ++i)
-			{
-				(u16&)vertex_index_array[dst_offset + i * sizeof(u16)] = vm::read16(address + (first + i) * sizeof(u16));
-			}
-			break;
-		}
-	}
-
 	void thread::capture_frame(const std::string &name)
 	{
 		frame_capture_data::draw_state draw_state = {};
@@ -372,18 +321,12 @@ namespace rsx
 
 	void thread::begin()
 	{
-		draw_mode = method_registers[NV4097_SET_BEGIN_END];
+		first_count_commands.clear();
+		draw_mode = to_primitive_type(method_registers[NV4097_SET_BEGIN_END]);
 	}
 
 	void thread::end()
 	{
-		vertex_index_array.clear();
-
-		for (auto &vertex_array : vertex_arrays)
-		{
-			vertex_array.clear();
-		}
-
 		transform_constants.clear();
 
 		if (capture_current_frame)
@@ -481,7 +424,7 @@ namespace rsx
 
 			if (cmd & 0x3)
 			{
-				LOG_WARNING(Log::RSX, "unaligned command: %s (0x%x from 0x%x)", get_method_name(first_cmd).c_str(), first_cmd, cmd & 0xffff);
+				LOG_WARNING(RSX, "unaligned command: %s (0x%x from 0x%x)", get_method_name(first_cmd).c_str(), first_cmd, cmd & 0xffff);
 			}
 
 			for (u32 i = 0; i < count; i++)
@@ -491,7 +434,7 @@ namespace rsx
 
 				if (rpcs3::config.misc.log.rsx_logging.value())
 				{
-					LOG_NOTICE(Log::RSX, "%s(0x%x) = 0x%x", get_method_name(reg).c_str(), reg, value);
+					LOG_NOTICE(RSX, "%s(0x%x) = 0x%x", get_method_name(reg).c_str(), reg, value);
 				}
 
 				method_registers[reg] = value;

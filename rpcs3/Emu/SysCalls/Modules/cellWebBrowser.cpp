@@ -183,7 +183,7 @@ s32 cellWebBrowserEstimate()
 
 s32 cellWebBrowserEstimate2(vm::cptr<CellWebBrowserConfig2> config, vm::ptr<u32> memSize)
 {
-	cellSysutil.Warning("cellWebBrowserEstimate2(config=*0x%x, memSize=*0x%x)", config, memSize);
+	cellSysutil.warning("cellWebBrowserEstimate2(config=*0x%x, memSize=*0x%x)", config, memSize);
 
 	// TODO: When cellWebBrowser stuff is implemented, change this to some real
 	// needed memory buffer size.

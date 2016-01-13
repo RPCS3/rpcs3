@@ -188,7 +188,7 @@ void ppu_recompiler_llvm::Compiler::translate_to_llvm_ir(llvm::Module *module, c
 	std::string        verify;
 	raw_string_ostream verify_ostream(verify);
 	if (verifyFunction(*m_state.function, &verify_ostream)) {
-//		m_recompilation_engine.Log() << "Verification failed: " << verify_ostream.str() << "\n";
+//		m_recompilation_engine.trace() << "Verification failed: " << verify_ostream.str() << "\n";
 	}
 
 	m_module = nullptr;
@@ -421,13 +421,13 @@ std::pair<Executable, llvm::ExecutionEngine *> RecompilationEngine::compile(cons
 	Function *llvm_function = module_ptr->getFunction(name);
 	void *function = execution_engine->getPointerToFunction(llvm_function);
 
-	/*    m_recompilation_engine.Log() << "\nDisassembly:\n";
+	/*    m_recompilation_engine.trace() << "\nDisassembly:\n";
 	auto disassembler = LLVMCreateDisasm(sys::getProcessTriple().c_str(), nullptr, 0, nullptr, nullptr);
 	for (size_t pc = 0; pc < mci.size();) {
 	char str[1024];
 
 	auto size = LLVMDisasmInstruction(disassembler, ((u8 *)mci.address()) + pc, mci.size() - pc, (uint64_t)(((u8 *)mci.address()) + pc), str, sizeof(str));
-	m_recompilation_engine.Log() << fmt::format("0x%08X: ", (u64)(((u8 *)mci.address()) + pc)) << str << '\n';
+	m_recompilation_engine.trace() << fmt::format("0x%08X: ", (u64)(((u8 *)mci.address()) + pc)) << str << '\n';
 	pc += size;
 	}
 

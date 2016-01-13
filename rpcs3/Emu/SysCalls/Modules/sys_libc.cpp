@@ -153,7 +153,7 @@ namespace sys_libc_func
 {
 	void memcpy(vm::ptr<void> dst, vm::cptr<void> src, u32 size)
 	{
-		sys_libc.Log("memcpy(dst=*0x%x, src=*0x%x, size=0x%x)", dst, src, size);
+		sys_libc.trace("memcpy(dst=*0x%x, src=*0x%x, size=0x%x)", dst, src, size);
 
 		::memcpy(dst.get_ptr(), src.get_ptr(), size);
 	}
@@ -163,7 +163,7 @@ extern Module<> sysPrxForUser;
 
 vm::ptr<void> _sys_memset(vm::ptr<void> dst, s32 value, u32 size)
 {
-	sysPrxForUser.Log("_sys_memset(dst=*0x%x, value=%d, size=0x%x)", dst, value, size);
+	sysPrxForUser.trace("_sys_memset(dst=*0x%x, value=%d, size=0x%x)", dst, value, size);
 
 	memset(dst.get_ptr(), value, size);
 
@@ -172,7 +172,7 @@ vm::ptr<void> _sys_memset(vm::ptr<void> dst, s32 value, u32 size)
 
 vm::ptr<void> _sys_memcpy(vm::ptr<void> dst, vm::cptr<void> src, u32 size)
 {
-	sysPrxForUser.Log("_sys_memcpy(dst=*0x%x, src=*0x%x, size=0x%x)", dst, src, size);
+	sysPrxForUser.trace("_sys_memcpy(dst=*0x%x, src=*0x%x, size=0x%x)", dst, src, size);
 
 	memcpy(dst.get_ptr(), src.get_ptr(), size);
 
@@ -181,7 +181,7 @@ vm::ptr<void> _sys_memcpy(vm::ptr<void> dst, vm::cptr<void> src, u32 size)
 
 s32 _sys_memcmp(vm::cptr<void> buf1, vm::cptr<void> buf2, u32 size)
 {
-	sysPrxForUser.Log("_sys_memcmp(buf1=*0x%x, buf2=*0x%x, size=%d)", buf1, buf2, size);
+	sysPrxForUser.trace("_sys_memcmp(buf1=*0x%x, buf2=*0x%x, size=%d)", buf1, buf2, size);
 
 	return memcmp(buf1.get_ptr(), buf2.get_ptr(), size);
 }
@@ -198,28 +198,28 @@ s32 _sys_memmove()
 
 s64 _sys_strlen(vm::cptr<char> str)
 {
-	sysPrxForUser.Log("_sys_strlen(str=*0x%x)", str);
+	sysPrxForUser.trace("_sys_strlen(str=*0x%x)", str);
 
 	return strlen(str.get_ptr());
 }
 
 s32 _sys_strcmp(vm::cptr<char> str1, vm::cptr<char> str2)
 {
-	sysPrxForUser.Log("_sys_strcmp(str1=*0x%x, str2=*0x%x)", str1, str2);
+	sysPrxForUser.trace("_sys_strcmp(str1=*0x%x, str2=*0x%x)", str1, str2);
 
 	return strcmp(str1.get_ptr(), str2.get_ptr());
 }
 
 s32 _sys_strncmp(vm::cptr<char> str1, vm::cptr<char> str2, s32 max)
 {
-	sysPrxForUser.Log("_sys_strncmp(str1=*0x%x, str2=*0x%x, max=%d)", str1, str2, max);
+	sysPrxForUser.trace("_sys_strncmp(str1=*0x%x, str2=*0x%x, max=%d)", str1, str2, max);
 
 	return strncmp(str1.get_ptr(), str2.get_ptr(), max);
 }
 
 vm::ptr<char> _sys_strcat(vm::ptr<char> dest, vm::cptr<char> source)
 {
-	sysPrxForUser.Log("_sys_strcat(dest=*0x%x, source=*0x%x)", dest, source);
+	sysPrxForUser.trace("_sys_strcat(dest=*0x%x, source=*0x%x)", dest, source);
 
 	if (strcat(dest.get_ptr(), source.get_ptr()) != dest.get_ptr())
 	{
@@ -231,14 +231,14 @@ vm::ptr<char> _sys_strcat(vm::ptr<char> dest, vm::cptr<char> source)
 
 vm::cptr<char> _sys_strchr(vm::cptr<char> str, s32 ch)
 {
-	sysPrxForUser.Log("_sys_strchr(str=*0x%x, ch=0x%x)", str, ch);
+	sysPrxForUser.trace("_sys_strchr(str=*0x%x, ch=0x%x)", str, ch);
 
 	return vm::cptr<char>::make(vm::get_addr(strchr(str.get_ptr(), ch)));
 }
 
 vm::ptr<char> _sys_strncat(vm::ptr<char> dest, vm::cptr<char> source, u32 len)
 {
-	sysPrxForUser.Log("_sys_strncat(dest=*0x%x, source=*0x%x, len=%d)", dest, source, len);
+	sysPrxForUser.trace("_sys_strncat(dest=*0x%x, source=*0x%x, len=%d)", dest, source, len);
 
 	if (strncat(dest.get_ptr(), source.get_ptr(), len) != dest.get_ptr())
 	{
@@ -250,7 +250,7 @@ vm::ptr<char> _sys_strncat(vm::ptr<char> dest, vm::cptr<char> source, u32 len)
 
 vm::ptr<char> _sys_strcpy(vm::ptr<char> dest, vm::cptr<char> source)
 {
-	sysPrxForUser.Log("_sys_strcpy(dest=*0x%x, source=*0x%x)", dest, source);
+	sysPrxForUser.trace("_sys_strcpy(dest=*0x%x, source=*0x%x)", dest, source);
 
 	if (strcpy(dest.get_ptr(), source.get_ptr()) != dest.get_ptr())
 	{
@@ -262,7 +262,7 @@ vm::ptr<char> _sys_strcpy(vm::ptr<char> dest, vm::cptr<char> source)
 
 vm::ptr<char> _sys_strncpy(vm::ptr<char> dest, vm::cptr<char> source, u32 len)
 {
-	sysPrxForUser.Log("_sys_strncpy(dest=*0x%x, source=*0x%x, len=%d)", dest, source, len);
+	sysPrxForUser.trace("_sys_strncpy(dest=*0x%x, source=*0x%x, len=%d)", dest, source, len);
 
 	if (!dest || !source)
 	{
@@ -299,21 +299,21 @@ s32 _sys_toupper()
 
 u32 _sys_malloc(u32 size)
 {
-	sysPrxForUser.Warning("_sys_malloc(size=0x%x)", size);
+	sysPrxForUser.warning("_sys_malloc(size=0x%x)", size);
 
 	return vm::alloc(size, vm::main);
 }
 
 u32 _sys_memalign(u32 align, u32 size)
 {
-	sysPrxForUser.Warning("_sys_memalign(align=0x%x, size=0x%x)", align, size);
+	sysPrxForUser.warning("_sys_memalign(align=0x%x, size=0x%x)", align, size);
 
 	return vm::alloc(size, vm::main, std::max<u32>(align, 4096));
 }
 
 s32 _sys_free(u32 addr)
 {
-	sysPrxForUser.Warning("_sys_free(addr=0x%x)", addr);
+	sysPrxForUser.warning("_sys_free(addr=0x%x)", addr);
 
 	vm::dealloc(addr, vm::main);
 
@@ -322,11 +322,11 @@ s32 _sys_free(u32 addr)
 
 s32 _sys_snprintf(PPUThread& ppu, vm::ptr<char> dst, u32 count, vm::cptr<char> fmt, ppu_va_args_t va_args)
 {
-	sysPrxForUser.Warning("_sys_snprintf(dst=*0x%x, count=%d, fmt=*0x%x, ...)", dst, count, fmt);
+	sysPrxForUser.warning("_sys_snprintf(dst=*0x%x, count=%d, fmt=*0x%x, ...)", dst, count, fmt);
 
 	std::string result = ps3_fmt(ppu, fmt, va_args.g_count, va_args.f_count, va_args.v_count);
 
-	sysPrxForUser.Warning("*** '%s' -> '%s'", fmt.get_ptr(), result);
+	sysPrxForUser.warning("*** '%s' -> '%s'", fmt.get_ptr(), result);
 
 	if (!count)
 	{
@@ -344,10 +344,9 @@ s32 _sys_snprintf(PPUThread& ppu, vm::ptr<char> dst, u32 count, vm::cptr<char> f
 
 s32 _sys_printf(PPUThread& ppu, vm::cptr<char> fmt, ppu_va_args_t va_args)
 {
-	sysPrxForUser.Warning("_sys_printf(fmt=*0x%x, ...)", fmt);
-	std::string result = ps3_fmt(ppu, fmt, va_args.g_count, va_args.f_count, va_args.v_count);
+	sysPrxForUser.warning("_sys_printf(fmt=*0x%x, ...)", fmt);
 
-	LOG_ERROR(TTY, result);
+	_log::g_tty_file.log(ps3_fmt(ppu, fmt, va_args.g_count, va_args.f_count, va_args.v_count));
 
 	return CELL_OK;
 }

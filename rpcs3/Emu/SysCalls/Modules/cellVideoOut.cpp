@@ -11,7 +11,7 @@ extern Module<> cellSysutil;
 
 s32 cellVideoOutGetState(u32 videoOut, u32 deviceIndex, vm::ptr<CellVideoOutState> state)
 {
-	cellSysutil.Log("cellVideoOutGetState(videoOut=%d, deviceIndex=%d, state=*0x%x)", videoOut, deviceIndex, state);
+	cellSysutil.trace("cellVideoOutGetState(videoOut=%d, deviceIndex=%d, state=*0x%x)", videoOut, deviceIndex, state);
 
 	if (deviceIndex) return CELL_VIDEO_OUT_ERROR_DEVICE_NOT_FOUND;
 
@@ -37,7 +37,7 @@ s32 cellVideoOutGetState(u32 videoOut, u32 deviceIndex, vm::ptr<CellVideoOutStat
 
 s32 cellVideoOutGetResolution(u32 resolutionId, vm::ptr<CellVideoOutResolution> resolution)
 {
-	cellSysutil.Log("cellVideoOutGetResolution(resolutionId=%d, resolution=*0x%x)", resolutionId, resolution);
+	cellSysutil.trace("cellVideoOutGetResolution(resolutionId=%d, resolution=*0x%x)", resolutionId, resolution);
 
 	u32 num = ResolutionIdToNum(resolutionId);
 	if (!num)
@@ -51,7 +51,7 @@ s32 cellVideoOutGetResolution(u32 resolutionId, vm::ptr<CellVideoOutResolution> 
 
 s32 cellVideoOutConfigure(u32 videoOut, vm::ptr<CellVideoOutConfiguration> config, vm::ptr<CellVideoOutOption> option, u32 waitForEvent)
 {
-	cellSysutil.Warning("cellVideoOutConfigure(videoOut=%d, config=*0x%x, option=*0x%x, waitForEvent=%d)", videoOut, config, option, waitForEvent);
+	cellSysutil.warning("cellVideoOutConfigure(videoOut=%d, config=*0x%x, option=*0x%x, waitForEvent=%d)", videoOut, config, option, waitForEvent);
 
 	switch (videoOut)
 	{
@@ -84,7 +84,7 @@ s32 cellVideoOutConfigure(u32 videoOut, vm::ptr<CellVideoOutConfiguration> confi
 
 s32 cellVideoOutGetConfiguration(u32 videoOut, vm::ptr<CellVideoOutConfiguration> config, vm::ptr<CellVideoOutOption> option)
 {
-	cellSysutil.Warning("cellVideoOutGetConfiguration(videoOut=%d, config=*0x%x, option=*0x%x)", videoOut, config, option);
+	cellSysutil.warning("cellVideoOutGetConfiguration(videoOut=%d, config=*0x%x, option=*0x%x)", videoOut, config, option);
 
 	if (option) *option = {};
 	*config = {};
@@ -109,7 +109,7 @@ s32 cellVideoOutGetConfiguration(u32 videoOut, vm::ptr<CellVideoOutConfiguration
 
 s32 cellVideoOutGetDeviceInfo(u32 videoOut, u32 deviceIndex, vm::ptr<CellVideoOutDeviceInfo> info)
 {
-	cellSysutil.Warning("cellVideoOutGetDeviceInfo(videoOut=%d, deviceIndex=%d, info=*0x%x)", videoOut, deviceIndex, info);
+	cellSysutil.warning("cellVideoOutGetDeviceInfo(videoOut=%d, deviceIndex=%d, info=*0x%x)", videoOut, deviceIndex, info);
 
 	if (deviceIndex) return CELL_VIDEO_OUT_ERROR_DEVICE_NOT_FOUND;
 
@@ -140,7 +140,7 @@ s32 cellVideoOutGetDeviceInfo(u32 videoOut, u32 deviceIndex, vm::ptr<CellVideoOu
 
 s32 cellVideoOutGetNumberOfDevice(u32 videoOut)
 {
-	cellSysutil.Warning("cellVideoOutGetNumberOfDevice(videoOut=%d)", videoOut);
+	cellSysutil.warning("cellVideoOutGetNumberOfDevice(videoOut=%d)", videoOut);
 
 	switch (videoOut)
 	{
@@ -153,7 +153,7 @@ s32 cellVideoOutGetNumberOfDevice(u32 videoOut)
 
 s32 cellVideoOutGetResolutionAvailability(u32 videoOut, u32 resolutionId, u32 aspect, u32 option)
 {
-	cellSysutil.Warning("cellVideoOutGetResolutionAvailability(videoOut=%d, resolutionId=0x%x, aspect=%d, option=%d)", videoOut, resolutionId, aspect, option);
+	cellSysutil.warning("cellVideoOutGetResolutionAvailability(videoOut=%d, resolutionId=0x%x, aspect=%d, option=%d)", videoOut, resolutionId, aspect, option);
 
 	if (!rpcs3::config.rsx._3dtv.value() && (resolutionId == CELL_VIDEO_OUT_RESOLUTION_720_3D_FRAME_PACKING || resolutionId == CELL_VIDEO_OUT_RESOLUTION_1024x720_3D_FRAME_PACKING ||
 		resolutionId == CELL_VIDEO_OUT_RESOLUTION_960x720_3D_FRAME_PACKING || resolutionId == CELL_VIDEO_OUT_RESOLUTION_800x720_3D_FRAME_PACKING ||

@@ -16,7 +16,7 @@ lv2_memory_container_t::lv2_memory_container_t(u32 size)
 
 s32 sys_memory_allocate(u32 size, u64 flags, vm::ptr<u32> alloc_addr)
 {
-	sys_memory.Warning("sys_memory_allocate(size=0x%x, flags=0x%llx, alloc_addr=*0x%x)", size, flags, alloc_addr);
+	sys_memory.warning("sys_memory_allocate(size=0x%x, flags=0x%llx, alloc_addr=*0x%x)", size, flags, alloc_addr);
 
 	LV2_LOCK;
 
@@ -68,7 +68,7 @@ s32 sys_memory_allocate(u32 size, u64 flags, vm::ptr<u32> alloc_addr)
 
 s32 sys_memory_allocate_from_container(u32 size, u32 cid, u64 flags, vm::ptr<u32> alloc_addr)
 {
-	sys_memory.Warning("sys_memory_allocate_from_container(size=0x%x, cid=0x%x, flags=0x%llx, alloc_addr=*0x%x)", size, cid, flags, alloc_addr);
+	sys_memory.warning("sys_memory_allocate_from_container(size=0x%x, cid=0x%x, flags=0x%llx, alloc_addr=*0x%x)", size, cid, flags, alloc_addr);
 
 	LV2_LOCK;
 
@@ -148,7 +148,7 @@ s32 sys_memory_allocate_from_container(u32 size, u32 cid, u64 flags, vm::ptr<u32
 
 s32 sys_memory_free(u32 addr)
 {
-	sys_memory.Warning("sys_memory_free(addr=0x%x)", addr);
+	sys_memory.warning("sys_memory_free(addr=0x%x)", addr);
 
 	LV2_LOCK;
 
@@ -189,7 +189,7 @@ s32 sys_memory_free(u32 addr)
 
 s32 sys_memory_get_page_attribute(u32 addr, vm::ptr<sys_page_attr_t> attr)
 {
-	sys_memory.Error("sys_memory_get_page_attribute(addr=0x%x, attr=*0x%x)", addr, attr);
+	sys_memory.error("sys_memory_get_page_attribute(addr=0x%x, attr=*0x%x)", addr, attr);
 
 	LV2_LOCK;
 
@@ -203,7 +203,7 @@ s32 sys_memory_get_page_attribute(u32 addr, vm::ptr<sys_page_attr_t> attr)
 
 s32 sys_memory_get_user_memory_size(vm::ptr<sys_memory_info_t> mem_info)
 {
-	sys_memory.Warning("sys_memory_get_user_memory_size(mem_info=*0x%x)", mem_info);
+	sys_memory.warning("sys_memory_get_user_memory_size(mem_info=*0x%x)", mem_info);
 
 	LV2_LOCK;
 
@@ -226,7 +226,7 @@ s32 sys_memory_get_user_memory_size(vm::ptr<sys_memory_info_t> mem_info)
 
 s32 sys_memory_container_create(vm::ptr<u32> cid, u32 size)
 {
-	sys_memory.Warning("sys_memory_container_create(cid=*0x%x, size=0x%x)", cid, size);
+	sys_memory.warning("sys_memory_container_create(cid=*0x%x, size=0x%x)", cid, size);
 
 	LV2_LOCK;
 
@@ -261,7 +261,7 @@ s32 sys_memory_container_create(vm::ptr<u32> cid, u32 size)
 
 s32 sys_memory_container_destroy(u32 cid)
 {
-	sys_memory.Warning("sys_memory_container_destroy(cid=0x%x)", cid);
+	sys_memory.warning("sys_memory_container_destroy(cid=0x%x)", cid);
 
 	LV2_LOCK;
 
@@ -285,7 +285,7 @@ s32 sys_memory_container_destroy(u32 cid)
 
 s32 sys_memory_container_get_size(vm::ptr<sys_memory_info_t> mem_info, u32 cid)
 {
-	sys_memory.Warning("sys_memory_container_get_size(mem_info=*0x%x, cid=0x%x)", mem_info, cid);
+	sys_memory.warning("sys_memory_container_get_size(mem_info=*0x%x, cid=0x%x)", mem_info, cid);
 
 	LV2_LOCK;
 

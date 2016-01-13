@@ -43,7 +43,7 @@ s32 cellVideoOutConvertCursorColor()
 
 s32 cellVideoOutGetGamma(u32 videoOut, vm::ptr<f32> gamma)
 {
-	cellAvconfExt.Warning("cellVideoOutGetGamma(videoOut=%d, gamma=*0x%x)", videoOut, gamma);
+	cellAvconfExt.warning("cellVideoOutGetGamma(videoOut=%d, gamma=*0x%x)", videoOut, gamma);
 
 	if (videoOut != CELL_VIDEO_OUT_PRIMARY)
 	{
@@ -67,7 +67,7 @@ s32 cellAudioOutGetAvailableDeviceInfo()
 
 s32 cellVideoOutSetGamma(u32 videoOut, f32 gamma)
 {
-	cellAvconfExt.Warning("cellVideoOutSetGamma(videoOut=%d, gamma=%f)", videoOut, gamma);
+	cellAvconfExt.warning("cellVideoOutSetGamma(videoOut=%d, gamma=%f)", videoOut, gamma);
 
 	if (videoOut != CELL_VIDEO_OUT_PRIMARY)
 	{
@@ -111,7 +111,7 @@ s32 cellAudioInUnregisterDevice()
 
 s32 cellVideoOutGetScreenSize(u32 videoOut, vm::ptr<float> screenSize)
 {
-	cellAvconfExt.Warning("cellVideoOutGetScreenSize(videoOut=%d, screenSize=*0x%x)", videoOut, screenSize);
+	cellAvconfExt.warning("cellVideoOutGetScreenSize(videoOut=%d, screenSize=*0x%x)", videoOut, screenSize);
 
 	if (videoOut != CELL_VIDEO_OUT_PRIMARY)
 	{

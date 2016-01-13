@@ -13,7 +13,7 @@ extern Module<> sysPrxForUser;
 
 s32 sys_lwcond_create(vm::ptr<sys_lwcond_t> lwcond, vm::ptr<sys_lwmutex_t> lwmutex, vm::ptr<sys_lwcond_attribute_t> attr)
 {
-	sysPrxForUser.Warning("sys_lwcond_create(lwcond=*0x%x, lwmutex=*0x%x, attr=*0x%x)", lwcond, lwmutex, attr);
+	sysPrxForUser.warning("sys_lwcond_create(lwcond=*0x%x, lwmutex=*0x%x, attr=*0x%x)", lwcond, lwmutex, attr);
 
 	lwcond->lwcond_queue = idm::make<lv2_lwcond_t>(reinterpret_cast<u64&>(attr->name));
 	lwcond->lwmutex = lwmutex;
@@ -23,7 +23,7 @@ s32 sys_lwcond_create(vm::ptr<sys_lwcond_t> lwcond, vm::ptr<sys_lwmutex_t> lwmut
 
 s32 sys_lwcond_destroy(vm::ptr<sys_lwcond_t> lwcond)
 {
-	sysPrxForUser.Log("sys_lwcond_destroy(lwcond=*0x%x)", lwcond);
+	sysPrxForUser.trace("sys_lwcond_destroy(lwcond=*0x%x)", lwcond);
 
 	const s32 res = _sys_lwcond_destroy(lwcond->lwcond_queue);
 
@@ -37,7 +37,7 @@ s32 sys_lwcond_destroy(vm::ptr<sys_lwcond_t> lwcond)
 
 s32 sys_lwcond_signal(PPUThread& ppu, vm::ptr<sys_lwcond_t> lwcond)
 {
-	sysPrxForUser.Log("sys_lwcond_signal(lwcond=*0x%x)", lwcond);
+	sysPrxForUser.trace("sys_lwcond_signal(lwcond=*0x%x)", lwcond);
 
 	const vm::ptr<sys_lwmutex_t> lwmutex = lwcond->lwmutex;
 
@@ -95,7 +95,7 @@ s32 sys_lwcond_signal(PPUThread& ppu, vm::ptr<sys_lwcond_t> lwcond)
 
 s32 sys_lwcond_signal_all(PPUThread& ppu, vm::ptr<sys_lwcond_t> lwcond)
 {
-	sysPrxForUser.Log("sys_lwcond_signal_all(lwcond=*0x%x)", lwcond);
+	sysPrxForUser.trace("sys_lwcond_signal_all(lwcond=*0x%x)", lwcond);
 
 	const vm::ptr<sys_lwmutex_t> lwmutex = lwcond->lwmutex;
 
@@ -152,7 +152,7 @@ s32 sys_lwcond_signal_all(PPUThread& ppu, vm::ptr<sys_lwcond_t> lwcond)
 
 s32 sys_lwcond_signal_to(PPUThread& ppu, vm::ptr<sys_lwcond_t> lwcond, u32 ppu_thread_id)
 {
-	sysPrxForUser.Log("sys_lwcond_signal_to(lwcond=*0x%x, ppu_thread_id=0x%x)", lwcond, ppu_thread_id);
+	sysPrxForUser.trace("sys_lwcond_signal_to(lwcond=*0x%x, ppu_thread_id=0x%x)", lwcond, ppu_thread_id);
 
 	const vm::ptr<sys_lwmutex_t> lwmutex = lwcond->lwmutex;
 
@@ -210,7 +210,7 @@ s32 sys_lwcond_signal_to(PPUThread& ppu, vm::ptr<sys_lwcond_t> lwcond, u32 ppu_t
 
 s32 sys_lwcond_wait(PPUThread& ppu, vm::ptr<sys_lwcond_t> lwcond, u64 timeout)
 {
-	sysPrxForUser.Log("sys_lwcond_wait(lwcond=*0x%x, timeout=0x%llx)", lwcond, timeout);
+	sysPrxForUser.trace("sys_lwcond_wait(lwcond=*0x%x, timeout=0x%llx)", lwcond, timeout);
 
 	const be_t<u32> tid = ppu.get_id();
 

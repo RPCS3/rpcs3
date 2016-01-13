@@ -13,7 +13,7 @@ s32 cellGameSetExitParam()
 
 s32 cellGameGetHomeDataExportPath(vm::ptr<char> exportPath)
 {
-	cellGameExec.Warning("cellGameGetHomeDataExportPath(exportPath=0x%x)", exportPath);
+	cellGameExec.warning("cellGameGetHomeDataExportPath(exportPath=0x%x)", exportPath);
 
 	// TODO: PlayStation home is defunct.
 
@@ -37,7 +37,7 @@ s32 cellGameGetHomeLaunchOptionPath()
 
 s32 cellGameGetBootGameInfo(vm::ptr<u32> type, vm::ptr<char> dirName, vm::ptr<u32> execData)
 {
-	cellGameExec.Todo("cellGameGetBootGameInfo(type=*0x%x, dirName=*0x%x, execData=*0x%x)", type, dirName, execData);
+	cellGameExec.todo("cellGameGetBootGameInfo(type=*0x%x, dirName=*0x%x, execData=*0x%x)", type, dirName, execData);
 
 	// TODO: Support more boot types
 	*type = CELL_GAME_GAMETYPE_SYS;
