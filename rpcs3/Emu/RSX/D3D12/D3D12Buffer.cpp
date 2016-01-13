@@ -8,28 +8,6 @@
 #include "D3D12Formats.h"
 #include "../rsx_methods.h"
 
-namespace
-{
-/**
- * 
- */
-D3D12_GPU_VIRTUAL_ADDRESS createVertexBuffer(const rsx::data_array_format_info &vertex_array_desc, const std::vector<u8> &vertex_data, ID3D12Device *device, data_heap &vertex_index_heap)
-{
-	size_t buffer_size = vertex_data.size();
-	size_t heap_offset = vertex_index_heap.alloc<D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT>(buffer_size);
-
-	memcpy(vertex_index_heap.map<float>(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size)), vertex_data.data(), vertex_data.size());
-	vertex_index_heap.unmap(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
-	return vertex_index_heap.get_heap()->GetGPUVirtualAddress() + heap_offset;
-}
-
-}
-
-void D3D12GSRender::load_vertex_data(u32 first, u32 count)
-{
-	m_first_count_pairs.emplace_back(std::make_pair(first, count));
-	vertex_draw_count += count;
-}
 
 std::vector<D3D12_VERTEX_BUFFER_VIEW> D3D12GSRender::upload_vertex_attributes(const std::vector<std::pair<u32, u32> > &vertex_ranges)
 {
@@ -125,10 +103,6 @@ std::vector<D3D12_VERTEX_BUFFER_VIEW> D3D12GSRender::upload_vertex_attributes(co
 	}
 
 	return vertex_buffer_views;
-}
-
-void D3D12GSRender::load_vertex_index_data(u32 first, u32 count)
-{
 }
 
 void D3D12GSRender::upload_and_bind_scale_offset_matrix(size_t descriptorIndex)
@@ -305,47 +279,55 @@ std::tuple<bool, size_t> D3D12GSRender::upload_and_set_vertex_index_data(ID3D12G
 
 	if (draw_command == Draw_command::draw_command_array)
 	{
-		const std::vector<D3D12_VERTEX_BUFFER_VIEW> &vertex_buffer_views = upload_vertex_attributes(m_first_count_pairs);
+		const std::vector<D3D12_VERTEX_BUFFER_VIEW> &vertex_buffer_views = upload_vertex_attributes(first_count_commands);
 		command_list->IASetVertexBuffers(0, (UINT)vertex_buffer_views.size(), vertex_buffer_views.data());
 
 		if (is_primitive_native(draw_mode))
 		{
 			// Index count
 			size_t vertex_count = 0;
-			for (const auto &pair : m_first_count_pairs)
+			for (const auto &pair : first_count_commands)
 				vertex_count += pair.second;
 			return std::make_tuple(false, vertex_count);
 		}
 
 		D3D12_INDEX_BUFFER_VIEW index_buffer_view;
 		size_t index_count;
-		std::tie(index_buffer_view, index_count) = generate_index_buffer_for_emulated_primitives_array(m_first_count_pairs);
+		std::tie(index_buffer_view, index_count) = generate_index_buffer_for_emulated_primitives_array(first_count_commands);
 		command_list->IASetIndexBuffer(&index_buffer_view);
 		return std::make_tuple(true, index_count);
 	}
 
 	assert(draw_command == Draw_command::draw_command_indexed);
 
-	u32 indexed_type = rsx::method_registers[NV4097_SET_INDEX_ARRAY_DMA] >> 4;
-	size_t index_size = get_index_type_size(indexed_type);
-
 	// Index count
 	size_t index_count = 0;
-	for (const auto &pair : m_first_count_pairs)
-		index_count += get_index_count(draw_mode, pair.second);
+	for (const auto &pair : first_count_commands)
+		index_count += pair.second;
+	index_count = get_index_count(draw_mode, gsl::narrow<int>(index_count));
+
+	Index_array_type indexed_type = to_index_array_type(rsx::method_registers[NV4097_SET_INDEX_ARRAY_DMA] >> 4);
+	size_t index_size = get_index_type_size(indexed_type);
 
 	// Alloc
 	size_t buffer_size = align(index_count * index_size, 64);
 	size_t heap_offset = m_buffer_data.alloc<D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT>(buffer_size);
 
 	void *mapped_buffer = m_buffer_data.map<void>(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
-	u32 min_index = (u32)-1, max_index = 0;
-	for (const auto &pair : m_first_count_pairs)
+	u32 min_index, max_index;
+
+	if (indexed_type == Index_array_type::unsigned_16b)
 	{
-		size_t element_count = get_index_count(draw_mode, pair.second);
-		write_index_array_data_to_buffer((char*)mapped_buffer, draw_mode, pair.first, pair.second, min_index, max_index);
-		mapped_buffer = (char*)mapped_buffer + element_count * index_size;
+		gsl::span<u16> dst = { (u16*)mapped_buffer, gsl::narrow<int>(buffer_size / index_size) };
+		std::tie(min_index, max_index) = write_index_array_data_to_buffer(dst, draw_mode, first_count_commands);
 	}
+
+	if (indexed_type == Index_array_type::unsigned_32b)
+	{
+		gsl::span<u32> dst = { (u32*)mapped_buffer, gsl::narrow<int>(buffer_size / index_size) };
+		std::tie(min_index, max_index) = write_index_array_data_to_buffer(dst, draw_mode, first_count_commands);
+	}
+
 	m_buffer_data.unmap(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
 	D3D12_INDEX_BUFFER_VIEW index_buffer_view = {
 		m_buffer_data.get_heap()->GetGPUVirtualAddress() + heap_offset,

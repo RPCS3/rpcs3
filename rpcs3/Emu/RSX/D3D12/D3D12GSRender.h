@@ -152,7 +152,6 @@ private:
 	*/
 	std::tuple<bool, size_t> upload_and_set_vertex_index_data(ID3D12GraphicsCommandList *command_list);
 
-	std::vector<std::pair<u32, u32> > m_first_count_pairs;
 	/**
 	 * Upload all enabled vertex attributes for vertex in ranges described by vertex_ranges.
 	 * A range in vertex_range is a pair whose first element is the index of the beginning of the
@@ -200,9 +199,6 @@ protected:
 	virtual bool do_method(u32 cmd, u32 arg) override;
 	virtual void end() override;
 	virtual void flip(int buffer) override;
-
-	virtual void load_vertex_data(u32 first, u32 count) override;
-	virtual void load_vertex_index_data(u32 first, u32 count) override;
 
 	virtual void copy_render_targets_to_memory(void *buffer, u8 rtt) override;
 	virtual void copy_depth_buffer_to_memory(void *buffer) override;
