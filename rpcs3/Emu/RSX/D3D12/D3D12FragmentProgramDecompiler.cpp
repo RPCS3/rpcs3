@@ -222,21 +222,21 @@ void D3D12FragmentDecompiler::insertMainEnd(std::stringstream & OS)
 		{ "ocol3", m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? "r4" : "h8" },
 	};
 
-	size_t num_output = 0;
+	std::string first_output_name;
 	OS << "	PixelOutput Out = (PixelOutput)0;" << std::endl;
 	for (int i = 0; i < sizeof(table) / sizeof(*table); ++i)
 	{
 		if (m_parr.HasParam(PF_PARAM_NONE, "float4", table[i].second))
 		{
 			OS << "	Out." << table[i].first << " = " << table[i].second << ";" << std::endl;
-			num_output++;
+			if (first_output_name.empty()) first_output_name = table[i].first;
 		}
 	}
 	if (m_ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT)
 		OS << "	Out.depth = " << ((m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS) ? "r1.z;" : "h0.z;") << std::endl;
 	// Shaders don't always output colors (for instance if they write to depth only)
-	if (num_output > 0)
-		OS << "	if (isAlphaTested && Out.ocol0.a <= alphaRef) discard;" << std::endl;
+	if (!first_output_name.empty())
+		OS << "	if (isAlphaTested && Out." << first_output_name << ".a <= alphaRef) discard;\n";
 	OS << "	return Out;" << std::endl;
 	OS << "}" << std::endl;
 }
