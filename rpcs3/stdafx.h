@@ -155,10 +155,10 @@ struct triplet_t
 };
 
 // return 32 bit sizeof() to avoid widening/narrowing conversions with size_t
-#define sizeof32(type) static_cast<u32>(sizeof(type))
+#define SIZE_32(type) static_cast<u32>(sizeof(type))
 
 // return 32 bit alignof() to avoid widening/narrowing conversions with size_t
-#define alignof32(type) static_cast<u32>(alignof(type))
+#define ALIGN_32(type) static_cast<u32>(alignof(type))
 
 // return 32 bit .size() for container
 template<typename T>
@@ -174,6 +174,9 @@ constexpr u32 size32(const T(&)[Size])
 {
 	return Size >= 0 && Size <= UINT32_MAX ? static_cast<u32>(Size) : throw std::length_error(__FUNCTION__);
 }
+
+// return 32 bit offsetof()
+#define OFFSET_32(type, x) static_cast<u32>(reinterpret_cast<uintptr_t>(&(reinterpret_cast<type*>(0ull)->x)))
 
 #define CONCATENATE_DETAIL(x, y) x ## y
 #define CONCATENATE(x, y) CONCATENATE_DETAIL(x, y)

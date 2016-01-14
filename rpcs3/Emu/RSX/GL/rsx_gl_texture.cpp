@@ -108,7 +108,7 @@ namespace rsx
 			u32 full_format = tex.format();
 
 			u32 format = full_format & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
-			bool is_swizzled = ~full_format & CELL_GCM_TEXTURE_LN;
+			bool is_swizzled = !!(~full_format & CELL_GCM_TEXTURE_LN);
 
 			const u8* pixels = vm::ps3::_ptr<u8>(texaddr);
 			u8 *unswizzledPixels;
@@ -496,7 +496,7 @@ namespace rsx
 
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, gl_tex_zfunc[tex.zfunc()]);
 
-			glTexEnvi(GL_TEXTURE_FILTER_CONTROL, GL_TEXTURE_LOD_BIAS, tex.bias());
+			glTexEnvi(GL_TEXTURE_FILTER_CONTROL, GL_TEXTURE_LOD_BIAS, (GLint)tex.bias());
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_LOD, (tex.min_lod() >> 8));
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, (tex.max_lod() >> 8));
 

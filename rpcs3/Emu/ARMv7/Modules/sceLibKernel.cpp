@@ -643,7 +643,7 @@ s32 sceKernelGetEventFlagInfo(s32 evfId, vm::ptr<SceKernelEventFlagInfo> pInfo)
 
 	std::lock_guard<std::mutex> lock(evf->mutex);
 
-	pInfo->size = sizeof32(SceKernelEventFlagInfo);
+	pInfo->size = SIZE_32(SceKernelEventFlagInfo);
 	pInfo->evfId = evfId;
 	
 	strcpy_trunc(pInfo->name, evf->name);

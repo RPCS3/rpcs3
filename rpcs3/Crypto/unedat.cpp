@@ -820,7 +820,6 @@ int DecryptEDAT(const std::string& input_file_name, const std::string& output_fi
 	// Prepare the files.
 	fs::file input(input_file_name);
 	fs::file output(output_file_name, fom::rewrite);
-	fs::file rap(rap_file_name);
 
 	// Set keys (RIF and DEVKLIC).
 	unsigned char rifkey[0x10];
@@ -879,8 +878,10 @@ int DecryptEDAT(const std::string& input_file_name, const std::string& output_fi
 	}
 
 	// Read the RAP file, if provided.
-	if (rap)
+	if (rap_file_name.size())
 	{
+		fs::file rap(rap_file_name);
+
 		unsigned char rapkey[0x10];
 		memset(rapkey, 0, 0x10);
 		

@@ -828,11 +828,11 @@ s32 cellVdecGetPicItem(u32 handle, vm::pptr<CellVdecPicItem> picItem)
 	info->auUserData[1] = 0;
 	info->status = CELL_OK;
 	info->attr = CELL_VDEC_PICITEM_ATTR_NORMAL;
-	info->picInfo_addr = info.addr() + sizeof32(CellVdecPicItem);
+	info->picInfo_addr = info.addr() + SIZE_32(CellVdecPicItem);
 
 	if (vdec->type == CELL_VDEC_CODEC_TYPE_AVC)
 	{
-		const vm::ptr<CellVdecAvcInfo> avc{ info.addr() + sizeof32(CellVdecPicItem), vm::addr };
+		const vm::ptr<CellVdecAvcInfo> avc{ info.addr() + SIZE_32(CellVdecPicItem), vm::addr };
 
 		avc->horizontalSize = frame.width;
 		avc->verticalSize = frame.height;
@@ -886,7 +886,7 @@ s32 cellVdecGetPicItem(u32 handle, vm::pptr<CellVdecPicItem> picItem)
 	}
 	else if (vdec->type == CELL_VDEC_CODEC_TYPE_DIVX)
 	{
-		auto dvx = vm::ptr<CellVdecDivxInfo>::make(info.addr() + sizeof32(CellVdecPicItem));
+		auto dvx = vm::ptr<CellVdecDivxInfo>::make(info.addr() + SIZE_32(CellVdecPicItem));
 
 		switch (frame.pict_type)
 		{
@@ -920,7 +920,7 @@ s32 cellVdecGetPicItem(u32 handle, vm::pptr<CellVdecPicItem> picItem)
 	}
 	else if (vdec->type == CELL_VDEC_CODEC_TYPE_MPEG2)
 	{
-		auto mp2 = vm::ptr<CellVdecMpeg2Info>::make(info.addr() + sizeof32(CellVdecPicItem));
+		auto mp2 = vm::ptr<CellVdecMpeg2Info>::make(info.addr() + SIZE_32(CellVdecPicItem));
 
 		throw EXCEPTION("MPEG2");
 	}

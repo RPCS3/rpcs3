@@ -44,11 +44,11 @@ s32 cellAudioInit()
 
 	// alloc memory (only once until the emulator is stopped)
 	g_audio.buffer = g_audio.buffer ? g_audio.buffer : vm::alloc(AUDIO_PORT_OFFSET * AUDIO_PORT_COUNT, vm::main);
-	g_audio.indexes = g_audio.indexes ? g_audio.indexes : vm::alloc(sizeof32(u64) * AUDIO_PORT_COUNT, vm::main);
+	g_audio.indexes = g_audio.indexes ? g_audio.indexes : vm::alloc(SIZE_32(u64) * AUDIO_PORT_COUNT, vm::main);
 
 	// clear memory
 	std::memset(vm::base(g_audio.buffer), 0, AUDIO_PORT_OFFSET * AUDIO_PORT_COUNT);
-	std::memset(vm::base(g_audio.indexes), 0, sizeof32(u64) * AUDIO_PORT_COUNT);
+	std::memset(vm::base(g_audio.indexes), 0, SIZE_32(u64) * AUDIO_PORT_COUNT);
 
 	// start audio thread
 	g_audio_thread = thread_ctrl::spawn(PURE_EXPR("Audio Thread"s), []()
@@ -854,7 +854,7 @@ s32 cellAudioAddData(u32 portNum, vm::ptr<float> src, u32 samples, float volume)
 
 	const AudioPortConfig& port = g_audio.ports[portNum];
 
-	const auto dst = vm::ptr<float>::make(port.addr + u32(port.tag % port.block) * port.channel * 256 * sizeof32(float));
+	const auto dst = vm::ptr<float>::make(port.addr + u32(port.tag % port.block) * port.channel * 256 * SIZE_32(float));
 
 	for (u32 i = 0; i < samples * port.channel; i++)
 	{
@@ -887,7 +887,7 @@ s32 cellAudioAdd2chData(u32 portNum, vm::ptr<float> src, u32 samples, float volu
 
 	const AudioPortConfig& port = g_audio.ports[portNum];
 
-	const auto dst = vm::ptr<float>::make(port.addr + s32(port.tag % port.block) * port.channel * 256 * sizeof32(float));
+	const auto dst = vm::ptr<float>::make(port.addr + s32(port.tag % port.block) * port.channel * 256 * SIZE_32(float));
 
 	if (port.channel == 2)
 	{
@@ -943,7 +943,7 @@ s32 cellAudioAdd6chData(u32 portNum, vm::ptr<float> src, float volume)
 
 	const AudioPortConfig& port = g_audio.ports[portNum];
 
-	const auto dst = vm::ptr<float>::make(port.addr + s32(port.tag % port.block) * port.channel * 256 * sizeof32(float));
+	const auto dst = vm::ptr<float>::make(port.addr + s32(port.tag % port.block) * port.channel * 256 * SIZE_32(float));
 
 	if (port.channel == 2 || port.channel == 6)
 	{

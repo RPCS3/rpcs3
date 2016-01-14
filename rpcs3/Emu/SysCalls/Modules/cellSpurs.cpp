@@ -1814,7 +1814,7 @@ s32 _spurs::trace_initialize(PPUThread& ppu, vm::ptr<CellSpurs> spurs, vm::ptr<C
 		return CELL_SPURS_CORE_ERROR_ALIGN;
 	}
 
-	if (size < sizeof32(CellSpursTraceInfo) || mode & ~(CELL_SPURS_TRACE_MODE_FLAG_MASK))
+	if (size < SIZE_32(CellSpursTraceInfo) || mode & ~(CELL_SPURS_TRACE_MODE_FLAG_MASK))
 	{
 		return CELL_SPURS_CORE_ERROR_INVAL;
 	}
@@ -1824,7 +1824,7 @@ s32 _spurs::trace_initialize(PPUThread& ppu, vm::ptr<CellSpurs> spurs, vm::ptr<C
 		return CELL_SPURS_CORE_ERROR_STAT;
 	}
 
-	spurs->traceDataSize = size - sizeof32(CellSpursTraceInfo);
+	spurs->traceDataSize = size - SIZE_32(CellSpursTraceInfo);
 	for (u32 i = 0; i < 8; i++)
 	{
 		buffer->spuThread[i] = spurs->spus[i];
@@ -1836,7 +1836,7 @@ s32 _spurs::trace_initialize(PPUThread& ppu, vm::ptr<CellSpurs> spurs, vm::ptr<C
 	spurs->traceBuffer.set(buffer.addr() | (mode & CELL_SPURS_TRACE_MODE_FLAG_WRAP_BUFFER ? 1 : 0));
 	spurs->traceMode     = mode;
 
-	u32 spuTraceDataCount = (u32)((spurs->traceDataSize / sizeof32(CellSpursTracePacket)) / spurs->nSpus);
+	u32 spuTraceDataCount = (u32)((spurs->traceDataSize / SIZE_32(CellSpursTracePacket)) / spurs->nSpus);
 	for (u32 i = 0, j = 8; i < 6; i++)
 	{
 		spurs->traceStartIndex[i] = j;
@@ -3330,7 +3330,7 @@ s32 cellSpursCreateTasksetWithAttribute(PPUThread& ppu, vm::ptr<CellSpurs> spurs
 
 	auto rc = _spurs::create_taskset(ppu, spurs, taskset, attr->args, attr.ptr(&CellSpursTasksetAttribute::priority), attr->max_contention, attr->name, attr->taskset_size, attr->enable_clear_ls);
 
-	if (attr->taskset_size >= sizeof32(CellSpursTaskset2))
+	if (attr->taskset_size >= SIZE_32(CellSpursTaskset2))
 	{
 		// TODO: Implement this
 	}
@@ -3342,7 +3342,7 @@ s32 cellSpursCreateTaskset(PPUThread& ppu, vm::ptr<CellSpurs> spurs, vm::ptr<Cel
 {
 	cellSpurs.warning("cellSpursCreateTaskset(spurs=*0x%x, taskset=*0x%x, args=0x%llx, priority=*0x%x, maxContention=%d)", spurs, taskset, args, priority, maxContention);
 
-	return _spurs::create_taskset(ppu, spurs, taskset, args, priority, maxContention, vm::null, sizeof32(CellSpursTaskset), 0);
+	return _spurs::create_taskset(ppu, spurs, taskset, args, priority, maxContention, vm::null, SIZE_32(CellSpursTaskset), 0);
 }
 
 s32 cellSpursJoinTaskset(vm::ptr<CellSpursTaskset> taskset)
@@ -3616,7 +3616,7 @@ s32 cellSpursTasksetAttributeSetTasksetSize(vm::ptr<CellSpursTasksetAttribute> a
 		return CELL_SPURS_TASK_ERROR_ALIGN;
 	}
 
-	if (size != sizeof32(CellSpursTaskset) && size != sizeof32(CellSpursTaskset2))
+	if (size != SIZE_32(CellSpursTaskset) && size != SIZE_32(CellSpursTaskset2))
 	{
 		return CELL_SPURS_TASK_ERROR_INVAL;
 	}
@@ -3747,7 +3747,7 @@ s32 cellSpursCreateTaskset2(PPUThread& ppu, vm::ptr<CellSpurs> spurs, vm::ptr<Ce
 		_cellSpursTasksetAttribute2Initialize(attr, 0);
 	}
 
-	if (s32 rc = _spurs::create_taskset(ppu, spurs, taskset, attr->args, attr.ptr(&CellSpursTasksetAttribute2::priority), attr->max_contention, attr->name, sizeof32(CellSpursTaskset2), attr->enable_clear_ls))
+	if (s32 rc = _spurs::create_taskset(ppu, spurs, taskset, attr->args, attr.ptr(&CellSpursTasksetAttribute2::priority), attr->max_contention, attr->name, SIZE_32(CellSpursTaskset2), attr->enable_clear_ls))
 	{
 		return rc;
 	}

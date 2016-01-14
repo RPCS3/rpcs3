@@ -103,7 +103,7 @@ namespace vm
 	public:
 		// Call the constructor with specified arguments
 		template<typename... Args, typename = std::enable_if_t<std::is_constructible<T, Args...>::value>> _var_base(Args&&... args)
-			: pointer(A::alloc(sizeof32(T), alignof32(T)), vm::addr)
+			: pointer(A::alloc(SIZE_32(T), ALIGN_32(T)), vm::addr)
 		{
 #include "restore_new.h"
 			new(pointer::get_ptr()) T(std::forward<Args>(args)...);
@@ -118,7 +118,7 @@ namespace vm
 			pointer::get_ptr()->~T();
 
 			// Deallocate memory
-			A::dealloc(pointer::addr(), sizeof32(T));
+			A::dealloc(pointer::addr(), SIZE_32(T));
 		}
 
 		// Remove operator []
@@ -135,7 +135,7 @@ namespace vm
 	public:
 		// Call the default constructor for each element
 		_var_base(u32 count)
-			: pointer(A::alloc(sizeof32(T) * count, alignof32(T)), vm::addr)
+			: pointer(A::alloc(SIZE_32(T) * count, ALIGN_32(T)), vm::addr)
 			, m_count(count)
 		{
 #include "restore_new.h"
@@ -145,7 +145,7 @@ namespace vm
 
 		// Call the constructor for each element using [it, it + count)
 		template<typename T2> _var_base(u32 count, T2 it)
-			: pointer(A::alloc(sizeof32(T) * count, alignof32(T)), vm::addr)
+			: pointer(A::alloc(SIZE_32(T) * count, ALIGN_32(T)), vm::addr)
 			, m_count(count)
 		{
 #include "restore_new.h"
@@ -161,7 +161,7 @@ namespace vm
 			for (u32 i = m_count - 1; ~i; i--) pointer::operator [](i).~T();
 
 			// Deallocate memory
-			A::dealloc(pointer::addr(), sizeof32(T) * m_count);
+			A::dealloc(pointer::addr(), SIZE_32(T) * m_count);
 		}
 
 		u32 get_count() const
@@ -188,7 +188,7 @@ namespace vm
 	public:
 		// Call the default constructor for each element
 		_var_base()
-			: pointer(A::alloc(sizeof32(T) * N, alignof32(T)), vm::addr)
+			: pointer(A::alloc(SIZE_32(T) * N, ALIGN_32(T)), vm::addr)
 		{
 #include "restore_new.h"
 			new(pointer::get_ptr()) T[N]();
@@ -197,7 +197,7 @@ namespace vm
 
 		// Call the constructor for each element using array
 		template<typename T2> _var_base(const T2(&array)[N])
-			: pointer(A::alloc(sizeof32(T) * N, alignof32(T)), vm::addr)
+			: pointer(A::alloc(SIZE_32(T) * N, ALIGN_32(T)), vm::addr)
 		{
 #include "restore_new.h"
 			for (u32 i = 0; i < N; i++) new(pointer::get_ptr() + i) T(array[i]);
@@ -212,7 +212,7 @@ namespace vm
 			for (u32 i = N - 1; ~i; i--) pointer::operator [](i).~T();
 
 			// Deallocate memory
-			A::dealloc(pointer::addr(), sizeof32(T) * N);
+			A::dealloc(pointer::addr(), SIZE_32(T) * N);
 		}
 
 		constexpr u32 get_count() const

@@ -27,12 +27,10 @@ LogFrame::LogFrame(wxWindow* parent)
 	m_log_file.open(fs::get_config_dir() + "RPCS3.log", fom::read | fom::create);
 	m_tty_file.open(fs::get_config_dir() + "TTY.log",   fom::read | fom::create);
 
-	// Check for updates every ~10 ms
-	m_timer.Start(10);
-
 	m_tty->SetBackgroundColour(wxColour("Black"));
 	m_log->SetBackgroundColour(wxColour("Black"));
 	m_tty->SetFont(wxFont(8, wxFONTFAMILY_MODERN, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL));
+	m_tty->SetDefaultStyle(wxColour(255, 255, 255));
 	m_tabs.AddPage(m_log, "Log");
 	m_tabs.AddPage(m_tty, "TTY");
 
@@ -46,6 +44,9 @@ LogFrame::LogFrame(wxWindow* parent)
 	Bind(wxEVT_MENU, &LogFrame::OnContextMenu, this, id_log_copy);
 
 	Show();
+
+	// Check for updates every ~10 ms
+	m_timer.Start(10);
 }
 
 LogFrame::~LogFrame()
@@ -101,42 +102,42 @@ void LogFrame::OnContextMenu(wxCommandEvent& event)
 
 void LogFrame::OnTimer(wxTimerEvent& event)
 {
-	char buf[8192];
+	char buf[4096];
 
-	const auto stamp0 = std::chrono::high_resolution_clock::now();
-
+	// Get UTF-8 string from file
 	auto get_utf8 = [&](const fs::file& file, u64 size) -> wxString
 	{
-		// Bruteforce valid UTF-8 (TODO)
-		for (u64 read = file.read(buf, size); read; read--)
+		size = file.read(buf, size);
+
+		for (u64 i = 0; i < size; i++)
 		{
-			wxString text = wxString::FromUTF8(buf, read);
-			if (!text.empty())
+			// Get UTF-8 sequence length (no real validation performed)
+			const u64 tail =
+				(buf[i] & 0xF0) == 0xF0 ? 3 :
+				(buf[i] & 0xE0) == 0xE0 ? 2 :
+				(buf[i] & 0xC0) == 0xC0 ? 1 : 0;
+
+			if (i + tail >= size)
 			{
-				file.seek(read - size, fs::seek_cur);
-				return text;
+				file.seek(i - size, fs::seek_cur);
+				return wxString::FromUTF8(buf, i);
 			}
 		}
 
-		return{};
+		return wxString::FromUTF8(buf, size);
 	};
+
+	const auto stamp0 = std::chrono::high_resolution_clock::now();
 
 	// Check TTY logs
 	while (const u64 size = std::min<u64>(sizeof(buf), _log::g_tty_file.size() - m_tty_file.seek(0, fs::seek_cur)))
 	{
 		const wxString& text = get_utf8(m_tty_file, size);
 
-		if (text.size())
-		{
-			m_tty->SetDefaultStyle(wxColour(255, 255, 255));
-			m_tty->AppendText(text);
-		}
+		m_tty->AppendText(text);
 
 		// Limit processing time
-		if (std::chrono::high_resolution_clock::now() >= stamp0 + 4ms)
-		{
-			break;
-		}
+		if (std::chrono::high_resolution_clock::now() >= stamp0 + 4ms || text.empty()) break;
 	}
 
 	const auto stamp1 = std::chrono::high_resolution_clock::now();
@@ -146,16 +147,27 @@ void LogFrame::OnTimer(wxTimerEvent& event)
 	{
 		const wxString& text = get_utf8(m_log_file, size);
 
-		std::size_t start = 0, pos = 0;
+		// Append text if necessary
+		auto flush_logs = [&](u64 start, u64 pos)
+		{
+			if (pos != start && m_level <= rpcs3::config.misc.log.level.value())
+			{
+				m_log->SetDefaultStyle(m_color);
+				m_log->AppendText(text.substr(start, pos - start));
+			}
+		};
 
-		for (; pos < text.size(); pos++)
+		// Parse log level formatting
+		for (std::size_t start = 0, pos = 0;; pos++)
 		{
 			if (text[pos] == L'·')
 			{
 				if (text.size() - pos <= 3)
 				{
-					// Cannot get log string: abort
+					// Cannot get log formatting: abort
 					m_log_file.seek(0 - text.substr(pos).ToUTF8().length(), fs::seek_cur);
+
+					flush_logs(start, pos);
 					break;
 				}
 
@@ -177,34 +189,22 @@ void LogFrame::OnTimer(wxTimerEvent& event)
 					default: continue;
 					}
 
-					if (pos != start && m_level <= rpcs3::config.misc.log.level.value())
-					{
-						m_log->SetDefaultStyle(m_color);
-						m_log->AppendText(text.substr(start, pos - start));
-					}
+					flush_logs(start, pos);
 
 					start = pos + 3;
 					m_level = level;
 					m_color = color;
 				}
 			}
-		}
 
-		if (pos != start && m_level <= rpcs3::config.misc.log.level.value())
-		{
-			m_log->SetDefaultStyle(m_color);
-			m_log->AppendText(text.substr(start, pos - start));
-		}
-
-		if (m_log->GetLastPosition() > 1024 * 1024)
-		{
-			m_log->Remove(0, m_log->GetLastPosition() - 512 * 1024);
+			if (pos >= text.size())
+			{
+				flush_logs(start, pos);
+				break;
+			}
 		}
 
 		// Limit processing time
-		if (std::chrono::high_resolution_clock::now() >= stamp1 + 3ms)
-		{
-			break;
-		}
+		if (std::chrono::high_resolution_clock::now() >= stamp1 + 3ms || text.empty()) break;
 	}
 }

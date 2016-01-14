@@ -382,7 +382,7 @@ namespace gl
 
 	private:
 		GLuint m_id = GL_NONE;
-		GLsizei m_size = 0;
+		GLsizeiptr m_size = 0;
 		target m_target = target::array;
 
 	public:
@@ -494,7 +494,7 @@ namespace gl
 			m_id = 0;
 		}
 
-		GLsizei size() const
+		GLsizeiptr size() const
 		{
 			return m_size;
 		}

@@ -1778,7 +1778,7 @@ void ppu_interpreter::LWARX(PPUThread& CPU, ppu_opcode_t op)
 	const u64 addr = op.ra ? CPU.GPR[op.ra] + CPU.GPR[op.rb] : CPU.GPR[op.rb];
 
 	be_t<u32> value;
-	vm::reservation_acquire(&value, VM_CAST(addr), sizeof32(value));
+	vm::reservation_acquire(&value, VM_CAST(addr), SIZE_32(value));
 
 	CPU.GPR[op.rd] = value;
 }
@@ -1949,7 +1949,7 @@ void ppu_interpreter::LDARX(PPUThread& CPU, ppu_opcode_t op)
 	const u64 addr = op.ra ? CPU.GPR[op.ra] + CPU.GPR[op.rb] : CPU.GPR[op.rb];
 
 	be_t<u64> value;
-	vm::reservation_acquire(&value, VM_CAST(addr), sizeof32(value));
+	vm::reservation_acquire(&value, VM_CAST(addr), SIZE_32(value));
 
 	CPU.GPR[op.rd] = value;
 }
@@ -2079,7 +2079,7 @@ void ppu_interpreter::STWCX_(PPUThread& CPU, ppu_opcode_t op)
 	const u64 addr = op.ra ? CPU.GPR[op.ra] + CPU.GPR[op.rb] : CPU.GPR[op.rb];
 
 	const be_t<u32> value = (u32)CPU.GPR[op.rs];
-	CPU.SetCR_EQ(0, vm::reservation_update(VM_CAST(addr), &value, sizeof32(value)));
+	CPU.SetCR_EQ(0, vm::reservation_update(VM_CAST(addr), &value, SIZE_32(value)));
 }
 
 void ppu_interpreter::STWX(PPUThread& CPU, ppu_opcode_t op)
@@ -2139,7 +2139,7 @@ void ppu_interpreter::STDCX_(PPUThread& CPU, ppu_opcode_t op)
 	const u64 addr = op.ra ? CPU.GPR[op.ra] + CPU.GPR[op.rb] : CPU.GPR[op.rb];
 
 	const be_t<u64> value = CPU.GPR[op.rs];
-	CPU.SetCR_EQ(0, vm::reservation_update(VM_CAST(addr), &value, sizeof32(value)));
+	CPU.SetCR_EQ(0, vm::reservation_update(VM_CAST(addr), &value, SIZE_32(value)));
 }
 
 void ppu_interpreter::STBX(PPUThread& CPU, ppu_opcode_t op)

@@ -705,7 +705,7 @@ void spursSysServiceMain(SPUThread & spu, u32 pollStatus) {
 
         vm::reservation_acquire(vm::base(spu.offset + 0x100), VM_CAST(ctxt->spurs.addr()), 128);
 
-        vm::reservation_op(VM_CAST(ctxt->spurs.addr() + offsetof(CellSpurs, wklState1)), 128, [&]() {
+        vm::reservation_op(ctxt->spurs.ptr(&CellSpurs::wklState1).addr(), 128, [&]() {
             auto spurs = ctxt->spurs.get_ptr_priv();
 
             // Halt if already initialised
@@ -862,7 +862,7 @@ void spursSysServiceActivateWorkload(SPUThread & spu, SpursKernelContext * ctxt)
         }
     }
 
-    vm::reservation_op(VM_CAST(ctxt->spurs.addr() + offsetof(CellSpurs, wklState1)), 128, [&]() {
+    vm::reservation_op(ctxt->spurs.ptr(&CellSpurs::wklState1).addr(), 128, [&]() {
         auto spurs = ctxt->spurs.get_ptr_priv();
 
         for (u32 i = 0; i < CELL_SPURS_MAX_WORKLOAD; i++) {
@@ -919,7 +919,7 @@ void spursSysServiceUpdateShutdownCompletionEvents(SPUThread & spu, SpursKernelC
     // workloads that have a shutdown completion hook registered
     u32 wklNotifyBitSet;
     u8  spuPort;
-    vm::reservation_op(VM_CAST(ctxt->spurs.addr() + offsetof(CellSpurs, wklState1)), 128, [&]() {
+    vm::reservation_op(ctxt->spurs.ptr(&CellSpurs::wklState1).addr(), 128, [&]() {
         auto spurs = ctxt->spurs.get_ptr_priv();
 
         wklNotifyBitSet = 0;
@@ -961,7 +961,7 @@ void spursSysServiceTraceUpdate(SPUThread & spu, SpursKernelContext * ctxt, u32 
     bool notify;
 
     u8 sysSrvMsgUpdateTrace;
-    vm::reservation_op(VM_CAST(ctxt->spurs.addr() + offsetof(CellSpurs, wklState1)), 128, [&]() {
+    vm::reservation_op(ctxt->spurs.ptr(&CellSpurs::wklState1).addr(), 128, [&]() {
         auto spurs = ctxt->spurs.get_ptr_priv();
 		auto& trace = spurs->sysSrvTrace.raw();
 
@@ -986,8 +986,8 @@ void spursSysServiceTraceUpdate(SPUThread & spu, SpursKernelContext * ctxt, u32 
 
     // Get trace parameters from CellSpurs and store them in the LS
     if (((sysSrvMsgUpdateTrace & (1 << ctxt->spuNum)) != 0) || (arg3 != 0)) {
-        vm::reservation_acquire(vm::base(spu.offset + 0x80), VM_CAST(ctxt->spurs.addr() + offsetof(CellSpurs, traceBuffer)), 128);
-        auto spurs = vm::_ptr<CellSpurs>(spu.offset + 0x80 - offsetof(CellSpurs, traceBuffer));
+        vm::reservation_acquire(vm::base(spu.offset + 0x80), ctxt->spurs.ptr(&CellSpurs::traceBuffer).addr(), 128);
+        auto spurs = vm::_ptr<CellSpurs>(spu.offset + 0x80 - OFFSET_32(CellSpurs, traceBuffer));
 
         if (ctxt->traceMsgCount != 0xFF || spurs->traceBuffer.addr() == 0) {
             spursSysServiceTraceSaveCount(spu, ctxt);
@@ -1005,7 +1005,7 @@ void spursSysServiceTraceUpdate(SPUThread & spu, SpursKernelContext * ctxt, u32 
     }
 
     if (notify) {
-        auto spurs = vm::_ptr<CellSpurs>(spu.offset + 0x2D80 - offsetof(CellSpurs, wklState1));
+        auto spurs = vm::_ptr<CellSpurs>(spu.offset + 0x2D80 - OFFSET_32(CellSpurs, wklState1));
         sys_spu_thread_send_event(spu, spurs->spuPort, 2, 0);
     }
 }
@@ -1016,7 +1016,7 @@ void spursSysServiceCleanupAfterSystemWorkload(SPUThread & spu, SpursKernelConte
 
     bool do_return = false;
 
-    vm::reservation_op(VM_CAST(ctxt->spurs.addr() + offsetof(CellSpurs, wklState1)), 128, [&]() {
+    vm::reservation_op(ctxt->spurs.ptr(&CellSpurs::wklState1).addr(), 128, [&]() {
         auto spurs = ctxt->spurs.get_ptr_priv();
 
         if (spurs->sysSrvPreemptWklId[ctxt->spuNum] == 0xFF) {
