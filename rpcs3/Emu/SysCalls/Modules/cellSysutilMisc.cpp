@@ -19,7 +19,7 @@ enum
 
 s32 cellSysutilGetLicenseArea()
 {
-	cellSysutilMisc.Warning("cellSysutilGetLicenseArea()");
+	cellSysutilMisc.warning("cellSysutilGetLicenseArea()");
 
 	switch (const char region = Emu.GetTitleID().at(2))
 	{
@@ -29,7 +29,7 @@ s32 cellSysutilGetLicenseArea()
 	case 'H': return CELL_SYSUTIL_LICENSE_AREA_H;
 	case 'K': return CELL_SYSUTIL_LICENSE_AREA_K;
 	case 'A': return CELL_SYSUTIL_LICENSE_AREA_C;
-	default: cellSysutilMisc.Todo("Unknown license area: %s", Emu.GetTitleID().c_str()); return CELL_SYSUTIL_LICENSE_AREA_OTHER;
+	default: cellSysutilMisc.todo("Unknown license area: %s", Emu.GetTitleID().c_str()); return CELL_SYSUTIL_LICENSE_AREA_OTHER;
 	}
 }
 

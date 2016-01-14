@@ -460,15 +460,6 @@ namespace convert
 	};
 }
 
-enum class misc_log_level
-{
-	all,
-	warnings,
-	success,
-	errors,
-	nothing
-};
-
 enum class misc_net_status
 {
 	ip_obtained,
@@ -480,44 +471,56 @@ enum class misc_net_status
 namespace convert
 {
 	template<>
-	struct to_impl_t<std::string, misc_log_level>
+	struct to_impl_t<std::string, _log::level>
 	{
-		static std::string func(misc_log_level value)
+		static std::string func(_log::level value)
 		{
 			switch (value)
 			{
-			case misc_log_level::all: return "All";
-			case misc_log_level::warnings: return "Warnings";
-			case misc_log_level::success: return "Success";
-			case misc_log_level::errors: return "Errors";
-			case misc_log_level::nothing: return "Nothing";
+			case _log::level::trace: return "All";
+			case _log::level::warning: return "Warning";
+			case _log::level::success: return "Success";
+			case _log::level::error: return "Error";
+			case _log::level::always: return "Nothing";
+			case _log::level::fatal: return "Fatal";
+			case _log::level::todo: return "TODO";
+			case _log::level::notice: return "Notice";
 			}
 
-			return "Unknown";
+			return fmt::format("Unknown:0x%x", value);
 		}
 	};
 
 	template<>
-	struct to_impl_t<misc_log_level, std::string>
+	struct to_impl_t<_log::level, std::string>
 	{
-		static misc_log_level func(const std::string &value)
+		static _log::level func(const std::string &value)
 		{
 			if (value == "All")
-				return misc_log_level::all;
+				return _log::level::trace;
 
-			if (value == "Warnings")
-				return misc_log_level::warnings;
+			if (value == "Warning")
+				return _log::level::warning;
 
 			if (value == "Success")
-				return misc_log_level::success;
+				return _log::level::success;
 
-			if (value == "Errors")
-				return misc_log_level::errors;
+			if (value == "Error")
+				return _log::level::error;
 
 			if (value == "Nothing")
-				return misc_log_level::nothing;
+				return _log::level::always;
 
-			return misc_log_level::errors;
+			if (value == "Fatal")
+				return _log::level::fatal;
+
+			if (value == "TODO")
+				return _log::level::todo;
+
+			if (value == "Notice")
+				return _log::level::notice;
+
+			return _log::level::success;
 		}
 	};
 
@@ -932,10 +935,8 @@ namespace rpcs3
 			{
 				log_group(group *grp) : group{ grp, "log" } {}
 
-				entry<misc_log_level> level  { this, "Log Level",               misc_log_level::errors };
-				entry<bool> hle_logging      { this, "Log everything",          false };
+				entry<_log::level> level     { this, "Log Level",               _log::level::success };
 				entry<bool> rsx_logging      { this, "RSX Logging",             false };
-				entry<bool> save_tty         { this, "Save TTY output to file", false };
 			} log{ this };
 
 			struct net_group : protected group

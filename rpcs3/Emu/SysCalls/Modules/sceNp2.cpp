@@ -9,7 +9,7 @@ extern Module<> sceNp2;
 
 s32 sceNp2Init(u32 poolsize, vm::ptr<void> poolptr)
 {
-	sceNp2.Warning("sceNp2Init(poolsize=0x%x, poolptr=*0x%x)", poolsize, poolptr);
+	sceNp2.warning("sceNp2Init(poolsize=0x%x, poolptr=*0x%x)", poolsize, poolptr);
 
 	if (poolsize == 0)
 	{
@@ -30,14 +30,14 @@ s32 sceNp2Init(u32 poolsize, vm::ptr<void> poolptr)
 
 s32 sceNpMatching2Init(u32 poolsize, s32 priority)
 {
-	sceNp2.Todo("sceNpMatching2Init(poolsize=0x%x, priority=%d)", poolsize, priority);
+	sceNp2.todo("sceNpMatching2Init(poolsize=0x%x, priority=%d)", poolsize, priority);
 
 	return CELL_OK;
 }
 
 s32 sceNpMatching2Init2(u32 poolsize, s32 priority, vm::ptr<SceNpMatching2UtilityInitParam> param)
 {
-	sceNp2.Todo("sceNpMatching2Init2(poolsize=0x%x, priority=%d, param=*0x%x)", poolsize, priority, param);
+	sceNp2.todo("sceNpMatching2Init2(poolsize=0x%x, priority=%d, param=*0x%x)", poolsize, priority, param);
 
 	// TODO:
 	// 1. Create an internal thread
@@ -49,21 +49,21 @@ s32 sceNpMatching2Init2(u32 poolsize, s32 priority, vm::ptr<SceNpMatching2Utilit
 
 s32 sceNp2Term()
 {
-	sceNp2.Warning("sceNp2Term()");
+	sceNp2.warning("sceNp2Term()");
 
 	return CELL_OK;
 }
 
 s32 sceNpMatching2Term(PPUThread& ppu)
 {
-	sceNp2.Warning("sceNpMatching2Term()");
+	sceNp2.warning("sceNpMatching2Term()");
 
 	return CELL_OK;
 }
 
 s32 sceNpMatching2Term2()
 {
-	sceNp2.Warning("sceNpMatching2Term2()");
+	sceNp2.warning("sceNpMatching2Term2()");
 
 	return CELL_OK;
 }

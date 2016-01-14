@@ -39,5 +39,5 @@ public:
 	virtual void RemoveEntry(const char *filename);
 	virtual void RenameEntry(const char *oldname, const char *newname);
 
-	virtual bool Close();
+	virtual void Close();
 };

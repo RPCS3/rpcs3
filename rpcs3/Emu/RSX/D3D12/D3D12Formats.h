@@ -56,12 +56,12 @@ D3D12_FILTER get_texture_filter(u8 min_filter, u8 mag_filter);
 /**
  * Convert draw mode to D3D12_PRIMITIVE_TOPOLOGY
  */
-D3D12_PRIMITIVE_TOPOLOGY get_primitive_topology(u8 draw_mode);
+D3D12_PRIMITIVE_TOPOLOGY get_primitive_topology(Primitive_type draw_mode);
 
 /**
 * Convert draw mode to D3D12_PRIMITIVE_TOPOLOGY_TYPE
 */
-D3D12_PRIMITIVE_TOPOLOGY_TYPE get_primitive_topology_type(u8 draw_mode);
+D3D12_PRIMITIVE_TOPOLOGY_TYPE get_primitive_topology_type(Primitive_type draw_mode);
 
 /**
  * Convert color surface format to DXGI_FORMAT
@@ -96,7 +96,7 @@ BOOL get_front_face_ccw(u32 set_front_face_value);
 /**
  * Convert index type to DXGI_FORMAT
  */
-DXGI_FORMAT get_index_type(u8 index_type);
+DXGI_FORMAT get_index_type(Index_array_type index_type);
 
 /**
  * Convert vertex attribute format and size to DXGI_FORMAT

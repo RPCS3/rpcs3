@@ -21,7 +21,7 @@ std::array<std::atomic<u32>, TLS_MAX> g_tls_owners;
 
 void sys_initialize_tls()
 {
-	sysPrxForUser.Log("sys_initialize_tls()");
+	sysPrxForUser.trace("sys_initialize_tls()");
 }
 
 u32 ppu_get_tls(u32 thread)
@@ -79,33 +79,33 @@ void ppu_free_tls(u32 thread)
 
 s64 sys_time_get_system_time()
 {
-	sysPrxForUser.Log("sys_time_get_system_time()");
+	sysPrxForUser.trace("sys_time_get_system_time()");
 
 	return get_system_time();
 }
 
 s64 _sys_process_atexitspawn()
 {
-	sysPrxForUser.Log("_sys_process_atexitspawn()");
+	sysPrxForUser.trace("_sys_process_atexitspawn()");
 	return CELL_OK;
 }
 
 s64 _sys_process_at_Exitspawn()
 {
-	sysPrxForUser.Log("_sys_process_at_Exitspawn");
+	sysPrxForUser.trace("_sys_process_at_Exitspawn");
 	return CELL_OK;
 }
 
 s32 sys_interrupt_thread_disestablish(PPUThread& ppu, u32 ih)
 {
-	sysPrxForUser.Todo("sys_interrupt_thread_disestablish(ih=0x%x)", ih);
+	sysPrxForUser.todo("sys_interrupt_thread_disestablish(ih=0x%x)", ih);
 
 	return _sys_interrupt_thread_disestablish(ppu, ih, vm::var<u64>{});
 }
 
 s32 sys_process_is_stack(u32 p)
 {
-	sysPrxForUser.Log("sys_process_is_stack(p=0x%x)", p);
+	sysPrxForUser.trace("sys_process_is_stack(p=0x%x)", p);
 
 	// prx: compare high 4 bits with "0xD"
 	return (p >> 28) == 0xD;
@@ -113,7 +113,7 @@ s32 sys_process_is_stack(u32 p)
 
 s32 sys_process_get_paramsfo(vm::ptr<char> buffer)
 {
-	sysPrxForUser.Warning("sys_process_get_paramsfo(buffer=*0x%x)", buffer);
+	sysPrxForUser.warning("sys_process_get_paramsfo(buffer=*0x%x)", buffer);
 
 	// prx: load some data (0x40 bytes) previously set by _sys_process_get_paramsfo syscall
 	return _sys_process_get_paramsfo(buffer);
@@ -121,7 +121,7 @@ s32 sys_process_get_paramsfo(vm::ptr<char> buffer)
 
 s32 sys_get_random_number(vm::ptr<u8> addr, u64 size)
 {
-	sysPrxForUser.Warning("sys_get_random_number(addr=*0x%x, size=%d)", addr, size);
+	sysPrxForUser.warning("sys_get_random_number(addr=*0x%x, size=%d)", addr, size);
 
 	if (size > 4096)
 		size = 4096;
@@ -146,9 +146,9 @@ s32 console_putc()
 
 s32 console_write(vm::ptr<char> data, u32 len)
 {
-	sysPrxForUser.Warning("console_write(data=*0x%x, len=%d)", data, len);
+	sysPrxForUser.warning("console_write(data=*0x%x, len=%d)", data, len);
 
-	LOG_NOTICE(TTY, { data.get_ptr(), len });
+	_log::g_tty_file.log({ data.get_ptr(), len });
 
 	return CELL_OK;
 }

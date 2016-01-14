@@ -474,7 +474,7 @@ s32 ARIBstoUTF8s()
 
 s32 SJISstoUTF8s(vm::cptr<void> src, vm::cptr<s32> src_len, vm::ptr<void> dst, vm::ptr<s32> dst_len)
 {
-	cellL10n.Warning("SJISstoUTF8s(src=*0x%x, src_len=*0x%x, dst=*0x%x, dst_len=*0x%x)", src, src_len, dst, dst_len);
+	cellL10n.warning("SJISstoUTF8s(src=*0x%x, src_len=*0x%x, dst=*0x%x, dst_len=*0x%x)", src, src_len, dst, dst_len);
 	return _L10nConvertStr(L10N_CODEPAGE_932, src, src_len, L10N_UTF8, dst, dst_len);
 }
 
@@ -580,7 +580,7 @@ s32 EUCKRtoUHC()
 
 s32 UCS2toSJIS(u16 ch, vm::ptr<void> dst)
 {
-	cellL10n.Warning("UCS2toSJIS(ch=%d, dst=*0x%x)", ch, dst);
+	cellL10n.warning("UCS2toSJIS(ch=%d, dst=*0x%x)", ch, dst);
 	return _L10nConvertCharNoResult(L10N_UTF8, &ch, sizeof(ch), L10N_CODEPAGE_932, dst);
 }
 
@@ -721,7 +721,7 @@ s32 UTF8toUTF32()
 
 s32 jstrchk(vm::cptr<void> jstr)
 {
-	cellL10n.Warning("jstrchk(jstr=*0x%x) -> utf8", jstr);
+	cellL10n.warning("jstrchk(jstr=*0x%x) -> utf8", jstr);
 
 	return L10N_STR_UTF8;
 }
@@ -803,7 +803,7 @@ s32 UHCtoUCS2()
 
 s32 L10nConvertStr(s32 src_code, vm::cptr<void> src, vm::ptr<s32> src_len, s32 dst_code, vm::ptr<void> dst, vm::ptr<s32> dst_len)
 {
-	cellL10n.Error("L10nConvertStr(src_code=%d, src=*0x%x, src_len=*0x%x, dst_code=%d, dst=*0x%x, dst_len=*0x%x)", src_code, src, src_len, dst_code, dst, dst_len);
+	cellL10n.error("L10nConvertStr(src_code=%d, src=*0x%x, src_len=*0x%x, dst_code=%d, dst=*0x%x, dst_len=*0x%x)", src_code, src, src_len, dst_code, dst, dst_len);
 	return _L10nConvertStr(src_code, src, src_len, dst_code, dst, dst_len);
 }
 
@@ -889,7 +889,7 @@ s32 UTF16toUTF32()
 
 s32 l10n_convert_str(s32 cd, vm::cptr<void> src, vm::ptr<s32> src_len, vm::ptr<void> dst, vm::ptr<s32> dst_len)
 {
-	cellL10n.Warning("l10n_convert_str(cd=%d, src=*0x%x, src_len=*0x%x, dst=*0x%x, dst_len=*0x%x)", cd, src, src_len, dst, dst_len);
+	cellL10n.warning("l10n_convert_str(cd=%d, src=*0x%x, src_len=*0x%x, dst=*0x%x, dst_len=*0x%x)", cd, src, src_len, dst, dst_len);
 
 	s32 src_code = cd >> 16;
 	s32 dst_code = cd & 0xffff;
@@ -999,7 +999,7 @@ s32 MSJISstoUCS2s()
 
 s32 l10n_get_converter(u32 src_code, u32 dst_code)
 {
-	cellL10n.Warning("l10n_get_converter(src_code=%d, dst_code=%d)", src_code, dst_code);
+	cellL10n.warning("l10n_get_converter(src_code=%d, dst_code=%d)", src_code, dst_code);
 	return (src_code << 16) | dst_code;
 }
 
@@ -1060,7 +1060,7 @@ s32 UTF8toBIG5()
 
 s32 UTF16stoUTF8s(vm::cptr<u16> utf16, vm::ref<s32> utf16_len, vm::ptr<u8> utf8, vm::ref<s32> utf8_len)
 {
-	cellL10n.Error("UTF16stoUTF8s(utf16=*0x%x, utf16_len=*0x%x, utf8=*0x%x, utf8_len=*0x%x)", utf16, utf16_len, utf8, utf8_len);
+	cellL10n.error("UTF16stoUTF8s(utf16=*0x%x, utf16_len=*0x%x, utf8=*0x%x, utf8_len=*0x%x)", utf16, utf16_len, utf8, utf8_len);
 
 	const u32 max_len = utf8_len; utf8_len = 0;
 
@@ -1112,7 +1112,7 @@ s32 GB18030toUTF8()
 
 s32 UTF8toSJIS(u8 ch, vm::ptr<void> dst, vm::ptr<s32> dst_len)
 {
-	cellL10n.Warning("UTF8toSJIS(ch=%d, dst=*0x%x, dst_len=*0x%x)", ch, dst, dst_len);
+	cellL10n.warning("UTF8toSJIS(ch=%d, dst=*0x%x, dst_len=*0x%x)", ch, dst, dst_len);
 	return _L10nConvertChar(L10N_UTF8, &ch, sizeof(ch), L10N_CODEPAGE_932, dst, dst_len);
 }
 
@@ -1153,7 +1153,7 @@ s32 UTF8stoUTF16s()
 
 s32 SJISstoUCS2s(vm::cptr<void> src, vm::cptr<s32> src_len, vm::ptr<void> dst, vm::ptr<s32> dst_len)
 {
-	cellL10n.Warning("SJISstoUCS2s(src=*0x%x, src_len=*0x%x, dst=*0x%x, dst_len=*0x%x)", src, src_len, dst, dst_len);
+	cellL10n.warning("SJISstoUCS2s(src=*0x%x, src_len=*0x%x, dst=*0x%x, dst_len=*0x%x)", src, src_len, dst, dst_len);
 	return _L10nConvertStr(L10N_CODEPAGE_932, src, src_len, L10N_UCS2, dst, dst_len);
 }
 

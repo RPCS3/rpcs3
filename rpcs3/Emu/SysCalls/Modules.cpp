@@ -144,10 +144,7 @@ void execute_ppu_func_by_index(PPUThread& ppu, u32 index)
 				throw EXCEPTION("Forced HLE enabled: %s (0x%llx)", get_ps3_function_name(func->id), func->id);
 			}
 
-			if (rpcs3::config.misc.log.hle_logging.value())
-			{
-				LOG_NOTICE(HLE, "Branch to LLE function: %s (0x%llx)", get_ps3_function_name(func->id), func->id);
-			}
+			LOG_TRACE(HLE, "Branch to LLE function: %s (0x%llx)", get_ps3_function_name(func->id), func->id);
 
 			if (index & EIF_PERFORM_BLR)
 			{
@@ -173,35 +170,23 @@ void execute_ppu_func_by_index(PPUThread& ppu, u32 index)
 			const u32 pc = data[0];
 			const u32 rtoc = data[1];
 
-			if (rpcs3::config.misc.log.hle_logging.value())
-			{
-				LOG_NOTICE(HLE, "LLE function called: %s", get_ps3_function_name(func->id));
-			}
+			LOG_TRACE(HLE, "LLE function called: %s", get_ps3_function_name(func->id));
 			
 			ppu.fast_call(pc, rtoc);
 
-			if (rpcs3::config.misc.log.hle_logging.value())
-			{
-				LOG_NOTICE(HLE, "LLE function finished: %s -> 0x%llx", get_ps3_function_name(func->id), ppu.GPR[3]);
-			}
+			LOG_TRACE(HLE, "LLE function finished: %s -> 0x%llx", get_ps3_function_name(func->id), ppu.GPR[3]);
 		}
 		else if (func->func)
 		{
-			if (rpcs3::config.misc.log.hle_logging.value())
-			{
-				LOG_NOTICE(HLE, "HLE function called: %s", get_ps3_function_name(func->id));
-			}
+			LOG_TRACE(HLE, "HLE function called: %s", get_ps3_function_name(func->id));
 
 			func->func(ppu);
 
-			if (rpcs3::config.misc.log.hle_logging.value())
-			{
-				LOG_NOTICE(HLE, "HLE function finished: %s -> 0x%llx", get_ps3_function_name(func->id), ppu.GPR[3]);
-			}
+			LOG_TRACE(HLE, "HLE function finished: %s -> 0x%llx", get_ps3_function_name(func->id), ppu.GPR[3]);
 		}
 		else
 		{
-			LOG_ERROR(HLE, "Unimplemented function: %s -> CELL_OK", get_ps3_function_name(func->id));
+			LOG_TODO(HLE, "Unimplemented function: %s -> CELL_OK", get_ps3_function_name(func->id));
 			ppu.GPR[3] = 0;
 		}
 
@@ -529,9 +514,9 @@ bool patch_ppu_import(u32 addr, u32 index)
 	return false;
 }
 
-Module<>::Module(const char* name, void(*init)())
-	: m_is_loaded(false)
-	, m_name(name)
+Module<>::Module(const std::string& name, void(*init)())
+	: _log::channel(name, _log::level::notice)
+	, m_is_loaded(false)
 	, m_init(init)
 {
 }
@@ -588,14 +573,4 @@ void Module<>::SetLoaded(bool loaded)
 bool Module<>::IsLoaded() const
 {
 	return m_is_loaded;
-}
-
-const std::string& Module<>::GetName() const
-{
-	return m_name;
-}
-
-void Module<>::SetName(const std::string& name)
-{
-	m_name = name;
 }

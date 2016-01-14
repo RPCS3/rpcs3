@@ -8,7 +8,7 @@ extern u64 get_system_time();
 
 s32 scePerfArmPmonReset(ARMv7Thread& context, s32 threadId)
 {
-	scePerf.Warning("scePerfArmPmonReset(threadId=0x%x)", threadId);
+	scePerf.warning("scePerfArmPmonReset(threadId=0x%x)", threadId);
 
 	if (threadId != SCE_PERF_ARM_PMON_THREAD_ID_SELF)
 	{
@@ -22,7 +22,7 @@ s32 scePerfArmPmonReset(ARMv7Thread& context, s32 threadId)
 
 s32 scePerfArmPmonSelectEvent(ARMv7Thread& context, s32 threadId, u32 counter, u8 eventCode)
 {
-	scePerf.Warning("scePerfArmPmonSelectEvent(threadId=0x%x, counter=0x%x, eventCode=0x%x)", threadId, counter, eventCode);
+	scePerf.warning("scePerfArmPmonSelectEvent(threadId=0x%x, counter=0x%x, eventCode=0x%x)", threadId, counter, eventCode);
 
 	if (threadId != SCE_PERF_ARM_PMON_THREAD_ID_SELF)
 	{
@@ -74,7 +74,7 @@ s32 scePerfArmPmonSelectEvent(ARMv7Thread& context, s32 threadId, u32 counter, u
 
 s32 scePerfArmPmonStart(ARMv7Thread& context, s32 threadId)
 {
-	scePerf.Warning("scePerfArmPmonStart(threadId=0x%x)", threadId);
+	scePerf.warning("scePerfArmPmonStart(threadId=0x%x)", threadId);
 
 	if (threadId != SCE_PERF_ARM_PMON_THREAD_ID_SELF)
 	{
@@ -86,7 +86,7 @@ s32 scePerfArmPmonStart(ARMv7Thread& context, s32 threadId)
 
 s32 scePerfArmPmonStop(ARMv7Thread& context, s32 threadId)
 {
-	scePerf.Warning("scePerfArmPmonStop(threadId=0x%x)");
+	scePerf.warning("scePerfArmPmonStop(threadId=0x%x)");
 
 	if (threadId != SCE_PERF_ARM_PMON_THREAD_ID_SELF)
 	{
@@ -98,7 +98,7 @@ s32 scePerfArmPmonStop(ARMv7Thread& context, s32 threadId)
 
 s32 scePerfArmPmonGetCounterValue(ARMv7Thread& context, s32 threadId, u32 counter, vm::ptr<u32> pValue)
 {
-	scePerf.Warning("scePerfArmPmonGetCounterValue(threadId=0x%x, counter=%d, pValue=*0x%x)", threadId, counter, pValue);
+	scePerf.warning("scePerfArmPmonGetCounterValue(threadId=0x%x, counter=%d, pValue=*0x%x)", threadId, counter, pValue);
 
 	if (threadId != SCE_PERF_ARM_PMON_THREAD_ID_SELF)
 	{
@@ -124,7 +124,7 @@ s32 scePerfArmPmonGetCounterValue(ARMv7Thread& context, s32 threadId, u32 counte
 
 s32 scePerfArmPmonSoftwareIncrement(ARMv7Thread& context, u32 mask)
 {
-	scePerf.Warning("scePerfArmPmonSoftwareIncrement(mask=0x%x)", mask);
+	scePerf.warning("scePerfArmPmonSoftwareIncrement(mask=0x%x)", mask);
 
 	if (mask > SCE_PERF_ARM_PMON_COUNTER_MASK_ALL)
 	{
@@ -144,14 +144,14 @@ s32 scePerfArmPmonSoftwareIncrement(ARMv7Thread& context, u32 mask)
 
 u64 scePerfGetTimebaseValue()
 {
-	scePerf.Warning("scePerfGetTimebaseValue()");
+	scePerf.warning("scePerfGetTimebaseValue()");
 
 	return get_system_time();
 }
 
 u32 scePerfGetTimebaseFrequency()
 {
-	scePerf.Warning("scePerfGetTimebaseFrequency()");
+	scePerf.warning("scePerfGetTimebaseFrequency()");
 
 	return 1;
 }

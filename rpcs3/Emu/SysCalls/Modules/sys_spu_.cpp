@@ -20,39 +20,39 @@ spu_printf_cb_t g_spu_printf_dtcb;
 
 s32 sys_spu_elf_get_information(u32 elf_img, vm::ptr<u32> entry, vm::ptr<s32> nseg)
 {
-	sysPrxForUser.Todo("sys_spu_elf_get_information(elf_img=0x%x, entry=*0x%x, nseg=*0x%x)", elf_img, entry, nseg);
+	sysPrxForUser.todo("sys_spu_elf_get_information(elf_img=0x%x, entry=*0x%x, nseg=*0x%x)", elf_img, entry, nseg);
 	return CELL_OK;
 }
 
 s32 sys_spu_elf_get_segments(u32 elf_img, vm::ptr<sys_spu_segment> segments, s32 nseg)
 {
-	sysPrxForUser.Todo("sys_spu_elf_get_segments(elf_img=0x%x, segments=*0x%x, nseg=0x%x)", elf_img, segments, nseg);
+	sysPrxForUser.todo("sys_spu_elf_get_segments(elf_img=0x%x, segments=*0x%x, nseg=0x%x)", elf_img, segments, nseg);
 	return CELL_OK;
 }
 
 s32 sys_spu_image_import(vm::ptr<sys_spu_image> img, u32 src, u32 type)
 {
-	sysPrxForUser.Warning("sys_spu_image_import(img=*0x%x, src=0x%x, type=%d)", img, src, type);
+	sysPrxForUser.warning("sys_spu_image_import(img=*0x%x, src=0x%x, type=%d)", img, src, type);
 
 	return spu_image_import(*img, src, type);
 }
 
 s32 sys_spu_image_close(vm::ptr<sys_spu_image> img)
 {
-	sysPrxForUser.Todo("sys_spu_image_close(img=*0x%x)", img);
+	sysPrxForUser.todo("sys_spu_image_close(img=*0x%x)", img);
 
 	return CELL_OK;
 }
 
 s32 sys_raw_spu_load(s32 id, vm::cptr<char> path, vm::ptr<u32> entry)
 {
-	sysPrxForUser.Warning("sys_raw_spu_load(id=%d, path=*0x%x, entry=*0x%x)", id, path, entry);
-	sysPrxForUser.Warning("*** path = '%s'", path.get_ptr());
+	sysPrxForUser.warning("sys_raw_spu_load(id=%d, path=*0x%x, entry=*0x%x)", id, path, entry);
+	sysPrxForUser.warning("*** path = '%s'", path.get_ptr());
 
 	vfsFile f(path.get_ptr());
 	if (!f.IsOpened())
 	{
-		sysPrxForUser.Error("sys_raw_spu_load error: '%s' not found!", path.get_ptr());
+		sysPrxForUser.error("sys_raw_spu_load error: '%s' not found!", path.get_ptr());
 		return CELL_ENOENT;
 	}
 
@@ -61,7 +61,7 @@ s32 sys_raw_spu_load(s32 id, vm::cptr<char> path, vm::ptr<u32> entry)
 
 	if (hdr.CheckMagic())
 	{
-		sysPrxForUser.Error("sys_raw_spu_load error: '%s' is encrypted! Decrypt SELF and try again.", path.get_ptr());
+		sysPrxForUser.error("sys_raw_spu_load error: '%s' is encrypted! Decrypt SELF and try again.", path.get_ptr());
 		Emu.Pause();
 		return CELL_ENOENT;
 	}
@@ -78,7 +78,7 @@ s32 sys_raw_spu_load(s32 id, vm::cptr<char> path, vm::ptr<u32> entry)
 
 s32 sys_raw_spu_image_load(PPUThread& ppu, s32 id, vm::ptr<sys_spu_image> img)
 {
-	sysPrxForUser.Warning("sys_raw_spu_image_load(id=%d, img=*0x%x)", id, img);
+	sysPrxForUser.warning("sys_raw_spu_image_load(id=%d, img=*0x%x)", id, img);
 
 	// TODO: use segment info
 
@@ -92,15 +92,15 @@ s32 sys_raw_spu_image_load(PPUThread& ppu, s32 id, vm::ptr<sys_spu_image> img)
 
 	const auto stamp2 = get_system_time();
 
-	sysPrxForUser.Error("memcpy() latency: %lldus", (stamp1 - stamp0));
-	sysPrxForUser.Error("MMIO latency: %lldus", (stamp2 - stamp1));
+	sysPrxForUser.error("memcpy() latency: %lldus", (stamp1 - stamp0));
+	sysPrxForUser.error("MMIO latency: %lldus", (stamp2 - stamp1));
 
 	return CELL_OK;
 }
 
 s32 _sys_spu_printf_initialize(spu_printf_cb_t agcb, spu_printf_cb_t dgcb, spu_printf_cb_t atcb, spu_printf_cb_t dtcb)
 {
-	sysPrxForUser.Warning("_sys_spu_printf_initialize(agcb=*0x%x, dgcb=*0x%x, atcb=*0x%x, dtcb=*0x%x)", agcb, dgcb, atcb, dtcb);
+	sysPrxForUser.warning("_sys_spu_printf_initialize(agcb=*0x%x, dgcb=*0x%x, atcb=*0x%x, dtcb=*0x%x)", agcb, dgcb, atcb, dtcb);
 
 	// register callbacks
 	g_spu_printf_agcb = agcb;
@@ -113,7 +113,7 @@ s32 _sys_spu_printf_initialize(spu_printf_cb_t agcb, spu_printf_cb_t dgcb, spu_p
 
 s32 _sys_spu_printf_finalize()
 {
-	sysPrxForUser.Warning("_sys_spu_printf_finalize()");
+	sysPrxForUser.warning("_sys_spu_printf_finalize()");
 
 	g_spu_printf_agcb = vm::null;
 	g_spu_printf_dgcb = vm::null;
@@ -125,7 +125,7 @@ s32 _sys_spu_printf_finalize()
 
 s32 _sys_spu_printf_attach_group(PPUThread& ppu, u32 group)
 {
-	sysPrxForUser.Warning("_sys_spu_printf_attach_group(group=0x%x)", group);
+	sysPrxForUser.warning("_sys_spu_printf_attach_group(group=0x%x)", group);
 
 	if (!g_spu_printf_agcb)
 	{
@@ -137,7 +137,7 @@ s32 _sys_spu_printf_attach_group(PPUThread& ppu, u32 group)
 
 s32 _sys_spu_printf_detach_group(PPUThread& ppu, u32 group)
 {
-	sysPrxForUser.Warning("_sys_spu_printf_detach_group(group=0x%x)", group);
+	sysPrxForUser.warning("_sys_spu_printf_detach_group(group=0x%x)", group);
 
 	if (!g_spu_printf_dgcb)
 	{
@@ -149,7 +149,7 @@ s32 _sys_spu_printf_detach_group(PPUThread& ppu, u32 group)
 
 s32 _sys_spu_printf_attach_thread(PPUThread& ppu, u32 thread)
 {
-	sysPrxForUser.Warning("_sys_spu_printf_attach_thread(thread=0x%x)", thread);
+	sysPrxForUser.warning("_sys_spu_printf_attach_thread(thread=0x%x)", thread);
 
 	if (!g_spu_printf_atcb)
 	{
@@ -161,7 +161,7 @@ s32 _sys_spu_printf_attach_thread(PPUThread& ppu, u32 thread)
 
 s32 _sys_spu_printf_detach_thread(PPUThread& ppu, u32 thread)
 {
-	sysPrxForUser.Warning("_sys_spu_printf_detach_thread(thread=0x%x)", thread);
+	sysPrxForUser.warning("_sys_spu_printf_detach_thread(thread=0x%x)", thread);
 
 	if (!g_spu_printf_dtcb)
 	{

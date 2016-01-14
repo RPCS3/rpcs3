@@ -32,7 +32,7 @@ void lv2_mutex_t::unlock(lv2_lock_t& lv2_lock)
 
 s32 sys_mutex_create(vm::ptr<u32> mutex_id, vm::ptr<sys_mutex_attribute_t> attr)
 {
-	sys_mutex.Warning("sys_mutex_create(mutex_id=*0x%x, attr=*0x%x)", mutex_id, attr);
+	sys_mutex.warning("sys_mutex_create(mutex_id=*0x%x, attr=*0x%x)", mutex_id, attr);
 
 	if (!mutex_id || !attr)
 	{
@@ -49,7 +49,7 @@ s32 sys_mutex_create(vm::ptr<u32> mutex_id, vm::ptr<sys_mutex_attribute_t> attr)
 
 	default:
 	{
-		sys_mutex.Error("sys_mutex_create(): unknown protocol (0x%x)", protocol);
+		sys_mutex.error("sys_mutex_create(): unknown protocol (0x%x)", protocol);
 		return CELL_EINVAL;
 	}
 	}
@@ -58,7 +58,7 @@ s32 sys_mutex_create(vm::ptr<u32> mutex_id, vm::ptr<sys_mutex_attribute_t> attr)
 
 	if ((!recursive && attr->recursive != SYS_SYNC_NOT_RECURSIVE) || attr->pshared != SYS_SYNC_NOT_PROCESS_SHARED || attr->adaptive != SYS_SYNC_NOT_ADAPTIVE || attr->ipc_key || attr->flags)
 	{
-		sys_mutex.Error("sys_mutex_create(): unknown attributes (recursive=0x%x, pshared=0x%x, adaptive=0x%x, ipc_key=0x%llx, flags=0x%x)", attr->recursive, attr->pshared, attr->adaptive, attr->ipc_key, attr->flags);
+		sys_mutex.error("sys_mutex_create(): unknown attributes (recursive=0x%x, pshared=0x%x, adaptive=0x%x, ipc_key=0x%llx, flags=0x%x)", attr->recursive, attr->pshared, attr->adaptive, attr->ipc_key, attr->flags);
 
 		return CELL_EINVAL;
 	}
@@ -70,7 +70,7 @@ s32 sys_mutex_create(vm::ptr<u32> mutex_id, vm::ptr<sys_mutex_attribute_t> attr)
 
 s32 sys_mutex_destroy(u32 mutex_id)
 {
-	sys_mutex.Warning("sys_mutex_destroy(mutex_id=0x%x)", mutex_id);
+	sys_mutex.warning("sys_mutex_destroy(mutex_id=0x%x)", mutex_id);
 
 	LV2_LOCK;
 
@@ -98,7 +98,7 @@ s32 sys_mutex_destroy(u32 mutex_id)
 
 s32 sys_mutex_lock(PPUThread& ppu, u32 mutex_id, u64 timeout)
 {
-	sys_mutex.Log("sys_mutex_lock(mutex_id=0x%x, timeout=0x%llx)", mutex_id, timeout);
+	sys_mutex.trace("sys_mutex_lock(mutex_id=0x%x, timeout=0x%llx)", mutex_id, timeout);
 
 	const u64 start_time = get_system_time();
 
@@ -172,7 +172,7 @@ s32 sys_mutex_lock(PPUThread& ppu, u32 mutex_id, u64 timeout)
 
 s32 sys_mutex_trylock(PPUThread& ppu, u32 mutex_id)
 {
-	sys_mutex.Log("sys_mutex_trylock(mutex_id=0x%x)", mutex_id);
+	sys_mutex.trace("sys_mutex_trylock(mutex_id=0x%x)", mutex_id);
 
 	LV2_LOCK;
 
@@ -214,7 +214,7 @@ s32 sys_mutex_trylock(PPUThread& ppu, u32 mutex_id)
 
 s32 sys_mutex_unlock(PPUThread& ppu, u32 mutex_id)
 {
-	sys_mutex.Log("sys_mutex_unlock(mutex_id=0x%x)", mutex_id);
+	sys_mutex.trace("sys_mutex_unlock(mutex_id=0x%x)", mutex_id);
 
 	LV2_LOCK;
 

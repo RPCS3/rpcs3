@@ -20,14 +20,14 @@ s32 sceNpCommerce2GetStoreBrowseUserdata()
 
 s32 sceNpCommerce2Init()
 {
-	sceNpCommerce2.Warning("sceNpCommerce2Init()");
+	sceNpCommerce2.warning("sceNpCommerce2Init()");
 
 	return CELL_OK;
 }
 
 s32 sceNpCommerce2Term()
 {
-	sceNpCommerce2.Warning("sceNpCommerce2Term()");
+	sceNpCommerce2.warning("sceNpCommerce2Term()");
 
 	return CELL_OK;
 }

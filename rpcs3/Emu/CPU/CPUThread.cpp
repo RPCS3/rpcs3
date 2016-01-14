@@ -89,7 +89,7 @@ void CPUThread::dump_info() const
 {
 	if (!Emu.IsStopped())
 	{
-		LOG_NOTICE(GENERAL, RegsToString());
+		LOG_NOTICE(GENERAL, "%s", RegsToString());
 	}
 }
 

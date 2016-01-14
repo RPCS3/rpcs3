@@ -35,7 +35,7 @@ void lv2_cond_t::notify(lv2_lock_t& lv2_lock, sleep_queue_t::value_type& thread)
 
 s32 sys_cond_create(vm::ptr<u32> cond_id, u32 mutex_id, vm::ptr<sys_cond_attribute_t> attr)
 {
-	sys_cond.Warning("sys_cond_create(cond_id=*0x%x, mutex_id=0x%x, attr=*0x%x)", cond_id, mutex_id, attr);
+	sys_cond.warning("sys_cond_create(cond_id=*0x%x, mutex_id=0x%x, attr=*0x%x)", cond_id, mutex_id, attr);
 
 	LV2_LOCK;
 
@@ -48,7 +48,7 @@ s32 sys_cond_create(vm::ptr<u32> cond_id, u32 mutex_id, vm::ptr<sys_cond_attribu
 
 	if (attr->pshared != SYS_SYNC_NOT_PROCESS_SHARED || attr->ipc_key || attr->flags)
 	{
-		sys_cond.Error("sys_cond_create(): unknown attributes (pshared=0x%x, ipc_key=0x%llx, flags=0x%x)", attr->pshared, attr->ipc_key, attr->flags);
+		sys_cond.error("sys_cond_create(): unknown attributes (pshared=0x%x, ipc_key=0x%llx, flags=0x%x)", attr->pshared, attr->ipc_key, attr->flags);
 		return CELL_EINVAL;
 	}
 
@@ -64,7 +64,7 @@ s32 sys_cond_create(vm::ptr<u32> cond_id, u32 mutex_id, vm::ptr<sys_cond_attribu
 
 s32 sys_cond_destroy(u32 cond_id)
 {
-	sys_cond.Warning("sys_cond_destroy(cond_id=0x%x)", cond_id);
+	sys_cond.warning("sys_cond_destroy(cond_id=0x%x)", cond_id);
 
 	LV2_LOCK;
 
@@ -92,7 +92,7 @@ s32 sys_cond_destroy(u32 cond_id)
 
 s32 sys_cond_signal(u32 cond_id)
 {
-	sys_cond.Log("sys_cond_signal(cond_id=0x%x)", cond_id);
+	sys_cond.trace("sys_cond_signal(cond_id=0x%x)", cond_id);
 
 	LV2_LOCK;
 
@@ -115,7 +115,7 @@ s32 sys_cond_signal(u32 cond_id)
 
 s32 sys_cond_signal_all(u32 cond_id)
 {
-	sys_cond.Log("sys_cond_signal_all(cond_id=0x%x)", cond_id);
+	sys_cond.trace("sys_cond_signal_all(cond_id=0x%x)", cond_id);
 
 	LV2_LOCK;
 
@@ -139,7 +139,7 @@ s32 sys_cond_signal_all(u32 cond_id)
 
 s32 sys_cond_signal_to(u32 cond_id, u32 thread_id)
 {
-	sys_cond.Log("sys_cond_signal_to(cond_id=0x%x, thread_id=0x%x)", cond_id, thread_id);
+	sys_cond.trace("sys_cond_signal_to(cond_id=0x%x, thread_id=0x%x)", cond_id, thread_id);
 
 	LV2_LOCK;
 
@@ -170,7 +170,7 @@ s32 sys_cond_signal_to(u32 cond_id, u32 thread_id)
 
 s32 sys_cond_wait(PPUThread& ppu, u32 cond_id, u64 timeout)
 {
-	sys_cond.Log("sys_cond_wait(cond_id=0x%x, timeout=%lld)", cond_id, timeout);
+	sys_cond.trace("sys_cond_wait(cond_id=0x%x, timeout=%lld)", cond_id, timeout);
 
 	const u64 start_time = get_system_time();
 

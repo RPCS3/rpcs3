@@ -19,7 +19,7 @@ enum
 
 s32 cellSysutilApGetRequiredMemSize()
 {
-	cellSysutilAp.Log("cellSysutilApGetRequiredMemSize()");
+	cellSysutilAp.trace("cellSysutilApGetRequiredMemSize()");
 	return 1024*1024; // Return 1 MB as required size
 }
 

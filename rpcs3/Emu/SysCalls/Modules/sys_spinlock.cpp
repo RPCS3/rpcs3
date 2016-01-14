@@ -9,14 +9,14 @@ extern Module<> sysPrxForUser;
 
 void sys_spinlock_initialize(vm::ptr<atomic_be_t<u32>> lock)
 {
-	sysPrxForUser.Log("sys_spinlock_initialize(lock=*0x%x)", lock);
+	sysPrxForUser.trace("sys_spinlock_initialize(lock=*0x%x)", lock);
 
 	lock->exchange(0);
 }
 
 void sys_spinlock_lock(PPUThread& ppu, vm::ptr<atomic_be_t<u32>> lock)
 {
-	sysPrxForUser.Log("sys_spinlock_lock(lock=*0x%x)", lock);
+	sysPrxForUser.trace("sys_spinlock_lock(lock=*0x%x)", lock);
 
 	// prx: exchange with 0xabadcafe, repeat until exchanged with 0
 	vm::wait_op(ppu, lock.addr(), 4, WRAP_EXPR(!lock->exchange(0xabadcafe)));
@@ -24,7 +24,7 @@ void sys_spinlock_lock(PPUThread& ppu, vm::ptr<atomic_be_t<u32>> lock)
 
 s32 sys_spinlock_trylock(vm::ptr<atomic_be_t<u32>> lock)
 {
-	sysPrxForUser.Log("sys_spinlock_trylock(lock=*0x%x)", lock);
+	sysPrxForUser.trace("sys_spinlock_trylock(lock=*0x%x)", lock);
 
 	if (lock->exchange(0xabadcafe))
 	{
@@ -36,7 +36,7 @@ s32 sys_spinlock_trylock(vm::ptr<atomic_be_t<u32>> lock)
 
 void sys_spinlock_unlock(vm::ptr<atomic_be_t<u32>> lock)
 {
-	sysPrxForUser.Log("sys_spinlock_unlock(lock=*0x%x)", lock);
+	sysPrxForUser.trace("sys_spinlock_unlock(lock=*0x%x)", lock);
 
 	lock->exchange(0);
 

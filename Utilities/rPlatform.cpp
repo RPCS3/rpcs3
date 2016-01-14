@@ -10,7 +10,6 @@
 
 #ifndef _WIN32
 #include <dirent.h>
-#include <errno.h>
 #endif
 
 #include "rPlatform.h"

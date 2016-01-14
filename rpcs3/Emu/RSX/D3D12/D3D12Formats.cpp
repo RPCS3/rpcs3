@@ -262,38 +262,38 @@ D3D12_FILTER get_texture_filter(u8 min_filter, u8 mag_filter)
 	return D3D12_ENCODE_BASIC_FILTER(min, mag, mip, D3D12_FILTER_REDUCTION_TYPE_STANDARD);
 }
 
-D3D12_PRIMITIVE_TOPOLOGY get_primitive_topology(u8 draw_mode)
+D3D12_PRIMITIVE_TOPOLOGY get_primitive_topology(Primitive_type draw_mode)
 {
 	switch (draw_mode)
 	{
-	case CELL_GCM_PRIMITIVE_POINTS: return D3D_PRIMITIVE_TOPOLOGY_POINTLIST;
-	case CELL_GCM_PRIMITIVE_LINES: return D3D_PRIMITIVE_TOPOLOGY_LINELIST;
-	case CELL_GCM_PRIMITIVE_LINE_LOOP: return D3D_PRIMITIVE_TOPOLOGY_LINELIST_ADJ;
-	case CELL_GCM_PRIMITIVE_LINE_STRIP: return D3D_PRIMITIVE_TOPOLOGY_LINESTRIP;
-	case CELL_GCM_PRIMITIVE_TRIANGLES: return D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-	case CELL_GCM_PRIMITIVE_TRIANGLE_STRIP: return D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
-	case CELL_GCM_PRIMITIVE_TRIANGLE_FAN: return D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-	case CELL_GCM_PRIMITIVE_QUADS: return D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-	case CELL_GCM_PRIMITIVE_QUAD_STRIP: return D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-	case CELL_GCM_PRIMITIVE_POLYGON: return D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	case Primitive_type::points: return D3D_PRIMITIVE_TOPOLOGY_POINTLIST;
+	case Primitive_type::lines: return D3D_PRIMITIVE_TOPOLOGY_LINELIST;
+	case Primitive_type::line_loop: return D3D_PRIMITIVE_TOPOLOGY_LINELIST_ADJ;
+	case Primitive_type::line_strip: return D3D_PRIMITIVE_TOPOLOGY_LINESTRIP;
+	case Primitive_type::triangles: return D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	case Primitive_type::triangle_strip: return D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
+	case Primitive_type::triangle_fan: return D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	case Primitive_type::quads: return D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	case Primitive_type::quad_strip: return D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	case Primitive_type::polygon: return D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 	}
 	throw EXCEPTION("Invalid draw mode (0x%x)", draw_mode);
 }
 
-D3D12_PRIMITIVE_TOPOLOGY_TYPE get_primitive_topology_type(u8 draw_mode)
+D3D12_PRIMITIVE_TOPOLOGY_TYPE get_primitive_topology_type(Primitive_type draw_mode)
 {
 	switch (draw_mode)
 	{
-	case CELL_GCM_PRIMITIVE_POINTS: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
-	case CELL_GCM_PRIMITIVE_LINES: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
-	case CELL_GCM_PRIMITIVE_LINE_STRIP: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
-	case CELL_GCM_PRIMITIVE_TRIANGLES: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-	case CELL_GCM_PRIMITIVE_TRIANGLE_STRIP: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-	case CELL_GCM_PRIMITIVE_TRIANGLE_FAN: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-	case CELL_GCM_PRIMITIVE_QUADS: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-	case CELL_GCM_PRIMITIVE_QUAD_STRIP: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-	case CELL_GCM_PRIMITIVE_POLYGON: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-	case CELL_GCM_PRIMITIVE_LINE_LOOP: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
+	case Primitive_type::points: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
+	case Primitive_type::lines: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
+	case Primitive_type::line_strip: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
+	case Primitive_type::triangles: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+	case Primitive_type::triangle_strip: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+	case Primitive_type::triangle_fan: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+	case Primitive_type::quads: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+	case Primitive_type::quad_strip: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+	case Primitive_type::polygon: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+	case Primitive_type::line_loop: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
 	}
 	throw EXCEPTION("Invalid or unsupported draw mode (0x%x)", draw_mode);
 }
@@ -363,12 +363,12 @@ BOOL get_front_face_ccw(u32 ffv)
 	throw EXCEPTION("Invalid front face value (0x%x)", ffv);
 }
 
-DXGI_FORMAT get_index_type(u8 index_type)
+DXGI_FORMAT get_index_type(Index_array_type index_type)
 {
 	switch (index_type)
 	{
-	case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_16: return DXGI_FORMAT_R16_UINT;
-	case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_32: return DXGI_FORMAT_R32_UINT;
+	case Index_array_type::unsigned_16b: return DXGI_FORMAT_R16_UINT;
+	case Index_array_type::unsigned_32b: return DXGI_FORMAT_R32_UINT;
 	}
 	throw EXCEPTION("Invalid index_type (0x%x)", index_type);
 }

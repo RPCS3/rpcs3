@@ -1,7 +1,5 @@
 #pragma once
-#include <wx/listctrl.h>
-#include <wx/imaglist.h>
-#include <wx/log.h>
+
 #include "Emu/GameInfo.h"
 #include "Emu/state.h"
 

@@ -76,4 +76,5 @@ std::string compareFunctionImpl(COMPARE f, const std::string &Op0, const std::st
 	case COMPARE::FUNCTION_SNE:
 		return "notEqual(" + Op0 + ", " + Op1 + ")";
 	}
+	throw EXCEPTION("Unknow compare function");
 }

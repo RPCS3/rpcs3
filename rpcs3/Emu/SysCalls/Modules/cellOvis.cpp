@@ -16,7 +16,7 @@ enum
 
 s32 cellOvisGetOverlayTableSize(vm::cptr<char> elf)
 {
-	cellOvis.Todo("cellOvisGetOverlayTableSize(elf=*0x%x)", elf);
+	cellOvis.todo("cellOvisGetOverlayTableSize(elf=*0x%x)", elf);
 	return CELL_OK;
 }
 

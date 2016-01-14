@@ -573,17 +573,17 @@ void SetupSurfaces(vm::ptr<CellGcmContextData>& cntxt)
 // Module<> Functions
 s32 cellRescInit(vm::ptr<CellRescInitConfig> initConfig)
 {
-	cellResc.Warning("cellRescInit(initConfig=*0x%x)", initConfig);
+	cellResc.warning("cellRescInit(initConfig=*0x%x)", initConfig);
 
 	if (s_rescInternalInstance->m_bInitialized)
 	{
-		cellResc.Error("cellRescInit : CELL_RESC_ERROR_REINITIALIZED");
+		cellResc.error("cellRescInit : CELL_RESC_ERROR_REINITIALIZED");
 		return CELL_RESC_ERROR_REINITIALIZED;
 	}
 
 	if (InternalVersion(initConfig) == -1 || !CheckInitConfig(initConfig))
 	{
-		cellResc.Error("cellRescInit : CELL_RESC_ERROR_BAD_ARGUMENT");
+		cellResc.error("cellRescInit : CELL_RESC_ERROR_BAD_ARGUMENT");
 		return CELL_RESC_ERROR_BAD_ARGUMENT;
 	}
 
@@ -596,11 +596,11 @@ s32 cellRescInit(vm::ptr<CellRescInitConfig> initConfig)
 
 void cellRescExit()
 {
-	cellResc.Warning("cellRescExit()");
+	cellResc.warning("cellRescExit()");
 
 	if (!s_rescInternalInstance->m_bInitialized)
 	{
-		cellResc.Error("cellRescExit(): not initialized");
+		cellResc.error("cellRescExit(): not initialized");
 		return;
 	}
 
@@ -616,7 +616,7 @@ void cellRescExit()
 			//s32 ret = ExitSystemResource();
 			//if (ret != CELL_OK)
 			//{
-			//	cellResc.Error("failed to clean up system resources.. continue. 0x%x\n", ret);
+			//	cellResc.error("failed to clean up system resources.. continue. 0x%x\n", ret);
 			//}
 		}
 	}
@@ -626,7 +626,7 @@ void cellRescExit()
 
 s32 cellRescVideoOutResolutionId2RescBufferMode(u32 resolutionId, vm::ptr<u32> bufferMode)
 {
-	cellResc.Log("cellRescVideoOutResolutionId2RescBufferMode(resolutionId=%d, bufferMode=*0x%x)", resolutionId, bufferMode);
+	cellResc.trace("cellRescVideoOutResolutionId2RescBufferMode(resolutionId=%d, bufferMode=*0x%x)", resolutionId, bufferMode);
 
 	switch (resolutionId)
 	{
@@ -643,7 +643,7 @@ s32 cellRescVideoOutResolutionId2RescBufferMode(u32 resolutionId, vm::ptr<u32> b
 		*bufferMode = CELL_RESC_720x576;   
 		break;
 	default: 
-		cellResc.Error("cellRescVideoOutResolutionId2RescBufferMod : CELL_RESC_ERROR_BAD_ARGUMENT");
+		cellResc.error("cellRescVideoOutResolutionId2RescBufferMod : CELL_RESC_ERROR_BAD_ARGUMENT");
 		return CELL_RESC_ERROR_BAD_ARGUMENT;
 	}
 
@@ -652,17 +652,17 @@ s32 cellRescVideoOutResolutionId2RescBufferMode(u32 resolutionId, vm::ptr<u32> b
 
 s32 cellRescSetDsts(u32 dstsMode, vm::ptr<CellRescDsts> dsts)
 {
-	cellResc.Log("cellRescSetDsts(dstsMode=%d, dsts=*0x%x)", dstsMode, dsts);
+	cellResc.trace("cellRescSetDsts(dstsMode=%d, dsts=*0x%x)", dstsMode, dsts);
 
 	if (!s_rescInternalInstance->m_bInitialized)
 	{
-		cellResc.Error("cellRescSetDst : CELL_RESC_ERROR_NOT_INITIALIZED");
+		cellResc.error("cellRescSetDst : CELL_RESC_ERROR_NOT_INITIALIZED");
 		return CELL_RESC_ERROR_NOT_INITIALIZED;
 	}
 
 	if ((dstsMode != CELL_RESC_720x480) && (dstsMode != CELL_RESC_720x576) && (dstsMode != CELL_RESC_1280x720) && (dstsMode != CELL_RESC_1920x1080))
 	{
-		cellResc.Error("cellRescSetDsts : CELL_RESC_ERROR_BAD_ARGUMENT");
+		cellResc.error("cellRescSetDsts : CELL_RESC_ERROR_BAD_ARGUMENT");
 		return CELL_RESC_ERROR_BAD_ARGUMENT;
 	}
 
@@ -719,24 +719,24 @@ void SetFlipHandler(vm::ptr<void(u32)> handler)
 
 s32 cellRescSetDisplayMode(u32 displayMode)
 {
-	cellResc.Warning("cellRescSetDisplayMode(displayMode=%d)", displayMode);
+	cellResc.warning("cellRescSetDisplayMode(displayMode=%d)", displayMode);
 
 	if (!s_rescInternalInstance->m_bInitialized)
 	{
-		cellResc.Error("cellRescSetDisplayMode : CELL_RESC_ERROR_NOT_INITIALIZED");
+		cellResc.error("cellRescSetDisplayMode : CELL_RESC_ERROR_NOT_INITIALIZED");
 		return CELL_RESC_ERROR_NOT_INITIALIZED;
 	}
 
 	if (!(s_rescInternalInstance->m_initConfig.supportModes & displayMode))
 	{
-		cellResc.Error("cellRescSetDisplayMode : CELL_RESC_ERROR_BAD_ARGUMENT");
+		cellResc.error("cellRescSetDisplayMode : CELL_RESC_ERROR_BAD_ARGUMENT");
 		return CELL_RESC_ERROR_BAD_ARGUMENT;
 	}
 
 	if ((displayMode != CELL_RESC_720x480) && (displayMode != CELL_RESC_720x576) &&
 		(displayMode != CELL_RESC_1280x720) && (displayMode != CELL_RESC_1920x1080))
 	{
-		cellResc.Error("cellRescSetDisplayMode : CELL_RESC_ERROR_BAD_ARGUMENT");
+		cellResc.error("cellRescSetDisplayMode : CELL_RESC_ERROR_BAD_ARGUMENT");
 		return CELL_RESC_ERROR_BAD_ARGUMENT;
 	}
 
@@ -744,13 +744,13 @@ s32 cellRescSetDisplayMode(u32 displayMode)
 
 	if ((IsPalInterpolate() || IsPalDrop()) && s_rescInternalInstance->m_initConfig.flipMode == CELL_RESC_DISPLAY_HSYNC)
 	{
-		cellResc.Error("cellRescSetDisplayMode : CELL_RESC_ERROR_BAD_COMBINATIONT");
+		cellResc.error("cellRescSetDisplayMode : CELL_RESC_ERROR_BAD_COMBINATIONT");
 		return CELL_RESC_ERROR_BAD_COMBINATION;
 	}
 
 	if (IsPal60Hsync() && s_rescInternalInstance->m_initConfig.flipMode==CELL_RESC_DISPLAY_VSYNC)
 	{
-		cellResc.Error("cellRescSetDisplayMode : CELL_RESC_ERROR_BAD_COMBINATIONT");
+		cellResc.error("cellRescSetDisplayMode : CELL_RESC_ERROR_BAD_COMBINATIONT");
 		return CELL_RESC_ERROR_BAD_COMBINATION;
 	}
 
@@ -809,17 +809,17 @@ s32 cellRescSetDisplayMode(u32 displayMode)
 
 s32 cellRescAdjustAspectRatio(float horizontal, float vertical)
 {
-	cellResc.Warning("cellRescAdjustAspectRatio(horizontal=%f, vertical=%f)", horizontal, vertical);
+	cellResc.warning("cellRescAdjustAspectRatio(horizontal=%f, vertical=%f)", horizontal, vertical);
 
 	if (!s_rescInternalInstance->m_bInitialized)
 	{
-		cellResc.Error("cellRescAdjustAspectRatio : CELL_RESC_ERROR_NOT_INITIALIZED");
+		cellResc.error("cellRescAdjustAspectRatio : CELL_RESC_ERROR_NOT_INITIALIZED");
 		return CELL_RESC_ERROR_NOT_INITIALIZED;
 	}
 
 	if ((horizontal < 0.5f || 2.f < horizontal) || (vertical < 0.5f || 2.f < vertical))
 	{
-		cellResc.Error("cellRescAdjustAspectRatio : CELL_RESC_ERROR_BAD_ARGUMENT");
+		cellResc.error("cellRescAdjustAspectRatio : CELL_RESC_ERROR_BAD_ARGUMENT");
 		return CELL_RESC_ERROR_BAD_ARGUMENT;
 	}
 
@@ -843,17 +843,17 @@ s32 cellRescAdjustAspectRatio(float horizontal, float vertical)
 
 s32 cellRescSetPalInterpolateDropFlexRatio(float ratio)
 {
-	cellResc.Warning("cellRescSetPalInterpolateDropFlexRatio(ratio=%f)", ratio);
+	cellResc.warning("cellRescSetPalInterpolateDropFlexRatio(ratio=%f)", ratio);
 
 	if (!s_rescInternalInstance->m_bInitialized)
 	{
-		cellResc.Error("cellRescSetPalInterpolateDropFlexRatio : CELL_RESC_ERROR_NOT_INITIALIZED");
+		cellResc.error("cellRescSetPalInterpolateDropFlexRatio : CELL_RESC_ERROR_NOT_INITIALIZED");
 		return CELL_RESC_ERROR_NOT_INITIALIZED;
 	}
 
 	if (ratio < 0.f || 1.f < ratio)
 	{
-		cellResc.Error("cellRescSetPalInterpolateDropFlexRatio : CELL_RESC_ERROR_BAD_ARGUMENT");
+		cellResc.error("cellRescSetPalInterpolateDropFlexRatio : CELL_RESC_ERROR_BAD_ARGUMENT");
 		return CELL_RESC_ERROR_BAD_ARGUMENT;
 	}
 
@@ -864,11 +864,11 @@ s32 cellRescSetPalInterpolateDropFlexRatio(float ratio)
 
 s32 cellRescGetBufferSize(vm::ptr<u32> colorBuffers, vm::ptr<u32> vertexArray, vm::ptr<u32> fragmentShader)
 {
-	cellResc.Warning("cellRescGetBufferSize(colorBuffers=*0x%x, vertexArray=*0x%x, fragmentShader=*0x%x)", colorBuffers, vertexArray, fragmentShader);
+	cellResc.warning("cellRescGetBufferSize(colorBuffers=*0x%x, vertexArray=*0x%x, fragmentShader=*0x%x)", colorBuffers, vertexArray, fragmentShader);
 
 	if (!s_rescInternalInstance->m_bInitialized)
 	{
-		cellResc.Error("cellRescGetBufferSize : CELL_RESC_ERROR_NOT_INITIALIZED");
+		cellResc.error("cellRescGetBufferSize : CELL_RESC_ERROR_NOT_INITIALIZED");
 		return CELL_RESC_ERROR_NOT_INITIALIZED;
 	}
 
@@ -907,11 +907,11 @@ s32 cellRescGetBufferSize(vm::ptr<u32> colorBuffers, vm::ptr<u32> vertexArray, v
 
 s32 cellRescGetNumColorBuffers(u32 dstMode, u32 palTemporalMode, u32 reserved)
 {
-	cellResc.Log("cellRescGetNumColorBuffers(dstMode=%d, palTemporalMode=%d, reserved=%d)", dstMode, palTemporalMode, reserved);
+	cellResc.trace("cellRescGetNumColorBuffers(dstMode=%d, palTemporalMode=%d, reserved=%d)", dstMode, palTemporalMode, reserved);
 
 	if (reserved != 0)
 	{
-		cellResc.Error("cellRescGetNumColorBuffers : CELL_RESC_ERROR_BAD_ARGUMENT");
+		cellResc.error("cellRescGetNumColorBuffers : CELL_RESC_ERROR_BAD_ARGUMENT");
 		return CELL_RESC_ERROR_BAD_ARGUMENT;
 	}
 
@@ -928,7 +928,7 @@ s32 cellRescGetNumColorBuffers(u32 dstMode, u32 palTemporalMode, u32 reserved)
 
 s32 cellRescGcmSurface2RescSrc(vm::ptr<CellGcmSurface> gcmSurface, vm::ptr<CellRescSrc> rescSrc)
 {
-	cellResc.Log("cellRescGcmSurface2RescSrc(gcmSurface=*0x%x, rescSrc=*0x%x)", gcmSurface, rescSrc);
+	cellResc.trace("cellRescGcmSurface2RescSrc(gcmSurface=*0x%x, rescSrc=*0x%x)", gcmSurface, rescSrc);
 
 	u8 textureFormat = GcmSurfaceFormat2GcmTextureFormat(gcmSurface->colorFormat, gcmSurface->type);
 	s32 xW = 1, xH = 1;
@@ -959,25 +959,25 @@ s32 cellRescGcmSurface2RescSrc(vm::ptr<CellGcmSurface> gcmSurface, vm::ptr<CellR
 
 s32 cellRescSetSrc(s32 idx, vm::ptr<CellRescSrc> src)
 {
-	cellResc.Log("cellRescSetSrc(idx=0x%x, src=*0x%x)", idx, src);
+	cellResc.trace("cellRescSetSrc(idx=0x%x, src=*0x%x)", idx, src);
 
 	if(!s_rescInternalInstance->m_bInitialized)
 	{
-		cellResc.Error("cellRescSetSrc : CELL_RESC_ERROR_NOT_INITIALIZED");
+		cellResc.error("cellRescSetSrc : CELL_RESC_ERROR_NOT_INITIALIZED");
 		return CELL_RESC_ERROR_NOT_INITIALIZED;
 	}
 
 	if (idx < 0 || idx >= SRC_BUFFER_NUM || src->width < 1 || src->width > 4096 || src->height < 1 || src->height > 4096)
 	{
-		cellResc.Error("cellRescSetSrc : CELL_RESC_ERROR_BAD_ARGUMENT");
+		cellResc.error("cellRescSetSrc : CELL_RESC_ERROR_BAD_ARGUMENT");
 		return CELL_RESC_ERROR_BAD_ARGUMENT;
 	}
 
-	cellResc.Log(" *** format=0x%x", src->format);
-	cellResc.Log(" *** pitch=%d", src->pitch);
-	cellResc.Log(" *** width=%d", src->width);
-	cellResc.Log(" *** height=%d", src->height);
-	cellResc.Log(" *** offset=0x%x", src->offset);
+	cellResc.trace(" *** format=0x%x", src->format);
+	cellResc.trace(" *** pitch=%d", src->pitch);
+	cellResc.trace(" *** width=%d", src->width);
+	cellResc.trace(" *** height=%d", src->height);
+	cellResc.trace(" *** offset=0x%x", src->offset);
 
 	s_rescInternalInstance->m_rescSrc[idx] = *src;
 
@@ -988,17 +988,17 @@ s32 cellRescSetSrc(s32 idx, vm::ptr<CellRescSrc> src)
 
 s32 cellRescSetConvertAndFlip(PPUThread& ppu, vm::ptr<CellGcmContextData> cntxt, s32 idx)
 {
-	cellResc.Log("cellRescSetConvertAndFlip(cntxt=*0x%x, idx=0x%x)", cntxt, idx);
+	cellResc.trace("cellRescSetConvertAndFlip(cntxt=*0x%x, idx=0x%x)", cntxt, idx);
 
 	if(!s_rescInternalInstance->m_bInitialized)
 	{
-		cellResc.Error("cellRescSetConvertAndFlip : CELL_RESC_ERROR_NOT_INITIALIZED");
+		cellResc.error("cellRescSetConvertAndFlip : CELL_RESC_ERROR_NOT_INITIALIZED");
 		return CELL_RESC_ERROR_NOT_INITIALIZED;
 	}
 
 	if(idx < 0 || SRC_BUFFER_NUM <= idx)
 	{
-		cellResc.Error("cellRescSetConvertAndFlip : CELL_RESC_ERROR_BAD_ARGUMENT");
+		cellResc.error("cellRescSetConvertAndFlip : CELL_RESC_ERROR_BAD_ARGUMENT");
 		return CELL_RESC_ERROR_BAD_ARGUMENT;
 	}
 
@@ -1026,7 +1026,7 @@ s32 cellRescSetConvertAndFlip(PPUThread& ppu, vm::ptr<CellGcmContextData> cntxt,
 
 s32 cellRescSetWaitFlip()
 {
-	cellResc.Warning("cellRescSetWaitFlip()");
+	cellResc.warning("cellRescSetWaitFlip()");
 	
 	// TODO: emit RSX command for "wait flip" operation
 
@@ -1035,17 +1035,17 @@ s32 cellRescSetWaitFlip()
 
 s32 cellRescSetBufferAddress(vm::ptr<u32> colorBuffers, vm::ptr<u32> vertexArray, vm::ptr<u32> fragmentShader)
 {
-	cellResc.Warning("cellRescSetBufferAddress(colorBuffers=*0x%x, vertexArray=*0x%x, fragmentShader=*0x%x)", colorBuffers, vertexArray, fragmentShader);
+	cellResc.warning("cellRescSetBufferAddress(colorBuffers=*0x%x, vertexArray=*0x%x, fragmentShader=*0x%x)", colorBuffers, vertexArray, fragmentShader);
 
 	if(!s_rescInternalInstance->m_bInitialized)
 	{
-		cellResc.Error("cellRescSetBufferAddress : CELL_RESC_ERROR_NOT_INITIALIZED");
+		cellResc.error("cellRescSetBufferAddress : CELL_RESC_ERROR_NOT_INITIALIZED");
 		return CELL_RESC_ERROR_NOT_INITIALIZED;
 	}
 
 	if(colorBuffers.addr() % COLOR_BUFFER_ALIGNMENT || vertexArray.addr() % VERTEX_BUFFER_ALIGNMENT || fragmentShader.addr() % FRAGMENT_SHADER_ALIGNMENT)
 	{
-		cellResc.Error("cellRescSetBufferAddress : CELL_RESC_ERROR_BAD_ALIGNMENT");
+		cellResc.error("cellRescSetBufferAddress : CELL_RESC_ERROR_BAD_ALIGNMENT");
 		return CELL_RESC_ERROR_BAD_ALIGNMENT;
 	}
 
@@ -1079,21 +1079,21 @@ s32 cellRescSetBufferAddress(vm::ptr<u32> colorBuffers, vm::ptr<u32> vertexArray
 
 void cellRescSetFlipHandler(vm::ptr<void(u32)> handler)
 {
-	cellResc.Warning("cellRescSetFlipHandler(handler=*0x%x)", handler);
+	cellResc.warning("cellRescSetFlipHandler(handler=*0x%x)", handler);
 
 	Emu.GetGSManager().GetRender().flip_handler = handler;
 }
 
 void cellRescResetFlipStatus()
 {
-	cellResc.Log("cellRescResetFlipStatus()");
+	cellResc.trace("cellRescResetFlipStatus()");
 
 	Emu.GetGSManager().GetRender().flip_status = 1;
 }
 
 s32 cellRescGetFlipStatus()
 {
-	cellResc.Log("cellRescGetFlipStatus()");
+	cellResc.trace("cellRescGetFlipStatus()");
 
 	return Emu.GetGSManager().GetRender().flip_status;
 }
@@ -1106,7 +1106,7 @@ s32 cellRescGetRegisterCount()
 
 u64 cellRescGetLastFlipTime()
 {
-	cellResc.Log("cellRescGetLastFlipTime()");
+	cellResc.trace("cellRescGetLastFlipTime()");
 
 	return Emu.GetGSManager().GetRender().last_flip_time;
 }
@@ -1119,7 +1119,7 @@ s32 cellRescSetRegisterCount()
 
 void cellRescSetVBlankHandler(vm::ptr<void(u32)> handler)
 {
-	cellResc.Warning("cellRescSetVBlankHandler(handler=*0x%x)", handler);
+	cellResc.warning("cellRescSetVBlankHandler(handler=*0x%x)", handler);
 
 	Emu.GetGSManager().GetRender().vblank_handler = handler;
 }
@@ -1216,23 +1216,23 @@ s32 CreateInterlaceTable(u32 ea_addr, float srcH, float dstH, CellRescTableEleme
 
 s32 cellRescCreateInterlaceTable(u32 ea_addr, float srcH, CellRescTableElement depth, s32 length)
 {
-	cellResc.Warning("cellRescCreateInterlaceTable(ea_addr=0x%x, srcH=%f, depth=%d, length=%d)", ea_addr, srcH, depth, length);
+	cellResc.warning("cellRescCreateInterlaceTable(ea_addr=0x%x, srcH=%f, depth=%d, length=%d)", ea_addr, srcH, depth, length);
 
 	if (!s_rescInternalInstance->m_bInitialized)
 	{
-		cellResc.Error("cellRescCreateInterlaceTable: CELL_RESC_ERROR_NOT_INITIALIZED");
+		cellResc.error("cellRescCreateInterlaceTable: CELL_RESC_ERROR_NOT_INITIALIZED");
 		return CELL_RESC_ERROR_NOT_INITIALIZED;
 	}
 
 	if ((ea_addr == 0) || (srcH <= 0.f) || (!(depth == CELL_RESC_ELEMENT_HALF || depth == CELL_RESC_ELEMENT_FLOAT)) || (length <= 0))
 	{
-		cellResc.Error("cellRescCreateInterlaceTable: CELL_RESC_ERROR_BAD_ARGUMENT");
+		cellResc.error("cellRescCreateInterlaceTable: CELL_RESC_ERROR_BAD_ARGUMENT");
 		return CELL_RESC_ERROR_BAD_ARGUMENT;
 	}
 
 	if (s_rescInternalInstance->m_dstHeight == 0)
 	{
-		cellResc.Error("cellRescCreateInterlaceTable: CELL_RESC_ERROR_BAD_COMBINATION");
+		cellResc.error("cellRescCreateInterlaceTable: CELL_RESC_ERROR_BAD_COMBINATION");
 		return CELL_RESC_ERROR_BAD_COMBINATION;
 	}
 

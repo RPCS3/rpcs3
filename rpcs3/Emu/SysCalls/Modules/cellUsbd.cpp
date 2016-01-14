@@ -8,14 +8,14 @@ extern Module<> cellUsbd;
 
 s32 cellUsbdInit()
 {
-	cellUsbd.Warning("cellUsbdInit()");
+	cellUsbd.warning("cellUsbdInit()");
 
 	return CELL_OK;
 }
 
 s32 cellUsbdEnd()
 {
-	cellUsbd.Warning("cellUsbdEnd()");
+	cellUsbd.warning("cellUsbdEnd()");
 
 	return CELL_OK;
 }

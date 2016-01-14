@@ -11,6 +11,7 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include "OpenGL.h"
+#include "../GCM.h"
 
 namespace gl
 {
@@ -381,7 +382,7 @@ namespace gl
 
 	private:
 		GLuint m_id = GL_NONE;
-		GLsizei m_size = 0;
+		GLsizeiptr m_size = 0;
 		target m_target = target::array;
 
 	public:
@@ -493,7 +494,7 @@ namespace gl
 			m_id = 0;
 		}
 
-		GLsizei size() const
+		GLsizeiptr size() const
 		{
 			return m_size;
 		}
@@ -1379,19 +1380,7 @@ namespace gl
 		settings& border_color(color4f value);
 	};
 
-	enum class draw_mode
-	{
-		points = GL_POINTS,
-		lines = GL_LINES,
-		line_loop = GL_LINE_LOOP,
-		line_strip = GL_LINE_STRIP,
-		triangles = GL_TRIANGLES,
-		triangle_strip = GL_TRIANGLE_STRIP,
-		triangle_fan = GL_TRIANGLE_FAN,
-		quads = GL_QUADS,
-		quad_strip = GL_QUAD_STRIP,
-		polygone = GL_POLYGON
-	};
+	GLenum draw_mode(Primitive_type in);
 
 	enum class indices_type
 	{
@@ -1534,20 +1523,20 @@ namespace gl
 		void draw_buffer(const attachment& buffer) const;
 		void draw_buffers(const std::initializer_list<attachment>& indexes) const;
 
-		void draw_arrays(draw_mode mode, GLsizei count, GLint first = 0) const;
-		void draw_arrays(const buffer& buffer, draw_mode mode, GLsizei count, GLint first = 0) const;
-		void draw_arrays(const vao& buffer, draw_mode mode, GLsizei count, GLint first = 0) const;
+		void draw_arrays(Primitive_type mode, GLsizei count, GLint first = 0) const;
+		void draw_arrays(const buffer& buffer, Primitive_type mode, GLsizei count, GLint first = 0) const;
+		void draw_arrays(const vao& buffer, Primitive_type mode, GLsizei count, GLint first = 0) const;
 
-		void draw_elements(draw_mode mode, GLsizei count, indices_type type, const GLvoid *indices) const;
-		void draw_elements(const buffer& buffer, draw_mode mode, GLsizei count, indices_type type, const GLvoid *indices) const;
-		void draw_elements(draw_mode mode, GLsizei count, indices_type type, const buffer& indices, size_t indices_buffer_offset = 0) const;
-		void draw_elements(const buffer& buffer_, draw_mode mode, GLsizei count, indices_type type, const buffer& indices, size_t indices_buffer_offset = 0) const;
-		void draw_elements(draw_mode mode, GLsizei count, const GLubyte *indices) const;
-		void draw_elements(const buffer& buffer, draw_mode mode, GLsizei count, const GLubyte *indices) const;
-		void draw_elements(draw_mode mode, GLsizei count, const GLushort *indices) const;
-		void draw_elements(const buffer& buffer, draw_mode mode, GLsizei count, const GLushort *indices) const;
-		void draw_elements(draw_mode mode, GLsizei count, const GLuint *indices) const;
-		void draw_elements(const buffer& buffer, draw_mode mode, GLsizei count, const GLuint *indices) const;
+		void draw_elements(Primitive_type mode, GLsizei count, indices_type type, const GLvoid *indices) const;
+		void draw_elements(const buffer& buffer, Primitive_type mode, GLsizei count, indices_type type, const GLvoid *indices) const;
+		void draw_elements(Primitive_type mode, GLsizei count, indices_type type, const buffer& indices, size_t indices_buffer_offset = 0) const;
+		void draw_elements(const buffer& buffer_, Primitive_type mode, GLsizei count, indices_type type, const buffer& indices, size_t indices_buffer_offset = 0) const;
+		void draw_elements(Primitive_type mode, GLsizei count, const GLubyte *indices) const;
+		void draw_elements(const buffer& buffer, Primitive_type mode, GLsizei count, const GLubyte *indices) const;
+		void draw_elements(Primitive_type mode, GLsizei count, const GLushort *indices) const;
+		void draw_elements(const buffer& buffer, Primitive_type mode, GLsizei count, const GLushort *indices) const;
+		void draw_elements(Primitive_type mode, GLsizei count, const GLuint *indices) const;
+		void draw_elements(const buffer& buffer, Primitive_type mode, GLsizei count, const GLuint *indices) const;
 
 		void clear(buffers buffers_) const;
 		void clear(buffers buffers_, color4f color_value, double depth_value, u8 stencil_value) const;

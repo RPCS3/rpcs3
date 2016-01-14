@@ -47,7 +47,7 @@ void lv2_event_flag_t::notify_all(lv2_lock_t& lv2_lock)
 
 s32 sys_event_flag_create(vm::ptr<u32> id, vm::ptr<sys_event_flag_attribute_t> attr, u64 init)
 {
-	sys_event_flag.Warning("sys_event_flag_create(id=*0x%x, attr=*0x%x, init=0x%llx)", id, attr, init);
+	sys_event_flag.warning("sys_event_flag_create(id=*0x%x, attr=*0x%x, init=0x%llx)", id, attr, init);
 
 	if (!id || !attr)
 	{
@@ -58,13 +58,13 @@ s32 sys_event_flag_create(vm::ptr<u32> id, vm::ptr<sys_event_flag_attribute_t> a
 
 	if (protocol != SYS_SYNC_FIFO && protocol != SYS_SYNC_RETRY && protocol != SYS_SYNC_PRIORITY && protocol != SYS_SYNC_PRIORITY_INHERIT)
 	{
-		sys_event_flag.Error("sys_event_flag_create(): unknown protocol (0x%x)", protocol);
+		sys_event_flag.error("sys_event_flag_create(): unknown protocol (0x%x)", protocol);
 		return CELL_EINVAL;
 	}
 
 	if (attr->pshared != SYS_SYNC_NOT_PROCESS_SHARED || attr->ipc_key || attr->flags)
 	{
-		sys_event_flag.Error("sys_event_flag_create(): unknown attributes (pshared=0x%x, ipc_key=0x%llx, flags=0x%x)", attr->pshared, attr->ipc_key, attr->flags);
+		sys_event_flag.error("sys_event_flag_create(): unknown attributes (pshared=0x%x, ipc_key=0x%llx, flags=0x%x)", attr->pshared, attr->ipc_key, attr->flags);
 		return CELL_EINVAL;
 	}
 
@@ -72,7 +72,7 @@ s32 sys_event_flag_create(vm::ptr<u32> id, vm::ptr<sys_event_flag_attribute_t> a
 
 	if (type != SYS_SYNC_WAITER_SINGLE && type != SYS_SYNC_WAITER_MULTIPLE)
 	{
-		sys_event_flag.Error("sys_event_flag_create(): unknown type (0x%x)", type);
+		sys_event_flag.error("sys_event_flag_create(): unknown type (0x%x)", type);
 		return CELL_EINVAL;
 	}
 
@@ -83,7 +83,7 @@ s32 sys_event_flag_create(vm::ptr<u32> id, vm::ptr<sys_event_flag_attribute_t> a
 
 s32 sys_event_flag_destroy(u32 id)
 {
-	sys_event_flag.Warning("sys_event_flag_destroy(id=0x%x)", id);
+	sys_event_flag.warning("sys_event_flag_destroy(id=0x%x)", id);
 
 	LV2_LOCK;
 
@@ -106,7 +106,7 @@ s32 sys_event_flag_destroy(u32 id)
 
 s32 sys_event_flag_wait(PPUThread& ppu, u32 id, u64 bitptn, u32 mode, vm::ptr<u64> result, u64 timeout)
 {
-	sys_event_flag.Log("sys_event_flag_wait(id=0x%x, bitptn=0x%llx, mode=0x%x, result=*0x%x, timeout=0x%llx)", id, bitptn, mode, result, timeout);
+	sys_event_flag.trace("sys_event_flag_wait(id=0x%x, bitptn=0x%llx, mode=0x%x, result=*0x%x, timeout=0x%llx)", id, bitptn, mode, result, timeout);
 
 	const u64 start_time = get_system_time();
 
@@ -121,7 +121,7 @@ s32 sys_event_flag_wait(PPUThread& ppu, u32 id, u64 bitptn, u32 mode, vm::ptr<u6
 
 	if (!lv2_event_flag_t::check_mode(mode))
 	{
-		sys_event_flag.Error("sys_event_flag_wait(): unknown mode (0x%x)", mode);
+		sys_event_flag.error("sys_event_flag_wait(): unknown mode (0x%x)", mode);
 		return CELL_EINVAL;
 	}
 
@@ -189,7 +189,7 @@ s32 sys_event_flag_wait(PPUThread& ppu, u32 id, u64 bitptn, u32 mode, vm::ptr<u6
 
 s32 sys_event_flag_trywait(u32 id, u64 bitptn, u32 mode, vm::ptr<u64> result)
 {
-	sys_event_flag.Log("sys_event_flag_trywait(id=0x%x, bitptn=0x%llx, mode=0x%x, result=*0x%x)", id, bitptn, mode, result);
+	sys_event_flag.trace("sys_event_flag_trywait(id=0x%x, bitptn=0x%llx, mode=0x%x, result=*0x%x)", id, bitptn, mode, result);
 
 	LV2_LOCK;
 
@@ -197,7 +197,7 @@ s32 sys_event_flag_trywait(u32 id, u64 bitptn, u32 mode, vm::ptr<u64> result)
 
 	if (!lv2_event_flag_t::check_mode(mode))
 	{
-		sys_event_flag.Error("sys_event_flag_trywait(): unknown mode (0x%x)", mode);
+		sys_event_flag.error("sys_event_flag_trywait(): unknown mode (0x%x)", mode);
 		return CELL_EINVAL;
 	}
 
@@ -222,7 +222,7 @@ s32 sys_event_flag_trywait(u32 id, u64 bitptn, u32 mode, vm::ptr<u64> result)
 
 s32 sys_event_flag_set(u32 id, u64 bitptn)
 {
-	sys_event_flag.Log("sys_event_flag_set(id=0x%x, bitptn=0x%llx)", id, bitptn);
+	sys_event_flag.trace("sys_event_flag_set(id=0x%x, bitptn=0x%llx)", id, bitptn);
 
 	LV2_LOCK;
 
@@ -243,7 +243,7 @@ s32 sys_event_flag_set(u32 id, u64 bitptn)
 
 s32 sys_event_flag_clear(u32 id, u64 bitptn)
 {
-	sys_event_flag.Log("sys_event_flag_clear(id=0x%x, bitptn=0x%llx)", id, bitptn);
+	sys_event_flag.trace("sys_event_flag_clear(id=0x%x, bitptn=0x%llx)", id, bitptn);
 
 	LV2_LOCK;
 
@@ -261,7 +261,7 @@ s32 sys_event_flag_clear(u32 id, u64 bitptn)
 
 s32 sys_event_flag_cancel(u32 id, vm::ptr<u32> num)
 {
-	sys_event_flag.Log("sys_event_flag_cancel(id=0x%x, num=*0x%x)", id, num);
+	sys_event_flag.trace("sys_event_flag_cancel(id=0x%x, num=*0x%x)", id, num);
 
 	LV2_LOCK;
 
@@ -308,7 +308,7 @@ s32 sys_event_flag_cancel(u32 id, vm::ptr<u32> num)
 
 s32 sys_event_flag_get(u32 id, vm::ptr<u64> flags)
 {
-	sys_event_flag.Log("sys_event_flag_get(id=0x%x, flags=*0x%x)", id, flags);
+	sys_event_flag.trace("sys_event_flag_get(id=0x%x, flags=*0x%x)", id, flags);
 
 	LV2_LOCK;
 

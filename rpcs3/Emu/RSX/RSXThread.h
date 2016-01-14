@@ -244,19 +244,19 @@ namespace rsx
 		data_array_format_info register_vertex_info[limits::vertex_count];
 		std::vector<u8> register_vertex_data[limits::vertex_count];
 		data_array_format_info vertex_arrays_info[limits::vertex_count];
-		std::vector<u8> vertex_arrays[limits::vertex_count];
-		std::vector<u8> vertex_index_array;
 		u32 vertex_draw_count = 0;
 
 		std::unordered_map<u32, color4_base<f32>> transform_constants;
+
+		/**
+		* Stores the first and count argument from draw/draw indexed parameters between begin/end clauses.
+		*/
+		std::vector<std::pair<u32, u32> > first_count_commands;
 
 		// Constant stored for whole frame
 		std::unordered_map<u32, color4f> local_transform_constants;
 
 		u32 transform_program[512 * 4] = {};
-
-		virtual void load_vertex_data(u32 first, u32 count);
-		virtual void load_vertex_index_data(u32 first, u32 count);
 
 		bool capture_current_frame = false;
 		void capture_frame(const std::string &name);
@@ -281,7 +281,7 @@ namespace rsx
 			draw_command_inlined_array,
 			draw_command_indexed,
 		} draw_command;
-		u32 draw_mode;
+		Primitive_type draw_mode;
 
 		u32 local_mem_addr, main_mem_addr;
 		bool strict_ordering[0x1000];

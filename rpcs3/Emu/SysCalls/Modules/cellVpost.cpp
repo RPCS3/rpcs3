@@ -15,7 +15,7 @@ extern Module<> cellVpost;
 
 s32 cellVpostQueryAttr(vm::cptr<CellVpostCfgParam> cfgParam, vm::ptr<CellVpostAttr> attr)
 {
-	cellVpost.Warning("cellVpostQueryAttr(cfgParam=*0x%x, attr=*0x%x)", cfgParam, attr);
+	cellVpost.warning("cellVpostQueryAttr(cfgParam=*0x%x, attr=*0x%x)", cfgParam, attr);
 
 	// TODO: check cfgParam and output values
 
@@ -29,7 +29,7 @@ s32 cellVpostQueryAttr(vm::cptr<CellVpostCfgParam> cfgParam, vm::ptr<CellVpostAt
 
 s32 cellVpostOpen(vm::cptr<CellVpostCfgParam> cfgParam, vm::cptr<CellVpostResource> resource, vm::ptr<u32> handle)
 {
-	cellVpost.Warning("cellVpostOpen(cfgParam=*0x%x, resource=*0x%x, handle=*0x%x)", cfgParam, resource, handle);
+	cellVpost.warning("cellVpostOpen(cfgParam=*0x%x, resource=*0x%x, handle=*0x%x)", cfgParam, resource, handle);
 
 	// TODO: check values
 	*handle = idm::make<VpostInstance>(cfgParam->outPicFmt == CELL_VPOST_PIC_FMT_OUT_RGBA_ILV);
@@ -38,7 +38,7 @@ s32 cellVpostOpen(vm::cptr<CellVpostCfgParam> cfgParam, vm::cptr<CellVpostResour
 
 s32 cellVpostOpenEx(vm::cptr<CellVpostCfgParam> cfgParam, vm::cptr<CellVpostResourceEx> resource, vm::ptr<u32> handle)
 {
-	cellVpost.Warning("cellVpostOpenEx(cfgParam=*0x%x, resource=*0x%x, handle=*0x%x)", cfgParam, resource, handle);
+	cellVpost.warning("cellVpostOpenEx(cfgParam=*0x%x, resource=*0x%x, handle=*0x%x)", cfgParam, resource, handle);
 
 	// TODO: check values
 	*handle = idm::make<VpostInstance>(cfgParam->outPicFmt == CELL_VPOST_PIC_FMT_OUT_RGBA_ILV);
@@ -47,7 +47,7 @@ s32 cellVpostOpenEx(vm::cptr<CellVpostCfgParam> cfgParam, vm::cptr<CellVpostReso
 
 s32 cellVpostClose(u32 handle)
 {
-	cellVpost.Warning("cellVpostClose(handle=0x%x)", handle);
+	cellVpost.warning("cellVpostClose(handle=0x%x)", handle);
 
 	const auto vpost = idm::get<VpostInstance>(handle);
 
@@ -62,7 +62,7 @@ s32 cellVpostClose(u32 handle)
 
 s32 cellVpostExec(u32 handle, vm::cptr<u8> inPicBuff, vm::cptr<CellVpostCtrlParam> ctrlParam, vm::ptr<u8> outPicBuff, vm::ptr<CellVpostPictureInfo> picInfo)
 {
-	cellVpost.Log("cellVpostExec(handle=0x%x, inPicBuff=*0x%x, ctrlParam=*0x%x, outPicBuff=*0x%x, picInfo=*0x%x)", handle, inPicBuff, ctrlParam, outPicBuff, picInfo);
+	cellVpost.trace("cellVpostExec(handle=0x%x, inPicBuff=*0x%x, ctrlParam=*0x%x, outPicBuff=*0x%x, picInfo=*0x%x)", handle, inPicBuff, ctrlParam, outPicBuff, picInfo);
 
 	const auto vpost = idm::get<VpostInstance>(handle);
 
@@ -77,15 +77,15 @@ s32 cellVpostExec(u32 handle, vm::cptr<u8> inPicBuff, vm::cptr<CellVpostCtrlPara
 	u32 oh = ctrlParam->outHeight;
 
 	//ctrlParam->inWindow; // ignored
-	if (ctrlParam->inWindow.x) cellVpost.Notice("*** inWindow.x = %d", (u32)ctrlParam->inWindow.x);
-	if (ctrlParam->inWindow.y) cellVpost.Notice("*** inWindow.y = %d", (u32)ctrlParam->inWindow.y);
-	if (ctrlParam->inWindow.width != w) cellVpost.Notice("*** inWindow.width = %d", (u32)ctrlParam->inWindow.width);
-	if (ctrlParam->inWindow.height != h) cellVpost.Notice("*** inWindow.height = %d", (u32)ctrlParam->inWindow.height);
+	if (ctrlParam->inWindow.x) cellVpost.notice("*** inWindow.x = %d", (u32)ctrlParam->inWindow.x);
+	if (ctrlParam->inWindow.y) cellVpost.notice("*** inWindow.y = %d", (u32)ctrlParam->inWindow.y);
+	if (ctrlParam->inWindow.width != w) cellVpost.notice("*** inWindow.width = %d", (u32)ctrlParam->inWindow.width);
+	if (ctrlParam->inWindow.height != h) cellVpost.notice("*** inWindow.height = %d", (u32)ctrlParam->inWindow.height);
 	//ctrlParam->outWindow; // ignored
-	if (ctrlParam->outWindow.x) cellVpost.Notice("*** outWindow.x = %d", (u32)ctrlParam->outWindow.x);
-	if (ctrlParam->outWindow.y) cellVpost.Notice("*** outWindow.y = %d", (u32)ctrlParam->outWindow.y);
-	if (ctrlParam->outWindow.width != ow) cellVpost.Notice("*** outWindow.width = %d", (u32)ctrlParam->outWindow.width);
-	if (ctrlParam->outWindow.height != oh) cellVpost.Notice("*** outWindow.height = %d", (u32)ctrlParam->outWindow.height);
+	if (ctrlParam->outWindow.x) cellVpost.notice("*** outWindow.x = %d", (u32)ctrlParam->outWindow.x);
+	if (ctrlParam->outWindow.y) cellVpost.notice("*** outWindow.y = %d", (u32)ctrlParam->outWindow.y);
+	if (ctrlParam->outWindow.width != ow) cellVpost.notice("*** outWindow.width = %d", (u32)ctrlParam->outWindow.width);
+	if (ctrlParam->outWindow.height != oh) cellVpost.notice("*** outWindow.height = %d", (u32)ctrlParam->outWindow.height);
 	//ctrlParam->execType; // ignored
 	//ctrlParam->scalerType; // ignored
 	//ctrlParam->ipcType; // ignored

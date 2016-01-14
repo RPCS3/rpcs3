@@ -9,9 +9,8 @@ struct vfsStream
 		Close();
 	}
 
-	virtual bool Close()
+	virtual void Close()
 	{
-		return true;
 	}
 
 	virtual u64 GetSize() const = 0;
@@ -30,7 +29,7 @@ struct vfsStream
 		return Read(&data, count) == count;
 	}
 
-	virtual u64 Seek(s64 offset, fsm seek_mode = fsm::begin) = 0;
+	virtual u64 Seek(s64 offset, fs::seek_mode whence = fs::seek_set) = 0;
 
 	virtual u64 Tell() const = 0;
 

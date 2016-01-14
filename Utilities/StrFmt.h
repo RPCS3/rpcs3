@@ -155,19 +155,19 @@ namespace fmt
 		}
 	};
 
-	template<> struct unveil<char*, false>
+	template<> struct unveil<const char*, false>
 	{
-		using result_type = const char*;
+		using result_type = const char* const;
 
-		force_inline static result_type get_value(const char* arg)
+		force_inline static result_type get_value(const char* const& arg)
 		{
 			return arg;
 		}
 	};
 
-	template<std::size_t N> struct unveil<const char[N], false>
+	template<std::size_t N> struct unveil<char[N], false>
 	{
-		using result_type = const char*;
+		using result_type = const char* const;
 
 		force_inline static result_type get_value(const char(&arg)[N])
 		{
@@ -220,7 +220,8 @@ namespace fmt
 	// vm::ptr, vm::bptr, ... (fmt::do_unveil) (vm_ptr.h) (with appropriate address type, using .addr() can be avoided)
 	// vm::ref, vm::bref, ... (fmt::do_unveil) (vm_ref.h)
 	//
-	template<typename... Args> safe_buffers std::string format(const char* fmt, Args... args)
+	template<typename... Args>
+	safe_buffers std::string format(const char* fmt, const Args&... args)
 	{
 		// fixed stack buffer for the first attempt
 		std::array<char, 4096> fixed_buf;

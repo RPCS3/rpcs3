@@ -81,7 +81,7 @@ s32 cellFiberPpuJoinFiber()
 
 vm::ptr<void> cellFiberPpuSelf()
 {
-	cellFiber.Log("cellFiberPpuSelf() -> nullptr"); // TODO
+	cellFiber.trace("cellFiberPpuSelf() -> nullptr"); // TODO
 
 	// returns fiber structure (zero for simple PPU thread)
 	return vm::null;

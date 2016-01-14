@@ -9,14 +9,14 @@ extern Module<> cellMic;
 
 s32 cellMicInit()
 {
-	cellMic.Warning("cellMicInit()");
+	cellMic.warning("cellMicInit()");
 
 	return CELL_OK;
 }
 
 s32 cellMicEnd()
 {
-	cellMic.Warning("cellMicEnd()");
+	cellMic.warning("cellMicEnd()");
 
 	return CELL_OK;
 }

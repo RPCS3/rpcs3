@@ -106,7 +106,7 @@ u64 get_system_time()
 // Functions
 s32 sys_time_get_timezone(vm::ptr<s32> timezone, vm::ptr<s32> summertime)
 {
-	sys_time.Warning("sys_time_get_timezone(timezone=*0x%x, summertime=*0x%x)", timezone, summertime);
+	sys_time.warning("sys_time_get_timezone(timezone=*0x%x, summertime=*0x%x)", timezone, summertime);
 
 	*timezone = 180;
 	*summertime = 0;
@@ -116,7 +116,7 @@ s32 sys_time_get_timezone(vm::ptr<s32> timezone, vm::ptr<s32> summertime)
 
 s32 sys_time_get_current_time(vm::ptr<s64> sec, vm::ptr<s64> nsec)
 {
-	sys_time.Log("sys_time_get_current_time(sec=*0x%x, nsec=*0x%x)", sec, nsec);
+	sys_time.trace("sys_time_get_current_time(sec=*0x%x, nsec=*0x%x)", sec, nsec);
 
 #ifdef _WIN32
 	LARGE_INTEGER count;
@@ -149,7 +149,7 @@ s32 sys_time_get_current_time(vm::ptr<s64> sec, vm::ptr<s64> nsec)
 
 u64 sys_time_get_timebase_frequency()
 {
-	sys_time.Log("sys_time_get_timebase_frequency()");
+	sys_time.trace("sys_time_get_timebase_frequency()");
 
 	return g_timebase_freq;
 }

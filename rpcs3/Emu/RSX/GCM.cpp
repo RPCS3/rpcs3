@@ -734,6 +734,34 @@ Vertex_base_type to_vertex_base_type(u8 in)
 	throw new EXCEPTION("Unknow vertex base type %d", in);
 }
 
+Index_array_type to_index_array_type(u8 in)
+{
+	switch (in)
+	{
+	case 0: return Index_array_type::unsigned_32b;
+	case 1: return Index_array_type::unsigned_16b;
+	}
+	throw new EXCEPTION("Unknown index array type %d", in);
+}
+
+Primitive_type to_primitive_type(u8 in)
+{
+	switch (in)
+	{
+	case 1: return Primitive_type::points;
+	case 2: return Primitive_type::lines;
+	case 3: return Primitive_type::line_loop;
+	case 4: return Primitive_type::line_strip;
+	case 5: return Primitive_type::triangles;
+	case 6: return Primitive_type::triangle_strip;
+	case 7: return Primitive_type::triangle_fan;
+	case 8: return Primitive_type::quads;
+	case 9: return Primitive_type::quad_strip;
+	case 10: return Primitive_type::polygon;
+	}
+	throw new EXCEPTION("Unknow primitive type %d", in);
+}
+
 std::string rsx::get_method_name(const u32 id)
 {
 	auto found = methods.find(id);
@@ -828,18 +856,18 @@ namespace
 
 	std::string get_primitive_mode(u8 draw_mode)
 	{
-		switch (draw_mode)
+		switch (to_primitive_type(draw_mode))
 		{
-		case CELL_GCM_PRIMITIVE_POINTS: return "Points";
-		case CELL_GCM_PRIMITIVE_LINES: return "Lines";
-		case CELL_GCM_PRIMITIVE_LINE_LOOP: return "Line_loop";
-		case CELL_GCM_PRIMITIVE_LINE_STRIP: return "Line_strip";
-		case CELL_GCM_PRIMITIVE_TRIANGLES: return "Triangles";
-		case CELL_GCM_PRIMITIVE_TRIANGLE_STRIP: return "Triangle_strip";
-		case CELL_GCM_PRIMITIVE_TRIANGLE_FAN: return "Triangle_fan";
-		case CELL_GCM_PRIMITIVE_QUADS: return "Quads";
-		case CELL_GCM_PRIMITIVE_QUAD_STRIP: return "Quad_strip";
-		case CELL_GCM_PRIMITIVE_POLYGON: return "Polygon";
+		case Primitive_type::points: return "Points";
+		case Primitive_type::lines: return "Lines";
+		case Primitive_type::line_loop: return "Line_loop";
+		case Primitive_type::line_strip: return "Line_strip";
+		case Primitive_type::triangles: return "Triangles";
+		case Primitive_type::triangle_strip: return "Triangle_strip";
+		case Primitive_type::triangle_fan: return "Triangle_fan";
+		case Primitive_type::quads: return "Quads";
+		case Primitive_type::quad_strip: return "Quad_strip";
+		case Primitive_type::polygon: return "Polygon";
 		}
 		return "Error";
 	}
@@ -967,10 +995,10 @@ namespace
 
 	std::string index_type(u16 arg)
 	{
-		switch (arg)
+		switch (to_index_array_type(arg))
 		{
-		case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_16: return "unsigned short";
-		case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_32: return "unsigned int";
+		case Index_array_type::unsigned_16b: return "unsigned short";
+		case Index_array_type::unsigned_32b: return "unsigned int";
 		}
 		return "Error";
 	}

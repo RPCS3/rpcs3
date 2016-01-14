@@ -4,14 +4,14 @@
 #include "PSVFuncList.h"
 
 psv_log_base::psv_log_base(const std::string& name, init_func_t init)
-	: m_name(name)
+	: _log::channel(name)
 	, m_init(init)
 {
 	on_error = [this](s32 code, psv_func* func)
 	{
 		if (code < 0)
 		{
-			Error("%s() failed: 0x%08X", func->name, code);
+			error("%s() failed: 0x%08X", func->name, code);
 			Emu.Pause();
 		}
 	};

@@ -7,7 +7,6 @@
 extern "C"
 {
 #include "stblib/stb_image.h"
-#include "stblib/stb_image.c"
 }
 
 #include "Emu/FS/VFS.h"
@@ -49,7 +48,7 @@ s32 cellGifDecExtCreate(PPMainHandle mainHandle, PThreadInParam threadInParam, P
 
 s32 cellGifDecOpen(PMainHandle mainHandle, PPSubHandle subHandle, PSrc src, POpenInfo openInfo)
 {
-	cellGifDec.Warning("cellGifDecOpen(mainHandle=*0x%x, subHandle=**0x%x, src=*0x%x, openInfo=*0x%x)", mainHandle, subHandle, src, openInfo);
+	cellGifDec.warning("cellGifDecOpen(mainHandle=*0x%x, subHandle=**0x%x, src=*0x%x, openInfo=*0x%x)", mainHandle, subHandle, src, openInfo);
 
 	GifStream current_subHandle;
 	current_subHandle.fd = 0;
@@ -87,7 +86,7 @@ s32 cellGifDecExtOpen()
 
 s32 cellGifDecReadHeader(PMainHandle mainHandle, PSubHandle subHandle, PInfo info)
 {
-	cellGifDec.Warning("cellGifDecReadHeader(mainHandle=*0x%x, subHandle=*0x%x, info=*0x%x)", mainHandle, subHandle, info);
+	cellGifDec.warning("cellGifDecReadHeader(mainHandle=*0x%x, subHandle=*0x%x, info=*0x%x)", mainHandle, subHandle, info);
 
 	const u32& fd = subHandle->fd;
 	const u64& fileSize = subHandle->fileSize;
@@ -139,7 +138,7 @@ s32 cellGifDecExtReadHeader()
 
 s32 cellGifDecSetParameter(PMainHandle mainHandle, PSubHandle subHandle, PInParam inParam, POutParam outParam)
 {
-	cellGifDec.Warning("cellGifDecSetParameter(mainHandle=*0x%x, subHandle=*0x%x, inParam=*0x%x, outParam=*0x%x)", mainHandle, subHandle, inParam, outParam);
+	cellGifDec.warning("cellGifDecSetParameter(mainHandle=*0x%x, subHandle=*0x%x, inParam=*0x%x, outParam=*0x%x)", mainHandle, subHandle, inParam, outParam);
 
 	CellGifDecInfo& current_info = subHandle->info;
 	CellGifDecOutParam& current_outParam = subHandle->outParam;
@@ -169,7 +168,7 @@ s32 cellGifDecExtSetParameter()
 
 s32 cellGifDecDecodeData(PMainHandle mainHandle, PSubHandle subHandle, vm::ptr<u8> data, PDataCtrlParam dataCtrlParam, PDataOutInfo dataOutInfo)
 {
-	cellGifDec.Warning("cellGifDecDecodeData(mainHandle=*0x%x, subHandle=*0x%x, data=*0x%x, dataCtrlParam=*0x%x, dataOutInfo=*0x%x)", mainHandle, subHandle, data, dataCtrlParam, dataOutInfo);
+	cellGifDec.warning("cellGifDecDecodeData(mainHandle=*0x%x, subHandle=*0x%x, data=*0x%x, dataCtrlParam=*0x%x, dataOutInfo=*0x%x)", mainHandle, subHandle, data, dataCtrlParam, dataOutInfo);
 
 	dataOutInfo->status = CELL_GIFDEC_DEC_STATUS_STOP;
 
@@ -288,7 +287,7 @@ s32 cellGifDecExtDecodeData()
 
 s32 cellGifDecClose(PMainHandle mainHandle, PSubHandle subHandle)
 {
-	cellGifDec.Warning("cellGifDecClose(mainHandle=*0x%x, subHandle=*0x%x)", mainHandle, subHandle);
+	cellGifDec.warning("cellGifDecClose(mainHandle=*0x%x, subHandle=*0x%x)", mainHandle, subHandle);
 
 	idm::remove<lv2_file_t>(subHandle->fd);
 

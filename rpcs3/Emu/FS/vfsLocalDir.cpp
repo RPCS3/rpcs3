@@ -20,7 +20,7 @@ bool vfsLocalDir::Open(const std::string& path)
 	std::string name;
 	fs::stat_t file_info;
 
-	while (m_dir.read(name, file_info))
+	while (m_dir.read(name, file_info) && name.size())
 	{
 		m_entries.emplace_back();
 

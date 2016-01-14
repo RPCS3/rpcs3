@@ -131,7 +131,7 @@ next:
 		OMAHeader oma(1 /* atrac3p id */, adec.sample_rate, adec.ch_cfg, adec.frame_size);
 		if (buf_size < sizeof(oma))
 		{
-			cellAdec.Error("adecRead(): OMAHeader writing failed");
+			cellAdec.error("adecRead(): OMAHeader writing failed");
 			Emu.Pause();
 			return 0;
 		}
@@ -149,7 +149,7 @@ next:
 		AdecTask task;
 		if (!adec.job.peek(task, 0, &adec.is_closed))
 		{
-			if (Emu.IsStopped()) cellAdec.Warning("adecRawRead() aborted");
+			if (Emu.IsStopped()) cellAdec.warning("adecRawRead() aborted");
 			return 0;
 		}
 
@@ -183,7 +183,7 @@ next:
 		
 		default:
 		{
-			cellAdec.Error("adecRawRead(): unknown task (%d)", task.type);
+			cellAdec.error("adecRawRead(): unknown task (%d)", task.type);
 			Emu.Pause();
 			return -1;
 		}
@@ -243,7 +243,7 @@ void adecOpen(u32 adec_id) // TODO: call from the constructor
 			case adecStartSeq:
 			{
 				// TODO: reset data
-				cellAdec.Warning("adecStartSeq:");
+				cellAdec.warning("adecStartSeq:");
 
 				adec.reader.addr = 0;
 				adec.reader.size = 0;
@@ -265,7 +265,7 @@ void adecOpen(u32 adec_id) // TODO: call from the constructor
 			case adecEndSeq:
 			{
 				// TODO: finalize
-				cellAdec.Warning("adecEndSeq:");
+				cellAdec.warning("adecEndSeq:");
 				adec.cbFunc(CPU, adec.id, CELL_ADEC_MSG_TYPE_SEQDONE, CELL_OK, adec.cbArg);
 
 				adec.just_finished = true;
@@ -361,7 +361,7 @@ void adecOpen(u32 adec_id) // TODO: call from the constructor
 				{
 					if (Emu.IsStopped() || adec.is_closed)
 					{
-						if (Emu.IsStopped()) cellAdec.Warning("adecDecodeAu: aborted");
+						if (Emu.IsStopped()) cellAdec.warning("adecDecodeAu: aborted");
 						break;
 					}
 
@@ -405,7 +405,7 @@ void adecOpen(u32 adec_id) // TODO: call from the constructor
 					{
 						if (decode < 0)
 						{
-							cellAdec.Error("adecDecodeAu: AU decoding error(0x%x)", decode);
+							cellAdec.error("adecDecodeAu: AU decoding error(0x%x)", decode);
 						}
 						if (!got_frame && adec.reader.size == 0) break;
 					}
@@ -475,11 +475,11 @@ bool adecCheckType(s32 type)
 {
 	switch (type)
 	{
-	case CELL_ADEC_TYPE_ATRACX: cellAdec.Notice("adecCheckType(): ATRAC3plus"); break;
-	case CELL_ADEC_TYPE_ATRACX_2CH: cellAdec.Notice("adecCheckType(): ATRAC3plus 2ch"); break;
-	case CELL_ADEC_TYPE_ATRACX_6CH: cellAdec.Notice("adecCheckType(): ATRAC3plus 6ch"); break;
-	case CELL_ADEC_TYPE_ATRACX_8CH: cellAdec.Notice("adecCheckType(): ATRAC3plus 8ch"); break;
-	case CELL_ADEC_TYPE_MP3: cellAdec.Notice("adecCheckType(): MP3"); break;
+	case CELL_ADEC_TYPE_ATRACX: cellAdec.notice("adecCheckType(): ATRAC3plus"); break;
+	case CELL_ADEC_TYPE_ATRACX_2CH: cellAdec.notice("adecCheckType(): ATRAC3plus 2ch"); break;
+	case CELL_ADEC_TYPE_ATRACX_6CH: cellAdec.notice("adecCheckType(): ATRAC3plus 6ch"); break;
+	case CELL_ADEC_TYPE_ATRACX_8CH: cellAdec.notice("adecCheckType(): ATRAC3plus 8ch"); break;
+	case CELL_ADEC_TYPE_MP3: cellAdec.notice("adecCheckType(): MP3"); break;
 
 	case CELL_ADEC_TYPE_LPCM_PAMF:
 	case CELL_ADEC_TYPE_AC3:
@@ -489,7 +489,7 @@ bool adecCheckType(s32 type)
 	case CELL_ADEC_TYPE_M4AAC:
 	case CELL_ADEC_TYPE_CELP8:
 	{
-		cellAdec.Todo("Unimplemented audio codec type (%d)", type);
+		cellAdec.todo("Unimplemented audio codec type (%d)", type);
 		Emu.Pause();
 		break;
 	}	
@@ -501,7 +501,7 @@ bool adecCheckType(s32 type)
 
 s32 cellAdecQueryAttr(vm::ptr<CellAdecType> type, vm::ptr<CellAdecAttr> attr)
 {
-	cellAdec.Warning("cellAdecQueryAttr(type=*0x%x, attr=*0x%x)", type, attr);
+	cellAdec.warning("cellAdecQueryAttr(type=*0x%x, attr=*0x%x)", type, attr);
 
 	if (!adecCheckType(type->audioCodecType))
 	{
@@ -518,7 +518,7 @@ s32 cellAdecQueryAttr(vm::ptr<CellAdecType> type, vm::ptr<CellAdecAttr> attr)
 
 s32 cellAdecOpen(vm::ptr<CellAdecType> type, vm::ptr<CellAdecResource> res, vm::ptr<CellAdecCb> cb, vm::ptr<u32> handle)
 {
-	cellAdec.Warning("cellAdecOpen(type=*0x%x, res=*0x%x, cb=*0x%x, handle=*0x%x)", type, res, cb, handle);
+	cellAdec.warning("cellAdecOpen(type=*0x%x, res=*0x%x, cb=*0x%x, handle=*0x%x)", type, res, cb, handle);
 
 	if (!adecCheckType(type->audioCodecType))
 	{
@@ -532,7 +532,7 @@ s32 cellAdecOpen(vm::ptr<CellAdecType> type, vm::ptr<CellAdecResource> res, vm::
 
 s32 cellAdecOpenEx(vm::ptr<CellAdecType> type, vm::ptr<CellAdecResourceEx> res, vm::ptr<CellAdecCb> cb, vm::ptr<u32> handle)
 {
-	cellAdec.Warning("cellAdecOpenEx(type=*0x%x, res=*0x%x, cb=*0x%x, handle=*0x%x)", type, res, cb, handle);
+	cellAdec.warning("cellAdecOpenEx(type=*0x%x, res=*0x%x, cb=*0x%x, handle=*0x%x)", type, res, cb, handle);
 
 	if (!adecCheckType(type->audioCodecType))
 	{
@@ -546,14 +546,14 @@ s32 cellAdecOpenEx(vm::ptr<CellAdecType> type, vm::ptr<CellAdecResourceEx> res, 
 
 s32 cellAdecOpenExt(vm::ptr<CellAdecType> type, vm::ptr<CellAdecResourceEx> res, vm::ptr<CellAdecCb> cb, vm::ptr<u32> handle)
 {
-	cellAdec.Warning("cellAdecOpenExt(type=*0x%x, res=*0x%x, cb=*0x%x, handle=*0x%x)", type, res, cb, handle);
+	cellAdec.warning("cellAdecOpenExt(type=*0x%x, res=*0x%x, cb=*0x%x, handle=*0x%x)", type, res, cb, handle);
 
 	return cellAdecOpenEx(type, res, cb, handle);
 }
 
 s32 cellAdecClose(u32 handle)
 {
-	cellAdec.Warning("cellAdecClose(handle=0x%x)", handle);
+	cellAdec.warning("cellAdecClose(handle=0x%x)", handle);
 
 	const auto adec = idm::get<AudioDecoder>(handle);
 
@@ -579,7 +579,7 @@ s32 cellAdecClose(u32 handle)
 
 s32 cellAdecStartSeq(u32 handle, u32 param)
 {
-	cellAdec.Warning("cellAdecStartSeq(handle=0x%x, param=*0x%x)", handle, param);
+	cellAdec.warning("cellAdecStartSeq(handle=0x%x, param=*0x%x)", handle, param);
 
 	const auto adec = idm::get<AudioDecoder>(handle);
 
@@ -607,7 +607,7 @@ s32 cellAdecStartSeq(u32 handle, u32 param)
 		task.at3p.output = atx->bw_pcm;
 		task.at3p.downmix = atx->downmix_flag;
 		task.at3p.ats_header = atx->au_includes_ats_hdr_flg;
-		cellAdec.Todo("*** CellAdecParamAtracX: sr=%d, ch_cfg=%d(%d), frame_size=0x%x, extra=0x%x, output=%d, downmix=%d, ats_header=%d",
+		cellAdec.todo("*** CellAdecParamAtracX: sr=%d, ch_cfg=%d(%d), frame_size=0x%x, extra=0x%x, output=%d, downmix=%d, ats_header=%d",
 			task.at3p.sample_rate, task.at3p.channel_config, task.at3p.channels, task.at3p.frame_size, (u32&)task.at3p.extra_config, task.at3p.output, task.at3p.downmix, task.at3p.ats_header);
 		break;
 	}
@@ -615,12 +615,12 @@ s32 cellAdecStartSeq(u32 handle, u32 param)
 	{
 		const auto mp3 = vm::cptr<CellAdecParamMP3>::make(param);
 
-		cellAdec.Todo("*** CellAdecParamMP3: bw_pcm=%d", mp3->bw_pcm);
+		cellAdec.todo("*** CellAdecParamMP3: bw_pcm=%d", mp3->bw_pcm);
 		break;
 	}
 	default:
 	{
-		cellAdec.Todo("cellAdecStartSeq(): Unimplemented audio codec type(%d)", adec->type);
+		cellAdec.todo("cellAdecStartSeq(): Unimplemented audio codec type(%d)", adec->type);
 		Emu.Pause();
 		return CELL_OK;
 	}
@@ -632,7 +632,7 @@ s32 cellAdecStartSeq(u32 handle, u32 param)
 
 s32 cellAdecEndSeq(u32 handle)
 {
-	cellAdec.Warning("cellAdecEndSeq(handle=0x%x)", handle);
+	cellAdec.warning("cellAdecEndSeq(handle=0x%x)", handle);
 
 	const auto adec = idm::get<AudioDecoder>(handle);
 
@@ -647,7 +647,7 @@ s32 cellAdecEndSeq(u32 handle)
 
 s32 cellAdecDecodeAu(u32 handle, vm::ptr<CellAdecAuInfo> auInfo)
 {
-	cellAdec.Log("cellAdecDecodeAu(handle=0x%x, auInfo=*0x%x)", handle, auInfo);
+	cellAdec.trace("cellAdecDecodeAu(handle=0x%x, auInfo=*0x%x)", handle, auInfo);
 
 	const auto adec = idm::get<AudioDecoder>(handle);
 
@@ -663,14 +663,14 @@ s32 cellAdecDecodeAu(u32 handle, vm::ptr<CellAdecAuInfo> auInfo)
 	task.au.pts = ((u64)auInfo->pts.upper << 32) | (u64)auInfo->pts.lower;
 	task.au.userdata = auInfo->userData;
 
-	//cellAdec.Notice("cellAdecDecodeAu(): addr=0x%x, size=0x%x, pts=0x%llx", task.au.addr, task.au.size, task.au.pts);
+	//cellAdec.notice("cellAdecDecodeAu(): addr=0x%x, size=0x%x, pts=0x%llx", task.au.addr, task.au.size, task.au.pts);
 	adec->job.push(task, &adec->is_closed);
 	return CELL_OK;
 }
 
 s32 cellAdecGetPcm(u32 handle, vm::ptr<float> outBuffer)
 {
-	cellAdec.Log("cellAdecGetPcm(handle=0x%x, outBuffer=*0x%x)", handle, outBuffer);
+	cellAdec.trace("cellAdecGetPcm(handle=0x%x, outBuffer=*0x%x)", handle, outBuffer);
 
 	const auto adec = idm::get<AudioDecoder>(handle);
 
@@ -786,7 +786,7 @@ s32 cellAdecGetPcm(u32 handle, vm::ptr<float> outBuffer)
 
 s32 cellAdecGetPcmItem(u32 handle, vm::pptr<CellAdecPcmItem> pcmItem)
 {
-	cellAdec.Log("cellAdecGetPcmItem(handle=0x%x, pcmItem=**0x%x)", handle, pcmItem);
+	cellAdec.trace("cellAdecGetPcmItem(handle=0x%x, pcmItem=**0x%x)", handle, pcmItem);
 
 	const auto adec = idm::get<AudioDecoder>(handle);
 
@@ -847,7 +847,7 @@ s32 cellAdecGetPcmItem(u32 handle, vm::pptr<CellAdecPcmItem> pcmItem)
 		}
 		else
 		{
-			cellAdec.Error("cellAdecGetPcmItem(): unsupported channel count (%d)", frame->channels);
+			cellAdec.error("cellAdecGetPcmItem(): unsupported channel count (%d)", frame->channels);
 			Emu.Pause();
 		}
 	}

@@ -24,8 +24,6 @@
 #include "Gui/LLEModulesManager.h"
 #include "Gui/CgDisasm.h"
 #include "Crypto/unpkg.h"
-#include <wx/dynlib.h>
-#include <wx/progdlg.h>
 
 #ifndef _WIN32
 #include "frame_icon.xpm"
@@ -220,7 +218,7 @@ void MainFrame::BootGame(wxCommandEvent& WXUNUSED(event))
 	
 	if(Emu.BootGame(ctrl.GetPath().ToStdString()))
 	{
-		LOG_SUCCESS(HLE, "Game: boot done.");
+		LOG_SUCCESS(GENERAL, "Game: boot done.");
 
 		if (rpcs3::config.misc.always_start.value())
 		{
@@ -229,7 +227,7 @@ void MainFrame::BootGame(wxCommandEvent& WXUNUSED(event))
 	}
 	else
 	{
-		LOG_ERROR(HLE, "PS3 executable not found in selected folder (%s)", fmt::ToUTF8(ctrl.GetPath())); // passing std::string (test)
+		LOG_ERROR(GENERAL, "PS3 executable not found in selected folder (%s)", fmt::ToUTF8(ctrl.GetPath())); // passing std::string (test)
 	}
 }
 
@@ -255,7 +253,7 @@ void MainFrame::InstallPkg(wxCommandEvent& WXUNUSED(event))
 	fs::file pkg_f(ctrl.GetPath().ToStdString());
 
 	// Open file mapping (test)
-	fs::file_ptr pkg_ptr(pkg_f);
+	fs::file_read_map pkg_ptr(pkg_f);
 
 	if (!pkg_f || !pkg_ptr)
 	{
@@ -265,7 +263,7 @@ void MainFrame::InstallPkg(wxCommandEvent& WXUNUSED(event))
 
 	// Append title ID to the path
 	local_path += '/';
-	local_path += { pkg_ptr + 55, 9 };
+	local_path.append(pkg_ptr + 55, 9);
 
 	if (!fs::create_dir(local_path))
 	{
@@ -289,7 +287,7 @@ void MainFrame::InstallPkg(wxCommandEvent& WXUNUSED(event))
 	volatile f64 progress = 0.0;
 
 	// Run PKG unpacking asynchronously
-	auto result = std::async(std::launch::async, WRAP_EXPR(pkg_install(pkg_f, local_path + "/", progress)));
+	auto result = std::async(std::launch::async, WRAP_EXPR(pkg_install(pkg_f, local_path + '/', progress)));
 
 	// Wait for the completion
 	while (result.wait_for(15ms) != std::future_status::ready)
@@ -338,13 +336,13 @@ void MainFrame::BootElf(wxCommandEvent& WXUNUSED(event))
 		return;
 	}
 
-	LOG_NOTICE(HLE, "(S)ELF: booting...");
+	LOG_NOTICE(LOADER, "(S)ELF: booting...");
 
 	Emu.Stop();
 	Emu.SetPath(fmt::ToUTF8(ctrl.GetPath()));
 	Emu.Load();
 
-	LOG_SUCCESS(HLE, "(S)ELF: boot done.");
+	LOG_SUCCESS(LOADER, "(S)ELF: boot done.");
 	
 	if (rpcs3::config.misc.always_start.value() && Emu.IsReady())
 	{

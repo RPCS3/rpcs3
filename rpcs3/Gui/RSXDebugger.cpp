@@ -15,8 +15,6 @@
 
 #include "MemoryViewer.h"
 
-#include <wx/notebook.h>
-
 // TODO: Clear the object when restarting the emulator
 std::vector<RSXDebuggerProgram> m_debug_programs;
 
@@ -569,7 +567,7 @@ void RSXDebugger::GetMemory()
 		dump += '\n';
 	}
 
-	fs::file(fs::get_config_dir() + "command_dump.log", fom::rewrite) << dump;
+	fs::file(fs::get_config_dir() + "command_dump.log", fom::rewrite).write(dump);
 
 	for (u32 i = 0;i < frame_debug.draw_calls.size(); i++)
 		m_list_captured_draw_calls->InsertItem(i, frame_debug.draw_calls[i].name);

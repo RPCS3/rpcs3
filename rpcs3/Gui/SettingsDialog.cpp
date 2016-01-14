@@ -5,7 +5,6 @@
 #include "Emu/state.h"
 #include "Emu/SysCalls/Modules/cellVideoOut.h"
 #include "SettingsDialog.h"
-#include <wx/radiobox.h>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -194,9 +193,7 @@ SettingsDialog::SettingsDialog(wxWindow *parent, rpcs3::config_t* cfg)
 	wxCheckBox* chbox_gs_overlay = new wxCheckBox(p_graphics, wxID_ANY, "Debug overlay");
 	wxCheckBox* chbox_audio_dump = new wxCheckBox(p_audio, wxID_ANY, "Dump to file");
 	wxCheckBox* chbox_audio_conv = new wxCheckBox(p_audio, wxID_ANY, "Convert to 16 bit");
-	wxCheckBox* chbox_hle_logging = new wxCheckBox(p_misc, wxID_ANY, "Log everything");
 	wxCheckBox* chbox_rsx_logging = new wxCheckBox(p_misc, wxID_ANY, "RSX Logging");
-	wxCheckBox* chbox_hle_savetty = new wxCheckBox(p_misc, wxID_ANY, "Save TTY output to file");
 	wxCheckBox* chbox_hle_exitonstop = new wxCheckBox(p_misc, wxID_ANY, "Exit RPCS3 when process finishes");
 	wxCheckBox* chbox_hle_always_start = new wxCheckBox(p_misc, wxID_ANY, "Always start after boot");
 	wxCheckBox* chbox_hle_use_default_ini = new wxCheckBox(p_misc, wxID_ANY, "Use default configuration");
@@ -296,11 +293,14 @@ SettingsDialog::SettingsDialog(wxWindow *parent, rpcs3::config_t* cfg)
 	cbox_camera_type->Append("PlayStation Eye");
 	cbox_camera_type->Append("USB Video Class 1.1");
 
-	cbox_hle_loglvl->Append("All");
-	cbox_hle_loglvl->Append("Warnings");
-	cbox_hle_loglvl->Append("Success");
-	cbox_hle_loglvl->Append("Errors");
 	cbox_hle_loglvl->Append("Nothing");
+	cbox_hle_loglvl->Append("Fatal");
+	cbox_hle_loglvl->Append("Error");
+	cbox_hle_loglvl->Append("TODO");
+	cbox_hle_loglvl->Append("Success");
+	cbox_hle_loglvl->Append("Warning");
+	cbox_hle_loglvl->Append("Notice");
+	cbox_hle_loglvl->Append("All");
 
 	cbox_net_status->Append("IP Obtained");
 	cbox_net_status->Append("Obtaining IP");
@@ -333,9 +333,7 @@ SettingsDialog::SettingsDialog(wxWindow *parent, rpcs3::config_t* cfg)
 	chbox_gs_overlay->SetValue(cfg->rsx.d3d12.overlay.value());
 	chbox_audio_dump->SetValue(rpcs3::config.audio.dump_to_file.value());
 	chbox_audio_conv->SetValue(rpcs3::config.audio.convert_to_u16.value());
-	chbox_hle_logging->SetValue(rpcs3::config.misc.log.hle_logging.value());
 	chbox_rsx_logging->SetValue(rpcs3::config.misc.log.rsx_logging.value());
-	chbox_hle_savetty->SetValue(rpcs3::config.misc.log.save_tty.value());
 	chbox_hle_exitonstop->SetValue(rpcs3::config.misc.exit_on_stop.value());
 	chbox_hle_always_start->SetValue(rpcs3::config.misc.always_start.value());
 	chbox_hle_use_default_ini->SetValue(rpcs3::config.misc.use_default_ini.value());
@@ -448,9 +446,7 @@ SettingsDialog::SettingsDialog(wxWindow *parent, rpcs3::config_t* cfg)
 
 	// Miscellaneous
 	s_subpanel_misc->Add(s_round_hle_log_lvl, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_subpanel_misc->Add(chbox_hle_logging, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_misc->Add(chbox_rsx_logging, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_subpanel_misc->Add(chbox_hle_savetty, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_misc->Add(chbox_hle_exitonstop, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_misc->Add(chbox_hle_always_start, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_misc->Add(chbox_hle_use_default_ini, wxSizerFlags().Border(wxALL, 5).Expand());
@@ -533,9 +529,7 @@ SettingsDialog::SettingsDialog(wxWindow *parent, rpcs3::config_t* cfg)
 		rpcs3::config.audio.dump_to_file = chbox_audio_dump->GetValue();
 		rpcs3::config.audio.convert_to_u16 = chbox_audio_conv->GetValue();
 		rpcs3::config.misc.log.level = cbox_hle_loglvl->GetSelection();
-		rpcs3::config.misc.log.hle_logging = chbox_hle_logging->GetValue();
 		rpcs3::config.misc.log.rsx_logging = chbox_rsx_logging->GetValue();
-		rpcs3::config.misc.log.save_tty = chbox_hle_savetty->GetValue();
 		rpcs3::config.misc.net.status = cbox_net_status->GetSelection();
 		rpcs3::config.misc.net._interface = cbox_net_interface->GetSelection();
 		rpcs3::config.misc.debug.auto_pause_syscall = chbox_dbg_ap_systemcall->GetValue();

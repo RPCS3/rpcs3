@@ -230,7 +230,7 @@ namespace loader
 							{
 								if (func->module)
 								{
-									LOG_NOTICE(LOADER, "Imported function '%s' in module '%s' (nid=0x%08x, addr=0x%x)", func->name, func->module->GetName(), nid, addr);
+									LOG_NOTICE(LOADER, "Imported function '%s' in module '%s' (nid=0x%08x, addr=0x%x)", func->name, func->module->name, nid, addr);
 								}
 								else
 								{
@@ -322,7 +322,7 @@ namespace loader
 								{
 									LOG_ERROR(LOADER, ".sceRefs: movw writing failed (ref_addr=0x%x, addr=0x%x)", code, code[1]);
 								}
-								else //if (rpcs3::config.misc.log.hle_logging.value())
+								else
 								{
 									LOG_NOTICE(LOADER, ".sceRefs: movw written at 0x%x (ref_addr=0x%x, data=0x%x)", code[1], code, data);
 								}
@@ -338,7 +338,7 @@ namespace loader
 								{
 									LOG_ERROR(LOADER, ".sceRefs: movt writing failed (ref_addr=0x%x, addr=0x%x)", code, code[1]);
 								}
-								else //if (rpcs3::config.misc.log.hle_logging.value())
+								else
 								{
 									LOG_NOTICE(LOADER, ".sceRefs: movt written at 0x%x (ref_addr=0x%x, data=0x%x)", code[1], code, data);
 								}
@@ -352,10 +352,7 @@ namespace loader
 							{
 								data = 0;
 
-								if (rpcs3::config.misc.log.hle_logging.value())
-								{
-									LOG_NOTICE(LOADER, ".sceRefs: zero code found");
-								}
+								LOG_TRACE(LOADER, ".sceRefs: zero code found");
 								break;
 							}
 							default:

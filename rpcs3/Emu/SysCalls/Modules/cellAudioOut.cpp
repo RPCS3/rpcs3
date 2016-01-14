@@ -8,7 +8,7 @@ extern Module<> cellSysutil;
 
 s32 cellAudioOutGetSoundAvailability(u32 audioOut, u32 type, u32 fs, u32 option)
 {
-	cellSysutil.Warning("cellAudioOutGetSoundAvailability(audioOut=%d, type=%d, fs=0x%x, option=%d)", audioOut, type, fs, option);
+	cellSysutil.warning("cellAudioOutGetSoundAvailability(audioOut=%d, type=%d, fs=0x%x, option=%d)", audioOut, type, fs, option);
 
 	option = 0;
 
@@ -48,7 +48,7 @@ s32 cellAudioOutGetSoundAvailability(u32 audioOut, u32 type, u32 fs, u32 option)
 
 s32 cellAudioOutGetSoundAvailability2(u32 audioOut, u32 type, u32 fs, u32 ch, u32 option)
 {
-	cellSysutil.Warning("cellAudioOutGetSoundAvailability2(audioOut=%d, type=%d, fs=0x%x, ch=%d, option=%d)", audioOut, type, fs, ch, option);
+	cellSysutil.warning("cellAudioOutGetSoundAvailability2(audioOut=%d, type=%d, fs=0x%x, ch=%d, option=%d)", audioOut, type, fs, ch, option);
 
 	option = 0;
 
@@ -97,7 +97,7 @@ s32 cellAudioOutGetSoundAvailability2(u32 audioOut, u32 type, u32 fs, u32 ch, u3
 
 s32 cellAudioOutGetState(u32 audioOut, u32 deviceIndex, vm::ptr<CellAudioOutState> state)
 {
-	cellSysutil.Warning("cellAudioOutGetState(audioOut=0x%x, deviceIndex=0x%x, state=*0x%x)", audioOut, deviceIndex, state);
+	cellSysutil.warning("cellAudioOutGetState(audioOut=0x%x, deviceIndex=0x%x, state=*0x%x)", audioOut, deviceIndex, state);
 
 	*state = {};
 
@@ -126,7 +126,7 @@ s32 cellAudioOutGetState(u32 audioOut, u32 deviceIndex, vm::ptr<CellAudioOutStat
 
 s32 cellAudioOutConfigure(u32 audioOut, vm::ptr<CellAudioOutConfiguration> config, vm::ptr<CellAudioOutOption> option, u32 waitForEvent)
 {
-	cellSysutil.Warning("cellAudioOutConfigure(audioOut=%d, config=*0x%x, option=*0x%x, waitForEvent=%d)", audioOut, config, option, waitForEvent);
+	cellSysutil.warning("cellAudioOutConfigure(audioOut=%d, config=*0x%x, option=*0x%x, waitForEvent=%d)", audioOut, config, option, waitForEvent);
 
 	switch (audioOut)
 	{
@@ -154,7 +154,7 @@ s32 cellAudioOutConfigure(u32 audioOut, vm::ptr<CellAudioOutConfiguration> confi
 
 s32 cellAudioOutGetConfiguration(u32 audioOut, vm::ptr<CellAudioOutConfiguration> config, vm::ptr<CellAudioOutOption> option)
 {
-	cellSysutil.Warning("cellAudioOutGetConfiguration(audioOut=%d, config=*0x%x, option=*0x%x)", audioOut, config, option);
+	cellSysutil.warning("cellAudioOutGetConfiguration(audioOut=%d, config=*0x%x, option=*0x%x)", audioOut, config, option);
 
 	if (option) *option = {};
 	*config = {};
@@ -178,7 +178,7 @@ s32 cellAudioOutGetConfiguration(u32 audioOut, vm::ptr<CellAudioOutConfiguration
 
 s32 cellAudioOutGetNumberOfDevice(u32 audioOut)
 {
-	cellSysutil.Warning("cellAudioOutGetNumberOfDevice(audioOut=%d)", audioOut);
+	cellSysutil.warning("cellAudioOutGetNumberOfDevice(audioOut=%d)", audioOut);
 
 	switch (audioOut)
 	{
@@ -191,7 +191,7 @@ s32 cellAudioOutGetNumberOfDevice(u32 audioOut)
 
 s32 cellAudioOutGetDeviceInfo(u32 audioOut, u32 deviceIndex, vm::ptr<CellAudioOutDeviceInfo> info)
 {
-	cellSysutil.Todo("cellAudioOutGetDeviceInfo(audioOut=%d, deviceIndex=%d, info=*0x%x)", audioOut, deviceIndex, info);
+	cellSysutil.todo("cellAudioOutGetDeviceInfo(audioOut=%d, deviceIndex=%d, info=*0x%x)", audioOut, deviceIndex, info);
 
 	if (deviceIndex) return CELL_AUDIO_OUT_ERROR_DEVICE_NOT_FOUND;
 
@@ -209,7 +209,7 @@ s32 cellAudioOutGetDeviceInfo(u32 audioOut, u32 deviceIndex, vm::ptr<CellAudioOu
 
 s32 cellAudioOutSetCopyControl(u32 audioOut, u32 control)
 {
-	cellSysutil.Warning("cellAudioOutSetCopyControl(audioOut=%d, control=%d)", audioOut, control);
+	cellSysutil.warning("cellAudioOutSetCopyControl(audioOut=%d, control=%d)", audioOut, control);
 
 	switch (audioOut)
 	{

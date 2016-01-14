@@ -131,7 +131,7 @@ s32 cellSysutilAvc2GetSpeakerVolumeLevel()
 
 s32 cellSysutilAvc2IsCameraAttached(vm::ptr<u8> status)
 {
-	cellSysutilAvc2.Todo("cellSysutilAvc2IsCameraAttached()");
+	cellSysutilAvc2.todo("cellSysutilAvc2IsCameraAttached()");
 
 	if (rpcs3::config.io.camera.value() == io_camera_state::null)
 	{
@@ -178,7 +178,7 @@ s32 cellSysutilAvc2GetWindowShowStatus()
 
 s32 cellSysutilAvc2InitParam(u16 version, vm::ptr<CellSysutilAvc2InitParam> option)
 {
-	cellSysutilAvc2.Warning("cellSysutilAvc2InitParam(version=%d, option=*0x%x)", version, option);
+	cellSysutilAvc2.warning("cellSysutilAvc2InitParam(version=%d, option=*0x%x)", version, option);
 
 	if (version >= 110)
 	{
@@ -186,7 +186,7 @@ s32 cellSysutilAvc2InitParam(u16 version, vm::ptr<CellSysutilAvc2InitParam> opti
 		// Other versions shouldn't differ by too much, if at all - they most likely differ in other functions.
 		if (version != 140)
 		{
-			cellSysutilAvc2.Todo("cellSysutilAvc2InitParam(): Older/newer version %d used, might cause problems.", version);
+			cellSysutilAvc2.todo("cellSysutilAvc2InitParam(): Older/newer version %d used, might cause problems.", version);
 		}
 
 		option->avc_init_param_version = version;
@@ -207,17 +207,17 @@ s32 cellSysutilAvc2InitParam(u16 version, vm::ptr<CellSysutilAvc2InitParam> opti
 			}
 			else
 			{
-				cellSysutilAvc2.Error("Unknown frame mode 0x%x", option->video_param.frame_mode);
+				cellSysutilAvc2.error("Unknown frame mode 0x%x", option->video_param.frame_mode);
 			}
 		}
 		else
 		{
-			cellSysutilAvc2.Error("Unknown media type 0x%x", option->media_type);
+			cellSysutilAvc2.error("Unknown media type 0x%x", option->media_type);
 		}
 	}
 	else
 	{
-		cellSysutilAvc2.Error("cellSysutilAvc2InitParam(): Unknown version %d used, please report this to a developer.", version);
+		cellSysutilAvc2.error("cellSysutilAvc2InitParam(): Unknown version %d used, please report this to a developer.", version);
 	}
 
 	return CELL_OK;

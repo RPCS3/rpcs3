@@ -60,7 +60,7 @@ bool RawSPUThread::read_reg(const u32 addr, u32& value)
 	}
 	}
 
-	LOG_ERROR(Log::SPU, "RawSPUThread[%d]: Read32(0x%x): unknown/illegal offset (0x%x)", index, addr, offset);
+	LOG_ERROR(SPU, "RawSPUThread[%d]: Read32(0x%x): unknown/illegal offset (0x%x)", index, addr, offset);
 	return false;
 }
 
