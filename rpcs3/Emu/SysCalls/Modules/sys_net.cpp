@@ -9,6 +9,7 @@
 #define _WIN32_WINNT 0x0601
 #include <winsock2.h>
 #include <WS2tcpip.h>
+#pragma comment(lib, "ws2_32.lib")
 #else
 #include <sys/types.h>
 #include <sys/socket.h>
