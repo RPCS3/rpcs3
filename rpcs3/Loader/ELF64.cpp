@@ -649,7 +649,7 @@ namespace loader
 
 						if (info.size < sizeof(process_param_t))
 						{
-							LOG_WARNING(LOADER, "Bad process_param size! [0x%x : 0x%x]", info.size, sizeof32(process_param_t));
+							LOG_WARNING(LOADER, "Bad process_param size! [0x%x : 0x%x]", info.size, SIZE_32(process_param_t));
 						}
 						if (info.magic != 0x13bcc5f6)
 						{

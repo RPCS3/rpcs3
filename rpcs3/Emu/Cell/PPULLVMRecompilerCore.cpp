@@ -5097,33 +5097,33 @@ Value * Compiler::SetNibble(Value * val, u32 n, Value * b0, Value * b1, Value * 
 }
 
 Value * Compiler::GetPc() {
-	auto pc_i8_ptr = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], (unsigned int)offsetof(PPUThread, PC));
+	auto pc_i8_ptr = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], OFFSET_32(PPUThread, PC));
 	auto pc_i32_ptr = m_ir_builder->CreateBitCast(pc_i8_ptr, m_ir_builder->getInt32Ty()->getPointerTo());
 	return m_ir_builder->CreateAlignedLoad(pc_i32_ptr, 4);
 }
 
 void Compiler::SetPc(Value * val_ix) {
-	auto pc_i8_ptr = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], (unsigned int)offsetof(PPUThread, PC));
+	auto pc_i8_ptr = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], OFFSET_32(PPUThread, PC));
 	auto pc_i32_ptr = m_ir_builder->CreateBitCast(pc_i8_ptr, m_ir_builder->getInt32Ty()->getPointerTo());
 	auto val_i32 = m_ir_builder->CreateZExtOrTrunc(val_ix, m_ir_builder->getInt32Ty());
 	m_ir_builder->CreateAlignedStore(val_i32, pc_i32_ptr, 4);
 }
 
 Value * Compiler::GetGpr(u32 r, u32 num_bits) {
-	auto r_i8_ptr = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], (unsigned int)offsetof(PPUThread, GPR[r]));
+	auto r_i8_ptr = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], OFFSET_32(PPUThread, GPR[r]));
 	auto r_ix_ptr = m_ir_builder->CreateBitCast(r_i8_ptr, m_ir_builder->getIntNTy(num_bits)->getPointerTo());
 	return m_ir_builder->CreateAlignedLoad(r_ix_ptr, 8);
 }
 
 void Compiler::SetGpr(u32 r, Value * val_x64) {
-	auto r_i8_ptr = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], (unsigned int)offsetof(PPUThread, GPR[r]));
+	auto r_i8_ptr = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], OFFSET_32(PPUThread, GPR[r]));
 	auto r_i64_ptr = m_ir_builder->CreateBitCast(r_i8_ptr, m_ir_builder->getInt64Ty()->getPointerTo());
 	auto val_i64 = m_ir_builder->CreateBitCast(val_x64, m_ir_builder->getInt64Ty());
 	m_ir_builder->CreateAlignedStore(val_i64, r_i64_ptr, 8);
 }
 
 Value * Compiler::GetCr() {
-	auto cr_i8_ptr = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], (unsigned int)offsetof(PPUThread, CR));
+	auto cr_i8_ptr = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], OFFSET_32(PPUThread, CR));
 	auto cr_i32_ptr = m_ir_builder->CreateBitCast(cr_i8_ptr, m_ir_builder->getInt32Ty()->getPointerTo());
 	return m_ir_builder->CreateAlignedLoad(cr_i32_ptr, 4);
 }
@@ -5134,7 +5134,7 @@ Value * Compiler::GetCrField(u32 n) {
 
 void Compiler::SetCr(Value * val_x32) {
 	auto val_i32 = m_ir_builder->CreateBitCast(val_x32, m_ir_builder->getInt32Ty());
-	auto cr_i8_ptr = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], (unsigned int)offsetof(PPUThread, CR));
+	auto cr_i8_ptr = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], OFFSET_32(PPUThread, CR));
 	auto cr_i32_ptr = m_ir_builder->CreateBitCast(cr_i8_ptr, m_ir_builder->getInt32Ty()->getPointerTo());
 	m_ir_builder->CreateAlignedStore(val_i32, cr_i32_ptr, 4);
 }
@@ -5176,33 +5176,33 @@ void Compiler::SetCr6AfterVectorCompare(u32 vr) {
 }
 
 Value * Compiler::GetLr() {
-	auto lr_i8_ptr = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], (unsigned int)offsetof(PPUThread, LR));
+	auto lr_i8_ptr = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], OFFSET_32(PPUThread, LR));
 	auto lr_i64_ptr = m_ir_builder->CreateBitCast(lr_i8_ptr, m_ir_builder->getInt64Ty()->getPointerTo());
 	return m_ir_builder->CreateAlignedLoad(lr_i64_ptr, 8);
 }
 
 void Compiler::SetLr(Value * val_x64) {
 	auto val_i64 = m_ir_builder->CreateBitCast(val_x64, m_ir_builder->getInt64Ty());
-	auto lr_i8_ptr = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], (unsigned int)offsetof(PPUThread, LR));
+	auto lr_i8_ptr = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], OFFSET_32(PPUThread, LR));
 	auto lr_i64_ptr = m_ir_builder->CreateBitCast(lr_i8_ptr, m_ir_builder->getInt64Ty()->getPointerTo());
 	m_ir_builder->CreateAlignedStore(val_i64, lr_i64_ptr, 8);
 }
 
 Value * Compiler::GetCtr() {
-	auto ctr_i8_ptr = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], (unsigned int)offsetof(PPUThread, CTR));
+	auto ctr_i8_ptr = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], OFFSET_32(PPUThread, CTR));
 	auto ctr_i64_ptr = m_ir_builder->CreateBitCast(ctr_i8_ptr, m_ir_builder->getInt64Ty()->getPointerTo());
 	return m_ir_builder->CreateAlignedLoad(ctr_i64_ptr, 8);
 }
 
 void Compiler::SetCtr(Value * val_x64) {
 	auto val_i64 = m_ir_builder->CreateBitCast(val_x64, m_ir_builder->getInt64Ty());
-	auto ctr_i8_ptr = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], (unsigned int)offsetof(PPUThread, CTR));
+	auto ctr_i8_ptr = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], OFFSET_32(PPUThread, CTR));
 	auto ctr_i64_ptr = m_ir_builder->CreateBitCast(ctr_i8_ptr, m_ir_builder->getInt64Ty()->getPointerTo());
 	m_ir_builder->CreateAlignedStore(val_i64, ctr_i64_ptr, 8);
 }
 
 Value * Compiler::GetXer() {
-	auto xer_i8_ptr = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], (unsigned int)offsetof(PPUThread, XER));
+	auto xer_i8_ptr = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], OFFSET_32(PPUThread, XER));
 	auto xer_i64_ptr = m_ir_builder->CreateBitCast(xer_i8_ptr, m_ir_builder->getInt64Ty()->getPointerTo());
 	return m_ir_builder->CreateAlignedLoad(xer_i64_ptr, 8);
 }
@@ -5217,7 +5217,7 @@ Value * Compiler::GetXerSo() {
 
 void Compiler::SetXer(Value * val_x64) {
 	auto val_i64 = m_ir_builder->CreateBitCast(val_x64, m_ir_builder->getInt64Ty());
-	auto xer_i8_ptr = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], (unsigned int)offsetof(PPUThread, XER));
+	auto xer_i8_ptr = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], OFFSET_32(PPUThread, XER));
 	auto xer_i64_ptr = m_ir_builder->CreateBitCast(xer_i8_ptr, m_ir_builder->getInt64Ty()->getPointerTo());
 	m_ir_builder->CreateAlignedStore(val_i64, xer_i64_ptr, 8);
 }
@@ -5235,7 +5235,7 @@ void Compiler::SetXerSo(Value * so) {
 }
 
 Value * Compiler::GetVrsave() {
-	auto vrsave_i8_ptr = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], (unsigned int)offsetof(PPUThread, VRSAVE));
+	auto vrsave_i8_ptr = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], OFFSET_32(PPUThread, VRSAVE));
 	auto vrsave_i32_ptr = m_ir_builder->CreateBitCast(vrsave_i8_ptr, m_ir_builder->getInt32Ty()->getPointerTo());
 	auto val_i32 = m_ir_builder->CreateAlignedLoad(vrsave_i32_ptr, 4);
 	return m_ir_builder->CreateZExtOrTrunc(val_i32, m_ir_builder->getInt64Ty());
@@ -5244,26 +5244,26 @@ Value * Compiler::GetVrsave() {
 void Compiler::SetVrsave(Value * val_x64) {
 	auto val_i64 = m_ir_builder->CreateBitCast(val_x64, m_ir_builder->getInt64Ty());
 	auto val_i32 = m_ir_builder->CreateZExtOrTrunc(val_i64, m_ir_builder->getInt32Ty());
-	auto vrsave_i8_ptr = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], (unsigned int)offsetof(PPUThread, VRSAVE));
+	auto vrsave_i8_ptr = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], OFFSET_32(PPUThread, VRSAVE));
 	auto vrsave_i32_ptr = m_ir_builder->CreateBitCast(vrsave_i8_ptr, m_ir_builder->getInt32Ty()->getPointerTo());
 	m_ir_builder->CreateAlignedStore(val_i32, vrsave_i32_ptr, 8);
 }
 
 Value * Compiler::GetFpscr() {
-	auto fpscr_i8_ptr = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], (unsigned int)offsetof(PPUThread, FPSCR));
+	auto fpscr_i8_ptr = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], OFFSET_32(PPUThread, FPSCR));
 	auto fpscr_i32_ptr = m_ir_builder->CreateBitCast(fpscr_i8_ptr, m_ir_builder->getInt32Ty()->getPointerTo());
 	return m_ir_builder->CreateAlignedLoad(fpscr_i32_ptr, 4);
 }
 
 void Compiler::SetFpscr(Value * val_x32) {
 	auto val_i32 = m_ir_builder->CreateBitCast(val_x32, m_ir_builder->getInt32Ty());
-	auto fpscr_i8_ptr = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], (unsigned int)offsetof(PPUThread, FPSCR));
+	auto fpscr_i8_ptr = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], OFFSET_32(PPUThread, FPSCR));
 	auto fpscr_i32_ptr = m_ir_builder->CreateBitCast(fpscr_i8_ptr, m_ir_builder->getInt32Ty()->getPointerTo());
 	m_ir_builder->CreateAlignedStore(val_i32, fpscr_i32_ptr, 4);
 }
 
 Value * Compiler::GetFpr(u32 r, u32 bits, bool as_int) {
-	auto r_i8_ptr = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], (unsigned int)offsetof(PPUThread, FPR[r]));
+	auto r_i8_ptr = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], OFFSET_32(PPUThread, FPR[r]));
 	if (!as_int) {
 		auto r_f64_ptr = m_ir_builder->CreateBitCast(r_i8_ptr, m_ir_builder->getDoubleTy()->getPointerTo());
 		auto r_f64 = m_ir_builder->CreateAlignedLoad(r_f64_ptr, 8);
@@ -5287,7 +5287,7 @@ Value * Compiler::GetFpr(u32 r, u32 bits, bool as_int) {
 }
 
 void Compiler::SetFpr(u32 r, Value * val) {
-	auto r_i8_ptr = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], (unsigned int)offsetof(PPUThread, FPR[r]));
+	auto r_i8_ptr = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], OFFSET_32(PPUThread, FPR[r]));
 	auto r_f64_ptr = m_ir_builder->CreateBitCast(r_i8_ptr, m_ir_builder->getDoubleTy()->getPointerTo());
 
 	Value* val_f64;
@@ -5306,47 +5306,47 @@ void Compiler::SetFpr(u32 r, Value * val) {
 }
 
 Value * Compiler::GetVscr() {
-	auto vscr_i8_ptr = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], (unsigned int)offsetof(PPUThread, VSCR));
+	auto vscr_i8_ptr = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], OFFSET_32(PPUThread, VSCR));
 	auto vscr_i32_ptr = m_ir_builder->CreateBitCast(vscr_i8_ptr, m_ir_builder->getInt32Ty()->getPointerTo());
 	return m_ir_builder->CreateAlignedLoad(vscr_i32_ptr, 4);
 }
 
 void Compiler::SetVscr(Value * val_x32) {
 	auto val_i32 = m_ir_builder->CreateBitCast(val_x32, m_ir_builder->getInt32Ty());
-	auto vscr_i8_ptr = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], (unsigned int)offsetof(PPUThread, VSCR));
+	auto vscr_i8_ptr = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], OFFSET_32(PPUThread, VSCR));
 	auto vscr_i32_ptr = m_ir_builder->CreateBitCast(vscr_i8_ptr, m_ir_builder->getInt32Ty()->getPointerTo());
 	m_ir_builder->CreateAlignedStore(val_i32, vscr_i32_ptr, 4);
 }
 
 Value * Compiler::GetVr(u32 vr) {
-	auto vr_i8_ptr = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], (unsigned int)offsetof(PPUThread, VPR[vr]));
+	auto vr_i8_ptr = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], OFFSET_32(PPUThread, VPR[vr]));
 	auto vr_i128_ptr = m_ir_builder->CreateBitCast(vr_i8_ptr, m_ir_builder->getIntNTy(128)->getPointerTo());
 	return m_ir_builder->CreateAlignedLoad(vr_i128_ptr, 16);
 }
 
 Value * Compiler::GetVrAsIntVec(u32 vr, u32 vec_elt_num_bits) {
-	auto vr_i8_ptr = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], (unsigned int)offsetof(PPUThread, VPR[vr]));
+	auto vr_i8_ptr = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], OFFSET_32(PPUThread, VPR[vr]));
 	auto vr_i128_ptr = m_ir_builder->CreateBitCast(vr_i8_ptr, m_ir_builder->getIntNTy(128)->getPointerTo());
 	auto vr_vec_ptr = m_ir_builder->CreateBitCast(vr_i128_ptr, VectorType::get(m_ir_builder->getIntNTy(vec_elt_num_bits), 128 / vec_elt_num_bits)->getPointerTo());
 	return m_ir_builder->CreateAlignedLoad(vr_vec_ptr, 16);
 }
 
 Value * Compiler::GetVrAsFloatVec(u32 vr) {
-	auto vr_i8_ptr = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], (unsigned int)offsetof(PPUThread, VPR[vr]));
+	auto vr_i8_ptr = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], OFFSET_32(PPUThread, VPR[vr]));
 	auto vr_i128_ptr = m_ir_builder->CreateBitCast(vr_i8_ptr, m_ir_builder->getIntNTy(128)->getPointerTo());
 	auto vr_v4f32_ptr = m_ir_builder->CreateBitCast(vr_i128_ptr, VectorType::get(m_ir_builder->getFloatTy(), 4)->getPointerTo());
 	return m_ir_builder->CreateAlignedLoad(vr_v4f32_ptr, 16);
 }
 
 Value * Compiler::GetVrAsDoubleVec(u32 vr) {
-	auto vr_i8_ptr = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], (unsigned int)offsetof(PPUThread, VPR[vr]));
+	auto vr_i8_ptr = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], OFFSET_32(PPUThread, VPR[vr]));
 	auto vr_i128_ptr = m_ir_builder->CreateBitCast(vr_i8_ptr, m_ir_builder->getIntNTy(128)->getPointerTo());
 	auto vr_v2f64_ptr = m_ir_builder->CreateBitCast(vr_i128_ptr, VectorType::get(m_ir_builder->getDoubleTy(), 2)->getPointerTo());
 	return m_ir_builder->CreateAlignedLoad(vr_v2f64_ptr, 16);
 }
 
 void Compiler::SetVr(u32 vr, Value * val_x128) {
-	auto vr_i8_ptr = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], (unsigned int)offsetof(PPUThread, VPR[vr]));
+	auto vr_i8_ptr = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], OFFSET_32(PPUThread, VPR[vr]));
 	auto vr_i128_ptr = m_ir_builder->CreateBitCast(vr_i8_ptr, m_ir_builder->getIntNTy(128)->getPointerTo());
 	auto val_i128 = m_ir_builder->CreateBitCast(val_x128, m_ir_builder->getIntNTy(128));
 	m_ir_builder->CreateAlignedStore(val_i128, vr_i128_ptr, 16);

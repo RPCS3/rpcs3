@@ -46,7 +46,7 @@ namespace vm
 		// get vm pointer to a struct member with array subscription
 		template<typename MT, typename T2, typename ET = std::remove_extent_t<MT>, typename = if_comparable_t<T, T2>> _ptr_base<ET> ptr(MT T2::*const mptr, u32 index) const
 		{
-			return{ VM_CAST(m_addr) + get_offset(mptr) + sizeof32(ET) * index, vm::addr };
+			return{ VM_CAST(m_addr) + get_offset(mptr) + SIZE_32(ET) * index, vm::addr };
 		}
 
 		// get vm reference to a struct member
@@ -58,7 +58,7 @@ namespace vm
 		// get vm reference to a struct member with array subscription
 		template<typename MT, typename T2, typename ET = std::remove_extent_t<MT>, typename = if_comparable_t<T, T2>> _ref_base<ET> ref(MT T2::*const mptr, u32 index) const
 		{
-			return{ VM_CAST(m_addr) + get_offset(mptr) + sizeof32(ET) * index, vm::addr };
+			return{ VM_CAST(m_addr) + get_offset(mptr) + SIZE_32(ET) * index, vm::addr };
 		}
 
 		// get vm reference
@@ -98,7 +98,7 @@ namespace vm
 		{
 			static_assert(!std::is_void<T>::value, "vm::_ptr_base<> error: operator[] is not available for void pointers");
 
-			return *static_cast<T*>(vm::base(VM_CAST(m_addr) + sizeof32(T) * index));
+			return *static_cast<T*>(vm::base(VM_CAST(m_addr) + SIZE_32(T) * index));
 		}
 
 		// enable only the conversions which are originally possible between pointer types
@@ -128,7 +128,7 @@ namespace vm
 		{
 			static_assert(!std::is_void<T>::value, "vm::_ptr_base<> error: aligned() is not available for void pointers");
 
-			return aligned(alignof32(T));
+			return aligned(ALIGN_32(T));
 		}
 
 		// Test address for arbitrary alignment: (addr & (align - 1)) != 0
@@ -143,7 +143,7 @@ namespace vm
 			static_assert(!std::is_void<T>::value, "vm::_ptr_base<> error: operator++ is not available for void pointers");
 
 			const addr_type result = m_addr;
-			m_addr = VM_CAST(m_addr) + sizeof32(T);
+			m_addr = VM_CAST(m_addr) + SIZE_32(T);
 			return{ result, vm::addr };
 		}
 
@@ -152,7 +152,7 @@ namespace vm
 		{
 			static_assert(!std::is_void<T>::value, "vm::_ptr_base<> error: operator++ is not available for void pointers");
 
-			m_addr = VM_CAST(m_addr) + sizeof32(T);
+			m_addr = VM_CAST(m_addr) + SIZE_32(T);
 			return *this;
 		}
 
@@ -162,7 +162,7 @@ namespace vm
 			static_assert(!std::is_void<T>::value, "vm::_ptr_base<> error: operator-- is not available for void pointers");
 
 			const addr_type result = m_addr;
-			m_addr = VM_CAST(m_addr) - sizeof32(T);
+			m_addr = VM_CAST(m_addr) - SIZE_32(T);
 			return{ result, vm::addr };
 		}
 
@@ -171,7 +171,7 @@ namespace vm
 		{
 			static_assert(!std::is_void<T>::value, "vm::_ptr_base<> error: operator-- is not available for void pointers");
 
-			m_addr = VM_CAST(m_addr) - sizeof32(T);
+			m_addr = VM_CAST(m_addr) - SIZE_32(T);
 			return *this;
 		}
 
@@ -179,7 +179,7 @@ namespace vm
 		{
 			static_assert(!std::is_void<T>::value, "vm::_ptr_base<> error: operator+= is not available for void pointers");
 
-			m_addr = VM_CAST(m_addr) + count * sizeof32(T);
+			m_addr = VM_CAST(m_addr) + count * SIZE_32(T);
 			return *this;
 		}
 
@@ -187,7 +187,7 @@ namespace vm
 		{
 			static_assert(!std::is_void<T>::value, "vm::_ptr_base<> error: operator-= is not available for void pointers");
 
-			m_addr = VM_CAST(m_addr) - count * sizeof32(T);
+			m_addr = VM_CAST(m_addr) - count * SIZE_32(T);
 			return *this;
 		}
 	};
@@ -350,13 +350,13 @@ namespace vm
 	// Call wait_op() for specified vm pointer
 	template<typename T, typename AT, typename F, typename... Args> inline auto wait_op(named_thread_t& thread, const _ptr_base<T, AT>& ptr, F pred, Args&&... args) -> decltype(static_cast<void>(pred(args...)))
 	{
-		return wait_op(thread, ptr.addr(), sizeof32(T), std::move(pred), std::forward<Args>(args)...);
+		return wait_op(thread, ptr.addr(), SIZE_32(T), std::move(pred), std::forward<Args>(args)...);
 	}
 
 	// Call notify_at() for specified vm pointer
 	template<typename T, typename AT> inline void notify_at(const vm::_ptr_base<T, AT>& ptr)
 	{
-		return notify_at(ptr.addr(), sizeof32(T));
+		return notify_at(ptr.addr(), SIZE_32(T));
 	}
 }
 
@@ -375,19 +375,19 @@ template<typename T, typename AT> inline std::enable_if_t<std::is_object<T>::val
 // addition operator for vm::_ptr_base (pointer + integer)
 template<typename T, typename AT> inline std::enable_if_t<std::is_object<T>::value, vm::_ptr_base<T>> operator +(const vm::_ptr_base<T, AT>& ptr, u32 count)
 {
-	return{ VM_CAST(ptr.addr()) + count * sizeof32(T), vm::addr };
+	return{ VM_CAST(ptr.addr()) + count * SIZE_32(T), vm::addr };
 }
 
 // addition operator for vm::_ptr_base (integer + pointer)
 template<typename T, typename AT> inline std::enable_if_t<std::is_object<T>::value, vm::_ptr_base<T>> operator +(u32 count, const vm::_ptr_base<T, AT>& ptr)
 {
-	return{ VM_CAST(ptr.addr()) + count * sizeof32(T), vm::addr };
+	return{ VM_CAST(ptr.addr()) + count * SIZE_32(T), vm::addr };
 }
 
 // subtraction operator for vm::_ptr_base (pointer - integer)
 template<typename T, typename AT> inline std::enable_if_t<std::is_object<T>::value, vm::_ptr_base<T>> operator -(const vm::_ptr_base<T, AT>& ptr, u32 count)
 {
-	return{ VM_CAST(ptr.addr()) - count * sizeof32(T), vm::addr };
+	return{ VM_CAST(ptr.addr()) - count * SIZE_32(T), vm::addr };
 }
 
 // pointer difference operator for vm::_ptr_base
@@ -397,7 +397,7 @@ template<typename T1, typename AT1, typename T2, typename AT2> inline std::enabl
 	std::is_same<std::remove_cv_t<T1>, std::remove_cv_t<T2>>::value,
 	s32> operator -(const vm::_ptr_base<T1, AT1>& left, const vm::_ptr_base<T2, AT2>& right)
 {
-	return static_cast<s32>(VM_CAST(left.addr()) - VM_CAST(right.addr())) / sizeof32(T1);
+	return static_cast<s32>(VM_CAST(left.addr()) - VM_CAST(right.addr())) / SIZE_32(T1);
 }
 
 // comparison operator for vm::_ptr_base (pointer1 == pointer2)

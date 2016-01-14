@@ -15,13 +15,11 @@
 
 #include "asmjit.h"
 
-#define OFFSET_OF(type, x) static_cast<s32>(reinterpret_cast<uintptr_t>(&(((type*)0)->x)))
-
-#define SPU_OFF_128(x) asmjit::host::oword_ptr(*cpu, OFFSET_OF(SPUThread, x))
-#define SPU_OFF_64(x) asmjit::host::qword_ptr(*cpu, OFFSET_OF(SPUThread, x))
-#define SPU_OFF_32(x) asmjit::host::dword_ptr(*cpu, OFFSET_OF(SPUThread, x))
-#define SPU_OFF_16(x) asmjit::host::word_ptr(*cpu, OFFSET_OF(SPUThread, x))
-#define SPU_OFF_8(x) asmjit::host::byte_ptr(*cpu, OFFSET_OF(SPUThread, x))
+#define SPU_OFF_128(x) asmjit::host::oword_ptr(*cpu, OFFSET_32(SPUThread, x))
+#define SPU_OFF_64(x) asmjit::host::qword_ptr(*cpu, OFFSET_32(SPUThread, x))
+#define SPU_OFF_32(x) asmjit::host::dword_ptr(*cpu, OFFSET_32(SPUThread, x))
+#define SPU_OFF_16(x) asmjit::host::word_ptr(*cpu, OFFSET_32(SPUThread, x))
+#define SPU_OFF_8(x) asmjit::host::byte_ptr(*cpu, OFFSET_32(SPUThread, x))
 
 spu_recompiler::spu_recompiler()
 	: m_jit(std::make_shared<asmjit::JitRuntime>())
@@ -1083,7 +1081,7 @@ void spu_recompiler::CBX(spu_opcode_t op)
 	const XmmLink& vr = XmmAlloc();
 	c->movdqa(vr, XmmConst(_mm_set_epi32(0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f)));
 	c->movdqa(SPU_OFF_128(gpr[op.rt]), vr);
-	c->mov(asmjit::host::byte_ptr(*cpu, *addr, 0, OFFSET_OF(SPUThread, gpr[op.rt])), 0x03);
+	c->mov(asmjit::host::byte_ptr(*cpu, *addr, 0, OFFSET_32(SPUThread, gpr[op.rt])), 0x03);
 	c->unuse(*addr);
 }
 
@@ -1097,7 +1095,7 @@ void spu_recompiler::CHX(spu_opcode_t op)
 	const XmmLink& vr = XmmAlloc();
 	c->movdqa(vr, XmmConst(_mm_set_epi32(0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f)));
 	c->movdqa(SPU_OFF_128(gpr[op.rt]), vr);
-	c->mov(asmjit::host::word_ptr(*cpu, *addr, 0, OFFSET_OF(SPUThread, gpr[op.rt])), 0x0203);
+	c->mov(asmjit::host::word_ptr(*cpu, *addr, 0, OFFSET_32(SPUThread, gpr[op.rt])), 0x0203);
 	c->unuse(*addr);
 }
 
@@ -1111,7 +1109,7 @@ void spu_recompiler::CWX(spu_opcode_t op)
 	const XmmLink& vr = XmmAlloc();
 	c->movdqa(vr, XmmConst(_mm_set_epi32(0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f)));
 	c->movdqa(SPU_OFF_128(gpr[op.rt]), vr);
-	c->mov(asmjit::host::dword_ptr(*cpu, *addr, 0, OFFSET_OF(SPUThread, gpr[op.rt])), 0x00010203);
+	c->mov(asmjit::host::dword_ptr(*cpu, *addr, 0, OFFSET_32(SPUThread, gpr[op.rt])), 0x00010203);
 	c->unuse(*addr);
 }
 
@@ -1126,7 +1124,7 @@ void spu_recompiler::CDX(spu_opcode_t op)
 	c->movdqa(vr, XmmConst(_mm_set_epi32(0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f)));
 	c->movdqa(SPU_OFF_128(gpr[op.rt]), vr);
 	c->mov(*qw0, asmjit::imm_u(0x0001020304050607));
-	c->mov(asmjit::host::qword_ptr(*cpu, *addr, 0, OFFSET_OF(SPUThread, gpr[op.rt])), *qw0);
+	c->mov(asmjit::host::qword_ptr(*cpu, *addr, 0, OFFSET_32(SPUThread, gpr[op.rt])), *qw0);
 	c->unuse(*addr);
 	c->unuse(*qw0);
 }
@@ -1254,7 +1252,7 @@ void spu_recompiler::CBD(spu_opcode_t op)
 	const XmmLink& vr = XmmAlloc();
 	c->movdqa(vr, XmmConst(_mm_set_epi32(0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f)));
 	c->movdqa(SPU_OFF_128(gpr[op.rt]), vr);
-	c->mov(asmjit::host::byte_ptr(*cpu, *addr, 0, OFFSET_OF(SPUThread, gpr[op.rt])), 0x03);
+	c->mov(asmjit::host::byte_ptr(*cpu, *addr, 0, OFFSET_32(SPUThread, gpr[op.rt])), 0x03);
 	c->unuse(*addr);
 }
 
@@ -1279,7 +1277,7 @@ void spu_recompiler::CHD(spu_opcode_t op)
 	const XmmLink& vr = XmmAlloc();
 	c->movdqa(vr, XmmConst(_mm_set_epi32(0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f)));
 	c->movdqa(SPU_OFF_128(gpr[op.rt]), vr);
-	c->mov(asmjit::host::word_ptr(*cpu, *addr, 0, OFFSET_OF(SPUThread, gpr[op.rt])), 0x0203);
+	c->mov(asmjit::host::word_ptr(*cpu, *addr, 0, OFFSET_32(SPUThread, gpr[op.rt])), 0x0203);
 	c->unuse(*addr);
 }
 
@@ -1304,7 +1302,7 @@ void spu_recompiler::CWD(spu_opcode_t op)
 	const XmmLink& vr = XmmAlloc();
 	c->movdqa(vr, XmmConst(_mm_set_epi32(0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f)));
 	c->movdqa(SPU_OFF_128(gpr[op.rt]), vr);
-	c->mov(asmjit::host::dword_ptr(*cpu, *addr, 0, OFFSET_OF(SPUThread, gpr[op.rt])), 0x00010203);
+	c->mov(asmjit::host::dword_ptr(*cpu, *addr, 0, OFFSET_32(SPUThread, gpr[op.rt])), 0x00010203);
 	c->unuse(*addr);
 }
 
@@ -1330,7 +1328,7 @@ void spu_recompiler::CDD(spu_opcode_t op)
 	c->movdqa(vr, XmmConst(_mm_set_epi32(0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f)));
 	c->movdqa(SPU_OFF_128(gpr[op.rt]), vr);
 	c->mov(*qw0, asmjit::imm_u(0x0001020304050607));
-	c->mov(asmjit::host::qword_ptr(*cpu, *addr, 0, OFFSET_OF(SPUThread, gpr[op.rt])), *qw0);
+	c->mov(asmjit::host::qword_ptr(*cpu, *addr, 0, OFFSET_32(SPUThread, gpr[op.rt])), *qw0);
 	c->unuse(*addr);
 	c->unuse(*qw0);
 }

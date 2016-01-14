@@ -72,7 +72,7 @@ s32 cellGifDecOpen(PMainHandle mainHandle, PPSubHandle subHandle, PSrc src, POpe
 	}
 	}
 
-	subHandle->set(vm::alloc(sizeof32(GifStream), vm::main));
+	subHandle->set(vm::alloc(SIZE_32(GifStream), vm::main));
 
 	**subHandle = current_subHandle;
 
