@@ -1,7 +1,7 @@
 #pragma once
 
 using SceFiosOpCallback = s32(vm::ptr<void> pContext, s32 op, u8 event, s32 err);
-using SceFiosVprintfCallback = s32(vm::cptr<char> fmt, va_list ap);
+using SceFiosVprintfCallback = s32(vm::cptr<char> fmt, armv7_va_args_t ap /* va_list */);
 using SceFiosMemcpyCallback = vm::ptr<void>(vm::ptr<void> dst, vm::cptr<void> src, u32 len);
 
 enum SceFiosWhence : s32
