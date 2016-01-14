@@ -176,7 +176,7 @@ constexpr u32 size32(const T(&)[Size])
 }
 
 // return 32 bit offsetof()
-#define OFFSET_32(type, x) static_cast<u32>(reinterpret_cast<uintptr_t>(&(reinterpret_cast<type*>(0ull)->x)))
+#define OFFSET_32(type, x) static_cast<u32>(reinterpret_cast<uintptr_t>(&reinterpret_cast<char const volatile&>(reinterpret_cast<type*>(0ull)->x)))
 
 #define CONCATENATE_DETAIL(x, y) x ## y
 #define CONCATENATE(x, y) CONCATENATE_DETAIL(x, y)
