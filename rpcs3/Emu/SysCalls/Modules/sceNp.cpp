@@ -75,7 +75,7 @@ s32 npDrmIsAvailable(u32 k_licensee_addr, vm::cptr<char> drm_path)
 	std::string pf_str("00000001");  // TODO: Allow multiple profiles. Use default for now.
 	std::string rap_path("/dev_hdd0/home/" + pf_str + "/exdata/");
 
-	// Search dev_usb000 for a compatible RAP file. 
+	// Search for a compatible RAP file. 
 	for (const auto entry : vfsDir(rap_path))
 	{
 		if (entry->name.find(titleID) != std::string::npos)
@@ -88,13 +88,19 @@ s32 npDrmIsAvailable(u32 k_licensee_addr, vm::cptr<char> drm_path)
 	if (rap_path.back() == '/')
 	{
 		sceNp.warning("npDrmIsAvailable(): Can't find RAP file for '%s' (titleID='%s')", drm_path.get_ptr(), titleID);
+		rap_path.clear();
 	}
 
 	// Decrypt this EDAT using the supplied k_licensee and matching RAP file.
 	std::string enc_drm_path_local, dec_drm_path_local, rap_path_local;
+
 	Emu.GetVFS().GetDevice(enc_drm_path, enc_drm_path_local);
 	Emu.GetVFS().GetDevice(dec_drm_path, dec_drm_path_local);
-	Emu.GetVFS().GetDevice(rap_path, rap_path_local);
+
+	if (rap_path.size())
+	{
+		Emu.GetVFS().GetDevice(rap_path, rap_path_local);
+	}
 
 	if (DecryptEDAT(enc_drm_path_local, dec_drm_path_local, 8, rap_path_local, k_licensee, false) >= 0)
 	{

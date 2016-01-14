@@ -218,7 +218,7 @@ void Emulator::Load()
 		if (dir_list.size() >= 2 && dir_list.back() == "USRDIR" && *(dir_list.end() - 2) == "PS3_GAME")
 		{
 			// mount detected /dev_bdvd/ directory
-			Emu.GetVFS().Mount("/dev_bdvd/", elf_dir.substr(0, elf_dir.length() - 17), new vfsDeviceLocalFile());
+			Emu.GetVFS().Mount("/dev_bdvd/", elf_dir.substr(0, elf_dir.length() - 16), new vfsDeviceLocalFile());
 		}
 	}
 
