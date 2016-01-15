@@ -162,9 +162,9 @@ void D3D12FragmentDecompiler::insertMainStart(std::stringstream & OS)
 	const std::set<std::string> output_value =
 	{
 		"r0", "r1", "r2", "r3", "r4",
-		"h0", "h4", "h6", "h8"
+		"h0", "h2", "h4", "h6", "h8"
 	};
-	OS << "void ps_impl(PixelInput In, inout float4 r0, inout float4 h0, inout float4 r1, inout float4 r2, inout float4 h4, inout float4 r3, inout float4 h6, inout float4 r4, inout float4 h8)" << std::endl;
+	OS << "void ps_impl(PixelInput In, inout float4 r0, inout float4 h0, inout float4 r1, inout float4 h2, inout float4 r2, inout float4 h4, inout float4 r3, inout float4 h6, inout float4 r4, inout float4 h8)" << std::endl;
 	OS << "{" << std::endl;
 	for (ParamType PT : m_parr.params[PF_PARAM_IN])
 	{
@@ -212,7 +212,7 @@ void D3D12FragmentDecompiler::insertMainEnd(std::stringstream & OS)
 	OS << "	float4 h4 = float4(0., 0., 0., 0.);" << std::endl;
 	OS << "	float4 h6 = float4(0., 0., 0., 0.);" << std::endl;
 	OS << "	float4 h8 = float4(0., 0., 0., 0.);" << std::endl;
-	OS << "	ps_impl(In, r0, h0, r1, r2, h4, r3, h6, r4, h8);" << std::endl;
+	OS << "	ps_impl(In, r0, h0, r1, h2, r2, h4, r3, h6, r4, h8);" << std::endl;
 
 	const std::pair<std::string, std::string> table[] =
 	{
@@ -233,7 +233,15 @@ void D3D12FragmentDecompiler::insertMainEnd(std::stringstream & OS)
 		}
 	}
 	if (m_ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT)
-		OS << "	Out.depth = " << ((m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS) ? "r1.z;" : "h0.z;") << std::endl;
+	{
+		/**
+		 * Note: Naruto Shippuden : Ultimate Ninja Storm 2 sets CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS in a shader
+		 * but it writes depth in r1.z and not h2.z.
+		 * Maybe there's a different flag for depth ?
+		 */
+		//		OS << "	Out.depth = " << ((m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS) ? "r1.z;" : "h2.z;") << std::endl;
+		OS << "	Out.depth = r1.z;\n";
+	}
 	// Shaders don't always output colors (for instance if they write to depth only)
 	if (!first_output_name.empty())
 		OS << "	if (isAlphaTested && Out." << first_output_name << ".a <= alphaRef) discard;\n";
