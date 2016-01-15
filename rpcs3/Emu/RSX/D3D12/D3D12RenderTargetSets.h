@@ -11,18 +11,18 @@ namespace rsx
 {
 	namespace
 	{
-		std::vector<u8> get_rtt_indexes(u8 color_target)
+		std::vector<u8> get_rtt_indexes(Surface_target color_target)
 		{
 			switch (color_target)
 			{
-			case CELL_GCM_SURFACE_TARGET_NONE: return{};
-			case CELL_GCM_SURFACE_TARGET_0: return{ 0 };
-			case CELL_GCM_SURFACE_TARGET_1: return{ 1 };
-			case CELL_GCM_SURFACE_TARGET_MRT1: return{ 0, 1 };
-			case CELL_GCM_SURFACE_TARGET_MRT2: return{ 0, 1, 2 };
-			case CELL_GCM_SURFACE_TARGET_MRT3: return{ 0, 1, 2, 3 };
+			case Surface_target::none: return{};
+			case Surface_target::surface_a: return{ 0 };
+			case Surface_target::surface_b: return{ 1 };
+			case Surface_target::surfaces_a_b: return{ 0, 1 };
+			case Surface_target::surfaces_a_b_c: return{ 0, 1, 2 };
+			case Surface_target::surfaces_a_b_c_d: return{ 0, 1, 2, 3 };
 			}
-			throw EXCEPTION("Wrong color_target (%d)", color_target);
+			throw EXCEPTION("Wrong color_target");
 		}
 	}
 
@@ -56,7 +56,7 @@ namespace rsx
 		gsl::not_null<surface_type> bind_address_as_render_targets(
 			command_list_type command_list,
 			u32 address,
-			u8 surface_color_format, size_t width, size_t height,
+			Surface_color_format surface_color_format, size_t width, size_t height,
 			Args&&... extra_params)
 		{
 			auto It = m_render_targets_storage.find(address);
@@ -75,7 +75,7 @@ namespace rsx
 				m_render_targets_storage.erase(address);
 			}
 
-			m_render_targets_storage[address] = Traits::create_new_render_target(address, surface_color_format, width, height, std::forward<Args>(extra_params)...);
+			m_render_targets_storage[address] = Traits::create_new_surface(address, surface_color_format, width, height, std::forward<Args>(extra_params)...);
 			return m_render_targets_storage[address].Get();
 		}
 
@@ -83,7 +83,7 @@ namespace rsx
 		gsl::not_null<surface_type> bind_address_as_depth_stencil(
 			command_list_type command_list,
 			u32 address,
-			u8 surface_depth_format, size_t width, size_t height,
+			Surface_depth_format surface_depth_format, size_t width, size_t height,
 			Args&&... extra_params)
 		{
 			auto It = m_depth_stencil_storage.find(address);
@@ -99,7 +99,7 @@ namespace rsx
 				m_depth_stencil_storage.erase(address);
 			}
 
-			m_depth_stencil_storage[address] = Traits::create_new_depth_stencil(address, surface_depth_format, width, height, std::forward<Args>(extra_params)...);
+			m_depth_stencil_storage[address] = Traits::create_new_surface(address, surface_depth_format, width, height, std::forward<Args>(extra_params)...);
 			return m_depth_stencil_storage[address].Get();
 		}
 	public:
@@ -108,7 +108,7 @@ namespace rsx
 			command_list_type command_list,
 			u32 set_surface_format_reg,
 			u32 clip_horizontal_reg, u32 clip_vertical_reg,
-			u32 set_surface_target,
+			Surface_target set_surface_target,
 			const std::array<u32, 4> &surface_addresses, u32 address_z,
 			Args&&... extra_params)
 		{
@@ -178,9 +178,9 @@ struct render_target_traits
 	using command_list_type = gsl::not_null<ID3D12GraphicsCommandList*>;
 
 	static
-	ComPtr<ID3D12Resource> create_new_render_target(
+	ComPtr<ID3D12Resource> create_new_surface(
 		u32 address,
-		u8 surface_color_format, size_t width, size_t height,
+		Surface_color_format surface_color_format, size_t width, size_t height,
 		gsl::not_null<ID3D12Device*> device, const std::array<float, 4> &clear_color, float, u8)
 	{
 		DXGI_FORMAT dxgi_format = get_color_surface_format(surface_color_format);
@@ -226,9 +226,9 @@ struct render_target_traits
 	}
 
 	static
-	ComPtr<ID3D12Resource> create_new_depth_stencil(
+	ComPtr<ID3D12Resource> create_new_surface(
 		u32 address,
-		u8 surfaceDepthFormat, size_t width, size_t height,
+		Surface_depth_format surfaceDepthFormat, size_t width, size_t height,
 		gsl::not_null<ID3D12Device*> device, const std::array<float, 4>& , float clear_depth, u8 clear_stencil)
 	{
 		D3D12_CLEAR_VALUE clear_depth_value = {};
@@ -272,14 +272,14 @@ struct render_target_traits
 
 
 	static
-	bool rtt_has_format_width_height(const ComPtr<ID3D12Resource> &rtt, u8 surface_color_format, size_t width, size_t height)
+	bool rtt_has_format_width_height(const ComPtr<ID3D12Resource> &rtt, Surface_color_format surface_color_format, size_t width, size_t height)
 	{
 		DXGI_FORMAT dxgi_format = get_color_surface_format(surface_color_format);
 		return rtt->GetDesc().Format == dxgi_format && rtt->GetDesc().Width == width && rtt->GetDesc().Height == height;
 	}
 
 	static
-	bool ds_has_format_width_height(const ComPtr<ID3D12Resource> &rtt, u8 surface_depth_stencil_format, size_t width, size_t height)
+	bool ds_has_format_width_height(const ComPtr<ID3D12Resource> &rtt, Surface_depth_format surface_depth_stencil_format, size_t width, size_t height)
 	{
 		//TODO: Check format
 		return rtt->GetDesc().Width == width && rtt->GetDesc().Height == height;

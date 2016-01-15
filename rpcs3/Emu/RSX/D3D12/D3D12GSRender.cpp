@@ -348,20 +348,20 @@ void D3D12GSRender::end()
 
 namespace
 {
-bool is_flip_surface_in_global_memory(u32 color_target)
+bool is_flip_surface_in_global_memory(Surface_target color_target)
 {
 	switch (color_target)
 	{
-	case CELL_GCM_SURFACE_TARGET_0:
-	case CELL_GCM_SURFACE_TARGET_1:
-	case CELL_GCM_SURFACE_TARGET_MRT1:
-	case CELL_GCM_SURFACE_TARGET_MRT2:
-	case CELL_GCM_SURFACE_TARGET_MRT3:
+	case Surface_target::surface_a:
+	case Surface_target::surface_b:
+	case Surface_target::surfaces_a_b:
+	case Surface_target::surfaces_a_b_c:
+	case Surface_target::surfaces_a_b_c_d:
 		return true;
-	case CELL_GCM_SURFACE_TARGET_NONE:
+	case Surface_target::none:
 		return false;
 	}
-	throw EXCEPTION("Wrong color_target (%u)", color_target);
+	throw EXCEPTION("Wrong color_target");
 }
 }
 
@@ -370,7 +370,7 @@ void D3D12GSRender::flip(int buffer)
 	ID3D12Resource *resource_to_flip;
 	float viewport_w, viewport_h;
 
-	if (!is_flip_surface_in_global_memory(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET]))
+	if (!is_flip_surface_in_global_memory(to_surface_target(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET])))
 	{
 		resource_storage &storage = get_current_resource_storage();
 		assert(storage.ram_framebuffer == nullptr);
@@ -459,7 +459,7 @@ void D3D12GSRender::flip(int buffer)
 	shader_resource_view_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	shader_resource_view_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 	shader_resource_view_desc.Texture2D.MipLevels = 1;
-	if (is_flip_surface_in_global_memory(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET]))
+	if (is_flip_surface_in_global_memory(to_surface_target(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET])))
 		shader_resource_view_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 	else
 		shader_resource_view_desc.Shader4ComponentMapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(
@@ -504,7 +504,7 @@ void D3D12GSRender::flip(int buffer)
 
 	if (!rpcs3::config.rsx.d3d12.overlay.value())
 		get_current_resource_storage().command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_backbuffer[m_swap_chain->GetCurrentBackBufferIndex()].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
-	if (is_flip_surface_in_global_memory(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET]) && resource_to_flip != nullptr)
+	if (is_flip_surface_in_global_memory(to_surface_target(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET])) && resource_to_flip != nullptr)
 		get_current_resource_storage().command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(resource_to_flip, D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET));
 	CHECK_HRESULT(get_current_resource_storage().command_list->Close());
 	m_command_queue->ExecuteCommandLists(1, (ID3D12CommandList**)get_current_resource_storage().command_list.GetAddressOf());

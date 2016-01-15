@@ -66,27 +66,27 @@ D3D12_PRIMITIVE_TOPOLOGY_TYPE get_primitive_topology_type(Primitive_type draw_mo
 /**
  * Convert color surface format to DXGI_FORMAT
  */
-DXGI_FORMAT get_color_surface_format(u8 format);
+DXGI_FORMAT get_color_surface_format(Surface_color_format format);
 
 /**
  * Convert depth stencil surface format to DXGI_FORMAT
  */
-DXGI_FORMAT get_depth_stencil_surface_format(u8 format);
+DXGI_FORMAT get_depth_stencil_surface_format(Surface_depth_format format);
 
 /**
  *Convert depth stencil surface format to DXGI_FORMAT suited for clear value
  */
-DXGI_FORMAT get_depth_stencil_surface_clear_format(u8 format);
+DXGI_FORMAT get_depth_stencil_surface_clear_format(Surface_depth_format format);
 
 /**
  * Convert depth surface format to a typeless DXGI_FORMAT
  */
-DXGI_FORMAT get_depth_stencil_typeless_surface_format(u8 format);
+DXGI_FORMAT get_depth_stencil_typeless_surface_format(Surface_depth_format format);
 
 /**
 * Convert depth surface format to a DXGI_FORMAT that can be depth sampled
 */
-DXGI_FORMAT get_depth_samplable_surface_format(u8 format);
+DXGI_FORMAT get_depth_samplable_surface_format(Surface_depth_format format);
 
 /**
  * Convert front face value to bool value telling wheter front face is counterclockwise or not

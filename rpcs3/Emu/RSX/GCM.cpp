@@ -762,6 +762,69 @@ Primitive_type to_primitive_type(u8 in)
 	throw new EXCEPTION("Unknow primitive type %d", in);
 }
 
+
+enum
+{
+	// Surface Target
+	CELL_GCM_SURFACE_TARGET_NONE = 0,
+	CELL_GCM_SURFACE_TARGET_0 = 1,
+	CELL_GCM_SURFACE_TARGET_1 = 2,
+	CELL_GCM_SURFACE_TARGET_MRT1 = 0x13,
+	CELL_GCM_SURFACE_TARGET_MRT2 = 0x17,
+	CELL_GCM_SURFACE_TARGET_MRT3 = 0x1f,
+
+	// Surface Depth
+	CELL_GCM_SURFACE_Z16 = 1,
+	CELL_GCM_SURFACE_Z24S8 = 2,
+
+	// Surface Antialias
+	CELL_GCM_SURFACE_CENTER_1 = 0,
+	CELL_GCM_SURFACE_DIAGONAL_CENTERED_2 = 3,
+	CELL_GCM_SURFACE_SQUARE_CENTERED_4 = 4,
+	CELL_GCM_SURFACE_SQUARE_ROTATED_4 = 5,
+
+	// Surface format
+	CELL_GCM_SURFACE_X1R5G5B5_Z1R5G5B5 = 1,
+	CELL_GCM_SURFACE_X1R5G5B5_O1R5G5B5 = 2,
+	CELL_GCM_SURFACE_R5G6B5 = 3,
+	CELL_GCM_SURFACE_X8R8G8B8_Z8R8G8B8 = 4,
+	CELL_GCM_SURFACE_X8R8G8B8_O8R8G8B8 = 5,
+	CELL_GCM_SURFACE_A8R8G8B8 = 8,
+	CELL_GCM_SURFACE_B8 = 9,
+	CELL_GCM_SURFACE_G8B8 = 10,
+	CELL_GCM_SURFACE_F_W16Z16Y16X16 = 11,
+	CELL_GCM_SURFACE_F_W32Z32Y32X32 = 12,
+	CELL_GCM_SURFACE_F_X32 = 13,
+	CELL_GCM_SURFACE_X8B8G8R8_Z8B8G8R8 = 14,
+	CELL_GCM_SURFACE_X8B8G8R8_O8B8G8R8 = 15,
+	CELL_GCM_SURFACE_A8B8G8R8 = 16,
+
+};
+
+Surface_target to_surface_target(u8 in)
+{
+	switch (in)
+	{
+	case CELL_GCM_SURFACE_TARGET_NONE: return Surface_target::none;
+	case CELL_GCM_SURFACE_TARGET_0: return Surface_target::surface_a;
+	case CELL_GCM_SURFACE_TARGET_1: return Surface_target::surface_b;
+	case CELL_GCM_SURFACE_TARGET_MRT1: return Surface_target::surfaces_a_b;
+	case CELL_GCM_SURFACE_TARGET_MRT2: return Surface_target::surfaces_a_b_c;
+	case CELL_GCM_SURFACE_TARGET_MRT3: return Surface_target::surfaces_a_b_c_d;
+	}
+	throw EXCEPTION("Unknow surface target %x", in);
+}
+
+Surface_depth_format to_surface_depth_format(u8 in)
+{
+	switch (in)
+	{
+	case CELL_GCM_SURFACE_Z16: return Surface_depth_format::z16;
+	case CELL_GCM_SURFACE_Z24S8: return Surface_depth_format::z24s8;
+	}
+	throw EXCEPTION("Unknow surface depth format %x", in);
+}
+
 std::string rsx::get_method_name(const u32 id)
 {
 	auto found = methods.find(id);
@@ -771,6 +834,40 @@ std::string rsx::get_method_name(const u32 id)
 	}
 
 	return fmt::format("unknown/illegal method [0x%08x]", id);
+}
+
+Surface_antialiasing to_surface_antialiasing(u8 in)
+{
+	switch (in)
+	{
+	case CELL_GCM_SURFACE_CENTER_1: return Surface_antialiasing::center_1_sample;
+	case CELL_GCM_SURFACE_DIAGONAL_CENTERED_2: return Surface_antialiasing::diagonal_centered_2_samples;
+	case CELL_GCM_SURFACE_SQUARE_CENTERED_4: return Surface_antialiasing::square_centered_4_samples;
+	case CELL_GCM_SURFACE_SQUARE_ROTATED_4: return Surface_antialiasing::square_rotated_4_samples;
+	}
+	throw EXCEPTION("unknow surface antialiasing format %x", in);
+}
+
+Surface_color_format to_surface_color_format(u8 in)
+{
+	switch (in)
+	{
+	case CELL_GCM_SURFACE_X1R5G5B5_Z1R5G5B5: return Surface_color_format::x1r5g5b5_z1r5g5b5;
+	case CELL_GCM_SURFACE_X1R5G5B5_O1R5G5B5: return Surface_color_format::x1r5g5b5_o1r5g5b5;
+	case CELL_GCM_SURFACE_R5G6B5: return Surface_color_format::r5g6b5;
+	case CELL_GCM_SURFACE_X8R8G8B8_Z8R8G8B8: return Surface_color_format::x8r8g8b8_z8r8g8b8;
+	case CELL_GCM_SURFACE_X8R8G8B8_O8R8G8B8: return Surface_color_format::x8r8g8b8_o8r8g8b8;
+	case CELL_GCM_SURFACE_A8R8G8B8: return Surface_color_format::a8r8g8b8;
+	case CELL_GCM_SURFACE_B8: return Surface_color_format::b8;
+	case CELL_GCM_SURFACE_G8B8: return Surface_color_format::g8b8;
+	case CELL_GCM_SURFACE_F_W16Z16Y16X16: return Surface_color_format::w16z16y16x16;
+	case CELL_GCM_SURFACE_F_W32Z32Y32X32: return Surface_color_format::w32z32y32x32;
+	case CELL_GCM_SURFACE_F_X32: return Surface_color_format::x32;
+	case CELL_GCM_SURFACE_X8B8G8R8_Z8B8G8R8: return Surface_color_format::x8b8g8r8_z8b8g8r8;
+	case CELL_GCM_SURFACE_X8B8G8R8_O8B8G8R8: return Surface_color_format::x8b8g8r8_o8b8g8r8;
+	case CELL_GCM_SURFACE_A8B8G8R8: return Surface_color_format::a8b8g8r8;
+	}
+	throw EXCEPTION("unknow surface color format %x", in);
 }
 
 // Various parameter pretty printing function
@@ -892,46 +989,58 @@ namespace
 
 	std::string depth_stencil_surface_format(u32 format)
 	{
-		switch (format)
+		switch (to_surface_depth_format(format))
 		{
-		case CELL_GCM_SURFACE_Z16: return "CELL_GCM_SURFACE_Z16";
-		case CELL_GCM_SURFACE_Z24S8: return "CELL_GCM_SURFACE_Z24S8";
+		case Surface_depth_format::z16: return "CELL_GCM_SURFACE_Z16";
+		case Surface_depth_format::z24s8: return "CELL_GCM_SURFACE_Z24S8";
+		}
+		return "Error";
+	}
+
+	std::string surface_antialiasing(u8 format)
+	{
+		switch (to_surface_antialiasing(format))
+		{
+		case Surface_antialiasing::center_1_sample: "1 sample centered";
+		case Surface_antialiasing::diagonal_centered_2_samples: return "2 samples diagonal centered";
+		case Surface_antialiasing::square_centered_4_samples: return "4 samples square centered";
+		case Surface_antialiasing::square_rotated_4_samples: return "4 samples diagonal rotated";
 		}
 		return "Error";
 	}
 
 	std::string color_surface_format(u32 format)
 	{
-		switch (format)
+		switch (to_surface_color_format(format))
 		{
-		case CELL_GCM_SURFACE_X1R5G5B5_Z1R5G5B5: return "CELL_GCM_SURFACE_X1R5G5B5_Z1R5G5B5";
-		case CELL_GCM_SURFACE_X1R5G5B5_O1R5G5B5: return "CELL_GCM_SURFACE_X1R5G5B5_O1R5G5B5";
-		case CELL_GCM_SURFACE_R5G6B5: return "CELL_GCM_SURFACE_R5G6B5";
-		case CELL_GCM_SURFACE_X8R8G8B8_Z8R8G8B8: return "CELL_GCM_SURFACE_X8R8G8B8_Z8R8G8B8";
-		case CELL_GCM_SURFACE_X8R8G8B8_O8R8G8B8: return "CELL_GCM_SURFACE_X8R8G8B8_O8R8G8B8";
-		case CELL_GCM_SURFACE_A8R8G8B8: return "CELL_GCM_SURFACE_A8R8G8B8";
-		case CELL_GCM_SURFACE_B8: return "CELL_GCM_SURFACE_B8";
-		case CELL_GCM_SURFACE_G8B8: return "CELL_GCM_SURFACE_G8B8";
-		case CELL_GCM_SURFACE_F_W16Z16Y16X16: return "CELL_GCM_SURFACE_F_W16Z16Y16X16";
-		case CELL_GCM_SURFACE_F_W32Z32Y32X32: return "CELL_GCM_SURFACE_F_W32Z32Y32X32";
-		case CELL_GCM_SURFACE_F_X32: return "CELL_GCM_SURFACE_F_X32";
-		case CELL_GCM_SURFACE_X8B8G8R8_Z8B8G8R8: return "CELL_GCM_SURFACE_X8B8G8R8_Z8B8G8R8";
-		case CELL_GCM_SURFACE_X8B8G8R8_O8B8G8R8: return "CELL_GCM_SURFACE_X8B8G8R8_O8B8G8R8";
-		case CELL_GCM_SURFACE_A8B8G8R8: return "CELL_GCM_SURFACE_A8B8G8R8";
+		case Surface_color_format::x1r5g5b5_z1r5g5b5: return "CELL_GCM_SURFACE_X1R5G5B5_Z1R5G5B5";
+		case Surface_color_format::x1r5g5b5_o1r5g5b5: return "CELL_GCM_SURFACE_X1R5G5B5_O1R5G5B5";
+		case Surface_color_format::r5g6b5 : return "CELL_GCM_SURFACE_R5G6B5";
+		case Surface_color_format::x8r8g8b8_z8r8g8b8: return "CELL_GCM_SURFACE_X8R8G8B8_Z8R8G8B8";
+		case Surface_color_format::x8r8g8b8_o8r8g8b8: return "CELL_GCM_SURFACE_X8R8G8B8_O8R8G8B8";
+		case Surface_color_format::a8r8g8b8: return "CELL_GCM_SURFACE_A8R8G8B8";
+		case Surface_color_format::b8: return "CELL_GCM_SURFACE_B8";
+		case Surface_color_format::g8b8: return "CELL_GCM_SURFACE_G8B8";
+		case Surface_color_format::w16z16y16x16: return "CELL_GCM_SURFACE_F_W16Z16Y16X16";
+		case Surface_color_format::w32z32y32x32: return "CELL_GCM_SURFACE_F_W32Z32Y32X32";
+		case Surface_color_format::x32: return "CELL_GCM_SURFACE_F_X32";
+		case Surface_color_format::x8b8g8r8_z8b8g8r8: return "CELL_GCM_SURFACE_X8B8G8R8_Z8B8G8R8";
+		case Surface_color_format::x8b8g8r8_o8b8g8r8: return "CELL_GCM_SURFACE_X8B8G8R8_O8B8G8R8";
+		case Surface_color_format::a8b8g8r8: return "CELL_GCM_SURFACE_A8B8G8R8";
 		}
 		return "Error";
 	}
 
 	std::string surface_target(u32 target)
 	{
-		switch (target)
+		switch (to_surface_target(target))
 		{
-		case CELL_GCM_SURFACE_TARGET_NONE: return "none";
-		case CELL_GCM_SURFACE_TARGET_0: return "surface A";
-		case CELL_GCM_SURFACE_TARGET_1: return "surface B";
-		case CELL_GCM_SURFACE_TARGET_MRT1: return "surfaces A and B";
-		case CELL_GCM_SURFACE_TARGET_MRT2: return "surfaces A, B and C";
-		case CELL_GCM_SURFACE_TARGET_MRT3: return "surfaces A,B, C and D";
+		case Surface_target::none: return "none";
+		case Surface_target::surface_a: return "surface A";
+		case Surface_target::surface_b: return "surface B";
+		case Surface_target::surfaces_a_b: return "surfaces A and B";
+		case Surface_target::surfaces_a_b_c: return "surfaces A, B and C";
+		case Surface_target::surfaces_a_b_c_d: return "surfaces A,B, C and D";
 		}
 		return "Error";
 	}
@@ -1334,7 +1443,7 @@ namespace
 		{ NV4097_SET_SURFACE_PITCH_Z, [](u32 arg) -> std::string { return "Surface Zeta: Pitch = " + std::to_string(arg); } },
 		{ NV4097_SET_SURFACE_ZETA_OFFSET, [](u32 arg) -> std::string { return "Surface Zeta: Offset = " + ptr_to_string(arg); } },
 		{ NV4097_SET_CONTEXT_DMA_ZETA, [](u32 arg) -> std::string { return "Surface Zeta: DMA mode = " + dma_mode(arg);} },
-		{ NV4097_SET_SURFACE_FORMAT, [](u32 arg) -> std::string { return "Surface: Color format = " + color_surface_format(arg & 0x1F) + " DepthStencil format = " + depth_stencil_surface_format((arg >> 5) & 0x7) + " Anti aliasing =" + std::to_string((arg >> 12) & 0x7); } },
+		{ NV4097_SET_SURFACE_FORMAT, [](u32 arg) -> std::string { return "Surface: Color format = " + color_surface_format(arg & 0x1F) + " DepthStencil format = " + depth_stencil_surface_format((arg >> 5) & 0x7) + " Anti aliasing =" + surface_antialiasing((arg >> 12) & 0x7); } },
 		{ NV4097_SET_SURFACE_CLIP_HORIZONTAL, [](u32 arg) -> std::string { return "Surface: clip x = " + std::to_string(arg & 0xFFFF) + " width = " + std::to_string(arg >> 16); } },
 		{ NV4097_SET_SURFACE_CLIP_VERTICAL, [](u32 arg) -> std::string { return "Surface: clip y = " + std::to_string(arg & 0xFFFF) + " height = " + std::to_string(arg >> 16); } },
 		{ NV4097_SET_SURFACE_COLOR_TARGET, [](u32 arg) -> std::string { return "Surface: Targets " + surface_target(arg); } },
