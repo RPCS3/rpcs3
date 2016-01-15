@@ -47,7 +47,10 @@
 #include <typeindex>
 #include <future>
 #include <chrono>
+
+#include <restore_new.h>
 #include <gsl.h>
+#include <define_new_memleakdetect.h>
 
 using namespace std::string_literals;
 using namespace std::chrono_literals;
