@@ -246,7 +246,7 @@ void D3D12GSRender::prepare_render_targets(ID3D12GraphicsCommandList *copycmdlis
 	if (std::get<1>(m_rtts.m_bound_depth_stencil) == nullptr)
 		return;
 	m_rtts.current_ds_handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(get_current_resource_storage().depth_stencil_descriptor_heap->GetCPUDescriptorHandleForHeapStart())
-		.Offset((INT)get_current_resource_storage().depth_stencil_descriptor_heap_index * g_descriptor_stride_rtv);
+		.Offset((INT)get_current_resource_storage().depth_stencil_descriptor_heap_index * g_descriptor_stride_dsv);
 	get_current_resource_storage().depth_stencil_descriptor_heap_index += 1;
 	D3D12_DEPTH_STENCIL_VIEW_DESC depth_stencil_view_desc = {};
 	depth_stencil_view_desc.Format = get_depth_stencil_surface_format(m_surface.depth_format);
