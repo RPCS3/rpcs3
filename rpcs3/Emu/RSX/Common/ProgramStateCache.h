@@ -152,7 +152,7 @@ public:
 	const vertex_program_type& get_transform_program(const RSXVertexProgram& rsx_vp) const
 	{
 		auto I = m_vertex_shader_cache.find(rsx_vp.data);
-		if (I == m_vertex_shader_cache.end())
+		if (I != m_vertex_shader_cache.end())
 			return I->second;
 		throw new EXCEPTION("Trying to get unknow transform program");
 	}

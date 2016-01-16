@@ -29,6 +29,8 @@ class RSXDebugger : public wxDialog
 	wxPanel* p_buffer_tex;
 
 	wxImage buffer_img[4];
+	wxImage depth_img;
+	wxImage stencil_img;
 
 	wxTextCtrl* m_text_transform_program;
 	wxTextCtrl *m_text_shader_program;

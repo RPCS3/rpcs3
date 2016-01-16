@@ -251,8 +251,8 @@ RSXDebugger::RSXDebugger(wxWindow* parent)
 	p_buffer_colorB->Bind(wxEVT_LEFT_DOWN, &RSXDebugger::OnClickBuffer, this);
 	p_buffer_colorC->Bind(wxEVT_LEFT_DOWN, &RSXDebugger::OnClickBuffer, this);
 	p_buffer_colorD->Bind(wxEVT_LEFT_DOWN, &RSXDebugger::OnClickBuffer, this);
-	//p_buffer_depth->Bind(wxEVT_BUTTON, &RSXDebugger::OnClickBuffer, this);
-	//p_buffer_stencil->Bind(wxEVT_BUTTON, &RSXDebugger::OnClickBuffer, this);
+	p_buffer_depth->Bind(wxEVT_LEFT_DOWN, &RSXDebugger::OnClickBuffer, this);
+	p_buffer_stencil->Bind(wxEVT_LEFT_DOWN, &RSXDebugger::OnClickBuffer, this);
 	p_buffer_tex->Bind(wxEVT_LEFT_DOWN, &RSXDebugger::OnClickBuffer, this);
 	m_list_captured_draw_calls->Bind(wxEVT_LEFT_DOWN, &RSXDebugger::OnClickDrawCalls, this);
 
@@ -364,6 +364,8 @@ void RSXDebugger::OnClickBuffer(wxMouseEvent& event)
 	if (event.GetId() == p_buffer_colorB->GetId()) display_buffer(this, buffer_img[1]);
 	if (event.GetId() == p_buffer_colorC->GetId()) display_buffer(this, buffer_img[2]);
 	if (event.GetId() == p_buffer_colorD->GetId()) display_buffer(this, buffer_img[3]);
+	if (event.GetId() == p_buffer_depth->GetId()) display_buffer(this, depth_img);
+	if (event.GetId() == p_buffer_stencil->GetId()) display_buffer(this, stencil_img);
 	if (event.GetId() == p_buffer_tex->GetId())
 	{
 		u8 location = render.textures[m_cur_texture].location();
@@ -380,18 +382,74 @@ void RSXDebugger::OnClickBuffer(wxMouseEvent& event)
 
 namespace
 {
+	std::array<u8, 3> get_value(gsl::span<const gsl::byte> orig_buffer, Surface_color_format format, size_t idx)
+	{
+		switch (format)
+		{
+		case Surface_color_format::b8:
+		{
+			u8 value = gsl::as_span<const u8>(orig_buffer)[idx];
+			return{ value, value, value };
+		}
+		case Surface_color_format::x32:
+		{
+			be_t<u32> stored_val = gsl::as_span<const be_t<u32>>(orig_buffer)[idx];
+			u32 swapped_val = stored_val;
+			f32 float_val = (f32&)swapped_val;
+			u8 val = float_val * 255.f;
+			return{ val, val, val };
+		}
+		case Surface_color_format::a8b8g8r8:
+		case Surface_color_format::x8b8g8r8_o8b8g8r8:
+		case Surface_color_format::x8b8g8r8_z8b8g8r8:
+		{
+			auto ptr = gsl::as_span<const u8>(orig_buffer);
+			return{ ptr[1 + idx * 4], ptr[2 + idx * 4], ptr[3 + idx * 4] };
+		}
+		case Surface_color_format::a8r8g8b8:
+		case Surface_color_format::x8r8g8b8_o8r8g8b8:
+		case Surface_color_format::x8r8g8b8_z8r8g8b8:
+		{
+			auto ptr = gsl::as_span<const u8>(orig_buffer);
+			return{ ptr[3 + idx * 4], ptr[2 + idx * 4], ptr[1 + idx * 4] };
+		}
+		case Surface_color_format::w16z16y16x16:
+		{
+			auto ptr = gsl::as_span<const u16>(orig_buffer);
+			f16 h0 = f16(ptr[4 * idx]);
+			f16 h1 = f16(ptr[4 * idx + 1]);
+			f16 h2 = f16(ptr[4 * idx + 2]);
+			f32 f0 = float(h0);
+			f32 f1 = float(h1);
+			f32 f2 = float(h2);
+
+			u8 val0 = f0 * 255.;
+			u8 val1 = f1 * 255.;
+			u8 val2 = f2 * 255.;
+			return{ val0, val1, val2 };
+		}
+		case Surface_color_format::g8b8:
+		case Surface_color_format::r5g6b5:
+		case Surface_color_format::x1r5g5b5_o1r5g5b5:
+		case Surface_color_format::x1r5g5b5_z1r5g5b5:
+		case Surface_color_format::w32z32y32x32:
+			throw EXCEPTION("Unsupported format for display");
+		}
+	}
+
 	/**
 	 * Return a new buffer that can be passed to wxImage ctor.
 	 * The pointer seems to be freed by wxImage.
 	 */
-	u8* convert_to_wximage_buffer(u8 *orig_buffer, size_t width, size_t height) noexcept
+	u8* convert_to_wximage_buffer(Surface_color_format format, gsl::span<const gsl::byte> orig_buffer, size_t width, size_t height) noexcept
 	{
 		unsigned char* buffer = (unsigned char*)malloc(width * height * 3);
 		for (u32 i = 0; i < width * height; i++)
 		{
-			buffer[0 + i * 3] = orig_buffer[3 + i * 4];
-			buffer[1 + i * 3] = orig_buffer[2 + i * 4];
-			buffer[2 + i * 3] = orig_buffer[1 + i * 4];
+			const auto &colors = get_value(orig_buffer, format, i);
+			buffer[0 + i * 3] = colors[0];
+			buffer[1 + i * 3] = colors[1];
+			buffer[2 + i * 3] = colors[2];
 		}
 		return buffer;
 	}
@@ -401,6 +459,8 @@ void RSXDebugger::OnClickDrawCalls(wxMouseEvent& event)
 {
 	size_t draw_id = m_list_captured_draw_calls->GetFirstSelected();
 
+	const auto& draw_call = frame_debug.draw_calls[draw_id];
+
 	wxPanel* p_buffers[] =
 	{
 		p_buffer_colorA,
@@ -409,13 +469,14 @@ void RSXDebugger::OnClickDrawCalls(wxMouseEvent& event)
 		p_buffer_colorD,
 	};
 
+	size_t width = draw_call.width;
+	size_t height = draw_call.height;
+
 	for (size_t i = 0; i < 4; i++)
 	{
-		size_t width = frame_debug.draw_calls[draw_id].color_buffer[i].width, height = frame_debug.draw_calls[draw_id].color_buffer[i].height;
-		if (width && height)
+		if (width && height && !draw_call.color_buffer[i].empty())
 		{
-			unsigned char *orig_buffer = frame_debug.draw_calls[draw_id].color_buffer[i].data.data();
-			buffer_img[i] = wxImage(width, height, convert_to_wximage_buffer(orig_buffer, width, height));
+			buffer_img[i] = wxImage(width, height, convert_to_wximage_buffer(draw_call.surface_color_format, draw_call.color_buffer[i], width, height));
 			wxClientDC dc_canvas(p_buffers[i]);
 
 			if (buffer_img[i].IsOk())
@@ -425,56 +486,71 @@ void RSXDebugger::OnClickDrawCalls(wxMouseEvent& event)
 
 	// Buffer Z
 	{
-		size_t width = frame_debug.draw_calls[draw_id].depth.width, height = frame_debug.draw_calls[draw_id].depth.height;
-		if (width && height)
+		if (width && height && !draw_call.depth_stencil[0].empty())
 		{
-			u32 *orig_buffer = (u32*)frame_debug.draw_calls[draw_id].depth.data.data();
+			gsl::span<const gsl::byte> orig_buffer = draw_call.depth_stencil[0];
 			unsigned char *buffer = (unsigned char *)malloc(width * height * 3);
 
-			for (u32 row = 0; row < height; row++)
+			if (draw_call.surface_depth_format == Surface_depth_format::z24s8)
 			{
-				for (u32 col = 0; col < width; col++)
+				for (u32 row = 0; row < height; row++)
 				{
-					u32 depth_val = orig_buffer[row * width + col];
-					u8 displayed_depth_val = 255 * depth_val / 0xFFFFFF;
-					buffer[3 * col + 0 + width * row * 3] = displayed_depth_val;
-					buffer[3 * col + 1 + width * row * 3] = displayed_depth_val;
-					buffer[3 * col + 2 + width * row * 3] = displayed_depth_val;
+					for (u32 col = 0; col < width; col++)
+					{
+						u32 depth_val = gsl::as_span<const u32>(orig_buffer)[row * width + col];
+						u8 displayed_depth_val = 255 * depth_val / 0xFFFFFF;
+						buffer[3 * col + 0 + width * row * 3] = displayed_depth_val;
+						buffer[3 * col + 1 + width * row * 3] = displayed_depth_val;
+						buffer[3 * col + 2 + width * row * 3] = displayed_depth_val;
+					}
+				}
+			}
+			else
+			{
+				for (u32 row = 0; row < height; row++)
+				{
+					for (u32 col = 0; col < width; col++)
+					{
+						u16 depth_val = gsl::as_span<const u16>(orig_buffer)[row * width + col];
+						u8 displayed_depth_val = 255 * depth_val / 0xFFFF;
+						buffer[3 * col + 0 + width * row * 3] = displayed_depth_val;
+						buffer[3 * col + 1 + width * row * 3] = displayed_depth_val;
+						buffer[3 * col + 2 + width * row * 3] = displayed_depth_val;
+					}
 				}
 			}
 
-			wxImage img(width, height, buffer);
+			depth_img = wxImage(width, height, buffer);
 			wxClientDC dc_canvas(p_buffer_depth);
 
-			if (img.IsOk())
-				dc_canvas.DrawBitmap(img.Scale(m_panel_width, m_panel_height), 0, 0, false);
+			if (depth_img.IsOk())
+				dc_canvas.DrawBitmap(depth_img.Scale(m_panel_width, m_panel_height), 0, 0, false);
 		}
 	}
 
 	// Buffer S
 	{
-		size_t width = frame_debug.draw_calls[draw_id].stencil.width, height = frame_debug.draw_calls[draw_id].stencil.height;
-		if (width && height)
+		if (width && height && !draw_call.depth_stencil[1].empty())
 		{
-			u8 *orig_buffer = frame_debug.draw_calls[draw_id].stencil.data.data();
+			gsl::span<const gsl::byte> orig_buffer = draw_call.depth_stencil[1];
 			unsigned char *buffer = (unsigned char *)malloc(width * height * 3);
 
 			for (u32 row = 0; row < height; row++)
 			{
 				for (u32 col = 0; col < width; col++)
 				{
-					u32 stencil_val = orig_buffer[row * width + col];
+					u8 stencil_val = gsl::as_span<const u8>(orig_buffer)[row * width + col];
 					buffer[3 * col + 0 + width * row * 3] = stencil_val;
 					buffer[3 * col + 1 + width * row * 3] = stencil_val;
 					buffer[3 * col + 2 + width * row * 3] = stencil_val;
 				}
 			}
 
-			wxImage img(width, height, buffer);
+			stencil_img = wxImage(width, height, buffer);
 			wxClientDC dc_canvas(p_buffer_stencil);
 
-			if (img.IsOk())
-				dc_canvas.DrawBitmap(img.Scale(m_panel_width, m_panel_height), 0, 0, false);
+			if (stencil_img.IsOk())
+				dc_canvas.DrawBitmap(stencil_img.Scale(m_panel_width, m_panel_height), 0, 0, false);
 		}
 	}
 

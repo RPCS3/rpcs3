@@ -276,44 +276,14 @@ namespace rsx
 
 		int clip_w = rsx::method_registers[NV4097_SET_SURFACE_CLIP_HORIZONTAL] >> 16;
 		int clip_h = rsx::method_registers[NV4097_SET_SURFACE_CLIP_VERTICAL] >> 16;
-		size_t pitch = clip_w * 4;
-		std::vector<size_t> color_index_to_record;
-		switch (to_surface_target(method_registers[NV4097_SET_SURFACE_COLOR_TARGET]))
-		{
-		case Surface_target::surface_a:
-			color_index_to_record = { 0 };
-			break;
-		case Surface_target::surface_b:
-			color_index_to_record = { 1 };
-			break;
-		case Surface_target::surfaces_a_b:
-			color_index_to_record = { 0, 1 };
-			break;
-		case Surface_target::surfaces_a_b_c:
-			color_index_to_record = { 0, 1, 2 };
-			break;
-		case Surface_target::surfaces_a_b_c_d:
-			color_index_to_record = { 0, 1, 2, 3 };
-			break;
-		}
-		for (size_t i : color_index_to_record)
-		{
-			draw_state.color_buffer[i].width = clip_w;
-			draw_state.color_buffer[i].height = clip_h;
-			draw_state.color_buffer[i].data.resize(pitch * clip_h);
-			copy_render_targets_to_memory(draw_state.color_buffer[i].data.data(), i);
-		}
-		if (get_address(method_registers[NV4097_SET_SURFACE_ZETA_OFFSET], method_registers[NV4097_SET_CONTEXT_DMA_ZETA]))
-		{
-			draw_state.depth.width = clip_w;
-			draw_state.depth.height = clip_h;
-			draw_state.depth.data.resize(clip_w * clip_h * 4);
-			copy_depth_buffer_to_memory(draw_state.depth.data.data());
-			draw_state.stencil.width = clip_w;
-			draw_state.stencil.height = clip_h;
-			draw_state.stencil.data.resize(clip_w * clip_h * 4);
-			copy_stencil_buffer_to_memory(draw_state.stencil.data.data());
-		}
+		rsx::surface_info surface = {};
+		surface.unpack(rsx::method_registers[NV4097_SET_SURFACE_FORMAT]);
+		draw_state.width = clip_w;
+		draw_state.height = clip_h;
+		draw_state.surface_color_format = surface.color_format;
+		draw_state.color_buffer = std::move(copy_render_targets_to_memory());
+		draw_state.surface_depth_format = surface.depth_format;
+		draw_state.depth_stencil = std::move(copy_depth_stencil_buffer_to_memory());
 		draw_state.programs = get_programs();
 		draw_state.name = name;
 		frame_debug.draw_calls.push_back(draw_state);
