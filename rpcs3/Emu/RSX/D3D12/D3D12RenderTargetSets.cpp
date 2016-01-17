@@ -246,7 +246,7 @@ void D3D12GSRender::prepare_render_targets(ID3D12GraphicsCommandList *copycmdlis
 	if (std::get<1>(m_rtts.m_bound_depth_stencil) == nullptr)
 		return;
 	m_rtts.current_ds_handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(get_current_resource_storage().depth_stencil_descriptor_heap->GetCPUDescriptorHandleForHeapStart())
-		.Offset((INT)get_current_resource_storage().depth_stencil_descriptor_heap_index * g_descriptor_stride_rtv);
+		.Offset((INT)get_current_resource_storage().depth_stencil_descriptor_heap_index * g_descriptor_stride_dsv);
 	get_current_resource_storage().depth_stencil_descriptor_heap_index += 1;
 	D3D12_DEPTH_STENCIL_VIEW_DESC depth_stencil_view_desc = {};
 	depth_stencil_view_desc.Format = get_depth_stencil_surface_format(m_surface.depth_format);
@@ -257,9 +257,8 @@ void D3D12GSRender::prepare_render_targets(ID3D12GraphicsCommandList *copycmdlis
 void D3D12GSRender::set_rtt_and_ds(ID3D12GraphicsCommandList *command_list)
 {
 	UINT num_rtt = get_num_rtt(to_surface_target(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET]));
-	D3D12_CPU_DESCRIPTOR_HANDLE* rtt_handle = (num_rtt > 0) ? &m_rtts.current_rtts_handle : nullptr;
 	D3D12_CPU_DESCRIPTOR_HANDLE* ds_handle = (std::get<1>(m_rtts.m_bound_depth_stencil) != nullptr) ? &m_rtts.current_ds_handle : nullptr;
-	command_list->OMSetRenderTargets((UINT)num_rtt, rtt_handle, true, ds_handle);
+	command_list->OMSetRenderTargets((UINT)num_rtt, &m_rtts.current_rtts_handle, true, ds_handle);
 }
 
 void render_targets::init(ID3D12Device *device)

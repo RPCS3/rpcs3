@@ -45,9 +45,9 @@ std::string getFunctionImp(FUNCTION f)
 	case FUNCTION::FUNCTION_TEXTURE_SAMPLE:
 		return "$t.Sample($tsampler, $0.xy * $t_scale)";
 	case FUNCTION::FUNCTION_TEXTURE_SAMPLE_PROJ:
-		return "$t.Sample($tsampler, ($0.xy / $0.z) * $t_scale)";
+		return "$t.Sample($tsampler, ($0.xy / $0.w) * $t_scale)";
 	case FUNCTION::FUNCTION_TEXTURE_SAMPLE_LOD:
-		return "$t.SampleLevel($tsampler, ($0.xy / $0.z) * $t_scale, $1)";
+		return "$t.SampleLevel($tsampler, ($0.xy / $0.w) * $t_scale, $1)";
 	case FUNCTION::FUNCTION_TEXTURE_CUBE_SAMPLE:
 		return "$t.Sample($tsampler, $0.xyz)";
 	case FUNCTION::FUNCTION_TEXTURE_CUBE_SAMPLE_PROJ:
