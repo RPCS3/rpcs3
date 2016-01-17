@@ -111,7 +111,6 @@ namespace rsx
 			bool is_swizzled = !!(~full_format & CELL_GCM_TEXTURE_LN);
 
 			const u8* pixels = vm::ps3::_ptr<u8>(texaddr);
-			u8 *unswizzledPixels;
 			static const GLint glRemapStandard[4] = { GL_ALPHA, GL_RED, GL_GREEN, GL_BLUE };
 			// NOTE: This must be in ARGB order in all forms below.
 			const GLint *glRemap = glRemapStandard;
@@ -138,7 +137,22 @@ namespace rsx
 				glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_TRUE);
 				glPixelStorei(GL_UNPACK_ROW_LENGTH, pitch / 2);
 
-				// TODO: texture swizzling
+				if (is_swizzled)
+				{
+					u16 height = tex.height();
+					u16 width = tex.width();
+
+					std::unique_ptr<u16[]> swz_buf(new u16[width * height]);
+					u16 *src = (u16*)pixels;
+					u16 *dst = swz_buf.get();
+
+					rsx::convert_linear_swizzle<u16>(src, dst, width, height, true);
+
+					glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.width(), tex.height(), 0, GL_BGRA, GL_UNSIGNED_SHORT_1_5_5_5_REV, dst);
+					glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_FALSE);
+					break;
+				}
+				
 				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.width(), tex.height(), 0, GL_BGRA, GL_UNSIGNED_SHORT_1_5_5_5_REV, pixels);
 				glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_FALSE);
 				break;
@@ -147,7 +161,22 @@ namespace rsx
 			case CELL_GCM_TEXTURE_A4R4G4B4:
 			{
 				glPixelStorei(GL_UNPACK_ROW_LENGTH, pitch / 2);
-				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.width(), tex.height(), 0, GL_RGBA, GL_UNSIGNED_SHORT_4_4_4_4, pixels);
+				
+				if (is_swizzled)
+				{
+					u16 height = tex.height();
+					u16 width = tex.width();
+
+					std::unique_ptr<u16[]> swz_buf(new u16[width * height]);
+					u16 *src = (u16*)pixels;
+					u16 *dst = swz_buf.get();
+
+					rsx::convert_linear_swizzle<u16>(src, dst, width, height, true);
+
+					glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.width(), tex.height(), 0, GL_RGBA, GL_UNSIGNED_SHORT_4_4_4_4, dst);
+				}
+				else
+					glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.width(), tex.height(), 0, GL_RGBA, GL_UNSIGNED_SHORT_4_4_4_4, pixels);
 
 				// We read it in as R4G4B4A4, so we need to remap each component.
 				static const GLint swizzleMaskA4R4G4B4[] = { GL_BLUE, GL_ALPHA, GL_RED, GL_GREEN };
@@ -170,13 +199,12 @@ namespace rsx
 
 				if (is_swizzled)
 				{
-					u32 *src, *dst;
 					u16 height = tex.height();
 					u16 width = tex.width();
 
-					unswizzledPixels = (u8*)malloc(width * height * 4);
-					src = (u32*)pixels;
-					dst = (u32*)unswizzledPixels;
+					std::unique_ptr<u32[]> swz_buf(new u32[width * height]);
+					u32 *src = (u32*)pixels;
+					u32 *dst = swz_buf.get();
 
 					if ((height & (height - 1)) || (width & (width - 1)))
 					{
@@ -184,9 +212,11 @@ namespace rsx
 					}
 
 					rsx::convert_linear_swizzle<u32>(src, dst, width, height, true);
+					glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.width(), tex.height(), 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, dst);
 				}
-
-				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.width(), tex.height(), 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, is_swizzled ? unswizzledPixels : pixels);
+				else
+					glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.width(), tex.height(), 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, pixels);
+				
 				break;
 			}
 
@@ -230,7 +260,8 @@ namespace rsx
 
 				// TODO: Probably need to actually unswizzle if is_swizzled.
 				const u32 numPixels = tex.width() * tex.height();
-				unswizzledPixels = (u8 *)malloc(numPixels * 4);
+				std::unique_ptr<u32[]> unpack_buf(new u32[numPixels]);
+				u8 *unswizzledPixels = reinterpret_cast<u8*>(unpack_buf.get());
 				// TODO: Speed.
 				for (u32 i = 0; i < numPixels; ++i) {
 					u16 c = reinterpret_cast<const be_t<u16> *>(pixels)[i];
@@ -241,8 +272,6 @@ namespace rsx
 				}
 
 				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.width(), tex.height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, unswizzledPixels);
-
-				free(unswizzledPixels);
 				break;
 			}
 
@@ -378,7 +407,8 @@ namespace rsx
 				glPixelStorei(GL_UNPACK_ROW_LENGTH, pitch / 4);
 
 				const u32 numPixels = tex.width() * tex.height();
-				unswizzledPixels = (u8 *)malloc(numPixels * 4);
+				std::unique_ptr<u32[]> unpack_buf(new u32[numPixels]);
+				u8 *unswizzledPixels = reinterpret_cast<u8*>(unpack_buf.get());
 				// TODO: Speed.
 				for (u32 i = 0; i < numPixels; i += 2)
 				{
@@ -395,7 +425,6 @@ namespace rsx
 				}
 
 				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.width(), tex.height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, unswizzledPixels);
-				free(unswizzledPixels);
 				break;
 			}
 
@@ -404,7 +433,8 @@ namespace rsx
 				glPixelStorei(GL_UNPACK_ROW_LENGTH, pitch / 4);
 
 				const u32 numPixels = tex.width() * tex.height();
-				unswizzledPixels = (u8 *)malloc(numPixels * 4);
+				std::unique_ptr<u32[]> unpack_buf(new u32[numPixels]);
+				u8 *unswizzledPixels = reinterpret_cast<u8*>(unpack_buf.get());
 				// TODO: Speed.
 				for (u32 i = 0; i < numPixels; i += 2)
 				{
@@ -421,7 +451,6 @@ namespace rsx
 				}
 
 				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.width(), tex.height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, unswizzledPixels);
-				free(unswizzledPixels);
 				break;
 			}
 
@@ -469,11 +498,6 @@ namespace rsx
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_tex_min_filter[tex.min_filter()]);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_tex_mag_filter[tex.mag_filter()]);
 			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, max_aniso(tex.max_aniso()));
-
-			if (is_swizzled && format == CELL_GCM_TEXTURE_A8R8G8B8)
-			{
-				free(unswizzledPixels);
-			}
 		}
 
 		void texture::bind()
