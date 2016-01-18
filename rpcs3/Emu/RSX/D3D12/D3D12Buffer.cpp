@@ -9,14 +9,17 @@
 #include "../rsx_methods.h"
 
 
-std::vector<D3D12_VERTEX_BUFFER_VIEW> D3D12GSRender::upload_vertex_attributes(const std::vector<std::pair<u32, u32> > &vertex_ranges)
+std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC> D3D12GSRender::upload_vertex_attributes(
+	const std::vector<std::pair<u32, u32> > &vertex_ranges,
+	gsl::not_null<ID3D12GraphicsCommandList*> command_list)
 {
-	std::vector<D3D12_VERTEX_BUFFER_VIEW> vertex_buffer_views;
-
-	m_IASet.clear();
+	std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC> vertex_buffer_views;
+	command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_vertex_buffer_data.Get(), D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, D3D12_RESOURCE_STATE_COPY_DEST));
 	size_t input_slot = 0;
 
 	size_t vertex_count = 0;
+
+	size_t offset_in_vertex_buffers_buffer = 0;
 
 	for (const auto &pair : vertex_ranges)
 		vertex_count += pair.second;
@@ -34,9 +37,9 @@ std::vector<D3D12_VERTEX_BUFFER_VIEW> D3D12GSRender::upload_vertex_attributes(co
 			// Active vertex array
 			const rsx::data_array_format_info &info = vertex_arrays_info[index];
 
-			u32 element_size = rsx::get_vertex_type_size_on_host(info.type, info.size);
-
+			size_t element_size = rsx::get_vertex_type_size_on_host(info.type, info.size);
 			size_t buffer_size = element_size * vertex_count;
+
 			size_t heap_offset = m_buffer_data.alloc<D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT>(buffer_size);
 
 			void *mapped_buffer = m_buffer_data.map<void>(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
@@ -47,25 +50,22 @@ std::vector<D3D12_VERTEX_BUFFER_VIEW> D3D12GSRender::upload_vertex_attributes(co
 			}
 			m_buffer_data.unmap(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
 
-			D3D12_VERTEX_BUFFER_VIEW vertex_buffer_view =
-			{
-				m_buffer_data.get_heap()->GetGPUVirtualAddress() + heap_offset,
-				(UINT)buffer_size,
-				(UINT)element_size
+			command_list->CopyBufferRegion(m_vertex_buffer_data.Get(), offset_in_vertex_buffers_buffer, m_buffer_data.get_heap(), heap_offset, buffer_size);
+
+			D3D12_SHADER_RESOURCE_VIEW_DESC vertex_buffer_view = {
+				get_vertex_attribute_format(info.type, info.size),
+				D3D12_SRV_DIMENSION_BUFFER,
+				D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING
 			};
+			vertex_buffer_view.Buffer.FirstElement = offset_in_vertex_buffers_buffer / element_size;
+			vertex_buffer_view.Buffer.NumElements = buffer_size / element_size;
 			vertex_buffer_views.push_back(vertex_buffer_view);
+
+			offset_in_vertex_buffers_buffer = (offset_in_vertex_buffers_buffer + buffer_size + 191) / 192; // 192 is multiple of 2, 4, 6, 8, 12, 16, 24, 32, 48, 64
+			offset_in_vertex_buffers_buffer *= 192;
 
 			m_timers.m_buffer_upload_size += buffer_size;
 
-			D3D12_INPUT_ELEMENT_DESC IAElement = {};
-			IAElement.SemanticName = "TEXCOORD";
-			IAElement.SemanticIndex = (UINT)index;
-			IAElement.InputSlot = (UINT)input_slot++;
-			IAElement.Format = get_vertex_attribute_format(info.type, info.size);
-			IAElement.AlignedByteOffset = 0;
-			IAElement.InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
-			IAElement.InstanceDataStepRate = 0;
-			m_IASet.push_back(IAElement);
 		}
 		else if (register_vertex_info[index].size > 0)
 		{
@@ -74,34 +74,31 @@ std::vector<D3D12_VERTEX_BUFFER_VIEW> D3D12GSRender::upload_vertex_attributes(co
 
 			const std::vector<u8> &data = register_vertex_data[index];
 
-			u32 element_size = rsx::get_vertex_type_size_on_host(info.type, info.size);
-
+			size_t element_size = rsx::get_vertex_type_size_on_host(info.type, info.size);
 			size_t buffer_size = data.size();
+
 			size_t heap_offset = m_buffer_data.alloc<D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT>(buffer_size);
 
 			void *mapped_buffer = m_buffer_data.map<void>(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
 			memcpy(mapped_buffer, data.data(), data.size());
 			m_buffer_data.unmap(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
 
-			D3D12_VERTEX_BUFFER_VIEW vertex_buffer_view = {
-				m_buffer_data.get_heap()->GetGPUVirtualAddress() + heap_offset,
-				(UINT)buffer_size,
-				(UINT)element_size
+			command_list->CopyBufferRegion(m_vertex_buffer_data.Get(), offset_in_vertex_buffers_buffer, m_buffer_data.get_heap(), heap_offset, buffer_size);
+
+			D3D12_SHADER_RESOURCE_VIEW_DESC vertex_buffer_view = {
+				get_vertex_attribute_format(info.type, info.size),
+				D3D12_SRV_DIMENSION_BUFFER,
+				D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING
 			};
+			vertex_buffer_view.Buffer.FirstElement = offset_in_vertex_buffers_buffer / element_size;
+			vertex_buffer_view.Buffer.NumElements = buffer_size / element_size;
 			vertex_buffer_views.push_back(vertex_buffer_view);
 
-			D3D12_INPUT_ELEMENT_DESC IAElement = {};
-			IAElement.SemanticName = "TEXCOORD";
-			IAElement.SemanticIndex = (UINT)index;
-			IAElement.InputSlot = (UINT)input_slot++;
-			IAElement.Format = get_vertex_attribute_format(info.type, info.size);
-			IAElement.AlignedByteOffset = 0;
-			IAElement.InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA;
-			IAElement.InstanceDataStepRate = 1;
-			m_IASet.push_back(IAElement);
+			offset_in_vertex_buffers_buffer = (offset_in_vertex_buffers_buffer + buffer_size + 191) / 192; // 192 is multiple of 2, 4, 6, 8, 12, 16, 24, 32, 48, 64
+			offset_in_vertex_buffers_buffer *= 192;
 		}
 	}
-
+	command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_vertex_buffer_data.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER));
 	return vertex_buffer_views;
 }
 
@@ -190,7 +187,7 @@ void D3D12GSRender::upload_and_bind_fragment_shader_constants(size_t descriptor_
 std::tuple<D3D12_VERTEX_BUFFER_VIEW, size_t> D3D12GSRender::upload_inlined_vertex_array()
 {
 	UINT offset = 0;
-	m_IASet.clear();
+
 	// Bind attributes
 	for (int index = 0; index < rsx::limits::vertex_count; ++index)
 	{
@@ -198,16 +195,6 @@ std::tuple<D3D12_VERTEX_BUFFER_VIEW, size_t> D3D12GSRender::upload_inlined_verte
 
 		if (!info.size) // disabled
 			continue;
-
-		D3D12_INPUT_ELEMENT_DESC IAElement = {};
-		IAElement.SemanticName = "TEXCOORD";
-		IAElement.SemanticIndex = (UINT)index;
-		IAElement.InputSlot = 0;
-		IAElement.Format = get_vertex_attribute_format(info.type, info.size);
-		IAElement.AlignedByteOffset = offset;
-		IAElement.InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
-		IAElement.InstanceDataStepRate = 0;
-		m_IASet.push_back(IAElement);
 
 		offset += rsx::get_vertex_type_size_on_host(info.type, info.size);
 	}
@@ -258,11 +245,11 @@ std::tuple<D3D12_INDEX_BUFFER_VIEW, size_t> D3D12GSRender::generate_index_buffer
 	return std::make_tuple(index_buffer_view, index_count);
 }
 
-std::tuple<bool, size_t> D3D12GSRender::upload_and_set_vertex_index_data(ID3D12GraphicsCommandList *command_list)
+std::tuple<bool, size_t, std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC>> D3D12GSRender::upload_and_set_vertex_index_data(ID3D12GraphicsCommandList *command_list)
 {
 	if (draw_command == Draw_command::draw_command_inlined_array)
 	{
-		size_t vertex_count;
+/*		size_t vertex_count;
 		D3D12_VERTEX_BUFFER_VIEW vertex_buffer_view;
 		std::tie(vertex_buffer_view, vertex_count) = upload_inlined_vertex_array();
 		command_list->IASetVertexBuffers(0, (UINT)1, &vertex_buffer_view);
@@ -274,28 +261,25 @@ std::tuple<bool, size_t> D3D12GSRender::upload_and_set_vertex_index_data(ID3D12G
 		size_t index_count;
 		std::tie(index_buffer_view, index_count) = generate_index_buffer_for_emulated_primitives_array({ { 0, (u32)vertex_count } });
 		command_list->IASetIndexBuffer(&index_buffer_view);
-		return std::make_tuple(true, index_count);
+		return std::make_tuple(true, index_count);*/
 	}
 
 	if (draw_command == Draw_command::draw_command_array)
 	{
-		const std::vector<D3D12_VERTEX_BUFFER_VIEW> &vertex_buffer_views = upload_vertex_attributes(first_count_commands);
-		command_list->IASetVertexBuffers(0, (UINT)vertex_buffer_views.size(), vertex_buffer_views.data());
-
 		if (is_primitive_native(draw_mode))
 		{
 			// Index count
 			size_t vertex_count = 0;
 			for (const auto &pair : first_count_commands)
 				vertex_count += pair.second;
-			return std::make_tuple(false, vertex_count);
+			return std::make_tuple(false, vertex_count, upload_vertex_attributes(first_count_commands, command_list));
 		}
 
 		D3D12_INDEX_BUFFER_VIEW index_buffer_view;
 		size_t index_count;
 		std::tie(index_buffer_view, index_count) = generate_index_buffer_for_emulated_primitives_array(first_count_commands);
 		command_list->IASetIndexBuffer(&index_buffer_view);
-		return std::make_tuple(true, index_count);
+		return std::make_tuple(true, index_count, upload_vertex_attributes(first_count_commands, command_list));
 	}
 
 	assert(draw_command == Draw_command::draw_command_indexed);
@@ -337,10 +321,7 @@ std::tuple<bool, size_t> D3D12GSRender::upload_and_set_vertex_index_data(ID3D12G
 	m_timers.m_buffer_upload_size += buffer_size;
 	command_list->IASetIndexBuffer(&index_buffer_view);
 
-	const std::vector<D3D12_VERTEX_BUFFER_VIEW> &vertex_buffer_views = upload_vertex_attributes({ std::make_pair(0, max_index + 1) });
-	command_list->IASetVertexBuffers(0, (UINT)vertex_buffer_views.size(), vertex_buffer_views.data());
-
-	return std::make_tuple(true, index_count);
+	return std::make_tuple(true, index_count, upload_vertex_attributes({ std::make_pair(0, max_index + 1) }, command_list));
 }
 
 #endif

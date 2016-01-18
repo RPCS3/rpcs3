@@ -251,7 +251,6 @@ void D3D12GSRender::load_program()
 	for (unsigned i = 0; i < prop.numMRT; i++)
 		prop.Blend.RenderTarget[i].RenderTargetWriteMask = mask;
 
-	prop.IASet = m_IASet;
 	if (!!rsx::method_registers[NV4097_SET_RESTART_INDEX_ENABLE])
 	{
 		Index_array_type index_type = to_index_array_type(rsx::method_registers[NV4097_SET_INDEX_ARRAY_DMA] >> 4);
