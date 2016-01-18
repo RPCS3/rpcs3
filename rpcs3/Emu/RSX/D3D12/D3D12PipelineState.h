@@ -10,7 +10,6 @@ struct D3D12PipelineProperties
 	D3D12_PRIMITIVE_TOPOLOGY_TYPE Topology;
 	DXGI_FORMAT DepthStencilFormat;
 	DXGI_FORMAT RenderTargetsFormat;
-	std::vector<D3D12_INPUT_ELEMENT_DESC> IASet;
 	D3D12_BLEND_DESC Blend;
 	unsigned numMRT : 3;
 	D3D12_DEPTH_STENCIL_DESC DepthStencil;
@@ -19,23 +18,6 @@ struct D3D12PipelineProperties
 
 	bool operator==(const D3D12PipelineProperties &in) const
 	{
-		if (IASet.size() != in.IASet.size())
-			return false;
-		for (unsigned i = 0; i < IASet.size(); i++)
-		{
-			const D3D12_INPUT_ELEMENT_DESC &a = IASet[i], &b = in.IASet[i];
-			if (a.AlignedByteOffset != b.AlignedByteOffset)
-				return false;
-			if (a.Format != b.Format)
-				return false;
-			if (a.InputSlot != b.InputSlot)
-				return false;
-			if (a.InstanceDataStepRate != b.InstanceDataStepRate)
-				return false;
-			if (a.SemanticIndex != b.SemanticIndex)
-				return false;
-		}
-
 		if (memcmp(&DepthStencil, &in.DepthStencil, sizeof(D3D12_DEPTH_STENCIL_DESC)))
 			return false;
 		if (memcmp(&Blend, &in.Blend, sizeof(D3D12_BLEND_DESC)))
@@ -118,24 +100,6 @@ bool has_attribute(size_t attribute, const std::vector<D3D12_INPUT_ELEMENT_DESC>
 	return false;
 }
 
-static
-std::vector<D3D12_INPUT_ELEMENT_DESC> completes_IA_desc(const std::vector<D3D12_INPUT_ELEMENT_DESC> &desc, const std::vector<size_t> &inputs)
-{
-	std::vector<D3D12_INPUT_ELEMENT_DESC> result(desc);
-	for (size_t attribute : inputs)
-	{
-		if (has_attribute(attribute, desc))
-			continue;
-		D3D12_INPUT_ELEMENT_DESC extra_ia_desc = {};
-		extra_ia_desc.SemanticIndex = (UINT)attribute;
-		extra_ia_desc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
-		extra_ia_desc.SemanticName = "TEXCOORD";
-		extra_ia_desc.InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
-		result.push_back(extra_ia_desc);
-	}
-	return result;
-}
-
 struct D3D12Traits
 {
 	using vertex_program_type = Shader;
@@ -184,7 +148,7 @@ struct D3D12Traits
 	static
 		pipeline_storage_type build_pipeline(
 			const vertex_program_type &vertexProgramData, const fragment_program_type &fragmentProgramData, const pipeline_properties &pipelineProperties,
-			ID3D12Device *device, gsl::span<ComPtr<ID3D12RootSignature>, 17> root_signatures)
+			ID3D12Device *device, gsl::span<ComPtr<ID3D12RootSignature>, 17, 16> root_signatures)
 	{
 		std::tuple<ID3D12PipelineState *, std::vector<size_t>, size_t> result = {};
 		D3D12_GRAPHICS_PIPELINE_STATE_DESC graphicPipelineStateDesc = {};
@@ -199,7 +163,7 @@ struct D3D12Traits
 		graphicPipelineStateDesc.PS.BytecodeLength = fragmentProgramData.bytecode->GetBufferSize();
 		graphicPipelineStateDesc.PS.pShaderBytecode = fragmentProgramData.bytecode->GetBufferPointer();
 
-		graphicPipelineStateDesc.pRootSignature = root_signatures[fragmentProgramData.m_textureCount].Get();
+		graphicPipelineStateDesc.pRootSignature = root_signatures[fragmentProgramData.m_textureCount][vertexProgramData.vertex_shader_inputs.size() - 1].Get();
 
 		graphicPipelineStateDesc.BlendState = pipelineProperties.Blend;
 		graphicPipelineStateDesc.DepthStencilState = pipelineProperties.DepthStencil;
@@ -211,10 +175,6 @@ struct D3D12Traits
 			graphicPipelineStateDesc.RTVFormats[i] = pipelineProperties.RenderTargetsFormat;
 		graphicPipelineStateDesc.DSVFormat = pipelineProperties.DepthStencilFormat;
 
-		const std::vector<D3D12_INPUT_ELEMENT_DESC> &completed_IA_desc = completes_IA_desc(pipelineProperties.IASet, vertexProgramData.vertex_shader_inputs);
-
-		graphicPipelineStateDesc.InputLayout.pInputElementDescs = completed_IA_desc.data();
-		graphicPipelineStateDesc.InputLayout.NumElements = (UINT)completed_IA_desc.size();
 		graphicPipelineStateDesc.SampleDesc.Count = 1;
 		graphicPipelineStateDesc.SampleMask = UINT_MAX;
 		graphicPipelineStateDesc.NodeMask = 1;

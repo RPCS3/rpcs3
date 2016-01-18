@@ -54,18 +54,25 @@ void D3D12VertexProgramDecompiler::insertHeader(std::stringstream &OS)
 
 void D3D12VertexProgramDecompiler::insertInputs(std::stringstream & OS, const std::vector<ParamType>& inputs)
 {
-	OS << "struct VertexInput" << std::endl;
-	OS << "{" << std::endl;
+	std::vector<std::tuple<size_t, std::string>> input_data;
 	for (const ParamType PT : inputs)
 	{
 		for (const ParamItem &PI : PT.items)
 		{
-			OS << "	" << PT.type << " " << PI.name << ": TEXCOORD" << PI.location << ";" << std::endl;
+			input_data.push_back(std::make_tuple(PI.location, PI.name));
 			input_slots.push_back(PI.location);
 		}
 	}
-	OS << "};" << std::endl;
 
+	std::sort(input_data.begin(), input_data.end());
+
+	size_t t_register = 0;
+	for (const auto &attribute : input_data)
+	{
+
+		OS << "Texture1D<float4> " << std::get<1>(attribute) << "_buffer : register(t" << t_register++ << ");\n";
+
+	}
 }
 
 void D3D12VertexProgramDecompiler::insertConstants(std::stringstream & OS, const std::vector<ParamType> & constants)
@@ -142,7 +149,7 @@ static const reg_info reg_table[] =
 
 void D3D12VertexProgramDecompiler::insertMainStart(std::stringstream & OS)
 {
-	OS << "PixelInput main(VertexInput In)" << std::endl;
+	OS << "PixelInput main(uint vertex_id : SV_VertexID)" << std::endl;
 	OS << "{" << std::endl;
 
 	// Declare inside main function
@@ -162,7 +169,7 @@ void D3D12VertexProgramDecompiler::insertMainStart(std::stringstream & OS)
 	for (const ParamType PT : m_parr.params[PF_PARAM_IN])
 	{
 		for (const ParamItem &PI : PT.items)
-			OS << "	" << PT.type << " " << PI.name << " = In." << PI.name << ";" << std::endl;
+			OS << "	" << PT.type << " " << PI.name << " = " << PI.name << "_buffer.Load(vertex_id);" << std::endl;
 	}
 }
 
