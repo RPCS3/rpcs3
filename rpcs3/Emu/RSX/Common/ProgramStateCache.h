@@ -23,12 +23,12 @@ namespace program_hash_util
 
 	struct vertex_program_hash
 	{
-		size_t operator()(const std::vector<u32> &program) const;
+		size_t operator()(const RSXVertexProgram &program) const;
 	};
 
 	struct vertex_program_compare
 	{
-		bool operator()(const std::vector<u32> &binary1, const std::vector<u32> &binary2) const;
+		bool operator()(const RSXVertexProgram &binary1, const RSXVertexProgram &binary2) const;
 	};
 
 	struct fragment_program_utils
@@ -75,7 +75,7 @@ class program_state_cache
 	using vertex_program_type = typename backend_traits::vertex_program_type;
 	using fragment_program_type = typename backend_traits::fragment_program_type;
 
-	using binary_to_vertex_program = std::unordered_map<std::vector<u32>, vertex_program_type, program_hash_util::vertex_program_hash, program_hash_util::vertex_program_compare> ;
+	using binary_to_vertex_program = std::unordered_map<RSXVertexProgram, vertex_program_type, program_hash_util::vertex_program_hash, program_hash_util::vertex_program_compare> ;
 	using binary_to_fragment_program = std::unordered_map<void *, fragment_program_type, program_hash_util::fragment_program_hash, program_hash_util::fragment_program_compare>;
 
 
@@ -115,13 +115,13 @@ private:
 	/// bool here to inform that the program was preexisting.
 	std::tuple<const vertex_program_type&, bool> search_vertex_program(const RSXVertexProgram& rsx_vp)
 	{
-		const auto& I = m_vertex_shader_cache.find(rsx_vp.data);
+		const auto& I = m_vertex_shader_cache.find(rsx_vp);
 		if (I != m_vertex_shader_cache.end())
 		{
 			return std::forward_as_tuple(I->second, true);
 		}
 		LOG_NOTICE(RSX, "VP not found in buffer!");
-		vertex_program_type& new_shader = m_vertex_shader_cache[rsx_vp.data];
+		vertex_program_type& new_shader = m_vertex_shader_cache[rsx_vp];
 		backend_traits::recompile_vertex_program(rsx_vp, new_shader, m_next_id++);
 
 		return std::forward_as_tuple(new_shader, false);
@@ -151,7 +151,7 @@ public:
 
 	const vertex_program_type& get_transform_program(const RSXVertexProgram& rsx_vp) const
 	{
-		auto I = m_vertex_shader_cache.find(rsx_vp.data);
+		auto I = m_vertex_shader_cache.find(rsx_vp);
 		if (I != m_vertex_shader_cache.end())
 			return I->second;
 		throw new EXCEPTION("Trying to get unknow transform program");
