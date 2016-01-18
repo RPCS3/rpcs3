@@ -18,7 +18,8 @@ protected:
 	virtual void insertOutputs(std::stringstream &OS, const std::vector<ParamType> &outputs);
 	virtual void insertMainStart(std::stringstream &OS);
 	virtual void insertMainEnd(std::stringstream &OS);
+
+	const RSXVertexProgram &rsx_vertex_program;
 public:
-	std::vector<size_t> input_slots;
 	D3D12VertexProgramDecompiler(const RSXVertexProgram &prog);
 };

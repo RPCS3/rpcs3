@@ -75,7 +75,7 @@ public:
 	ComPtr<ID3DBlob> bytecode;
 	// For debugging
 	std::string content;
-	std::vector<size_t> vertex_shader_inputs;
+	size_t vertex_shader_input_count;
 	std::vector<size_t> FragmentConstantOffsetCache;
 	size_t m_textureCount;
 
@@ -104,7 +104,7 @@ struct D3D12Traits
 {
 	using vertex_program_type = Shader;
 	using fragment_program_type  = Shader;
-	using pipeline_storage_type = std::tuple<ComPtr<ID3D12PipelineState>, std::vector<size_t>, size_t>;
+	using pipeline_storage_type = std::tuple<ComPtr<ID3D12PipelineState>, size_t, size_t>;
 	using pipeline_properties  = D3D12PipelineProperties;
 
 	static
@@ -140,15 +140,15 @@ struct D3D12Traits
 		D3D12VertexProgramDecompiler VS(RSXVP);
 		std::string shaderCode = VS.Decompile();
 		vertexProgramData.Compile(shaderCode, Shader::SHADER_TYPE::SHADER_TYPE_VERTEX);
-		vertexProgramData.vertex_shader_inputs = VS.input_slots;
+		vertexProgramData.vertex_shader_input_count = RSXVP.rsx_vertex_inputs.size();
 		fs::file(fs::get_config_dir() + "VertexProgram" + std::to_string(ID) + ".hlsl", fom::rewrite).write(shaderCode);
 		vertexProgramData.id = (u32)ID;
 	}
 
 	static
-		pipeline_storage_type build_pipeline(
-			const vertex_program_type &vertexProgramData, const fragment_program_type &fragmentProgramData, const pipeline_properties &pipelineProperties,
-			ID3D12Device *device, gsl::span<ComPtr<ID3D12RootSignature>, 17, 16> root_signatures)
+	pipeline_storage_type build_pipeline(
+		const vertex_program_type &vertexProgramData, const fragment_program_type &fragmentProgramData, const pipeline_properties &pipelineProperties,
+		ID3D12Device *device, gsl::span<ComPtr<ID3D12RootSignature>, 17, 16> root_signatures)
 	{
 		std::tuple<ID3D12PipelineState *, std::vector<size_t>, size_t> result = {};
 		D3D12_GRAPHICS_PIPELINE_STATE_DESC graphicPipelineStateDesc = {};
@@ -163,7 +163,7 @@ struct D3D12Traits
 		graphicPipelineStateDesc.PS.BytecodeLength = fragmentProgramData.bytecode->GetBufferSize();
 		graphicPipelineStateDesc.PS.pShaderBytecode = fragmentProgramData.bytecode->GetBufferPointer();
 
-		graphicPipelineStateDesc.pRootSignature = root_signatures[fragmentProgramData.m_textureCount][vertexProgramData.vertex_shader_inputs.size() - 1].Get();
+		graphicPipelineStateDesc.pRootSignature = root_signatures[fragmentProgramData.m_textureCount][vertexProgramData.vertex_shader_input_count - 1].Get();
 
 		graphicPipelineStateDesc.BlendState = pipelineProperties.Blend;
 		graphicPipelineStateDesc.DepthStencilState = pipelineProperties.DepthStencil;
@@ -186,7 +186,7 @@ struct D3D12Traits
 
 		std::wstring name = L"PSO_" + std::to_wstring(vertexProgramData.id) + L"_" + std::to_wstring(fragmentProgramData.id);
 		pso->SetName(name.c_str());
-		return std::make_tuple(pso, vertexProgramData.vertex_shader_inputs, fragmentProgramData.m_textureCount);
+		return std::make_tuple(pso, vertexProgramData.vertex_shader_input_count, fragmentProgramData.m_textureCount);
 	}
 };
 

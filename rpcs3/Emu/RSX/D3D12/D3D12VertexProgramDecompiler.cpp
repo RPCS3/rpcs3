@@ -60,7 +60,6 @@ void D3D12VertexProgramDecompiler::insertInputs(std::stringstream & OS, const st
 		for (const ParamItem &PI : PT.items)
 		{
 			input_data.push_back(std::make_tuple(PI.location, PI.name));
-			input_slots.push_back(PI.location);
 		}
 	}
 
@@ -169,7 +168,19 @@ void D3D12VertexProgramDecompiler::insertMainStart(std::stringstream & OS)
 	for (const ParamType PT : m_parr.params[PF_PARAM_IN])
 	{
 		for (const ParamItem &PI : PT.items)
-			OS << "	" << PT.type << " " << PI.name << " = " << PI.name << "_buffer.Load(vertex_id);" << std::endl;
+		{
+			for (const auto &real_input : rsx_vertex_program.rsx_vertex_inputs)
+			{
+				if (real_input.location != PI.location)
+					continue;
+				if (!real_input.is_array)
+				{
+					OS << "	" << PT.type << " " << PI.name << " = " << PI.name << "_buffer.Load(0);\n";
+					continue;
+				}
+				OS << "	" << PT.type << " " << PI.name << " = " << PI.name << "_buffer.Load(vertex_id);\n";
+			}
+		}
 	}
 }
 
@@ -189,7 +200,7 @@ void D3D12VertexProgramDecompiler::insertMainEnd(std::stringstream & OS)
 }
 
 D3D12VertexProgramDecompiler::D3D12VertexProgramDecompiler(const RSXVertexProgram &prog) :
-	VertexProgramDecompiler(prog)
+	VertexProgramDecompiler(prog), rsx_vertex_program(prog)
 {
 }
 #endif

@@ -67,7 +67,7 @@ private:
 	RSXVertexProgram vertex_program;
 	RSXFragmentProgram fragment_program;
 	PipelineStateObjectCache m_pso_cache;
-	std::tuple<ComPtr<ID3D12PipelineState>, std::vector<size_t>, size_t> m_current_pso;
+	std::tuple<ComPtr<ID3D12PipelineState>, size_t, size_t> m_current_pso;
 
 	struct
 	{
