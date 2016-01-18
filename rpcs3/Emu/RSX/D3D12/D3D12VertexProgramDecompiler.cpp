@@ -52,6 +52,21 @@ void D3D12VertexProgramDecompiler::insertHeader(std::stringstream &OS)
 	OS << "};" << std::endl;
 }
 
+namespace
+{
+	bool declare_input(std::stringstream & OS, const std::tuple<size_t, std::string> &attribute, const std::vector<rsx_vertex_input> &inputs, size_t reg)
+	{
+		for (const auto &real_input : inputs)
+		{
+			if (static_cast<size_t>(real_input.location) != std::get<0>(attribute))
+				continue;
+			OS << "Texture1D<float4> " << std::get<1>(attribute) << "_buffer : register(t" << reg++ << ");\n";
+			return true;
+		}
+		return false;
+	}
+}
+
 void D3D12VertexProgramDecompiler::insertInputs(std::stringstream & OS, const std::vector<ParamType>& inputs)
 {
 	std::vector<std::tuple<size_t, std::string>> input_data;
@@ -68,9 +83,8 @@ void D3D12VertexProgramDecompiler::insertInputs(std::stringstream & OS, const st
 	size_t t_register = 0;
 	for (const auto &attribute : input_data)
 	{
-
-		OS << "Texture1D<float4> " << std::get<1>(attribute) << "_buffer : register(t" << t_register++ << ");\n";
-
+		if (declare_input(OS, attribute, rsx_vertex_program.rsx_vertex_inputs, t_register))
+			t_register++;
 	}
 }
 
@@ -146,6 +160,26 @@ static const reg_info reg_table[] =
 	{ "tc8", true, "dst_reg15", "", false },
 };
 
+namespace
+{
+	void add_input(std::stringstream & OS, const ParamItem &PI, const std::vector<rsx_vertex_input> &inputs)
+	{
+		for (const auto &real_input : inputs)
+		{
+			if (real_input.location != PI.location)
+				continue;
+			if (!real_input.is_array)
+			{
+				OS << "	float4 " << PI.name << " = " << PI.name << "_buffer.Load(0);\n";
+				return;
+			}
+			OS << "	float4 " << PI.name << " = " << PI.name << "_buffer.Load(vertex_id);\n";
+			return;
+		}
+		OS << "	float4 " << PI.name << " = float4(0., 0., 0., 1.);\n";
+	}
+}
+
 void D3D12VertexProgramDecompiler::insertMainStart(std::stringstream & OS)
 {
 	OS << "PixelInput main(uint vertex_id : SV_VertexID)" << std::endl;
@@ -169,17 +203,7 @@ void D3D12VertexProgramDecompiler::insertMainStart(std::stringstream & OS)
 	{
 		for (const ParamItem &PI : PT.items)
 		{
-			for (const auto &real_input : rsx_vertex_program.rsx_vertex_inputs)
-			{
-				if (real_input.location != PI.location)
-					continue;
-				if (!real_input.is_array)
-				{
-					OS << "	" << PT.type << " " << PI.name << " = " << PI.name << "_buffer.Load(0);\n";
-					continue;
-				}
-				OS << "	" << PT.type << " " << PI.name << " = " << PI.name << "_buffer.Load(vertex_id);\n";
-			}
+			add_input(OS, PI, rsx_vertex_program.rsx_vertex_inputs);
 		}
 	}
 }
