@@ -488,91 +488,21 @@ void D3D12GSRender::copy_render_target_to_dma_location()
 }
 
 
-void D3D12GSRender::copy_render_targets_to_memory(void *buffer, u8 rtt)
+std::array<std::vector<gsl::byte>, 4> D3D12GSRender::copy_render_targets_to_memory()
 {
-	size_t heap_offset = download_to_readback_buffer(m_device.Get(), get_current_resource_storage().command_list.Get(), m_readback_resources, std::get<1>(m_rtts.m_bound_render_targets[rtt]), m_surface.color_format);
-
-	CHECK_HRESULT(get_current_resource_storage().command_list->Close());
-	m_command_queue->ExecuteCommandLists(1, (ID3D12CommandList**)get_current_resource_storage().command_list.GetAddressOf());
-	get_current_resource_storage().set_new_command_list();
-
-	wait_for_command_queue(m_device.Get(), m_command_queue.Get());
-	m_readback_resources.m_get_pos = m_readback_resources.get_current_put_pos_minus_one();
-
 	int clip_w = rsx::method_registers[NV4097_SET_SURFACE_CLIP_HORIZONTAL] >> 16;
 	int clip_h = rsx::method_registers[NV4097_SET_SURFACE_CLIP_VERTICAL] >> 16;
-	size_t srcPitch = get_aligned_pitch(m_surface.color_format, clip_w);
-	size_t dstPitch = get_packed_pitch(m_surface.color_format, clip_w);
-	copy_readback_buffer_to_dest(buffer, m_readback_resources, heap_offset, srcPitch, dstPitch, clip_h);
+	rsx::surface_info surface = {};
+	surface.unpack(rsx::method_registers[NV4097_SET_SURFACE_FORMAT]);
+	return m_rtts.get_render_targets_data(surface.color_format, clip_w, clip_h, m_device.Get(), m_command_queue.Get(), m_readback_resources, get_current_resource_storage());
 }
 
-void D3D12GSRender::copy_depth_buffer_to_memory(void *buffer)
+std::array<std::vector<gsl::byte>, 2> D3D12GSRender::copy_depth_stencil_buffer_to_memory()
 {
-	unsigned clip_w = rsx::method_registers[NV4097_SET_SURFACE_CLIP_HORIZONTAL] >> 16;
-	unsigned clip_h = rsx::method_registers[NV4097_SET_SURFACE_CLIP_VERTICAL] >> 16;
-
-	size_t row_pitch = align(clip_w * 4, 256);
-
-	size_t buffer_size = row_pitch * clip_h;
-	size_t heap_offset = m_readback_resources.alloc<D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT>(buffer_size);
-
-	get_current_resource_storage().command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(std::get<1>(m_rtts.m_bound_depth_stencil), D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_COPY_SOURCE));
-
-	get_current_resource_storage().command_list->CopyTextureRegion(&CD3DX12_TEXTURE_COPY_LOCATION(m_readback_resources.get_heap(), { heap_offset,{ DXGI_FORMAT_R32_TYPELESS, (UINT)clip_w, (UINT)clip_h, 1, (UINT)row_pitch } }), 0, 0, 0,
-		&CD3DX12_TEXTURE_COPY_LOCATION(std::get<1>(m_rtts.m_bound_depth_stencil), 0), nullptr);
-	get_current_resource_storage().command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(std::get<1>(m_rtts.m_bound_depth_stencil), D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE));
-
-	CHECK_HRESULT(get_current_resource_storage().command_list->Close());
-	m_command_queue->ExecuteCommandLists(1, (ID3D12CommandList**)get_current_resource_storage().command_list.GetAddressOf());
-	get_current_resource_storage().set_new_command_list();
-
-	wait_for_command_queue(m_device.Get(), m_command_queue.Get());
-	m_readback_resources.m_get_pos = m_readback_resources.get_current_put_pos_minus_one();
-
-	void *mapped_buffer = m_readback_resources.map<void>(heap_offset);
-	for (unsigned row = 0; row < clip_h; row++)
-	{
-		u32 *casted_dest = (u32*)((char*)buffer + row * clip_w * 4);
-		u32 *casted_src = (u32*)((char*)mapped_buffer + row * row_pitch);
-		for (unsigned col = 0; col < row_pitch / 4; col++)
-			*casted_dest++ = *casted_src++;
-	}
-	m_readback_resources.unmap();
+	int clip_w = rsx::method_registers[NV4097_SET_SURFACE_CLIP_HORIZONTAL] >> 16;
+	int clip_h = rsx::method_registers[NV4097_SET_SURFACE_CLIP_VERTICAL] >> 16;
+	rsx::surface_info surface = {};
+	surface.unpack(rsx::method_registers[NV4097_SET_SURFACE_FORMAT]);
+	return m_rtts.get_depth_stencil_data(surface.depth_format, clip_w, clip_h, m_device.Get(), m_command_queue.Get(), m_readback_resources, get_current_resource_storage());
 }
-
-
-void D3D12GSRender::copy_stencil_buffer_to_memory(void *buffer)
-{
-	unsigned clip_w = rsx::method_registers[NV4097_SET_SURFACE_CLIP_HORIZONTAL] >> 16;
-	unsigned clip_h = rsx::method_registers[NV4097_SET_SURFACE_CLIP_VERTICAL] >> 16;
-
-	size_t row_pitch = align(clip_w * 4, 256);
-
-	size_t buffer_size = row_pitch * clip_h;
-	size_t heap_offset = m_readback_resources.alloc<D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT>(buffer_size);
-
-	get_current_resource_storage().command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(std::get<1>(m_rtts.m_bound_depth_stencil), D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_COPY_SOURCE));
-
-	get_current_resource_storage().command_list->CopyTextureRegion(&CD3DX12_TEXTURE_COPY_LOCATION(m_readback_resources.get_heap(), { heap_offset, { DXGI_FORMAT_R8_TYPELESS, (UINT)clip_w, (UINT)clip_h, 1, (UINT)row_pitch } }), 0, 0, 0,
-		&CD3DX12_TEXTURE_COPY_LOCATION(std::get<1>(m_rtts.m_bound_depth_stencil), 1), nullptr);
-	get_current_resource_storage().command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(std::get<1>(m_rtts.m_bound_depth_stencil), D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE));
-
-	CHECK_HRESULT(get_current_resource_storage().command_list->Close());
-	m_command_queue->ExecuteCommandLists(1, (ID3D12CommandList**)get_current_resource_storage().command_list.GetAddressOf());
-	get_current_resource_storage().set_new_command_list();
-
-	wait_for_command_queue(m_device.Get(), m_command_queue.Get());
-	m_readback_resources.m_get_pos = m_readback_resources.get_current_put_pos_minus_one();
-
-	void *mapped_buffer = m_readback_resources.map<void>(heap_offset);
-	for (unsigned row = 0; row < clip_h; row++)
-	{
-		char *casted_dest = (char*)buffer + row * clip_w;
-		char *casted_src = (char*)mapped_buffer + row * row_pitch;
-		for (unsigned col = 0; col < row_pitch; col++)
-			*casted_dest++ = *casted_src++;
-	}
-	m_readback_resources.unmap();
-}
-
 #endif

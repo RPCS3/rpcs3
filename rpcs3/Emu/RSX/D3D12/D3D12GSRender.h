@@ -200,8 +200,7 @@ protected:
 	virtual void end() override;
 	virtual void flip(int buffer) override;
 
-	virtual void copy_render_targets_to_memory(void *buffer, u8 rtt) override;
-	virtual void copy_depth_buffer_to_memory(void *buffer) override;
-	virtual void copy_stencil_buffer_to_memory(void *buffer) override;
+	virtual std::array<std::vector<gsl::byte>, 4> copy_render_targets_to_memory() override;
+	virtual std::array<std::vector<gsl::byte>, 2> copy_depth_stencil_buffer_to_memory() override;
 	virtual std::pair<std::string, std::string> get_programs() const override;
 };

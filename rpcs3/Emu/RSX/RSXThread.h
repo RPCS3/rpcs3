@@ -15,19 +15,16 @@ extern u64 get_system_time();
 
 struct frame_capture_data
 {
-	struct buffer
-	{
-		std::vector<u8> data;
-		size_t width = 0, height = 0;
-	};
 
 	struct draw_state
 	{
 		std::string name;
 		std::pair<std::string, std::string> programs;
-		buffer color_buffer[4];
-		buffer depth;
-		buffer stencil;
+		size_t width = 0, height = 0;
+		Surface_color_format surface_color_format;
+		std::array<std::vector<gsl::byte>, 4> color_buffer;
+		Surface_depth_format surface_depth_format;
+		std::array<std::vector<gsl::byte>, 2> depth_stencil;
 	};
 	std::vector<std::pair<u32, u32> > command_queue;
 	std::vector<draw_state> draw_calls;
@@ -347,19 +344,17 @@ namespace rsx
 		 * Copy rtt values to buffer.
 		 * TODO: It's more efficient to combine multiple call of this function into one.
 		 */
-		virtual void copy_render_targets_to_memory(void *buffer, u8 rtt) {};
+		virtual std::array<std::vector<gsl::byte>, 4> copy_render_targets_to_memory() {
+			return  std::array<std::vector<gsl::byte>, 4>();
+		};
 
 		/**
-		* Copy depth content to buffer.
+		* Copy depth and stencil content to buffers.
 		* TODO: It's more efficient to combine multiple call of this function into one.
 		*/
-		virtual void copy_depth_buffer_to_memory(void *buffer) {};
-
-		/**
-		* Copy stencil content to buffer.
-		* TODO: It's more efficient to combine multiple call of this function into one.
-		*/
-		virtual void copy_stencil_buffer_to_memory(void *buffer) {};
+		virtual std::array<std::vector<gsl::byte>, 2> copy_depth_stencil_buffer_to_memory() {
+			return std::array<std::vector<gsl::byte>, 2>();
+		};
 
 		virtual std::pair<std::string, std::string> get_programs() const { return std::make_pair("", ""); };
 	public:
