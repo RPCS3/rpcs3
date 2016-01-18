@@ -173,6 +173,16 @@ namespace
 				OS << "	float4 " << PI.name << " = " << PI.name << "_buffer.Load(0);\n";
 				return;
 			}
+			if (real_input.frequency > 1)
+			{
+				if (real_input.is_modulo)
+				{
+					OS << "	float4 " << PI.name << " = " << PI.name << "_buffer.Load(vertex_id % " << real_input.frequency << ");\n";
+					return;
+				}
+				OS << "	float4 " << PI.name << " = " << PI.name << "_buffer.Load(vertex_id / " << real_input.frequency << ");\n";
+				return;
+			}
 			OS << "	float4 " << PI.name << " = " << PI.name << "_buffer.Load(vertex_id);\n";
 			return;
 		}
