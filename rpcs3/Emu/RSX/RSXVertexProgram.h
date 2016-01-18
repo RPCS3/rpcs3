@@ -194,7 +194,7 @@ struct rsx_vertex_input
 {
 	u8 location; // between 0 and 15
 	u8 size; // between 1 and 4
-	u8 frequency;
+	u16 frequency;
 	bool is_modulo; // either modulo frequency or divide frequency
 	bool is_array; // false if "reg value"
 
