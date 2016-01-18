@@ -757,7 +757,7 @@ bool GLGSRender::load_program()
 
 	u32 input_mask = rsx::method_registers[NV4097_SET_VERTEX_ATTRIB_INPUT_MASK];
 	u32 modulo_mask = rsx::method_registers[NV4097_SET_FREQUENCY_DIVIDER_OPERATION];
-
+	vertex_program.rsx_vertex_inputs.clear();
 	for (u8 index = 0; index < rsx::limits::vertex_count; ++index)
 	{
 		bool enabled = !!(input_mask & (1 << index));
