@@ -52,20 +52,40 @@ void D3D12VertexProgramDecompiler::insertHeader(std::stringstream &OS)
 	OS << "};" << std::endl;
 }
 
+namespace
+{
+	bool declare_input(std::stringstream & OS, const std::tuple<size_t, std::string> &attribute, const std::vector<rsx_vertex_input> &inputs, size_t reg)
+	{
+		for (const auto &real_input : inputs)
+		{
+			if (static_cast<size_t>(real_input.location) != std::get<0>(attribute))
+				continue;
+			OS << "Texture1D<float4> " << std::get<1>(attribute) << "_buffer : register(t" << reg++ << ");\n";
+			return true;
+		}
+		return false;
+	}
+}
+
 void D3D12VertexProgramDecompiler::insertInputs(std::stringstream & OS, const std::vector<ParamType>& inputs)
 {
-	OS << "struct VertexInput" << std::endl;
-	OS << "{" << std::endl;
+	std::vector<std::tuple<size_t, std::string>> input_data;
 	for (const ParamType PT : inputs)
 	{
 		for (const ParamItem &PI : PT.items)
 		{
-			OS << "	" << PT.type << " " << PI.name << ": TEXCOORD" << PI.location << ";" << std::endl;
-			input_slots.push_back(PI.location);
+			input_data.push_back(std::make_tuple(PI.location, PI.name));
 		}
 	}
-	OS << "};" << std::endl;
 
+	std::sort(input_data.begin(), input_data.end());
+
+	size_t t_register = 0;
+	for (const auto &attribute : input_data)
+	{
+		if (declare_input(OS, attribute, rsx_vertex_program.rsx_vertex_inputs, t_register))
+			t_register++;
+	}
 }
 
 void D3D12VertexProgramDecompiler::insertConstants(std::stringstream & OS, const std::vector<ParamType> & constants)
@@ -140,9 +160,39 @@ static const reg_info reg_table[] =
 	{ "tc8", true, "dst_reg15", "", false },
 };
 
+namespace
+{
+	void add_input(std::stringstream & OS, const ParamItem &PI, const std::vector<rsx_vertex_input> &inputs)
+	{
+		for (const auto &real_input : inputs)
+		{
+			if (real_input.location != PI.location)
+				continue;
+			if (!real_input.is_array)
+			{
+				OS << "	float4 " << PI.name << " = " << PI.name << "_buffer.Load(0);\n";
+				return;
+			}
+			if (real_input.frequency > 1)
+			{
+				if (real_input.is_modulo)
+				{
+					OS << "	float4 " << PI.name << " = " << PI.name << "_buffer.Load(vertex_id % " << real_input.frequency << ");\n";
+					return;
+				}
+				OS << "	float4 " << PI.name << " = " << PI.name << "_buffer.Load(vertex_id / " << real_input.frequency << ");\n";
+				return;
+			}
+			OS << "	float4 " << PI.name << " = " << PI.name << "_buffer.Load(vertex_id);\n";
+			return;
+		}
+		OS << "	float4 " << PI.name << " = float4(0., 0., 0., 1.);\n";
+	}
+}
+
 void D3D12VertexProgramDecompiler::insertMainStart(std::stringstream & OS)
 {
-	OS << "PixelInput main(VertexInput In)" << std::endl;
+	OS << "PixelInput main(uint vertex_id : SV_VertexID)" << std::endl;
 	OS << "{" << std::endl;
 
 	// Declare inside main function
@@ -162,7 +212,9 @@ void D3D12VertexProgramDecompiler::insertMainStart(std::stringstream & OS)
 	for (const ParamType PT : m_parr.params[PF_PARAM_IN])
 	{
 		for (const ParamItem &PI : PT.items)
-			OS << "	" << PT.type << " " << PI.name << " = In." << PI.name << ";" << std::endl;
+		{
+			add_input(OS, PI, rsx_vertex_program.rsx_vertex_inputs);
+		}
 	}
 }
 
@@ -182,7 +234,7 @@ void D3D12VertexProgramDecompiler::insertMainEnd(std::stringstream & OS)
 }
 
 D3D12VertexProgramDecompiler::D3D12VertexProgramDecompiler(const RSXVertexProgram &prog) :
-	VertexProgramDecompiler(prog)
+	VertexProgramDecompiler(prog), rsx_vertex_program(prog)
 {
 }
 #endif
