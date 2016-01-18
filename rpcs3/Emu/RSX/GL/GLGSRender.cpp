@@ -753,6 +753,42 @@ bool GLGSRender::load_program()
 		if (d3.end)
 			break;
 	}
+	vertex_program.output_mask = rsx::method_registers[NV4097_SET_VERTEX_ATTRIB_OUTPUT_MASK];
+
+	u32 input_mask = rsx::method_registers[NV4097_SET_VERTEX_ATTRIB_INPUT_MASK];
+	u32 modulo_mask = rsx::method_registers[NV4097_SET_FREQUENCY_DIVIDER_OPERATION];
+
+	for (u8 index = 0; index < rsx::limits::vertex_count; ++index)
+	{
+		bool enabled = !!(input_mask & (1 << index));
+		if (!enabled)
+			continue;
+
+		if (vertex_arrays_info[index].size > 0)
+		{
+			vertex_program.rsx_vertex_inputs.push_back(
+			{
+				index,
+				vertex_arrays_info[index].size,
+				vertex_arrays_info[index].frequency,
+				!!((modulo_mask >> index) & 0x1),
+				true
+			}
+			);
+		}
+		else if (register_vertex_info[index].size > 0)
+		{
+			vertex_program.rsx_vertex_inputs.push_back(
+			{
+				index,
+				register_vertex_info[index].size,
+				register_vertex_info[index].frequency,
+				!!((modulo_mask >> index) & 0x1),
+				false
+			}
+			);
+		}
+	}
 
 	RSXFragmentProgram fragment_program;
 	u32 shader_program = rsx::method_registers[NV4097_SET_SHADER_PROGRAM];
