@@ -9,6 +9,13 @@ enum CellPngTxtType : s32
 	CELL_PNG_ITXT = 2,
 };
 
+enum CellPngUnknownLocation : s32
+{
+	CELL_PNG_BEFORE_PLTE = 1,
+	CELL_PNG_BEFORE_IDAT = 2,
+	CELL_PNG_AFTER_IDAT  = 8,
+};
+
 struct CellPngPLTEentry
 {
 	u8 red;
@@ -31,13 +38,6 @@ struct CellPngSPLTentry
 	u8 sampleDepth;
 	vm::bptr<CellPngPaletteEntries> paletteEntries;
 	be_t<u32> paletteEntriesNumber;
-};
-
-enum CellPngUnknownLocation : s32
-{
-	CELL_PNG_BEFORE_PLTE = 1,
-	CELL_PNG_BEFORE_IDAT = 2,
-	CELL_PNG_AFTER_IDAT  = 8,
 };
 
 struct CellPngTextInfo

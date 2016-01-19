@@ -83,9 +83,20 @@ enum CellPngDecDecodeStatus : s32
 	CELL_PNGDEC_DEC_STATUS_STOP   = 1,
 };
 
+enum CellPngDecBufferMode : s32
+{
+	CELL_PNGDEC_LINE_MODE = 1,
+};
+
+enum CellPngDecSpuMode : s32
+{
+	CELL_PNGDEC_RECEIVE_EVENT    = 0,
+	CELL_PNGDEC_TRYRECEIVE_EVENT = 1,
+};
+
 // Callbacks for memory management
 using CellPngDecCbControlMalloc = vm::ptr<void>(u32 size, vm::ptr<void> cbCtrlMallocArg);
-using CellPngDecCbControlFree = s32(vm::ptr<void> ptr, vm::ptr<void> cbCtrlFreeArg);
+using CellPngDecCbControlFree   = s32(vm::ptr<void> ptr, vm::ptr<void> cbCtrlFreeArg);
 
 // Structs
 struct CellPngDecThreadInParam
@@ -179,18 +190,6 @@ struct CellPngDecDataOutInfo
 	be_t<s32> status; // CellPngDecDecodeStatus
 };
 
-// Defines for decoding partial streams
-enum CellPngDecBufferMode : s32
-{
-	CELL_PNGDEC_LINE_MODE = 1,
-};
-
-enum CellPngDecSpuMode : s32
-{
-	CELL_PNGDEC_RECEIVE_EVENT    = 0,
-	CELL_PNGDEC_TRYRECEIVE_EVENT = 1,
-};
-
 // Structs for decoding partial streams
 struct CellPngDecStrmInfo
 {
@@ -248,7 +247,7 @@ struct CellPngDecExtOutParam
 
 // Callbacks for decoding partial streams
 using CellPngDecCbControlStream = s32(vm::ptr<CellPngDecStrmInfo> strmInfo, vm::ptr<CellPngDecStrmParam> strmParam, vm::ptr<void> cbCtrlStrmArg);
-using CellPngDecCbControlDisp = s32(vm::ptr<CellPngDecDispInfo> dispInfo, vm::ptr<CellPngDecDispParam> dispParam, vm::ptr<void> cbCtrlDispArg);
+using CellPngDecCbControlDisp   = s32(vm::ptr<CellPngDecDispInfo> dispInfo, vm::ptr<CellPngDecDispParam> dispParam, vm::ptr<void> cbCtrlDispArg);
 
 struct CellPngDecCbCtrlStrm
 {
@@ -263,7 +262,7 @@ struct CellPngDecCbCtrlDisp
 };
 
 // Custom structs
-struct PngDecoder
+struct PngHandle
 {
 	vm::ptr<CellPngDecCbControlMalloc> malloc;
 	vm::ptr<void> malloc_arg;
@@ -271,17 +270,53 @@ struct PngDecoder
 	vm::ptr<void> free_arg;
 };
 
+// For reading from a buffer using libpng
+struct PngBuffer
+{
+	// The cursor location and data pointer for reading from a buffer
+	size_t cursor;
+	size_t length;
+	vm::bptr<void> data;
+
+	// The file descriptor, and whether we need to read from a file descriptor
+	bool file;
+	u32 fd;
+};
+
 struct PngStream
 {
-	vm::ptr<PngDecoder> dec;
-
-	// old data:
-	u32 fd;
-	u64 fileSize;
+	// PNG decoding structures
 	CellPngDecInfo info;
-	CellPngDecOutParam outParam;
-	CellPngDecSrc src;
-
+	CellPngDecOutParam out_param;
+	CellPngDecSrc source;
 	CellPngDecStrmInfo streamInfo;
 	CellPngDecStrmParam streamParam;
+
+	// Fixed alpha value and flag
+	bool fixed_alpha;
+	be_t<u32> fixed_alpha_colour;
+
+	// Pixel packing value
+	be_t<s32> packing;
+	
+	// PNG custom read function structure, for decoding from a buffer
+	vm::ptr<PngBuffer> buffer;
+
+	// libpng structures for reading and decoding the PNG file
+	png_structp png_ptr;
+	png_infop info_ptr;
 };
+
+// Converts libpng colour type to cellPngDec colour type
+static s32 getPngDecColourType(u8 type)
+{
+	switch (type)
+	{
+	case PNG_COLOR_TYPE_RGB:        return CELL_PNGDEC_RGB;
+	case PNG_COLOR_TYPE_RGBA:       return CELL_PNGDEC_RGBA; // We can't diffrentiate between ARGB and RGBA. Doesn't seem to be exactly important.
+	case PNG_COLOR_TYPE_PALETTE:    return CELL_PNGDEC_PALETTE;
+	case PNG_COLOR_TYPE_GRAY:       return CELL_PNGDEC_GRAYSCALE;
+	case PNG_COLOR_TYPE_GRAY_ALPHA: return CELL_PNGDEC_GRAYSCALE_ALPHA;
+	default: throw EXCEPTION("Unknown colour type: %d", type);
+	}
+}

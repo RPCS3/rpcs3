@@ -22,3 +22,6 @@
 [submodule "GSL"]
 	path = GSL
 	url = https://github.com/Microsoft/GSL.git
+[submodule "libpng"]
+	path = libpng
+	url = https://github.com/RPCS3/libpng
