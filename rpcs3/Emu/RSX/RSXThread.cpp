@@ -301,7 +301,10 @@ namespace rsx
 
 		if (capture_current_frame)
 		{
+			for (const auto &first_count : first_count_commands)
+				vertex_draw_count += first_count.second;
 			capture_frame("Draw " + std::to_string(vertex_draw_count));
+			vertex_draw_count = 0;
 		}
 	}
 
