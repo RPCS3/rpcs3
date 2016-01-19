@@ -10,6 +10,7 @@
 #include <unordered_map>
 
 #include "GLGSRender.h"
+#include "gl_render_targets.h"
 #include "../Common/TextureUtils.h"
 #include <chrono>
 
@@ -423,42 +424,48 @@ namespace gl
 			}
 		}
 
-		void upload_texture(int index, rsx::texture &tex, rsx::gl::texture &gl_texture)
+		void upload_texture(int index, rsx::texture &tex, rsx::gl::texture &gl_texture, gl_render_targets &m_rtts)
 		{
 			const u32 texaddr = rsx::get_address(tex.offset(), tex.location());
 			const u32 range = (u32)get_texture_size(tex);
 
+			glActiveTexture(GL_TEXTURE0 + index);
+
+			/**
+			 * Give precedence to rtt data obtained through read/write buffers
+			 */
 			cached_rtt *rtt = find_cached_rtt(texaddr, range);
 			
 			if (rtt && !rtt->is_dirty)
 			{
-				if (!rtt->is_depth)
-				{
-					u32 real_id = gl_texture.id();
+				u32 real_id = gl_texture.id();
 
-					glActiveTexture(GL_TEXTURE0 + index);
-					gl_texture.set_id(rtt->copy_glid);
-					gl_texture.bind();
+				gl_texture.set_id(rtt->copy_glid);
+				gl_texture.bind();
 
-					gl_texture.set_id(real_id);
-				}
-				else
-				{
-					LOG_NOTICE(RSX, "Depth RTT found from 0x%X, Trying to upload width dims: %d x %d, Saved as %d x %d", rtt->data_addr, tex.width(), tex.height(), rtt->current_width, rtt->current_height);
-					//The texture should have already been loaded through the writeback interface call
-					//Bind it directly
-					u32 real_id = gl_texture.id();
+				gl_texture.set_id(real_id);
+			}
 
-					glActiveTexture(GL_TEXTURE0 + index);
-					gl_texture.set_id(rtt->copy_glid);
-					gl_texture.bind();
-
-					gl_texture.set_id(real_id);
-				}
+			/**
+			 * Check for sampleable rtts from previous render passes
+			 */
+			gl::texture *texptr = nullptr;
+			if (texptr = m_rtts.get_texture_from_render_target_if_applicable(texaddr))
+			{
+				texptr->bind();
 				return;
 			}
-			else if (rtt)
-				LOG_NOTICE(RSX, "RTT texture for address 0x%X is dirty!", texaddr);
+
+			if (texptr = m_rtts.get_texture_from_depth_stencil_if_applicable(texaddr))
+			{
+				texptr->bind();				
+				return;
+			}
+
+			/**
+			 * If all the above failed, then its probably a generic texture.
+			 * Search in cache and upload/bind
+			 */
 			
 			gl_cached_texture *obj = nullptr;
 
@@ -469,7 +476,6 @@ namespace gl
 			{
 				u32 real_id = gl_texture.id();
 
-				glActiveTexture(GL_TEXTURE0 + index);
 				gl_texture.set_id(obj->gl_id);
 				gl_texture.bind();
 

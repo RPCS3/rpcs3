@@ -8,6 +8,7 @@
     <ClCompile Include="Emu\RSX\GL\GLGSRender.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLVertexProgram.cpp" />
     <ClCompile Include="Emu\RSX\GL\OpenGL.cpp" />
+    <ClCompile Include="Emu\RSX\GL\gl_render_targets.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Emu\RSX\GL\rsx_gl_texture.h" />
@@ -19,5 +20,7 @@
     <ClInclude Include="Emu\RSX\GL\GLProgramBuffer.h" />
     <ClInclude Include="Emu\RSX\GL\GLVertexProgram.h" />
     <ClInclude Include="Emu\RSX\GL\OpenGL.h" />
+    <ClInclude Include="Emu\RSX\GL\gl_texture_cache.h" />
+    <ClInclude Include="Emu\RSX\GL\gl_render_targets.h" />
   </ItemGroup>
 </Project>
