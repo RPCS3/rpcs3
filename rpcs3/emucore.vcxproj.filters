@@ -936,6 +936,9 @@
     <ClCompile Include="Emu\RSX\Common\ProgramStateCache.cpp">
       <Filter>Emu\GPU\RSX\Common</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\RSX\Common\surface_store.cpp">
+      <Filter>Emu\GPU\RSX\Common</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -1787,6 +1790,9 @@
     </ClInclude>
     <ClInclude Include="..\stblib\stb_image.c">
       <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Common\surface_store.h">
+      <Filter>Emu\GPU\RSX\Common</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

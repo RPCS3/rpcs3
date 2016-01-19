@@ -282,6 +282,11 @@ namespace rsx
 				break;
 			}
 		}
+
+		force_inline void set_surface_dirty_bit(thread* rsx, u32)
+		{
+			rsx->m_rtts_dirty = true;
+		}
 	}
 
 	namespace nv308a
@@ -786,6 +791,16 @@ namespace rsx
 			bind<NV406E_SEMAPHORE_ACQUIRE, nv406e::semaphore_acquire>();
 			bind<NV406E_SEMAPHORE_RELEASE, nv406e::semaphore_release>();
 
+			/*
+
+			// Store previous fbo addresses to detect RTT config changes.
+			std::array<u32, 4> m_previous_color_address = {};
+			u32 m_previous_address_z = 0;
+			u32 m_previous_target = 0;
+			u32 m_previous_clip_horizontal = 0;
+			u32 m_previous_clip_vertical = 0;
+			*/
+
 			// NV4097
 			bind<NV4097_TEXTURE_READ_SEMAPHORE_RELEASE, nv4097::texture_read_semaphore_release>();
 			bind<NV4097_BACK_END_WRITE_SEMAPHORE_RELEASE, nv4097::back_end_write_semaphore_release>();
@@ -806,6 +821,19 @@ namespace rsx
 			bind_range<NV4097_SET_TRANSFORM_PROGRAM + 3, 4, 128, nv4097::set_transform_program>();
 			bind_cpu_only<NV4097_GET_REPORT, nv4097::get_report>();
 			bind_cpu_only<NV4097_CLEAR_REPORT_VALUE, nv4097::clear_report_value>();
+			bind<NV4097_SET_SURFACE_CLIP_HORIZONTAL, nv4097::set_surface_dirty_bit>();
+			bind<NV4097_SET_SURFACE_CLIP_VERTICAL, nv4097::set_surface_dirty_bit>();
+			bind<NV4097_SET_SURFACE_COLOR_AOFFSET, nv4097::set_surface_dirty_bit>();
+			bind<NV4097_SET_SURFACE_COLOR_BOFFSET, nv4097::set_surface_dirty_bit>();
+			bind<NV4097_SET_SURFACE_COLOR_COFFSET, nv4097::set_surface_dirty_bit>();
+			bind<NV4097_SET_SURFACE_COLOR_DOFFSET, nv4097::set_surface_dirty_bit>();
+			bind<NV4097_SET_SURFACE_ZETA_OFFSET, nv4097::set_surface_dirty_bit>();
+			bind<NV4097_SET_CONTEXT_DMA_COLOR_A, nv4097::set_surface_dirty_bit>();
+			bind<NV4097_SET_CONTEXT_DMA_COLOR_B, nv4097::set_surface_dirty_bit>();
+			bind<NV4097_SET_CONTEXT_DMA_COLOR_C, nv4097::set_surface_dirty_bit>();
+			bind<NV4097_SET_CONTEXT_DMA_COLOR_D, nv4097::set_surface_dirty_bit>();
+			bind<NV4097_SET_CONTEXT_DMA_ZETA, nv4097::set_surface_dirty_bit>();
+			bind<NV4097_SET_SURFACE_FORMAT, nv4097::set_surface_dirty_bit>();
 
 			//NV308A
 			bind_range<NV308A_COLOR, 1, 256, nv308a::color>();

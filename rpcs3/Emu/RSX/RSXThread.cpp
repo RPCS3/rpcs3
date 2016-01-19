@@ -504,6 +504,38 @@ namespace rsx
 		return get_system_time() * 1000;
 	}
 
+	std::array<u32, 4> thread::get_color_surface_addresses() const
+	{
+		u32 offset_color[] =
+		{
+			rsx::method_registers[NV4097_SET_SURFACE_COLOR_AOFFSET],
+			rsx::method_registers[NV4097_SET_SURFACE_COLOR_BOFFSET],
+			rsx::method_registers[NV4097_SET_SURFACE_COLOR_COFFSET],
+			rsx::method_registers[NV4097_SET_SURFACE_COLOR_DOFFSET]
+		};
+		u32 context_dma_color[] =
+		{
+			rsx::method_registers[NV4097_SET_CONTEXT_DMA_COLOR_A],
+			rsx::method_registers[NV4097_SET_CONTEXT_DMA_COLOR_B],
+			rsx::method_registers[NV4097_SET_CONTEXT_DMA_COLOR_C],
+			rsx::method_registers[NV4097_SET_CONTEXT_DMA_COLOR_D]
+		};
+		return
+		{
+			rsx::get_address(offset_color[0], context_dma_color[0]),
+			rsx::get_address(offset_color[1], context_dma_color[1]),
+			rsx::get_address(offset_color[2], context_dma_color[2]),
+			rsx::get_address(offset_color[3], context_dma_color[3]),
+		};
+	}
+
+	u32 thread::get_zeta_surface_address() const
+	{
+		u32 m_context_dma_z = rsx::method_registers[NV4097_SET_CONTEXT_DMA_ZETA];
+		u32 offset_zeta = rsx::method_registers[NV4097_SET_SURFACE_ZETA_OFFSET];
+		return rsx::get_address(offset_zeta, m_context_dma_z);
+	}
+
 	void thread::reset()
 	{
 		//setup method registers

@@ -116,7 +116,7 @@ private:
 	data_heap m_buffer_data;
 	data_heap m_readback_resources;
 
-	render_targets m_rtts;
+	rsx::render_targets m_rtts;
 
 	std::vector<D3D12_INPUT_ELEMENT_DESC> m_IASet;
 
@@ -127,13 +127,6 @@ private:
 
 	// Used to fill unused texture slot
 	ID3D12Resource *m_dummy_texture;
-
-	// Store previous fbo addresses to detect RTT config changes.
-	std::array<u32, 4> m_previous_color_address = {};
-	u32 m_previous_address_z = 0;
-	u32 m_previous_target = 0;
-	u32 m_previous_clip_horizontal = 0;
-	u32 m_previous_clip_vertical = 0;
 public:
 	D3D12GSRender();
 	virtual ~D3D12GSRender();

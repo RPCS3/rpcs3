@@ -40,7 +40,7 @@ namespace rsx
 		u32 y_mask = 0xAAAAAAAA;
 
 		// We have to limit the masks to the lower of the two dimensions to allow for non-square textures
-		u16 limit_mask = (log2width < log2height) ? log2width : log2height;
+		u32 limit_mask = (log2width < log2height) ? log2width : log2height;
 		// double the limit mask to account for bits in both x and y
 		limit_mask = 1 << (limit_mask << 1);
 

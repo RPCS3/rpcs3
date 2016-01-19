@@ -171,58 +171,23 @@ void D3D12GSRender::prepare_render_targets(ID3D12GraphicsCommandList *copycmdlis
 {
 	// check if something has changed
 	u32 surface_format = rsx::method_registers[NV4097_SET_SURFACE_FORMAT];
-	u32 context_dma_color[] =
-	{
-		rsx::method_registers[NV4097_SET_CONTEXT_DMA_COLOR_A],
-		rsx::method_registers[NV4097_SET_CONTEXT_DMA_COLOR_B],
-		rsx::method_registers[NV4097_SET_CONTEXT_DMA_COLOR_C],
-		rsx::method_registers[NV4097_SET_CONTEXT_DMA_COLOR_D]
-	};
-	u32 m_context_dma_z = rsx::method_registers[NV4097_SET_CONTEXT_DMA_ZETA];
-
-	u32 offset_color[] =
-	{
-		rsx::method_registers[NV4097_SET_SURFACE_COLOR_AOFFSET],
-		rsx::method_registers[NV4097_SET_SURFACE_COLOR_BOFFSET],
-		rsx::method_registers[NV4097_SET_SURFACE_COLOR_COFFSET],
-		rsx::method_registers[NV4097_SET_SURFACE_COLOR_DOFFSET]
-	};
-	u32 offset_zeta = rsx::method_registers[NV4097_SET_SURFACE_ZETA_OFFSET];
-
-	// FBO location has changed, previous data might be copied
-	std::array<u32, 4> address_color =
-	{
-		rsx::get_address(offset_color[0], context_dma_color[0]),
-		rsx::get_address(offset_color[1], context_dma_color[1]),
-		rsx::get_address(offset_color[2], context_dma_color[2]),
-		rsx::get_address(offset_color[3], context_dma_color[3]),
-	};
-	u32 address_z = rsx::get_address(offset_zeta, m_context_dma_z);
-
-	u32 clip_h_reg = rsx::method_registers[NV4097_SET_SURFACE_CLIP_HORIZONTAL];
-	u32 clip_v_reg = rsx::method_registers[NV4097_SET_SURFACE_CLIP_VERTICAL];
-	u32 target_reg = rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET];
 
 	// Exit early if there is no rtt changes
-	if (m_previous_color_address == address_color &&
-		m_previous_address_z == address_z &&
-		m_surface.format == surface_format &&
-		m_previous_clip_horizontal == clip_h_reg &&
-		m_previous_clip_vertical == clip_v_reg &&
-		m_previous_target == target_reg)
+	if (!m_rtts_dirty)
 		return;
+	m_rtts_dirty = false;
 
-	m_previous_color_address = address_color;
-	m_previous_address_z = address_z;
-	m_previous_target = target_reg;
-	m_previous_clip_horizontal = clip_h_reg;
-	m_previous_clip_vertical = clip_v_reg;
 
 	if (m_surface.format != surface_format)
 		m_surface.unpack(surface_format);
 
 	std::array<float, 4> clear_color = get_clear_color(rsx::method_registers[NV4097_SET_COLOR_CLEAR_VALUE]);
-	m_rtts.prepare_render_target(copycmdlist, surface_format, clip_h_reg, clip_v_reg, to_surface_target(target_reg), address_color, address_z, m_device.Get(), clear_color, 1.f, 0);
+	m_rtts.prepare_render_target(copycmdlist,
+		rsx::method_registers[NV4097_SET_SURFACE_FORMAT],
+		rsx::method_registers[NV4097_SET_SURFACE_CLIP_HORIZONTAL], rsx::method_registers[NV4097_SET_SURFACE_CLIP_VERTICAL],
+		to_surface_target(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET]),
+		get_color_surface_addresses(), get_zeta_surface_address(),
+		m_device.Get(), clear_color, 1.f, 0);
 
 	// write descriptors
 	DXGI_FORMAT dxgi_format = get_color_surface_format(m_surface.color_format);
@@ -261,7 +226,7 @@ void D3D12GSRender::set_rtt_and_ds(ID3D12GraphicsCommandList *command_list)
 	command_list->OMSetRenderTargets((UINT)num_rtt, &m_rtts.current_rtts_handle, true, ds_handle);
 }
 
-void render_targets::init(ID3D12Device *device)
+void rsx::render_targets::init(ID3D12Device *device)
 {
 	g_descriptor_stride_rtv = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 }
