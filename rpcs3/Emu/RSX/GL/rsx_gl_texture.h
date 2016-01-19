@@ -1,4 +1,6 @@
 
+struct gl_render_targets;
+
 namespace rsx
 {
 	class texture;
@@ -34,7 +36,7 @@ namespace rsx
 				return (v << 2) | (v >> 4);
 			}
 
-			void init(int index, rsx::texture& tex);
+			void init(int index, rsx::texture& tex, gl_render_targets& );
 			void bind();
 			void unbind();
 			void remove();
