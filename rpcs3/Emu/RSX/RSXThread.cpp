@@ -122,11 +122,11 @@ namespace rsx
 		return res;
 	}
 
-	u32 get_vertex_type_size_on_host(Vertex_base_type type, u32 size)
+	u32 get_vertex_type_size_on_host(vertex_base_type type, u32 size)
 	{
 		switch (type)
 		{
-		case Vertex_base_type::s1:
+		case vertex_base_type::s1:
 			switch (size)
 			{
 			case 1:
@@ -137,8 +137,8 @@ namespace rsx
 				return sizeof(u16) * 4;
 			}
 			throw new EXCEPTION("Wrong vector size");
-		case Vertex_base_type::f:     return sizeof(f32) * size;
-		case Vertex_base_type::sf:
+		case vertex_base_type::f:     return sizeof(f32) * size;
+		case vertex_base_type::sf:
 			switch (size)
 			{
 			case 1:
@@ -149,7 +149,7 @@ namespace rsx
 				return sizeof(f16) * 4;
 			}
 			throw new EXCEPTION("Wrong vector size");
-		case Vertex_base_type::ub:
+		case vertex_base_type::ub:
 			switch (size)
 			{
 			case 1:
@@ -160,9 +160,9 @@ namespace rsx
 				return sizeof(u8) * 4;
 			}
 			throw new EXCEPTION("Wrong vector size");
-		case Vertex_base_type::s32k:  return sizeof(u32) * size;
-		case Vertex_base_type::cmp:   return sizeof(u16) * 4;
-		case Vertex_base_type::ub256: return sizeof(u8) * 4;
+		case vertex_base_type::s32k:  return sizeof(u32) * size;
+		case vertex_base_type::cmp:   return sizeof(u16) * 4;
+		case vertex_base_type::ub256: return sizeof(u8) * 4;
 
 		default:
 			throw new EXCEPTION("RSXVertexData::GetTypeSize: Bad vertex data type (%d)!", type);
@@ -295,9 +295,9 @@ namespace rsx
 		surface.unpack(rsx::method_registers[NV4097_SET_SURFACE_FORMAT]);
 		draw_state.width = clip_w;
 		draw_state.height = clip_h;
-		draw_state.surface_color_format = surface.color_format;
+		draw_state.color_format = surface.color_format;
 		draw_state.color_buffer = std::move(copy_render_targets_to_memory());
-		draw_state.surface_depth_format = surface.depth_format;
+		draw_state.depth_format = surface.depth_format;
 		draw_state.depth_stencil = std::move(copy_depth_stencil_buffer_to_memory());
 		draw_state.programs = get_programs();
 		draw_state.name = name;
@@ -495,7 +495,7 @@ namespace rsx
 
 				u32 element_size = rsx::get_vertex_type_size_on_host(info.type, info.size);
 
-				if (info.type == Vertex_base_type::ub && info.size == 4)
+				if (info.type == vertex_base_type::ub && info.size == 4)
 				{
 					dst[0] = src[3];
 					dst[1] = src[2];

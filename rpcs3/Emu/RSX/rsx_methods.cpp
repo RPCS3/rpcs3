@@ -14,10 +14,10 @@ namespace rsx
 	rsx_method_t methods[0x10000 >> 2]{};
 
 	template<typename Type> struct vertex_data_type_from_element_type;
-	template<> struct vertex_data_type_from_element_type<float> { static const Vertex_base_type type = Vertex_base_type::f; };
-	template<> struct vertex_data_type_from_element_type<f16> { static const Vertex_base_type type = Vertex_base_type::sf; };
-	template<> struct vertex_data_type_from_element_type<u8> { static const Vertex_base_type type = Vertex_base_type::ub; };
-	template<> struct vertex_data_type_from_element_type<u16> { static const Vertex_base_type type = Vertex_base_type::s1; };
+	template<> struct vertex_data_type_from_element_type<float> { static const vertex_base_type type = vertex_base_type::f; };
+	template<> struct vertex_data_type_from_element_type<f16> { static const vertex_base_type type = vertex_base_type::sf; };
+	template<> struct vertex_data_type_from_element_type<u8> { static const vertex_base_type type = vertex_base_type::ub; };
+	template<> struct vertex_data_type_from_element_type<u16> { static const vertex_base_type type = vertex_base_type::s1; };
 
 	namespace nv406e
 	{
@@ -160,7 +160,7 @@ namespace rsx
 
 		force_inline void draw_arrays(thread* rsx, u32 arg)
 		{
-			rsx->draw_command = thread::Draw_command::draw_command_array;
+			rsx->draw_command = rsx::draw_command::array;
 			u32 first = arg & 0xffffff;
 			u32 count = (arg >> 24) + 1;
 
@@ -169,7 +169,7 @@ namespace rsx
 
 		force_inline void draw_index_array(thread* rsx, u32 arg)
 		{
-			rsx->draw_command = thread::Draw_command::draw_command_indexed;
+			rsx->draw_command = rsx::draw_command::indexed;
 			u32 first = arg & 0xffffff;
 			u32 count = (arg >> 24) + 1;
 
@@ -178,7 +178,7 @@ namespace rsx
 
 		force_inline void draw_inline_array(thread* rsx, u32 arg)
 		{
-			rsx->draw_command = thread::Draw_command::draw_command_inlined_array;
+			rsx->draw_command = rsx::draw_command::inlined_array;
 			rsx->draw_inline_vertex_array = true;
 			rsx->inline_vertex_array.push_back(arg);
 		}

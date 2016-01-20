@@ -21,10 +21,10 @@ struct render_target_traits
 	static
 	ComPtr<ID3D12Resource> create_new_surface(
 		u32 address,
-		Surface_color_format surface_color_format, size_t width, size_t height,
+		surface_color_format color_format, size_t width, size_t height,
 		gsl::not_null<ID3D12Device*> device, const std::array<float, 4> &clear_color, float, u8)
 	{
-		DXGI_FORMAT dxgi_format = get_color_surface_format(surface_color_format);
+		DXGI_FORMAT dxgi_format = get_color_surface_format(color_format);
 		ComPtr<ID3D12Resource> rtt;
 		LOG_WARNING(RSX, "Creating RTT");
 
@@ -69,7 +69,7 @@ struct render_target_traits
 	static
 	ComPtr<ID3D12Resource> create_new_surface(
 		u32 address,
-		Surface_depth_format surfaceDepthFormat, size_t width, size_t height,
+		surface_depth_format surfaceDepthFormat, size_t width, size_t height,
 		gsl::not_null<ID3D12Device*> device, const std::array<float, 4>& , float clear_depth, u8 clear_stencil)
 	{
 		D3D12_CLEAR_VALUE clear_depth_value = {};
@@ -113,14 +113,14 @@ struct render_target_traits
 
 
 	static
-	bool rtt_has_format_width_height(const ComPtr<ID3D12Resource> &rtt, Surface_color_format surface_color_format, size_t width, size_t height)
+	bool rtt_has_format_width_height(const ComPtr<ID3D12Resource> &rtt, surface_color_format surface_color_format, size_t width, size_t height)
 	{
 		DXGI_FORMAT dxgi_format = get_color_surface_format(surface_color_format);
 		return rtt->GetDesc().Format == dxgi_format && rtt->GetDesc().Width == width && rtt->GetDesc().Height == height;
 	}
 
 	static
-	bool ds_has_format_width_height(const ComPtr<ID3D12Resource> &rtt, Surface_depth_format surface_depth_stencil_format, size_t width, size_t height)
+	bool ds_has_format_width_height(const ComPtr<ID3D12Resource> &rtt, surface_depth_format surface_depth_stencil_format, size_t width, size_t height)
 	{
 		//TODO: Check format
 		return rtt->GetDesc().Width == width && rtt->GetDesc().Height == height;
@@ -129,7 +129,7 @@ struct render_target_traits
 	static
 	std::tuple<size_t, size_t, size_t, ComPtr<ID3D12Fence>, HANDLE> issue_download_command(
 		gsl::not_null<ID3D12Resource*> rtt,
-		Surface_color_format color_format, size_t width, size_t height,
+		surface_color_format color_format, size_t width, size_t height,
 		gsl::not_null<ID3D12Device*> device, gsl::not_null<ID3D12CommandQueue*> command_queue, data_heap &readback_heap, resource_storage &res_store
 		)
 	{
@@ -162,12 +162,12 @@ struct render_target_traits
 	static
 	std::tuple<size_t, size_t, size_t, ComPtr<ID3D12Fence>, HANDLE> issue_depth_download_command(
 		gsl::not_null<ID3D12Resource*> ds,
-		Surface_depth_format depth_format, size_t width, size_t height,
+		surface_depth_format depth_format, size_t width, size_t height,
 		gsl::not_null<ID3D12Device*> device, gsl::not_null<ID3D12CommandQueue*> command_queue, data_heap &readback_heap, resource_storage &res_store
 			)
 	{
 		ID3D12GraphicsCommandList* command_list = res_store.command_list.Get();
-		DXGI_FORMAT dxgi_format = (depth_format == Surface_depth_format::z24s8) ? DXGI_FORMAT_R32_TYPELESS : DXGI_FORMAT_R16_TYPELESS;
+		DXGI_FORMAT dxgi_format = (depth_format == surface_depth_format::z24s8) ? DXGI_FORMAT_R32_TYPELESS : DXGI_FORMAT_R16_TYPELESS;
 
 		size_t row_pitch = align(width * 4, 256);
 		size_t buffer_size = row_pitch * height;

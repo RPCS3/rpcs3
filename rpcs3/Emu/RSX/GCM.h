@@ -23,7 +23,7 @@ enum
 	CELL_GCM_DISPLAY_FREQUENCY_DISABLE = 3,
 };
 
-enum class Vertex_base_type : u8
+enum class vertex_base_type : u8
 {
 	s1, ///< signed byte
 	f, ///< float
@@ -34,17 +34,17 @@ enum class Vertex_base_type : u8
 	ub256,
 };
 
-Vertex_base_type to_vertex_base_type(u8 in);
+vertex_base_type to_vertex_base_type(u8 in);
 
-enum class Index_array_type : u8
+enum class index_array_type : u8
 {
 	unsigned_32b,
 	unsigned_16b,
 };
 
-Index_array_type to_index_array_type(u8 in);
+index_array_type to_index_array_type(u8 in);
 
-enum class Primitive_type : u8
+enum class primitive_type : u8
 {
 	points,
 	lines,
@@ -58,9 +58,9 @@ enum class Primitive_type : u8
 	polygon, // convex polygon
 };
 
-Primitive_type to_primitive_type(u8 in);
+primitive_type to_primitive_type(u8 in);
 
-enum class Surface_target : u8
+enum class surface_target : u8
 {
 	none,
 	surface_a,
@@ -70,17 +70,17 @@ enum class Surface_target : u8
 	surfaces_a_b_c_d,
 };
 
-Surface_target to_surface_target(u8 in);
+surface_target to_surface_target(u8 in);
 
-enum class Surface_depth_format : u8
+enum class surface_depth_format : u8
 {
 	z16, // unsigned 16 bits depth
 	z24s8, // unsigned 24 bits depth + 8 bits stencil
 };
 
-Surface_depth_format to_surface_depth_format(u8 in);
+surface_depth_format to_surface_depth_format(u8 in);
 
-enum class Surface_antialiasing : u8
+enum class surface_antialiasing : u8
 {
 	center_1_sample,
 	diagonal_centered_2_samples,
@@ -88,9 +88,9 @@ enum class Surface_antialiasing : u8
 	square_rotated_4_samples,
 };
 
-Surface_antialiasing to_surface_antialiasing(u8 in);
+surface_antialiasing to_surface_antialiasing(u8 in);
 
-enum class Surface_color_format : u8
+enum class surface_color_format : u8
 {
 	x1r5g5b5_z1r5g5b5,
 	x1r5g5b5_o1r5g5b5,
@@ -108,7 +108,7 @@ enum class Surface_color_format : u8
 	a8b8g8r8,
 };
 
-Surface_color_format to_surface_color_format(u8 in);
+surface_color_format to_surface_color_format(u8 in);
 
 enum
 {

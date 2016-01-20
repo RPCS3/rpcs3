@@ -339,17 +339,17 @@ void D3D12GSRender::end()
 
 namespace
 {
-bool is_flip_surface_in_global_memory(Surface_target color_target)
+bool is_flip_surface_in_global_memory(surface_target color_target)
 {
 	switch (color_target)
 	{
-	case Surface_target::surface_a:
-	case Surface_target::surface_b:
-	case Surface_target::surfaces_a_b:
-	case Surface_target::surfaces_a_b_c:
-	case Surface_target::surfaces_a_b_c_d:
+	case surface_target::surface_a:
+	case surface_target::surface_b:
+	case surface_target::surfaces_a_b:
+	case surface_target::surfaces_a_b_c:
+	case surface_target::surfaces_a_b_c_d:
 		return true;
-	case Surface_target::none:
+	case surface_target::none:
 		return false;
 	}
 	throw EXCEPTION("Wrong color_target");

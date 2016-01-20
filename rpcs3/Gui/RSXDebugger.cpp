@@ -382,16 +382,16 @@ void RSXDebugger::OnClickBuffer(wxMouseEvent& event)
 
 namespace
 {
-	std::array<u8, 3> get_value(gsl::span<const gsl::byte> orig_buffer, Surface_color_format format, size_t idx)
+	std::array<u8, 3> get_value(gsl::span<const gsl::byte> orig_buffer, surface_color_format format, size_t idx)
 	{
 		switch (format)
 		{
-		case Surface_color_format::b8:
+		case surface_color_format::b8:
 		{
 			u8 value = gsl::as_span<const u8>(orig_buffer)[idx];
 			return{ value, value, value };
 		}
-		case Surface_color_format::x32:
+		case surface_color_format::x32:
 		{
 			be_t<u32> stored_val = gsl::as_span<const be_t<u32>>(orig_buffer)[idx];
 			u32 swapped_val = stored_val;
@@ -399,21 +399,21 @@ namespace
 			u8 val = float_val * 255.f;
 			return{ val, val, val };
 		}
-		case Surface_color_format::a8b8g8r8:
-		case Surface_color_format::x8b8g8r8_o8b8g8r8:
-		case Surface_color_format::x8b8g8r8_z8b8g8r8:
+		case surface_color_format::a8b8g8r8:
+		case surface_color_format::x8b8g8r8_o8b8g8r8:
+		case surface_color_format::x8b8g8r8_z8b8g8r8:
 		{
 			auto ptr = gsl::as_span<const u8>(orig_buffer);
 			return{ ptr[1 + idx * 4], ptr[2 + idx * 4], ptr[3 + idx * 4] };
 		}
-		case Surface_color_format::a8r8g8b8:
-		case Surface_color_format::x8r8g8b8_o8r8g8b8:
-		case Surface_color_format::x8r8g8b8_z8r8g8b8:
+		case surface_color_format::a8r8g8b8:
+		case surface_color_format::x8r8g8b8_o8r8g8b8:
+		case surface_color_format::x8r8g8b8_z8r8g8b8:
 		{
 			auto ptr = gsl::as_span<const u8>(orig_buffer);
 			return{ ptr[3 + idx * 4], ptr[2 + idx * 4], ptr[1 + idx * 4] };
 		}
-		case Surface_color_format::w16z16y16x16:
+		case surface_color_format::w16z16y16x16:
 		{
 			auto ptr = gsl::as_span<const u16>(orig_buffer);
 			f16 h0 = f16(ptr[4 * idx]);
@@ -428,11 +428,11 @@ namespace
 			u8 val2 = f2 * 255.;
 			return{ val0, val1, val2 };
 		}
-		case Surface_color_format::g8b8:
-		case Surface_color_format::r5g6b5:
-		case Surface_color_format::x1r5g5b5_o1r5g5b5:
-		case Surface_color_format::x1r5g5b5_z1r5g5b5:
-		case Surface_color_format::w32z32y32x32:
+		case surface_color_format::g8b8:
+		case surface_color_format::r5g6b5:
+		case surface_color_format::x1r5g5b5_o1r5g5b5:
+		case surface_color_format::x1r5g5b5_z1r5g5b5:
+		case surface_color_format::w32z32y32x32:
 			throw EXCEPTION("Unsupported format for display");
 		}
 	}
@@ -441,7 +441,7 @@ namespace
 	 * Return a new buffer that can be passed to wxImage ctor.
 	 * The pointer seems to be freed by wxImage.
 	 */
-	u8* convert_to_wximage_buffer(Surface_color_format format, gsl::span<const gsl::byte> orig_buffer, size_t width, size_t height) noexcept
+	u8* convert_to_wximage_buffer(surface_color_format format, gsl::span<const gsl::byte> orig_buffer, size_t width, size_t height) noexcept
 	{
 		unsigned char* buffer = (unsigned char*)malloc(width * height * 3);
 		for (u32 i = 0; i < width * height; i++)
@@ -476,7 +476,7 @@ void RSXDebugger::OnClickDrawCalls(wxMouseEvent& event)
 	{
 		if (width && height && !draw_call.color_buffer[i].empty())
 		{
-			buffer_img[i] = wxImage(width, height, convert_to_wximage_buffer(draw_call.surface_color_format, draw_call.color_buffer[i], width, height));
+			buffer_img[i] = wxImage(width, height, convert_to_wximage_buffer(draw_call.color_format, draw_call.color_buffer[i], width, height));
 			wxClientDC dc_canvas(p_buffers[i]);
 
 			if (buffer_img[i].IsOk())
@@ -491,7 +491,7 @@ void RSXDebugger::OnClickDrawCalls(wxMouseEvent& event)
 			gsl::span<const gsl::byte> orig_buffer = draw_call.depth_stencil[0];
 			unsigned char *buffer = (unsigned char *)malloc(width * height * 3);
 
-			if (draw_call.surface_depth_format == Surface_depth_format::z24s8)
+			if (draw_call.depth_format == surface_depth_format::z24s8)
 			{
 				for (u32 row = 0; row < height; row++)
 				{

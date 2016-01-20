@@ -21,9 +21,9 @@ struct frame_capture_data
 		std::string name;
 		std::pair<std::string, std::string> programs;
 		size_t width = 0, height = 0;
-		Surface_color_format surface_color_format;
+		surface_color_format color_format;
 		std::array<std::vector<gsl::byte>, 4> color_buffer;
-		Surface_depth_format surface_depth_format;
+		surface_depth_format depth_format;
 		std::array<std::vector<gsl::byte>, 2> depth_stencil;
 	};
 	std::vector<std::pair<u32, u32> > command_queue;
@@ -145,7 +145,7 @@ namespace rsx
 		static std::string path_to_root();
 	};
 
-	u32 get_vertex_type_size_on_host(Vertex_base_type type, u32 size);
+	u32 get_vertex_type_size_on_host(vertex_base_type type, u32 size);
 
 	u32 get_address(u32 offset, u32 location);
 
@@ -164,9 +164,9 @@ namespace rsx
 	{
 		u8 log2height;
 		u8 log2width;
-		Surface_antialiasing antialias;
-		Surface_depth_format depth_format;
-		Surface_color_format color_format;
+		surface_antialiasing antialias;
+		surface_depth_format depth_format;
+		surface_color_format color_format;
 
 		u32 width;
 		u32 height;
@@ -192,7 +192,7 @@ namespace rsx
 		u16 frequency = 0;
 		u8 stride = 0;
 		u8 size = 0;
-		Vertex_base_type type = Vertex_base_type::f;
+		vertex_base_type type = vertex_base_type::f;
 
 		void unpack_array(u32 data_array_format)
 		{
@@ -201,6 +201,13 @@ namespace rsx
 			size = (data_array_format >> 4) & 0xf;
 			type = to_vertex_base_type(data_array_format & 0xf);
 		}
+	};
+
+	enum class draw_command
+	{
+		array,
+		inlined_array,
+		indexed,
 	};
 
 	class thread : public named_thread_t
@@ -273,13 +280,8 @@ namespace rsx
 		u32 ctxt_addr;
 		u32 report_main_addr;
 		u32 label_addr;
-		enum class Draw_command
-		{
-			draw_command_array,
-			draw_command_inlined_array,
-			draw_command_indexed,
-		} draw_command;
-		Primitive_type draw_mode;
+		rsx::draw_command draw_command;
+		primitive_type draw_mode;
 
 		u32 local_mem_addr, main_mem_addr;
 		bool strict_ordering[0x1000];

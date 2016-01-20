@@ -260,7 +260,7 @@ std::tuple<D3D12_INDEX_BUFFER_VIEW, size_t> D3D12GSRender::generate_index_buffer
 
 std::tuple<bool, size_t> D3D12GSRender::upload_and_set_vertex_index_data(ID3D12GraphicsCommandList *command_list)
 {
-	if (draw_command == Draw_command::draw_command_inlined_array)
+	if (draw_command == rsx::draw_command::inlined_array)
 	{
 		size_t vertex_count;
 		D3D12_VERTEX_BUFFER_VIEW vertex_buffer_view;
@@ -277,7 +277,7 @@ std::tuple<bool, size_t> D3D12GSRender::upload_and_set_vertex_index_data(ID3D12G
 		return std::make_tuple(true, index_count);
 	}
 
-	if (draw_command == Draw_command::draw_command_array)
+	if (draw_command == rsx::draw_command::array)
 	{
 		const std::vector<D3D12_VERTEX_BUFFER_VIEW> &vertex_buffer_views = upload_vertex_attributes(first_count_commands);
 		command_list->IASetVertexBuffers(0, (UINT)vertex_buffer_views.size(), vertex_buffer_views.data());
@@ -298,7 +298,7 @@ std::tuple<bool, size_t> D3D12GSRender::upload_and_set_vertex_index_data(ID3D12G
 		return std::make_tuple(true, index_count);
 	}
 
-	assert(draw_command == Draw_command::draw_command_indexed);
+	assert(draw_command == rsx::draw_command::indexed);
 
 	// Index count
 	size_t index_count = 0;
@@ -306,7 +306,7 @@ std::tuple<bool, size_t> D3D12GSRender::upload_and_set_vertex_index_data(ID3D12G
 		index_count += pair.second;
 	index_count = get_index_count(draw_mode, gsl::narrow<int>(index_count));
 
-	Index_array_type indexed_type = to_index_array_type(rsx::method_registers[NV4097_SET_INDEX_ARRAY_DMA] >> 4);
+	index_array_type indexed_type = to_index_array_type(rsx::method_registers[NV4097_SET_INDEX_ARRAY_DMA] >> 4);
 	size_t index_size = get_index_type_size(indexed_type);
 
 	// Alloc
@@ -316,13 +316,13 @@ std::tuple<bool, size_t> D3D12GSRender::upload_and_set_vertex_index_data(ID3D12G
 	void *mapped_buffer = m_buffer_data.map<void>(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
 	u32 min_index, max_index;
 
-	if (indexed_type == Index_array_type::unsigned_16b)
+	if (indexed_type == index_array_type::unsigned_16b)
 	{
 		gsl::span<u16> dst = { (u16*)mapped_buffer, gsl::narrow<int>(buffer_size / index_size) };
 		std::tie(min_index, max_index) = write_index_array_data_to_buffer(dst, draw_mode, first_count_commands);
 	}
 
-	if (indexed_type == Index_array_type::unsigned_32b)
+	if (indexed_type == index_array_type::unsigned_32b)
 	{
 		gsl::span<u32> dst = { (u32*)mapped_buffer, gsl::narrow<int>(buffer_size / index_size) };
 		std::tie(min_index, max_index) = write_index_array_data_to_buffer(dst, draw_mode, first_count_commands);

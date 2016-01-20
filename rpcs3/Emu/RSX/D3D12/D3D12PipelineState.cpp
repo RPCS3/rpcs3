@@ -164,17 +164,17 @@ void D3D12GSRender::load_program()
 
 	switch (to_surface_target(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET]))
 	{
-	case Surface_target::surface_a:
-	case Surface_target::surface_b:
+	case surface_target::surface_a:
+	case surface_target::surface_b:
 		prop.numMRT = 1;
 		break;
-	case Surface_target::surfaces_a_b:
+	case surface_target::surfaces_a_b:
 		prop.numMRT = 2;
 		break;
-	case Surface_target::surfaces_a_b_c:
+	case surface_target::surfaces_a_b_c:
 		prop.numMRT = 3;
 		break;
-	case Surface_target::surfaces_a_b_c_d:
+	case surface_target::surfaces_a_b_c_d:
 		prop.numMRT = 4;
 		break;
 	default:
@@ -254,12 +254,12 @@ void D3D12GSRender::load_program()
 	prop.IASet = m_IASet;
 	if (!!rsx::method_registers[NV4097_SET_RESTART_INDEX_ENABLE])
 	{
-		Index_array_type index_type = to_index_array_type(rsx::method_registers[NV4097_SET_INDEX_ARRAY_DMA] >> 4);
-		if (index_type == Index_array_type::unsigned_32b)
+		index_array_type index_type = to_index_array_type(rsx::method_registers[NV4097_SET_INDEX_ARRAY_DMA] >> 4);
+		if (index_type == index_array_type::unsigned_32b)
 		{
 			prop.CutValue = D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_0xFFFFFFFF;
 		}
-		if (index_type == Index_array_type::unsigned_16b)
+		if (index_type == index_array_type::unsigned_16b)
 		{
 			prop.CutValue = D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_0xFFFF;
 		}
