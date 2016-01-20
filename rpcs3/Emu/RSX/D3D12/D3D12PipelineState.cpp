@@ -162,19 +162,19 @@ void D3D12GSRender::load_program()
 	prop.DepthStencilFormat = get_depth_stencil_surface_format(m_surface.depth_format);
 	prop.RenderTargetsFormat = get_color_surface_format(m_surface.color_format);
 
-	switch (to_surface_target(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET]))
+	switch (rsx::to_surface_target(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET]))
 	{
-	case surface_target::surface_a:
-	case surface_target::surface_b:
+	case rsx::surface_target::surface_a:
+	case rsx::surface_target::surface_b:
 		prop.numMRT = 1;
 		break;
-	case surface_target::surfaces_a_b:
+	case rsx::surface_target::surfaces_a_b:
 		prop.numMRT = 2;
 		break;
-	case surface_target::surfaces_a_b_c:
+	case rsx::surface_target::surfaces_a_b_c:
 		prop.numMRT = 3;
 		break;
-	case surface_target::surfaces_a_b_c_d:
+	case rsx::surface_target::surfaces_a_b_c_d:
 		prop.numMRT = 4;
 		break;
 	default:
@@ -254,12 +254,12 @@ void D3D12GSRender::load_program()
 	prop.IASet = m_ia_set;
 	if (!!rsx::method_registers[NV4097_SET_RESTART_INDEX_ENABLE])
 	{
-		index_array_type index_type = to_index_array_type(rsx::method_registers[NV4097_SET_INDEX_ARRAY_DMA] >> 4);
-		if (index_type == index_array_type::unsigned_32b)
+		rsx::index_array_type index_type = rsx::to_index_array_type(rsx::method_registers[NV4097_SET_INDEX_ARRAY_DMA] >> 4);
+		if (index_type == rsx::index_array_type::u32)
 		{
 			prop.CutValue = D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_0xFFFFFFFF;
 		}
-		if (index_type == index_array_type::unsigned_16b)
+		if (index_type == rsx::index_array_type::u16)
 		{
 			prop.CutValue = D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_0xFFFF;
 		}

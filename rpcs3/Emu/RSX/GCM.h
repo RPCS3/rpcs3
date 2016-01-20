@@ -23,92 +23,95 @@ enum
 	CELL_GCM_DISPLAY_FREQUENCY_DISABLE = 3,
 };
 
-enum class vertex_base_type : u8
+namespace rsx
 {
-	s1, ///< signed byte
-	f, ///< float
-	sf, ///< half float
-	ub, ///< unsigned byte
-	s32k, ///< signed 32bits int
-	cmp, ///< compressed aka X11G11Z10 and always 1. W.
-	ub256,
-};
+	enum class vertex_base_type : u8
+	{
+		s1, ///< signed byte
+		f, ///< float
+		sf, ///< half float
+		ub, ///< unsigned byte
+		s32k, ///< signed 32bits int
+		cmp, ///< compressed aka X11G11Z10 and always 1. W.
+		ub256,
+	};
 
-vertex_base_type to_vertex_base_type(u8 in);
+	vertex_base_type to_vertex_base_type(u8 in);
 
-enum class index_array_type : u8
-{
-	unsigned_32b,
-	unsigned_16b,
-};
+	enum class index_array_type : u8
+	{
+		u32,
+		u16,
+	};
 
-index_array_type to_index_array_type(u8 in);
+	index_array_type to_index_array_type(u8 in);
 
-enum class primitive_type : u8
-{
-	points,
-	lines,
-	line_loop, // line strip with last end being joined with first end.
-	line_strip,
-	triangles,
-	triangle_strip,
-	triangle_fan, // like strip except that every triangle share the first vertex and one instead of 2 from previous triangle.
-	quads,
-	quad_strip,
-	polygon, // convex polygon
-};
+	enum class primitive_type : u8
+	{
+		points,
+		lines,
+		line_loop, // line strip with last end being joined with first end.
+		line_strip,
+		triangles,
+		triangle_strip,
+		triangle_fan, // like strip except that every triangle share the first vertex and one instead of 2 from previous triangle.
+		quads,
+		quad_strip,
+		polygon, // convex polygon
+	};
 
-primitive_type to_primitive_type(u8 in);
+	primitive_type to_primitive_type(u8 in);
 
-enum class surface_target : u8
-{
-	none,
-	surface_a,
-	surface_b,
-	surfaces_a_b,
-	surfaces_a_b_c,
-	surfaces_a_b_c_d,
-};
+	enum class surface_target : u8
+	{
+		none,
+		surface_a,
+		surface_b,
+		surfaces_a_b,
+		surfaces_a_b_c,
+		surfaces_a_b_c_d,
+	};
 
-surface_target to_surface_target(u8 in);
+	surface_target to_surface_target(u8 in);
 
-enum class surface_depth_format : u8
-{
-	z16, // unsigned 16 bits depth
-	z24s8, // unsigned 24 bits depth + 8 bits stencil
-};
+	enum class surface_depth_format : u8
+	{
+		z16, // unsigned 16 bits depth
+		z24s8, // unsigned 24 bits depth + 8 bits stencil
+	};
 
-surface_depth_format to_surface_depth_format(u8 in);
+	surface_depth_format to_surface_depth_format(u8 in);
 
-enum class surface_antialiasing : u8
-{
-	center_1_sample,
-	diagonal_centered_2_samples,
-	square_centered_4_samples,
-	square_rotated_4_samples,
-};
+	enum class surface_antialiasing : u8
+	{
+		center_1_sample,
+		diagonal_centered_2_samples,
+		square_centered_4_samples,
+		square_rotated_4_samples,
+	};
 
-surface_antialiasing to_surface_antialiasing(u8 in);
+	surface_antialiasing to_surface_antialiasing(u8 in);
 
-enum class surface_color_format : u8
-{
-	x1r5g5b5_z1r5g5b5,
-	x1r5g5b5_o1r5g5b5,
-	r5g6b5,
-	x8r8g8b8_z8r8g8b8,
-	x8r8g8b8_o8r8g8b8,
-	a8r8g8b8,
-	b8,
-	g8b8,
-	w16z16y16x16,
-	w32z32y32x32,
-	x32,
-	x8b8g8r8_z8b8g8r8,
-	x8b8g8r8_o8b8g8r8,
-	a8b8g8r8,
-};
+	enum class surface_color_format : u8
+	{
+		x1r5g5b5_z1r5g5b5,
+		x1r5g5b5_o1r5g5b5,
+		r5g6b5,
+		x8r8g8b8_z8r8g8b8,
+		x8r8g8b8_o8r8g8b8,
+		a8r8g8b8,
+		b8,
+		g8b8,
+		w16z16y16x16,
+		w32z32y32x32,
+		x32,
+		x8b8g8r8_z8b8g8r8,
+		x8b8g8r8_o8b8g8r8,
+		a8b8g8r8,
+	};
 
-surface_color_format to_surface_color_format(u8 in);
+	surface_color_format to_surface_color_format(u8 in);
+}
 
 enum
 {

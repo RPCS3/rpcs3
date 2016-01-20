@@ -719,45 +719,45 @@ namespace
 	};
 }
 
-vertex_base_type to_vertex_base_type(u8 in)
+rsx::vertex_base_type rsx::to_vertex_base_type(u8 in)
 {
 	switch (in)
 	{
-	case 1: return vertex_base_type::s1;
-	case 2: return vertex_base_type::f;
-	case 3: return vertex_base_type::sf;
-	case 4: return vertex_base_type::ub;
-	case 5: return vertex_base_type::s32k;
-	case 6: return vertex_base_type::cmp;
-	case 7: return vertex_base_type::ub256;
+	case 1: return rsx::vertex_base_type::s1;
+	case 2: return rsx::vertex_base_type::f;
+	case 3: return rsx::vertex_base_type::sf;
+	case 4: return rsx::vertex_base_type::ub;
+	case 5: return rsx::vertex_base_type::s32k;
+	case 6: return rsx::vertex_base_type::cmp;
+	case 7: return rsx::vertex_base_type::ub256;
 	}
 	throw new EXCEPTION("Unknow vertex base type %d", in);
 }
 
-index_array_type to_index_array_type(u8 in)
+rsx::index_array_type rsx::to_index_array_type(u8 in)
 {
 	switch (in)
 	{
-	case 0: return index_array_type::unsigned_32b;
-	case 1: return index_array_type::unsigned_16b;
+	case 0: return rsx::index_array_type::u32;
+	case 1: return rsx::index_array_type::u16;
 	}
 	throw new EXCEPTION("Unknown index array type %d", in);
 }
 
-primitive_type to_primitive_type(u8 in)
+rsx::primitive_type rsx::to_primitive_type(u8 in)
 {
 	switch (in)
 	{
-	case 1: return primitive_type::points;
-	case 2: return primitive_type::lines;
-	case 3: return primitive_type::line_loop;
-	case 4: return primitive_type::line_strip;
-	case 5: return primitive_type::triangles;
-	case 6: return primitive_type::triangle_strip;
-	case 7: return primitive_type::triangle_fan;
-	case 8: return primitive_type::quads;
-	case 9: return primitive_type::quad_strip;
-	case 10: return primitive_type::polygon;
+	case 1: return rsx::primitive_type::points;
+	case 2: return rsx::primitive_type::lines;
+	case 3: return rsx::primitive_type::line_loop;
+	case 4: return rsx::primitive_type::line_strip;
+	case 5: return rsx::primitive_type::triangles;
+	case 6: return rsx::primitive_type::triangle_strip;
+	case 7: return rsx::primitive_type::triangle_fan;
+	case 8: return rsx::primitive_type::quads;
+	case 9: return rsx::primitive_type::quad_strip;
+	case 10: return rsx::primitive_type::polygon;
 	}
 	throw new EXCEPTION("Unknow primitive type %d", in);
 }
@@ -801,26 +801,26 @@ enum
 
 };
 
-surface_target to_surface_target(u8 in)
+rsx::surface_target rsx::to_surface_target(u8 in)
 {
 	switch (in)
 	{
-	case CELL_GCM_SURFACE_TARGET_NONE: return surface_target::none;
-	case CELL_GCM_SURFACE_TARGET_0: return surface_target::surface_a;
-	case CELL_GCM_SURFACE_TARGET_1: return surface_target::surface_b;
-	case CELL_GCM_SURFACE_TARGET_MRT1: return surface_target::surfaces_a_b;
-	case CELL_GCM_SURFACE_TARGET_MRT2: return surface_target::surfaces_a_b_c;
-	case CELL_GCM_SURFACE_TARGET_MRT3: return surface_target::surfaces_a_b_c_d;
+	case CELL_GCM_SURFACE_TARGET_NONE: return rsx::surface_target::none;
+	case CELL_GCM_SURFACE_TARGET_0: return rsx::surface_target::surface_a;
+	case CELL_GCM_SURFACE_TARGET_1: return rsx::surface_target::surface_b;
+	case CELL_GCM_SURFACE_TARGET_MRT1: return rsx::surface_target::surfaces_a_b;
+	case CELL_GCM_SURFACE_TARGET_MRT2: return rsx::surface_target::surfaces_a_b_c;
+	case CELL_GCM_SURFACE_TARGET_MRT3: return rsx::surface_target::surfaces_a_b_c_d;
 	}
 	throw EXCEPTION("Unknow surface target %x", in);
 }
 
-surface_depth_format to_surface_depth_format(u8 in)
+rsx::surface_depth_format rsx::to_surface_depth_format(u8 in)
 {
 	switch (in)
 	{
-	case CELL_GCM_SURFACE_Z16: return surface_depth_format::z16;
-	case CELL_GCM_SURFACE_Z24S8: return surface_depth_format::z24s8;
+	case CELL_GCM_SURFACE_Z16: return rsx::surface_depth_format::z16;
+	case CELL_GCM_SURFACE_Z24S8: return rsx::surface_depth_format::z24s8;
 	}
 	throw EXCEPTION("Unknow surface depth format %x", in);
 }
@@ -836,36 +836,36 @@ std::string rsx::get_method_name(const u32 id)
 	return fmt::format("unknown/illegal method [0x%08x]", id);
 }
 
-surface_antialiasing to_surface_antialiasing(u8 in)
+rsx::surface_antialiasing rsx::to_surface_antialiasing(u8 in)
 {
 	switch (in)
 	{
-	case CELL_GCM_SURFACE_CENTER_1: return surface_antialiasing::center_1_sample;
-	case CELL_GCM_SURFACE_DIAGONAL_CENTERED_2: return surface_antialiasing::diagonal_centered_2_samples;
-	case CELL_GCM_SURFACE_SQUARE_CENTERED_4: return surface_antialiasing::square_centered_4_samples;
-	case CELL_GCM_SURFACE_SQUARE_ROTATED_4: return surface_antialiasing::square_rotated_4_samples;
+	case CELL_GCM_SURFACE_CENTER_1: return rsx::surface_antialiasing::center_1_sample;
+	case CELL_GCM_SURFACE_DIAGONAL_CENTERED_2: return rsx::surface_antialiasing::diagonal_centered_2_samples;
+	case CELL_GCM_SURFACE_SQUARE_CENTERED_4: return rsx::surface_antialiasing::square_centered_4_samples;
+	case CELL_GCM_SURFACE_SQUARE_ROTATED_4: return rsx::surface_antialiasing::square_rotated_4_samples;
 	}
 	throw EXCEPTION("unknow surface antialiasing format %x", in);
 }
 
-surface_color_format to_surface_color_format(u8 in)
+rsx::surface_color_format rsx::to_surface_color_format(u8 in)
 {
 	switch (in)
 	{
-	case CELL_GCM_SURFACE_X1R5G5B5_Z1R5G5B5: return surface_color_format::x1r5g5b5_z1r5g5b5;
-	case CELL_GCM_SURFACE_X1R5G5B5_O1R5G5B5: return surface_color_format::x1r5g5b5_o1r5g5b5;
-	case CELL_GCM_SURFACE_R5G6B5: return surface_color_format::r5g6b5;
-	case CELL_GCM_SURFACE_X8R8G8B8_Z8R8G8B8: return surface_color_format::x8r8g8b8_z8r8g8b8;
-	case CELL_GCM_SURFACE_X8R8G8B8_O8R8G8B8: return surface_color_format::x8r8g8b8_o8r8g8b8;
-	case CELL_GCM_SURFACE_A8R8G8B8: return surface_color_format::a8r8g8b8;
-	case CELL_GCM_SURFACE_B8: return surface_color_format::b8;
-	case CELL_GCM_SURFACE_G8B8: return surface_color_format::g8b8;
-	case CELL_GCM_SURFACE_F_W16Z16Y16X16: return surface_color_format::w16z16y16x16;
-	case CELL_GCM_SURFACE_F_W32Z32Y32X32: return surface_color_format::w32z32y32x32;
-	case CELL_GCM_SURFACE_F_X32: return surface_color_format::x32;
-	case CELL_GCM_SURFACE_X8B8G8R8_Z8B8G8R8: return surface_color_format::x8b8g8r8_z8b8g8r8;
-	case CELL_GCM_SURFACE_X8B8G8R8_O8B8G8R8: return surface_color_format::x8b8g8r8_o8b8g8r8;
-	case CELL_GCM_SURFACE_A8B8G8R8: return surface_color_format::a8b8g8r8;
+	case CELL_GCM_SURFACE_X1R5G5B5_Z1R5G5B5: return rsx::surface_color_format::x1r5g5b5_z1r5g5b5;
+	case CELL_GCM_SURFACE_X1R5G5B5_O1R5G5B5: return rsx::surface_color_format::x1r5g5b5_o1r5g5b5;
+	case CELL_GCM_SURFACE_R5G6B5: return rsx::surface_color_format::r5g6b5;
+	case CELL_GCM_SURFACE_X8R8G8B8_Z8R8G8B8: return rsx::surface_color_format::x8r8g8b8_z8r8g8b8;
+	case CELL_GCM_SURFACE_X8R8G8B8_O8R8G8B8: return rsx::surface_color_format::x8r8g8b8_o8r8g8b8;
+	case CELL_GCM_SURFACE_A8R8G8B8: return rsx::surface_color_format::a8r8g8b8;
+	case CELL_GCM_SURFACE_B8: return rsx::surface_color_format::b8;
+	case CELL_GCM_SURFACE_G8B8: return rsx::surface_color_format::g8b8;
+	case CELL_GCM_SURFACE_F_W16Z16Y16X16: return rsx::surface_color_format::w16z16y16x16;
+	case CELL_GCM_SURFACE_F_W32Z32Y32X32: return rsx::surface_color_format::w32z32y32x32;
+	case CELL_GCM_SURFACE_F_X32: return rsx::surface_color_format::x32;
+	case CELL_GCM_SURFACE_X8B8G8R8_Z8B8G8R8: return rsx::surface_color_format::x8b8g8r8_z8b8g8r8;
+	case CELL_GCM_SURFACE_X8B8G8R8_O8B8G8R8: return rsx::surface_color_format::x8b8g8r8_o8b8g8r8;
+	case CELL_GCM_SURFACE_A8B8G8R8: return rsx::surface_color_format::a8b8g8r8;
 	}
 	throw EXCEPTION("unknow surface color format %x", in);
 }
@@ -953,18 +953,18 @@ namespace
 
 	std::string get_primitive_mode(u8 draw_mode)
 	{
-		switch (to_primitive_type(draw_mode))
+		switch (rsx::to_primitive_type(draw_mode))
 		{
-		case primitive_type::points: return "Points";
-		case primitive_type::lines: return "Lines";
-		case primitive_type::line_loop: return "Line_loop";
-		case primitive_type::line_strip: return "Line_strip";
-		case primitive_type::triangles: return "Triangles";
-		case primitive_type::triangle_strip: return "Triangle_strip";
-		case primitive_type::triangle_fan: return "Triangle_fan";
-		case primitive_type::quads: return "Quads";
-		case primitive_type::quad_strip: return "Quad_strip";
-		case primitive_type::polygon: return "Polygon";
+		case rsx::primitive_type::points: return "Points";
+		case rsx::primitive_type::lines: return "Lines";
+		case rsx::primitive_type::line_loop: return "Line_loop";
+		case rsx::primitive_type::line_strip: return "Line_strip";
+		case rsx::primitive_type::triangles: return "Triangles";
+		case rsx::primitive_type::triangle_strip: return "Triangle_strip";
+		case rsx::primitive_type::triangle_fan: return "Triangle_fan";
+		case rsx::primitive_type::quads: return "Quads";
+		case rsx::primitive_type::quad_strip: return "Quad_strip";
+		case rsx::primitive_type::polygon: return "Polygon";
 		}
 		return "Error";
 	}
@@ -989,58 +989,58 @@ namespace
 
 	std::string depth_stencil_surface_format(u32 format)
 	{
-		switch (to_surface_depth_format(format))
+		switch (rsx::to_surface_depth_format(format))
 		{
-		case surface_depth_format::z16: return "CELL_GCM_SURFACE_Z16";
-		case surface_depth_format::z24s8: return "CELL_GCM_SURFACE_Z24S8";
+		case rsx::surface_depth_format::z16: return "CELL_GCM_SURFACE_Z16";
+		case rsx::surface_depth_format::z24s8: return "CELL_GCM_SURFACE_Z24S8";
 		}
 		return "Error";
 	}
 
 	std::string surface_antialiasing(u8 format)
 	{
-		switch (to_surface_antialiasing(format))
+		switch (rsx::to_surface_antialiasing(format))
 		{
-		case surface_antialiasing::center_1_sample: "1 sample centered";
-		case surface_antialiasing::diagonal_centered_2_samples: return "2 samples diagonal centered";
-		case surface_antialiasing::square_centered_4_samples: return "4 samples square centered";
-		case surface_antialiasing::square_rotated_4_samples: return "4 samples diagonal rotated";
+		case rsx::surface_antialiasing::center_1_sample: return "1 sample centered";
+		case rsx::surface_antialiasing::diagonal_centered_2_samples: return "2 samples diagonal centered";
+		case rsx::surface_antialiasing::square_centered_4_samples: return "4 samples square centered";
+		case rsx::surface_antialiasing::square_rotated_4_samples: return "4 samples diagonal rotated";
 		}
 		return "Error";
 	}
 
-	std::string color_surface_format(u32 format)
+	std::string surface_color_format(u32 format)
 	{
-		switch (to_surface_color_format(format))
+		switch (rsx::to_surface_color_format(format))
 		{
-		case surface_color_format::x1r5g5b5_z1r5g5b5: return "CELL_GCM_SURFACE_X1R5G5B5_Z1R5G5B5";
-		case surface_color_format::x1r5g5b5_o1r5g5b5: return "CELL_GCM_SURFACE_X1R5G5B5_O1R5G5B5";
-		case surface_color_format::r5g6b5 : return "CELL_GCM_SURFACE_R5G6B5";
-		case surface_color_format::x8r8g8b8_z8r8g8b8: return "CELL_GCM_SURFACE_X8R8G8B8_Z8R8G8B8";
-		case surface_color_format::x8r8g8b8_o8r8g8b8: return "CELL_GCM_SURFACE_X8R8G8B8_O8R8G8B8";
-		case surface_color_format::a8r8g8b8: return "CELL_GCM_SURFACE_A8R8G8B8";
-		case surface_color_format::b8: return "CELL_GCM_SURFACE_B8";
-		case surface_color_format::g8b8: return "CELL_GCM_SURFACE_G8B8";
-		case surface_color_format::w16z16y16x16: return "CELL_GCM_SURFACE_F_W16Z16Y16X16";
-		case surface_color_format::w32z32y32x32: return "CELL_GCM_SURFACE_F_W32Z32Y32X32";
-		case surface_color_format::x32: return "CELL_GCM_SURFACE_F_X32";
-		case surface_color_format::x8b8g8r8_z8b8g8r8: return "CELL_GCM_SURFACE_X8B8G8R8_Z8B8G8R8";
-		case surface_color_format::x8b8g8r8_o8b8g8r8: return "CELL_GCM_SURFACE_X8B8G8R8_O8B8G8R8";
-		case surface_color_format::a8b8g8r8: return "CELL_GCM_SURFACE_A8B8G8R8";
+		case rsx::surface_color_format::x1r5g5b5_z1r5g5b5: return "CELL_GCM_SURFACE_X1R5G5B5_Z1R5G5B5";
+		case rsx::surface_color_format::x1r5g5b5_o1r5g5b5: return "CELL_GCM_SURFACE_X1R5G5B5_O1R5G5B5";
+		case rsx::surface_color_format::r5g6b5 : return "CELL_GCM_SURFACE_R5G6B5";
+		case rsx::surface_color_format::x8r8g8b8_z8r8g8b8: return "CELL_GCM_SURFACE_X8R8G8B8_Z8R8G8B8";
+		case rsx::surface_color_format::x8r8g8b8_o8r8g8b8: return "CELL_GCM_SURFACE_X8R8G8B8_O8R8G8B8";
+		case rsx::surface_color_format::a8r8g8b8: return "CELL_GCM_SURFACE_A8R8G8B8";
+		case rsx::surface_color_format::b8: return "CELL_GCM_SURFACE_B8";
+		case rsx::surface_color_format::g8b8: return "CELL_GCM_SURFACE_G8B8";
+		case rsx::surface_color_format::w16z16y16x16: return "CELL_GCM_SURFACE_F_W16Z16Y16X16";
+		case rsx::surface_color_format::w32z32y32x32: return "CELL_GCM_SURFACE_F_W32Z32Y32X32";
+		case rsx::surface_color_format::x32: return "CELL_GCM_SURFACE_F_X32";
+		case rsx::surface_color_format::x8b8g8r8_z8b8g8r8: return "CELL_GCM_SURFACE_X8B8G8R8_Z8B8G8R8";
+		case rsx::surface_color_format::x8b8g8r8_o8b8g8r8: return "CELL_GCM_SURFACE_X8B8G8R8_O8B8G8R8";
+		case rsx::surface_color_format::a8b8g8r8: return "CELL_GCM_SURFACE_A8B8G8R8";
 		}
 		return "Error";
 	}
 
 	std::string surface_target(u32 target)
 	{
-		switch (to_surface_target(target))
+		switch (rsx::to_surface_target(target))
 		{
-		case surface_target::none: return "none";
-		case surface_target::surface_a: return "surface A";
-		case surface_target::surface_b: return "surface B";
-		case surface_target::surfaces_a_b: return "surfaces A and B";
-		case surface_target::surfaces_a_b_c: return "surfaces A, B and C";
-		case surface_target::surfaces_a_b_c_d: return "surfaces A,B, C and D";
+		case rsx::surface_target::none: return "none";
+		case rsx::surface_target::surface_a: return "surface A";
+		case rsx::surface_target::surface_b: return "surface B";
+		case rsx::surface_target::surfaces_a_b: return "surfaces A and B";
+		case rsx::surface_target::surfaces_a_b_c: return "surfaces A, B and C";
+		case rsx::surface_target::surfaces_a_b_c_d: return "surfaces A,B, C and D";
 		}
 		return "Error";
 	}
@@ -1078,15 +1078,15 @@ namespace
 
 	std::string get_vertex_attribute_format(u8 type)
 	{
-		switch (to_vertex_base_type(type))
+		switch (rsx::to_vertex_base_type(type))
 		{
-		case vertex_base_type::s1: return "Short";
-		case vertex_base_type::f: return "Float";
-		case vertex_base_type::sf: return "Half float";
-		case vertex_base_type::ub: return "Unsigned byte";
-		case vertex_base_type::s32k: return "Signed int";
-		case vertex_base_type::cmp: return "CMP";
-		case vertex_base_type::ub256: return "UB256";
+		case rsx::vertex_base_type::s1: return "Short";
+		case rsx::vertex_base_type::f: return "Float";
+		case rsx::vertex_base_type::sf: return "Half float";
+		case rsx::vertex_base_type::ub: return "Unsigned byte";
+		case rsx::vertex_base_type::s32k: return "Signed int";
+		case rsx::vertex_base_type::cmp: return "CMP";
+		case rsx::vertex_base_type::ub256: return "UB256";
 		}
 	}
 
@@ -1104,10 +1104,10 @@ namespace
 
 	std::string index_type(u16 arg)
 	{
-		switch (to_index_array_type(arg))
+		switch (rsx::to_index_array_type(arg))
 		{
-		case index_array_type::unsigned_16b: return "unsigned short";
-		case index_array_type::unsigned_32b: return "unsigned int";
+		case rsx::index_array_type::u16: return "unsigned short";
+		case rsx::index_array_type::u32: return "unsigned int";
 		}
 		return "Error";
 	}
@@ -1443,7 +1443,7 @@ namespace
 		{ NV4097_SET_SURFACE_PITCH_Z, [](u32 arg) -> std::string { return "Surface Zeta: Pitch = " + std::to_string(arg); } },
 		{ NV4097_SET_SURFACE_ZETA_OFFSET, [](u32 arg) -> std::string { return "Surface Zeta: Offset = " + ptr_to_string(arg); } },
 		{ NV4097_SET_CONTEXT_DMA_ZETA, [](u32 arg) -> std::string { return "Surface Zeta: DMA mode = " + dma_mode(arg);} },
-		{ NV4097_SET_SURFACE_FORMAT, [](u32 arg) -> std::string { return "Surface: Color format = " + color_surface_format(arg & 0x1F) + " DepthStencil format = " + depth_stencil_surface_format((arg >> 5) & 0x7) + " Anti aliasing =" + surface_antialiasing((arg >> 12) & 0x7); } },
+		{ NV4097_SET_SURFACE_FORMAT, [](u32 arg) -> std::string { return "Surface: Color format = " + surface_color_format(arg & 0x1F) + " DepthStencil format = " + depth_stencil_surface_format((arg >> 5) & 0x7) + " Anti aliasing =" + surface_antialiasing((arg >> 12) & 0x7); } },
 		{ NV4097_SET_SURFACE_CLIP_HORIZONTAL, [](u32 arg) -> std::string { return "Surface: clip x = " + std::to_string(arg & 0xFFFF) + " width = " + std::to_string(arg >> 16); } },
 		{ NV4097_SET_SURFACE_CLIP_VERTICAL, [](u32 arg) -> std::string { return "Surface: clip y = " + std::to_string(arg & 0xFFFF) + " height = " + std::to_string(arg >> 16); } },
 		{ NV4097_SET_SURFACE_COLOR_TARGET, [](u32 arg) -> std::string { return "Surface: Targets " + surface_target(arg); } },

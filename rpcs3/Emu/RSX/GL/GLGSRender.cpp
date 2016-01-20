@@ -11,22 +11,22 @@
 
 namespace
 {
-	u32 get_max_depth_value(surface_depth_format format)
+	u32 get_max_depth_value(rsx::surface_depth_format format)
 	{
 		switch (format)
 		{
-		case surface_depth_format::z16: return 0xFFFF;
-		case surface_depth_format::z24s8: return 0xFFFFFF;
+		case rsx::surface_depth_format::z16: return 0xFFFF;
+		case rsx::surface_depth_format::z24s8: return 0xFFFFFF;
 		}
 		throw EXCEPTION("Unknow depth format");
 	}
 
-	u8 get_pixel_size(surface_depth_format format)
+	u8 get_pixel_size(rsx::surface_depth_format format)
 	{
 		switch (format)
 		{
-		case surface_depth_format::z16: return 2;
-		case surface_depth_format::z24s8: return 4;
+		case rsx::surface_depth_format::z16: return 2;
+		case rsx::surface_depth_format::z24s8: return 4;
 		}
 		throw EXCEPTION("Unknow depth format");
 	}
@@ -120,7 +120,7 @@ void GLGSRender::begin()
 
 		__glcheck glBlendFuncSeparate(sfactor_rgb, dfactor_rgb, sfactor_a, dfactor_a);
 
-		if (m_surface.color_format == surface_color_format::w16z16y16x16) //TODO: check another color formats
+		if (m_surface.color_format == rsx::surface_color_format::w16z16y16x16) //TODO: check another color formats
 		{
 			u32 blend_color = rsx::method_registers[NV4097_SET_BLEND_COLOR];
 			u32 blend_color2 = rsx::method_registers[NV4097_SET_BLEND_COLOR2];
@@ -318,33 +318,33 @@ void apply_attrib_array(gl::glsl::program& program, int location, const std::vec
 
 namespace
 {
-	gl::buffer_pointer::type gl_types(vertex_base_type type)
+	gl::buffer_pointer::type gl_types(rsx::vertex_base_type type)
 	{
 		switch (type)
 		{
-			case vertex_base_type::s1: return gl::buffer_pointer::type::s16;
-			case vertex_base_type::f: return gl::buffer_pointer::type::f32;
-			case vertex_base_type::sf: return gl::buffer_pointer::type::f16;
-			case vertex_base_type::ub: return gl::buffer_pointer::type::u8;
-			case vertex_base_type::s32k: return gl::buffer_pointer::type::s32;
-			case vertex_base_type::cmp: return gl::buffer_pointer::type::s16; // Needs conversion
-			case vertex_base_type::ub256: gl::buffer_pointer::type::u8;
+			case rsx::vertex_base_type::s1: return gl::buffer_pointer::type::s16;
+			case rsx::vertex_base_type::f: return gl::buffer_pointer::type::f32;
+			case rsx::vertex_base_type::sf: return gl::buffer_pointer::type::f16;
+			case rsx::vertex_base_type::ub: return gl::buffer_pointer::type::u8;
+			case rsx::vertex_base_type::s32k: return gl::buffer_pointer::type::s32;
+			case rsx::vertex_base_type::cmp: return gl::buffer_pointer::type::s16; // Needs conversion
+			case rsx::vertex_base_type::ub256: gl::buffer_pointer::type::u8;
 		}
 		throw EXCEPTION("unknow vertex type");
 	}
 
-	bool gl_normalized(vertex_base_type type)
+	bool gl_normalized(rsx::vertex_base_type type)
 	{
 		switch (type)
 		{
-		case vertex_base_type::s1:
-		case vertex_base_type::ub:
-		case vertex_base_type::cmp:
+		case rsx::vertex_base_type::s1:
+		case rsx::vertex_base_type::ub:
+		case rsx::vertex_base_type::cmp:
 			return true;
-		case vertex_base_type::f:
-		case vertex_base_type::sf:
-		case vertex_base_type::ub256:
-		case vertex_base_type::s32k:
+		case rsx::vertex_base_type::f:
+		case rsx::vertex_base_type::sf:
+		case rsx::vertex_base_type::ub256:
+		case rsx::vertex_base_type::s32k:
 			return false;
 		}
 		throw EXCEPTION("unknow vertex type");
@@ -404,7 +404,7 @@ void GLGSRender::end()
 	u32 min_index, max_index;
 	if (draw_command == rsx::draw_command::indexed)
 	{
-		index_array_type type = to_index_array_type(rsx::method_registers[NV4097_SET_INDEX_ARRAY_DMA] >> 4);
+		rsx::index_array_type type = rsx::to_index_array_type(rsx::method_registers[NV4097_SET_INDEX_ARRAY_DMA] >> 4);
 		u32 type_size = gsl::narrow<u32>(get_index_type_size(type));
 		for (const auto& first_count : first_count_commands)
 		{
@@ -415,10 +415,10 @@ void GLGSRender::end()
 
 		switch (type)
 		{
-		case index_array_type::unsigned_32b:
+		case rsx::index_array_type::u32:
 			std::tie(min_index, max_index) = write_index_array_data_to_buffer_untouched(gsl::span<u32>((u32*)vertex_index_array.data(), vertex_draw_count), first_count_commands);
 			break;
-		case index_array_type::unsigned_16b:
+		case rsx::index_array_type::u16:
 			std::tie(min_index, max_index) = write_index_array_data_to_buffer_untouched(gsl::span<u16>((u16*)vertex_index_array.data(), vertex_draw_count), first_count_commands);
 			break;
 		}
@@ -508,7 +508,7 @@ void GLGSRender::end()
 
 				switch (vertex_info.type)
 				{
-				case vertex_base_type::f:
+				case rsx::vertex_base_type::f:
 					switch (register_vertex_info[index].size)
 					{
 					case 1: apply_attrib_array<f32, 1>(*m_program, location, vertex_data); break;
@@ -531,11 +531,11 @@ void GLGSRender::end()
 	{
 		m_ebo.data(vertex_index_array.size(), vertex_index_array.data());
 
-		index_array_type indexed_type = to_index_array_type(rsx::method_registers[NV4097_SET_INDEX_ARRAY_DMA] >> 4);
+		rsx::index_array_type indexed_type = rsx::to_index_array_type(rsx::method_registers[NV4097_SET_INDEX_ARRAY_DMA] >> 4);
 
-		if (indexed_type == index_array_type::unsigned_32b)
+		if (indexed_type == rsx::index_array_type::u32)
 			__glcheck glDrawElements(gl::draw_mode(draw_mode), vertex_draw_count, GL_UNSIGNED_INT, nullptr);
-		if (indexed_type == index_array_type::unsigned_16b)
+		if (indexed_type == rsx::index_array_type::u16)
 			__glcheck glDrawElements(gl::draw_mode(draw_mode), vertex_draw_count, GL_UNSIGNED_SHORT, nullptr);
 	}
 	else
@@ -677,7 +677,7 @@ void nv4097_clear_surface(u32 arg, GLGSRender* renderer)
 
 	if (arg & 0x1)
 	{
-		surface_depth_format surface_depth_format = to_surface_depth_format((rsx::method_registers[NV4097_SET_SURFACE_FORMAT] >> 5) & 0x7);
+		rsx::surface_depth_format surface_depth_format = rsx::to_surface_depth_format((rsx::method_registers[NV4097_SET_SURFACE_FORMAT] >> 5) & 0x7);
 		u32 max_depth_value = get_max_depth_value(surface_depth_format);
 
 		u32 clear_depth = rsx::method_registers[NV4097_SET_ZSTENCIL_CLEAR_VALUE] >> 8;
@@ -855,52 +855,52 @@ struct color_format
 	color_swizzle swizzle;
 };
 
-color_format surface_color_format_to_gl(surface_color_format color_format)
+color_format surface_color_format_to_gl(rsx::surface_color_format color_format)
 {
 	//color format
 	switch (color_format)
 	{
-	case surface_color_format::r5g6b5:
+	case rsx::surface_color_format::r5g6b5:
 		return{ gl::texture::type::ushort_5_6_5, gl::texture::format::bgr, false, 3, 2 };
 
-	case surface_color_format::a8r8g8b8:
+	case rsx::surface_color_format::a8r8g8b8:
 		return{ gl::texture::type::uint_8_8_8_8, gl::texture::format::bgra, false, 4, 1 };
 
-	case surface_color_format::x8r8g8b8_o8r8g8b8:
+	case rsx::surface_color_format::x8r8g8b8_o8r8g8b8:
 		return{ gl::texture::type::uint_8_8_8_8, gl::texture::format::bgra, false, 4, 1,
 		{ gl::texture::channel::one, gl::texture::channel::r, gl::texture::channel::g, gl::texture::channel::b } };
 
-	case surface_color_format::w16z16y16x16:
+	case rsx::surface_color_format::w16z16y16x16:
 		return{ gl::texture::type::f16, gl::texture::format::rgba, true, 4, 2 };
 
-	case surface_color_format::w32z32y32x32:
+	case rsx::surface_color_format::w32z32y32x32:
 		return{ gl::texture::type::f32, gl::texture::format::rgba, true, 4, 4 };
 
-	case surface_color_format::b8:
-	case surface_color_format::x1r5g5b5_o1r5g5b5:
-	case surface_color_format::x1r5g5b5_z1r5g5b5:
-	case surface_color_format::x8r8g8b8_z8r8g8b8:
-	case surface_color_format::g8b8:
-	case surface_color_format::x32:
-	case surface_color_format::x8b8g8r8_o8b8g8r8:
-	case surface_color_format::x8b8g8r8_z8b8g8r8:
-	case surface_color_format::a8b8g8r8:
+	case rsx::surface_color_format::b8:
+	case rsx::surface_color_format::x1r5g5b5_o1r5g5b5:
+	case rsx::surface_color_format::x1r5g5b5_z1r5g5b5:
+	case rsx::surface_color_format::x8r8g8b8_z8r8g8b8:
+	case rsx::surface_color_format::g8b8:
+	case rsx::surface_color_format::x32:
+	case rsx::surface_color_format::x8b8g8r8_o8b8g8r8:
+	case rsx::surface_color_format::x8b8g8r8_z8b8g8r8:
+	case rsx::surface_color_format::a8b8g8r8:
 	default:
 		LOG_ERROR(RSX, "Surface color buffer: Unsupported surface color format (0x%x)", color_format);
 		return{ gl::texture::type::uint_8_8_8_8, gl::texture::format::bgra, false, 4, 1 };
 	}
 }
 
-std::pair<gl::texture::type, gl::texture::format> surface_depth_format_to_gl(surface_depth_format depth_format)
+std::pair<gl::texture::type, gl::texture::format> surface_depth_format_to_gl(rsx::surface_depth_format depth_format)
 {
 	switch (depth_format)
 	{
-	case surface_depth_format::z16:
+	case rsx::surface_depth_format::z16:
 		return std::make_pair(gl::texture::type::ushort, gl::texture::format::depth);
 
 	default:
 		LOG_ERROR(RSX, "Surface depth buffer: Unsupported surface depth format (0x%x)", depth_format);
-	case surface_depth_format::z24s8:
+	case rsx::surface_depth_format::z24s8:
 		return std::make_pair(gl::texture::type::uint_24_8, gl::texture::format::depth_stencil);
 		//return std::make_pair(gl::texture::type::f32, gl::texture::format::depth);
 	}
@@ -949,7 +949,7 @@ void GLGSRender::init_buffers(bool skip_reading)
 
 		switch (m_surface.depth_format)
 		{
-		case surface_depth_format::z16:
+		case rsx::surface_depth_format::z16:
 		{
 			__glcheck m_draw_tex_depth_stencil.config()
 				.size({ (int)m_surface.width, (int)m_surface.height })
@@ -961,7 +961,7 @@ void GLGSRender::init_buffers(bool skip_reading)
 			break;
 		}
 
-		case surface_depth_format::z24s8:
+		case rsx::surface_depth_format::z24s8:
 		{
 			__glcheck m_draw_tex_depth_stencil.config()
 				.size({ (int)m_surface.width, (int)m_surface.height })
@@ -992,27 +992,27 @@ void GLGSRender::init_buffers(bool skip_reading)
 
 	set_viewport();
 
-	switch (to_surface_target(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET]))
+	switch (rsx::to_surface_target(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET]))
 	{
-	case surface_target::none: break;
+	case rsx::surface_target::none: break;
 
-	case surface_target::surface_a:
+	case rsx::surface_target::surface_a:
 		__glcheck draw_fbo.draw_buffer(draw_fbo.color[0]);
 		break;
 
-	case surface_target::surface_b:
+	case rsx::surface_target::surface_b:
 		__glcheck draw_fbo.draw_buffer(draw_fbo.color[1] );
 		break;
 
-	case surface_target::surfaces_a_b:
+	case rsx::surface_target::surfaces_a_b:
 		__glcheck draw_fbo.draw_buffers({ draw_fbo.color[0], draw_fbo.color[1] });
 		break;
 
-	case surface_target::surfaces_a_b_c:
+	case rsx::surface_target::surfaces_a_b_c:
 		__glcheck draw_fbo.draw_buffers({ draw_fbo.color[0], draw_fbo.color[1], draw_fbo.color[2] });
 		break;
 
-	case surface_target::surfaces_a_b_c_d:
+	case rsx::surface_target::surfaces_a_b_c_d:
 		__glcheck draw_fbo.draw_buffers({ draw_fbo.color[0], draw_fbo.color[1], draw_fbo.color[2], draw_fbo.color[3] });
 		break;
 
@@ -1090,28 +1090,28 @@ void GLGSRender::read_buffers()
 			}
 		};
 
-		switch (to_surface_target(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET]))
+		switch (rsx::to_surface_target(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET]))
 		{
-		case surface_target::none:
+		case rsx::surface_target::none:
 			break;
 
-		case surface_target::surface_a:
+		case rsx::surface_target::surface_a:
 			read_color_buffers(0, 1);
 			break;
 
-		case surface_target::surface_b:
+		case rsx::surface_target::surface_b:
 			read_color_buffers(1, 1);
 			break;
 
-		case surface_target::surfaces_a_b:
+		case rsx::surface_target::surfaces_a_b:
 			read_color_buffers(0, 2);
 			break;
 
-		case surface_target::surfaces_a_b_c:
+		case rsx::surface_target::surfaces_a_b_c:
 			read_color_buffers(0, 3);
 			break;
 
-		case surface_target::surfaces_a_b_c_d:
+		case rsx::surface_target::surfaces_a_b_c_d:
 			read_color_buffers(0, 4);
 			break;
 		}
@@ -1135,7 +1135,7 @@ void GLGSRender::read_buffers()
 		{
 			u32 depth_address = rsx::get_address(rsx::method_registers[NV4097_SET_SURFACE_ZETA_OFFSET], rsx::method_registers[NV4097_SET_CONTEXT_DMA_ZETA]);
 
-			if (m_surface.depth_format == surface_depth_format::z16)
+			if (m_surface.depth_format == rsx::surface_depth_format::z16)
 			{
 				u16 *dst = (u16*)pixels;
 				const be_t<u16>* src = vm::ps3::_ptr<u16>(depth_address);
@@ -1221,28 +1221,28 @@ void GLGSRender::write_buffers()
 			}
 		};
 
-		switch (to_surface_target(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET]))
+		switch (rsx::to_surface_target(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET]))
 		{
-		case surface_target::none:
+		case rsx::surface_target::none:
 			break;
 
-		case surface_target::surface_a:
+		case rsx::surface_target::surface_a:
 			write_color_buffers(0, 1);
 			break;
 
-		case surface_target::surface_b:
+		case rsx::surface_target::surface_b:
 			write_color_buffers(1, 1);
 			break;
 
-		case surface_target::surfaces_a_b:
+		case rsx::surface_target::surfaces_a_b:
 			write_color_buffers(0, 2);
 			break;
 
-		case surface_target::surfaces_a_b_c:
+		case rsx::surface_target::surfaces_a_b_c:
 			write_color_buffers(0, 3);
 			break;
 
-		case surface_target::surfaces_a_b_c_d:
+		case rsx::surface_target::surfaces_a_b_c_d:
 			write_color_buffers(0, 4);
 			break;
 		}
@@ -1269,7 +1269,7 @@ void GLGSRender::write_buffers()
 		{
 			u32 depth_address = rsx::get_address(rsx::method_registers[NV4097_SET_SURFACE_ZETA_OFFSET], rsx::method_registers[NV4097_SET_CONTEXT_DMA_ZETA]);
 
-			if (m_surface.depth_format == surface_depth_format::z16)
+			if (m_surface.depth_format == rsx::surface_depth_format::z16)
 			{
 				const u16 *src = (const u16*)pixels;
 				be_t<u16>* dst = vm::ps3::_ptr<u16>(depth_address);

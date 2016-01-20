@@ -306,7 +306,7 @@ std::tuple<bool, size_t> D3D12GSRender::upload_and_set_vertex_index_data(ID3D12G
 		index_count += pair.second;
 	index_count = get_index_count(draw_mode, gsl::narrow<int>(index_count));
 
-	index_array_type indexed_type = to_index_array_type(rsx::method_registers[NV4097_SET_INDEX_ARRAY_DMA] >> 4);
+	rsx::index_array_type indexed_type = rsx::to_index_array_type(rsx::method_registers[NV4097_SET_INDEX_ARRAY_DMA] >> 4);
 	size_t index_size = get_index_type_size(indexed_type);
 
 	// Alloc
@@ -316,13 +316,13 @@ std::tuple<bool, size_t> D3D12GSRender::upload_and_set_vertex_index_data(ID3D12G
 	void *mapped_buffer = m_buffer_data.map<void>(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
 	u32 min_index, max_index;
 
-	if (indexed_type == index_array_type::unsigned_16b)
+	if (indexed_type == rsx::index_array_type::u16)
 	{
 		gsl::span<u16> dst = { (u16*)mapped_buffer, gsl::narrow<int>(buffer_size / index_size) };
 		std::tie(min_index, max_index) = write_index_array_data_to_buffer(dst, draw_mode, first_count_commands);
 	}
 
-	if (indexed_type == index_array_type::unsigned_32b)
+	if (indexed_type == rsx::index_array_type::u32)
 	{
 		gsl::span<u32> dst = { (u32*)mapped_buffer, gsl::narrow<int>(buffer_size / index_size) };
 		std::tie(min_index, max_index) = write_index_array_data_to_buffer(dst, draw_mode, first_count_commands);

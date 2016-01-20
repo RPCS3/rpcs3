@@ -15,15 +15,14 @@ extern u64 get_system_time();
 
 struct frame_capture_data
 {
-
 	struct draw_state
 	{
 		std::string name;
 		std::pair<std::string, std::string> programs;
 		size_t width = 0, height = 0;
-		surface_color_format color_format;
+		rsx::surface_color_format color_format;
 		std::array<std::vector<gsl::byte>, 4> color_buffer;
-		surface_depth_format depth_format;
+		rsx::surface_depth_format depth_format;
 		std::array<std::vector<gsl::byte>, 2> depth_stencil;
 	};
 	std::vector<std::pair<u32, u32> > command_queue;

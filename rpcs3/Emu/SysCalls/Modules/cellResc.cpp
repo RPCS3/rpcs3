@@ -267,12 +267,12 @@ u8 GcmSurfaceFormat2GcmTextureFormat(u8 surfaceFormat, u8 surfaceType)
 {
 	u8 result = 0;
 
-	switch (to_surface_color_format(surfaceFormat))
+	switch (rsx::to_surface_color_format(surfaceFormat))
 	{
-	case surface_color_format::a8r8g8b8:
+	case rsx::surface_color_format::a8r8g8b8:
 		result = CELL_GCM_TEXTURE_A8R8G8B8;
 		break;
-	case surface_color_format::w16z16y16x16:
+	case rsx::surface_color_format::w16z16y16x16:
 		result = CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT;
 		break;
 	default:
@@ -933,15 +933,15 @@ s32 cellRescGcmSurface2RescSrc(vm::ptr<CellGcmSurface> gcmSurface, vm::ptr<CellR
 	u8 textureFormat = GcmSurfaceFormat2GcmTextureFormat(gcmSurface->colorFormat, gcmSurface->type);
 	s32 xW = 1, xH = 1;
 
-	switch(to_surface_antialiasing(gcmSurface->antialias))
+	switch(rsx::to_surface_antialiasing(gcmSurface->antialias))
 	{
-	case surface_antialiasing::square_rotated_4_samples:
+	case rsx::surface_antialiasing::square_rotated_4_samples:
 		xW=xH=2; 
 		break;
-	case surface_antialiasing::square_centered_4_samples:
+	case rsx::surface_antialiasing::square_centered_4_samples:
 		xW=xH=2; 
 		break; 
-	case surface_antialiasing::diagonal_centered_2_samples:
+	case rsx::surface_antialiasing::diagonal_centered_2_samples:
 		xW=2; 
 		break;
 	default:
