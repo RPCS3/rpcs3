@@ -366,7 +366,7 @@ namespace rsx
 
 			if (put == get || !Emu.IsRunning())
 			{
-				std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
+				do_internal_task();
 				continue;
 			}
 
@@ -517,6 +517,52 @@ namespace rsx
 	{
 		// Get timestamp, and convert it from microseconds to nanoseconds
 		return get_system_time() * 1000;
+	}
+
+	void thread::do_internal_task()
+	{
+		if (m_internal_tasks.empty())
+		{
+			std::this_thread::sleep_for(1ms);
+		}
+		else
+		{
+			std::lock_guard<std::mutex> lock{ m_mtx_task };
+
+			internal_task_entry &front = m_internal_tasks.front();
+
+			if (front.callback())
+			{
+				front.promise.set_value();
+				m_internal_tasks.pop_front();
+			}
+		}
+	}
+
+	std::future<void> thread::add_internal_task(std::function<bool()> callback)
+	{
+		std::lock_guard<std::mutex> lock{ m_mtx_task };
+		m_internal_tasks.emplace_back(callback);
+
+		return m_internal_tasks.back().promise.get_future();
+	}
+
+	void thread::invoke(std::function<bool()> callback)
+	{
+		if (get_thread_ctrl() == thread_ctrl::get_current())
+		{
+			while (true)
+			{
+				if (callback())
+				{
+					break;
+				}
+			}
+		}
+		else
+		{
+			add_internal_task(callback).wait();
+		}
 	}
 
 	std::array<u32, 4> thread::get_color_surface_addresses() const

@@ -329,6 +329,26 @@ namespace rsx
 		virtual u64 timestamp() const;
 		virtual bool on_access_violation(u32 address, bool is_writing) { return false; }
 
+	private:
+		std::mutex m_mtx_task;
+
+		struct internal_task_entry
+		{
+			std::function<bool()> callback;
+			std::promise<void> promise;
+
+			internal_task_entry(std::function<bool()> callback) : callback(callback)
+			{
+			}
+		};
+
+		std::deque<internal_task_entry> m_internal_tasks;
+		void do_internal_task();
+
+	public:
+		std::future<void> add_internal_task(std::function<bool()> callback);
+		void invoke(std::function<bool()> callback);
+
 		/**
 		 * Fill buffer with 4x4 scale offset matrix.
 		 * Vertex shader's position is to be multiplied by this matrix.
