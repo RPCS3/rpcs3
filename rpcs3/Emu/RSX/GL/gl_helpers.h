@@ -1380,7 +1380,7 @@ namespace gl
 		settings& border_color(color4f value);
 	};
 
-	GLenum draw_mode(Primitive_type in);
+	GLenum draw_mode(rsx::primitive_type in);
 
 	enum class indices_type
 	{
@@ -1523,20 +1523,20 @@ namespace gl
 		void draw_buffer(const attachment& buffer) const;
 		void draw_buffers(const std::initializer_list<attachment>& indexes) const;
 
-		void draw_arrays(Primitive_type mode, GLsizei count, GLint first = 0) const;
-		void draw_arrays(const buffer& buffer, Primitive_type mode, GLsizei count, GLint first = 0) const;
-		void draw_arrays(const vao& buffer, Primitive_type mode, GLsizei count, GLint first = 0) const;
+		void draw_arrays(rsx::primitive_type mode, GLsizei count, GLint first = 0) const;
+		void draw_arrays(const buffer& buffer, rsx::primitive_type mode, GLsizei count, GLint first = 0) const;
+		void draw_arrays(const vao& buffer, rsx::primitive_type mode, GLsizei count, GLint first = 0) const;
 
-		void draw_elements(Primitive_type mode, GLsizei count, indices_type type, const GLvoid *indices) const;
-		void draw_elements(const buffer& buffer, Primitive_type mode, GLsizei count, indices_type type, const GLvoid *indices) const;
-		void draw_elements(Primitive_type mode, GLsizei count, indices_type type, const buffer& indices, size_t indices_buffer_offset = 0) const;
-		void draw_elements(const buffer& buffer_, Primitive_type mode, GLsizei count, indices_type type, const buffer& indices, size_t indices_buffer_offset = 0) const;
-		void draw_elements(Primitive_type mode, GLsizei count, const GLubyte *indices) const;
-		void draw_elements(const buffer& buffer, Primitive_type mode, GLsizei count, const GLubyte *indices) const;
-		void draw_elements(Primitive_type mode, GLsizei count, const GLushort *indices) const;
-		void draw_elements(const buffer& buffer, Primitive_type mode, GLsizei count, const GLushort *indices) const;
-		void draw_elements(Primitive_type mode, GLsizei count, const GLuint *indices) const;
-		void draw_elements(const buffer& buffer, Primitive_type mode, GLsizei count, const GLuint *indices) const;
+		void draw_elements(rsx::primitive_type mode, GLsizei count, indices_type type, const GLvoid *indices) const;
+		void draw_elements(const buffer& buffer, rsx::primitive_type mode, GLsizei count, indices_type type, const GLvoid *indices) const;
+		void draw_elements(rsx::primitive_type mode, GLsizei count, indices_type type, const buffer& indices, size_t indices_buffer_offset = 0) const;
+		void draw_elements(const buffer& buffer_, rsx::primitive_type mode, GLsizei count, indices_type type, const buffer& indices, size_t indices_buffer_offset = 0) const;
+		void draw_elements(rsx::primitive_type mode, GLsizei count, const GLubyte *indices) const;
+		void draw_elements(const buffer& buffer, rsx::primitive_type mode, GLsizei count, const GLubyte *indices) const;
+		void draw_elements(rsx::primitive_type mode, GLsizei count, const GLushort *indices) const;
+		void draw_elements(const buffer& buffer, rsx::primitive_type mode, GLsizei count, const GLushort *indices) const;
+		void draw_elements(rsx::primitive_type mode, GLsizei count, const GLuint *indices) const;
+		void draw_elements(const buffer& buffer, rsx::primitive_type mode, GLsizei count, const GLuint *indices) const;
 
 		void clear(buffers buffers_) const;
 		void clear(buffers buffers_, color4f color_value, double depth_value, u8 stencil_value) const;

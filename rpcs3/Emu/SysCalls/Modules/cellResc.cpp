@@ -258,7 +258,7 @@ u8 RescDstFormat2SysutilFormat(u32 dstFormat)
 	{
 	case CELL_RESC_SURFACE_F_W16Z16Y16X16: 
 		return CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_R16G16B16X16_FLOAT;
-	default:                               
+	default:
 		return CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8R8G8B8;
 	}
 }
@@ -267,24 +267,24 @@ u8 GcmSurfaceFormat2GcmTextureFormat(u8 surfaceFormat, u8 surfaceType)
 {
 	u8 result = 0;
 
-	switch (to_surface_color_format(surfaceFormat))
+	switch (rsx::to_surface_color_format(surfaceFormat))
 	{
-	case Surface_color_format::a8r8g8b8:
-		result = CELL_GCM_TEXTURE_A8R8G8B8;			
+	case rsx::surface_color_format::a8r8g8b8:
+		result = CELL_GCM_TEXTURE_A8R8G8B8;
 		break;
-	case Surface_color_format::w16z16y16x16:
-		result = CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT;	
+	case rsx::surface_color_format::w16z16y16x16:
+		result = CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT;
 		break;
-	default: 
+	default:
 		return 0xFF; //Error
 	}
 
 	switch (surfaceType)
 	{
-	case CELL_GCM_SURFACE_PITCH:   
+	case CELL_GCM_SURFACE_PITCH:
 		result |= CELL_GCM_TEXTURE_LN; 
 		break;
-	case CELL_GCM_SURFACE_SWIZZLE: 
+	case CELL_GCM_SURFACE_SWIZZLE:
 		result |= CELL_GCM_TEXTURE_SZ; 
 		break;
 	default: 
@@ -300,13 +300,13 @@ s32 GetRescDestsIndex(u32 dstMode)
 {
 	switch(dstMode)
 	{
-	case CELL_RESC_720x480:   
+	case CELL_RESC_720x480:
 		return 0;
-	case CELL_RESC_720x576:   
+	case CELL_RESC_720x576:
 		return 1;
-	case CELL_RESC_1280x720:  
+	case CELL_RESC_1280x720:
 		return 2;
-	case CELL_RESC_1920x1080: 
+	case CELL_RESC_1920x1080:
 		return 3;
 	default: 
 		return -1;
@@ -317,14 +317,14 @@ void GetScreenSize(u32 mode, s32 *width, s32 *height)
 {	
 	switch (mode)
 	{
-	case CELL_RESC_720x480:   
-		*width = 720;  *height = 480;  
+	case CELL_RESC_720x480:
+		*width = 720;  *height = 480;
 		break;
-	case CELL_RESC_720x576:   
-		*width = 720;  *height = 576; 
+	case CELL_RESC_720x576:
+		*width = 720;  *height = 576;
 		break;
-	case CELL_RESC_1280x720:  
-		*width = 1280; *height = 720;	 
+	case CELL_RESC_1280x720:
+		*width = 1280; *height = 720;
 		break;
 	case CELL_RESC_1920x1080: 
 		*width = 1920; *height = 1080; 
@@ -933,18 +933,18 @@ s32 cellRescGcmSurface2RescSrc(vm::ptr<CellGcmSurface> gcmSurface, vm::ptr<CellR
 	u8 textureFormat = GcmSurfaceFormat2GcmTextureFormat(gcmSurface->colorFormat, gcmSurface->type);
 	s32 xW = 1, xH = 1;
 
-	switch(to_surface_antialiasing(gcmSurface->antialias))
+	switch(rsx::to_surface_antialiasing(gcmSurface->antialias))
 	{
-	case Surface_antialiasing::square_rotated_4_samples:
+	case rsx::surface_antialiasing::square_rotated_4_samples:
 		xW=xH=2; 
 		break;
-	case Surface_antialiasing::square_centered_4_samples:
+	case rsx::surface_antialiasing::square_centered_4_samples:
 		xW=xH=2; 
 		break; 
-	case Surface_antialiasing::diagonal_centered_2_samples:
+	case rsx::surface_antialiasing::diagonal_centered_2_samples:
 		xW=2; 
 		break;
-	default:         
+	default:
 		break;
 	}
 

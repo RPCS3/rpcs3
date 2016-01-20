@@ -7,9 +7,9 @@ namespace rsx
 {
 	namespace utility
 	{
-		std::vector<u8> get_rtt_indexes(Surface_target color_target);
-		size_t get_aligned_pitch(Surface_color_format format, u32 width);
-		size_t get_packed_pitch(Surface_color_format format, u32 width);
+		std::vector<u8> get_rtt_indexes(surface_target color_target);
+		size_t get_aligned_pitch(surface_color_format format, u32 width);
+		size_t get_packed_pitch(surface_color_format format, u32 width);
 	}
 
 	/**
@@ -86,7 +86,7 @@ namespace rsx
 		gsl::not_null<surface_type> bind_address_as_render_targets(
 			command_list_type command_list,
 			u32 address,
-			Surface_color_format surface_color_format, size_t width, size_t height,
+			surface_color_format color_format, size_t width, size_t height,
 			Args&&... extra_params)
 		{
 			auto It = m_render_targets_storage.find(address);
@@ -96,7 +96,7 @@ namespace rsx
 			if (It != m_render_targets_storage.end())
 			{
 				surface_storage_type &rtt = It->second;
-				if (Traits::rtt_has_format_width_height(rtt, surface_color_format, width, height))
+				if (Traits::rtt_has_format_width_height(rtt, color_format, width, height))
 				{
 					Traits::prepare_rtt_for_drawing(command_list, Traits::get(rtt));
 					return Traits::get(rtt);
@@ -105,7 +105,7 @@ namespace rsx
 				m_render_targets_storage.erase(address);
 			}
 
-			m_render_targets_storage[address] = Traits::create_new_surface(address, surface_color_format, width, height, std::forward<Args>(extra_params)...);
+			m_render_targets_storage[address] = Traits::create_new_surface(address, color_format, width, height, std::forward<Args>(extra_params)...);
 			return Traits::get(m_render_targets_storage[address]);
 		}
 
@@ -113,14 +113,14 @@ namespace rsx
 		gsl::not_null<surface_type> bind_address_as_depth_stencil(
 			command_list_type command_list,
 			u32 address,
-			Surface_depth_format surface_depth_format, size_t width, size_t height,
+			surface_depth_format depth_format, size_t width, size_t height,
 			Args&&... extra_params)
 		{
 			auto It = m_depth_stencil_storage.find(address);
 			if (It != m_depth_stencil_storage.end())
 			{
 				surface_storage_type &ds = It->second;
-				if (Traits::ds_has_format_width_height(ds, surface_depth_format, width, height))
+				if (Traits::ds_has_format_width_height(ds, depth_format, width, height))
 				{
 					Traits::prepare_ds_for_drawing(command_list, Traits::get(ds));
 					return Traits::get(ds);
@@ -129,7 +129,7 @@ namespace rsx
 				m_depth_stencil_storage.erase(address);
 			}
 
-			m_depth_stencil_storage[address] = Traits::create_new_surface(address, surface_depth_format, width, height, std::forward<Args>(extra_params)...);
+			m_depth_stencil_storage[address] = Traits::create_new_surface(address, depth_format, width, height, std::forward<Args>(extra_params)...);
 			return Traits::get(m_depth_stencil_storage[address]);
 		}
 	public:
@@ -142,7 +142,7 @@ namespace rsx
 			command_list_type command_list,
 			u32 set_surface_format_reg,
 			u32 clip_horizontal_reg, u32 clip_vertical_reg,
-			Surface_target set_surface_target,
+			surface_target set_surface_target,
 			const std::array<u32, 4> &surface_addresses, u32 address_z,
 			Args&&... extra_params)
 		{
@@ -151,8 +151,8 @@ namespace rsx
 			u32 clip_x = clip_horizontal_reg;
 			u32 clip_y = clip_vertical_reg;
 
-			Surface_color_format color_format = to_surface_color_format(set_surface_format_reg & 0x1f);
-			Surface_depth_format depth_format = to_surface_depth_format((set_surface_format_reg >> 5) & 0x7);
+			surface_color_format color_format = to_surface_color_format(set_surface_format_reg & 0x1f);
+			surface_depth_format depth_format = to_surface_depth_format((set_surface_format_reg >> 5) & 0x7);
 
 			// Make previous RTTs sampleable
 			for (std::tuple<u32, surface_type> &rtt : m_bound_render_targets)
@@ -216,7 +216,7 @@ namespace rsx
 		 */
 		template <typename... Args>
 		std::array<std::vector<gsl::byte>, 4> get_render_targets_data(
-			Surface_color_format surface_color_format, size_t width, size_t height,
+			surface_color_format color_format, size_t width, size_t height,
 			Args&& ...args
 			)
 		{
@@ -230,7 +230,7 @@ namespace rsx
 
 				surface_type surface_resource = std::get<1>(m_bound_render_targets[i]);
 				download_data[i] = std::move(
-					Traits::issue_download_command(surface_resource, surface_color_format, width, height, std::forward<Args&&>(args)...)
+					Traits::issue_download_command(surface_resource, color_format, width, height, std::forward<Args&&>(args)...)
 					);
 			}
 
@@ -244,50 +244,50 @@ namespace rsx
 
 				gsl::span<const gsl::byte> raw_src = Traits::map_downloaded_buffer(download_data[i], std::forward<Args&&>(args)...);
 
-				size_t src_pitch = utility::get_aligned_pitch(surface_color_format, gsl::narrow<u32>(width));
-				size_t dst_pitch = utility::get_packed_pitch(surface_color_format, gsl::narrow<u32>(width));
+				size_t src_pitch = utility::get_aligned_pitch(color_format, gsl::narrow<u32>(width));
+				size_t dst_pitch = utility::get_packed_pitch(color_format, gsl::narrow<u32>(width));
 
 				result[i].resize(dst_pitch * height);
 
 				// Note: MSVC + GSL doesn't support span<byte> -> span<T> for non const span atm
 				// thus manual conversion
-				switch (surface_color_format)
+				switch (color_format)
 				{
-				case Surface_color_format::a8b8g8r8:
-				case Surface_color_format::x8b8g8r8_o8b8g8r8:
-				case Surface_color_format::x8b8g8r8_z8b8g8r8:
-				case Surface_color_format::a8r8g8b8:
-				case Surface_color_format::x8r8g8b8_o8r8g8b8:
-				case Surface_color_format::x8r8g8b8_z8r8g8b8:
-				case Surface_color_format::x32:
+				case surface_color_format::a8b8g8r8:
+				case surface_color_format::x8b8g8r8_o8b8g8r8:
+				case surface_color_format::x8b8g8r8_z8b8g8r8:
+				case surface_color_format::a8r8g8b8:
+				case surface_color_format::x8r8g8b8_o8r8g8b8:
+				case surface_color_format::x8r8g8b8_z8r8g8b8:
+				case surface_color_format::x32:
 				{
 					gsl::span<be_t<u32>> dst_span{ (be_t<u32>*)result[i].data(), gsl::narrow<int>(dst_pitch * width / sizeof(be_t<u32>)) };
 					copy_pitched_src_to_dst(dst_span, gsl::as_span<const u32>(raw_src), src_pitch, width, height);
 					break;
 				}
-				case Surface_color_format::b8:
+				case surface_color_format::b8:
 				{
 					gsl::span<u8> dst_span{ (u8*)result[i].data(), gsl::narrow<int>(dst_pitch * width / sizeof(u8)) };
 					copy_pitched_src_to_dst(dst_span, gsl::as_span<const u8>(raw_src), src_pitch, width, height);
 					break;
 				}
-				case Surface_color_format::g8b8:
-				case Surface_color_format::r5g6b5:
-				case Surface_color_format::x1r5g5b5_o1r5g5b5:
-				case Surface_color_format::x1r5g5b5_z1r5g5b5:
+				case surface_color_format::g8b8:
+				case surface_color_format::r5g6b5:
+				case surface_color_format::x1r5g5b5_o1r5g5b5:
+				case surface_color_format::x1r5g5b5_z1r5g5b5:
 				{
 					gsl::span<be_t<u16>> dst_span{ (be_t<u16>*)result[i].data(), gsl::narrow<int>(dst_pitch * width / sizeof(be_t<u16>)) };
 					copy_pitched_src_to_dst(dst_span, gsl::as_span<const u16>(raw_src), src_pitch, width, height);
 					break;
 				}
 				// Note : may require some big endian swap
-				case Surface_color_format::w32z32y32x32:
+				case surface_color_format::w32z32y32x32:
 				{
 					gsl::span<u128> dst_span{ (u128*)result[i].data(), gsl::narrow<int>(dst_pitch * width / sizeof(u128)) };
 					copy_pitched_src_to_dst(dst_span, gsl::as_span<const u128>(raw_src), src_pitch, width, height);
 					break;
 				}
-				case Surface_color_format::w16z16y16x16:
+				case surface_color_format::w16z16y16x16:
 				{
 					gsl::span<u64> dst_span{ (u64*)result[i].data(), gsl::narrow<int>(dst_pitch * width / sizeof(u64)) };
 					copy_pitched_src_to_dst(dst_span, gsl::as_span<const u64>(raw_src), src_pitch, width, height);
@@ -305,7 +305,7 @@ namespace rsx
 		 */
 		template <typename... Args>
 		std::array<std::vector<gsl::byte>, 2> get_depth_stencil_data(
-			Surface_depth_format surface_depth_format, size_t width, size_t height,
+			surface_depth_format depth_format, size_t width, size_t height,
 			Args&& ...args
 			)
 		{
@@ -315,18 +315,18 @@ namespace rsx
 			size_t row_pitch = align(width * 4, 256);
 
 			download_buffer_object stencil_data = {};
-			download_buffer_object depth_data = Traits::issue_depth_download_command(std::get<1>(m_bound_depth_stencil), surface_depth_format, width, height, std::forward<Args&&>(args)...);
-			if (surface_depth_format == Surface_depth_format::z24s8)
+			download_buffer_object depth_data = Traits::issue_depth_download_command(std::get<1>(m_bound_depth_stencil), depth_format, width, height, std::forward<Args&&>(args)...);
+			if (depth_format == surface_depth_format::z24s8)
 				stencil_data = std::move(Traits::issue_stencil_download_command(std::get<1>(m_bound_depth_stencil), width, height, std::forward<Args&&>(args)...));
 
 			gsl::span<const gsl::byte> depth_buffer_raw_src = Traits::map_downloaded_buffer(depth_data, std::forward<Args&&>(args)...);
-			if (surface_depth_format == Surface_depth_format::z16)
+			if (depth_format == surface_depth_format::z16)
 			{
 				result[0].resize(width * height * 2);
 				gsl::span<u16> dest{ (u16*)result[0].data(), gsl::narrow<int>(width * height) };
 				copy_pitched_src_to_dst(dest, gsl::as_span<const u16>(depth_buffer_raw_src), row_pitch, width, height);
 			}
-			if (surface_depth_format == Surface_depth_format::z24s8)
+			if (depth_format == surface_depth_format::z24s8)
 			{
 				result[0].resize(width * height * 4);
 				gsl::span<u32> dest{ (u32*)result[0].data(), gsl::narrow<int>(width * height) };
@@ -334,7 +334,7 @@ namespace rsx
 			}
 			Traits::unmap_downloaded_buffer(depth_data, std::forward<Args&&>(args)...);
 
-			if (surface_depth_format == Surface_depth_format::z16)
+			if (depth_format == surface_depth_format::z16)
 				return result;
 
 			gsl::span<const gsl::byte> stencil_buffer_raw_src = Traits::map_downloaded_buffer(stencil_data, std::forward<Args&&>(args)...);

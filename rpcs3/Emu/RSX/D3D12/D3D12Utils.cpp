@@ -47,7 +47,7 @@ std::pair<ID3DBlob *, ID3DBlob *> compileF32toU8CS()
 }
 
 
-void D3D12GSRender::Shader::Init(ID3D12Device *device, ID3D12CommandQueue *gfxcommandqueue)
+void D3D12GSRender::shader::init(ID3D12Device *device, ID3D12CommandQueue *gfx_command_queue)
 {
 	const char *fsCode = STRINGIFY(
 		Texture2D InputTexture : register(t0); \n
@@ -143,21 +143,21 @@ void D3D12GSRender::Shader::Init(ID3D12Device *device, ID3D12CommandQueue *gfxco
 	Microsoft::WRL::ComPtr<ID3DBlob> rootSignatureBlob;
 
 	CHECK_HRESULT(wrapD3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &rootSignatureBlob, &errorBlob));
-	CHECK_HRESULT(device->CreateRootSignature(0, rootSignatureBlob->GetBufferPointer(), rootSignatureBlob->GetBufferSize(), IID_PPV_ARGS(&m_rootSignature)));
+	CHECK_HRESULT(device->CreateRootSignature(0, rootSignatureBlob->GetBufferPointer(), rootSignatureBlob->GetBufferSize(), IID_PPV_ARGS(&root_signature)));
 
-	psoDesc.pRootSignature = m_rootSignature;
+	psoDesc.pRootSignature = root_signature;
 	psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 	psoDesc.BlendState.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
 
-	CHECK_HRESULT(device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_PSO)));
+	CHECK_HRESULT(device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&pso)));
 
 	D3D12_DESCRIPTOR_HEAP_DESC textureHeapDesc = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV , 2, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE };
 	CHECK_HRESULT(
-		device->CreateDescriptorHeap(&textureHeapDesc, IID_PPV_ARGS(&m_textureDescriptorHeap))
+		device->CreateDescriptorHeap(&textureHeapDesc, IID_PPV_ARGS(&texture_descriptor_heap))
 		);
 	D3D12_DESCRIPTOR_HEAP_DESC samplerHeapDesc = { D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER , 2, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE };
 	CHECK_HRESULT(
-		device->CreateDescriptorHeap(&samplerHeapDesc, IID_PPV_ARGS(&m_samplerDescriptorHeap))
+		device->CreateDescriptorHeap(&samplerHeapDesc, IID_PPV_ARGS(&sampler_descriptor_heap))
 		);
 
 	ComPtr<ID3D12Fence> fence;
@@ -197,37 +197,37 @@ void D3D12GSRender::Shader::Init(ID3D12Device *device, ID3D12CommandQueue *gfxco
 			&CD3DX12_RESOURCE_DESC::Buffer(16 * sizeof(float)),
 			D3D12_RESOURCE_STATE_COPY_DEST,
 			nullptr,
-			IID_PPV_ARGS(&m_vertexBuffer)
+			IID_PPV_ARGS(&vertex_buffer)
 			));
 
 	D3D12_SUBRESOURCE_DATA vertexData = { reinterpret_cast<BYTE*>(quadVertex), 16 * sizeof(float), 1 };
 
-	UpdateSubresources(cmdList.Get(), m_vertexBuffer, intermediateBuffer.Get(), 0, 0, 1, &vertexData);
-	cmdList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_vertexBuffer, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER));
+	UpdateSubresources(cmdList.Get(), vertex_buffer, intermediateBuffer.Get(), 0, 0, 1, &vertexData);
+	cmdList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(vertex_buffer, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER));
 	CHECK_HRESULT(cmdList->Close());
 
-	gfxcommandqueue->ExecuteCommandLists(1, CommandListCast(cmdList.GetAddressOf()));
+	gfx_command_queue->ExecuteCommandLists(1, CommandListCast(cmdList.GetAddressOf()));
 
 	// Now wait until upload has completed
-	gfxcommandqueue->Signal(fence.Get(), 1);
+	gfx_command_queue->Signal(fence.Get(), 1);
 	WaitForSingleObjectEx(handle, INFINITE, FALSE);
 	CloseHandle(handle);
 }
 
-void D3D12GSRender::initConvertShader()
+void D3D12GSRender::init_convert_shader()
 {
 	const auto &p = compileF32toU8CS();
 	CHECK_HRESULT(
-		m_device->CreateRootSignature(0, p.second->GetBufferPointer(), p.second->GetBufferSize(), IID_PPV_ARGS(&m_convertRootSignature))
+		m_device->CreateRootSignature(0, p.second->GetBufferPointer(), p.second->GetBufferSize(), IID_PPV_ARGS(&m_convert_root_signature))
 		);
 
 	D3D12_COMPUTE_PIPELINE_STATE_DESC computePipelineStateDesc = {};
 	computePipelineStateDesc.CS.BytecodeLength = p.first->GetBufferSize();
 	computePipelineStateDesc.CS.pShaderBytecode = p.first->GetBufferPointer();
-	computePipelineStateDesc.pRootSignature = m_convertRootSignature;
+	computePipelineStateDesc.pRootSignature = m_convert_root_signature;
 
 	CHECK_HRESULT(
-		m_device->CreateComputePipelineState(&computePipelineStateDesc, IID_PPV_ARGS(&m_convertPSO))
+		m_device->CreateComputePipelineState(&computePipelineStateDesc, IID_PPV_ARGS(&m_convert_pso))
 		);
 
 	p.first->Release();

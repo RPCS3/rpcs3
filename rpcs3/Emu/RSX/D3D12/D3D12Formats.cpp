@@ -262,99 +262,99 @@ D3D12_FILTER get_texture_filter(u8 min_filter, u8 mag_filter)
 	return D3D12_ENCODE_BASIC_FILTER(min, mag, mip, D3D12_FILTER_REDUCTION_TYPE_STANDARD);
 }
 
-D3D12_PRIMITIVE_TOPOLOGY get_primitive_topology(Primitive_type draw_mode)
+D3D12_PRIMITIVE_TOPOLOGY get_primitive_topology(rsx::primitive_type draw_mode)
 {
 	switch (draw_mode)
 	{
-	case Primitive_type::points: return D3D_PRIMITIVE_TOPOLOGY_POINTLIST;
-	case Primitive_type::lines: return D3D_PRIMITIVE_TOPOLOGY_LINELIST;
-	case Primitive_type::line_loop: return D3D_PRIMITIVE_TOPOLOGY_LINELIST_ADJ;
-	case Primitive_type::line_strip: return D3D_PRIMITIVE_TOPOLOGY_LINESTRIP;
-	case Primitive_type::triangles: return D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-	case Primitive_type::triangle_strip: return D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
-	case Primitive_type::triangle_fan: return D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-	case Primitive_type::quads: return D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-	case Primitive_type::quad_strip: return D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-	case Primitive_type::polygon: return D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	case rsx::primitive_type::points: return D3D_PRIMITIVE_TOPOLOGY_POINTLIST;
+	case rsx::primitive_type::lines: return D3D_PRIMITIVE_TOPOLOGY_LINELIST;
+	case rsx::primitive_type::line_loop: return D3D_PRIMITIVE_TOPOLOGY_LINELIST_ADJ;
+	case rsx::primitive_type::line_strip: return D3D_PRIMITIVE_TOPOLOGY_LINESTRIP;
+	case rsx::primitive_type::triangles: return D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	case rsx::primitive_type::triangle_strip: return D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
+	case rsx::primitive_type::triangle_fan: return D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	case rsx::primitive_type::quads: return D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	case rsx::primitive_type::quad_strip: return D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	case rsx::primitive_type::polygon: return D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 	}
 	throw EXCEPTION("Invalid draw mode (0x%x)", draw_mode);
 }
 
-D3D12_PRIMITIVE_TOPOLOGY_TYPE get_primitive_topology_type(Primitive_type draw_mode)
+D3D12_PRIMITIVE_TOPOLOGY_TYPE get_primitive_topology_type(rsx::primitive_type draw_mode)
 {
 	switch (draw_mode)
 	{
-	case Primitive_type::points: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
-	case Primitive_type::lines: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
-	case Primitive_type::line_strip: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
-	case Primitive_type::triangles: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-	case Primitive_type::triangle_strip: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-	case Primitive_type::triangle_fan: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-	case Primitive_type::quads: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-	case Primitive_type::quad_strip: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-	case Primitive_type::polygon: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-	case Primitive_type::line_loop: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
+	case rsx::primitive_type::points: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
+	case rsx::primitive_type::lines: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
+	case rsx::primitive_type::line_strip: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
+	case rsx::primitive_type::triangles: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+	case rsx::primitive_type::triangle_strip: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+	case rsx::primitive_type::triangle_fan: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+	case rsx::primitive_type::quads: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+	case rsx::primitive_type::quad_strip: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+	case rsx::primitive_type::polygon: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+	case rsx::primitive_type::line_loop: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
 	}
 	throw EXCEPTION("Invalid or unsupported draw mode (0x%x)", draw_mode);
 }
 
-DXGI_FORMAT get_color_surface_format(Surface_color_format format)
+DXGI_FORMAT get_color_surface_format(rsx::surface_color_format format)
 {
 	switch (format)
 	{
-	case Surface_color_format::r5g6b5: return DXGI_FORMAT_B5G6R5_UNORM;
-	case Surface_color_format::x8r8g8b8_o8r8g8b8:
-	case Surface_color_format::x8r8g8b8_z8r8g8b8:
-	case Surface_color_format::x8b8g8r8_o8b8g8r8:
-	case Surface_color_format::x8b8g8r8_z8b8g8r8:
+	case rsx::surface_color_format::r5g6b5: return DXGI_FORMAT_B5G6R5_UNORM;
+	case rsx::surface_color_format::x8r8g8b8_o8r8g8b8:
+	case rsx::surface_color_format::x8r8g8b8_z8r8g8b8:
+	case rsx::surface_color_format::x8b8g8r8_o8b8g8r8:
+	case rsx::surface_color_format::x8b8g8r8_z8b8g8r8:
 			return DXGI_FORMAT_B8G8R8X8_UNORM; //BIT.TRIP Runner2 use this
-	case Surface_color_format::a8b8g8r8:
-	case Surface_color_format::a8r8g8b8: return DXGI_FORMAT_R8G8B8A8_UNORM;
-	case Surface_color_format::b8: return DXGI_FORMAT_R8_UNORM;
-	case Surface_color_format::g8b8: return DXGI_FORMAT_R8G8_UNORM;
-	case Surface_color_format::w16z16y16x16: return DXGI_FORMAT_R16G16B16A16_FLOAT;
-	case Surface_color_format::w32z32y32x32: return DXGI_FORMAT_R32G32B32A32_FLOAT;
-	case Surface_color_format::x32: return DXGI_FORMAT_R32_FLOAT;
+	case rsx::surface_color_format::a8b8g8r8:
+	case rsx::surface_color_format::a8r8g8b8: return DXGI_FORMAT_R8G8B8A8_UNORM;
+	case rsx::surface_color_format::b8: return DXGI_FORMAT_R8_UNORM;
+	case rsx::surface_color_format::g8b8: return DXGI_FORMAT_R8G8_UNORM;
+	case rsx::surface_color_format::w16z16y16x16: return DXGI_FORMAT_R16G16B16A16_FLOAT;
+	case rsx::surface_color_format::w32z32y32x32: return DXGI_FORMAT_R32G32B32A32_FLOAT;
+	case rsx::surface_color_format::x32: return DXGI_FORMAT_R32_FLOAT;
 	}
 	throw EXCEPTION("Invalid format (0x%x)", format);
 }
 
-DXGI_FORMAT get_depth_stencil_surface_format(Surface_depth_format format)
+DXGI_FORMAT get_depth_stencil_surface_format(rsx::surface_depth_format format)
 {
 	switch (format)
 	{
-	case Surface_depth_format::z16: return DXGI_FORMAT_D16_UNORM;
-	case Surface_depth_format::z24s8: return DXGI_FORMAT_D24_UNORM_S8_UINT;
+	case rsx::surface_depth_format::z16: return DXGI_FORMAT_D16_UNORM;
+	case rsx::surface_depth_format::z24s8: return DXGI_FORMAT_D24_UNORM_S8_UINT;
 	}
 	throw EXCEPTION("Invalid format (0x%x)", format);
 }
 
-DXGI_FORMAT get_depth_stencil_surface_clear_format(Surface_depth_format format)
+DXGI_FORMAT get_depth_stencil_surface_clear_format(rsx::surface_depth_format format)
 {
 	switch (format)
 	{
-	case Surface_depth_format::z16: return DXGI_FORMAT_D16_UNORM;
-	case Surface_depth_format::z24s8: return DXGI_FORMAT_D24_UNORM_S8_UINT;
+	case rsx::surface_depth_format::z16: return DXGI_FORMAT_D16_UNORM;
+	case rsx::surface_depth_format::z24s8: return DXGI_FORMAT_D24_UNORM_S8_UINT;
 	}
 	throw EXCEPTION("Invalid format (0x%x)", format);
 }
 
-DXGI_FORMAT get_depth_stencil_typeless_surface_format(Surface_depth_format format)
+DXGI_FORMAT get_depth_stencil_typeless_surface_format(rsx::surface_depth_format format)
 {
 	switch (format)
 	{
-	case Surface_depth_format::z16: return DXGI_FORMAT_R16_TYPELESS;
-	case Surface_depth_format::z24s8: return DXGI_FORMAT_R24G8_TYPELESS;
+	case rsx::surface_depth_format::z16: return DXGI_FORMAT_R16_TYPELESS;
+	case rsx::surface_depth_format::z24s8: return DXGI_FORMAT_R24G8_TYPELESS;
 	}
 	throw EXCEPTION("Invalid format (0x%x)", format);
 }
 
-DXGI_FORMAT get_depth_samplable_surface_format(Surface_depth_format format)
+DXGI_FORMAT get_depth_samplable_surface_format(rsx::surface_depth_format format)
 {
 	switch (format)
 	{
-	case Surface_depth_format::z16: return DXGI_FORMAT_R16_UNORM;
-	case Surface_depth_format::z24s8: return DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+	case rsx::surface_depth_format::z16: return DXGI_FORMAT_R16_UNORM;
+	case rsx::surface_depth_format::z24s8: return DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
 	}
 	throw EXCEPTION("Invalid format (0x%x)", format);
 }
@@ -370,21 +370,21 @@ BOOL get_front_face_ccw(u32 ffv)
 	throw EXCEPTION("Invalid front face value (0x%x)", ffv);
 }
 
-DXGI_FORMAT get_index_type(Index_array_type index_type)
+DXGI_FORMAT get_index_type(rsx::index_array_type index_type)
 {
 	switch (index_type)
 	{
-	case Index_array_type::unsigned_16b: return DXGI_FORMAT_R16_UINT;
-	case Index_array_type::unsigned_32b: return DXGI_FORMAT_R32_UINT;
+	case rsx::index_array_type::u16: return DXGI_FORMAT_R16_UINT;
+	case rsx::index_array_type::u32: return DXGI_FORMAT_R32_UINT;
 	}
 	throw EXCEPTION("Invalid index_type (0x%x)", index_type);
 }
 
-DXGI_FORMAT get_vertex_attribute_format(Vertex_base_type type, u8 size)
+DXGI_FORMAT get_vertex_attribute_format(rsx::vertex_base_type type, u8 size)
 {
 	switch (type)
 	{
-	case Vertex_base_type::s1:
+	case rsx::vertex_base_type::s1:
 	{
 		switch (size)
 		{
@@ -395,7 +395,7 @@ DXGI_FORMAT get_vertex_attribute_format(Vertex_base_type type, u8 size)
 		}
 		break;
 	}
-	case Vertex_base_type::f:
+	case rsx::vertex_base_type::f:
 	{
 		switch (size)
 		{
@@ -406,7 +406,7 @@ DXGI_FORMAT get_vertex_attribute_format(Vertex_base_type type, u8 size)
 		}
 		break;
 	}
-	case Vertex_base_type::sf:
+	case rsx::vertex_base_type::sf:
 	{
 		switch (size)
 		{
@@ -417,7 +417,7 @@ DXGI_FORMAT get_vertex_attribute_format(Vertex_base_type type, u8 size)
 		}
 		break;
 	}
-	case Vertex_base_type::ub:
+	case rsx::vertex_base_type::ub:
 	{
 		switch (size)
 		{
@@ -428,7 +428,7 @@ DXGI_FORMAT get_vertex_attribute_format(Vertex_base_type type, u8 size)
 		}
 		break;
 	}
-	case Vertex_base_type::s32k:
+	case rsx::vertex_base_type::s32k:
 	{
 		switch (size)
 		{
@@ -439,7 +439,7 @@ DXGI_FORMAT get_vertex_attribute_format(Vertex_base_type type, u8 size)
 		}
 		break;
 	}
-	case Vertex_base_type::cmp:
+	case rsx::vertex_base_type::cmp:
 	{
 		switch (size)
 		{
@@ -450,7 +450,7 @@ DXGI_FORMAT get_vertex_attribute_format(Vertex_base_type type, u8 size)
 		}
 		break;
 	}
-	case Vertex_base_type::ub256:
+	case rsx::vertex_base_type::ub256:
 	{
 		switch (size)
 		{

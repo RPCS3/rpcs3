@@ -15,15 +15,14 @@ extern u64 get_system_time();
 
 struct frame_capture_data
 {
-
 	struct draw_state
 	{
 		std::string name;
 		std::pair<std::string, std::string> programs;
 		size_t width = 0, height = 0;
-		Surface_color_format surface_color_format;
+		rsx::surface_color_format color_format;
 		std::array<std::vector<gsl::byte>, 4> color_buffer;
-		Surface_depth_format surface_depth_format;
+		rsx::surface_depth_format depth_format;
 		std::array<std::vector<gsl::byte>, 2> depth_stencil;
 	};
 	std::vector<std::pair<u32, u32> > command_queue;
@@ -145,7 +144,7 @@ namespace rsx
 		static std::string path_to_root();
 	};
 
-	u32 get_vertex_type_size_on_host(Vertex_base_type type, u32 size);
+	u32 get_vertex_type_size_on_host(vertex_base_type type, u32 size);
 
 	u32 get_address(u32 offset, u32 location);
 
@@ -164,9 +163,9 @@ namespace rsx
 	{
 		u8 log2height;
 		u8 log2width;
-		Surface_antialiasing antialias;
-		Surface_depth_format depth_format;
-		Surface_color_format color_format;
+		surface_antialiasing antialias;
+		surface_depth_format depth_format;
+		surface_color_format color_format;
 
 		u32 width;
 		u32 height;
@@ -192,7 +191,7 @@ namespace rsx
 		u16 frequency = 0;
 		u8 stride = 0;
 		u8 size = 0;
-		Vertex_base_type type = Vertex_base_type::f;
+		vertex_base_type type = vertex_base_type::f;
 
 		void unpack_array(u32 data_array_format)
 		{
@@ -201,6 +200,13 @@ namespace rsx
 			size = (data_array_format >> 4) & 0xf;
 			type = to_vertex_base_type(data_array_format & 0xf);
 		}
+	};
+
+	enum class draw_command
+	{
+		array,
+		inlined_array,
+		indexed,
 	};
 
 	class thread : public named_thread_t
@@ -257,6 +263,7 @@ namespace rsx
 
 		bool capture_current_frame = false;
 		void capture_frame(const std::string &name);
+
 	public:
 		u32 ioAddress, ioSize;
 		int flip_status;
@@ -272,17 +279,11 @@ namespace rsx
 		u32 ctxt_addr;
 		u32 report_main_addr;
 		u32 label_addr;
-		enum class Draw_command
-		{
-			draw_command_array,
-			draw_command_inlined_array,
-			draw_command_indexed,
-		} draw_command;
-		Primitive_type draw_mode;
+		rsx::draw_command draw_command;
+		primitive_type draw_mode;
 
 		u32 local_mem_addr, main_mem_addr;
 		bool strict_ordering[0x1000];
-
 
 		bool draw_inline_vertex_array;
 		std::vector<u32> inline_vertex_array;
@@ -309,7 +310,8 @@ namespace rsx
 		std::set<u32> m_used_gcm_commands;
 
 	protected:
-		virtual ~thread() {}
+		thread();
+		virtual ~thread();
 
 		virtual void on_task() override;
 
@@ -324,6 +326,27 @@ namespace rsx
 		virtual bool do_method(u32 cmd, u32 value) { return false; }
 		virtual void flip(int buffer) = 0;
 		virtual u64 timestamp() const;
+		virtual bool on_access_violation(u32 address, bool is_writing) { return false; }
+
+	private:
+		std::mutex m_mtx_task;
+
+		struct internal_task_entry
+		{
+			std::function<bool()> callback;
+			std::promise<void> promise;
+
+			internal_task_entry(std::function<bool()> callback) : callback(callback)
+			{
+			}
+		};
+
+		std::deque<internal_task_entry> m_internal_tasks;
+		void do_internal_task();
+
+	public:
+		std::future<void> add_internal_task(std::function<bool()> callback);
+		void invoke(std::function<bool()> callback);
 
 		/**
 		 * Fill buffer with 4x4 scale offset matrix.
@@ -362,6 +385,7 @@ namespace rsx
 		};
 
 		virtual std::pair<std::string, std::string> get_programs() const { return std::make_pair("", ""); };
+
 	public:
 		void reset();
 		void init(const u32 ioAddress, const u32 ioSize, const u32 ctrlAddress, const u32 localAddress);

@@ -58,16 +58,14 @@ void wait_for_command_queue(ID3D12Device *device, ID3D12CommandQueue *command_qu
 }
 }
 
-void D3D12GSRender::Shader::Release()
+void D3D12GSRender::shader::release()
 {
-	m_PSO->Release();
-	m_rootSignature->Release();
-	m_vertexBuffer->Release();
-	m_textureDescriptorHeap->Release();
-	m_samplerDescriptorHeap->Release();
+	pso->Release();
+	root_signature->Release();
+	vertex_buffer->Release();
+	texture_descriptor_heap->Release();
+	sampler_descriptor_heap->Release();
 }
-
-extern std::function<bool(u32 addr)> gfxHandler;
 
 bool D3D12GSRender::invalidate_address(u32 addr)
 {
@@ -89,12 +87,6 @@ D3D12DLLManagement::~D3D12DLLManagement()
 D3D12GSRender::D3D12GSRender()
 	: GSRender(frame_type::DX12), m_d3d12_lib(), m_current_pso({})
 {
-	gfxHandler = [this](u32 addr) {
-		bool result = invalidate_address(addr);
-		if (result)
-				LOG_WARNING(RSX, "Reporting Cell writing to 0x%x", addr);
-		return result;
-	};
 	if (rpcs3::config.rsx.d3d12.debug_output.value())
 	{
 		Microsoft::WRL::ComPtr<ID3D12Debug> debugInterface;
@@ -113,10 +105,10 @@ D3D12GSRender::D3D12GSRender()
 	D3D12_COMMAND_QUEUE_DESC graphic_queue_desc = { D3D12_COMMAND_LIST_TYPE_DIRECT };
 	CHECK_HRESULT(m_device->CreateCommandQueue(&graphic_queue_desc, IID_PPV_ARGS(m_command_queue.GetAddressOf())));
 
-	g_descriptor_stride_srv_cbv_uav = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-	g_descriptor_stride_dsv = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
-	g_descriptor_stride_rtv = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-	g_descriptor_stride_samplers = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
+	m_descriptor_stride_srv_cbv_uav = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	m_descriptor_stride_dsv = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+	m_descriptor_stride_rtv = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+	m_descriptor_stride_samplers = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
 
 	// Create swap chain and put them in a descriptor heap as rendertarget
 	DXGI_SWAP_CHAIN_DESC swap_chain = {};
@@ -177,8 +169,8 @@ D3D12GSRender::D3D12GSRender()
 	m_per_frame_storage[1].init(m_device.Get());
 	m_per_frame_storage[1].reset();
 
-	initConvertShader();
-	m_output_scaling_pass.Init(m_device.Get(), m_command_queue.Get());
+	init_convert_shader();
+	m_output_scaling_pass.init(m_device.Get(), m_command_queue.Get());
 
 	CHECK_HRESULT(
 		m_device->CreateCommittedResource(
@@ -204,13 +196,12 @@ D3D12GSRender::~D3D12GSRender()
 
 	m_texture_cache.unprotect_all();
 
-	gfxHandler = [this](u32) { return false; };
 	m_dummy_texture->Release();
-	m_convertPSO->Release();
-	m_convertRootSignature->Release();
+	m_convert_pso->Release();
+	m_convert_root_signature->Release();
 	m_per_frame_storage[0].release();
 	m_per_frame_storage[1].release();
-	m_output_scaling_pass.Release();
+	m_output_scaling_pass.release();
 
 	release_d2d_structures();
 }
@@ -246,7 +237,7 @@ void D3D12GSRender::end()
 	prepare_render_targets(get_current_resource_storage().command_list.Get());
 
 	std::chrono::time_point<std::chrono::system_clock> rtt_duration_end = std::chrono::system_clock::now();
-	m_timers.m_prepare_rtt_duration += std::chrono::duration_cast<std::chrono::microseconds>(rtt_duration_end - rtt_duration_start).count();
+	m_timers.prepare_rtt_duration += std::chrono::duration_cast<std::chrono::microseconds>(rtt_duration_end - rtt_duration_start).count();
 
 	std::chrono::time_point<std::chrono::system_clock> vertex_index_duration_start = std::chrono::system_clock::now();
 
@@ -255,12 +246,12 @@ void D3D12GSRender::end()
 	std::tie(indexed_draw, vertex_count) = upload_and_set_vertex_index_data(get_current_resource_storage().command_list.Get());
 
 	std::chrono::time_point<std::chrono::system_clock> vertex_index_duration_end = std::chrono::system_clock::now();
-	m_timers.m_vertex_index_duration += std::chrono::duration_cast<std::chrono::microseconds>(vertex_index_duration_end - vertex_index_duration_start).count();
+	m_timers.vertex_index_duration += std::chrono::duration_cast<std::chrono::microseconds>(vertex_index_duration_end - vertex_index_duration_start).count();
 
 	std::chrono::time_point<std::chrono::system_clock> program_load_start = std::chrono::system_clock::now();
 	load_program();
 	std::chrono::time_point<std::chrono::system_clock> program_load_end = std::chrono::system_clock::now();
-	m_timers.m_program_load_duration += std::chrono::duration_cast<std::chrono::microseconds>(program_load_end - program_load_start).count();
+	m_timers.program_load_duration += std::chrono::duration_cast<std::chrono::microseconds>(program_load_end - program_load_start).count();
 
 	get_current_resource_storage().command_list->SetGraphicsRootSignature(m_root_signatures[std::get<2>(m_current_pso)].Get());
 	get_current_resource_storage().command_list->OMSetStencilRef(rsx::method_registers[NV4097_SET_STENCIL_FUNC_REF]);
@@ -274,7 +265,7 @@ void D3D12GSRender::end()
 	upload_and_bind_fragment_shader_constants(currentDescriptorIndex + 2);
 
 	std::chrono::time_point<std::chrono::system_clock> constants_duration_end = std::chrono::system_clock::now();
-	m_timers.m_constants_duration += std::chrono::duration_cast<std::chrono::microseconds>(constants_duration_end - constants_duration_start).count();
+	m_timers.constants_duration += std::chrono::duration_cast<std::chrono::microseconds>(constants_duration_end - constants_duration_start).count();
 
 	get_current_resource_storage().command_list->SetPipelineState(std::get<0>(m_current_pso).Get());
 
@@ -286,11 +277,11 @@ void D3D12GSRender::end()
 
 		get_current_resource_storage().command_list->SetGraphicsRootDescriptorTable(0,
 			CD3DX12_GPU_DESCRIPTOR_HANDLE(get_current_resource_storage().descriptors_heap->GetGPUDescriptorHandleForHeapStart())
-			.Offset((INT)currentDescriptorIndex, g_descriptor_stride_srv_cbv_uav)
+			.Offset((INT)currentDescriptorIndex, m_descriptor_stride_srv_cbv_uav)
 			);
 		get_current_resource_storage().command_list->SetGraphicsRootDescriptorTable(1,
 			CD3DX12_GPU_DESCRIPTOR_HANDLE(get_current_resource_storage().sampler_descriptor_heap[get_current_resource_storage().sampler_descriptors_heap_index]->GetGPUDescriptorHandleForHeapStart())
-			.Offset((INT)get_current_resource_storage().current_sampler_index, g_descriptor_stride_samplers)
+			.Offset((INT)get_current_resource_storage().current_sampler_index, m_descriptor_stride_samplers)
 			);
 
 		get_current_resource_storage().current_sampler_index += std::get<2>(m_current_pso);
@@ -301,13 +292,13 @@ void D3D12GSRender::end()
 		get_current_resource_storage().command_list->SetDescriptorHeaps(1, get_current_resource_storage().descriptors_heap.GetAddressOf());
 		get_current_resource_storage().command_list->SetGraphicsRootDescriptorTable(0,
 			CD3DX12_GPU_DESCRIPTOR_HANDLE(get_current_resource_storage().descriptors_heap->GetGPUDescriptorHandleForHeapStart())
-			.Offset((INT)currentDescriptorIndex, g_descriptor_stride_srv_cbv_uav)
+			.Offset((INT)currentDescriptorIndex, m_descriptor_stride_srv_cbv_uav)
 			);
 		get_current_resource_storage().descriptors_heap_index += 3;
 	}
 
 	std::chrono::time_point<std::chrono::system_clock> texture_duration_end = std::chrono::system_clock::now();
-	m_timers.m_texture_duration += std::chrono::duration_cast<std::chrono::microseconds>(texture_duration_end - texture_duration_start).count();
+	m_timers.texture_duration += std::chrono::duration_cast<std::chrono::microseconds>(texture_duration_end - texture_duration_start).count();
 	set_rtt_and_ds(get_current_resource_storage().command_list.Get());
 
 	int clip_w = rsx::method_registers[NV4097_SET_SURFACE_CLIP_HORIZONTAL] >> 16;
@@ -334,8 +325,8 @@ void D3D12GSRender::end()
 		get_current_resource_storage().command_list->DrawInstanced((UINT)vertex_count, 1, 0, 0);
 
 	std::chrono::time_point<std::chrono::system_clock> end_duration = std::chrono::system_clock::now();
-	m_timers.m_draw_calls_duration += std::chrono::duration_cast<std::chrono::microseconds>(end_duration - start_duration).count();
-	m_timers.m_draw_calls_count++;
+	m_timers.draw_calls_duration += std::chrono::duration_cast<std::chrono::microseconds>(end_duration - start_duration).count();
+	m_timers.draw_calls_count++;
 
 	if (rpcs3::config.rsx.d3d12.debug_output.value())
 	{
@@ -348,17 +339,17 @@ void D3D12GSRender::end()
 
 namespace
 {
-bool is_flip_surface_in_global_memory(Surface_target color_target)
+bool is_flip_surface_in_global_memory(rsx::surface_target color_target)
 {
 	switch (color_target)
 	{
-	case Surface_target::surface_a:
-	case Surface_target::surface_b:
-	case Surface_target::surfaces_a_b:
-	case Surface_target::surfaces_a_b_c:
-	case Surface_target::surfaces_a_b_c_d:
+	case rsx::surface_target::surface_a:
+	case rsx::surface_target::surface_b:
+	case rsx::surface_target::surfaces_a_b:
+	case rsx::surface_target::surfaces_a_b_c:
+	case rsx::surface_target::surfaces_a_b_c_d:
 		return true;
-	case Surface_target::none:
+	case rsx::surface_target::none:
 		return false;
 	}
 	throw EXCEPTION("Wrong color_target");
@@ -370,7 +361,7 @@ void D3D12GSRender::flip(int buffer)
 	ID3D12Resource *resource_to_flip;
 	float viewport_w, viewport_h;
 
-	if (!is_flip_surface_in_global_memory(to_surface_target(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET])))
+	if (!is_flip_surface_in_global_memory(rsx::to_surface_target(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET])))
 	{
 		resource_storage &storage = get_current_resource_storage();
 		assert(storage.ram_framebuffer == nullptr);
@@ -451,15 +442,15 @@ void D3D12GSRender::flip(int buffer)
 		(LONG)m_backbuffer[m_swap_chain->GetCurrentBackBufferIndex()]->GetDesc().Height,
 	};
 	get_current_resource_storage().command_list->RSSetScissorRects(1, &box);
-	get_current_resource_storage().command_list->SetGraphicsRootSignature(m_output_scaling_pass.m_rootSignature);
-	get_current_resource_storage().command_list->SetPipelineState(m_output_scaling_pass.m_PSO);
+	get_current_resource_storage().command_list->SetGraphicsRootSignature(m_output_scaling_pass.root_signature);
+	get_current_resource_storage().command_list->SetPipelineState(m_output_scaling_pass.pso);
 
 	D3D12_SHADER_RESOURCE_VIEW_DESC shader_resource_view_desc = {};
 	// FIXME: Not always true
 	shader_resource_view_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	shader_resource_view_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 	shader_resource_view_desc.Texture2D.MipLevels = 1;
-	if (is_flip_surface_in_global_memory(to_surface_target(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET])))
+	if (is_flip_surface_in_global_memory(rsx::to_surface_target(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET])))
 		shader_resource_view_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 	else
 		shader_resource_view_desc.Shader4ComponentMapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(
@@ -469,7 +460,7 @@ void D3D12GSRender::flip(int buffer)
 			D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_0
 			);
 	m_device->CreateShaderResourceView(resource_to_flip, &shader_resource_view_desc,
-		CD3DX12_CPU_DESCRIPTOR_HANDLE(m_output_scaling_pass.m_textureDescriptorHeap->GetCPUDescriptorHandleForHeapStart()).Offset(m_swap_chain->GetCurrentBackBufferIndex(), g_descriptor_stride_srv_cbv_uav));
+		CD3DX12_CPU_DESCRIPTOR_HANDLE(m_output_scaling_pass.texture_descriptor_heap->GetCPUDescriptorHandleForHeapStart()).Offset(m_swap_chain->GetCurrentBackBufferIndex(), m_descriptor_stride_srv_cbv_uav));
 
 	D3D12_SAMPLER_DESC sampler_desc = {};
 	sampler_desc.Filter = D3D12_FILTER_MIN_MAG_LINEAR_MIP_POINT;
@@ -477,24 +468,24 @@ void D3D12GSRender::flip(int buffer)
 	sampler_desc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
 	sampler_desc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
 	m_device->CreateSampler(&sampler_desc,
-		CD3DX12_CPU_DESCRIPTOR_HANDLE(m_output_scaling_pass.m_samplerDescriptorHeap->GetCPUDescriptorHandleForHeapStart()).Offset(m_swap_chain->GetCurrentBackBufferIndex(), g_descriptor_stride_samplers));
+		CD3DX12_CPU_DESCRIPTOR_HANDLE(m_output_scaling_pass.sampler_descriptor_heap->GetCPUDescriptorHandleForHeapStart()).Offset(m_swap_chain->GetCurrentBackBufferIndex(), m_descriptor_stride_samplers));
 
 	ID3D12DescriptorHeap *descriptors_heaps[] =
 	{
-		m_output_scaling_pass.m_textureDescriptorHeap,
-		m_output_scaling_pass.m_samplerDescriptorHeap
+		m_output_scaling_pass.texture_descriptor_heap,
+		m_output_scaling_pass.sampler_descriptor_heap
 	};
 	get_current_resource_storage().command_list->SetDescriptorHeaps(2, descriptors_heaps);
 	get_current_resource_storage().command_list->SetGraphicsRootDescriptorTable(0,
-		CD3DX12_GPU_DESCRIPTOR_HANDLE(m_output_scaling_pass.m_textureDescriptorHeap->GetGPUDescriptorHandleForHeapStart()).Offset(m_swap_chain->GetCurrentBackBufferIndex(), g_descriptor_stride_srv_cbv_uav));
+		CD3DX12_GPU_DESCRIPTOR_HANDLE(m_output_scaling_pass.texture_descriptor_heap->GetGPUDescriptorHandleForHeapStart()).Offset(m_swap_chain->GetCurrentBackBufferIndex(), m_descriptor_stride_srv_cbv_uav));
 	get_current_resource_storage().command_list->SetGraphicsRootDescriptorTable(1,
-		CD3DX12_GPU_DESCRIPTOR_HANDLE(m_output_scaling_pass.m_samplerDescriptorHeap->GetGPUDescriptorHandleForHeapStart()).Offset(m_swap_chain->GetCurrentBackBufferIndex(), g_descriptor_stride_samplers));
+		CD3DX12_GPU_DESCRIPTOR_HANDLE(m_output_scaling_pass.sampler_descriptor_heap->GetGPUDescriptorHandleForHeapStart()).Offset(m_swap_chain->GetCurrentBackBufferIndex(), m_descriptor_stride_samplers));
 
 	get_current_resource_storage().command_list->OMSetRenderTargets(1,
 		&CD3DX12_CPU_DESCRIPTOR_HANDLE(m_backbuffer_descriptor_heap[m_swap_chain->GetCurrentBackBufferIndex()]->GetCPUDescriptorHandleForHeapStart()),
 		true, nullptr);
 	D3D12_VERTEX_BUFFER_VIEW vertex_buffer_view = {};
-	vertex_buffer_view.BufferLocation = m_output_scaling_pass.m_vertexBuffer->GetGPUVirtualAddress();
+	vertex_buffer_view.BufferLocation = m_output_scaling_pass.vertex_buffer->GetGPUVirtualAddress();
 	vertex_buffer_view.StrideInBytes = 4 * sizeof(float);
 	vertex_buffer_view.SizeInBytes = 16 * sizeof(float);
 	get_current_resource_storage().command_list->IASetVertexBuffers(0, 1, &vertex_buffer_view);
@@ -504,7 +495,7 @@ void D3D12GSRender::flip(int buffer)
 
 	if (!rpcs3::config.rsx.d3d12.overlay.value())
 		get_current_resource_storage().command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_backbuffer[m_swap_chain->GetCurrentBackBufferIndex()].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
-	if (is_flip_surface_in_global_memory(to_surface_target(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET])) && resource_to_flip != nullptr)
+	if (is_flip_surface_in_global_memory(rsx::to_surface_target(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET])) && resource_to_flip != nullptr)
 		get_current_resource_storage().command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(resource_to_flip, D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET));
 	CHECK_HRESULT(get_current_resource_storage().command_list->Close());
 	m_command_queue->ExecuteCommandLists(1, (ID3D12CommandList**)get_current_resource_storage().command_list.GetAddressOf());
@@ -549,20 +540,36 @@ void D3D12GSRender::flip(int buffer)
 
 
 	std::chrono::time_point<std::chrono::system_clock> flip_end = std::chrono::system_clock::now();
-	m_timers.m_flip_duration += std::chrono::duration_cast<std::chrono::microseconds>(flip_end - flip_start).count();
+	m_timers.flip_duration += std::chrono::duration_cast<std::chrono::microseconds>(flip_end - flip_start).count();
+}
+
+bool D3D12GSRender::on_access_violation(u32 address, bool is_writing)
+{
+	if (!is_writing)
+	{
+		return false;
+	}
+
+	if (invalidate_address(address))
+	{
+		LOG_WARNING(RSX, "Reporting Cell writing to 0x%x", address);
+		return true;
+	}
+
+	return false;
 }
 
 void D3D12GSRender::reset_timer()
 {
-	m_timers.m_draw_calls_count = 0;
-	m_timers.m_draw_calls_duration = 0;
-	m_timers.m_prepare_rtt_duration = 0;
-	m_timers.m_vertex_index_duration = 0;
-	m_timers.m_buffer_upload_size = 0;
-	m_timers.m_program_load_duration = 0;
-	m_timers.m_constants_duration = 0;
-	m_timers.m_texture_duration = 0;
-	m_timers.m_flip_duration = 0;
+	m_timers.draw_calls_count = 0;
+	m_timers.draw_calls_duration = 0;
+	m_timers.prepare_rtt_duration = 0;
+	m_timers.vertex_index_duration = 0;
+	m_timers.buffer_upload_size = 0;
+	m_timers.program_load_duration = 0;
+	m_timers.constants_duration = 0;
+	m_timers.texture_duration = 0;
+	m_timers.flip_duration = 0;
 }
 
 resource_storage& D3D12GSRender::get_current_resource_storage()

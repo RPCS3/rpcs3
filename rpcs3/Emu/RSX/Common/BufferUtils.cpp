@@ -50,12 +50,12 @@ void write_vertex_array_data_to_buffer(void *buffer, u32 first, u32 count, size_
 
 		switch (vertex_array_desc.type)
 		{
-		case Vertex_base_type::ub:
+		case rsx::vertex_base_type::ub:
 			memcpy(dst, src, vertex_array_desc.size);
 			break;
 
-		case Vertex_base_type::s1:
-		case Vertex_base_type::sf:
+		case rsx::vertex_base_type::s1:
+		case rsx::vertex_base_type::sf:
 		{
 			auto* c_src = (const be_t<u16>*)src;
 			u16* c_dst = (u16*)dst;
@@ -69,9 +69,9 @@ void write_vertex_array_data_to_buffer(void *buffer, u32 first, u32 count, size_
 			break;
 		}
 
-		case Vertex_base_type::f:
-		case Vertex_base_type::s32k:
-		case Vertex_base_type::ub256:
+		case rsx::vertex_base_type::f:
+		case rsx::vertex_base_type::s32k:
+		case rsx::vertex_base_type::ub256:
 		{
 			auto* c_src = (const be_t<u32>*)src;
 			u32* c_dst = (u32*)dst;
@@ -82,7 +82,7 @@ void write_vertex_array_data_to_buffer(void *buffer, u32 first, u32 count, size_
 			}
 			break;
 		}
-		case Vertex_base_type::cmp:
+		case rsx::vertex_base_type::cmp:
 		{
 			auto* c_src = (const be_t<u32>*)src;
 			const auto& decoded_vector = decode_cmp_vector(*c_src);
@@ -244,21 +244,21 @@ std::tuple<T, T> expand_indexed_quads(gsl::span<to_be_t<const T>> src, gsl::span
 }
 
 // Only handle quads and triangle fan now
-bool is_primitive_native(Primitive_type m_draw_mode)
+bool is_primitive_native(rsx::primitive_type draw_mode)
 {
-	switch (m_draw_mode)
+	switch (draw_mode)
 	{
-	case Primitive_type::points:
-	case Primitive_type::lines:
-	case Primitive_type::line_loop:
-	case Primitive_type::line_strip:
-	case Primitive_type::triangles:
-	case Primitive_type::triangle_strip:
-	case Primitive_type::quad_strip:
+	case rsx::primitive_type::points:
+	case rsx::primitive_type::lines:
+	case rsx::primitive_type::line_loop:
+	case rsx::primitive_type::line_strip:
+	case rsx::primitive_type::triangles:
+	case rsx::primitive_type::triangle_strip:
+	case rsx::primitive_type::quad_strip:
 		return true;
-	case Primitive_type::polygon:
-	case Primitive_type::triangle_fan:
-	case Primitive_type::quads:
+	case rsx::primitive_type::polygon:
+	case rsx::primitive_type::triangle_fan:
+	case rsx::primitive_type::quads:
 		return false;
 	}
 	throw new EXCEPTION("Wrong primitive type");
@@ -269,41 +269,41 @@ bool is_primitive_native(Primitive_type m_draw_mode)
  * see http://www.gamedev.net/page/resources/_/technical/graphics-programming-and-theory/polygon-triangulation-r3334
  */
 
-size_t get_index_count(Primitive_type m_draw_mode, unsigned initial_index_count)
+size_t get_index_count(rsx::primitive_type draw_mode, unsigned initial_index_count)
 {
 	// Index count
-	if (is_primitive_native(m_draw_mode))
+	if (is_primitive_native(draw_mode))
 		return initial_index_count;
 
-	switch (m_draw_mode)
+	switch (draw_mode)
 	{
-	case Primitive_type::polygon:
-	case Primitive_type::triangle_fan:
+	case rsx::primitive_type::polygon:
+	case rsx::primitive_type::triangle_fan:
 		return (initial_index_count - 2) * 3;
-	case Primitive_type::quads:
+	case rsx::primitive_type::quads:
 		return (6 * initial_index_count) / 4;
 	default:
 		return 0;
 	}
 }
 
-size_t get_index_type_size(Index_array_type type)
+size_t get_index_type_size(rsx::index_array_type type)
 {
 	switch (type)
 	{
-	case Index_array_type::unsigned_16b: return 2;
-	case Index_array_type::unsigned_32b: return 4;
+	case rsx::index_array_type::u16: return sizeof(u16);
+	case rsx::index_array_type::u32: return sizeof(u32);
 	}
 	throw new EXCEPTION("Wrong index type");
 }
 
-void write_index_array_for_non_indexed_non_native_primitive_to_buffer(char* dst, Primitive_type draw_mode, unsigned first, unsigned count)
+void write_index_array_for_non_indexed_non_native_primitive_to_buffer(char* dst, rsx::primitive_type draw_mode, unsigned first, unsigned count)
 {
 	unsigned short *typedDst = (unsigned short *)(dst);
 	switch (draw_mode)
 	{
-	case Primitive_type::triangle_fan:
-	case Primitive_type::polygon:
+	case rsx::primitive_type::triangle_fan:
+	case rsx::primitive_type::polygon:
 		for (unsigned i = 0; i < (count - 2); i++)
 		{
 			typedDst[3 * i] = first;
@@ -311,7 +311,7 @@ void write_index_array_for_non_indexed_non_native_primitive_to_buffer(char* dst,
 			typedDst[3 * i + 2] = i + 2;
 		}
 		return;
-	case Primitive_type::quads:
+	case rsx::primitive_type::quads:
 		for (unsigned i = 0; i < count / 4; i++)
 		{
 			// First triangle
@@ -324,13 +324,13 @@ void write_index_array_for_non_indexed_non_native_primitive_to_buffer(char* dst,
 			typedDst[6 * i + 5] = 4 * i + first;
 		}
 		return;
-	case Primitive_type::points:
-	case Primitive_type::lines:
-	case Primitive_type::line_loop:
-	case Primitive_type::line_strip:
-	case Primitive_type::triangles:
-	case Primitive_type::triangle_strip:
-	case Primitive_type::quad_strip:
+	case rsx::primitive_type::points:
+	case rsx::primitive_type::lines:
+	case rsx::primitive_type::line_loop:
+	case rsx::primitive_type::line_strip:
+	case rsx::primitive_type::triangles:
+	case rsx::primitive_type::triangle_strip:
+	case rsx::primitive_type::quad_strip:
 		throw new EXCEPTION("Native primitive type doesn't require expansion");
 	}
 }
@@ -338,10 +338,10 @@ void write_index_array_for_non_indexed_non_native_primitive_to_buffer(char* dst,
 // TODO: Unify indexed and non indexed primitive expansion ?
 
 template<typename T>
-std::tuple<T, T> write_index_array_data_to_buffer_impl(gsl::span<T, gsl::dynamic_range> dst, Primitive_type m_draw_mode, const std::vector<std::pair<u32, u32> > &first_count_arguments)
+std::tuple<T, T> write_index_array_data_to_buffer_impl(gsl::span<T, gsl::dynamic_range> dst, rsx::primitive_type draw_mode, const std::vector<std::pair<u32, u32> > &first_count_arguments)
 {
 	u32 address = rsx::get_address(rsx::method_registers[NV4097_SET_INDEX_ARRAY_ADDRESS], rsx::method_registers[NV4097_SET_INDEX_ARRAY_DMA] & 0xf);
-	Index_array_type type = to_index_array_type(rsx::method_registers[NV4097_SET_INDEX_ARRAY_DMA] >> 4);
+	rsx::index_array_type type = rsx::to_index_array_type(rsx::method_registers[NV4097_SET_INDEX_ARRAY_DMA] >> 4);
 
 	u32 type_size = gsl::narrow<u32>(get_index_type_size(type));
 
@@ -362,40 +362,40 @@ std::tuple<T, T> write_index_array_data_to_buffer_impl(gsl::span<T, gsl::dynamic
 	u32 count = std::get<0>(first_count_arguments.back()) + std::get<1>(first_count_arguments.back()) - first;
 	auto ptr = vm::ps3::_ptr<const T>(address + first * type_size);
 
-	switch (m_draw_mode)
+	switch (draw_mode)
 	{
-	case Primitive_type::points:
-	case Primitive_type::lines:
-	case Primitive_type::line_loop:
-	case Primitive_type::line_strip:
-	case Primitive_type::triangles:
-	case Primitive_type::triangle_strip:
-	case Primitive_type::quad_strip:
+	case rsx::primitive_type::points:
+	case rsx::primitive_type::lines:
+	case rsx::primitive_type::line_loop:
+	case rsx::primitive_type::line_strip:
+	case rsx::primitive_type::triangles:
+	case rsx::primitive_type::triangle_strip:
+	case rsx::primitive_type::quad_strip:
 		return upload_untouched<T>({ ptr, count }, dst, is_primitive_restart_enabled, primitive_restart_index);
-	case Primitive_type::polygon:
-	case Primitive_type::triangle_fan:
+	case rsx::primitive_type::polygon:
+	case rsx::primitive_type::triangle_fan:
 		return expand_indexed_triangle_fan<T>({ ptr, count }, dst, is_primitive_restart_enabled, primitive_restart_index);
-	case Primitive_type::quads:
+	case rsx::primitive_type::quads:
 		return expand_indexed_quads<T>({ ptr, count }, dst, is_primitive_restart_enabled, primitive_restart_index);
 	}
 
 	throw new EXCEPTION("Unknow draw mode");
 }
 
-std::tuple<u32, u32> write_index_array_data_to_buffer(gsl::span<u32, gsl::dynamic_range> dst, Primitive_type m_draw_mode, const std::vector<std::pair<u32, u32> > &first_count_arguments)
+std::tuple<u32, u32> write_index_array_data_to_buffer(gsl::span<u32, gsl::dynamic_range> dst, rsx::primitive_type draw_mode, const std::vector<std::pair<u32, u32> > &first_count_arguments)
 {
-	return write_index_array_data_to_buffer_impl(dst, m_draw_mode, first_count_arguments);
+	return write_index_array_data_to_buffer_impl(dst, draw_mode, first_count_arguments);
 }
 
-std::tuple<u16, u16> write_index_array_data_to_buffer(gsl::span<u16, gsl::dynamic_range> dst, Primitive_type m_draw_mode, const std::vector<std::pair<u32, u32> > &first_count_arguments)
+std::tuple<u16, u16> write_index_array_data_to_buffer(gsl::span<u16, gsl::dynamic_range> dst, rsx::primitive_type draw_mode, const std::vector<std::pair<u32, u32> > &first_count_arguments)
 {
-	return write_index_array_data_to_buffer_impl(dst, m_draw_mode, first_count_arguments);
+	return write_index_array_data_to_buffer_impl(dst, draw_mode, first_count_arguments);
 }
 
 std::tuple<u32, u32> write_index_array_data_to_buffer_untouched(gsl::span<u32, gsl::dynamic_range> dst, const std::vector<std::pair<u32, u32> > &first_count_arguments)
 {
 	u32 address = rsx::get_address(rsx::method_registers[NV4097_SET_INDEX_ARRAY_ADDRESS], rsx::method_registers[NV4097_SET_INDEX_ARRAY_DMA] & 0xf);
-	Index_array_type type = to_index_array_type(rsx::method_registers[NV4097_SET_INDEX_ARRAY_DMA] >> 4);
+	rsx::index_array_type type = rsx::to_index_array_type(rsx::method_registers[NV4097_SET_INDEX_ARRAY_DMA] >> 4);
 
 	u32 type_size = gsl::narrow<u32>(get_index_type_size(type));
 	bool is_primitive_restart_enabled = !!rsx::method_registers[NV4097_SET_RESTART_INDEX_ENABLE];
@@ -418,7 +418,7 @@ std::tuple<u32, u32> write_index_array_data_to_buffer_untouched(gsl::span<u32, g
 std::tuple<u16, u16> write_index_array_data_to_buffer_untouched(gsl::span<u16, gsl::dynamic_range> dst, const std::vector<std::pair<u32, u32> > &first_count_arguments)
 {
 	u32 address = rsx::get_address(rsx::method_registers[NV4097_SET_INDEX_ARRAY_ADDRESS], rsx::method_registers[NV4097_SET_INDEX_ARRAY_DMA] & 0xf);
-	Index_array_type type = to_index_array_type(rsx::method_registers[NV4097_SET_INDEX_ARRAY_DMA] >> 4);
+	rsx::index_array_type type = rsx::to_index_array_type(rsx::method_registers[NV4097_SET_INDEX_ARRAY_DMA] >> 4);
 
 	u32 type_size = gsl::narrow<u32>(get_index_type_size(type));
 	bool is_primitive_restart_enabled = !!rsx::method_registers[NV4097_SET_RESTART_INDEX_ENABLE];

@@ -64,49 +64,49 @@ private:
 
 	rsx::surface_info m_surface;
 
-	RSXVertexProgram vertex_program;
-	RSXFragmentProgram fragment_program;
+	RSXVertexProgram m_vertex_program;
+	RSXFragmentProgram m_fragment_program;
 	PipelineStateObjectCache m_pso_cache;
 	std::tuple<ComPtr<ID3D12PipelineState>, std::vector<size_t>, size_t> m_current_pso;
 
 	struct
 	{
-		size_t m_draw_calls_duration;
-		size_t m_draw_calls_count;
-		size_t m_prepare_rtt_duration;
-		size_t m_vertex_index_duration;
-		size_t m_buffer_upload_size;
-		size_t m_program_load_duration;
-		size_t m_constants_duration;
-		size_t m_texture_duration;
-		size_t m_flip_duration;
+		size_t draw_calls_duration;
+		size_t draw_calls_count;
+		size_t prepare_rtt_duration;
+		size_t vertex_index_duration;
+		size_t buffer_upload_size;
+		size_t program_load_duration;
+		size_t constants_duration;
+		size_t texture_duration;
+		size_t flip_duration;
 	} m_timers;
 
 	void reset_timer();
 
-	struct Shader
+	struct shader
 	{
-		ID3D12PipelineState *m_PSO;
-		ID3D12RootSignature *m_rootSignature;
-		ID3D12Resource *m_vertexBuffer;
-		ID3D12DescriptorHeap *m_textureDescriptorHeap;
-		ID3D12DescriptorHeap *m_samplerDescriptorHeap;
-		void Init(ID3D12Device *device, ID3D12CommandQueue *gfxcommandqueue);
-		void Release();
+		ID3D12PipelineState *pso;
+		ID3D12RootSignature *root_signature;
+		ID3D12Resource *vertex_buffer;
+		ID3D12DescriptorHeap *texture_descriptor_heap;
+		ID3D12DescriptorHeap *sampler_descriptor_heap;
+		void init(ID3D12Device *device, ID3D12CommandQueue *gfx_command_queue);
+		void release();
 	};
 
 	/**
 	 * Stores data related to the scaling pass that turns internal
 	 * render targets into presented buffers.
 	 */
-	Shader m_output_scaling_pass;
+	shader m_output_scaling_pass;
 
 	/**
 	 * Data used when depth buffer is converted to uchar textures.
 	 */
-	ID3D12PipelineState *m_convertPSO;
-	ID3D12RootSignature *m_convertRootSignature;
-	void initConvertShader();
+	ID3D12PipelineState *m_convert_pso;
+	ID3D12RootSignature *m_convert_root_signature;
+	void init_convert_shader();
 
 	resource_storage m_per_frame_storage[2];
 	resource_storage &get_current_resource_storage();
@@ -118,18 +118,20 @@ private:
 
 	rsx::render_targets m_rtts;
 
-	std::vector<D3D12_INPUT_ELEMENT_DESC> m_IASet;
+	std::vector<D3D12_INPUT_ELEMENT_DESC> m_ia_set;
 
-	INT g_descriptor_stride_srv_cbv_uav;
-	INT g_descriptor_stride_dsv;
-	INT g_descriptor_stride_rtv;
-	INT g_descriptor_stride_samplers;
+	INT m_descriptor_stride_srv_cbv_uav;
+	INT m_descriptor_stride_dsv;
+	INT m_descriptor_stride_rtv;
+	INT m_descriptor_stride_samplers;
 
 	// Used to fill unused texture slot
 	ID3D12Resource *m_dummy_texture;
+
 public:
 	D3D12GSRender();
 	virtual ~D3D12GSRender();
+
 private:
 	void init_d2d_structures();
 	void release_d2d_structures();
@@ -192,6 +194,8 @@ protected:
 	virtual bool do_method(u32 cmd, u32 arg) override;
 	virtual void end() override;
 	virtual void flip(int buffer) override;
+
+	virtual bool on_access_violation(u32 address, bool is_writing) override;
 
 	virtual std::array<std::vector<gsl::byte>, 4> copy_render_targets_to_memory() override;
 	virtual std::array<std::vector<gsl::byte>, 2> copy_depth_stencil_buffer_to_memory() override;

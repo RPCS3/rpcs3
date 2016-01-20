@@ -5,20 +5,20 @@ namespace gl
 {
 	const fbo screen{};
 
-	GLenum draw_mode(Primitive_type in)
+	GLenum draw_mode(rsx::primitive_type in)
 	{
 		switch (in)
 		{
-		case Primitive_type::points: return GL_POINTS;
-		case Primitive_type::lines: return GL_LINES;
-		case Primitive_type::line_loop: return GL_LINE_LOOP;
-		case Primitive_type::line_strip: return GL_LINE_STRIP;
-		case Primitive_type::triangles: return GL_TRIANGLES;
-		case Primitive_type::triangle_strip: return GL_TRIANGLE_STRIP;
-		case Primitive_type::triangle_fan: return GL_TRIANGLE_FAN;
-		case Primitive_type::quads: return GL_QUADS;
-		case Primitive_type::quad_strip: return GL_QUAD_STRIP;
-		case Primitive_type::polygon: return GL_POLYGON;
+		case rsx::primitive_type::points: return GL_POINTS;
+		case rsx::primitive_type::lines: return GL_LINES;
+		case rsx::primitive_type::line_loop: return GL_LINE_LOOP;
+		case rsx::primitive_type::line_strip: return GL_LINE_STRIP;
+		case rsx::primitive_type::triangles: return GL_TRIANGLES;
+		case rsx::primitive_type::triangle_strip: return GL_TRIANGLE_STRIP;
+		case rsx::primitive_type::triangle_fan: return GL_TRIANGLE_FAN;
+		case rsx::primitive_type::quads: return GL_QUADS;
+		case rsx::primitive_type::quad_strip: return GL_QUAD_STRIP;
+		case rsx::primitive_type::polygon: return GL_POLYGON;
 		}
 		throw new EXCEPTION("unknow primitive type");
 	}
@@ -97,74 +97,74 @@ namespace gl
 		__glcheck glDrawBuffers((GLsizei)ids.size(), ids.data());
 	}
 
-	void fbo::draw_arrays(Primitive_type mode, GLsizei count, GLint first) const
+	void fbo::draw_arrays(rsx::primitive_type mode, GLsizei count, GLint first) const
 	{
 		save_binding_state save(*this);
 		__glcheck glDrawArrays(draw_mode(mode), first, count);
 	}
 
-	void fbo::draw_arrays(const buffer& buffer, Primitive_type mode, GLsizei count, GLint first) const
+	void fbo::draw_arrays(const buffer& buffer, rsx::primitive_type mode, GLsizei count, GLint first) const
 	{
 		buffer.bind(buffer::target::array);
 		draw_arrays(mode, count, first);
 	}
 
-	void fbo::draw_arrays(const vao& buffer, Primitive_type mode, GLsizei count, GLint first) const
+	void fbo::draw_arrays(const vao& buffer, rsx::primitive_type mode, GLsizei count, GLint first) const
 	{
 		buffer.bind();
 		draw_arrays(mode, count, first);
 	}
 
-	void fbo::draw_elements(Primitive_type mode, GLsizei count, indices_type type, const GLvoid *indices) const
+	void fbo::draw_elements(rsx::primitive_type mode, GLsizei count, indices_type type, const GLvoid *indices) const
 	{
 		save_binding_state save(*this);
 		__glcheck glDrawElements(draw_mode(mode), count, (GLenum)type, indices);
 	}
 
-	void fbo::draw_elements(const buffer& buffer, Primitive_type mode, GLsizei count, indices_type type, const GLvoid *indices) const
+	void fbo::draw_elements(const buffer& buffer, rsx::primitive_type mode, GLsizei count, indices_type type, const GLvoid *indices) const
 	{
 		buffer.bind(buffer::target::array);
 		__glcheck glDrawElements(draw_mode(mode), count, (GLenum)type, indices);
 	}
 
-	void fbo::draw_elements(Primitive_type mode, GLsizei count, indices_type type, const buffer& indices, size_t indices_buffer_offset) const
+	void fbo::draw_elements(rsx::primitive_type mode, GLsizei count, indices_type type, const buffer& indices, size_t indices_buffer_offset) const
 	{
 		indices.bind(buffer::target::element_array);
 		__glcheck glDrawElements(draw_mode(mode), count, (GLenum)type, (GLvoid*)indices_buffer_offset);
 	}
 
-	void fbo::draw_elements(const buffer& buffer_, Primitive_type mode, GLsizei count, indices_type type, const buffer& indices, size_t indices_buffer_offset) const
+	void fbo::draw_elements(const buffer& buffer_, rsx::primitive_type mode, GLsizei count, indices_type type, const buffer& indices, size_t indices_buffer_offset) const
 	{
 		buffer_.bind(buffer::target::array);
 		draw_elements(mode, count, type, indices, indices_buffer_offset);
 	}
 
-	void fbo::draw_elements(Primitive_type mode, GLsizei count, const GLubyte *indices) const
+	void fbo::draw_elements(rsx::primitive_type mode, GLsizei count, const GLubyte *indices) const
 	{
 		draw_elements(mode, count, indices_type::ubyte, indices);
 	}
 
-	void fbo::draw_elements(const buffer& buffer, Primitive_type mode, GLsizei count, const GLubyte *indices) const
+	void fbo::draw_elements(const buffer& buffer, rsx::primitive_type mode, GLsizei count, const GLubyte *indices) const
 	{
 		draw_elements(buffer, mode, count, indices_type::ubyte, indices);
 	}
 
-	void fbo::draw_elements(Primitive_type mode, GLsizei count, const GLushort *indices) const
+	void fbo::draw_elements(rsx::primitive_type mode, GLsizei count, const GLushort *indices) const
 	{
 		draw_elements(mode, count, indices_type::ushort, indices);
 	}
 
-	void fbo::draw_elements(const buffer& buffer, Primitive_type mode, GLsizei count, const GLushort *indices) const
+	void fbo::draw_elements(const buffer& buffer, rsx::primitive_type mode, GLsizei count, const GLushort *indices) const
 	{
 		draw_elements(buffer, mode, count, indices_type::ushort, indices);
 	}
 
-	void fbo::draw_elements(Primitive_type mode, GLsizei count, const GLuint *indices) const
+	void fbo::draw_elements(rsx::primitive_type mode, GLsizei count, const GLuint *indices) const
 	{
 		draw_elements(mode, count, indices_type::uint, indices);
 	}
 
-	void fbo::draw_elements(const buffer& buffer, Primitive_type mode, GLsizei count, const GLuint *indices) const
+	void fbo::draw_elements(const buffer& buffer, rsx::primitive_type mode, GLsizei count, const GLuint *indices) const
 	{
 		draw_elements(buffer, mode, count, indices_type::uint, indices);
 	}

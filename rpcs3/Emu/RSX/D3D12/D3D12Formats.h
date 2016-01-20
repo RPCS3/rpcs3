@@ -56,37 +56,37 @@ D3D12_FILTER get_texture_filter(u8 min_filter, u8 mag_filter);
 /**
  * Convert draw mode to D3D12_PRIMITIVE_TOPOLOGY
  */
-D3D12_PRIMITIVE_TOPOLOGY get_primitive_topology(Primitive_type draw_mode);
+D3D12_PRIMITIVE_TOPOLOGY get_primitive_topology(rsx::primitive_type draw_mode);
 
 /**
 * Convert draw mode to D3D12_PRIMITIVE_TOPOLOGY_TYPE
 */
-D3D12_PRIMITIVE_TOPOLOGY_TYPE get_primitive_topology_type(Primitive_type draw_mode);
+D3D12_PRIMITIVE_TOPOLOGY_TYPE get_primitive_topology_type(rsx::primitive_type draw_mode);
 
 /**
  * Convert color surface format to DXGI_FORMAT
  */
-DXGI_FORMAT get_color_surface_format(Surface_color_format format);
+DXGI_FORMAT get_color_surface_format(rsx::surface_color_format format);
 
 /**
  * Convert depth stencil surface format to DXGI_FORMAT
  */
-DXGI_FORMAT get_depth_stencil_surface_format(Surface_depth_format format);
+DXGI_FORMAT get_depth_stencil_surface_format(rsx::surface_depth_format format);
 
 /**
  *Convert depth stencil surface format to DXGI_FORMAT suited for clear value
  */
-DXGI_FORMAT get_depth_stencil_surface_clear_format(Surface_depth_format format);
+DXGI_FORMAT get_depth_stencil_surface_clear_format(rsx::surface_depth_format format);
 
 /**
  * Convert depth surface format to a typeless DXGI_FORMAT
  */
-DXGI_FORMAT get_depth_stencil_typeless_surface_format(Surface_depth_format format);
+DXGI_FORMAT get_depth_stencil_typeless_surface_format(rsx::surface_depth_format format);
 
 /**
 * Convert depth surface format to a DXGI_FORMAT that can be depth sampled
 */
-DXGI_FORMAT get_depth_samplable_surface_format(Surface_depth_format format);
+DXGI_FORMAT get_depth_samplable_surface_format(rsx::surface_depth_format format);
 
 /**
  * Convert front face value to bool value telling wheter front face is counterclockwise or not
@@ -96,12 +96,12 @@ BOOL get_front_face_ccw(u32 set_front_face_value);
 /**
  * Convert index type to DXGI_FORMAT
  */
-DXGI_FORMAT get_index_type(Index_array_type index_type);
+DXGI_FORMAT get_index_type(rsx::index_array_type index_type);
 
 /**
  * Convert vertex attribute format and size to DXGI_FORMAT
  */
-DXGI_FORMAT get_vertex_attribute_format(Vertex_base_type type, u8 size);
+DXGI_FORMAT get_vertex_attribute_format(rsx::vertex_base_type type, u8 size);
 
 /**
  * Convert scissor register value to D3D12_RECT

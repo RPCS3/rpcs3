@@ -19,6 +19,8 @@ frame_capture_data frame_debug;
 
 namespace rsx
 {
+	std::function<bool(u32 addr, bool is_writing)> g_access_violation_handler;
+
 	std::string shaders_cache::path_to_root()
 	{
 		return fs::get_executable_dir() + "data/";
@@ -120,11 +122,11 @@ namespace rsx
 		return res;
 	}
 
-	u32 get_vertex_type_size_on_host(Vertex_base_type type, u32 size)
+	u32 get_vertex_type_size_on_host(vertex_base_type type, u32 size)
 	{
 		switch (type)
 		{
-		case Vertex_base_type::s1:
+		case vertex_base_type::s1:
 			switch (size)
 			{
 			case 1:
@@ -135,8 +137,8 @@ namespace rsx
 				return sizeof(u16) * 4;
 			}
 			throw new EXCEPTION("Wrong vector size");
-		case Vertex_base_type::f:     return sizeof(f32) * size;
-		case Vertex_base_type::sf:
+		case vertex_base_type::f:     return sizeof(f32) * size;
+		case vertex_base_type::sf:
 			switch (size)
 			{
 			case 1:
@@ -147,7 +149,7 @@ namespace rsx
 				return sizeof(f16) * 4;
 			}
 			throw new EXCEPTION("Wrong vector size");
-		case Vertex_base_type::ub:
+		case vertex_base_type::ub:
 			switch (size)
 			{
 			case 1:
@@ -158,16 +160,16 @@ namespace rsx
 				return sizeof(u8) * 4;
 			}
 			throw new EXCEPTION("Wrong vector size");
-		case Vertex_base_type::s32k:  return sizeof(u32) * size;
-		case Vertex_base_type::cmp:   return sizeof(u16) * 4;
-		case Vertex_base_type::ub256: return sizeof(u8) * 4;
+		case vertex_base_type::s32k:  return sizeof(u32) * size;
+		case vertex_base_type::cmp:   return sizeof(u16) * 4;
+		case vertex_base_type::ub256: return sizeof(u8) * 4;
 
 		default:
 			throw new EXCEPTION("RSXVertexData::GetTypeSize: Bad vertex data type (%d)!", type);
 			return 0;
 		}
 	}
-	
+
 	void tiled_region::write(const void *src, u32 width, u32 height, u32 pitch)
 	{
 		if (!tile)
@@ -270,6 +272,19 @@ namespace rsx
 		}
 	}
 
+	thread::thread()
+	{
+		g_access_violation_handler = [this](u32 address, bool is_writing)
+		{
+			return on_access_violation(address, is_writing);
+		};
+	}
+
+	thread::~thread()
+	{
+		g_access_violation_handler = nullptr;
+	}
+
 	void thread::capture_frame(const std::string &name)
 	{
 		frame_capture_data::draw_state draw_state = {};
@@ -280,9 +295,9 @@ namespace rsx
 		surface.unpack(rsx::method_registers[NV4097_SET_SURFACE_FORMAT]);
 		draw_state.width = clip_w;
 		draw_state.height = clip_h;
-		draw_state.surface_color_format = surface.color_format;
+		draw_state.color_format = surface.color_format;
 		draw_state.color_buffer = std::move(copy_render_targets_to_memory());
-		draw_state.surface_depth_format = surface.depth_format;
+		draw_state.depth_format = surface.depth_format;
 		draw_state.depth_stencil = std::move(copy_depth_stencil_buffer_to_memory());
 		draw_state.programs = get_programs();
 		draw_state.name = name;
@@ -351,7 +366,7 @@ namespace rsx
 
 			if (put == get || !Emu.IsRunning())
 			{
-				std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
+				do_internal_task();
 				continue;
 			}
 
@@ -480,7 +495,7 @@ namespace rsx
 
 				u32 element_size = rsx::get_vertex_type_size_on_host(info.type, info.size);
 
-				if (info.type == Vertex_base_type::ub && info.size == 4)
+				if (info.type == vertex_base_type::ub && info.size == 4)
 				{
 					dst[0] = src[3];
 					dst[1] = src[2];
@@ -502,6 +517,52 @@ namespace rsx
 	{
 		// Get timestamp, and convert it from microseconds to nanoseconds
 		return get_system_time() * 1000;
+	}
+
+	void thread::do_internal_task()
+	{
+		if (m_internal_tasks.empty())
+		{
+			std::this_thread::sleep_for(1ms);
+		}
+		else
+		{
+			std::lock_guard<std::mutex> lock{ m_mtx_task };
+
+			internal_task_entry &front = m_internal_tasks.front();
+
+			if (front.callback())
+			{
+				front.promise.set_value();
+				m_internal_tasks.pop_front();
+			}
+		}
+	}
+
+	std::future<void> thread::add_internal_task(std::function<bool()> callback)
+	{
+		std::lock_guard<std::mutex> lock{ m_mtx_task };
+		m_internal_tasks.emplace_back(callback);
+
+		return m_internal_tasks.back().promise.get_future();
+	}
+
+	void thread::invoke(std::function<bool()> callback)
+	{
+		if (get_thread_ctrl() == thread_ctrl::get_current())
+		{
+			while (true)
+			{
+				if (callback())
+				{
+					break;
+				}
+			}
+		}
+		else
+		{
+			add_internal_task(callback).wait();
+		}
 	}
 
 	std::array<u32, 4> thread::get_color_surface_addresses() const

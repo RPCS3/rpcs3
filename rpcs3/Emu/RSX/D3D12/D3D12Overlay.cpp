@@ -152,21 +152,21 @@ void D3D12GSRender::release_d2d_structures()
 void D3D12GSRender::render_overlay()
 {
 	D2D1_SIZE_F rtSize = g_d2d_render_targets[m_swap_chain->GetCurrentBackBufferIndex()]->GetSize();
-	std::wstring duration = L"Draw duration : " + std::to_wstring(m_timers.m_draw_calls_duration) + L" us";
-	float vtxIdxPercent = (float)m_timers.m_vertex_index_duration / (float)m_timers.m_draw_calls_duration;
-	std::wstring vertexIndexDuration = L"Vtx/Idx upload : " + std::to_wstring(m_timers.m_vertex_index_duration) + L" us (" + std::to_wstring(100.f * vtxIdxPercent) + L" %)";
-	std::wstring size = L"Upload size : " + std::to_wstring(m_timers.m_buffer_upload_size) + L" Bytes";
-	float texPercent = (float)m_timers.m_texture_duration / (float)m_timers.m_draw_calls_duration;
-	std::wstring texDuration = L"Textures : " + std::to_wstring(m_timers.m_texture_duration) + L" us (" + std::to_wstring(100.f * texPercent) + L" %)";
-	float programPercent = (float)m_timers.m_program_load_duration / (float)m_timers.m_draw_calls_duration;
-	std::wstring programDuration = L"Program : " + std::to_wstring(m_timers.m_program_load_duration) + L" us (" + std::to_wstring(100.f * programPercent) + L" %)";
-	float constantsPercent = (float)m_timers.m_constants_duration / (float)m_timers.m_draw_calls_duration;
-	std::wstring constantDuration = L"Constants : " + std::to_wstring(m_timers.m_constants_duration) + L" us (" + std::to_wstring(100.f * constantsPercent) + L" %)";
-	float rttPercent = (float)m_timers.m_prepare_rtt_duration / (float)m_timers.m_draw_calls_duration;
-	std::wstring rttDuration = L"RTT : " + std::to_wstring(m_timers.m_prepare_rtt_duration) + L" us (" + std::to_wstring(100.f * rttPercent) + L" %)";
-	std::wstring flipDuration = L"Flip : " + std::to_wstring(m_timers.m_flip_duration) + L" us";
+	std::wstring duration = L"Draw duration : " + std::to_wstring(m_timers.draw_calls_duration) + L" us";
+	float vtxIdxPercent = (float)m_timers.vertex_index_duration / (float)m_timers.draw_calls_duration;
+	std::wstring vertexIndexDuration = L"Vtx/Idx upload : " + std::to_wstring(m_timers.vertex_index_duration) + L" us (" + std::to_wstring(100.f * vtxIdxPercent) + L" %)";
+	std::wstring size = L"Upload size : " + std::to_wstring(m_timers.buffer_upload_size) + L" Bytes";
+	float texPercent = (float)m_timers.texture_duration / (float)m_timers.draw_calls_duration;
+	std::wstring texDuration = L"Textures : " + std::to_wstring(m_timers.texture_duration) + L" us (" + std::to_wstring(100.f * texPercent) + L" %)";
+	float programPercent = (float)m_timers.program_load_duration / (float)m_timers.draw_calls_duration;
+	std::wstring programDuration = L"Program : " + std::to_wstring(m_timers.program_load_duration) + L" us (" + std::to_wstring(100.f * programPercent) + L" %)";
+	float constantsPercent = (float)m_timers.constants_duration / (float)m_timers.draw_calls_duration;
+	std::wstring constantDuration = L"Constants : " + std::to_wstring(m_timers.constants_duration) + L" us (" + std::to_wstring(100.f * constantsPercent) + L" %)";
+	float rttPercent = (float)m_timers.prepare_rtt_duration / (float)m_timers.draw_calls_duration;
+	std::wstring rttDuration = L"RTT : " + std::to_wstring(m_timers.prepare_rtt_duration) + L" us (" + std::to_wstring(100.f * rttPercent) + L" %)";
+	std::wstring flipDuration = L"Flip : " + std::to_wstring(m_timers.flip_duration) + L" us";
 
-	std::wstring count = L"Draw count : " + std::to_wstring(m_timers.m_draw_calls_count);
+	std::wstring count = L"Draw count : " + std::to_wstring(m_timers.draw_calls_count);
 	draw_strings(rtSize, m_swap_chain->GetCurrentBackBufferIndex(),
 		{
 			duration,
