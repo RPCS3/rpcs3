@@ -143,7 +143,7 @@ void D3D12GSRender::upload_and_bind_textures(ID3D12GraphicsCommandList *command_
 				D3D12_SHADER_COMPONENT_MAPPING_FORCE_VALUE_0);
 			m_device->CreateShaderResourceView(m_dummy_texture, &shader_resource_view_desc,
 				CD3DX12_CPU_DESCRIPTOR_HANDLE(get_current_resource_storage().descriptors_heap->GetCPUDescriptorHandleForHeapStart())
-				.Offset((INT)descriptor_index + (INT)used_texture, g_descriptor_stride_srv_cbv_uav)
+				.Offset((INT)descriptor_index + (INT)used_texture, m_descriptor_stride_srv_cbv_uav)
 				);
 
 			D3D12_SAMPLER_DESC sampler_desc = {};
@@ -153,7 +153,7 @@ void D3D12GSRender::upload_and_bind_textures(ID3D12GraphicsCommandList *command_
 			sampler_desc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
 			m_device->CreateSampler(&sampler_desc,
 				CD3DX12_CPU_DESCRIPTOR_HANDLE(get_current_resource_storage().sampler_descriptor_heap[get_current_resource_storage().sampler_descriptors_heap_index]->GetCPUDescriptorHandleForHeapStart())
-				.Offset((INT)get_current_resource_storage().current_sampler_index + (INT)used_texture, g_descriptor_stride_samplers)
+				.Offset((INT)get_current_resource_storage().current_sampler_index + (INT)used_texture, m_descriptor_stride_samplers)
 				);
 			used_texture++;
 			continue;
@@ -320,7 +320,7 @@ void D3D12GSRender::upload_and_bind_textures(ID3D12GraphicsCommandList *command_
 
 		m_device->CreateShaderResourceView(vram_texture, &shared_resource_view_desc,
 			CD3DX12_CPU_DESCRIPTOR_HANDLE(get_current_resource_storage().descriptors_heap->GetCPUDescriptorHandleForHeapStart())
-			.Offset((UINT)descriptor_index + (UINT)used_texture, g_descriptor_stride_srv_cbv_uav));
+			.Offset((UINT)descriptor_index + (UINT)used_texture, m_descriptor_stride_srv_cbv_uav));
 
 		if (get_current_resource_storage().current_sampler_index + 16 > 2048)
 		{
@@ -336,7 +336,7 @@ void D3D12GSRender::upload_and_bind_textures(ID3D12GraphicsCommandList *command_
 		}
 		m_device->CreateSampler(&get_sampler_desc(textures[i]),
 			CD3DX12_CPU_DESCRIPTOR_HANDLE(get_current_resource_storage().sampler_descriptor_heap[get_current_resource_storage().sampler_descriptors_heap_index]->GetCPUDescriptorHandleForHeapStart())
-			.Offset((UINT)get_current_resource_storage().current_sampler_index + (UINT)used_texture, g_descriptor_stride_samplers));
+			.Offset((UINT)get_current_resource_storage().current_sampler_index + (UINT)used_texture, m_descriptor_stride_samplers));
 
 		used_texture++;
 	}

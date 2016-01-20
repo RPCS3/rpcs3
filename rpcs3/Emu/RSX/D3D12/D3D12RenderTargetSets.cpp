@@ -126,7 +126,7 @@ void D3D12GSRender::clear_surface(u32 arg)
 	prepare_render_targets(get_current_resource_storage().command_list.Get());
 
 	std::chrono::time_point<std::chrono::system_clock> rtt_duration_end = std::chrono::system_clock::now();
-	m_timers.m_prepare_rtt_duration += std::chrono::duration_cast<std::chrono::microseconds>(rtt_duration_end - rtt_duration_start).count();
+	m_timers.prepare_rtt_duration += std::chrono::duration_cast<std::chrono::microseconds>(rtt_duration_end - rtt_duration_start).count();
 
 	if (arg & 0x1 || arg & 0x2)
 	{
@@ -151,13 +151,13 @@ void D3D12GSRender::clear_surface(u32 arg)
 		size_t rtt_index = get_num_rtt(to_surface_target(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET]));
 		get_current_resource_storage().render_targets_descriptors_heap_index += rtt_index;
 		for (unsigned i = 0; i < rtt_index; i++)
-			get_current_resource_storage().command_list->ClearRenderTargetView(handle.Offset(i, g_descriptor_stride_rtv), get_clear_color(rsx::method_registers[NV4097_SET_COLOR_CLEAR_VALUE]).data(),
+			get_current_resource_storage().command_list->ClearRenderTargetView(handle.Offset(i, m_descriptor_stride_rtv), get_clear_color(rsx::method_registers[NV4097_SET_COLOR_CLEAR_VALUE]).data(),
 				1, &get_scissor(rsx::method_registers[NV4097_SET_SCISSOR_HORIZONTAL], rsx::method_registers[NV4097_SET_SCISSOR_VERTICAL]));
 	}
 
 	std::chrono::time_point<std::chrono::system_clock> end_duration = std::chrono::system_clock::now();
-	m_timers.m_draw_calls_duration += std::chrono::duration_cast<std::chrono::microseconds>(end_duration - start_duration).count();
-	m_timers.m_draw_calls_count++;
+	m_timers.draw_calls_duration += std::chrono::duration_cast<std::chrono::microseconds>(end_duration - start_duration).count();
+	m_timers.draw_calls_count++;
 
 	if (rpcs3::config.rsx.d3d12.debug_output.value())
 	{
@@ -196,14 +196,14 @@ void D3D12GSRender::prepare_render_targets(ID3D12GraphicsCommandList *copycmdlis
 	rtt_view_desc.Format = dxgi_format;
 
 	m_rtts.current_rtts_handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(get_current_resource_storage().render_targets_descriptors_heap->GetCPUDescriptorHandleForHeapStart())
-		.Offset((INT)get_current_resource_storage().render_targets_descriptors_heap_index * g_descriptor_stride_rtv);
+		.Offset((INT)get_current_resource_storage().render_targets_descriptors_heap_index * m_descriptor_stride_rtv);
 	size_t rtt_index = 0;
 	for (u8 i : get_rtt_indexes(to_surface_target(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET])))
 	{
 		if (std::get<1>(m_rtts.m_bound_render_targets[i]) == nullptr)
 			continue;
 		m_device->CreateRenderTargetView(std::get<1>(m_rtts.m_bound_render_targets[i]), &rtt_view_desc,
-			CD3DX12_CPU_DESCRIPTOR_HANDLE(m_rtts.current_rtts_handle).Offset((INT)rtt_index * g_descriptor_stride_rtv));
+			CD3DX12_CPU_DESCRIPTOR_HANDLE(m_rtts.current_rtts_handle).Offset((INT)rtt_index * m_descriptor_stride_rtv));
 		rtt_index++;
 	}
 	get_current_resource_storage().render_targets_descriptors_heap_index += rtt_index;
@@ -211,7 +211,7 @@ void D3D12GSRender::prepare_render_targets(ID3D12GraphicsCommandList *copycmdlis
 	if (std::get<1>(m_rtts.m_bound_depth_stencil) == nullptr)
 		return;
 	m_rtts.current_ds_handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(get_current_resource_storage().depth_stencil_descriptor_heap->GetCPUDescriptorHandleForHeapStart())
-		.Offset((INT)get_current_resource_storage().depth_stencil_descriptor_heap_index * g_descriptor_stride_dsv);
+		.Offset((INT)get_current_resource_storage().depth_stencil_descriptor_heap_index * m_descriptor_stride_dsv);
 	get_current_resource_storage().depth_stencil_descriptor_heap_index += 1;
 	D3D12_DEPTH_STENCIL_VIEW_DESC depth_stencil_view_desc = {};
 	depth_stencil_view_desc.Format = get_depth_stencil_surface_format(m_surface.depth_format);
@@ -362,13 +362,13 @@ void D3D12GSRender::copy_render_target_to_dma_location()
 		uav_desc.Format = DXGI_FORMAT_R8_UNORM;
 		uav_desc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
 		m_device->CreateUnorderedAccessView(depth_format_conversion_buffer.Get(), nullptr, &uav_desc,
-			CD3DX12_CPU_DESCRIPTOR_HANDLE(descriptor_heap->GetCPUDescriptorHandleForHeapStart()).Offset(1, g_descriptor_stride_srv_cbv_uav));
+			CD3DX12_CPU_DESCRIPTOR_HANDLE(descriptor_heap->GetCPUDescriptorHandleForHeapStart()).Offset(1, m_descriptor_stride_srv_cbv_uav));
 
 		// Convert
 		get_current_resource_storage().command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(std::get<1>(m_rtts.m_bound_depth_stencil), D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_GENERIC_READ));
 
-		get_current_resource_storage().command_list->SetPipelineState(m_convertPSO);
-		get_current_resource_storage().command_list->SetComputeRootSignature(m_convertRootSignature);
+		get_current_resource_storage().command_list->SetPipelineState(m_convert_pso);
+		get_current_resource_storage().command_list->SetComputeRootSignature(m_convert_root_signature);
 		get_current_resource_storage().command_list->SetDescriptorHeaps(1, descriptor_heap.GetAddressOf());
 		get_current_resource_storage().command_list->SetComputeRootDescriptorTable(0, descriptor_heap->GetGPUDescriptorHandleForHeapStart());
 		get_current_resource_storage().command_list->Dispatch(clip_w / 8, clip_h / 8, 1);

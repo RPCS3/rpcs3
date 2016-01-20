@@ -13,7 +13,7 @@ std::vector<D3D12_VERTEX_BUFFER_VIEW> D3D12GSRender::upload_vertex_attributes(co
 {
 	std::vector<D3D12_VERTEX_BUFFER_VIEW> vertex_buffer_views;
 
-	m_IASet.clear();
+	m_ia_set.clear();
 	size_t input_slot = 0;
 
 	size_t vertex_count = 0;
@@ -55,7 +55,7 @@ std::vector<D3D12_VERTEX_BUFFER_VIEW> D3D12GSRender::upload_vertex_attributes(co
 			};
 			vertex_buffer_views.push_back(vertex_buffer_view);
 
-			m_timers.m_buffer_upload_size += buffer_size;
+			m_timers.buffer_upload_size += buffer_size;
 
 			D3D12_INPUT_ELEMENT_DESC IAElement = {};
 			IAElement.SemanticName = "TEXCOORD";
@@ -65,7 +65,7 @@ std::vector<D3D12_VERTEX_BUFFER_VIEW> D3D12GSRender::upload_vertex_attributes(co
 			IAElement.AlignedByteOffset = 0;
 			IAElement.InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
 			IAElement.InstanceDataStepRate = 0;
-			m_IASet.push_back(IAElement);
+			m_ia_set.push_back(IAElement);
 		}
 		else if (register_vertex_info[index].size > 0)
 		{
@@ -98,7 +98,7 @@ std::vector<D3D12_VERTEX_BUFFER_VIEW> D3D12GSRender::upload_vertex_attributes(co
 			IAElement.AlignedByteOffset = 0;
 			IAElement.InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA;
 			IAElement.InstanceDataStepRate = 1;
-			m_IASet.push_back(IAElement);
+			m_ia_set.push_back(IAElement);
 		}
 	}
 
@@ -141,7 +141,7 @@ void D3D12GSRender::upload_and_bind_scale_offset_matrix(size_t descriptorIndex)
 	};
 	m_device->CreateConstantBufferView(&constant_buffer_view_desc,
 		CD3DX12_CPU_DESCRIPTOR_HANDLE(get_current_resource_storage().descriptors_heap->GetCPUDescriptorHandleForHeapStart())
-		.Offset((INT)descriptorIndex, g_descriptor_stride_srv_cbv_uav));
+		.Offset((INT)descriptorIndex, m_descriptor_stride_srv_cbv_uav));
 }
 
 void D3D12GSRender::upload_and_bind_vertex_shader_constants(size_t descriptor_index)
@@ -160,13 +160,13 @@ void D3D12GSRender::upload_and_bind_vertex_shader_constants(size_t descriptor_in
 	};
 	m_device->CreateConstantBufferView(&constant_buffer_view_desc,
 		CD3DX12_CPU_DESCRIPTOR_HANDLE(get_current_resource_storage().descriptors_heap->GetCPUDescriptorHandleForHeapStart())
-		.Offset((INT)descriptor_index, g_descriptor_stride_srv_cbv_uav));
+		.Offset((INT)descriptor_index, m_descriptor_stride_srv_cbv_uav));
 }
 
 void D3D12GSRender::upload_and_bind_fragment_shader_constants(size_t descriptor_index)
 {
 	// Get constant from fragment program
-	size_t buffer_size = m_pso_cache.get_fragment_constants_buffer_size(fragment_program);
+	size_t buffer_size = m_pso_cache.get_fragment_constants_buffer_size(m_fragment_program);
 	// Multiple of 256 never 0
 	buffer_size = (buffer_size + 255) & ~255;
 
@@ -174,7 +174,7 @@ void D3D12GSRender::upload_and_bind_fragment_shader_constants(size_t descriptor_
 
 	size_t offset = 0;
 	float *mapped_buffer = m_buffer_data.map<float>(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
-	m_pso_cache.fill_fragment_constans_buffer({ mapped_buffer, gsl::narrow<int>(buffer_size) }, fragment_program);
+	m_pso_cache.fill_fragment_constans_buffer({ mapped_buffer, gsl::narrow<int>(buffer_size) }, m_fragment_program);
 	m_buffer_data.unmap(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
 
 	D3D12_CONSTANT_BUFFER_VIEW_DESC constant_buffer_view_desc = {
@@ -183,14 +183,14 @@ void D3D12GSRender::upload_and_bind_fragment_shader_constants(size_t descriptor_
 	};
 	m_device->CreateConstantBufferView(&constant_buffer_view_desc,
 		CD3DX12_CPU_DESCRIPTOR_HANDLE(get_current_resource_storage().descriptors_heap->GetCPUDescriptorHandleForHeapStart())
-		.Offset((INT)descriptor_index, g_descriptor_stride_srv_cbv_uav));
+		.Offset((INT)descriptor_index, m_descriptor_stride_srv_cbv_uav));
 }
 
 
 std::tuple<D3D12_VERTEX_BUFFER_VIEW, size_t> D3D12GSRender::upload_inlined_vertex_array()
 {
 	UINT offset = 0;
-	m_IASet.clear();
+	m_ia_set.clear();
 	// Bind attributes
 	for (int index = 0; index < rsx::limits::vertex_count; ++index)
 	{
@@ -207,7 +207,7 @@ std::tuple<D3D12_VERTEX_BUFFER_VIEW, size_t> D3D12GSRender::upload_inlined_verte
 		IAElement.AlignedByteOffset = offset;
 		IAElement.InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
 		IAElement.InstanceDataStepRate = 0;
-		m_IASet.push_back(IAElement);
+		m_ia_set.push_back(IAElement);
 
 		offset += rsx::get_vertex_type_size_on_host(info.type, info.size);
 	}
@@ -334,7 +334,7 @@ std::tuple<bool, size_t> D3D12GSRender::upload_and_set_vertex_index_data(ID3D12G
 		(UINT)buffer_size,
 		get_index_type(indexed_type)
 	};
-	m_timers.m_buffer_upload_size += buffer_size;
+	m_timers.buffer_upload_size += buffer_size;
 	command_list->IASetIndexBuffer(&index_buffer_view);
 
 	const std::vector<D3D12_VERTEX_BUFFER_VIEW> &vertex_buffer_views = upload_vertex_attributes({ std::make_pair(0, max_index + 1) });

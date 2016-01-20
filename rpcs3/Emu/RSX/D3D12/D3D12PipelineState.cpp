@@ -39,12 +39,12 @@ void Shader::Compile(const std::string &code, SHADER_TYPE st)
 void D3D12GSRender::load_program()
 {
 	u32 transform_program_start = rsx::method_registers[NV4097_SET_TRANSFORM_PROGRAM_START];
-	vertex_program.data.reserve((512 - transform_program_start) * 4);
+	m_vertex_program.data.reserve((512 - transform_program_start) * 4);
 
 	for (int i = transform_program_start; i < 512; ++i)
 	{
-		vertex_program.data.resize((i - transform_program_start) * 4 + 4);
-		memcpy(vertex_program.data.data() + (i - transform_program_start) * 4, transform_program + i * 4, 4 * sizeof(u32));
+		m_vertex_program.data.resize((i - transform_program_start) * 4 + 4);
+		memcpy(m_vertex_program.data.data() + (i - transform_program_start) * 4, transform_program + i * 4, 4 * sizeof(u32));
 
 		D3 d3;
 		d3.HEX = transform_program[i * 4 + 3];
@@ -54,19 +54,19 @@ void D3D12GSRender::load_program()
 	}
 
 	u32 shader_program = rsx::method_registers[NV4097_SET_SHADER_PROGRAM];
-	fragment_program.offset = shader_program & ~0x3;
-	fragment_program.addr = rsx::get_address(fragment_program.offset, (shader_program & 0x3) - 1);
-	fragment_program.ctrl = rsx::method_registers[NV4097_SET_SHADER_CONTROL];
-	fragment_program.texture_dimensions.clear();
+	m_fragment_program.offset = shader_program & ~0x3;
+	m_fragment_program.addr = rsx::get_address(m_fragment_program.offset, (shader_program & 0x3) - 1);
+	m_fragment_program.ctrl = rsx::method_registers[NV4097_SET_SHADER_CONTROL];
+	m_fragment_program.texture_dimensions.clear();
 
 	for (u32 i = 0; i < rsx::limits::textures_count; ++i)
 	{
 		if (!textures[i].enabled())
-			fragment_program.texture_dimensions.push_back(texture_dimension::texture_dimension_2d);
+			m_fragment_program.texture_dimensions.push_back(texture_dimension::texture_dimension_2d);
 		else if (textures[i].cubemap())
-			fragment_program.texture_dimensions.push_back(texture_dimension::texture_dimension_cubemap);
+			m_fragment_program.texture_dimensions.push_back(texture_dimension::texture_dimension_cubemap);
 		else
-			fragment_program.texture_dimensions.push_back(texture_dimension::texture_dimension_2d);
+			m_fragment_program.texture_dimensions.push_back(texture_dimension::texture_dimension_2d);
 	}
 
 	D3D12PipelineProperties prop = {};
@@ -251,7 +251,7 @@ void D3D12GSRender::load_program()
 	for (unsigned i = 0; i < prop.numMRT; i++)
 		prop.Blend.RenderTarget[i].RenderTargetWriteMask = mask;
 
-	prop.IASet = m_IASet;
+	prop.IASet = m_ia_set;
 	if (!!rsx::method_registers[NV4097_SET_RESTART_INDEX_ENABLE])
 	{
 		index_array_type index_type = to_index_array_type(rsx::method_registers[NV4097_SET_INDEX_ARRAY_DMA] >> 4);
@@ -265,12 +265,12 @@ void D3D12GSRender::load_program()
 		}
 	}
 
-	m_current_pso = m_pso_cache.getGraphicPipelineState(vertex_program, fragment_program, prop, m_device.Get(), m_root_signatures);
+	m_current_pso = m_pso_cache.getGraphicPipelineState(m_vertex_program, m_fragment_program, prop, m_device.Get(), m_root_signatures);
 	return;
 }
 
 std::pair<std::string, std::string> D3D12GSRender::get_programs() const
 {
-	return std::make_pair(m_pso_cache.get_transform_program(vertex_program).content, m_pso_cache.get_shader_program(fragment_program).content);
+	return std::make_pair(m_pso_cache.get_transform_program(m_vertex_program).content, m_pso_cache.get_shader_program(m_fragment_program).content);
 }
 #endif
