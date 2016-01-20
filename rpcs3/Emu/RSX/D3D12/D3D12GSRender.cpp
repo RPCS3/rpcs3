@@ -67,8 +67,6 @@ void D3D12GSRender::Shader::Release()
 	m_samplerDescriptorHeap->Release();
 }
 
-extern std::function<bool(u32 addr)> gfxHandler;
-
 bool D3D12GSRender::invalidate_address(u32 addr)
 {
 	bool result = false;
@@ -89,12 +87,6 @@ D3D12DLLManagement::~D3D12DLLManagement()
 D3D12GSRender::D3D12GSRender()
 	: GSRender(frame_type::DX12), m_d3d12_lib(), m_current_pso({})
 {
-	gfxHandler = [this](u32 addr) {
-		bool result = invalidate_address(addr);
-		if (result)
-				LOG_WARNING(RSX, "Reporting Cell writing to 0x%x", addr);
-		return result;
-	};
 	if (rpcs3::config.rsx.d3d12.debug_output.value())
 	{
 		Microsoft::WRL::ComPtr<ID3D12Debug> debugInterface;
@@ -204,7 +196,6 @@ D3D12GSRender::~D3D12GSRender()
 
 	m_texture_cache.unprotect_all();
 
-	gfxHandler = [this](u32) { return false; };
 	m_dummy_texture->Release();
 	m_convertPSO->Release();
 	m_convertRootSignature->Release();
@@ -550,6 +541,22 @@ void D3D12GSRender::flip(int buffer)
 
 	std::chrono::time_point<std::chrono::system_clock> flip_end = std::chrono::system_clock::now();
 	m_timers.m_flip_duration += std::chrono::duration_cast<std::chrono::microseconds>(flip_end - flip_start).count();
+}
+
+bool D3D12GSRender::on_access_violation(u32 address, bool is_writing)
+{
+	if (!is_writing)
+	{
+		return false;
+	}
+
+	if (invalidate_address(address))
+	{
+		LOG_WARNING(RSX, "Reporting Cell writing to 0x%x", address);
+		return true;
+	}
+
+	return false;
 }
 
 void D3D12GSRender::reset_timer()

@@ -19,6 +19,8 @@ frame_capture_data frame_debug;
 
 namespace rsx
 {
+	std::function<bool(u32 addr, bool is_writing)> g_access_violation_handler;
+
 	std::string shaders_cache::path_to_root()
 	{
 		return fs::get_executable_dir() + "data/";
@@ -167,7 +169,7 @@ namespace rsx
 			return 0;
 		}
 	}
-	
+
 	void tiled_region::write(const void *src, u32 width, u32 height, u32 pitch)
 	{
 		if (!tile)
@@ -268,6 +270,19 @@ namespace rsx
 		default:
 			throw;
 		}
+	}
+
+	thread::thread()
+	{
+		g_access_violation_handler = [this](u32 address, bool is_writing)
+		{
+			return on_access_violation(address, is_writing);
+		};
+	}
+
+	thread::~thread()
+	{
+		g_access_violation_handler = nullptr;
 	}
 
 	void thread::capture_frame(const std::string &name)

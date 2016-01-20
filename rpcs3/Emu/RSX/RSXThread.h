@@ -257,6 +257,7 @@ namespace rsx
 
 		bool capture_current_frame = false;
 		void capture_frame(const std::string &name);
+
 	public:
 		u32 ioAddress, ioSize;
 		int flip_status;
@@ -283,7 +284,6 @@ namespace rsx
 		u32 local_mem_addr, main_mem_addr;
 		bool strict_ordering[0x1000];
 
-
 		bool draw_inline_vertex_array;
 		std::vector<u32> inline_vertex_array;
 
@@ -309,7 +309,8 @@ namespace rsx
 		std::set<u32> m_used_gcm_commands;
 
 	protected:
-		virtual ~thread() {}
+		thread();
+		virtual ~thread();
 
 		virtual void on_task() override;
 
@@ -324,6 +325,7 @@ namespace rsx
 		virtual bool do_method(u32 cmd, u32 value) { return false; }
 		virtual void flip(int buffer) = 0;
 		virtual u64 timestamp() const;
+		virtual bool on_access_violation(u32 address, bool is_writing) { return false; }
 
 		/**
 		 * Fill buffer with 4x4 scale offset matrix.
@@ -362,6 +364,7 @@ namespace rsx
 		};
 
 		virtual std::pair<std::string, std::string> get_programs() const { return std::make_pair("", ""); };
+
 	public:
 		void reset();
 		void init(const u32 ioAddress, const u32 ioSize, const u32 ctrlAddress, const u32 localAddress);

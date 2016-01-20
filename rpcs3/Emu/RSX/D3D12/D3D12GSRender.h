@@ -193,6 +193,8 @@ protected:
 	virtual void end() override;
 	virtual void flip(int buffer) override;
 
+	virtual bool on_access_violation(u32 address, bool is_writing) override;
+
 	virtual std::array<std::vector<gsl::byte>, 4> copy_render_targets_to_memory() override;
 	virtual std::array<std::vector<gsl::byte>, 2> copy_depth_stencil_buffer_to_memory() override;
 	virtual std::pair<std::string, std::string> get_programs() const override;
