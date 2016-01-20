@@ -52,10 +52,39 @@ std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC> D3D12GSRender::upload_vertex_attrib
 
 			command_list->CopyBufferRegion(m_vertex_buffer_data.Get(), offset_in_vertex_buffers_buffer, m_buffer_data.get_heap(), heap_offset, buffer_size);
 
+			UINT component_mapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+			switch (info.size)
+			{
+			case 1:
+				component_mapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(
+					D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_0,
+					D3D12_SHADER_COMPONENT_MAPPING_FORCE_VALUE_0,
+					D3D12_SHADER_COMPONENT_MAPPING_FORCE_VALUE_0,
+					D3D12_SHADER_COMPONENT_MAPPING_FORCE_VALUE_1,
+					);
+					break;
+			case 2:
+				component_mapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(
+					D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_0,
+					D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_1,
+					D3D12_SHADER_COMPONENT_MAPPING_FORCE_VALUE_0,
+					D3D12_SHADER_COMPONENT_MAPPING_FORCE_VALUE_1,
+					);
+				break;
+			case 3:
+				component_mapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(
+					D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_0,
+					D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_1,
+					D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_2,
+					D3D12_SHADER_COMPONENT_MAPPING_FORCE_VALUE_1,
+					);
+				break;
+			}
+
 			D3D12_SHADER_RESOURCE_VIEW_DESC vertex_buffer_view = {
 				get_vertex_attribute_format(info.type, info.size),
 				D3D12_SRV_DIMENSION_BUFFER,
-				D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING
+				component_mapping
 			};
 			vertex_buffer_view.Buffer.FirstElement = offset_in_vertex_buffers_buffer / element_size;
 			vertex_buffer_view.Buffer.NumElements = buffer_size / element_size;
