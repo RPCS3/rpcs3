@@ -56,7 +56,7 @@ private:
 	ComPtr<ID3D12Resource> m_backbuffer[2];
 	ComPtr<ID3D12DescriptorHeap> m_backbuffer_descriptor_heap[2];
 	// m_rootSignatures[N] is RS with N texture/sample
-	ComPtr<ID3D12RootSignature> m_root_signatures[17][16]; // indexed by [texture count][vertex count]
+	ComPtr<ID3D12RootSignature> m_root_signatures[17][17]; // indexed by [texture count][vertex count]
 
 	// TODO: Use a tree structure to parse more efficiently
 	data_cache m_texture_cache;

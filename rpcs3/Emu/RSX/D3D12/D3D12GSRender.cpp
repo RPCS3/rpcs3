@@ -143,7 +143,7 @@ D3D12GSRender::D3D12GSRender()
 	m_device->CreateRenderTargetView(m_backbuffer[1].Get(), &renter_target_view_desc, m_backbuffer_descriptor_heap[1]->GetCPUDescriptorHandleForHeapStart());
 
 	// Common root signatures
-	for (int vertex_buffer_count = 1; vertex_buffer_count <= 16; vertex_buffer_count++)
+	for (int vertex_buffer_count = 0; vertex_buffer_count < 17; vertex_buffer_count++) // Some app (naruto ultimate ninja storm 2) uses a shader without inputs...
 	{
 		for (unsigned texture_count = 0; texture_count < 17; texture_count++)
 		{
@@ -161,7 +161,12 @@ D3D12GSRender::D3D12GSRender()
 				CD3DX12_DESCRIPTOR_RANGE(D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER, texture_count, 0),
 			};
 			CD3DX12_ROOT_PARAMETER RP[2];
-			RP[0].InitAsDescriptorTable((texture_count > 0) ? 4 : 3, &descriptorRange[0]);
+			size_t cbv_srv_uav_descriptor_size = 4;
+			if (texture_count == 0)
+				cbv_srv_uav_descriptor_size -= 1;
+			if (vertex_buffer_count == 0)
+				cbv_srv_uav_descriptor_size -= 1;
+			RP[0].InitAsDescriptorTable(cbv_srv_uav_descriptor_size, (vertex_buffer_count > 0) ? &descriptorRange[0] : &descriptorRange[1]);
 			RP[1].InitAsDescriptorTable(1, &descriptorRange[4]);
 
 			Microsoft::WRL::ComPtr<ID3DBlob> rootSignatureBlob;
@@ -173,7 +178,7 @@ D3D12GSRender::D3D12GSRender()
 			m_device->CreateRootSignature(0,
 				rootSignatureBlob->GetBufferPointer(),
 				rootSignatureBlob->GetBufferSize(),
-				IID_PPV_ARGS(m_root_signatures[texture_count][vertex_buffer_count - 1].GetAddressOf()));
+				IID_PPV_ARGS(m_root_signatures[texture_count][vertex_buffer_count].GetAddressOf()));
 		}
 	}
 
@@ -283,7 +288,7 @@ void D3D12GSRender::end()
 	std::chrono::time_point<std::chrono::system_clock> program_load_end = std::chrono::system_clock::now();
 	m_timers.m_program_load_duration += std::chrono::duration_cast<std::chrono::microseconds>(program_load_end - program_load_start).count();
 
-	get_current_resource_storage().command_list->SetGraphicsRootSignature(m_root_signatures[std::get<2>(m_current_pso)][vertex_buffer_count - 1].Get());
+	get_current_resource_storage().command_list->SetGraphicsRootSignature(m_root_signatures[std::get<2>(m_current_pso)][vertex_buffer_count].Get());
 	get_current_resource_storage().command_list->OMSetStencilRef(rsx::method_registers[NV4097_SET_STENCIL_FUNC_REF]);
 
 	std::chrono::time_point<std::chrono::system_clock> constants_duration_start = std::chrono::system_clock::now();
