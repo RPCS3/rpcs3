@@ -38,20 +38,7 @@ void Shader::Compile(const std::string &code, SHADER_TYPE st)
 
 void D3D12GSRender::load_program()
 {
-	u32 transform_program_start = rsx::method_registers[NV4097_SET_TRANSFORM_PROGRAM_START];
-	m_vertex_program.data.reserve((512 - transform_program_start) * 4);
-
-	for (int i = transform_program_start; i < 512; ++i)
-	{
-		m_vertex_program.data.resize((i - transform_program_start) * 4 + 4);
-		memcpy(m_vertex_program.data.data() + (i - transform_program_start) * 4, transform_program + i * 4, 4 * sizeof(u32));
-
-		D3 d3;
-		d3.HEX = transform_program[i * 4 + 3];
-
-		if (d3.end)
-			break;
-	}
+	m_vertex_program = get_current_vertex_program();
 
 	u32 shader_program = rsx::method_registers[NV4097_SET_SHADER_PROGRAM];
 	m_fragment_program.offset = shader_program & ~0x3;

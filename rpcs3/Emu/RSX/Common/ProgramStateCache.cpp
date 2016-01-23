@@ -3,14 +3,14 @@
 
 using namespace program_hash_util;
 
-size_t vertex_program_hash::operator()(const std::vector<u32> &program) const
+size_t vertex_program_hash::operator()(const RSXVertexProgram &program) const
 {
 	// 64-bit Fowler/Noll/Vo FNV-1a hash code
 	size_t hash = 0xCBF29CE484222325ULL;
-	const qword *instbuffer = (const qword*)program.data();
+	const qword *instbuffer = (const qword*)program.data.data();
 	size_t instIndex = 0;
 	bool end = false;
-	for (unsigned i = 0; i < program.size() / 4; i++)
+	for (unsigned i = 0; i < program.data.size() / 4; i++)
 	{
 		const qword inst = instbuffer[instIndex];
 		hash ^= inst.dword[0];
@@ -22,13 +22,17 @@ size_t vertex_program_hash::operator()(const std::vector<u32> &program) const
 	return hash;
 }
 
-bool vertex_program_compare::operator()(const std::vector<u32> &binary1, const std::vector<u32> &binary2) const
+bool vertex_program_compare::operator()(const RSXVertexProgram &binary1, const RSXVertexProgram &binary2) const
 {
-	if (binary1.size() != binary2.size()) return false;
-	const qword *instBuffer1 = (const qword*)binary1.data();
-	const qword *instBuffer2 = (const qword*)binary2.data();
+	if (binary1.output_mask != binary2.output_mask)
+		return false;
+	if (binary1.rsx_vertex_inputs != binary2.rsx_vertex_inputs)
+		return false;
+	if (binary1.data.size() != binary2.data.size()) return false;
+	const qword *instBuffer1 = (const qword*)binary1.data.data();
+	const qword *instBuffer2 = (const qword*)binary2.data.data();
 	size_t instIndex = 0;
-	for (unsigned i = 0; i < binary1.size() / 4; i++)
+	for (unsigned i = 0; i < binary1.data.size() / 4; i++)
 	{
 		const qword& inst1 = instBuffer1[instIndex];
 		const qword& inst2 = instBuffer2[instIndex];

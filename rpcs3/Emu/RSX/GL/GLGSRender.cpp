@@ -738,22 +738,7 @@ bool GLGSRender::do_method(u32 cmd, u32 arg)
 bool GLGSRender::load_program()
 {
 #if 1
-	RSXVertexProgram vertex_program;
-	u32 transform_program_start = rsx::method_registers[NV4097_SET_TRANSFORM_PROGRAM_START];
-	vertex_program.data.reserve((512 - transform_program_start) * 4);
-
-	for (int i = transform_program_start; i < 512; ++i)
-	{
-		vertex_program.data.resize((i - transform_program_start) * 4 + 4);
-		memcpy(vertex_program.data.data() + (i - transform_program_start) * 4, transform_program + i * 4, 4 * sizeof(u32));
-
-		D3 d3;
-		d3.HEX = transform_program[i * 4 + 3];
-
-		if (d3.end)
-			break;
-	}
-
+	RSXVertexProgram vertex_program = get_current_vertex_program();
 	RSXFragmentProgram fragment_program;
 	u32 shader_program = rsx::method_registers[NV4097_SET_SHADER_PROGRAM];
 	fragment_program.offset = shader_program & ~0x3;

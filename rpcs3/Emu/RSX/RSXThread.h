@@ -292,6 +292,7 @@ namespace rsx
 	protected:
 		std::array<u32, 4> get_color_surface_addresses() const;
 		u32 get_zeta_surface_address() const;
+		RSXVertexProgram get_current_vertex_program() const;
 
 	public:
 		u32 draw_array_count;

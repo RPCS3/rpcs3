@@ -597,6 +597,62 @@ namespace rsx
 		return rsx::get_address(offset_zeta, m_context_dma_z);
 	}
 
+	RSXVertexProgram thread::get_current_vertex_program() const
+	{
+		RSXVertexProgram result = {};
+		u32 transform_program_start = rsx::method_registers[NV4097_SET_TRANSFORM_PROGRAM_START];
+		result.data.reserve((512 - transform_program_start) * 4);
+
+		for (int i = transform_program_start; i < 512; ++i)
+		{
+			result.data.resize((i - transform_program_start) * 4 + 4);
+			memcpy(result.data.data() + (i - transform_program_start) * 4, transform_program + i * 4, 4 * sizeof(u32));
+
+			D3 d3;
+			d3.HEX = transform_program[i * 4 + 3];
+
+			if (d3.end)
+				break;
+		}
+		result.output_mask = rsx::method_registers[NV4097_SET_VERTEX_ATTRIB_OUTPUT_MASK];
+
+		u32 input_mask = rsx::method_registers[NV4097_SET_VERTEX_ATTRIB_INPUT_MASK];
+		u32 modulo_mask = rsx::method_registers[NV4097_SET_FREQUENCY_DIVIDER_OPERATION];
+		result.rsx_vertex_inputs.clear();
+		for (u8 index = 0; index < rsx::limits::vertex_count; ++index)
+		{
+			bool enabled = !!(input_mask & (1 << index));
+			if (!enabled)
+				continue;
+
+			if (vertex_arrays_info[index].size > 0)
+			{
+				result.rsx_vertex_inputs.push_back(
+				{
+					index,
+					vertex_arrays_info[index].size,
+					vertex_arrays_info[index].frequency,
+					!!((modulo_mask >> index) & 0x1),
+					true
+				}
+				);
+			}
+			else if (register_vertex_info[index].size > 0)
+			{
+				result.rsx_vertex_inputs.push_back(
+				{
+					index,
+					register_vertex_info[index].size,
+					register_vertex_info[index].frequency,
+					!!((modulo_mask >> index) & 0x1),
+					false
+				}
+				);
+			}
+		}
+		return result;
+	}
+
 	void thread::reset()
 	{
 		//setup method registers
