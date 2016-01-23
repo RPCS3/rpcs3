@@ -138,12 +138,12 @@ struct texture_entry
 	texture_entry() : m_format(0), m_width(0), m_height(0), m_is_dirty(true)
 	{}
 
-	texture_entry(u8 f, size_t w, size_t h, size_t m) : m_format(f), m_width(w), m_height(h), m_is_dirty(false)
+	texture_entry(u8 f, size_t w, size_t h, size_t m) : m_format(f), m_width(w), m_height(h), m_is_dirty(false), m_mipmap(m)
 	{}
 
 	bool operator==(const texture_entry &other)
 	{
-		return (m_format == other.m_format && m_width == other.m_width && m_height == other.m_height);
+		return (m_format == other.m_format && m_width == other.m_width && m_height == other.m_height && m_mipmap == other.m_mipmap);
 	}
 };
 
