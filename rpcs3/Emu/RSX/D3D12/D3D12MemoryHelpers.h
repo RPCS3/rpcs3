@@ -134,16 +134,17 @@ struct texture_entry
 	size_t m_width;
 	size_t m_height;
 	size_t m_mipmap;
+	size_t m_depth;
 
-	texture_entry() : m_format(0), m_width(0), m_height(0), m_is_dirty(true)
+	texture_entry() : m_format(0), m_width(0), m_height(0), m_depth(0), m_is_dirty(true)
 	{}
 
-	texture_entry(u8 f, size_t w, size_t h, size_t m) : m_format(f), m_width(w), m_height(h), m_is_dirty(false)
+	texture_entry(u8 f, size_t w, size_t h, size_t d, size_t m) : m_format(f), m_width(w), m_height(h), m_depth(d), m_is_dirty(false), m_mipmap(m)
 	{}
 
 	bool operator==(const texture_entry &other)
 	{
-		return (m_format == other.m_format && m_width == other.m_width && m_height == other.m_height);
+		return (m_format == other.m_format && m_width == other.m_width && m_height == other.m_height && m_mipmap == other.m_mipmap && m_depth == other.m_depth);
 	}
 };
 
@@ -163,7 +164,7 @@ private:
 	std::unordered_map<u64, std::pair<texture_entry, ComPtr<ID3D12Resource>> > m_address_to_data; // Storage
 	std::list <std::tuple<u64, u32, u32> > m_protected_ranges; // address, start of protected range, size of protected range
 public:
-	void store_and_protect_data(u64 key, u32 start, size_t size, u8 format, size_t w, size_t h, size_t m, ComPtr<ID3D12Resource> data);
+	void store_and_protect_data(u64 key, u32 start, size_t size, u8 format, size_t w, size_t h, size_t d, size_t m, ComPtr<ID3D12Resource> data);
 
 	/**
 	* Make memory from start to start + size write protected.

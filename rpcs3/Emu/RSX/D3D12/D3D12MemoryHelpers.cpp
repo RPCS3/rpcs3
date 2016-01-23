@@ -4,10 +4,10 @@
 #include "D3D12MemoryHelpers.h"
 
 
-void data_cache::store_and_protect_data(u64 key, u32 start, size_t size, u8 format, size_t w, size_t h, size_t m, ComPtr<ID3D12Resource> data)
+void data_cache::store_and_protect_data(u64 key, u32 start, size_t size, u8 format, size_t w, size_t h, size_t d, size_t m, ComPtr<ID3D12Resource> data)
 {
 	std::lock_guard<std::mutex> lock(m_mut);
-	m_address_to_data[key] = std::make_pair(texture_entry(format, w, h, m), data);
+	m_address_to_data[key] = std::make_pair(texture_entry(format, w, h, d, m), data);
 	protect_data(key, start, size);
 }
 

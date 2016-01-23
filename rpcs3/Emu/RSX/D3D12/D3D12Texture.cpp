@@ -193,7 +193,7 @@ void D3D12GSRender::upload_and_bind_textures(ID3D12GraphicsCommandList *command_
 		{
 			is_depth_stencil_texture = true;
 		}
-		else if (cached_texture != nullptr && (cached_texture->first == texture_entry(format, w, h, textures[i].mipmap())))
+		else if (cached_texture != nullptr && (cached_texture->first == texture_entry(format, w, h, textures[i].depth(), textures[i].mipmap())))
 		{
 			if (cached_texture->first.m_is_dirty)
 			{
@@ -210,7 +210,7 @@ void D3D12GSRender::upload_and_bind_textures(ID3D12GraphicsCommandList *command_
 			std::wstring name = L"texture_@" + std::to_wstring(texaddr);
 			tex->SetName(name.c_str());
 			vram_texture = tex.Get();
-			m_texture_cache.store_and_protect_data(texaddr, texaddr, get_texture_size(textures[i]), format, w, h, textures[i].mipmap(), tex);
+			m_texture_cache.store_and_protect_data(texaddr, texaddr, get_texture_size(textures[i]), format, w, h, textures[i].depth(), textures[i].mipmap(), tex);
 		}
 
 		D3D12_SHADER_RESOURCE_VIEW_DESC shared_resource_view_desc = {};
