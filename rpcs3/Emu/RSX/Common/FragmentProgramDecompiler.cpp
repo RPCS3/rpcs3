@@ -340,7 +340,7 @@ bool FragmentProgramDecompiler::handle_sct(u32 opcode)
 	switch (opcode)
 	{
 	case RSX_FP_OPCODE_ADD: SetDst("($0 + $1)"); return true;
-	case RSX_FP_OPCODE_DIV: SetDst("($0 / $1)"); return true;
+	case RSX_FP_OPCODE_DIV: SetDst("($0 / $1.xxxx)"); return true;
 	// Note: DIVSQ is not IEEE compliant. divsq(0, 0) is 0 (Super Puzzle Fighter II Turbo HD Remix).
 	// sqrt(x, 0) might be equal to some big value (in absolute) whose sign is sign(x) but it has to be proven.
 	case RSX_FP_OPCODE_DIVSQ: SetDst("divsq_legacy($0, $1)"); return true;
@@ -376,7 +376,7 @@ bool FragmentProgramDecompiler::handle_scb(u32 opcode)
 	{
 	case RSX_FP_OPCODE_ADD: SetDst("($0 + $1)"); return true;
 	case RSX_FP_OPCODE_COS: SetDst("cos($0.xxxx)"); return true;
-	case RSX_FP_OPCODE_DIV: SetDst("($0 / $1)"); return true;
+	case RSX_FP_OPCODE_DIV: SetDst("($0 / $1.xxxx)"); return true;
 	// Note: DIVSQ is not IEEE compliant. sqrt(0, 0) is 0 (Super Puzzle Fighter II Turbo HD Remix).
 	// sqrt(x, 0) might be equal to some big value (in absolute) whose sign is sign(x) but it has to be proven.
 	case RSX_FP_OPCODE_DIVSQ: SetDst("divsq_legacy($0, sqrt($1).xxxx)"); return true;
