@@ -44,17 +44,20 @@ void D3D12GSRender::load_program()
 	m_fragment_program.offset = shader_program & ~0x3;
 	m_fragment_program.addr = rsx::get_address(m_fragment_program.offset, (shader_program & 0x3) - 1);
 	m_fragment_program.ctrl = rsx::method_registers[NV4097_SET_SHADER_CONTROL];
-	m_fragment_program.texture_dimensions.clear();
 
+	std::array<texture_dimension, 16> texture_dimensions;
 	for (u32 i = 0; i < rsx::limits::textures_count; ++i)
 	{
 		if (!textures[i].enabled())
-			m_fragment_program.texture_dimensions.push_back(texture_dimension::texture_dimension_2d);
+			texture_dimensions[i] = texture_dimension::texture_dimension_2d;
 		else if (textures[i].cubemap())
-			m_fragment_program.texture_dimensions.push_back(texture_dimension::texture_dimension_cubemap);
+			texture_dimensions[i] = texture_dimension::texture_dimension_cubemap;
+		else if (textures[i].dimension() == 3)
+			texture_dimensions[i] = texture_dimension::texture_dimension_3d;
 		else
-			m_fragment_program.texture_dimensions.push_back(texture_dimension::texture_dimension_2d);
+			texture_dimensions[i] = texture_dimension::texture_dimension_2d;
 	}
+	m_fragment_program.set_texture_dimension(texture_dimensions);
 
 	D3D12PipelineProperties prop = {};
 	prop.Topology = get_primitive_topology_type(draw_mode);
