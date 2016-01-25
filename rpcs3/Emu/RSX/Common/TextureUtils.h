@@ -5,9 +5,10 @@
 struct MipmapLevelInfo
 {
 	size_t offset;
-	size_t width;
-	size_t height;
-	size_t rowPitch;
+	u16 width;
+	u16 height;
+	u16 depth;
+	u16 rowPitch;
 };
 
 /**
