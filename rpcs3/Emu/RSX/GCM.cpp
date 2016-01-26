@@ -762,6 +762,34 @@ rsx::primitive_type rsx::to_primitive_type(u8 in)
 	throw new EXCEPTION("Unknow primitive type %d", in);
 }
 
+enum
+{
+	CELL_GCM_WINDOW_ORIGIN_TOP = 0,
+	CELL_GCM_WINDOW_ORIGIN_BOTTOM = 1,
+	CELL_GCM_WINDOW_PIXEL_CENTER_HALF = 0,
+	CELL_GCM_WINDOW_PIXEL_CENTER_INTEGER = 1,
+};
+
+rsx::window_origin rsx::to_window_origin(u8 in)
+{
+	switch (in)
+	{
+	case CELL_GCM_WINDOW_ORIGIN_TOP: return rsx::window_origin::top;
+	case CELL_GCM_WINDOW_ORIGIN_BOTTOM: return rsx::window_origin::bottom;
+	}
+	throw EXCEPTION("Unknow window origin modifier %x", in);
+}
+
+rsx::window_pixel_center rsx::to_window_pixel_center(u8 in)
+{
+	switch (in)
+	{
+	case CELL_GCM_WINDOW_PIXEL_CENTER_HALF: return rsx::window_pixel_center::half;
+	case CELL_GCM_WINDOW_PIXEL_CENTER_INTEGER: return rsx::window_pixel_center::integer;
+	}
+	throw EXCEPTION("Unknow window pixel center %x", in);
+}
+
 
 enum
 {
@@ -1378,6 +1406,31 @@ namespace
 		return result;
 	}
 
+	std::string origin_mode(u32 origin)
+	{
+		switch (rsx::to_window_origin(origin))
+		{
+		case rsx::window_origin::bottom: return "bottom";
+		case rsx::window_origin::top: return "top";
+		}
+		throw EXCEPTION("Wrong origin mode");
+	}
+
+	std::string pixel_center_mode(u32 in)
+	{
+		switch (rsx::to_window_pixel_center(in))
+		{
+		case rsx::window_pixel_center::half: return "half";
+		case rsx::window_pixel_center::integer: return "integer";
+		}
+		throw EXCEPTION("Wrong origin mode");
+	}
+
+	std::string shader_window(u32 arg)
+	{
+		return "Viewport: height = " + std::to_string(arg & 0xFFF) + " origin = " + origin_mode((arg >> 12) & 0xF) + " pixel center = " + pixel_center_mode((arg >> 16) & 0xF);
+	}
+
 #define OPCODE_RANGE_1(opcode, increment, index, printing_function) \
 	{ (opcode) + (index) * (increment), [](u32 arg) -> std::string { return (printing_function)((index), arg); } },
 
@@ -1476,6 +1529,7 @@ namespace
 		{ NV4097_SET_VERTEX_ATTRIB_OUTPUT_MASK, vertex_output_mask },
 		{ NV4097_SET_SHADER_CONTROL, shader_control },
 		{ NV4097_SET_ANTI_ALIASING_CONTROL, anti_aliasing_control },
+		{ NV4097_SET_SHADER_WINDOW, shader_window },
 		{ NV4097_SET_VERTEX_DATA_ARRAY_FORMAT, [](u32 arg) -> std::string { return "Vertex array 0: " + unpack_vertex_format(arg); } },
 		{ NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 1, [](u32 arg) -> std::string { return "Vertex array 1: " + unpack_vertex_format(arg); } },
 		{ NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + 2, [](u32 arg) -> std::string { return "Vertex array 2: " + unpack_vertex_format(arg); } },

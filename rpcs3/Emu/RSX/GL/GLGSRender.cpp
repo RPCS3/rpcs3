@@ -567,10 +567,10 @@ void GLGSRender::set_viewport()
 
 	u32 shader_window = rsx::method_registers[NV4097_SET_SHADER_WINDOW];
 
-	u8 shader_window_origin = (shader_window >> 12) & 0xf;
+	rsx::window_origin shader_window_origin = rsx::to_window_origin((shader_window >> 12) & 0xf);
 
 	//TODO
-	if (true || shader_window_origin == CELL_GCM_WINDOW_ORIGIN_BOTTOM)
+	if (true || shader_window_origin == rsx::window_origin::bottom)
 	{
 		__glcheck glViewport(viewport_x, viewport_y, viewport_w, viewport_h);
 		__glcheck glScissor(scissor_x, scissor_y, scissor_w, scissor_h);
