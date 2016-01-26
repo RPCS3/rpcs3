@@ -105,18 +105,12 @@ void GameViewer::LoadPSF()
 		}
 
 		vfsFile f;
-
 		if (!f.Open(sfo))
 		{
 			continue;
 		}
 
-		const psf::object psf(f);
-
-		if (!psf)
-		{
-			continue;
-		}
+		const auto& psf = psf::load(f.VRead<char>());
 
 		// get local path from VFS...
 		std::string local_path;
@@ -124,14 +118,14 @@ void GameViewer::LoadPSF()
 
 		GameInfo game;
 		game.root = m_games[i];
-		game.serial = psf.get_string_or("TITLE_ID", "unknown");
-		game.name = psf.get_string_or("TITLE", "unknown");
-		game.app_ver = psf.get_string_or("APP_VER", "unknown");
-		game.category = psf.get_string_or("CATEGORY", "unknown");
-		game.fw = psf.get_string_or("PS3_SYSTEM_VER", "unknown");
-		game.parental_lvl = psf.get_integer_or("PARENTAL_LEVEL", 0);
-		game.resolution = psf.get_integer_or("RESOLUTION", 0);
-		game.sound_format = psf.get_integer_or("SOUND_FORMAT", 0);
+		game.serial = psf::get_string(psf, "TITLE_ID", "unknown");
+		game.name = psf::get_string(psf, "TITLE", "unknown");
+		game.app_ver = psf::get_string(psf, "APP_VER", "unknown");
+		game.category = psf::get_string(psf, "CATEGORY", "unknown");
+		game.fw = psf::get_string(psf, "PS3_SYSTEM_VER", "unknown");
+		game.parental_lvl = psf::get_integer(psf, "PARENTAL_LEVEL");
+		game.resolution = psf::get_integer(psf, "RESOLUTION");
+		game.sound_format = psf::get_integer(psf, "SOUND_FORMAT");
 		
 		if (game.serial.length() == 9)
 		{

@@ -78,27 +78,19 @@ s32 cellHddGameCheck(PPUThread& ppu, u32 version, vm::cptr<char> dirName, u32 er
 	else
 	{
 		// TODO: Is cellHddGameCheck really responsible for writing the information in get->getParam ? (If not, delete this else)
-		vfsFile f("/dev_hdd0/game/" + dir + "/PARAM.SFO");
-		const psf::object psf(f);
-		if (!psf)
-		{
-			return CELL_HDDGAME_ERROR_BROKEN;
-		}
+		const auto& psf = psf::load(vfsFile("/dev_hdd0/game/" + dir + "/PARAM.SFO").VRead<char>());
 
-		get->getParam.parentalLevel = psf["PARENTAL_LEVEL"].as_integer();
-		get->getParam.attribute = psf["ATTRIBUTE"].as_integer();
-		get->getParam.resolution = psf["RESOLUTION"].as_integer();
-		get->getParam.soundFormat = psf["SOUND_FORMAT"].as_integer();
-		std::string title = psf["TITLE"].as_string();
-		strcpy_trunc(get->getParam.title, title);
-		std::string app_ver = psf["APP_VER"].as_string();
-		strcpy_trunc(get->getParam.dataVersion, app_ver);
-		strcpy_trunc(get->getParam.titleId, dir);
+		get->getParam.parentalLevel = psf.at("PARENTAL_LEVEL").as_integer();
+		get->getParam.attribute = psf.at("ATTRIBUTE").as_integer();
+		get->getParam.resolution = psf.at("RESOLUTION").as_integer();
+		get->getParam.soundFormat = psf.at("SOUND_FORMAT").as_integer();
+		strcpy_trunc(get->getParam.title, psf.at("TITLE").as_string());
+		strcpy_trunc(get->getParam.dataVersion, psf.at("APP_VER").as_string());
+		strcpy_trunc(get->getParam.titleId, psf.at("TITLE_ID").as_string());
 
 		for (u32 i = 0; i < CELL_HDDGAME_SYSP_LANGUAGE_NUM; i++)
 		{
-			title = psf[fmt::format("TITLE_%02d", i)].as_string();
-			strcpy_trunc(get->getParam.titleLang[i], title);
+			strcpy_trunc(get->getParam.titleLang[i], psf::get_string(psf, fmt::format("TITLE_%02d", i)));
 		}
 	}
 
@@ -167,17 +159,17 @@ s32 cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr<CellGa
 		size->sysSizeKB = 0;
 	}
 
-	vfsFile f("/app_home/../PARAM.SFO");
-	const psf::object psf(f);
+	const auto& psf = psf::load(vfsFile("/app_home/../PARAM.SFO").VRead<char>());
 
-	if (!psf)
+	if (psf.empty())
 	{
 		// According to testing (in debug mode) cellGameBootCheck doesn't return an error code, when PARAM.SFO doesn't exist.
 		cellGame.error("cellGameBootCheck(): Cannot read PARAM.SFO.");
+		return CELL_GAME_RET_OK;
 	}
 
-	std::string category = psf["CATEGORY"].as_string();
-	if (category.substr(0, 2) == "DG")
+	const std::string& category = psf.at("CATEGORY").as_string();
+	if (category == "DG")
 	{
 		*type = CELL_GAME_GAMETYPE_DISC;
 		*attributes = 0; // TODO
@@ -188,9 +180,9 @@ s32 cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr<CellGa
 			return CELL_GAME_ERROR_BUSY;
 		}
 	}
-	else if (category.substr(0, 2) == "HG")
+	else if (category == "HG")
 	{
-		std::string titleId = psf["TITLE_ID"].as_string();
+		const std::string& titleId = psf.at("TITLE_ID").as_string();
 		*type = CELL_GAME_GAMETYPE_HDD;
 		*attributes = 0; // TODO
 		if (dirName) strcpy_trunc(*dirName, titleId); 
@@ -200,9 +192,9 @@ s32 cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr<CellGa
 			return CELL_GAME_ERROR_BUSY;
 		}
 	}
-	else if (category.substr(0, 2) == "GD")
+	else if (category == "GD")
 	{
-		std::string titleId = psf["TITLE_ID"].as_string();
+		const std::string& titleId = psf.at("TITLE_ID").as_string();
 		*type = CELL_GAME_GAMETYPE_DISC;
 		*attributes = CELL_GAME_ATTRIBUTE_PATCH; // TODO
 		if (dirName) strcpy_trunc(*dirName, titleId); // ???
@@ -212,7 +204,7 @@ s32 cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr<CellGa
 			return CELL_GAME_ERROR_BUSY;
 		}
 	}
-	else if (psf)
+	else
 	{
 		cellGame.error("cellGameBootCheck(): Unknown CATEGORY.");
 	}
@@ -234,22 +226,16 @@ s32 cellGamePatchCheck(vm::ptr<CellGameContentSize> size, vm::ptr<void> reserved
 		size->sysSizeKB = 0;
 	}
 
-	vfsFile f("/app_home/../PARAM.SFO");
-	const psf::object psf(f);
-	if (!psf)
-	{
-		cellGame.error("cellGamePatchCheck(): CELL_GAME_ERROR_ACCESS_ERROR (cannot read PARAM.SFO)");
-		return CELL_GAME_ERROR_ACCESS_ERROR;
-	}
+	const auto& psf = psf::load(vfsFile("/app_home/../PARAM.SFO").VRead<char>());
 
-	std::string category = psf["CATEGORY"].as_string();
-	if (category.substr(0, 2) != "GD")
+	const std::string& category = psf.at("CATEGORY").as_string();
+	if (category != "GD")
 	{
 		cellGame.error("cellGamePatchCheck(): CELL_GAME_ERROR_NOTPATCH");
 		return CELL_GAME_ERROR_NOTPATCH;
 	}
 
-	if (!fxm::make<content_permission_t>("/dev_hdd0/game/" + psf["TITLE_ID"].as_string(), false))
+	if (!fxm::make<content_permission_t>("/dev_hdd0/game/" + psf.at("TITLE_ID").as_string(), false))
 	{
 		return CELL_GAME_ERROR_BUSY;
 	}
@@ -377,13 +363,7 @@ s32 cellGameDataCheckCreate2(PPUThread& ppu, u32 version, vm::cptr<char> dirName
 		return CELL_GAMEDATA_RET_OK;
 	}
 
-	vfsFile f("/app_home/../PARAM.SFO");
-	const psf::object psf(f);
-	if (!psf)
-	{
-		cellGame.error("cellGameDataCheckCreate2(): CELL_GAMEDATA_ERROR_BROKEN (cannot read PARAM.SFO)");
-		return CELL_GAMEDATA_ERROR_BROKEN;
-	}
+	const auto& psf = psf::load(vfsFile("/app_home/../PARAM.SFO").VRead<char>());
 
 	vm::var<CellGameDataCBResult> cbResult;
 	vm::var<CellGameDataStatGet>  cbGet;
@@ -406,10 +386,10 @@ s32 cellGameDataCheckCreate2(PPUThread& ppu, u32 version, vm::cptr<char> dirName
 	cbGet->sysSizeKB = 0;
 
 	cbGet->getParam.attribute = CELL_GAMEDATA_ATTR_NORMAL;
-	cbGet->getParam.parentalLevel = psf["PARENTAL_LEVEL"].as_integer();
-	strcpy_trunc(cbGet->getParam.dataVersion, psf["APP_VER"].as_string());
-	strcpy_trunc(cbGet->getParam.titleId, psf["TITLE_ID"].as_string());
-	strcpy_trunc(cbGet->getParam.title, psf["TITLE"].as_string());
+	cbGet->getParam.parentalLevel = psf.at("PARENTAL_LEVEL").as_integer();
+	strcpy_trunc(cbGet->getParam.dataVersion, psf.at("APP_VER").as_string());
+	strcpy_trunc(cbGet->getParam.titleId, psf.at("TITLE_ID").as_string());
+	strcpy_trunc(cbGet->getParam.title, psf.at("TITLE").as_string());
 	// TODO: write lang titles
 
 	funcStat(ppu, cbResult, cbGet, cbSet);
@@ -505,13 +485,7 @@ s32 cellGameGetParamInt(u32 id, vm::ptr<u32> value)
 {
 	cellGame.warning("cellGameGetParamInt(id=%d, value=*0x%x)", id, value);
 
-	// TODO: Access through cellGame***Check functions
-	vfsFile f("/app_home/../PARAM.SFO");
-	const psf::object psf(f);
-	if (!psf)
-	{
-		return CELL_GAME_ERROR_FAILURE;
-	}
+	const auto& psf = psf::load(vfsFile("/app_home/../PARAM.SFO").VRead<char>());
 
 	std::string key;
 
@@ -525,8 +499,7 @@ s32 cellGameGetParamInt(u32 id, vm::ptr<u32> value)
 		return CELL_GAME_ERROR_INVALID_ID;
 	}
 
-	//TODO: check format?
-	*value = psf[key].as_integer();
+	*value = psf.at(key).as_integer();
 	return CELL_OK;
 }
 
@@ -534,13 +507,7 @@ s32 cellGameGetParamString(u32 id, vm::ptr<char> buf, u32 bufsize)
 {
 	cellGame.warning("cellGameGetParamString(id=%d, buf=*0x%x, bufsize=%d)", id, buf, bufsize);
 
-	// TODO: Access through cellGame***Check functions
-	vfsFile f("/app_home/../PARAM.SFO");
-	const psf::object psf(f);
-	if (!psf)
-	{
-		return CELL_GAME_ERROR_FAILURE;
-	}
+	const auto& psf = psf::load(vfsFile("/app_home/../PARAM.SFO").VRead<char>());
 
 	std::string key;
 	switch(id)
@@ -576,13 +543,7 @@ s32 cellGameGetParamString(u32 id, vm::ptr<char> buf, u32 bufsize)
 		return CELL_GAME_ERROR_INVALID_ID;
 	}
 
-	//TODO: check format?
-	std::string value = psf[key].as_string();
-
-	if (value.size() >= bufsize)
-	{
-		value.resize(bufsize - 1);
-	}
+	const std::string& value = psf.at(key).as_string().substr(0, bufsize - 1);
 
 	std::copy_n(value.c_str(), value.size() + 1, buf.get_ptr());
 

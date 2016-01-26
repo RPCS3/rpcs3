@@ -530,7 +530,7 @@ template<typename T> class se_t<T, true>
 	static_assert(!std::is_pointer<type>::value, "se_t<> error: invalid type (pointer)");
 	static_assert(!std::is_reference<type>::value, "se_t<> error: invalid type (reference)");
 	static_assert(!std::is_array<type>::value, "se_t<> error: invalid type (array)");
-	static_assert(!std::is_enum<type>::value, "se_t<> error: invalid type (enumeration), use integral type instead");
+	//static_assert(!std::is_enum<type>::value, "se_t<> error: invalid type (enumeration), use integral type instead");
 	static_assert(alignof(type) == alignof(stype), "se_t<> error: unexpected alignment");
 
 	template<typename T2, typename = void> struct bool_converter
@@ -642,7 +642,7 @@ template<typename T> class se_t<T, false>
 	static_assert(!std::is_pointer<type>::value, "se_t<> error: invalid type (pointer)");
 	static_assert(!std::is_reference<type>::value, "se_t<> error: invalid type (reference)");
 	static_assert(!std::is_array<type>::value, "se_t<> error: invalid type (array)");
-	static_assert(!std::is_enum<type>::value, "se_t<> error: invalid type (enumeration), use integral type instead");
+	//static_assert(!std::is_enum<type>::value, "se_t<> error: invalid type (enumeration), use integral type instead");
 
 public:
 	se_t() = default;

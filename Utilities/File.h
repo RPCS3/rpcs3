@@ -199,6 +199,16 @@ namespace fs
 			CHECK_ASSERTION(seek(0) != -1 && read(result));
 			return result;
 		}
+
+		// Read full file to std::vector
+		template<typename T>
+		std::enable_if_t<std::is_pod<T>::value && !std::is_pointer<T>::value, std::vector<T>> to_vector() const
+		{
+			std::vector<T> result;
+			result.resize(size() / sizeof(T));
+			CHECK_ASSERTION(seek(0) != -1 && read(result));
+			return result;
+		}
 	};
 
 	// TODO
