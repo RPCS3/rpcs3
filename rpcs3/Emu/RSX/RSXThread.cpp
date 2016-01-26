@@ -656,6 +656,42 @@ namespace rsx
 		return result;
 	}
 
+
+	RSXFragmentProgram thread::get_current_fragment_program() const
+	{
+		RSXFragmentProgram result = {};
+		u32 shader_program = rsx::method_registers[NV4097_SET_SHADER_PROGRAM];
+		result.offset = shader_program & ~0x3;
+		result.addr = vm::base(rsx::get_address(result.offset, (shader_program & 0x3) - 1));
+		result.ctrl = rsx::method_registers[NV4097_SET_SHADER_CONTROL];
+		result.unnormalized_coords = 0;
+
+		std::array<texture_dimension, 16> texture_dimensions;
+		for (u32 i = 0; i < rsx::limits::textures_count; ++i)
+		{
+			if (!textures[i].enabled())
+				texture_dimensions[i] = texture_dimension::texture_dimension_2d;
+			else if (textures[i].dimension() == 1)
+				texture_dimensions[i] = texture_dimension::texture_dimension_1d;
+			else if (textures[i].dimension() == 2)
+			{
+				if (textures[i].cubemap())
+					texture_dimensions[i] = texture_dimension::texture_dimension_cubemap;
+				else
+					texture_dimensions[i] = texture_dimension::texture_dimension_2d;
+			}
+			else if (textures[i].dimension() == 3)
+				texture_dimensions[i] = texture_dimension::texture_dimension_3d;
+			else
+				throw EXCEPTION("Unable to determine texture dimension");
+			if (textures[i].enabled() && (textures[i].format() & CELL_GCM_TEXTURE_UN))
+				result.unnormalized_coords |= (1 << i);
+		}
+		result.set_texture_dimension(texture_dimensions);
+
+		return result;
+	}
+
 	void thread::reset()
 	{
 		//setup method registers

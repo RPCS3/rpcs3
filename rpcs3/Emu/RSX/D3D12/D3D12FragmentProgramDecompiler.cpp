@@ -109,18 +109,27 @@ void D3D12FragmentDecompiler::insertConstants(std::stringstream & OS)
 	OS << "{" << std::endl;
 	for (const ParamType &PT : m_parr.params[PF_PARAM_UNIFORM])
 	{
-		if (PT.type == "sampler2D" || PT.type == "samplerCube" || PT.type == "sampler3D")
+		if (PT.type == "sampler1D" || PT.type == "sampler2D" || PT.type == "samplerCube" || PT.type == "sampler3D")
 			continue;
-		for (ParamItem PI : PT.items)
+		for (const ParamItem &PI : PT.items)
 			OS << "	" << PT.type << " " << PI.name << ";" << std::endl;
 	}
 	OS << "};" << std::endl << std::endl;
 
 	for (const ParamType &PT : m_parr.params[PF_PARAM_UNIFORM])
 	{
-		if (PT.type == "sampler2D")
+		if (PT.type == "sampler1D")
 		{
-			for (ParamItem PI : PT.items)
+			for (const ParamItem &PI : PT.items)
+			{
+				size_t textureIndex = atoi(PI.name.data() + 3);
+				OS << "Texture1D " << PI.name << " : register(t" << textureIndex + 16 << ");" << std::endl;
+				OS << "sampler " << PI.name << "sampler : register(s" << textureIndex << ");" << std::endl;
+			}
+		}
+		else if (PT.type == "sampler2D")
+		{
+			for (const ParamItem &PI : PT.items)
 			{
 				size_t textureIndex = atoi(PI.name.data() + 3);
 				OS << "Texture2D " << PI.name << " : register(t" << textureIndex + 16 << ");" << std::endl;

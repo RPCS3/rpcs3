@@ -207,9 +207,10 @@ static const std::string rsx_fp_op_names[] =
 
 enum class texture_dimension : u8
 {
-	texture_dimension_2d = 0,
-	texture_dimension_cubemap = 1,
-	texture_dimension_3d = 2,
+	texture_dimension_1d = 0,
+	texture_dimension_2d = 1,
+	texture_dimension_cubemap = 2,
+	texture_dimension_3d = 3,
 };
 
 struct RSXFragmentProgram

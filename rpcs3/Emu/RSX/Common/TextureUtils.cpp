@@ -270,7 +270,13 @@ std::vector<MipmapLevelInfo> upload_placed_texture(const rsx::texture &texture, 
 	u16 depth;
 	u8 layer;
 
-	if (texture.dimension() == 2)
+	if (texture.dimension() == 1)
+	{
+		depth = 1;
+		layer = 1;
+		h = 1;
+	}
+	else if (texture.dimension() == 2)
 	{
 		depth = 1;
 		layer = texture.cubemap() ? 6 : 1;
