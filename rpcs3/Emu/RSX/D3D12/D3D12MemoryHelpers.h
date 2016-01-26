@@ -47,6 +47,11 @@ class data_heap
 	size_t m_put_pos; // Start of free space
 	ComPtr<ID3D12Resource> m_heap;
 public:
+	data_heap() = default;
+	~data_heap() = default;
+	data_heap(const data_heap&) = delete;
+	data_heap(data_heap&&) = delete;
+
 	size_t m_get_pos; // End of free space
 
 	template <typename... arg_type>
@@ -164,6 +169,11 @@ private:
 	std::unordered_map<u64, std::pair<texture_entry, ComPtr<ID3D12Resource>> > m_address_to_data; // Storage
 	std::list <std::tuple<u64, u32, u32> > m_protected_ranges; // address, start of protected range, size of protected range
 public:
+	data_cache() = default;
+	~data_cache() = default;
+	data_cache(const data_cache&) = delete;
+	data_cache(data_cache&&) = delete;
+
 	void store_and_protect_data(u64 key, u32 start, size_t size, u8 format, size_t w, size_t h, size_t d, size_t m, ComPtr<ID3D12Resource> data);
 
 	/**
@@ -195,6 +205,11 @@ public:
 */
 struct resource_storage
 {
+	resource_storage() = default;
+	~resource_storage() = default;
+	resource_storage(const resource_storage&) = delete;
+	resource_storage(resource_storage&&) = delete;
+
 	bool in_use; // False until command list has been populated at least once
 	ComPtr<ID3D12Fence> frame_finished_fence;
 	UINT64 fence_value;
