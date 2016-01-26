@@ -43,12 +43,12 @@ namespace program_hash_util
 
 	struct fragment_program_hash
 	{
-		size_t operator()(const void *program) const;
+		size_t operator()(const RSXFragmentProgram &program) const;
 	};
 
 	struct fragment_program_compare
 	{
-		bool operator()(const void *binary1, const void *binary2) const;
+		bool operator()(const RSXFragmentProgram &binary1, const RSXFragmentProgram &binary2) const;
 	};
 }
 
@@ -76,7 +76,7 @@ class program_state_cache
 	using fragment_program_type = typename backend_traits::fragment_program_type;
 
 	using binary_to_vertex_program = std::unordered_map<RSXVertexProgram, vertex_program_type, program_hash_util::vertex_program_hash, program_hash_util::vertex_program_compare> ;
-	using binary_to_fragment_program = std::unordered_map<void *, fragment_program_type, program_hash_util::fragment_program_hash, program_hash_util::fragment_program_compare>;
+	using binary_to_fragment_program = std::unordered_map<RSXFragmentProgram, fragment_program_type, program_hash_util::fragment_program_hash, program_hash_util::fragment_program_compare>;
 
 
 	struct pipeline_key
@@ -130,16 +130,18 @@ private:
 	/// bool here to inform that the program was preexisting.
 	std::tuple<const fragment_program_type&, bool> search_fragment_program(const RSXFragmentProgram& rsx_fp)
 	{
-		const auto& I = m_fragment_shader_cache.find(vm::base(rsx_fp.addr));
+		const auto& I = m_fragment_shader_cache.find(rsx_fp);
 		if (I != m_fragment_shader_cache.end())
 		{
 			return std::forward_as_tuple(I->second, true);
 		}
 		LOG_NOTICE(RSX, "FP not found in buffer!");
-		size_t fragment_program_size = program_hash_util::fragment_program_utils::get_fragment_program_ucode_size(vm::base(rsx_fp.addr));
+		size_t fragment_program_size = program_hash_util::fragment_program_utils::get_fragment_program_ucode_size(rsx_fp.addr);
 		gsl::not_null<void*> fragment_program_ucode_copy = malloc(fragment_program_size);
-		std::memcpy(fragment_program_ucode_copy, vm::base(rsx_fp.addr), fragment_program_size);
-		fragment_program_type &new_shader = m_fragment_shader_cache[fragment_program_ucode_copy];
+		std::memcpy(fragment_program_ucode_copy, rsx_fp.addr, fragment_program_size);
+		RSXFragmentProgram new_fp_key = rsx_fp;
+		new_fp_key.addr = fragment_program_ucode_copy;
+		fragment_program_type &new_shader = m_fragment_shader_cache[new_fp_key];
 		backend_traits::recompile_fragment_program(rsx_fp, new_shader, m_next_id++);
 
 		return std::forward_as_tuple(new_shader, false);
@@ -147,7 +149,13 @@ private:
 
 public:
 	program_state_cache() = default;
-	~program_state_cache() = default;
+	~program_state_cache()
+	{
+		for (auto& pair : m_fragment_shader_cache)
+		{
+			free(pair.first.addr);
+		}
+	};
 
 	const vertex_program_type& get_transform_program(const RSXVertexProgram& rsx_vp) const
 	{
@@ -159,7 +167,7 @@ public:
 
 	const fragment_program_type& get_shader_program(const RSXFragmentProgram& rsx_fp) const
 	{
-		auto I = m_fragment_shader_cache.find(vm::base(rsx_fp.addr));
+		auto I = m_fragment_shader_cache.find(rsx_fp);
 		if (I != m_fragment_shader_cache.end())
 			return I->second;
 		throw new EXCEPTION("Trying to get unknow shader program");
@@ -200,7 +208,7 @@ public:
 
 	size_t get_fragment_constants_buffer_size(const RSXFragmentProgram &fragmentShader) const
 	{
-		const auto I = m_fragment_shader_cache.find(vm::base(fragmentShader.addr));
+		const auto I = m_fragment_shader_cache.find(fragmentShader);
 		if (I != m_fragment_shader_cache.end())
 			return I->second.FragmentConstantOffsetCache.size() * 4 * sizeof(float);
 		LOG_ERROR(RSX, "Can't retrieve constant offset cache");
@@ -209,7 +217,7 @@ public:
 
 	void fill_fragment_constans_buffer(gsl::span<f32, gsl::dynamic_range> dst_buffer, const RSXFragmentProgram &fragment_program) const
 	{
-		const auto I = m_fragment_shader_cache.find(vm::base(fragment_program.addr));
+		const auto I = m_fragment_shader_cache.find(fragment_program);
 		if (I == m_fragment_shader_cache.end())
 			return;
 		__m128i mask = _mm_set_epi8(0xE, 0xF, 0xC, 0xD,
@@ -222,7 +230,7 @@ public:
 		size_t offset = 0;
 		for (size_t offset_in_fragment_program : I->second.FragmentConstantOffsetCache)
 		{
-			void *data = vm::base(fragment_program.addr + (u32)offset_in_fragment_program);
+			void *data = (char*)fragment_program.addr + (u32)offset_in_fragment_program;
 			const __m128i &vector = _mm_loadu_si128((__m128i*)data);
 			const __m128i &shuffled_vector = _mm_shuffle_epi8(vector, mask);
 			_mm_stream_si128((__m128i*)dst_buffer.subspan(offset, 4).data(), shuffled_vector);

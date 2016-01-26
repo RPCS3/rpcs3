@@ -26,7 +26,6 @@ class FragmentProgramDecompiler
 
 	std::string main;
 	u32& m_size;
-	const RSXFragmentProgram &m_prog;
 	u32 m_const_index;
 	u32 m_offset;
 	u32 m_location;
@@ -75,6 +74,7 @@ class FragmentProgramDecompiler
 	*/
 	bool handle_tex_srb(u32 opcode);
 protected:
+	const RSXFragmentProgram &m_prog;
 	u32 m_ctrl;
 	/** returns the type name of float vectors.
 	 */
