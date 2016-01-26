@@ -8,8 +8,8 @@ if(WIN32 AND BUILD_SHARED_LIBS)
   add_definitions("-DGTEST_LINKED_AS_SHARED_LIBRARY")
 endif()
 
-if("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU" OR
-   "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU" OR
+   CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   set(yaml_test_flags "-Wno-c99-extensions -Wno-variadic-macros -Wno-sign-compare -std=c++11")
 endif()
 
