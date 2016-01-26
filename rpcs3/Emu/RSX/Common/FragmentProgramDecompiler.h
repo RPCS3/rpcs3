@@ -25,9 +25,8 @@ class FragmentProgramDecompiler
 	SRC2 src2;
 
 	std::string main;
-	u32 m_addr;
 	u32& m_size;
-	const std::vector<texture_dimension> m_texture_dimensions;
+	const RSXFragmentProgram &m_prog;
 	u32 m_const_index;
 	u32 m_offset;
 	u32 m_location;

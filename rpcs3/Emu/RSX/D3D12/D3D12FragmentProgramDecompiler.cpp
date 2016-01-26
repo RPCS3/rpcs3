@@ -107,16 +107,16 @@ void D3D12FragmentDecompiler::insertConstants(std::stringstream & OS)
 {
 	OS << "cbuffer CONSTANT : register(b2)" << std::endl;
 	OS << "{" << std::endl;
-	for (ParamType PT : m_parr.params[PF_PARAM_UNIFORM])
+	for (const ParamType &PT : m_parr.params[PF_PARAM_UNIFORM])
 	{
-		if (PT.type == "sampler2D" || PT.type == "samplerCube")
+		if (PT.type == "sampler2D" || PT.type == "samplerCube" || PT.type == "sampler3D")
 			continue;
 		for (ParamItem PI : PT.items)
 			OS << "	" << PT.type << " " << PI.name << ";" << std::endl;
 	}
 	OS << "};" << std::endl << std::endl;
 
-	for (ParamType PT : m_parr.params[PF_PARAM_UNIFORM])
+	for (const ParamType &PT : m_parr.params[PF_PARAM_UNIFORM])
 	{
 		if (PT.type == "sampler2D")
 		{
@@ -127,9 +127,18 @@ void D3D12FragmentDecompiler::insertConstants(std::stringstream & OS)
 				OS << "sampler " << PI.name << "sampler : register(s" << textureIndex << ");" << std::endl;
 			}
 		}
+		else if (PT.type == "sampler3D")
+		{
+			for (const ParamItem &PI : PT.items)
+			{
+				size_t textureIndex = atoi(PI.name.data() + 3);
+				OS << "Texture3D " << PI.name << " : register(t" << textureIndex + 16 << ");" << std::endl;
+				OS << "sampler " << PI.name << "sampler : register(s" << textureIndex << ");" << std::endl;
+			}
+		}
 		else if (PT.type == "samplerCube")
 		{
-			for (ParamItem PI : PT.items)
+			for (const ParamItem &PI : PT.items)
 			{
 				size_t textureIndex = atoi(PI.name.data() + 3);
 				OS << "TextureCube " << PI.name << " : register(t" << textureIndex << ");" << std::endl;
@@ -166,23 +175,23 @@ void D3D12FragmentDecompiler::insertMainStart(std::stringstream & OS)
 	};
 	OS << "void ps_impl(PixelInput In, inout float4 r0, inout float4 h0, inout float4 r1, inout float4 h2, inout float4 r2, inout float4 h4, inout float4 r3, inout float4 h6, inout float4 r4, inout float4 h8)" << std::endl;
 	OS << "{" << std::endl;
-	for (ParamType PT : m_parr.params[PF_PARAM_IN])
+	for (const ParamType &PT : m_parr.params[PF_PARAM_IN])
 	{
-		for (ParamItem PI : PT.items)
+		for (const ParamItem &PI : PT.items)
 			OS << "	" << PT.type << " " << PI.name << " = In." << PI.name << ";" << std::endl;
 	}
 	// A bit unclean, but works.
 	OS << "	" << "float4 gl_Position = In.Position;" << std::endl;
 	// Declare output
-	for (ParamType PT : m_parr.params[PF_PARAM_NONE])
+	for (const ParamType &PT : m_parr.params[PF_PARAM_NONE])
 	{
-		for (ParamItem PI : PT.items)
+		for (const ParamItem &PI : PT.items)
 			if (output_value.find(PI.name) == output_value.end())
 				OS << "	" << PT.type << " " << PI.name << " = float4(0., 0., 0., 0.);" << std::endl;
 	}
 	// Declare texture coordinate scaling component (to handle unormalized texture coordinates)
 
-	for (ParamType PT : m_parr.params[PF_PARAM_UNIFORM])
+	for (const ParamType &PT : m_parr.params[PF_PARAM_UNIFORM])
 	{
 		if (PT.type != "sampler2D")
 			continue;

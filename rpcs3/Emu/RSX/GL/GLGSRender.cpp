@@ -745,15 +745,19 @@ bool GLGSRender::load_program()
 	fragment_program.addr = rsx::get_address(fragment_program.offset, (shader_program & 0x3) - 1);
 	fragment_program.ctrl = rsx::method_registers[NV4097_SET_SHADER_CONTROL];
 
+	std::array<texture_dimension, 16> texture_dimensions;
 	for (u32 i = 0; i < rsx::limits::textures_count; ++i)
 	{
 		if (!textures[i].enabled())
-			fragment_program.texture_dimensions.push_back(texture_dimension::texture_dimension_2d);
+			texture_dimensions[i] = texture_dimension::texture_dimension_2d;
 		else if (textures[i].cubemap())
-			fragment_program.texture_dimensions.push_back(texture_dimension::texture_dimension_cubemap);
+			texture_dimensions[i] = texture_dimension::texture_dimension_cubemap;
+		else if (textures[i].dimension() == 3)
+			texture_dimensions[i] = texture_dimension::texture_dimension_3d;
 		else
-			fragment_program.texture_dimensions.push_back(texture_dimension::texture_dimension_2d);
+			texture_dimensions[i] = texture_dimension::texture_dimension_2d;
 	}
+	fragment_program.set_texture_dimension(texture_dimensions);
 
 	__glcheck m_program = &m_prog_buffer.getGraphicPipelineState(vertex_program, fragment_program, nullptr);
 	__glcheck m_program->use();

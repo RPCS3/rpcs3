@@ -204,11 +204,11 @@ static const std::string rsx_fp_op_names[] =
 	"NULL", "BRK", "CAL", "IFE", "LOOP", "REP", "RET"
 };
 
-enum class texture_dimension
+enum class texture_dimension : u8
 {
-	texture_dimension_2d,
-	texture_dimension_2d_array,
-	texture_dimension_cubemap,
+	texture_dimension_2d = 0,
+	texture_dimension_cubemap = 1,
+	texture_dimension_3d = 2,
 };
 
 struct RSXFragmentProgram
@@ -217,13 +217,33 @@ struct RSXFragmentProgram
 	u32 addr;
 	u32 offset;
 	u32 ctrl;
-	std::vector<texture_dimension> texture_dimensions;
+	u16 unnormalized_coords;
+	u32 texture_dimensions;
+
+	texture_dimension get_texture_dimension(u8 id) const
+	{
+		return (texture_dimension)((texture_dimensions >> (id * 2)) & 0x3);
+	}
+
+	void set_texture_dimension(const std::array<texture_dimension, 16> &dimensions)
+	{
+		size_t id = 0;
+		for (const texture_dimension &dim : dimensions)
+		{
+			texture_dimensions &= ~(0x3 << (id * 2));
+			u8 d = (u8)dim;
+			texture_dimensions |= ((d & 0x3) << (id * 2));
+			id++;
+		}
+	}
 
 	RSXFragmentProgram()
 		: size(0)
 		, addr(0)
 		, offset(0)
 		, ctrl(0)
+		, unnormalized_coords(0)
+		, texture_dimensions(0)
 	{
 	}
 };

@@ -40,6 +40,27 @@ D3D12_SAMPLER_DESC get_sampler_desc(const rsx::texture &texture)
 	return samplerDesc;
 }
 
+namespace
+{
+	CD3DX12_RESOURCE_DESC get_texture_description(const rsx::texture &texture)
+	{
+		const u8 format = texture.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
+		DXGI_FORMAT dxgi_format = get_texture_format(format);
+
+		if (texture.dimension() == 2) // 2D texture or cubemap
+		{
+//			if (texture.depth() < 2);
+			size_t depth = (texture.cubemap()) ? 6 : 1;
+			return CD3DX12_RESOURCE_DESC::Tex2D(dxgi_format, texture.width(), texture.height(), (UINT)depth, texture.mipmap());
+		}
+		else if (texture.dimension() == 3) // 3d texture
+		{
+			return CD3DX12_RESOURCE_DESC::Tex3D(dxgi_format, texture.width(), texture.height(), texture.depth(), texture.mipmap());
+		}
+		throw EXCEPTION("Unknow texture dimension");
+	}
+}
+
 
 /**
  * Create a texture residing in default heap and generate uploads commands in commandList,
@@ -51,14 +72,6 @@ ComPtr<ID3D12Resource> upload_single_texture(
 	ID3D12GraphicsCommandList *command_list,
 	data_heap &texture_buffer_heap)
 {
-	size_t w = texture.width(), h = texture.height();
-	size_t depth = texture.depth();
-	if (depth == 0) depth = 1;
-	if (texture.cubemap()) depth *= 6;
-
-	const u8 format = texture.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
-	DXGI_FORMAT dxgi_format = get_texture_format(format);
-
 	size_t buffer_size = get_placed_texture_storage_size(texture, 256);
 	size_t heap_offset = texture_buffer_heap.alloc<D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT>(buffer_size);
 
@@ -70,17 +83,19 @@ ComPtr<ID3D12Resource> upload_single_texture(
 	CHECK_HRESULT(device->CreateCommittedResource(
 		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
 		D3D12_HEAP_FLAG_NONE,
-		&CD3DX12_RESOURCE_DESC::Tex2D(dxgi_format, (UINT)w, (UINT)h, (UINT)depth, texture.mipmap()),
+		&get_texture_description(texture),
 		D3D12_RESOURCE_STATE_COPY_DEST,
 		nullptr,
 		IID_PPV_ARGS(result.GetAddressOf())
 		));
 
+	const u8 format = texture.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
+	DXGI_FORMAT dxgi_format = get_texture_format(format);
 	size_t mip_level = 0;
 	for (const MipmapLevelInfo mli : mipInfos)
 	{
 		command_list->CopyTextureRegion(&CD3DX12_TEXTURE_COPY_LOCATION(result.Get(), (UINT)mip_level), 0, 0, 0,
-			&CD3DX12_TEXTURE_COPY_LOCATION(texture_buffer_heap.get_heap(), { heap_offset + mli.offset, { dxgi_format, (UINT)mli.width, (UINT)mli.height, 1, (UINT)mli.rowPitch } }), nullptr);
+			&CD3DX12_TEXTURE_COPY_LOCATION(texture_buffer_heap.get_heap(), { heap_offset + mli.offset, { dxgi_format, (UINT)mli.width, (UINT)mli.height, (UINT)mli.depth, (UINT)mli.rowPitch } }), nullptr);
 		mip_level++;
 	}
 
@@ -114,7 +129,7 @@ void update_existing_texture(
 	for (const MipmapLevelInfo mli : mipInfos)
 	{
 		command_list->CopyTextureRegion(&CD3DX12_TEXTURE_COPY_LOCATION(existing_texture, (UINT)miplevel), 0, 0, 0,
-			&CD3DX12_TEXTURE_COPY_LOCATION(texture_buffer_heap.get_heap(), { heap_offset + mli.offset,{ dxgi_format, (UINT)mli.width, (UINT)mli.height, 1, (UINT)mli.rowPitch } }), nullptr);
+			&CD3DX12_TEXTURE_COPY_LOCATION(texture_buffer_heap.get_heap(), { heap_offset + mli.offset,{ dxgi_format, (UINT)mli.width, (UINT)mli.height, (UINT)mli.depth, (UINT)mli.rowPitch } }), nullptr);
 		miplevel++;
 	}
 
@@ -204,9 +219,14 @@ void D3D12GSRender::upload_and_bind_textures(ID3D12GraphicsCommandList *command_
 			shared_resource_view_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE;
 			shared_resource_view_desc.TextureCube.MipLevels = textures[i].mipmap();
 		}
-		else
+		else if (textures[i].dimension() == 2)
 		{
 			shared_resource_view_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+			shared_resource_view_desc.Texture2D.MipLevels = textures[i].mipmap();
+		}
+		else if (textures[i].dimension() == 3)
+		{
+			shared_resource_view_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE3D;
 			shared_resource_view_desc.Texture2D.MipLevels = textures[i].mipmap();
 		}
 		shared_resource_view_desc.Format = get_texture_format(format);

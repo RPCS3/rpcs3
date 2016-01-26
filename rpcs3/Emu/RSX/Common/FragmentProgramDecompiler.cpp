@@ -5,12 +5,11 @@
 #include "FragmentProgramDecompiler.h"
 
 FragmentProgramDecompiler::FragmentProgramDecompiler(const RSXFragmentProgram &prog, u32& size) :
-	m_addr(prog.addr),
+	m_prog(prog),
 	m_size(size),
 	m_const_index(0),
 	m_location(0),
-	m_ctrl(prog.ctrl),
-	m_texture_dimensions(prog.texture_dimensions)
+	m_ctrl(prog.ctrl)
 {
 	m_size = 0;
 }
@@ -114,7 +113,7 @@ std::string FragmentProgramDecompiler::AddConst()
 		return name;
 	}
 
-	auto data = vm::ps3::ptr<u32>::make(m_addr + m_size + 4 * SIZE_32(u32));
+	auto data = vm::ps3::ptr<u32>::make(m_prog.addr + m_size + 4 * SIZE_32(u32));
 
 	m_offset = 2 * 4 * sizeof(u32);
 	u32 x = GetData(data[0]);
@@ -128,7 +127,20 @@ std::string FragmentProgramDecompiler::AddConst()
 
 std::string FragmentProgramDecompiler::AddTex()
 {
-	return m_parr.AddParam(PF_PARAM_UNIFORM, (m_texture_dimensions[dst.tex_num] == texture_dimension::texture_dimension_cubemap) ? "samplerCube" : "sampler2D", std::string("tex") + std::to_string(dst.tex_num));
+	std::string sampler;
+	switch (m_prog.get_texture_dimension(dst.tex_num))
+	{
+	case texture_dimension::texture_dimension_cubemap:
+		sampler = "samplerCube";
+		break;
+	case texture_dimension::texture_dimension_2d:
+		sampler = "sampler2D";
+		break;
+	case texture_dimension::texture_dimension_3d:
+		sampler = "sampler3D";
+		break;
+	}
+	return m_parr.AddParam(PF_PARAM_UNIFORM, sampler, std::string("tex") + std::to_string(dst.tex_num));
 }
 
 std::string FragmentProgramDecompiler::Format(const std::string& code)
@@ -425,12 +437,7 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 	case RSX_FP_OPCODE_NRM: SetDst("normalize($0)"); return true;
 	case RSX_FP_OPCODE_BEM: LOG_ERROR(RSX, "Unimplemented TEX_SRB instruction: BEM"); return true;
 	case RSX_FP_OPCODE_TEX:
-		if (dst.tex_num >= m_texture_dimensions.size())
-		{
-			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE));
-			return true;
-		}
-		switch (m_texture_dimensions[dst.tex_num])
+		switch (m_prog.get_texture_dimension(dst.tex_num))
 		{
 		case texture_dimension::texture_dimension_2d:
 			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE));
@@ -438,16 +445,14 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 		case texture_dimension::texture_dimension_cubemap:
 			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_CUBE_SAMPLE));
 			return true;
+		case texture_dimension::texture_dimension_3d:
+			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE3D));
+			return true;
 		}
 		return false;
 	case RSX_FP_OPCODE_TEXBEM: SetDst("texture($t, $0.xy, $1.x)"); return true;
 	case RSX_FP_OPCODE_TXP:
-		if (dst.tex_num >= m_texture_dimensions.size())
-		{
-			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE_PROJ));
-			return true;
-		}
-		switch (m_texture_dimensions[dst.tex_num])
+		switch (m_prog.get_texture_dimension(dst.tex_num))
 		{
 		case texture_dimension::texture_dimension_2d:
 			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE_PROJ));
@@ -455,24 +460,25 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 		case texture_dimension::texture_dimension_cubemap:
 			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_CUBE_SAMPLE_PROJ));
 			return true;
+		case texture_dimension::texture_dimension_3d:
+			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE3D_PROJ));
+			return true;
 		}
 		return false;
 	case RSX_FP_OPCODE_TXPBEM: SetDst("textureProj($t, $0.xyz, $1.x)"); return true;
 	case RSX_FP_OPCODE_TXD: LOG_ERROR(RSX, "Unimplemented TEX_SRB instruction: TXD"); return true;
 	case RSX_FP_OPCODE_TXB: SetDst("texture($t, $0.xy, $1.x)"); return true;
 	case RSX_FP_OPCODE_TXL:
-		if (dst.tex_num >= m_texture_dimensions.size())
-		{
-			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE_LOD));
-			return true;
-		}
-		switch (m_texture_dimensions[dst.tex_num])
+		switch (m_prog.get_texture_dimension(dst.tex_num))
 		{
 		case texture_dimension::texture_dimension_2d:
 			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE_LOD));
 			return true;
 		case texture_dimension::texture_dimension_cubemap:
 			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_CUBE_SAMPLE_LOD));
+			return true;
+		case texture_dimension::texture_dimension_3d:
+			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE3D_LOD));
 			return true;
 		}
 		return false;
@@ -487,7 +493,7 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 
 std::string FragmentProgramDecompiler::Decompile()
 {
-	auto data = vm::ps3::ptr<u32>::make(m_addr);
+	auto data = vm::ps3::ptr<u32>::make(m_prog.addr);
 	m_size = 0;
 	m_location = 0;
 	m_loop_count = 0;
