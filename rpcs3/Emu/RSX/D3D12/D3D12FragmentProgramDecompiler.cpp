@@ -39,22 +39,6 @@ void D3D12FragmentDecompiler::insertHeader(std::stringstream & OS)
 	OS << "	float4x4 scaleOffsetMat;" << std::endl;
 	OS << "	int isAlphaTested;" << std::endl;
 	OS << "	float alphaRef;" << std::endl;
-	OS << "	int tex0_is_unorm;" << std::endl;
-	OS << "	int tex1_is_unorm;" << std::endl;
-	OS << "	int tex2_is_unorm;" << std::endl;
-	OS << "	int tex3_is_unorm;" << std::endl;
-	OS << "	int tex4_is_unorm;" << std::endl;
-	OS << "	int tex5_is_unorm;" << std::endl;
-	OS << "	int tex6_is_unorm;" << std::endl;
-	OS << "	int tex7_is_unorm;" << std::endl;
-	OS << "	int tex8_is_unorm;" << std::endl;
-	OS << "	int tex9_is_unorm;" << std::endl;
-	OS << "	int tex10_is_unorm;" << std::endl;
-	OS << "	int tex11_is_unorm;" << std::endl;
-	OS << "	int tex12_is_unorm;" << std::endl;
-	OS << "	int tex13_is_unorm;" << std::endl;
-	OS << "	int tex14_is_unorm;" << std::endl;
-	OS << "	int tex15_is_unorm;" << std::endl;
 	OS << "};" << std::endl;
 }
 
@@ -209,9 +193,15 @@ void D3D12FragmentDecompiler::insertMainStart(std::stringstream & OS)
 		for (const ParamItem& PI : PT.items)
 		{
 			size_t textureIndex = atoi(PI.name.data() + 3);
+			bool is_unorm = !!(m_prog.unnormalized_coords & (1 << textureIndex));
+			if (!is_unorm)
+			{
+				OS << "	float2  " << PI.name << "_scale = float2(1., 1.);" << std::endl;
+				continue;
+			}
 			OS << "	float2  " << PI.name << "_dim;" << std::endl;
 			OS << "	" << PI.name << ".GetDimensions(" << PI.name << "_dim.x, " << PI.name << "_dim.y);" << std::endl;
-			OS << "	float2  " << PI.name << "_scale = (!!" << PI.name << "_is_unorm) ? float2(1., 1.) / " << PI.name << "_dim : float2(1., 1.);" << std::endl;
+			OS << "	float2  " << PI.name << "_scale = float2(1., 1.) / " << PI.name << "_dim;" << std::endl;
 		}
 	}
 }
