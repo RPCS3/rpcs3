@@ -30,22 +30,19 @@ namespace
 
 void write_vertex_array_data_to_buffer(void *buffer, u32 first, u32 count, size_t index, const rsx::data_array_format_info &vertex_array_desc)
 {
-	assert(vertex_array_desc.size > 0);
+	Expects(vertex_array_desc.size > 0);
 
-	if (vertex_array_desc.frequency > 1)
-		LOG_ERROR(RSX, "%s: frequency is not null (%d, index=%d)", __FUNCTION__, vertex_array_desc.frequency, index);
-
+	u32 base_offset = rsx::method_registers[NV4097_SET_VERTEX_DATA_BASE_OFFSET];
 	u32 offset = rsx::method_registers[NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + index];
-	u32 address = rsx::get_address(offset & 0x7fffffff, offset >> 31);
+	u32 address = base_offset + rsx::get_address(offset & 0x7fffffff, offset >> 31);
 
 	u32 element_size = rsx::get_vertex_type_size_on_host(vertex_array_desc.type, vertex_array_desc.size);
 
-	u32 base_offset = rsx::method_registers[NV4097_SET_VERTEX_DATA_BASE_OFFSET];
 	u32 base_index = rsx::method_registers[NV4097_SET_VERTEX_DATA_BASE_INDEX];
 
 	for (u32 i = 0; i < count; ++i)
 	{
-		auto src = vm::ps3::_ptr<const u8>(address + base_offset + vertex_array_desc.stride * (first + i + base_index));
+		auto src = vm::ps3::_ptr<const u8>(address + vertex_array_desc.stride * (first + i + base_index));
 		u8* dst = (u8*)buffer + i * element_size;
 
 		switch (vertex_array_desc.type)
@@ -345,7 +342,7 @@ std::tuple<T, T> write_index_array_data_to_buffer_impl(gsl::span<T, gsl::dynamic
 
 	u32 type_size = gsl::narrow<u32>(get_index_type_size(type));
 
-	Expects(rsx::method_registers[NV4097_SET_VERTEX_DATA_BASE_OFFSET] == 0);
+
 	Expects(rsx::method_registers[NV4097_SET_VERTEX_DATA_BASE_INDEX] == 0);
 
 	bool is_primitive_restart_enabled = !!rsx::method_registers[NV4097_SET_RESTART_INDEX_ENABLE];
