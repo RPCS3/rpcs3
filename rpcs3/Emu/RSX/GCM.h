@@ -111,6 +111,22 @@ namespace rsx
 	};
 
 	surface_color_format to_surface_color_format(u8 in);
+
+	enum class window_origin : u8
+	{
+		top,
+		bottom
+	};
+
+	window_origin to_window_origin(u8 in);
+
+	enum class window_pixel_center : u8
+	{
+		half,
+		integer
+	};
+
+	window_pixel_center to_window_pixel_center(u8 in);
 }
 
 enum
@@ -480,12 +496,6 @@ enum
 
 	CELL_GCM_TRUE = 1,
 	CELL_GCM_FALSE = 0,
-
-	CELL_GCM_WINDOW_ORIGIN_TOP = 0,
-	CELL_GCM_WINDOW_ORIGIN_BOTTOM = 1,
-
-	CELL_GCM_WINDOW_PIXEL_CENTER_HALF = 0,
-	CELL_GCM_WINDOW_PIXEL_CENTER_INTEGER = 1,
 
 	CELL_GCM_USER_CLIP_PLANE_DISABLE = 0,
 	CELL_GCM_USER_CLIP_PLANE_ENABLE_LT = 1,
