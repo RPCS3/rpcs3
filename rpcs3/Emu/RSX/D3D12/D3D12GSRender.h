@@ -56,7 +56,7 @@ private:
 	ComPtr<ID3D12Resource> m_backbuffer[2];
 	ComPtr<ID3D12DescriptorHeap> m_backbuffer_descriptor_heap[2];
 	// m_rootSignatures[N] is RS with N texture/sample
-	ComPtr<ID3D12RootSignature> m_root_signatures[17];
+	ComPtr<ID3D12RootSignature> m_root_signatures[17][17]; // indexed by [texture count][vertex count]
 
 	// TODO: Use a tree structure to parse more efficiently
 	data_cache m_texture_cache;
@@ -67,7 +67,7 @@ private:
 	RSXVertexProgram m_vertex_program;
 	RSXFragmentProgram m_fragment_program;
 	PipelineStateObjectCache m_pso_cache;
-	std::tuple<ComPtr<ID3D12PipelineState>, std::vector<size_t>, size_t> m_current_pso;
+	std::tuple<ComPtr<ID3D12PipelineState>, size_t, size_t> m_current_pso;
 
 	struct
 	{
@@ -115,10 +115,9 @@ private:
 	// Textures, constants, index and vertex buffers storage
 	data_heap m_buffer_data;
 	data_heap m_readback_resources;
+	ComPtr<ID3D12Resource> m_vertex_buffer_data;
 
 	rsx::render_targets m_rtts;
-
-	std::vector<D3D12_INPUT_ELEMENT_DESC> m_ia_set;
 
 	INT m_descriptor_stride_srv_cbv_uav;
 	INT m_descriptor_stride_dsv;
@@ -145,16 +144,15 @@ private:
 	 * Non native primitive type are emulated by index buffers expansion.
 	 * Returns whether the draw call is indexed or not and the vertex count to draw.
 	*/
-	std::tuple<bool, size_t> upload_and_set_vertex_index_data(ID3D12GraphicsCommandList *command_list);
+	std::tuple<bool, size_t, std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC> > upload_and_set_vertex_index_data(ID3D12GraphicsCommandList *command_list);
 
 	/**
 	 * Upload all enabled vertex attributes for vertex in ranges described by vertex_ranges.
 	 * A range in vertex_range is a pair whose first element is the index of the beginning of the
 	 * range, and whose second element is the number of vertex in this range.
 	 */
-	std::vector<D3D12_VERTEX_BUFFER_VIEW> upload_vertex_attributes(const std::vector<std::pair<u32, u32> > &vertex_ranges);
-
-	std::tuple<D3D12_VERTEX_BUFFER_VIEW, size_t> upload_inlined_vertex_array();
+	std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC> upload_vertex_attributes(const std::vector<std::pair<u32, u32> > &vertex_ranges,
+		gsl::not_null<ID3D12GraphicsCommandList*> command_list);
 
 	std::tuple<D3D12_INDEX_BUFFER_VIEW, size_t> generate_index_buffer_for_emulated_primitives_array(const std::vector<std::pair<u32, u32> > &vertex_ranges);
 

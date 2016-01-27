@@ -4,10 +4,10 @@
 #include "D3D12MemoryHelpers.h"
 
 
-void data_cache::store_and_protect_data(u64 key, u32 start, size_t size, u8 format, size_t w, size_t h, size_t m, ComPtr<ID3D12Resource> data)
+void data_cache::store_and_protect_data(u64 key, u32 start, size_t size, u8 format, size_t w, size_t h, size_t d, size_t m, ComPtr<ID3D12Resource> data)
 {
 	std::lock_guard<std::mutex> lock(m_mut);
-	m_address_to_data[key] = std::make_pair(texture_entry(format, w, h, m), data);
+	m_address_to_data[key] = std::make_pair(texture_entry(format, w, h, d, m), data);
 	protect_data(key, start, size);
 }
 
@@ -106,7 +106,7 @@ void resource_storage::init(ID3D12Device *device)
 	CHECK_HRESULT(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, command_allocator.Get(), nullptr, IID_PPV_ARGS(command_list.GetAddressOf())));
 	CHECK_HRESULT(command_list->Close());
 
-	D3D12_DESCRIPTOR_HEAP_DESC descriptor_heap_desc = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 10000, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE };
+	D3D12_DESCRIPTOR_HEAP_DESC descriptor_heap_desc = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 50000, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE };
 	CHECK_HRESULT(device->CreateDescriptorHeap(&descriptor_heap_desc, IID_PPV_ARGS(&descriptors_heap)));
 
 	D3D12_DESCRIPTOR_HEAP_DESC sampler_heap_desc = { D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER , 2048, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE };
