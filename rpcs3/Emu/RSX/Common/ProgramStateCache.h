@@ -229,4 +229,9 @@ public:
 			offset += sizeof(f32);
 		}
 	}
+
+	void clear()
+	{
+		m_storage.clear();
+	}
 };

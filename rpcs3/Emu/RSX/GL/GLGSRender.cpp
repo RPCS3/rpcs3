@@ -615,8 +615,7 @@ void GLGSRender::on_exit()
 {
 	glDisable(GL_VERTEX_PROGRAM_POINT_SIZE);
 
-	//if (m_program)
-	//	m_program.remove();
+	m_prog_buffer.clear();
 
 	if (draw_fbo)
 		draw_fbo.remove();
