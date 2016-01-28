@@ -19,10 +19,13 @@ protected:
 	virtual void insertOutputs(std::stringstream &OS, const std::vector<ParamType> &outputs) override;
 	virtual void insertMainStart(std::stringstream &OS) override;
 	virtual void insertMainEnd(std::stringstream &OS) override;
+
+	const RSXVertexProgram &rsx_vertex_program;
 public:
 	GLVertexDecompilerThread(const RSXVertexProgram &prog, std::string& shader, ParamArray& parr)
 		: VertexProgramDecompiler(prog)
 		, m_shader(shader)
+		, rsx_vertex_program(prog)
 	{
 	}
 

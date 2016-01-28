@@ -30,6 +30,25 @@ namespace
 		}
 		throw EXCEPTION("Unknow depth format");
 	}
+
+	u32 to_gl_internal_type(rsx::vertex_base_type type, u8 size)
+	{
+		/**
+		 * The buffer texture spec only allows fetches aligned to 8, 16, 32, etc...
+		 * This rules out most 3-component formats, except for the 32-wide RGB32F, RGB32I, RGB32UI
+		 */
+		const u32 vec1_types[] = { GL_R16, GL_R32F, GL_R16F, GL_R8, GL_R32I, GL_R16F, GL_R8 };
+		const u32 vec2_types[] = { GL_RG16, GL_RG32F, GL_RG16F, GL_RG8, GL_RG32I, GL_RG16F, GL_RG8 };
+		const u32 vec3_types[] = { GL_RGBA16, GL_RGB32F, GL_RGBA16F, GL_RGBA8, GL_RGB32I, GL_RGBA16F, GL_RGBA8 };	//VEC3 COMPONENTS NOT SUPPORTED!
+		const u32 vec4_types[] = { GL_RGBA16, GL_RGBA32F, GL_RGBA16F, GL_RGBA8, GL_RGBA32I, GL_RGBA16F, GL_RGBA8 };
+
+		const u32* vec_selectors[] = { 0, vec1_types, vec2_types, vec3_types, vec4_types };
+
+		if (type > rsx::vertex_base_type::ub256)
+			throw EXCEPTION("OpenGL error: unknown vertex base type 0x%X.", (u32)type);
+
+		return vec_selectors[size][(int)type];
+	}
 }
 
 GLGSRender::GLGSRender() : GSRender(frame_type::OpenGL)
@@ -397,11 +416,11 @@ void GLGSRender::end()
 	};
 
 	u32 input_mask = rsx::method_registers[NV4097_SET_VERTEX_ATTRIB_INPUT_MASK];
-	m_vao.bind();
 
 	std::vector<u8> vertex_index_array;
 	vertex_draw_count = 0;
 	u32 min_index, max_index;
+
 	if (draw_command == rsx::draw_command::indexed)
 	{
 		rsx::index_array_type type = rsx::to_index_array_type(rsx::method_registers[NV4097_SET_INDEX_ARRAY_DMA] >> 4);
@@ -426,6 +445,7 @@ void GLGSRender::end()
 
 	if (draw_command == rsx::draw_command::inlined_array)
 	{
+		vertex_arrays_data.resize(inline_vertex_array.size() * sizeof(u32));
 		write_inline_array_to_buffer(vertex_arrays_data.data());
 		u32 offset = 0;
 		for (int index = 0; index < rsx::limits::vertex_count; ++index)
@@ -436,12 +456,25 @@ void GLGSRender::end()
 				continue;
 
 			int location;
-			if (!m_program->attribs.has_location(reg_table[index], &location))
+			if (!m_program->uniforms.has_location(reg_table[index] + "_buffer", &location))
 				continue;
 
-			__glcheck m_program->attribs[location] =
-				(m_vao + offset)
-				.config(gl_types(vertex_info.type), vertex_info.size, gl_normalized(vertex_info.type));
+			const u32 element_size = rsx::get_vertex_type_size_on_host(vertex_info.type, vertex_info.size);
+			const u32 gl_type = to_gl_internal_type(vertex_info.type, vertex_info.size);
+			const u32 data_size = element_size * vertex_draw_count;
+
+			auto &buffer = m_gl_attrib_buffers[index].buffer;
+			auto &texture = m_gl_attrib_buffers[index].texture;
+
+			buffer->data(data_size, nullptr);
+			buffer->sub_data(0, data_size, vertex_arrays_data.data()+offset);
+
+			//Attach buffer to texture
+			texture->copy_from(*buffer, gl_type);
+
+			//Link texture to uniform
+			m_program->uniforms.texture(location, index +rsx::limits::vertex_count, *texture);
+
 			offset += rsx::get_vertex_type_size_on_host(vertex_info.type, vertex_info.size);
 		}
 	}
@@ -463,7 +496,7 @@ void GLGSRender::end()
 				continue;
 
 			int location;
-			if (!m_program->attribs.has_location(reg_table[index], &location))
+			if (!m_program->uniforms.has_location(reg_table[index]+"_buffer", &location))
 				continue;
 
 			if (vertex_arrays_info[index].size > 0)
@@ -495,29 +528,48 @@ void GLGSRender::end()
 				vertex_arrays_offsets[index] = gsl::narrow<u32>(position);
 				vertex_arrays_data.resize(position + size);
 
-				memcpy(vertex_arrays_data.data() + position, vertex_array.data(), size);
+				const u32 gl_type = to_gl_internal_type(vertex_info.type, vertex_info.size);
+				const u32 data_size = element_size * vertex_draw_count;
 
-				__glcheck m_program->attribs[location] =
-					(m_vao + vertex_arrays_offsets[index])
-					.config(gl_types(vertex_info.type), vertex_info.size, gl_normalized(vertex_info.type));
+				auto &buffer = m_gl_attrib_buffers[index].buffer;
+				auto &texture = m_gl_attrib_buffers[index].texture;
+
+				buffer->data(data_size, nullptr);
+				buffer->sub_data(0, data_size, vertex_array.data());
+
+				//Attach buffer to texture
+				texture->copy_from(*buffer, gl_type);
+
+				//Link texture to uniform
+				m_program->uniforms.texture(location, index + rsx::limits::vertex_count, *texture);
 			}
 			else if (register_vertex_info[index].size > 0)
 			{
+				//Untested!
 				auto &vertex_data = register_vertex_data[index];
 				auto &vertex_info = register_vertex_info[index];
 
 				switch (vertex_info.type)
 				{
 				case rsx::vertex_base_type::f:
-					switch (register_vertex_info[index].size)
-					{
-					case 1: apply_attrib_array<f32, 1>(*m_program, location, vertex_data); break;
-					case 2: apply_attrib_array<f32, 2>(*m_program, location, vertex_data); break;
-					case 3: apply_attrib_array<f32, 3>(*m_program, location, vertex_data); break;
-					case 4: apply_attrib_array<f32, 4>(*m_program, location, vertex_data); break;
-					}
-					break;
+				{
+					const u32 element_size = rsx::get_vertex_type_size_on_host(vertex_info.type, vertex_info.size);
+					const u32 gl_type = to_gl_internal_type(vertex_info.type, vertex_info.size);
+					const u32 data_size = vertex_data.size();
 
+					auto &buffer = m_gl_attrib_buffers[index].buffer;
+					auto &texture = m_gl_attrib_buffers[index].texture;
+
+					buffer->data(data_size, nullptr);
+					buffer->sub_data(0, data_size, vertex_data.data());
+
+					//Attach buffer to texture
+					texture->copy_from(*buffer, gl_type);
+
+					//Link texture to uniform
+					m_program->uniforms.texture(location, index + rsx::limits::vertex_count, *texture);
+					break;
+				}
 				default:
 					LOG_ERROR(RSX, "bad non array vertex data format (type = %d, size = %d)", vertex_info.type, vertex_info.size);
 					break;
@@ -525,7 +577,11 @@ void GLGSRender::end()
 			}
 		}
 	}
-	m_vbo.data(vertex_arrays_data.size(), vertex_arrays_data.data());
+
+//	glDraw* will fail without at least attrib0 defined if we are on compatibility profile
+//	Someone should really test AMD behaviour here, Nvidia is too permissive. There is no buffer currently bound, but on NV it works ok
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 2, GL_FLOAT, false, 0, 0);
 
 	if (draw_command == rsx::draw_command::indexed)
 	{
@@ -609,6 +665,18 @@ void GLGSRender::on_init_thread()
 
 	m_vao.array_buffer = m_vbo;
 	m_vao.element_array_buffer = m_ebo;
+
+	for (texture_buffer_pair &attrib_buffer : m_gl_attrib_buffers)
+	{
+		gl::texture *&tex = attrib_buffer.texture;
+		tex = new gl::texture(gl::texture::target::textureBuffer);
+		tex->create();
+		tex->set_target(gl::texture::target::textureBuffer);
+
+		gl::buffer *&buf = attrib_buffer.buffer;
+		buf = new gl::buffer();
+		buf->create();
+	}
 }
 
 void GLGSRender::on_exit()
@@ -649,6 +717,19 @@ void GLGSRender::on_exit()
 
 	if (m_fragment_constants_buffer)
 		m_fragment_constants_buffer.remove();
+
+	for (texture_buffer_pair &attrib_buffer : m_gl_attrib_buffers)
+	{
+		gl::texture *&tex = attrib_buffer.texture;
+		tex->remove();
+		delete tex;
+		tex = nullptr;
+
+		gl::buffer *&buf = attrib_buffer.buffer;
+		buf->remove();
+		delete buf;
+		buf = nullptr;
+	}
 }
 
 void nv4097_clear_surface(u32 arg, GLGSRender* renderer)

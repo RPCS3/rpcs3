@@ -27,7 +27,7 @@ std::string GLVertexDecompilerThread::compareFunction(COMPARE f, const std::stri
 
 void GLVertexDecompilerThread::insertHeader(std::stringstream &OS)
 {
-	OS << "#version 420" << std::endl << std::endl;
+	OS << "#version 430" << std::endl << std::endl;
 	OS << "layout(std140, binding = 0) uniform ScaleOffsetBuffer" << std::endl;
 	OS << "{" << std::endl;
 	OS << "	mat4 scaleOffsetMat;" << std::endl;
@@ -36,10 +36,33 @@ void GLVertexDecompilerThread::insertHeader(std::stringstream &OS)
 
 void GLVertexDecompilerThread::insertInputs(std::stringstream & OS, const std::vector<ParamType>& inputs)
 {
-	for (const ParamType PT : inputs)
+	std::vector<std::tuple<size_t, std::string>> input_data;
+	for (const ParamType &PT : inputs)
 	{
 		for (const ParamItem &PI : PT.items)
-			OS << /*"layout(location = " << PI.location << ") "*/  "in " << PT.type << " " << PI.name << ";" << std::endl;
+		{
+			input_data.push_back(std::make_tuple(PI.location, PI.name));
+		}
+	}
+
+	/**
+	 * Its is important that the locations are in the order that vertex attributes are expected.
+	 * If order is not adhered to, channels may be swapped leading to corruption
+	*/
+
+	std::sort(input_data.begin(), input_data.end());
+
+	int location = 1;
+	for (const std::tuple<size_t, std::string> item : input_data)
+	{
+		for (const ParamType &PT : inputs)
+		{
+			for (const ParamItem &PI : PT.items)
+			{
+				if (PI.name == std::get<1>(item))
+					OS << "layout(location=" << location++ << ")" << "	uniform samplerBuffer" << " " << PI.name << "_buffer;" << std::endl;
+			}
+		}
 	}
 }
 
@@ -101,6 +124,37 @@ void GLVertexDecompilerThread::insertOutputs(std::stringstream & OS, const std::
 	}
 }
 
+void add_input(std::stringstream & OS, const ParamItem &PI, const std::vector<rsx_vertex_input> &inputs)
+{
+	for (const auto &real_input : inputs)
+	{
+		if (real_input.location != PI.location)
+			continue;
+
+		if (!real_input.is_array)
+		{
+			OS << "	vec4 " << PI.name << " = texelFetch(" << PI.name << "_buffer, 0);" << std::endl;
+			return;
+		}
+
+		if (real_input.frequency > 1)
+		{
+			if (real_input.is_modulo)
+			{
+				OS << "	vec4 " << PI.name << "= texelFetch(" << PI.name << "_buffer, gl_VertexID %" << real_input.frequency << ");" << std::endl;
+				return;
+			}
+
+			OS << "	vec4 " << PI.name << "= texelFetch(" << PI.name << "_buffer, gl_VertexID /" << real_input.frequency << ");" << std::endl;
+			return;
+		}
+
+		OS << "	vec4 " << PI.name << "= texelFetch(" << PI.name << "_buffer, gl_VertexID);" << std::endl;
+		return;
+	}
+
+	OS << "	vec4 " << PI.name << " = vec4(0., 0., 0., 1.);" << std::endl;
+}
 
 void GLVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 {
@@ -117,6 +171,12 @@ void GLVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 				OS << " = " << PI.value;
 			OS << ";" << std::endl;
 		}
+	}
+
+	for (const ParamType &PT : m_parr.params[PF_PARAM_IN])
+	{
+		for (const ParamItem &PI : PT.items)
+			add_input(OS, PI, rsx_vertex_program.rsx_vertex_inputs);
 	}
 }
 
