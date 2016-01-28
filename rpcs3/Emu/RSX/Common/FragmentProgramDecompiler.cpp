@@ -113,7 +113,7 @@ std::string FragmentProgramDecompiler::AddConst()
 		return name;
 	}
 
-	auto data = vm::ps3::ptr<u32>::make(m_prog.addr + m_size + 4 * SIZE_32(u32));
+	auto data = (be_t<u32>*) ((char*)m_prog.addr + m_size + 4 * SIZE_32(u32));
 
 	m_offset = 2 * 4 * sizeof(u32);
 	u32 x = GetData(data[0]);
@@ -493,7 +493,7 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 
 std::string FragmentProgramDecompiler::Decompile()
 {
-	auto data = vm::ps3::ptr<u32>::make(m_prog.addr);
+	auto data = (be_t<u32>*) m_prog.addr;
 	m_size = 0;
 	m_location = 0;
 	m_loop_count = 0;

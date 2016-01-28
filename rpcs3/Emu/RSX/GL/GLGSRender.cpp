@@ -741,7 +741,7 @@ bool GLGSRender::load_program()
 	RSXFragmentProgram fragment_program;
 	u32 shader_program = rsx::method_registers[NV4097_SET_SHADER_PROGRAM];
 	fragment_program.offset = shader_program & ~0x3;
-	fragment_program.addr = rsx::get_address(fragment_program.offset, (shader_program & 0x3) - 1);
+	fragment_program.addr = vm::base(rsx::get_address(fragment_program.offset, (shader_program & 0x3) - 1));
 	fragment_program.ctrl = rsx::method_registers[NV4097_SET_SHADER_CONTROL];
 
 	std::array<texture_dimension, 16> texture_dimensions;

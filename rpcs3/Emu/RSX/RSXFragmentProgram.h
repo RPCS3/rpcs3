@@ -1,4 +1,5 @@
 #pragma once
+#include "GCM.h"
 
 enum
 {
@@ -214,11 +215,14 @@ enum class texture_dimension : u8
 struct RSXFragmentProgram
 {
 	u32 size;
-	u32 addr;
+	void *addr;
 	u32 offset;
 	u32 ctrl;
 	u16 unnormalized_coords;
 	u32 texture_dimensions;
+	rsx::window_origin origin_mode;
+	rsx::window_pixel_center pixel_center_mode;
+	u16 height;
 
 	texture_dimension get_texture_dimension(u8 id) const
 	{

@@ -74,11 +74,11 @@ size_t fragment_program_utils::get_fragment_program_ucode_size(void *ptr)
 	}
 }
 
-size_t fragment_program_hash::operator()(const void *program) const
+size_t fragment_program_hash::operator()(const RSXFragmentProgram& program) const
 {
 	// 64-bit Fowler/Noll/Vo FNV-1a hash code
 	size_t hash = 0xCBF29CE484222325ULL;
-	const qword *instbuffer = (const qword*)program;
+	const qword *instbuffer = (const qword*)program.addr;
 	size_t instIndex = 0;
 	while (true)
 	{
@@ -101,10 +101,13 @@ size_t fragment_program_hash::operator()(const void *program) const
 	return 0;
 }
 
-bool fragment_program_compare::operator()(const void *binary1, const void *binary2) const
+bool fragment_program_compare::operator()(const RSXFragmentProgram& binary1, const RSXFragmentProgram& binary2) const
 {
-	const qword *instBuffer1 = (const qword*)binary1;
-	const qword *instBuffer2 = (const qword*)binary2;
+	if (binary1.texture_dimensions != binary2.texture_dimensions || binary1.unnormalized_coords != binary2.unnormalized_coords ||
+		binary1.height != binary2.height || binary1.origin_mode != binary2.origin_mode || binary1.pixel_center_mode != binary2.pixel_center_mode)
+		return false;
+	const qword *instBuffer1 = (const qword*)binary1.addr;
+	const qword *instBuffer2 = (const qword*)binary2.addr;
 	size_t instIndex = 0;
 	while (true)
 	{

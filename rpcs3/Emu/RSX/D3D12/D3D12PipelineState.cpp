@@ -42,7 +42,7 @@ void D3D12GSRender::load_program()
 
 	u32 shader_program = rsx::method_registers[NV4097_SET_SHADER_PROGRAM];
 	m_fragment_program.offset = shader_program & ~0x3;
-	m_fragment_program.addr = rsx::get_address(m_fragment_program.offset, (shader_program & 0x3) - 1);
+	m_fragment_program.addr = vm::base(rsx::get_address(m_fragment_program.offset, (shader_program & 0x3) - 1));
 	m_fragment_program.ctrl = rsx::method_registers[NV4097_SET_SHADER_CONTROL];
 
 	std::array<texture_dimension, 16> texture_dimensions;
