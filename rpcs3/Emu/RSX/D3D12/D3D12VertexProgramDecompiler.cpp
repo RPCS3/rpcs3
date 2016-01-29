@@ -60,7 +60,7 @@ namespace
 		{
 			if (static_cast<size_t>(real_input.location) != std::get<0>(attribute))
 				continue;
-			OS << "Texture1D<float4> " << std::get<1>(attribute) << "_buffer : register(t" << reg++ << ");\n";
+			OS << "Buffer<float4> " << std::get<1>(attribute) << "_buffer : register(t" << reg++ << ");\n";
 			return true;
 		}
 		return false;
@@ -170,20 +170,20 @@ namespace
 				continue;
 			if (!real_input.is_array)
 			{
-				OS << "	float4 " << PI.name << " = " << PI.name << "_buffer.Load(0);\n";
+				OS << "	float4 " << PI.name << " = " << PI.name << "_buffer[0];\n";
 				return;
 			}
 			if (real_input.frequency > 1)
 			{
 				if (real_input.is_modulo)
 				{
-					OS << "	float4 " << PI.name << " = " << PI.name << "_buffer.Load(vertex_id % " << real_input.frequency << ");\n";
+					OS << "	float4 " << PI.name << " = " << PI.name << "_buffer[vertex_id % " << real_input.frequency << "];\n";
 					return;
 				}
-				OS << "	float4 " << PI.name << " = " << PI.name << "_buffer.Load(vertex_id / " << real_input.frequency << ");\n";
+				OS << "	float4 " << PI.name << " = " << PI.name << "_buffer[vertex_id / " << real_input.frequency << "];\n";
 				return;
 			}
-			OS << "	float4 " << PI.name << " = " << PI.name << "_buffer.Load(vertex_id);\n";
+			OS << "	float4 " << PI.name << " = " << PI.name << "_buffer[vertex_id];\n";
 			return;
 		}
 		OS << "	float4 " << PI.name << " = float4(0., 0., 0., 1.);\n";
