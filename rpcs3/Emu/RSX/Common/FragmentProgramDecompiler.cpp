@@ -130,6 +130,9 @@ std::string FragmentProgramDecompiler::AddTex()
 	std::string sampler;
 	switch (m_prog.get_texture_dimension(dst.tex_num))
 	{
+	case texture_dimension::texture_dimension_1d:
+		sampler = "sampler1D";
+		break;
 	case texture_dimension::texture_dimension_cubemap:
 		sampler = "samplerCube";
 		break;
@@ -439,11 +442,14 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 	case RSX_FP_OPCODE_TEX:
 		switch (m_prog.get_texture_dimension(dst.tex_num))
 		{
+		case texture_dimension::texture_dimension_1d:
+			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE1D));
+			return true;
 		case texture_dimension::texture_dimension_2d:
-			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE));
+			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE2D));
 			return true;
 		case texture_dimension::texture_dimension_cubemap:
-			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_CUBE_SAMPLE));
+			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE));
 			return true;
 		case texture_dimension::texture_dimension_3d:
 			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE3D));
@@ -454,11 +460,14 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 	case RSX_FP_OPCODE_TXP:
 		switch (m_prog.get_texture_dimension(dst.tex_num))
 		{
+		case texture_dimension::texture_dimension_1d:
+			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE1D_PROJ));
+			return true;
 		case texture_dimension::texture_dimension_2d:
-			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE_PROJ));
+			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_PROJ));
 			return true;
 		case texture_dimension::texture_dimension_cubemap:
-			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_CUBE_SAMPLE_PROJ));
+			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE_PROJ));
 			return true;
 		case texture_dimension::texture_dimension_3d:
 			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE3D_PROJ));
@@ -471,11 +480,14 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 	case RSX_FP_OPCODE_TXL:
 		switch (m_prog.get_texture_dimension(dst.tex_num))
 		{
+		case texture_dimension::texture_dimension_1d:
+			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE1D_LOD));
+			return true;
 		case texture_dimension::texture_dimension_2d:
-			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE_LOD));
+			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_LOD));
 			return true;
 		case texture_dimension::texture_dimension_cubemap:
-			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_CUBE_SAMPLE_LOD));
+			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE_LOD));
 			return true;
 		case texture_dimension::texture_dimension_3d:
 			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE3D_LOD));

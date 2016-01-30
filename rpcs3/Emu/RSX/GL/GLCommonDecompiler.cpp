@@ -40,17 +40,23 @@ std::string getFunctionImpl(FUNCTION f)
 		return "vec4(1., 1., 1., 1.)";
 	case FUNCTION::FUNCTION_FRACT:
 		return "fract($0)";
-	case FUNCTION::FUNCTION_TEXTURE_SAMPLE:
+	case FUNCTION::FUNCTION_TEXTURE_SAMPLE1D:
+		return "texture($t, $0.x)";
+	case FUNCTION::FUNCTION_TEXTURE_SAMPLE1D_PROJ:
+		return "textureProj($t, $0.x, $1.x)"; // Note: $1.x is bias
+	case FUNCTION::FUNCTION_TEXTURE_SAMPLE1D_LOD:
+		return "textureLod($t, $0.x, $1)";
+	case FUNCTION::FUNCTION_TEXTURE_SAMPLE2D:
 		return "texture($t, $0.xy)";
-	case FUNCTION::FUNCTION_TEXTURE_SAMPLE_PROJ:
+	case FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_PROJ:
 		return "textureProj($t, $0.xyz, $1.x)"; // Note: $1.x is bias
-	case FUNCTION::FUNCTION_TEXTURE_SAMPLE_LOD:
+	case FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_LOD:
 		return "textureLod($t, $0.xy, $1)";
-	case FUNCTION::FUNCTION_TEXTURE_CUBE_SAMPLE:
+	case FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE:
 		return "texture($t, $0.xyz)";
-	case FUNCTION::FUNCTION_TEXTURE_CUBE_SAMPLE_PROJ:
+	case FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE_PROJ:
 		return "textureProj($t, $0.xyzw, $1.x)"; // Note: $1.x is bias
-	case FUNCTION::FUNCTION_TEXTURE_CUBE_SAMPLE_LOD:
+	case FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE_LOD:
 		return "textureLod($t, $0.xyz, $1)";
 	case FUNCTION::FUNCTION_DFDX:
 		return "dFdx($0)";

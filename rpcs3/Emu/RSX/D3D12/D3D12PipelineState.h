@@ -119,7 +119,7 @@ struct D3D12Traits
 		{
 			for (const ParamItem PI : PT.items)
 			{
-				if (PT.type == "sampler2D" || PT.type == "samplerCube" || PT.type == "sampler3D")
+				if (PT.type == "sampler1D" || PT.type == "sampler2D" || PT.type == "samplerCube" || PT.type == "sampler3D")
 				{
 					size_t texture_unit = atoi(PI.name.c_str() + 3);
 					fragmentProgramData.m_textureCount = std::max(texture_unit + 1, fragmentProgramData.m_textureCount);

@@ -738,25 +738,7 @@ bool GLGSRender::load_program()
 {
 #if 1
 	RSXVertexProgram vertex_program = get_current_vertex_program();
-	RSXFragmentProgram fragment_program;
-	u32 shader_program = rsx::method_registers[NV4097_SET_SHADER_PROGRAM];
-	fragment_program.offset = shader_program & ~0x3;
-	fragment_program.addr = vm::base(rsx::get_address(fragment_program.offset, (shader_program & 0x3) - 1));
-	fragment_program.ctrl = rsx::method_registers[NV4097_SET_SHADER_CONTROL];
-
-	std::array<texture_dimension, 16> texture_dimensions;
-	for (u32 i = 0; i < rsx::limits::textures_count; ++i)
-	{
-		if (!textures[i].enabled())
-			texture_dimensions[i] = texture_dimension::texture_dimension_2d;
-		else if (textures[i].cubemap())
-			texture_dimensions[i] = texture_dimension::texture_dimension_cubemap;
-		else if (textures[i].dimension() == 3)
-			texture_dimensions[i] = texture_dimension::texture_dimension_3d;
-		else
-			texture_dimensions[i] = texture_dimension::texture_dimension_2d;
-	}
-	fragment_program.set_texture_dimension(texture_dimensions);
+	RSXFragmentProgram fragment_program = get_current_fragment_program();
 
 	__glcheck m_program = &m_prog_buffer.getGraphicPipelineState(vertex_program, fragment_program, nullptr);
 	__glcheck m_program->use();

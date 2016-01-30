@@ -47,7 +47,11 @@ namespace
 		const u8 format = texture.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
 		DXGI_FORMAT dxgi_format = get_texture_format(format);
 
-		if (texture.dimension() == 2) // 2D texture or cubemap
+		if (texture.dimension() == 1) // 1D texture or cubemap
+		{
+			return CD3DX12_RESOURCE_DESC::Tex1D(dxgi_format, texture.width(), 1, texture.mipmap());
+		}
+		else if (texture.dimension() == 2) // 2D texture or cubemap
 		{
 //			if (texture.depth() < 2);
 			size_t depth = (texture.cubemap()) ? 6 : 1;
@@ -135,6 +139,36 @@ void update_existing_texture(
 
 	command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(existing_texture, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ));
 }
+
+D3D12_SHADER_RESOURCE_VIEW_DESC get_srv_descriptor_with_dimensions(const rsx::texture &tex)
+{
+	D3D12_SHADER_RESOURCE_VIEW_DESC shared_resource_view_desc = {};
+	if (tex.dimension() == 1)
+	{
+		shared_resource_view_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE1D;
+		shared_resource_view_desc.Texture1D.MipLevels = tex.mipmap();
+		return shared_resource_view_desc;
+	}
+	if (tex.dimension() == 2)
+	{
+		if (tex.cubemap())
+		{
+			shared_resource_view_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE;
+			shared_resource_view_desc.TextureCube.MipLevels = tex.mipmap();
+			return shared_resource_view_desc;
+		}
+		shared_resource_view_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+		shared_resource_view_desc.Texture2D.MipLevels = tex.mipmap();
+		return shared_resource_view_desc;
+	}
+	if (tex.dimension() == 3)
+	{
+		shared_resource_view_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE3D;
+		shared_resource_view_desc.Texture3D.MipLevels = tex.mipmap();
+		return shared_resource_view_desc;
+	}
+	throw EXCEPTION("Wrong texture dimension %d", tex.dimension());
+}
 }
 
 void D3D12GSRender::upload_and_bind_textures(ID3D12GraphicsCommandList *command_list, size_t descriptor_index, size_t texture_count)
@@ -213,22 +247,7 @@ void D3D12GSRender::upload_and_bind_textures(ID3D12GraphicsCommandList *command_
 			m_texture_cache.store_and_protect_data(texaddr, texaddr, get_texture_size(textures[i]), format, w, h, textures[i].depth(), textures[i].mipmap(), tex);
 		}
 
-		D3D12_SHADER_RESOURCE_VIEW_DESC shared_resource_view_desc = {};
-		if (textures[i].cubemap())
-		{
-			shared_resource_view_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE;
-			shared_resource_view_desc.TextureCube.MipLevels = textures[i].mipmap();
-		}
-		else if (textures[i].dimension() == 2)
-		{
-			shared_resource_view_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-			shared_resource_view_desc.Texture2D.MipLevels = textures[i].mipmap();
-		}
-		else if (textures[i].dimension() == 3)
-		{
-			shared_resource_view_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE3D;
-			shared_resource_view_desc.Texture2D.MipLevels = textures[i].mipmap();
-		}
+		D3D12_SHADER_RESOURCE_VIEW_DESC shared_resource_view_desc = get_srv_descriptor_with_dimensions(textures[i]);
 		shared_resource_view_desc.Format = get_texture_format(format);
 
 		switch (format)
