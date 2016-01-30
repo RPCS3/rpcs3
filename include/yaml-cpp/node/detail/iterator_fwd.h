@@ -13,7 +13,6 @@
 #include <vector>
 
 namespace YAML {
-class node;
 
 namespace detail {
 struct iterator_value;
