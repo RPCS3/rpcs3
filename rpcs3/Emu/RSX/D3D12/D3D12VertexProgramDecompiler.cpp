@@ -176,6 +176,8 @@ namespace
 
 void D3D12VertexProgramDecompiler::insertMainStart(std::stringstream & OS)
 {
+	insert_d3d12_legacy_function(OS);
+
 	OS << "PixelInput main(uint vertex_id : SV_VertexID)" << std::endl;
 	OS << "{" << std::endl;
 

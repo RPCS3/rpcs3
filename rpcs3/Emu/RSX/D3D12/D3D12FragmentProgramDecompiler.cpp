@@ -143,23 +143,7 @@ void D3D12FragmentDecompiler::insertConstants(std::stringstream & OS)
 
 void D3D12FragmentDecompiler::insertMainStart(std::stringstream & OS)
 {
-	// "lib" function
-	// 0.00001 is used as "some non zero very little number"
-	OS << "float4 divsq_legacy(float4 num, float4 denum)\n";
-	OS << "{\n";
-	OS << "	return num / sqrt(max(denum.xxxx, 0.00001));\n";
-	OS << "}\n";
-
-	OS << "float4 rcp_legacy(float4 denum)\n";
-	OS << "{\n";
-	OS << "	return 1. / denum;\n";
-	OS << "}\n";
-
-	OS << "float4 rsq_legacy(float4 denum)\n";
-	OS << "{\n";
-	OS << "	return 1. / sqrt(max(denum, 0.00001));\n";
-	OS << "}\n";
-
+	insert_d3d12_legacy_function(OS);
 
 	const std::set<std::string> output_value =
 	{

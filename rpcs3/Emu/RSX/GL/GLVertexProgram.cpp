@@ -158,6 +158,8 @@ void add_input(std::stringstream & OS, const ParamItem &PI, const std::vector<rs
 
 void GLVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 {
+	insert_glsl_legacy_function(OS);
+
 	OS << "void main()" << std::endl;
 	OS << "{" << std::endl;
 
