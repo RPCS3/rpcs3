@@ -665,6 +665,10 @@ namespace rsx
 		result.addr = vm::base(rsx::get_address(result.offset, (shader_program & 0x3) - 1));
 		result.ctrl = rsx::method_registers[NV4097_SET_SHADER_CONTROL];
 		result.unnormalized_coords = 0;
+		u32 shader_window = rsx::method_registers[NV4097_SET_SHADER_WINDOW];
+		result.origin_mode = rsx::to_window_origin((shader_window >> 12) & 0xF);
+		result.pixel_center_mode = rsx::to_window_pixel_center((shader_window >> 16) & 0xF);
+		result.height = shader_window & 0xFFF;
 
 		std::array<texture_dimension, 16> texture_dimensions;
 		for (u32 i = 0; i < rsx::limits::textures_count; ++i)
