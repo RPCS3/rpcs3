@@ -2,6 +2,7 @@
 #include "Emu/RSX/GSRender.h"
 #include "gl_helpers.h"
 #include "rsx_gl_texture.h"
+#include "gl_render_targets.h"
 
 #define RSX_DEBUG 1
 
@@ -21,15 +22,13 @@ private:
 	gl::glsl::program *m_program;
 
 	rsx::surface_info m_surface;
+	gl_render_targets m_rtts;
 
 public:
 	gl::fbo draw_fbo;
 
 private:
 	GLProgramBuffer m_prog_buffer;
-
-	gl::texture m_draw_tex_color[rsx::limits::color_buffers_count];
-	gl::texture m_draw_tex_depth_stencil;
 
 	//buffer
 	gl::fbo m_flip_fbo;
@@ -66,4 +65,7 @@ protected:
 	bool do_method(u32 id, u32 arg) override;
 	void flip(int buffer) override;
 	u64 timestamp() const override;
+
+	virtual std::array<std::vector<gsl::byte>, 4> copy_render_targets_to_memory() override;
+	virtual std::array<std::vector<gsl::byte>, 2> copy_depth_stencil_buffer_to_memory() override;
 };

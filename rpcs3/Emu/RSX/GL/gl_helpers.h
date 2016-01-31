@@ -387,6 +387,7 @@ namespace gl
 
 	public:
 		buffer() = default;
+		buffer(const buffer&) = delete;
 
 		buffer(GLuint id)
 		{

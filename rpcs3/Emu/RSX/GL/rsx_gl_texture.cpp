@@ -5,6 +5,7 @@
 #include "../RSXThread.h"
 #include "../RSXTexture.h"
 #include "../rsx_utils.h"
+#include "gl_render_targets.h"
 
 namespace rsx
 {
@@ -89,21 +90,27 @@ namespace rsx
 			return 1.0f;
 		}
 
-		void texture::init(int index, rsx::texture& tex)
+		void texture::init(int index, rsx::texture& tex, gl_render_targets& render_targets)
 		{
-			if (!m_id)
-			{
-				create();
-			}
-
 			glActiveTexture(GL_TEXTURE0 + index);
-			bind();
 
 			const u32 texaddr = rsx::get_address(tex.offset(), tex.location());
 			//LOG_WARNING(RSX, "texture addr = 0x%x, width = %d, height = %d, max_aniso=%d, mipmap=%d, remap=0x%x, zfunc=0x%x, wraps=0x%x, wrapt=0x%x, wrapr=0x%x, minlod=0x%x, maxlod=0x%x", 
 			//	m_offset, m_width, m_height, m_maxaniso, m_mipmap, m_remap, m_zfunc, m_wraps, m_wrapt, m_wrapr, m_minlod, m_maxlod);
 
-			//TODO: safe init
+			auto rtt = render_targets.get_texture_from_render_target_if_applicable(texaddr);
+			if (rtt != nullptr)
+			{
+				rtt->bind();
+				return;
+			}
+
+				//TODO: safe init
+			if (!m_id)
+			{
+				create();
+			}
+			bind();
 
 			u32 full_format = tex.format();
 
