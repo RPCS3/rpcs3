@@ -3,7 +3,7 @@
 
 namespace psf
 {
-	_log::channel log("PSF");
+	_log::channel log("PSF", _log::level::notice);
 
 	struct header_t
 	{
@@ -25,26 +25,26 @@ namespace psf
 
 	const std::string& entry::as_string() const
 	{
-		CHECK_ASSERTION(m_type == format::string || m_type == format::array);
+		Expects(m_type == format::string || m_type == format::array);
 		return m_value_string;
 	}
 
 	u32 entry::as_integer() const
 	{
-		CHECK_ASSERTION(m_type == format::integer);
+		Expects(m_type == format::integer);
 		return m_value_integer;
 	}
 
 	entry& entry::operator =(const std::string& value)
 	{
-		CHECK_ASSERTION(m_type == format::string || m_type == format::array);
+		Expects(m_type == format::string || m_type == format::array);
 		m_value_string = value;
 		return *this;
 	}
 
 	entry& entry::operator =(u32 value)
 	{
-		CHECK_ASSERTION(m_type == format::integer);
+		Expects(m_type == format::integer);
 		m_value_integer = value;
 		return *this;
 	}
@@ -61,10 +61,10 @@ namespace psf
 			return SIZE_32(u32);
 		}
 
-		throw EXCEPTION("Invalid format (0x%x)", m_type);
+		throw fmt::exception("Invalid format (0x%x)" HERE, m_type);
 	}
 
-	registry load(const std::vector<char>& data)
+	registry load_object(const std::vector<char>& data)
 	{
 		registry result;
 
@@ -75,18 +75,18 @@ namespace psf
 		}
 
 		// Check size
-		CHECK_ASSERTION(data.size() >= sizeof(header_t));
-		CHECK_ASSERTION((std::uintptr_t)data.data() % 8 == 0);
+		Expects(data.size() >= sizeof(header_t));
+		Expects((std::uintptr_t)data.data() % 8 == 0);
 
 		// Get header
 		const header_t& header = reinterpret_cast<const header_t&>(data[0]);
 
 		// Check magic and version
-		CHECK_ASSERTION(header.magic == *(u32*)"\0PSF");
-		CHECK_ASSERTION(header.version == 0x101);
-		CHECK_ASSERTION(sizeof(header_t) + header.entries_num * sizeof(def_table_t) <= header.off_key_table);
-		CHECK_ASSERTION(header.off_key_table <= header.off_data_table);
-		CHECK_ASSERTION(header.off_data_table <= data.size());
+		Expects(header.magic == "\0PSF"_u32);
+		Expects(header.version == 0x101);
+		Expects(sizeof(header_t) + header.entries_num * sizeof(def_table_t) <= header.off_key_table);
+		Expects(header.off_key_table <= header.off_data_table);
+		Expects(header.off_data_table <= data.size());
 
 		// Get indices (alignment should be fine)
 		const def_table_t* indices = reinterpret_cast<const def_table_t*>(data.data() + sizeof(header_t));
@@ -94,7 +94,7 @@ namespace psf
 		// Load entries
 		for (u32 i = 0; i < header.entries_num; ++i)
 		{
-			CHECK_ASSERTION(indices[i].key_off < header.off_data_table - header.off_key_table);
+			Expects(indices[i].key_off < header.off_data_table - header.off_key_table);
 
 			// Get key name range
 			const auto name_ptr = data.begin() + header.off_key_table + indices[i].key_off;
@@ -103,10 +103,10 @@ namespace psf
 			// Get name (must be unique)
 			std::string key(name_ptr, name_end);
 
-			CHECK_ASSERTION(result.count(key) == 0);
-			CHECK_ASSERTION(indices[i].param_len <= indices[i].param_max);
-			CHECK_ASSERTION(indices[i].data_off < data.size() - header.off_data_table);
-			CHECK_ASSERTION(indices[i].param_max < data.size() - indices[i].data_off);
+			Expects(result.count(key) == 0);
+			Expects(indices[i].param_len <= indices[i].param_max);
+			Expects(indices[i].data_off < data.size() - header.off_data_table);
+			Expects(indices[i].param_max < data.size() - indices[i].data_off);
 
 			// Get data pointer
 			const auto value_ptr = data.begin() + header.off_data_table + indices[i].data_off;
@@ -147,7 +147,7 @@ namespace psf
 		return result;
 	}
 
-	std::vector<char> save(const registry& psf)
+	std::vector<char> save_object(const registry& psf)
 	{
 		std::vector<def_table_t> indices; indices.reserve(psf.size());
 
@@ -175,7 +175,7 @@ namespace psf
 
 		// Generate header
 		header_t header;
-		header.magic = *(u32*)"\0PSF";
+		header.magic = "\0PSF"_u32;
 		header.version = 0x101;
 		header.off_key_table = gsl::narrow<u32>(sizeof(header_t) + sizeof(def_table_t) * psf.size());
 		header.off_data_table = gsl::narrow<u32>(header.off_key_table + key_offset);

@@ -1,7 +1,5 @@
 #pragma once
 
-struct vfsStream;
-
 struct TROPUSRHeader
 {
 	be_t<u32> magic;         // 81 8F 54 AD
@@ -56,8 +54,8 @@ struct TROPUSREntry6
 
 class TROPUSRLoader
 {
-	vfsStream* m_file;
-	TROPUSRHeader m_header;
+	fs::file m_file;
+	TROPUSRHeader m_header{};
 	std::vector<TROPUSRTableHeader> m_tableHeaders;
 
 	std::vector<TROPUSREntry4> m_table4;
@@ -69,12 +67,8 @@ class TROPUSRLoader
 	virtual bool LoadTables();
 
 public:
-	TROPUSRLoader();
-	~TROPUSRLoader();
-
 	virtual bool Load(const std::string& filepath, const std::string& configpath);
 	virtual bool Save(const std::string& filepath);
-	virtual void Close();
 
 	virtual u32 GetTrophiesCount();
 
