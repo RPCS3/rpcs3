@@ -1,8 +1,10 @@
 #include "stdafx.h"
 #include "Emu/System.h"
-#include "Emu/ARMv7/PSVFuncList.h"
+#include "Emu/ARMv7/ARMv7Module.h"
 
 #include "sceAppUtil.h"
+
+LOG_CHANNEL(sceAppUtil);
 
 s32 sceAppUtilInit(vm::cptr<SceAppUtilInitParam> initParam, vm::ptr<SceAppUtilBootParam> bootParam)
 {
@@ -70,15 +72,10 @@ s32 sceAppUtilLoadSafeMemory(vm::ptr<void> buf, u32 bufSize, s64 offset)
 }
 
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &sceAppUtil, #name, name)
+#define REG_FUNC(nid, name) REG_FNID(SceAppUtil, nid, name)
 
-psv_log_base sceAppUtil("SceAppUtil", []()
+DECLARE(arm_module_manager::SceAppUtil)("SceAppUtil", []()
 {
-	sceAppUtil.on_load = nullptr;
-	sceAppUtil.on_unload = nullptr;
-	sceAppUtil.on_stop = nullptr;
-	sceAppUtil.on_error = nullptr;
-
 	REG_FUNC(0xDAFFE671, sceAppUtilInit);
 	REG_FUNC(0xB220B00B, sceAppUtilShutdown);
 	REG_FUNC(0x7E8FE96A, sceAppUtilSaveDataSlotCreate);

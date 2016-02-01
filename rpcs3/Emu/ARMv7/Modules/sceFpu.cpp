@@ -1,8 +1,10 @@
 #include "stdafx.h"
 #include "Emu/System.h"
-#include "Emu/ARMv7/PSVFuncList.h"
+#include "Emu/ARMv7/ARMv7Module.h"
 
 #include "sceFpu.h"
+
+LOG_CHANNEL(sceFpu);
 
 float sceFpuSinf(float x)
 {
@@ -76,15 +78,10 @@ float sceFpuPowf(float x, float y)
 }
 
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &sceFpu, #name, name)
+#define REG_FUNC(nid, name) REG_FNID(SceFpu, nid, name)
 
-psv_log_base sceFpu("SceFpu", []()
+DECLARE(arm_module_manager::SceFpu)("SceFpu", []()
 {
-	sceFpu.on_load = nullptr;
-	sceFpu.on_unload = nullptr;
-	sceFpu.on_stop = nullptr;
-	sceFpu.on_error = nullptr;
-
 	//REG_FUNC(0x33E1AC14, sceFpuSinf);
 	//REG_FUNC(0xDB66BA89, sceFpuCosf);
 	//REG_FUNC(0x6FBDA1C9, sceFpuTanf);

@@ -157,5 +157,3 @@ struct SceSystemGestureTouchEvent
 	_property_t property;
 	u8 reserved[56];
 };
-
-extern psv_log_base sceSystemGesture;

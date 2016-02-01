@@ -1,18 +1,21 @@
 ﻿#include "stdafx.h"
 #include "Emu/System.h"
-#include "Emu/ARMv7/PSVFuncList.h"
+#include "Emu/ARMv7/ARMv7Module.h"
 #include "Emu/ARMv7/ARMv7Thread.h"
 #include "Emu/ARMv7/ARMv7Callback.h"
 
 #include "sceLibc.h"
 
+LOG_CHANNEL(sceLibc);
+
+// TODO
 vm::ptr<void> g_dso;
 
 std::vector<std::function<void(ARMv7Thread&)>> g_atexit;
 
 std::mutex g_atexit_mutex;
 
-std::string armv7_fmt(ARMv7Context& context, vm::cptr<char> fmt, u32 g_count, u32 f_count, u32 v_count)
+std::string arm_fmt(ARMv7Thread& cpu, vm::cptr<char> fmt, u32 g_count)
 {
 	std::string result;
 
@@ -40,7 +43,7 @@ std::string armv7_fmt(ARMv7Context& context, vm::cptr<char> fmt, u32 g_count, u3
 				if (*fmt == '*')
 				{
 					fmt++;
-					return context.get_next_gpr_arg(g_count, f_count, v_count);
+					return cpu.get_next_gpr_arg(g_count);
 				}
 
 				while (*fmt - '0' < 10)
@@ -64,7 +67,7 @@ std::string armv7_fmt(ARMv7Context& context, vm::cptr<char> fmt, u32 g_count, u3
 				if (*++fmt == '*')
 				{
 					fmt++;
-					return context.get_next_gpr_arg(g_count, f_count, v_count);
+					return cpu.get_next_gpr_arg(g_count);
 				}
 
 				while (*fmt - '0' < 10)
@@ -88,7 +91,7 @@ std::string armv7_fmt(ARMv7Context& context, vm::cptr<char> fmt, u32 g_count, u3
 			case 'i':
 			{
 				// signed decimal
-				const s64 value = context.get_next_gpr_arg(g_count, f_count, v_count);
+				const s64 value = cpu.get_next_gpr_arg(g_count);
 
 				if (plus_sign || minus_sign || space_sign || number_sign || zero_padding || width || prec) break;
 
@@ -99,7 +102,7 @@ std::string armv7_fmt(ARMv7Context& context, vm::cptr<char> fmt, u32 g_count, u3
 			case 'X':
 			{
 				// hexadecimal
-				const u64 value = context.get_next_gpr_arg(g_count, f_count, v_count);
+				const u64 value = cpu.get_next_gpr_arg(g_count);
 
 				if (plus_sign || minus_sign || space_sign || prec) break;
 
@@ -108,7 +111,7 @@ std::string armv7_fmt(ARMv7Context& context, vm::cptr<char> fmt, u32 g_count, u3
 					result += cf == 'x' ? "0x" : "0X";
 				}
 
-				const std::string& hex = cf == 'x' ? fmt::to_hex(value) : fmt::toupper(fmt::to_hex(value));
+				const std::string& hex = cf == 'x' ? fmt::to_hex(value) : fmt::to_upper(fmt::to_hex(value));
 
 				if (hex.length() >= width)
 				{
@@ -127,7 +130,7 @@ std::string armv7_fmt(ARMv7Context& context, vm::cptr<char> fmt, u32 g_count, u3
 			case 's':
 			{
 				// string
-				const vm::cptr<char> string{ context.get_next_gpr_arg(g_count, f_count, v_count), vm::addr };
+				const vm::cptr<char> string{ cpu.get_next_gpr_arg(g_count), vm::addr };
 
 				if (plus_sign || minus_sign || space_sign || number_sign || zero_padding || width || prec) break;
 
@@ -154,9 +157,9 @@ namespace sce_libc_func
 		
 		std::lock_guard<std::mutex> lock(g_atexit_mutex);
 
-		g_atexit.insert(g_atexit.begin(), [func, arg, dso](ARMv7Thread& context)
+		g_atexit.insert(g_atexit.begin(), [func, arg, dso](ARMv7Thread& cpu)
 		{
-			func(context, arg);
+			func(cpu, arg);
 		});
 	}
 
@@ -166,13 +169,13 @@ namespace sce_libc_func
 
 		std::lock_guard<std::mutex> lock(g_atexit_mutex);
 
-		g_atexit.insert(g_atexit.begin(), [func, arg, dso](ARMv7Thread& context)
+		g_atexit.insert(g_atexit.begin(), [func, arg, dso](ARMv7Thread& cpu)
 		{
-			func(context, arg);
+			func(cpu, arg);
 		});
 	}
 
-	void exit(ARMv7Thread& context)
+	void exit(ARMv7Thread& cpu)
 	{
 		sceLibc.warning("exit()");
 
@@ -182,7 +185,7 @@ namespace sce_libc_func
 
 		for (auto& func : decltype(g_atexit)(std::move(g_atexit)))
 		{
-			func(context);
+			func(cpu);
 		}
 
 		sceLibc.success("Process finished");
@@ -196,27 +199,27 @@ namespace sce_libc_func
 		{
 			CHECK_EMU_STATUS;
 
-			std::this_thread::sleep_for(std::chrono::milliseconds(1));
+			std::this_thread::sleep_for(1ms);
 		}
 	}
 
-	void printf(ARMv7Thread& context, vm::cptr<char> fmt, armv7_va_args_t va_args)
+	void printf(ARMv7Thread& cpu, vm::cptr<char> fmt, arm_va_args_t va_args)
 	{
 		sceLibc.warning("printf(fmt=*0x%x)", fmt);
 		sceLibc.trace("*** *fmt = '%s'", fmt.get_ptr());
 
-		const std::string& result = armv7_fmt(context, fmt, va_args.g_count, va_args.f_count, va_args.v_count);
+		const std::string& result = arm_fmt(cpu, fmt, va_args.count);
 		sceLibc.trace("***     -> '%s'", result);
 
 		_log::g_tty_file.log(result);
 	}
 
-	void sprintf(ARMv7Thread& context, vm::ptr<char> str, vm::cptr<char> fmt, armv7_va_args_t va_args)
+	void sprintf(ARMv7Thread& cpu, vm::ptr<char> str, vm::cptr<char> fmt, arm_va_args_t va_args)
 	{
 		sceLibc.warning("sprintf(str=*0x%x, fmt=*0x%x)", str, fmt);
 		sceLibc.trace("*** *fmt = '%s'", fmt.get_ptr());
 
-		const std::string& result = armv7_fmt(context, fmt, va_args.g_count, va_args.f_count, va_args.v_count);
+		const std::string& result = arm_fmt(cpu, fmt, va_args.count);
 		sceLibc.trace("***     -> '%s'", result);
 
 		::memcpy(str.get_ptr(), result.c_str(), result.size() + 1);
@@ -225,8 +228,9 @@ namespace sce_libc_func
 	void __cxa_set_dso_handle_main(vm::ptr<void> dso)
 	{
 		sceLibc.warning("__cxa_set_dso_handle_main(dso=*0x%x)", dso);
-
+		
 		g_dso = dso;
+		g_atexit.clear();
 	}
 
 	void memcpy(vm::ptr<void> dst, vm::cptr<void> src, u32 size)
@@ -252,18 +256,10 @@ namespace sce_libc_func
 	}
 }
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &sceLibc, #name, sce_libc_func::name)
+#define REG_FUNC(nid, name) REG_FNID(SceLibc, nid, sce_libc_func::name)
 
-psv_log_base sceLibc("SceLibc", []()
+DECLARE(arm_module_manager::SceLibc)("SceLibc", []()
 {
-	g_dso = vm::null;
-	g_atexit.clear();
-
-	sceLibc.on_load = nullptr;
-	sceLibc.on_unload = nullptr;
-	sceLibc.on_stop = nullptr;
-	sceLibc.on_error = nullptr;
-
 	REG_FUNC(0xE4531F85, _Assert);
 	//REG_FUNC(0xE71C5CDE, _Stoul);
 	//REG_FUNC(0x7A5CA6A3, _Stoulx);

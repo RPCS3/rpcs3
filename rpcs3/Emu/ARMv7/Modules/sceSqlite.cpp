@@ -1,18 +1,15 @@
 #include "stdafx.h"
 #include "Emu/System.h"
-#include "Emu/ARMv7/PSVFuncList.h"
+#include "Emu/ARMv7/ARMv7Module.h"
 
 #include "sceSqlite.h"
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &sceSqlite, #name, name)
+LOG_CHANNEL(sceSqlite);
 
-psv_log_base sceSqlite("SceSqlite", []()
+#define REG_FUNC(nid, name) REG_FNID(SceSqlite, nid, name)
+
+DECLARE(arm_module_manager::SceSqlite)("SceSqlite", []()
 {
-	sceSqlite.on_load = nullptr;
-	sceSqlite.on_unload = nullptr;
-	sceSqlite.on_stop = nullptr;
-	sceSqlite.on_error = nullptr;
-
 	//REG_FUNC(0x26E46324, sqlite3_libversion);
 	//REG_FUNC(0x4CCB58A2, sqlite3_sourceid);
 	//REG_FUNC(0x5982F404, sqlite3_libversion_number);

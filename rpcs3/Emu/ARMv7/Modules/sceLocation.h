@@ -79,5 +79,3 @@ struct SceLocationPermissionInfo
 	SceLocationPermissionStatus mainstatus;
 	SceLocationPermissionApplicationStatus applicationstatus;
 };
-
-extern psv_log_base sceLocation;

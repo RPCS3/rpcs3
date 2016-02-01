@@ -1,8 +1,10 @@
 #include "stdafx.h"
 #include "Emu/System.h"
-#include "Emu/ARMv7/PSVFuncList.h"
+#include "Emu/ARMv7/ARMv7Module.h"
 
 #include "sceIme.h"
+
+LOG_CHANNEL(sceIme);
 
 s32 sceImeOpen(vm::ptr<SceImeParam> param)
 {
@@ -30,15 +32,10 @@ s32 sceImeClose()
 }
 
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &sceIme, #name, name)
+#define REG_FUNC(nid, name) REG_FNID(SceIme, nid, name)
 
-psv_log_base sceIme("SceIme", []()
+DECLARE(arm_module_manager::SceIme)("SceIme", []()
 {
-	sceIme.on_load = nullptr;
-	sceIme.on_unload = nullptr;
-	sceIme.on_stop = nullptr;
-	sceIme.on_error = nullptr;
-
 	REG_FUNC(0x0E050613, sceImeOpen);
 	REG_FUNC(0x71D6898A, sceImeUpdate);
 	REG_FUNC(0x889A8421, sceImeClose);

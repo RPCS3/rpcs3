@@ -1,8 +1,10 @@
 #include "stdafx.h"
 #include "Emu/System.h"
-#include "Emu/ARMv7/PSVFuncList.h"
+#include "Emu/ARMv7/ARMv7Module.h"
 
 #include "sceNpMatching.h"
+
+LOG_CHANNEL(sceNpMatching);
 
 // Functions
 
@@ -224,15 +226,10 @@ s32 sceNpMatching2SignalingGetPeerNetInfoResult(
 	throw EXCEPTION("");
 }
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &sceNpMatching, #name, name)
+#define REG_FUNC(nid, name) REG_FNID(SceNpMatching2, nid, name)
 
-psv_log_base sceNpMatching("SceNpMatching2", []()
+DECLARE(arm_module_manager::SceNpMatching)("SceNpMatching2", []()
 {
-	sceNpMatching.on_load = nullptr;
-	sceNpMatching.on_unload = nullptr;
-	sceNpMatching.on_stop = nullptr;
-	sceNpMatching.on_error = nullptr;
-
 	REG_FUNC(0xEBB1FE74, sceNpMatching2Init);
 	REG_FUNC(0x0124641C, sceNpMatching2Term);
 	REG_FUNC(0xADF578E1, sceNpMatching2CreateContext);

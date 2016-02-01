@@ -1,8 +1,10 @@
 #include "stdafx.h"
 #include "Emu/System.h"
-#include "Emu/ARMv7/PSVFuncList.h"
+#include "Emu/ARMv7/ARMv7Module.h"
 
 #include "sceCommonDialog.h"
+
+LOG_CHANNEL(sceCommonDialog);
 
 s32 sceCommonDialogUpdate(vm::cptr<SceCommonDialogUpdateParam> updateParam)
 {
@@ -205,15 +207,10 @@ s32 scePhotoReviewDialogAbort()
 }
 
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &sceCommonDialog, #name, name)
+#define REG_FUNC(nid, name) REG_FNID(SceCommonDialog, nid, name)
 
-psv_log_base sceCommonDialog("SceCommonDialog", []()
+DECLARE(arm_module_manager::SceCommonDialog)("SceCommonDialog", []()
 {
-	sceCommonDialog.on_load = nullptr;
-	sceCommonDialog.on_unload = nullptr;
-	sceCommonDialog.on_stop = nullptr;
-	sceCommonDialog.on_error = nullptr;
-
 	REG_FUNC(0x90530F2F, sceCommonDialogUpdate);
 	REG_FUNC(0x755FF270, sceMsgDialogInit);
 	REG_FUNC(0x4107019E, sceMsgDialogGetStatus);

@@ -178,5 +178,3 @@ struct SceNetStatisticsInfo
 	le_t<s32> libnet_mem_free_size;
 	le_t<s32> libnet_mem_free_min;
 };
-
-extern psv_log_base sceNet;

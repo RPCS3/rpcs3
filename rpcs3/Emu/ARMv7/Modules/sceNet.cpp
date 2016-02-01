@@ -1,8 +1,10 @@
 #include "stdafx.h"
 #include "Emu/System.h"
-#include "Emu/ARMv7/PSVFuncList.h"
+#include "Emu/ARMv7/ARMv7Module.h"
 
 #include "sceNet.h"
+
+LOG_CHANNEL(sceNet);
 
 s32 sceNetSetDnsInfo(vm::ptr<SceNetDnsInfo> info, s32 flags)
 {
@@ -295,15 +297,10 @@ s32 sceNetGetStatisticsInfo(vm::ptr<SceNetStatisticsInfo> info, s32 flags)
 }
 
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &sceNet, #name, name)
+#define REG_FUNC(nid, name) REG_FNID(SceNet, nid, name)
 
-psv_log_base sceNet("SceNet", []()
+DECLARE(arm_module_manager::SceNet)("SceNet", []()
 {
-	sceNet.on_load = nullptr;
-	sceNet.on_unload = nullptr;
-	sceNet.on_stop = nullptr;
-	sceNet.on_error = nullptr;
-
 	REG_FUNC(0xD62EF218, sceNetSetDnsInfo);
 	REG_FUNC(0xFEC1166D, sceNetClearDnsCache);
 	REG_FUNC(0xAFF9FA4D, sceNetDumpCreate);

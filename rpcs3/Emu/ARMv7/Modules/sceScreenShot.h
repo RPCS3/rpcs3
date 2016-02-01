@@ -7,5 +7,3 @@ struct SceScreenShotParam
 	vm::lcptr<char> gameComment;
 	vm::lptr<void> reserved;
 };
-
-extern psv_log_base sceScreenShot;

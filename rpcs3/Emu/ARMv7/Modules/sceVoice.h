@@ -128,5 +128,3 @@ struct SceVoiceStartParam
 	le_t<s32> container;
 	u8 reserved[28];
 };
-
-extern psv_log_base sceVoice;

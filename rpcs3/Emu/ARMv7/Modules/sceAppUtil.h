@@ -65,5 +65,3 @@ struct SceAppUtilSaveDataFileSlot
 	vm::lptr<SceAppUtilSaveDataSlotParam> slotParam;
 	char reserved[32];
 };
-
-extern psv_log_base sceAppUtil;

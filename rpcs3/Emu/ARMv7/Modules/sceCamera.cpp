@@ -1,8 +1,10 @@
 #include "stdafx.h"
 #include "Emu/System.h"
-#include "Emu/ARMv7/PSVFuncList.h"
+#include "Emu/ARMv7/ARMv7Module.h"
 
 #include "sceCamera.h"
+
+LOG_CHANNEL(sceCamera);
 
 s32 sceCameraOpen(s32 devnum, vm::ptr<SceCameraInfo> pInfo)
 {
@@ -210,15 +212,10 @@ void sceCameraUseCacheMemoryForTrial(s32 isCache)
 }
 
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &sceCamera, #name, name)
+#define REG_FUNC(nid, name) REG_FNID(SceCamera, nid, name)
 
-psv_log_base sceCamera("SceCamera", []()
+DECLARE(arm_module_manager::SceCamera)("SceCamera", []()
 {
-	sceCamera.on_load = nullptr;
-	sceCamera.on_unload = nullptr;
-	sceCamera.on_stop = nullptr;
-	sceCamera.on_error = nullptr;
-
 	REG_FUNC(0xA462F801, sceCameraOpen);
 	REG_FUNC(0xCD6E1CFC, sceCameraClose);
 	REG_FUNC(0xA8FEAE35, sceCameraStart);

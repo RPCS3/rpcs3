@@ -1,18 +1,15 @@
 #include "stdafx.h"
 #include "Emu/System.h"
-#include "Emu/ARMv7/PSVFuncList.h"
+#include "Emu/ARMv7/ARMv7Module.h"
 
-#include "sceXml.h"
+#include "sceLibXml.h"
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &sceXml, #name, name)
+LOG_CHANNEL(sceLibXml);
 
-psv_log_base sceXml("SceXml", []()
+#define REG_FUNC(nid, name) REG_FNID(SceLibXml, nid, name)
+
+DECLARE(arm_module_manager::SceLibXml)("SceLibXml", []()
 {
-	sceXml.on_load = nullptr;
-	sceXml.on_unload = nullptr;
-	sceXml.on_stop = nullptr;
-	sceXml.on_error = nullptr;
-
 	//REG_FUNC(0x57400A1A, _ZN3sce3Xml10SimpleDataC1EPKcj);
 	//REG_FUNC(0x7E582075, _ZN3sce3Xml10SimpleDataC1Ev);
 	//REG_FUNC(0x4CF0656B, _ZN3sce3Xml10SimpleDataC2EPKcj);

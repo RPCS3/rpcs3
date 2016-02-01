@@ -1,8 +1,10 @@
 #include "stdafx.h"
 #include "Emu/System.h"
-#include "Emu/ARMv7/PSVFuncList.h"
+#include "Emu/ARMv7/ARMv7Module.h"
 
 #include "sceTouch.h"
+
+LOG_CHANNEL(sceTouch);
 
 s32 sceTouchGetPanelInfo(u32 port, vm::ptr<SceTouchPanelInfo> pPanelInfo)
 {
@@ -30,15 +32,10 @@ s32 sceTouchGetSamplingState(u32 port, vm::ptr<u32> pState)
 }
 
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &sceTouch, #name, name)
+#define REG_FUNC(nid, name) REG_FNID(SceTouch, nid, name)
 
-psv_log_base sceTouch("SceTouch", []()
+DECLARE(arm_module_manager::SceTouch)("SceTouch", []()
 {
-	sceTouch.on_load = nullptr;
-	sceTouch.on_unload = nullptr;
-	sceTouch.on_stop = nullptr;
-	sceTouch.on_error = nullptr;
-
 	REG_FUNC(0x169A1D58, sceTouchRead);
 	REG_FUNC(0xFF082DF0, sceTouchPeek);
 	REG_FUNC(0x1B9C5D14, sceTouchSetSamplingState);

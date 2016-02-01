@@ -12,5 +12,3 @@ struct SceSulphaConfig
 struct SceSulphaAgentsRegister;
 
 using SceSulphaHandle = void;
-
-extern psv_log_base sceSulpha;

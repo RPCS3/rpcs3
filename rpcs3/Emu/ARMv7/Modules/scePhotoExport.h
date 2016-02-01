@@ -10,5 +10,3 @@ struct ScePhotoExportParam
 };
 
 using ScePhotoExportCancelFunc = s32(vm::ptr<void>);
-
-extern psv_log_base scePhotoExport;

@@ -1,8 +1,10 @@
 #include "stdafx.h"
 #include "Emu/System.h"
-#include "Emu/ARMv7/PSVFuncList.h"
+#include "Emu/ARMv7/ARMv7Module.h"
 
 #include "sceMd5.h"
+
+LOG_CHANNEL(sceMd5);
 
 s32 sceMd5Digest(vm::cptr<void> plain, u32 len, vm::ptr<u8> digest)
 {
@@ -24,15 +26,10 @@ s32 sceMd5BlockResult(vm::ptr<SceMd5Context> pContext, vm::ptr<u8> digest)
 	throw EXCEPTION("");
 }
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &sceMd5, #name, name)
+#define REG_FUNC(nid, name) REG_FNID(SceMd5, nid, name)
 
-psv_log_base sceMd5("SceMd5", []()
+DECLARE(arm_module_manager::SceMd5)("SceMd5", []()
 {
-	sceMd5.on_load = nullptr;
-	sceMd5.on_unload = nullptr;
-	sceMd5.on_stop = nullptr;
-	sceMd5.on_error = nullptr;
-
 	REG_FUNC(0xB845BCCB, sceMd5Digest);
 	REG_FUNC(0x4D6436F9, sceMd5BlockInit);
 	REG_FUNC(0x094A4902, sceMd5BlockUpdate);

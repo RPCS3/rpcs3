@@ -1,8 +1,10 @@
 #include "stdafx.h"
 #include "Emu/System.h"
-#include "Emu/ARMv7/PSVFuncList.h"
+#include "Emu/ARMv7/ARMv7Module.h"
 
 #include "sceMotion.h"
+
+LOG_CHANNEL(sceMotion);
 
 s32 sceMotionGetState(vm::ptr<SceMotionState> motionState)
 {
@@ -84,15 +86,10 @@ s32 sceMotionStopSampling()
 	throw EXCEPTION("");
 }
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &sceMotion, #name, name)
+#define REG_FUNC(nid, name) REG_FNID(SceMotion, nid, name)
 
-psv_log_base sceMotion("SceMotion", []()
+DECLARE(arm_module_manager::SceMotion)("SceMotion", []()
 {
-	sceMotion.on_load = nullptr;
-	sceMotion.on_unload = nullptr;
-	sceMotion.on_stop = nullptr;
-	sceMotion.on_error = nullptr;
-
 	REG_FUNC(0xBDB32767, sceMotionGetState);
 	REG_FUNC(0x47D679EA, sceMotionGetSensorState);
 	REG_FUNC(0xC1652201, sceMotionGetTiltCorrection);

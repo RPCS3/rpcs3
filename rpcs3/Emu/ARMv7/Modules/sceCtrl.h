@@ -20,5 +20,3 @@ struct SceCtrlRapidFireRule
 	le_t<u32> uiMake;
 	le_t<u32> uiBreak;
 };
-
-extern psv_log_base sceCtrl;

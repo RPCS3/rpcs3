@@ -1,8 +1,10 @@
 #include "stdafx.h"
 #include "Emu/System.h"
-#include "Emu/ARMv7/PSVFuncList.h"
+#include "Emu/ARMv7/ARMv7Module.h"
 
 #include "sceJpegEnc.h"
+
+LOG_CHANNEL(sceJpegEnc);
 
 s32 sceJpegEncoderGetContextSize()
 {
@@ -73,15 +75,10 @@ s32 sceJpegEncoderCsc(
 }
 
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &sceJpegEnc, #name, name)
+#define REG_FUNC(nid, name) REG_FNID(SceJpegEncUser, nid, name)
 
-psv_log_base sceJpegEnc("SceJpegEnc", []()
+DECLARE(arm_module_manager::SceJpegEnc)("SceJpegEncUser", []()
 {
-	sceJpegEnc.on_load = nullptr;
-	sceJpegEnc.on_unload = nullptr;
-	sceJpegEnc.on_stop = nullptr;
-	sceJpegEnc.on_error = nullptr;
-
 	REG_FUNC(0x2B55844D, sceJpegEncoderGetContextSize);
 	REG_FUNC(0x88DA92B4, sceJpegEncoderInit);
 	REG_FUNC(0xC60DE94C, sceJpegEncoderEncode);

@@ -10,5 +10,3 @@ struct SceMd5Context
 	u8 buf[64];
 	u8 result[64];
 };
-
-extern psv_log_base sceMd5;

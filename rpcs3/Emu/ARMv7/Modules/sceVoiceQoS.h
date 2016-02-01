@@ -17,5 +17,3 @@ enum SceVoiceQoSStatusId : s32
 	SCE_VOICE_QOS_IN_FRAME_RECEIVED_RATIO,
 	SCE_VOICE_QOS_HEARTBEAT_FLAG
 };
-
-extern psv_log_base sceVoiceQoS;

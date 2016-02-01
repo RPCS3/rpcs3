@@ -1,8 +1,10 @@
 #include "stdafx.h"
 #include "Emu/System.h"
-#include "Emu/ARMv7/PSVFuncList.h"
+#include "Emu/ARMv7/ARMv7Module.h"
 
 #include "sceNpUtility.h"
+
+LOG_CHANNEL(sceNpUtility);
 
 s32 sceNpLookupInit(s32 usesAsync, s32 threadPriority, s32 cpuAffinityMask, vm::ptr<void> option)
 {
@@ -126,15 +128,10 @@ s32 sceNpBandwidthTestAbort()
 	throw EXCEPTION("");
 }
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &sceNpUtility, #name, name)
+#define REG_FUNC(nid, name) REG_FNID(SceNpUtility, nid, name)
 
-psv_log_base sceNpUtility("SceNpUtility", []()
+DECLARE(arm_module_manager::SceNpUtility)("SceNpUtility", []()
 {
-	sceNpUtility.on_load = nullptr;
-	sceNpUtility.on_unload = nullptr;
-	sceNpUtility.on_stop = nullptr;
-	sceNpUtility.on_error = nullptr;
-
 	REG_FUNC(0x9246A673, sceNpLookupInit);
 	REG_FUNC(0x0158B61B, sceNpLookupTerm);
 	REG_FUNC(0x5110E17E, sceNpLookupCreateTitleCtx);

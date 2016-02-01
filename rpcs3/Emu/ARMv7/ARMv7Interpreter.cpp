@@ -1,585 +1,62 @@
 #include "stdafx.h"
-#include "Emu/System.h"
 #include "Emu/Memory/Memory.h"
-#include "Emu/CPU/CPUDecoder.h"
+#include "Emu/System.h"
 
 #include "ARMv7Thread.h"
-#include "PSVFuncList.h"
 #include "ARMv7Interpreter.h"
 
-#define reject(cond, info) { if (cond) throw EXCEPTION("%s ('%s', type=%s)", info, #cond, fmt_encoding(type)); }
+using namespace arm_code::arm_encoding_alias;
 
-std::map<u32, std::string> g_armv7_dump;
+#define ARG(arg, ...) const u32 arg = args::arg::extract(__VA_ARGS__);
 
-namespace ARMv7_instrs
+extern void arm_execute_function(ARMv7Thread& cpu, u32 index);
+
+namespace vm { using namespace psv; }
+
+void arm_interpreter::UNK(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	template<typename T>
-	u32 BitCount(T x, size_t len = sizeof(T) * 8)
+	if (cpu.ISET == Thumb)
 	{
-		u32 result = 0;
-
-		for (T mask = static_cast<T>(1) << (len - 1); mask; mask >>= 1)
+		if (op > 0xffff)
 		{
-			if (x & mask) result++;
-		}
-
-		return result;
-	}
-
-	//template<typename T>
-	//s8 LowestSetBit(T x, u8 len)
-	//{
-	//	if (!x) return len;
-
-	//	u8 result = 0;
-
-	//	for (T mask = 1, i = 0; i<len && (x & mask) == 0; mask <<= 1, i++)
-	//	{
-	//		result++;
-	//	}
-
-	//	return result;
-	//}
-
-	//template<typename T>
-	//s8 HighestSetBit(T x, u8 len)
-	//{
-	//	if (!x) return -1;
-
-	//	u8 result = len;
-
-	//	for (T mask = T(1) << (len - 1); (x & mask) == 0; mask >>= 1)
-	//	{
-	//		result--;
-	//	}
-
-	//	return result;
-	//}
-
-	//template<typename T>
-	//s8 CountLeadingZeroBits(T x, u8 len)
-	//{
-	//	return len - 1 - HighestSetBit(x, len);
-	//}
-
-	SRType DecodeImmShift(u32 type, u32 imm5, u32* shift_n)
-	{
-		SRType shift_t;
-
-		switch (type)
-		{
-		case 0: shift_t = SRType_LSL; if (shift_n) *shift_n = imm5; break;
-		case 1: shift_t = SRType_LSR; if (shift_n) *shift_n = imm5 == 0 ? 32 : imm5; break;
-		case 2: shift_t = SRType_ASR; if (shift_n) *shift_n = imm5 == 0 ? 32 : imm5; break;
-		case 3:
-			if (imm5 == 0)
-			{
-				shift_t = SRType_RRX; if (shift_n) *shift_n = 1;
-			}
-			else
-			{
-				shift_t = SRType_ROR; if (shift_n) *shift_n = imm5;
-			}
-			break;
-
-		default: throw EXCEPTION("");
-		}
-
-		return shift_t;
-	}
-
-	//SRType DecodeRegShift(u8 type)
-	//{
-	//	SRType shift_t;
-
-	//	switch (type)
-	//	{
-	//	case 0: shift_t = SRType_LSL; break;
-	//	case 1: shift_t = SRType_LSR; break;
-	//	case 2: shift_t = SRType_ASR; break;
-	//	case 3: shift_t = SRType_ROR; break;
-	//	default: throw EXCEPTION("");
-	//	}
-
-	//	return shift_t;
-	//}
-
-	u32 LSL_C(u32 x, s32 shift, bool& carry_out)
-	{
-		assert(shift > 0);
-		carry_out = shift <= 32 ? (x & (1 << (32 - shift))) != 0 : false;
-		return shift < 32 ? x << shift : 0;
-	}
-
-	u32 LSL_(u32 x, s32 shift)
-	{
-		assert(shift >= 0);
-		return shift < 32 ? x << shift : 0;
-	}
-
-	u32 LSR_C(u32 x, s32 shift, bool& carry_out)
-	{
-		assert(shift > 0);
-		carry_out = shift <= 32 ? (x & (1 << (shift - 1))) != 0 : false;
-		return shift < 32 ? x >> shift : 0;
-	}
-
-	u32 LSR_(u32 x, s32 shift)
-	{
-		assert(shift >= 0);
-		return shift < 32 ? x >> shift : 0;
-	}
-
-	s32 ASR_C(s32 x, s32 shift, bool& carry_out)
-	{
-		assert(shift > 0);
-		carry_out = shift <= 32 ? (x & (1 << (shift - 1))) != 0 : x < 0;
-		return shift < 32 ? x >> shift : x >> 31;
-	}
-
-	s32 ASR_(s32 x, s32 shift)
-	{
-		assert(shift >= 0);
-		return shift < 32 ? x >> shift : x >> 31;
-	}
-
-	u32 ROR_C(u32 x, s32 shift, bool& carry_out)
-	{
-		assert(shift);
-		const u32 result = x >> shift | x << (32 - shift);
-		carry_out = (result >> 31) != 0;
-		return result;
-	}
-
-	u32 ROR_(u32 x, s32 shift)
-	{
-		return x >> shift | x << (32 - shift);
-	}
-
-	u32 RRX_C(u32 x, bool carry_in, bool& carry_out)
-	{
-		carry_out = x & 0x1;
-		return ((u32)carry_in << 31) | (x >> 1);
-	}
-
-	u32 RRX_(u32 x, bool carry_in)
-	{
-		return ((u32)carry_in << 31) | (x >> 1);
-	}
-
-	u32 Shift_C(u32 value, u32 type, s32 amount, bool carry_in, bool& carry_out)
-	{
-		assert(type != SRType_RRX || amount == 1);
-
-		if (amount)
-		{
-			switch (type)
-			{
-			case SRType_LSL: return LSL_C(value, amount, carry_out);
-			case SRType_LSR: return LSR_C(value, amount, carry_out);
-			case SRType_ASR: return ASR_C(value, amount, carry_out);
-			case SRType_ROR: return ROR_C(value, amount, carry_out);
-			case SRType_RRX: return RRX_C(value, carry_in, carry_out);
-			default: throw EXCEPTION("");
-			}
-		}
-
-		carry_out = carry_in;
-		return value;
-	}
-
-	u32 Shift(u32 value, u32 type, s32 amount, bool carry_in)
-	{
-		bool carry_out;
-		return Shift_C(value, type, amount, carry_in, carry_out);
-	}
-
-	template<typename T> T AddWithCarry(T x, T y, bool carry_in, bool& carry_out, bool& overflow)
-	{
-		const T sign_mask = (T)1 << (sizeof(T) * 8 - 1);
-
-		T result = x + y;
-		carry_out = (((x & y) | ((x ^ y) & ~result)) & sign_mask) != 0;
-		overflow = ((x ^ result) & (y ^ result) & sign_mask) != 0;
-		if (carry_in)
-		{
-			result += 1;
-			carry_out ^= (result == 0);
-			overflow ^= (result == sign_mask);
-		}
-		return result;
-	}
-
-	u32 ThumbExpandImm_C(u32 imm12, bool carry_in, bool& carry_out)
-	{
-		if ((imm12 & 0xc00) >> 10)
-		{
-			u32 unrotated_value = (imm12 & 0x7f) | 0x80;
-
-			return ROR_C(unrotated_value, (imm12 & 0xf80) >> 7, carry_out);
+			throw fmt::exception("Unknown/Illegal opcode: 0x%04X 0x%04X (cond=0x%x)", op >> 16, op & 0xffff, cond);
 		}
 		else
 		{
-			carry_out = carry_in;
-
-			u32 imm8 = imm12 & 0xff;
-			switch ((imm12 & 0x300) >> 8)
-			{
-			case 0: return imm8;
-			case 1: return imm8 << 16 | imm8;
-			case 2: return imm8 << 24 | imm8 << 8;
-			default: return imm8 << 24 | imm8 << 16 | imm8 << 8 | imm8;
-			}
+			throw fmt::exception("Unknown/Illegal opcode: 0x%04X (cond=0x%x)", op, cond);
 		}
-	}
-
-	u32 ThumbExpandImm(u32 imm12)
-	{
-		bool carry = false;
-		return ThumbExpandImm_C(imm12, carry, carry);
-	}
-
-	bool ConditionPassed(ARMv7Context& context, u32 cond)
-	{
-		bool result = false;
-
-		switch (cond >> 1)
-		{
-		case 0: result = (context.APSR.Z == 1); break;
-		case 1: result = (context.APSR.C == 1); break;
-		case 2: result = (context.APSR.N == 1); break;
-		case 3: result = (context.APSR.V == 1); break;
-		case 4: result = (context.APSR.C == 1) && (context.APSR.Z == 0); break;
-		case 5: result = (context.APSR.N == context.APSR.V); break;
-		case 6: result = (context.APSR.N == context.APSR.V) && (context.APSR.Z == 0); break;
-		case 7: return true;
-		}
-
-		if (cond & 0x1)
-		{
-			return !result;
-		}
-
-		return result;
-	}
-
-	bool process_debug(ARMv7Context& context)
-	{
-		if (context.debug & DF_PRINT)
-		{
-			auto pos = context.debug_str.find(' ');
-			if (pos != std::string::npos && pos < 8)
-			{
-				context.debug_str.insert(pos, 8 - pos, ' ');
-			}
-
-			context.fmt_debug_str("0x%08x: %s", context.PC, context.debug_str);
-
-			LV2_LOCK;
-
-			auto found = g_armv7_dump.find(context.PC);
-			if (found != g_armv7_dump.end())
-			{
-				if (found->second != context.debug_str)
-				{
-					throw EXCEPTION("Disasm inconsistency: '%s' != '%s'", found->second.c_str(), context.debug_str.c_str());
-				}
-			}
-			else
-			{
-				g_armv7_dump[context.PC] = context.debug_str;
-			}
-		}
-
-		if (context.debug & DF_NO_EXE)
-		{
-			return true;
-		}
-
-		return false;
-	}
-
-	const char* fmt_encoding(const ARMv7_encoding type)
-	{
-		switch (type)
-		{
-		case T1: return "T1";
-		case T2: return "T2";
-		case T3: return "T3";
-		case T4: return "T4";
-		case A1: return "A1";
-		case A2: return "A2";
-		default: return "???";
-		}
-	};
-
-	const char* fmt_cond(u32 cond)
-	{
-		switch (cond)
-		{
-		case 0: return "eq";
-		case 1: return "ne";
-		case 2: return "cs";
-		case 3: return "cc";
-		case 4: return "mi";
-		case 5: return "pl";
-		case 6: return "vs";
-		case 7: return "vc";
-		case 8: return "hi";
-		case 9: return "ls";
-		case 10: return "ge";
-		case 11: return "lt";
-		case 12: return "gt";
-		case 13: return "le";
-		case 14: return "";
-		default: return "???";
-		}
-	}
-
-	const char* fmt_it(u32 state)
-	{
-		switch (state & ~0x10)
-		{
-		case 0x8: return "";
-
-		case 0x4: return state & 0x10 ? "e" : "t";
-		case 0xc: return state & 0x10 ? "t" : "e";
-
-		case 0x2: return state & 0x10 ? "ee" : "tt";
-		case 0x6: return state & 0x10 ? "et" : "te";
-		case 0xa: return state & 0x10 ? "te" : "et";
-		case 0xe: return state & 0x10 ? "tt" : "ee";
-
-		case 0x1: return state & 0x10 ? "eee" : "ttt";
-		case 0x3: return state & 0x10 ? "eet" : "tte";
-		case 0x5: return state & 0x10 ? "ete" : "tet";
-		case 0x7: return state & 0x10 ? "ett" : "tee";
-		case 0x9: return state & 0x10 ? "tee" : "ett";
-		case 0xb: return state & 0x10 ? "tet" : "ete";
-		case 0xd: return state & 0x10 ? "tte" : "eet";
-		case 0xf: return state & 0x10 ? "ttt" : "eee";
-
-		default: return "???";
-		}
-	}
-
-	const char* fmt_reg(u32 reg)
-	{
-		switch (reg)
-		{
-		case 0: return "r0";
-		case 1: return "r1";
-		case 2: return "r2";
-		case 3: return "r3";
-		case 4: return "r4";
-		case 5: return "r5";
-		case 6: return "r6";
-		case 7: return "r7";
-		case 8: return "r8";
-		case 9: return "r9";
-		case 10: return "r10";
-		case 11: return "r11";
-		case 12: return "r12";
-		case 13: return "sp";
-		case 14: return "lr";
-		case 15: return "pc";
-		default: return "r???";
-		}
-	}
-
-	std::string fmt_shift(u32 type, u32 amount)
-	{
-		assert(type != SRType_RRX || amount == 1);
-		assert(amount <= 32);
-
-		if (amount)
-		{
-			switch (type)
-			{
-			case SRType_LSL: return ",lsl #" + fmt::to_udec(amount);
-			case SRType_LSR: return ",lsr #" + fmt::to_udec(amount);
-			case SRType_ASR: return ",asr #" + fmt::to_udec(amount);
-			case SRType_ROR: return ",ror #" + fmt::to_udec(amount);
-			case SRType_RRX: return ",rrx";
-			default: return ",?????";
-			}
-		}
-
-		return{};
-	}
-
-	std::string fmt_reg_list(u32 reg_list)
-	{
-		std::vector<std::pair<u32, u32>> lines;
-
-		for (u32 i = 0; i < 13; i++)
-		{
-			if (reg_list & (1 << i))
-			{
-				if (lines.size() && lines.rbegin()->second == i - 1)
-				{
-					lines.rbegin()->second = i;
-				}
-				else
-				{
-					lines.push_back({ i, i });
-				}
-			}
-		}
-
-		if (reg_list & 0x2000) lines.push_back({ 13, 13 }); // sp
-		if (reg_list & 0x4000) lines.push_back({ 14, 14 }); // lr
-		if (reg_list & 0x8000) lines.push_back({ 15, 15 }); // pc
-
-		std::string result;
-
-		if (reg_list >> 16) result = "???"; // invalid bits		
-
-		for (auto& line : lines)
-		{
-			if (!result.empty())
-			{
-				result += ",";
-			}
-
-			if (line.first == line.second)
-			{
-				result += fmt_reg(line.first);
-			}
-			else
-			{
-				result += fmt_reg(line.first);
-				result += '-';
-				result += fmt_reg(line.second);
-			}
-		}
-
-		return result;
-	}
-
-	std::string fmt_mem_imm(u32 reg, u32 imm, bool index, bool add, bool wback)
-	{
-		if (index)
-		{
-			return fmt::format("[%s,#%s0x%X]%s", fmt_reg(reg), add ? "" : "-", imm, wback ? "!" : "");
-		}
-		else
-		{
-			return fmt::format("[%s],#%s0x%X%s", fmt_reg(reg), add ? "" : "-", imm, wback ? "" : "???");
-		}
-	}
-
-	std::string fmt_mem_reg(u32 n, u32 m, bool index, bool add, bool wback, u32 shift_t = SRType_LSL, u32 shift_n = 0)
-	{
-		if (index)
-		{
-			return fmt::format("[%s,%s%s%s]%s", fmt_reg(n), add ? "" : "-", fmt_reg(m), fmt_shift(shift_t, shift_n), wback ? "!" : "");
-		}
-		else
-		{
-			return fmt::format("[%s],%s%s%s%s", fmt_reg(n), add ? "" : "-", fmt_reg(m), fmt_shift(shift_t, shift_n), wback ? "" : "???");
-		}
-	}
-}
-
-void ARMv7_instrs::UNK(ARMv7Context& context, const ARMv7Code code)
-{
-	if (context.ISET == Thumb)
-	{
-		throw EXCEPTION("Unknown/illegal opcode: 0x%04X 0x%04X", code.code1, code.code0);
 	}
 	else
 	{
-		throw EXCEPTION("Unknown/illegal opcode: 0x%08X", code.data);
+		throw fmt::exception("Unknown/Illegal opcode: 0x%08X", op);
 	}
 }
 
-void ARMv7_instrs::HACK(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::HACK(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	u32 cond, index;
+	using args = arm_code::hack<type>;
+	ARG(index, op);
 
-	switch (type)
+	if (ConditionPassed(cpu, cond))
 	{
-	case T1:
-	{
-		cond = context.ITSTATE.advance();
-		index = code.data & 0xffff;
-		break;
-	}
-	case A1:
-	{
-		cond = code.data >> 28;
-		index = (code.data & 0xfff00) >> 4 | (code.data & 0xf);
-		break;
-	}
-	default: throw EXCEPTION("");
-	}
-
-	if (context.debug)
-	{
-		if (context.debug & DF_DISASM)
-		{
-			if (auto func = get_psv_func_by_index(index))
-			{
-				if (func->func)
-				{
-					context.fmt_debug_str("hack%s %s", fmt_cond(cond), func->name);
-				}
-				else
-				{
-					context.fmt_debug_str("hack%s UNIMPLEMENTED:0x%08X (%s)", fmt_cond(cond), func->nid, func->name);
-				}
-			}
-			else
-			{
-				context.fmt_debug_str("hack%s %d", fmt_cond(cond), index);
-			}
-		}
-		if (process_debug(context)) return;
-	}
-
-	if (ConditionPassed(context, cond))
-	{
-		execute_psv_func_by_index(static_cast<ARMv7Thread&>(context), index);
+		arm_execute_function(cpu, index);
 	}
 }
 
-void ARMv7_instrs::MRC_(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+
+template<arm_encoding type>
+void arm_interpreter::MRC_(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	u32 cond, t, cp, opc1, opc2, cn, cm;
+	using args = arm_code::mrc<type>;
+	ARG(t, op);
+	ARG(cp, op);
+	ARG(opc1, op);
+	ARG(opc2, op);
+	ARG(cn, op);
+	ARG(cm, op);
 
-	switch (type)
-	{
-	case T1: case A1:
-	case T2: case A2:
-	{
-		cond = type == A1 ? code.data >> 28 : context.ITSTATE.advance();
-		t = (code.data & 0xf000) >> 12;
-		cp = (code.data & 0xf00) >> 8;
-		opc1 = (code.data & 0xe00000) >> 21;
-		opc2 = (code.data & 0xe0) >> 5;
-		cn = (code.data & 0xf0000) >> 16;
-		cm = (code.data & 0xf);
-
-		reject(cp - 10 < 2 && (type == T1 || type == A1), "Advanced SIMD and VFP");
-		reject(t == 13 && (type == T1 || type == T2), "UNPREDICTABLE");
-		break;
-	}
-	default: throw EXCEPTION("");
-	}
-
-	auto disasm = [&]()
-	{
-		context.fmt_debug_str("mrc%s p%d,%d,r%d,c%d,c%d,%d", fmt_cond(cond), cp, opc1, t, cn, cm, opc2);
-	};
-
-	if (context.debug)
-	{
-		if (context.debug & DF_DISASM) disasm();
-		if (process_debug(context)) return;
-	}
-
-	if (ConditionPassed(context, cond))
+	if (ConditionPassed(cpu, cond))
 	{
 		// APSR flags are written if t = 15
 
@@ -587,6252 +64,4122 @@ void ARMv7_instrs::MRC_(ARMv7Context& context, const ARMv7Code code, const ARMv7
 		{
 			// Read CP15 User Read-only Thread ID Register (seems used as TLS address)
 
-			if (!context.TLS)
+			if (!cpu.TLS)
 			{
-				throw EXCEPTION("TLS not initialized");
+				throw fmt::exception("TLS not initialized" HERE);
 			}
 
-			context.GPR[t] = context.TLS;
+			cpu.GPR[t] = cpu.TLS;
 			return;
 		}
 
-		throw EXCEPTION("Bad instruction: '%s' (code=0x%x, type=%d)", (disasm(), context.debug_str.c_str()), code.data, type);
+		throw fmt::exception("mrc?? p%d,%d,r%d,c%d,c%d,%d" HERE, cp, opc1, t, cn, cm, opc2);
 	}
 }
 
-void ARMv7_instrs::ADC_IMM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::ADC_IMM(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	u32 cond, d, n, imm32;
-	bool set_flags;
+	using args = arm_code::adc_imm<type>;
+	ARG(d, op);
+	ARG(n, op);
+	ARG(imm32, op);
+	ARG(set_flags, op, cond);
 
-	switch (type)
-	{
-	case T1:
-	{
-		cond = context.ITSTATE.advance();
-		d = (code.data & 0xf00) >> 8;
-		n = (code.data & 0xf0000) >> 16;
-		set_flags = (code.data & 0x100000) != 0;
-		imm32 = ThumbExpandImm((code.data & 0x4000000) >> 15 | (code.data & 0x7000) >> 4 | (code.data & 0xff));
-
-		reject(d == 13 || d == 15 || n == 13 || n == 15, "UNPREDICTABLE");
-		break;
-	}
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
-
-	if (context.debug)
-	{
-		if (context.debug & DF_DISASM) context.fmt_debug_str("adc%s%s %s,%s,#0x%X", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(n), imm32);
-		if (process_debug(context)) return;
-	}
-
-	if (ConditionPassed(context, cond))
+	if (ConditionPassed(cpu, cond))
 	{
 		bool carry, overflow;
-		const u32 result = AddWithCarry(context.read_gpr(n), imm32, context.APSR.C, carry, overflow);
-		context.write_gpr(d, result, 4);
+		const u32 result = AddWithCarry<u32>(cpu.read_gpr(n), imm32, cpu.APSR.C, carry, overflow);
+		cpu.write_gpr(d, result, 4);
 
 		if (set_flags)
 		{
-			context.APSR.N = result >> 31;
-			context.APSR.Z = result == 0;
-			context.APSR.C = carry;
-			context.APSR.V = overflow;
+			cpu.APSR.N = result >> 31;
+			cpu.APSR.Z = result == 0;
+			cpu.APSR.C = carry;
+			cpu.APSR.V = overflow;
 		}
 	}
 }
 
-void ARMv7_instrs::ADC_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::ADC_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	bool set_flags = !context.ITSTATE;
-	u32 cond, d, n, m, shift_t, shift_n;
+	using args = arm_code::adc_reg<type>;
+	ARG(d, op);
+	ARG(n, op);
+	ARG(m, op);
+	ARG(shift_t, op);
+	ARG(shift_n, op);
+	ARG(set_flags, op, cond);
 
-	switch (type)
-	{
-	case T1:
-	{
-		cond = context.ITSTATE.advance();
-		d = n = (code.data & 0x7);
-		m = (code.data & 0x38) >> 3;
-		shift_t = SRType_LSL;
-		shift_n = 0;
-		break;
-	}
-	case T2:
-	{
-		cond = context.ITSTATE.advance();
-		d = (code.data & 0xf00) >> 8;
-		n = (code.data & 0xf0000) >> 16;
-		m = (code.data & 0xf);
-		set_flags = (code.data & 0x100000) != 0;
-		shift_t = DecodeImmShift((code.data & 0x30) >> 4, (code.data & 0x7000) >> 10 | (code.data & 0xc0) >> 6, &shift_n);
-
-		reject(d == 13 || d == 15 || n == 13 || n == 15 || m == 13 || m == 15, "UNPREDICTABLE");
-		break;
-	}
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
-
-	if (context.debug)
-	{
-		if (context.debug & DF_DISASM) context.fmt_debug_str("adc%s%s %s,%s,%s%s", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(n), fmt_reg(m), fmt_shift(shift_t, shift_n));
-		if (process_debug(context)) return;
-	}
-
-	if (ConditionPassed(context, cond))
+	if (ConditionPassed(cpu, cond))
 	{
 		bool carry, overflow;
-		const u32 shifted = Shift(context.read_gpr(m), shift_t, shift_n, context.APSR.C);
-		const u32 result = AddWithCarry(context.read_gpr(n), shifted, context.APSR.C, carry, overflow);
-		context.write_gpr(d, result, type == T1 ? 2 : 4);
+		const u32 shifted = Shift(cpu.read_gpr(m), shift_t, shift_n, cpu.APSR.C);
+		const u32 result = AddWithCarry(cpu.read_gpr(n), shifted, cpu.APSR.C, carry, overflow);
+		cpu.write_gpr(d, result, type == T1 ? 2 : 4);
 
 		if (set_flags)
 		{
-			context.APSR.N = result >> 31;
-			context.APSR.Z = result == 0;
-			context.APSR.C = carry;
-			context.APSR.V = overflow;
+			cpu.APSR.N = result >> 31;
+			cpu.APSR.Z = result == 0;
+			cpu.APSR.C = carry;
+			cpu.APSR.V = overflow;
 		}
 	}
 }
 
-void ARMv7_instrs::ADC_RSR(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::ADC_RSR(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
 
-void ARMv7_instrs::ADD_IMM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::ADD_IMM(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	bool set_flags = !context.ITSTATE;
-	u32 cond, d, n, imm32;
+	using args = arm_code::add_imm<type>;
+	ARG(d, op);
+	ARG(n, op);
+	ARG(imm32, op);
+	ARG(set_flags, op, cond);
 
-	switch (type)
-	{
-	case T1:
-	{
-		cond = context.ITSTATE.advance();
-		d = (code.data & 0x7);
-		n = (code.data & 0x38) >> 3;
-		imm32 = (code.data & 0x1c0) >> 6;
-		break;
-	}
-	case T2:
-	{
-		cond = context.ITSTATE.advance();
-		d = n = (code.data & 0x700) >> 8;
-		imm32 = (code.data & 0xff);
-		break;
-	}
-	case T3:
-	{
-		cond = context.ITSTATE.advance();
-		d = (code.data & 0xf00) >> 8;
-		n = (code.data & 0xf0000) >> 16;
-		set_flags = (code.data & 0x100000) != 0;
-		imm32 = ThumbExpandImm((code.data & 0x4000000) >> 15 | (code.data & 0x7000) >> 4 | (code.data & 0xff));
-
-		reject(d == 15 && set_flags, "CMN (immediate)");
-		reject(n == 13, "ADD (SP plus immediate)");
-		reject(d == 13 || n == 15, "UNPREDICTABLE");
-		break;
-	}
-	case T4:
-	{
-		cond = context.ITSTATE.advance();
-		d = (code.data & 0xf00) >> 8;
-		n = (code.data & 0xf0000) >> 16;
-		set_flags = false;
-		imm32 = (code.data & 0x4000000) >> 15 | (code.data & 0x7000) >> 4 | (code.data & 0xff);
-
-		reject(n == 15, "ADR");
-		reject(n == 13, "ADD (SP plus immediate)");
-		reject(d == 13 || d == 15, "UNPREDICTABLE");
-		break;
-	}
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
-
-	if (context.debug)
-	{
-		if (context.debug & DF_DISASM) context.fmt_debug_str("add%s%s %s,%s,#0x%X", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(n), imm32);
-		if (process_debug(context)) return;
-	}
-
-	if (ConditionPassed(context, cond))
+	if (ConditionPassed(cpu, cond))
 	{
 		bool carry, overflow;
-		const u32 result = AddWithCarry(context.read_gpr(n), imm32, false, carry, overflow);
-		context.write_gpr(d, result, type < T3 ? 2 : 4);
+		const u32 result = AddWithCarry<u32>(cpu.read_gpr(n), imm32, false, carry, overflow);
+		cpu.write_gpr(d, result, type < T3 ? 2 : 4);
 
 		if (set_flags)
 		{
-			context.APSR.N = result >> 31;
-			context.APSR.Z = result == 0;
-			context.APSR.C = carry;
-			context.APSR.V = overflow;
+			cpu.APSR.N = result >> 31;
+			cpu.APSR.Z = result == 0;
+			cpu.APSR.C = carry;
+			cpu.APSR.V = overflow;
 		}
 	}
 }
 
-void ARMv7_instrs::ADD_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::ADD_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	bool set_flags = !context.ITSTATE;
-	u32 cond, d, n, m, shift_t, shift_n;
+	using args = arm_code::add_reg<type>;
+	ARG(d, op);
+	ARG(n, op);
+	ARG(m, op);
+	ARG(shift_t, op);
+	ARG(shift_n, op);
+	ARG(set_flags, op, cond);
 
-	switch (type)
-	{
-	case T1:
-	{
-		cond = context.ITSTATE.advance();
-		d = (code.data & 0x7);
-		n = (code.data & 0x38) >> 3;
-		m = (code.data & 0x1c0) >> 6;
-		shift_t = SRType_LSL;
-		shift_n = 0;
-		break;
-	}
-	case T2:
-	{
-		cond = context.ITSTATE.advance();
-		n = d = (code.data & 0x80) >> 4 | (code.data & 0x7);
-		m = (code.data & 0x78) >> 3;
-		set_flags = false;
-		shift_t = SRType_LSL;
-		shift_n = 0;
-
-		reject(n == 13 || m == 13, "ADD (SP plus register)");
-		reject(n == 15 && m == 15, "UNPREDICTABLE");
-		reject(d == 15 && context.ITSTATE, "UNPREDICTABLE");
-		break;
-	}
-	case T3:
-	{
-		cond = context.ITSTATE.advance();
-		d = (code.data & 0xf00) >> 8;
-		n = (code.data & 0xf0000) >> 16;
-		m = (code.data & 0xf);
-		set_flags = (code.data & 0x100000) != 0;
-		shift_t = DecodeImmShift((code.data & 0x30) >> 4, (code.data & 0x7000) >> 10 | (code.data & 0xc0) >> 6, &shift_n);
-
-		reject(d == 15 && set_flags, "CMN (register)");
-		reject(n == 13, "ADD (SP plus register)");
-		reject(d == 13 || n == 15 || m == 13 || m == 15, "UNPREDICTABLE");
-		break;
-	}
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
-
-	if (context.debug)
-	{
-		if (context.debug & DF_DISASM) context.fmt_debug_str("add%s%s %s,%s,%s%s", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(n), fmt_reg(m), fmt_shift(shift_t, shift_n));
-		if (process_debug(context)) return;
-	}
-
-	if (ConditionPassed(context, cond))
+	if (ConditionPassed(cpu, cond))
 	{
 		bool carry, overflow;
-		const u32 shifted = Shift(context.read_gpr(m), shift_t, shift_n, true);
-		const u32 result = AddWithCarry(context.read_gpr(n), shifted, false, carry, overflow);
-		context.write_gpr(d, result, type < T3 ? 2 : 4);
+		const u32 shifted = Shift(cpu.read_gpr(m), shift_t, shift_n, true);
+		const u32 result = AddWithCarry(cpu.read_gpr(n), shifted, false, carry, overflow);
+		cpu.write_gpr(d, result, type < T3 ? 2 : 4);
 
 		if (set_flags)
 		{
-			context.APSR.N = result >> 31;
-			context.APSR.Z = result == 0;
-			context.APSR.C = carry;
-			context.APSR.V = overflow;
+			cpu.APSR.N = result >> 31;
+			cpu.APSR.Z = result == 0;
+			cpu.APSR.C = carry;
+			cpu.APSR.V = overflow;
 		}
 	}
 }
 
-void ARMv7_instrs::ADD_RSR(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::ADD_RSR(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::ADD_SPI(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::ADD_SPI(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	bool set_flags;
-	u32 cond, d, imm32;
+	using args = arm_code::add_spi<type>;
+	ARG(d, op);
+	ARG(imm32, op);
+	ARG(set_flags, op, cond);
 
-	switch (type)
-	{
-	case T1:
-	{
-		cond = context.ITSTATE.advance();
-		d = (code.data & 0x700) >> 8;
-		set_flags = false;
-		imm32 = (code.data & 0xff) << 2;
-		break;
-	}
-	case T2:
-	{
-		cond = context.ITSTATE.advance();
-		d = 13;
-		set_flags = false;
-		imm32 = (code.data & 0x7f) << 2;
-		break;
-	}
-	case T3:
-	{
-		cond = context.ITSTATE.advance();
-		d = (code.data & 0xf00) >> 8;
-		set_flags = (code.data & 0x100000) != 0;
-		imm32 = ThumbExpandImm((code.data & 0x4000000) >> 15 | (code.data & 0x7000) >> 4 | (code.data & 0xff));
-
-		reject(d == 15 && set_flags, "CMN (immediate)");
-		reject(d == 15, "UNPREDICTABLE");
-		break;
-	}
-	case T4:
-	{
-		cond = context.ITSTATE.advance();
-		d = (code.data & 0xf00) >> 8;
-		set_flags = false;
-		imm32 = (code.data & 0x4000000) >> 15 | (code.data & 0x7000) >> 4 | (code.data & 0xff);
-
-		reject(d == 15, "UNPREDICTABLE");
-		break;
-	}
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
-
-	if (context.debug)
-	{
-		if (context.debug & DF_DISASM) context.fmt_debug_str("add%s%s %s,sp,#0x%X", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), imm32);
-		if (process_debug(context)) return;
-	}
-
-	if (ConditionPassed(context, cond))
+	if (ConditionPassed(cpu, cond))
 	{
 		bool carry, overflow;
-		const u32 result = AddWithCarry(context.SP, imm32, false, carry, overflow);
-		context.write_gpr(d, result, type < T3 ? 2 : 4);
+		const u32 result = AddWithCarry<u32>(cpu.SP, imm32, false, carry, overflow);
+		cpu.write_gpr(d, result, type < T3 ? 2 : 4);
 
 		if (set_flags)
 		{
-			context.APSR.N = result >> 31;
-			context.APSR.Z = result == 0;
-			context.APSR.C = carry;
-			context.APSR.V = overflow;
+			cpu.APSR.N = result >> 31;
+			cpu.APSR.Z = result == 0;
+			cpu.APSR.C = carry;
+			cpu.APSR.V = overflow;
 		}
 	}
 }
 
-void ARMv7_instrs::ADD_SPR(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::ADD_SPR(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	bool set_flags;
-	u32 cond, d, m, shift_t, shift_n;
+	using args = arm_code::add_spr<type>;
+	ARG(d, op);
+	ARG(m, op);
+	ARG(shift_t, op);
+	ARG(shift_n, op);
+	ARG(set_flags, op, cond);
 
-	switch (type)
-	{
-	case T1:
-	{
-		cond = context.ITSTATE.advance();
-		d = m = (code.data & 0x80) >> 4 | (code.data & 0x7);
-		set_flags = false;
-		shift_t = SRType_LSL;
-		shift_n = 0;
-		break;
-	}
-	case T2:
-	{
-		cond = context.ITSTATE.advance();
-		d = 13;
-		m = (code.data & 0x78) >> 3;
-		set_flags = false;
-		shift_t = SRType_LSL;
-		shift_n = 0;
-
-		reject(m == 13, "encoding T1");
-		break;
-	}
-	case T3:
-	{
-		cond = context.ITSTATE.advance();
-		d = (code.data & 0xf00) >> 8;
-		m = (code.data & 0xf);
-		set_flags = (code.data & 0x100000) != 0;
-		shift_t = DecodeImmShift((code.data & 0x30) >> 4, (code.data & 0x7000) >> 10 | (code.data & 0xc0) >> 6, &shift_n);
-
-		reject(d == 13 && (shift_t != SRType_LSL || shift_n > 3), "UNPREDICTABLE");
-		reject(d == 15 || m == 13 || m == 15, "UNPREDICTABLE");
-		break;
-	}
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
-
-	if (context.debug)
-	{
-		if (context.debug & DF_DISASM) context.fmt_debug_str("add%s%s %s,sp,%s%s", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(m), fmt_shift(shift_t, shift_n));
-		if (process_debug(context)) return;
-	}
-
-	if (ConditionPassed(context, cond))
+	if (ConditionPassed(cpu, cond))
 	{
 		bool carry, overflow;
-		const u32 shifted = Shift(context.read_gpr(m), shift_t, shift_n, context.APSR.C);
-		const u32 result = AddWithCarry(context.SP, shifted, false, carry, overflow);
-		context.write_gpr(d, result, type < T3 ? 2 : 4);
+		const u32 shifted = Shift(cpu.read_gpr(m), shift_t, shift_n, cpu.APSR.C);
+		const u32 result = AddWithCarry(cpu.SP, shifted, false, carry, overflow);
+		cpu.write_gpr(d, result, type < T3 ? 2 : 4);
 
 		if (set_flags)
 		{
-			context.APSR.N = result >> 31;
-			context.APSR.Z = result == 0;
-			context.APSR.C = carry;
-			context.APSR.V = overflow;
+			cpu.APSR.N = result >> 31;
+			cpu.APSR.Z = result == 0;
+			cpu.APSR.C = carry;
+			cpu.APSR.V = overflow;
 		}
 	}
 }
 
 
-void ARMv7_instrs::ADR(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::ADR(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	u32 cond, d, imm32;
-	bool add;
+	using args = arm_code::adr<type>;
+	ARG(d, op);
+	ARG(i, op);
 
-	switch (type)
+	if (ConditionPassed(cpu, cond))
 	{
-	case T1:
-	{
-		cond = context.ITSTATE.advance();
-		d = (code.data & 0x700) >> 8;
-		imm32 = (code.data & 0xff) << 2;
-		add = true;
-		break;
-	}
-	case T2:
-	{
-		cond = context.ITSTATE.advance();
-		d = (code.data & 0xf00) >> 8;
-		imm32 = (code.data & 0x4000000) >> 15 | (code.data & 0x7000) >> 4 | (code.data & 0xff);
-		add = false;
-
-		reject(d == 13 || d == 15, "UNPREDICTABLE");
-		break;
-	}
-	case T3:
-	{
-		cond = context.ITSTATE.advance();
-		d = (code.data & 0xf00) >> 8;
-		imm32 = (code.data & 0x4000000) >> 15 | (code.data & 0x7000) >> 4 | (code.data & 0xff);
-		add = true;
-
-		reject(d == 13 || d == 15, "UNPREDICTABLE");
-		break;
-	}
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
-
-	const u32 base = context.read_pc() & ~3;
-	const u32 result = add ? base + imm32 : base - imm32;
-
-	if (context.debug)
-	{
-		if (context.debug & DF_DISASM) context.fmt_debug_str("adr%s r%d, 0x%08X", fmt_cond(cond), d, result);
-		if (process_debug(context)) return;
-	}
-
-	if (ConditionPassed(context, cond))
-	{
-		context.write_gpr(d, result, type == T1 ? 2 : 4);
+		cpu.write_gpr(d, (cpu.read_pc() & ~3) + i, type == T1 ? 2 : 4);
 	}
 }
 
 
-void ARMv7_instrs::AND_IMM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::AND_IMM(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	u32 cond, d, n, imm32;
-	bool set_flags, carry = context.APSR.C;
+	using args = arm_code::and_imm<type>;
+	ARG(d, op);
+	ARG(n, op);
+	ARG(imm32, op);
+	ARG(set_flags, op, cond);
 
-	switch (type)
+	if (ConditionPassed(cpu, cond))
 	{
-	case T1:
-	{
-		cond = context.ITSTATE.advance();
-		d = (code.data & 0xf00) >> 8;
-		n = (code.data & 0xf0000) >> 16;
-		set_flags = (code.data & 0x100000) != 0;
-		imm32 = ThumbExpandImm_C((code.data & 0x4000000) >> 15 | (code.data & 0x7000) >> 4 | (code.data & 0xff), carry, carry);
-
-		reject(d == 15 && set_flags, "TST (immediate)");
-		reject(d == 13 || d == 15 || n == 13 || n == 15, "UNPREDICTABLE");
-		break;
-	}
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
-
-	if (context.debug)
-	{
-		if (context.debug & DF_DISASM) context.fmt_debug_str("and%s%s %s,%s,#0x%X", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(n), imm32);
-		if (process_debug(context)) return;
-	}
-
-	if (ConditionPassed(context, cond))
-	{
-		const u32 result = context.read_gpr(n) & imm32;
-		context.write_gpr(d, result, 4);
+		const u32 result = cpu.read_gpr(n) & imm32;
+		cpu.write_gpr(d, result, 4);
 
 		if (set_flags)
 		{
-			context.APSR.N = result >> 31;
-			context.APSR.Z = result == 0;
-			context.APSR.C = carry;
+			cpu.APSR.N = result >> 31;
+			cpu.APSR.Z = result == 0;
+			cpu.APSR.C = args::carry::extract(op, cpu.APSR.C);
 		}
 	}
 }
 
-void ARMv7_instrs::AND_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::AND_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	bool set_flags = !context.ITSTATE;
-	u32 cond, d, n, m, shift_t, shift_n;
+	using args = arm_code::and_reg<type>;
+	ARG(d, op);
+	ARG(n, op);
+	ARG(m, op);
+	ARG(shift_t, op);
+	ARG(shift_n, op);
+	ARG(set_flags, op, cond);
 
-	switch (type)
-	{
-	case T1:
-	{
-		cond = context.ITSTATE.advance();
-		d = n = (code.data & 0x7);
-		m = (code.data & 0x38) >> 3;
-		shift_t = SRType_LSL;
-		shift_n = 0;
-		break;
-	}
-	case T2:
-	{
-		cond = context.ITSTATE.advance();
-		d = (code.data & 0xf00) >> 8;
-		n = (code.data & 0xf0000) >> 16;
-		m = (code.data & 0xf);
-		set_flags = (code.data & 0x100000) != 0;
-		shift_t = DecodeImmShift((code.data & 0x30) >> 4, (code.data & 0x7000) >> 10 | (code.data & 0xc0) >> 6, &shift_n);
-
-		reject(d == 15 && set_flags, "TST (register)");
-		reject(d == 13 || d == 15 || n == 13 || n == 15 || m == 13 || m == 15, "UNPREDICTABLE");
-		break;
-	}
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
-
-	if (context.debug)
-	{
-		if (context.debug & DF_DISASM) context.fmt_debug_str("and%s%s %s,%s,%s%s", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(n), fmt_reg(m), fmt_shift(shift_t, shift_n));
-		if (process_debug(context)) return;
-	}
-
-	if (ConditionPassed(context, cond))
+	if (ConditionPassed(cpu, cond))
 	{
 		bool carry;
-		const u32 shifted = Shift_C(context.read_gpr(m), shift_t, shift_n, context.APSR.C, carry);
-		const u32 result = context.read_gpr(n) & shifted;
-		context.write_gpr(d, result, type == T1 ? 2 : 4);
+		const u32 shifted = Shift_C(cpu.read_gpr(m), shift_t, shift_n, cpu.APSR.C, carry);
+		const u32 result = cpu.read_gpr(n) & shifted;
+		cpu.write_gpr(d, result, type == T1 ? 2 : 4);
 
 		if (set_flags)
 		{
-			context.APSR.N = result >> 31;
-			context.APSR.Z = result == 0;
-			context.APSR.C = carry;
+			cpu.APSR.N = result >> 31;
+			cpu.APSR.Z = result == 0;
+			cpu.APSR.C = carry;
 		}
 	}
 }
 
-void ARMv7_instrs::AND_RSR(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::AND_RSR(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
+	throw EXCEPTION("TODO");
+}
+
+
+template<arm_encoding type>
+void arm_interpreter::ASR_IMM(ARMv7Thread& cpu, const u32 op, const u32 cond)
+{
+	throw EXCEPTION("TODO");
+}
+
+template<arm_encoding type>
+void arm_interpreter::ASR_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
+{
+	throw EXCEPTION("TODO");
+}
+
+
+template<arm_encoding type>
+void arm_interpreter::B(ARMv7Thread& cpu, const u32 op, const u32 _cond)
+{
+	using args = arm_code::b<type>;
+	ARG(imm32, op);
+
+	if (ConditionPassed(cpu, args::cond::extract(op, _cond)))
 	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
+		cpu.PC = cpu.read_pc() + imm32 - (type < T3 ? 2 : 4);
 	}
 }
 
 
-void ARMv7_instrs::ASR_IMM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::BFC(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::ASR_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::BFI(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
 
-void ARMv7_instrs::B(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::BIC_IMM(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	u32 cond, imm32;
+	using args = arm_code::bic_imm<type>;
+	ARG(d, op);
+	ARG(n, op);
+	ARG(imm32, op);
+	ARG(set_flags, op, cond);
 
-	switch (type)
+	if (ConditionPassed(cpu, cond))
 	{
-	case T1:
-	{
-		cond = (code.data >> 8) & 0xf;
-		imm32 = sign<9, u32>((code.data & 0xff) << 1);
-
-		reject(cond == 14, "UNDEFINED");
-		reject(cond == 15, "SVC");
-		reject(context.ITSTATE, "UNPREDICTABLE");
-		break;
-	}
-	case T2:
-	{
-		cond = context.ITSTATE.advance();
-		imm32 = sign<12, u32>((code.data & 0x7ff) << 1);
-
-		reject(context.ITSTATE, "UNPREDICTABLE");
-		break;
-	}
-	case T3:
-	{
-		cond = (code.data >> 22) & 0xf;
-		{
-			const u32 s = (code.data >> 26) & 0x1;
-			const u32 j1 = (code.data >> 13) & 0x1;
-			const u32 j2 = (code.data >> 11) & 0x1;
-			imm32 = sign<21, u32>(s << 20 | j2 << 19 | j1 << 18 | (code.data & 0x3f0000) >> 4 | (code.data & 0x7ff) << 1);
-		}
-
-		reject(cond >= 14, "Related encodings");
-		reject(context.ITSTATE, "UNPREDICTABLE");
-		break;
-	}
-	case T4:
-	{
-		cond = context.ITSTATE.advance();
-		{
-			const u32 s = (code.data >> 26) & 0x1;
-			const u32 i1 = (code.data >> 13) & 0x1 ^ s ^ 1;
-			const u32 i2 = (code.data >> 11) & 0x1 ^ s ^ 1;
-			imm32 = sign<25, u32>(s << 24 | i2 << 23 | i1 << 22 | (code.data & 0x3ff0000) >> 4 | (code.data & 0x7ff) << 1);
-		}
-		
-		reject(context.ITSTATE, "UNPREDICTABLE");
-		break;
-	}
-	case A1:
-	{
-		cond = code.data >> 28;
-		imm32 = sign<26, u32>((code.data & 0xffffff) << 2);
-		break;
-	}
-	default: throw EXCEPTION("");
-	}
-
-	if (context.debug)
-	{
-		if (context.debug & DF_DISASM) context.fmt_debug_str("b%s 0x%08X", fmt_cond(cond), context.read_pc() + imm32);
-		if (process_debug(context)) return;
-	}
-
-	if (ConditionPassed(context, cond))
-	{
-		context.PC = context.read_pc() + imm32 - (type < T3 ? 2 : 4);
-	}
-}
-
-
-void ARMv7_instrs::BFC(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
-}
-
-void ARMv7_instrs::BFI(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
-}
-
-
-void ARMv7_instrs::BIC_IMM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
-{
-	bool set_flags, carry = context.APSR.C;
-	u32 cond, d, n, imm32;
-
-	switch (type)
-	{
-	case T1:
-	{
-		cond = context.ITSTATE.advance();
-		d = (code.data & 0xf00) >> 8;
-		n = (code.data & 0xf0000) >> 16;
-		set_flags = (code.data & 0x100000) != 0;
-		imm32 = ThumbExpandImm_C((code.data & 0x4000000) >> 15 | (code.data & 0x7000) >> 4 | (code.data & 0xff), carry, carry);
-
-		reject(d == 13 || d == 15 || n == 13 || n == 15, "UNPREDICTABLE");
-		break;
-	}
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
-
-	if (context.debug)
-	{
-		if (context.debug & DF_DISASM) context.fmt_debug_str("bic%s%s %s,%s,#0x%X", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(n), imm32);
-		if (process_debug(context)) return;
-	}
-
-	if (ConditionPassed(context, cond))
-	{
-		const u32 result = context.read_gpr(n) & ~imm32;
-		context.write_gpr(d, result, 4);
+		const u32 result = cpu.read_gpr(n) & ~imm32;
+		cpu.write_gpr(d, result, 4);
 
 		if (set_flags)
 		{
-			context.APSR.N = result >> 31;
-			context.APSR.Z = result == 0;
-			context.APSR.C = carry;
+			cpu.APSR.N = result >> 31;
+			cpu.APSR.Z = result == 0;
+			cpu.APSR.C = args::carry::extract(op, cpu.APSR.C);
 		}
 	}
 }
 
-void ARMv7_instrs::BIC_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::BIC_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	bool set_flags = !context.ITSTATE;
-	u32 cond, d, n, m, shift_t, shift_n;
+	using args = arm_code::bic_reg<type>;
+	ARG(d, op);
+	ARG(n, op);
+	ARG(m, op);
+	ARG(shift_t, op);
+	ARG(shift_n, op);
+	ARG(set_flags, op, cond);
 
-	switch (type)
-	{
-	case T1:
-	{
-		cond = context.ITSTATE.advance();
-		d = n = (code.data & 0x7);
-		m = (code.data & 0x38) >> 3;
-		shift_t = SRType_LSL;
-		shift_n = 0;
-		break;
-	}
-	case T2:
-	{
-		cond = context.ITSTATE.advance();
-		d = (code.data & 0xf00) >> 8;
-		n = (code.data & 0xf0000) >> 16;
-		m = (code.data & 0xf);
-		set_flags = (code.data & 0x100000) != 0;
-		shift_t = DecodeImmShift((code.data & 0x30) >> 4, (code.data & 0x7000) >> 10 | (code.data & 0xc0) >> 6, &shift_n);
-
-		reject(d == 13 || d == 15 || n == 13 || n == 15 || m == 13 || m == 15, "UNPREDICTABLE");
-		break;
-	}
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
-
-	if (context.debug)
-	{
-		if (context.debug & DF_DISASM) context.fmt_debug_str("bic%s%s %s,%s,%s%s", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(n), fmt_reg(m), fmt_shift(shift_t, shift_n));
-		if (process_debug(context)) return;
-	}
-
-	if (ConditionPassed(context, cond))
+	if (ConditionPassed(cpu, cond))
 	{
 		bool carry;
-		const u32 shifted = Shift_C(context.read_gpr(m), shift_t, shift_n, context.APSR.C, carry);
-		const u32 result = context.read_gpr(n) & ~shifted;
-		context.write_gpr(d, result, type == T1 ? 2 : 4);
+		const u32 shifted = Shift_C(cpu.read_gpr(m), shift_t, shift_n, cpu.APSR.C, carry);
+		const u32 result = cpu.read_gpr(n) & ~shifted;
+		cpu.write_gpr(d, result, type == T1 ? 2 : 4);
 
 		if (set_flags)
 		{
-			context.APSR.N = result >> 31;
-			context.APSR.Z = result == 0;
-			context.APSR.C = carry;
+			cpu.APSR.N = result >> 31;
+			cpu.APSR.Z = result == 0;
+			cpu.APSR.C = carry;
 		}
 	}
 }
 
-void ARMv7_instrs::BIC_RSR(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::BIC_RSR(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
 
-void ARMv7_instrs::BKPT(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::BKPT(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
 
-void ARMv7_instrs::BL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::BL(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	u32 cond, imm32;
+	using args = arm_code::bl<type>;
+	ARG(imm32, op);
+	ARG(to_arm);
 
-	switch (type)
+	if (ConditionPassed(cpu, cond))
 	{
-	case T1:
-	{
-		cond = context.ITSTATE.advance();
+		cpu.LR = (cpu.PC + 4) | (cpu.ISET != ARM);
+
+		// TODO: this is quite a mess
+		if ((cpu.ISET == ARM) == to_arm)
 		{
-			const u32 s = (code.data >> 26) & 0x1;
-			const u32 i1 = (code.data >> 13) & 0x1 ^ s ^ 1;
-			const u32 i2 = (code.data >> 11) & 0x1 ^ s ^ 1;
-			imm32 = sign<25, u32>(s << 24 | i2 << 23 | i1 << 22 | (code.data & 0x3ff0000) >> 4 | (code.data & 0x7ff) << 1);
+			const u32 pc = cpu.ISET == ARM ? (cpu.read_pc() & ~3) + imm32 : cpu.read_pc() + imm32;
+
+			cpu.PC = pc - 4;
 		}
-
-		reject(context.ITSTATE, "UNPREDICTABLE");
-		break;
-	}
-	case A1:
-	{
-		cond = code.data >> 28;
-		imm32 = sign<26, u32>((code.data & 0xffffff) << 2);
-		break;
-	}
-	default: throw EXCEPTION("");
-	}
-
-	const u32 lr = context.ISET == ARM ? context.read_pc() - 4 : context.read_pc() | 1;
-	const u32 pc = context.ISET == ARM ? (context.read_pc() & ~3) + imm32 : context.read_pc() + imm32;
-
-	if (context.debug)
-	{
-		if (context.debug & DF_DISASM) context.fmt_debug_str("bl%s 0x%08X", fmt_cond(cond), pc);
-		if (process_debug(context)) return;
-	}
-
-	if (ConditionPassed(context, cond))
-	{
-		context.LR = lr;
-		context.PC = pc - 4;
-	}
-}
-
-void ARMv7_instrs::BLX(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
-{
-	u32 cond, target, newLR;
-
-	switch (type)
-	{
-	case T1:
-	{
-		cond = context.ITSTATE.advance();
-		newLR = (context.PC + 2) | 1;
+		else
 		{
-			const u32 m = (code.data >> 3) & 0xf;
-			reject(m == 15, "UNPREDICTABLE");
-			target = context.read_gpr(m);
+			const u32 pc = type == T2 ? ~3 & cpu.PC + 4 + imm32 : 1 | cpu.PC + 8 + imm32;
+
+			cpu.write_pc(pc, type == T1 ? 2 : 4);
 		}
-
-		reject(context.ITSTATE, "UNPREDICTABLE");
-		break;
-	}
-	case T2:
-	{
-		cond = context.ITSTATE.advance();
-		newLR = (context.PC + 4) | 1;
-		{
-			const u32 s = (code.data >> 26) & 0x1;
-			const u32 i1 = (code.data >> 13) & 0x1 ^ s ^ 1;
-			const u32 i2 = (code.data >> 11) & 0x1 ^ s ^ 1;
-			target = ~3 & context.PC + 4 + sign<25, u32>(s << 24 | i2 << 23 | i1 << 22 | (code.data & 0x3ff0000) >> 4 | (code.data & 0x7ff) << 1);
-		}
-
-		reject(context.ITSTATE, "UNPREDICTABLE");
-		break;
-	}
-	case A1:
-	{
-		cond = code.data >> 28;
-		newLR = context.PC + 4;
-		target = context.read_gpr(code.data & 0xf);
-		break;
-	}
-	case A2:
-	{
-		cond = 0xe; // always true
-		newLR = context.PC + 4;
-		target = 1 | context.PC + 8 + sign<25, u32>((code.data & 0xffffff) << 2 | (code.data & 0x1000000) >> 23);
-		break;
-	}
-	default: throw EXCEPTION("");
-	}
-
-	if (context.debug)
-	{
-		if (context.debug & DF_DISASM)
-		{
-			switch (type)
-			{
-			case T1: context.fmt_debug_str("blx%s %s", fmt_cond(cond), fmt_reg((code.data >> 3) & 0xf)); break;
-			case T2: context.fmt_debug_str("blx%s 0x%08X", fmt_cond(cond), target); break;
-			case A1: context.fmt_debug_str("blx%s %s", fmt_cond(cond), fmt_reg(code.data & 0xf)); break;
-			default: context.fmt_debug_str("blx%s ???", fmt_cond(cond));
-			}
-		}
-		if (process_debug(context)) return;
-	}
-
-	if (ConditionPassed(context, cond))
-	{
-		context.LR = newLR;
-		context.write_pc(target, type == T1 ? 2 : 4);
 	}
 }
 
-void ARMv7_instrs::BX(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::BLX(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	u32 cond, m;
+	using args = arm_code::blx<type>;
+	ARG(m, op);
 
-	switch (type)
+	if (ConditionPassed(cpu, cond))
 	{
-	case T1:
-	{
-		cond = context.ITSTATE.advance();
-		m = (code.data >> 3) & 0xf;
+		cpu.LR = type == T1 ? (cpu.PC + 2) | 1 : cpu.PC + 4;
+		cpu.write_pc(cpu.read_gpr(m), type == T1 ? 2 : 4);
+	}
+}
 
-		reject(context.ITSTATE, "UNPREDICTABLE");
-		break;
-	}
-	case A1:
-	{
-		cond = code.data >> 28;
-		m = (code.data & 0xf);
-		break;
-	}
-	default: throw EXCEPTION("");
-	}
+template<arm_encoding type>
+void arm_interpreter::BX(ARMv7Thread& cpu, const u32 op, const u32 cond)
+{
+	using args = arm_code::bx<type>;
+	ARG(m, op);
 
-	if (context.debug)
+	if (ConditionPassed(cpu, cond))
 	{
-		if (context.debug & DF_DISASM) context.fmt_debug_str("bx%s %s", fmt_cond(cond), fmt_reg(m));
-		if (process_debug(context)) return;
-	}
-
-	if (ConditionPassed(context, cond))
-	{
-		context.write_pc(context.read_gpr(m), type == T1 ? 2 : 4);
+		cpu.write_pc(cpu.read_gpr(m), type == T1 ? 2 : 4);
 	}
 }
 
 
-void ARMv7_instrs::CB_Z(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::CB_Z(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	u32 n, imm32;
-	bool nonzero;
+	using args = arm_code::cb_z<type>;
+	ARG(n, op);
+	ARG(imm32, op);
+	ARG(nonzero, op);
 
-	switch (type)
+	if ((cpu.read_gpr(n) == 0) ^ nonzero)
 	{
-	case T1:
-	{
-		n = code.data & 0x7;
-		imm32 = (code.data & 0xf8) >> 2 | (code.data & 0x200) >> 3;
-		nonzero = (code.data & 0x800) != 0;
-
-		reject(context.ITSTATE, "UNPREDICTABLE");
-		break;
-	}
-	default: throw EXCEPTION("");
-	}
-
-	if (context.debug)
-	{
-		if (context.debug & DF_DISASM) context.fmt_debug_str("cb%sz 0x%08X", nonzero ? "n" : "", context.read_pc() + imm32);
-		if (process_debug(context)) return;
-	}
-
-	if ((context.read_gpr(n) == 0) ^ nonzero)
-	{
-		context.PC = context.read_pc() + imm32 - 2;
+		cpu.PC = cpu.read_pc() + imm32 - 2;
 	}
 }
 
 
-void ARMv7_instrs::CLZ(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::CLZ(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	u32 cond, d, m;
+	using args = arm_code::clz<type>;
+	ARG(d, op);
+	ARG(m, op);
 
-	switch (type)
+	if (ConditionPassed(cpu, cond))
 	{
-	case T1:
-	{
-		cond = context.ITSTATE.advance();
-		d = (code.data & 0xf00) >> 8;
-		m = (code.data & 0xf);
-
-		reject(m != (code.data & 0xf0000) >> 16, "UNPREDICTABLE");
-		reject(d == 13 || d == 15 || m == 13 || m == 15, "UNPREDICTABLE");
-		break;
-	}
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
-
-	if (context.debug)
-	{
-		if (context.debug & DF_DISASM) context.fmt_debug_str("clz%s %s,%s", fmt_cond(cond), fmt_reg(d), fmt_reg(m));
-		if (process_debug(context)) return;
-	}
-
-	if (ConditionPassed(context, cond))
-	{
-		context.write_gpr(d, cntlz32(context.read_gpr(m)), 4);
+		cpu.write_gpr(d, cntlz32(cpu.read_gpr(m)), 4);
 	}
 }
 
 
-void ARMv7_instrs::CMN_IMM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::CMN_IMM(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::CMN_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::CMN_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::CMN_RSR(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::CMN_RSR(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
 
-void ARMv7_instrs::CMP_IMM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::CMP_IMM(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	u32 cond, n, imm32;
+	using args = arm_code::cmp_imm<type>;
+	ARG(n, op);
+	ARG(imm32, op);
 
-	switch (type)
-	{
-	case T1:
-	{
-		cond = context.ITSTATE.advance();
-		n = (code.data & 0x700) >> 8;
-		imm32 = (code.data & 0xff);
-		break;
-	}
-	case T2:
-	{
-		cond = context.ITSTATE.advance();
-		n = (code.data & 0xf0000) >> 16;
-		imm32 = ThumbExpandImm((code.data & 0x4000000) >> 15 | (code.data & 0x7000) >> 4 | (code.data & 0xff));
-
-		reject(n == 15, "UNPREDICTABLE");
-		break;
-	}
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
-
-	if (context.debug)
-	{
-		if (context.debug & DF_DISASM) context.fmt_debug_str("cmp%s %s,#0x%X", fmt_cond(cond), fmt_reg(n), imm32);
-		if (process_debug(context)) return;
-	}
-
-	if (ConditionPassed(context, cond))
+	if (ConditionPassed(cpu, cond))
 	{
 		bool carry, overflow;
-		const u32 n_value = context.read_gpr(n);
+		const u32 n_value = cpu.read_gpr(n);
 		const u32 result = AddWithCarry(n_value, ~imm32, true, carry, overflow);
-		context.APSR.N = result >> 31;
-		context.APSR.Z = result == 0;
-		context.APSR.C = carry;
-		context.APSR.V = overflow;
+		cpu.APSR.N = result >> 31;
+		cpu.APSR.Z = result == 0;
+		cpu.APSR.C = carry;
+		cpu.APSR.V = overflow;
 
 		//LOG_NOTICE(ARMv7, "CMP: r%d=0x%08x <> 0x%08x, res=0x%08x", n, n_value, imm32, res);
 	}
 }
 
-void ARMv7_instrs::CMP_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::CMP_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	u32 cond, n, m, shift_t, shift_n;
+	using args = arm_code::cmp_reg<type>;
+	ARG(n, op);
+	ARG(m, op);
+	ARG(shift_t, op);
+	ARG(shift_n, op);
 
-	switch (type)
-	{
-	case T1:
-	{
-		cond = context.ITSTATE.advance();
-		n = (code.data & 0x7);
-		m = (code.data & 0x38) >> 3;
-		shift_t = SRType_LSL;
-		shift_n = 0;
-		break;
-	}
-	case T2:
-	{
-		cond = context.ITSTATE.advance();
-		n = (code.data & 0x80) >> 4 | (code.data & 0x7);
-		m = (code.data & 0x78) >> 3;
-		shift_t = SRType_LSL;
-		shift_n = 0;
-
-		reject(n < 8 && m < 8, "UNPREDICTABLE");
-		reject(n == 15 || m == 15, "UNPREDICTABLE");
-		break;
-	}
-	case T3:
-	{
-		cond = context.ITSTATE.advance();
-		n = (code.data & 0xf0000) >> 16;
-		m = (code.data & 0xf);
-		shift_t = DecodeImmShift((code.data & 0x30) >> 4, (code.data & 0x7000) >> 10 | (code.data & 0xc0) >> 6, &shift_n);
-
-		reject(n == 15 || m == 13 || m == 15, "UNPREDICTABLE");
-		break;
-	}
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
-
-	if (context.debug)
-	{
-		if (context.debug & DF_DISASM) context.fmt_debug_str("cmp%s %s,%s%s", fmt_cond(cond), fmt_reg(n), fmt_reg(m), fmt_shift(shift_t, shift_n));
-		if (process_debug(context)) return;
-	}
-
-	if (ConditionPassed(context, cond))
+	if (ConditionPassed(cpu, cond))
 	{
 		bool carry, overflow;
-		const u32 m_value = context.read_gpr(m);
-		const u32 n_value = context.read_gpr(n);
+		const u32 m_value = cpu.read_gpr(m);
+		const u32 n_value = cpu.read_gpr(n);
 		const u32 shifted = Shift(m_value, shift_t, shift_n, true);
 		const u32 result = AddWithCarry(n_value, ~shifted, true, carry, overflow);
-		context.APSR.N = result >> 31;
-		context.APSR.Z = result == 0;
-		context.APSR.C = carry;
-		context.APSR.V = overflow;
+		cpu.APSR.N = result >> 31;
+		cpu.APSR.Z = result == 0;
+		cpu.APSR.C = carry;
+		cpu.APSR.V = overflow;
 
 		//LOG_NOTICE(ARMv7, "CMP: r%d=0x%08x <> r%d=0x%08x, shifted=0x%08x, res=0x%08x", n, n_value, m, m_value, shifted, res);
 	}
 }
 
-void ARMv7_instrs::CMP_RSR(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::CMP_RSR(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
 
-void ARMv7_instrs::DBG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::DBG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::DMB(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::DMB(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::DSB(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::DSB(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
 
-void ARMv7_instrs::EOR_IMM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::EOR_IMM(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	bool set_flags, carry = context.APSR.C;
-	u32 cond, d, n, imm32;
+	using args = arm_code::eor_imm<type>;
+	ARG(d, op);
+	ARG(n, op);
+	ARG(imm32, op);
+	ARG(set_flags, op, cond);
 
-	switch (type)
+	if (ConditionPassed(cpu, cond))
 	{
-	case T1:
-	{
-		cond = context.ITSTATE.advance();
-		d = (code.data & 0xf00) >> 8;
-		n = (code.data & 0xf0000) >> 16;
-		set_flags = (code.data & 0x100000) != 0;
-		imm32 = ThumbExpandImm_C((code.data & 0x4000000) >> 15 | (code.data & 0x7000) >> 4 | (code.data & 0xff), carry, carry);
-
-		reject(d == 15 && set_flags, "TEQ (immediate)");
-		reject(d == 13 || d == 15 || n == 13 || n == 15, "UNPREDICTABLE");
-		break;
-	}
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
-
-	if (context.debug)
-	{
-		if (context.debug & DF_DISASM) context.fmt_debug_str("eor%s%s %s,%s,#0x%X", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(n), imm32);
-		if (process_debug(context)) return;
-	}
-
-	if (ConditionPassed(context, cond))
-	{
-		const u32 result = context.read_gpr(n) ^ imm32;
-		context.write_gpr(d, result, 4);
+		const u32 result = cpu.read_gpr(n) ^ imm32;
+		cpu.write_gpr(d, result, 4);
 
 		if (set_flags)
 		{
-			context.APSR.N = result >> 31;
-			context.APSR.Z = result == 0;
-			context.APSR.C = carry;
+			cpu.APSR.N = result >> 31;
+			cpu.APSR.Z = result == 0;
+			cpu.APSR.C = args::carry::extract(op, cpu.APSR.C);
 		}
 	}
 }
 
-void ARMv7_instrs::EOR_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::EOR_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	bool set_flags = !context.ITSTATE;
-	u32 cond, d, n, m, shift_t, shift_n;
+	using args = arm_code::eor_reg<type>;
+	ARG(d, op);
+	ARG(n, op);
+	ARG(m, op);
+	ARG(shift_t, op);
+	ARG(shift_n, op);
+	ARG(set_flags, op, cond);
 
-	switch (type)
-	{
-	case T1:
-	{
-		cond = context.ITSTATE.advance();
-		d = n = (code.data & 0x7);
-		m = (code.data & 0x38) >> 3;
-		shift_t = SRType_LSL;
-		shift_n = 0;
-		break;
-	}
-	case T2:
-	{
-		cond = context.ITSTATE.advance();
-		d = (code.data & 0xf00) >> 8;
-		n = (code.data & 0xf0000) >> 16;
-		m = (code.data & 0xf);
-		set_flags = (code.data & 0x100000) != 0;
-		shift_t = DecodeImmShift((code.data & 0x30) >> 4, (code.data & 0x7000) >> 10 | (code.data & 0xc0) >> 6, &shift_n);
-
-		reject(d == 15 && set_flags, "TEQ (register)");
-		reject(d == 13 || d == 15 || n == 13 || n == 15 || m == 13 || m == 15, "UNPREDICTABLE");
-		break;
-	}
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
-
-	if (context.debug)
-	{
-		if (context.debug & DF_DISASM) context.fmt_debug_str("eor%s%s %s,%s,%s%s", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(n), fmt_reg(m), fmt_shift(shift_t, shift_n));
-		if (process_debug(context)) return;
-	}
-
-	if (ConditionPassed(context, cond))
+	if (ConditionPassed(cpu, cond))
 	{
 		bool carry;
-		const u32 shifted = Shift_C(context.read_gpr(m), shift_t, shift_n, context.APSR.C, carry);
-		const u32 result = context.read_gpr(n) ^ shifted;
-		context.write_gpr(d, result, type == T1 ? 2 : 4);
+		const u32 shifted = Shift_C(cpu.read_gpr(m), shift_t, shift_n, cpu.APSR.C, carry);
+		const u32 result = cpu.read_gpr(n) ^ shifted;
+		cpu.write_gpr(d, result, type == T1 ? 2 : 4);
 
 		if (set_flags)
 		{
-			context.APSR.N = result >> 31;
-			context.APSR.Z = result == 0;
-			context.APSR.C = carry;
+			cpu.APSR.N = result >> 31;
+			cpu.APSR.Z = result == 0;
+			cpu.APSR.C = carry;
 		}
 	}
 }
 
-void ARMv7_instrs::EOR_RSR(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::EOR_RSR(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
 
-void ARMv7_instrs::IT(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::IT(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case T1:
-	{
-		const u32 mask = (code.data & 0xf);
-		const u32 first = (code.data & 0xf0) >> 4;
-		
-		reject(mask == 0, "Related encodings");
-		reject(first == 15, "UNPREDICTABLE");
-		reject(first == 14 && BitCount(mask, 4) != 1, "UNPREDICTABLE");
-		reject(context.ITSTATE, "UNPREDICTABLE");
-
-		context.ITSTATE.IT = code.data & 0xff;
-		break;
-	}
-	default: throw EXCEPTION("");
-	}
-
-	if (context.debug)
-	{
-		if (context.debug & DF_DISASM) context.fmt_debug_str("IT%s %s", fmt_it(context.ITSTATE.shift_state), fmt_cond(context.ITSTATE.condition));
-		if (process_debug(context)) return;
-	}
+	cpu.ITSTATE.IT = op & 0xff;
 }
 
 
-void ARMv7_instrs::LDM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::LDM(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	u32 cond, n, reg_list;
-	bool wback;
+	using args = arm_code::ldm<type>;
+	ARG(n, op);
+	ARG(registers, op);
+	ARG(wback, op);
 
-	switch (type)
+	if (ConditionPassed(cpu, cond))
 	{
-	case T1:
-	{
-		cond = context.ITSTATE.advance();
-		n = (code.data & 0x700) >> 8;
-		reg_list = (code.data & 0xff);
-		wback = !(reg_list & (1 << n));
-
-		reject(reg_list == 0, "UNPREDICTABLE");
-		break;
-	}
-	case T2:
-	{
-		cond = context.ITSTATE.advance();
-		n = (code.data & 0xf0000) >> 16;
-		reg_list = (code.data & 0xdfff);
-		wback = (code.data & 0x200000) != 0;
-
-		reject(wback && n == 13, "POP");
-		reject(n == 15 || BitCount(reg_list, 16) < 2 || reg_list >= 0xc000, "UNPREDICTABLE");
-		reject(reg_list & 0x8000 && context.ITSTATE, "UNPREDICTABLE");
-		reject(wback && reg_list & (1 << n), "UNPREDICTABLE");
-		break;
-	}
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
-
-	if (context.debug)
-	{
-		if (context.debug & DF_DISASM) context.fmt_debug_str("ldm%s %s%s,{%s}", fmt_cond(cond), fmt_reg(n), wback ? "!" : "", fmt_reg_list(reg_list));
-		if (process_debug(context)) return;
-	}
-
-	if (ConditionPassed(context, cond))
-	{
-		vm::ptr<u32> memory{ context.read_gpr(n), vm::addr };
+		vm::ptr<u32> memory(cpu.read_gpr(n), vm::addr);
 
 		for (u32 i = 0; i < 16; i++)
 		{
-			if (reg_list & (1 << i))
+			if (registers & (1 << i))
 			{
-				context.write_gpr(i, *memory++, type == T1 ? 2 : 4);
+				cpu.write_gpr(i, *memory++, type == T1 ? 2 : 4);
 			}
 		}
-
-		if (wback)
+		
+		// Warning: wback set true for T1
+		if (wback && ~registers & (1 << n))
 		{
-			context.write_gpr(n, memory.addr(), type == T1 ? 2 : 4);
+			cpu.write_gpr(n, memory.addr(), type == T1 ? 2 : 4);
 		}
 	}
 }
 
-void ARMv7_instrs::LDMDA(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::LDMDA(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::LDMDB(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::LDMDB(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::LDMIB(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::LDMIB(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
 
-void ARMv7_instrs::LDR_IMM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::LDR_IMM(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	u32 cond, t, n, imm32;
-	bool index, add, wback;
+	using args = arm_code::ldr_imm<type>;
+	ARG(t, op);
+	ARG(n, op);
+	ARG(imm32, op);
+	ARG(index, op);
+	ARG(add, op);
+	ARG(wback, op);
 
-	switch (type)
+	if (ConditionPassed(cpu, cond))
 	{
-	case T1:
-	{
-		cond = context.ITSTATE.advance();
-		t = (code.data & 0x7);
-		n = (code.data & 0x38) >> 3;
-		imm32 = (code.data & 0x7c0) >> 4;
-		index = true;
-		add = true;
-		wback = false;
-		break;
-	}
-	case T2:
-	{
-		cond = context.ITSTATE.advance();
-		t = (code.data & 0x700) >> 8;
-		n = 13;
-		imm32 = (code.data & 0xff) << 2;
-		index = true;
-		add = true;
-		wback = false;
-		break;
-	}
-	case T3:
-	{
-		cond = context.ITSTATE.advance();
-		t = (code.data & 0xf000) >> 12;
-		n = (code.data & 0xf0000) >> 16;
-		imm32 = (code.data & 0xfff);
-		index = true;
-		add = true;
-		wback = false;
-
-		reject(n == 15, "LDR (literal)");
-		reject(t == 15 && context.ITSTATE, "UNPREDICTABLE");
-		break;
-	}
-	case T4:
-	{
-		cond = context.ITSTATE.advance();
-		t = (code.data & 0xf000) >> 12;
-		n = (code.data & 0xf0000) >> 16;
-		imm32 = (code.data & 0xff);
-		index = (code.data & 0x400) != 0;
-		add = (code.data & 0x200) != 0;
-		wback = (code.data & 0x100) != 0;
-
-		reject(n == 15, "LDR (literal)");
-		reject(index && add && !wback, "LDRT");
-		reject(n == 13 && !index && add && wback && imm32 == 4, "POP");
-		reject(!index && !wback, "UNDEFINED");
-		reject((wback && n == t) || (t == 15 && context.ITSTATE), "UNPREDICTABLE");
-		break;
-	}
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
-
-	if (context.debug)
-	{
-		if (context.debug & DF_DISASM) context.fmt_debug_str("ldr%s %s,%s", fmt_cond(cond), fmt_reg(t), fmt_mem_imm(n, imm32, index, add, wback));
-		if (process_debug(context)) return;
-	}
-
-	if (ConditionPassed(context, cond))
-	{
-		const u32 offset_addr = add ? context.read_gpr(n) + imm32 : context.read_gpr(n) - imm32;
-		const u32 addr = index ? offset_addr : context.read_gpr(n);
-		context.write_gpr(t, vm::read32(addr), type < T3 ? 2 : 4);
+		const u32 offset_addr = add ? cpu.read_gpr(n) + imm32 : cpu.read_gpr(n) - imm32;
+		const u32 addr = index ? offset_addr : cpu.read_gpr(n);
+		cpu.write_gpr(t, vm::read32(addr), type < T3 ? 2 : 4);
 
 		if (wback)
 		{
-			context.write_gpr(n, offset_addr, type < T3 ? 2 : 4);
+			cpu.write_gpr(n, offset_addr, type < T3 ? 2 : 4);
 		}
 	}
 }
 
-void ARMv7_instrs::LDR_LIT(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::LDR_LIT(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	u32 cond, t, imm32;
-	bool add;
+	using args = arm_code::ldr_lit<type>;
+	ARG(t, op);
+	ARG(imm32, op);
+	ARG(add, op);
 
-	switch (type)
-	{
-	case T1:
-	{
-		cond = context.ITSTATE.advance();
-		t = (code.data & 0x700) >> 8;
-		imm32 = (code.data & 0xff) << 2;
-		add = true;
-		break;
-	}
-	case T2:
-	{
-		cond = context.ITSTATE.advance();
-		t = (code.data & 0xf000) >> 12;
-		imm32 = (code.data & 0xfff);
-		add = (code.data & 0x800000) != 0;
-
-		reject(t == 15 && context.ITSTATE, "UNPREDICTABLE");
-		break;
-	}
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
-
-	const u32 base = context.read_pc() & ~3;
+	const u32 base = cpu.read_pc() & ~3;
 	const u32 addr = add ? base + imm32 : base - imm32;
 
-	if (context.debug)
-	{
-		if (context.debug & DF_DISASM) context.fmt_debug_str("ldr%s %s,0x%08X", fmt_cond(cond), fmt_reg(t), addr);
-		if (process_debug(context)) return;
-	}
-
-	if (ConditionPassed(context, cond))
+	if (ConditionPassed(cpu, cond))
 	{
 		const u32 data = vm::read32(addr);
-		context.write_gpr(t, data, type == T1 ? 2 : 4);
+		cpu.write_gpr(t, data, type == T1 ? 2 : 4);
 	}
 }
 
-void ARMv7_instrs::LDR_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::LDR_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	u32 cond, t, n, m, shift_t, shift_n;
-	bool index, add, wback;
+	using args = arm_code::ldr_reg<type>;
+	ARG(t, op);
+	ARG(n, op);
+	ARG(m, op);
+	ARG(shift_t, op);
+	ARG(shift_n, op);
+	ARG(index, op);
+	ARG(add, op);
+	ARG(wback, op);
 
-	switch (type)
+	if (ConditionPassed(cpu, cond))
 	{
-	case T1:
-	{
-		cond = context.ITSTATE.advance();
-		t = (code.data & 0x7);
-		n = (code.data & 0x38) >> 3;
-		m = (code.data & 0x1c0) >> 6;
-		index = true;
-		add = true;
-		wback = false;
-		shift_t = SRType_LSL;
-		shift_n = 0;
-		break;
-	}
-	case T2:
-	{
-		cond = context.ITSTATE.advance();
-		t = (code.data & 0xf000) >> 12;
-		n = (code.data & 0xf0000) >> 16;
-		m = (code.data & 0xf);
-		index = true;
-		add = true;
-		wback = false;
-		shift_t = SRType_LSL;
-		shift_n = (code.data & 0x30) >> 4;
-
-		reject(n == 15, "LDR (literal)");
-		reject(m == 13 || m == 15, "UNPREDICTABLE");
-		reject(t == 15 && context.ITSTATE, "UNPREDICTABLE");
-		break;
-	}
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
-
-	if (context.debug)
-	{
-		if (context.debug & DF_DISASM) context.fmt_debug_str("ldr%s %s,%s", fmt_cond(cond), fmt_reg(t), fmt_mem_reg(n, m, index, add, wback, shift_t, shift_n));
-		if (process_debug(context)) return;
-	}
-
-	if (ConditionPassed(context, cond))
-	{
-		const u32 offset = Shift(context.read_gpr(m), shift_t, shift_n, context.APSR.C);
-		const u32 offset_addr = add ? context.read_gpr(n) + offset : context.read_gpr(n) - offset;
-		const u32 addr = index ? offset_addr : context.read_gpr(n);
-		context.write_gpr(t, vm::read32(addr), type == T1 ? 2 : 4);
+		const u32 offset = Shift(cpu.read_gpr(m), shift_t, shift_n, cpu.APSR.C);
+		const u32 offset_addr = add ? cpu.read_gpr(n) + offset : cpu.read_gpr(n) - offset;
+		const u32 addr = index ? offset_addr : cpu.read_gpr(n);
+		cpu.write_gpr(t, vm::read32(addr), type == T1 ? 2 : 4);
 
 		if (wback)
 		{
-			context.write_gpr(n, offset_addr, type == T1 ? 2 : 4);
+			cpu.write_gpr(n, offset_addr, type == T1 ? 2 : 4);
 		}
 	}
 }
 
 
-void ARMv7_instrs::LDRB_IMM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::LDRB_IMM(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	u32 cond, t, n, imm32;
-	bool index, add, wback;
+	using args = arm_code::ldrb_imm<type>;
+	ARG(t, op);
+	ARG(n, op);
+	ARG(imm32, op);
+	ARG(index, op);
+	ARG(add, op);
+	ARG(wback, op);
 
-	switch (type)
+	if (ConditionPassed(cpu, cond))
 	{
-	case T1:
-	{
-		cond = context.ITSTATE.advance();
-		t = (code.data & 0x7);
-		n = (code.data & 0x38) >> 3;
-		imm32 = (code.data & 0x7c0) >> 6;
-		index = true;
-		add = true;
-		wback = false;
-		break;
-	}
-	case T2:
-	{
-		cond = context.ITSTATE.advance();
-		t = (code.data & 0xf000) >> 12;
-		n = (code.data & 0xf0000) >> 16;
-		imm32 = (code.data & 0xfff);
-		index = true;
-		add = true;
-		wback = false;
-
-		reject(t == 15, "PLD");
-		reject(n == 15, "LDRB (literal)");
-		reject(t == 13, "UNPREDICTABLE");
-		break;
-	}
-	case T3:
-	{
-		cond = context.ITSTATE.advance();
-		t = (code.data & 0xf000) >> 12;
-		n = (code.data & 0xf0000) >> 16;
-		imm32 = (code.data & 0xff);
-		index = (code.data & 0x400) != 0;
-		add = (code.data & 0x200) != 0;
-		wback = (code.data & 0x100) != 0;
-
-		reject(t == 15 && index && !add && !wback, "PLD");
-		reject(n == 15, "LDRB (literal)");
-		reject(index && add && !wback, "LDRBT");
-		reject(!index && !wback, "UNDEFINED");
-		reject(t == 13 || t == 15 || (wback && n == t), "UNPREDICTABLE");
-		break;
-	}
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
-
-	if (context.debug)
-	{
-		if (context.debug & DF_DISASM) context.fmt_debug_str("ldrb%s %s,%s", fmt_cond(cond), fmt_reg(t), fmt_mem_imm(n, imm32, index, add, wback));
-		if (process_debug(context)) return;
-	}
-
-	if (ConditionPassed(context, cond))
-	{
-		const u32 offset_addr = add ? context.read_gpr(n) + imm32 : context.read_gpr(n) - imm32;
-		const u32 addr = index ? offset_addr : context.read_gpr(n);
-		context.write_gpr(t, vm::read8(addr), type == T1 ? 2 : 4);
+		const u32 offset_addr = add ? cpu.read_gpr(n) + imm32 : cpu.read_gpr(n) - imm32;
+		const u32 addr = index ? offset_addr : cpu.read_gpr(n);
+		cpu.write_gpr(t, vm::read8(addr), type == T1 ? 2 : 4);
 
 		if (wback)
 		{
-			context.write_gpr(n, offset_addr, type == T1 ? 2 : 4);
+			cpu.write_gpr(n, offset_addr, type == T1 ? 2 : 4);
 		}
 	}
 }
 
-void ARMv7_instrs::LDRB_LIT(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::LDRB_LIT(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::LDRB_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::LDRB_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	u32 cond, t, n, m, shift_t, shift_n;
-	bool index, add, wback;
+	using args = arm_code::ldrb_reg<type>;
+	ARG(t, op);
+	ARG(n, op);
+	ARG(m, op);
+	ARG(shift_t, op);
+	ARG(shift_n, op);
+	ARG(index, op);
+	ARG(add, op);
+	ARG(wback, op);
 
-	switch (type)
+	if (ConditionPassed(cpu, cond))
 	{
-	case T1:
-	{
-		cond = context.ITSTATE.advance();
-		t = (code.data & 0x7);
-		n = (code.data & 0x38) >> 3;
-		m = (code.data & 0x1c0) >> 6;
-		index = true;
-		add = true;
-		wback = false;
-		shift_t = SRType_LSL;
-		shift_n = 0;
-		break;
-	}
-	case T2:
-	{
-		cond = context.ITSTATE.advance();
-		t = (code.data & 0xf000) >> 12;
-		n = (code.data & 0xf0000) >> 16;
-		m = (code.data & 0xf);
-		index = true;
-		add = true;
-		wback = false;
-		shift_t = SRType_LSL;
-		shift_n = (code.data & 0x30) >> 4;
-
-		reject(t == 15, "PLD");
-		reject(n == 15, "LDRB (literal)");
-		reject(t == 13 || m == 13 || m == 15, "UNPREDICTABLE");
-		break;
-	}
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
-
-	if (context.debug)
-	{
-		if (context.debug & DF_DISASM) context.fmt_debug_str("ldrb%s %s,%s", fmt_cond(cond), fmt_reg(t), fmt_mem_reg(n, m, index, add, wback, shift_t, shift_n));
-		if (process_debug(context)) return;
-	}
-
-	if (ConditionPassed(context, cond))
-	{
-		const u32 offset = Shift(context.read_gpr(m), shift_t, shift_n, context.APSR.C);
-		const u32 offset_addr = add ? context.read_gpr(n) + offset : context.read_gpr(n) - offset;
-		const u32 addr = index ? offset_addr : context.read_gpr(n);
-		context.write_gpr(t, vm::read8(addr), type == T1 ? 2 : 4);
+		const u32 offset = Shift(cpu.read_gpr(m), shift_t, shift_n, cpu.APSR.C);
+		const u32 offset_addr = add ? cpu.read_gpr(n) + offset : cpu.read_gpr(n) - offset;
+		const u32 addr = index ? offset_addr : cpu.read_gpr(n);
+		cpu.write_gpr(t, vm::read8(addr), type == T1 ? 2 : 4);
 
 		if (wback)
 		{
-			context.write_gpr(n, offset_addr, type == T1 ? 2 : 4);
+			cpu.write_gpr(n, offset_addr, type == T1 ? 2 : 4);
 		}
 	}
 }
 
 
-void ARMv7_instrs::LDRD_IMM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::LDRD_IMM(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	u32 cond, t, t2, n, imm32;
-	bool index, add, wback;
+	using args = arm_code::ldrd_imm<type>;
+	ARG(t, op);
+	ARG(t2, op);
+	ARG(n, op);
+	ARG(imm32, op);
+	ARG(index, op);
+	ARG(add, op);
+	ARG(wback, op);
 
-	switch (type)
+	if (ConditionPassed(cpu, cond))
 	{
-	case T1:
-	{
-		cond = context.ITSTATE.advance();
-		t = (code.data & 0xf000) >> 12;
-		t2 = (code.data & 0xf00) >> 8;
-		n = (code.data & 0xf0000) >> 16;
-		imm32 = (code.data & 0xff) << 2;
-		index = (code.data & 0x1000000) != 0;
-		add = (code.data & 0x800000) != 0;
-		wback = (code.data & 0x200000) != 0;
-
-		reject(!index && !wback, "Related encodings");
-		reject(n == 15, "LDRD (literal)");
-		reject(wback && (n == t || n == t2), "UNPREDICTABLE");
-		reject(t == 13 || t == 15 || t2 == 13 || t2 == 15 || t == t2, "UNPREDICTABLE");
-		break;
-	}
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
-
-	if (context.debug)
-	{
-		if (context.debug & DF_DISASM) context.fmt_debug_str("ldrd%s %s,%s,%s", fmt_cond(cond), fmt_reg(t), fmt_reg(t2), fmt_mem_imm(n, imm32, index, add, wback));
-		if (process_debug(context)) return;
-	}
-
-	if (ConditionPassed(context, cond))
-	{
-		const u32 offset_addr = add ? context.read_gpr(n) + imm32 : context.read_gpr(n) - imm32;
-		const u32 addr = index ? offset_addr : context.read_gpr(n);
+		const u32 offset_addr = add ? cpu.read_gpr(n) + imm32 : cpu.read_gpr(n) - imm32;
+		const u32 addr = index ? offset_addr : cpu.read_gpr(n);
 		const u64 value = vm::read64(addr);
-		context.write_gpr(t, (u32)(value), 4);
-		context.write_gpr(t2, (u32)(value >> 32), 4);
+		cpu.write_gpr(t, (u32)(value), 4);
+		cpu.write_gpr(t2, (u32)(value >> 32), 4);
 
 		if (wback)
 		{
-			context.write_gpr(n, offset_addr, 4);
+			cpu.write_gpr(n, offset_addr, 4);
 		}
 	}
 }
 
-void ARMv7_instrs::LDRD_LIT(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::LDRD_LIT(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	u32 cond, t, t2, imm32;
-	bool add;
+	using args = arm_code::ldrd_lit<type>;
+	ARG(t, op);
+	ARG(t2, op);
+	ARG(imm32, op);
+	ARG(add, op);
 
-	switch (type)
-	{
-	case T1:
-	{
-		cond = context.ITSTATE.advance();
-		t = (code.data & 0xf000) >> 12;
-		t2 = (code.data & 0xf00) >> 8;
-		imm32 = (code.data & 0xff) << 2;
-		add = (code.data & 0x800000) != 0;
-
-		reject(!(code.data & 0x1000000), "Related encodings"); // ???
-		reject(t == 13 || t == 15 || t2 == 13 || t2 == 15 || t == t2, "UNPREDICTABLE");
-		break;
-	}
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
-
-	const u32 base = context.read_pc() & ~3;
+	const u32 base = cpu.read_pc() & ~3;
 	const u32 addr = add ? base + imm32 : base - imm32;
 
-	if (context.debug)
-	{
-		if (context.debug & DF_DISASM) context.fmt_debug_str("ldrd%s %s,%s,0x%08X", fmt_cond(cond), fmt_reg(t), fmt_reg(t2), addr);
-		if (process_debug(context)) return;
-	}
-
-	if (ConditionPassed(context, cond))
+	if (ConditionPassed(cpu, cond))
 	{
 		const u64 value = vm::read64(addr);
-		context.write_gpr(t, (u32)(value), 4);
-		context.write_gpr(t2, (u32)(value >> 32), 4);
+		cpu.write_gpr(t, (u32)(value), 4);
+		cpu.write_gpr(t2, (u32)(value >> 32), 4);
 	}
 }
 
-void ARMv7_instrs::LDRD_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::LDRD_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
 
-void ARMv7_instrs::LDRH_IMM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::LDRH_IMM(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	u32 cond, t, n, imm32;
-	bool index, add, wback;
+	using args = arm_code::ldrh_imm<type>;
+	ARG(t, op);
+	ARG(n, op);
+	ARG(imm32, op);
+	ARG(index, op);
+	ARG(add, op);
+	ARG(wback, op);
 
-	switch (type)
+	if (ConditionPassed(cpu, cond))
 	{
-	case T1:
-	{
-		cond = context.ITSTATE.advance();
-		t = (code.data & 0x7);
-		n = (code.data & 0x38) >> 3;
-		imm32 = (code.data & 0x7c0) >> 5;
-		index = true;
-		add = true;
-		wback = false;
-		break;
-	}
-	case T2:
-	{
-		cond = context.ITSTATE.advance();
-		t = (code.data & 0xf000) >> 12;
-		n = (code.data & 0xf0000) >> 16;
-		imm32 = (code.data & 0xfff);
-		index = true;
-		add = true;
-		wback = false;
-
-		reject(t == 15, "Unallocated memory hints");
-		reject(n == 15, "LDRH (literal)");
-		reject(t == 13, "UNPREDICTABLE");
-		break;
-	}
-	case T3:
-	{
-		cond = context.ITSTATE.advance();
-		t = (code.data & 0xf000) >> 12;
-		n = (code.data & 0xf0000) >> 16;
-		imm32 = (code.data & 0xff);
-		index = (code.data & 0x400) != 0;
-		add = (code.data & 0x200) != 0;
-		wback = (code.data & 0x100) != 0;
-
-		reject(n == 15, "LDRH (literal)");
-		reject(t == 15 && index && !add && !wback, "Unallocated memory hints");
-		reject(index && add && !wback, "LDRHT");
-		reject(!index && !wback, "UNDEFINED");
-		reject(t == 13 || t == 15 || (wback && n == t), "UNPREDICTABLE");
-		break;
-	}
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
-
-	if (context.debug)
-	{
-		if (context.debug & DF_DISASM) context.fmt_debug_str("ldrh%s %s,%s", fmt_cond(cond), fmt_reg(t), fmt_mem_imm(n, imm32, index, add, wback));
-		if (process_debug(context)) return;
-	}
-
-	if (ConditionPassed(context, cond))
-	{
-		const u32 offset_addr = add ? context.read_gpr(n) + imm32 : context.read_gpr(n) - imm32;
-		const u32 addr = index ? offset_addr : context.read_gpr(n);
-		context.write_gpr(t, vm::read16(addr), type == T1 ? 2 : 4);
+		const u32 offset_addr = add ? cpu.read_gpr(n) + imm32 : cpu.read_gpr(n) - imm32;
+		const u32 addr = index ? offset_addr : cpu.read_gpr(n);
+		cpu.write_gpr(t, vm::read16(addr), type == T1 ? 2 : 4);
 
 		if (wback)
 		{
-			context.write_gpr(n, offset_addr, type == T1 ? 2 : 4);
+			cpu.write_gpr(n, offset_addr, type == T1 ? 2 : 4);
 		}
 	}
 }
 
-void ARMv7_instrs::LDRH_LIT(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::LDRH_LIT(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::LDRH_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::LDRH_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
 
-void ARMv7_instrs::LDRSB_IMM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::LDRSB_IMM(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	u32 cond, t, n, imm32;
-	bool index, add, wback;
+	using args = arm_code::ldrsb_imm<type>;
+	ARG(t, op);
+	ARG(n, op);
+	ARG(imm32, op);
+	ARG(index, op);
+	ARG(add, op);
+	ARG(wback, op);
 
-	switch (type)
+	if (ConditionPassed(cpu, cond))
 	{
-	case T1:
-	{
-		cond = context.ITSTATE.advance();
-		t = (code.data & 0xf000) >> 12;
-		n = (code.data & 0xf0000) >> 16;
-		imm32 = (code.data & 0xfff);
-		index = true;
-		add = true;
-		wback = false;
-
-		reject(t == 15, "PLI");
-		reject(n == 15, "LDRSB (literal)");
-		reject(t == 13, "UNPREDICTABLE");
-		break;
-	}
-	case T2:
-	{
-		cond = context.ITSTATE.advance();
-		t = (code.data & 0xf000) >> 12;
-		n = (code.data & 0xf0000) >> 16;
-		imm32 = (code.data & 0xff);
-		index = (code.data & 0x400) != 0;
-		add = (code.data & 0x200) != 0;
-		wback = (code.data & 0x100) != 0;
-
-		reject(t == 15 && index && !add && !wback, "PLI");
-		reject(n == 15, "LDRSB (literal)");
-		reject(index && add && !wback, "LDRSBT");
-		reject(!index && !wback, "UNDEFINED");
-		reject(t == 13 || t == 15 || (wback && n == t), "UNPREDICTABLE");
-		break;
-	}
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
-
-	if (context.debug)
-	{
-		if (context.debug & DF_DISASM) context.fmt_debug_str("ldrsb%s %s,%s", fmt_cond(cond), fmt_reg(t), fmt_mem_imm(n, imm32, index, add, wback));
-		if (process_debug(context)) return;
-	}
-
-	if (ConditionPassed(context, cond))
-	{
-		const u32 offset_addr = add ? context.read_gpr(n) + imm32 : context.read_gpr(n) - imm32;
-		const u32 addr = index ? offset_addr : context.read_gpr(n);
+		const u32 offset_addr = add ? cpu.read_gpr(n) + imm32 : cpu.read_gpr(n) - imm32;
+		const u32 addr = index ? offset_addr : cpu.read_gpr(n);
 		const s8 value = vm::read8(addr);
-		context.write_gpr(t, value, 4); // sign-extend
+		cpu.write_gpr(t, value, 4); // sign-extend
 
 		if (wback)
 		{
-			context.write_gpr(n, offset_addr, 4);
+			cpu.write_gpr(n, offset_addr, 4);
 		}
 	}
 }
 
-void ARMv7_instrs::LDRSB_LIT(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::LDRSB_LIT(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::LDRSB_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::LDRSB_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
 
-void ARMv7_instrs::LDRSH_IMM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::LDRSH_IMM(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::LDRSH_LIT(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::LDRSH_LIT(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::LDRSH_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::LDRSH_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
 
-void ARMv7_instrs::LDREX(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::LDREX(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	u32 cond, t, n, imm32;
+	using args = arm_code::ldrex<type>;
+	ARG(t, op);
+	ARG(n, op);
+	ARG(imm32, op);
 
-	switch (type)
+	if (ConditionPassed(cpu, cond))
 	{
-	case T1:
-	{
-		cond = context.ITSTATE.advance();
-		t = (code.data & 0xf000) >> 12;
-		n = (code.data & 0xf0000) >> 16;
-		imm32 = (code.data & 0xff) << 2;
-
-		reject(t == 13 || t == 15 || n == 15, "UNPREDICTABLE");
-		break;
-	}
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
-
-	if (context.debug)
-	{
-		if (context.debug & DF_DISASM) context.fmt_debug_str("ldrex%s %s,[%s,#0x%X]", fmt_cond(cond), fmt_reg(t), fmt_reg(n), imm32);
-		if (process_debug(context)) return;
-	}
-
-	if (ConditionPassed(context, cond))
-	{
-		const u32 addr = context.read_gpr(n) + imm32;
+		const u32 addr = cpu.read_gpr(n) + imm32;
 
 		u32 value;
 		vm::reservation_acquire(&value, addr, sizeof(value));
 
-		context.write_gpr(t, value, 4);
+		cpu.write_gpr(t, value, 4);
 	}
 }
 
-void ARMv7_instrs::LDREXB(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::LDREXB(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::LDREXD(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::LDREXD(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::LDREXH(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::LDREXH(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
 
-void ARMv7_instrs::LSL_IMM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::LSL_IMM(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	bool set_flags = !context.ITSTATE;
-	u32 cond, d, m, shift_n;
+	using args = arm_code::lsl_imm<type>;
+	ARG(d, op);
+	ARG(m, op);
+	ARG(shift_n, op);
+	ARG(set_flags, op, cond);
 
-	switch (type)
-	{
-	case T1:
-	{
-		cond = context.ITSTATE.advance();
-		d = (code.data & 0x7);
-		m = (code.data & 0x38) >> 3;
-		DecodeImmShift(0, (code.data & 0x7c0) >> 6, &shift_n);
-
-		reject(!shift_n, "MOV (register)");
-		break;
-	}
-	case T2:
-	{
-		cond = context.ITSTATE.advance();
-		d = (code.data & 0xf00) >> 8;
-		m = (code.data & 0xf);
-		set_flags = (code.data & 0x100000) != 0;
-		DecodeImmShift(0, (code.data & 0x7000) >> 10 | (code.data & 0xc0) >> 6, &shift_n);
-
-		reject(!shift_n, "MOV (register)");
-		reject(d == 13 || d == 15 || m == 13 || m == 15, "UNPREDICTABLE");
-		break;
-	}
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
-
-	if (context.debug)
-	{
-		if (context.debug & DF_DISASM) context.fmt_debug_str("lsl%s%s %s,%s,#%d", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(m), shift_n);
-		if (process_debug(context)) return;
-	}
-
-	if (ConditionPassed(context, cond))
+	if (ConditionPassed(cpu, cond))
 	{
 		bool carry;
-		const u32 result = Shift_C(context.read_gpr(m), SRType_LSL, shift_n, context.APSR.C, carry);
-		context.write_gpr(d, result, type == T1 ? 2 : 4);
+		const u32 result = Shift_C(cpu.read_gpr(m), arm_code::SRType_LSL, shift_n, cpu.APSR.C, carry);
+		cpu.write_gpr(d, result, type == T1 ? 2 : 4);
 
 		if (set_flags)
 		{
-			context.APSR.N = result >> 31;
-			context.APSR.Z = result == 0;
-			context.APSR.C = carry;
+			cpu.APSR.N = result >> 31;
+			cpu.APSR.Z = result == 0;
+			cpu.APSR.C = carry;
 		}
 	}
 }
 
-void ARMv7_instrs::LSL_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::LSL_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	bool set_flags = !context.ITSTATE;
-	u32 cond, d, n, m;
+	using args = arm_code::lsl_reg<type>;
+	ARG(d, op);
+	ARG(n, op);
+	ARG(m, op);
+	ARG(set_flags, op, cond);
 
-	switch (type)
-	{
-	case T1:
-	{
-		cond = context.ITSTATE.advance();
-		d = n = (code.data & 0x7);
-		m = (code.data & 0x38) >> 3;
-		break;
-	}
-	case T2:
-	{
-		cond = context.ITSTATE.advance();
-		d = (code.data & 0xf00) >> 8;
-		n = (code.data & 0xf0000) >> 16;
-		m = (code.data & 0xf);
-		set_flags = (code.data & 0x100000) != 0;
-
-		reject(d == 13 || d == 15 || n == 13 || n == 15 || m == 13 || m == 15, "UNPREDICTABLE");
-		break;
-	}
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
-
-	if (context.debug)
-	{
-		if (context.debug & DF_DISASM) context.fmt_debug_str("lsl%s%s %s,%s,%s", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(n), fmt_reg(m));
-		if (process_debug(context)) return;
-	}
-
-	if (ConditionPassed(context, cond))
+	if (ConditionPassed(cpu, cond))
 	{
 		bool carry;
-		const u32 result = Shift_C(context.read_gpr(n), SRType_LSL, (context.read_gpr(m) & 0xff), context.APSR.C, carry);
-		context.write_gpr(d, result, type == T1 ? 2 : 4);
+		const u32 result = Shift_C(cpu.read_gpr(n), arm_code::SRType_LSL, (cpu.read_gpr(m) & 0xff), cpu.APSR.C, carry);
+		cpu.write_gpr(d, result, type == T1 ? 2 : 4);
 
 		if (set_flags)
 		{
-			context.APSR.N = result >> 31;
-			context.APSR.Z = result == 0;
-			context.APSR.C = carry;
+			cpu.APSR.N = result >> 31;
+			cpu.APSR.Z = result == 0;
+			cpu.APSR.C = carry;
 		}
 	}
 }
 
 
-void ARMv7_instrs::LSR_IMM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::LSR_IMM(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	bool set_flags = !context.ITSTATE;
-	u32 cond, d, m, shift_n;
+	using args = arm_code::lsr_imm<type>;
+	ARG(d, op);
+	ARG(m, op);
+	ARG(shift_n, op);
+	ARG(set_flags, op, cond);
 
-	switch (type)
-	{
-	case T1:
-	{
-		cond = context.ITSTATE.advance();
-		d = (code.data & 0x7);
-		m = (code.data & 0x38) >> 3;
-		DecodeImmShift(1, (code.data & 0x7c0) >> 6, &shift_n);
-		break;
-	}
-	case T2:
-	{
-		cond = context.ITSTATE.advance();
-		d = (code.data & 0xf00) >> 8;
-		m = (code.data & 0xf);
-		set_flags = (code.data & 0x100000) != 0;
-		DecodeImmShift(1, (code.data & 0x7000) >> 10 | (code.data & 0xc0) >> 6, &shift_n);
-
-		reject(d == 13 || d == 15 || m == 13 || m == 15, "UNPREDICTABLE");
-		break;
-	}
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
-
-	if (context.debug)
-	{
-		if (context.debug & DF_DISASM) context.fmt_debug_str("lsr%s%s %s,%s,#%d", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(m), shift_n);
-		if (process_debug(context)) return;
-	}
-
-	if (ConditionPassed(context, cond))
+	if (ConditionPassed(cpu, cond))
 	{
 		bool carry;
-		const u32 result = Shift_C(context.read_gpr(m), SRType_LSR, shift_n, context.APSR.C, carry);
-		context.write_gpr(d, result, type == T1 ? 2 : 4);
+		const u32 result = Shift_C(cpu.read_gpr(m), arm_code::SRType_LSR, shift_n, cpu.APSR.C, carry);
+		cpu.write_gpr(d, result, type == T1 ? 2 : 4);
 
 		if (set_flags)
 		{
-			context.APSR.N = result >> 31;
-			context.APSR.Z = result == 0;
-			context.APSR.C = carry;
+			cpu.APSR.N = result >> 31;
+			cpu.APSR.Z = result == 0;
+			cpu.APSR.C = carry;
 		}
 	}
 }
 
-void ARMv7_instrs::LSR_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::LSR_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
 
-void ARMv7_instrs::MLA(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::MLA(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::MLS(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::MLS(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
 
-void ARMv7_instrs::MOV_IMM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::MOV_IMM(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	bool set_flags = !context.ITSTATE;
-	bool carry = context.APSR.C;
-	u32 cond, d, imm32;
+	using args = arm_code::mov_imm<type>;
+	ARG(d, op);
+	ARG(imm32, op);
+	ARG(set_flags, op, cond);
 
-	switch (type)
-	{
-	case T1:
-	{
-		cond = context.ITSTATE.advance();
-		d = (code.data >> 8) & 0x7;
-		imm32 = sign<8, u32>(code.data & 0xff);
-		break;
-	}
-	case T2:
-	{
-		cond = context.ITSTATE.advance();
-		set_flags = (code.data & 0x100000) != 0;
-		d = (code.data >> 8) & 0xf;
-		imm32 = ThumbExpandImm_C((code.data & 0x4000000) >> 15 | (code.data & 0x7000) >> 4 | (code.data & 0xff), carry, carry);
-
-		reject(d == 13 || d == 15, "UNPREDICTABLE");
-		break;
-	}
-	case T3:
-	{
-		cond = context.ITSTATE.advance();
-		set_flags = false;
-		d = (code.data >> 8) & 0xf;
-		imm32 = (code.data & 0xf0000) >> 4 | (code.data & 0x4000000) >> 15 | (code.data & 0x7000) >> 4 | (code.data & 0xff);
-
-		reject(d == 13 || d == 15, "UNPREDICTABLE");
-		break;
-	}
-	default: throw EXCEPTION("");
-	}
-
-	if (context.debug)
-	{
-		if (context.debug & DF_DISASM)
-		{
-			switch (type)
-			{
-			case T3: case A2: context.fmt_debug_str("movw%s%s %s,#0x%04X", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), imm32); break; 
-			default: context.fmt_debug_str("mov%s%s %s,#0x%X", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), imm32);
-			}
-		}
-		if (process_debug(context)) return;
-	}
-
-	if (ConditionPassed(context, cond))
+	if (ConditionPassed(cpu, cond))
 	{
 		const u32 result = imm32;
-		context.write_gpr(d, result, type == T1 ? 2 : 4);
+		cpu.write_gpr(d, result, type == T1 ? 2 : 4);
 
 		if (set_flags)
 		{
-			context.APSR.N = result >> 31;
-			context.APSR.Z = result == 0;
-			context.APSR.C = carry;
+			cpu.APSR.N = result >> 31;
+			cpu.APSR.Z = result == 0;
+			cpu.APSR.C = args::carry::extract(op, cpu.APSR.C);
 		}
 	}
 }
 
-void ARMv7_instrs::MOV_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::MOV_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	u32 cond, d, m;
-	bool set_flags;
+	using args = arm_code::mov_reg<type>;
+	ARG(d, op);
+	ARG(m, op);
+	ARG(set_flags, op, cond);
 
-	switch (type)
+	if (ConditionPassed(cpu, cond))
 	{
-	case T1:
-	{
-		cond = context.ITSTATE.advance();
-		d = (code.data & 0x80) >> 4 | (code.data & 0x7);
-		m = (code.data & 0x78) >> 3;
-		set_flags = false;
+		const u32 result = cpu.read_gpr(m);
+		cpu.write_gpr(d, result, type < T3 ? 2 : 4);
 
-		reject(d == 15 && context.ITSTATE, "UNPREDICTABLE");
-		break;
-	}
-	case T2:
-	{
-		cond = 0xe; // always true
-		d = (code.data & 0x7);
-		m = (code.data & 0x38) >> 3;
-		set_flags = true;
-
-		reject(context.ITSTATE, "UNPREDICTABLE");
-		break;
-	}
-	case T3:
-	{
-		cond = context.ITSTATE.advance();
-		d = (code.data & 0xf00) >> 8;
-		m = (code.data & 0xf);
-		set_flags = (code.data & 0x100000) != 0;
-
-		reject((d == 13 || m == 13 || m == 15) && set_flags, "UNPREDICTABLE");
-		reject((d == 13 && (m == 13 || m == 15)) || d == 15, "UNPREDICTABLE");
-		break;
-	}
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
-
-	if (context.debug)
-	{
-		if (context.debug & DF_DISASM) context.fmt_debug_str("mov%s%s %s,%s", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(m));
-		if (process_debug(context)) return;
-	}
-
-	if (ConditionPassed(context, cond))
-	{
-		const u32 result = context.read_gpr(m);
-		context.write_gpr(d, result, type < T3 ? 2 : 4);
-
-		if (set_flags)
+		if (set_flags) // cond is not used
 		{
-			context.APSR.N = result >> 31;
-			context.APSR.Z = result == 0;
-			//context.APSR.C = carry;
+			cpu.APSR.N = result >> 31;
+			cpu.APSR.Z = result == 0;
+			//cpu.APSR.C = carry;
 		}
 	}
 }
 
-void ARMv7_instrs::MOVT(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::MOVT(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	u32 cond, d, imm16;
+	using args = arm_code::movt<type>;
+	ARG(d, op);
+	ARG(imm16, op);
 
-	switch (type)
+	if (ConditionPassed(cpu, cond))
 	{
-	case T1:
-	{
-		cond = context.ITSTATE.advance();
-		d = (code.data & 0xf00) >> 8;
-		imm16 = (code.data & 0xf0000) >> 4 | (code.data & 0x4000000) >> 15 | (code.data & 0x7000) >> 4 | (code.data & 0xff);
-
-		reject(d == 13 || d == 15, "UNPREDICTABLE");
-		break;
-	}
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
-
-	if (context.debug)
-	{
-		if (context.debug & DF_DISASM) context.fmt_debug_str("movt%s %s,#0x%04X", fmt_cond(cond), fmt_reg(d), imm16);
-		if (process_debug(context)) return;
-	}
-
-	if (ConditionPassed(context, cond))
-	{
-		context.write_gpr(d, (context.read_gpr(d) & 0xffff) | (imm16 << 16), 4);
+		cpu.write_gpr(d, (cpu.read_gpr(d) & 0xffff) | (imm16 << 16), 4);
 	}
 }
 
 
-void ARMv7_instrs::MRS(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::MRS(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::MSR_IMM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::MSR_IMM(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::MSR_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::MSR_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
 
-void ARMv7_instrs::MUL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::MUL(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	bool set_flags = !context.ITSTATE;
-	u32 cond, d, n, m;
+	using args = arm_code::mul<type>;
+	ARG(d, op);
+	ARG(n, op);
+	ARG(m, op);
+	ARG(set_flags, op, cond);
 
-	switch (type)
+	if (ConditionPassed(cpu, cond))
 	{
-	case T1:
-	{
-		cond = context.ITSTATE.advance();
-		d = m = code.data & 0x7;
-		n = (code.data & 0x38) >> 3;
-
-		//reject(ArchVersion() < 6 && d == n, "UNPREDICTABLE");
-		break;
-	}
-	case T2:
-	{
-		cond = context.ITSTATE.advance();
-		d = (code.data & 0xf00) >> 8;
-		n = (code.data & 0xf0000) >> 16;
-		m = (code.data & 0xf);
-		set_flags = false;
-
-		reject(d == 13 || d == 15 || n == 13 || n == 15 || m == 13 || m == 15, "UNPREDICTABLE");
-		break;
-	}
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
-
-	if (context.debug)
-	{
-		if (context.debug & DF_DISASM) context.fmt_debug_str("mul%s%s %s,%s,%s", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(n), fmt_reg(m));
-		if (process_debug(context)) return;
-	}
-
-	if (ConditionPassed(context, cond))
-	{
-		const u32 op1 = context.read_gpr(n);
-		const u32 op2 = context.read_gpr(m);
+		const u32 op1 = cpu.read_gpr(n);
+		const u32 op2 = cpu.read_gpr(m);
 		const u32 result = op1 * op2;
-		context.write_gpr(d, result, type == T1 ? 2 : 4);
+		cpu.write_gpr(d, result, type == T1 ? 2 : 4);
 
 		if (set_flags)
 		{
-			context.APSR.N = result >> 31;
-			context.APSR.Z = result == 0;
+			cpu.APSR.N = result >> 31;
+			cpu.APSR.Z = result == 0;
 		}
 	}
 }
 
 
-void ARMv7_instrs::MVN_IMM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::MVN_IMM(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	u32 cond, d, imm32;
-	bool set_flags, carry;
+	using args = arm_code::mvn_imm<type>;
+	ARG(d, op);
+	ARG(imm32, op);
+	ARG(set_flags, op, cond);
 
-	switch (type)
-	{
-	case T1:
-	{
-		cond = context.ITSTATE.advance();
-		d = (code.data & 0xf00) >> 8;
-		set_flags = (code.data & 0x100000) != 0;
-		imm32 = ThumbExpandImm_C((code.data & 0x4000000) >> 15 | (code.data & 0x7000) >> 4 | (code.data & 0xff), context.APSR.C, carry);
-
-		reject(d == 13 || d == 15, "UNPREDICTABLE");
-		break;
-	}
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
-
-	if (context.debug)
-	{
-		if (context.debug & DF_DISASM) context.fmt_debug_str("mvn%s%s %s,#0x%X", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), imm32);
-		if (process_debug(context)) return;
-	}
-
-	if (ConditionPassed(context, cond))
+	if (ConditionPassed(cpu, cond))
 	{
 		const u32 result = ~imm32;
-		context.write_gpr(d, result, 4);
+		cpu.write_gpr(d, result, 4);
 
 		if (set_flags)
 		{
-			context.APSR.N = result >> 31;
-			context.APSR.Z = result == 0;
-			context.APSR.C = carry;
+			cpu.APSR.N = result >> 31;
+			cpu.APSR.Z = result == 0;
+			cpu.APSR.C = args::carry::extract(op, cpu.APSR.C);
 		}
 	}
 }
 
-void ARMv7_instrs::MVN_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::MVN_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	bool set_flags = !context.ITSTATE;
-	u32 cond, d, m, shift_t, shift_n;
+	using args = arm_code::mvn_reg<type>;
+	ARG(d, op);
+	ARG(m, op);
+	ARG(shift_t, op);
+	ARG(shift_n, op);
+	ARG(set_flags, op, cond);
 
-	switch (type)
-	{
-	case T1:
-	{
-		cond = context.ITSTATE.advance();
-		d = (code.data & 0x7);
-		m = (code.data & 0x38) >> 3;
-		shift_t = SRType_LSL;
-		shift_n = 0;
-		break;
-	}
-	case T2:
-	{
-		cond = context.ITSTATE.advance();
-		d = (code.data & 0xf00) >> 8;
-		m = (code.data & 0xf);
-		set_flags = (code.data & 0x100000) != 0;
-		shift_t = DecodeImmShift((code.data & 0x30) >> 4, (code.data & 0x7000) >> 10 | (code.data & 0xc0) >> 6, &shift_n);
-
-		reject(d == 13 || d == 15 || m == 13 || m == 15, "UNPREDICTABLE");
-		break;
-	}
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
-
-	if (context.debug)
-	{
-		if (context.debug & DF_DISASM) context.fmt_debug_str("mvn%s%s %s,%s%s", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(m), fmt_shift(shift_t, shift_n));
-		if (process_debug(context)) return;
-	}
-
-	if (ConditionPassed(context, cond))
+	if (ConditionPassed(cpu, cond))
 	{
 		bool carry;
-		const u32 shifted = Shift_C(context.read_gpr(m), shift_t, shift_n, context.APSR.C, carry);
+		const u32 shifted = Shift_C(cpu.read_gpr(m), shift_t, shift_n, cpu.APSR.C, carry);
 		const u32 result = ~shifted;
-		context.write_gpr(d, result, type == T1 ? 2 : 4);
+		cpu.write_gpr(d, result, type == T1 ? 2 : 4);
 
 		if (set_flags)
 		{
-			context.APSR.N = result >> 31;
-			context.APSR.Z = result == 0;
-			context.APSR.C = carry;
+			cpu.APSR.N = result >> 31;
+			cpu.APSR.Z = result == 0;
+			cpu.APSR.C = carry;
 		}
 	}
 }
 
-void ARMv7_instrs::MVN_RSR(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::MVN_RSR(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
 
-void ARMv7_instrs::NOP(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::NOP(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	u32 cond; 
-
-	switch (type)
-	{
-	case T1:
-	{
-		cond = context.ITSTATE.advance();
-		break;
-	}
-	case T2:
-	{
-		cond = context.ITSTATE.advance();
-		break;
-	}
-	case A1:
-	{
-		cond = code.data >> 28;
-		break;
-	}
-	default: throw EXCEPTION("");
-	}
-
-	if (context.debug)
-	{
-		if (context.debug & DF_DISASM) context.fmt_debug_str("nop%s", fmt_cond(cond));
-		if (process_debug(context)) return;
-	}
-
-	if (ConditionPassed(context, cond))
+	if (ConditionPassed(cpu, cond))
 	{
 	}
 }
 
 
-void ARMv7_instrs::ORN_IMM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::ORN_IMM(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::ORN_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::ORN_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
 
-void ARMv7_instrs::ORR_IMM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::ORR_IMM(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	u32 cond, d, n, imm32;
-	bool set_flags, carry = context.APSR.C;
+	using args = arm_code::orr_imm<type>;
+	ARG(d, op);
+	ARG(n, op);
+	ARG(imm32, op);
+	ARG(set_flags, op, cond);
 
-	switch (type)
+	if (ConditionPassed(cpu, cond))
 	{
-	case T1:
-	{
-		cond = context.ITSTATE.advance();
-		d = (code.data & 0xf00) >> 8;
-		n = (code.data & 0xf0000) >> 16;
-		set_flags = (code.data & 0x100000) != 0;
-		imm32 = ThumbExpandImm_C((code.data & 0x4000000) >> 15 | (code.data & 0x7000) >> 4 | (code.data & 0xff), carry, carry);
-
-		reject(n == 15, "MOV (immediate)");
-		reject(d == 13 || d == 15 || n == 13, "UNPREDICTABLE");
-		break;
-	}
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
-
-	if (context.debug)
-	{
-		if (context.debug & DF_DISASM) context.fmt_debug_str("orr%s%s %s,%s,#0x%X", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(n), imm32);
-		if (process_debug(context)) return;
-	}
-
-	if (ConditionPassed(context, cond))
-	{
-		const u32 result = context.read_gpr(n) | imm32;
-		context.write_gpr(d, result, 4);
+		const u32 result = cpu.read_gpr(n) | imm32;
+		cpu.write_gpr(d, result, 4);
 
 		if (set_flags)
 		{
-			context.APSR.N = result >> 31;
-			context.APSR.Z = result == 0;
-			context.APSR.C = carry;
+			cpu.APSR.N = result >> 31;
+			cpu.APSR.Z = result == 0;
+			cpu.APSR.C = args::carry::extract(op, cpu.APSR.C);
 		}
 	}
 }
 
-void ARMv7_instrs::ORR_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::ORR_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	bool set_flags = !context.ITSTATE;
-	u32 cond, d, n, m, shift_t, shift_n;
+	using args = arm_code::orr_reg<type>;
+	ARG(d, op);
+	ARG(n, op);
+	ARG(m, op);
+	ARG(shift_t, op);
+	ARG(shift_n, op);
+	ARG(set_flags, op, cond);
 
-	switch (type)
-	{
-	case T1:
-	{
-		cond = context.ITSTATE.advance();
-		d = n = (code.data & 0x7);
-		m = (code.data & 0x38) >> 3;
-		shift_t = SRType_LSL;
-		shift_n = 0;
-		break;
-	}
-	case T2:
-	{
-		cond = context.ITSTATE.advance();
-		d = (code.data & 0xf00) >> 8;
-		n = (code.data & 0xf0000) >> 16;
-		m = (code.data & 0xf);
-		set_flags = (code.data & 0x100000) != 0;
-		shift_t = DecodeImmShift((code.data & 0x30) >> 4, (code.data & 0x7000) >> 10 | (code.data & 0xc0) >> 6, &shift_n);
-
-		reject(n == 15, "ROR (immediate)");
-		reject(d == 13 || d == 15 || n == 13 || m == 13 || m == 15, "UNPREDICTABLE");
-		break;
-	}
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
-
-	if (context.debug)
-	{
-		if (context.debug & DF_DISASM) context.fmt_debug_str("orr%s%s %s,%s,%s%s", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(n), fmt_reg(m), fmt_shift(shift_t, shift_n));
-		if (process_debug(context)) return;
-	}
-
-	if (ConditionPassed(context, cond))
+	if (ConditionPassed(cpu, cond))
 	{
 		bool carry;
-		const u32 shifted = Shift_C(context.read_gpr(m), shift_t, shift_n, context.APSR.C, carry);
-		const u32 result = context.read_gpr(n) | shifted;
-		context.write_gpr(d, result, type == T1 ? 2 : 4);
+		const u32 shifted = Shift_C(cpu.read_gpr(m), shift_t, shift_n, cpu.APSR.C, carry);
+		const u32 result = cpu.read_gpr(n) | shifted;
+		cpu.write_gpr(d, result, type == T1 ? 2 : 4);
 
 		if (set_flags)
 		{
-			context.APSR.N = result >> 31;
-			context.APSR.Z = result == 0;
-			context.APSR.C = carry;
+			cpu.APSR.N = result >> 31;
+			cpu.APSR.Z = result == 0;
+			cpu.APSR.C = carry;
 		}
 	}
 }
 
-void ARMv7_instrs::ORR_RSR(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::ORR_RSR(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
 
-void ARMv7_instrs::PKH(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::PKH(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
 
-void ARMv7_instrs::POP(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::POP(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	u32 cond, reg_list;
+	const u32 registers = arm_code::pop<type>::registers::extract(op);
 
-	switch (type)
+	if (ConditionPassed(cpu, cond))
 	{
-	case T1:
-	{
-		cond = context.ITSTATE.advance();
-		reg_list = ((code.data & 0x100) << 7) | (code.data & 0xff);
-
-		reject(!reg_list, "UNPREDICTABLE");
-		break;
-	}
-	case T2:
-	{
-		cond = context.ITSTATE.advance();
-		reg_list = code.data & 0xdfff;
-
-		reject(BitCount(reg_list, 16) < 2 || ((reg_list & 0x8000) && (reg_list & 0x4000)), "UNPREDICTABLE");
-		reject((reg_list & 0x8000) && context.ITSTATE, "UNPREDICTABLE");
-		break;
-	}
-	case T3:
-	{
-		cond = context.ITSTATE.advance();
-		reg_list = 1 << ((code.data & 0xf000) >> 12);
-
-		reject((reg_list & 0x2000) || ((reg_list & 0x8000) && context.ITSTATE), "UNPREDICTABLE");
-		break;
-	}
-	case A1:
-	{
-		cond = code.data >> 28;
-		reg_list = code.data & 0xffff;
-
-		reject(BitCount(reg_list, 16) < 2, "LDM / LDMIA / LDMFD");
-		reject((reg_list & 0x2000) /* && ArchVersion() >= 7*/, "UNPREDICTABLE");
-		break;
-	}
-	case A2:
-	{
-		cond = code.data >> 28;
-		reg_list = 1 << ((code.data & 0xf000) >> 12);
-
-		reject(reg_list & 0x2000, "UNPREDICTABLE");
-		break;
-	}
-	default: throw EXCEPTION("");
-	}
-
-	if (context.debug)
-	{
-		if (context.debug & DF_DISASM) context.fmt_debug_str("pop%s {%s}", fmt_cond(cond), fmt_reg_list(reg_list));
-		if (process_debug(context)) return;
-	}
-
-	if (ConditionPassed(context, cond))
-	{
-		auto stack = vm::ptr<u32>::make(context.SP);
+		auto stack = vm::ptr<u32>::make(cpu.SP);
 
 		for (u32 i = 0; i < 16; i++)
 		{
-			if (reg_list & (1 << i))
+			if (registers & (1 << i))
 			{
-				context.write_gpr(i, *stack++, type == T1 ? 2 : 4);
+				cpu.write_gpr(i, *stack++, type == T1 ? 2 : 4);
 			}
 		}
 
-		context.SP = stack.addr();
+		cpu.SP = stack.addr();
 	}
 }
 
-void ARMv7_instrs::PUSH(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::PUSH(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	u32 cond, reg_list;
+	const u32 registers = arm_code::push<type>::registers::extract(op);
 
-	switch (type)
+	if (ConditionPassed(cpu, cond))
 	{
-	case T1:
-	{
-		cond = context.ITSTATE.advance();
-		reg_list = ((code.data & 0x100) << 6) | (code.data & 0xff);
-
-		reject(!reg_list, "UNPREDICTABLE");
-		break;
-	}
-	case T2:
-	{
-		cond = context.ITSTATE.advance();
-		reg_list = code.data & 0x5fff;
-
-		reject(BitCount(reg_list, 16) < 2, "UNPREDICTABLE");
-		break;
-	}
-	case T3:
-	{
-		cond = context.ITSTATE.advance();
-		reg_list = 1 << ((code.data & 0xf000) >> 12);
-
-		reject((reg_list & 0x8000) || (reg_list & 0x2000), "UNPREDICTABLE");
-		break;
-	}
-	case A1:
-	{
-		cond = code.data >> 28;
-		reg_list = code.data & 0xffff;
-
-		reject(BitCount(reg_list) < 2, "STMDB / STMFD");
-		break;
-	}
-	case A2:
-	{
-		cond = code.data >> 28;
-		reg_list = 1 << ((code.data & 0xf000) >> 12);
-
-		reject(reg_list & 0x2000, "UNPREDICTABLE");
-		break;
-	}
-	default: throw EXCEPTION("");
-	}
-
-	if (context.debug)
-	{
-		if (context.debug & DF_DISASM) context.fmt_debug_str("push%s {%s}", fmt_cond(cond), fmt_reg_list(reg_list));
-		if (process_debug(context)) return;
-	}
-
-	if (ConditionPassed(context, cond))
-	{
-		vm::ptr<u32> memory{ context.SP, vm::addr };
+		vm::ptr<u32> memory(cpu.SP, vm::addr);
 
 		for (u32 i = 15; ~i; i--)
 		{
-			if (reg_list & (1 << i))
+			if (registers & (1 << i))
 			{
-				*--memory = context.read_gpr(i);
+				*--memory = cpu.read_gpr(i);
 			}
 		}
 
-		context.SP = memory.addr();
+		cpu.SP = memory.addr();
 	}
 }
 
 
-void ARMv7_instrs::QADD(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::QADD(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::QADD16(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::QADD16(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::QADD8(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::QADD8(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::QASX(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::QASX(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::QDADD(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::QDADD(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::QDSUB(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::QDSUB(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::QSAX(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::QSAX(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::QSUB(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::QSUB(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::QSUB16(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::QSUB16(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::QSUB8(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::QSUB8(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
 
-void ARMv7_instrs::RBIT(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::RBIT(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
+	throw EXCEPTION("TODO");
+}
+
+template<arm_encoding type>
+void arm_interpreter::REV(ARMv7Thread& cpu, const u32 op, const u32 cond)
+{
+	using args = arm_code::rev<type>;
+	ARG(d, op);
+	ARG(m, op);
+
+	if (ConditionPassed(cpu, cond))
 	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
+		cpu.write_gpr(d, se_storage<u32>::swap(cpu.read_gpr(m)), type == T1 ? 2 : 4);
 	}
 }
 
-void ARMv7_instrs::REV(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::REV16(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	u32 cond, d, m;
-
-	switch (type)
-	{
-	case T1:
-	{
-		cond = context.ITSTATE.advance();
-		d = (code.data & 0x7);
-		m = (code.data & 0x38) >> 3;
-		break;
-	}
-	case T2:
-	{
-		cond = context.ITSTATE.advance();
-		d = (code.data & 0xf00) >> 8;
-		m = (code.data & 0xf);
-
-		reject(m != (code.data & 0xf0000) >> 16, "UNPREDICTABLE");
-		reject(d == 13 || d == 15 || m == 13 || m == 15, "UNPREDICTABLE");
-		break;
-	}
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
-
-	if (context.debug)
-	{
-		if (context.debug & DF_DISASM) context.fmt_debug_str("rev%s %s,%s", fmt_cond(cond), fmt_reg(d), fmt_reg(m));
-		if (process_debug(context)) return;
-	}
-
-	if (ConditionPassed(context, cond))
-	{
-		context.write_gpr(d, se_storage<u32>::swap(context.read_gpr(m)), type == T1 ? 2 : 4);
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::REV16(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::REVSH(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
-}
-
-void ARMv7_instrs::REVSH(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
 
-void ARMv7_instrs::ROR_IMM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::ROR_IMM(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	u32 cond, d, m, shift_n;
-	bool set_flags;
+	using args = arm_code::ror_imm<type>;
+	ARG(d, op);
+	ARG(m, op);
+	ARG(shift_n, op);
+	ARG(set_flags, op, cond);
 
-	switch (type)
-	{
-	case T1:
-	{
-		cond = context.ITSTATE.advance();
-		d = (code.data & 0xf00) >> 8;
-		m = (code.data & 0xf);
-		set_flags = (code.data & 0x100000) != 0;
-		const u32 shift_t = DecodeImmShift(3, (code.data & 0x7000) >> 10 | (code.data & 0xc0) >> 6, &shift_n);
-
-		reject(shift_t == SRType_RRX, "RRX");
-		reject(d == 13 || d == 15 || m == 13 || m == 15, "UNPREDICTABLE");
-		break;
-	}
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
-
-	if (context.debug)
-	{
-		if (context.debug & DF_DISASM) context.fmt_debug_str("ror%s%s %s,%s,#%d", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(m), shift_n);
-		if (process_debug(context)) return;
-	}
-
-	if (ConditionPassed(context, cond))
+	if (ConditionPassed(cpu, cond))
 	{
 		bool carry;
-		const u32 result = Shift_C(context.read_gpr(m), SRType_ROR, shift_n, context.APSR.C, carry);
-		context.write_gpr(d, result, 4);
+		const u32 result = Shift_C(cpu.read_gpr(m), arm_code::SRType_ROR, shift_n, cpu.APSR.C, carry);
+		cpu.write_gpr(d, result, 4);
 
 		if (set_flags)
 		{
-			context.APSR.N = result >> 31;
-			context.APSR.Z = result == 0;
-			context.APSR.C = carry;
+			cpu.APSR.N = result >> 31;
+			cpu.APSR.Z = result == 0;
+			cpu.APSR.C = carry;
 		}
 	}
 }
 
-void ARMv7_instrs::ROR_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::ROR_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	bool set_flags = !context.ITSTATE;
-	u32 cond, d, n, m;
+	using args = arm_code::ror_reg<type>;
+	ARG(d, op);
+	ARG(n, op);
+	ARG(m, op);
+	ARG(set_flags, op, cond);
 
-	switch (type)
-	{
-	case T1:
-	{
-		cond = context.ITSTATE.advance();
-		d = n = (code.data & 0x7);
-		m = (code.data & 0x38) >> 3;
-		break;
-	}
-	case T2:
-	{
-		cond = context.ITSTATE.advance();
-		d = (code.data & 0xf00) >> 8;
-		n = (code.data & 0xf0000) >> 16;
-		m = (code.data & 0xf);
-		set_flags = (code.data & 0x100000) != 0;
-
-		reject(d == 13 || d == 15 || n == 13 || n == 15 || m == 13 || m == 15, "UNPREDICTABLE");
-		break;
-	}
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
-
-	if (context.debug)
-	{
-		if (context.debug & DF_DISASM) context.fmt_debug_str("ror%s%s %s,%s,%s", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(n), fmt_reg(m));
-		if (process_debug(context)) return;
-	}
-
-	if (ConditionPassed(context, cond))
+	if (ConditionPassed(cpu, cond))
 	{
 		bool carry;
-		const u32 shift_n = context.read_gpr(m) & 0xff;
-		const u32 result = Shift_C(context.read_gpr(n), SRType_ROR, shift_n, context.APSR.C, carry);
-		context.write_gpr(d, result, type == T1 ? 2 : 4);
+		const u32 shift_n = cpu.read_gpr(m) & 0xff;
+		const u32 result = Shift_C(cpu.read_gpr(n), arm_code::SRType_ROR, shift_n, cpu.APSR.C, carry);
+		cpu.write_gpr(d, result, type == T1 ? 2 : 4);
 
 		if (set_flags)
 		{
-			context.APSR.N = result >> 31;
-			context.APSR.Z = result == 0;
-			context.APSR.C = carry;
+			cpu.APSR.N = result >> 31;
+			cpu.APSR.Z = result == 0;
+			cpu.APSR.C = carry;
 		}
 	}
 }
 
 
-void ARMv7_instrs::RRX(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::RRX(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
 
-void ARMv7_instrs::RSB_IMM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::RSB_IMM(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	bool set_flags = !context.ITSTATE;
-	u32 cond, d, n, imm32;
+	using args = arm_code::rsb_imm<type>;
+	ARG(d, op);
+	ARG(n, op);
+	ARG(imm32, op);
+	ARG(set_flags, op, cond);
 
-	switch (type)
-	{
-	case T1:
-	{
-		cond = context.ITSTATE.advance();
-		d = (code.data & 0x7);
-		n = (code.data & 0x38) >> 3;
-		imm32 = 0;
-		break;
-	}
-	case T2:
-	{
-		cond = context.ITSTATE.advance();
-		d = (code.data & 0xf00) >> 8;
-		n = (code.data & 0xf0000) >> 16;
-		set_flags = (code.data & 0x100000) != 0;
-		imm32 = ThumbExpandImm((code.data & 0x4000000) >> 15 | (code.data & 0x7000) >> 4 | (code.data & 0xff));
-
-		reject(d == 13 || d == 15 || n == 13 || n == 15, "UNPREDICTABLE");
-		break;
-	}
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
-
-	if (context.debug)
-	{
-		if (context.debug & DF_DISASM) context.fmt_debug_str("rsb%s%s %s,%s,#0x%X", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(n), imm32);
-		if (process_debug(context)) return;
-	}
-
-	if (ConditionPassed(context, cond))
+	if (ConditionPassed(cpu, cond))
 	{
 		bool carry, overflow;
-		const u32 result = AddWithCarry(~context.read_gpr(n), imm32, true, carry, overflow);
-		context.write_gpr(d, result, type == T1 ? 2 : 4);
+		const u32 result = AddWithCarry(~cpu.read_gpr(n), imm32, true, carry, overflow);
+		cpu.write_gpr(d, result, type == T1 ? 2 : 4);
 
 		if (set_flags)
 		{
-			context.APSR.N = result >> 31;
-			context.APSR.Z = result == 0;
-			context.APSR.C = carry;
-			context.APSR.V = overflow;
+			cpu.APSR.N = result >> 31;
+			cpu.APSR.Z = result == 0;
+			cpu.APSR.C = carry;
+			cpu.APSR.V = overflow;
 		}
 	}
 }
 
-void ARMv7_instrs::RSB_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::RSB_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::RSB_RSR(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::RSB_RSR(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
 
-void ARMv7_instrs::RSC_IMM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::RSC_IMM(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::RSC_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::RSC_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::RSC_RSR(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::RSC_RSR(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
 
-void ARMv7_instrs::SADD16(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::SADD16(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::SADD8(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::SADD8(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::SASX(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::SASX(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
 
-void ARMv7_instrs::SBC_IMM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::SBC_IMM(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::SBC_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::SBC_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::SBC_RSR(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::SBC_RSR(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
 
-void ARMv7_instrs::SBFX(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::SBFX(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
 
-void ARMv7_instrs::SDIV(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::SDIV(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
 
-void ARMv7_instrs::SEL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::SEL(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
 
-void ARMv7_instrs::SHADD16(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::SHADD16(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::SHADD8(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::SHADD8(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::SHASX(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::SHASX(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::SHSAX(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::SHSAX(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::SHSUB16(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::SHSUB16(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::SHSUB8(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::SHSUB8(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
 
-void ARMv7_instrs::SMLA__(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::SMLA__(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::SMLAD(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::SMLAD(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::SMLAL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::SMLAL(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::SMLAL__(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::SMLAL__(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::SMLALD(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::SMLALD(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::SMLAW_(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::SMLAW_(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::SMLSD(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::SMLSD(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::SMLSLD(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::SMLSLD(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::SMMLA(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::SMMLA(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::SMMLS(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::SMMLS(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::SMMUL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::SMMUL(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::SMUAD(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::SMUAD(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::SMUL__(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::SMUL__(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::SMULL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::SMULL(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::SMULW_(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::SMULW_(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::SMUSD(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::SMUSD(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
 
-void ARMv7_instrs::SSAT(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::SSAT(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::SSAT16(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::SSAT16(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::SSAX(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::SSAX(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::SSUB16(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::SSUB16(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::SSUB8(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::SSUB8(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
 
-void ARMv7_instrs::STM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::STM(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	u32 cond, n, reg_list;
-	bool wback;
+	using args = arm_code::stm<type>;
+	ARG(n, op);
+	ARG(registers, op);
+	ARG(wback, op);
 
-	switch (type)
+	if (ConditionPassed(cpu, cond))
 	{
-	case T1:
-	{
-		cond = context.ITSTATE.advance();
-		n = (code.data & 0x700) >> 8;
-		reg_list = (code.data & 0xff);
-		wback = true;
-
-		reject(reg_list == 0, "UNPREDICTABLE");
-		break;
-	}
-	case T2:
-	{
-		cond = context.ITSTATE.advance();
-		n = (code.data & 0xf0000) >> 16;
-		reg_list = (code.data & 0x5fff);
-		wback = (code.data & 0x200000) != 0;
-
-		reject(n == 15 || BitCount(reg_list, 16) < 2, "UNPREDICTABLE");
-		reject(wback && reg_list & (1 << n), "UNPREDICTABLE");
-		break;
-	}
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
-
-	if (context.debug)
-	{
-		if (context.debug & DF_DISASM) context.fmt_debug_str("stm%s %s%s,{%s}", fmt_cond(cond), fmt_reg(n), wback ? "!" : "", fmt_reg_list(reg_list));
-		if (process_debug(context)) return;
-	}
-
-	if (ConditionPassed(context, cond))
-	{
-		auto memory = vm::ptr<u32>::make(context.read_gpr(n));
+		auto memory = vm::ptr<u32>::make(cpu.read_gpr(n));
 
 		for (u32 i = 0; i < 16; i++)
 		{
-			if (reg_list & (1 << i))
+			if (registers & (1 << i))
 			{
-				*memory++ = context.read_gpr(i);
+				*memory++ = cpu.read_gpr(i);
 			}
 		}
 
 		if (wback)
 		{
-			context.write_gpr(n, memory.addr(), type == T1 ? 2 : 4);
+			cpu.write_gpr(n, memory.addr(), type == T1 ? 2 : 4);
 		}
 	}
 }
 
-void ARMv7_instrs::STMDA(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::STMDA(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::STMDB(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::STMDB(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::STMIB(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::STMIB(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
 
-void ARMv7_instrs::STR_IMM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::STR_IMM(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	u32 cond, t, n, imm32;
-	bool index, add, wback;
+	using args = arm_code::str_imm<type>;
+	ARG(t, op);
+	ARG(n, op);
+	ARG(imm32, op);
+	ARG(index, op);
+	ARG(add, op);
+	ARG(wback, op);
 
-	switch (type)
+	if (ConditionPassed(cpu, cond))
 	{
-	case T1:
-	{
-		cond = context.ITSTATE.advance();
-		t = (code.data & 0x7);
-		n = (code.data & 0x38) >> 3;
-		imm32 = (code.data & 0x7c0) >> 4;
-		index = true;
-		add = true;
-		wback = false;
-		break;
-	}
-	case T2:
-	{
-		cond = context.ITSTATE.advance();
-		t = (code.data & 0x700) >> 8;
-		n = 13;
-		imm32 = (code.data & 0xff) << 2;
-		index = true;
-		add = true;
-		wback = false;
-		break;
-	}
-	case T3:
-	{
-		cond = context.ITSTATE.advance();
-		t = (code.data & 0xf000) >> 12;
-		n = (code.data & 0xf0000) >> 16;
-		imm32 = (code.data & 0xfff);
-		index = true;
-		add = true;
-		wback = false;
-
-		reject(n == 15, "UNDEFINED");
-		reject(t == 15, "UNPREDICTABLE");
-		break;
-	}
-	case T4:
-	{
-		cond = context.ITSTATE.advance();
-		t = (code.data & 0xf000) >> 12;
-		n = (code.data & 0xf0000) >> 16;
-		imm32 = (code.data & 0xff);
-		index = (code.data & 0x400) != 0;
-		add = (code.data & 0x200) != 0;
-		wback = (code.data & 0x100) != 0;
-
-		reject(index && add && !wback, "STRT");
-		reject(n == 13 && index && !add && wback && imm32 == 4, "PUSH");
-		reject(n == 15 || (!index && !wback), "UNDEFINED");
-		reject(t == 15 || (wback && n == t), "UNPREDICTABLE");
-		break;
-	}
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
-
-	if (context.debug)
-	{
-		if (context.debug & DF_DISASM) context.fmt_debug_str("str%s %s,%s", fmt_cond(cond), fmt_reg(t), fmt_mem_imm(n, imm32, index, add, wback));
-		if (process_debug(context)) return;
-	}
-
-	if (ConditionPassed(context, cond))
-	{
-		const u32 offset_addr = add ? context.read_gpr(n) + imm32 : context.read_gpr(n) - imm32;
-		const u32 addr = index ? offset_addr : context.read_gpr(n);
-		vm::write32(addr, context.read_gpr(t));
+		const u32 offset_addr = add ? cpu.read_gpr(n) + imm32 : cpu.read_gpr(n) - imm32;
+		const u32 addr = index ? offset_addr : cpu.read_gpr(n);
+		vm::write32(addr, cpu.read_gpr(t));
 
 		if (wback)
 		{
-			context.write_gpr(n, offset_addr, type < T3 ? 2 : 4);
+			cpu.write_gpr(n, offset_addr, type < T3 ? 2 : 4);
 		}
 	}
 }
 
-void ARMv7_instrs::STR_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::STR_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	u32 cond, t, n, m, shift_t, shift_n;
-	bool index, add, wback;
+	using args = arm_code::str_reg<type>;
+	ARG(t, op);
+	ARG(n, op);
+	ARG(m, op);
+	ARG(shift_t, op);
+	ARG(shift_n, op);
+	ARG(index, op);
+	ARG(add, op);
+	ARG(wback, op);
 
-	switch (type)
+	if (ConditionPassed(cpu, cond))
 	{
-	case T1:
-	{
-		cond = context.ITSTATE.advance();
-		t = (code.data & 0x7);
-		n = (code.data & 0x38) >> 3;
-		m = (code.data & 0x1c0) >> 6;
-		index = true;
-		add = true;
-		wback = false;
-		shift_t = SRType_LSL;
-		shift_n = 0;
-		break;
-	}
-	case T2:
-	{
-		cond = context.ITSTATE.advance();
-		t = (code.data & 0xf000) >> 12;
-		n = (code.data & 0xf0000) >> 16;
-		m = (code.data & 0xf);
-		index = true;
-		add = true;
-		wback = false;
-		shift_t = SRType_LSL;
-		shift_n = (code.data & 0x30) >> 4;
-
-		reject(n == 15, "UNDEFINED");
-		reject(t == 15 || m == 13 || m == 15, "UNPREDICTABLE");
-		break;
-	}
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
-
-	if (context.debug)
-	{
-		if (context.debug & DF_DISASM) context.fmt_debug_str("str%s %s,%s", fmt_cond(cond), fmt_reg(t), fmt_mem_reg(n, m, index, add, wback, shift_t, shift_n));
-		if (process_debug(context)) return;
-	}
-
-	if (ConditionPassed(context, cond))
-	{
-		const u32 offset = Shift(context.read_gpr(m), shift_t, shift_n, context.APSR.C);
-		const u32 offset_addr = add ? context.read_gpr(n) + offset : context.read_gpr(n) - offset;
-		const u32 addr = index ? offset_addr : context.read_gpr(n);
-		vm::write32(addr, context.read_gpr(t));
+		const u32 offset = Shift(cpu.read_gpr(m), shift_t, shift_n, cpu.APSR.C);
+		const u32 offset_addr = add ? cpu.read_gpr(n) + offset : cpu.read_gpr(n) - offset;
+		const u32 addr = index ? offset_addr : cpu.read_gpr(n);
+		vm::write32(addr, cpu.read_gpr(t));
 
 		if (wback)
 		{
-			context.write_gpr(n, offset_addr, type == T1 ? 2 : 4);
+			cpu.write_gpr(n, offset_addr, type == T1 ? 2 : 4);
 		}
 	}
 }
 
 
-void ARMv7_instrs::STRB_IMM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::STRB_IMM(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	u32 cond, t, n, imm32;
-	bool index, add, wback;
+	using args = arm_code::strb_imm<type>;
+	ARG(t, op);
+	ARG(n, op);
+	ARG(imm32, op);
+	ARG(index, op);
+	ARG(add, op);
+	ARG(wback, op);
 
-	switch (type)
+	if (ConditionPassed(cpu, cond))
 	{
-	case T1:
-	{
-		cond = context.ITSTATE.advance();
-		t = (code.data & 0x7);
-		n = (code.data & 0x38) >> 3;
-		imm32 = (code.data & 0x7c0) >> 6;
-		index = true;
-		add = true;
-		wback = false;
-		break;
-	}
-	case T2:
-	{
-		cond = context.ITSTATE.advance();
-		t = (code.data & 0xf000) >> 12;
-		n = (code.data & 0xf0000) >> 16;
-		imm32 = (code.data & 0xfff);
-		index = true;
-		add = true;
-		wback = false;
-
-		reject(n == 15, "UNDEFINED");
-		reject(t == 13 || t == 15, "UNPREDICTABLE");
-		break;
-	}
-	case T3:
-	{
-		cond = context.ITSTATE.advance();
-		t = (code.data & 0xf000) >> 12;
-		n = (code.data & 0xf0000) >> 16;
-		imm32 = (code.data & 0xff);
-		index = (code.data & 0x400) != 0;
-		add = (code.data & 0x200) != 0;
-		wback = (code.data & 0x100) != 0;
-
-		reject(index && add && !wback, "STRBT");
-		reject(n == 15 || (!index && !wback), "UNDEFINED");
-		reject(t == 13 || t == 15 || (wback && n == t), "UNPREDICTABLE");
-		break;
-	}
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
-
-	if (context.debug)
-	{
-		if (context.debug & DF_DISASM) context.fmt_debug_str("strb%s %s,%s", fmt_cond(cond), fmt_reg(t), fmt_mem_imm(n, imm32, index, add, wback));
-		if (process_debug(context)) return;
-	}
-
-	if (ConditionPassed(context, cond))
-	{
-		const u32 offset_addr = add ? context.read_gpr(n) + imm32 : context.read_gpr(n) - imm32;
-		const u32 addr = index ? offset_addr : context.read_gpr(n);
-		vm::write8(addr, (u8)context.read_gpr(t));
+		const u32 offset_addr = add ? cpu.read_gpr(n) + imm32 : cpu.read_gpr(n) - imm32;
+		const u32 addr = index ? offset_addr : cpu.read_gpr(n);
+		vm::write8(addr, (u8)cpu.read_gpr(t));
 
 		if (wback)
 		{
-			context.write_gpr(n, offset_addr, type == T1 ? 2 : 4);
+			cpu.write_gpr(n, offset_addr, type == T1 ? 2 : 4);
 		}
 	}
 }
 
-void ARMv7_instrs::STRB_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::STRB_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	u32 cond, t, n, m, shift_t, shift_n;
-	bool index, add, wback;
+	using args = arm_code::strb_reg<type>;
+	ARG(t, op);
+	ARG(n, op);
+	ARG(m, op);
+	ARG(shift_t, op);
+	ARG(shift_n, op);
+	ARG(index, op);
+	ARG(add, op);
+	ARG(wback, op);
 
-	switch (type)
+	if (ConditionPassed(cpu, cond))
 	{
-	case T1:
-	{
-		cond = context.ITSTATE.advance();
-		t = (code.data & 0x7);
-		n = (code.data & 0x38) >> 3;
-		m = (code.data & 0x1c0) >> 6;
-		index = true;
-		add = true;
-		wback = false;
-		shift_t = SRType_LSL;
-		shift_n = 0;
-		break;
-	}
-	case T2:
-	{
-		cond = context.ITSTATE.advance();
-		t = (code.data & 0xf000) >> 12;
-		n = (code.data & 0xf0000) >> 16;
-		m = (code.data & 0xf);
-		index = true;
-		add = true;
-		wback = false;
-		shift_t = SRType_LSL;
-		shift_n = (code.data & 0x30) >> 4;
-
-		reject(n == 15, "UNDEFINED");
-		reject(t == 13 || t == 15 || m == 13 || m == 15, "UNPREDICTABLE");
-		break;
-	}
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
-
-	if (context.debug)
-	{
-		if (context.debug & DF_DISASM) context.fmt_debug_str("strb%s %s,%s", fmt_cond(cond), fmt_reg(t), fmt_mem_reg(n, m, index, add, wback, shift_t, shift_n));
-		if (process_debug(context)) return;
-	}
-
-	if (ConditionPassed(context, cond))
-	{
-		const u32 offset = Shift(context.read_gpr(m), shift_t, shift_n, context.APSR.C);
-		const u32 offset_addr = add ? context.read_gpr(n) + offset : context.read_gpr(n) - offset;
-		const u32 addr = index ? offset_addr : context.read_gpr(n);
-		vm::write8(addr, (u8)context.read_gpr(t));
+		const u32 offset = Shift(cpu.read_gpr(m), shift_t, shift_n, cpu.APSR.C);
+		const u32 offset_addr = add ? cpu.read_gpr(n) + offset : cpu.read_gpr(n) - offset;
+		const u32 addr = index ? offset_addr : cpu.read_gpr(n);
+		vm::write8(addr, (u8)cpu.read_gpr(t));
 
 		if (wback)
 		{
-			context.write_gpr(n, offset_addr, type == T1 ? 2 : 4);
+			cpu.write_gpr(n, offset_addr, type == T1 ? 2 : 4);
 		}
 	}
 }
 
 
-void ARMv7_instrs::STRD_IMM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::STRD_IMM(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	u32 cond, t, t2, n, imm32;
-	bool index, add, wback;
+	using args = arm_code::strd_imm<type>;
+	ARG(t, op);
+	ARG(t2, op);
+	ARG(n, op);
+	ARG(imm32, op);
+	ARG(index, op);
+	ARG(add, op);
+	ARG(wback, op);
 
-	switch (type)
+	if (ConditionPassed(cpu, cond))
 	{
-	case T1:
-	{
-		cond = context.ITSTATE.advance();
-		t = (code.data & 0xf000) >> 12;
-		t2 = (code.data & 0xf00) >> 8;
-		n = (code.data & 0xf0000) >> 16;
-		imm32 = (code.data & 0xff) << 2;
-		index = (code.data & 0x1000000) != 0;
-		add = (code.data & 0x800000) != 0;
-		wback = (code.data & 0x200000) != 0;
-
-		reject(!index && !wback, "Related encodings");
-		reject(wback && (n == t || n == t2), "UNPREDICTABLE");
-		reject(n == 15 || t == 13 || t == 15 || t2 == 13 || t2 == 15, "UNPREDICTABLE");
-		break;
-	}
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
-
-	if (context.debug)
-	{
-		if (context.debug & DF_DISASM) context.fmt_debug_str("strd%s %s,%s,%s", fmt_cond(cond), fmt_reg(t), fmt_reg(t2), fmt_mem_imm(n, imm32, index, add, wback));
-		if (process_debug(context)) return;
-	}
-
-	if (ConditionPassed(context, cond))
-	{
-		const u32 n_value = context.read_gpr(n);
+		const u32 n_value = cpu.read_gpr(n);
 		const u32 offset = add ? n_value + imm32 : n_value - imm32;
 		const u32 addr = index ? offset : n_value;
-		vm::write64(addr, (u64)context.read_gpr(t2) << 32 | (u64)context.read_gpr(t));
+		vm::write64(addr, (u64)cpu.read_gpr(t2) << 32 | (u64)cpu.read_gpr(t));
 
 		if (wback)
 		{
-			context.write_gpr(n, offset, 4);
+			cpu.write_gpr(n, offset, 4);
 		}
 	}
 }
 
-void ARMv7_instrs::STRD_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::STRD_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
 
-void ARMv7_instrs::STRH_IMM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::STRH_IMM(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	u32 cond, t, n, imm32;
-	bool index, add, wback;
+	using args = arm_code::strh_imm<type>;
+	ARG(t, op);
+	ARG(n, op);
+	ARG(imm32, op);
+	ARG(index, op);
+	ARG(add, op);
+	ARG(wback, op);
 
-	switch (type)
+	if (ConditionPassed(cpu, cond))
 	{
-	case T1:
-	{
-		cond = context.ITSTATE.advance();
-		t = (code.data & 0x7);
-		n = (code.data & 0x38) >> 3;
-		imm32 = (code.data & 0x7c0) >> 5;
-		index = true;
-		add = true;
-		wback = false;
-		break;
-	}
-	case T2:
-	{
-		cond = context.ITSTATE.advance();
-		t = (code.data & 0xf000) >> 12;
-		n = (code.data & 0xf0000) >> 16;
-		imm32 = (code.data & 0xfff);
-		index = true;
-		add = true;
-		wback = false;
-
-		reject(n == 15, "UNDEFINED");
-		reject(t == 13 || t == 15, "UNPREDICTABLE");
-		break;
-	}
-	case T3:
-	{
-		cond = context.ITSTATE.advance();
-		t = (code.data & 0xf000) >> 12;
-		n = (code.data & 0xf0000) >> 16;
-		imm32 = (code.data & 0xff);
-		index = (code.data & 0x400) != 0;
-		add = (code.data & 0x200) != 0;
-		wback = (code.data & 0x100) != 0;
-
-		reject(index && add && !wback, "STRHT");
-		reject(n == 15 || (!index && !wback), "UNDEFINED");
-		reject(t == 13 || t == 15 || (wback && n == t), "UNPREDICTABLE");
-		break;
-	}
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
-
-	if (context.debug)
-	{
-		if (context.debug & DF_DISASM) context.fmt_debug_str("strh%s %s,%s", fmt_cond(cond), fmt_reg(t), fmt_mem_imm(n, imm32, index, add, wback));
-		if (process_debug(context)) return;
-	}
-
-	if (ConditionPassed(context, cond))
-	{
-		const u32 offset_addr = add ? context.read_gpr(n) + imm32 : context.read_gpr(n) - imm32;
-		const u32 addr = index ? offset_addr : context.read_gpr(n);
-		vm::write16(addr, (u16)context.read_gpr(t));
+		const u32 offset_addr = add ? cpu.read_gpr(n) + imm32 : cpu.read_gpr(n) - imm32;
+		const u32 addr = index ? offset_addr : cpu.read_gpr(n);
+		vm::write16(addr, (u16)cpu.read_gpr(t));
 
 		if (wback)
 		{
-			context.write_gpr(n, offset_addr, type == T1 ? 2 : 4);
+			cpu.write_gpr(n, offset_addr, type == T1 ? 2 : 4);
 		}
 	}
 }
 
-void ARMv7_instrs::STRH_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::STRH_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	u32 cond, t, n, m, shift_t, shift_n;
-	bool index, add, wback;
+	using args = arm_code::strh_reg<type>;
+	ARG(t, op);
+	ARG(n, op);
+	ARG(m, op);
+	ARG(shift_t, op);
+	ARG(shift_n, op);
+	ARG(index, op);
+	ARG(add, op);
+	ARG(wback, op);
 
-	switch (type)
+	if (ConditionPassed(cpu, cond))
 	{
-	case T1:
-	{
-		cond = context.ITSTATE.advance();
-		t = (code.data & 0x7);
-		n = (code.data & 0x38) >> 3;
-		m = (code.data & 0x1c0) >> 6;
-		index = true;
-		add = true;
-		wback = false;
-		shift_t = SRType_LSL;
-		shift_n = 0;
-		break;
-	}
-	case T2:
-	{
-		cond = context.ITSTATE.advance();
-		t = (code.data & 0xf000) >> 12;
-		n = (code.data & 0xf0000) >> 16;
-		m = (code.data & 0xf);
-		index = true;
-		add = true;
-		wback = false;
-		shift_t = SRType_LSL;
-		shift_n = (code.data & 0x30) >> 4;
-
-		reject(n == 15, "UNDEFINED");
-		reject(t == 13 || t == 15 || m == 13 || m == 15, "UNPREDICTABLE");
-		break;
-	}
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
-
-	if (context.debug)
-	{
-		if (context.debug & DF_DISASM) context.fmt_debug_str("strh%s %s,%s", fmt_cond(cond), fmt_reg(t), fmt_mem_reg(n, m, index, add, wback, shift_t, shift_n));
-		if (process_debug(context)) return;
-	}
-
-	if (ConditionPassed(context, cond))
-	{
-		const u32 offset = Shift(context.read_gpr(m), shift_t, shift_n, context.APSR.C);
-		const u32 offset_addr = add ? context.read_gpr(n) + offset : context.read_gpr(n) - offset;
-		const u32 addr = index ? offset_addr : context.read_gpr(n);
-		vm::write16(addr, (u16)context.read_gpr(t));
+		const u32 offset = Shift(cpu.read_gpr(m), shift_t, shift_n, cpu.APSR.C);
+		const u32 offset_addr = add ? cpu.read_gpr(n) + offset : cpu.read_gpr(n) - offset;
+		const u32 addr = index ? offset_addr : cpu.read_gpr(n);
+		vm::write16(addr, (u16)cpu.read_gpr(t));
 
 		if (wback)
 		{
-			context.write_gpr(n, offset_addr, type == T1 ? 2 : 4);
+			cpu.write_gpr(n, offset_addr, type == T1 ? 2 : 4);
 		}
 	}
 }
 
 
-void ARMv7_instrs::STREX(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::STREX(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	u32 cond, d, t, n, imm32;
+	using args = arm_code::strex<type>;
+	ARG(d, op);
+	ARG(t, op);
+	ARG(n, op);
+	ARG(imm32, op);
 
-	switch (type)
+	if (ConditionPassed(cpu, cond))
 	{
-	case T1:
-	{
-		cond = context.ITSTATE.advance();
-		d = (code.data & 0xf00) >> 8;
-		t = (code.data & 0xf000) >> 12;
-		n = (code.data & 0xf0000) >> 16;
-		imm32 = (code.data & 0xff) << 2;
-
-		reject(d == 13 || d == 15 || t == 13 || t == 15 || n == 15, "UNPREDICTABLE");
-		reject(d == n || d == t, "UNPREDICTABLE");
-		break;
-	}
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
-
-	if (context.debug)
-	{
-		if (context.debug & DF_DISASM) context.fmt_debug_str("strex%s %s,%s,[%s,#0x%x]", fmt_cond(cond), fmt_reg(d), fmt_reg(t), fmt_reg(n), imm32);
-		if (process_debug(context)) return;
-	}
-
-	if (ConditionPassed(context, cond))
-	{
-		const u32 addr = context.read_gpr(n) + imm32;
-		const u32 value = context.read_gpr(t);
-		context.write_gpr(d, !vm::reservation_update(addr, &value, sizeof(value)), 4);
+		const u32 addr = cpu.read_gpr(n) + imm32;
+		const u32 value = cpu.read_gpr(t);
+		cpu.write_gpr(d, !vm::reservation_update(addr, &value, sizeof(value)), 4);
 	}
 }
 
-void ARMv7_instrs::STREXB(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::STREXB(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::STREXD(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::STREXD(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::STREXH(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::STREXH(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
 
-void ARMv7_instrs::SUB_IMM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::SUB_IMM(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	bool set_flags = !context.ITSTATE;
-	u32 cond, d, n, imm32;
+	using args = arm_code::sub_imm<type>;
+	ARG(d, op);
+	ARG(n, op);
+	ARG(imm32, op);
+	ARG(set_flags, op, cond);
 
-	switch (type)
-	{
-	case T1:
-	{
-		cond = context.ITSTATE.advance();
-		d = (code.data & 0x7);
-		n = (code.data & 0x38) >> 3;
-		imm32 = (code.data & 0x1c) >> 6;
-		break;
-	}
-	case T2:
-	{
-		cond = context.ITSTATE.advance();
-		d = n = (code.data & 0x700) >> 8;
-		imm32 = (code.data & 0xff);
-		break;
-	}
-	case T3:
-	{
-		cond = context.ITSTATE.advance();
-		d = (code.data & 0xf00) >> 8;
-		n = (code.data & 0xf0000) >> 16;
-		set_flags = (code.data & 0x100000) != 0;
-		imm32 = ThumbExpandImm((code.data & 0x4000000) >> 15 | (code.data & 0x7000) >> 4 | (code.data & 0xff));
-
-		reject(d == 15 && set_flags, "CMP (immediate)");
-		reject(n == 13, "SUB (SP minus immediate)");
-		reject(d == 13 || d == 15 || n == 15, "UNPREDICTABLE");
-		break;
-	}
-	case T4:
-	{
-		cond = context.ITSTATE.advance();
-		d = (code.data & 0xf00) >> 8;
-		n = (code.data & 0xf0000) >> 16;
-		set_flags = false;
-		imm32 = (code.data & 0x4000000) >> 15 | (code.data & 0x7000) >> 4 | (code.data & 0xff);
-
-		reject(d == 15, "ADR");
-		reject(n == 13, "SUB (SP minus immediate)");
-		reject(d == 13 || d == 15, "UNPREDICTABLE");
-		break;
-	}
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
-
-	if (context.debug)
-	{
-		if (context.debug & DF_DISASM) context.fmt_debug_str("sub%s%s %s,%s,#0x%X", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(n), imm32);
-		if (process_debug(context)) return;
-	}
-
-	if (ConditionPassed(context, cond))
+	if (ConditionPassed(cpu, cond))
 	{
 		bool carry, overflow;
-		const u32 result = AddWithCarry(context.read_gpr(n), ~imm32, true, carry, overflow);
-		context.write_gpr(d, result, type < T3 ? 2 : 4);
+		const u32 result = AddWithCarry(cpu.read_gpr(n), ~imm32, true, carry, overflow);
+		cpu.write_gpr(d, result, type < T3 ? 2 : 4);
 
 		if (set_flags)
 		{
-			context.APSR.N = result >> 31;
-			context.APSR.Z = result == 0;
-			context.APSR.C = carry;
-			context.APSR.V = overflow;
+			cpu.APSR.N = result >> 31;
+			cpu.APSR.Z = result == 0;
+			cpu.APSR.C = carry;
+			cpu.APSR.V = overflow;
 		}
 	}
 }
 
-void ARMv7_instrs::SUB_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::SUB_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	bool set_flags = !context.ITSTATE;
-	u32 cond, d, n, m, shift_t, shift_n;
+	using args = arm_code::sub_reg<type>;
+	ARG(d, op);
+	ARG(n, op);
+	ARG(m, op);
+	ARG(shift_t, op);
+	ARG(shift_n, op);
+	ARG(set_flags, op, cond);
 
-	switch (type)
-	{
-	case T1:
-	{
-		cond = context.ITSTATE.advance();
-		d = (code.data & 0x7);
-		n = (code.data & 0x38) >> 3;
-		m = (code.data & 0x1c0) >> 6;
-		shift_t = SRType_LSL;
-		shift_n = 0;
-		break;
-	}
-	case T2:
-	{
-		cond = context.ITSTATE.advance();
-		d = (code.data & 0xf00) >> 8;
-		n = (code.data & 0xf0000) >> 16;
-		m = (code.data & 0xf);
-		set_flags = (code.data & 0x100000) != 0;
-		shift_t = DecodeImmShift((code.data & 0x30) >> 4, (code.data & 0x7000) >> 10 | (code.data & 0xc0) >> 6, &shift_n);
-
-		reject(d == 15 && set_flags, "CMP (register)");
-		reject(n == 13, "SUB (SP minus register)");
-		reject(d == 13 || d == 15 || n == 15 || m == 13 || m == 15, "UNPREDICTABLE");
-		break;
-	}
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
-
-	if (context.debug)
-	{
-		if (context.debug & DF_DISASM) context.fmt_debug_str("sub%s%s %s,%s,%s%s", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(n), fmt_reg(m), fmt_shift(shift_t, shift_n));
-		if (process_debug(context)) return;
-	}
-
-	if (ConditionPassed(context, cond))
+	if (ConditionPassed(cpu, cond))
 	{
 		bool carry, overflow;
-		const u32 shifted = Shift(context.read_gpr(m), shift_t, shift_n, context.APSR.C);
-		const u32 result = AddWithCarry(context.read_gpr(n), ~shifted, true, carry, overflow);
-		context.write_gpr(d, result, type == T1 ? 2 : 4);
+		const u32 shifted = Shift(cpu.read_gpr(m), shift_t, shift_n, cpu.APSR.C);
+		const u32 result = AddWithCarry(cpu.read_gpr(n), ~shifted, true, carry, overflow);
+		cpu.write_gpr(d, result, type == T1 ? 2 : 4);
 
 		if (set_flags)
 		{
-			context.APSR.N = result >> 31;
-			context.APSR.Z = result == 0;
-			context.APSR.C = carry;
-			context.APSR.V = overflow;
+			cpu.APSR.N = result >> 31;
+			cpu.APSR.Z = result == 0;
+			cpu.APSR.C = carry;
+			cpu.APSR.V = overflow;
 		}
 	}
 }
 
-void ARMv7_instrs::SUB_RSR(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::SUB_RSR(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::SUB_SPI(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::SUB_SPI(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	u32 cond, d, imm32;
-	bool set_flags;
+	using args = arm_code::sub_spi<type>;
+	ARG(d, op);
+	ARG(imm32, op);
+	ARG(set_flags, op, cond);
 
-	switch (type)
-	{
-	case T1:
-	{
-		cond = context.ITSTATE.advance();
-		d = 13;
-		set_flags = false;
-		imm32 = (code.data & 0x7f) << 2;
-		break;
-	}
-	case T2:
-	{
-		cond = context.ITSTATE.advance();
-		d = (code.data & 0xf00) >> 8;
-		set_flags = (code.data & 0x100000) != 0;
-		imm32 = ThumbExpandImm((code.data & 0x4000000) >> 15 | (code.data & 0x7000) >> 4 | (code.data & 0xff));
-
-		reject(d == 15 && set_flags, "CMP (immediate)");
-		reject(d == 15, "UNPREDICTABLE");
-		break;
-	}
-	case T3:
-	{
-		cond = context.ITSTATE.advance();
-		d = (code.data & 0xf00) >> 8;
-		set_flags = false;
-		imm32 = (code.data & 0x4000000) >> 15 | (code.data & 0x7000) >> 4 | (code.data & 0xff);
-
-		reject(d == 15, "UNPREDICTABLE");
-		break;
-	}
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
-
-	if (context.debug)
-	{
-		if (context.debug & DF_DISASM) context.fmt_debug_str("sub%s%s %s,sp,#0x%X", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), imm32);
-		if (process_debug(context)) return;
-	}
-
-	if (ConditionPassed(context, cond))
+	if (ConditionPassed(cpu, cond))
 	{
 		bool carry, overflow;
-		const u32 result = AddWithCarry(context.SP, ~imm32, true, carry, overflow);
-		context.write_gpr(d, result, type == T1 ? 2 : 4);
+		const u32 result = AddWithCarry(cpu.SP, ~imm32, true, carry, overflow);
+		cpu.write_gpr(d, result, type == T1 ? 2 : 4);
 
 		if (set_flags)
 		{
-			context.APSR.N = result >> 31;
-			context.APSR.Z = result == 0;
-			context.APSR.C = carry;
-			context.APSR.V = overflow;
+			cpu.APSR.N = result >> 31;
+			cpu.APSR.Z = result == 0;
+			cpu.APSR.C = carry;
+			cpu.APSR.V = overflow;
 		}
 	}
 }
 
-void ARMv7_instrs::SUB_SPR(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::SUB_SPR(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
 
-void ARMv7_instrs::SVC(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::SVC(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
 
-void ARMv7_instrs::SXTAB(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::SXTAB(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::SXTAB16(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::SXTAB16(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::SXTAH(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::SXTAH(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::SXTB(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::SXTB(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::SXTB16(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::SXTB16(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::SXTH(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::SXTH(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
 
-void ARMv7_instrs::TB_(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::TB_(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
 
-void ARMv7_instrs::TEQ_IMM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::TEQ_IMM(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::TEQ_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::TEQ_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::TEQ_RSR(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::TEQ_RSR(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
 
-void ARMv7_instrs::TST_IMM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::TST_IMM(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	bool carry = context.APSR.C;
-	u32 cond, n, imm32;
+	using args = arm_code::tst_imm<type>;
+	ARG(n, op);
+	ARG(imm32, op);
 
-	switch (type)
+	if (ConditionPassed(cpu, cond))
 	{
-	case T1:
-	{
-		cond = context.ITSTATE.advance();
-		n = (code.data & 0xf0000) >> 16;
-		imm32 = ThumbExpandImm_C((code.data & 0x4000000) >> 15 | (code.data & 0x7000) >> 4 | (code.data & 0xff), carry, carry);
-
-		reject(n == 13 || n == 15, "UNPREDICTABLE");
-		break;
-	}
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
-
-	if (context.debug)
-	{
-		if (context.debug & DF_DISASM) context.fmt_debug_str("tst%s %s,#0x%X", fmt_cond(cond), fmt_reg(n), imm32);
-		if (process_debug(context)) return;
-	}
-
-	if (ConditionPassed(context, cond))
-	{
-		const u32 result = context.read_gpr(n) & imm32;
-		context.APSR.N = result >> 31;
-		context.APSR.Z = result == 0;
-		context.APSR.C = carry;
+		const u32 result = cpu.read_gpr(n) & imm32;
+		cpu.APSR.N = result >> 31;
+		cpu.APSR.Z = result == 0;
+		cpu.APSR.C = args::carry::extract(op, cpu.APSR.C);
 	}
 }
 
-void ARMv7_instrs::TST_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::TST_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::TST_RSR(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::TST_RSR(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
 
-void ARMv7_instrs::UADD16(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::UADD16(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::UADD8(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::UADD8(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::UASX(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::UASX(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::UBFX(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::UBFX(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::UDIV(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::UDIV(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::UHADD16(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::UHADD16(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::UHADD8(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::UHADD8(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::UHASX(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::UHASX(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::UHSAX(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::UHSAX(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::UHSUB16(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::UHSUB16(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::UHSUB8(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::UHSUB8(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::UMAAL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::UMAAL(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::UMLAL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::UMLAL(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::UMULL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::UMULL(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	u32 cond, d0, d1, n, m;
-	bool set_flags;
+	using args = arm_code::umull<type>;
+	ARG(d0, op);
+	ARG(d1, op);
+	ARG(n, op);
+	ARG(m, op);
+	ARG(set_flags, op, cond);
 
-	switch (type)
+	if (ConditionPassed(cpu, cond))
 	{
-	case T1:
-	{
-		cond = context.ITSTATE.advance();
-		d0 = (code.data & 0xf000) >> 12;
-		d1 = (code.data & 0xf00) >> 8;
-		n = (code.data & 0xf0000) >> 16;
-		m = (code.data & 0xf);
-		set_flags = false;
-
-		reject(d0 == 13 || d0 == 15 || d1 == 13 || d1 == 15 || n == 13 || n == 15 || m == 13 || m == 15, "UNPREDICTABLE");
-		reject(d0 == d1, "UNPREDICTABLE");
-		break;
-	}
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
-
-	if (context.debug)
-	{
-		if (context.debug & DF_DISASM) context.fmt_debug_str("umull%s%s %s,%s,%s,%s", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d0), fmt_reg(d1), fmt_reg(n), fmt_reg(m));
-		if (process_debug(context)) return;
-	}
-
-	if (ConditionPassed(context, cond))
-	{
-		const u64 result = (u64)context.read_gpr(n) * (u64)context.read_gpr(m);
-		context.write_gpr(d1, (u32)(result >> 32), 4);
-		context.write_gpr(d0, (u32)(result), 4);
+		const u64 result = (u64)cpu.read_gpr(n) * (u64)cpu.read_gpr(m);
+		cpu.write_gpr(d1, (u32)(result >> 32), 4);
+		cpu.write_gpr(d0, (u32)(result), 4);
 
 		if (set_flags)
 		{
-			context.APSR.N = result >> 63 != 0;
-			context.APSR.Z = result == 0;
+			cpu.APSR.N = result >> 63 != 0;
+			cpu.APSR.Z = result == 0;
 		}
 	}
 }
 
-void ARMv7_instrs::UQADD16(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::UQADD16(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::UQADD8(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::UQADD8(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::UQASX(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::UQASX(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::UQSAX(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::UQSAX(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::UQSUB16(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::UQSUB16(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::UQSUB8(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::UQSUB8(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::USAD8(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::USAD8(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::USADA8(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::USADA8(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::USAT(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::USAT(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::USAT16(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::USAT16(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::USAX(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::USAX(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::USUB16(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::USUB16(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::USUB8(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::USUB8(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::UXTAB(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::UXTAB(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::UXTAB16(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::UXTAB16(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::UXTAH(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::UXTAH(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::UXTB(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::UXTB(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	u32 cond, d, m, rot;
-
-	switch (type)
-	{
-	case T1:
-	{
-		cond = context.ITSTATE.advance();
-		d = (code.data & 0x7);
-		m = (code.data & 0x38) >> 3;
-		rot = 0;
-		break;
-	}
-	case T2:
-	{
-		cond = context.ITSTATE.advance();
-		d = (code.data & 0xf00) >> 8;
-		m = (code.data & 0xf);
-		rot = (code.data & 0x30) >> 1;
-
-		reject(d == 13 || d == 15 || m == 13 || m == 15, "UNPREDICTABLE");
-		break;
-	}
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
-
-	if (context.debug)
-	{
-		if (context.debug & DF_DISASM) context.fmt_debug_str("uxtb%s %s,%s%s", fmt_cond(cond), fmt_reg(d), fmt_reg(m), fmt_shift(SRType_ROR, rot));
-		if (process_debug(context)) return;
-	}
+	using args = arm_code::uxtb<type>;
+	ARG(d, op);
+	ARG(m, op);
+	ARG(rotation, op);
 
-	if (ConditionPassed(context, cond))
+	if (ConditionPassed(cpu, cond))
 	{
-		context.write_gpr(d, (context.read_gpr(m) >> rot) & 0xff, type == T1 ? 2 : 4);
+		cpu.write_gpr(d, u8(cpu.read_gpr(m) >> rotation), type == T1 ? 2 : 4);
 	}
 }
 
-void ARMv7_instrs::UXTB16(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::UXTB16(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::UXTH(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::UXTH(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
 
-void ARMv7_instrs::VABA_(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VABA_(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VABD_(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VABD_(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VABD_FP(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VABD_FP(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VABS(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VABS(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VAC__(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VAC__(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VADD(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VADD(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VADD_FP(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VADD_FP(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VADDHN(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VADDHN(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VADD_(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VADD_(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VAND(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VAND(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VBIC_IMM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VBIC_IMM(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VBIC_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VBIC_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VB__(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VB__(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VCEQ_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VCEQ_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VCEQ_ZERO(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VCEQ_ZERO(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VCGE_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VCGE_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VCGE_ZERO(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VCGE_ZERO(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VCGT_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VCGT_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VCGT_ZERO(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VCGT_ZERO(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VCLE_ZERO(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VCLE_ZERO(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VCLS(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VCLS(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VCLT_ZERO(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VCLT_ZERO(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VCLZ(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VCLZ(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VCMP_(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VCMP_(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VCNT(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VCNT(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VCVT_FIA(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VCVT_FIA(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VCVT_FIF(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VCVT_FIF(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VCVT_FFA(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VCVT_FFA(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VCVT_FFF(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VCVT_FFF(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VCVT_DF(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VCVT_DF(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VCVT_HFA(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VCVT_HFA(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VCVT_HFF(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VCVT_HFF(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VDIV(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VDIV(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VDUP_S(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VDUP_S(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VDUP_R(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VDUP_R(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VEOR(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VEOR(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VEXT(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VEXT(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VHADDSUB(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VHADDSUB(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VLD__MS(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VLD__MS(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VLD1_SL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VLD1_SL(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VLD1_SAL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VLD1_SAL(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VLD2_SL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VLD2_SL(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VLD2_SAL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VLD2_SAL(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VLD3_SL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VLD3_SL(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VLD3_SAL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VLD3_SAL(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VLD4_SL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VLD4_SL(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VLD4_SAL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VLD4_SAL(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VLDM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VLDM(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VLDR(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VLDR(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VMAXMIN(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VMAXMIN(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VMAXMIN_FP(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VMAXMIN_FP(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VML__(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VML__(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VML__FP(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VML__FP(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VML__S(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VML__S(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VMOV_IMM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VMOV_IMM(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VMOV_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VMOV_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VMOV_RS(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VMOV_RS(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VMOV_SR(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VMOV_SR(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VMOV_RF(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VMOV_RF(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VMOV_2RF(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VMOV_2RF(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VMOV_2RD(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VMOV_2RD(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VMOVL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VMOVL(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VMOVN(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VMOVN(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VMRS(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VMRS(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VMSR(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VMSR(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VMUL_(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VMUL_(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VMUL_FP(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VMUL_FP(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VMUL_S(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VMUL_S(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VMVN_IMM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VMVN_IMM(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VMVN_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VMVN_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VNEG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VNEG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VNM__(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VNM__(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VORN_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VORN_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VORR_IMM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VORR_IMM(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VORR_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VORR_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VPADAL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VPADAL(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VPADD(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VPADD(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VPADD_FP(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VPADD_FP(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VPADDL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VPADDL(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VPMAXMIN(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VPMAXMIN(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VPMAXMIN_FP(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VPMAXMIN_FP(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VPOP(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VPOP(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VPUSH(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VPUSH(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VQABS(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VQABS(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VQADD(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VQADD(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VQDML_L(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VQDML_L(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VQDMULH(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VQDMULH(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VQDMULL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VQDMULL(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VQMOV_N(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VQMOV_N(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VQNEG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VQNEG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VQRDMULH(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VQRDMULH(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VQRSHL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VQRSHL(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VQRSHR_N(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VQRSHR_N(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VQSHL_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VQSHL_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VQSHL_IMM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VQSHL_IMM(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VQSHR_N(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VQSHR_N(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VQSUB(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VQSUB(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VRADDHN(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VRADDHN(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VRECPE(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VRECPE(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VRECPS(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VRECPS(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VREV__(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VREV__(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VRHADD(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VRHADD(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VRSHL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VRSHL(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VRSHR(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VRSHR(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VRSHRN(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VRSHRN(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VRSQRTE(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VRSQRTE(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VRSQRTS(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VRSQRTS(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VRSRA(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VRSRA(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VRSUBHN(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VRSUBHN(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VSHL_IMM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VSHL_IMM(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VSHL_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VSHL_REG(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VSHLL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VSHLL(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VSHR(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VSHR(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VSHRN(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VSHRN(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VSLI(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VSLI(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VSQRT(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VSQRT(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VSRA(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VSRA(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VSRI(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VSRI(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VST__MS(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VST__MS(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VST1_SL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VST1_SL(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VST2_SL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VST2_SL(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VST3_SL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VST3_SL(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VST4_SL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VST4_SL(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VSTM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VSTM(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VSTR(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VSTR(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VSUB(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VSUB(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VSUB_FP(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VSUB_FP(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VSUBHN(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VSUBHN(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VSUB_(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VSUB_(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VSWP(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VSWP(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VTB_(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VTB_(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VTRN(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VTRN(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VTST(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VTST(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VUZP(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VUZP(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::VZIP(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::VZIP(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
 
-void ARMv7_instrs::WFE(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::WFE(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::WFI(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::WFI(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
 
-void ARMv7_instrs::YIELD(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+template<arm_encoding type>
+void arm_interpreter::YIELD(ARMv7Thread& cpu, const u32 op, const u32 cond)
 {
-	switch (type)
-	{
-	case A1: throw EXCEPTION("");
-	default: throw EXCEPTION("");
-	}
+	throw EXCEPTION("TODO");
 }
+
+template void arm_interpreter::HACK<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::HACK<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::ADC_IMM<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::ADC_IMM<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::ADC_REG<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::ADC_REG<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::ADC_REG<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::ADC_RSR<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::ADD_IMM<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::ADD_IMM<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::ADD_IMM<T3>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::ADD_IMM<T4>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::ADD_IMM<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::ADD_REG<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::ADD_REG<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::ADD_REG<T3>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::ADD_REG<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::ADD_RSR<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::ADD_SPI<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::ADD_SPI<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::ADD_SPI<T3>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::ADD_SPI<T4>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::ADD_SPI<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::ADD_SPR<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::ADD_SPR<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::ADD_SPR<T3>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::ADD_SPR<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::ADR<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::ADR<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::ADR<T3>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::ADR<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::ADR<A2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::AND_IMM<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::AND_IMM<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::AND_REG<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::AND_REG<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::AND_REG<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::AND_RSR<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::ASR_IMM<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::ASR_IMM<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::ASR_IMM<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::ASR_REG<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::ASR_REG<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::ASR_REG<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::B<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::B<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::B<T3>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::B<T4>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::B<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::BFC<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::BFC<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::BFI<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::BFI<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::BIC_IMM<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::BIC_IMM<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::BIC_REG<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::BIC_REG<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::BIC_REG<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::BIC_RSR<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::BKPT<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::BKPT<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::BL<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::BL<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::BL<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::BL<A2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::BLX<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::BLX<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::BX<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::BX<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::CB_Z<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::CLZ<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::CLZ<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::CMN_IMM<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::CMN_IMM<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::CMN_REG<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::CMN_REG<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::CMN_REG<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::CMN_RSR<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::CMP_IMM<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::CMP_IMM<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::CMP_IMM<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::CMP_REG<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::CMP_REG<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::CMP_REG<T3>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::CMP_REG<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::CMP_RSR<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::DBG<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::DBG<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::DMB<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::DMB<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::DSB<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::DSB<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::EOR_IMM<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::EOR_IMM<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::EOR_REG<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::EOR_REG<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::EOR_REG<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::EOR_RSR<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::IT<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LDM<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LDM<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LDM<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LDMDA<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LDMDB<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LDMDB<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LDMIB<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LDR_IMM<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LDR_IMM<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LDR_IMM<T3>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LDR_IMM<T4>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LDR_IMM<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LDR_LIT<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LDR_LIT<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LDR_LIT<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LDR_REG<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LDR_REG<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LDR_REG<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LDRB_IMM<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LDRB_IMM<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LDRB_IMM<T3>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LDRB_IMM<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LDRB_LIT<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LDRB_LIT<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LDRB_REG<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LDRB_REG<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LDRB_REG<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LDRD_IMM<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LDRD_IMM<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LDRD_LIT<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LDRD_LIT<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LDRD_REG<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LDREX<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LDREX<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LDREXB<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LDREXB<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LDREXD<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LDREXD<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LDREXH<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LDREXH<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LDRH_IMM<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LDRH_IMM<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LDRH_IMM<T3>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LDRH_IMM<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LDRH_LIT<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LDRH_LIT<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LDRH_REG<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LDRH_REG<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LDRH_REG<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LDRSB_IMM<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LDRSB_IMM<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LDRSB_IMM<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LDRSB_LIT<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LDRSB_LIT<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LDRSB_REG<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LDRSB_REG<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LDRSB_REG<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LDRSH_IMM<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LDRSH_IMM<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LDRSH_IMM<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LDRSH_LIT<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LDRSH_LIT<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LDRSH_REG<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LDRSH_REG<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LDRSH_REG<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LSL_IMM<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LSL_IMM<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LSL_IMM<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LSL_REG<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LSL_REG<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LSL_REG<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LSR_IMM<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LSR_IMM<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LSR_IMM<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LSR_REG<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LSR_REG<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::LSR_REG<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::MLA<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::MLA<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::MLS<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::MLS<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::MOV_IMM<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::MOV_IMM<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::MOV_IMM<T3>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::MOV_IMM<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::MOV_IMM<A2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::MOV_REG<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::MOV_REG<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::MOV_REG<T3>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::MOV_REG<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::MOVT<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::MOVT<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::MRC_<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::MRC_<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::MRC_<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::MRC_<A2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::MRS<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::MRS<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::MSR_IMM<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::MSR_REG<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::MSR_REG<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::MUL<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::MUL<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::MUL<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::MVN_IMM<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::MVN_IMM<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::MVN_REG<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::MVN_REG<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::MVN_REG<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::MVN_RSR<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::NOP<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::NOP<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::NOP<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::ORN_IMM<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::ORN_REG<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::ORR_IMM<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::ORR_IMM<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::ORR_REG<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::ORR_REG<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::ORR_REG<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::ORR_RSR<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::PKH<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::PKH<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::POP<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::POP<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::POP<T3>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::POP<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::POP<A2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::PUSH<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::PUSH<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::PUSH<T3>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::PUSH<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::PUSH<A2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::QADD<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::QADD<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::QADD16<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::QADD16<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::QADD8<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::QADD8<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::QASX<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::QASX<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::QDADD<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::QDADD<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::QDSUB<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::QDSUB<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::QSAX<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::QSAX<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::QSUB<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::QSUB<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::QSUB16<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::QSUB16<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::QSUB8<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::QSUB8<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::RBIT<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::RBIT<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::REV<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::REV<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::REV<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::REV16<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::REV16<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::REV16<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::REVSH<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::REVSH<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::REVSH<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::ROR_IMM<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::ROR_IMM<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::ROR_REG<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::ROR_REG<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::ROR_REG<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::RRX<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::RRX<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::RSB_IMM<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::RSB_IMM<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::RSB_IMM<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::RSB_REG<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::RSB_REG<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::RSB_RSR<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::RSC_IMM<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::RSC_REG<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::RSC_RSR<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SADD16<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SADD16<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SADD8<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SADD8<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SASX<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SASX<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SBC_IMM<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SBC_IMM<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SBC_REG<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SBC_REG<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SBC_REG<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SBC_RSR<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SBFX<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SBFX<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SDIV<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SEL<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SEL<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SHADD16<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SHADD16<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SHADD8<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SHADD8<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SHASX<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SHASX<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SHSAX<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SHSAX<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SHSUB16<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SHSUB16<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SHSUB8<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SHSUB8<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SMLA__<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SMLA__<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SMLAD<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SMLAD<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SMLAL<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SMLAL<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SMLAL__<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SMLAL__<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SMLALD<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SMLALD<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SMLAW_<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SMLAW_<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SMLSD<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SMLSD<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SMLSLD<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SMLSLD<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SMMLA<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SMMLA<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SMMLS<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SMMLS<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SMMUL<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SMMUL<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SMUAD<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SMUAD<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SMUL__<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SMUL__<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SMULL<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SMULL<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SMULW_<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SMULW_<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SMUSD<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SMUSD<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SSAT<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SSAT<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SSAT16<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SSAT16<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SSAX<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SSAX<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SSUB16<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SSUB16<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SSUB8<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SSUB8<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::STM<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::STM<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::STM<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::STMDA<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::STMDB<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::STMDB<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::STMIB<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::STR_IMM<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::STR_IMM<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::STR_IMM<T3>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::STR_IMM<T4>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::STR_IMM<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::STR_REG<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::STR_REG<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::STR_REG<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::STRB_IMM<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::STRB_IMM<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::STRB_IMM<T3>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::STRB_IMM<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::STRB_REG<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::STRB_REG<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::STRB_REG<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::STRD_IMM<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::STRD_IMM<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::STRD_REG<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::STREX<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::STREX<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::STREXB<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::STREXB<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::STREXD<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::STREXD<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::STREXH<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::STREXH<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::STRH_IMM<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::STRH_IMM<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::STRH_IMM<T3>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::STRH_IMM<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::STRH_REG<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::STRH_REG<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::STRH_REG<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SUB_IMM<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SUB_IMM<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SUB_IMM<T3>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SUB_IMM<T4>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SUB_IMM<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SUB_REG<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SUB_REG<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SUB_REG<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SUB_RSR<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SUB_SPI<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SUB_SPI<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SUB_SPI<T3>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SUB_SPI<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SUB_SPR<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SUB_SPR<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SVC<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SVC<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SXTAB<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SXTAB<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SXTAB16<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SXTAB16<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SXTAH<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SXTAH<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SXTB<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SXTB<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SXTB<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SXTB16<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SXTB16<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SXTH<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SXTH<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::SXTH<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::TB_<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::TEQ_IMM<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::TEQ_IMM<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::TEQ_REG<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::TEQ_REG<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::TEQ_RSR<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::TST_IMM<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::TST_IMM<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::TST_REG<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::TST_REG<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::TST_REG<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::TST_RSR<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::UADD16<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::UADD16<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::UADD8<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::UADD8<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::UASX<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::UASX<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::UBFX<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::UBFX<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::UDIV<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::UHADD16<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::UHADD16<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::UHADD8<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::UHADD8<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::UHASX<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::UHASX<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::UHSAX<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::UHSAX<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::UHSUB16<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::UHSUB16<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::UHSUB8<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::UHSUB8<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::UMAAL<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::UMAAL<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::UMLAL<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::UMLAL<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::UMULL<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::UMULL<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::UQADD16<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::UQADD16<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::UQADD8<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::UQADD8<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::UQASX<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::UQASX<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::UQSAX<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::UQSAX<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::UQSUB16<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::UQSUB16<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::UQSUB8<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::UQSUB8<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::USAD8<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::USAD8<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::USADA8<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::USADA8<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::USAT<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::USAT<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::USAT16<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::USAT16<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::USAX<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::USAX<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::USUB16<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::USUB16<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::USUB8<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::USUB8<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::UXTAB<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::UXTAB<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::UXTAB16<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::UXTAB16<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::UXTAH<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::UXTAH<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::UXTB<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::UXTB<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::UXTB<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::UXTB16<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::UXTB16<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::UXTH<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::UXTH<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::UXTH<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VABA_<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VABA_<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VABA_<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VABA_<A2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VABD_<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VABD_<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VABD_<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VABD_<A2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VABD_FP<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VABD_FP<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VABS<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VABS<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VABS<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VABS<A2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VAC__<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VAC__<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VADD<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VADD<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VADD_FP<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VADD_FP<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VADD_FP<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VADD_FP<A2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VADDHN<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VADDHN<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VADD_<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VADD_<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VAND<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VAND<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VBIC_IMM<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VBIC_IMM<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VBIC_REG<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VBIC_REG<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VB__<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VB__<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VCEQ_REG<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VCEQ_REG<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VCEQ_REG<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VCEQ_REG<A2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VCEQ_ZERO<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VCEQ_ZERO<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VCGE_REG<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VCGE_REG<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VCGE_REG<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VCGE_REG<A2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VCGE_ZERO<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VCGE_ZERO<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VCGT_REG<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VCGT_REG<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VCGT_REG<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VCGT_REG<A2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VCGT_ZERO<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VCGT_ZERO<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VCLE_ZERO<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VCLE_ZERO<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VCLS<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VCLS<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VCLT_ZERO<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VCLT_ZERO<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VCLZ<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VCLZ<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VCMP_<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VCMP_<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VCMP_<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VCMP_<A2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VCNT<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VCNT<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VCVT_FIA<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VCVT_FIA<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VCVT_FIF<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VCVT_FIF<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VCVT_FFA<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VCVT_FFA<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VCVT_FFF<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VCVT_FFF<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VCVT_DF<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VCVT_DF<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VCVT_HFA<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VCVT_HFA<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VCVT_HFF<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VCVT_HFF<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VDIV<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VDIV<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VDUP_S<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VDUP_S<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VDUP_R<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VDUP_R<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VEOR<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VEOR<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VEXT<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VEXT<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VHADDSUB<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VHADDSUB<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VLD__MS<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VLD__MS<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VLD1_SAL<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VLD1_SAL<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VLD1_SL<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VLD1_SL<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VLD2_SAL<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VLD2_SAL<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VLD2_SL<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VLD2_SL<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VLD3_SAL<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VLD3_SAL<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VLD3_SL<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VLD3_SL<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VLD4_SAL<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VLD4_SAL<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VLD4_SL<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VLD4_SL<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VLDM<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VLDM<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VLDM<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VLDM<A2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VLDR<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VLDR<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VLDR<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VLDR<A2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VMAXMIN<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VMAXMIN<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VMAXMIN_FP<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VMAXMIN_FP<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VML__<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VML__<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VML__<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VML__<A2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VML__FP<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VML__FP<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VML__FP<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VML__FP<A2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VML__S<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VML__S<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VML__S<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VML__S<A2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VMOV_IMM<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VMOV_IMM<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VMOV_IMM<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VMOV_IMM<A2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VMOV_REG<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VMOV_REG<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VMOV_REG<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VMOV_REG<A2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VMOV_RS<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VMOV_RS<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VMOV_SR<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VMOV_SR<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VMOV_RF<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VMOV_RF<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VMOV_2RF<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VMOV_2RF<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VMOV_2RD<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VMOV_2RD<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VMOVL<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VMOVL<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VMOVN<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VMOVN<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VMRS<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VMRS<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VMSR<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VMSR<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VMUL_<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VMUL_<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VMUL_<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VMUL_<A2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VMUL_FP<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VMUL_FP<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VMUL_FP<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VMUL_FP<A2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VMUL_S<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VMUL_S<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VMUL_S<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VMUL_S<A2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VMVN_IMM<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VMVN_IMM<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VMVN_REG<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VMVN_REG<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VNEG<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VNEG<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VNEG<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VNEG<A2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VNM__<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VNM__<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VNM__<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VNM__<A2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VORN_REG<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VORN_REG<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VORR_IMM<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VORR_IMM<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VORR_REG<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VORR_REG<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VPADAL<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VPADAL<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VPADD<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VPADD<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VPADD_FP<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VPADD_FP<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VPADDL<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VPADDL<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VPMAXMIN<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VPMAXMIN<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VPMAXMIN_FP<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VPMAXMIN_FP<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VPOP<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VPOP<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VPOP<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VPOP<A2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VPUSH<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VPUSH<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VPUSH<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VPUSH<A2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VQABS<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VQABS<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VQADD<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VQADD<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VQDML_L<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VQDML_L<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VQDML_L<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VQDML_L<A2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VQDMULH<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VQDMULH<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VQDMULH<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VQDMULH<A2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VQDMULL<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VQDMULL<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VQDMULL<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VQDMULL<A2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VQMOV_N<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VQMOV_N<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VQNEG<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VQNEG<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VQRDMULH<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VQRDMULH<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VQRDMULH<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VQRDMULH<A2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VQRSHL<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VQRSHL<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VQRSHR_N<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VQRSHR_N<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VQSHL_REG<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VQSHL_REG<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VQSHL_IMM<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VQSHL_IMM<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VQSHR_N<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VQSHR_N<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VQSUB<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VQSUB<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VRADDHN<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VRADDHN<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VRECPE<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VRECPE<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VRECPS<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VRECPS<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VREV__<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VREV__<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VRHADD<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VRHADD<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VRSHL<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VRSHL<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VRSHR<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VRSHR<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VRSHRN<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VRSHRN<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VRSQRTE<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VRSQRTE<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VRSQRTS<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VRSQRTS<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VRSRA<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VRSRA<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VRSUBHN<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VRSUBHN<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VSHL_IMM<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VSHL_IMM<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VSHL_REG<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VSHL_REG<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VSHLL<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VSHLL<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VSHLL<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VSHLL<A2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VSHR<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VSHR<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VSHRN<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VSHRN<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VSLI<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VSLI<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VSQRT<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VSQRT<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VSRA<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VSRA<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VSRI<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VSRI<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VST__MS<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VST__MS<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VST1_SL<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VST1_SL<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VST2_SL<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VST2_SL<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VST3_SL<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VST3_SL<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VST4_SL<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VST4_SL<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VSTM<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VSTM<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VSTM<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VSTM<A2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VSTR<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VSTR<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VSTR<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VSTR<A2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VSUB<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VSUB<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VSUB_FP<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VSUB_FP<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VSUB_FP<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VSUB_FP<A2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VSUBHN<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VSUBHN<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VSUB_<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VSUB_<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VSWP<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VSWP<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VTB_<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VTB_<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VTRN<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VTRN<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VTST<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VTST<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VUZP<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VUZP<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VZIP<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::VZIP<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::WFE<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::WFE<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::WFE<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::WFI<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::WFI<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::WFI<A1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::YIELD<T1>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::YIELD<T2>(ARMv7Thread&, const u32, const u32);
+template void arm_interpreter::YIELD<A1>(ARMv7Thread&, const u32, const u32);

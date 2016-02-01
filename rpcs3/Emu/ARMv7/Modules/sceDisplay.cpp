@@ -1,8 +1,10 @@
 #include "stdafx.h"
 #include "Emu/System.h"
-#include "Emu/ARMv7/PSVFuncList.h"
+#include "Emu/ARMv7/ARMv7Module.h"
 
 #include "sceDisplay.h"
+
+LOG_CHANNEL(sceDisplay);
 
 s32 sceDisplayGetRefreshRate(vm::ptr<float> pFps)
 {
@@ -75,20 +77,16 @@ s32 sceDisplayUnregisterVblankStartCallback(s32 uid)
 }
 
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &sceDisplay, #name, name)
+#define REG_FUNC(nid, name) REG_FNID(SceDisplay, nid, name)
 
-psv_log_base sceDisplay("SceDisplay", []()
+DECLARE(arm_module_manager::SceDisplayUser)("SceDisplayUser", []()
 {
-	sceDisplay.on_load = nullptr;
-	sceDisplay.on_unload = nullptr;
-	sceDisplay.on_stop = nullptr;
-	sceDisplay.on_error = nullptr;
+	REG_FNID(SceDisplayUser, 0x7A410B64, sceDisplaySetFrameBuf);
+	REG_FNID(SceDisplayUser, 0x42AE6BBC, sceDisplayGetFrameBuf);
+});
 
-	// SceDisplayUser
-	REG_FUNC(0x7A410B64, sceDisplaySetFrameBuf);
-	REG_FUNC(0x42AE6BBC, sceDisplayGetFrameBuf);
-
-	// SceDisplay
+DECLARE(arm_module_manager::SceDisplay)("SceDisplay", []()
+{
 	REG_FUNC(0xA08CA60D, sceDisplayGetRefreshRate);
 	REG_FUNC(0xB6FDE0BA, sceDisplayGetVcount);
 	REG_FUNC(0x5795E898, sceDisplayWaitVblankStart);

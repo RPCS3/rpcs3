@@ -34,5 +34,3 @@ struct SceJpegSplitDecodeCtrl
 
 	le_t<u32> internalData[3];
 };
-
-extern psv_log_base sceJpeg;

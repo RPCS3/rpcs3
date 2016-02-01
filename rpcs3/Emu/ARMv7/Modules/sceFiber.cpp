@@ -1,8 +1,10 @@
 #include "stdafx.h"
 #include "Emu/System.h"
-#include "Emu/ARMv7/PSVFuncList.h"
+#include "Emu/ARMv7/ARMv7Module.h"
 
 #include "sceFiber.h"
+
+LOG_CHANNEL(sceFiber);
 
 s32 _sceFiberInitializeImpl(vm::ptr<SceFiber> fiber, vm::cptr<char> name, vm::ptr<SceFiberEntry> entry, u32 argOnInitialize, vm::ptr<void> addrContext, u32 sizeContext, vm::cptr<SceFiberOptParam> optParam, u32 buildVersion)
 {
@@ -45,15 +47,10 @@ s32 sceFiberGetInfo(vm::ptr<SceFiber> fiber, vm::ptr<SceFiberInfo> fiberInfo)
 }
 
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &sceFiber, #name, name)
+#define REG_FUNC(nid, name) REG_FNID(SceFiber, nid, name)
 
-psv_log_base sceFiber("SceFiber", []()
+DECLARE(arm_module_manager::SceFiber)("SceFiber", []()
 {
-	sceFiber.on_load = nullptr;
-	sceFiber.on_unload = nullptr;
-	sceFiber.on_stop = nullptr;
-	sceFiber.on_error = nullptr;
-
 	REG_FUNC(0xF24A298C, _sceFiberInitializeImpl);
 	//REG_FUNC(0xC6A3F9BB, _sceFiberInitializeWithInternalOptionImpl);
 	//REG_FUNC(0x7D0C7DDB, _sceFiberAttachContextAndRun);

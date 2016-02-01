@@ -1,8 +1,10 @@
 #include "stdafx.h"
 #include "Emu/System.h"
-#include "Emu/ARMv7/PSVFuncList.h"
+#include "Emu/ARMv7/ARMv7Module.h"
 
 #include "sceSsl.h"
+
+LOG_CHANNEL(sceSsl);
 
 s32 sceSslInit(u32 poolSize)
 {
@@ -60,15 +62,10 @@ s32 sceSslFreeSslCertName(vm::ptr<SceSslCertName> certName)
 }
 
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &sceSsl, #name, name)
+#define REG_FUNC(nid, name) REG_FNID(SceSsl, nid, name)
 
-psv_log_base sceSsl("SceSsl", []()
+DECLARE(arm_module_manager::SceSsl)("SceSsl", []()
 {
-	sceSsl.on_load = nullptr;
-	sceSsl.on_unload = nullptr;
-	sceSsl.on_stop = nullptr;
-	sceSsl.on_error = nullptr;
-
 	REG_FUNC(0x3C733316, sceSslInit);
 	REG_FUNC(0x03CE6E3A, sceSslTerm);
 	REG_FUNC(0xBD203262, sceSslGetMemoryPoolStats);

@@ -985,5 +985,3 @@ struct SceNpMatching2SignalingNetInfo
 	SceNetInAddr mappedAddr;
 	le_t<s32> natStatus;
 };
-
-extern psv_log_base sceNpMatching;

@@ -1,8 +1,10 @@
 #include "stdafx.h"
 #include "Emu/System.h"
-#include "Emu/ARMv7/PSVFuncList.h"
+#include "Emu/ARMv7/ARMv7Module.h"
 
 #include "sceVoice.h"
+
+LOG_CHANNEL(sceVoice);
 
 s32 sceVoiceInit(vm::ptr<SceVoiceInitParam> pArg, SceVoiceVersion version)
 {
@@ -130,15 +132,10 @@ s32 sceVoiceGetResourceInfo(vm::ptr<SceVoiceResourceInfo> pInfo)
 }
 
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &sceVoice, #name, name)
+#define REG_FUNC(nid, name) REG_FNID(SceVoice, nid, name)
 
-psv_log_base sceVoice("SceVoice", []()
+DECLARE(arm_module_manager::SceVoice)("SceVoice", []()
 {
-	sceVoice.on_load = nullptr;
-	sceVoice.on_unload = nullptr;
-	sceVoice.on_stop = nullptr;
-	sceVoice.on_error = nullptr;
-
 	REG_FUNC(0xD02C00B4, sceVoiceGetBitRate);
 	REG_FUNC(0xC913F7E9, sceVoiceGetMuteFlag);
 	REG_FUNC(0x875CC80D, sceVoiceGetVolume);

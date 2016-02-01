@@ -55,5 +55,3 @@ struct SceAudioencCtrl
 	vm::lptr<SceAudioencInfo> pInfo;
 	vm::lptr<SceAudioencOptInfo> pOptInfo;
 };
-
-extern psv_log_base sceAudioenc;

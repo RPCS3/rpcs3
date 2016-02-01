@@ -1,23 +1,20 @@
 #include "stdafx.h"
 #include "Emu/System.h"
-#include "Emu/ARMv7/PSVFuncList.h"
+#include "Emu/ARMv7/ARMv7Module.h"
 
 #include "sceLibm.h"
+
+LOG_CHANNEL(sceLibm);
 
 namespace sce_libm_func
 {
 
 }
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &sceLibm, #name, sce_libm_func::name)
+#define REG_FUNC(nid, name) REG_FNID(SceLibm, nid, sce_libm_func::name)
 
-psv_log_base sceLibm("SceLibm", []()
+DECLARE(arm_module_manager::SceLibm)("SceLibm", []()
 {
-	sceLibm.on_load = nullptr;
-	sceLibm.on_unload = nullptr;
-	sceLibm.on_stop = nullptr;
-	sceLibm.on_error = nullptr;
-
 	//REG_FUNC(0xC73FE76D, _Exp);
 	//REG_FUNC(0xFF4EAE04, _FExp);
 	//REG_FUNC(0xB363D7D4, _LExp);

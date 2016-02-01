@@ -51,5 +51,3 @@ struct SceNpScoreNpIdPcId
 	le_t<s32> pcId;
 	u8 pad[4];
 };
-
-extern psv_log_base sceNpScore;

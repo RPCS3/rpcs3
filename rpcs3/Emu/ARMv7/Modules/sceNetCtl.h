@@ -43,5 +43,3 @@ struct SceNetCtlAdhocPeerInfo
 };
 
 using SceNetCtlCallback = void(s32 event_type, vm::ptr<void> arg);
-
-extern psv_log_base sceNetCtl;

@@ -1,10 +1,23 @@
 #pragma once
 
-enum
+#include "Emu/ARMv7/ErrorCodes.h"
+
+enum ScePerfError : s32
 {
 	// Error Codes
-	SCE_PERF_ERROR_INVALID_ARGUMENT = 0x80580000,
+	SCE_PERF_ERROR_INVALID_ARGUMENT = ERROR_CODE(0x80580000),
 };
+
+template<>
+inline const char* arm_error_code::print(ScePerfError error)
+{
+	switch (error)
+	{
+		STR_CASE(SCE_PERF_ERROR_INVALID_ARGUMENT);
+	}
+
+	return nullptr;
+}
 
 enum : s32
 {
@@ -89,5 +102,3 @@ enum : u8
 	SCE_PERF_ARM_PMON_PLE_FIFO_OVERFLOW = 0xA4,
 	SCE_PERF_ARM_PMON_PLE_REQ_PROGRAMMED = 0xA5,
 };
-
-extern psv_log_base scePerf;

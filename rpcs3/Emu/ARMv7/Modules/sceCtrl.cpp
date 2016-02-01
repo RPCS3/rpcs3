@@ -1,8 +1,10 @@
 #include "stdafx.h"
 #include "Emu/System.h"
-#include "Emu/ARMv7/PSVFuncList.h"
+#include "Emu/ARMv7/ARMv7Module.h"
 
 #include "sceCtrl.h"
+
+LOG_CHANNEL(sceCtrl);
 
 s32 sceCtrlSetSamplingMode(u32 uiMode)
 {
@@ -45,15 +47,10 @@ s32 sceCtrlClearRapidFire(s32 port, s32 idx)
 }
 
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &sceCtrl, #name, name)
+#define REG_FUNC(nid, name) REG_FNID(SceCtrl, nid, name)
 
-psv_log_base sceCtrl("SceCtrl", []()
+DECLARE(arm_module_manager::SceCtrl)("SceCtrl", []()
 {
-	sceCtrl.on_load = nullptr;
-	sceCtrl.on_unload = nullptr;
-	sceCtrl.on_stop = nullptr;
-	sceCtrl.on_error = nullptr;
-
 	REG_FUNC(0xA497B150, sceCtrlSetSamplingMode);
 	REG_FUNC(0xEC752AAF, sceCtrlGetSamplingMode);
 	REG_FUNC(0xA9C3CED6, sceCtrlPeekBufferPositive);

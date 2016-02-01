@@ -1,8 +1,10 @@
 #include "stdafx.h"
 #include "Emu/System.h"
-#include "Emu/ARMv7/PSVFuncList.h"
+#include "Emu/ARMv7/ARMv7Module.h"
 
 #include "sceSysmodule.h"
+
+LOG_CHANNEL(sceSysmodule);
 
 s32 sceSysmoduleLoadModule(u16 id)
 {
@@ -25,15 +27,10 @@ s32 sceSysmoduleIsLoaded(u16 id)
 	return SCE_OK; // module is loaded
 }
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &sceSysmodule, #name, name)
+#define REG_FUNC(nid, name) REG_FNID(SceSysmodule, nid, name)
 
-psv_log_base sceSysmodule("SceSysmodule", []()
+DECLARE(arm_module_manager::SceSysmodule)("SceSysmodule", []()
 {
-	sceSysmodule.on_load = nullptr;
-	sceSysmodule.on_unload = nullptr;
-	sceSysmodule.on_stop = nullptr;
-	sceSysmodule.on_error = nullptr;
-
 	REG_FUNC(0x79A0160A, sceSysmoduleLoadModule);
 	REG_FUNC(0x31D87805, sceSysmoduleUnloadModule);
 	REG_FUNC(0x53099B7A, sceSysmoduleIsLoaded);

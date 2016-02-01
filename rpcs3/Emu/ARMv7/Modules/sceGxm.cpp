@@ -1,8 +1,10 @@
 #include "stdafx.h"
 #include "Emu/System.h"
-#include "Emu/ARMv7/PSVFuncList.h"
+#include "Emu/ARMv7/ARMv7Module.h"
 
 #include "sceGxm.h"
+
+LOG_CHANNEL(sceGxm);
 
 s32 sceGxmInitialize(vm::cptr<SceGxmInitializeParams> params)
 {
@@ -1067,15 +1069,10 @@ s32 sceGxmSetUniformDataF(vm::ptr<void> uniformBuffer, vm::cptr<SceGxmProgramPar
 }
 
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &sceGxm, #name, name)
+#define REG_FUNC(nid, name) REG_FNID(SceGxm, nid, name)
 
-psv_log_base sceGxm("SceGxm", []()
+DECLARE(arm_module_manager::SceGxm)("SceGxm", []()
 {
-	sceGxm.on_load = nullptr;
-	sceGxm.on_unload = nullptr;
-	sceGxm.on_stop = nullptr;
-	sceGxm.on_error = nullptr;
-
 	REG_FUNC(0xB0F1E4EC, sceGxmInitialize);
 	REG_FUNC(0xB627DE66, sceGxmTerminate);
 	//REG_FUNC(0x48C134AB, sceGxmBug9255RaisePrimitiveSplitThresholdEs2);
@@ -1145,6 +1142,8 @@ psv_log_base sceGxm("SceGxm", []()
 	REG_FUNC(0x6679BEF0, sceGxmTextureInitLinearStrided);
 	REG_FUNC(0xD572D547, sceGxmTextureInitSwizzled);
 	REG_FUNC(0xE6F0DB27, sceGxmTextureInitTiled);
+	//REG_FUNC(0x5DBFBA2C, sceGxmTextureInitSwizzledArbitrary);
+	//REG_FUNC(0xE3DF5E3B, sceGxmTextureInitCubeArbitrary);
 	REG_FUNC(0xE719CBD4, sceGxmTextureSetAnisoMode);
 	REG_FUNC(0x855814C4, sceGxmTextureSetData);
 	REG_FUNC(0xFC943596, sceGxmTextureSetFormat);
@@ -1186,11 +1185,14 @@ psv_log_base sceGxm("SceGxm", []()
 	REG_FUNC(0x8FF68274, sceGxmPrecomputedVertexStateSetAllTextures);
 	REG_FUNC(0x0389861D, sceGxmPrecomputedVertexStateSetAllUniformBuffers);
 	REG_FUNC(0x1F856E5D, sceGxmGetRenderTargetMemSizes);
+	//REG_FUNC(0xB291C959, sceGxmGetRenderTargetMemSize);
 	REG_FUNC(0xD56CD7B1, sceGxmCreateRenderTarget);
+	REG_FUNC(0x207AF96B, sceGxmCreateRenderTarget); // !!!
 	REG_FUNC(0x0B94C50A, sceGxmDestroyRenderTarget);
 	REG_FUNC(0xD0EDAB4C, sceGxmRenderTargetGetHostMem);
 	REG_FUNC(0x49553737, sceGxmRenderTargetGetDriverMemBlock);
 	REG_FUNC(0xDBA33160, sceGxmBeginScene);
+	REG_FUNC(0x8734FF4E, sceGxmBeginScene); // !!!
 	REG_FUNC(0xE84CE5B4, sceGxmCreateContext);
 	REG_FUNC(0xEDDC5FB2, sceGxmDestroyContext);
 	REG_FUNC(0xBC059AFC, sceGxmDraw);
@@ -1199,6 +1201,7 @@ psv_log_base sceGxm("SceGxm", []()
 	REG_FUNC(0xFE300E2F, sceGxmEndScene);
 	REG_FUNC(0x0733D8AE, sceGxmFinish);
 	REG_FUNC(0x51FE0899, sceGxmMidSceneFlush);
+	REG_FUNC(0x2B5C0444, sceGxmMidSceneFlush); // !!!
 	REG_FUNC(0x4FA073A6, sceGxmPopUserMarker);
 	REG_FUNC(0x3276C475, sceGxmPushUserMarker);
 	REG_FUNC(0x7B1FABB6, sceGxmReserveFragmentDefaultUniformBuffer);

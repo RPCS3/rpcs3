@@ -32,5 +32,3 @@ struct SceTouchData
 	le_t<u32> reportNum;
 	SceTouchReport report[8];
 };
-
-extern psv_log_base sceTouch;

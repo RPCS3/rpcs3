@@ -1,8 +1,10 @@
 #include "stdafx.h"
 #include "Emu/System.h"
-#include "Emu/ARMv7/PSVFuncList.h"
+#include "Emu/ARMv7/ARMv7Module.h"
 
 #include "sceNpScore.h"
+
+LOG_CHANNEL(sceNpScore);
 
 s32 sceNpScoreInit(s32 threadPriority, s32 cpuAffinityMask, vm::ptr<void> option)
 {
@@ -276,15 +278,10 @@ s32 sceNpScoreSanitizeCommentAsync(s32 reqId, vm::cptr<char> comment, vm::ptr<ch
 	throw EXCEPTION("");
 }
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &sceNpScore, #name, name)
+#define REG_FUNC(nid, name) REG_FNID(SceNpScore, nid, name)
 
-psv_log_base sceNpScore("SceNpScore", []()
+DECLARE(arm_module_manager::SceNpScore)("SceNpScore", []()
 {
-	sceNpScore.on_load = nullptr;
-	sceNpScore.on_unload = nullptr;
-	sceNpScore.on_stop = nullptr;
-	sceNpScore.on_error = nullptr;
-
 	REG_FUNC(0x0433069F, sceNpScoreInit);
 	REG_FUNC(0x2050F98F, sceNpScoreTerm);
 	REG_FUNC(0x5685F225, sceNpScoreCreateTitleCtx);

@@ -1,8 +1,10 @@
 #include "stdafx.h"
 #include "Emu/System.h"
-#include "Emu/ARMv7/PSVFuncList.h"
+#include "Emu/ARMv7/ARMv7Module.h"
 
 #include "sceNpCommon.h"
+
+LOG_CHANNEL(sceNpCommon);
 
 s32 sceNpAuthInit()
 {
@@ -59,15 +61,10 @@ s32 sceNpCmpNpIdInOrder(vm::cptr<SceNpId> npid1, vm::cptr<SceNpId> npid2, vm::pt
 	throw EXCEPTION("");
 }
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &sceNpCommon, #name, name)
+#define REG_FUNC(nid, name) REG_FNID(SceNpCommon, nid, name)
 
-psv_log_base sceNpCommon("SceNpCommon", []()
+DECLARE(arm_module_manager::SceNpCommon)("SceNpCommon", []()
 {
-	sceNpCommon.on_load = nullptr;
-	sceNpCommon.on_unload = nullptr;
-	sceNpCommon.on_stop = nullptr;
-	sceNpCommon.on_error = nullptr;
-
 	REG_FUNC(0x441D8B4E, sceNpAuthInit);
 	REG_FUNC(0x6093B689, sceNpAuthTerm);
 	REG_FUNC(0xED42079F, sceNpAuthCreateStartRequest);
