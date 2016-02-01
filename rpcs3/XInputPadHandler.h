@@ -3,14 +3,14 @@
 #include "Emu/Io/PadHandler.h"
 #include <Xinput.h>
 
-class XInputPadHandler : public PadHandlerBase
+class XInputPadHandler final : public PadHandlerBase
 {
 public:
 	XInputPadHandler();
 	~XInputPadHandler();
 
 	void Init(const u32 max_connect) override;
-	void Close() override;
+	void Close();
 
 private:
 	typedef void (WINAPI * PFN_XINPUTENABLE)(BOOL);
