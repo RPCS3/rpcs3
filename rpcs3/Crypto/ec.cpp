@@ -2,7 +2,6 @@
 // Licensed under the terms of the GNU GPL, version 2
 // http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
 
-#include "stdafx.h"
 #include "utils.h"
 
 void bn_print(char *name, u8 *a, u32 n)

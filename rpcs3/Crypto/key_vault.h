@@ -1,5 +1,8 @@
 #pragma once
 
+#include <string>
+#include <vector>
+
 enum SELF_KEY_TYPE {
 	KEY_LV0 = 1,
 	KEY_LV1,

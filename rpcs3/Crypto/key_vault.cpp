@@ -1,4 +1,3 @@
-#include "stdafx.h"
 #include "utils.h"
 #include "aes.h"
 #include "key_vault.h"
