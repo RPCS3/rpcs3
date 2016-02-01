@@ -18,7 +18,7 @@ bool VirtualMemoryBlock::IsInMyRange(const u32 addr, const u32 size)
 
 u32 VirtualMemoryBlock::Map(u32 realaddr, u32 size)
 {
-	assert(size);
+	Expects(size);
 
 	for (u32 addr = m_range_start; addr <= m_range_start + m_range_size - 1 - GetReservedAmount() - size;)
 	{
@@ -48,7 +48,7 @@ u32 VirtualMemoryBlock::Map(u32 realaddr, u32 size)
 
 bool VirtualMemoryBlock::Map(u32 realaddr, u32 size, u32 addr)
 {
-	assert(size);
+	Expects(size);
 
 	if (!IsInMyRange(addr, size))
 	{
