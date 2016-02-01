@@ -18,7 +18,7 @@ SaveDataInfoDialog::SaveDataInfoDialog(wxWindow* parent, const SaveDataInformati
 
 	wxBoxSizer* s_actions = new wxBoxSizer(wxHORIZONTAL);
 	s_actions->Add(0, 0, 1, wxEXPAND, 5);	//Add a spacer to make Close on the Right-Down corner of this dialog.
-	s_actions->Add(new wxButton(this, wxID_CANCEL, wxT("&Close"), wxDefaultPosition, wxDefaultSize, 0), 0, wxALL, 5);
+	s_actions->Add(new wxButton(this, wxID_CANCEL, "&Close", wxDefaultPosition, wxDefaultSize, 0), 0, wxALL, 5);
 	s_main->Add(s_actions, 0, wxEXPAND, 5);
 
 	SetSizerAndFit(s_main);
@@ -78,20 +78,20 @@ SaveDataManageDialog::SaveDataManageDialog(wxWindow* parent, unsigned int* sort_
 	wxBoxSizer* s_manage = new wxBoxSizer(wxVERTICAL);
 
 	wxBoxSizer* s_sort = new wxBoxSizer(wxHORIZONTAL);
-	s_sort->Add(new wxStaticText(this, wxID_ANY, wxT("Sort By"), wxDefaultPosition, wxDefaultSize, 0), 0, wxALL | wxEXPAND, 5);
+	s_sort->Add(new wxStaticText(this, wxID_ANY, "Sort By", wxDefaultPosition, wxDefaultSize, 0), 0, wxALL | wxEXPAND, 5);
 
 	m_sort_options = new wxComboBox(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_DROPDOWN | wxCB_READONLY);
 	//You might change this - of corse we should know what to been set - maybe after functions related been implemented.
-	m_sort_options->Append(wxT("User Id"));
-	m_sort_options->Append(wxT("Game Title"));
-	m_sort_options->Append(wxT("Game Subtitle"));
-	m_sort_options->Append(wxT("Play Time"));
-	m_sort_options->Append(wxT("Data Size"));
-	m_sort_options->Append(wxT("Last Modified"));
-	m_sort_options->Append(wxT("Created Time"));
-	m_sort_options->Append(wxT("Accessed Time"));
-	m_sort_options->Append(wxT("Modified Time"));
-	m_sort_options->Append(wxT("Modify Time"));
+	m_sort_options->Append("User Id");
+	m_sort_options->Append("Game Title");
+	m_sort_options->Append("Game Subtitle");
+	m_sort_options->Append("Play Time");
+	m_sort_options->Append("Data Size");
+	m_sort_options->Append("Last Modified");
+	m_sort_options->Append("Created Time");
+	m_sort_options->Append("Accessed Time");
+	m_sort_options->Append("Modified Time");
+	m_sort_options->Append("Modify Time");
 
 	m_sort_type = sort_type;
 	if (m_sort_type != nullptr)
@@ -106,7 +106,7 @@ SaveDataManageDialog::SaveDataManageDialog(wxWindow* parent, unsigned int* sort_
 	m_sort_options->SetSelection(*m_sort_type);
 	s_sort->Add(m_sort_options, 1, wxALL | wxEXPAND, 5);
 
-	wxButton* s_sort_action = new wxButton(this, wxID_ANY, wxT("&Apply"), wxDefaultPosition, wxDefaultSize, 0);
+	wxButton* s_sort_action = new wxButton(this, wxID_ANY, "&Apply", wxDefaultPosition, wxDefaultSize, 0);
 	s_sort_action->Bind(wxEVT_BUTTON, &SaveDataManageDialog::OnApplySort, this);
 	s_sort->Add(s_sort_action, 0, wxALL, 5);
 	
@@ -114,19 +114,19 @@ SaveDataManageDialog::SaveDataManageDialog(wxWindow* parent, unsigned int* sort_
 
 	wxBoxSizer* s_actions = new wxBoxSizer(wxHORIZONTAL);
 
-	wxButton* s_copy = new wxButton(this, wxID_ANY, wxT("&Copy"), wxDefaultPosition, wxDefaultSize, 0);
+	wxButton* s_copy = new wxButton(this, wxID_ANY, "&Copy", wxDefaultPosition, wxDefaultSize, 0);
 	s_copy->Bind(wxEVT_BUTTON, &SaveDataManageDialog::OnCopy, this);
 	s_actions->Add(s_copy, 0, wxALL, 5);
 
-	wxButton* s_delete = new wxButton(this, wxID_ANY, wxT("&Delete"), wxDefaultPosition, wxDefaultSize, 0);
+	wxButton* s_delete = new wxButton(this, wxID_ANY, "&Delete", wxDefaultPosition, wxDefaultSize, 0);
 	s_delete->Bind(wxEVT_BUTTON, &SaveDataManageDialog::OnDelete, this);
 	s_actions->Add(s_delete, 0, wxALL, 5);
 
-	wxButton* s_info = new wxButton(this, wxID_ANY, wxT("&Info"), wxDefaultPosition, wxDefaultSize, 0);
+	wxButton* s_info = new wxButton(this, wxID_ANY, "&Info", wxDefaultPosition, wxDefaultSize, 0);
 	s_info->Bind(wxEVT_BUTTON, &SaveDataManageDialog::OnInfo, this);
 	s_actions->Add(s_info, 0, wxALL, 5);
 
-	s_actions->Add(new wxButton(this, wxID_CANCEL, wxT("&Close"), wxDefaultPosition, wxDefaultSize, 0), 0, wxALL, 5);
+	s_actions->Add(new wxButton(this, wxID_CANCEL, "&Close", wxDefaultPosition, wxDefaultSize, 0), 0, wxALL, 5);
 
 	s_manage->Add(s_actions, 1, wxEXPAND, 5);
 
@@ -191,20 +191,20 @@ SaveDataListDialog::SaveDataListDialog(wxWindow* parent, bool enable_manage)
 	//If do not need manage, hide it, like just a save data picker.
 	if (!enable_manage)
 	{
-		wxButton *m_select = new wxButton(this, wxID_OK, wxT("&Select"), wxDefaultPosition, wxDefaultSize, 0);
+		wxButton *m_select = new wxButton(this, wxID_OK, "&Select", wxDefaultPosition, wxDefaultSize, 0);
 		m_select->Bind(wxEVT_BUTTON, &SaveDataListDialog::OnSelect, this);
 		s_action->Add(m_select, 0, wxALL, 5);
 		SetTitle("Save Data Chooser");
 	}
 	else {
-		wxButton *m_manage = new wxButton(this, wxID_ANY, wxT("&Manage"), wxDefaultPosition, wxDefaultSize, 0);
+		wxButton *m_manage = new wxButton(this, wxID_ANY, "&Manage", wxDefaultPosition, wxDefaultSize, 0);
 		m_manage->Bind(wxEVT_BUTTON, &SaveDataListDialog::OnManage, this);
 		s_action->Add(m_manage, 0, wxALL, 5);
 	}
 
 	s_action->Add(0, 0, 1, wxEXPAND, 5);
 
-	s_action->Add(new wxButton(this, wxID_CANCEL, wxT("&Close"), wxDefaultPosition, wxDefaultSize, 0), 0, wxALL, 5);
+	s_action->Add(new wxButton(this, wxID_CANCEL, "&Close", wxDefaultPosition, wxDefaultSize, 0), 0, wxALL, 5);
 
 	s_main->Add(s_action, 0, wxEXPAND, 5);
 

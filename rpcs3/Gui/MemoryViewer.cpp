@@ -107,7 +107,7 @@ MemoryViewerPanel::MemoryViewerPanel(wxWindow* parent)
 
 	//Memory Panel: Set size of the wxTextCtrl's
 	int x, y;
-	t_mem_hex->GetTextExtent(wxT("T"), &x, &y);
+	t_mem_hex->GetTextExtent("T", &x, &y);
 	t_mem_hex->SetMinSize(wxSize(x * 3 * m_colcount + 6, 228));
 	t_mem_hex->SetMaxSize(wxSize(x * 3 * m_colcount + 6, 228));
 	t_mem_ascii->SetMinSize(wxSize(x * m_colcount + 6, 228));
@@ -155,7 +155,7 @@ void MemoryViewerPanel::OnChangeToolsBytes(wxCommandEvent& event)
 	m_colcount = sc_bytes->GetValue();
 
 	int x, y;
-	t_mem_hex->GetTextExtent(wxT("T"), &x, &y);
+	t_mem_hex->GetTextExtent("T", &x, &y);
 	t_mem_hex->SetMinSize(wxSize(x * 3 * m_colcount + 6, 228));
 	t_mem_hex->SetMaxSize(wxSize(x * 3 * m_colcount + 6, 228));
 	t_mem_ascii->SetMinSize(wxSize(x * m_colcount + 6, 228));

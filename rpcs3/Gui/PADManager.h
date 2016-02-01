@@ -1,4 +1,4 @@
-#include <time.h>
+#pragma once
 
 enum ButtonIDs
 {
@@ -80,11 +80,10 @@ class PADManager : public wxDialog, PadButtons
 private:
 	u32 m_seconds;
 	u32 m_button_id;
-	bool m_key_pressed, m_emu_paused;
+	bool m_key_pressed;
 
 public:
 	PADManager(wxWindow* parent);
-	~PADManager() { if(m_emu_paused) Emu.Resume(); }
 
 	void OnKeyDown(wxKeyEvent &keyEvent);
 	void OnKeyUp(wxKeyEvent &keyEvent);

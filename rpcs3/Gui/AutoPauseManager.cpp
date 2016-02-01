@@ -26,10 +26,10 @@ AutoPauseManagerDialog::AutoPauseManagerDialog(wxWindow* parent)
 
 	wxBoxSizer* s_action = new wxBoxSizer(wxHORIZONTAL);
 
-	s_action->Add(new wxButton(this, wxID_CLEAR, wxT("Cl&ear"), wxDefaultPosition, wxDefaultSize, 0), 0, wxALL, 5);
-	s_action->Add(new wxButton(this, wxID_REFRESH, wxT("&Reload"), wxDefaultPosition, wxDefaultSize, 0), 0, wxALL, 5);
-	s_action->Add(new wxButton(this, wxID_SAVE, wxT("&Save"), wxDefaultPosition, wxDefaultSize, 0), 0, wxALL, 5);
-	s_action->Add(new wxButton(this, wxID_CANCEL, wxT("&Close"), wxDefaultPosition, wxDefaultSize, 0), 0, wxALL, 5);
+	s_action->Add(new wxButton(this, wxID_CLEAR, "Cl&ear", wxDefaultPosition, wxDefaultSize, 0), 0, wxALL, 5);
+	s_action->Add(new wxButton(this, wxID_REFRESH, "&Reload", wxDefaultPosition, wxDefaultSize, 0), 0, wxALL, 5);
+	s_action->Add(new wxButton(this, wxID_SAVE, "&Save", wxDefaultPosition, wxDefaultSize, 0), 0, wxALL, 5);
+	s_action->Add(new wxButton(this, wxID_CANCEL, "&Close", wxDefaultPosition, wxDefaultSize, 0), 0, wxALL, 5);
 
 	s_main->Add(s_action, 0, wxALL, 5);
 
@@ -65,7 +65,7 @@ void AutoPauseManagerDialog::LoadEntries(void)
 		u32 num;
 		size_t fmax = list.size();
 		size_t fcur = 0;
-		CHECK_ASSERTION(list.seek(0) != -1);
+		list.seek(0);
 		while (fcur <= fmax - sizeof(u32))
 		{
 			list.read(&num, sizeof(u32));
@@ -82,10 +82,10 @@ void AutoPauseManagerDialog::LoadEntries(void)
 //This would always use a 0xFFFFFFFF as end of the pause.bin
 void AutoPauseManagerDialog::SaveEntries(void)
 {
-	fs::file list(fs::get_config_dir() + "pause.bin", fom::rewrite);
+	fs::file list(fs::get_config_dir() + "pause.bin", fs::rewrite);
 	//System calls ID and Function calls ID are all u32 iirc.
 	u32 num = 0;
-	CHECK_ASSERTION(list.seek(0) != -1);
+	list.seek(0);
 	for (size_t i = 0; i < m_entries.size(); ++i)
 	{
 		if (num == 0xFFFFFFFF) continue;
@@ -210,12 +210,12 @@ AutoPauseSettingsDialog::AutoPauseSettingsDialog(wxWindow* parent, u32 *entry)
 
 	m_id = new wxTextCtrl(this, wxID_STATIC, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0);
 	s_config->Add(m_id, 1, wxALL | wxEXPAND, 5);
-	s_config->Add(new wxButton(this, wxID_OK, wxT("&OK"), wxDefaultPosition, wxDefaultSize, 0), 0, wxALL, 5);
-	s_config->Add(new wxButton(this, wxID_CANCEL, wxT("&Cancel"), wxDefaultPosition, wxDefaultSize, 0), 0, wxALL, 5);
+	s_config->Add(new wxButton(this, wxID_OK, "&OK", wxDefaultPosition, wxDefaultSize, 0), 0, wxALL, 5);
+	s_config->Add(new wxButton(this, wxID_CANCEL, "&Cancel", wxDefaultPosition, wxDefaultSize, 0), 0, wxALL, 5);
 
 	s_main->Add(s_config, 0, wxEXPAND, 5);
 
-	m_current_converted = new wxStaticText(this, wxID_ANY, wxT("Currently it gets an id of \"Unset\"."), wxDefaultPosition, wxDefaultSize, 0);
+	m_current_converted = new wxStaticText(this, wxID_ANY, "Currently it gets an id of \"Unset\".", wxDefaultPosition, wxDefaultSize, 0);
 	s_main->Add(m_current_converted, 0, wxALL, 5);
 
 	m_id->SetValue(fmt::format("%08x", m_entry));

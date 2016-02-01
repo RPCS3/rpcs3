@@ -1,10 +1,14 @@
 #include "stdafx.h"
 #include "stdafx_gui.h"
+#include "Utilities/Config.h"
 #include "GLGSFrame.h"
 #include "config.h"
 #include <wx/version.h>
 
-GLGSFrame::GLGSFrame() : GSFrame("OpenGL")
+extern cfg::bool_entry g_cfg_rsx_debug_output;
+
+GLGSFrame::GLGSFrame(size2i size)
+	: GSFrame("OpenGL", size)
 {
 	const int context_attrs[] =
 	{
@@ -16,15 +20,13 @@ GLGSFrame::GLGSFrame() : GSFrame("OpenGL")
 		WX_GL_MINOR_VERSION, 3,
 		WX_GL_CORE_PROFILE,
 #if !defined(CMAKE_BUILD)
-		rpcs3::config.rsx.d3d12.debug_output.value() ? WX_GL_DEBUG : 0,
+		g_cfg_rsx_debug_output ? WX_GL_DEBUG : 0,
 #endif
 #endif
 		0
 	};
 
-	m_canvas = new wxGLCanvas(this, wxID_ANY, context_attrs);
-	m_canvas->SetSize(GetClientSize());
-
+	m_canvas = new wxGLCanvas(this, wxID_ANY, context_attrs, wxDefaultPosition, { size.width, size.height });
 	m_canvas->Bind(wxEVT_LEFT_DCLICK, &GSFrame::OnLeftDclick, this);
 }
 

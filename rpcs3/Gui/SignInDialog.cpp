@@ -19,8 +19,8 @@ void SignInDialogFrame::Create()
 	wxButton* b_signin = new wxButton(p_esn, wxID_OK, "Fake sign in");
 	wxButton* b_cancel = new wxButton(p_esn, wxID_CANCEL, "Cancel");
 
-	nb_config->AddPage(p_esn, wxT("ESN"));
-	nb_config->AddPage(p_psn, wxT("PSN"));
+	nb_config->AddPage(p_esn, "ESN");
+	nb_config->AddPage(p_psn, "PSN");
 
 	wxBoxSizer* s_subpanel_esn = new wxBoxSizer(wxVERTICAL);
 	wxBoxSizer* s_subpanel_psn = new wxBoxSizer(wxVERTICAL);

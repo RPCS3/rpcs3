@@ -1,19 +1,14 @@
 #include "stdafx.h"
 #include "stdafx_gui.h"
 #include "rpcs3.h"
-#include "config.h"
 #include "MainFrame.h"
 #include "git-version.h"
 
 #include "Emu/Memory/Memory.h"
-#include "Emu/SysCalls/Modules/cellSysutil.h"
 #include "Emu/System.h"
 #include "Gui/PADManager.h"
-#include "Gui/VHDDManager.h"
-#include "Gui/VFSManager.h"
 #include "Gui/AboutDialog.h"
 #include "Gui/GameViewer.h"
-#include "Gui/CompilerELF.h"
 #include "Gui/AutoPauseManager.h"
 #include "Gui/SaveDataUtility.h"
 #include "Gui/KernelExplorer.h"
@@ -21,9 +16,10 @@
 #include "Gui/RSXDebugger.h"
 #include "Gui/SettingsDialog.h"
 #include "Gui/MemoryStringSearcher.h"
-#include "Gui/LLEModulesManager.h"
 #include "Gui/CgDisasm.h"
 #include "Crypto/unpkg.h"
+
+#include <future>
 
 #ifndef _WIN32
 #include "frame_icon.xpm"
@@ -49,7 +45,6 @@ enum IDs
 	id_config_vhdd_manager,
 	id_config_autopause_manager,
 	id_config_savedata_manager,
-	id_config_lle_modules_manager,
 	id_tools_compiler,
 	id_tools_kernel_explorer,
 	id_tools_memory_viewer,
@@ -72,7 +67,7 @@ MainFrame::MainFrame()
 	, m_sys_menu_opened(false)
 {
 
-	SetLabel(wxString::Format(_PRGNAME_ " v" _PRGVER_ "-" RPCS3_GIT_VERSION));
+	SetLabel(_PRGNAME_ " v" _PRGVER_ "-" RPCS3_GIT_VERSION);
 
 	wxMenuBar* menubar = new wxMenuBar();
 
@@ -99,21 +94,19 @@ MainFrame::MainFrame()
 	menu_conf->Append(id_config_pad, "&PAD Settings");
 	menu_conf->AppendSeparator();
 	menu_conf->Append(id_config_autopause_manager, "&Auto Pause Settings");
-	menu_conf->AppendSeparator();
-	menu_conf->Append(id_config_vfs_manager, "Virtual &File System Manager");
-	menu_conf->Append(id_config_vhdd_manager, "Virtual &HDD Manager");
-	menu_conf->Append(id_config_savedata_manager, "Save &Data Utility");
-	menu_conf->Append(id_config_lle_modules_manager, "&LLE Modules Manager");
-
+	//menu_conf->AppendSeparator();
+	//menu_conf->Append(id_config_vfs_manager, "Virtual &File System Manager");
+	//menu_conf->Append(id_config_vhdd_manager, "Virtual &HDD Manager");
+	//menu_conf->Append(id_config_savedata_manager, "Save &Data Utility");
 
 	wxMenu* menu_tools = new wxMenu();
 	menubar->Append(menu_tools, "&Tools");
-	menu_tools->Append(id_tools_compiler, "&ELF Compiler");
+	//menu_tools->Append(id_tools_compiler, "&ELF Compiler");
+	menu_tools->Append(id_tools_cg_disasm, "&Cg Disasm")->Enable();
 	menu_tools->Append(id_tools_kernel_explorer, "&Kernel Explorer")->Enable(false);
 	menu_tools->Append(id_tools_memory_viewer, "&Memory Viewer")->Enable(false);
 	menu_tools->Append(id_tools_rsx_debugger, "&RSX Debugger")->Enable(false);
 	menu_tools->Append(id_tools_string_search, "&String Search")->Enable(false);
-	menu_tools->Append(id_tools_cg_disasm, "&Cg Disasm")->Enable();
 
 	wxMenu* menu_help = new wxMenu();
 	menubar->Append(menu_help, "&Help");
@@ -144,11 +137,10 @@ MainFrame::MainFrame()
 
 	Bind(wxEVT_MENU, &MainFrame::Config, this, id_config_emu);
 	Bind(wxEVT_MENU, &MainFrame::ConfigPad, this, id_config_pad);
+	Bind(wxEVT_MENU, &MainFrame::ConfigAutoPause, this, id_config_autopause_manager);
 	Bind(wxEVT_MENU, &MainFrame::ConfigVFS, this, id_config_vfs_manager);
 	Bind(wxEVT_MENU, &MainFrame::ConfigVHDD, this, id_config_vhdd_manager);
-	Bind(wxEVT_MENU, &MainFrame::ConfigAutoPause, this, id_config_autopause_manager);
 	Bind(wxEVT_MENU, &MainFrame::ConfigSaveData, this, id_config_savedata_manager);
-	Bind(wxEVT_MENU, &MainFrame::ConfigLLEModules, this, id_config_lle_modules_manager);
 
 	Bind(wxEVT_MENU, &MainFrame::OpenELFCompiler, this, id_tools_compiler);
 	Bind(wxEVT_MENU, &MainFrame::OpenKernelExplorer, this, id_tools_kernel_explorer);
@@ -164,7 +156,7 @@ MainFrame::MainFrame()
 	wxGetApp().Bind(wxEVT_KEY_DOWN, &MainFrame::OnKeyDown, this);
 	wxGetApp().Bind(wxEVT_DBG_COMMAND, &MainFrame::UpdateUI, this);
 
-	LOG_NOTICE(GENERAL, _PRGNAME_ " v" _PRGVER_ "-" RPCS3_GIT_VERSION);
+	LOG_NOTICE(GENERAL, "%s", _PRGNAME_ " v" _PRGVER_ "-" RPCS3_GIT_VERSION);
 	LOG_NOTICE(GENERAL, "");
 }
 
@@ -181,18 +173,18 @@ void MainFrame::AddPane(wxWindow* wind, const wxString& caption, int flags)
 
 void MainFrame::DoSettings(bool load)
 {
-	if(load)
-	{
-		// replace all '=' with '~' for ini-manager
-		if(!rpcs3::config.gui.aui_mgr_perspective.value().size())
-			rpcs3::config.gui.aui_mgr_perspective = fmt::replace_all(fmt::ToUTF8(m_aui_mgr.SavePerspective()), "=", "~");
+	auto&& cfg = g_gui_cfg[ini_name]["aui"];
 
-		m_aui_mgr.LoadPerspective(fmt::FromUTF8(fmt::replace_all(rpcs3::config.gui.aui_mgr_perspective.value(), "~", "=")));
+	if (load)
+	{
+		const auto& perspective = fmt::FromUTF8(cfg.Scalar());
+
+		m_aui_mgr.LoadPerspective(perspective.empty() ? m_aui_mgr.SavePerspective() : perspective);
 	}
 	else
 	{
-		rpcs3::config.gui.aui_mgr_perspective = fmt::replace_all(fmt::ToUTF8(m_aui_mgr.SavePerspective()), "=", "~");
-		rpcs3::config.save();
+		cfg = fmt::ToUTF8(m_aui_mgr.SavePerspective());
+		save_gui_cfg();
 	}
 }
 
@@ -216,16 +208,7 @@ void MainFrame::BootGame(wxCommandEvent& WXUNUSED(event))
 
 	Emu.Stop();
 	
-	if(Emu.BootGame(ctrl.GetPath().ToStdString()))
-	{
-		LOG_SUCCESS(GENERAL, "Game: boot done.");
-
-		if (rpcs3::config.misc.always_start.value())
-		{
-			Emu.Run();
-		}
-	}
-	else
+	if(!Emu.BootGame(ctrl.GetPath().ToStdString()))
 	{
 		LOG_ERROR(GENERAL, "PS3 executable not found in selected folder (%s)", fmt::ToUTF8(ctrl.GetPath())); // passing std::string (test)
 	}
@@ -233,37 +216,35 @@ void MainFrame::BootGame(wxCommandEvent& WXUNUSED(event))
 
 void MainFrame::InstallPkg(wxCommandEvent& WXUNUSED(event))
 {
-	const bool was_running = Emu.Pause();
+	const bool paused = Emu.Pause();
 
 	wxFileDialog ctrl(this, L"Select PKG", wxEmptyString, wxEmptyString, "PKG files (*.pkg)|*.pkg|All files (*.*)|*.*", wxFD_OPEN | wxFD_FILE_MUST_EXIST);
 	
 	if (ctrl.ShowModal() == wxID_CANCEL)
 	{
-		if (was_running) Emu.Resume();
+		if (paused) Emu.Resume();
 		return;
 	}
 
 	Emu.Stop();
 
-	Emu.GetVFS().Init("/");
-	std::string local_path;
-	Emu.GetVFS().GetDevice("/dev_hdd0/game/", local_path);
-
 	// Open PKG file
 	fs::file pkg_f(ctrl.GetPath().ToStdString());
 
-	// Open file mapping (test)
-	fs::file_read_map pkg_ptr(pkg_f);
-
-	if (!pkg_f || !pkg_ptr)
+	if (!pkg_f || pkg_f.size() < 64)
 	{
 		LOG_ERROR(LOADER, "PKG: Failed to open %s", ctrl.GetPath().ToStdString());
 		return;
 	}
 
-	// Append title ID to the path
-	local_path += '/';
-	local_path.append(pkg_ptr + 55, 9);
+	// Get title ID
+	std::vector<char> title_id(9);
+	pkg_f.seek(55);
+	pkg_f.read(title_id);
+	pkg_f.seek(0);
+
+	// Get full path
+	const auto& local_path = vfs::get("/dev_hdd0/game/") + std::string(std::begin(title_id), std::end(title_id));
 
 	if (!fs::create_dir(local_path))
 	{
@@ -343,11 +324,6 @@ void MainFrame::BootElf(wxCommandEvent& WXUNUSED(event))
 	Emu.Load();
 
 	LOG_SUCCESS(LOADER, "(S)ELF: boot done.");
-	
-	if (rpcs3::config.misc.always_start.value() && Emu.IsReady())
-	{
-		Emu.Run();
-	}
 }
 
 void MainFrame::Pause(wxCommandEvent& WXUNUSED(event))
@@ -371,14 +347,17 @@ void MainFrame::Stop(wxCommandEvent& WXUNUSED(event))
 	Emu.Stop();
 }
 
+// This is ugly, but PS3 headers shall not be included there.
+extern void sysutilSendSystemCommand(u64 status, u64 param);
+
 void MainFrame::SendExit(wxCommandEvent& event)
 {
-	sysutilSendSystemCommand(CELL_SYSUTIL_REQUEST_EXITGAME, 0);
+	sysutilSendSystemCommand(0x0101 /* CELL_SYSUTIL_REQUEST_EXITGAME */, 0);
 }
 
 void MainFrame::SendOpenCloseSysMenu(wxCommandEvent& event)
 {
-	sysutilSendSystemCommand(m_sys_menu_opened ? CELL_SYSUTIL_SYSTEM_MENU_CLOSE : CELL_SYSUTIL_SYSTEM_MENU_OPEN, 0);
+	sysutilSendSystemCommand(m_sys_menu_opened ? 0x0132 /* CELL_SYSUTIL_SYSTEM_MENU_CLOSE */ : 0x0131 /* CELL_SYSUTIL_SYSTEM_MENU_OPEN */, 0);
 	m_sys_menu_opened = !m_sys_menu_opened;
 	wxCommandEvent ce;
 	UpdateUI(ce);
@@ -396,12 +375,12 @@ void MainFrame::ConfigPad(wxCommandEvent& WXUNUSED(event))
 
 void MainFrame::ConfigVFS(wxCommandEvent& WXUNUSED(event))
 {
-	VFSManagerDialog(this).ShowModal();
+	//VFSManagerDialog(this).ShowModal();
 }
 
 void MainFrame::ConfigVHDD(wxCommandEvent& WXUNUSED(event))
 {
-	VHDDManagerDialog(this).ShowModal();
+	//VHDDManagerDialog(this).ShowModal();
 }
 
 void MainFrame::ConfigAutoPause(wxCommandEvent& WXUNUSED(event))
@@ -414,14 +393,9 @@ void MainFrame::ConfigSaveData(wxCommandEvent& event)
 	SaveDataListDialog(this, true).ShowModal();
 }
 
-void MainFrame::ConfigLLEModules(wxCommandEvent& event)
-{
-	(new LLEModulesManagerFrame(this))->Show();
-}
-
 void MainFrame::OpenELFCompiler(wxCommandEvent& WXUNUSED(event))
 {
-	(new CompilerELF(this))->Show();
+	//(new CompilerELF(this))->Show();
 }
 
 void MainFrame::OpenKernelExplorer(wxCommandEvent& WXUNUSED(event))
@@ -507,14 +481,6 @@ void MainFrame::UpdateUI(wxCommandEvent& event)
 
 			default:
 				return;
-		}
-
-		if (event.GetId() == DID_STOPPED_EMU)
-		{
-			if (rpcs3::config.misc.exit_on_stop.value())
-			{
-				wxGetApp().Exit();
-			}
 		}
 	}
 	else

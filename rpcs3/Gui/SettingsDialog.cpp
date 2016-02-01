@@ -1,96 +1,215 @@
 #include "stdafx.h"
 #include "stdafx_gui.h"
-
+#include "Utilities/Config.h"
+#include "Loader/ELF.h"
 #include "Emu/System.h"
-#include "Emu/state.h"
-#include "Emu/SysCalls/Modules/cellVideoOut.h"
-#include "SettingsDialog.h"
 
-#ifdef _WIN32
-#include <windows.h>
-#include <iphlpapi.h>
-#pragma comment(lib, "iphlpapi.lib")
-
-#undef GetHwnd
 #ifdef _MSC_VER
+#include <Windows.h>
+#undef GetHwnd
 #include <d3d12.h>
 #include <wrl/client.h>
 #include <dxgi1_4.h>
 #endif
-#else
-#include <arpa/inet.h>
-#include <sys/socket.h>
-#include <netdb.h>
-#include <ifaddrs.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#endif
 
-std::vector<std::string> GetAdapters()
+#include "SettingsDialog.h"
+
+#include <set>
+
+// Node location
+using cfg_location = std::vector<const char*>;
+
+extern std::string g_cfg_defaults;
+
+static YAML::Node loaded;
+static YAML::Node saved;
+
+// Emit sorted YAML
+static never_inline void emit(YAML::Emitter& out, const YAML::Node& node)
 {
-	std::vector<std::string> adapters;
-#ifdef _WIN32
-	PIP_ADAPTER_INFO pAdapterInfo;
-	pAdapterInfo = (IP_ADAPTER_INFO*)malloc(sizeof(IP_ADAPTER_INFO));
-	ULONG buflen = sizeof(IP_ADAPTER_INFO);
-
-	if (GetAdaptersInfo(pAdapterInfo, &buflen) == ERROR_BUFFER_OVERFLOW)
-	{
-		free(pAdapterInfo);
-		pAdapterInfo = (IP_ADAPTER_INFO*)malloc(buflen);
-	}
-
-	if (GetAdaptersInfo(pAdapterInfo, &buflen) == NO_ERROR)
-	{
-		PIP_ADAPTER_INFO pAdapter = pAdapterInfo;
-		while (pAdapter)
-		{
-			adapters.emplace_back(pAdapter->Description);
-			pAdapter = pAdapter->Next;
-		}
-	}
-	else
-	{
-		LOG_ERROR(HLE, "Call to GetAdaptersInfo failed.");
-	}
-#else
-	struct ifaddrs *ifaddr, *ifa;
-	int family, s, n;
-	char host[NI_MAXHOST];
-
-	if (getifaddrs(&ifaddr) == -1)
-	{
-		LOG_ERROR(HLE, "Call to getifaddrs returned negative.");
-	}
-
-	for (ifa = ifaddr, n = 0; ifa != NULL; ifa = ifa->ifa_next, n++)
-	{
-		if (ifa->ifa_addr == NULL)
-		{
-			continue;
-		}
-
-		family = ifa->ifa_addr->sa_family;
-
-		if (family == AF_INET || family == AF_INET6)
-		{
-			adapters.emplace_back(ifa->ifa_name);
-		}
-	}
-
-	freeifaddrs(ifaddr);
-#endif
-
-	return adapters;
+	// TODO
+	out << node;
 }
 
+// Incrementally load YAML
+static never_inline void operator +=(YAML::Node& left, const YAML::Node& node)
+{
+	if (node && !node.IsNull())
+	{
+		if (node.IsMap())
+		{
+			for (const auto& pair : node)
+			{
+				if (pair.first.IsScalar())
+				{
+					auto&& lhs = left[pair.first.Scalar()];
+					lhs += pair.second;
+				}
+				else
+				{
+					// Exotic case (TODO: probably doesn't work)
+					auto&& lhs = left[YAML::Clone(pair.first)];
+					lhs += pair.second;
+				}
+			}
+		}
+		else if (node.IsScalar() || node.IsSequence())
+		{
+			// Scalars and sequences are replaced completely, but this may change in future.
+			// This logic may be overwritten by custom demands of every specific cfg:: node.
+			left = node;
+		}
+	}
+}
 
-SettingsDialog::SettingsDialog(wxWindow *parent, rpcs3::config_t* cfg)
+// Connects wx gui element to the config node; abstract base class
+struct cfg_adapter
+{
+	cfg_location location;
+
+	cfg_adapter(cfg_location&& _loc)
+		: location(std::move(_loc))
+	{
+	}
+
+	static cfg::entry_base& get_cfg(cfg::entry_base& root, cfg_location::const_iterator begin, cfg_location::const_iterator end)
+	{
+		return begin == end ? root : get_cfg(root[*begin], begin + 1, end);
+	}
+
+	static YAML::Node get_node(YAML::Node node, cfg_location::const_iterator begin, cfg_location::const_iterator end)
+	{
+		return begin == end ? node : get_node(node[*begin], begin + 1, end); // TODO
+	}
+
+	cfg::entry_base& get_cfg() const
+	{
+		return get_cfg(cfg::root, location.cbegin(), location.cend());
+	}
+
+	YAML::Node get_node(YAML::Node root) const
+	{
+		return get_node(root, location.cbegin(), location.cend());
+	}
+
+	virtual void save() = 0;
+};
+
+struct radiobox_pad_helper
+{
+	cfg_location location;
+	wxArrayString values;
+
+	radiobox_pad_helper(cfg_location&& _loc)
+		: location(std::move(_loc))
+	{
+		for (const auto& v : cfg_adapter::get_cfg(cfg::root, location.cbegin(), location.cend()).to_list())
+		{
+			values.Add(fmt::FromUTF8(v));
+		}
+	}
+
+	operator const wxArrayString&() const
+	{
+		return values;
+	}
+};
+
+struct radiobox_pad : cfg_adapter
+{
+	wxRadioBox*& ptr;
+
+	radiobox_pad(radiobox_pad_helper&& helper, wxRadioBox*& ptr)
+		: cfg_adapter(std::move(helper.location))
+		, ptr(ptr)
+	{
+		const auto& value = get_node(loaded).Scalar();
+		const auto& values = get_cfg().to_list();
+
+		for (int i = 0; i < values.size(); i++)
+		{
+			if (value == values[i])
+			{
+				ptr->SetSelection(i);
+				return;
+			}
+		}
+	}
+
+	void save() override
+	{
+		get_node(saved) = get_cfg().to_list()[ptr->GetSelection()];
+	}
+};
+
+struct combobox_pad : cfg_adapter
+{
+	wxComboBox*& ptr;
+
+	combobox_pad(cfg_location&& _loc, wxComboBox*& ptr)
+		: cfg_adapter(std::move(_loc))
+		, ptr(ptr)
+	{
+		for (const auto& v : get_cfg().to_list())
+		{
+			ptr->Append(fmt::FromUTF8(v));
+		}
+
+		ptr->SetValue(fmt::FromUTF8(get_node(loaded).Scalar()));
+	}
+
+	void save() override
+	{
+		get_node(saved) = fmt::ToUTF8(ptr->GetValue());
+	}
+};
+
+struct checkbox_pad : cfg_adapter
+{
+	wxCheckBox*& ptr;
+
+	checkbox_pad(cfg_location&& _loc, wxCheckBox*& ptr)
+		: cfg_adapter(std::move(_loc))
+		, ptr(ptr)
+	{
+		ptr->SetValue(get_node(loaded).as<bool>(false));
+	}
+
+	void save() override
+	{
+		get_node(saved) = ptr->GetValue() ? "true" : "false";
+	}
+};
+
+struct textctrl_pad : cfg_adapter
+{
+	wxTextCtrl*& ptr;
+
+	textctrl_pad(cfg_location&& _loc, wxTextCtrl*& ptr)
+		: cfg_adapter(std::move(_loc))
+		, ptr(ptr)
+	{
+		ptr->SetValue(fmt::FromUTF8(get_node(loaded).Scalar()));
+	}
+
+	void save() override
+	{
+		get_node(saved) = fmt::ToUTF8(ptr->GetValue());
+	}
+};
+
+
+SettingsDialog::SettingsDialog(wxWindow* parent)
 	: wxDialog(parent, wxID_ANY, "Settings", wxDefaultPosition)
 {
-	const bool was_running = Emu.Pause();
-	if (was_running || Emu.IsReady()) cfg = &rpcs3::state.config;
+	// Load default config
+	loaded = YAML::Load(g_cfg_defaults);
+
+	// Incrementally load config.yml
+	const fs::file config(fs::get_config_dir() + "/config.yml", fs::read + fs::write + fs::create);
+	loaded += YAML::Load(config.to_string());
+
+	std::vector<std::unique_ptr<cfg_adapter>> pads;
 
 	static const u32 width = 458;
 	static const u32 height = 400;
@@ -105,13 +224,13 @@ SettingsDialog::SettingsDialog(wxWindow *parent, rpcs3::config_t* cfg)
 	wxPanel* p_misc = new wxPanel(nb_config, wxID_ANY);
 	wxPanel* p_networking = new wxPanel(nb_config, wxID_ANY);
 
-	nb_config->AddPage(p_core, wxT("Core"));
-	nb_config->AddPage(p_graphics, wxT("Graphics"));
-	nb_config->AddPage(p_audio, wxT("Audio"));
-	nb_config->AddPage(p_io, wxT("Input / Output"));
-	nb_config->AddPage(p_misc, wxT("Miscellaneous"));
-	nb_config->AddPage(p_networking, wxT("Networking"));
-	nb_config->AddPage(p_system, wxT("System"));
+	nb_config->AddPage(p_core, "Core");
+	nb_config->AddPage(p_graphics, "Graphics");
+	nb_config->AddPage(p_audio, "Audio");
+	nb_config->AddPage(p_io, "Input / Output");
+	nb_config->AddPage(p_misc, "Misc");
+	nb_config->AddPage(p_networking, "Networking");
+	nb_config->AddPage(p_system, "System");
 
 	wxBoxSizer* s_subpanel_core = new wxBoxSizer(wxHORIZONTAL);
 	wxBoxSizer* s_subpanel_core1 = new wxBoxSizer(wxVERTICAL);
@@ -128,43 +247,38 @@ SettingsDialog::SettingsDialog(wxWindow *parent, rpcs3::config_t* cfg)
 	wxBoxSizer* s_subpanel_misc = new wxBoxSizer(wxVERTICAL);
 	wxBoxSizer* s_subpanel_networking = new wxBoxSizer(wxVERTICAL);
 
-	// Core settings
-	wxStaticBoxSizer* s_round_llvm = new wxStaticBoxSizer(wxVERTICAL, p_core, _("LLVM config"));
-	wxStaticBoxSizer* s_round_llvm_range = new wxStaticBoxSizer(wxHORIZONTAL, p_core, _("Excluded block range"));
-	wxStaticBoxSizer* s_round_llvm_threshold = new wxStaticBoxSizer(wxHORIZONTAL, p_core, _("Compilation threshold"));
+	// Core
+	wxStaticBoxSizer* s_round_core_lle = new wxStaticBoxSizer(wxVERTICAL, p_core, "Load libraries");
+	wxCheckListBox* chbox_list_core_lle = new wxCheckListBox(p_core, wxID_ANY, wxDefaultPosition, wxDefaultSize, {}, wxLB_EXTENDED);
 
 	// Graphics
-	wxStaticBoxSizer* s_round_gs_render = new wxStaticBoxSizer(wxVERTICAL, p_graphics, _("Render"));
-	wxStaticBoxSizer* s_round_gs_d3d_adaptater = new wxStaticBoxSizer(wxVERTICAL, p_graphics, _("D3D Adaptater"));
-	wxStaticBoxSizer* s_round_gs_res = new wxStaticBoxSizer(wxVERTICAL, p_graphics, _("Resolution"));
-	wxStaticBoxSizer* s_round_gs_aspect = new wxStaticBoxSizer(wxVERTICAL, p_graphics, _("Aspect ratio"));
-	wxStaticBoxSizer* s_round_gs_frame_limit = new wxStaticBoxSizer(wxVERTICAL, p_graphics, _("Frame limit"));
+	wxStaticBoxSizer* s_round_gs_render = new wxStaticBoxSizer(wxVERTICAL, p_graphics, "Render");
+	wxStaticBoxSizer* s_round_gs_d3d_adapter = new wxStaticBoxSizer(wxVERTICAL, p_graphics, "D3D Adaptater");
+	wxStaticBoxSizer* s_round_gs_res = new wxStaticBoxSizer(wxVERTICAL, p_graphics, "Resolution");
+	wxStaticBoxSizer* s_round_gs_aspect = new wxStaticBoxSizer(wxVERTICAL, p_graphics, "Aspect ratio");
+	wxStaticBoxSizer* s_round_gs_frame_limit = new wxStaticBoxSizer(wxVERTICAL, p_graphics, "Frame limit");
 
 	// Input / Output
-	wxStaticBoxSizer* s_round_io_pad_handler = new wxStaticBoxSizer(wxVERTICAL, p_io, _("Pad Handler"));
-	wxStaticBoxSizer* s_round_io_keyboard_handler = new wxStaticBoxSizer(wxVERTICAL, p_io, _("Keyboard Handler"));
-	wxStaticBoxSizer* s_round_io_mouse_handler = new wxStaticBoxSizer(wxVERTICAL, p_io, _("Mouse Handler"));
-	wxStaticBoxSizer* s_round_io_camera = new wxStaticBoxSizer(wxVERTICAL, p_io, _("Camera"));
-	wxStaticBoxSizer* s_round_io_camera_type = new wxStaticBoxSizer(wxVERTICAL, p_io, _("Camera type"));
+	wxStaticBoxSizer* s_round_io_pad_handler = new wxStaticBoxSizer(wxVERTICAL, p_io, "Pad Handler");
+	wxStaticBoxSizer* s_round_io_keyboard_handler = new wxStaticBoxSizer(wxVERTICAL, p_io, "Keyboard Handler");
+	wxStaticBoxSizer* s_round_io_mouse_handler = new wxStaticBoxSizer(wxVERTICAL, p_io, "Mouse Handler");
+	wxStaticBoxSizer* s_round_io_camera = new wxStaticBoxSizer(wxVERTICAL, p_io, "Camera");
+	wxStaticBoxSizer* s_round_io_camera_type = new wxStaticBoxSizer(wxVERTICAL, p_io, "Camera type");
 
 	// Audio
-	wxStaticBoxSizer* s_round_audio_out = new wxStaticBoxSizer(wxVERTICAL, p_audio, _("Audio Out"));
-
-	// Miscellaneous
-	wxStaticBoxSizer* s_round_hle_log_lvl = new wxStaticBoxSizer(wxVERTICAL, p_misc, _("Log Level"));
+	wxStaticBoxSizer* s_round_audio_out = new wxStaticBoxSizer(wxVERTICAL, p_audio, "Audio Out");
 
 	// Networking
-	wxStaticBoxSizer* s_round_net_status = new wxStaticBoxSizer(wxVERTICAL, p_networking, _("Connection status"));
-	wxStaticBoxSizer* s_round_net_interface = new wxStaticBoxSizer(wxVERTICAL, p_networking, _("Network adapter"));
+	wxStaticBoxSizer* s_round_net_status = new wxStaticBoxSizer(wxVERTICAL, p_networking, "Connection status");
 
 	// System
-	wxStaticBoxSizer* s_round_sys_lang = new wxStaticBoxSizer(wxVERTICAL, p_system, _("Language"));
+	wxStaticBoxSizer* s_round_sys_lang = new wxStaticBoxSizer(wxVERTICAL, p_system, "Language");
 
 
 	wxRadioBox* rbox_ppu_decoder;
 	wxRadioBox* rbox_spu_decoder;
 	wxComboBox* cbox_gs_render = new wxComboBox(p_graphics, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(150, -1), 0, NULL, wxCB_READONLY);
-	wxComboBox* cbox_gs_d3d_adaptater = new wxComboBox(p_graphics, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(150, -1), 0, NULL, wxCB_READONLY);
+	wxComboBox* cbox_gs_d3d_adapter = new wxComboBox(p_graphics, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(150, -1), 0, NULL, wxCB_READONLY);
 	wxComboBox* cbox_gs_resolution = new wxComboBox(p_graphics, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(150, -1), 0, NULL, wxCB_READONLY);
 	wxComboBox* cbox_gs_aspect = new wxComboBox(p_graphics, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(150, -1), 0, NULL, wxCB_READONLY);
 	wxComboBox* cbox_gs_frame_limit = new wxComboBox(p_graphics, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(150, -1), 0, NULL, wxCB_READONLY);
@@ -174,14 +288,12 @@ SettingsDialog::SettingsDialog(wxWindow *parent, rpcs3::config_t* cfg)
 	wxComboBox* cbox_camera = new wxComboBox(p_io, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(150, -1), 0, NULL, wxCB_READONLY);
 	wxComboBox* cbox_camera_type = new wxComboBox(p_io, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(150, -1), 0, NULL, wxCB_READONLY);
 	wxComboBox* cbox_audio_out = new wxComboBox(p_audio, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(150, -1), 0, NULL, wxCB_READONLY);
-	wxComboBox* cbox_hle_loglvl = new wxComboBox(p_misc, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(150, -1), 0, NULL, wxCB_READONLY);
 	wxComboBox* cbox_net_status = new wxComboBox(p_networking, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY);
-	wxComboBox* cbox_net_interface = new wxComboBox(p_networking, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY);
 	wxComboBox* cbox_sys_lang = new wxComboBox(p_system, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY);
 
-	wxCheckBox* chbox_core_llvm_exclud = new wxCheckBox(p_core, wxID_ANY, "Compiled blocks exclusion");
 	wxCheckBox* chbox_core_hook_stfunc = new wxCheckBox(p_core, wxID_ANY, "Hook static functions");
 	wxCheckBox* chbox_core_load_liblv2 = new wxCheckBox(p_core, wxID_ANY, "Load liblv2.sprx");
+	wxCheckBox* chbox_vfs_enable_host_root = new wxCheckBox(p_system, wxID_ANY, "Enable /host_root/");
 	wxCheckBox* chbox_gs_log_prog = new wxCheckBox(p_graphics, wxID_ANY, "Log shader programs");
 	wxCheckBox* chbox_gs_dump_depth = new wxCheckBox(p_graphics, wxID_ANY, "Write Depth Buffer");
 	wxCheckBox* chbox_gs_dump_color = new wxCheckBox(p_graphics, wxID_ANY, "Write Color Buffers");
@@ -193,195 +305,113 @@ SettingsDialog::SettingsDialog(wxWindow *parent, rpcs3::config_t* cfg)
 	wxCheckBox* chbox_gs_overlay = new wxCheckBox(p_graphics, wxID_ANY, "Debug overlay");
 	wxCheckBox* chbox_audio_dump = new wxCheckBox(p_audio, wxID_ANY, "Dump to file");
 	wxCheckBox* chbox_audio_conv = new wxCheckBox(p_audio, wxID_ANY, "Convert to 16 bit");
-	wxCheckBox* chbox_rsx_logging = new wxCheckBox(p_misc, wxID_ANY, "RSX Logging");
 	wxCheckBox* chbox_hle_exitonstop = new wxCheckBox(p_misc, wxID_ANY, "Exit RPCS3 when process finishes");
 	wxCheckBox* chbox_hle_always_start = new wxCheckBox(p_misc, wxID_ANY, "Always start after boot");
-	wxCheckBox* chbox_hle_use_default_ini = new wxCheckBox(p_misc, wxID_ANY, "Use default configuration");
-
-	wxTextCtrl* txt_dbg_range_min = new wxTextCtrl(p_core, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(55, 20));
-	wxTextCtrl* txt_dbg_range_max = new wxTextCtrl(p_core, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(55, 20));
-	wxTextCtrl* txt_llvm_threshold = new wxTextCtrl(p_core, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(55, 20));
-
-	//Auto Pause
 	wxCheckBox* chbox_dbg_ap_systemcall = new wxCheckBox(p_misc, wxID_ANY, "Auto Pause at System Call");
 	wxCheckBox* chbox_dbg_ap_functioncall = new wxCheckBox(p_misc, wxID_ANY, "Auto Pause at Function Call");
 
-	//Custom EmulationDir
-	wxCheckBox* chbox_emulationdir_enable = new wxCheckBox(p_system, wxID_ANY, "Use path below as EmulationDir. (Restart required)");
-	wxTextCtrl* txt_emulationdir_path = new wxTextCtrl(p_system, wxID_ANY, fs::get_executable_dir());
+	std::vector<std::string> lle_module_list;
+	{
+		auto&& data = loaded["Core"]["Load libraries"].as<std::vector<std::string>, std::initializer_list<std::string>>({});
 
+		// List selected modules first
+		for (const auto& unk : data)
+		{
+			chbox_list_core_lle->Check(chbox_list_core_lle->Append(unk));
+			lle_module_list.push_back(unk);
+		}
 
-	wxArrayString ppu_decoder_modes;
-	ppu_decoder_modes.Add("Interpreter");
-	ppu_decoder_modes.Add("Interpreter 2");
-	ppu_decoder_modes.Add("Recompiler (LLVM)");
-	rbox_ppu_decoder = new wxRadioBox(p_core, wxID_ANY, "PPU Decoder", wxDefaultPosition, wxSize(215, -1), ppu_decoder_modes, 1);
+		const std::string& lle_dir = vfs::get("/dev_flash/sys/external/"); // TODO
 
-#if !defined(LLVM_AVAILABLE)
-	rbox_ppu_decoder->Enable(2, false);
-#endif
+		std::unordered_set<std::string> set(data.begin(), data.end());
 
-	wxArrayString spu_decoder_modes;
-	spu_decoder_modes.Add("Interpreter (precise)");
-	spu_decoder_modes.Add("Interpreter (fast)");
-	spu_decoder_modes.Add("Recompiler (ASMJIT)");
-	rbox_spu_decoder = new wxRadioBox(p_core, wxID_ANY, "SPU Decoder", wxDefaultPosition, wxSize(215, -1), spu_decoder_modes, 1);
+		for (const auto& prxf : fs::dir(lle_dir))
+		{
+			// List found unselected modules
+			if (!prxf.is_directory && ppu_prx_loader(fs::file(lle_dir + prxf.name)) == elf_error::ok && !set.count(prxf.name))
+			{
+				chbox_list_core_lle->Check(chbox_list_core_lle->Append(prxf.name), false);
+				lle_module_list.push_back(prxf.name);
+			}
+		}
+	}
 
-	cbox_gs_render->Append("Null");
-	cbox_gs_render->Append("OpenGL");
-	cbox_gs_render->Append("Vulkan");
+	radiobox_pad_helper ppu_decoder_modes({ "Core", "PPU Decoder" });
+	rbox_ppu_decoder = new wxRadioBox(p_core, wxID_ANY, "PPU Decoder", wxDefaultPosition, wxSize(-1, -1), ppu_decoder_modes, 1);
+	pads.emplace_back(std::make_unique<radiobox_pad>(std::move(ppu_decoder_modes), rbox_ppu_decoder));
+	rbox_ppu_decoder->Enable(2, false); // TODO
+
+	radiobox_pad_helper spu_decoder_modes({ "Core", "SPU Decoder" });
+	rbox_spu_decoder = new wxRadioBox(p_core, wxID_ANY, "SPU Decoder", wxDefaultPosition, wxSize(-1, -1), spu_decoder_modes, 1);
+	pads.emplace_back(std::make_unique<radiobox_pad>(std::move(spu_decoder_modes), rbox_spu_decoder));
+	rbox_spu_decoder->Enable(3, false); // TODO
+
+	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Core", "Hook static functions" }, chbox_core_hook_stfunc));
+	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Core", "Load liblv2.sprx only" }, chbox_core_load_liblv2));
+
+	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "VFS", "Enable /host_root/" }, chbox_vfs_enable_host_root));
+
+	pads.emplace_back(std::make_unique<combobox_pad>(cfg_location{ "Video", "Renderer" }, cbox_gs_render));
+	pads.emplace_back(std::make_unique<combobox_pad>(cfg_location{ "Video", "Resolution" }, cbox_gs_resolution));
+	pads.emplace_back(std::make_unique<combobox_pad>(cfg_location{ "Video", "Aspect ratio" }, cbox_gs_aspect));
+	pads.emplace_back(std::make_unique<combobox_pad>(cfg_location{ "Video", "Frame limit" }, cbox_gs_frame_limit));
+	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Video", "Log shader programs" }, chbox_gs_log_prog));
+	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Video", "Write Depth Buffer" }, chbox_gs_dump_depth));
+	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Video", "Write Color Buffers" }, chbox_gs_dump_color));
+	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Video", "Read Color Buffers" }, chbox_gs_read_color));
+	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Video", "Read Depth Buffer" }, chbox_gs_read_depth));
+	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Video", "VSync" }, chbox_gs_vsync));
+	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Video", "Debug output" }, chbox_gs_debug_output));
+	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Video", "3D Monitor" }, chbox_gs_3dmonitor));
+	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Video", "Debug overlay" }, chbox_gs_overlay));
+	
+	pads.emplace_back(std::make_unique<combobox_pad>(cfg_location{ "Audio", "Renderer" }, cbox_audio_out));
+	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Audio", "Dump to file" }, chbox_audio_dump));
+	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Audio", "Convert to 16 bit" }, chbox_audio_conv));
+
+	pads.emplace_back(std::make_unique<combobox_pad>(cfg_location{ "Input/Output", "Pad" }, cbox_pad_handler));
+	pads.emplace_back(std::make_unique<combobox_pad>(cfg_location{ "Input/Output", "Keyboard" }, cbox_keyboard_handler));
+	pads.emplace_back(std::make_unique<combobox_pad>(cfg_location{ "Input/Output", "Mouse" }, cbox_mouse_handler));
+	pads.emplace_back(std::make_unique<combobox_pad>(cfg_location{ "Input/Output", "Camera" }, cbox_camera));
+	pads.emplace_back(std::make_unique<combobox_pad>(cfg_location{ "Input/Output", "Camera type" }, cbox_camera_type));
+
+	pads.emplace_back(std::make_unique<combobox_pad>(cfg_location{ "Net", "Connection status" }, cbox_net_status));
+
+	pads.emplace_back(std::make_unique<combobox_pad>(cfg_location{ "System", "Language" }, cbox_sys_lang));
+
+	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Miscellaneous", "Exit RPCS3 when process finishes" }, chbox_hle_exitonstop));
+	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Miscellaneous", "Always start after boot" }, chbox_hle_always_start));
+	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Miscellaneous", "Auto Pause at System Call" }, chbox_dbg_ap_systemcall));
+	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Miscellaneous", "Auto Pause at Function Call" }, chbox_dbg_ap_functioncall));
+
+	pads.emplace_back(std::make_unique<combobox_pad>(cfg_location{ "Video", "D3D12", "Adapter" }, cbox_gs_d3d_adapter));
 
 #ifdef _MSC_VER
-	Microsoft::WRL::ComPtr<IDXGIFactory4> dxgiFactory;
-	Microsoft::WRL::ComPtr<IDXGIAdapter> adapter;
+	Microsoft::WRL::ComPtr<IDXGIFactory4> dxgi_factory;
 
-	if (SUCCEEDED(CreateDXGIFactory(IID_PPV_ARGS(&dxgiFactory))))
+	if (SUCCEEDED(CreateDXGIFactory(IID_PPV_ARGS(&dxgi_factory))))
 	{
-		cbox_gs_render->Append("DirectX 12");
+		Microsoft::WRL::ComPtr<IDXGIAdapter> adapter;
 
-		for (uint id = 0; dxgiFactory->EnumAdapters(id, adapter.GetAddressOf()) != DXGI_ERROR_NOT_FOUND; id++)
+		for (UINT id = 0; dxgi_factory->EnumAdapters(id, adapter.ReleaseAndGetAddressOf()) != DXGI_ERROR_NOT_FOUND; id++)
 		{
-			DXGI_ADAPTER_DESC adapterDesc;
-			adapter->GetDesc(&adapterDesc);
-			cbox_gs_d3d_adaptater->Append(adapterDesc.Description);
+			DXGI_ADAPTER_DESC desc;
+			adapter->GetDesc(&desc);
+			cbox_gs_d3d_adapter->Append(desc.Description);
 		}
 	}
 	else
+#endif
 	{
-		cbox_gs_d3d_adaptater->Enable(false);
-		chbox_gs_overlay->Enable(false);
+		cbox_gs_d3d_adapter->Enable(false);
 	}
-
-#endif
-
-	for (int i = 1; i < WXSIZEOF(ResolutionTable); ++i)
-	{
-		cbox_gs_resolution->Append(wxString::Format("%dx%d", ResolutionTable[i].width.value(), ResolutionTable[i].height.value()));
-	}
-
-	cbox_gs_aspect->Append("4:3");
-	cbox_gs_aspect->Append("16:9");
-
-	for (auto item : { "Off", "50", "59.94", "30", "60", "Auto" })
-		cbox_gs_frame_limit->Append(item);
-
-	cbox_pad_handler->Append("Null");
-	cbox_pad_handler->Append("Windows");
-#ifdef _MSC_VER
-	cbox_pad_handler->Append("XInput");
-#endif
-
-	//cbox_pad_handler->Append("DirectInput");
-
-	cbox_keyboard_handler->Append("Null");
-	cbox_keyboard_handler->Append("Windows");
-	//cbox_keyboard_handler->Append("DirectInput");
-
-	cbox_mouse_handler->Append("Null");
-	cbox_mouse_handler->Append("Windows");
-	//cbox_mouse_handler->Append("DirectInput");
-
-	cbox_audio_out->Append("Null");
-	cbox_audio_out->Append("OpenAL");
-#ifdef _MSC_VER
-	cbox_audio_out->Append("XAudio2");
-#endif
-
-	cbox_camera->Append("Null");
-	cbox_camera->Append("Connected");
-
-	cbox_camera_type->Append("Unknown");
-	cbox_camera_type->Append("EyeToy");
-	cbox_camera_type->Append("PlayStation Eye");
-	cbox_camera_type->Append("USB Video Class 1.1");
-
-	cbox_hle_loglvl->Append("Nothing");
-	cbox_hle_loglvl->Append("Fatal");
-	cbox_hle_loglvl->Append("Error");
-	cbox_hle_loglvl->Append("TODO");
-	cbox_hle_loglvl->Append("Success");
-	cbox_hle_loglvl->Append("Warning");
-	cbox_hle_loglvl->Append("Notice");
-	cbox_hle_loglvl->Append("All");
-
-	cbox_net_status->Append("IP Obtained");
-	cbox_net_status->Append("Obtaining IP");
-	cbox_net_status->Append("Connecting");
-	cbox_net_status->Append("Disconnected");
-
-	for(const auto& adapterName : GetAdapters())
-		cbox_net_interface->Append(adapterName);
-
-	static wxString s_langs[] =
-	{
-		"Japanese", "English (US)", "French", "Spanish", "German",
-		"Italian", "Dutch", "Portuguese (PT)", "Russian",
-		"Korean", "Chinese (Trad.)", "Chinese (Simp.)", "Finnish",
-		"Swedish", "Danish", "Norwegian", "Polish", "English (UK)"
-	};
-
-	for (const auto& lang : s_langs)
-		cbox_sys_lang->Append(lang);
-
-	chbox_core_llvm_exclud->SetValue(cfg->core.llvm.exclusion_range.value());
-	chbox_gs_log_prog->SetValue(rpcs3::config.rsx.log_programs.value());
-	chbox_gs_dump_depth->SetValue(cfg->rsx.opengl.write_depth_buffer.value());
-	chbox_gs_dump_color->SetValue(cfg->rsx.opengl.write_color_buffers.value());
-	chbox_gs_read_color->SetValue(cfg->rsx.opengl.read_color_buffers.value());
-	chbox_gs_read_depth->SetValue(cfg->rsx.opengl.read_depth_buffer.value());
-	chbox_gs_vsync->SetValue(rpcs3::config.rsx.vsync.value());
-	chbox_gs_debug_output->SetValue(cfg->rsx.d3d12.debug_output.value());
-	chbox_gs_3dmonitor->SetValue(rpcs3::config.rsx._3dtv.value());
-	chbox_gs_overlay->SetValue(cfg->rsx.d3d12.overlay.value());
-	chbox_audio_dump->SetValue(rpcs3::config.audio.dump_to_file.value());
-	chbox_audio_conv->SetValue(rpcs3::config.audio.convert_to_u16.value());
-	chbox_rsx_logging->SetValue(rpcs3::config.misc.log.rsx_logging.value());
-	chbox_hle_exitonstop->SetValue(rpcs3::config.misc.exit_on_stop.value());
-	chbox_hle_always_start->SetValue(rpcs3::config.misc.always_start.value());
-	chbox_hle_use_default_ini->SetValue(rpcs3::config.misc.use_default_ini.value());
-	chbox_core_hook_stfunc->SetValue(cfg->core.hook_st_func.value());
-	chbox_core_load_liblv2->SetValue(cfg->core.load_liblv2.value());
-
-	//Auto Pause related
-	chbox_dbg_ap_systemcall->SetValue(rpcs3::config.misc.debug.auto_pause_syscall.value());
-	chbox_dbg_ap_functioncall->SetValue(rpcs3::config.misc.debug.auto_pause_func_call.value());
-
-	//Custom EmulationDir
-	chbox_emulationdir_enable->SetValue(rpcs3::config.system.emulation_dir_path_enable.value());
-	txt_emulationdir_path->SetValue(rpcs3::config.system.emulation_dir_path.value());
-
-	rbox_ppu_decoder->SetSelection((int)cfg->core.ppu_decoder.value());
-	txt_dbg_range_min->SetValue(cfg->core.llvm.min_id.string_value());
-	txt_dbg_range_max->SetValue(cfg->core.llvm.max_id.string_value());
-	txt_llvm_threshold->SetValue(cfg->core.llvm.threshold.string_value());
-	rbox_spu_decoder->SetSelection((int)cfg->core.spu_decoder.value());
-	cbox_gs_render->SetSelection((int)cfg->rsx.renderer.value());
-	cbox_gs_d3d_adaptater->SetSelection(cfg->rsx.d3d12.adaptater.value());
-	cbox_gs_resolution->SetSelection(ResolutionIdToNum((int)cfg->rsx.resolution.value()) - 1);
-	cbox_gs_aspect->SetSelection((int)cfg->rsx.aspect_ratio.value() - 1);
-	cbox_gs_frame_limit->SetSelection((int)cfg->rsx.frame_limit.value());
-	cbox_pad_handler->SetSelection((int)cfg->io.pad_handler_mode.value());
-	cbox_keyboard_handler->SetSelection((int)cfg->io.keyboard_handler_mode.value());
-	cbox_mouse_handler->SetSelection((int)cfg->io.mouse_handler_mode.value());
-	cbox_audio_out->SetSelection((int)cfg->audio.out.value());
-	cbox_camera->SetSelection((int)cfg->io.camera.value());
-	cbox_camera_type->SetSelection((int)cfg->io.camera_type.value());
-	cbox_hle_loglvl->SetSelection((int)rpcs3::config.misc.log.level.value());
-	cbox_net_status->SetSelection((int)rpcs3::config.misc.net.status.value());
-	cbox_net_interface->SetSelection((int)rpcs3::config.misc.net._interface.value());
-	cbox_sys_lang->SetSelection((int)rpcs3::config.system.language.value());
 
 	// Core
-	s_round_llvm->Add(chbox_core_llvm_exclud, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_round_llvm_range->Add(txt_dbg_range_min, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_round_llvm_range->Add(txt_dbg_range_max, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_round_llvm->Add(s_round_llvm_range, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_round_llvm_threshold->Add(txt_llvm_threshold, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_round_llvm->Add(s_round_llvm_threshold, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_round_core_lle->Add(chbox_list_core_lle, wxSizerFlags().Border(wxALL, 5).Expand());
 
 	// Rendering
 	s_round_gs_render->Add(cbox_gs_render, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_round_gs_d3d_adaptater->Add(cbox_gs_d3d_adaptater, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_round_gs_d3d_adapter->Add(cbox_gs_d3d_adapter, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_round_gs_res->Add(cbox_gs_resolution, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_round_gs_aspect->Add(cbox_gs_aspect, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_round_gs_frame_limit->Add(cbox_gs_frame_limit, wxSizerFlags().Border(wxALL, 5).Expand());
@@ -395,28 +425,25 @@ SettingsDialog::SettingsDialog(wxWindow *parent, rpcs3::config_t* cfg)
 
 	s_round_audio_out->Add(cbox_audio_out, wxSizerFlags().Border(wxALL, 5).Expand());
 
-	// Miscellaneous
-	s_round_hle_log_lvl->Add(cbox_hle_loglvl, wxSizerFlags().Border(wxALL, 5).Expand());
-
 	// Networking
 	s_round_net_status->Add(cbox_net_status, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_round_net_interface->Add(cbox_net_interface, wxSizerFlags().Border(wxALL, 5).Expand());
 
+	// System
 	s_round_sys_lang->Add(cbox_sys_lang, wxSizerFlags().Border(wxALL, 5).Expand());
 
 	// Core
 	s_subpanel_core1->Add(rbox_ppu_decoder, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_subpanel_core2->Add(rbox_spu_decoder, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_subpanel_core1->Add(s_round_llvm, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_subpanel_core1->Add(rbox_spu_decoder, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_core1->Add(chbox_core_hook_stfunc, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_core1->Add(chbox_core_load_liblv2, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_subpanel_core2->Add(s_round_core_lle, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_core->Add(s_subpanel_core1);
 	s_subpanel_core->Add(s_subpanel_core2);
 
 	// Graphics
 	s_subpanel_graphics1->Add(s_round_gs_render, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_graphics1->Add(s_round_gs_res, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_subpanel_graphics1->Add(s_round_gs_d3d_adaptater, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_subpanel_graphics1->Add(s_round_gs_d3d_adapter, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_graphics1->Add(chbox_gs_dump_color, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_graphics1->Add(chbox_gs_read_color, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_graphics1->Add(chbox_gs_dump_depth, wxSizerFlags().Border(wxALL, 5).Expand());
@@ -447,11 +474,8 @@ SettingsDialog::SettingsDialog(wxWindow *parent, rpcs3::config_t* cfg)
 	s_subpanel_audio->Add(chbox_audio_conv, wxSizerFlags().Border(wxALL, 5).Expand());
 
 	// Miscellaneous
-	s_subpanel_misc->Add(s_round_hle_log_lvl, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_subpanel_misc->Add(chbox_rsx_logging, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_misc->Add(chbox_hle_exitonstop, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_misc->Add(chbox_hle_always_start, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_subpanel_misc->Add(chbox_hle_use_default_ini, wxSizerFlags().Border(wxALL, 5).Expand());
 
 	// Auto Pause
 	s_subpanel_misc->Add(chbox_dbg_ap_systemcall, wxSizerFlags().Border(wxALL, 5).Expand());
@@ -459,14 +483,10 @@ SettingsDialog::SettingsDialog(wxWindow *parent, rpcs3::config_t* cfg)
 
 	// Networking
 	s_subpanel_networking->Add(s_round_net_status, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_subpanel_networking->Add(s_round_net_interface, wxSizerFlags().Border(wxALL, 5).Expand());
 
 	// System
+	s_subpanel_system->Add(chbox_vfs_enable_host_root, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_system->Add(s_round_sys_lang, wxSizerFlags().Border(wxALL, 5).Expand());
-
-	// Custom EmulationDir
-	s_subpanel_system->Add(chbox_emulationdir_enable, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_subpanel_system->Add(txt_emulationdir_path, wxSizerFlags().Border(wxALL, 5).Expand());
 
 	// Buttons
 	wxBoxSizer* s_b_panel(new wxBoxSizer(wxHORIZONTAL));
@@ -487,74 +507,31 @@ SettingsDialog::SettingsDialog(wxWindow *parent, rpcs3::config_t* cfg)
 
 	if (ShowModal() == wxID_OK)
 	{
-		long llvmthreshold;
-		long minllvmid, maxllvmid;
-		txt_dbg_range_min->GetValue().ToLong(&minllvmid);
-		txt_dbg_range_max->GetValue().ToLong(&maxllvmid);
-		txt_llvm_threshold->GetValue().ToLong(&llvmthreshold);
+		std::set<std::string> lle_selected;
 
-		// individual settings
-		cfg->core.ppu_decoder = rbox_ppu_decoder->GetSelection();
-		cfg->core.llvm.exclusion_range = chbox_core_llvm_exclud->GetValue();
-		cfg->core.llvm.min_id = minllvmid;
-		cfg->core.llvm.max_id = maxllvmid;
-		cfg->core.llvm.threshold = llvmthreshold;
-		cfg->core.spu_decoder = rbox_spu_decoder->GetSelection();
-		cfg->core.hook_st_func = chbox_core_hook_stfunc->GetValue();
-		cfg->core.load_liblv2 = chbox_core_load_liblv2->GetValue();
+		for (auto i = 0; i < lle_module_list.size(); i++)
+		{
+			if (chbox_list_core_lle->IsChecked(i))
+			{
+				lle_selected.emplace(lle_module_list[i]);
+			}
+		}
 
-		// Translates renderer string to enum class for config.h
-		if (cbox_gs_render->GetString(cbox_gs_render->GetSelection()) == "Null")
-			cfg->rsx.renderer = rsx_renderer_type::Null;
-		if (cbox_gs_render->GetString(cbox_gs_render->GetSelection()) == "OpenGL")
-			cfg->rsx.renderer = rsx_renderer_type::OpenGL;
-		if (cbox_gs_render->GetString(cbox_gs_render->GetSelection()) == "Vulkan")
-			cfg->rsx.renderer = rsx_renderer_type::Vulkan;
-		if (cbox_gs_render->GetString(cbox_gs_render->GetSelection()) == "DirectX 12")
-			cfg->rsx.renderer = rsx_renderer_type::DX12;
-		
-		cfg->rsx.d3d12.adaptater = cbox_gs_d3d_adaptater->GetSelection();
-		cfg->rsx.resolution = ResolutionNumToId(cbox_gs_resolution->GetSelection() + 1);
-		cfg->rsx.aspect_ratio = cbox_gs_aspect->GetSelection() + 1;
-		cfg->rsx.frame_limit = cbox_gs_frame_limit->GetSelection();
-		cfg->rsx.opengl.write_depth_buffer = chbox_gs_dump_depth->GetValue();
-		cfg->rsx.opengl.write_color_buffers = chbox_gs_dump_color->GetValue();
-		cfg->rsx.opengl.read_color_buffers = chbox_gs_read_color->GetValue();
-		cfg->rsx.opengl.read_depth_buffer = chbox_gs_read_depth->GetValue();
+		saved.reset();
+		saved["Core"]["Load libraries"] = std::vector<std::string>(lle_selected.begin(), lle_selected.end());
 
-		cfg->audio.out = cbox_audio_out->GetSelection();
+		for (auto& pad : pads)
+		{
+			pad->save();
+		}
 
-		cfg->io.pad_handler_mode = cbox_pad_handler->GetSelection();
-		cfg->io.keyboard_handler_mode = cbox_keyboard_handler->GetSelection();
-		cfg->io.mouse_handler_mode = cbox_mouse_handler->GetSelection();
-		cfg->io.camera = cbox_camera->GetSelection();
-		cfg->io.camera_type = cbox_camera_type->GetSelection();
+		loaded += saved;
+		YAML::Emitter out;
+		emit(out, loaded);
 
-		
-		// global settings
-		rpcs3::config.rsx.log_programs = chbox_gs_log_prog->GetValue();
-		rpcs3::config.rsx.vsync = chbox_gs_vsync->GetValue();
-		rpcs3::config.rsx._3dtv = chbox_gs_3dmonitor->GetValue();
-		rpcs3::config.rsx.d3d12.debug_output = chbox_gs_debug_output->GetValue();
-		rpcs3::config.rsx.d3d12.overlay = chbox_gs_overlay->GetValue();
-		rpcs3::config.audio.dump_to_file = chbox_audio_dump->GetValue();
-		rpcs3::config.audio.convert_to_u16 = chbox_audio_conv->GetValue();
-		rpcs3::config.misc.log.level = cbox_hle_loglvl->GetSelection();
-		rpcs3::config.misc.log.rsx_logging = chbox_rsx_logging->GetValue();
-		rpcs3::config.misc.net.status = cbox_net_status->GetSelection();
-		rpcs3::config.misc.net._interface = cbox_net_interface->GetSelection();
-		rpcs3::config.misc.debug.auto_pause_syscall = chbox_dbg_ap_systemcall->GetValue();
-		rpcs3::config.misc.debug.auto_pause_func_call = chbox_dbg_ap_functioncall->GetValue();
-		rpcs3::config.misc.always_start = chbox_hle_always_start->GetValue();
-		rpcs3::config.misc.exit_on_stop = chbox_hle_exitonstop->GetValue();
-		rpcs3::config.misc.use_default_ini = chbox_hle_use_default_ini->GetValue();
-		rpcs3::config.system.language = cbox_sys_lang->GetSelection();
-		rpcs3::config.system.emulation_dir_path_enable = chbox_emulationdir_enable->GetValue();
-		rpcs3::config.system.emulation_dir_path = txt_emulationdir_path->GetValue().ToStdString();
-		rpcs3::config.save();
-
-		cfg->save();
+		// Save config
+		config.seek(0);
+		config.trunc(0);
+		config.write(out.c_str(), out.size());
 	}
-
-	if (was_running) Emu.Resume();
 }

@@ -1,11 +1,7 @@
 #include "stdafx.h"
 #include "stdafx_gui.h"
-#include "Utilities/AutoPause.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
-#include "Emu/FS/VFS.h"
-#include "Emu/FS/vfsDir.h"
-#include "Emu/FS/vfsFile.h"
 #include "GameViewer.h"
 #include "Loader/PSF.h"
 #include "SettingsDialog.h"
@@ -82,11 +78,11 @@ void GameViewer::LoadGames()
 {
 	m_games.clear();
 
-	for (const auto info : vfsDir(m_path))
+	for (const auto& entry : fs::dir(vfs::get(m_path)))
 	{
-		if(info->flags & DirEntry_TypeDir)
+		if (entry.is_directory)
 		{
-			m_games.push_back(info->name);
+			m_games.push_back(entry.name);
 		}
 	}
 }
@@ -94,27 +90,19 @@ void GameViewer::LoadGames()
 void GameViewer::LoadPSF()
 {
 	m_game_data.clear();
+
 	for (u32 i = 0; i < m_games.size(); ++i)
 	{
-		const std::string sfb = m_path + m_games[i] + "/PS3_DISC.SFB"; 
-		const std::string sfo = m_path + m_games[i] + (Emu.GetVFS().ExistsFile(sfb) ? "/PS3_GAME/PARAM.SFO" : "/PARAM.SFO");
+		const std::string sfb = vfs::get(m_path) + m_games[i] + "/PS3_DISC.SFB";
+		const std::string sfo = vfs::get(m_path) + m_games[i] + (fs::is_file(sfb) ? "/PS3_GAME/PARAM.SFO" : "/PARAM.SFO");
 
-		if (!Emu.GetVFS().ExistsFile(sfo))
+		const fs::file sfo_file(sfo);
+		if (!sfo_file)
 		{
 			continue;
 		}
 
-		vfsFile f;
-		if (!f.Open(sfo))
-		{
-			continue;
-		}
-
-		const auto& psf = psf::load(f.VRead<char>());
-
-		// get local path from VFS...
-		std::string local_path;
-		Emu.GetVFS().GetDevice(m_path, local_path);
+		const auto& psf = psf::load_object(sfo_file);
 
 		GameInfo game;
 		game.root = m_games[i];
@@ -129,33 +117,33 @@ void GameViewer::LoadPSF()
 		
 		if (game.serial.length() == 9)
 		{
-			game.serial = game.serial.substr(0, 4) + "-" + game.serial.substr(4, 5);
+			game.serial.insert(4, 1, '-');
 		}
 
-		if (game.category.substr(0, 2) == "HG")
+		if (game.category == "HG")
 		{
 			game.category = "HDD Game";
-			game.icon_path = local_path + "/" + m_games[i] + "/ICON0.PNG";
+			game.icon_path = vfs::get(m_path) + m_games[i] + "/ICON0.PNG";
 		}
-		else if (game.category.substr(0, 2) == "DG")
+		else if (game.category == "DG")
 		{
 			game.category = "Disc Game";
-			game.icon_path = local_path + "/" + m_games[i] + "/PS3_GAME/ICON0.PNG";
+			game.icon_path = vfs::get(m_path) + m_games[i] + "/PS3_GAME/ICON0.PNG";
 		}
-		else if (game.category.substr(0, 2) == "HM")
+		else if (game.category == "HM")
 		{
 			game.category = "Home";
-			game.icon_path = local_path + "/" + m_games[i] + "/ICON0.PNG";
+			game.icon_path = vfs::get(m_path) + m_games[i] + "/ICON0.PNG";
 		}
-		else if (game.category.substr(0, 2) == "AV")
+		else if (game.category == "AV")
 		{
 			game.category = "Audio/Video";
-			game.icon_path = local_path + "/" + m_games[i] + "/ICON0.PNG";
+			game.icon_path = vfs::get(m_path) + m_games[i] + "/ICON0.PNG";
 		}
-		else if (game.category.substr(0, 2) == "GD")
+		else if (game.category == "GD")
 		{
 			game.category = "Game Data";
-			game.icon_path = local_path + "/" + m_games[i] + "/ICON0.PNG";
+			game.icon_path = vfs::get(m_path) + m_games[i] + "/ICON0.PNG";
 		}
 			
 		m_game_data.push_back(game);
@@ -173,11 +161,9 @@ void GameViewer::ShowData()
 
 void GameViewer::Refresh()
 {
-	Emu.GetVFS().Init("/");
 	LoadGames();
 	LoadPSF();
 	ShowData();
-	Emu.GetVFS().UnMountAll();
 }
 
 void GameViewer::SaveSettings()
@@ -199,19 +185,9 @@ void GameViewer::DClick(wxListEvent& event)
 
 	Emu.Stop();
 
-	Debug::AutoPause::getInstance().Reload();
-
-	Emu.GetVFS().Init("/");
-	std::string local_path;
-	if (Emu.GetVFS().GetDevice(path, local_path) && !Emu.BootGame(local_path))
+	if (!Emu.BootGame(vfs::get(path)))
 	{
-		LOG_ERROR(HLE, "Boot error: elf not found! [%s]", path.c_str());
-		return;
-	}
-
-	if (rpcs3::config.misc.always_start.value() && Emu.IsReady())
-	{
-		Emu.Run();
+		LOG_ERROR(LOADER, "Failed to boot %s", path);
 	}
 }
 
@@ -250,11 +226,7 @@ void GameViewer::ConfigureGame(wxCommandEvent& WXUNUSED(event))
 	long i = GetFirstSelected();
 	if (i < 0) return;
 
-	Emu.CreateConfig(m_game_data[i].serial);
-	rpcs3::config_t custom_config { fs::get_config_dir() + "data/" + m_game_data[i].serial + "/settings.ini" };
-	custom_config.load();
-	LOG_NOTICE(LOADER, "Configure: '%s'", custom_config.path().c_str());
-	SettingsDialog(this, &custom_config);
+	LOG_TODO(LOADER, "Configure: %s", m_game_data[i].root);
 }
 
 void GameViewer::RemoveGame(wxCommandEvent& event)
@@ -262,9 +234,218 @@ void GameViewer::RemoveGame(wxCommandEvent& event)
 	long i = GetFirstSelected();
 	if (i < 0) return;
 	
-	Emu.GetVFS().Init("/");
-	Emu.GetVFS().DeleteAll(m_path + "/" + this->GetItemText(i, 6).ToStdString());
-	Emu.GetVFS().UnMountAll();
+	fs::remove_all(vfs::get(m_path) + this->GetItemText(i, 6).ToStdString());
 
 	Refresh();
+}
+
+ColumnsArr::ColumnsArr()
+{
+	Init();
+}
+
+std::vector<Column*> ColumnsArr::GetSortedColumnsByPos()
+{
+	std::vector<Column*> arr;
+	for (u32 pos = 0; pos<m_columns.size(); pos++)
+	{
+		for (u32 c = 0; c<m_columns.size(); ++c)
+		{
+			if (m_columns[c].pos != pos) continue;
+			arr.push_back(&m_columns[c]);
+		}
+	}
+
+	return arr;
+}
+
+Column* ColumnsArr::GetColumnByPos(u32 pos)
+{
+	std::vector<Column *> columns = GetSortedColumnsByPos();
+	for (u32 c = 0; c<columns.size(); ++c)
+	{
+		if (!columns[c]->shown)
+		{
+			pos++;
+			continue;
+		}
+		if (columns[c]->pos != pos) continue;
+		return columns[c];
+	}
+
+	return NULL;
+}
+
+void ColumnsArr::Init()
+{
+	m_img_list = new wxImageList(80, 44);
+
+	m_columns.clear();
+	m_columns.emplace_back(0, 90, "Icon");
+	m_columns.emplace_back(1, 160, "Name");
+	m_columns.emplace_back(2, 85, "Serial");
+	m_columns.emplace_back(3, 55, "FW");
+	m_columns.emplace_back(4, 55, "App version");
+	m_columns.emplace_back(5, 75, "Category");
+	m_columns.emplace_back(6, 160, "Path");
+	m_col_icon = &m_columns[0];
+	m_col_name = &m_columns[1];
+	m_col_serial = &m_columns[2];
+	m_col_fw = &m_columns[3];
+	m_col_app_ver = &m_columns[4];
+	m_col_category = &m_columns[5];
+	m_col_path = &m_columns[6];
+}
+
+void ColumnsArr::Update(const std::vector<GameInfo>& game_data)
+{
+	m_col_icon->data.clear();
+	m_col_name->data.clear();
+	m_col_serial->data.clear();
+	m_col_fw->data.clear();
+	m_col_app_ver->data.clear();
+	m_col_category->data.clear();
+	m_col_path->data.clear();
+	m_icon_indexes.clear();
+
+	if (m_columns.size() == 0) return;
+
+	for (const auto& game : game_data)
+	{
+		m_col_icon->data.push_back(game.icon_path);
+		m_col_name->data.push_back(game.name);
+		m_col_serial->data.push_back(game.serial);
+		m_col_fw->data.push_back(game.fw);
+		m_col_app_ver->data.push_back(game.app_ver);
+		m_col_category->data.push_back(game.category);
+		m_col_path->data.push_back(game.root);
+	}
+
+	// load icons
+	for (const auto& path : m_col_icon->data)
+	{
+		wxImage game_icon(80, 44);
+		{
+			wxLogNull logNo; // temporary disable wx warnings ("iCCP: known incorrect sRGB profile" spamming)
+			if (game_icon.LoadFile(fmt::FromUTF8(path), wxBITMAP_TYPE_PNG))
+				game_icon.Rescale(80, 44, wxIMAGE_QUALITY_HIGH);
+		}
+
+		m_icon_indexes.push_back(m_img_list->Add(game_icon));
+	}
+}
+
+void ColumnsArr::Show(wxListView* list)
+{
+	list->DeleteAllColumns();
+	list->SetImageList(m_img_list, wxIMAGE_LIST_SMALL);
+	std::vector<Column *> c_col = GetSortedColumnsByPos();
+	for (u32 i = 0, c = 0; i<c_col.size(); ++i)
+	{
+		if (!c_col[i]->shown) continue;
+		list->InsertColumn(c++, fmt::FromUTF8(c_col[i]->name), 0, c_col[i]->width);
+	}
+}
+
+void ColumnsArr::ShowData(wxListView* list)
+{
+	list->DeleteAllItems();
+	list->SetImageList(m_img_list, wxIMAGE_LIST_SMALL);
+	for (int c = 1; c<list->GetColumnCount(); ++c)
+	{
+		Column* col = GetColumnByPos(c);
+
+		if (!col)
+		{
+			LOG_ERROR(HLE, "Columns loaded with error!");
+			return;
+		}
+
+		for (u32 i = 0; i<col->data.size(); ++i)
+		{
+			if (list->GetItemCount() <= (int)i)
+			{
+				list->InsertItem(i, wxEmptyString);
+				list->SetItemData(i, i);
+			}
+			list->SetItem(i, c, fmt::FromUTF8(col->data[i]));
+			list->SetItemColumnImage(i, 0, m_icon_indexes[i]);
+		}
+	}
+}
+
+void ColumnsArr::LoadSave(bool isLoad, const std::string& path, wxListView* list)
+{
+	if (isLoad)
+	{
+		Init();
+	}
+	else if (list)
+	{
+		for (int c = 0; c < list->GetColumnCount(); ++c)
+		{
+			Column* col = GetColumnByPos(c);
+			if (col)
+				col->width = list->GetColumnWidth(c);
+		}
+	}
+
+	auto&& cfg = g_gui_cfg["GameViewer"];
+
+	for (auto& column : m_columns)
+	{
+		auto&& c_cfg = cfg[column.name];
+
+		if (isLoad)
+		{
+			std::tie(column.pos, column.width) = c_cfg.as<std::pair<u32, u32>>(std::make_pair(column.def_pos, column.def_width));
+
+			column.shown = true;
+		}
+		else //if (column.shown)
+		{
+			c_cfg = std::make_pair(column.pos, column.width);
+		}
+	}
+
+	if (isLoad)
+	{
+		//check for errors
+		for (u32 c1 = 0; c1 < m_columns.size(); ++c1)
+		{
+			for (u32 c2 = c1 + 1; c2 < m_columns.size(); ++c2)
+			{
+				if (m_columns[c1].pos == m_columns[c2].pos)
+				{
+					LOG_ERROR(HLE, "Columns loaded with error!");
+					Init();
+					return;
+				}
+			}
+		}
+
+		for (u32 p = 0; p < m_columns.size(); ++p)
+		{
+			bool ishas = false;
+			for (u32 c = 0; c < m_columns.size(); ++c)
+			{
+				if (m_columns[c].pos != p)
+					continue;
+
+				ishas = true;
+				break;
+			}
+
+			if (!ishas)
+			{
+				LOG_ERROR(HLE, "Columns loaded with error!");
+				Init();
+				return;
+			}
+		}
+	}
+	else
+	{
+		save_gui_cfg();
+	}
 }

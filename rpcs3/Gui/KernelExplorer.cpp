@@ -7,18 +7,18 @@
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/Cell/RawSPUThread.h"
-#include "Emu/SysCalls/lv2/sys_lwmutex.h"
-#include "Emu/SysCalls/lv2/sys_lwcond.h"
-#include "Emu/SysCalls/lv2/sys_mutex.h"
-#include "Emu/SysCalls/lv2/sys_cond.h"
-#include "Emu/SysCalls/lv2/sys_semaphore.h"
-#include "Emu/SysCalls/lv2/sys_event.h"
-#include "Emu/SysCalls/lv2/sys_event_flag.h"
-#include "Emu/SysCalls/lv2/sys_rwlock.h"
-#include "Emu/SysCalls/lv2/sys_prx.h"
-#include "Emu/SysCalls/lv2/sys_memory.h"
-#include "Emu/SysCalls/lv2/sys_mmapper.h"
-#include "Emu/SysCalls/lv2/sys_spu.h"
+#include "Emu/Cell/lv2/sys_lwmutex.h"
+#include "Emu/Cell/lv2/sys_lwcond.h"
+#include "Emu/Cell/lv2/sys_mutex.h"
+#include "Emu/Cell/lv2/sys_cond.h"
+#include "Emu/Cell/lv2/sys_semaphore.h"
+#include "Emu/Cell/lv2/sys_event.h"
+#include "Emu/Cell/lv2/sys_event_flag.h"
+#include "Emu/Cell/lv2/sys_rwlock.h"
+#include "Emu/Cell/lv2/sys_prx.h"
+#include "Emu/Cell/lv2/sys_memory.h"
+#include "Emu/Cell/lv2/sys_mmapper.h"
+#include "Emu/Cell/lv2/sys_spu.h"
 
 #include "KernelExplorer.h"
 
@@ -171,7 +171,7 @@ void KernelExplorer::Update()
 			const auto& eq = *data.second;
 
 			m_tree->AppendItem(node, fmt::format("Event Queue: ID = 0x%08x '%s', %s, Key = %#llx, Events = %zu/%d, Waiters = %zu", data.first,
-				&name64(eq.name), eq.type == SYS_SPU_QUEUE ? "SPU" : "PPU", eq.key, eq.events.size(), eq.size, eq.sq.size()));
+				&name64(eq.name), eq.type == SYS_SPU_QUEUE ? "SPU" : "PPU", eq.ipc_key, eq.events(), eq.size, eq.waiters()));
 		}
 	}
 
@@ -202,7 +202,7 @@ void KernelExplorer::Update()
 		{
 			const auto& ef = *data.second;
 
-			m_tree->AppendItem(node, fmt::format("Event Flag: ID = 0x%08x", data.first));
+			m_tree->AppendItem(node, fmt::format("Event Flag: ID = 0x%08x '%s', Type = 0x%x, Pattern = 0x%llx", data.first, &name64(ef.name), ef.type, ef.pattern.load()));
 		}
 	}
 
@@ -277,8 +277,7 @@ void KernelExplorer::Update()
 		{
 			const auto& ppu = *data.second;
 
-			m_tree->AppendItem(node, fmt::format("PPU Thread: ID = 0x%08x '%s', - %s", data.first,
-				ppu.get_name().c_str(), ppu.ThreadStatusToString()));
+			m_tree->AppendItem(node, fmt::format("PPU Thread: ID = 0x%08x '%s'", data.first, ppu.get_name()));
 		}
 	}
 
