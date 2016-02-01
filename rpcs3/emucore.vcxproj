@@ -58,103 +58,206 @@
     <Import Project="..\rpcs3_release.props" />
     <Import Project="..\rpcs3_llvm.props" />
   </ImportGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug - MemLeak|x64'">
+  <ItemDefinitionGroup>
     <ClCompile>
-      <AdditionalIncludeDirectories>..\llvm\include;..\llvm_build\include;</AdditionalIncludeDirectories>
-    </ClCompile>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">
-    <ClCompile>
-      <AdditionalIncludeDirectories>..\llvm\include;..\llvm_build\include;</AdditionalIncludeDirectories>
-    </ClCompile>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <ClCompile>
-      <AdditionalIncludeDirectories>..\llvm\include;..\llvm_build\include;</AdditionalIncludeDirectories>
-    </ClCompile>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <ClCompile>
-      <AdditionalIncludeDirectories>..\llvm\include;..\llvm_build\include;</AdditionalIncludeDirectories>
-    </ClCompile>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">
-    <ClCompile>
+      <PrecompiledHeader>Use</PrecompiledHeader>
       <AdditionalIncludeDirectories>..\llvm\include;..\llvm_build\include;</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\Utilities\AutoPause.cpp" />
-    <ClCompile Include="..\Utilities\config_context.cpp" />
-    <ClCompile Include="..\Utilities\Log.cpp" />
-    <ClCompile Include="..\Utilities\File.cpp" />
-    <ClCompile Include="..\Utilities\rPlatform.cpp" />
-    <ClCompile Include="..\Utilities\rTime.cpp" />
+    <ClCompile Include="..\Utilities\Log.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\Utilities\File.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\Utilities\Config.cpp" />
     <ClCompile Include="..\Utilities\rXml.cpp" />
     <ClCompile Include="..\Utilities\Semaphore.cpp" />
-    <ClCompile Include="..\Utilities\SharedMutex.cpp" />
-    <ClCompile Include="..\Utilities\SleepQueue.cpp" />
-    <ClCompile Include="..\Utilities\StrFmt.cpp" />
+    <ClCompile Include="..\Utilities\StrFmt.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="..\Utilities\Thread.cpp" />
     <ClCompile Include="..\Utilities\VirtualMemory.cpp" />
-    <ClCompile Include="config.cpp" />
+    <ClCompile Include="Emu\ARMv7\ARMv7Module.cpp" />
+    <ClCompile Include="Emu\Cell\lv2\lv2.cpp" />
+    <ClCompile Include="Emu\Cell\lv2\sys_cond.cpp" />
+    <ClCompile Include="Emu\Cell\lv2\sys_dbg.cpp" />
+    <ClCompile Include="Emu\Cell\lv2\sys_event.cpp" />
+    <ClCompile Include="Emu\Cell\lv2\sys_event_flag.cpp" />
+    <ClCompile Include="Emu\Cell\lv2\sys_fs.cpp" />
+    <ClCompile Include="Emu\Cell\lv2\sys_interrupt.cpp" />
+    <ClCompile Include="Emu\Cell\lv2\sys_lwcond.cpp" />
+    <ClCompile Include="Emu\Cell\lv2\sys_lwmutex.cpp" />
+    <ClCompile Include="Emu\Cell\lv2\sys_memory.cpp" />
+    <ClCompile Include="Emu\Cell\lv2\sys_mmapper.cpp" />
+    <ClCompile Include="Emu\Cell\lv2\sys_mutex.cpp" />
+    <ClCompile Include="Emu\Cell\lv2\sys_ppu_thread.cpp" />
+    <ClCompile Include="Emu\Cell\lv2\sys_process.cpp" />
+    <ClCompile Include="Emu\Cell\lv2\sys_prx.cpp" />
+    <ClCompile Include="Emu\Cell\lv2\sys_rsx.cpp" />
+    <ClCompile Include="Emu\Cell\lv2\sys_rwlock.cpp" />
+    <ClCompile Include="Emu\Cell\lv2\sys_semaphore.cpp" />
+    <ClCompile Include="Emu\Cell\lv2\sys_spu.cpp" />
+    <ClCompile Include="Emu\Cell\lv2\sys_time.cpp" />
+    <ClCompile Include="Emu\Cell\lv2\sys_timer.cpp" />
+    <ClCompile Include="Emu\Cell\lv2\sys_trace.cpp" />
+    <ClCompile Include="Emu\Cell\lv2\sys_tty.cpp" />
+    <ClCompile Include="Emu\Cell\lv2\sys_vm.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\sys_libc_.cpp" />
+    <ClCompile Include="Emu\Cell\PPUModule.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellAdec.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellAtrac.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellAtracMulti.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellAudio.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellAudioOut.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellAvconfExt.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellBgdl.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellCamera.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellCelp8Enc.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellCelpEnc.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellDaisy.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellDmux.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellFiber.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellFont.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellFontFT.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellFs.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellGame.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellGameExec.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellGcmSys.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellGem.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellGifDec.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellHttp.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellHttpUtil.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellImejp.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellJpgDec.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellJpgEnc.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellKb.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellKey2char.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellL10n.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellMic.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellMouse.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellMsgDialog.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellMusic.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellMusicDecode.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellMusicExport.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellNetCtl.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellOskDialog.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellOvis.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellPad.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellPamf.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellPhotoDecode.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellPhotoExport.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellPhotoImport.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellPngDec.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellPngEnc.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellPrint.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellRec.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellRemotePlay.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellResc.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellRtc.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellRudp.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellSail.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellSailRec.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellSaveData.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellScreenshot.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellSearch.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellSheap.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellSpudll.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellSpurs.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellSpursJq.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellSpursSpu.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellSsl.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellStorage.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellSubdisplay.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellSync.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellSync2.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellSysconf.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellSysmodule.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellSysutil.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellSysutilAp.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellSysutilAvc.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellSysutilAvc2.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellSysutilMisc.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellUsbd.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellUsbpspcm.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellUserInfo.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellVdec.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellVideoExport.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellVideoOut.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellVideoUpload.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellVoice.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellVpost.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellWebBrowser.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\libmixer.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\libsnd3.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\libsynth2.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\sceNp.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\sceNp2.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\sceNpClans.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\sceNpCommerce2.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\sceNpSns.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\sceNpTrophy.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\sceNpTus.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\sceNpUtil.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\sysPrxForUser.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\sys_game.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\sys_heap.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\sys_io.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\sys_libc.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\sys_lv2dbg.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\sys_lwcond_.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\sys_lwmutex_.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\sys_mempool.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\sys_mmapper_.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\sys_net.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\sys_ppu_thread_.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\sys_prx_.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\sys_spinlock.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\sys_spu_.cpp" />
+    <ClCompile Include="Emu\Cell\PPUCallback.cpp" />
+    <ClCompile Include="Emu\Cell\PPUDisAsm.cpp" />
+    <ClCompile Include="Emu\Cell\PPUFunction.cpp" />
     <ClCompile Include="Emu\Cell\PPUInterpreter.cpp" />
     <ClCompile Include="Emu\Cell\SPUAnalyser.cpp" />
     <ClCompile Include="Emu\Cell\SPUASMJITRecompiler.cpp" />
+    <ClCompile Include="Emu\Cell\SPUDisAsm.cpp" />
     <ClCompile Include="Emu\Cell\SPUInterpreter.cpp" />
-    <ClCompile Include="Emu\events.cpp" />
-    <ClCompile Include="Emu\IdManager.cpp" />
     <ClCompile Include="Emu\RSX\CgBinaryFragmentProgram.cpp" />
     <ClCompile Include="Emu\RSX\CgBinaryVertexProgram.cpp" />
-    <ClCompile Include="Emu\RSX\Common\BufferUtils.cpp">
-      <TreatWarningAsError Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</TreatWarningAsError>
-      <TreatWarningAsError Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">true</TreatWarningAsError>
-      <TreatWarningAsError Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">true</TreatWarningAsError>
-      <TreatWarningAsError Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</TreatWarningAsError>
-      <TreatWarningAsError Condition="'$(Configuration)|$(Platform)'=='Debug - MemLeak|x64'">true</TreatWarningAsError>
-    </ClCompile>
+    <ClCompile Include="Emu\RSX\Common\BufferUtils.cpp" />
     <ClCompile Include="Emu\RSX\Common\FragmentProgramDecompiler.cpp" />
     <ClCompile Include="Emu\RSX\Common\ProgramStateCache.cpp" />
     <ClCompile Include="Emu\RSX\Common\ShaderParam.cpp" />
     <ClCompile Include="Emu\RSX\Common\surface_store.cpp" />
-    <ClCompile Include="Emu\RSX\Common\TextureUtils.cpp">
-      <TreatWarningAsError Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</TreatWarningAsError>
-      <TreatWarningAsError Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">true</TreatWarningAsError>
-      <TreatWarningAsError Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">true</TreatWarningAsError>
-      <TreatWarningAsError Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</TreatWarningAsError>
-      <TreatWarningAsError Condition="'$(Configuration)|$(Platform)'=='Debug - MemLeak|x64'">true</TreatWarningAsError>
-    </ClCompile>
+    <ClCompile Include="Emu\RSX\Common\TextureUtils.cpp" />
     <ClCompile Include="Emu\RSX\Common\VertexProgramDecompiler.cpp" />
     <ClCompile Include="Emu\RSX\GCM.cpp" />
     <ClCompile Include="Emu\RSX\Null\NullGSRender.cpp" />
     <ClCompile Include="Emu\RSX\rsx_methods.cpp" />
     <ClCompile Include="Emu\RSX\rsx_utils.cpp" />
-    <ClCompile Include="Emu\state.cpp" />
-    <ClCompile Include="Emu\SysCalls\lv2\sys_dbg.cpp" />
-    <ClCompile Include="Emu\SysCalls\lv2\sys_fs.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellAtracMulti.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellAudioOut.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellDaisy.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellFs.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellGameExec.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellMusic.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellOskDialog.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellRec.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellRemotePlay.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellSpudll.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellSpursSpu.cpp" />
-    <ClCompile Include="Crypto\aes.cpp" />
-    <ClCompile Include="Crypto\ec.cpp" />
-    <ClCompile Include="Crypto\key_vault.cpp" />
+    <ClCompile Include="Crypto\aes.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="Crypto\ec.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="Crypto\key_vault.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="Crypto\lz.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="Crypto\sha1.cpp" />
+    <ClCompile Include="Crypto\sha1.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="Crypto\unedat.cpp" />
     <ClCompile Include="Crypto\unpkg.cpp" />
     <ClCompile Include="Crypto\unself.cpp" />
-    <ClCompile Include="Crypto\utils.cpp" />
-    <ClCompile Include="Emu\ARMv7\ARMv7Decoder.cpp" />
+    <ClCompile Include="Crypto\utils.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="Emu\ARMv7\ARMv7DisAsm.cpp" />
     <ClCompile Include="Emu\ARMv7\ARMv7Interpreter.cpp" />
     <ClCompile Include="Emu\ARMv7\ARMv7Thread.cpp" />
@@ -217,168 +320,24 @@
     <ClCompile Include="Emu\ARMv7\Modules\sceVideodec.cpp" />
     <ClCompile Include="Emu\ARMv7\Modules\sceVoice.cpp" />
     <ClCompile Include="Emu\ARMv7\Modules\sceVoiceQoS.cpp" />
-    <ClCompile Include="Emu\ARMv7\Modules\sceXml.cpp" />
-    <ClCompile Include="Emu\ARMv7\PSVFuncList.cpp" />
+    <ClCompile Include="Emu\ARMv7\Modules\sceLibXml.cpp" />
+    <ClCompile Include="Emu\ARMv7\ARMv7Function.cpp" />
     <ClCompile Include="Emu\Audio\AudioDumper.cpp" />
-    <ClCompile Include="Emu\Audio\AudioManager.cpp" />
     <ClCompile Include="Emu\Cell\MFC.cpp" />
-    <ClCompile Include="Emu\Cell\PPCDecoder.cpp" />
     <ClCompile Include="Emu\Cell\PPUThread.cpp" />
     <ClCompile Include="Emu\Cell\RawSPUThread.cpp" />
     <ClCompile Include="Emu\Cell\SPURecompiler.cpp" />
     <ClCompile Include="Emu\Cell\SPUThread.cpp" />
     <ClCompile Include="Emu\CPU\CPUThread.cpp" />
-    <ClCompile Include="Emu\CPU\CPUThreadManager.cpp" />
-    <ClCompile Include="Emu\Event.cpp" />
-    <ClCompile Include="Emu\FS\VFS.cpp" />
-    <ClCompile Include="Emu\FS\vfsDevice.cpp" />
-    <ClCompile Include="Emu\FS\vfsDeviceLocalFile.cpp" />
-    <ClCompile Include="Emu\FS\vfsDir.cpp" />
-    <ClCompile Include="Emu\FS\vfsDirBase.cpp" />
-    <ClCompile Include="Emu\FS\vfsFile.cpp" />
-    <ClCompile Include="Emu\FS\vfsFileBase.cpp" />
-    <ClCompile Include="Emu\FS\vfsLocalDir.cpp" />
-    <ClCompile Include="Emu\FS\vfsLocalFile.cpp" />
-    <ClCompile Include="Emu\FS\vfsStream.cpp" />
-    <ClCompile Include="Emu\FS\vfsStreamMemory.cpp" />
-    <ClCompile Include="Emu\HDD\HDD.cpp" />
-    <ClCompile Include="Emu\Io\Keyboard.cpp" />
-    <ClCompile Include="Emu\Io\Mouse.cpp" />
-    <ClCompile Include="Emu\Io\Pad.cpp" />
-    <ClCompile Include="Emu\Memory\Memory.cpp" />
-    <ClCompile Include="Emu\RSX\GSManager.cpp" />
+    <ClCompile Include="Emu\VFS.cpp" />
+    <ClCompile Include="Emu\Memory\Memory.cpp">
+      <ObjectFileName>$(IntDir)OldMemory.obj</ObjectFileName>
+    </ClCompile>
     <ClCompile Include="Emu\RSX\GSRender.cpp" />
     <ClCompile Include="Emu\RSX\RSXTexture.cpp" />
     <ClCompile Include="Emu\RSX\RSXThread.cpp" />
     <ClCompile Include="Emu\Memory\vm.cpp" />
-    <ClCompile Include="Emu\SysCalls\Callback.cpp" />
-    <ClCompile Include="Emu\SysCalls\FuncList.cpp" />
-    <ClCompile Include="Emu\SysCalls\lv2\sys_cond.cpp" />
-    <ClCompile Include="Emu\SysCalls\lv2\sys_event.cpp" />
-    <ClCompile Include="Emu\SysCalls\lv2\sys_event_flag.cpp" />
-    <ClCompile Include="Emu\SysCalls\lv2\sys_interrupt.cpp" />
-    <ClCompile Include="Emu\SysCalls\lv2\sys_lwcond.cpp" />
-    <ClCompile Include="Emu\SysCalls\lv2\sys_lwmutex.cpp" />
-    <ClCompile Include="Emu\SysCalls\lv2\sys_memory.cpp" />
-    <ClCompile Include="Emu\SysCalls\lv2\sys_mmapper.cpp" />
-    <ClCompile Include="Emu\SysCalls\lv2\sys_mutex.cpp" />
-    <ClCompile Include="Emu\SysCalls\lv2\sys_ppu_thread.cpp" />
-    <ClCompile Include="Emu\SysCalls\lv2\sys_process.cpp" />
-    <ClCompile Include="Emu\SysCalls\lv2\sys_prx.cpp" />
-    <ClCompile Include="Emu\SysCalls\lv2\sys_rsx.cpp" />
-    <ClCompile Include="Emu\SysCalls\lv2\sys_rwlock.cpp" />
-    <ClCompile Include="Emu\SysCalls\lv2\sys_semaphore.cpp" />
-    <ClCompile Include="Emu\SysCalls\lv2\sys_spu.cpp" />
-    <ClCompile Include="Emu\SysCalls\lv2\sys_time.cpp" />
-    <ClCompile Include="Emu\SysCalls\lv2\sys_timer.cpp" />
-    <ClCompile Include="Emu\SysCalls\lv2\sys_trace.cpp" />
-    <ClCompile Include="Emu\SysCalls\lv2\sys_tty.cpp" />
-    <ClCompile Include="Emu\SysCalls\lv2\sys_vm.cpp" />
-    <ClCompile Include="Emu\SysCalls\ModuleManager.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellAdec.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellAtrac.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellAudio.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellAvconfExt.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellBgdl.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellCamera.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellCelp8Enc.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellCelpEnc.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellDmux.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellFiber.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellFont.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellFontFT.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellGame.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellGcmSys.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellGem.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellGifDec.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellHttpUtil.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellImejp.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellJpgDec.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellJpgEnc.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellKey2char.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellL10n.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellMic.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellMsgDialog.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellMusicDecode.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellMusicExport.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellNetCtl.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellOvis.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellPamf.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellPhotoDecode.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellPhotoExport.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellPhotoImport.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellPngDec.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellPngEnc.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellPrint.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellResc.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellRtc.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellRudp.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellSail.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellSailRec.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellScreenshot.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellSearch.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellSheap.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellSpurs.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellSpursJq.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellSsl.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellStorage.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellSubdisplay.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellSync.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellSync2.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellSysconf.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellSysmodule.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellSysutil.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellSysutilAp.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellSaveData.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellSysutilAvc.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellSysutilAvc2.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellSysutilMisc.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellUsbd.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellUsbpspcm.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellUserInfo.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellVdec.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellVideoExport.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellVideoOut.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellVoice.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellVpost.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellWebBrowser.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\libmixer.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\libsnd3.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\libsynth2.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\sceNp.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\sceNp2.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\sceNpClans.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\sceNpCommerce2.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\sceNpSns.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\sceNpTrophy.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\sceNpTus.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellKb.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellMouse.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellPad.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\sceNpUtil.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellVideoUpload.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\sysPrxForUser.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\sys_game.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\sys_heap.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\sys_lv2dbg.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellHttp.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\sys_io.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\sys_libc.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\sys_lwcond_.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\sys_lwmutex_.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\sys_mempool.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\sys_mmapper_.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\sys_net.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\sys_ppu_thread_.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\sys_prx_.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\sys_spinlock.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\sys_spu_.cpp" />
-    <ClCompile Include="Emu\SysCalls\SysCalls.cpp" />
     <ClCompile Include="Emu\System.cpp" />
-    <ClCompile Include="Loader\ELF32.cpp" />
-    <ClCompile Include="Loader\ELF64.cpp" />
-    <ClCompile Include="Loader\Loader.cpp" />
     <ClCompile Include="Loader\PSF.cpp" />
     <ClCompile Include="Loader\TROPUSR.cpp" />
     <ClCompile Include="Loader\TRP.cpp" />
@@ -393,14 +352,12 @@
     <ClInclude Include="..\Utilities\AutoPause.h" />
     <ClInclude Include="..\Utilities\BEType.h" />
     <ClInclude Include="..\Utilities\BitField.h" />
-    <ClInclude Include="..\Utilities\config_context.h" />
-    <ClInclude Include="..\Utilities\convert.h" />
     <ClInclude Include="..\Utilities\event.h" />
-    <ClInclude Include="..\Utilities\GNU.h" />
+    <ClInclude Include="..\Utilities\Platform.h" />
     <ClInclude Include="..\Utilities\Log.h" />
     <ClInclude Include="..\Utilities\File.h" />
-    <ClInclude Include="..\Utilities\rPlatform.h" />
-    <ClInclude Include="..\Utilities\rTime.h" />
+    <ClInclude Include="..\Utilities\Macro.h" />
+    <ClInclude Include="..\Utilities\Config.h" />
     <ClInclude Include="..\Utilities\rXml.h" />
     <ClInclude Include="..\Utilities\Semaphore.h" />
     <ClInclude Include="..\Utilities\SharedMutex.h" />
@@ -410,7 +367,6 @@
     <ClInclude Include="..\Utilities\Timer.h" />
     <ClInclude Include="..\Utilities\types.h" />
     <ClInclude Include="..\Utilities\VirtualMemory.h" />
-    <ClInclude Include="config.h" />
     <ClInclude Include="Crypto\aes.h" />
     <ClInclude Include="Crypto\ec.h" />
     <ClInclude Include="Crypto\key_vault.h" />
@@ -422,12 +378,12 @@
     <ClInclude Include="Crypto\utils.h" />
     <ClInclude Include="define_new_memleakdetect.h" />
     <ClInclude Include="Emu\ARMv7\ARMv7Callback.h" />
-    <ClInclude Include="Emu\ARMv7\ARMv7Context.h" />
-    <ClInclude Include="Emu\ARMv7\ARMv7Decoder.h" />
     <ClInclude Include="Emu\ARMv7\ARMv7DisAsm.h" />
     <ClInclude Include="Emu\ARMv7\ARMv7Interpreter.h" />
+    <ClInclude Include="Emu\ARMv7\ARMv7Module.h" />
     <ClInclude Include="Emu\ARMv7\ARMv7Opcodes.h" />
     <ClInclude Include="Emu\ARMv7\ARMv7Thread.h" />
+    <ClInclude Include="Emu\ARMv7\ErrorCodes.h" />
     <ClInclude Include="Emu\ARMv7\Modules\sceAppMgr.h" />
     <ClInclude Include="Emu\ARMv7\Modules\sceAppUtil.h" />
     <ClInclude Include="Emu\ARMv7\Modules\sceAudio.h" />
@@ -485,64 +441,127 @@
     <ClInclude Include="Emu\ARMv7\Modules\sceVideodec.h" />
     <ClInclude Include="Emu\ARMv7\Modules\sceVoice.h" />
     <ClInclude Include="Emu\ARMv7\Modules\sceVoiceQoS.h" />
-    <ClInclude Include="Emu\ARMv7\Modules\sceXml.h" />
-    <ClInclude Include="Emu\ARMv7\PSVFuncList.h" />
-    <ClInclude Include="Emu\ARMv7\PSVObjectList.h" />
+    <ClInclude Include="Emu\ARMv7\Modules\sceLibXml.h" />
+    <ClInclude Include="Emu\ARMv7\ARMv7Function.h" />
     <ClInclude Include="Emu\Audio\AudioDumper.h" />
-    <ClInclude Include="Emu\Audio\AudioManager.h" />
     <ClInclude Include="Emu\Audio\AudioThread.h" />
     <ClInclude Include="Emu\Audio\Null\NullAudioThread.h" />
     <ClInclude Include="Emu\Cell\Common.h" />
+    <ClInclude Include="Emu\Cell\ErrorCodes.h" />
+    <ClInclude Include="Emu\Cell\lv2\sys_cond.h" />
+    <ClInclude Include="Emu\Cell\lv2\sys_dbg.h" />
+    <ClInclude Include="Emu\Cell\lv2\sys_event.h" />
+    <ClInclude Include="Emu\Cell\lv2\sys_event_flag.h" />
+    <ClInclude Include="Emu\Cell\lv2\sys_fs.h" />
+    <ClInclude Include="Emu\Cell\lv2\sys_interrupt.h" />
+    <ClInclude Include="Emu\Cell\lv2\sys_lwcond.h" />
+    <ClInclude Include="Emu\Cell\lv2\sys_lwmutex.h" />
+    <ClInclude Include="Emu\Cell\lv2\sys_memory.h" />
+    <ClInclude Include="Emu\Cell\lv2\sys_mmapper.h" />
+    <ClInclude Include="Emu\Cell\lv2\sys_mutex.h" />
+    <ClInclude Include="Emu\Cell\lv2\sys_ppu_thread.h" />
+    <ClInclude Include="Emu\Cell\lv2\sys_process.h" />
+    <ClInclude Include="Emu\Cell\lv2\sys_prx.h" />
+    <ClInclude Include="Emu\Cell\lv2\sys_rsx.h" />
+    <ClInclude Include="Emu\Cell\lv2\sys_rwlock.h" />
+    <ClInclude Include="Emu\Cell\lv2\sys_semaphore.h" />
+    <ClInclude Include="Emu\Cell\lv2\sys_spu.h" />
+    <ClInclude Include="Emu\Cell\lv2\sys_sync.h" />
+    <ClInclude Include="Emu\Cell\lv2\sys_time.h" />
+    <ClInclude Include="Emu\Cell\lv2\sys_timer.h" />
+    <ClInclude Include="Emu\Cell\lv2\sys_trace.h" />
+    <ClInclude Include="Emu\Cell\lv2\sys_tty.h" />
+    <ClInclude Include="Emu\Cell\lv2\sys_vm.h" />
     <ClInclude Include="Emu\Cell\MFC.h" />
-    <ClInclude Include="Emu\Cell\PPCDecoder.h" />
+    <ClInclude Include="Emu\Cell\PPUModule.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellAdec.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellAtrac.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellAtracMulti.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellAudio.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellAudioIn.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellAudioOut.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellCamera.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellDmux.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellFiber.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellFont.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellFontFT.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellFs.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellGame.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellGcmSys.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellGem.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellGifDec.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellJpgDec.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellKb.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellL10n.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellMic.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellMouse.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellMsgDialog.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellMusic.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellNetCtl.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellPad.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellPamf.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellPng.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellPngDec.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellResc.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellRtc.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellRudp.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellSail.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellSaveData.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellScreenshot.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellSearch.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellSpurs.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellSpursJq.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellSubdisplay.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellSync.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellSync2.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellSysutil.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellSysutilAvc2.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellUsbd.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellUserInfo.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellVdec.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellVideoOut.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellVpost.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellWebBrowser.h" />
+    <ClInclude Include="Emu\Cell\Modules\libmixer.h" />
+    <ClInclude Include="Emu\Cell\Modules\libsnd3.h" />
+    <ClInclude Include="Emu\Cell\Modules\libsynth2.h" />
+    <ClInclude Include="Emu\Cell\Modules\sceNp.h" />
+    <ClInclude Include="Emu\Cell\Modules\sceNp2.h" />
+    <ClInclude Include="Emu\Cell\Modules\sceNpClans.h" />
+    <ClInclude Include="Emu\Cell\Modules\sceNpCommerce2.h" />
+    <ClInclude Include="Emu\Cell\Modules\sceNpSns.h" />
+    <ClInclude Include="Emu\Cell\Modules\sceNpTrophy.h" />
+    <ClInclude Include="Emu\Cell\Modules\sceNpTus.h" />
+    <ClInclude Include="Emu\Cell\Modules\sceNpUtil.h" />
+    <ClInclude Include="Emu\Cell\Modules\sysPrxForUser.h" />
+    <ClInclude Include="Emu\Cell\Modules\sys_lv2dbg.h" />
+    <ClInclude Include="Emu\Cell\Modules\sys_net.h" />
     <ClInclude Include="Emu\Cell\PPCDisAsm.h" />
-    <ClInclude Include="Emu\Cell\PPCInstrTable.h" />
-    <ClInclude Include="Emu\Cell\PPUDecoder.h" />
+    <ClInclude Include="Emu\Cell\PPUCallback.h" />
     <ClInclude Include="Emu\Cell\PPUDisAsm.h" />
-    <ClInclude Include="Emu\Cell\PPUInstrTable.h" />
+    <ClInclude Include="Emu\Cell\PPUFunction.h" />
     <ClInclude Include="Emu\Cell\PPUInterpreter.h" />
-    <ClInclude Include="Emu\Cell\PPUInterpreter2.h" />
     <ClInclude Include="Emu\Cell\PPUOpcodes.h" />
     <ClInclude Include="Emu\Cell\PPUThread.h" />
     <ClInclude Include="Emu\Cell\RawSPUThread.h" />
     <ClInclude Include="Emu\Cell\SPUAnalyser.h" />
     <ClInclude Include="Emu\Cell\SPUASMJITRecompiler.h" />
-    <ClInclude Include="Emu\Cell\SPUContext.h" />
     <ClInclude Include="Emu\Cell\SPUDisAsm.h" />
     <ClInclude Include="Emu\Cell\SPUInterpreter.h" />
     <ClInclude Include="Emu\Cell\SPUOpcodes.h" />
     <ClInclude Include="Emu\Cell\SPURecompiler.h" />
     <ClInclude Include="Emu\Cell\SPUThread.h" />
-    <ClInclude Include="Emu\CPU\CPUDecoder.h" />
     <ClInclude Include="Emu\CPU\CPUDisAsm.h" />
-    <ClInclude Include="Emu\CPU\CPUInstrTable.h" />
     <ClInclude Include="Emu\CPU\CPUThread.h" />
-    <ClInclude Include="Emu\CPU\CPUThreadManager.h" />
     <ClInclude Include="Emu\DbgCommand.h" />
-    <ClInclude Include="Emu\Event.h" />
-    <ClInclude Include="Emu\events.h" />
-    <ClInclude Include="Emu\FS\VFS.h" />
-    <ClInclude Include="Emu\FS\vfsDevice.h" />
-    <ClInclude Include="Emu\FS\vfsDeviceLocalFile.h" />
-    <ClInclude Include="Emu\FS\vfsDir.h" />
-    <ClInclude Include="Emu\FS\vfsDirBase.h" />
-    <ClInclude Include="Emu\FS\vfsFile.h" />
-    <ClInclude Include="Emu\FS\vfsFileBase.h" />
-    <ClInclude Include="Emu\FS\vfsLocalDir.h" />
-    <ClInclude Include="Emu\FS\vfsLocalFile.h" />
-    <ClInclude Include="Emu\FS\vfsStream.h" />
-    <ClInclude Include="Emu\FS\vfsStreamMemory.h" />
+    <ClInclude Include="Emu\VFS.h" />
     <ClInclude Include="Emu\GameInfo.h" />
-    <ClInclude Include="Emu\HDD\HDD.h" />
     <ClInclude Include="Emu\IdManager.h" />
-    <ClInclude Include="Emu\Io\Keyboard.h" />
     <ClInclude Include="Emu\Io\KeyboardHandler.h" />
-    <ClInclude Include="Emu\Io\Mouse.h" />
     <ClInclude Include="Emu\Io\MouseHandler.h" />
     <ClInclude Include="Emu\Io\Null\NullKeyboardHandler.h" />
     <ClInclude Include="Emu\Io\Null\NullMouseHandler.h" />
     <ClInclude Include="Emu\Io\Null\NullPadHandler.h" />
-    <ClInclude Include="Emu\Io\Pad.h" />
     <ClInclude Include="Emu\Io\PadHandler.h" />
     <ClInclude Include="Emu\Memory\Memory.h" />
     <ClInclude Include="Emu\Memory\MemoryBlock.h" />
@@ -556,7 +575,6 @@
     <ClInclude Include="Emu\RSX\Common\TextureUtils.h" />
     <ClInclude Include="Emu\RSX\Common\VertexProgramDecompiler.h" />
     <ClInclude Include="Emu\RSX\GCM.h" />
-    <ClInclude Include="Emu\RSX\GSManager.h" />
     <ClInclude Include="Emu\RSX\GSRender.h" />
     <ClInclude Include="Emu\RSX\Null\NullGSRender.h" />
     <ClInclude Include="Emu\RSX\RSXFragmentProgram.h" />
@@ -569,109 +587,24 @@
     <ClInclude Include="Emu\Memory\vm_var.h" />
     <ClInclude Include="Emu\RSX\rsx_methods.h" />
     <ClInclude Include="Emu\RSX\rsx_utils.h" />
-    <ClInclude Include="Emu\state.h" />
-    <ClInclude Include="Emu\SysCalls\Callback.h" />
-    <ClInclude Include="Emu\SysCalls\CB_FUNC.h" />
-    <ClInclude Include="Emu\SysCalls\ErrorCodes.h" />
-    <ClInclude Include="Emu\SysCalls\lv2\sys_sync.h" />
-    <ClInclude Include="Emu\SysCalls\lv2\sys_cond.h" />
-    <ClInclude Include="Emu\SysCalls\lv2\sys_dbg.h" />
-    <ClInclude Include="Emu\SysCalls\lv2\sys_event.h" />
-    <ClInclude Include="Emu\SysCalls\lv2\sys_event_flag.h" />
-    <ClInclude Include="Emu\SysCalls\lv2\sys_fs.h" />
-    <ClInclude Include="Emu\SysCalls\lv2\sys_interrupt.h" />
-    <ClInclude Include="Emu\SysCalls\lv2\sys_lwcond.h" />
-    <ClInclude Include="Emu\SysCalls\lv2\sys_lwmutex.h" />
-    <ClInclude Include="Emu\SysCalls\lv2\sys_memory.h" />
-    <ClInclude Include="Emu\SysCalls\lv2\sys_mmapper.h" />
-    <ClInclude Include="Emu\SysCalls\lv2\sys_mutex.h" />
-    <ClInclude Include="Emu\SysCalls\lv2\sys_ppu_thread.h" />
-    <ClInclude Include="Emu\SysCalls\lv2\sys_process.h" />
-    <ClInclude Include="Emu\SysCalls\lv2\sys_prx.h" />
-    <ClInclude Include="Emu\SysCalls\lv2\sys_rsx.h" />
-    <ClInclude Include="Emu\SysCalls\lv2\sys_rwlock.h" />
-    <ClInclude Include="Emu\SysCalls\lv2\sys_semaphore.h" />
-    <ClInclude Include="Emu\SysCalls\lv2\sys_spu.h" />
-    <ClInclude Include="Emu\SysCalls\lv2\sys_time.h" />
-    <ClInclude Include="Emu\SysCalls\lv2\sys_timer.h" />
-    <ClInclude Include="Emu\SysCalls\lv2\sys_trace.h" />
-    <ClInclude Include="Emu\SysCalls\lv2\sys_tty.h" />
-    <ClInclude Include="Emu\SysCalls\lv2\sys_vm.h" />
-    <ClInclude Include="Emu\SysCalls\ModuleManager.h" />
-    <ClInclude Include="Emu\SysCalls\Modules.h" />
-    <ClInclude Include="Emu\SysCalls\Modules\cellAdec.h" />
-    <ClInclude Include="Emu\SysCalls\Modules\cellAtrac.h" />
-    <ClInclude Include="Emu\SysCalls\Modules\cellAtracMulti.h" />
-    <ClInclude Include="Emu\SysCalls\Modules\cellAudio.h" />
-    <ClInclude Include="Emu\SysCalls\Modules\cellAudioIn.h" />
-    <ClInclude Include="Emu\SysCalls\Modules\cellAudioOut.h" />
-    <ClInclude Include="Emu\SysCalls\Modules\cellCamera.h" />
-    <ClInclude Include="Emu\SysCalls\Modules\cellDmux.h" />
-    <ClInclude Include="Emu\SysCalls\Modules\cellFiber.h" />
-    <ClInclude Include="Emu\SysCalls\Modules\cellFont.h" />
-    <ClInclude Include="Emu\SysCalls\Modules\cellFontFT.h" />
-    <ClInclude Include="Emu\SysCalls\Modules\cellFs.h" />
-    <ClInclude Include="Emu\SysCalls\Modules\cellGame.h" />
-    <ClInclude Include="Emu\SysCalls\Modules\cellGcmSys.h" />
-    <ClInclude Include="Emu\SysCalls\Modules\cellGem.h" />
-    <ClInclude Include="Emu\SysCalls\Modules\cellGifDec.h" />
-    <ClInclude Include="Emu\SysCalls\Modules\cellJpgDec.h" />
-    <ClInclude Include="Emu\SysCalls\Modules\cellL10n.h" />
-    <ClInclude Include="Emu\SysCalls\Modules\cellMic.h" />
-    <ClInclude Include="Emu\SysCalls\Modules\cellMsgDialog.h" />
-    <ClInclude Include="Emu\SysCalls\Modules\cellMusic.h" />
-    <ClInclude Include="Emu\SysCalls\Modules\cellNetCtl.h" />
-    <ClInclude Include="Emu\SysCalls\Modules\cellPad.h" />
-    <ClInclude Include="Emu\SysCalls\Modules\cellPamf.h" />
-    <ClInclude Include="Emu\SysCalls\Modules\cellPng.h" />
-    <ClInclude Include="Emu\SysCalls\Modules\cellPngDec.h" />
-    <ClInclude Include="Emu\SysCalls\Modules\cellResc.h" />
-    <ClInclude Include="Emu\SysCalls\Modules\cellRtc.h" />
-    <ClInclude Include="Emu\SysCalls\Modules\cellRudp.h" />
-    <ClInclude Include="Emu\SysCalls\Modules\cellSail.h" />
-    <ClInclude Include="Emu\SysCalls\Modules\cellScreenshot.h" />
-    <ClInclude Include="Emu\SysCalls\Modules\cellSearch.h" />
-    <ClInclude Include="Emu\SysCalls\Modules\cellSpurs.h" />
-    <ClInclude Include="Emu\SysCalls\Modules\cellSpursJq.h" />
-    <ClInclude Include="Emu\SysCalls\Modules\cellSubdisplay.h" />
-    <ClInclude Include="Emu\SysCalls\Modules\cellSync.h" />
-    <ClInclude Include="Emu\SysCalls\Modules\cellSync2.h" />
-    <ClInclude Include="Emu\SysCalls\Modules\cellSysutil.h" />
-    <ClInclude Include="Emu\SysCalls\Modules\cellSaveData.h" />
-    <ClInclude Include="Emu\SysCalls\Modules\cellSysutilAvc2.h" />
-    <ClInclude Include="Emu\SysCalls\Modules\cellUsbd.h" />
-    <ClInclude Include="Emu\SysCalls\Modules\cellUserInfo.h" />
-    <ClInclude Include="Emu\SysCalls\Modules\cellVdec.h" />
-    <ClInclude Include="Emu\SysCalls\Modules\cellVideoOut.h" />
-    <ClInclude Include="Emu\SysCalls\Modules\cellVpost.h" />
-    <ClInclude Include="Emu\SysCalls\Modules\cellWebBrowser.h" />
-    <ClInclude Include="Emu\SysCalls\Modules\libmixer.h" />
-    <ClInclude Include="Emu\SysCalls\Modules\libsnd3.h" />
-    <ClInclude Include="Emu\SysCalls\Modules\libsynth2.h" />
-    <ClInclude Include="Emu\SysCalls\Modules\sceNp.h" />
-    <ClInclude Include="Emu\SysCalls\Modules\sceNp2.h" />
-    <ClInclude Include="Emu\SysCalls\Modules\sceNpClans.h" />
-    <ClInclude Include="Emu\SysCalls\Modules\sceNpCommerce2.h" />
-    <ClInclude Include="Emu\SysCalls\Modules\sceNpSns.h" />
-    <ClInclude Include="Emu\SysCalls\Modules\sceNpTrophy.h" />
-    <ClInclude Include="Emu\SysCalls\Modules\sceNpTus.h" />
-    <ClInclude Include="Emu\SysCalls\Modules\cellKb.h" />
-    <ClInclude Include="Emu\SysCalls\Modules\cellMouse.h" />
-    <ClInclude Include="Emu\SysCalls\Modules\sceNpUtil.h" />
-    <ClInclude Include="Emu\SysCalls\Modules\sysPrxForUser.h" />
-    <ClInclude Include="Emu\SysCalls\Modules\sys_lv2dbg.h" />
-    <ClInclude Include="Emu\SysCalls\Modules\sys_net.h" />
-    <ClInclude Include="Emu\SysCalls\SC_FUNC.h" />
-    <ClInclude Include="Emu\SysCalls\SysCalls.h" />
     <ClInclude Include="Emu\System.h" />
-    <ClInclude Include="Loader\ELF32.h" />
-    <ClInclude Include="Loader\ELF64.h" />
-    <ClInclude Include="Loader\Loader.h" />
+    <ClInclude Include="Loader\ELF.h" />
     <ClInclude Include="Loader\PSF.h" />
     <ClInclude Include="Loader\TROPUSR.h" />
     <ClInclude Include="Loader\TRP.h" />
     <ClInclude Include="restore_new.h" />
     <ClInclude Include="stdafx.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\3rdparty\libpng\projects\vstudio\libpng\libpng.vcxproj">
+      <Project>{d6973076-9317-4ef2-a0b8-b7a18ac0713e}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\asmjitsrc\asmjit.vcxproj">
+      <Project>{ac40ff01-426e-4838-a317-66354cefae88}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\Utilities\yaml-cpp.vcxproj">
+      <Project>{fdc361c5-7734-493b-8cfb-037308b35122}</Project>
+    </ProjectReference>
   </ItemGroup>
   <PropertyGroup Label="UserMacros" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -87,11 +87,8 @@
       <Command>%windir%\sysnative\cmd.exe /c "$(SolutionDir)\Utilities\git-version-gen.cmd"</Command>
       <Message>Updating git-version.h</Message>
     </PreBuildEvent>
-    <ProjectReference>
-      <UseLibraryDependencyInputs>false</UseLibraryDependencyInputs>
-    </ProjectReference>
     <ClCompile>
-      <AdditionalIncludeDirectories>..\3rdparty\XAudio2_7;..\Vulkan\Vulkan-LoaderAndValidationLayers\include;..\Vulkan\glslang\glslang\Public;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\wxWidgets\include\msvc;..\wxWidgets\include;..\3rdparty\XAudio2_7;..\Vulkan\Vulkan-LoaderAndValidationLayers\include;..\Vulkan\glslang\glslang\Public;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories Condition="'$(Configuration)|$(Platform)'=='Debug - MemLeak|x64'">..\Vulkan\glslang-build\SPIRV\Debug;..\Vulkan\glslang-build\OGLCompilersDLL\Debug;..\Vulkan\glslang-build\glslang\OSDependent\Windows\Debug;..\Vulkan\Vulkan-build\loader\Debug;..\Vulkan\glslang-build\glslang\Debug;..\3rdparty\OpenAL\libs\Win64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
@@ -99,56 +96,60 @@
       <AdditionalLibraryDirectories Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">..\Vulkan\glslang-build\SPIRV\Debug;..\Vulkan\glslang-build\OGLCompilersDLL\Debug;..\Vulkan\glslang-build\glslang\OSDependent\Windows\Debug;..\Vulkan\Vulkan-build\loader\Debug;..\Vulkan\glslang-build\glslang\Debug;..\3rdparty\OpenAL\libs\Win64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalLibraryDirectories Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\Vulkan\glslang-build\SPIRV\Release;..\Vulkan\glslang-build\OGLCompilersDLL\Release;..\Vulkan\glslang-build\glslang\OSDependent\Windows\Release;..\Vulkan\Vulkan-build\loader\Release;..\Vulkan\glslang-build\glslang\Release;..\3rdparty\OpenAL\libs\Win64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalLibraryDirectories Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">..\Vulkan\glslang-build\SPIRV\Release;..\Vulkan\glslang-build\OGLCompilersDLL\Release;..\Vulkan\glslang-build\glslang\OSDependent\Windows\Release;..\Vulkan\Vulkan-build\loader\Release;..\Vulkan\glslang-build\glslang\Release;..\3rdparty\OpenAL\libs\Win64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>..\wxWidgets\lib\vc_x64_lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Debug - MemLeak|x64'">wxmsw31ud_adv.lib;wxbase31ud.lib;wxmsw31ud_core.lib;wxmsw31ud_aui.lib;wxtiffd.lib;wxjpegd.lib;wxpngd.lib;wxzlibd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">wxmsw31ud_adv.lib;wxbase31ud.lib;wxmsw31ud_core.lib;wxmsw31ud_aui.lib;wxtiffd.lib;wxjpegd.lib;wxpngd.lib;wxzlibd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">wxmsw31ud_adv.lib;wxbase31ud.lib;wxmsw31ud_core.lib;wxmsw31ud_aui.lib;wxtiffd.lib;wxjpegd.lib;wxpngd.lib;wxzlibd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Release|x64'">wxmsw31u_adv.lib;wxbase31u.lib;wxmsw31u_core.lib;wxmsw31u_aui.lib;wxtiff.lib;wxjpeg.lib;wxpng.lib;wxzlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">wxmsw31u_adv.lib;wxbase31u.lib;wxmsw31u_core.lib;wxmsw31u_aui.lib;wxtiff.lib;wxjpeg.lib;wxpng.lib;wxzlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalDependencies>VKstatic.1.lib;glslang.lib;OSDependent.lib;OGLCompiler.lib;SPIRV.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <BaseAddress>0x10000</BaseAddress>
+      <RandomizedBaseAddress>false</RandomizedBaseAddress>
+      <DataExecutionPrevention>true</DataExecutionPrevention>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Emu\Cell\PPUProgramCompiler.cpp" />
-    <ClCompile Include="Emu\Io\XInput\XInputPadHandler.cpp" />
+    <ClCompile Include="BasicKeyboardHandler.cpp" />
+    <ClCompile Include="BasicMouseHandler.cpp" />
     <ClCompile Include="Gui\AutoPauseManager.cpp" />
     <ClCompile Include="Gui\CgDisasm.cpp" />
-    <ClCompile Include="Gui\CompilerELF.cpp" />
     <ClCompile Include="Gui\ConLogFrame.cpp" />
     <ClCompile Include="Gui\Debugger.cpp" />
-    <ClCompile Include="Gui\DisAsmFrame.cpp" />
+    <ClCompile Include="Gui\FrameBase.cpp" />
     <ClCompile Include="Gui\GameViewer.cpp" />
     <ClCompile Include="Gui\GLGSFrame.cpp" />
     <ClCompile Include="Gui\GSFrame.cpp" />
+    <ClCompile Include="Gui\InstructionEditor.cpp" />
     <ClCompile Include="Gui\InterpreterDisAsm.cpp" />
     <ClCompile Include="Gui\KernelExplorer.cpp" />
-    <ClCompile Include="Gui\LLEModulesManager.cpp" />
     <ClCompile Include="Gui\MainFrame.cpp" />
     <ClCompile Include="Gui\MemoryStringSearcher.cpp" />
     <ClCompile Include="Gui\MemoryViewer.cpp" />
     <ClCompile Include="Gui\MsgDialog.cpp" />
     <ClCompile Include="Gui\PADManager.cpp" />
+    <ClCompile Include="Gui\RegisterEditor.cpp" />
     <ClCompile Include="Gui\RSXDebugger.cpp" />
     <ClCompile Include="Gui\SaveDataDialog.cpp" />
     <ClCompile Include="Gui\SaveDataUtility.cpp" />
     <ClCompile Include="Gui\SettingsDialog.cpp" />
     <ClCompile Include="Gui\SignInDialog.cpp" />
     <ClCompile Include="Gui\TextInputDialog.cpp" />
-    <ClCompile Include="Gui\VFSManager.cpp" />
-    <ClCompile Include="Gui\VHDDManager.cpp" />
+    <ClCompile Include="KeyboardPadHandler.cpp" />
     <ClCompile Include="rpcs3.cpp" />
+    <ClCompile Include="XInputPadHandler.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="rpcs3.rc" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Utilities\MTProgressDialog.h" />
-    <ClInclude Include="Emu\Cell\PPUProgramCompiler.h" />
-    <ClInclude Include="Emu\Io\Windows\WindowsKeyboardHandler.h" />
-    <ClInclude Include="Emu\Io\Windows\WindowsMouseHandler.h" />
-    <ClInclude Include="Emu\Io\Windows\WindowsPadHandler.h" />
-    <ClInclude Include="Emu\Io\XInput\XInputPadHandler.h" />
     <ClInclude Include="Gui\AboutDialog.h" />
     <ClInclude Include="Gui\AutoPauseManager.h" />
     <ClInclude Include="Gui\CgDisasm.h" />
-    <ClInclude Include="Gui\CompilerELF.h" />
     <ClInclude Include="Gui\ConLogFrame.h" />
     <ClInclude Include="Gui\Debugger.h" />
-    <ClInclude Include="Gui\DisAsmFrame.h" />
     <ClInclude Include="Gui\FrameBase.h" />
     <ClInclude Include="Gui\GameViewer.h" />
     <ClInclude Include="Gui\GLGSFrame.h" />
@@ -156,7 +157,6 @@
     <ClInclude Include="Gui\InstructionEditor.h" />
     <ClInclude Include="Gui\InterpreterDisAsm.h" />
     <ClInclude Include="Gui\KernelExplorer.h" />
-    <ClInclude Include="Gui\LLEModulesManager.h" />
     <ClInclude Include="Gui\MainFrame.h" />
     <ClInclude Include="Gui\MemoryStringSearcher.h" />
     <ClInclude Include="Gui\MemoryViewer.h" />
@@ -169,11 +169,13 @@
     <ClInclude Include="Gui\SettingsDialog.h" />
     <ClInclude Include="Gui\SignInDialog.h" />
     <ClInclude Include="Gui\TextInputDialog.h" />
-    <ClInclude Include="Gui\VFSManager.h" />
-    <ClInclude Include="Gui\VHDDManager.h" />
+    <ClInclude Include="KeyboardPadHandler.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="rpcs3.h" />
     <ClInclude Include="stdafx_gui.h" />
+    <ClInclude Include="BasicKeyboardHandler.h" />
+    <ClInclude Include="BasicMouseHandler.h" />
+    <ClInclude Include="XInputPadHandler.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="D3D12GSRender.vcxproj">
@@ -187,9 +189,6 @@
     </ProjectReference>
     <ProjectReference Include="OpenAL.vcxproj">
       <Project>{30a05c4d-f5fd-421c-a864-17a64bdeaa75}</Project>
-    </ProjectReference>
-    <ProjectReference Include="PPULLVMRecompiler.vcxproj">
-      <Project>{304a6e8b-a311-4ec5-8045-bfa8d08175ce}</Project>
     </ProjectReference>
     <ProjectReference Include="VKGSRender.vcxproj">
       <Project>{3ee5f075-b546-42c4-b6a8-e3ccef38b78d}</Project>

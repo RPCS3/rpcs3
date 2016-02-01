@@ -1,5 +1,6 @@
 // Qt5.2+ frontend implementation for rpcs3. Known to work on Windows, Linux, Mac
 // by Sacha Refshauge
+#ifdef QT_UI
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include "glviewer.h"
@@ -14,3 +15,4 @@ int main(int argc, char *argv[])
 	return app.exec();
 	Q_UNUSED(engine)
 }
+#endif

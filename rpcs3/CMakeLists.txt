@@ -112,8 +112,8 @@ ${LLVM_INCLUDE_DIRS}
 "${RPCS3_SRC_DIR}/Loader"
 "${RPCS3_SRC_DIR}/Crypto"
 "${RPCS3_SRC_DIR}/.."
+"${RPCS3_SRC_DIR}/../Utilities/yaml-cpp/include"
 "${RPCS3_SRC_DIR}/../asmjit/src/asmjit"
-"${RPCS3_SRC_DIR}/../3rdparty/glm"
 "${RPCS3_SRC_DIR}/../3rdparty/libpng"
 "${RPCS3_SRC_DIR}/../3rdparty/GSL/include"
 "${RPCS3_SRC_DIR}/../rsx_program_decompiler/rsx_decompiler"
@@ -165,17 +165,10 @@ endforeach()
 file(
 GLOB_RECURSE
 RPCS3_SRC
-"${RPCS3_SRC_DIR}/rpcs3.cpp"
-"${RPCS3_SRC_DIR}/config.cpp"
-"${RPCS3_SRC_DIR}/stb_image.cpp"
-"${RPCS3_SRC_DIR}/../Utilities/GNU.cpp"
-"${RPCS3_SRC_DIR}/Emu/*"
-"${RPCS3_SRC_DIR}/Gui/*"
-"${RPCS3_SRC_DIR}/Loader/*"
-"${RPCS3_SRC_DIR}/Crypto/*"
-"${RPCS3_SRC_DIR}/../Utilities/*"
-"${RPCS3_SRC_DIR}/../rsx_program_decompiler/rsx_decompiler/*"
-"${RPCS3_SRC_DIR}/../rsx_program_decompiler/shader_code/*"
+"${RPCS3_SRC_DIR}/*.cpp"
+"${RPCS3_SRC_DIR}/../Utilities/*.cpp"
+"${RPCS3_SRC_DIR}/../rsx_program_decompiler/rsx_decompiler/*.cpp"
+"${RPCS3_SRC_DIR}/../rsx_program_decompiler/shader_code/*.cpp"
 )
 
 if(APPLE)

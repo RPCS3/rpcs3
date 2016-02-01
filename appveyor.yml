@@ -14,7 +14,7 @@ branches:
 
 before_build:
  # until git for win 2.5 release with commit checkout
- - git submodule update --init 3rdparty/ffmpeg 3rdparty/pugixml asmjit rsx_program_decompiler 3rdparty/GSL 3rdparty/libpng Vulkan/glslang Vulkan/Vulkan-LoaderAndValidationLayers
+ - git submodule update --init 3rdparty/ffmpeg 3rdparty/pugixml asmjit 3rdparty/GSL 3rdparty/libpng Vulkan/glslang Vulkan/Vulkan-LoaderAndValidationLayers Utilities/yaml-cpp
  - 7z x wxWidgets.7z -aos -oC:\rpcs3\wxWidgets > null
  - 7z x zlib.7z -aos -oC:\rpcs3\ > null
  - if %configuration%==Release (cmake -G "Visual Studio 14 Win64" -DZLIB_ROOT=C:/rpcs3/zlib/)
