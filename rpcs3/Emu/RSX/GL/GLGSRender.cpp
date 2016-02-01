@@ -1,11 +1,12 @@
 #include "stdafx.h"
-#include "Utilities/rPlatform.h" // only for rImage
+#include "Utilities/Config.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
-#include "Emu/state.h"
 #include "GLGSRender.h"
 #include "../rsx_methods.h"
 #include "../Common/BufferUtils.h"
+
+extern cfg::bool_entry g_cfg_rsx_debug_output;
 
 #define DUMP_VERTEX_DATA 0
 
@@ -366,7 +367,7 @@ void GLGSRender::on_init_thread()
 	GSRender::on_init_thread();
 
 	gl::init();
-	if (rpcs3::config.rsx.d3d12.debug_output.value())
+	if (g_cfg_rsx_debug_output)
 		gl::enable_debugging();
 	LOG_NOTICE(RSX, "%s", (const char*)glGetString(GL_VERSION));
 	LOG_NOTICE(RSX, "%s", (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION));

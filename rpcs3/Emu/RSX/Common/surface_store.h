@@ -2,6 +2,7 @@
 
 #include <gsl.h>
 #include "../GCM.h"
+#include <list>
 
 namespace rsx
 {

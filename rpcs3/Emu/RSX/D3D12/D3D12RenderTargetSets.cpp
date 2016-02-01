@@ -1,17 +1,20 @@
 #include "stdafx.h"
 #include "stdafx_d3d12.h"
 #ifdef _MSC_VER
+#include "Utilities/Config.h"
 #include "D3D12RenderTargetSets.h"
-#include "Utilities/rPlatform.h" // only for rImage
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
-#include "Emu/state.h"
 #include "Emu/RSX/GSRender.h"
 #include "../rsx_methods.h"
 
 #include <D3D12.h>
 #include "D3D12GSRender.h"
 #include "D3D12Formats.h"
+
+extern cfg::bool_entry g_cfg_rsx_debug_output;
+extern cfg::bool_entry g_cfg_rsx_write_color_buffers;
+extern cfg::bool_entry g_cfg_rsx_write_depth_buffer;
 
 namespace
 {
@@ -159,7 +162,7 @@ void D3D12GSRender::clear_surface(u32 arg)
 	m_timers.draw_calls_duration += std::chrono::duration_cast<std::chrono::microseconds>(end_duration - start_duration).count();
 	m_timers.draw_calls_count++;
 
-	if (rpcs3::config.rsx.d3d12.debug_output.value())
+	if (g_cfg_rsx_debug_output)
 	{
 		CHECK_HRESULT(get_current_resource_storage().command_list->Close());
 		m_command_queue->ExecuteCommandLists(1, (ID3D12CommandList**)get_current_resource_storage().command_list.GetAddressOf());
@@ -330,7 +333,7 @@ void D3D12GSRender::copy_render_target_to_dma_location()
 
 	bool need_transfer = false;
 
-	if (m_context_dma_z && rpcs3::state.config.rsx.opengl.write_depth_buffer)
+	if (m_context_dma_z && g_cfg_rsx_write_depth_buffer)
 	{
 		get_current_resource_storage().command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(std::get<1>(m_rtts.m_bound_depth_stencil), D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_COPY_SOURCE));
 		get_current_resource_storage().command_list->CopyTextureRegion(&CD3DX12_TEXTURE_COPY_LOCATION(m_readback_resources.get_heap(), { depth_buffer_offset_in_heap,{ DXGI_FORMAT_R32_TYPELESS, (UINT)clip_w, (UINT)clip_h, 1, (UINT)depth_row_pitch } }), 0, 0, 0,
@@ -342,7 +345,7 @@ void D3D12GSRender::copy_render_target_to_dma_location()
 	}
 
 	size_t color_buffer_offset_in_heap[4];
-	if (rpcs3::state.config.rsx.opengl.write_color_buffers)
+	if (g_cfg_rsx_write_color_buffers)
 	{
 		for (u8 i : get_rtt_indexes(rsx::to_surface_target(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET])))
 		{
@@ -363,7 +366,7 @@ void D3D12GSRender::copy_render_target_to_dma_location()
 	//Wait for result
 	wait_for_command_queue(m_device.Get(), m_command_queue.Get());
 
-	if (address_z && rpcs3::state.config.rsx.opengl.write_depth_buffer)
+	if (address_z && g_cfg_rsx_write_depth_buffer)
 	{
 		auto ptr = vm::base(address_z);
 		char *depth_buffer = (char*)ptr;
@@ -383,7 +386,7 @@ void D3D12GSRender::copy_render_target_to_dma_location()
 		m_readback_resources.unmap();
 	}
 
-	if (rpcs3::state.config.rsx.opengl.write_color_buffers)
+	if (g_cfg_rsx_write_color_buffers)
 	{
 		size_t srcPitch = get_aligned_pitch(m_surface.color_format, clip_w);
 		size_t dstPitch = get_packed_pitch(m_surface.color_format, clip_w);

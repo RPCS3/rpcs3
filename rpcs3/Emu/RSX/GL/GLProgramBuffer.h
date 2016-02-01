@@ -17,7 +17,7 @@ struct GLTraits
 		fragmentProgramData.Compile();
 		//checkForGlError("m_fragment_prog.Compile");
 
-		fs::file(fs::get_config_dir() + "FragmentProgram.txt", fom::rewrite).write(fragmentProgramData.shader);
+		fs::file(fs::get_config_dir() + "FragmentProgram.txt", fs::rewrite).write(fragmentProgramData.shader);
 	}
 
 	static
@@ -27,7 +27,7 @@ struct GLTraits
 		vertexProgramData.Compile();
 		//checkForGlError("m_vertex_prog.Compile");
 
-		fs::file(fs::get_config_dir() + "VertexProgram.txt", fom::rewrite).write(vertexProgramData.shader);
+		fs::file(fs::get_config_dir() + "VertexProgram.txt", fs::rewrite).write(vertexProgramData.shader);
 	}
 
 	static

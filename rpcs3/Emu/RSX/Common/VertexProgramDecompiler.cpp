@@ -395,7 +395,6 @@ std::string VertexProgramDecompiler::BuildCode()
 	{
 		lvl -= m_instructions[i].close_scopes;
 		if (lvl < 1) lvl = 1;
-		//assert(lvl >= 1);
 		for (int j = 0; j < m_instructions[i].put_close_scopes; ++j)
 		{
 			--lvl;

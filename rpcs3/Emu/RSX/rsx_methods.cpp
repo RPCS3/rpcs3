@@ -1,12 +1,21 @@
 #include "stdafx.h"
+#include "Utilities/Config.h"
 #include "rsx_methods.h"
 #include "RSXThread.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
-#include "Emu/state.h"
 #include "rsx_utils.h"
-#include "Emu/SysCalls/Callback.h"
-#include "Emu/SysCalls/CB_FUNC.h"
+#include "Emu/Cell/PPUCallback.h"
+
+cfg::map_entry<double> g_cfg_rsx_frame_limit(cfg::root.video, "Frame limit",
+{
+	{ "Off", 0. },
+	{ "59.94", 59.94 },
+	{ "50", 50. },
+	{ "60", 60. },
+	{ "30", 30. },
+	{ "Auto", -1. },
+});
 
 namespace rsx
 {
@@ -667,24 +676,14 @@ namespace rsx
 
 		rsx->sem_flip.post_and_wait();
 
-		//sync
-		double limit;
-		switch (rpcs3::state.config.rsx.frame_limit.value())
+		if (double limit = g_cfg_rsx_frame_limit.get())
 		{
-		case rsx_frame_limit::_50: limit = 50.; break;
-		case rsx_frame_limit::_59_94: limit = 59.94; break;
-		case rsx_frame_limit::_30: limit = 30.; break;
-		case rsx_frame_limit::_60: limit = 60.; break;
-		case rsx_frame_limit::Auto: limit = rsx->fps_limit; break; //TODO
+			if (limit < 0) limit = rsx->fps_limit; // TODO
 
-		case rsx_frame_limit::Off:
-		default:
-			return;
+			std::this_thread::sleep_for(std::chrono::milliseconds((s64)(1000.0 / limit - rsx->timer_sync.GetElapsedTimeInMilliSec())));
+			rsx->timer_sync.Start();
+			rsx->local_transform_constants.clear();
 		}
-
-		std::this_thread::sleep_for(std::chrono::milliseconds((s64)(1000.0 / limit - rsx->timer_sync.GetElapsedTimeInMilliSec())));
-		rsx->timer_sync.Start();
-		rsx->local_transform_constants.clear();
 	}
 
 	void user_command(thread* rsx, u32 arg)

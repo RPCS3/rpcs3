@@ -1,21 +1,30 @@
 #include "stdafx.h"
+#include "Utilities/Config.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
-#include "Emu/state.h"
-#include "Emu/RSX/GSManager.h"
 #include "RSXThread.h"
 
-#include "Emu/SysCalls/Callback.h"
-#include "Emu/SysCalls/CB_FUNC.h"
-#include "Emu/SysCalls/lv2/sys_time.h"
+#include "Emu/Cell/PPUCallback.h"
 
 #include "Common/BufferUtils.h"
 #include "rsx_methods.h"
 
 #define CMD_DEBUG 0
 
+cfg::bool_entry g_cfg_rsx_write_color_buffers(cfg::root.video, "Write Color Buffers");
+cfg::bool_entry g_cfg_rsx_write_depth_buffer(cfg::root.video, "Write Depth Buffer");
+cfg::bool_entry g_cfg_rsx_read_color_buffers(cfg::root.video, "Read Color Buffers");
+cfg::bool_entry g_cfg_rsx_read_depth_buffer(cfg::root.video, "Read Depth Buffer");
+cfg::bool_entry g_cfg_rsx_log_programs(cfg::root.video, "Log shader programs");
+cfg::bool_entry g_cfg_rsx_vsync(cfg::root.video, "VSync");
+cfg::bool_entry g_cfg_rsx_3dtv(cfg::root.video, "3D Monitor");
+cfg::bool_entry g_cfg_rsx_debug_output(cfg::root.video, "Debug output");
+cfg::bool_entry g_cfg_rsx_overlay(cfg::root.video, "Debug overlay");
+
 bool user_asked_for_frame_capture = false;
 frame_capture_data frame_debug;
+
+namespace vm { using namespace ps3; }
 
 namespace rsx
 {
@@ -28,14 +37,14 @@ namespace rsx
 
 	void shaders_cache::load(const std::string &path, shader_language lang)
 	{
-		std::string lang_name = convert::to<std::string>(lang);
+		const std::string lang_name = bijective_find<shader_language>(lang, "");
 
 		auto extract_hash = [](const std::string &string)
 		{
 			return std::stoull(string.substr(0, string.find('.')).c_str(), 0, 16);
 		};
 
-		for (const fs::dir::entry &entry : fs::dir{ path })
+		for (const auto& entry : fs::dir(path))
 		{
 			if (entry.name == "." || entry.name == "..")
 				continue;
@@ -106,7 +115,7 @@ namespace rsx
 				throw EXCEPTION("GetAddress(offset=0x%x, location=0x%x): RSXIO memory not mapped", offset, location);
 			}
 
-			//if (Emu.GetGSManager().GetRender().strict_ordering[offset >> 20])
+			//if (fxm::get<GSRender>()->strict_ordering[offset >> 20])
 			//{
 			//	_mm_mfence(); // probably doesn't have any effect on current implementation
 			//}
@@ -353,7 +362,7 @@ namespace rsx
 
 		last_flip_time = get_system_time() - 1000000;
 
-		scope_thread_t vblank(PURE_EXPR("VBlank Thread"s), [this]()
+		scope_thread vblank("VBlank Thread", [this]()
 		{
 			const u64 start_time = get_system_time();
 
@@ -386,8 +395,8 @@ namespace rsx
 		{
 			CHECK_EMU_STATUS;
 
-			be_t<u32> get = ctrl->get;
-			be_t<u32> put = ctrl->put;
+			const u32 get = ctrl->get;
+			const u32 put = ctrl->put;
 
 			if (put == get || !Emu.IsRunning())
 			{
@@ -442,10 +451,7 @@ namespace rsx
 				u32 reg = cmd & CELL_GCM_METHOD_FLAG_NON_INCREMENT ? first_cmd : first_cmd + i;
 				u32 value = args[i];
 
-				if (rpcs3::config.misc.log.rsx_logging.value())
-				{
-					LOG_NOTICE(RSX, "%s(0x%x) = 0x%x", get_method_name(reg).c_str(), reg, value);
-				}
+				LOG_TRACE(RSX, "%s(0x%x) = 0x%x", get_method_name(reg).c_str(), reg, value);
 
 				method_registers[reg] = value;
 				if (capture_current_frame)
@@ -831,7 +837,7 @@ namespace rsx
 
 		m_used_gcm_commands.clear();
 
-		on_init();
+		on_init_rsx();
 		start();
 	}
 

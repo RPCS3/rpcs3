@@ -1,7 +1,6 @@
 #pragma once
 
 #include "D3D12Utils.h"
-#include "Utilities/rPlatform.h" // only for rImage
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/RSX/GSRender.h"

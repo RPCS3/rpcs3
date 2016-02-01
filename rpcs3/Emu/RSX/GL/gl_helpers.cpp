@@ -20,7 +20,7 @@ namespace gl
 		case rsx::primitive_type::quad_strip: return GL_TRIANGLES;
 		case rsx::primitive_type::polygon: return GL_TRIANGLES;
 		}
-		throw new EXCEPTION("unknow primitive type");
+		throw EXCEPTION("unknow primitive type");
 	}
 
 #ifdef WIN32

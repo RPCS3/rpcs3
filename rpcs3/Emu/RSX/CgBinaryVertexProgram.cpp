@@ -6,13 +6,13 @@
 
 void CgBinaryDisasm::AddScaCodeDisasm(const std::string& code)
 {
-	assert(m_sca_opcode < 21);
+	Expects(m_sca_opcode < 21);
 	m_arb_shader += rsx_vp_sca_op_names[m_sca_opcode] + code + " ";
 }
 
 void CgBinaryDisasm::AddVecCodeDisasm(const std::string& code)
 {
-	assert(m_vec_opcode < 26);
+	Expects(m_vec_opcode < 26);
 	m_arb_shader += rsx_vp_vec_op_names[m_vec_opcode] + code + " ";
 }
 

@@ -1,8 +1,6 @@
 #include "stdafx.h"
-#include "Utilities/rPlatform.h" // only for rImage
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
-#include "Emu/state.h"
 #include "VKGSRender.h"
 #include "../rsx_methods.h"
 #include "../Common/BufferUtils.h"
@@ -591,3 +589,4 @@ VKGSRender::upload_vertex_data()
 
 	return std::make_tuple(prims, is_indexed_draw, index_count, offset_in_index_buffer, index_format);
 }
+
