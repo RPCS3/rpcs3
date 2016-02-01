@@ -8,6 +8,8 @@ struct WAVHeader
 		u32 Size; // FileSize - 8
 		u32 WAVE; // "WAVE"
 
+		RIFFHeader() = default;
+
 		RIFFHeader(u32 size)
 			: ID(*(u32*)"RIFF")
 			, WAVE(*(u32*)"WAVE")
@@ -15,6 +17,7 @@ struct WAVHeader
 		{
 		}
 	} RIFF;
+
 	struct FMTHeader
 	{
 		u32 ID; // "fmt "
@@ -26,7 +29,9 @@ struct WAVHeader
 		u16 BlockAlign; // NumChannels * BitsPerSample/8
 		u16 BitsPerSample; // sizeof(float) * 8
 
-		FMTHeader(u8 ch)
+		FMTHeader() = default;
+
+		FMTHeader(u16 ch)
 			: ID(*(u32*)"fmt ")
 			, Size(16)
 			, AudioFormat(3)
@@ -38,10 +43,13 @@ struct WAVHeader
 		{
 		}
 	} FMT;
+
 	u32 ID; // "data"
 	u32 Size; // size of data (256 * NumChannels * sizeof(float))
 
-	WAVHeader(u8 ch)
+	WAVHeader() = default;
+
+	WAVHeader(u16 ch)
 		: ID(*(u32*)"data")
 		, Size(0)
 		, FMT(ch)
@@ -50,21 +58,15 @@ struct WAVHeader
 	}
 };
 
-
 class AudioDumper
 {
 	WAVHeader m_header;
 	fs::file m_output;
-	bool m_init;
 	
 public:
-	AudioDumper();
+	AudioDumper(u16 ch);
 	~AudioDumper();
 
-public:
-	bool Init(u8 ch);
-	void WriteHeader();
-	size_t WriteData(const void* buffer, size_t size);
-	void Finalize();
+	void WriteData(const void* buffer, u32 size);
 	const u16 GetCh() const { return m_header.FMT.NumChannels; }
 };
