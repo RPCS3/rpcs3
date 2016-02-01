@@ -8,7 +8,7 @@ class semaphore_t
 	// semaphore condition variable
 	std::condition_variable m_cv;
 
-	struct sync_var_t
+	struct alignas(8) sync_var_t
 	{
 		u32 value; // current semaphore value
 		u32 waiters; // current amount of waiters

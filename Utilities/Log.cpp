@@ -1,26 +1,17 @@
-﻿#include "stdafx.h"
-#include "Thread.h"
-#include "File.h"
-#include "Log.h"
-
-#ifdef _WIN32
-#include <Windows.h>
-#endif
+﻿#include "Log.h"
 
 namespace _log
 {
-	logger& get_logger()
+	static file_listener& get_logger()
 	{
-		// Use magic static for global logger instance
-		static logger instance;
-		return instance;
+		// Use magic static
+		static file_listener logger("RPCS3.log");
+		return logger;
 	}
-
-	file_listener g_log_file(_PRGNAME_ ".log");
 
 	file_writer g_tty_file("TTY.log");
 
-	channel GENERAL("", level::notice);
+	channel GENERAL(nullptr, level::notice);
 	channel LOADER("LDR", level::notice);
 	channel MEMORY("MEM", level::notice);
 	channel RSX("RSX", level::notice);
@@ -28,72 +19,29 @@ namespace _log
 	channel PPU("PPU", level::notice);
 	channel SPU("SPU", level::notice);
 	channel ARMv7("ARMv7");
-}
 
-_log::listener::listener()
-{
-	// Register self
-	get_logger().add_listener(this);
-}
-
-_log::listener::~listener()
-{
-	// Unregister self
-	get_logger().remove_listener(this);
-}
-
-_log::channel::channel(const std::string& name, _log::level init_level)
-	: name{ name }
-	, enabled{ init_level }
-{
-	// TODO: register config property "name" associated with "enabled" member
-}
-
-void _log::logger::add_listener(_log::listener* listener)
-{
-	std::lock_guard<shared_mutex> lock(m_mutex);
-
-	m_listeners.emplace(listener);
-}
-
-void _log::logger::remove_listener(_log::listener* listener)
-{
-	std::lock_guard<shared_mutex> lock(m_mutex);
-
-	m_listeners.erase(listener);
-}
-
-void _log::logger::broadcast(const _log::channel& ch, _log::level sev, const std::string& text) const
-{
-	reader_lock lock(m_mutex);
-
-	for (auto listener : m_listeners)
-	{
-		listener->log(ch, sev, text);
-	}
+	thread_local std::string(*g_tls_make_prefix)(const channel&, level, const std::string&) = nullptr;
 }
 
 void _log::broadcast(const _log::channel& ch, _log::level sev, const std::string& text)
 {
-	get_logger().broadcast(ch, sev, text);
+	get_logger().log(ch, sev, text);
 }
+
+[[noreturn]] extern void catch_all_exceptions();
 
 _log::file_writer::file_writer(const std::string& name)
 {
 	try
 	{
-		if (!m_file.open(fs::get_config_dir() + name, fom::rewrite | fom::append))
+		if (!m_file.open(fs::get_config_dir() + name, fs::rewrite + fs::append))
 		{
-			throw EXCEPTION("Can't create log file %s (error %d)", name, errno);
+			throw fmt::exception("Can't create log file %s (error %d)", name, errno);
 		}
 	}
-	catch (const fmt::exception& e)
+	catch (...)
 	{
-#ifdef _WIN32
-		MessageBoxA(0, e.what(), "_log::file_writer() failed", MB_ICONERROR);
-#else
-		std::printf("_log::file_writer() failed: %s\n", e.what());
-#endif
+		catch_all_exceptions();
 	}
 }
 
@@ -104,7 +52,7 @@ void _log::file_writer::log(const std::string& text)
 
 std::size_t _log::file_writer::size() const
 {
-	return m_file.seek(0, fs::seek_cur);
+	return m_file.pos();
 }
 
 void _log::file_listener::log(const _log::channel& ch, _log::level sev, const std::string& text)
@@ -126,14 +74,14 @@ void _log::file_listener::log(const _log::channel& ch, _log::level sev, const st
 
 	// TODO: print time?
 
-	if (auto t = thread_ctrl::get_current())
+	if (auto func = g_tls_make_prefix)
 	{
 		msg += '{';
-		msg += t->get_name();
+		msg += func(ch, sev, text);
 		msg += "} ";
 	}
-
-	if (ch.name.size())
+	
+	if (ch.name)
 	{
 		msg += ch.name;
 		msg += sev == level::todo ? " TODO: " : ": ";

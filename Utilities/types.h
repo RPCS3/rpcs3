@@ -1,16 +1,21 @@
 #pragma once
 
+#include <new>
 #include <typeinfo>
+#include <type_traits>
+#include <exception>
+#include <utility>
 #include <cstdint>
 #include <cmath>
-#include <algorithm>
 
+#include "Platform.h"
+
+using schar = signed char;
 using uchar = unsigned char;
 using ushort = unsigned short;
 using uint = unsigned int;
 using ulong = unsigned long;
 using ullong = unsigned long long;
-
 using llong = long long;
 
 using u8 = std::uint8_t;
@@ -22,6 +27,350 @@ using s8 = std::int8_t;
 using s16 = std::int16_t;
 using s32 = std::int32_t;
 using s64 = std::int64_t;
+
+// Specialization with static constexpr pair<T1, T2> map[] member expected
+template<typename T1, typename T2>
+struct bijective;
+
+template<typename T, std::size_t Size = sizeof(T)>
+struct atomic_storage;
+
+template<typename T1, typename T2, typename = void>
+struct atomic_add;
+
+template<typename T1, typename T2, typename = void>
+struct atomic_sub;
+
+template<typename T1, typename T2, typename = void>
+struct atomic_and;
+
+template<typename T1, typename T2, typename = void>
+struct atomic_or;
+
+template<typename T1, typename T2, typename = void>
+struct atomic_xor;
+
+template<typename T, typename = void>
+struct atomic_pre_inc;
+
+template<typename T, typename = void>
+struct atomic_post_inc;
+
+template<typename T, typename = void>
+struct atomic_pre_dec;
+
+template<typename T, typename = void>
+struct atomic_post_dec;
+
+template<typename T1, typename T2, typename = void>
+struct atomic_test_and_set;
+
+template<typename T1, typename T2, typename = void>
+struct atomic_test_and_reset;
+
+template<typename T1, typename T2, typename = void>
+struct atomic_test_and_complement;
+
+template<typename T>
+class atomic_t;
+
+namespace fmt
+{
+	template<typename T, typename = void>
+	struct unveil;
+}
+
+// TODO: replace with std::void_t when available
+namespace void_details
+{
+	template<class... >
+	struct make_void
+	{
+		using type = void;
+	};
+}
+
+template<class... T> using void_t = typename void_details::make_void<T...>::type;
+
+// Extract T::simple_type if available, remove cv qualifiers
+template<typename T, typename = void>
+struct simple_type_helper
+{
+	using type = typename std::remove_cv<T>::type;
+};
+
+template<typename T>
+struct simple_type_helper<T, void_t<typename T::simple_type>>
+{
+	using type = typename T::simple_type;
+};
+
+template<typename T> using simple_t = typename simple_type_helper<T>::type;
+
+// Bool type equivalent
+class b8
+{
+	std::uint8_t m_value;
+
+public:
+	b8() = default;
+
+	constexpr b8(bool value)
+		: m_value(value)
+	{
+	}
+
+	constexpr operator bool() const
+	{
+		return m_value != 0;
+	}
+};
+
+// Bool wrapper for restricting bool result conversions
+struct explicit_bool_t
+{
+	const bool value;
+
+	constexpr explicit_bool_t(bool value)
+		: value(value)
+	{
+	}
+
+	explicit constexpr operator bool() const
+	{
+		return value;
+	}
+};
+
+#ifndef _MSC_VER
+using u128 = __uint128_t;
+using s128 = __int128_t;
+#else
+
+#include "intrin.h"
+
+// Unsigned 128-bit integer implementation (TODO)
+struct alignas(16) u128
+{
+	std::uint64_t lo, hi;
+
+	u128() = default;
+
+	constexpr u128(std::uint64_t l)
+		: lo(l)
+		, hi(0)
+	{
+	}
+
+	friend u128 operator +(const u128& l, const u128& r)
+	{
+		u128 value;
+		_addcarry_u64(_addcarry_u64(0, r.lo, l.lo, &value.lo), r.hi, l.hi, &value.hi);
+		return value;
+	}
+
+	friend u128 operator +(const u128& l, std::uint64_t r)
+	{
+		u128 value;
+		_addcarry_u64(_addcarry_u64(0, r, l.lo, &value.lo), l.hi, 0, &value.hi);
+		return value;
+	}
+
+	friend u128 operator +(std::uint64_t l, const u128& r)
+	{
+		u128 value;
+		_addcarry_u64(_addcarry_u64(0, r.lo, l, &value.lo), 0, r.hi, &value.hi);
+		return value;
+	}
+
+	friend u128 operator -(const u128& l, const u128& r)
+	{
+		u128 value;
+		_subborrow_u64(_subborrow_u64(0, r.lo, l.lo, &value.lo), r.hi, l.hi, &value.hi);
+		return value;
+	}
+
+	friend u128 operator -(const u128& l, std::uint64_t r)
+	{
+		u128 value;
+		_subborrow_u64(_subborrow_u64(0, r, l.lo, &value.lo), 0, l.hi, &value.hi);
+		return value;
+	}
+
+	friend u128 operator -(std::uint64_t l, const u128& r)
+	{
+		u128 value;
+		_subborrow_u64(_subborrow_u64(0, r.lo, l, &value.lo), r.hi, 0, &value.hi);
+		return value;
+	}
+
+	u128 operator +() const
+	{
+		return *this;
+	}
+
+	u128 operator -() const
+	{
+		u128 value;
+		_subborrow_u64(_subborrow_u64(0, lo, 0, &value.lo), hi, 0, &value.hi);
+		return value;
+	}
+
+	u128& operator ++()
+	{
+		_addcarry_u64(_addcarry_u64(0, 1, lo, &lo), 0, hi, &hi);
+		return *this;
+	}
+
+	u128 operator ++(int)
+	{
+		u128 value = *this;
+		_addcarry_u64(_addcarry_u64(0, 1, lo, &lo), 0, hi, &hi);
+		return value;
+	}
+
+	u128& operator --()
+	{
+		_subborrow_u64(_subborrow_u64(0, 1, lo, &lo), 0, hi, &hi);
+		return *this;
+	}
+
+	u128 operator --(int)
+	{
+		u128 value = *this;
+		_subborrow_u64(_subborrow_u64(0, 1, lo, &lo), 0, hi, &hi);
+		return value;
+	}
+
+	u128 operator ~() const
+	{
+		u128 value;
+		value.lo = ~lo;
+		value.hi = ~hi;
+		return value;
+	}
+
+	friend u128 operator &(const u128& l, const u128& r)
+	{
+		u128 value;
+		value.lo = l.lo & r.lo;
+		value.hi = l.hi & r.hi;
+		return value;
+	}
+
+	friend u128 operator |(const u128& l, const u128& r)
+	{
+		u128 value;
+		value.lo = l.lo | r.lo;
+		value.hi = l.hi | r.hi;
+		return value;
+	}
+
+	friend u128 operator ^(const u128& l, const u128& r)
+	{
+		u128 value;
+		value.lo = l.lo ^ r.lo;
+		value.hi = l.hi ^ r.hi;
+		return value;
+	}
+
+	u128& operator +=(const u128& r)
+	{
+		_addcarry_u64(_addcarry_u64(0, r.lo, lo, &lo), r.hi, hi, &hi);
+		return *this;
+	}
+
+	u128& operator +=(uint64_t r)
+	{
+		_addcarry_u64(_addcarry_u64(0, r, lo, &lo), 0, hi, &hi);
+		return *this;
+	}
+
+	u128& operator &=(const u128& r)
+	{
+		lo &= r.lo;
+		hi &= r.hi;
+		return *this;
+	}
+
+	u128& operator |=(const u128& r)
+	{
+		lo |= r.lo;
+		hi |= r.hi;
+		return *this;
+	}
+
+	u128& operator ^=(const u128& r)
+	{
+		lo ^= r.lo;
+		hi ^= r.hi;
+		return *this;
+	}
+};
+
+// Signed 128-bit integer implementation (TODO)
+struct alignas(16) s128
+{
+	std::uint64_t lo;
+	std::int64_t hi;
+
+	s128() = default;
+
+	constexpr s128(std::int64_t l)
+		: hi(l >> 63)
+		, lo(l)
+	{
+	}
+
+	constexpr s128(std::uint64_t l)
+		: hi(0)
+		, lo(l)
+	{
+	}
+};
+#endif
+
+namespace std
+{
+	/* Let's hack. */
+
+	template<>
+	struct is_integral<u128> : true_type
+	{
+	};
+
+	template<>
+	struct is_integral<s128> : true_type
+	{
+	};
+
+	template<>
+	struct make_unsigned<u128>
+	{
+		using type = u128;
+	};
+
+	template<>
+	struct make_unsigned<s128>
+	{
+		using type = u128;
+	};
+
+	template<>
+	struct make_signed<u128>
+	{
+		using type = s128;
+	};
+
+	template<>
+	struct make_signed<s128>
+	{
+		using type = s128;
+	};
+}
+
+static_assert(std::is_arithmetic<u128>::value && std::is_integral<u128>::value && alignof(u128) == 16 && sizeof(u128) == 16, "Wrong u128 implementation");
+static_assert(std::is_arithmetic<s128>::value && std::is_integral<s128>::value && alignof(s128) == 16 && sizeof(s128) == 16, "Wrong s128 implementation");
 
 union alignas(2) f16
 {
@@ -54,6 +403,313 @@ struct ignore
 	{
 	}
 };
+
+// Allows to define integer convertible to multiple enum types
+template<typename T = void, typename... Ts>
+struct multicast : multicast<Ts...>
+{
+	static_assert(std::is_enum<T>::value, "multicast<> error: invalid conversion type (enum type expected)");
+
+	multicast() = default;
+
+	template<typename UT>
+	constexpr multicast(const UT& value)
+		: multicast<Ts...>(value)
+		, m_value{ value } // Forbid narrowing
+	{
+	}
+
+	constexpr operator T() const
+	{
+		// Cast to enum type
+		return static_cast<T>(m_value);
+	}
+
+private:
+	std::underlying_type_t<T> m_value;
+};
+
+// Recursion terminator
+template<>
+struct multicast<void>
+{
+	multicast() = default;
+
+	template<typename UT>
+	constexpr multicast(const UT& value)
+	{
+	}
+};
+
+// Small bitset for enum class types with available values [0, bitsize).
+// T must be either enum type or convertible to (registered with via simple_t<T>).
+// Internal representation is single value of type T.
+template<typename T>
+struct mset
+{
+	using type = simple_t<T>;
+	using under = std::underlying_type_t<type>;
+
+	static constexpr auto bitsize = sizeof(type) * CHAR_BIT;
+
+	mset() = default;
+
+	constexpr mset(type _enum_const)
+		: m_value(static_cast<type>(shift(_enum_const)))
+	{
+	}
+
+	constexpr mset(under raw_value, const std::nothrow_t&)
+		: m_value(static_cast<T>(raw_value))
+	{
+	}
+
+	// Get underlying value
+	constexpr under _value() const
+	{
+		return static_cast<under>(m_value);
+	}
+
+	explicit constexpr operator bool() const
+	{
+		return _value() ? true : false;
+	}
+
+	mset& operator +=(mset rhs)
+	{
+		return *this = { _value() | rhs._value(), std::nothrow };
+	}
+
+	mset& operator -=(mset rhs)
+	{
+		return *this = { _value() & ~rhs._value(), std::nothrow };
+	}
+
+	mset& operator &=(mset rhs)
+	{
+		return *this = { _value() & rhs._value(), std::nothrow };
+	}
+
+	mset& operator ^=(mset rhs)
+	{
+		return *this = { _value() ^ rhs._value(), std::nothrow };
+	}
+
+	friend constexpr mset operator +(mset lhs, mset rhs)
+	{
+		return{ lhs._value() | rhs._value(), std::nothrow };
+	}
+
+	friend constexpr mset operator -(mset lhs, mset rhs)
+	{
+		return{ lhs._value() & ~rhs._value(), std::nothrow };
+	}
+
+	friend constexpr mset operator &(mset lhs, mset rhs)
+	{
+		return{ lhs._value() & rhs._value(), std::nothrow };
+	}
+
+	friend constexpr mset operator ^(mset lhs, mset rhs)
+	{
+		return{ lhs._value() ^ rhs._value(), std::nothrow };
+	}
+
+	bool test(mset rhs) const
+	{
+		const under v = _value();
+		const under s = rhs._value();
+		return (v & s) != 0;
+	}
+
+	bool test_and_set(mset rhs)
+	{
+		const under v = _value();
+		const under s = rhs._value();
+		*this = { v | s, std::nothrow };
+		return (v & s) != 0;
+	}
+
+	bool test_and_reset(mset rhs)
+	{
+		const under v = _value();
+		const under s = rhs._value();
+		*this = { v & ~s, std::nothrow };
+		return (v & s) != 0;
+	}
+
+	bool test_and_complement(mset rhs)
+	{
+		const under v = _value();
+		const under s = rhs._value();
+		*this = { v ^ s, std::nothrow };
+		return (v & s) != 0;
+	}
+
+private:
+	[[noreturn]] static under xrange()
+	{
+		throw std::out_of_range("mset<>: bit out of range");
+	}
+
+	static constexpr under shift(const T& value)
+	{
+		return static_cast<under>(value) < bitsize ? static_cast<under>(1) << static_cast<under>(value) : xrange();
+	}
+
+	T m_value;
+};
+
+template<typename T, typename RT = T>
+constexpr RT to_mset()
+{
+	return RT{};
+}
+
+// Fold enum constants into mset<>
+template<typename T = void, typename Arg, typename... Args, typename RT = std::conditional_t<std::is_void<T>::value, mset<Arg>, T>>
+constexpr RT to_mset(Arg&& _enum_const, Args&&... args)
+{
+	return RT{ std::forward<Arg>(_enum_const) } + to_mset<RT>(std::forward<Args>(args)...);
+}
+
+template<typename T, typename CT>
+struct atomic_add<mset<T>, CT, std::enable_if_t<std::is_enum<T>::value>>
+{
+	using under = typename mset<T>::under;
+
+	static force_inline mset<T> op1(mset<T>& left, mset<T> right)
+	{
+		return{ atomic_storage<under>::fetch_or(reinterpret_cast<under&>(left), right._value()), std::nothrow };
+	}
+
+	static constexpr auto fetch_op = &op1;
+
+	static force_inline mset<T> op2(mset<T>& left, mset<T> right)
+	{
+		return{ atomic_storage<under>::or_fetch(reinterpret_cast<under&>(left), right._value()), std::nothrow };
+	}
+
+	static constexpr auto op_fetch = &op2;
+	static constexpr auto atomic_op = &op2;
+};
+
+template<typename T, typename CT>
+struct atomic_sub<mset<T>, CT, std::enable_if_t<std::is_enum<T>::value>>
+{
+	using under = typename mset<T>::under;
+
+	static force_inline mset<T> op1(mset<T>& left, mset<T> right)
+	{
+		return{ atomic_storage<under>::fetch_and(reinterpret_cast<under&>(left), ~right._value()), std::nothrow };
+	}
+
+	static constexpr auto fetch_op = &op1;
+
+	static force_inline mset<T> op2(mset<T>& left, mset<T> right)
+	{
+		return{ atomic_storage<under>::and_fetch(reinterpret_cast<under&>(left), ~right._value()), std::nothrow };
+	}
+
+	static constexpr auto op_fetch = &op2;
+	static constexpr auto atomic_op = &op2;
+};
+
+template<typename T, typename CT>
+struct atomic_and<mset<T>, CT, std::enable_if_t<std::is_enum<T>::value>>
+{
+	using under = typename mset<T>::under;
+
+	static force_inline mset<T> op1(mset<T>& left, mset<T> right)
+	{
+		return{ atomic_storage<under>::fetch_and(reinterpret_cast<under&>(left), right._value()), std::nothrow };
+	}
+
+	static constexpr auto fetch_op = &op1;
+
+	static force_inline mset<T> op2(mset<T>& left, mset<T> right)
+	{
+		return{ atomic_storage<under>::and_fetch(reinterpret_cast<under&>(left), right._value()), std::nothrow };
+	}
+
+	static constexpr auto op_fetch = &op2;
+	static constexpr auto atomic_op = &op2;
+};
+
+template<typename T, typename CT>
+struct atomic_xor<mset<T>, CT, std::enable_if_t<std::is_enum<T>::value>>
+{
+	using under = typename mset<T>::under;
+
+	static force_inline mset<T> op1(mset<T>& left, mset<T> right)
+	{
+		return{ atomic_storage<under>::fetch_xor(reinterpret_cast<under&>(left), right._value()), std::nothrow };
+	}
+
+	static constexpr auto fetch_op = &op1;
+
+	static force_inline mset<T> op2(mset<T>& left, mset<T> right)
+	{
+		return{ atomic_storage<under>::xor_fetch(reinterpret_cast<under&>(left), right._value()), std::nothrow };
+	}
+
+	static constexpr auto op_fetch = &op2;
+	static constexpr auto atomic_op = &op2;
+};
+
+template<typename T>
+struct atomic_test_and_set<mset<T>, T, std::enable_if_t<std::is_enum<T>::value>>
+{
+	using under = typename mset<T>::under;
+
+	static force_inline bool _op(mset<T>& left, const T& value)
+	{
+		return atomic_storage<under>::bts(reinterpret_cast<under&>(left), static_cast<uint>(value));
+	}
+
+	static constexpr auto atomic_op = &_op;
+};
+
+template<typename T>
+struct atomic_test_and_reset<mset<T>, T, std::enable_if_t<std::is_enum<T>::value>>
+{
+	using under = typename mset<T>::under;
+
+	static force_inline bool _op(mset<T>& left, const T& value)
+	{
+		return atomic_storage<under>::btr(reinterpret_cast<under&>(left), static_cast<uint>(value));
+	}
+
+	static constexpr auto atomic_op = &_op;
+};
+
+template<typename T>
+struct atomic_test_and_complement<mset<T>, T, std::enable_if_t<std::is_enum<T>::value>>
+{
+	using under = typename mset<T>::under;
+
+	static force_inline bool _op(mset<T>& left, const T& value)
+	{
+		return atomic_storage<under>::btc(reinterpret_cast<under&>(left), static_cast<uint>(value));
+	}
+
+	static constexpr auto atomic_op = &_op;
+};
+
+template<typename T1, typename T2 = const char*, typename T = T1, typename DT = T2>
+T2 bijective_find(const T& left, const DT& def = {})
+{
+	for (const auto& pair : bijective<T1, T2>::map)
+	{
+		if (pair.first == left)
+		{
+			return pair.second;
+		}
+	}
+
+	return def;
+}
+
 
 template<typename T>
 struct size2_base
@@ -1088,15 +1744,3 @@ using color2d = color2_base<double>;
 using color1i = color1_base<int>;
 using color1f = color1_base<float>;
 using color1d = color1_base<double>;
-
-namespace std
-{
-	template<>
-	struct hash<::position2i>
-	{
-		size_t operator()(const ::position2i& position) const
-		{
-			return (static_cast<size_t>(position.x) << 32) | position.y;
-		}
-	};
-}

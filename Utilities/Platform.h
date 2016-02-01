@@ -1,17 +1,22 @@
 #pragma once
 
+#include <cstdint>
+#include <immintrin.h>
 #include <emmintrin.h>
 
-#if defined(_MSC_VER) && _MSC_VER <= 1800
-#define thread_local __declspec(thread)
-#elif __APPLE__
-#define thread_local __thread
+#define IS_LE_MACHINE 1
+#define IS_BE_MACHINE 0
+
+#ifdef _MSC_VER
+#include <intrin.h>
+#else
+#include <x86intrin.h>
 #endif
 
-#if defined(_MSC_VER)
-#define never_inline __declspec(noinline)
-#else
-#define never_inline __attribute__((noinline))
+// Some platforms don't support thread_local well yet.
+#ifndef _MSC_VER
+#define thread_local __thread
+#define __assume(cond) do { if (!(cond)) __builtin_unreachable(); } while (0)
 #endif
 
 #if defined(_MSC_VER)
@@ -21,19 +26,20 @@
 #endif
 
 #if defined(_MSC_VER)
+#define never_inline __declspec(noinline)
+#else
+#define never_inline __attribute__((noinline))
+#endif
+
+#if defined(_MSC_VER)
 #define force_inline __forceinline
 #else
 #define force_inline __attribute__((always_inline)) inline
 #endif
 
-#if defined(_MSC_VER) && _MSC_VER <= 1800
-#define alignas(x) _CRT_ALIGN(x)
-#endif
-
 #if defined(__GNUG__)
 
 #include <stdlib.h>
-#include <cstdint>
 
 #define _fpclass(x) std::fpclassify(x)
 #define INFINITE 0xFFFFFFFF
@@ -59,170 +65,6 @@ int clock_gettime(clockid_t clk_id, struct timespec *tp);
 #endif /* __APPLE__ */
 #endif /* __GNUG__ */
 
-#if defined(_MSC_VER)
-
-// Unsigned 128-bit integer implementation
-struct alignas(16) u128
-{
-	std::uint64_t lo, hi;
-
-	u128() = default;
-
-	u128(const u128&) = default;
-
-	u128(std::uint64_t l)
-		: lo(l)
-		, hi(0)
-	{
-	}
-
-	u128 operator +(const u128& r) const
-	{
-		u128 value;
-		_addcarry_u64(_addcarry_u64(0, r.lo, lo, &value.lo), r.hi, hi, &value.hi);
-		return value;
-	}
-
-	friend u128 operator +(const u128& l, std::uint64_t r)
-	{
-		u128 value;
-		_addcarry_u64(_addcarry_u64(0, r, l.lo, &value.lo), l.hi, 0, &value.hi);
-		return value;
-	}
-
-	friend u128 operator +(std::uint64_t l, const u128& r)
-	{
-		u128 value;
-		_addcarry_u64(_addcarry_u64(0, r.lo, l, &value.lo), 0, r.hi, &value.hi);
-		return value;
-	}
-
-	u128 operator -(const u128& r) const
-	{
-		u128 value;
-		_subborrow_u64(_subborrow_u64(0, r.lo, lo, &value.lo), r.hi, hi, &value.hi);
-		return value;
-	}
-
-	friend u128 operator -(const u128& l, std::uint64_t r)
-	{
-		u128 value;
-		_subborrow_u64(_subborrow_u64(0, r, l.lo, &value.lo), 0, l.hi, &value.hi);
-		return value;
-	}
-
-	friend u128 operator -(std::uint64_t l, const u128& r)
-	{
-		u128 value;
-		_subborrow_u64(_subborrow_u64(0, r.lo, l, &value.lo), r.hi, 0, &value.hi);
-		return value;
-	}
-
-	u128 operator +() const
-	{
-		return *this;
-	}
-
-	u128 operator -() const
-	{
-		u128 value;
-		_subborrow_u64(_subborrow_u64(0, lo, 0, &value.lo), hi, 0, &value.hi);
-		return value;
-	}
-
-	u128& operator ++()
-	{
-		_addcarry_u64(_addcarry_u64(0, 1, lo, &lo), 0, hi, &hi);
-		return *this;
-	}
-
-	u128 operator ++(int)
-	{
-		u128 value = *this;
-		_addcarry_u64(_addcarry_u64(0, 1, lo, &lo), 0, hi, &hi);
-		return value;
-	}
-
-	u128& operator --()
-	{
-		_subborrow_u64(_subborrow_u64(0, 1, lo, &lo), 0, hi, &hi);
-		return *this;
-	}
-
-	u128 operator --(int)
-	{
-		u128 value = *this;
-		_subborrow_u64(_subborrow_u64(0, 1, lo, &lo), 0, hi, &hi);
-		return value;
-	}
-
-	u128 operator ~() const
-	{
-		u128 value;
-		value.lo = ~lo;
-		value.hi = ~hi;
-		return value;
-	}
-
-	u128 operator &(const u128& r) const
-	{
-		u128 value;
-		value.lo = lo & r.lo;
-		value.hi = hi & r.hi;
-		return value;
-	}
-
-	u128 operator |(const u128& r) const
-	{
-		u128 value;
-		value.lo = lo | r.lo;
-		value.hi = hi | r.hi;
-		return value;
-	}
-
-	u128 operator ^(const u128& r) const
-	{
-		u128 value;
-		value.lo = lo ^ r.lo;
-		value.hi = hi ^ r.hi;
-		return value;
-	}
-
-	u128& operator +=(const u128& r)
-	{
-		_addcarry_u64(_addcarry_u64(0, r.lo, lo, &lo), r.hi, hi, &hi);
-		return *this;
-	}
-
-	u128& operator +=(uint64_t r)
-	{
-		_addcarry_u64(_addcarry_u64(0, r, lo, &lo), 0, hi, &hi);
-		return *this;
-	}
-
-	u128& operator &=(const u128& r)
-	{
-		lo &= r.lo;
-		hi &= r.hi;
-		return *this;
-	}
-
-	u128& operator |=(const u128& r)
-	{
-		lo |= r.lo;
-		hi |= r.hi;
-		return *this;
-	}
-
-	u128& operator ^=(const u128& r)
-	{
-		lo ^= r.lo;
-		hi ^= r.hi;
-		return *this;
-	}
-};
-#endif
-
 inline std::uint32_t cntlz32(std::uint32_t arg)
 {
 #if defined(_MSC_VER)
@@ -243,7 +85,67 @@ inline std::uint64_t cntlz64(std::uint64_t arg)
 #endif
 }
 
-// compare 16 packed unsigned bytes (greater than)
+template<typename T>
+struct add_flags_result_t
+{
+	T result;
+	bool carry;
+	//bool overflow;
+	bool zero;
+	bool sign;
+
+	add_flags_result_t() = default;
+
+	// Straighforward ADD with flags
+	add_flags_result_t(T a, T b)
+		: result(a + b)
+		, carry(result < a)
+		//, overflow((result ^ ~(a ^ b)) >> (sizeof(T) * 8 - 1) != 0)
+		, zero(result == 0)
+		, sign(result >> (sizeof(T) * 8 - 1) != 0)
+	{
+	}
+
+	// Straighforward ADC with flags
+	add_flags_result_t(T a, T b, bool c)
+		: add_flags_result_t(a, b)
+	{
+		add_flags_result_t r(result, c);
+		result = r.result;
+		carry |= r.carry;
+		//overflow |= r.overflow;
+		zero = r.zero;
+		sign = r.sign;
+	}
+};
+
+inline add_flags_result_t<std::uint32_t> add32_flags(std::uint32_t a, std::uint32_t b)
+{
+	//add_flags_result_t<std::uint32_t> r;
+	//r.carry = _addcarry_u32(0, a, b, &r.result) != 0;
+	//r.zero = r.result == 0;
+	//r.sign = r.result >> 31;
+	//return r;
+
+	return{ a, b };
+}
+
+inline add_flags_result_t<std::uint32_t> add32_flags(std::uint32_t a, std::uint32_t b, bool c)
+{
+	return{ a, b, c };
+}
+
+inline add_flags_result_t<std::uint64_t> add64_flags(std::uint64_t a, std::uint64_t b)
+{
+	return{ a, b };
+}
+
+inline add_flags_result_t<std::uint64_t> add64_flags(std::uint64_t a, std::uint64_t b, bool c)
+{
+	return{ a, b, c };
+}
+
+// Compare 16 packed unsigned bytes (greater than)
 inline __m128i sse_cmpgt_epu8(__m128i A, __m128i B)
 {
 	// (A xor 0x80) > (B xor 0x80)
@@ -289,4 +191,37 @@ inline __m128 sse_log2_ps(__m128 A)
 	const auto x7 = _mm_rcp_ps(_mm_add_ps(_mm_mul_ps(_mm_add_ps(_mm_mul_ps(_mm_set1_ps(-35.67227983f), x5), _mm_set1_ps(312.0937664f)), x5), _mm_set1_ps(-769.6919436f)));
 	const auto x8 = _mm_cvtepi32_ps(_mm_sub_epi32(_mm_srli_epi32(_mm_castps_si128(x0), 23), _mm_set1_epi32(127)));
 	return _mm_add_ps(_mm_mul_ps(_mm_mul_ps(_mm_mul_ps(_mm_mul_ps(x5, x6), x7), x4), _c), _mm_add_ps(_mm_mul_ps(x4, _c), x8));
+}
+
+// Helper function, used by ""_u16, ""_u32, ""_u64
+constexpr std::uint8_t to_u8(char c)
+{
+	return static_cast<std::uint8_t>(c);
+}
+
+// Convert 2-byte string to u16 value like reinterpret_cast does
+constexpr std::uint16_t operator""_u16(const char* s, std::size_t length)
+{
+	return length != 2 ? throw s :
+#if IS_LE_MACHINE == 1
+		to_u8(s[1]) << 8 | to_u8(s[0]);
+#endif
+}
+
+// Convert 4-byte string to u32 value like reinterpret_cast does
+constexpr std::uint32_t operator""_u32(const char* s, std::size_t length)
+{
+	return length != 4 ? throw s :
+#if IS_LE_MACHINE == 1
+		to_u8(s[3]) << 24 | to_u8(s[2]) << 16 | to_u8(s[1]) << 8 | to_u8(s[0]);
+#endif
+}
+
+// Convert 8-byte string to u64 value like reinterpret_cast does
+constexpr std::uint64_t operator""_u64(const char* s, std::size_t length)
+{
+	return length != 8 ? throw s :
+#if IS_LE_MACHINE == 1
+		static_cast<std::uint64_t>(to_u8(s[7]) << 24 | to_u8(s[6]) << 16 | to_u8(s[5]) << 8 | to_u8(s[4])) << 32 | to_u8(s[3]) << 24 | to_u8(s[2]) << 16 | to_u8(s[1]) << 8 | to_u8(s[0]);
+#endif
 }

@@ -10,7 +10,7 @@ bool semaphore_t::try_wait()
 	}
 
 	// try to decrement m_value atomically
-	const auto old = m_var.atomic_op([](sync_var_t& var)
+	const auto old = m_var.fetch_op([](sync_var_t& var)
 	{
 		if (var.value)
 		{
@@ -36,7 +36,7 @@ bool semaphore_t::try_post()
 	}
 
 	// try to increment m_value atomically
-	const auto old = m_var.atomic_op([&](sync_var_t& var)
+	const auto old = m_var.fetch_op([&](sync_var_t& var)
 	{
 		if (var.value < max_value)
 		{

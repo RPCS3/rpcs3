@@ -300,7 +300,7 @@
 // Recommended setting: 0 as the options below already provide a relatively
 // good level of interoperability and changing this option arguably isn't worth
 // diverging from the official builds of the library.
-#define wxUSE_STL 0
+#define wxUSE_STL 1
 
 // This is not a real option but is used as the default value for
 // wxUSE_STD_IOSTREAM, wxUSE_STD_STRING and wxUSE_STD_CONTAINERS_COMPATIBLY.

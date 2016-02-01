@@ -1,4 +1,4 @@
-#include "GNU.h"
+#include "Platform.h"
 
 #ifdef __APPLE__
 #include <sys/types.h>

@@ -1,57 +1,29 @@
 #include "stdafx.h"
-#include "AutoPause.h"
-#include "Utilities/Log.h"
-#include "Utilities/File.h"
+#include "Config.h"
 #include "Emu/System.h"
-#include "Emu/state.h"
+#include "AutoPause.h"
 
-using namespace Debug;
+cfg::bool_entry g_cfg_debug_autopause_syscall(cfg::root.misc, "Auto Pause at System Call");
+cfg::bool_entry g_cfg_debug_autopause_func_call(cfg::root.misc, "Auto Pause at Function Call");
 
-std::unique_ptr<AutoPause> g_autopause;
-
-AutoPause& AutoPause::getInstance(void)
+debug::autopause& debug::autopause::get_instance()
 {
-	if (!g_autopause)
+	// Use magic static
+	static autopause instance;
+	return instance;
+}
+
+// Load Auto Pause Configuration from file "pause.bin"
+void debug::autopause::reload(void)
+{
+	auto& instance = get_instance();
+
+	instance.m_pause_function.clear();
+	instance.m_pause_syscall.clear();
+
+	// TODO: better format, possibly a config entry
+	if (fs::file list{ fs::get_config_dir() + "pause.bin" })
 	{
-		g_autopause.reset(new AutoPause);
-	}
-
-	return *g_autopause;
-}
-
-//Still use binary format. Default Setting should be "disable all auto pause".
-AutoPause::AutoPause(void)
-{
-	m_pause_function.reserve(16);
-	m_pause_syscall.reserve(16);
-	initialized = false;
-	//Reload(false, false);
-	Reload();
-}
-
-//Notice: I would not allow to write the binary to file in this command.
-AutoPause::~AutoPause(void)
-{
-	initialized = false;
-	m_pause_function.clear();
-	m_pause_syscall.clear();
-	m_pause_function_enable = false;
-	m_pause_syscall_enable = false;
-}
-
-//Load Auto Pause Configuration from file "pause.bin"
-//This would be able to create in a GUI window.
-void AutoPause::Reload(void)
-{
-	if (fs::is_file(fs::get_config_dir() + "pause.bin"))
-	{
-		m_pause_function.clear();
-		m_pause_function.reserve(16);
-		m_pause_syscall.clear();
-		m_pause_syscall.reserve(16);
-
-		fs::file list(fs::get_config_dir() + "pause.bin");
-		//System calls ID and Function calls ID are all u32 iirc.
 		u32 num;
 		size_t fmax = list.size();
 		size_t fcur = 0;
@@ -64,60 +36,38 @@ void AutoPause::Reload(void)
 			
 			if (num < 1024)
 			{
-				//Less than 1024 - be regarded as a system call.
-				//emplace_back may not cause reductant move/copy operation.
-				m_pause_syscall.emplace_back(num);
-				LOG_WARNING(HLE, "Auto Pause: Find System Call ID 0x%x", num);
+				instance.m_pause_syscall.emplace(num);
+				LOG_WARNING(HLE, "Set autopause at syscall %lld", num);
 			}
 			else
 			{
-				m_pause_function.emplace_back(num);
-				LOG_WARNING(HLE, "Auto Pause: Find Function Call ID 0x%x", num);
+				instance.m_pause_function.emplace(num);
+				LOG_WARNING(HLE, "Set autopause at function 0x%08x", num);
 			}
 		}
 	}
-
-	m_pause_syscall_enable = rpcs3::config.misc.debug.auto_pause_syscall.value();
-	m_pause_function_enable = rpcs3::config.misc.debug.auto_pause_func_call.value();
-	initialized = true;
 }
 
-void AutoPause::TryPause(u32 code)
+bool debug::autopause::pause_syscall(u64 code)
 {
-	if (code < 1024)
+	if (g_cfg_debug_autopause_syscall && get_instance().m_pause_syscall.count(code) != 0)
 	{
-		//Would first check Enable setting. Then the list length.
-		if ((!m_pause_syscall_enable)
-			|| (m_pause_syscall.size() <= 0))
-		{
-			return;
-		}
-
-		for (u32 i = 0; i < m_pause_syscall.size(); ++i)
-		{
-			if (code == m_pause_syscall[i])
-			{
-				Emu.Pause();
-				LOG_ERROR(HLE, "Auto Pause Triggered: System call 0x%x", code); // Used Error
-			}
-		}
+		Emu.Pause();
+		LOG_SUCCESS(HLE, "Autopause triggered at syscall %lld", code);
+		return true;
 	}
-	else
+
+	return false;
+}
+
+bool debug::autopause::pause_function(u32 code)
+{
+	if (g_cfg_debug_autopause_func_call && get_instance().m_pause_function.count(code) != 0)
 	{
-		//Well similiar.. Seperate the list caused by possible setting difference.
-		if ((!m_pause_function_enable)
-			|| (m_pause_function.size() <= 0))
-		{
-			return;
-		}
-
-		for (u32 i = 0; i < m_pause_function.size(); ++i)
-		{
-			if (code == m_pause_function[i])
-			{
-				Emu.Pause();
-				LOG_ERROR(HLE, "Auto Pause Triggered: Function call 0x%x", code); // Used Error
-			}
-		}
+		Emu.Pause();
+		LOG_SUCCESS(HLE, "Autopause triggered at function 0x%08x", code);
+		return true;
 	}
+
+	return false;
 }
