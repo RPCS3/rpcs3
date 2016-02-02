@@ -583,6 +583,13 @@ void GLGSRender::end()
 	glEnableVertexAttribArray(0);
 	glVertexAttribPointer(0, 2, GL_FLOAT, false, 0, 0);
 
+	/**
+	 * Validate fails if called right after linking a program because the VS and FS both use textures bound using different
+	 * samplers. So far only sampler2D has been largely used, hiding the problem. This call shall also degrade performance further
+	 * if used every draw call. Fixes shader validation issues on AMD.
+	 */
+	m_program->validate();
+
 	if (draw_command == rsx::draw_command::indexed)
 	{
 		m_ebo.data(vertex_index_array.size(), vertex_index_array.data());
