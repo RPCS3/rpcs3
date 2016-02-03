@@ -394,6 +394,12 @@ void GLGSRender::end()
 		int location;
 		if (m_program->uniforms.has_location("tex" + std::to_string(i), &location))
 		{
+			u32 target = GL_TEXTURE_2D;
+			if (textures[i].format() & CELL_GCM_TEXTURE_UN)
+				target = GL_TEXTURE_RECTANGLE;
+
+			m_gl_textures[i].set_target(target);
+
 			__glcheck m_gl_textures[i].init(i, textures[i]);
 			glProgramUniform1i(m_program->id(), location, i);
 		}

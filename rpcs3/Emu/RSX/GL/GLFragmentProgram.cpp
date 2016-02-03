@@ -61,22 +61,39 @@ void GLFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 {
 	for (const ParamType& PT : m_parr.params[PF_PARAM_UNIFORM])
 	{
-		if (PT.type != "sampler2D")
+		if (PT.type != "sampler1D" &&
+			PT.type != "sampler2D" &&
+			PT.type != "sampler3D" &&
+			PT.type != "samplerCube")
 			continue;
-		for (const ParamItem& PI : PT.items)
-			OS << "uniform " << PT.type << " " << PI.name << ";" << std::endl;
 
+		for (const ParamItem& PI : PT.items)
+		{
+			std::string samplerType = PT.type;
+			int index = atoi(&PI.name.data()[3]);
+
+			if (m_prog.unnormalized_coords & (1 << index))
+				samplerType = "sampler2DRect";
+
+			OS << "uniform " << samplerType << " " << PI.name << ";" << std::endl;
+		}
 	}
 
 	OS << "layout(std140, binding = 2) uniform FragmentConstantsBuffer" << std::endl;
 	OS << "{" << std::endl;
+
 	for (const ParamType& PT : m_parr.params[PF_PARAM_UNIFORM])
 	{
-		if (PT.type == "sampler2D")
+		if (PT.type == "sampler1D" ||
+			PT.type == "sampler2D" ||
+			PT.type == "sampler3D" ||
+			PT.type == "samplerCube")
 			continue;
+
 		for (const ParamItem& PI : PT.items)
-			OS << "	 " << PT.type << " " << PI.name << ";" << std::endl;
+			OS << "	" << PT.type << " " << PI.name << ";" << std::endl;
 	}
+
 	// A dummy value otherwise it's invalid to create an empty uniform buffer
 	OS << "	vec4 void_value;" << std::endl;
 	OS << "};" << std::endl;
@@ -136,9 +153,9 @@ void GLFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 	{
 		{
 			/** Note: Naruto Shippuden : Ultimate Ninja Storm 2 sets CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS in a shader
-				* but it writes depth in r1.z and not h2.z.
-				* Maybe there's a different flag for depth ?
-				 */
+			* but it writes depth in r1.z and not h2.z.
+			* Maybe there's a different flag for depth ?
+			*/
 			//OS << ((m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS) ? "\tgl_FragDepth = r1.z;\n" : "\tgl_FragDepth = h0.z;\n") << std::endl;
 			OS << "	gl_FragDepth = r1.z;\n";
 		}
