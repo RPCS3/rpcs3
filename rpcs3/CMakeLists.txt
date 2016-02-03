@@ -88,7 +88,6 @@ if(NOT MSVC)
 endif()
 find_package(OpenGL REQUIRED)
 find_package(OpenAL REQUIRED)
-find_package(PNG REQUIRED)
 find_package(LLVM CONFIG)
 
 include("${wxWidgets_USE_FILE}")
@@ -105,7 +104,6 @@ include_directories(
 ${GLEW_INCLUDE_DIR}
 ${wxWidgets_INCLUDE_DIRS}
 ${OPENAL_INCLUDE_DIR}
-${PNG_INCLUDE_DIRS}
 ${LLVM_INCLUDE_DIRS}
 "${RPCS3_SRC_DIR}/../ffmpeg/${PLATFORM_ARCH}/include"
 "${RPCS3_SRC_DIR}"
@@ -114,6 +112,7 @@ ${LLVM_INCLUDE_DIRS}
 "${RPCS3_SRC_DIR}/.."
 "${RPCS3_SRC_DIR}/../asmjit/src/asmjit"
 "${RPCS3_SRC_DIR}/../glm"
+"${RPCS3_SRC_DIR}/../libpng"
 "${RPCS3_SRC_DIR}/../GSL/include"
 "${RPCS3_SRC_DIR}/../rsx_program_decompiler/rsx_decompiler"
 "${RPCS3_SRC_DIR}/../rsx_program_decompiler/shader_code"
@@ -142,7 +141,10 @@ else()
 	endif()
 endif()
 
-link_directories("${RPCS3_SRC_DIR}/../asmjit/" "${RPCS3_SRC_DIR}/../minidx12/")
+link_directories(
+"${RPCS3_SRC_DIR}/../asmjit/"
+"${RPCS3_SRC_DIR}/../minidx12/"
+)
 
 if(MSVC OR NOT WIN32)
 	link_directories("${RPCS3_SRC_DIR}/../ffmpeg/${PLATFORM_ARCH}/lib")
@@ -183,18 +185,18 @@ if(WIN32) # I'm not sure we need all of these libs, but we link them in vs
 		target_link_libraries(rpcs3  ${LLVM_LIBS})
 	endif()
 	if(NOT MSVC)
-		target_link_libraries(rpcs3  ${OPENGL_LIBRARIES} ${PNG_LIBRARIES} ${GLEW_LIBRARY} opengl32.lib glu32.lib)
+		target_link_libraries(rpcs3  ${OPENGL_LIBRARIES} ${GLEW_LIBRARY} opengl32.lib glu32.lib)
 	else()
 		target_link_libraries(rpcs3  dxgi.lib d2d1.lib dwrite.lib)
 	endif()
-	target_link_libraries(rpcs3  asmjit.lib avformat.lib avcodec.lib avutil.lib swresample.lib swscale.lib ${wxWidgets_LIBRARIES} ${OPENAL_LIBRARY} ${ADDITIONAL_LIBS})
+	target_link_libraries(rpcs3  asmjit.lib avformat.lib avcodec.lib avutil.lib swresample.lib swscale.lib png16 ${wxWidgets_LIBRARIES} ${OPENAL_LIBRARY} ${ADDITIONAL_LIBS})
 else()
 	if(LLVM_FOUND)
-		target_link_libraries(rpcs3  asmjit.a  ${wxWidgets_LIBRARIES} ${OPENAL_LIBRARY} ${GLEW_LIBRARY} ${OPENGL_LIBRARIES} ${PNG_LIBRARIES})
-		target_link_libraries(rpcs3  libavformat.a libavcodec.a libavutil.a libswresample.a libswscale.a ${ZLIB_LIBRARIES} ${LLVM_LIBS} ${ADDITIONAL_LIBS})
+		target_link_libraries(rpcs3  asmjit.a ${wxWidgets_LIBRARIES} ${OPENAL_LIBRARY} ${GLEW_LIBRARY} ${OPENGL_LIBRARIES})
+		target_link_libraries(rpcs3  libavformat.a libavcodec.a libavutil.a libswresample.a libswscale.a png16 ${ZLIB_LIBRARIES} ${LLVM_LIBS} ${ADDITIONAL_LIBS})
 	else()
-		target_link_libraries(rpcs3  asmjit.a  ${wxWidgets_LIBRARIES} ${OPENAL_LIBRARY} ${GLEW_LIBRARY} ${OPENGL_LIBRARIES} ${PNG_LIBRARIES})
-		target_link_libraries(rpcs3  libavformat.a libavcodec.a libavutil.a libswresample.a libswscale.a ${ZLIB_LIBRARIES} ${ADDITIONAL_LIBS})
+		target_link_libraries(rpcs3  asmjit.a ${wxWidgets_LIBRARIES} ${OPENAL_LIBRARY} ${GLEW_LIBRARY} ${OPENGL_LIBRARIES})
+		target_link_libraries(rpcs3  libavformat.a libavcodec.a libavutil.a libswresample.a libswscale.a png16 ${ZLIB_LIBRARIES} ${ADDITIONAL_LIBS})
     endif()
 endif()
 

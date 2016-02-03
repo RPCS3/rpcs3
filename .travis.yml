@@ -85,6 +85,7 @@ addons:
     - clang-3.6
     - libstdc++-4.8-dev
     - lib32stdc++6
+    - zlib1g-dev
   coverity_scan:
     project:
       name: $TRAVIS_REPO_SLUG
