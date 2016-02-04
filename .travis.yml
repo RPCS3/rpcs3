@@ -33,8 +33,10 @@ git:
 before_install:
 # shutdown services on Travis, which may have a memory impact
   - if [ "$TRAVIS_OS_NAME" = "linux" ]; then
-      echo "yes" | sudo apt-add-repository 'deb http://repos.codelite.org/wx3.0/ubuntu/ precise universe';
       sudo apt-get install libwxgtk3.0-dev;
+      sudo apt-add-repository -y ppa:libreoffice/ppa;
+      sudo apt-get update;
+      sudo apt-get install libglew-dev;
     fi;
   - if [ "$TRAVIS_OS_NAME" = "linux" ] && [ "$CXX" = "g++" ]; then
       export CXX="g++-5" CC="gcc-5" CXXFLAGS="-Wno-format-security";
@@ -73,7 +75,7 @@ addons:
     - cmake
     - libopenal-dev
     - freeglut3-dev
-    - libglew-dev
+#    - libglew-dev apt version is too old
     - libc6-dev
     - llvm-3.6
     - llvm-3.6-dev

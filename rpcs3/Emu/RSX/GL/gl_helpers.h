@@ -830,7 +830,8 @@ namespace gl
 		{
 			texture1D = GL_TEXTURE_1D,
 			texture2D = GL_TEXTURE_2D,
-			texture3D = GL_TEXTURE_3D
+			texture3D = GL_TEXTURE_3D,
+			textureBuffer = GL_TEXTURE_BUFFER
 		};
 
 		enum class channel_type
@@ -863,9 +864,10 @@ namespace gl
 				GLenum pname;
 				switch (new_binding.get_target())
 				{
-				case target::texture1D: pname = GL_TEXTURE_1D_BINDING_EXT; break;
-				case target::texture2D: pname = GL_TEXTURE_2D_BINDING_EXT; break;
-				case target::texture3D: pname = GL_TEXTURE_3D_BINDING_EXT; break;
+				case target::texture1D: pname = GL_TEXTURE_BINDING_1D; break;
+				case target::texture2D: pname = GL_TEXTURE_BINDING_2D; break;
+				case target::texture3D: pname = GL_TEXTURE_BINDING_3D; break;
+				case target::textureBuffer: pname = GL_TEXTURE_BINDING_BUFFER; break;
 				}
 
 				glGetIntegerv(pname, &m_last_binding);
@@ -1129,6 +1131,29 @@ namespace gl
 			save_binding_state save(*this);
 			pixel_settings.apply();
 			__glcheck glTexSubImage2D((GLenum)get_target(), level(), 0, 0, width(), height(), (GLenum)format, (GLenum)type, src);
+		}
+
+		void copy_from(buffer &buf, u32 gl_format_type, u32 offset, u32 length)
+		{
+			if (get_target() != target::textureBuffer)
+				throw EXCEPTION("OpenGL error: texture cannot copy from buffer");
+
+			if (!offset)
+			{
+				copy_from(buf, gl_format_type);
+				return;
+			}
+
+			if (glTextureBufferRangeEXT == nullptr)
+				throw EXCEPTION("OpenGL error: partial buffer access for textures is unsupported on your system");
+
+			__glcheck glTextureBufferRangeEXT(id(), (GLenum)target::textureBuffer, gl_format_type, buf.id(), offset, length);
+		}
+
+		void copy_from(buffer &buf, u32 gl_format_type)
+		{
+			save_binding_state save(*this);
+			__glcheck glTexBuffer((GLenum)target::textureBuffer, gl_format_type, buf.id());
 		}
 
 		void copy_from(const buffer& buf, texture::format format, texture::type type, class pixel_unpack_settings pixel_settings)

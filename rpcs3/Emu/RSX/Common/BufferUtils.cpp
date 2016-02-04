@@ -62,7 +62,7 @@ void write_vertex_array_data_to_buffer(void *buffer, u32 first, u32 count, size_
 				*c_dst++ = *c_src++;
 			}
 			if (vertex_array_desc.size * sizeof(u16) < element_size)
-				*c_dst++ = 0x3800;
+				*c_dst++ = 0x3c00;
 			break;
 		}
 
