@@ -289,6 +289,7 @@ namespace rsx
 		std::vector<u32> inline_vertex_array;
 
 		bool m_rtts_dirty;
+		bool m_textures_dirty[16];
 	protected:
 		std::array<u32, 4> get_color_surface_addresses() const;
 		u32 get_zeta_surface_address() const;

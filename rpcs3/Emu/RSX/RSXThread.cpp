@@ -278,6 +278,8 @@ namespace rsx
 		{
 			return on_access_violation(address, is_writing);
 		};
+		m_rtts_dirty = true;
+		memset(m_textures_dirty, -1, sizeof(m_textures_dirty));
 	}
 
 	thread::~thread()

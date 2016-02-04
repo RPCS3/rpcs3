@@ -287,6 +287,15 @@ namespace rsx
 		{
 			rsx->m_rtts_dirty = true;
 		}
+
+		template<u32 index>
+		struct set_texture_dirty_bit
+		{
+			force_inline static void impl(thread* rsx, u32 arg)
+			{
+				rsx->m_textures_dirty[index] = true;
+			}
+		};
 	}
 
 	namespace nv308a
@@ -834,6 +843,16 @@ namespace rsx
 			bind<NV4097_SET_CONTEXT_DMA_COLOR_D, nv4097::set_surface_dirty_bit>();
 			bind<NV4097_SET_CONTEXT_DMA_ZETA, nv4097::set_surface_dirty_bit>();
 			bind<NV4097_SET_SURFACE_FORMAT, nv4097::set_surface_dirty_bit>();
+			bind_range<NV4097_SET_TEXTURE_OFFSET, 8, 16, nv4097::set_texture_dirty_bit>();
+			bind_range<NV4097_SET_TEXTURE_FORMAT, 8, 16, nv4097::set_texture_dirty_bit>();
+			bind_range<NV4097_SET_TEXTURE_ADDRESS, 8, 16, nv4097::set_texture_dirty_bit>();
+			bind_range<NV4097_SET_TEXTURE_CONTROL0, 8, 16, nv4097::set_texture_dirty_bit>();
+			bind_range<NV4097_SET_TEXTURE_CONTROL1, 8, 16, nv4097::set_texture_dirty_bit>();
+			bind_range<NV4097_SET_TEXTURE_CONTROL2, 8, 16, nv4097::set_texture_dirty_bit>();
+			bind_range<NV4097_SET_TEXTURE_CONTROL3, 1, 16, nv4097::set_texture_dirty_bit>();
+			bind_range<NV4097_SET_TEXTURE_FILTER, 8, 16, nv4097::set_texture_dirty_bit>();
+			bind_range<NV4097_SET_TEXTURE_IMAGE_RECT, 8, 16, nv4097::set_texture_dirty_bit>();
+			bind_range<NV4097_SET_TEXTURE_BORDER_COLOR, 8, 16, nv4097::set_texture_dirty_bit>();
 
 			//NV308A
 			bind_range<NV308A_COLOR, 1, 256, nv308a::color>();

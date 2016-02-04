@@ -303,9 +303,24 @@ void D3D12GSRender::end()
 	get_current_resource_storage().command_list->SetPipelineState(std::get<0>(m_current_pso).Get());
 
 	std::chrono::time_point<std::chrono::system_clock> texture_duration_start = std::chrono::system_clock::now();
-	if (std::get<2>(m_current_pso) > 0)
+	size_t texture_count = std::get<2>(m_current_pso);
+	if (texture_count > 0)
 	{
-		upload_and_bind_textures(get_current_resource_storage().command_list.Get(), currentDescriptorIndex + 3 + vertex_buffer_count, std::get<2>(m_current_pso) > 0);
+		upload_and_bind_textures(get_current_resource_storage().command_list.Get(), texture_count);
+
+		for (unsigned i = 0; i < texture_count; i++)
+		{
+			ID3D12Resource *tex_resource;
+			D3D12_SHADER_RESOURCE_VIEW_DESC srv;
+			std::tie(tex_resource, srv) = m_current_shader_resources[i];
+			m_device->CreateShaderResourceView(tex_resource, &srv,
+				CD3DX12_CPU_DESCRIPTOR_HANDLE(get_current_resource_storage().descriptors_heap->GetCPUDescriptorHandleForHeapStart())
+				.Offset((INT)currentDescriptorIndex + 3 + (INT)vertex_buffer_count + (INT)i, m_descriptor_stride_srv_cbv_uav)
+				);
+			m_device->CreateSampler(&m_current_samplers[i],
+				CD3DX12_CPU_DESCRIPTOR_HANDLE(get_current_resource_storage().sampler_descriptor_heap[get_current_resource_storage().sampler_descriptors_heap_index]->GetCPUDescriptorHandleForHeapStart())
+				.Offset((UINT)get_current_resource_storage().current_sampler_index + (UINT)i, m_descriptor_stride_samplers));
+		}
 
 		get_current_resource_storage().command_list->SetGraphicsRootDescriptorTable(0,
 			CD3DX12_GPU_DESCRIPTOR_HANDLE(get_current_resource_storage().descriptors_heap->GetGPUDescriptorHandleForHeapStart())
