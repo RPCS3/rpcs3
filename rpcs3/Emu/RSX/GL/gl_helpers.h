@@ -2096,7 +2096,6 @@ namespace gl
 			void make()
 			{
 				link();
-				validate();
 			}
 
 			uint id() const
