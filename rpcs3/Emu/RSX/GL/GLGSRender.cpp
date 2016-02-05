@@ -555,7 +555,7 @@ void GLGSRender::end()
 				{
 					const u32 element_size = rsx::get_vertex_type_size_on_host(vertex_info.type, vertex_info.size);
 					const u32 gl_type = to_gl_internal_type(vertex_info.type, vertex_info.size);
-					const u32 data_size = vertex_data.size();
+					const size_t data_size = vertex_data.size();
 
 					auto &buffer = m_gl_attrib_buffers[index].buffer;
 					auto &texture = m_gl_attrib_buffers[index].texture;
