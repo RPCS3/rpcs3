@@ -150,12 +150,27 @@ void D3D12FragmentDecompiler::insertMainStart(std::stringstream & OS)
 		"r0", "r1", "r2", "r3", "r4",
 		"h0", "h2", "h4", "h6", "h8"
 	};
-	OS << "void ps_impl(PixelInput In, inout float4 r0, inout float4 h0, inout float4 r1, inout float4 h2, inout float4 r2, inout float4 h4, inout float4 r3, inout float4 h6, inout float4 r4, inout float4 h8)" << std::endl;
+	OS << "void ps_impl(bool is_front_face, PixelInput In, inout float4 r0, inout float4 h0, inout float4 r1, inout float4 h2, inout float4 r2, inout float4 h4, inout float4 r3, inout float4 h6, inout float4 r4, inout float4 h8)" << std::endl;
 	OS << "{" << std::endl;
 	for (const ParamType &PT : m_parr.params[PF_PARAM_IN])
 	{
 		for (const ParamItem &PI : PT.items)
+		{
+			if (m_prog.front_back_color_enabled)
+			{
+				if (PI.name == "spec_color" && m_prog.back_color_specular_output)
+				{
+					OS << "	float4 spec_color = is_front_face ? In.dst_reg4 : In.spec_color;\n";
+					continue;
+				}
+				if (PI.name == "diff_color" && m_prog.back_color_diffuse_output)
+				{
+					OS << "	float4 diff_color = is_front_face ? In.dst_reg3 : In.diff_color;\n";
+					continue;
+				}
+			}
 			OS << "	" << PT.type << " " << PI.name << " = In." << PI.name << ";" << std::endl;
+		}
 	}
 	// A bit unclean, but works.
 	OS << "	" << "float4 gl_Position = In.Position;" << std::endl;
@@ -194,7 +209,7 @@ void D3D12FragmentDecompiler::insertMainEnd(std::stringstream & OS)
 {
 	OS << "}" << std::endl;
 	OS << std::endl;
-	OS << "PixelOutput main(PixelInput In)" << std::endl;
+	OS << "PixelOutput main(PixelInput In, bool is_front_face : SV_IsFrontFace)" << std::endl;
 	OS << "{" << std::endl;
 	OS << "	float4 r0 = float4(0., 0., 0., 0.);" << std::endl;
 	OS << "	float4 r1 = float4(0., 0., 0., 0.);" << std::endl;
@@ -206,7 +221,7 @@ void D3D12FragmentDecompiler::insertMainEnd(std::stringstream & OS)
 	OS << "	float4 h4 = float4(0., 0., 0., 0.);" << std::endl;
 	OS << "	float4 h6 = float4(0., 0., 0., 0.);" << std::endl;
 	OS << "	float4 h8 = float4(0., 0., 0., 0.);" << std::endl;
-	OS << "	ps_impl(In, r0, h0, r1, h2, r2, h4, r3, h6, r4, h8);" << std::endl;
+	OS << "	ps_impl(is_front_face, In, r0, h0, r1, h2, r2, h4, r3, h6, r4, h8);" << std::endl;
 
 	const std::pair<std::string, std::string> table[] =
 	{

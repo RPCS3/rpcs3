@@ -195,7 +195,7 @@ void D3D12GSRender::load_program()
 		D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF,
 	};
 	prop.Rasterization = CD3D12_RASTERIZER_DESC;
-	if (rsx::method_registers[NV4097_SET_CULL_FACE_ENABLE])
+	if (!!rsx::method_registers[NV4097_SET_CULL_FACE_ENABLE])
 	{
 		switch (rsx::method_registers[NV4097_SET_CULL_FACE])
 		{
