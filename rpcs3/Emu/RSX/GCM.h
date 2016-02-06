@@ -127,6 +127,20 @@ namespace rsx
 	};
 
 	window_pixel_center to_window_pixel_center(u8 in);
+
+	enum class comparaison_function : u8
+	{
+		never,
+		less,
+		equal,
+		less_or_equal,
+		greater,
+		not_equal,
+		greater_or_equal,
+		always
+	};
+
+	comparaison_function to_comparaison_function(u16 in);
 }
 
 enum

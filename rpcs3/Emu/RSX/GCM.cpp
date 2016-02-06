@@ -790,6 +790,22 @@ rsx::window_pixel_center rsx::to_window_pixel_center(u8 in)
 	throw EXCEPTION("Unknow window pixel center %x", in);
 }
 
+rsx::comparaison_function rsx::to_comparaison_function(u16 in)
+{
+	switch (in)
+	{
+	case CELL_GCM_NEVER: return rsx::comparaison_function::never;
+	case CELL_GCM_LESS: return rsx::comparaison_function::less;
+	case CELL_GCM_EQUAL: return rsx::comparaison_function::equal;
+	case CELL_GCM_LEQUAL: return rsx::comparaison_function::less_or_equal;
+	case CELL_GCM_GREATER: return rsx::comparaison_function::greater;
+	case CELL_GCM_NOTEQUAL: return rsx::comparaison_function::not_equal;
+	case CELL_GCM_GEQUAL: return rsx::comparaison_function::greater_or_equal;
+	case CELL_GCM_ALWAYS: return rsx::comparaison_function::always;
+	}
+	throw EXCEPTION("Wrong comparaison function %x", in);
+}
+
 
 enum
 {

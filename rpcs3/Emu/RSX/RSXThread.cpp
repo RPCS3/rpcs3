@@ -670,6 +670,7 @@ namespace rsx
 		result.front_back_color_enabled = !rsx::method_registers[NV4097_SET_TWO_SIDE_LIGHT_EN];
 		result.back_color_diffuse_output = !!(rsx::method_registers[NV4097_SET_VERTEX_ATTRIB_OUTPUT_MASK] & CELL_GCM_ATTRIB_OUTPUT_MASK_BACKDIFFUSE);
 		result.back_color_specular_output = !!(rsx::method_registers[NV4097_SET_VERTEX_ATTRIB_OUTPUT_MASK] & CELL_GCM_ATTRIB_OUTPUT_MASK_BACKSPECULAR);
+		result.alpha_func = to_comparaison_function(rsx::method_registers[NV4097_SET_ALPHA_FUNC]);
 		u32 shader_window = rsx::method_registers[NV4097_SET_SHADER_WINDOW];
 		result.origin_mode = rsx::to_window_origin((shader_window >> 12) & 0xF);
 		result.pixel_center_mode = rsx::to_window_pixel_center((shader_window >> 16) & 0xF);
@@ -766,6 +767,7 @@ namespace rsx
 
 		method_registers[NV4097_SET_CONTEXT_DMA_REPORT] = CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_REPORT;
 		rsx::method_registers[NV4097_SET_TWO_SIDE_LIGHT_EN] = true;
+		rsx::method_registers[NV4097_SET_ALPHA_FUNC] = CELL_GCM_ALWAYS;
 
 		// Reset vertex attrib array
 		for (int i = 0; i < limits::vertex_count; i++)
