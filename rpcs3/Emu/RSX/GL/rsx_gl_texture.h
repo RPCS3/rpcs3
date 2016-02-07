@@ -1,3 +1,4 @@
+#include "OpenGL.h"
 
 namespace rsx
 {
@@ -8,6 +9,7 @@ namespace rsx
 		class texture
 		{
 			u32 m_id = 0;
+			u32 m_target = GL_TEXTURE_2D;
 
 		public:
 			void create();
@@ -53,6 +55,7 @@ namespace rsx
 			void unbind();
 			void remove();
 
+			void set_target(u32 target) { m_target = target; }
 			u32 id() const;
 		};
 	}
