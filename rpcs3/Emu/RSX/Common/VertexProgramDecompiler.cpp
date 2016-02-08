@@ -562,10 +562,10 @@ std::string VertexProgramDecompiler::Decompile()
 		case RSX_SCA_OPCODE_MOV: SetDSTSca("$s"); break;
 		case RSX_SCA_OPCODE_RCP: SetDSTSca("(1.0 / $s)"); break;
 		case RSX_SCA_OPCODE_RCC: SetDSTSca("clamp(1.0 / $s, 5.42101e-20, 1.884467e19)"); break;
-		case RSX_SCA_OPCODE_RSQ: SetDSTSca("(1.f / sqrt($s))"); break;
+		case RSX_SCA_OPCODE_RSQ: SetDSTSca("rsq_legacy($s)"); break;
 		case RSX_SCA_OPCODE_EXP: SetDSTSca("exp($s)"); break;
 		case RSX_SCA_OPCODE_LOG: SetDSTSca("log($s)"); break;
-		case RSX_SCA_OPCODE_LIT: SetDSTSca(getFloatTypeName(4) + "(1.0, $s.x, ($s.x > 0.0 ? exp($s.w * log2($s.y)) : 0.0), 1.0)"); break;
+		case RSX_SCA_OPCODE_LIT: SetDSTSca("lit_legacy($s)"); break;
 		case RSX_SCA_OPCODE_BRA:
 		{
 			AddCode("$if ($cond)");
@@ -619,7 +619,7 @@ std::string VertexProgramDecompiler::Decompile()
 			// works like BRI but shorter (RET o[1].x(TR);)
 			AddCode("$ifcond return;");
 			break;
-		case RSX_SCA_OPCODE_LG2: SetDSTSca("log2($s)"); break;
+		case RSX_SCA_OPCODE_LG2: SetDSTSca("log2_legacy($s)"); break;
 		case RSX_SCA_OPCODE_EX2: SetDSTSca("exp2($s)"); break;
 		case RSX_SCA_OPCODE_SIN: SetDSTSca("sin($s)"); break;
 		case RSX_SCA_OPCODE_COS: SetDSTSca("cos($s)"); break;

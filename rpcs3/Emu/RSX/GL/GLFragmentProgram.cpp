@@ -101,22 +101,7 @@ void GLFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 
 void GLFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 {
-	// "lib" function
-	// 0.00001 is used as "some non zero very little number"
-	OS << "vec4 divsq_legacy(vec4 num, vec4 denum)\n";
-	OS << "{\n";
-	OS << "	return num / sqrt(max(denum.xxxx, 0.00001));\n";
-	OS << "}\n";
-
-	OS << "vec4 rcp_legacy(vec4 denum)\n";
-	OS << "{\n";
-	OS << "	return 1. / denum;\n";
-	OS << "}\n";
-
-	OS << "vec4 rsq_legacy(vec4 denum)\n";
-	OS << "{\n";
-	OS << "	return 1. / sqrt(max(denum, 0.00001));\n";
-	OS << "}\n";
+	insert_glsl_legacy_function(OS);
 
 	OS << "void main ()" << std::endl;
 	OS << "{" << std::endl;

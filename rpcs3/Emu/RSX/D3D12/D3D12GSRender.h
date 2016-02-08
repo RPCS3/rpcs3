@@ -127,6 +127,9 @@ private:
 	// Used to fill unused texture slot
 	ID3D12Resource *m_dummy_texture;
 
+	// Currently used shader resources / samplers descriptor
+	std::array<std::tuple<ID3D12Resource*, D3D12_SHADER_RESOURCE_VIEW_DESC>, 16> m_current_shader_resources = {};
+	std::array<D3D12_SAMPLER_DESC, 16> m_current_samplers = {};
 public:
 	D3D12GSRender();
 	virtual ~D3D12GSRender();
@@ -165,7 +168,7 @@ private:
 	 * Create necessary resource view/sampler descriptors in the per frame storage struct.
 	 * If the count of enabled texture is below texture_count, fills with dummy texture and sampler.
 	 */
-	void upload_and_bind_textures(ID3D12GraphicsCommandList *command_list, size_t descriptor_index, size_t texture_count);
+	void upload_and_bind_textures(ID3D12GraphicsCommandList *command_list, size_t texture_count);
 
 	/**
 	 * Creates render target if necessary.
