@@ -3,7 +3,7 @@
   <ImportGroup Label="PropertySheets" />
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
-    <IncludePath>.\;..\;..\asmjit\src\asmjit;..\wxWidgets\include\msvc;..\wxWidgets\include;..\ffmpeg\WindowsInclude;..\ffmpeg\Windows\x86_64\Include;$(VC_IncludePath);$(WindowsSDK_IncludePath);..\llvm\include;..\llvm_build\include;$(UniversalCRT_IncludePath);..\minidx12\Include;..\glm;..\GSL\include</IncludePath>
+    <IncludePath>.\;..\;..\asmjit\src\asmjit;..\wxWidgets\include\msvc;..\wxWidgets\include;..\ffmpeg\WindowsInclude;..\ffmpeg\Windows\x86_64\Include;$(VC_IncludePath);$(WindowsSDK_IncludePath);..\llvm\include;..\llvm_build\include;$(UniversalCRT_IncludePath);..\minidx12\Include;..\glm;..\GSL\include;..\libpng</IncludePath>
     <OutDir>$(SolutionDir)lib\$(Configuration)-$(Platform)\</OutDir>
     <LibraryPath>$(SolutionDir)lib\$(Configuration)-$(Platform)\;$(UniversalCRT_LibraryPath_x64);$(LibraryPath)</LibraryPath>
     <IntDir>$(SolutionDir)tmp\$(ProjectName)-$(Configuration)-$(Platform)\</IntDir>
@@ -25,9 +25,9 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>odbc32.lib;odbccp32.lib;comctl32.lib;ws2_32.lib;shlwapi.lib;winmm.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;rpcrt4.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>odbc32.lib;odbccp32.lib;comctl32.lib;ws2_32.lib;shlwapi.lib;winmm.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;rpcrt4.lib;libpng.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <DataExecutionPrevention>true</DataExecutionPrevention>
-      <AdditionalLibraryDirectories>..\wxWidgets\lib\vc_x64_lib;..\ffmpeg\Windows\x86_64\lib</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>..\wxWidgets\lib\vc_x64_lib;..\ffmpeg\Windows\x86_64\lib;..\lib\</AdditionalLibraryDirectories>
       <BaseAddress>0x10000</BaseAddress>
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
     </Link>
