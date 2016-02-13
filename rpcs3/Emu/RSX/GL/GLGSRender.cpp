@@ -874,23 +874,24 @@ bool GLGSRender::load_program()
 
 	(m_program.recreate() += { fp.compile(), vp.compile() }).make();
 #endif
-	glBindBuffer(GL_UNIFORM_BUFFER, m_scale_offset_buffer.id());
+	size_t max_buffer_sz =(size_t) m_vertex_constants_buffer.size();
+	size_t fragment_constants_sz = m_prog_buffer.get_fragment_constants_buffer_size(fragment_program);
+	if (fragment_constants_sz > max_buffer_sz)
+		max_buffer_sz = fragment_constants_sz;
 
-	void *buffer = glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
-	fill_scale_offset_data(buffer, false);
-	glUnmapBuffer(GL_UNIFORM_BUFFER);
+	std::vector<u8> client_side_buf(max_buffer_sz);
 
-	glBindBuffer(GL_UNIFORM_BUFFER, m_vertex_constants_buffer.id());
-	buffer = glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
-	fill_vertex_program_constants_data(buffer);
-	glUnmapBuffer(GL_UNIFORM_BUFFER);
+	fill_scale_offset_data(client_side_buf.data(), false);
+	m_scale_offset_buffer.data(m_scale_offset_buffer.size(), nullptr);
+	m_scale_offset_buffer.sub_data(0, m_scale_offset_buffer.size(), client_side_buf.data());
 
-	glBindBuffer(GL_UNIFORM_BUFFER, m_fragment_constants_buffer.id());
-	size_t buffer_size = m_prog_buffer.get_fragment_constants_buffer_size(fragment_program);
-	glBufferData(GL_UNIFORM_BUFFER, buffer_size, nullptr, GL_STATIC_DRAW);
-	buffer = glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
-	m_prog_buffer.fill_fragment_constans_buffer({ static_cast<float*>(buffer), gsl::narrow<int>(buffer_size) }, fragment_program);
-	glUnmapBuffer(GL_UNIFORM_BUFFER);
+	fill_vertex_program_constants_data(client_side_buf.data());
+	m_vertex_constants_buffer.data(m_vertex_constants_buffer.size(), nullptr);
+	m_vertex_constants_buffer.sub_data(0, m_vertex_constants_buffer.size(), client_side_buf.data());
+
+	m_prog_buffer.fill_fragment_constans_buffer({ reinterpret_cast<float*>(client_side_buf.data()), gsl::narrow<int>(fragment_constants_sz) }, fragment_program);
+	m_fragment_constants_buffer.data(fragment_constants_sz, nullptr);
+	m_fragment_constants_buffer.sub_data(0, fragment_constants_sz, client_side_buf.data());
 
 	return true;
 }
