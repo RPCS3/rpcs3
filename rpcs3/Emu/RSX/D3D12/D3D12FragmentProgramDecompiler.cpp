@@ -253,7 +253,30 @@ void D3D12FragmentDecompiler::insertMainEnd(std::stringstream & OS)
 	}
 	// Shaders don't always output colors (for instance if they write to depth only)
 	if (!first_output_name.empty())
-		OS << "	if (isAlphaTested && Out." << first_output_name << ".a <= alphaRef) discard;\n";
+	{
+		switch (m_prog.alpha_func)
+		{
+		case rsx::comparaison_function::equal:
+			OS << "	if (isAlphaTested && Out." << first_output_name << ".a != alphaRef) discard;\n";
+			break;
+		case rsx::comparaison_function::not_equal:
+			OS << "	if (isAlphaTested && Out." << first_output_name << ".a == alphaRef) discard;\n";
+			break;
+		case rsx::comparaison_function::less_or_equal:
+			OS << "	if (isAlphaTested && Out." << first_output_name << ".a > alphaRef) discard;\n";
+			break;
+		case rsx::comparaison_function::less:
+			OS << "	if (isAlphaTested && Out." << first_output_name << ".a >= alphaRef) discard;\n";
+			break;
+		case rsx::comparaison_function::greater:
+			OS << "	if (isAlphaTested && Out." << first_output_name << ".a <= alphaRef) discard;\n";
+			break;
+		case rsx::comparaison_function::greater_or_equal:
+			OS << "	if (isAlphaTested && Out." << first_output_name << ".a < alphaRef) discard;\n";
+			break;
+		}
+		
+	}
 	OS << "	return Out;" << std::endl;
 	OS << "}" << std::endl;
 }
