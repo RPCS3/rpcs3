@@ -185,7 +185,7 @@ namespace rsx
 			if (is_swizzled || mandates_expansion(format))
 			{
 				aligned_pitch = align(aligned_pitch, 256);
-				upload_placed_texture(tex, 256, texture_data);
+				upload_placed_texture({ reinterpret_cast<gsl::byte*>(texture_data), gsl::narrow<int>(texture_data_sz) }, tex, 256);
 				glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 			}
 			else
