@@ -11,6 +11,10 @@ if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
 	message( FATAL_ERROR "RPCS3 can only be compiled on 64-bit platforms." )
 endif()
 
+# We use libpng's static library and don't need to build the shared library and run the tests
+set(PNG_SHARED OFF CACHE BOOL "Build shared lib." FORCE)
+set(PNG_TESTS  OFF CACHE BOOL "Build tests." FORCE)
+
 add_subdirectory( asmjit )
 add_subdirectory( libpng )
 # TODO: do real installation, including copying directory structure
