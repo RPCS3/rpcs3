@@ -400,7 +400,7 @@ void GLGSRender::end()
 
 			m_gl_textures[i].set_target(target);
 
-			__glcheck m_gl_textures[i].init(i, textures[i]);
+			__glcheck m_gl_texture_cache.upload_texture(i, textures[i], m_gl_textures[i]);
 			glProgramUniform1i(m_program->id(), location, i);
 		}
 	}
@@ -771,6 +771,8 @@ void GLGSRender::on_init_thread()
 		buf = new gl::buffer();
 		buf->create();
 	}
+
+	m_gl_texture_cache.initialize_rtt_cache();
 }
 
 void GLGSRender::on_exit()
@@ -1208,7 +1210,11 @@ void GLGSRender::read_buffers()
 			u32 width = rsx::method_registers[NV4097_SET_SURFACE_CLIP_HORIZONTAL] >> 16;
 			u32 height = rsx::method_registers[NV4097_SET_SURFACE_CLIP_VERTICAL] >> 16;
 
-
+			/**
+			 * Read color buffers is useless if write buffers is enabled. I havent encountered a case where it is necessary
+			 * since the output is usually fed back into the pipeline as a fragment shader input texture
+			 * It is included here for completeness
+			 */
 			for (int i = index; i < index + count; ++i)
 			{
 				u32 offset = rsx::method_registers[mr_color_offset[i]];
@@ -1218,20 +1224,28 @@ void GLGSRender::read_buffers()
 				if (pitch <= 64)
 					continue;
 
-				m_draw_tex_color[i].pixel_unpack_settings().row_length(pitch / (color_format.channel_size * color_format.channel_count));
-
 				rsx::tiled_region color_buffer = get_tiled_address(offset, location & 0xf);
+				u32 texaddr = (u32)((u64)color_buffer.ptr - (u64)vm::base(0));
 
-				if (!color_buffer.tile)
+				bool success = m_gl_texture_cache.explicit_writeback(m_draw_tex_color[i], texaddr, pitch);
+				
+				//Fall back to slower methods if the image could not be fetched.
+				if (!success)
 				{
-					__glcheck m_draw_tex_color[i].copy_from(color_buffer.ptr, color_format.format, color_format.type);
-				}
-				else
-				{
-					std::unique_ptr<u8[]> buffer(new u8[pitch * height]);
-					color_buffer.read(buffer.get(), width, height, pitch);
+					if (!color_buffer.tile)
+					{
+						m_draw_tex_color[i].copy_from(color_buffer.ptr, color_format.format, color_format.type);
+					}
+					else
+					{
+						u32 range = pitch * height;
+						m_gl_texture_cache.remove_in_range(texaddr, range);
 
-					__glcheck m_draw_tex_color[i].copy_from(buffer.get(), color_format.format, color_format.type);
+						std::unique_ptr<u8[]> buffer(new u8[pitch * height]);
+						color_buffer.read(buffer.get(), width, height, pitch);
+
+						__glcheck m_draw_tex_color[i].copy_from(buffer.get(), color_format.format, color_format.type);
+					}
 				}
 			}
 		};
@@ -1271,8 +1285,15 @@ void GLGSRender::read_buffers()
 		if (pitch <= 64)
 			return;
 
-		auto depth_format = surface_depth_format_to_gl(m_surface.depth_format);
+		u32 depth_address = rsx::get_address(rsx::method_registers[NV4097_SET_SURFACE_ZETA_OFFSET], rsx::method_registers[NV4097_SET_CONTEXT_DMA_ZETA]);
+		bool in_cache = m_gl_texture_cache.explicit_writeback(m_draw_tex_depth_stencil, depth_address, pitch);
 
+		if (in_cache)
+			return;
+
+		//Read failed. Fall back to slow s/w path...
+
+		auto depth_format = surface_depth_format_to_gl(m_surface.depth_format);
 		int pixel_size = get_pixel_size(m_surface.depth_format);
 		gl::buffer pbo_depth;
 
@@ -1312,9 +1333,6 @@ void GLGSRender::write_buffers()
 
 	if (rpcs3::state.config.rsx.opengl.write_color_buffers)
 	{
-		//gl::buffer pbo_color;
-		//__glcheck pbo_color.create(m_draw_tex_color[0].width() * m_draw_tex_color[0].height() * 4);
-
 		auto color_format = surface_color_format_to_gl(m_surface.color_format);
 
 		auto write_color_buffers = [&](int index, int count)
@@ -1324,23 +1342,6 @@ void GLGSRender::write_buffers()
 
 			for (int i = index; i < index + count; ++i)
 			{
-				//TODO: swizzle
-				//__glcheck m_draw_tex_color[i].copy_to(pbo_color, color_format.format, color_format.type);
-
-				//pbo_color.map([&](GLubyte* pixels)
-				//{
-				//	u32 color_address = rsx::get_address(rsx::method_registers[mr_color_offset[i]], rsx::method_registers[mr_color_dma[i]]);
-				//	//u32 depth_address = rsx::get_address(rsx::method_registers[NV4097_SET_SURFACE_ZETA_OFFSET], rsx::method_registers[NV4097_SET_CONTEXT_DMA_ZETA]);
-
-				//	const u32 *src = (const u32*)pixels;
-				//	be_t<u32>* dst = vm::ps3::_ptr<u32>(color_address);
-				//	for (int i = 0, end = m_draw_tex_color[i].width() * m_draw_tex_color[i].height(); i < end; ++i)
-				//	{
-				//		dst[i] = src[i];
-				//	}
-
-				//}, gl::buffer::access::read);
-
 				u32 offset = rsx::method_registers[mr_color_offset[i]];
 				u32 location = rsx::method_registers[mr_color_dma[i]];
 				u32 pitch = rsx::method_registers[mr_color_pitch[i]];
@@ -1348,22 +1349,15 @@ void GLGSRender::write_buffers()
 				if (pitch <= 64)
 					continue;
 
-				m_draw_tex_color[i].pixel_pack_settings().row_length(pitch / (color_format.channel_size * color_format.channel_count));
-
 				rsx::tiled_region color_buffer = get_tiled_address(offset, location & 0xf);
+				u32 texaddr = (u32)((u64)color_buffer.ptr - (u64)vm::base(0));
+				u32 range = pitch * height;
 
-				if (!color_buffer.tile)
-				{
-					__glcheck m_draw_tex_color[i].copy_to(color_buffer.ptr, color_format.format, color_format.type);
-				}
-				else
-				{
-					std::unique_ptr<u8[]> buffer(new u8[pitch * height]);
-
-					__glcheck m_draw_tex_color[i].copy_to(buffer.get(), color_format.format, color_format.type);
-
-					color_buffer.write(buffer.get(), width, height, pitch);
-				}
+				/**Even tiles are loaded as whole textures during read_buffers from testing.
+				 * Need further evaluation to determine correct behavior. Separate paths for both show no difference,
+				 * but using the GPU to perform the caching is many times faster.
+				 */
+				__glcheck m_gl_texture_cache.save_render_target(texaddr, range, m_draw_tex_color[i]);
 			}
 		};
 
@@ -1403,38 +1397,12 @@ void GLGSRender::write_buffers()
 			return;
 
 		auto depth_format = surface_depth_format_to_gl(m_surface.depth_format);
+		u32 depth_address = rsx::get_address(rsx::method_registers[NV4097_SET_SURFACE_ZETA_OFFSET], rsx::method_registers[NV4097_SET_CONTEXT_DMA_ZETA]);
+		u32 range = m_draw_tex_depth_stencil.width() * m_draw_tex_depth_stencil.height() * 2;
 
-		gl::buffer pbo_depth;
+		if (m_surface.depth_format != rsx::surface_depth_format::z16) range *= 2;
 
-		int pixel_size = get_pixel_size(m_surface.depth_format);
-
-		__glcheck pbo_depth.create(m_surface.width * m_surface.height * pixel_size);
-		__glcheck m_draw_tex_depth_stencil.copy_to(pbo_depth, depth_format.second, depth_format.first);
-
-		__glcheck pbo_depth.map([&](GLubyte* pixels)
-		{
-			u32 depth_address = rsx::get_address(rsx::method_registers[NV4097_SET_SURFACE_ZETA_OFFSET], rsx::method_registers[NV4097_SET_CONTEXT_DMA_ZETA]);
-
-			if (m_surface.depth_format == rsx::surface_depth_format::z16)
-			{
-				const u16 *src = (const u16*)pixels;
-				be_t<u16>* dst = vm::ps3::_ptr<u16>(depth_address);
-				for (int i = 0, end = m_draw_tex_depth_stencil.width() * m_draw_tex_depth_stencil.height(); i < end; ++i)
-				{
-					dst[i] = src[i];
-				}
-			}
-			else
-			{
-				const u32 *src = (const u32*)pixels;
-				be_t<u32>* dst = vm::ps3::_ptr<u32>(depth_address);
-				for (int i = 0, end = m_draw_tex_depth_stencil.width() * m_draw_tex_depth_stencil.height(); i < end; ++i)
-				{
-					dst[i] = src[i];
-				}
-			}
-
-		}, gl::buffer::access::read);
+		m_gl_texture_cache.save_render_target(depth_address, range, m_draw_tex_depth_stencil);
 	}
 }
 
@@ -1449,7 +1417,10 @@ void GLGSRender::flip(int buffer)
 
 	bool skip_read = false;
 
-	if (draw_fbo && !rpcs3::state.config.rsx.opengl.write_color_buffers)
+	/**
+	 * Calling read_buffers will overwrite cached content
+	 */
+	if (draw_fbo)
 	{
 		skip_read = true;
 		/*
@@ -1557,4 +1528,10 @@ u64 GLGSRender::timestamp() const
 	GLint64 result;
 	glGetInteger64v(GL_TIMESTAMP, &result);
 	return result;
+}
+
+bool GLGSRender::on_access_violation(u32 address, bool is_writing)
+{
+	if (is_writing) return m_gl_texture_cache.mark_as_dirty(address);
+	return false;
 }

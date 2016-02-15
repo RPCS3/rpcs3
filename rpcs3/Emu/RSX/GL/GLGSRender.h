@@ -2,6 +2,7 @@
 #include "Emu/RSX/GSRender.h"
 #include "gl_helpers.h"
 #include "rsx_gl_texture.h"
+#include "gl_texture_cache.h"
 
 #define RSX_DEBUG 1
 
@@ -28,6 +29,8 @@ private:
 		gl::buffer *buffer;
 	}
 	m_gl_attrib_buffers[rsx::limits::vertex_count];
+
+	gl::gl_texture_cache m_gl_texture_cache;
 
 public:
 	gl::fbo draw_fbo;
@@ -73,4 +76,6 @@ protected:
 	bool do_method(u32 id, u32 arg) override;
 	void flip(int buffer) override;
 	u64 timestamp() const override;
+
+	bool on_access_violation(u32 address, bool is_writing) override;
 };
