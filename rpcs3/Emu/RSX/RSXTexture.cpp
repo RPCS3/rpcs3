@@ -202,12 +202,12 @@ namespace rsx
 
 	u16 texture::depth() const
 	{
-		return method_registers[NV4097_SET_TEXTURE_CONTROL3] >> 20;
+		return method_registers[NV4097_SET_TEXTURE_CONTROL3 + m_index] >> 20;
 	}
 
 	u32 texture::pitch() const
 	{
-		return method_registers[NV4097_SET_TEXTURE_CONTROL3] & 0xfffff;
+		return method_registers[NV4097_SET_TEXTURE_CONTROL3 + m_index] & 0xfffff;
 	}
 
 	void vertex_texture::init(u8 index)
@@ -386,11 +386,11 @@ namespace rsx
 
 	u16 vertex_texture::depth() const
 	{
-		return method_registers[NV4097_SET_VERTEX_TEXTURE_CONTROL3] >> 20;
+		return method_registers[NV4097_SET_VERTEX_TEXTURE_CONTROL3 + (m_index * 8)] >> 20;
 	}
 
 	u32 vertex_texture::pitch() const
 	{
-		return method_registers[NV4097_SET_VERTEX_TEXTURE_CONTROL3] & 0xfffff;
+		return method_registers[NV4097_SET_VERTEX_TEXTURE_CONTROL3 + (m_index * 8)] & 0xfffff;
 	}
 }
