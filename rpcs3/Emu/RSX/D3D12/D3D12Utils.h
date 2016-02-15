@@ -5,11 +5,24 @@
 #include <wrl/client.h>
 #include "Emu/Memory/vm.h"
 #include "Emu/RSX/GCM.h"
+#include <locale>
+#include <comdef.h>
 
 
 using namespace Microsoft::WRL;
 
-#define CHECK_HRESULT(expr) { HRESULT hr = (expr); if (FAILED(hr)) throw EXCEPTION("HRESULT = 0x%x", hr); }
+inline std::string get_hresult_message(HRESULT hr)
+{
+	_com_error error(hr);
+#ifndef UNICODE
+	return error.ErrorMessage();
+#else
+	using convert_type = std::codecvt<wchar_t, char, mbstate_t>;
+	return std::wstring_convert<convert_type>().to_bytes(error.ErrorMessage());
+#endif
+}
+
+#define CHECK_HRESULT(expr) { HRESULT hr = (expr); if (FAILED(hr)) throw EXCEPTION("HRESULT = %s", get_hresult_message(hr)); }
 
 /**
  * Send data to dst pointer without polluting cache.
