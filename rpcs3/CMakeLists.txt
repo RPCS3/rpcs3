@@ -116,6 +116,8 @@ ${LLVM_INCLUDE_DIRS}
 "${RPCS3_SRC_DIR}/../GSL/include"
 "${RPCS3_SRC_DIR}/../rsx_program_decompiler/rsx_decompiler"
 "${RPCS3_SRC_DIR}/../rsx_program_decompiler/shader_code"
+"${RPCS3_SRC_DIR}/../Vulkan/Vulkan-LoaderAndValidationLayers/include"
+"${RPCS3_SRC_DIR}/../Vulkan/glslang/glslang/Public"
 )
 if(WIN32)
 	include_directories(BEFORE "${RPCS3_SRC_DIR}/../minidx9/Include")
@@ -189,14 +191,14 @@ if(WIN32) # I'm not sure we need all of these libs, but we link them in vs
 	else()
 		target_link_libraries(rpcs3  dxgi.lib d2d1.lib dwrite.lib)
 	endif()
-	target_link_libraries(rpcs3  asmjit.lib avformat.lib avcodec.lib avutil.lib swresample.lib swscale.lib png16_static ${wxWidgets_LIBRARIES} ${OPENAL_LIBRARY} ${ADDITIONAL_LIBS})
+	target_link_libraries(rpcs3  asmjit.lib avformat.lib avcodec.lib avutil.lib swresample.lib swscale.lib png16_static ${wxWidgets_LIBRARIES} ${OPENAL_LIBRARY} ${ADDITIONAL_LIBS} ${vulkan} ${glslang})
 else()
 	if(LLVM_FOUND)
 		target_link_libraries(rpcs3  asmjit.a ${wxWidgets_LIBRARIES} ${OPENAL_LIBRARY} ${GLEW_LIBRARY} ${OPENGL_LIBRARIES})
-		target_link_libraries(rpcs3  libavformat.a libavcodec.a libavutil.a libswresample.a libswscale.a png16_static ${ZLIB_LIBRARIES} ${LLVM_LIBS} ${ADDITIONAL_LIBS})
+		target_link_libraries(rpcs3  libavformat.a libavcodec.a libavutil.a libswresample.a libswscale.a png16_static ${ZLIB_LIBRARIES} ${LLVM_LIBS} ${ADDITIONAL_LIBS} ${vulkan} ${glslang})
 	else()
 		target_link_libraries(rpcs3  asmjit.a ${wxWidgets_LIBRARIES} ${OPENAL_LIBRARY} ${GLEW_LIBRARY} ${OPENGL_LIBRARIES})
-		target_link_libraries(rpcs3  libavformat.a libavcodec.a libavutil.a libswresample.a libswscale.a png16_static ${ZLIB_LIBRARIES} ${ADDITIONAL_LIBS})
+		target_link_libraries(rpcs3  libavformat.a libavcodec.a libavutil.a libswresample.a libswscale.a png16_static ${ZLIB_LIBRARIES} ${ADDITIONAL_LIBS} ${vulkan} ${glslang})
     endif()
 endif()
 

@@ -25,3 +25,9 @@
 [submodule "libpng"]
 	path = libpng
 	url = https://github.com/RPCS3/libpng
+[submodule "Vulkan/glslang"]
+	path = Vulkan/glslang
+	url = https://github.com/KhronosGroup/glslang.git
+[submodule "Vulkan/Vulkan-LoaderAndValidationLayers"]
+	path = Vulkan/Vulkan-LoaderAndValidationLayers
+	url = https://github.com/KhronosGroup/Vulkan-LoaderAndValidationLayers

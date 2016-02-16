@@ -21,8 +21,8 @@ If you want to contribute please take a took at the [Coding Style](https://githu
 __Windows__
 * [Visual Studio 2015](https://www.visualstudio.com/en-us/downloads/download-visual-studio-vs.aspx)
 * [Visual C++ Redistributable Packages for Visual Studio 2015](http://www.microsoft.com/en-us/download/details.aspx?id=48145)
-* [Cmake 3.1.0+](http://www.cmake.org/download/) (optional, required only for LLVM build; add to PATH)
-* [Python](https://www.python.org/downloads/) (optional, required only for LLVM build; add to PATH)
+* [Cmake 3.1.0+](http://www.cmake.org/download/) (required; add to PATH)
+* [Python](https://www.python.org/downloads/) (required; add to PATH)
 
 __Linux__
 * GCC 5.1+ or Clang 3.5.0+
