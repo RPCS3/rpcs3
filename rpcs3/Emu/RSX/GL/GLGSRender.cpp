@@ -451,9 +451,20 @@ void GLGSRender::end()
 
 	if (draw_command == rsx::draw_command::inlined_array)
 	{
-		vertex_arrays_data.resize(inline_vertex_array.size() * sizeof(u32));
-		write_inline_array_to_buffer(vertex_arrays_data.data());
-		u32 offset = 0;
+		u32 stride = 0;
+		u32 offsets[rsx::limits::vertex_count] = { 0 };
+
+		for (u32 i = 0; i < rsx::limits::vertex_count; ++i)
+		{
+			const auto &info = vertex_arrays_info[i];
+			if (!info.size) continue;
+
+			offsets[i] = stride;
+			stride += rsx::get_vertex_type_size_on_host(info.type, info.size);
+		}
+
+		vertex_draw_count = (u32)(inline_vertex_array.size() * sizeof(u32)) / stride;
+
 		for (int index = 0; index < rsx::limits::vertex_count; ++index)
 		{
 			auto &vertex_info = vertex_arrays_info[index];
@@ -466,22 +477,66 @@ void GLGSRender::end()
 				continue;
 
 			const u32 element_size = rsx::get_vertex_type_size_on_host(vertex_info.type, vertex_info.size);
-			const u32 gl_type = to_gl_internal_type(vertex_info.type, vertex_info.size);
-			const u32 data_size = element_size * vertex_draw_count;
+			u32 data_size = element_size * vertex_draw_count;
+			u32 gl_type = to_gl_internal_type(vertex_info.type, vertex_info.size);
 
 			auto &buffer = m_gl_attrib_buffers[index].buffer;
 			auto &texture = m_gl_attrib_buffers[index].texture;
 
+			vertex_arrays_data.resize(data_size);
+			u8 *src = reinterpret_cast<u8*>(inline_vertex_array.data());
+			u8 *dst = vertex_arrays_data.data();
+
+			src += offsets[index];
+
+			for (u32 i = 0; i < vertex_draw_count; ++i)
+			{
+				if (vertex_info.type == rsx::vertex_base_type::ub && vertex_info.size == 4)
+				{
+					dst[0] = src[3];
+					dst[1] = src[2];
+					dst[2] = src[1];
+					dst[3] = src[0];
+				}
+				else
+					memcpy(dst, src, element_size);
+
+				src += stride;
+				dst += element_size;
+			}
+
+			void *vertex_data = static_cast<void*>(vertex_arrays_data.data());
+			std::vector<float> conversion_buf;
+
+			//Normalize diffuse color and specular color from 0-255 to 0-1; texelFetch does not normalize texels
+			if (index == 3 || index == 4)
+			{
+				if (vertex_info.type == rsx::vertex_base_type::ub ||
+					vertex_info.type == rsx::vertex_base_type::s1)
+				{
+					const u32 num_values = vertex_draw_count * vertex_info.size;
+					conversion_buf.resize(num_values);
+					u8 *source_values = (u8*)vertex_data;
+
+					for (u32 i = 0; i < num_values; ++i)
+					{
+						conversion_buf[i] = (float)source_values[i] / 255.f;
+					}
+
+					gl_type = to_gl_internal_type(rsx::vertex_base_type::f, vertex_info.size);
+					vertex_data = conversion_buf.data();
+					data_size *= sizeof(float);
+				}
+			}
+
 			buffer->data(data_size, nullptr);
-			buffer->sub_data(0, data_size, vertex_arrays_data.data()+offset);
+			buffer->sub_data(0, data_size, vertex_data);
 
 			//Attach buffer to texture
 			texture->copy_from(*buffer, gl_type);
 
 			//Link texture to uniform
-			m_program->uniforms.texture(location, index +rsx::limits::vertex_count, *texture);
-
-			offset += rsx::get_vertex_type_size_on_host(vertex_info.type, vertex_info.size);
+			m_program->uniforms.texture(location, index + rsx::limits::vertex_count, *texture);
 		}
 	}
 
@@ -534,14 +589,40 @@ void GLGSRender::end()
 				vertex_arrays_offsets[index] = gsl::narrow<u32>(position);
 				vertex_arrays_data.resize(position + size);
 
-				const u32 gl_type = to_gl_internal_type(vertex_info.type, vertex_info.size);
-				const u32 data_size = element_size * vertex_draw_count;
+				u32 gl_type = to_gl_internal_type(vertex_info.type, vertex_info.size);
+				u32 data_size = element_size * vertex_draw_count;
 
 				auto &buffer = m_gl_attrib_buffers[index].buffer;
 				auto &texture = m_gl_attrib_buffers[index].texture;
 
+				std::chrono::time_point<std::chrono::system_clock> u0 = std::chrono::system_clock::now();
+
+				void *vertex_data = static_cast<void*>(vertex_array.data());
+				std::vector<float> conversion_buf;
+
+				//Normalize color inputs if given in ub format
+				if (index == 3 || index == 4)
+				{
+					if (vertex_info.type == rsx::vertex_base_type::ub ||
+						vertex_info.type == rsx::vertex_base_type::s1)
+					{
+						const u32 num_values = vertex_draw_count * vertex_info.size;
+						conversion_buf.resize(num_values);
+						u8 *source_values = (u8*)vertex_data;
+
+						for (u32 i = 0; i < num_values; ++i)
+						{
+							conversion_buf[i] = (float)source_values[i] / 255.f;
+						}
+
+						gl_type = to_gl_internal_type(rsx::vertex_base_type::f, vertex_info.size);
+						vertex_data = conversion_buf.data();
+						data_size *= sizeof(float);
+					}
+				}
+
 				buffer->data(data_size, nullptr);
-				buffer->sub_data(0, data_size, vertex_array.data());
+				buffer->sub_data(0, data_size, vertex_data);
 
 				//Attach buffer to texture
 				texture->copy_from(*buffer, gl_type);

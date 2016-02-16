@@ -147,8 +147,12 @@ std::tuple<std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC>, size_t> upload_inlined_
 	// We can't rely on vertex_attribute_infos strides here so compute it
 	// assuming all attributes are packed
 	u32 stride = 0;
+	u32 initial_offsets[rsx::limits::vertex_count];
+	u8  index = 0;
 	for (const auto &info : vertex_attribute_infos)
 	{
+		initial_offsets[index++] = stride;
+
 		if (!info.size) // disabled
 			continue;
 
@@ -159,10 +163,14 @@ std::tuple<std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC>, size_t> upload_inlined_
 	std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC> result;
 
 	UINT64 vertex_buffer_offset = 0;
+	index = 0;
 	for (const auto &info : vertex_attribute_infos)
 	{
-		if (!info.size) // disabled
+		if (!info.size)
+		{
+			index++;
 			continue;
+		}
 
 		u32 element_size = rsx::get_vertex_type_size_on_host(info.type, info.size);
 		UINT buffer_size = element_size * element_count;
@@ -174,7 +182,7 @@ std::tuple<std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC>, size_t> upload_inlined_
 		for (u32 i = 0; i < element_count; i++)
 		{
 			auto subdst = dst.subspan(i * element_size, element_size);
-			auto subsrc = inlined_array_raw_data.subspan(i * stride, element_size);
+			auto subsrc = inlined_array_raw_data.subspan(initial_offsets[index] + (i * stride), element_size);
 			if (info.type == rsx::vertex_base_type::ub && info.size == 4)
 			{
 				subdst[0] = subsrc[3];
@@ -194,6 +202,7 @@ std::tuple<std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC>, size_t> upload_inlined_
 
 		result.emplace_back(get_vertex_attribute_srv(info, vertex_buffer_offset, buffer_size));
 		vertex_buffer_offset = get_next_multiple_of<48>(vertex_buffer_offset + buffer_size); // 48 is multiple of 2, 4, 6, 8, 12, 16
+		index++;
 	}
 
 	return std::make_tuple(result, element_count);
