@@ -191,9 +191,13 @@ s32 _sys_memchr()
 	throw EXCEPTION("");
 }
 
-s32 _sys_memmove()
+vm::ptr<void> _sys_memmove(vm::ptr<void> dst, vm::cptr<void> src, u32 size)
 {
-	throw EXCEPTION("");
+	sysPrxForUser.trace("_sys_memmove(dst=*0x%x, src=*0x%x, size=%d)", dst, src, size);
+
+	memmove(dst.get_ptr(), src.get_ptr(), size);
+
+	return dst;
 }
 
 s64 _sys_strlen(vm::cptr<char> str)
