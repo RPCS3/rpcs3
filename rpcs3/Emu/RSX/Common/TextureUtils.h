@@ -8,7 +8,7 @@ struct MipmapLevelInfo
 	u16 width;
 	u16 height;
 	u16 depth;
-	u16 rowPitch;
+	u32 rowPitch;
 };
 
 /**
@@ -22,7 +22,7 @@ size_t get_placed_texture_storage_size(const rsx::texture &texture, size_t rowPi
 * Data are not packed, they are stored per rows using rowPitchAlignement.
 * Similarly, offset for every mipmaplevel is aligned to rowPitchAlignement boundary.
 */
-std::vector<MipmapLevelInfo> upload_placed_texture(const rsx::texture &texture, size_t rowPitchAlignement, void* textureData);
+std::vector<MipmapLevelInfo> upload_placed_texture(gsl::span<gsl::byte> mapped_buffer, const rsx::texture &texture, size_t rowPitchAlignement);
 
 /**
 * Get number of bytes occupied by texture in RSX mem

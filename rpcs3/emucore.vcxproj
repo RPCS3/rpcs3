@@ -88,7 +88,13 @@
     <ClCompile Include="Emu\RSX\Common\ProgramStateCache.cpp" />
     <ClCompile Include="Emu\RSX\Common\ShaderParam.cpp" />
     <ClCompile Include="Emu\RSX\Common\surface_store.cpp" />
-    <ClCompile Include="Emu\RSX\Common\TextureUtils.cpp" />
+    <ClCompile Include="Emu\RSX\Common\TextureUtils.cpp">
+      <TreatWarningAsError Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</TreatWarningAsError>
+      <TreatWarningAsError Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">true</TreatWarningAsError>
+      <TreatWarningAsError Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">true</TreatWarningAsError>
+      <TreatWarningAsError Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</TreatWarningAsError>
+      <TreatWarningAsError Condition="'$(Configuration)|$(Platform)'=='Debug - MemLeak|x64'">true</TreatWarningAsError>
+    </ClCompile>
     <ClCompile Include="Emu\RSX\Common\VertexProgramDecompiler.cpp" />
     <ClCompile Include="Emu\RSX\GCM.cpp" />
     <ClCompile Include="Emu\RSX\Null\NullGSRender.cpp" />

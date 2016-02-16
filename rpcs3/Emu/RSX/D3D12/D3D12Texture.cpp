@@ -79,8 +79,9 @@ ComPtr<ID3D12Resource> upload_single_texture(
 	size_t buffer_size = get_placed_texture_storage_size(texture, 256);
 	size_t heap_offset = texture_buffer_heap.alloc<D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT>(buffer_size);
 
-	void *mapped_buffer = texture_buffer_heap.map<void>(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
-	std::vector<MipmapLevelInfo> mipInfos = upload_placed_texture(texture, 256, mapped_buffer);
+	void *mapped_buffer_ptr = texture_buffer_heap.map<void>(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
+	gsl::span<gsl::byte> mapped_buffer{ (gsl::byte*)mapped_buffer_ptr, gsl::narrow<int>(buffer_size) };
+	std::vector<MipmapLevelInfo> mipInfos = upload_placed_texture(mapped_buffer, texture, 256);
 	texture_buffer_heap.unmap(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
 
 	ComPtr<ID3D12Resource> result;
@@ -124,8 +125,9 @@ void update_existing_texture(
 	size_t buffer_size = get_placed_texture_storage_size(texture, 256);
 	size_t heap_offset = texture_buffer_heap.alloc<D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT>(buffer_size);
 
-	void *mapped_buffer = texture_buffer_heap.map<void>(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
-	std::vector<MipmapLevelInfo> mipInfos = upload_placed_texture(texture, 256, mapped_buffer);
+	void *mapped_buffer_ptr = texture_buffer_heap.map<void>(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
+	gsl::span<gsl::byte> mapped_buffer{ (gsl::byte*)mapped_buffer_ptr, gsl::narrow<int>(buffer_size) };
+	std::vector<MipmapLevelInfo> mipInfos = upload_placed_texture(mapped_buffer, texture, 256);
 	texture_buffer_heap.unmap(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
 
 	command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(existing_texture, D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_COPY_DEST));
