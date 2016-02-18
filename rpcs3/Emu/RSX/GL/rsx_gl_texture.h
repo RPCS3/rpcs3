@@ -56,6 +56,7 @@ namespace rsx
 			void remove();
 
 			void set_target(u32 target) { m_target = target; }
+			void set_id(u32 id) { m_id = id;  }
 			u32 id() const;
 		};
 	}
