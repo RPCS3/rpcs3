@@ -591,10 +591,11 @@ s32 pngDecodeData(PPUThread& ppu, PHandle handle, PStream stream, vm::ptr<u8> da
 	// Check if the outputWidthByte is smaller than the intended output length of a line. For example an image might be in RGB, but we need to output 4 components, so we need to perform alpha padding.
 	else if (stream->out_param.outputWidthByte < (stream->out_param.outputWidth * stream->out_param.outputComponents))
 	{
-		// Not sure what to do, when a fixed alpha value isn't specified.
+		// Not sure what to do, when a fixed alpha value isn't specified, but specifying full opaque seems to cause no issues currently. Logging this just in case.
 		if (!stream->fixed_alpha)
 		{
-			throw EXCEPTION("Fixed alpha not specified for padding.");
+			cellPngDec.error("Fixed alpha not specified for padding. Please notify a developer of this.");
+			stream->fixed_alpha_colour = 255;
 		}
 
 		// We need to fill alpha (before or after, depending on the output colour format) using the fixed alpha value passed by the game.
@@ -646,12 +647,6 @@ s32 pngDecodeData(PPUThread& ppu, PHandle handle, PStream stream, vm::ptr<u8> da
 		// Check if we need to flip the image or leave empty space at the end of a line
 		if ((bytes_per_line > stream->out_param.outputWidthByte) || flip)
 		{
-			// Flipping is untested
-			if (flip)
-			{
-				throw EXCEPTION("Flipping is not yet supported.");
-			}
-
 			// Get how many bytes per line we need to output - bytesPerLine is total amount of bytes per line, rest is unused and the game can do as it pleases.
 			const u32 line_size = std::min(bytes_per_line, stream->out_param.outputWidth * 4);
 

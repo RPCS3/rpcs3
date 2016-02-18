@@ -1146,9 +1146,10 @@ s32 SJIStoEUCJP()
 	throw EXCEPTION("");
 }
 
-s32 UTF8stoUTF16s()
+s32 UTF8stoUTF16s(vm::cptr<void> src, vm::cptr<s32> src_len, vm::ptr<void> dst, vm::ptr<s32> dst_len)
 {
-	throw EXCEPTION("");
+	cellL10n.warning("UTF8stoUTF16s(src=*0x%x, src_len=*0x%x, dst=*0x%x, dst_len=*0x%x)", src, src_len, dst, dst_len);
+	return _L10nConvertStr(L10N_UTF8, src, src_len, L10N_UTF16, dst, dst_len);
 }
 
 s32 SJISstoUCS2s(vm::cptr<void> src, vm::cptr<s32> src_len, vm::ptr<void> dst, vm::ptr<s32> dst_len)
