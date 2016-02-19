@@ -4,9 +4,10 @@
 #include "../RSXThread.h"
 
 /**
- * Write count vertex attributes from index array buffer starting at first, using vertex_array_desc
+ * Write count vertex attributes from src_ptr starting at first.
+ * src_ptr array layout is deduced from the type, vector element count and src_stride arguments.
  */
-void write_vertex_array_data_to_buffer(void *buffer, u32 first, u32 count, size_t index, const rsx::data_array_format_info &vertex_array_desc);
+void write_vertex_array_data_to_buffer(gsl::span<gsl::byte> raw_dst_span, const gsl::byte *src_ptr, u32 first, u32 count, rsx::vertex_base_type type, u32 vector_element_count, u32 attribute_src_stride);
 
 /*
  * If primitive mode is not supported and need to be emulated (using an index buffer) returns false.

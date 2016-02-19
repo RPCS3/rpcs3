@@ -564,24 +564,33 @@ void GLGSRender::end()
 			{
 				auto &vertex_info = vertex_arrays_info[index];
 				// Active vertex array
-				std::vector<u8> vertex_array;
+				std::vector<gsl::byte> vertex_array;
 
 				// Fill vertex_array
 				u32 element_size = rsx::get_vertex_type_size_on_host(vertex_info.type, vertex_info.size);
 				vertex_array.resize(vertex_draw_count * element_size);
+
+				// Get source pointer
+				u32 base_offset = rsx::method_registers[NV4097_SET_VERTEX_DATA_BASE_OFFSET];
+				u32 offset = rsx::method_registers[NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + index];
+				u32 address = base_offset + rsx::get_address(offset & 0x7fffffff, offset >> 31);
+				const gsl::byte *src_ptr = gsl::narrow_cast<const gsl::byte*>(vm::base(address));
+
 				if (draw_command == rsx::draw_command::array)
 				{
 					size_t offset = 0;
+					gsl::span<gsl::byte> dest_span(vertex_array);
 					for (const auto &first_count : first_count_commands)
 					{
-						write_vertex_array_data_to_buffer(vertex_array.data() + offset, first_count.first, first_count.second, index, vertex_info);
+						write_vertex_array_data_to_buffer(dest_span.subspan(offset), src_ptr, first_count.first, first_count.second, vertex_info.type, vertex_info.size, vertex_info.stride);
 						offset += first_count.second * element_size;
 					}
 				}
 				if (draw_command == rsx::draw_command::indexed)
 				{
 					vertex_array.resize((max_index + 1) * element_size);
-					write_vertex_array_data_to_buffer(vertex_array.data(), 0, max_index + 1, index, vertex_info);
+					gsl::span<gsl::byte> dest_span(vertex_array);
+					write_vertex_array_data_to_buffer(dest_span, src_ptr, 0, max_index + 1, vertex_info.type, vertex_info.size, vertex_info.stride);
 				}
 
 				size_t size = vertex_array.size();

@@ -5,6 +5,16 @@
 #define MIN2(x, y) ((x) < (y)) ? (x) : (y)
 #define MAX2(x, y) ((x) > (y)) ? (x) : (y)
 
+namespace
+{
+	// FIXME: GSL as_span break build if template parameter is non const with current revision.
+	// Replace with true as_span when fixed.
+	template <typename T>
+	gsl::span<T> as_span_workaround(gsl::span<gsl::byte> unformated_span)
+	{
+		return{ (T*)unformated_span.data(), gsl::narrow<int>(unformated_span.size_bytes() / sizeof(T)) };
+	}
+}
 
 namespace
 {
@@ -24,73 +34,64 @@ namespace
 		X = X << 5;
 		return{ X, Y, Z, 1 };
 	}
+
+	template<typename U, typename T>
+	void copy_whole_attribute_array(gsl::span<T> dst, const gsl::byte* src_ptr, u8 attribute_size, u8 dst_stride, u32 src_stride, u32 first, u32 vertex_count)
+	{
+		for (u32 vertex = 0; vertex < vertex_count; ++vertex)
+		{
+			const U* src = reinterpret_cast<const U*>(src_ptr + src_stride * (first + vertex));
+			for (u32 i = 0; i < attribute_size; ++i)
+			{
+				dst[vertex * dst_stride / sizeof(T) + i] = src[i];
+			}
+		}
+	}
 }
 
-// FIXME: these functions shouldn't access rsx::method_registers (global)
-
-void write_vertex_array_data_to_buffer(void *buffer, u32 first, u32 count, size_t index, const rsx::data_array_format_info &vertex_array_desc)
+void write_vertex_array_data_to_buffer(gsl::span<gsl::byte> raw_dst_span, const gsl::byte *src_ptr, u32 first, u32 count, rsx::vertex_base_type type, u32 vector_element_count, u32 attribute_src_stride)
 {
-	Expects(vertex_array_desc.size > 0);
+	Expects(vector_element_count > 0);
 
-	u32 base_offset = rsx::method_registers[NV4097_SET_VERTEX_DATA_BASE_OFFSET];
-	u32 offset = rsx::method_registers[NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + index];
-	u32 address = base_offset + rsx::get_address(offset & 0x7fffffff, offset >> 31);
+	u32 element_size = rsx::get_vertex_type_size_on_host(type, vector_element_count);
 
-	u32 element_size = rsx::get_vertex_type_size_on_host(vertex_array_desc.type, vertex_array_desc.size);
-
-	u32 base_index = rsx::method_registers[NV4097_SET_VERTEX_DATA_BASE_INDEX];
-
-	for (u32 i = 0; i < count; ++i)
+	switch (type)
 	{
-		auto src = vm::ps3::_ptr<const u8>(address + vertex_array_desc.stride * (first + i + base_index));
-		u8* dst = (u8*)buffer + i * element_size;
-
-		switch (vertex_array_desc.type)
+	case rsx::vertex_base_type::ub:
+	{
+		gsl::span<u8> dst_span = as_span_workaround<u8>(raw_dst_span);
+		copy_whole_attribute_array<u8>(dst_span, src_ptr, vector_element_count, element_size, attribute_src_stride, first, count);
+		return;
+	}
+	case rsx::vertex_base_type::s1:
+	case rsx::vertex_base_type::sf:
+	{
+		gsl::span<u16> dst_span = as_span_workaround<u16>(raw_dst_span);
+		copy_whole_attribute_array<be_t<u16>>(dst_span, src_ptr, vector_element_count, element_size, attribute_src_stride, first, count);
+		return;
+	}
+	case rsx::vertex_base_type::f:
+	case rsx::vertex_base_type::s32k:
+	case rsx::vertex_base_type::ub256:
+	{
+		gsl::span<u32> dst_span = as_span_workaround<u32>(raw_dst_span);
+		copy_whole_attribute_array<be_t<u32>>(dst_span, src_ptr, vector_element_count, element_size, attribute_src_stride, first, count);
+		return;
+	}
+	case rsx::vertex_base_type::cmp:
+	{
+		gsl::span<u16> dst_span = as_span_workaround<u16>(raw_dst_span);
+		for (u32 i = 0; i < count; ++i)
 		{
-		case rsx::vertex_base_type::ub:
-			memcpy(dst, src, vertex_array_desc.size);
-			break;
-
-		case rsx::vertex_base_type::s1:
-		case rsx::vertex_base_type::sf:
-		{
-			auto* c_src = (const be_t<u16>*)src;
-			u16* c_dst = (u16*)dst;
-
-			for (u32 j = 0; j < vertex_array_desc.size; ++j)
-			{
-				*c_dst++ = *c_src++;
-			}
-			if (vertex_array_desc.size * sizeof(u16) < element_size)
-				*c_dst++ = 0x3c00;
-			break;
-		}
-
-		case rsx::vertex_base_type::f:
-		case rsx::vertex_base_type::s32k:
-		case rsx::vertex_base_type::ub256:
-		{
-			auto* c_src = (const be_t<u32>*)src;
-			u32* c_dst = (u32*)dst;
-
-			for (u32 j = 0; j < vertex_array_desc.size; ++j)
-			{
-				*c_dst++ = *c_src++;
-			}
-			break;
-		}
-		case rsx::vertex_base_type::cmp:
-		{
-			auto* c_src = (const be_t<u32>*)src;
+			auto* c_src = (const be_t<u32>*)(src_ptr + attribute_src_stride * (first + i));
 			const auto& decoded_vector = decode_cmp_vector(*c_src);
-			u16* c_dst = (u16*)dst;
-			c_dst[0] = decoded_vector[0];
-			c_dst[1] = decoded_vector[1];
-			c_dst[2] = decoded_vector[2];
-			c_dst[3] = decoded_vector[3];
-			break;
+			dst_span[i * element_size / sizeof(u16)] = decoded_vector[0];
+			dst_span[i * element_size / sizeof(u16) + 1] = decoded_vector[1];
+			dst_span[i * element_size / sizeof(u16) + 2] = decoded_vector[2];
+			dst_span[i * element_size / sizeof(u16) + 3] = decoded_vector[3];
 		}
-		}
+		return;
+	}
 	}
 }
 
@@ -333,7 +334,7 @@ void write_index_array_for_non_indexed_non_native_primitive_to_buffer(char* dst,
 }
 
 // TODO: Unify indexed and non indexed primitive expansion ?
-
+// FIXME: these functions shouldn't access rsx::method_registers (global)
 template<typename T>
 std::tuple<T, T> write_index_array_data_to_buffer_impl(gsl::span<T, gsl::dynamic_range> dst, rsx::primitive_type draw_mode, const std::vector<std::pair<u32, u32> > &first_count_arguments)
 {
