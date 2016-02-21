@@ -252,7 +252,7 @@ void D3D12GSRender::upload_and_bind_vertex_shader_constants(size_t descriptor_in
 		.Offset((INT)descriptor_index, m_descriptor_stride_srv_cbv_uav));
 }
 
-void D3D12GSRender::upload_and_bind_fragment_shader_constants(size_t descriptor_index)
+D3D12_CONSTANT_BUFFER_VIEW_DESC D3D12GSRender::upload_fragment_shader_constants()
 {
 	// Get constant from fragment program
 	size_t buffer_size = m_pso_cache.get_fragment_constants_buffer_size(m_fragment_program);
@@ -266,13 +266,10 @@ void D3D12GSRender::upload_and_bind_fragment_shader_constants(size_t descriptor_
 	m_pso_cache.fill_fragment_constans_buffer({ mapped_buffer, gsl::narrow<int>(buffer_size) }, m_fragment_program);
 	m_buffer_data.unmap(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
 
-	D3D12_CONSTANT_BUFFER_VIEW_DESC constant_buffer_view_desc = {
+	return {
 		m_buffer_data.get_heap()->GetGPUVirtualAddress() + heap_offset,
 		(UINT)buffer_size
 	};
-	m_device->CreateConstantBufferView(&constant_buffer_view_desc,
-		CD3DX12_CPU_DESCRIPTOR_HANDLE(get_current_resource_storage().descriptors_heap->GetCPUDescriptorHandleForHeapStart())
-		.Offset((INT)descriptor_index, m_descriptor_stride_srv_cbv_uav));
 }
 
 

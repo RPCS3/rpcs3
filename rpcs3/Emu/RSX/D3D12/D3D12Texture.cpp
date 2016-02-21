@@ -173,9 +173,9 @@ D3D12_SHADER_RESOURCE_VIEW_DESC get_srv_descriptor_with_dimensions(const rsx::te
 }
 }
 
-void D3D12GSRender::upload_and_bind_textures(ID3D12GraphicsCommandList *command_list, size_t texture_count)
+void D3D12GSRender::upload_textures(ID3D12GraphicsCommandList *command_list, size_t texture_count)
 {
-	for (u32 i = 0; i < 16; ++i)
+	for (u32 i = 0; i < texture_count; ++i)
 	{
 		if (!m_textures_dirty[i])
 			continue;
