@@ -128,6 +128,7 @@ private:
 	ID3D12Resource *m_dummy_texture;
 
 	// Currently used shader resources / samplers descriptor
+	u32 m_current_transform_constants_buffer_descriptor_id;
 	std::array<std::tuple<ID3D12Resource*, D3D12_SHADER_RESOURCE_VIEW_DESC>, 16> m_current_shader_resources = {};
 	std::array<D3D12_SAMPLER_DESC, 16> m_current_samplers = {};
 public:
