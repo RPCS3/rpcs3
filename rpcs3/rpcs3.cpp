@@ -144,7 +144,7 @@ bool Rpcs3App::OnInit()
 		case rsx_renderer_type::OpenGL: return std::make_shared<GLGSRender>();
 #ifdef _MSC_VER
 		case rsx_renderer_type::DX12: return std::make_shared<D3D12GSRender>();
-		case rsx_renderer_type::Vulkan: return std::make_shared<>(VKGSRender);
+		case rsx_renderer_type::Vulkan: return std::make_shared<VKGSRender>();
 #endif
 		default: throw EXCEPTION("Invalid GS Renderer %d", (int)mode);
 		}

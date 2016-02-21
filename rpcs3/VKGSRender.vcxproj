@@ -23,10 +23,26 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Emu\RSX\VK\VKCommonDecompiler.h" />
+    <ClInclude Include="Emu\RSX\VK\VKFragmentProgram.h" />
     <ClInclude Include="Emu\RSX\VK\VKGSRender.h" />
+    <ClInclude Include="Emu\RSX\VK\VKHelpers.h" />
+    <ClInclude Include="Emu\RSX\VK\VKProgramBuffer.h" />
+    <ClInclude Include="Emu\RSX\VK\VKRenderTargets.h" />
+    <ClInclude Include="Emu\RSX\VK\VKTextureCache.h" />
+    <ClInclude Include="Emu\RSX\VK\VKVertexProgram.h" />
+    <ClInclude Include="Emu\RSX\VK\VulkanAPI.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Emu\RSX\VK\VKCommonDecompiler.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKFragmentProgram.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKGSRender.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKHelpers.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKProgramPipeline.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKTexture.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKVertexBuffers.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKVertexProgram.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VulkanAPI.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="emucore.vcxproj">

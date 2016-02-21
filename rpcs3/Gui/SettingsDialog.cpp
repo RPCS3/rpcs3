@@ -252,6 +252,8 @@ SettingsDialog::SettingsDialog(wxWindow *parent, rpcs3::config_t* cfg)
 	}
 #endif
 
+	cbox_gs_render->Append("Vulkan");
+
 	for (int i = 1; i < WXSIZEOF(ResolutionTable); ++i)
 	{
 		cbox_gs_resolution->Append(wxString::Format("%dx%d", ResolutionTable[i].width.value(), ResolutionTable[i].height.value()));
