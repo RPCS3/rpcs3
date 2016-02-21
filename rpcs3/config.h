@@ -50,7 +50,8 @@ enum class rsx_renderer_type
 {
 	Null,
 	OpenGL,
-	DX12
+	DX12,
+	Vulkan
 };
 
 enum class rsx_aspect_ratio
@@ -93,6 +94,7 @@ namespace convert
 			case rsx_renderer_type::Null: return "Null";
 			case rsx_renderer_type::OpenGL: return "OpenGL";
 			case rsx_renderer_type::DX12: return "DX12";
+			case rsx_renderer_type::Vulkan: return "Vulkan";
 			}
 
 			return "Unknown";
@@ -112,6 +114,9 @@ namespace convert
 
 			if (value == "DX12")
 				return rsx_renderer_type::DX12;
+
+			if (value == "Vulkan")
+				return rsx_renderer_type::Vulkan;
 
 			return rsx_renderer_type::Null;
 		}

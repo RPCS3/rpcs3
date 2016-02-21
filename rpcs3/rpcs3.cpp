@@ -32,6 +32,7 @@
 
 #include "Emu/RSX/Null/NullGSRender.h"
 #include "Emu/RSX/GL/GLGSRender.h"
+#include "Emu/RSX/VK/VKGSRender.h"
 #include "Emu/Audio/Null/NullAudioThread.h"
 #include "Emu/Audio/AL/OpenALThread.h"
 #ifdef _MSC_VER
@@ -129,6 +130,7 @@ bool Rpcs3App::OnInit()
 		case frame_type::OpenGL: return std::make_unique<GLGSFrame>();
 		case frame_type::DX12: return std::make_unique<GSFrame>("DirectX 12");
 		case frame_type::Null: return std::make_unique<GSFrame>("Null");
+		case frame_type::Vulkan: return std::make_unique<GSFrame>("Vulkan");
 		}
 
 		throw EXCEPTION("Invalid Frame Type");
@@ -142,6 +144,7 @@ bool Rpcs3App::OnInit()
 		case rsx_renderer_type::OpenGL: return std::make_shared<GLGSRender>();
 #ifdef _MSC_VER
 		case rsx_renderer_type::DX12: return std::make_shared<D3D12GSRender>();
+		case rsx_renderer_type::Vulkan: return std::make_shared<>(VKGSRender);
 #endif
 		default: throw EXCEPTION("Invalid GS Renderer %d", (int)mode);
 		}
