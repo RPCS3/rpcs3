@@ -148,7 +148,7 @@ struct D3D12Traits
 	static
 	pipeline_storage_type build_pipeline(
 		const vertex_program_type &vertexProgramData, const fragment_program_type &fragmentProgramData, const pipeline_properties &pipelineProperties,
-		ID3D12Device *device, gsl::span<ComPtr<ID3D12RootSignature>, 17, 17> root_signatures)
+		ID3D12Device *device, ID3D12RootSignature* root_signatures)
 	{
 		std::tuple<ID3D12PipelineState *, std::vector<size_t>, size_t> result = {};
 		D3D12_GRAPHICS_PIPELINE_STATE_DESC graphicPipelineStateDesc = {};
@@ -163,7 +163,7 @@ struct D3D12Traits
 		graphicPipelineStateDesc.PS.BytecodeLength = fragmentProgramData.bytecode->GetBufferSize();
 		graphicPipelineStateDesc.PS.pShaderBytecode = fragmentProgramData.bytecode->GetBufferPointer();
 
-		graphicPipelineStateDesc.pRootSignature = root_signatures[fragmentProgramData.m_textureCount][vertexProgramData.vertex_shader_input_count].Get();
+		graphicPipelineStateDesc.pRootSignature = root_signatures;
 
 		graphicPipelineStateDesc.BlendState = pipelineProperties.Blend;
 		graphicPipelineStateDesc.DepthStencilState = pipelineProperties.DepthStencil;

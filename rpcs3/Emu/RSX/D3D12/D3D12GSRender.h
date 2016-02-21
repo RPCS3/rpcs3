@@ -55,8 +55,8 @@ private:
 	ComPtr<struct IDXGISwapChain3> m_swap_chain;
 	ComPtr<ID3D12Resource> m_backbuffer[2];
 	ComPtr<ID3D12DescriptorHeap> m_backbuffer_descriptor_heap[2];
-	// m_rootSignatures[N] is RS with N texture/sample
-	ComPtr<ID3D12RootSignature> m_root_signatures[17][17]; // indexed by [texture count][vertex count]
+
+	ComPtr<ID3D12RootSignature> m_shared_root_signature;
 
 	// TODO: Use a tree structure to parse more efficiently
 	data_cache m_texture_cache;
@@ -161,14 +161,14 @@ private:
 
 	void upload_and_bind_scale_offset_matrix(size_t descriptor_index);
 	void upload_and_bind_vertex_shader_constants(size_t descriptor_index);
-	void upload_and_bind_fragment_shader_constants(size_t descriptorIndex);
+	D3D12_CONSTANT_BUFFER_VIEW_DESC upload_fragment_shader_constants();
 	/**
 	 * Fetch all textures recorded in the state in the render target cache and in the texture cache.
 	 * If a texture is not cached, populate cmdlist with uploads command.
 	 * Create necessary resource view/sampler descriptors in the per frame storage struct.
 	 * If the count of enabled texture is below texture_count, fills with dummy texture and sampler.
 	 */
-	void upload_and_bind_textures(ID3D12GraphicsCommandList *command_list, size_t texture_count);
+	void upload_textures(ID3D12GraphicsCommandList *command_list, size_t texture_count);
 
 	/**
 	 * Creates render target if necessary.

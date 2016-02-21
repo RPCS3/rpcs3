@@ -107,7 +107,7 @@ void D3D12FragmentDecompiler::insertConstants(std::stringstream & OS)
 			for (const ParamItem &PI : PT.items)
 			{
 				size_t textureIndex = atoi(PI.name.data() + 3);
-				OS << "Texture1D " << PI.name << " : register(t" << textureIndex + 16 << ");" << std::endl;
+				OS << "Texture1D " << PI.name << " : register(t" << textureIndex << ");" << std::endl;
 				OS << "sampler " << PI.name << "sampler : register(s" << textureIndex << ");" << std::endl;
 			}
 		}
@@ -116,7 +116,7 @@ void D3D12FragmentDecompiler::insertConstants(std::stringstream & OS)
 			for (const ParamItem &PI : PT.items)
 			{
 				size_t textureIndex = atoi(PI.name.data() + 3);
-				OS << "Texture2D " << PI.name << " : register(t" << textureIndex + 16 << ");" << std::endl;
+				OS << "Texture2D " << PI.name << " : register(t" << textureIndex << ");" << std::endl;
 				OS << "sampler " << PI.name << "sampler : register(s" << textureIndex << ");" << std::endl;
 			}
 		}
@@ -125,7 +125,7 @@ void D3D12FragmentDecompiler::insertConstants(std::stringstream & OS)
 			for (const ParamItem &PI : PT.items)
 			{
 				size_t textureIndex = atoi(PI.name.data() + 3);
-				OS << "Texture3D " << PI.name << " : register(t" << textureIndex + 16 << ");" << std::endl;
+				OS << "Texture3D " << PI.name << " : register(t" << textureIndex << ");" << std::endl;
 				OS << "sampler " << PI.name << "sampler : register(s" << textureIndex << ");" << std::endl;
 			}
 		}
@@ -134,7 +134,7 @@ void D3D12FragmentDecompiler::insertConstants(std::stringstream & OS)
 			for (const ParamItem &PI : PT.items)
 			{
 				size_t textureIndex = atoi(PI.name.data() + 3);
-				OS << "TextureCube " << PI.name << " : register(t" << textureIndex + 16 << ");" << std::endl;
+				OS << "TextureCube " << PI.name << " : register(t" << textureIndex << ");" << std::endl;
 				OS << "sampler " << PI.name << "sampler : register(s" << textureIndex << ");" << std::endl;
 			}
 		}
