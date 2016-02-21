@@ -280,6 +280,7 @@ namespace rsx
 		};
 		m_rtts_dirty = true;
 		memset(m_textures_dirty, -1, sizeof(m_textures_dirty));
+		m_transform_constants_dirty = true;
 	}
 
 	thread::~thread()

@@ -197,6 +197,7 @@ namespace rsx
 				size_t subreg = index % 4;
 
 				memcpy(rsxthr->transform_constants[load + reg].rgba + subreg, method_registers + NV4097_SET_TRANSFORM_CONSTANT + reg * count + subreg, sizeof(f32));
+				rsxthr->m_transform_constants_dirty = true;
 			}
 		};
 
