@@ -78,6 +78,7 @@ std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC> D3D12GSRender::upload_vertex_attrib
 	u32 vertex_count = get_vertex_count(vertex_ranges);
 	size_t offset_in_vertex_buffers_buffer = 0;
 	u32 input_mask = rsx::method_registers[NV4097_SET_VERTEX_ATTRIB_INPUT_MASK];
+	Expects(rsx::method_registers[NV4097_SET_VERTEX_DATA_BASE_INDEX] == 0);
 
 	for (int index = 0; index < rsx::limits::vertex_count; ++index)
 	{
@@ -94,10 +95,16 @@ std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC> D3D12GSRender::upload_vertex_attrib
 			UINT buffer_size = element_size * vertex_count;
 			size_t heap_offset = m_buffer_data.alloc<D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT>(buffer_size);
 
+			u32 base_offset = rsx::method_registers[NV4097_SET_VERTEX_DATA_BASE_OFFSET];
+			u32 offset = rsx::method_registers[NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + index];
+			u32 address = base_offset + rsx::get_address(offset & 0x7fffffff, offset >> 31);
+			const gsl::byte *src_ptr = gsl::narrow_cast<const gsl::byte*>(vm::base(address));
+
 			void *mapped_buffer = m_buffer_data.map<void>(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
 			for (const auto &range : vertex_ranges)
 			{
-				write_vertex_array_data_to_buffer(mapped_buffer, range.first, range.second, index, info);
+				gsl::span<gsl::byte> mapped_buffer_span = { (gsl::byte*)mapped_buffer, gsl::narrow_cast<int>(buffer_size) };
+				write_vertex_array_data_to_buffer(mapped_buffer_span, src_ptr, range.first, range.second, info.type, info.size, info.stride);
 				mapped_buffer = (char*)mapped_buffer + range.second * element_size;
 			}
 			m_buffer_data.unmap(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));

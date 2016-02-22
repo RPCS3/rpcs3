@@ -83,7 +83,13 @@
     <ClCompile Include="Emu\IdManager.cpp" />
     <ClCompile Include="Emu\RSX\CgBinaryFragmentProgram.cpp" />
     <ClCompile Include="Emu\RSX\CgBinaryVertexProgram.cpp" />
-    <ClCompile Include="Emu\RSX\Common\BufferUtils.cpp" />
+    <ClCompile Include="Emu\RSX\Common\BufferUtils.cpp">
+      <TreatWarningAsError Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</TreatWarningAsError>
+      <TreatWarningAsError Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">true</TreatWarningAsError>
+      <TreatWarningAsError Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">true</TreatWarningAsError>
+      <TreatWarningAsError Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</TreatWarningAsError>
+      <TreatWarningAsError Condition="'$(Configuration)|$(Platform)'=='Debug - MemLeak|x64'">true</TreatWarningAsError>
+    </ClCompile>
     <ClCompile Include="Emu\RSX\Common\FragmentProgramDecompiler.cpp" />
     <ClCompile Include="Emu\RSX\Common\ProgramStateCache.cpp" />
     <ClCompile Include="Emu\RSX\Common\ShaderParam.cpp" />
