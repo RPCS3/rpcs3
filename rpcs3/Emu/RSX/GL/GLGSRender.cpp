@@ -37,10 +37,10 @@ namespace
 		 * The buffer texture spec only allows fetches aligned to 8, 16, 32, etc...
 		 * This rules out most 3-component formats, except for the 32-wide RGB32F, RGB32I, RGB32UI
 		 */
-		const u32 vec1_types[] = { GL_R16, GL_R32F, GL_R16F, GL_R8, GL_R32I, GL_R16, GL_R8UI };
-		const u32 vec2_types[] = { GL_RG16, GL_RG32F, GL_RG16F, GL_RG8, GL_RG32I, GL_RG16, GL_RG8UI };
-		const u32 vec3_types[] = { GL_RGBA16, GL_RGB32F, GL_RGBA16F, GL_RGBA8, GL_RGB32I, GL_RGBA16, GL_RGBA8UI };	//VEC3 COMPONENTS NOT SUPPORTED!
-		const u32 vec4_types[] = { GL_RGBA16, GL_RGBA32F, GL_RGBA16F, GL_RGBA8, GL_RGBA32I, GL_RGBA16, GL_RGBA8UI };
+		const u32 vec1_types[] = { GL_R16, GL_R32F, GL_R16F, GL_R8, GL_R16I, GL_R16, GL_R8UI };
+		const u32 vec2_types[] = { GL_RG16, GL_RG32F, GL_RG16F, GL_RG8, GL_RG16I, GL_RG16, GL_RG8UI };
+		const u32 vec3_types[] = { GL_RGBA16, GL_RGB32F, GL_RGBA16F, GL_RGBA8, GL_RGBA16I, GL_RGBA16, GL_RGBA8UI };	//VEC3 COMPONENTS NOT SUPPORTED!
+		const u32 vec4_types[] = { GL_RGBA16, GL_RGBA32F, GL_RGBA16F, GL_RGBA8, GL_RGBA16I, GL_RGBA16, GL_RGBA8UI };
 
 		const u32* vec_selectors[] = { 0, vec1_types, vec2_types, vec3_types, vec4_types };
 

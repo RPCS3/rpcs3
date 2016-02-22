@@ -127,6 +127,7 @@ namespace rsx
 		switch (type)
 		{
 		case vertex_base_type::s1:
+		case vertex_base_type::s32k:
 			switch (size)
 			{
 			case 1:
@@ -160,7 +161,6 @@ namespace rsx
 				return sizeof(u8) * 4;
 			}
 			throw EXCEPTION("Wrong vector size");
-		case vertex_base_type::s32k: return sizeof(u32) * size;
 		case vertex_base_type::cmp: return sizeof(u16) * 4;
 		case vertex_base_type::ub256: Expects(size == 4); return sizeof(u8) * 4;
 		}
