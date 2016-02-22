@@ -169,6 +169,8 @@ void D3D12FragmentDecompiler::insertMainStart(std::stringstream & OS)
 					continue;
 				}
 			}
+			if (PI.name == "ssa")
+				continue;
 			OS << "	" << PT.type << " " << PI.name << " = In." << PI.name << ";" << std::endl;
 		}
 	}
@@ -176,6 +178,7 @@ void D3D12FragmentDecompiler::insertMainStart(std::stringstream & OS)
 	OS << "	" << "float4 gl_FragCoord = In.Position;" << std::endl;
 	if (m_prog.origin_mode == rsx::window_origin::bottom)
 		OS << "	gl_FragCoord.y = (" << std::to_string(m_prog.height) << " - gl_FragCoord.y);\n";
+	OS << "	float4 ssa = is_front_face ? float4(1., 1., 1., 1.) : float4(-1., -1., -1., -1.);\n";
 	// Declare output
 	for (const ParamType &PT : m_parr.params[PF_PARAM_NONE])
 	{
