@@ -295,6 +295,8 @@ std::vector<MipmapLevelInfo> upload_placed_texture(gsl::span<gsl::byte> mapped_b
 			return copy_texture_data<copy_unmodified_block_swizzled, false, 1>(as_span_workaround<u8>(mapped_buffer), reinterpret_cast<const u8*>(pixels), w, h, depth, layer, texture.mipmap(), texture.pitch());
 		else
 			return copy_texture_data<copy_unmodified_block, true, 1>(as_span_workaround<u8>(mapped_buffer), reinterpret_cast<const u8*>(pixels), w, h, depth, layer, texture.mipmap(), texture.pitch());
+	case CELL_GCM_TEXTURE_DEPTH24_D8: // Opaque type ; ATM do not copy anything
+		return std::vector<MipmapLevelInfo>();
 	}
 	throw EXCEPTION("Wrong format %d", format);
 }
