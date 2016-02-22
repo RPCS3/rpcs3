@@ -129,8 +129,8 @@ private:
 
 	// Currently used shader resources / samplers descriptor
 	u32 m_current_transform_constants_buffer_descriptor_id;
-	std::array<std::tuple<ID3D12Resource*, D3D12_SHADER_RESOURCE_VIEW_DESC>, 16> m_current_shader_resources = {};
-	std::array<D3D12_SAMPLER_DESC, 16> m_current_samplers = {};
+	ComPtr<ID3D12DescriptorHeap> m_current_texture_descriptors;
+	ComPtr<ID3D12DescriptorHeap> m_current_sampler_descriptors;
 public:
 	D3D12GSRender();
 	virtual ~D3D12GSRender();

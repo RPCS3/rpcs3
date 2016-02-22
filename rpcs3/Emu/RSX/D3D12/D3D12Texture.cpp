@@ -194,14 +194,22 @@ void D3D12GSRender::upload_textures(ID3D12GraphicsCommandList *command_list, siz
 				D3D12_SHADER_COMPONENT_MAPPING_FORCE_VALUE_0,
 				D3D12_SHADER_COMPONENT_MAPPING_FORCE_VALUE_0,
 				D3D12_SHADER_COMPONENT_MAPPING_FORCE_VALUE_0);
-			m_current_shader_resources[i] = std::make_tuple(m_dummy_texture, shader_resource_view_desc);
+
+			m_device->CreateShaderResourceView(m_dummy_texture, &shader_resource_view_desc,
+				CD3DX12_CPU_DESCRIPTOR_HANDLE(m_current_texture_descriptors->GetCPUDescriptorHandleForHeapStart())
+				.Offset((UINT)i, m_descriptor_stride_srv_cbv_uav)
+				);
 
 			D3D12_SAMPLER_DESC sampler_desc = {};
 			sampler_desc.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
 			sampler_desc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
 			sampler_desc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
 			sampler_desc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-			m_current_samplers[i] = sampler_desc;
+
+			m_device->CreateSampler(&sampler_desc,
+				CD3DX12_CPU_DESCRIPTOR_HANDLE(m_current_sampler_descriptors->GetCPUDescriptorHandleForHeapStart())
+				.Offset((UINT)i, m_descriptor_stride_samplers));
+
 			continue;
 		}
 		size_t w = textures[i].width(), h = textures[i].height();
@@ -354,7 +362,10 @@ void D3D12GSRender::upload_textures(ID3D12GraphicsCommandList *command_list, siz
 			break;
 		}
 
-		m_current_shader_resources[i] = std::make_tuple(vram_texture, shared_resource_view_desc);
+		m_device->CreateShaderResourceView(vram_texture, &shared_resource_view_desc,
+			CD3DX12_CPU_DESCRIPTOR_HANDLE(m_current_texture_descriptors->GetCPUDescriptorHandleForHeapStart())
+			.Offset((UINT)i, m_descriptor_stride_srv_cbv_uav)
+			);
 
 		if (get_current_resource_storage().current_sampler_index + 16 > 2048)
 		{
@@ -368,7 +379,10 @@ void D3D12GSRender::upload_textures(ID3D12GraphicsCommandList *command_list, siz
 			};
 			command_list->SetDescriptorHeaps(2, descriptors);
 		}
-		m_current_samplers[i] = get_sampler_desc(textures[i]);
+
+		m_device->CreateSampler(&get_sampler_desc(textures[i]),
+			CD3DX12_CPU_DESCRIPTOR_HANDLE(m_current_sampler_descriptors->GetCPUDescriptorHandleForHeapStart())
+			.Offset((UINT)i, m_descriptor_stride_samplers));
 	}
 }
 #endif
