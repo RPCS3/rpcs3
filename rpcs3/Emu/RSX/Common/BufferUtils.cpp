@@ -58,6 +58,7 @@ void write_vertex_array_data_to_buffer(gsl::span<gsl::byte> raw_dst_span, const 
 	switch (type)
 	{
 	case rsx::vertex_base_type::ub:
+	case rsx::vertex_base_type::ub256:
 	{
 		gsl::span<u8> dst_span = as_span_workaround<u8>(raw_dst_span);
 		copy_whole_attribute_array<u8>(dst_span, src_ptr, vector_element_count, element_size, attribute_src_stride, first, count);
@@ -72,7 +73,6 @@ void write_vertex_array_data_to_buffer(gsl::span<gsl::byte> raw_dst_span, const 
 	}
 	case rsx::vertex_base_type::f:
 	case rsx::vertex_base_type::s32k:
-	case rsx::vertex_base_type::ub256:
 	{
 		gsl::span<u32> dst_span = as_span_workaround<u32>(raw_dst_span);
 		copy_whole_attribute_array<be_t<u32>>(dst_span, src_ptr, vector_element_count, element_size, attribute_src_stride, first, count);

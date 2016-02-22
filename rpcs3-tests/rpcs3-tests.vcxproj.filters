@@ -17,6 +17,9 @@
     <ClCompile Include="ps3_ppu_llvm.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="ps3-rsx-common.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h">

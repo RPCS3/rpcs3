@@ -136,8 +136,8 @@ namespace rsx
 			case 3:
 				return sizeof(u16) * 4;
 			}
-			throw new EXCEPTION("Wrong vector size");
-		case vertex_base_type::f:     return sizeof(f32) * size;
+			throw EXCEPTION("Wrong vector size");
+		case vertex_base_type::f: return sizeof(f32) * size;
 		case vertex_base_type::sf:
 			switch (size)
 			{
@@ -148,7 +148,7 @@ namespace rsx
 			case 3:
 				return sizeof(f16) * 4;
 			}
-			throw new EXCEPTION("Wrong vector size");
+			throw EXCEPTION("Wrong vector size");
 		case vertex_base_type::ub:
 			switch (size)
 			{
@@ -159,15 +159,12 @@ namespace rsx
 			case 3:
 				return sizeof(u8) * 4;
 			}
-			throw new EXCEPTION("Wrong vector size");
-		case vertex_base_type::s32k:  return sizeof(u32) * size;
-		case vertex_base_type::cmp:   return sizeof(u16) * 4;
-		case vertex_base_type::ub256: return sizeof(u8) * 4;
-
-		default:
-			throw new EXCEPTION("RSXVertexData::GetTypeSize: Bad vertex data type (%d)!", type);
-			return 0;
+			throw EXCEPTION("Wrong vector size");
+		case vertex_base_type::s32k: return sizeof(u32) * size;
+		case vertex_base_type::cmp: return sizeof(u16) * 4;
+		case vertex_base_type::ub256: Expects(size == 4); return sizeof(u8) * 4;
 		}
+		throw EXCEPTION("RSXVertexData::GetTypeSize: Bad vertex data type (%d)!", type);
 	}
 
 	void tiled_region::write(const void *src, u32 width, u32 height, u32 pitch)
