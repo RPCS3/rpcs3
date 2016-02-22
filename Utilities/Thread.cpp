@@ -22,8 +22,7 @@
 static void report_fatal_error(const std::string& msg)
 {
 #ifdef _WIN32
-	const auto& text = msg + "\n\nPlease report this error to the developers. Press (Ctrl+C) to copy this message.";
-	MessageBoxA(0, text.c_str(), "Fatal error", MB_ICONERROR); // TODO: unicode message
+	MessageBoxA(0, msg.c_str(), "Fatal error", MB_ICONERROR); // TODO: unicode message
 #else
 	std::printf("Fatal error: %s\nPlease report this error to the developers.\n", msg.c_str());
 #endif
@@ -1195,6 +1194,23 @@ static LONG exception_filter(PEXCEPTION_POINTERS pExp)
 
 	// TODO: print registers and the callstack
 
+	// Exception specific messages
+	if (pExp->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION)
+	{
+		msg += "\n\nAn internal access violation has occured."
+		       "\nPlease only report this error to the developers, if you're an advanced user and have obtained a stack trace.";
+	}
+	else if (pExp->ExceptionRecord->ExceptionCode == EXCEPTION_ILLEGAL_INSTRUCTION)
+	{
+		msg += "\n\nAn internal illegal instruction exception has occured."
+		       "\nRPCS3 requires a modern x86-64 CPU that supports SSSE3 (and SSE4.1 for PPU LLVM recompiler)."
+		       "\nPlease make sure that your CPU supports these extensions.";
+	}
+	else
+	{
+		msg += "\n\nAn unknown internal exception has occured. Please report this to the developers.\nYou can press (Ctrl+C) to copy this message.";
+	}
+
 	// Report fatal error
 	report_fatal_error(msg);
 	return EXCEPTION_CONTINUE_SEARCH;
@@ -1231,6 +1247,8 @@ static void signal_handler(int sig, siginfo_t* info, void* uct)
 
 	const u64 addr64 = (u64)info->si_addr - (u64)vm::base(0);
 	const auto cause = is_writing ? "writing" : "reading";
+
+	// TODO: Exception specific informative messages
 
 	if (addr64 < 0x100000000ull && thread_ctrl::get_current())
 	{
@@ -1358,7 +1376,7 @@ void named_thread_t::start()
 		}
 		catch (const std::exception& e)
 		{
-			LOG_FATAL(GENERAL, "Exception: %s\nPlease report this to the developers.", e.what());
+			LOG_FATAL(GENERAL, "Exception: %s", e.what());
 			Emu.Pause();
 		}
 		catch (EmulationStopped)
