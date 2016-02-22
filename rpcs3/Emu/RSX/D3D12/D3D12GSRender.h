@@ -101,13 +101,6 @@ private:
 	 */
 	shader m_output_scaling_pass;
 
-	/**
-	 * Data used when depth buffer is converted to uchar textures.
-	 */
-	ID3D12PipelineState *m_convert_pso;
-	ID3D12RootSignature *m_convert_root_signature;
-	void init_convert_shader();
-
 	resource_storage m_per_frame_storage[2];
 	resource_storage &get_current_resource_storage();
 	resource_storage &get_non_current_resource_storage();

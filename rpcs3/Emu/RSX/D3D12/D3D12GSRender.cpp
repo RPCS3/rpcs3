@@ -197,7 +197,6 @@ D3D12GSRender::D3D12GSRender()
 	m_per_frame_storage[1].init(m_device.Get());
 	m_per_frame_storage[1].reset();
 
-	init_convert_shader();
 	m_output_scaling_pass.init(m_device.Get(), m_command_queue.Get());
 
 	CHECK_HRESULT(
@@ -236,8 +235,6 @@ D3D12GSRender::~D3D12GSRender()
 	m_texture_cache.unprotect_all();
 
 	m_dummy_texture->Release();
-	m_convert_pso->Release();
-	m_convert_root_signature->Release();
 	m_per_frame_storage[0].release();
 	m_per_frame_storage[1].release();
 	m_output_scaling_pass.release();

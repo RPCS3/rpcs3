@@ -8,45 +8,6 @@
 extern PFN_D3D12_SERIALIZE_ROOT_SIGNATURE wrapD3D12SerializeRootSignature;
 extern pD3DCompile wrapD3DCompile;
 
- /**
- * returns bytecode and root signature of a Compute Shader converting texture from
- * one format to another
- */
-static
-std::pair<ID3DBlob *, ID3DBlob *> compileF32toU8CS()
-{
-	const char *shaderCode = STRINGIFY(
-		Texture2D<float> InputTexture : register(t0); \n
-		RWTexture2D<float> OutputTexture : register(u0);\n
-
-		[numthreads(8, 8, 1)]\n
-		void main(uint3 Id : SV_DispatchThreadID)\n
-	{ \n
-		OutputTexture[Id.xy] = InputTexture.Load(uint3(Id.xy, 0));\n
-	}
-	);
-
-	ID3DBlob *bytecode;
-	Microsoft::WRL::ComPtr<ID3DBlob> errorBlob;
-	CHECK_HRESULT(wrapD3DCompile(shaderCode, strlen(shaderCode), "test", nullptr, nullptr, "main", "cs_5_0", 0, 0, &bytecode, errorBlob.GetAddressOf()));
-	CD3DX12_DESCRIPTOR_RANGE descriptorRange[] =
-	{
-		// Textures
-		CD3DX12_DESCRIPTOR_RANGE(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0),
-		// UAV (same descriptor heap)
-		CD3DX12_DESCRIPTOR_RANGE(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0, 0, 1),
-	};
-
-	CD3DX12_ROOT_PARAMETER RP;
-	RP.InitAsDescriptorTable(2, &descriptorRange[0]);
-
-	ID3DBlob *rootSignatureBlob;
-
-	CHECK_HRESULT(wrapD3D12SerializeRootSignature(&CD3DX12_ROOT_SIGNATURE_DESC(1, &RP), D3D_ROOT_SIGNATURE_VERSION_1, &rootSignatureBlob, &errorBlob));
-	return std::make_pair(bytecode, rootSignatureBlob);
-}
-
-
 void D3D12GSRender::shader::init(ID3D12Device *device, ID3D12CommandQueue *gfx_command_queue)
 {
 	const char *fsCode = STRINGIFY(
@@ -213,25 +174,4 @@ void D3D12GSRender::shader::init(ID3D12Device *device, ID3D12CommandQueue *gfx_c
 	WaitForSingleObjectEx(handle, INFINITE, FALSE);
 	CloseHandle(handle);
 }
-
-void D3D12GSRender::init_convert_shader()
-{
-	const auto &p = compileF32toU8CS();
-	CHECK_HRESULT(
-		m_device->CreateRootSignature(0, p.second->GetBufferPointer(), p.second->GetBufferSize(), IID_PPV_ARGS(&m_convert_root_signature))
-		);
-
-	D3D12_COMPUTE_PIPELINE_STATE_DESC computePipelineStateDesc = {};
-	computePipelineStateDesc.CS.BytecodeLength = p.first->GetBufferSize();
-	computePipelineStateDesc.CS.pShaderBytecode = p.first->GetBufferPointer();
-	computePipelineStateDesc.pRootSignature = m_convert_root_signature;
-
-	CHECK_HRESULT(
-		m_device->CreateComputePipelineState(&computePipelineStateDesc, IID_PPV_ARGS(&m_convert_pso))
-		);
-
-	p.first->Release();
-	p.second->Release();
-}
-
 #endif

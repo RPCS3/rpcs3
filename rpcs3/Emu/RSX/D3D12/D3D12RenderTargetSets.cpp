@@ -298,9 +298,7 @@ void D3D12GSRender::copy_render_target_to_dma_location()
 	int clip_w = rsx::method_registers[NV4097_SET_SURFACE_CLIP_HORIZONTAL] >> 16;
 	int clip_h = rsx::method_registers[NV4097_SET_SURFACE_CLIP_VERTICAL] >> 16;
 
-	ComPtr<ID3D12Resource> depth_format_conversion_buffer;
-	ComPtr<ID3D12DescriptorHeap> descriptor_heap;
-	size_t depth_row_pitch = align(clip_w, 256);
+	size_t depth_row_pitch = align(clip_w * 4, 256);
 	size_t depth_buffer_offset_in_heap = 0;
 
 	u32 context_dma_color[] =
@@ -334,55 +332,10 @@ void D3D12GSRender::copy_render_target_to_dma_location()
 
 	if (m_context_dma_z && rpcs3::state.config.rsx.opengl.write_depth_buffer)
 	{
-		size_t uav_size = clip_w * clip_h * 2;
-
-		CHECK_HRESULT(
-			m_device->CreateCommittedResource(
-				&D3D12_HEAP_PROPERTIES{D3D12_HEAP_TYPE_DEFAULT},
-				D3D12_HEAP_FLAG_NONE,
-				&CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8_UNORM, clip_w, clip_h, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS),
-				D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
-				nullptr,
-				IID_PPV_ARGS(depth_format_conversion_buffer.GetAddressOf())
-				)
-			);
-
-		D3D12_DESCRIPTOR_HEAP_DESC descriptor_heap_desc = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV , 2, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE };
-		CHECK_HRESULT(
-			m_device->CreateDescriptorHeap(&descriptor_heap_desc, IID_PPV_ARGS(descriptor_heap.GetAddressOf()))
-			);
-		D3D12_SHADER_RESOURCE_VIEW_DESC shader_resource_view_desc = {};
-		shader_resource_view_desc.Format = get_depth_samplable_surface_format(m_surface.depth_format);
-		shader_resource_view_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-		shader_resource_view_desc.Texture2D.MipLevels = 1;
-		shader_resource_view_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-		m_device->CreateShaderResourceView(std::get<1>(m_rtts.m_bound_depth_stencil), &shader_resource_view_desc,
-			CD3DX12_CPU_DESCRIPTOR_HANDLE(descriptor_heap->GetCPUDescriptorHandleForHeapStart()));
-		D3D12_UNORDERED_ACCESS_VIEW_DESC uav_desc = {};
-		uav_desc.Format = DXGI_FORMAT_R8_UNORM;
-		uav_desc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
-		m_device->CreateUnorderedAccessView(depth_format_conversion_buffer.Get(), nullptr, &uav_desc,
-			CD3DX12_CPU_DESCRIPTOR_HANDLE(descriptor_heap->GetCPUDescriptorHandleForHeapStart()).Offset(1, m_descriptor_stride_srv_cbv_uav));
-
-		// Convert
-		get_current_resource_storage().command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(std::get<1>(m_rtts.m_bound_depth_stencil), D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_GENERIC_READ));
-
-		get_current_resource_storage().command_list->SetPipelineState(m_convert_pso);
-		get_current_resource_storage().command_list->SetComputeRootSignature(m_convert_root_signature);
-		get_current_resource_storage().command_list->SetDescriptorHeaps(1, descriptor_heap.GetAddressOf());
-		get_current_resource_storage().command_list->SetComputeRootDescriptorTable(0, descriptor_heap->GetGPUDescriptorHandleForHeapStart());
-		get_current_resource_storage().command_list->Dispatch(clip_w / 8, clip_h / 8, 1);
-
-		D3D12_RESOURCE_BARRIER barriers[] =
-		{
-			CD3DX12_RESOURCE_BARRIER::Transition(std::get<1>(m_rtts.m_bound_depth_stencil), D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_DEPTH_WRITE),
-			CD3DX12_RESOURCE_BARRIER::UAV(depth_format_conversion_buffer.Get()),
-		};
-		get_current_resource_storage().command_list->ResourceBarrier(2, barriers);
-		get_current_resource_storage().command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(depth_format_conversion_buffer.Get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COPY_SOURCE));
-		get_current_resource_storage().command_list->CopyTextureRegion(&CD3DX12_TEXTURE_COPY_LOCATION(m_readback_resources.get_heap(), { depth_buffer_offset_in_heap,{ DXGI_FORMAT_R8_UNORM, (UINT)clip_w, (UINT)clip_h, 1, (UINT)depth_row_pitch } }), 0, 0, 0,
-			&CD3DX12_TEXTURE_COPY_LOCATION(depth_format_conversion_buffer.Get(), 0), nullptr);
-
+		get_current_resource_storage().command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(std::get<1>(m_rtts.m_bound_depth_stencil), D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_COPY_SOURCE));
+		get_current_resource_storage().command_list->CopyTextureRegion(&CD3DX12_TEXTURE_COPY_LOCATION(m_readback_resources.get_heap(), { depth_buffer_offset_in_heap,{ DXGI_FORMAT_R32_TYPELESS, (UINT)clip_w, (UINT)clip_h, 1, (UINT)depth_row_pitch } }), 0, 0, 0,
+			&CD3DX12_TEXTURE_COPY_LOCATION(std::get<1>(m_rtts.m_bound_depth_stencil), 0), nullptr);
+		get_current_resource_storage().command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(std::get<1>(m_rtts.m_bound_depth_stencil), D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE));
 		invalidate_address(address_z);
 
 		need_transfer = true;
