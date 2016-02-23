@@ -24,6 +24,9 @@ struct frame_capture_data
 		std::array<std::vector<gsl::byte>, 4> color_buffer;
 		rsx::surface_depth_format depth_format;
 		std::array<std::vector<gsl::byte>, 2> depth_stencil;
+		rsx::index_array_type index_type;
+		std::vector<gsl::byte> index;
+		u32 vertex_count;
 	};
 	std::vector<std::pair<u32, u32> > command_queue;
 	std::vector<draw_state> draw_calls;

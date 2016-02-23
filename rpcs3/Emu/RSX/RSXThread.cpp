@@ -299,6 +299,29 @@ namespace rsx
 		draw_state.color_buffer = std::move(copy_render_targets_to_memory());
 		draw_state.depth_format = surface.depth_format;
 		draw_state.depth_stencil = std::move(copy_depth_stencil_buffer_to_memory());
+
+		if (draw_command == rsx::draw_command::indexed)
+		{
+			draw_state.vertex_count = 0;
+			for (const auto &range : first_count_commands)
+			{
+				draw_state.vertex_count += range.second;
+			}
+			draw_state.index_type = rsx::to_index_array_type(rsx::method_registers[NV4097_SET_INDEX_ARRAY_DMA] >> 4);
+			if (draw_state.index_type == rsx::index_array_type::u16)
+			{
+				draw_state.index.resize(2 * draw_state.vertex_count);
+				gsl::span<u16> dst = { (u16*)draw_state.index.data(), gsl::narrow<int>(draw_state.vertex_count) };
+				write_index_array_data_to_buffer(dst, draw_mode, first_count_commands);
+			}
+			if (draw_state.index_type == rsx::index_array_type::u32)
+			{
+				draw_state.index.resize(4 * draw_state.vertex_count);
+				gsl::span<u16> dst = { (u16*)draw_state.index.data(), gsl::narrow<int>(draw_state.vertex_count) };
+				write_index_array_data_to_buffer(dst, draw_mode, first_count_commands);
+			}
+		}
+
 		draw_state.programs = get_programs();
 		draw_state.name = name;
 		frame_debug.draw_calls.push_back(draw_state);
