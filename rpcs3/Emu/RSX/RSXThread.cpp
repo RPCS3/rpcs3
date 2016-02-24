@@ -568,6 +568,25 @@ namespace rsx
 		}
 	}
 
+	namespace
+	{
+		bool is_int_type(rsx::vertex_base_type type)
+		{
+			switch (type)
+			{
+			case rsx::vertex_base_type::s32k:
+			case rsx::vertex_base_type::ub256:
+				return true;
+			case rsx::vertex_base_type::f:
+			case rsx::vertex_base_type::cmp:
+			case rsx::vertex_base_type::sf:
+			case rsx::vertex_base_type::s1:
+			case rsx::vertex_base_type::ub:
+				return false;
+			}
+		}
+	}
+
 	std::array<u32, 4> thread::get_color_surface_addresses() const
 	{
 		u32 offset_color[] =
@@ -636,7 +655,8 @@ namespace rsx
 					vertex_arrays_info[index].size,
 					vertex_arrays_info[index].frequency,
 					!!((modulo_mask >> index) & 0x1),
-					true
+					true,
+					is_int_type(vertex_arrays_info[index].type)
 				}
 				);
 			}
@@ -648,7 +668,8 @@ namespace rsx
 					register_vertex_info[index].size,
 					register_vertex_info[index].frequency,
 					!!((modulo_mask >> index) & 0x1),
-					false
+					false,
+					is_int_type(vertex_arrays_info[index].type)
 				}
 				);
 			}
