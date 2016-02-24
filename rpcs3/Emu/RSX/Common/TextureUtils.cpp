@@ -291,7 +291,10 @@ std::vector<MipmapLevelInfo> upload_placed_texture(gsl::span<gsl::byte> mapped_b
 		else
 			return copy_texture_data<copy_unmodified_block, true, 4>(as_span_workaround<u128>(mapped_buffer), reinterpret_cast<const u128*>(pixels), w, h, depth, layer, texture.mipmap(), texture.pitch());
 	case CELL_GCM_TEXTURE_B8:
-		return copy_texture_data<copy_unmodified_block, true, 1>(as_span_workaround<u8>(mapped_buffer), reinterpret_cast<const u8*>(pixels), w, h, depth, layer, texture.mipmap(), texture.pitch());
+		if (is_swizzled)
+			return copy_texture_data<copy_unmodified_block_swizzled, false, 1>(as_span_workaround<u8>(mapped_buffer), reinterpret_cast<const u8*>(pixels), w, h, depth, layer, texture.mipmap(), texture.pitch());
+		else
+			return copy_texture_data<copy_unmodified_block, true, 1>(as_span_workaround<u8>(mapped_buffer), reinterpret_cast<const u8*>(pixels), w, h, depth, layer, texture.mipmap(), texture.pitch());
 	}
 	throw EXCEPTION("Wrong format %d", format);
 }
