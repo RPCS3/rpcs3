@@ -386,17 +386,20 @@ void GLGSRender::end()
 	//setup textures
 	for (int i = 0; i < rsx::limits::textures_count; ++i)
 	{
-		if (!textures[i].enabled())
-		{
-			continue;
-		}
-
 		int location;
 		if (m_program->uniforms.has_location("tex" + std::to_string(i), &location))
 		{
 			u32 target = GL_TEXTURE_2D;
 			if (textures[i].format() & CELL_GCM_TEXTURE_UN)
 				target = GL_TEXTURE_RECTANGLE;
+
+			if (!textures[i].enabled())
+			{
+				glActiveTexture(GL_TEXTURE0 + i);
+				glBindTexture(target, NULL);
+				glProgramUniform1i(m_program->id(), location, i);
+				continue;
+			}
 
 			m_gl_textures[i].set_target(target);
 
@@ -469,12 +472,17 @@ void GLGSRender::end()
 		{
 			auto &vertex_info = vertex_arrays_info[index];
 
-			if (!vertex_info.size) // disabled
-				continue;
-
 			int location;
 			if (!m_program->uniforms.has_location(reg_table[index] + "_buffer", &location))
 				continue;
+
+			if (!vertex_info.size) // disabled, bind a null sampler
+			{
+				glActiveTexture(GL_TEXTURE0 + index + rsx::limits::textures_count);
+				glBindTexture(GL_TEXTURE_BUFFER, NULL);
+				glProgramUniform1i(m_program->id(), location, index + rsx::limits::textures_count);
+				continue;
+			}
 
 			const u32 element_size = rsx::get_vertex_type_size_on_host(vertex_info.type, vertex_info.size);
 			u32 data_size = element_size * vertex_draw_count;
@@ -536,7 +544,7 @@ void GLGSRender::end()
 			texture->copy_from(*buffer, gl_type);
 
 			//Link texture to uniform
-			m_program->uniforms.texture(location, index + rsx::limits::vertex_count, *texture);
+			m_program->uniforms.texture(location, index + rsx::limits::textures_count, *texture);
 		}
 	}
 
@@ -552,13 +560,18 @@ void GLGSRender::end()
 	{
 		for (int index = 0; index < rsx::limits::vertex_count; ++index)
 		{
-			bool enabled = !!(input_mask & (1 << index));
-			if (!enabled)
-				continue;
-
 			int location;
 			if (!m_program->uniforms.has_location(reg_table[index]+"_buffer", &location))
 				continue;
+
+			bool enabled = !!(input_mask & (1 << index));
+			if (!enabled)
+			{
+				glActiveTexture(GL_TEXTURE0 + index + rsx::limits::textures_count);
+				glBindTexture(GL_TEXTURE_BUFFER, NULL);
+				glProgramUniform1i(m_program->id(), location, index + rsx::limits::textures_count);
+				continue;
+			}
 
 			if (vertex_arrays_info[index].size > 0)
 			{
@@ -637,7 +650,7 @@ void GLGSRender::end()
 				texture->copy_from(*buffer, gl_type);
 
 				//Link texture to uniform
-				m_program->uniforms.texture(location, index + rsx::limits::vertex_count, *texture);
+				m_program->uniforms.texture(location, index + rsx::limits::textures_count, *texture);
 			}
 			else if (register_vertex_info[index].size > 0)
 			{
@@ -663,13 +676,20 @@ void GLGSRender::end()
 					texture->copy_from(*buffer, gl_type);
 
 					//Link texture to uniform
-					m_program->uniforms.texture(location, index + rsx::limits::vertex_count, *texture);
+					m_program->uniforms.texture(location, index + rsx::limits::textures_count, *texture);
 					break;
 				}
 				default:
 					LOG_ERROR(RSX, "bad non array vertex data format (type = %d, size = %d)", vertex_info.type, vertex_info.size);
 					break;
 				}
+			}
+			else
+			{
+				glActiveTexture(GL_TEXTURE0 + index + rsx::limits::textures_count);
+				glBindTexture(GL_TEXTURE_BUFFER, NULL);
+				glProgramUniform1i(m_program->id(), location, index + rsx::limits::textures_count);
+				continue;
 			}
 		}
 	}
