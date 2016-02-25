@@ -101,13 +101,6 @@ private:
 	 */
 	shader m_output_scaling_pass;
 
-	/**
-	 * Data used when depth buffer is converted to uchar textures.
-	 */
-	ID3D12PipelineState *m_convert_pso;
-	ID3D12RootSignature *m_convert_root_signature;
-	void init_convert_shader();
-
 	resource_storage m_per_frame_storage[2];
 	resource_storage &get_current_resource_storage();
 	resource_storage &get_non_current_resource_storage();
@@ -128,8 +121,9 @@ private:
 	ID3D12Resource *m_dummy_texture;
 
 	// Currently used shader resources / samplers descriptor
-	std::array<std::tuple<ID3D12Resource*, D3D12_SHADER_RESOURCE_VIEW_DESC>, 16> m_current_shader_resources = {};
-	std::array<D3D12_SAMPLER_DESC, 16> m_current_samplers = {};
+	u32 m_current_transform_constants_buffer_descriptor_id;
+	ComPtr<ID3D12DescriptorHeap> m_current_texture_descriptors;
+	ComPtr<ID3D12DescriptorHeap> m_current_sampler_descriptors;
 public:
 	D3D12GSRender();
 	virtual ~D3D12GSRender();
