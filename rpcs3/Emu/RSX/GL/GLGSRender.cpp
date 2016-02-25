@@ -37,10 +37,10 @@ namespace
 		 * The buffer texture spec only allows fetches aligned to 8, 16, 32, etc...
 		 * This rules out most 3-component formats, except for the 32-wide RGB32F, RGB32I, RGB32UI
 		 */
-		const u32 vec1_types[] = { GL_R16, GL_R32F, GL_R16F, GL_R8, GL_R32I, GL_R16F, GL_R8 };
-		const u32 vec2_types[] = { GL_RG16, GL_RG32F, GL_RG16F, GL_RG8, GL_RG32I, GL_RG16F, GL_RG8 };
-		const u32 vec3_types[] = { GL_RGBA16, GL_RGB32F, GL_RGBA16F, GL_RGBA8, GL_RGB32I, GL_RGBA16F, GL_RGBA8 };	//VEC3 COMPONENTS NOT SUPPORTED!
-		const u32 vec4_types[] = { GL_RGBA16, GL_RGBA32F, GL_RGBA16F, GL_RGBA8, GL_RGBA32I, GL_RGBA16F, GL_RGBA8 };
+		const u32 vec1_types[] = { GL_R16, GL_R32F, GL_R16F, GL_R8, GL_R32I, GL_R16, GL_R8UI };
+		const u32 vec2_types[] = { GL_RG16, GL_RG32F, GL_RG16F, GL_RG8, GL_RG32I, GL_RG16, GL_RG8UI };
+		const u32 vec3_types[] = { GL_RGBA16, GL_RGB32F, GL_RGBA16F, GL_RGBA8, GL_RGB32I, GL_RGBA16, GL_RGBA8UI };	//VEC3 COMPONENTS NOT SUPPORTED!
+		const u32 vec4_types[] = { GL_RGBA16, GL_RGBA32F, GL_RGBA16F, GL_RGBA8, GL_RGBA32I, GL_RGBA16, GL_RGBA8UI };
 
 		const u32* vec_selectors[] = { 0, vec1_types, vec2_types, vec3_types, vec4_types };
 
@@ -497,6 +497,7 @@ void GLGSRender::end()
 
 			src += offsets[index];
 
+			//TODO: properly handle compressed data
 			for (u32 i = 0; i < vertex_draw_count; ++i)
 			{
 				if (vertex_info.type == rsx::vertex_base_type::ub && vertex_info.size == 4)
@@ -513,32 +514,8 @@ void GLGSRender::end()
 				dst += element_size;
 			}
 
-			void *vertex_data = static_cast<void*>(vertex_arrays_data.data());
-			std::vector<float> conversion_buf;
-
-			//Normalize diffuse color and specular color from 0-255 to 0-1; texelFetch does not normalize texels
-			if (index == 3 || index == 4)
-			{
-				if (vertex_info.type == rsx::vertex_base_type::ub ||
-					vertex_info.type == rsx::vertex_base_type::s1)
-				{
-					const u32 num_values = vertex_draw_count * vertex_info.size;
-					conversion_buf.resize(num_values);
-					u8 *source_values = (u8*)vertex_data;
-
-					for (u32 i = 0; i < num_values; ++i)
-					{
-						conversion_buf[i] = (float)source_values[i] / 255.f;
-					}
-
-					gl_type = to_gl_internal_type(rsx::vertex_base_type::f, vertex_info.size);
-					vertex_data = conversion_buf.data();
-					data_size *= sizeof(float);
-				}
-			}
-
 			buffer->data(data_size, nullptr);
-			buffer->sub_data(0, data_size, vertex_data);
+			buffer->sub_data(0, data_size, vertex_arrays_data.data());
 
 			//Attach buffer to texture
 			texture->copy_from(*buffer, gl_type);
@@ -617,34 +594,8 @@ void GLGSRender::end()
 				auto &buffer = m_gl_attrib_buffers[index].buffer;
 				auto &texture = m_gl_attrib_buffers[index].texture;
 
-				std::chrono::time_point<std::chrono::system_clock> u0 = std::chrono::system_clock::now();
-
-				void *vertex_data = static_cast<void*>(vertex_array.data());
-				std::vector<float> conversion_buf;
-
-				//Normalize color inputs if given in ub format
-				if (index == 3 || index == 4)
-				{
-					if (vertex_info.type == rsx::vertex_base_type::ub ||
-						vertex_info.type == rsx::vertex_base_type::s1)
-					{
-						const u32 num_values = vertex_draw_count * vertex_info.size;
-						conversion_buf.resize(num_values);
-						u8 *source_values = (u8*)vertex_data;
-
-						for (u32 i = 0; i < num_values; ++i)
-						{
-							conversion_buf[i] = (float)source_values[i] / 255.f;
-						}
-
-						gl_type = to_gl_internal_type(rsx::vertex_base_type::f, vertex_info.size);
-						vertex_data = conversion_buf.data();
-						data_size *= sizeof(float);
-					}
-				}
-
 				buffer->data(data_size, nullptr);
-				buffer->sub_data(0, data_size, vertex_data);
+				buffer->sub_data(0, data_size, vertex_array.data());
 
 				//Attach buffer to texture
 				texture->copy_from(*buffer, gl_type);
