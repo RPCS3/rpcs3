@@ -806,6 +806,30 @@ rsx::comparaison_function rsx::to_comparaison_function(u16 in)
 	throw EXCEPTION("Wrong comparaison function %x", in);
 }
 
+enum
+{
+	CELL_GCM_FOG_MODE_LINEAR = 0x2601,
+	CELL_GCM_FOG_MODE_EXP = 0x0800,
+	CELL_GCM_FOG_MODE_EXP2 = 0x0801,
+	CELL_GCM_FOG_MODE_EXP_ABS = 0x0802,
+	CELL_GCM_FOG_MODE_EXP2_ABS = 0x0803,
+	CELL_GCM_FOG_MODE_LINEAR_ABS = 0x0804,
+};
+
+rsx::fog_mode rsx::to_fog_mode(u32 in)
+{
+	switch (in)
+	{
+	case CELL_GCM_FOG_MODE_LINEAR: return rsx::fog_mode::linear;
+	case CELL_GCM_FOG_MODE_EXP: return rsx::fog_mode::exponential;
+	case CELL_GCM_FOG_MODE_EXP2: return rsx::fog_mode::exponential2;
+	case CELL_GCM_FOG_MODE_EXP_ABS: return rsx::fog_mode::exponential_abs;
+	case CELL_GCM_FOG_MODE_EXP2_ABS: return rsx::fog_mode::exponential2_abs;
+	case CELL_GCM_FOG_MODE_LINEAR_ABS: return rsx::fog_mode::linear_abs;
+	}
+	throw EXCEPTION("Wrong fog mode %x", in);
+}
+
 
 enum
 {

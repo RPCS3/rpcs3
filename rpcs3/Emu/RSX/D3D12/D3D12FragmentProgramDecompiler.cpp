@@ -39,6 +39,8 @@ void D3D12FragmentDecompiler::insertHeader(std::stringstream & OS)
 	OS << "	float4x4 scaleOffsetMat;" << std::endl;
 	OS << "	int isAlphaTested;" << std::endl;
 	OS << "	float alphaRef;" << std::endl;
+	OS << "	float fog_param0;\n";
+	OS << "	float fog_param1;\n";
 	OS << "};" << std::endl;
 }
 
@@ -141,6 +143,36 @@ void D3D12FragmentDecompiler::insertConstants(std::stringstream & OS)
 	}
 }
 
+namespace
+{
+	// Note: It's not clear whether fog is computed per pixel or per vertex.
+	// But it makes more sense to compute exp of interpoled value than to interpolate exp values.
+	void insert_fog_declaration(std::stringstream & OS, rsx::fog_mode mode)
+	{
+		switch (mode)
+		{
+		case rsx::fog_mode::linear:
+			OS << "	float4 fogc = fog_param1 * In.fogc + (fog_param0 - 1.);\n";
+			return;
+		case rsx::fog_mode::exponential:
+			OS << "	float4 fogc = exp(11.084 * (fog_param1 * In.fogc + fog_param0 - 1.5));\n";
+			return;
+		case rsx::fog_mode::exponential2:
+			OS << "	float4 fogc = exp(-pow(4.709 * (fog_param1 * In.fogc + fog_param0 - 1.5)), 2.);\n";
+			return;
+		case rsx::fog_mode::linear_abs:
+			OS << "	float4 fogc = fog_param1 * abs(In.fogc) + (fog_param0 - 1.);\n";
+			return;
+		case rsx::fog_mode::exponential_abs:
+			OS << "	float4 fogc = exp(11.084 * (fog_param1 * abs(In.fogc) + fog_param0 - 1.5));\n";
+			return;
+		case rsx::fog_mode::exponential2_abs:
+			OS << "	float4 fogc = exp(-pow(4.709 * (fog_param1 * abs(In.fogc) + fog_param0 - 1.5)), 2.);\n";
+			return;
+		}
+	}
+}
+
 void D3D12FragmentDecompiler::insertMainStart(std::stringstream & OS)
 {
 	insert_d3d12_legacy_function(OS);
@@ -169,6 +201,11 @@ void D3D12FragmentDecompiler::insertMainStart(std::stringstream & OS)
 					continue;
 				}
 			}
+			if (PI.name == "fogc")
+			{
+				insert_fog_declaration(OS, m_prog.fog_equation);
+				continue;
+			}
 			if (PI.name == "ssa")
 				continue;
 			OS << "	" << PT.type << " " << PI.name << " = In." << PI.name << ";" << std::endl;
@@ -179,6 +216,7 @@ void D3D12FragmentDecompiler::insertMainStart(std::stringstream & OS)
 	if (m_prog.origin_mode == rsx::window_origin::bottom)
 		OS << "	gl_FragCoord.y = (" << std::to_string(m_prog.height) << " - gl_FragCoord.y);\n";
 	OS << "	float4 ssa = is_front_face ? float4(1., 1., 1., 1.) : float4(-1., -1., -1., -1.);\n";
+
 	// Declare output
 	for (const ParamType &PT : m_parr.params[PF_PARAM_NONE])
 	{

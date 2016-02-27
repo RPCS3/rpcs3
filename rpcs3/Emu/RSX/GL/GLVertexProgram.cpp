@@ -31,6 +31,8 @@ void GLVertexDecompilerThread::insertHeader(std::stringstream &OS)
 	OS << "layout(std140, binding = 0) uniform ScaleOffsetBuffer" << std::endl;
 	OS << "{" << std::endl;
 	OS << "	mat4 scaleOffsetMat;" << std::endl;
+	OS << "	float fog_param0;\n";
+	OS << "	float fog_param1;\n";
 	OS << "};" << std::endl;
 }
 

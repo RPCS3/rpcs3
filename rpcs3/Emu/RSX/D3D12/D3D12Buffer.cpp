@@ -229,6 +229,9 @@ void D3D12GSRender::upload_and_bind_scale_offset_matrix(size_t descriptorIndex)
 	float alpha_ref = alpha_ref_raw / 255.f;
 	memcpy((char*)mapped_buffer + 16 * sizeof(float), &is_alpha_tested, sizeof(int));
 	memcpy((char*)mapped_buffer + 17 * sizeof(float), &alpha_ref, sizeof(float));
+	memcpy((char*)mapped_buffer + 18 * sizeof(float), &rsx::method_registers[NV4097_SET_FOG_PARAMS], sizeof(float));
+	memcpy((char*)mapped_buffer + 19 * sizeof(float), &rsx::method_registers[NV4097_SET_FOG_PARAMS + 1], sizeof(float));
+
 	m_buffer_data.unmap(CD3DX12_RANGE(heap_offset, heap_offset + 256));
 
 	D3D12_CONSTANT_BUFFER_VIEW_DESC constant_buffer_view_desc = {
