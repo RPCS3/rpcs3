@@ -1124,13 +1124,13 @@ namespace
 	{
 		switch (rsx::to_vertex_base_type(type))
 		{
-		case rsx::vertex_base_type::s1: return "Short";
+		case rsx::vertex_base_type::s1: return "Signed short normalized";
 		case rsx::vertex_base_type::f: return "Float";
 		case rsx::vertex_base_type::sf: return "Half float";
-		case rsx::vertex_base_type::ub: return "Unsigned byte";
-		case rsx::vertex_base_type::s32k: return "Signed int";
+		case rsx::vertex_base_type::ub: return "Unsigned byte normalized";
+		case rsx::vertex_base_type::s32k: return "Signed short unormalized";
 		case rsx::vertex_base_type::cmp: return "CMP";
-		case rsx::vertex_base_type::ub256: return "UB256";
+		case rsx::vertex_base_type::ub256: return "Unsigned byte unormalized";
 		}
 	}
 

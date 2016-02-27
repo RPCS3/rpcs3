@@ -30,10 +30,10 @@ namespace rsx
 		s1, ///< signed byte
 		f, ///< float
 		sf, ///< half float
-		ub, ///< unsigned byte
+		ub, ///< unsigned byte interpreted as 0.f and 1.f
 		s32k, ///< signed 32bits int
 		cmp, ///< compressed aka X11G11Z10 and always 1. W.
-		ub256,
+		ub256, ///< unsigned byte interpreted as between 0 and 255.
 	};
 
 	vertex_base_type to_vertex_base_type(u8 in);

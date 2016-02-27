@@ -56,7 +56,7 @@
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(VCInstallDir)UnitTest\lib;..\OpenAL\libs\Win64;..\ffmpeg\Windows\x86_64\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-   </Link>
+    </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -76,6 +76,7 @@
     <ClInclude Include="stdafx.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="ps3-rsx-common.cpp" />
     <ClCompile Include="ps3_ppu_llvm.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>

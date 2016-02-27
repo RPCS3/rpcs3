@@ -44,7 +44,7 @@ namespace
 		{
 			if (static_cast<size_t>(real_input.location) != std::get<0>(attribute))
 				continue;
-			OS << "Buffer<float4> " << std::get<1>(attribute) << "_buffer : register(t" << reg++ << ");\n";
+			OS << "Buffer<" << (real_input.int_type ? "int4" : "float4") << "> " << std::get<1>(attribute) << "_buffer : register(t" << reg++ << ");\n";
 			return true;
 		}
 		return false;

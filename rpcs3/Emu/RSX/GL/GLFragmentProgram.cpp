@@ -116,6 +116,8 @@ void GLFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 			OS << ";" << std::endl;
 		}
 	}
+
+	OS << "	vec4 ssa = gl_FrontFacing ? vec4(1.) : vec4(-1.);\n";
 }
 
 void GLFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
