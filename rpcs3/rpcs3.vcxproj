@@ -193,9 +193,6 @@
     <ProjectReference Include="OpenAL.vcxproj">
       <Project>{30a05c4d-f5fd-421c-a864-17a64bdeaa75}</Project>
     </ProjectReference>
-    <ProjectReference Include="VKGSRender.vcxproj">
-      <Project>{3ee5f075-b546-42c4-b6a8-e3ccef38b78d}</Project>
-    </ProjectReference>
     <ProjectReference Include="XAudio.vcxproj">
       <Project>{78cb2f39-b809-4a06-8329-8c0a19119d3d}</Project>
     </ProjectReference>
