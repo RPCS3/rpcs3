@@ -1512,6 +1512,5 @@ u64 GLGSRender::timestamp() const
 
 bool GLGSRender::on_access_violation(u32 address, bool is_writing)
 {
-	if (is_writing) return m_gl_texture_cache.mark_as_dirty(address);
-	return false;
+	return m_gl_texture_cache.sync_at((is_writing ? gl::cache_buffers::host : gl::cache_buffers::local), address);
 }

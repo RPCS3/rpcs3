@@ -6,6 +6,33 @@
 
 namespace gl
 {
+	enum class cache_access
+	{
+		none,
+		read = 1 << 0,
+		write = 1 << 1,
+		read_write = read | write,
+	};
+
+	enum class cache_buffers
+	{
+		none = 0,
+		host = 1 << 0,
+		local = 1 << 1,
+	};
+
+	enum class cache_entry_state
+	{
+		invalidated = 0,
+		local_synchronized = 1 << 0,
+		host_synchronized = 1 << 1,
+		synchronized = local_synchronized | host_synchronized,
+	};
+
+	DECLARE_ENUM_CLASS_BITWISE_OPERATORS(cache_access);
+	DECLARE_ENUM_CLASS_BITWISE_OPERATORS(cache_buffers);
+	DECLARE_ENUM_CLASS_BITWISE_OPERATORS(cache_entry_state);
+
 	struct cached_texture
 	{
 		u32 gl_id;
@@ -73,11 +100,13 @@ namespace gl
 		void update_frame_ctr();
 		void initialize_rtt_cache();
 		void upload_texture(int index, rsx::texture &tex, rsx::gl::texture &gl_texture);
-		bool mark_as_dirty(u32 address);
+		bool mark_local_as_dirty_at(u32 address);
 		void save_render_target(u32 texaddr, u32 range, gl::texture &gl_texture);
 		std::vector<invalid_cache_area> find_and_invalidate_in_range(u32 base, u32 limit);
-		void lock_invalidated_ranges(std::vector<invalid_cache_area> invalid);
+		void lock_invalidated_ranges(const std::vector<invalid_cache_area> &invalid);
 		void remove_in_range(u32 texaddr, u32 range);
 		bool explicit_writeback(gl::texture &tex, const u32 address, const u32 pitch);
+
+		bool sync_at(cache_buffers buffer, u32 address);
 	};
 }

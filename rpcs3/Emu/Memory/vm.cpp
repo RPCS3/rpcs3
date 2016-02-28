@@ -85,7 +85,7 @@ namespace vm
 	u8* const g_base_addr = g_addr_set[0].get();
 	u8* const g_priv_addr = g_addr_set[1].get();
 
-	std::array<atomic_t<u8>, 0x100000000ull / 4096> g_pages{}; // information about every page
+	std::array<atomic_t<u8>, 0x100000000ull / page_size> g_pages{}; // information about every page
 
 	std::vector<std::shared_ptr<block_t>> g_locations; // memory locations
 
@@ -170,7 +170,7 @@ namespace vm
 
 		const u64 align = 0x80000000ull >> cntlz32(size);
 
-		if (!size || !addr || size > 4096 || size != align || addr & (align - 1))
+		if (!size || !addr || size > page_size || size != align || addr & (align - 1))
 		{
 			throw EXCEPTION("Invalid arguments (addr=0x%x, size=0x%x)", addr, size);
 		}
@@ -316,7 +316,7 @@ namespace vm
 	{
 		const u64 align = 0x80000000ull >> cntlz32(size);
 
-		if (!size || !addr || size > 4096 || size != align || addr & (align - 1))
+		if (!size || !addr || size > page_size || size != align || addr & (align - 1))
 		{
 			throw EXCEPTION("Invalid arguments (addr=0x%x, size=0x%x)", addr, size);
 		}
@@ -372,9 +372,9 @@ namespace vm
 	{
 #ifdef _WIN32
 		DWORD old;
-		if (!::VirtualProtect(vm::base(addr & ~0xfff), 4096, no_access ? PAGE_NOACCESS : PAGE_READONLY, &old))
+		if (!::VirtualProtect(vm::base(addr & ~0xfff), page_size, no_access ? PAGE_NOACCESS : PAGE_READONLY, &old))
 #else
-		if (::mprotect(vm::base(addr & ~0xfff), 4096, no_access ? PROT_NONE : PROT_READ))
+		if (::mprotect(vm::base(addr & ~0xfff), page_size, no_access ? PROT_NONE : PROT_READ))
 #endif
 		{
 			throw EXCEPTION("System failure (addr=0x%x)", addr);
@@ -387,9 +387,9 @@ namespace vm
 		{
 #ifdef _WIN32
 			DWORD old;
-			if (!::VirtualProtect(vm::base(addr & ~0xfff), 4096, PAGE_READWRITE, &old))
+			if (!::VirtualProtect(vm::base(addr & ~0xfff), page_size, PAGE_READWRITE, &old))
 #else
-			if (::mprotect(vm::base(addr & ~0xfff), 4096, PROT_READ | PROT_WRITE))
+			if (::mprotect(vm::base(addr & ~0xfff), page_size, PROT_READ | PROT_WRITE))
 #endif
 			{
 				throw EXCEPTION("System failure (addr=0x%x)", addr);
@@ -424,7 +424,7 @@ namespace vm
 
 		const u64 align = 0x80000000ull >> cntlz32(size);
 
-		if (!size || !addr || size > 4096 || size != align || addr & (align - 1))
+		if (!size || !addr || size > page_size || size != align || addr & (align - 1))
 		{
 			throw EXCEPTION("Invalid arguments (addr=0x%x, size=0x%x)", addr, size);
 		}
@@ -460,7 +460,7 @@ namespace vm
 
 		const u64 align = 0x80000000ull >> cntlz32(size);
 
-		if (!size || !addr || size > 4096 || size != align || addr & (align - 1))
+		if (!size || !addr || size > page_size || size != align || addr & (align - 1))
 		{
 			throw EXCEPTION("Invalid arguments (addr=0x%x, size=0x%x)", addr, size);
 		}
@@ -545,7 +545,7 @@ namespace vm
 
 		const u64 align = 0x80000000ull >> cntlz32(size);
 
-		if (!size || !addr || size > 4096 || size != align || addr & (align - 1))
+		if (!size || !addr || size > page_size || size != align || addr & (align - 1))
 		{
 			throw EXCEPTION("Invalid arguments (addr=0x%x, size=0x%x)", addr, size);
 		}
@@ -586,16 +586,16 @@ namespace vm
 
 	void _page_map(u32 addr, u32 size, u8 flags)
 	{
-		if (!size || (size | addr) % 4096 || flags & page_allocated)
+		if (!size || (size | addr) & (page_size - 1) || flags & page_allocated)
 		{
 			throw EXCEPTION("Invalid arguments (addr=0x%x, size=0x%x)", addr, size);
 		}
 
-		for (u32 i = addr / 4096; i < addr / 4096 + size / 4096; i++)
+		for (u32 i = addr / page_size; i < addr / page_size + size / page_size; i++)
 		{
 			if (g_pages[i])
 			{
-				throw EXCEPTION("Memory already mapped (addr=0x%x, size=0x%x, flags=0x%x, current_addr=0x%x)", addr, size, flags, i * 4096);
+				throw EXCEPTION("Memory already mapped (addr=0x%x, size=0x%x, flags=0x%x, current_addr=0x%x)", addr, size, flags, i * page_size);
 			}
 		}
 
@@ -613,11 +613,11 @@ namespace vm
 			throw EXCEPTION("System failure (addr=0x%x, size=0x%x, flags=0x%x)", addr, size, flags);
 		}
 
-		for (u32 i = addr / 4096; i < addr / 4096 + size / 4096; i++)
+		for (u32 i = addr / page_size; i < addr / page_size + size / page_size; i++)
 		{
 			if (g_pages[i].exchange(flags | page_allocated))
 			{
-				throw EXCEPTION("Concurrent access (addr=0x%x, size=0x%x, flags=0x%x, current_addr=0x%x)", addr, size, flags, i * 4096);
+				throw EXCEPTION("Concurrent access (addr=0x%x, size=0x%x, flags=0x%x, current_addr=0x%x)", addr, size, flags, i * page_size);
 			}
 		}
 
@@ -628,7 +628,7 @@ namespace vm
 	{
 		std::lock_guard<reservation_mutex_t> lock(g_reservation_mutex);
 
-		if (!size || (size | addr) % 4096)
+		if (!size || (size | addr) & (page_size - 1))
 		{
 			throw EXCEPTION("Invalid arguments (addr=0x%x, size=0x%x)", addr, size);
 		}
@@ -637,7 +637,7 @@ namespace vm
 
 		flags_test |= page_allocated;
 
-		for (u32 i = addr / 4096; i < addr / 4096 + size / 4096; i++)
+		for (u32 i = addr / page_size; i < addr / page_size + size / page_size; i++)
 		{
 			if ((g_pages[i] & flags_test) != (flags_test | page_allocated))
 			{
@@ -650,9 +650,9 @@ namespace vm
 			return true;
 		}
 
-		for (u32 i = addr / 4096; i < addr / 4096 + size / 4096; i++)
+		for (u32 i = addr / page_size; i < addr / page_size + size / page_size; i++)
 		{
-			_reservation_break(i * 4096);
+			_reservation_break(i * page_size);
 
 			const u8 f1 = g_pages[i]._or(flags_set & ~flags_inv) & (page_writable | page_readable);
 			g_pages[i]._and_not(flags_clear & ~flags_inv);
@@ -660,16 +660,16 @@ namespace vm
 
 			if (f1 != f2)
 			{
-				void* real_addr = vm::base(i * 4096);
+				void* real_addr = vm::base(i * page_size);
 
 #ifdef _WIN32
 				DWORD old;
 
 				auto protection = f2 & page_writable ? PAGE_READWRITE : (f2 & page_readable ? PAGE_READONLY : PAGE_NOACCESS);
-				if (!::VirtualProtect(real_addr, 4096, protection, &old))
+				if (!::VirtualProtect(real_addr, page_size, protection, &old))
 #else
 				auto protection = f2 & page_writable ? PROT_WRITE | PROT_READ : (f2 & page_readable ? PROT_READ : PROT_NONE);
-				if (::mprotect(real_addr, 4096, protection))
+				if (::mprotect(real_addr, page_size, protection))
 #endif
 				{
 					throw EXCEPTION("System failure (addr=0x%x, size=0x%x, flags_test=0x%x, flags_set=0x%x, flags_clear=0x%x)", addr, size, flags_test, flags_set, flags_clear);
@@ -682,26 +682,26 @@ namespace vm
 
 	void _page_unmap(u32 addr, u32 size)
 	{
-		if (!size || (size | addr) % 4096)
+		if (!size || (size | addr) & (page_size - 1))
 		{
 			throw EXCEPTION("Invalid arguments (addr=0x%x, size=0x%x)", addr, size);
 		}
 
-		for (u32 i = addr / 4096; i < addr / 4096 + size / 4096; i++)
+		for (u32 i = addr / page_size; i < addr / page_size + size / page_size; i++)
 		{
 			if ((g_pages[i] & page_allocated) == 0)
 			{
-				throw EXCEPTION("Memory not mapped (addr=0x%x, size=0x%x, current_addr=0x%x)", addr, size, i * 4096);
+				throw EXCEPTION("Memory not mapped (addr=0x%x, size=0x%x, current_addr=0x%x)", addr, size, i * page_size);
 			}
 		}
 
-		for (u32 i = addr / 4096; i < addr / 4096 + size / 4096; i++)
+		for (u32 i = addr / page_size; i < addr / page_size + size / page_size; i++)
 		{
-			_reservation_break(i * 4096);
+			_reservation_break(i * page_size);
 
 			if (!(g_pages[i].exchange(0) & page_allocated))
 			{
-				throw EXCEPTION("Concurrent access (addr=0x%x, size=0x%x, current_addr=0x%x)", addr, size, i * 4096);
+				throw EXCEPTION("Concurrent access (addr=0x%x, size=0x%x, current_addr=0x%x)", addr, size, i * page_size);
 			}
 		}
 
@@ -727,7 +727,7 @@ namespace vm
 			return false;
 		}
 
-		for (u32 i = addr / 4096; i <= (addr + size - 1) / 4096; i++)
+		for (u32 i = addr / page_size; i <= (addr + size - 1) / page_size; i++)
 		{
 			if ((g_pages[i] & page_allocated) == 0)
 			{
@@ -794,7 +794,7 @@ namespace vm
 	bool block_t::try_alloc(u32 addr, u32 size)
 	{
 		// check if memory area is already mapped
-		for (u32 i = addr / 4096; i <= (addr + size - 1) / 4096; i++)
+		for (u32 i = addr / page_size; i <= (addr + size - 1) / page_size; i++)
 		{
 			if (g_pages[i])
 			{
@@ -848,10 +848,10 @@ namespace vm
 		std::lock_guard<std::mutex> lock(m_mutex);
 
 		// align to minimal page size
-		size = ::align(size, 4096);
+		size = ::align(size, page_size);
 
 		// check alignment (it's page allocation, so passing small values there is just silly)
-		if (align < 4096 || align != (0x80000000u >> cntlz32(align)))
+		if (align < page_size || align != (0x80000000u >> cntlz32(align)))
 		{
 			throw EXCEPTION("Invalid alignment (size=0x%x, align=0x%x)", size, align);
 		}
@@ -884,7 +884,7 @@ namespace vm
 		std::lock_guard<std::mutex> lock(m_mutex);
 
 		// align to minimal page size
-		size = ::align(size, 4096);
+		size = ::align(size, page_size);
 
 		// return if addr or size is invalid
 		if (!size || size > this->size || addr < this->addr || addr + size - 1 >= this->addr + this->size - 1)
@@ -929,7 +929,7 @@ namespace vm
 	{
 		std::lock_guard<reservation_mutex_t> lock(g_reservation_mutex);
 
-		if (!size || (size | addr) % 4096)
+		if (!size || (size | addr) & (page_size - 1))
 		{
 			throw EXCEPTION("Invalid arguments (addr=0x%x, size=0x%x)", addr, size);
 		}
@@ -947,11 +947,11 @@ namespace vm
 			}
 		}
 
-		for (u32 i = addr / 4096; i < addr / 4096 + size / 4096; i++)
+		for (u32 i = addr / page_size; i < addr / page_size + size / page_size; i++)
 		{
 			if (g_pages[i])
 			{
-				throw EXCEPTION("Unexpected pages allocated (current_addr=0x%x)", i * 4096);
+				throw EXCEPTION("Unexpected pages allocated (current_addr=0x%x)", i * page_size);
 			}
 		}
 

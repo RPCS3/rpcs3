@@ -4,6 +4,8 @@
 
 namespace vm
 {
+	static constexpr u32 page_size = 0x1000;
+
 	extern u8* const g_base_addr;
 	extern u8* const g_priv_addr;
 
@@ -328,7 +330,7 @@ namespace vm
 
 		void init();
 	}
-	
+
 	namespace psv
 	{
 		template<typename T> inline to_le_t<T>* _ptr(u32 addr)

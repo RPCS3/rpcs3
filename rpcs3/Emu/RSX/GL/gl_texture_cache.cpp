@@ -21,27 +21,24 @@ namespace gl
 
 	bool texture_cache::lock_memory_region(u32 start, u32 size)
 	{
-		static const u32 memory_page_size = 4096;
-		start = start & ~(memory_page_size - 1);
-		size = (u32)align(size, memory_page_size);
+		start = start & ~(vm::page_size - 1);
+		size = (u32)align(size, vm::page_size);
 
 		return vm::page_protect(start, size, 0, 0, vm::page_writable);
 	}
 
 	bool texture_cache::unlock_memory_region(u32 start, u32 size)
 	{
-		static const u32 memory_page_size = 4096;
-		start = start & ~(memory_page_size - 1);
-		size = (u32)align(size, memory_page_size);
+		start = start & ~(vm::page_size - 1);
+		size = (u32)align(size, vm::page_size);
 
 		return vm::page_protect(start, size, 0, vm::page_writable, 0);
 	}
 
 	void texture_cache::lock_gl_object(cached_texture &obj)
 	{
-		static const u32 memory_page_size = 4096;
-		obj.protected_block_start = obj.data_addr & ~(memory_page_size - 1);
-		obj.protected_block_sz = (u32)align(obj.block_sz, memory_page_size);
+		obj.protected_block_start = obj.data_addr & ~(vm::page_size - 1);
+		obj.protected_block_sz = (u32)align(obj.block_sz, vm::page_size);
 
 		if (!lock_memory_region(obj.protected_block_start, obj.protected_block_sz))
 			LOG_ERROR(RSX, "lock_gl_object failed!");
@@ -191,8 +188,8 @@ namespace gl
 		{
 			if (!rtt.data_addr || rtt.is_dirty) continue;
 
-			u32 rtt_aligned_base = ((u32)(rtt.data_addr)) & ~(4096 - 1);
-			u32 rtt_block_sz = align(rtt.block_sz, 4096);
+			u32 rtt_aligned_base = u32(rtt.data_addr) & ~(vm::page_size - 1);
+			u32 rtt_block_sz = align(rtt.block_sz, vm::page_size);
 
 			if (region_overlaps(rtt_aligned_base, (rtt_aligned_base + rtt_block_sz), base, base + size))
 			{
@@ -403,15 +400,20 @@ namespace gl
 
 				gl_texture.set_id(real_id);
 			}
+
 			return;
 		}
 		else if (rtt)
+		{
 			LOG_NOTICE(RSX, "RTT texture for address 0x%X is dirty!", texaddr);
+		}
 
 		cached_texture *obj = nullptr;
 
 		if (!rtt)
+		{
 			obj = find_obj_for_params(texaddr, tex.width(), tex.height(), tex.mipmap());
+		}
 
 		if (obj && !obj->deleted)
 		{
@@ -444,13 +446,16 @@ namespace gl
 		}
 	}
 
-	bool texture_cache::mark_as_dirty(u32 address)
+	bool texture_cache::mark_local_as_dirty_at(u32 address)
 	{
 		bool response = false;
 
 		for (cached_texture &tex : m_texture_cache)
 		{
-			if (!tex.locked) continue;
+			if (!tex.locked)
+			{
+				continue;
+			}
 
 			if (tex.protected_block_start <= address &&
 				tex.protected_block_sz > (address - tex.protected_block_start))
@@ -465,27 +470,28 @@ namespace gl
 			}
 		}
 
-		if (response) return true;
-
-		for (cached_rtt &rtt : m_rtt_cache)
+		if (!response)
 		{
-			if (!rtt.data_addr || rtt.is_dirty) continue;
-
-			u32 rtt_aligned_base = ((u32)(rtt.data_addr)) & ~(4096 - 1);
-			u32 rtt_block_sz = align(rtt.block_sz, 4096);
-
-			if (rtt.locked && (u64)address >= rtt_aligned_base)
+			for (cached_rtt &rtt : m_rtt_cache)
 			{
-				u32 offset = address - rtt_aligned_base;
-				if (offset >= rtt_block_sz) continue;
+				if (!rtt.data_addr || rtt.is_dirty) continue;
 
-				LOG_NOTICE(RSX, "Dirty non-texture RTT FOUND! addr=0x%X", rtt.data_addr);
-				rtt.is_dirty = true;
+				u32 rtt_aligned_base = u32(rtt.data_addr) & ~(vm::page_size - 1);
+				u32 rtt_block_sz = align(rtt.block_sz, vm::page_size);
 
-				unlock_memory_region(rtt_aligned_base, rtt_block_sz);
-				rtt.locked = false;
+				if (rtt.locked && (u64)address >= rtt_aligned_base)
+				{
+					u32 offset = address - rtt_aligned_base;
+					if (offset >= rtt_block_sz) continue;
 
-				response = true;
+					LOG_NOTICE(RSX, "Dirty non-texture RTT FOUND! addr=0x%X", rtt.data_addr);
+					rtt.is_dirty = true;
+
+					unlock_memory_region(rtt_aligned_base, rtt_block_sz);
+					rtt.locked = false;
+
+					response = true;
+				}
 			}
 		}
 
@@ -547,9 +553,9 @@ namespace gl
 				if (base < obj.data_addr)
 					invalid.block_base = obj.protected_block_start;
 				else
-					invalid.block_base = obj.protected_block_start + obj.protected_block_sz - 4096;
+					invalid.block_base = obj.protected_block_start + obj.protected_block_sz - vm::page_size;
 
-				invalid.block_sz = 4096;
+				invalid.block_sz = vm::page_size;
 				unlock_memory_region(invalid.block_base, invalid.block_sz);
 				result.push_back(invalid);
 			}
@@ -558,9 +564,9 @@ namespace gl
 		return result;
 	}
 
-	void texture_cache::lock_invalidated_ranges(std::vector<invalid_cache_area> invalid)
+	void texture_cache::lock_invalidated_ranges(const std::vector<invalid_cache_area> &invalid)
 	{
-		for (invalid_cache_area area : invalid)
+		for (const invalid_cache_area &area : invalid)
 		{
 			lock_memory_region(area.block_base, area.block_sz);
 		}
@@ -602,5 +608,22 @@ namespace gl
 
 		//No valid object found in cache
 		return false;
+	}
+
+	bool texture_cache::sync_at(cache_buffers buffers, u32 address)
+	{
+		bool result = false;
+
+		if ((buffers & cache_buffers::host) != cache_buffers::none)
+		{
+			result = mark_local_as_dirty_at(address);
+		}
+
+		if ((buffers & cache_buffers::local) != cache_buffers::none)
+		{
+			//TODO
+		}
+
+		return result;
 	}
 }
