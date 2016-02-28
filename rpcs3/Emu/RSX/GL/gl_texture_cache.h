@@ -32,19 +32,15 @@ namespace gl
 
 		struct cached_rtt
 		{
+			bool valid = false;
+			bool locked;
+			bool is_dirty;
+			bool is_depth;
 			u32 copy_glid;
 			u32 data_addr;
 			u32 block_sz;
-
-			bool is_dirty;
-			bool is_depth;
-			bool valid;
-
 			u32 current_width;
 			u32 current_height;
-
-			bool locked;
-			cached_rtt() : valid(false) {}
 		};
 
 	private:
