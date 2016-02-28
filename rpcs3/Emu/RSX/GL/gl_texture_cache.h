@@ -6,57 +6,59 @@
 
 namespace gl
 {
-	class gl_texture_cache
+	struct cached_texture
 	{
+		u32 gl_id;
+		u32 w;
+		u32 h;
+		u64 data_addr;
+		u32 block_sz;
+		u32 frame_ctr;
+		u32 protected_block_start;
+		u32 protected_block_sz;
+		u16 mipmap;
+		bool deleted;
+		bool locked;
+	};
+
+	struct invalid_cache_area
+	{
+		u32 block_base;
+		u32 block_sz;
+	};
+
+	struct cached_rtt
+	{
+		bool valid = false;
+		bool locked;
+		bool is_dirty;
+		bool is_depth;
+		u32 copy_glid;
+		u32 data_addr;
+		u32 block_sz;
+		u32 current_width;
+		u32 current_height;
+	};
+
+	class texture_cache
+	{
+		std::vector<cached_texture> m_texture_cache;
+		std::vector<cached_rtt> m_rtt_cache;
+		u32 m_frame_ctr = 0;
+
 	public:
-		struct gl_cached_texture
-		{
-			u32 gl_id;
-			u32 w;
-			u32 h;
-			u64 data_addr;
-			u32 block_sz;
-			u32 frame_ctr;
-			u32 protected_block_start;
-			u32 protected_block_sz;
-			u16 mipmap;
-			bool deleted;
-			bool locked;
-		};
-
-		struct invalid_cache_area
-		{
-			u32 block_base;
-			u32 block_sz;
-		};
-
-		struct cached_rtt
-		{
-			bool valid = false;
-			bool locked;
-			bool is_dirty;
-			bool is_depth;
-			u32 copy_glid;
-			u32 data_addr;
-			u32 block_sz;
-			u32 current_width;
-			u32 current_height;
-		};
+		~texture_cache();
 
 	private:
-		std::vector<gl_cached_texture> texture_cache;
-		std::vector<cached_rtt> rtt_cache;
-		u32 frame_ctr;
-
 		bool lock_memory_region(u32 start, u32 size);
 		bool unlock_memory_region(u32 start, u32 size);
-		void lock_gl_object(gl_cached_texture &obj);
-		void unlock_gl_object(gl_cached_texture &obj);
+		void lock_gl_object(cached_texture &obj);
+		void unlock_gl_object(cached_texture &obj);
 
-		gl_cached_texture *find_obj_for_params(u64 texaddr, u32 w, u32 h, u16 mipmap);
-		gl_cached_texture& create_obj_for_params(u32 gl_id, u64 texaddr, u32 w, u32 h, u16 mipmap);
+		cached_texture *find_obj_for_params(u64 texaddr, u32 w, u32 h, u16 mipmap);
+		cached_texture& create_obj_for_params(u32 gl_id, u64 texaddr, u32 w, u32 h, u16 mipmap);
 
-		void remove_obj(gl_cached_texture &tex);
+		void remove_obj(cached_texture &tex);
 		void remove_obj_for_glid(u32 gl_id);
 		void clear_obj_cache();
 		bool region_overlaps(u32 base1, u32 limit1, u32 base2, u32 limit2);
@@ -68,9 +70,6 @@ namespace gl
 		void destroy_rtt_cache();
 
 	public:
-		gl_texture_cache();
-		~gl_texture_cache();
-
 		void update_frame_ctr();
 		void initialize_rtt_cache();
 		void upload_texture(int index, rsx::texture &tex, rsx::gl::texture &gl_texture);

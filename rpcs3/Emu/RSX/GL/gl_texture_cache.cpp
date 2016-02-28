@@ -14,7 +14,12 @@
 
 namespace gl
 {
-	bool gl_texture_cache::lock_memory_region(u32 start, u32 size)
+	texture_cache::~texture_cache()
+	{
+		clear_obj_cache();
+	}
+
+	bool texture_cache::lock_memory_region(u32 start, u32 size)
 	{
 		static const u32 memory_page_size = 4096;
 		start = start & ~(memory_page_size - 1);
@@ -23,7 +28,7 @@ namespace gl
 		return vm::page_protect(start, size, 0, 0, vm::page_writable);
 	}
 
-	bool gl_texture_cache::unlock_memory_region(u32 start, u32 size)
+	bool texture_cache::unlock_memory_region(u32 start, u32 size)
 	{
 		static const u32 memory_page_size = 4096;
 		start = start & ~(memory_page_size - 1);
@@ -32,7 +37,7 @@ namespace gl
 		return vm::page_protect(start, size, 0, vm::page_writable, 0);
 	}
 
-	void gl_texture_cache::lock_gl_object(gl_cached_texture &obj)
+	void texture_cache::lock_gl_object(cached_texture &obj)
 	{
 		static const u32 memory_page_size = 4096;
 		obj.protected_block_start = obj.data_addr & ~(memory_page_size - 1);
@@ -44,7 +49,7 @@ namespace gl
 			obj.locked = true;
 	}
 
-	void gl_texture_cache::unlock_gl_object(gl_cached_texture &obj)
+	void texture_cache::unlock_gl_object(cached_texture &obj)
 	{
 		if (!unlock_memory_region(obj.protected_block_start, obj.protected_block_sz))
 			LOG_ERROR(RSX, "unlock_gl_object failed! Will probably crash soon...");
@@ -52,9 +57,9 @@ namespace gl
 			obj.locked = false;
 	}
 
-	gl_texture_cache::gl_cached_texture *gl_texture_cache::find_obj_for_params(u64 texaddr, u32 w, u32 h, u16 mipmap)
+	cached_texture *texture_cache::find_obj_for_params(u64 texaddr, u32 w, u32 h, u16 mipmap)
 	{
-		for (gl_cached_texture &tex : texture_cache)
+		for (cached_texture &tex : m_texture_cache)
 		{
 			if (tex.gl_id && tex.data_addr == texaddr)
 			{
@@ -66,7 +71,7 @@ namespace gl
 					continue;
 				}
 
-				tex.frame_ctr = frame_ctr;
+				tex.frame_ctr = m_frame_ctr;
 				return &tex;
 			}
 		}
@@ -74,9 +79,9 @@ namespace gl
 		return nullptr;
 	}
 
-	gl_texture_cache::gl_cached_texture& gl_texture_cache::create_obj_for_params(u32 gl_id, u64 texaddr, u32 w, u32 h, u16 mipmap)
+	cached_texture& texture_cache::create_obj_for_params(u32 gl_id, u64 texaddr, u32 w, u32 h, u16 mipmap)
 	{
-		gl_cached_texture obj = { 0 };
+		cached_texture obj = { 0 };
 
 		obj.gl_id = gl_id;
 		obj.data_addr = texaddr;
@@ -86,13 +91,13 @@ namespace gl
 		obj.deleted = false;
 		obj.locked = false;
 
-		for (gl_cached_texture &tex : texture_cache)
+		for (cached_texture &tex : m_texture_cache)
 		{
-			if (tex.gl_id == 0 || (tex.deleted && (frame_ctr - tex.frame_ctr) > 32768))
+			if (tex.gl_id == 0 || (tex.deleted && (m_frame_ctr - tex.frame_ctr) > 32768))
 			{
 				if (tex.gl_id)
 				{
-					LOG_NOTICE(RSX, "Reclaiming GL texture %d, cache_size=%d, master_ctr=%d, ctr=%d", tex.gl_id, texture_cache.size(), frame_ctr, tex.frame_ctr);
+					LOG_NOTICE(RSX, "Reclaiming GL texture %d, cache_size=%d, master_ctr=%d, ctr=%d", tex.gl_id, m_texture_cache.size(), m_frame_ctr, tex.frame_ctr);
 					__glcheck glDeleteTextures(1, &tex.gl_id);
 					unlock_gl_object(tex);
 					tex.gl_id = 0;
@@ -103,11 +108,11 @@ namespace gl
 			}
 		}
 
-		texture_cache.push_back(obj);
-		return texture_cache[texture_cache.size() - 1];
+		m_texture_cache.push_back(obj);
+		return m_texture_cache.back();
 	}
 
-	void gl_texture_cache::remove_obj(gl_cached_texture &tex)
+	void texture_cache::remove_obj(cached_texture &tex)
 	{
 		if (tex.locked)
 			unlock_gl_object(tex);
@@ -115,18 +120,18 @@ namespace gl
 		tex.deleted = true;
 	}
 
-	void gl_texture_cache::remove_obj_for_glid(u32 gl_id)
+	void texture_cache::remove_obj_for_glid(u32 gl_id)
 	{
-		for (gl_cached_texture &tex : texture_cache)
+		for (cached_texture &tex : m_texture_cache)
 		{
 			if (tex.gl_id == gl_id)
 				remove_obj(tex);
 		}
 	}
 
-	void gl_texture_cache::clear_obj_cache()
+	void texture_cache::clear_obj_cache()
 	{
-		for (gl_cached_texture &tex : texture_cache)
+		for (cached_texture &tex : m_texture_cache)
 		{
 			if (tex.locked)
 				unlock_gl_object(tex);
@@ -141,11 +146,11 @@ namespace gl
 			tex.gl_id = 0;
 		}
 
-		texture_cache.resize(0);
+		m_texture_cache.clear();
 		destroy_rtt_cache();
 	}
 
-	bool gl_texture_cache::region_overlaps(u32 base1, u32 limit1, u32 base2, u32 limit2)
+	bool texture_cache::region_overlaps(u32 base1, u32 limit1, u32 base2, u32 limit2)
 	{
 		//Check for memory area overlap. unlock page(s) if needed and add this index to array.
 		//Axis separation test
@@ -167,9 +172,9 @@ namespace gl
 		return false;
 	}
 
-	gl_texture_cache::cached_rtt* gl_texture_cache::find_cached_rtt(u32 base, u32 size)
+	cached_rtt* texture_cache::find_cached_rtt(u32 base, u32 size)
 	{
-		for (cached_rtt &rtt : rtt_cache)
+		for (cached_rtt &rtt : m_rtt_cache)
 		{
 			if (region_overlaps(base, base + size, rtt.data_addr, rtt.data_addr + rtt.block_sz))
 			{
@@ -180,9 +185,9 @@ namespace gl
 		return nullptr;
 	}
 
-	void gl_texture_cache::invalidate_rtts_in_range(u32 base, u32 size)
+	void texture_cache::invalidate_rtts_in_range(u32 base, u32 size)
 	{
-		for (cached_rtt &rtt : rtt_cache)
+		for (cached_rtt &rtt : m_rtt_cache)
 		{
 			if (!rtt.data_addr || rtt.is_dirty) continue;
 
@@ -202,7 +207,7 @@ namespace gl
 		}
 	}
 
-	void gl_texture_cache::prep_rtt(cached_rtt &rtt, u32 width, u32 height, u32 gl_pixel_format_internal)
+	void texture_cache::prep_rtt(cached_rtt &rtt, u32 width, u32 height, u32 gl_pixel_format_internal)
 	{
 		int binding = 0;
 		bool is_depth = false;
@@ -257,13 +262,13 @@ namespace gl
 		rtt.is_depth = is_depth;
 	}
 
-	void gl_texture_cache::save_rtt(u32 base, u32 size, u32 width, u32 height, u32 gl_pixel_format_internal, gl::texture &source)
+	void texture_cache::save_rtt(u32 base, u32 size, u32 width, u32 height, u32 gl_pixel_format_internal, gl::texture &source)
 	{
 		cached_rtt *region = find_cached_rtt(base, size);
 
 		if (!region)
 		{
-			for (cached_rtt &rtt : rtt_cache)
+			for (cached_rtt &rtt : m_rtt_cache)
 			{
 				if (rtt.valid && rtt.data_addr == 0)
 				{
@@ -317,15 +322,15 @@ namespace gl
 		}
 	}
 
-	void gl_texture_cache::write_rtt(u32 base, u32 size, u32 texaddr)
+	void texture_cache::write_rtt(u32 base, u32 size, u32 texaddr)
 	{
 		//Actually download the data, since it seems that cell is writing to it manually
 		throw;
 	}
 
-	void gl_texture_cache::destroy_rtt_cache()
+	void texture_cache::destroy_rtt_cache()
 	{
-		for (cached_rtt &rtt : rtt_cache)
+		for (cached_rtt &rtt : m_rtt_cache)
 		{
 			rtt.valid = false;
 			rtt.is_dirty = false;
@@ -336,27 +341,20 @@ namespace gl
 			rtt.copy_glid = 0;
 		}
 
-		rtt_cache.resize(0);
+		m_rtt_cache.clear();
 	}
 
-	gl_texture_cache::gl_texture_cache()
-		: frame_ctr(0)
+	void texture_cache::update_frame_ctr()
 	{
+		m_frame_ctr++;
 	}
 
-	gl_texture_cache::~gl_texture_cache()
+	void texture_cache::initialize_rtt_cache()
 	{
-		clear_obj_cache();
-	}
-
-	void gl_texture_cache::update_frame_ctr()
-	{
-		frame_ctr++;
-	}
-
-	void gl_texture_cache::initialize_rtt_cache()
-	{
-		if (rtt_cache.size()) throw EXCEPTION("Initialize RTT cache while cache already exists! Leaking objects??");
+		if (!m_rtt_cache.empty())
+		{
+			throw EXCEPTION("Initialize RTT cache while cache already exists! Leaking objects??");
+		}
 
 		for (int i = 0; i < 64; ++i)
 		{
@@ -369,11 +367,11 @@ namespace gl
 			rtt.data_addr = 0;
 			rtt.locked = false;
 
-			rtt_cache.push_back(rtt);
+			m_rtt_cache.push_back(rtt);
 		}
 	}
 
-	void gl_texture_cache::upload_texture(int index, rsx::texture &tex, rsx::gl::texture &gl_texture)
+	void texture_cache::upload_texture(int index, rsx::texture &tex, rsx::gl::texture &gl_texture)
 	{
 		const u32 texaddr = rsx::get_address(tex.offset(), tex.location());
 		const u32 range = (u32)get_texture_size(tex);
@@ -410,7 +408,7 @@ namespace gl
 		else if (rtt)
 			LOG_NOTICE(RSX, "RTT texture for address 0x%X is dirty!", texaddr);
 
-		gl_cached_texture *obj = nullptr;
+		cached_texture *obj = nullptr;
 
 		if (!rtt)
 			obj = find_obj_for_params(texaddr, tex.width(), tex.height(), tex.mipmap());
@@ -439,18 +437,18 @@ namespace gl
 			}
 
 			__glcheck gl_texture.init(index, tex);
-			gl_cached_texture &_obj = create_obj_for_params(gl_texture.id(), texaddr, tex.width(), tex.height(), tex.mipmap());
+			cached_texture &_obj = create_obj_for_params(gl_texture.id(), texaddr, tex.width(), tex.height(), tex.mipmap());
 
 			_obj.block_sz = (u32)get_texture_size(tex);
 			lock_gl_object(_obj);
 		}
 	}
 
-	bool gl_texture_cache::mark_as_dirty(u32 address)
+	bool texture_cache::mark_as_dirty(u32 address)
 	{
 		bool response = false;
 
-		for (gl_cached_texture &tex : texture_cache)
+		for (cached_texture &tex : m_texture_cache)
 		{
 			if (!tex.locked) continue;
 
@@ -469,7 +467,7 @@ namespace gl
 
 		if (response) return true;
 
-		for (cached_rtt &rtt : rtt_cache)
+		for (cached_rtt &rtt : m_rtt_cache)
 		{
 			if (!rtt.data_addr || rtt.is_dirty) continue;
 
@@ -494,12 +492,12 @@ namespace gl
 		return response;
 	}
 
-	void gl_texture_cache::save_render_target(u32 texaddr, u32 range, gl::texture &gl_texture)
+	void texture_cache::save_render_target(u32 texaddr, u32 range, gl::texture &gl_texture)
 	{
 		save_rtt(texaddr, range, gl_texture.width(), gl_texture.height(), (GLenum)gl_texture.get_internal_format(), gl_texture);
 	}
 
-	std::vector<gl_texture_cache::invalid_cache_area> gl_texture_cache::find_and_invalidate_in_range(u32 base, u32 limit)
+	std::vector<invalid_cache_area> texture_cache::find_and_invalidate_in_range(u32 base, u32 limit)
 	{
 		/**
 		* Sometimes buffers can share physical pages.
@@ -508,7 +506,7 @@ namespace gl
 
 		std::vector<invalid_cache_area> result;
 
-		for (gl_cached_texture &obj : texture_cache)
+		for (cached_texture &obj : m_texture_cache)
 		{
 			//Check for memory area overlap. unlock page(s) if needed and add this index to array.
 			//Axis separation test
@@ -560,7 +558,7 @@ namespace gl
 		return result;
 	}
 
-	void gl_texture_cache::lock_invalidated_ranges(std::vector<invalid_cache_area> invalid)
+	void texture_cache::lock_invalidated_ranges(std::vector<invalid_cache_area> invalid)
 	{
 		for (invalid_cache_area area : invalid)
 		{
@@ -568,11 +566,11 @@ namespace gl
 		}
 	}
 
-	void gl_texture_cache::remove_in_range(u32 texaddr, u32 range)
+	void texture_cache::remove_in_range(u32 texaddr, u32 range)
 	{
 		//Seems that the rsx only 'reads' full texture objects..
 		//This simplifies this function to simply check for matches
-		for (gl_cached_texture &cached : texture_cache)
+		for (cached_texture &cached : m_texture_cache)
 		{
 			if (cached.data_addr == texaddr &&
 				cached.block_sz == range)
@@ -580,7 +578,7 @@ namespace gl
 		}
 	}
 
-	bool gl_texture_cache::explicit_writeback(gl::texture &tex, const u32 address, const u32 pitch)
+	bool texture_cache::explicit_writeback(gl::texture &tex, const u32 address, const u32 pitch)
 	{
 		const u32 range = tex.height() * pitch;
 		cached_rtt *rtt = find_cached_rtt(address, range);

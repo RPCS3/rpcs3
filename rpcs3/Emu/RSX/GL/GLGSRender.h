@@ -30,7 +30,7 @@ private:
 	}
 	m_gl_attrib_buffers[rsx::limits::vertex_count];
 
-	gl::gl_texture_cache m_gl_texture_cache;
+	gl::texture_cache m_gl_texture_cache;
 
 public:
 	gl::fbo draw_fbo;
