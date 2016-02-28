@@ -58,6 +58,31 @@
     <Import Project="..\rpcs3_release.props" />
     <Import Project="..\rpcs3_llvm.props" />
   </ImportGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug - MemLeak|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>..\llvm\include;..\llvm_build\include;</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>..\llvm\include;..\llvm_build\include;</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>..\llvm\include;..\llvm_build\include;</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>..\llvm\include;..\llvm_build\include;</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>..\llvm\include;..\llvm_build\include;</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="..\stblib\stb_image.c" />
     <ClCompile Include="..\Utilities\AutoPause.cpp" />
@@ -75,7 +100,6 @@
     <ClCompile Include="..\Utilities\VirtualMemory.cpp" />
     <ClCompile Include="config.cpp" />
     <ClCompile Include="Emu\Cell\PPUInterpreter.cpp" />
-    <ClCompile Include="Emu\Cell\PPULLVMRecompilerCore.cpp" />
     <ClCompile Include="Emu\Cell\SPUAnalyser.cpp" />
     <ClCompile Include="Emu\Cell\SPUASMJITRecompiler.cpp" />
     <ClCompile Include="Emu\Cell\SPUInterpreter.cpp" />
@@ -359,7 +383,6 @@
     <ClCompile Include="Loader\PSF.cpp" />
     <ClCompile Include="Loader\TROPUSR.cpp" />
     <ClCompile Include="Loader\TRP.cpp" />
-    <ClCompile Include="Emu\Cell\PPULLVMRecompiler.cpp" />
     <ClCompile Include="stb_image.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
@@ -648,7 +671,6 @@
     <ClInclude Include="Loader\TROPUSR.h" />
     <ClInclude Include="Loader\TRP.h" />
     <ClInclude Include="restore_new.h" />
-    <ClInclude Include="Emu\Cell\PPULLVMRecompiler.h" />
     <ClInclude Include="stdafx.h" />
   </ItemGroup>
   <PropertyGroup Label="UserMacros" />

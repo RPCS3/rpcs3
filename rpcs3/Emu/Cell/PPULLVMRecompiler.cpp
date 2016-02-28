@@ -215,6 +215,8 @@ RecompilationEngine::RecompilationEngine()
 	FunctionCache = (ExecutableStorageType *)memory_helper::reserve_memory(VIRTUAL_INSTRUCTION_COUNT * sizeof(ExecutableStorageType));
 	// Each char can store 8 page status
 	FunctionCachePagesCommited = (char *)malloc(VIRTUAL_INSTRUCTION_COUNT / (8 * PAGE_SIZE));
+	if (FunctionCachePagesCommited == nullptr)
+		throw EXCEPTION("Memory error");
 	memset(FunctionCachePagesCommited, 0, VIRTUAL_INSTRUCTION_COUNT / (8 * PAGE_SIZE));
 }
 
@@ -455,7 +457,7 @@ bool RecompilationEngine::AnalyseBlock(BlockEntry &functionData, size_t maxSize)
 	// Used to decode instructions
 	PPUDisAsm dis_asm(CPUDisAsm_DumpMode);
 	dis_asm.offset = vm::ps3::_ptr<u8>(startAddress);
-	for (size_t instructionAddress = startAddress; instructionAddress < startAddress + maxSize; instructionAddress += 4)
+	for (u32 instructionAddress = startAddress; instructionAddress < startAddress + maxSize; instructionAddress += 4)
 	{
 		u32 instr = vm::ps3::read32((u32)instructionAddress);
 

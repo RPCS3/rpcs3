@@ -2277,7 +2277,7 @@ private:
 
 	static void ADDIS_impl(PPUThread *CPU, u32 rd, u32 ra, s32 simm16)
 	{
-		CPU->GPR[rd] = ra ? ((s64)CPU->GPR[ra] + (simm16 << 16)) : (simm16 << 16);
+		CPU->GPR[rd] = ra ? ((s64)CPU->GPR[ra] + (static_cast<s64>(simm16) << 16)) : (static_cast<s64>(simm16) << 16);
 	}
 	void ADDIS(u32 rd, u32 ra, s32 simm16) override
 	{

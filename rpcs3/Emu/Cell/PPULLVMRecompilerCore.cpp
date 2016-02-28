@@ -539,7 +539,8 @@ void Compiler::VCMPGTUW_(u32 vd, u32 va, u32 vb) {
 void Compiler::VCTSXS(u32 vd, u32 uimm5, u32 vb) {
 	auto vb_v4f32 = GetVrAsFloatVec(vb);
 	if (uimm5) {
-		vb_v4f32 = m_ir_builder->CreateFMul(vb_v4f32, m_ir_builder->CreateVectorSplat(4, ConstantFP::get(m_ir_builder->getFloatTy(), 1 << uimm5)));
+		u64 power_of_two = UINT64_C(1) << uimm5;
+		vb_v4f32 = m_ir_builder->CreateFMul(vb_v4f32, m_ir_builder->CreateVectorSplat(4, ConstantFP::get(m_ir_builder->getFloatTy(), static_cast<double>(power_of_two))));
 	}
 
 	auto res_v4i32 = (Value *)m_ir_builder->CreateCall(Intrinsic::getDeclaration(m_module, Intrinsic::x86_sse2_cvtps2dq), vb_v4f32);
@@ -554,7 +555,8 @@ void Compiler::VCTSXS(u32 vd, u32 uimm5, u32 vb) {
 void Compiler::VCTUXS(u32 vd, u32 uimm5, u32 vb) {
 	auto vb_v4f32 = GetVrAsFloatVec(vb);
 	if (uimm5) {
-		vb_v4f32 = m_ir_builder->CreateFMul(vb_v4f32, m_ir_builder->CreateVectorSplat(4, ConstantFP::get(m_ir_builder->getFloatTy(), 1 << uimm5)));
+		u64 power_of_two = UINT64_C(1) << uimm5;
+		vb_v4f32 = m_ir_builder->CreateFMul(vb_v4f32, m_ir_builder->CreateVectorSplat(4, ConstantFP::get(m_ir_builder->getFloatTy(), static_cast<double>(power_of_two))));
 	}
 
 	auto res_v4f32 = (Value *)m_ir_builder->CreateCall2(Intrinsic::getDeclaration(m_module, Intrinsic::x86_sse_max_ps), vb_v4f32, m_ir_builder->CreateVectorSplat(4, ConstantFP::get(m_ir_builder->getFloatTy(), 0)));
@@ -2842,11 +2844,11 @@ void Compiler::MTOCRF(u32 l, u32 crm, u32 rs) {
 
 	auto rs_i32 = GetGpr(rs, 32);
 	auto cr_i32 = GetCr();
-	u32  mask = 0;
+	u64  mask = 0;
 
 	for (u32 i = 0; i < 8; i++) {
 		if (crm & (1 << i)) {
-			mask |= 0xF << (i * 4); // move 0xF to the left i positions (in hex form)
+			mask |= UINT64_C(0xF) << (i * 4); // move 0xF to the left i positions (in hex form)
 			if (l) {
 				break;
 			}
@@ -4560,10 +4562,10 @@ void Compiler::MFFS(u32 frd, u32 rc) {
 }
 
 void Compiler::MTFSF(u32 flm, u32 frb, u32 rc) {
-	u32 mask = 0;
+	u64 mask = 0;
 	for (u32 i = 0; i < 8; i++) {
 		if (flm & (1 << i)) {
-			mask |= 0xF << (i * 4);
+			mask |= UINT64_C(0xF) << (i * 4);
 		}
 	}
 
@@ -4979,7 +4981,7 @@ BasicBlock * Compiler::GetBasicBlockFromAddress(u32 address, const std::string &
 }
 
 Value * Compiler::GetBit(Value * val, u32 n) {
-	Value * bit;
+	Value * bit = val;
 
 #ifdef PPU_LLVM_RECOMPILER_USE_BMI
 	if (val->getType()->isIntegerTy(32)) {
@@ -5485,11 +5487,12 @@ void Compiler::CreateBranch(llvm::Value * cmp_i1, llvm::Value * target_i32, bool
 	m_state.hit_branch_instruction = true;
 }
 
+// FIXME: Find out why alignement is needed
 Value * Compiler::ReadMemory(Value * addr_i64, u32 bits, u32 alignment, bool bswap, bool could_be_mmio) {
 	addr_i64 = m_ir_builder->CreateAnd(addr_i64, 0xFFFFFFFF);
 	auto eaddr_i64 = m_ir_builder->CreateAdd(addr_i64, m_ir_builder->getInt64((u64)vm::base(0)));
 	auto eaddr_ix_ptr = m_ir_builder->CreateIntToPtr(eaddr_i64, m_ir_builder->getIntNTy(bits)->getPointerTo());
-	auto val_ix = (Value *)m_ir_builder->CreateLoad(eaddr_ix_ptr, alignment);
+	auto val_ix = (Value *)m_ir_builder->CreateLoad(eaddr_ix_ptr);
 	if (bits > 8 && bswap) {
 		val_ix = m_ir_builder->CreateCall(Intrinsic::getDeclaration(m_module, Intrinsic::bswap, m_ir_builder->getIntNTy(bits)), val_ix);
 	}
