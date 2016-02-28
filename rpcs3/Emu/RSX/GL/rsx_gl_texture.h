@@ -1,3 +1,5 @@
+#pragma once
+
 #include "OpenGL.h"
 
 namespace rsx
