@@ -690,6 +690,7 @@ namespace rsx
 		result.back_color_diffuse_output = !!(rsx::method_registers[NV4097_SET_VERTEX_ATTRIB_OUTPUT_MASK] & CELL_GCM_ATTRIB_OUTPUT_MASK_BACKDIFFUSE);
 		result.back_color_specular_output = !!(rsx::method_registers[NV4097_SET_VERTEX_ATTRIB_OUTPUT_MASK] & CELL_GCM_ATTRIB_OUTPUT_MASK_BACKSPECULAR);
 		result.alpha_func = to_comparaison_function(rsx::method_registers[NV4097_SET_ALPHA_FUNC]);
+		result.fog_equation = rsx::to_fog_mode(rsx::method_registers[NV4097_SET_FOG_MODE]);
 		u32 shader_window = rsx::method_registers[NV4097_SET_SHADER_WINDOW];
 		result.origin_mode = rsx::to_window_origin((shader_window >> 12) & 0xF);
 		result.pixel_center_mode = rsx::to_window_pixel_center((shader_window >> 16) & 0xF);
@@ -767,7 +768,7 @@ namespace rsx
 
 		method_registers[NV4097_SET_LINE_WIDTH] = 1 << 3;
 
-		method_registers[NV4097_SET_FOG_MODE] = CELL_GCM_FOG_MODE_EXP;
+		method_registers[NV4097_SET_FOG_MODE] = 0x0800; // rsx::fog_mode::exponential;
 
 		method_registers[NV4097_SET_DEPTH_FUNC] = CELL_GCM_LESS;
 		method_registers[NV4097_SET_DEPTH_MASK] = CELL_GCM_TRUE;

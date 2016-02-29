@@ -252,11 +252,11 @@ bool is_primitive_native(rsx::primitive_type draw_mode)
 	case rsx::primitive_type::line_strip:
 	case rsx::primitive_type::triangles:
 	case rsx::primitive_type::triangle_strip:
-	case rsx::primitive_type::quad_strip:
 		return true;
 	case rsx::primitive_type::polygon:
 	case rsx::primitive_type::triangle_fan:
 	case rsx::primitive_type::quads:
+	case rsx::primitive_type::quad_strip:
 		return false;
 	}
 	throw new EXCEPTION("Wrong primitive type");
@@ -280,6 +280,8 @@ size_t get_index_count(rsx::primitive_type draw_mode, unsigned initial_index_cou
 		return (initial_index_count - 2) * 3;
 	case rsx::primitive_type::quads:
 		return (6 * initial_index_count) / 4;
+	case rsx::primitive_type::quad_strip:
+		return (6 * (initial_index_count - 2)) / 2;
 	default:
 		return 0;
 	}
@@ -322,14 +324,26 @@ void write_index_array_for_non_indexed_non_native_primitive_to_buffer(char* dst,
 			typedDst[6 * i + 5] = 4 * i + first;
 		}
 		return;
+	case rsx::primitive_type::quad_strip:
+		for (unsigned i = 0; i < (count - 2) / 2; i++)
+		{
+			// First triangle
+			typedDst[6 * i] = 2 * i + first;
+			typedDst[6 * i + 1] = 2 * i + 1 + first;
+			typedDst[6 * i + 2] = 2 * i + 2 + first;
+			// Second triangle
+			typedDst[6 * i + 3] = 2 * i + 2 + first;
+			typedDst[6 * i + 4] = 2 * i + 3 + first;
+			typedDst[6 * i + 5] = 2 * i + 1 + first;
+		}
+		return;
 	case rsx::primitive_type::points:
 	case rsx::primitive_type::lines:
 	case rsx::primitive_type::line_loop:
 	case rsx::primitive_type::line_strip:
 	case rsx::primitive_type::triangles:
 	case rsx::primitive_type::triangle_strip:
-	case rsx::primitive_type::quad_strip:
-		throw new EXCEPTION("Native primitive type doesn't require expansion");
+		throw EXCEPTION("Native primitive type doesn't require expansion");
 	}
 }
 

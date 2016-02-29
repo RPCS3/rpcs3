@@ -227,6 +227,7 @@ struct RSXFragmentProgram
 	u32 texture_dimensions;
 	rsx::window_origin origin_mode;
 	rsx::window_pixel_center pixel_center_mode;
+	rsx::fog_mode fog_equation;
 	u16 height;
 
 	texture_dimension get_texture_dimension(u8 id) const

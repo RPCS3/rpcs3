@@ -141,6 +141,18 @@ namespace rsx
 	};
 
 	comparaison_function to_comparaison_function(u16 in);
+
+	enum class fog_mode : u8
+	{
+		linear,
+		exponential,
+		exponential2,
+		exponential_abs,
+		exponential2_abs,
+		linear_abs
+	};
+
+	fog_mode to_fog_mode(u32 in);
 }
 
 enum
@@ -496,13 +508,6 @@ enum
 	CELL_GCM_ATTRIB_OUTPUT_MASK_TEX5 = 1 << 19,
 	CELL_GCM_ATTRIB_OUTPUT_MASK_TEX6 = 1 << 20,
 	CELL_GCM_ATTRIB_OUTPUT_MASK_TEX7 = 1 << 21,
-
-	CELL_GCM_FOG_MODE_LINEAR = 0x2601,
-	CELL_GCM_FOG_MODE_EXP = 0x0800,
-	CELL_GCM_FOG_MODE_EXP2 = 0x0801,
-	CELL_GCM_FOG_MODE_EXP_ABS = 0x0802,
-	CELL_GCM_FOG_MODE_EXP2_ABS = 0x0803,
-	CELL_GCM_FOG_MODE_LINEAR_ABS = 0x0804,
 
 	CELL_GCM_POLYGON_MODE_POINT = 0x1B00,
 	CELL_GCM_POLYGON_MODE_LINE = 0x1B01,

@@ -29,6 +29,13 @@ std::string GLFragmentDecompilerThread::compareFunction(COMPARE f, const std::st
 void GLFragmentDecompilerThread::insertHeader(std::stringstream & OS)
 {
 	OS << "#version 420" << std::endl;
+
+	OS << "layout(std140, binding = 0) uniform ScaleOffsetBuffer\n";
+	OS << "{\n";
+	OS << "	mat4 scaleOffsetMat;\n";
+	OS << "	float fog_param0;\n";
+	OS << "	float fog_param1;\n";
+	OS << "};\n";
 }
 
 void GLFragmentDecompilerThread::insertIntputs(std::stringstream & OS)
@@ -99,6 +106,37 @@ void GLFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 	OS << "};" << std::endl;
 }
 
+
+namespace
+{
+	// Note: It's not clear whether fog is computed per pixel or per vertex.
+	// But it makes more sense to compute exp of interpoled value than to interpolate exp values.
+	void insert_fog_declaration(std::stringstream & OS, rsx::fog_mode mode)
+	{
+		switch (mode)
+		{
+		case rsx::fog_mode::linear:
+			OS << "	vec4 fogc = fog_param1 * fogc + (fog_param0 - 1.);\n";
+			return;
+		case rsx::fog_mode::exponential:
+			OS << "	vec4 fogc = exp(11.084 * (fog_param1 * fogc + fog_param0 - 1.5));\n";
+			return;
+		case rsx::fog_mode::exponential2:
+			OS << "	vec4 fogc = exp(-pow(4.709 * (fog_param1 * fogc + fog_param0 - 1.5)), 2.);\n";
+			return;
+		case rsx::fog_mode::linear_abs:
+			OS << "	vec4 fogc = fog_param1 * abs(fogc) + (fog_param0 - 1.);\n";
+			return;
+		case rsx::fog_mode::exponential_abs:
+			OS << "	vec4 fogc = exp(11.084 * (fog_param1 * abs(fogc) + fog_param0 - 1.5));\n";
+			return;
+		case rsx::fog_mode::exponential2_abs:
+			OS << "	vec4 fogc = exp(-pow(4.709 * (fog_param1 * abs(fogc) + fog_param0 - 1.5)), 2.);\n";
+			return;
+		}
+	}
+}
+
 void GLFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 {
 	insert_glsl_legacy_function(OS);
@@ -118,6 +156,19 @@ void GLFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 	}
 
 	OS << "	vec4 ssa = gl_FrontFacing ? vec4(1.) : vec4(-1.);\n";
+
+	// search if there is fogc in inputs
+	for (const ParamType& PT : m_parr.params[PF_PARAM_IN])
+	{
+		for (const ParamItem& PI : PT.items)
+		{
+			if (PI.name == "fogc")
+			{
+				insert_fog_declaration(OS, m_prog.fog_equation);
+				return;
+			}
+		}
+	}
 }
 
 void GLFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
