@@ -381,6 +381,34 @@ namespace
 	}
 }
 
+namespace
+{
+	// return vertex count and filled index array if primitive type is not native (empty array otherwise)
+	std::tuple<u32, std::vector<u8>> get_index_array_for_emulated_non_indexed_draw(const std::vector<std::pair<u32, u32>> &first_count_commands, rsx::primitive_type primitive_mode)
+	{
+		u32 vertex_draw_count = 0;
+		assert(!is_primitive_native(primitive_mode));
+
+		for (const auto &pair : first_count_commands)
+		{
+			vertex_draw_count += (u32)get_index_count(primitive_mode, pair.second);
+		}
+
+		std::vector<u8> vertex_index_array(vertex_draw_count * sizeof(u16));
+		u32 first = 0;
+		char* mapped_buffer = (char*)vertex_index_array.data();
+		for (const auto &pair : first_count_commands)
+		{
+			size_t element_count = get_index_count(primitive_mode, pair.second);
+			write_index_array_for_non_indexed_non_native_primitive_to_buffer(mapped_buffer, primitive_mode, first, pair.second);
+			mapped_buffer = (char*)mapped_buffer + element_count * sizeof(u16);
+			first += pair.second;
+		}
+
+		return std::make_tuple(vertex_draw_count, vertex_index_array);
+	}
+}
+
 void GLGSRender::end()
 {
 	if (!draw_fbo)
@@ -449,16 +477,17 @@ void GLGSRender::end()
 		{
 			vertex_draw_count += first_count.second;
 		}
-
+		// Index count
+		vertex_draw_count = (u32)get_index_count(draw_mode, gsl::narrow<int>(vertex_draw_count));
 		vertex_index_array.resize(vertex_draw_count * type_size);
 
 		switch (type)
 		{
 		case rsx::index_array_type::u32:
-			std::tie(min_index, max_index) = write_index_array_data_to_buffer_untouched(gsl::span<u32>((u32*)vertex_index_array.data(), vertex_draw_count), first_count_commands);
+			std::tie(min_index, max_index) = write_index_array_data_to_buffer(gsl::span<u32>((u32*)vertex_index_array.data(), vertex_draw_count), draw_mode, first_count_commands);
 			break;
 		case rsx::index_array_type::u16:
-			std::tie(min_index, max_index) = write_index_array_data_to_buffer_untouched(gsl::span<u16>((u16*)vertex_index_array.data(), vertex_draw_count), first_count_commands);
+			std::tie(min_index, max_index) = write_index_array_data_to_buffer(gsl::span<u16>((u16*)vertex_index_array.data(), vertex_draw_count), draw_mode, first_count_commands);
 			break;
 		}
 	}
@@ -534,6 +563,10 @@ void GLGSRender::end()
 
 			//Link texture to uniform
 			m_program->uniforms.texture(location, index + rsx::limits::textures_count, *texture);
+			if (!is_primitive_native(draw_mode))
+			{
+				std::tie(vertex_draw_count, vertex_index_array) = get_index_array_for_emulated_non_indexed_draw({ {0, vertex_draw_count} }, draw_mode);
+			}
 		}
 	}
 
@@ -659,6 +692,10 @@ void GLGSRender::end()
 				continue;
 			}
 		}
+		if (draw_command == rsx::draw_command::array && !is_primitive_native(draw_mode))
+		{
+			std::tie(vertex_draw_count, vertex_index_array) = get_index_array_for_emulated_non_indexed_draw(first_count_commands, draw_mode);
+		}
 	}
 
 //	glDraw* will fail without at least attrib0 defined if we are on compatibility profile
@@ -683,6 +720,11 @@ void GLGSRender::end()
 			__glcheck glDrawElements(gl::draw_mode(draw_mode), vertex_draw_count, GL_UNSIGNED_INT, nullptr);
 		if (indexed_type == rsx::index_array_type::u16)
 			__glcheck glDrawElements(gl::draw_mode(draw_mode), vertex_draw_count, GL_UNSIGNED_SHORT, nullptr);
+	}
+	else if (!is_primitive_native(draw_mode))
+	{
+		m_ebo.data(vertex_index_array.size(), vertex_index_array.data());
+		__glcheck glDrawElements(gl::draw_mode(draw_mode), vertex_draw_count, GL_UNSIGNED_SHORT, nullptr);
 	}
 	else
 	{
