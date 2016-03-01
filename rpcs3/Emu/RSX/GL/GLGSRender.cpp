@@ -49,6 +49,27 @@ namespace
 
 		return vec_selectors[size][(int)type];
 	}
+
+	void prepare_buffer_for_writing(void *data, rsx::vertex_base_type type, u8 vertex_size, u32 vertex_count)
+	{
+		switch (type)
+		{
+		case rsx::vertex_base_type::sf:
+		{
+			if (vertex_size == 3)
+			{
+				/**
+				* Pad the 4th component for half-float arrays to 1, since texelfetch does not mask components
+				*/
+				u16 *dst = reinterpret_cast<u16*>(data);
+				for (u32 i = 0, idx = 3; i < vertex_count; ++i, idx += 4)
+					dst[idx] = 0x3c00;
+			}
+
+			break;
+		}
+		}
+	}
 }
 
 GLGSRender::GLGSRender() : GSRender(frame_type::OpenGL)
@@ -496,6 +517,7 @@ void GLGSRender::end()
 			u8 *dst = vertex_arrays_data.data();
 
 			src += offsets[index];
+			prepare_buffer_for_writing(dst, vertex_info.type, vertex_info.size, vertex_draw_count);
 
 			//TODO: properly handle compressed data
 			for (u32 i = 0; i < vertex_draw_count; ++i)
@@ -570,6 +592,8 @@ void GLGSRender::end()
 				{
 					size_t offset = 0;
 					gsl::span<gsl::byte> dest_span(vertex_array);
+					prepare_buffer_for_writing(vertex_array.data(), vertex_info.type, vertex_info.size, vertex_draw_count);
+
 					for (const auto &first_count : first_count_commands)
 					{
 						write_vertex_array_data_to_buffer(dest_span.subspan(offset), src_ptr, first_count.first, first_count.second, vertex_info.type, vertex_info.size, vertex_info.stride);
@@ -580,6 +604,8 @@ void GLGSRender::end()
 				{
 					vertex_array.resize((max_index + 1) * element_size);
 					gsl::span<gsl::byte> dest_span(vertex_array);
+					prepare_buffer_for_writing(vertex_array.data(), vertex_info.type, vertex_info.size, vertex_draw_count);
+
 					write_vertex_array_data_to_buffer(dest_span, src_ptr, 0, max_index + 1, vertex_info.type, vertex_info.size, vertex_info.stride);
 				}
 
