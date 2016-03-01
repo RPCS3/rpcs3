@@ -27,7 +27,7 @@ private:
 	}
 	m_gl_attrib_buffers[rsx::limits::vertex_count];
 
-	gl::texture_cache m_gl_texture_cache;
+	gl::texture_cache m_texture_cache;
 
 public:
 	gl::fbo draw_fbo;
@@ -37,6 +37,9 @@ private:
 
 	gl::texture m_draw_tex_color[rsx::limits::color_buffers_count];
 	gl::texture m_draw_tex_depth_stencil;
+
+	gl::cached_texture *m_cached_color_buffers[rsx::limits::color_buffers_count];
+	gl::cached_texture *m_cached_depth_buffer;
 
 	//buffer
 	gl::fbo m_flip_fbo;
@@ -60,8 +63,7 @@ private:
 public:
 	bool load_program();
 	void init_buffers(bool skip_reading = false);
-	void read_buffers();
-	void write_buffers();
+	void invalidate_buffers();
 	void set_viewport();
 
 protected:
@@ -75,4 +77,6 @@ protected:
 	u64 timestamp() const override;
 
 	bool on_access_violation(u32 address, bool is_writing) override;
+
+	void for_each_active_surface(std::function<void(gl::cached_texture& texture)> callback);
 };

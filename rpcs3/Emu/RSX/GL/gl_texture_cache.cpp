@@ -337,13 +337,39 @@ namespace gl
 
 	protected_region *texture_cache::find_region(u32 address)
 	{
-		//TODO
+		for (auto& entry : m_protected_regions)
+		{
+			if (entry.first > address)
+			{
+				break;
+			}
+
+			if (address >= entry.first && address < entry.first + entry.second.size())
+			{
+				return &entry.second;
+			}
+		}
+
 		return nullptr;
 	}
 
 	protected_region *texture_cache::find_region(u32 address, u32 size)
 	{
-		//TODO
+		for (auto& entry : m_protected_regions)
+		{
+			if (entry.first > address + size)
+			{
+				break;
+			}
+
+			if (entry.first + entry.second.size() < address)
+			{
+				continue;
+			}
+
+			return &entry.second;
+		}
+
 		return nullptr;
 	}
 

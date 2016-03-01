@@ -870,4 +870,40 @@ namespace rsx
 			bind_cpu_only<GCM_SET_USER_COMMAND, user_command>();
 		}
 	} __rsx_methods;
+
+	std::pair<int, int> get_active_color_surfaces()
+	{
+		switch (to_surface_target(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET]))
+		{
+		case surface_target::none:
+			return{ 0, 0 };
+
+		case surface_target::surface_a:
+			return{ 0, 1 };
+
+		case surface_target::surface_b:
+			return{ 1, 1 };
+
+		case surface_target::surfaces_a_b:
+			return{ 0, 2 };
+
+		case surface_target::surfaces_a_b_c:
+			return{ 0, 3 };
+
+		case surface_target::surfaces_a_b_c_d:
+			return{ 0, 4 };
+		}
+
+		return{};
+	}
+
+	void for_each_active_color_surface(std::function<void(int index)> callback)
+	{
+		auto info = get_active_color_surfaces();
+
+		for (int index = info.first; index < info.first + info.second; ++index)
+		{
+			callback(index);
+		}
+	}
 }

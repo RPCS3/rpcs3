@@ -66,4 +66,7 @@ namespace rsx
 	using rsx_method_t = void(*)(class thread*, u32);
 	extern u32 method_registers[0x10000 >> 2];
 	extern rsx_method_t methods[0x10000 >> 2];
+
+	std::pair<int, int> get_active_color_surfaces();
+	void for_each_active_color_surface(std::function<void(int index)> callback);
 }

@@ -97,6 +97,11 @@ namespace gl
 
 		void bind(uint index = ~0u) const;
 
+		gl::texture_view view() const
+		{
+			return{ info.target, gl_name };
+		}
+
 	protected:
 		void create();
 		void remove();
