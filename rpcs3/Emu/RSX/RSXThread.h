@@ -333,23 +333,14 @@ namespace rsx
 
 	private:
 		std::mutex m_mtx_task;
+		std::atomic<uint> m_internal_task_waiters{ 0 };
 
-		struct internal_task_entry
-		{
-			std::function<bool()> callback;
-			std::promise<void> promise;
-
-			internal_task_entry(std::function<bool()> callback) : callback(callback)
-			{
-			}
-		};
-
-		std::deque<internal_task_entry> m_internal_tasks;
+		std::deque<std::packaged_task<void()>> m_internal_tasks;
 		void do_internal_task();
 
 	public:
-		std::future<void> add_internal_task(std::function<bool()> callback);
-		void invoke(std::function<bool()> callback);
+		std::shared_future<void> add_internal_task(std::function<void()> callback);
+		void invoke(std::function<void()> callback);
 
 		/**
 		 * Fill buffer with 4x4 scale offset matrix.

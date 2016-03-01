@@ -389,21 +389,7 @@ void GLGSRender::end()
 		int location;
 		if (m_program->uniforms.has_location("tex" + std::to_string(i), &location))
 		{
-			u32 target = GL_TEXTURE_2D;
-			if (textures[i].format() & CELL_GCM_TEXTURE_UN)
-				target = GL_TEXTURE_RECTANGLE;
-
-			if (!textures[i].enabled())
-			{
-				glActiveTexture(GL_TEXTURE0 + i);
-				glBindTexture(target, NULL);
-				glProgramUniform1i(m_program->id(), location, i);
-				continue;
-			}
-
-			m_gl_textures[i].set_target(target);
-
-			__glcheck m_gl_texture_cache.upload_texture(i, textures[i], m_gl_textures[i]);
+			rsx::gl_texture::bind(m_gl_texture_cache, i, textures[i]);
 			glProgramUniform1i(m_program->id(), location, i);
 		}
 	}
@@ -743,16 +729,14 @@ void GLGSRender::on_init_thread()
 	for (texture_buffer_pair &attrib_buffer : m_gl_attrib_buffers)
 	{
 		gl::texture *&tex = attrib_buffer.texture;
-		tex = new gl::texture(gl::texture::target::textureBuffer);
+		tex = new gl::texture(gl::texture::target::texture_buffer);
 		tex->create();
-		tex->set_target(gl::texture::target::textureBuffer);
+		tex->set_target(gl::texture::target::texture_buffer);
 
 		gl::buffer *&buf = attrib_buffer.buffer;
 		buf = new gl::buffer();
 		buf->create();
 	}
-
-	m_gl_texture_cache.initialize_rtt_cache();
 }
 
 void GLGSRender::on_exit()
@@ -1181,6 +1165,8 @@ void GLGSRender::read_buffers()
 
 	glDisable(GL_STENCIL_TEST);
 
+	//TODO
+#if 0
 	if (rpcs3::state.config.rsx.opengl.read_color_buffers)
 	{
 		auto color_format = surface_color_format_to_gl(m_surface.color_format);
@@ -1304,6 +1290,7 @@ void GLGSRender::read_buffers()
 
 		__glcheck m_draw_tex_depth_stencil.copy_from(pbo_depth, depth_format.second, depth_format.first);
 	}
+#endif
 }
 
 void GLGSRender::write_buffers()
@@ -1311,6 +1298,7 @@ void GLGSRender::write_buffers()
 	if (!draw_fbo)
 		return;
 
+#if 0
 	if (rpcs3::state.config.rsx.opengl.write_color_buffers)
 	{
 		auto color_format = surface_color_format_to_gl(m_surface.color_format);
@@ -1384,6 +1372,8 @@ void GLGSRender::write_buffers()
 
 		m_gl_texture_cache.save_render_target(depth_address, range, m_draw_tex_depth_stencil);
 	}
+
+#endif
 }
 
 void GLGSRender::flip(int buffer)
@@ -1417,6 +1407,8 @@ void GLGSRender::flip(int buffer)
 		}
 		*/
 	}
+
+	//TODO
 
 	if (!skip_read)
 	{
@@ -1512,5 +1504,48 @@ u64 GLGSRender::timestamp() const
 
 bool GLGSRender::on_access_violation(u32 address, bool is_writing)
 {
-	return m_gl_texture_cache.sync_at((is_writing ? gl::cache_buffers::host : gl::cache_buffers::local), address);
+	if (auto region = m_gl_texture_cache.find_region(address))
+	{
+		if (is_writing)
+		{
+			const bool accurate_cache = false;
+
+			if (accurate_cache)
+			{
+				region->for_each([this](gl::cached_texture& texture)
+				{
+					invoke([&]()
+					{
+						texture.sync(gl::cache_buffers::host);
+						texture.invalidate(gl::cache_buffers::local);
+					});
+				});
+			}
+			else
+			{
+				region->for_each([](gl::cached_texture& texture)
+				{
+					texture.invalidate(gl::cache_buffers::local);
+				});
+			}
+
+			region->unprotect();
+		}
+		else
+		{
+			region->for_each([this](gl::cached_texture& texture)
+			{
+				invoke([&]()
+				{
+					texture.sync(gl::cache_buffers::host);
+				});
+			});
+
+			region->unprotect(gl::cache_access::read);
+		}
+
+		return true;
+	}
+
+	return false;
 }

@@ -108,7 +108,7 @@ struct fnv_1a_hasher
 	}
 };
 
-struct binary_equals
+struct bitwise_equals
 {
 	template<typename TypeA, typename TypeB>
 	bool operator()(const TypeA& a, const TypeB& b) const

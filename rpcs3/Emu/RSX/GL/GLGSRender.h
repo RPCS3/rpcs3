@@ -16,9 +16,6 @@ private:
 	GLFragmentProgram m_fragment_prog;
 	GLVertexProgram m_vertex_prog;
 
-	rsx::gl::texture m_gl_textures[rsx::limits::textures_count];
-	rsx::gl::texture m_gl_vertex_textures[rsx::limits::vertex_textures_count];
-
 	gl::glsl::program *m_program;
 
 	rsx::surface_info m_surface;

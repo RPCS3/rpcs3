@@ -760,6 +760,10 @@ namespace gl
 		enum class format
 		{
 			red = GL_RED,
+			blue = GL_BLUE,
+			green = GL_GREEN,
+			alpha = GL_ALPHA,
+
 			r = GL_R,
 			rg = GL_RG,
 			rgb = GL_RGB,
@@ -788,6 +792,7 @@ namespace gl
 			stencil8 = GL_STENCIL_INDEX8,
 			depth = GL_DEPTH_COMPONENT,
 			depth16 = GL_DEPTH_COMPONENT16,
+			depth24 = GL_DEPTH_COMPONENT24,
 			depth_stencil = GL_DEPTH_STENCIL,
 			depth24_stencil8 = GL_DEPTH24_STENCIL8,
 
@@ -831,7 +836,8 @@ namespace gl
 			texture1D = GL_TEXTURE_1D,
 			texture2D = GL_TEXTURE_2D,
 			texture3D = GL_TEXTURE_3D,
-			textureBuffer = GL_TEXTURE_BUFFER
+			texture_buffer = GL_TEXTURE_BUFFER,
+			texture_rectangle = GL_TEXTURE_RECTANGLE,
 		};
 
 		enum class channel_type
@@ -867,7 +873,8 @@ namespace gl
 				case target::texture1D: pname = GL_TEXTURE_BINDING_1D; break;
 				case target::texture2D: pname = GL_TEXTURE_BINDING_2D; break;
 				case target::texture3D: pname = GL_TEXTURE_BINDING_3D; break;
-				case target::textureBuffer: pname = GL_TEXTURE_BINDING_BUFFER; break;
+				case target::texture_buffer: pname = GL_TEXTURE_BINDING_BUFFER; break;
+				case target::texture_rectangle: pname = GL_TEXTURE_BINDING_RECTANGLE; break;
 				}
 
 				glGetIntegerv(pname, &m_last_binding);
@@ -1135,7 +1142,7 @@ namespace gl
 
 		void copy_from(buffer &buf, u32 gl_format_type, u32 offset, u32 length)
 		{
-			if (get_target() != target::textureBuffer)
+			if (get_target() != target::texture_buffer)
 				throw EXCEPTION("OpenGL error: texture cannot copy from buffer");
 
 			if (!offset)
@@ -1147,13 +1154,13 @@ namespace gl
 			if (glTextureBufferRangeEXT == nullptr)
 				throw EXCEPTION("OpenGL error: partial buffer access for textures is unsupported on your system");
 
-			__glcheck glTextureBufferRangeEXT(id(), (GLenum)target::textureBuffer, gl_format_type, buf.id(), offset, length);
+			__glcheck glTextureBufferRangeEXT(id(), (GLenum)target::texture_buffer, gl_format_type, buf.id(), offset, length);
 		}
 
 		void copy_from(buffer &buf, u32 gl_format_type)
 		{
 			save_binding_state save(*this);
-			__glcheck glTexBuffer((GLenum)target::textureBuffer, gl_format_type, buf.id());
+			__glcheck glTexBuffer((GLenum)target::texture_buffer, gl_format_type, buf.id());
 		}
 
 		void copy_from(const buffer& buf, texture::format format, texture::type type, class pixel_unpack_settings pixel_settings)

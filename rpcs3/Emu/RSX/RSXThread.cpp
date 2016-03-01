@@ -373,6 +373,11 @@ namespace rsx
 				continue;
 			}
 
+			if (m_internal_task_waiters.load(std::memory_order_relaxed))
+			{
+				do_internal_task();
+			}
+
 			const u32 cmd = ReadIO32(get);
 			const u32 count = (cmd >> 18) & 0x7ff;
 
@@ -532,39 +537,32 @@ namespace rsx
 		{
 			std::lock_guard<std::mutex> lock{ m_mtx_task };
 
-			internal_task_entry &front = m_internal_tasks.front();
+			auto &front = m_internal_tasks.front();
 
-			if (front.callback())
-			{
-				front.promise.set_value();
-				m_internal_tasks.pop_front();
-			}
+			front();
+			m_internal_tasks.pop_front();
 		}
 	}
 
-	std::future<void> thread::add_internal_task(std::function<bool()> callback)
+	std::shared_future<void> thread::add_internal_task(std::function<void()> callback)
 	{
 		std::lock_guard<std::mutex> lock{ m_mtx_task };
 		m_internal_tasks.emplace_back(callback);
 
-		return m_internal_tasks.back().promise.get_future();
+		return m_internal_tasks.back().get_future();
 	}
 
-	void thread::invoke(std::function<bool()> callback)
+	void thread::invoke(std::function<void()> callback)
 	{
 		if (get_thread_ctrl() == thread_ctrl::get_current())
 		{
-			while (true)
-			{
-				if (callback())
-				{
-					break;
-				}
-			}
+			callback();
 		}
 		else
 		{
+			++m_internal_task_waiters;
 			add_internal_task(callback).wait();
+			--m_internal_task_waiters;
 		}
 	}
 
