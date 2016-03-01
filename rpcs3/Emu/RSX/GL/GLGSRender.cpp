@@ -143,7 +143,7 @@ void GLGSRender::begin()
 	__glcheck glDepthRange((f32&)rsx::method_registers[NV4097_SET_CLIP_MIN], (f32&)rsx::method_registers[NV4097_SET_CLIP_MAX]);
 	__glcheck enable(rsx::method_registers[NV4097_SET_DITHER_ENABLE], GL_DITHER);
 
-	if (__glcheck enable(rsx::method_registers[NV4097_SET_ALPHA_TEST_ENABLE], GL_ALPHA_TEST))
+	if (!!rsx::method_registers[NV4097_SET_ALPHA_TEST_ENABLE])
 	{
 		//TODO: NV4097_SET_ALPHA_REF must be converted to f32
 		//glcheck(glAlphaFunc(rsx::method_registers[NV4097_SET_ALPHA_FUNC], rsx::method_registers[NV4097_SET_ALPHA_REF]));
@@ -215,13 +215,14 @@ void GLGSRender::begin()
 		__glcheck enable(blend_mrt & 8, GL_BLEND, GL_COLOR_ATTACHMENT3);
 	}
 	
-	if (__glcheck enable(rsx::method_registers[NV4097_SET_LOGIC_OP_ENABLE], GL_LOGIC_OP))
+	if (!!rsx::method_registers[NV4097_SET_LOGIC_OP_ENABLE])
 	{
 		__glcheck glLogicOp(rsx::method_registers[NV4097_SET_LOGIC_OP]);
 	}
 
 	u32 line_width = rsx::method_registers[NV4097_SET_LINE_WIDTH];
-	__glcheck glLineWidth((line_width >> 3) + (line_width & 7) / 8.f);
+	// NOTE : Line width is not deprecated per se but the only supported argument is 1.
+//	__glcheck glLineWidth((line_width >> 3) + (line_width & 7) / 8.f);
 	__glcheck enable(rsx::method_registers[NV4097_SET_LINE_SMOOTH_ENABLE], GL_LINE_SMOOTH);
 
 	//TODO
@@ -299,13 +300,13 @@ void GLGSRender::begin()
 		__glcheck glPrimitiveRestartIndex(rsx::method_registers[NV4097_SET_RESTART_INDEX]);
 	}
 
-	if (__glcheck enable(rsx::method_registers[NV4097_SET_LINE_STIPPLE], GL_LINE_STIPPLE))
-	{
-		u32 line_stipple_pattern = rsx::method_registers[NV4097_SET_LINE_STIPPLE_PATTERN];
-		u16 factor = line_stipple_pattern;
-		u16 pattern = line_stipple_pattern >> 16;
-		__glcheck glLineStipple(factor, pattern);
-	}
+//	if (__glcheck enable(rsx::method_registers[NV4097_SET_LINE_STIPPLE], GL_LINE_STIPPLE))
+//	{
+//		u32 line_stipple_pattern = rsx::method_registers[NV4097_SET_LINE_STIPPLE_PATTERN];
+//		u16 factor = line_stipple_pattern;
+//		u16 pattern = line_stipple_pattern >> 16;
+//		__glcheck glLineStipple(factor, pattern);
+//	}
 }
 
 template<typename T, int count>
@@ -1497,7 +1498,6 @@ void GLGSRender::flip(int buffer)
 		glDisable(GL_DEPTH_TEST);
 		glDisable(GL_STENCIL_TEST);
 		glDisable(GL_BLEND);
-		glDisable(GL_LOGIC_OP);
 		glDisable(GL_CULL_FACE);
 
 		if (buffer_region.tile)
