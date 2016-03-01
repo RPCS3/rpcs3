@@ -4,7 +4,21 @@
 
 GLGSFrame::GLGSFrame() : GSFrame("OpenGL")
 {
+	// For some reason WX_GL_MAJOR_VERSION, WX_GL_MINOR_VERSION and WX_GL_CORE_PROFILE are not defined on travis build despite using wxWidget 3.0+
+#ifdef WIN32
+	const int attributes[] =
+	{
+		WX_GL_RGBA,
+		WX_GL_DOUBLEBUFFER,
+		WX_GL_MAJOR_VERSION, 3,
+		WX_GL_MINOR_VERSION, 3,
+		WX_GL_CORE_PROFILE,
+		0
+	};
+	m_canvas = new wxGLCanvas(this, wxID_ANY, attributes);
+#else
 	m_canvas = new wxGLCanvas(this, wxID_ANY, NULL);
+#endif
 	m_canvas->SetSize(GetClientSize());
 
 	m_canvas->Bind(wxEVT_LEFT_DCLICK, &GSFrame::OnLeftDclick, this);
