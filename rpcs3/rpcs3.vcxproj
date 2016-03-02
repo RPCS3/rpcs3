@@ -188,6 +188,9 @@
     <ProjectReference Include="OpenAL.vcxproj">
       <Project>{30a05c4d-f5fd-421c-a864-17a64bdeaa75}</Project>
     </ProjectReference>
+    <ProjectReference Include="PPULLVMRecompiler.vcxproj">
+      <Project>{304a6e8b-a311-4ec5-8045-bfa8d08175ce}</Project>
+    </ProjectReference>
     <ProjectReference Include="VKGSRender.vcxproj">
       <Project>{3ee5f075-b546-42c4-b6a8-e3ccef38b78d}</Project>
     </ProjectReference>

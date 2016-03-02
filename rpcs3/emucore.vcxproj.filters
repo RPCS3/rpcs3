@@ -485,9 +485,6 @@
     <ClCompile Include="Emu\SysCalls\Modules\cellMic.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\Cell\PPULLVMRecompiler.cpp">
-      <Filter>Emu\CPU\Cell</Filter>
-    </ClCompile>
     <ClCompile Include="Emu\ARMv7\ARMv7Interpreter.cpp">
       <Filter>Emu\CPU\ARMv7</Filter>
     </ClCompile>
@@ -721,9 +718,6 @@
     </ClCompile>
     <ClCompile Include="Emu\SysCalls\Modules\sys_lv2dbg.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\Cell\PPULLVMRecompilerCore.cpp">
-      <Filter>Emu\CPU\Cell</Filter>
     </ClCompile>
     <ClCompile Include="Emu\SysCalls\Modules\sceNpUtil.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
@@ -1444,9 +1438,6 @@
     </ClInclude>
     <ClInclude Include="Crypto\ec.h">
       <Filter>Crypto</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\Cell\PPULLVMRecompiler.h">
-      <Filter>Emu\CPU\Cell</Filter>
     </ClInclude>
     <ClInclude Include="Emu\ARMv7\PSVFuncList.h">
       <Filter>Emu\CPU\ARMv7</Filter>
