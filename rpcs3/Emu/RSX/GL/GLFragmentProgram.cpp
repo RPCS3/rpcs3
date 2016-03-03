@@ -43,7 +43,13 @@ void GLFragmentDecompilerThread::insertIntputs(std::stringstream & OS)
 	for (const ParamType& PT : m_parr.params[PF_PARAM_IN])
 	{
 		for (const ParamItem& PI : PT.items)
-			OS << "in " << PT.type << " " << PI.name << ";" << std::endl;
+		{
+			//Rename fogc to fog_c to differentiate the input register from the variable
+			if (PI.name == "fogc")
+				OS << "in vec4 fog_c;" << std::endl;
+			else
+				OS << "in " << PT.type << " " << PI.name << ";" << std::endl;
+		}
 	}
 }
 
@@ -116,22 +122,22 @@ namespace
 		switch (mode)
 		{
 		case rsx::fog_mode::linear:
-			OS << "	vec4 fogc = fog_param1 * fogc + (fog_param0 - 1.);\n";
+			OS << "	vec4 fogc = fog_param1 * fog_c + (fog_param0 - 1.);\n";
 			return;
 		case rsx::fog_mode::exponential:
-			OS << "	vec4 fogc = exp(11.084 * (fog_param1 * fogc + fog_param0 - 1.5));\n";
+			OS << "	vec4 fogc = exp(11.084 * (fog_param1 * fog_c + fog_param0 - 1.5));\n";
 			return;
 		case rsx::fog_mode::exponential2:
-			OS << "	vec4 fogc = exp(-pow(4.709 * (fog_param1 * fogc + fog_param0 - 1.5)), 2.);\n";
+			OS << "	vec4 fogc = exp(-pow(4.709 * (fog_param1 * fog_c + fog_param0 - 1.5)), 2.);\n";
 			return;
 		case rsx::fog_mode::linear_abs:
-			OS << "	vec4 fogc = fog_param1 * abs(fogc) + (fog_param0 - 1.);\n";
+			OS << "	vec4 fogc = fog_param1 * abs(fog_c) + (fog_param0 - 1.);\n";
 			return;
 		case rsx::fog_mode::exponential_abs:
-			OS << "	vec4 fogc = exp(11.084 * (fog_param1 * abs(fogc) + fog_param0 - 1.5));\n";
+			OS << "	vec4 fogc = exp(11.084 * (fog_param1 * abs(fog_c) + fog_param0 - 1.5));\n";
 			return;
 		case rsx::fog_mode::exponential2_abs:
-			OS << "	vec4 fogc = exp(-pow(4.709 * (fog_param1 * abs(fogc) + fog_param0 - 1.5)), 2.);\n";
+			OS << "	vec4 fogc = exp(-pow(4.709 * (fog_param1 * abs(fog_c) + fog_param0 - 1.5)), 2.);\n";
 			return;
 		}
 	}

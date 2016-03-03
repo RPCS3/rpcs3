@@ -92,7 +92,7 @@ static const reg_info reg_table[] =
 	{ "spec_color", true, "dst_reg2", "", false },
 	{ "front_diff_color", true, "dst_reg3", "", false },
 	{ "front_spec_color", true, "dst_reg4", "", false },
-	{ "fogc", true, "dst_reg5", ".x", true },
+	{ "fog_c", true, "dst_reg5", ".xxxx", true },
 	{ "gl_ClipDistance[0]", false, "dst_reg5", ".y", false },
 	{ "gl_ClipDistance[1]", false, "dst_reg5", ".z", false },
 	{ "gl_ClipDistance[2]", false, "dst_reg5", ".w", false },
@@ -118,10 +118,7 @@ void GLVertexDecompilerThread::insertOutputs(std::stringstream & OS, const std::
 	{
 		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", i.src_reg) && i.need_declare)
 		{
-			if (i.name == "fogc")
-				OS << "out float " << i.name << ";" << std::endl;
-			else
-				OS << "out vec4 " << i.name << ";" << std::endl;
+			OS << "out vec4 " << i.name << ";" << std::endl;
 		}
 	}
 }
