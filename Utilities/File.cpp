@@ -856,7 +856,7 @@ bool fs::dir::open(const std::string& dirname)
 
 	m_dd = -1;
 #else
-	const auto ptr = ::opendir(m_path.get());
+	const auto ptr = ::opendir(dirname.c_str());
 	if (!ptr)
 	{
 		return false;
