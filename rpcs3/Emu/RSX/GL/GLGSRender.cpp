@@ -133,7 +133,7 @@ void GLGSRender::begin()
 	__glcheck glDepthRange((f32&)rsx::method_registers[NV4097_SET_CLIP_MIN], (f32&)rsx::method_registers[NV4097_SET_CLIP_MAX]);
 	__glcheck enable(rsx::method_registers[NV4097_SET_DITHER_ENABLE], GL_DITHER);
 
-	if (__glcheck enable(rsx::method_registers[NV4097_SET_ALPHA_TEST_ENABLE], GL_ALPHA_TEST))
+	if (!!rsx::method_registers[NV4097_SET_ALPHA_TEST_ENABLE])
 	{
 		//TODO: NV4097_SET_ALPHA_REF must be converted to f32
 		//glcheck(glAlphaFunc(rsx::method_registers[NV4097_SET_ALPHA_FUNC], rsx::method_registers[NV4097_SET_ALPHA_REF]));
@@ -205,13 +205,14 @@ void GLGSRender::begin()
 		__glcheck enable(blend_mrt & 8, GL_BLEND, GL_COLOR_ATTACHMENT3);
 	}
 	
-	if (__glcheck enable(rsx::method_registers[NV4097_SET_LOGIC_OP_ENABLE], GL_LOGIC_OP))
+	if (!!rsx::method_registers[NV4097_SET_LOGIC_OP_ENABLE])
 	{
 		__glcheck glLogicOp(rsx::method_registers[NV4097_SET_LOGIC_OP]);
 	}
 
 	u32 line_width = rsx::method_registers[NV4097_SET_LINE_WIDTH];
-	__glcheck glLineWidth((line_width >> 3) + (line_width & 7) / 8.f);
+	// NOTE : Line width is not deprecated per se but the only supported argument is 1.
+//	__glcheck glLineWidth((line_width >> 3) + (line_width & 7) / 8.f);
 	__glcheck enable(rsx::method_registers[NV4097_SET_LINE_SMOOTH_ENABLE], GL_LINE_SMOOTH);
 
 	//TODO
@@ -261,13 +262,13 @@ void GLGSRender::begin()
 
 	__glcheck enable(rsx::method_registers[NV4097_SET_POLY_OFFSET_FILL_ENABLE], GL_POLYGON_OFFSET_FILL);
 
-	if (__glcheck enable(rsx::method_registers[NV4097_SET_POLYGON_STIPPLE], GL_POLYGON_STIPPLE))
-	{
-		__glcheck glPolygonStipple((GLubyte*)(rsx::method_registers + NV4097_SET_POLYGON_STIPPLE_PATTERN));
-	}
+//	if (__glcheck enable(rsx::method_registers[NV4097_SET_POLYGON_STIPPLE], GL_POLYGON_STIPPLE))
+//	{
+//		__glcheck glPolygonStipple((GLubyte*)(rsx::method_registers + NV4097_SET_POLYGON_STIPPLE_PATTERN));
+//	}
 
-	__glcheck glPolygonMode(GL_FRONT, rsx::method_registers[NV4097_SET_FRONT_POLYGON_MODE]);
-	__glcheck glPolygonMode(GL_BACK, rsx::method_registers[NV4097_SET_BACK_POLYGON_MODE]);
+//	__glcheck glPolygonMode(GL_FRONT, rsx::method_registers[NV4097_SET_FRONT_POLYGON_MODE]);
+//	__glcheck glPolygonMode(GL_BACK, rsx::method_registers[NV4097_SET_BACK_POLYGON_MODE]);
 
 	if (__glcheck enable(rsx::method_registers[NV4097_SET_CULL_FACE_ENABLE], GL_CULL_FACE))
 	{
@@ -289,13 +290,13 @@ void GLGSRender::begin()
 		__glcheck glPrimitiveRestartIndex(rsx::method_registers[NV4097_SET_RESTART_INDEX]);
 	}
 
-	if (__glcheck enable(rsx::method_registers[NV4097_SET_LINE_STIPPLE], GL_LINE_STIPPLE))
-	{
-		u32 line_stipple_pattern = rsx::method_registers[NV4097_SET_LINE_STIPPLE_PATTERN];
-		u16 factor = line_stipple_pattern;
-		u16 pattern = line_stipple_pattern >> 16;
-		__glcheck glLineStipple(factor, pattern);
-	}
+//	if (__glcheck enable(rsx::method_registers[NV4097_SET_LINE_STIPPLE], GL_LINE_STIPPLE))
+//	{
+//		u32 line_stipple_pattern = rsx::method_registers[NV4097_SET_LINE_STIPPLE_PATTERN];
+//		u16 factor = line_stipple_pattern;
+//		u16 pattern = line_stipple_pattern >> 16;
+//		__glcheck glLineStipple(factor, pattern);
+//	}
 }
 
 template<typename T, int count>
@@ -449,18 +450,40 @@ void GLGSRender::end()
 		{
 			vertex_draw_count += first_count.second;
 		}
-
+		// Index count
+		vertex_draw_count = (u32)get_index_count(draw_mode, gsl::narrow<int>(vertex_draw_count));
 		vertex_index_array.resize(vertex_draw_count * type_size);
 
 		switch (type)
 		{
 		case rsx::index_array_type::u32:
-			std::tie(min_index, max_index) = write_index_array_data_to_buffer_untouched(gsl::span<u32>((u32*)vertex_index_array.data(), vertex_draw_count), first_count_commands);
+			std::tie(min_index, max_index) = write_index_array_data_to_buffer(gsl::span<u32>((u32*)vertex_index_array.data(), vertex_draw_count), draw_mode, first_count_commands);
 			break;
 		case rsx::index_array_type::u16:
-			std::tie(min_index, max_index) = write_index_array_data_to_buffer_untouched(gsl::span<u16>((u16*)vertex_index_array.data(), vertex_draw_count), first_count_commands);
+			std::tie(min_index, max_index) = write_index_array_data_to_buffer(gsl::span<u16>((u16*)vertex_index_array.data(), vertex_draw_count), draw_mode, first_count_commands);
 			break;
 		}
+	}
+	else if (!is_primitive_native(draw_mode))
+	{
+		for (const auto &pair : first_count_commands)
+			vertex_draw_count += (u32)get_index_count(draw_mode, pair.second);
+		vertex_index_array.resize(vertex_draw_count * sizeof(u16));
+
+		size_t first = 0;
+		char* mapped_buffer = (char*)vertex_index_array.data();
+		for (const auto &pair : first_count_commands)
+		{
+			size_t element_count = get_index_count(draw_mode, pair.second);
+			write_index_array_for_non_indexed_non_native_primitive_to_buffer(mapped_buffer, draw_mode, (u32)first, (u32)pair.second);
+			mapped_buffer = (char*)mapped_buffer + element_count * sizeof(u16);
+			first += pair.second;
+		}
+
+		min_index = 0;
+		max_index = 0;
+		for (const auto &pair : first_count_commands)
+			max_index += pair.second;
 	}
 
 	if (draw_command == rsx::draw_command::inlined_array)
@@ -537,7 +560,7 @@ void GLGSRender::end()
 		}
 	}
 
-	if (draw_command == rsx::draw_command::array)
+	if (draw_command == rsx::draw_command::array && is_primitive_native(draw_mode))
 	{
 		for (const auto &first_count : first_count_commands)
 		{
@@ -684,6 +707,11 @@ void GLGSRender::end()
 		if (indexed_type == rsx::index_array_type::u16)
 			__glcheck glDrawElements(gl::draw_mode(draw_mode), vertex_draw_count, GL_UNSIGNED_SHORT, nullptr);
 	}
+	else if (draw_command == rsx::draw_command::array && !is_primitive_native(draw_mode))
+	{
+		m_ebo.data(vertex_index_array.size(), vertex_index_array.data());
+		__glcheck glDrawElements(gl::draw_mode(draw_mode), vertex_draw_count, GL_UNSIGNED_SHORT, nullptr);
+	}
 	else
 	{
 		draw_fbo.draw_arrays(draw_mode, vertex_draw_count);
@@ -735,7 +763,6 @@ void GLGSRender::set_viewport()
 void GLGSRender::on_init_thread()
 {
 	GSRender::on_init_thread();
-
 	gl::init();
 	LOG_NOTICE(RSX, "%s", (const char*)glGetString(GL_VERSION));
 	LOG_NOTICE(RSX, "%s", (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION));
@@ -1028,7 +1055,6 @@ void GLGSRender::flip(int buffer)
 		glDisable(GL_DEPTH_TEST);
 		glDisable(GL_STENCIL_TEST);
 		glDisable(GL_BLEND);
-		glDisable(GL_LOGIC_OP);
 		glDisable(GL_CULL_FACE);
 
 		if (buffer_region.tile)
