@@ -411,7 +411,6 @@ namespace rsx
 			}
 
 			glTexParameteri(m_target, GL_TEXTURE_MAX_LEVEL, tex.mipmap() - 1);
-			glTexParameteri(m_target, GL_GENERATE_MIPMAP, tex.mipmap() > 1);
 
 			if (format != CELL_GCM_TEXTURE_B8 && format != CELL_GCM_TEXTURE_X16 && format != CELL_GCM_TEXTURE_X32_FLOAT)
 			{
@@ -444,7 +443,23 @@ namespace rsx
 			glTexParameteri(m_target, GL_TEXTURE_MIN_LOD, (tex.min_lod() >> 8));
 			glTexParameteri(m_target, GL_TEXTURE_MAX_LOD, (tex.max_lod() >> 8));
 
-			glTexParameteri(m_target, GL_TEXTURE_MIN_FILTER, gl_tex_min_filter[tex.min_filter()]);
+			int min_filter = gl_tex_min_filter[tex.min_filter()];
+			
+			if (min_filter != GL_LINEAR && min_filter != GL_NEAREST)
+			{
+				if (tex.mipmap() <= 1 || m_target == GL_TEXTURE_RECTANGLE)
+				{
+					LOG_WARNING(RSX, "Texture %d, target 0x%X, requesting mipmap filtering without any mipmaps set!", m_id, m_target);
+					min_filter = GL_LINEAR;
+				}
+				else
+				{
+					//TODO: Check if the call succeeded
+					glGenerateMipmap(m_target);
+				}
+			}
+
+			glTexParameteri(m_target, GL_TEXTURE_MIN_FILTER, min_filter);
 			glTexParameteri(m_target, GL_TEXTURE_MAG_FILTER, gl_tex_mag_filter[tex.mag_filter()]);
 			glTexParameterf(m_target, GL_TEXTURE_MAX_ANISOTROPY_EXT, max_aniso(tex.max_aniso()));
 		}
