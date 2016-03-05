@@ -261,13 +261,13 @@ namespace rsx
 				case surface_color_format::x8r8g8b8_z8r8g8b8:
 				case surface_color_format::x32:
 				{
-					gsl::span<be_t<u32>> dst_span{ (be_t<u32>*)result[i].data(), gsl::narrow<int>(dst_pitch * width / sizeof(be_t<u32>)) };
+					gsl::span<be_t<u32>> dst_span{ (be_t<u32>*)result[i].data(), gsl::narrow<int>(dst_pitch * height / sizeof(be_t<u32>)) };
 					copy_pitched_src_to_dst(dst_span, gsl::as_span<const u32>(raw_src), src_pitch, width, height);
 					break;
 				}
 				case surface_color_format::b8:
 				{
-					gsl::span<u8> dst_span{ (u8*)result[i].data(), gsl::narrow<int>(dst_pitch * width / sizeof(u8)) };
+					gsl::span<u8> dst_span{ (u8*)result[i].data(), gsl::narrow<int>(dst_pitch * height / sizeof(u8)) };
 					copy_pitched_src_to_dst(dst_span, gsl::as_span<const u8>(raw_src), src_pitch, width, height);
 					break;
 				}
@@ -276,20 +276,20 @@ namespace rsx
 				case surface_color_format::x1r5g5b5_o1r5g5b5:
 				case surface_color_format::x1r5g5b5_z1r5g5b5:
 				{
-					gsl::span<be_t<u16>> dst_span{ (be_t<u16>*)result[i].data(), gsl::narrow<int>(dst_pitch * width / sizeof(be_t<u16>)) };
+					gsl::span<be_t<u16>> dst_span{ (be_t<u16>*)result[i].data(), gsl::narrow<int>(dst_pitch * height / sizeof(be_t<u16>)) };
 					copy_pitched_src_to_dst(dst_span, gsl::as_span<const u16>(raw_src), src_pitch, width, height);
 					break;
 				}
 				// Note : may require some big endian swap
 				case surface_color_format::w32z32y32x32:
 				{
-					gsl::span<u128> dst_span{ (u128*)result[i].data(), gsl::narrow<int>(dst_pitch * width / sizeof(u128)) };
+					gsl::span<u128> dst_span{ (u128*)result[i].data(), gsl::narrow<int>(dst_pitch * height / sizeof(u128)) };
 					copy_pitched_src_to_dst(dst_span, gsl::as_span<const u128>(raw_src), src_pitch, width, height);
 					break;
 				}
 				case surface_color_format::w16z16y16x16:
 				{
-					gsl::span<u64> dst_span{ (u64*)result[i].data(), gsl::narrow<int>(dst_pitch * width / sizeof(u64)) };
+					gsl::span<u64> dst_span{ (u64*)result[i].data(), gsl::narrow<int>(dst_pitch * height / sizeof(u64)) };
 					copy_pitched_src_to_dst(dst_span, gsl::as_span<const u64>(raw_src), src_pitch, width, height);
 					break;
 				}
