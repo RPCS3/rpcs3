@@ -122,22 +122,22 @@ namespace
 		switch (mode)
 		{
 		case rsx::fog_mode::linear:
-			OS << "	vec4 fogc = fog_param1 * fog_c + (fog_param0 - 1.);\n";
+			OS << "	vec4 fogc = vec4(fog_param1 * fog_c.x + (fog_param0 - 1.), fog_param1 * fog_c.x + (fog_param0 - 1.), 0., 0.);\n";
 			return;
 		case rsx::fog_mode::exponential:
-			OS << "	vec4 fogc = exp(11.084 * (fog_param1 * fog_c + fog_param0 - 1.5));\n";
+			OS << "	vec4 fogc = vec4(11.084 * (fog_param1 * fog_c.x + fog_param0 - 1.5), exp(11.084 * (fog_param1 * fog_c.x + fog_param0 - 1.5)), 0., 0.);\n";
 			return;
 		case rsx::fog_mode::exponential2:
-			OS << "	vec4 fogc = exp(-pow(4.709 * (fog_param1 * fog_c + fog_param0 - 1.5)), 2.);\n";
+			OS << "	vec4 fogc = vec4(4.709 * (fog_param1 * fog_c.x + fog_param0 - 1.5), exp(-pow(4.709 * (fog_param1 * fog_c.x + fog_param0 - 1.5)), 2.), 0., 0.);\n";
 			return;
 		case rsx::fog_mode::linear_abs:
-			OS << "	vec4 fogc = fog_param1 * abs(fog_c) + (fog_param0 - 1.);\n";
+			OS << "	vec4 fogc = vec4(fog_param1 * abs(fog_c.x) + (fog_param0 - 1.), fog_param1 * abs(fog_c.x) + (fog_param0 - 1.), 0., 0.);\n";
 			return;
 		case rsx::fog_mode::exponential_abs:
-			OS << "	vec4 fogc = exp(11.084 * (fog_param1 * abs(fog_c) + fog_param0 - 1.5));\n";
+			OS << "	vec4 fogc = vec4(11.084 * (fog_param1 * abs(fog_c.x) + fog_param0 - 1.5), exp(11.084 * (fog_param1 * abs(fog_c.x) + fog_param0 - 1.5)), 0., 0.);\n";
 			return;
 		case rsx::fog_mode::exponential2_abs:
-			OS << "	vec4 fogc = exp(-pow(4.709 * (fog_param1 * abs(fog_c) + fog_param0 - 1.5)), 2.);\n";
+			OS << "	vec4 fogc = vec4(4.709 * (fog_param1 * abs(fog_c.x) + fog_param0 - 1.5), exp(-pow(4.709 * (fog_param1 * abs(fog_c.x) + fog_param0 - 1.5)), 2.), 0., 0.);\n";
 			return;
 		}
 	}
