@@ -19,6 +19,7 @@ class RSXDebugger : public wxDialog
 	wxListView* m_list_lightning;
 	wxListView* m_list_texture;
 	wxListView* m_list_settings;
+	wxListView* m_list_index_buffer;
 
 	wxPanel* p_buffer_colorA;
 	wxPanel* p_buffer_colorB;

@@ -163,16 +163,21 @@ RSXDebugger::RSXDebugger(wxWindow* parent)
 	wxPanel* p_buffers = new wxPanel(state_rsx, wxID_ANY);
 	wxPanel* p_transform_program = new wxPanel(state_rsx, wxID_ANY);
 	wxPanel* p_shader_program = new wxPanel(state_rsx, wxID_ANY);
+	wxPanel* p_index_buffer = new wxPanel(state_rsx, wxID_ANY);
 
 	state_rsx->AddPage(p_buffers, wxT("RTTs and DS"));
 	state_rsx->AddPage(p_transform_program, wxT("Transform program"));
 	state_rsx->AddPage(p_shader_program, wxT("Shader program"));
+	state_rsx->AddPage(p_index_buffer, (wxT("Index buffer")));
 
 	m_text_transform_program = new wxTextCtrl(p_transform_program, wxID_ANY, "", wxPoint(1, 3), wxSize(720, 720), wxTE_MULTILINE | wxTE_READONLY);
 	m_text_transform_program->SetFont(wxFont(8, wxFONTFAMILY_MODERN, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL));
 
 	m_text_shader_program = new wxTextCtrl(p_shader_program, wxID_ANY, "", wxPoint(1, 3), wxSize(720, 720), wxTE_MULTILINE | wxTE_READONLY);
 	m_text_shader_program->SetFont(wxFont(8, wxFONTFAMILY_MODERN, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL));
+
+	m_list_index_buffer = new wxListView(p_index_buffer, wxID_ANY, wxPoint(1, 3), wxSize(720, 720));
+	m_list_index_buffer->SetFont(wxFont(8, wxFONTFAMILY_MODERN, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL));
 
 	//Buffers
 	wxBoxSizer* s_buffers1 = new wxBoxSizer(wxVERTICAL);
@@ -559,6 +564,25 @@ void RSXDebugger::OnClickDrawCalls(wxMouseEvent& event)
 	m_text_transform_program->AppendText(frame_debug.draw_calls[draw_id].programs.first);
 	m_text_shader_program->Clear();
 	m_text_shader_program->AppendText(frame_debug.draw_calls[draw_id].programs.second);
+
+	m_list_index_buffer->ClearAll();
+	m_list_index_buffer->InsertColumn(0, "Index", 0, 700);
+	if (frame_debug.draw_calls[draw_id].index_type == rsx::index_array_type::u16)
+	{
+		u16 *index_buffer = (u16*)frame_debug.draw_calls[draw_id].index.data();
+		for (u32 i = 0; i < frame_debug.draw_calls[draw_id].vertex_count; ++i)
+		{
+			m_list_index_buffer->InsertItem(i, std::to_string(index_buffer[i]));
+		}
+	}
+	if (frame_debug.draw_calls[draw_id].index_type == rsx::index_array_type::u32)
+	{
+		u32 *index_buffer = (u32*)frame_debug.draw_calls[draw_id].index.data();
+		for (u32 i = 0; i < frame_debug.draw_calls[draw_id].vertex_count; ++i)
+		{
+			m_list_index_buffer->InsertItem(i, std::to_string(index_buffer[i]));
+		}
+	}
 }
 
 void RSXDebugger::GoToGet(wxCommandEvent& event)
