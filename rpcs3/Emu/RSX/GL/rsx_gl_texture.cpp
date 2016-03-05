@@ -149,6 +149,9 @@ namespace rsx
 
 		void texture::init(int index, rsx::texture& tex)
 		{
+			const u32 texaddr = rsx::get_address(tex.offset(), tex.location());
+
+			//TODO: safe init
 			if (!m_id)
 			{
 				create();
@@ -156,12 +159,6 @@ namespace rsx
 
 			glActiveTexture(GL_TEXTURE0 + index);
 			bind();
-
-			const u32 texaddr = rsx::get_address(tex.offset(), tex.location());
-			//LOG_WARNING(RSX, "texture addr = 0x%x, width = %d, height = %d, max_aniso=%d, mipmap=%d, remap=0x%x, zfunc=0x%x, wraps=0x%x, wrapt=0x%x, wrapr=0x%x, minlod=0x%x, maxlod=0x%x", 
-			//	m_offset, m_width, m_height, m_maxaniso, m_mipmap, m_remap, m_zfunc, m_wraps, m_wrapt, m_wrapr, m_minlod, m_maxlod);
-
-			//TODO: safe init
 
 			u32 full_format = tex.format();
 

@@ -3,6 +3,7 @@
 #include "gl_helpers.h"
 #include "rsx_gl_texture.h"
 #include "gl_texture_cache.h"
+#include "gl_render_targets.h"
 
 #define RSX_DEBUG 1
 
@@ -22,6 +23,7 @@ private:
 	gl::glsl::program *m_program;
 
 	rsx::surface_info m_surface;
+	gl_render_targets m_rtts;
 
 	struct texture_buffer_pair
 	{
@@ -37,9 +39,6 @@ public:
 
 private:
 	GLProgramBuffer m_prog_buffer;
-
-	gl::texture m_draw_tex_color[rsx::limits::color_buffers_count];
-	gl::texture m_draw_tex_depth_stencil;
 
 	//buffer
 	gl::fbo m_flip_fbo;
@@ -78,4 +77,7 @@ protected:
 	u64 timestamp() const override;
 
 	bool on_access_violation(u32 address, bool is_writing) override;
+
+	virtual std::array<std::vector<gsl::byte>, 4> copy_render_targets_to_memory() override;
+	virtual std::array<std::vector<gsl::byte>, 2> copy_depth_stencil_buffer_to_memory() override;
 };
