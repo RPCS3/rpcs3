@@ -9,30 +9,30 @@
 
 namespace
 {
-	std::tuple<GLenum, GLenum, GLenum> get_internal_format_format_type(u32 texture_format)
+	std::tuple<GLenum, GLenum, GLenum> get_sized_internal_format_format_type(u32 texture_format)
 	{
 		switch (texture_format)
 		{
-		case CELL_GCM_TEXTURE_B8: return std::make_tuple(GL_RGBA, GL_BLUE, GL_UNSIGNED_BYTE);
-		case CELL_GCM_TEXTURE_A1R5G5B5: return std::make_tuple(GL_RGBA, GL_BGRA, GL_UNSIGNED_SHORT_1_5_5_5_REV);
-		case CELL_GCM_TEXTURE_A4R4G4B4: return std::make_tuple(GL_RGBA, GL_BGRA, GL_UNSIGNED_SHORT_4_4_4_4);
-		case CELL_GCM_TEXTURE_R5G6B5: return std::make_tuple(GL_RGB, GL_RGB, GL_UNSIGNED_SHORT_5_6_5);
-		case CELL_GCM_TEXTURE_A8R8G8B8: return std::make_tuple(GL_RGBA, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8);
-		case CELL_GCM_TEXTURE_G8B8: return std::make_tuple(GL_RGBA, GL_RG, GL_UNSIGNED_BYTE);
-		case CELL_GCM_TEXTURE_R6G5B5: return std::make_tuple(GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE);
+		case CELL_GCM_TEXTURE_B8: return std::make_tuple(GL_R8, GL_RED, GL_UNSIGNED_BYTE);
+		case CELL_GCM_TEXTURE_A1R5G5B5: return std::make_tuple(GL_RGB5_A1, GL_BGRA, GL_UNSIGNED_SHORT_1_5_5_5_REV);
+		case CELL_GCM_TEXTURE_A4R4G4B4: return std::make_tuple(GL_RGBA4, GL_BGRA, GL_UNSIGNED_SHORT_4_4_4_4);
+		case CELL_GCM_TEXTURE_R5G6B5: return std::make_tuple(GL_RGB565, GL_RGB, GL_UNSIGNED_SHORT_5_6_5);
+		case CELL_GCM_TEXTURE_A8R8G8B8: return std::make_tuple(GL_RGBA8, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8);
+		case CELL_GCM_TEXTURE_G8B8: return std::make_tuple(GL_RG8, GL_RG, GL_UNSIGNED_BYTE);
+		case CELL_GCM_TEXTURE_R6G5B5: return std::make_tuple(GL_RGB565, GL_RGBA, GL_UNSIGNED_BYTE);
 		case CELL_GCM_TEXTURE_DEPTH24_D8: return std::make_tuple(GL_DEPTH_COMPONENT24, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE);
 		case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT: return std::make_tuple(GL_DEPTH_COMPONENT24, GL_DEPTH_COMPONENT, GL_FLOAT);
 		case CELL_GCM_TEXTURE_DEPTH16: return std::make_tuple(GL_DEPTH_COMPONENT16, GL_DEPTH_COMPONENT, GL_SHORT);
 		case CELL_GCM_TEXTURE_DEPTH16_FLOAT: return std::make_tuple(GL_DEPTH_COMPONENT16, GL_DEPTH_COMPONENT, GL_FLOAT);
-		case CELL_GCM_TEXTURE_X16: return std::make_tuple(GL_RGBA, GL_RED, GL_UNSIGNED_SHORT);
-		case CELL_GCM_TEXTURE_Y16_X16: return std::make_tuple(GL_RGBA, GL_RG, GL_UNSIGNED_SHORT);
-		case CELL_GCM_TEXTURE_R5G5B5A1: return std::make_tuple(GL_RGBA, GL_RGBA, GL_UNSIGNED_SHORT_5_5_5_1);
-		case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT: return std::make_tuple(GL_RGBA, GL_RGBA, GL_HALF_FLOAT);
-		case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT: return std::make_tuple(GL_RGBA, GL_RGBA, GL_FLOAT);
-		case CELL_GCM_TEXTURE_X32_FLOAT: return std::make_tuple(GL_RGBA, GL_RED, GL_FLOAT);
-		case CELL_GCM_TEXTURE_D1R5G5B5: return std::make_tuple(GL_RGBA, GL_BGRA, GL_UNSIGNED_SHORT_1_5_5_5_REV);
-		case CELL_GCM_TEXTURE_D8R8G8B8: return std::make_tuple(GL_RGBA, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8);
-		case CELL_GCM_TEXTURE_Y16_X16_FLOAT: return std::make_tuple(GL_RGBA, GL_RG, GL_HALF_FLOAT);
+		case CELL_GCM_TEXTURE_X16: return std::make_tuple(GL_R16, GL_RED, GL_UNSIGNED_SHORT);
+		case CELL_GCM_TEXTURE_Y16_X16: return std::make_tuple(GL_RG16, GL_RG, GL_UNSIGNED_SHORT);
+		case CELL_GCM_TEXTURE_R5G5B5A1: return std::make_tuple(GL_RGB5_A1, GL_RGBA, GL_UNSIGNED_SHORT_5_5_5_1);
+		case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT: return std::make_tuple(GL_RGBA16F, GL_RGBA, GL_HALF_FLOAT);
+		case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT: return std::make_tuple(GL_RGBA32F, GL_RGBA, GL_FLOAT);
+		case CELL_GCM_TEXTURE_X32_FLOAT: return std::make_tuple(GL_R32F, GL_RED, GL_FLOAT);
+		case CELL_GCM_TEXTURE_D1R5G5B5: return std::make_tuple(GL_RGB5_A1, GL_BGRA, GL_UNSIGNED_SHORT_1_5_5_5_REV);
+		case CELL_GCM_TEXTURE_D8R8G8B8: return std::make_tuple(GL_RGBA8, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8);
+		case CELL_GCM_TEXTURE_Y16_X16_FLOAT: return std::make_tuple(GL_RG16F, GL_RG, GL_HALF_FLOAT);
 		}
 		throw EXCEPTION("Compressed or unknown texture format %x", texture_format);
 	}
@@ -92,7 +92,7 @@ namespace
 		// NOTE: This must be in ARGB order in all forms below.
 		switch (texture_format)
 		{
-		case CELL_GCM_TEXTURE_B8: return{ GL_BLUE, GL_BLUE, GL_BLUE, GL_BLUE };
+		case CELL_GCM_TEXTURE_B8: return{ GL_RED, GL_RED, GL_RED, GL_RED };
 		case CELL_GCM_TEXTURE_A4R4G4B4: return { GL_BLUE, GL_ALPHA, GL_RED, GL_GREEN };
 		case CELL_GCM_TEXTURE_G8B8: return { GL_RED, GL_GREEN, GL_RED, GL_GREEN };
 		case CELL_GCM_TEXTURE_X16: return { GL_RED, GL_ONE, GL_RED, GL_ONE };
@@ -309,10 +309,11 @@ namespace rsx
 
 			if (!is_compressed_format(format))
 			{
+				const auto &sized_internal_format_format_type = get_sized_internal_format_format_type(format);
+				glTexStorage2D(m_target, tex.mipmap(), std::get<0>(sized_internal_format_format_type), tex.width(), tex.height());
 				if (requires_unpack_byte(format))
 					glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_TRUE);
-				const auto &internal_format_format_type = get_internal_format_format_type(format);
-				glTexImage2D(m_target, 0, std::get<0>(internal_format_format_type), tex.width(), tex.height(), 0, std::get<1>(internal_format_format_type), std::get<2>(internal_format_format_type), texture_data);
+				glTexSubImage2D(m_target, 0, 0, 0, tex.width(), tex.height(), std::get<1>(sized_internal_format_format_type), std::get<2>(sized_internal_format_format_type), texture_data);
 				if (requires_unpack_byte(format))
 					glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_FALSE);
 			}
