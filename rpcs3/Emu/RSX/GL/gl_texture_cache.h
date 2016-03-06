@@ -45,7 +45,7 @@ namespace gl
 	struct texture_format
 	{
 		u8 bpp;
-		const GLint *remap;
+		std::array<GLint, 4> remap;
 		texture::internal_format internal_format;
 		texture::format format;
 		texture::type type;
@@ -68,7 +68,7 @@ namespace gl
 
 		u32 size() const
 		{
-			return height * pitch * depth;
+			return compressed_size ? compressed_size : height * pitch * depth;
 		}
 	};
 
@@ -76,7 +76,7 @@ namespace gl
 
 	struct cached_texture
 	{
-		texture_info info;
+		const texture_info *info;
 		GLuint gl_name = 0;
 
 	private:
@@ -99,8 +99,10 @@ namespace gl
 
 		gl::texture_view view() const
 		{
-			return{ info.target, gl_name };
+			return{ info->target, gl_name };
 		}
+
+		cache_access requires_protection() const;
 
 	protected:
 		void create();
@@ -116,10 +118,8 @@ namespace gl
 		u32 pages_count;
 
 	private:
-		std::map<u32, cached_texture> m_textures;
+		std::unordered_map<texture_info, cached_texture, fnv_1a_hasher, bitwise_equals> m_textures;
 
-		u32 m_read_protected = 0;
-		u32 m_write_protected = 0;
 		u32 m_current_protection = 0;
 
 	public:
@@ -128,6 +128,7 @@ namespace gl
 			return pages_count * vm::page_size;
 		}
 
+		cache_access requires_protection() const;
 		void for_each(std::function<void(cached_texture& texture)> callback);
 		void for_each(u32 start_address, u32 size, std::function<void(cached_texture& texture)> callback);
 		void protect();
@@ -135,11 +136,12 @@ namespace gl
 		bool empty() const;
 
 		void separate(protected_region& dst);
-		void combine(const protected_region& region);
+		void combine(protected_region& region);
+
+		cached_texture* find(const texture_info& info);
+		cached_texture& add(const texture_info& info);
 
 		void clear();
-
-		friend cached_texture;
 	};
 
 	class texture_cache
@@ -147,9 +149,10 @@ namespace gl
 		std::map<u32, protected_region> m_protected_regions;
 
 	public:
-		cached_texture &entry(texture_info &info, cache_buffers sync_buffers = cache_buffers::none);
+		cached_texture &entry(texture_info &info, cache_buffers sync = cache_buffers::none);
 		protected_region *find_region(u32 address);
-		protected_region *find_region(u32 address, u32 size);
+		std::vector<protected_region*> find_regions(u32 address, u32 size);
+		void update_protection();
 		void clear();
 	};
 }

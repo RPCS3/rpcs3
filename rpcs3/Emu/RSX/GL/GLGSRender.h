@@ -38,9 +38,11 @@ private:
 	gl::texture m_draw_tex_color[rsx::limits::color_buffers_count];
 	gl::texture m_draw_tex_depth_stencil;
 
-	gl::cached_texture *m_cached_color_buffers[rsx::limits::color_buffers_count];
-	gl::cached_texture *m_cached_depth_buffer;
+public:
+	gl::cached_texture *cached_color_buffers[rsx::limits::color_buffers_count];
+	gl::cached_texture *cached_depth_buffer;
 
+private:
 	//buffer
 	gl::fbo m_flip_fbo;
 	gl::texture m_flip_tex_color;
@@ -78,5 +80,6 @@ protected:
 
 	bool on_access_violation(u32 address, bool is_writing) override;
 
+public:
 	void for_each_active_surface(std::function<void(gl::cached_texture& texture)> callback);
 };

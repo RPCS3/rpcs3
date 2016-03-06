@@ -8,17 +8,17 @@
 #include "../Common/TextureUtils.h"
 #include "gl_texture_cache.h"
 
-const GLint default_remap[4]{ GL_ALPHA, GL_RED, GL_GREEN, GL_BLUE };
-const GLint remap_B8[4]{ GL_BLUE, GL_BLUE, GL_BLUE, GL_BLUE };
-const GLint remap_G8B8[4]{ GL_RED, GL_GREEN, GL_RED, GL_GREEN };
-const GLint remap_R6G5B5[4]{ GL_ALPHA, GL_GREEN, GL_RED, GL_BLUE };
-const GLint remap_X16[4]{ GL_RED, GL_ONE, GL_RED, GL_ONE };
-const GLint remap_Y16_X16[4]{ GL_GREEN, GL_RED, GL_GREEN, GL_RED };
-const GLint remap_FLOAT[4]{ GL_RED, GL_ONE, GL_ONE, GL_ONE };
-const GLint remap_X32_FLOAT[4]{ GL_RED, GL_ONE, GL_ONE, GL_ONE };
-const GLint remap_D1R5G5B5[4]{ GL_ONE, GL_RED, GL_GREEN, GL_BLUE };
-const GLint remap_D8R8G8B8[4]{ GL_ONE, GL_RED, GL_GREEN, GL_BLUE };
-const GLint remap_Y16_X16_FLOAT[4]{ GL_RED, GL_GREEN, GL_RED, GL_GREEN };
+const std::array<GLint, 4> default_remap{ GL_ALPHA, GL_RED, GL_GREEN, GL_BLUE };
+const std::array<GLint, 4> remap_B8{ GL_BLUE, GL_BLUE, GL_BLUE, GL_BLUE };
+const std::array<GLint, 4> remap_G8B8{ GL_RED, GL_GREEN, GL_RED, GL_GREEN };
+const std::array<GLint, 4> remap_R6G5B5{ GL_ALPHA, GL_GREEN, GL_RED, GL_BLUE };
+const std::array<GLint, 4> remap_X16{ GL_RED, GL_ONE, GL_RED, GL_ONE };
+const std::array<GLint, 4> remap_Y16_X16{ GL_GREEN, GL_RED, GL_GREEN, GL_RED };
+const std::array<GLint, 4> remap_FLOAT{ GL_RED, GL_ONE, GL_ONE, GL_ONE };
+const std::array<GLint, 4> remap_X32_FLOAT{ GL_RED, GL_ONE, GL_ONE, GL_ONE };
+const std::array<GLint, 4> remap_D1R5G5B5{ GL_ONE, GL_RED, GL_GREEN, GL_BLUE };
+const std::array<GLint, 4> remap_D8R8G8B8{ GL_ONE, GL_RED, GL_GREEN, GL_BLUE };
+const std::array<GLint, 4> remap_Y16_X16_FLOAT{ GL_RED, GL_GREEN, GL_RED, GL_GREEN };
 
 const std::unordered_map<u32, gl::texture_format> textures_fromats
 {
@@ -43,6 +43,14 @@ const std::unordered_map<u32, gl::texture_format> textures_fromats
 	{ CELL_GCM_TEXTURE_D8R8G8B8,{ 4, remap_D8R8G8B8, gl::texture::internal_format::rgba, gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8, gl::texture_flags::allow_remap | gl::texture_flags::allow_swizzle } },
 	{ CELL_GCM_TEXTURE_Y16_X16_FLOAT,{ 4, remap_Y16_X16_FLOAT, gl::texture::internal_format::rgba, gl::texture::format::rg, gl::texture::type::f16, gl::texture_flags::allow_remap | gl::texture_flags::swap_bytes } },
 };
+
+namespace gl
+{
+	const texture_format& get_texture_format(u32 texture_id)
+	{
+		return textures_fromats.at(texture_id);
+	}
+}
 
 static const int gl_tex_min_filter[] =
 {
@@ -147,7 +155,7 @@ void rsx::gl_texture::bind(gl::texture_cache& cache, int index, rsx::texture& te
 
 	bool is_compressed = compressed_format(full_format);
 
-	const GLint *remap = default_remap;
+	const GLint *remap = default_remap.data();
 
 	//TODO
 	gl::texture_info info{};
@@ -156,6 +164,8 @@ void rsx::gl_texture::bind(gl::texture_cache& cache, int index, rsx::texture& te
 	info.height = std::max<u16>(tex.height(), 1);
 	info.depth = std::max<u16>(tex.depth(), 1);
 	info.dimension = tex.dimension();
+	info.start_address = rsx::get_address(tex.offset(), tex.location());
+	info.target = target;
 
 	if (is_compressed)
 	{
@@ -183,6 +193,10 @@ void rsx::gl_texture::bind(gl::texture_cache& cache, int index, rsx::texture& te
 		default:
 			throw EXCEPTION("bad compressed format");
 		}
+
+		info.format.bpp = 1;
+		info.format.format = gl::texture::format::rgba;
+		info.format.flags = gl::texture_flags::none;
 	}
 	else
 	{
@@ -201,7 +215,7 @@ void rsx::gl_texture::bind(gl::texture_cache& cache, int index, rsx::texture& te
 			info.pitch = info.width * info.format.bpp;
 		}
 
-		remap = info.format.remap;
+		remap = info.format.remap.data();
 	}
 
 	cache.entry(info, gl::cache_buffers::local).bind(index);

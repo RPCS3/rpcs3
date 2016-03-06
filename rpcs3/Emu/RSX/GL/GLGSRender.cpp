@@ -662,6 +662,8 @@ void GLGSRender::end()
 	invalidate_buffers();
 
 	rsx::thread::end();
+
+	m_texture_cache.update_protection();
 }
 
 void GLGSRender::set_viewport()
@@ -799,7 +801,15 @@ void nv4097_clear_surface(u32 arg, GLGSRender* renderer)
 {
 	//LOG_NOTICE(Log::RSX, "nv4097_clear_surface(0x%x)", arg);
 
-	if ((arg & 0xf3) == 0)
+	enum
+	{
+		depth = 1 << 0,
+		stencil = 1 << 1,
+		depth_stencil = depth | stencil,
+		color_mask = 0xf0,
+	};
+
+	if ((arg & (depth_stencil | color_mask)) == 0)
 	{
 		//do nothing
 		return;
@@ -818,29 +828,45 @@ void nv4097_clear_surface(u32 arg, GLGSRender* renderer)
 
 	GLbitfield mask = 0;
 
-	if (arg & 0x1)
+	if (arg & depth_stencil)
 	{
-		rsx::surface_depth_format surface_depth_format = rsx::to_surface_depth_format((rsx::method_registers[NV4097_SET_SURFACE_FORMAT] >> 5) & 0x7);
-		u32 max_depth_value = get_max_depth_value(surface_depth_format);
+		if (arg & depth)
+		{
+			rsx::surface_depth_format surface_depth_format = rsx::to_surface_depth_format((rsx::method_registers[NV4097_SET_SURFACE_FORMAT] >> 5) & 0x7);
+			u32 max_depth_value = get_max_depth_value(surface_depth_format);
 
-		u32 clear_depth = rsx::method_registers[NV4097_SET_ZSTENCIL_CLEAR_VALUE] >> 8;
+			u32 clear_depth = rsx::method_registers[NV4097_SET_ZSTENCIL_CLEAR_VALUE] >> 8;
 
-		glDepthMask(GL_TRUE);
-		glClearDepth(double(clear_depth) / max_depth_value);
-		mask |= GLenum(gl::buffers::depth);
+			glDepthMask(GL_TRUE);
+			glClearDepth(double(clear_depth) / max_depth_value);
+			mask |= GLenum(gl::buffers::depth);
+		}
+
+		if (arg & stencil)
+		{
+			u8 clear_stencil = rsx::method_registers[NV4097_SET_ZSTENCIL_CLEAR_VALUE] & 0xff;
+
+			__glcheck glStencilMask(rsx::method_registers[NV4097_SET_STENCIL_MASK]);
+			glClearStencil(clear_stencil);
+
+			mask |= GLenum(gl::buffers::stencil);
+		}
+
+		if (gl::cached_texture* texture = renderer->cached_depth_buffer)
+		{
+			if ((arg & depth_stencil) == depth_stencil)
+			{
+				texture->ignore(gl::cache_buffers::local);
+				texture->invalidate(gl::cache_buffers::host);
+			}
+			else
+			{
+				texture->sync(gl::cache_buffers::local);
+			}
+		}
 	}
 
-	if (arg & 0x2)
-	{
-		u8 clear_stencil = rsx::method_registers[NV4097_SET_ZSTENCIL_CLEAR_VALUE] & 0xff;
-
-		__glcheck glStencilMask(rsx::method_registers[NV4097_SET_STENCIL_MASK]);
-		glClearStencil(clear_stencil);
-
-		mask |= GLenum(gl::buffers::stencil);
-	}
-
-	if (arg & 0xf0)
+	if (arg & color_mask)
 	{
 		u32 clear_color = rsx::method_registers[NV4097_SET_COLOR_CLEAR_VALUE];
 		u8 clear_a = clear_color >> 24;
@@ -852,10 +878,27 @@ void nv4097_clear_surface(u32 arg, GLGSRender* renderer)
 		glClearColor(clear_r / 255.f, clear_g / 255.f, clear_b / 255.f, clear_a / 255.f);
 
 		mask |= GLenum(gl::buffers::color);
+
+		rsx::for_each_active_color_surface([&](int index)
+		{
+			gl::cached_texture* texture = renderer->cached_color_buffers[index];
+
+			if (texture)
+			{
+				if ((arg & color_mask) == color_mask)
+				{
+					texture->ignore(gl::cache_buffers::local);
+					texture->invalidate(gl::cache_buffers::host);
+				}
+				else
+				{
+					texture->sync(gl::cache_buffers::local);
+				}
+			}
+		});
 	}
 
 	glClear(mask);
-	renderer->invalidate_buffers();
 }
 
 using rsx_method_impl_t = void(*)(u32, GLGSRender*);
@@ -1021,6 +1064,52 @@ std::pair<gl::texture::type, gl::texture::format> surface_depth_format_to_gl(rsx
 	}
 }
 
+[[noreturn]] void unimplemented()
+{
+	throw EXCEPTION("");
+}
+
+u32 surface_format_to_texture_format(rsx::surface_color_format format)
+{
+	switch (format)
+	{
+	case rsx::surface_color_format::x1r5g5b5_z1r5g5b5: unimplemented();
+	case rsx::surface_color_format::x1r5g5b5_o1r5g5b5: unimplemented();
+	case rsx::surface_color_format::r5g6b5: return CELL_GCM_TEXTURE_R5G6B5;
+	case rsx::surface_color_format::x8r8g8b8_z8r8g8b8: unimplemented();
+	case rsx::surface_color_format::x8r8g8b8_o8r8g8b8: unimplemented();
+	case rsx::surface_color_format::a8r8g8b8: return CELL_GCM_TEXTURE_A8R8G8B8;
+	case rsx::surface_color_format::b8: return CELL_GCM_TEXTURE_B8;
+	case rsx::surface_color_format::g8b8: return CELL_GCM_TEXTURE_G8B8;
+	case rsx::surface_color_format::w16z16y16x16: return CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT;
+	case rsx::surface_color_format::w32z32y32x32: return CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT;
+	case rsx::surface_color_format::x32: return CELL_GCM_TEXTURE_X32_FLOAT;
+	case rsx::surface_color_format::x8b8g8r8_z8b8g8r8: unimplemented();
+	case rsx::surface_color_format::x8b8g8r8_o8b8g8r8: unimplemented();
+	case rsx::surface_color_format::a8b8g8r8: unimplemented();
+	}
+
+	return CELL_GCM_TEXTURE_A8R8G8B8;
+}
+
+gl::texture_info surface_info(rsx::surface_color_format format, u32 offset, u32 location, u32 width, u32 height, u32 pitch)
+{
+	gl::texture_info info;
+
+	info.width = width;
+	info.height = height;
+	info.depth = 1;
+	info.pitch = pitch;
+	info.compressed_size = 0;
+	info.target = gl::texture::target::texture2D;
+	info.dimension = 2;
+	info.start_address = rsx::get_address(offset, location);
+
+	info.format = gl::get_texture_format(surface_format_to_texture_format(format));
+
+	return info;
+}
+
 void GLGSRender::init_buffers(bool skip_reading)
 {
 	static const u32 mr_color_offset[rsx::limits::color_buffers_count] =
@@ -1049,44 +1138,99 @@ void GLGSRender::init_buffers(bool skip_reading)
 
 	static const gl::texture_view null_texture{ gl::texture::target::texture2D, 0 };
 
+	u32 surface_format = rsx::method_registers[NV4097_SET_SURFACE_FORMAT];
+
+	u32 clip_horizontal = rsx::method_registers[NV4097_SET_SURFACE_CLIP_HORIZONTAL];
+	u32 clip_vertical = rsx::method_registers[NV4097_SET_SURFACE_CLIP_VERTICAL];
+
+	u32 clip_width = clip_horizontal >> 16;
+	u32 clip_height = clip_vertical >> 16;
+	u32 clip_x = clip_horizontal & 0xffff;
+	u32 clip_y = clip_vertical & 0xffff;
+
+	m_surface.unpack(surface_format);
+	m_surface.width = clip_width + clip_x;
+	m_surface.height = clip_height + clip_y;
+
 	rsx::for_each_active_color_surface([&](int index)
 	{
-		//TODO
+		u32 offset = rsx::method_registers[mr_color_offset[index]];
+		u32 location = rsx::method_registers[mr_color_dma[index]];
+		u32 pitch = rsx::method_registers[mr_color_pitch[index]];
 
-		if (true)
+		if (!location)
 		{
-			m_cached_color_buffers[index] = nullptr;
+			cached_color_buffers[index] = nullptr;
 			draw_fbo.color[index] = null_texture;
 		}
 		else
 		{
-			gl::texture_info info{};
-
-			//TODO
-
-			m_cached_color_buffers[index] = &m_texture_cache.entry(info, skip_reading ? gl::cache_buffers::none : gl::cache_buffers::local);
-
-			draw_fbo.color[index] = m_cached_color_buffers[index]->view();
+			gl::texture_info info = surface_info(m_surface.color_format, offset, location, m_surface.width, m_surface.height, pitch);
+			cached_color_buffers[index] = &m_texture_cache.entry(info, skip_reading ? gl::cache_buffers::none : gl::cache_buffers::local);
+			draw_fbo.color[index] = cached_color_buffers[index]->view();
 		}
 	});
 
 	{
-		//TODO
+		u32 offset = rsx::method_registers[NV4097_SET_SURFACE_ZETA_OFFSET];
+		u32 location = rsx::method_registers[NV4097_SET_CONTEXT_DMA_ZETA];
+		u32 pitch = rsx::method_registers[NV4097_SET_SURFACE_PITCH_Z];
 
-		if (true)
+		if (!location)
 		{
-			m_cached_depth_buffer = nullptr;
+			cached_depth_buffer = nullptr;
 			draw_fbo.depth_stencil = null_texture;
 		}
 		else
 		{
-			gl::texture_info info{};
+			gl::texture_info info;
 
-			//TODO
+			info.width = m_surface.width;
+			info.height = m_surface.height;
+			info.depth = 1;
+			info.pitch = pitch;
+			info.dimension = 2;
+			info.compressed_size = 0;
+			info.start_address = rsx::get_address(offset, location);
+			info.target = gl::texture::target::texture2D;
 
-			m_cached_depth_buffer = &m_texture_cache.entry(info, skip_reading ? gl::cache_buffers::none : gl::cache_buffers::local);
+			switch (m_surface.depth_format)
+			{
+			case rsx::surface_depth_format::z16:
+				info.format.bpp = 2;
+				info.format.flags = gl::texture_flags::swap_bytes;
+				info.format.type = gl::texture::type::ushort;
+				info.format.internal_format = gl::texture::internal_format::depth16;
+				info.format.format = gl::texture::format::depth;
+				break;
 
-			draw_fbo.depth_stencil = m_cached_depth_buffer->view();
+			case rsx::surface_depth_format::z24s8:
+				info.format.bpp = 4;
+				info.format.flags = gl::texture_flags::swap_bytes;
+				info.format.type = gl::texture::type::uint_24_8;
+				info.format.internal_format = gl::texture::internal_format::depth24_stencil8;
+				info.format.format = gl::texture::format::depth_stencil;
+				break;
+
+			default:
+				throw EXCEPTION("");
+			}
+
+			info.format.remap = { GL_ZERO, GL_ZERO, GL_ZERO, GL_ZERO };
+
+			cached_depth_buffer = &m_texture_cache.entry(info, skip_reading ? gl::cache_buffers::none : gl::cache_buffers::local);
+
+
+			switch (m_surface.depth_format)
+			{
+			case rsx::surface_depth_format::z16:
+				draw_fbo.depth = cached_depth_buffer->view();
+				break;
+
+			case rsx::surface_depth_format::z24s8:
+				draw_fbo.depth_stencil = cached_depth_buffer->view();
+				break;
+			}
 		}
 	}
 
@@ -1126,14 +1270,9 @@ void GLGSRender::invalidate_buffers()
 
 void GLGSRender::flip(int buffer)
 {
-	//LOG_NOTICE(Log::RSX, "flip(%d)", buffer);
 	u32 buffer_width = gcm_buffers[buffer].width;
 	u32 buffer_height = gcm_buffers[buffer].height;
 	u32 buffer_pitch = gcm_buffers[buffer].pitch;
-
-	//rsx::tiled_region buffer_region = get_tiled_address(gcm_buffers[buffer].offset, CELL_GCM_LOCATION_LOCAL);
-
-	//TODO
 
 	glDisable(GL_SCISSOR_TEST);
 	glDisable(GL_DEPTH_TEST);
@@ -1142,11 +1281,8 @@ void GLGSRender::flip(int buffer)
 	glDisable(GL_LOGIC_OP);
 	glDisable(GL_CULL_FACE);
 
-	gl::texture_info info{};
-
-	//TODO
-
-	gl::cached_texture& texture = m_texture_cache.entry(info);
+	gl::cached_texture& texture = m_texture_cache.entry(surface_info(rsx::surface_color_format::a8r8g8b8, gcm_buffers[buffer].offset,
+		CELL_GCM_LOCATION_LOCAL, buffer_width, buffer_height, buffer_pitch), gl::cache_buffers::local);
 
 	m_flip_fbo.bind();
 	m_flip_fbo.color = texture.view();
@@ -1203,7 +1339,7 @@ bool GLGSRender::on_access_violation(u32 address, bool is_writing)
 	{
 		if (is_writing)
 		{
-			const bool accurate_cache = false;
+			const bool accurate_cache = true;
 
 			if (accurate_cache)
 			{
@@ -1249,14 +1385,16 @@ void GLGSRender::for_each_active_surface(std::function<void(gl::cached_texture& 
 {
 	rsx::for_each_active_color_surface([&](int index)
 	{
-		if (gl::cached_texture *texture = m_cached_color_buffers[index])
+		gl::cached_texture *texture = cached_color_buffers[index];
+
+		if (texture)
 		{
 			callback(*texture);
 		}
 	});
 
-	if (gl::cached_texture *texture = m_cached_depth_buffer)
+	if (cached_depth_buffer)
 	{
-		callback(*texture);
+		callback(*cached_depth_buffer);
 	}
 }

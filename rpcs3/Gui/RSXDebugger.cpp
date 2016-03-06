@@ -667,7 +667,7 @@ void RSXDebugger::GetBuffers()
 		if(!vm::check_addr(RSXbuffer_addr))
 			continue;
 
-		auto RSXbuffer = vm::ps3::_ptr<u8>(RSXbuffer_addr);
+		auto RSXbuffer = (u8*)vm::base_priv(RSXbuffer_addr);
 		
 		u32 width  = buffers[bufferId].width;
 		u32 height = buffers[bufferId].height;
