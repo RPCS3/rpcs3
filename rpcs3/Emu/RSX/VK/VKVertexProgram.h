@@ -45,7 +45,7 @@ public:
 
 	ParamArray parr;
 	VkShaderModule handle = nullptr;
-	int id;
+	u32 id;
 	std::string shader;
 	std::vector<vk::glsl::program_input> uniforms;
 

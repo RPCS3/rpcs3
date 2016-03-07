@@ -99,7 +99,7 @@ namespace vk
 		uint32_t get_queue_count()
 		{
 			if (queue_props.size())
-				return queue_props.size();
+				return (u32)queue_props.size();
 
 			uint32_t count = 0;
 			vkGetPhysicalDeviceQueueFamilyProperties(dev, &count, nullptr);
@@ -239,13 +239,13 @@ namespace vk
 	{
 		VkDeviceMemory vram = nullptr;
 		vk::render_device *owner = nullptr;
-		u32 vram_block_sz = 0;
+		u64 vram_block_sz = 0;
 
 	public:
 		memory_block() {}
 		~memory_block() {}
 
-		void allocate_from_pool(vk::render_device &device, u32 block_sz, u32 typeBits)
+		void allocate_from_pool(vk::render_device &device, u64 block_sz, u32 typeBits)
 		{
 			if (vram)
 				destroy();
@@ -322,9 +322,9 @@ namespace vk
 		texture() {}
 		~texture() {}
 
-		void create(vk::render_device &device, VkFormat format, VkImageType image_type, VkImageViewType view_type, VkImageCreateFlags image_flags, VkImageUsageFlags usage, VkImageTiling tiling, u32 width, u32 height, u32 mipmaps, bool gpu_only, VkComponentMapping& swizzle);
-		void create(vk::render_device &device, VkFormat format, VkImageUsageFlags usage, VkImageTiling tiling, u32 width, u32 height, u32 mipmaps, bool gpu_only, VkComponentMapping& swizzle);
-		void create(vk::render_device &device, VkFormat format, VkImageUsageFlags usage, u32 width, u32 height, u32 mipmaps, bool gpu_only, VkComponentMapping& swizzle);
+		void create(vk::render_device &device, VkFormat format, VkImageType image_type, VkImageViewType view_type, VkImageCreateFlags image_flags, VkImageUsageFlags usage, VkImageTiling tiling, u32 width, u32 height, u32 mipmaps, bool gpu_only, VkComponentMapping swizzle);
+		void create(vk::render_device &device, VkFormat format, VkImageUsageFlags usage, VkImageTiling tiling, u32 width, u32 height, u32 mipmaps, bool gpu_only, VkComponentMapping swizzle);
+		void create(vk::render_device &device, VkFormat format, VkImageUsageFlags usage, u32 width, u32 height, u32 mipmaps, bool gpu_only, VkComponentMapping swizzle);
 		void create(vk::render_device &device, VkFormat format, VkImageUsageFlags usage, u32 width, u32 height, u32 mipmaps, bool gpu_only);
 		void create(vk::render_device &device, VkFormat format, VkImageUsageFlags usage, u32 width, u32 height);
 		void destroy();
@@ -360,7 +360,7 @@ namespace vk
 
 		vk::render_device *owner;
 		vk::memory_block vram;
-		u32 m_size = 0;
+		u64 m_size = 0;
 
 		bool viewable = false;
 
@@ -368,7 +368,7 @@ namespace vk
 		buffer() {}
 		~buffer() {}
 
-		void create(vk::render_device &dev, u32 size, VkFormat format, VkBufferUsageFlagBits usage, VkBufferCreateFlags flags)
+		void create(vk::render_device &dev, u64 size, VkFormat format, VkBufferUsageFlagBits usage, VkBufferCreateFlags flags)
 		{
 			if (m_buffer) throw EXCEPTION("Buffer create called on an existing buffer!");
 
@@ -504,7 +504,7 @@ namespace vk
 			m_internal_format = format;
 		}
 
-		u32 size()
+		u64 size()
 		{
 			return m_size;
 		}
@@ -784,7 +784,7 @@ namespace vk
 
 		u32 get_swap_image_count()
 		{
-			return m_swap_images.size();
+			return (u32)m_swap_images.size();
 		}
 
 		vk::swap_chain_image& get_swap_chain_image(const int index)
@@ -959,7 +959,7 @@ namespace vk
 			app.applicationVersion = 0;
 			app.pEngineName = app_name;
 			app.engineVersion = 0;
-			app.apiVersion = (1, 0, 0);
+			app.apiVersion = VK_MAKE_VERSION(1, 0, 0);
 
 			//Set up instance information
 			const char *requested_extensions[] =
@@ -993,7 +993,7 @@ namespace vk
 			if (error != VK_SUCCESS) throw EXCEPTION("Undefined trap");
 
 			m_vk_instances.push_back(instance);
-			return m_vk_instances.size();
+			return (u32)m_vk_instances.size();
 		}
 
 		void makeCurrentInstance(uint32_t instance_id)
@@ -1037,7 +1037,7 @@ namespace vk
 
 				CHECK_RESULT(vkEnumeratePhysicalDevices(m_instance, &num_gpus, pdevs.data()));
 
-				for (int i = 0; i < num_gpus; ++i)
+				for (u32 i = 0; i < num_gpus; ++i)
 					gpus[i].set_device(pdevs[i]);
 			}
 
@@ -1060,7 +1060,7 @@ namespace vk
 			uint32_t device_queues = dev.get_queue_count();
 			std::vector<VkBool32> supportsPresent(device_queues);
 
-			for (int index = 0; index < device_queues; index++)
+			for (u32 index = 0; index < device_queues; index++)
 			{
 				vkGetPhysicalDeviceSurfaceSupportKHR(dev, index, surface, &supportsPresent[index]);
 			}
@@ -1070,7 +1070,7 @@ namespace vk
 			uint32_t graphicsQueueNodeIndex = UINT32_MAX;
 			uint32_t presentQueueNodeIndex = UINT32_MAX;
 
-			for (int i = 0; i < device_queues; i++)
+			for (u32 i = 0; i < device_queues; i++)
 			{
 				if ((dev.get_queue_properties(i).queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0)
 				{
@@ -1206,8 +1206,8 @@ namespace vk
 		{
 			VkBufferView buffer_view = nullptr;
 			VkBuffer buffer = nullptr;
-			u32 offset = 0;
-			u32 size = 0;
+			u64 offset = 0;
+			u64 size = 0;
 		};
 
 		struct program_input

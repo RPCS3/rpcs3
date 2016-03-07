@@ -290,7 +290,7 @@ void VKFragmentProgram::Compile()
 	VkDevice dev = (VkDevice)*vk::get_current_renderer();
 	vkCreateShaderModule(dev, &fs_info, nullptr, &handle);
 
-	id = (u32)(handle);
+	id = (u32)((u64)handle);
 }
 
 void VKFragmentProgram::Delete()

@@ -725,7 +725,7 @@ namespace vk
 					uniform.domain == domain)
 				{
 					VkBuffer buf = _buffer;
-					u32 size = _buffer.size();
+					u64 size = _buffer.size();
 
 					if (uniform.as_buffer.buffer != buf ||
 						uniform.as_buffer.size != size)
@@ -760,7 +760,7 @@ namespace vk
 				{
 					VkBuffer buf = _buffer;
 					VkBufferView view = _buffer;
-					u32 size = _buffer.size();
+					u64 size = _buffer.size();
 
 					if (uniform.as_buffer.buffer != buf ||
 						uniform.as_buffer.buffer_view != view ||

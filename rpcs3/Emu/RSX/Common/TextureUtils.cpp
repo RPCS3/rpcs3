@@ -340,7 +340,7 @@ std::vector<MipmapLevelInfo> upload_placed_texture(gsl::span<gsl::byte> mapped_b
 /**
  * Upload texture mipmaps where alignment and offset information is provided manually
  */
-void upload_texture_mipmaps(gsl::span<gsl::byte> dst_buffer, const rsx::texture &texture, std::vector<std::pair<u32, u32>> alignment_offset_info)
+void upload_texture_mipmaps(gsl::span<gsl::byte> dst_buffer, const rsx::texture &texture, std::vector<std::pair<u64, u32>> alignment_offset_info)
 {
 	u16 w = texture.width(), h = texture.height();
 	u16 depth;

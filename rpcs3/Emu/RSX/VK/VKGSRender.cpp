@@ -412,7 +412,7 @@ void VKGSRender::end()
 		}
 	}
 
-	auto &upload_info = upload_vertex_data();
+	auto upload_info = upload_vertex_data();
 
 	m_program->set_primitive_topology(std::get<0>(upload_info));
 	m_program->use(m_command_buffer, m_render_pass, 0);
@@ -434,9 +434,6 @@ void VKGSRender::end()
 
 	end_command_buffer_recording();
 	execute_command_buffer(false);
-
-	//Finish()
-	vkDeviceWaitIdle((*m_device));
 
 	rsx::thread::end();
 }
@@ -519,7 +516,7 @@ void VKGSRender::clear_surface(u32 mask)
 	init_buffers();
 
 	float depth_clear = 1.f;
-	u32   stencil_clear = 0.f;
+	u32   stencil_clear = 0;
 
 	VkClearValue depth_stencil_clear_values, color_clear_values;
 	VkImageSubresourceRange depth_range = vk::default_image_subresource_range();
@@ -874,7 +871,6 @@ void VKGSRender::prepare_rtts()
 		(*m_device), &m_command_buffer);
 
 	//Bind created rtts as current fbo...
-	VkImageView attachments[5];
 	std::vector<u8> draw_buffers = vk::get_draw_buffers(rsx::to_surface_target(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET]));
 
 	m_framebuffer.destroy();
@@ -904,7 +900,7 @@ void VKGSRender::prepare_rtts()
 
 		init_render_pass(vk::get_compatible_surface_format(m_surface.color_format),
 			vk::get_compatible_depth_surface_format(m_surface.depth_format),
-			draw_buffers.size(),
+			(u8)draw_buffers.size(),
 			draw_buffers.data());
 	}
 

@@ -92,7 +92,7 @@ namespace vk
 	*/
 	u32 expand_line_loop_array_to_strip(u32 vertex_draw_count, std::vector<u16>& indices)
 	{
-		int i = 0;
+		u32 i = 0;
 		indices.resize(vertex_draw_count + 1);
 
 		for (; i < vertex_draw_count; ++i)
@@ -107,7 +107,7 @@ namespace vk
 	{
 		indices.resize(original_count + 1);
 
-		int i = 0;
+		u32 i = 0;
 		for (; i < original_count; ++i)
 			indices[i] = original_indices[i];
 

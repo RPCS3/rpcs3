@@ -269,7 +269,7 @@ void VKVertexProgram::Compile()
 	VkDevice dev = (VkDevice)*vk::get_current_renderer();
 	vkCreateShaderModule(dev, &vs_info, nullptr, &handle);
 
-	id = (u32)(handle);
+	id = (u32)((u64)handle);
 }
 
 void VKVertexProgram::Delete()

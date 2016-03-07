@@ -29,7 +29,7 @@ std::vector<MipmapLevelInfo> upload_placed_texture(gsl::span<gsl::byte> mapped_b
 * alignment_offset info is an array of N mipmaps providing the offset into the data block and row-pitch alignment of each
 * mipmap level individually.
 */
-void upload_texture_mipmaps(gsl::span<gsl::byte> dst_buffer, const rsx::texture &texture, std::vector<std::pair<u32, u32>> alignment_offset_info);
+void upload_texture_mipmaps(gsl::span<gsl::byte> dst_buffer, const rsx::texture &texture, std::vector<std::pair<u64, u32>> alignment_offset_info);
 
 /**
 * Get number of bytes occupied by texture in RSX mem

@@ -47,7 +47,7 @@ public:
 
 	ParamArray parr;
 	VkShaderModule handle = nullptr;
-	int id;
+	u32 id;
 	std::string shader;
 	std::vector<size_t> FragmentConstantOffsetCache;
 
