@@ -289,7 +289,6 @@ VKGSRender::upload_vertex_data()
 				continue;
 			}
 
-			const u32 host_element_size = rsx::get_vertex_type_size_on_host(vertex_info.type, vertex_info.size);
 			const u32 element_size = vk::get_suitable_vk_size(vertex_info.type, vertex_info.size);
 			const u32 data_size = element_size * vertex_draw_count;
 			const VkFormat format = vk::get_suitable_vk_format(vertex_info.type, vertex_info.size);
@@ -311,19 +310,19 @@ VKGSRender::upload_vertex_data()
 			switch (vertex_info.type)
 			{
 			case rsx::vertex_base_type::f:
-				vk::copy_inlined_data_to_buffer<float, 1>(src, dst, vertex_draw_count, vertex_info.type, vertex_info.size, opt_size, host_element_size, stride);
+				vk::copy_inlined_data_to_buffer<float, 1>(src, dst, vertex_draw_count, vertex_info.type, vertex_info.size, opt_size, element_size, stride);
 				break;
 			case rsx::vertex_base_type::sf:
-				vk::copy_inlined_data_to_buffer<u16, 0x3c00>(src, dst, vertex_draw_count, vertex_info.type, vertex_info.size, opt_size, host_element_size, stride);
+				vk::copy_inlined_data_to_buffer<u16, 0x3c00>(src, dst, vertex_draw_count, vertex_info.type, vertex_info.size, opt_size, element_size, stride);
 				break;
 			case rsx::vertex_base_type::s1:
 			case rsx::vertex_base_type::ub:
 			case rsx::vertex_base_type::ub256:
-				vk::copy_inlined_data_to_buffer<u8, 1>(src, dst, vertex_draw_count, vertex_info.type, vertex_info.size, opt_size, host_element_size, stride);
+				vk::copy_inlined_data_to_buffer<u8, 1>(src, dst, vertex_draw_count, vertex_info.type, vertex_info.size, opt_size, element_size, stride);
 				break;
 			case rsx::vertex_base_type::s32k:
 			case rsx::vertex_base_type::cmp:
-				vk::copy_inlined_data_to_buffer<u16, 1>(src, dst, vertex_draw_count, vertex_info.type, vertex_info.size, opt_size, host_element_size, stride);
+				vk::copy_inlined_data_to_buffer<u16, 1>(src, dst, vertex_draw_count, vertex_info.type, vertex_info.size, opt_size, element_size, stride);
 				break;
 			default:
 				throw EXCEPTION("Unknown base type %d", vertex_info.type);

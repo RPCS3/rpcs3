@@ -162,7 +162,7 @@ namespace vk
 		CHECK_RESULT(vkCreateImage(device, &image_info, nullptr, &m_image_contents));
 
 		vkGetImageMemoryRequirements(device, m_image_contents, &m_memory_layout);
-		vram_allocation.allocate_from_pool(device, m_memory_layout.size, m_memory_layout.memoryTypeBits);
+		vram_allocation.allocate_from_pool(device, m_memory_layout.size, !gpu_only, m_memory_layout.memoryTypeBits);
 
 		CHECK_RESULT(vkBindImageMemory(device, m_image_contents, vram_allocation, 0));
 

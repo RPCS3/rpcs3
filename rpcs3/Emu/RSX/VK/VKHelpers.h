@@ -240,12 +240,13 @@ namespace vk
 		VkDeviceMemory vram = nullptr;
 		vk::render_device *owner = nullptr;
 		u64 vram_block_sz = 0;
+		bool mappable = false;
 
 	public:
 		memory_block() {}
 		~memory_block() {}
 
-		void allocate_from_pool(vk::render_device &device, u64 block_sz, u32 typeBits)
+		void allocate_from_pool(vk::render_device &device, u64 block_sz, bool host_visible, u32 typeBits)
 		{
 			if (vram)
 				destroy();
@@ -254,8 +255,13 @@ namespace vk
 
 			owner = (vk::render_device*)&device;
 			VkDevice dev = (VkDevice)(*owner);
+
+			u32 access_mask = 0;
 			
-			if (!owner->get_compatible_memory_type(typeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, &typeIndex))
+			if (host_visible)
+				access_mask |= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+
+			if (!owner->get_compatible_memory_type(typeBits, access_mask, &typeIndex))
 				throw EXCEPTION("Could not find suitable memory type!");
 
 			VkMemoryAllocateInfo infos;
@@ -266,6 +272,12 @@ namespace vk
 
 			CHECK_RESULT(vkAllocateMemory(dev, &infos, nullptr, &vram));
 			vram_block_sz = block_sz;
+			mappable = host_visible;
+		}
+
+		void allocate_from_pool(vk::render_device &device, u64 block_sz, u32 typeBits)
+		{
+			allocate_from_pool(device, block_sz, true, typeBits);
 		}
 
 		void destroy()
@@ -276,6 +288,11 @@ namespace vk
 			owner = nullptr;
 			vram = nullptr;
 			vram_block_sz = 0;
+		}
+
+		bool is_mappable()
+		{
+			return mappable;
 		}
 
 		vk::render_device& get_owner()
@@ -419,7 +436,10 @@ namespace vk
 
 		void *map(u32 offset, u64 size)
 		{
+			if (!vram.is_mappable()) return nullptr;
+
 			void *data = nullptr;
+			
 			if (size == VK_WHOLE_SIZE)
 				size = m_memory_layout.size;
 			
