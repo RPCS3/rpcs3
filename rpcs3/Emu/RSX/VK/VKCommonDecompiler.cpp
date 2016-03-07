@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "VKCommonDecompiler.h"
-#include "../VulKan/glslang/SPIRV/GlslangToSpv.h"
+#include "../../../../Vulkan/glslang/SPIRV/GlslangToSpv.h"
 
 namespace vk
 {

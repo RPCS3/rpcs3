@@ -1044,6 +1044,7 @@ namespace vk
 			return gpus;
 		}
 
+#ifdef _WIN32
 		vk::swap_chain* createSwapChain(HINSTANCE hInstance, HWND hWnd, vk::physical_device &dev)
 		{
 			VkWin32SurfaceCreateInfoKHR createInfo;
@@ -1133,6 +1134,8 @@ namespace vk
 
 			return new swap_chain(dev, presentQueueNodeIndex, graphicsQueueNodeIndex, format, surface, color_space);
 		}
+#endif	//if _WIN32
+
 	};
 
 	class descriptor_pool

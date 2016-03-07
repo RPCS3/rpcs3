@@ -250,9 +250,9 @@ SettingsDialog::SettingsDialog(wxWindow *parent, rpcs3::config_t* cfg)
 		cbox_gs_d3d_adaptater->Enable(false);
 		chbox_gs_overlay->Enable(false);
 	}
-#endif
 
 	cbox_gs_render->Append("Vulkan");
+#endif
 
 	for (int i = 1; i < WXSIZEOF(ResolutionTable); ++i)
 	{

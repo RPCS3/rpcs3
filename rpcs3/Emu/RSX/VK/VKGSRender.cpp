@@ -160,15 +160,17 @@ VKGSRender::VKGSRender() : GSRender(frame_type::Vulkan)
 {
 	shaders_cache.load(rsx::shader_language::glsl);
 
-	HINSTANCE hInstance = NULL;
-	HWND hWnd = (HWND)m_frame->handle();
-
 	m_thread_context.createInstance("RPCS3");
 	m_thread_context.makeCurrentInstance(1);
 	m_thread_context.enable_debugging();
 
+#ifdef _WIN32
+	HINSTANCE hInstance = NULL;
+	HWND hWnd = (HWND)m_frame->handle();
+
 	std::vector<vk::physical_device>& gpus = m_thread_context.enumerateDevices();
 	m_swap_chain = m_thread_context.createSwapChain(hInstance, hWnd, gpus[0]);
+#endif
 
 	m_device = (vk::render_device *)(&m_swap_chain->get_device());
 	
