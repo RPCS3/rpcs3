@@ -46,7 +46,7 @@ namespace gl
 	{
 		u8 bpp;
 		std::array<GLint, 4> remap;
-		texture::internal_format internal_format;
+		texture::sized_internal_format internal_format;
 		texture::format format;
 		texture::type type;
 		texture_flags flags;
@@ -104,6 +104,9 @@ namespace gl
 
 		cache_access requires_protection() const;
 
+		void lock();
+		void unlock();
+
 	protected:
 		void create();
 		void remove();
@@ -121,6 +124,7 @@ namespace gl
 		std::unordered_map<texture_info, cached_texture, fnv_1a_hasher, bitwise_equals> m_textures;
 
 		u32 m_current_protection = 0;
+		std::mutex m_mtx;
 
 	public:
 		u32 size() const
@@ -142,6 +146,9 @@ namespace gl
 		cached_texture& add(const texture_info& info);
 
 		void clear();
+
+		void lock();
+		void unlock();
 	};
 
 	class texture_cache
@@ -149,7 +156,7 @@ namespace gl
 		std::map<u32, protected_region> m_protected_regions;
 
 	public:
-		cached_texture &entry(texture_info &info, cache_buffers sync = cache_buffers::none);
+		cached_texture &entry(const texture_info &info, cache_buffers sync = cache_buffers::none);
 		protected_region *find_region(u32 address);
 		std::vector<protected_region*> find_regions(u32 address, u32 size);
 		void update_protection();

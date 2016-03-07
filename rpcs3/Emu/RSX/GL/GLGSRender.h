@@ -10,6 +10,12 @@
 
 #pragma comment(lib, "opengl32.lib")
 
+struct texture_buffer_pair
+{
+	gl::texture texture;
+	gl::buffer buffer;
+};
+
 class GLGSRender : public GSRender
 {
 private:
@@ -20,12 +26,7 @@ private:
 
 	rsx::surface_info m_surface;
 
-	struct texture_buffer_pair
-	{
-		gl::texture *texture;
-		gl::buffer *buffer;
-	}
-	m_gl_attrib_buffers[rsx::limits::vertex_count];
+	texture_buffer_pair m_gl_attrib_buffers[rsx::limits::vertex_count];
 
 	gl::texture_cache m_texture_cache;
 

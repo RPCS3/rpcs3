@@ -15,7 +15,7 @@
 
 namespace gl
 {
-#ifdef _DEBUG
+#if 1//def _DEBUG
 	struct __glcheck_impl_t
 	{
 		const char* file;
@@ -777,7 +777,7 @@ namespace gl
 			depth_stencil = GL_DEPTH_STENCIL
 		};
 
-		enum class internal_format
+		enum class internal_format : GLenum
 		{
 			red = GL_RED,
 			r = GL_R,
@@ -794,6 +794,69 @@ namespace gl
 			depth16 = GL_DEPTH_COMPONENT16,
 			depth24 = GL_DEPTH_COMPONENT24,
 			depth_stencil = GL_DEPTH_STENCIL,
+			depth24_stencil8 = GL_DEPTH24_STENCIL8,
+
+			compressed_rgb_s3tc_dxt1 = GL_COMPRESSED_RGB_S3TC_DXT1_EXT,
+			compressed_rgba_s3tc_dxt1 = GL_COMPRESSED_RGBA_S3TC_DXT1_EXT,
+			compressed_rgba_s3tc_dxt3 = GL_COMPRESSED_RGBA_S3TC_DXT3_EXT,
+			compressed_rgba_s3tc_dxt5 = GL_COMPRESSED_RGBA_S3TC_DXT5_EXT
+		};
+
+		enum class sized_internal_format : GLenum
+		{
+			r8 = GL_R8,
+			r8_snorm = GL_R8_SNORM,
+			r16f = GL_R16F,
+			r32f = GL_R32F,
+			r8ui = GL_R8UI,
+			r8i = GL_R8I,
+			r16ui = GL_R16UI,
+			r16i = GL_R16I,
+			r32ui = GL_R32UI,
+			r32i = GL_R32I,
+			rg8 = GL_RG8,
+			rg8_snorm = GL_RG8_SNORM,
+			rg16f = GL_RG16F,
+			rg32f = GL_RG32F,
+			rg8ui = GL_RG8UI,
+			rg8i = GL_RG8I,
+			rg16ui = GL_RG16UI,
+			rg16i = GL_RG16I,
+			rg32ui = GL_RG32UI,
+			rg32i = GL_RG32I,
+			rgb8 = GL_RGB8,
+			srgb8 = GL_SRGB8,
+			rgb565 = GL_RGB565,
+			rgb8_snorm = GL_RGB8_SNORM,
+			r11f_g11f_b10f = GL_R11F_G11F_B10F,
+			rgb9_e5 = GL_RGB9_E5,
+			rgb16f = GL_RGB16F,
+			rgb32f = GL_RGB32F,
+			rgb8ui = GL_RGB8UI,
+			rgb8i = GL_RGB8I,
+			rgb16ui = GL_RGB16UI,
+			rgb16i = GL_RGB16I,
+			rgb32ui = GL_RGB32UI,
+			rgb32i = GL_RGB32I,
+			rgba8 = GL_RGBA8,
+			srgb8_alpha8 = GL_SRGB8_ALPHA8,
+			rgba8_snorm = GL_RGBA8_SNORM,
+			rgb5_a1 = GL_RGB5_A1,
+			rgba4 = GL_RGBA4,
+			rgb10_a2 = GL_RGB10_A2,
+			rgba16f = GL_RGBA16F,
+			rgba32f = GL_RGBA32F,
+			rgba8ui = GL_RGBA8UI,
+			rgba8i = GL_RGBA8I,
+			rgb10_a2ui = GL_RGB10_A2UI,
+			rgba16ui = GL_RGBA16UI,
+			rgba16i = GL_RGBA16I,
+			rgba32i = GL_RGBA32I,
+			rgba32ui = GL_RGBA32UI,
+
+			stencil8 = GL_STENCIL_INDEX8,
+			depth16 = GL_DEPTH_COMPONENT16,
+			depth24 = GL_DEPTH_COMPONENT24,
 			depth24_stencil8 = GL_DEPTH24_STENCIL8,
 
 			compressed_rgb_s3tc_dxt1 = GL_COMPRESSED_RGB_S3TC_DXT1_EXT,
@@ -877,7 +940,7 @@ namespace gl
 				case target::texture_rectangle: pname = GL_TEXTURE_BINDING_RECTANGLE; break;
 				}
 
-				glGetIntegerv(pname, &m_last_binding);
+				__glcheck glGetIntegerv(pname, &m_last_binding);
 				
 				new_binding.bind();
 				m_target = (GLenum)new_binding.get_target();
@@ -885,7 +948,7 @@ namespace gl
 
 			~save_binding_state() noexcept
 			{
-				glBindTexture(m_target, m_last_binding);
+				__glcheck glBindTexture(m_target, m_last_binding);
 			}
 		};
 

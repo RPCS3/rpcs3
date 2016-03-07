@@ -68,7 +68,7 @@ namespace gl
 			{
 				LOG_WARNING(RSX, "cached_texture at 0x%x: reading compressed texture from host buffer", info->start_address);
 
-				glCompressedTexImage2D((GLenum)info->target, 0,
+				__glcheck glCompressedTexImage2D((GLenum)info->target, 0,
 					(GLenum)info->format.internal_format,
 					info->width, info->height,
 					0,
@@ -84,7 +84,7 @@ namespace gl
 					.swap_bytes((info->format.flags & gl::texture_flags::swap_bytes) != gl::texture_flags::none)
 					.apply();
 
-				glTexImage2D((GLenum)info->target, 0, (GLenum)info->format.internal_format, info->width, info->height, 0,
+				__glcheck glTexSubImage2D((GLenum)info->target, 0, 0, 0, info->width, info->height,
 					(GLenum)info->format.format, (GLenum)info->format.type, vm::base_priv(info->start_address));
 			}
 		}
@@ -228,14 +228,24 @@ namespace gl
 		return cache_access::none;
 	}
 
+	void cached_texture::lock()
+	{
+		m_parent_region->lock();
+	}
+
+	void cached_texture::unlock()
+	{
+		m_parent_region->unlock();
+	}
+
 	void cached_texture::bind(uint index) const
 	{
 		if (index != ~0u)
 		{
-			glActiveTexture(GL_TEXTURE0 + index);
+			__glcheck glActiveTexture(GL_TEXTURE0 + index);
 		}
 
-		glBindTexture((GLenum)info->target, gl_name);
+		__glcheck glBindTexture((GLenum)info->target, gl_name);
 	}
 
 	void cached_texture::create()
@@ -243,9 +253,12 @@ namespace gl
 		assert(!created());
 
 		glGenTextures(1, &gl_name);
-		bind();
-		glTexImage2D((GLenum)info->target, 0, (GLenum)info->format.internal_format, info->width, info->height, 0,
-			(GLenum)info->format.format, (GLenum)info->format.type, nullptr);
+
+		if (!info->compressed_size)
+		{
+			bind();
+			__glcheck glTexStorage2D((GLenum)info->target, 1, (GLenum)info->format.internal_format, info->width, info->height);
+		}
 	}
 
 	void cached_texture::remove()
@@ -385,7 +398,7 @@ namespace gl
 	cached_texture& protected_region::add(const texture_info& info)
 	{
 		LOG_WARNING(RSX, "new texture in cache at 0x%x", info.start_address);
-		auto &result = m_textures.emplace(info, cached_texture{});
+		const auto &result = m_textures.emplace(info, cached_texture{});
 
 		if (!result.second)
 		{
@@ -424,7 +437,17 @@ namespace gl
 		m_textures.clear();
 	}
 
-	cached_texture &texture_cache::entry(texture_info &info, cache_buffers sync)
+	void protected_region::lock()
+	{
+		m_mtx.lock();
+	}
+
+	void protected_region::unlock()
+	{
+		m_mtx.unlock();
+	}
+
+	cached_texture &texture_cache::entry(const texture_info &info, cache_buffers sync)
 	{
 		u32 aligned_address = info.start_address & ~(vm::page_size - 1);
 		u32 aligned_size = align(info.size(), vm::page_size);

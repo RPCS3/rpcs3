@@ -9,7 +9,7 @@
 #include "gl_texture_cache.h"
 
 const std::array<GLint, 4> default_remap{ GL_ALPHA, GL_RED, GL_GREEN, GL_BLUE };
-const std::array<GLint, 4> remap_B8{ GL_BLUE, GL_BLUE, GL_BLUE, GL_BLUE };
+const std::array<GLint, 4> remap_B8{ GL_RED, GL_RED, GL_RED, GL_RED };
 const std::array<GLint, 4> remap_G8B8{ GL_RED, GL_GREEN, GL_RED, GL_GREEN };
 const std::array<GLint, 4> remap_R6G5B5{ GL_ALPHA, GL_GREEN, GL_RED, GL_BLUE };
 const std::array<GLint, 4> remap_X16{ GL_RED, GL_ONE, GL_RED, GL_ONE };
@@ -22,26 +22,26 @@ const std::array<GLint, 4> remap_Y16_X16_FLOAT{ GL_RED, GL_GREEN, GL_RED, GL_GRE
 
 const std::unordered_map<u32, gl::texture_format> textures_fromats
 {
-	{ CELL_GCM_TEXTURE_B8,{ 1, remap_B8, gl::texture::internal_format::rgba, gl::texture::format::blue, gl::texture::type::ubyte, gl::texture_flags::none } },
-	{ CELL_GCM_TEXTURE_A1R5G5B5,{ 2, default_remap, gl::texture::internal_format::rgba, gl::texture::format::bgra, gl::texture::type::ushort_5_5_5_1, gl::texture_flags::allow_remap | gl::texture_flags::allow_swizzle } },
-	{ CELL_GCM_TEXTURE_A4R4G4B4,{ 2, default_remap, gl::texture::internal_format::rgba, gl::texture::format::bgra, gl::texture::type::ushort_4_4_4_4, gl::texture_flags::allow_remap | gl::texture_flags::allow_swizzle } },
-	{ CELL_GCM_TEXTURE_R5G6B5,{ 2, default_remap, gl::texture::internal_format::rgb, gl::texture::format::bgr, gl::texture::type::ushort_5_6_5, gl::texture_flags::allow_remap | gl::texture_flags::allow_swizzle } },
-	{ CELL_GCM_TEXTURE_A8R8G8B8,{ 4, default_remap, gl::texture::internal_format::rgba, gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8, gl::texture_flags::allow_remap | gl::texture_flags::allow_swizzle } },
-	{ CELL_GCM_TEXTURE_G8B8,{ 2, remap_G8B8, gl::texture::internal_format::rgba, gl::texture::format::rg, gl::texture::type::ubyte, gl::texture_flags::allow_remap } },
-	{ CELL_GCM_TEXTURE_R6G5B5,{ 2, remap_R6G5B5, gl::texture::internal_format::rgba, gl::texture::format::bgr, gl::texture::type::ushort_5_6_5, gl::texture_flags::allow_remap | gl::texture_flags::allow_swizzle } },
-	{ CELL_GCM_TEXTURE_DEPTH24_D8,{ 4, default_remap, gl::texture::internal_format::depth24, gl::texture::format::depth, gl::texture::type::uint_8_8_8_8_rev, gl::texture_flags::allow_remap } },
-	{ CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT,{ 4, default_remap, gl::texture::internal_format::depth24, gl::texture::format::depth, gl::texture::type::f32, gl::texture_flags::allow_remap } },
-	{ CELL_GCM_TEXTURE_DEPTH16,{ 2, default_remap, gl::texture::internal_format::depth16, gl::texture::format::depth, gl::texture::type::ushort, gl::texture_flags::allow_remap } },
-	{ CELL_GCM_TEXTURE_DEPTH16_FLOAT,{ 2, default_remap, gl::texture::internal_format::depth16, gl::texture::format::depth, gl::texture::type::f32, gl::texture_flags::allow_remap } },
-	{ CELL_GCM_TEXTURE_X16,{ 2, remap_X16, gl::texture::internal_format::rgba, gl::texture::format::red, gl::texture::type::ushort, gl::texture_flags::swap_bytes } },
-	{ CELL_GCM_TEXTURE_Y16_X16,{ 4, remap_Y16_X16, gl::texture::internal_format::rgba, gl::texture::format::rg, gl::texture::type::ushort, gl::texture_flags::allow_remap | gl::texture_flags::swap_bytes } },
-	{ CELL_GCM_TEXTURE_R5G5B5A1,{ 2, default_remap, gl::texture::internal_format::rgba, gl::texture::format::rgba, gl::texture::type::ushort_5_5_5_1, gl::texture_flags::allow_remap | gl::texture_flags::swap_bytes | gl::texture_flags::allow_swizzle } },
-	{ CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT,{ 8, default_remap, gl::texture::internal_format::rgba, gl::texture::format::rgba, gl::texture::type::f16, gl::texture_flags::allow_remap | gl::texture_flags::swap_bytes } },
-	{ CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT,{ 16, default_remap, gl::texture::internal_format::rgba, gl::texture::format::rgba, gl::texture::type::f32, gl::texture_flags::allow_remap | gl::texture_flags::swap_bytes } },
-	{ CELL_GCM_TEXTURE_X32_FLOAT,{ 4, remap_X32_FLOAT, gl::texture::internal_format::rgba, gl::texture::format::red, gl::texture::type::f32, gl::texture_flags::swap_bytes } },
-	{ CELL_GCM_TEXTURE_D1R5G5B5,{ 2, remap_D1R5G5B5, gl::texture::internal_format::rgba, gl::texture::format::bgra, gl::texture::type::ushort_5_5_5_1, gl::texture_flags::allow_remap | gl::texture_flags::allow_swizzle } },
-	{ CELL_GCM_TEXTURE_D8R8G8B8,{ 4, remap_D8R8G8B8, gl::texture::internal_format::rgba, gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8, gl::texture_flags::allow_remap | gl::texture_flags::allow_swizzle } },
-	{ CELL_GCM_TEXTURE_Y16_X16_FLOAT,{ 4, remap_Y16_X16_FLOAT, gl::texture::internal_format::rgba, gl::texture::format::rg, gl::texture::type::f16, gl::texture_flags::allow_remap | gl::texture_flags::swap_bytes } },
+	{ CELL_GCM_TEXTURE_B8,{ 1, remap_B8, gl::texture::sized_internal_format::r8, gl::texture::format::red, gl::texture::type::ubyte, gl::texture_flags::none } },
+	{ CELL_GCM_TEXTURE_A1R5G5B5,{ 2, default_remap, gl::texture::sized_internal_format::rgb5_a1, gl::texture::format::bgra, gl::texture::type::ushort_5_5_5_1, gl::texture_flags::allow_remap | gl::texture_flags::allow_swizzle } },
+	{ CELL_GCM_TEXTURE_A4R4G4B4,{ 2, default_remap, gl::texture::sized_internal_format::rgba4, gl::texture::format::bgra, gl::texture::type::ushort_4_4_4_4, gl::texture_flags::allow_remap | gl::texture_flags::allow_swizzle } },
+	{ CELL_GCM_TEXTURE_R5G6B5,{ 2, default_remap, gl::texture::sized_internal_format::rgb565, gl::texture::format::bgr, gl::texture::type::ushort_5_6_5, gl::texture_flags::allow_remap | gl::texture_flags::allow_swizzle } },
+	{ CELL_GCM_TEXTURE_A8R8G8B8,{ 4, default_remap, gl::texture::sized_internal_format::rgba8, gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8, gl::texture_flags::allow_remap | gl::texture_flags::allow_swizzle } },
+	{ CELL_GCM_TEXTURE_G8B8,{ 2, remap_G8B8, gl::texture::sized_internal_format::rg8, gl::texture::format::rg, gl::texture::type::ubyte, gl::texture_flags::allow_remap } },
+	{ CELL_GCM_TEXTURE_R6G5B5,{ 2, remap_R6G5B5, gl::texture::sized_internal_format::rgb565, gl::texture::format::bgr, gl::texture::type::ushort_5_6_5, gl::texture_flags::allow_remap | gl::texture_flags::allow_swizzle } },
+	{ CELL_GCM_TEXTURE_DEPTH24_D8,{ 4, default_remap, gl::texture::sized_internal_format::depth24, gl::texture::format::depth, gl::texture::type::uint_8_8_8_8_rev, gl::texture_flags::allow_remap } },
+	{ CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT,{ 4, default_remap, gl::texture::sized_internal_format::depth24, gl::texture::format::depth, gl::texture::type::f32, gl::texture_flags::allow_remap } },
+	{ CELL_GCM_TEXTURE_DEPTH16,{ 2, default_remap, gl::texture::sized_internal_format::depth16, gl::texture::format::depth, gl::texture::type::ushort, gl::texture_flags::allow_remap } },
+	{ CELL_GCM_TEXTURE_DEPTH16_FLOAT,{ 2, default_remap, gl::texture::sized_internal_format::depth16, gl::texture::format::depth, gl::texture::type::f32, gl::texture_flags::allow_remap } },
+	{ CELL_GCM_TEXTURE_X16,{ 2, remap_X16, gl::texture::sized_internal_format::r16ui, gl::texture::format::red, gl::texture::type::ushort, gl::texture_flags::swap_bytes } },
+	{ CELL_GCM_TEXTURE_Y16_X16,{ 4, remap_Y16_X16, gl::texture::sized_internal_format::rg16ui, gl::texture::format::rg, gl::texture::type::ushort, gl::texture_flags::allow_remap | gl::texture_flags::swap_bytes } },
+	{ CELL_GCM_TEXTURE_R5G5B5A1,{ 2, default_remap, gl::texture::sized_internal_format::rgb5_a1, gl::texture::format::rgba, gl::texture::type::ushort_5_5_5_1, gl::texture_flags::allow_remap | gl::texture_flags::swap_bytes | gl::texture_flags::allow_swizzle } },
+	{ CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT,{ 8, default_remap, gl::texture::sized_internal_format::rgba16f, gl::texture::format::rgba, gl::texture::type::f16, gl::texture_flags::allow_remap | gl::texture_flags::swap_bytes } },
+	{ CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT,{ 16, default_remap, gl::texture::sized_internal_format::rgba32f, gl::texture::format::rgba, gl::texture::type::f32, gl::texture_flags::allow_remap | gl::texture_flags::swap_bytes } },
+	{ CELL_GCM_TEXTURE_X32_FLOAT,{ 4, remap_X32_FLOAT, gl::texture::sized_internal_format::r32f, gl::texture::format::red, gl::texture::type::f32, gl::texture_flags::swap_bytes } },
+	{ CELL_GCM_TEXTURE_D1R5G5B5,{ 2, remap_D1R5G5B5, gl::texture::sized_internal_format::rgb5_a1, gl::texture::format::bgra, gl::texture::type::ushort_5_5_5_1, gl::texture_flags::allow_remap | gl::texture_flags::allow_swizzle } },
+	{ CELL_GCM_TEXTURE_D8R8G8B8,{ 4, remap_D8R8G8B8, gl::texture::sized_internal_format::rgba8, gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8, gl::texture_flags::allow_remap | gl::texture_flags::allow_swizzle } },
+	{ CELL_GCM_TEXTURE_Y16_X16_FLOAT,{ 4, remap_Y16_X16_FLOAT, gl::texture::sized_internal_format::rg16f, gl::texture::format::rg, gl::texture::type::f16, gl::texture_flags::allow_remap | gl::texture_flags::swap_bytes } },
 };
 
 namespace gl
@@ -177,17 +177,17 @@ void rsx::gl_texture::bind(gl::texture_cache& cache, int index, rsx::texture& te
 		{
 		case CELL_GCM_TEXTURE_COMPRESSED_DXT1: // Compressed 4x4 pixels into 8 bytes
 			info.compressed_size = ((info.width + 3) / 4) * ((info.height + 3) / 4) * 8;
-			info.format.internal_format = gl::texture::internal_format::compressed_rgba_s3tc_dxt1;
+			info.format.internal_format = gl::texture::sized_internal_format::compressed_rgba_s3tc_dxt1;
 			break;
 
 		case CELL_GCM_TEXTURE_COMPRESSED_DXT23: // Compressed 4x4 pixels into 16 bytes
 			info.compressed_size = ((info.width + 3) / 4) * ((info.height + 3) / 4) * 16;
-			info.format.internal_format = gl::texture::internal_format::compressed_rgba_s3tc_dxt3;
+			info.format.internal_format = gl::texture::sized_internal_format::compressed_rgba_s3tc_dxt3;
 			break;
 
 		case CELL_GCM_TEXTURE_COMPRESSED_DXT45: // Compressed 4x4 pixels into 16 bytes
 			info.compressed_size = ((info.width + 3) / 4) * ((info.height + 3) / 4) * 16;
-			info.format.internal_format = gl::texture::internal_format::compressed_rgba_s3tc_dxt5;
+			info.format.internal_format = gl::texture::sized_internal_format::compressed_rgba_s3tc_dxt5;
 			break;
 
 		default:
@@ -218,10 +218,10 @@ void rsx::gl_texture::bind(gl::texture_cache& cache, int index, rsx::texture& te
 		remap = info.format.remap.data();
 	}
 
-	cache.entry(info, gl::cache_buffers::local).bind(index);
+	__glcheck cache.entry(info, gl::cache_buffers::local).bind(index);
 
-	glTexParameteri((GLenum)target, GL_TEXTURE_MAX_LEVEL, tex.mipmap() - 1);
-	glTexParameteri((GLenum)target, GL_GENERATE_MIPMAP, tex.mipmap() > 1);
+	__glcheck glTexParameteri((GLenum)target, GL_TEXTURE_MAX_LEVEL, tex.mipmap() - 1);
+	__glcheck glTexParameteri((GLenum)target, GL_GENERATE_MIPMAP, tex.mipmap() > 1);
 
 	if ((info.format.flags & gl::texture_flags::allow_remap) != gl::texture_flags::none)
 	{
@@ -256,5 +256,7 @@ void rsx::gl_texture::bind(gl::texture_cache& cache, int index, rsx::texture& te
 	glTexParameteri((GLenum)target, GL_TEXTURE_MIN_FILTER, gl_tex_min_filter[tex.min_filter()]);
 	glTexParameteri((GLenum)target, GL_TEXTURE_MAG_FILTER, gl_tex_mag_filter[tex.mag_filter()]);
 	glTexParameterf((GLenum)target, GL_TEXTURE_MAX_ANISOTROPY_EXT, max_aniso(tex.max_aniso()));
+
+	__glcheck 0;
 }
 

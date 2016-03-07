@@ -389,8 +389,8 @@ void GLGSRender::end()
 		int location;
 		if (m_program->uniforms.has_location("tex" + std::to_string(i), &location))
 		{
-			rsx::gl_texture::bind(m_texture_cache, i, textures[i]);
-			glProgramUniform1i(m_program->id(), location, i);
+			__glcheck rsx::gl_texture::bind(m_texture_cache, i, textures[i]);
+			__glcheck glProgramUniform1i(m_program->id(), location, i);
 		}
 	}
 
@@ -464,9 +464,9 @@ void GLGSRender::end()
 
 			if (!vertex_info.size) // disabled, bind a null sampler
 			{
-				glActiveTexture(GL_TEXTURE0 + index + rsx::limits::textures_count);
-				glBindTexture(GL_TEXTURE_BUFFER, NULL);
-				glProgramUniform1i(m_program->id(), location, index + rsx::limits::textures_count);
+				__glcheck glActiveTexture(GL_TEXTURE0 + index + rsx::limits::textures_count);
+				__glcheck glBindTexture(GL_TEXTURE_BUFFER, NULL);
+				__glcheck glProgramUniform1i(m_program->id(), location, index + rsx::limits::textures_count);
 				continue;
 			}
 
@@ -500,14 +500,13 @@ void GLGSRender::end()
 				dst += element_size;
 			}
 
-			buffer->data(data_size, nullptr);
-			buffer->sub_data(0, data_size, vertex_arrays_data.data());
+			buffer.data(data_size, vertex_arrays_data.data());
 
 			//Attach buffer to texture
-			texture->copy_from(*buffer, gl_type);
+			texture.copy_from(buffer, gl_type);
 
 			//Link texture to uniform
-			m_program->uniforms.texture(location, index + rsx::limits::textures_count, *texture);
+			m_program->uniforms.texture(location, index + rsx::limits::textures_count, texture);
 		}
 	}
 
@@ -577,17 +576,19 @@ void GLGSRender::end()
 				u32 gl_type = to_gl_internal_type(vertex_info.type, vertex_info.size);
 				u32 data_size = element_size * vertex_draw_count;
 
-				auto &buffer = m_gl_attrib_buffers[index].buffer;
-				auto &texture = m_gl_attrib_buffers[index].texture;
+				auto& attrib_pair = m_gl_attrib_buffers[index];
 
-				buffer->data(data_size, nullptr);
-				buffer->sub_data(0, data_size, vertex_array.data());
+				__glcheck 0;
+
+				attrib_pair.buffer.data(data_size, vertex_array.data());
+
+				__glcheck 0;
 
 				//Attach buffer to texture
-				texture->copy_from(*buffer, gl_type);
+				attrib_pair.texture.copy_from(attrib_pair.buffer, gl_type);
 
 				//Link texture to uniform
-				m_program->uniforms.texture(location, index + rsx::limits::textures_count, *texture);
+				m_program->uniforms.texture(location, index + rsx::limits::textures_count, attrib_pair.texture);
 			}
 			else if (register_vertex_info[index].size > 0)
 			{
@@ -603,17 +604,15 @@ void GLGSRender::end()
 					const u32 gl_type = to_gl_internal_type(vertex_info.type, vertex_info.size);
 					const size_t data_size = vertex_data.size();
 
-					auto &buffer = m_gl_attrib_buffers[index].buffer;
-					auto &texture = m_gl_attrib_buffers[index].texture;
+					auto& attrib_pair = m_gl_attrib_buffers[index];
 
-					buffer->data(data_size, nullptr);
-					buffer->sub_data(0, data_size, vertex_data.data());
+					attrib_pair.buffer.data(data_size, vertex_data.data());
 
 					//Attach buffer to texture
-					texture->copy_from(*buffer, gl_type);
+					attrib_pair.texture.copy_from(attrib_pair.buffer, gl_type);
 
 					//Link texture to uniform
-					m_program->uniforms.texture(location, index + rsx::limits::textures_count, *texture);
+					m_program->uniforms.texture(location, index + rsx::limits::textures_count, attrib_pair.texture);
 					break;
 				}
 				default:
@@ -731,16 +730,10 @@ void GLGSRender::on_init_thread()
 	m_vao.array_buffer = m_vbo;
 	m_vao.element_array_buffer = m_ebo;
 
-	for (texture_buffer_pair &attrib_buffer : m_gl_attrib_buffers)
+	for (texture_buffer_pair &pair : m_gl_attrib_buffers)
 	{
-		gl::texture *&tex = attrib_buffer.texture;
-		tex = new gl::texture(gl::texture::target::texture_buffer);
-		tex->create();
-		tex->set_target(gl::texture::target::texture_buffer);
-
-		gl::buffer *&buf = attrib_buffer.buffer;
-		buf = new gl::buffer();
-		buf->create();
+		pair.texture.create(gl::texture::target::texture_buffer);
+		pair.buffer.create();
 	}
 }
 
@@ -783,17 +776,10 @@ void GLGSRender::on_exit()
 	if (m_fragment_constants_buffer)
 		m_fragment_constants_buffer.remove();
 
-	for (texture_buffer_pair &attrib_buffer : m_gl_attrib_buffers)
+	for (texture_buffer_pair &pair : m_gl_attrib_buffers)
 	{
-		gl::texture *&tex = attrib_buffer.texture;
-		tex->remove();
-		delete tex;
-		tex = nullptr;
-
-		gl::buffer *&buf = attrib_buffer.buffer;
-		buf->remove();
-		delete buf;
-		buf = nullptr;
+		pair.buffer.remove();
+		pair.texture.remove();
 	}
 }
 
@@ -1200,7 +1186,7 @@ void GLGSRender::init_buffers(bool skip_reading)
 				info.format.bpp = 2;
 				info.format.flags = gl::texture_flags::swap_bytes;
 				info.format.type = gl::texture::type::ushort;
-				info.format.internal_format = gl::texture::internal_format::depth16;
+				info.format.internal_format = gl::texture::sized_internal_format::depth16;
 				info.format.format = gl::texture::format::depth;
 				break;
 
@@ -1208,7 +1194,7 @@ void GLGSRender::init_buffers(bool skip_reading)
 				info.format.bpp = 4;
 				info.format.flags = gl::texture_flags::swap_bytes;
 				info.format.type = gl::texture::type::uint_24_8;
-				info.format.internal_format = gl::texture::internal_format::depth24_stencil8;
+				info.format.internal_format = gl::texture::sized_internal_format::depth24_stencil8;
 				info.format.format = gl::texture::format::depth_stencil;
 				break;
 
@@ -1337,6 +1323,8 @@ bool GLGSRender::on_access_violation(u32 address, bool is_writing)
 {
 	if (auto region = m_texture_cache.find_region(address))
 	{
+		std::lock_guard<gl::protected_region> lock(*region);
+
 		if (is_writing)
 		{
 			const bool accurate_cache = true;
