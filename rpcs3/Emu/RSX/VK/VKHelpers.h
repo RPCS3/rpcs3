@@ -726,7 +726,29 @@ namespace vk
 				height = surface_descriptors.currentExtent.height;
 			}
 
-			VkPresentModeKHR swapchain_present_mode = VK_PRESENT_MODE_IMMEDIATE_KHR;
+			uint32_t nb_available_modes = 0;
+			CHECK_RESULT(vkGetPhysicalDeviceSurfacePresentModesKHR(gpu, m_surface, &nb_available_modes, nullptr));
+
+			std::vector<VkPresentModeKHR> present_modes(nb_available_modes);
+			CHECK_RESULT(vkGetPhysicalDeviceSurfacePresentModesKHR(gpu, m_surface, &nb_available_modes, present_modes.data()));
+
+			VkPresentModeKHR swapchain_present_mode = VK_PRESENT_MODE_FIFO_KHR;
+			
+			for (VkPresentModeKHR mode : present_modes)
+			{
+				if (mode == VK_PRESENT_MODE_MAILBOX_KHR)
+				{
+					//If we can get a mailbox mode, use it
+					swapchain_present_mode = mode;
+					break;
+				}
+
+				//If we can get out of using the FIFO mode, take it. Fifo is very high latency (generic vsync)
+				if (swapchain_present_mode == VK_PRESENT_MODE_FIFO_KHR &&
+					(mode == VK_PRESENT_MODE_IMMEDIATE_KHR || mode == VK_PRESENT_MODE_FIFO_RELAXED_KHR))
+					swapchain_present_mode = mode;
+			}
+			
 			uint32_t nb_swap_images = surface_descriptors.minImageCount + 1;
 
 			if ((surface_descriptors.maxImageCount > 0) && (nb_swap_images > surface_descriptors.maxImageCount))

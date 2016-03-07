@@ -233,17 +233,43 @@ namespace vk
 	{
 		VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL;
 
-		if (usage & VK_IMAGE_USAGE_SAMPLED_BIT)
-		{
-			VkFormatProperties props;
-			vkGetPhysicalDeviceFormatProperties(device.gpu(), format, &props);
+		/* The spec mandates checking against all usage bits for support in either linear or optimal tiling modes.
+		 * Ideally, no assumptions should be made, but for simplification, we'll assume optimal mode suppoorts everything
+		 */
 
-			//Enable linear tiling if supported and we request a sampled image..
-			if (props.linearTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT)
-				tiling = VK_IMAGE_TILING_LINEAR;
-			else
-				usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+		VkFormatProperties props;
+		vkGetPhysicalDeviceFormatProperties(device.gpu(), format, &props);
+
+		bool linear_is_supported = true;
+
+		if (!!(usage & VK_IMAGE_USAGE_SAMPLED_BIT))
+		{
+			if (!(props.linearTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT))
+				linear_is_supported = false;
 		}
+
+		if (linear_is_supported && !!(usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT))
+		{
+			if (!(props.linearTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT))
+				linear_is_supported = false;
+		}
+
+		if (linear_is_supported && !!(usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT))
+		{
+			if (!(props.linearTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT))
+				linear_is_supported = false;
+		}
+
+		if (linear_is_supported && !!(usage & VK_IMAGE_USAGE_STORAGE_BIT))
+		{
+			if (!(props.linearTilingFeatures & VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT))
+				linear_is_supported = false;
+		}
+
+		if (linear_is_supported)
+			tiling = VK_IMAGE_TILING_LINEAR;
+		else
+			usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 
 		create(device, format, usage, tiling, width, height, mipmaps, gpu_only, swizzle);
 	}
