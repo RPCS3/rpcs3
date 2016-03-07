@@ -19,12 +19,20 @@ namespace vk
 
 	VKAPI_ATTR void *VKAPI_CALL mem_alloc(void *pUserData, size_t size, size_t alignment, VkSystemAllocationScope allocationScope)
 	{
+#ifdef _WIN32
 		return _aligned_malloc(size, alignment);
+#else
+		return malloc(size);
+#endif
 	}
 
 	VKAPI_ATTR void VKAPI_CALL mem_free(void *pUserData, void *pMemory)
 	{
+#ifdef _WIN32
 		_aligned_free(pMemory);
+#else
+		free(pMemory);
+#endif
 	}
 
 	VkFormat get_compatible_sampler_format(u32 format, VkComponentMapping& swizzle, u8 swizzle_mask)
@@ -278,7 +286,9 @@ namespace vk
 							uint64_t srcObject, size_t location, int32_t msgCode,
 							const char *pLayerPrefix, const char *pMsg, void *pUserData)
 	{
+#ifdef _WIN32
 		DebugBreak();
+#endif
 
 		return false;
 	}
