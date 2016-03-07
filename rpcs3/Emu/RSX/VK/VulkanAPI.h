@@ -2,7 +2,7 @@
 
 #ifdef _WIN32
 #define VK_USE_PLATFORM_WIN32_KHR
-#else
+#elif !defined __APPLE__
 #define VK_USE_PLATFORM_XLIB_KHR
 #endif
 
