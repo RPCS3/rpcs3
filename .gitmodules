@@ -1,33 +1,10 @@
-[submodule "wxWidgets"]
-	path = wxWidgets
-	url = https://github.com/wxWidgets/wxWidgets
-	ignore = dirty
-[submodule "rpcs3-ffmpeg"]
-	path = ffmpeg
-	url = https://github.com/hrydgard/ppsspp-ffmpeg
 [submodule "asmjit"]
 	path = asmjit
 	url = https://github.com/kobalicek/asmjit
 	ignore = dirty
-[submodule "llvm"]
-	path = llvm
-	url = https://github.com/llvm-mirror/llvm
-	branch = release_36
-[submodule "minidx9"]
-	path = minidx9
-	url = https://github.com/hrydgard/minidx9.git
-[submodule "rsx_program_decompiler"]
-	path = rsx_program_decompiler
-	url = https://github.com/RPCS3/rsx_program_decompiler
 [submodule "GSL"]
 	path = GSL
 	url = https://github.com/Microsoft/GSL.git
-[submodule "libpng"]
-	path = libpng
-	url = https://github.com/RPCS3/libpng
-[submodule "Vulkan/glslang"]
-	path = Vulkan/glslang
-	url = https://github.com/KhronosGroup/glslang.git
-[submodule "Vulkan/Vulkan-LoaderAndValidationLayers"]
-	path = Vulkan/Vulkan-LoaderAndValidationLayers
-	url = https://github.com/KhronosGroup/Vulkan-LoaderAndValidationLayers
+[submodule "rsx_program_decompiler"]
+	path = rsx_program_decompiler
+	url = https://github.com/RPCS3/rsx_program_decompiler
