@@ -52,7 +52,7 @@
 /bin/textures
 /bin/*.lib
 /bin/*.exp
-rpcs3/git-version.h
+/src/git-version.h
 
 # Visual Studio Files
 *.vspx

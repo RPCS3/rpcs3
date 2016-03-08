@@ -4,7 +4,8 @@ set(PROJ_NAME rpcs3)
 include(cotire)
 
 #Find wxWidgets
-find_package(wxWidgets COMPONENTS core base net aui gl xml REQUIRED)
+set(wxWidgets_CONFIGURATION mswu)
+find_package(wxWidgets REQUIRED core base net aui gl xml)
 include(${wxWidgets_USE_FILE})
 
 #Find GLEW
@@ -18,9 +19,6 @@ find_package(GLEXT REQUIRED)
 
 #Find OpenAL
 find_package(OpenAL REQUIRED)
-
-#Find DirectX
-find_package(DirectX REQUIRED)
 
 #Find FFMPEG
 find_package(FFMPEG REQUIRED)
@@ -36,6 +34,14 @@ set(ASMJIT_EMBED TRUE)
 add_Definitions(-DASMJIT_STATIC)
 set(ASMJIT_DIR ${CMAKE_SOURCE_DIR}/asmjit)
 include(${ASMJIT_DIR}/CMakeLists.txt)
+
+set(CMAKE_FLAGS)
+if(WIN32)
+	#Find DirectX
+	find_package(DirectX REQUIRED)
+
+	set(CMAKE_FLAGS WIN32)
+endif()
 
 file(
 GLOB_RECURSE
@@ -60,7 +66,7 @@ add_custom_command(OUTPUT something_that_never_exists
 		-P ${CMAKE_CURRENT_SOURCE_DIR}/git-version.cmake)
 
 
-add_executable(${PROJ_NAME} ${RPCS3_SRC})
+add_executable(${PROJ_NAME} ${CMAKE_FLAGS} ${RPCS3_SRC} ${ASMJIT_SRC})
 
 set_target_properties(${PROJ_NAME} PROPERTIES COTIRE_CXX_PREFIX_HEADER_INIT "${RPCS3_SRC_DIR}/stdafx.h")
 cotire(${PROJ_NAME})
@@ -71,9 +77,10 @@ target_include_directories(${PROJ_NAME} PUBLIC 	${wxWidgets_INCLUDE_DIRS}
 												${GLEXT_INCLUDE_DIRS}
 												${PNG_INCLUDE_DIRS}
 												${OPENAL_INCLUDE_DIR}
-												${FFMPEG_INCLUDE_DIR}
+												${FFMPEG_INCLUDE_DIRS}
 												${VULKAN_INCLUDE_DIR}
 												${ASMJIT_INCLUDE_DIR}
+												${DIRECTX_INCLUDE_DIRS}
 												${RPCS3_SRC_DIR}
 												${RPCS3_SRC_DIR}/..
 												${RPCS3_SRC_DIR}/../asmjit/src/asmjit
@@ -86,7 +93,12 @@ target_link_libraries(${PROJ_NAME} 	${wxWidgets_LIBRARIES}
 									${OPENAL_LIBRARY}
 									${VULKAN_LIBRARY}
 									${FFMPEG_LIBRARIES}
-									${ASMJIT_DEPS})
+									${ASMJIT_DEPS}
+									${DIRECTX_XINPUT_LIBRARY}
+									${DIRECTX_XAUDIO_LIBRARY}
+									${DIRECTX_DWRITE_LIBRARY}
+									${DIRECTX_DXGI_LIBRARY}
+									${DIRECTX_D2D1_LIBRARY})
 
 #Use C++ 14
 set_property(TARGET ${PROJ_NAME} PROPERTY CXX_STANDARD 14)
