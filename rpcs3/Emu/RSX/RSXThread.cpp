@@ -561,7 +561,10 @@ namespace rsx
 		else
 		{
 			++m_internal_task_waiters;
-			add_internal_task(callback).wait();
+			while (add_internal_task(callback).wait_for(1s) == std::future_status::timeout)
+			{
+				CHECK_EMU_STATUS;
+			}
 			--m_internal_task_waiters;
 		}
 	}
@@ -736,6 +739,9 @@ namespace rsx
 		method_registers[NV4097_SET_BLEND_COLOR] = 0;
 		method_registers[NV4097_SET_BLEND_COLOR2] = 0;
 		method_registers[NV4097_SET_BLEND_EQUATION] = (CELL_GCM_FUNC_ADD << 16) | CELL_GCM_FUNC_ADD;
+
+		method_registers[NV4097_SET_STENCIL_TEST_ENABLE] = false;
+		method_registers[NV4097_SET_DEPTH_TEST_ENABLE] = false;
 
 		method_registers[NV4097_SET_STENCIL_MASK] = 0xff;
 		method_registers[NV4097_SET_STENCIL_FUNC] = CELL_GCM_ALWAYS;

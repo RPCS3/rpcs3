@@ -2,6 +2,7 @@
 #include <vector>
 #include "Utilities/types.h"
 #include "gl_helpers.h"
+#include <array>
 
 namespace gl
 {
@@ -63,6 +64,7 @@ namespace gl
 
 		texture::target target;
 		texture_format format;
+		bool swizzled;
 
 		u32 start_address;
 

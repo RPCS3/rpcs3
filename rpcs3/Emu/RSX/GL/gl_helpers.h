@@ -810,6 +810,7 @@ namespace gl
 			r32f = GL_R32F,
 			r8ui = GL_R8UI,
 			r8i = GL_R8I,
+			r16 = GL_R16,
 			r16ui = GL_R16UI,
 			r16i = GL_R16I,
 			r32ui = GL_R32UI,
@@ -820,6 +821,7 @@ namespace gl
 			rg32f = GL_RG32F,
 			rg8ui = GL_RG8UI,
 			rg8i = GL_RG8I,
+			rg16 = GL_RG16,
 			rg16ui = GL_RG16UI,
 			rg16i = GL_RG16I,
 			rg32ui = GL_RG32UI,
@@ -830,6 +832,7 @@ namespace gl
 			rgb8_snorm = GL_RGB8_SNORM,
 			r11f_g11f_b10f = GL_R11F_G11F_B10F,
 			rgb9_e5 = GL_RGB9_E5,
+			rgb16 = GL_RGB16,
 			rgb16f = GL_RGB16F,
 			rgb32f = GL_RGB32F,
 			rgb8ui = GL_RGB8UI,
@@ -849,6 +852,7 @@ namespace gl
 			rgba8ui = GL_RGBA8UI,
 			rgba8i = GL_RGBA8I,
 			rgb10_a2ui = GL_RGB10_A2UI,
+			rgba16 = GL_RGBA16,
 			rgba16ui = GL_RGBA16UI,
 			rgba16i = GL_RGBA16I,
 			rgba32i = GL_RGBA32I,
@@ -1203,27 +1207,27 @@ namespace gl
 			__glcheck glTexSubImage2D((GLenum)get_target(), level(), 0, 0, width(), height(), (GLenum)format, (GLenum)type, src);
 		}
 
-		void copy_from(buffer &buf, u32 gl_format_type, u32 offset, u32 length)
+		void copy_from(const buffer &buf, gl::texture::sized_internal_format format, u32 offset, u32 length)
 		{
 			if (get_target() != target::texture_buffer)
 				throw EXCEPTION("OpenGL error: texture cannot copy from buffer");
 
 			if (!offset)
 			{
-				copy_from(buf, gl_format_type);
+				copy_from(buf, format);
 				return;
 			}
 
 			if (glTextureBufferRangeEXT == nullptr)
 				throw EXCEPTION("OpenGL error: partial buffer access for textures is unsupported on your system");
 
-			__glcheck glTextureBufferRangeEXT(id(), (GLenum)target::texture_buffer, gl_format_type, buf.id(), offset, length);
+			__glcheck glTextureBufferRangeEXT(id(), (GLenum)target::texture_buffer, (GLenum)format, buf.id(), offset, length);
 		}
 
-		void copy_from(buffer &buf, u32 gl_format_type)
+		void copy_from(const buffer &buf, gl::texture::sized_internal_format format)
 		{
 			save_binding_state save(*this);
-			__glcheck glTexBuffer((GLenum)target::texture_buffer, gl_format_type, buf.id());
+			__glcheck glTexBuffer((GLenum)target::texture_buffer, (GLenum)format, buf.id());
 		}
 
 		void copy_from(const buffer& buf, texture::format format, texture::type type, class pixel_unpack_settings pixel_settings)

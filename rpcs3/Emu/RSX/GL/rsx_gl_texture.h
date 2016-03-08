@@ -18,7 +18,7 @@ namespace rsx
 
 	namespace gl_texture
 	{
-		void bind(gl::texture_cache& cache, int index, rsx::texture& tex);
+		void bind(gl::texture_cache& cache, rsx::texture& tex);
 	}
 }
 

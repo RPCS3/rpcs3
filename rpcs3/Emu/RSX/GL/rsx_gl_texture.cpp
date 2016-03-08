@@ -136,7 +136,7 @@ int wrap(int wrap)
 }
 
 
-void rsx::gl_texture::bind(gl::texture_cache& cache, int index, rsx::texture& tex)
+void rsx::gl_texture::bind(gl::texture_cache& cache, rsx::texture& tex)
 {
 	u32 full_format = tex.format();
 	u32 format = full_format & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
@@ -145,7 +145,7 @@ void rsx::gl_texture::bind(gl::texture_cache& cache, int index, rsx::texture& te
 
 	gl::texture::target target = is_normalized ? gl::texture::target::texture2D : gl::texture::target::texture_rectangle;
 
-	glActiveTexture(GL_TEXTURE0 + index);
+	glActiveTexture(GL_TEXTURE0 + tex.index());
 	gl::texture_view(target, 0).bind();
 
 	if (!tex.enabled())
@@ -166,6 +166,7 @@ void rsx::gl_texture::bind(gl::texture_cache& cache, int index, rsx::texture& te
 	info.dimension = tex.dimension();
 	info.start_address = rsx::get_address(tex.offset(), tex.location());
 	info.target = target;
+	info.swizzled = is_swizzled;
 
 	if (is_compressed)
 	{
@@ -218,7 +219,7 @@ void rsx::gl_texture::bind(gl::texture_cache& cache, int index, rsx::texture& te
 		remap = info.format.remap.data();
 	}
 
-	__glcheck cache.entry(info, gl::cache_buffers::local).bind(index);
+	__glcheck cache.entry(info, gl::cache_buffers::local).bind(tex.index());
 
 	__glcheck glTexParameteri((GLenum)target, GL_TEXTURE_MAX_LEVEL, tex.mipmap() - 1);
 	__glcheck glTexParameteri((GLenum)target, GL_GENERATE_MIPMAP, tex.mipmap() > 1);

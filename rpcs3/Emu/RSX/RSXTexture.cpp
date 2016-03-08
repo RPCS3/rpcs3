@@ -210,6 +210,11 @@ namespace rsx
 		return method_registers[NV4097_SET_TEXTURE_CONTROL3 + m_index] & 0xfffff;
 	}
 
+	u8 texture::index() const
+	{
+		return m_index;
+	}
+
 	void vertex_texture::init(u8 index)
 	{
 		m_index = index;
@@ -392,5 +397,10 @@ namespace rsx
 	u32 vertex_texture::pitch() const
 	{
 		return method_registers[NV4097_SET_VERTEX_TEXTURE_CONTROL3 + (m_index * 8)] & 0xfffff;
+	}
+
+	u8 vertex_texture::index() const
+	{
+		return m_index;
 	}
 }

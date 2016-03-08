@@ -31,21 +31,69 @@ namespace
 		throw EXCEPTION("Unknow depth format");
 	}
 
-	u32 to_gl_internal_type(rsx::vertex_base_type type, u8 size)
+	gl::texture::sized_internal_format to_gl_internal_type(rsx::vertex_base_type type, u8 size)
 	{
 		/**
 		 * The buffer texture spec only allows fetches aligned to 8, 16, 32, etc...
 		 * This rules out most 3-component formats, except for the 32-wide RGB32F, RGB32I, RGB32UI
 		 */
-		const u32 vec1_types[] = { GL_R16, GL_R32F, GL_R16F, GL_R8, GL_R16I, GL_R16, GL_R8UI };
-		const u32 vec2_types[] = { GL_RG16, GL_RG32F, GL_RG16F, GL_RG8, GL_RG16I, GL_RG16, GL_RG8UI };
-		const u32 vec3_types[] = { GL_RGBA16, GL_RGB32F, GL_RGBA16F, GL_RGBA8, GL_RGBA16I, GL_RGBA16, GL_RGBA8UI };	//VEC3 COMPONENTS NOT SUPPORTED!
-		const u32 vec4_types[] = { GL_RGBA16, GL_RGBA32F, GL_RGBA16F, GL_RGBA8, GL_RGBA16I, GL_RGBA16, GL_RGBA8UI };
+		static const gl::texture::sized_internal_format vec1_types[]
+		{
+			gl::texture::sized_internal_format::r16,
+			gl::texture::sized_internal_format::r32f,
+			gl::texture::sized_internal_format::r16f,
+			gl::texture::sized_internal_format::r8,
+			gl::texture::sized_internal_format::r16i,
+			gl::texture::sized_internal_format::r16,
+			gl::texture::sized_internal_format::r8ui
+		};
 
-		const u32* vec_selectors[] = { 0, vec1_types, vec2_types, vec3_types, vec4_types };
+		static const gl::texture::sized_internal_format vec2_types[]
+		{
+			gl::texture::sized_internal_format::rg16,
+			gl::texture::sized_internal_format::rg32f,
+			gl::texture::sized_internal_format::rg16f,
+			gl::texture::sized_internal_format::rg8,
+			gl::texture::sized_internal_format::rg16i,
+			gl::texture::sized_internal_format::rg16,
+			gl::texture::sized_internal_format::rg8ui
+		};
+
+		static const gl::texture::sized_internal_format vec3_types[] //VEC3 COMPONENTS NOT SUPPORTED!
+		{
+			gl::texture::sized_internal_format::rgba16,
+			gl::texture::sized_internal_format::rgb32f,
+			gl::texture::sized_internal_format::rgba16f,
+			gl::texture::sized_internal_format::rgba8,
+			gl::texture::sized_internal_format::rgba16i,
+			gl::texture::sized_internal_format::rgba16,
+			gl::texture::sized_internal_format::rgba8ui
+		};
+
+		static const gl::texture::sized_internal_format vec4_types[]
+		{
+			gl::texture::sized_internal_format::rgba16,
+			gl::texture::sized_internal_format::rgba32f,
+			gl::texture::sized_internal_format::rgba16f,
+			gl::texture::sized_internal_format::rgba8,
+			gl::texture::sized_internal_format::rgba16i,
+			gl::texture::sized_internal_format::rgba16,
+			gl::texture::sized_internal_format::rgba8ui
+		};
+
+		static const gl::texture::sized_internal_format* vec_selectors[]
+		{
+			nullptr,
+			vec1_types,
+			vec2_types,
+			vec3_types,
+			vec4_types
+		};
 
 		if (type > rsx::vertex_base_type::ub256)
+		{
 			throw EXCEPTION("OpenGL error: unknown vertex base type 0x%X.", (u32)type);
+		}
 
 		return vec_selectors[size][(int)type];
 	}
@@ -189,9 +237,9 @@ void GLGSRender::begin()
 
 	if (u32 blend_mrt = rsx::method_registers[NV4097_SET_BLEND_ENABLE_MRT])
 	{
-		__glcheck enable(blend_mrt & 2, GL_BLEND, GL_COLOR_ATTACHMENT1);
-		__glcheck enable(blend_mrt & 4, GL_BLEND, GL_COLOR_ATTACHMENT2);
-		__glcheck enable(blend_mrt & 8, GL_BLEND, GL_COLOR_ATTACHMENT3);
+		__glcheck enable(blend_mrt & 2, GL_BLEND, 1);
+		__glcheck enable(blend_mrt & 4, GL_BLEND, 2);
+		__glcheck enable(blend_mrt & 8, GL_BLEND, 3);
 	}
 	
 	if (__glcheck enable(rsx::method_registers[NV4097_SET_LOGIC_OP_ENABLE], GL_LOGIC_OP))
@@ -347,7 +395,7 @@ namespace
 			case rsx::vertex_base_type::ub: return gl::buffer_pointer::type::u8;
 			case rsx::vertex_base_type::s32k: return gl::buffer_pointer::type::s32;
 			case rsx::vertex_base_type::cmp: return gl::buffer_pointer::type::s16; // Needs conversion
-			case rsx::vertex_base_type::ub256: gl::buffer_pointer::type::u8;
+			case rsx::vertex_base_type::ub256: return gl::buffer_pointer::type::u8;
 		}
 		throw EXCEPTION("unknow vertex type");
 	}
@@ -389,7 +437,7 @@ void GLGSRender::end()
 		int location;
 		if (m_program->uniforms.has_location("tex" + std::to_string(i), &location))
 		{
-			__glcheck rsx::gl_texture::bind(m_texture_cache, i, textures[i]);
+			__glcheck rsx::gl_texture::bind(m_texture_cache, textures[i]);
 			__glcheck glProgramUniform1i(m_program->id(), location, i);
 		}
 	}
@@ -472,7 +520,7 @@ void GLGSRender::end()
 
 			const u32 element_size = rsx::get_vertex_type_size_on_host(vertex_info.type, vertex_info.size);
 			u32 data_size = element_size * vertex_draw_count;
-			u32 gl_type = to_gl_internal_type(vertex_info.type, vertex_info.size);
+			gl::texture::sized_internal_format gl_type = to_gl_internal_type(vertex_info.type, vertex_info.size);
 
 			auto &buffer = m_gl_attrib_buffers[index].buffer;
 			auto &texture = m_gl_attrib_buffers[index].texture;
@@ -530,7 +578,7 @@ void GLGSRender::end()
 			if (!enabled)
 			{
 				glActiveTexture(GL_TEXTURE0 + index + rsx::limits::textures_count);
-				glBindTexture(GL_TEXTURE_BUFFER, NULL);
+				glBindTexture(GL_TEXTURE_BUFFER, 0);
 				glProgramUniform1i(m_program->id(), location, index + rsx::limits::textures_count);
 				continue;
 			}
@@ -573,16 +621,11 @@ void GLGSRender::end()
 				vertex_arrays_offsets[index] = gsl::narrow<u32>(position);
 				vertex_arrays_data.resize(position + size);
 
-				u32 gl_type = to_gl_internal_type(vertex_info.type, vertex_info.size);
-				u32 data_size = element_size * vertex_draw_count;
+				gl::texture::sized_internal_format gl_type = to_gl_internal_type(vertex_info.type, vertex_info.size);
 
 				auto& attrib_pair = m_gl_attrib_buffers[index];
 
-				__glcheck 0;
-
-				attrib_pair.buffer.data(data_size, vertex_array.data());
-
-				__glcheck 0;
+				attrib_pair.buffer.data(vertex_array.size(), vertex_array.data());
 
 				//Attach buffer to texture
 				attrib_pair.texture.copy_from(attrib_pair.buffer, gl_type);
@@ -601,12 +644,11 @@ void GLGSRender::end()
 				case rsx::vertex_base_type::f:
 				{
 					const u32 element_size = rsx::get_vertex_type_size_on_host(vertex_info.type, vertex_info.size);
-					const u32 gl_type = to_gl_internal_type(vertex_info.type, vertex_info.size);
-					const size_t data_size = vertex_data.size();
+					gl::texture::sized_internal_format gl_type = to_gl_internal_type(vertex_info.type, vertex_info.size);
 
 					auto& attrib_pair = m_gl_attrib_buffers[index];
 
-					attrib_pair.buffer.data(data_size, vertex_data.data());
+					attrib_pair.buffer.data(vertex_data.size(), vertex_data.data());
 
 					//Attach buffer to texture
 					attrib_pair.texture.copy_from(attrib_pair.buffer, gl_type);
@@ -623,7 +665,7 @@ void GLGSRender::end()
 			else
 			{
 				glActiveTexture(GL_TEXTURE0 + index + rsx::limits::textures_count);
-				glBindTexture(GL_TEXTURE_BUFFER, NULL);
+				glBindTexture(GL_TEXTURE_BUFFER, 0);
 				glProgramUniform1i(m_program->id(), location, index + rsx::limits::textures_count);
 				continue;
 			}
@@ -1080,7 +1122,7 @@ u32 surface_format_to_texture_format(rsx::surface_color_format format)
 
 gl::texture_info surface_info(rsx::surface_color_format format, u32 offset, u32 location, u32 width, u32 height, u32 pitch)
 {
-	gl::texture_info info;
+	gl::texture_info info{};
 
 	info.width = width;
 	info.height = height;
@@ -1089,6 +1131,8 @@ gl::texture_info surface_info(rsx::surface_color_format format, u32 offset, u32 
 	info.compressed_size = 0;
 	info.target = gl::texture::target::texture2D;
 	info.dimension = 2;
+	//TODO
+	info.swizzled = false;
 	info.start_address = rsx::get_address(offset, location);
 
 	info.format = gl::get_texture_format(surface_format_to_texture_format(format));
@@ -1144,7 +1188,7 @@ void GLGSRender::init_buffers(bool skip_reading)
 		u32 location = rsx::method_registers[mr_color_dma[index]];
 		u32 pitch = rsx::method_registers[mr_color_pitch[index]];
 
-		if (!location)
+		if (pitch <= 64)
 		{
 			cached_color_buffers[index] = nullptr;
 			draw_fbo.color[index] = null_texture;
@@ -1162,14 +1206,14 @@ void GLGSRender::init_buffers(bool skip_reading)
 		u32 location = rsx::method_registers[NV4097_SET_CONTEXT_DMA_ZETA];
 		u32 pitch = rsx::method_registers[NV4097_SET_SURFACE_PITCH_Z];
 
-		if (!location)
+		if (pitch <= 64)
 		{
 			cached_depth_buffer = nullptr;
 			draw_fbo.depth_stencil = null_texture;
 		}
 		else
 		{
-			gl::texture_info info;
+			gl::texture_info info{};
 
 			info.width = m_surface.width;
 			info.height = m_surface.height;
@@ -1179,6 +1223,8 @@ void GLGSRender::init_buffers(bool skip_reading)
 			info.compressed_size = 0;
 			info.start_address = rsx::get_address(offset, location);
 			info.target = gl::texture::target::texture2D;
+			//TODO
+			info.swizzled = false;
 
 			switch (m_surface.depth_format)
 			{
@@ -1203,24 +1249,24 @@ void GLGSRender::init_buffers(bool skip_reading)
 			}
 
 			info.format.remap = { GL_ZERO, GL_ZERO, GL_ZERO, GL_ZERO };
-
-			cached_depth_buffer = &m_texture_cache.entry(info, skip_reading ? gl::cache_buffers::none : gl::cache_buffers::local);
+			__glcheck 0;
+			__glcheck cached_depth_buffer = &m_texture_cache.entry(info, skip_reading ? gl::cache_buffers::none : gl::cache_buffers::local);
 
 
 			switch (m_surface.depth_format)
 			{
 			case rsx::surface_depth_format::z16:
-				draw_fbo.depth = cached_depth_buffer->view();
+				__glcheck draw_fbo.depth = cached_depth_buffer->view();
 				break;
 
 			case rsx::surface_depth_format::z24s8:
-				draw_fbo.depth_stencil = cached_depth_buffer->view();
+				__glcheck draw_fbo.depth_stencil = cached_depth_buffer->view();
 				break;
 			}
 		}
 	}
 
-	draw_fbo.bind();
+	__glcheck draw_fbo.bind();
 
 	{
 		auto info = rsx::get_active_color_surfaces();
@@ -1233,7 +1279,7 @@ void GLGSRender::init_buffers(bool skip_reading)
 			GL_COLOR_ATTACHMENT3
 		};
 
-		glDrawBuffers(info.second, color_buffers + info.first);
+		__glcheck glDrawBuffers(info.second, color_buffers + info.first);
 	}
 
 	set_viewport();
@@ -1323,7 +1369,7 @@ bool GLGSRender::on_access_violation(u32 address, bool is_writing)
 {
 	if (auto region = m_texture_cache.find_region(address))
 	{
-		std::lock_guard<gl::protected_region> lock(*region);
+		//std::lock_guard<gl::protected_region> lock(*region);
 
 		if (is_writing)
 		{
