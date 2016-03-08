@@ -35,6 +35,26 @@ add_Definitions(-DASMJIT_STATIC)
 set(ASMJIT_DIR ${CMAKE_SOURCE_DIR}/asmjit)
 include(${ASMJIT_DIR}/CMakeLists.txt)
 
+#Find LLVM
+find_package(LLVM CONFIG)
+if(NOT LLVM_FOUND)
+	Message("LLVM not found! LLVM 3.6 or greater is required. RPCS3 will be compiled without LLVM support.")
+else()
+	add_definitions(${LLVM_DEFINITIONS})
+	add_definitions(-DLLVM_AVAILABLE)
+	if (CMAKE_BUILD_TYPE STREQUAL "Release")
+		llvm_map_components_to_libnames(LLVM_LIBS mcjit vectorize x86codegen x86disassembler)
+	else()
+		llvm_map_components_to_libnames(LLVM_LIBS mcjit vectorize x86codegen x86disassembler mcdisassembler)
+	endif()
+	if(MSVC)
+		set_source_files_properties(${RPCS3_SRC_DIR}/Emu/Cell/PPULLVMRecompiler.cpp PROPERTIES COMPILE_FLAGS /GR-)
+	else()
+		set_source_files_properties(${RPCS3_SRC_DIR}/Emu/Cell/PPULLVMRecompiler.cpp PROPERTIES COMPILE_FLAGS -fno-rtti)
+	endif()
+endif()
+
+#Handle the D3D12 Renderer
 set(CMAKE_FLAGS)
 set(D3D12_SRC)
 set(D3D12_STDAFX)
@@ -43,9 +63,7 @@ if(WIN32)
 	#Find DirectX
 	find_package(DirectX REQUIRED)
 
-	option(BUILD_D3D12_RENDERER "Add the Direct3D12 Renderbackend" ON)
-
-	if(BUILD_D3D12_RENDERER)
+	if(DIRECTX_D3D12_INCLUDE_DIR)
 		file(
 		GLOB_RECURSE
 		D3D12_SRC
@@ -108,6 +126,7 @@ target_include_directories(${PROJ_NAME} PUBLIC 	${wxWidgets_INCLUDE_DIRS}
 												${VULKAN_INCLUDE_DIR}
 												${ASMJIT_INCLUDE_DIR}
 												${DIRECTX_INCLUDE_DIRS}
+												${LLVM_INCLUDE_DIRS}
 												${RPCS3_SRC_DIR}
 												${RPCS3_SRC_DIR}/..
 												${RPCS3_SRC_DIR}/../asmjit/src/asmjit
@@ -120,12 +139,9 @@ target_link_libraries(${PROJ_NAME} 	${wxWidgets_LIBRARIES}
 									${OPENAL_LIBRARY}
 									${VULKAN_LIBRARY}
 									${FFMPEG_LIBRARIES}
+									${LLVM_LIBS}
 									${ASMJIT_DEPS}
-									${DIRECTX_XINPUT_LIBRARY}
-									${DIRECTX_XAUDIO_LIBRARY}
-									${DIRECTX_DWRITE_LIBRARY}
-									${DIRECTX_DXGI_LIBRARY}
-									${DIRECTX_D2D1_LIBRARY}
+									${DIRECTX_LIBRARIES}
 									${ADDITIONAL_LIBS})
 
 

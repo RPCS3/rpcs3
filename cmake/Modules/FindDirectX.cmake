@@ -4,6 +4,7 @@
 #  DIRECTX_INCLUDE_DIR
 #
 # Variables you should use in your CMakeLists.txt:
+#  DIRECTX_LIBRARIES
 #  DIRECTX_DXGUID_LIBRARY - deprecated, see below
 #  DIRECTX_DXERR_LIBRARY - deprecated, see http://blogs.msdn.com/b/chuckw/archive/2012/04/24/where-s-dxerr-lib.aspx
 #  DIRECTX_DINPUT_LIBRARY
@@ -17,6 +18,7 @@
 #  DIRECTX_XINPUT_LIBRARY
 #  DIRECTX_DWIRTE_LIBRARY
 #  DIRECTX_INCLUDE_DIRS
+#  DIRECTX_D3D12_INCLUDE_DIR
 #  DIRECTX_FOUND - if this is not true, do not attempt to use this library
 #
 # Defines these macros:
@@ -107,6 +109,7 @@ else()
     set(DXSDK_DIRS /mingw)
 endif()
 
+
 find_path(DIRECTX_INCLUDE_DIR
     NAMES
     dxdiag.h
@@ -119,9 +122,10 @@ find_path(DIRECTX_INCLUDE_DIR
     "${DIRECTX_ROOT_DIR}"
     PATH_SUFFIXES
     include)
-find_path(DIRECTX_DINPUT_INCLUDE_DIR
+
+find_path(DIRECTX_D3D12_INCLUDE_DIR
     NAMES
-    dinput.h
+    d3d12.h
     PATHS
     ${DXSDK_DIRS}
     HINTS
@@ -335,8 +339,11 @@ find_package_handle_standard_args(DirectX
 
 if(DIRECTX_FOUND)
     set(DIRECTX_LIBRARIES
-        "${DIRECTX_DXGUID_LIBRARY}"
-        "${DIRECTX_DINPUT_LIBRARY}")
+        "${DIRECTX_DXGI_LIBRARY}"
+        "${DIRECTX_D2D1_LIBRARY}"
+        "${DIRECTX_DWRITE_LIBRARY}"
+        "${DIRECTX_XAUDIO_LIBRARY}"
+        "${DIRECTX_XINPUT_LIBRARY}")
 
     set(DIRECTX_INCLUDE_DIRS "${DIRECTX_INCLUDE_DIR}")
 
