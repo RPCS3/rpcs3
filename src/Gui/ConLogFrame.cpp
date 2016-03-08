@@ -160,6 +160,12 @@ void LogFrame::OnTimer(wxTimerEvent& event)
 		// Parse log level formatting
 		for (std::size_t start = 0, pos = 0;; pos++)
 		{
+			if (pos >= text.size())
+			{
+				flush_logs(start, pos);
+				break;
+			}
+
 			if (text[pos] == L'·')
 			{
 				if (text.size() - pos <= 3)
@@ -195,13 +201,7 @@ void LogFrame::OnTimer(wxTimerEvent& event)
 					m_level = level;
 					m_color = color;
 				}
-			}
-
-			if (pos >= text.size())
-			{
-				flush_logs(start, pos);
-				break;
-			}
+			}			
 		}
 
 		// Limit processing time

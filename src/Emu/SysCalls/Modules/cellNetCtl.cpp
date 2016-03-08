@@ -11,8 +11,6 @@
 #include <winsock2.h>
 #include <windows.h>
 #include <iphlpapi.h>
-
-#pragma comment(lib, "iphlpapi.lib")
 #else
 #include <unistd.h>
 

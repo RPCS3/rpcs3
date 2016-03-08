@@ -9,7 +9,6 @@
 #ifdef _WIN32
 #include <windows.h>
 #include <iphlpapi.h>
-#pragma comment(lib, "iphlpapi.lib")
 
 #undef GetHwnd
 #ifdef _MSC_VER
