@@ -1196,6 +1196,7 @@ void GLGSRender::init_buffers(bool skip_reading)
 		else
 		{
 			gl::texture_info info = surface_info(m_surface.color_format, offset, location, m_surface.width, m_surface.height, pitch);
+			info.antialiasing = m_surface.antialias;
 			cached_color_buffers[index] = &m_texture_cache.entry(info, skip_reading ? gl::cache_buffers::none : gl::cache_buffers::local);
 			draw_fbo.color[index] = cached_color_buffers[index]->view();
 		}

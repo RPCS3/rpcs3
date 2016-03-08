@@ -146,6 +146,31 @@ namespace gl
 					pixels = linear_pixels.get();
 				}
 
+
+				if (info->antialiasing != rsx::surface_antialiasing::center_1_sample)
+				{
+					std::unique_ptr<u8[]> tmp(std::move(linear_pixels));
+
+					switch (info->antialiasing)
+					{
+					case rsx::surface_antialiasing::square_centered_4_samples:
+					case rsx::surface_antialiasing::square_rotated_4_samples:
+						linear_pixels.reset(new u8[info->size() * 4]);
+						for (u32 y = 0; y < info->height; ++y)
+						{
+							for (u32 x = 0; x < info->width; ++x)
+							{
+								u32 value = *(u32*)((u8*)pixels + (y * 2 + 0) * info->pitch + (x * 2 + 0) * sizeof(u32));
+
+								*(u32*)((u8*)linear_pixels.get() + info->pitch * y + x * sizeof(u32)) = value;
+							}
+						}
+
+						pixels = linear_pixels.get();
+						break;
+					}
+				}
+
 				gl::pixel_unpack_settings{}
 					.row_length(info->pitch / info->format.bpp)
 					.aligment(1)
@@ -230,7 +255,34 @@ namespace gl
 				.swap_bytes((info->format.flags & gl::texture_flags::swap_bytes) != gl::texture_flags::none)
 				.apply();
 
-			__glcheck glGetTexImage((GLenum)info->target, 0, (GLenum)info->format.format, (GLenum)info->format.type, vm::base_priv(info->start_address));
+			if (info->antialiasing == rsx::surface_antialiasing::square_centered_4_samples ||
+				info->antialiasing == rsx::surface_antialiasing::square_rotated_4_samples)
+			{
+				//TODO
+				std::unique_ptr<u8[]> tmp(new u8[info->size()]);
+
+				glGetTexImage((GLenum)info->target, 0, (GLenum)info->format.format, (GLenum)info->format.type, tmp.get());
+
+				u8 *dst = (u8*)vm::base_priv(info->start_address);
+
+				for (u32 y = 0; y < info->height; ++y)
+				{
+					for (u32 x = 0; x < info->width; ++x)
+					{
+						u32 value = *(u32*)((u8*)tmp.get() + info->pitch * y + x * sizeof(u32));
+
+						*(u32*)(dst + (y * 2 + 0) * info->pitch + (x * 2 + 0) * sizeof(u32)) = value;
+						*(u32*)(dst + (y * 2 + 0) * info->pitch + (x * 2 + 1) * sizeof(u32)) = value;
+						*(u32*)(dst + (y * 2 + 1) * info->pitch + (x * 2 + 0) * sizeof(u32)) = value;
+						*(u32*)(dst + (y * 2 + 1) * info->pitch + (x * 2 + 1) * sizeof(u32)) = value;
+					}
+				}
+
+			}
+			else
+			{
+				__glcheck glGetTexImage((GLenum)info->target, 0, (GLenum)info->format.format, (GLenum)info->format.type, vm::base_priv(info->start_address));
+			}
 		}
 
 		ignore(gl::cache_buffers::all);
@@ -561,7 +613,6 @@ namespace gl
 
 	cached_texture &texture_cache::entry(const texture_info &info, cache_buffers sync)
 	{
-		//u32 aligned_address = info.start_address & ~(vm::page_size - 1);
 		u32 aligned_address;
 		u32 aligned_size;
 
