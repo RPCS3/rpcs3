@@ -20,6 +20,18 @@ namespace rsx
 			
 			vk::texture rtt;
 			rtt.create(device, requested_format, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT|VK_IMAGE_USAGE_TRANSFER_SRC_BIT|VK_IMAGE_USAGE_SAMPLED_BIT, width, height, 1, true);
+			rtt.change_layout(*cmd, VK_IMAGE_LAYOUT_GENERAL);
+
+			//Clear new surface
+			VkClearColorValue clear_color;
+			VkImageSubresourceRange range = vk::default_image_subresource_range();
+		
+			clear_color.float32[0] = 0.f;
+			clear_color.float32[1] = 0.f;
+			clear_color.float32[2] = 0.f;
+			clear_color.float32[3] = 0.f;
+
+			vkCmdClearColorImage(*cmd, rtt, rtt.get_layout(), &clear_color, 1, &range);
 			rtt.change_layout(*cmd, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
 			return rtt;
@@ -31,6 +43,24 @@ namespace rsx
 
 			vk::texture rtt;
 			rtt.create(device, requested_format, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT|VK_IMAGE_USAGE_SAMPLED_BIT, width, height, 1, true);
+			rtt.change_layout(*cmd, VK_IMAGE_LAYOUT_GENERAL);
+
+			//Clear new surface..
+			VkClearDepthStencilValue clear_depth;
+			VkImageSubresourceRange range;
+			range.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+			range.baseArrayLayer = 0;
+			range.baseMipLevel = 0;
+			range.layerCount = 1;
+			range.levelCount = 1;
+
+			if (format == surface_depth_format::z24s8)
+				range.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+
+			clear_depth.depth = 1.f;
+			clear_depth.stencil = 0;
+
+			vkCmdClearDepthStencilImage(*cmd, rtt, rtt.get_layout(), &clear_depth, 1, &range);
 			rtt.change_layout(*cmd, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 			
 			return rtt;
