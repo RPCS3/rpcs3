@@ -1085,6 +1085,13 @@ void GLGSRender::flip(int buffer)
 	}
 
 	m_frame->flip(m_context);
+
+	for (auto &tex : m_rtts.invalidated_resources)
+	{
+		tex->remove();
+	}
+
+	m_rtts.invalidated_resources.clear();
 }
 
 
