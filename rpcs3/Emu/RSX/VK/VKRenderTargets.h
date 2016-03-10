@@ -54,7 +54,7 @@ namespace rsx
 			range.layerCount = 1;
 			range.levelCount = 1;
 
-			if (format == surface_depth_format::z24s8)
+			if (requested_format != VK_FORMAT_D16_UNORM)
 				range.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
 
 			clear_depth.depth = 1.f;

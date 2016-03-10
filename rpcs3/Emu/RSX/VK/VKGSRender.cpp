@@ -93,7 +93,7 @@ namespace vk
 		switch (format)
 		{
 		case rsx::surface_depth_format::z16: return VK_FORMAT_D16_UNORM;
-		case rsx::surface_depth_format::z24s8: return VK_FORMAT_D16_UNORM;
+		case rsx::surface_depth_format::z24s8: return VK_FORMAT_D16_UNORM_S8_UINT;	//Cant get D24_S8 to work on AMD (beta 5)
 		}
 		throw EXCEPTION("Invalid format (0x%x)", format);
 	}
@@ -626,9 +626,9 @@ void VKGSRender::init_render_pass(VkFormat surface_format, VkFormat depth_format
 	attachments[0].initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;	//PRESENT_SRC_KHR??
 	attachments[0].finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-	attachments[1].format = VK_FORMAT_D16_UNORM;								/* Depth buffer format. Should be more elegant than this */
+	attachments[1].format = depth_format;								/* Depth buffer format. Should be more elegant than this */
 	attachments[1].samples = VK_SAMPLE_COUNT_1_BIT;
-	attachments[1].loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+	attachments[1].loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 	attachments[1].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 	attachments[1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 	attachments[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;

@@ -178,7 +178,7 @@ namespace vk
 
 		if (usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)
 		{
-			view_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT/* | VK_IMAGE_ASPECT_STENCIL_BIT*/;
+			view_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
 			m_image_aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
 		}
 
