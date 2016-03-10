@@ -32,10 +32,10 @@
 
 #include "Emu/RSX/Null/NullGSRender.h"
 #include "Emu/RSX/GL/GLGSRender.h"
-#include "Emu/RSX/VK/VKGSRender.h"
 #include "Emu/Audio/Null/NullAudioThread.h"
 #include "Emu/Audio/AL/OpenALThread.h"
 #ifdef _MSC_VER
+#include "Emu/RSX/VK/VKGSRender.h"
 #include "Emu/RSX/D3D12/D3D12GSRender.h"
 #include "Emu/Audio/XAudio2/XAudio2Thread.h"
 #endif
