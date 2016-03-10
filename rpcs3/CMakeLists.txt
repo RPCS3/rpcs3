@@ -173,6 +173,16 @@ RPCS3_SRC
 "${RPCS3_SRC_DIR}/../rsx_program_decompiler/shader_code/*"
 )
 
+if(APPLE)
+	set (EXCLUDE_DIR "/RSX/VK/")
+	foreach (TMP_PATH ${RPCS3_SRC})
+		string (FIND ${TMP_PATH} ${EXCLUDE_DIR} EXCLUDE_DIR_FOUND)
+		if (NOT ${EXCLUDE_DIR_FOUND} EQUAL -1)
+			list (REMOVE_ITEM RPCS3_SRC ${TMP_PATH})
+		endif ()
+	endforeach(TMP_PATH)
+endif()
+
 add_executable(rpcs3 ${RPCS3_SRC})
 
 
@@ -191,17 +201,22 @@ if(WIN32) # I'm not sure we need all of these libs, but we link them in vs
 	else()
 		target_link_libraries(rpcs3  dxgi.lib d2d1.lib dwrite.lib)
 	endif()
-	target_link_libraries(rpcs3  asmjit.lib avformat.lib avcodec.lib avutil.lib swresample.lib swscale.lib png16_static ${wxWidgets_LIBRARIES} ${OPENAL_LIBRARY} ${ADDITIONAL_LIBS} ${vulkan} ${glslang})
+	target_link_libraries(rpcs3  asmjit.lib avformat.lib avcodec.lib avutil.lib swresample.lib swscale.lib png16_static ${wxWidgets_LIBRARIES} ${OPENAL_LIBRARY} ${ADDITIONAL_LIBS} VKstatic.1 glslang OSDependent OGLCompiler SPIRV)
 else()
 	if(LLVM_FOUND)
 		target_link_libraries(rpcs3  asmjit.a ${wxWidgets_LIBRARIES} ${OPENAL_LIBRARY} ${GLEW_LIBRARY} ${OPENGL_LIBRARIES})
-		target_link_libraries(rpcs3  libavformat.a libavcodec.a libavutil.a libswresample.a libswscale.a png16_static ${ZLIB_LIBRARIES} ${LLVM_LIBS} ${ADDITIONAL_LIBS} ${vulkan} ${glslang})
+		target_link_libraries(rpcs3  libavformat.a libavcodec.a libavutil.a libswresample.a libswscale.a png16_static ${ZLIB_LIBRARIES} ${LLVM_LIBS} ${ADDITIONAL_LIBS})
+		if (NOT APPLE)
+			target_link_libraries(rpcs3  vulkan glslang OSDependent OGLCompiler SPIRV)
+		endif()
 	else()
 		target_link_libraries(rpcs3  asmjit.a ${wxWidgets_LIBRARIES} ${OPENAL_LIBRARY} ${GLEW_LIBRARY} ${OPENGL_LIBRARIES})
-		target_link_libraries(rpcs3  libavformat.a libavcodec.a libavutil.a libswresample.a libswscale.a png16_static ${ZLIB_LIBRARIES} ${ADDITIONAL_LIBS} ${vulkan} ${glslang})
+		target_link_libraries(rpcs3  libavformat.a libavcodec.a libavutil.a libswresample.a libswscale.a png16_static ${ZLIB_LIBRARIES} ${ADDITIONAL_LIBS})
+		if (NOT APPLE)
+			target_link_libraries(rpcs3  vulkan glslang OSDependent OGLCompiler SPIRV)
+		endif()
     endif()
 endif()
 
 set_target_properties(rpcs3 PROPERTIES COTIRE_CXX_PREFIX_HEADER_INIT "${RPCS3_SRC_DIR}/stdafx.h")
 cotire(rpcs3)
-

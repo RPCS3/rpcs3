@@ -36,7 +36,8 @@ enum class frame_type
 {
 	Null,
 	OpenGL,
-	DX12
+	DX12,
+	Vulkan
 };
 
 class GSRender : public rsx::thread
