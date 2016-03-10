@@ -993,17 +993,6 @@ void VKGSRender::flip(int buffer)
 		aspect_ratio.size = m_frame->client_size();
 	}
 
-	//Check if anything is waiting in queue and submit it if possible..
-	if (m_submit_fence)
-	{
-		CHECK_RESULT(vkWaitForFences((*m_device), 1, &m_submit_fence, VK_TRUE, ~0ULL));
-		
-		vkDestroyFence((*m_device), m_submit_fence, nullptr);
-		m_submit_fence = nullptr;
-
-		CHECK_RESULT(vkResetCommandBuffer(m_command_buffer, 0));
-	}
-
 	VkSwapchainKHR swap_chain = (VkSwapchainKHR)(*m_swap_chain);
 	uint32_t next_image_temp = 0;
 
@@ -1050,6 +1039,17 @@ void VKGSRender::flip(int buffer)
 
 		end_command_buffer_recording();
 		execute_command_buffer(false);
+
+		//Check if anything is waiting in queue and wait for it if possible..
+		if (m_submit_fence)
+		{
+			CHECK_RESULT(vkWaitForFences((*m_device), 1, &m_submit_fence, VK_TRUE, ~0ULL));
+
+			vkDestroyFence((*m_device), m_submit_fence, nullptr);
+			m_submit_fence = nullptr;
+
+			CHECK_RESULT(vkResetCommandBuffer(m_command_buffer, 0));
+		}
 
 		CHECK_RESULT(m_swap_chain->queuePresentKHR(m_swap_chain->get_present_queue(), &present));
 		CHECK_RESULT(vkQueueWaitIdle(m_swap_chain->get_present_queue()));
