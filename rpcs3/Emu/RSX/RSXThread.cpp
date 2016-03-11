@@ -561,7 +561,8 @@ namespace rsx
 		else
 		{
 			++m_internal_task_waiters;
-			while (add_internal_task(callback).wait_for(1s) == std::future_status::timeout)
+			auto future = add_internal_task(callback);
+			while (future.wait_for(1s) == std::future_status::timeout)
 			{
 				CHECK_EMU_STATUS;
 			}

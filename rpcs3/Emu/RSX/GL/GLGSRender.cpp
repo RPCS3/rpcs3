@@ -136,6 +136,8 @@ extern CellGcmContextData current_context;
 
 void GLGSRender::begin()
 {
+	//LOG_NOTICE(RSX, "begin()");
+
 	rsx::thread::begin();
 
 	if (!load_program())
@@ -420,6 +422,8 @@ namespace
 
 void GLGSRender::end()
 {
+	//LOG_NOTICE(RSX, "end()");
+
 	if (!draw_fbo)
 	{
 		rsx::thread::end();
@@ -448,7 +452,7 @@ void GLGSRender::end()
 	std::vector<u8> vertex_arrays_data;
 	u32 vertex_arrays_offsets[rsx::limits::vertex_count];
 
-	const std::string reg_table[] =
+	static const std::string reg_table[] =
 	{
 		"in_pos", "in_weight", "in_normal",
 		"in_diff_color", "in_spec_color",
@@ -513,7 +517,7 @@ void GLGSRender::end()
 			if (!vertex_info.size) // disabled, bind a null sampler
 			{
 				__glcheck glActiveTexture(GL_TEXTURE0 + index + rsx::limits::textures_count);
-				__glcheck glBindTexture(GL_TEXTURE_BUFFER, NULL);
+				__glcheck glBindTexture(GL_TEXTURE_BUFFER, 0);
 				__glcheck glProgramUniform1i(m_program->id(), location, index + rsx::limits::textures_count);
 				continue;
 			}
@@ -625,7 +629,7 @@ void GLGSRender::end()
 
 				auto& attrib_pair = m_gl_attrib_buffers[index];
 
-				attrib_pair.buffer.data(vertex_array.size(), vertex_array.data());
+				attrib_pair.buffer.data(element_size * vertex_draw_count, vertex_array.data());
 
 				//Attach buffer to texture
 				attrib_pair.texture.copy_from(attrib_pair.buffer, gl_type);
@@ -714,15 +718,15 @@ void GLGSRender::set_viewport()
 
 	u16 viewport_x = viewport_horizontal & 0xffff;
 	u16 viewport_y = viewport_vertical & 0xffff;
-	u16 viewport_w = viewport_horizontal >> 16;
-	u16 viewport_h = viewport_vertical >> 16;
+	u16 viewport_w = (viewport_horizontal >> 16) * m_surface.width_mult;
+	u16 viewport_h = (viewport_vertical >> 16) * m_surface.height_mult;
 
 	u32 scissor_horizontal = rsx::method_registers[NV4097_SET_SCISSOR_HORIZONTAL];
 	u32 scissor_vertical = rsx::method_registers[NV4097_SET_SCISSOR_VERTICAL];
 	u16 scissor_x = scissor_horizontal;
-	u16 scissor_w = scissor_horizontal >> 16;
+	u16 scissor_w = (scissor_horizontal >> 16) * m_surface.width_mult;
 	u16 scissor_y = scissor_vertical;
-	u16 scissor_h = scissor_vertical >> 16;
+	u16 scissor_h = (scissor_vertical >> 16) * m_surface.width_mult;
 
 	u32 shader_window = rsx::method_registers[NV4097_SET_SHADER_WINDOW];
 
@@ -827,7 +831,7 @@ void GLGSRender::on_exit()
 
 void nv4097_clear_surface(u32 arg, GLGSRender* renderer)
 {
-	//LOG_NOTICE(Log::RSX, "nv4097_clear_surface(0x%x)", arg);
+	//LOG_NOTICE(RSX, "nv4097_clear_surface(0x%x)", arg);
 
 	enum
 	{
@@ -856,7 +860,7 @@ void nv4097_clear_surface(u32 arg, GLGSRender* renderer)
 
 	GLbitfield mask = 0;
 
-	if (arg & depth_stencil)
+	if (renderer->cached_depth_buffer && (arg & depth_stencil))
 	{
 		if (arg & depth)
 		{
@@ -865,8 +869,8 @@ void nv4097_clear_surface(u32 arg, GLGSRender* renderer)
 
 			u32 clear_depth = rsx::method_registers[NV4097_SET_ZSTENCIL_CLEAR_VALUE] >> 8;
 
-			glDepthMask(GL_TRUE);
-			glClearDepth(double(clear_depth) / max_depth_value);
+			__glcheck glDepthMask(GL_TRUE);
+			__glcheck glClearDepth(double(clear_depth) / max_depth_value);
 			mask |= GLenum(gl::buffers::depth);
 		}
 
@@ -875,7 +879,7 @@ void nv4097_clear_surface(u32 arg, GLGSRender* renderer)
 			u8 clear_stencil = rsx::method_registers[NV4097_SET_ZSTENCIL_CLEAR_VALUE] & 0xff;
 
 			__glcheck glStencilMask(rsx::method_registers[NV4097_SET_STENCIL_MASK]);
-			glClearStencil(clear_stencil);
+			__glcheck glClearStencil(clear_stencil);
 
 			mask |= GLenum(gl::buffers::stencil);
 		}
@@ -926,7 +930,10 @@ void nv4097_clear_surface(u32 arg, GLGSRender* renderer)
 		});
 	}
 
-	glClear(mask);
+	if (mask)
+	{
+		__glcheck glClear(mask);
+	}
 }
 
 using rsx_method_impl_t = void(*)(u32, GLGSRender*);
@@ -1179,8 +1186,8 @@ void GLGSRender::init_buffers(bool skip_reading)
 	u32 clip_y = clip_vertical & 0xffff;
 
 	m_surface.unpack(surface_format);
-	m_surface.width = clip_width + clip_x;
-	m_surface.height = clip_height + clip_y;
+	m_surface.width = clip_width * m_surface.width_mult + clip_x;
+	m_surface.height = clip_height * m_surface.height_mult + clip_y;
 
 	rsx::for_each_active_color_surface([&](int index)
 	{
@@ -1188,83 +1195,73 @@ void GLGSRender::init_buffers(bool skip_reading)
 		u32 location = rsx::method_registers[mr_color_dma[index]];
 		u32 pitch = rsx::method_registers[mr_color_pitch[index]];
 
-		if (pitch <= 64)
-		{
-			cached_color_buffers[index] = nullptr;
-			draw_fbo.color[index] = null_texture;
-		}
-		else
-		{
-			gl::texture_info info = surface_info(m_surface.color_format, offset, location, m_surface.width, m_surface.height, pitch);
-			info.antialiasing = m_surface.antialias;
-			cached_color_buffers[index] = &m_texture_cache.entry(info, skip_reading ? gl::cache_buffers::none : gl::cache_buffers::local);
-			draw_fbo.color[index] = cached_color_buffers[index]->view();
-		}
+		gl::texture_info info = surface_info(m_surface.color_format, offset, location, m_surface.width, m_surface.height, pitch);
+		info.antialiasing = m_surface.antialias;
+		info.swizzled = m_surface.type == CELL_GCM_SURFACE_SWIZZLE;
+		cached_color_buffers[index] = &m_texture_cache.entry(info, skip_reading ? gl::cache_buffers::none : gl::cache_buffers::local);
+		draw_fbo.color[index] = cached_color_buffers[index]->view();
 	});
 
+	if (rsx::method_registers[NV4097_SET_DEPTH_TEST_ENABLE])
 	{
 		u32 offset = rsx::method_registers[NV4097_SET_SURFACE_ZETA_OFFSET];
 		u32 location = rsx::method_registers[NV4097_SET_CONTEXT_DMA_ZETA];
 		u32 pitch = rsx::method_registers[NV4097_SET_SURFACE_PITCH_Z];
 
-		if (pitch <= 64)
+		gl::texture_info info{};
+
+		info.width = m_surface.width * m_surface.width_mult;
+		info.height = m_surface.height * m_surface.height_mult;
+		info.depth = 1;
+		info.pitch = pitch;
+		info.dimension = 2;
+		info.compressed_size = 0;
+		info.start_address = rsx::get_address(offset, location);
+		info.target = gl::texture::target::texture2D;
+		info.swizzled = false;
+
+		switch (m_surface.depth_format)
 		{
-			cached_depth_buffer = nullptr;
-			draw_fbo.depth_stencil = null_texture;
+		case rsx::surface_depth_format::z16:
+			info.format.bpp = 2;
+			info.format.flags = gl::texture_flags::swap_bytes;
+			info.format.type = gl::texture::type::ushort;
+			info.format.internal_format = gl::texture::sized_internal_format::depth16;
+			info.format.format = gl::texture::format::depth;
+			break;
+
+		case rsx::surface_depth_format::z24s8:
+			info.format.bpp = 4;
+			info.format.flags = gl::texture_flags::swap_bytes;
+			info.format.type = gl::texture::type::uint_24_8;
+			info.format.internal_format = gl::texture::sized_internal_format::depth24_stencil8;
+			info.format.format = gl::texture::format::depth_stencil;
+			break;
+
+		default:
+			throw EXCEPTION("");
 		}
-		else
+
+		info.format.remap = { GL_ZERO, GL_ZERO, GL_ZERO, GL_ZERO };
+
+		__glcheck cached_depth_buffer = &m_texture_cache.entry(info, skip_reading ? gl::cache_buffers::none : gl::cache_buffers::local);
+
+		switch (m_surface.depth_format)
 		{
-			gl::texture_info info{};
+		case rsx::surface_depth_format::z16:
+			__glcheck draw_fbo.depth = cached_depth_buffer->view();
+			__glcheck draw_fbo.stencil = null_texture;
+			break;
 
-			info.width = m_surface.width;
-			info.height = m_surface.height;
-			info.depth = 1;
-			info.pitch = pitch;
-			info.dimension = 2;
-			info.compressed_size = 0;
-			info.start_address = rsx::get_address(offset, location);
-			info.target = gl::texture::target::texture2D;
-			//TODO
-			info.swizzled = false;
-
-			switch (m_surface.depth_format)
-			{
-			case rsx::surface_depth_format::z16:
-				info.format.bpp = 2;
-				info.format.flags = gl::texture_flags::swap_bytes;
-				info.format.type = gl::texture::type::ushort;
-				info.format.internal_format = gl::texture::sized_internal_format::depth16;
-				info.format.format = gl::texture::format::depth;
-				break;
-
-			case rsx::surface_depth_format::z24s8:
-				info.format.bpp = 4;
-				info.format.flags = gl::texture_flags::swap_bytes;
-				info.format.type = gl::texture::type::uint_24_8;
-				info.format.internal_format = gl::texture::sized_internal_format::depth24_stencil8;
-				info.format.format = gl::texture::format::depth_stencil;
-				break;
-
-			default:
-				throw EXCEPTION("");
-			}
-
-			info.format.remap = { GL_ZERO, GL_ZERO, GL_ZERO, GL_ZERO };
-			__glcheck 0;
-			__glcheck cached_depth_buffer = &m_texture_cache.entry(info, skip_reading ? gl::cache_buffers::none : gl::cache_buffers::local);
-
-
-			switch (m_surface.depth_format)
-			{
-			case rsx::surface_depth_format::z16:
-				__glcheck draw_fbo.depth = cached_depth_buffer->view();
-				break;
-
-			case rsx::surface_depth_format::z24s8:
-				__glcheck draw_fbo.depth_stencil = cached_depth_buffer->view();
-				break;
-			}
+		case rsx::surface_depth_format::z24s8:
+			__glcheck draw_fbo.depth_stencil = cached_depth_buffer->view();
+			break;
 		}
+	}
+	else
+	{
+		__glcheck draw_fbo.depth_stencil = null_texture;
+		cached_depth_buffer = nullptr;
 	}
 
 	__glcheck draw_fbo.bind();
@@ -1283,7 +1280,7 @@ void GLGSRender::init_buffers(bool skip_reading)
 		__glcheck glDrawBuffers(info.second, color_buffers + info.first);
 	}
 
-	set_viewport();
+	__glcheck set_viewport();
 }
 
 void GLGSRender::invalidate_buffers()
@@ -1303,6 +1300,7 @@ void GLGSRender::invalidate_buffers()
 
 void GLGSRender::flip(int buffer)
 {
+	//LOG_WARNING(RSX, "flip(%d)", buffer);
 	u32 buffer_width = gcm_buffers[buffer].width;
 	u32 buffer_height = gcm_buffers[buffer].height;
 	u32 buffer_pitch = gcm_buffers[buffer].pitch;
@@ -1316,6 +1314,8 @@ void GLGSRender::flip(int buffer)
 
 	gl::cached_texture& texture = m_texture_cache.entry(surface_info(rsx::surface_color_format::a8r8g8b8, gcm_buffers[buffer].offset,
 		CELL_GCM_LOCATION_LOCAL, buffer_width, buffer_height, buffer_pitch), gl::cache_buffers::local);
+
+	//std::lock_guard<gl::cached_texture> lock(texture);
 
 	m_flip_fbo.bind();
 	m_flip_fbo.color = texture.view();
@@ -1374,26 +1374,14 @@ bool GLGSRender::on_access_violation(u32 address, bool is_writing)
 
 		if (is_writing)
 		{
-			const bool accurate_cache = true;
-
-			if (accurate_cache)
+			region->for_each([this](gl::cached_texture& texture)
 			{
-				region->for_each([this](gl::cached_texture& texture)
+				invoke([&]()
 				{
-					invoke([&]()
-					{
-						texture.sync(gl::cache_buffers::host);
-						texture.invalidate(gl::cache_buffers::local);
-					});
-				});
-			}
-			else
-			{
-				region->for_each([](gl::cached_texture& texture)
-				{
+					texture.sync(gl::cache_buffers::host);
 					texture.invalidate(gl::cache_buffers::local);
 				});
-			}
+			});
 
 			region->unprotect();
 		}
