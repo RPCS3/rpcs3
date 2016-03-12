@@ -298,15 +298,19 @@ std::vector<MipmapLevelInfo> upload_placed_texture(gsl::span<gsl::byte> mapped_b
 	bool is_swizzled = !(texture.format() & CELL_GCM_TEXTURE_LN);
 	switch (format)
 	{
+	case CELL_GCM_TEXTURE_D8R8G8B8:
 	case CELL_GCM_TEXTURE_A8R8G8B8:
 		if (is_swizzled)
 			return copy_texture_data<copy_unmodified_block_swizzled, false, 1>(as_span_workaround<u32>(mapped_buffer), reinterpret_cast<const u32*>(pixels), w, h, depth, layer, texture.mipmap(), texture.pitch(), rowPitchAlignment);
 		else
 			return copy_texture_data<copy_unmodified_block, true, 1>(as_span_workaround<u32>(mapped_buffer), reinterpret_cast<const u32*>(pixels), w, h, depth, layer, texture.mipmap(), texture.pitch(), rowPitchAlignment);
 	case CELL_GCM_TEXTURE_DEPTH16:
+	case CELL_GCM_TEXTURE_D1R5G5B5:
 	case CELL_GCM_TEXTURE_A1R5G5B5:
+	case CELL_GCM_TEXTURE_R5G5B5A1:
 	case CELL_GCM_TEXTURE_A4R4G4B4:
 	case CELL_GCM_TEXTURE_R5G6B5:
+	case CELL_GCM_TEXTURE_G8B8:
 		if (is_swizzled)
 			return copy_texture_data<copy_unmodified_block_swizzled, false, 1>(as_span_workaround<u16>(mapped_buffer), reinterpret_cast<const be_t<u16>*>(pixels), w, h, depth, layer, texture.mipmap(), texture.pitch(), rowPitchAlignment);
 		else
@@ -379,15 +383,19 @@ void upload_texture_mipmaps(gsl::span<gsl::byte> dst_buffer, const rsx::texture 
 		switch (format)
 		{
 		case CELL_GCM_TEXTURE_A8R8G8B8:
+		case CELL_GCM_TEXTURE_D8R8G8B8:
 			if (is_swizzled)
 				copy_single_mipmap_layer<copy_unmodified_block_swizzled, false, 1>(as_span_workaround<u32>(mapped_buffer), reinterpret_cast<const u32*>(pixels), w, h, depth, layer, texture.mipmap(), mip_level, 0, texture.pitch(), alignment_offset_info[mip_level].second);
 			else
 				copy_single_mipmap_layer<copy_unmodified_block, true, 1>(as_span_workaround<u32>(mapped_buffer), reinterpret_cast<const u32*>(pixels), w, h, depth, layer, texture.mipmap(), mip_level, 0, texture.pitch(), alignment_offset_info[mip_level].second);
 			break;
 		case CELL_GCM_TEXTURE_DEPTH16:
+		case CELL_GCM_TEXTURE_D1R5G5B5:
 		case CELL_GCM_TEXTURE_A1R5G5B5:
+		case CELL_GCM_TEXTURE_R5G5B5A1:
 		case CELL_GCM_TEXTURE_A4R4G4B4:
 		case CELL_GCM_TEXTURE_R5G6B5:
+		case CELL_GCM_TEXTURE_G8B8:
 			if (is_swizzled)
 				copy_single_mipmap_layer<copy_unmodified_block_swizzled, false, 1>(as_span_workaround<u16>(mapped_buffer), reinterpret_cast<const be_t<u16>*>(pixels), w, h, depth, layer, texture.mipmap(), mip_level, 0, texture.pitch(), alignment_offset_info[mip_level].second);
 			else
