@@ -47,8 +47,8 @@ namespace rsx
 			rtt.change_layout(*cmd, VK_IMAGE_LAYOUT_GENERAL);
 
 			//Clear new surface..
-			VkClearDepthStencilValue clear_depth;
-			VkImageSubresourceRange range;
+			VkClearDepthStencilValue clear_depth = {};
+			VkImageSubresourceRange range = {};
 			range.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
 			range.baseArrayLayer = 0;
 			range.baseMipLevel = 0;

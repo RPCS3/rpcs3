@@ -384,15 +384,12 @@ namespace vk
 
 			owner = &dev;
 
-			VkBufferCreateInfo infos;
-			infos.pNext = nullptr;
+			VkBufferCreateInfo infos = {};
 			infos.size = size;
 			infos.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
 			infos.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 			infos.flags = flags;
 			infos.usage = usage;
-			infos.pQueueFamilyIndices = nullptr;
-			infos.queueFamilyIndexCount = 0;
 
 			CHECK_RESULT(vkCreateBuffer(dev, &infos, nullptr, &m_buffer));
 
@@ -503,12 +500,9 @@ namespace vk
 			if (!(format_properties.bufferFeatures & VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT))
 				throw EXCEPTION("Can't map view to requested format");
 
-			VkBufferViewCreateInfo view_info;
+			VkBufferViewCreateInfo view_info = {};
 			view_info.buffer = m_buffer;
-			view_info.flags = 0;
 			view_info.format = format;
-			view_info.offset = 0;
-			view_info.pNext = nullptr;
 			view_info.range = m_size;
 			view_info.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
 			
@@ -552,12 +546,10 @@ namespace vk
 
 		void create(vk::render_device &dev, VkRenderPass pass, VkImageView *attachments, u32 nb_attachments, u32 width, u32 height)
 		{
-			VkFramebufferCreateInfo infos;
+			VkFramebufferCreateInfo infos = {};
 			infos.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-			infos.flags = 0;
 			infos.width = width;
 			infos.height = height;
-			infos.pNext = nullptr;
 			infos.attachmentCount = nb_attachments;
 			infos.pAttachments = attachments;
 			infos.renderPass = pass;
@@ -593,10 +585,9 @@ namespace vk
 
 		void create(vk::render_device &dev, VkImage &swap_image, VkFormat format)
 		{
-			VkImageViewCreateInfo color_image_view;
+			VkImageViewCreateInfo color_image_view = {};
 
 			color_image_view.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-			color_image_view.pNext = nullptr;
 			color_image_view.format = format;
 
 			color_image_view.components.r = VK_COMPONENT_SWIZZLE_R;
@@ -611,7 +602,6 @@ namespace vk
 			color_image_view.subresourceRange.layerCount = 1;
 
 			color_image_view.viewType = VK_IMAGE_VIEW_TYPE_2D;
-			color_image_view.flags = 0;
 
 			color_image_view.image = swap_image;
 			vkCreateImageView(dev, &color_image_view, nullptr, &view);
@@ -774,9 +764,8 @@ namespace vk
 			if (surface_descriptors.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR)
 				pre_transform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
 
-			VkSwapchainCreateInfoKHR swap_info;
+			VkSwapchainCreateInfoKHR swap_info = {};
 			swap_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-			swap_info.pNext = nullptr;
 			swap_info.surface = m_surface;
 			swap_info.minImageCount = nb_swap_images;
 			swap_info.imageFormat = m_surface_format;
@@ -787,8 +776,6 @@ namespace vk
 			swap_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
 			swap_info.imageArrayLayers = 1;
 			swap_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-			swap_info.queueFamilyIndexCount = 0;
-			swap_info.pQueueFamilyIndices = nullptr;
 			swap_info.presentMode = swapchain_present_mode;
 			swap_info.oldSwapchain = old_swapchain;
 			swap_info.clipped = true;
@@ -860,10 +847,8 @@ namespace vk
 		void create(vk::render_device &dev)
 		{
 			owner = &dev;
-			VkCommandPoolCreateInfo infos;
+			VkCommandPoolCreateInfo infos = {};
 			infos.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-			infos.pNext = nullptr;
-			infos.queueFamilyIndex = 0;
 			infos.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 
 			CHECK_RESULT(vkCreateCommandPool(dev, &infos, nullptr, &pool));
@@ -900,12 +885,11 @@ namespace vk
 
 		void create(vk::command_pool &cmd_pool)
 		{
-			VkCommandBufferAllocateInfo infos;
+			VkCommandBufferAllocateInfo infos = {};
 			infos.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
 			infos.commandBufferCount = 1;
 			infos.commandPool = (VkCommandPool)cmd_pool;
 			infos.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-			infos.pNext = nullptr;
 
 			CHECK_RESULT(vkAllocateCommandBuffers(cmd_pool.get_owner(), &infos, &commands));
 			pool = &cmd_pool;
@@ -973,11 +957,9 @@ namespace vk
 			createDebugReportCallback = (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(m_instance, "vkCreateDebugReportCallbackEXT");
 			destroyDebugReportCallback = (PFN_vkDestroyDebugReportCallbackEXT)vkGetInstanceProcAddr(m_instance, "vkDestroyDebugReportCallbackEXT");
 
-			VkDebugReportCallbackCreateInfoEXT dbgCreateInfo;
+			VkDebugReportCallbackCreateInfoEXT dbgCreateInfo = {};
 			dbgCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
-			dbgCreateInfo.pNext = NULL;
 			dbgCreateInfo.pfnCallback = callback;
-			dbgCreateInfo.pUserData = NULL;
 			dbgCreateInfo.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
 
 			CHECK_RESULT(createDebugReportCallback(m_instance, &dbgCreateInfo, NULL, &m_debugger));
@@ -986,10 +968,9 @@ namespace vk
 		uint32_t createInstance(const char *app_name)
 		{
 			//Initialize a vulkan instance
-			VkApplicationInfo app;
+			VkApplicationInfo app = {};
 
 			app.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-			app.pNext = nullptr;
 			app.pApplicationName = app_name;
 			app.applicationVersion = 0;
 			app.pEngineName = app_name;
@@ -1009,9 +990,8 @@ namespace vk
 			if (rpcs3::config.rsx.d3d12.debug_output.value())
 				layers.push_back("VK_LAYER_LUNARG_standard_validation");
 
-			VkInstanceCreateInfo instance_info;
+			VkInstanceCreateInfo instance_info = {};
 			instance_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-			instance_info.pNext = nullptr;
 			instance_info.pApplicationInfo = &app;
 			instance_info.enabledLayerCount = layers.size();
 			instance_info.ppEnabledLayerNames = layers.data();
@@ -1078,10 +1058,8 @@ namespace vk
 #ifdef _WIN32
 		vk::swap_chain* createSwapChain(HINSTANCE hInstance, HWND hWnd, vk::physical_device &dev)
 		{
-			VkWin32SurfaceCreateInfoKHR createInfo;
+			VkWin32SurfaceCreateInfoKHR createInfo = {};
 			createInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
-			createInfo.pNext = NULL;
-			createInfo.flags = 0;
 			createInfo.hinstance = hInstance;
 			createInfo.hwnd = hWnd;
 
@@ -1180,10 +1158,9 @@ namespace vk
 
 		void create(vk::render_device &dev, VkDescriptorPoolSize *sizes, u32 size_descriptors_count)
 		{
-			VkDescriptorPoolCreateInfo infos;
+			VkDescriptorPoolCreateInfo infos = {};
 			infos.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
 			infos.maxSets = 2;
-			infos.pNext = nullptr;
 			infos.poolSizeCount = size_descriptors_count;
 			infos.pPoolSizes = sizes;
 			infos.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;

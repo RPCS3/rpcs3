@@ -176,20 +176,11 @@ VKGSRender::VKGSRender() : GSRender(frame_type::Vulkan)
 	m_command_buffer_pool.create((*m_device));
 	m_command_buffer.create(m_command_buffer_pool);
 
-	VkCommandBufferInheritanceInfo inheritance_info;
+	VkCommandBufferInheritanceInfo inheritance_info = {};
 	inheritance_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
-	inheritance_info.pNext = nullptr;
-	inheritance_info.renderPass = VK_NULL_HANDLE;
-	inheritance_info.subpass = 0;
-	inheritance_info.framebuffer = VK_NULL_HANDLE;
-	inheritance_info.occlusionQueryEnable = VK_FALSE;
-	inheritance_info.queryFlags = 0;
-	inheritance_info.pipelineStatistics = 0;
 
-	VkCommandBufferBeginInfo begin_infos;
-	begin_infos.flags = 0;
+	VkCommandBufferBeginInfo begin_infos = {};
 	begin_infos.pInheritanceInfo = &inheritance_info;
-	begin_infos.pNext = nullptr;
 	begin_infos.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 
 	CHECK_RESULT(vkBeginCommandBuffer(m_command_buffer, &begin_infos));
@@ -375,17 +366,14 @@ namespace
 
 void VKGSRender::end()
 {
-	VkRenderPassBeginInfo rp_begin;
+	VkRenderPassBeginInfo rp_begin = {};
 	rp_begin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-	rp_begin.pNext = NULL;
 	rp_begin.renderPass = m_render_pass;
 	rp_begin.framebuffer = m_framebuffer;
 	rp_begin.renderArea.offset.x = 0;
 	rp_begin.renderArea.offset.y = 0;
 	rp_begin.renderArea.extent.width = m_frame->client_size().width;
 	rp_begin.renderArea.extent.height = m_frame->client_size().height;
-	rp_begin.clearValueCount = 0;
-	rp_begin.pClearValues = nullptr;
 
 	vkCmdBeginRenderPass(m_command_buffer, &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
 
@@ -452,7 +440,7 @@ void VKGSRender::set_viewport()
 //	u32 shader_window = rsx::method_registers[NV4097_SET_SHADER_WINDOW];
 //	rsx::window_origin shader_window_origin = rsx::to_window_origin((shader_window >> 12) & 0xf);
 
-	VkViewport viewport;
+	VkViewport viewport = {};
 	viewport.x = viewport_x;
 	viewport.y = viewport_y;
 	viewport.width = viewport_w;
@@ -462,7 +450,7 @@ void VKGSRender::set_viewport()
 
 	vkCmdSetViewport(m_command_buffer, 0, 1, &viewport);
 
-	VkRect2D scissor;
+	VkRect2D scissor = {};
 	scissor.extent.height = scissor_h;
 	scissor.extent.width = scissor_w;
 	scissor.offset.x = scissor_x;
@@ -607,8 +595,7 @@ void VKGSRender::init_render_pass(VkFormat surface_format, VkFormat depth_format
 {
 	//TODO: Create buffers as requested by the game. Render to swapchain for now..
 	/* Describe a render pass and framebuffer attachments */
-	VkAttachmentDescription attachments[2];
-	memset(&attachments, 0, sizeof attachments);
+	std::array<VkAttachmentDescription, 2> attachments;
 
 	attachments[0].format = surface_format;
 	attachments[0].samples = VK_SAMPLE_COUNT_1_BIT;
@@ -628,17 +615,17 @@ void VKGSRender::init_render_pass(VkFormat surface_format, VkFormat depth_format
 	attachments[1].initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 	attachments[1].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
-	VkAttachmentReference template_color_reference;
+	VkAttachmentReference template_color_reference = {};
 	template_color_reference.attachment = VK_ATTACHMENT_UNUSED;
 	template_color_reference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-	VkAttachmentReference depth_reference;
+	VkAttachmentReference depth_reference = {};
 	depth_reference.attachment = num_draw_buffers;
 	depth_reference.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
 	//Fill in draw_buffers information...
-	VkAttachmentDescription real_attachments[4];
-	VkAttachmentReference color_references[4];
+	std::array<VkAttachmentDescription, 4> real_attachments;
+	std::array<VkAttachmentReference, 4> color_references;
 
 	for (int i = 0; i < num_draw_buffers; ++i)
 	{
@@ -650,28 +637,18 @@ void VKGSRender::init_render_pass(VkFormat surface_format, VkFormat depth_format
 
 	real_attachments[num_draw_buffers] = attachments[1];
 
-	VkSubpassDescription subpass;
+	VkSubpassDescription subpass = {};
 	subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-	subpass.flags = 0;
-	subpass.inputAttachmentCount = 0;
-	subpass.pInputAttachments = nullptr;
 	subpass.colorAttachmentCount = num_draw_buffers;
-	subpass.pColorAttachments = num_draw_buffers? color_references: nullptr;
-	subpass.pResolveAttachments = nullptr;
+	subpass.pColorAttachments = num_draw_buffers? color_references.data() : nullptr;
 	subpass.pDepthStencilAttachment = &depth_reference;
-	subpass.preserveAttachmentCount = 0;
-	subpass.pPreserveAttachments = nullptr;
 
-	VkRenderPassCreateInfo rp_info;
+	VkRenderPassCreateInfo rp_info = {};
 	rp_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-	rp_info.pNext = NULL;
-	rp_info.attachmentCount = num_draw_buffers+1;
-	rp_info.pAttachments = real_attachments;
+	rp_info.attachmentCount = num_draw_buffers + 1;
+	rp_info.pAttachments = real_attachments.data();
 	rp_info.subpassCount = 1;
 	rp_info.pSubpasses = &subpass;
-	rp_info.dependencyCount = 0;
-	rp_info.pDependencies = NULL;
-	rp_info.flags = 0;
 
 	CHECK_RESULT(vkCreateRenderPass((*m_device), &rp_info, NULL, &m_render_pass));
 }
@@ -775,9 +752,7 @@ void VKGSRender::init_buffers(bool skip_reading)
 	if (dirty_frame)
 	{
 		//Prepare surface for new frame
-		VkSemaphoreCreateInfo semaphore_info;
-		semaphore_info.flags = 0;
-		semaphore_info.pNext = nullptr;
+		VkSemaphoreCreateInfo semaphore_info = {};
 		semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
 		vkCreateSemaphore((*m_device), &semaphore_info, nullptr, &m_present_semaphore);
@@ -808,20 +783,11 @@ void VKGSRender::write_buffers()
 
 void VKGSRender::begin_command_buffer_recording()
 {
-	VkCommandBufferInheritanceInfo inheritance_info;
+	VkCommandBufferInheritanceInfo inheritance_info = {};
 	inheritance_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
-	inheritance_info.pNext = nullptr;
-	inheritance_info.renderPass = VK_NULL_HANDLE;
-	inheritance_info.subpass = 0;
-	inheritance_info.framebuffer = VK_NULL_HANDLE;
-	inheritance_info.occlusionQueryEnable = VK_FALSE;
-	inheritance_info.queryFlags = 0;
-	inheritance_info.pipelineStatistics = 0;
 
-	VkCommandBufferBeginInfo begin_infos;
-	begin_infos.flags = 0;
+	VkCommandBufferBeginInfo begin_infos = {};
 	begin_infos.pInheritanceInfo = &inheritance_info;
-	begin_infos.pNext = nullptr;
 	begin_infos.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 
 	if (m_submit_fence)
@@ -922,25 +888,18 @@ void VKGSRender::execute_command_buffer(bool wait)
 	if (m_submit_fence)
 		throw EXCEPTION("Synchronization deadlock!");
 
-	VkFenceCreateInfo fence_info;
+	VkFenceCreateInfo fence_info = {};
 	fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-	fence_info.flags = 0;
-	fence_info.pNext = nullptr;
 
 	CHECK_RESULT(vkCreateFence(*m_device, &fence_info, nullptr, &m_submit_fence));
 
 	VkPipelineStageFlags pipe_stage_flags = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
 	VkCommandBuffer cmd = m_command_buffer;
 
-	VkSubmitInfo infos;
+	VkSubmitInfo infos = {};
 	infos.commandBufferCount = 1;
 	infos.pCommandBuffers = &cmd;
-	infos.pNext = nullptr;
-	infos.pSignalSemaphores = nullptr;
 	infos.pWaitDstStageMask = &pipe_stage_flags;
-	infos.signalSemaphoreCount = 0;	
-	infos.waitSemaphoreCount = 0;
-	infos.pWaitSemaphores = nullptr;
 	infos.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
 	CHECK_RESULT(vkQueueSubmit(m_swap_chain->get_present_queue(), 1, &infos, m_submit_fence));
@@ -989,7 +948,7 @@ void VKGSRender::flip(int buffer)
 	VkSwapchainKHR swap_chain = (VkSwapchainKHR)(*m_swap_chain);
 	uint32_t next_image_temp = 0;
 
-	VkPresentInfoKHR present;
+	VkPresentInfoKHR present = {};
 	present.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 	present.pNext = nullptr;
 	present.swapchainCount = 1;

@@ -10,7 +10,7 @@ namespace vk
 {
 	VkComponentMapping default_component_map()
 	{
-		VkComponentMapping result;
+		VkComponentMapping result = {};
 		result.a = VK_COMPONENT_SWIZZLE_A;
 		result.r = VK_COMPONENT_SWIZZLE_R;
 		result.g = VK_COMPONENT_SWIZZLE_G;
@@ -21,7 +21,7 @@ namespace vk
 
 	VkImageSubresource default_image_subresource()
 	{
-		VkImageSubresource subres;
+		VkImageSubresource subres = {};
 		subres.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 		subres.mipLevel = 0;
 		subres.arrayLayer = 0;
@@ -31,7 +31,7 @@ namespace vk
 
 	VkImageSubresourceRange default_image_subresource_range()
 	{
-		VkImageSubresourceRange subres;
+		VkImageSubresourceRange subres = {};
 		subres.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 		subres.baseArrayLayer = 0;
 		subres.baseMipLevel = 0;
@@ -43,7 +43,7 @@ namespace vk
 
 	void copy_image(VkCommandBuffer cmd, VkImage &src, VkImage &dst, VkImageLayout srcLayout, VkImageLayout dstLayout, u32 width, u32 height, u32 mipmaps, VkImageAspectFlagBits aspect)
 	{
-		VkImageSubresourceLayers a_src, a_dst;
+		VkImageSubresourceLayers a_src = {}, a_dst = {};
 		a_src.aspectMask = aspect;
 		a_src.baseArrayLayer = 0;
 		a_src.layerCount = 1;
@@ -51,7 +51,7 @@ namespace vk
 
 		a_dst = a_src;
 
-		VkImageCopy rgn;
+		VkImageCopy rgn = {};
 		rgn.extent.depth = 1;
 		rgn.extent.width = width;
 		rgn.extent.height = height;
@@ -83,7 +83,7 @@ namespace vk
 
 	void copy_scaled_image(VkCommandBuffer cmd, VkImage & src, VkImage & dst, VkImageLayout srcLayout, VkImageLayout dstLayout, u32 src_width, u32 src_height, u32 dst_width, u32 dst_height, u32 mipmaps, VkImageAspectFlagBits aspect)
 	{
-		VkImageSubresourceLayers a_src, a_dst;
+		VkImageSubresourceLayers a_src = {}, a_dst = {};
 		a_src.aspectMask = aspect;
 		a_src.baseArrayLayer = 0;
 		a_src.layerCount = 1;
@@ -91,7 +91,7 @@ namespace vk
 
 		a_dst = a_src;
 
-		VkImageBlit rgn;
+		VkImageBlit rgn = {};
 		rgn.srcOffsets[0] = { 0, 0, 0 };
 		rgn.srcOffsets[1] = { (int32_t)src_width, (int32_t)src_height, 1 };
 		rgn.dstOffsets[0] = { 0, 0, 0 };
@@ -143,11 +143,9 @@ namespace vk
 		owner = &device;
 
 		//First create the image
-		VkImageCreateInfo image_info;
-		memset(&image_info, 0, sizeof(image_info));
+		VkImageCreateInfo image_info = {};
 
 		image_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-		image_info.pNext = nullptr;
 		image_info.imageType = image_type;
 		image_info.format = format;
 		image_info.extent = { width, height, 1 };
@@ -166,15 +164,13 @@ namespace vk
 
 		CHECK_RESULT(vkBindImageMemory(device, m_image_contents, vram_allocation, 0));
 
-		VkImageViewCreateInfo view_info;
+		VkImageViewCreateInfo view_info = {};
 		view_info.format = format;
 		view_info.image = m_image_contents;
-		view_info.pNext = nullptr;
 		view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
 		view_info.viewType = view_type;
 		view_info.components = swizzle;
 		view_info.subresourceRange = default_image_subresource_range();
-		view_info.flags = 0;
 
 		if (usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)
 		{
@@ -200,18 +196,16 @@ namespace vk
 			VkSamplerAddressMode clamp_t = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
 			VkSamplerAddressMode clamp_r = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
 
-			VkSamplerCreateInfo sampler_info;
+			VkSamplerCreateInfo sampler_info = {};
 			sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
 			sampler_info.addressModeU = clamp_s;
 			sampler_info.addressModeV = clamp_t;
 			sampler_info.addressModeW = clamp_r;
 			sampler_info.anisotropyEnable = VK_FALSE;
 			sampler_info.compareEnable = VK_FALSE;
-			sampler_info.pNext = nullptr;
 			sampler_info.unnormalizedCoordinates = VK_FALSE;
 			sampler_info.mipLodBias = 0;
 			sampler_info.maxAnisotropy = 0;
-			sampler_info.flags = 0;
 			sampler_info.magFilter = VK_FILTER_LINEAR;
 			sampler_info.minFilter = VK_FILTER_LINEAR;
 			sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
@@ -325,18 +319,16 @@ namespace vk
 		VkSamplerAddressMode clamp_t = vk_wrap_mode(tex.wrap_t());
 		VkSamplerAddressMode clamp_r = vk_wrap_mode(tex.wrap_r());
 
-		VkSamplerCreateInfo sampler_info;
+		VkSamplerCreateInfo sampler_info = {};
 		sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
 		sampler_info.addressModeU = clamp_s;
 		sampler_info.addressModeV = clamp_t;
 		sampler_info.addressModeW = clamp_r;
 		sampler_info.anisotropyEnable = VK_TRUE;
 		sampler_info.compareEnable = VK_FALSE;
-		sampler_info.pNext = nullptr;
 		sampler_info.unnormalizedCoordinates = !!(tex.format() & CELL_GCM_TEXTURE_UN);
 		sampler_info.mipLodBias = tex.bias();
 		sampler_info.maxAnisotropy = max_aniso(tex.max_aniso());
-		sampler_info.flags = 0;
 		sampler_info.maxLod = tex.max_lod();
 		sampler_info.minLod = tex.min_lod();
 		sampler_info.magFilter = VK_FILTER_LINEAR;
@@ -379,7 +371,7 @@ namespace vk
 		if (!m_sampler)
 			sampler_setup(tex, best_type, default_component_map());
 
-		VkImageSubresource subres;
+		VkImageSubresource subres = {};
 		subres.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 		subres.mipLevel = 0;
 		subres.arrayLayer = 0;
