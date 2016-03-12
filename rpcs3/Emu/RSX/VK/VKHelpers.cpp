@@ -136,8 +136,7 @@ namespace vk
 		if (g_null_sampler)
 			return g_null_sampler;
 
-		VkSamplerCreateInfo sampler_info;
-		memset(&sampler_info, 0, sizeof(sampler_info));
+		VkSamplerCreateInfo sampler_info = {};
 
 		sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
 		sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
@@ -146,7 +145,6 @@ namespace vk
 		sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
 		sampler_info.anisotropyEnable = VK_FALSE;
 		sampler_info.compareEnable = VK_FALSE;
-		sampler_info.pNext = nullptr;
 		sampler_info.unnormalizedCoordinates = VK_FALSE;
 		sampler_info.mipLodBias = 0;
 		sampler_info.maxAnisotropy = 0;
@@ -216,9 +214,8 @@ namespace vk
 		VkImageSubresourceRange range = default_image_subresource_range();
 		range.aspectMask = aspect_flags;
 
-		VkImageMemoryBarrier barrier;
+		VkImageMemoryBarrier barrier = {};
 		barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-		barrier.pNext = nullptr;
 		barrier.newLayout = new_layout;
 		barrier.oldLayout = current_layout;
 		barrier.image = image;
