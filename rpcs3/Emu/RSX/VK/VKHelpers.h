@@ -68,7 +68,6 @@ namespace vk
 
 	VkFormat get_compatible_sampler_format(u32 format, VkComponentMapping& mapping, u8 swizzle_mask=0);
 	VkFormat get_compatible_surface_format(rsx::surface_color_format color_format);
-	VkFormat get_compatible_depth_surface_format(rsx::surface_depth_format depth_format);
 
 	class physical_device
 	{

@@ -3,6 +3,7 @@
 #include "VKHelpers.h"
 #include "VKTextureCache.h"
 #include "VKRenderTargets.h"
+#include "VKFormats.h"
 
 #define RSX_DEBUG 1
 
@@ -26,6 +27,8 @@ private:
 	
 	vk::texture_cache m_texture_cache;
 	rsx::vk_render_targets m_rtts;
+
+	vk::gpu_formats_support m_optimal_tiling_supported_formats;
 
 public:
 	//vk::fbo draw_fbo;

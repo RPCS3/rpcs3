@@ -6,6 +6,7 @@
 #include "VKGSRender.h"
 #include "../rsx_methods.h"
 #include "../Common/BufferUtils.h"
+#include "VKFormats.h"
 
 namespace
 {
@@ -88,16 +89,6 @@ namespace vk
 		}
 	}
 
-	VkFormat get_compatible_depth_surface_format(rsx::surface_depth_format format)
-	{
-		switch (format)
-		{
-		case rsx::surface_depth_format::z16: return VK_FORMAT_D16_UNORM;
-		case rsx::surface_depth_format::z24s8: return VK_FORMAT_D16_UNORM_S8_UINT;	//Cant get D24_S8 to work on AMD (beta 5)
-		}
-		throw EXCEPTION("Invalid format (0x%x)", format);
-	}
-
 	std::vector<u8> get_draw_buffers(rsx::surface_target fmt)
 	{
 		switch (fmt)
@@ -173,7 +164,9 @@ VKGSRender::VKGSRender() : GSRender(frame_type::Vulkan)
 #endif
 
 	m_device = (vk::render_device *)(&m_swap_chain->get_device());
-	
+
+	m_optimal_tiling_supported_formats = vk::get_optimal_tiling_supported_formats(m_device->gpu());
+
 	vk::set_current_thread_ctx(m_thread_context);
 	vk::set_current_renderer(m_swap_chain->get_device());
 
@@ -879,7 +872,7 @@ void VKGSRender::prepare_rtts()
 		clip_horizontal, clip_vertical,
 		rsx::to_surface_target(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET]),
 		get_color_surface_addresses(), get_zeta_surface_address(),
-		(*m_device), &m_command_buffer);
+		(*m_device), &m_command_buffer, m_optimal_tiling_supported_formats);
 
 	//Bind created rtts as current fbo...
 	std::vector<u8> draw_buffers = vk::get_draw_buffers(rsx::to_surface_target(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET]));
@@ -910,7 +903,7 @@ void VKGSRender::prepare_rtts()
 			destroy_render_pass();
 
 		init_render_pass(vk::get_compatible_surface_format(m_surface.color_format),
-			vk::get_compatible_depth_surface_format(m_surface.depth_format),
+			vk::get_compatible_depth_surface_format(m_optimal_tiling_supported_formats, m_surface.depth_format),
 			(u8)draw_buffers.size(),
 			draw_buffers.data());
 	}
