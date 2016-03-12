@@ -177,6 +177,10 @@ void rsx::gl_texture::bind(gl::texture_cache& cache, rsx::texture& tex)
 	info.start_address = rsx::get_address(tex.offset(), tex.location());
 	info.swizzled = is_swizzled;
 	info.target = target;
+	info.mipmap = target != gl::texture::target::texture_rectangle ? tex.mipmap() : 1;
+	info.min_lod = tex.min_lod() >> 8;
+	info.max_lod = tex.max_lod() >> 8;
+	info.lod_bias = tex.bias();
 
 	if (is_compressed)
 	{
@@ -226,8 +230,6 @@ void rsx::gl_texture::bind(gl::texture_cache& cache, rsx::texture& tex)
 
 	__glcheck cache.entry(info, gl::cache_buffers::local).bind(tex.index());
 
-	__glcheck glTexParameteri((GLenum)target, GL_TEXTURE_MAX_LEVEL, tex.mipmap() - 1);
-
 	if ((info.format.flags & gl::texture_flags::allow_remap) != gl::texture_flags::none)
 	{
 		u8 remap_a = tex.remap() & 0x3;
@@ -254,21 +256,8 @@ void rsx::gl_texture::bind(gl::texture_cache& cache, rsx::texture& tex)
 
 	__glcheck glTexParameteri((GLenum)target, GL_TEXTURE_COMPARE_FUNC, gl_tex_zfunc[tex.zfunc()]);
 
-	__glcheck glTexEnvi(GL_TEXTURE_FILTER_CONTROL, GL_TEXTURE_LOD_BIAS, (GLint)tex.bias());
-
 	__glcheck glTexParameteri((GLenum)target, GL_TEXTURE_MIN_FILTER, gl_tex_min_filter[tex.min_filter()]);
 	__glcheck glTexParameteri((GLenum)target, GL_TEXTURE_MAG_FILTER, gl_tex_mag_filter[tex.mag_filter()]);
 	__glcheck glTexParameterf((GLenum)target, GL_TEXTURE_MAX_ANISOTROPY_EXT, max_aniso(tex.max_aniso()));
-
-	if (target != gl::texture::target::texture_rectangle)
-	{
-		__glcheck glTexParameteri((GLenum)target, GL_TEXTURE_MIN_LOD, (tex.min_lod() >> 8));
-		__glcheck glTexParameteri((GLenum)target, GL_TEXTURE_MAX_LOD, (tex.max_lod() >> 8));
-
-		if (tex.mipmap() > 1)
-		{
-			__glcheck glGenerateMipmap((GLenum)target);
-		}
-	}
 }
 

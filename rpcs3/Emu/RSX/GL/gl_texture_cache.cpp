@@ -61,7 +61,7 @@ namespace gl
 			{
 				gl::buffer pbo_depth;
 
-				__glcheck pbo_depth.create(info->pitch * info->height);
+				__glcheck pbo_depth.create(info->size());
 				__glcheck pbo_depth.map([&](GLubyte* pixels)
 				{
 					switch (info->format.bpp)
@@ -153,6 +153,15 @@ namespace gl
 				__glcheck glTexSubImage2D((GLenum)info->target, 0, 0, 0, info->width, info->height,
 					(GLenum)info->format.format, (GLenum)info->format.type, pixels);
 			}
+
+			if (info->mipmap > 1)
+			{
+				__glcheck glTexParameteri((GLenum)info->target, GL_TEXTURE_MIN_LOD, info->min_lod);
+				__glcheck glTexParameteri((GLenum)info->target, GL_TEXTURE_MAX_LOD, info->max_lod);
+				__glcheck glTexParameterf((GLenum)info->target, GL_TEXTURE_LOD_BIAS, info->lod_bias);
+
+				__glcheck glGenerateMipmap((GLenum)info->target);
+			}
 		}
 
 		ignore(gl::cache_buffers::all);
@@ -168,17 +177,17 @@ namespace gl
 
 			gl::buffer pbo_depth;
 
-			pbo_depth.create(info->pitch * info->height);
+			pbo_depth.create(info->size());
 
 			gl::pixel_pack_settings{}
 				.row_length(info->pitch / info->format.bpp)
 				.aligment(1)
-				.swap_bytes((info->format.flags & gl::texture_flags::swap_bytes) != gl::texture_flags::none)
+				//.swap_bytes((info->format.flags & gl::texture_flags::swap_bytes) != gl::texture_flags::none)
 				.apply();
 
-			glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo_depth.id());
+			__glcheck glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo_depth.id());
 			__glcheck glGetTexImage((GLenum)info->target, 0, (GLenum)info->format.format, (GLenum)info->format.type, nullptr);
-			glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+			__glcheck glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
 
 			__glcheck pbo_depth.map([&](GLubyte* pixels)
 			{
@@ -369,7 +378,7 @@ namespace gl
 		glGenTextures(1, &gl_name);
 
 		bind();
-		__glcheck glTexStorage2D((GLenum)info->target, 1, (GLenum)info->format.internal_format, info->width, info->height);
+		__glcheck glTexStorage2D((GLenum)info->target, info->mipmap, (GLenum)info->format.internal_format, info->width, info->height);
 		//__glcheck glClearTexImage(gl_name, 0, (GLenum)info->format.format, (GLenum)info->format.type, nullptr);
 	}
 

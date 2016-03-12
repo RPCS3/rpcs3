@@ -63,9 +63,11 @@ namespace gl
 
 		texture::target target;
 		texture_format format;
-		rsx::surface_antialiasing antialiasing;
+		u8 mipmap;
+		u8 min_lod;
+		u8 max_lod;
 		bool swizzled;
-
+		float lod_bias;
 		u32 start_address;
 
 		u32 size() const

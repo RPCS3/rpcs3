@@ -909,7 +909,7 @@ void nv4097_clear_surface(u32 arg, GLGSRender* renderer)
 		glColorMask(((arg & 0x20) ? 1 : 0), ((arg & 0x40) ? 1 : 0), ((arg & 0x80) ? 1 : 0), ((arg & 0x10) ? 1 : 0));
 		glClearColor(clear_r / 255.f, clear_g / 255.f, clear_b / 255.f, clear_a / 255.f);
 
-		mask |= GLenum(gl::buffers::color);
+		bool exists_active_color_surface = false;
 
 		rsx::for_each_active_color_surface([&](int index)
 		{
@@ -917,6 +917,8 @@ void nv4097_clear_surface(u32 arg, GLGSRender* renderer)
 
 			if (texture)
 			{
+				exists_active_color_surface = true;
+
 				if ((arg & color_mask) == color_mask)
 				{
 					texture->ignore(gl::cache_buffers::local);
@@ -928,6 +930,11 @@ void nv4097_clear_surface(u32 arg, GLGSRender* renderer)
 				}
 			}
 		});
+
+		if (exists_active_color_surface)
+		{
+			mask |= GLenum(gl::buffers::color);
+		}
 	}
 
 	if (mask)
@@ -1135,12 +1142,10 @@ gl::texture_info surface_info(rsx::surface_color_format format, u32 offset, u32 
 	info.height = height;
 	info.depth = 1;
 	info.pitch = pitch;
-	info.compressed_size = 0;
 	info.target = gl::texture::target::texture2D;
 	info.dimension = 2;
-	//TODO
-	info.swizzled = false;
 	info.start_address = rsx::get_address(offset, location);
+	info.mipmap = 1;
 
 	info.format = gl::get_texture_format(surface_format_to_texture_format(format));
 
@@ -1194,74 +1199,90 @@ void GLGSRender::init_buffers(bool skip_reading)
 		u32 offset = rsx::method_registers[mr_color_offset[index]];
 		u32 location = rsx::method_registers[mr_color_dma[index]];
 		u32 pitch = rsx::method_registers[mr_color_pitch[index]];
+		bool swizzled = m_surface.type == CELL_GCM_SURFACE_SWIZZLE;
 
 		gl::texture_info info = surface_info(m_surface.color_format, offset, location, m_surface.width, m_surface.height, pitch);
-		info.antialiasing = m_surface.antialias;
-		info.swizzled = m_surface.type == CELL_GCM_SURFACE_SWIZZLE;
+
+		info.swizzled = swizzled;
+
 		cached_color_buffers[index] = &m_texture_cache.entry(info, skip_reading ? gl::cache_buffers::none : gl::cache_buffers::local);
 		draw_fbo.color[index] = cached_color_buffers[index]->view();
 	});
 
-	if (rsx::method_registers[NV4097_SET_DEPTH_TEST_ENABLE])
 	{
 		u32 offset = rsx::method_registers[NV4097_SET_SURFACE_ZETA_OFFSET];
 		u32 location = rsx::method_registers[NV4097_SET_CONTEXT_DMA_ZETA];
-		u32 pitch = rsx::method_registers[NV4097_SET_SURFACE_PITCH_Z];
+		u32 pitch = rsx::method_registers[NV4097_SET_SURFACE_PITCH_Z] & ~63;
 
-		gl::texture_info info{};
-
-		info.width = m_surface.width * m_surface.width_mult;
-		info.height = m_surface.height * m_surface.height_mult;
-		info.depth = 1;
-		info.pitch = pitch;
-		info.dimension = 2;
-		info.compressed_size = 0;
-		info.start_address = rsx::get_address(offset, location);
-		info.target = gl::texture::target::texture2D;
-		info.swizzled = false;
-
+		int bpp;
 		switch (m_surface.depth_format)
 		{
 		case rsx::surface_depth_format::z16:
-			info.format.bpp = 2;
-			info.format.flags = gl::texture_flags::swap_bytes;
-			info.format.type = gl::texture::type::ushort;
-			info.format.internal_format = gl::texture::sized_internal_format::depth16;
-			info.format.format = gl::texture::format::depth;
+			bpp = 2;
 			break;
 
 		case rsx::surface_depth_format::z24s8:
-			info.format.bpp = 4;
-			info.format.flags = gl::texture_flags::swap_bytes;
-			info.format.type = gl::texture::type::uint_24_8;
-			info.format.internal_format = gl::texture::sized_internal_format::depth24_stencil8;
-			info.format.format = gl::texture::format::depth_stencil;
+			bpp = 4;
 			break;
-
-		default:
-			throw EXCEPTION("");
 		}
 
-		info.format.remap = { GL_ZERO, GL_ZERO, GL_ZERO, GL_ZERO };
-
-		__glcheck cached_depth_buffer = &m_texture_cache.entry(info, skip_reading ? gl::cache_buffers::none : gl::cache_buffers::local);
-
-		switch (m_surface.depth_format)
+		if (pitch && pitch < bpp * m_surface.width)
 		{
-		case rsx::surface_depth_format::z16:
-			__glcheck draw_fbo.depth = cached_depth_buffer->view();
-			__glcheck draw_fbo.stencil = null_texture;
-			break;
-
-		case rsx::surface_depth_format::z24s8:
-			__glcheck draw_fbo.depth_stencil = cached_depth_buffer->view();
-			break;
+			__glcheck draw_fbo.depth_stencil = null_texture;
+			cached_depth_buffer = nullptr;
 		}
-	}
-	else
-	{
-		__glcheck draw_fbo.depth_stencil = null_texture;
-		cached_depth_buffer = nullptr;
+		else
+		{
+			if (!pitch)
+			{
+				pitch = m_surface.width * bpp;
+			}
+
+			gl::texture_info info{};
+
+			info.width = m_surface.width;
+			info.height = m_surface.height;
+			info.depth = 1;
+			info.pitch = pitch;
+			info.dimension = 2;
+			info.start_address = rsx::get_address(offset, location);
+			info.target = gl::texture::target::texture2D;
+			info.format.bpp = bpp;
+			info.mipmap = 1;
+
+			switch (m_surface.depth_format)
+			{
+			case rsx::surface_depth_format::z16:
+				info.format.flags = gl::texture_flags::swap_bytes;
+				info.format.type = gl::texture::type::ushort;
+				info.format.internal_format = gl::texture::sized_internal_format::depth16;
+				info.format.format = gl::texture::format::depth;
+				break;
+
+			case rsx::surface_depth_format::z24s8:
+				info.format.flags = gl::texture_flags::swap_bytes;
+				info.format.type = gl::texture::type::uint_24_8;
+				info.format.internal_format = gl::texture::sized_internal_format::depth24_stencil8;
+				info.format.format = gl::texture::format::depth_stencil;
+				break;
+			}
+
+			info.format.remap = { GL_ZERO, GL_ZERO, GL_ZERO, GL_ZERO };
+
+			__glcheck cached_depth_buffer = &m_texture_cache.entry(info, skip_reading ? gl::cache_buffers::none : gl::cache_buffers::local);
+
+			switch (m_surface.depth_format)
+			{
+			case rsx::surface_depth_format::z16:
+				__glcheck draw_fbo.depth = cached_depth_buffer->view();
+				__glcheck draw_fbo.stencil = null_texture;
+				break;
+
+			case rsx::surface_depth_format::z24s8:
+				__glcheck draw_fbo.depth_stencil = cached_depth_buffer->view();
+				break;
+			}
+		}
 	}
 
 	__glcheck draw_fbo.bind();
