@@ -4,6 +4,7 @@
 #include "VKHelpers.h"
 #include "../GCM.h"
 #include "../Common/surface_store.h"
+#include "VKFormats.h"
 
 namespace rsx
 {
@@ -14,7 +15,7 @@ namespace rsx
 		using command_list_type = vk::command_buffer*;
 		using download_buffer_object = void*;
 
-		static vk::texture create_new_surface(u32 address, surface_color_format format, size_t width, size_t height, vk::render_device &device, vk::command_buffer *cmd)
+		static vk::texture create_new_surface(u32 address, surface_color_format format, size_t width, size_t height, vk::render_device &device, vk::command_buffer *cmd, const vk::gpu_formats_support &support)
 		{
 			VkFormat requested_format = vk::get_compatible_surface_format(format);
 			
@@ -37,9 +38,9 @@ namespace rsx
 			return rtt;
 		}
 
-		static vk::texture create_new_surface(u32 address, surface_depth_format format, size_t width, size_t height, vk::render_device &device, vk::command_buffer *cmd)
+		static vk::texture create_new_surface(u32 address, surface_depth_format format, size_t width, size_t height, vk::render_device &device, vk::command_buffer *cmd, const vk::gpu_formats_support &support)
 		{
-			VkFormat requested_format = vk::get_compatible_depth_surface_format(format);
+			VkFormat requested_format = vk::get_compatible_depth_surface_format(support, format);
 
 			vk::texture rtt;
 			rtt.create(device, requested_format, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT|VK_IMAGE_USAGE_SAMPLED_BIT, width, height, 1, true);
@@ -101,10 +102,11 @@ namespace rsx
 
 		static bool ds_has_format_width_height(const vk::texture &ds, surface_depth_format format, size_t width, size_t height)
 		{
-			VkFormat fmt = vk::get_compatible_depth_surface_format(format);
+			// TODO: check format
+			//VkFormat fmt = vk::get_compatible_depth_surface_format(format);
 			vk::texture &tex = const_cast<vk::texture&>(ds);
 
-			if (tex.get_format() == fmt &&
+			if (//tex.get_format() == fmt &&
 				tex.width() == width &&
 				tex.height() == height)
 				return true;

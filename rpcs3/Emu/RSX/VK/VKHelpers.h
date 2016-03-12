@@ -11,11 +11,9 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#include "Emu/state.h"
 #include "VulkanAPI.h"
 #include "../GCM.h"
-
-//Set to 9 to enable all debug layers. Will cause significant slowdowns. Eventually to be replaced with GUI checkbox
-#define VK_ENABLED_LAYER_COUNT 0
 
 namespace rsx
 {
@@ -70,7 +68,6 @@ namespace vk
 
 	VkFormat get_compatible_sampler_format(u32 format, VkComponentMapping& mapping, u8 swizzle_mask=0);
 	VkFormat get_compatible_surface_format(rsx::surface_color_format color_format);
-	VkFormat get_compatible_depth_surface_format(rsx::surface_depth_format depth_format);
 
 	class physical_device
 	{
@@ -166,22 +163,18 @@ namespace vk
 				"VK_KHR_swapchain"
 			};
 
-			const char *validation_layers[] =
-			{
-				"VK_LAYER_LUNARG_threading",      "VK_LAYER_LUNARG_mem_tracker",
-				"VK_LAYER_LUNARG_object_tracker", "VK_LAYER_LUNARG_draw_state",
-				"VK_LAYER_LUNARG_param_checker",  "VK_LAYER_LUNARG_swapchain",
-				"VK_LAYER_LUNARG_device_limits",  "VK_LAYER_LUNARG_image",
-				"VK_LAYER_GOOGLE_unique_objects",
-			};
+			std::vector<const char *> layers;
+
+			if (rpcs3::config.rsx.d3d12.debug_output.value())
+				layers.push_back("VK_LAYER_LUNARG_standard_validation");
 
 			VkDeviceCreateInfo device;
 			device.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 			device.pNext = NULL;
 			device.queueCreateInfoCount = 1;
 			device.pQueueCreateInfos = &queue;
-			device.enabledLayerCount = VK_ENABLED_LAYER_COUNT;
-			device.ppEnabledLayerNames = validation_layers;
+			device.enabledLayerCount = layers.size();
+			device.ppEnabledLayerNames = layers.data();
 			device.enabledExtensionCount = 1;
 			device.ppEnabledExtensionNames = requested_extensions;
 			device.pEnabledFeatures = nullptr;
@@ -1011,21 +1004,17 @@ namespace vk
 				"VK_EXT_debug_report",
 			};
 
-			const char *validation_layers[] =
-			{
-				"VK_LAYER_LUNARG_threading",      "VK_LAYER_LUNARG_mem_tracker",
-				"VK_LAYER_LUNARG_object_tracker", "VK_LAYER_LUNARG_draw_state",
-				"VK_LAYER_LUNARG_param_checker",  "VK_LAYER_LUNARG_swapchain",
-				"VK_LAYER_LUNARG_device_limits",  "VK_LAYER_LUNARG_image",
-				"VK_LAYER_GOOGLE_unique_objects",
-			};
+			std::vector<const char *> layers;
+
+			if (rpcs3::config.rsx.d3d12.debug_output.value())
+				layers.push_back("VK_LAYER_LUNARG_standard_validation");
 
 			VkInstanceCreateInfo instance_info;
 			instance_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
 			instance_info.pNext = nullptr;
 			instance_info.pApplicationInfo = &app;
-			instance_info.enabledLayerCount = VK_ENABLED_LAYER_COUNT;
-			instance_info.ppEnabledLayerNames = validation_layers;
+			instance_info.enabledLayerCount = layers.size();
+			instance_info.ppEnabledLayerNames = layers.data();
 			instance_info.enabledExtensionCount = 3;
 			instance_info.ppEnabledExtensionNames = requested_extensions;
 

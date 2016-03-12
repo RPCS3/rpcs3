@@ -34,6 +34,9 @@
     <ClInclude Include="Emu\RSX\VK\VulkanAPI.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\RSX\VK\VKFormats.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Emu\RSX\VK\VKGSRender.cpp">
@@ -61,6 +64,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Emu\RSX\VK\VKVertexBuffers.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\VK\VKFormats.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
