@@ -108,9 +108,6 @@ namespace gl
 
 		cache_access requires_protection() const;
 
-		void lock();
-		void unlock();
-
 	protected:
 		void create();
 		void remove();
@@ -126,9 +123,7 @@ namespace gl
 
 	private:
 		std::unordered_map<texture_info, cached_texture, fnv_1a_hasher, bitwise_equals> m_textures;
-
 		u32 m_current_protection = 0;
-		std::mutex m_mtx;
 
 	public:
 		u32 size() const
@@ -150,19 +145,16 @@ namespace gl
 		cached_texture& add(const texture_info& info);
 
 		void clear();
-
-		void lock();
-		void unlock();
 	};
 
 	class texture_cache
 	{
-		std::map<u32, protected_region> m_protected_regions;
+		std::list<protected_region> m_protected_regions;
 
 	public:
 		cached_texture &entry(const texture_info &info, cache_buffers sync = cache_buffers::none);
 		protected_region *find_region(u32 address);
-		std::vector<protected_region*> find_regions(u32 address, u32 size);
+		std::vector<std::list<protected_region>::iterator> find_regions(u32 address, u32 size);
 		void update_protection();
 		void clear();
 	};

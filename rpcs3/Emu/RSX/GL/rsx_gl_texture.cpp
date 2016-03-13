@@ -178,9 +178,13 @@ void rsx::gl_texture::bind(gl::texture_cache& cache, rsx::texture& tex)
 	info.swizzled = is_swizzled;
 	info.target = target;
 	info.mipmap = target != gl::texture::target::texture_rectangle ? tex.mipmap() : 1;
-	info.min_lod = tex.min_lod() >> 8;
-	info.max_lod = tex.max_lod() >> 8;
-	info.lod_bias = tex.bias();
+
+	if (info.mipmap > 1)
+	{
+		info.min_lod = tex.min_lod() >> 8;
+		info.max_lod = tex.max_lod() >> 8;
+		info.lod_bias = tex.bias();
+	}
 
 	if (is_compressed)
 	{

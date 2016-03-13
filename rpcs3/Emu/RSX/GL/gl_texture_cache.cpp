@@ -17,7 +17,14 @@ namespace gl
 {
 	void cached_texture::read()
 	{
-		cached_texture* found_texture = nullptr;
+		struct capability_texture
+		{
+			positioni src_pos;
+			positioni dst_pos;
+			cached_texture* texture;
+		};
+
+		std::vector<capability_texture> found_textures;
 		u32 texture_size = info.size();
 
 		m_parent_region->for_each(info.start_address, texture_size, [&](cached_texture& texture)
@@ -27,24 +34,91 @@ namespace gl
 				return;
 			}
 
-			if (texture.info.start_address != info.start_address ||
-				texture.info.pitch != info.pitch ||
-				texture.info.height < info.height ||
-				texture.info.width < info.width)
+			if (texture.info.pitch != info.pitch || texture.info.format.bpp != info.format.bpp)
 			{
 				return;
 			}
 
-			found_texture = &texture;
+			capability_texture texture_info{};
+
+			if (texture.info.start_address < info.start_address)
+			{
+				if (texture.info.dimension > 2)
+					return;
+
+				u32 diff = info.start_address - texture.info.start_address;
+
+				texture_info.src_pos.y = diff / info.pitch;
+				texture_info.src_pos.x = (diff % info.pitch) / info.format.bpp;
+
+				//texture.sync(cache_buffers::host);
+			}
+			else if (texture.info.start_address > info.start_address)
+			{
+				if (info.dimension > 2)
+					return;
+
+				u32 diff = texture.info.start_address - info.start_address;
+
+				texture_info.dst_pos.y = diff / info.pitch;
+				texture_info.dst_pos.x = (diff % info.pitch) / info.format.bpp;
+
+				//texture.sync(gl::cache_buffers::host);
+			}
+
+			texture_info.texture = &texture;
+			found_textures.push_back(texture_info);
 		});
 
-		if (found_texture)
+		u32 covered_width = 0, covered_height = 0, covered_depth = 0;
+
+		while (found_textures.size() > 1)
 		{
-			//read from local
-			__glcheck glCopyImageSubData(
-				found_texture->gl_name, (GLenum)found_texture->info.target, 0, 0, 0, 0,
-				gl_name, (GLenum)info.target, 0, 0, 0, 0,
-				info.width, info.height, info.depth);
+			bool found = false;
+
+			for (auto& tex : found_textures)
+			{
+				if (tex.dst_pos.x == covered_width)
+				{
+					covered_width += tex.texture->info.width;
+					found = true;
+				}
+
+				if (tex.dst_pos.y == covered_height)
+				{
+					covered_height += tex.texture->info.height;
+					found = true;
+				}
+
+				if (0 == covered_depth)
+				{
+					covered_depth += tex.texture->info.depth;
+					found = true;
+				}
+			}
+
+			if (!found)
+			{
+				if (covered_width < info.width || covered_height < info.height || covered_depth < info.depth)
+				{
+					found_textures.clear();
+				}
+
+				break;
+			}
+		}
+
+		if (!found_textures.empty())
+		{
+			//read from locals
+
+			for (auto &tex : found_textures)
+			{
+				__glcheck glCopyImageSubData(
+					tex.texture->gl_name, (GLenum)tex.texture->info.target, 0, tex.src_pos.x, tex.src_pos.y, 0,
+					gl_name, (GLenum)info.target, 0, tex.dst_pos.x, tex.dst_pos.y, 0,
+					std::min(tex.texture->info.width, info.width), std::min(tex.texture->info.height, info.height), std::min(tex.texture->info.depth, tex.texture->info.depth));
+			}
 		}
 		else
 		{
@@ -53,6 +127,7 @@ namespace gl
 			m_parent_region->for_each(info.start_address, texture_size, [](cached_texture& texture)
 			{
 				texture.sync(gl::cache_buffers::host);
+				//texture.invalidate(gl::cache_buffers::local);
 			});
 
 			bind();
@@ -101,20 +176,48 @@ namespace gl
 
 				glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbo_depth.id());
 
-				__glcheck glTexSubImage2D((GLenum)info.target, 0, 0, 0, info.width, info.height,
-					(GLenum)info.format.format, (GLenum)info.format.type, nullptr);
-
+				switch (info.dimension)
+				{
+				case 1: __glcheck glTexSubImage1D((GLenum)info.target, 0, 0, info.width, (GLenum)info.format.format, (GLenum)info.format.type, nullptr); break;
+				case 2: __glcheck glTexSubImage2D((GLenum)info.target, 0, 0, 0, info.width, info.height, (GLenum)info.format.format, (GLenum)info.format.type, nullptr); break;
+				case 3: __glcheck glTexSubImage3D((GLenum)info.target, 0, 0, 0, 0, info.width, info.height, info.depth, (GLenum)info.format.format, (GLenum)info.format.type, nullptr); break;
+				}
+				
 				glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
 			}
 			else if (info.compressed_size)
 			{
-				__glcheck glCompressedTexSubImage2D((GLenum)info.target, 0,
-					0, 0, info.width, info.height,
-					(GLenum)info.format.internal_format,
-					info.compressed_size, vm::base_priv(info.start_address));
+				switch (info.dimension)
+				{
+				case 1: 
+					__glcheck glCompressedTexSubImage1D((GLenum)info.target, 0,
+						0, info.width,
+						(GLenum)info.format.internal_format,
+						info.compressed_size, vm::base_priv(info.start_address));
+					break;
+
+				case 2:
+					__glcheck glCompressedTexSubImage2D((GLenum)info.target, 0,
+						0, 0, info.width, info.height,
+						(GLenum)info.format.internal_format,
+						info.compressed_size, vm::base_priv(info.start_address));
+					break;
+
+				case 3:
+					__glcheck glCompressedTexSubImage3D((GLenum)info.target, 0,
+						0, 0, 0, info.width, info.height, info.depth,
+						(GLenum)info.format.internal_format,
+						info.compressed_size, vm::base_priv(info.start_address));
+					break;
+				}
 			}
 			else
 			{
+				if (info.dimension > 2)
+				{
+					LOG_ERROR(RSX, "unimplemented reading swizzled %uD texture", info.dimension);
+				}
+
 				void *pixels = vm::base_priv(info.start_address);
 
 				std::unique_ptr<u8[]> linear_pixels;
@@ -150,8 +253,12 @@ namespace gl
 					.swap_bytes((info.format.flags & gl::texture_flags::swap_bytes) != gl::texture_flags::none)
 					.apply();
 
-				__glcheck glTexSubImage2D((GLenum)info.target, 0, 0, 0, info.width, info.height,
-					(GLenum)info.format.format, (GLenum)info.format.type, pixels);
+				switch (info.dimension)
+				{
+				case 1: __glcheck glTexSubImage1D((GLenum)info.target, 0, 0, info.width, (GLenum)info.format.format, (GLenum)info.format.type, pixels); break;
+				case 2: __glcheck glTexSubImage2D((GLenum)info.target, 0, 0, 0, info.width, info.height, (GLenum)info.format.format, (GLenum)info.format.type, pixels); break;
+				case 3: __glcheck glTexSubImage3D((GLenum)info.target, 0, 0, 0, 0, info.width, info.height, info.depth, (GLenum)info.format.format, (GLenum)info.format.type, pixels); break;
+				}
 			}
 
 			if (info.mipmap > 1)
@@ -351,16 +458,6 @@ namespace gl
 		return cache_access::none;
 	}
 
-	void cached_texture::lock()
-	{
-		m_parent_region->lock();
-	}
-
-	void cached_texture::unlock()
-	{
-		m_parent_region->unlock();
-	}
-
 	void cached_texture::bind(uint index) const
 	{
 		if (index != ~0u)
@@ -378,7 +475,15 @@ namespace gl
 		glGenTextures(1, &gl_name);
 
 		bind();
-		__glcheck glTexStorage2D((GLenum)info.target, info.mipmap, (GLenum)info.format.internal_format, info.width, info.height);
+
+		switch (info.dimension)
+		{
+		case 1: __glcheck glTexStorage1D((GLenum)info.target, info.mipmap, (GLenum)info.format.internal_format, info.width); break;
+		case 2: __glcheck glTexStorage2D((GLenum)info.target, info.mipmap, (GLenum)info.format.internal_format, info.width, info.height); break;
+		case 3: __glcheck glTexStorage3D((GLenum)info.target, info.mipmap, (GLenum)info.format.internal_format, info.width, info.height, info.depth); break;
+		default:
+			throw EXCEPTION("bad dimension %d", info.dimension);
+		}
 		//__glcheck glClearTexImage(gl_name, 0, (GLenum)info.format.format, (GLenum)info.format.type, nullptr);
 	}
 
@@ -501,9 +606,11 @@ namespace gl
 		for (auto &texture : region.m_textures)
 		{
 			texture.second.parent(this);
+			if (!m_textures.emplace(texture).second)
+			{
+				throw EXCEPTION("");
+			}
 		}
-
-		m_textures.insert(region.m_textures.begin(), region.m_textures.end());
 
 		if (region.start_address < start_address)
 		{
@@ -512,7 +619,9 @@ namespace gl
 		}
 		else
 		{
-			pages_count = (region.start_address + region.pages_count - start_address) / vm::page_size;
+			//[start_address, region.start_address + region.pages_count * vm::page_size)
+
+			pages_count = (region.start_address + region.pages_count * vm::page_size - start_address) / vm::page_size;
 		}
 	}
 
@@ -558,16 +667,6 @@ namespace gl
 		m_textures.clear();
 	}
 
-	void protected_region::lock()
-	{
-		m_mtx.lock();
-	}
-
-	void protected_region::unlock()
-	{
-		m_mtx.unlock();
-	}
-
 	cached_texture &texture_cache::entry(const texture_info &info, cache_buffers sync)
 	{
 		u32 aligned_address;
@@ -595,30 +694,24 @@ namespace gl
 			}
 		}
 
-		std::vector<protected_region*> regions = find_regions(aligned_address, aligned_size);
+		std::vector<std::list<protected_region>::iterator> regions = find_regions(aligned_address, aligned_size);
 		protected_region *region;
 
 		if (regions.empty())
 		{
-			region = &m_protected_regions[aligned_address];
+			m_protected_regions.emplace_back();
+			region = &m_protected_regions.back();
 			region->pages_count = aligned_size / vm::page_size;
 			region->start_address = aligned_address;
 		}
 		else
 		{
-			region = regions[0];
-
-			std::vector<u32> remove_addresses;
+			region = &*regions[0];
 
 			for (std::size_t index = 1; index < regions.size(); ++index)
 			{
 				region->combine(*regions[index]);
-				remove_addresses.push_back(regions[index]->start_address);
-			}
-
-			for (u32 address : remove_addresses)
-			{
-				m_protected_regions.erase(address);
+				m_protected_regions.erase(regions[index]);
 			}
 
 			if (region->start_address > aligned_address)
@@ -647,37 +740,37 @@ namespace gl
 	{
 		for (auto& entry : m_protected_regions)
 		{
-			if (entry.first > address)
+			if (entry.start_address > address)
 			{
-				break;
+				continue;
 			}
 
-			if (address >= entry.first && address < entry.first + entry.second.size())
+			if (address >= entry.start_address && address < entry.start_address + entry.size())
 			{
-				return &entry.second;
+				return &entry;
 			}
 		}
 
 		return nullptr;
 	}
 
-	std::vector<protected_region*> texture_cache::find_regions(u32 address, u32 size)
+	std::vector<std::list<protected_region>::iterator> texture_cache::find_regions(u32 address, u32 size)
 	{
-		std::vector<protected_region *> result;
+		std::vector<std::list<protected_region>::iterator> result;
 
-		for (auto& entry : m_protected_regions)
+		for (auto it = m_protected_regions.begin(); it != m_protected_regions.end(); ++it)
 		{
-			if (entry.first >= address + size)
-			{
-				break;
-			}
-
-			if (entry.first + entry.second.size() <= address)
+			if (it->start_address >= address + size)
 			{
 				continue;
 			}
 
-			result.push_back(&entry.second);
+			if (it->start_address + it->size() <= address)
+			{
+				continue;
+			}
+
+			result.push_back(it);
 		}
 
 		return result;
@@ -687,7 +780,7 @@ namespace gl
 	{
 		for (auto& entry : m_protected_regions)
 		{
-			entry.second.protect();
+			entry.protect();
 		}
 	}
 
@@ -695,7 +788,7 @@ namespace gl
 	{
 		for (auto& entry : m_protected_regions)
 		{
-			entry.second.clear();
+			entry.clear();
 		}
 
 		m_protected_regions.clear();

@@ -344,8 +344,8 @@ namespace rsx
 			u8 in_inter = method_registers[NV3089_IMAGE_IN_FORMAT] >> 24;
 			u32 src_color_format = method_registers[NV3089_SET_COLOR_FORMAT];
 
-			f32 in_x = (method_registers[NV3089_IMAGE_IN] & 0xffff) / 16.f;
-			f32 in_y = (method_registers[NV3089_IMAGE_IN] >> 16) / 16.f;
+			f32 in_x = (arg & 0xffff) / 16.f;
+			f32 in_y = (arg >> 16) / 16.f;
 
 			if (in_origin != CELL_GCM_TRANSFER_ORIGIN_CORNER)
 			{
@@ -395,7 +395,7 @@ namespace rsx
 			u32 in_bpp = src_color_format == CELL_GCM_TRANSFER_SCALE_FORMAT_R5G6B5 ? 2 : 4; // bytes per pixel
 			u32 out_bpp = dst_color_format == CELL_GCM_TRANSFER_SURFACE_FORMAT_R5G6B5 ? 2 : 4;
 
-			u32 in_offset = u32(in_x * in_bpp + in_pitch * in_y);
+			u32 in_offset = u32(in_x) * u32(in_bpp + in_pitch * in_y);
 			u32 out_offset = out_x * out_bpp + out_pitch * out_y;
 
 			tiled_region src_region = rsx->get_tiled_address(src_offset + in_offset, src_dma & 0xf);//get_address(src_offset, src_dma);
@@ -473,7 +473,7 @@ namespace rsx
 				if (size > src_region.tile->size - src_region.base)
 				{
 					u32 diff = size - (src_region.tile->size - src_region.base);
-					slice_h -= diff / in_pitch + (diff % in_pitch ? 1 : 0);
+					slice_h -= (diff + in_pitch - 1) / in_pitch;
 				}
 			}
 
@@ -503,7 +503,7 @@ namespace rsx
 				}
 				else
 				{
-					if (out_pitch != in_pitch || out_pitch != out_bpp * out_w)
+					if (out_pitch != in_pitch || out_pitch != out_bpp * out_w || in_pitch != in_bpp * in_w)
 					{
 						for (u32 y = 0; y < out_h; ++y)
 						{
@@ -561,10 +561,12 @@ namespace rsx
 				u8* linear_pixels = pixels_src;
 				u8* swizzled_pixels = temp2.get();
 
+				std::unique_ptr<u8[]> sw_temp;
+
 				// Check and pad texture out if we are given non square texture for swizzle to be correct
 				if (sw_width != out_w || sw_height != out_h)
 				{
-					std::unique_ptr<u8[]> sw_temp(new u8[out_bpp * sw_width * sw_height]);
+					sw_temp.reset(new u8[out_bpp * sw_width * sw_height]);
 
 					switch (out_bpp)
 					{

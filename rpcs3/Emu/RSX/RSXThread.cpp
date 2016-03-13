@@ -180,14 +180,12 @@ namespace rsx
 
 		switch (tile->comp)
 		{
-		case CELL_GCM_COMPMODE_C32_2X1:
 		case CELL_GCM_COMPMODE_DISABLED:
 			for (int y = 0; y < height; ++y)
 			{
 				memcpy(ptr + (offset_y + y) * tile->pitch + offset_x, (u8*)src + pitch * y, pitch);
 			}
 			break;
-			/*
 		case CELL_GCM_COMPMODE_C32_2X1:
 			for (u32 y = 0; y < height; ++y)
 			{
@@ -200,7 +198,6 @@ namespace rsx
 				}
 			}
 			break;
-			*/
 		case CELL_GCM_COMPMODE_C32_2X2:
 			for (u32 y = 0; y < height; ++y)
 			{
@@ -233,14 +230,12 @@ namespace rsx
 
 		switch (tile->comp)
 		{
-		case CELL_GCM_COMPMODE_C32_2X1:
 		case CELL_GCM_COMPMODE_DISABLED:
 			for (int y = 0; y < height; ++y)
 			{
 				memcpy((u8*)dst + pitch * y, ptr + (offset_y + y) * tile->pitch + offset_x, pitch);
 			}
 			break;
-			/*
 		case CELL_GCM_COMPMODE_C32_2X1:
 			for (u32 y = 0; y < height; ++y)
 			{
@@ -252,7 +247,6 @@ namespace rsx
 				}
 			}
 			break;
-			*/
 		case CELL_GCM_COMPMODE_C32_2X2:
 			for (u32 y = 0; y < height; ++y)
 			{
@@ -845,7 +839,7 @@ namespace rsx
 
 	tiled_region thread::get_tiled_address(u32 offset, u32 location)
 	{
-		u32 address = get_address(offset, location);
+		u32 address;
 
 		GcmTileInfo *tile = find_tile(offset, location);
 		u32 base = 0;
@@ -854,6 +848,10 @@ namespace rsx
 		{
 			base = offset - tile->offset;
 			address = get_address(tile->offset, location);
+		}
+		else
+		{
+			address = get_address(offset, location);
 		}
 
 		return{ address, base, tile, (u8*)vm::base(address) };

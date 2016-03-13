@@ -945,10 +945,308 @@ bool nv4097_clear_surface(u32 arg, GLGSRender* renderer)
 	return true;
 }
 
+void scale_texture(gl::texture& dst, gl::texture::sized_internal_format dst_format, size2i dst_size, const gl::texture& src, position2i point, size2i src_size)
+{
+	dst.bind();
+
+	if (dst.get_target() == gl::texture::target::texture1D)
+	{
+		glTexStorage1D((GLenum)dst.get_target(), 1, (GLenum)dst_format, dst_size.width);
+	}
+	else
+	{
+		glTexStorage2D((GLenum)dst.get_target(), 1, (GLenum)dst_format, dst_size.width, dst_size.height);
+	}
+
+	gl::fbo src_fbo, dst_fbo;
+	src_fbo.create();
+	dst_fbo.create();
+
+	dst_fbo.color = dst;
+	src_fbo.color = src;
+
+	src_fbo.blit(dst_fbo, areai{ point.x, point.y, src_size.width, src_size.height }, coordi{ {}, dst_size }, gl::buffers::color, gl::filter::linear);
+}
+
 bool nv3089_image_in(u32 arg, GLGSRender* renderer)
 {
-	//TODO
-	return false;
+	u32 operation = rsx::method_registers[NV3089_SET_OPERATION];
+
+	u32 clip_x = rsx::method_registers[NV3089_CLIP_POINT] & 0xffff;
+	u32 clip_y = rsx::method_registers[NV3089_CLIP_POINT] >> 16;
+	u32 clip_w = rsx::method_registers[NV3089_CLIP_SIZE] & 0xffff;
+	u32 clip_h = rsx::method_registers[NV3089_CLIP_SIZE] >> 16;
+
+	u32 out_x = rsx::method_registers[NV3089_IMAGE_OUT_POINT] & 0xffff;
+	u32 out_y = rsx::method_registers[NV3089_IMAGE_OUT_POINT] >> 16;
+	u32 out_w = rsx::method_registers[NV3089_IMAGE_OUT_SIZE] & 0xffff;
+	u32 out_h = rsx::method_registers[NV3089_IMAGE_OUT_SIZE] >> 16;
+
+	u16 in_w = rsx::method_registers[NV3089_IMAGE_IN_SIZE];
+	u16 in_h = rsx::method_registers[NV3089_IMAGE_IN_SIZE] >> 16;
+	u16 in_pitch = rsx::method_registers[NV3089_IMAGE_IN_FORMAT];
+	u8 in_origin = rsx::method_registers[NV3089_IMAGE_IN_FORMAT] >> 16;
+	u8 in_inter = rsx::method_registers[NV3089_IMAGE_IN_FORMAT] >> 24;
+	u32 src_color_format = rsx::method_registers[NV3089_SET_COLOR_FORMAT];
+
+	u32 context_surface = rsx::method_registers[NV3089_SET_CONTEXT_SURFACE];
+
+	f32 scale_x = 1048576.f / rsx::method_registers[NV3089_DS_DX];
+	f32 scale_y = 1048576.f / rsx::method_registers[NV3089_DT_DY];
+
+	f32 in_x = (arg & 0xffff) / 16.f;
+	f32 in_y = (arg >> 16) / 16.f;
+
+	if (in_w <= 64 || in_h <= 64)
+	{
+		return false;
+	}
+
+	if(in_origin != CELL_GCM_TRANSFER_ORIGIN_CORNER)
+	{
+		LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown origin (%d)", in_origin);
+	}
+
+	if (in_inter != CELL_GCM_TRANSFER_INTERPOLATOR_ZOH && in_inter != CELL_GCM_TRANSFER_INTERPOLATOR_FOH)
+	{
+		LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown inter (%d)", in_inter);
+	}
+
+	if (operation != CELL_GCM_TRANSFER_OPERATION_SRCCOPY)
+	{
+		LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unimplemented operation (%d)", operation);
+		return false;
+	}
+
+	const u32 src_offset = rsx::method_registers[NV3089_IMAGE_IN_OFFSET];
+	const u32 src_dma = rsx::method_registers[NV3089_SET_CONTEXT_DMA_IMAGE];
+
+	u32 dst_offset;
+	u32 dst_dma = 0;
+	u16 dst_color_format;
+	u32 out_pitch = 0;
+	u32 out_aligment = 64;
+
+	switch (context_surface)
+	{
+	case CELL_GCM_CONTEXT_SURFACE2D:
+		dst_dma = rsx::method_registers[NV3062_SET_CONTEXT_DMA_IMAGE_DESTIN];
+		dst_offset = rsx::method_registers[NV3062_SET_OFFSET_DESTIN];
+		dst_color_format = rsx::method_registers[NV3062_SET_COLOR_FORMAT];
+		out_pitch = rsx::method_registers[NV3062_SET_PITCH] >> 16;
+		out_aligment = rsx::method_registers[NV3062_SET_PITCH] & 0xffff;
+		break;
+
+	case CELL_GCM_CONTEXT_SWIZZLE2D:
+		dst_dma = rsx::method_registers[NV309E_SET_CONTEXT_DMA_IMAGE];
+		dst_offset = rsx::method_registers[NV309E_SET_OFFSET];
+		dst_color_format = rsx::method_registers[NV309E_SET_FORMAT];
+		break;
+
+	default:
+		//LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown m_context_surface (0x%x)", rsx::method_registers[NV3089_SET_CONTEXT_SURFACE]);
+		return false;
+	}
+
+	if (dst_color_format != CELL_GCM_TRANSFER_SURFACE_FORMAT_R5G6B5 &&
+		dst_color_format != CELL_GCM_TRANSFER_SURFACE_FORMAT_A8R8G8B8)
+	{
+		return false;
+	}
+
+	if (src_color_format != CELL_GCM_TRANSFER_SCALE_FORMAT_R5G6B5 &&
+		src_color_format != CELL_GCM_TRANSFER_SCALE_FORMAT_A8R8G8B8)
+	{
+		return false;
+	}
+
+
+	u32 in_bpp = src_color_format == CELL_GCM_TRANSFER_SCALE_FORMAT_R5G6B5 ? 2 : 4; // bytes per pixel
+	u32 out_bpp = dst_color_format == CELL_GCM_TRANSFER_SURFACE_FORMAT_R5G6B5 ? 2 : 4;
+
+	if (out_pitch == 0)
+	{
+		out_pitch = out_bpp * out_w;
+	}
+
+	if (in_pitch == 0)
+	{
+		in_pitch = in_bpp * in_w;
+	}
+
+	if (clip_w > out_w)
+	{
+		clip_w = out_w;
+	}
+
+	if (clip_h > out_h)
+	{
+		clip_h = out_h;
+	}
+
+	u32 convert_w = u32(scale_x * in_w);
+	u32 convert_h = u32(scale_y * in_h);
+
+	//LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: src = 0x%x, dst = 0x%x", src_address, dst_address);
+
+	rsx::tiled_region src_region = renderer->get_tiled_address(src_offset, src_dma & 0xf);//get_address(src_offset, src_dma);
+	rsx::tiled_region dst_region = renderer->get_tiled_address(dst_offset, dst_dma & 0xf);
+
+	u32 src_x = 0;
+	u32 src_y = 0;
+
+	gl::texture_info src_info{};
+	src_info.start_address = src_region.address;
+
+	if (src_region.tile)
+	{
+		src_x = (src_region.base % src_region.tile->pitch) / in_bpp;
+		src_y = src_region.base / src_region.tile->pitch;
+
+		src_info.width = src_region.tile->pitch / in_bpp;
+		src_info.height = src_region.tile->size / src_region.tile->pitch;
+		src_info.pitch = src_region.tile->pitch;
+	}
+	else
+	{
+		src_info.width = in_w;
+		src_info.height = in_h;
+		src_info.pitch = in_pitch;
+	}
+
+	src_info.depth = 1;
+	src_info.mipmap = 1;
+	src_info.dimension = src_info.height == 1 ? 1 : 2;
+
+	switch (src_info.dimension)
+	{
+	case 1:
+		if (src_info.width & 1)
+		{
+			return false;
+		}
+
+		src_info.target =  gl::texture::target::texture1D;
+		break;
+
+	case 2:
+		if ((src_info.width | src_info.height) & 1)
+		{
+			return false;
+		}
+
+		src_info.target = gl::texture::target::texture2D;
+		break;
+	}
+
+	switch (src_color_format)
+	{
+	case CELL_GCM_TRANSFER_SCALE_FORMAT_R5G6B5:
+		src_info.format = gl::get_texture_format(CELL_GCM_TEXTURE_R5G6B5);
+		break;
+
+	case CELL_GCM_TRANSFER_SCALE_FORMAT_A8R8G8B8:
+		src_info.format = gl::get_texture_format(CELL_GCM_TEXTURE_A8R8G8B8);
+		break;
+
+	default:
+		return false;
+	}
+
+	u32 dst_x = 0;
+	u32 dst_y = 0;
+
+	gl::texture_info dst_info{};
+	dst_info.start_address = dst_region.address;
+
+	if (dst_region.tile)
+	{
+		dst_x = (dst_region.base % dst_region.tile->pitch) / out_bpp;
+		dst_y = dst_region.base / dst_region.tile->pitch;
+
+		dst_info.width = dst_region.tile->pitch / out_bpp;
+		dst_info.height = dst_region.tile->size / dst_region.tile->pitch;
+		dst_info.pitch = dst_region.tile->pitch;
+	}
+	else
+	{
+		dst_info.start_address += out_x * out_bpp + out_y * out_pitch;
+		out_x = 0;
+		out_y = 0;
+		dst_info.width = out_w;
+		dst_info.height = out_h;
+		dst_info.pitch = out_pitch;
+	}
+
+	dst_info.depth = 1;
+	dst_info.mipmap = 1;
+	dst_info.dimension = dst_info.height == 1 ? 1 : 2;
+
+	switch (dst_info.dimension)
+	{
+	case 1:
+		if (dst_info.width & 1)
+		{
+			return false;
+		}
+
+		dst_info.target = gl::texture::target::texture1D;
+		break;
+
+	case 2:
+		if ((dst_info.width | dst_info.height) & 1)
+		{
+			return false;
+		}
+
+		dst_info.target = gl::texture::target::texture2D;
+		break;
+	}
+
+	dst_info.swizzled = context_surface == CELL_GCM_CONTEXT_SWIZZLE2D;
+
+	switch (dst_color_format)
+	{
+	case CELL_GCM_TRANSFER_SURFACE_FORMAT_R5G6B5:
+		dst_info.format = gl::get_texture_format(CELL_GCM_TEXTURE_R5G6B5);
+		break;
+
+	case CELL_GCM_TRANSFER_SURFACE_FORMAT_A8R8G8B8:
+		dst_info.format = gl::get_texture_format(CELL_GCM_TEXTURE_A8R8G8B8);
+		break;
+
+	default:
+		return false;
+	}
+
+	auto &src_texture = renderer->texture_cache.entry(src_info, gl::cache_buffers::local);
+	auto &dst_texture = renderer->texture_cache.entry(dst_info);
+
+	dst_texture.ignore(gl::cache_buffers::local);
+
+	u32 src_id = src_texture.view().id();
+	gl::texture tmp;
+
+	if (convert_w != src_info.width || convert_h != src_info.height)
+	{
+		tmp.create(src_info.target);
+
+		__glcheck scale_texture(tmp, src_info.format.internal_format, { (int)convert_w, (int)convert_h },
+			src_texture.view(), { (int)src_x + int(in_x), (int)src_y + int(in_y) }, { int(src_x + in_w), int(src_y + in_h) });
+
+		src_id = tmp.id();
+
+		src_x = 0;
+		src_y = 0;
+	}
+
+	__glcheck glCopyImageSubData(
+		src_id, (GLenum)src_info.target, 0, src_x, src_y, 0,
+		dst_texture.view().id(), (GLenum)dst_info.target, 0, dst_x + out_x, dst_y + out_y, 0,
+		clip_w, clip_h, 1);
+	dst_texture.invalidate(gl::cache_buffers::host);
+
+	return true;
 }
 
 using rsx_method_impl_t = bool(*)(u32, GLGSRender*);
@@ -956,7 +1254,7 @@ using rsx_method_impl_t = bool(*)(u32, GLGSRender*);
 static const std::unordered_map<u32, rsx_method_impl_t> g_gl_method_tbl =
 {
 	{ NV4097_CLEAR_SURFACE, nv4097_clear_surface },
-	//{ NV3089_IMAGE_IN, nv3089_image_in },
+	{ NV3089_IMAGE_IN, nv3089_image_in },
 };
 
 bool GLGSRender::do_method(u32 cmd, u32 arg)
@@ -1142,20 +1440,31 @@ u32 surface_format_to_texture_format(rsx::surface_color_format format)
 	return CELL_GCM_TEXTURE_A8R8G8B8;
 }
 
-gl::texture_info surface_info(rsx::surface_color_format format, u32 offset, u32 location, u32 width, u32 height, u32 pitch)
+gl::texture_info surface_info(rsx::thread &rsx, rsx::surface_color_format format, u32 offset, u32 location, u32 width, u32 height, u32 pitch)
 {
 	gl::texture_info info{};
+	info.format = gl::get_texture_format(surface_format_to_texture_format(format));
 
-	info.width = width;
-	info.height = height;
+	rsx::tiled_region region = rsx.get_tiled_address(offset, location);
+
+	if (region.tile && region.base == 0)
+	{
+		info.width = region.tile->pitch / info.format.bpp;
+		info.height = region.tile->size / region.tile->pitch;
+		info.pitch = region.tile->pitch;
+	}
+	else
+	{
+		info.width = width;
+		info.height = height;
+		info.pitch = pitch;
+	}
+
 	info.depth = 1;
-	info.pitch = pitch;
 	info.target = gl::texture::target::texture2D;
 	info.dimension = 2;
-	info.start_address = rsx::get_address(offset, location);
+	info.start_address = region.address;
 	info.mipmap = 1;
-
-	info.format = gl::get_texture_format(surface_format_to_texture_format(format));
 
 	return info;
 }
@@ -1209,7 +1518,7 @@ void GLGSRender::init_buffers(bool skip_reading)
 		u32 pitch = rsx::method_registers[mr_color_pitch[index]];
 		bool swizzled = m_surface.type == CELL_GCM_SURFACE_SWIZZLE;
 
-		gl::texture_info info = surface_info(m_surface.color_format, offset, location, m_surface.width, m_surface.height, pitch);
+		gl::texture_info info = surface_info(*this, m_surface.color_format, offset, location, m_surface.width, m_surface.height, pitch);
 
 		info.swizzled = swizzled;
 
@@ -1248,12 +1557,24 @@ void GLGSRender::init_buffers(bool skip_reading)
 
 			gl::texture_info info{};
 
-			info.width = m_surface.width;
-			info.height = m_surface.height;
+			rsx::tiled_region region = get_tiled_address(offset, location);
+
+			if (region.tile && region.base == 0)
+			{
+				info.width = region.tile->pitch / info.format.bpp;
+				info.height = region.tile->size / region.tile->pitch;
+				info.pitch = region.tile->pitch;
+			}
+			else
+			{
+				info.width = m_surface.width;
+				info.height = m_surface.height;
+				info.pitch = pitch;
+			}
+
 			info.depth = 1;
-			info.pitch = pitch;
 			info.dimension = 2;
-			info.start_address = rsx::get_address(offset, location);
+			info.start_address = region.address;
 			info.target = gl::texture::target::texture2D;
 			info.format.bpp = bpp;
 			info.mipmap = 1;
@@ -1341,7 +1662,7 @@ void GLGSRender::flip(int buffer)
 	glDisable(GL_LOGIC_OP);
 	glDisable(GL_CULL_FACE);
 
-	gl::cached_texture& texture = texture_cache.entry(surface_info(rsx::surface_color_format::a8r8g8b8, gcm_buffers[buffer].offset,
+	gl::cached_texture& texture = texture_cache.entry(surface_info(*this, rsx::surface_color_format::a8r8g8b8, gcm_buffers[buffer].offset,
 		CELL_GCM_LOCATION_LOCAL, buffer_width, buffer_height, buffer_pitch), gl::cache_buffers::local);
 
 	//std::lock_guard<gl::cached_texture> lock(texture);
@@ -1382,9 +1703,11 @@ void GLGSRender::flip(int buffer)
 
 	gl::screen.clear(gl::buffers::color_depth_stencil);
 
-	__glcheck m_flip_fbo.blit(gl::screen, screen_area, areai(aspect_ratio).flipped_vertical());
+	__glcheck m_flip_fbo.blit(gl::screen, screen_area, areai(aspect_ratio).flipped_vertical(), gl::buffers::color, gl::filter::linear);
 
 	m_frame->flip(m_context);
+
+	texture_cache.update_protection();
 }
 
 
