@@ -160,7 +160,7 @@ void LogFrame::OnTimer(wxTimerEvent& event)
 		// Parse log level formatting
 		for (std::size_t start = 0, pos = 0;; pos++)
 		{
-			if (text[pos] == L'·')
+			if (pos < text.size() && text[pos] == L'·')
 			{
 				if (text.size() - pos <= 3)
 				{

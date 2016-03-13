@@ -60,6 +60,7 @@ public:
 	class entry_base
 	{
 	public:
+		virtual ~entry_base() = default;
 		virtual std::string name() = 0;
 		virtual void to_default() = 0;
 		virtual std::string string_value() = 0;
