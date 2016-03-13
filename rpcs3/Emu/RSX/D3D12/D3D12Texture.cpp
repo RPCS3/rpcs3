@@ -79,11 +79,6 @@ ComPtr<ID3D12Resource> upload_single_texture(
 	size_t buffer_size = get_placed_texture_storage_size(texture, 256);
 	size_t heap_offset = texture_buffer_heap.alloc<D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT>(buffer_size);
 
-	void *mapped_buffer_ptr = texture_buffer_heap.map<void>(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
-	gsl::span<gsl::byte> mapped_buffer{ (gsl::byte*)mapped_buffer_ptr, gsl::narrow<int>(buffer_size) };
-	std::vector<MipmapLevelInfo> mipInfos = upload_placed_texture(mapped_buffer, texture, 256);
-	texture_buffer_heap.unmap(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
-
 	ComPtr<ID3D12Resource> result;
 	CHECK_HRESULT(device->CreateCommittedResource(
 		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
@@ -97,12 +92,35 @@ ComPtr<ID3D12Resource> upload_single_texture(
 	const u8 format = texture.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
 	DXGI_FORMAT dxgi_format = get_texture_format(format);
 	size_t mip_level = 0;
-	for (const MipmapLevelInfo mli : mipInfos)
+
+	void *mapped_buffer_ptr = texture_buffer_heap.map<void>(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
+	gsl::span<gsl::byte> mapped_buffer{ (gsl::byte*)mapped_buffer_ptr, gsl::narrow<int>(buffer_size) };
+	std::vector<rsx_subresource_layout> input_layouts = get_subresources_layout(texture);
+	u8 block_size_in_bytes = get_format_block_size_in_bytes(format);
+	u8 block_size_in_texel = get_format_block_size_in_texel(format);
+	bool is_swizzled = !(texture.format() & CELL_GCM_TEXTURE_LN);
+	size_t offset_in_buffer = 0;
+	for (const rsx_subresource_layout &layout : input_layouts)
 	{
+		upload_texture_subresource(mapped_buffer.subspan(offset_in_buffer), layout, format, is_swizzled, 256);
+		UINT row_pitch = align(layout.width_in_block * block_size_in_bytes, 256);
 		command_list->CopyTextureRegion(&CD3DX12_TEXTURE_COPY_LOCATION(result.Get(), (UINT)mip_level), 0, 0, 0,
-			&CD3DX12_TEXTURE_COPY_LOCATION(texture_buffer_heap.get_heap(), { heap_offset + mli.offset, { dxgi_format, (UINT)mli.width, (UINT)mli.height, (UINT)mli.depth, (UINT)mli.rowPitch } }), nullptr);
+			&CD3DX12_TEXTURE_COPY_LOCATION(texture_buffer_heap.get_heap(),
+				{ heap_offset + offset_in_buffer,
+					{
+						dxgi_format,
+						(UINT)layout.width_in_block * block_size_in_texel,
+						(UINT)layout.height_in_block * block_size_in_texel,
+						(UINT)layout.depth,
+						row_pitch
+				}
+			}), nullptr);
+
+		offset_in_buffer += row_pitch * layout.height_in_block * layout.depth;
+		offset_in_buffer = align(offset_in_buffer, 512);
 		mip_level++;
 	}
+	texture_buffer_heap.unmap(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
 
 	command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(result.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ));
 	return result;
@@ -124,20 +142,36 @@ void update_existing_texture(
 
 	size_t buffer_size = get_placed_texture_storage_size(texture, 256);
 	size_t heap_offset = texture_buffer_heap.alloc<D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT>(buffer_size);
+	size_t mip_level = 0;
 
 	void *mapped_buffer_ptr = texture_buffer_heap.map<void>(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
 	gsl::span<gsl::byte> mapped_buffer{ (gsl::byte*)mapped_buffer_ptr, gsl::narrow<int>(buffer_size) };
-	std::vector<MipmapLevelInfo> mipInfos = upload_placed_texture(mapped_buffer, texture, 256);
-	texture_buffer_heap.unmap(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
-
-	command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(existing_texture, D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_COPY_DEST));
-	size_t miplevel = 0;
-	for (const MipmapLevelInfo mli : mipInfos)
+	std::vector<rsx_subresource_layout> input_layouts = get_subresources_layout(texture);
+	u8 block_size_in_bytes = get_format_block_size_in_bytes(format);
+	u8 block_size_in_texel = get_format_block_size_in_texel(format);
+	bool is_swizzled = !(texture.format() & CELL_GCM_TEXTURE_LN);
+	size_t offset_in_buffer = 0;
+	for (const rsx_subresource_layout &layout : input_layouts)
 	{
-		command_list->CopyTextureRegion(&CD3DX12_TEXTURE_COPY_LOCATION(existing_texture, (UINT)miplevel), 0, 0, 0,
-			&CD3DX12_TEXTURE_COPY_LOCATION(texture_buffer_heap.get_heap(), { heap_offset + mli.offset,{ dxgi_format, (UINT)mli.width, (UINT)mli.height, (UINT)mli.depth, (UINT)mli.rowPitch } }), nullptr);
-		miplevel++;
+		upload_texture_subresource(mapped_buffer.subspan(offset_in_buffer), layout, format, is_swizzled, 256);
+		UINT row_pitch = align(layout.width_in_block * block_size_in_bytes, 256);
+		command_list->CopyTextureRegion(&CD3DX12_TEXTURE_COPY_LOCATION(existing_texture, (UINT)mip_level), 0, 0, 0,
+			&CD3DX12_TEXTURE_COPY_LOCATION(texture_buffer_heap.get_heap(),
+			{ heap_offset + offset_in_buffer,
+			{
+				dxgi_format,
+				(UINT)layout.width_in_block * block_size_in_texel,
+				(UINT)layout.height_in_block * block_size_in_texel,
+				(UINT)layout.depth,
+				row_pitch
+			}
+			}), nullptr);
+
+		offset_in_buffer += row_pitch * layout.height_in_block * layout.depth;
+		offset_in_buffer = align(offset_in_buffer, 512);
+		mip_level++;
 	}
+	texture_buffer_heap.unmap(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
 
 	command_list->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(existing_texture, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ));
 }
