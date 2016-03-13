@@ -441,7 +441,7 @@ void GLGSRender::end()
 		int location;
 		if (m_program->uniforms.has_location("tex" + std::to_string(i), &location))
 		{
-			__glcheck rsx::gl_texture::bind(m_texture_cache, textures[i]);
+			__glcheck rsx::gl_texture::bind(texture_cache, textures[i]);
 			__glcheck glProgramUniform1i(m_program->id(), location, i);
 		}
 	}
@@ -708,7 +708,7 @@ void GLGSRender::end()
 
 	rsx::thread::end();
 
-	m_texture_cache.update_protection();
+	texture_cache.update_protection();
 }
 
 void GLGSRender::set_viewport()
@@ -829,7 +829,7 @@ void GLGSRender::on_exit()
 	}
 }
 
-void nv4097_clear_surface(u32 arg, GLGSRender* renderer)
+bool nv4097_clear_surface(u32 arg, GLGSRender* renderer)
 {
 	//LOG_NOTICE(RSX, "nv4097_clear_surface(0x%x)", arg);
 
@@ -844,7 +844,7 @@ void nv4097_clear_surface(u32 arg, GLGSRender* renderer)
 	if ((arg & (depth_stencil | color_mask)) == 0)
 	{
 		//do nothing
-		return;
+		return true;
 	}
 
 	/*
@@ -941,13 +941,22 @@ void nv4097_clear_surface(u32 arg, GLGSRender* renderer)
 	{
 		__glcheck glClear(mask);
 	}
+
+	return true;
 }
 
-using rsx_method_impl_t = void(*)(u32, GLGSRender*);
+bool nv3089_image_in(u32 arg, GLGSRender* renderer)
+{
+	//TODO
+	return false;
+}
+
+using rsx_method_impl_t = bool(*)(u32, GLGSRender*);
 
 static const std::unordered_map<u32, rsx_method_impl_t> g_gl_method_tbl =
 {
-	{ NV4097_CLEAR_SURFACE, nv4097_clear_surface }
+	{ NV4097_CLEAR_SURFACE, nv4097_clear_surface },
+	//{ NV3089_IMAGE_IN, nv3089_image_in },
 };
 
 bool GLGSRender::do_method(u32 cmd, u32 arg)
@@ -959,8 +968,7 @@ bool GLGSRender::do_method(u32 cmd, u32 arg)
 		return false;
 	}
 
-	found->second(arg, this);
-	return true;
+	return found->second(arg, this);
 }
 
 bool GLGSRender::load_program()
@@ -1205,7 +1213,7 @@ void GLGSRender::init_buffers(bool skip_reading)
 
 		info.swizzled = swizzled;
 
-		cached_color_buffers[index] = &m_texture_cache.entry(info, skip_reading ? gl::cache_buffers::none : gl::cache_buffers::local);
+		cached_color_buffers[index] = &texture_cache.entry(info, skip_reading ? gl::cache_buffers::none : gl::cache_buffers::local);
 		draw_fbo.color[index] = cached_color_buffers[index]->view();
 	});
 
@@ -1269,7 +1277,7 @@ void GLGSRender::init_buffers(bool skip_reading)
 
 			info.format.remap = { GL_ZERO, GL_ZERO, GL_ZERO, GL_ZERO };
 
-			__glcheck cached_depth_buffer = &m_texture_cache.entry(info, skip_reading ? gl::cache_buffers::none : gl::cache_buffers::local);
+			__glcheck cached_depth_buffer = &texture_cache.entry(info, skip_reading ? gl::cache_buffers::none : gl::cache_buffers::local);
 
 			switch (m_surface.depth_format)
 			{
@@ -1333,7 +1341,7 @@ void GLGSRender::flip(int buffer)
 	glDisable(GL_LOGIC_OP);
 	glDisable(GL_CULL_FACE);
 
-	gl::cached_texture& texture = m_texture_cache.entry(surface_info(rsx::surface_color_format::a8r8g8b8, gcm_buffers[buffer].offset,
+	gl::cached_texture& texture = texture_cache.entry(surface_info(rsx::surface_color_format::a8r8g8b8, gcm_buffers[buffer].offset,
 		CELL_GCM_LOCATION_LOCAL, buffer_width, buffer_height, buffer_pitch), gl::cache_buffers::local);
 
 	//std::lock_guard<gl::cached_texture> lock(texture);
@@ -1389,7 +1397,7 @@ u64 GLGSRender::timestamp() const
 
 bool GLGSRender::on_access_violation(u32 address, bool is_writing)
 {
-	if (auto region = m_texture_cache.find_region(address))
+	if (auto region = texture_cache.find_region(address))
 	{
 		//std::lock_guard<gl::protected_region> lock(*region);
 

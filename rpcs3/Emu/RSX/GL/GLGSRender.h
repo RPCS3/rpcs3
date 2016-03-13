@@ -28,9 +28,8 @@ private:
 
 	texture_buffer_pair m_gl_attrib_buffers[rsx::limits::vertex_count];
 
-	gl::texture_cache m_texture_cache;
-
 public:
+	gl::texture_cache texture_cache;
 	gl::fbo draw_fbo;
 
 private:

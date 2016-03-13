@@ -13,6 +13,8 @@
 #include "OpenGL.h"
 #include "../GCM.h"
 
+void print_call_stack(int skip);
+
 namespace gl
 {
 #if 1//def _DEBUG
@@ -44,6 +46,7 @@ namespace gl
 				default: error = "unknown error"; break;
 				}
 
+				print_call_stack(1);
 				throw std::runtime_error(fmt::format("OpenGL error: %s. file '%s' function '%s' line %ld", error.c_str(), file, function, line));
 			}
 		}

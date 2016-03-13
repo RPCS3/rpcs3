@@ -604,31 +604,45 @@ namespace rsx
 	{
 		force_inline void buffer_notify(u32 arg)
 		{
-			const u32 inPitch = method_registers[NV0039_PITCH_IN];
-			const u32 outPitch = method_registers[NV0039_PITCH_OUT];
-			const u32 lineLength = method_registers[NV0039_LINE_LENGTH_IN];
-			const u32 lineCount = method_registers[NV0039_LINE_COUNT];
-			const u8 outFormat = method_registers[NV0039_FORMAT] >> 8;
-			const u8 inFormat = method_registers[NV0039_FORMAT];
+			u32 in_pitch = method_registers[NV0039_PITCH_IN];
+			u32 out_pitch = method_registers[NV0039_PITCH_OUT];
+			const u32 line_length = method_registers[NV0039_LINE_LENGTH_IN];
+			const u32 line_count = method_registers[NV0039_LINE_COUNT];
+			const u8 out_format = method_registers[NV0039_FORMAT] >> 8;
+			const u8 in_format = method_registers[NV0039_FORMAT];
 			const u32 notify = arg;
 
 			// The existing GCM commands use only the value 0x1 for inFormat and outFormat
-			if (inFormat != 0x01 || outFormat != 0x01)
+			if (in_format != 0x01 || out_format != 0x01)
 			{
-				LOG_ERROR(RSX, "NV0039_OFFSET_IN: Unsupported format: inFormat=%d, outFormat=%d", inFormat, outFormat);
+				LOG_ERROR(RSX, "NV0039_OFFSET_IN: Unsupported format: inFormat=%d, outFormat=%d", in_format, out_format);
 			}
 
-			if (lineCount == 1 && !inPitch && !outPitch && !notify)
+			if (!in_pitch)
 			{
-				std::memcpy(
-					vm::base(get_address(method_registers[NV0039_OFFSET_OUT], method_registers[NV0039_SET_CONTEXT_DMA_BUFFER_OUT])),
-					vm::base(get_address(method_registers[NV0039_OFFSET_IN], method_registers[NV0039_SET_CONTEXT_DMA_BUFFER_IN])),
-					lineLength);
+				in_pitch = line_length;
+			}
+
+			if (!out_pitch)
+			{
+				out_pitch = line_length;
+			}
+
+			u8 *dst = (u8*)vm::base(get_address(method_registers[NV0039_OFFSET_OUT], method_registers[NV0039_SET_CONTEXT_DMA_BUFFER_OUT]));
+			const u8 *src = (u8*)vm::base(get_address(method_registers[NV0039_OFFSET_IN], method_registers[NV0039_SET_CONTEXT_DMA_BUFFER_IN]));
+
+			if (in_pitch == out_pitch && out_pitch == line_length)
+			{
+				std::memcpy(dst, src, line_length * line_count);
 			}
 			else
 			{
-				LOG_ERROR(RSX, "NV0039_OFFSET_IN: bad offset(in=0x%x, out=0x%x), pitch(in=0x%x, out=0x%x), line(len=0x%x, cnt=0x%x), fmt(in=0x%x, out=0x%x), notify=0x%x",
-					method_registers[NV0039_OFFSET_IN], method_registers[NV0039_OFFSET_OUT], inPitch, outPitch, lineLength, lineCount, inFormat, outFormat, notify);
+				for (u32 i = 0; i < line_count; ++i)
+				{
+					std::memcpy(dst, src, line_length);
+					dst += out_pitch;
+					src += in_pitch;
+				}
 			}
 		}
 	}

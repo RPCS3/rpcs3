@@ -18,19 +18,19 @@ namespace gl
 	void cached_texture::read()
 	{
 		cached_texture* found_texture = nullptr;
-		u32 texture_size = info->size();
+		u32 texture_size = info.size();
 
-		m_parent_region->for_each(info->start_address, texture_size, [&](cached_texture& texture)
+		m_parent_region->for_each(info.start_address, texture_size, [&](cached_texture& texture)
 		{
 			if ((texture.m_state & cache_entry_state::local_synchronized) == cache_entry_state::invalid)
 			{
 				return;
 			}
 
-			if (texture.info->start_address != info->start_address ||
-				texture.info->pitch != info->pitch ||
-				texture.info->height < info->height ||
-				texture.info->width < info->width)
+			if (texture.info.start_address != info.start_address ||
+				texture.info.pitch != info.pitch ||
+				texture.info.height < info.height ||
+				texture.info.width < info.width)
 			{
 				return;
 			}
@@ -42,35 +42,35 @@ namespace gl
 		{
 			//read from local
 			__glcheck glCopyImageSubData(
-				found_texture->gl_name, (GLenum)found_texture->info->target, 0, 0, 0, 0,
-				gl_name, (GLenum)info->target, 0, 0, 0, 0,
-				info->width, info->height, info->depth);
+				found_texture->gl_name, (GLenum)found_texture->info.target, 0, 0, 0, 0,
+				gl_name, (GLenum)info.target, 0, 0, 0, 0,
+				info.width, info.height, info.depth);
 		}
 		else
 		{
 			//read from host
 			//flush all local textures at region
-			m_parent_region->for_each(info->start_address, texture_size, [](cached_texture& texture)
+			m_parent_region->for_each(info.start_address, texture_size, [](cached_texture& texture)
 			{
 				texture.sync(gl::cache_buffers::host);
 			});
 
 			bind();
 
-			if (info->format.format == gl::texture::format::depth || info->format.format == gl::texture::format::depth_stencil)
+			if (info.format.format == gl::texture::format::depth || info.format.format == gl::texture::format::depth_stencil)
 			{
 				gl::buffer pbo_depth;
 
-				__glcheck pbo_depth.create(info->size());
+				__glcheck pbo_depth.create(info.size());
 				__glcheck pbo_depth.map([&](GLubyte* pixels)
 				{
-					switch (info->format.bpp)
+					switch (info.format.bpp)
 					{
 					case 2:
 					{
 						u16 *dst = (u16*)pixels;
-						const be_t<u16>* src = (const be_t<u16>*)vm::base_priv(info->start_address);
-						for (u32 i = 0, end = info->pitch / info->format.bpp * info->height; i < end; ++i)
+						const be_t<u16>* src = (const be_t<u16>*)vm::base_priv(info.start_address);
+						for (u32 i = 0, end = info.pitch / info.format.bpp * info.height; i < end; ++i)
 						{
 							dst[i] = src[i];
 						}
@@ -80,8 +80,8 @@ namespace gl
 					case 4:
 					{
 						u32 *dst = (u32*)pixels;
-						const be_t<u32>* src = (const be_t<u32>*)vm::base_priv(info->start_address);
-						for (u32 i = 0, end = info->pitch / info->format.bpp * info->height; i < end; ++i)
+						const be_t<u32>* src = (const be_t<u32>*)vm::base_priv(info.start_address);
+						for (u32 i = 0, end = info.pitch / info.format.bpp * info.height; i < end; ++i)
 						{
 							dst[i] = src[i];
 						}
@@ -94,47 +94,47 @@ namespace gl
 				}, gl::buffer::access::write);
 
 				gl::pixel_unpack_settings{}
-					.row_length(info->pitch / info->format.bpp)
+					.row_length(info.pitch / info.format.bpp)
 					.aligment(1)
-					.swap_bytes((info->format.flags & gl::texture_flags::swap_bytes) != gl::texture_flags::none)
+					//.swap_bytes((info.format.flags & gl::texture_flags::swap_bytes) != gl::texture_flags::none)
 					.apply();
 
 				glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbo_depth.id());
 
-				__glcheck glTexSubImage2D((GLenum)info->target, 0, 0, 0, info->width, info->height,
-					(GLenum)info->format.format, (GLenum)info->format.type, nullptr);
+				__glcheck glTexSubImage2D((GLenum)info.target, 0, 0, 0, info.width, info.height,
+					(GLenum)info.format.format, (GLenum)info.format.type, nullptr);
 
 				glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
 			}
-			else if (info->compressed_size)
+			else if (info.compressed_size)
 			{
-				__glcheck glCompressedTexSubImage2D((GLenum)info->target, 0,
-					0, 0, info->width, info->height,
-					(GLenum)info->format.internal_format,
-					info->compressed_size, vm::base_priv(info->start_address));
+				__glcheck glCompressedTexSubImage2D((GLenum)info.target, 0,
+					0, 0, info.width, info.height,
+					(GLenum)info.format.internal_format,
+					info.compressed_size, vm::base_priv(info.start_address));
 			}
 			else
 			{
-				void *pixels = vm::base_priv(info->start_address);
+				void *pixels = vm::base_priv(info.start_address);
 
 				std::unique_ptr<u8[]> linear_pixels;
 
-				if (info->swizzled && (info->format.flags & texture_flags::allow_swizzle) != texture_flags::none)
+				if (info.swizzled && (info.format.flags & texture_flags::allow_swizzle) != texture_flags::none)
 				{
-					linear_pixels.reset(new u8[info->size()]);
-					switch (info->format.bpp)
+					linear_pixels.reset(new u8[info.size()]);
+					switch (info.format.bpp)
 					{
 					case 1:
-						rsx::convert_linear_swizzle<u8>(pixels, linear_pixels.get(), info->width, info->height, true);
+						rsx::convert_linear_swizzle<u8>(pixels, linear_pixels.get(), info.width, info.height, true);
 						break;
 					case 2:
-						rsx::convert_linear_swizzle<u16>(pixels, linear_pixels.get(), info->width, info->height, true);
+						rsx::convert_linear_swizzle<u16>(pixels, linear_pixels.get(), info.width, info.height, true);
 						break;
 					case 4:
-						rsx::convert_linear_swizzle<u32>(pixels, linear_pixels.get(), info->width, info->height, true);
+						rsx::convert_linear_swizzle<u32>(pixels, linear_pixels.get(), info.width, info.height, true);
 						break;
 					case 8:
-						rsx::convert_linear_swizzle<u64>(pixels, linear_pixels.get(), info->width, info->height, true);
+						rsx::convert_linear_swizzle<u64>(pixels, linear_pixels.get(), info.width, info.height, true);
 						break;
 
 					default:
@@ -145,22 +145,22 @@ namespace gl
 				}
 
 				gl::pixel_unpack_settings{}
-					.row_length(info->pitch / info->format.bpp)
+					.row_length(info.pitch / info.format.bpp)
 					.aligment(1)
-					.swap_bytes((info->format.flags & gl::texture_flags::swap_bytes) != gl::texture_flags::none)
+					.swap_bytes((info.format.flags & gl::texture_flags::swap_bytes) != gl::texture_flags::none)
 					.apply();
 
-				__glcheck glTexSubImage2D((GLenum)info->target, 0, 0, 0, info->width, info->height,
-					(GLenum)info->format.format, (GLenum)info->format.type, pixels);
+				__glcheck glTexSubImage2D((GLenum)info.target, 0, 0, 0, info.width, info.height,
+					(GLenum)info.format.format, (GLenum)info.format.type, pixels);
 			}
 
-			if (info->mipmap > 1)
+			if (info.mipmap > 1)
 			{
-				__glcheck glTexParameteri((GLenum)info->target, GL_TEXTURE_MIN_LOD, info->min_lod);
-				__glcheck glTexParameteri((GLenum)info->target, GL_TEXTURE_MAX_LOD, info->max_lod);
-				__glcheck glTexParameterf((GLenum)info->target, GL_TEXTURE_LOD_BIAS, info->lod_bias);
+				__glcheck glTexParameteri((GLenum)info.target, GL_TEXTURE_MIN_LOD, info.min_lod);
+				__glcheck glTexParameteri((GLenum)info.target, GL_TEXTURE_MAX_LOD, info.max_lod);
+				__glcheck glTexParameterf((GLenum)info.target, GL_TEXTURE_LOD_BIAS, info.lod_bias);
 
-				__glcheck glGenerateMipmap((GLenum)info->target);
+				__glcheck glGenerateMipmap((GLenum)info.target);
 			}
 		}
 
@@ -171,33 +171,33 @@ namespace gl
 	{
 		bind();
 
-		if (info->format.format == gl::texture::format::depth || info->format.format == gl::texture::format::depth_stencil)
+		if (info.format.format == gl::texture::format::depth || info.format.format == gl::texture::format::depth_stencil)
 		{
-			//LOG_ERROR(RSX, "write depth color to host[0x%x]", info->start_address);
+			//LOG_ERROR(RSX, "write depth color to host[0x%x]", info.start_address);
 
 			gl::buffer pbo_depth;
 
-			pbo_depth.create(info->size());
+			pbo_depth.create(info.size());
 
 			gl::pixel_pack_settings{}
-				.row_length(info->pitch / info->format.bpp)
+				.row_length(info.pitch / info.format.bpp)
 				.aligment(1)
-				//.swap_bytes((info->format.flags & gl::texture_flags::swap_bytes) != gl::texture_flags::none)
+				//.swap_bytes((info.format.flags & gl::texture_flags::swap_bytes) != gl::texture_flags::none)
 				.apply();
 
 			__glcheck glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo_depth.id());
-			__glcheck glGetTexImage((GLenum)info->target, 0, (GLenum)info->format.format, (GLenum)info->format.type, nullptr);
+			__glcheck glGetTexImage((GLenum)info.target, 0, (GLenum)info.format.format, (GLenum)info.format.type, nullptr);
 			__glcheck glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
 
 			__glcheck pbo_depth.map([&](GLubyte* pixels)
 			{
-				switch (info->format.bpp)
+				switch (info.format.bpp)
 				{
 				case 2:
 				{
 					const u16 *src = (const u16*)pixels;
-					be_t<u16>* dst = (be_t<u16>*)vm::base_priv(info->start_address);
-					for (u32 i = 0, end = info->pitch / info->format.bpp * info->height; i < end; ++i)
+					be_t<u16>* dst = (be_t<u16>*)vm::base_priv(info.start_address);
+					for (u32 i = 0, end = info.pitch / info.format.bpp * info.height; i < end; ++i)
 					{
 						dst[i] = src[i];
 					}
@@ -207,8 +207,8 @@ namespace gl
 				case 4:
 				{
 					const u32 *src = (const u32*)pixels;
-					be_t<u32>* dst = (be_t<u32>*)vm::base_priv(info->start_address);
-					for (u32 i = 0, end = info->pitch / info->format.bpp * info->height; i < end; ++i)
+					be_t<u32>* dst = (be_t<u32>*)vm::base_priv(info.start_address);
+					for (u32 i = 0, end = info.pitch / info.format.bpp * info.height; i < end; ++i)
 					{
 						dst[i] = src[i];
 					}
@@ -221,25 +221,25 @@ namespace gl
 
 			}, gl::buffer::access::read);
 		}
-		else if (info->compressed_size)
+		else if (info.compressed_size)
 		{
-			LOG_ERROR(RSX, "writing compressed texture[0x%x] to host buffer", info->start_address);
+			LOG_ERROR(RSX, "writing compressed texture[0x%x] to host buffer", info.start_address);
 		}
 		else
 		{
-			if (info->swizzled && (info->format.flags & texture_flags::allow_swizzle) != texture_flags::none)
+			if (info.swizzled && (info.format.flags & texture_flags::allow_swizzle) != texture_flags::none)
 			{
 				//TODO
-				LOG_ERROR(RSX, "writing swizzled texture[0x%x] to host buffer", info->start_address);
+				LOG_ERROR(RSX, "writing swizzled texture[0x%x] to host buffer", info.start_address);
 			}
 
 			gl::pixel_pack_settings{}
-				.row_length(info->pitch / info->format.bpp)
+				.row_length(info.pitch / info.format.bpp)
 				.aligment(1)
-				.swap_bytes((info->format.flags & gl::texture_flags::swap_bytes) != gl::texture_flags::none)
+				.swap_bytes((info.format.flags & gl::texture_flags::swap_bytes) != gl::texture_flags::none)
 				.apply();
 
-			__glcheck glGetTexImage((GLenum)info->target, 0, (GLenum)info->format.format, (GLenum)info->format.type, vm::base_priv(info->start_address));
+			__glcheck glGetTexImage((GLenum)info.target, 0, (GLenum)info.format.format, (GLenum)info.format.type, vm::base_priv(info.start_address));
 		}
 
 		ignore(gl::cache_buffers::all);
@@ -280,13 +280,13 @@ namespace gl
 		if ((buffers & cache_buffers::host) != cache_buffers::none)
 		{
 			m_state &= ~cache_entry_state::host_synchronized;
-			m_parent_region->for_each(info->start_address, info->size(), [this](cached_texture& texture)
+			m_parent_region->for_each(info.start_address, info.size(), [this](cached_texture& texture)
 			{
 				if (std::addressof(texture) != this)
 				{
 					//LOG_WARNING(RSX, "cached_texture[0x%x,0x%x) invalidate cached_texture[0x%x, 0x%x)",
-					//	info->start_address, info->start_address + info->size(),
-					//	texture.info->start_address, texture.info->start_address + texture.info->size());
+					//	info.start_address, info.start_address + info.size(),
+					//	texture.info.start_address, texture.info.start_address + texture.info.size());
 					texture.invalidate(cache_buffers::local);
 				}
 			});
@@ -368,7 +368,7 @@ namespace gl
 			__glcheck glActiveTexture(GL_TEXTURE0 + index);
 		}
 
-		__glcheck glBindTexture((GLenum)info->target, gl_name);
+		__glcheck glBindTexture((GLenum)info.target, gl_name);
 	}
 
 	void cached_texture::create()
@@ -378,8 +378,8 @@ namespace gl
 		glGenTextures(1, &gl_name);
 
 		bind();
-		__glcheck glTexStorage2D((GLenum)info->target, info->mipmap, (GLenum)info->format.internal_format, info->width, info->height);
-		//__glcheck glClearTexImage(gl_name, 0, (GLenum)info->format.format, (GLenum)info->format.type, nullptr);
+		__glcheck glTexStorage2D((GLenum)info.target, info.mipmap, (GLenum)info.format.internal_format, info.width, info.height);
+		//__glcheck glClearTexImage(gl_name, 0, (GLenum)info.format.format, (GLenum)info.format.type, nullptr);
 	}
 
 	void cached_texture::remove()
@@ -528,7 +528,7 @@ namespace gl
 
 		auto& texture_info = *result.first;
 
-		texture_info.second.info = &texture_info.first;
+		texture_info.second.info = texture_info.first;
 		texture_info.second.parent(this);
 
 		return texture_info.second;

@@ -1,6 +1,42 @@
 #include "stdafx.h"
 #include "gl_helpers.h"
 
+#ifdef _WIN32
+#include <DbgHelp.h>
+#pragma comment(lib, "Dbghelp.lib")
+#endif
+
+//TODO: find proper place
+void print_call_stack(int skip)
+{
+#ifdef _WIN32
+	HANDLE current_process = GetCurrentProcess();
+	SymInitialize(current_process, nullptr, true);
+
+	void* stack[61];
+	u32 frames_count = CaptureStackBackTrace(skip + 1, 61 - skip, stack, nullptr);
+
+	u32 max_sym_length = 255;
+
+	std::unique_ptr<SYMBOL_INFO, decltype(&std::free)> sym_info
+	{
+		(SYMBOL_INFO*)std::calloc(sizeof(SYMBOL_INFO) + (max_sym_length + 1) * sizeof(char), 1),
+		std::free
+	};
+
+	sym_info->MaxNameLen = max_sym_length;
+	sym_info->SizeOfStruct = sizeof(SYMBOL_INFO);
+
+	LOG_ERROR(GENERAL, "CALL STACK:");
+
+	for (s32 i = frames_count - 1; i > 0; --i)
+	{
+		SymFromAddr(current_process, (DWORD64)stack[i], 0, sym_info.get());
+		LOG_ERROR(GENERAL, "%u: %s:%u - 0x%0X", i, sym_info->Name, sym_info->Index, sym_info->Address);
+	}
+#endif
+}
+
 namespace gl
 {
 	const fbo screen{};

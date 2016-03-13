@@ -80,7 +80,7 @@ namespace gl
 
 	struct cached_texture
 	{
-		const texture_info *info;
+		texture_info info;
 		GLuint gl_name = 0;
 
 	private:
@@ -103,7 +103,7 @@ namespace gl
 
 		gl::texture_view view() const
 		{
-			return{ info->target, gl_name };
+			return{ info.target, gl_name };
 		}
 
 		cache_access requires_protection() const;
