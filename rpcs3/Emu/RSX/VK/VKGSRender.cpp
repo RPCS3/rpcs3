@@ -141,6 +141,8 @@ namespace vk
 		case CELL_GCM_FUNC_ADD: return VK_BLEND_OP_ADD;
 		case CELL_GCM_FUNC_SUBTRACT: return VK_BLEND_OP_SUBTRACT;
 		case CELL_GCM_FUNC_REVERSE_SUBTRACT: return VK_BLEND_OP_REVERSE_SUBTRACT;
+		case CELL_GCM_MIN: return VK_BLEND_OP_MIN;
+		case CELL_GCM_MAX: return VK_BLEND_OP_MAX;
 		default:
 			throw EXCEPTION("Unknown blend op: 0x%X", op);
 		}

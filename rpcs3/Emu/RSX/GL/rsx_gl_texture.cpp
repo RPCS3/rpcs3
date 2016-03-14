@@ -265,11 +265,9 @@ namespace rsx
 		{
 			const u32 texaddr = rsx::get_address(tex.offset(), tex.location());
 
-			//TODO: safe init
-			if (!m_id)
-			{
-				create();
-			}
+			//We can't re-use texture handles if using immutable storage
+			if (m_id) remove();
+			create();
 
 			glActiveTexture(GL_TEXTURE0 + index);
 			bind();

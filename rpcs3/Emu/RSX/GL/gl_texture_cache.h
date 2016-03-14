@@ -483,6 +483,8 @@ namespace gl
 			}
 			else
 			{
+				u32 real_id = gl_texture.id();
+
 				if (!obj) gl_texture.set_id(0);
 				else
 				{
@@ -499,6 +501,8 @@ namespace gl
 
 				_obj.block_sz = (u32)get_texture_size(tex);
 				lock_gl_object(_obj);
+
+				gl_texture.set_id(real_id);
 			}
 		}
 
