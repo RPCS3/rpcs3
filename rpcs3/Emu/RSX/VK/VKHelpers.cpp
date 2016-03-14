@@ -152,7 +152,7 @@ namespace vk
 		if (g_null_buffer.size())
 			return g_null_buffer;
 
-		g_null_buffer.create(g_current_renderer, 32, VK_FORMAT_R32_SFLOAT, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT);
+		g_null_buffer.create(g_current_renderer, 32, 0, VK_FORMAT_R32_SFLOAT, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT);
 		return g_null_buffer;
 	}
 
@@ -197,7 +197,7 @@ namespace vk
 		if (g_null_buffer.size())
 			return g_null_buffer;
 
-		g_null_buffer.create(g_current_renderer, 32, VK_FORMAT_R32_SFLOAT, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT);
+		g_null_buffer.create(g_current_renderer, 32, 0, VK_FORMAT_R32_SFLOAT, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT);
 		return g_null_buffer;
 	}
 

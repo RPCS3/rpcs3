@@ -199,10 +199,10 @@ VKGSRender::VKGSRender() : GSRender(frame_type::Vulkan)
 	CHECK_RESULT(vkEndCommandBuffer(m_command_buffer));
 	execute_command_buffer(false);
 
-	m_scale_offset_buffer.create((*m_device), 128);
-	m_vertex_constants_buffer.create((*m_device), 512 * 16);
-	m_fragment_constants_buffer.create((*m_device), 512 * 16);
-	m_index_buffer.create((*m_device), 65536, VK_FORMAT_R16_UINT, VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
+	m_scale_offset_buffer.create((*m_device), 128, m_memory_type_mapping.host_visible_coherent);
+	m_vertex_constants_buffer.create((*m_device), 512 * 16, m_memory_type_mapping.host_visible_coherent);
+	m_fragment_constants_buffer.create((*m_device), 512 * 16, m_memory_type_mapping.host_visible_coherent);
+	m_index_buffer.create((*m_device), 65536, m_memory_type_mapping.host_visible_coherent, VK_FORMAT_R16_UINT, VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
 }
 
 VKGSRender::~VKGSRender()
@@ -469,7 +469,7 @@ void VKGSRender::on_init_thread()
 
 	for (auto &attrib_buffer : m_attrib_buffers)
 	{
-		attrib_buffer.create((*m_device), 65536, VK_FORMAT_R8_UNORM, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT);
+		attrib_buffer.create((*m_device), 65536, m_memory_type_mapping.host_visible_coherent, VK_FORMAT_R8_UNORM, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT);
 		
 		u8 *data = static_cast<u8*>(attrib_buffer.map(0, 65536));
 		memset(data, 0, 65536);
