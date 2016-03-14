@@ -854,10 +854,10 @@ namespace rpcs3
 			{
 				opengl_group(group *grp) : group{ grp, "opengl" } {}
 
-				entry<bool> write_color_buffers { this, "Write Color Buffers", true };
-				entry<bool> write_depth_buffer  { this, "Write Depth Buffer",  true };
-				entry<bool> read_color_buffers  { this, "Read Color Buffers",  true };
-				entry<bool> read_depth_buffer   { this, "Read Depth Buffer",   true };
+				entry<bool> write_color_buffers { this, "Write Color Buffers", false };
+				entry<bool> write_depth_buffer  { this, "Write Depth Buffer",  false };
+				entry<bool> read_color_buffers  { this, "Read Color Buffers",  false };
+				entry<bool> read_depth_buffer   { this, "Read Depth Buffer",   false };
 			} opengl{ this };
 
 			struct d3d12_group : protected group
