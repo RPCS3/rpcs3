@@ -9,30 +9,62 @@
 
 namespace
 {
-	std::tuple<GLenum, GLenum, GLenum> get_sized_internal_format_format_type(u32 texture_format)
+	GLenum get_sized_internal_format(u32 texture_format)
 	{
 		switch (texture_format)
 		{
-		case CELL_GCM_TEXTURE_B8: return std::make_tuple(GL_R8, GL_RED, GL_UNSIGNED_BYTE);
-		case CELL_GCM_TEXTURE_A1R5G5B5: return std::make_tuple(GL_RGB5_A1, GL_BGRA, GL_UNSIGNED_SHORT_1_5_5_5_REV);
-		case CELL_GCM_TEXTURE_A4R4G4B4: return std::make_tuple(GL_RGBA4, GL_BGRA, GL_UNSIGNED_SHORT_4_4_4_4);
-		case CELL_GCM_TEXTURE_R5G6B5: return std::make_tuple(GL_RGB565, GL_RGB, GL_UNSIGNED_SHORT_5_6_5);
-		case CELL_GCM_TEXTURE_A8R8G8B8: return std::make_tuple(GL_RGBA8, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8);
-		case CELL_GCM_TEXTURE_G8B8: return std::make_tuple(GL_RG8, GL_RG, GL_UNSIGNED_BYTE);
-		case CELL_GCM_TEXTURE_R6G5B5: return std::make_tuple(GL_RGB565, GL_RGBA, GL_UNSIGNED_BYTE);
-		case CELL_GCM_TEXTURE_DEPTH24_D8: return std::make_tuple(GL_DEPTH_COMPONENT24, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE);
-		case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT: return std::make_tuple(GL_DEPTH_COMPONENT24, GL_DEPTH_COMPONENT, GL_FLOAT);
-		case CELL_GCM_TEXTURE_DEPTH16: return std::make_tuple(GL_DEPTH_COMPONENT16, GL_DEPTH_COMPONENT, GL_SHORT);
-		case CELL_GCM_TEXTURE_DEPTH16_FLOAT: return std::make_tuple(GL_DEPTH_COMPONENT16, GL_DEPTH_COMPONENT, GL_FLOAT);
-		case CELL_GCM_TEXTURE_X16: return std::make_tuple(GL_R16, GL_RED, GL_UNSIGNED_SHORT);
-		case CELL_GCM_TEXTURE_Y16_X16: return std::make_tuple(GL_RG16, GL_RG, GL_UNSIGNED_SHORT);
-		case CELL_GCM_TEXTURE_R5G5B5A1: return std::make_tuple(GL_RGB5_A1, GL_RGBA, GL_UNSIGNED_SHORT_5_5_5_1);
-		case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT: return std::make_tuple(GL_RGBA16F, GL_RGBA, GL_HALF_FLOAT);
-		case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT: return std::make_tuple(GL_RGBA32F, GL_RGBA, GL_FLOAT);
-		case CELL_GCM_TEXTURE_X32_FLOAT: return std::make_tuple(GL_R32F, GL_RED, GL_FLOAT);
-		case CELL_GCM_TEXTURE_D1R5G5B5: return std::make_tuple(GL_RGB5_A1, GL_BGRA, GL_UNSIGNED_SHORT_1_5_5_5_REV);
-		case CELL_GCM_TEXTURE_D8R8G8B8: return std::make_tuple(GL_RGBA8, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8);
-		case CELL_GCM_TEXTURE_Y16_X16_FLOAT: return std::make_tuple(GL_RG16F, GL_RG, GL_HALF_FLOAT);
+		case CELL_GCM_TEXTURE_B8: return GL_R8;
+		case CELL_GCM_TEXTURE_A1R5G5B5: return GL_RGB5_A1;
+		case CELL_GCM_TEXTURE_A4R4G4B4: return GL_RGBA4;
+		case CELL_GCM_TEXTURE_R5G6B5: return GL_RGB565;
+		case CELL_GCM_TEXTURE_A8R8G8B8: return GL_RGBA8;
+		case CELL_GCM_TEXTURE_G8B8: return GL_RG8;
+		case CELL_GCM_TEXTURE_R6G5B5: return GL_RGB565;
+		case CELL_GCM_TEXTURE_DEPTH24_D8: return GL_DEPTH_COMPONENT24;
+		case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT: return GL_DEPTH_COMPONENT24;
+		case CELL_GCM_TEXTURE_DEPTH16: return GL_DEPTH_COMPONENT16;
+		case CELL_GCM_TEXTURE_DEPTH16_FLOAT: return GL_DEPTH_COMPONENT16;
+		case CELL_GCM_TEXTURE_X16: return GL_R16;
+		case CELL_GCM_TEXTURE_Y16_X16: return GL_RG16;
+		case CELL_GCM_TEXTURE_R5G5B5A1: return GL_RGB5_A1;
+		case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT: return GL_RGBA16F;
+		case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT: return GL_RGBA32F;
+		case CELL_GCM_TEXTURE_X32_FLOAT: return GL_R32F;
+		case CELL_GCM_TEXTURE_D1R5G5B5: return GL_RGB5_A1;
+		case CELL_GCM_TEXTURE_D8R8G8B8: return GL_RGBA8;
+		case CELL_GCM_TEXTURE_Y16_X16_FLOAT: return GL_RG16F;
+		case CELL_GCM_TEXTURE_COMPRESSED_DXT1: return GL_COMPRESSED_RGBA_S3TC_DXT1_EXT;
+		case CELL_GCM_TEXTURE_COMPRESSED_DXT23: return GL_COMPRESSED_RGBA_S3TC_DXT3_EXT;
+		case CELL_GCM_TEXTURE_COMPRESSED_DXT45: return GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
+		}
+		throw EXCEPTION("Compressed or unknown texture format %x", texture_format);
+	}
+
+
+	std::tuple<GLenum, GLenum> get_format_type(u32 texture_format)
+	{
+		switch (texture_format)
+		{
+		case CELL_GCM_TEXTURE_B8: return std::make_tuple(GL_RED, GL_UNSIGNED_BYTE);
+		case CELL_GCM_TEXTURE_A1R5G5B5: return std::make_tuple(GL_BGRA, GL_UNSIGNED_SHORT_1_5_5_5_REV);
+		case CELL_GCM_TEXTURE_A4R4G4B4: return std::make_tuple(GL_BGRA, GL_UNSIGNED_SHORT_4_4_4_4);
+		case CELL_GCM_TEXTURE_R5G6B5: return std::make_tuple(GL_RGB, GL_UNSIGNED_SHORT_5_6_5);
+		case CELL_GCM_TEXTURE_A8R8G8B8: return std::make_tuple(GL_BGRA, GL_UNSIGNED_INT_8_8_8_8);
+		case CELL_GCM_TEXTURE_G8B8: return std::make_tuple(GL_RG, GL_UNSIGNED_BYTE);
+		case CELL_GCM_TEXTURE_R6G5B5: return std::make_tuple(GL_RGBA, GL_UNSIGNED_BYTE);
+		case CELL_GCM_TEXTURE_DEPTH24_D8: return std::make_tuple(GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE);
+		case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT: return std::make_tuple(GL_DEPTH_COMPONENT, GL_FLOAT);
+		case CELL_GCM_TEXTURE_DEPTH16: return std::make_tuple(GL_DEPTH_COMPONENT, GL_SHORT);
+		case CELL_GCM_TEXTURE_DEPTH16_FLOAT: return std::make_tuple(GL_DEPTH_COMPONENT, GL_FLOAT);
+		case CELL_GCM_TEXTURE_X16: return std::make_tuple(GL_RED, GL_UNSIGNED_SHORT);
+		case CELL_GCM_TEXTURE_Y16_X16: return std::make_tuple(GL_RG, GL_UNSIGNED_SHORT);
+		case CELL_GCM_TEXTURE_R5G5B5A1: return std::make_tuple(GL_RGBA, GL_UNSIGNED_SHORT_5_5_5_1);
+		case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT: return std::make_tuple(GL_RGBA, GL_HALF_FLOAT);
+		case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT: return std::make_tuple(GL_RGBA, GL_FLOAT);
+		case CELL_GCM_TEXTURE_X32_FLOAT: return std::make_tuple(GL_RED, GL_FLOAT);
+		case CELL_GCM_TEXTURE_D1R5G5B5: return std::make_tuple(GL_BGRA, GL_UNSIGNED_SHORT_1_5_5_5_REV);
+		case CELL_GCM_TEXTURE_D8R8G8B8: return std::make_tuple(GL_BGRA, GL_UNSIGNED_INT_8_8_8_8);
+		case CELL_GCM_TEXTURE_Y16_X16_FLOAT: return std::make_tuple(GL_RG, GL_HALF_FLOAT);
 		}
 		throw EXCEPTION("Compressed or unknown texture format %x", texture_format);
 	}
@@ -283,62 +315,31 @@ namespace rsx
 			u32 aligned_pitch = tex.pitch();
 
 			size_t texture_data_sz = get_placed_texture_storage_size(tex, 256);
-			std::vector<u8> data_upload_buf(texture_data_sz);
-			u8* texture_data = data_upload_buf.data();
+			std::vector<gsl::byte> data_upload_buf(texture_data_sz);
 			u32 block_sz = get_pitch_modifier(format);
 
-			if (is_swizzled || mandates_expansion(format))
-			{
-				aligned_pitch = align(aligned_pitch, 256);
-				upload_placed_texture({ reinterpret_cast<gsl::byte*>(texture_data), gsl::narrow<int>(texture_data_sz) }, tex, 256);
-				glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
-			}
-			else
-			{
-				texture_data = vm::ps3::_ptr<u8>(texaddr);
-			}
-
-			if (block_sz)
-				aligned_pitch /= block_sz;
-			else
-				aligned_pitch = 0;
-
-			glPixelStorei(GL_UNPACK_ROW_LENGTH, aligned_pitch);
+			const std::vector<rsx_subresource_layout> &input_layouts = get_subresources_layout(tex);
+			glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+			glTexStorage2D(m_target, tex.mipmap(), get_sized_internal_format(format), tex.width(), tex.height());
 
 			if (!is_compressed_format(format))
 			{
-				const auto &sized_internal_format_format_type = get_sized_internal_format_format_type(format);
-				glTexStorage2D(m_target, tex.mipmap(), std::get<0>(sized_internal_format_format_type), tex.width(), tex.height());
-				if (requires_unpack_byte(format))
-					glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_TRUE);
-				glTexSubImage2D(m_target, 0, 0, 0, tex.width(), tex.height(), std::get<1>(sized_internal_format_format_type), std::get<2>(sized_internal_format_format_type), texture_data);
-				if (requires_unpack_byte(format))
-					glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_FALSE);
+				const auto &format_type = get_format_type(format);
+				GLint mip_level = 0;
+				for (const rsx_subresource_layout &layout : input_layouts)
+				{
+					upload_texture_subresource(data_upload_buf, layout, format, is_swizzled, 4);
+					glTexSubImage2D(m_target, mip_level++, 0, 0, layout.width_in_block, layout.height_in_block, std::get<0>(format_type), std::get<1>(format_type), data_upload_buf.data());
+				}
 			}
 			else
 			{
-				switch (format)
-				{
-				case CELL_GCM_TEXTURE_COMPRESSED_DXT1: // Compressed 4x4 pixels into 8 bytes
-				{
-					u32 size = ((tex.width() + 3) / 4) * ((tex.height() + 3) / 4) * 8;
-					glCompressedTexImage2D(m_target, 0, GL_COMPRESSED_RGBA_S3TC_DXT1_EXT, tex.width(), tex.height(), 0, size, texture_data);
-					break;
-				}
 
-				case CELL_GCM_TEXTURE_COMPRESSED_DXT23: // Compressed 4x4 pixels into 16 bytes
+				GLint mip_level = 0;
+				for (const rsx_subresource_layout &layout : input_layouts)
 				{
-					u32 size = ((tex.width() + 3) / 4) * ((tex.height() + 3) / 4) * 16;
-					glCompressedTexImage2D(m_target, 0, GL_COMPRESSED_RGBA_S3TC_DXT3_EXT, tex.width(), tex.height(), 0, size, texture_data);
-				}
-				break;
-
-				case CELL_GCM_TEXTURE_COMPRESSED_DXT45: // Compressed 4x4 pixels into 16 bytes
-				{
-					u32 size = ((tex.width() + 3) / 4) * ((tex.height() + 3) / 4) * 16;
-					glCompressedTexImage2D(m_target, 0, GL_COMPRESSED_RGBA_S3TC_DXT5_EXT, tex.width(), tex.height(), 0, size, texture_data);
-					break;
-				}
+					u32 size = layout.width_in_block * layout.height_in_block * ((format == CELL_GCM_TEXTURE_COMPRESSED_DXT1) ? 8 : 16);
+					glCompressedTexSubImage2D(m_target, mip_level++, 0, 0, layout.width_in_block * 4, layout.height_in_block * 4, get_sized_internal_format(format), size, layout.data.data());
 				}
 			}
 
@@ -385,11 +386,6 @@ namespace rsx
 				{
 					LOG_WARNING(RSX, "Texture %d, target 0x%X, requesting mipmap filtering without any mipmaps set!", m_id, m_target);
 					min_filter = GL_LINEAR;
-				}
-				else
-				{
-					//TODO: Check if the call succeeded
-					glGenerateMipmap(m_target);
 				}
 			}
 

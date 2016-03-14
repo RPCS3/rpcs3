@@ -2,13 +2,13 @@
 #include "../RSXTexture.h"
 #include <vector>
 
-struct MipmapLevelInfo
+struct rsx_subresource_layout
 {
-	size_t offset;
-	u16 width;
-	u16 height;
+	gsl::span<const gsl::byte> data;
+	u16 width_in_block;
+	u16 height_in_block;
 	u16 depth;
-	u32 rowPitch;
+	u32 pitch_in_bytes;
 };
 
 /**
@@ -18,18 +18,15 @@ struct MipmapLevelInfo
 size_t get_placed_texture_storage_size(const rsx::texture &texture, size_t rowPitchAlignement, size_t mipmapAlignment=512);
 
 /**
-* Write texture data to textureData.
-* Data are not packed, they are stored per rows using rowPitchAlignement.
-* Similarly, offset for every mipmaplevel is aligned to rowPitchAlignement boundary.
-*/
-std::vector<MipmapLevelInfo> upload_placed_texture(gsl::span<gsl::byte> mapped_buffer, const rsx::texture &texture, size_t rowPitchAlignement);
+ * get all rsx_subresource_layout for texture.
+ * The subresources are ordered per layer then per mipmap level (as in rsx memory).
+ */
+std::vector<rsx_subresource_layout> get_subresources_layout(const rsx::texture &texture);
 
-/**
-* Upload texture mipmaps where alignment and offset information is provided manually.
-* alignment_offset info is an array of N mipmaps providing the offset into the data block and row-pitch alignment of each
-* mipmap level individually.
-*/
-void upload_texture_mipmaps(gsl::span<gsl::byte> dst_buffer, const rsx::texture &texture, std::vector<std::pair<u64, u32>> alignment_offset_info);
+void upload_texture_subresource(gsl::span<gsl::byte> dst_buffer, const rsx_subresource_layout &src_layout, int format, bool is_swizzled, size_t dst_row_alignment);
+
+u8 get_format_block_size_in_bytes(int format);
+u8 get_format_block_size_in_texel(int format);
 
 /**
 * Get number of bytes occupied by texture in RSX mem

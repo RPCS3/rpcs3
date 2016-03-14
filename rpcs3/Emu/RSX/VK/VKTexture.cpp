@@ -433,7 +433,11 @@ namespace vk
 				CHECK_RESULT(vkMapMemory((*owner), vram_allocation, 0, m_memory_layout.size, 0, (void**)&data));
 				gsl::span<gsl::byte> mapped{ (gsl::byte*)(data + layout_alignment[0].second.offset), gsl::narrow<int>(layout_alignment[0].second.size) };
 
-				upload_placed_texture(mapped, tex, layout_alignment[0].first);
+				const std::vector<rsx_subresource_layout> &subresources_layout = get_subresources_layout(tex);
+				for (const rsx_subresource_layout &layout : subresources_layout)
+				{
+					upload_texture_subresource(mapped, layout, tex.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN), !(tex.format() & CELL_GCM_TEXTURE_LN), layout_alignment[0].first);
+				}
 				vkUnmapMemory((*owner), vram_allocation);
 			}
 			else
@@ -460,7 +464,13 @@ namespace vk
 				CHECK_RESULT(vkMapMemory((*owner), vram_allocation, 0, m_memory_layout.size, 0, (void**)&data));
 				gsl::span<gsl::byte> mapped{ (gsl::byte*)(data), gsl::narrow<int>(m_memory_layout.size) };
 
-				upload_texture_mipmaps(mapped, tex, layout_offset_info);
+				const std::vector<rsx_subresource_layout> &subresources_layout = get_subresources_layout(tex);
+				size_t idx = 0;
+				for (const rsx_subresource_layout &layout : subresources_layout)
+				{
+					const auto &dst_layout = layout_offset_info[idx++];
+					upload_texture_subresource(mapped.subspan(dst_layout.first), layout, tex.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN), !(tex.format() & CELL_GCM_TEXTURE_LN), dst_layout.second);
+				}
 				vkUnmapMemory((*owner), vram_allocation);
 			}
 		}
