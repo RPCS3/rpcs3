@@ -29,6 +29,7 @@ private:
 	rsx::vk_render_targets m_rtts;
 
 	vk::gpu_formats_support m_optimal_tiling_supported_formats;
+	vk::memory_type_mapping m_memory_type_mapping;
 
 public:
 	//vk::fbo draw_fbo;

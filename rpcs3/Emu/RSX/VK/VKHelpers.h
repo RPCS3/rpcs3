@@ -69,6 +69,14 @@ namespace vk
 	VkFormat get_compatible_sampler_format(u32 format, VkComponentMapping& mapping, u8 swizzle_mask=0);
 	VkFormat get_compatible_surface_format(rsx::surface_color_format color_format);
 
+	struct memory_type_mapping
+	{
+		uint32_t host_visible_coherent;
+		uint32_t device_local;
+	};
+
+	memory_type_mapping get_memory_mapping(VkPhysicalDevice pdev);
+
 	class physical_device
 	{
 		VkPhysicalDevice dev = nullptr;

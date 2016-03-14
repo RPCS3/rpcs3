@@ -35,6 +35,31 @@ namespace vk
 #endif
 	}
 
+	memory_type_mapping get_memory_mapping(VkPhysicalDevice pdev)
+	{
+		VkPhysicalDeviceMemoryProperties memory_properties;
+		vkGetPhysicalDeviceMemoryProperties(pdev, &memory_properties);
+
+		memory_type_mapping result;
+		result.device_local = VK_MAX_MEMORY_TYPES;
+		result.host_visible_coherent = VK_MAX_MEMORY_TYPES;
+
+		for (int i = 0; i < VK_MAX_MEMORY_TYPES; i++)
+		{
+			bool is_device_local = !!(memory_properties.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+			if (is_device_local)
+				result.device_local = i;
+			bool is_host_visible = !!(memory_properties.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+			bool is_host_coherent = !!(memory_properties.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+			if (is_host_coherent && is_host_visible)
+				result.host_visible_coherent = i;
+		}
+
+		if (result.device_local == VK_MAX_MEMORY_TYPES) throw EXCEPTION("GPU doesn't support device local memory");
+		if (result.host_visible_coherent == VK_MAX_MEMORY_TYPES) throw EXCEPTION("GPU doesn't support host coherent device local memory");
+		return result;
+	}
+
 	VkFormat get_compatible_sampler_format(u32 format, VkComponentMapping& swizzle, u8 swizzle_mask)
 	{
 		u8 remap_a = swizzle_mask & 0x3;

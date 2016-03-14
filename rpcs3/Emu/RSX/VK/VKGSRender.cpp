@@ -167,6 +167,8 @@ VKGSRender::VKGSRender() : GSRender(frame_type::Vulkan)
 
 	m_device = (vk::render_device *)(&m_swap_chain->get_device());
 
+	m_memory_type_mapping = get_memory_mapping(m_device->gpu());
+
 	m_optimal_tiling_supported_formats = vk::get_optimal_tiling_supported_formats(m_device->gpu());
 
 	vk::set_current_thread_ctx(m_thread_context);
