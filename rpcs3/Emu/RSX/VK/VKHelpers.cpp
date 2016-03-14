@@ -6,7 +6,7 @@ namespace vk
 	context *g_current_vulkan_ctx = nullptr;
 	render_device g_current_renderer;
 
-	buffer g_null_buffer;
+	buffer_deprecated g_null_buffer;
 	texture g_null_texture;
 
 	VkSampler g_null_sampler = nullptr;
