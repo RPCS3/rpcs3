@@ -69,6 +69,14 @@ namespace vk
 	VkFormat get_compatible_sampler_format(u32 format, VkComponentMapping& mapping, u8 swizzle_mask=0);
 	VkFormat get_compatible_surface_format(rsx::surface_color_format color_format);
 
+	struct memory_type_mapping
+	{
+		uint32_t host_visible_coherent;
+		uint32_t device_local;
+	};
+
+	memory_type_mapping get_memory_mapping(VkPhysicalDevice pdev);
+
 	class physical_device
 	{
 		VkPhysicalDevice dev = nullptr;
@@ -228,7 +236,31 @@ namespace vk
 		}
 	};
 
-	class memory_block
+	struct memory_block
+	{
+		VkMemoryAllocateInfo info = {};
+		VkDeviceMemory memory;
+
+		memory_block(VkDevice dev, u64 block_sz, uint32_t memory_type_index) : m_device(dev)
+		{
+			info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+			info.pNext = nullptr;
+			info.allocationSize = block_sz;
+			info.memoryTypeIndex = memory_type_index;
+
+			CHECK_RESULT(vkAllocateMemory(m_device, &info, nullptr, &memory));
+		}
+
+		~memory_block()
+		{
+			vkFreeMemory(m_device, memory, nullptr);
+		}
+
+	private:
+		VkDevice m_device;
+	};
+
+	class memory_block_deprecated
 	{
 		VkDeviceMemory vram = nullptr;
 		vk::render_device *owner = nullptr;
@@ -236,8 +268,8 @@ namespace vk
 		bool mappable = false;
 
 	public:
-		memory_block() {}
-		~memory_block() {}
+		memory_block_deprecated() {}
+		~memory_block_deprecated() {}
 
 		void allocate_from_pool(vk::render_device &device, u64 block_sz, bool host_visible, u32 typeBits)
 		{
@@ -313,7 +345,7 @@ namespace vk
 		VkImageUsageFlags m_usage = VK_IMAGE_USAGE_SAMPLED_BIT;
 		VkImageTiling m_tiling = VK_IMAGE_TILING_LINEAR;
 
-		vk::memory_block vram_allocation;
+		vk::memory_block_deprecated vram_allocation;
 		vk::render_device *owner = nullptr;
 		
 		u32 m_width;
@@ -369,7 +401,7 @@ namespace vk
 		VkBufferCreateFlags m_flags = 0;
 
 		vk::render_device *owner;
-		vk::memory_block vram;
+		std::unique_ptr<vk::memory_block> vram;
 		u64 m_size = 0;
 
 		bool viewable = false;
@@ -378,7 +410,7 @@ namespace vk
 		buffer() {}
 		~buffer() {}
 
-		void create(vk::render_device &dev, u64 size, VkFormat format, VkBufferUsageFlagBits usage, VkBufferCreateFlags flags)
+		void create(vk::render_device &dev, u64 size, uint32_t memory_type_index, VkFormat format = VK_FORMAT_UNDEFINED, VkBufferUsageFlagBits usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VkBufferCreateFlags flags = 0)
 		{
 			if (m_buffer) throw EXCEPTION("Buffer create called on an existing buffer!");
 
@@ -395,12 +427,12 @@ namespace vk
 
 			//Allocate vram for this buffer
 			vkGetBufferMemoryRequirements(dev, m_buffer, &m_memory_layout);
-			vram.allocate_from_pool(dev, m_memory_layout.size, m_memory_layout.memoryTypeBits);
+			vram.reset(new memory_block(dev, m_memory_layout.size, memory_type_index));
 
 			viewable = !!(usage & (VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT));
 
 			//Bind buffer memory
-			vkBindBufferMemory(dev, m_buffer, vram, 0);
+			vkBindBufferMemory(dev, m_buffer, vram->memory, 0);
 
 			m_size = m_memory_layout.size;
 			m_usage = usage;
@@ -409,48 +441,32 @@ namespace vk
 			set_format(format);
 		}
 
-		void create(vk::render_device &dev, u32 size, VkFormat format, VkBufferUsageFlagBits usage)
-		{
-			create(dev, size, format, usage, 0);
-		}
-
-		void create(vk::render_device &dev, u32 size, VkFormat format)
-		{
-			create(dev, size, format, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
-		}
-
-		void create(vk::render_device &dev, u32 size)
-		{
-			create(dev, size, VK_FORMAT_UNDEFINED);
-		}
-
 		void *map(u32 offset, u64 size)
 		{
-			if (!vram.is_mappable()) return nullptr;
-
 			void *data = nullptr;
 			
 			if (size == VK_WHOLE_SIZE)
 				size = m_memory_layout.size;
 			
-			CHECK_RESULT(vkMapMemory((*owner), vram, offset, size, 0, &data));
+			CHECK_RESULT(vkMapMemory((*owner), vram->memory, offset, size, 0, &data));
 			return data;
 		}
 
 		void unmap()
 		{
-			vkUnmapMemory((*owner), vram);
+			vkUnmapMemory((*owner), vram->memory);
 		}
 
 		void sub_data(u32 offset, u32 size, void *data)
 		{
+			uint32_t memory_index_type = vram->info.memoryTypeIndex;
 			//TODO: Synchronization
 			if (!data && (m_size < size))
 			{
 				vk::render_device *pdev = owner;
 
 				destroy();
-				create((*pdev), size, m_internal_format, m_usage, m_flags);
+				create((*pdev), size, memory_index_type, m_internal_format, m_usage, m_flags);
 			}
 
 			if (!data) return;
@@ -458,7 +474,7 @@ namespace vk
 			{
 				vk::render_device *tmp_owner = owner;
 				destroy();
-				create((*tmp_owner), size, m_internal_format, m_usage, m_flags);
+				create((*tmp_owner), size, memory_index_type, m_internal_format, m_usage, m_flags);
 			}
 
 			u8 *dst = (u8*)map(offset, size);
@@ -474,7 +490,7 @@ namespace vk
 
 			vkDestroyBufferView((*owner), m_view, nullptr);
 			vkDestroyBuffer((*owner), m_buffer, nullptr);
-			vram.destroy();
+			vram.reset();
 
 			owner = nullptr;
 			m_view = nullptr;
