@@ -1,7 +1,8 @@
 #pragma once
 #include <vector>
-#include "Utilities/types.h"
 #include "gl_helpers.h"
+#include <Utilities/types.h>
+#include <Utilities/range.h>
 
 namespace gl
 {
@@ -74,6 +75,11 @@ namespace gl
 		{
 			return compressed_size ? compressed_size : height * pitch * depth;
 		}
+
+		range<u32> range() const
+		{
+			return{ start_address, start_address + size() };
+		}
 	};
 
 	struct protected_region;
@@ -116,24 +122,16 @@ namespace gl
 		friend protected_region;
 	};
 
-	struct protected_region
+	struct protected_region : range<u32>
 	{
-		u32 start_address;
-		u32 pages_count;
-
 	private:
 		std::unordered_map<texture_info, cached_texture, fnv_1a_hasher, bitwise_equals> m_textures;
 		u32 m_current_protection = 0;
 
 	public:
-		u32 size() const
-		{
-			return pages_count * vm::page_size;
-		}
-
 		cache_access requires_protection() const;
 		void for_each(std::function<void(cached_texture& texture)> callback);
-		void for_each(u32 start_address, u32 size, std::function<void(cached_texture& texture)> callback);
+		void for_each(range<u32> range, std::function<void(cached_texture& texture)> callback);
 		void protect();
 		void unprotect(cache_access access = cache_access::read_write);
 		bool empty() const;
@@ -154,7 +152,7 @@ namespace gl
 	public:
 		cached_texture &entry(const texture_info &info, cache_buffers sync = cache_buffers::none);
 		protected_region *find_region(u32 address);
-		std::vector<std::list<protected_region>::iterator> find_regions(u32 address, u32 size);
+		std::vector<std::list<protected_region>::iterator> find_regions(range<u32> range);
 		void update_protection();
 		void clear();
 	};

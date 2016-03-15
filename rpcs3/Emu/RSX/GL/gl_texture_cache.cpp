@@ -25,9 +25,8 @@ namespace gl
 		};
 
 		std::vector<capability_texture> found_textures;
-		u32 texture_size = info.size();
 
-		m_parent_region->for_each(info.start_address, texture_size, [&](cached_texture& texture)
+		m_parent_region->for_each(info.range(), [&](cached_texture& texture)
 		{
 			if ((texture.m_state & cache_entry_state::local_synchronized) == cache_entry_state::invalid)
 			{
@@ -124,7 +123,7 @@ namespace gl
 		{
 			//read from host
 			//flush all local textures at region
-			m_parent_region->for_each(info.start_address, texture_size, [](cached_texture& texture)
+			m_parent_region->for_each(info.range(), [](cached_texture& texture)
 			{
 				texture.sync(gl::cache_buffers::host);
 				//texture.invalidate(gl::cache_buffers::local);
@@ -387,7 +386,7 @@ namespace gl
 		if ((buffers & cache_buffers::host) != cache_buffers::none)
 		{
 			m_state &= ~cache_entry_state::host_synchronized;
-			m_parent_region->for_each(info.start_address, info.size(), [this](cached_texture& texture)
+			m_parent_region->for_each(info.range(), [this](cached_texture& texture)
 			{
 				if (std::addressof(texture) != this)
 				{
@@ -522,21 +521,14 @@ namespace gl
 		}
 	}
 
-	void protected_region::for_each(u32 start_address, u32 size, std::function<void(cached_texture& texture)> callback)
+	void protected_region::for_each(range<u32> range, std::function<void(cached_texture& texture)> callback)
 	{
 		for (auto &entry : m_textures)
 		{
-			if (entry.first.start_address >= start_address + size)
+			if (range.overlaps({ entry.first.start_address, entry.first.start_address + entry.first.size() }))
 			{
-				continue;
+				callback(entry.second);
 			}
-
-			if (entry.first.start_address + entry.first.size() <= start_address)
-			{
-				continue;
-			}
-
-			callback(entry.second);
 		}
 	}
 
@@ -558,7 +550,7 @@ namespace gl
 		if (m_current_protection != flags)
 		{
 			//LOG_WARNING(RSX, "protected region [0x%x, 0x%x)", start_address, start_address + size());
-			vm::page_protect(start_address, size(), 0, m_current_protection & ~flags, flags);
+			vm::page_protect(begin(), size(), 0, m_current_protection & ~flags, flags);
 			m_current_protection = flags;
 		}
 	}
@@ -584,7 +576,7 @@ namespace gl
 		}
 
 		//LOG_WARNING(RSX, "unprotected region [0x%x, 0x%x)", start_address, start_address + size());
-		vm::page_protect(start_address, size(), 0, flags, 0);
+		vm::page_protect(begin(), size(), 0, flags, 0);
 		m_current_protection &= ~flags;
 	}
 
@@ -612,17 +604,7 @@ namespace gl
 			}
 		}
 
-		if (region.start_address < start_address)
-		{
-			pages_count += (start_address - region.start_address) / vm::page_size;
-			start_address = region.start_address;
-		}
-		else
-		{
-			//[start_address, region.start_address + region.pages_count * vm::page_size)
-
-			pages_count = (region.start_address + region.pages_count * vm::page_size - start_address) / vm::page_size;
-		}
+		extend(region);
 	}
 
 	cached_texture& protected_region::add(const texture_info& info)
@@ -669,40 +651,39 @@ namespace gl
 
 	cached_texture &texture_cache::entry(const texture_info &info, cache_buffers sync)
 	{
-		u32 aligned_address;
-		u32 aligned_size;
+		range<u32> aligned_range;
 
 		const bool accurate_cache = false;
 
 		if (accurate_cache)
 		{
-			aligned_address = info.start_address & ~(vm::page_size - 1);
-			aligned_size = align(info.start_address - aligned_address + info.size(), vm::page_size);
+			aligned_range.begin(info.start_address & ~(vm::page_size - 1));
+			aligned_range.size(align(info.start_address - aligned_range.begin() + info.size(), vm::page_size));
 		}
 		else
 		{
-			aligned_size = info.size() & ~(vm::page_size - 1);
+			u32 aligned_size = info.size() & ~(vm::page_size - 1);
 
 			if (!aligned_size)
 			{
-				aligned_address = info.start_address & ~(vm::page_size - 1);
-				aligned_size = align(info.size() + info.start_address - aligned_address, vm::page_size);
+				aligned_range.begin(info.start_address & ~(vm::page_size - 1));
+				aligned_range.size(align(info.size() + info.start_address - aligned_range.begin(), vm::page_size));
 			}
 			else
 			{
-				aligned_address = align(info.start_address, vm::page_size);
+				aligned_range.begin(align(info.start_address, vm::page_size));
+				aligned_range.size(aligned_size);
 			}
 		}
 
-		std::vector<std::list<protected_region>::iterator> regions = find_regions(aligned_address, aligned_size);
+		std::vector<std::list<protected_region>::iterator> regions = find_regions(aligned_range);
 		protected_region *region;
 
 		if (regions.empty())
 		{
 			m_protected_regions.emplace_back();
 			region = &m_protected_regions.back();
-			region->pages_count = aligned_size / vm::page_size;
-			region->start_address = aligned_address;
+			region->set(aligned_range);
 		}
 		else
 		{
@@ -714,14 +695,14 @@ namespace gl
 				m_protected_regions.erase(regions[index]);
 			}
 
-			if (region->start_address > aligned_address)
+			if (region->begin() > aligned_range.begin())
 			{
-				region->pages_count += (region->start_address - aligned_address) / vm::page_size;
-				region->start_address = aligned_address;
+				region->end(region->end() + (region->begin() - aligned_range.begin()));
+				region->begin(aligned_range.begin());
 			}
 
-			u32 new_pages_count = (aligned_address + aligned_size - region->start_address) / vm::page_size;
-			region->pages_count = std::max(region->pages_count, new_pages_count);
+			u32 new_size = aligned_range.end() - region->begin();
+			region->size(std::max(region->size(), new_size));
 		}
 
 		cached_texture *result = region->find(info);
@@ -740,12 +721,7 @@ namespace gl
 	{
 		for (auto& entry : m_protected_regions)
 		{
-			if (entry.start_address > address)
-			{
-				continue;
-			}
-
-			if (address >= entry.start_address && address < entry.start_address + entry.size())
+			if (entry.contains(address))
 			{
 				return &entry;
 			}
@@ -754,23 +730,16 @@ namespace gl
 		return nullptr;
 	}
 
-	std::vector<std::list<protected_region>::iterator> texture_cache::find_regions(u32 address, u32 size)
+	std::vector<std::list<protected_region>::iterator> texture_cache::find_regions(range<u32> range)
 	{
 		std::vector<std::list<protected_region>::iterator> result;
 
 		for (auto it = m_protected_regions.begin(); it != m_protected_regions.end(); ++it)
 		{
-			if (it->start_address >= address + size)
+			if (it->overlaps(range))
 			{
-				continue;
+				result.push_back(it);
 			}
-
-			if (it->start_address + it->size() <= address)
-			{
-				continue;
-			}
-
-			result.push_back(it);
 		}
 
 		return result;

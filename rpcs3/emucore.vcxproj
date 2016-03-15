@@ -377,6 +377,7 @@
     <ClInclude Include="..\Utilities\GNU.h" />
     <ClInclude Include="..\Utilities\Log.h" />
     <ClInclude Include="..\Utilities\File.h" />
+    <ClInclude Include="..\Utilities\range.h" />
     <ClInclude Include="..\Utilities\rPlatform.h" />
     <ClInclude Include="..\Utilities\rTime.h" />
     <ClInclude Include="..\Utilities\rXml.h" />

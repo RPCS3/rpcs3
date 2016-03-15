@@ -1591,6 +1591,8 @@ s32 _cellSyncLFQueueDetachLv2EventQueue(vm::ptr<u32> spus, u32 num, vm::ptr<Cell
 	throw EXCEPTION("");
 }
 
+static const u32 cellSyncMutexTryLock_id = get_function_id("cellSyncMutexTryLock");
+
 Module<> cellSync("cellSync", []()
 {
 	// setup error handler
@@ -1624,13 +1626,17 @@ Module<> cellSync("cellSync", []()
 		// analyse error code
 		if (u32 code = (value & 0xffffff00) == 0x80410100 ? static_cast<u32>(value) : 0)
 		{
-			cellSync.error("%s() -> %s (0x%x)", func->name, get_error(code), code);
+			//CELL_SYNC_ERROR_BUSY is ok for cellSyncMutexTryLock
+			if (code != CELL_SYNC_ERROR_BUSY || func->id != cellSyncMutexTryLock_id)
+			{
+				cellSync.error("%s() -> %s (0x%x)", func->name, get_error(code), code);
+			}
 		}
 	};
 
 	REG_FUNC(cellSync, cellSyncMutexInitialize);
 	REG_FUNC(cellSync, cellSyncMutexLock);
-	REG_FUNC(cellSync, cellSyncMutexTryLock);
+	REG_FNID(cellSync, cellSyncMutexTryLock_id, cellSyncMutexTryLock);
 	REG_FUNC(cellSync, cellSyncMutexUnlock);
 
 	REG_FUNC(cellSync, cellSyncBarrierInitialize);

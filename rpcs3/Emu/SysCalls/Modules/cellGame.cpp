@@ -640,26 +640,31 @@ s32 cellGameThemeInstallFromBuffer()
 
 s32 cellDiscGameGetBootDiscInfo()
 {
+	return 0;
 	throw EXCEPTION("");
 }
 
 s32 cellDiscGameRegisterDiscChangeCallback()
 {
+	return 0;
 	throw EXCEPTION("");
 }
 
 s32 cellDiscGameUnregisterDiscChangeCallback()
 {
+	return 0;
 	throw EXCEPTION("");
 }
 
 s32 cellGameRegisterDiscChangeCallback()
 {
+	return 0;
 	throw EXCEPTION("");
 }
 
 s32 cellGameUnregisterDiscChangeCallback()
 {
+	return 0;
 	throw EXCEPTION("");
 }
 

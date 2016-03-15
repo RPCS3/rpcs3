@@ -19,6 +19,36 @@ namespace rsx
 	template<> struct vertex_data_type_from_element_type<u8> { static const vertex_base_type type = vertex_base_type::ub; };
 	template<> struct vertex_data_type_from_element_type<u16> { static const vertex_base_type type = vertex_base_type::s1; };
 
+	std::atomic<uint> operations_in_progress{ 0 };
+
+	struct scoped_operation
+	{
+		~scoped_operation()
+		{
+			--operations_in_progress;
+		}
+	};
+
+	force_inline void async_operation(std::function<void()> function)
+	{
+		++operations_in_progress;
+
+		std::thread([function = std::move(function)]()
+		{
+			scoped_operation operation;
+			function();
+		}).detach();
+	}
+
+	std::vector<std::shared_ptr<thread_ctrl>> threads_storage;
+
+	void wait_for_operations_end(thread* rsx)
+	{
+		rsx->loop([] { return operations_in_progress > 0; });
+
+		threads_storage.clear();
+	}
+
 	namespace nv406e
 	{
 		force_inline void set_reference(thread* rsx, u32 arg)
@@ -29,13 +59,7 @@ namespace rsx
 		force_inline void semaphore_acquire(thread* rsx, u32 arg)
 		{
 			//TODO: dma
-			while (vm::ps3::read32(rsx->label_addr + method_registers[NV406E_SEMAPHORE_OFFSET]) != arg)
-			{
-				if (Emu.IsStopped())
-					break;
-
-				std::this_thread::sleep_for(std::chrono::milliseconds(1));
-			}
+			rsx->loop([=] { return vm::ps3::read32(rsx->label_addr + method_registers[NV406E_SEMAPHORE_OFFSET]) != arg; });
 		}
 
 		force_inline void semaphore_release(thread* rsx, u32 arg)
@@ -55,6 +79,8 @@ namespace rsx
 
 		force_inline void back_end_write_semaphore_release(thread* rsx, u32 arg)
 		{
+			wait_for_operations_end(rsx);
+
 			//TODO: dma
 			vm::ps3::write32(rsx->label_addr + method_registers[NV4097_SET_SEMAPHORE_OFFSET],
 				(arg & 0xff00ff00) | ((arg & 0xff) << 16) | ((arg >> 16) & 0xff));
@@ -217,6 +243,8 @@ namespace rsx
 
 		force_inline void set_begin_end(thread* rsx, u32 arg)
 		{
+			wait_for_operations_end(rsx);
+
 			if (arg)
 			{
 				rsx->draw_inline_vertex_array = false;
@@ -323,7 +351,7 @@ namespace rsx
 
 	namespace nv3089
 	{
-		never_inline void image_in(thread *rsx, u32 arg)
+		force_inline void image_in(thread *rsx, u32 arg)
 		{
 			u32 operation = method_registers[NV3089_SET_OPERATION];
 
@@ -344,6 +372,14 @@ namespace rsx
 			u8 in_inter = method_registers[NV3089_IMAGE_IN_FORMAT] >> 24;
 			u32 src_color_format = method_registers[NV3089_SET_COLOR_FORMAT];
 
+			u32 context_surface = method_registers[NV3089_SET_CONTEXT_SURFACE];
+
+			const u32 src_offset = method_registers[NV3089_IMAGE_IN_OFFSET];
+			const u32 src_dma = method_registers[NV3089_SET_CONTEXT_DMA_IMAGE];
+
+			f32 scale_x = 1048576.f / method_registers[NV3089_DS_DX];
+			f32 scale_y = 1048576.f / method_registers[NV3089_DT_DY];
+
 			f32 in_x = (arg & 0xffff) / 16.f;
 			f32 in_y = (arg >> 16) / 16.f;
 
@@ -362,16 +398,13 @@ namespace rsx
 				LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown operation (%d)", operation);
 			}
 
-			const u32 src_offset = method_registers[NV3089_IMAGE_IN_OFFSET];
-			const u32 src_dma = method_registers[NV3089_SET_CONTEXT_DMA_IMAGE];
-
 			u32 dst_offset;
 			u32 dst_dma = 0;
 			u16 dst_color_format;
 			u32 out_pitch = 0;
 			u32 out_aligment = 64;
 
-			switch (method_registers[NV3089_SET_CONTEXT_SURFACE])
+			switch (context_surface)
 			{
 			case CELL_GCM_CONTEXT_SURFACE2D:
 				dst_dma = method_registers[NV3062_SET_CONTEXT_DMA_IMAGE_DESTIN];
@@ -395,12 +428,6 @@ namespace rsx
 			u32 in_bpp = src_color_format == CELL_GCM_TRANSFER_SCALE_FORMAT_R5G6B5 ? 2 : 4; // bytes per pixel
 			u32 out_bpp = dst_color_format == CELL_GCM_TRANSFER_SURFACE_FORMAT_R5G6B5 ? 2 : 4;
 
-			u32 in_offset = u32(in_x) * u32(in_bpp + in_pitch * in_y);
-			u32 out_offset = out_x * out_bpp + out_pitch * out_y;
-
-			tiled_region src_region = rsx->get_tiled_address(src_offset + in_offset, src_dma & 0xf);//get_address(src_offset, src_dma);
-			u32 dst_address = get_address(dst_offset + out_offset, dst_dma);
-
 			if (out_pitch == 0)
 			{
 				out_pitch = out_bpp * out_w;
@@ -421,10 +448,13 @@ namespace rsx
 				clip_h = out_h;
 			}
 
-			//LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: src = 0x%x, dst = 0x%x", src_address, dst_address);
+			u32 in_offset = u32(in_x * in_bpp) + u32(in_pitch * in_y);
+			u32 out_offset = out_x * out_bpp + out_pitch * out_y;
 
-			u8* pixels_src = src_region.tile ? src_region.ptr + src_region.base : src_region.ptr;
-			u8* pixels_dst = vm::ps3::_ptr<u8>(dst_address + out_offset);
+			tiled_region src_region = rsx->get_tiled_address(src_offset + in_offset, src_dma & 0xf);//get_address(src_offset, src_dma);
+			u32 dst_address = get_address(dst_offset + out_offset, dst_dma);
+
+			//LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: src = 0x%x, dst = 0x%x", src_address, dst_address);
 
 			if (dst_color_format != CELL_GCM_TRANSFER_SURFACE_FORMAT_R5G6B5 &&
 				dst_color_format != CELL_GCM_TRANSFER_SURFACE_FORMAT_A8R8G8B8)
@@ -442,13 +472,8 @@ namespace rsx
 			//	method_registers[NV3089_IMAGE_IN_SIZE], in_pitch, src_offset, double(1 << 20) / (method_registers[NV3089_DS_DX]), double(1 << 20) / (method_registers[NV3089_DT_DY]),
 			//	method_registers[NV3089_CLIP_SIZE], method_registers[NV3089_IMAGE_OUT_SIZE]);
 
-			std::unique_ptr<u8[]> temp1, temp2;
-
 			AVPixelFormat in_format = src_color_format == CELL_GCM_TRANSFER_SCALE_FORMAT_R5G6B5 ? AV_PIX_FMT_RGB565BE : AV_PIX_FMT_ARGB;
 			AVPixelFormat out_format = dst_color_format == CELL_GCM_TRANSFER_SURFACE_FORMAT_R5G6B5 ? AV_PIX_FMT_RGB565BE : AV_PIX_FMT_ARGB;
-
-			f32 scale_x = 1048576.f / method_registers[NV3089_DS_DX];
-			f32 scale_y = 1048576.f / method_registers[NV3089_DT_DY];
 
 			u32 convert_w = (u32)(scale_x * in_w);
 			u32 convert_h = (u32)(scale_y * in_h);
@@ -459,146 +484,158 @@ namespace rsx
 
 			bool need_convert = out_format != in_format || scale_x != 1.0 || scale_y != 1.0;
 
-			u32 slice_h = clip_h;
+			u8 sw_width_log2 = method_registers[NV309E_SET_FORMAT] >> 16;
+			u8 sw_height_log2 = method_registers[NV309E_SET_FORMAT] >> 24;
 
-			if (src_region.tile)
+			// 0 indicates height of 1 pixel
+			if (!sw_height_log2)
 			{
-				if (src_region.tile->comp == CELL_GCM_COMPMODE_C32_2X2)
-				{
-					slice_h *= 2;
-				}
-
-				u32 size = slice_h * in_pitch;
-
-				if (size > src_region.tile->size - src_region.base)
-				{
-					u32 diff = size - (src_region.tile->size - src_region.base);
-					slice_h -= (diff + in_pitch - 1) / in_pitch;
-				}
+				sw_height_log2 = 1;
 			}
 
-			if (method_registers[NV3089_SET_CONTEXT_SURFACE] != CELL_GCM_CONTEXT_SWIZZLE2D)
+			async_operation([=]
 			{
-				if (need_convert || need_clip)
-				{
-					if (need_clip)
-					{
-						if (need_convert)
-						{
-							convert_scale_image(temp1, out_format, convert_w, convert_h, out_pitch,
-								pixels_src, in_format, in_w, in_h, in_pitch, slice_h, in_inter ? true : false);
+				u8* pixels_src = src_region.tile ? src_region.ptr + src_region.base : src_region.ptr;
+				u8* pixels_dst = vm::ps3::_ptr<u8>(dst_address + out_offset);
 
-							clip_image(pixels_dst + out_offset, temp1.get(), clip_x, clip_y, clip_w, clip_h, out_bpp, out_pitch, out_pitch);
+				std::unique_ptr<u8[]> temp1, temp2;
+
+				u32 slice_h = clip_h;
+
+				if (src_region.tile)
+				{
+					if (src_region.tile->comp == CELL_GCM_COMPMODE_C32_2X2)
+					{
+						slice_h *= 2;
+					}
+
+					u32 size = slice_h * in_pitch;
+
+					if (size > src_region.tile->size - src_region.base)
+					{
+						u32 diff = size - (src_region.tile->size - src_region.base);
+						slice_h -= (diff + in_pitch - 1) / in_pitch;
+					}
+				}
+
+				if (context_surface != CELL_GCM_CONTEXT_SWIZZLE2D)
+				{
+					if (need_convert || need_clip)
+					{
+						if (need_clip)
+						{
+							if (need_convert)
+							{
+								convert_scale_image(temp1, out_format, convert_w, convert_h, out_pitch,
+									pixels_src, in_format, in_w, in_h, in_pitch, slice_h, in_inter ? true : false);
+
+								clip_image(pixels_dst + out_offset, temp1.get(), clip_x, clip_y, clip_w, clip_h, out_bpp, out_pitch, out_pitch);
+							}
+							else
+							{
+								clip_image(pixels_dst + out_offset, pixels_src, clip_x, clip_y, clip_w, clip_h, out_bpp, in_pitch, out_pitch);
+							}
 						}
 						else
 						{
-							clip_image(pixels_dst + out_offset, pixels_src, clip_x, clip_y, clip_w, clip_h, out_bpp, in_pitch, out_pitch);
+							convert_scale_image(pixels_dst + out_offset, out_format, out_w, out_h, out_pitch,
+								pixels_src, in_format, in_w, in_h, in_pitch, slice_h, in_inter ? true : false);
 						}
+
 					}
 					else
 					{
-						convert_scale_image(pixels_dst + out_offset, out_format, out_w, out_h, out_pitch,
-							pixels_src, in_format, in_w, in_h, in_pitch, slice_h, in_inter ? true : false);
+						if (out_pitch != in_pitch || out_pitch != out_bpp * out_w || in_pitch != in_bpp * in_w)
+						{
+							for (u32 y = 0; y < out_h; ++y)
+							{
+								u8 *dst = pixels_dst + out_pitch * y;
+								u8 *src = pixels_src + in_pitch * y;
+
+								std::memmove(dst, src, out_w * out_bpp);
+							}
+						}
+						else
+						{
+							std::memmove(pixels_dst + out_offset, pixels_src, out_pitch * out_h);
+						}
 					}
 				}
 				else
 				{
-					if (out_pitch != in_pitch || out_pitch != out_bpp * out_w || in_pitch != in_bpp * in_w)
+					if (need_convert || need_clip)
 					{
-						for (u32 y = 0; y < out_h; ++y)
+						if (need_clip)
 						{
-							u8 *dst = pixels_dst + out_pitch * y;
-							u8 *src = pixels_src + in_pitch * y;
+							if (need_convert)
+							{
+								convert_scale_image(temp1, out_format, convert_w, convert_h, out_pitch,
+									pixels_src, in_format, in_w, in_h, in_pitch, slice_h, in_inter ? true : false);
 
-							std::memmove(dst, src, out_w * out_bpp);
-						}
-					}
-					else
-					{
-						std::memmove(pixels_dst + out_offset, pixels_src, out_pitch * out_h);
-					}
-				}
-			}
-			else
-			{
-				if (need_convert || need_clip)
-				{
-					if (need_clip)
-					{
-						if (need_convert)
-						{
-							convert_scale_image(temp1, out_format, convert_w, convert_h, out_pitch,
-								pixels_src, in_format, in_w, in_h, in_pitch, slice_h, in_inter ? true : false);
-
-							clip_image(temp2, temp1.get(), clip_x, clip_y, clip_w, clip_h, out_bpp, out_pitch, out_pitch);
+								clip_image(temp2, temp1.get(), clip_x, clip_y, clip_w, clip_h, out_bpp, out_pitch, out_pitch);
+							}
+							else
+							{
+								clip_image(temp2, pixels_src, clip_x, clip_y, clip_w, clip_h, out_bpp, in_pitch, out_pitch);
+							}
 						}
 						else
 						{
-							clip_image(temp2, pixels_src, clip_x, clip_y, clip_w, clip_h, out_bpp, in_pitch, out_pitch);
+							convert_scale_image(temp2, out_format, out_w, out_h, out_pitch,
+								pixels_src, in_format, in_w, in_h, in_pitch, clip_h, in_inter ? true : false);
 						}
+
+						pixels_src = temp2.get();
 					}
-					else
+
+					// swizzle based on destination size
+					u16 sw_width = 1 << sw_width_log2;
+					u16 sw_height = 1 << sw_height_log2;
+
+					temp2.reset(new u8[out_bpp * sw_width * sw_height]);
+
+					u8* linear_pixels = pixels_src;
+					u8* swizzled_pixels = temp2.get();
+
+					std::unique_ptr<u8[]> sw_temp;
+
+					// Check and pad texture out if we are given non square texture for swizzle to be correct
+					if (sw_width != out_w || sw_height != out_h)
 					{
-						convert_scale_image(temp2, out_format, out_w, out_h, out_pitch,
-							pixels_src, in_format, in_w, in_h, in_pitch, clip_h, in_inter ? true : false);
+						sw_temp.reset(new u8[out_bpp * sw_width * sw_height]);
+
+						switch (out_bpp)
+						{
+						case 1:
+							pad_texture<u8>(linear_pixels, sw_temp.get(), out_w, out_h, sw_width, sw_height);
+							break;
+						case 2:
+							pad_texture<u16>(linear_pixels, sw_temp.get(), out_w, out_h, sw_width, sw_height);
+							break;
+						case 4:
+							pad_texture<u32>(linear_pixels, sw_temp.get(), out_w, out_h, sw_width, sw_height);
+							break;
+						}
+
+						linear_pixels = sw_temp.get();
 					}
-
-					pixels_src = temp2.get();
-				}
-
-				u8 sw_width_log2 = method_registers[NV309E_SET_FORMAT] >> 16;
-				u8 sw_height_log2 = method_registers[NV309E_SET_FORMAT] >> 24;
-
-				// 0 indicates height of 1 pixel
-				sw_height_log2 = sw_height_log2 == 0 ? 1 : sw_height_log2;
-
-				// swizzle based on destination size
-				u16 sw_width = 1 << sw_width_log2;
-				u16 sw_height = 1 << sw_height_log2;
-
-				temp2.reset(new u8[out_bpp * sw_width * sw_height]);
-
-				u8* linear_pixels = pixels_src;
-				u8* swizzled_pixels = temp2.get();
-
-				std::unique_ptr<u8[]> sw_temp;
-
-				// Check and pad texture out if we are given non square texture for swizzle to be correct
-				if (sw_width != out_w || sw_height != out_h)
-				{
-					sw_temp.reset(new u8[out_bpp * sw_width * sw_height]);
 
 					switch (out_bpp)
 					{
 					case 1:
-						pad_texture<u8>(linear_pixels, sw_temp.get(), out_w, out_h, sw_width, sw_height);
+						convert_linear_swizzle<u8>(linear_pixels, swizzled_pixels, sw_width, sw_height, false);
 						break;
 					case 2:
-						pad_texture<u16>(linear_pixels, sw_temp.get(), out_w, out_h, sw_width, sw_height);
+						convert_linear_swizzle<u16>(linear_pixels, swizzled_pixels, sw_width, sw_height, false);
 						break;
 					case 4:
-						pad_texture<u32>(linear_pixels, sw_temp.get(), out_w, out_h, sw_width, sw_height);
+						convert_linear_swizzle<u32>(linear_pixels, swizzled_pixels, sw_width, sw_height, false);
 						break;
 					}
 
-					linear_pixels = sw_temp.get();
+					std::memcpy(pixels_dst, swizzled_pixels, out_bpp * sw_width * sw_height);
 				}
-
-				switch (out_bpp)
-				{
-				case 1:
-					convert_linear_swizzle<u8>(linear_pixels, swizzled_pixels, sw_width, sw_height, false);
-					break;
-				case 2:
-					convert_linear_swizzle<u16>(linear_pixels, swizzled_pixels, sw_width, sw_height, false);
-					break;
-				case 4:
-					convert_linear_swizzle<u32>(linear_pixels, swizzled_pixels, sw_width, sw_height, false);
-					break;
-				}
-
-				std::memcpy(pixels_dst, swizzled_pixels, out_bpp * sw_width * sw_height);
-			}
+			});
 		}
 	}
 
@@ -630,22 +667,32 @@ namespace rsx
 				out_pitch = line_length;
 			}
 
-			u8 *dst = (u8*)vm::base(get_address(method_registers[NV0039_OFFSET_OUT], method_registers[NV0039_SET_CONTEXT_DMA_BUFFER_OUT]));
-			const u8 *src = (u8*)vm::base(get_address(method_registers[NV0039_OFFSET_IN], method_registers[NV0039_SET_CONTEXT_DMA_BUFFER_IN]));
 
-			if (in_pitch == out_pitch && out_pitch == line_length)
+			u32 src_offset = method_registers[NV0039_OFFSET_IN];
+			u32 src_dma = method_registers[NV0039_SET_CONTEXT_DMA_BUFFER_IN];
+
+			u32 dst_offset = method_registers[NV0039_OFFSET_OUT];
+			u32 dst_dma = method_registers[NV0039_SET_CONTEXT_DMA_BUFFER_OUT];
+
+			async_operation([=]
 			{
-				std::memcpy(dst, src, line_length * line_count);
-			}
-			else
-			{
-				for (u32 i = 0; i < line_count; ++i)
+				u8 *dst = (u8*)vm::base(get_address(dst_offset, dst_dma));
+				const u8 *src = (u8*)vm::base(get_address(src_offset, src_dma));
+
+				if (in_pitch == out_pitch && out_pitch == line_length)
 				{
-					std::memcpy(dst, src, line_length);
-					dst += out_pitch;
-					src += in_pitch;
+					std::memcpy(dst, src, line_length * line_count);
 				}
-			}
+				else
+				{
+					for (u32 i = 0; i < line_count; ++i)
+					{
+						std::memcpy(dst, src, line_length);
+						dst += out_pitch;
+						src += in_pitch;
+					}
+				}
+			});
 		}
 	}
 

@@ -561,8 +561,7 @@ void GLGSRender::end()
 			m_program->uniforms.texture(location, index + rsx::limits::textures_count, texture);
 		}
 	}
-
-	if (draw_command == rsx::draw_command::array)
+	else if (draw_command == rsx::draw_command::array)
 	{
 		for (const auto &first_count : first_count_commands)
 		{
@@ -1232,7 +1231,7 @@ bool nv3089_image_in(u32 arg, GLGSRender* renderer)
 		tmp.create(src_info.target);
 
 		__glcheck scale_texture(tmp, src_info.format.internal_format, { (int)convert_w, (int)convert_h },
-			src_texture.view(), { (int)src_x + int(in_x), (int)src_y + int(in_y) }, { int(src_x + in_w), int(src_y + in_h) });
+			src_texture.view(), { (int)src_x + int(in_x) * 0, (int)src_y + int(in_y)*0 }, { int(src_x + in_w), int(src_y + in_h) });
 
 		src_id = tmp.id();
 

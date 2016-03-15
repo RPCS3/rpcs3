@@ -353,23 +353,15 @@ namespace rsx
 			}
 		});
 
-		// TODO: exit condition
-		while (true)
+		loop([this]
 		{
-			CHECK_EMU_STATUS;
-
 			be_t<u32> get = ctrl->get;
 			be_t<u32> put = ctrl->put;
 
 			if (put == get || !Emu.IsRunning())
 			{
 				do_internal_task();
-				continue;
-			}
-
-			if (m_internal_task_waiters.load(std::memory_order_relaxed))
-			{
-				do_internal_task();
+				return;
 			}
 
 			const u32 cmd = ReadIO32(get);
@@ -380,7 +372,7 @@ namespace rsx
 				u32 offs = cmd & 0x1fffffff;
 				//LOG_WARNING(RSX, "rsx jump(0x%x) #addr=0x%x, cmd=0x%x, get=0x%x, put=0x%x", offs, m_ioAddress + get, cmd, get, put);
 				ctrl->get = offs;
-				continue;
+				return;
 			}
 			if (cmd & CELL_GCM_METHOD_FLAG_CALL)
 			{
@@ -388,7 +380,7 @@ namespace rsx
 				u32 offs = cmd & ~3;
 				//LOG_WARNING(RSX, "rsx call(0x%x) #0x%x - 0x%x", offs, cmd, get);
 				ctrl->get = offs;
-				continue;
+				return;
 			}
 			if (cmd == CELL_GCM_METHOD_FLAG_RETURN)
 			{
@@ -396,13 +388,13 @@ namespace rsx
 				m_call_stack.pop();
 				//LOG_WARNING(RSX, "rsx return(0x%x)", get);
 				ctrl->get = get;
-				continue;
+				return;
 			}
 
 			if (cmd == 0) //nop
 			{
 				ctrl->get = get + 4;
-				continue;
+				return;
 			}
 
 			auto args = vm::ptr<u32>::make((u32)RSXIOMem.RealAddr(get + 4));
@@ -433,7 +425,7 @@ namespace rsx
 			}
 
 			ctrl->get = get + (count + 1) * 4;
-		}
+		});
 	}
 
 	std::string thread::get_name() const
@@ -548,7 +540,7 @@ namespace rsx
 
 	void thread::invoke(std::function<void()> callback)
 	{
-		if (get_thread_ctrl() == thread_ctrl::get_current())
+		if (is_current())
 		{
 			callback();
 		}

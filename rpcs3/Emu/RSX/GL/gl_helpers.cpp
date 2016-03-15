@@ -2,7 +2,11 @@
 #include "gl_helpers.h"
 
 #ifdef _WIN32
+#pragma warning(push)
+#pragma warning(disable: 4091)
 #include <DbgHelp.h>
+#pragma warning(pop)
+
 #pragma comment(lib, "Dbghelp.lib")
 #endif
 

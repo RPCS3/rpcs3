@@ -7,6 +7,7 @@
 #include "Emu/Cell/RawSPUThread.h"
 #include "Emu/SysCalls/SysCalls.h"
 #include "Thread.h"
+#include "range.h"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -902,7 +903,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 		{
 			LOG_ERROR(MEMORY, "Invalid or unsupported instruction (op=%d, reg=%d, d_size=%lld, a_size=0x%llx, i_size=%lld)", op, reg, d_size, a_size, i_size);
 			report_opcode();
-			return false;
+			return true;
 		}
 
 		switch (op)
@@ -914,7 +915,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 				if (reg - X64R_XMM0 >= 16)
 				{
 					LOG_ERROR(MEMORY, "X64OP_STORE: d_size=16, reg=%d", reg);
-					return false;
+					return true;
 				}
 
 				std::memcpy(vm::base_priv(addr), XMMREG(context, reg - X64R_XMM0), 16);
@@ -924,7 +925,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 			u64 reg_value;
 			if (!get_x64_reg_value(context, reg, d_size, i_size, reg_value))
 			{
-				return false;
+				return true;
 			}
 
 			std::memcpy(vm::base_priv(addr), &reg_value, d_size);
@@ -935,13 +936,13 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 			if (d_size > 8)
 			{
 				LOG_ERROR(MEMORY, "X64OP_MOVS: d_size=%lld", d_size);
-				return false;
+				return true;
 			}
 
 			if (vm::base(addr) != (void*)RDI(context))
 			{
 				LOG_ERROR(MEMORY, "X64OP_MOVS: rdi=0x%llx, rsi=0x%llx, addr=0x%x", (u64)RDI(context), (u64)RSI(context), addr);
-				return false;
+				return true;
 			}
 
 			u32 a_addr = addr;
@@ -958,7 +959,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 				if (EFLAGS(context) & 0x400 /* direction flag */)
 				{
 					LOG_ERROR(MEMORY, "X64OP_MOVS TODO: reversed direction");
-					return false;
+					return true;
 					//RSI(context) -= d_size;
 					//RDI(context) -= d_size;
 					//a_addr -= (u32)d_size;
@@ -990,19 +991,19 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 			if (d_size > 8)
 			{
 				LOG_ERROR(MEMORY, "X64OP_STOS: d_size=%lld", d_size);
-				return false;
+				return true;
 			}
 
 			if (vm::base(addr) != (void*)RDI(context))
 			{
 				LOG_ERROR(MEMORY, "X64OP_STOS: rdi=0x%llx, addr=0x%x", (u64)RDI(context), addr);
-				return false;
+				return true;
 			}
 
 			u64 value;
 			if (!get_x64_reg_value(context, X64R_RAX, d_size, i_size, value))
 			{
-				return false;
+				return true;
 			}
 
 			u32 a_addr = addr;
@@ -1016,7 +1017,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 				if (EFLAGS(context) & 0x400 /* direction flag */)
 				{
 					LOG_ERROR(MEMORY, "X64OP_STOS TODO: reversed direction");
-					return false;
+					return true;
 					//RDI(context) -= d_size;
 					//a_addr -= (u32)d_size;
 				}
@@ -1046,7 +1047,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 			u64 reg_value;
 			if (!get_x64_reg_value(context, reg, d_size, i_size, reg_value))
 			{
-				return false;
+				return true;
 			}
 
 			switch (d_size)
@@ -1055,12 +1056,12 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 			case 2: reg_value = sync_lock_test_and_set((u16*)vm::base_priv(addr), (u16)reg_value); break;
 			case 4: reg_value = sync_lock_test_and_set((u32*)vm::base_priv(addr), (u32)reg_value); break;
 			case 8: reg_value = sync_lock_test_and_set((u64*)vm::base_priv(addr), (u64)reg_value); break;
-			default: return false;
+			default: return true;
 			}
 
 			if (!put_x64_reg_value(context, reg, d_size, reg_value))
 			{
-				return false;
+				return true;
 			}
 			break;
 		}
@@ -1069,7 +1070,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 			u64 reg_value, old_value, cmp_value;
 			if (!get_x64_reg_value(context, reg, d_size, i_size, reg_value) || !get_x64_reg_value(context, X64R_RAX, d_size, i_size, cmp_value))
 			{
-				return false;
+				return true;
 			}
 
 			switch (d_size)
@@ -1078,7 +1079,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 			case 2: old_value = sync_val_compare_and_swap((u16*)vm::base_priv(addr), (u16)cmp_value, (u16)reg_value); break;
 			case 4: old_value = sync_val_compare_and_swap((u32*)vm::base_priv(addr), (u32)cmp_value, (u32)reg_value); break;
 			case 8: old_value = sync_val_compare_and_swap((u64*)vm::base_priv(addr), (u64)cmp_value, (u64)reg_value); break;
-			default: return false;
+			default: return true;
 			}
 
 			if (!put_x64_reg_value(context, X64R_RAX, d_size, old_value) || !set_x64_cmp_flags(context, d_size, cmp_value, old_value))
@@ -1092,7 +1093,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 			u64 value;
 			if (!get_x64_reg_value(context, reg, d_size, i_size, value))
 			{
-				return false;
+				return true;
 			}
 
 			switch (d_size)
@@ -1101,12 +1102,12 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 			case 2: value &= sync_fetch_and_and((u16*)vm::base_priv(addr), (u16)value); break;
 			case 4: value &= sync_fetch_and_and((u32*)vm::base_priv(addr), (u32)value); break;
 			case 8: value &= sync_fetch_and_and((u64*)vm::base_priv(addr), (u64)value); break;
-			default: return false;
+			default: return true;
 			}
 
 			if (!set_x64_cmp_flags(context, d_size, value, 0))
 			{
-				return false;
+				return true;
 			}
 			break;
 		}
@@ -1114,7 +1115,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 		{
 			LOG_ERROR(MEMORY, "Invalid or unsupported operation (op=%d, reg=%d, d_size=%lld, a_size=0x%llx, i_size=%lld)", op, reg, d_size, a_size, i_size);
 			report_opcode();
-			return false;
+			return true;
 		}
 		}
 
@@ -1148,17 +1149,30 @@ void prepare_throw_access_violation(x64_context* context, const char* cause, u32
 
 static LONG exception_handler(PEXCEPTION_POINTERS pExp)
 {
-	const u64 addr64 = pExp->ExceptionRecord->ExceptionInformation[1] - (u64)vm::base(0);
-	const bool is_writing = pExp->ExceptionRecord->ExceptionInformation[0] != 0;
+	if (pExp->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION)
+	{
+		const range<u64> vm_range = range<u64>((u64)vm::base(0)).size(1ull << 32);
+		const u64 address = pExp->ExceptionRecord->ExceptionInformation[1];
 
-	if (pExp->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION && addr64 < 0x100000000ull && thread_ctrl::get_current() && handle_access_violation((u32)addr64, is_writing, pExp->ContextRecord))
+		if (vm_range.contains(address))
+		{
+			u32 vaddress = u32(address - vm_range.begin());
+
+			const bool is_writing = pExp->ExceptionRecord->ExceptionInformation[0] != 0;
+
+			if (handle_access_violation(vaddress, is_writing, pExp->ContextRecord))
+			{
+				return EXCEPTION_CONTINUE_EXECUTION;
+			}
+		}
+	}
+
+	if (pExp->ExceptionRecord->ExceptionCode == EXCEPTION_NONCONTINUABLE_EXCEPTION)
 	{
 		return EXCEPTION_CONTINUE_EXECUTION;
 	}
-	else
-	{
-		return EXCEPTION_CONTINUE_SEARCH;
-	}
+	
+	return EXCEPTION_CONTINUE_SEARCH;
 }
 
 static LONG exception_filter(PEXCEPTION_POINTERS pExp)
@@ -1245,18 +1259,20 @@ static void signal_handler(int sig, siginfo_t* info, void* uct)
 	const bool is_writing = context->uc_mcontext.gregs[REG_ERR] & 0x2;
 #endif
 
-	const u64 addr64 = (u64)info->si_addr - (u64)vm::base(0);
+	const range<u64> vm_range = range<u64>((u64)vm::base(0)).size(1ull << 32);
+	const u64 address = (u64)info->si_addr;
+
 	const auto cause = is_writing ? "writing" : "reading";
 
-	// TODO: Exception specific informative messages
-
-	if (addr64 < 0x100000000ull && thread_ctrl::get_current())
+	if (vm_range.contains(address))
 	{
+		u32 vaddress = u32(address - vm_range.begin());
+
 		// Try to process access violation
-		if (!handle_access_violation((u32)addr64, is_writing, context))
+		if (!handle_access_violation(vaddress, is_writing, context))
 		{
 			// Setup throw_access_violation() call on the context
-			prepare_throw_access_violation(context, cause, (u32)addr64);
+			prepare_throw_access_violation(context, cause, vaddress);
 		}
 	}
 	else

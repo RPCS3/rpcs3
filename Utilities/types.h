@@ -24,11 +24,11 @@ using s32 = std::int32_t;
 using s64 = std::int64_t;
 
 #define DECLARE_ENUM_CLASS_BITWISE_OPERATORS(type) \
-	inline type operator |(type lhs, type rhs) \
+	inline constexpr type operator |(type lhs, type rhs) \
 	{ \
 		return type(std::underlying_type_t<type>(lhs) | std::underlying_type_t<type>(rhs)); \
 	} \
-	inline type operator &(type lhs, type rhs) \
+	inline constexpr type operator &(type lhs, type rhs) \
 	{ \
 		return type(std::underlying_type_t<type>(lhs) & std::underlying_type_t<type>(rhs)); \
 	} \
@@ -40,7 +40,7 @@ using s64 = std::int64_t;
 	{ \
 		return lhs = lhs & rhs; \
 	} \
-	inline type operator ~(type lhs) \
+	inline constexpr type operator ~(type lhs) \
 	{ \
 		return type(~std::underlying_type_t<type>(lhs)); \
 	} \

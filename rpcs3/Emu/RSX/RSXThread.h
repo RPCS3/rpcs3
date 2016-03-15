@@ -10,6 +10,7 @@
 #include "Utilities/Thread.h"
 #include "Utilities/Timer.h"
 #include "Utilities/convert.h"
+#include "Emu/System.h"
 
 extern u64 get_system_time();
 
@@ -412,5 +413,39 @@ namespace rsx
 
 		u32 ReadIO32(u32 addr);
 		void WriteIO32(u32 addr, u32 value);
+
+		template<typename Type>
+		force_inline auto loop(Type function) -> std::enable_if_t<!std::is_same<decltype(function()), void>::value, void>
+		{
+			while (function())
+			{
+				CHECK_EMU_STATUS;
+
+				if (m_internal_task_waiters.load(std::memory_order_relaxed))
+				{
+					do_internal_task();
+				}
+				else
+				{
+					std::this_thread::sleep_for(1ms);
+				}
+			}
+		}
+
+		template<typename Type>
+		force_inline auto loop(Type function) -> std::enable_if_t<std::is_same<decltype(function()), void>::value, void>
+		{
+			while (true)
+			{
+				CHECK_EMU_STATUS;
+
+				if (m_internal_task_waiters.load(std::memory_order_relaxed))
+				{
+					do_internal_task();
+				}
+
+				function();
+			}
+		}
 	};
 }
