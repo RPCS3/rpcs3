@@ -368,13 +368,10 @@ namespace vk
 
 		void create(vk::render_device &device, VkFormat format, VkImageType image_type, VkImageViewType view_type, VkImageCreateFlags image_flags, VkImageUsageFlags usage, VkImageTiling tiling, u32 width, u32 height, u32 mipmaps, bool gpu_only, VkComponentMapping swizzle);
 		void create(vk::render_device &device, VkFormat format, VkImageUsageFlags usage, VkImageTiling tiling, u32 width, u32 height, u32 mipmaps, bool gpu_only, VkComponentMapping swizzle);
-		void create(vk::render_device &device, VkFormat format, VkImageUsageFlags usage, u32 width, u32 height, u32 mipmaps, bool gpu_only, VkComponentMapping swizzle);
-		void create(vk::render_device &device, VkFormat format, VkImageUsageFlags usage, u32 width, u32 height, u32 mipmaps, bool gpu_only);
-		void create(vk::render_device &device, VkFormat format, VkImageUsageFlags usage, u32 width, u32 height);
+		void create(vk::render_device &device, VkFormat format, VkImageUsageFlags usage, u32 width, u32 height, u32 mipmaps = 1, bool gpu_only = false, VkComponentMapping swizzle = default_component_map());
 		void destroy();
 
-		void init(rsx::texture &tex, vk::command_buffer &cmd, bool ignore_checks);
-		void init(rsx::texture &tex, vk::command_buffer &cmd);
+		void init(rsx::texture &tex, vk::command_buffer &cmd, bool ignore_checks = false);
 		void flush(vk::command_buffer & cmd);
 
 		//Fill with debug color 0xFF
