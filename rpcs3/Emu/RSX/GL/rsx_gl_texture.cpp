@@ -186,6 +186,8 @@ void rsx::gl_texture::bind(gl::texture_cache& cache, rsx::texture& tex)
 		info.lod_bias = tex.bias();
 	}
 
+	gl::texture_flags flags = gl::texture_flags::none;
+
 	if (is_compressed)
 	{
 		info.format.type = gl::texture::type::ubyte;
@@ -226,15 +228,18 @@ void rsx::gl_texture::bind(gl::texture_cache& cache, rsx::texture& tex)
 			throw EXCEPTION("unimplemented texture format 0x%x", format);
 		}
 
+		info.swizzled = info.swizzled && (found->second.flags & gl::texture_flags::allow_swizzle) != gl::texture_flags::none;
 		info.format = found->second;
 		info.pitch = std::max(info.width * info.format.bpp, tex.pitch());
+		flags = found->second.flags;
+		info.format.flags &= gl::texture_flags::allow_swizzle;
 
 		remap = info.format.remap.data();
 	}
 
 	__glcheck cache.entry(info, gl::cache_buffers::local).bind(tex.index());
 
-	if ((info.format.flags & gl::texture_flags::allow_remap) != gl::texture_flags::none)
+	if ((flags & gl::texture_flags::allow_remap) != gl::texture_flags::none)
 	{
 		u8 remap_a = tex.remap() & 0x3;
 		u8 remap_r = (tex.remap() >> 2) & 0x3;

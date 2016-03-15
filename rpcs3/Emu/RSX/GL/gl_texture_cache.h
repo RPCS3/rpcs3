@@ -70,6 +70,8 @@ namespace gl
 		bool swizzled;
 		float lod_bias;
 		u32 start_address;
+		u32 log2_width;
+		u32 log2_height;
 
 		u32 size() const
 		{
@@ -126,7 +128,7 @@ namespace gl
 	{
 	private:
 		std::unordered_map<texture_info, cached_texture, fnv_1a_hasher, bitwise_equals> m_textures;
-		u32 m_current_protection = 0;
+		u8 m_current_protection = 0;
 
 	public:
 		cache_access requires_protection() const;

@@ -333,19 +333,59 @@ namespace gl
 		}
 		else
 		{
-			if (info.swizzled && (info.format.flags & texture_flags::allow_swizzle) != texture_flags::none)
-			{
-				//TODO
-				LOG_ERROR(RSX, "writing swizzled texture[0x%x] to host buffer", info.start_address);
-			}
-
 			gl::pixel_pack_settings{}
 				.row_length(info.pitch / info.format.bpp)
 				.aligment(1)
 				.swap_bytes((info.format.flags & gl::texture_flags::swap_bytes) != gl::texture_flags::none)
 				.apply();
 
-			__glcheck glGetTexImage((GLenum)info.target, 0, (GLenum)info.format.format, (GLenum)info.format.type, vm::base_priv(info.start_address));
+			if (info.swizzled && (info.format.flags & texture_flags::allow_swizzle) != texture_flags::none)
+			{
+				std::unique_ptr<u8[]> linear_pixels(new u8[info.size()]);
+
+				__glcheck glGetTexImage((GLenum)info.target, 0, (GLenum)info.format.format, (GLenum)info.format.type, linear_pixels.get());
+
+				u16 sw_width = 1 << info.log2_width;
+				u16 sw_height = 1 << info.log2_height;
+
+				// Check and pad texture out if we are given non square texture for swizzle to be correct
+				if (sw_width != info.width || sw_height != info.height)
+				{
+					std::unique_ptr<u8[]> sw_temp(new u8[info.format.bpp * sw_width * sw_height]);
+
+					switch (info.format.bpp)
+					{
+					case 1:
+						rsx::pad_texture<u8>(linear_pixels.get(), sw_temp.get(), info.width, info.height, sw_width, sw_height);
+						break;
+					case 2:
+						rsx::pad_texture<u16>(linear_pixels.get(), sw_temp.get(), info.width, info.height, sw_width, sw_height);
+						break;
+					case 4:
+						rsx::pad_texture<u32>(linear_pixels.get(), sw_temp.get(), info.width, info.height, sw_width, sw_height);
+						break;
+					}
+
+					linear_pixels = std::move(sw_temp);
+				}
+
+				switch (info.format.bpp)
+				{
+				case 1:
+					rsx::convert_linear_swizzle<u8>(linear_pixels.get(), vm::base_priv(info.start_address), sw_width, sw_height, false);
+					break;
+				case 2:
+					rsx::convert_linear_swizzle<u16>(linear_pixels.get(), vm::base_priv(info.start_address), sw_width, sw_height, false);
+					break;
+				case 4:
+					rsx::convert_linear_swizzle<u32>(linear_pixels.get(), vm::base_priv(info.start_address), sw_width, sw_height, false);
+					break;
+				}
+			}
+			else
+			{
+				__glcheck glGetTexImage((GLenum)info.target, 0, (GLenum)info.format.format, (GLenum)info.format.type, vm::base_priv(info.start_address));
+			}
 		}
 
 		ignore(gl::cache_buffers::all);
@@ -590,20 +630,93 @@ namespace gl
 		//TODO
 	}
 
+	void set_page_protection(range<u32> range, u8 protect)
+	{
+		vm::page_protect(range.begin(), range.size(), 0, ~protect & (vm::page_readable | vm::page_writable), protect);
+	}
+
 	void protected_region::combine(protected_region& region)
 	{
-		region.unprotect();
-		unprotect();
+		cache_access new_protection = region.requires_protection();
 
 		for (auto &texture : region.m_textures)
 		{
 			texture.second.parent(this);
+
 			if (!m_textures.emplace(texture).second)
 			{
 				throw EXCEPTION("");
 			}
+
+			new_protection |= texture.second.requires_protection();
 		}
 
+		u8 new_protection_flags = 0;
+
+		if ((new_protection & cache_access::read) != cache_access::none)
+		{
+			new_protection_flags |= vm::page_readable;
+		}
+
+		if ((new_protection & cache_access::write) != cache_access::none)
+		{
+			new_protection_flags |= vm::page_writable;
+		}
+
+		if (m_current_protection != new_protection_flags && region.m_current_protection != new_protection_flags)
+		{
+			if (begin() < region.begin())
+			{
+				set_page_protection({ begin(), region.end() }, new_protection_flags);
+			}
+			else
+			{
+				set_page_protection({ region.begin(), end() }, new_protection_flags);
+			}
+		}
+		else if (m_current_protection != new_protection_flags)
+		{
+			if (begin() < region.begin())
+			{
+				set_page_protection({ begin(), region.begin() }, new_protection_flags);
+			}
+			else
+			{
+				set_page_protection({ region.end(), end() }, new_protection_flags);
+			}
+		}
+		else if (region.m_current_protection != new_protection_flags)
+		{
+			if (begin() < region.begin())
+			{
+				set_page_protection({ end(), region.end() }, new_protection_flags);
+			}
+			else
+			{
+				set_page_protection({ region.begin(), begin() }, new_protection_flags);
+			}
+		}
+		else
+		{
+			if (begin() < region.begin())
+			{
+				if (u32 diff = region.begin() - end())
+				{
+					set_page_protection({ end(), end() + diff }, new_protection_flags);
+				}
+			}
+			else
+			{
+				if (u32 diff = begin() - region.end())
+				{
+					set_page_protection({ region.end(), region.end() + diff }, new_protection_flags);
+				}
+
+				set_page_protection({ region.begin(), begin() }, new_protection_flags);
+			}
+		}
+
+		m_current_protection = new_protection_flags;
 		extend(region);
 	}
 
@@ -667,7 +780,7 @@ namespace gl
 			if (!aligned_size)
 			{
 				aligned_range.begin(info.start_address & ~(vm::page_size - 1));
-				aligned_range.size(align(info.size() + info.start_address - aligned_range.begin(), vm::page_size));
+				aligned_range.size(align(info.start_address - aligned_range.begin() + info.size(), vm::page_size));
 			}
 			else
 			{

@@ -1059,7 +1059,6 @@ bool nv3089_image_in(u32 arg, GLGSRender* renderer)
 		return false;
 	}
 
-
 	u32 in_bpp = src_color_format == CELL_GCM_TRANSFER_SCALE_FORMAT_R5G6B5 ? 2 : 4; // bytes per pixel
 	u32 out_bpp = dst_color_format == CELL_GCM_TRANSFER_SURFACE_FORMAT_R5G6B5 ? 2 : 4;
 
@@ -1203,6 +1202,15 @@ bool nv3089_image_in(u32 arg, GLGSRender* renderer)
 	}
 
 	dst_info.swizzled = context_surface == CELL_GCM_CONTEXT_SWIZZLE2D;
+
+	if (dst_info.swizzled)
+	{
+		u8 sw_width_log2 = rsx::method_registers[NV309E_SET_FORMAT] >> 16;
+		u8 sw_height_log2 = rsx::method_registers[NV309E_SET_FORMAT] >> 24;
+
+		dst_info.log2_width = sw_width_log2 ? sw_width_log2 : 1;
+		dst_info.log2_height = sw_height_log2 ? sw_height_log2 : 1;
+	}
 
 	switch (dst_color_format)
 	{
@@ -1443,6 +1451,7 @@ gl::texture_info surface_info(rsx::thread &rsx, rsx::surface_color_format format
 {
 	gl::texture_info info{};
 	info.format = gl::get_texture_format(surface_format_to_texture_format(format));
+	info.format.flags &= gl::texture_flags::allow_swizzle;
 
 	rsx::tiled_region region = rsx.get_tiled_address(offset, location);
 
@@ -1510,24 +1519,29 @@ void GLGSRender::init_buffers(bool skip_reading)
 	m_surface.width = clip_width * m_surface.width_mult + clip_x;
 	m_surface.height = clip_height * m_surface.height_mult + clip_y;
 
+	bool swizzled_surface = m_surface.type == CELL_GCM_SURFACE_SWIZZLE;
+
 	rsx::for_each_active_color_surface([&](int index)
 	{
 		u32 offset = rsx::method_registers[mr_color_offset[index]];
 		u32 location = rsx::method_registers[mr_color_dma[index]];
 		u32 pitch = rsx::method_registers[mr_color_pitch[index]];
-		bool swizzled = m_surface.type == CELL_GCM_SURFACE_SWIZZLE;
 
 		gl::texture_info info = surface_info(*this, m_surface.color_format, offset, location, m_surface.width, m_surface.height, pitch);
 
-		info.swizzled = swizzled;
+		info.swizzled = swizzled_surface;
+
+		if (swizzled_surface)
+		{
+			info.log2_width = m_surface.log2width;
+			info.log2_height = m_surface.log2height;
+		}
 
 		cached_color_buffers[index] = &texture_cache.entry(info, skip_reading ? gl::cache_buffers::none : gl::cache_buffers::local);
 		draw_fbo.color[index] = cached_color_buffers[index]->view();
 	});
 
 	{
-		u32 offset = rsx::method_registers[NV4097_SET_SURFACE_ZETA_OFFSET];
-		u32 location = rsx::method_registers[NV4097_SET_CONTEXT_DMA_ZETA];
 		u32 pitch = rsx::method_registers[NV4097_SET_SURFACE_PITCH_Z] & ~63;
 
 		int bpp;
@@ -1542,13 +1556,16 @@ void GLGSRender::init_buffers(bool skip_reading)
 			break;
 		}
 
-		if (pitch && pitch < bpp * m_surface.width)
+		if (swizzled_surface || (pitch && pitch < bpp * m_surface.width))
 		{
 			__glcheck draw_fbo.depth_stencil = null_texture;
 			cached_depth_buffer = nullptr;
 		}
 		else
 		{
+			u32 offset = rsx::method_registers[NV4097_SET_SURFACE_ZETA_OFFSET];
+			u32 location = rsx::method_registers[NV4097_SET_CONTEXT_DMA_ZETA];
+
 			if (!pitch)
 			{
 				pitch = m_surface.width * bpp;

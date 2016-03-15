@@ -57,10 +57,11 @@ public:
 		m_end = m_begin + value;
 		return *this;
 	}
+
 	void extend(const range& other)
 	{
 		m_begin = std::min(m_begin, other.m_begin);
-		m_end = std::min(m_end, other.m_end);
+		m_end = std::max(m_end, other.m_end);
 	}
 
 	constexpr bool valid() const

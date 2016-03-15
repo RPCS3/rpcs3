@@ -29,15 +29,22 @@ namespace rsx
 		}
 	};
 
-	force_inline void async_operation(std::function<void()> function)
+	force_inline void async_operation(bool call_async, std::function<void()> function)
 	{
-		++operations_in_progress;
-
-		std::thread([function = std::move(function)]()
+		if (call_async)
 		{
-			scoped_operation operation;
+			++operations_in_progress;
+
+			std::thread([function = std::move(function)]()
+			{
+				scoped_operation operation;
+				function();
+			}).detach();
+		}
+		else
+		{
 			function();
-		}).detach();
+		}
 	}
 
 	std::vector<std::shared_ptr<thread_ctrl>> threads_storage;
@@ -493,7 +500,7 @@ namespace rsx
 				sw_height_log2 = 1;
 			}
 
-			async_operation([=]
+			async_operation(need_clip || need_convert || (in_w + in_h) > 128, [=]
 			{
 				u8* pixels_src = src_region.tile ? src_region.ptr + src_region.base : src_region.ptr;
 				u8* pixels_dst = vm::ps3::_ptr<u8>(dst_address + out_offset);
@@ -592,10 +599,8 @@ namespace rsx
 					u16 sw_width = 1 << sw_width_log2;
 					u16 sw_height = 1 << sw_height_log2;
 
-					temp2.reset(new u8[out_bpp * sw_width * sw_height]);
-
 					u8* linear_pixels = pixels_src;
-					u8* swizzled_pixels = temp2.get();
+					u8* swizzled_pixels = pixels_dst;
 
 					std::unique_ptr<u8[]> sw_temp;
 
@@ -632,8 +637,6 @@ namespace rsx
 						convert_linear_swizzle<u32>(linear_pixels, swizzled_pixels, sw_width, sw_height, false);
 						break;
 					}
-
-					std::memcpy(pixels_dst, swizzled_pixels, out_bpp * sw_width * sw_height);
 				}
 			});
 		}
@@ -674,7 +677,7 @@ namespace rsx
 			u32 dst_offset = method_registers[NV0039_OFFSET_OUT];
 			u32 dst_dma = method_registers[NV0039_SET_CONTEXT_DMA_BUFFER_OUT];
 
-			async_operation([=]
+			async_operation(line_count * line_length > 64, [=]
 			{
 				u8 *dst = (u8*)vm::base(get_address(dst_offset, dst_dma));
 				const u8 *src = (u8*)vm::base(get_address(src_offset, src_dma));
