@@ -520,6 +520,7 @@ namespace vk
 					{
 						buffer.buffer = input.as_buffer.buffer;
 						buffer.range = input.as_buffer.size;
+						buffer.offset = input.as_buffer.offset;
 					}
 					else
 						LOG_ERROR(RSX, "UBO was not bound: %s", input.name);
@@ -717,7 +718,32 @@ namespace vk
 			return false;
 		}
 
-		bool program::bind_uniform(program_domain domain, std::string uniform_name, vk::buffer &_buffer)
+		bool program::bind_uniform(program_domain domain, std::string uniform_name, VkBuffer _buffer, VkDeviceSize offset, VkDeviceSize size)
+		{
+			for (auto &uniform : uniforms)
+			{
+				if (uniform.name == uniform_name &&
+					uniform.domain == domain)
+				{
+					if (uniform.as_buffer.buffer != _buffer ||
+						uniform.as_buffer.size != size ||
+						uniform.as_buffer.offset != offset)
+					{
+						uniform.as_buffer.size = size;
+						uniform.as_buffer.buffer = _buffer;
+						uniform.as_buffer.buffer_view = nullptr; //UBOs cannot be viewed!
+						uniform.as_buffer.offset = offset;
+
+						uniforms_changed = true;
+					}
+
+					uniform.type = input_type_uniform_buffer;
+					return true;
+				}
+			}
+		}
+
+		bool program::bind_uniform(program_domain domain, std::string uniform_name, vk::buffer_deprecated &_buffer)
 		{
 			for (auto &uniform : uniforms)
 			{
@@ -728,11 +754,13 @@ namespace vk
 					u64 size = _buffer.size();
 
 					if (uniform.as_buffer.buffer != buf ||
-						uniform.as_buffer.size != size)
+						uniform.as_buffer.size != size ||
+						uniform.as_buffer.offset != 0)
 					{
 						uniform.as_buffer.size = size;
 						uniform.as_buffer.buffer = buf;
 						uniform.as_buffer.buffer_view = nullptr;	//UBOs cannot be viewed!
+						uniform.as_buffer.offset = 0;
 
 						uniforms_changed = true;
 					}
@@ -746,7 +774,7 @@ namespace vk
 			return false;
 		}
 
-		bool program::bind_uniform(program_domain domain, std::string uniform_name, vk::buffer &_buffer, bool is_texel_store)
+		bool program::bind_uniform(program_domain domain, std::string uniform_name, vk::buffer_deprecated &_buffer, bool is_texel_store)
 		{
 			if (!is_texel_store)
 			{
@@ -764,11 +792,13 @@ namespace vk
 
 					if (uniform.as_buffer.buffer != buf ||
 						uniform.as_buffer.buffer_view != view ||
-						uniform.as_buffer.size != size)
+						uniform.as_buffer.size != size ||
+						uniform.as_buffer.offset != 0)
 					{
 						uniform.as_buffer.size = size;
 						uniform.as_buffer.buffer = buf;
 						uniform.as_buffer.buffer_view = view;
+						uniform.as_buffer.offset = 0;
 
 						if (!view)
 							throw EXCEPTION("Invalid buffer passed as texel storage");

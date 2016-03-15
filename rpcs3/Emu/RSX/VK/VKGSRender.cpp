@@ -167,6 +167,8 @@ VKGSRender::VKGSRender() : GSRender(frame_type::Vulkan)
 
 	m_device = (vk::render_device *)(&m_swap_chain->get_device());
 
+	m_memory_type_mapping = get_memory_mapping(m_device->gpu());
+
 	m_optimal_tiling_supported_formats = vk::get_optimal_tiling_supported_formats(m_device->gpu());
 
 	vk::set_current_thread_ctx(m_thread_context);
@@ -190,17 +192,27 @@ VKGSRender::VKGSRender() : GSRender(frame_type::Vulkan)
 	for (u32 i = 0; i < m_swap_chain->get_swap_image_count(); ++i)
 	{
 		vk::change_image_layout(m_command_buffer, m_swap_chain->get_swap_chain_image(i),
-								VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+								VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL,
 								VK_IMAGE_ASPECT_COLOR_BIT);
+
+		VkClearColorValue clear_color{};
+		auto range = vk::default_image_subresource_range();
+		vkCmdClearColorImage(m_command_buffer, m_swap_chain->get_swap_chain_image(i), VK_IMAGE_LAYOUT_GENERAL, &clear_color, 1, &range);
+		vk::change_image_layout(m_command_buffer, m_swap_chain->get_swap_chain_image(i),
+			VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+			VK_IMAGE_ASPECT_COLOR_BIT);
+
 	}
 	
 	CHECK_RESULT(vkEndCommandBuffer(m_command_buffer));
 	execute_command_buffer(false);
 
-	m_scale_offset_buffer.create((*m_device), 128);
-	m_vertex_constants_buffer.create((*m_device), 512 * 16);
-	m_fragment_constants_buffer.create((*m_device), 512 * 16);
-	m_index_buffer.create((*m_device), 65536, VK_FORMAT_R16_UINT, VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
+
+#define RING_BUFFER_SIZE 16 * 1024 * 1024
+	m_uniform_buffer_ring_info.init(RING_BUFFER_SIZE);
+	m_uniform_buffer.reset(new vk::buffer(*m_device, RING_BUFFER_SIZE, m_memory_type_mapping.host_visible_coherent, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 0));
+	m_index_buffer_ring_info.init(RING_BUFFER_SIZE);
+	m_index_buffer.reset(new vk::buffer(*m_device, RING_BUFFER_SIZE, m_memory_type_mapping.host_visible_coherent, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, 0));
 }
 
 VKGSRender::~VKGSRender()
@@ -222,11 +234,6 @@ VKGSRender::~VKGSRender()
 
 	//TODO: Properly destroy shader modules instead of calling clear...
 	m_prog_buffer.clear();
-
-	m_scale_offset_buffer.destroy();
-	m_vertex_constants_buffer.destroy();
-	m_fragment_constants_buffer.destroy();
-	m_index_buffer.destroy();
 
 	if (m_render_pass)
 		destroy_render_pass();
@@ -405,10 +412,12 @@ void VKGSRender::end()
 		vkCmdDraw(m_command_buffer, vertex_draw_count, 1, 0, 0);
 	else
 	{
-		VkIndexType &index_type = std::get<3>(upload_info);
-		u32 &index_count = std::get<2>(upload_info);
+		VkIndexType index_type;
+		u32 index_count;
+		VkDeviceSize offset;
+		std::tie(std::ignore, std::ignore, index_count, offset, index_type) = upload_info;
 
-		vkCmdBindIndexBuffer(m_command_buffer, m_index_buffer, 0, index_type);
+		vkCmdBindIndexBuffer(m_command_buffer, m_index_buffer->value, offset, index_type);
 		vkCmdDrawIndexed(m_command_buffer, index_count, 1, 0, 0, 0);
 	}
 
@@ -673,7 +682,9 @@ bool VKGSRender::load_program()
 	//1. Update scale-offset matrix
 	//2. Update vertex constants
 	//3. Update fragment constants
-	u8 *buf = (u8*)m_scale_offset_buffer.map(0, VK_WHOLE_SIZE);
+	const size_t scale_offset_offset = m_uniform_buffer_ring_info.alloc<256>(256);
+
+	u8 *buf = (u8*)m_uniform_buffer->map(scale_offset_offset, 256);
 
 	//TODO: Add case for this in RSXThread
 	/**
@@ -706,21 +717,23 @@ bool VKGSRender::load_program()
 	memset((char*)buf+64, 0, 8);
 	memcpy((char*)buf + 64, &rsx::method_registers[NV4097_SET_FOG_PARAMS], sizeof(float));
 	memcpy((char*)buf + 68, &rsx::method_registers[NV4097_SET_FOG_PARAMS + 1], sizeof(float));
-	m_scale_offset_buffer.unmap();
+	m_uniform_buffer->unmap();
 
-	buf = (u8*)m_vertex_constants_buffer.map(0, VK_WHOLE_SIZE);
+	const size_t vertex_constants_offset = m_uniform_buffer_ring_info.alloc<256>(512 * 4 * sizeof(float));
+	buf = (u8*)m_uniform_buffer->map(vertex_constants_offset, 512 * 4 * sizeof(float));
 	fill_vertex_program_constants_data(buf);
-	m_vertex_constants_buffer.unmap();
+	m_uniform_buffer->unmap();
 
-	size_t fragment_constants_sz = m_prog_buffer.get_fragment_constants_buffer_size(fragment_program);
-	buf = (u8*)m_fragment_constants_buffer.map(0, fragment_constants_sz);
+	const size_t fragment_constants_sz = m_prog_buffer.get_fragment_constants_buffer_size(fragment_program);
+	const size_t fragment_constants_offset = m_uniform_buffer_ring_info.alloc<256>(fragment_constants_sz);
+	buf = (u8*)m_uniform_buffer->map(fragment_constants_offset, fragment_constants_sz);
 	m_prog_buffer.fill_fragment_constans_buffer({ reinterpret_cast<float*>(buf), gsl::narrow<int>(fragment_constants_sz) }, fragment_program);
-	m_fragment_constants_buffer.unmap();
+	m_uniform_buffer->unmap();
 
-	m_program->bind_uniform(vk::glsl::glsl_vertex_program, "ScaleOffsetBuffer", m_scale_offset_buffer);
-	m_program->bind_uniform(vk::glsl::glsl_vertex_program, "VertexConstantsBuffer", m_vertex_constants_buffer);
-	m_program->bind_uniform(vk::glsl::glsl_fragment_program, "ScaleOffsetBuffer", m_scale_offset_buffer);
-	m_program->bind_uniform(vk::glsl::glsl_fragment_program, "FragmentConstantsBuffer", m_fragment_constants_buffer);
+	m_program->bind_uniform(vk::glsl::glsl_vertex_program, "ScaleOffsetBuffer", m_uniform_buffer->value, scale_offset_offset, 256);
+	m_program->bind_uniform(vk::glsl::glsl_vertex_program, "VertexConstantsBuffer", m_uniform_buffer->value, vertex_constants_offset, 512 * 4 * sizeof(float));
+	m_program->bind_uniform(vk::glsl::glsl_fragment_program, "ScaleOffsetBuffer", m_uniform_buffer->value, scale_offset_offset, 256);
+	m_program->bind_uniform(vk::glsl::glsl_fragment_program, "FragmentConstantsBuffer", m_uniform_buffer->value, fragment_constants_offset, fragment_constants_sz);
 
 	return true;
 }
@@ -1007,7 +1020,9 @@ void VKGSRender::flip(int buffer)
 
 		CHECK_RESULT(m_swap_chain->queuePresentKHR(m_swap_chain->get_present_queue(), &present));
 		CHECK_RESULT(vkQueueWaitIdle(m_swap_chain->get_present_queue()));
-		
+
+		m_uniform_buffer_ring_info.m_get_pos = m_uniform_buffer_ring_info.get_current_put_pos_minus_one();
+		m_index_buffer_ring_info.m_get_pos = m_index_buffer_ring_info.get_current_put_pos_minus_one();
 		if (m_present_semaphore)
 		{
 			vkDestroySemaphore((*m_device), m_present_semaphore, nullptr);

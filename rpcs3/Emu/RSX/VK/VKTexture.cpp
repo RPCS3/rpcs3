@@ -268,16 +268,6 @@ namespace vk
 		create(device, format, usage, tiling, width, height, mipmaps, gpu_only, swizzle);
 	}
 
-	void texture::create(vk::render_device &device, VkFormat format, VkImageUsageFlags usage, u32 width, u32 height, u32 mipmaps, bool gpu_only)
-	{
-		create(device, format, usage, width, height, mipmaps, gpu_only, default_component_map());
-	}
-
-	void texture::create(vk::render_device &device, VkFormat format, VkImageUsageFlags usage, u32 width, u32 height)
-	{
-		create(device, format, usage, width, height, 1, false);
-	}
-
 	VkSamplerAddressMode texture::vk_wrap_mode(u32 gcm_wrap)
 	{
 		switch (gcm_wrap)
@@ -487,11 +477,6 @@ namespace vk
 
 			ready = false;
 		}
-	}
-
-	void texture::init(rsx::texture &tex, vk::command_buffer &cmd)
-	{
-		init(tex, cmd, false);
 	}
 
 	void texture::flush(vk::command_buffer &cmd)

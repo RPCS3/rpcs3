@@ -69,6 +69,14 @@ namespace vk
 	VkFormat get_compatible_sampler_format(u32 format, VkComponentMapping& mapping, u8 swizzle_mask=0);
 	VkFormat get_compatible_surface_format(rsx::surface_color_format color_format);
 
+	struct memory_type_mapping
+	{
+		uint32_t host_visible_coherent;
+		uint32_t device_local;
+	};
+
+	memory_type_mapping get_memory_mapping(VkPhysicalDevice pdev);
+
 	class physical_device
 	{
 		VkPhysicalDevice dev = nullptr;
@@ -228,7 +236,33 @@ namespace vk
 		}
 	};
 
-	class memory_block
+	struct memory_block
+	{
+		VkMemoryAllocateInfo info = {};
+		VkDeviceMemory memory;
+
+		memory_block(VkDevice dev, u64 block_sz, uint32_t memory_type_index) : m_device(dev)
+		{
+			info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+			info.allocationSize = block_sz;
+			info.memoryTypeIndex = memory_type_index;
+
+			CHECK_RESULT(vkAllocateMemory(m_device, &info, nullptr, &memory));
+		}
+
+		~memory_block()
+		{
+			vkFreeMemory(m_device, memory, nullptr);
+		}
+
+		memory_block(const memory_block&) = delete;
+		memory_block(memory_block&&) = delete;
+
+	private:
+		VkDevice m_device;
+	};
+
+	class memory_block_deprecated
 	{
 		VkDeviceMemory vram = nullptr;
 		vk::render_device *owner = nullptr;
@@ -236,8 +270,8 @@ namespace vk
 		bool mappable = false;
 
 	public:
-		memory_block() {}
-		~memory_block() {}
+		memory_block_deprecated() {}
+		~memory_block_deprecated() {}
 
 		void allocate_from_pool(vk::render_device &device, u64 block_sz, bool host_visible, u32 typeBits)
 		{
@@ -313,7 +347,7 @@ namespace vk
 		VkImageUsageFlags m_usage = VK_IMAGE_USAGE_SAMPLED_BIT;
 		VkImageTiling m_tiling = VK_IMAGE_TILING_LINEAR;
 
-		vk::memory_block vram_allocation;
+		vk::memory_block_deprecated vram_allocation;
 		vk::render_device *owner = nullptr;
 		
 		u32 m_width;
@@ -334,13 +368,10 @@ namespace vk
 
 		void create(vk::render_device &device, VkFormat format, VkImageType image_type, VkImageViewType view_type, VkImageCreateFlags image_flags, VkImageUsageFlags usage, VkImageTiling tiling, u32 width, u32 height, u32 mipmaps, bool gpu_only, VkComponentMapping swizzle);
 		void create(vk::render_device &device, VkFormat format, VkImageUsageFlags usage, VkImageTiling tiling, u32 width, u32 height, u32 mipmaps, bool gpu_only, VkComponentMapping swizzle);
-		void create(vk::render_device &device, VkFormat format, VkImageUsageFlags usage, u32 width, u32 height, u32 mipmaps, bool gpu_only, VkComponentMapping swizzle);
-		void create(vk::render_device &device, VkFormat format, VkImageUsageFlags usage, u32 width, u32 height, u32 mipmaps, bool gpu_only);
-		void create(vk::render_device &device, VkFormat format, VkImageUsageFlags usage, u32 width, u32 height);
+		void create(vk::render_device &device, VkFormat format, VkImageUsageFlags usage, u32 width, u32 height, u32 mipmaps = 1, bool gpu_only = false, VkComponentMapping swizzle = default_component_map());
 		void destroy();
 
-		void init(rsx::texture &tex, vk::command_buffer &cmd, bool ignore_checks);
-		void init(rsx::texture &tex, vk::command_buffer &cmd);
+		void init(rsx::texture &tex, vk::command_buffer &cmd, bool ignore_checks = false);
 		void flush(vk::command_buffer & cmd);
 
 		//Fill with debug color 0xFF
@@ -359,7 +390,83 @@ namespace vk
 		operator VkImage();
 	};
 
-	class buffer
+	struct buffer
+	{
+		VkBuffer value;
+		VkBufferCreateInfo info = {};
+		std::unique_ptr<vk::memory_block> memory;
+
+		buffer(VkDevice dev, u64 size, uint32_t memory_type_index, VkBufferUsageFlagBits usage, VkBufferCreateFlags flags)
+			: m_device(dev)
+		{
+			info.size = size;
+			info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+			info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+			info.flags = flags;
+			info.usage = usage;
+
+			CHECK_RESULT(vkCreateBuffer(m_device, &info, nullptr, &value));
+
+			VkMemoryRequirements memory_reqs;
+			//Allocate vram for this buffer
+			vkGetBufferMemoryRequirements(m_device, value, &memory_reqs);
+			memory.reset(new memory_block(m_device, memory_reqs.size, memory_type_index));
+			vkBindBufferMemory(dev, value, memory->memory, 0);
+		}
+
+		~buffer()
+		{
+			vkDestroyBuffer(m_device, value, nullptr);
+		}
+
+		void *map(u32 offset, u64 size)
+		{
+			void *data = nullptr;
+			CHECK_RESULT(vkMapMemory(m_device, memory->memory, offset, size, 0, &data));
+			return data;
+		}
+
+		void unmap()
+		{
+			vkUnmapMemory(m_device, memory->memory);
+		}
+
+		buffer(const buffer&) = delete;
+		buffer(buffer&&) = delete;
+
+	private:
+		VkDevice m_device;
+	};
+
+	struct buffer_view
+	{
+		VkBufferView value;
+		VkBufferViewCreateInfo info = {};
+
+		buffer_view(VkDevice dev, VkBuffer buffer, VkFormat format, VkDeviceSize offset, VkDeviceSize size)
+			: m_device(dev)
+		{
+			info.buffer = buffer;
+			info.format = format;
+			info.offset = offset;
+			info.range = size;
+			info.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
+			CHECK_RESULT(vkCreateBufferView(m_device, &info, nullptr, &value));
+		}
+
+		~buffer_view()
+		{
+			vkDestroyBufferView(m_device, value, nullptr);
+		}
+
+		buffer_view(const buffer_view&) = delete;
+		buffer_view(buffer_view&&) = delete;
+
+	private:
+		VkDevice m_device;
+	};
+
+	class buffer_deprecated
 	{
 		VkBufferView m_view = nullptr;
 		VkBuffer m_buffer = nullptr;
@@ -369,16 +476,16 @@ namespace vk
 		VkBufferCreateFlags m_flags = 0;
 
 		vk::render_device *owner;
-		vk::memory_block vram;
+		vk::memory_block_deprecated vram;
 		u64 m_size = 0;
 
 		bool viewable = false;
 
 	public:
-		buffer() {}
-		~buffer() {}
+		buffer_deprecated() {}
+		~buffer_deprecated() {}
 
-		void create(vk::render_device &dev, u64 size, VkFormat format, VkBufferUsageFlagBits usage, VkBufferCreateFlags flags)
+		void create(vk::render_device &dev, u64 size, VkFormat format = VK_FORMAT_UNDEFINED, VkBufferUsageFlagBits usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VkBufferCreateFlags flags = 0)
 		{
 			if (m_buffer) throw EXCEPTION("Buffer create called on an existing buffer!");
 
@@ -407,21 +514,6 @@ namespace vk
 			m_flags = flags;
 
 			set_format(format);
-		}
-
-		void create(vk::render_device &dev, u32 size, VkFormat format, VkBufferUsageFlagBits usage)
-		{
-			create(dev, size, format, usage, 0);
-		}
-
-		void create(vk::render_device &dev, u32 size, VkFormat format)
-		{
-			create(dev, size, format, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
-		}
-
-		void create(vk::render_device &dev, u32 size)
-		{
-			create(dev, size, VK_FORMAT_UNDEFINED);
 		}
 
 		void *map(u32 offset, u64 size)
@@ -1315,8 +1407,9 @@ namespace vk
 			bool has_uniform(program_domain domain, std::string uniform_name);
 			bool bind_uniform(program_domain domain, std::string uniform_name);
 			bool bind_uniform(program_domain domain, std::string uniform_name, vk::texture &_texture);
-			bool bind_uniform(program_domain domain, std::string uniform_name, vk::buffer &_buffer);
-			bool bind_uniform(program_domain domain, std::string uniform_name, vk::buffer &_buffer, bool is_texel_store);
+			bool bind_uniform(program_domain domain, std::string uniform_name, VkBuffer _buffer, VkDeviceSize offset, VkDeviceSize size);
+			bool bind_uniform(program_domain domain, std::string uniform_name, vk::buffer_deprecated &_buffer);
+			bool bind_uniform(program_domain domain, std::string uniform_name, vk::buffer_deprecated &_buffer, bool is_texel_store);
 
 			program& operator = (const program&) = delete;
 			program& operator = (program&& other);

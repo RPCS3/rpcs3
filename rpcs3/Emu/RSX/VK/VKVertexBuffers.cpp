@@ -216,7 +216,7 @@ namespace vk
 	}
 }
 
-std::tuple<VkPrimitiveTopology, bool, u32, VkIndexType>
+std::tuple<VkPrimitiveTopology, bool, u32, VkDeviceSize, VkIndexType>
 VKGSRender::upload_vertex_data()
 {
 	//initialize vertex attributes
@@ -481,6 +481,8 @@ VKGSRender::upload_vertex_data()
 	VkIndexType index_format = VK_INDEX_TYPE_UINT16;
 	VkPrimitiveTopology prims = vk::get_appropriate_topology(draw_mode, primitives_emulated);
 
+	size_t offset_in_index_buffer = -1;
+
 	if (primitives_emulated)
 	{
 		//Line loops are line-strips with loop-back; using line-strips-with-adj doesnt work for vulkan
@@ -491,7 +493,11 @@ VKGSRender::upload_vertex_data()
 			if (!is_indexed_draw)
 			{
 				index_count = vk::expand_line_loop_array_to_strip(vertex_draw_count, indices);
-				m_index_buffer.sub_data(0, index_count*sizeof(u16), indices.data());
+				size_t upload_size = index_count * sizeof(u16);
+				offset_in_index_buffer = m_index_buffer_ring_info.alloc<256>(upload_size);
+				void* buf = m_index_buffer->map(offset_in_index_buffer, upload_size);
+				memcpy(buf, indices.data(), upload_size);
+				m_index_buffer->unmap();
 			}
 			else
 			{
@@ -502,12 +508,20 @@ VKGSRender::upload_vertex_data()
 					std::vector<u32> indices32;
 
 					index_count = vk::expand_indexed_line_loop_to_strip(vertex_draw_count, (u32*)vertex_index_array.data(), indices32);
-					m_index_buffer.sub_data(0, index_count*sizeof(u32), indices32.data());
+					size_t upload_size = index_count * sizeof(u32);
+					offset_in_index_buffer = m_index_buffer_ring_info.alloc<256>(upload_size);
+					void* buf = m_index_buffer->map(offset_in_index_buffer, upload_size);
+					memcpy(buf, indices32.data(), upload_size);
+					m_index_buffer->unmap();
 				}
 				else
 				{
 					index_count = vk::expand_indexed_line_loop_to_strip(vertex_draw_count, (u16*)vertex_index_array.data(), indices);
-					m_index_buffer.sub_data(0, index_count*sizeof(u16), indices.data());
+					size_t upload_size = index_count * sizeof(u16);
+					offset_in_index_buffer = m_index_buffer_ring_info.alloc<256>(upload_size);
+					void* buf = m_index_buffer->map(offset_in_index_buffer, upload_size);
+					memcpy(buf, indices.data(), upload_size);
+					m_index_buffer->unmap();
 				}
 			}
 		}
@@ -532,7 +546,11 @@ VKGSRender::upload_vertex_data()
 				write_index_array_for_non_indexed_non_native_primitive_to_buffer(reinterpret_cast<char*>(indices.data()), draw_mode, 0, vertex_draw_count);
 			}
 
-			m_index_buffer.sub_data(0, index_count * sizeof(u16), indices.data());
+			size_t upload_size = index_count * sizeof(u16);
+			offset_in_index_buffer = m_index_buffer_ring_info.alloc<256>(upload_size);
+			void* buf = m_index_buffer->map(offset_in_index_buffer, upload_size);
+			memcpy(buf, indices.data(), upload_size);
+			m_index_buffer->unmap();
 		}
 
 		is_indexed_draw = true;
@@ -557,9 +575,12 @@ VKGSRender::upload_vertex_data()
 		if (index_sz != vertex_draw_count)
 			LOG_ERROR(RSX, "Vertex draw count mismatch!");
 
-		m_index_buffer.sub_data(0, vertex_index_array.size(), vertex_index_array.data());
-		m_index_buffer.set_format(fmt);											//Unnecessary unless viewing contents in sampler...
+		size_t upload_size = vertex_index_array.size();
+		offset_in_index_buffer = m_index_buffer_ring_info.alloc<256>(upload_size);
+		void* buf = m_index_buffer->map(offset_in_index_buffer, upload_size);
+		memcpy(buf, vertex_index_array.data(), upload_size);
+		m_index_buffer->unmap();
 	}
 
-	return std::make_tuple(prims, is_indexed_draw, index_count, index_format);
+	return std::make_tuple(prims, is_indexed_draw, index_count, offset_in_index_buffer, index_format);
 }
