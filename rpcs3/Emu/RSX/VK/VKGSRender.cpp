@@ -192,8 +192,16 @@ VKGSRender::VKGSRender() : GSRender(frame_type::Vulkan)
 	for (u32 i = 0; i < m_swap_chain->get_swap_image_count(); ++i)
 	{
 		vk::change_image_layout(m_command_buffer, m_swap_chain->get_swap_chain_image(i),
-								VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+								VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL,
 								VK_IMAGE_ASPECT_COLOR_BIT);
+
+		VkClearColorValue clear_color{};
+		auto range = vk::default_image_subresource_range();
+		vkCmdClearColorImage(m_command_buffer, m_swap_chain->get_swap_chain_image(i), VK_IMAGE_LAYOUT_GENERAL, &clear_color, 1, &range);
+		vk::change_image_layout(m_command_buffer, m_swap_chain->get_swap_chain_image(i),
+			VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+			VK_IMAGE_ASPECT_COLOR_BIT);
+
 	}
 	
 	CHECK_RESULT(vkEndCommandBuffer(m_command_buffer));
