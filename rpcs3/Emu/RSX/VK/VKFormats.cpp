@@ -39,6 +39,32 @@ VkFormat get_compatible_depth_surface_format(const gpu_formats_support &support,
 	throw EXCEPTION("Invalid format (0x%x)", format);
 }
 
+std::tuple<VkFilter, VkSamplerMipmapMode> get_min_filter_and_mip(u8 min_filter)
+{
+	switch (min_filter)
+	{
+	case CELL_GCM_TEXTURE_NEAREST: return std::make_tuple(VK_FILTER_NEAREST, VK_SAMPLER_MIPMAP_MODE_NEAREST);
+	case CELL_GCM_TEXTURE_LINEAR: return std::make_tuple(VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_NEAREST);
+	case CELL_GCM_TEXTURE_NEAREST_NEAREST: return std::make_tuple(VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_NEAREST);
+	case CELL_GCM_TEXTURE_LINEAR_NEAREST: return std::make_tuple(VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_NEAREST);
+	case CELL_GCM_TEXTURE_NEAREST_LINEAR: return std::make_tuple(VK_FILTER_NEAREST, VK_SAMPLER_MIPMAP_MODE_LINEAR);
+	case CELL_GCM_TEXTURE_LINEAR_LINEAR: return std::make_tuple(VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR);
+	case CELL_GCM_TEXTURE_CONVOLUTION_MIN: return std::make_tuple(VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR);
+	}
+	throw EXCEPTION("Invalid max filter (0x%x)", min_filter);
+}
+
+VkFilter get_mag_filter(u8 mag_filter)
+{
+	switch (mag_filter)
+	{
+	case CELL_GCM_TEXTURE_NEAREST: return VK_FILTER_NEAREST;
+	case CELL_GCM_TEXTURE_LINEAR: return VK_FILTER_LINEAR;
+	case CELL_GCM_TEXTURE_CONVOLUTION_MAG: return VK_FILTER_LINEAR;
+	}
+	throw EXCEPTION("Invalid mag filter (0x%x)", mag_filter);
+}
+
 VkSamplerAddressMode vk_wrap_mode(u32 gcm_wrap)
 {
 	switch (gcm_wrap)

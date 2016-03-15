@@ -415,6 +415,8 @@ VKGSRender::VKGSRender() : GSRender(frame_type::Vulkan)
 	m_uniform_buffer.reset(new vk::buffer(*m_device, RING_BUFFER_SIZE, m_memory_type_mapping.host_visible_coherent, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 0));
 	m_index_buffer_ring_info.init(RING_BUFFER_SIZE);
 	m_index_buffer.reset(new vk::buffer(*m_device, RING_BUFFER_SIZE, m_memory_type_mapping.host_visible_coherent, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, 0));
+	m_texture_upload_buffer_ring_info.init(8 * RING_BUFFER_SIZE);
+	m_texture_upload_buffer.reset(new vk::buffer(*m_device, 8 * RING_BUFFER_SIZE, m_memory_type_mapping.host_visible_coherent, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 0));
 
 	m_render_passes = get_precomputed_render_passes(*m_device, m_optimal_tiling_supported_formats);
 
@@ -464,14 +466,18 @@ VKGSRender::~VKGSRender()
 	m_index_buffer.release();
 	m_uniform_buffer.release();
 	m_attrib_buffers.release();
+	m_texture_upload_buffer.release();
 	null_buffer.release();
 	null_buffer_view.release();
 	m_buffer_view_to_clean.clear();
+	m_sampler_to_clean.clear();
 	m_framebuffer_to_clean.clear();
 
 	for (auto &render_pass : m_render_passes)
 		if (render_pass)
 			vkDestroyRenderPass(*m_device, render_pass, nullptr);
+
+	m_rtts.destroy();
 
 	vkFreeDescriptorSets(*m_device, descriptor_pool, 1, &descriptor_sets);
 	vkDestroyPipelineLayout(*m_device, pipeline_layout, nullptr);
@@ -551,26 +557,28 @@ void VKGSRender::end()
 		(u8)vk::get_draw_buffers(rsx::to_surface_target(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET])).size());
 	VkRenderPass current_render_pass = m_render_passes[idx];
 
-	vk::texture *texture0 = nullptr;
 	for (int i = 0; i < rsx::limits::textures_count; ++i)
 	{
 		if (m_program->has_uniform("tex" + std::to_string(i)))
 		{
 			if (!textures[i].enabled())
 			{
-				m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL}, "tex" + std::to_string(i), descriptor_sets);
+				m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, "tex" + std::to_string(i), descriptor_sets);
 				continue;
 			}
+			vk::image_view  *texture0 = m_texture_cache.upload_texture(m_command_buffer, textures[i], m_rtts, m_memory_type_mapping, m_texture_upload_buffer_ring_info, m_texture_upload_buffer.get());
 
-			vk::texture &tex = (texture0)? (*texture0): m_texture_cache.upload_texture(m_command_buffer, textures[i], m_rtts);
-			vk::sampler sampler(*m_device,
+			VkFilter min_filter;
+			VkSamplerMipmapMode mip_mode;
+			std::tie(min_filter, mip_mode) = vk::get_min_filter_and_mip(textures[i].min_filter());
+			m_sampler_to_clean.push_back(std::make_unique<vk::sampler>(
+				*m_device,
 				vk::vk_wrap_mode(textures[i].wrap_s()), vk::vk_wrap_mode(textures[i].wrap_t()), vk::vk_wrap_mode(textures[i].wrap_r()),
 				!!(textures[i].format() & CELL_GCM_TEXTURE_UN),
 				textures[i].bias(), vk::max_aniso(textures[i].max_aniso()), textures[i].min_lod(), textures[i].max_lod(),
-				VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_NEAREST
-				);
-			m_program->bind_uniform({ sampler.value, tex, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, "tex" + std::to_string(i), descriptor_sets);
-			texture0 = &tex;
+				min_filter, vk::get_mag_filter(textures[i].mag_filter()), mip_mode
+				));
+			m_program->bind_uniform({ m_sampler_to_clean.back()->value, texture0->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, "tex" + std::to_string(i), descriptor_sets);
 		}
 	}
 
@@ -733,22 +741,19 @@ void VKGSRender::clear_surface(u32 mask)
 		{
 			if (std::get<1>(m_rtts.m_bound_render_targets[i]) == nullptr) continue;
 
-			VkImage color_image = (*std::get<1>(m_rtts.m_bound_render_targets[i]));
-			VkImageLayout old_layout = std::get<1>(m_rtts.m_bound_render_targets[i])->get_layout();
-			std::get<1>(m_rtts.m_bound_render_targets[i])->change_layout(m_command_buffer, VK_IMAGE_LAYOUT_GENERAL);
-			
+			VkImage color_image = std::get<1>(m_rtts.m_bound_render_targets[i])->value;
+			change_image_layout(m_command_buffer, color_image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_ASPECT_COLOR_BIT);
 			vkCmdClearColorImage(m_command_buffer, color_image, VK_IMAGE_LAYOUT_GENERAL, &color_clear_values.color, 1, &range);
-			std::get<1>(m_rtts.m_bound_render_targets[i])->change_layout(m_command_buffer, old_layout);
+			change_image_layout(m_command_buffer, color_image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
 		}
 	}
 
 	if (mask & 0x3)
 	{
-		VkImageLayout old_layout = std::get<1>(m_rtts.m_bound_depth_stencil)->get_layout();
-		std::get<1>(m_rtts.m_bound_depth_stencil)->change_layout(m_command_buffer, VK_IMAGE_LAYOUT_GENERAL);
-
-		vkCmdClearDepthStencilImage(m_command_buffer, (*std::get<1>(m_rtts.m_bound_depth_stencil)), VK_IMAGE_LAYOUT_GENERAL, &depth_stencil_clear_values.depthStencil, 1, &depth_range);
-		std::get<1>(m_rtts.m_bound_depth_stencil)->change_layout(m_command_buffer, old_layout);
+		VkImage depth_stencil_image = std::get<1>(m_rtts.m_bound_depth_stencil)->value;
+		change_image_layout(m_command_buffer, depth_stencil_image, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_ASPECT_DEPTH_BIT);
+		vkCmdClearDepthStencilImage(m_command_buffer, std::get<1>(m_rtts.m_bound_depth_stencil)->value, VK_IMAGE_LAYOUT_GENERAL, &depth_stencil_clear_values.depthStencil, 1, &depth_range);
+		change_image_layout(m_command_buffer, depth_stencil_image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_DEPTH_BIT);
 	}
 
 	if (!was_recording)
@@ -1062,16 +1067,16 @@ void VKGSRender::prepare_rtts()
 		clip_horizontal, clip_vertical,
 		rsx::to_surface_target(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET]),
 		get_color_surface_addresses(), get_zeta_surface_address(),
-		(*m_device), &m_command_buffer, m_optimal_tiling_supported_formats);
+		(*m_device), &m_command_buffer, m_optimal_tiling_supported_formats, m_memory_type_mapping);
 
 	//Bind created rtts as current fbo...
 	std::vector<u8> draw_buffers = vk::get_draw_buffers(rsx::to_surface_target(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET]));
 
-	std::vector<std::unique_ptr<vk::image_view> > fbo_images;
+	std::vector<std::unique_ptr<vk::image_view>> fbo_images;
 
 	for (u8 index: draw_buffers)
 	{
-		vk::texture *raw = std::get<1>(m_rtts.m_bound_render_targets[index]);
+		vk::image *raw = std::get<1>(m_rtts.m_bound_render_targets[index]);
 
 		VkImageSubresourceRange subres = {};
 		subres.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -1080,14 +1085,14 @@ void VKGSRender::prepare_rtts()
 		subres.layerCount = 1;
 		subres.levelCount = 1;
 
-		fbo_images.push_back(std::make_unique<vk::image_view>(*m_device, *raw, VK_IMAGE_VIEW_TYPE_2D, raw->get_format(), vk::default_component_map(), subres));
+		fbo_images.push_back(std::make_unique<vk::image_view>(*m_device, raw->value, VK_IMAGE_VIEW_TYPE_2D, raw->info.format, vk::default_component_map(), subres));
 	}
 
 	m_draw_buffers_count = fbo_images.size();
 
 	if (std::get<1>(m_rtts.m_bound_depth_stencil) != nullptr)
 	{
-		vk::texture *raw = (std::get<1>(m_rtts.m_bound_depth_stencil));
+		vk::image *raw = (std::get<1>(m_rtts.m_bound_depth_stencil));
 
 		VkImageSubresourceRange subres = {};
 		subres.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
@@ -1096,7 +1101,7 @@ void VKGSRender::prepare_rtts()
 		subres.layerCount = 1;
 		subres.levelCount = 1;
 
-		fbo_images.push_back(std::make_unique<vk::image_view>(*m_device, *raw, VK_IMAGE_VIEW_TYPE_2D, raw->get_format(), vk::default_component_map(), subres));
+		fbo_images.push_back(std::make_unique<vk::image_view>(*m_device, raw->value, VK_IMAGE_VIEW_TYPE_2D, raw->info.format, vk::default_component_map(), subres));
 	}
 
 	size_t idx = vk::get_render_pass_location(vk::get_compatible_surface_format(m_surface.color_format), vk::get_compatible_depth_surface_format(m_optimal_tiling_supported_formats, m_surface.depth_format), (u8)draw_buffers.size());
@@ -1190,9 +1195,9 @@ void VKGSRender::flip(int buffer)
 		VkImage image_to_flip = nullptr;
 
 		if (std::get<1>(m_rtts.m_bound_render_targets[0]) != nullptr)
-			image_to_flip = (*std::get<1>(m_rtts.m_bound_render_targets[0]));
+			image_to_flip = std::get<1>(m_rtts.m_bound_render_targets[0])->value;
 		else
-			image_to_flip = (*std::get<1>(m_rtts.m_bound_render_targets[1]));
+			image_to_flip = std::get<1>(m_rtts.m_bound_render_targets[1])->value;
 
 		VkImage target_image = m_swap_chain->get_swap_chain_image(m_current_present_image);
 		vk::copy_scaled_image(m_command_buffer, image_to_flip, target_image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
@@ -1232,6 +1237,7 @@ void VKGSRender::flip(int buffer)
 	m_uniform_buffer_ring_info.m_get_pos = m_uniform_buffer_ring_info.get_current_put_pos_minus_one();
 	m_index_buffer_ring_info.m_get_pos = m_index_buffer_ring_info.get_current_put_pos_minus_one();
 	m_attrib_ring_info.m_get_pos = m_attrib_ring_info.get_current_put_pos_minus_one();
+	m_texture_upload_buffer_ring_info.m_get_pos = m_texture_upload_buffer_ring_info.get_current_put_pos_minus_one();
 	if (m_present_semaphore)
 	{
 		vkDestroySemaphore((*m_device), m_present_semaphore, nullptr);
@@ -1239,10 +1245,11 @@ void VKGSRender::flip(int buffer)
 	}
 
 	//Feed back damaged resources to the main texture cache for management...
-	m_texture_cache.merge_dirty_textures(m_rtts.invalidated_resources);
+//	m_texture_cache.merge_dirty_textures(m_rtts.invalidated_resources);
 	m_rtts.invalidated_resources.clear();
 
 	m_buffer_view_to_clean.clear();
+	m_sampler_to_clean.clear();
 
 	m_draw_calls = 0;
 	dirty_frame = true;
