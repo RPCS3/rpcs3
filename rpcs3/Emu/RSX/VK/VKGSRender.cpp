@@ -704,8 +704,8 @@ bool VKGSRender::load_program()
 	}
 
 	memset((char*)buf+64, 0, 8);
-//	memcpy((char*)buf + 64, &rsx::method_registers[NV4097_SET_FOG_PARAMS], sizeof(float));
-//	memcpy((char*)buf + 68, &rsx::method_registers[NV4097_SET_FOG_PARAMS + 1], sizeof(float));
+	memcpy((char*)buf + 64, &rsx::method_registers[NV4097_SET_FOG_PARAMS], sizeof(float));
+	memcpy((char*)buf + 68, &rsx::method_registers[NV4097_SET_FOG_PARAMS + 1], sizeof(float));
 	m_scale_offset_buffer.unmap();
 
 	buf = (u8*)m_vertex_constants_buffer.map(0, VK_WHOLE_SIZE);
