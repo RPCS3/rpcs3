@@ -4,7 +4,15 @@
 
 GLGSFrame::GLGSFrame() : GSFrame("OpenGL")
 {
-	m_canvas = new wxGLCanvas(this, wxID_ANY, NULL);
+	const int context_attrs[] =
+	{
+		WX_GL_RGBA,
+		WX_GL_DEPTH_SIZE, 16,
+		WX_GL_DOUBLEBUFFER,
+		0
+	};
+
+	m_canvas = new wxGLCanvas(this, wxID_ANY, context_attrs);
 	m_canvas->SetSize(GetClientSize());
 
 	m_canvas->Bind(wxEVT_LEFT_DCLICK, &GSFrame::OnLeftDclick, this);
