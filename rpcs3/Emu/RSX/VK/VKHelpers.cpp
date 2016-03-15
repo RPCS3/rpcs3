@@ -6,7 +6,6 @@ namespace vk
 	context *g_current_vulkan_ctx = nullptr;
 	render_device g_current_renderer;
 
-	buffer_deprecated g_null_buffer;
 	texture g_null_texture;
 
 	VkSampler g_null_sampler = nullptr;
@@ -147,15 +146,6 @@ namespace vk
 		return callbacks;
 	}
 
-	VkBuffer null_buffer()
-	{
-		if (g_null_buffer.size())
-			return g_null_buffer;
-
-		g_null_buffer.create(g_current_renderer, 32, VK_FORMAT_R32_SFLOAT, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT);
-		return g_null_buffer;
-	}
-
 	VkSampler null_sampler()
 	{
 		if (g_null_sampler)
@@ -192,18 +182,8 @@ namespace vk
 		return g_null_image_view;
 	}
 
-	VkBufferView null_buffer_view()
-	{
-		if (g_null_buffer.size())
-			return g_null_buffer;
-
-		g_null_buffer.create(g_current_renderer, 32, VK_FORMAT_R32_SFLOAT, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT);
-		return g_null_buffer;
-	}
-
 	void destroy_global_resources()
 	{
-		g_null_buffer.destroy();
 		g_null_texture.destroy();
 
 		if (g_null_sampler)

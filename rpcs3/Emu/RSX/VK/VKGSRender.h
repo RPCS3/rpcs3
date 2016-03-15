@@ -104,7 +104,8 @@ private:
 
 	rsx::surface_info m_surface;
 
-	vk::buffer_deprecated m_attrib_buffers[rsx::limits::vertex_count];
+	vk::data_heap m_attrib_ring_info;
+	std::unique_ptr<vk::buffer> m_attrib_buffers;
 	
 	vk::texture_cache m_texture_cache;
 	rsx::vk_render_targets m_rtts;
