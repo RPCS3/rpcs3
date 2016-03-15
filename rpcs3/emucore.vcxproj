@@ -84,7 +84,6 @@
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="..\stblib\stb_image.c" />
     <ClCompile Include="..\Utilities\AutoPause.cpp" />
     <ClCompile Include="..\Utilities\config_context.cpp" />
     <ClCompile Include="..\Utilities\Log.cpp" />

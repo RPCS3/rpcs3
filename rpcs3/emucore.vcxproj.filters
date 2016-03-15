@@ -1779,9 +1779,6 @@
     <ClInclude Include="..\stblib\stb_image.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\stblib\stb_image.c">
-      <Filter>Source Files</Filter>
-    </ClInclude>
     <ClInclude Include="Emu\RSX\Common\surface_store.h">
       <Filter>Emu\GPU\RSX\Common</Filter>
     </ClInclude>

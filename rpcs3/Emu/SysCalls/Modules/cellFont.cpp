@@ -2,7 +2,7 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/SysCalls/Modules.h"
 
-// Defines STB_IMAGE_IMPLEMENTATION *once* before including stb_truetype.h (as said in stb_truetype.h's comments)
+// Defines STB_TRUETYPE_IMPLEMENTATION *once* before including stb_truetype.h (as noted in stb_truetype.h's comments)
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "stblib/stb_truetype.h"
 
