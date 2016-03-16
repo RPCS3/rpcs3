@@ -328,13 +328,13 @@ VKGSRender::upload_vertex_data()
 				throw EXCEPTION("Unknown base type %d", vertex_info.type);
 			}
 
-			auto &buffer = m_attrib_buffers[index];
-
-			buffer.sub_data(0, data_size, vertex_arrays_data.data());
-			buffer.set_format(format);
+			size_t offset_in_attrib_buffer = m_attrib_ring_info.alloc<256>(data_size);
+			void* buf = m_attrib_buffers->map(offset_in_attrib_buffer, data_size);
+			memcpy(buf, vertex_arrays_data.data(), data_size);
+			m_attrib_buffers->unmap();
 
 			//Link texture to uniform location
-			m_program->bind_uniform(vk::glsl::glsl_vertex_program, reg_table[index], buffer, true);
+			m_program->bind_uniform(vk::glsl::glsl_vertex_program, reg_table[index], m_attrib_buffers->value, offset_in_attrib_buffer, data_size, format);
 		}
 	}
 
@@ -419,11 +419,13 @@ VKGSRender::upload_vertex_data()
 				const VkFormat format = vk::get_suitable_vk_format(vertex_info.type, vertex_info.size);
 				const u32 data_size = vk::get_suitable_vk_size(vertex_info.type, vertex_info.size) * num_stored_verts;
 
-				auto &buffer = m_attrib_buffers[index];
 
-				buffer.sub_data(0, data_size, data_ptr);
-				buffer.set_format(format);
-				m_program->bind_uniform(vk::glsl::glsl_vertex_program, reg_table[index], buffer, true);
+				size_t offset_in_attrib_buffer = m_attrib_ring_info.alloc<256>(data_size);
+				void* buf = m_attrib_buffers->map(offset_in_attrib_buffer, data_size);
+				memcpy(buf, data_ptr, data_size);
+				m_attrib_buffers->unmap();
+
+				m_program->bind_uniform(vk::glsl::glsl_vertex_program, reg_table[index], m_attrib_buffers->value, offset_in_attrib_buffer, data_size, format);
 			}
 			else if (register_vertex_info[index].size > 0)
 			{
@@ -457,12 +459,13 @@ VKGSRender::upload_vertex_data()
 						data_size = converted_buffer.size();
 					}
 
-					auto &buffer = m_attrib_buffers[index];
 
-					buffer.sub_data(0, data_size, data_ptr);
-					buffer.set_format(format);
+					size_t offset_in_attrib_buffer = m_attrib_ring_info.alloc<256>(data_size);
+					void* buf = m_attrib_buffers->map(offset_in_attrib_buffer, data_size);
+					memcpy(buf, data_ptr, data_size);
+					m_attrib_buffers->unmap();
 
-					m_program->bind_uniform(vk::glsl::glsl_vertex_program, reg_table[index], buffer, true);
+					m_program->bind_uniform(vk::glsl::glsl_vertex_program, reg_table[index], m_attrib_buffers->value, offset_in_attrib_buffer, data_size, format);
 					break;
 				}
 				default:

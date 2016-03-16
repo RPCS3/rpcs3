@@ -473,25 +473,13 @@ void VKGSRender::set_viewport()
 void VKGSRender::on_init_thread()
 {
 	GSRender::on_init_thread();
-
-	for (auto &attrib_buffer : m_attrib_buffers)
-	{
-		attrib_buffer.create((*m_device), 65536, VK_FORMAT_R8_UNORM, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT);
-		
-		u8 *data = static_cast<u8*>(attrib_buffer.map(0, 65536));
-		memset(data, 0, 65536);
-		attrib_buffer.unmap();
-	}
+	m_attrib_ring_info.init(8 * RING_BUFFER_SIZE);
+	m_attrib_buffers.reset(new vk::buffer(*m_device, 8 * RING_BUFFER_SIZE, m_memory_type_mapping.host_visible_coherent, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, 0));
 }
 
 void VKGSRender::on_exit()
 {
 	m_texture_cache.destroy();
-	
-	for (auto &attrib_buffer : m_attrib_buffers)
-	{
-		attrib_buffer.destroy();
-	}
 }
 
 void VKGSRender::clear_surface(u32 mask)
@@ -1023,6 +1011,7 @@ void VKGSRender::flip(int buffer)
 
 		m_uniform_buffer_ring_info.m_get_pos = m_uniform_buffer_ring_info.get_current_put_pos_minus_one();
 		m_index_buffer_ring_info.m_get_pos = m_index_buffer_ring_info.get_current_put_pos_minus_one();
+		m_attrib_ring_info.m_get_pos = m_attrib_ring_info.get_current_put_pos_minus_one();
 		if (m_present_semaphore)
 		{
 			vkDestroySemaphore((*m_device), m_present_semaphore, nullptr);

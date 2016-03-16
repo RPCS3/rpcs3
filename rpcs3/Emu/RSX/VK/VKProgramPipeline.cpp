@@ -475,7 +475,7 @@ namespace vk
 			std::vector<VkDescriptorImageInfo> images(16);
 			std::vector<VkDescriptorBufferInfo> buffers(16);
 			std::vector<VkDescriptorBufferInfo> texel_buffers(16);
-			std::vector<VkBufferView> texel_buffer_views(16);
+			std::vector<std::unique_ptr<vk::buffer_view>> texel_buffer_views(16);
 			VkWriteDescriptorSet write;
 
 			int image_index = 0;
@@ -512,7 +512,7 @@ namespace vk
 				case input_type_uniform_buffer:
 				{
 					auto &buffer = buffers[buffer_index++];
-					buffer.buffer = null_buffer();
+					buffer.buffer = VK_NULL_HANDLE;
 					buffer.offset = 0;
 					buffer.range = 0;
 
@@ -523,7 +523,9 @@ namespace vk
 						buffer.offset = input.as_buffer.offset;
 					}
 					else
+					{
 						LOG_ERROR(RSX, "UBO was not bound: %s", input.name);
+					}
 
 					memset(&write, 0, sizeof(write));
 					write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -534,26 +536,28 @@ namespace vk
 				case input_type_texel_buffer:
 				{
 					auto &buffer_view = texel_buffer_views[texel_buffer_index];
-					buffer_view = null_buffer_view();
 
 					auto &buffer = texel_buffers[texel_buffer_index++];
-					buffer.buffer = null_buffer();
+					buffer.buffer = VK_NULL_HANDLE;
 					buffer.offset = 0;
 					buffer.range = 0;
 
-					if (input.as_buffer.buffer && input.as_buffer.buffer_view)
+					if (input.as_buffer.buffer && input.as_buffer.format != VK_FORMAT_UNDEFINED)
 					{
-						buffer_view = input.as_buffer.buffer_view;
+						buffer.offset = input.as_buffer.offset;
 						buffer.buffer = input.as_buffer.buffer;
 						buffer.range = input.as_buffer.size;
 					}
 					else
+					{
 						LOG_ERROR(RSX, "Texel buffer was not bound: %s", input.name);
+					}
+
+					buffer_view.reset(new vk::buffer_view(*device, input.as_buffer.buffer, input.as_buffer.format, input.as_buffer.offset, input.as_buffer.size));
 
 					memset(&write, 0, sizeof(write));
 					write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
-					write.pTexelBufferView = &buffer_view;
-					write.pBufferInfo = &buffer;
+					write.pTexelBufferView = &(buffer_view->value);
 					write.descriptorCount = 1;
 					break;
 				}
@@ -680,7 +684,7 @@ namespace vk
 					uniform.domain == domain)
 				{
 					uniform.as_buffer.buffer = nullptr;
-					uniform.as_buffer.buffer_view = nullptr;
+					uniform.as_buffer.format = VK_FORMAT_UNDEFINED;
 					uniform.as_sampler.image_view = nullptr;
 					uniform.as_sampler.sampler = nullptr;
 
@@ -731,7 +735,7 @@ namespace vk
 					{
 						uniform.as_buffer.size = size;
 						uniform.as_buffer.buffer = _buffer;
-						uniform.as_buffer.buffer_view = nullptr; //UBOs cannot be viewed!
+						uniform.as_buffer.format = VK_FORMAT_UNDEFINED; //UBOs cannot be viewed!
 						uniform.as_buffer.offset = offset;
 
 						uniforms_changed = true;
@@ -743,65 +747,22 @@ namespace vk
 			}
 		}
 
-		bool program::bind_uniform(program_domain domain, std::string uniform_name, vk::buffer_deprecated &_buffer)
+		bool program::bind_uniform(program_domain domain, std::string uniform_name, VkBuffer _buffer, VkDeviceSize offset, VkDeviceSize size, VkFormat format)
 		{
 			for (auto &uniform : uniforms)
 			{
 				if (uniform.name == uniform_name &&
 					uniform.domain == domain)
 				{
-					VkBuffer buf = _buffer;
-					u64 size = _buffer.size();
-
-					if (uniform.as_buffer.buffer != buf ||
+					if (uniform.as_buffer.buffer != _buffer ||
+						uniform.as_buffer.format != format ||
 						uniform.as_buffer.size != size ||
 						uniform.as_buffer.offset != 0)
 					{
 						uniform.as_buffer.size = size;
-						uniform.as_buffer.buffer = buf;
-						uniform.as_buffer.buffer_view = nullptr;	//UBOs cannot be viewed!
-						uniform.as_buffer.offset = 0;
-
-						uniforms_changed = true;
-					}
-
-					uniform.type = input_type_uniform_buffer;
-					return true;
-				}
-			}
-
-			throw EXCEPTION("Failed to bind program uniform %s", uniform_name);
-			return false;
-		}
-
-		bool program::bind_uniform(program_domain domain, std::string uniform_name, vk::buffer_deprecated &_buffer, bool is_texel_store)
-		{
-			if (!is_texel_store)
-			{
-				return bind_uniform(domain, uniform_name, _buffer);
-			}
-
-			for (auto &uniform : uniforms)
-			{
-				if (uniform.name == uniform_name &&
-					uniform.domain == domain)
-				{
-					VkBuffer buf = _buffer;
-					VkBufferView view = _buffer;
-					u64 size = _buffer.size();
-
-					if (uniform.as_buffer.buffer != buf ||
-						uniform.as_buffer.buffer_view != view ||
-						uniform.as_buffer.size != size ||
-						uniform.as_buffer.offset != 0)
-					{
-						uniform.as_buffer.size = size;
-						uniform.as_buffer.buffer = buf;
-						uniform.as_buffer.buffer_view = view;
-						uniform.as_buffer.offset = 0;
-
-						if (!view)
-							throw EXCEPTION("Invalid buffer passed as texel storage");
+						uniform.as_buffer.buffer = _buffer;
+						uniform.as_buffer.format = format;
+						uniform.as_buffer.offset = offset;
 
 						uniforms_changed = true;
 					}

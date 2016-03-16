@@ -55,10 +55,8 @@ namespace vk
 	VkImageSubresource default_image_subresource();
 	VkImageSubresourceRange default_image_subresource_range();
 
-	VkBuffer null_buffer();
 	VkSampler null_sampler();
 	VkImageView null_image_view();
-	VkBufferView null_buffer_view();
 
 	void destroy_global_resources();
 
@@ -464,167 +462,6 @@ namespace vk
 
 	private:
 		VkDevice m_device;
-	};
-
-	class buffer_deprecated
-	{
-		VkBufferView m_view = nullptr;
-		VkBuffer m_buffer = nullptr;
-		VkMemoryRequirements m_memory_layout;
-		VkFormat m_internal_format = VK_FORMAT_UNDEFINED;
-		VkBufferUsageFlagBits m_usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-		VkBufferCreateFlags m_flags = 0;
-
-		vk::render_device *owner;
-		vk::memory_block_deprecated vram;
-		u64 m_size = 0;
-
-		bool viewable = false;
-
-	public:
-		buffer_deprecated() {}
-		~buffer_deprecated() {}
-
-		void create(vk::render_device &dev, u64 size, VkFormat format = VK_FORMAT_UNDEFINED, VkBufferUsageFlagBits usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VkBufferCreateFlags flags = 0)
-		{
-			if (m_buffer) throw EXCEPTION("Buffer create called on an existing buffer!");
-
-			owner = &dev;
-
-			VkBufferCreateInfo infos = {};
-			infos.size = size;
-			infos.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-			infos.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-			infos.flags = flags;
-			infos.usage = usage;
-
-			CHECK_RESULT(vkCreateBuffer(dev, &infos, nullptr, &m_buffer));
-
-			//Allocate vram for this buffer
-			vkGetBufferMemoryRequirements(dev, m_buffer, &m_memory_layout);
-			vram.allocate_from_pool(dev, m_memory_layout.size, m_memory_layout.memoryTypeBits);
-
-			viewable = !!(usage & (VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT));
-
-			//Bind buffer memory
-			vkBindBufferMemory(dev, m_buffer, vram, 0);
-
-			m_size = m_memory_layout.size;
-			m_usage = usage;
-			m_flags = flags;
-
-			set_format(format);
-		}
-
-		void *map(u32 offset, u64 size)
-		{
-			if (!vram.is_mappable()) return nullptr;
-
-			void *data = nullptr;
-			
-			if (size == VK_WHOLE_SIZE)
-				size = m_memory_layout.size;
-			
-			CHECK_RESULT(vkMapMemory((*owner), vram, offset, size, 0, &data));
-			return data;
-		}
-
-		void unmap()
-		{
-			vkUnmapMemory((*owner), vram);
-		}
-
-		void sub_data(u32 offset, u32 size, void *data)
-		{
-			//TODO: Synchronization
-			if (!data && (m_size < size))
-			{
-				vk::render_device *pdev = owner;
-
-				destroy();
-				create((*pdev), size, m_internal_format, m_usage, m_flags);
-			}
-
-			if (!data) return;
-			if ((offset + size) > m_size)
-			{
-				vk::render_device *tmp_owner = owner;
-				destroy();
-				create((*tmp_owner), size, m_internal_format, m_usage, m_flags);
-			}
-
-			u8 *dst = (u8*)map(offset, size);
-			u8 *src = (u8*)data;
-
-			memcpy(dst, src, size);
-			unmap();
-		}
-
-		void destroy()
-		{
-			if (!owner) return;
-
-			vkDestroyBufferView((*owner), m_view, nullptr);
-			vkDestroyBuffer((*owner), m_buffer, nullptr);
-			vram.destroy();
-
-			owner = nullptr;
-			m_view = nullptr;
-			m_buffer = nullptr;
-			m_internal_format = VK_FORMAT_UNDEFINED;
-		}
-
-		void set_format(VkFormat format)
-		{
-			if (m_internal_format == format || format == VK_FORMAT_UNDEFINED || !viewable)
-				return;
-
-			if (m_view)
-			{
-				vkDestroyBufferView((*owner), m_view, nullptr);
-				m_view = nullptr;
-			}
-
-			VkFormatProperties format_properties;
-			vk::physical_device dev = owner->gpu();
-			vkGetPhysicalDeviceFormatProperties(dev, format, &format_properties);
-
-			if (!(format_properties.bufferFeatures & VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT))
-				throw EXCEPTION("Can't map view to requested format");
-
-			VkBufferViewCreateInfo view_info = {};
-			view_info.buffer = m_buffer;
-			view_info.format = format;
-			view_info.range = m_size;
-			view_info.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
-			
-			CHECK_RESULT(vkCreateBufferView((*owner), &view_info, nullptr, &m_view));
-
-			m_internal_format = format;
-		}
-
-		u64 size()
-		{
-			return m_size;
-		}
-
-		vk::render_device& get_owner()
-		{
-			return (*owner);
-		}
-
-		operator VkBuffer()
-		{
-			return m_buffer;
-		}
-
-		operator VkBufferView()
-		{
-			if (!viewable)
-				throw EXCEPTION("Invalid usage! Buffer cannot be viewed as texels.");
-
-			return m_view;
-		}
 	};
 
 	class framebuffer
@@ -1304,7 +1141,7 @@ namespace vk
 
 		struct bound_buffer
 		{
-			VkBufferView buffer_view = nullptr;
+			VkFormat format = VK_FORMAT_UNDEFINED;
 			VkBuffer buffer = nullptr;
 			u64 offset = 0;
 			u64 size = 0;
@@ -1408,8 +1245,7 @@ namespace vk
 			bool bind_uniform(program_domain domain, std::string uniform_name);
 			bool bind_uniform(program_domain domain, std::string uniform_name, vk::texture &_texture);
 			bool bind_uniform(program_domain domain, std::string uniform_name, VkBuffer _buffer, VkDeviceSize offset, VkDeviceSize size);
-			bool bind_uniform(program_domain domain, std::string uniform_name, vk::buffer_deprecated &_buffer);
-			bool bind_uniform(program_domain domain, std::string uniform_name, vk::buffer_deprecated &_buffer, bool is_texel_store);
+			bool bind_uniform(program_domain domain, std::string uniform_name, VkBuffer _buffer, VkDeviceSize offset, VkDeviceSize size, VkFormat format);
 
 			program& operator = (const program&) = delete;
 			program& operator = (program&& other);
