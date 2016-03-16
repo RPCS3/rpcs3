@@ -389,16 +389,16 @@ void VKGSRender::end()
 	vk::texture *texture0 = nullptr;
 	for (int i = 0; i < rsx::limits::textures_count; ++i)
 	{
-		if (m_program->has_uniform(vk::glsl::glsl_fragment_program, "tex" + std::to_string(i)))
+		if (m_program->has_uniform("tex" + std::to_string(i)))
 		{
 			if (!textures[i].enabled())
 			{
-				m_program->bind_uniform(vk::glsl::glsl_fragment_program, "tex" + std::to_string(i));
+				m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL}, "tex" + std::to_string(i));
 				continue;
 			}
 
 			vk::texture &tex = (texture0)? (*texture0): m_texture_cache.upload_texture(m_command_buffer, textures[i], m_rtts);
-			m_program->bind_uniform(vk::glsl::glsl_fragment_program, "tex" + std::to_string(i), tex);
+			m_program->bind_uniform({ tex, tex, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, "tex" + std::to_string(i));
 			texture0 = &tex;
 		}
 	}
@@ -730,10 +730,9 @@ bool VKGSRender::load_program()
 	m_prog_buffer.fill_fragment_constans_buffer({ reinterpret_cast<float*>(buf), gsl::narrow<int>(fragment_constants_sz) }, fragment_program);
 	m_uniform_buffer->unmap();
 
-	m_program->bind_uniform(vk::glsl::glsl_vertex_program, "ScaleOffsetBuffer", m_uniform_buffer->value, scale_offset_offset, 256);
-	m_program->bind_uniform(vk::glsl::glsl_vertex_program, "VertexConstantsBuffer", m_uniform_buffer->value, vertex_constants_offset, 512 * 4 * sizeof(float));
-	m_program->bind_uniform(vk::glsl::glsl_fragment_program, "ScaleOffsetBuffer", m_uniform_buffer->value, scale_offset_offset, 256);
-	m_program->bind_uniform(vk::glsl::glsl_fragment_program, "FragmentConstantsBuffer", m_uniform_buffer->value, fragment_constants_offset, fragment_constants_sz);
+	m_program->bind_uniform({ m_uniform_buffer->value, scale_offset_offset, 256 }, SCALE_OFFSET_BIND_SLOT);
+	m_program->bind_uniform({ m_uniform_buffer->value, vertex_constants_offset, 512 * 4 * sizeof(float) }, VERTEX_CONSTANT_BUFFERS_BIND_SLOT);
+	m_program->bind_uniform({ m_uniform_buffer->value, fragment_constants_offset, fragment_constants_sz }, FRAGMENT_CONSTANT_BUFFERS_BIND_SLOT);
 
 	return true;
 }
