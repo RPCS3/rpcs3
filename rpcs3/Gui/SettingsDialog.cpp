@@ -229,6 +229,7 @@ SettingsDialog::SettingsDialog(wxWindow *parent, rpcs3::config_t* cfg)
 
 	cbox_gs_render->Append("Null");
 	cbox_gs_render->Append("OpenGL");
+	cbox_gs_render->Append("Vulkan");
 
 #ifdef _MSC_VER
 	Microsoft::WRL::ComPtr<IDXGIFactory4> dxgiFactory;
@@ -251,7 +252,6 @@ SettingsDialog::SettingsDialog(wxWindow *parent, rpcs3::config_t* cfg)
 		chbox_gs_overlay->Enable(false);
 	}
 
-	cbox_gs_render->Append("Vulkan");
 #endif
 
 	for (int i = 1; i < WXSIZEOF(ResolutionTable); ++i)
@@ -503,7 +503,16 @@ SettingsDialog::SettingsDialog(wxWindow *parent, rpcs3::config_t* cfg)
 		cfg->core.hook_st_func = chbox_core_hook_stfunc->GetValue();
 		cfg->core.load_liblv2 = chbox_core_load_liblv2->GetValue();
 
-		cfg->rsx.renderer = cbox_gs_render->GetSelection();
+		// Translates renderer string to enum class for config.h
+		if (cbox_gs_render->GetString(cbox_gs_render->GetSelection()) == "Null")
+			cfg->rsx.renderer = rsx_renderer_type::Null;
+		if (cbox_gs_render->GetString(cbox_gs_render->GetSelection()) == "OpenGL")
+			cfg->rsx.renderer = rsx_renderer_type::OpenGL;
+		if (cbox_gs_render->GetString(cbox_gs_render->GetSelection()) == "Vulkan")
+			cfg->rsx.renderer = rsx_renderer_type::Vulkan;
+		if (cbox_gs_render->GetString(cbox_gs_render->GetSelection()) == "DirectX 12")
+			cfg->rsx.renderer = rsx_renderer_type::DX12;
+		
 		cfg->rsx.d3d12.adaptater = cbox_gs_d3d_adaptater->GetSelection();
 		cfg->rsx.resolution = ResolutionNumToId(cbox_gs_resolution->GetSelection() + 1);
 		cfg->rsx.aspect_ratio = cbox_gs_aspect->GetSelection() + 1;
