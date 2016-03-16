@@ -43,7 +43,7 @@ namespace vk
 		result.device_local = VK_MAX_MEMORY_TYPES;
 		result.host_visible_coherent = VK_MAX_MEMORY_TYPES;
 
-		for (int i = 0; i < VK_MAX_MEMORY_TYPES; i++)
+		for (int i = 0; i < memory_properties.memoryTypeCount; i++)
 		{
 			bool is_device_local = !!(memory_properties.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 			if (is_device_local)
