@@ -139,9 +139,9 @@ private:
 	bool recording = false;
 	bool dirty_frame = true;
 
-	//Single render pass
-	VkRenderPass m_render_pass = nullptr;
-	
+
+	std::array<VkRenderPass, 120> m_render_passes;
+
 	u32 m_draw_calls = 0;
 	
 	u8 m_draw_buffers_count = 0;
@@ -153,8 +153,6 @@ public:
 
 private:
 	void clear_surface(u32 mask);
-	void init_render_pass(VkFormat surface_format, VkFormat depth_format, u8 num_draw_buffers, u8 *draw_buffers);
-	void destroy_render_pass();
 	void execute_command_buffer(bool wait);
 	void begin_command_buffer_recording();
 	void end_command_buffer_recording();

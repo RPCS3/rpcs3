@@ -68,6 +68,7 @@ namespace vk
 
 	VkFormat get_compatible_sampler_format(u32 format, VkComponentMapping& mapping, u8 swizzle_mask=0);
 	VkFormat get_compatible_surface_format(rsx::surface_color_format color_format);
+	size_t get_render_pass_location(VkFormat color_surface_format, VkFormat depth_stencil_format, u8 color_surface_count);
 
 	struct memory_type_mapping
 	{
