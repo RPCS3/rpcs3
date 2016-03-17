@@ -285,6 +285,67 @@ namespace
 		}
 		return result;
 	}
+
+	std::tuple<VkPipelineLayout, VkDescriptorSetLayout> get_shared_pipeline_layout(VkDevice dev)
+	{
+		std::array<VkDescriptorSetLayoutBinding, 35> bindings = {};
+
+		size_t idx = 0;
+		// Vertex buffer
+		for (int i = 0; i < 16; i++)
+		{
+			bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
+			bindings[idx].descriptorCount = 1;
+			bindings[idx].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+			bindings[idx].binding = VERTEX_BUFFERS_FIRST_BIND_SLOT + i;
+			idx++;
+		}
+
+		bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		bindings[idx].descriptorCount = 1;
+		bindings[idx].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+		bindings[idx].binding = FRAGMENT_CONSTANT_BUFFERS_BIND_SLOT;
+
+		idx++;
+
+		bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		bindings[idx].descriptorCount = 1;
+		bindings[idx].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+		bindings[idx].binding = VERTEX_CONSTANT_BUFFERS_BIND_SLOT;
+
+		idx++;
+
+		for (int i = 0; i < 16; i++)
+		{
+			bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			bindings[idx].descriptorCount = 1;
+			bindings[idx].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+			bindings[idx].binding = TEXTURES_FIRST_BIND_SLOT + i;
+			idx++;
+		}
+
+		bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		bindings[idx].descriptorCount = 1;
+		bindings[idx].stageFlags = VK_SHADER_STAGE_ALL_GRAPHICS;
+		bindings[idx].binding = SCALE_OFFSET_BIND_SLOT;
+
+		VkDescriptorSetLayoutCreateInfo infos = {};
+		infos.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+		infos.pBindings = bindings.data();
+		infos.bindingCount = bindings.size();
+
+		VkDescriptorSetLayout set_layout;
+		CHECK_RESULT(vkCreateDescriptorSetLayout(dev, &infos, nullptr, &set_layout));
+
+		VkPipelineLayoutCreateInfo layout_info = {};
+		layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+		layout_info.setLayoutCount = 1;
+		layout_info.pSetLayouts = &set_layout;
+
+		VkPipelineLayout result;
+		CHECK_RESULT(vkCreatePipelineLayout(dev, &layout_info, nullptr, &result));
+		return std::make_tuple(result, set_layout);
+	}
 }
 
 VKGSRender::VKGSRender() : GSRender(frame_type::Vulkan)
@@ -353,6 +414,24 @@ VKGSRender::VKGSRender() : GSRender(frame_type::Vulkan)
 	m_index_buffer.reset(new vk::buffer(*m_device, RING_BUFFER_SIZE, m_memory_type_mapping.host_visible_coherent, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, 0));
 
 	m_render_passes = get_precomputed_render_passes(*m_device, m_optimal_tiling_supported_formats);
+
+	std::tie(pipeline_layout, descriptor_layouts) = get_shared_pipeline_layout(*m_device);
+
+	VkDescriptorPoolSize uniform_buffer_pool = { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER , 3 };
+	VkDescriptorPoolSize uniform_texel_pool = { VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER , 16 };
+	VkDescriptorPoolSize texture_pool = { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER , 16 };
+
+	std::vector<VkDescriptorPoolSize> sizes{ uniform_buffer_pool, uniform_texel_pool, texture_pool };
+
+	descriptor_pool.create(*m_device, sizes.data(), sizes.size());
+
+	VkDescriptorSetAllocateInfo alloc_info = {};
+	alloc_info.descriptorPool = descriptor_pool;
+	alloc_info.descriptorSetCount = 1;
+	alloc_info.pSetLayouts = &descriptor_layouts;
+	alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+
+	CHECK_RESULT(vkAllocateDescriptorSets(*m_device, &alloc_info, &descriptor_sets));
 }
 
 VKGSRender::~VKGSRender()
@@ -378,6 +457,12 @@ VKGSRender::~VKGSRender()
 	for (auto &render_pass : m_render_passes)
 		if (render_pass)
 			vkDestroyRenderPass(*m_device, render_pass, nullptr);
+
+	vkFreeDescriptorSets(*m_device, descriptor_pool, 1, &descriptor_sets);
+	vkDestroyPipelineLayout(*m_device, pipeline_layout, nullptr);
+	vkDestroyDescriptorSetLayout(*m_device, descriptor_layouts, nullptr);
+
+	descriptor_pool.destroy();
 
 	m_command_buffer.destroy();
 	m_command_buffer_pool.destroy();
@@ -540,12 +625,12 @@ void VKGSRender::end()
 		{
 			if (!textures[i].enabled())
 			{
-				m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL}, "tex" + std::to_string(i));
+				m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL}, "tex" + std::to_string(i), descriptor_sets);
 				continue;
 			}
 
 			vk::texture &tex = (texture0)? (*texture0): m_texture_cache.upload_texture(m_command_buffer, textures[i], m_rtts);
-			m_program->bind_uniform({ tex, tex, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, "tex" + std::to_string(i));
+			m_program->bind_uniform({ tex, tex, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, "tex" + std::to_string(i), descriptor_sets);
 			texture0 = &tex;
 		}
 	}
@@ -553,8 +638,8 @@ void VKGSRender::end()
 	auto upload_info = upload_vertex_data();
 
 	m_program->set_primitive_topology(std::get<0>(upload_info));
-	m_program->use(m_command_buffer, current_render_pass, 0);
-	
+	m_program->use(m_command_buffer, current_render_pass, pipeline_layout, descriptor_sets);
+
 	if (!std::get<1>(upload_info))
 		vkCmdDraw(m_command_buffer, vertex_draw_count, 1, 0, 0);
 	else
@@ -809,9 +894,9 @@ bool VKGSRender::load_program()
 	m_prog_buffer.fill_fragment_constans_buffer({ reinterpret_cast<float*>(buf), gsl::narrow<int>(fragment_constants_sz) }, fragment_program);
 	m_uniform_buffer->unmap();
 
-	m_program->bind_uniform({ m_uniform_buffer->value, scale_offset_offset, 256 }, SCALE_OFFSET_BIND_SLOT);
-	m_program->bind_uniform({ m_uniform_buffer->value, vertex_constants_offset, 512 * 4 * sizeof(float) }, VERTEX_CONSTANT_BUFFERS_BIND_SLOT);
-	m_program->bind_uniform({ m_uniform_buffer->value, fragment_constants_offset, fragment_constants_sz }, FRAGMENT_CONSTANT_BUFFERS_BIND_SLOT);
+	m_program->bind_uniform({ m_uniform_buffer->value, scale_offset_offset, 256 }, SCALE_OFFSET_BIND_SLOT, descriptor_sets);
+	m_program->bind_uniform({ m_uniform_buffer->value, vertex_constants_offset, 512 * 4 * sizeof(float) }, VERTEX_CONSTANT_BUFFERS_BIND_SLOT, descriptor_sets);
+	m_program->bind_uniform({ m_uniform_buffer->value, fragment_constants_offset, fragment_constants_sz }, FRAGMENT_CONSTANT_BUFFERS_BIND_SLOT, descriptor_sets);
 
 	return true;
 }

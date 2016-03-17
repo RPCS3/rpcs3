@@ -141,6 +141,10 @@ private:
 
 
 	std::array<VkRenderPass, 120> m_render_passes;
+	VkDescriptorSetLayout descriptor_layouts;
+	VkDescriptorSet descriptor_sets;
+	VkPipelineLayout pipeline_layout;
+	vk::descriptor_pool descriptor_pool;
 
 	u32 m_draw_calls = 0;
 	

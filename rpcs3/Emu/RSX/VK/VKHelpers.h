@@ -1347,10 +1347,6 @@ namespace vk
 				VkShaderModule vs, fs;
 				VkPipeline pipeline_handle = nullptr;
 
-				VkDescriptorSetLayout descriptor_layouts;
-				VkDescriptorSet descriptor_sets;
-				VkPipelineLayout pipeline_layout;
-
 				int num_targets = 1;
 
 				bool dirty;
@@ -1362,7 +1358,6 @@ namespace vk
 
 			vk::render_device *device = nullptr;
 			std::vector<program_input> uniforms;			
-			vk::descriptor_pool descriptor_pool;
 
 			void init_pipeline();
 
@@ -1394,15 +1389,12 @@ namespace vk
 			void set_blend_op(int num_targets, u8* targets, VkBlendOp* color_ops, VkBlendOp* alpha_ops);
 			void set_blend_op(int num_targets, u8 * targets, VkBlendOp color_op, VkBlendOp alpha_op);
 			void set_primitive_restart(VkBool32 state);
-			
-			void init_descriptor_layout();
-			void destroy_descriptors();
 
 			void set_draw_buffer_count(u8 draw_buffers);
 
 			program& load_uniforms(program_domain domain, std::vector<program_input>& inputs);
 
-			void use(vk::command_buffer& commands, VkRenderPass pass, u32 subpass);
+			void use(vk::command_buffer& commands, VkRenderPass pass, VkPipelineLayout pipeline_layout, VkDescriptorSet descriptor_set);
 
 			bool has_uniform(std::string uniform_name);
 #define VERTEX_BUFFERS_FIRST_BIND_SLOT 3
@@ -1410,9 +1402,9 @@ namespace vk
 #define VERTEX_CONSTANT_BUFFERS_BIND_SLOT 1
 #define TEXTURES_FIRST_BIND_SLOT 19
 #define SCALE_OFFSET_BIND_SLOT 0
-			void bind_uniform(VkDescriptorImageInfo image_descriptor, std::string uniform_name);
-			void bind_uniform(VkDescriptorBufferInfo buffer_descriptor, uint32_t binding_point);
-			void bind_uniform(const VkBufferView &buffer_view, const std::string &binding_name);
+			void bind_uniform(VkDescriptorImageInfo image_descriptor, std::string uniform_name, VkDescriptorSet &descriptor_set);
+			void bind_uniform(VkDescriptorBufferInfo buffer_descriptor, uint32_t binding_point, VkDescriptorSet &descriptor_set);
+			void bind_uniform(const VkBufferView &buffer_view, const std::string &binding_name, VkDescriptorSet &descriptor_set);
 
 			program& operator = (const program&) = delete;
 			program& operator = (program&& other);
