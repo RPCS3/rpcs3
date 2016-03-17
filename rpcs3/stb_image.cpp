@@ -1,9 +1,4 @@
 #include "stdafx.h"
-
-extern "C"
-{
-#pragma warning(push, 0)
+// Defines STB_IMAGE_IMPLEMENTATION *once* for stb_image.h includes (Should this be placed somewhere else?)
+#define STB_IMAGE_IMPLEMENTATION
 #include "stblib/stb_image.h"
-#include "stblib/stb_image.c"
-#pragma warning(pop)
-}

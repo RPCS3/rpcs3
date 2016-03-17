@@ -2,7 +2,10 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/SysCalls/Modules.h"
 
+// Defines STB_TRUETYPE_IMPLEMENTATION *once* before including stb_truetype.h (as noted in stb_truetype.h's comments)
+#define STB_TRUETYPE_IMPLEMENTATION
 #include "stblib/stb_truetype.h"
+
 #include "Emu/FS/vfsFile.h"
 #include "cellFont.h"
 
@@ -325,12 +328,12 @@ s32 cellFontRenderCharGlyphImage(vm::ptr<CellFont> font, u32 code, vm::ptr<CellF
 	unsigned char* buffer = vm::_ptr<unsigned char>(surface->buffer.addr());
 	for (u32 ypos = 0; ypos < (u32)height; ypos++)
 	{
-		if ((u32)y + ypos + yoff + baseLineY >= surface->height)
+		if ((u32)y + ypos + yoff + baseLineY >= (u32)surface->height)
 			break;
 
 		for (u32 xpos = 0; xpos < (u32)width; xpos++)
 		{
-			if ((u32)x + xpos >= surface->width)
+			if ((u32)x + xpos >= (u32)surface->width)
 				break;
 
 			// TODO: There are some oddities in the position of the character in the final buffer
