@@ -89,6 +89,63 @@ namespace vk
 		}
 	}
 
+	/** Maps color_format, depth_stencil_format and color count to an int as below :
+	 * idx = color_count + 5 * depth_stencil_idx + 15 * color_format_idx
+	 * This should perform a 1:1 mapping
+	 */
+
+	size_t get_render_pass_location(VkFormat color_format, VkFormat depth_stencil_format, u8 color_count)
+	{
+		size_t color_format_idx = 0;
+		size_t depth_format_idx = 0;
+
+		Expects(color_count < 5);
+
+		switch (color_format)
+		{
+		case VK_FORMAT_R5G6B5_UNORM_PACK16:
+			color_format_idx = 0;
+			break;
+		case VK_FORMAT_B8G8R8A8_UNORM:
+			color_format_idx = 1;
+			break;
+		case VK_FORMAT_R16G16B16A16_SFLOAT:
+			color_format_idx = 2;
+			break;
+		case VK_FORMAT_R32G32B32A32_SFLOAT:
+			color_format_idx = 3;
+			break;
+		case VK_FORMAT_R8_UINT:
+			color_format_idx = 4;
+			break;
+		case VK_FORMAT_R8G8_UINT:
+			color_format_idx = 5;
+			break;
+		case VK_FORMAT_A1R5G5B5_UNORM_PACK16:
+			color_format_idx = 6;
+			break;
+		case VK_FORMAT_R32_SFLOAT:
+			color_format_idx = 7;
+			break;
+		}
+
+		switch (depth_stencil_format)
+		{
+		case VK_FORMAT_D16_UNORM:
+			depth_format_idx = 0;
+			break;
+		case VK_FORMAT_D24_UNORM_S8_UINT:
+		case VK_FORMAT_D32_SFLOAT_S8_UINT:
+			depth_format_idx = 1;
+			break;
+		case VK_FORMAT_UNDEFINED:
+			depth_format_idx = 2;
+			break;
+		}
+
+		return color_count + 5 * depth_format_idx + 5 * 3 * color_format_idx;
+	}
+
 	std::vector<u8> get_draw_buffers(rsx::surface_target fmt)
 	{
 		switch (fmt)
@@ -146,6 +203,151 @@ namespace vk
 		default:
 			throw EXCEPTION("Unknown blend op: 0x%X", op);
 		}
+	}
+}
+
+
+namespace
+{
+	VkRenderPass precompute_render_pass(VkDevice dev, VkFormat color_format, u8 number_of_color_surface, VkFormat depth_format)
+	{
+		// Some driver crashes when using empty render pass
+		if (number_of_color_surface == 0 && depth_format == VK_FORMAT_UNDEFINED)
+			return nullptr;
+		/* Describe a render pass and framebuffer attachments */
+		std::vector<VkAttachmentDescription> attachments = {};
+		std::vector<VkAttachmentReference> attachment_references;
+
+		VkAttachmentDescription color_attachement_description = {};
+		color_attachement_description.format = color_format;
+		color_attachement_description.samples = VK_SAMPLE_COUNT_1_BIT;
+		color_attachement_description.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+		color_attachement_description.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+		color_attachement_description.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		color_attachement_description.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		color_attachement_description.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		color_attachement_description.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		for (u32 i = 0; i < number_of_color_surface; ++i)
+		{
+			attachments.push_back(color_attachement_description);
+			attachment_references.push_back({ i, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL });
+		}
+
+		if (depth_format != VK_FORMAT_UNDEFINED)
+		{
+			VkAttachmentDescription depth_attachement_description = {};
+			depth_attachement_description.format = depth_format;
+			depth_attachement_description.samples = VK_SAMPLE_COUNT_1_BIT;
+			depth_attachement_description.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+			depth_attachement_description.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+			depth_attachement_description.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+			depth_attachement_description.stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
+			depth_attachement_description.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+			depth_attachement_description.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+			attachments.push_back(depth_attachement_description);
+
+			attachment_references.push_back({ number_of_color_surface, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL });
+		}
+
+		VkSubpassDescription subpass = {};
+		subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+		subpass.colorAttachmentCount = number_of_color_surface;
+		subpass.pColorAttachments = number_of_color_surface > 0 ? attachment_references.data() : nullptr;
+		subpass.pDepthStencilAttachment = depth_format != VK_FORMAT_UNDEFINED ? &attachment_references.back() : nullptr;
+
+		VkRenderPassCreateInfo rp_info = {};
+		rp_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+		rp_info.attachmentCount = attachments.size();
+		rp_info.pAttachments = attachments.data();
+		rp_info.subpassCount = 1;
+		rp_info.pSubpasses = &subpass;
+
+		VkRenderPass result;
+		CHECK_RESULT(vkCreateRenderPass(dev, &rp_info, NULL, &result));
+		return result;
+	}
+
+	std::array<VkRenderPass, 120> get_precomputed_render_passes(VkDevice dev, const vk::gpu_formats_support &gpu_format_support)
+	{
+		std::array<VkRenderPass, 120> result = {};
+
+		const std::array<VkFormat, 3> depth_format_list = { VK_FORMAT_UNDEFINED, VK_FORMAT_D16_UNORM, gpu_format_support.d24_unorm_s8 ? VK_FORMAT_D24_UNORM_S8_UINT : VK_FORMAT_D32_SFLOAT_S8_UINT };
+		const std::array<VkFormat, 8> color_format_list = { VK_FORMAT_R5G6B5_UNORM_PACK16, VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_R16G16B16A16_SFLOAT, VK_FORMAT_R32G32B32A32_SFLOAT, VK_FORMAT_R8_UINT, VK_FORMAT_R8G8_UINT, VK_FORMAT_A1R5G5B5_UNORM_PACK16, VK_FORMAT_R32_SFLOAT };
+
+
+		for (const VkFormat &color_format : color_format_list)
+		{
+			for (const VkFormat &depth_stencil_format : depth_format_list)
+			{
+				for (u8 number_of_draw_buffer = 0; number_of_draw_buffer <= 4; number_of_draw_buffer++)
+				{
+					size_t idx = vk::get_render_pass_location(color_format, depth_stencil_format, number_of_draw_buffer);
+					result[idx] = precompute_render_pass(dev, color_format, number_of_draw_buffer, depth_stencil_format);
+				}
+			}
+		}
+		return result;
+	}
+
+	std::tuple<VkPipelineLayout, VkDescriptorSetLayout> get_shared_pipeline_layout(VkDevice dev)
+	{
+		std::array<VkDescriptorSetLayoutBinding, 35> bindings = {};
+
+		size_t idx = 0;
+		// Vertex buffer
+		for (int i = 0; i < 16; i++)
+		{
+			bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
+			bindings[idx].descriptorCount = 1;
+			bindings[idx].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+			bindings[idx].binding = VERTEX_BUFFERS_FIRST_BIND_SLOT + i;
+			idx++;
+		}
+
+		bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		bindings[idx].descriptorCount = 1;
+		bindings[idx].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+		bindings[idx].binding = FRAGMENT_CONSTANT_BUFFERS_BIND_SLOT;
+
+		idx++;
+
+		bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		bindings[idx].descriptorCount = 1;
+		bindings[idx].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+		bindings[idx].binding = VERTEX_CONSTANT_BUFFERS_BIND_SLOT;
+
+		idx++;
+
+		for (int i = 0; i < 16; i++)
+		{
+			bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			bindings[idx].descriptorCount = 1;
+			bindings[idx].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+			bindings[idx].binding = TEXTURES_FIRST_BIND_SLOT + i;
+			idx++;
+		}
+
+		bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		bindings[idx].descriptorCount = 1;
+		bindings[idx].stageFlags = VK_SHADER_STAGE_ALL_GRAPHICS;
+		bindings[idx].binding = SCALE_OFFSET_BIND_SLOT;
+
+		VkDescriptorSetLayoutCreateInfo infos = {};
+		infos.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+		infos.pBindings = bindings.data();
+		infos.bindingCount = bindings.size();
+
+		VkDescriptorSetLayout set_layout;
+		CHECK_RESULT(vkCreateDescriptorSetLayout(dev, &infos, nullptr, &set_layout));
+
+		VkPipelineLayoutCreateInfo layout_info = {};
+		layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+		layout_info.setLayoutCount = 1;
+		layout_info.pSetLayouts = &set_layout;
+
+		VkPipelineLayout result;
+		CHECK_RESULT(vkCreatePipelineLayout(dev, &layout_info, nullptr, &result));
+		return std::make_tuple(result, set_layout);
 	}
 }
 
@@ -213,6 +415,26 @@ VKGSRender::VKGSRender() : GSRender(frame_type::Vulkan)
 	m_uniform_buffer.reset(new vk::buffer(*m_device, RING_BUFFER_SIZE, m_memory_type_mapping.host_visible_coherent, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 0));
 	m_index_buffer_ring_info.init(RING_BUFFER_SIZE);
 	m_index_buffer.reset(new vk::buffer(*m_device, RING_BUFFER_SIZE, m_memory_type_mapping.host_visible_coherent, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, 0));
+
+	m_render_passes = get_precomputed_render_passes(*m_device, m_optimal_tiling_supported_formats);
+
+	std::tie(pipeline_layout, descriptor_layouts) = get_shared_pipeline_layout(*m_device);
+
+	VkDescriptorPoolSize uniform_buffer_pool = { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER , 3 };
+	VkDescriptorPoolSize uniform_texel_pool = { VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER , 16 };
+	VkDescriptorPoolSize texture_pool = { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER , 16 };
+
+	std::vector<VkDescriptorPoolSize> sizes{ uniform_buffer_pool, uniform_texel_pool, texture_pool };
+
+	descriptor_pool.create(*m_device, sizes.data(), sizes.size());
+
+	VkDescriptorSetAllocateInfo alloc_info = {};
+	alloc_info.descriptorPool = descriptor_pool;
+	alloc_info.descriptorSetCount = 1;
+	alloc_info.pSetLayouts = &descriptor_layouts;
+	alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+
+	CHECK_RESULT(vkAllocateDescriptorSets(*m_device, &alloc_info, &descriptor_sets));
 }
 
 VKGSRender::~VKGSRender()
@@ -235,8 +457,20 @@ VKGSRender::~VKGSRender()
 	//TODO: Properly destroy shader modules instead of calling clear...
 	m_prog_buffer.clear();
 
-	if (m_render_pass)
-		destroy_render_pass();
+	m_index_buffer.release();
+	m_uniform_buffer.release();
+
+
+
+	for (auto &render_pass : m_render_passes)
+		if (render_pass)
+			vkDestroyRenderPass(*m_device, render_pass, nullptr);
+
+	vkFreeDescriptorSets(*m_device, descriptor_pool, 1, &descriptor_sets);
+	vkDestroyPipelineLayout(*m_device, pipeline_layout, nullptr);
+	vkDestroyDescriptorSetLayout(*m_device, descriptor_layouts, nullptr);
+
+	descriptor_pool.destroy();
 
 	m_command_buffer.destroy();
 	m_command_buffer_pool.destroy();
@@ -375,9 +609,15 @@ namespace
 
 void VKGSRender::end()
 {
+	size_t idx = vk::get_render_pass_location(
+		vk::get_compatible_surface_format(m_surface.color_format),
+		vk::get_compatible_depth_surface_format(m_optimal_tiling_supported_formats, m_surface.depth_format),
+		(u8)vk::get_draw_buffers(rsx::to_surface_target(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET])).size());
+	VkRenderPass current_render_pass = m_render_passes[idx];
+
 	VkRenderPassBeginInfo rp_begin = {};
 	rp_begin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-	rp_begin.renderPass = m_render_pass;
+	rp_begin.renderPass = current_render_pass;
 	rp_begin.framebuffer = m_framebuffer;
 	rp_begin.renderArea.offset.x = 0;
 	rp_begin.renderArea.offset.y = 0;
@@ -393,12 +633,12 @@ void VKGSRender::end()
 		{
 			if (!textures[i].enabled())
 			{
-				m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL}, "tex" + std::to_string(i));
+				m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL}, "tex" + std::to_string(i), descriptor_sets);
 				continue;
 			}
 
 			vk::texture &tex = (texture0)? (*texture0): m_texture_cache.upload_texture(m_command_buffer, textures[i], m_rtts);
-			m_program->bind_uniform({ tex, tex, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, "tex" + std::to_string(i));
+			m_program->bind_uniform({ tex, tex, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, "tex" + std::to_string(i), descriptor_sets);
 			texture0 = &tex;
 		}
 	}
@@ -406,8 +646,8 @@ void VKGSRender::end()
 	auto upload_info = upload_vertex_data();
 
 	m_program->set_primitive_topology(std::get<0>(upload_info));
-	m_program->use(m_command_buffer, m_render_pass, 0);
-	
+	m_program->use(m_command_buffer, current_render_pass, pipeline_layout, descriptor_sets);
+
 	if (!std::get<1>(upload_info))
 		vkCmdDraw(m_command_buffer, vertex_draw_count, 1, 0, 0);
 	else
@@ -602,74 +842,6 @@ bool VKGSRender::do_method(u32 cmd, u32 arg)
 	}
 }
 
-void VKGSRender::init_render_pass(VkFormat surface_format, VkFormat depth_format, u8 num_draw_buffers, u8 *draw_buffers)
-{
-	//TODO: Create buffers as requested by the game. Render to swapchain for now..
-	/* Describe a render pass and framebuffer attachments */
-	std::array<VkAttachmentDescription, 2> attachments;
-
-	attachments[0].format = surface_format;
-	attachments[0].samples = VK_SAMPLE_COUNT_1_BIT;
-	attachments[0].loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;							//Set to clear removes warnings about empty contents after flip; overwrites previous calls
-	attachments[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-	attachments[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-	attachments[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-	attachments[0].initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;	//PRESENT_SRC_KHR??
-	attachments[0].finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-	attachments[1].format = depth_format;								/* Depth buffer format. Should be more elegant than this */
-	attachments[1].samples = VK_SAMPLE_COUNT_1_BIT;
-	attachments[1].loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-	attachments[1].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-	attachments[1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-	attachments[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-	attachments[1].initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-	attachments[1].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-	VkAttachmentReference template_color_reference = {};
-	template_color_reference.attachment = VK_ATTACHMENT_UNUSED;
-	template_color_reference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-	VkAttachmentReference depth_reference = {};
-	depth_reference.attachment = num_draw_buffers;
-	depth_reference.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-	//Fill in draw_buffers information...
-	std::array<VkAttachmentDescription, 4> real_attachments;
-	std::array<VkAttachmentReference, 4> color_references;
-
-	for (int i = 0; i < num_draw_buffers; ++i)
-	{
-		real_attachments[i] = attachments[0];
-		
-		color_references[i] = template_color_reference;
-		color_references[i].attachment = (draw_buffers)? draw_buffers[i]: i;
-	}
-
-	real_attachments[num_draw_buffers] = attachments[1];
-
-	VkSubpassDescription subpass = {};
-	subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-	subpass.colorAttachmentCount = num_draw_buffers;
-	subpass.pColorAttachments = num_draw_buffers? color_references.data() : nullptr;
-	subpass.pDepthStencilAttachment = &depth_reference;
-
-	VkRenderPassCreateInfo rp_info = {};
-	rp_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-	rp_info.attachmentCount = num_draw_buffers + 1;
-	rp_info.pAttachments = real_attachments.data();
-	rp_info.subpassCount = 1;
-	rp_info.pSubpasses = &subpass;
-
-	CHECK_RESULT(vkCreateRenderPass((*m_device), &rp_info, NULL, &m_render_pass));
-}
-
-void VKGSRender::destroy_render_pass()
-{
-	vkDestroyRenderPass((*m_device), m_render_pass, nullptr);
-	m_render_pass = nullptr;
-}
-
 bool VKGSRender::load_program()
 {
 	RSXVertexProgram vertex_program = get_current_vertex_program();
@@ -730,9 +902,9 @@ bool VKGSRender::load_program()
 	m_prog_buffer.fill_fragment_constans_buffer({ reinterpret_cast<float*>(buf), gsl::narrow<int>(fragment_constants_sz) }, fragment_program);
 	m_uniform_buffer->unmap();
 
-	m_program->bind_uniform({ m_uniform_buffer->value, scale_offset_offset, 256 }, SCALE_OFFSET_BIND_SLOT);
-	m_program->bind_uniform({ m_uniform_buffer->value, vertex_constants_offset, 512 * 4 * sizeof(float) }, VERTEX_CONSTANT_BUFFERS_BIND_SLOT);
-	m_program->bind_uniform({ m_uniform_buffer->value, fragment_constants_offset, fragment_constants_sz }, FRAGMENT_CONSTANT_BUFFERS_BIND_SLOT);
+	m_program->bind_uniform({ m_uniform_buffer->value, scale_offset_offset, 256 }, SCALE_OFFSET_BIND_SLOT, descriptor_sets);
+	m_program->bind_uniform({ m_uniform_buffer->value, vertex_constants_offset, 512 * 4 * sizeof(float) }, VERTEX_CONSTANT_BUFFERS_BIND_SLOT, descriptor_sets);
+	m_program->bind_uniform({ m_uniform_buffer->value, fragment_constants_offset, fragment_constants_sz }, FRAGMENT_CONSTANT_BUFFERS_BIND_SLOT, descriptor_sets);
 
 	return true;
 }
@@ -874,21 +1046,10 @@ void VKGSRender::prepare_rtts()
 		fbo_images.push_back(depth_image);
 	}
 
-	if (reconfigure_render_pass)
-	{
-		//Create render pass with draw_buffers information
-		//Somewhat simliar to glDrawBuffers
+	size_t idx = vk::get_render_pass_location(vk::get_compatible_surface_format(m_surface.color_format), vk::get_compatible_depth_surface_format(m_optimal_tiling_supported_formats, m_surface.depth_format), (u8)draw_buffers.size());
+	VkRenderPass current_render_pass = m_render_passes[idx];
 
-		if (m_render_pass)
-			destroy_render_pass();
-
-		init_render_pass(vk::get_compatible_surface_format(m_surface.color_format),
-			vk::get_compatible_depth_surface_format(m_optimal_tiling_supported_formats, m_surface.depth_format),
-			(u8)draw_buffers.size(),
-			draw_buffers.data());
-	}
-
-	m_framebuffer.create((*m_device), m_render_pass, fbo_images.data(), fbo_images.size(),
+	m_framebuffer.create((*m_device), current_render_pass, fbo_images.data(), fbo_images.size(),
 						clip_width, clip_height);
 
 	m_draw_buffers_count = draw_buffers.size();
@@ -971,62 +1132,59 @@ void VKGSRender::flip(int buffer)
 	present.pWaitSemaphores = &m_present_semaphore;
 	present.waitSemaphoreCount = 1;
 
-	if (m_render_pass)
+	begin_command_buffer_recording();
+
+	if (m_present_semaphore)
 	{
-		begin_command_buffer_recording();
+		//Blit contents to screen..
+		VkImage image_to_flip = nullptr;
 
-		if (m_present_semaphore)
-		{
-			//Blit contents to screen..
-			VkImage image_to_flip = nullptr;
-
-			if (std::get<1>(m_rtts.m_bound_render_targets[0]) != nullptr)
-				image_to_flip = (*std::get<1>(m_rtts.m_bound_render_targets[0]));
-			else
-				image_to_flip = (*std::get<1>(m_rtts.m_bound_render_targets[1]));
-
-			VkImage target_image = m_swap_chain->get_swap_chain_image(m_current_present_image);
-			vk::copy_scaled_image(m_command_buffer, image_to_flip, target_image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-									buffer_width, buffer_height, aspect_ratio.width, aspect_ratio.height, 1, VK_IMAGE_ASPECT_COLOR_BIT);
-		}
+		if (std::get<1>(m_rtts.m_bound_render_targets[0]) != nullptr)
+			image_to_flip = (*std::get<1>(m_rtts.m_bound_render_targets[0]));
 		else
-		{
-			//No draw call was issued!
-			//TODO: Properly clear the background to rsx value
-			m_swap_chain->acquireNextImageKHR((*m_device), (*m_swap_chain), ~0ULL, VK_NULL_HANDLE, VK_NULL_HANDLE, &next_image_temp);
+			image_to_flip = (*std::get<1>(m_rtts.m_bound_render_targets[1]));
 
-			VkImageSubresourceRange range = vk::default_image_subresource_range();
-			VkClearColorValue clear_black = { 0 };
-			vkCmdClearColorImage(m_command_buffer, m_swap_chain->get_swap_chain_image(next_image_temp), VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, &clear_black, 1, &range);
-			
-			present.pImageIndices = &next_image_temp;
-			present.waitSemaphoreCount = 0;
-		}
+		VkImage target_image = m_swap_chain->get_swap_chain_image(m_current_present_image);
+		vk::copy_scaled_image(m_command_buffer, image_to_flip, target_image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+			buffer_width, buffer_height, aspect_ratio.width, aspect_ratio.height, 1, VK_IMAGE_ASPECT_COLOR_BIT);
+	}
+	else
+	{
+		//No draw call was issued!
+		//TODO: Properly clear the background to rsx value
+		m_swap_chain->acquireNextImageKHR((*m_device), (*m_swap_chain), ~0ULL, VK_NULL_HANDLE, VK_NULL_HANDLE, &next_image_temp);
 
-		end_command_buffer_recording();
-		execute_command_buffer(false);
+		VkImageSubresourceRange range = vk::default_image_subresource_range();
+		VkClearColorValue clear_black = { 0 };
+		vkCmdClearColorImage(m_command_buffer, m_swap_chain->get_swap_chain_image(next_image_temp), VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, &clear_black, 1, &range);
 
-		//Check if anything is waiting in queue and wait for it if possible..
-		if (m_submit_fence)
-		{
-			CHECK_RESULT(vkWaitForFences((*m_device), 1, &m_submit_fence, VK_TRUE, ~0ULL));
+		present.pImageIndices = &next_image_temp;
+		present.waitSemaphoreCount = 0;
+	}
 
-			vkDestroyFence((*m_device), m_submit_fence, nullptr);
-			m_submit_fence = nullptr;
+	end_command_buffer_recording();
+	execute_command_buffer(false);
 
-			CHECK_RESULT(vkResetCommandBuffer(m_command_buffer, 0));
-		}
+	//Check if anything is waiting in queue and wait for it if possible..
+	if (m_submit_fence)
+	{
+		CHECK_RESULT(vkWaitForFences((*m_device), 1, &m_submit_fence, VK_TRUE, ~0ULL));
 
-		CHECK_RESULT(m_swap_chain->queuePresentKHR(m_swap_chain->get_present_queue(), &present));
-		CHECK_RESULT(vkQueueWaitIdle(m_swap_chain->get_present_queue()));
+		vkDestroyFence((*m_device), m_submit_fence, nullptr);
+		m_submit_fence = nullptr;
 
-		m_uniform_buffer_ring_info.m_get_pos = m_uniform_buffer_ring_info.get_current_put_pos_minus_one();
-		m_index_buffer_ring_info.m_get_pos = m_index_buffer_ring_info.get_current_put_pos_minus_one();
-		if (m_present_semaphore)
-		{
-			vkDestroySemaphore((*m_device), m_present_semaphore, nullptr);
-			m_present_semaphore = nullptr;
-		}
+		CHECK_RESULT(vkResetCommandBuffer(m_command_buffer, 0));
+	}
+
+	CHECK_RESULT(m_swap_chain->queuePresentKHR(m_swap_chain->get_present_queue(), &present));
+	CHECK_RESULT(vkQueueWaitIdle(m_swap_chain->get_present_queue()));
+
+	m_uniform_buffer_ring_info.m_get_pos = m_uniform_buffer_ring_info.get_current_put_pos_minus_one();
+	m_index_buffer_ring_info.m_get_pos = m_index_buffer_ring_info.get_current_put_pos_minus_one();
+	if (m_present_semaphore)
+	{
+		vkDestroySemaphore((*m_device), m_present_semaphore, nullptr);
+		m_present_semaphore = nullptr;
 	}
 
 	//Feed back damaged resources to the main texture cache for management...
