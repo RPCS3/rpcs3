@@ -30,7 +30,7 @@ void VKVertexDecompilerThread::insertHeader(std::stringstream &OS)
 {
 	OS << "#version 450" << std::endl << std::endl;
 	OS << "#extension GL_ARB_separate_shader_objects : enable" << std::endl;
-	OS << "layout(std140, set=0, binding = 0) uniform ScaleOffsetBuffer" << std::endl;
+	OS << "layout(std140, set = 0, binding = 0) uniform ScaleOffsetBuffer" << std::endl;
 	OS << "{" << std::endl;
 	OS << "	mat4 scaleOffsetMat;" << std::endl;
 	OS << "	float fog_param0;\n";
@@ -81,7 +81,7 @@ void VKVertexDecompilerThread::insertInputs(std::stringstream & OS, const std::v
 
 					this->inputs.push_back(in);
 
-					OS << "layout(set=0, binding=" << location++ << ")" << "	uniform samplerBuffer" << " " << PI.name << "_buffer;" << std::endl;
+					OS << "layout(set = 0, binding=" << 3 + location++ << ")" << "	uniform samplerBuffer" << " " << PI.name << "_buffer;" << std::endl;
 				}
 			}
 		}

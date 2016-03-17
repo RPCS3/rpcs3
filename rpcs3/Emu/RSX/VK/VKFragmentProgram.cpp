@@ -32,7 +32,7 @@ void VKFragmentDecompilerThread::insertHeader(std::stringstream & OS)
 	OS << "#version 420" << std::endl;
 	OS << "#extension GL_ARB_separate_shader_objects: enable" << std::endl << std::endl;
 
-	OS << "layout(std140, set=1, binding = 0) uniform ScaleOffsetBuffer" << std::endl;
+	OS << "layout(std140, set=0, binding = 0) uniform ScaleOffsetBuffer" << std::endl;
 	OS << "{" << std::endl;
 	OS << "	mat4 scaleOffsetMat;" << std::endl;
 	OS << "	float fog_param0;" << std::endl;
@@ -110,11 +110,11 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 
 			inputs.push_back(in);
 
-			OS << "layout(set=1, binding=" << location++ << ") uniform " << samplerType << " " << PI.name << ";" << std::endl;
+			OS << "layout(set=0, binding=" << 19 + location++ << ") uniform " << samplerType << " " << PI.name << ";" << std::endl;
 		}
 	}
 
-	OS << "layout(std140, set=1, binding = 1) uniform FragmentConstantsBuffer" << std::endl;
+	OS << "layout(std140, set = 0, binding = 2) uniform FragmentConstantsBuffer" << std::endl;
 	OS << "{" << std::endl;
 
 	for (const ParamType& PT : m_parr.params[PF_PARAM_UNIFORM])

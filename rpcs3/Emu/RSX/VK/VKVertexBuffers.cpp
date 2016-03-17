@@ -280,12 +280,11 @@ VKGSRender::upload_vertex_data()
 		{
 			auto &vertex_info = vertex_arrays_info[index];
 
-			if (!m_program->has_uniform(vk::glsl::glsl_vertex_program, reg_table[index]))
+			if (!m_program->has_uniform(reg_table[index]))
 				continue;
 
 			if (!vertex_info.size) // disabled
 			{
-				m_program->bind_uniform(vk::glsl::glsl_vertex_program, reg_table[index]);
 				continue;
 			}
 
@@ -334,7 +333,7 @@ VKGSRender::upload_vertex_data()
 			buffer.set_format(format);
 
 			//Link texture to uniform location
-			m_program->bind_uniform(vk::glsl::glsl_vertex_program, reg_table[index], buffer, true);
+			m_program->bind_uniform(buffer, reg_table[index]);
 		}
 	}
 
@@ -350,14 +349,13 @@ VKGSRender::upload_vertex_data()
 	{
 		for (int index = 0; index < rsx::limits::vertex_count; ++index)
 		{
-			if (!m_program->has_uniform(vk::glsl::glsl_vertex_program, reg_table[index]))
-				continue;
-		
 			bool enabled = !!(input_mask & (1 << index));
+
+			if (!m_program->has_uniform(reg_table[index]))
+				continue;
 
 			if (!enabled)
 			{
-				m_program->bind_uniform(vk::glsl::glsl_vertex_program, reg_table[index]);
 				continue;
 			}
 
@@ -423,7 +421,7 @@ VKGSRender::upload_vertex_data()
 
 				buffer.sub_data(0, data_size, data_ptr);
 				buffer.set_format(format);
-				m_program->bind_uniform(vk::glsl::glsl_vertex_program, reg_table[index], buffer, true);
+				m_program->bind_uniform(buffer, reg_table[index]);
 			}
 			else if (register_vertex_info[index].size > 0)
 			{
@@ -462,7 +460,7 @@ VKGSRender::upload_vertex_data()
 					buffer.sub_data(0, data_size, data_ptr);
 					buffer.set_format(format);
 
-					m_program->bind_uniform(vk::glsl::glsl_vertex_program, reg_table[index], buffer, true);
+					m_program->bind_uniform(buffer, reg_table[index]);
 					break;
 				}
 				default:
