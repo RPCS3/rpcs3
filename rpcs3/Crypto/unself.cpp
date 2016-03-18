@@ -9,7 +9,13 @@
 #pragma warning(disable : 4996)
 
 // TODO: Still reliant on wxWidgets for zlib functions. Alternative solutions?
-#include "wxWidgets/src/zlib/zlib.h"
+
+#ifdef _WIN32
+#include <wxWidgets/src/zlib/zlib.h>
+#else
+#include <zlib.h>
+#endif
+
 #pragma warning(pop)
 
 force_inline u8 Read8(vfsStream& f)
