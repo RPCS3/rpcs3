@@ -333,7 +333,7 @@ VKGSRender::upload_vertex_data()
 			buffer.set_format(format);
 
 			//Link texture to uniform location
-			m_program->bind_uniform(buffer, reg_table[index]);
+			m_program->bind_uniform(buffer, reg_table[index], descriptor_sets);
 		}
 	}
 
@@ -421,7 +421,7 @@ VKGSRender::upload_vertex_data()
 
 				buffer.sub_data(0, data_size, data_ptr);
 				buffer.set_format(format);
-				m_program->bind_uniform(buffer, reg_table[index]);
+				m_program->bind_uniform(buffer, reg_table[index], descriptor_sets);
 			}
 			else if (register_vertex_info[index].size > 0)
 			{
@@ -460,7 +460,7 @@ VKGSRender::upload_vertex_data()
 					buffer.sub_data(0, data_size, data_ptr);
 					buffer.set_format(format);
 
-					m_program->bind_uniform(buffer, reg_table[index]);
+					m_program->bind_uniform(buffer, reg_table[index], descriptor_sets);
 					break;
 				}
 				default:
