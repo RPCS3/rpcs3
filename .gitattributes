@@ -1,5 +1,5 @@
 # Auto detect text files and perform LF normalization
-* text=auto
+# * text=auto
 
 # Source files
 *.c text
@@ -7,10 +7,10 @@
 *.h text
 
 # Windows CRLF files
-*.sln text eol=lf
-*.vcxproj text eol=lf
-*.vcxproj.filters text eol=lf
-*.vcxproj.user text eol=lf
+*.sln text eol=crlf
+*.vcxproj text eol=crlf
+*.vcxproj.filters text eol=crlf
+*.vcxproj.user text eol=crlf
 
 
 # Custom for Visual Studio
