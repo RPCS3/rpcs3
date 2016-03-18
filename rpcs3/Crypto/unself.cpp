@@ -1153,20 +1153,20 @@ bool SELFDecrypter::MakeElf(const std::string& elf, bool isElf32)
 				{
 					/// Removed all wxWidget dependent code. Replaced with zlib functions.
 
-					// Store the length in writeable memory space (alloc'd).
-					uLongf* decomp_buf_length = (uLongf*)malloc(sizeof(uLongf));
-					memcpy(decomp_buf_length, &phdr64_arr[meta_shdr[i].program_idx].p_filesz, sizeof(uLongf));
+					// Store the length in writeable memory space.
+					std::unique_ptr<uLongf> decomp_buf_length(new uLongf);
+					memcpy(decomp_buf_length.get(), &phdr64_arr[meta_shdr[i].program_idx].p_filesz, sizeof(uLongf));
 
-					// Allocate a buffer for decompression.
-					u8 *decomp_buf = (u8 *)malloc(phdr64_arr[meta_shdr[i].program_idx].p_filesz);
+					// Create a pointer to a buffer for decompression.
+					std::unique_ptr<u8[]> decomp_buf(new u8[phdr64_arr[meta_shdr[i].program_idx].p_filesz]);
 
 					// Create a buffer separate from data_buf to uncompress.
-					u8 *zlib_buf = (u8 *)malloc(data_buf_length);
-					memcpy(zlib_buf, data_buf, data_buf_length);
+					std::unique_ptr<u8[]> zlib_buf(new u8[data_buf_length]);
+					memcpy(zlib_buf.get(), data_buf, data_buf_length);
 
 					// Use zlib uncompress on the new buffer.
-					// Why cast decomp_buf_length? It changes inside the call to uncompress, so it must be a pointer to correct type (in writeable mem space).
-					int rv = uncompress(decomp_buf, decomp_buf_length, zlib_buf + data_buf_offset, data_buf_length);
+					// decomp_buf_length changes inside the call to uncompress, so it must be a pointer to correct type (in writeable mem space).
+					int rv = uncompress(decomp_buf.get(), decomp_buf_length.get(), zlib_buf.get() + data_buf_offset, data_buf_length);
 
 					// Check for errors (TODO: Probably safe to remove this once these changes have passed testing.)
 					switch (rv)
@@ -1179,12 +1179,8 @@ bool SELFDecrypter::MakeElf(const std::string& elf, bool isElf32)
 					
 					// Seek to the program header data offset and write the data.
 					CHECK_ASSERTION(e.seek(phdr64_arr[meta_shdr[i].program_idx].p_offset) != -1);
-					e.write(decomp_buf, phdr64_arr[meta_shdr[i].program_idx].p_filesz);
+					e.write(decomp_buf.get(), phdr64_arr[meta_shdr[i].program_idx].p_filesz);
 
-					// Release the malloc'd variables.
-					free(decomp_buf_length);
-					free(decomp_buf);
-					free(zlib_buf);
 				}
 				else
 				{
