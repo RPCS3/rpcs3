@@ -1152,6 +1152,7 @@ bool SELFDecrypter::MakeElf(const std::string& elf, bool isElf32)
 				if (meta_shdr[i].compressed == 2)
 				{
 					/// Removed all wxWidget dependent code. Replaced with zlib functions.
+					/// Also changed local mallocs to unique_ptrs.
 
 					// Store the length in writeable memory space.
 					std::unique_ptr<uLongf> decomp_buf_length(new uLongf);
