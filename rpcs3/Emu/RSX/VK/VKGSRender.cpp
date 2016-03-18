@@ -211,6 +211,9 @@ namespace
 {
 	VkRenderPass precompute_render_pass(VkDevice dev, VkFormat color_format, u8 number_of_color_surface, VkFormat depth_format)
 	{
+		// Some driver crashes when using empty render pass
+		if (number_of_color_surface == 0 && depth_format == VK_FORMAT_UNDEFINED)
+			return nullptr;
 		/* Describe a render pass and framebuffer attachments */
 		std::vector<VkAttachmentDescription> attachments = {};
 		std::vector<VkAttachmentReference> attachment_references;
