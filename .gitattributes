@@ -1,9 +1,9 @@
 # Auto detect text files and perform LF normalization
-# * text=auto
+* text=auto
 
 # Source files
 *.c text
-# *.cpp text
+*.cpp text
 *.h text
 
 # Windows CRLF files
