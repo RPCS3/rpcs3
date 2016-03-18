@@ -31,10 +31,6 @@ namespace vk
 			uniforms = other.uniforms;
 			other.uniforms = tmp_uniforms;
 
-			vk::descriptor_pool tmp_pool;
-			descriptor_pool = other.descriptor_pool;
-			other.descriptor_pool = tmp_pool;
-
 			vk::render_device *tmp_dev = device;
 			device = other.device;
 			other.device = tmp_dev;
@@ -54,10 +50,6 @@ namespace vk
 			std::vector<program_input> tmp_uniforms = uniforms;
 			uniforms = other.uniforms;
 			other.uniforms = tmp_uniforms;
-
-			vk::descriptor_pool tmp_pool;
-			descriptor_pool = other.descriptor_pool;
-			other.descriptor_pool = tmp_pool;
 
 			vk::render_device *tmp_dev = device;
 			device = other.device;
@@ -382,108 +374,6 @@ namespace vk
 			}
 		}
 
-		namespace
-		{
-			std::tuple<VkPipelineLayout, VkDescriptorSetLayout> get_shared_pipeline_layout(VkDevice dev)
-			{
-				std::array<VkDescriptorSetLayoutBinding, 35> bindings = {};
-
-				size_t idx = 0;
-				// Vertex buffer
-				for (int i = 0; i < 16; i++)
-				{
-					bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
-					bindings[idx].descriptorCount = 1;
-					bindings[idx].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-					bindings[idx].binding = VERTEX_BUFFERS_FIRST_BIND_SLOT + i;
-					idx++;
-				}
-
-				bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-				bindings[idx].descriptorCount = 1;
-				bindings[idx].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-				bindings[idx].binding = FRAGMENT_CONSTANT_BUFFERS_BIND_SLOT;
-
-				idx++;
-
-				bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-				bindings[idx].descriptorCount = 1;
-				bindings[idx].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-				bindings[idx].binding = VERTEX_CONSTANT_BUFFERS_BIND_SLOT;
-
-				idx++;
-
-				for (int i = 0; i < 16; i++)
-				{
-					bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-					bindings[idx].descriptorCount = 1;
-					bindings[idx].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-					bindings[idx].binding = TEXTURES_FIRST_BIND_SLOT + i;
-					idx++;
-				}
-
-				bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-				bindings[idx].descriptorCount = 1;
-				bindings[idx].stageFlags = VK_SHADER_STAGE_ALL_GRAPHICS;
-				bindings[idx].binding = SCALE_OFFSET_BIND_SLOT;
-
-				VkDescriptorSetLayoutCreateInfo infos = {};
-				infos.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-				infos.pBindings = bindings.data();
-				infos.bindingCount = bindings.size();
-
-				VkDescriptorSetLayout set_layout;
-				CHECK_RESULT(vkCreateDescriptorSetLayout(dev, &infos, nullptr, &set_layout));
-
-				VkPipelineLayoutCreateInfo layout_info = {};
-				layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-				layout_info.setLayoutCount = 1;
-				layout_info.pSetLayouts = &set_layout;
-
-				VkPipelineLayout result;
-				CHECK_RESULT(vkCreatePipelineLayout(dev, &layout_info, nullptr, &result));
-				return std::make_tuple(result, set_layout);
-			}
-		}
-
-		void program::init_descriptor_layout()
-		{
-			if (descriptor_pool.valid())
-				descriptor_pool.destroy();
-
-			std::tie(pstate.pipeline_layout, pstate.descriptor_layouts) = get_shared_pipeline_layout(*device);
-
-			VkDescriptorPoolSize uniform_buffer_pool = { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER , 3};
-			VkDescriptorPoolSize uniform_texel_pool = { VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER , 16};
-			VkDescriptorPoolSize texture_pool = { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER , 16 };
-
-			std::vector<VkDescriptorPoolSize> sizes{ uniform_buffer_pool, uniform_texel_pool, texture_pool };
-
-			descriptor_pool.create((*device), sizes.data(), sizes.size());
-
-			VkDescriptorSetAllocateInfo alloc_info = {};
-			alloc_info.descriptorPool = descriptor_pool;
-			alloc_info.descriptorSetCount = 1;
-			alloc_info.pSetLayouts = &pstate.descriptor_layouts;
-			alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-
-			CHECK_RESULT(vkAllocateDescriptorSets((*device), &alloc_info, &pstate.descriptor_sets));
-		}
-
-		void program::destroy_descriptors()
-		{
-			if (pstate.descriptor_sets)
-				vkFreeDescriptorSets((*device), descriptor_pool, 1, &pstate.descriptor_sets);
-
-			if (pstate.pipeline_layout)
-				vkDestroyPipelineLayout((*device), pstate.pipeline_layout, nullptr);
-
-			if (pstate.descriptor_layouts)
-				vkDestroyDescriptorSetLayout((*device), pstate.descriptor_layouts, nullptr);
-
-			descriptor_pool.destroy();
-		}
-
 		void program::set_draw_buffer_count(u8 draw_buffers)
 		{
 			if (pstate.num_targets != draw_buffers)
@@ -509,7 +399,7 @@ namespace vk
 			return *this;
 		}
 
-		void program::use(vk::command_buffer& commands, VkRenderPass pass, u32 subpass)
+		void program::use(vk::command_buffer& commands, VkRenderPass pass, VkPipelineLayout pipeline_layout, VkDescriptorSet descriptor_set)
 		{
 			if (/*uniforms_changed*/true)
 			{
@@ -535,7 +425,7 @@ namespace vk
 				pstate.pipeline.pDepthStencilState = &pstate.ds;
 				pstate.pipeline.pStages = pstate.shader_stages;
 				pstate.pipeline.pDynamicState = &pstate.dynamic_state;
-				pstate.pipeline.layout = pstate.pipeline_layout;
+				pstate.pipeline.layout = pipeline_layout;
 				pstate.pipeline.basePipelineIndex = -1;
 				pstate.pipeline.basePipelineHandle = VK_NULL_HANDLE;
 
@@ -546,7 +436,7 @@ namespace vk
 			}
 
 			vkCmdBindPipeline(commands, VK_PIPELINE_BIND_POINT_GRAPHICS, pstate.pipeline_handle);
-			vkCmdBindDescriptorSets(commands, VK_PIPELINE_BIND_POINT_GRAPHICS, pstate.pipeline_layout, 0, 1, &pstate.descriptor_sets, 0, nullptr);
+			vkCmdBindDescriptorSets(commands, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &descriptor_set, 0, nullptr);
 		}
 
 		bool program::has_uniform(std::string uniform_name)
@@ -560,17 +450,15 @@ namespace vk
 			return false;
 		}
 
-		void program::bind_uniform(VkDescriptorImageInfo image_descriptor, std::string uniform_name)
+		void program::bind_uniform(VkDescriptorImageInfo image_descriptor, std::string uniform_name, VkDescriptorSet &descriptor_set)
 		{
-			if (!pstate.descriptor_layouts)
-				init_descriptor_layout();
 			for (auto &uniform : uniforms)
 			{
 				if (uniform.name == uniform_name)
 				{
 					VkWriteDescriptorSet descriptor_writer = {};
 					descriptor_writer.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-					descriptor_writer.dstSet = pstate.descriptor_sets;
+					descriptor_writer.dstSet = descriptor_set;
 					descriptor_writer.descriptorCount = 1;
 					descriptor_writer.pImageInfo = &image_descriptor;
 					descriptor_writer.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -585,13 +473,11 @@ namespace vk
 			throw EXCEPTION("texture not found");
 		}
 
-		void program::bind_uniform(VkDescriptorBufferInfo buffer_descriptor, uint32_t binding_point)
+		void program::bind_uniform(VkDescriptorBufferInfo buffer_descriptor, uint32_t binding_point, VkDescriptorSet &descriptor_set)
 		{
-			if (!pstate.descriptor_layouts)
-				init_descriptor_layout();
 			VkWriteDescriptorSet descriptor_writer = {};
 			descriptor_writer.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-			descriptor_writer.dstSet = pstate.descriptor_sets;
+			descriptor_writer.dstSet = descriptor_set;
 			descriptor_writer.descriptorCount = 1;
 			descriptor_writer.pBufferInfo = &buffer_descriptor;
 			descriptor_writer.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -601,18 +487,15 @@ namespace vk
 			vkUpdateDescriptorSets((*device), 1, &descriptor_writer, 0, nullptr);
 		}
 
-		void program::bind_uniform(const VkBufferView &buffer_view, const std::string &binding_name)
+		void program::bind_uniform(const VkBufferView &buffer_view, const std::string &binding_name, VkDescriptorSet &descriptor_set)
 		{
-			if (!pstate.descriptor_layouts)
-				init_descriptor_layout();
-
 			for (auto &uniform : uniforms)
 			{
 				if (uniform.name == binding_name)
 				{
 					VkWriteDescriptorSet descriptor_writer = {};
 					descriptor_writer.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-					descriptor_writer.dstSet = pstate.descriptor_sets;
+					descriptor_writer.dstSet = descriptor_set;
 					descriptor_writer.descriptorCount = 1;
 					descriptor_writer.pTexelBufferView = &buffer_view;
 					descriptor_writer.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
@@ -630,7 +513,6 @@ namespace vk
 		{
 			if (device)
 			{
-				destroy_descriptors();
 				uniforms.resize(0);
 
 				if (pstate.pipeline_handle)
