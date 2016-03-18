@@ -9,7 +9,13 @@
 #pragma warning(disable : 4996)
 
 // TODO: Still reliant on wxWidgets for zlib functions. Alternative solutions?
+
+#ifdef _WIN32
 #include <wxWidgets/src/zlib/zlib.h>
+#else
+#include <zlib.h>
+#endif
+
 #pragma warning(pop)
 
 force_inline u8 Read8(vfsStream& f)
@@ -1152,6 +1158,7 @@ bool SELFDecrypter::MakeElf(const std::string& elf, bool isElf32)
 				if (meta_shdr[i].compressed == 2)
 				{
 					/// Removed all wxWidget dependent code. Replaced with zlib functions.
+					/// Also changed local mallocs to unique_ptrs.
 
 					// Store the length in writeable memory space.
 					std::unique_ptr<uLongf> decomp_buf_length(new uLongf);
