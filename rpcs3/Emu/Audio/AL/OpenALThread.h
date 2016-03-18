@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Emu/Audio/AudioThread.h"
-#include "OpenAL/include/alext.h"
+#include "3rdparty/OpenAL/include/alext.h"
 
 class OpenALThread : public AudioThread
 {

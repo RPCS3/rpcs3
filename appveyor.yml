@@ -28,7 +28,7 @@ install:
  - ps: Start-FileDownload 'https://402331b94f8e4b87ae2ef4677347f7956cf3861f.googledrive.com/host/0B6v_qtb9hkicfmt0NG0wTTRtUmF4X3VTQk5Oc2JidEVKVnUteDA1dXdrYlNsVW9kREpsSHc/llvmlibs.7z'
  - ps: Start-FileDownload 'https://402331b94f8e4b87ae2ef4677347f7956cf3861f.googledrive.com/host/0B6v_qtb9hkicfmt0NG0wTTRtUmF4X3VTQk5Oc2JidEVKVnUteDA1dXdrYlNsVW9kREpsSHc/zlib.7z'
  - set WXWIN=C:\rpcs3\wxWidgets
- - set OPENALDIR=C:\rpcs3\OpenAL
+ - set OPENALDIR=C:\rpcs3\3rdparty\OpenAL
  - set PATH=C:\Program Files (x86)\MSBuild\14.0\Bin;C:\wxWidgets;%PATH%
  - set COMMIT_SHA=%APPVEYOR_REPO_COMMIT:~0,8%
 

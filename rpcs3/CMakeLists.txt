@@ -119,10 +119,13 @@ ${LLVM_INCLUDE_DIRS}
 "${RPCS3_SRC_DIR}/../rsx_program_decompiler/shader_code"
 "${RPCS3_SRC_DIR}/../Vulkan/Vulkan-LoaderAndValidationLayers/include"
 "${RPCS3_SRC_DIR}/../Vulkan/glslang/glslang/Public"
+# Includes 3rdparty stuff that isn't included yet
+"${RPCS3_SRC_DIR}/../3rdparty/GL"
+"${RPCS3_SRC_DIR}/../3rdparty/stblib"
 )
 if(WIN32)
 	include_directories(BEFORE "${RPCS3_SRC_DIR}/../minidx9/Include")
-	include_directories(BEFORE "${RPCS3_SRC_DIR}/../minidx12/Include")
+	include_directories(BEFORE "${RPCS3_SRC_DIR}/../3rdparty/minidx12/Include")
 endif()
 
 if(NOT LLVM_FOUND)
@@ -146,7 +149,7 @@ endif()
 
 link_directories(
 "${RPCS3_SRC_DIR}/../asmjit/"
-"${RPCS3_SRC_DIR}/../minidx12/"
+"${RPCS3_SRC_DIR}/../3rdparty/minidx12/"
 )
 
 if(MSVC OR NOT WIN32)

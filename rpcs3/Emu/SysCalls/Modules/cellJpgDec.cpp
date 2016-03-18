@@ -5,7 +5,7 @@
 #include "Emu/SysCalls/Modules.h"
 
 // STB_IMAGE_IMPLEMENTATION is already defined in stb_image.cpp
-#include "stblib/stb_image.h"
+#include <stb_image.h>
 
 #include "Emu/FS/VFS.h"
 #include "Emu/FS/vfsFileBase.h"

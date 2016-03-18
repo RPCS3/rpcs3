@@ -9,7 +9,7 @@
 #include "Emu/RSX/GSRender.h"
 #include "../rsx_methods.h"
 
-#include "D3D12.h"
+#include <D3D12.h>
 #include "D3D12GSRender.h"
 #include "D3D12Formats.h"
 
