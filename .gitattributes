@@ -3,7 +3,7 @@
 
 # Source files
 *.c text
-*.cpp text
+# *.cpp text
 *.h text
 
 # Windows CRLF files
