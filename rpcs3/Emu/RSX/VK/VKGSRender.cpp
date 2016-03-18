@@ -457,6 +457,11 @@ VKGSRender::~VKGSRender()
 	//TODO: Properly destroy shader modules instead of calling clear...
 	m_prog_buffer.clear();
 
+	m_index_buffer.release();
+	m_uniform_buffer.release();
+
+
+
 	for (auto &render_pass : m_render_passes)
 		if (render_pass)
 			vkDestroyRenderPass(*m_device, render_pass, nullptr);
