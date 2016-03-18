@@ -7,10 +7,10 @@
 *.h text
 
 # Windows CRLF files
-*.sln text eol=crlf
-*.vcxproj text eol=crlf
-*.vcxproj.filters text eol=crlf
-*.vcxproj.user text eol=crlf
+*.sln text eol=lf
+*.vcxproj text eol=lf
+*.vcxproj.filters text eol=lf
+*.vcxproj.user text eol=lf
 
 
 # Custom for Visual Studio
