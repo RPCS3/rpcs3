@@ -6,6 +6,13 @@
 *.cpp text
 *.h text
 
+# Windows CRLF files
+*.sln text eol=crlf
+*.vcxproj text eol=crlf
+*.vcxproj.filters text eol=crlf
+*.vcxproj.user text eol=crlf
+
+
 # Custom for Visual Studio
 *.cs     diff=csharp
 
