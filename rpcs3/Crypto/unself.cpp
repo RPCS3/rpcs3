@@ -9,12 +9,7 @@
 #pragma warning(disable : 4996)
 
 // TODO: Still reliant on wxWidgets for zlib functions. Alternative solutions?
-
-#ifdef _WIN32
-#include <wxWidgets/src/zlib/zlib.h>
-#else
 #include <zlib.h>
-#endif
 
 #pragma warning(pop)
 
