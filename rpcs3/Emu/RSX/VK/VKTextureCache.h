@@ -195,8 +195,8 @@ namespace vk
 			u32 raw_format = tex.format();
 			u32 format = raw_format & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
 
-			VkComponentMapping mapping;
-			VkFormat vk_format = get_compatible_sampler_format(format, mapping, tex.remap());
+			VkComponentMapping mapping = vk::get_component_mapping(format, tex.remap());
+			VkFormat vk_format = get_compatible_sampler_format(format);
 
 			cto.uploaded_texture.create(*vk::get_current_renderer(), vk_format, VK_IMAGE_USAGE_SAMPLED_BIT, tex.width(), tex.height(), tex.mipmap(), false, mapping);
 			cto.uploaded_texture.init(tex, cmd);

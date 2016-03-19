@@ -60,49 +60,19 @@ namespace vk
 		return result;
 	}
 
-	VkFormat get_compatible_sampler_format(u32 format, VkComponentMapping& swizzle, u8 swizzle_mask)
+	VkFormat get_compatible_sampler_format(u32 format)
 	{
-		u8 remap_a = swizzle_mask & 0x3;
-		u8 remap_r = (swizzle_mask >> 2) & 0x3;
-		u8 remap_g = (swizzle_mask >> 4) & 0x3;
-		u8 remap_b = (swizzle_mask >> 6) & 0x3;
-
-		VkComponentSwizzle map_table[] = { VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_A };
-		
-		VkComponentMapping remapped;
-		remapped.a = map_table[remap_a];
-		remapped.b = map_table[remap_b];
-		remapped.g = map_table[remap_g];
-		remapped.r = map_table[remap_r];
-
-		swizzle = default_component_map();
-
 		switch (format)
 		{
-		case CELL_GCM_TEXTURE_B8:
-		{
-			swizzle = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R };
-			return VK_FORMAT_R8_UNORM;
-		}
+		case CELL_GCM_TEXTURE_B8: return VK_FORMAT_R8_UNORM;
 		case CELL_GCM_TEXTURE_A1R5G5B5: return VK_FORMAT_A1R5G5B5_UNORM_PACK16;
 		case CELL_GCM_TEXTURE_A4R4G4B4: return VK_FORMAT_B4G4R4A4_UNORM_PACK16;
 		case CELL_GCM_TEXTURE_R5G6B5: return VK_FORMAT_R5G6B5_UNORM_PACK16;
-		case CELL_GCM_TEXTURE_A8R8G8B8:
-		{
-			swizzle = remapped;
-			return VK_FORMAT_B8G8R8A8_UNORM;
-		}
+		case CELL_GCM_TEXTURE_A8R8G8B8: return VK_FORMAT_B8G8R8A8_UNORM;
 		case CELL_GCM_TEXTURE_COMPRESSED_DXT1: return VK_FORMAT_BC1_RGBA_UNORM_BLOCK;
 		case CELL_GCM_TEXTURE_COMPRESSED_DXT23: return VK_FORMAT_BC2_UNORM_BLOCK;
-		case CELL_GCM_TEXTURE_COMPRESSED_DXT45: 
-		{
-			return VK_FORMAT_BC3_UNORM_BLOCK;
-		}
-		case CELL_GCM_TEXTURE_G8B8:
-		{
-			swizzle = { VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_ONE, VK_COMPONENT_SWIZZLE_ONE };
-			return VK_FORMAT_R8G8_UNORM;
-		}
+		case CELL_GCM_TEXTURE_COMPRESSED_DXT45: return VK_FORMAT_BC3_UNORM_BLOCK;
+		case CELL_GCM_TEXTURE_G8B8: return VK_FORMAT_R8G8_UNORM;
 		case CELL_GCM_TEXTURE_R6G5B5: return VK_FORMAT_R5G6B5_UNORM_PACK16;					//Expand, discard high bit?
 		case CELL_GCM_TEXTURE_DEPTH24_D8: return VK_FORMAT_R32_UINT;
 		case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:	return VK_FORMAT_R32_SFLOAT;
@@ -114,25 +84,10 @@ namespace vk
 		case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT: return VK_FORMAT_R16G16B16A16_SFLOAT;
 		case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT: return VK_FORMAT_R32G32B32A32_SFLOAT;
 		case CELL_GCM_TEXTURE_X32_FLOAT: return VK_FORMAT_R32_SFLOAT;
-		case CELL_GCM_TEXTURE_D1R5G5B5:
-		{
-			swizzle.a = VK_COMPONENT_SWIZZLE_ONE;
-			return VK_FORMAT_A1R5G5B5_UNORM_PACK16;
-		}
-		case CELL_GCM_TEXTURE_D8R8G8B8:
-		{
-			swizzle = remapped;
-			swizzle.a = VK_COMPONENT_SWIZZLE_ONE;
-			return VK_FORMAT_B8G8R8A8_UNORM;
-		}
+		case CELL_GCM_TEXTURE_D1R5G5B5: return VK_FORMAT_A1R5G5B5_UNORM_PACK16;
+		case CELL_GCM_TEXTURE_D8R8G8B8: return VK_FORMAT_B8G8R8A8_UNORM;
 		case CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8: return VK_FORMAT_A8B8G8R8_UNORM_PACK32;	//Expand
 		case CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8: return VK_FORMAT_R8G8B8A8_UNORM;		//Expand
-		case CELL_GCM_TEXTURE_Y16_X16_FLOAT:
-		case CELL_GCM_TEXTURE_COMPRESSED_HILO8:
-		case CELL_GCM_TEXTURE_COMPRESSED_HILO_S8:
-		case ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN) & CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8:
-		case ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN) & CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8:
-			break;
 		}
 		throw EXCEPTION("Invalid or unsupported texture format (0x%x)", format);
 	}
