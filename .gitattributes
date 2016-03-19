@@ -7,7 +7,6 @@
 *.h text
 
 # Windows CRLF files
-*.vcxproj text eol=crlf
 
 # Custom for Visual Studio
 *.cs     diff=csharp
