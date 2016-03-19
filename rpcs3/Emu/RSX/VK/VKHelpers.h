@@ -357,9 +357,6 @@ namespace vk
 
 		vk::texture *staging_texture = nullptr;
 		bool ready = false;
-
-		VkSamplerAddressMode vk_wrap_mode(u32 gcm_wrap_mode);
-		float max_aniso(u32 gcm_aniso);
 		void sampler_setup(rsx::texture& tex, VkImageViewType type, VkComponentMapping swizzle);
 
 	public:

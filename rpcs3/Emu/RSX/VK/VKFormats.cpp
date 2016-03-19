@@ -39,4 +39,38 @@ VkFormat get_compatible_depth_surface_format(const gpu_formats_support &support,
 	throw EXCEPTION("Invalid format (0x%x)", format);
 }
 
+VkSamplerAddressMode vk_wrap_mode(u32 gcm_wrap)
+{
+	switch (gcm_wrap)
+	{
+	case CELL_GCM_TEXTURE_WRAP: return VK_SAMPLER_ADDRESS_MODE_REPEAT;
+	case CELL_GCM_TEXTURE_MIRROR: return VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
+	case CELL_GCM_TEXTURE_CLAMP_TO_EDGE: return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+	case CELL_GCM_TEXTURE_BORDER: return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+	case CELL_GCM_TEXTURE_CLAMP: return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+	case CELL_GCM_TEXTURE_MIRROR_ONCE_CLAMP_TO_EDGE: return VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE;
+	case CELL_GCM_TEXTURE_MIRROR_ONCE_BORDER: return VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE;
+	case CELL_GCM_TEXTURE_MIRROR_ONCE_CLAMP: return VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE;
+	default:
+		throw EXCEPTION("unhandled texture clamp mode 0x%X", gcm_wrap);
+	}
+}
+
+float max_aniso(u32 gcm_aniso)
+{
+	switch (gcm_aniso)
+	{
+	case CELL_GCM_TEXTURE_MAX_ANISO_1: return 1.0f;
+	case CELL_GCM_TEXTURE_MAX_ANISO_2: return 2.0f;
+	case CELL_GCM_TEXTURE_MAX_ANISO_4: return 4.0f;
+	case CELL_GCM_TEXTURE_MAX_ANISO_6: return 6.0f;
+	case CELL_GCM_TEXTURE_MAX_ANISO_8: return 8.0f;
+	case CELL_GCM_TEXTURE_MAX_ANISO_10: return 10.0f;
+	case CELL_GCM_TEXTURE_MAX_ANISO_12: return 12.0f;
+	case CELL_GCM_TEXTURE_MAX_ANISO_16: return 16.0f;
+	}
+
+	throw EXCEPTION("Texture anisotropy error: bad max aniso (%d).", gcm_aniso);
+}
+
 }
