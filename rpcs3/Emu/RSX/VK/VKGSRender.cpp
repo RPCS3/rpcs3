@@ -615,17 +615,6 @@ void VKGSRender::end()
 		(u8)vk::get_draw_buffers(rsx::to_surface_target(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET])).size());
 	VkRenderPass current_render_pass = m_render_passes[idx];
 
-	VkRenderPassBeginInfo rp_begin = {};
-	rp_begin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-	rp_begin.renderPass = current_render_pass;
-	rp_begin.framebuffer = m_framebuffer;
-	rp_begin.renderArea.offset.x = 0;
-	rp_begin.renderArea.offset.y = 0;
-	rp_begin.renderArea.extent.width = m_frame->client_size().width;
-	rp_begin.renderArea.extent.height = m_frame->client_size().height;
-
-	vkCmdBeginRenderPass(m_command_buffer, &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
-
 	vk::texture *texture0 = nullptr;
 	for (int i = 0; i < rsx::limits::textures_count; ++i)
 	{
@@ -642,6 +631,17 @@ void VKGSRender::end()
 			texture0 = &tex;
 		}
 	}
+
+	VkRenderPassBeginInfo rp_begin = {};
+	rp_begin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+	rp_begin.renderPass = current_render_pass;
+	rp_begin.framebuffer = m_framebuffer;
+	rp_begin.renderArea.offset.x = 0;
+	rp_begin.renderArea.offset.y = 0;
+	rp_begin.renderArea.extent.width = m_frame->client_size().width;
+	rp_begin.renderArea.extent.height = m_frame->client_size().height;
+
+	vkCmdBeginRenderPass(m_command_buffer, &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
 
 	auto upload_info = upload_vertex_data();
 
