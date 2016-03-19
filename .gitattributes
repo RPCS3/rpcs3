@@ -1,5 +1,5 @@
 # Auto detect text files and perform LF normalization
-* text=auto
+# * text=auto
 
 # Source files
 *.c text
@@ -7,7 +7,6 @@
 *.h text
 
 # Windows CRLF files
-*.vcxproj text
 
 # Custom for Visual Studio
 *.cs     diff=csharp
