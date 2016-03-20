@@ -20,10 +20,10 @@
 	path = rsx_program_decompiler
 	url = https://github.com/RPCS3/rsx_program_decompiler
 [submodule "GSL"]
-	path = GSL
+	path = 3rdparty/GSL
 	url = https://github.com/Microsoft/GSL.git
 [submodule "libpng"]
-	path = libpng
+	path = 3rdparty/libpng
 	url = https://github.com/RPCS3/libpng
 [submodule "Vulkan/glslang"]
 	path = Vulkan/glslang

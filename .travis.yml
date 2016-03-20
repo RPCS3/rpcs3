@@ -53,7 +53,7 @@ before_install:
     fi;
 
 before_script:
- - git submodule update --init asmjit 3rdparty/ffmpeg rsx_program_decompiler GSL libpng Vulkan/glslang Vulkan/Vulkan-LoaderAndValidationLayers
+ - git submodule update --init asmjit 3rdparty/ffmpeg rsx_program_decompiler 3rdparty/GSL 3rdparty/libpng Vulkan/glslang Vulkan/Vulkan-LoaderAndValidationLayers
  - mkdir build
  - cd build
  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then cmake ..; else cmake .. -DLLVM_DIR=/usr/local/opt/llvm36/lib/llvm-3.6/share/llvm/cmake; fi
