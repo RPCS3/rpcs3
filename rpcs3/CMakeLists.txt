@@ -106,23 +106,26 @@ ${wxWidgets_INCLUDE_DIRS}
 ${ZLIB_INCLUDE_DIR}
 ${OPENAL_INCLUDE_DIR}
 ${LLVM_INCLUDE_DIRS}
-"${RPCS3_SRC_DIR}/../ffmpeg/${PLATFORM_ARCH}/include"
+"${RPCS3_SRC_DIR}/../3rdparty/ffmpeg/${PLATFORM_ARCH}/include"
 "${RPCS3_SRC_DIR}"
 "${RPCS3_SRC_DIR}/Loader"
 "${RPCS3_SRC_DIR}/Crypto"
 "${RPCS3_SRC_DIR}/.."
 "${RPCS3_SRC_DIR}/../asmjit/src/asmjit"
-"${RPCS3_SRC_DIR}/../glm"
-"${RPCS3_SRC_DIR}/../libpng"
-"${RPCS3_SRC_DIR}/../GSL/include"
+"${RPCS3_SRC_DIR}/../3rdparty/glm"
+"${RPCS3_SRC_DIR}/../3rdparty/libpng"
+"${RPCS3_SRC_DIR}/../3rdparty/GSL/include"
 "${RPCS3_SRC_DIR}/../rsx_program_decompiler/rsx_decompiler"
 "${RPCS3_SRC_DIR}/../rsx_program_decompiler/shader_code"
 "${RPCS3_SRC_DIR}/../Vulkan/Vulkan-LoaderAndValidationLayers/include"
 "${RPCS3_SRC_DIR}/../Vulkan/glslang/glslang/Public"
+# Includes 3rdparty stuff that isn't included yet
+"${RPCS3_SRC_DIR}/../3rdparty/GL"
+"${RPCS3_SRC_DIR}/../3rdparty/stblib"
 )
 if(WIN32)
-	include_directories(BEFORE "${RPCS3_SRC_DIR}/../minidx9/Include")
-	include_directories(BEFORE "${RPCS3_SRC_DIR}/../minidx12/Include")
+	include_directories(BEFORE "${RPCS3_SRC_DIR}/../3rdparty/minidx9/Include")
+	include_directories(BEFORE "${RPCS3_SRC_DIR}/../3rdparty/minidx12/Include")
 endif()
 
 if(NOT LLVM_FOUND)
@@ -146,11 +149,11 @@ endif()
 
 link_directories(
 "${RPCS3_SRC_DIR}/../asmjit/"
-"${RPCS3_SRC_DIR}/../minidx12/"
+"${RPCS3_SRC_DIR}/../3rdparty/minidx12/"
 )
 
 if(MSVC OR NOT WIN32)
-	link_directories("${RPCS3_SRC_DIR}/../ffmpeg/${PLATFORM_ARCH}/lib")
+	link_directories("${RPCS3_SRC_DIR}/../3rdparty/ffmpeg/${PLATFORM_ARCH}/lib")
 endif()
 
 get_property(dirs DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY INCLUDE_DIRECTORIES)

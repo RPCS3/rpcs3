@@ -16,7 +16,7 @@ set(PNG_SHARED OFF CACHE BOOL "Build shared lib." FORCE)
 set(PNG_TESTS  OFF CACHE BOOL "Build tests." FORCE)
 
 add_subdirectory( asmjit )
-add_subdirectory( libpng )
+add_subdirectory( 3rdparty/libpng )
 # TODO: do real installation, including copying directory structure
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE "${PROJECT_BINARY_DIR}/bin")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG "${PROJECT_BINARY_DIR}/bin")

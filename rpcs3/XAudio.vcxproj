@@ -63,7 +63,7 @@
   <PropertyGroup Label="UserMacros" />
   <ItemDefinitionGroup>
     <ClCompile>
-      <AdditionalIncludeDirectories>..\minidx9\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\3rdparty\minidx9\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>

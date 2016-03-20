@@ -14,7 +14,7 @@ branches:
 
 before_build:
  # until git for win 2.5 release with commit checkout
- - git submodule update --init ffmpeg asmjit minidx9 rsx_program_decompiler GSL libpng Vulkan/glslang Vulkan/Vulkan-LoaderAndValidationLayers
+ - git submodule update --init 3rdparty/ffmpeg asmjit 3rdparty/minidx9 rsx_program_decompiler 3rdparty/GSL 3rdparty/libpng Vulkan/glslang Vulkan/Vulkan-LoaderAndValidationLayers
  - 7z x wxWidgets.7z -aos -oC:\rpcs3\wxWidgets > null
  - 7z x zlib.7z -aos -oC:\rpcs3\ > null
  - if %configuration%==Release (cmake -G "Visual Studio 14 Win64" -DZLIB_ROOT=C:/rpcs3/zlib/)
@@ -28,7 +28,7 @@ install:
  - ps: Start-FileDownload 'https://402331b94f8e4b87ae2ef4677347f7956cf3861f.googledrive.com/host/0B6v_qtb9hkicfmt0NG0wTTRtUmF4X3VTQk5Oc2JidEVKVnUteDA1dXdrYlNsVW9kREpsSHc/llvmlibs.7z'
  - ps: Start-FileDownload 'https://402331b94f8e4b87ae2ef4677347f7956cf3861f.googledrive.com/host/0B6v_qtb9hkicfmt0NG0wTTRtUmF4X3VTQk5Oc2JidEVKVnUteDA1dXdrYlNsVW9kREpsSHc/zlib.7z'
  - set WXWIN=C:\rpcs3\wxWidgets
- - set OPENALDIR=C:\rpcs3\OpenAL
+ - set OPENALDIR=C:\rpcs3\3rdparty\OpenAL
  - set PATH=C:\Program Files (x86)\MSBuild\14.0\Bin;C:\wxWidgets;%PATH%
  - set COMMIT_SHA=%APPVEYOR_REPO_COMMIT:~0,8%
 

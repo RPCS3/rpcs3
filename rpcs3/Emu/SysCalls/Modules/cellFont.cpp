@@ -4,7 +4,7 @@
 
 // Defines STB_TRUETYPE_IMPLEMENTATION *once* before including stb_truetype.h (as noted in stb_truetype.h's comments)
 #define STB_TRUETYPE_IMPLEMENTATION
-#include "stblib/stb_truetype.h"
+#include <stb_truetype.h>
 
 #include "Emu/FS/vfsFile.h"
 #include "cellFont.h"
