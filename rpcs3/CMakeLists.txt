@@ -103,7 +103,6 @@ endif()
 include_directories(
 ${GLEW_INCLUDE_DIR}
 ${wxWidgets_INCLUDE_DIRS}
-${ZLIB_INCLUDE_DIR}
 ${OPENAL_INCLUDE_DIR}
 ${LLVM_INCLUDE_DIRS}
 "${RPCS3_SRC_DIR}/../ffmpeg/${PLATFORM_ARCH}/include"
