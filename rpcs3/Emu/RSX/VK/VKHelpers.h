@@ -1159,76 +1159,17 @@ namespace vk
 
 		class program
 		{
-			struct pipeline_state
-			{
-				VkGraphicsPipelineCreateInfo pipeline;
-				VkPipelineCacheCreateInfo pipeline_cache_desc;
-				VkPipelineCache pipeline_cache;
-				VkPipelineVertexInputStateCreateInfo vi;
-				VkPipelineInputAssemblyStateCreateInfo ia;
-				VkPipelineRasterizationStateCreateInfo rs;
-				VkPipelineColorBlendStateCreateInfo cb;
-				VkPipelineDepthStencilStateCreateInfo ds;
-				VkPipelineViewportStateCreateInfo vp;
-				VkPipelineMultisampleStateCreateInfo ms;
-				VkDynamicState dynamic_state_descriptors[VK_DYNAMIC_STATE_RANGE_SIZE];
-				VkPipelineDynamicStateCreateInfo dynamic_state;
-
-				VkPipelineColorBlendAttachmentState att_state[4];
-
-				VkPipelineShaderStageCreateInfo shader_stages[2];
-				VkRenderPass render_pass = nullptr;
-				VkShaderModule vs, fs;
-				VkPipeline pipeline_handle = nullptr;
-
-				int num_targets = 1;
-
-				bool dirty;
-				bool in_use;
-			}
-			pstate;
-
-			bool uniforms_changed = true;
-
-			vk::render_device *device = nullptr;
-			std::vector<program_input> uniforms;			
-
-			void init_pipeline();
-
+			std::vector<program_input> uniforms;
+			VkDevice m_device;
 		public:
-			program();
-			program(const program&) = delete;
-			program(program&& other);
-			program(vk::render_device &renderer);
+			VkPipeline pipeline;
 
+			program(VkDevice dev, VkPipeline p, const std::vector<program_input> &vertex_input, const std::vector<program_input>& fragment_inputs);
+			program(const program&) = delete;
+			program(program&& other) = delete;
 			~program();
 
-			program& attach_device(vk::render_device &dev);
-			program& attachFragmentProgram(VkShaderModule prog);
-			program& attachVertexProgram(VkShaderModule prog);
-
-			void make();
-			void destroy();
-
-			//Render state stuff...
-			void set_depth_compare_op(VkCompareOp op);
-			void set_depth_write_mask(VkBool32 write_enable);
-			void set_depth_test_enable(VkBool32 state);
-			void set_primitive_topology(VkPrimitiveTopology topology);
-			void set_color_mask(int num_targets, u8* targets, VkColorComponentFlags *flags);
-			void set_blend_state(int num_targets, u8* targets, VkBool32 *enable);
-			void set_blend_state(int num_targets, u8* targets, VkBool32 enable);
-			void set_blend_func(int num_targets, u8* targets, VkBlendFactor *src_color, VkBlendFactor *dst_color, VkBlendFactor *src_alpha, VkBlendFactor *dst_alpha);
-			void set_blend_func(int num_targets, u8 * targets, VkBlendFactor src_color, VkBlendFactor dst_color, VkBlendFactor src_alpha, VkBlendFactor dst_alpha);
-			void set_blend_op(int num_targets, u8* targets, VkBlendOp* color_ops, VkBlendOp* alpha_ops);
-			void set_blend_op(int num_targets, u8 * targets, VkBlendOp color_op, VkBlendOp alpha_op);
-			void set_primitive_restart(VkBool32 state);
-
-			void set_draw_buffer_count(u8 draw_buffers);
-
-			program& load_uniforms(program_domain domain, std::vector<program_input>& inputs);
-
-			void use(vk::command_buffer& commands, VkRenderPass pass, VkPipelineLayout pipeline_layout, VkDescriptorSet descriptor_set);
+			program& load_uniforms(program_domain domain, const std::vector<program_input>& inputs);
 
 			bool has_uniform(std::string uniform_name);
 #define VERTEX_BUFFERS_FIRST_BIND_SLOT 3
@@ -1239,9 +1180,6 @@ namespace vk
 			void bind_uniform(VkDescriptorImageInfo image_descriptor, std::string uniform_name, VkDescriptorSet &descriptor_set);
 			void bind_uniform(VkDescriptorBufferInfo buffer_descriptor, uint32_t binding_point, VkDescriptorSet &descriptor_set);
 			void bind_uniform(const VkBufferView &buffer_view, const std::string &binding_name, VkDescriptorSet &descriptor_set);
-
-			program& operator = (const program&) = delete;
-			program& operator = (program&& other);
 		};
 	}
 }
