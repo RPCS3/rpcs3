@@ -1326,7 +1326,7 @@ bool CheckDebugSelf(const std::string& self, const std::string& elf)
 
 		// Copy the data.
 		char buf[2048];
-		while (size_t size = s.read(buf, 2048)) // Did size need to be of type ssize_t?
+		while (u64 size = s.read(buf, 2048)) // read returns u64.
 		{
 			e.write(buf, size);
 		}
