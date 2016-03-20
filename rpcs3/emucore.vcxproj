@@ -388,7 +388,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\stblib\stb_image.h" />
+    <ClInclude Include="..\3rdparty\stblib\stb_image.h" />
     <ClInclude Include="..\Utilities\Atomic.h" />
     <ClInclude Include="..\Utilities\AutoPause.h" />
     <ClInclude Include="..\Utilities\BEType.h" />

@@ -106,7 +106,7 @@ ${wxWidgets_INCLUDE_DIRS}
 ${ZLIB_INCLUDE_DIR}
 ${OPENAL_INCLUDE_DIR}
 ${LLVM_INCLUDE_DIRS}
-"${RPCS3_SRC_DIR}/../ffmpeg/${PLATFORM_ARCH}/include"
+"${RPCS3_SRC_DIR}/../3rdparty/ffmpeg/${PLATFORM_ARCH}/include"
 "${RPCS3_SRC_DIR}"
 "${RPCS3_SRC_DIR}/Loader"
 "${RPCS3_SRC_DIR}/Crypto"
@@ -124,7 +124,7 @@ ${LLVM_INCLUDE_DIRS}
 "${RPCS3_SRC_DIR}/../3rdparty/stblib"
 )
 if(WIN32)
-	include_directories(BEFORE "${RPCS3_SRC_DIR}/../minidx9/Include")
+	include_directories(BEFORE "${RPCS3_SRC_DIR}/../3rdparty/minidx9/Include")
 	include_directories(BEFORE "${RPCS3_SRC_DIR}/../3rdparty/minidx12/Include")
 endif()
 
@@ -153,7 +153,7 @@ link_directories(
 )
 
 if(MSVC OR NOT WIN32)
-	link_directories("${RPCS3_SRC_DIR}/../ffmpeg/${PLATFORM_ARCH}/lib")
+	link_directories("${RPCS3_SRC_DIR}/../3rdparty/ffmpeg/${PLATFORM_ARCH}/lib")
 endif()
 
 get_property(dirs DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY INCLUDE_DIRECTORIES)

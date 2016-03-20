@@ -91,7 +91,7 @@
       <UseLibraryDependencyInputs>false</UseLibraryDependencyInputs>
     </ProjectReference>
     <ClCompile>
-      <AdditionalIncludeDirectories>..\minidx9\Include;..\Vulkan\Vulkan-LoaderAndValidationLayers\include;..\Vulkan\glslang\glslang\Public;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\3rdparty\minidx9\Include;..\Vulkan\Vulkan-LoaderAndValidationLayers\include;..\Vulkan\glslang\glslang\Public;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories Condition="'$(Configuration)|$(Platform)'=='Debug - MemLeak|x64'">..\Vulkan\glslang-build\SPIRV\Debug;..\Vulkan\glslang-build\OGLCompilersDLL\Debug;..\Vulkan\glslang-build\glslang\OSDependent\Windows\Debug;..\Vulkan\Vulkan-build\loader\Debug;..\Vulkan\glslang-build\glslang\Debug;..\3rdparty\OpenAL\libs\Win64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>

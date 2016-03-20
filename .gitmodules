@@ -3,7 +3,7 @@
 	url = https://github.com/wxWidgets/wxWidgets
 	ignore = dirty
 [submodule "rpcs3-ffmpeg"]
-	path = ffmpeg
+	path = 3rdparty/ffmpeg
 	url = https://github.com/hrydgard/ppsspp-ffmpeg
 [submodule "asmjit"]
 	path = asmjit
@@ -14,7 +14,7 @@
 	url = https://github.com/llvm-mirror/llvm
 	branch = release_36
 [submodule "minidx9"]
-	path = minidx9
+	path = 3rdparty/minidx9
 	url = https://github.com/hrydgard/minidx9.git
 [submodule "rsx_program_decompiler"]
 	path = rsx_program_decompiler
