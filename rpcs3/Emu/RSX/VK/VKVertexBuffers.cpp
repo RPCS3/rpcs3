@@ -216,6 +216,20 @@ namespace vk
 	}
 }
 
+namespace
+{
+	size_t alloc_and_copy(vk::buffer* buffer, vk::data_heap& data_heap_info, size_t size, std::function<void(gsl::span<gsl::byte> ptr)> copy_function)
+	{
+		size_t offset = data_heap_info.alloc<256>(size);
+		void* buf = buffer->map(offset, size);
+		gsl::span<gsl::byte> mapped_span = {reinterpret_cast<gsl::byte*>(buf), gsl::narrow<int>(size) };
+		copy_function(mapped_span);
+		buffer->unmap();
+		return offset;
+	}
+}
+
+
 std::tuple<VkPrimitiveTopology, bool, u32, VkDeviceSize, VkIndexType>
 VKGSRender::upload_vertex_data()
 {
@@ -327,13 +341,10 @@ VKGSRender::upload_vertex_data()
 				throw EXCEPTION("Unknown base type %d", vertex_info.type);
 			}
 
-			auto &buffer = m_attrib_buffers[index];
+			size_t offset_in_attrib_buffer = alloc_and_copy(m_attrib_buffers.get(), m_attrib_ring_info, data_size, [&vertex_arrays_data, data_size](gsl::span<gsl::byte> ptr) { memcpy(ptr.data(), vertex_arrays_data.data(), data_size); });
 
-			buffer.sub_data(0, data_size, vertex_arrays_data.data());
-			buffer.set_format(format);
-
-			//Link texture to uniform location
-			m_program->bind_uniform(buffer, reg_table[index], descriptor_sets);
+			m_buffer_view_to_clean.push_back(std::make_unique<vk::buffer_view>(*m_device, m_attrib_buffers->value, format, offset_in_attrib_buffer, data_size));
+			m_program->bind_uniform(m_buffer_view_to_clean.back()->value, reg_table[index], descriptor_sets);
 		}
 	}
 
@@ -417,11 +428,9 @@ VKGSRender::upload_vertex_data()
 				const VkFormat format = vk::get_suitable_vk_format(vertex_info.type, vertex_info.size);
 				const u32 data_size = vk::get_suitable_vk_size(vertex_info.type, vertex_info.size) * num_stored_verts;
 
-				auto &buffer = m_attrib_buffers[index];
-
-				buffer.sub_data(0, data_size, data_ptr);
-				buffer.set_format(format);
-				m_program->bind_uniform(buffer, reg_table[index], descriptor_sets);
+				size_t offset_in_attrib_buffer = alloc_and_copy(m_attrib_buffers.get(), m_attrib_ring_info, data_size, [data_ptr, data_size](gsl::span<gsl::byte> ptr) { memcpy(ptr.data(), data_ptr, data_size); });
+				m_buffer_view_to_clean.push_back(std::make_unique<vk::buffer_view>(*m_device, m_attrib_buffers->value, format, offset_in_attrib_buffer, data_size));
+				m_program->bind_uniform(m_buffer_view_to_clean.back()->value, reg_table[index], descriptor_sets);
 			}
 			else if (register_vertex_info[index].size > 0)
 			{
@@ -455,12 +464,10 @@ VKGSRender::upload_vertex_data()
 						data_size = converted_buffer.size();
 					}
 
-					auto &buffer = m_attrib_buffers[index];
 
-					buffer.sub_data(0, data_size, data_ptr);
-					buffer.set_format(format);
-
-					m_program->bind_uniform(buffer, reg_table[index], descriptor_sets);
+					size_t offset_in_attrib_buffer = alloc_and_copy(m_attrib_buffers.get(), m_attrib_ring_info, data_size, [data_ptr, data_size](gsl::span<gsl::byte> ptr) { memcpy(ptr.data(), data_ptr, data_size); });
+					m_buffer_view_to_clean.push_back(std::make_unique<vk::buffer_view>(*m_device, m_attrib_buffers->value, format, offset_in_attrib_buffer, data_size));
+					m_program->bind_uniform(m_buffer_view_to_clean.back()->value, reg_table[index], descriptor_sets);
 					break;
 				}
 				default:

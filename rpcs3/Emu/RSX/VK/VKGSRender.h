@@ -104,13 +104,17 @@ private:
 
 	rsx::surface_info m_surface;
 
-	vk::buffer_deprecated m_attrib_buffers[rsx::limits::vertex_count];
+	vk::data_heap m_attrib_ring_info;
+	std::unique_ptr<vk::buffer> m_attrib_buffers;
 	
 	vk::texture_cache m_texture_cache;
 	rsx::vk_render_targets m_rtts;
 
 	vk::gpu_formats_support m_optimal_tiling_supported_formats;
 	vk::memory_type_mapping m_memory_type_mapping;
+
+	std::unique_ptr<vk::buffer> null_buffer;
+	std::unique_ptr<vk::buffer_view> null_buffer_view;
 
 public:
 	//vk::fbo draw_fbo;
@@ -145,6 +149,8 @@ private:
 	VkDescriptorSet descriptor_sets;
 	VkPipelineLayout pipeline_layout;
 	vk::descriptor_pool descriptor_pool;
+
+	std::vector<std::unique_ptr<vk::buffer_view> > m_buffer_view_to_clean;
 
 	u32 m_draw_calls = 0;
 	
