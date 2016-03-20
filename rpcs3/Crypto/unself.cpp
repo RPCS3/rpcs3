@@ -5,12 +5,10 @@
 #include "Emu/FS/vfsLocalFile.h"
 #include "unself.h"
 #pragma warning(push)
-#pragma message("TODO: remove wx dependencies: See comment below.")
+#pragma message("TODO: remove wx dependencies: <wx/mstream.h> <wx/zstream.h>")
 #pragma warning(disable : 4996)
-
-// TODO: Still reliant on wxWidgets for zlib functions. Alternative solutions?
-#include <zlib.h>
-
+#include <wx/mstream.h>
+#include <wx/zstream.h>
 #pragma warning(pop)
 
 force_inline u8 Read8(vfsStream& f)
@@ -1152,37 +1150,29 @@ bool SELFDecrypter::MakeElf(const std::string& elf, bool isElf32)
 				// Decompress if necessary.
 				if (meta_shdr[i].compressed == 2)
 				{
-					/// Removed all wxWidget dependent code. Replaced with zlib functions.
-					/// Also changed local mallocs to unique_ptrs.
+					// Allocate a buffer for decompression.
+					u8 *decomp_buf = (u8 *)malloc(phdr64_arr[meta_shdr[i].program_idx].p_filesz);
 
-					// Store the length in writeable memory space.
-					std::unique_ptr<uLongf> decomp_buf_length(new uLongf);
-					memcpy(decomp_buf_length.get(), &phdr64_arr[meta_shdr[i].program_idx].p_filesz, sizeof(uLongf));
+					// Set up memory streams for input/output.
+					wxMemoryInputStream decomp_stream_in(data_buf + data_buf_offset, meta_shdr[i].data_size);
+					wxMemoryOutputStream decomp_stream_out;
 
-					/// Create a pointer to a buffer for decompression.
-					std::unique_ptr<u8[]> decomp_buf(new u8[phdr64_arr[meta_shdr[i].program_idx].p_filesz]);
+					// Create a Zlib stream, read the data and flush the stream.
+					wxZlibInputStream* z_stream = new wxZlibInputStream(decomp_stream_in);
+					z_stream->Read(decomp_stream_out);
+					delete z_stream;
 
-					// Create a buffer separate from data_buf to uncompress.
-					std::unique_ptr<u8[]> zlib_buf(new u8[data_buf_length]);
-					memcpy(zlib_buf.get(), data_buf, data_buf_length);
-
-					// Use zlib uncompress on the new buffer.
-					// decomp_buf_length changes inside the call to uncompress, so it must be a pointer to correct type (in writeable mem space).
-					int rv = uncompress(decomp_buf.get(), decomp_buf_length.get(), zlib_buf.get() + data_buf_offset, data_buf_length);
-
-					// Check for errors (TODO: Probably safe to remove this once these changes have passed testing.)
-					switch (rv)
-					{
-					case Z_MEM_ERROR:	LOG_ERROR(LOADER, "MakeELF encountered a Z_MEM_ERROR!"); break;
-					case Z_BUF_ERROR:	LOG_ERROR(LOADER, "MakeELF encountered a Z_BUF_ERROR!"); break;
-					case Z_DATA_ERROR:	LOG_ERROR(LOADER, "MakeELF encountered a Z_DATA_ERROR!"); break;
-					default: break;
-					}
+					// Copy the decompressed result from the stream.
+					decomp_stream_out.CopyTo(decomp_buf, phdr64_arr[meta_shdr[i].program_idx].p_filesz);
 
 					// Seek to the program header data offset and write the data.
-					CHECK_ASSERTION(e.seek(phdr64_arr[meta_shdr[i].program_idx].p_offset) != -1);
-					e.write(decomp_buf.get(), phdr64_arr[meta_shdr[i].program_idx].p_filesz);
 
+					CHECK_ASSERTION(e.seek(phdr64_arr[meta_shdr[i].program_idx].p_offset) != -1);
+
+					e.write(decomp_buf, phdr64_arr[meta_shdr[i].program_idx].p_filesz);
+
+					// Release the decompression buffer.
+					free(decomp_buf);
 				}
 				else
 				{
@@ -1326,7 +1316,7 @@ bool CheckDebugSelf(const std::string& self, const std::string& elf)
 
 		// Copy the data.
 		char buf[2048];
-		while (u64 size = s.read(buf, 2048)) // read returns u64.
+		while (ssize_t size = s.read(buf, 2048))
 		{
 			e.write(buf, size);
 		}
