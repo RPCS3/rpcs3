@@ -467,6 +467,7 @@ VKGSRender::~VKGSRender()
 	null_buffer.release();
 	null_buffer_view.release();
 	m_buffer_view_to_clean.clear();
+	m_framebuffer_to_clean.clear();
 
 	for (auto &render_pass : m_render_passes)
 		if (render_pass)
@@ -576,7 +577,7 @@ void VKGSRender::end()
 	VkRenderPassBeginInfo rp_begin = {};
 	rp_begin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 	rp_begin.renderPass = current_render_pass;
-	rp_begin.framebuffer = m_framebuffer;
+	rp_begin.framebuffer = m_framebuffer_to_clean.back()->value;
 	rp_begin.renderArea.offset.x = 0;
 	rp_begin.renderArea.offset.y = 0;
 	rp_begin.renderArea.extent.width = m_frame->client_size().width;
@@ -1066,30 +1067,42 @@ void VKGSRender::prepare_rtts()
 	//Bind created rtts as current fbo...
 	std::vector<u8> draw_buffers = vk::get_draw_buffers(rsx::to_surface_target(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET]));
 
-	m_framebuffer.destroy();
-	std::vector<VkImageView> fbo_images;
+	std::vector<std::unique_ptr<vk::image_view> > fbo_images;
 
 	for (u8 index: draw_buffers)
 	{
 		vk::texture *raw = std::get<1>(m_rtts.m_bound_render_targets[index]);
-		VkImageView as_image = (*raw);
-		fbo_images.push_back(as_image);
+
+		VkImageSubresourceRange subres = {};
+		subres.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		subres.baseArrayLayer = 0;
+		subres.baseMipLevel = 0;
+		subres.layerCount = 1;
+		subres.levelCount = 1;
+
+		fbo_images.push_back(std::make_unique<vk::image_view>(*m_device, *raw, VK_IMAGE_VIEW_TYPE_2D, raw->get_format(), vk::default_component_map(), subres));
 	}
+
+	m_draw_buffers_count = fbo_images.size();
 
 	if (std::get<1>(m_rtts.m_bound_depth_stencil) != nullptr)
 	{
 		vk::texture *raw = (std::get<1>(m_rtts.m_bound_depth_stencil));
-		VkImageView depth_image = (*raw);
-		fbo_images.push_back(depth_image);
+
+		VkImageSubresourceRange subres = {};
+		subres.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+		subres.baseArrayLayer = 0;
+		subres.baseMipLevel = 0;
+		subres.layerCount = 1;
+		subres.levelCount = 1;
+
+		fbo_images.push_back(std::make_unique<vk::image_view>(*m_device, *raw, VK_IMAGE_VIEW_TYPE_2D, raw->get_format(), vk::default_component_map(), subres));
 	}
 
 	size_t idx = vk::get_render_pass_location(vk::get_compatible_surface_format(m_surface.color_format), vk::get_compatible_depth_surface_format(m_optimal_tiling_supported_formats, m_surface.depth_format), (u8)draw_buffers.size());
 	VkRenderPass current_render_pass = m_render_passes[idx];
 
-	m_framebuffer.create((*m_device), current_render_pass, fbo_images.data(), fbo_images.size(),
-						clip_width, clip_height);
-
-	m_draw_buffers_count = draw_buffers.size();
+	m_framebuffer_to_clean.push_back(std::make_unique<vk::framebuffer>(*m_device, current_render_pass, clip_width, clip_height, std::move(fbo_images)));
 }
 
 void VKGSRender::execute_command_buffer(bool wait)

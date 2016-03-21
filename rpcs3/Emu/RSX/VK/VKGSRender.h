@@ -151,11 +151,11 @@ private:
 	vk::descriptor_pool descriptor_pool;
 
 	std::vector<std::unique_ptr<vk::buffer_view> > m_buffer_view_to_clean;
+	std::vector<std::unique_ptr<vk::framebuffer> > m_framebuffer_to_clean;
 
 	u32 m_draw_calls = 0;
 	
 	u8 m_draw_buffers_count = 0;
-	vk::framebuffer m_framebuffer;
 
 public:
 	VKGSRender();

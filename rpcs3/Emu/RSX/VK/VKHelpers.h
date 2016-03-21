@@ -332,6 +332,35 @@ namespace vk
 		}
 	};
 
+	struct image_view
+	{
+		VkImageView value;
+		VkImageViewCreateInfo info = {};
+
+		image_view(VkDevice dev, VkImage image, VkImageViewType view_type, VkFormat format, VkComponentMapping mapping, VkImageSubresourceRange range)
+			: m_device(dev)
+		{
+			info.format = format;
+			info.image = image;
+			info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+			info.viewType = view_type;
+			info.components = mapping;
+			info.subresourceRange = range;
+
+			CHECK_RESULT(vkCreateImageView(m_device, &info, nullptr, &value));
+		}
+
+		~image_view()
+		{
+			vkDestroyImageView(m_device, value, nullptr);
+		}
+
+		image_view(const image_view&) = delete;
+		image_view(image_view&&) = delete;
+	private:
+		VkDevice m_device;
+	};
+
 	class texture
 	{
 		VkImageView m_view = nullptr;
@@ -501,42 +530,43 @@ namespace vk
 		VkDevice m_device;
 	};
 
-	class framebuffer
+	struct framebuffer
 	{
-		VkFramebuffer m_vk_framebuffer = nullptr;
-		vk::render_device *owner = nullptr;
-
+		VkFramebuffer value;
+		VkFramebufferCreateInfo info = {};
+		std::vector<std::unique_ptr<vk::image_view>> attachements;
 	public:
-		framebuffer() {}
-		~framebuffer() {}
-
-		void create(vk::render_device &dev, VkRenderPass pass, VkImageView *attachments, u32 nb_attachments, u32 width, u32 height)
+		framebuffer(VkDevice dev, VkRenderPass pass, u32 width, u32 height, std::vector<std::unique_ptr<vk::image_view>> &&atts)
+			: m_device(dev), attachements(std::move(atts))
 		{
-			VkFramebufferCreateInfo infos = {};
-			infos.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-			infos.width = width;
-			infos.height = height;
-			infos.attachmentCount = nb_attachments;
-			infos.pAttachments = attachments;
-			infos.renderPass = pass;
-			infos.layers = 1;
+			std::vector<VkImageView> image_view_array(attachements.size());
+			size_t i = 0;
+			for (const auto &att : attachements)
+			{
+				image_view_array[i++] = att->value;
+			}
 
-			vkCreateFramebuffer(dev, &infos, nullptr, &m_vk_framebuffer);
-			owner = &dev;
+			info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+			info.width = width;
+			info.height = height;
+			info.attachmentCount = image_view_array.size();
+			info.pAttachments = image_view_array.data();
+			info.renderPass = pass;
+			info.layers = 1;
+
+			CHECK_RESULT(vkCreateFramebuffer(dev, &info, nullptr, &value));
 		}
 
-		void destroy()
+		~framebuffer()
 		{
-			if (!owner) return;
-
-			vkDestroyFramebuffer((*owner), m_vk_framebuffer, nullptr);
-			owner = nullptr;
+			vkDestroyFramebuffer(m_device, value, nullptr);
 		}
 
-		operator VkFramebuffer() const
-		{
-			return m_vk_framebuffer;
-		}
+		framebuffer(const framebuffer&) = delete;
+		framebuffer(framebuffer&&) = delete;
+
+	private:
+		VkDevice m_device;
 	};
 
 	class swap_chain_image
