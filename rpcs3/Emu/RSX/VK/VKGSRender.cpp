@@ -562,7 +562,13 @@ void VKGSRender::end()
 			}
 
 			vk::texture &tex = (texture0)? (*texture0): m_texture_cache.upload_texture(m_command_buffer, textures[i], m_rtts);
-			m_program->bind_uniform({ tex, tex, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, "tex" + std::to_string(i), descriptor_sets);
+			vk::sampler sampler(*m_device,
+				vk::vk_wrap_mode(textures[i].wrap_s()), vk::vk_wrap_mode(textures[i].wrap_t()), vk::vk_wrap_mode(textures[i].wrap_r()),
+				!!(textures[i].format() & CELL_GCM_TEXTURE_UN),
+				textures[i].bias(), vk::max_aniso(textures[i].max_aniso()), textures[i].min_lod(), textures[i].max_lod(),
+				VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_NEAREST
+				);
+			m_program->bind_uniform({ sampler.value, tex, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, "tex" + std::to_string(i), descriptor_sets);
 			texture0 = &tex;
 		}
 	}

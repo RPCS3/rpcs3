@@ -335,7 +335,6 @@ namespace vk
 	class texture
 	{
 		VkImageView m_view = nullptr;
-		VkSampler m_sampler = nullptr;
 		VkImage m_image_contents = nullptr;
 		VkMemoryRequirements m_memory_layout;
 		VkFormat m_internal_format;
@@ -355,7 +354,6 @@ namespace vk
 
 		vk::texture *staging_texture = nullptr;
 		bool ready = false;
-		void sampler_setup(rsx::texture& tex, VkImageViewType type, VkComponentMapping swizzle);
 
 	public:
 		texture(vk::swap_chain_image &img);
@@ -381,7 +379,6 @@ namespace vk
 		const u16 mipmaps();
 		const VkFormat get_format();
 
-		operator VkSampler();
 		operator VkImageView();
 		operator VkImage();
 	};
@@ -458,6 +455,48 @@ namespace vk
 		buffer_view(const buffer_view&) = delete;
 		buffer_view(buffer_view&&) = delete;
 
+	private:
+		VkDevice m_device;
+	};
+
+	struct sampler
+	{
+		VkSampler value;
+		VkSamplerCreateInfo info = {};
+
+		sampler(VkDevice dev, VkSamplerAddressMode clamp_u, VkSamplerAddressMode clamp_v, VkSamplerAddressMode clamp_w,
+			bool unnormalized_coordinates, float mipLodBias, float max_anisotropy, float min_lod, float max_lod,
+			VkFilter min_filter, VkFilter mag_filter, VkSamplerMipmapMode mipmap_mode)
+			: m_device(dev)
+		{
+			VkSamplerCreateInfo info = {};
+			info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+			info.addressModeU = clamp_u;
+			info.addressModeV = clamp_v;
+			info.addressModeW = clamp_w;
+			info.anisotropyEnable = VK_TRUE;
+			info.compareEnable = VK_FALSE;
+			info.unnormalizedCoordinates = unnormalized_coordinates;
+			info.mipLodBias = mipLodBias;
+			info.maxAnisotropy = max_anisotropy;
+			info.maxLod = max_lod;
+			info.minLod = min_lod;
+			info.magFilter = mag_filter;
+			info.minFilter = min_filter;
+			info.mipmapMode = mipmap_mode;
+			info.compareOp = VK_COMPARE_OP_NEVER;
+			info.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+
+			CHECK_RESULT(vkCreateSampler(m_device, &info, nullptr, &value));
+		}
+
+		~sampler()
+		{
+			vkDestroySampler(m_device, value, nullptr);
+		}
+
+		sampler(const sampler&) = delete;
+		sampler(sampler&&) = delete;
 	private:
 		VkDevice m_device;
 	};
