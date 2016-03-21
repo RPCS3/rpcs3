@@ -124,7 +124,7 @@ ${LLVM_INCLUDE_DIRS}
 "${RPCS3_SRC_DIR}/../3rdparty/stblib"
 )
 if(WIN32)
-	include_directories(BEFORE "${RPCS3_SRC_DIR}/../3rdparty/minidx9/Include")
+	include_directories(BEFORE "${RPCS3_SRC_DIR}/../3rdparty/XAudio2_7") # Slimmed down version of minidx9 for XAudio2_7 only
 	include_directories(BEFORE "${RPCS3_SRC_DIR}/../3rdparty/minidx12/Include")
 endif()
 

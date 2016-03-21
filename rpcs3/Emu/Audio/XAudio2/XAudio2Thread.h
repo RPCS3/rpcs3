@@ -6,7 +6,7 @@
 #pragma push_macro("_WIN32_WINNT")
 #undef _WIN32_WINNT
 #define _WIN32_WINNT 0x0601 // This is to be sure that correct (2.7) header is included
-#include "3rdparty/minidx9/Include/XAudio2.h" // XAudio2 2.8 available only on Win8+, used XAudio2 2.7 from dxsdk
+#include "XAudio2.h" // XAudio2 2.8 available only on Win8+, used XAudio2 2.7 from dxsdk
 #pragma pop_macro("_WIN32_WINNT")
 
 class XAudio2Thread : public AudioThread

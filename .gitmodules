@@ -13,9 +13,6 @@
 	path = llvm
 	url = https://github.com/llvm-mirror/llvm
 	branch = release_36
-[submodule "minidx9"]
-	path = 3rdparty/minidx9
-	url = https://github.com/hrydgard/minidx9.git
 [submodule "rsx_program_decompiler"]
 	path = rsx_program_decompiler
 	url = https://github.com/RPCS3/rsx_program_decompiler
