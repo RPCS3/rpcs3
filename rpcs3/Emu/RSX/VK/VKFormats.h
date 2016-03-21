@@ -14,4 +14,5 @@ namespace vk
 	VkSamplerAddressMode vk_wrap_mode(u32 gcm_wrap);
 	float max_aniso(u32 gcm_aniso);
 	VkComponentMapping get_component_mapping(u32 format, u8 swizzle_mask);
+	VkPrimitiveTopology get_appropriate_topology(rsx::primitive_type& mode, bool &requires_modification);
 }

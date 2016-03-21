@@ -332,10 +332,38 @@ namespace vk
 		}
 	};
 
+	struct image_view
+	{
+		VkImageView value;
+		VkImageViewCreateInfo info = {};
+
+		image_view(VkDevice dev, VkImage image, VkImageViewType view_type, VkFormat format, VkComponentMapping mapping, VkImageSubresourceRange range)
+			: m_device(dev)
+		{
+			info.format = format;
+			info.image = image;
+			info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+			info.viewType = view_type;
+			info.components = mapping;
+			info.subresourceRange = range;
+
+			CHECK_RESULT(vkCreateImageView(m_device, &info, nullptr, &value));
+		}
+
+		~image_view()
+		{
+			vkDestroyImageView(m_device, value, nullptr);
+		}
+
+		image_view(const image_view&) = delete;
+		image_view(image_view&&) = delete;
+	private:
+		VkDevice m_device;
+	};
+
 	class texture
 	{
 		VkImageView m_view = nullptr;
-		VkSampler m_sampler = nullptr;
 		VkImage m_image_contents = nullptr;
 		VkMemoryRequirements m_memory_layout;
 		VkFormat m_internal_format;
@@ -355,7 +383,6 @@ namespace vk
 
 		vk::texture *staging_texture = nullptr;
 		bool ready = false;
-		void sampler_setup(rsx::texture& tex, VkImageViewType type, VkComponentMapping swizzle);
 
 	public:
 		texture(vk::swap_chain_image &img);
@@ -381,7 +408,6 @@ namespace vk
 		const u16 mipmaps();
 		const VkFormat get_format();
 
-		operator VkSampler();
 		operator VkImageView();
 		operator VkImage();
 	};
@@ -462,42 +488,85 @@ namespace vk
 		VkDevice m_device;
 	};
 
-	class framebuffer
+	struct sampler
 	{
-		VkFramebuffer m_vk_framebuffer = nullptr;
-		vk::render_device *owner = nullptr;
+		VkSampler value;
+		VkSamplerCreateInfo info = {};
 
+		sampler(VkDevice dev, VkSamplerAddressMode clamp_u, VkSamplerAddressMode clamp_v, VkSamplerAddressMode clamp_w,
+			bool unnormalized_coordinates, float mipLodBias, float max_anisotropy, float min_lod, float max_lod,
+			VkFilter min_filter, VkFilter mag_filter, VkSamplerMipmapMode mipmap_mode)
+			: m_device(dev)
+		{
+			VkSamplerCreateInfo info = {};
+			info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+			info.addressModeU = clamp_u;
+			info.addressModeV = clamp_v;
+			info.addressModeW = clamp_w;
+			info.anisotropyEnable = VK_TRUE;
+			info.compareEnable = VK_FALSE;
+			info.unnormalizedCoordinates = unnormalized_coordinates;
+			info.mipLodBias = mipLodBias;
+			info.maxAnisotropy = max_anisotropy;
+			info.maxLod = max_lod;
+			info.minLod = min_lod;
+			info.magFilter = mag_filter;
+			info.minFilter = min_filter;
+			info.mipmapMode = mipmap_mode;
+			info.compareOp = VK_COMPARE_OP_NEVER;
+			info.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+
+			CHECK_RESULT(vkCreateSampler(m_device, &info, nullptr, &value));
+		}
+
+		~sampler()
+		{
+			vkDestroySampler(m_device, value, nullptr);
+		}
+
+		sampler(const sampler&) = delete;
+		sampler(sampler&&) = delete;
+	private:
+		VkDevice m_device;
+	};
+
+	struct framebuffer
+	{
+		VkFramebuffer value;
+		VkFramebufferCreateInfo info = {};
+		std::vector<std::unique_ptr<vk::image_view>> attachements;
 	public:
-		framebuffer() {}
-		~framebuffer() {}
-
-		void create(vk::render_device &dev, VkRenderPass pass, VkImageView *attachments, u32 nb_attachments, u32 width, u32 height)
+		framebuffer(VkDevice dev, VkRenderPass pass, u32 width, u32 height, std::vector<std::unique_ptr<vk::image_view>> &&atts)
+			: m_device(dev), attachements(std::move(atts))
 		{
-			VkFramebufferCreateInfo infos = {};
-			infos.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-			infos.width = width;
-			infos.height = height;
-			infos.attachmentCount = nb_attachments;
-			infos.pAttachments = attachments;
-			infos.renderPass = pass;
-			infos.layers = 1;
+			std::vector<VkImageView> image_view_array(attachements.size());
+			size_t i = 0;
+			for (const auto &att : attachements)
+			{
+				image_view_array[i++] = att->value;
+			}
 
-			vkCreateFramebuffer(dev, &infos, nullptr, &m_vk_framebuffer);
-			owner = &dev;
+			info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+			info.width = width;
+			info.height = height;
+			info.attachmentCount = image_view_array.size();
+			info.pAttachments = image_view_array.data();
+			info.renderPass = pass;
+			info.layers = 1;
+
+			CHECK_RESULT(vkCreateFramebuffer(dev, &info, nullptr, &value));
 		}
 
-		void destroy()
+		~framebuffer()
 		{
-			if (!owner) return;
-
-			vkDestroyFramebuffer((*owner), m_vk_framebuffer, nullptr);
-			owner = nullptr;
+			vkDestroyFramebuffer(m_device, value, nullptr);
 		}
 
-		operator VkFramebuffer() const
-		{
-			return m_vk_framebuffer;
-		}
+		framebuffer(const framebuffer&) = delete;
+		framebuffer(framebuffer&&) = delete;
+
+	private:
+		VkDevice m_device;
 	};
 
 	class swap_chain_image
@@ -1159,76 +1228,17 @@ namespace vk
 
 		class program
 		{
-			struct pipeline_state
-			{
-				VkGraphicsPipelineCreateInfo pipeline;
-				VkPipelineCacheCreateInfo pipeline_cache_desc;
-				VkPipelineCache pipeline_cache;
-				VkPipelineVertexInputStateCreateInfo vi;
-				VkPipelineInputAssemblyStateCreateInfo ia;
-				VkPipelineRasterizationStateCreateInfo rs;
-				VkPipelineColorBlendStateCreateInfo cb;
-				VkPipelineDepthStencilStateCreateInfo ds;
-				VkPipelineViewportStateCreateInfo vp;
-				VkPipelineMultisampleStateCreateInfo ms;
-				VkDynamicState dynamic_state_descriptors[VK_DYNAMIC_STATE_RANGE_SIZE];
-				VkPipelineDynamicStateCreateInfo dynamic_state;
-
-				VkPipelineColorBlendAttachmentState att_state[4];
-
-				VkPipelineShaderStageCreateInfo shader_stages[2];
-				VkRenderPass render_pass = nullptr;
-				VkShaderModule vs, fs;
-				VkPipeline pipeline_handle = nullptr;
-
-				int num_targets = 1;
-
-				bool dirty;
-				bool in_use;
-			}
-			pstate;
-
-			bool uniforms_changed = true;
-
-			vk::render_device *device = nullptr;
-			std::vector<program_input> uniforms;			
-
-			void init_pipeline();
-
+			std::vector<program_input> uniforms;
+			VkDevice m_device;
 		public:
-			program();
-			program(const program&) = delete;
-			program(program&& other);
-			program(vk::render_device &renderer);
+			VkPipeline pipeline;
 
+			program(VkDevice dev, VkPipeline p, const std::vector<program_input> &vertex_input, const std::vector<program_input>& fragment_inputs);
+			program(const program&) = delete;
+			program(program&& other) = delete;
 			~program();
 
-			program& attach_device(vk::render_device &dev);
-			program& attachFragmentProgram(VkShaderModule prog);
-			program& attachVertexProgram(VkShaderModule prog);
-
-			void make();
-			void destroy();
-
-			//Render state stuff...
-			void set_depth_compare_op(VkCompareOp op);
-			void set_depth_write_mask(VkBool32 write_enable);
-			void set_depth_test_enable(VkBool32 state);
-			void set_primitive_topology(VkPrimitiveTopology topology);
-			void set_color_mask(int num_targets, u8* targets, VkColorComponentFlags *flags);
-			void set_blend_state(int num_targets, u8* targets, VkBool32 *enable);
-			void set_blend_state(int num_targets, u8* targets, VkBool32 enable);
-			void set_blend_func(int num_targets, u8* targets, VkBlendFactor *src_color, VkBlendFactor *dst_color, VkBlendFactor *src_alpha, VkBlendFactor *dst_alpha);
-			void set_blend_func(int num_targets, u8 * targets, VkBlendFactor src_color, VkBlendFactor dst_color, VkBlendFactor src_alpha, VkBlendFactor dst_alpha);
-			void set_blend_op(int num_targets, u8* targets, VkBlendOp* color_ops, VkBlendOp* alpha_ops);
-			void set_blend_op(int num_targets, u8 * targets, VkBlendOp color_op, VkBlendOp alpha_op);
-			void set_primitive_restart(VkBool32 state);
-
-			void set_draw_buffer_count(u8 draw_buffers);
-
-			program& load_uniforms(program_domain domain, std::vector<program_input>& inputs);
-
-			void use(vk::command_buffer& commands, VkRenderPass pass, VkPipelineLayout pipeline_layout, VkDescriptorSet descriptor_set);
+			program& load_uniforms(program_domain domain, const std::vector<program_input>& inputs);
 
 			bool has_uniform(std::string uniform_name);
 #define VERTEX_BUFFERS_FIRST_BIND_SLOT 3
@@ -1239,9 +1249,6 @@ namespace vk
 			void bind_uniform(VkDescriptorImageInfo image_descriptor, std::string uniform_name, VkDescriptorSet &descriptor_set);
 			void bind_uniform(VkDescriptorBufferInfo buffer_descriptor, uint32_t binding_point, VkDescriptorSet &descriptor_set);
 			void bind_uniform(const VkBufferView &buffer_view, const std::string &binding_name, VkDescriptorSet &descriptor_set);
-
-			program& operator = (const program&) = delete;
-			program& operator = (program&& other);
 		};
 	}
 }

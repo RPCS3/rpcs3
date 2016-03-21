@@ -133,7 +133,6 @@ namespace vk
 	{
 		m_image_contents = img;
 		m_view = img;
-		m_sampler = nullptr;
 		
 		//We did not create this object, do not allow internal modification!
 		owner = nullptr;
@@ -190,32 +189,6 @@ namespace vk
 		m_usage = usage;
 		m_tiling = tiling;
 
-		if (usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT ||
-			usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)
-		{
-			VkSamplerAddressMode clamp_s = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-			VkSamplerAddressMode clamp_t = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-			VkSamplerAddressMode clamp_r = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-
-			VkSamplerCreateInfo sampler_info = {};
-			sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-			sampler_info.addressModeU = clamp_s;
-			sampler_info.addressModeV = clamp_t;
-			sampler_info.addressModeW = clamp_r;
-			sampler_info.anisotropyEnable = VK_FALSE;
-			sampler_info.compareEnable = VK_FALSE;
-			sampler_info.unnormalizedCoordinates = VK_FALSE;
-			sampler_info.mipLodBias = 0;
-			sampler_info.maxAnisotropy = 0;
-			sampler_info.magFilter = VK_FILTER_LINEAR;
-			sampler_info.minFilter = VK_FILTER_LINEAR;
-			sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
-			sampler_info.compareOp = VK_COMPARE_OP_NEVER;
-			sampler_info.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
-
-			CHECK_RESULT(vkCreateSampler((*owner), &sampler_info, nullptr, &m_sampler));
-		}
-
 		ready = true;
 	}
 
@@ -269,33 +242,6 @@ namespace vk
 		create(device, format, usage, tiling, width, height, mipmaps, gpu_only, swizzle);
 	}
 
-	void texture::sampler_setup(rsx::texture &tex, VkImageViewType type, VkComponentMapping swizzle)
-	{
-		VkSamplerAddressMode clamp_s = vk::vk_wrap_mode(tex.wrap_s());
-		VkSamplerAddressMode clamp_t = vk::vk_wrap_mode(tex.wrap_t());
-		VkSamplerAddressMode clamp_r = vk::vk_wrap_mode(tex.wrap_r());
-
-		VkSamplerCreateInfo sampler_info = {};
-		sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-		sampler_info.addressModeU = clamp_s;
-		sampler_info.addressModeV = clamp_t;
-		sampler_info.addressModeW = clamp_r;
-		sampler_info.anisotropyEnable = VK_TRUE;
-		sampler_info.compareEnable = VK_FALSE;
-		sampler_info.unnormalizedCoordinates = !!(tex.format() & CELL_GCM_TEXTURE_UN);
-		sampler_info.mipLodBias = tex.bias();
-		sampler_info.maxAnisotropy = vk::max_aniso(tex.max_aniso());
-		sampler_info.maxLod = tex.max_lod();
-		sampler_info.minLod = tex.min_lod();
-		sampler_info.magFilter = VK_FILTER_LINEAR;
-		sampler_info.minFilter = VK_FILTER_LINEAR;
-		sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
-		sampler_info.compareOp = VK_COMPARE_OP_NEVER;
-		sampler_info.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
-
-		CHECK_RESULT(vkCreateSampler((*owner), &sampler_info, nullptr, &m_sampler));
-	}
-
 	void texture::init(rsx::texture& tex, vk::command_buffer &cmd, bool ignore_checks)
 	{
 		VkImageViewType best_type = VK_IMAGE_VIEW_TYPE_2D;
@@ -323,9 +269,6 @@ namespace vk
 			destroy();
 			create(dev, format, VK_IMAGE_TYPE_3D, VK_IMAGE_VIEW_TYPE_3D, 0, usage, tiling, tex.width(), tex.height(), tex.mipmap(), false, default_component_map());
 		}
-
-		if (!m_sampler)
-			sampler_setup(tex, best_type, default_component_map());
 
 		VkImageSubresource subres = {};
 		subres.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -495,9 +438,6 @@ namespace vk
 	{
 		if (!owner) return;
 
-		if (m_sampler)
-			vkDestroySampler((*owner), m_sampler, nullptr);
-
 		//Destroy all objects managed by this object
 		vkDestroyImageView((*owner), m_view, nullptr);
 		vkDestroyImage((*owner), m_image_contents, nullptr);
@@ -505,7 +445,6 @@ namespace vk
 		vram_allocation.destroy();
 
 		owner = nullptr;
-		m_sampler = nullptr;
 		m_view = nullptr;
 		m_image_contents = nullptr;
 
@@ -532,8 +471,4 @@ namespace vk
 		return m_view;
 	}
 
-	texture::operator VkSampler()
-	{
-		return m_sampler;
-	}
 }

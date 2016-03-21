@@ -467,6 +467,7 @@ VKGSRender::~VKGSRender()
 	null_buffer.release();
 	null_buffer_view.release();
 	m_buffer_view_to_clean.clear();
+	m_framebuffer_to_clean.clear();
 
 	for (auto &render_pass : m_render_passes)
 		if (render_pass)
@@ -502,90 +503,17 @@ void VKGSRender::begin()
 	//TODO: Fence sync, ring-buffers, etc
 	//CHECK_RESULT(vkDeviceWaitIdle((*m_device)));
 
-	if (!load_program())
-		return;
-
 	if (!recording)
 		begin_command_buffer_recording();
 
 	init_buffers();
 
-	m_program->set_draw_buffer_count(m_draw_buffers_count);
-
-	u32 color_mask = rsx::method_registers[NV4097_SET_COLOR_MASK];
-	bool color_mask_b = !!(color_mask & 0xff);
-	bool color_mask_g = !!((color_mask >> 8) & 0xff);
-	bool color_mask_r = !!((color_mask >> 16) & 0xff);
-	bool color_mask_a = !!((color_mask >> 24) & 0xff);
-
-	VkColorComponentFlags mask = 0;
-	if (color_mask_a) mask |= VK_COLOR_COMPONENT_A_BIT;
-	if (color_mask_b) mask |= VK_COLOR_COMPONENT_B_BIT;
-	if (color_mask_g) mask |= VK_COLOR_COMPONENT_G_BIT;
-	if (color_mask_r) mask |= VK_COLOR_COMPONENT_R_BIT;
-
-	VkColorComponentFlags color_masks[4] = { mask };
-
-	u8 render_targets[] = { 0, 1, 2, 3 };
-	m_program->set_color_mask(m_draw_buffers_count, render_targets, color_masks);
-
-	//TODO stencil mask
-	m_program->set_depth_write_mask(rsx::method_registers[NV4097_SET_DEPTH_MASK]);
-
-	if (rsx::method_registers[NV4097_SET_DEPTH_TEST_ENABLE])
-	{
-		m_program->set_depth_test_enable(VK_TRUE);
-		m_program->set_depth_compare_op(vk::compare_op(rsx::method_registers[NV4097_SET_DEPTH_FUNC]));
-	}
-	else
-		m_program->set_depth_test_enable(VK_FALSE);
-
-	if (rsx::method_registers[NV4097_SET_BLEND_ENABLE])
-	{
-		u32 sfactor = rsx::method_registers[NV4097_SET_BLEND_FUNC_SFACTOR];
-		u32 dfactor = rsx::method_registers[NV4097_SET_BLEND_FUNC_DFACTOR];
-
-		VkBlendFactor sfactor_rgb = vk::get_blend_factor(sfactor);
-		VkBlendFactor sfactor_a = vk::get_blend_factor(sfactor >> 16);
-		VkBlendFactor dfactor_rgb = vk::get_blend_factor(dfactor);
-		VkBlendFactor dfactor_a = vk::get_blend_factor(dfactor >> 16);
-
-		//TODO: Separate target blending
-
-		VkBool32 blend_state = VK_TRUE;
-
-		m_program->set_blend_state(m_draw_buffers_count, render_targets, blend_state);
-		m_program->set_blend_func(m_draw_buffers_count, render_targets, sfactor_rgb, dfactor_rgb, sfactor_a, dfactor_a);
-
-		u32 equation = rsx::method_registers[NV4097_SET_BLEND_EQUATION];
-		VkBlendOp equation_rgb = vk::get_blend_op(equation);
-		VkBlendOp equation_a = vk::get_blend_op(equation >> 16);
-
-		m_program->set_blend_op(m_draw_buffers_count, render_targets, equation_rgb, equation_a);
-	}
-	else
-	{
-		VkBool32 blend_state = VK_FALSE;
-		m_program->set_blend_state(m_draw_buffers_count, render_targets, blend_state);
-	}
-
-	if (rsx::method_registers[NV4097_SET_RESTART_INDEX_ENABLE])
-	{
-		if (rsx::method_registers[NV4097_SET_RESTART_INDEX] != 0xFFFF &&
-			rsx::method_registers[NV4097_SET_RESTART_INDEX] != 0xFFFFFFFF)
-		{
-			LOG_ERROR(RSX, "Custom primitive restart index 0x%X. Should rewrite index buffer with proper value!", rsx::method_registers[NV4097_SET_RESTART_INDEX]);
-		}
-
-		LOG_ERROR(RSX, "Primitive restart enabled!");
-		m_program->set_primitive_restart(VK_TRUE);
-	}
-	else
-		m_program->set_primitive_restart(VK_FALSE);
+	if (!load_program())
+		return;
 
 	u32 line_width = rsx::method_registers[NV4097_SET_LINE_WIDTH];
 	float actual_line_width = (line_width >> 3) + (line_width & 7) / 8.f;
-	
+
 	vkCmdSetLineWidth(m_command_buffer, actual_line_width);
 
 	//TODO: Set up other render-state parameters into the program pipeline
@@ -613,6 +541,8 @@ namespace
 	}
 }
 
+
+
 void VKGSRender::end()
 {
 	size_t idx = vk::get_render_pass_location(
@@ -633,7 +563,13 @@ void VKGSRender::end()
 			}
 
 			vk::texture &tex = (texture0)? (*texture0): m_texture_cache.upload_texture(m_command_buffer, textures[i], m_rtts);
-			m_program->bind_uniform({ tex, tex, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, "tex" + std::to_string(i), descriptor_sets);
+			vk::sampler sampler(*m_device,
+				vk::vk_wrap_mode(textures[i].wrap_s()), vk::vk_wrap_mode(textures[i].wrap_t()), vk::vk_wrap_mode(textures[i].wrap_r()),
+				!!(textures[i].format() & CELL_GCM_TEXTURE_UN),
+				textures[i].bias(), vk::max_aniso(textures[i].max_aniso()), textures[i].min_lod(), textures[i].max_lod(),
+				VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_NEAREST
+				);
+			m_program->bind_uniform({ sampler.value, tex, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, "tex" + std::to_string(i), descriptor_sets);
 			texture0 = &tex;
 		}
 	}
@@ -641,7 +577,7 @@ void VKGSRender::end()
 	VkRenderPassBeginInfo rp_begin = {};
 	rp_begin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 	rp_begin.renderPass = current_render_pass;
-	rp_begin.framebuffer = m_framebuffer;
+	rp_begin.framebuffer = m_framebuffer_to_clean.back()->value;
 	rp_begin.renderArea.offset.x = 0;
 	rp_begin.renderArea.offset.y = 0;
 	rp_begin.renderArea.extent.width = m_frame->client_size().width;
@@ -651,8 +587,8 @@ void VKGSRender::end()
 
 	auto upload_info = upload_vertex_data();
 
-	m_program->set_primitive_topology(std::get<0>(upload_info));
-	m_program->use(m_command_buffer, current_render_pass, pipeline_layout, descriptor_sets);
+	vkCmdBindPipeline(m_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_program->pipeline);
+	vkCmdBindDescriptorSets(m_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &descriptor_sets, 0, nullptr);
 
 	if (!std::get<1>(upload_info))
 		vkCmdDraw(m_command_buffer, vertex_draw_count, 1, 0, 0);
@@ -841,8 +777,116 @@ bool VKGSRender::load_program()
 	RSXVertexProgram vertex_program = get_current_vertex_program();
 	RSXFragmentProgram fragment_program = get_current_fragment_program();
 
+	vk::pipeline_props properties = {};
+
+
+	properties.ia.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+	bool unused;
+	properties.ia.topology = vk::get_appropriate_topology(draw_mode, unused);
+
+	if (rsx::method_registers[NV4097_SET_RESTART_INDEX_ENABLE])
+	{
+		if (rsx::method_registers[NV4097_SET_RESTART_INDEX] != 0xFFFF &&
+			rsx::method_registers[NV4097_SET_RESTART_INDEX] != 0xFFFFFFFF)
+		{
+			LOG_ERROR(RSX, "Custom primitive restart index 0x%X. Should rewrite index buffer with proper value!", rsx::method_registers[NV4097_SET_RESTART_INDEX]);
+		}
+		properties.ia.primitiveRestartEnable = VK_TRUE;
+	}
+	else
+		properties.ia.primitiveRestartEnable = VK_FALSE;
+
+
+	for (int i = 0; i < 4; ++i)
+	{
+		properties.att_state[i].colorWriteMask = 0xf;
+		properties.att_state[i].blendEnable = VK_FALSE;
+	}
+
+	u32 color_mask = rsx::method_registers[NV4097_SET_COLOR_MASK];
+	bool color_mask_b = !!(color_mask & 0xff);
+	bool color_mask_g = !!((color_mask >> 8) & 0xff);
+	bool color_mask_r = !!((color_mask >> 16) & 0xff);
+	bool color_mask_a = !!((color_mask >> 24) & 0xff);
+
+	VkColorComponentFlags mask = 0;
+	if (color_mask_a) mask |= VK_COLOR_COMPONENT_A_BIT;
+	if (color_mask_b) mask |= VK_COLOR_COMPONENT_B_BIT;
+	if (color_mask_g) mask |= VK_COLOR_COMPONENT_G_BIT;
+	if (color_mask_r) mask |= VK_COLOR_COMPONENT_R_BIT;
+
+	VkColorComponentFlags color_masks[4] = { mask };
+
+	u8 render_targets[] = { 0, 1, 2, 3 };
+
+	for (u8 idx = 0; idx < m_draw_buffers_count; ++idx)
+	{
+		properties.att_state[render_targets[idx]].colorWriteMask = mask;
+	}
+
+	if (rsx::method_registers[NV4097_SET_BLEND_ENABLE])
+	{
+		u32 sfactor = rsx::method_registers[NV4097_SET_BLEND_FUNC_SFACTOR];
+		u32 dfactor = rsx::method_registers[NV4097_SET_BLEND_FUNC_DFACTOR];
+
+		VkBlendFactor sfactor_rgb = vk::get_blend_factor(sfactor);
+		VkBlendFactor sfactor_a = vk::get_blend_factor(sfactor >> 16);
+		VkBlendFactor dfactor_rgb = vk::get_blend_factor(dfactor);
+		VkBlendFactor dfactor_a = vk::get_blend_factor(dfactor >> 16);
+
+		u32 equation = rsx::method_registers[NV4097_SET_BLEND_EQUATION];
+		VkBlendOp equation_rgb = vk::get_blend_op(equation);
+		VkBlendOp equation_a = vk::get_blend_op(equation >> 16);
+
+		//TODO: Separate target blending
+		for (u8 idx = 0; idx < m_draw_buffers_count; ++idx)
+		{
+			properties.att_state[render_targets[idx]].blendEnable = VK_TRUE;
+			properties.att_state[render_targets[idx]].srcColorBlendFactor = sfactor_rgb;
+			properties.att_state[render_targets[idx]].dstColorBlendFactor = dfactor_rgb;
+			properties.att_state[render_targets[idx]].srcAlphaBlendFactor = sfactor_a;
+			properties.att_state[render_targets[idx]].dstAlphaBlendFactor = dfactor_a;
+			properties.att_state[render_targets[idx]].colorBlendOp = equation_rgb;
+			properties.att_state[render_targets[idx]].alphaBlendOp = equation_a;
+		}
+	}
+	else
+	{
+		for (u8 idx = 0; idx < m_draw_buffers_count; ++idx)
+		{
+			properties.att_state[render_targets[idx]].blendEnable = VK_FALSE;
+		}
+	}
+
+
+
+	properties.ds.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+	properties.ds.depthWriteEnable = (!!rsx::method_registers[NV4097_SET_DEPTH_MASK]) ? VK_TRUE : VK_FALSE;
+	properties.ds.depthBoundsTestEnable = VK_FALSE;
+	properties.ds.back.failOp = VK_STENCIL_OP_KEEP;
+	properties.ds.back.passOp = VK_STENCIL_OP_KEEP;
+	properties.ds.back.compareOp = VK_COMPARE_OP_ALWAYS;
+	properties.ds.stencilTestEnable = VK_FALSE;
+	properties.ds.front = properties.ds.back;
+
+	if (!!rsx::method_registers[NV4097_SET_DEPTH_TEST_ENABLE])
+	{
+		properties.ds.depthTestEnable = VK_TRUE;
+		properties.ds.depthCompareOp = vk::compare_op(rsx::method_registers[NV4097_SET_DEPTH_FUNC]);
+	}
+	else
+		properties.ds.depthTestEnable = VK_FALSE;
+
+	size_t idx = vk::get_render_pass_location(
+		vk::get_compatible_surface_format(m_surface.color_format),
+		vk::get_compatible_depth_surface_format(m_optimal_tiling_supported_formats, m_surface.depth_format),
+		(u8)vk::get_draw_buffers(rsx::to_surface_target(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET])).size());
+	properties.render_pass = m_render_passes[idx];
+
+	properties.num_targets = m_draw_buffers_count;
+
 	//Load current program from buffer
-	m_program = &m_prog_buffer.getGraphicPipelineState(vertex_program, fragment_program, nullptr);
+	m_program = m_prog_buffer.getGraphicPipelineState(vertex_program, fragment_program, properties, *m_device, pipeline_layout).get();
 
 	//TODO: Update constant buffers..
 	//1. Update scale-offset matrix
@@ -1023,30 +1067,42 @@ void VKGSRender::prepare_rtts()
 	//Bind created rtts as current fbo...
 	std::vector<u8> draw_buffers = vk::get_draw_buffers(rsx::to_surface_target(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET]));
 
-	m_framebuffer.destroy();
-	std::vector<VkImageView> fbo_images;
+	std::vector<std::unique_ptr<vk::image_view> > fbo_images;
 
 	for (u8 index: draw_buffers)
 	{
 		vk::texture *raw = std::get<1>(m_rtts.m_bound_render_targets[index]);
-		VkImageView as_image = (*raw);
-		fbo_images.push_back(as_image);
+
+		VkImageSubresourceRange subres = {};
+		subres.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		subres.baseArrayLayer = 0;
+		subres.baseMipLevel = 0;
+		subres.layerCount = 1;
+		subres.levelCount = 1;
+
+		fbo_images.push_back(std::make_unique<vk::image_view>(*m_device, *raw, VK_IMAGE_VIEW_TYPE_2D, raw->get_format(), vk::default_component_map(), subres));
 	}
+
+	m_draw_buffers_count = fbo_images.size();
 
 	if (std::get<1>(m_rtts.m_bound_depth_stencil) != nullptr)
 	{
 		vk::texture *raw = (std::get<1>(m_rtts.m_bound_depth_stencil));
-		VkImageView depth_image = (*raw);
-		fbo_images.push_back(depth_image);
+
+		VkImageSubresourceRange subres = {};
+		subres.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+		subres.baseArrayLayer = 0;
+		subres.baseMipLevel = 0;
+		subres.layerCount = 1;
+		subres.levelCount = 1;
+
+		fbo_images.push_back(std::make_unique<vk::image_view>(*m_device, *raw, VK_IMAGE_VIEW_TYPE_2D, raw->get_format(), vk::default_component_map(), subres));
 	}
 
 	size_t idx = vk::get_render_pass_location(vk::get_compatible_surface_format(m_surface.color_format), vk::get_compatible_depth_surface_format(m_optimal_tiling_supported_formats, m_surface.depth_format), (u8)draw_buffers.size());
 	VkRenderPass current_render_pass = m_render_passes[idx];
 
-	m_framebuffer.create((*m_device), current_render_pass, fbo_images.data(), fbo_images.size(),
-						clip_width, clip_height);
-
-	m_draw_buffers_count = draw_buffers.size();
+	m_framebuffer_to_clean.push_back(std::make_unique<vk::framebuffer>(*m_device, current_render_pass, clip_width, clip_height, std::move(fbo_images)));
 }
 
 void VKGSRender::execute_command_buffer(bool wait)
