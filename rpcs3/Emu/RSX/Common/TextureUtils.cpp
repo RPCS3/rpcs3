@@ -111,9 +111,10 @@ namespace
 }
 
 template<typename T>
-u32 get_row_pitch_in_block(u16 width_in_block, size_t alignment_in_bytes)
+u32 get_row_pitch_in_block(u16 width_in_block, size_t multiple_constraints_in_byte)
 {
-	return static_cast<u32>(align(width_in_block * sizeof(T), alignment_in_bytes) / sizeof(T));
+	size_t divided = (width_in_block * sizeof(T) + multiple_constraints_in_byte - 1) / multiple_constraints_in_byte;
+	return static_cast<u32>(divided * multiple_constraints_in_byte / sizeof(T));
 }
 }
 
@@ -173,7 +174,7 @@ std::vector<rsx_subresource_layout> get_subresources_layout(const rsx::texture &
 	throw EXCEPTION("Wrong format %d", format);
 }
 
-void upload_texture_subresource(gsl::span<gsl::byte> dst_buffer, const rsx_subresource_layout &src_layout, int format, bool is_swizzled, size_t dst_row_alignment)
+void upload_texture_subresource(gsl::span<gsl::byte> dst_buffer, const rsx_subresource_layout &src_layout, int format, bool is_swizzled, size_t dst_row_pitch_multiple_of)
 {
 	u16 w = src_layout.width_in_block;
 	u16 h = src_layout.height_in_block;
@@ -183,9 +184,9 @@ void upload_texture_subresource(gsl::span<gsl::byte> dst_buffer, const rsx_subre
 	case CELL_GCM_TEXTURE_A8R8G8B8:
 	case CELL_GCM_TEXTURE_D8R8G8B8:
 		if (is_swizzled)
-			copy_unmodified_block_swizzled::copy_mipmap_level(as_span_workaround<u32>(dst_buffer), gsl::as_span<const u32>(src_layout.data), w, h, depth, get_row_pitch_in_block<u32>(w, dst_row_alignment));
+			copy_unmodified_block_swizzled::copy_mipmap_level(as_span_workaround<u32>(dst_buffer), gsl::as_span<const u32>(src_layout.data), w, h, depth, get_row_pitch_in_block<u32>(w, dst_row_pitch_multiple_of));
 		else
-			copy_unmodified_block::copy_mipmap_level(as_span_workaround<u32>(dst_buffer), gsl::as_span<const u32>(src_layout.data), w, h, depth, get_row_pitch_in_block<u32>(w, dst_row_alignment), src_layout.pitch_in_bytes);
+			copy_unmodified_block::copy_mipmap_level(as_span_workaround<u32>(dst_buffer), gsl::as_span<const u32>(src_layout.data), w, h, depth, get_row_pitch_in_block<u32>(w, dst_row_pitch_multiple_of), src_layout.pitch_in_bytes);
 		break;
 	case CELL_GCM_TEXTURE_DEPTH16:
 	case CELL_GCM_TEXTURE_D1R5G5B5:
@@ -195,25 +196,25 @@ void upload_texture_subresource(gsl::span<gsl::byte> dst_buffer, const rsx_subre
 	case CELL_GCM_TEXTURE_R5G6B5:
 	case CELL_GCM_TEXTURE_G8B8:
 		if (is_swizzled)
-			copy_unmodified_block_swizzled::copy_mipmap_level(as_span_workaround<u16>(dst_buffer), gsl::as_span<const be_t<u16>>(src_layout.data), w, h, depth, get_row_pitch_in_block<u16>(w, dst_row_alignment));
+			copy_unmodified_block_swizzled::copy_mipmap_level(as_span_workaround<u16>(dst_buffer), gsl::as_span<const be_t<u16>>(src_layout.data), w, h, depth, get_row_pitch_in_block<u16>(w, dst_row_pitch_multiple_of));
 		else
-			copy_unmodified_block::copy_mipmap_level(as_span_workaround<u16>(dst_buffer), gsl::as_span<const be_t<u16>>(src_layout.data), w, h, depth, get_row_pitch_in_block<u16>(w, dst_row_alignment), src_layout.pitch_in_bytes);
+			copy_unmodified_block::copy_mipmap_level(as_span_workaround<u16>(dst_buffer), gsl::as_span<const be_t<u16>>(src_layout.data), w, h, depth, get_row_pitch_in_block<u16>(w, dst_row_pitch_multiple_of), src_layout.pitch_in_bytes);
 		break;
 	case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT:
-		copy_unmodified_block::copy_mipmap_level(as_span_workaround<u64>(dst_buffer), gsl::as_span<const be_t<u64>>(src_layout.data), w, h, depth, get_row_pitch_in_block<u64>(w, dst_row_alignment), src_layout.pitch_in_bytes);
+		copy_unmodified_block::copy_mipmap_level(as_span_workaround<u64>(dst_buffer), gsl::as_span<const be_t<u64>>(src_layout.data), w, h, depth, get_row_pitch_in_block<u64>(w, dst_row_pitch_multiple_of), src_layout.pitch_in_bytes);
 		break;
 	case CELL_GCM_TEXTURE_COMPRESSED_DXT1:
-		copy_unmodified_block::copy_mipmap_level(as_span_workaround<u64>(dst_buffer), gsl::as_span<const u64>(src_layout.data), w, h, depth, get_row_pitch_in_block<u64>(w, dst_row_alignment), src_layout.pitch_in_bytes);
+		copy_unmodified_block::copy_mipmap_level(as_span_workaround<u64>(dst_buffer), gsl::as_span<const u64>(src_layout.data), w, h, depth, get_row_pitch_in_block<u64>(w, dst_row_pitch_multiple_of), src_layout.pitch_in_bytes);
 		break;
 	case CELL_GCM_TEXTURE_COMPRESSED_DXT23:
 	case CELL_GCM_TEXTURE_COMPRESSED_DXT45:
-		copy_unmodified_block::copy_mipmap_level(as_span_workaround<u128>(dst_buffer), gsl::as_span<const u128>(src_layout.data), w, h, depth, get_row_pitch_in_block<u128>(w, dst_row_alignment), src_layout.pitch_in_bytes);
+		copy_unmodified_block::copy_mipmap_level(as_span_workaround<u128>(dst_buffer), gsl::as_span<const u128>(src_layout.data), w, h, depth, get_row_pitch_in_block<u128>(w, dst_row_pitch_multiple_of), src_layout.pitch_in_bytes);
 		break;
 	case CELL_GCM_TEXTURE_B8:
 		if (is_swizzled)
-			copy_unmodified_block_swizzled::copy_mipmap_level(as_span_workaround<u8>(dst_buffer), gsl::as_span<const u8>(src_layout.data), w, h, depth, get_row_pitch_in_block<u8>(w, dst_row_alignment));
+			copy_unmodified_block_swizzled::copy_mipmap_level(as_span_workaround<u8>(dst_buffer), gsl::as_span<const u8>(src_layout.data), w, h, depth, get_row_pitch_in_block<u8>(w, dst_row_pitch_multiple_of));
 		else
-			copy_unmodified_block::copy_mipmap_level(as_span_workaround<u8>(dst_buffer), gsl::as_span<const u8>(src_layout.data), w, h, depth, get_row_pitch_in_block<u8>(w, dst_row_alignment), src_layout.pitch_in_bytes);
+			copy_unmodified_block::copy_mipmap_level(as_span_workaround<u8>(dst_buffer), gsl::as_span<const u8>(src_layout.data), w, h, depth, get_row_pitch_in_block<u8>(w, dst_row_pitch_multiple_of), src_layout.pitch_in_bytes);
 		break;
 	default:
 		throw EXCEPTION("Wrong format %d", format);
