@@ -23,7 +23,7 @@ size_t get_placed_texture_storage_size(const rsx::texture &texture, size_t rowPi
  */
 std::vector<rsx_subresource_layout> get_subresources_layout(const rsx::texture &texture);
 
-void upload_texture_subresource(gsl::span<gsl::byte> dst_buffer, const rsx_subresource_layout &src_layout, int format, bool is_swizzled, size_t dst_row_alignment);
+void upload_texture_subresource(gsl::span<gsl::byte> dst_buffer, const rsx_subresource_layout &src_layout, int format, bool is_swizzled, size_t dst_row_pitch_multiple_of);
 
 u8 get_format_block_size_in_bytes(int format);
 u8 get_format_block_size_in_texel(int format);
