@@ -16,9 +16,9 @@ namespace gl
 		case rsx::primitive_type::triangles: return GL_TRIANGLES;
 		case rsx::primitive_type::triangle_strip: return GL_TRIANGLE_STRIP;
 		case rsx::primitive_type::triangle_fan: return GL_TRIANGLE_FAN;
-		case rsx::primitive_type::quads: return GL_QUADS;
-		case rsx::primitive_type::quad_strip: return GL_QUAD_STRIP;
-		case rsx::primitive_type::polygon: return GL_POLYGON;
+		case rsx::primitive_type::quads: return GL_TRIANGLES;
+		case rsx::primitive_type::quad_strip: return GL_TRIANGLES;
+		case rsx::primitive_type::polygon: return GL_TRIANGLES;
 		}
 		throw new EXCEPTION("unknow primitive type");
 	}
