@@ -133,7 +133,7 @@ void GLGSRender::begin()
 	__glcheck glDepthRange((f32&)rsx::method_registers[NV4097_SET_CLIP_MIN], (f32&)rsx::method_registers[NV4097_SET_CLIP_MAX]);
 	__glcheck enable(rsx::method_registers[NV4097_SET_DITHER_ENABLE], GL_DITHER);
 
-	if (__glcheck enable(rsx::method_registers[NV4097_SET_ALPHA_TEST_ENABLE], GL_ALPHA_TEST))
+	if (!!rsx::method_registers[NV4097_SET_ALPHA_TEST_ENABLE])
 	{
 		//TODO: NV4097_SET_ALPHA_REF must be converted to f32
 		//glcheck(glAlphaFunc(rsx::method_registers[NV4097_SET_ALPHA_FUNC], rsx::method_registers[NV4097_SET_ALPHA_REF]));
@@ -205,7 +205,7 @@ void GLGSRender::begin()
 		__glcheck enable(blend_mrt & 8, GL_BLEND, GL_COLOR_ATTACHMENT3);
 	}
 	
-	if (__glcheck enable(rsx::method_registers[NV4097_SET_LOGIC_OP_ENABLE], GL_LOGIC_OP))
+	if (__glcheck enable(rsx::method_registers[NV4097_SET_LOGIC_OP_ENABLE], GL_COLOR_LOGIC_OP))
 	{
 		__glcheck glLogicOp(rsx::method_registers[NV4097_SET_LOGIC_OP]);
 	}
@@ -261,14 +261,6 @@ void GLGSRender::begin()
 
 	__glcheck enable(rsx::method_registers[NV4097_SET_POLY_OFFSET_FILL_ENABLE], GL_POLYGON_OFFSET_FILL);
 
-	if (__glcheck enable(rsx::method_registers[NV4097_SET_POLYGON_STIPPLE], GL_POLYGON_STIPPLE))
-	{
-		__glcheck glPolygonStipple((GLubyte*)(rsx::method_registers + NV4097_SET_POLYGON_STIPPLE_PATTERN));
-	}
-
-	__glcheck glPolygonMode(GL_FRONT, rsx::method_registers[NV4097_SET_FRONT_POLYGON_MODE]);
-	__glcheck glPolygonMode(GL_BACK, rsx::method_registers[NV4097_SET_BACK_POLYGON_MODE]);
-
 	if (__glcheck enable(rsx::method_registers[NV4097_SET_CULL_FACE_ENABLE], GL_CULL_FACE))
 	{
 		__glcheck glCullFace(rsx::method_registers[NV4097_SET_CULL_FACE]);
@@ -287,14 +279,6 @@ void GLGSRender::begin()
 	if (__glcheck enable(rsx::method_registers[NV4097_SET_RESTART_INDEX_ENABLE], GL_PRIMITIVE_RESTART))
 	{
 		__glcheck glPrimitiveRestartIndex(rsx::method_registers[NV4097_SET_RESTART_INDEX]);
-	}
-
-	if (__glcheck enable(rsx::method_registers[NV4097_SET_LINE_STIPPLE], GL_LINE_STIPPLE))
-	{
-		u32 line_stipple_pattern = rsx::method_registers[NV4097_SET_LINE_STIPPLE_PATTERN];
-		u16 factor = line_stipple_pattern;
-		u16 pattern = line_stipple_pattern >> 16;
-		__glcheck glLineStipple(factor, pattern);
 	}
 }
 
@@ -779,6 +763,8 @@ void GLGSRender::on_init_thread()
 	GSRender::on_init_thread();
 
 	gl::init();
+	if (rpcs3::config.rsx.d3d12.debug_output.value())
+		gl::enable_debugging();
 	LOG_NOTICE(RSX, "%s", (const char*)glGetString(GL_VERSION));
 	LOG_NOTICE(RSX, "%s", (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION));
 	LOG_NOTICE(RSX, "%s", (const char*)glGetString(GL_VENDOR));

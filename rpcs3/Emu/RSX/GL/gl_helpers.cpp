@@ -23,6 +23,31 @@ namespace gl
 		throw new EXCEPTION("unknow primitive type");
 	}
 
+#ifdef WIN32
+	void APIENTRY dbgFunc(GLenum source, GLenum type, GLuint id,
+		GLenum severity, GLsizei lenght, const GLchar* message,
+		const void* userParam)
+	{
+		switch (type)
+		{
+		case GL_DEBUG_TYPE_ERROR:
+			LOG_ERROR(RSX, "%s", message);
+			return;
+		default:
+			LOG_WARNING(RSX, "%s", message);
+			return;
+		}
+	}
+#endif
+
+	void enable_debugging()
+	{
+#ifdef WIN32
+		glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+		glDebugMessageCallback(static_cast<GLDEBUGPROC>(dbgFunc), nullptr);
+#endif
+	}
+
 	void fbo::create()
 	{
 		glGenFramebuffers(1, &m_id);

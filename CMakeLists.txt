@@ -15,6 +15,8 @@ endif()
 set(PNG_SHARED OFF CACHE BOOL "Build shared lib." FORCE)
 set(PNG_TESTS  OFF CACHE BOOL "Build tests." FORCE)
 
+add_definitions(-DCMAKE_BUILD)
+
 add_subdirectory( asmjit )
 add_subdirectory( 3rdparty/libpng )
 # TODO: do real installation, including copying directory structure
