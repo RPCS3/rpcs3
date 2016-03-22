@@ -58,7 +58,7 @@ namespace rsx
 			}
 		}
 
-	private:
+	protected:
 		using surface_storage_type = typename Traits::surface_storage_type;
 		using surface_type = typename Traits::surface_type;
 		using command_list_type = typename Traits::command_list_type;
@@ -76,7 +76,7 @@ namespace rsx
 		surface_store() = default;
 		~surface_store() = default;
 		surface_store(const surface_store&) = delete;
-	private:
+	protected:
 		/**
 		* If render target already exists at address, issue state change operation on cmdList.
 		* Otherwise create one with width, height, clearColor info.
