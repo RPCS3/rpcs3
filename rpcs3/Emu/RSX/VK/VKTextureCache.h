@@ -15,8 +15,8 @@ namespace vk
 		u16 height;
 		u16 depth;
 		u16 mipmaps;
-		
-		vk::texture uploaded_texture;
+		std::unique_ptr<vk::image_view> uploaded_image_view;
+		std::unique_ptr<vk::image> uploaded_texture;
 
 		u64  protected_rgn_start;
 		u64  protected_rgn_end;
@@ -31,6 +31,8 @@ namespace vk
 	private:
 		std::vector<cached_texture_object> m_cache;
 		u32 num_dirty_textures = 0;
+
+		std::vector<std::unique_ptr<vk::image_view> > m_temporary_image_view;
 
 		bool lock_memory_region(u32 start, u32 size)
 		{
@@ -98,7 +100,7 @@ namespace vk
 				{
 					if (tex.exists)
 					{
-						tex.uploaded_texture.destroy();
+						tex.uploaded_texture.reset();
 						tex.exists = false;
 					}
 
@@ -106,8 +108,7 @@ namespace vk
 				}
 			}
 
-			cached_texture_object object;
-			m_cache.push_back(object);
+			m_cache.push_back(cached_texture_object());
 
 			return m_cache[m_cache.size() - 1];
 		}
@@ -133,7 +134,7 @@ namespace vk
 			{
 				if (tex.dirty && tex.exists)
 				{
-					tex.uploaded_texture.destroy();
+					tex.uploaded_texture.reset();
 					tex.exists = false;
 				}
 			}
@@ -148,19 +149,10 @@ namespace vk
 
 		void destroy()
 		{
-			for (cached_texture_object &tex : m_cache)
-			{
-				if (tex.exists)
-				{
-					tex.uploaded_texture.destroy();
-					tex.exists = false;
-				}
-			}
-
 			m_cache.resize(0);
 		}
 
-		vk::texture& upload_texture(command_buffer cmd, rsx::texture &tex, rsx::vk_render_targets &m_rtts)
+		vk::image_view* upload_texture(command_buffer cmd, rsx::texture &tex, rsx::vk_render_targets &m_rtts, const vk::memory_type_mapping &memory_type_mapping, data_heap& upload_heap, vk::buffer* upload_buffer)
 		{
 			if (num_dirty_textures > 32)
 			{
@@ -175,21 +167,27 @@ namespace vk
 			const u32 range = (u32)get_texture_size(tex);
 
 			//First check if it exists as an rtt...
-			vk::texture *rtt_texture = nullptr;
+			vk::image *rtt_texture = nullptr;
 			if (rtt_texture = m_rtts.get_texture_from_render_target_if_applicable(texaddr))
 			{
-				return *rtt_texture;
+				m_temporary_image_view.push_back(std::make_unique<vk::image_view>(*vk::get_current_renderer(), rtt_texture->value, VK_IMAGE_VIEW_TYPE_2D, rtt_texture->info.format,
+					vk::default_component_map(),
+					vk::default_image_subresource_range()));
+				return m_temporary_image_view.back().get();
 			}
 
 			if (rtt_texture = m_rtts.get_texture_from_depth_stencil_if_applicable(texaddr))
 			{
-				return *rtt_texture;
+				m_temporary_image_view.push_back(std::make_unique<vk::image_view>(*vk::get_current_renderer(), rtt_texture->value, VK_IMAGE_VIEW_TYPE_2D, rtt_texture->info.format,
+					vk::default_component_map(),
+					vk::default_image_subresource_range()));
+				return m_temporary_image_view.back().get();
 			}
 
 			cached_texture_object& cto = find_cached_texture(texaddr, range, true, tex.width(), tex.height(), tex.mipmap());
 			if (cto.exists && !cto.dirty)
 			{
-				return cto.uploaded_texture;
+				return cto.uploaded_image_view.get();
 			}
 
 			u32 raw_format = tex.format();
@@ -198,21 +196,32 @@ namespace vk
 			VkComponentMapping mapping = vk::get_component_mapping(format, tex.remap());
 			VkFormat vk_format = get_compatible_sampler_format(format);
 
-			cto.uploaded_texture.create(*vk::get_current_renderer(), vk_format, VK_IMAGE_USAGE_SAMPLED_BIT, tex.width(), tex.height(), tex.mipmap(), false, mapping);
-			cto.uploaded_texture.init(tex, cmd);
-			cto.uploaded_texture.change_layout(cmd, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+			cto.uploaded_texture = std::make_unique<vk::image>(*vk::get_current_renderer(), memory_type_mapping.device_local,
+				VK_IMAGE_TYPE_2D,
+				vk_format,
+				tex.width(), tex.height(), 1, tex.mipmap(), 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
+				VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 0);
+			change_image_layout(cmd, cto.uploaded_texture->value, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
+
+			cto.uploaded_image_view = std::make_unique<vk::image_view>(*vk::get_current_renderer(), cto.uploaded_texture->value, VK_IMAGE_VIEW_TYPE_2D, vk_format,
+				vk::get_component_mapping(tex.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN), tex.remap()),
+				vk::default_image_subresource_range());
+
+			copy_mipmaped_image_using_buffer(cmd, cto.uploaded_texture->value, get_subresources_layout(tex), format, !(tex.format() & CELL_GCM_TEXTURE_LN), upload_heap, upload_buffer);
+
+			change_image_layout(cmd, cto.uploaded_texture->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
 
 			cto.exists = true;
 			cto.dirty = false;
 			cto.native_rsx_address = texaddr;
 			cto.native_rsx_size = range;
-			cto.width = cto.uploaded_texture.width();
-			cto.height = cto.uploaded_texture.height();
-			cto.mipmaps = cto.uploaded_texture.mipmaps();
+			cto.width = tex.width();
+			cto.height = tex.height();
+			cto.mipmaps = tex.mipmap();
 			
 			lock_object(cto);
 
-			return cto.uploaded_texture;
+			return cto.uploaded_image_view.get();
 		}
 
 		bool invalidate_address(u32 rsx_address)
@@ -239,28 +248,7 @@ namespace vk
 
 		void flush(vk::command_buffer &cmd)
 		{
-			//Finish all pending transactions for any cache managed textures..
-			for (cached_texture_object &tex : m_cache)
-			{
-				if (tex.dirty || !tex.exists) continue;
-				tex.uploaded_texture.flush(cmd);
-			}
-		}
-
-		void merge_dirty_textures(std::list<vk::texture> dirty_textures)
-		{
-			for (vk::texture &tex : dirty_textures)
-			{
-				cached_texture_object cto;
-				cto.uploaded_texture = tex;
-				cto.locked = false;
-				cto.exists = true;
-				cto.dirty = true;
-				cto.native_rsx_address = 0;
-
-				num_dirty_textures++;
-				m_cache.push_back(cto);
-			}
+			m_temporary_image_view.clear();
 		}
 	};
 }

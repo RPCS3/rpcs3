@@ -14,6 +14,7 @@
 #include "Emu/state.h"
 #include "VulkanAPI.h"
 #include "../GCM.h"
+#include "../Common/TextureUtils.h"
 
 namespace rsx
 {
@@ -330,6 +331,60 @@ namespace vk
 		{
 			return vram;
 		}
+	};
+
+	struct image
+	{
+		VkImage value;
+		VkImageCreateInfo info = {};
+		std::shared_ptr<vk::memory_block> memory;
+
+		image(VkDevice dev, uint32_t memory_type_index,
+			VkImageType image_type,
+			VkFormat format,
+			uint32_t width, uint32_t height, uint32_t depth,
+			VkDeviceSize mipmaps, VkDeviceSize layers,
+			VkSampleCountFlagBits samples,
+			VkImageLayout initial_layout,
+			VkImageTiling tiling,
+			VkImageUsageFlags usage,
+			VkImageCreateFlags image_flags)
+			: m_device(dev)
+		{
+			info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+			info.imageType = image_type;
+			info.format = format;
+			info.extent = { width, height, depth };
+			info.mipLevels = mipmaps;
+			info.arrayLayers = layers;
+			info.samples = samples;
+			info.tiling = tiling;
+			info.usage = usage;
+			info.flags = image_flags;
+			info.initialLayout = initial_layout;
+			info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+			CHECK_RESULT(vkCreateImage(m_device, &info, nullptr, &value));
+
+			VkMemoryRequirements memory_req;
+			vkGetImageMemoryRequirements(m_device, value, &memory_req);
+			memory = std::make_shared<vk::memory_block>(m_device, memory_req.size, memory_type_index);
+
+			CHECK_RESULT(vkBindImageMemory(m_device, value, memory->memory, 0));
+		}
+
+		// TODO: Ctor that uses a provided memory heap
+
+		~image()
+		{
+			vkDestroyImage(m_device, value, nullptr);
+		}
+
+		image(const image&) = delete;
+		image(image&&) = delete;
+
+	private:
+		VkDevice m_device;
 	};
 
 	struct image_view
@@ -1202,8 +1257,9 @@ namespace vk
 
 		struct bound_sampler
 		{
-			VkImageView image_view = nullptr;
-			VkSampler sampler = nullptr;
+			VkFormat format;
+			VkImage image;
+			VkComponentMapping mapping;
 		};
 
 		struct bound_buffer
@@ -1251,4 +1307,94 @@ namespace vk
 			void bind_uniform(const VkBufferView &buffer_view, const std::string &binding_name, VkDescriptorSet &descriptor_set);
 		};
 	}
+
+
+
+	// TODO: factorize between backends
+	class data_heap
+	{
+		/**
+		* Does alloc cross get position ?
+		*/
+		template<int Alignement>
+		bool can_alloc(size_t size) const
+		{
+			size_t alloc_size = align(size, Alignement);
+			size_t aligned_put_pos = align(m_put_pos, Alignement);
+			if (aligned_put_pos + alloc_size < m_size)
+			{
+				// range before get
+				if (aligned_put_pos + alloc_size < m_get_pos)
+					return true;
+				// range after get
+				if (aligned_put_pos > m_get_pos)
+					return true;
+				return false;
+			}
+			else
+			{
+				// ..]....[..get..
+				if (aligned_put_pos < m_get_pos)
+					return false;
+				// ..get..]...[...
+				// Actually all resources extending beyond heap space starts at 0
+				if (alloc_size > m_get_pos)
+					return false;
+				return true;
+			}
+		}
+
+		size_t m_size;
+		size_t m_put_pos; // Start of free space
+	public:
+		data_heap() = default;
+		~data_heap() = default;
+		data_heap(const data_heap&) = delete;
+		data_heap(data_heap&&) = delete;
+
+		size_t m_get_pos; // End of free space
+
+		void init(size_t heap_size)
+		{
+			m_size = heap_size;
+			m_put_pos = 0;
+			m_get_pos = heap_size - 1;
+		}
+
+		template<int Alignement>
+		size_t alloc(size_t size)
+		{
+			if (!can_alloc<Alignement>(size)) throw EXCEPTION("Working buffer not big enough");
+			size_t alloc_size = align(size, Alignement);
+			size_t aligned_put_pos = align(m_put_pos, Alignement);
+			if (aligned_put_pos + alloc_size < m_size)
+			{
+				m_put_pos = aligned_put_pos + alloc_size;
+				return aligned_put_pos;
+			}
+			else
+			{
+				m_put_pos = alloc_size;
+				return 0;
+			}
+		}
+
+		/**
+		* return current putpos - 1
+		*/
+		size_t get_current_put_pos_minus_one() const
+		{
+			return (m_put_pos - 1 > 0) ? m_put_pos - 1 : m_size - 1;
+		}
+	};
+
+
+	/**
+	* Allocate enough space in upload_buffer and write all mipmap/layer data into the subbuffer.
+	* Then copy all layers into dst_image.
+	* dst_image must be in TRANSFER_DST_OPTIMAL layout and upload_buffer have TRANSFER_SRC_BIT usage flag.
+	*/
+	void copy_mipmaped_image_using_buffer(VkCommandBuffer cmd, VkImage dst_image,
+		const std::vector<rsx_subresource_layout> subresource_layout, int format, bool is_swizzled,
+		vk::data_heap &upload_heap, vk::buffer* upload_buffer);
 }

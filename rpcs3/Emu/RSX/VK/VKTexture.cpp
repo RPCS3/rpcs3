@@ -4,7 +4,6 @@
 #include "../RSXThread.h"
 #include "../RSXTexture.h"
 #include "../rsx_utils.h"
-#include "../Common/TextureUtils.h"
 #include "VKFormats.h"
 
 namespace vk
@@ -36,8 +35,8 @@ namespace vk
 		subres.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 		subres.baseArrayLayer = 0;
 		subres.baseMipLevel = 0;
-		subres.layerCount = 1;
-		subres.levelCount = 1;
+		subres.layerCount = 100;
+		subres.levelCount = 100;
 
 		return subres;
 	}
@@ -127,6 +126,39 @@ namespace vk
 		VkImage idst = (VkImage)dst;
 		
 		copy_image(cmd, isrc, idst, srcLayout, dstLayout, width, height, mipmaps, aspect);
+	}
+
+	void copy_mipmaped_image_using_buffer(VkCommandBuffer cmd, VkImage dst_image,
+		const std::vector<rsx_subresource_layout> subresource_layout, int format, bool is_swizzled,
+		vk::data_heap &upload_heap, vk::buffer* upload_buffer)
+	{
+		u32 mipmap_level = 0;
+		u32 block_in_pixel = get_format_block_size_in_texel(format);
+		u8 block_size_in_bytes = get_format_block_size_in_bytes(format);
+		for (const rsx_subresource_layout &layout : subresource_layout)
+		{
+			u32 row_pitch = align(layout.width_in_block * block_size_in_bytes, 256);
+			size_t image_linear_size = row_pitch * layout.height_in_block * layout.depth;
+			size_t offset_in_buffer = upload_heap.alloc<512>(image_linear_size);
+
+			void *mapped_buffer = upload_buffer->map(offset_in_buffer, image_linear_size);
+			gsl::span<gsl::byte> mapped{ (gsl::byte*)mapped_buffer, gsl::narrow<int>(image_linear_size) };
+			upload_texture_subresource(mapped, layout, format, is_swizzled, 256);
+			upload_buffer->unmap();
+
+			VkBufferImageCopy copy_info = {};
+			copy_info.bufferOffset = offset_in_buffer;
+			copy_info.imageExtent.height = layout.height_in_block * block_in_pixel;
+			copy_info.imageExtent.width = layout.width_in_block * block_in_pixel;
+			copy_info.imageExtent.depth = layout.depth;
+			copy_info.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			copy_info.imageSubresource.layerCount = 1;
+			copy_info.imageSubresource.mipLevel = mipmap_level;
+			copy_info.bufferRowLength = block_in_pixel * row_pitch / block_size_in_bytes;
+
+			vkCmdCopyBufferToImage(cmd, upload_buffer->value, dst_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy_info);
+			mipmap_level++;
+		}
 	}
 
 	texture::texture(vk::swap_chain_image &img)
