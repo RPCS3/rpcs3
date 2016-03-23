@@ -94,6 +94,7 @@ struct gl_render_target_traits
 			.type(format.type)
 			.format(format.format)
 			.swizzle(format.swizzle.r, format.swizzle.g, format.swizzle.b, format.swizzle.a)
+			.wrap(gl::texture::wrap::clamp_to_border, gl::texture::wrap::clamp_to_border, gl::texture::wrap::clamp_to_border)
 			.apply();
 
 		__glcheck result->pixel_pack_settings().swap_bytes(format.swap_bytes).aligment(1);
@@ -120,6 +121,7 @@ struct gl_render_target_traits
 			.type(format.type)
 			.format(format.format)
 			.internal_format(format.internal_format)
+			.wrap(gl::texture::wrap::clamp_to_border, gl::texture::wrap::clamp_to_border, gl::texture::wrap::clamp_to_border)
 			.apply();
 
 		__glcheck result->pixel_pack_settings().aligment(1);
