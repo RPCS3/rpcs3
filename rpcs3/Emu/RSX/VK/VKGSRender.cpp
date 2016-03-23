@@ -422,21 +422,13 @@ VKGSRender::VKGSRender() : GSRender(frame_type::Vulkan)
 
 	std::tie(pipeline_layout, descriptor_layouts) = get_shared_pipeline_layout(*m_device);
 
-	VkDescriptorPoolSize uniform_buffer_pool = { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER , 3 };
-	VkDescriptorPoolSize uniform_texel_pool = { VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER , 16 };
-	VkDescriptorPoolSize texture_pool = { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER , 16 };
+	VkDescriptorPoolSize uniform_buffer_pool = { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER , 3000 };
+	VkDescriptorPoolSize uniform_texel_pool = { VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER , 16000 };
+	VkDescriptorPoolSize texture_pool = { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER , 16000 };
 
 	std::vector<VkDescriptorPoolSize> sizes{ uniform_buffer_pool, uniform_texel_pool, texture_pool };
 
 	descriptor_pool.create(*m_device, sizes.data(), sizes.size());
-
-	VkDescriptorSetAllocateInfo alloc_info = {};
-	alloc_info.descriptorPool = descriptor_pool;
-	alloc_info.descriptorSetCount = 1;
-	alloc_info.pSetLayouts = &descriptor_layouts;
-	alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-
-	CHECK_RESULT(vkAllocateDescriptorSets(*m_device, &alloc_info, &descriptor_sets));
 
 
 	null_buffer = std::make_unique<vk::buffer>(*m_device, 32, m_memory_type_mapping.host_visible_coherent, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, 0);
@@ -479,7 +471,6 @@ VKGSRender::~VKGSRender()
 
 	m_rtts.destroy();
 
-	vkFreeDescriptorSets(*m_device, descriptor_pool, 1, &descriptor_sets);
 	vkDestroyPipelineLayout(*m_device, pipeline_layout, nullptr);
 	vkDestroyDescriptorSetLayout(*m_device, descriptor_layouts, nullptr);
 
@@ -511,6 +502,17 @@ void VKGSRender::begin()
 
 	if (!recording)
 		begin_command_buffer_recording();
+	VkDescriptorSetAllocateInfo alloc_info = {};
+	alloc_info.descriptorPool = descriptor_pool;
+	alloc_info.descriptorSetCount = 1;
+	alloc_info.pSetLayouts = &descriptor_layouts;
+	alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+
+	VkDescriptorSet new_descriptor_set;
+
+	CHECK_RESULT(vkAllocateDescriptorSets(*m_device, &alloc_info, &new_descriptor_set));
+
+	descriptor_sets = new_descriptor_set;
 
 	init_buffers();
 
@@ -1250,6 +1252,8 @@ void VKGSRender::flip(int buffer)
 
 	m_buffer_view_to_clean.clear();
 	m_sampler_to_clean.clear();
+
+	vkResetDescriptorPool(*m_device, descriptor_pool, 0);
 
 	m_draw_calls = 0;
 	dirty_frame = true;
