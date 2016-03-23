@@ -333,8 +333,8 @@ void write_index_array_for_non_indexed_non_native_primitive_to_buffer(char* dst,
 			typedDst[6 * i + 2] = 2 * i + 2 + first;
 			// Second triangle
 			typedDst[6 * i + 3] = 2 * i + 2 + first;
-			typedDst[6 * i + 4] = 2 * i + 3 + first;
-			typedDst[6 * i + 5] = 2 * i + 1 + first;
+			typedDst[6 * i + 4] = 2 * i + 1 + first;
+			typedDst[6 * i + 5] = 2 * i + 3 + first;
 		}
 		return;
 	case rsx::primitive_type::points:
