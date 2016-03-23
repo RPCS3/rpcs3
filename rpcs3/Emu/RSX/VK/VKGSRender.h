@@ -61,7 +61,6 @@ private:
 
 	vk::command_pool m_command_buffer_pool;
 	vk::command_buffer m_command_buffer;
-	bool recording = false;
 	bool dirty_frame = true;
 
 
@@ -85,9 +84,6 @@ public:
 
 private:
 	void clear_surface(u32 mask);
-	void execute_command_buffer(bool wait);
-	void begin_command_buffer_recording();
-	void end_command_buffer_recording();
 
 	void prepare_rtts();
 	/// returns primitive topology, is_indexed, index_count, offset in index buffer, index type

@@ -405,9 +405,6 @@ VKGSRender::VKGSRender() : GSRender(frame_type::Vulkan)
 			VK_IMAGE_ASPECT_COLOR_BIT);
 
 	}
-	
-	CHECK_RESULT(vkEndCommandBuffer(m_command_buffer));
-	execute_command_buffer(false);
 
 
 #define RING_BUFFER_SIZE 16 * 1024 * 1024
@@ -433,16 +430,21 @@ VKGSRender::VKGSRender() : GSRender(frame_type::Vulkan)
 
 	null_buffer = std::make_unique<vk::buffer>(*m_device, 32, m_memory_type_mapping.host_visible_coherent, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, 0);
 	null_buffer_view = std::make_unique<vk::buffer_view>(*m_device, null_buffer->value, VK_FORMAT_R32_SFLOAT, 0, 32);
+
+	VkFenceCreateInfo fence_info = {};
+	fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+
+	CHECK_RESULT(vkCreateFence(*m_device, &fence_info, nullptr, &m_submit_fence));
+
+	VkSemaphoreCreateInfo semaphore_info = {};
+	semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+	vkCreateSemaphore((*m_device), &semaphore_info, nullptr, &m_present_semaphore);
 }
 
 VKGSRender::~VKGSRender()
 {
-	if (m_submit_fence)
-	{
-		vkWaitForFences((*m_device), 1, &m_submit_fence, VK_TRUE, 1000000L);
-		vkDestroyFence((*m_device), m_submit_fence, nullptr);
-		m_submit_fence = nullptr;
-	}
+	CHECK_RESULT(vkQueueWaitIdle(m_swap_chain->get_present_queue()));
 
 	if (m_present_semaphore)
 	{
@@ -500,8 +502,6 @@ void VKGSRender::begin()
 	//TODO: Fence sync, ring-buffers, etc
 	//CHECK_RESULT(vkDeviceWaitIdle((*m_device)));
 
-	if (!recording)
-		begin_command_buffer_recording();
 	VkDescriptorSetAllocateInfo alloc_info = {};
 	alloc_info.descriptorPool = descriptor_pool;
 	alloc_info.descriptorSetCount = 1;
@@ -617,9 +617,6 @@ void VKGSRender::end()
 
 	m_texture_cache.flush(m_command_buffer);
 
-	end_command_buffer_recording();
-	execute_command_buffer(false);
-
 	rsx::thread::end();
 }
 
@@ -680,11 +677,6 @@ void VKGSRender::clear_surface(u32 mask)
 	if (!(mask & 0xF3)) return;
 
 	if (m_current_present_image== 0xFFFF) return;
-
-	bool was_recording = recording;
-
-	if (!was_recording)
-		begin_command_buffer_recording();
 
 	init_buffers();
 
@@ -758,13 +750,6 @@ void VKGSRender::clear_surface(u32 mask)
 		change_image_layout(m_command_buffer, depth_stencil_image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_DEPTH_BIT);
 	}
 
-	if (!was_recording)
-	{
-		end_command_buffer_recording();
-		execute_command_buffer(false);
-	}
-
-	recording = was_recording;
 }
 
 bool VKGSRender::do_method(u32 cmd, u32 arg)
@@ -980,20 +965,6 @@ static const u32 mr_color_pitch[rsx::limits::color_buffers_count] =
 
 void VKGSRender::init_buffers(bool skip_reading)
 {
-	if (dirty_frame)
-	{
-		//Prepare surface for new frame
-		VkSemaphoreCreateInfo semaphore_info = {};
-		semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-
-		vkCreateSemaphore((*m_device), &semaphore_info, nullptr, &m_present_semaphore);
-
-		VkFence nullFence = VK_NULL_HANDLE;
-		CHECK_RESULT(vkAcquireNextImageKHR((*m_device), (*m_swap_chain), 0, m_present_semaphore, nullFence, &m_current_present_image));
-
-		dirty_frame = false;
-	}
-
 	prepare_rtts();
 
 	if (!skip_reading)
@@ -1012,33 +983,6 @@ void VKGSRender::write_buffers()
 {
 }
 
-void VKGSRender::begin_command_buffer_recording()
-{
-	VkCommandBufferInheritanceInfo inheritance_info = {};
-	inheritance_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
-
-	VkCommandBufferBeginInfo begin_infos = {};
-	begin_infos.pInheritanceInfo = &inheritance_info;
-	begin_infos.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-
-	if (m_submit_fence)
-	{
-		vkWaitForFences(*m_device, 1, &m_submit_fence, VK_TRUE, ~0ULL);
-		vkDestroyFence(*m_device, m_submit_fence, nullptr);
-		m_submit_fence = nullptr;
-
-		CHECK_RESULT(vkResetCommandBuffer(m_command_buffer, 0));
-	}
-
-	CHECK_RESULT(vkBeginCommandBuffer(m_command_buffer, &begin_infos));
-	recording = true;
-}
-
-void VKGSRender::end_command_buffer_recording()
-{
-	recording = false;
-	CHECK_RESULT(vkEndCommandBuffer(m_command_buffer));
-}
 
 void VKGSRender::prepare_rtts()
 {
@@ -1112,31 +1056,6 @@ void VKGSRender::prepare_rtts()
 	m_framebuffer_to_clean.push_back(std::make_unique<vk::framebuffer>(*m_device, current_render_pass, clip_width, clip_height, std::move(fbo_images)));
 }
 
-void VKGSRender::execute_command_buffer(bool wait)
-{
-	if (recording)
-		throw EXCEPTION("execute_command_buffer called before end_command_buffer_recording()!");
-
-	if (m_submit_fence)
-		throw EXCEPTION("Synchronization deadlock!");
-
-	VkFenceCreateInfo fence_info = {};
-	fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-
-	CHECK_RESULT(vkCreateFence(*m_device, &fence_info, nullptr, &m_submit_fence));
-
-	VkPipelineStageFlags pipe_stage_flags = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-	VkCommandBuffer cmd = m_command_buffer;
-
-	VkSubmitInfo infos = {};
-	infos.commandBufferCount = 1;
-	infos.pCommandBuffers = &cmd;
-	infos.pWaitDstStageMask = &pipe_stage_flags;
-	infos.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-
-	CHECK_RESULT(vkQueueSubmit(m_swap_chain->get_present_queue(), 1, &infos, m_submit_fence));
-	CHECK_RESULT(vkQueueWaitIdle(m_swap_chain->get_present_queue()));
-}
 
 void VKGSRender::flip(int buffer)
 {
@@ -1180,71 +1099,73 @@ void VKGSRender::flip(int buffer)
 	VkSwapchainKHR swap_chain = (VkSwapchainKHR)(*m_swap_chain);
 	uint32_t next_image_temp = 0;
 
+	//Prepare surface for new frame
+	CHECK_RESULT(vkAcquireNextImageKHR((*m_device), (*m_swap_chain), 0, m_present_semaphore, VK_NULL_HANDLE, &m_current_present_image));
+
+
+	//Blit contents to screen..
+	VkImage image_to_flip = nullptr;
+
+	if (std::get<1>(m_rtts.m_bound_render_targets[0]) != nullptr)
+		image_to_flip = std::get<1>(m_rtts.m_bound_render_targets[0])->value;
+	else if (std::get<1>(m_rtts.m_bound_render_targets[1]) != nullptr)
+		image_to_flip = std::get<1>(m_rtts.m_bound_render_targets[1])->value;
+
+	VkImage target_image = m_swap_chain->get_swap_chain_image(m_current_present_image);
+	if (image_to_flip)
+	{
+		vk::copy_scaled_image(m_command_buffer, image_to_flip, target_image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+			buffer_width, buffer_height, aspect_ratio.width, aspect_ratio.height, 1, VK_IMAGE_ASPECT_COLOR_BIT);
+	}
+	else
+	{
+		VkImageSubresourceRange range = vk::default_image_subresource_range();
+		VkClearColorValue clear_black = { 0 };
+		vkCmdClearColorImage(m_command_buffer, m_swap_chain->get_swap_chain_image(next_image_temp), VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, &clear_black, 1, &range);
+	}
+
+	CHECK_RESULT(vkEndCommandBuffer(m_command_buffer));
+
+	VkPipelineStageFlags pipe_stage_flags = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+	VkCommandBuffer cmd = m_command_buffer;
+
+	VkSubmitInfo infos = {};
+	infos.commandBufferCount = 1;
+	infos.pCommandBuffers = &cmd;
+	infos.pWaitDstStageMask = &pipe_stage_flags;
+	infos.pWaitSemaphores = &m_present_semaphore;
+	infos.waitSemaphoreCount = 1;
+	infos.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+	CHECK_RESULT(vkQueueSubmit(m_swap_chain->get_present_queue(), 1, &infos, m_submit_fence));
+	CHECK_RESULT(vkWaitForFences((*m_device), 1, &m_submit_fence, VK_TRUE, ~0ULL));
+
 	VkPresentInfoKHR present = {};
 	present.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 	present.pNext = nullptr;
 	present.swapchainCount = 1;
 	present.pSwapchains = &swap_chain;
 	present.pImageIndices = &m_current_present_image;
-	present.pWaitSemaphores = &m_present_semaphore;
-	present.waitSemaphoreCount = 1;
-
-	begin_command_buffer_recording();
-
-	if (m_present_semaphore)
-	{
-		//Blit contents to screen..
-		VkImage image_to_flip = nullptr;
-
-		if (std::get<1>(m_rtts.m_bound_render_targets[0]) != nullptr)
-			image_to_flip = std::get<1>(m_rtts.m_bound_render_targets[0])->value;
-		else
-			image_to_flip = std::get<1>(m_rtts.m_bound_render_targets[1])->value;
-
-		VkImage target_image = m_swap_chain->get_swap_chain_image(m_current_present_image);
-		vk::copy_scaled_image(m_command_buffer, image_to_flip, target_image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-			buffer_width, buffer_height, aspect_ratio.width, aspect_ratio.height, 1, VK_IMAGE_ASPECT_COLOR_BIT);
-	}
-	else
-	{
-		//No draw call was issued!
-		//TODO: Properly clear the background to rsx value
-		m_swap_chain->acquireNextImageKHR((*m_device), (*m_swap_chain), ~0ULL, VK_NULL_HANDLE, VK_NULL_HANDLE, &next_image_temp);
-
-		VkImageSubresourceRange range = vk::default_image_subresource_range();
-		VkClearColorValue clear_black = { 0 };
-		vkCmdClearColorImage(m_command_buffer, m_swap_chain->get_swap_chain_image(next_image_temp), VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, &clear_black, 1, &range);
-
-		present.pImageIndices = &next_image_temp;
-		present.waitSemaphoreCount = 0;
-	}
-
-	end_command_buffer_recording();
-	execute_command_buffer(false);
-
-	//Check if anything is waiting in queue and wait for it if possible..
-	if (m_submit_fence)
-	{
-		CHECK_RESULT(vkWaitForFences((*m_device), 1, &m_submit_fence, VK_TRUE, ~0ULL));
-
-		vkDestroyFence((*m_device), m_submit_fence, nullptr);
-		m_submit_fence = nullptr;
-
-		CHECK_RESULT(vkResetCommandBuffer(m_command_buffer, 0));
-	}
-
 	CHECK_RESULT(m_swap_chain->queuePresentKHR(m_swap_chain->get_present_queue(), &present));
-	CHECK_RESULT(vkQueueWaitIdle(m_swap_chain->get_present_queue()));
+
+	CHECK_RESULT(vkResetFences(*m_device, 1, &m_submit_fence));
+
+	// Open begin command buffer
+	CHECK_RESULT(vkResetCommandPool(*m_device, m_command_buffer_pool, 0));
+
+	VkCommandBufferInheritanceInfo inheritance_info = {};
+	inheritance_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
+
+	VkCommandBufferBeginInfo begin_infos = {};
+	begin_infos.pInheritanceInfo = &inheritance_info;
+	begin_infos.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	CHECK_RESULT(vkBeginCommandBuffer(m_command_buffer, &begin_infos));
+
 
 	m_uniform_buffer_ring_info.m_get_pos = m_uniform_buffer_ring_info.get_current_put_pos_minus_one();
 	m_index_buffer_ring_info.m_get_pos = m_index_buffer_ring_info.get_current_put_pos_minus_one();
 	m_attrib_ring_info.m_get_pos = m_attrib_ring_info.get_current_put_pos_minus_one();
 	m_texture_upload_buffer_ring_info.m_get_pos = m_texture_upload_buffer_ring_info.get_current_put_pos_minus_one();
-	if (m_present_semaphore)
-	{
-		vkDestroySemaphore((*m_device), m_present_semaphore, nullptr);
-		m_present_semaphore = nullptr;
-	}
 
 	//Feed back damaged resources to the main texture cache for management...
 //	m_texture_cache.merge_dirty_textures(m_rtts.invalidated_resources);
