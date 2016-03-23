@@ -899,7 +899,7 @@ namespace vk
 		{
 			owner = &dev;
 			VkCommandPoolCreateInfo infos = {};
-			infos.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+			infos.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
 			infos.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 
 			CHECK_RESULT(vkCreateCommandPool(dev, &infos, nullptr, &pool));
