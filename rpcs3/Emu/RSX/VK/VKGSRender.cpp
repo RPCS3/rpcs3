@@ -1249,6 +1249,7 @@ void VKGSRender::flip(int buffer)
 
 	m_buffer_view_to_clean.clear();
 	m_sampler_to_clean.clear();
+	m_framebuffer_to_clean.clear();
 
 	m_draw_calls = 0;
 	dirty_frame = true;
