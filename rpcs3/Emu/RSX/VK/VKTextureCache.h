@@ -233,7 +233,7 @@ namespace vk
 			return false;
 		}
 
-		void flush(vk::command_buffer &cmd)
+		void flush()
 		{
 			m_temporary_image_view.clear();
 		}
