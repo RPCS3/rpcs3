@@ -752,6 +752,36 @@ void VKGSRender::clear_surface(u32 mask)
 
 }
 
+void VKGSRender::sync_at_semaphore_release()
+{
+	CHECK_RESULT(vkEndCommandBuffer(m_command_buffer));
+
+	VkPipelineStageFlags pipe_stage_flags = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+	VkCommandBuffer cmd = m_command_buffer;
+
+	VkSubmitInfo infos = {};
+	infos.commandBufferCount = 1;
+	infos.pCommandBuffers = &cmd;
+	infos.pWaitDstStageMask = &pipe_stage_flags;
+	infos.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+	CHECK_RESULT(vkQueueSubmit(m_swap_chain->get_present_queue(), 1, &infos, m_submit_fence));
+	CHECK_RESULT(vkWaitForFences((*m_device), 1, &m_submit_fence, VK_TRUE, ~0ULL));
+
+	CHECK_RESULT(vkResetFences(*m_device, 1, &m_submit_fence));
+
+	// Open begin command buffer
+	CHECK_RESULT(vkResetCommandPool(*m_device, m_command_buffer_pool, 0));
+
+	VkCommandBufferInheritanceInfo inheritance_info = {};
+	inheritance_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
+
+	VkCommandBufferBeginInfo begin_infos = {};
+	begin_infos.pInheritanceInfo = &inheritance_info;
+	begin_infos.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	CHECK_RESULT(vkBeginCommandBuffer(m_command_buffer, &begin_infos));
+}
+
 bool VKGSRender::do_method(u32 cmd, u32 arg)
 {
 	switch (cmd)
@@ -759,6 +789,10 @@ bool VKGSRender::do_method(u32 cmd, u32 arg)
 	case NV4097_CLEAR_SURFACE:
 		clear_surface(arg);
 		return true;
+	case NV4097_TEXTURE_READ_SEMAPHORE_RELEASE:
+	case NV4097_BACK_END_WRITE_SEMAPHORE_RELEASE:
+		sync_at_semaphore_release();
+		return false; //call rsx::thread method implementation
 	default:
 		return false;
 	}
