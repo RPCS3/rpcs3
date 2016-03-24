@@ -30,7 +30,6 @@ namespace vk
 	{
 	private:
 		std::vector<cached_texture_object> m_cache;
-		u32 num_dirty_textures = 0;
 
 		std::vector<std::unique_ptr<vk::image_view> > m_temporary_image_view;
 
@@ -138,8 +137,6 @@ namespace vk
 					tex.exists = false;
 				}
 			}
-
-			num_dirty_textures = 0;
 		}
 
 	public:
@@ -154,15 +151,6 @@ namespace vk
 
 		vk::image_view* upload_texture(command_buffer cmd, rsx::texture &tex, rsx::vk_render_targets &m_rtts, const vk::memory_type_mapping &memory_type_mapping, data_heap& upload_heap, vk::buffer* upload_buffer)
 		{
-			if (num_dirty_textures > 32)
-			{
-				/**
-				 * Should actually reuse available dirty textures whenever possible.
-				 * For now, just remove them, from vram
-				 */
-				purge_dirty_textures();
-			}
-
 			const u32 texaddr = rsx::get_address(tex.offset(), tex.location());
 			const u32 range = (u32)get_texture_size(tex);
 
@@ -235,7 +223,6 @@ namespace vk
 				{
 					unlock_object(tex);
 
-					num_dirty_textures++;
 					tex.native_rsx_address = 0;
 					tex.dirty = true;
 
@@ -246,7 +233,7 @@ namespace vk
 			return false;
 		}
 
-		void flush(vk::command_buffer &cmd)
+		void flush()
 		{
 			m_temporary_image_view.clear();
 		}
