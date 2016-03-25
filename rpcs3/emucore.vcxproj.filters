@@ -933,6 +933,9 @@
     <ClCompile Include="Emu\RSX\Common\surface_store.cpp">
       <Filter>Emu\GPU\RSX\Common</Filter>
     </ClCompile>
+    <ClCompile Include="..\Utilities\vmem.cpp">
+      <Filter>Utilities</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -1776,11 +1779,20 @@
     <ClInclude Include="Emu\RSX\rsx_methods.h">
       <Filter>Emu\GPU\RSX</Filter>
     </ClInclude>
-    <ClInclude Include="..\stblib\stb_image.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Emu\RSX\Common\surface_store.h">
       <Filter>Emu\GPU\RSX\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\3rdparty\stblib\stb_image.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utilities\range.h">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utilities\runtime_ptr.h">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utilities\vmem.h">
+      <Filter>Utilities</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

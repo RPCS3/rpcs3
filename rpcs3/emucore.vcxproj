@@ -97,6 +97,7 @@
     <ClCompile Include="..\Utilities\StrFmt.cpp" />
     <ClCompile Include="..\Utilities\Thread.cpp" />
     <ClCompile Include="..\Utilities\VirtualMemory.cpp" />
+    <ClCompile Include="..\Utilities\vmem.cpp" />
     <ClCompile Include="config.cpp" />
     <ClCompile Include="Emu\Cell\PPUInterpreter.cpp" />
     <ClCompile Include="Emu\Cell\SPUAnalyser.cpp" />
@@ -399,8 +400,10 @@
     <ClInclude Include="..\Utilities\GNU.h" />
     <ClInclude Include="..\Utilities\Log.h" />
     <ClInclude Include="..\Utilities\File.h" />
+    <ClInclude Include="..\Utilities\range.h" />
     <ClInclude Include="..\Utilities\rPlatform.h" />
     <ClInclude Include="..\Utilities\rTime.h" />
+    <ClInclude Include="..\Utilities\runtime_ptr.h" />
     <ClInclude Include="..\Utilities\rXml.h" />
     <ClInclude Include="..\Utilities\Semaphore.h" />
     <ClInclude Include="..\Utilities\SharedMutex.h" />
@@ -410,6 +413,7 @@
     <ClInclude Include="..\Utilities\Timer.h" />
     <ClInclude Include="..\Utilities\types.h" />
     <ClInclude Include="..\Utilities\VirtualMemory.h" />
+    <ClInclude Include="..\Utilities\vmem.h" />
     <ClInclude Include="config.h" />
     <ClInclude Include="Crypto\aes.h" />
     <ClInclude Include="Crypto\ec.h" />

@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <cmath>
 #include <algorithm>
+#include "runtime_ptr.h"
 
 using uchar = unsigned char;
 using ushort = unsigned short;
@@ -22,6 +23,28 @@ using s8 = std::int8_t;
 using s16 = std::int16_t;
 using s32 = std::int32_t;
 using s64 = std::int64_t;
+
+#define DECLARE_ENUM_CLASS_BITWISE_OPERATORS(type) \
+	inline constexpr type operator |(type lhs, type rhs) \
+	{ \
+		return type(std::underlying_type_t<type>(lhs) | std::underlying_type_t<type>(rhs)); \
+	} \
+	inline constexpr type operator &(type lhs, type rhs) \
+	{ \
+		return type(std::underlying_type_t<type>(lhs) & std::underlying_type_t<type>(rhs)); \
+	} \
+	inline type& operator |=(type& lhs, type rhs) \
+	{ \
+		return lhs = lhs | rhs; \
+	} \
+	inline type& operator &=(type& lhs, type rhs) \
+	{ \
+		return lhs = lhs & rhs; \
+	} \
+	inline constexpr type operator ~(type lhs) \
+	{ \
+		return type(~std::underlying_type_t<type>(lhs)); \
+	} \
 
 union alignas(2) f16
 {
@@ -52,6 +75,97 @@ struct ignore
 	template<typename T>
 	ignore(T)
 	{
+	}
+};
+
+template<typename Type>
+force_inline auto get_value(const Type& object) -> std::enable_if_t<!is_any_pointer<Type>::value, const Type&>
+{
+	return object;
+}
+
+template<typename Type>
+force_inline auto get_value(const Type& pointer) -> std::enable_if_t<is_any_pointer<Type>::value, decltype((*pointer))>
+{
+	return get_value(*pointer);
+}
+
+struct internal_hasher
+{
+	template<typename Type>
+	auto operator()(const Type& object) const
+	{
+		return object.hash();
+	}
+};
+
+struct value_internal_hasher
+{
+	template<typename Type>
+	std::size_t operator()(const Type& object) const
+	{
+		return get_value(object).hash();
+	}
+};
+
+struct bitwise_equals
+{
+	template<typename TypeA, typename TypeB>
+	bool operator()(const TypeA& a, const TypeB& b) const
+	{
+		static_assert(sizeof(TypeA) == sizeof(TypeB), "");
+
+		const void *a_ptr = reinterpret_cast<const void*>(std::addressof(a));
+		const void *b_ptr = reinterpret_cast<const void*>(std::addressof(b));
+
+		return a_ptr == b_ptr || memcmp(a_ptr, b_ptr, sizeof(TypeA)) == 0;
+	}
+};
+
+struct value_equal_to
+{
+	template<typename TypeL, typename TypeR>
+	std::size_t operator()(const TypeL& lhs, const TypeR& rhs) const
+	{
+		return get_value(lhs) == get_value(rhs);
+	}
+};
+
+template<std::size_t Size = sizeof(std::size_t)>
+struct fnv_1;
+
+template<>
+struct fnv_1<8>
+{
+	static const std::size_t offset_basis = 14695981039346656037ULL;
+	static const std::size_t prime = 1099511628211ULL;
+};
+
+struct fnv_1a_hasher
+{
+	static std::size_t hash(const u8* raw, std::size_t size)
+	{
+		std::size_t result = fnv_1<>::offset_basis;
+
+		for (std::size_t byte = 0; byte < size; ++byte)
+		{
+			result ^= (std::size_t)raw[byte];
+			result *= fnv_1<>::prime;
+		}
+
+		return result;
+	}
+
+	template<typename Type>
+	static std::size_t hash(const Type& obj)
+	{
+		return hash((const u8*)&obj, sizeof(Type));
+	}
+
+	template<typename Type>
+	std::size_t operator()(const Type& obj) const
+	{
+		return hash(obj);
 	}
 };
 
