@@ -37,6 +37,8 @@ namespace vk
 	{
 		switch (gl_name)
 		{
+		case CELL_GCM_NEVER:
+			return VK_COMPARE_OP_NEVER;
 		case CELL_GCM_GREATER:
 			return VK_COMPARE_OP_GREATER;
 		case CELL_GCM_LESS:
