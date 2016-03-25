@@ -75,6 +75,12 @@ namespace rsx
 		return ((method_registers[NV4097_SET_TEXTURE_FORMAT + (m_index * 8)] >> 16) & 0xffff);
 	}
 
+	u16 texture::get_exact_mipmap_count() const
+	{
+		u16 max_mipmap_count = static_cast<u16>(floor(log2(std::max(width(), height()))) + 1);
+		return std::min(mipmap(), max_mipmap_count);
+	}
+
 	u8 texture::wrap_s() const
 	{
 		return ((method_registers[NV4097_SET_TEXTURE_ADDRESS + (m_index * 8)]) & 0xf);

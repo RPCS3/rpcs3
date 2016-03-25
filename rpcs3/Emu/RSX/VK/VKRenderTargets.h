@@ -29,10 +29,10 @@ namespace rsx
 				VK_IMAGE_TILING_OPTIMAL,
 				VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT|VK_IMAGE_USAGE_TRANSFER_SRC_BIT|VK_IMAGE_USAGE_SAMPLED_BIT,
 				0));
-			change_image_layout(*cmd, rtt->value, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_ASPECT_COLOR_BIT);
+			change_image_layout(*cmd, rtt->value, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL, vk::get_image_subresource_range(0, 0, 1, 1, VK_IMAGE_ASPECT_COLOR_BIT));
 			//Clear new surface
 			VkClearColorValue clear_color;
-			VkImageSubresourceRange range = vk::default_image_subresource_range();
+			VkImageSubresourceRange range = vk::get_image_subresource_range(0,0, 1, 1, VK_IMAGE_ASPECT_COLOR_BIT);
 
 			clear_color.float32[0] = 0.f;
 			clear_color.float32[1] = 0.f;
@@ -40,7 +40,7 @@ namespace rsx
 			clear_color.float32[3] = 0.f;
 
 			vkCmdClearColorImage(*cmd, rtt->value, VK_IMAGE_LAYOUT_GENERAL, &clear_color, 1, &range);
-			change_image_layout(*cmd, rtt->value, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
+			change_image_layout(*cmd, rtt->value, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, vk::get_image_subresource_range(0, 0, 1, 1, VK_IMAGE_ASPECT_COLOR_BIT));
 
 			return rtt;
 		}
@@ -52,16 +52,11 @@ namespace rsx
 			std::unique_ptr<vk::image> ds;
 			ds.reset(new vk::image(device, mem_mapping.device_local,
 				VK_IMAGE_TYPE_2D, requested_format, width, height, 1, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT|VK_IMAGE_USAGE_SAMPLED_BIT, 0));
-			change_image_layout(*cmd, ds->value, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT);
+			change_image_layout(*cmd, ds->value, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL, vk::get_image_subresource_range(0, 0, 1, 1, VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT));
 
 			//Clear new surface..
 			VkClearDepthStencilValue clear_depth = {};
-			VkImageSubresourceRange range = {};
-			range.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-			range.baseArrayLayer = 0;
-			range.baseMipLevel = 0;
-			range.layerCount = 1;
-			range.levelCount = 1;
+			VkImageSubresourceRange range = vk::get_image_subresource_range(0, 0, 1, 1, VK_IMAGE_ASPECT_DEPTH_BIT);
 
 			if (requested_format != VK_FORMAT_D16_UNORM)
 				range.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
@@ -70,7 +65,7 @@ namespace rsx
 			clear_depth.stencil = 0;
 
 			vkCmdClearDepthStencilImage(*cmd, ds->value, VK_IMAGE_LAYOUT_GENERAL, &clear_depth, 1, &range);
-			change_image_layout(*cmd, ds->value, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT);
+			change_image_layout(*cmd, ds->value, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, vk::get_image_subresource_range(0, 0, 1, 1, VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT));
 
 			return ds;
 		}

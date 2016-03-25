@@ -320,7 +320,7 @@ namespace rsx
 
 			const std::vector<rsx_subresource_layout> &input_layouts = get_subresources_layout(tex);
 			glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
-			glTexStorage2D(m_target, tex.mipmap(), get_sized_internal_format(format), tex.width(), tex.height());
+			glTexStorage2D(m_target, tex.get_exact_mipmap_count(), get_sized_internal_format(format), tex.width(), tex.height());
 
 			if (!is_compressed_format(format))
 			{
@@ -345,7 +345,7 @@ namespace rsx
 
 			const std::array<GLenum, 4>& glRemap = get_swizzle_remap(format);
 
-			glTexParameteri(m_target, GL_TEXTURE_MAX_LEVEL, tex.mipmap() - 1);
+			glTexParameteri(m_target, GL_TEXTURE_MAX_LEVEL, tex.get_exact_mipmap_count() - 1);
 
 			if (format != CELL_GCM_TEXTURE_B8 && format != CELL_GCM_TEXTURE_X16 && format != CELL_GCM_TEXTURE_X32_FLOAT)
 			{
@@ -382,7 +382,7 @@ namespace rsx
 			
 			if (min_filter != GL_LINEAR && min_filter != GL_NEAREST)
 			{
-				if (tex.mipmap() <= 1 || m_target == GL_TEXTURE_RECTANGLE)
+				if (tex.get_exact_mipmap_count() <= 1 || m_target == GL_TEXTURE_RECTANGLE)
 				{
 					LOG_WARNING(RSX, "Texture %d, target 0x%X, requesting mipmap filtering without any mipmaps set!", m_id, m_target);
 					min_filter = GL_LINEAR;
