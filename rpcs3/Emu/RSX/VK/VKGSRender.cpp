@@ -613,7 +613,6 @@ void VKGSRender::end()
 
 	vkCmdEndRenderPass(m_command_buffer);
 
-	m_texture_cache.flush(m_command_buffer);
 
 	end_command_buffer_recording();
 	execute_command_buffer(false);
@@ -1246,9 +1245,11 @@ void VKGSRender::flip(int buffer)
 	//Feed back damaged resources to the main texture cache for management...
 //	m_texture_cache.merge_dirty_textures(m_rtts.invalidated_resources);
 	m_rtts.invalidated_resources.clear();
+	m_texture_cache.flush();
 
 	m_buffer_view_to_clean.clear();
 	m_sampler_to_clean.clear();
+	m_framebuffer_to_clean.clear();
 
 	m_draw_calls = 0;
 	dirty_frame = true;
