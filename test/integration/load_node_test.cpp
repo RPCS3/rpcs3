@@ -198,5 +198,33 @@ TEST(NodeTest, ParseNodeStyle) {
   EXPECT_EQ(EmitterStyle::Block, Load("- foo\n- bar").Style());
   EXPECT_EQ(EmitterStyle::Block, Load("foo: bar").Style());
 }
+
+struct ParserExceptionTestCase {
+  std::string name;
+  std::string input;
+  std::string expected_exception;
+};
+
+TEST(NodeTest, IncompleteJson) {
+  std::vector<ParserExceptionTestCase> tests = {
+      {"JSON map without value", "{\"access\"", ErrorMsg::END_OF_MAP_FLOW},
+      {"JSON map with colon but no value", "{\"access\":",
+       ErrorMsg::END_OF_MAP_FLOW},
+      {"JSON map with unclosed value quote", "{\"access\":\"",
+       ErrorMsg::END_OF_MAP_FLOW},
+      {"JSON map without end brace", "{\"access\":\"abc\"",
+       ErrorMsg::END_OF_MAP_FLOW},
+  };
+  for (const ParserExceptionTestCase test : tests) {
+    try {
+      Load(test.input);
+      FAIL() << "Expected exception " << test.expected_exception << " for "
+             << test.name << ", input: " << test.input;
+    } catch (const ParserException& e) {
+      EXPECT_EQ(test.expected_exception, e.msg);
+    }
+  }
 }
-}
+
+}  // namespace
+}  // namespace YAML
