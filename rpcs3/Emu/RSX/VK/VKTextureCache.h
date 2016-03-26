@@ -172,7 +172,7 @@ namespace vk
 			{
 				m_temporary_image_view.push_back(std::make_unique<vk::image_view>(*vk::get_current_renderer(), rtt_texture->value, VK_IMAGE_VIEW_TYPE_2D, rtt_texture->info.format,
 					vk::default_component_map(),
-					vk::default_image_subresource_range()));
+					vk::get_image_subresource_range(0, 0, 1, 1, VK_IMAGE_ASPECT_COLOR_BIT)));
 				return m_temporary_image_view.back().get();
 			}
 
@@ -180,11 +180,11 @@ namespace vk
 			{
 				m_temporary_image_view.push_back(std::make_unique<vk::image_view>(*vk::get_current_renderer(), rtt_texture->value, VK_IMAGE_VIEW_TYPE_2D, rtt_texture->info.format,
 					vk::default_component_map(),
-					vk::default_image_subresource_range()));
+					vk::get_image_subresource_range(0, 0, 1, 1, VK_IMAGE_ASPECT_DEPTH_BIT)));
 				return m_temporary_image_view.back().get();
 			}
 
-			cached_texture_object& cto = find_cached_texture(texaddr, range, true, tex.width(), tex.height(), tex.mipmap());
+			cached_texture_object& cto = find_cached_texture(texaddr, range, true, tex.width(), tex.height(), tex.get_exact_mipmap_count());
 			if (cto.exists && !cto.dirty)
 			{
 				return cto.uploaded_image_view.get();
@@ -196,20 +196,22 @@ namespace vk
 			VkComponentMapping mapping = vk::get_component_mapping(format, tex.remap());
 			VkFormat vk_format = get_compatible_sampler_format(format);
 
+			VkImageSubresourceRange subresource_range = vk::get_image_subresource_range(0, 0, 1, tex.get_exact_mipmap_count(), VK_IMAGE_ASPECT_COLOR_BIT);
+
 			cto.uploaded_texture = std::make_unique<vk::image>(*vk::get_current_renderer(), memory_type_mapping.device_local,
 				VK_IMAGE_TYPE_2D,
 				vk_format,
-				tex.width(), tex.height(), 1, tex.mipmap(), 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
+				tex.width(), tex.height(), 1, tex.get_exact_mipmap_count(), 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
 				VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 0);
-			change_image_layout(cmd, cto.uploaded_texture->value, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
+			change_image_layout(cmd, cto.uploaded_texture->value, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, subresource_range);
 
 			cto.uploaded_image_view = std::make_unique<vk::image_view>(*vk::get_current_renderer(), cto.uploaded_texture->value, VK_IMAGE_VIEW_TYPE_2D, vk_format,
 				vk::get_component_mapping(tex.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN), tex.remap()),
-				vk::default_image_subresource_range());
+				subresource_range);
 
 			copy_mipmaped_image_using_buffer(cmd, cto.uploaded_texture->value, get_subresources_layout(tex), format, !(tex.format() & CELL_GCM_TEXTURE_LN), upload_heap, upload_buffer);
 
-			change_image_layout(cmd, cto.uploaded_texture->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
+			change_image_layout(cmd, cto.uploaded_texture->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, subresource_range);
 
 			cto.exists = true;
 			cto.dirty = false;
@@ -217,7 +219,7 @@ namespace vk
 			cto.native_rsx_size = range;
 			cto.width = tex.width();
 			cto.height = tex.height();
-			cto.mipmaps = tex.mipmap();
+			cto.mipmaps = tex.get_exact_mipmap_count();
 			
 			lock_object(cto);
 

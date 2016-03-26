@@ -395,14 +395,14 @@ VKGSRender::VKGSRender() : GSRender(frame_type::Vulkan)
 	{
 		vk::change_image_layout(m_command_buffer, m_swap_chain->get_swap_chain_image(i),
 								VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL,
-								VK_IMAGE_ASPECT_COLOR_BIT);
+								vk::get_image_subresource_range(0, 0, 1, 1, VK_IMAGE_ASPECT_COLOR_BIT));
 
 		VkClearColorValue clear_color{};
-		auto range = vk::default_image_subresource_range();
+		auto range = vk::get_image_subresource_range(0, 0, 1, 1, VK_IMAGE_ASPECT_COLOR_BIT);
 		vkCmdClearColorImage(m_command_buffer, m_swap_chain->get_swap_chain_image(i), VK_IMAGE_LAYOUT_GENERAL, &clear_color, 1, &range);
 		vk::change_image_layout(m_command_buffer, m_swap_chain->get_swap_chain_image(i),
 			VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-			VK_IMAGE_ASPECT_COLOR_BIT);
+			vk::get_image_subresource_range(0, 0, 1, 1, VK_IMAGE_ASPECT_COLOR_BIT));
 
 	}
 	
@@ -690,8 +690,7 @@ void VKGSRender::clear_surface(u32 mask)
 	u32   stencil_clear = 0;
 
 	VkClearValue depth_stencil_clear_values, color_clear_values;
-	VkImageSubresourceRange depth_range = vk::default_image_subresource_range();
-	depth_range.aspectMask = 0;
+	VkImageSubresourceRange depth_range = vk::get_image_subresource_range(0, 0, 1, 1, 0);
 
 	if (mask & 0x1)
 	{
@@ -735,25 +734,25 @@ void VKGSRender::clear_surface(u32 mask)
 		color_clear_values.color.float32[2] = (float)clear_b / 255;
 		color_clear_values.color.float32[3] = (float)clear_a / 255;
 
-		VkImageSubresourceRange range = vk::default_image_subresource_range();
-
 		for (u32 i = 0; i < m_rtts.m_bound_render_targets.size(); ++i)
 		{
+			VkImageSubresourceRange range = vk::get_image_subresource_range(0, 0, 1, 1, VK_IMAGE_ASPECT_COLOR_BIT);
 			if (std::get<1>(m_rtts.m_bound_render_targets[i]) == nullptr) continue;
 
 			VkImage color_image = std::get<1>(m_rtts.m_bound_render_targets[i])->value;
-			change_image_layout(m_command_buffer, color_image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_ASPECT_COLOR_BIT);
+			change_image_layout(m_command_buffer, color_image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, range);
 			vkCmdClearColorImage(m_command_buffer, color_image, VK_IMAGE_LAYOUT_GENERAL, &color_clear_values.color, 1, &range);
-			change_image_layout(m_command_buffer, color_image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
+			change_image_layout(m_command_buffer, color_image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, range);
 		}
 	}
 
 	if (mask & 0x3)
 	{
+		VkImageSubresourceRange range = vk::get_image_subresource_range(0, 0, 1, 1, VK_IMAGE_ASPECT_DEPTH_BIT);
 		VkImage depth_stencil_image = std::get<1>(m_rtts.m_bound_depth_stencil)->value;
-		change_image_layout(m_command_buffer, depth_stencil_image, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_ASPECT_DEPTH_BIT);
+		change_image_layout(m_command_buffer, depth_stencil_image, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, range);
 		vkCmdClearDepthStencilImage(m_command_buffer, std::get<1>(m_rtts.m_bound_depth_stencil)->value, VK_IMAGE_LAYOUT_GENERAL, &depth_stencil_clear_values.depthStencil, 1, &depth_range);
-		change_image_layout(m_command_buffer, depth_stencil_image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_DEPTH_BIT);
+		change_image_layout(m_command_buffer, depth_stencil_image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, range);
 	}
 
 	if (!was_recording)
@@ -1209,7 +1208,7 @@ void VKGSRender::flip(int buffer)
 		//TODO: Properly clear the background to rsx value
 		m_swap_chain->acquireNextImageKHR((*m_device), (*m_swap_chain), ~0ULL, VK_NULL_HANDLE, VK_NULL_HANDLE, &next_image_temp);
 
-		VkImageSubresourceRange range = vk::default_image_subresource_range();
+		VkImageSubresourceRange range = vk::get_image_subresource_range(0, 0, 1, 1, VK_IMAGE_ASPECT_COLOR_BIT);
 		VkClearColorValue clear_black = { 0 };
 		vkCmdClearColorImage(m_command_buffer, m_swap_chain->get_swap_chain_image(next_image_temp), VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, &clear_black, 1, &range);
 

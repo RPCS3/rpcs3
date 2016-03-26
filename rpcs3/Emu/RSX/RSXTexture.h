@@ -21,6 +21,11 @@ namespace rsx
 		u8   dimension() const;
 		u8   format() const;
 		u16  mipmap() const;
+		/**
+		 * mipmap() returns value from register which can be higher than the actual number of mipmap level.
+		 * This function clamp the result with the mipmap count allowed by texture size.
+		 */
+		u16 get_exact_mipmap_count() const;
 
 		// Address
 		u8 wrap_s() const;

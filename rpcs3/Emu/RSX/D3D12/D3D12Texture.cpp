@@ -49,17 +49,17 @@ namespace
 
 		if (texture.dimension() == 1) // 1D texture or cubemap
 		{
-			return CD3DX12_RESOURCE_DESC::Tex1D(dxgi_format, texture.width(), 1, texture.mipmap());
+			return CD3DX12_RESOURCE_DESC::Tex1D(dxgi_format, texture.width(), 1, texture.get_exact_mipmap_count());
 		}
 		else if (texture.dimension() == 2) // 2D texture or cubemap
 		{
 //			if (texture.depth() < 2);
 			size_t depth = (texture.cubemap()) ? 6 : 1;
-			return CD3DX12_RESOURCE_DESC::Tex2D(dxgi_format, texture.width(), texture.height(), (UINT)depth, texture.mipmap());
+			return CD3DX12_RESOURCE_DESC::Tex2D(dxgi_format, texture.width(), texture.height(), (UINT)depth, texture.get_exact_mipmap_count());
 		}
 		else if (texture.dimension() == 3) // 3d texture
 		{
-			return CD3DX12_RESOURCE_DESC::Tex3D(dxgi_format, texture.width(), texture.height(), texture.depth(), texture.mipmap());
+			return CD3DX12_RESOURCE_DESC::Tex3D(dxgi_format, texture.width(), texture.height(), texture.depth(), texture.get_exact_mipmap_count());
 		}
 		throw EXCEPTION("Unknow texture dimension");
 	}
@@ -182,7 +182,7 @@ D3D12_SHADER_RESOURCE_VIEW_DESC get_srv_descriptor_with_dimensions(const rsx::te
 	if (tex.dimension() == 1)
 	{
 		shared_resource_view_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE1D;
-		shared_resource_view_desc.Texture1D.MipLevels = tex.mipmap();
+		shared_resource_view_desc.Texture1D.MipLevels = tex.get_exact_mipmap_count();
 		return shared_resource_view_desc;
 	}
 	if (tex.dimension() == 2)
@@ -190,17 +190,17 @@ D3D12_SHADER_RESOURCE_VIEW_DESC get_srv_descriptor_with_dimensions(const rsx::te
 		if (tex.cubemap())
 		{
 			shared_resource_view_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE;
-			shared_resource_view_desc.TextureCube.MipLevels = tex.mipmap();
+			shared_resource_view_desc.TextureCube.MipLevels = tex.get_exact_mipmap_count();
 			return shared_resource_view_desc;
 		}
 		shared_resource_view_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-		shared_resource_view_desc.Texture2D.MipLevels = tex.mipmap();
+		shared_resource_view_desc.Texture2D.MipLevels = tex.get_exact_mipmap_count();
 		return shared_resource_view_desc;
 	}
 	if (tex.dimension() == 3)
 	{
 		shared_resource_view_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE3D;
-		shared_resource_view_desc.Texture3D.MipLevels = tex.mipmap();
+		shared_resource_view_desc.Texture3D.MipLevels = tex.get_exact_mipmap_count();
 		return shared_resource_view_desc;
 	}
 	throw EXCEPTION("Wrong texture dimension %d", tex.dimension());
@@ -266,7 +266,7 @@ void D3D12GSRender::upload_textures(ID3D12GraphicsCommandList *command_list, siz
 		{
 			is_depth_stencil_texture = true;
 		}
-		else if (cached_texture != nullptr && (cached_texture->first == texture_entry(format, w, h, textures[i].depth(), textures[i].mipmap())))
+		else if (cached_texture != nullptr && (cached_texture->first == texture_entry(format, w, h, textures[i].depth(), textures[i].get_exact_mipmap_count())))
 		{
 			if (cached_texture->first.m_is_dirty)
 			{
@@ -283,7 +283,7 @@ void D3D12GSRender::upload_textures(ID3D12GraphicsCommandList *command_list, siz
 			std::wstring name = L"texture_@" + std::to_wstring(texaddr);
 			tex->SetName(name.c_str());
 			vram_texture = tex.Get();
-			m_texture_cache.store_and_protect_data(texaddr, texaddr, get_texture_size(textures[i]), format, w, h, textures[i].depth(), textures[i].mipmap(), tex);
+			m_texture_cache.store_and_protect_data(texaddr, texaddr, get_texture_size(textures[i]), format, w, h, textures[i].depth(), textures[i].get_exact_mipmap_count(), tex);
 		}
 
 		D3D12_SHADER_RESOURCE_VIEW_DESC shared_resource_view_desc = get_srv_descriptor_with_dimensions(textures[i]);

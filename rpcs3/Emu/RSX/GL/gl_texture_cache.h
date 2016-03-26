@@ -470,7 +470,7 @@ namespace gl
 			gl_cached_texture *obj = nullptr;
 
 			if (!rtt)
-				obj = find_obj_for_params(texaddr, tex.width(), tex.height(), tex.mipmap());
+				obj = find_obj_for_params(texaddr, tex.width(), tex.height(), tex.get_exact_mipmap_count());
 
 			if (obj && !obj->deleted)
 			{
@@ -497,7 +497,7 @@ namespace gl
 				}
 
 				__glcheck gl_texture.init(index, tex);
-				gl_cached_texture &_obj = create_obj_for_params(gl_texture.id(), texaddr, tex.width(), tex.height(), tex.mipmap());
+				gl_cached_texture &_obj = create_obj_for_params(gl_texture.id(), texaddr, tex.width(), tex.height(), tex.get_exact_mipmap_count());
 
 				_obj.block_sz = (u32)get_texture_size(tex);
 				lock_gl_object(_obj);

@@ -168,12 +168,9 @@ namespace vk
 		g_current_renderer = device;
 	}
 
-	void change_image_layout(VkCommandBuffer cmd, VkImage image, VkImageLayout current_layout, VkImageLayout new_layout, VkImageAspectFlags aspect_flags)
+	void change_image_layout(VkCommandBuffer cmd, VkImage image, VkImageLayout current_layout, VkImageLayout new_layout, VkImageSubresourceRange range)
 	{
 		//Prepare an image to match the new layout..
-		VkImageSubresourceRange range = default_image_subresource_range();
-		range.aspectMask = aspect_flags;
-
 		VkImageMemoryBarrier barrier = {};
 		barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
 		barrier.newLayout = new_layout;
