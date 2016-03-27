@@ -53,6 +53,8 @@ namespace gl
 #define __glcheck
 #endif
 
+	void enable_debugging();
+
 	class exception : public std::exception
 	{
 	protected:

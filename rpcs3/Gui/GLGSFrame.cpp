@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "stdafx_gui.h"
 #include "GLGSFrame.h"
+#include "config.h"
+#include <wx/version.h>
 
 GLGSFrame::GLGSFrame() : GSFrame("OpenGL")
 {
@@ -9,6 +11,14 @@ GLGSFrame::GLGSFrame() : GSFrame("OpenGL")
 		WX_GL_RGBA,
 		WX_GL_DEPTH_SIZE, 16,
 		WX_GL_DOUBLEBUFFER,
+#if wxCHECK_VERSION(3, 1, 0)
+		WX_GL_MAJOR_VERSION, 3,
+		WX_GL_MINOR_VERSION, 3,
+		WX_GL_CORE_PROFILE,
+#if !defined(CMAKE_BUILD)
+		rpcs3::config.rsx.d3d12.debug_output.value() ? WX_GL_DEBUG : 0,
+#endif
+#endif
 		0
 	};
 
