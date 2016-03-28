@@ -1199,6 +1199,5 @@ void VKGSRender::flip(int buffer)
 	vkResetDescriptorPool(*m_device, descriptor_pool, 0);
 
 	m_draw_calls = 0;
-	dirty_frame = true;
 	m_frame->flip(m_context);
 }
