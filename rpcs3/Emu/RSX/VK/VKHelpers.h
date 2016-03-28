@@ -899,7 +899,7 @@ namespace vk
 		{
 			owner = &dev;
 			VkCommandPoolCreateInfo infos = {};
-			infos.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+			infos.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
 			infos.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 
 			CHECK_RESULT(vkCreateCommandPool(dev, &infos, nullptr, &pool));
@@ -1210,8 +1210,8 @@ namespace vk
 		void create(vk::render_device &dev, VkDescriptorPoolSize *sizes, u32 size_descriptors_count)
 		{
 			VkDescriptorPoolCreateInfo infos = {};
-			infos.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
-			infos.maxSets = 2;
+			infos.flags = 0;
+			infos.maxSets = 1000;
 			infos.poolSizeCount = size_descriptors_count;
 			infos.pPoolSizes = sizes;
 			infos.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
