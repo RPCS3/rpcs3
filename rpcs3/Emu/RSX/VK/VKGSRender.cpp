@@ -679,9 +679,10 @@ void VKGSRender::clear_surface(u32 mask)
 	VkClearValue depth_stencil_clear_values, color_clear_values;
 	VkImageSubresourceRange depth_range = vk::get_image_subresource_range(0, 0, 1, 1, 0);
 
+	rsx::surface_depth_format surface_depth_format = rsx::to_surface_depth_format((rsx::method_registers[NV4097_SET_SURFACE_FORMAT] >> 5) & 0x7);
+
 	if (mask & 0x1)
 	{
-		rsx::surface_depth_format surface_depth_format = rsx::to_surface_depth_format((rsx::method_registers[NV4097_SET_SURFACE_FORMAT] >> 5) & 0x7);
 		u32 max_depth_value = get_max_depth_value(surface_depth_format);
 
 		u32 clear_depth = rsx::method_registers[NV4097_SET_ZSTENCIL_CLEAR_VALUE] >> 8;
@@ -692,7 +693,7 @@ void VKGSRender::clear_surface(u32 mask)
 		depth_stencil_clear_values.depthStencil.stencil = stencil_clear;
 	}
 
-/*	if (mask & 0x2)
+	if (mask & 0x2)
 	{
 		u8 clear_stencil = rsx::method_registers[NV4097_SET_ZSTENCIL_CLEAR_VALUE] & 0xff;
 		u32 stencil_mask = rsx::method_registers[NV4097_SET_STENCIL_MASK];
@@ -700,7 +701,7 @@ void VKGSRender::clear_surface(u32 mask)
 		//TODO set stencil mask
 		depth_range.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
 		depth_stencil_clear_values.depthStencil.stencil = stencil_mask;
-	}*/
+	}
 
 	if (mask & 0xF0)
 	{
@@ -735,11 +736,11 @@ void VKGSRender::clear_surface(u32 mask)
 
 	if (mask & 0x3)
 	{
-		VkImageSubresourceRange range = vk::get_image_subresource_range(0, 0, 1, 1, VK_IMAGE_ASPECT_DEPTH_BIT);
+		VkImageAspectFlags depth_stencil_aspect = (surface_depth_format == rsx::surface_depth_format::z24s8) ? (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT) : VK_IMAGE_ASPECT_DEPTH_BIT;
 		VkImage depth_stencil_image = std::get<1>(m_rtts.m_bound_depth_stencil)->value;
-		change_image_layout(m_command_buffer, depth_stencil_image, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, range);
+		change_image_layout(m_command_buffer, depth_stencil_image, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, vk::get_image_subresource_range(0, 0, 1, 1, depth_stencil_aspect));
 		vkCmdClearDepthStencilImage(m_command_buffer, std::get<1>(m_rtts.m_bound_depth_stencil)->value, VK_IMAGE_LAYOUT_GENERAL, &depth_stencil_clear_values.depthStencil, 1, &depth_range);
-		change_image_layout(m_command_buffer, depth_stencil_image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, range);
+		change_image_layout(m_command_buffer, depth_stencil_image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, vk::get_image_subresource_range(0, 0, 1, 1, depth_stencil_aspect));
 	}
 
 }
@@ -1077,7 +1078,7 @@ void VKGSRender::prepare_rtts()
 		vk::image *raw = (std::get<1>(m_rtts.m_bound_depth_stencil));
 
 		VkImageSubresourceRange subres = {};
-		subres.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+		subres.aspectMask = (m_surface.depth_format == rsx::surface_depth_format::z24s8) ? (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT) : VK_IMAGE_ASPECT_DEPTH_BIT;
 		subres.baseArrayLayer = 0;
 		subres.baseMipLevel = 0;
 		subres.layerCount = 1;
@@ -1161,7 +1162,9 @@ void VKGSRender::flip(int buffer)
 
 		VkImageSubresourceRange range = vk::get_image_subresource_range(0, 0, 1, 1, VK_IMAGE_ASPECT_COLOR_BIT);
 		VkClearColorValue clear_black = { 0 };
-		vkCmdClearColorImage(m_command_buffer, m_swap_chain->get_swap_chain_image(next_image_temp), VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, &clear_black, 1, &range);
+		vk::change_image_layout(m_command_buffer, m_swap_chain->get_swap_chain_image(next_image_temp), VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_GENERAL, range);
+		vkCmdClearColorImage(m_command_buffer, m_swap_chain->get_swap_chain_image(next_image_temp), VK_IMAGE_LAYOUT_GENERAL, &clear_black, 1, &range);
+		vk::change_image_layout(m_command_buffer, m_swap_chain->get_swap_chain_image(next_image_temp), VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, range);
 	}
 
 	close_and_submit_command_buffer({ m_present_semaphore }, m_submit_fence);
