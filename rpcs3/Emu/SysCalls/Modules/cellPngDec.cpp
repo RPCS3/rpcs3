@@ -316,7 +316,7 @@ s32 pngDecOpen(PPUThread& ppu, PHandle handle, PPStream png_stream, PSrc source,
 	// Check for if the buffer structure allocation failed
 	if (!buffer)
 	{
-		throw EXCEPTION("Memory allocation for the buffer PNG reading structure failed.");
+		throw EXCEPTION("Memory allocation for the PNG buffer structure failed.");
 	}
 
 	// We might not be reading from a file stream
@@ -327,6 +327,12 @@ s32 pngDecOpen(PPUThread& ppu, PHandle handle, PPStream png_stream, PSrc source,
 
 	// Open the buffer/file and check the header
 	u8 header[8];
+
+	// Need to test it somewhere
+	if (stream->source.fileOffset != 0)
+	{
+		throw EXCEPTION("Non-0 file offset not supported.");
+	}
 
 	// Depending on the source type, get the first 8 bytes
 	if (source->srcSelect == CELL_PNGDEC_FILE)
@@ -564,7 +570,11 @@ s32 pngDecodeData(PPUThread& ppu, PHandle handle, PStream stream, vm::ptr<u8> da
 	// Get the amount of output bytes per line
 	const u32 bytes_per_line = data_control_param->outputBytesPerLine;
 
+	// Whether to recaculate bytes per row
+	bool recalculate_bytes_per_row = false;
+
 	// Check if the game is expecting the number of bytes per line to be lower, than the actual bytes per line on the image. (Arkedo Pixel for example)
+	// In such case we strip the bit depth to be lower.
 	if ((bytes_per_line < stream->out_param.outputWidthByte) && stream->out_param.outputBitDepth != 8)
 	{
 		// Check if the packing is really 1 byte per 1 pixel
@@ -575,18 +585,7 @@ s32 pngDecodeData(PPUThread& ppu, PHandle handle, PStream stream, vm::ptr<u8> da
 
 		// Scale 16 bit depth down to 8 bit depth. PS3 uses png_set_strip_16, since png_set_scale_16 wasn't available back then.
 		png_set_strip_16(stream->png_ptr);
-
-		// We need to tell libpng to update the info structure, since we modified the info
-		png_read_update_info(stream->png_ptr, stream->info_ptr);
-
-		// Recalculate the outputWidthByte value, and recalculate the image size
-		stream->out_param.outputWidthByte = png_get_rowbytes(stream->png_ptr, stream->info_ptr);
-
-		// What do we do if bytes_per_line is still samller? Something probably went wrong, but this should never happen anyway.
-		if (bytes_per_line < stream->out_param.outputWidthByte)
-		{
-			throw EXCEPTION("bytesPerLine is still smaller than outputWidthByte: %d", stream->out_param.outputWidthByte);
-		}
+		recalculate_bytes_per_row = true;
 	}
 	// Check if the outputWidthByte is smaller than the intended output length of a line. For example an image might be in RGB, but we need to output 4 components, so we need to perform alpha padding.
 	else if (stream->out_param.outputWidthByte < (stream->out_param.outputWidth * stream->out_param.outputComponents))
@@ -600,17 +599,30 @@ s32 pngDecodeData(PPUThread& ppu, PHandle handle, PStream stream, vm::ptr<u8> da
 
 		// We need to fill alpha (before or after, depending on the output colour format) using the fixed alpha value passed by the game.
 		png_set_add_alpha(stream->png_ptr, stream->fixed_alpha_colour, stream->out_param.outputColorSpace == CELL_PNGDEC_RGBA ? PNG_FILLER_AFTER : PNG_FILLER_BEFORE);
-		
-		// We need to tell libpng to update the info structure, since we modified the info
-		png_read_update_info(stream->png_ptr, stream->info_ptr);
-
-		// Calculate the actual needed output image size
-		stream->out_param.outputWidthByte = stream->out_param.outputWidth * stream->out_param.outputComponents;
+		recalculate_bytes_per_row = true;
 	}
+	// We decode as RGBA, so we need to swap the alpha
 	else if (stream->out_param.outputColorSpace == CELL_PNGDEC_ARGB)
 	{
 		// Swap the alpha channel for the ARGB output format, if the padding isn't needed
 		png_set_swap_alpha(stream->png_ptr);
+	}
+	// Sometimes games pass in a RBG/RGBA image and want it as grayscale
+	else if ((stream->out_param.outputColorSpace == CELL_PNGDEC_GRAYSCALE_ALPHA || stream->out_param.outputColorSpace == CELL_PNGDEC_GRAYSCALE)
+		  && (stream->info.colorSpace == CELL_PNGDEC_RGB || stream->info.colorSpace == CELL_PNGDEC_RGBA))
+	{
+		// Tell libpng to convert it to grayscale
+		png_set_rgb_to_gray(stream->png_ptr, PNG_ERROR_ACTION_NONE, PNG_RGB_TO_GRAY_DEFAULT, PNG_RGB_TO_GRAY_DEFAULT);
+		recalculate_bytes_per_row = true;
+	}
+
+	if (recalculate_bytes_per_row)
+	{
+		// Update the info structure
+		png_read_update_info(stream->png_ptr, stream->info_ptr);
+
+		// Recalculate the bytes per row
+		stream->out_param.outputWidthByte = png_get_rowbytes(stream->png_ptr, stream->info_ptr);
 	}
 
 	// Calculate the image size
@@ -634,50 +646,27 @@ s32 pngDecodeData(PPUThread& ppu, PHandle handle, PStream stream, vm::ptr<u8> da
 	// Check if the image needs to be flipped
 	const bool flip = stream->out_param.outputMode == CELL_PNGDEC_BOTTOM_TO_TOP;
 
+	// Copy the result to the output buffer
 	switch (stream->out_param.outputColorSpace)
 	{
 	case CELL_PNGDEC_RGB:
-	{
-		throw EXCEPTION("RGB colour format.");
-		break;
-	}
-
 	case CELL_PNGDEC_RGBA:
+	case CELL_PNGDEC_ARGB:
+	case CELL_PNGDEC_GRAYSCALE_ALPHA:
 	{
-		// Check if we need to flip the image or leave empty space at the end of a line
+		// Check if we need to flip the image or need to leave empty bytes at the end of a line
 		if ((bytes_per_line > stream->out_param.outputWidthByte) || flip)
 		{
 			// Get how many bytes per line we need to output - bytesPerLine is total amount of bytes per line, rest is unused and the game can do as it pleases.
 			const u32 line_size = std::min(bytes_per_line, stream->out_param.outputWidth * 4);
 
-			// If the game wants more bytes per line to be output, than the image has, then we simply copy what we have for each line, and continue on the next line, leaving empty space at the end of the line.
+			// If the game wants more bytes per line to be output, than the image has, then we simply copy what we have for each line,
+			// and continue on the next line, thus leaving empty bytes at the end of the line.
 			for (u32 i = 0; i < stream->out_param.outputHeight; i++)
 			{
 				const u32 dst = i * bytes_per_line;
 				const u32 src = stream->out_param.outputWidth * 4 * (flip ? stream->out_param.outputHeight - i - 1 : i);
 				memcpy(&data[dst], &png[src], line_size);
-			}
-		}
-		else
-		{
-			// We can simply copy the output to the data pointer specified by the game, since we already do alpha channel transformations in libpng, if needed
-			memcpy(data.get_ptr(), png.data(), image_size);
-		}
-		break;
-	}
-
-	case CELL_PNGDEC_ARGB:
-	{
-		// Check if we need to flip the image or leave empty space at the end of a line
-		if ((bytes_per_line > stream->out_param.outputWidthByte) || flip)
-		{
-			// Haven't found a game to test this with
-			throw EXCEPTION("ARGB is big.");
-
-			// Flipping is untested
-			if (flip)
-			{
-				throw EXCEPTION("Flipping is not yet supported.");
 			}
 		}
 		else
@@ -696,7 +685,7 @@ s32 pngDecodeData(PPUThread& ppu, PHandle handle, PStream stream, vm::ptr<u8> da
 	png_get_text(stream->png_ptr, stream->info_ptr, nullptr, &text_chunks);
 
 	// Set the chunk information and the previously obtained number of text chunks
-	data_out_info->numText = text_chunks;
+	data_out_info->numText = (u32)text_chunks;
 	data_out_info->chunkInformation = pngDecGetChunkInformation(stream, true);
 	data_out_info->numUnknownChunk = 0; // TODO: Get this somehow. Does anything even use or need this?
 
