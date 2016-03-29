@@ -19,6 +19,8 @@
 *.obj
 *.ilk
 *.pch
+*.filters
+*.user
 
 *.log
 *.exe
