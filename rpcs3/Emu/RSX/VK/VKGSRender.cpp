@@ -1174,10 +1174,6 @@ void VKGSRender::flip(int buffer)
 	present.pImageIndices = &m_current_present_image;
 	CHECK_RESULT(m_swap_chain->queuePresentKHR(m_swap_chain->get_present_queue(), &present));
 
-	CHECK_RESULT(vkResetFences(*m_device, 1, &m_submit_fence));
-	CHECK_RESULT(vkResetCommandPool(*m_device, m_command_buffer_pool, 0));
-	open_command_buffer();
-
 	m_uniform_buffer_ring_info.m_get_pos = m_uniform_buffer_ring_info.get_current_put_pos_minus_one();
 	m_index_buffer_ring_info.m_get_pos = m_index_buffer_ring_info.get_current_put_pos_minus_one();
 	m_attrib_ring_info.m_get_pos = m_attrib_ring_info.get_current_put_pos_minus_one();
@@ -1193,6 +1189,9 @@ void VKGSRender::flip(int buffer)
 	m_framebuffer_to_clean.clear();
 
 	vkResetDescriptorPool(*m_device, descriptor_pool, 0);
+	CHECK_RESULT(vkResetFences(*m_device, 1, &m_submit_fence));
+	CHECK_RESULT(vkResetCommandPool(*m_device, m_command_buffer_pool, 0));
+	open_command_buffer();
 
 	m_draw_calls = 0;
 	m_frame->flip(m_context);
