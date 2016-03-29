@@ -393,6 +393,21 @@ namespace
 	}
 }
 
+namespace
+{
+	GLenum get_gl_target_for_texture(const rsx::texture& tex)
+	{
+		switch (tex.get_extended_texture_dimension())
+		{
+		case rsx::texture_dimension_extended::texture_dimension_1d: return GL_TEXTURE_1D;
+		case rsx::texture_dimension_extended::texture_dimension_2d: return GL_TEXTURE_2D;
+		case rsx::texture_dimension_extended::texture_dimension_cubemap: return GL_TEXTURE_CUBE_MAP;
+		case rsx::texture_dimension_extended::texture_dimension_3d: return GL_TEXTURE_3D;
+		}
+		throw EXCEPTION("Unknow texture target");
+	}
+}
+
 void GLGSRender::end()
 {
 	if (!draw_fbo)
@@ -412,19 +427,15 @@ void GLGSRender::end()
 		int location;
 		if (m_program->uniforms.has_location("tex" + std::to_string(i), &location))
 		{
-			u32 target = GL_TEXTURE_2D;
-			if (textures[i].format() & CELL_GCM_TEXTURE_UN)
-				target = GL_TEXTURE_RECTANGLE;
-
 			if (!textures[i].enabled())
 			{
 				glActiveTexture(GL_TEXTURE0 + i);
-				glBindTexture(target, 0);
+				glBindTexture(GL_TEXTURE_2D, 0);
 				glProgramUniform1i(m_program->id(), location, i);
 				continue;
 			}
 
-			m_gl_textures[i].set_target(target);
+			m_gl_textures[i].set_target(get_gl_target_for_texture(textures[i]));
 
 			__glcheck m_gl_texture_cache.upload_texture(i, textures[i], m_gl_textures[i], m_rtts);
 			glProgramUniform1i(m_program->id(), location, i);
