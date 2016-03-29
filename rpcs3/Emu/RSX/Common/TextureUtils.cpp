@@ -152,7 +152,7 @@ std::vector<rsx_subresource_layout> get_subresources_layout(const rsx::texture &
 	{
 	case CELL_GCM_TEXTURE_D8R8G8B8:
 	case CELL_GCM_TEXTURE_A8R8G8B8:
-		return get_subresources_layout_impl<1, u32>(pixels, w, h, depth, layer, texture.mipmap(), texture.pitch(), !is_swizzled);
+		return get_subresources_layout_impl<1, u32>(pixels, w, h, depth, layer, texture.get_exact_mipmap_count(), texture.pitch(), !is_swizzled);
 	case CELL_GCM_TEXTURE_DEPTH16:
 	case CELL_GCM_TEXTURE_D1R5G5B5:
 	case CELL_GCM_TEXTURE_A1R5G5B5:
@@ -160,16 +160,16 @@ std::vector<rsx_subresource_layout> get_subresources_layout(const rsx::texture &
 	case CELL_GCM_TEXTURE_A4R4G4B4:
 	case CELL_GCM_TEXTURE_R5G6B5:
 	case CELL_GCM_TEXTURE_G8B8:
-		return get_subresources_layout_impl<1, u16>(pixels, w, h, depth, layer, texture.mipmap(), texture.pitch(), !is_swizzled);
+		return get_subresources_layout_impl<1, u16>(pixels, w, h, depth, layer, texture.get_exact_mipmap_count(), texture.pitch(), !is_swizzled);
 	case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT:
-		return get_subresources_layout_impl<1, u64>(pixels, w, h, depth, layer, texture.mipmap(), texture.pitch(), !is_swizzled);
+		return get_subresources_layout_impl<1, u64>(pixels, w, h, depth, layer, texture.get_exact_mipmap_count(), texture.pitch(), !is_swizzled);
 	case CELL_GCM_TEXTURE_COMPRESSED_DXT1:
-		return get_subresources_layout_impl<4, u64>(pixels, w, h, depth, layer, texture.mipmap(), texture.pitch(), !is_swizzled);
+		return get_subresources_layout_impl<4, u64>(pixels, w, h, depth, layer, texture.get_exact_mipmap_count(), texture.pitch(), !is_swizzled);
 	case CELL_GCM_TEXTURE_COMPRESSED_DXT23:
 	case CELL_GCM_TEXTURE_COMPRESSED_DXT45:
-		return get_subresources_layout_impl<4, u128>(pixels, w, h, depth, layer, texture.mipmap(), texture.pitch(), !is_swizzled);
+		return get_subresources_layout_impl<4, u128>(pixels, w, h, depth, layer, texture.get_exact_mipmap_count(), texture.pitch(), !is_swizzled);
 	case CELL_GCM_TEXTURE_B8:
-		return get_subresources_layout_impl<1, u8>(pixels, w, h, depth, layer, texture.mipmap(), texture.pitch(), !is_swizzled);
+		return get_subresources_layout_impl<1, u8>(pixels, w, h, depth, layer, texture.get_exact_mipmap_count(), texture.pitch(), !is_swizzled);
 	}
 	throw EXCEPTION("Wrong format %d", format);
 }

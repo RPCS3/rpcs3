@@ -21,6 +21,7 @@ namespace rsx
 		u8   border_type() const;
 		rsx::texture_dimension   dimension() const;
 		u8   format() const;
+		bool is_compressed_format() const;
 		u16  mipmap() const;
 		/**
 		 * mipmap() returns value from register which can be higher than the actual number of mipmap level.
