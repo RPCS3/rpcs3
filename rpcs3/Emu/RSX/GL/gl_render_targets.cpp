@@ -9,7 +9,7 @@ color_format rsx::internals::surface_color_format_to_gl(rsx::surface_color_forma
 	switch (color_format)
 	{
 	case rsx::surface_color_format::r5g6b5:
-		return{ ::gl::texture::type::ushort_5_6_5, ::gl::texture::format::bgr, false, 3, 2 };
+		return{ ::gl::texture::type::ushort_5_6_5, ::gl::texture::format::rgb, false, 3, 2 };
 
 	case rsx::surface_color_format::a8r8g8b8:
 		return{ ::gl::texture::type::uint_8_8_8_8, ::gl::texture::format::bgra, false, 4, 1 };
