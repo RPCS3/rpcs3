@@ -61,7 +61,6 @@ private:
 
 	vk::command_pool m_command_buffer_pool;
 	vk::command_buffer m_command_buffer;
-	bool dirty_frame = true;
 
 
 	std::array<VkRenderPass, 120> m_render_passes;
@@ -75,7 +74,6 @@ private:
 	std::vector<std::unique_ptr<vk::sampler> > m_sampler_to_clean;
 
 	u32 m_draw_calls = 0;
-	
 	u8 m_draw_buffers_count = 0;
 
 public:

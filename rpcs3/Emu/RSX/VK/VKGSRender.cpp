@@ -37,6 +37,8 @@ namespace vk
 	{
 		switch (gl_name)
 		{
+		case CELL_GCM_NEVER:
+			return VK_COMPARE_OP_NEVER;
 		case CELL_GCM_GREATER:
 			return VK_COMPARE_OP_GREATER;
 		case CELL_GCM_LESS:
@@ -257,7 +259,7 @@ namespace
 
 		VkRenderPassCreateInfo rp_info = {};
 		rp_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-		rp_info.attachmentCount = attachments.size();
+		rp_info.attachmentCount = static_cast<uint32_t>(attachments.size());
 		rp_info.pAttachments = attachments.data();
 		rp_info.subpassCount = 1;
 		rp_info.pSubpasses = &subpass;
@@ -335,7 +337,7 @@ namespace
 		VkDescriptorSetLayoutCreateInfo infos = {};
 		infos.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
 		infos.pBindings = bindings.data();
-		infos.bindingCount = bindings.size();
+		infos.bindingCount = static_cast<uint32_t>(bindings.size());
 
 		VkDescriptorSetLayout set_layout;
 		CHECK_RESULT(vkCreateDescriptorSetLayout(dev, &infos, nullptr, &set_layout));
@@ -417,7 +419,7 @@ VKGSRender::VKGSRender() : GSRender(frame_type::Vulkan)
 
 	std::vector<VkDescriptorPoolSize> sizes{ uniform_buffer_pool, uniform_texel_pool, texture_pool };
 
-	descriptor_pool.create(*m_device, sizes.data(), sizes.size());
+	descriptor_pool.create(*m_device, sizes.data(), static_cast<uint32_t>(sizes.size()));
 
 
 	null_buffer = std::make_unique<vk::buffer>(*m_device, 32, m_memory_type_mapping.host_visible_coherent, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, 0);
@@ -436,7 +438,7 @@ VKGSRender::VKGSRender() : GSRender(frame_type::Vulkan)
 
 VKGSRender::~VKGSRender()
 {
-	CHECK_RESULT(vkQueueWaitIdle(m_swap_chain->get_present_queue()));
+	vkQueueWaitIdle(m_swap_chain->get_present_queue());
 
 	if (m_present_semaphore)
 	{
@@ -677,9 +679,10 @@ void VKGSRender::clear_surface(u32 mask)
 	VkClearValue depth_stencil_clear_values, color_clear_values;
 	VkImageSubresourceRange depth_range = vk::get_image_subresource_range(0, 0, 1, 1, 0);
 
+	rsx::surface_depth_format surface_depth_format = rsx::to_surface_depth_format((rsx::method_registers[NV4097_SET_SURFACE_FORMAT] >> 5) & 0x7);
+
 	if (mask & 0x1)
 	{
-		rsx::surface_depth_format surface_depth_format = rsx::to_surface_depth_format((rsx::method_registers[NV4097_SET_SURFACE_FORMAT] >> 5) & 0x7);
 		u32 max_depth_value = get_max_depth_value(surface_depth_format);
 
 		u32 clear_depth = rsx::method_registers[NV4097_SET_ZSTENCIL_CLEAR_VALUE] >> 8;
@@ -690,7 +693,7 @@ void VKGSRender::clear_surface(u32 mask)
 		depth_stencil_clear_values.depthStencil.stencil = stencil_clear;
 	}
 
-/*	if (mask & 0x2)
+	if (mask & 0x2)
 	{
 		u8 clear_stencil = rsx::method_registers[NV4097_SET_ZSTENCIL_CLEAR_VALUE] & 0xff;
 		u32 stencil_mask = rsx::method_registers[NV4097_SET_STENCIL_MASK];
@@ -698,7 +701,7 @@ void VKGSRender::clear_surface(u32 mask)
 		//TODO set stencil mask
 		depth_range.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
 		depth_stencil_clear_values.depthStencil.stencil = stencil_mask;
-	}*/
+	}
 
 	if (mask & 0xF0)
 	{
@@ -733,11 +736,11 @@ void VKGSRender::clear_surface(u32 mask)
 
 	if (mask & 0x3)
 	{
-		VkImageSubresourceRange range = vk::get_image_subresource_range(0, 0, 1, 1, VK_IMAGE_ASPECT_DEPTH_BIT);
+		VkImageAspectFlags depth_stencil_aspect = (surface_depth_format == rsx::surface_depth_format::z24s8) ? (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT) : VK_IMAGE_ASPECT_DEPTH_BIT;
 		VkImage depth_stencil_image = std::get<1>(m_rtts.m_bound_depth_stencil)->value;
-		change_image_layout(m_command_buffer, depth_stencil_image, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, range);
+		change_image_layout(m_command_buffer, depth_stencil_image, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, vk::get_image_subresource_range(0, 0, 1, 1, depth_stencil_aspect));
 		vkCmdClearDepthStencilImage(m_command_buffer, std::get<1>(m_rtts.m_bound_depth_stencil)->value, VK_IMAGE_LAYOUT_GENERAL, &depth_stencil_clear_values.depthStencil, 1, &depth_range);
-		change_image_layout(m_command_buffer, depth_stencil_image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, range);
+		change_image_layout(m_command_buffer, depth_stencil_image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, vk::get_image_subresource_range(0, 0, 1, 1, depth_stencil_aspect));
 	}
 
 }
@@ -999,7 +1002,7 @@ void VKGSRender::close_and_submit_command_buffer(const std::vector<VkSemaphore> 
 	infos.pCommandBuffers = &cmd;
 	infos.pWaitDstStageMask = &pipe_stage_flags;
 	infos.pWaitSemaphores = semaphores.data();
-	infos.waitSemaphoreCount = semaphores.size();
+	infos.waitSemaphoreCount = static_cast<uint32_t>(semaphores.size());
 	infos.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
 	CHECK_RESULT(vkQueueSubmit(m_swap_chain->get_present_queue(), 1, &infos, fence));
@@ -1068,14 +1071,14 @@ void VKGSRender::prepare_rtts()
 		fbo_images.push_back(std::make_unique<vk::image_view>(*m_device, raw->value, VK_IMAGE_VIEW_TYPE_2D, raw->info.format, vk::default_component_map(), subres));
 	}
 
-	m_draw_buffers_count = fbo_images.size();
+	m_draw_buffers_count = static_cast<u32>(fbo_images.size());
 
 	if (std::get<1>(m_rtts.m_bound_depth_stencil) != nullptr)
 	{
 		vk::image *raw = (std::get<1>(m_rtts.m_bound_depth_stencil));
 
 		VkImageSubresourceRange subres = {};
-		subres.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+		subres.aspectMask = (m_surface.depth_format == rsx::surface_depth_format::z24s8) ? (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT) : VK_IMAGE_ASPECT_DEPTH_BIT;
 		subres.baseArrayLayer = 0;
 		subres.baseMipLevel = 0;
 		subres.layerCount = 1;
@@ -1131,7 +1134,6 @@ void VKGSRender::flip(int buffer)
 	}
 
 	VkSwapchainKHR swap_chain = (VkSwapchainKHR)(*m_swap_chain);
-	uint32_t next_image_temp = 0;
 
 	//Prepare surface for new frame
 	CHECK_RESULT(vkAcquireNextImageKHR((*m_device), (*m_swap_chain), 0, m_present_semaphore, VK_NULL_HANDLE, &m_current_present_image));
@@ -1154,12 +1156,11 @@ void VKGSRender::flip(int buffer)
 	else
 	{
 		//No draw call was issued!
-		//TODO: Properly clear the background to rsx value
-		m_swap_chain->acquireNextImageKHR((*m_device), (*m_swap_chain), ~0ULL, VK_NULL_HANDLE, VK_NULL_HANDLE, &next_image_temp);
-
 		VkImageSubresourceRange range = vk::get_image_subresource_range(0, 0, 1, 1, VK_IMAGE_ASPECT_COLOR_BIT);
 		VkClearColorValue clear_black = { 0 };
-		vkCmdClearColorImage(m_command_buffer, m_swap_chain->get_swap_chain_image(next_image_temp), VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, &clear_black, 1, &range);
+		vk::change_image_layout(m_command_buffer, m_swap_chain->get_swap_chain_image(m_current_present_image), VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_GENERAL, range);
+		vkCmdClearColorImage(m_command_buffer, m_swap_chain->get_swap_chain_image(m_current_present_image), VK_IMAGE_LAYOUT_GENERAL, &clear_black, 1, &range);
+		vk::change_image_layout(m_command_buffer, m_swap_chain->get_swap_chain_image(m_current_present_image), VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, range);
 	}
 
 	close_and_submit_command_buffer({ m_present_semaphore }, m_submit_fence);
@@ -1172,10 +1173,6 @@ void VKGSRender::flip(int buffer)
 	present.pSwapchains = &swap_chain;
 	present.pImageIndices = &m_current_present_image;
 	CHECK_RESULT(m_swap_chain->queuePresentKHR(m_swap_chain->get_present_queue(), &present));
-
-	CHECK_RESULT(vkResetFences(*m_device, 1, &m_submit_fence));
-	CHECK_RESULT(vkResetCommandPool(*m_device, m_command_buffer_pool, 0));
-	open_command_buffer();
 
 	m_uniform_buffer_ring_info.m_get_pos = m_uniform_buffer_ring_info.get_current_put_pos_minus_one();
 	m_index_buffer_ring_info.m_get_pos = m_index_buffer_ring_info.get_current_put_pos_minus_one();
@@ -1192,8 +1189,10 @@ void VKGSRender::flip(int buffer)
 	m_framebuffer_to_clean.clear();
 
 	vkResetDescriptorPool(*m_device, descriptor_pool, 0);
+	CHECK_RESULT(vkResetFences(*m_device, 1, &m_submit_fence));
+	CHECK_RESULT(vkResetCommandPool(*m_device, m_command_buffer_pool, 0));
+	open_command_buffer();
 
 	m_draw_calls = 0;
-	dirty_frame = true;
 	m_frame->flip(m_context);
 }

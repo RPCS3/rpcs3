@@ -181,7 +181,7 @@ namespace vk
 			device.pNext = NULL;
 			device.queueCreateInfoCount = 1;
 			device.pQueueCreateInfos = &queue;
-			device.enabledLayerCount = layers.size();
+			device.enabledLayerCount = static_cast<uint32_t>(layers.size());
 			device.ppEnabledLayerNames = layers.data();
 			device.enabledExtensionCount = 1;
 			device.ppEnabledExtensionNames = requested_extensions;
@@ -343,7 +343,7 @@ namespace vk
 			VkImageType image_type,
 			VkFormat format,
 			uint32_t width, uint32_t height, uint32_t depth,
-			VkDeviceSize mipmaps, VkDeviceSize layers,
+			uint32_t mipmaps, uint32_t layers,
 			VkSampleCountFlagBits samples,
 			VkImageLayout initial_layout,
 			VkImageTiling tiling,
@@ -496,7 +496,7 @@ namespace vk
 			vkDestroyBuffer(m_device, value, nullptr);
 		}
 
-		void *map(u32 offset, u64 size)
+		void *map(u64 offset, u64 size)
 		{
 			void *data = nullptr;
 			CHECK_RESULT(vkMapMemory(m_device, memory->memory, offset, size, 0, &data));
@@ -604,7 +604,7 @@ namespace vk
 			info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
 			info.width = width;
 			info.height = height;
-			info.attachmentCount = image_view_array.size();
+			info.attachmentCount = static_cast<uint32_t>(image_view_array.size());
 			info.pAttachments = image_view_array.data();
 			info.renderPass = pass;
 			info.layers = 1;
@@ -1044,7 +1044,7 @@ namespace vk
 			VkInstanceCreateInfo instance_info = {};
 			instance_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
 			instance_info.pApplicationInfo = &app;
-			instance_info.enabledLayerCount = layers.size();
+			instance_info.enabledLayerCount = static_cast<uint32_t>(layers.size());
 			instance_info.ppEnabledLayerNames = layers.data();
 			instance_info.enabledExtensionCount = 3;
 			instance_info.ppEnabledExtensionNames = requested_extensions;
