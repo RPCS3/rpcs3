@@ -172,89 +172,89 @@ DXGI_FORMAT get_texture_format(u8 format)
 	throw EXCEPTION("Invalid or unsupported texture format (0x%x)", format);
 }
 
-UINT get_texture_max_aniso(u8 aniso)
+UINT get_texture_max_aniso(rsx::texture_max_anisotropy aniso)
 {
 	switch (aniso)
 	{
-	case CELL_GCM_TEXTURE_MAX_ANISO_1: return 1;
-	case CELL_GCM_TEXTURE_MAX_ANISO_2: return 2;
-	case CELL_GCM_TEXTURE_MAX_ANISO_4: return 4;
-	case CELL_GCM_TEXTURE_MAX_ANISO_6: return 6;
-	case CELL_GCM_TEXTURE_MAX_ANISO_8: return 8;
-	case CELL_GCM_TEXTURE_MAX_ANISO_10: return 10;
-	case CELL_GCM_TEXTURE_MAX_ANISO_12: return 12;
-	case CELL_GCM_TEXTURE_MAX_ANISO_16: return 16;
+	case rsx::texture_max_anisotropy::x1: return 1;
+	case rsx::texture_max_anisotropy::x2: return 2;
+	case rsx::texture_max_anisotropy::x4: return 4;
+	case rsx::texture_max_anisotropy::x6: return 6;
+	case rsx::texture_max_anisotropy::x8: return 8;
+	case rsx::texture_max_anisotropy::x10: return 10;
+	case rsx::texture_max_anisotropy::x12: return 12;
+	case rsx::texture_max_anisotropy::x16: return 16;
 	}
 	throw EXCEPTION("Invalid texture max aniso (0x%x)", aniso);
 }
 
-D3D12_TEXTURE_ADDRESS_MODE get_texture_wrap_mode(u8 wrap)
+D3D12_TEXTURE_ADDRESS_MODE get_texture_wrap_mode(rsx::texture_wrap_mode wrap)
 {
 	switch (wrap)
 	{
-	case CELL_GCM_TEXTURE_WRAP: return D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-	case CELL_GCM_TEXTURE_MIRROR: return D3D12_TEXTURE_ADDRESS_MODE_MIRROR;
-	case CELL_GCM_TEXTURE_CLAMP_TO_EDGE: return D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-	case CELL_GCM_TEXTURE_BORDER: return D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-	case CELL_GCM_TEXTURE_CLAMP: return D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-	case CELL_GCM_TEXTURE_MIRROR_ONCE_CLAMP_TO_EDGE: return D3D12_TEXTURE_ADDRESS_MODE_MIRROR_ONCE;
-	case CELL_GCM_TEXTURE_MIRROR_ONCE_BORDER: return D3D12_TEXTURE_ADDRESS_MODE_MIRROR_ONCE;
-	case CELL_GCM_TEXTURE_MIRROR_ONCE_CLAMP: return D3D12_TEXTURE_ADDRESS_MODE_MIRROR_ONCE;
+	case rsx::texture_wrap_mode::wrap: return D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+	case rsx::texture_wrap_mode::mirror: return D3D12_TEXTURE_ADDRESS_MODE_MIRROR;
+	case rsx::texture_wrap_mode::clamp_to_edge: return D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+	case rsx::texture_wrap_mode::border: return D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+	case rsx::texture_wrap_mode::clamp: return D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+	case rsx::texture_wrap_mode::mirror_once_clamp_to_edge: return D3D12_TEXTURE_ADDRESS_MODE_MIRROR_ONCE;
+	case rsx::texture_wrap_mode::mirror_once_border: return D3D12_TEXTURE_ADDRESS_MODE_MIRROR_ONCE;
+	case rsx::texture_wrap_mode::mirror_once_clamp: return D3D12_TEXTURE_ADDRESS_MODE_MIRROR_ONCE;
 	}
 	throw EXCEPTION("Invalid texture wrap mode (0x%x)", wrap);
 }
 
 namespace
 {
-	void get_min_filter(u8 min_filter, D3D12_FILTER_TYPE &min, D3D12_FILTER_TYPE &mip)
+	void get_min_filter(rsx::texture_minify_filter min_filter, D3D12_FILTER_TYPE &min, D3D12_FILTER_TYPE &mip)
 	{
 		switch (min_filter)
 		{
-		case CELL_GCM_TEXTURE_NEAREST:
+		case rsx::texture_minify_filter::nearest:
 			min = D3D12_FILTER_TYPE_POINT;
 			mip = D3D12_FILTER_TYPE_POINT;
 			return;
-		case CELL_GCM_TEXTURE_LINEAR:
+		case rsx::texture_minify_filter::linear:
 			min = D3D12_FILTER_TYPE_LINEAR;
 			mip = D3D12_FILTER_TYPE_POINT;
 			return;
-		case CELL_GCM_TEXTURE_NEAREST_NEAREST:
+		case rsx::texture_minify_filter::nearest_nearest:
 			min = D3D12_FILTER_TYPE_POINT;
 			mip = D3D12_FILTER_TYPE_POINT;
 			return;
-		case CELL_GCM_TEXTURE_LINEAR_NEAREST:
+		case rsx::texture_minify_filter::linear_nearest:
 			min = D3D12_FILTER_TYPE_LINEAR;
 			mip = D3D12_FILTER_TYPE_POINT;
 			return;
-		case CELL_GCM_TEXTURE_NEAREST_LINEAR:
+		case rsx::texture_minify_filter::nearest_linear:
 			min = D3D12_FILTER_TYPE_POINT;
 			mip = D3D12_FILTER_TYPE_LINEAR;
 			return;
-		case CELL_GCM_TEXTURE_LINEAR_LINEAR:
+		case rsx::texture_minify_filter::linear_linear:
 			min = D3D12_FILTER_TYPE_LINEAR;
 			mip = D3D12_FILTER_TYPE_LINEAR;
 			return;
-		case CELL_GCM_TEXTURE_CONVOLUTION_MIN:
+		case rsx::texture_minify_filter::convolution_min:
 			min = D3D12_FILTER_TYPE_LINEAR;
 			mip = D3D12_FILTER_TYPE_POINT;
 			return;
 		}
-		throw EXCEPTION("Invalid max filter (0x%x)", min_filter);
+		throw EXCEPTION("Invalid max filter");
 	}
 
-	D3D12_FILTER_TYPE get_mag_filter(u8 mag_filter)
+	D3D12_FILTER_TYPE get_mag_filter(rsx::texture_magnify_filter mag_filter)
 	{
 		switch (mag_filter)
 		{
-		case CELL_GCM_TEXTURE_NEAREST: return D3D12_FILTER_TYPE_POINT;
-		case CELL_GCM_TEXTURE_LINEAR: return D3D12_FILTER_TYPE_LINEAR;
-		case CELL_GCM_TEXTURE_CONVOLUTION_MAG: return D3D12_FILTER_TYPE_LINEAR;
+		case rsx::texture_magnify_filter::nearest: return D3D12_FILTER_TYPE_POINT;
+		case rsx::texture_magnify_filter::linear: return D3D12_FILTER_TYPE_LINEAR;
+		case rsx::texture_magnify_filter::convolution_mag: return D3D12_FILTER_TYPE_LINEAR;
 		}
-		throw EXCEPTION("Invalid mag filter (0x%x)", mag_filter);
+		throw EXCEPTION("Invalid mag filter");
 	}
 }
 
-D3D12_FILTER get_texture_filter(u8 min_filter, u8 mag_filter)
+D3D12_FILTER get_texture_filter(rsx::texture_minify_filter min_filter, rsx::texture_magnify_filter mag_filter)
 {
 	D3D12_FILTER_TYPE min, mip;
 	get_min_filter(min_filter, min, mip);

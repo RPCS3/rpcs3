@@ -153,6 +153,65 @@ namespace rsx
 	};
 
 	fog_mode to_fog_mode(u32 in);
+
+	enum class texture_dimension : u8
+	{
+		dimension1d,
+		dimension2d,
+		dimension3d,
+	};
+
+	texture_dimension to_texture_dimension(u8 in);
+
+	enum class texture_wrap_mode : u8
+	{
+		wrap,
+		mirror,
+		clamp_to_edge,
+		border,
+		clamp,
+		mirror_once_clamp_to_edge,
+		mirror_once_border,
+		mirror_once_clamp,
+	};
+
+	texture_wrap_mode to_texture_wrap_mode(u8 in);
+
+	enum class texture_max_anisotropy : u8
+	{
+		x1,
+		x2,
+		x4,
+		x6,
+		x8,
+		x10,
+		x12,
+		x16,
+	};
+
+	texture_max_anisotropy to_texture_max_anisotropy(u8 in);
+
+	enum class texture_minify_filter : u8
+	{
+		nearest, ///< no filtering, mipmap base level
+		linear, ///< linear filtering, mipmap base level
+		nearest_nearest, ///< no filtering, closest mipmap level
+		linear_nearest, ///< linear filtering, closest mipmap level
+		nearest_linear, ///< no filtering, linear mix between closest mipmap levels
+		linear_linear, ///< linear filtering, linear mix between closest mipmap levels
+		convolution_min, ///< Unknow mode but looks close to linear_linear
+	};
+
+	texture_minify_filter to_texture_minify_filter(u8 in);
+
+	enum class texture_magnify_filter : u8
+	{
+		nearest, ///< no filtering
+		linear, ///< linear filtering
+		convolution_mag, ///< Unknow mode but looks close to linear
+	};
+
+	texture_magnify_filter to_texture_magnify_filter(u8 in);
 }
 
 enum
@@ -229,26 +288,6 @@ enum
 	// Normalization Flag
 	CELL_GCM_TEXTURE_NR = 0x00,
 	CELL_GCM_TEXTURE_UN = 0x40,
-
-	// Max Anisotropy
-	CELL_GCM_TEXTURE_MAX_ANISO_1  = 0,
-	CELL_GCM_TEXTURE_MAX_ANISO_2  = 1,
-	CELL_GCM_TEXTURE_MAX_ANISO_4  = 2,
-	CELL_GCM_TEXTURE_MAX_ANISO_6  = 3,
-	CELL_GCM_TEXTURE_MAX_ANISO_8  = 4,
-	CELL_GCM_TEXTURE_MAX_ANISO_10 = 5,
-	CELL_GCM_TEXTURE_MAX_ANISO_12 = 6,
-	CELL_GCM_TEXTURE_MAX_ANISO_16 = 7,
-
-	// Wrap
-	CELL_GCM_TEXTURE_WRAP                      = 1,
-	CELL_GCM_TEXTURE_MIRROR                    = 2,
-	CELL_GCM_TEXTURE_CLAMP_TO_EDGE             = 3,
-	CELL_GCM_TEXTURE_BORDER                    = 4,
-	CELL_GCM_TEXTURE_CLAMP                     = 5,
-	CELL_GCM_TEXTURE_MIRROR_ONCE_CLAMP_TO_EDGE = 6,
-	CELL_GCM_TEXTURE_MIRROR_ONCE_BORDER        = 7,
-	CELL_GCM_TEXTURE_MIRROR_ONCE_CLAMP         = 8,
 };
 
 // GCM Surface
@@ -359,16 +398,6 @@ enum
 	CELL_GCM_TEXTURE_CYLINDRICAL_WRAP_ENABLE_TEX7_V = 1 << 29,
 	CELL_GCM_TEXTURE_CYLINDRICAL_WRAP_ENABLE_TEX7_P = 1 << 30,
 	CELL_GCM_TEXTURE_CYLINDRICAL_WRAP_ENABLE_TEX7_Q = 1 << 31,
-
-	// Texture Filter
-	CELL_GCM_TEXTURE_NEAREST = 1,
-	CELL_GCM_TEXTURE_LINEAR = 2,
-	CELL_GCM_TEXTURE_NEAREST_NEAREST = 3,
-	CELL_GCM_TEXTURE_LINEAR_NEAREST = 4,
-	CELL_GCM_TEXTURE_NEAREST_LINEAR = 5,
-	CELL_GCM_TEXTURE_LINEAR_LINEAR = 6,
-	CELL_GCM_TEXTURE_CONVOLUTION_MIN = 7,
-	CELL_GCM_TEXTURE_CONVOLUTION_MAG = 4,
 
 	CELL_GCM_COLOR_MASK_B = 1 << 0,
 	CELL_GCM_COLOR_MASK_G = 1 << 8,

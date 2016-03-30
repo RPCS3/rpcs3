@@ -157,26 +157,31 @@ namespace rsx
 {
 	namespace gl
 	{
-		static const int gl_tex_min_filter[] =
+		int gl_tex_min_filter(rsx::texture_minify_filter min_filter)
 		{
-			GL_NEAREST, // unused
-			GL_NEAREST,
-			GL_LINEAR,
-			GL_NEAREST_MIPMAP_NEAREST,
-			GL_LINEAR_MIPMAP_NEAREST,
-			GL_NEAREST_MIPMAP_LINEAR,
-			GL_LINEAR_MIPMAP_LINEAR,
-			GL_NEAREST, // CELL_GCM_TEXTURE_CONVOLUTION_MIN
-		};
+			switch (min_filter)
+			{
+			case rsx::texture_minify_filter::nearest: return GL_NEAREST;
+			case rsx::texture_minify_filter::linear: return GL_LINEAR;
+			case rsx::texture_minify_filter::nearest_nearest: return GL_NEAREST_MIPMAP_NEAREST;
+			case rsx::texture_minify_filter::linear_nearest: return GL_LINEAR_MIPMAP_NEAREST;
+			case rsx::texture_minify_filter::nearest_linear: return GL_NEAREST_MIPMAP_LINEAR;
+			case rsx::texture_minify_filter::linear_linear: return GL_LINEAR_MIPMAP_LINEAR;
+			case rsx::texture_minify_filter::convolution_min: return GL_LINEAR_MIPMAP_LINEAR;
+			}
+			throw EXCEPTION("Unknow min filter");
+		}
 
-		static const int gl_tex_mag_filter[] =
+		int gl_tex_mag_filter(rsx::texture_magnify_filter mag_filter)
 		{
-			GL_NEAREST, // unused
-			GL_NEAREST,
-			GL_LINEAR,
-			GL_NEAREST, // unused
-			GL_LINEAR  // CELL_GCM_TEXTURE_CONVOLUTION_MAG
-		};
+			switch (mag_filter)
+			{
+			case rsx::texture_magnify_filter::nearest: return GL_NEAREST;
+			case rsx::texture_magnify_filter::linear: return GL_LINEAR;
+			case rsx::texture_magnify_filter::convolution_mag: return GL_LINEAR;
+			}
+			throw EXCEPTION("Unknow mag filter");
+		}
 
 		static const int gl_tex_zfunc[] =
 		{
@@ -200,36 +205,36 @@ namespace rsx
 			glGenTextures(1, &m_id);
 		}
 
-		int texture::gl_wrap(int wrap)
+		int texture::gl_wrap(rsx::texture_wrap_mode wrap)
 		{
 			switch (wrap)
 			{
-			case CELL_GCM_TEXTURE_WRAP: return GL_REPEAT;
-			case CELL_GCM_TEXTURE_MIRROR: return GL_MIRRORED_REPEAT;
-			case CELL_GCM_TEXTURE_CLAMP_TO_EDGE: return GL_CLAMP_TO_EDGE;
-			case CELL_GCM_TEXTURE_BORDER: return GL_CLAMP_TO_BORDER;
-			case CELL_GCM_TEXTURE_CLAMP: return GL_CLAMP;
-			case CELL_GCM_TEXTURE_MIRROR_ONCE_CLAMP_TO_EDGE: return GL_MIRROR_CLAMP_TO_EDGE_EXT;
-			case CELL_GCM_TEXTURE_MIRROR_ONCE_BORDER: return GL_MIRROR_CLAMP_TO_BORDER_EXT;
-			case CELL_GCM_TEXTURE_MIRROR_ONCE_CLAMP: return GL_MIRROR_CLAMP_EXT;
+			case rsx::texture_wrap_mode::wrap: return GL_REPEAT;
+			case rsx::texture_wrap_mode::mirror: return GL_MIRRORED_REPEAT;
+			case rsx::texture_wrap_mode::clamp_to_edge: return GL_CLAMP_TO_EDGE;
+			case rsx::texture_wrap_mode::border: return GL_CLAMP_TO_BORDER;
+			case rsx::texture_wrap_mode::clamp: return GL_CLAMP;
+			case rsx::texture_wrap_mode::mirror_once_clamp_to_edge: return GL_MIRROR_CLAMP_TO_EDGE_EXT;
+			case rsx::texture_wrap_mode::mirror_once_border: return GL_MIRROR_CLAMP_TO_BORDER_EXT;
+			case rsx::texture_wrap_mode::mirror_once_clamp: return GL_MIRROR_CLAMP_EXT;
 			}
 
 			LOG_ERROR(RSX, "Texture wrap error: bad wrap (%d).", wrap);
 			return GL_REPEAT;
 		}
 
-		float texture::max_aniso(int aniso)
+		float texture::max_aniso(rsx::texture_max_anisotropy aniso)
 		{
 			switch (aniso)
 			{
-			case CELL_GCM_TEXTURE_MAX_ANISO_1: return 1.0f;
-			case CELL_GCM_TEXTURE_MAX_ANISO_2: return 2.0f;
-			case CELL_GCM_TEXTURE_MAX_ANISO_4: return 4.0f;
-			case CELL_GCM_TEXTURE_MAX_ANISO_6: return 6.0f;
-			case CELL_GCM_TEXTURE_MAX_ANISO_8: return 8.0f;
-			case CELL_GCM_TEXTURE_MAX_ANISO_10: return 10.0f;
-			case CELL_GCM_TEXTURE_MAX_ANISO_12: return 12.0f;
-			case CELL_GCM_TEXTURE_MAX_ANISO_16: return 16.0f;
+			case rsx::texture_max_anisotropy::x1: return 1.0f;
+			case rsx::texture_max_anisotropy::x2: return 2.0f;
+			case rsx::texture_max_anisotropy::x4: return 4.0f;
+			case rsx::texture_max_anisotropy::x6: return 6.0f;
+			case rsx::texture_max_anisotropy::x8: return 8.0f;
+			case rsx::texture_max_anisotropy::x10: return 10.0f;
+			case rsx::texture_max_anisotropy::x12: return 12.0f;
+			case rsx::texture_max_anisotropy::x16: return 16.0f;
 			}
 
 			LOG_ERROR(RSX, "Texture anisotropy error: bad max aniso (%d).", aniso);
@@ -378,7 +383,7 @@ namespace rsx
 			glTexParameteri(m_target, GL_TEXTURE_MIN_LOD, (tex.min_lod() >> 8));
 			glTexParameteri(m_target, GL_TEXTURE_MAX_LOD, (tex.max_lod() >> 8));
 
-			int min_filter = gl_tex_min_filter[tex.min_filter()];
+			int min_filter = gl_tex_min_filter(tex.min_filter());
 			
 			if (min_filter != GL_LINEAR && min_filter != GL_NEAREST)
 			{
@@ -390,7 +395,7 @@ namespace rsx
 			}
 
 			glTexParameteri(m_target, GL_TEXTURE_MIN_FILTER, min_filter);
-			glTexParameteri(m_target, GL_TEXTURE_MAG_FILTER, gl_tex_mag_filter[tex.mag_filter()]);
+			glTexParameteri(m_target, GL_TEXTURE_MAG_FILTER, gl_tex_mag_filter(tex.mag_filter()));
 			glTexParameterf(m_target, GL_TEXTURE_MAX_ANISOTROPY_EXT, max_aniso(tex.max_aniso()));
 		}
 

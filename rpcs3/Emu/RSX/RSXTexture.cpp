@@ -60,9 +60,9 @@ namespace rsx
 		return ((method_registers[NV4097_SET_TEXTURE_FORMAT + (m_index * 8)] >> 3) & 0x1);
 	}
 
-	u8 texture::dimension() const
+	rsx::texture_dimension texture::dimension() const
 	{
-		return ((method_registers[NV4097_SET_TEXTURE_FORMAT + (m_index * 8)] >> 4) & 0xf);
+		return rsx::to_texture_dimension((method_registers[NV4097_SET_TEXTURE_FORMAT + (m_index * 8)] >> 4) & 0xf);
 	}
 
 	u8 texture::format() const
@@ -81,19 +81,19 @@ namespace rsx
 		return std::min(mipmap(), max_mipmap_count);
 	}
 
-	u8 texture::wrap_s() const
+	rsx::texture_wrap_mode texture::wrap_s() const
 	{
-		return ((method_registers[NV4097_SET_TEXTURE_ADDRESS + (m_index * 8)]) & 0xf);
+		return rsx::to_texture_wrap_mode((method_registers[NV4097_SET_TEXTURE_ADDRESS + (m_index * 8)]) & 0xf);
 	}
 
-	u8 texture::wrap_t() const
+	rsx::texture_wrap_mode texture::wrap_t() const
 	{
-		return ((method_registers[NV4097_SET_TEXTURE_ADDRESS + (m_index * 8)] >> 8) & 0xf);
+		return rsx::to_texture_wrap_mode((method_registers[NV4097_SET_TEXTURE_ADDRESS + (m_index * 8)] >> 8) & 0xf);
 	}
 
-	u8 texture::wrap_r() const
+	rsx::texture_wrap_mode texture::wrap_r() const
 	{
-		return ((method_registers[NV4097_SET_TEXTURE_ADDRESS + (m_index * 8)] >> 16) & 0xf);
+		return rsx::to_texture_wrap_mode((method_registers[NV4097_SET_TEXTURE_ADDRESS + (m_index * 8)] >> 16) & 0xf);
 	}
 
 	u8 texture::unsigned_remap() const
@@ -136,9 +136,9 @@ namespace rsx
 		return ((method_registers[NV4097_SET_TEXTURE_CONTROL0 + (m_index * 8)] >> 7) & 0xfff);
 	}
 
-	u8   texture::max_aniso() const
+	rsx::texture_max_anisotropy   texture::max_aniso() const
 	{
-		return ((method_registers[NV4097_SET_TEXTURE_CONTROL0 + (m_index * 8)] >> 4) & 0x7);
+		return rsx::to_texture_max_anisotropy((method_registers[NV4097_SET_TEXTURE_CONTROL0 + (m_index * 8)] >> 4) & 0x7);
 	}
 
 	bool texture::alpha_kill_enabled() const
@@ -156,14 +156,14 @@ namespace rsx
 		return float(f16((method_registers[NV4097_SET_TEXTURE_FILTER + (m_index * 8)]) & 0x1fff));
 	}
 
-	u8  texture::min_filter() const
+	rsx::texture_minify_filter texture::min_filter() const
 	{
-		return ((method_registers[NV4097_SET_TEXTURE_FILTER + (m_index * 8)] >> 16) & 0x7);
+		return rsx::to_texture_minify_filter((method_registers[NV4097_SET_TEXTURE_FILTER + (m_index * 8)] >> 16) & 0x7);
 	}
 
-	u8  texture::mag_filter() const
+	rsx::texture_magnify_filter texture::mag_filter() const
 	{
-		return ((method_registers[NV4097_SET_TEXTURE_FILTER + (m_index * 8)] >> 24) & 0x7);
+		return rsx::to_texture_magnify_filter((method_registers[NV4097_SET_TEXTURE_FILTER + (m_index * 8)] >> 24) & 0x7);
 	}
 
 	u8 texture::convolution_filter() const

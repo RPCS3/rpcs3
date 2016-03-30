@@ -124,18 +124,18 @@ std::vector<rsx_subresource_layout> get_subresources_layout(const rsx::texture &
 	u16 depth;
 	u8 layer;
 
-	if (texture.dimension() == 1)
+	if (texture.dimension() == rsx::texture_dimension::dimension1d)
 	{
 		depth = 1;
 		layer = 1;
 		h = 1;
 	}
-	else if (texture.dimension() == 2)
+	else if (texture.dimension() == rsx::texture_dimension::dimension2d)
 	{
 		depth = 1;
 		layer = texture.cubemap() ? 6 : 1;
 	}
-	else if (texture.dimension() == 3)
+	else if (texture.dimension() == rsx::texture_dimension::dimension3d)
 	{
 		depth = texture.depth();
 		layer = 1;

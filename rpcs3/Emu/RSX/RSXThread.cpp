@@ -719,22 +719,22 @@ namespace rsx
 		result.pixel_center_mode = rsx::to_window_pixel_center((shader_window >> 16) & 0xF);
 		result.height = shader_window & 0xFFF;
 
-		std::array<texture_dimension, 16> texture_dimensions;
+		std::array<texture_dimension_extended, 16> texture_dimensions;
 		for (u32 i = 0; i < rsx::limits::textures_count; ++i)
 		{
 			if (!textures[i].enabled())
-				texture_dimensions[i] = texture_dimension::texture_dimension_2d;
-			else if (textures[i].dimension() == 1)
-				texture_dimensions[i] = texture_dimension::texture_dimension_1d;
-			else if (textures[i].dimension() == 2)
+				texture_dimensions[i] = texture_dimension_extended::texture_dimension_2d;
+			else if (textures[i].dimension() == rsx::texture_dimension::dimension1d)
+				texture_dimensions[i] = texture_dimension_extended::texture_dimension_1d;
+			else if (textures[i].dimension() == rsx::texture_dimension::dimension2d)
 			{
 				if (textures[i].cubemap())
-					texture_dimensions[i] = texture_dimension::texture_dimension_cubemap;
+					texture_dimensions[i] = texture_dimension_extended::texture_dimension_cubemap;
 				else
-					texture_dimensions[i] = texture_dimension::texture_dimension_2d;
+					texture_dimensions[i] = texture_dimension_extended::texture_dimension_2d;
 			}
-			else if (textures[i].dimension() == 3)
-				texture_dimensions[i] = texture_dimension::texture_dimension_3d;
+			else if (textures[i].dimension() == rsx::texture_dimension::dimension3d)
+				texture_dimensions[i] = texture_dimension_extended::texture_dimension_3d;
 			else
 				throw EXCEPTION("Unable to determine texture dimension");
 			if (textures[i].enabled() && (textures[i].format() & CELL_GCM_TEXTURE_UN))

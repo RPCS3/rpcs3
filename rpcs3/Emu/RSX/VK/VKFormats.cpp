@@ -39,61 +39,60 @@ VkFormat get_compatible_depth_surface_format(const gpu_formats_support &support,
 	throw EXCEPTION("Invalid format (0x%x)", format);
 }
 
-std::tuple<VkFilter, VkSamplerMipmapMode> get_min_filter_and_mip(u8 min_filter)
+std::tuple<VkFilter, VkSamplerMipmapMode> get_min_filter_and_mip(rsx::texture_minify_filter min_filter)
 {
 	switch (min_filter)
 	{
-	case CELL_GCM_TEXTURE_NEAREST: return std::make_tuple(VK_FILTER_NEAREST, VK_SAMPLER_MIPMAP_MODE_NEAREST);
-	case CELL_GCM_TEXTURE_LINEAR: return std::make_tuple(VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_NEAREST);
-	case CELL_GCM_TEXTURE_NEAREST_NEAREST: return std::make_tuple(VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_NEAREST);
-	case CELL_GCM_TEXTURE_LINEAR_NEAREST: return std::make_tuple(VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_NEAREST);
-	case CELL_GCM_TEXTURE_NEAREST_LINEAR: return std::make_tuple(VK_FILTER_NEAREST, VK_SAMPLER_MIPMAP_MODE_LINEAR);
-	case CELL_GCM_TEXTURE_LINEAR_LINEAR: return std::make_tuple(VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR);
-	case CELL_GCM_TEXTURE_CONVOLUTION_MIN: return std::make_tuple(VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR);
+	case rsx::texture_minify_filter::nearest: return std::make_tuple(VK_FILTER_NEAREST, VK_SAMPLER_MIPMAP_MODE_NEAREST);
+	case rsx::texture_minify_filter::linear: return std::make_tuple(VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_NEAREST);
+	case rsx::texture_minify_filter::nearest_nearest: return std::make_tuple(VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_NEAREST);
+	case rsx::texture_minify_filter::linear_nearest: return std::make_tuple(VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_NEAREST);
+	case rsx::texture_minify_filter::nearest_linear: return std::make_tuple(VK_FILTER_NEAREST, VK_SAMPLER_MIPMAP_MODE_LINEAR);
+	case rsx::texture_minify_filter::linear_linear: return std::make_tuple(VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR);
+	case rsx::texture_minify_filter::convolution_min: return std::make_tuple(VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR);
 	}
-	throw EXCEPTION("Invalid max filter (0x%x)", min_filter);
+	throw EXCEPTION("Invalid max filter");
 }
 
-VkFilter get_mag_filter(u8 mag_filter)
+VkFilter get_mag_filter(rsx::texture_magnify_filter mag_filter)
 {
 	switch (mag_filter)
 	{
-	case CELL_GCM_TEXTURE_NEAREST: return VK_FILTER_NEAREST;
-	case CELL_GCM_TEXTURE_LINEAR: return VK_FILTER_LINEAR;
-	case CELL_GCM_TEXTURE_CONVOLUTION_MAG: return VK_FILTER_LINEAR;
+	case rsx::texture_magnify_filter::nearest: return VK_FILTER_NEAREST;
+	case rsx::texture_magnify_filter::linear: return VK_FILTER_LINEAR;
+	case rsx::texture_magnify_filter::convolution_mag: return VK_FILTER_LINEAR;
 	}
 	throw EXCEPTION("Invalid mag filter (0x%x)", mag_filter);
 }
 
-VkSamplerAddressMode vk_wrap_mode(u32 gcm_wrap)
+VkSamplerAddressMode vk_wrap_mode(rsx::texture_wrap_mode gcm_wrap)
 {
 	switch (gcm_wrap)
 	{
-	case CELL_GCM_TEXTURE_WRAP: return VK_SAMPLER_ADDRESS_MODE_REPEAT;
-	case CELL_GCM_TEXTURE_MIRROR: return VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
-	case CELL_GCM_TEXTURE_CLAMP_TO_EDGE: return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-	case CELL_GCM_TEXTURE_BORDER: return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
-	case CELL_GCM_TEXTURE_CLAMP: return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-	case CELL_GCM_TEXTURE_MIRROR_ONCE_CLAMP_TO_EDGE: return VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE;
-	case CELL_GCM_TEXTURE_MIRROR_ONCE_BORDER: return VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE;
-	case CELL_GCM_TEXTURE_MIRROR_ONCE_CLAMP: return VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE;
-	default:
-		throw EXCEPTION("unhandled texture clamp mode 0x%X", gcm_wrap);
+	case rsx::texture_wrap_mode::wrap: return VK_SAMPLER_ADDRESS_MODE_REPEAT;
+	case rsx::texture_wrap_mode::mirror: return VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
+	case rsx::texture_wrap_mode::clamp_to_edge: return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+	case rsx::texture_wrap_mode::border: return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+	case rsx::texture_wrap_mode::clamp: return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+	case rsx::texture_wrap_mode::mirror_once_clamp_to_edge: return VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE;
+	case rsx::texture_wrap_mode::mirror_once_border: return VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE;
+	case rsx::texture_wrap_mode::mirror_once_clamp: return VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE;
 	}
+	throw EXCEPTION("unhandled texture clamp mode");
 }
 
-float max_aniso(u32 gcm_aniso)
+float max_aniso(rsx::texture_max_anisotropy gcm_aniso)
 {
 	switch (gcm_aniso)
 	{
-	case CELL_GCM_TEXTURE_MAX_ANISO_1: return 1.0f;
-	case CELL_GCM_TEXTURE_MAX_ANISO_2: return 2.0f;
-	case CELL_GCM_TEXTURE_MAX_ANISO_4: return 4.0f;
-	case CELL_GCM_TEXTURE_MAX_ANISO_6: return 6.0f;
-	case CELL_GCM_TEXTURE_MAX_ANISO_8: return 8.0f;
-	case CELL_GCM_TEXTURE_MAX_ANISO_10: return 10.0f;
-	case CELL_GCM_TEXTURE_MAX_ANISO_12: return 12.0f;
-	case CELL_GCM_TEXTURE_MAX_ANISO_16: return 16.0f;
+	case rsx::texture_max_anisotropy::x1: return 1.0f;
+	case rsx::texture_max_anisotropy::x2: return 2.0f;
+	case rsx::texture_max_anisotropy::x4: return 4.0f;
+	case rsx::texture_max_anisotropy::x6: return 6.0f;
+	case rsx::texture_max_anisotropy::x8: return 8.0f;
+	case rsx::texture_max_anisotropy::x10: return 10.0f;
+	case rsx::texture_max_anisotropy::x12: return 12.0f;
+	case rsx::texture_max_anisotropy::x16: return 16.0f;
 	}
 
 	throw EXCEPTION("Texture anisotropy error: bad max aniso (%d).", gcm_aniso);

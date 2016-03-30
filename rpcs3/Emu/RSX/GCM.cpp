@@ -830,6 +830,16 @@ rsx::fog_mode rsx::to_fog_mode(u32 in)
 	throw EXCEPTION("Wrong fog mode %x", in);
 }
 
+rsx::texture_dimension rsx::to_texture_dimension(u8 in)
+{
+	switch (in)
+	{
+	case 1: return rsx::texture_dimension::dimension1d;
+	case 2: return rsx::texture_dimension::dimension2d;
+	case 3: return rsx::texture_dimension::dimension3d;
+	}
+	throw EXCEPTION("Wrong texture dimension %d", in);
+}
 
 enum
 {
@@ -867,7 +877,95 @@ enum
 	CELL_GCM_SURFACE_X8B8G8R8_O8B8G8R8 = 15,
 	CELL_GCM_SURFACE_A8B8G8R8 = 16,
 
+	// Wrap
+	CELL_GCM_TEXTURE_WRAP = 1,
+	CELL_GCM_TEXTURE_MIRROR = 2,
+	CELL_GCM_TEXTURE_CLAMP_TO_EDGE = 3,
+	CELL_GCM_TEXTURE_BORDER = 4,
+	CELL_GCM_TEXTURE_CLAMP = 5,
+	CELL_GCM_TEXTURE_MIRROR_ONCE_CLAMP_TO_EDGE = 6,
+	CELL_GCM_TEXTURE_MIRROR_ONCE_BORDER = 7,
+	CELL_GCM_TEXTURE_MIRROR_ONCE_CLAMP = 8,
+
+	// Max Anisotropy
+	CELL_GCM_TEXTURE_MAX_ANISO_1 = 0,
+	CELL_GCM_TEXTURE_MAX_ANISO_2 = 1,
+	CELL_GCM_TEXTURE_MAX_ANISO_4 = 2,
+	CELL_GCM_TEXTURE_MAX_ANISO_6 = 3,
+	CELL_GCM_TEXTURE_MAX_ANISO_8 = 4,
+	CELL_GCM_TEXTURE_MAX_ANISO_10 = 5,
+	CELL_GCM_TEXTURE_MAX_ANISO_12 = 6,
+	CELL_GCM_TEXTURE_MAX_ANISO_16 = 7,
+
+	// Texture Filter
+	CELL_GCM_TEXTURE_NEAREST = 1,
+	CELL_GCM_TEXTURE_LINEAR = 2,
+	CELL_GCM_TEXTURE_NEAREST_NEAREST = 3,
+	CELL_GCM_TEXTURE_LINEAR_NEAREST = 4,
+	CELL_GCM_TEXTURE_NEAREST_LINEAR = 5,
+	CELL_GCM_TEXTURE_LINEAR_LINEAR = 6,
+	CELL_GCM_TEXTURE_CONVOLUTION_MIN = 7,
+	CELL_GCM_TEXTURE_CONVOLUTION_MAG = 4,
 };
+
+rsx::texture_wrap_mode rsx::to_texture_wrap_mode(u8 in)
+{
+	switch (in)
+	{
+	case CELL_GCM_TEXTURE_WRAP: return rsx::texture_wrap_mode::wrap;
+	case CELL_GCM_TEXTURE_MIRROR: return rsx::texture_wrap_mode::mirror;
+	case CELL_GCM_TEXTURE_CLAMP_TO_EDGE: return rsx::texture_wrap_mode::clamp_to_edge;
+	case CELL_GCM_TEXTURE_BORDER: return rsx::texture_wrap_mode::border;
+	case CELL_GCM_TEXTURE_CLAMP: return rsx::texture_wrap_mode::clamp;
+	case CELL_GCM_TEXTURE_MIRROR_ONCE_CLAMP_TO_EDGE: return rsx::texture_wrap_mode::mirror_once_clamp_to_edge;
+	case CELL_GCM_TEXTURE_MIRROR_ONCE_BORDER: return rsx::texture_wrap_mode::mirror_once_border;
+	case CELL_GCM_TEXTURE_MIRROR_ONCE_CLAMP: return rsx::texture_wrap_mode::mirror_once_clamp;
+	}
+	throw EXCEPTION("Unknow wrap mode %x", in);
+}
+
+rsx::texture_max_anisotropy rsx::to_texture_max_anisotropy(u8 in)
+{
+	switch (in)
+	{
+	case CELL_GCM_TEXTURE_MAX_ANISO_1: return rsx::texture_max_anisotropy::x1;
+	case CELL_GCM_TEXTURE_MAX_ANISO_2: return rsx::texture_max_anisotropy::x2;
+	case CELL_GCM_TEXTURE_MAX_ANISO_4: return rsx::texture_max_anisotropy::x4;
+	case CELL_GCM_TEXTURE_MAX_ANISO_6: return rsx::texture_max_anisotropy::x6;
+	case CELL_GCM_TEXTURE_MAX_ANISO_8: return rsx::texture_max_anisotropy::x8;
+	case CELL_GCM_TEXTURE_MAX_ANISO_10: return rsx::texture_max_anisotropy::x10;
+	case CELL_GCM_TEXTURE_MAX_ANISO_12: return rsx::texture_max_anisotropy::x12;
+	case CELL_GCM_TEXTURE_MAX_ANISO_16: return rsx::texture_max_anisotropy::x16;
+	}
+	throw EXCEPTION("Unknow anisotropy max mode %x", in);
+}
+
+rsx::texture_minify_filter rsx::to_texture_minify_filter(u8 in)
+{
+	switch (in)
+	{
+	case CELL_GCM_TEXTURE_NEAREST: return rsx::texture_minify_filter::nearest;
+	case CELL_GCM_TEXTURE_LINEAR: return rsx::texture_minify_filter::linear;
+	case CELL_GCM_TEXTURE_NEAREST_NEAREST: return rsx::texture_minify_filter::nearest_nearest;
+	case CELL_GCM_TEXTURE_LINEAR_NEAREST: return rsx::texture_minify_filter::linear_nearest;
+	case CELL_GCM_TEXTURE_NEAREST_LINEAR: return rsx::texture_minify_filter::nearest_linear;
+	case CELL_GCM_TEXTURE_LINEAR_LINEAR: return rsx::texture_minify_filter::linear_linear;
+	case CELL_GCM_TEXTURE_CONVOLUTION_MIN: return rsx::texture_minify_filter::linear_linear;
+	}
+	throw EXCEPTION("Unknow minify filter %x", in);
+}
+
+
+rsx::texture_magnify_filter rsx::to_texture_magnify_filter(u8 in)
+{
+	switch (in)
+	{
+	case CELL_GCM_TEXTURE_NEAREST: return rsx::texture_magnify_filter::nearest;
+	case CELL_GCM_TEXTURE_LINEAR: return rsx::texture_magnify_filter::linear;
+	case CELL_GCM_TEXTURE_CONVOLUTION_MAG: return rsx::texture_magnify_filter::convolution_mag;
+	}
+	throw EXCEPTION("Unknow magnify filter %x", in);
+}
 
 rsx::surface_target rsx::to_surface_target(u8 in)
 {
@@ -1099,6 +1197,17 @@ namespace
 		return "Error";
 	}
 
+	std::string texture_dimension(u8 dim)
+	{
+		switch(rsx::to_texture_dimension(dim))
+		{
+		case rsx::texture_dimension::dimension1d: return "1D";
+		case rsx::texture_dimension::dimension2d: return "2D";
+		case rsx::texture_dimension::dimension3d: return "3D";
+		}
+		return "";
+	}
+
 	std::string surface_target(u32 target)
 	{
 		switch (rsx::to_surface_target(target))
@@ -1245,16 +1354,16 @@ namespace
 
 	std::string get_texture_wrap_mode(u8 wrap)
 	{
-		switch (wrap)
+		switch (rsx::to_texture_wrap_mode(wrap))
 		{
-		case CELL_GCM_TEXTURE_WRAP: return "WRAP";
-		case CELL_GCM_TEXTURE_MIRROR: return "MIRROR";
-		case CELL_GCM_TEXTURE_CLAMP_TO_EDGE: return "CLAMP_TO_EDGE";
-		case CELL_GCM_TEXTURE_BORDER: return "BORDER";
-		case CELL_GCM_TEXTURE_CLAMP: return "CLAMP";
-		case CELL_GCM_TEXTURE_MIRROR_ONCE_CLAMP_TO_EDGE: return "MIRROR_ONCE_CLAMP_TO_EDGE";
-		case CELL_GCM_TEXTURE_MIRROR_ONCE_BORDER: return "MIRROR_ONCE_BORDER";
-		case CELL_GCM_TEXTURE_MIRROR_ONCE_CLAMP: return "MIRROR_ONCE_CLAMP";
+		case rsx::texture_wrap_mode::wrap: return "WRAP";
+		case rsx::texture_wrap_mode::mirror: return "MIRROR";
+		case rsx::texture_wrap_mode::clamp_to_edge: return "CLAMP_TO_EDGE";
+		case rsx::texture_wrap_mode::border: return "BORDER";
+		case rsx::texture_wrap_mode::clamp: return "CLAMP";
+		case rsx::texture_wrap_mode::mirror_once_clamp_to_edge: return "MIRROR_ONCE_CLAMP_TO_EDGE";
+		case rsx::texture_wrap_mode::mirror_once_border: return "MIRROR_ONCE_BORDER";
+		case rsx::texture_wrap_mode::mirror_once_clamp: return "MIRROR_ONCE_CLAMP";
 		}
 		return "Error";
 	}
@@ -1289,16 +1398,16 @@ namespace
 
 	std::string get_texture_max_aniso_name(u8 aniso)
 	{
-		switch (aniso)
+		switch (rsx::to_texture_max_anisotropy(aniso))
 		{
-		case CELL_GCM_TEXTURE_MAX_ANISO_1: return "1";
-		case CELL_GCM_TEXTURE_MAX_ANISO_2: return "2";
-		case CELL_GCM_TEXTURE_MAX_ANISO_4: return "4";
-		case CELL_GCM_TEXTURE_MAX_ANISO_6: return "6";
-		case CELL_GCM_TEXTURE_MAX_ANISO_8: return "8";
-		case CELL_GCM_TEXTURE_MAX_ANISO_10: return "10";
-		case CELL_GCM_TEXTURE_MAX_ANISO_12: return "12";
-		case CELL_GCM_TEXTURE_MAX_ANISO_16: return "16";
+		case rsx::texture_max_anisotropy::x1 : return "1";
+		case rsx::texture_max_anisotropy::x2: return "2";
+		case rsx::texture_max_anisotropy::x4: return "4";
+		case rsx::texture_max_anisotropy::x6: return "6";
+		case rsx::texture_max_anisotropy::x8: return "8";
+		case rsx::texture_max_anisotropy::x10: return "10";
+		case rsx::texture_max_anisotropy::x12: return "12";
+		case rsx::texture_max_anisotropy::x16: return "16";
 		}
 		return "Error";
 	}

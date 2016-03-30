@@ -1,4 +1,5 @@
 #pragma once
+#include "GCM.h"
 
 namespace rsx
 {
@@ -18,7 +19,7 @@ namespace rsx
 		u8   location() const;
 		bool cubemap() const;
 		u8   border_type() const;
-		u8   dimension() const;
+		rsx::texture_dimension   dimension() const;
 		u8   format() const;
 		u16  mipmap() const;
 		/**
@@ -28,9 +29,9 @@ namespace rsx
 		u16 get_exact_mipmap_count() const;
 
 		// Address
-		u8 wrap_s() const;
-		u8 wrap_t() const;
-		u8 wrap_r() const;
+		rsx::texture_wrap_mode wrap_s() const;
+		rsx::texture_wrap_mode wrap_t() const;
+		rsx::texture_wrap_mode wrap_r() const;
 		u8 unsigned_remap() const;
 		u8 zfunc() const;
 		u8 gamma() const;
@@ -41,7 +42,7 @@ namespace rsx
 		bool enabled() const;
 		u16  min_lod() const;
 		u16  max_lod() const;
-		u8   max_aniso() const;
+		rsx::texture_max_anisotropy   max_aniso() const;
 		bool alpha_kill_enabled() const;
 
 		// Control1
@@ -49,8 +50,8 @@ namespace rsx
 
 		// Filter
 		float bias() const;
-		u8  min_filter() const;
-		u8  mag_filter() const;
+		rsx::texture_minify_filter  min_filter() const;
+		rsx::texture_magnify_filter  mag_filter() const;
 		u8  convolution_filter() const;
 		bool a_signed() const;
 		bool r_signed() const;
