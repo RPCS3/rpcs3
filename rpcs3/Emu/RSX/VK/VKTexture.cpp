@@ -138,7 +138,7 @@ namespace vk
 		for (const rsx_subresource_layout &layout : subresource_layout)
 		{
 			u32 row_pitch = align(layout.width_in_block * block_size_in_bytes, 256);
-			size_t image_linear_size = row_pitch * layout.height_in_block * layout.depth;
+			u32 image_linear_size = row_pitch * layout.height_in_block * layout.depth;
 			size_t offset_in_buffer = upload_heap.alloc<512>(image_linear_size);
 
 			void *mapped_buffer = upload_buffer->map(offset_in_buffer, image_linear_size);

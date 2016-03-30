@@ -99,7 +99,7 @@ namespace vk
 			indices[i] = i;
 
 		indices[i] = 0;
-		return indices.size();
+		return static_cast<u32>(indices.size());
 	}
 
 	template<typename T>
@@ -112,7 +112,7 @@ namespace vk
 			indices[i] = original_indices[i];
 
 		indices[i] = original_indices[0];
-		return indices.size();
+		return static_cast<u32>(indices.size());
 	}
 
 	/**
@@ -454,7 +454,7 @@ VKGSRender::upload_vertex_data()
 						{
 						case rsx::vertex_base_type::f:
 						{
-							const u32 num_stored_verts = data_size / (sizeof(float) * vertex_info.size);
+							const u32 num_stored_verts = static_cast<u32>(data_size / (sizeof(float) * vertex_info.size));
 							vk::expand_array_components<float, 3, 4, 1>(reinterpret_cast<float*>(vertex_data.data()), converted_buffer, num_stored_verts);
 							break;
 						}
@@ -532,7 +532,7 @@ VKGSRender::upload_vertex_data()
 		}
 		else
 		{
-			index_count = get_index_count(draw_mode, vertex_draw_count);
+			index_count = static_cast<u32>(get_index_count(draw_mode, vertex_draw_count));
 			std::vector<u16> indices(index_count);
 
 			if (is_indexed_draw)
@@ -568,7 +568,7 @@ VKGSRender::upload_vertex_data()
 		index_format = VK_INDEX_TYPE_UINT16;
 		VkFormat fmt = VK_FORMAT_R16_UINT;
 		
-		u32 elem_size = get_index_type_size(indexed_type);
+		u32 elem_size = static_cast<u32>(get_index_type_size(indexed_type));
 
 		if (indexed_type == rsx::index_array_type::u32)
 		{
@@ -576,7 +576,7 @@ VKGSRender::upload_vertex_data()
 			fmt = VK_FORMAT_R32_UINT;
 		}
 
-		u32 index_sz = vertex_index_array.size() / elem_size;
+		u32 index_sz = static_cast<u32>(vertex_index_array.size()) / elem_size;
 		if (index_sz != vertex_draw_count)
 			LOG_ERROR(RSX, "Vertex draw count mismatch!");
 

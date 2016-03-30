@@ -259,7 +259,7 @@ namespace
 
 		VkRenderPassCreateInfo rp_info = {};
 		rp_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-		rp_info.attachmentCount = attachments.size();
+		rp_info.attachmentCount = static_cast<uint32_t>(attachments.size());
 		rp_info.pAttachments = attachments.data();
 		rp_info.subpassCount = 1;
 		rp_info.pSubpasses = &subpass;
@@ -337,7 +337,7 @@ namespace
 		VkDescriptorSetLayoutCreateInfo infos = {};
 		infos.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
 		infos.pBindings = bindings.data();
-		infos.bindingCount = bindings.size();
+		infos.bindingCount = static_cast<uint32_t>(bindings.size());
 
 		VkDescriptorSetLayout set_layout;
 		CHECK_RESULT(vkCreateDescriptorSetLayout(dev, &infos, nullptr, &set_layout));
@@ -419,7 +419,7 @@ VKGSRender::VKGSRender() : GSRender(frame_type::Vulkan)
 
 	std::vector<VkDescriptorPoolSize> sizes{ uniform_buffer_pool, uniform_texel_pool, texture_pool };
 
-	descriptor_pool.create(*m_device, sizes.data(), sizes.size());
+	descriptor_pool.create(*m_device, sizes.data(), static_cast<uint32_t>(sizes.size()));
 
 
 	null_buffer = std::make_unique<vk::buffer>(*m_device, 32, m_memory_type_mapping.host_visible_coherent, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, 0);
@@ -438,7 +438,7 @@ VKGSRender::VKGSRender() : GSRender(frame_type::Vulkan)
 
 VKGSRender::~VKGSRender()
 {
-	CHECK_RESULT(vkQueueWaitIdle(m_swap_chain->get_present_queue()));
+	vkQueueWaitIdle(m_swap_chain->get_present_queue());
 
 	if (m_present_semaphore)
 	{
@@ -1002,7 +1002,7 @@ void VKGSRender::close_and_submit_command_buffer(const std::vector<VkSemaphore> 
 	infos.pCommandBuffers = &cmd;
 	infos.pWaitDstStageMask = &pipe_stage_flags;
 	infos.pWaitSemaphores = semaphores.data();
-	infos.waitSemaphoreCount = semaphores.size();
+	infos.waitSemaphoreCount = static_cast<uint32_t>(semaphores.size());
 	infos.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
 	CHECK_RESULT(vkQueueSubmit(m_swap_chain->get_present_queue(), 1, &infos, fence));
@@ -1071,7 +1071,7 @@ void VKGSRender::prepare_rtts()
 		fbo_images.push_back(std::make_unique<vk::image_view>(*m_device, raw->value, VK_IMAGE_VIEW_TYPE_2D, raw->info.format, vk::default_component_map(), subres));
 	}
 
-	m_draw_buffers_count = fbo_images.size();
+	m_draw_buffers_count = static_cast<u32>(fbo_images.size());
 
 	if (std::get<1>(m_rtts.m_bound_depth_stencil) != nullptr)
 	{

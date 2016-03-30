@@ -23,7 +23,7 @@ namespace rsx
 			rtt.reset(new vk::image(device, mem_mapping.device_local,
 				VK_IMAGE_TYPE_2D,
 				requested_format,
-				width, height, 1, 1, 1,
+				static_cast<uint32_t>(width), static_cast<uint32_t>(height), 1, 1, 1,
 				VK_SAMPLE_COUNT_1_BIT,
 				VK_IMAGE_LAYOUT_UNDEFINED,
 				VK_IMAGE_TILING_OPTIMAL,
@@ -55,7 +55,7 @@ namespace rsx
 
 			std::unique_ptr<vk::image> ds;
 			ds.reset(new vk::image(device, mem_mapping.device_local,
-				VK_IMAGE_TYPE_2D, requested_format, width, height, 1, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT|VK_IMAGE_USAGE_SAMPLED_BIT, 0));
+				VK_IMAGE_TYPE_2D, requested_format, static_cast<uint32_t>(width), static_cast<uint32_t>(height), 1, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT|VK_IMAGE_USAGE_SAMPLED_BIT, 0));
 			change_image_layout(*cmd, ds->value, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL, range);
 
 			//Clear new surface..

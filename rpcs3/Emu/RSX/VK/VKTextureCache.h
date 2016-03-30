@@ -119,12 +119,12 @@ namespace vk
 			obj.protected_rgn_end = (u32)align(obj.native_rsx_size, memory_page_size);
 			obj.protected_rgn_end += obj.protected_rgn_start;
 
-			lock_memory_region(obj.protected_rgn_start, obj.native_rsx_size);
+			lock_memory_region(static_cast<u32>(obj.protected_rgn_start), static_cast<u32>(obj.native_rsx_size));
 		}
 
 		void unlock_object(cached_texture_object &obj)
 		{
-			unlock_memory_region(obj.protected_rgn_start, obj.native_rsx_size);
+			unlock_memory_region(static_cast<u32>(obj.protected_rgn_start), static_cast<u32>(obj.native_rsx_size));
 		}
 
 		void purge_dirty_textures()
