@@ -65,21 +65,20 @@ VkFilter get_mag_filter(u8 mag_filter)
 	throw EXCEPTION("Invalid mag filter (0x%x)", mag_filter);
 }
 
-VkSamplerAddressMode vk_wrap_mode(u32 gcm_wrap)
+VkSamplerAddressMode vk_wrap_mode(rsx::texture_wrap_mode gcm_wrap)
 {
 	switch (gcm_wrap)
 	{
-	case CELL_GCM_TEXTURE_WRAP: return VK_SAMPLER_ADDRESS_MODE_REPEAT;
-	case CELL_GCM_TEXTURE_MIRROR: return VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
-	case CELL_GCM_TEXTURE_CLAMP_TO_EDGE: return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-	case CELL_GCM_TEXTURE_BORDER: return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
-	case CELL_GCM_TEXTURE_CLAMP: return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-	case CELL_GCM_TEXTURE_MIRROR_ONCE_CLAMP_TO_EDGE: return VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE;
-	case CELL_GCM_TEXTURE_MIRROR_ONCE_BORDER: return VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE;
-	case CELL_GCM_TEXTURE_MIRROR_ONCE_CLAMP: return VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE;
-	default:
-		throw EXCEPTION("unhandled texture clamp mode 0x%X", gcm_wrap);
+	case rsx::texture_wrap_mode::wrap: return VK_SAMPLER_ADDRESS_MODE_REPEAT;
+	case rsx::texture_wrap_mode::mirror: return VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
+	case rsx::texture_wrap_mode::clamp_to_edge: return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+	case rsx::texture_wrap_mode::border: return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+	case rsx::texture_wrap_mode::clamp: return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+	case rsx::texture_wrap_mode::mirror_once_clamp_to_edge: return VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE;
+	case rsx::texture_wrap_mode::mirror_once_border: return VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE;
+	case rsx::texture_wrap_mode::mirror_once_clamp: return VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE;
 	}
+	throw EXCEPTION("unhandled texture clamp mode");
 }
 
 float max_aniso(u32 gcm_aniso)

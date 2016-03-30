@@ -162,6 +162,20 @@ namespace rsx
 	};
 
 	texture_dimension to_texture_dimension(u8 in);
+
+	enum class texture_wrap_mode : u8
+	{
+		wrap,
+		mirror,
+		clamp_to_edge,
+		border,
+		clamp,
+		mirror_once_clamp_to_edge,
+		mirror_once_border,
+		mirror_once_clamp,
+	};
+
+	texture_wrap_mode to_texture_wrap_mode(u8 in);
 }
 
 enum
@@ -248,16 +262,6 @@ enum
 	CELL_GCM_TEXTURE_MAX_ANISO_10 = 5,
 	CELL_GCM_TEXTURE_MAX_ANISO_12 = 6,
 	CELL_GCM_TEXTURE_MAX_ANISO_16 = 7,
-
-	// Wrap
-	CELL_GCM_TEXTURE_WRAP                      = 1,
-	CELL_GCM_TEXTURE_MIRROR                    = 2,
-	CELL_GCM_TEXTURE_CLAMP_TO_EDGE             = 3,
-	CELL_GCM_TEXTURE_BORDER                    = 4,
-	CELL_GCM_TEXTURE_CLAMP                     = 5,
-	CELL_GCM_TEXTURE_MIRROR_ONCE_CLAMP_TO_EDGE = 6,
-	CELL_GCM_TEXTURE_MIRROR_ONCE_BORDER        = 7,
-	CELL_GCM_TEXTURE_MIRROR_ONCE_CLAMP         = 8,
 };
 
 // GCM Surface

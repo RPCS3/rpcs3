@@ -81,19 +81,19 @@ namespace rsx
 		return std::min(mipmap(), max_mipmap_count);
 	}
 
-	u8 texture::wrap_s() const
+	rsx::texture_wrap_mode texture::wrap_s() const
 	{
-		return ((method_registers[NV4097_SET_TEXTURE_ADDRESS + (m_index * 8)]) & 0xf);
+		return rsx::to_texture_wrap_mode((method_registers[NV4097_SET_TEXTURE_ADDRESS + (m_index * 8)]) & 0xf);
 	}
 
-	u8 texture::wrap_t() const
+	rsx::texture_wrap_mode texture::wrap_t() const
 	{
-		return ((method_registers[NV4097_SET_TEXTURE_ADDRESS + (m_index * 8)] >> 8) & 0xf);
+		return rsx::to_texture_wrap_mode((method_registers[NV4097_SET_TEXTURE_ADDRESS + (m_index * 8)] >> 8) & 0xf);
 	}
 
-	u8 texture::wrap_r() const
+	rsx::texture_wrap_mode texture::wrap_r() const
 	{
-		return ((method_registers[NV4097_SET_TEXTURE_ADDRESS + (m_index * 8)] >> 16) & 0xf);
+		return rsx::to_texture_wrap_mode((method_registers[NV4097_SET_TEXTURE_ADDRESS + (m_index * 8)] >> 16) & 0xf);
 	}
 
 	u8 texture::unsigned_remap() const

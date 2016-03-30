@@ -15,7 +15,7 @@ namespace vk
 
 	std::tuple<VkFilter, VkSamplerMipmapMode> get_min_filter_and_mip(u8 min_filter);
 	VkFilter get_mag_filter(u8 mag_filter);
-	VkSamplerAddressMode vk_wrap_mode(u32 gcm_wrap);
+	VkSamplerAddressMode vk_wrap_mode(rsx::texture_wrap_mode gcm_wrap);
 	float max_aniso(u32 gcm_aniso);
 	VkComponentMapping get_component_mapping(u32 format, u8 swizzle_mask);
 	VkPrimitiveTopology get_appropriate_topology(rsx::primitive_type& mode, bool &requires_modification);

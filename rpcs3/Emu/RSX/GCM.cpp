@@ -877,7 +877,32 @@ enum
 	CELL_GCM_SURFACE_X8B8G8R8_O8B8G8R8 = 15,
 	CELL_GCM_SURFACE_A8B8G8R8 = 16,
 
+	// Wrap
+	CELL_GCM_TEXTURE_WRAP = 1,
+	CELL_GCM_TEXTURE_MIRROR = 2,
+	CELL_GCM_TEXTURE_CLAMP_TO_EDGE = 3,
+	CELL_GCM_TEXTURE_BORDER = 4,
+	CELL_GCM_TEXTURE_CLAMP = 5,
+	CELL_GCM_TEXTURE_MIRROR_ONCE_CLAMP_TO_EDGE = 6,
+	CELL_GCM_TEXTURE_MIRROR_ONCE_BORDER = 7,
+	CELL_GCM_TEXTURE_MIRROR_ONCE_CLAMP = 8,
 };
+
+rsx::texture_wrap_mode rsx::to_texture_wrap_mode(u8 in)
+{
+	switch (in)
+	{
+	case CELL_GCM_TEXTURE_WRAP: return rsx::texture_wrap_mode::wrap;
+	case CELL_GCM_TEXTURE_MIRROR: return rsx::texture_wrap_mode::mirror;
+	case CELL_GCM_TEXTURE_CLAMP_TO_EDGE: return rsx::texture_wrap_mode::clamp_to_edge;
+	case CELL_GCM_TEXTURE_BORDER: return rsx::texture_wrap_mode::border;
+	case CELL_GCM_TEXTURE_CLAMP: return rsx::texture_wrap_mode::clamp;
+	case CELL_GCM_TEXTURE_MIRROR_ONCE_CLAMP_TO_EDGE: return rsx::texture_wrap_mode::mirror_once_clamp_to_edge;
+	case CELL_GCM_TEXTURE_MIRROR_ONCE_BORDER: return rsx::texture_wrap_mode::mirror_once_border;
+	case CELL_GCM_TEXTURE_MIRROR_ONCE_CLAMP: return rsx::texture_wrap_mode::mirror_once_clamp;
+	}
+	throw EXCEPTION("Unknow wrap mode %x", in);
+}
 
 rsx::surface_target rsx::to_surface_target(u8 in)
 {
@@ -1266,16 +1291,16 @@ namespace
 
 	std::string get_texture_wrap_mode(u8 wrap)
 	{
-		switch (wrap)
+		switch (rsx::to_texture_wrap_mode(wrap))
 		{
-		case CELL_GCM_TEXTURE_WRAP: return "WRAP";
-		case CELL_GCM_TEXTURE_MIRROR: return "MIRROR";
-		case CELL_GCM_TEXTURE_CLAMP_TO_EDGE: return "CLAMP_TO_EDGE";
-		case CELL_GCM_TEXTURE_BORDER: return "BORDER";
-		case CELL_GCM_TEXTURE_CLAMP: return "CLAMP";
-		case CELL_GCM_TEXTURE_MIRROR_ONCE_CLAMP_TO_EDGE: return "MIRROR_ONCE_CLAMP_TO_EDGE";
-		case CELL_GCM_TEXTURE_MIRROR_ONCE_BORDER: return "MIRROR_ONCE_BORDER";
-		case CELL_GCM_TEXTURE_MIRROR_ONCE_CLAMP: return "MIRROR_ONCE_CLAMP";
+		case rsx::texture_wrap_mode::wrap: return "WRAP";
+		case rsx::texture_wrap_mode::mirror: return "MIRROR";
+		case rsx::texture_wrap_mode::clamp_to_edge: return "CLAMP_TO_EDGE";
+		case rsx::texture_wrap_mode::border: return "BORDER";
+		case rsx::texture_wrap_mode::clamp: return "CLAMP";
+		case rsx::texture_wrap_mode::mirror_once_clamp_to_edge: return "MIRROR_ONCE_CLAMP_TO_EDGE";
+		case rsx::texture_wrap_mode::mirror_once_border: return "MIRROR_ONCE_BORDER";
+		case rsx::texture_wrap_mode::mirror_once_clamp: return "MIRROR_ONCE_CLAMP";
 		}
 		return "Error";
 	}

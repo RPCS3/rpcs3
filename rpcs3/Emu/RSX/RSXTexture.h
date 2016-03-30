@@ -29,9 +29,9 @@ namespace rsx
 		u16 get_exact_mipmap_count() const;
 
 		// Address
-		u8 wrap_s() const;
-		u8 wrap_t() const;
-		u8 wrap_r() const;
+		rsx::texture_wrap_mode wrap_s() const;
+		rsx::texture_wrap_mode wrap_t() const;
+		rsx::texture_wrap_mode wrap_r() const;
 		u8 unsigned_remap() const;
 		u8 zfunc() const;
 		u8 gamma() const;

@@ -46,7 +46,7 @@ UINT get_texture_max_aniso(u8 aniso);
 /**
  * Convert texture wrap mode to D3D12_TEXTURE_ADDRESS_MODE
  */
-D3D12_TEXTURE_ADDRESS_MODE get_texture_wrap_mode(u8 wrap);
+D3D12_TEXTURE_ADDRESS_MODE get_texture_wrap_mode(rsx::texture_wrap_mode wrap);
 
 /**
  * Convert minify and magnify filter to D3D12_FILTER

@@ -200,18 +200,18 @@ namespace rsx
 			glGenTextures(1, &m_id);
 		}
 
-		int texture::gl_wrap(int wrap)
+		int texture::gl_wrap(rsx::texture_wrap_mode wrap)
 		{
 			switch (wrap)
 			{
-			case CELL_GCM_TEXTURE_WRAP: return GL_REPEAT;
-			case CELL_GCM_TEXTURE_MIRROR: return GL_MIRRORED_REPEAT;
-			case CELL_GCM_TEXTURE_CLAMP_TO_EDGE: return GL_CLAMP_TO_EDGE;
-			case CELL_GCM_TEXTURE_BORDER: return GL_CLAMP_TO_BORDER;
-			case CELL_GCM_TEXTURE_CLAMP: return GL_CLAMP;
-			case CELL_GCM_TEXTURE_MIRROR_ONCE_CLAMP_TO_EDGE: return GL_MIRROR_CLAMP_TO_EDGE_EXT;
-			case CELL_GCM_TEXTURE_MIRROR_ONCE_BORDER: return GL_MIRROR_CLAMP_TO_BORDER_EXT;
-			case CELL_GCM_TEXTURE_MIRROR_ONCE_CLAMP: return GL_MIRROR_CLAMP_EXT;
+			case rsx::texture_wrap_mode::wrap: return GL_REPEAT;
+			case rsx::texture_wrap_mode::mirror: return GL_MIRRORED_REPEAT;
+			case rsx::texture_wrap_mode::clamp_to_edge: return GL_CLAMP_TO_EDGE;
+			case rsx::texture_wrap_mode::border: return GL_CLAMP_TO_BORDER;
+			case rsx::texture_wrap_mode::clamp: return GL_CLAMP;
+			case rsx::texture_wrap_mode::mirror_once_clamp_to_edge: return GL_MIRROR_CLAMP_TO_EDGE_EXT;
+			case rsx::texture_wrap_mode::mirror_once_border: return GL_MIRROR_CLAMP_TO_BORDER_EXT;
+			case rsx::texture_wrap_mode::mirror_once_clamp: return GL_MIRROR_CLAMP_EXT;
 			}
 
 			LOG_ERROR(RSX, "Texture wrap error: bad wrap (%d).", wrap);

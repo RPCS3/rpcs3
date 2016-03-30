@@ -1,4 +1,5 @@
 #include "OpenGL.h"
+#include "../GCM.h"
 
 namespace rsx
 {
@@ -14,7 +15,7 @@ namespace rsx
 		public:
 			void create();
 
-			int gl_wrap(int wrap);
+			int gl_wrap(rsx::texture_wrap_mode in);
 
 			float max_aniso(int aniso);
 

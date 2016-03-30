@@ -188,18 +188,18 @@ UINT get_texture_max_aniso(u8 aniso)
 	throw EXCEPTION("Invalid texture max aniso (0x%x)", aniso);
 }
 
-D3D12_TEXTURE_ADDRESS_MODE get_texture_wrap_mode(u8 wrap)
+D3D12_TEXTURE_ADDRESS_MODE get_texture_wrap_mode(rsx::texture_wrap_mode wrap)
 {
 	switch (wrap)
 	{
-	case CELL_GCM_TEXTURE_WRAP: return D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-	case CELL_GCM_TEXTURE_MIRROR: return D3D12_TEXTURE_ADDRESS_MODE_MIRROR;
-	case CELL_GCM_TEXTURE_CLAMP_TO_EDGE: return D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-	case CELL_GCM_TEXTURE_BORDER: return D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-	case CELL_GCM_TEXTURE_CLAMP: return D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-	case CELL_GCM_TEXTURE_MIRROR_ONCE_CLAMP_TO_EDGE: return D3D12_TEXTURE_ADDRESS_MODE_MIRROR_ONCE;
-	case CELL_GCM_TEXTURE_MIRROR_ONCE_BORDER: return D3D12_TEXTURE_ADDRESS_MODE_MIRROR_ONCE;
-	case CELL_GCM_TEXTURE_MIRROR_ONCE_CLAMP: return D3D12_TEXTURE_ADDRESS_MODE_MIRROR_ONCE;
+	case rsx::texture_wrap_mode::wrap: return D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+	case rsx::texture_wrap_mode::mirror: return D3D12_TEXTURE_ADDRESS_MODE_MIRROR;
+	case rsx::texture_wrap_mode::clamp_to_edge: return D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+	case rsx::texture_wrap_mode::border: return D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+	case rsx::texture_wrap_mode::clamp: return D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+	case rsx::texture_wrap_mode::mirror_once_clamp_to_edge: return D3D12_TEXTURE_ADDRESS_MODE_MIRROR_ONCE;
+	case rsx::texture_wrap_mode::mirror_once_border: return D3D12_TEXTURE_ADDRESS_MODE_MIRROR_ONCE;
+	case rsx::texture_wrap_mode::mirror_once_clamp: return D3D12_TEXTURE_ADDRESS_MODE_MIRROR_ONCE;
 	}
 	throw EXCEPTION("Invalid texture wrap mode (0x%x)", wrap);
 }
