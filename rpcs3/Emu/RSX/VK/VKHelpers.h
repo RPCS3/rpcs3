@@ -499,7 +499,7 @@ namespace vk
 		void *map(u64 offset, u64 size)
 		{
 			void *data = nullptr;
-			CHECK_RESULT(vkMapMemory(m_device, memory->memory, offset, size, 0, &data));
+			CHECK_RESULT(vkMapMemory(m_device, memory->memory, offset, std::max<u64>(size, 1u), 0, &data));
 			return data;
 		}
 
