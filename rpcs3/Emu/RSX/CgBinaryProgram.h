@@ -333,7 +333,7 @@ public:
 				auto& vmfprog = vm::ps3::_ref<CgBinaryFragmentProgram>(ptr + vmprog.program);
 				u32 size;
 				u32 ctrl = (vmfprog.outputFromH0 ? 0 : 0x40) | (vmfprog.depthReplace ? 0xe : 0);
-				std::vector<texture_dimension> td;
+				std::vector<texture_dimension_extended> td;
 				RSXFragmentProgram prog;
 				prog.size = 0, prog.addr = vm::base(ptr + vmprog.ucode), prog.offset = 0, prog.ctrl = ctrl;
 				GLFragmentDecompilerThread(m_glsl_shader, param_array, prog, size).Task();

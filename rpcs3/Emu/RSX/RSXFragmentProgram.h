@@ -205,7 +205,11 @@ static const std::string rsx_fp_op_names[] =
 	"NULL", "BRK", "CAL", "IFE", "LOOP", "REP", "RET"
 };
 
-enum class texture_dimension : u8
+
+/**
+ * Use an extra cubemap format
+ */
+enum class texture_dimension_extended : u8
 {
 	texture_dimension_1d = 0,
 	texture_dimension_2d = 1,
@@ -230,15 +234,15 @@ struct RSXFragmentProgram
 	rsx::fog_mode fog_equation;
 	u16 height;
 
-	texture_dimension get_texture_dimension(u8 id) const
+	texture_dimension_extended get_texture_dimension(u8 id) const
 	{
-		return (texture_dimension)((texture_dimensions >> (id * 2)) & 0x3);
+		return (texture_dimension_extended)((texture_dimensions >> (id * 2)) & 0x3);
 	}
 
-	void set_texture_dimension(const std::array<texture_dimension, 16> &dimensions)
+	void set_texture_dimension(const std::array<texture_dimension_extended, 16> &dimensions)
 	{
 		size_t id = 0;
-		for (const texture_dimension &dim : dimensions)
+		for (const texture_dimension_extended &dim : dimensions)
 		{
 			texture_dimensions &= ~(0x3 << (id * 2));
 			u8 d = (u8)dim;

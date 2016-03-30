@@ -60,9 +60,9 @@ namespace rsx
 		return ((method_registers[NV4097_SET_TEXTURE_FORMAT + (m_index * 8)] >> 3) & 0x1);
 	}
 
-	u8 texture::dimension() const
+	rsx::texture_dimension texture::dimension() const
 	{
-		return ((method_registers[NV4097_SET_TEXTURE_FORMAT + (m_index * 8)] >> 4) & 0xf);
+		return rsx::to_texture_dimension((method_registers[NV4097_SET_TEXTURE_FORMAT + (m_index * 8)] >> 4) & 0xf);
 	}
 
 	u8 texture::format() const

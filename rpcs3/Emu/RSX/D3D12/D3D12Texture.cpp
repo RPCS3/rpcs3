@@ -47,17 +47,17 @@ namespace
 		const u8 format = texture.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
 		DXGI_FORMAT dxgi_format = get_texture_format(format);
 
-		if (texture.dimension() == 1) // 1D texture or cubemap
+		if (texture.dimension() == rsx::texture_dimension::dimension1d)
 		{
 			return CD3DX12_RESOURCE_DESC::Tex1D(dxgi_format, texture.width(), 1, texture.get_exact_mipmap_count());
 		}
-		else if (texture.dimension() == 2) // 2D texture or cubemap
+		else if (texture.dimension() == rsx::texture_dimension::dimension2d)
 		{
 //			if (texture.depth() < 2);
 			size_t depth = (texture.cubemap()) ? 6 : 1;
 			return CD3DX12_RESOURCE_DESC::Tex2D(dxgi_format, texture.width(), texture.height(), (UINT)depth, texture.get_exact_mipmap_count());
 		}
-		else if (texture.dimension() == 3) // 3d texture
+		else if (texture.dimension() == rsx::texture_dimension::dimension3d)
 		{
 			return CD3DX12_RESOURCE_DESC::Tex3D(dxgi_format, texture.width(), texture.height(), texture.depth(), texture.get_exact_mipmap_count());
 		}
@@ -146,13 +146,13 @@ ComPtr<ID3D12Resource> upload_single_texture(
 D3D12_SHADER_RESOURCE_VIEW_DESC get_srv_descriptor_with_dimensions(const rsx::texture &tex)
 {
 	D3D12_SHADER_RESOURCE_VIEW_DESC shared_resource_view_desc = {};
-	if (tex.dimension() == 1)
+	if (tex.dimension() == rsx::texture_dimension::dimension1d)
 	{
 		shared_resource_view_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE1D;
 		shared_resource_view_desc.Texture1D.MipLevels = tex.get_exact_mipmap_count();
 		return shared_resource_view_desc;
 	}
-	if (tex.dimension() == 2)
+	if (tex.dimension() == rsx::texture_dimension::dimension2d)
 	{
 		if (tex.cubemap())
 		{
@@ -164,7 +164,7 @@ D3D12_SHADER_RESOURCE_VIEW_DESC get_srv_descriptor_with_dimensions(const rsx::te
 		shared_resource_view_desc.Texture2D.MipLevels = tex.get_exact_mipmap_count();
 		return shared_resource_view_desc;
 	}
-	if (tex.dimension() == 3)
+	if (tex.dimension() == rsx::texture_dimension::dimension3d)
 	{
 		shared_resource_view_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE3D;
 		shared_resource_view_desc.Texture3D.MipLevels = tex.get_exact_mipmap_count();

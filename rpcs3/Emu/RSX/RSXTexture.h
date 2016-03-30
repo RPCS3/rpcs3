@@ -1,4 +1,5 @@
 #pragma once
+#include "GCM.h"
 
 namespace rsx
 {
@@ -18,7 +19,7 @@ namespace rsx
 		u8   location() const;
 		bool cubemap() const;
 		u8   border_type() const;
-		u8   dimension() const;
+		rsx::texture_dimension   dimension() const;
 		u8   format() const;
 		u16  mipmap() const;
 		/**

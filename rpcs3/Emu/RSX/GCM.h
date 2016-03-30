@@ -153,6 +153,15 @@ namespace rsx
 	};
 
 	fog_mode to_fog_mode(u32 in);
+
+	enum class texture_dimension : u8
+	{
+		dimension1d,
+		dimension2d,
+		dimension3d,
+	};
+
+	texture_dimension to_texture_dimension(u8 in);
 }
 
 enum

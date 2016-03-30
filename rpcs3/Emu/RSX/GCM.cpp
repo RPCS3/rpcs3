@@ -830,6 +830,16 @@ rsx::fog_mode rsx::to_fog_mode(u32 in)
 	throw EXCEPTION("Wrong fog mode %x", in);
 }
 
+rsx::texture_dimension rsx::to_texture_dimension(u8 in)
+{
+	switch (in)
+	{
+	case 1: return rsx::texture_dimension::dimension1d;
+	case 2: return rsx::texture_dimension::dimension2d;
+	case 3: return rsx::texture_dimension::dimension3d;
+	}
+	throw EXCEPTION("Wrong texture dimension %d", in);
+}
 
 enum
 {
@@ -1097,6 +1107,17 @@ namespace
 		case rsx::surface_color_format::a8b8g8r8: return "CELL_GCM_SURFACE_A8B8G8R8";
 		}
 		return "Error";
+	}
+
+	std::string texture_dimension(u8 dim)
+	{
+		switch(rsx::to_texture_dimension(dim))
+		{
+		case rsx::texture_dimension::dimension1d: return "1D";
+		case rsx::texture_dimension::dimension2d: return "2D";
+		case rsx::texture_dimension::dimension3d: return "3D";
+		}
+		return "";
 	}
 
 	std::string surface_target(u32 target)
