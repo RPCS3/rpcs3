@@ -724,19 +724,8 @@ namespace rsx
 		{
 			if (!textures[i].enabled())
 				texture_dimensions[i] = texture_dimension_extended::texture_dimension_2d;
-			else if (textures[i].dimension() == rsx::texture_dimension::dimension1d)
-				texture_dimensions[i] = texture_dimension_extended::texture_dimension_1d;
-			else if (textures[i].dimension() == rsx::texture_dimension::dimension2d)
-			{
-				if (textures[i].cubemap())
-					texture_dimensions[i] = texture_dimension_extended::texture_dimension_cubemap;
-				else
-					texture_dimensions[i] = texture_dimension_extended::texture_dimension_2d;
-			}
-			else if (textures[i].dimension() == rsx::texture_dimension::dimension3d)
-				texture_dimensions[i] = texture_dimension_extended::texture_dimension_3d;
 			else
-				throw EXCEPTION("Unable to determine texture dimension");
+				texture_dimensions[i] = textures[i].get_extended_texture_dimension();
 			if (textures[i].enabled() && (textures[i].format() & CELL_GCM_TEXTURE_UN))
 				result.unnormalized_coords |= (1 << i);
 		}

@@ -1,5 +1,6 @@
 #pragma once
 #include "GCM.h"
+#include "RSXTexture.h"
 
 enum
 {
@@ -205,18 +206,6 @@ static const std::string rsx_fp_op_names[] =
 	"NULL", "BRK", "CAL", "IFE", "LOOP", "REP", "RET"
 };
 
-
-/**
- * Use an extra cubemap format
- */
-enum class texture_dimension_extended : u8
-{
-	texture_dimension_1d = 0,
-	texture_dimension_2d = 1,
-	texture_dimension_cubemap = 2,
-	texture_dimension_3d = 3,
-};
-
 struct RSXFragmentProgram
 {
 	u32 size;
@@ -234,15 +223,15 @@ struct RSXFragmentProgram
 	rsx::fog_mode fog_equation;
 	u16 height;
 
-	texture_dimension_extended get_texture_dimension(u8 id) const
+	rsx::texture_dimension_extended get_texture_dimension(u8 id) const
 	{
-		return (texture_dimension_extended)((texture_dimensions >> (id * 2)) & 0x3);
+		return (rsx::texture_dimension_extended)((texture_dimensions >> (id * 2)) & 0x3);
 	}
 
-	void set_texture_dimension(const std::array<texture_dimension_extended, 16> &dimensions)
+	void set_texture_dimension(const std::array<rsx::texture_dimension_extended, 16> &dimensions)
 	{
 		size_t id = 0;
-		for (const texture_dimension_extended &dim : dimensions)
+		for (const rsx::texture_dimension_extended &dim : dimensions)
 		{
 			texture_dimensions &= ~(0x3 << (id * 2));
 			u8 d = (u8)dim;

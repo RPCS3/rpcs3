@@ -116,32 +116,32 @@ u32 get_row_pitch_in_block(u16 width_in_block, size_t multiple_constraints_in_by
 	size_t divided = (width_in_block * sizeof(T) + multiple_constraints_in_byte - 1) / multiple_constraints_in_byte;
 	return static_cast<u32>(divided * multiple_constraints_in_byte / sizeof(T));
 }
+
+/**
+ * Since rsx ignore unused dimensionnality some app set them to 0.
+ * Use 1 value instead to be more general.
+ */
+std::tuple<u16, u16, u8> get_height_depth_layer(const rsx::texture &tex)
+{
+	switch (tex.get_extended_texture_dimension())
+	{
+	case rsx::texture_dimension_extended::texture_dimension_1d: return std::make_tuple(1, 1, 1);
+	case rsx::texture_dimension_extended::texture_dimension_2d: return std::make_tuple(tex.height(), 1, 1);
+	case rsx::texture_dimension_extended::texture_dimension_cubemap: return std::make_tuple(tex.height(), 1, 6);
+	case rsx::texture_dimension_extended::texture_dimension_3d: return std::make_tuple(tex.height(), tex.depth(), 1);
+	}
+	throw EXCEPTION("Unsupported texture dimension");
+}
 }
 
 std::vector<rsx_subresource_layout> get_subresources_layout(const rsx::texture &texture)
 {
-	u16 w = texture.width(), h = texture.height();
+	u16 w = texture.width();
+	u16 h;
 	u16 depth;
 	u8 layer;
 
-	if (texture.dimension() == rsx::texture_dimension::dimension1d)
-	{
-		depth = 1;
-		layer = 1;
-		h = 1;
-	}
-	else if (texture.dimension() == rsx::texture_dimension::dimension2d)
-	{
-		depth = 1;
-		layer = texture.cubemap() ? 6 : 1;
-	}
-	else if (texture.dimension() == rsx::texture_dimension::dimension3d)
-	{
-		depth = texture.depth();
-		layer = 1;
-	}
-	else
-		throw EXCEPTION("Unsupported texture dimension %d", texture.dimension());
+	std::tie(h, depth, layer) = get_height_depth_layer(texture);
 
 	int format = texture.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
 

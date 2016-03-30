@@ -65,6 +65,16 @@ namespace rsx
 		return rsx::to_texture_dimension((method_registers[NV4097_SET_TEXTURE_FORMAT + (m_index * 8)] >> 4) & 0xf);
 	}
 
+	rsx::texture_dimension_extended texture::get_extended_texture_dimension() const
+	{
+		switch (dimension())
+		{
+		case rsx::texture_dimension::dimension1d: return rsx::texture_dimension_extended::texture_dimension_1d;
+		case rsx::texture_dimension::dimension3d: return rsx::texture_dimension_extended::texture_dimension_2d;
+		case rsx::texture_dimension::dimension2d: return cubemap() ? rsx::texture_dimension_extended::texture_dimension_cubemap : rsx::texture_dimension_extended::texture_dimension_2d;
+		}
+	}
+
 	u8 texture::format() const
 	{
 		return ((method_registers[NV4097_SET_TEXTURE_FORMAT + (m_index * 8)] >> 8) & 0xff);
