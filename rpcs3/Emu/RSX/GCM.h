@@ -190,6 +190,28 @@ namespace rsx
 	};
 
 	texture_max_anisotropy to_texture_max_anisotropy(u8 in);
+
+	enum class texture_minify_filter : u8
+	{
+		nearest, ///< no filtering, mipmap base level
+		linear, ///< linear filtering, mipmap base level
+		nearest_nearest, ///< no filtering, closest mipmap level
+		linear_nearest, ///< linear filtering, closest mipmap level
+		nearest_linear, ///< no filtering, linear mix between closest mipmap levels
+		linear_linear, ///< linear filtering, linear mix between closest mipmap levels
+		convolution_min, ///< Unknow mode but looks close to linear_linear
+	};
+
+	texture_minify_filter to_texture_minify_filter(u8 in);
+
+	enum class texture_magnify_filter : u8
+	{
+		nearest, ///< no filtering
+		linear, ///< linear filtering
+		convolution_mag, ///< Unknow mode but looks close to linear
+	};
+
+	texture_magnify_filter to_texture_magnify_filter(u8 in);
 }
 
 enum
@@ -376,16 +398,6 @@ enum
 	CELL_GCM_TEXTURE_CYLINDRICAL_WRAP_ENABLE_TEX7_V = 1 << 29,
 	CELL_GCM_TEXTURE_CYLINDRICAL_WRAP_ENABLE_TEX7_P = 1 << 30,
 	CELL_GCM_TEXTURE_CYLINDRICAL_WRAP_ENABLE_TEX7_Q = 1 << 31,
-
-	// Texture Filter
-	CELL_GCM_TEXTURE_NEAREST = 1,
-	CELL_GCM_TEXTURE_LINEAR = 2,
-	CELL_GCM_TEXTURE_NEAREST_NEAREST = 3,
-	CELL_GCM_TEXTURE_LINEAR_NEAREST = 4,
-	CELL_GCM_TEXTURE_NEAREST_LINEAR = 5,
-	CELL_GCM_TEXTURE_LINEAR_LINEAR = 6,
-	CELL_GCM_TEXTURE_CONVOLUTION_MIN = 7,
-	CELL_GCM_TEXTURE_CONVOLUTION_MAG = 4,
 
 	CELL_GCM_COLOR_MASK_B = 1 << 0,
 	CELL_GCM_COLOR_MASK_G = 1 << 8,

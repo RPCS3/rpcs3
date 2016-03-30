@@ -157,26 +157,31 @@ namespace rsx
 {
 	namespace gl
 	{
-		static const int gl_tex_min_filter[] =
+		int gl_tex_min_filter(rsx::texture_minify_filter min_filter)
 		{
-			GL_NEAREST, // unused
-			GL_NEAREST,
-			GL_LINEAR,
-			GL_NEAREST_MIPMAP_NEAREST,
-			GL_LINEAR_MIPMAP_NEAREST,
-			GL_NEAREST_MIPMAP_LINEAR,
-			GL_LINEAR_MIPMAP_LINEAR,
-			GL_NEAREST, // CELL_GCM_TEXTURE_CONVOLUTION_MIN
-		};
+			switch (min_filter)
+			{
+			case rsx::texture_minify_filter::nearest: return GL_NEAREST;
+			case rsx::texture_minify_filter::linear: return GL_LINEAR;
+			case rsx::texture_minify_filter::nearest_nearest: return GL_NEAREST_MIPMAP_NEAREST;
+			case rsx::texture_minify_filter::linear_nearest: return GL_LINEAR_MIPMAP_NEAREST;
+			case rsx::texture_minify_filter::nearest_linear: return GL_NEAREST_MIPMAP_LINEAR;
+			case rsx::texture_minify_filter::linear_linear: return GL_LINEAR_MIPMAP_LINEAR;
+			case rsx::texture_minify_filter::convolution_min: return GL_LINEAR_MIPMAP_LINEAR;
+			}
+			throw EXCEPTION("Unknow min filter");
+		}
 
-		static const int gl_tex_mag_filter[] =
+		int gl_tex_mag_filter(rsx::texture_magnify_filter mag_filter)
 		{
-			GL_NEAREST, // unused
-			GL_NEAREST,
-			GL_LINEAR,
-			GL_NEAREST, // unused
-			GL_LINEAR  // CELL_GCM_TEXTURE_CONVOLUTION_MAG
-		};
+			switch (mag_filter)
+			{
+			case rsx::texture_magnify_filter::nearest: return GL_NEAREST;
+			case rsx::texture_magnify_filter::linear: return GL_LINEAR;
+			case rsx::texture_magnify_filter::convolution_mag: return GL_LINEAR;
+			}
+			throw EXCEPTION("Unknow mag filter");
+		}
 
 		static const int gl_tex_zfunc[] =
 		{
@@ -378,7 +383,7 @@ namespace rsx
 			glTexParameteri(m_target, GL_TEXTURE_MIN_LOD, (tex.min_lod() >> 8));
 			glTexParameteri(m_target, GL_TEXTURE_MAX_LOD, (tex.max_lod() >> 8));
 
-			int min_filter = gl_tex_min_filter[tex.min_filter()];
+			int min_filter = gl_tex_min_filter(tex.min_filter());
 			
 			if (min_filter != GL_LINEAR && min_filter != GL_NEAREST)
 			{
@@ -390,7 +395,7 @@ namespace rsx
 			}
 
 			glTexParameteri(m_target, GL_TEXTURE_MIN_FILTER, min_filter);
-			glTexParameteri(m_target, GL_TEXTURE_MAG_FILTER, gl_tex_mag_filter[tex.mag_filter()]);
+			glTexParameteri(m_target, GL_TEXTURE_MAG_FILTER, gl_tex_mag_filter(tex.mag_filter()));
 			glTexParameterf(m_target, GL_TEXTURE_MAX_ANISOTROPY_EXT, max_aniso(tex.max_aniso()));
 		}
 

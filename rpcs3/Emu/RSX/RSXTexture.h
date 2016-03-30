@@ -50,8 +50,8 @@ namespace rsx
 
 		// Filter
 		float bias() const;
-		u8  min_filter() const;
-		u8  mag_filter() const;
+		rsx::texture_minify_filter  min_filter() const;
+		rsx::texture_magnify_filter  mag_filter() const;
 		u8  convolution_filter() const;
 		bool a_signed() const;
 		bool r_signed() const;

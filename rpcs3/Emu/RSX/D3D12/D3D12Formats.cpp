@@ -206,55 +206,55 @@ D3D12_TEXTURE_ADDRESS_MODE get_texture_wrap_mode(rsx::texture_wrap_mode wrap)
 
 namespace
 {
-	void get_min_filter(u8 min_filter, D3D12_FILTER_TYPE &min, D3D12_FILTER_TYPE &mip)
+	void get_min_filter(rsx::texture_minify_filter min_filter, D3D12_FILTER_TYPE &min, D3D12_FILTER_TYPE &mip)
 	{
 		switch (min_filter)
 		{
-		case CELL_GCM_TEXTURE_NEAREST:
+		case rsx::texture_minify_filter::nearest:
 			min = D3D12_FILTER_TYPE_POINT;
 			mip = D3D12_FILTER_TYPE_POINT;
 			return;
-		case CELL_GCM_TEXTURE_LINEAR:
+		case rsx::texture_minify_filter::linear:
 			min = D3D12_FILTER_TYPE_LINEAR;
 			mip = D3D12_FILTER_TYPE_POINT;
 			return;
-		case CELL_GCM_TEXTURE_NEAREST_NEAREST:
+		case rsx::texture_minify_filter::nearest_nearest:
 			min = D3D12_FILTER_TYPE_POINT;
 			mip = D3D12_FILTER_TYPE_POINT;
 			return;
-		case CELL_GCM_TEXTURE_LINEAR_NEAREST:
+		case rsx::texture_minify_filter::linear_nearest:
 			min = D3D12_FILTER_TYPE_LINEAR;
 			mip = D3D12_FILTER_TYPE_POINT;
 			return;
-		case CELL_GCM_TEXTURE_NEAREST_LINEAR:
+		case rsx::texture_minify_filter::nearest_linear:
 			min = D3D12_FILTER_TYPE_POINT;
 			mip = D3D12_FILTER_TYPE_LINEAR;
 			return;
-		case CELL_GCM_TEXTURE_LINEAR_LINEAR:
+		case rsx::texture_minify_filter::linear_linear:
 			min = D3D12_FILTER_TYPE_LINEAR;
 			mip = D3D12_FILTER_TYPE_LINEAR;
 			return;
-		case CELL_GCM_TEXTURE_CONVOLUTION_MIN:
+		case rsx::texture_minify_filter::convolution_min:
 			min = D3D12_FILTER_TYPE_LINEAR;
 			mip = D3D12_FILTER_TYPE_POINT;
 			return;
 		}
-		throw EXCEPTION("Invalid max filter (0x%x)", min_filter);
+		throw EXCEPTION("Invalid max filter");
 	}
 
-	D3D12_FILTER_TYPE get_mag_filter(u8 mag_filter)
+	D3D12_FILTER_TYPE get_mag_filter(rsx::texture_magnify_filter mag_filter)
 	{
 		switch (mag_filter)
 		{
-		case CELL_GCM_TEXTURE_NEAREST: return D3D12_FILTER_TYPE_POINT;
-		case CELL_GCM_TEXTURE_LINEAR: return D3D12_FILTER_TYPE_LINEAR;
-		case CELL_GCM_TEXTURE_CONVOLUTION_MAG: return D3D12_FILTER_TYPE_LINEAR;
+		case rsx::texture_magnify_filter::nearest: return D3D12_FILTER_TYPE_POINT;
+		case rsx::texture_magnify_filter::linear: return D3D12_FILTER_TYPE_LINEAR;
+		case rsx::texture_magnify_filter::convolution_mag: return D3D12_FILTER_TYPE_LINEAR;
 		}
-		throw EXCEPTION("Invalid mag filter (0x%x)", mag_filter);
+		throw EXCEPTION("Invalid mag filter");
 	}
 }
 
-D3D12_FILTER get_texture_filter(u8 min_filter, u8 mag_filter)
+D3D12_FILTER get_texture_filter(rsx::texture_minify_filter min_filter, rsx::texture_magnify_filter mag_filter)
 {
 	D3D12_FILTER_TYPE min, mip;
 	get_min_filter(min_filter, min, mip);

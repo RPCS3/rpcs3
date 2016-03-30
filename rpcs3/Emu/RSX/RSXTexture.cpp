@@ -156,14 +156,14 @@ namespace rsx
 		return float(f16((method_registers[NV4097_SET_TEXTURE_FILTER + (m_index * 8)]) & 0x1fff));
 	}
 
-	u8  texture::min_filter() const
+	rsx::texture_minify_filter texture::min_filter() const
 	{
-		return ((method_registers[NV4097_SET_TEXTURE_FILTER + (m_index * 8)] >> 16) & 0x7);
+		return rsx::to_texture_minify_filter((method_registers[NV4097_SET_TEXTURE_FILTER + (m_index * 8)] >> 16) & 0x7);
 	}
 
-	u8  texture::mag_filter() const
+	rsx::texture_magnify_filter texture::mag_filter() const
 	{
-		return ((method_registers[NV4097_SET_TEXTURE_FILTER + (m_index * 8)] >> 24) & 0x7);
+		return rsx::to_texture_magnify_filter((method_registers[NV4097_SET_TEXTURE_FILTER + (m_index * 8)] >> 24) & 0x7);
 	}
 
 	u8 texture::convolution_filter() const

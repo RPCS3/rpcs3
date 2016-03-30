@@ -896,6 +896,16 @@ enum
 	CELL_GCM_TEXTURE_MAX_ANISO_10 = 5,
 	CELL_GCM_TEXTURE_MAX_ANISO_12 = 6,
 	CELL_GCM_TEXTURE_MAX_ANISO_16 = 7,
+
+	// Texture Filter
+	CELL_GCM_TEXTURE_NEAREST = 1,
+	CELL_GCM_TEXTURE_LINEAR = 2,
+	CELL_GCM_TEXTURE_NEAREST_NEAREST = 3,
+	CELL_GCM_TEXTURE_LINEAR_NEAREST = 4,
+	CELL_GCM_TEXTURE_NEAREST_LINEAR = 5,
+	CELL_GCM_TEXTURE_LINEAR_LINEAR = 6,
+	CELL_GCM_TEXTURE_CONVOLUTION_MIN = 7,
+	CELL_GCM_TEXTURE_CONVOLUTION_MAG = 4,
 };
 
 rsx::texture_wrap_mode rsx::to_texture_wrap_mode(u8 in)
@@ -928,6 +938,33 @@ rsx::texture_max_anisotropy rsx::to_texture_max_anisotropy(u8 in)
 	case CELL_GCM_TEXTURE_MAX_ANISO_16: return rsx::texture_max_anisotropy::x16;
 	}
 	throw EXCEPTION("Unknow anisotropy max mode %x", in);
+}
+
+rsx::texture_minify_filter rsx::to_texture_minify_filter(u8 in)
+{
+	switch (in)
+	{
+	case CELL_GCM_TEXTURE_NEAREST: return rsx::texture_minify_filter::nearest;
+	case CELL_GCM_TEXTURE_LINEAR: return rsx::texture_minify_filter::linear;
+	case CELL_GCM_TEXTURE_NEAREST_NEAREST: return rsx::texture_minify_filter::nearest_nearest;
+	case CELL_GCM_TEXTURE_LINEAR_NEAREST: return rsx::texture_minify_filter::linear_nearest;
+	case CELL_GCM_TEXTURE_NEAREST_LINEAR: return rsx::texture_minify_filter::nearest_linear;
+	case CELL_GCM_TEXTURE_LINEAR_LINEAR: return rsx::texture_minify_filter::linear_linear;
+	case CELL_GCM_TEXTURE_CONVOLUTION_MIN: return rsx::texture_minify_filter::linear_linear;
+	}
+	throw EXCEPTION("Unknow minify filter %x", in);
+}
+
+
+rsx::texture_magnify_filter rsx::to_texture_magnify_filter(u8 in)
+{
+	switch (in)
+	{
+	case CELL_GCM_TEXTURE_NEAREST: return rsx::texture_magnify_filter::nearest;
+	case CELL_GCM_TEXTURE_LINEAR: return rsx::texture_magnify_filter::linear;
+	case CELL_GCM_TEXTURE_CONVOLUTION_MAG: return rsx::texture_magnify_filter::convolution_mag;
+	}
+	throw EXCEPTION("Unknow magnify filter %x", in);
 }
 
 rsx::surface_target rsx::to_surface_target(u8 in)

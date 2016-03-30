@@ -51,7 +51,7 @@ D3D12_TEXTURE_ADDRESS_MODE get_texture_wrap_mode(rsx::texture_wrap_mode wrap);
 /**
  * Convert minify and magnify filter to D3D12_FILTER
  */
-D3D12_FILTER get_texture_filter(u8 min_filter, u8 mag_filter);
+D3D12_FILTER get_texture_filter(rsx::texture_minify_filter min_filter, rsx::texture_magnify_filter mag_filter);
 
 /**
  * Convert draw mode to D3D12_PRIMITIVE_TOPOLOGY
