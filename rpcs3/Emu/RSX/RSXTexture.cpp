@@ -136,9 +136,9 @@ namespace rsx
 		return ((method_registers[NV4097_SET_TEXTURE_CONTROL0 + (m_index * 8)] >> 7) & 0xfff);
 	}
 
-	u8   texture::max_aniso() const
+	rsx::texture_max_anisotropy   texture::max_aniso() const
 	{
-		return ((method_registers[NV4097_SET_TEXTURE_CONTROL0 + (m_index * 8)] >> 4) & 0x7);
+		return rsx::to_texture_max_anisotropy((method_registers[NV4097_SET_TEXTURE_CONTROL0 + (m_index * 8)] >> 4) & 0x7);
 	}
 
 	bool texture::alpha_kill_enabled() const

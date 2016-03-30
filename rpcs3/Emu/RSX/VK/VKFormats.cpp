@@ -81,18 +81,18 @@ VkSamplerAddressMode vk_wrap_mode(rsx::texture_wrap_mode gcm_wrap)
 	throw EXCEPTION("unhandled texture clamp mode");
 }
 
-float max_aniso(u32 gcm_aniso)
+float max_aniso(rsx::texture_max_anisotropy gcm_aniso)
 {
 	switch (gcm_aniso)
 	{
-	case CELL_GCM_TEXTURE_MAX_ANISO_1: return 1.0f;
-	case CELL_GCM_TEXTURE_MAX_ANISO_2: return 2.0f;
-	case CELL_GCM_TEXTURE_MAX_ANISO_4: return 4.0f;
-	case CELL_GCM_TEXTURE_MAX_ANISO_6: return 6.0f;
-	case CELL_GCM_TEXTURE_MAX_ANISO_8: return 8.0f;
-	case CELL_GCM_TEXTURE_MAX_ANISO_10: return 10.0f;
-	case CELL_GCM_TEXTURE_MAX_ANISO_12: return 12.0f;
-	case CELL_GCM_TEXTURE_MAX_ANISO_16: return 16.0f;
+	case rsx::texture_max_anisotropy::x1: return 1.0f;
+	case rsx::texture_max_anisotropy::x2: return 2.0f;
+	case rsx::texture_max_anisotropy::x4: return 4.0f;
+	case rsx::texture_max_anisotropy::x6: return 6.0f;
+	case rsx::texture_max_anisotropy::x8: return 8.0f;
+	case rsx::texture_max_anisotropy::x10: return 10.0f;
+	case rsx::texture_max_anisotropy::x12: return 12.0f;
+	case rsx::texture_max_anisotropy::x16: return 16.0f;
 	}
 
 	throw EXCEPTION("Texture anisotropy error: bad max aniso (%d).", gcm_aniso);

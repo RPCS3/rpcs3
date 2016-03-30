@@ -17,7 +17,7 @@ namespace rsx
 
 			int gl_wrap(rsx::texture_wrap_mode in);
 
-			float max_aniso(int aniso);
+			float max_aniso(rsx::texture_max_anisotropy aniso);
 
 			inline static u8 convert_4_to_8(u8 v)
 			{

@@ -176,6 +176,20 @@ namespace rsx
 	};
 
 	texture_wrap_mode to_texture_wrap_mode(u8 in);
+
+	enum class texture_max_anisotropy : u8
+	{
+		x1,
+		x2,
+		x4,
+		x6,
+		x8,
+		x10,
+		x12,
+		x16,
+	};
+
+	texture_max_anisotropy to_texture_max_anisotropy(u8 in);
 }
 
 enum
@@ -252,16 +266,6 @@ enum
 	// Normalization Flag
 	CELL_GCM_TEXTURE_NR = 0x00,
 	CELL_GCM_TEXTURE_UN = 0x40,
-
-	// Max Anisotropy
-	CELL_GCM_TEXTURE_MAX_ANISO_1  = 0,
-	CELL_GCM_TEXTURE_MAX_ANISO_2  = 1,
-	CELL_GCM_TEXTURE_MAX_ANISO_4  = 2,
-	CELL_GCM_TEXTURE_MAX_ANISO_6  = 3,
-	CELL_GCM_TEXTURE_MAX_ANISO_8  = 4,
-	CELL_GCM_TEXTURE_MAX_ANISO_10 = 5,
-	CELL_GCM_TEXTURE_MAX_ANISO_12 = 6,
-	CELL_GCM_TEXTURE_MAX_ANISO_16 = 7,
 };
 
 // GCM Surface

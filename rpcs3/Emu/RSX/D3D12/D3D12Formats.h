@@ -41,7 +41,7 @@ DXGI_FORMAT get_texture_format(u8 format);
 /**
  * Convert texture aniso value to UINT.
  */
-UINT get_texture_max_aniso(u8 aniso);
+UINT get_texture_max_aniso(rsx::texture_max_anisotropy aniso);
 
 /**
  * Convert texture wrap mode to D3D12_TEXTURE_ADDRESS_MODE

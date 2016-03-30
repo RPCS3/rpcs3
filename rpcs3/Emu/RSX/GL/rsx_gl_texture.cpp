@@ -218,18 +218,18 @@ namespace rsx
 			return GL_REPEAT;
 		}
 
-		float texture::max_aniso(int aniso)
+		float texture::max_aniso(rsx::texture_max_anisotropy aniso)
 		{
 			switch (aniso)
 			{
-			case CELL_GCM_TEXTURE_MAX_ANISO_1: return 1.0f;
-			case CELL_GCM_TEXTURE_MAX_ANISO_2: return 2.0f;
-			case CELL_GCM_TEXTURE_MAX_ANISO_4: return 4.0f;
-			case CELL_GCM_TEXTURE_MAX_ANISO_6: return 6.0f;
-			case CELL_GCM_TEXTURE_MAX_ANISO_8: return 8.0f;
-			case CELL_GCM_TEXTURE_MAX_ANISO_10: return 10.0f;
-			case CELL_GCM_TEXTURE_MAX_ANISO_12: return 12.0f;
-			case CELL_GCM_TEXTURE_MAX_ANISO_16: return 16.0f;
+			case rsx::texture_max_anisotropy::x1: return 1.0f;
+			case rsx::texture_max_anisotropy::x2: return 2.0f;
+			case rsx::texture_max_anisotropy::x4: return 4.0f;
+			case rsx::texture_max_anisotropy::x6: return 6.0f;
+			case rsx::texture_max_anisotropy::x8: return 8.0f;
+			case rsx::texture_max_anisotropy::x10: return 10.0f;
+			case rsx::texture_max_anisotropy::x12: return 12.0f;
+			case rsx::texture_max_anisotropy::x16: return 16.0f;
 			}
 
 			LOG_ERROR(RSX, "Texture anisotropy error: bad max aniso (%d).", aniso);

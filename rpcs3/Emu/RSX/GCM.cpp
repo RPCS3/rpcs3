@@ -886,6 +886,16 @@ enum
 	CELL_GCM_TEXTURE_MIRROR_ONCE_CLAMP_TO_EDGE = 6,
 	CELL_GCM_TEXTURE_MIRROR_ONCE_BORDER = 7,
 	CELL_GCM_TEXTURE_MIRROR_ONCE_CLAMP = 8,
+
+	// Max Anisotropy
+	CELL_GCM_TEXTURE_MAX_ANISO_1 = 0,
+	CELL_GCM_TEXTURE_MAX_ANISO_2 = 1,
+	CELL_GCM_TEXTURE_MAX_ANISO_4 = 2,
+	CELL_GCM_TEXTURE_MAX_ANISO_6 = 3,
+	CELL_GCM_TEXTURE_MAX_ANISO_8 = 4,
+	CELL_GCM_TEXTURE_MAX_ANISO_10 = 5,
+	CELL_GCM_TEXTURE_MAX_ANISO_12 = 6,
+	CELL_GCM_TEXTURE_MAX_ANISO_16 = 7,
 };
 
 rsx::texture_wrap_mode rsx::to_texture_wrap_mode(u8 in)
@@ -902,6 +912,22 @@ rsx::texture_wrap_mode rsx::to_texture_wrap_mode(u8 in)
 	case CELL_GCM_TEXTURE_MIRROR_ONCE_CLAMP: return rsx::texture_wrap_mode::mirror_once_clamp;
 	}
 	throw EXCEPTION("Unknow wrap mode %x", in);
+}
+
+rsx::texture_max_anisotropy rsx::to_texture_max_anisotropy(u8 in)
+{
+	switch (in)
+	{
+	case CELL_GCM_TEXTURE_MAX_ANISO_1: return rsx::texture_max_anisotropy::x1;
+	case CELL_GCM_TEXTURE_MAX_ANISO_2: return rsx::texture_max_anisotropy::x2;
+	case CELL_GCM_TEXTURE_MAX_ANISO_4: return rsx::texture_max_anisotropy::x4;
+	case CELL_GCM_TEXTURE_MAX_ANISO_6: return rsx::texture_max_anisotropy::x6;
+	case CELL_GCM_TEXTURE_MAX_ANISO_8: return rsx::texture_max_anisotropy::x8;
+	case CELL_GCM_TEXTURE_MAX_ANISO_10: return rsx::texture_max_anisotropy::x10;
+	case CELL_GCM_TEXTURE_MAX_ANISO_12: return rsx::texture_max_anisotropy::x12;
+	case CELL_GCM_TEXTURE_MAX_ANISO_16: return rsx::texture_max_anisotropy::x16;
+	}
+	throw EXCEPTION("Unknow anisotropy max mode %x", in);
 }
 
 rsx::surface_target rsx::to_surface_target(u8 in)
@@ -1335,16 +1361,16 @@ namespace
 
 	std::string get_texture_max_aniso_name(u8 aniso)
 	{
-		switch (aniso)
+		switch (rsx::to_texture_max_anisotropy(aniso))
 		{
-		case CELL_GCM_TEXTURE_MAX_ANISO_1: return "1";
-		case CELL_GCM_TEXTURE_MAX_ANISO_2: return "2";
-		case CELL_GCM_TEXTURE_MAX_ANISO_4: return "4";
-		case CELL_GCM_TEXTURE_MAX_ANISO_6: return "6";
-		case CELL_GCM_TEXTURE_MAX_ANISO_8: return "8";
-		case CELL_GCM_TEXTURE_MAX_ANISO_10: return "10";
-		case CELL_GCM_TEXTURE_MAX_ANISO_12: return "12";
-		case CELL_GCM_TEXTURE_MAX_ANISO_16: return "16";
+		case rsx::texture_max_anisotropy::x1 : return "1";
+		case rsx::texture_max_anisotropy::x2: return "2";
+		case rsx::texture_max_anisotropy::x4: return "4";
+		case rsx::texture_max_anisotropy::x6: return "6";
+		case rsx::texture_max_anisotropy::x8: return "8";
+		case rsx::texture_max_anisotropy::x10: return "10";
+		case rsx::texture_max_anisotropy::x12: return "12";
+		case rsx::texture_max_anisotropy::x16: return "16";
 		}
 		return "Error";
 	}

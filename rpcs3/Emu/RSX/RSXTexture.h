@@ -42,7 +42,7 @@ namespace rsx
 		bool enabled() const;
 		u16  min_lod() const;
 		u16  max_lod() const;
-		u8   max_aniso() const;
+		rsx::texture_max_anisotropy   max_aniso() const;
 		bool alpha_kill_enabled() const;
 
 		// Control1

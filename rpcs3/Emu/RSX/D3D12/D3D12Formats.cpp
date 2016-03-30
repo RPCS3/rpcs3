@@ -172,18 +172,18 @@ DXGI_FORMAT get_texture_format(u8 format)
 	throw EXCEPTION("Invalid or unsupported texture format (0x%x)", format);
 }
 
-UINT get_texture_max_aniso(u8 aniso)
+UINT get_texture_max_aniso(rsx::texture_max_anisotropy aniso)
 {
 	switch (aniso)
 	{
-	case CELL_GCM_TEXTURE_MAX_ANISO_1: return 1;
-	case CELL_GCM_TEXTURE_MAX_ANISO_2: return 2;
-	case CELL_GCM_TEXTURE_MAX_ANISO_4: return 4;
-	case CELL_GCM_TEXTURE_MAX_ANISO_6: return 6;
-	case CELL_GCM_TEXTURE_MAX_ANISO_8: return 8;
-	case CELL_GCM_TEXTURE_MAX_ANISO_10: return 10;
-	case CELL_GCM_TEXTURE_MAX_ANISO_12: return 12;
-	case CELL_GCM_TEXTURE_MAX_ANISO_16: return 16;
+	case rsx::texture_max_anisotropy::x1: return 1;
+	case rsx::texture_max_anisotropy::x2: return 2;
+	case rsx::texture_max_anisotropy::x4: return 4;
+	case rsx::texture_max_anisotropy::x6: return 6;
+	case rsx::texture_max_anisotropy::x8: return 8;
+	case rsx::texture_max_anisotropy::x10: return 10;
+	case rsx::texture_max_anisotropy::x12: return 12;
+	case rsx::texture_max_anisotropy::x16: return 16;
 	}
 	throw EXCEPTION("Invalid texture max aniso (0x%x)", aniso);
 }
