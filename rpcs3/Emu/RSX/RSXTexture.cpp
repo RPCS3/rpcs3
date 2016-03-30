@@ -65,9 +65,29 @@ namespace rsx
 		return rsx::to_texture_dimension((method_registers[NV4097_SET_TEXTURE_FORMAT + (m_index * 8)] >> 4) & 0xf);
 	}
 
+	rsx::texture_dimension_extended texture::get_extended_texture_dimension() const
+	{
+		switch (dimension())
+		{
+		case rsx::texture_dimension::dimension1d: return rsx::texture_dimension_extended::texture_dimension_1d;
+		case rsx::texture_dimension::dimension3d: return rsx::texture_dimension_extended::texture_dimension_2d;
+		case rsx::texture_dimension::dimension2d: return cubemap() ? rsx::texture_dimension_extended::texture_dimension_cubemap : rsx::texture_dimension_extended::texture_dimension_2d;
+		}
+	}
+
 	u8 texture::format() const
 	{
 		return ((method_registers[NV4097_SET_TEXTURE_FORMAT + (m_index * 8)] >> 8) & 0xff);
+	}
+
+	bool texture::is_compressed_format() const
+	{
+		int texture_format = format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
+		if (texture_format == CELL_GCM_TEXTURE_COMPRESSED_DXT1 ||
+			texture_format == CELL_GCM_TEXTURE_COMPRESSED_DXT23 ||
+			texture_format == CELL_GCM_TEXTURE_COMPRESSED_DXT45)
+			return true;
+		return false;
 	}
 
 	u16 texture::mipmap() const
@@ -77,7 +97,14 @@ namespace rsx
 
 	u16 texture::get_exact_mipmap_count() const
 	{
-		u16 max_mipmap_count = static_cast<u16>(floor(log2(std::max(width(), height()))) + 1);
+		if (is_compressed_format())
+		{
+			// OpenGL considers that highest mipmap level for DXTC format is when either width or height is 1
+			// not both. Assume it's the same for others backend.
+			u16 max_mipmap_count = static_cast<u16>(floor(log2(std::min(width() / 4, height() / 4))) + 1);
+			return std::min(mipmap(), max_mipmap_count);
+		}
+		u16 max_mipmap_count = static_cast<u16>(floor(log2(std::max(width(), height()))) + 1) - 2;
 		return std::min(mipmap(), max_mipmap_count);
 	}
 

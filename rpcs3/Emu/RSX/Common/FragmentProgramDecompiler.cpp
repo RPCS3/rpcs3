@@ -130,16 +130,16 @@ std::string FragmentProgramDecompiler::AddTex()
 	std::string sampler;
 	switch (m_prog.get_texture_dimension(dst.tex_num))
 	{
-	case texture_dimension_extended::texture_dimension_1d:
+	case rsx::texture_dimension_extended::texture_dimension_1d:
 		sampler = "sampler1D";
 		break;
-	case texture_dimension_extended::texture_dimension_cubemap:
+	case rsx::texture_dimension_extended::texture_dimension_cubemap:
 		sampler = "samplerCube";
 		break;
-	case texture_dimension_extended::texture_dimension_2d:
+	case rsx::texture_dimension_extended::texture_dimension_2d:
 		sampler = "sampler2D";
 		break;
-	case texture_dimension_extended::texture_dimension_3d:
+	case rsx::texture_dimension_extended::texture_dimension_3d:
 		sampler = "sampler3D";
 		break;
 	}
@@ -442,16 +442,16 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 	case RSX_FP_OPCODE_TEX:
 		switch (m_prog.get_texture_dimension(dst.tex_num))
 		{
-		case texture_dimension_extended::texture_dimension_1d:
+		case rsx::texture_dimension_extended::texture_dimension_1d:
 			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE1D));
 			return true;
-		case texture_dimension_extended::texture_dimension_2d:
+		case rsx::texture_dimension_extended::texture_dimension_2d:
 			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE2D));
 			return true;
-		case texture_dimension_extended::texture_dimension_cubemap:
+		case rsx::texture_dimension_extended::texture_dimension_cubemap:
 			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE));
 			return true;
-		case texture_dimension_extended::texture_dimension_3d:
+		case rsx::texture_dimension_extended::texture_dimension_3d:
 			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE3D));
 			return true;
 		}
@@ -460,16 +460,16 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 	case RSX_FP_OPCODE_TXP:
 		switch (m_prog.get_texture_dimension(dst.tex_num))
 		{
-		case texture_dimension_extended::texture_dimension_1d:
+		case rsx::texture_dimension_extended::texture_dimension_1d:
 			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE1D_PROJ));
 			return true;
-		case texture_dimension_extended::texture_dimension_2d:
+		case rsx::texture_dimension_extended::texture_dimension_2d:
 			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_PROJ));
 			return true;
-		case texture_dimension_extended::texture_dimension_cubemap:
+		case rsx::texture_dimension_extended::texture_dimension_cubemap:
 			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE_PROJ));
 			return true;
-		case texture_dimension_extended::texture_dimension_3d:
+		case rsx::texture_dimension_extended::texture_dimension_3d:
 			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE3D_PROJ));
 			return true;
 		}
@@ -480,16 +480,16 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 	case RSX_FP_OPCODE_TXL:
 		switch (m_prog.get_texture_dimension(dst.tex_num))
 		{
-		case texture_dimension_extended::texture_dimension_1d:
+		case rsx::texture_dimension_extended::texture_dimension_1d:
 			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE1D_LOD));
 			return true;
-		case texture_dimension_extended::texture_dimension_2d:
+		case rsx::texture_dimension_extended::texture_dimension_2d:
 			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_LOD));
 			return true;
-		case texture_dimension_extended::texture_dimension_cubemap:
+		case rsx::texture_dimension_extended::texture_dimension_cubemap:
 			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE_LOD));
 			return true;
-		case texture_dimension_extended::texture_dimension_3d:
+		case rsx::texture_dimension_extended::texture_dimension_3d:
 			SetDst(getFunction(FUNCTION::FUNCTION_TEXTURE_SAMPLE3D_LOD));
 			return true;
 		}
