@@ -499,7 +499,7 @@ namespace vk
 		void *map(u64 offset, u64 size)
 		{
 			void *data = nullptr;
-			CHECK_RESULT(vkMapMemory(m_device, memory->memory, offset, size, 0, &data));
+			CHECK_RESULT(vkMapMemory(m_device, memory->memory, offset, std::max<u64>(size, 1u), 0, &data));
 			return data;
 		}
 
@@ -1395,6 +1395,6 @@ namespace vk
 	* dst_image must be in TRANSFER_DST_OPTIMAL layout and upload_buffer have TRANSFER_SRC_BIT usage flag.
 	*/
 	void copy_mipmaped_image_using_buffer(VkCommandBuffer cmd, VkImage dst_image,
-		const std::vector<rsx_subresource_layout> subresource_layout, int format, bool is_swizzled,
+		const std::vector<rsx_subresource_layout> subresource_layout, int format, bool is_swizzled, u16 mipmap_count,
 		vk::data_heap &upload_heap, vk::buffer* upload_buffer);
 }

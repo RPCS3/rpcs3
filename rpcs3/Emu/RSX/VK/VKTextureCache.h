@@ -184,20 +184,58 @@ namespace vk
 			VkComponentMapping mapping = vk::get_component_mapping(format, tex.remap());
 			VkFormat vk_format = get_compatible_sampler_format(format);
 
-			VkImageSubresourceRange subresource_range = vk::get_image_subresource_range(0, 0, 1, tex.get_exact_mipmap_count(), VK_IMAGE_ASPECT_COLOR_BIT);
+			VkImageType image_type;
+			VkImageViewType image_view_type;
+			u16 height;
+			u16 depth;
+			u8 layer;
+			switch (tex.get_extended_texture_dimension())
+			{
+			case rsx::texture_dimension_extended::texture_dimension_1d:
+				image_type = VK_IMAGE_TYPE_1D;
+				image_view_type = VK_IMAGE_VIEW_TYPE_1D;
+				height = 1;
+				depth = 1;
+				layer = 1;
+				break;
+			case rsx::texture_dimension_extended::texture_dimension_2d:
+				image_type = VK_IMAGE_TYPE_2D;
+				image_view_type = VK_IMAGE_VIEW_TYPE_2D;
+				height = tex.height();
+				depth = 1;
+				layer = 1;
+				break;
+			case rsx::texture_dimension_extended::texture_dimension_cubemap:
+				image_type = VK_IMAGE_TYPE_2D;
+				image_view_type = VK_IMAGE_VIEW_TYPE_CUBE;
+				height = tex.height();
+				depth = 1;
+				layer = 6;
+				break;
+			case rsx::texture_dimension_extended::texture_dimension_3d:
+				image_type = VK_IMAGE_TYPE_3D;
+				image_view_type = VK_IMAGE_VIEW_TYPE_3D;
+				depth = tex.depth();
+				layer = 1;
+				break;
+			}
+
+			bool is_cubemap = tex.get_extended_texture_dimension() == rsx::texture_dimension_extended::texture_dimension_cubemap;
+			VkImageSubresourceRange subresource_range = vk::get_image_subresource_range(0, 0, is_cubemap ? 6 : 1, tex.get_exact_mipmap_count(), VK_IMAGE_ASPECT_COLOR_BIT);
 
 			cto.uploaded_texture = std::make_unique<vk::image>(*vk::get_current_renderer(), memory_type_mapping.device_local,
-				VK_IMAGE_TYPE_2D,
+				image_type,
 				vk_format,
-				tex.width(), tex.height(), 1, tex.get_exact_mipmap_count(), 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
-				VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 0);
+				tex.width(), height, depth, tex.get_exact_mipmap_count(), layer, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
+				VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, is_cubemap ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0);
 			change_image_layout(cmd, cto.uploaded_texture->value, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, subresource_range);
 
-			cto.uploaded_image_view = std::make_unique<vk::image_view>(*vk::get_current_renderer(), cto.uploaded_texture->value, VK_IMAGE_VIEW_TYPE_2D, vk_format,
+			cto.uploaded_image_view = std::make_unique<vk::image_view>(*vk::get_current_renderer(), cto.uploaded_texture->value, image_view_type, vk_format,
 				vk::get_component_mapping(tex.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN), tex.remap()),
 				subresource_range);
 
-			copy_mipmaped_image_using_buffer(cmd, cto.uploaded_texture->value, get_subresources_layout(tex), format, !(tex.format() & CELL_GCM_TEXTURE_LN), upload_heap, upload_buffer);
+			copy_mipmaped_image_using_buffer(cmd, cto.uploaded_texture->value, get_subresources_layout(tex), format, !(tex.format() & CELL_GCM_TEXTURE_LN), tex.get_exact_mipmap_count(),
+				upload_heap, upload_buffer);
 
 			change_image_layout(cmd, cto.uploaded_texture->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, subresource_range);
 
