@@ -345,6 +345,19 @@ void D3D12GSRender::end()
 	size_t texture_count = std::get<2>(m_current_pso);
 	if (texture_count > 0)
 	{
+		if (get_current_resource_storage().current_sampler_index + 16 > 2048)
+		{
+			get_current_resource_storage().sampler_descriptors_heap_index = 1;
+			get_current_resource_storage().current_sampler_index = 0;
+
+			ID3D12DescriptorHeap *descriptors[] =
+			{
+				get_current_resource_storage().descriptors_heap.Get(),
+				get_current_resource_storage().sampler_descriptor_heap[get_current_resource_storage().sampler_descriptors_heap_index].Get(),
+			};
+			get_current_resource_storage().command_list->SetDescriptorHeaps(2, descriptors);
+		}
+
 		upload_textures(get_current_resource_storage().command_list.Get(), texture_count);
 
 		m_device->CopyDescriptorsSimple(16,

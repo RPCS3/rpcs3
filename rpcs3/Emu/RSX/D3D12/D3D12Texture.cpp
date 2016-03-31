@@ -361,19 +361,6 @@ void D3D12GSRender::upload_textures(ID3D12GraphicsCommandList *command_list, siz
 			.Offset((UINT)i, m_descriptor_stride_srv_cbv_uav)
 			);
 
-		if (get_current_resource_storage().current_sampler_index + 16 > 2048)
-		{
-			get_current_resource_storage().sampler_descriptors_heap_index = 1;
-			get_current_resource_storage().current_sampler_index = 0;
-
-			ID3D12DescriptorHeap *descriptors[] =
-			{
-				get_current_resource_storage().descriptors_heap.Get(),
-				get_current_resource_storage().sampler_descriptor_heap[get_current_resource_storage().sampler_descriptors_heap_index].Get(),
-			};
-			command_list->SetDescriptorHeaps(2, descriptors);
-		}
-
 		m_device->CreateSampler(&get_sampler_desc(textures[i]),
 			CD3DX12_CPU_DESCRIPTOR_HANDLE(m_current_sampler_descriptors->GetCPUDescriptorHandleForHeapStart())
 			.Offset((UINT)i, m_descriptor_stride_samplers));
