@@ -85,9 +85,6 @@ void GLFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 			std::string samplerType = PT.type;
 			int index = atoi(&PI.name.data()[3]);
 
-			if (m_prog.unnormalized_coords & (1 << index))
-				samplerType = "sampler2DRect";
-
 			OS << "uniform " << samplerType << " " << PI.name << ";" << std::endl;
 		}
 	}
@@ -162,6 +159,27 @@ void GLFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 	}
 
 	OS << "	vec4 ssa = gl_FrontFacing ? vec4(1.) : vec4(-1.);\n";
+
+	for (const ParamType& PT : m_parr.params[PF_PARAM_UNIFORM])
+	{
+		if (PT.type != "sampler2D")
+			continue;
+
+		for (const ParamItem& PI : PT.items)
+		{
+			std::string samplerType = PT.type;
+			int index = atoi(&PI.name.data()[3]);
+
+			if (m_prog.unnormalized_coords & (1 << index))
+			{
+				OS << "vec2 tex" << index << "_coord_scale = 1. / textureSize(" << PI.name << ", 0);\n";
+			}
+			else
+			{
+				OS << "vec2 tex" << index << "_coord_scale = vec2(1.);\n";
+			}
+		}
+	}
 
 	// search if there is fogc in inputs
 	for (const ParamType& PT : m_parr.params[PF_PARAM_IN])

@@ -47,11 +47,11 @@ std::string getFunctionImpl(FUNCTION f)
 	case FUNCTION::FUNCTION_TEXTURE_SAMPLE1D_LOD:
 		return "textureLod($t, $0.x, $1)";
 	case FUNCTION::FUNCTION_TEXTURE_SAMPLE2D:
-		return "texture($t, $0.xy)";
+		return "texture($t, $0.xy * $t_coord_scale)";
 	case FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_PROJ:
-		return "textureProj($t, $0.xyz, $1.x)"; // Note: $1.x is bias
+		return "textureProj($t, $0.xyz * vec3($t_coord_scale, 1.) , $1.x)"; // Note: $1.x is bias
 	case FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_LOD:
-		return "textureLod($t, $0.xy, $1.x)";
+		return "textureLod($t, $0.xy * $t_coord_scale, $1.x)";
 	case FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE:
 		return "texture($t, $0.xyz)";
 	case FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE_PROJ:
