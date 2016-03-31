@@ -104,7 +104,7 @@ namespace rsx
 			u16 max_mipmap_count = static_cast<u16>(floor(log2(std::min(width() / 4, height() / 4))) + 1);
 			return std::min(mipmap(), max_mipmap_count);
 		}
-		u16 max_mipmap_count = static_cast<u16>(floor(log2(std::max(width(), height()))) + 1) - 2;
+		u16 max_mipmap_count = static_cast<u16>(floor(log2(std::max(width(), height()))) + 1);
 		return std::min(mipmap(), max_mipmap_count);
 	}
 
