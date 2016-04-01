@@ -11,6 +11,7 @@
 #include "yaml-cpp/eventhandler.h"
 #include "yaml-cpp/exceptions.h"  // IWYU pragma: keep
 #include "yaml-cpp/mark.h"
+#include "yaml-cpp/null.h"
 
 namespace YAML {
 SingleDocParser::SingleDocParser(Scanner& scanner, const Directives& directives)
@@ -75,7 +76,7 @@ void SingleDocParser::HandleNode(EventHandler& eventHandler) {
 
   const Token& token = m_scanner.peek();
 
-  if (token.type == Token::PLAIN_SCALAR && token.value == "null") {
+  if (token.type == Token::PLAIN_SCALAR && IsNullString(token.value)) {
     eventHandler.OnNull(mark, anchor);
     m_scanner.pop();
     return;

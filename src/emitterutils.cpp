@@ -9,6 +9,7 @@
 #include "stringsource.h"
 #include "yaml-cpp/binary.h"  // IWYU pragma: keep
 #include "yaml-cpp/ostream_wrapper.h"
+#include "yaml-cpp/null.h"
 
 namespace YAML {
 namespace Utils {
@@ -152,12 +153,8 @@ void WriteCodePoint(ostream_wrapper& out, int codePoint) {
 
 bool IsValidPlainScalar(const std::string& str, FlowType::value flowType,
                         bool allowOnlyAscii) {
-  if (str.empty()) {
-    return false;
-  }
-
   // check against null
-  if (str == "null") {
+  if (IsNullString(str)) {
     return false;
   }
 
