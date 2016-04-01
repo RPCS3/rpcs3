@@ -2,9 +2,6 @@
 #include "BufferUtils.h"
 #include "../rsx_methods.h"
 
-#define MIN2(x, y) ((x) < (y)) ? (x) : (y)
-#define MAX2(x, y) ((x) > (y)) ? (x) : (y)
-
 namespace
 {
 	// FIXME: GSL as_span break build if template parameter is non const with current revision.
@@ -114,8 +111,8 @@ std::tuple<T, T> upload_untouched(gsl::span<to_be_t<const T>> src, gsl::span<T> 
 		}
 		else
 		{
-			max_index = MAX2(max_index, index);
-			min_index = MIN2(min_index, index);
+			max_index = std::max(max_index, index);
+			min_index = std::min(min_index, index);
 		}
 		dst[dst_idx++] = index;
 	}
@@ -134,8 +131,8 @@ std::tuple<T, T> expand_indexed_triangle_fan(gsl::span<to_be_t<const T>> src, gs
 	const T index0 = src[0];
 	if (!is_primitive_restart_enabled || index0 != -1) // Cut
 	{
-		min_index = MIN2(min_index, index0);
-		max_index = MAX2(max_index, index0);
+		min_index = std::min(min_index, index0);
+		max_index = std::max(max_index, index0);
 	}
 
 	size_t dst_idx = 0;
@@ -149,8 +146,8 @@ std::tuple<T, T> expand_indexed_triangle_fan(gsl::span<to_be_t<const T>> src, gs
 		}
 		else
 		{
-			min_index = MIN2(min_index, index1);
-			max_index = MAX2(max_index, index1);
+			min_index = std::min(min_index, index1);
+			max_index = std::max(max_index, index1);
 		}
 		T index2 = tri_indexes[1];
 		if (is_primitive_restart_enabled && index2 == primitive_restart_index)
@@ -159,8 +156,8 @@ std::tuple<T, T> expand_indexed_triangle_fan(gsl::span<to_be_t<const T>> src, gs
 		}
 		else
 		{
-			min_index = MIN2(min_index, index2);
-			max_index = MAX2(max_index, index2);
+			min_index = std::min(min_index, index2);
+			max_index = std::max(max_index, index2);
 		}
 
 		dst[dst_idx++] = index0;
@@ -192,8 +189,8 @@ std::tuple<T, T> expand_indexed_quads(gsl::span<to_be_t<const T>> src, gsl::span
 		}
 		else
 		{
-			min_index = MIN2(min_index, index0);
-			max_index = MAX2(max_index, index0);
+			min_index = std::min(min_index, index0);
+			max_index = std::max(max_index, index0);
 		}
 		T index1 = quad_indexes[1];
 		if (is_primitive_restart_enabled && index1 == primitive_restart_index)
@@ -202,8 +199,8 @@ std::tuple<T, T> expand_indexed_quads(gsl::span<to_be_t<const T>> src, gsl::span
 		}
 		else
 		{
-			min_index = MIN2(min_index, index1);
-			max_index = MAX2(max_index, index1);
+			min_index = std::min(min_index, index1);
+			max_index = std::max(max_index, index1);
 		}
 		T index2 = quad_indexes[2];
 		if (is_primitive_restart_enabled && index2 == primitive_restart_index)
@@ -212,8 +209,8 @@ std::tuple<T, T> expand_indexed_quads(gsl::span<to_be_t<const T>> src, gsl::span
 		}
 		else
 		{
-			min_index = MIN2(min_index, index2);
-			max_index = MAX2(max_index, index2);
+			min_index = std::min(min_index, index2);
+			max_index = std::max(max_index, index2);
 		}
 		T index3 = quad_indexes[3];
 		if (is_primitive_restart_enabled &&index3 == primitive_restart_index)
@@ -222,8 +219,8 @@ std::tuple<T, T> expand_indexed_quads(gsl::span<to_be_t<const T>> src, gsl::span
 		}
 		else
 		{
-			min_index = MIN2(min_index, index3);
-			max_index = MAX2(max_index, index3);
+			min_index = std::min(min_index, index3);
+			max_index = std::max(max_index, index3);
 		}
 
 		// First triangle
