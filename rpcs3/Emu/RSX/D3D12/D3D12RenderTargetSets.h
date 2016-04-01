@@ -130,7 +130,7 @@ struct render_target_traits
 	std::tuple<size_t, size_t, size_t, ComPtr<ID3D12Fence>, HANDLE> issue_download_command(
 		gsl::not_null<ID3D12Resource*> rtt,
 		surface_color_format color_format, size_t width, size_t height,
-		gsl::not_null<ID3D12Device*> device, gsl::not_null<ID3D12CommandQueue*> command_queue, data_heap &readback_heap, resource_storage &res_store
+		gsl::not_null<ID3D12Device*> device, gsl::not_null<ID3D12CommandQueue*> command_queue, d3d12_data_heap &readback_heap, resource_storage &res_store
 		)
 	{
 		ID3D12GraphicsCommandList* command_list = res_store.command_list.Get();
@@ -163,7 +163,7 @@ struct render_target_traits
 	std::tuple<size_t, size_t, size_t, ComPtr<ID3D12Fence>, HANDLE> issue_depth_download_command(
 		gsl::not_null<ID3D12Resource*> ds,
 		surface_depth_format depth_format, size_t width, size_t height,
-		gsl::not_null<ID3D12Device*> device, gsl::not_null<ID3D12CommandQueue*> command_queue, data_heap &readback_heap, resource_storage &res_store
+		gsl::not_null<ID3D12Device*> device, gsl::not_null<ID3D12CommandQueue*> command_queue, d3d12_data_heap &readback_heap, resource_storage &res_store
 			)
 	{
 		ID3D12GraphicsCommandList* command_list = res_store.command_list.Get();
@@ -196,7 +196,7 @@ struct render_target_traits
 		std::tuple<size_t, size_t, size_t, ComPtr<ID3D12Fence>, HANDLE> issue_stencil_download_command(
 			gsl::not_null<ID3D12Resource*> stencil,
 			size_t width, size_t height,
-			gsl::not_null<ID3D12Device*> device, gsl::not_null<ID3D12CommandQueue*> command_queue, data_heap &readback_heap, resource_storage &res_store
+			gsl::not_null<ID3D12Device*> device, gsl::not_null<ID3D12CommandQueue*> command_queue, d3d12_data_heap &readback_heap, resource_storage &res_store
 			)
 	{
 		ID3D12GraphicsCommandList* command_list = res_store.command_list.Get();
@@ -226,7 +226,7 @@ struct render_target_traits
 
 	static
 	gsl::span<const gsl::byte> map_downloaded_buffer(const std::tuple<size_t, size_t, size_t, ComPtr<ID3D12Fence>, HANDLE> &sync_data,
-		gsl::not_null<ID3D12Device*> device, gsl::not_null<ID3D12CommandQueue*> command_queue, data_heap &readback_heap, resource_storage &res_store)
+		gsl::not_null<ID3D12Device*> device, gsl::not_null<ID3D12CommandQueue*> command_queue, d3d12_data_heap &readback_heap, resource_storage &res_store)
 	{
 		size_t offset;
 		size_t buffer_size;
@@ -243,7 +243,7 @@ struct render_target_traits
 
 	static
 	void unmap_downloaded_buffer(const std::tuple<size_t, size_t, size_t, ComPtr<ID3D12Fence>, HANDLE> &sync_data,
-		gsl::not_null<ID3D12Device*> device, gsl::not_null<ID3D12CommandQueue*> command_queue, data_heap &readback_heap, resource_storage &res_store)
+		gsl::not_null<ID3D12Device*> device, gsl::not_null<ID3D12CommandQueue*> command_queue, d3d12_data_heap &readback_heap, resource_storage &res_store)
 	{
 		readback_heap.unmap();
 	}

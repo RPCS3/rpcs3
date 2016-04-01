@@ -149,7 +149,7 @@ namespace vk
 			m_cache.resize(0);
 		}
 
-		vk::image_view* upload_texture(command_buffer cmd, rsx::texture &tex, rsx::vk_render_targets &m_rtts, const vk::memory_type_mapping &memory_type_mapping, data_heap& upload_heap, vk::buffer* upload_buffer)
+		vk::image_view* upload_texture(command_buffer cmd, rsx::texture &tex, rsx::vk_render_targets &m_rtts, const vk::memory_type_mapping &memory_type_mapping, vk_data_heap& upload_heap, vk::buffer* upload_buffer)
 		{
 			const u32 texaddr = rsx::get_address(tex.offset(), tex.location());
 			const u32 range = (u32)get_texture_size(tex);

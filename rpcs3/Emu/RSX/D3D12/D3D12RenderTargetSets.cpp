@@ -240,7 +240,7 @@ namespace
 	size_t download_to_readback_buffer(
 		ID3D12Device *device,
 		ID3D12GraphicsCommandList * command_list,
-		data_heap &readback_heap,
+		d3d12_data_heap &readback_heap,
 		ID3D12Resource * color_surface,
 		rsx::surface_color_format color_surface_format
 		)
@@ -262,7 +262,7 @@ namespace
 		return heap_offset;
 	}
 
-	void copy_readback_buffer_to_dest(void *dest, data_heap &readback_heap, size_t offset_in_heap, size_t dst_pitch, size_t src_pitch, size_t height)
+	void copy_readback_buffer_to_dest(void *dest, d3d12_data_heap &readback_heap, size_t offset_in_heap, size_t dst_pitch, size_t src_pitch, size_t height)
 	{
 		// TODO: Use exact range
 		void *mapped_buffer = readback_heap.map<void>(offset_in_heap);

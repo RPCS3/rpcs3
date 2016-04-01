@@ -146,7 +146,7 @@ namespace
 std::tuple<std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC>, size_t> upload_inlined_vertex_array(
 	gsl::span<const rsx::data_array_format_info, 16> vertex_attribute_infos,
 	gsl::span<const gsl::byte> inlined_array_raw_data,
-	data_heap& ring_buffer_data,
+	d3d12_data_heap& ring_buffer_data,
 	ID3D12Resource* vertex_buffer_placement,
 	ID3D12GraphicsCommandList* command_list
 	)

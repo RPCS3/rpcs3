@@ -69,7 +69,7 @@ namespace {
 	void update_existing_texture(
 		const rsx::texture &texture,
 		ID3D12GraphicsCommandList *command_list,
-		data_heap &texture_buffer_heap,
+		d3d12_data_heap &texture_buffer_heap,
 		ID3D12Resource *existing_texture)
 	{
 		size_t w = texture.width(), h = texture.height();
@@ -123,7 +123,7 @@ ComPtr<ID3D12Resource> upload_single_texture(
 	const rsx::texture &texture,
 	ID3D12Device *device,
 	ID3D12GraphicsCommandList *command_list,
-	data_heap &texture_buffer_heap)
+	d3d12_data_heap &texture_buffer_heap)
 {
 	ComPtr<ID3D12Resource> result;
 	CHECK_HRESULT(device->CreateCommittedResource(
