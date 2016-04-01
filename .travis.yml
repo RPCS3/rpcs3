@@ -1,12 +1,20 @@
 language: c++
+os:
+  - linux
+  - osx
 compiler:
   - clang
   - gcc
 before_install:
-  - sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
-  - sudo apt-get update -qq
-  - if [ "$CXX" = "g++" ]; then sudo apt-get install -qq g++-4.7; fi
-  - if [ "$CXX" = "g++" ]; then export CXX="g++-4.7" CC="gcc-4.7"; fi
+  - |
+    if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
+      sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
+      && sudo apt-get update -qq
+      if [ "$CXX" = "g++" ]; then
+        sudo apt-get install -qq g++-4.7
+        && export CXX="g++-4.7" CC="gcc-4.7"
+      fi
+    fi
 before_script:
   - mkdir build
   - cd build
