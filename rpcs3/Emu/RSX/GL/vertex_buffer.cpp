@@ -159,7 +159,6 @@ void GLGSRender::set_vertex_buffer()
 
 	//merge all vertex arrays
 	std::vector<u8> vertex_arrays_data;
-	u32 vertex_arrays_offsets[rsx::limits::vertex_count];
 
 	const std::string reg_table[] =
 	{
@@ -342,17 +341,15 @@ void GLGSRender::set_vertex_buffer()
 
 				size_t size = vertex_array.size();
 				size_t position = vertex_arrays_data.size();
-				vertex_arrays_offsets[index] = gsl::narrow<u32>(position);
 				vertex_arrays_data.resize(position + size);
 
 				u32 gl_type = to_gl_internal_type(vertex_info.type, vertex_info.size);
-				u32 data_size = element_size * vertex_draw_count;
 
 				auto &buffer = m_gl_attrib_buffers[index].buffer;
 				auto &texture = m_gl_attrib_buffers[index].texture;
 
-				buffer->data(data_size, nullptr);
-				buffer->sub_data(0, data_size, vertex_array.data());
+				buffer->data(static_cast<u32>(size), nullptr);
+				buffer->sub_data(0, static_cast<u32>(size), vertex_array.data());
 
 				//Attach buffer to texture
 				texture->copy_from(*buffer, gl_type);
