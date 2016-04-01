@@ -287,6 +287,112 @@ namespace rsx
 			}
 		}
 
+		namespace
+		{
+			void create_and_fill_texture(rsx::texture_dimension_extended dim,
+				u16 mipmap_count, int format, u16 width, u16 height, u16 depth, const std::vector<rsx_subresource_layout> &input_layouts, bool is_swizzled,
+				std::vector<gsl::byte> staging_buffer)
+			{
+				int mip_level = 0;
+				if (dim == rsx::texture_dimension_extended::texture_dimension_1d)
+				{
+					glTexStorage1D(GL_TEXTURE_1D, mipmap_count, get_sized_internal_format(format), width);
+					if (!is_compressed_format(format))
+					{
+						const auto &format_type = get_format_type(format);
+						for (const rsx_subresource_layout &layout : input_layouts)
+						{
+							upload_texture_subresource(staging_buffer, layout, format, is_swizzled, 4);
+							glTexSubImage1D(GL_TEXTURE_1D, mip_level++, 0, layout.width_in_block, std::get<0>(format_type), std::get<1>(format_type), staging_buffer.data());
+						}
+					}
+					else
+					{
+						for (const rsx_subresource_layout &layout : input_layouts)
+						{
+							u32 size = layout.width_in_block * ((format == CELL_GCM_TEXTURE_COMPRESSED_DXT1) ? 8 : 16);
+							glCompressedTexSubImage1D(GL_TEXTURE_1D, mip_level++, 0, layout.width_in_block * 4, get_sized_internal_format(format), size, layout.data.data());
+						}
+					}
+					return;
+				}
+
+				if (dim == rsx::texture_dimension_extended::texture_dimension_2d)
+				{
+					glTexStorage2D(GL_TEXTURE_2D, mipmap_count, get_sized_internal_format(format), width, height);
+					if (!is_compressed_format(format))
+					{
+						const auto &format_type = get_format_type(format);
+						for (const rsx_subresource_layout &layout : input_layouts)
+						{
+							upload_texture_subresource(staging_buffer, layout, format, is_swizzled, 4);
+							glTexSubImage2D(GL_TEXTURE_2D, mip_level++, 0, 0, layout.width_in_block, layout.height_in_block, std::get<0>(format_type), std::get<1>(format_type), staging_buffer.data());
+						}
+					}
+					else
+					{
+						for (const rsx_subresource_layout &layout : input_layouts)
+						{
+							u32 size = layout.width_in_block * layout.height_in_block * ((format == CELL_GCM_TEXTURE_COMPRESSED_DXT1) ? 8 : 16);
+							glCompressedTexSubImage2D(GL_TEXTURE_2D, mip_level++, 0, 0, layout.width_in_block * 4, layout.height_in_block * 4, get_sized_internal_format(format), size, layout.data.data());
+						}
+					}
+					return;
+				}
+
+				if (dim == rsx::texture_dimension_extended::texture_dimension_cubemap)
+				{
+					glTexStorage2D(GL_TEXTURE_CUBE_MAP, mipmap_count, get_sized_internal_format(format), width, height);
+					// Note : input_layouts size is get_exact_mipmap_count() for non cubemap texture, and 6 * get_exact_mipmap_count() for cubemap
+					// Thus for non cubemap texture, mip_level / mipmap_per_layer will always be rounded to 0.
+					// mip_level % mipmap_per_layer will always be equal to mip_level
+					if (!is_compressed_format(format))
+					{
+						const auto &format_type = get_format_type(format);
+						for (const rsx_subresource_layout &layout : input_layouts)
+						{
+							upload_texture_subresource(staging_buffer, layout, format, is_swizzled, 4);
+							glTexSubImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + mip_level / mipmap_count, mip_level % mipmap_count, 0, 0, layout.width_in_block, layout.height_in_block, std::get<0>(format_type), std::get<1>(format_type), staging_buffer.data());
+							mip_level++;
+						}
+					}
+					else
+					{
+						for (const rsx_subresource_layout &layout : input_layouts)
+						{
+							u32 size = layout.width_in_block * layout.height_in_block * ((format == CELL_GCM_TEXTURE_COMPRESSED_DXT1) ? 8 : 16);
+							glCompressedTexSubImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + mip_level / mipmap_count, mip_level % mipmap_count, 0, 0, layout.width_in_block * 4, layout.height_in_block * 4, get_sized_internal_format(format), size, layout.data.data());
+							mip_level++;
+						}
+					}
+					return;
+				}
+
+				if (dim == rsx::texture_dimension_extended::texture_dimension_3d)
+				{
+					glTexStorage3D(GL_TEXTURE_3D, mipmap_count, get_sized_internal_format(format), width, height, depth);
+					if (!is_compressed_format(format))
+					{
+						const auto &format_type = get_format_type(format);
+						for (const rsx_subresource_layout &layout : input_layouts)
+						{
+							upload_texture_subresource(staging_buffer, layout, format, is_swizzled, 4);
+							glTexSubImage3D(GL_TEXTURE_3D, mip_level++, 0, 0, 0, layout.width_in_block, layout.height_in_block, depth, std::get<0>(format_type), std::get<1>(format_type), staging_buffer.data());
+						}
+					}
+					else
+					{
+						for (const rsx_subresource_layout &layout : input_layouts)
+						{
+							u32 size = layout.width_in_block * layout.height_in_block * layout.depth * ((format == CELL_GCM_TEXTURE_COMPRESSED_DXT1) ? 8 : 16);
+							glCompressedTexSubImage3D(GL_TEXTURE_3D, mip_level++, 0, 0, 0, layout.width_in_block * 4, layout.height_in_block * 4, layout.depth, get_sized_internal_format(format), size, layout.data.data());
+						}
+					}
+					return;
+				}
+			}
+		}
+
 		bool texture::mandates_expansion(u32 format)
 		{
 			/**
@@ -323,38 +429,8 @@ namespace rsx
 			std::vector<gsl::byte> data_upload_buf(texture_data_sz);
 			u32 block_sz = get_pitch_modifier(format);
 
-			const std::vector<rsx_subresource_layout> &input_layouts = get_subresources_layout(tex);
 			glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
-			glTexStorage2D(m_target, tex.get_exact_mipmap_count(), get_sized_internal_format(format), tex.width(), tex.height());
-
-			// Note : input_layouts size is get_exact_mipmap_count() for non cubemap texture, and 6 * get_exact_mipmap_count() for cubemap
-			// Thus for non cubemap texture, mip_level / mipmap_per_layer will always be rounded to 0.
-			// mip_level % mipmap_per_layer will always be equal to mip_level
-			u16 mipmap_per_layer = tex.get_exact_mipmap_count();
-			GLenum real_target = tex.cubemap() ? GL_TEXTURE_CUBE_MAP_POSITIVE_X : m_target;
-
-			if (!is_compressed_format(format))
-			{
-				const auto &format_type = get_format_type(format);
-				GLint mip_level = 0;
-				for (const rsx_subresource_layout &layout : input_layouts)
-				{
-					upload_texture_subresource(data_upload_buf, layout, format, is_swizzled, 4);
-					glTexSubImage2D(real_target + mip_level / mipmap_per_layer, mip_level % mipmap_per_layer, 0, 0, layout.width_in_block, layout.height_in_block, std::get<0>(format_type), std::get<1>(format_type), data_upload_buf.data());
-					mip_level++;
-				}
-			}
-			else
-			{
-
-				GLint mip_level = 0;
-				for (const rsx_subresource_layout &layout : input_layouts)
-				{
-					u32 size = layout.width_in_block * layout.height_in_block * ((format == CELL_GCM_TEXTURE_COMPRESSED_DXT1) ? 8 : 16);
-					glCompressedTexSubImage2D(real_target + mip_level / mipmap_per_layer, mip_level % mipmap_per_layer, 0, 0, layout.width_in_block * 4, layout.height_in_block * 4, get_sized_internal_format(format), size, layout.data.data());
-					mip_level++;
-				}
-			}
+			create_and_fill_texture(tex.get_extended_texture_dimension(), tex.get_exact_mipmap_count(), format, tex.width(), tex.height(), tex.depth(), get_subresources_layout(tex), is_swizzled, data_upload_buf);
 
 			const std::array<GLenum, 4>& glRemap = get_swizzle_remap(format);
 
