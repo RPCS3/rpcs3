@@ -248,7 +248,7 @@ namespace rsx
 			case CELL_GCM_TEXTURE_COMPRESSED_HILO8:
 			case CELL_GCM_TEXTURE_COMPRESSED_HILO_S8:
 			default:
-				LOG_ERROR(RSX, "Unimplemented Texture format : 0x%x", format);
+				LOG_ERROR(RSX, "Unimplemented pitch modifier for texture format: 0x%x", format);
 				return 0;
 			case ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN) & CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8:
 			case ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN) & CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8:
