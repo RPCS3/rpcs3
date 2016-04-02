@@ -21,5 +21,3 @@ before_script:
 script:
   - make
   - test/run-tests
-notifications:
-  email: false
