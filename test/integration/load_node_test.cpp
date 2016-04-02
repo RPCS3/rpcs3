@@ -226,5 +226,10 @@ TEST(NodeTest, IncompleteJson) {
   }
 }
 
+TEST(NodeTest, LoadTildeAsNull) {
+  Node node = Load("~");
+  ASSERT_TRUE(node.IsNull());
+}
+
 }  // namespace
 }  // namespace YAML
