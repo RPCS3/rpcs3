@@ -42,5 +42,35 @@ TEST_F(HandlerTest, NullStringScalar) {
   EXPECT_CALL(handler, OnDocumentEnd());
   Parse("foo: null");
 }
+
+TEST_F(HandlerTest, CommentOnNewlineOfMapValueWithNoSpaces) {
+  EXPECT_CALL(handler, OnDocumentStart(_));
+  EXPECT_CALL(handler, OnMapStart(_, "?", 0, EmitterStyle::Block));
+  EXPECT_CALL(handler, OnScalar(_, "?", 0, "key"));
+  EXPECT_CALL(handler, OnScalar(_, "?", 0, "value"));
+  EXPECT_CALL(handler, OnMapEnd());
+  EXPECT_CALL(handler, OnDocumentEnd());
+  Parse("key: value\n# comment");
 }
+
+TEST_F(HandlerTest, CommentOnNewlineOfMapValueWithOneSpace) {
+  EXPECT_CALL(handler, OnDocumentStart(_));
+  EXPECT_CALL(handler, OnMapStart(_, "?", 0, EmitterStyle::Block));
+  EXPECT_CALL(handler, OnScalar(_, "?", 0, "key"));
+  EXPECT_CALL(handler, OnScalar(_, "?", 0, "value"));
+  EXPECT_CALL(handler, OnMapEnd());
+  EXPECT_CALL(handler, OnDocumentEnd());
+  Parse("key: value\n # comment");
 }
+
+TEST_F(HandlerTest, CommentOnNewlineOfMapValueWithManySpace) {
+  EXPECT_CALL(handler, OnDocumentStart(_));
+  EXPECT_CALL(handler, OnMapStart(_, "?", 0, EmitterStyle::Block));
+  EXPECT_CALL(handler, OnScalar(_, "?", 0, "key"));
+  EXPECT_CALL(handler, OnScalar(_, "?", 0, "value"));
+  EXPECT_CALL(handler, OnMapEnd());
+  EXPECT_CALL(handler, OnDocumentEnd());
+  Parse("key: value\n    # comment");
+}
+}  // namespace
+}  // namespace YAML

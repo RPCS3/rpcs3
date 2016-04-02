@@ -39,15 +39,17 @@ std::string ScanScalar(Stream& INPUT, ScanScalarParams& params) {
     std::size_t lastNonWhitespaceChar = scalar.size();
     bool escapedNewline = false;
     while (!params.end->Matches(INPUT) && !Exp::Break().Matches(INPUT)) {
-      if (!INPUT)
+      if (!INPUT) {
         break;
+      }
 
       // document indicator?
       if (INPUT.column() == 0 && Exp::DocIndicator().Matches(INPUT)) {
-        if (params.onDocIndicator == BREAK)
+        if (params.onDocIndicator == BREAK) {
           break;
-        else if (params.onDocIndicator == THROW)
+        } else if (params.onDocIndicator == THROW) {
           throw ParserException(INPUT.mark(), ErrorMsg::DOC_IN_SCALAR);
+        }
       }
 
       foundNonEmptyLine = true;
@@ -74,27 +76,31 @@ std::string ScanScalar(Stream& INPUT, ScanScalarParams& params) {
       // otherwise, just add the damn character
       char ch = INPUT.get();
       scalar += ch;
-      if (ch != ' ' && ch != '\t')
+      if (ch != ' ' && ch != '\t') {
         lastNonWhitespaceChar = scalar.size();
+      }
     }
 
     // eof? if we're looking to eat something, then we throw
     if (!INPUT) {
-      if (params.eatEnd)
+      if (params.eatEnd) {
         throw ParserException(INPUT.mark(), ErrorMsg::EOF_IN_SCALAR);
+      }
       break;
     }
 
     // doc indicator?
     if (params.onDocIndicator == BREAK && INPUT.column() == 0 &&
-        Exp::DocIndicator().Matches(INPUT))
+        Exp::DocIndicator().Matches(INPUT)) {
       break;
+    }
 
     // are we done via character match?
     int n = params.end->Match(INPUT);
     if (n >= 0) {
-      if (params.eatEnd)
+      if (params.eatEnd) {
         INPUT.eat(n);
+      }
       break;
     }
 
@@ -111,23 +117,33 @@ std::string ScanScalar(Stream& INPUT, ScanScalarParams& params) {
     // Phase #3: scan initial spaces
 
     // first the required indentation
-    while (INPUT.peek() == ' ' && (INPUT.column() < params.indent ||
-                                   (params.detectIndent && !foundNonEmptyLine)))
+    while (INPUT.peek() == ' ' &&
+           (INPUT.column() < params.indent ||
+            (params.detectIndent && !foundNonEmptyLine)) &&
+           !params.end->Matches(INPUT)) {
       INPUT.eat(1);
+    }
 
     // update indent if we're auto-detecting
-    if (params.detectIndent && !foundNonEmptyLine)
+    if (params.detectIndent && !foundNonEmptyLine) {
       params.indent = std::max(params.indent, INPUT.column());
+    }
 
     // and then the rest of the whitespace
     while (Exp::Blank().Matches(INPUT)) {
       // we check for tabs that masquerade as indentation
       if (INPUT.peek() == '\t' && INPUT.column() < params.indent &&
-          params.onTabInIndentation == THROW)
+          params.onTabInIndentation == THROW) {
         throw ParserException(INPUT.mark(), ErrorMsg::TAB_IN_INDENTATION);
+      }
 
-      if (!params.eatLeadingWhitespace)
+      if (!params.eatLeadingWhitespace) {
         break;
+      }
+
+      if (params.end->Matches(INPUT)) {
+        break;
+      }
 
       INPUT.eat(1);
     }
@@ -147,26 +163,29 @@ std::string ScanScalar(Stream& INPUT, ScanScalarParams& params) {
           break;
         case FOLD_BLOCK:
           if (!emptyLine && !nextEmptyLine && !moreIndented &&
-              !nextMoreIndented && INPUT.column() >= params.indent)
+              !nextMoreIndented && INPUT.column() >= params.indent) {
             scalar += " ";
-          else if (nextEmptyLine)
+          } else if (nextEmptyLine) {
             foldedNewlineCount++;
-          else
+          } else {
             scalar += "\n";
+          }
 
           if (!nextEmptyLine && foldedNewlineCount > 0) {
             scalar += std::string(foldedNewlineCount - 1, '\n');
             if (foldedNewlineStartedMoreIndented ||
-                nextMoreIndented | !foundNonEmptyLine)
+                nextMoreIndented | !foundNonEmptyLine) {
               scalar += "\n";
+            }
             foldedNewlineCount = 0;
           }
           break;
         case FOLD_FLOW:
-          if (nextEmptyLine)
+          if (nextEmptyLine) {
             scalar += "\n";
-          else if (!emptyLine && !nextEmptyLine && !escapedNewline)
+          } else if (!emptyLine && !nextEmptyLine && !escapedNewline) {
             scalar += " ";
+          }
           break;
       }
     }
@@ -186,35 +205,41 @@ std::string ScanScalar(Stream& INPUT, ScanScalarParams& params) {
   if (params.trimTrailingSpaces) {
     std::size_t pos = scalar.find_last_not_of(' ');
     if (lastEscapedChar != std::string::npos) {
-      if (pos < lastEscapedChar || pos == std::string::npos)
+      if (pos < lastEscapedChar || pos == std::string::npos) {
         pos = lastEscapedChar;
+      }
     }
-    if (pos < scalar.size())
+    if (pos < scalar.size()) {
       scalar.erase(pos + 1);
+    }
   }
 
   switch (params.chomp) {
     case CLIP: {
       std::size_t pos = scalar.find_last_not_of('\n');
       if (lastEscapedChar != std::string::npos) {
-        if (pos < lastEscapedChar || pos == std::string::npos)
+        if (pos < lastEscapedChar || pos == std::string::npos) {
           pos = lastEscapedChar;
+        }
       }
-      if (pos == std::string::npos)
+      if (pos == std::string::npos) {
         scalar.erase();
-      else if (pos + 1 < scalar.size())
+      } else if (pos + 1 < scalar.size()) {
         scalar.erase(pos + 2);
+      }
     } break;
     case STRIP: {
       std::size_t pos = scalar.find_last_not_of('\n');
       if (lastEscapedChar != std::string::npos) {
-        if (pos < lastEscapedChar || pos == std::string::npos)
+        if (pos < lastEscapedChar || pos == std::string::npos) {
           pos = lastEscapedChar;
+        }
       }
-      if (pos == std::string::npos)
+      if (pos == std::string::npos) {
         scalar.erase();
-      else if (pos < scalar.size())
+      } else if (pos < scalar.size()) {
         scalar.erase(pos + 1);
+      }
     } break;
     default:
       break;
