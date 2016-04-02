@@ -616,6 +616,8 @@ std::string FragmentProgramDecompiler::Decompile()
 		case RSX_FP_OPCODE_KIL: SetDst("discard", false); break;
 
 		default:
+			int prev_force_unit = forced_unit;
+
 			if (forced_unit == FORCE_NONE)
 			{
 				if (SIP()) break;
@@ -634,7 +636,7 @@ std::string FragmentProgramDecompiler::Decompile()
 				if (handle_scb(opcode)) break;
 			}
 
-			LOG_ERROR(RSX, "Unknown/illegal instruction: 0x%x (forced unit %d)", opcode, forced_unit);
+			LOG_ERROR(RSX, "Unknown/illegal instruction: 0x%x (forced unit %d)", opcode, prev_force_unit);
 			break;
 		}
 
