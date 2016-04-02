@@ -9,7 +9,6 @@
 
 #include "yaml-cpp/dll.h"
 #include "yaml-cpp/node/ptr.h"
-#include "yaml-cpp/node/detail/node.h"
 #include <cstddef>
 #include <iterator>
 #include <memory>
