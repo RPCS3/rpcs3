@@ -106,6 +106,7 @@ ${wxWidgets_INCLUDE_DIRS}
 ${ZLIB_INCLUDE_DIR}
 ${OPENAL_INCLUDE_DIR}
 ${LLVM_INCLUDE_DIRS}
+"${RPCS3_SRC_DIR}/../3rdparty/pugixml/src"
 "${RPCS3_SRC_DIR}/../3rdparty/ffmpeg/${PLATFORM_ARCH}/include"
 "${RPCS3_SRC_DIR}"
 "${RPCS3_SRC_DIR}/Loader"
@@ -164,6 +165,7 @@ endforeach()
 file(
 GLOB_RECURSE
 RPCS3_SRC
+"${RPCS3_SRC_DIR}/../3rdparty/pugixml/src/pugixml.cpp"
 "${RPCS3_SRC_DIR}/rpcs3.cpp"
 "${RPCS3_SRC_DIR}/config.cpp"
 "${RPCS3_SRC_DIR}/stb_image.cpp"

@@ -1,117 +1,120 @@
 #include "stdafx.h"
 #include "Utilities/rXml.h"
 #pragma warning(push)
-#pragma message("TODO: remove wx dependency: <wx/xml/xml.h>")
 #pragma warning(disable : 4996)
-#include <wx/xml/xml.h>
+#include <pugixml.hpp>
 #pragma warning(pop)
 
 rXmlNode::rXmlNode()
 {
 	ownPtr = true;
-	handle = reinterpret_cast<void *>(new wxXmlNode());
+	handle = new pugi::xml_node;
 }
 
-rXmlNode::rXmlNode(void *ptr)
+rXmlNode::rXmlNode(pugi::xml_node *ptr)
 {
 	ownPtr = false;
 	handle = ptr;
-}
-
-rXmlNode::rXmlNode(const rXmlNode& other)
-{
-	ownPtr = true;
-	handle = reinterpret_cast<void *>(new wxXmlNode(*reinterpret_cast<wxXmlNode*>(other.handle)));
-}
-
-rXmlNode &rXmlNode::operator=(const rXmlNode& other)
-{
-	if (ownPtr)
-	{
-		delete reinterpret_cast<wxXmlNode*>(handle);
-	}
-	handle = reinterpret_cast<void *>(new wxXmlNode(*reinterpret_cast<wxXmlNode*>(other.handle)));
-	ownPtr = true;
-	return *this;
 }
 
 rXmlNode::~rXmlNode()
 {
 	if (ownPtr)
 	{
-		delete reinterpret_cast<wxXmlNode*>(handle);
+		delete handle;
 	}
+}
+
+rXmlNode::rXmlNode(const rXmlNode& other)
+{
+	ownPtr = true;
+	handle = new pugi::xml_node(*other.handle);
+}
+
+rXmlNode &rXmlNode::operator=(const rXmlNode& other)
+{
+	if (ownPtr)
+	{
+		delete handle;
+	}
+	handle = new pugi::xml_node(*other.handle);
+	ownPtr = true;
+	return *this;
 }
 
 std::shared_ptr<rXmlNode> rXmlNode::GetChildren()
 {
-	wxXmlNode* result = reinterpret_cast<wxXmlNode*>(handle)->GetChildren();
-	if (result)
+	// it.begin() returns node_iterator*, *it.begin() return node*.
+	pugi::xml_object_range<pugi::xml_node_iterator> it = handle->children();
+	pugi::xml_node begin = *it.begin();
+
+	if (begin)
 	{
-		return std::make_shared<rXmlNode>(reinterpret_cast<void*>(result));
+		return std::make_shared<rXmlNode>(&begin);
 	}
 	else
 	{
-		return std::shared_ptr<rXmlNode>(nullptr);
+		return nullptr;
 	}
 }
 
 std::shared_ptr<rXmlNode> rXmlNode::GetNext()
 {
-	wxXmlNode* result = reinterpret_cast<wxXmlNode*>(handle)->GetNext();
+	pugi::xml_node result = handle->next_sibling();
 	if (result)
 	{
-		return std::make_shared<rXmlNode>(reinterpret_cast<void*>(result));
+		return std::make_shared<rXmlNode>(&result);
 	}
 	else
 	{
-		return std::shared_ptr<rXmlNode>(nullptr);
+		return nullptr;
 	}
 }
 
 std::string rXmlNode::GetName()
 {
-	return fmt::ToUTF8(reinterpret_cast<wxXmlNode*>(handle)->GetName());
+	return handle->name();
 }
 
 std::string rXmlNode::GetAttribute(const std::string &name)
 {
-	return fmt::ToUTF8(reinterpret_cast<wxXmlNode*>(handle)->GetAttribute(fmt::FromUTF8(name)));
+	auto pred = [&name](pugi::xml_attribute attr) { return (name == attr.name()); };
+	return handle->find_attribute(pred).value();
 }
 
 std::string rXmlNode::GetNodeContent()
 {
-	return fmt::ToUTF8(reinterpret_cast<wxXmlNode*>(handle)->GetNodeContent());
+	return handle->text().get(); 
+}
+
+void *rXmlNode::AsVoidPtr()
+{
+	return static_cast<void*>(handle);
 }
 
 rXmlDocument::rXmlDocument()
 {
-	handle = reinterpret_cast<void *>(new wxXmlDocument());
-}
-
-rXmlDocument::rXmlDocument(const rXmlDocument& other)
-{
-	handle = reinterpret_cast<void *>(new wxXmlDocument(*reinterpret_cast<wxXmlDocument*>(other.handle)));
-}
-
-rXmlDocument &rXmlDocument::operator = (const rXmlDocument& other)
-{
-	delete reinterpret_cast<wxXmlDocument*>(handle);
-	handle = reinterpret_cast<void *>(new wxXmlDocument(*reinterpret_cast<wxXmlDocument*>(other.handle)));
-	return *this;
+	handle = new pugi::xml_document;
 }
 
 rXmlDocument::~rXmlDocument()
 {
-	delete reinterpret_cast<wxXmlDocument*>(handle);
+	delete handle;
 }
 
 void rXmlDocument::Load(const std::string & path)
 {
-	reinterpret_cast<wxXmlDocument*>(handle)->Load(fmt::FromUTF8(path));
+	// TODO: Unsure of use of c_str.
+	handle->load_string(path.c_str());
 }
 
 std::shared_ptr<rXmlNode> rXmlDocument::GetRoot()
 {
-	return std::make_shared<rXmlNode>(reinterpret_cast<void*>(reinterpret_cast<wxXmlDocument*>(handle)->GetRoot()));
+	pugi::xml_node root = handle->root();
+	return std::make_shared<rXmlNode>(&root);
+}
+
+void *rXmlDocument::AsVoidPtr()
+{
+	return static_cast<void*>(handle);
 }

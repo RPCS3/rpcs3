@@ -1,9 +1,11 @@
 #pragma once
 
+#include <pugixml.hpp>
+
 struct rXmlNode
 {
 	rXmlNode();
-	rXmlNode(void *);
+	rXmlNode(pugi::xml_node *);
 	rXmlNode(const rXmlNode& other);
 	rXmlNode &operator=(const rXmlNode& other);
 	~rXmlNode();
@@ -12,19 +14,21 @@ struct rXmlNode
 	std::string GetName();
 	std::string GetAttribute( const std::string &name);
 	std::string GetNodeContent();
+	void *AsVoidPtr();
 
-	void *handle;
+	pugi::xml_node *handle;
 	bool ownPtr;
 };
 
 struct rXmlDocument
 {
 	rXmlDocument();
-	rXmlDocument(const rXmlDocument& other);
-	rXmlDocument &operator=(const rXmlDocument& other);
+	rXmlDocument(const rXmlDocument& other) = delete;
+	rXmlDocument &operator=(const rXmlDocument& other) = delete;
 	~rXmlDocument();
 	void Load(const std::string & path);
 	std::shared_ptr<rXmlNode> GetRoot();
+	void *AsVoidPtr();
 
-	void *handle;
+	pugi::xml_document *handle;
 };
