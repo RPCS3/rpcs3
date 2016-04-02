@@ -9,6 +9,7 @@
     <ClCompile Include="Emu\RSX\GL\GLVertexProgram.cpp" />
     <ClCompile Include="Emu\RSX\GL\OpenGL.cpp" />
     <ClCompile Include="Emu\RSX\GL\gl_render_targets.cpp" />
+    <ClCompile Include="Emu\RSX\GL\vertex_buffer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Emu\RSX\GL\rsx_gl_texture.h" />

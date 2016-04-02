@@ -58,6 +58,7 @@ public:
 private:
 	static u32 enable(u32 enable, u32 cap);
 	static u32 enable(u32 enable, u32 cap, u32 index);
+	void set_vertex_buffer();
 
 public:
 	bool load_program();
