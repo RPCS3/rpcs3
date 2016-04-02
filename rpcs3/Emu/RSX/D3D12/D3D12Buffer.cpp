@@ -364,18 +364,9 @@ std::tuple<bool, size_t, std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC>> D3D12GSRe
 
 	void *mapped_buffer = m_buffer_data.map<void>(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
 	u32 min_index, max_index;
+	gsl::span<gsl::byte> dst{ reinterpret_cast<gsl::byte*>(mapped_buffer), gsl::narrow<u32>(buffer_size) };
 
-	if (indexed_type == rsx::index_array_type::u16)
-	{
-		gsl::span<u16> dst = { (u16*)mapped_buffer, gsl::narrow<int>(buffer_size / index_size) };
-		std::tie(min_index, max_index) = write_index_array_data_to_buffer(dst, draw_mode, first_count_commands);
-	}
-
-	if (indexed_type == rsx::index_array_type::u32)
-	{
-		gsl::span<u32> dst = { (u32*)mapped_buffer, gsl::narrow<int>(buffer_size / index_size) };
-		std::tie(min_index, max_index) = write_index_array_data_to_buffer(dst, draw_mode, first_count_commands);
-	}
+	std::tie(min_index, max_index) = write_index_array_data_to_buffer(dst, indexed_type, draw_mode, first_count_commands);
 
 	m_buffer_data.unmap(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
 	D3D12_INDEX_BUFFER_VIEW index_buffer_view = {

@@ -545,8 +545,8 @@ VKGSRender::upload_vertex_data()
 				std::vector<std::pair<u32, u32>> ranges;
 				ranges.push_back(std::pair<u32, u32>(0, vertex_draw_count));
 
-				gsl::span<u16> dst = { (u16*)indices.data(), gsl::narrow<int>(index_count) };
-				write_index_array_data_to_buffer(dst, draw_mode, ranges);
+				gsl::span<gsl::byte> dst = { (gsl::byte*)indices.data(), gsl::narrow<int>(index_count * 2) };
+				write_index_array_data_to_buffer(dst, rsx::index_array_type::u16, draw_mode, ranges);
 			}
 			else
 			{

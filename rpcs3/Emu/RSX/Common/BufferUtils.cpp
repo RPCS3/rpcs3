@@ -391,14 +391,16 @@ std::tuple<T, T> write_index_array_data_to_buffer_impl(gsl::span<T, gsl::dynamic
 	throw new EXCEPTION("Unknow draw mode");
 }
 
-std::tuple<u32, u32> write_index_array_data_to_buffer(gsl::span<u32, gsl::dynamic_range> dst, rsx::primitive_type draw_mode, const std::vector<std::pair<u32, u32> > &first_count_arguments)
+std::tuple<u32, u32> write_index_array_data_to_buffer(gsl::span<gsl::byte> dst, rsx::index_array_type type, rsx::primitive_type draw_mode, const std::vector<std::pair<u32, u32> > &first_count_arguments)
 {
-	return write_index_array_data_to_buffer_impl(dst, draw_mode, first_count_arguments);
-}
-
-std::tuple<u16, u16> write_index_array_data_to_buffer(gsl::span<u16, gsl::dynamic_range> dst, rsx::primitive_type draw_mode, const std::vector<std::pair<u32, u32> > &first_count_arguments)
-{
-	return write_index_array_data_to_buffer_impl(dst, draw_mode, first_count_arguments);
+	switch (type)
+	{
+	case rsx::index_array_type::u16:
+		return write_index_array_data_to_buffer_impl<u16>(as_span_workaround<u16>(dst), draw_mode, first_count_arguments);
+	case rsx::index_array_type::u32:
+		return write_index_array_data_to_buffer_impl<u32>(as_span_workaround<u32>(dst), draw_mode, first_count_arguments);
+	}
+	throw EXCEPTION("Unknow index type");
 }
 
 std::tuple<u32, u32> write_index_array_data_to_buffer_untouched(gsl::span<u32, gsl::dynamic_range> dst, const std::vector<std::pair<u32, u32> > &first_count_arguments)

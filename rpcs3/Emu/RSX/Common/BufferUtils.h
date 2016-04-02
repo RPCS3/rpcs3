@@ -29,8 +29,8 @@ size_t get_index_type_size(rsx::index_array_type type);
  * Returns min/max index found during the process.
  * The function expands index buffer for non native primitive type.
  */
-std::tuple<u32, u32> write_index_array_data_to_buffer(gsl::span<u32, gsl::dynamic_range> dst, rsx::primitive_type draw_mode, const std::vector<std::pair<u32, u32> > &first_count_arguments);
-std::tuple<u16, u16> write_index_array_data_to_buffer(gsl::span<u16, gsl::dynamic_range> dst, rsx::primitive_type draw_mode, const std::vector<std::pair<u32, u32> > &first_count_arguments);
+std::tuple<u32, u32> write_index_array_data_to_buffer(gsl::span<gsl::byte> dst, rsx::index_array_type, rsx::primitive_type draw_mode, const std::vector<std::pair<u32, u32> > &first_count_arguments);
+
 
 /**
  * Doesn't expand index

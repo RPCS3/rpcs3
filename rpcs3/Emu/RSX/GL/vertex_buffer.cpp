@@ -188,15 +188,8 @@ void GLGSRender::set_vertex_buffer()
 		vertex_draw_count = (u32)get_index_count(draw_mode, gsl::narrow<int>(vertex_draw_count));
 		vertex_index_array.resize(vertex_draw_count * type_size);
 
-		switch (type)
-		{
-		case rsx::index_array_type::u32:
-			std::tie(min_index, max_index) = write_index_array_data_to_buffer(gsl::span<u32>((u32*)vertex_index_array.data(), vertex_draw_count), draw_mode, first_count_commands);
-			break;
-		case rsx::index_array_type::u16:
-			std::tie(min_index, max_index) = write_index_array_data_to_buffer(gsl::span<u16>((u16*)vertex_index_array.data(), vertex_draw_count), draw_mode, first_count_commands);
-			break;
-		}
+		gsl::span<gsl::byte> dst{ reinterpret_cast<gsl::byte*>(vertex_index_array.data()), gsl::narrow<u32>(vertex_index_array.size()) };
+		std::tie(min_index, max_index) = write_index_array_data_to_buffer(dst, type, draw_mode, first_count_commands);
 	}
 
 	if (draw_command == rsx::draw_command::inlined_array)
