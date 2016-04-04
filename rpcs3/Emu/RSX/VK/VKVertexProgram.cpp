@@ -158,6 +158,22 @@ void VKVertexDecompilerThread::insertOutputs(std::stringstream & OS, const std::
 
 namespace vk
 {
+	void add_default_channel_component(std::stringstream &OS, const std::string &name, size_t size)
+	{
+		switch (size)
+		{
+		case 1:
+			OS << name << ".yzw = vec3(0., 0., 1.);\n";
+			return;
+		case 2:
+			OS << name << ".zw = vec2(0., 1.);\n";
+			return;
+		case 3:
+			OS << name << ".w = 1.;\n";
+			return;
+		}
+	}
+
 	void add_input(std::stringstream & OS, const ParamItem &PI, const std::vector<rsx_vertex_input> &inputs)
 	{
 		for (const auto &real_input : inputs)
@@ -168,6 +184,7 @@ namespace vk
 			if (!real_input.is_array)
 			{
 				OS << "	vec4 " << PI.name << " = texelFetch(" << PI.name << "_buffer, 0);" << std::endl;
+				add_default_channel_component(OS, PI.name, real_input.size);
 				return;
 			}
 
@@ -176,14 +193,17 @@ namespace vk
 				if (real_input.is_modulo)
 				{
 					OS << "	vec4 " << PI.name << "= texelFetch(" << PI.name << "_buffer, gl_VertexIndex %" << real_input.frequency << ");" << std::endl;
+					add_default_channel_component(OS, PI.name, real_input.size);
 					return;
 				}
 
 				OS << "	vec4 " << PI.name << "= texelFetch(" << PI.name << "_buffer, gl_VertexIndex /" << real_input.frequency << ");" << std::endl;
+				add_default_channel_component(OS, PI.name, real_input.size);
 				return;
 			}
 
 			OS << "	vec4 " << PI.name << "= texelFetch(" << PI.name << "_buffer, gl_VertexIndex).rgba;" << std::endl;
+			add_default_channel_component(OS, PI.name, real_input.size);
 			return;
 		}
 
