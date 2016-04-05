@@ -122,6 +122,14 @@ namespace gl
 		__glcheck glDrawBuffers((GLsizei)ids.size(), ids.data());
 	}
 
+	void fbo::read_buffer(const attachment& buffer) const
+	{
+		save_binding_state save(*this);
+		GLenum buf = buffer.id();
+
+		__glcheck glReadBuffer(buf);
+	}
+
 	void fbo::draw_arrays(rsx::primitive_type mode, GLsizei count, GLint first) const
 	{
 		save_binding_state save(*this);

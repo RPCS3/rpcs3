@@ -1550,6 +1550,8 @@ namespace gl
 		void recreate();
 		void draw_buffer(const attachment& buffer) const;
 		void draw_buffers(const std::initializer_list<attachment>& indexes) const;
+		
+		void read_buffer(const attachment& buffer) const;
 
 		void draw_arrays(rsx::primitive_type mode, GLsizei count, GLint first = 0) const;
 		void draw_arrays(const buffer& buffer, rsx::primitive_type mode, GLsizei count, GLint first = 0) const;
