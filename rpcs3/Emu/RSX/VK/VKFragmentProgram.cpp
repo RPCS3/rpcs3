@@ -54,6 +54,9 @@ void VKFragmentDecompilerThread::insertIntputs(std::stringstream & OS)
 	{
 		for (const ParamItem& PI : PT.items)
 		{
+			//ssa is defined in the program body and is not a varying type
+			if (PI.name == "ssa") continue;
+
 			const vk::varying_register_t &reg = vk::get_varying_register(PI.name);
 			
 			std::string var_name = PI.name;
