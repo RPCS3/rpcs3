@@ -46,11 +46,9 @@ namespace
 	}
 }
 
-void write_vertex_array_data_to_buffer(gsl::span<gsl::byte> raw_dst_span, const gsl::byte *src_ptr, u32 first, u32 count, rsx::vertex_base_type type, u32 vector_element_count, u32 attribute_src_stride)
+void write_vertex_array_data_to_buffer(gsl::span<gsl::byte> raw_dst_span, const gsl::byte *src_ptr, u32 first, u32 count, rsx::vertex_base_type type, u32 vector_element_count, u32 attribute_src_stride, u8 dst_stride)
 {
 	Expects(vector_element_count > 0);
-
-	u32 element_size = rsx::get_vertex_type_size_on_host(type, vector_element_count);
 
 	switch (type)
 	{
@@ -58,7 +56,7 @@ void write_vertex_array_data_to_buffer(gsl::span<gsl::byte> raw_dst_span, const 
 	case rsx::vertex_base_type::ub256:
 	{
 		gsl::span<u8> dst_span = as_span_workaround<u8>(raw_dst_span);
-		copy_whole_attribute_array<u8>(dst_span, src_ptr, vector_element_count, element_size, attribute_src_stride, first, count);
+		copy_whole_attribute_array<u8>(dst_span, src_ptr, vector_element_count, dst_stride, attribute_src_stride, first, count);
 		return;
 	}
 	case rsx::vertex_base_type::s1:
@@ -66,13 +64,13 @@ void write_vertex_array_data_to_buffer(gsl::span<gsl::byte> raw_dst_span, const 
 	case rsx::vertex_base_type::s32k:
 	{
 		gsl::span<u16> dst_span = as_span_workaround<u16>(raw_dst_span);
-		copy_whole_attribute_array<be_t<u16>>(dst_span, src_ptr, vector_element_count, element_size, attribute_src_stride, first, count);
+		copy_whole_attribute_array<be_t<u16>>(dst_span, src_ptr, vector_element_count, dst_stride, attribute_src_stride, first, count);
 		return;
 	}
 	case rsx::vertex_base_type::f:
 	{
 		gsl::span<u32> dst_span = as_span_workaround<u32>(raw_dst_span);
-		copy_whole_attribute_array<be_t<u32>>(dst_span, src_ptr, vector_element_count, element_size, attribute_src_stride, first, count);
+		copy_whole_attribute_array<be_t<u32>>(dst_span, src_ptr, vector_element_count, dst_stride, attribute_src_stride, first, count);
 		return;
 	}
 	case rsx::vertex_base_type::cmp:
@@ -82,10 +80,10 @@ void write_vertex_array_data_to_buffer(gsl::span<gsl::byte> raw_dst_span, const 
 		{
 			auto* c_src = (const be_t<u32>*)(src_ptr + attribute_src_stride * (first + i));
 			const auto& decoded_vector = decode_cmp_vector(*c_src);
-			dst_span[i * element_size / sizeof(u16)] = decoded_vector[0];
-			dst_span[i * element_size / sizeof(u16) + 1] = decoded_vector[1];
-			dst_span[i * element_size / sizeof(u16) + 2] = decoded_vector[2];
-			dst_span[i * element_size / sizeof(u16) + 3] = decoded_vector[3];
+			dst_span[i * dst_stride / sizeof(u16)] = decoded_vector[0];
+			dst_span[i * dst_stride / sizeof(u16) + 1] = decoded_vector[1];
+			dst_span[i * dst_stride / sizeof(u16) + 2] = decoded_vector[2];
+			dst_span[i * dst_stride / sizeof(u16) + 3] = decoded_vector[3];
 		}
 		return;
 	}
