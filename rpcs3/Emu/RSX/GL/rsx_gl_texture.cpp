@@ -213,7 +213,7 @@ namespace rsx
 			case rsx::texture_wrap_mode::mirror: return GL_MIRRORED_REPEAT;
 			case rsx::texture_wrap_mode::clamp_to_edge: return GL_CLAMP_TO_EDGE;
 			case rsx::texture_wrap_mode::border: return GL_CLAMP_TO_BORDER;
-			case rsx::texture_wrap_mode::clamp: return GL_CLAMP;
+			case rsx::texture_wrap_mode::clamp: return GL_CLAMP_TO_BORDER;
 			case rsx::texture_wrap_mode::mirror_once_clamp_to_edge: return GL_MIRROR_CLAMP_TO_EDGE_EXT;
 			case rsx::texture_wrap_mode::mirror_once_border: return GL_MIRROR_CLAMP_TO_BORDER_EXT;
 			case rsx::texture_wrap_mode::mirror_once_clamp: return GL_MIRROR_CLAMP_EXT;
