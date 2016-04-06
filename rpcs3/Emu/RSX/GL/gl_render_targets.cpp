@@ -76,6 +76,7 @@ void GLGSRender::init_buffers(bool skip_reading)
 
 	if (draw_fbo && !m_rtts_dirty)
 		return;
+
 	m_rtts_dirty = false;
 
 	m_rtts.prepare_render_target(nullptr, surface_format, clip_horizontal, clip_vertical, rsx::to_surface_target(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET]),
@@ -88,9 +89,12 @@ void GLGSRender::init_buffers(bool skip_reading)
 		if (std::get<0>(m_rtts.m_bound_render_targets[i]) != 0)
 			__glcheck draw_fbo.color[i] = *std::get<1>(m_rtts.m_bound_render_targets[i]);
 	}
+
 	if (std::get<0>(m_rtts.m_bound_depth_stencil) != 0)
 		__glcheck draw_fbo.depth = *std::get<1>(m_rtts.m_bound_depth_stencil);
+
 	__glcheck draw_fbo.check();
+	__glcheck draw_fbo.read_buffer(draw_fbo.color[0]);
 
 
 	switch (rsx::to_surface_target(rsx::method_registers[NV4097_SET_SURFACE_COLOR_TARGET]))
@@ -102,8 +106,11 @@ void GLGSRender::init_buffers(bool skip_reading)
 		break;
 
 	case rsx::surface_target::surface_b:
+	{
 		__glcheck draw_fbo.draw_buffer(draw_fbo.color[1]);
+		__glcheck draw_fbo.read_buffer(draw_fbo.color[1]);
 		break;
+	}
 
 	case rsx::surface_target::surfaces_a_b:
 		__glcheck draw_fbo.draw_buffers({ draw_fbo.color[0], draw_fbo.color[1] });

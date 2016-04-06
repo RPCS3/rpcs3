@@ -156,13 +156,11 @@ void GLGSRender::begin()
 		}
 	}
 
-	__glcheck glShadeModel(rsx::method_registers[NV4097_SET_SHADE_MODE]);
-
 	if (u32 blend_mrt = rsx::method_registers[NV4097_SET_BLEND_ENABLE_MRT])
 	{
-		__glcheck enable(blend_mrt & 2, GL_BLEND, GL_COLOR_ATTACHMENT1);
-		__glcheck enable(blend_mrt & 4, GL_BLEND, GL_COLOR_ATTACHMENT2);
-		__glcheck enable(blend_mrt & 8, GL_BLEND, GL_COLOR_ATTACHMENT3);
+		__glcheck enable(blend_mrt & 2, GL_BLEND, 1);
+		__glcheck enable(blend_mrt & 4, GL_BLEND, 2);
+		__glcheck enable(blend_mrt & 8, GL_BLEND, 3);
 	}
 	
 	if (__glcheck enable(rsx::method_registers[NV4097_SET_LOGIC_OP_ENABLE], GL_COLOR_LOGIC_OP))
