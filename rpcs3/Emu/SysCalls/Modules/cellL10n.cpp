@@ -721,8 +721,9 @@ s32 UTF8toUTF32()
 
 s32 jstrchk(vm::cptr<void> jstr)
 {
-	cellL10n.warning("jstrchk(jstr=*0x%x) -> utf8", jstr);
+	cellL10n.todo("jstrchk(jstr=*0x%x) -> utf8", jstr);
 
+	// TODO: Actually detect the type of the string
 	return L10N_STR_UTF8;
 }
 

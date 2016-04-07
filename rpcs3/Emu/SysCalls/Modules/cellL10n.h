@@ -25,7 +25,8 @@ enum
 };
 
 // CodePages
-enum {
+enum
+{
 	L10N_UTF8 = 0,
 	L10N_UTF16,
 	L10N_UTF32,
