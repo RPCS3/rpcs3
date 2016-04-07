@@ -218,17 +218,19 @@ namespace vk
 
 namespace
 {
-	size_t alloc_and_copy(vk::buffer* buffer, vk::data_heap& data_heap_info, size_t size, std::function<void(gsl::span<gsl::byte> ptr)> copy_function)
+	struct data_heap_alloc
 	{
-		size_t offset = data_heap_info.alloc<256>(size);
-		void* buf = buffer->map(offset, size);
-		gsl::span<gsl::byte> mapped_span = {reinterpret_cast<gsl::byte*>(buf), gsl::narrow<int>(size) };
-		copy_function(mapped_span);
-		buffer->unmap();
-		return offset;
-	}
+		static size_t alloc_and_copy(vk::vk_data_heap& data_heap_info, size_t size, std::function<void(gsl::span<gsl::byte> ptr)> copy_function)
+		{
+			size_t offset = data_heap_info.alloc<256>(size);
+			void* buf = data_heap_info.map(offset, size);
+			gsl::span<gsl::byte> mapped_span = { reinterpret_cast<gsl::byte*>(buf), gsl::narrow<int>(size) };
+			copy_function(mapped_span);
+			data_heap_info.unmap();
+			return offset;
+		}
+	};
 }
-
 
 std::tuple<VkPrimitiveTopology, bool, u32, VkDeviceSize, VkIndexType>
 VKGSRender::upload_vertex_data()
@@ -341,9 +343,9 @@ VKGSRender::upload_vertex_data()
 				throw EXCEPTION("Unknown base type %d", vertex_info.type);
 			}
 
-			size_t offset_in_attrib_buffer = alloc_and_copy(m_attrib_buffers.get(), m_attrib_ring_info, data_size, [&vertex_arrays_data, data_size](gsl::span<gsl::byte> ptr) { memcpy(ptr.data(), vertex_arrays_data.data(), data_size); });
+			size_t offset_in_attrib_buffer = data_heap_alloc::alloc_and_copy(m_attrib_ring_info, data_size, [&vertex_arrays_data, data_size](gsl::span<gsl::byte> ptr) { memcpy(ptr.data(), vertex_arrays_data.data(), data_size); });
 
-			m_buffer_view_to_clean.push_back(std::make_unique<vk::buffer_view>(*m_device, m_attrib_buffers->value, format, offset_in_attrib_buffer, data_size));
+			m_buffer_view_to_clean.push_back(std::make_unique<vk::buffer_view>(*m_device, m_attrib_ring_info.heap->value, format, offset_in_attrib_buffer, data_size));
 			m_program->bind_uniform(m_buffer_view_to_clean.back()->value, reg_table[index], descriptor_sets);
 		}
 	}
@@ -396,7 +398,7 @@ VKGSRender::upload_vertex_data()
 
 					for (const auto &first_count : first_count_commands)
 					{
-						write_vertex_array_data_to_buffer(dest_span.subspan(offset), src_ptr, first_count.first, first_count.second, vertex_info.type, vertex_info.size, vertex_info.stride);
+						write_vertex_array_data_to_buffer(dest_span.subspan(offset), src_ptr, first_count.first, first_count.second, vertex_info.type, vertex_info.size, vertex_info.stride, element_size);
 						offset += first_count.second * element_size;
 					}
 				}
@@ -407,7 +409,7 @@ VKGSRender::upload_vertex_data()
 					gsl::span<gsl::byte> dest_span(vertex_array);
 					vk::prepare_buffer_for_writing(vertex_array.data(), vertex_info.type, vertex_info.size, vertex_draw_count);
 
-					write_vertex_array_data_to_buffer(dest_span, src_ptr, 0, max_index + 1, vertex_info.type, vertex_info.size, vertex_info.stride);
+					write_vertex_array_data_to_buffer(dest_span, src_ptr, 0, max_index + 1, vertex_info.type, vertex_info.size, vertex_info.stride, element_size);
 				}
 
 				std::vector<u8> converted_buffer;
@@ -428,8 +430,8 @@ VKGSRender::upload_vertex_data()
 				const VkFormat format = vk::get_suitable_vk_format(vertex_info.type, vertex_info.size);
 				const u32 data_size = vk::get_suitable_vk_size(vertex_info.type, vertex_info.size) * num_stored_verts;
 
-				size_t offset_in_attrib_buffer = alloc_and_copy(m_attrib_buffers.get(), m_attrib_ring_info, data_size, [data_ptr, data_size](gsl::span<gsl::byte> ptr) { memcpy(ptr.data(), data_ptr, data_size); });
-				m_buffer_view_to_clean.push_back(std::make_unique<vk::buffer_view>(*m_device, m_attrib_buffers->value, format, offset_in_attrib_buffer, data_size));
+				size_t offset_in_attrib_buffer = data_heap_alloc::alloc_and_copy(m_attrib_ring_info, data_size, [data_ptr, data_size](gsl::span<gsl::byte> ptr) { memcpy(ptr.data(), data_ptr, data_size); });
+				m_buffer_view_to_clean.push_back(std::make_unique<vk::buffer_view>(*m_device, m_attrib_ring_info.heap->value, format, offset_in_attrib_buffer, data_size));
 				m_program->bind_uniform(m_buffer_view_to_clean.back()->value, reg_table[index], descriptor_sets);
 			}
 			else if (register_vertex_info[index].size > 0)
@@ -465,8 +467,8 @@ VKGSRender::upload_vertex_data()
 					}
 
 
-					size_t offset_in_attrib_buffer = alloc_and_copy(m_attrib_buffers.get(), m_attrib_ring_info, data_size, [data_ptr, data_size](gsl::span<gsl::byte> ptr) { memcpy(ptr.data(), data_ptr, data_size); });
-					m_buffer_view_to_clean.push_back(std::make_unique<vk::buffer_view>(*m_device, m_attrib_buffers->value, format, offset_in_attrib_buffer, data_size));
+					size_t offset_in_attrib_buffer = data_heap_alloc::alloc_and_copy(m_attrib_ring_info, data_size, [data_ptr, data_size](gsl::span<gsl::byte> ptr) { memcpy(ptr.data(), data_ptr, data_size); });
+					m_buffer_view_to_clean.push_back(std::make_unique<vk::buffer_view>(*m_device, m_attrib_ring_info.heap->value, format, offset_in_attrib_buffer, data_size));
 					m_program->bind_uniform(m_buffer_view_to_clean.back()->value, reg_table[index], descriptor_sets);
 					break;
 				}
@@ -500,9 +502,9 @@ VKGSRender::upload_vertex_data()
 				index_count = vk::expand_line_loop_array_to_strip(vertex_draw_count, indices);
 				size_t upload_size = index_count * sizeof(u16);
 				offset_in_index_buffer = m_index_buffer_ring_info.alloc<256>(upload_size);
-				void* buf = m_index_buffer->map(offset_in_index_buffer, upload_size);
+				void* buf = m_index_buffer_ring_info.heap->map(offset_in_index_buffer, upload_size);
 				memcpy(buf, indices.data(), upload_size);
-				m_index_buffer->unmap();
+				m_index_buffer_ring_info.heap->unmap();
 			}
 			else
 			{
@@ -515,18 +517,18 @@ VKGSRender::upload_vertex_data()
 					index_count = vk::expand_indexed_line_loop_to_strip(vertex_draw_count, (u32*)vertex_index_array.data(), indices32);
 					size_t upload_size = index_count * sizeof(u32);
 					offset_in_index_buffer = m_index_buffer_ring_info.alloc<256>(upload_size);
-					void* buf = m_index_buffer->map(offset_in_index_buffer, upload_size);
+					void* buf = m_index_buffer_ring_info.heap->map(offset_in_index_buffer, upload_size);
 					memcpy(buf, indices32.data(), upload_size);
-					m_index_buffer->unmap();
+					m_index_buffer_ring_info.heap->unmap();
 				}
 				else
 				{
 					index_count = vk::expand_indexed_line_loop_to_strip(vertex_draw_count, (u16*)vertex_index_array.data(), indices);
 					size_t upload_size = index_count * sizeof(u16);
 					offset_in_index_buffer = m_index_buffer_ring_info.alloc<256>(upload_size);
-					void* buf = m_index_buffer->map(offset_in_index_buffer, upload_size);
+					void* buf = m_index_buffer_ring_info.heap->map(offset_in_index_buffer, upload_size);
 					memcpy(buf, indices.data(), upload_size);
-					m_index_buffer->unmap();
+					m_index_buffer_ring_info.heap->unmap();
 				}
 			}
 		}
@@ -543,8 +545,8 @@ VKGSRender::upload_vertex_data()
 				std::vector<std::pair<u32, u32>> ranges;
 				ranges.push_back(std::pair<u32, u32>(0, vertex_draw_count));
 
-				gsl::span<u16> dst = { (u16*)indices.data(), gsl::narrow<int>(index_count) };
-				write_index_array_data_to_buffer(dst, draw_mode, ranges);
+				gsl::span<gsl::byte> dst = { (gsl::byte*)indices.data(), gsl::narrow<int>(index_count * 2) };
+				write_index_array_data_to_buffer(dst, rsx::index_array_type::u16, draw_mode, ranges);
 			}
 			else
 			{
@@ -553,9 +555,9 @@ VKGSRender::upload_vertex_data()
 
 			size_t upload_size = index_count * sizeof(u16);
 			offset_in_index_buffer = m_index_buffer_ring_info.alloc<256>(upload_size);
-			void* buf = m_index_buffer->map(offset_in_index_buffer, upload_size);
+			void* buf = m_index_buffer_ring_info.heap->map(offset_in_index_buffer, upload_size);
 			memcpy(buf, indices.data(), upload_size);
-			m_index_buffer->unmap();
+			m_index_buffer_ring_info.heap->unmap();
 		}
 
 		is_indexed_draw = true;
@@ -582,9 +584,9 @@ VKGSRender::upload_vertex_data()
 
 		size_t upload_size = vertex_index_array.size();
 		offset_in_index_buffer = m_index_buffer_ring_info.alloc<256>(upload_size);
-		void* buf = m_index_buffer->map(offset_in_index_buffer, upload_size);
+		void* buf = m_index_buffer_ring_info.heap->map(offset_in_index_buffer, upload_size);
 		memcpy(buf, vertex_index_array.data(), upload_size);
-		m_index_buffer->unmap();
+		m_index_buffer_ring_info.heap->unmap();
 	}
 
 	return std::make_tuple(prims, is_indexed_draw, index_count, offset_in_index_buffer, index_format);

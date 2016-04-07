@@ -550,6 +550,7 @@
     <ClInclude Include="Emu\RSX\Common\BufferUtils.h" />
     <ClInclude Include="Emu\RSX\Common\FragmentProgramDecompiler.h" />
     <ClInclude Include="Emu\RSX\Common\ProgramStateCache.h" />
+    <ClInclude Include="Emu\RSX\Common\ring_buffer_helper.h" />
     <ClInclude Include="Emu\RSX\Common\ShaderParam.h" />
     <ClInclude Include="Emu\RSX\Common\surface_store.h" />
     <ClInclude Include="Emu\RSX\Common\TextureUtils.h" />

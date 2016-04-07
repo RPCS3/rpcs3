@@ -1776,10 +1776,13 @@
     <ClInclude Include="Emu\RSX\rsx_methods.h">
       <Filter>Emu\GPU\RSX</Filter>
     </ClInclude>
-    <ClInclude Include="..\stblib\stb_image.h">
+    <ClInclude Include="Emu\RSX\Common\surface_store.h">
+      <Filter>Emu\GPU\RSX\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\3rdparty\stblib\stb_image.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\RSX\Common\surface_store.h">
+    <ClInclude Include="Emu\RSX\Common\ring_buffer_helper.h">
       <Filter>Emu\GPU\RSX\Common</Filter>
     </ClInclude>
   </ItemGroup>

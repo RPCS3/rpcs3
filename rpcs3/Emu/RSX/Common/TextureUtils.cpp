@@ -5,7 +5,6 @@
 #include "../rsx_utils.h"
 
 
-#define MAX2(a, b) ((a) > (b)) ? (a) : (b)
 namespace
 {
 	// FIXME: GSL as_span break build if template parameter is non const with current revision.
@@ -101,8 +100,8 @@ namespace
 
 				result.push_back(current_subresource_layout);
 				offset_in_src += miplevel_height_in_block * src_pitch_in_block * block_size_in_bytes * depth;
-				miplevel_height_in_block = MAX2(miplevel_height_in_block / 2, 1);
-				miplevel_width_in_block = MAX2(miplevel_width_in_block / 2, 1);
+				miplevel_height_in_block = std::max(miplevel_height_in_block / 2, 1);
+				miplevel_width_in_block = std::max(miplevel_width_in_block / 2, 1);
 			}
 			offset_in_src = align(offset_in_src, 128);
 		}
@@ -343,7 +342,7 @@ u8 get_format_block_size_in_texel(int format)
 
 size_t get_placed_texture_storage_size(const rsx::texture &texture, size_t rowPitchAlignement, size_t mipmapAlignment)
 {
-	size_t w = texture.width(), h = texture.height(), d = MAX2(texture.depth(), 1);
+	size_t w = texture.width(), h = texture.height(), d = std::max<u16>(texture.depth(), 1);
 
 	int format = texture.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
 	size_t blockEdge = get_format_block_size_in_texel(format);
@@ -352,14 +351,13 @@ size_t get_placed_texture_storage_size(const rsx::texture &texture, size_t rowPi
 	size_t heightInBlocks = (h + blockEdge - 1) / blockEdge;
 	size_t widthInBlocks = (w + blockEdge - 1) / blockEdge;
 
-
 	size_t result = 0;
 	for (unsigned mipmap = 0; mipmap < texture.mipmap(); ++mipmap)
 	{
 		size_t rowPitch = align(blockSizeInByte * widthInBlocks, rowPitchAlignement);
 		result += align(rowPitch * heightInBlocks * d, mipmapAlignment);
-		heightInBlocks = MAX2(heightInBlocks / 2, 1);
-		widthInBlocks = MAX2(widthInBlocks / 2, 1);
+		heightInBlocks = std::max<size_t>(heightInBlocks / 2, 1);
+		widthInBlocks = std::max<size_t>(widthInBlocks / 2, 1);
 	}
 
 	return result * (texture.cubemap() ? 6 : 1);

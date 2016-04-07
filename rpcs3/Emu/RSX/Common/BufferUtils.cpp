@@ -2,9 +2,6 @@
 #include "BufferUtils.h"
 #include "../rsx_methods.h"
 
-#define MIN2(x, y) ((x) < (y)) ? (x) : (y)
-#define MAX2(x, y) ((x) > (y)) ? (x) : (y)
-
 namespace
 {
 	// FIXME: GSL as_span break build if template parameter is non const with current revision.
@@ -49,11 +46,9 @@ namespace
 	}
 }
 
-void write_vertex_array_data_to_buffer(gsl::span<gsl::byte> raw_dst_span, const gsl::byte *src_ptr, u32 first, u32 count, rsx::vertex_base_type type, u32 vector_element_count, u32 attribute_src_stride)
+void write_vertex_array_data_to_buffer(gsl::span<gsl::byte> raw_dst_span, const gsl::byte *src_ptr, u32 first, u32 count, rsx::vertex_base_type type, u32 vector_element_count, u32 attribute_src_stride, u8 dst_stride)
 {
 	Expects(vector_element_count > 0);
-
-	u32 element_size = rsx::get_vertex_type_size_on_host(type, vector_element_count);
 
 	switch (type)
 	{
@@ -61,7 +56,7 @@ void write_vertex_array_data_to_buffer(gsl::span<gsl::byte> raw_dst_span, const 
 	case rsx::vertex_base_type::ub256:
 	{
 		gsl::span<u8> dst_span = as_span_workaround<u8>(raw_dst_span);
-		copy_whole_attribute_array<u8>(dst_span, src_ptr, vector_element_count, element_size, attribute_src_stride, first, count);
+		copy_whole_attribute_array<u8>(dst_span, src_ptr, vector_element_count, dst_stride, attribute_src_stride, first, count);
 		return;
 	}
 	case rsx::vertex_base_type::s1:
@@ -69,13 +64,13 @@ void write_vertex_array_data_to_buffer(gsl::span<gsl::byte> raw_dst_span, const 
 	case rsx::vertex_base_type::s32k:
 	{
 		gsl::span<u16> dst_span = as_span_workaround<u16>(raw_dst_span);
-		copy_whole_attribute_array<be_t<u16>>(dst_span, src_ptr, vector_element_count, element_size, attribute_src_stride, first, count);
+		copy_whole_attribute_array<be_t<u16>>(dst_span, src_ptr, vector_element_count, dst_stride, attribute_src_stride, first, count);
 		return;
 	}
 	case rsx::vertex_base_type::f:
 	{
 		gsl::span<u32> dst_span = as_span_workaround<u32>(raw_dst_span);
-		copy_whole_attribute_array<be_t<u32>>(dst_span, src_ptr, vector_element_count, element_size, attribute_src_stride, first, count);
+		copy_whole_attribute_array<be_t<u32>>(dst_span, src_ptr, vector_element_count, dst_stride, attribute_src_stride, first, count);
 		return;
 	}
 	case rsx::vertex_base_type::cmp:
@@ -85,10 +80,10 @@ void write_vertex_array_data_to_buffer(gsl::span<gsl::byte> raw_dst_span, const 
 		{
 			auto* c_src = (const be_t<u32>*)(src_ptr + attribute_src_stride * (first + i));
 			const auto& decoded_vector = decode_cmp_vector(*c_src);
-			dst_span[i * element_size / sizeof(u16)] = decoded_vector[0];
-			dst_span[i * element_size / sizeof(u16) + 1] = decoded_vector[1];
-			dst_span[i * element_size / sizeof(u16) + 2] = decoded_vector[2];
-			dst_span[i * element_size / sizeof(u16) + 3] = decoded_vector[3];
+			dst_span[i * dst_stride / sizeof(u16)] = decoded_vector[0];
+			dst_span[i * dst_stride / sizeof(u16) + 1] = decoded_vector[1];
+			dst_span[i * dst_stride / sizeof(u16) + 2] = decoded_vector[2];
+			dst_span[i * dst_stride / sizeof(u16) + 3] = decoded_vector[3];
 		}
 		return;
 	}
@@ -114,8 +109,8 @@ std::tuple<T, T> upload_untouched(gsl::span<to_be_t<const T>> src, gsl::span<T> 
 		}
 		else
 		{
-			max_index = MAX2(max_index, index);
-			min_index = MIN2(min_index, index);
+			max_index = std::max(max_index, index);
+			min_index = std::min(min_index, index);
 		}
 		dst[dst_idx++] = index;
 	}
@@ -134,8 +129,8 @@ std::tuple<T, T> expand_indexed_triangle_fan(gsl::span<to_be_t<const T>> src, gs
 	const T index0 = src[0];
 	if (!is_primitive_restart_enabled || index0 != -1) // Cut
 	{
-		min_index = MIN2(min_index, index0);
-		max_index = MAX2(max_index, index0);
+		min_index = std::min(min_index, index0);
+		max_index = std::max(max_index, index0);
 	}
 
 	size_t dst_idx = 0;
@@ -149,8 +144,8 @@ std::tuple<T, T> expand_indexed_triangle_fan(gsl::span<to_be_t<const T>> src, gs
 		}
 		else
 		{
-			min_index = MIN2(min_index, index1);
-			max_index = MAX2(max_index, index1);
+			min_index = std::min(min_index, index1);
+			max_index = std::max(max_index, index1);
 		}
 		T index2 = tri_indexes[1];
 		if (is_primitive_restart_enabled && index2 == primitive_restart_index)
@@ -159,8 +154,8 @@ std::tuple<T, T> expand_indexed_triangle_fan(gsl::span<to_be_t<const T>> src, gs
 		}
 		else
 		{
-			min_index = MIN2(min_index, index2);
-			max_index = MAX2(max_index, index2);
+			min_index = std::min(min_index, index2);
+			max_index = std::max(max_index, index2);
 		}
 
 		dst[dst_idx++] = index0;
@@ -192,8 +187,8 @@ std::tuple<T, T> expand_indexed_quads(gsl::span<to_be_t<const T>> src, gsl::span
 		}
 		else
 		{
-			min_index = MIN2(min_index, index0);
-			max_index = MAX2(max_index, index0);
+			min_index = std::min(min_index, index0);
+			max_index = std::max(max_index, index0);
 		}
 		T index1 = quad_indexes[1];
 		if (is_primitive_restart_enabled && index1 == primitive_restart_index)
@@ -202,8 +197,8 @@ std::tuple<T, T> expand_indexed_quads(gsl::span<to_be_t<const T>> src, gsl::span
 		}
 		else
 		{
-			min_index = MIN2(min_index, index1);
-			max_index = MAX2(max_index, index1);
+			min_index = std::min(min_index, index1);
+			max_index = std::max(max_index, index1);
 		}
 		T index2 = quad_indexes[2];
 		if (is_primitive_restart_enabled && index2 == primitive_restart_index)
@@ -212,8 +207,8 @@ std::tuple<T, T> expand_indexed_quads(gsl::span<to_be_t<const T>> src, gsl::span
 		}
 		else
 		{
-			min_index = MIN2(min_index, index2);
-			max_index = MAX2(max_index, index2);
+			min_index = std::min(min_index, index2);
+			max_index = std::max(max_index, index2);
 		}
 		T index3 = quad_indexes[3];
 		if (is_primitive_restart_enabled &&index3 == primitive_restart_index)
@@ -222,8 +217,8 @@ std::tuple<T, T> expand_indexed_quads(gsl::span<to_be_t<const T>> src, gsl::span
 		}
 		else
 		{
-			min_index = MIN2(min_index, index3);
-			max_index = MAX2(max_index, index3);
+			min_index = std::min(min_index, index3);
+			max_index = std::max(max_index, index3);
 		}
 
 		// First triangle
@@ -394,14 +389,16 @@ std::tuple<T, T> write_index_array_data_to_buffer_impl(gsl::span<T, gsl::dynamic
 	throw new EXCEPTION("Unknow draw mode");
 }
 
-std::tuple<u32, u32> write_index_array_data_to_buffer(gsl::span<u32, gsl::dynamic_range> dst, rsx::primitive_type draw_mode, const std::vector<std::pair<u32, u32> > &first_count_arguments)
+std::tuple<u32, u32> write_index_array_data_to_buffer(gsl::span<gsl::byte> dst, rsx::index_array_type type, rsx::primitive_type draw_mode, const std::vector<std::pair<u32, u32> > &first_count_arguments)
 {
-	return write_index_array_data_to_buffer_impl(dst, draw_mode, first_count_arguments);
-}
-
-std::tuple<u16, u16> write_index_array_data_to_buffer(gsl::span<u16, gsl::dynamic_range> dst, rsx::primitive_type draw_mode, const std::vector<std::pair<u32, u32> > &first_count_arguments)
-{
-	return write_index_array_data_to_buffer_impl(dst, draw_mode, first_count_arguments);
+	switch (type)
+	{
+	case rsx::index_array_type::u16:
+		return write_index_array_data_to_buffer_impl<u16>(as_span_workaround<u16>(dst), draw_mode, first_count_arguments);
+	case rsx::index_array_type::u32:
+		return write_index_array_data_to_buffer_impl<u32>(as_span_workaround<u32>(dst), draw_mode, first_count_arguments);
+	}
+	throw EXCEPTION("Unknow index type");
 }
 
 std::tuple<u32, u32> write_index_array_data_to_buffer_untouched(gsl::span<u32, gsl::dynamic_range> dst, const std::vector<std::pair<u32, u32> > &first_count_arguments)

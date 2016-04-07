@@ -104,7 +104,7 @@ std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC> D3D12GSRender::upload_vertex_attrib
 			for (const auto &range : vertex_ranges)
 			{
 				gsl::span<gsl::byte> mapped_buffer_span = { (gsl::byte*)mapped_buffer, gsl::narrow_cast<int>(buffer_size) };
-				write_vertex_array_data_to_buffer(mapped_buffer_span, src_ptr, range.first, range.second, info.type, info.size, info.stride);
+				write_vertex_array_data_to_buffer(mapped_buffer_span, src_ptr, range.first, range.second, info.type, info.size, info.stride, element_size);
 				mapped_buffer = (char*)mapped_buffer + range.second * element_size;
 			}
 			m_buffer_data.unmap(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
@@ -146,7 +146,7 @@ namespace
 std::tuple<std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC>, size_t> upload_inlined_vertex_array(
 	gsl::span<const rsx::data_array_format_info, 16> vertex_attribute_infos,
 	gsl::span<const gsl::byte> inlined_array_raw_data,
-	data_heap& ring_buffer_data,
+	d3d12_data_heap& ring_buffer_data,
 	ID3D12Resource* vertex_buffer_placement,
 	ID3D12GraphicsCommandList* command_list
 	)
@@ -364,18 +364,9 @@ std::tuple<bool, size_t, std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC>> D3D12GSRe
 
 	void *mapped_buffer = m_buffer_data.map<void>(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
 	u32 min_index, max_index;
+	gsl::span<gsl::byte> dst{ reinterpret_cast<gsl::byte*>(mapped_buffer), gsl::narrow<u32>(buffer_size) };
 
-	if (indexed_type == rsx::index_array_type::u16)
-	{
-		gsl::span<u16> dst = { (u16*)mapped_buffer, gsl::narrow<int>(buffer_size / index_size) };
-		std::tie(min_index, max_index) = write_index_array_data_to_buffer(dst, draw_mode, first_count_commands);
-	}
-
-	if (indexed_type == rsx::index_array_type::u32)
-	{
-		gsl::span<u32> dst = { (u32*)mapped_buffer, gsl::narrow<int>(buffer_size / index_size) };
-		std::tie(min_index, max_index) = write_index_array_data_to_buffer(dst, draw_mode, first_count_commands);
-	}
+	std::tie(min_index, max_index) = write_index_array_data_to_buffer(dst, indexed_type, draw_mode, first_count_commands);
 
 	m_buffer_data.unmap(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
 	D3D12_INDEX_BUFFER_VIEW index_buffer_view = {

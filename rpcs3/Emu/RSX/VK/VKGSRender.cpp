@@ -403,11 +403,11 @@ VKGSRender::VKGSRender() : GSRender(frame_type::Vulkan)
 
 #define RING_BUFFER_SIZE 16 * 1024 * 1024
 	m_uniform_buffer_ring_info.init(RING_BUFFER_SIZE);
-	m_uniform_buffer.reset(new vk::buffer(*m_device, RING_BUFFER_SIZE, m_memory_type_mapping.host_visible_coherent, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 0));
+	m_uniform_buffer_ring_info.heap.reset(new vk::buffer(*m_device, RING_BUFFER_SIZE, m_memory_type_mapping.host_visible_coherent, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 0));
 	m_index_buffer_ring_info.init(RING_BUFFER_SIZE);
-	m_index_buffer.reset(new vk::buffer(*m_device, RING_BUFFER_SIZE, m_memory_type_mapping.host_visible_coherent, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, 0));
+	m_index_buffer_ring_info.heap.reset(new vk::buffer(*m_device, RING_BUFFER_SIZE, m_memory_type_mapping.host_visible_coherent, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, 0));
 	m_texture_upload_buffer_ring_info.init(8 * RING_BUFFER_SIZE);
-	m_texture_upload_buffer.reset(new vk::buffer(*m_device, 8 * RING_BUFFER_SIZE, m_memory_type_mapping.host_visible_coherent, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 0));
+	m_texture_upload_buffer_ring_info.heap.reset(new vk::buffer(*m_device, 8 * RING_BUFFER_SIZE, m_memory_type_mapping.host_visible_coherent, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 0));
 
 	m_render_passes = get_precomputed_render_passes(*m_device, m_optimal_tiling_supported_formats);
 
@@ -451,10 +451,10 @@ VKGSRender::~VKGSRender()
 	//TODO: Properly destroy shader modules instead of calling clear...
 	m_prog_buffer.clear();
 
-	m_index_buffer.release();
-	m_uniform_buffer.release();
-	m_attrib_buffers.release();
-	m_texture_upload_buffer.release();
+	m_index_buffer_ring_info.heap.release();
+	m_uniform_buffer_ring_info.heap.release();
+	m_attrib_ring_info.heap.release();
+	m_texture_upload_buffer_ring_info.heap.release();
 	null_buffer.release();
 	null_buffer_view.release();
 	m_buffer_view_to_clean.clear();
@@ -562,7 +562,7 @@ void VKGSRender::end()
 				m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, "tex" + std::to_string(i), descriptor_sets);
 				continue;
 			}
-			vk::image_view  *texture0 = m_texture_cache.upload_texture(m_command_buffer, textures[i], m_rtts, m_memory_type_mapping, m_texture_upload_buffer_ring_info, m_texture_upload_buffer.get());
+			vk::image_view  *texture0 = m_texture_cache.upload_texture(m_command_buffer, textures[i], m_rtts, m_memory_type_mapping, m_texture_upload_buffer_ring_info, m_texture_upload_buffer_ring_info.heap.get());
 
 			VkFilter min_filter;
 			VkSamplerMipmapMode mip_mode;
@@ -603,7 +603,7 @@ void VKGSRender::end()
 		VkDeviceSize offset;
 		std::tie(std::ignore, std::ignore, index_count, offset, index_type) = upload_info;
 
-		vkCmdBindIndexBuffer(m_command_buffer, m_index_buffer->value, offset, index_type);
+		vkCmdBindIndexBuffer(m_command_buffer, m_index_buffer_ring_info.heap->value, offset, index_type);
 		vkCmdDrawIndexed(m_command_buffer, index_count, 1, 0, 0, 0);
 	}
 
@@ -656,7 +656,7 @@ void VKGSRender::on_init_thread()
 {
 	GSRender::on_init_thread();
 	m_attrib_ring_info.init(8 * RING_BUFFER_SIZE);
-	m_attrib_buffers.reset(new vk::buffer(*m_device, 8 * RING_BUFFER_SIZE, m_memory_type_mapping.host_visible_coherent, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, 0));
+	m_attrib_ring_info.heap.reset(new vk::buffer(*m_device, 8 * RING_BUFFER_SIZE, m_memory_type_mapping.host_visible_coherent, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, 0));
 }
 
 void VKGSRender::on_exit()
@@ -893,7 +893,7 @@ bool VKGSRender::load_program()
 	//3. Update fragment constants
 	const size_t scale_offset_offset = m_uniform_buffer_ring_info.alloc<256>(256);
 
-	u8 *buf = (u8*)m_uniform_buffer->map(scale_offset_offset, 256);
+	u8 *buf = (u8*)m_uniform_buffer_ring_info.map(scale_offset_offset, 256);
 
 	//TODO: Add case for this in RSXThread
 	/**
@@ -926,22 +926,22 @@ bool VKGSRender::load_program()
 	memset((char*)buf+64, 0, 8);
 	memcpy((char*)buf + 64, &rsx::method_registers[NV4097_SET_FOG_PARAMS], sizeof(float));
 	memcpy((char*)buf + 68, &rsx::method_registers[NV4097_SET_FOG_PARAMS + 1], sizeof(float));
-	m_uniform_buffer->unmap();
+	m_uniform_buffer_ring_info.unmap();
 
 	const size_t vertex_constants_offset = m_uniform_buffer_ring_info.alloc<256>(512 * 4 * sizeof(float));
-	buf = (u8*)m_uniform_buffer->map(vertex_constants_offset, 512 * 4 * sizeof(float));
+	buf = (u8*)m_uniform_buffer_ring_info.map(vertex_constants_offset, 512 * 4 * sizeof(float));
 	fill_vertex_program_constants_data(buf);
-	m_uniform_buffer->unmap();
+	m_uniform_buffer_ring_info.unmap();
 
 	const size_t fragment_constants_sz = m_prog_buffer.get_fragment_constants_buffer_size(fragment_program);
 	const size_t fragment_constants_offset = m_uniform_buffer_ring_info.alloc<256>(fragment_constants_sz);
-	buf = (u8*)m_uniform_buffer->map(fragment_constants_offset, fragment_constants_sz);
+	buf = (u8*)m_uniform_buffer_ring_info.map(fragment_constants_offset, fragment_constants_sz);
 	m_prog_buffer.fill_fragment_constans_buffer({ reinterpret_cast<float*>(buf), gsl::narrow<int>(fragment_constants_sz) }, fragment_program);
-	m_uniform_buffer->unmap();
+	m_uniform_buffer_ring_info.unmap();
 
-	m_program->bind_uniform({ m_uniform_buffer->value, scale_offset_offset, 256 }, SCALE_OFFSET_BIND_SLOT, descriptor_sets);
-	m_program->bind_uniform({ m_uniform_buffer->value, vertex_constants_offset, 512 * 4 * sizeof(float) }, VERTEX_CONSTANT_BUFFERS_BIND_SLOT, descriptor_sets);
-	m_program->bind_uniform({ m_uniform_buffer->value, fragment_constants_offset, fragment_constants_sz }, FRAGMENT_CONSTANT_BUFFERS_BIND_SLOT, descriptor_sets);
+	m_program->bind_uniform({ m_uniform_buffer_ring_info.heap->value, scale_offset_offset, 256 }, SCALE_OFFSET_BIND_SLOT, descriptor_sets);
+	m_program->bind_uniform({ m_uniform_buffer_ring_info.heap->value, vertex_constants_offset, 512 * 4 * sizeof(float) }, VERTEX_CONSTANT_BUFFERS_BIND_SLOT, descriptor_sets);
+	m_program->bind_uniform({ m_uniform_buffer_ring_info.heap->value, fragment_constants_offset, fragment_constants_sz }, FRAGMENT_CONSTANT_BUFFERS_BIND_SLOT, descriptor_sets);
 
 	return true;
 }

@@ -188,15 +188,8 @@ void GLGSRender::set_vertex_buffer()
 		vertex_draw_count = (u32)get_index_count(draw_mode, gsl::narrow<int>(vertex_draw_count));
 		vertex_index_array.resize(vertex_draw_count * type_size);
 
-		switch (type)
-		{
-		case rsx::index_array_type::u32:
-			std::tie(min_index, max_index) = write_index_array_data_to_buffer(gsl::span<u32>((u32*)vertex_index_array.data(), vertex_draw_count), draw_mode, first_count_commands);
-			break;
-		case rsx::index_array_type::u16:
-			std::tie(min_index, max_index) = write_index_array_data_to_buffer(gsl::span<u16>((u16*)vertex_index_array.data(), vertex_draw_count), draw_mode, first_count_commands);
-			break;
-		}
+		gsl::span<gsl::byte> dst{ reinterpret_cast<gsl::byte*>(vertex_index_array.data()), gsl::narrow<u32>(vertex_index_array.size()) };
+		std::tie(min_index, max_index) = write_index_array_data_to_buffer(dst, type, draw_mode, first_count_commands);
 	}
 
 	if (draw_command == rsx::draw_command::inlined_array)
@@ -326,7 +319,7 @@ void GLGSRender::set_vertex_buffer()
 
 					for (const auto &first_count : first_count_commands)
 					{
-						write_vertex_array_data_to_buffer(dest_span.subspan(offset), src_ptr, first_count.first, first_count.second, vertex_info.type, vertex_info.size, vertex_info.stride);
+						write_vertex_array_data_to_buffer(dest_span.subspan(offset), src_ptr, first_count.first, first_count.second, vertex_info.type, vertex_info.size, vertex_info.stride, rsx::get_vertex_type_size_on_host(vertex_info.type, vertex_info.stride));
 						offset += first_count.second * element_size;
 					}
 				}
@@ -336,7 +329,7 @@ void GLGSRender::set_vertex_buffer()
 					gsl::span<gsl::byte> dest_span(vertex_array);
 					prepare_buffer_for_writing(vertex_array.data(), vertex_info.type, vertex_info.size, vertex_draw_count);
 
-					write_vertex_array_data_to_buffer(dest_span, src_ptr, 0, max_index + 1, vertex_info.type, vertex_info.size, vertex_info.stride);
+					write_vertex_array_data_to_buffer(dest_span, src_ptr, 0, max_index + 1, vertex_info.type, vertex_info.size, vertex_info.stride, rsx::get_vertex_type_size_on_host(vertex_info.type, vertex_info.stride));
 				}
 
 				size_t size = vertex_array.size();

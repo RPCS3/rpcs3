@@ -1,58 +1,16 @@
 #pragma once
 #include "D3D12Utils.h"
 #include "d3dx12.h"
+#include "../Common/ring_buffer_helper.h"
 
-
-/**
-* Wrapper around a ID3D12Resource or a ID3D12Heap.
-* Acts as a ring buffer : hold a get and put pointers,
-* put pointer is used as storage space offset
-* and get is used as beginning of in use data space.
-* This wrapper checks that put pointer doesn't cross get one.
-*/
-class data_heap
+struct d3d12_data_heap : public data_heap
 {
-	/**
-	* Does alloc cross get position ?
-	*/
-	template<int Alignement>
-	bool can_alloc(size_t size) const
-	{
-		size_t alloc_size = align(size, Alignement);
-		size_t aligned_put_pos = align(m_put_pos, Alignement);
-		if (aligned_put_pos + alloc_size < m_size)
-		{
-			// range before get
-			if (aligned_put_pos + alloc_size < m_get_pos)
-				return true;
-			// range after get
-			if (aligned_put_pos > m_get_pos)
-				return true;
-			return false;
-		}
-		else
-		{
-			// ..]....[..get..
-			if (aligned_put_pos < m_get_pos)
-				return false;
-			// ..get..]...[...
-			// Actually all resources extending beyond heap space starts at 0
-			if (alloc_size > m_get_pos)
-				return false;
-			return true;
-		}
-	}
-
-	size_t m_size;
-	size_t m_put_pos; // Start of free space
 	ComPtr<ID3D12Resource> m_heap;
 public:
-	data_heap() = default;
-	~data_heap() = default;
-	data_heap(const data_heap&) = delete;
-	data_heap(data_heap&&) = delete;
-
-	size_t m_get_pos; // End of free space
+	d3d12_data_heap() = default;
+	~d3d12_data_heap() = default;
+	d3d12_data_heap(const d3d12_data_heap&) = delete;
+	d3d12_data_heap(d3d12_data_heap&&) = delete;
 
 	template <typename... arg_type>
 	void init(ID3D12Device *device, size_t heap_size, D3D12_HEAP_TYPE type, D3D12_RESOURCE_STATES state)
@@ -70,24 +28,6 @@ public:
 			nullptr,
 			IID_PPV_ARGS(m_heap.GetAddressOf()))
 			);
-	}
-
-	template<int Alignement>
-	size_t alloc(size_t size)
-	{
-		if (!can_alloc<Alignement>(size)) throw EXCEPTION("Working buffer not big enough");
-		size_t alloc_size = align(size, Alignement);
-		size_t aligned_put_pos  = align(m_put_pos, Alignement);
-		if (aligned_put_pos + alloc_size < m_size)
-		{
-			m_put_pos = aligned_put_pos + alloc_size;
-			return aligned_put_pos;
-		}
-		else
-		{
-			m_put_pos = alloc_size;
-			return 0;
-		}
 	}
 
 	template<typename T>
@@ -121,14 +61,6 @@ public:
 	ID3D12Resource* get_heap()
 	{
 		return m_heap.Get();
-	}
-
-	/**
-	* return current putpos - 1
-	*/
-	size_t get_current_put_pos_minus_one() const
-	{
-		return (m_put_pos - 1 > 0) ? m_put_pos - 1 : m_size - 1;
 	}
 };
 

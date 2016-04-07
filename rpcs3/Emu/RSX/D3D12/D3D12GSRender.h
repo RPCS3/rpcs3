@@ -106,8 +106,8 @@ private:
 	resource_storage &get_non_current_resource_storage();
 
 	// Textures, constants, index and vertex buffers storage
-	data_heap m_buffer_data;
-	data_heap m_readback_resources;
+	d3d12_data_heap m_buffer_data;
+	d3d12_data_heap m_readback_resources;
 	ComPtr<ID3D12Resource> m_vertex_buffer_data;
 
 	rsx::render_targets m_rtts;
