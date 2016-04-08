@@ -266,7 +266,7 @@ public:
 			.setOptLevel(llvm::CodeGenOpt::Aggressive)
 			.setMCPU("nehalem")
 			.create();
-		module_ptr->setDataLayout(execution_engine->getDataLayout());
+		module_ptr->setDataLayout(*execution_engine->getDataLayout());
 
 		execution_engine->finalizeObject();
 
