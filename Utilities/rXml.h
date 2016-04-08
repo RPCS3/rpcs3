@@ -1,6 +1,10 @@
 #pragma once
 
-#include <pugixml.hpp>
+#ifndef PUGIXML_HEADER_ONLY
+#define PUGIXML_HEADER_ONLY 1
+#endif // !PUGIXML_HEADER_ONLY
+#include "pugixml.hpp"
+#undef PUGIXML_HEADER_ONLY
 
 struct rXmlNode
 {

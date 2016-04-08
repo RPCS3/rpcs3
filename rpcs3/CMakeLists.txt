@@ -165,7 +165,6 @@ endforeach()
 file(
 GLOB_RECURSE
 RPCS3_SRC
-"${RPCS3_SRC_DIR}/../3rdparty/pugixml/src/pugixml.cpp"
 "${RPCS3_SRC_DIR}/rpcs3.cpp"
 "${RPCS3_SRC_DIR}/config.cpp"
 "${RPCS3_SRC_DIR}/stb_image.cpp"

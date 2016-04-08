@@ -1,9 +1,5 @@
 #include "stdafx.h"
 #include "Utilities/rXml.h"
-#pragma warning(push)
-#pragma warning(disable : 4996)
-#include <pugixml.hpp>
-#pragma warning(pop)
 
 rXmlNode::rXmlNode()
 {
