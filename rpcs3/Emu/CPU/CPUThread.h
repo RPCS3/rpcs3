@@ -2,174 +2,97 @@
 
 #include "Utilities/Thread.h"
 
-enum CPUThreadType
+// CPU Thread Type
+enum class cpu_type : u32
 {
-	CPU_THREAD_PPU,
-	CPU_THREAD_SPU,
-	CPU_THREAD_RAW_SPU,
-	CPU_THREAD_ARMv7,
+	ppu, // PPU Thread
+	spu, // SPU Thread
+	arm, // ARMv7 Thread
 };
 
-// CPU Thread State Flags
-enum : u64
+// CPU Thread State flags
+enum struct cpu_state : u32
 {
-	CPU_STATE_STOPPED = (1ull << 0), // basic execution state (stopped by default), removed by Exec()
-	CPU_STATE_PAUSED  = (1ull << 1), // pauses thread execution, set by the debugger (manually or after step execution)
-	CPU_STATE_SLEEP   = (1ull << 2), // shouldn't affect thread execution, set by sleep(), removed by the latest awake(), may possibly indicate waiting state of the thread
-	CPU_STATE_STEP    = (1ull << 3), // forces the thread to pause after executing just one instruction or something appropriate, set by the debugger
-	CPU_STATE_DEAD    = (1ull << 4), // indicates irreversible exit of the thread
-	CPU_STATE_RETURN  = (1ull << 5), // used for callback return
-	CPU_STATE_SIGNAL  = (1ull << 6), // used for HLE signaling
-	CPU_STATE_INTR    = (1ull << 7), // thread interrupted
+	stop, // Thread not running (HLE, initial state)
+	exit, // Irreversible exit
+	suspend, // Thread paused
+	ret, // Callback return requested
+	signal, // Thread received a signal (HLE)
+	interrupt, // Thread interrupted
 
-	CPU_STATE_MAX     = (1ull << 8), // added to (subtracted from) m_state by sleep()/awake() calls to trigger status check
+	dbg_global_pause, // Emulation paused
+	dbg_global_stop, // Emulation stopped
+	dbg_pause, // Thread paused
+	dbg_step, // Thread forced to pause after one step (one instruction, etc)
 };
 
-class CPUThreadReturn {}; // "HLE return" exception event
-class CPUThreadStop {}; // CPUThread::Stop exception event
-class CPUThreadExit {}; // CPUThread::Exit exception event
+// CPU Thread State flags: pause state union
+constexpr mset<cpu_state> cpu_state_pause = to_mset(cpu_state::suspend, cpu_state::dbg_global_pause, cpu_state::dbg_pause);
 
-class CPUDecoder;
-
-class CPUThread : public named_thread_t
+class cpu_thread : public named_thread
 {
 	void on_task() override;
-	void on_id_aux_finalize() override { exit(); } // call exit() instead of join()
-
-protected:
-	atomic_t<u64> m_state{ CPU_STATE_STOPPED }; // thread state flags
-
-	std::unique_ptr<CPUDecoder> m_dec;
-
-	const u32 m_id;
-	const CPUThreadType m_type;
-	const std::string m_name; // changing m_name is unsafe because it can be read at any moment
-
-	CPUThread(CPUThreadType type, const std::string& name);
 
 public:
-	virtual ~CPUThread() override;
+	virtual void on_init() override
+	{
+		named_thread::on_init();
+	}
 
-	virtual std::string get_name() const override;
-	u32 get_id() const { return m_id; }
-	CPUThreadType get_type() const { return m_type; }
+	virtual void on_stop() override
+	{
+		state += cpu_state::exit;
+		safe_notify();
+	}
 
-	bool is_alive() const { return (m_state & CPU_STATE_DEAD) == 0; }
-	bool is_stopped() const { return (m_state & CPU_STATE_STOPPED) != 0; }
-	virtual bool is_paused() const;
+	const std::string name;
+	const u32 id{};
+	const cpu_type type;
 
-	virtual void dump_info() const;
-	virtual u32 get_pc() const = 0;
-	virtual u32 get_offset() const = 0;
-	virtual void do_run() = 0;
-	virtual void cpu_task() = 0;
+	cpu_thread(cpu_type type, const std::string& name)
+		: type(type)
+		, name(name)
+	{
+	}
 
-	virtual void init_regs() = 0;
-	virtual void init_stack() = 0;
-	virtual void close_stack() = 0;
+	// Public thread state
+	atomic_t<mset<cpu_state>> state{ cpu_state::stop };
 
-	// initialize thread
-	void run();
+	// Recursively enter sleep state
+	void sleep()
+	{
+		if (!++m_sleep) xsleep();
+	}
 
-	// called by the debugger, don't use
-	void pause();
+	// Leave sleep state
+	void awake()
+	{
+		if (!m_sleep--) xsleep();
+	}
 
-	// called by the debugger, don't use
-	void resume();
-
-	// stop thread execution
-	void stop();
-
-	// start thread execution (removing STOP status)
-	void exec();
-
-	// exit thread execution
-	void exit();
-
-	// called by the debugger, don't use
-	void step();
-
-	// trigger thread status check
-	void sleep();
-
-	// untrigger thread status check
-	void awake();
-
-	// set SIGNAL and notify (returns true if set)
-	bool signal();
-
-	// test SIGNAL and reset
-	bool unsignal();
-
-	// process m_state flags, returns true if the checker must return
+	// Process thread state, return true if the checker must return
 	bool check_status();
 
+	virtual std::string dump() const = 0; // Print CPU state
+	virtual void cpu_init() {}
+	virtual void cpu_task() = 0;
 	virtual bool handle_interrupt() { return false; }
 
-	std::string GetFName() const
+private:
+	[[noreturn]] void xsleep()
 	{
-		return fmt::format("%s[0x%x] Thread (%s)", GetTypeString(), m_id, m_name);
+		throw std::runtime_error("cpu_thread: sleep()/awake() inconsistency");
 	}
 
-	static const char* CPUThreadTypeToString(CPUThreadType type)
-	{
-		switch (type)
-		{
-		case CPU_THREAD_PPU: return "PPU";
-		case CPU_THREAD_SPU: return "SPU";
-		case CPU_THREAD_RAW_SPU: return "RawSPU";
-		case CPU_THREAD_ARMv7: return "ARMv7";
-		}
-
-		return "Unknown";
-	}
-
-	const char* ThreadStatusToString() const
-	{
-		// TODO
-
-		//switch (ThreadStatus())
-		//{
-		//case CPUThread_Ready: return "Ready";
-		//case CPUThread_Running: return "Running";
-		//case CPUThread_Paused: return "Paused";
-		//case CPUThread_Stopped: return "Stopped";
-		//case CPUThread_Sleeping: return "Sleeping";
-		//case CPUThread_Break: return "Break";
-		//case CPUThread_Step: return "Step";
-		//}
-
-		return "Unknown";
-	}
-
-	const char* GetTypeString() const
-	{
-		return CPUThreadTypeToString(m_type);
-	}
-
-	CPUDecoder* GetDecoder()
-	{
-		return m_dec.get();
-	};
-
-	virtual std::string RegsToString() const = 0;
-	virtual std::string ReadRegString(const std::string& reg) const = 0;
-	virtual bool WriteRegString(const std::string& reg, std::string value) = 0;
+	// Sleep/Awake counter
+	atomic_t<u32> m_sleep{};
 };
 
-inline CPUThread* get_current_cpu_thread()
+inline cpu_thread* get_current_cpu_thread() noexcept
 {
-	extern thread_local CPUThread* g_tls_current_cpu_thread;
+	extern thread_local cpu_thread* g_tls_current_cpu_thread;
 
 	return g_tls_current_cpu_thread;
 }
 
-class cpu_thread
-{
-protected:
-	std::shared_ptr<CPUThread> thread;
-
-public:
-	virtual cpu_thread& args(std::initializer_list<std::string> values) = 0;
-	virtual cpu_thread& run() = 0;
-};
+extern std::vector<std::shared_ptr<cpu_thread>> get_all_cpu_threads();

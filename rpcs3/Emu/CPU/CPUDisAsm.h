@@ -51,11 +51,14 @@ protected:
 	{
 	}
 
-	virtual u32 DisAsmBranchTarget(const s32 imm)=0;
+	virtual u32 DisAsmBranchTarget(const s32 imm) = 0;
 
 	std::string FixOp(std::string op)
 	{
-		op.append(std::max<int>(10 - (int)op.length(), 0),' ');
+		op.resize(std::max<std::size_t>(op.length(), 10), ' ');
 		return op;
 	}
+
+public:
+	virtual u32 disasm(u32 pc) = 0;
 };
