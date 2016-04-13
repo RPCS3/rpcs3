@@ -3,9 +3,8 @@
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 
-#include "Emu/Cell/PPUThread.h"
-#include "Emu/ARMv7/ARMv7Thread.h"
-#include "Callback.h"
+#include "PPUThread.h"
+#include "PPUCallback.h"
 
 void CallbackManager::Register(check_cb_t func)
 {
@@ -79,17 +78,14 @@ void CallbackManager::Init()
 		}
 	};
 
-	if (vm::get(vm::main)->addr == 0x10000)
-	{
-		auto thread = idm::make_ptr<PPUThread>("Callback Thread");
+	auto thread = idm::make_ptr<PPUThread>("Callback Thread");
 
-		thread->prio = 1001;
-		thread->stack_size = 0x10000;
-		thread->custom_task = task;
-		thread->run();
+	thread->prio = 1001;
+	thread->stack_size = 0x10000;
+	thread->custom_task = task;
+	thread->cpu_init();
 
-		m_cb_thread = thread;
-	}
+	m_cb_thread = thread;
 }
 
 void CallbackManager::Clear()

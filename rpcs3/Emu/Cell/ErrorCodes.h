@@ -2,10 +2,13 @@
 
 #define ERROR_CODE(code) static_cast<s32>(code)
 
-enum : s32
+enum CellOk : s32
 {
-	CELL_OK            = 0,
+	CELL_OK = 0,
+};
 
+enum CellError : s32
+{
 	CELL_EAGAIN        = ERROR_CODE(0x80010001), // The resource is temporarily unavailable
 	CELL_EINVAL        = ERROR_CODE(0x80010002), // An invalid argument value is specified
 	CELL_ENOSYS        = ERROR_CODE(0x80010003), // The feature is not yet implemented
@@ -64,6 +67,146 @@ enum : s32
 	CELL_EOVERFLOW     = ERROR_CODE(0x80010039),
 	CELL_ENOTMOUNTED   = ERROR_CODE(0x8001003A),
 	CELL_ENOTSDATA     = ERROR_CODE(0x8001003B),
-
-	CELL_UNKNOWN_ERROR = -1,
 };
+
+// Special return type signaling on errors
+struct ppu_error_code
+{
+	s32 value;
+
+	// Print error message, error code is returned
+	static s32 report(s32 error, const char* text);
+
+	// Must be specialized for specific tag type T
+	template<typename T>
+	static const char* print(T code)
+	{
+		return nullptr;
+	}
+
+	template<typename T>
+	s32 error_check(T code)
+	{
+		if (const auto text = print(code))
+		{
+			return report(code, text);
+		}
+
+		return code;
+	}
+
+	ppu_error_code() = default;
+
+	// General error check
+	template<typename T, typename = std::enable_if_t<std::is_enum<T>::value>>
+	ppu_error_code(T value)
+		: value(error_check(value))
+	{
+	}
+
+	// Force error reporting with a message specified
+	ppu_error_code(s32 value, const char* text)
+		: value(report(value, text))
+	{
+	}
+
+	// Silence any error
+	constexpr ppu_error_code(s32 value, const std::nothrow_t&)
+		: value(value)
+	{
+	}
+
+	// Conversion
+	constexpr operator s32() const
+	{
+		return value;
+	}
+};
+
+// Helper macro for silencing possible error checks on returning ppu_error_code values
+#define NOT_AN_ERROR(value) { static_cast<s32>(value), std::nothrow }
+
+template<typename T, typename>
+struct ppu_gpr_cast_impl;
+
+template<>
+struct ppu_gpr_cast_impl<ppu_error_code, void>
+{
+	static inline u64 to(const ppu_error_code& code)
+	{
+		return code;
+	}
+
+	static inline ppu_error_code from(const u64 reg)
+	{
+		return NOT_AN_ERROR(reg);
+	}
+};
+
+template<>
+inline const char* ppu_error_code::print(CellError error)
+{
+	switch (error)
+	{
+		STR_CASE(CELL_EAGAIN);
+		STR_CASE(CELL_EINVAL);
+		STR_CASE(CELL_ENOSYS);
+		STR_CASE(CELL_ENOMEM);
+		STR_CASE(CELL_ESRCH);
+		STR_CASE(CELL_ENOENT);
+		STR_CASE(CELL_ENOEXEC);
+		STR_CASE(CELL_EDEADLK);
+		STR_CASE(CELL_EPERM);
+		STR_CASE(CELL_EBUSY);
+		STR_CASE(CELL_ETIMEDOUT);
+		STR_CASE(CELL_EABORT);
+		STR_CASE(CELL_EFAULT);
+		STR_CASE(CELL_ESTAT);
+		STR_CASE(CELL_EALIGN);
+		STR_CASE(CELL_EKRESOURCE);
+		STR_CASE(CELL_EISDIR);
+		STR_CASE(CELL_ECANCELED);
+		STR_CASE(CELL_EEXIST);
+		STR_CASE(CELL_EISCONN);
+		STR_CASE(CELL_ENOTCONN);
+		STR_CASE(CELL_EAUTHFAIL);
+		STR_CASE(CELL_ENOTMSELF);
+		STR_CASE(CELL_ESYSVER);
+		STR_CASE(CELL_EAUTHFATAL);
+		STR_CASE(CELL_EDOM);
+		STR_CASE(CELL_ERANGE);
+		STR_CASE(CELL_EILSEQ);
+		STR_CASE(CELL_EFPOS);
+		STR_CASE(CELL_EINTR);
+		STR_CASE(CELL_EFBIG);
+		STR_CASE(CELL_EMLINK);
+		STR_CASE(CELL_ENFILE);
+		STR_CASE(CELL_ENOSPC);
+		STR_CASE(CELL_ENOTTY);
+		STR_CASE(CELL_EPIPE);
+		STR_CASE(CELL_EROFS);
+		STR_CASE(CELL_ESPIPE);
+		STR_CASE(CELL_E2BIG);
+		STR_CASE(CELL_EACCES);
+		STR_CASE(CELL_EBADF);
+		STR_CASE(CELL_EIO);
+		STR_CASE(CELL_EMFILE);
+		STR_CASE(CELL_ENODEV);
+		STR_CASE(CELL_ENOTDIR);
+		STR_CASE(CELL_ENXIO);
+		STR_CASE(CELL_EXDEV);
+		STR_CASE(CELL_EBADMSG);
+		STR_CASE(CELL_EINPROGRESS);
+		STR_CASE(CELL_EMSGSIZE);
+		STR_CASE(CELL_ENAMETOOLONG);
+		STR_CASE(CELL_ENOLCK);
+		STR_CASE(CELL_ENOTEMPTY);
+		STR_CASE(CELL_ENOTSUP);
+		STR_CASE(CELL_EFSSPECIFIC);
+		STR_CASE(CELL_EOVERFLOW);
+		STR_CASE(CELL_ENOTMOUNTED);
+		STR_CASE(CELL_ENOTSDATA);
+	}
+
+	return nullptr;
+}

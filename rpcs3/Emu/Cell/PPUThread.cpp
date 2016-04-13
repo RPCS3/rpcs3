@@ -1,108 +1,62 @@
 #include "stdafx.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
-#include "Emu/state.h"
 #include "Emu/IdManager.h"
-#include "Emu/Cell/PPUThread.h"
-#include "Emu/Cell/PPUDecoder.h"
-#include "Emu/Cell/PPUInterpreter.h"
-#include "Emu/Cell/PPUInterpreter2.h"
-#include "Emu/Cell/PPULLVMRecompiler.h"
-//#include "Emu/Cell/PPURecompiler.h"
-#include "Utilities/VirtualMemory.h"
+#include "PPUThread.h"
+#include "PPUInterpreter.h"
+#include "PPUModule.h"
 
-#ifdef _WIN32
-#include <Windows.h>
-#else
-#include <sys/mman.h>
-#include <sys/stat.h>
-#endif
-
-u64 rotate_mask[64][64];
-
-extern u32 ppu_get_tls(u32 thread);
-extern void ppu_free_tls(u32 thread);
-
-//thread_local const std::weak_ptr<ppu_decoder_cache_t> g_tls_ppu_decoder_cache = fxm::get<ppu_decoder_cache_t>();
-thread_local const ppu_decoder_cache_t* g_tls_ppu_decoder_cache = nullptr; // temporarily, because thread_local is not fully available
-
-ppu_decoder_cache_t::ppu_decoder_cache_t()
-	: pointer(static_cast<decltype(pointer)>(memory_helper::reserve_memory(0x200000000)))
+enum class ppu_decoder_type
 {
-}
+	precise,
+	fast,
+	llvm,
+};
 
-ppu_decoder_cache_t::~ppu_decoder_cache_t()
+cfg::map_entry<ppu_decoder_type> g_cfg_ppu_decoder(cfg::root.core, "PPU Decoder", 1,
 {
-	memory_helper::free_reserved_memory(pointer, 0x200000000);
-}
+	{ "Interpreter (precise)", ppu_decoder_type::precise },
+	{ "Interpreter (fast)", ppu_decoder_type::fast },
+	{ "Recompiler (LLVM)", ppu_decoder_type::llvm },
+});
 
-void ppu_decoder_cache_t::initialize(u32 addr, u32 size)
-{
-	memory_helper::commit_page_memory(pointer + addr / 4, size * 2);
-
-	PPUInterpreter2* inter;
-	PPUDecoder dec(inter = new PPUInterpreter2);
-
-	for (u32 pos = addr; pos < addr + size; pos += 4)
-	{
-		inter->func = ppu_interpreter::NULL_OP;
-
-		// decode PPU opcode
-		dec.Decode(vm::ps3::read32(pos));
-
-		// store function address
-		pointer[pos / 4] = inter->func;
-	}
-}
-
-PPUThread::PPUThread(const std::string& name)
-	: CPUThread(CPU_THREAD_PPU, name)
-{
-	InitRotateMask();
-}
-
-PPUThread::~PPUThread()
-{
-	close_stack();
-	ppu_free_tls(m_id);
-}
+const ppu_decoder<ppu_interpreter_precise> s_ppu_interpreter_precise;
+const ppu_decoder<ppu_interpreter_fast> s_ppu_interpreter_fast;
 
 std::string PPUThread::get_name() const
 {
-	return fmt::format("PPU Thread[0x%x] (%s)[0x%08x]", m_id, CPUThread::get_name(), PC);
+	return fmt::format("PPU[0x%x] Thread (%s)", id, name);
 }
 
-void PPUThread::dump_info() const
+std::string PPUThread::dump() const
 {
-	extern std::string get_ps3_function_name(u64 fid);
+	std::string ret = "Registers:\n=========\n";
 
-	if (~hle_code < 1024)
-	{
-		LOG_SUCCESS(HLE, "Last syscall: %lld (%s)", ~hle_code, get_ps3_function_name(hle_code));
-	}
-	else if (hle_code)
-	{
-		LOG_SUCCESS(HLE, "Last function: %s (0x%llx)", get_ps3_function_name(hle_code), hle_code);
-	}
+	for (uint i = 0; i<32; ++i) ret += fmt::format("GPR[%d] = 0x%llx\n", i, GPR[i]);
+	for (uint i = 0; i<32; ++i) ret += fmt::format("FPR[%d] = %.6G\n", i, FPR[i]);
+	for (uint i = 0; i<32; ++i) ret += fmt::format("VR[%d] = 0x%s [%s]\n", i, VR[i].to_hex().c_str(), VR[i].to_xyzw().c_str());
+	ret += fmt::format("CR = 0x%08x\n", GetCR());
+	ret += fmt::format("LR = 0x%llx\n", LR);
+	ret += fmt::format("CTR = 0x%llx\n", CTR);
+	ret += fmt::format("XER = [CA=%u | OV=%u | SO=%u | CNT=%u]\n", u32{ CA }, u32{ OV }, u32{ SO }, u32{ XCNT });
+	//ret += fmt::format("FPSCR = 0x%x "
+	//	"[RN=%d | NI=%d | XE=%d | ZE=%d | UE=%d | OE=%d | VE=%d | "
+	//	"VXCVI=%d | VXSQRT=%d | VXSOFT=%d | FPRF=%d | "
+	//	"FI=%d | FR=%d | VXVC=%d | VXIMZ=%d | "
+	//	"VXZDZ=%d | VXIDI=%d | VXISI=%d | VXSNAN=%d | "
+	//	"XX=%d | ZX=%d | UX=%d | OX=%d | VX=%d | FEX=%d | FX=%d]\n",
+	//	FPSCR.FPSCR,
+	//	u32{ FPSCR.RN },
+	//	u32{ FPSCR.NI }, u32{ FPSCR.XE }, u32{ FPSCR.ZE }, u32{ FPSCR.UE }, u32{ FPSCR.OE }, u32{ FPSCR.VE },
+	//	u32{ FPSCR.VXCVI }, u32{ FPSCR.VXSQRT }, u32{ FPSCR.VXSOFT }, u32{ FPSCR.FPRF },
+	//	u32{ FPSCR.FI }, u32{ FPSCR.FR }, u32{ FPSCR.VXVC }, u32{ FPSCR.VXIMZ },
+	//	u32{ FPSCR.VXZDZ }, u32{ FPSCR.VXIDI }, u32{ FPSCR.VXISI }, u32{ FPSCR.VXSNAN },
+	//	u32{ FPSCR.XX }, u32{ FPSCR.ZX }, u32{ FPSCR.UX }, u32{ FPSCR.OX }, u32{ FPSCR.VX }, u32{ FPSCR.FEX }, u32{ FPSCR.FX });
 
-	CPUThread::dump_info();
+	return ret;
 }
 
-void PPUThread::init_regs()
-{
-	GPR[1] = align(stack_addr + stack_size, 0x200) - 0x200;
-	GPR[13] = ppu_get_tls(m_id) + 0x7000; // 0x7000 is subtracted from r13 to access first TLS element
-
-	LR = 0;
-	CTR = PC;
-	CR.CR = 0x22000082;
-	VSCR.NJ = 1;
-	TB = 0;
-
-	//m_state |= CPU_STATE_INTR;
-}
-
-void PPUThread::init_stack()
+void PPUThread::cpu_init()
 {
 	if (!stack_addr)
 	{
@@ -118,14 +72,70 @@ void PPUThread::init_stack()
 			throw EXCEPTION("Out of stack memory");
 		}
 	}
+
+	GPR[1] = align(stack_addr + stack_size, 0x200) - 0x200;
 }
 
-void PPUThread::close_stack()
+void PPUThread::cpu_task()
 {
-	if (stack_addr)
+	//SetHostRoundingMode(FPSCR_RN_NEAR);
+
+	if (custom_task)
 	{
-		vm::dealloc_verbose_nothrow(stack_addr, vm::stack);
-		stack_addr = 0;
+		if (check_status()) return;
+
+		return custom_task(*this);
+	}
+
+	_log::g_tls_make_prefix = [](const auto&, auto, const auto&)
+	{
+		const auto cpu = static_cast<PPUThread*>(get_current_cpu_thread());
+
+		return fmt::format("%s [0x%08x]", cpu->get_name(), cpu->PC);
+	};
+
+	const auto base = vm::_ptr<const u8>(0);
+
+	// Select opcode table
+	const auto& table = *(
+		g_cfg_ppu_decoder.get() == ppu_decoder_type::precise ? &s_ppu_interpreter_precise.get_table() :
+		g_cfg_ppu_decoder.get() == ppu_decoder_type::fast ? &s_ppu_interpreter_fast.get_table() :
+		throw std::logic_error("Invalid PPU decoder"));
+
+	u32 _pc{};
+	u32 op0, op1, op2;
+	ppu_inter_func_t func0, func1, func2;
+
+	while (true)
+	{
+		if (_pc == PC && !state.load())
+		{
+			func0(*this, { op0 });
+			
+			if ((_pc += 4) == (PC += 4) && !state.load())
+			{
+				func1(*this, { op1 });
+
+				if ((_pc += 4) == (PC += 4))
+				{
+					op0 = op2;
+					func0 = func2;
+					const auto ops = reinterpret_cast<const be_t<u32>*>(base + _pc);
+					func1 = table[ppu_decode(op1 = ops[1])];
+					func2 = table[ppu_decode(op2 = ops[2])];
+					continue;
+				}
+			}
+		}
+
+		// Reinitialize
+		_pc = PC;
+		const auto ops = reinterpret_cast<const be_t<u32>*>(base + _pc);
+		func0 = table[ppu_decode(op0 = ops[0])];
+		func1 = table[ppu_decode(op1 = ops[1])];
+		func2 = table[ppu_decode(op2 = ops[2])];
+
+		if (check_status()) return;
 	}
 }
 
@@ -134,98 +144,27 @@ bool PPUThread::handle_interrupt()
 	return false;
 }
 
-void PPUThread::do_run()
+PPUThread::~PPUThread()
 {
-	m_dec.reset();
-
-	switch (auto mode = rpcs3::state.config.core.ppu_decoder.value())
+	if (stack_addr)
 	{
-	case ppu_decoder_type::interpreter: // original interpreter
-	{
-		m_dec.reset(new PPUDecoder(new PPUInterpreter(*this)));
-		break;
-	}
-
-	case ppu_decoder_type::interpreter2: // alternative interpreter
-	{
-		break;
-	}
-
-	case ppu_decoder_type::recompiler_llvm:
-	{
-#ifdef PPU_LLVM_RECOMPILER
-		m_dec.reset(new ppu_recompiler_llvm::CPUHybridDecoderRecompiler(*this));
-#else
-		LOG_ERROR(PPU, "This image does not include PPU JIT (LLVM)");
-		Emu.Pause();
-#endif
-		break;
-	}
-
-	//case 3: m_dec.reset(new PPURecompiler(*this)); break;
-
-	default:
-	{
-		LOG_ERROR(PPU, "Invalid CPU decoder mode: %d", mode);
-		Emu.Pause();
-	}
+		vm::dealloc_verbose_nothrow(stack_addr, vm::stack);
 	}
 }
 
-bool FPRdouble::IsINF(PPCdouble d)
+be_t<u64>* PPUThread::get_stack_arg(s32 i, u64 align)
 {
-	return ((u64&)d & 0x7FFFFFFFFFFFFFFFULL) == 0x7FF0000000000000ULL;
-}
-
-bool FPRdouble::IsNaN(PPCdouble d)
-{
-	return std::isnan((double)d) ? 1 : 0;
-}
-
-bool FPRdouble::IsQNaN(PPCdouble d)
-{
-	return 
-		((u64&)d & 0x7FF0000000000000ULL) == 0x7FF0000000000000ULL &&
-		((u64&)d & 0x0007FFFFFFFFFFFULL) == 0ULL &&
-		((u64&)d & 0x000800000000000ULL) != 0ULL;
-}
-
-bool FPRdouble::IsSNaN(PPCdouble d)
-{
-	return
-		((u64&)d & 0x7FF0000000000000ULL) == 0x7FF0000000000000ULL &&
-		((u64&)d & 0x000FFFFFFFFFFFFFULL) != 0ULL &&
-		((u64&)d & 0x0008000000000000ULL) == 0ULL;
-}
-
-int FPRdouble::Cmp(PPCdouble a, PPCdouble b)
-{
-	if(a < b) return CR_LT;
-	if(a > b) return CR_GT;
-	if(a == b) return CR_EQ;
-
-	return CR_SO;
-}
-
-u64 PPUThread::get_stack_arg(s32 i)
-{
-	return vm::ps3::read64(VM_CAST(GPR[1] + 0x70 + 0x8 * (i - 9)));
+	if (align != 1 && align != 2 && align != 4 && align != 8 && align != 16) throw fmt::exception("Unsupported alignment: 0x%llx" HERE, align);
+	return vm::_ptr<u64>(vm::cast((GPR[1] + 0x30 + 0x8 * (i - 1)) & (0 - align), HERE));
 }
 
 void PPUThread::fast_call(u32 addr, u32 rtoc)
 {
-	if (!is_current())
-	{
-		throw EXCEPTION("Called from the wrong thread");
-	}
-
 	auto old_PC = PC;
 	auto old_stack = GPR[1];
 	auto old_rtoc = GPR[2];
 	auto old_LR = LR;
 	auto old_task = std::move(custom_task);
-
-	assert(!old_task || !custom_task);
 
 	PC = addr;
 	GPR[2] = rtoc;
@@ -236,11 +175,13 @@ void PPUThread::fast_call(u32 addr, u32 rtoc)
 	{
 		cpu_task();
 	}
-	catch (CPUThreadReturn)
+	catch (cpu_state _s)
 	{
+		state += _s;
+		if (_s != cpu_state::ret) throw;
 	}
 
-	m_state &= ~CPU_STATE_RETURN;
+	state -= cpu_state::ret;
 
 	PC = old_PC;
 
@@ -252,136 +193,4 @@ void PPUThread::fast_call(u32 addr, u32 rtoc)
 	GPR[2] = old_rtoc;
 	LR = old_LR;
 	custom_task = std::move(old_task);
-}
-
-void PPUThread::fast_stop()
-{
-	m_state |= CPU_STATE_RETURN;
-}
-
-void PPUThread::cpu_task()
-{
-	SetHostRoundingMode(FPSCR_RN_NEAR);
-
-	if (custom_task)
-	{
-		if (check_status()) return;
-
-		return custom_task(*this);
-	}
-
-	if (!g_tls_ppu_decoder_cache)
-	{
-		const auto decoder_cache = fxm::get<ppu_decoder_cache_t>();
-
-		if (!decoder_cache)
-		{
-			throw EXCEPTION("PPU Decoder Cache not initialized");
-		}
-
-		g_tls_ppu_decoder_cache = decoder_cache.get(); // unsafe (TODO)
-	}
-	
-	const auto exec_map = g_tls_ppu_decoder_cache->pointer;
-
-	if (m_dec)
-	{
-		while (true)
-		{
-			if (m_state && check_status()) break;
-
-			// decode instruction using specified decoder
-			m_dec->DecodeMemory(PC);
-
-			// next instruction
-			PC += 4;
-		}
-	}
-	else
-	{
-		while (true)
-		{
-			// get cached interpreter function address
-			const auto func = exec_map[PC / 4];
-
-			// check status
-			if (!m_state)
-			{
-				// call interpreter function
-				func(*this, { vm::ps3::read32(PC) });
-
-				// next instruction
-				PC += 4;
-
-				continue;
-			}
-			
-			if (check_status())
-			{
-				break;
-			}
-		}
-	}
-}
-
-ppu_thread::ppu_thread(u32 entry, const std::string& name, u32 stack_size, s32 prio)
-{
-	auto ppu = idm::make_ptr<PPUThread>(name);
-
-	if (entry)
-	{
-		ppu->PC = vm::ps3::read32(entry);
-		ppu->GPR[2] = vm::ps3::read32(entry + 4); // rtoc
-	}
-
-	ppu->stack_size = stack_size ? stack_size : Emu.GetPrimaryStackSize();
-	ppu->prio = prio ? prio : Emu.GetPrimaryPrio();
-
-	thread = std::move(ppu);
-
-	argc = 0;
-}
-
-cpu_thread& ppu_thread::args(std::initializer_list<std::string> values)
-{
-	if (!values.size())
-		return *this;
-
-	assert(argc == 0);
-
-	envp.set(vm::alloc(align(SIZE_32(*envp), stack_align), vm::main));
-	*envp = 0;
-	argv.set(vm::alloc(SIZE_32(*argv) * (u32)values.size(), vm::main));
-
-	for (auto &arg : values)
-	{
-		const u32 arg_size = align(u32(arg.size() + 1), stack_align);
-		const u32 arg_addr = vm::alloc(arg_size, vm::main);
-
-		std::memcpy(vm::base(arg_addr), arg.c_str(), arg.size() + 1);
-
-		argv[argc++] = arg_addr;
-	}
-
-	return *this;
-}
-
-cpu_thread& ppu_thread::run()
-{
-	thread->run();
-
-	gpr(3, argc);
-	gpr(4, argv.addr());
-	gpr(5, envp.addr());
-
-	return *this;
-}
-
-ppu_thread& ppu_thread::gpr(uint index, u64 value)
-{
-	assert(index < 32);
-
-	static_cast<PPUThread&>(*thread).GPR[index] = value;
-
-	return *this;
 }

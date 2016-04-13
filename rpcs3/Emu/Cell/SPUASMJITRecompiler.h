@@ -13,7 +13,7 @@ namespace asmjit
 }
 
 // SPU ASMJIT Recompiler
-class spu_recompiler : public SPURecompilerBase
+class spu_recompiler : public spu_recompiler_base
 {
 	const std::shared_ptr<asmjit::JitRuntime> m_jit;
 
@@ -75,7 +75,7 @@ private:
 	asmjit::X86Mem XmmConst(__m128 data);
 	asmjit::X86Mem XmmConst(__m128i data);
 
-private:
+public:
 	void InterpreterCall(spu_opcode_t op);
 	void FunctionCall();
 
@@ -280,6 +280,4 @@ private:
 	void FMS(spu_opcode_t op);
 
 	void UNK(spu_opcode_t op);
-
-	static const spu_opcode_table_t<void(spu_recompiler::*)(spu_opcode_t)> opcodes;
 };
