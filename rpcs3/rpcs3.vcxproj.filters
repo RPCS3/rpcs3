@@ -107,9 +107,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="rpcs3.rc" />
-  </ItemGroup>
-  <ItemGroup>
     <ClInclude Include="..\Utilities\MTProgressDialog.h">
       <Filter>Utilities</Filter>
     </ClInclude>
@@ -207,5 +204,8 @@
   </ItemGroup>
   <ItemGroup>
     <Image Include="rpcs3.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="rpcs3_.rc" />
   </ItemGroup>
 </Project>

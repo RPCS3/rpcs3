@@ -141,7 +141,7 @@
     <ClCompile Include="XInputPadHandler.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="rpcs3.rc" />
+    <ResourceCompile Include="rpcs3_.rc" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Utilities\MTProgressDialog.h" />
