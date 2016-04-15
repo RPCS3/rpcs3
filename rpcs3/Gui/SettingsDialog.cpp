@@ -384,8 +384,6 @@ SettingsDialog::SettingsDialog(wxWindow* parent)
 	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Miscellaneous", "Auto Pause at System Call" }, chbox_dbg_ap_systemcall));
 	pads.emplace_back(std::make_unique<checkbox_pad>(cfg_location{ "Miscellaneous", "Auto Pause at Function Call" }, chbox_dbg_ap_functioncall));
 
-	pads.emplace_back(std::make_unique<combobox_pad>(cfg_location{ "Video", "D3D12", "Adapter" }, cbox_gs_d3d_adapter));
-
 #ifdef _MSC_VER
 	Microsoft::WRL::ComPtr<IDXGIFactory4> dxgi_factory;
 
@@ -399,6 +397,8 @@ SettingsDialog::SettingsDialog(wxWindow* parent)
 			adapter->GetDesc(&desc);
 			cbox_gs_d3d_adapter->Append(desc.Description);
 		}
+
+		pads.emplace_back(std::make_unique<combobox_pad>(cfg_location{ "Video", "D3D12", "Adapter" }, cbox_gs_d3d_adapter));
 	}
 	else
 #endif
