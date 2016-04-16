@@ -66,7 +66,7 @@ static const char* spu_ch_name[128] =
 	"$ch121", "$ch122", "$ch123", "$ch124", "$ch125", "$ch126", "$ch127",
 };
 
-class SPUDisAsm : public PPCDisAsm
+class SPUDisAsm final : public PPCDisAsm
 {
 public:
 	SPUDisAsm(CPUDisAsmMode mode) : PPCDisAsm(mode)
@@ -133,6 +133,10 @@ private:
 	{
 		Write(fmt::format("%s %s,%s,%s,%s", FixOp(op).c_str(), a1, a2, a3, a4));
 	}
+
+public:
+	u32 disasm(u32 pc) override;
+
 	//0 - 10
 	void STOP(spu_opcode_t op)
 	{
@@ -944,13 +948,5 @@ private:
 	void UNK(spu_opcode_t op)
 	{
 		Write(fmt::format("Unknown/Illegal opcode! (0x%08x)", op.opcode));
-	}
-
-	static const spu_opcode_table_t<void(SPUDisAsm::*)(spu_opcode_t)> opcodes;
-
-public:
-	void do_disasm(u32 opcode)
-	{
-		(this->*opcodes[opcode])({ opcode });
 	}
 };

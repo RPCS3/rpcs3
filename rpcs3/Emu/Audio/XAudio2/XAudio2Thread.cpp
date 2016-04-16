@@ -1,20 +1,16 @@
 #include "stdafx.h"
 #ifdef _MSC_VER
+#include "Utilities/Config.h"
 #include "Emu/System.h"
-#include "Emu/state.h"
 
 #include "XAudio2Thread.h"
 
-XAudio2Thread::~XAudio2Thread()
-{
-	Quit();
-}
+extern cfg::bool_entry g_cfg_audio_convert_to_u16;
 
-XAudio2Thread::XAudio2Thread() : m_xaudio2_instance(nullptr), m_master_voice(nullptr), m_source_voice(nullptr)
-{
-}
-
-void XAudio2Thread::Init()
+XAudio2Thread::XAudio2Thread()
+	: m_xaudio2_instance(nullptr)
+	, m_master_voice(nullptr)
+	, m_source_voice(nullptr)
 {
 	HRESULT hr = S_OK;
 
@@ -43,24 +39,23 @@ void XAudio2Thread::Init()
 	}
 }
 
-void XAudio2Thread::Quit()
+XAudio2Thread::~XAudio2Thread()
 {
-	if (m_source_voice != nullptr) 
+	if (m_source_voice != nullptr)
 	{
-		Stop();
+		m_source_voice->Stop();
 		m_source_voice->DestroyVoice();
-		m_source_voice = nullptr;
 	}
+
 	if (m_master_voice != nullptr)
 	{
 		m_master_voice->DestroyVoice();
-		m_master_voice = nullptr;
 	}
+
 	if (m_xaudio2_instance != nullptr)
 	{
 		m_xaudio2_instance->StopEngine();
 		m_xaudio2_instance->Release();
-		m_xaudio2_instance = nullptr;
 	}
 
 	CoUninitialize();
@@ -101,11 +96,11 @@ void XAudio2Thread::Open(const void* src, int size)
 {
 	HRESULT hr;
 
-	WORD sample_size = rpcs3::config.audio.convert_to_u16.value() ? sizeof(u16) : sizeof(float);
+	WORD sample_size = g_cfg_audio_convert_to_u16 ? sizeof(u16) : sizeof(float);
 	WORD channels = 8;
 
 	WAVEFORMATEX waveformatex;
-	waveformatex.wFormatTag = rpcs3::config.audio.convert_to_u16.value() ? WAVE_FORMAT_PCM : WAVE_FORMAT_IEEE_FLOAT;
+	waveformatex.wFormatTag = g_cfg_audio_convert_to_u16 ? WAVE_FORMAT_PCM : WAVE_FORMAT_IEEE_FLOAT;
 	waveformatex.nChannels = channels;
 	waveformatex.nSamplesPerSec = 48000;
 	waveformatex.nAvgBytesPerSec = 48000 * (DWORD)channels * (DWORD)sample_size;
@@ -120,6 +115,8 @@ void XAudio2Thread::Open(const void* src, int size)
 		Emu.Pause();
 		return;
 	}
+
+	m_source_voice->SetVolume(4.0);
 
 	AddData(src, size);
 	Play();

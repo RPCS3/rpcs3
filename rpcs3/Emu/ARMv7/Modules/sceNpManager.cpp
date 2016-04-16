@@ -1,8 +1,10 @@
 #include "stdafx.h"
 #include "Emu/System.h"
-#include "Emu/ARMv7/PSVFuncList.h"
+#include "Emu/ARMv7/ARMv7Module.h"
 
 #include "sceNpManager.h"
+
+LOG_CHANNEL(sceNpManager);
 
 s32 sceNpInit(vm::cptr<SceNpCommunicationConfig> commConf, vm::ptr<SceNpOptParam> opt)
 {
@@ -54,15 +56,10 @@ s32 sceNpManagerGetChatRestrictionFlag(vm::ptr<s32> isRestricted)
 	throw EXCEPTION("");
 }
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &sceNpManager, #name, name)
+#define REG_FUNC(nid, name) REG_FNID(SceNpManager, nid, name)
 
-psv_log_base sceNpManager("SceNpManager", []()
+DECLARE(arm_module_manager::SceNpManager)("SceNpManager", []()
 {
-	sceNpManager.on_load = nullptr;
-	sceNpManager.on_unload = nullptr;
-	sceNpManager.on_stop = nullptr;
-	sceNpManager.on_error = nullptr;
-
 	REG_FUNC(0x04D9F484, sceNpInit);
 	REG_FUNC(0x19E40AE1, sceNpTerm);
 	REG_FUNC(0x3C94B4B4, sceNpManagerGetNpId);

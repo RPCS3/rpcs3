@@ -149,10 +149,7 @@ public:
 	{
 		auto var_blocks = fmt::split(var, { "." });
 
-		if (var_blocks.size() == 0)
-		{
-			assert(0);
-		}
+		Expects(var_blocks.size() != 0);
 
 		name = var_blocks[0];
 

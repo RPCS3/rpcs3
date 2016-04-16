@@ -122,5 +122,3 @@ struct SceAvcdecArrayPicture
 	le_t<u32> numOfElm;
 	vm::lpptr<SceAvcdecPicture> pPicture;
 };
-
-extern psv_log_base sceVideodec;

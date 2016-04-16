@@ -1,25 +1,20 @@
 #include "stdafx.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
-#include "Emu/state.h"
-#include "Emu/IdManager.h"
-#include "Emu/ARMv7/PSVFuncList.h"
 
 #include "ARMv7Thread.h"
-#include "ARMv7Decoder.h"
-#include "ARMv7DisAsm.h"
+#include "ARMv7Opcodes.h"
 #include "ARMv7Interpreter.h"
 
-void ARMv7Context::fast_call(u32 addr)
-{
-	return static_cast<ARMv7Thread*>(this)->fast_call(addr);
-}
+namespace vm { using namespace psv; }
+
+const arm_decoder<arm_interpreter> s_arm_interpreter;
 
 #define TLS_MAX 128
 
 u32 g_armv7_tls_start;
 
-std::array<std::atomic<u32>, TLS_MAX> g_armv7_tls_owners;
+std::array<atomic_t<u32>, TLS_MAX> g_armv7_tls_owners;
 
 void armv7_init_tls()
 {
@@ -48,8 +43,7 @@ u32 armv7_get_tls(u32 thread)
 
 	for (u32 i = 0; i < TLS_MAX; i++)
 	{
-		u32 old = 0;
-		if (g_armv7_tls_owners[i].compare_exchange_strong(old, thread))
+		if (g_armv7_tls_owners[i].compare_and_swap_test(0, thread))
 		{
 			const u32 addr = g_armv7_tls_start + i * Emu.GetTLSMemsz(); // get TLS address
 			std::memcpy(vm::base(addr), vm::base(Emu.GetTLSAddr()), Emu.GetTLSFilesz()); // initialize from TLS image
@@ -70,57 +64,38 @@ void armv7_free_tls(u32 thread)
 
 	for (auto& v : g_armv7_tls_owners)
 	{
-		u32 old = thread;
-		if (v.compare_exchange_strong(old, 0))
+		if (v.compare_and_swap_test(thread, 0))
 		{
 			return;
 		}
 	}
 }
 
-ARMv7Thread::ARMv7Thread(const std::string& name)
-	: CPUThread(CPU_THREAD_ARMv7, name)
-	, ARMv7Context({})
-{
-}
-
-ARMv7Thread::~ARMv7Thread()
-{
-	close_stack();
-	armv7_free_tls(m_id);
-}
-
 std::string ARMv7Thread::get_name() const
 {
-	return fmt::format("ARMv7 Thread[0x%x] (%s)[0x%08x]", m_id, CPUThread::get_name(), PC);
+	return fmt::format("ARMv7[0x%x] Thread (%s)", id, name);
 }
 
-void ARMv7Thread::dump_info() const
+std::string ARMv7Thread::dump() const
 {
-	if (hle_func)
+	std::string result = "Registers:\n=========\n";
+	for(int i=0; i<15; ++i)
 	{
-		const auto func = get_psv_func_by_nid(hle_func);
-		
-		LOG_SUCCESS(HLE, "Last function: %s (0x%x)", func ? func->name : "?????????", hle_func);
+		result += fmt::format("r%u\t= 0x%08x\n", i, GPR[i]);
 	}
 
-	CPUThread::dump_info();
+	result += fmt::format("APSR\t= 0x%08x [N: %d, Z: %d, C: %d, V: %d, Q: %d]\n", 
+		APSR.APSR,
+		u32{ APSR.N },
+		u32{ APSR.Z },
+		u32{ APSR.C },
+		u32{ APSR.V },
+		u32{ APSR.Q });
+	
+	return result;
 }
 
-void ARMv7Thread::init_regs()
-{
-	memset(GPR, 0, sizeof(GPR));
-	APSR.APSR = 0;
-	IPSR.IPSR = 0;
-	ISET = PC & 1 ? Thumb : ARM; // select instruction set
-	PC = PC & ~1; // and fix PC
-	ITSTATE.IT = 0;
-	SP = stack_addr + stack_size;
-	TLS = armv7_get_tls(m_id);
-	debug = DF_DISASM | DF_PRINT;
-}
-
-void ARMv7Thread::init_stack()
+void ARMv7Thread::cpu_init()
 {
 	if (!stack_addr)
 	{
@@ -136,60 +111,15 @@ void ARMv7Thread::init_stack()
 			throw EXCEPTION("Out of stack memory");
 		}
 	}
-}
 
-void ARMv7Thread::close_stack()
-{
-	if (stack_addr)
-	{
-		vm::dealloc_verbose_nothrow(stack_addr, vm::main);
-		stack_addr = 0;
-	}
-}
-
-std::string ARMv7Thread::RegsToString() const
-{
-	std::string result = "Registers:\n=========\n";
-	for(int i=0; i<15; ++i)
-	{
-		result += fmt::format("%s\t= 0x%08x\n", g_arm_reg_name[i], GPR[i]);
-	}
-
-	result += fmt::format("APSR\t= 0x%08x [N: %d, Z: %d, C: %d, V: %d, Q: %d]\n", 
-		APSR.APSR,
-		u32{ APSR.N },
-		u32{ APSR.Z },
-		u32{ APSR.C },
-		u32{ APSR.V },
-		u32{ APSR.Q });
-	
-	return result;
-}
-
-std::string ARMv7Thread::ReadRegString(const std::string& reg) const
-{
-	return "";
-}
-
-bool ARMv7Thread::WriteRegString(const std::string& reg, std::string value)
-{
-	return true;
-}
-
-void ARMv7Thread::do_run()
-{
-	m_dec.reset();
-
-	switch((int)rpcs3::state.config.core.ppu_decoder.value())
-	{
-	case 0:
-	case 1:
-		m_dec.reset(new ARMv7Decoder(*this));
-		break;
-	default:
-		LOG_ERROR(ARMv7, "Invalid CPU decoder mode: %d", (int)rpcs3::state.config.core.ppu_decoder.value());
-		Emu.Pause();
-	}
+	memset(GPR, 0, sizeof(GPR));
+	APSR.APSR = 0;
+	IPSR.IPSR = 0;
+	ISET = PC & 1 ? Thumb : ARM; // select instruction set
+	PC = PC & ~1; // and fix PC
+	ITSTATE.IT = 0;
+	SP = stack_addr + stack_size;
+	TLS = armv7_get_tls(id);
 }
 
 void ARMv7Thread::cpu_task()
@@ -201,10 +131,54 @@ void ARMv7Thread::cpu_task()
 		return custom_task(*this);
 	}
 
-	while (!m_state || !check_status())
+	_log::g_tls_make_prefix = [](const auto&, auto, const auto&)
 	{
-		// decode instruction using specified decoder
-		PC += m_dec->DecodeMemory(PC);
+		const auto cpu = static_cast<ARMv7Thread*>(get_current_cpu_thread());
+
+		return fmt::format("%s [0x%08x]", cpu->get_name(), cpu->PC);
+	};
+
+	while (!state.load() || !check_status())
+	{
+		if (ISET == Thumb)
+		{
+			const u16 op16 = vm::read16(PC);
+			const u32 cond = ITSTATE.advance();
+
+			if (const auto func16 = s_arm_interpreter.decode_thumb(op16))
+			{
+				func16(*this, op16, cond);
+				PC += 2;
+			}
+			else
+			{
+				const u32 op32 = (op16 << 16) | vm::read16(PC + 2);
+
+				s_arm_interpreter.decode_thumb(op32)(*this, op32, cond);
+				PC += 4;
+			}
+		}
+		else if (ISET == ARM)
+		{
+			const u32 op = vm::read32(PC);
+
+			s_arm_interpreter.decode_arm(op)(*this, op, op >> 28);
+			PC += 4;
+		}
+		else
+		{
+			throw fmt::exception("Invalid instruction set" HERE);
+		}
+	}
+}
+
+ARMv7Thread::~ARMv7Thread()
+{
+	armv7_free_tls(id);
+
+	if (stack_addr)
+	{
+		vm::dealloc_verbose_nothrow(stack_addr, vm::main);
 	}
 }
 
@@ -228,11 +202,13 @@ void ARMv7Thread::fast_call(u32 addr)
 	{
 		cpu_task();
 	}
-	catch (CPUThreadReturn)
+	catch (cpu_state _s)
 	{
+		state += _s;
+		if (_s != cpu_state::ret) throw;
 	}
 
-	m_state &= ~CPU_STATE_RETURN;
+	state -= cpu_state::ret;
 
 	PC = old_PC;
 
@@ -243,68 +219,4 @@ void ARMv7Thread::fast_call(u32 addr)
 
 	LR = old_LR;
 	custom_task = std::move(old_task);
-}
-
-void ARMv7Thread::fast_stop()
-{
-	m_state |= CPU_STATE_RETURN;
-}
-
-armv7_thread::armv7_thread(u32 entry, const std::string& name, u32 stack_size, s32 prio)
-{
-	std::shared_ptr<ARMv7Thread> armv7 = idm::make_ptr<ARMv7Thread>(name);
-
-	armv7->PC = entry;
-	armv7->stack_size = stack_size;
-	armv7->prio = prio;
-
-	thread = std::move(armv7);
-
-	argc = 0;
-}
-
-cpu_thread& armv7_thread::args(std::initializer_list<std::string> values)
-{
-	assert(argc == 0);
-
-	if (!values.size())
-	{
-		return *this;
-	}
-
-	std::vector<char> argv_data;
-	u32 argv_size = 0;
-
-	for (auto& arg : values)
-	{
-		const u32 arg_size = arg.size(); // get arg size
-
-		for (char c : arg)
-		{
-			argv_data.push_back(c); // append characters
-		}
-
-		argv_data.push_back('\0'); // append null terminator
-
-		argv_size += arg_size + 1;
-		argc++;
-	}
-
-	argv = vm::alloc(argv_size, vm::main); // allocate arg list
-	std::memcpy(vm::base(argv), argv_data.data(), argv_size); // copy arg list
-	
-	return *this;
-}
-
-cpu_thread& armv7_thread::run()
-{
-	auto& armv7 = static_cast<ARMv7Thread&>(*thread);
-
-	armv7.run();
-
-	// set arguments
-	armv7.GPR[0] = argc;
-	armv7.GPR[1] = argv;
-
-	return *this;
 }

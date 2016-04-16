@@ -1,5 +1,7 @@
 #pragma once
 
+// TODO: HLE info (constants, structs, etc.) should not be available here
+
 enum PortStatus
 {
 	CELL_PAD_STATUS_DISCONNECTED   = 0x00000000,
@@ -213,8 +215,7 @@ protected:
 	std::vector<Pad> m_pads;
 
 public:
-	virtual void Init(const u32 max_connect)=0;
-	virtual void Close()=0;
+	virtual void Init(const u32 max_connect) = 0;
 	virtual ~PadHandlerBase() = default;
 
 	//Set value to set pressure/axi to certain level, otherwise 0/255 default

@@ -1,8 +1,10 @@
 #include "stdafx.h"
 #include "Emu/System.h"
-#include "Emu/ARMv7/PSVFuncList.h"
+#include "Emu/ARMv7/ARMv7Module.h"
 
 #include "sceVideodec.h"
+
+LOG_CHANNEL(sceVideodec);
 
 s32 sceVideodecInitLibrary(u32 codecType, vm::cptr<SceVideodecQueryInitInfo> pInitInfo)
 {
@@ -50,15 +52,10 @@ s32 sceAvcdecDecodeFlush(vm::ptr<SceAvcdecCtrl> pCtrl)
 }
 
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &sceVideodec, #name, name)
+#define REG_FUNC(nid, name) REG_FNID(SceVideodecUser, nid, name)
 
-psv_log_base sceVideodec("SceVideodec", []()
+DECLARE(arm_module_manager::SceVideodec)("SceVideodecUser", []()
 {
-	sceVideodec.on_load = nullptr;
-	sceVideodec.on_unload = nullptr;
-	sceVideodec.on_stop = nullptr;
-	sceVideodec.on_error = nullptr;
-
 	REG_FUNC(0xF1AF65A3, sceVideodecInitLibrary);
 	REG_FUNC(0x3A5F4924, sceVideodecTermLibrary);
 	REG_FUNC(0x97E95EDB, sceAvcdecQueryDecoderMemSize);

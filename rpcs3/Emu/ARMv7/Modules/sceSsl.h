@@ -10,5 +10,3 @@ struct SceSslMemoryPoolStats
 	le_t<u32> currentInuseSize;
 	le_t<s32> reserved;
 };
-
-extern psv_log_base sceSsl;

@@ -1,8 +1,10 @@
 #include "stdafx.h"
 #include "Emu/System.h"
-#include "Emu/ARMv7/PSVFuncList.h"
+#include "Emu/ARMv7/ARMv7Module.h"
 
 #include "sceDeflt.h"
+
+LOG_CHANNEL(sceDeflt);
 
 s32 sceGzipIsValid(vm::cptr<void> pSrcGzip)
 {
@@ -70,15 +72,10 @@ s32 sceZipGetInfo(vm::cptr<void> pSrc, vm::cpptr<void> ppvExtra, vm::ptr<u32> pu
 }
 
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &sceDeflt, #name, name)
+#define REG_FUNC(nid, name) REG_FNID(SceDeflt, nid, name)
 
-psv_log_base sceDeflt("SceDeflt", []()
+DECLARE(arm_module_manager::SceDeflt)("SceDeflt", []()
 {
-	sceDeflt.on_load = nullptr;
-	sceDeflt.on_unload = nullptr;
-	sceDeflt.on_stop = nullptr;
-	sceDeflt.on_error = nullptr;
-
 	REG_FUNC(0xCD83A464, sceZlibAdler32);
 	REG_FUNC(0x110D5050, sceDeflateDecompress);
 	REG_FUNC(0xE3CB51A3, sceGzipDecompress);

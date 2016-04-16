@@ -4,7 +4,7 @@
 #include "Emu/System.h"
 #include "Emu/Memory/Memory.h"
 
-#include "Emu/SysCalls/lv2/sys_time.h"
+#include "Emu/Cell/lv2/sys_time.h"
 #include "MsgDialog.h"
 
 MsgDialogFrame::~MsgDialogFrame()
@@ -72,9 +72,9 @@ void MsgDialogFrame::Create(const std::string& msg)
 	if (type.button_type.unshifted() == CELL_MSGDIALOG_TYPE_BUTTON_TYPE_YESNO)
 	{
 		m_button_yes = new wxButton(m_dialog, wxID_YES);
-		m_buttons->Add(m_button_yes, 0, wxALIGN_CENTER_HORIZONTAL | wxRIGHT, 8);
+		m_buttons->Add(m_button_yes, 0, wxRIGHT, 8);
 		m_button_no = new wxButton(m_dialog, wxID_NO);
-		m_buttons->Add(m_button_no, 0, wxALIGN_CENTER_HORIZONTAL, 16);
+		m_buttons->Add(m_button_no, 0, 0, 16);
 
 		if (type.default_cursor == 1)
 		{
@@ -91,7 +91,7 @@ void MsgDialogFrame::Create(const std::string& msg)
 	if (type.button_type.unshifted() == CELL_MSGDIALOG_TYPE_BUTTON_TYPE_OK)
 	{
 		m_button_ok = new wxButton(m_dialog, wxID_OK);
-		m_buttons->Add(m_button_ok, 0, wxALIGN_CENTER_HORIZONTAL, 16);
+		m_buttons->Add(m_button_ok, 0, 0, 16);
 
 		if (type.default_cursor == 0)
 		{

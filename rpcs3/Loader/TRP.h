@@ -1,7 +1,5 @@
 #pragma once
 
-struct vfsStream;
-
 struct TRPHeader
 {
 	be_t<u32> trp_magic;
@@ -23,21 +21,19 @@ struct TRPEntry
 	char padding[12];
 };
 
-class TRPLoader
+class TRPLoader final
 {
-	vfsStream& trp_f;
+	const fs::file& trp_f;
 	TRPHeader m_header;
 	std::vector<TRPEntry> m_entries;
 
 public:
-	TRPLoader(vfsStream& f);
-	~TRPLoader();
-	virtual bool Install(std::string dest, bool show = false);
-	virtual bool LoadHeader(bool show = false);
+	TRPLoader(const fs::file& f);
 
-	virtual bool ContainsEntry(const char *filename);
-	virtual void RemoveEntry(const char *filename);
-	virtual void RenameEntry(const char *oldname, const char *newname);
+	bool Install(const std::string& dest, bool show = false);
+	bool LoadHeader(bool show = false);
 
-	virtual void Close();
+	bool ContainsEntry(const char *filename);
+	void RemoveEntry(const char *filename);
+	void RenameEntry(const char *oldname, const char *newname);
 };

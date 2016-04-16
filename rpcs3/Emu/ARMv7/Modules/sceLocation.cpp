@@ -1,8 +1,10 @@
 #include "stdafx.h"
 #include "Emu/System.h"
-#include "Emu/ARMv7/PSVFuncList.h"
+#include "Emu/ARMv7/ARMv7Module.h"
 
 #include "sceLocation.h"
+
+LOG_CHANNEL(sceLocation);
 
 s32 sceLocationOpen(vm::ptr<u8> handle, SceLocationLocationMethod lmethod, SceLocationHeadingMethod hmethod)
 {
@@ -90,15 +92,10 @@ s32 sceLocationSetGpsEmulationFile(vm::ptr<char> filename)
 }
 
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &sceLocation, #name, name)
+#define REG_FUNC(nid, name) REG_FNID(SceLibLocation, nid, name)
 
-psv_log_base sceLocation("SceLibLocation", []()
+DECLARE(arm_module_manager::SceLocation)("SceLibLocation", []()
 {
-	sceLocation.on_load = nullptr;
-	sceLocation.on_unload = nullptr;
-	sceLocation.on_stop = nullptr;
-	sceLocation.on_error = nullptr;
-
 	REG_FUNC(0xDD271661, sceLocationOpen);
 	REG_FUNC(0x14FE76E8, sceLocationClose);
 	REG_FUNC(0xB1F55065, sceLocationReopen);

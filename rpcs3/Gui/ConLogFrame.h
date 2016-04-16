@@ -17,6 +17,12 @@ class LogFrame : public wxPanel
 
 	wxTimer m_timer;
 
+	YAML::Node m_cfg_level;
+	YAML::Node m_cfg_tty;
+
+	_log::level get_cfg_level() const { return static_cast<_log::level>(m_cfg_level.as<uint>(4)); }
+	bool get_cfg_tty() const { return m_cfg_tty.as<bool>(true); }
+
 public:
 	LogFrame(wxWindow* parent);
 	LogFrame(LogFrame &other) = delete;

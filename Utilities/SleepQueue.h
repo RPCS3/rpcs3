@@ -1,45 +1,75 @@
 #pragma once
 
-using sleep_entry_t = class CPUThread;
-using sleep_queue_t = std::deque<std::shared_ptr<sleep_entry_t>>;
+#include <deque>
 
-static struct defer_sleep_t {} const defer_sleep{};
+// Tag used in sleep_entry<> constructor
+static struct defer_sleep_tag {} constexpr defer_sleep{};
 
-// automatic object handling a thread entry in the sleep queue
-class sleep_queue_entry_t final
+// Define sleep queue as std::deque with T* pointers, T - thread type
+template<typename T> using sleep_queue = std::deque<T*>;
+
+// Automatic object handling a thread pointer (T*) in the sleep queue
+// Sleep is called in the constructor (if not null)
+// Awake is called in the destructor (if not null)
+// Sleep queue is actually std::deque with pointers, be careful about the lifetime
+template<typename T, void(T::*Sleep)() = &T::sleep, void(T::*Awake)() = &T::awake>
+class sleep_entry final
 {
-	sleep_entry_t& m_thread;
-	sleep_queue_t& m_queue;
-
-	void add_entry();
-	void remove_entry();
-	bool find() const;
+	sleep_queue<T>& m_queue;
+	T& m_thread;
 
 public:
-	// add specified thread to the sleep queue
-	sleep_queue_entry_t(sleep_entry_t& entry, sleep_queue_t& queue);
+	// Constructor; enter() not called
+	sleep_entry(sleep_queue<T>& queue, T& entry, const defer_sleep_tag&)
+		: m_queue(queue)
+		, m_thread(entry)
+	{
+		if (Sleep) (m_thread.*Sleep)();
+	}
 
-	// don't add specified thread to the sleep queue
-	sleep_queue_entry_t(sleep_entry_t& entry, sleep_queue_t& queue, const defer_sleep_t&);
+	// Constructor; calls enter()
+	sleep_entry(sleep_queue<T>& queue, T& entry)
+		: sleep_entry(queue, entry, defer_sleep)
+	{
+		enter();
+	}
 
-	// removes specified thread from the sleep queue if added
-	~sleep_queue_entry_t();
+	// Destructor; calls leave()
+	~sleep_entry()
+	{
+		leave();
+		if (Awake) (m_thread.*Awake)();
+	}
 
-	// add thread to the sleep queue
+	// Add thread to the sleep queue
 	void enter()
 	{
-		add_entry();
+		for (auto t : m_queue)
+		{
+			if (t == &m_thread)
+			{
+				// Already exists, is it an error?
+				return;
+			}
+		}
+		
+		m_queue.emplace_back(&m_thread);
 	}
 
-	// remove thread from the sleep queue
+	// Remove thread from the sleep queue
 	void leave()
 	{
-		remove_entry();
+		auto it = std::find(m_queue.begin(), m_queue.end(), &m_thread);
+		
+		if (it != m_queue.end())
+		{
+			m_queue.erase(it);
+		}
 	}
 
-	// check whether the thread exists in the sleep queue
+	// Check whether the thread exists in the sleep queue
 	explicit operator bool() const
 	{
-		return find();
+		return std::find(m_queue.begin(), m_queue.end(), &m_thread) != m_queue.end();
 	}
 };

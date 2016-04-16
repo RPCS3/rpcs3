@@ -9,5 +9,3 @@ struct SceDisplayFrameBuf
 	le_t<u32> width;
 	le_t<u32> height;
 };
-
-extern psv_log_base sceDisplay;

@@ -1,8 +1,10 @@
 #include "stdafx.h"
 #include "Emu/System.h"
-#include "Emu/ARMv7/PSVFuncList.h"
+#include "Emu/ARMv7/ARMv7Module.h"
 
 #include "sceJpeg.h"
+
+LOG_CHANNEL(sceJpeg);
 
 s32 sceJpegInitMJpeg(s32 maxSplitDecoder)
 {
@@ -77,15 +79,10 @@ s32 sceJpegSplitDecodeMJpeg(vm::ptr<SceJpegSplitDecodeCtrl> pCtrl)
 }
 
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &sceJpeg, #name, name)
+#define REG_FUNC(nid, name) REG_FNID(SceJpegUser, nid, name)
 
-psv_log_base sceJpeg("SceJpeg", []()
+DECLARE(arm_module_manager::SceJpeg)("SceJpegUser", []()
 {
-	sceJpeg.on_load = nullptr;
-	sceJpeg.on_unload = nullptr;
-	sceJpeg.on_stop = nullptr;
-	sceJpeg.on_error = nullptr;
-
 	REG_FUNC(0xB030773B, sceJpegInitMJpeg);
 	REG_FUNC(0x62842598, sceJpegFinishMJpeg);
 	REG_FUNC(0x6215B095, sceJpegDecodeMJpeg);

@@ -1,17 +1,17 @@
 #pragma once
-#include "Emu/Memory/Memory.h"
-#include "Emu/ARMv7/PSVFuncList.h"
+
+#include "ARMv7Function.h"
 
 namespace vm
 {
 	template<typename AT, typename RT, typename... T>
-	force_inline RT _ptr_base<RT(T...), AT>::operator()(ARMv7Thread& context, T... args) const
+	force_inline RT _ptr_base<RT(T...), AT>::operator()(ARMv7Thread& cpu, T... args) const
 	{
-		return psv_func_detail::func_caller<RT, T...>::call(context, VM_CAST(this->addr()), args...);
+		return arm_func_detail::func_caller<RT, T...>::call(cpu, vm::cast(this->addr(), HERE), args...);
 	}
 }
 
-template<typename RT, typename... T> inline RT cb_call(ARMv7Thread& context, u32 addr, T... args)
+template<typename RT, typename... T> inline RT cb_call(ARMv7Thread& cpu, u32 addr, T... args)
 {
-	return psv_func_detail::func_caller<RT, T...>::call(context, addr, args...);
+	return arm_func_detail::func_caller<RT, T...>::call(cpu, addr, args...);
 }

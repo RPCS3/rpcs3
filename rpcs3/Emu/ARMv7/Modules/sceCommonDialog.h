@@ -298,5 +298,3 @@ struct ScePhotoReviewDialogResult
 	le_t<s32> result;
 	char reserved[32];
 };
-
-extern psv_log_base sceCommonDialog;

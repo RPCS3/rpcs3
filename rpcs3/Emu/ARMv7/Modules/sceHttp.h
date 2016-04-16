@@ -70,5 +70,3 @@ struct SceHttpsCaList
 };
 
 using SceHttpsCallback = s32(u32 verifyEsrr, vm::cptr<vm::ptr<SceSslCert>> sslCert, s32 certNum, vm::ptr<void> userArg);
-
-extern psv_log_base sceHttp;

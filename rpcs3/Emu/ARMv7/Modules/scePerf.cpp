@@ -1,33 +1,29 @@
 #include "stdafx.h"
 #include "Emu/System.h"
-#include "Emu/ARMv7/PSVFuncList.h"
+#include "Emu/ARMv7/ARMv7Module.h"
 
 #include "scePerf.h"
 
+LOG_CHANNEL(scePerf);
+
 extern u64 get_system_time();
 
-s32 scePerfArmPmonReset(ARMv7Thread& context, s32 threadId)
+arm_error_code scePerfArmPmonReset(ARMv7Thread& cpu, s32 threadId)
 {
 	scePerf.warning("scePerfArmPmonReset(threadId=0x%x)", threadId);
 
-	if (threadId != SCE_PERF_ARM_PMON_THREAD_ID_SELF)
-	{
-		throw EXCEPTION("Unexpected thread");
-	}
+	ASSERT(threadId == SCE_PERF_ARM_PMON_THREAD_ID_SELF);
 
-	context.counters = {};
+	cpu.counters = {};
 
 	return SCE_OK;
 }
 
-s32 scePerfArmPmonSelectEvent(ARMv7Thread& context, s32 threadId, u32 counter, u8 eventCode)
+arm_error_code scePerfArmPmonSelectEvent(ARMv7Thread& cpu, s32 threadId, u32 counter, u8 eventCode)
 {
 	scePerf.warning("scePerfArmPmonSelectEvent(threadId=0x%x, counter=0x%x, eventCode=0x%x)", threadId, counter, eventCode);
 
-	if (threadId != SCE_PERF_ARM_PMON_THREAD_ID_SELF)
-	{
-		throw EXCEPTION("Unexpected thread");
-	}
+	ASSERT(threadId == SCE_PERF_ARM_PMON_THREAD_ID_SELF);
 
 	if (counter >= 6)
 	{
@@ -66,44 +62,35 @@ s32 scePerfArmPmonSelectEvent(ARMv7Thread& context, s32 threadId, u32 counter, u
 	}
 	}
 
-	context.counters[counter].event = eventCode;
-	context.counters[counter].value = value;
+	cpu.counters[counter].event = eventCode;
+	cpu.counters[counter].value = value;
 
 	return SCE_OK;
 }
 
-s32 scePerfArmPmonStart(ARMv7Thread& context, s32 threadId)
+arm_error_code scePerfArmPmonStart(ARMv7Thread& cpu, s32 threadId)
 {
 	scePerf.warning("scePerfArmPmonStart(threadId=0x%x)", threadId);
 
-	if (threadId != SCE_PERF_ARM_PMON_THREAD_ID_SELF)
-	{
-		throw EXCEPTION("Unexpected thread");
-	}
+	ASSERT(threadId == SCE_PERF_ARM_PMON_THREAD_ID_SELF);
 
 	return SCE_OK;
 }
 
-s32 scePerfArmPmonStop(ARMv7Thread& context, s32 threadId)
+arm_error_code scePerfArmPmonStop(ARMv7Thread& cpu, s32 threadId)
 {
 	scePerf.warning("scePerfArmPmonStop(threadId=0x%x)");
 
-	if (threadId != SCE_PERF_ARM_PMON_THREAD_ID_SELF)
-	{
-		throw EXCEPTION("Unexpected thread");
-	}
+	ASSERT(threadId == SCE_PERF_ARM_PMON_THREAD_ID_SELF);
 
 	return SCE_OK;
 }
 
-s32 scePerfArmPmonGetCounterValue(ARMv7Thread& context, s32 threadId, u32 counter, vm::ptr<u32> pValue)
+arm_error_code scePerfArmPmonGetCounterValue(ARMv7Thread& cpu, s32 threadId, u32 counter, vm::ptr<u32> pValue)
 {
 	scePerf.warning("scePerfArmPmonGetCounterValue(threadId=0x%x, counter=%d, pValue=*0x%x)", threadId, counter, pValue);
 
-	if (threadId != SCE_PERF_ARM_PMON_THREAD_ID_SELF)
-	{
-		throw EXCEPTION("Unexpected thread");
-	}
+	ASSERT(threadId == SCE_PERF_ARM_PMON_THREAD_ID_SELF);
 
 	if (counter >= 6 && counter != SCE_PERF_ARM_PMON_CYCLE_COUNTER)
 	{
@@ -112,7 +99,7 @@ s32 scePerfArmPmonGetCounterValue(ARMv7Thread& context, s32 threadId, u32 counte
 
 	if (counter < 6)
 	{
-		*pValue = context.counters[counter].value;
+		*pValue = cpu.counters[counter].value;
 	}
 	else
 	{
@@ -122,7 +109,7 @@ s32 scePerfArmPmonGetCounterValue(ARMv7Thread& context, s32 threadId, u32 counte
 	return SCE_OK;
 }
 
-s32 scePerfArmPmonSoftwareIncrement(ARMv7Thread& context, u32 mask)
+arm_error_code scePerfArmPmonSoftwareIncrement(ARMv7Thread& cpu, u32 mask)
 {
 	scePerf.warning("scePerfArmPmonSoftwareIncrement(mask=0x%x)", mask);
 
@@ -135,7 +122,7 @@ s32 scePerfArmPmonSoftwareIncrement(ARMv7Thread& context, u32 mask)
 	{
 		if (mask & 1)
 		{
-			context.counters[i].value++;
+			cpu.counters[i].value++;
 		}
 	}
 
@@ -176,15 +163,10 @@ s32 sceRazorCpuSync()
 	throw EXCEPTION("");
 }
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &scePerf, #name, name)
+#define REG_FUNC(nid, name) REG_FNID(ScePerf, nid, name)
 
-psv_log_base scePerf("ScePerf", []()
+DECLARE(arm_module_manager::ScePerf)("ScePerf", []()
 {
-	scePerf.on_load = nullptr;
-	scePerf.on_unload = nullptr;
-	scePerf.on_stop = nullptr;
-	//scePerf.on_error = nullptr; // keep default error handler
-
 	REG_FUNC(0x35151735, scePerfArmPmonReset);
 	REG_FUNC(0x63CBEA8B, scePerfArmPmonSelectEvent);
 	REG_FUNC(0xC9D969D5, scePerfArmPmonStart);

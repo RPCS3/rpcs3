@@ -1,11 +1,8 @@
 #include "stdafx.h"
-#include "Log.h"
+#include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
-#include "Emu/state.h"
-#include "Emu/CPU/CPUThreadManager.h"
-#include "Emu/CPU/CPUThread.h"
+#include "Emu/IdManager.h"
 #include "Emu/Cell/RawSPUThread.h"
-#include "Emu/SysCalls/SysCalls.h"
 #include "Thread.h"
 
 #ifdef _WIN32
@@ -21,10 +18,19 @@
 
 static void report_fatal_error(const std::string& msg)
 {
+	std::string _msg = msg + "\n"
+		"HOW TO REPORT ERRORS:\n"
+		"1) Check the FAQ, readme, other sources. Please ensure that your hardware and software configuration is compliant.\n"
+		"2) You must provide FULL information: how to reproduce the error (your actions), RPCS3.log file, other *.log files whenever requested.\n"
+		"3) Please ensure that your software (game) is 'Playable' or close. Please note that 'Non-playable' games will be ignored.\n"
+		"4) If the software (game) is not 'Playable', please ensure that this error is unexpected, i.e. it didn't happen before or similar.\n"
+		"Please, don't send incorrect reports. Thanks for understanding.\n";
+
 #ifdef _WIN32
-	MessageBoxA(0, msg.c_str(), "Fatal error", MB_ICONERROR); // TODO: unicode message
+	_msg += "Press (Ctrl+C) to copy this message.";
+	MessageBoxA(0, _msg.c_str(), "Fatal error", MB_ICONERROR); // TODO: unicode message
 #else
-	std::printf("Fatal error: %s\nPlease report this error to the developers.\n", msg.c_str());
+	std::printf("Fatal error: \n%s", _msg.c_str());
 #endif
 }
 
@@ -34,9 +40,9 @@ static void report_fatal_error(const std::string& msg)
 	{
 		throw;
 	}
-	catch (const std::exception& ex)
+	catch (const std::exception& e)
 	{
-		report_fatal_error("Unhandled exception: "s + ex.what());
+		report_fatal_error("Unhandled exception of type '"s + typeid(e).name() + "': "s + e.what());
 	}
 	catch (...)
 	{
@@ -775,8 +781,7 @@ size_t get_x64_access_size(x64_context* context, x64_op_t op, x64_reg_t reg, siz
 
 	if (op == X64OP_CMPXCHG)
 	{
-		// detect whether this instruction can't actually modify memory to avoid breaking reservation;
-		// this may theoretically cause endless loop, but it shouldn't be a problem if only load_sync() generates such instruction
+		// Detect whether the instruction can't actually modify memory to avoid breaking reservation
 		u64 cmp, exch;
 		if (!get_x64_reg_value(context, reg, d_size, i_size, cmp) || !get_x64_reg_value(context, X64R_RAX, d_size, i_size, exch))
 		{
@@ -843,7 +848,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 	// check if address is RawSPU MMIO register
 	if (addr - RAW_SPU_BASE_ADDR < (6 * RAW_SPU_OFFSET) && (addr % RAW_SPU_OFFSET) >= RAW_SPU_PROB_OFFSET)
 	{
-		auto thread = Emu.GetCPU().GetRawSPUThread((addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET);
+		auto thread = idm::get<RawSPUThread>((addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET);
 
 		if (!thread)
 		{
@@ -1051,10 +1056,10 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 
 			switch (d_size)
 			{
-			case 1: reg_value = sync_lock_test_and_set((u8*)vm::base_priv(addr), (u8)reg_value); break;
-			case 2: reg_value = sync_lock_test_and_set((u16*)vm::base_priv(addr), (u16)reg_value); break;
-			case 4: reg_value = sync_lock_test_and_set((u32*)vm::base_priv(addr), (u32)reg_value); break;
-			case 8: reg_value = sync_lock_test_and_set((u64*)vm::base_priv(addr), (u64)reg_value); break;
+			case 1: reg_value = ((atomic_t<u8>*)vm::base_priv(addr))->exchange((u8)reg_value); break;
+			case 2: reg_value = ((atomic_t<u16>*)vm::base_priv(addr))->exchange((u16)reg_value); break;
+			case 4: reg_value = ((atomic_t<u32>*)vm::base_priv(addr))->exchange((u32)reg_value); break;
+			case 8: reg_value = ((atomic_t<u64>*)vm::base_priv(addr))->exchange((u64)reg_value); break;
 			default: return false;
 			}
 
@@ -1074,10 +1079,10 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 
 			switch (d_size)
 			{
-			case 1: old_value = sync_val_compare_and_swap((u8*)vm::base_priv(addr), (u8)cmp_value, (u8)reg_value); break;
-			case 2: old_value = sync_val_compare_and_swap((u16*)vm::base_priv(addr), (u16)cmp_value, (u16)reg_value); break;
-			case 4: old_value = sync_val_compare_and_swap((u32*)vm::base_priv(addr), (u32)cmp_value, (u32)reg_value); break;
-			case 8: old_value = sync_val_compare_and_swap((u64*)vm::base_priv(addr), (u64)cmp_value, (u64)reg_value); break;
+			case 1: old_value = ((atomic_t<u8>*)vm::base_priv(addr))->compare_and_swap((u8)cmp_value, (u8)reg_value); break;
+			case 2: old_value = ((atomic_t<u16>*)vm::base_priv(addr))->compare_and_swap((u16)cmp_value, (u16)reg_value); break;
+			case 4: old_value = ((atomic_t<u32>*)vm::base_priv(addr))->compare_and_swap((u32)cmp_value, (u32)reg_value); break;
+			case 8: old_value = ((atomic_t<u64>*)vm::base_priv(addr))->compare_and_swap((u64)cmp_value, (u64)reg_value); break;
 			default: return false;
 			}
 
@@ -1097,10 +1102,10 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 
 			switch (d_size)
 			{
-			case 1: value &= sync_fetch_and_and((u8*)vm::base_priv(addr), (u8)value); break;
-			case 2: value &= sync_fetch_and_and((u16*)vm::base_priv(addr), (u16)value); break;
-			case 4: value &= sync_fetch_and_and((u32*)vm::base_priv(addr), (u32)value); break;
-			case 8: value &= sync_fetch_and_and((u64*)vm::base_priv(addr), (u64)value); break;
+			case 1: value = *(atomic_t<u8>*)vm::base_priv(addr) &= (u8)value; break;
+			case 2: value = *(atomic_t<u16>*)vm::base_priv(addr) &= (u16)value; break;
+			case 4: value = *(atomic_t<u32>*)vm::base_priv(addr) &= (u32)value; break;
+			case 8: value = *(atomic_t<u64>*)vm::base_priv(addr) &= (u64)value; break;
 			default: return false;
 			}
 
@@ -1126,14 +1131,14 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 	// TODO: allow recovering from a page fault as a feature of PS3 virtual memory
 }
 
-// Throw virtual memory access violation exception
-[[noreturn]] void throw_access_violation(const char* cause, u32 address) // Don't change function definition
+[[noreturn]] static void throw_access_violation(const char* cause, u64 addr)
 {
-	throw EXCEPTION("Access violation %s location 0x%08x", cause, address);
+	vm::throw_access_violation(addr, cause);
+	std::abort();
 }
 
 // Modify context in order to convert hardware exception to C++ exception
-void prepare_throw_access_violation(x64_context* context, const char* cause, u32 address)
+static void prepare_throw_access_violation(x64_context* context, const char* cause, u32 address)
 {
 	// Set throw_access_violation() call args (old register values are lost)
 	ARG1(context) = (u64)cause;
@@ -1151,14 +1156,17 @@ static LONG exception_handler(PEXCEPTION_POINTERS pExp)
 	const u64 addr64 = pExp->ExceptionRecord->ExceptionInformation[1] - (u64)vm::base(0);
 	const bool is_writing = pExp->ExceptionRecord->ExceptionInformation[0] != 0;
 
-	if (pExp->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION && addr64 < 0x100000000ull && thread_ctrl::get_current() && handle_access_violation((u32)addr64, is_writing, pExp->ContextRecord))
+	if (pExp->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION && addr64 < 0x100000000ull)
 	{
-		return EXCEPTION_CONTINUE_EXECUTION;
+		vm::g_tls_fault_count++;
+
+		if (thread_ctrl::get_current() && handle_access_violation((u32)addr64, is_writing, pExp->ContextRecord))
+		{
+			return EXCEPTION_CONTINUE_EXECUTION;
+		}
 	}
-	else
-	{
-		return EXCEPTION_CONTINUE_SEARCH;
-	}
+
+	return EXCEPTION_CONTINUE_SEARCH;
 }
 
 static LONG exception_filter(PEXCEPTION_POINTERS pExp)
@@ -1170,8 +1178,9 @@ static LONG exception_filter(PEXCEPTION_POINTERS pExp)
 		const u64 addr64 = pExp->ExceptionRecord->ExceptionInformation[1] - (u64)vm::base(0);
 		const auto cause = pExp->ExceptionRecord->ExceptionInformation[0] != 0 ? "writing" : "reading";
 
-		if (addr64 < 0x100000000ull)
+		if (!(vm::g_tls_fault_count & (1ull << 63)) && addr64 < 0x100000000ull)
 		{
+			vm::g_tls_fault_count |= (1ull << 63);
 			// Setup throw_access_violation() call on the context
 			prepare_throw_access_violation(pExp->ContextRecord, cause, (u32)addr64);
 			return EXCEPTION_CONTINUE_EXECUTION;
@@ -1190,33 +1199,23 @@ static LONG exception_filter(PEXCEPTION_POINTERS pExp)
 	}
 
 	msg += fmt::format("Instruction address: %p.\n", pExp->ContextRecord->Rip);
-	msg += fmt::format("Image base: %p.", GetModuleHandle(NULL));
+	msg += fmt::format("Image base: %p.\n", GetModuleHandle(NULL));
+
+	if (pExp->ExceptionRecord->ExceptionCode == EXCEPTION_ILLEGAL_INSTRUCTION)
+	{
+		msg += "\n"
+			"Illegal instruction exception occured.\n"
+			"Note that your CPU must support SSSE3 extension.\n";
+	}
 
 	// TODO: print registers and the callstack
-
-	// Exception specific messages
-	if (pExp->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION)
-	{
-		msg += "\n\nAn internal access violation has occured."
-		       "\nPlease only report this error to the developers, if you're an advanced user and have obtained a stack trace.";
-	}
-	else if (pExp->ExceptionRecord->ExceptionCode == EXCEPTION_ILLEGAL_INSTRUCTION)
-	{
-		msg += "\n\nAn internal illegal instruction exception has occured."
-		       "\nRPCS3 requires a modern x86-64 CPU that supports SSSE3 (and SSE4.1 for PPU LLVM recompiler)."
-		       "\nPlease make sure that your CPU supports these extensions.";
-	}
-	else
-	{
-		msg += "\n\nAn unknown internal exception has occured. Please report this to the developers.\nYou can press (Ctrl+C) to copy this message.";
-	}
 
 	// Report fatal error
 	report_fatal_error(msg);
 	return EXCEPTION_CONTINUE_SEARCH;
 }
 
-const bool g_exception_handler_set = []() -> bool
+const bool s_exception_handler_set = []() -> bool
 {
 	if (!AddVectoredExceptionHandler(1, (PVECTORED_EXCEPTION_HANDLER)exception_handler))
 	{
@@ -1248,12 +1247,12 @@ static void signal_handler(int sig, siginfo_t* info, void* uct)
 	const u64 addr64 = (u64)info->si_addr - (u64)vm::base(0);
 	const auto cause = is_writing ? "writing" : "reading";
 
-	// TODO: Exception specific informative messages
-
-	if (addr64 < 0x100000000ull && thread_ctrl::get_current())
+	if (addr64 < 0x100000000ull)
 	{
+		vm::g_tls_fault_count++;
+
 		// Try to process access violation
-		if (!handle_access_violation((u32)addr64, is_writing, context))
+		if (!thread_ctrl::get_current() || !handle_access_violation((u32)addr64, is_writing, context))
 		{
 			// Setup throw_access_violation() call on the context
 			prepare_throw_access_violation(context, cause, (u32)addr64);
@@ -1267,7 +1266,7 @@ static void signal_handler(int sig, siginfo_t* info, void* uct)
 	}
 }
 
-const bool g_exception_handler_set = []() -> bool
+const bool s_exception_handler_set = []() -> bool
 {
 	struct ::sigaction sa;
 	sa.sa_flags = SA_SIGINFO;
@@ -1285,17 +1284,33 @@ const bool g_exception_handler_set = []() -> bool
 
 #endif
 
-thread_local thread_ctrl* thread_ctrl::g_tls_this_thread = nullptr;
+const bool s_self_test = []() -> bool
+{
+	// Find ret instruction
+	if ((*(u8*)throw_access_violation & 0xF6) == 0xC2)
+	{
+		std::abort();
+	}
+
+	return true;
+}();
+
+thread_local DECLARE(thread_ctrl::g_tls_this_thread) = nullptr;
 
 // TODO
-std::atomic<u32> g_thread_count{ 0 };
+atomic_t<u32> g_thread_count{ 0 };
 
 void thread_ctrl::initialize()
 {
-	SetCurrentThreadDebugName(g_tls_this_thread->m_name().c_str());
+	SetCurrentThreadDebugName(g_tls_this_thread->m_name.c_str());
+
+	_log::g_tls_make_prefix = [](const auto&, auto, const auto&)
+	{
+		return g_tls_this_thread->m_name;
+	};
 
 	// TODO
-	g_thread_count++;
+	++g_thread_count;
 }
 
 void thread_ctrl::finalize() noexcept
@@ -1304,79 +1319,36 @@ void thread_ctrl::finalize() noexcept
 	vm::reservation_free();
 
 	// TODO
-	g_thread_count--;
+	--g_thread_count;
 
 	// Call atexit functions
-	for (const auto& func : decltype(m_atexit)(std::move(g_tls_this_thread->m_atexit)))
-	{
-		func();
-	}
+	g_tls_this_thread->m_atexit.exec();
 }
 
-thread_ctrl::~thread_ctrl()
-{
-	m_thread.detach();
-
-	if (m_future.valid())
-	{
-		try
-		{
-			m_future.get();
-		}
-		catch (...)
-		{
-			catch_all_exceptions();
-		}
-	}
-}
-
-std::string thread_ctrl::get_name() const
-{
-	CHECK_ASSERTION(m_name);
-
-	return m_name();
-}
-
-std::string named_thread_t::get_name() const
+std::string named_thread::get_name() const
 {
 	return fmt::format("('%s') Unnamed Thread", typeid(*this).name());
 }
 
-void named_thread_t::start()
+void named_thread::start()
 {
-	CHECK_ASSERTION(!m_thread);
+	Expects(!m_thread);
 
 	// Get shared_ptr instance (will throw if called from the constructor or the object has been created incorrectly)
-	auto ptr = shared_from_this();
-
-	// Make name getter
-	auto name = [wptr = std::weak_ptr<named_thread_t>(ptr), type = &typeid(*this)]()
-	{
-		// Return actual name if available
-		if (const auto ptr = wptr.lock())
-		{
-			return ptr->get_name();
-		}
-		else
-		{
-			return fmt::format("('%s') Deleted Thread", type->name());
-		}
-	};
+	auto&& ptr = shared_from_this();
 
 	// Run thread
-	m_thread = thread_ctrl::spawn(std::move(name), [thread = std::move(ptr)]()
+	m_thread = thread_ctrl::spawn(get_name(), [thread = std::move(ptr)]()
 	{
 		try
 		{
 			LOG_TRACE(GENERAL, "Thread started");
-
 			thread->on_task();
-
 			LOG_TRACE(GENERAL, "Thread ended");
 		}
 		catch (const std::exception& e)
 		{
-			LOG_FATAL(GENERAL, "Exception: %s", e.what());
+			LOG_FATAL(GENERAL, "%s thrown: %s", typeid(e).name(), e.what());
 			Emu.Pause();
 		}
 		catch (EmulationStopped)
@@ -1388,9 +1360,9 @@ void named_thread_t::start()
 	});
 }
 
-void named_thread_t::join()
+void named_thread::join()
 {
-	CHECK_ASSERTION(m_thread != nullptr);
+	Expects(m_thread);
 
 	try
 	{
@@ -1402,12 +1374,4 @@ void named_thread_t::join()
 		m_thread.reset();
 		throw;
 	}
-}
-
-const std::function<bool()> SQUEUE_ALWAYS_EXIT = [](){ return true; };
-const std::function<bool()> SQUEUE_NEVER_EXIT = [](){ return false; };
-
-bool squeue_test_exit()
-{
-	return Emu.IsStopped();
 }

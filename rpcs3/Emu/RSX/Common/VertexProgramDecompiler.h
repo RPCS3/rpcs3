@@ -1,6 +1,7 @@
 #pragma once
 #include "Emu/RSX/RSXVertexProgram.h"
 #include <vector>
+#include <set>
 #include <sstream>
 #include "ShaderParam.h"
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Emu/SysCalls/Modules/cellMsgDialog.h"
+#include "Emu/Cell/Modules/cellMsgDialog.h"
 
 class MsgDialogFrame : public MsgDialogBase
 {

@@ -1,8 +1,10 @@
 #include "stdafx.h"
 #include "Emu/System.h"
-#include "Emu/ARMv7/PSVFuncList.h"
+#include "Emu/ARMv7/ARMv7Module.h"
 
 #include "sceHttp.h"
+
+LOG_CHANNEL(sceHttp);
 
 s32 sceHttpInit(u32 poolSize)
 {
@@ -280,15 +282,10 @@ s32 sceHttpsFreeCaList(vm::ptr<SceHttpsCaList> caList)
 }
 
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &sceHttp, #name, name)
+#define REG_FUNC(nid, name) REG_FNID(SceHttp, nid, name)
 
-psv_log_base sceHttp("SceHttp", []()
+DECLARE(arm_module_manager::SceHttp)("SceHttp", []()
 {
-	sceHttp.on_load = nullptr;
-	sceHttp.on_unload = nullptr;
-	sceHttp.on_stop = nullptr;
-	sceHttp.on_error = nullptr;
-
 	REG_FUNC(0x214926D9, sceHttpInit);
 	REG_FUNC(0xC9076666, sceHttpTerm);
 	REG_FUNC(0xF98CDFA9, sceHttpGetMemoryPoolStats);

@@ -2,8 +2,6 @@
 
 #include "restore_new.h"
 
-#ifndef QT_UI
-
 #ifdef _MSC_VER
 #pragma warning(push, 0)
 #else
@@ -49,6 +47,28 @@
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
-#endif
 
 #include "define_new_memleakdetect.h"
+
+namespace fmt
+{
+	// Convert a null-terminated wxString to a std::string encoded in utf8
+	inline std::string ToUTF8(const wxString& right)
+	{
+		return static_cast<const char*>(right.utf8_str());
+	}
+
+	// Convert a null-terminated std::string encoded in utf8 to a wxString
+	inline wxString FromUTF8(const std::string& right)
+	{
+		return wxString::FromUTF8(right.c_str());
+	}
+}
+
+#include "yaml-cpp/yaml.h"
+
+// Global GUI config
+extern YAML::Node g_gui_cfg;
+
+// Save global GUI config
+extern void save_gui_cfg();

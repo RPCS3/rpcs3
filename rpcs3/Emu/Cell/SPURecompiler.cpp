@@ -8,39 +8,36 @@
 
 extern u64 get_system_time();
 
-SPURecompilerDecoder::SPURecompilerDecoder(SPUThread& spu)
-	: db(fxm::get_always<SPUDatabase>())
-	, rec(fxm::get_always<spu_recompiler>())
-	, spu(spu)
+void spu_recompiler_base::enter(SPUThread& spu)
 {
-}
-
-u32 SPURecompilerDecoder::DecodeMemory(const u32 address)
-{
-	if (spu.offset != address - spu.pc || spu.pc >= 0x40000 || spu.pc % 4)
+	if (spu.pc >= 0x40000 || spu.pc % 4)
 	{
-		throw EXCEPTION("Invalid address or PC (address=0x%x, PC=0x%05x)", address, spu.pc);
+		throw fmt::exception("Invalid PC: 0x%05x", spu.pc);
 	}
 
-	// get SPU LS pointer
+	// Get SPU LS pointer
 	const auto _ls = vm::ps3::_ptr<u32>(spu.offset);
 
-	// always validate (TODO)
-	const auto func = db->analyse(_ls, spu.pc);
+	// Always validate (TODO)
+	const auto func = spu.spu_db->analyse(_ls, spu.pc);
 
-	// reset callstack if necessary
+	// Reset callstack if necessary
 	if (func->does_reset_stack && spu.recursion_level)
 	{
-		spu.m_state |= CPU_STATE_RETURN;
-
-		return 0;
+		spu.state += cpu_state::ret;
+		return;
 	}
 
 	if (!func->compiled)
 	{
-		rec->compile(*func);
+		if (!spu.spu_rec)
+		{
+			spu.spu_rec = fxm::get_always<spu_recompiler>();
+		}
 
-		if (!func->compiled) throw EXCEPTION("Compilation failed");
+		spu.spu_rec->compile(*func);
+
+		if (!func->compiled) throw std::runtime_error("Compilation failed" HERE);
 	}
 
 	const u32 res = func->compiled(&spu, _ls);
@@ -64,7 +61,7 @@ u32 SPURecompilerDecoder::DecodeMemory(const u32 address)
 	{
 		if (res & 0x8000000)
 		{
-			throw EXCEPTION("Undefined behaviour");
+			throw std::logic_error("Invalid interrupt status set" HERE);
 		}
 
 		spu.set_interrupt_status(true);
@@ -75,6 +72,4 @@ u32 SPURecompilerDecoder::DecodeMemory(const u32 address)
 	}
 
 	spu.pc = res & 0x3fffc;
-
-	return 0;
 }

@@ -1238,5 +1238,3 @@ struct SceGxmRenderTargetParams
 	le_t<u32> hostMemSize;
 	le_t<s32> driverMemBlock;
 };
-
-extern psv_log_base sceGxm;

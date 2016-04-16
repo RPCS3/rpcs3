@@ -147,5 +147,3 @@ struct SceNpEntitlement
 	le_t<u32> consumedCount;
 	char padding[4];
 };
-
-extern psv_log_base sceNpCommon;

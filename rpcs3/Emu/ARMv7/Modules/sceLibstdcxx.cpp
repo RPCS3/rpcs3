@@ -1,8 +1,10 @@
 #include "stdafx.h"
 #include "Emu/System.h"
-#include "Emu/ARMv7/PSVFuncList.h"
+#include "Emu/ARMv7/ARMv7Module.h"
 
 #include "sceLibstdcxx.h"
+
+LOG_CHANNEL(sceLibstdcxx);
 
 namespace sce_libstdcxx_func
 {
@@ -22,16 +24,12 @@ namespace sce_libstdcxx_func
 	}
 }
 
-// Attention: find and set correct original mangled name in third parameter, for example: REG_FUNC(0xAE71DC3, operator_new_nothrow, "_ZnwjRKSt9nothrow_t");
-#define REG_FUNC(nid, name, orig_name) reg_psv_func(nid, &sceLibstdcxx, orig_name, sce_libstdcxx_func::name)
+// TODO: find and set correct original mangled name. Currently ignored.
+// Example of correct usage: REG_FUNC(0xAE71DC3, operator_new_nothrow, "_ZnwjRKSt9nothrow_t");
+#define REG_FUNC(nid, name, orig_name) REG_FNID(SceLibstdcxx, nid, sce_libstdcxx_func::name)
 
-psv_log_base sceLibstdcxx("SceLibstdcxx", []()
+DECLARE(arm_module_manager::SceLibstdcxx)("SceLibstdcxx", []()
 {
-	sceLibstdcxx.on_load = nullptr;
-	sceLibstdcxx.on_unload = nullptr;
-	sceLibstdcxx.on_stop = nullptr;
-	sceLibstdcxx.on_error = nullptr;
-
 	//REG_FUNC(0x52B0C625, std::bad_typeid::what() const);
 	//REG_FUNC(0x64D7D074, std::bad_typeid::_Doraise() const);
 	//REG_FUNC(0x15FB88E2, std::logic_error::what() const);

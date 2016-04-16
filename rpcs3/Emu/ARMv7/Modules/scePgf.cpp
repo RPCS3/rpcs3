@@ -1,18 +1,15 @@
 #include "stdafx.h"
 #include "Emu/System.h"
-#include "Emu/ARMv7/PSVFuncList.h"
+#include "Emu/ARMv7/ARMv7Module.h"
 
 #include "scePgf.h"
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &scePgf, #name, name)
+LOG_CHANNEL(scePgf);
 
-psv_log_base scePgf("ScePgf", []()
+#define REG_FUNC(nid, name) REG_FNID(ScePgf, nid, name)
+
+DECLARE(arm_module_manager::ScePgf)("ScePgf", []()
 {
-	scePgf.on_load = nullptr;
-	scePgf.on_unload = nullptr;
-	scePgf.on_stop = nullptr;
-	scePgf.on_error = nullptr;
-
 	//REG_FUNC(0x1055ABA3, sceFontNewLib);
 	//REG_FUNC(0x07EE1733, sceFontDoneLib);
 	//REG_FUNC(0xDE47674C, sceFontSetResolution);

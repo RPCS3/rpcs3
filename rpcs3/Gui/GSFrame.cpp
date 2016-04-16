@@ -1,23 +1,23 @@
 #include "stdafx.h"
 #include "stdafx_gui.h"
-#include "GSFrame.h"
-#include "Emu/System.h"
-#include "Emu/state.h"
-#include "Emu/SysCalls/Modules/cellVideoOut.h"
-#include "rpcs3.h"
+
 #include "Utilities/Timer.h"
+#include "Emu/System.h"
+#include "rpcs3.h"
+
+#include "GSFrame.h"
 
 BEGIN_EVENT_TABLE(GSFrame, wxFrame)
 	EVT_PAINT(GSFrame::OnPaint)
 	EVT_SIZE(GSFrame::OnSize)
 END_EVENT_TABLE()
 
-GSFrame::GSFrame(const wxString& title) : wxFrame(nullptr, wxID_ANY, "GSFrame[" + title + "]")
+GSFrame::GSFrame(const wxString& title, size2i size)
+	: wxFrame(nullptr, wxID_ANY, "GSFrame[" + title + "]")
 {
 	SetIcon(wxGetApp().m_MainFrame->GetIcon());
 
-	CellVideoOutResolution res = ResolutionTable[ResolutionIdToNum((u32)rpcs3::state.config.rsx.resolution.value())];
-	SetClientSize(res.width, res.height);
+	SetClientSize(size.width, size.height);
 	wxGetApp().Bind(wxEVT_KEY_DOWN, &GSFrame::OnKeyDown, this);
 	Bind(wxEVT_CLOSE_WINDOW, &GSFrame::OnClose, this);
 	Bind(wxEVT_LEFT_DCLICK, &GSFrame::OnLeftDclick, this);
@@ -102,16 +102,13 @@ void GSFrame::flip(draw_context_t)
 	{
 		std::string title = fmt::format("FPS: %.2f", (double)m_frames / fps_t.GetElapsedTimeInSec());
 
-		if (!m_title_message.empty())
-			title += " | " + m_title_message;
-
 		if (!Emu.GetTitle().empty())
 			title += " | " + Emu.GetTitle();
 
 		if (!Emu.GetTitleID().empty())
-			title += " | [" + Emu.GetTitleID() + "]";
+			title += " | [" + Emu.GetTitleID() + ']';
 
-		// can freeze on exit
+		// can freeze
 		SetTitle(wxString(title.c_str(), wxConvUTF8));
 		m_frames = 0;
 		fps_t.Start();

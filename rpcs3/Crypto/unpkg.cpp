@@ -62,12 +62,12 @@ bool pkg_install(const fs::file& pkg_f, const std::string& dir, volatile f64& pr
 	const std::size_t BUF_SIZE = 8192 * 1024; // 8 MB
 
 	// Save current file offset (probably zero)
-	const u64 start_offset = pkg_f.seek(0, fs::seek_cur);
+	const u64 start_offset = pkg_f.pos();
 
 	// Get basic PKG information
 	PKGHeader header;
 
-	if (pkg_f.read(&header, sizeof(PKGHeader)) != sizeof(PKGHeader))
+	if (!pkg_f.read(header))
 	{
 		LOG_ERROR(LOADER, "PKG: Package file is too short!");
 		return false;
@@ -84,7 +84,7 @@ bool pkg_install(const fs::file& pkg_f, const std::string& dir, volatile f64& pr
 	// Define decryption subfunction (`psp` arg selects the key for specific block)
 	auto decrypt = [&](u64 offset, u64 size, bool psp) -> u64
 	{
-		CHECK_ASSERTION(pkg_f.seek(start_offset + header.data_offset + offset) != -1);
+		pkg_f.seek(start_offset + header.data_offset + offset);
 
 		// Read the data and set available size
 		const u64 read = pkg_f.read(buf.get(), size);
@@ -175,7 +175,7 @@ bool pkg_install(const fs::file& pkg_f, const std::string& dir, volatile f64& pr
 
 			const bool did_overwrite = fs::is_file(path);
 
-			if (fs::file out{ path, fom::write | fom::create | fom::trunc })
+			if (fs::file out{ path, fs::rewrite })
 			{
 				for (u64 pos = 0; pos < entry.file_size; pos += BUF_SIZE)
 				{

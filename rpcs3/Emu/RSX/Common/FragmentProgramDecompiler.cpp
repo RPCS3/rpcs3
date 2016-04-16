@@ -644,7 +644,7 @@ std::string FragmentProgramDecompiler::Decompile()
 
 		if (dst.end) break;
 
-		assert(m_offset % sizeof(u32) == 0);
+		Ensures(m_offset % sizeof(u32) == 0);
 		data += m_offset / sizeof(u32);
 	}
 

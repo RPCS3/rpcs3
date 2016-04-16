@@ -1,15 +1,17 @@
 #pragma once
 
+#include <stack>
+#include <deque>
+#include <set>
+#include <future>
 #include "GCM.h"
 #include "RSXTexture.h"
 #include "RSXVertexProgram.h"
 #include "RSXFragmentProgram.h"
 
-#include <stack>
 #include "Utilities/Semaphore.h"
 #include "Utilities/Thread.h"
 #include "Utilities/Timer.h"
-#include "Utilities/convert.h"
 
 extern u64 get_system_time();
 
@@ -46,44 +48,20 @@ namespace rsx
 	enum class shader_language
 	{
 		glsl,
-		hlsl
+		hlsl,
 	};
 }
 
-namespace convert
+template<>
+struct bijective<rsx::shader_language, const char*>
 {
-	template<>
-	struct to_impl_t<rsx::shader_language, std::string>
+	static constexpr std::pair<rsx::shader_language, const char*> map[]
 	{
-		static rsx::shader_language func(const std::string &from)
-		{
-			if (from == "glsl")
-				return rsx::shader_language::glsl;
-
-			if (from == "hlsl")
-				return rsx::shader_language::hlsl;
-
-			throw;
-		}
+		{ rsx::shader_language::glsl, "glsl" },
+		{ rsx::shader_language::hlsl, "hlsl" },
 	};
+};
 
-	template<>
-	struct to_impl_t<std::string, rsx::shader_language>
-	{
-		static std::string func(rsx::shader_language from)
-		{
-			switch (from)
-			{
-			case rsx::shader_language::glsl:
-				return "glsl";
-			case rsx::shader_language::hlsl:
-				return "hlsl";
-			}
-
-			throw;
-		}
-	};
-}
 namespace rsx
 {
 	namespace limits
@@ -212,7 +190,7 @@ namespace rsx
 		indexed,
 	};
 
-	class thread : public named_thread_t
+	class thread : public named_thread
 	{
 	protected:
 		std::stack<u32> m_call_stack;
@@ -280,7 +258,6 @@ namespace rsx
 		u32 gcm_buffers_count;
 		u32 gcm_current_buffer;
 		u32 ctxt_addr;
-		u32 report_main_addr;
 		u32 label_addr;
 		rsx::draw_command draw_command;
 		primitive_type draw_mode;
@@ -324,10 +301,13 @@ namespace rsx
 	public:
 		virtual std::string get_name() const override;
 
+		virtual void on_init() override {} // disable start() (TODO)
+		virtual void on_stop() override {} // disable join()
+
 		virtual void begin();
 		virtual void end();
 
-		virtual void on_init() = 0;
+		virtual void on_init_rsx() = 0;
 		virtual void on_init_thread() = 0;
 		virtual bool do_method(u32 cmd, u32 value) { return false; }
 		virtual void flip(int buffer) = 0;

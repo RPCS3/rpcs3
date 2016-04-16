@@ -1,8 +1,6 @@
 #include "stdafx.h"
-#include "Utilities/rPlatform.h" // only for rImage
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
-#include "Emu/state.h"
 #include "VKGSRender.h"
 #include "../rsx_methods.h"
 #include "../Common/BufferUtils.h"

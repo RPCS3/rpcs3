@@ -1,8 +1,10 @@
 #include "stdafx.h"
 #include "Emu/System.h"
-#include "Emu/ARMv7/PSVFuncList.h"
+#include "Emu/ARMv7/ARMv7Module.h"
 
 #include "sceVoiceQoS.h"
+
+LOG_CHANNEL(sceVoiceQoS);
 
 s32 sceVoiceQoSInit()
 {
@@ -90,15 +92,10 @@ s32 sceVoiceQoSReadPacket(s32 connectionId, vm::ptr<void> pData, vm::ptr<u32> pS
 }
 
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &sceVoiceQoS, #name, name)
+#define REG_FUNC(nid, name) REG_FNID(SceVoiceQoS, nid, name)
 
-psv_log_base sceVoiceQoS("SceVoiceQos", []()
+DECLARE(arm_module_manager::SceVoiceQoS)("SceVoiceQoS", []()
 {
-	sceVoiceQoS.on_load = nullptr;
-	sceVoiceQoS.on_unload = nullptr;
-	sceVoiceQoS.on_stop = nullptr;
-	sceVoiceQoS.on_error = nullptr;
-
 	REG_FUNC(0x4B5FFF1C, sceVoiceQoSInit);
 	REG_FUNC(0xFB0B747B, sceVoiceQoSEnd);
 	REG_FUNC(0xAAB54BE4, sceVoiceQoSCreateLocalEndpoint);

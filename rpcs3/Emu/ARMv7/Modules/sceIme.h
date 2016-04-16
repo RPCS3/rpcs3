@@ -66,5 +66,3 @@ struct SceImeParam
 	le_t<u32> reserved0;
 	le_t<u32> reserved1;
 };
-
-extern psv_log_base sceIme;

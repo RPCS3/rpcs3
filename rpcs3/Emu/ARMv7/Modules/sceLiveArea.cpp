@@ -1,8 +1,10 @@
 #include "stdafx.h"
 #include "Emu/System.h"
-#include "Emu/ARMv7/PSVFuncList.h"
+#include "Emu/ARMv7/ARMv7Module.h"
 
 #include "sceLiveArea.h"
+
+LOG_CHANNEL(sceLiveArea);
 
 s32 sceLiveAreaResourceReplaceAll(vm::cptr<char> dirpath)
 {
@@ -14,15 +16,10 @@ s32 sceLiveAreaResourceGetStatus()
 	throw EXCEPTION("");
 }
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &sceLiveArea, #name, name)
+#define REG_FUNC(nid, name) REG_FNID(SceLiveArea, nid, name)
 
-psv_log_base sceLiveArea("SceLiveArea", []()
+DECLARE(arm_module_manager::SceLiveArea)("SceLiveArea", []()
 {
-	sceLiveArea.on_load = nullptr;
-	sceLiveArea.on_unload = nullptr;
-	sceLiveArea.on_stop = nullptr;
-	sceLiveArea.on_error = nullptr;
-
 	REG_FUNC(0xA4B506F9, sceLiveAreaResourceReplaceAll);
 	REG_FUNC(0x54A395FB, sceLiveAreaResourceGetStatus);
 });

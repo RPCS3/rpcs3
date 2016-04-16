@@ -3,10 +3,8 @@
 class AudioThread
 {
 public:
-	virtual ~AudioThread() {}
+	virtual ~AudioThread() = default;
 
-	virtual void Init() = 0;
-	virtual void Quit() = 0;
 	virtual void Play() = 0;
 	virtual void Open(const void* src, int size) = 0;
 	virtual void Close() = 0;

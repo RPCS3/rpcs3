@@ -79,5 +79,3 @@ struct SceAudiodecCtrl
 	le_t<u32> wordLength;
 	vm::lptr<SceAudiodecInfo> pInfo;
 };
-
-extern psv_log_base sceAudiodec;

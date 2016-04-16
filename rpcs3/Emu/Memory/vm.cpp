@@ -24,6 +24,8 @@
 
 namespace vm
 {
+	thread_local u64 g_tls_fault_count{};
+
 	template<std::size_t Size> struct mapped_ptr_deleter
 	{
 		void operator ()(void* ptr)
@@ -93,7 +95,7 @@ namespace vm
 
 	class reservation_mutex_t
 	{
-		std::atomic<bool> m_lock{ false };
+		atomic_t<bool> m_lock{ false };
 		std::thread::id m_owner{};
 
 		std::condition_variable m_cv;
@@ -164,7 +166,7 @@ namespace vm
 
 	std::mutex g_waiter_list_mutex;
 
-	waiter_t* _add_waiter(named_thread_t& thread, u32 addr, u32 size)
+	waiter_t* _add_waiter(named_thread& thread, u32 addr, u32 size)
 	{
 		std::lock_guard<std::mutex> lock(g_waiter_list_mutex);
 
@@ -255,7 +257,7 @@ namespace vm
 		return true;
 	}
 
-	waiter_lock_t::waiter_lock_t(named_thread_t& thread, u32 addr, u32 size)
+	waiter_lock_t::waiter_lock_t(named_thread& thread, u32 addr, u32 size)
 		: m_waiter(_add_waiter(thread, addr, size))
 		, m_lock(thread.mutex, std::adopt_lock) // must be locked in _add_waiter
 	{
@@ -312,6 +314,12 @@ namespace vm
 		}
 	}
 
+	access_violation::access_violation(u64 addr, const char* cause)
+		: std::runtime_error(fmt::exception("Access violation %s address 0x%llx", cause, addr))
+	{
+		g_tls_fault_count &= ~(1ull << 63);
+	}
+
 	void notify_at(u32 addr, u32 size)
 	{
 		const u64 align = 0x80000000ull >> cntlz32(size);
@@ -353,7 +361,7 @@ namespace vm
 	void start()
 	{
 		// start notification thread
-		thread_ctrl::spawn(PURE_EXPR("vm::start thread"s), []()
+		thread_ctrl::spawn("vm::start thread", []()
 		{
 			while (!Emu.IsStopped())
 			{
@@ -654,8 +662,8 @@ namespace vm
 		{
 			_reservation_break(i * 4096);
 
-			const u8 f1 = g_pages[i]._or(flags_set & ~flags_inv) & (page_writable | page_readable);
-			g_pages[i]._and_not(flags_clear & ~flags_inv);
+			const u8 f1 = g_pages[i].fetch_or(flags_set & ~flags_inv) & (page_writable | page_readable);
+			g_pages[i].fetch_and(~(flags_clear & ~flags_inv));
 			const u8 f2 = (g_pages[i] ^= flags_inv) & (page_writable | page_readable);
 
 			if (f1 != f2)
@@ -1065,13 +1073,13 @@ namespace vm
 
 	u32 stack_push(u32 size, u32 align_v)
 	{
-		if (auto cpu = get_current_cpu_thread()) switch (cpu->get_type())
+		if (auto cpu = get_current_cpu_thread()) switch (cpu->type)
 		{
-		case CPU_THREAD_PPU:
+		case cpu_type::ppu:
 		{
 			PPUThread& context = static_cast<PPUThread&>(*cpu);
 
-			const u32 old_pos = VM_CAST(context.GPR[1]);
+			const u32 old_pos = vm::cast(context.GPR[1], HERE);
 			context.GPR[1] -= align(size + 4, 8); // room minimal possible size
 			context.GPR[1] &= ~(align_v - 1); // fix stack alignment
 
@@ -1083,12 +1091,12 @@ namespace vm
 			{
 				const u32 addr = static_cast<u32>(context.GPR[1]);
 				vm::ps3::_ref<nse_t<u32>>(addr + size) = old_pos;
+				std::memset(vm::base(addr), 0, size);
 				return addr;
 			}
 		}
 
-		case CPU_THREAD_SPU:
-		case CPU_THREAD_RAW_SPU:
+		case cpu_type::spu:
 		{
 			SPUThread& context = static_cast<SPUThread&>(*cpu);
 
@@ -1108,9 +1116,9 @@ namespace vm
 			}
 		}
 
-		case CPU_THREAD_ARMv7:
+		case cpu_type::arm:
 		{
-			ARMv7Context& context = static_cast<ARMv7Thread&>(*cpu);
+			ARMv7Thread& context = static_cast<ARMv7Thread&>(*cpu);
 
 			const u32 old_pos = context.SP;
 			context.SP -= align(size + 4, 4); // room minimal possible size
@@ -1129,63 +1137,63 @@ namespace vm
 
 		default:
 		{
-			throw EXCEPTION("Invalid thread type (%d)", cpu->get_type());
+			throw EXCEPTION("Invalid thread type (%u)", cpu->type);
 		}
 		}
 
 		throw EXCEPTION("Invalid thread");
 	}
 
-	void stack_pop(u32 addr, u32 size)
+	void stack_pop_verbose(u32 addr, u32 size) noexcept
 	{
-		if (auto cpu = get_current_cpu_thread()) switch (cpu->get_type())
+		if (auto cpu = get_current_cpu_thread()) switch (cpu->type)
 		{
-		case CPU_THREAD_PPU:
+		case cpu_type::ppu:
 		{
 			PPUThread& context = static_cast<PPUThread&>(*cpu);
 
 			if (context.GPR[1] != addr)
 			{
-				throw EXCEPTION("Stack inconsistency (addr=0x%x, SP=0x%llx, size=0x%x)", addr, context.GPR[1], size);
+				LOG_ERROR(MEMORY, "Stack inconsistency (addr=0x%x, SP=0x%llx, size=0x%x)", addr, context.GPR[1], size);
+				return;
 			}
 
 			context.GPR[1] = vm::ps3::_ref<nse_t<u32>>(context.GPR[1] + size);
 			return;
 		}
 
-		case CPU_THREAD_SPU:
-		case CPU_THREAD_RAW_SPU:
+		case cpu_type::spu:
 		{
 			SPUThread& context = static_cast<SPUThread&>(*cpu);
 
 			if (context.gpr[1]._u32[3] + context.offset != addr)
 			{
-				throw EXCEPTION("Stack inconsistency (addr=0x%x, SP=LS:0x%05x, size=0x%x)", addr, context.gpr[1]._u32[3], size);
+				LOG_ERROR(MEMORY, "Stack inconsistency (addr=0x%x, SP=LS:0x%05x, size=0x%x)", addr, context.gpr[1]._u32[3], size);
+				return;
 			}
 
 			context.gpr[1]._u32[3] = vm::ps3::_ref<nse_t<u32>>(context.gpr[1]._u32[3] + context.offset + size);
 			return;
 		}
 
-		case CPU_THREAD_ARMv7:
+		case cpu_type::arm:
 		{
-			ARMv7Context& context = static_cast<ARMv7Thread&>(*cpu);
+			ARMv7Thread& context = static_cast<ARMv7Thread&>(*cpu);
 
 			if (context.SP != addr)
 			{
-				throw EXCEPTION("Stack inconsistency (addr=0x%x, SP=0x%x, size=0x%x)", addr, context.SP, size);
+				LOG_ERROR(MEMORY, "Stack inconsistency (addr=0x%x, SP=0x%x, size=0x%x)", addr, context.SP, size);
+				return;
 			}
 
 			context.SP = vm::psv::_ref<nse_t<u32>>(context.SP + size);
 			return;
 		}
-
-		default:
-		{
-			throw EXCEPTION("Invalid thread type (%d)", cpu->get_type());
 		}
-		}
+	}
 
-		throw EXCEPTION("Invalid thread");
+	[[noreturn]] void throw_access_violation(u64 addr, const char* cause)
+	{
+		throw access_violation(addr, cause);
 	}
 }

@@ -1,18 +1,13 @@
 #include "stdafx.h"
 #include "Emu/System.h"
-#include "Emu/ARMv7/PSVFuncList.h"
+#include "Emu/ARMv7/ARMv7Module.h"
 
-extern psv_log_base sceSfmt;
+LOG_CHANNEL(sceSfmt);
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &sceSfmt, #name, name)
+#define REG_FUNC(nid, name) REG_FNID(SceSfmt, nid, name)
 
-psv_log_base sceSfmt("SceSfmt", []()
+DECLARE(arm_module_manager::SceSfmt)("SceSfmt", []()
 {
-	sceSfmt.on_load = nullptr;
-	sceSfmt.on_unload = nullptr;
-	sceSfmt.on_stop = nullptr;
-	sceSfmt.on_error = nullptr;
-
 	//REG_FUNC(0x8FF464C9, sceSfmt11213InitGenRand);
 	//REG_FUNC(0xBAF5F058, sceSfmt11213InitByArray);
 	//REG_FUNC(0xFB281CD7, sceSfmt11213GenRand32);

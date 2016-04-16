@@ -1,8 +1,10 @@
 #include "stdafx.h"
 #include "Emu/System.h"
-#include "Emu/ARMv7/PSVFuncList.h"
+#include "Emu/ARMv7/ARMv7Module.h"
 
 #include "sceAudioIn.h"
+
+LOG_CHANNEL(sceAudioIn);
 
 s32 sceAudioInOpenPort(s32 portType, s32 grain, s32 freq, s32 param)
 {
@@ -20,15 +22,10 @@ s32 sceAudioInInput(s32 port, vm::ptr<void> destPtr)
 }
 
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &sceAudioIn, #name, name)
+#define REG_FUNC(nid, name) REG_FNID(SceAudioIn, nid, name)
 
-psv_log_base sceAudioIn("SceAudioIn", []()
+DECLARE(arm_module_manager::SceAudioIn)("SceAudioIn", []()
 {
-	sceAudioIn.on_load = nullptr;
-	sceAudioIn.on_unload = nullptr;
-	sceAudioIn.on_stop = nullptr;
-	sceAudioIn.on_error = nullptr;
-
 	REG_FUNC(0x638ADD2D, sceAudioInInput);
 	REG_FUNC(0x39B50DC1, sceAudioInOpenPort);
 	REG_FUNC(0x3A61B8C4, sceAudioInReleasePort);

@@ -1,67 +1,31 @@
 #include "stdafx.h"
 #include "AudioDumper.h"
 
-AudioDumper::AudioDumper() : m_header(0), m_init(false)
+AudioDumper::AudioDumper(u16 ch)
+	: m_header(ch)
 {
+	if (GetCh())
+	{
+		m_output.open(fs::get_config_dir() + "audio.wav", fs::rewrite);
+		m_output.write(m_header); // write initial file header
+	}
 }
 
 AudioDumper::~AudioDumper()
 {
-	Finalize();
-}
-
-bool AudioDumper::Init(u8 ch)
-{
-	if ((m_init = m_output.open("audio.wav", fom::rewrite)))
-	{
-		m_header = WAVHeader(ch);
-		WriteHeader();
-	}
-
-	return m_init;
-}
-
-void AudioDumper::WriteHeader()
-{
-	if (m_init)
-	{
-		m_output.write(&m_header, sizeof(m_header)); // write file header
-	}
-}
-
-size_t AudioDumper::WriteData(const void* buffer, size_t size)
-{
-#ifdef SKIP_EMPTY_AUDIO
-	bool do_save = false;
-	for (u32 i = 0; i < size / 8; i++)
-	{
-		if (((u64*)buffer)[i]) do_save = true;
-	}
-	for (u32 i = 0; i < size % 8; i++)
-	{
-		if (((u8*)buffer)[i + (size & ~7)]) do_save = true;
-	}
-
-	if (m_init && do_save)
-#else
-	if (m_init)
-#endif
-	{
-		size_t ret = m_output.write(buffer, size);
-		m_header.Size += (u32)ret;
-		m_header.RIFF.Size += (u32)ret;
-		return ret;
-	}
-	
-	return size;
-}
-
-void AudioDumper::Finalize()
-{
-	if (m_init)
+	if (GetCh())
 	{
 		m_output.seek(0);
-		m_output.write(&m_header, sizeof(m_header)); // write fixed file header
-		m_output.close();
+		m_output.write(m_header); // rewrite file header
+	}
+}
+
+void AudioDumper::WriteData(const void* buffer, u32 size)
+{
+	if (GetCh())
+	{
+		ASSERT(m_output.write(buffer, size) == size);
+		m_header.Size += size;
+		m_header.RIFF.Size += size;
 	}
 }

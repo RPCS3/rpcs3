@@ -1,42 +1,34 @@
 #include "stdafx.h"
 #include "Emu/System.h"
-#include "Emu/FS/VFS.h"
-#include "Emu/FS/vfsFile.h"
 #include "TRP.h"
 
-TRPLoader::TRPLoader(vfsStream& f) : trp_f(f)
+TRPLoader::TRPLoader(const fs::file& f)
+	: trp_f(f)
 {
 }
 
-TRPLoader::~TRPLoader()
+bool TRPLoader::Install(const std::string& dest, bool show)
 {
-	Close();
-}
-
-bool TRPLoader::Install(std::string dest, bool show)
-{
-	if (!trp_f.IsOpened())
+	if (!trp_f)
 	{
 		return false;
 	}
 
-	if (!dest.empty() && dest.back() != '/')
+	const std::string& local_path = vfs::get(dest);
+
+	if (!fs::create_dir(local_path) && errno != EEXIST)
 	{
-		dest += '/';
+		return false;
 	}
 
-	if (!Emu.GetVFS().ExistsDir(dest))
-	{
-		Emu.GetVFS().CreateDir(dest);
-	}
+	std::vector<char> buffer; buffer.reserve(65536);
 
 	for (const TRPEntry& entry : m_entries)
 	{
-		char* buffer = new char [(u32)entry.size];
-		trp_f.Seek(entry.offset);
-		trp_f.Read(buffer, entry.size);
-		vfsFile(dest + entry.name, fom::rewrite).Write(buffer, entry.size);
-		delete[] buffer;
+		trp_f.seek(entry.offset);
+		buffer.resize(entry.size);
+		if (!trp_f.read(buffer)) continue; // ???
+		fs::file(local_path + '/' + entry.name, fs::rewrite).write(buffer);
 	}
 
 	return true;
@@ -44,14 +36,14 @@ bool TRPLoader::Install(std::string dest, bool show)
 
 bool TRPLoader::LoadHeader(bool show)
 {
-	if (!trp_f.IsOpened())
+	if (!trp_f)
 	{
 		return false;
 	}
 
-	trp_f.Seek(0);
+	trp_f.seek(0);
 
-	if (trp_f.Read(&m_header, sizeof(TRPHeader)) != sizeof(TRPHeader))
+	if (!trp_f.read(m_header))
 	{
 		return false;
 	}
@@ -71,7 +63,7 @@ bool TRPLoader::LoadHeader(bool show)
 
 	for (u32 i = 0; i < m_header.trp_files_count; i++)
 	{
-		if (trp_f.Read(&m_entries[i], sizeof(TRPEntry)) != sizeof(TRPEntry))
+		if (!trp_f.read(m_entries[i]))
 		{
 			return false;
 		}
@@ -122,9 +114,4 @@ void TRPLoader::RenameEntry(const char *oldname, const char *newname)
 			memcpy((void*)entry.name, newname, 32);
 		}
 	}
-}
-
-void TRPLoader::Close()
-{
-	trp_f.Close();
 }

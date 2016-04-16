@@ -1,8 +1,10 @@
 #include "stdafx.h"
 #include "Emu/System.h"
-#include "Emu/ARMv7/PSVFuncList.h"
+#include "Emu/ARMv7/ARMv7Module.h"
 
 #include "sceAppMgr.h"
+
+LOG_CHANNEL(sceAppMgr);
 
 s32 sceAppMgrReceiveEventNum(vm::ptr<s32> eventNum)
 {
@@ -25,15 +27,10 @@ s32 sceAppMgrReleaseBgmPort()
 }
 
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &sceAppMgr, #name, name)
+#define REG_FUNC(nid, name) REG_FNID(SceAppMgrUser, nid, name)
 
-psv_log_base sceAppMgr("SceAppMgr", []()
+DECLARE(arm_module_manager::SceAppMgr)("SceAppMgrUser", []()
 {
-	sceAppMgr.on_load = nullptr;
-	sceAppMgr.on_unload = nullptr;
-	sceAppMgr.on_stop = nullptr;
-	sceAppMgr.on_error = nullptr;
-
 	REG_FUNC(0x47E5DD7D, sceAppMgrReceiveEventNum);
 	REG_FUNC(0xCFAD5A3A, sceAppMgrReceiveEvent);
 	REG_FUNC(0xF3D65520, sceAppMgrAcquireBgmPort);

@@ -1,18 +1,13 @@
 #include "stdafx.h"
 #include "Emu/System.h"
-#include "Emu/ARMv7/PSVFuncList.h"
+#include "Emu/ARMv7/ARMv7Module.h"
 
-extern psv_log_base sceSha;
+LOG_CHANNEL(sceSha);
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &sceSha, #name, name)
+#define REG_FUNC(nid, name) REG_FNID(SceSha, nid, name)
 
-psv_log_base sceSha("SceSha", []()
+DECLARE(arm_module_manager::SceSha)("SceSha", []()
 {
-	sceSha.on_load = nullptr;
-	sceSha.on_unload = nullptr;
-	sceSha.on_stop = nullptr;
-	sceSha.on_error = nullptr;
-
 	//REG_FUNC(0xD19A9AA8, sceSha0Digest);
 	//REG_FUNC(0xBCF6DB3A, sceSha0BlockInit);
 	//REG_FUNC(0x37EF2AFC, sceSha0BlockUpdate);

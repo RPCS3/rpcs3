@@ -36,5 +36,3 @@ struct SceCameraRead
 	vm::lptr<void> pvUBase;
 	vm::lptr<void> pvVBase;
 };
-
-extern psv_log_base sceCamera;

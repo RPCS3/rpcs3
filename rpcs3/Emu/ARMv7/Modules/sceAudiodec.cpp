@@ -1,8 +1,10 @@
 #include "stdafx.h"
 #include "Emu/System.h"
-#include "Emu/ARMv7/PSVFuncList.h"
+#include "Emu/ARMv7/ARMv7Module.h"
 
 #include "sceAudiodec.h"
+
+LOG_CHANNEL(sceAudiodec);
 
 s32 sceAudiodecInitLibrary(u32 codecType, vm::ptr<SceAudiodecInitParam> pInitParam)
 {
@@ -40,15 +42,10 @@ s32 sceAudiodecGetInternalError(vm::ptr<SceAudiodecCtrl> pCtrl, vm::ptr<s32> pIn
 }
 
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &sceAudiodec, #name, name)
+#define REG_FUNC(nid, name) REG_FNID(SceAudiodecUser, nid, name)
 
-psv_log_base sceAudiodec("SceAudiodec", []()
+DECLARE(arm_module_manager::SceAudiodec)("SceAudiodecUser", []()
 {
-	sceAudiodec.on_load = nullptr;
-	sceAudiodec.on_unload = nullptr;
-	sceAudiodec.on_stop = nullptr;
-	sceAudiodec.on_error = nullptr;
-
 	REG_FUNC(0x445C2CEF, sceAudiodecInitLibrary);
 	REG_FUNC(0x45719B9D, sceAudiodecTermLibrary);
 	REG_FUNC(0x4DFD3AAA, sceAudiodecCreateDecoder);

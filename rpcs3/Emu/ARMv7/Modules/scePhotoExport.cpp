@@ -1,8 +1,10 @@
 #include "stdafx.h"
 #include "Emu/System.h"
-#include "Emu/ARMv7/PSVFuncList.h"
+#include "Emu/ARMv7/ARMv7Module.h"
 
 #include "scePhotoExport.h"
+
+LOG_CHANNEL(scePhotoExport);
 
 s32 scePhotoExportFromData(
 	vm::cptr<void> photodata,
@@ -29,15 +31,10 @@ s32 scePhotoExportFromFile(
 	throw EXCEPTION("");
 }
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &scePhotoExport, #name, name)
+#define REG_FUNC(nid, name) REG_FNID(libScePhotoExport, nid, name)
 
-psv_log_base scePhotoExport("ScePhotoExport", []()
+DECLARE(arm_module_manager::ScePhotoExport)("libScePhotoExport", []()
 {
-	scePhotoExport.on_load = nullptr;
-	scePhotoExport.on_unload = nullptr;
-	scePhotoExport.on_stop = nullptr;
-	scePhotoExport.on_error = nullptr;
-
 	REG_FUNC(0x70512321, scePhotoExportFromData);
 	REG_FUNC(0x84FD9FC5, scePhotoExportFromFile);
 });

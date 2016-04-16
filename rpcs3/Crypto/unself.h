@@ -1,7 +1,6 @@
 #pragma once
-#include "key_vault.h"
 
-struct vfsStream;
+#include "key_vault.h"
 
 struct AppInfo 
 {
@@ -11,7 +10,7 @@ struct AppInfo
 	u64 version;
 	u64 padding;
 
-	void Load(vfsStream& f);
+	void Load(const fs::file& f);
 	void Show();
 };
 
@@ -24,7 +23,7 @@ struct SectionInfo
 	u32 unknown2;
 	u32 encrypted;
 
-	void Load(vfsStream& f);
+	void Load(const fs::file& f);
 	void Show();
 };
 
@@ -35,7 +34,7 @@ struct SCEVersionInfo
 	u32 size;
 	u32 unknown;
 
-	void Load(vfsStream& f);
+	void Load(const fs::file& f);
 	void Show();
 };
 
@@ -95,7 +94,7 @@ struct ControlInfo
 		} npdrm;
 	};
 
-	void Load(vfsStream& f);
+	void Load(const fs::file& f);
 	void Show();
 };
 
@@ -148,7 +147,7 @@ struct SectionHash
 	u8 padding[12];
 	u8 hmac_key[64];
 
-	void Load(vfsStream& f);
+	void Load(const fs::file& f);
 };
 
 struct CapabilitiesInfo
@@ -163,7 +162,7 @@ struct CapabilitiesInfo
 	u32 unknown4;
 	u32 unknown5;
 
-	void Load(vfsStream& f);
+	void Load(const fs::file& f);
 };
 
 struct Signature
@@ -172,7 +171,7 @@ struct Signature
 	u8 s[21];
 	u8 padding[6];
 
-	void Load(vfsStream& f);
+	void Load(const fs::file& f);
 };
 
 struct SelfSection
@@ -181,7 +180,7 @@ struct SelfSection
 	u64 size;
 	u64 offset;
 
-	void Load(vfsStream& f);
+	void Load(const fs::file& f);
 };
 
 struct Elf32_Ehdr
@@ -206,7 +205,7 @@ struct Elf32_Ehdr
 	u16 e_shnum;
 	u16 e_shstrndx;
 
-	void Load(vfsStream& f);
+	void Load(const fs::file& f);
 	void Show() {}
 	bool IsLittleEndian() const { return e_data == 1; }
 	bool CheckMagic() const { return e_magic == 0x7F454C46; }
@@ -226,8 +225,8 @@ struct Elf32_Shdr
 	u32 sh_addralign;
 	u32 sh_entsize;
 
-	void Load(vfsStream& f);
-	void LoadLE(vfsStream& f);
+	void Load(const fs::file& f);
+	void LoadLE(const fs::file& f);
 	void Show() {}
 };
 
@@ -242,8 +241,8 @@ struct Elf32_Phdr
 	u32 p_flags;
 	u32 p_align;
 
-	void Load(vfsStream& f);
-	void LoadLE(vfsStream& f);
+	void Load(const fs::file& f);
+	void LoadLE(const fs::file& f);
 	void Show() {}
 };
 
@@ -269,7 +268,7 @@ struct Elf64_Ehdr
 	u16 e_shnum;
 	u16 e_shstrndx;
 
-	void Load(vfsStream& f);
+	void Load(const fs::file& f);
 	void Show() {}
 	bool CheckMagic() const { return e_magic == 0x7F454C46; }
 	u64 GetEntry() const { return e_entry; }
@@ -288,7 +287,7 @@ struct Elf64_Shdr
 	u64 sh_addralign;
 	u64 sh_entsize;
 
-	void Load(vfsStream& f);
+	void Load(const fs::file& f);
 	void Show(){}
 };
 
@@ -303,7 +302,7 @@ struct Elf64_Phdr
 	u64 p_memsz;
 	u64 p_align;
 
-	void Load(vfsStream& f);
+	void Load(const fs::file& f);
 	void Show(){}
 };
 
@@ -317,7 +316,7 @@ struct SceHeader
 	u64 se_hsize;
 	u64 se_esize;
 
-	void Load(vfsStream& f);
+	void Load(const fs::file& f);
 	void Show(){}
 	bool CheckMagic() const { return se_magic == 0x53434500; }
 };
@@ -335,14 +334,14 @@ struct SelfHeader
 	u64 se_controlsize;
 	u64 pad;
 	
-	void Load(vfsStream& f);
+	void Load(const fs::file& f);
 	void Show(){}
 };
 
 class SELFDecrypter
 {
 	// Main SELF file stream.
-	vfsStream& self_f;
+	const fs::file& self_f;
 
 	// SCE, SELF and APP headers.
 	SceHeader sce_hdr;
@@ -379,7 +378,7 @@ class SELFDecrypter
 	KeyVault key_v;
 
 public:
-	SELFDecrypter(vfsStream& s);
+	SELFDecrypter(const fs::file& s);
 	bool MakeElf(const std::string& elf, bool isElf32);
 	bool LoadHeaders(bool isElf32);
 	void ShowHeaders(bool isElf32);

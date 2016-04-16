@@ -1,68 +1,64 @@
 #include "stdafx.h"
 #include "stdafx_gui.h"
-#include "Emu/Memory/Memory.h"
-#include "Emu/System.h"
-#include "Emu/state.h"
 #include "rpcs3.h"
+
+#include "KeyboardPadHandler.h"
 #include "PADManager.h"
+
+extern KeyboardPadConfig g_kbpad_config;
 
 PADManager::PADManager(wxWindow* parent)
 	: wxDialog(parent, wxID_ANY, "PAD Settings")
 	, m_button_id(0)
 	, m_key_pressed(false)
-	, m_emu_paused(false)
 {
-	if(Emu.IsRunning())
-	{
-		Emu.Pause();
-		m_emu_paused = true;
-	}
+	g_kbpad_config.load();
 
 	wxBoxSizer* s_panel = new wxBoxSizer(wxHORIZONTAL);
 	wxBoxSizer* s_subpanel = new wxBoxSizer(wxVERTICAL);
 	wxBoxSizer* s_subpanel2 = new wxBoxSizer(wxVERTICAL);
 
 	// Left Analog Stick
-	wxStaticBoxSizer* s_round_stick_l = new wxStaticBoxSizer(wxVERTICAL, this, _("Left Analog Stick"));
+	wxStaticBoxSizer* s_round_stick_l = new wxStaticBoxSizer(wxVERTICAL, this, "Left Analog Stick");
 	wxBoxSizer* s_subpanel_lstick_1 = new wxBoxSizer(wxVERTICAL);
 	wxBoxSizer* s_subpanel_lstick_2 = new wxBoxSizer(wxHORIZONTAL);
 	wxBoxSizer* s_subpanel_lstick_3 = new wxBoxSizer(wxVERTICAL);
 
 	// D-Pad
-	wxStaticBoxSizer* s_round_pad_controls = new wxStaticBoxSizer(wxVERTICAL, this, _("D-Pad"));
+	wxStaticBoxSizer* s_round_pad_controls = new wxStaticBoxSizer(wxVERTICAL, this, "D-Pad");
 	wxBoxSizer* s_subpanel_pad_1 = new wxBoxSizer(wxVERTICAL);
 	wxBoxSizer* s_subpanel_pad_2 = new wxBoxSizer(wxHORIZONTAL);
 	wxBoxSizer* s_subpanel_pad_3 = new wxBoxSizer(wxVERTICAL);
 
 	// Left shifts
-	wxStaticBoxSizer* s_round_pad_shifts_l = new wxStaticBoxSizer(wxVERTICAL, this, _("Left Shifts"));
-	wxStaticBoxSizer* s_round_pad_l1 = new wxStaticBoxSizer(wxVERTICAL, this, _("L1"));
-	wxStaticBoxSizer* s_round_pad_l2 = new wxStaticBoxSizer(wxVERTICAL, this, _("L2"));
-	wxStaticBoxSizer* s_round_pad_l3 = new wxStaticBoxSizer(wxVERTICAL, this, _("L3"));
+	wxStaticBoxSizer* s_round_pad_shifts_l = new wxStaticBoxSizer(wxVERTICAL, this, "Left Shifts");
+	wxStaticBoxSizer* s_round_pad_l1 = new wxStaticBoxSizer(wxVERTICAL, this, "L1");
+	wxStaticBoxSizer* s_round_pad_l2 = new wxStaticBoxSizer(wxVERTICAL, this, "L2");
+	wxStaticBoxSizer* s_round_pad_l3 = new wxStaticBoxSizer(wxVERTICAL, this, "L3");
 
 	// Start / Select
-	wxStaticBoxSizer* s_round_pad_system = new wxStaticBoxSizer(wxVERTICAL, this, _("System"));
-	wxStaticBoxSizer* s_round_pad_select = new wxStaticBoxSizer(wxVERTICAL, this, _("Select"));
-	wxStaticBoxSizer* s_round_pad_start = new wxStaticBoxSizer(wxVERTICAL, this, _("Start"));
+	wxStaticBoxSizer* s_round_pad_system = new wxStaticBoxSizer(wxVERTICAL, this, "System");
+	wxStaticBoxSizer* s_round_pad_select = new wxStaticBoxSizer(wxVERTICAL, this, "Select");
+	wxStaticBoxSizer* s_round_pad_start = new wxStaticBoxSizer(wxVERTICAL, this, "Start");
 
 	// Right shifts
-	wxStaticBoxSizer* s_round_pad_shifts_r = new wxStaticBoxSizer(wxVERTICAL, this, _("Right Shifts"));
-	wxStaticBoxSizer* s_round_pad_r1 = new wxStaticBoxSizer(wxVERTICAL, this, _("R1"));
-	wxStaticBoxSizer* s_round_pad_r2 = new wxStaticBoxSizer(wxVERTICAL, this, _("R2"));
-	wxStaticBoxSizer* s_round_pad_r3 = new wxStaticBoxSizer(wxVERTICAL, this, _("R3"));
+	wxStaticBoxSizer* s_round_pad_shifts_r = new wxStaticBoxSizer(wxVERTICAL, this, "Right Shifts");
+	wxStaticBoxSizer* s_round_pad_r1 = new wxStaticBoxSizer(wxVERTICAL, this, "R1");
+	wxStaticBoxSizer* s_round_pad_r2 = new wxStaticBoxSizer(wxVERTICAL, this, "R2");
+	wxStaticBoxSizer* s_round_pad_r3 = new wxStaticBoxSizer(wxVERTICAL, this, "R3");
 
 	// Action buttons
-	wxStaticBoxSizer* s_round_pad_buttons = new wxStaticBoxSizer(wxVERTICAL, this, _("Buttons"));
-	wxStaticBoxSizer* s_round_pad_square = new wxStaticBoxSizer(wxVERTICAL, this, _("Square"));
-	wxStaticBoxSizer* s_round_pad_cross = new wxStaticBoxSizer(wxVERTICAL, this, _("Cross"));
-	wxStaticBoxSizer* s_round_pad_circle = new wxStaticBoxSizer(wxVERTICAL, this, _("Circle"));
-	wxStaticBoxSizer* s_round_pad_triangle = new wxStaticBoxSizer(wxVERTICAL, this, _("Triangle"));
+	wxStaticBoxSizer* s_round_pad_buttons = new wxStaticBoxSizer(wxVERTICAL, this, "Buttons");
+	wxStaticBoxSizer* s_round_pad_square = new wxStaticBoxSizer(wxVERTICAL, this, "Square");
+	wxStaticBoxSizer* s_round_pad_cross = new wxStaticBoxSizer(wxVERTICAL, this, "Cross");
+	wxStaticBoxSizer* s_round_pad_circle = new wxStaticBoxSizer(wxVERTICAL, this, "Circle");
+	wxStaticBoxSizer* s_round_pad_triangle = new wxStaticBoxSizer(wxVERTICAL, this, "Triangle");
 	wxBoxSizer* s_subpanel_buttons_1 = new wxBoxSizer(wxVERTICAL);
 	wxBoxSizer* s_subpanel_buttons_2 = new wxBoxSizer(wxHORIZONTAL);
 	wxBoxSizer* s_subpanel_buttons_3 = new wxBoxSizer(wxVERTICAL);
 
 	// Right Analog Stick
-	wxStaticBoxSizer* s_round_stick_r = new wxStaticBoxSizer(wxVERTICAL, this, _("Right Analog Stick"));
+	wxStaticBoxSizer* s_round_stick_r = new wxStaticBoxSizer(wxVERTICAL, this, "Right Analog Stick");
 	wxBoxSizer* s_subpanel_rstick_1 = new wxBoxSizer(wxVERTICAL);
 	wxBoxSizer* s_subpanel_rstick_2 = new wxBoxSizer(wxHORIZONTAL);
 	wxBoxSizer* s_subpanel_rstick_3 = new wxBoxSizer(wxVERTICAL);
@@ -258,36 +254,36 @@ void PADManager::OnKeyDown(wxKeyEvent &keyEvent)
 
 	switch (m_button_id)
 	{
-	case id_pad_lstick_left: rpcs3::config.io.pad.left_stick_left = keyEvent.GetKeyCode(); break;
-	case id_pad_lstick_down: rpcs3::config.io.pad.left_stick_down = keyEvent.GetKeyCode(); break;
-	case id_pad_lstick_right: rpcs3::config.io.pad.left_stick_right = keyEvent.GetKeyCode(); break;
-	case id_pad_lstick_up: rpcs3::config.io.pad.left_stick_up = keyEvent.GetKeyCode(); break;
+	case id_pad_lstick_left: g_kbpad_config.left_stick_left = keyEvent.GetKeyCode(); break;
+	case id_pad_lstick_down: g_kbpad_config.left_stick_down = keyEvent.GetKeyCode(); break;
+	case id_pad_lstick_right: g_kbpad_config.left_stick_right = keyEvent.GetKeyCode(); break;
+	case id_pad_lstick_up: g_kbpad_config.left_stick_up = keyEvent.GetKeyCode(); break;
 
-	case id_pad_left: rpcs3::config.io.pad.left = keyEvent.GetKeyCode(); break;
-	case id_pad_down: rpcs3::config.io.pad.down = keyEvent.GetKeyCode(); break;
-	case id_pad_right: rpcs3::config.io.pad.right = keyEvent.GetKeyCode(); break;
-	case id_pad_up: rpcs3::config.io.pad.up = keyEvent.GetKeyCode(); break;
+	case id_pad_left: g_kbpad_config.left = keyEvent.GetKeyCode(); break;
+	case id_pad_down: g_kbpad_config.down = keyEvent.GetKeyCode(); break;
+	case id_pad_right: g_kbpad_config.right = keyEvent.GetKeyCode(); break;
+	case id_pad_up: g_kbpad_config.up = keyEvent.GetKeyCode(); break;
 	
-	case id_pad_l1: rpcs3::config.io.pad.l1 = keyEvent.GetKeyCode(); break;
-	case id_pad_l2: rpcs3::config.io.pad.l2 = keyEvent.GetKeyCode(); break;
-	case id_pad_l3: rpcs3::config.io.pad.l3 = keyEvent.GetKeyCode(); break;
+	case id_pad_l1: g_kbpad_config.l1 = keyEvent.GetKeyCode(); break;
+	case id_pad_l2: g_kbpad_config.l2 = keyEvent.GetKeyCode(); break;
+	case id_pad_l3: g_kbpad_config.l3 = keyEvent.GetKeyCode(); break;
 
-	case id_pad_start: rpcs3::config.io.pad.start = keyEvent.GetKeyCode(); break;
-	case id_pad_select: rpcs3::config.io.pad.select = keyEvent.GetKeyCode(); break;
+	case id_pad_start: g_kbpad_config.start = keyEvent.GetKeyCode(); break;
+	case id_pad_select: g_kbpad_config.select = keyEvent.GetKeyCode(); break;
 	
-	case id_pad_r1: rpcs3::config.io.pad.r1 = keyEvent.GetKeyCode(); break;
-	case id_pad_r2: rpcs3::config.io.pad.r2 = keyEvent.GetKeyCode(); break;
-	case id_pad_r3: rpcs3::config.io.pad.r3 = keyEvent.GetKeyCode(); break;
+	case id_pad_r1: g_kbpad_config.r1 = keyEvent.GetKeyCode(); break;
+	case id_pad_r2: g_kbpad_config.r2 = keyEvent.GetKeyCode(); break;
+	case id_pad_r3: g_kbpad_config.r3 = keyEvent.GetKeyCode(); break;
 
-	case id_pad_square: rpcs3::config.io.pad.square = keyEvent.GetKeyCode(); break;
-	case id_pad_cross: rpcs3::config.io.pad.cross = keyEvent.GetKeyCode(); break;
-	case id_pad_circle: rpcs3::config.io.pad.circle = keyEvent.GetKeyCode(); break;
-	case id_pad_triangle: rpcs3::config.io.pad.triangle = keyEvent.GetKeyCode(); break;
+	case id_pad_square: g_kbpad_config.square = keyEvent.GetKeyCode(); break;
+	case id_pad_cross: g_kbpad_config.cross = keyEvent.GetKeyCode(); break;
+	case id_pad_circle: g_kbpad_config.circle = keyEvent.GetKeyCode(); break;
+	case id_pad_triangle: g_kbpad_config.triangle = keyEvent.GetKeyCode(); break;
 
-	case id_pad_rstick_left: rpcs3::config.io.pad.right_stick_left = keyEvent.GetKeyCode(); break;
-	case id_pad_rstick_down: rpcs3::config.io.pad.right_stick_down = keyEvent.GetKeyCode(); break;
-	case id_pad_rstick_right: rpcs3::config.io.pad.right_stick_right = keyEvent.GetKeyCode(); break;
-	case id_pad_rstick_up: rpcs3::config.io.pad.right_stick_up = keyEvent.GetKeyCode(); break;
+	case id_pad_rstick_left: g_kbpad_config.right_stick_left = keyEvent.GetKeyCode(); break;
+	case id_pad_rstick_down: g_kbpad_config.right_stick_down = keyEvent.GetKeyCode(); break;
+	case id_pad_rstick_right: g_kbpad_config.right_stick_right = keyEvent.GetKeyCode(); break;
+	case id_pad_rstick_up: g_kbpad_config.right_stick_up = keyEvent.GetKeyCode(); break;
 
 	case 0: break;
 	default: LOG_ERROR(HLE, "Unknown button ID: %d", m_button_id); break;
@@ -321,7 +317,7 @@ void PADManager::OnButtonClicked(wxCommandEvent &event)
 		switch (event.GetId())
 		{
 		case id_reset_parameters: ResetParameters(); UpdateLabel(); break;
-		case wxID_OK: rpcs3::config.save(); break;
+		case wxID_OK: g_kbpad_config.save(); break;
 		case wxID_CANCEL: break;
 
 		default: LOG_ERROR(HLE, "Unknown button ID: %d", event.GetId()); break;
@@ -409,70 +405,70 @@ const wxString PADManager::GetKeyName(const u32 keyCode)
 void PADManager::UpdateLabel()
 {
 	// Get button labels from .ini
-	b_up_lstick->SetLabel(GetKeyName(rpcs3::config.io.pad.left_stick_up.value()));
-	b_down_lstick->SetLabel(GetKeyName(rpcs3::config.io.pad.left_stick_down.value()));
-	b_left_lstick->SetLabel(GetKeyName(rpcs3::config.io.pad.left_stick_left.value()));
-	b_right_lstick->SetLabel(GetKeyName(rpcs3::config.io.pad.left_stick_right.value()));
+	b_up_lstick->SetLabel(GetKeyName(g_kbpad_config.left_stick_up));
+	b_down_lstick->SetLabel(GetKeyName(g_kbpad_config.left_stick_down));
+	b_left_lstick->SetLabel(GetKeyName(g_kbpad_config.left_stick_left));
+	b_right_lstick->SetLabel(GetKeyName(g_kbpad_config.left_stick_right));
 
-	b_up->SetLabel(GetKeyName(rpcs3::config.io.pad.up.value()));
-	b_down->SetLabel(GetKeyName(rpcs3::config.io.pad.down.value()));
-	b_left->SetLabel(GetKeyName(rpcs3::config.io.pad.left.value()));
-	b_right->SetLabel(GetKeyName(rpcs3::config.io.pad.right.value()));
+	b_up->SetLabel(GetKeyName(g_kbpad_config.up));
+	b_down->SetLabel(GetKeyName(g_kbpad_config.down));
+	b_left->SetLabel(GetKeyName(g_kbpad_config.left));
+	b_right->SetLabel(GetKeyName(g_kbpad_config.right));
 	
-	b_shift_l1->SetLabel(GetKeyName(rpcs3::config.io.pad.l1.value()));
-	b_shift_l2->SetLabel(GetKeyName(rpcs3::config.io.pad.l2.value()));
-	b_shift_l3->SetLabel(GetKeyName(rpcs3::config.io.pad.l3.value()));
+	b_shift_l1->SetLabel(GetKeyName(g_kbpad_config.l1));
+	b_shift_l2->SetLabel(GetKeyName(g_kbpad_config.l2));
+	b_shift_l3->SetLabel(GetKeyName(g_kbpad_config.l3));
 
-	b_start->SetLabel(GetKeyName(rpcs3::config.io.pad.start.value()));
-	b_select->SetLabel(GetKeyName(rpcs3::config.io.pad.select.value()));
+	b_start->SetLabel(GetKeyName(g_kbpad_config.start));
+	b_select->SetLabel(GetKeyName(g_kbpad_config.select));
 
-	b_shift_r1->SetLabel(GetKeyName(rpcs3::config.io.pad.r1.value()));
-	b_shift_r2->SetLabel(GetKeyName(rpcs3::config.io.pad.r2.value()));
-	b_shift_r3->SetLabel(GetKeyName(rpcs3::config.io.pad.r3.value()));
+	b_shift_r1->SetLabel(GetKeyName(g_kbpad_config.r1));
+	b_shift_r2->SetLabel(GetKeyName(g_kbpad_config.r2));
+	b_shift_r3->SetLabel(GetKeyName(g_kbpad_config.r3));
 
-	b_square->SetLabel(GetKeyName(rpcs3::config.io.pad.square.value()));
-	b_cross->SetLabel(GetKeyName(rpcs3::config.io.pad.cross.value()));
-	b_circle->SetLabel(GetKeyName(rpcs3::config.io.pad.circle.value()));
-	b_triangle->SetLabel(GetKeyName(rpcs3::config.io.pad.triangle.value()));
+	b_square->SetLabel(GetKeyName(g_kbpad_config.square));
+	b_cross->SetLabel(GetKeyName(g_kbpad_config.cross));
+	b_circle->SetLabel(GetKeyName(g_kbpad_config.circle));
+	b_triangle->SetLabel(GetKeyName(g_kbpad_config.triangle));
 
-	b_up_rstick->SetLabel(GetKeyName(rpcs3::config.io.pad.right_stick_up.value()));
-	b_down_rstick->SetLabel(GetKeyName(rpcs3::config.io.pad.right_stick_down.value()));
-	b_left_rstick->SetLabel(GetKeyName(rpcs3::config.io.pad.right_stick_left.value()));
-	b_right_rstick->SetLabel(GetKeyName(rpcs3::config.io.pad.right_stick_right.value()));
+	b_up_rstick->SetLabel(GetKeyName(g_kbpad_config.right_stick_up));
+	b_down_rstick->SetLabel(GetKeyName(g_kbpad_config.right_stick_down));
+	b_left_rstick->SetLabel(GetKeyName(g_kbpad_config.right_stick_left));
+	b_right_rstick->SetLabel(GetKeyName(g_kbpad_config.right_stick_right));
 }
 
 void PADManager::ResetParameters()
 {
-	rpcs3::config.io.pad.left_stick_up = 315;
-	rpcs3::config.io.pad.left_stick_down = 317;
-	rpcs3::config.io.pad.left_stick_left = 314;
-	rpcs3::config.io.pad.left_stick_right = 316;
+	g_kbpad_config.left_stick_up = g_kbpad_config.left_stick_up.def;
+	g_kbpad_config.left_stick_down = g_kbpad_config.left_stick_down.def;
+	g_kbpad_config.left_stick_left = g_kbpad_config.left_stick_left.def;
+	g_kbpad_config.left_stick_right = g_kbpad_config.left_stick_right.def;
 
-	rpcs3::config.io.pad.up = static_cast<int>('W');
-	rpcs3::config.io.pad.down = static_cast<int>('S');
-	rpcs3::config.io.pad.left = static_cast<int>('A');
-	rpcs3::config.io.pad.right = static_cast<int>('D');
+	g_kbpad_config.up = g_kbpad_config.up.def;
+	g_kbpad_config.down = g_kbpad_config.down.def;
+	g_kbpad_config.left = g_kbpad_config.left.def;
+	g_kbpad_config.right = g_kbpad_config.right.def;
 	
-	rpcs3::config.io.pad.l1 = static_cast<int>('1');
-	rpcs3::config.io.pad.l2 = static_cast<int>('Q');
-	rpcs3::config.io.pad.l3 = static_cast<int>('Z');
+	g_kbpad_config.l1 = g_kbpad_config.l1.def;
+	g_kbpad_config.l2 = g_kbpad_config.l2.def;
+	g_kbpad_config.l3 = g_kbpad_config.l3.def;
 
-	rpcs3::config.io.pad.start = 13;
-	rpcs3::config.io.pad.select = 32;
+	g_kbpad_config.start = g_kbpad_config.start.def;
+	g_kbpad_config.select = g_kbpad_config.select.def;
 
-	rpcs3::config.io.pad.r1 = static_cast<int>('3');
-	rpcs3::config.io.pad.r2 = static_cast<int>('E');
-	rpcs3::config.io.pad.r3 = static_cast<int>('C');
+	g_kbpad_config.r1 = g_kbpad_config.r1.def;
+	g_kbpad_config.r2 = g_kbpad_config.r2.def;
+	g_kbpad_config.r3 = g_kbpad_config.r3.def;
 
-	rpcs3::config.io.pad.square = static_cast<int>('J');
-	rpcs3::config.io.pad.cross = static_cast<int>('K');
-	rpcs3::config.io.pad.circle = static_cast<int>('L');
-	rpcs3::config.io.pad.triangle = static_cast<int>('I');
+	g_kbpad_config.square = g_kbpad_config.square.def;
+	g_kbpad_config.cross = g_kbpad_config.cross.def;
+	g_kbpad_config.circle = g_kbpad_config.circle.def;
+	g_kbpad_config.triangle = g_kbpad_config.triangle.def;
 
-	rpcs3::config.io.pad.right_stick_up = 366;
-	rpcs3::config.io.pad.right_stick_down = 367;
-	rpcs3::config.io.pad.right_stick_left = 313;
-	rpcs3::config.io.pad.right_stick_right = 312;
+	g_kbpad_config.right_stick_up = g_kbpad_config.right_stick_up.def;
+	g_kbpad_config.right_stick_down = g_kbpad_config.right_stick_down.def;
+	g_kbpad_config.right_stick_left = g_kbpad_config.right_stick_left.def;
+	g_kbpad_config.right_stick_right = g_kbpad_config.right_stick_right.def;
 }
 
 void PADManager::UpdateTimerLabel(const u32 id)
@@ -551,6 +547,9 @@ void PADManager::SwitchButtons(const bool IsEnabled)
 	b_cancel->Enable(IsEnabled);
 	b_reset->Enable(IsEnabled);
 }
+
+// TODO: rewrite with std::chrono or wxTimer
+#include <time.h>
 
 void PADManager::RunTimer(const u32 seconds, const u32 id)		
 {

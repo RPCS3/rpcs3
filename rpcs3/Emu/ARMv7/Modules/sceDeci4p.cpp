@@ -1,8 +1,10 @@
 #include "stdafx.h"
 #include "Emu/System.h"
-#include "Emu/ARMv7/PSVFuncList.h"
+#include "Emu/ARMv7/ARMv7Module.h"
 
 #include "sceDeci4p.h"
+
+LOG_CHANNEL(sceDeci4p);
 
 s32 sceKernelDeci4pOpen(vm::cptr<char> protoname, u32 protonum, u32 bufsize)
 {
@@ -30,15 +32,10 @@ s32 sceKernelDeci4pRegisterCallback(s32 socketid, s32 cbid)
 }
 
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &sceDeci4p, #name, name)
+#define REG_FUNC(nid, name) REG_FNID(SceDeci4pUserp, nid, name)
 
-psv_log_base sceDeci4p("SceDeci4pUserp", []()
+DECLARE(arm_module_manager::SceDeci4p)("SceDeci4pUserp", []()
 {
-	sceDeci4p.on_load = nullptr;
-	sceDeci4p.on_unload = nullptr;
-	sceDeci4p.on_stop = nullptr;
-	sceDeci4p.on_error = nullptr;
-
 	REG_FUNC(0x28578FE8, sceKernelDeci4pOpen);
 	REG_FUNC(0x63B0C50F, sceKernelDeci4pClose);
 	REG_FUNC(0x971E1C66, sceKernelDeci4pRead);

@@ -22,8 +22,8 @@ CgDisasm::CgDisasm(wxWindow* parent)
 	wxPanel* p_cg_disasm = new wxPanel(nb_cg, wxID_ANY);
 	wxPanel* p_glsl_shader = new wxPanel(nb_cg, wxID_ANY);
 
-	nb_cg->AddPage(p_cg_disasm, wxT("ASM"));
-	nb_cg->AddPage(p_glsl_shader, wxT("GLSL"));
+	nb_cg->AddPage(p_cg_disasm, "ASM");
+	nb_cg->AddPage(p_glsl_shader, "GLSL");
 
 	m_disasm_text = new wxTextCtrl(p_cg_disasm, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(620, 395), wxTE_MULTILINE | wxNO_BORDER | wxTE_READONLY | wxTE_RICH2);
 	m_glsl_text = new wxTextCtrl(p_glsl_shader, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(620, 395), wxTE_MULTILINE | wxNO_BORDER | wxTE_READONLY | wxTE_RICH2);

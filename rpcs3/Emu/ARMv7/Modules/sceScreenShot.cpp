@@ -1,8 +1,10 @@
 #include "stdafx.h"
 #include "Emu/System.h"
-#include "Emu/ARMv7/PSVFuncList.h"
+#include "Emu/ARMv7/ARMv7Module.h"
 
 #include "sceScreenShot.h"
+
+LOG_CHANNEL(sceScreenShot);
 
 s32 sceScreenShotSetParam(vm::cptr<SceScreenShotParam> param)
 {
@@ -25,15 +27,10 @@ s32 sceScreenShotEnable()
 }
 
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &sceScreenShot, #name, name)
+#define REG_FUNC(nid, name) REG_FNID(libSceScreenShot, nid, name)
 
-psv_log_base sceScreenShot("SceScreenShot", []()
+DECLARE(arm_module_manager::SceScreenShot)("libSceScreenShot", []()
 {
-	sceScreenShot.on_load = nullptr;
-	sceScreenShot.on_unload = nullptr;
-	sceScreenShot.on_stop = nullptr;
-	sceScreenShot.on_error = nullptr;
-
 	REG_FUNC(0x05DB59C7, sceScreenShotSetParam);
 	REG_FUNC(0x7061665B, sceScreenShotSetOverlayImage);
 	REG_FUNC(0x50AE9FF9, sceScreenShotDisable);

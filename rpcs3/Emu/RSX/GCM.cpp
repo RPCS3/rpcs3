@@ -731,7 +731,7 @@ rsx::vertex_base_type rsx::to_vertex_base_type(u8 in)
 	case 6: return rsx::vertex_base_type::cmp;
 	case 7: return rsx::vertex_base_type::ub256;
 	}
-	throw new EXCEPTION("Unknow vertex base type %d", in);
+	throw EXCEPTION("Unknow vertex base type %d", in);
 }
 
 rsx::index_array_type rsx::to_index_array_type(u8 in)
@@ -741,7 +741,7 @@ rsx::index_array_type rsx::to_index_array_type(u8 in)
 	case 0: return rsx::index_array_type::u32;
 	case 1: return rsx::index_array_type::u16;
 	}
-	throw new EXCEPTION("Unknown index array type %d", in);
+	throw EXCEPTION("Unknown index array type %d", in);
 }
 
 rsx::primitive_type rsx::to_primitive_type(u8 in)
@@ -759,7 +759,7 @@ rsx::primitive_type rsx::to_primitive_type(u8 in)
 	case 9: return rsx::primitive_type::quad_strip;
 	case 10: return rsx::primitive_type::polygon;
 	}
-	throw new EXCEPTION("Unknow primitive type %d", in);
+	throw EXCEPTION("Unknow primitive type %d", in);
 }
 
 enum

@@ -1,3 +1,4 @@
+#ifdef QT_UI
 #include "glviewer.h"
 #include <QQuickWindow>
 #include <QOpenGLContext>
@@ -53,4 +54,4 @@ void GLViewer::cleanup() {
 		m_renderer = 0;
 	}
 }
-
+#endif

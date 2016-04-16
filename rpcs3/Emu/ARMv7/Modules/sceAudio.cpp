@@ -1,8 +1,10 @@
 #include "stdafx.h"
 #include "Emu/System.h"
-#include "Emu/ARMv7/PSVFuncList.h"
+#include "Emu/ARMv7/ARMv7Module.h"
 
 #include "sceAudio.h"
+
+LOG_CHANNEL(sceAudio);
 
 s32 sceAudioOutOpenPort(s32 portType, s32 len, s32 freq, s32 param)
 {
@@ -45,15 +47,10 @@ s32 sceAudioOutGetAdopt(s32 portType)
 }
 
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &sceAudio, #name, name)
+#define REG_FUNC(nid, name) REG_FNID(SceAudio, nid, name)
 
-psv_log_base sceAudio("SceAudio", []()
+DECLARE(arm_module_manager::SceAudio)("SceAudio", []()
 {
-	sceAudio.on_load = nullptr;
-	sceAudio.on_unload = nullptr;
-	sceAudio.on_stop = nullptr;
-	sceAudio.on_error = nullptr;
-
 	REG_FUNC(0x5BC341E4, sceAudioOutOpenPort);
 	REG_FUNC(0x69E2E6B5, sceAudioOutReleasePort);
 	REG_FUNC(0x02DB3F5F, sceAudioOutOutput);

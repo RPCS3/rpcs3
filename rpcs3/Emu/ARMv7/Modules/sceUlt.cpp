@@ -1,8 +1,10 @@
 #include "stdafx.h"
 #include "Emu/System.h"
-#include "Emu/ARMv7/PSVFuncList.h"
+#include "Emu/ARMv7/ARMv7Module.h"
 
 #include "sceUlt.h"
+
+LOG_CHANNEL(sceUlt);
 
 // Functions
 
@@ -384,15 +386,10 @@ s32 sceUltUlthreadGetSelf(vm::pptr<SceUltUlthread> ulthread)
 	throw EXCEPTION("");
 }
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &sceUlt, #name, name)
+#define REG_FUNC(nid, name) REG_FNID(SceUlt, nid, name)
 
-psv_log_base sceUlt("SceUlt", []()
+DECLARE(arm_module_manager::SceUlt)("SceUlt", []()
 {
-	sceUlt.on_load = nullptr;
-	sceUlt.on_unload = nullptr;
-	sceUlt.on_stop = nullptr;
-	sceUlt.on_error = nullptr;
-
 	REG_FUNC(0xEF094E35, _sceUltWaitingQueueResourcePoolOptParamInitialize);
 	REG_FUNC(0x644DA029, sceUltWaitingQueueResourcePoolGetWorkAreaSize);
 	REG_FUNC(0x62F9493E, _sceUltWaitingQueueResourcePoolCreate);

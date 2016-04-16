@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "stdafx_gui.h"
-#include "Utilities/rPlatform.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 

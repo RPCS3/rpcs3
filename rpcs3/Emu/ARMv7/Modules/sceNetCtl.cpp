@@ -1,8 +1,10 @@
 #include "stdafx.h"
 #include "Emu/System.h"
-#include "Emu/ARMv7/PSVFuncList.h"
+#include "Emu/ARMv7/ARMv7Module.h"
 
 #include "sceNetCtl.h"
+
+LOG_CHANNEL(sceNetCtl);
 
 s32 sceNetCtlInit()
 {
@@ -84,15 +86,10 @@ s32 sceNetCtlAdhocGetInAddr(vm::ptr<SceNetInAddr> inaddr)
 	throw EXCEPTION("");
 }
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &sceNetCtl, #name, name)
+#define REG_FUNC(nid, name) REG_FNID(SceNetCtl, nid, name)
 
-psv_log_base sceNetCtl("SceNetCtl", []()
+DECLARE(arm_module_manager::SceNetCtl)("SceNetCtl", []()
 {
-	sceNetCtl.on_load = nullptr;
-	sceNetCtl.on_unload = nullptr;
-	sceNetCtl.on_stop = nullptr;
-	sceNetCtl.on_error = nullptr;
-
 	REG_FUNC(0x495CA1DB, sceNetCtlInit);
 	REG_FUNC(0xCD188648, sceNetCtlTerm);
 	REG_FUNC(0xDFFC3ED4, sceNetCtlCheckCallback);

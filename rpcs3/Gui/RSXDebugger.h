@@ -70,7 +70,5 @@ public:
 	const char* ParseGCMEnum(u32 value, u32 type);
 	wxString DisAsmCommand(u32 cmd, u32 count, u32 currentAddr, u32 ioAddr);
 	
-
-	bool RSXReady();
 	void SetPC(const uint pc) { m_addr = pc; }
 };

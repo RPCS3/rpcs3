@@ -1,9 +1,5 @@
-#include "stdafx.h"
-#pragma warning(push)
-#pragma message("TODO: remove wx dependency: <wx/string.h>")
-#pragma warning(disable : 4996)
-#include <wx/string.h>
-#pragma warning(pop)
+#include "StrFmt.h"
+#include "BEType.h"
 
 std::string v128::to_hex() const
 {
@@ -19,7 +15,7 @@ std::string fmt::to_hex(u64 value, u64 count)
 {
 	if (count - 1 >= 16)
 	{
-		throw EXCEPTION("Invalid count: 0x%llx", count);
+		throw exception("fmt::to_hex(): invalid count: 0x%llx", count);
 	}
 
 	count = std::max<u64>(count, 16 - cntlz64(value) / 4);
@@ -78,8 +74,6 @@ std::string fmt::to_sdec(s64 svalue)
 	return std::string(&res[first], sizeof(res) - first);
 }
 
-//extern const std::string fmt::placeholder = "???";
-
 std::string fmt::replace_first(const std::string& src, const std::string& from, const std::string& to)
 {
 	auto pos = src.find(from);
@@ -102,83 +96,6 @@ std::string fmt::replace_all(const std::string &src, const std::string& from, co
 	}
 
 	return target;
-}
-
-//TODO: move this wx Stuff somewhere else
-//convert a wxString to a std::string encoded in utf8
-//CAUTION, only use this to interface with wxWidgets classes
-std::string fmt::ToUTF8(const wxString& right)
-{
-	auto ret = std::string(((const char *)right.utf8_str()));
-	return ret;
-}
-
-//convert a std::string encoded in utf8 to a wxString
-//CAUTION, only use this to interface with wxWidgets classes
-wxString fmt::FromUTF8(const std::string& right)
-{
-	auto ret = wxString::FromUTF8(right.c_str());
-	return ret;
-}
-
-//TODO: remove this after every snippet that uses it is gone
-//WARNING: not fully compatible with CmpNoCase from wxString
-int fmt::CmpNoCase(const std::string& a, const std::string& b)
-{
-	if (a.length() != b.length())
-	{
-		return -1;
-	}
-	else
-	{
-		return std::equal(a.begin(),
-			a.end(),
-			b.begin(),
-			[](const char& a, const char& b){return ::tolower(a) == ::tolower(b); })
-			? 0 : -1;
-	}
-}
-
-//TODO: remove this after every snippet that uses it is gone
-//WARNING: not fully compatible with CmpNoCase from wxString
-void fmt::Replace(std::string &str, const std::string &searchterm, const std::string& replaceterm)
-{
-	size_t cursor = 0;
-	do
-	{
-		cursor = str.find(searchterm, cursor);
-		if (cursor != std::string::npos)
-		{
-			str.replace(cursor, searchterm.size(), replaceterm);
-			cursor += replaceterm.size();
-		}
-		else
-		{
-			break;
-		}
-	} while (true);
-}
-
-std::vector<std::string> fmt::rSplit(const std::string& source, const std::string& delim)
-{
-	std::vector<std::string> ret;
-	size_t cursor = 0;
-	do
-	{
-		size_t prevcurs = cursor;
-		cursor = source.find(delim, cursor);
-		if (cursor != std::string::npos)
-		{
-			ret.push_back(source.substr(prevcurs,cursor-prevcurs));
-			cursor += delim.size();
-		}
-		else
-		{
-			ret.push_back(source.substr(prevcurs));
-			break;
-		}
-	} while (true);
-	return ret;
 }
 
 std::vector<std::string> fmt::split(const std::string& source, std::initializer_list<std::string> separators, bool is_skip_empty)
@@ -222,21 +139,7 @@ std::string fmt::trim(const std::string& source, const std::string& values)
 	return source.substr(begin, source.find_last_not_of(values) + 1);
 }
 
-std::string fmt::tolower(std::string source)
-{
-	std::transform(source.begin(), source.end(), source.begin(), ::tolower);
-
-	return source;
-}
-
-std::string fmt::toupper(std::string source)
-{
-	std::transform(source.begin(), source.end(), source.begin(), ::toupper);
-
-	return source;
-}
-
-std::string fmt::escape(std::string source)
+std::string fmt::escape(const std::string& source, std::initializer_list<char> more)
 {
 	const std::pair<std::string, std::string> escape_list[] =
 	{
@@ -244,20 +147,66 @@ std::string fmt::escape(std::string source)
 		{ "\a", "\\a" },
 		{ "\b", "\\b" },
 		{ "\f", "\\f" },
-		{ "\n", "\\n\n" },
+		{ "\n", "\\n" },
 		{ "\r", "\\r" },
 		{ "\t", "\\t" },
 		{ "\v", "\\v" },
 	};
 
-	source = fmt::replace_all(source, escape_list);
+	std::string result = fmt::replace_all(source, escape_list);
 
 	for (char c = 0; c < 32; c++)
 	{
-		if (c != '\n') source = fmt::replace_all(source, std::string(1, c), fmt::format("\\x%02X", c));
+		result = fmt::replace_all(result, std::string(1, c), fmt::format("\\x%02X", c));
 	}
 
-	return source;
+	for (char c : more)
+	{
+		result = fmt::replace_all(result, std::string(1, c), fmt::format("\\x%02X", c));
+	}
+
+	return result;
+}
+
+std::string fmt::unescape(const std::string& source)
+{
+	std::string result;
+
+	for (auto it = source.begin(); it != source.end();)
+	{
+		const char bs = *it++;
+
+		if (bs == '\\' && it != source.end())
+		{
+			switch (const char code = *it++)
+			{
+			case 'a': result += '\a'; break;
+			case 'b': result += '\b'; break;
+			case 'f': result += '\f'; break;
+			case 'n': result += '\n'; break;
+			case 'r': result += '\r'; break;
+			case 't': result += '\t'; break;
+			case 'v': result += '\v'; break;
+			case 'x':
+			{
+				// Detect hexadecimal character code (TODO)
+				if (source.end() - it >= 2)
+				{
+					result += std::stoi(std::string{ *it++, *it++ }, 0, 16);
+				}
+				
+			}
+			// Octal/unicode not supported
+			default: result += code;
+			}
+		}
+		else
+		{
+			result += bs;
+		}
+	}
+
+	return result;
 }
 
 bool fmt::match(const std::string &source, const std::string &mask)

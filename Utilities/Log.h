@@ -1,6 +1,9 @@
 #pragma once
 
-#include "SharedMutex.h"
+#include "types.h"
+#include "Atomic.h"
+#include "File.h"
+#include "StrFmt.h"
 
 namespace _log
 {
@@ -19,40 +22,24 @@ namespace _log
 	struct channel;
 	struct listener;
 
-	// Log manager
-	class logger final
-	{
-		mutable shared_mutex m_mutex;
-
-		std::set<listener*> m_listeners;
-
-	public:
-		// Register listener
-		void add_listener(listener* listener);
-
-		// Unregister listener
-		void remove_listener(listener* listener);
-
-		// Send log message to all listeners
-		void broadcast(const channel& ch, level sev, const std::string& text) const;
-	};
-
 	// Send log message to global logger instance
 	void broadcast(const channel& ch, level sev, const std::string& text);
 
-	// Log channel (source)
+	// Log channel
 	struct channel
 	{
-		// Channel prefix (also used for identification)
-		const std::string name;
+		// Channel prefix (added to every log message)
+		const char* const name;
 
 		// The lowest logging level enabled for this channel (used for early filtering)
-		std::atomic<level> enabled;
+		atomic_t<level> enabled;
 
-		// Initialization (max level enabled by default)
-		channel(const std::string& name, level = level::trace);
-
-		virtual ~channel() = default;
+		// Constant initialization: name and initial log level
+		constexpr channel(const char* name, level enabled = level::trace)
+			: name{ name }
+			, enabled{ enabled }
+		{
+		}
 
 		// Log without formatting
 		force_inline void log(level sev, const std::string& text) const
@@ -71,7 +58,7 @@ namespace _log
 
 #define GEN_LOG_METHOD(_sev)\
 		template<typename... Args>\
-		force_inline void _sev(const char* fmt, const Args&... args)\
+		force_inline void _sev(const char* fmt, const Args&... args) const\
 		{\
 			return format<Args...>(level::_sev, fmt, args...);\
 		}
@@ -90,9 +77,9 @@ namespace _log
 	// Log listener (destination)
 	struct listener
 	{
-		listener();
+		listener() = default;
 		
-		virtual ~listener();
+		virtual ~listener() = default;
 
 		virtual void log(const channel& ch, level sev, const std::string& text) = 0;
 	};
@@ -126,9 +113,6 @@ namespace _log
 		virtual void log(const channel& ch, level sev, const std::string& text) override;
 	};
 
-	// Global variable for RPCS3.log
-	extern file_listener g_log_file;
-
 	// Global variable for TTY.log
 	extern file_writer g_tty_file;
 
@@ -142,7 +126,25 @@ namespace _log
 	extern channel PPU;
 	extern channel SPU;
 	extern channel ARMv7;
+
+	extern thread_local std::string(*g_tls_make_prefix)(const channel&, level, const std::string&);
 }
+
+template<>
+struct bijective<_log::level, const char*>
+{
+	static constexpr std::pair<_log::level, const char*> map[]
+	{
+		{ _log::level::always, "Nothing" },
+		{ _log::level::fatal, "Fatal" },
+		{ _log::level::error, "Error" },
+		{ _log::level::todo, "TODO" },
+		{ _log::level::success, "Success" },
+		{ _log::level::warning, "Warning" },
+		{ _log::level::notice, "Notice" },
+		{ _log::level::trace, "Trace" },
+	};
+};
 
 // Legacy:
 

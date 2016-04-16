@@ -102,5 +102,3 @@ struct SceSulphaNgsConfig
 	le_t<u32> maxNamedObjects;
 	le_t<u32> maxTraceBufferBytes;
 };
-
-extern psv_log_base sceNgs;

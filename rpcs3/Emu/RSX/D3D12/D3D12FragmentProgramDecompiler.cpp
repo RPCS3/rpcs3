@@ -5,6 +5,7 @@
 #include "D3D12CommonDecompiler.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
+#include <set>
 
 D3D12FragmentDecompiler::D3D12FragmentDecompiler(const RSXFragmentProgram &prog, u32& size) :
 	FragmentProgramDecompiler(prog, size)

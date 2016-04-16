@@ -1,5 +1,7 @@
 #pragma once
 
+#include <map>
+
 namespace psf
 {
 	enum class format : u16
@@ -23,8 +25,8 @@ namespace psf
 			, m_max_size(max_size)
 			, m_value_string(value)
 		{
-			CHECK_ASSERTION(type == format::string || type == format::array);
-			CHECK_ASSERTION(max_size);
+			Expects(type == format::string || type == format::array);
+			Expects(max_size);
 		}
 
 		// Construct integer entry, assign the value
@@ -49,11 +51,24 @@ namespace psf
 	// Define PSF registry as a sorted map of entries:
 	using registry = std::map<std::string, entry>;
 
-	// Load PSF registry from binary data
-	registry load(const std::vector<char>&);
+	// Load PSF registry from SFO binary data
+	registry load_object(const std::vector<char>&);
 
-	// Convert PSF registry to binary format
-	std::vector<char> save(const registry&);
+	// Load PSF registry from SFO file, if opened
+	inline registry load_object(const fs::file& f)
+	{
+		if (f)
+		{
+			return load_object(f.to_vector<char>());
+		}
+		else
+		{
+			return registry{};
+		}
+	}
+
+	// Convert PSF registry to SFO binary format
+	std::vector<char> save_object(const registry&);
 
 	// Get string value or default value
 	std::string get_string(const registry& psf, const std::string& key, const std::string& def = {});

@@ -10,14 +10,14 @@
     <Filter Include="Io">
       <UniqueIdentifier>{6da015d7-ee99-4d6b-9588-42414b63ee0e}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Io\Windows">
-      <UniqueIdentifier>{ce9ce942-07dd-4cbc-9b76-0f754c363eda}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Io\XInput">
       <UniqueIdentifier>{b30572ce-b602-4c10-ad69-bd3f1c8a0144}</UniqueIdentifier>
     </Filter>
     <Filter Include="rpcs3">
       <UniqueIdentifier>{47155d25-741d-42c0-8850-f22aafca082a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Io\Basic">
+      <UniqueIdentifier>{ce9ce942-07dd-4cbc-9b76-0f754c363eda}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -30,12 +30,6 @@
     <ClCompile Include="Gui\MemoryViewer.cpp">
       <Filter>Gui</Filter>
     </ClCompile>
-    <ClCompile Include="Gui\DisAsmFrame.cpp">
-      <Filter>Gui</Filter>
-    </ClCompile>
-    <ClCompile Include="Gui\CompilerELF.cpp">
-      <Filter>Gui</Filter>
-    </ClCompile>
     <ClCompile Include="Gui\InterpreterDisAsm.cpp">
       <Filter>Gui</Filter>
     </ClCompile>
@@ -43,12 +37,6 @@
       <Filter>Gui</Filter>
     </ClCompile>
     <ClCompile Include="Gui\Debugger.cpp">
-      <Filter>Gui</Filter>
-    </ClCompile>
-    <ClCompile Include="Gui\VHDDManager.cpp">
-      <Filter>Gui</Filter>
-    </ClCompile>
-    <ClCompile Include="Gui\VFSManager.cpp">
       <Filter>Gui</Filter>
     </ClCompile>
     <ClCompile Include="Gui\TextInputDialog.cpp">
@@ -78,16 +66,7 @@
     <ClCompile Include="Gui\KernelExplorer.cpp">
       <Filter>Gui</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\Io\XInput\XInputPadHandler.cpp">
-      <Filter>Io\XInput</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\Cell\PPUProgramCompiler.cpp">
-      <Filter>Gui</Filter>
-    </ClCompile>
     <ClCompile Include="Gui\MsgDialog.cpp">
-      <Filter>Gui</Filter>
-    </ClCompile>
-    <ClCompile Include="Gui\LLEModulesManager.cpp">
       <Filter>Gui</Filter>
     </ClCompile>
     <ClCompile Include="Gui\MemoryStringSearcher.cpp">
@@ -105,21 +84,33 @@
     <ClCompile Include="Gui\SignInDialog.cpp">
       <Filter>Gui</Filter>
     </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <ResourceCompile Include="rpcs3.rc" />
+    <ClCompile Include="Gui\FrameBase.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="KeyboardPadHandler.cpp">
+      <Filter>Io\Basic</Filter>
+    </ClCompile>
+    <ClCompile Include="XInputPadHandler.cpp">
+      <Filter>Io\XInput</Filter>
+    </ClCompile>
+    <ClCompile Include="BasicKeyboardHandler.cpp">
+      <Filter>Io\Basic</Filter>
+    </ClCompile>
+    <ClCompile Include="BasicMouseHandler.cpp">
+      <Filter>Io\Basic</Filter>
+    </ClCompile>
+    <ClCompile Include="Gui\RegisterEditor.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="Gui\InstructionEditor.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Utilities\MTProgressDialog.h">
       <Filter>Utilities</Filter>
     </ClInclude>
-    <ClInclude Include="Gui\CompilerELF.h">
-      <Filter>Gui</Filter>
-    </ClInclude>
     <ClInclude Include="Gui\Debugger.h">
-      <Filter>Gui</Filter>
-    </ClInclude>
-    <ClInclude Include="Gui\DisAsmFrame.h">
       <Filter>Gui</Filter>
     </ClInclude>
     <ClInclude Include="Gui\GameViewer.h">
@@ -138,12 +129,6 @@
       <Filter>Gui</Filter>
     </ClInclude>
     <ClInclude Include="Gui\TextInputDialog.h">
-      <Filter>Gui</Filter>
-    </ClInclude>
-    <ClInclude Include="Gui\VFSManager.h">
-      <Filter>Gui</Filter>
-    </ClInclude>
-    <ClInclude Include="Gui\VHDDManager.h">
       <Filter>Gui</Filter>
     </ClInclude>
     <ClInclude Include="rpcs3.h">
@@ -176,31 +161,13 @@
     <ClInclude Include="Gui\KernelExplorer.h">
       <Filter>Gui</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\Io\Windows\WindowsKeyboardHandler.h">
-      <Filter>Io\Windows</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\Io\Windows\WindowsMouseHandler.h">
-      <Filter>Io\Windows</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\Io\Windows\WindowsPadHandler.h">
-      <Filter>Io\Windows</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\Io\XInput\XInputPadHandler.h">
-      <Filter>Io\XInput</Filter>
-    </ClInclude>
     <ClInclude Include="stdafx_gui.h">
       <Filter>rpcs3</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\Cell\PPUProgramCompiler.h">
-      <Filter>Gui</Filter>
     </ClInclude>
     <ClInclude Include="Gui\MsgDialog.h">
       <Filter>Gui</Filter>
     </ClInclude>
     <ClInclude Include="Gui\InstructionEditor.h">
-      <Filter>Gui</Filter>
-    </ClInclude>
-    <ClInclude Include="Gui\LLEModulesManager.h">
       <Filter>Gui</Filter>
     </ClInclude>
     <ClInclude Include="Gui\CgDisasm.h">
@@ -222,8 +189,23 @@
     <ClInclude Include="Gui\PADManager.h">
       <Filter>Gui</Filter>
     </ClInclude>
+    <ClInclude Include="XInputPadHandler.h">
+      <Filter>Io\XInput</Filter>
+    </ClInclude>
+    <ClInclude Include="KeyboardPadHandler.h">
+      <Filter>Io\Basic</Filter>
+    </ClInclude>
+    <ClInclude Include="BasicKeyboardHandler.h">
+      <Filter>Io\Basic</Filter>
+    </ClInclude>
+    <ClInclude Include="BasicMouseHandler.h">
+      <Filter>Io\Basic</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Image Include="rpcs3.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="rpcs3_.rc" />
   </ItemGroup>
 </Project>

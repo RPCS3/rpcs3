@@ -1,7 +1,12 @@
 #include "stdafx.h"
+#include "Utilities/Config.h"
 #include "../rsx_methods.h"
 #include "GLGSRender.h"
-#include "Emu/state.h"
+
+extern cfg::bool_entry g_cfg_rsx_write_color_buffers;
+extern cfg::bool_entry g_cfg_rsx_write_depth_buffer;
+extern cfg::bool_entry g_cfg_rsx_read_color_buffers;
+extern cfg::bool_entry g_cfg_rsx_read_depth_buffer;
 
 color_format rsx::internals::surface_color_format_to_gl(rsx::surface_color_format color_format)
 {
@@ -151,7 +156,7 @@ void GLGSRender::read_buffers()
 
 	glDisable(GL_STENCIL_TEST);
 
-	if (rpcs3::state.config.rsx.opengl.read_color_buffers)
+	if (g_cfg_rsx_read_color_buffers)
 	{
 		auto color_format = rsx::internals::surface_color_format_to_gl(m_surface.color_format);
 
@@ -222,7 +227,7 @@ void GLGSRender::read_buffers()
 		}
 	}
 
-	if (rpcs3::state.config.rsx.opengl.read_depth_buffer)
+	if (g_cfg_rsx_read_depth_buffer)
 	{
 		//TODO: use pitch
 		u32 pitch = rsx::method_registers[NV4097_SET_SURFACE_PITCH_Z];
@@ -279,7 +284,7 @@ void GLGSRender::write_buffers()
 	//TODO: Detect when the data is actually being used by cell and issue download command on-demand (mark as not present?)
 	//Should also mark cached resources as dirty so that read buffers works out-of-the-box without modification
 
-	if (rpcs3::state.config.rsx.opengl.write_color_buffers)
+	if (g_cfg_rsx_write_color_buffers)
 	{
 		auto color_format = rsx::internals::surface_color_format_to_gl(m_surface.color_format);
 
@@ -337,7 +342,7 @@ void GLGSRender::write_buffers()
 		}
 	}
 
-	if (rpcs3::state.config.rsx.opengl.write_depth_buffer)
+	if (g_cfg_rsx_write_depth_buffer)
 	{
 		//TODO: use pitch
 		u32 pitch = rsx::method_registers[NV4097_SET_SURFACE_PITCH_Z];

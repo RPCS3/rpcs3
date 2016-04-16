@@ -1,8 +1,10 @@
 #include "stdafx.h"
 #include "Emu/System.h"
-#include "Emu/ARMv7/PSVFuncList.h"
+#include "Emu/ARMv7/ARMv7Module.h"
 
 #include "sceRtc.h"
+
+LOG_CHANNEL(sceRtc);
 
 u32 sceRtcGetTickResolution()
 {
@@ -190,15 +192,10 @@ s32 sceRtcParseRFC3339(vm::ptr<u64> pUtc, vm::cptr<char> pszDateTime)
 }
 
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &sceRtc, #name, name)
+#define REG_FUNC(nid, name) REG_FNID(SceRtcUser, nid, name)
 
-psv_log_base sceRtc("SceRtc", []()
+DECLARE(arm_module_manager::SceRtc)("SceRtcUser", []()
 {
-	sceRtc.on_load = nullptr;
-	sceRtc.on_unload = nullptr;
-	sceRtc.on_stop = nullptr;
-	sceRtc.on_error = nullptr;
-
 	REG_FUNC(0x23F79274, sceRtcGetCurrentTick);
 	REG_FUNC(0xCDDD25FE, sceRtcGetCurrentNetworkTick);
 	REG_FUNC(0x70FDE8F1, sceRtcGetCurrentClock);

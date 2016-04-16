@@ -1,8 +1,10 @@
 #include "stdafx.h"
 #include "Emu/System.h"
-#include "Emu/ARMv7/PSVFuncList.h"
+#include "Emu/ARMv7/ARMv7Module.h"
 
 #include "sceSulpha.h"
+
+LOG_CHANNEL(sceSulpha);
 
 s32 sceSulphaNetworkInit()
 {
@@ -70,15 +72,10 @@ s32 sceSulphaAgentsUnregister(vm::cptr<SceSulphaHandle> handles, u32 agentCount)
 }
 
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &sceSulpha, #name, name)
+#define REG_FUNC(nid, name) REG_FNID(SceSulpha, nid, name)
 
-psv_log_base sceSulpha("SceSulpha", []()
+DECLARE(arm_module_manager::SceSulpha)("SceSulpha", []()
 {
-	sceSulpha.on_load = nullptr;
-	sceSulpha.on_unload = nullptr;
-	sceSulpha.on_stop = nullptr;
-	sceSulpha.on_error = nullptr;
-
 	REG_FUNC(0xB4668AEA, sceSulphaNetworkInit);
 	REG_FUNC(0x0FC71B72, sceSulphaNetworkShutdown);
 	REG_FUNC(0xA6A05C50, sceSulphaGetDefaultConfig);

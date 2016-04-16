@@ -350,7 +350,7 @@ std::tuple<bool, size_t, std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC>> D3D12GSRe
 		return std::make_tuple(true, index_count, upload_vertex_attributes(first_count_commands, command_list));
 	}
 
-	assert(draw_command == rsx::draw_command::indexed);
+	Expects(draw_command == rsx::draw_command::indexed);
 
 	// Index count
 	size_t index_count = get_index_count(draw_mode, gsl::narrow<int>(get_vertex_count(first_count_commands)));

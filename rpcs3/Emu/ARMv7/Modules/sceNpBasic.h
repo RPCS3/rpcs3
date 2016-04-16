@@ -113,5 +113,3 @@ enum SceNpBasicPlaySessionLogType : s32
 	SCE_NP_BASIC_PLAY_SESSION_LOG_TYPE_BY_NP_COMM_ID = 1,
 	SCE_NP_BASIC_PLAY_SESSION_LOG_TYPE_MAX = 2
 };
-
-extern psv_log_base sceNpBasic;

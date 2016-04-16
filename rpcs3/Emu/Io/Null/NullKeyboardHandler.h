@@ -5,11 +5,7 @@
 class NullKeyboardHandler final : public KeyboardHandlerBase
 {
 public:
-	NullKeyboardHandler()
-	{
-	}
-
-	virtual void Init(const u32 max_connect)
+	void Init(const u32 max_connect) override
 	{
 		memset(&m_info, 0, sizeof(KbInfo));
 		m_info.max_connect = max_connect;
@@ -18,11 +14,5 @@ public:
 		{
 			m_keyboards.emplace_back(Keyboard());
 		}
-	}
-
-	virtual void Close()
-	{
-		memset(&m_info, 0, sizeof(KbInfo));
-		m_keyboards.clear();
 	}
 };

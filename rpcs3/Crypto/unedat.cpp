@@ -170,7 +170,7 @@ int decrypt_data(const fs::file* in, const fs::file* out, EDAT_HEADER *edat, NPD
 		{
 			metadata_sec_offset = metadata_offset + (unsigned long long) i * metadata_section_size;
 
-			CHECK_ASSERTION(in->seek(metadata_sec_offset) != -1);
+			in->seek(metadata_sec_offset);
 			
 			unsigned char metadata[0x20];
 			memset(metadata, 0, 0x20);
@@ -199,7 +199,7 @@ int decrypt_data(const fs::file* in, const fs::file* out, EDAT_HEADER *edat, NPD
 		{
 			// If FLAG 0x20, the metadata precedes each data block.
 			metadata_sec_offset = metadata_offset + (unsigned long long) i * (metadata_section_size + length);
-			CHECK_ASSERTION(in->seek(metadata_sec_offset) != -1);
+			in->seek(metadata_sec_offset);
 
 			unsigned char metadata[0x20];
 			memset(metadata, 0, 0x20);
@@ -220,7 +220,7 @@ int decrypt_data(const fs::file* in, const fs::file* out, EDAT_HEADER *edat, NPD
 		else
 		{
 			metadata_sec_offset = metadata_offset + (unsigned long long) i * metadata_section_size;
-			CHECK_ASSERTION(in->seek(metadata_sec_offset) != -1);
+			in->seek(metadata_sec_offset);
 
 			in->read(hash_result, 0x10);
 			offset = metadata_offset + (unsigned long long) i * edat->block_size + (unsigned long long) block_num * metadata_section_size;
@@ -242,8 +242,7 @@ int decrypt_data(const fs::file* in, const fs::file* out, EDAT_HEADER *edat, NPD
 		memset(hash, 0, 0x10);
 		memset(key_result, 0, 0x10);
 
-		CHECK_ASSERTION(in->seek(offset) != -1);
-
+		in->seek(offset);
 		in->read(enc_data, length);
 
 		// Generate a key for the current block.
@@ -347,7 +346,7 @@ int decrypt_data(const fs::file* in, const fs::file* out, EDAT_HEADER *edat, NPD
 
 int check_data(unsigned char *key, EDAT_HEADER *edat, NPD_HEADER *npd, const fs::file* f, bool verbose)
 {
-	CHECK_ASSERTION(f->seek(0) != -1);
+	f->seek(0);
 	unsigned char header[0xA0];
 	unsigned char empty_header[0xA0];
 	unsigned char header_hash[0x10];
@@ -392,8 +391,7 @@ int check_data(unsigned char *key, EDAT_HEADER *edat, NPD_HEADER *npd, const fs:
 	f->read(header, 0xA0);
 
 	// Read in the header and metadata section hashes.
-	CHECK_ASSERTION(f->seek(0x90) != -1);
-
+	f->seek(0x90);
 	f->read(metadata_hash, 0x10);
 	f->read(header_hash, 0x10);
 
@@ -449,7 +447,7 @@ int check_data(unsigned char *key, EDAT_HEADER *edat, NPD_HEADER *npd, const fs:
 	while (bytes_to_read > 0)
 	{
 		// Locate the metadata blocks.
-		CHECK_ASSERTION(f->seek(metadata_section_offset) != -1);
+		f->seek(metadata_section_offset);
 
 		// Read in the metadata.
 		f->read(metadata + bytes_read, metadata_section_size);
@@ -496,9 +494,9 @@ int check_data(unsigned char *key, EDAT_HEADER *edat, NPD_HEADER *npd, const fs:
 
 
 		// Read in the metadata and header signatures.
-		CHECK_ASSERTION(f->seek(0xB0) != -1);
+		f->seek(0xB0);
 		f->read(metadata_signature, 0x28);
-		CHECK_ASSERTION(f->seek(0xD8) != -1);
+		f->seek(0xD8);
 		f->read(header_signature, 0x28);
 
 		// Checking metadata signature.
@@ -514,7 +512,7 @@ int check_data(unsigned char *key, EDAT_HEADER *edat, NPD_HEADER *npd, const fs:
 			{
 				int metadata_buf_size = block_num * 0x10;
 				unsigned char *metadata_buf = new unsigned char[metadata_buf_size];
-				CHECK_ASSERTION(f->seek(metadata_offset) != -1);
+				f->seek(metadata_offset);
 				f->read(metadata_buf, metadata_buf_size);
 				sha1(metadata_buf, metadata_buf_size, signature_hash);
 				delete[] metadata_buf;
@@ -547,7 +545,7 @@ int check_data(unsigned char *key, EDAT_HEADER *edat, NPD_HEADER *npd, const fs:
 			// Setup header signature hash.
 			memset(signature_hash, 0, 20);
 			unsigned char *header_buf = new unsigned char[0xD8];
-			CHECK_ASSERTION(f->seek(0x00) != -1);
+			f->seek(0x00);
 			f->read(header_buf, 0xD8);
 			sha1(header_buf, 0xD8, signature_hash );
 			delete[] header_buf;
@@ -819,7 +817,7 @@ int DecryptEDAT(const std::string& input_file_name, const std::string& output_fi
 {
 	// Prepare the files.
 	fs::file input(input_file_name);
-	fs::file output(output_file_name, fom::rewrite);
+	fs::file output(output_file_name, fs::rewrite);
 
 	// Set keys (RIF and DEVKLIC).
 	unsigned char rifkey[0x10];
@@ -893,7 +891,7 @@ int DecryptEDAT(const std::string& input_file_name, const std::string& output_fi
 	// Delete the bad output file if any errors arise.
 	if (extract_data(&input, &output, input_file_name.c_str(), devklic, rifkey, verbose))
 	{
-		output.close();
+		output.release();
 		fs::remove_file(output_file_name);
 		return -1;
 	}

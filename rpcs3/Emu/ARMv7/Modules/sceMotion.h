@@ -26,5 +26,3 @@ struct SceMotionSensorState
 	le_t<u64> hostTimestamp;
 	u8 reserve3[8];
 };
-
-extern psv_log_base sceMotion;

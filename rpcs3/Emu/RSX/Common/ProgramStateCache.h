@@ -162,7 +162,7 @@ public:
 		auto I = m_vertex_shader_cache.find(rsx_vp);
 		if (I != m_vertex_shader_cache.end())
 			return I->second;
-		throw new EXCEPTION("Trying to get unknow transform program");
+		throw EXCEPTION("Trying to get unknown transform program");
 	}
 
 	const fragment_program_type& get_shader_program(const RSXFragmentProgram& rsx_fp) const
@@ -170,7 +170,7 @@ public:
 		auto I = m_fragment_shader_cache.find(rsx_fp);
 		if (I != m_fragment_shader_cache.end())
 			return I->second;
-		throw new EXCEPTION("Trying to get unknow shader program");
+		throw EXCEPTION("Trying to get unknown shader program");
 	}
 
 	template<typename... Args>

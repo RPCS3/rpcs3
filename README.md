@@ -37,9 +37,11 @@ __Mac OSX__
 
 ### Building
 
-To initialize the repository don't forget to execute `git submodule update --init` to pull the wxWidgets source.
+To initialize the repository don't forget to execute `git submodule update --init` to pull the submodules.
 * __Windows__:
-Open the *.SLN* file, and press *Build* > *Clean Solution*, then *Build Solution*. *Rebuild* may not work correctly.
+1) Open the *.SLN* file.
+2) Build the projects in *__BUILD_BEFORE* folder: right-click on every project > *Build*.
+3) Press *BUILD* > *Build Solution* or *Rebuild Solution*.
 * __Linux & Mac OSX__:
 If you want to build with LLVM, then LLVM 3.6.2 is required.
 `cd rpcs3 && cmake CMakeLists.txt && make && cd ../` then run with `cd bin && ./rpcs3`.

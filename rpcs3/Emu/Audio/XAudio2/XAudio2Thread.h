@@ -11,21 +11,18 @@
 
 class XAudio2Thread : public AudioThread
 {
-private:
 	IXAudio2* m_xaudio2_instance;
 	IXAudio2MasteringVoice* m_master_voice;
 	IXAudio2SourceVoice* m_source_voice;
 
 public:
-	virtual ~XAudio2Thread();
 	XAudio2Thread();
+	virtual ~XAudio2Thread() override;
 
-	virtual void Init();
-	virtual void Quit();
-	virtual void Play();
-	virtual void Open(const void* src, int size);
-	virtual void Close();
-	virtual void Stop();
-	virtual void AddData(const void* src, int size);
+	virtual void Play() override;
+	virtual void Open(const void* src, int size) override;
+	virtual void Close() override;
+	virtual void Stop() override;
+	virtual void AddData(const void* src, int size) override;
 };
 #endif

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Utilities/Thread.h"
+#include <map>
 
 namespace vm
 {
@@ -30,28 +31,31 @@ namespace vm
 		page_allocated          = (1 << 7),
 	};
 
+	struct access_violation : std::runtime_error
+	{
+		access_violation(u64 addr, const char* cause);
+	};
+
+	[[noreturn]] void throw_access_violation(u64 addr, const char* cause);
+
 	struct waiter_t
 	{
 		u32 addr = 0;
 		u32 mask = ~0;
-		named_thread_t* thread = nullptr;
+		named_thread* thread = nullptr;
 
 		std::function<bool()> pred;
 
 		waiter_t() = default;
 
-		waiter_t* reset(u32 addr, u32 size, named_thread_t& thread)
+		waiter_t* reset(u32 addr, u32 size, named_thread& thread)
 		{
 			this->addr = addr;
 			this->mask = ~(size - 1);
 			this->thread = &thread;
 
 			// must be null at this point
-			if (pred)
-			{
-				throw EXCEPTION("Unexpected");
-			}
-
+			Ensures(!pred);
 			return this;
 		}
 
@@ -64,7 +68,7 @@ namespace vm
 		std::unique_lock<std::mutex> m_lock;
 
 	public:
-		waiter_lock_t(named_thread_t& thread, u32 addr, u32 size);
+		waiter_lock_t(named_thread& thread, u32 addr, u32 size);
 
 		waiter_t* operator ->() const
 		{
@@ -77,7 +81,8 @@ namespace vm
 	};
 
 	// Wait until pred() returns true, addr must be aligned to size which must be a power of 2, pred() may be called by any thread
-	template<typename F, typename... Args> auto wait_op(named_thread_t& thread, u32 addr, u32 size, F pred, Args&&... args) -> decltype(static_cast<void>(pred(args...)))
+	template<typename F, typename... Args>
+	auto wait_op(named_thread& thread, u32 addr, u32 size, F pred, Args&&... args) -> decltype(static_cast<void>(pred(args...)))
 	{
 		// return immediately if condition passed (optimistic case)
 		if (pred(args...)) return;
@@ -207,7 +212,7 @@ namespace vm
 			return res;
 		}
 
-		throw EXCEPTION("Not a virtual memory pointer (%p)", real_ptr);
+		throw fmt::exception("Not a virtual memory pointer (%p)", real_ptr);
 	}
 
 	// Convert pointer-to-member to a vm address compatible offset
@@ -216,38 +221,43 @@ namespace vm
 		return static_cast<u32>(reinterpret_cast<std::uintptr_t>(&reinterpret_cast<char const volatile&>(reinterpret_cast<T*>(0ull)->*member_ptr)));
 	}
 
-	template<typename T> struct cast_ptr
+	template<typename T>
+	struct cast_impl
 	{
-		static_assert(std::is_same<T, u32>::value, "Unsupported VM_CAST() type");
+		static_assert(std::is_same<T, u32>::value, "vm::cast() error: unsupported type");
 	};
 
-	template<> struct cast_ptr<u32>
+	template<>
+	struct cast_impl<u32>
 	{
-		static u32 cast(const u32 addr, const char* file, int line, const char* func)
+		static u32 cast(const u32& addr, const char* loc)
 		{
 			return addr;
 		}
 	};
 
-	template<> struct cast_ptr<u64>
+	template<>
+	struct cast_impl<u64>
 	{
-		static u32 cast(const u64 addr, const char* file, int line, const char* func)
+		static u32 cast(const u64& addr, const char* loc)
 		{
-			return static_cast<u32>(addr) == addr ? static_cast<u32>(addr) : throw fmt::exception(file, line, func, "VM_CAST failed (addr=0x%llx)", addr);
+			return fmt::narrow<u32>("Memory address out of range: 0x%llx%s", addr, loc);
 		}
 	};
 
-	template<typename T, bool Se> struct cast_ptr<se_t<T, Se>>
+	template<typename T, bool Se>
+	struct cast_impl<se_t<T, Se>>
 	{
-		static u32 cast(const se_t<T, Se>& addr, const char* file, int line, const char* func)
+		static u32 cast(const se_t<T, Se>& addr, const char* loc)
 		{
-			return cast_ptr<T>::cast(addr, file, line, func);
+			return cast_impl<T>::cast(addr, loc);
 		}
 	};
 
-	template<typename T> u32 impl_cast(const T& addr, const char* file, int line, const char* func)
+	template<typename T>
+	u32 cast(const T& addr, const char* loc)
 	{
-		return cast_ptr<T>::cast(addr, file, line, func);
+		return cast_impl<T>::cast(addr, loc);
 	}
 
 	// Convert specified PS3/PSV virtual memory address to a pointer for common access
@@ -392,12 +402,10 @@ namespace vm
 	}
 
 	void close();
-}
 
-#include "vm_ptr.h"
+	u32 stack_push(u32 size, u32 align_v);
+	void stack_pop_verbose(u32 addr, u32 size) noexcept;
 
-namespace vm
-{
 	class stack
 	{
 		u32 m_begin;
@@ -418,21 +426,20 @@ namespace vm
 
 		u32 alloc_new_page()
 		{
-			assert(m_position + m_page_size < (int)m_size);
+			Expects(m_position + m_page_size < (int)m_size);
 			m_position += (int)m_page_size;
 			return m_begin + m_position;
 		}
 
 		u32 dealloc_new_page()
 		{
-			assert(m_position - m_page_size > 0);
+			Expects(m_position - m_page_size > 0);
 			m_position -= (int)m_page_size;
 			return m_begin + m_position;
 		}
 	};
 
-	u32 stack_push(u32 size, u32 align_v);
-	void stack_pop(u32 addr, u32 size);
+	extern thread_local u64 g_tls_fault_count;
 }
 
 #include "vm_var.h"

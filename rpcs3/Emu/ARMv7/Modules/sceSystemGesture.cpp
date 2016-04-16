@@ -1,8 +1,10 @@
 #include "stdafx.h"
 #include "Emu/System.h"
-#include "Emu/ARMv7/PSVFuncList.h"
+#include "Emu/ARMv7/ARMv7Module.h"
 
 #include "sceSystemGesture.h"
+
+LOG_CHANNEL(sceSystemGesture);
 
 s32 sceSystemGestureInitializePrimitiveTouchRecognizer(vm::ptr<SceSystemGesturePrimitiveTouchRecognizerParameter> parameter)
 {
@@ -90,15 +92,10 @@ s32 sceSystemGestureGetTouchEventByEventID(vm::cptr<SceSystemGestureTouchRecogni
 }
 
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &sceSystemGesture, #name, name)
+#define REG_FUNC(nid, name) REG_FNID(SceSystemGesture, nid, name)
 
-psv_log_base sceSystemGesture("SceSystemGesture", []()
+DECLARE(arm_module_manager::SceSystemGesture)("SceSystemGesture", []()
 {
-	sceSystemGesture.on_load = nullptr;
-	sceSystemGesture.on_unload = nullptr;
-	sceSystemGesture.on_stop = nullptr;
-	sceSystemGesture.on_error = nullptr;
-
 	REG_FUNC(0x6078A08B, sceSystemGestureInitializePrimitiveTouchRecognizer);
 	REG_FUNC(0xFD5A6504, sceSystemGestureResetPrimitiveTouchRecognizer);
 	REG_FUNC(0xB3875104, sceSystemGestureFinalizePrimitiveTouchRecognizer);

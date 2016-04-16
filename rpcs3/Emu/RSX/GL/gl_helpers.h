@@ -7,9 +7,6 @@
 #include <memory>
 #include <unordered_map>
 
-#include <glm/glm.hpp>
-#include <glm/gtc/type_ptr.hpp>
-
 #include "OpenGL.h"
 #include "../GCM.h"
 
@@ -1778,23 +1775,6 @@ namespace gl
 				void operator = (const color4i& rhs) const { m_program.use(); glUniform4i(location(), rhs.r, rhs.g, rhs.b, rhs.a); }
 				void operator = (const color4f& rhs) const { m_program.use(); glUniform4f(location(), rhs.r, rhs.g, rhs.b, rhs.a); }
 				//void operator = (const color4d& rhs) const { m_program.use(); glUniform4d(location(), rhs.r, rhs.g, rhs.b, rhs.a); }
-
-				void operator = (const glm::ivec2& rhs) const { m_program.use(); glUniform2i(location(), rhs.r, rhs.g); }
-				void operator = (const glm::vec2& rhs) const { m_program.use(); glUniform2f(location(), rhs.r, rhs.g); }
-				//void operator = (const glm::dvec2& rhs) const { m_program.use(); glUniform2d(location(), rhs.r, rhs.g); }
-				void operator = (const glm::ivec3& rhs) const { m_program.use(); glUniform3i(location(), rhs.r, rhs.g, rhs.b); }
-				void operator = (const glm::vec3& rhs) const { m_program.use(); glUniform3f(location(), rhs.r, rhs.g, rhs.b); }
-				//void operator = (const glm::dvec3& rhs) const { m_program.use(); glUniform3d(location(), rhs.r, rhs.g, rhs.b); }
-				void operator = (const glm::ivec4& rhs) const { m_program.use(); glUniform4i(location(), rhs.r, rhs.g, rhs.b, rhs.a); }
-				void operator = (const glm::vec4& rhs) const { m_program.use(); glUniform4f(location(), rhs.r, rhs.g, rhs.b, rhs.a); }
-				//void operator = (const glm::dvec4& rhs) const { m_program.use(); glUniform4d(location(), rhs.r, rhs.g, rhs.b, rhs.a); }
-
-				void operator = (const glm::mat2& rhs) const { m_program.use(); glUniformMatrix2fv(location(), 1, GL_FALSE, glm::value_ptr(rhs)); }
-				//void operator = (const glm::dmat2& rhs) const { m_program.use(); glUniformMatrix2dv(location(), 1, GL_FALSE, glm::value_ptr(rhs)); }
-				void operator = (const glm::mat3& rhs) const { m_program.use(); glUniformMatrix3fv(location(), 1, GL_FALSE, glm::value_ptr(rhs)); }
-				//void operator = (const glm::dmat3& rhs) const { m_program.use(); glUniformMatrix3dv(location(), 1, GL_FALSE, glm::value_ptr(rhs)); }
-				void operator = (const glm::mat4& rhs) const { m_program.use(); glUniformMatrix4fv(location(), 1, GL_FALSE, glm::value_ptr(rhs)); }
-				//void operator = (const glm::dmat4& rhs) const { m_program.use(); glUniformMatrix4dv(location(), 1, GL_FALSE, glm::value_ptr(rhs)); }
 			};
 
 			class attrib_t
@@ -1825,13 +1805,6 @@ namespace gl
 				void operator = (const color3d& rhs) const { glDisableVertexAttribArray(location()); glVertexAttrib3d(location(), rhs.r, rhs.g, rhs.b); }
 				void operator = (const color4f& rhs) const { glDisableVertexAttribArray(location()); glVertexAttrib4f(location(), rhs.r, rhs.g, rhs.b, rhs.a); }
 				void operator = (const color4d& rhs) const { glDisableVertexAttribArray(location()); glVertexAttrib4d(location(), rhs.r, rhs.g, rhs.b, rhs.a); }
-
-				void operator = (const glm::vec2& rhs) const { glDisableVertexAttribArray(location()); glVertexAttrib2f(location(), rhs.r, rhs.g); }
-				void operator = (const glm::dvec2& rhs) const { glDisableVertexAttribArray(location()); glVertexAttrib2d(location(), rhs.r, rhs.g); }
-				void operator = (const glm::vec3& rhs) const { glDisableVertexAttribArray(location()); glVertexAttrib3f(location(), rhs.r, rhs.g, rhs.b); }
-				void operator = (const glm::dvec3& rhs) const { glDisableVertexAttribArray(location()); glVertexAttrib3d(location(), rhs.r, rhs.g, rhs.b); }
-				void operator = (const glm::vec4& rhs) const { glDisableVertexAttribArray(location()); glVertexAttrib4f(location(), rhs.r, rhs.g, rhs.b, rhs.a); }
-				void operator = (const glm::dvec4& rhs) const { glDisableVertexAttribArray(location()); glVertexAttrib4d(location(), rhs.r, rhs.g, rhs.b, rhs.a); }
 
 				void operator =(buffer_pointer& pointer) const
 				{

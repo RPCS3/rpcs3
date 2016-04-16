@@ -1,13 +1,14 @@
 ﻿#include "stdafx.h"
 #include "stdafx_gui.h"
-
-#include "Emu/state.h"
 #include "Gui/ConLogFrame.h"
 
 enum
 {
 	id_log_copy,  // Copy log to ClipBoard
 	id_log_clear, // Clear log
+	id_log_level,
+	id_log_level7 = id_log_level + 7,
+	id_log_tty,
 	id_timer,
 };
 
@@ -22,10 +23,12 @@ LogFrame::LogFrame(wxWindow* parent)
 	, m_log(new wxTextCtrl(&m_tabs, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE | wxTE_READONLY | wxTE_RICH2))
 	, m_tty(new wxTextCtrl(&m_tabs, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE | wxTE_READONLY | wxTE_RICH2))
 	, m_timer(this, id_timer)
+	, m_cfg_level(g_gui_cfg["Log Level"])
+	, m_cfg_tty(g_gui_cfg["Log TTY"])
 {
 	// Open or create RPCS3.log; TTY.log
-	m_log_file.open(fs::get_config_dir() + "RPCS3.log", fom::read | fom::create);
-	m_tty_file.open(fs::get_config_dir() + "TTY.log",   fom::read | fom::create);
+	m_log_file.open(fs::get_config_dir() + "RPCS3.log", fs::read + fs::create);
+	m_tty_file.open(fs::get_config_dir() + "TTY.log",   fs::read + fs::create);
 
 	m_tty->SetBackgroundColour(wxColour("Black"));
 	m_log->SetBackgroundColour(wxColour("Black"));
@@ -42,6 +45,8 @@ LogFrame::LogFrame(wxWindow* parent)
 	m_log->Bind(wxEVT_RIGHT_DOWN, &LogFrame::OnRightClick, this);
 	Bind(wxEVT_MENU, &LogFrame::OnContextMenu, this, id_log_clear);
 	Bind(wxEVT_MENU, &LogFrame::OnContextMenu, this, id_log_copy);
+	Bind(wxEVT_MENU, &LogFrame::OnContextMenu, this, id_log_level, id_log_level + 7);
+	Bind(wxEVT_MENU, &LogFrame::OnContextMenu, this, id_log_tty);
 
 	Show();
 
@@ -69,8 +74,21 @@ void LogFrame::OnRightClick(wxMouseEvent& event)
 	wxMenu* menu = new wxMenu();
 
 	menu->Append(id_log_copy, "&Copy");
-	menu->AppendSeparator();
 	menu->Append(id_log_clear, "C&lear");
+	menu->AppendSeparator();
+	menu->AppendRadioItem(id_log_level + 0, "Nothing");
+	menu->AppendRadioItem(id_log_level + 1, "Fatal");
+	menu->AppendRadioItem(id_log_level + 2, "Error");
+	menu->AppendRadioItem(id_log_level + 3, "Todo");
+	menu->AppendRadioItem(id_log_level + 4, "Success");
+	menu->AppendRadioItem(id_log_level + 5, "Warning");
+	menu->AppendRadioItem(id_log_level + 6, "Notice");
+	menu->AppendRadioItem(id_log_level + 7, "Trace");
+	menu->AppendSeparator();
+	menu->AppendCheckItem(id_log_tty, "TTY");
+
+	menu->Check(id_log_level + static_cast<uint>(get_cfg_level()), true);
+	menu->Check(id_log_tty, get_cfg_tty());
 
 	PopupMenu(menu);
 }
@@ -78,13 +96,17 @@ void LogFrame::OnRightClick(wxMouseEvent& event)
 // Well you can bind more than one control to a single handler.
 void LogFrame::OnContextMenu(wxCommandEvent& event)
 {
-	int id = event.GetId();
-	switch (id)
+	switch (auto id = event.GetId())
 	{
 	case id_log_clear:
+	{
 		m_log->Clear();
+		m_log_file.seek(0, fs::seek_end);
 		break;
+	}
+
 	case id_log_copy:
+	{
 		if (wxTheClipboard->Open())
 		{
 			m_tdo = new wxTextDataObject(m_log->GetStringSelection());
@@ -95,19 +117,36 @@ void LogFrame::OnContextMenu(wxCommandEvent& event)
 			wxTheClipboard->Close();
 		}
 		break;
-	default:
-		event.Skip();
 	}
+
+	case id_log_tty:
+	{
+		m_cfg_tty = !get_cfg_tty();
+		break;
+	}
+
+	default:
+	{
+		if (id >= id_log_level && id < id_log_level + 8)
+		{
+			m_cfg_level = id - id_log_level;
+			break;
+		}
+	}
+	}
+
+	save_gui_cfg();
+	event.Skip();
 }
 
 void LogFrame::OnTimer(wxTimerEvent& event)
 {
-	char buf[4096];
+	std::vector<char> buf(4096);
 
 	// Get UTF-8 string from file
 	auto get_utf8 = [&](const fs::file& file, u64 size) -> wxString
 	{
-		size = file.read(buf, size);
+		size = file.read(buf.data(), size);
 
 		for (u64 i = 0; i < size; i++)
 		{
@@ -120,37 +159,35 @@ void LogFrame::OnTimer(wxTimerEvent& event)
 			if (i + tail >= size)
 			{
 				file.seek(i - size, fs::seek_cur);
-				return wxString::FromUTF8(buf, i);
+				return wxString::FromUTF8(buf.data(), i);
 			}
 		}
 
-		return wxString::FromUTF8(buf, size);
+		return wxString::FromUTF8(buf.data(), size);
 	};
 
-	const auto stamp0 = std::chrono::high_resolution_clock::now();
+	const auto start = std::chrono::high_resolution_clock::now();
 
 	// Check TTY logs
-	while (const u64 size = std::min<u64>(sizeof(buf), _log::g_tty_file.size() - m_tty_file.seek(0, fs::seek_cur)))
+	while (const u64 size = std::min<u64>(sizeof(buf), _log::g_tty_file.size() - m_tty_file.pos()))
 	{
 		const wxString& text = get_utf8(m_tty_file, size);
 
-		m_tty->AppendText(text);
+		if (get_cfg_tty()) m_tty->AppendText(text);
 
 		// Limit processing time
-		if (std::chrono::high_resolution_clock::now() >= stamp0 + 4ms || text.empty()) break;
+		if (std::chrono::high_resolution_clock::now() >= start + 4ms || text.empty()) break;
 	}
 
-	const auto stamp1 = std::chrono::high_resolution_clock::now();
-
 	// Check main logs
-	while (const u64 size = std::min<u64>(sizeof(buf), _log::g_log_file.size() - m_log_file.seek(0, fs::seek_cur)))
+	while (const u64 size = std::min<u64>(sizeof(buf), m_log_file.size() - m_log_file.pos()))
 	{
 		const wxString& text = get_utf8(m_log_file, size);
 
 		// Append text if necessary
 		auto flush_logs = [&](u64 start, u64 pos)
 		{
-			if (pos != start && m_level <= rpcs3::config.misc.log.level.value())
+			if (pos != start && m_level <= get_cfg_level()) // TODO
 			{
 				m_log->SetDefaultStyle(m_color);
 				m_log->AppendText(text.substr(start, pos - start));
@@ -205,6 +242,6 @@ void LogFrame::OnTimer(wxTimerEvent& event)
 		}
 
 		// Limit processing time
-		if (std::chrono::high_resolution_clock::now() >= stamp1 + 3ms || text.empty()) break;
+		if (std::chrono::high_resolution_clock::now() >= start + 7ms || text.empty()) break;
 	}
 }

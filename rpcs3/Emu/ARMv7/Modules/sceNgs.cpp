@@ -1,8 +1,10 @@
 #include "stdafx.h"
 #include "Emu/System.h"
-#include "Emu/ARMv7/PSVFuncList.h"
+#include "Emu/ARMv7/ARMv7Module.h"
 
 #include "sceNgs.h"
+
+LOG_CHANNEL(sceNgs);
 
 s32 sceNgsSystemGetRequiredMemorySize(vm::cptr<SceNgsSystemInitParams> pSynthParams, vm::ptr<u32> pnSize)
 {
@@ -320,15 +322,10 @@ s32 sceSulphaNgsTrace(vm::cptr<char> message)
 }
 
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &sceNgs, #name, name)
+#define REG_FUNC(nid, name) REG_FNID(SceNgs, nid, name)
 
-psv_log_base sceNgs("SceNgs", []()
+DECLARE(arm_module_manager::SceNgs)("SceNgs", []()
 {
-	sceNgs.on_load = nullptr;
-	sceNgs.on_unload = nullptr;
-	sceNgs.on_stop = nullptr;
-	sceNgs.on_error = nullptr;
-
 	REG_FUNC(0x6CE8B36F, sceNgsSystemGetRequiredMemorySize);
 	REG_FUNC(0xED14CF4A, sceNgsSystemInit);
 	REG_FUNC(0x684F080C, sceNgsSystemUpdate);

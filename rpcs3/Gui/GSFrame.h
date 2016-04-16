@@ -1,4 +1,5 @@
 #pragma once 
+
 #include "Emu/RSX/GSRender.h"
 
 class GSFrame : public wxFrame, public GSFrameBase
@@ -6,7 +7,7 @@ class GSFrame : public wxFrame, public GSFrameBase
 	u64 m_frames = 0;
 
 public:
-	GSFrame(const wxString& title);
+	GSFrame(const wxString& title, size2i);
 
 protected:
 	virtual void OnPaint(wxPaintEvent& event);

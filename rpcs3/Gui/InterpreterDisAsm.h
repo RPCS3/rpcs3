@@ -1,15 +1,13 @@
 #pragma once
+
 #include "Emu/CPU/CPUThread.h"
-#include "Emu/CPU/CPUDecoder.h"
 #include "Emu/CPU/CPUDisAsm.h"
 
 class InterpreterDisAsmFrame : public wxPanel
 {
 	wxListView* m_list;
-	CPUDisAsm* disasm;
-	std::unique_ptr<CPUDecoder> decoder;
-	u64 PC;
-	std::vector<u32> remove_markedPC;
+	std::unique_ptr<CPUDisAsm> m_disasm;
+	u32 m_pc;
 	wxTextCtrl* m_regs;
 	wxTextCtrl* m_calls;
 	wxButton* m_btn_step;
@@ -19,7 +17,7 @@ class InterpreterDisAsmFrame : public wxPanel
 	wxChoice* m_choice_units;
 
 public:
-	CPUThread* CPU;
+	cpu_thread* cpu;
 
 public:
 	InterpreterDisAsmFrame(wxWindow* parent);
@@ -27,12 +25,13 @@ public:
 
 	void UpdateUnitList();
 
-	u64 CentrePc(const u64 pc) const;
+	u32 GetPc() const;
+	u32 CentrePc(u32 pc) const;
 	void OnSelectUnit(wxCommandEvent& event);
 	void OnKeyDown(wxKeyEvent& event);
 	void OnResize(wxSizeEvent& event);
 	void DoUpdate();
-	void ShowAddr(const u64 addr);
+	void ShowAddr(u32 addr);
 	void WriteRegs();
 	void WriteCallStack();
 
@@ -47,7 +46,7 @@ public:
 	void DClick(wxListEvent& event);
 
 	void MouseWheel(wxMouseEvent& event);
-	bool IsBreakPoint(u64 pc);
-	void AddBreakPoint(u64 pc);
-	bool RemoveBreakPoint(u64 pc);
+	bool IsBreakPoint(u32 pc);
+	void AddBreakPoint(u32 pc);
+	bool RemoveBreakPoint(u32 pc);
 };

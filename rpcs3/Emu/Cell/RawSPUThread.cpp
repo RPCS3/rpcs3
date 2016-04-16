@@ -1,17 +1,27 @@
 #include "stdafx.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
-#include "Emu/SysCalls/Callback.h"
+#include "Emu/IdManager.h"
+#include "Loader/ELF.h"
 
 #include "Emu/Cell/RawSPUThread.h"
 
 // Originally, SPU MFC registers are accessed externally in a concurrent manner (don't mix with channels, SPU MFC channels are isolated)
 thread_local spu_mfc_arg_t raw_spu_mfc[8] = {};
 
-RawSPUThread::RawSPUThread(const std::string& name, u32 index)
-	: SPUThread(CPU_THREAD_RAW_SPU, name, index, RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * index)
+void RawSPUThread::cpu_task()
 {
-	CHECK_ASSERTION(vm::falloc(offset, 0x40000) == offset);
+	// get next PC and SPU Interrupt status
+	pc = npc.exchange(0);
+
+	set_interrupt_status((pc & 1) != 0);
+
+	pc &= 0x3fffc;
+
+	SPUThread::cpu_task();
+
+	// save next PC and current SPU Interrupt status
+	npc = pc | ((ch_event_stat & SPU_EVENT_INTR_ENABLED) != 0);
 }
 
 bool RawSPUThread::read_reg(const u32 addr, u32& value)
@@ -81,7 +91,8 @@ bool RawSPUThread::write_reg(const u32 addr, const u32 value)
 			}
 		}))
 		{
-			exec();
+			state -= cpu_state::stop;
+			safe_notify();
 		}
 	};
 
@@ -182,7 +193,7 @@ bool RawSPUThread::write_reg(const u32 addr, const u32 value)
 		else if (value == SPU_RUNCNTL_STOP_REQUEST)
 		{
 			status &= ~SPU_STATUS_RUNNING;
-			stop();
+			state += cpu_state::stop;
 		}
 		else
 		{
@@ -221,17 +232,19 @@ bool RawSPUThread::write_reg(const u32 addr, const u32 value)
 	return false;
 }
 
-void RawSPUThread::cpu_task()
+template<>
+void spu_exec_loader::load() const
 {
-	// get next PC and SPU Interrupt status
-	pc = npc.exchange(0);
+	auto spu = idm::make_ptr<RawSPUThread>("TEST_SPU");
 
-	set_interrupt_status((pc & 1) != 0);
+	for (const auto& prog : progs)
+	{
+		if (prog.p_type == 0x1 /* LOAD */ && prog.p_memsz)
+		{
+			std::memcpy(vm::base(spu->offset + prog.p_vaddr), prog.bin.data(), prog.p_filesz);
+		}
+	}
 
-	pc &= 0x3fffc;
-
-	SPUThread::cpu_task();
-
-	// save next PC and current SPU Interrupt status
-	npc = pc | ((ch_event_stat & SPU_EVENT_INTR_ENABLED) != 0);
+	spu->cpu_init();
+	spu->npc = header.e_entry;
 }

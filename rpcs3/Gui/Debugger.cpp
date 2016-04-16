@@ -6,7 +6,6 @@
 #include "rpcs3.h"
 #include "Debugger.h"
 #include "InterpreterDisAsm.h"
-#include "Emu/CPU/CPUThreadManager.h"
 #include "Emu/CPU/CPUThread.h"
 
 extern bool user_asked_for_frame_capture;

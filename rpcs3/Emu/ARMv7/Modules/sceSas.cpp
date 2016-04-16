@@ -1,8 +1,10 @@
 #include "stdafx.h"
 #include "Emu/System.h"
-#include "Emu/ARMv7/PSVFuncList.h"
+#include "Emu/ARMv7/ARMv7Module.h"
 
 #include "sceSas.h"
+
+LOG_CHANNEL(sceSas);
 
 s32 sceSasGetNeededMemorySize(vm::cptr<char> config, vm::ptr<u32> outSize)
 {
@@ -150,15 +152,10 @@ s32 sceSasSetEffectParam(u32 delayTime, u32 feedback)
 }
 
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &sceSas, #name, name)
+#define REG_FUNC(nid, name) REG_FNID(SceSas, nid, name)
 
-psv_log_base sceSas("SceSas", []()
+DECLARE(arm_module_manager::SceSas)("SceSas", []()
 {
-	sceSas.on_load = nullptr;
-	sceSas.on_unload = nullptr;
-	sceSas.on_stop = nullptr;
-	sceSas.on_error = nullptr;
-
 	//REG_FUNC(0xA2209C58, sceAsSetRegisterReportHandler);
 	//REG_FUNC(0xBB635544, sceAsSetUnregisterReportHandler);
 	//REG_FUNC(0xF578F0EF, sceAsGetSystemNeededMemory);

@@ -1,8 +1,10 @@
 #include "stdafx.h"
 #include "Emu/System.h"
-#include "Emu/ARMv7/PSVFuncList.h"
+#include "Emu/ARMv7/ARMv7Module.h"
 
 #include "sceFios.h"
+
+LOG_CHANNEL(sceFios);
 
 s32 sceFiosInitialize(vm::cptr<SceFiosParams> pParameters)
 {
@@ -119,7 +121,7 @@ s32 sceFiosPathncmp(vm::cptr<char> pA, vm::cptr<char> pB, u32 n)
 	throw EXCEPTION("");
 }
 
-s32 sceFiosPrintf(vm::cptr<char> pFormat, armv7_va_args_t va_args)
+s32 sceFiosPrintf(vm::cptr<char> pFormat, arm_va_args_t va_args)
 {
 	throw EXCEPTION("");
 }
@@ -684,15 +686,10 @@ void sceFiosIOFilterPsarcDearchiver()
 	throw EXCEPTION("");
 }
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &sceFios, #name, name)
+#define REG_FUNC(nid, name) REG_FNID(SceFios2, nid, name)
 
-psv_log_base sceFios("SceFios2", []()
+DECLARE(arm_module_manager::SceFios)("SceFios2", []()
 {
-	sceFios.on_load = nullptr;
-	sceFios.on_unload = nullptr;
-	sceFios.on_stop = nullptr;
-	sceFios.on_error = nullptr;
-
 	REG_FUNC(0x15857180, sceFiosArchiveGetMountBufferSize);
 	REG_FUNC(0xDF3352FC, sceFiosArchiveGetMountBufferSizeSync);
 	//REG_FUNC(0x92E76BBD, sceFiosArchiveMount);

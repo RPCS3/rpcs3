@@ -27,5 +27,3 @@ struct alignas(8) SceFiberInfo
 };
 
 CHECK_SIZE_ALIGN(SceFiberInfo, 128, 8);
-
-extern psv_log_base sceFiber;

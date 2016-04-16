@@ -6,7 +6,7 @@
 
 void CgBinaryDisasm::AddCodeAsm(const std::string& code)
 {
-	assert(m_opcode < 70);
+	Expects(m_opcode < 70);
 	std::string op_name = "";
 
 	if (dst.dest_reg == 63)
@@ -223,7 +223,7 @@ void CgBinaryDisasm::TaskFP()
 {
 	m_size = 0;
 	u32* data = (u32*)&m_buffer[m_offset];
-	assert((m_buffer_size - m_offset) % sizeof(u32) == 0);
+	Expects((m_buffer_size - m_offset) % sizeof(u32) == 0);
 	for (u32 i = 0; i < (m_buffer_size - m_offset) / sizeof(u32); i++)
 	{
 		data[i] = se_storage<u32>::swap(data[i]); // WTF, cannot use be_t<> there?
@@ -471,7 +471,7 @@ void CgBinaryDisasm::TaskFP()
 			break;
 		}
 
-		assert(m_step % sizeof(u32) == 0);
+		Ensures(m_step % sizeof(u32) == 0);
 		data += m_step / sizeof(u32);
 	}
 }

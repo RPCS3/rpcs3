@@ -1,8 +1,10 @@
 ﻿#include "stdafx.h"
 #include "Emu/System.h"
-#include "Emu/ARMv7/PSVFuncList.h"
+#include "Emu/ARMv7/ARMv7Module.h"
 
 #include "sceNpBasic.h"
+
+LOG_CHANNEL(sceNpBasic);
 
 s32 sceNpBasicInit(vm::ptr<void> opt)
 {
@@ -94,15 +96,10 @@ s32 sceNpBasicGetPlaySessionLog(SceNpBasicPlaySessionLogType type, u32 index, vm
 	throw EXCEPTION("");
 }
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &sceNpBasic, #name, name)
+#define REG_FUNC(nid, name) REG_FNID(SceNpBasic, nid, name)
 
-psv_log_base sceNpBasic("SceNpBasic", []()
+DECLARE(arm_module_manager::SceNpBasic)("SceNpBasic", []()
 {
-	sceNpBasic.on_load = nullptr;
-	sceNpBasic.on_unload = nullptr;
-	sceNpBasic.on_stop = nullptr;
-	sceNpBasic.on_error = nullptr;
-
 	REG_FUNC(0xEFB91A99, sceNpBasicInit);
 	REG_FUNC(0x389BCB3B, sceNpBasicTerm);
 	REG_FUNC(0x26E6E048, sceNpBasicRegisterHandler);
