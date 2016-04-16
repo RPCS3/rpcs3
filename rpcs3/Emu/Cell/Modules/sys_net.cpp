@@ -10,9 +10,12 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <arpa/inet.h>
 #include <unistd.h>
 #endif
+
+#include <fcntl.h>
 
 logs::channel libnet("libnet", logs::level::notice);
 
@@ -22,6 +25,7 @@ logs::channel libnet("libnet", logs::level::notice);
 std::vector<s64> g_socketMap{ 0 };
 
 // Auxiliary Functions
+// FIXME: Use the variant from OS instead? Why do we even have such a custom function?
 int inet_pton4(const char *src, char *dst)
 {
 	const char digits[] = "0123456789";
@@ -72,19 +76,6 @@ int inet_pton(int af, const char *src, char *dst)
 	}
 }
 
-s32 getLastError()
-{
-#ifdef _WIN32
-	s32 ret = WSAGetLastError();
-	if (ret > 10000 && ret < 11000)
-		return ret % 10000;
-	else
-		return -1;
-#else
-	return errno;
-#endif
-}
-
 void copy_fdset(fd_set* set, vm::ptr<sys_net::fd_set> src)
 {
 	FD_ZERO(set);
@@ -94,9 +85,9 @@ void copy_fdset(fd_set* set, vm::ptr<sys_net::fd_set> src)
 		// Go through the bit set fds_bits and calculate the
 		// socket FDs from it, setting it in the native fd-set.
 
-		for (int i = 0; i < 32; i++)
+		for (s32 i = 0; i < 32; i++)
 		{
-			for (int bit = 0; bit < 32; bit++)
+			for (s32 bit = 0; bit < 32; bit++)
 			{
 				if (src->fds_bits[i] & (1 << bit))
 				{
@@ -115,6 +106,7 @@ namespace sys_net
 	{
 		be_t<s32> _errno;
 		be_t<s32> _h_errno;
+		char addr[16];
 	};
 
 	// TODO
@@ -126,6 +118,9 @@ namespace sys_net
 		if (!g_tls_net_data)
 		{
 			g_tls_net_data.set(vm::alloc(sizeof(decltype(g_tls_net_data)::type), vm::main));
+			
+			// Initial values
+			g_tls_net_data->_errno = SYS_NET_EBUSY;
 
 			thread_ctrl::atexit([addr = g_tls_net_data.addr()]
 			{
@@ -148,27 +143,72 @@ namespace sys_net
 		return g_tls_net_data.ref(&_tls_data_t::_h_errno);
 	}
 
+	// Error helper functions
+	s32 get_last_error()
+	{
+		// Convert the error code for socket functions to a one for sys_net
+#ifdef _WIN32
+		switch (WSAGetLastError())
+		{
+		case WSAEWOULDBLOCK:
+			return SYS_NET_EWOULDBLOCK;
+
+		default:
+			throw EXCEPTION("Unknown Win32 socket error: %d", WSAGetLastError());
+		}
+#else
+		switch (errno)
+		{
+		case EWOULDBLOCK:
+			return SYS_NET_EWOULDBLOCK;
+
+		default:
+			throw EXCEPTION("Unknown Unix socket error: %d", errno);
+		}
+
+		return errno;
+#endif
+	}
+
 	// Functions
 	s32 accept(s32 s, vm::ptr<sockaddr> addr, vm::ptr<u32> paddrlen)
 	{
 		libnet.warning("accept(s=%d, family=*0x%x, paddrlen=*0x%x)", s, addr, paddrlen);
 		s = g_socketMap[s];
 
-		if (!addr) {
-			int ret = ::accept(s, nullptr, nullptr);
-			get_errno() = getLastError();
-			return ret;
+		s32 ret;
+
+		if (!addr)
+		{
+			ret = ::accept(s, nullptr, nullptr);
+
+			if (ret < 0)
+			{
+				libnet.error("accept(): error %d", get_errno() = get_last_error());
+				return -1;
+			}
 		}
-		else {
+		else
+		{
 			::sockaddr _addr;
-			memcpy(&_addr, addr.get_ptr(), sizeof(::sockaddr));
-			_addr.sa_family = addr->sa_family;
-			::socklen_t _paddrlen;
-			s32 ret = ::accept(s, &_addr, &_paddrlen);
+			::socklen_t _paddrlen = 16;
+
+			ret = ::accept(s, &_addr, &_paddrlen);
+
+			if (ret < 0)
+			{
+				libnet.error("accept(): error %d", get_errno() = get_last_error());
+				return -1;
+			}
+
 			*paddrlen = _paddrlen;
-			get_errno() = getLastError();
-			return ret;
+			addr->sa_len = _paddrlen;
+			addr->sa_family = _addr.sa_family;
+			memcpy(addr->sa_data, _addr.sa_data, addr->sa_len - 2);
 		}
+
+		g_socketMap.push_back(ret);
+		return g_socketMap.size() - 1;
 	}
 
 	s32 bind(s32 s, vm::cptr<sockaddr> addr, u32 addrlen)
@@ -180,9 +220,14 @@ namespace sys_net
 		memcpy(&saddr, addr.get_ptr(), sizeof(::sockaddr_in));
 		saddr.sin_family = addr->sa_family;
 		const char *ipaddr = ::inet_ntoa(saddr.sin_addr);
-		libnet.warning("binding on %s to port %d", ipaddr, ntohs(saddr.sin_port));
+		libnet.warning("binding to %s on port %d", ipaddr, ntohs(saddr.sin_port));
 		s32 ret = ::bind(s, (const ::sockaddr*)&saddr, addrlen);
-		get_errno() = getLastError();
+
+		if (ret != 0)
+		{
+			libnet.error("bind(): error %d", get_errno() = get_last_error());
+			return -1;
+		}
 
 		return ret;
 	}
@@ -195,10 +240,19 @@ namespace sys_net
 		::sockaddr_in saddr;
 		memcpy(&saddr, addr.get_ptr(), sizeof(::sockaddr_in));
 		saddr.sin_family = addr->sa_family;
-		const char *ipaddr = ::inet_ntoa(saddr.sin_addr);
-		libnet.warning("connecting on %s to port %d", ipaddr, ntohs(saddr.sin_port));
+
+		libnet.warning("connecting to %s on port %d", ::inet_ntoa(saddr.sin_addr), ntohs(saddr.sin_port));
 		s32 ret = ::connect(s, (const ::sockaddr*)&saddr, addrlen);
-		get_errno() = getLastError();
+		
+		if (ret != 0)
+		{
+			if ((get_errno() = get_last_error()) != SYS_NET_EWOULDBLOCK)
+			{
+				libnet.error("connect(): error %d", get_errno().get_ref());
+			}
+			
+			return -1;
+		}
 
 		return ret;
 	}
@@ -269,10 +323,18 @@ namespace sys_net
 		return CELL_OK;
 	}
 
-	s32 inet_ntoa()
+	vm::ptr<char> inet_ntoa(u32 in)
 	{
-		UNIMPLEMENTED_FUNC(libnet);
-		return CELL_OK;
+		libnet.warning("inet_ntoa(in=0x%x)", in);
+		initialize_tls();
+
+		::in_addr addr;
+		addr.s_addr = in;
+
+		char* result = ::inet_ntoa(addr);
+		strcpy(g_tls_net_data->addr, result);
+
+		return vm::ptr<char>::make(vm::get_addr(g_tls_net_data->addr));
 	}
 
 	vm::cptr<char> inet_ntop(s32 af, vm::ptr<void> src, vm::ptr<char> dst, u32 size)
@@ -298,8 +360,14 @@ namespace sys_net
 	{
 		libnet.warning("listen(s=%d, backlog=%d)", s, backlog);
 		s = g_socketMap[s];
+
 		s32 ret = ::listen(s, backlog);
-		get_errno() = getLastError();
+
+		if (ret != 0)
+		{
+			libnet.error("listen(): error %d", get_errno() = get_last_error());
+			return -1;
+		}
 
 		return ret;
 	}
@@ -310,7 +378,12 @@ namespace sys_net
 		s = g_socketMap[s];
 
 		s32 ret = ::recv(s, buf.get_ptr(), len, flags);
-		get_errno() = getLastError();
+		
+		if (ret < 0)
+		{
+			libnet.error("recv(): error %d", get_errno() = get_last_error());
+			return -1;
+		}
 
 		return ret;
 	}
@@ -321,12 +394,18 @@ namespace sys_net
 		s = g_socketMap[s];
 
 		::sockaddr _addr;
+		::socklen_t _paddrlen;
+
 		memcpy(&_addr, addr.get_ptr(), sizeof(::sockaddr));
 		_addr.sa_family = addr->sa_family;
-		::socklen_t _paddrlen;
 		s32 ret = ::recvfrom(s, buf.get_ptr(), len, flags, &_addr, &_paddrlen);
 		*paddrlen = _paddrlen;
-		get_errno() = getLastError();
+
+		if (ret < 0)
+		{
+			libnet.error("recvfrom(): error %d", get_errno() = get_last_error());
+			return -1;
+		}
 
 		return ret;
 	}
@@ -343,7 +422,12 @@ namespace sys_net
 		s = g_socketMap[s];
 
 		s32 ret = ::send(s, buf.get_ptr(), len, flags);
-		get_errno() = getLastError();
+		
+		if (ret < 0)
+		{
+			libnet.error("send(): error %d", get_errno() = get_last_error());
+			return -1;
+		}
 
 		return ret;
 	}
@@ -363,18 +447,121 @@ namespace sys_net
 		memcpy(&_addr, addr.get_ptr(), sizeof(::sockaddr));
 		_addr.sa_family = addr->sa_family;
 		s32 ret = ::sendto(s, buf.get_ptr(), len, flags, &_addr, addrlen);
-		get_errno() = getLastError();
+
+		if (ret < 0)
+		{
+			libnet.error("sendto(): error %d", get_errno() = get_last_error());
+			return -1;
+		}
 
 		return ret;
 	}
 
-	s32 setsockopt(s32 s, s32 level, s32 optname, vm::cptr<char> optval, u32 optlen)
+	s32 setsockopt(s32 s, s32 level, s32 optname, vm::cptr<void> optval, u32 optlen)
 	{
-		libnet.warning("socket(s=%d, level=%d, optname=%d, optval=*0x%x, optlen=%d)", s, level, optname, optval, optlen);
+		libnet.warning("setsockopt(s=%d, level=%d, optname=%d, optval=*0x%x, optlen=%d)", s, level, optname, optval, optlen);
 		s = g_socketMap[s];
 
-		s32 ret = ::setsockopt(s, level, optname, optval.get_ptr(), optlen);
-		get_errno() = getLastError();
+		if (level != SOL_SOCKET && level != IPPROTO_TCP)
+		{
+			throw EXCEPTION("Invalid socket option level!");
+		}
+
+		s32 ret;
+
+#ifdef _WIN32
+		if (level == SOL_SOCKET)
+		{
+			switch (optname)
+			{
+			case OP_SO_NBIO:
+			{
+				unsigned long mode = *(unsigned long*)optval.get_ptr();
+				ret = ioctlsocket(s, FIONBIO, &mode);
+				break;
+			}
+
+			default:
+				throw EXCEPTION("Unknown socket option for Win32: 0x%x", optname);
+			}
+		}
+		else if (level == PROTO_IPPROTO_TCP)
+		{
+			switch (optname)
+			{
+			case OP_TCP_NODELAY:
+			{
+				const char delay = *(char*)optval.get_ptr();
+				ret = ::setsockopt(s, IPPROTO_TCP, TCP_NODELAY, &delay, sizeof(delay));
+				break;
+			}
+
+			case OP_TCP_MAXSEG:
+			{
+				libnet.warning("TCP_MAXSEG can't be set on Windows.");
+				break;
+			}
+
+			default:
+				throw EXCEPTION("Unknown TCP option for Win32: 0x%x", optname);
+			}
+		}
+#else
+		if (level == SOL_SOCKET)
+		{
+			switch (optname)
+			{
+			case OP_SO_NBIO:
+			{
+				// Obtain the flags
+				s32 flags = fcntl(s, F_GETFL, 0);
+
+				if (flags < 0)
+				{
+					throw EXCEPTION("Failed to obtain socket flags.");
+				}
+
+				u32 mode = *(u32*)optval.get_ptr();
+				flags = mode ? (flags &~O_NONBLOCK) : (flags | O_NONBLOCK);
+
+				// Re-set the flags
+				ret = fcntl(s, F_SETFL, flags);
+				break;
+			}
+
+			default:
+				throw EXCEPTION("Unknown socket option for Unix: 0x%x", optname);
+			}
+		}
+		else if (level == PROTO_IPPROTO_TCP)
+		{
+			switch (optname)
+			{
+			case OP_TCP_NODELAY:
+			{
+				u32 delay = *(u32*)optval.get_ptr();
+				ret = ::setsockopt(s, IPPROTO_TCP, TCP_NODELAY, &delay, optlen);
+				break;
+			}
+
+			case OP_TCP_MAXSEG:
+			{
+				u32 maxseg = *(u32*)optval.get_ptr();
+				ret = ::setsockopt(s, IPPROTO_TCP, TCP_MAXSEG, &maxseg, optlen);
+				break;
+			}
+
+			default:
+				throw EXCEPTION("Unknown TCP option for Win32: 0x%x", optname);
+			}
+		}
+#endif
+
+		if (ret != 0)
+		{
+			libnet.error("setsockopt(): error %d", get_errno() = get_last_error());
+			return -1;
+		}
 
 		return ret;
 	}
@@ -385,7 +572,7 @@ namespace sys_net
 		s = g_socketMap[s];
 
 		s32 ret = ::shutdown(s, how);
-		get_errno() = getLastError();
+		get_errno() = get_last_error();
 
 		return ret;
 	}
@@ -394,8 +581,30 @@ namespace sys_net
 	{
 		libnet.warning("socket(family=%d, type=%d, protocol=%d)", family, type, protocol);
 
+		if (type < 1 || type > 10 || (type > 4 && type < 6) || (type > 6 && type < 10))
+		{
+			get_errno() = SYS_NET_EPROTONOSUPPORT;
+			return -1;
+		}
+
+		// HACKS: Neither Unix nor Windows support TCP/UDP over UDPP2P.
+		// But what's the usage of it anyways?
+		if (type == SOCK_STREAM_P2P)
+		{
+			type = SOCK_STREAM;
+		}
+		else if (type == SOCK_DGRAM_P2P)
+		{
+			type = SOCK_DGRAM;
+		}
+
 		s32 sock = ::socket(family, type, protocol);
-		get_errno() = getLastError();
+
+		if (sock < 0)
+		{
+			libnet.error("socket(): error %d", get_errno() = get_last_error());
+			return -1;
+		}
 
 		g_socketMap.push_back(sock);
 		return g_socketMap.size() - 1;
@@ -403,15 +612,21 @@ namespace sys_net
 
 	s32 socketclose(s32 s)
 	{
-		libnet.warning("socket(s=%d)", s);
+		libnet.warning("socketclose(s=%d)", s);
 		s = g_socketMap[s];
 
 #ifdef _WIN32
-		int ret = ::closesocket(s);
+		s32 ret = ::closesocket(s);
 #else
-		int ret = ::close(s);
+		s32 ret = ::close(s);
 #endif
-		get_errno() = getLastError();
+
+		if (ret != 0)
+		{
+			libnet.error("socketclose(): error %d", get_errno() = get_last_error());
+			return -1;
+		}
+
 		return ret;
 	}
 
@@ -444,16 +659,26 @@ namespace sys_net
 		copy_fdset(&_writefds, writefds);
 		copy_fdset(&_exceptfds, exceptfds);
 
-		s32 ret = ::select(nfds, &_readfds, &_writefds, &_exceptfds, timeout ? &_timeout : NULL);
-		get_errno() = getLastError();
-
-		if (getLastError() >= 0)
+#ifdef _WIN32
+		// On Unix, when the sets are empty (thus nothing to wait on), it waits until the timeout.
+		// This behaviour is often used to "sleep" on Unix based systems.
+		// WinSock in such case returns WSAEINVAL and doesn't allow such behaviour.
+		// Since it's not possible on Windows, we just return and say that the timeout is over and hope that it's good enough.
+		if (_readfds.fd_count == 0 && _writefds.fd_count == 0 && _exceptfds.fd_count == 0)
 		{
-			libnet.error("socketselect(): error %d", getLastError());
+			return 0; // Timeout!
+		}
+#endif
+
+		s32 ret = ::select(g_socketMap[nfds], &_readfds, &_writefds, &_exceptfds, timeout ? &_timeout : nullptr);
+
+		if (ret < 0)
+		{
+			libnet.error("socketselect(): error %d", get_errno() = get_last_error());
+			return -1;
 		}
 
-		//return ret;
-		return CELL_OK;
+		return ret;
 	}
 
 	s32 sys_net_initialize_network_ex(vm::ptr<sys_net_initialize_parameter_t> param)
@@ -463,8 +688,16 @@ namespace sys_net
 #ifdef _WIN32
 		WSADATA wsaData;
 		WORD wVersionRequested = MAKEWORD(2, 2);
-		WSAStartup(wVersionRequested, &wsaData);
+		
+		if (WSAStartup(wVersionRequested, &wsaData) != 0)
+		{
+			throw EXCEPTION("sys_net: WSAStartup unsuccessful");
+		}
 #endif
+
+		// Errno is set to 0 upon initialization
+		get_errno() = 0;
+
 		return CELL_OK;
 	}
 
@@ -498,9 +731,9 @@ namespace sys_net
 		return CELL_OK;
 	}
 
-	s32 sys_net_get_sockinfo()
+	s32 sys_net_get_sockinfo(s32 s, vm::ptr<sys_net_sockinfo_t> p, s32 n)
 	{
-		UNIMPLEMENTED_FUNC(libnet);
+		libnet.todo("sys_net_get_sockinfo()");
 		return CELL_OK;
 	}
 
@@ -525,7 +758,6 @@ namespace sys_net
 	vm::ptr<s32> _sys_net_errno_loc()
 	{
 		libnet.warning("_sys_net_errno_loc()");
-
 		return get_errno().ptr();
 	}
 
@@ -591,18 +823,22 @@ namespace sys_net
 
 	s32 sys_net_finalize_network()
 	{
-		libnet.warning("sys_net_initialize_network_ex()");
+		libnet.warning("sys_net_finalize_network()");
 
 #ifdef _WIN32
 		WSACleanup();
 #endif
+
+		// Errno is set to SYS_NET_EBUSY after finalization
+		get_errno() = SYS_NET_EBUSY;
+
 		return CELL_OK;
 	}
 
-	s32 _sys_net_h_errno_loc()
+	vm::ptr<s32> _sys_net_h_errno_loc()
 	{
-		UNIMPLEMENTED_FUNC(libnet);
-		return CELL_OK;
+		libnet.warning("_sys_net_h_errno_loc()");
+		return get_h_errno().ptr();
 	}
 
 	s32 sys_net_set_netemu_test_param()
@@ -611,9 +847,9 @@ namespace sys_net
 		return CELL_OK;
 	}
 
-	s32 sys_net_free_thread_context()
+	s32 sys_net_free_thread_context(u64 tid, s32 flags)
 	{
-		UNIMPLEMENTED_FUNC(libnet);
+		libnet.todo("sys_net_free_thread_context(tid=%d, flags=%d)", tid, flags);
 		return CELL_OK;
 	}
 }
