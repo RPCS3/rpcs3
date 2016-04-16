@@ -145,9 +145,6 @@ enum : u32
 
 struct spu_channel_t
 {
-	// set to true if SPU thread must be notified after SPU channel operation
-	thread_local static bool notification_required;
-
 	struct alignas(8) sync_var_t
 	{
 		bool count; // value available
@@ -174,7 +171,7 @@ public:
 	}
 
 	// push performing bitwise OR with previous value, may require notification
-	void push_or(u32 value)
+	void push_or(cpu_thread& spu, u32 value)
 	{
 		const auto old = data.fetch_op([=](sync_var_t& data)
 		{
@@ -183,11 +180,11 @@ public:
 			data.value |= value;
 		});
 
-		notification_required = old.wait;
+		if (old.wait) spu.safe_notify();
 	}
 
 	// push unconditionally (overwriting previous value), may require notification
-	void push(u32 value)
+	void push(cpu_thread& spu, u32 value)
 	{
 		const auto old = data.fetch_op([=](sync_var_t& data)
 		{
@@ -196,24 +193,33 @@ public:
 			data.value = value;
 		});
 
-		notification_required = old.wait;
+		if (old.wait) spu.safe_notify();
 	}
 
-	// returns true on success and loaded value
-	std::tuple<bool, u32> try_pop()
+	// returns true on success
+	bool try_pop(u32& out)
 	{
-		const auto old = data.fetch_op([](sync_var_t& data)
+		const auto old = data.fetch_op([&](sync_var_t& data)
 		{
-			data.wait = !data.count;
+			if (data.count)
+			{
+				data.wait = false;
+				out = data.value;
+			}
+			else
+			{
+				data.wait = true;
+			}
+
 			data.count = false;
 			data.value = 0; // ???
 		});
 
-		return std::tie(old.count, old.value);
+		return old.count;
 	}
 
 	// pop unconditionally (loading last value), may require notification
-	u32 pop()
+	u32 pop(cpu_thread& spu)
 	{
 		const auto old = data.fetch_op([](sync_var_t& data)
 		{
@@ -222,7 +228,7 @@ public:
 			// value is not cleared and may be read again
 		});
 
-		notification_required = old.wait;
+		if (old.wait) spu.safe_notify();
 
 		return old.value;
 	}
@@ -269,11 +275,11 @@ public:
 	}
 
 	// push unconditionally (overwriting latest value), returns true if needs signaling
-	bool push(u32 value)
+	void push(cpu_thread& spu, u32 value)
 	{
 		value3 = value; _mm_sfence();
 
-		return values.atomic_op([=](sync_var_t& data) -> bool
+		if (values.atomic_op([=](sync_var_t& data) -> bool
 		{
 			switch (data.count++)
 			{
@@ -291,20 +297,24 @@ public:
 			}
 
 			return false;
-		});
+		}))
+		{
+			spu.safe_notify();
+		}
 	}
 
-	// returns true on success and two u32 values: data and count after removing the first element
-	std::tuple<bool, u32, u32> try_pop()
+	// returns non-zero value on success: queue size before removal
+	uint try_pop(u32& out)
 	{
-		return values.atomic_op([this](sync_var_t& data)
+		return values.atomic_op([&](sync_var_t& data)
 		{
-			const auto result = std::make_tuple(data.count != 0, u32{ data.value0 }, u32{ data.count - 1u });
+			const uint result = data.count;
 
-			if (data.count != 0)
+			if (result != 0)
 			{
 				data.waiting = 0;
 				data.count--;
+				out = data.value0;
 
 				data.value0 = data.value1;
 				data.value1 = data.value2;
@@ -620,10 +630,9 @@ public:
 	void set_events(u32 mask);
 	void set_interrupt_status(bool enable);
 	u32 get_ch_count(u32 ch);
-	u32 get_ch_value(u32 ch);
-	void set_ch_value(u32 ch, u32 value);
-
-	void stop_and_signal(u32 code);
+	bool get_ch_value(u32 ch, u32& out);
+	bool set_ch_value(u32 ch, u32 value);
+	bool stop_and_signal(u32 code);
 	void halt();
 
 	void fast_call(u32 ls_addr);

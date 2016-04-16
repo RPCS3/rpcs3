@@ -203,12 +203,7 @@ s32 sys_spu_thread_get_exit_status(u32 id, vm::ptr<u32> status)
 
 	// TODO: check CELL_ESTAT condition
 
-	*status = thread->ch_out_mbox.pop();
-
-	if (thread->ch_out_mbox.notification_required)
-	{
-		throw EXCEPTION("Unexpected");
-	}
+	*status = thread->ch_out_mbox.pop(*thread);
 
 	return CELL_OK;
 }
@@ -713,13 +708,7 @@ s32 sys_spu_thread_write_spu_mb(u32 id, u32 value)
 		return CELL_ESTAT;
 	}
 
-	if (thread->ch_in_mbox.push(value))
-	{
-		// lock for reliable notification
-		std::lock_guard<std::mutex> lock(thread->mutex);
-
-		thread->cv.notify_one();
-	}
+	thread->ch_in_mbox.push(*thread, value);
 
 	return CELL_OK;
 }
@@ -1330,15 +1319,7 @@ s32 sys_raw_spu_read_puint_mb(u32 id, vm::ptr<u32> value)
 		return CELL_ESRCH;
 	}
 
-	*value = thread->ch_out_intr_mbox.pop();
-
-	if (thread->ch_out_intr_mbox.notification_required)
-	{
-		// lock for reliable notification
-		std::lock_guard<std::mutex> lock(thread->mutex);
-
-		thread->cv.notify_one();
-	}
+	*value = thread->ch_out_intr_mbox.pop(*thread);
 
 	return CELL_OK;
 }
@@ -1378,83 +1359,4 @@ s32 sys_raw_spu_get_spu_cfg(u32 id, vm::ptr<u32> value)
 	*value = (u32)thread->snr_config;
 
 	return CELL_OK;
-}
-
-void sys_spu_thread_exit(SPUThread & spu, s32 status)
-{
-	// Cancel any pending status update requests
-	spu.set_ch_value(MFC_WrTagUpdate, 0);
-	while (spu.get_ch_count(MFC_RdTagStat) != 1);
-	spu.get_ch_value(MFC_RdTagStat);
-
-	// Wait for all pending DMA operations to complete
-	spu.set_ch_value(MFC_WrTagMask, 0xFFFFFFFF);
-	spu.set_ch_value(MFC_WrTagUpdate, MFC_TAG_UPDATE_ALL);
-	spu.get_ch_value(MFC_RdTagStat);
-
-	spu.set_ch_value(SPU_WrOutMbox, status);
-	spu.stop_and_signal(0x102);
-}
-
-void sys_spu_thread_group_exit(SPUThread & spu, s32 status)
-{
-	// Cancel any pending status update requests
-	spu.set_ch_value(MFC_WrTagUpdate, 0);
-	while (spu.get_ch_count(MFC_RdTagStat) != 1);
-	spu.get_ch_value(MFC_RdTagStat);
-
-	// Wait for all pending DMA operations to complete
-	spu.set_ch_value(MFC_WrTagMask, 0xFFFFFFFF);
-	spu.set_ch_value(MFC_WrTagUpdate, MFC_TAG_UPDATE_ALL);
-	spu.get_ch_value(MFC_RdTagStat);
-
-	spu.set_ch_value(SPU_WrOutMbox, status);
-	spu.stop_and_signal(0x101);
-}
-
-s32 sys_spu_thread_send_event(SPUThread & spu, u8 spup, u32 data0, u32 data1)
-{
-	if (spup > 0x3F)
-	{
-		return CELL_EINVAL;
-	}
-
-	if (spu.get_ch_count(SPU_RdInMbox))
-	{
-		return CELL_EBUSY;
-	}
-
-	spu.set_ch_value(SPU_WrOutMbox, data1);
-	spu.set_ch_value(SPU_WrOutIntrMbox, (spup << 24) | (data0 & 0x00FFFFFF));
-
-	return spu.get_ch_value(SPU_RdInMbox);
-}
-
-s32 sys_spu_thread_switch_system_module(SPUThread & spu, u32 status)
-{
-	if (spu.get_ch_count(SPU_RdInMbox))
-	{
-		return CELL_EBUSY;
-	}
-
-	// Cancel any pending status update requests
-	spu.set_ch_value(MFC_WrTagUpdate, 0);
-	while (spu.get_ch_count(MFC_RdTagStat) != 1);
-	spu.get_ch_value(MFC_RdTagStat);
-
-	// Wait for all pending DMA operations to complete
-	spu.set_ch_value(MFC_WrTagMask, 0xFFFFFFFF);
-	spu.set_ch_value(MFC_WrTagUpdate, MFC_TAG_UPDATE_ALL);
-	spu.get_ch_value(MFC_RdTagStat);
-
-	s32 result;
-
-	do
-	{
-		spu.set_ch_value(SPU_WrOutMbox, status);
-		spu.stop_and_signal(0x120);
-	}
-	while ((result = spu.get_ch_value(SPU_RdInMbox)) == CELL_EBUSY);
-
-	return result;
 }

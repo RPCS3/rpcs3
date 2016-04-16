@@ -44,16 +44,7 @@ bool RawSPUThread::read_reg(const u32 addr, u32& value)
 
 	case SPU_Out_MBox_offs:
 	{
-		value = ch_out_mbox.pop();
-
-		if (ch_out_mbox.notification_required)
-		{
-			// lock for reliable notification
-			std::lock_guard<std::mutex> lock(mutex);
-
-			cv.notify_one();
-		}
-
+		value = ch_out_mbox.pop(*this);
 		return true;
 	}
 
@@ -173,14 +164,7 @@ bool RawSPUThread::write_reg(const u32 addr, const u32 value)
 
 	case SPU_In_MBox_offs:
 	{
-		if (ch_in_mbox.push(value))
-		{
-			// lock for reliable notification
-			std::lock_guard<std::mutex> lock(mutex);
-
-			cv.notify_one();
-		}
-
+		ch_in_mbox.push(*this, value);
 		return true;
 	}
 
