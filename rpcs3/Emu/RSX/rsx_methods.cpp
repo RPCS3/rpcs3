@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Utilities/Config.h"
 #include "rsx_methods.h"
 #include "RSXThread.h"
@@ -31,7 +31,7 @@ namespace rsx
 
 	[[noreturn]] void invalid_method(thread*, u32 _reg, u32 arg)
 	{
-		fmt::throw_exception("Invalid RSX method 0x%x (arg=0x%x)" HERE, _reg << 2, arg);
+		LOG_ERROR( RSX, "Invalid RSX method 0x%x (arg=0x%x)" HERE, _reg << 2, arg);
 	}
 
 	template<typename Type> struct vertex_data_type_from_element_type;
@@ -285,6 +285,7 @@ namespace rsx
 
 			switch (report_dma)
 			{
+			case blit_engine::context_dma::memory_host_buffer: location = CELL_GCM_LOCATION_MAIN; break;
 			case blit_engine::context_dma::to_memory_get_report: location = CELL_GCM_LOCATION_LOCAL; break;
 			case blit_engine::context_dma::report_location_main: location = CELL_GCM_LOCATION_MAIN; break;
 			default:

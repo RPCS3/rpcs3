@@ -17,6 +17,18 @@ enum class ppu_cmd : u32
 	initialize, // ppu_initialize()
 };
 
+union VSCRhdr
+{
+	u32 vscr;
+	struct
+	{
+	u32 sat : 1;
+	u32 X : 15;
+	u32 nj : 1;
+	u32 Y : 15;
+	};
+};
+
 class ppu_thread : public cpu_thread
 {
 public:
@@ -35,6 +47,7 @@ public:
 	u64 gpr[32] = {}; // General-Purpose Registers
 	f64 fpr[32] = {}; // Floating Point Registers
 	v128 vr[32] = {}; // Vector Registers
+	VSCRhdr vscr{}; // Vector Status and Control Register
 
 	alignas(16) bool cr[32] = {}; // Condition Registers (abstract representation)
 

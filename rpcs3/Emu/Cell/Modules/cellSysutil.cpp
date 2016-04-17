@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Utilities/Config.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
@@ -380,7 +380,8 @@ s32 cellSysutilSetBgmPlaybackExtraParam()
 
 s32 cellSysutilRegisterCallbackDispatcher()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellSysutilRegisterCallbackDispatcher()");
+	return CELL_OK;
 }
 
 s32 cellSysutilPacketWrite()
@@ -414,6 +415,173 @@ s32 cellSysutilGameReboot_I()
 }
 
 s32 cellSysutil_E1EC7B6A()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
+}
+
+s32 cellSysutil_E186F9AC()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
+}
+
+s32 cellSysutil_B47470E1()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
+}
+s32 cellSysutil_CFAD36DE()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
+}
+
+s32 cellSysutil_2CD62587()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
+}
+
+s32 cellSysutil_6BA1D72F()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
+}
+
+s32 cellSysutil_E77FAFB5()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
+}
+
+s32 cellSysutil_20957CD4()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
+}
+
+s32 cellSysutil_75AA7373()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
+}
+
+s32 cellSysutil_5EC145E2()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
+}
+
+s32 cellSysutil_2D96313F()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
+}
+
+s32 cellSysutil_6EEE1B61()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
+}
+
+s32 cellSysutil_8AD11D24()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
+}
+
+s32 cellSysutil_134034CE()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
+}
+
+s32 cellSysutil_79EFF338()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
+}
+
+s32 cellSysutil_40719C8C()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
+}
+
+s32 cellSysutil_0B8D63AE()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
+}
+
+s32 cellSysutil_35F7ED00()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
+}
+
+s32 cellSysutil_40C7538E0()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
+}
+
+s32 cellSysutil_D3CDD694()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
+}
+
+s32 cellSysutil_0633EDC2()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
+}
+
+s32 cellSysutil_58B963E5()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
+}
+
+s32 cellSysutil_933B103D()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
+}
+
+s32 cellSysutil_FB1E70A0()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
+}
+
+s32 cellSysutil_6AF9FD89()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
+}
+
+s32 cellSysutil_505FA917()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
+}
+
+s32 cellSysutil_44F288A7()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
+}
+
+s32 cellSysutil_4986187C()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
+}
+
+s32 cellSysutil_A297525E()
 {
 	UNIMPLEMENTED_FUNC(cellSysutil);
 	return CELL_OK;
@@ -469,5 +637,43 @@ DECLARE(ppu_module_manager::cellSysutil)("cellSysutil", []()
 	REG_FUNC(cellSysutil, cellSysutilGameExit_I);
 	REG_FUNC(cellSysutil, cellSysutilGamePowerOff_I);
 	REG_FUNC(cellSysutil, cellSysutilGameReboot_I);
+
 	REG_FNID(cellSysutil, 0xE1EC7B6A, cellSysutil_E1EC7B6A);
+	REG_FNID(cellSysutil, 0xE186F9AC, cellSysutil_E186F9AC);
+	REG_FNID(cellSysutil, 0xB47470E1, cellSysutil_B47470E1);
+	REG_FNID(cellSysutil, 0xCFAD36DE, cellSysutil_CFAD36DE);
+	REG_FNID(cellSysutil, 0x2CD62587, cellSysutil_2CD62587);
+	REG_FNID(cellSysutil, 0x6BA1D72F, cellSysutil_6BA1D72F);
+	REG_FNID(cellSysutil, 0xE77FAFB5, cellSysutil_E77FAFB5);
+	REG_FNID(cellSysutil, 0x20957CD4, cellSysutil_20957CD4);
+	REG_FNID(cellSysutil, 0x75AA7373, cellSysutil_75AA7373);
+	REG_FNID(cellSysutil, 0x5EC145E2, cellSysutil_5EC145E2);
+	REG_FNID(cellSysutil, 0x2D96313F, cellSysutil_2D96313F);
+	REG_FNID(cellSysutil, 0x6EEE1B61, cellSysutil_6EEE1B61);
+	REG_FNID(cellSysutil, 0x8AD11D24, cellSysutil_8AD11D24);
+	REG_FNID(cellSysutil, 0x134034CE, cellSysutil_134034CE);
+	REG_FNID(cellSysutil, 0x79EFF338, cellSysutil_79EFF338);
+	REG_FNID(cellSysutil, 0x40719C8C, cellSysutil_40719C8C);
+	REG_FNID(cellSysutil, 0x0B8D63AE, cellSysutil_0B8D63AE);
+
+	REG_FNID(cellSysutil, 0x35F7ED00, cellSysutil_35F7ED00); //The Fight
+	REG_FNID(cellSysutil, 0x40C7538E, cellSysutil_40C7538E0); //The Fight
+	REG_FNID(cellSysutil, 0xD3CDD694, cellSysutil_D3CDD694); //The Fight
+
+	REG_FNID(cellSysutil, 0x0633EDC2, cellSysutil_0633EDC2); //Killzone 3
+
+	REG_FNID(cellSysutil, 0x58B963E5, cellSysutil_58B963E5); //Super Stardust HD
+
+	REG_FNID(cellSysutil, 0x933B103D, cellSysutil_933B103D); //Kung fuu rider
+
+	REG_FNID(cellSysutil, 0xFB1E70A0, cellSysutil_FB1E70A0); //Libscreenshot
+
+	REG_FNID(cellSysutil, 0x6AF9FD89, cellSysutil_6AF9FD89); //DBZ Burst Limit
+	
+	REG_FNID(cellSysutil, 0x505FA917, cellSysutil_505FA917); //Infamous 2
+
+	REG_FNID(cellSysutil, 0x44F288A7, cellSysutil_44F288A7); //Big Sky Infinity
+	REG_FNID(cellSysutil, 0x4986187C, cellSysutil_4986187C); //Big Sky Infinity
+
+	REG_FNID(cellSysutil, 0xA297525E, cellSysutil_A297525E); //THE KING OF FIGHTERS XII
 });

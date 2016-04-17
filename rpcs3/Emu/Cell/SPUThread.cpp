@@ -495,7 +495,7 @@ void SPUThread::process_mfc_cmd(u32 cmd)
 		return;
 	}
 
-	fmt::throw_exception("Unknown command %s (cmd=0x%x, lsa=0x%x, ea=0x%llx, tag=0x%x, size=0x%x)" HERE,
+	LOG_ERROR(SPU, "Unknown command %s (cmd=0x%x, lsa=0x%x, ea=0x%llx, tag=0x%x, size=0x%x)" HERE,
 		get_mfc_cmd_name(cmd), cmd, ch_mfc_args.lsa, ch_mfc_args.ea, ch_mfc_args.tag, ch_mfc_args.size);
 }
 
@@ -1119,7 +1119,7 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 	}
 	}
 
-	fmt::throw_exception("Unknown/illegal channel (ch=%d [%s], value=0x%x)" HERE, ch, ch < 128 ? spu_ch_name[ch] : "???", value);
+	LOG_ERROR(SPU, "Unknown/illegal channel (ch=%d [%s], value=0x%x)" HERE, ch, ch < 128 ? spu_ch_name[ch] : "???", value);
 }
 
 bool SPUThread::stop_and_signal(u32 code)

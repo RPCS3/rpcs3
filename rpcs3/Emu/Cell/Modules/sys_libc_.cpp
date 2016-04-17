@@ -354,7 +354,8 @@ s32 _sys_vsprintf()
 
 s32 _sys_qsort()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sysPrxForUser);
+	return CELL_OK;
 }
 
 void sysPrxForUser_sys_libc_init()

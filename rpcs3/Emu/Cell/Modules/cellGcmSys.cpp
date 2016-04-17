@@ -1136,7 +1136,8 @@ void cellGcmSetDefaultCommandBuffer()
 
 s32 cellGcmSetDefaultCommandBufferAndSegmentWordSize()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(cellGcmSys);
+	return CELL_OK;
 }
 
 //------------------------------------------------------------------------
@@ -1205,12 +1206,14 @@ s32 cellGcmSetTile(u8 index, u8 location, u32 offset, u32 size, u32 pitch, u8 co
 
 s32 _cellGcmFunc2()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(cellGcmSys);
+	return CELL_OK; 
 }
 
 s32 _cellGcmFunc3()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(cellGcmSys);
+	return CELL_OK;
 }
 
 s32 _cellGcmFunc4()
@@ -1220,7 +1223,8 @@ s32 _cellGcmFunc4()
 
 s32 _cellGcmFunc13()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(cellGcmSys);
+	return CELL_OK;
 }
 
 s32 _cellGcmFunc38()

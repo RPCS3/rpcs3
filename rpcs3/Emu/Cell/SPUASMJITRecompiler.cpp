@@ -917,7 +917,7 @@ void spu_recompiler::BISL(spu_opcode_t op)
 
 void spu_recompiler::IRET(spu_opcode_t op)
 {
-	fmt::throw_exception("Unimplemented instruction" HERE);
+	LOG_ERROR(SPU, "Unimplemented instruction" HERE);
 }
 
 void spu_recompiler::BISLED(spu_opcode_t op)
@@ -2052,7 +2052,7 @@ void spu_recompiler::BRNZ(spu_opcode_t op)
 {
 	const u32 target = spu_branch_target(m_pos, op.i16);
 
-	if (target == m_pos) fmt::throw_exception("Branch-to-self (0x%05x)" HERE, target);
+	if (target == m_pos) LOG_ERROR(SPU, "Branch-to-self (0x%05x)" HERE, target);
 
 	c->cmp(SPU_OFF_32(gpr[op.rt]._u32[3]), 0);
 

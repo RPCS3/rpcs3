@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
@@ -181,7 +181,8 @@ s32 cellHddGameCheck2()
 
 s32 cellHddGameGetSizeKB()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(cellGame);
+	return CELL_OK;
 }
 
 s32 cellHddGameSetSystemVer()
@@ -191,7 +192,8 @@ s32 cellHddGameSetSystemVer()
 
 s32 cellHddGameExitBroken()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(cellGame);
+	return CELL_OK;
 }
 
 

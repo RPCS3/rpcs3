@@ -634,7 +634,7 @@ s32 pngDecodeData(ppu_thread& ppu, PHandle handle, PStream stream, vm::ptr<u8> d
 	}
 
 	// Calculate the image size
-	u32 image_size = stream->out_param.outputWidthByte * stream->out_param.outputHeight;
+	unsigned __int64 image_size = stream->out_param.outputWidthByte * stream->out_param.outputHeight;
 
 	// Buffer for storing the image
 	std::vector<u8> png(image_size);

@@ -129,7 +129,18 @@ error_code sys_fs_open(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, s32 mode
 		fmt::throw_exception("sys_fs_open(%s): Invalid or unimplemented flags: %#o" HERE, path, flags);
 	}
 
-	fs::file file(local_path, open_mode);
+	const char *path_ptr = path.get_ptr();
+	
+		if (strstr(path.get_ptr(), "/dev_hdd0") &&
+			strncmp(path.get_ptr(), "/dev_hdd0", 9))
+		 {
+			 path_ptr = strstr(path_ptr, "/dev_hdd0");
+		
+		LOG_ERROR(HLE, "Path contains device root path but not at the start!");
+		LOG_ERROR(HLE, "Path given is (%s), modified to (%s)", path.get_ptr(), path_ptr);
+		}
+	
+		fs::file file(local_path, open_mode);
 
 	if (!file)
 	{

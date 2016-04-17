@@ -372,7 +372,7 @@ namespace vm
 
 		if (!size || (size | addr) % 4096)
 		{
-			fmt::throw_exception("Invalid arguments (addr=0x%x, size=0x%x)" HERE, addr, size);
+			LOG_ERROR(MEMORY, "Invalid arguments (addr=0x%x, size=0x%x)" HERE, addr, size);
 		}
 
 		const u8 flags_inv = flags_set & flags_clear;

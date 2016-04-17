@@ -85,3 +85,5 @@ CMakeCache.txt
 # cotire
 rpcs3/cotire/*
 rpcs3/rpcs3_*_cotire.cmake
+/.vs/rpcs3/v15/ipch/AutoPCH/VKGSRENDER-1a48cf59/VKGSRENDER-717b8989/*.ipch
+/.vs/rpcs3/v15/ipch/EMUCORE-4bdb26ae/*.ipch

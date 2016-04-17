@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 
@@ -1478,12 +1478,14 @@ s32 _sceNpSysutilClientFree()
 
 s32 _Z33_sce_np_sysutil_send_empty_packetiPN16sysutil_cxmlutil11FixedMemoryEPKcS3_()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNp);
+	return CELL_OK;
 }
 
 s32 _Z27_sce_np_sysutil_send_packetiRN4cxml8DocumentE()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNp);
+	return CELL_OK;
 }
 
 s32 _Z36_sce_np_sysutil_recv_packet_fixedmemiPN16sysutil_cxmlutil11FixedMemoryERN4cxml8DocumentERNS2_7ElementE()
@@ -1498,7 +1500,8 @@ s32 _Z40_sce_np_sysutil_recv_packet_fixedmem_subiPN16sysutil_cxmlutil11FixedMemo
 
 s32 _Z27_sce_np_sysutil_recv_packetiRN4cxml8DocumentERNS_7ElementE()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNp);
+	return CELL_OK;
 }
 
 s32 _Z29_sce_np_sysutil_cxml_set_npidRN4cxml8DocumentERNS_7ElementEPKcPK7SceNpId()
@@ -1518,10 +1521,17 @@ s32 _Z37sce_np_matching_set_matching2_runningb()
 
 s32 _Z32_sce_np_sysutil_cxml_prepare_docPN16sysutil_cxmlutil11FixedMemoryERN4cxml8DocumentEPKcRNS2_7ElementES6_i()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNp);
+	return CELL_OK;
 }
 
 s32 sceNp_AFC62605()
+{
+	UNIMPLEMENTED_FUNC(sceNp);
+	return CELL_OK;
+}
+
+s32 sceNp_A41DDED6()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
@@ -1761,4 +1771,5 @@ DECLARE(ppu_module_manager::sceNp)("sceNp", []()
 	REG_FUNC(sceNp, _Z37sce_np_matching_set_matching2_runningb);
 	REG_FUNC(sceNp, _Z32_sce_np_sysutil_cxml_prepare_docPN16sysutil_cxmlutil11FixedMemoryERN4cxml8DocumentEPKcRNS2_7ElementES6_i);
 	REG_FNID(sceNp, 0xAFC62605, sceNp_AFC62605);
+	REG_FNID(sceNp, 0xA41DDED6, sceNp_A41DDED6); //NpCommerce2 Splatherhouse
 });

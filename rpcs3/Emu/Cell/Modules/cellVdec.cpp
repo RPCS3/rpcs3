@@ -484,6 +484,11 @@ s32 cellVdecDecodeAu(u32 handle, CellVdecDecodeMode mode, vm::cptr<CellVdecAuInf
 		return CELL_VDEC_ERROR_ARG;
 	}
 
+	if (mode == CELL_VDEC_DEC_MODE_B_SKIP || !vdec)
+	{
+		return CELL_VDEC_ERROR_BUSY;
+	}
+
 	if (mode != CELL_VDEC_DEC_MODE_NORMAL)
 	{
 		fmt::throw_exception("Unsupported decoding mode (%d)" HERE, (s32)mode);
@@ -555,7 +560,7 @@ s32 cellVdecGetPicture(u32 handle, vm::cptr<CellVdecPicFormat> format, vm::ptr<u
 
 		if (format->colorMatrixType != CELL_VDEC_COLOR_MATRIX_TYPE_BT709)
 		{
-			fmt::throw_exception("Unknown colorMatrixType (%d)" HERE, format->colorMatrixType);
+			LOG_ERROR(HLE, "Unknown colorMatrixType (%d)" HERE, format->colorMatrixType);
 		}
 
 		if (alpha_plane)

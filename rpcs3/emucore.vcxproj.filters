@@ -1288,6 +1288,9 @@
     <ClInclude Include="Emu\Cell\Modules\cellNetCtl.h">
       <Filter>Emu\Cell\Modules</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\Cell\Modules\cellOskDialog.h">
+      <Filter>Emu\Cell\Modules</Filter>
+    </ClInclude>
     <ClInclude Include="Emu\Cell\Modules\cellPad.h">
       <Filter>Emu\Cell\Modules</Filter>
     </ClInclude>

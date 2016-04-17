@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/System.h"
 #include "PPUThread.h"
 #include "PPUInterpreter.h"
@@ -292,12 +292,15 @@ const g_ppu_scale_table;
 
 bool ppu_interpreter::MFVSCR(ppu_thread& ppu, ppu_opcode_t op)
 {
-	fmt::throw_exception<std::logic_error>("MFVSCR instruction at 0x%x (%s)", ppu.cia, Emu.GetTitleID());
+	ppu.vr[op.vd].clear();
+	ppu.vr[op.vd]._u32[0] = ppu.vscr.vscr;
+	return true;
 }
 
 bool ppu_interpreter::MTVSCR(ppu_thread& ppu, ppu_opcode_t op)
 {
-	LOG_WARNING(PPU, "MTVSCR");
+	ppu.vscr.vscr = ppu.vr[op.vb]._u32[0];
+	ppu.vscr.X = ppu.vscr.Y = 0;
 	return true;
 }
 
@@ -2181,7 +2184,7 @@ bool ppu_interpreter::TW(ppu_thread& ppu, ppu_opcode_t op)
 		((u32)a < (u32)b && (op.bo & 0x2)) ||
 		((u32)a >(u32)b && (op.bo & 0x1)))
 	{
-		fmt::throw_exception("Trap!" HERE);
+		LOG_ERROR(PPU, "Trap! (0x%x)" HERE, (u32) TW);
 	}
 
 	return true;
@@ -2306,7 +2309,7 @@ bool ppu_interpreter::CNTLZW(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::SLD(ppu_thread& ppu, ppu_opcode_t op)
 {
-	const u32 n = ppu.gpr[op.rb];
+	const u64 n = ppu.gpr[op.rb];
 	ppu.gpr[op.ra] = UNLIKELY(n & 0x40) ? 0 : ppu.gpr[op.rs] << n;
 	if (UNLIKELY(op.rc)) ppu_cr_set<s64>(ppu, 0, ppu.gpr[op.ra], 0);
 	return true;
@@ -3017,7 +3020,7 @@ bool ppu_interpreter::SRW(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::SRD(ppu_thread& ppu, ppu_opcode_t op)
 {
-	const u32 n = ppu.gpr[op.rb];
+	const u64 n = ppu.gpr[op.rb];
 	ppu.gpr[op.ra] = UNLIKELY(n & 0x40) ? 0 : ppu.gpr[op.rs] >> n;
 	if (UNLIKELY(op.rc)) ppu_cr_set<s64>(ppu, 0, ppu.gpr[op.ra], 0);
 	return true;

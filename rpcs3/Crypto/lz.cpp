@@ -120,7 +120,7 @@ int decode_word(unsigned char *ptr, int index, int *bit_flag, unsigned int *rang
 
 int decompress(unsigned char *out, unsigned char *in, unsigned int size)
 {
-	int result;
+	__int64 result;
 
 	unsigned char *tmp = new unsigned char[0xCC8];
 
