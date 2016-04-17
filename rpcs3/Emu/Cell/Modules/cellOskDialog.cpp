@@ -15,7 +15,8 @@ s32 cellOskDialogUnloadAsync()
 
 s32 cellOskDialogGetSize()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(cellOskDialog);
+	return CELL_OK;
 }
 
 s32 cellOskDialogAbort()

@@ -374,6 +374,7 @@ namespace rsx
 
 		enum class context_dma : u8
 		{
+			memory_host_buffer,
 			to_memory_get_report,
 			report_location_main,
 		};

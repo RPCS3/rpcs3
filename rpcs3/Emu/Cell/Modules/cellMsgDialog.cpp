@@ -10,9 +10,110 @@
 
 extern logs::channel cellSysutil;
 
-s32 cellMsgDialogOpen()
+s32 cellMsgDialogOpen(u32 type, vm::cptr<char> msgString, vm::ptr<CellMsgDialogCallback> callback, vm::ptr<void> userData, vm::ptr<void> extParam)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.warning("cellMsgDialogOpen(type=0x%x, msgString=%s, callback=*0x%x, userData=*0x%x, extParam=*0x%x)", type, msgString, callback, userData, extParam);
+
+	if (!msgString || std::strlen(msgString.get_ptr()) >= 0x200 || type & -0x33f8)
+	{
+		return CELL_MSGDIALOG_ERROR_PARAM;
+	}
+
+	const MsgDialogType _type = { type };
+
+	switch (_type.button_type.unshifted())
+	{
+	case CELL_MSGDIALOG_TYPE_BUTTON_TYPE_NONE:
+	{
+		if (_type.default_cursor || _type.progress_bar_count > 2)
+		{
+			return CELL_MSGDIALOG_ERROR_PARAM;
+		}
+
+		break;
+	}
+
+	case CELL_MSGDIALOG_TYPE_BUTTON_TYPE_YESNO:
+	{
+		if (_type.default_cursor > 1 || _type.progress_bar_count)
+		{
+			return CELL_MSGDIALOG_ERROR_PARAM;
+		}
+
+		break;
+	}
+
+	case CELL_MSGDIALOG_TYPE_BUTTON_TYPE_OK:
+	{
+		if (_type.default_cursor || _type.progress_bar_count)
+		{
+			return CELL_MSGDIALOG_ERROR_PARAM;
+		}
+
+		break;
+	}
+
+	default: return CELL_MSGDIALOG_ERROR_PARAM;
+	}
+
+	const auto dlg = fxm::import<MsgDialogBase>(Emu.GetCallbacks().get_msg_dialog);
+
+	if (!dlg)
+	{
+		return CELL_SYSUTIL_ERROR_BUSY;
+	}
+
+	if (_type.se_mute_on)
+	{
+		// TODO
+	}
+
+	if (_type.se_normal)
+	{
+		cellSysutil.warning(msgString.get_ptr());
+	}
+	else
+	{
+		cellSysutil.error(msgString.get_ptr());
+	}
+
+	dlg->type = _type;
+
+	dlg->on_close = [callback, userData, wptr = std::weak_ptr<MsgDialogBase>(dlg)](s32 status)
+	{
+		const auto dlg = wptr.lock();
+
+		if (dlg && dlg->state.compare_and_swap_test(MsgDialogState::Open, MsgDialogState::Close))
+		{
+			if (callback)
+			{
+				sysutil_register_cb([=](ppu_thread& ppu) -> s32
+				{
+					callback(ppu, status, userData);
+					return CELL_OK;
+				});
+			}
+
+			fxm::remove<MsgDialogBase>();
+		}
+	};
+
+	atomic_t<bool> result(false);
+
+	// Run asynchronously in GUI thread
+	Emu.CallAfter([&]()
+	{
+		dlg->Create(msgString.get_ptr());
+		result = true;
+	});
+
+	while (!result)
+	{
+		CHECK_EMU_STATUS;
+		std::this_thread::sleep_for(1ms);
+	}
+
+	return CELL_OK;
 }
 
 s32 cellMsgDialogOpen2(u32 type, vm::cptr<char> msgString, vm::ptr<CellMsgDialogCallback> callback, vm::ptr<void> userData, vm::ptr<void> extParam)

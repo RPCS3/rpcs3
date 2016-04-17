@@ -139,7 +139,8 @@ s32 cellNetCtlGetNatInfo(vm::ptr<CellNetCtlNatInfo> natInfo)
 
 s32 cellGameUpdateInit()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(cellNetCtl);
+	return CELL_OK;
 }
 
 s32 cellGameUpdateTerm()

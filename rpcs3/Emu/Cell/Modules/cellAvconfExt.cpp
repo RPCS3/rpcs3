@@ -95,7 +95,8 @@ s32 cellAudioOutSetDeviceMode()
 
 s32 cellAudioInSetDeviceMode()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(cellAvconfExt);
+	return -1;
 }
 
 s32 cellAudioInRegisterDevice()

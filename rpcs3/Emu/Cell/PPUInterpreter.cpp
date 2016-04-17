@@ -292,12 +292,15 @@ const g_ppu_scale_table;
 
 bool ppu_interpreter::MFVSCR(ppu_thread& ppu, ppu_opcode_t op)
 {
-	fmt::throw_exception<std::logic_error>("MFVSCR instruction at 0x%x (%s)", ppu.cia, Emu.GetTitleID());
+	ppu.vr[op.vd].clear();
+	ppu.vr[op.vd]._u32[0] = ppu.vscr.vscr;
+	return true;
 }
 
 bool ppu_interpreter::MTVSCR(ppu_thread& ppu, ppu_opcode_t op)
 {
-	LOG_WARNING(PPU, "MTVSCR");
+	ppu.vscr.vscr = ppu.vr[op.vb]._u32[0];
+	ppu.vscr.X = ppu.vscr.Y = 0;
 	return true;
 }
 

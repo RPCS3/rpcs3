@@ -234,7 +234,8 @@ s32 sceNpMatching2SetSignalingOptParam()
 
 s32 sceNpMatching2RegisterContextCallback()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 s32 sceNpMatching2SendRoomChatMessage()
@@ -274,7 +275,8 @@ s32 sceNpMatching2GrantRoomOwner()
 
 s32 sceNpMatching2CreateContext()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 s32 sceNpMatching2GetSignalingOptParamLocal()
@@ -324,12 +326,14 @@ s32 sceNpMatching2DeleteServerContext()
 
 s32 sceNpMatching2SetDefaultRequestOptParam()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 s32 sceNpMatching2RegisterRoomEventCallback()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 s32 sceNpMatching2GetRoomPasswordLocal()
@@ -379,7 +383,8 @@ s32 sceNpMatching2SetLobbyMemberDataInternal()
 
 s32 sceNpMatching2RegisterRoomMessageCallback()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
 }
 
 
