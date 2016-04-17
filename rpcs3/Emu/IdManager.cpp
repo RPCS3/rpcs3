@@ -76,7 +76,7 @@ void fxm::init()
 {
 	// Allocate
 	g_vec.resize(id_manager::typeinfo::get_count());
-	fxm::clear();
+	//fxm::clear();
 }
 
 void fxm::clear()

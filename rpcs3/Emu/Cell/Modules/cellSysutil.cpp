@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
@@ -387,67 +387,80 @@ s32 cellSysutilSetBgmPlaybackExtraParam()
 
 s32 cellSysutilRegisterCallbackDispatcher()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	 UNIMPLEMENTED_FUNC(cellSysutil);
+	 return CELL_OK;
 }
 
 s32 cellSysutilUnregisterCallbackDispatcher()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
 }
 
 s32 cellSysutilPacketRead()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
 }
 
 s32 cellSysutilPacketWrite()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	 UNIMPLEMENTED_FUNC(cellSysutil);
+	 return CELL_OK;
 }
 
 s32 cellSysutilPacketBegin()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
 }
 
 s32 cellSysutilPacketEnd()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
 }
 
 s32 cellSysutilGameDataAssignVmc()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	 UNIMPLEMENTED_FUNC(cellSysutil);
+	 return CELL_OK;
 }
 
 s32 cellSysutilGameDataExit()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	 UNIMPLEMENTED_FUNC(cellSysutil);
+	 return CELL_OK;
 }
 
 s32 cellSysutilGameExit_I()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	 UNIMPLEMENTED_FUNC(cellSysutil);
+	 return CELL_OK;
 }
 
 s32 cellSysutilGamePowerOff_I()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	 UNIMPLEMENTED_FUNC(cellSysutil);
+	 return CELL_OK;
 }
 
 s32 cellSysutilGameReboot_I()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	 UNIMPLEMENTED_FUNC(cellSysutil);
+	 return CELL_OK;
 }
 
 s32 cellSysutilSharedMemoryAlloc()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	 UNIMPLEMENTED_FUNC(cellSysutil);
+	 return CELL_OK;
 }
 
 s32 cellSysutilSharedMemoryFree()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	 UNIMPLEMENTED_FUNC(cellSysutil);
+	 return CELL_OK;
 }
 
 s32 _ZN4cxml7Element11AppendChildERS0_()

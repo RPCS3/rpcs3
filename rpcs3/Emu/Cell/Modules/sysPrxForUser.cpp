@@ -184,6 +184,18 @@ s32 sysPs2Disc_BB7CD1AE()
 	return CELL_OK;
 }
 
+s32 sysPrxForUser_B5D5F64E()
+{
+	UNIMPLEMENTED_FUNC(sysPrxForUser);
+	return CELL_OK;
+}
+
+s32 sysPrxForUser_9FB6228E()
+{
+	UNIMPLEMENTED_FUNC(sysPrxForUser);
+	return CELL_OK;
+}
+
 extern void sysPrxForUser_sys_lwmutex_init();
 extern void sysPrxForUser_sys_lwcond_init();
 extern void sysPrxForUser_sys_ppu_thread_init();
@@ -269,4 +281,6 @@ DECLARE(ppu_module_manager::sysPrxForUser)("sysPrxForUser", []()
 	REG_FUNC(sysPrxForUser, console_getc);
 	REG_FUNC(sysPrxForUser, console_putc);
 	REG_FUNC(sysPrxForUser, console_write);
+	REG_FNID(sysPrxForUser, 0xB5D5F64E, sysPrxForUser_B5D5F64E);
+	REG_FNID(sysPrxForUser, 0x9FB6228E, sysPrxForUser_9FB6228E); //Np_commerce2 Splatherhouse
 });

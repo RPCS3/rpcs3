@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 /**
  * Ring buffer memory helper :
@@ -71,7 +71,7 @@ public:
 	{
 		if (!can_alloc<Alignement>(size))
 		{
-			fmt::throw_exception("Working buffer not big enough, buffer_length=%d allocated=%d requested=%d guard=%d largest_pool=%d" HERE,
+			LOG_ERROR(RSX, "Working buffer not big enough, buffer_length=%d allocated=%d requested=%d guard=%d largest_pool=%d" HERE,
 					m_size, m_current_allocated_size, size, m_min_guard_size, m_largest_allocated_pool);
 		}
 

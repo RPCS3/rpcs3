@@ -237,8 +237,8 @@ public:
 	static const ppu_static_module cellSysutilAp;
 	static const ppu_static_module cellSysutilAvc;
 	static const ppu_static_module cellSysutilAvc2;
-	static const ppu_static_module cellSysutilNpEula;
 	static const ppu_static_module cellSysutilMisc;
+	static const ppu_static_module cellSysutilNpEula;
 	static const ppu_static_module cellUsbd;
 	static const ppu_static_module cellUsbPspcm;
 	static const ppu_static_module cellUserInfo;
@@ -247,6 +247,9 @@ public:
 	static const ppu_static_module cellVideoUpload;
 	static const ppu_static_module cellVoice;
 	static const ppu_static_module cellVpost;
+	static const ppu_static_module libad_async;
+	static const ppu_static_module libad_billboard_util;
+	static const ppu_static_module libad_core;
 	static const ppu_static_module libmedi;
 	static const ppu_static_module libmixer;
 	static const ppu_static_module libsnd3;

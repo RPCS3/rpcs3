@@ -2263,7 +2263,7 @@ void spu_recompiler::BRZ(spu_opcode_t op)
 {
 	const u32 target = spu_branch_target(m_pos, op.i16);
 
-	if (target == m_pos) fmt::throw_exception("Branch-to-self (0x%05x)" HERE, target);
+	if (target == m_pos) LOG_ERROR(SPU, "Branch-to-self (0x%05x)" HERE, target);
 
 	c->cmp(SPU_OFF_32(gpr, op.rt, &v128::_u32, 3), 0);
 

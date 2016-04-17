@@ -26,6 +26,16 @@ namespace utils
 		return get_cpuid(0, 0)[0] >= 0x1 && get_cpuid(1, 0)[2] & 0x10000000;
 	}
 
+	inline bool has_avx2()
+	{
+		return get_cpuid(0, 0)[0] >= 0x1 && get_cpuid(7, 0)[1] & 0x00000020;
+	}
+
+	inline bool has_fma3()
+	{
+		return get_cpuid(0, 0)[0] >= 0x1 && get_cpuid(1, 0)[2] & 0x00001000;
+	}
+
 	inline bool has_rtm()
 	{
 		// Check RTM and MPX extensions in order to filter out TSX on Haswell CPUs

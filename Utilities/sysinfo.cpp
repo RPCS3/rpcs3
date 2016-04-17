@@ -52,6 +52,16 @@ std::string utils::get_system_info()
 		result += " | AVX";
 	}
 
+	if (has_avx2())
+	{
+		result += " | AVX2";
+	}
+
+	if (has_fma3())
+	{
+		result += " | FMA3";
+	}
+
 	if (has_rtm())
 	{
 		result += " | TSX";

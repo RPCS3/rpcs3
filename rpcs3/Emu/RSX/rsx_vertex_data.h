@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "GCM.h"
 #include "Utilities/types.h"
@@ -91,7 +91,7 @@ struct push_buffer_vertex_info
 		case vertex_base_type::s32k:
 			return size / 2;
 		default:
-			fmt::throw_exception("Unsupported vertex base type %d", (u8)type);
+			fmt::throw_exception("Unsupported vertex base type %d" HERE, (u8)type);
 		}
 	}
 
@@ -129,7 +129,7 @@ struct push_buffer_vertex_info
 			((u16*)dst)[1] = se_storage<u16>::swap((u16)(arg >> 16));
 			break;
 		default:
-			fmt::throw_exception("Unsupported vertex base type %d", (u8)type);
+			fmt::throw_exception("Unsupported vertex base type %d" HERE, (u8)type);
 		}
 	}
 };

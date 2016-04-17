@@ -27,6 +27,7 @@ void FragmentProgramDecompiler::SetDst(std::string code, bool append_mask)
 	case 1: code = "(" + code + " * 2.0)"; break;
 	case 2: code = "(" + code + " * 4.0)"; break;
 	case 3: code = "(" + code + " * 8.0)"; break;
+	case 4: break;
 	case 5: code = "(" + code + " / 2.0)"; break;
 	case 6: code = "(" + code + " / 4.0)"; break;
 	case 7: code = "(" + code + " / 8.0)"; break;

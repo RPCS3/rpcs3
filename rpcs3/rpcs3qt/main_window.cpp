@@ -120,7 +120,7 @@ void main_window::Init()
 		std::exit(EXIT_FAILURE);
 	}
 
-#ifdef BRANCH
+/*#ifdef BRANCH
 	if ("RPCS3/rpcs3/master"s != STRINGIZE(BRANCH))
 #elif _MSC_VER
 	fs::stat_t st;
@@ -155,7 +155,7 @@ void main_window::Init()
 		{
 			std::exit(EXIT_SUCCESS);
 		}
-	}
+	}*/
 }
 
 void main_window::CreateThumbnailToolbar()
