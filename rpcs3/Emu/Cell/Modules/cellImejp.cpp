@@ -1,5 +1,6 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
+#include "cellImejp.h"
 
 logs::channel cellImeJp("cellImeJp", logs::level::notice);
 
@@ -15,21 +16,26 @@ enum
 	CELL_IMEJP_ERROR_OTHER              = 0x8002bfff,
 };
 
+static uint16_t s_ime_string[256];
+
 s32 cellImeJpOpen()
 {
-	UNIMPLEMENTED_FUNC(cellImeJp);
+	std::memset(s_ime_string, 0, sizeof(s_ime_string));
+	cellImeJp.error("cellImeJpOpen()");
 	return CELL_OK;
 }
 
 s32 cellImeJpOpen2()
 {
-	UNIMPLEMENTED_FUNC(cellImeJp);
+	std::memset(s_ime_string, 0, sizeof(s_ime_string));
+	cellImeJp.error("cellImeJpOpen2()");
 	return CELL_OK;
 }
 
 s32 cellImeJpOpen3()
 {
-	UNIMPLEMENTED_FUNC(cellImeJp);
+	std::memset(s_ime_string, 0, sizeof(s_ime_string));
+	cellImeJp.error("cellImeJpOpen3()");
 	return CELL_OK;
 }
 
@@ -69,9 +75,10 @@ s32 cellImeJpReset()
 	return CELL_OK;
 }
 
-s32 cellImeJpGetStatus()
+s32 cellImeJpGetStatus(CellImeJpHandle hImeJpHandle, vm::ptr<u16> pInputStatus)
 {
-	UNIMPLEMENTED_FUNC(cellImeJp);
+	cellImeJp.error("cellImeJpGetStatus()");
+	*pInputStatus = CELL_IMEJP_CANDIDATE_EMPTY;
 	return CELL_OK;
 }
 
@@ -201,33 +208,42 @@ s32 cellImeJpGetFocusTop()
 	return CELL_OK;
 }
 
-s32 cellImeJpGetFocusLength()
+s32 cellImeJpGetFocusLength(CellImeJpHandle hImeJpHandle, vm::ptr<u16> pFocusLength)
 {
-	UNIMPLEMENTED_FUNC(cellImeJp);
+	cellImeJp.error("cellImeJpGetFocusLength()");
+	*pFocusLength = 1;
 	return CELL_OK;
 }
 
-s32 cellImeJpGetConfirmYomiString()
+s32 cellImeJpGetConfirmYomiString(CellImeJpHandle hImeJpHandle, vm::ptr<u16> pYomiString)
 {
-	UNIMPLEMENTED_FUNC(cellImeJp);
+	cellImeJp.error("cellImeJpGetConfirmYomiString()");
+	*s_ime_string = 'A';
+	*pYomiString = *s_ime_string;
 	return CELL_OK;
 }
 
-s32 cellImeJpGetConfirmString()
+s32 cellImeJpGetConfirmString(CellImeJpHandle hImeJpHandle, vm::ptr<u16> pConfirmString)
 {
-	UNIMPLEMENTED_FUNC(cellImeJp);
+	cellImeJp.error("cellImeJpGetConfirmString()");
+	*s_ime_string = 'A';
+	*pConfirmString = *s_ime_string;
 	return CELL_OK;
 }
 
-s32 cellImeJpGetConvertYomiString()
+s32 cellImeJpGetConvertYomiString(CellImeJpHandle hImeJpHandle, vm::ptr<u16> pYomiString)
 {
-	UNIMPLEMENTED_FUNC(cellImeJp);
+	cellImeJp.error("cellImeJpGetConvertYomiString()");
+	*s_ime_string = 'A';
+	*pYomiString = *s_ime_string;
 	return CELL_OK;
 }
 
-s32 cellImeJpGetConvertString()
+s32 cellImeJpGetConvertString(CellImeJpHandle hImeJpHandle, vm::ptr<u16> pConvertString)
 {
-	UNIMPLEMENTED_FUNC(cellImeJp);
+	cellImeJp.error("cellImeJpGetConvertString()");
+	*s_ime_string = 'A';
+	*pConvertString = *s_ime_string;
 	return CELL_OK;
 }
 

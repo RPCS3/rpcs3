@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
 #include "cellAudioOut.h"
@@ -128,16 +128,21 @@ s32 cellAudioOutConfigure(u32 audioOut, vm::ptr<CellAudioOutConfiguration> confi
 	case CELL_AUDIO_OUT_PRIMARY:
 		if (config->channel)
 		{
-			//Emu.GetAudioManager().GetInfo().mode.channel = config->channel;
+			CELL_AUDIO_OUT_CHNUM_8;
+			return CELL_OK;
 		}
-
-		//Emu.GetAudioManager().GetInfo().mode.encoder = config->encoder;
 
 		if (config->downMixer)
 		{
-			//Emu.GetAudioManager().GetInfo().mode.downMixer = config->downMixer;
+			CELL_AUDIO_OUT_DOWNMIXER_NONE;
+			return CELL_OK;
 		}
 
+		if (config->encoder)
+		{
+			CELL_AUDIO_OUT_CODING_TYPE_LPCM;
+			return CELL_OK;
+		}
 		return CELL_OK;
 
 	case CELL_AUDIO_OUT_SECONDARY:

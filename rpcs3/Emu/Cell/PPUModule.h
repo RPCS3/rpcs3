@@ -105,6 +105,8 @@ public:
 		return info;
 	}
 
+	static const ppu_static_module cell005C;
+	static const ppu_static_module cell0054;
 	static const ppu_static_module cellAdec;
 	static const ppu_static_module cellAtrac;
 	static const ppu_static_module cellAtracMulti;
@@ -116,6 +118,7 @@ public:
 	static const ppu_static_module cellCelpEnc;
 	static const ppu_static_module cellDaisy;
 	static const ppu_static_module cellDmux;
+	static const ppu_static_module cellF044;
 	static const ppu_static_module cellFiber;
 	static const ppu_static_module cellFont;
 	static const ppu_static_module cellFontFT;

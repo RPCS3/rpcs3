@@ -24,7 +24,8 @@ struct memory_pool_t
 
 s32 sys_mempool_allocate_block()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sysPrxForUser);
+	return CELL_OK;
 }
 
 s32 sys_mempool_create(vm::ptr<sys_mempool_t> mempool, vm::ptr<void> chunk, const u64 chunk_size, const u64 block_size, const u64 ralignment)

@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/System.h"
 #include "PPUThread.h"
 #include "PPUInterpreter.h"
@@ -2181,7 +2181,7 @@ bool ppu_interpreter::TW(ppu_thread& ppu, ppu_opcode_t op)
 		((u32)a < (u32)b && (op.bo & 0x2)) ||
 		((u32)a >(u32)b && (op.bo & 0x1)))
 	{
-		fmt::throw_exception("Trap!" HERE);
+		LOG_ERROR(PPU, "Trap! (0x%x)" HERE, (u32) TW);
 	}
 
 	return true;

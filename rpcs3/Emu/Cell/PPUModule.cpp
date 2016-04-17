@@ -19,6 +19,8 @@
 
 namespace vm { using namespace ps3; }
 
+LOG_CHANNEL(cell005C);
+LOG_CHANNEL(cell0054);
 LOG_CHANNEL(cellAdec);
 LOG_CHANNEL(cellAtrac);
 LOG_CHANNEL(cellAtracMulti);
@@ -30,6 +32,7 @@ LOG_CHANNEL(cellCelp8Enc);
 LOG_CHANNEL(cellCelpEnc);
 LOG_CHANNEL(cellDaisy);
 LOG_CHANNEL(cellDmux);
+LOG_CHANNEL(cellF044);
 LOG_CHANNEL(cellFiber);
 LOG_CHANNEL(cellFont);
 LOG_CHANNEL(cellFontFT);
@@ -205,6 +208,8 @@ static void ppu_initialize_modules()
 {
 	const std::initializer_list<const ppu_static_module*> registered
 	{
+		&ppu_module_manager::cell005C,
+		&ppu_module_manager::cell0054,
 		&ppu_module_manager::cellAdec,
 		&ppu_module_manager::cellAtrac,
 		&ppu_module_manager::cellAtracMulti,
@@ -216,6 +221,7 @@ static void ppu_initialize_modules()
 		&ppu_module_manager::cellCelpEnc,
 		&ppu_module_manager::cellDaisy,
 		&ppu_module_manager::cellDmux,
+		&ppu_module_manager::cellF044,
 		&ppu_module_manager::cellFiber,
 		&ppu_module_manager::cellFont,
 		&ppu_module_manager::cellFontFT,

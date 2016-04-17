@@ -656,15 +656,15 @@ namespace sys_net
 		libnet.warning("shutdown(s=%d, how=%d)", s, how);
 		std::shared_ptr<sys_net_socket> sock = idm::get<sys_net_socket>(s);
 
-		s32 ret = ::shutdown(sock->s, how);
+		/*s32 ret = ::shutdown(sock->s, how);
 
 		if (ret != 0)
 		{
 			libnet.error("shutdown(): error %d", get_errno() = get_last_error());
-			return -1;
-		}
+			return 0;
+		}*/
 
-		return ret;
+		return true;
 	}
 
 	s32 socket(s32 family, s32 type, s32 protocol)

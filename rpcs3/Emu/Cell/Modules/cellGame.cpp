@@ -194,7 +194,8 @@ s32 cellHddGameSetSystemVer()
 
 s32 cellHddGameExitBroken()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(cellGame);
+	return CELL_OK;
 }
 
 

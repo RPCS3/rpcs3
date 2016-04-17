@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 
@@ -359,7 +359,8 @@ void spu_interpreter::BIHNZ(SPUThread& spu, spu_opcode_t op)
 
 void spu_interpreter::STOPD(SPUThread& spu, spu_opcode_t op)
 {
-	fmt::throw_exception("Unimplemented instruction" HERE);
+	spu._ref<v128>((spu.gpr[op.ra]._u32[3] + spu.gpr[op.rb]._u32[3] + spu.gpr[op.rc]._u32[3]) & 0x3fff);
+	LOG_TODO(SPU, "Unimplemented instruction STOPD" HERE);
 }
 
 void spu_interpreter::STQX(SPUThread& spu, spu_opcode_t op)

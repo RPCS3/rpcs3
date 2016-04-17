@@ -100,6 +100,7 @@
     <ClCompile Include="..\Utilities\Thread.cpp" />
     <ClCompile Include="..\Utilities\version.cpp" />
     <ClCompile Include="..\Utilities\VirtualMemory.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cell005C.cpp" />
     <ClCompile Include="Emu\Cell\PPUAnalyser.cpp" />
     <ClCompile Include="Emu\Cell\PPUTranslator.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
@@ -134,6 +135,7 @@
     <ClCompile Include="Emu\Cell\lv2\sys_vm.cpp" />
     <ClCompile Include="Emu\Cell\Modules\sys_libc_.cpp" />
     <ClCompile Include="Emu\Cell\PPUModule.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cell0054.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellAdec.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellAtrac.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellAtracMulti.cpp" />
@@ -146,6 +148,7 @@
     <ClCompile Include="Emu\Cell\Modules\cellCelpEnc.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellDaisy.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellDmux.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellF044.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellFiber.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellFont.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellFontFT.cpp" />
@@ -428,7 +431,6 @@
     <ClInclude Include="Crypto\unself.h" />
     <ClInclude Include="Crypto\utils.h" />
     <ClInclude Include="define_new_memleakdetect.h" />
-    <ClInclude Include="Emu\Cell\Modules\cellOskDialog.h" />
     <ClInclude Include="Emu\Cell\PPUAnalyser.h" />
     <ClInclude Include="Emu\Cell\PPUTranslator.h" />
     <ClInclude Include="Emu\CPU\CPUTranslator.h" />
@@ -556,6 +558,7 @@
     <ClInclude Include="Emu\Cell\Modules\cellMsgDialog.h" />
     <ClInclude Include="Emu\Cell\Modules\cellMusic.h" />
     <ClInclude Include="Emu\Cell\Modules\cellNetCtl.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellOskDialog.h" />
     <ClInclude Include="Emu\Cell\Modules\cellPad.h" />
     <ClInclude Include="Emu\Cell\Modules\cellPamf.h" />
     <ClInclude Include="Emu\Cell\Modules\cellPng.h" />

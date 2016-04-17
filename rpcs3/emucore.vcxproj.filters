@@ -299,6 +299,9 @@
     <ClCompile Include="Emu\Cell\lv2\sys_vm.cpp">
       <Filter>Emu\Cell\lv2</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Cell\Modules\cell0054.cpp">
+      <Filter>Emu\Cell\Modules</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\Cell\Modules\cellAdec.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
@@ -333,6 +336,9 @@
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
     <ClCompile Include="Emu\Cell\Modules\cellDmux.cpp">
+      <Filter>Emu\Cell\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Cell\Modules\cellF044.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
     <ClCompile Include="Emu\Cell\Modules\cellFiber.cpp">
@@ -902,6 +908,9 @@
     <ClCompile Include="Loader\TAR.cpp">
       <Filter>Loader</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Cell\Modules\cell005C.cpp">
+      <Filter>Emu\Cell\Modules</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -1295,6 +1304,9 @@
       <Filter>Emu\Cell\Modules</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Cell\Modules\cellNetCtl.h">
+      <Filter>Emu\Cell\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Cell\Modules\cellOskDialog.h">
       <Filter>Emu\Cell\Modules</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Cell\Modules\cellPad.h">
@@ -1722,9 +1734,6 @@
     </ClInclude>
     <ClInclude Include="..\Utilities\sema.h">
       <Filter>Utilities</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\Cell\Modules\cellOskDialog.h">
-      <Filter>Emu\Cell\Modules</Filter>
     </ClInclude>
     <ClInclude Include="sys_gamepad.h">
       <Filter>Emu\Cell\lv2</Filter>
