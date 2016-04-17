@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Utilities/Log.h"
 #include "VirtualMemory.h"
 #ifdef _WIN32

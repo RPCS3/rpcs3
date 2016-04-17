@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "stdafx_gui.h"
 #include "Emu/System.h"
 #include "DS4PadHandler.h"
@@ -325,7 +325,7 @@ void DS4PadHandler::ProcessData() {
             pad.m_buttons[5].m_value = 0;
             break;
         default:
-            fmt::throw_exception("ds4 dpad state encountered unexpected input");
+            fmt::throw_exception("ds4 dpad state encountered unexpected input 0x0%x" HERE, dpadState);
         }
 
         // square, cross, circle, triangle

@@ -245,7 +245,9 @@ namespace
 				return;
 			switch (vertex_register.type)
 			{
+			case rsx::vertex_base_type::s1:
 			case rsx::vertex_base_type::f:
+			case rsx::vertex_base_type::ub:
 			{
 				const u32 element_size = rsx::get_vertex_type_size_on_host(vertex_register.type, vertex_register.attribute_size);
 				const u32 gl_type   = to_gl_internal_type(vertex_register.type, vertex_register.attribute_size);

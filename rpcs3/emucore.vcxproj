@@ -228,6 +228,9 @@
     <ClCompile Include="Emu\Cell\Modules\cellVoice.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellVpost.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellWebBrowser.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\libad_async.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\libad_billboard_util.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\libad_core.cpp" />
     <ClCompile Include="Emu\Cell\Modules\libmedi.cpp" />
     <ClCompile Include="Emu\Cell\Modules\libmixer.cpp" />
     <ClCompile Include="Emu\Cell\Modules\libsnd3.cpp" />
@@ -441,7 +444,6 @@
     <ClInclude Include="Crypto\unself.h" />
     <ClInclude Include="Crypto\utils.h" />
     <ClInclude Include="define_new_memleakdetect.h" />
-    <ClInclude Include="Emu\Cell\Modules\cellOskDialog.h" />
     <ClInclude Include="Emu\Cell\PPUAnalyser.h" />
     <ClInclude Include="Emu\Cell\PPUTranslator.h" />
     <ClInclude Include="Emu\CPU\CPUTranslator.h" />
@@ -571,6 +573,7 @@
     <ClInclude Include="Emu\Cell\Modules\cellMsgDialog.h" />
     <ClInclude Include="Emu\Cell\Modules\cellMusic.h" />
     <ClInclude Include="Emu\Cell\Modules\cellNetCtl.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellOskDialog.h" />
     <ClInclude Include="Emu\Cell\Modules\cellPad.h" />
     <ClInclude Include="Emu\Cell\Modules\cellPamf.h" />
     <ClInclude Include="Emu\Cell\Modules\cellPng.h" />

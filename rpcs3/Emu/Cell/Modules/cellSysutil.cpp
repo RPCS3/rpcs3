@@ -382,7 +382,8 @@ s32 cellSysutilSetBgmPlaybackExtraParam()
 
 s32 cellSysutilRegisterCallbackDispatcher()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellSysutilRegisterCallbackDispatcher()");
+	return CELL_OK;
 }
 
 s32 cellSysutilUnregisterCallbackDispatcher()
@@ -566,6 +567,90 @@ s32 cellSysutil_E1EC7B6A(vm::ptr<u32> unk)
 	return CELL_OK;
 }
 
+s32 cellSysutil_E186F9AC()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
+}
+
+s32 cellSysutil_B47470E1()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
+}
+
+s32 cellSysutil_20957CD4()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
+}
+
+s32 cellSysutil_75AA7373()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
+}
+
+s32 cellSysutil_2D96313F()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
+}
+
+s32 cellSysutil_40719C8C()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
+}
+
+s32 cellSysutil_0B8D63AE()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
+}
+
+s32 cellSysutil_35F7ED00()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
+}
+
+s32 cellSysutil_40C7538E0()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
+}
+
+s32 cellSysutil_D3CDD694()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
+}
+
+s32 cellSysutil_0633EDC2()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
+}
+
+s32 cellSysutil_933B103D()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
+}
+
+s32 cellSysutil_44F288A7()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
+}
+
+s32 cellSysutil_A297525E()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
+}
+
 extern void cellSysutil_SaveData_init();
 extern void cellSysutil_GameData_init();
 extern void cellSysutil_MsgDialog_init();
@@ -648,4 +733,23 @@ DECLARE(ppu_module_manager::cellSysutil)("cellSysutil", []()
 	REG_FUNC(cellSysutil, _ZN8cxmlutil7GetFileERKN4cxml7ElementEPKcPNS0_4FileE);
 
 	REG_FNID(cellSysutil, 0xE1EC7B6A, cellSysutil_E1EC7B6A);
+	REG_FNID(cellSysutil, 0xE186F9AC, cellSysutil_E186F9AC);
+	REG_FNID(cellSysutil, 0xB47470E1, cellSysutil_B47470E1);
+	REG_FNID(cellSysutil, 0x20957CD4, cellSysutil_20957CD4);
+	REG_FNID(cellSysutil, 0x75AA7373, cellSysutil_75AA7373);
+	REG_FNID(cellSysutil, 0x2D96313F, cellSysutil_2D96313F);
+	REG_FNID(cellSysutil, 0x40719C8C, cellSysutil_40719C8C);
+	REG_FNID(cellSysutil, 0x0B8D63AE, cellSysutil_0B8D63AE);
+
+	REG_FNID(cellSysutil, 0x35F7ED00, cellSysutil_35F7ED00); //The Fight
+	REG_FNID(cellSysutil, 0x40C7538E, cellSysutil_40C7538E0); //The Fight
+	REG_FNID(cellSysutil, 0xD3CDD694, cellSysutil_D3CDD694); //The Fight
+
+	REG_FNID(cellSysutil, 0x0633EDC2, cellSysutil_0633EDC2); //Killzone 3
+
+	REG_FNID(cellSysutil, 0x933B103D, cellSysutil_933B103D); //Kung fuu rider
+
+	REG_FNID(cellSysutil, 0x44F288A7, cellSysutil_44F288A7); //Big Sky Infinity
+
+	REG_FNID(cellSysutil, 0xA297525E, cellSysutil_A297525E); //THE KING OF FIGHTERS XII
 });

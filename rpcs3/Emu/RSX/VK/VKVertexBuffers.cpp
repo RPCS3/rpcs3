@@ -285,7 +285,9 @@ namespace
 		{
 			switch (vertex_register.type)
 			{
+			case rsx::vertex_base_type::s1:
 			case rsx::vertex_base_type::f:
+			case rsx::vertex_base_type::ub:
 			{
 				size_t data_size = rsx::get_vertex_type_size_on_host(
 					vertex_register.type, vertex_register.attribute_size);

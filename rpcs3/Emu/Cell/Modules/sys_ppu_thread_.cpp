@@ -90,12 +90,14 @@ void sys_ppu_thread_once(ppu_thread& ppu, vm::ptr<atomic_be_t<u32>> once_ctrl, v
 
 s32 sys_ppu_thread_register_atexit()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sysPrxForUser);
+	return CELL_OK;
 }
 
 s32 sys_ppu_thread_unregister_atexit()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sysPrxForUser);
+	return CELL_OK;
 }
 
 void sysPrxForUser_sys_ppu_thread_init()

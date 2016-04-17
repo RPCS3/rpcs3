@@ -35,8 +35,8 @@ namespace rsx
 	{
 		//Don't throw, gather information and ignore broken/garbage commands
 		//TODO: Investigate why these commands are executed at all. (Heap corruption? Alignment padding?)
-		LOG_ERROR(RSX, "Invalid RSX method 0x%x (arg=0x%x)" HERE, _reg << 2, arg);
-		rsx->invalid_command_interrupt_raised = true;
+		//LOG_ERROR(RSX, "Invalid RSX method 0x%x (arg=0x%x)" HERE, _reg << 2, arg);
+		//rsx->invalid_command_interrupt_raised = true;
 	}
 
 	template<typename Type> struct vertex_data_type_from_element_type;

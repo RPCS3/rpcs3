@@ -132,6 +132,7 @@ static const char* get_module_name(u16 id)
 	case 0xf054: return "cellAtracMulti";
 	}
 
+	fmt::throw_exception("Unknown module (0x%04X)" HERE, id);
 	return nullptr;
 }
 

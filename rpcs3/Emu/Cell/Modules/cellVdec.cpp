@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
@@ -329,7 +329,8 @@ struct vdec_thread : ppu_thread
 							else if (std::abs(freq - 60.000) < 0.001)
 								frame.frc = CELL_VDEC_FRC_60;
 							else
-								fmt::throw_exception("Unsupported time_base.num (%d/%d, tpf=%d)" HERE, ctx->time_base.den, ctx->time_base.num, ctx->ticks_per_frame);
+								frame.frc = CELL_VDEC_FRC_60;
+								//LOG_TODO(HLE, "Unsupported time_base.num (%d/%d, tpf=%d)" HERE, ctx->time_base.den, ctx->time_base.num, ctx->ticks_per_frame);
 						}
 
 						cellVdec.trace("Got picture (pts=0x%llx[0x%llx], dts=0x%llx[0x%llx])", frame.pts, frame->pkt_pts, frame.dts, frame->pkt_dts);
@@ -585,7 +586,7 @@ s32 cellVdecGetPicture(u32 handle, vm::cptr<CellVdecPicFormat> format, vm::ptr<u
 		// TODO: color matrix
 		if (format->colorMatrixType & ~1)
 		{
-			fmt::throw_exception("Unknown colorMatrixType (%d)" HERE, format->colorMatrixType);
+			LOG_ERROR(HLE, "Unknown colorMatrixType (%d)" HERE, format->colorMatrixType);
 		}
 
 		if (alpha_plane)

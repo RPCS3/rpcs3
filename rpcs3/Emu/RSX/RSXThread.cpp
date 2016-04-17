@@ -1170,7 +1170,7 @@ namespace rsx
 	
 		if (!RSXIOMem.Read32(addr, &value))
 		{
-			fmt::throw_exception("%s(addr=0x%x): RSXIO memory not mapped" HERE, __FUNCTION__, addr);
+			LOG_ERROR(RSX, "%s(addr=0x%x): RSXIO memory not mapped" HERE, __FUNCTION__, addr);
 		}
 
 		return value;

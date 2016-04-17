@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Utilities/Config.h"
 #include "Utilities/VirtualMemory.h"
 #include "Crypto/sha1.h"
@@ -702,7 +702,11 @@ u32 ppu_thread::stack_push(u32 size, u32 align_v)
 
 		if (old_pos >= context.stack_addr && old_pos < context.stack_addr + context.stack_size && context.gpr[1] < context.stack_addr)
 		{
-			fmt::throw_exception("Stack overflow (size=0x%x, align=0x%x, SP=0x%llx, stack=*0x%x)" HERE, size, align_v, old_pos, context.stack_addr);
+			LOG_ERROR(PPU, "Stack overflow (size=0x%x, align=0x%x, SP=0x%llx, stack=*0x%x)" HERE, size, align_v, old_pos, context.stack_addr);
+			const u32 addr = static_cast<u32>(context.gpr[1]);
+			vm::ps3::_ref<nse_t<u32>>(addr + size) = old_pos;
+			std::memset(vm::base(addr), 0, size);
+			return addr;
 		}
 		else
 		{
@@ -753,7 +757,7 @@ extern void sse_cellbe_stvrx(u64 addr, __m128i a);
 
 [[noreturn]] static void ppu_trap(u64 addr)
 {
-	fmt::throw_exception("Trap! (0x%llx)", addr);
+	LOG_ERROR(PPU, "Trap! (0x%llx)", addr);
 }
 
 [[noreturn]] static void ppu_unreachable(u64 addr)

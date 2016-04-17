@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Utilities/cfmt.h"
 
@@ -170,7 +170,8 @@ vm::ptr<char> _sys_strncpy(vm::ptr<char> dest, vm::cptr<char> source, u32 len)
 
 s32 _sys_strncasecmp()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sysPrxForUser);
+	return CELL_OK;
 }
 
 s32 _sys_strrchr()
@@ -271,7 +272,8 @@ s32 _sys_vsprintf()
 
 s32 _sys_qsort()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(sysPrxForUser);
+	return CELL_OK;
 }
 
 void sysPrxForUser_sys_libc_init()
