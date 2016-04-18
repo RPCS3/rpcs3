@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
+#include "Emu/IdManager.h"
 
 #include "sys_net.h"
 
@@ -19,10 +20,14 @@
 
 logs::channel libnet("libnet", logs::level::notice);
 
-// We map host sockets to sequential IDs to return as FDs because syscalls using
-// socketselect(), etc. expect socket FDs to be under 1024.
-// We start at 1 because 0 is an invalid socket.
-std::vector<s64> g_socketMap{ 0 };
+namespace sys_net
+{
+#ifdef _WIN32
+	using socket_t = SOCKET;
+#else
+	using socket_t = int;
+#endif
+}
 
 // Auxiliary Functions
 // FIXME: Use the variant from OS instead? Why do we even have such a custom function?
@@ -76,6 +81,35 @@ int inet_pton(int af, const char *src, char *dst)
 	}
 }
 
+// Custom structure for sockets
+// We map host sockets to sequential IDs to return as descriptors because syscalls expect socket IDs to be under 1024.
+struct sys_net_socket final
+{
+	using id_base = sys_net_socket;
+
+	static constexpr u32 id_min = 0; // Minimal valid socket number is 0 (not 1).
+	static constexpr u32 id_max = 1023;
+
+	sys_net::socket_t s = -1;
+
+	explicit sys_net_socket(s32 socket) : s(socket)
+	{
+	}
+
+	~sys_net_socket()
+	{
+		if (s != -1)
+#ifdef _WIN32
+			::closesocket(s);
+#else
+			::close(s);
+#endif
+	}
+
+	sys_net_socket(sys_net_socket const &) = delete;
+	sys_net_socket& operator=(const sys_net_socket&) = delete;
+};
+
 void copy_fdset(fd_set* set, vm::ptr<sys_net::fd_set> src)
 {
 	FD_ZERO(set);
@@ -91,9 +125,9 @@ void copy_fdset(fd_set* set, vm::ptr<sys_net::fd_set> src)
 			{
 				if (src->fds_bits[i] & (1 << bit))
 				{
-					u32 sock = (i << 5) | bit;
+					sys_net::socket_t sock = idm::get<sys_net_socket>((i << 5) | bit)->s;
 					//libnet.error("setting: fd %d", sock);
-					FD_SET(g_socketMap[sock], set);
+					FD_SET(sock, set);
 				}
 			}
 		}
@@ -147,40 +181,41 @@ namespace sys_net
 	s32 get_last_error()
 	{
 		// Convert the error code for socket functions to a one for sys_net
+		s32 result;
+		const char* name{};
+
 #ifdef _WIN32
-		switch (WSAGetLastError())
-		{
-		case WSAEWOULDBLOCK:
-			return SYS_NET_EWOULDBLOCK;
-
-		default:
-			throw EXCEPTION("Unknown Win32 socket error: %d", WSAGetLastError());
-		}
+		switch (s32 code = WSAGetLastError())
+#define ERROR_CASE(error) case WSA ## error: result = SYS_NET_ ## error; name = #error; break;
 #else
-		switch (errno)
+		switch (s32 code = errno)
+#define ERROR_CASE(error) case error: result = SYS_NET_ ## error; name = #error; break;
+#endif
 		{
-		case EWOULDBLOCK:
-			return SYS_NET_EWOULDBLOCK;
-
-		default:
-			throw EXCEPTION("Unknown Unix socket error: %d", errno);
+			ERROR_CASE(EWOULDBLOCK);
+		default: throw fmt::exception("Unknown/illegal socket error: %d" HERE, code);
 		}
 
-		return errno;
-#endif
+		if (name && result != SYS_NET_EWOULDBLOCK)
+		{
+			ppu_error_code::report(result, name);
+		}
+
+		return result;
+#undef ERROR_CASE
 	}
 
 	// Functions
 	s32 accept(s32 s, vm::ptr<sockaddr> addr, vm::ptr<u32> paddrlen)
 	{
 		libnet.warning("accept(s=%d, family=*0x%x, paddrlen=*0x%x)", s, addr, paddrlen);
-		s = g_socketMap[s];
+		std::shared_ptr<sys_net_socket> sock = idm::get<sys_net_socket>(s);
 
 		s32 ret;
 
 		if (!addr)
 		{
-			ret = ::accept(s, nullptr, nullptr);
+			ret = ::accept(sock->s, nullptr, nullptr);
 
 			if (ret < 0)
 			{
@@ -193,7 +228,7 @@ namespace sys_net
 			::sockaddr _addr;
 			::socklen_t _paddrlen = 16;
 
-			ret = ::accept(s, &_addr, &_paddrlen);
+			ret = ::accept(sock->s, &_addr, &_paddrlen);
 
 			if (ret < 0)
 			{
@@ -207,21 +242,20 @@ namespace sys_net
 			memcpy(addr->sa_data, _addr.sa_data, addr->sa_len - 2);
 		}
 
-		g_socketMap.push_back(ret);
-		return g_socketMap.size() - 1;
+		return idm::make<sys_net_socket>(ret);
 	}
 
 	s32 bind(s32 s, vm::cptr<sockaddr> addr, u32 addrlen)
 	{
 		libnet.warning("bind(s=%d, family=*0x%x, addrlen=%d)", s, addr, addrlen);
-		s = g_socketMap[s];
+		std::shared_ptr<sys_net_socket> sock = idm::get<sys_net_socket>(s);
 
 		::sockaddr_in saddr;
 		memcpy(&saddr, addr.get_ptr(), sizeof(::sockaddr_in));
 		saddr.sin_family = addr->sa_family;
 		const char *ipaddr = ::inet_ntoa(saddr.sin_addr);
 		libnet.warning("binding to %s on port %d", ipaddr, ntohs(saddr.sin_port));
-		s32 ret = ::bind(s, (const ::sockaddr*)&saddr, addrlen);
+		s32 ret = ::bind(sock->s, (const ::sockaddr*)&saddr, addrlen);
 
 		if (ret != 0)
 		{
@@ -235,14 +269,14 @@ namespace sys_net
 	s32 connect(s32 s, vm::ptr<sockaddr> addr, u32 addrlen)
 	{
 		libnet.warning("connect(s=%d, family=*0x%x, addrlen=%d)", s, addr, addrlen);
-		s = g_socketMap[s];
+		std::shared_ptr<sys_net_socket> sock = idm::get<sys_net_socket>(s);
 
 		::sockaddr_in saddr;
 		memcpy(&saddr, addr.get_ptr(), sizeof(::sockaddr_in));
 		saddr.sin_family = addr->sa_family;
 
 		libnet.warning("connecting to %s on port %d", ::inet_ntoa(saddr.sin_addr), ntohs(saddr.sin_port));
-		s32 ret = ::connect(s, (const ::sockaddr*)&saddr, addrlen);
+		s32 ret = ::connect(sock->s, (const ::sockaddr*)&saddr, addrlen);
 		
 		if (ret != 0)
 		{
@@ -359,9 +393,9 @@ namespace sys_net
 	s32 listen(s32 s, s32 backlog)
 	{
 		libnet.warning("listen(s=%d, backlog=%d)", s, backlog);
-		s = g_socketMap[s];
+		std::shared_ptr<sys_net_socket> sock = idm::get<sys_net_socket>(s);
 
-		s32 ret = ::listen(s, backlog);
+		s32 ret = ::listen(sock->s, backlog);
 
 		if (ret != 0)
 		{
@@ -375,9 +409,9 @@ namespace sys_net
 	s32 recv(s32 s, vm::ptr<char> buf, u32 len, s32 flags)
 	{
 		libnet.warning("recv(s=%d, buf=*0x%x, len=%d, flags=0x%x)", s, buf, len, flags);
-		s = g_socketMap[s];
+		std::shared_ptr<sys_net_socket> sock = idm::get<sys_net_socket>(s);
 
-		s32 ret = ::recv(s, buf.get_ptr(), len, flags);
+		s32 ret = ::recv(sock->s, buf.get_ptr(), len, flags);
 		
 		if (ret < 0)
 		{
@@ -391,14 +425,14 @@ namespace sys_net
 	s32 recvfrom(s32 s, vm::ptr<char> buf, u32 len, s32 flags, vm::ptr<sockaddr> addr, vm::ptr<u32> paddrlen)
 	{
 		libnet.warning("recvfrom(s=%d, buf=*0x%x, len=%d, flags=0x%x, addr=*0x%x, paddrlen=*0x%x)", s, buf, len, flags, addr, paddrlen);
-		s = g_socketMap[s];
+		std::shared_ptr<sys_net_socket> sock = idm::get<sys_net_socket>(s);
 
 		::sockaddr _addr;
 		::socklen_t _paddrlen;
 
 		memcpy(&_addr, addr.get_ptr(), sizeof(::sockaddr));
 		_addr.sa_family = addr->sa_family;
-		s32 ret = ::recvfrom(s, buf.get_ptr(), len, flags, &_addr, &_paddrlen);
+		s32 ret = ::recvfrom(sock->s, buf.get_ptr(), len, flags, &_addr, &_paddrlen);
 		*paddrlen = _paddrlen;
 
 		if (ret < 0)
@@ -419,9 +453,9 @@ namespace sys_net
 	s32 send(s32 s, vm::cptr<char> buf, u32 len, s32 flags)
 	{
 		libnet.warning("send(s=%d, buf=*0x%x, len=%d, flags=0x%x)", s, buf, len, flags);
-		s = g_socketMap[s];
+		std::shared_ptr<sys_net_socket> sock = idm::get<sys_net_socket>(s);
 
-		s32 ret = ::send(s, buf.get_ptr(), len, flags);
+		s32 ret = ::send(sock->s, buf.get_ptr(), len, flags);
 		
 		if (ret < 0)
 		{
@@ -441,12 +475,12 @@ namespace sys_net
 	s32 sendto(s32 s, vm::cptr<char> buf, u32 len, s32 flags, vm::ptr<sockaddr> addr, u32 addrlen)
 	{
 		libnet.warning("sendto(s=%d, buf=*0x%x, len=%d, flags=0x%x, addr=*0x%x, addrlen=%d)", s, buf, len, flags, addr, addrlen);
-		s = g_socketMap[s];
+		std::shared_ptr<sys_net_socket> sock = idm::get<sys_net_socket>(s);
 
 		::sockaddr _addr;
 		memcpy(&_addr, addr.get_ptr(), sizeof(::sockaddr));
 		_addr.sa_family = addr->sa_family;
-		s32 ret = ::sendto(s, buf.get_ptr(), len, flags, &_addr, addrlen);
+		s32 ret = ::sendto(sock->s, buf.get_ptr(), len, flags, &_addr, addrlen);
 
 		if (ret < 0)
 		{
@@ -460,7 +494,7 @@ namespace sys_net
 	s32 setsockopt(s32 s, s32 level, s32 optname, vm::cptr<void> optval, u32 optlen)
 	{
 		libnet.warning("setsockopt(s=%d, level=%d, optname=%d, optval=*0x%x, optlen=%d)", s, level, optname, optval, optlen);
-		s = g_socketMap[s];
+		std::shared_ptr<sys_net_socket> sock = idm::get<sys_net_socket>(s);
 
 		if (level != SOL_SOCKET && level != IPPROTO_TCP)
 		{
@@ -477,7 +511,7 @@ namespace sys_net
 			case OP_SO_NBIO:
 			{
 				unsigned long mode = *(unsigned long*)optval.get_ptr();
-				ret = ioctlsocket(s, FIONBIO, &mode);
+				ret = ioctlsocket(sock->s, FIONBIO, &mode);
 				break;
 			}
 
@@ -492,7 +526,7 @@ namespace sys_net
 			case OP_TCP_NODELAY:
 			{
 				const char delay = *(char*)optval.get_ptr();
-				ret = ::setsockopt(s, IPPROTO_TCP, TCP_NODELAY, &delay, sizeof(delay));
+				ret = ::setsockopt(sock->s, IPPROTO_TCP, TCP_NODELAY, &delay, sizeof(delay));
 				break;
 			}
 
@@ -525,7 +559,7 @@ namespace sys_net
 				flags = mode ? (flags &~O_NONBLOCK) : (flags | O_NONBLOCK);
 
 				// Re-set the flags
-				ret = fcntl(s, F_SETFL, flags);
+				ret = fcntl(sock->s, F_SETFL, flags);
 				break;
 			}
 
@@ -540,14 +574,14 @@ namespace sys_net
 			case OP_TCP_NODELAY:
 			{
 				u32 delay = *(u32*)optval.get_ptr();
-				ret = ::setsockopt(s, IPPROTO_TCP, TCP_NODELAY, &delay, optlen);
+				ret = ::setsockopt(sock->s, IPPROTO_TCP, TCP_NODELAY, &delay, optlen);
 				break;
 			}
 
 			case OP_TCP_MAXSEG:
 			{
 				u32 maxseg = *(u32*)optval.get_ptr();
-				ret = ::setsockopt(s, IPPROTO_TCP, TCP_MAXSEG, &maxseg, optlen);
+				ret = ::setsockopt(sock->s, IPPROTO_TCP, TCP_MAXSEG, &maxseg, optlen);
 				break;
 			}
 
@@ -569,10 +603,15 @@ namespace sys_net
 	s32 shutdown(s32 s, s32 how)
 	{
 		libnet.warning("shutdown(s=%d, how=%d)", s, how);
-		s = g_socketMap[s];
+		std::shared_ptr<sys_net_socket> sock = idm::get<sys_net_socket>(s);
 
-		s32 ret = ::shutdown(s, how);
-		get_errno() = get_last_error();
+		s32 ret = ::shutdown(sock->s, how);
+
+		if (ret != 0)
+		{
+			libnet.error("shutdown(): error %d", get_errno() = get_last_error());
+			return -1;
+		}
 
 		return ret;
 	}
@@ -591,14 +630,16 @@ namespace sys_net
 		// But what's the usage of it anyways?
 		if (type == SOCK_STREAM_P2P)
 		{
+			libnet.warning("SOCK_STREAM_P2P is not properly implemented.");
 			type = SOCK_STREAM;
 		}
 		else if (type == SOCK_DGRAM_P2P)
 		{
+			libnet.warning("SOCK_DGRAM_P2P is not properly implemented.");
 			type = SOCK_DGRAM;
 		}
 
-		s32 sock = ::socket(family, type, protocol);
+		socket_t sock = ::socket(family, type, protocol);
 
 		if (sock < 0)
 		{
@@ -606,19 +647,18 @@ namespace sys_net
 			return -1;
 		}
 
-		g_socketMap.push_back(sock);
-		return g_socketMap.size() - 1;
+		return idm::make<sys_net_socket>(sock);
 	}
 
 	s32 socketclose(s32 s)
 	{
 		libnet.warning("socketclose(s=%d)", s);
-		s = g_socketMap[s];
+		std::shared_ptr<sys_net_socket> sock = idm::get<sys_net_socket>(s);
 
 #ifdef _WIN32
-		s32 ret = ::closesocket(s);
+		s32 ret = ::closesocket(sock->s);
 #else
-		s32 ret = ::close(s);
+		s32 ret = ::close(sock->s);
 #endif
 
 		if (ret != 0)
@@ -626,6 +666,9 @@ namespace sys_net
 			libnet.error("socketclose(): error %d", get_errno() = get_last_error());
 			return -1;
 		}
+
+		idm::get<sys_net_socket>(s)->s = -1;
+		idm::remove<sys_net_socket>(s);
 
 		return ret;
 	}
@@ -670,7 +713,8 @@ namespace sys_net
 		}
 #endif
 
-		s32 ret = ::select(g_socketMap[nfds], &_readfds, &_writefds, &_exceptfds, timeout ? &_timeout : nullptr);
+		// There's no good way to determine nfds and it shouldn't be too slow, so let's let it check the whole set. It also isn't used on Windows.
+		s32 ret = ::select(FD_SETSIZE, &_readfds, &_writefds, &_exceptfds, timeout ? &_timeout : nullptr);
 
 		if (ret < 0)
 		{
@@ -684,16 +728,6 @@ namespace sys_net
 	s32 sys_net_initialize_network_ex(vm::ptr<sys_net_initialize_parameter_t> param)
 	{
 		libnet.warning("sys_net_initialize_network_ex(param=*0x%x)", param);
-
-#ifdef _WIN32
-		WSADATA wsaData;
-		WORD wVersionRequested = MAKEWORD(2, 2);
-		
-		if (WSAStartup(wVersionRequested, &wsaData) != 0)
-		{
-			throw EXCEPTION("sys_net: WSAStartup unsuccessful");
-		}
-#endif
 
 		// Errno is set to 0 upon initialization
 		get_errno() = 0;
@@ -824,10 +858,6 @@ namespace sys_net
 	s32 sys_net_finalize_network()
 	{
 		libnet.warning("sys_net_finalize_network()");
-
-#ifdef _WIN32
-		WSACleanup();
-#endif
 
 		// Errno is set to SYS_NET_EBUSY after finalization
 		get_errno() = SYS_NET_EBUSY;
