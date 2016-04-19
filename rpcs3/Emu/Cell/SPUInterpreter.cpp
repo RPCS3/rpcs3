@@ -33,7 +33,10 @@ void spu_interpreter::set_interrupt_status(SPUThread& spu, spu_opcode_t op)
 
 void spu_interpreter::STOP(SPUThread& spu, spu_opcode_t op)
 {
-	spu.stop_and_signal(op.opcode & 0x3fff);
+	if (!spu.stop_and_signal(op.opcode & 0x3fff))
+	{
+		spu.pc -= 4;
+	}
 }
 
 void spu_interpreter::LNOP(SPUThread& spu, spu_opcode_t op)
@@ -59,7 +62,10 @@ void spu_interpreter::MFSPR(SPUThread& spu, spu_opcode_t op)
 
 void spu_interpreter::RDCH(SPUThread& spu, spu_opcode_t op)
 {
-	spu.gpr[op.rt] = v128::from32r(spu.get_ch_value(op.ra));
+	if (!spu.get_ch_value(op.ra, spu.gpr[op.rt]._u32[3]))
+	{
+		spu.pc -= 4;
+	}
 }
 
 void spu_interpreter::RCHCNT(SPUThread& spu, spu_opcode_t op)
@@ -276,7 +282,10 @@ void spu_interpreter::MTSPR(SPUThread& spu, spu_opcode_t op)
 
 void spu_interpreter::WRCH(SPUThread& spu, spu_opcode_t op)
 {
-	spu.set_ch_value(op.ra, spu.gpr[op.rt]._u32[3]);
+	if (!spu.set_ch_value(op.ra, spu.gpr[op.rt]._u32[3]))
+	{
+		spu.pc -= 4;
+	}
 }
 
 void spu_interpreter::BIZ(SPUThread& spu, spu_opcode_t op)

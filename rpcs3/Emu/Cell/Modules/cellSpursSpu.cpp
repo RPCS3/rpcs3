@@ -132,7 +132,7 @@ bool spursDma(SPUThread& spu, u32 cmd, u64 ea, u32 lsa, u32 size, u32 tag)
 	{
 		u32 rv;
 
-		rv = spu.get_ch_value(MFC_RdAtomicStat);
+		spu.get_ch_value(MFC_RdAtomicStat, rv);
 		auto success = rv ? true : false;
 		success = cmd == MFC_PUTLLC_CMD ? !success : success;
 		return success;
@@ -146,7 +146,7 @@ u32 spursDmaGetCompletionStatus(SPUThread& spu, u32 tagMask)
 {
 	spu.set_ch_value(MFC_WrTagMask, tagMask);
 	spu.set_ch_value(MFC_WrTagUpdate, MFC_TAG_UPDATE_IMMEDIATE);
-	return spu.get_ch_value(MFC_RdTagStat);
+	u32 rv; spu.get_ch_value(MFC_RdTagStat, rv); return rv;
 }
 
 // Wait for DMA operations to complete
@@ -154,13 +154,96 @@ u32 spursDmaWaitForCompletion(SPUThread& spu, u32 tagMask, bool waitForAll)
 {
 	spu.set_ch_value(MFC_WrTagMask, tagMask);
 	spu.set_ch_value(MFC_WrTagUpdate, waitForAll ? MFC_TAG_UPDATE_ALL : MFC_TAG_UPDATE_ANY);
-	return spu.get_ch_value(MFC_RdTagStat);
+	u32 rv; spu.get_ch_value(MFC_RdTagStat, rv); return rv;
 }
 
 // Halt the SPU
 void spursHalt(SPUThread& spu)
 {
 	spu.halt();
+}
+
+void sys_spu_thread_exit(SPUThread& spu, s32 status)
+{
+	u32 _v;
+	// Cancel any pending status update requests
+	spu.set_ch_value(MFC_WrTagUpdate, 0);
+	while (spu.get_ch_count(MFC_RdTagStat) != 1);
+	spu.get_ch_value(MFC_RdTagStat, _v);
+
+	// Wait for all pending DMA operations to complete
+	spu.set_ch_value(MFC_WrTagMask, 0xFFFFFFFF);
+	spu.set_ch_value(MFC_WrTagUpdate, MFC_TAG_UPDATE_ALL);
+	spu.get_ch_value(MFC_RdTagStat, _v);
+
+	spu.set_ch_value(SPU_WrOutMbox, status);
+	spu.stop_and_signal(0x102);
+}
+
+void sys_spu_thread_group_exit(SPUThread& spu, s32 status)
+{
+	u32 _v;
+	// Cancel any pending status update requests
+	spu.set_ch_value(MFC_WrTagUpdate, 0);
+	while (spu.get_ch_count(MFC_RdTagStat) != 1);
+	spu.get_ch_value(MFC_RdTagStat, _v);
+
+	// Wait for all pending DMA operations to complete
+	spu.set_ch_value(MFC_WrTagMask, 0xFFFFFFFF);
+	spu.set_ch_value(MFC_WrTagUpdate, MFC_TAG_UPDATE_ALL);
+	spu.get_ch_value(MFC_RdTagStat, _v);
+
+	spu.set_ch_value(SPU_WrOutMbox, status);
+	spu.stop_and_signal(0x101);
+}
+
+s32 sys_spu_thread_send_event(SPUThread& spu, u8 spup, u32 data0, u32 data1)
+{
+	if (spup > 0x3F)
+	{
+		return CELL_EINVAL;
+	}
+
+	if (spu.get_ch_count(SPU_RdInMbox))
+	{
+		return CELL_EBUSY;
+	}
+
+	spu.set_ch_value(SPU_WrOutMbox, data1);
+	spu.set_ch_value(SPU_WrOutIntrMbox, (spup << 24) | (data0 & 0x00FFFFFF));
+
+	spu.get_ch_value(SPU_RdInMbox, data0);
+	return data0;
+}
+
+s32 sys_spu_thread_switch_system_module(SPUThread& spu, u32 status)
+{
+	if (spu.get_ch_count(SPU_RdInMbox))
+	{
+		return CELL_EBUSY;
+	}
+
+	u32 result;
+
+	// Cancel any pending status update requests
+	spu.set_ch_value(MFC_WrTagUpdate, 0);
+	while (spu.get_ch_count(MFC_RdTagStat) != 1);
+	spu.get_ch_value(MFC_RdTagStat, result);
+
+	// Wait for all pending DMA operations to complete
+	spu.set_ch_value(MFC_WrTagMask, 0xFFFFFFFF);
+	spu.set_ch_value(MFC_WrTagUpdate, MFC_TAG_UPDATE_ALL);
+	spu.get_ch_value(MFC_RdTagStat, result);
+
+	do
+	{
+		spu.set_ch_value(SPU_WrOutMbox, status);
+		spu.stop_and_signal(0x120);
+		spu.get_ch_value(SPU_RdInMbox, result);
+	}
+	while (result == CELL_EBUSY);
+
+	return result;
 }
 
 //----------------------------------------------------------------------------
@@ -1643,8 +1726,9 @@ s32 spursTasketSaveTaskContext(SPUThread& spu)
 	v128 r;
 	spu.fpscr.Read(r);
 	ctxt->savedContextFpscr = r;
-	ctxt->savedSpuWriteEventMask = spu.get_ch_value(SPU_RdEventMask);
-	ctxt->savedWriteTagGroupQueryMask = spu.get_ch_value(MFC_RdTagMask);
+	u32 r32;
+	spu.get_ch_value(SPU_RdEventMask, r32); ctxt->savedSpuWriteEventMask = r32;
+	spu.get_ch_value(MFC_RdTagMask, r32); ctxt->savedWriteTagGroupQueryMask = r32;
 
 	// Store the processor context
 	const u32 contextSaveStorage = vm::cast(taskInfo->context_save_storage_and_alloc_ls_blocks & -0x80, HERE);
