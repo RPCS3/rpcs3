@@ -991,7 +991,7 @@ void spursSysServiceProcessRequests(SPUThread& spu, SpursKernelContext* ctxt)
 	bool updateWorkload = false;
 	bool terminate = false;
 
-	vm::reservation_op(vm::cast(ctxt->spurs.addr() + offsetof(CellSpurs, wklState1), HERE), 128, [&]()
+	vm::reservation_op(vm::cast(ctxt->spurs.addr() + OFFSET_32(CellSpurs, wklState1), HERE), 128, [&]()
 	{
 		auto spurs = ctxt->spurs.get_ptr_priv();
 

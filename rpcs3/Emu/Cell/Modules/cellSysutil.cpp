@@ -53,7 +53,7 @@ cfg::map_entry<s32> g_cfg_sys_language(cfg::root.sys, "Language",
 
 static const char* get_systemparam_id_name(s32 id)
 {
-	thread_local static char tls_id_name[16]; // for test
+	static thread_local char tls_id_name[16]; // for test
 
 	switch (id)
 	{
