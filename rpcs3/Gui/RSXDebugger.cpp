@@ -11,6 +11,8 @@
 #include "MemoryViewer.h"
 #include "RSXDebugger.h"
 
+#include "Utilities/GSL.h"
+
 enum GCMEnumTypes
 {
 	CELL_GCM_ENUM,

@@ -129,7 +129,7 @@ static const char* get_module_name(u16 id)
 
 static const char* get_module_id(u16 id)
 {
-	thread_local static char tls_id_name[8]; // for test
+	static thread_local char tls_id_name[8]; // for test
 
 	switch (id)
 	{

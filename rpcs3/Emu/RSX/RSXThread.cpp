@@ -9,6 +9,8 @@
 #include "Common/BufferUtils.h"
 #include "rsx_methods.h"
 
+#include "Utilities/GSL.h"
+
 #define CMD_DEBUG 0
 
 cfg::bool_entry g_cfg_rsx_write_color_buffers(cfg::root.video, "Write Color Buffers");

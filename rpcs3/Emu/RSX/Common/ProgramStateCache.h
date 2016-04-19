@@ -4,6 +4,7 @@
 #include "Emu/RSX/RSXVertexProgram.h"
 #include "Emu/Memory/vm.h"
 
+#include "Utilities/GSL.h"
 
 enum class SHADER_TYPE
 {
@@ -15,6 +16,7 @@ namespace program_hash_util
 {
 	// Based on
 	// https://github.com/AlexAltea/nucleus/blob/master/nucleus/gpu/rsx_pgraph.cpp
+	// TODO: eliminate it and implement independent hash utility
 	union qword
 	{
 		u64 dword[2];

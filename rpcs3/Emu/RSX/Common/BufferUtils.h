@@ -1,5 +1,8 @@
 #pragma once
+
 #include <vector>
+
+#include "Utilities/GSL.h"
 #include "Emu/Memory/vm.h"
 #include "../RSXThread.h"
 

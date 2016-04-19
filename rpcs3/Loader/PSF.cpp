@@ -55,7 +55,7 @@ namespace psf
 		{
 		case format::string:
 		case format::array:
-			return std::min(m_max_size, gsl::narrow<u32>(m_value_string.size() + (m_type == format::string)));
+			return std::min(m_max_size, ::narrow<u32>(m_value_string.size() + (m_type == format::string)));
 
 		case format::integer:
 			return SIZE_32(u32);
@@ -157,14 +157,14 @@ namespace psf
 		for (const auto& entry : psf)
 		{
 			def_table_t index;
-			index.key_off = gsl::narrow<u32>(key_offset);
+			index.key_off = ::narrow<u32>(key_offset);
 			index.param_fmt = entry.second.type();
 			index.param_len = entry.second.size();
 			index.param_max = entry.second.max();
-			index.data_off = gsl::narrow<u32>(data_offset);
+			index.data_off = ::narrow<u32>(data_offset);
 
 			// Update offsets:
-			key_offset += gsl::narrow<u32>(entry.first.size() + 1); // key size
+			key_offset += ::narrow<u32>(entry.first.size() + 1); // key size
 			data_offset += index.param_max;
 
 			indices.push_back(index);
@@ -177,9 +177,9 @@ namespace psf
 		header_t header;
 		header.magic = "\0PSF"_u32;
 		header.version = 0x101;
-		header.off_key_table = gsl::narrow<u32>(sizeof(header_t) + sizeof(def_table_t) * psf.size());
-		header.off_data_table = gsl::narrow<u32>(header.off_key_table + key_offset);
-		header.entries_num = gsl::narrow<u32>(psf.size());
+		header.off_key_table = ::narrow<u32>(sizeof(header_t) + sizeof(def_table_t) * psf.size());
+		header.off_data_table = ::narrow<u32>(header.off_key_table + key_offset);
+		header.entries_num = ::narrow<u32>(psf.size());
 
 		// Save header and indices
 		std::vector<char> result; result.reserve(header.off_data_table + data_offset);

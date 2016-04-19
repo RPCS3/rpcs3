@@ -261,7 +261,7 @@ void GLVertexProgram::Compile()
 	id = glCreateShader(GL_VERTEX_SHADER);
 
 	const char* str = shader.c_str();
-	const int strlen = gsl::narrow<int>(shader.length());
+	const int strlen = ::narrow<int>(shader.length());
 
 	glShaderSource(id, 1, &str, &strlen);
 	glCompileShader(id);

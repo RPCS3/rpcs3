@@ -1,6 +1,9 @@
 #pragma once
+
 #include "../RSXTexture.h"
+
 #include <vector>
+#include "Utilities/GSL.h"
 
 struct rsx_subresource_layout
 {

@@ -39,16 +39,6 @@
 #include <unordered_map>
 #include <chrono>
 
-#include "Utilities/types.h"
-
-#include <restore_new.h>
-#define GSL_THROW_ON_CONTRACT_VIOLATION
-#include <gsl.h>
-#include <define_new_memleakdetect.h>
-
-#undef Expects
-#undef Ensures
-
 using namespace std::string_literals;
 using namespace std::chrono_literals;
 
@@ -58,6 +48,7 @@ using namespace std::chrono_literals;
 #define _PRGNAME_ "RPCS3"
 #define _PRGVER_ "0.0.0.9"
 
+#include "Utilities/types.h"
 #include "Utilities/Macro.h"
 #include "Utilities/Platform.h"
 #include "Utilities/BEType.h"

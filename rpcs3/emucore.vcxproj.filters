@@ -1588,5 +1588,8 @@
     <ClInclude Include="Emu\VFS.h">
       <Filter>Emu</Filter>
     </ClInclude>
+    <ClInclude Include="..\Utilities\GSL.h">
+      <Filter>Utilities</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

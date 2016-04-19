@@ -28,6 +28,11 @@ using s16 = std::int16_t;
 using s32 = std::int32_t;
 using s64 = std::int64_t;
 
+namespace gsl
+{
+	enum class byte : std::uint8_t;
+}
+
 // Specialization with static constexpr pair<T1, T2> map[] member expected
 template<typename T1, typename T2>
 struct bijective;

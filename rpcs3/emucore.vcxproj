@@ -353,6 +353,7 @@
     <ClInclude Include="..\Utilities\BEType.h" />
     <ClInclude Include="..\Utilities\BitField.h" />
     <ClInclude Include="..\Utilities\event.h" />
+    <ClInclude Include="..\Utilities\GSL.h" />
     <ClInclude Include="..\Utilities\Platform.h" />
     <ClInclude Include="..\Utilities\Log.h" />
     <ClInclude Include="..\Utilities\File.h" />
