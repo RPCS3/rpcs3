@@ -976,4 +976,17 @@ public:
 	{
 		return atomic_op(atomic_test_and_complement<type, T2>{}, rhs);
 	}
+
+	// Minimal pointer support (TODO: must forward operator ->())
+	type operator ->() const
+	{
+		return load();
+	}
+
+	// Minimal array support
+	template<typename I = std::size_t>
+	auto operator [](const I& index) const -> decltype(std::declval<const type>()[std::declval<I>()])
+	{
+		return load()[index];
+	}
 };

@@ -1,22 +1,16 @@
 #pragma once
 
-#include <cstdint>
-#include <exception>
-#include <thread>
-#include <mutex>
-#include <condition_variable>
-
+#include "types.h"
 #include "Atomic.h"
+#include "Platform.h"
 
 //! An attempt to create effective implementation of "shared mutex", lock-free in optimistic case.
-//! All locking and unlocking may be done by single LOCK XADD or LOCK CMPXCHG instructions.
+//! All locking and unlocking may be done by a single LOCK XADD or LOCK CMPXCHG instruction.
 //! MSVC implementation of std::shared_timed_mutex seems suboptimal.
 //! std::shared_mutex is not available until C++17.
 class shared_mutex final
 {
-	using ctrl_type = u32;
-
-	enum : ctrl_type
+	enum : u32
 	{
 		SM_WRITER_LOCK = 1u << 31, // Exclusive lock flag, must be MSB
 		SM_WAITERS_BIT = 1u << 30, // Flag set if m_wq_size or m_rq_size is non-zero
@@ -26,186 +20,79 @@ class shared_mutex final
 		SM_READER_MAX  = 1u << 24, // Max reader count
 	};
 
-	atomic_t<ctrl_type> m_ctrl{}; // Control atomic variable: reader count | SM_* flags
+	atomic_t<u32> m_ctrl{}; // Control variable: reader count | SM_* flags
 
-	std::mutex m_mutex;
+	struct internal;
 
-	std::size_t m_rq_size{}; // Reader queue size (threads waiting on m_rcv)
-	std::size_t m_wq_size{}; // Writer queue size (threads waiting on m_wcv and m_ocv)
-	
-	std::condition_variable m_rcv; // Reader queue
-	std::condition_variable m_wcv; // Writer queue
-	std::condition_variable m_ocv; // For current exclusive owner
+	atomic_t<internal*> m_data{}; // Internal data
 
-	void lock_shared_hard()
-	{
-		std::unique_lock<std::mutex> lock(m_mutex);
+	void lock_shared_hard();
+	void unlock_shared_notify();
 
-		// Validate
-		if ((m_ctrl & SM_INVALID_BIT) != 0) throw std::runtime_error("shared_mutex::lock_shared(): Invalid bit");
-		if ((m_ctrl & SM_READER_MASK) == 0) throw std::runtime_error("shared_mutex::lock_shared(): No readers");
-
-		// Notify non-zero reader queue size
-		m_ctrl |= SM_WAITERS_BIT, m_rq_size++;
-
-		// Fix excess reader count
-		if ((--m_ctrl & SM_READER_MASK) == 0 && m_wq_size)
-		{
-			// Notify exclusive owner
-			m_ocv.notify_one();
-		}
-
-		// Obtain the reader lock
-		while (true)
-		{
-			const auto ctrl = m_ctrl.load();
-
-			// Check writers and reader limit
-			if (m_wq_size || (ctrl & ~SM_WAITERS_BIT) >= SM_READER_MAX)
-			{
-				m_rcv.wait(lock);
-				continue;
-			}
-
-			if (m_ctrl.compare_and_swap_test(ctrl, ctrl + 1))
-			{
-				break;
-			}
-		}
-
-		if (!--m_rq_size && !m_wq_size)
-		{
-			m_ctrl &= ~SM_WAITERS_BIT;
-		}
-	}
-
-	void unlock_shared_notify()
-	{
-		// Mutex is locked for reliable notification because m_ctrl has been changed outside
-		std::lock_guard<std::mutex> lock(m_mutex);
-
-		if ((m_ctrl & SM_READER_MASK) == 0 && m_wq_size)
-		{
-			// Notify exclusive owner
-			m_ocv.notify_one();
-		}
-		else if (m_rq_size)
-		{
-			// Notify other readers
-			m_rcv.notify_one();
-		}
-	}
-
-	void lock_hard()
-	{
-		std::unique_lock<std::mutex> lock(m_mutex);
-
-		// Validate
-		if ((m_ctrl & SM_INVALID_BIT) != 0) throw std::runtime_error("shared_mutex::lock(): Invalid bit");
-
-		// Notify non-zero writer queue size
-		m_ctrl |= SM_WAITERS_BIT, m_wq_size++;
-
-		// Obtain the writer lock
-		while (true)
-		{
-			const auto ctrl = m_ctrl.load();
-
-			if (ctrl & SM_WRITER_LOCK)
-			{
-				m_wcv.wait(lock);
-				continue;
-			}
-
-			if (m_ctrl.compare_and_swap_test(ctrl, ctrl | SM_WRITER_LOCK))
-			{
-				break;
-			}
-		}
-
-		// Wait for remaining readers
-		while ((m_ctrl & SM_READER_MASK) != 0)
-		{
-			m_ocv.wait(lock);
-		}
-
-		if (!--m_wq_size && !m_rq_size)
-		{
-			m_ctrl &= ~SM_WAITERS_BIT;
-		}
-	}
-
-	void unlock_notify()
-	{
-		// Mutex is locked for reliable notification because m_ctrl has been changed outside
-		std::lock_guard<std::mutex> lock(m_mutex);
-
-		if (m_wq_size)
-		{
-			// Notify next exclusive owner
-			m_wcv.notify_one();
-		}
-		else if (m_rq_size)
-		{
-			// Notify all readers
-			m_rcv.notify_all();
-		}
-	}
+	void lock_hard();
+	void unlock_notify();
 
 public:
-	shared_mutex() = default;
+	constexpr shared_mutex() = default;
 
-	// Lock in shared mode
+	~shared_mutex();
+
+	// Initialize internal data
+	void initialize_once();
+
+	bool try_lock_shared()
+	{
+		auto ctrl = m_ctrl.load();
+
+		if (UNLIKELY(ctrl >= SM_READER_MAX))
+		{
+			ctrl = 0;
+		}
+
+		// Weak attempt
+		return LIKELY(m_ctrl.compare_and_swap_test(ctrl, ctrl + 1));
+	}
+
 	void lock_shared()
 	{
-		if (m_ctrl++ >= SM_READER_MAX)
+		// Optimization: unconditional increment, compensated later
+		if (UNLIKELY(m_ctrl++ >= SM_READER_MAX))
 		{
 			lock_shared_hard();
 		}
 	}
 
-	// Try to lock in shared mode
-	bool try_lock_shared()
-	{
-		auto ctrl = m_ctrl.load();
-
-		return ctrl < SM_READER_MAX && m_ctrl.compare_and_swap_test(ctrl, ctrl + 1);
-	}
-
-	// Unlock in shared mode
 	void unlock_shared()
 	{
-		if (m_ctrl-- >= SM_READER_MAX)
+		if (UNLIKELY(m_ctrl-- >= SM_READER_MAX))
 		{
 			unlock_shared_notify();
 		}
 	}
 
-	// Try to lock exclusively
 	bool try_lock()
 	{
-		return m_ctrl.compare_and_swap_test(0, SM_WRITER_LOCK);
+		return LIKELY(m_ctrl.compare_and_swap_test(0, SM_WRITER_LOCK));
 	}
 
-	// Lock exclusively
 	void lock()
 	{
-		if (m_ctrl.compare_and_swap_test(0, SM_WRITER_LOCK)) return;
-
-		lock_hard();		
+		if (UNLIKELY(!try_lock()))
+		{
+			lock_hard();
+		}
 	}
 
-	// Unlock exclusively
 	void unlock()
 	{
-		if (m_ctrl.fetch_sub(SM_WRITER_LOCK) != SM_WRITER_LOCK)
+		if (UNLIKELY(m_ctrl.fetch_sub(SM_WRITER_LOCK) != SM_WRITER_LOCK))
 		{
 			unlock_notify();
 		}
 	}
 };
 
-//! Simplified shared (reader) lock implementation, similar to std::lock_guard.
+//! Simplified shared (reader) lock implementation.
 //! std::shared_lock may be used instead if necessary.
 class reader_lock final
 {
@@ -223,5 +110,26 @@ public:
 	~reader_lock()
 	{
 		m_mutex.unlock_shared();
+	}
+};
+
+//! Simplified exclusive (writer) lock implementation.
+//! std::lock_guard may or std::unique_lock be used instead if necessary.
+class writer_lock final
+{
+	shared_mutex& m_mutex;
+
+public:
+	writer_lock(const writer_lock&) = delete;
+
+	writer_lock(shared_mutex& mutex)
+		: m_mutex(mutex)
+	{
+		m_mutex.lock();
+	}
+
+	~writer_lock()
+	{
+		m_mutex.unlock();
 	}
 };

@@ -263,7 +263,7 @@ s32 cellFsReadWithOffset(u32 fd, u64 offset, vm::ptr<void> buf, u64 buffer_size,
 
 	const auto read = file->file.read(buf.get_ptr(), buffer_size);
 
-	ASSERT(file->file.seek(old_pos) == old_pos);
+	file->file.seek(old_pos);
 
 	if (nread)
 	{
@@ -292,7 +292,7 @@ s32 cellFsWriteWithOffset(u32 fd, u64 offset, vm::cptr<void> buf, u64 data_size,
 
 	const auto written = file->file.write(buf.get_ptr(), data_size);
 
-	ASSERT(file->file.seek(old_pos) == old_pos);
+	file->file.seek(old_pos);
 
 	if (nwrite)
 	{
@@ -502,7 +502,7 @@ s32 cellFsStReadStart(u32 fd, u64 offset, u64 size)
 				auto old = file->file.pos();
 				file->file.seek(offset + file->st_total_read);
 				auto res = file->file.read(vm::base(position), file->st_block_size);
-				ASSERT(file->file.seek(old) == old);
+				file->file.seek(old);
 
 				// notify
 				file->st_total_read += res;
@@ -796,11 +796,11 @@ s32 sdata_unpack(const std::string& packed_file, const std::string& unpacked_fil
 
 		if (flags & 0x20)
 		{
-			ASSERT(packed_stream.seek(0x100) == 0x100);
+			packed_stream.seek(0x100);
 		}
 		else
 		{
-			ASSERT(packed_stream.seek(startOffset) == startOffset);
+			packed_stream.seek(startOffset);
 		}
 
 		for (u32 i = 0; i < blockCount; i++)
@@ -887,7 +887,7 @@ void fsAio(vm::ptr<CellFsAio> aio, bool write, s32 xid, fs_aio_cb_t func)
 			? file->file.write(aio->buf.get_ptr(), aio->size)
 			: file->file.read(aio->buf.get_ptr(), aio->size);
 
-		ASSERT(file->file.seek(old_pos) == old_pos);
+		file->file.seek(old_pos);
 	}
 
 	// should be executed directly by FS AIO thread

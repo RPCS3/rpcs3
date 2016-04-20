@@ -2,7 +2,6 @@
 
 #include "VFS.h"
 #include "DbgCommand.h"
-#include "Loader/PSF.h"
 
 enum class frame_type;
 
@@ -73,7 +72,6 @@ class Emulator final
 	std::string m_elf_path;
 	std::string m_title_id;
 	std::string m_title;
-	psf::registry m_psf;
 
 public:
 	Emulator();
@@ -123,11 +121,6 @@ public:
 	const std::string& GetTitle() const
 	{
 		return m_title;
-	}
-
-	const psf::registry& GetPSF() const
-	{
-		return m_psf;
 	}
 
 	u64 GetPauseTime()

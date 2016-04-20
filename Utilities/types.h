@@ -79,11 +79,8 @@ struct atomic_test_and_complement;
 template<typename T>
 class atomic_t;
 
-namespace fmt
-{
-	template<typename T, typename = void>
-	struct unveil;
-}
+template<typename T, typename = void>
+struct unveil;
 
 // TODO: replace with std::void_t when available
 namespace void_details

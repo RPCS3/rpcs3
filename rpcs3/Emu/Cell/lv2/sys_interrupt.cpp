@@ -14,15 +14,14 @@ void lv2_int_serv_t::join(PPUThread& ppu, lv2_lock_t lv2_lock)
 {
 	// Use is_joining to stop interrupt thread and signal
 	thread->is_joining = true;
-
-	thread->cv.notify_one();
+	thread->notify();
 
 	// Start joining
 	while (!(thread->state & cpu_state::exit))
 	{
 		CHECK_EMU_STATUS;
 
-		ppu.cv.wait_for(lv2_lock, std::chrono::milliseconds(1));
+		get_current_thread_cv().wait_for(lv2_lock, std::chrono::milliseconds(1));
 	}
 
 	// Cleanup
@@ -122,14 +121,14 @@ s32 _sys_interrupt_thread_establish(vm::ptr<u32> ih, u32 intrtag, u32 intrthread
 				continue;
 			}
 
-			ppu.cv.wait(lv2_lock);
+			get_current_thread_cv().wait(lv2_lock);
 		}
 
 		ppu.state += cpu_state::exit;
 	};
 
 	it->state -= cpu_state::stop;
-	it->safe_notify();
+	it->lock_notify();
 
 	*ih = handler->id;
 

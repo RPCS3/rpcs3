@@ -1,5 +1,8 @@
 #pragma once
 
+#include "types.h"
+#include "Atomic.h"
+
 class semaphore_t
 {
 	// semaphore mutex

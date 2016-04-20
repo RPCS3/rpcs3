@@ -437,20 +437,6 @@ namespace vm
 
 	// Null pointer convertible to any vm::ptr* type
 	static null_t null;
-
-	// Call wait_op() for specified vm pointer
-	template<typename T, typename AT, typename F, typename... Args>
-	static inline auto wait_op(named_thread& thread, const _ptr_base<T, AT>& ptr, F pred, Args&&... args) -> decltype(static_cast<void>(pred(args...)))
-	{
-		return wait_op(thread, ptr.addr(), SIZE_32(T), std::move(pred), std::forward<Args>(args)...);
-	}
-
-	// Call notify_at() for specified vm pointer
-	template<typename T, typename AT>
-	inline void notify_at(const vm::_ptr_base<T, AT>& ptr)
-	{
-		return notify_at(ptr.addr(), SIZE_32(T));
-	}
 }
 
 template<typename T1, typename AT1, typename T2, typename AT2>
@@ -496,17 +482,12 @@ struct to_se<vm::_ptr_base<T, AT>, Se>
 	using type = vm::_ptr_base<T, typename to_se<AT, Se>::type>;
 };
 
-namespace fmt
+// Format pointer
+template<typename T, typename AT>
+struct unveil<vm::_ptr_base<T, AT>, void>
 {
-	// Format pointer
-	template<typename T, typename AT>
-	struct unveil<vm::_ptr_base<T, AT>, void>
+	static inline auto get(const vm::_ptr_base<T, AT>& arg)
 	{
-		using result_type = typename unveil<AT>::result_type;
-
-		static inline result_type get_value(const vm::_ptr_base<T, AT>& arg)
-		{
-			return unveil<AT>::get_value(arg.addr());
-		}
-	};
-}
+		return unveil<AT>::get(arg.addr());
+	}
+};

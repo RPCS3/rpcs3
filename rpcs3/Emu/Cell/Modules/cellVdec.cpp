@@ -541,7 +541,7 @@ void vdecOpen(u32 vdec_id) // TODO: call from the constructor
 
 	vdec.vdecCb->cpu_init();
 	vdec.vdecCb->state -= cpu_state::stop;
-	vdec.vdecCb->safe_notify();
+	vdec.vdecCb->lock_notify();
 }
 
 s32 cellVdecQueryAttr(vm::cptr<CellVdecType> type, vm::ptr<CellVdecAttr> attr)

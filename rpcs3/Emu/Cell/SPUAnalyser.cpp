@@ -58,7 +58,7 @@ std::shared_ptr<spu_function_t> SPUDatabase::analyse(const be_t<u32>* ls, u32 en
 		}
 	}
 
-	std::lock_guard<shared_mutex> lock(m_mutex);
+	writer_lock lock(m_mutex);
 
 	// Double-check
 	if (auto func = find(ls + entry / 4, key, max_limit - entry))

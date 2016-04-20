@@ -18,6 +18,7 @@
       <SDLCheck>false</SDLCheck>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <AdditionalOptions>/Zc:throwingNew</AdditionalOptions>
     </ClCompile>
     <Link>
       <AdditionalDependencies>ws2_32.lib;avcodec.lib;avformat.lib;avutil.lib;swresample.lib;swscale.lib</AdditionalDependencies>

@@ -161,9 +161,6 @@ namespace fs
 		// Open memory for read
 		explicit file(const void* ptr, std::size_t size);
 
-		// Open vector
-		explicit file(std::vector<char>& vec);
-
 		// Check whether the handle is valid (opened file)
 		explicit operator bool() const
 		{
@@ -214,7 +211,7 @@ namespace fs
 			return m_file->write(buffer, count);
 		}
 
-		// Change current position, returns previous position
+		// Change current position, returns resulting position
 		u64 seek(s64 offset, seek_mode whence = seek_set) const
 		{
 			if (!m_file) xnull();

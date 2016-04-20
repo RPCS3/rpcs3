@@ -36,10 +36,10 @@
 #ifdef _MSC_VER
 #include "Emu/RSX/VK/VKGSRender.h"
 #include "Emu/RSX/D3D12/D3D12GSRender.h"
-#include "Emu/Audio/XAudio2/XAudio2Thread.h"
 #endif
 
 #ifdef _WIN32
+#include "Emu/Audio/XAudio2/XAudio2Thread.h"
 #include <wx/msw/wrapwin.h>
 #endif
 
@@ -105,7 +105,7 @@ cfg::map_entry<std::function<std::shared_ptr<AudioThread>()>> g_cfg_audio_render
 {
 	{ "Null", PURE_EXPR(std::make_shared<NullAudioThread>()) },
 	{ "OpenAL", PURE_EXPR(std::make_shared<OpenALThread>()) },
-#ifdef _MSC_VER
+#ifdef _WIN32
 	{ "XAudio2", PURE_EXPR(std::make_shared<XAudio2Thread>()) },
 #endif
 });

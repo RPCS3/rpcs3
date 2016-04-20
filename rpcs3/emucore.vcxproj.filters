@@ -845,6 +845,12 @@
     <ClCompile Include="Emu\VFS.cpp">
       <Filter>Emu</Filter>
     </ClCompile>
+    <ClCompile Include="..\Utilities\SharedMutex.cpp">
+      <Filter>Utilities</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Memory\wait_engine.cpp">
+      <Filter>Emu\Memory</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -1590,6 +1596,15 @@
     </ClInclude>
     <ClInclude Include="..\Utilities\GSL.h">
       <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utilities\AtomicPtr.h">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Memory\wait_engine.h">
+      <Filter>Emu\Memory</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Cell\lv2\IPC.h">
+      <Filter>Emu\Cell\lv2</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

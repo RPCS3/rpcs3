@@ -910,20 +910,15 @@ template<typename T> using atomic_be_t = atomic_t<be_t<T>>;
 template<typename T> using atomic_le_t = atomic_t<le_t<T>>;
 #endif
 
-namespace fmt
+// Formatting for BE/LE data
+template<typename T, bool Se>
+struct unveil<se_t<T, Se>, void>
 {
-	// Formatting for BE/LE data
-	template<typename T, bool Se>
-	struct unveil<se_t<T, Se>, void>
+	static inline auto get(const se_t<T, Se>& arg)
 	{
-		using result_type = typename unveil<T>::result_type;
-
-		static inline result_type get_value(const se_t<T, Se>& arg)
-		{
-			return unveil<T>::get_value(arg);
-		}
-	};
-}
+		return unveil<T>::get(arg);
+	}
+};
 
 #undef IS_BINARY_COMPARABLE
 #undef IS_INTEGER

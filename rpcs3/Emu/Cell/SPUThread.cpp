@@ -16,6 +16,8 @@
 #include "Emu/Cell/SPUInterpreter.h"
 #include "Emu/Cell/SPURecompiler.h"
 
+#include "Emu/Memory/wait_engine.h"
+
 #include <cfenv>
 
 extern u64 get_timebased_time();
@@ -52,8 +54,7 @@ void spu_int_ctrl_t::set(u64 ints)
 		if (tag && tag->handler)
 		{
 			tag->handler->signal++;
-
-			tag->handler->thread->cv.notify_one();
+			tag->handler->thread->notify();
 		}
 	}
 }
@@ -167,18 +168,25 @@ void SPUThread::cpu_task()
 	}
 }
 
-SPUThread::SPUThread(const std::string & name, u32 index)
+SPUThread::~SPUThread()
+{
+	// Deallocate Local Storage
+	vm::dealloc_verbose_nothrow(offset);
+}
+
+SPUThread::SPUThread(const std::string& name)
+	: cpu_thread(cpu_type::spu, name)
+	, index(0)
+	, offset(0)
+{
+}
+
+SPUThread::SPUThread(const std::string& name, u32 index)
 	: cpu_thread(cpu_type::spu, name)
 	, index(index)
 	, offset(vm::alloc(0x40000, vm::main))
 {
 	Ensures(offset);
-}
-
-SPUThread::~SPUThread()
-{
-	// Deallocate Local Storage
-	vm::dealloc_verbose_nothrow(offset);
 }
 
 void SPUThread::push_snr(u32 number, u32 value)
@@ -430,7 +438,7 @@ void SPUThread::process_mfc_cmd(u32 cmd)
 u32 SPUThread::get_events(bool waiting)
 {
 	// check reservation status and set SPU_EVENT_LR if lost
-	if (last_raddr != 0 && !vm::reservation_test(get_thread_ctrl()))
+	if (last_raddr != 0 && !vm::reservation_test(operator->()))
 	{
 		ch_event_stat |= SPU_EVENT_LR;
 
@@ -473,11 +481,11 @@ void SPUThread::set_events(u32 mask)
 	// notify if some events were set
 	if (~old_stat & mask && old_stat & SPU_EVENT_WAITING)
 	{
-		std::lock_guard<std::mutex> lock(mutex);
+		std::lock_guard<std::mutex> lock(get_current_thread_mutex());
 
 		if (ch_event_stat & SPU_EVENT_WAITING)
 		{
-			cv.notify_one();
+			notify();
 		}
 	}
 }
@@ -530,7 +538,7 @@ bool SPUThread::get_ch_value(u32 ch, u32& out)
 
 	auto read_channel = [&](spu_channel_t& channel)
 	{
-		std::unique_lock<std::mutex> lock(mutex, std::defer_lock);
+		std::unique_lock<std::mutex> lock(get_current_thread_mutex(), std::defer_lock);
 
 		while (true)
 		{
@@ -552,7 +560,7 @@ bool SPUThread::get_ch_value(u32 ch, u32& out)
 				continue;
 			}
 
-			cv.wait(lock);
+			get_current_thread_cv().wait(lock);
 		}
 	};
 
@@ -563,7 +571,7 @@ bool SPUThread::get_ch_value(u32 ch, u32& out)
 	//	break;
 	case SPU_RdInMbox:
 	{
-		std::unique_lock<std::mutex> lock(mutex, std::defer_lock);
+		std::unique_lock<std::mutex> lock(get_current_thread_mutex(), std::defer_lock);
 
 		while (true)
 		{
@@ -590,7 +598,7 @@ bool SPUThread::get_ch_value(u32 ch, u32& out)
 				continue;
 			}
 
-			cv.wait(lock);
+			get_current_thread_cv().wait(lock);
 		}
 	}
 
@@ -639,7 +647,7 @@ bool SPUThread::get_ch_value(u32 ch, u32& out)
 
 	case SPU_RdEventStat:
 	{
-		std::unique_lock<std::mutex> lock(mutex, std::defer_lock);
+		std::unique_lock<std::mutex> lock(get_current_thread_mutex(), std::defer_lock);
 
 		// start waiting or return immediately
 		if (u32 res = get_events(true))
@@ -651,7 +659,7 @@ bool SPUThread::get_ch_value(u32 ch, u32& out)
 		if (ch_event_mask & SPU_EVENT_LR)
 		{
 			// register waiter if polling reservation status is required
-			vm::wait_op(*this, last_raddr, 128, WRAP_EXPR(get_events(true) || state & cpu_state::stop));
+			vm::wait_op(last_raddr, 128, WRAP_EXPR(get_events(true) || state & cpu_state::stop));
 		}
 		else
 		{
@@ -662,7 +670,7 @@ bool SPUThread::get_ch_value(u32 ch, u32& out)
 			{
 				CHECK_EMU_STATUS;
 
-				cv.wait(lock);
+				get_current_thread_cv().wait(lock);
 			}
 		}
 
@@ -702,7 +710,7 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 	{
 		if (offset >= RAW_SPU_BASE_ADDR)
 		{
-			std::unique_lock<std::mutex> lock(mutex, std::defer_lock);
+			std::unique_lock<std::mutex> lock(get_current_thread_mutex(), std::defer_lock);
 
 			while (!ch_out_intr_mbox.try_push(value))
 			{
@@ -719,7 +727,7 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 					continue;
 				}
 
-				cv.wait(lock);
+				get_current_thread_cv().wait(lock);
 			}
 
 			int_ctrl[2].set(SPU_INT2_STAT_MAILBOX_INT);
@@ -909,7 +917,7 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 
 	case SPU_WrOutMbox:
 	{
-		std::unique_lock<std::mutex> lock(mutex, std::defer_lock);
+		std::unique_lock<std::mutex> lock(get_current_thread_mutex(), std::defer_lock);
 
 		while (!ch_out_mbox.try_push(value))
 		{
@@ -926,7 +934,7 @@ bool SPUThread::set_ch_value(u32 ch, u32 value)
 				continue;
 			}
 
-			cv.wait(lock);
+			get_current_thread_cv().wait(lock);
 		}
 
 		return true;
@@ -1226,7 +1234,7 @@ bool SPUThread::stop_and_signal(u32 code)
 					return false;
 				}
 
-				cv.wait(lv2_lock);
+				get_current_thread_cv().wait(lv2_lock);
 			}
 
 			// event data must be set by push()
@@ -1251,7 +1259,7 @@ bool SPUThread::stop_and_signal(u32 code)
 			if (thread && thread.get() != this)
 			{
 				thread->state -= cpu_state::suspend;
-				thread->safe_notify();
+				thread->lock_notify();
 			}
 		}
 
@@ -1290,7 +1298,7 @@ bool SPUThread::stop_and_signal(u32 code)
 			if (thread && thread.get() != this)
 			{
 				thread->state += cpu_state::stop;
-				thread->safe_notify();
+				thread->lock_notify();
 			}
 		}
 
@@ -1392,4 +1400,30 @@ void SPUThread::fast_call(u32 ls_addr)
 	gpr[0]._u32[3] = old_lr;
 	gpr[1]._u32[3] = old_stack;
 	custom_task = std::move(old_task);
+}
+
+void SPUThread::RegisterHleFunction(u32 addr, std::function<bool(SPUThread&SPU)> function)
+{
+	m_addr_to_hle_function_map[addr] = function;
+	_ref<u32>(addr) = 0x00000003; // STOP 3
+}
+
+void SPUThread::UnregisterHleFunction(u32 addr)
+{
+	m_addr_to_hle_function_map.erase(addr);
+}
+
+void SPUThread::UnregisterHleFunctions(u32 start_addr, u32 end_addr)
+{
+	for (auto iter = m_addr_to_hle_function_map.begin(); iter != m_addr_to_hle_function_map.end();)
+	{
+		if (iter->first >= start_addr && iter->first <= end_addr)
+		{
+			m_addr_to_hle_function_map.erase(iter++);
+		}
+		else
+		{
+			iter++;
+		}
+	}
 }

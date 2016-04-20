@@ -75,6 +75,9 @@
     <ClCompile Include="..\Utilities\Config.cpp" />
     <ClCompile Include="..\Utilities\rXml.cpp" />
     <ClCompile Include="..\Utilities\Semaphore.cpp" />
+    <ClCompile Include="..\Utilities\SharedMutex.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="..\Utilities\StrFmt.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
@@ -224,6 +227,7 @@
     <ClCompile Include="Emu\Cell\SPUASMJITRecompiler.cpp" />
     <ClCompile Include="Emu\Cell\SPUDisAsm.cpp" />
     <ClCompile Include="Emu\Cell\SPUInterpreter.cpp" />
+    <ClCompile Include="Emu\Memory\wait_engine.cpp" />
     <ClCompile Include="Emu\RSX\CgBinaryFragmentProgram.cpp" />
     <ClCompile Include="Emu\RSX\CgBinaryVertexProgram.cpp" />
     <ClCompile Include="Emu\RSX\Common\BufferUtils.cpp" />
@@ -349,6 +353,7 @@
   <ItemGroup>
     <ClInclude Include="..\3rdparty\stblib\stb_image.h" />
     <ClInclude Include="..\Utilities\Atomic.h" />
+    <ClInclude Include="..\Utilities\AtomicPtr.h" />
     <ClInclude Include="..\Utilities\AutoPause.h" />
     <ClInclude Include="..\Utilities\BEType.h" />
     <ClInclude Include="..\Utilities\BitField.h" />
@@ -449,6 +454,7 @@
     <ClInclude Include="Emu\Audio\Null\NullAudioThread.h" />
     <ClInclude Include="Emu\Cell\Common.h" />
     <ClInclude Include="Emu\Cell\ErrorCodes.h" />
+    <ClInclude Include="Emu\Cell\lv2\IPC.h" />
     <ClInclude Include="Emu\Cell\lv2\sys_cond.h" />
     <ClInclude Include="Emu\Cell\lv2\sys_dbg.h" />
     <ClInclude Include="Emu\Cell\lv2\sys_event.h" />
@@ -555,6 +561,7 @@
     <ClInclude Include="Emu\CPU\CPUDisAsm.h" />
     <ClInclude Include="Emu\CPU\CPUThread.h" />
     <ClInclude Include="Emu\DbgCommand.h" />
+    <ClInclude Include="Emu\Memory\wait_engine.h" />
     <ClInclude Include="Emu\VFS.h" />
     <ClInclude Include="Emu\GameInfo.h" />
     <ClInclude Include="Emu\IdManager.h" />

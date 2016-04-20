@@ -13,25 +13,28 @@
 #include <x86intrin.h>
 #endif
 
+#ifdef _MSC_VER
+#define ASSUME(cond) __assume(cond)
+#define LIKELY(cond) (cond)
+#define UNLIKELY(cond) (cond)
+#else
+#define ASSUME(cond) do { if (!(cond)) __builtin_unreachable(); } while (0)
+#define LIKELY(cond) __builtin_expect(!!(cond), 1)
+#define UNLIKELY(cond) __builtin_expect(!!(cond), 0)
+#endif
+
 // Some platforms don't support thread_local well yet.
 #ifndef _MSC_VER
 #define thread_local __thread
-#define __assume(cond) do { if (!(cond)) __builtin_unreachable(); } while (0)
 #endif
 
-#if defined(_MSC_VER)
-#define safe_buffers __declspec(safebuffers)
-#else
-#define safe_buffers
-#endif
-
-#if defined(_MSC_VER)
+#ifdef _MSC_VER
 #define never_inline __declspec(noinline)
 #else
 #define never_inline __attribute__((noinline))
 #endif
 
-#if defined(_MSC_VER)
+#ifdef _MSC_VER
 #define force_inline __forceinline
 #else
 #define force_inline __attribute__((always_inline)) inline

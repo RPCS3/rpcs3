@@ -1,6 +1,10 @@
 #include "StrFmt.h"
 #include "BEType.h"
 
+#include <cassert>
+#include <array>
+#include <memory>
+
 std::string v128::to_hex() const
 {
 	return fmt::format("%016llx%016llx", _u64[1], _u64[0]);
@@ -72,6 +76,59 @@ std::string fmt::to_sdec(s64 svalue)
 	}
 
 	return std::string(&res[first], sizeof(res) - first);
+}
+
+std::string fmt::_vformat(const char* fmt, va_list _args) noexcept
+{
+	// Fixed stack buffer for the first attempt
+	std::array<char, 4096> fixed_buf;
+
+	// Possibly dynamically allocated buffer for the second attempt
+	std::unique_ptr<char[]> buf;
+
+	// Pointer to the current buffer
+	char* buf_addr = fixed_buf.data();
+
+	for (std::size_t buf_size = fixed_buf.size();;)
+	{
+		va_list args;
+		va_copy(args, _args);
+
+#ifndef _MSC_VER
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-security"
+#endif
+		const std::size_t len = std::vsnprintf(buf_addr, buf_size, fmt, args);
+#ifndef _MSC_VER
+#pragma GCC diagnostic pop
+#endif
+		va_end(args);
+
+		assert(len <= INT_MAX);
+
+		if (len < buf_size)
+		{
+			return{ buf_addr, len };
+		}
+
+		buf.reset(buf_addr = new char[buf_size = len + 1]);
+	}
+}
+
+std::string fmt::_format(const char* fmt...) noexcept
+{
+	va_list args;
+	va_start(args, fmt);
+	auto result = fmt::_vformat(fmt, args);
+	va_end(args);
+
+	return result;
+}
+
+fmt::exception_base::exception_base(const char* fmt...)
+	: std::runtime_error((va_start(m_args, fmt), _vformat(fmt, m_args)))
+{
+	va_end(m_args);
 }
 
 std::string fmt::replace_first(const std::string& src, const std::string& from, const std::string& to)

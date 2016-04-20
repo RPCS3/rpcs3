@@ -1,5 +1,5 @@
-#include "stdafx.h"
-#ifdef _MSC_VER
+#ifdef _WIN32
+#include "Utilities/Log.h"
 #include "Utilities/Config.h"
 #include "Emu/System.h"
 
@@ -143,4 +143,5 @@ void XAudio2Thread::AddData(const void* src, int size)
 		Emu.Pause();
 	}
 }
+
 #endif

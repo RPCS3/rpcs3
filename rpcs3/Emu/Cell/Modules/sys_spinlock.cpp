@@ -4,6 +4,8 @@
 
 #include "sysPrxForUser.h"
 
+#include "Emu/Memory/wait_engine.h"
+
 extern _log::channel sysPrxForUser;
 
 void sys_spinlock_initialize(vm::ptr<atomic_be_t<u32>> lock)
@@ -13,12 +15,12 @@ void sys_spinlock_initialize(vm::ptr<atomic_be_t<u32>> lock)
 	lock->exchange(0);
 }
 
-void sys_spinlock_lock(PPUThread& ppu, vm::ptr<atomic_be_t<u32>> lock)
+void sys_spinlock_lock(vm::ptr<atomic_be_t<u32>> lock)
 {
 	sysPrxForUser.trace("sys_spinlock_lock(lock=*0x%x)", lock);
 
 	// prx: exchange with 0xabadcafe, repeat until exchanged with 0
-	vm::wait_op(ppu, lock.addr(), 4, WRAP_EXPR(!lock->exchange(0xabadcafe)));
+	vm::wait_op(lock.addr(), 4, WRAP_EXPR(!lock->exchange(0xabadcafe)));
 }
 
 s32 sys_spinlock_trylock(vm::ptr<atomic_be_t<u32>> lock)

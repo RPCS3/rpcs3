@@ -762,7 +762,7 @@ struct psv_event_flag_t
 			static_cast<ARMv7Thread&>(*thread).GPR[0] = SCE_KERNEL_ERROR_WAIT_DELETE;
 			static_cast<ARMv7Thread&>(*thread).GPR[1] = pattern;
 			thread->state += cpu_state::signal;
-			thread->cv.notify_one();
+			thread->notify();
 		}
 	}
 };

@@ -24,6 +24,24 @@ void RawSPUThread::cpu_task()
 	npc = pc | ((ch_event_stat & SPU_EVENT_INTR_ENABLED) != 0);
 }
 
+void RawSPUThread::on_init()
+{
+	if (!offset)
+	{
+		// Install correct SPU index and LS address
+		const_cast<u32&>(index) = id;
+		const_cast<u32&>(offset) = vm::falloc(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * index, 0x40000);
+		ASSERT(offset);
+
+		SPUThread::on_init();
+	}
+}
+
+RawSPUThread::RawSPUThread(const std::string& name)
+	: SPUThread(name)
+{
+}
+
 bool RawSPUThread::read_reg(const u32 addr, u32& value)
 {
 	const u32 offset = addr - RAW_SPU_BASE_ADDR - index * RAW_SPU_OFFSET - RAW_SPU_PROB_OFFSET;
@@ -83,7 +101,7 @@ bool RawSPUThread::write_reg(const u32 addr, const u32 value)
 		}))
 		{
 			state -= cpu_state::stop;
-			safe_notify();
+			lock_notify();
 		}
 	};
 

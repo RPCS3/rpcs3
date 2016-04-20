@@ -516,7 +516,7 @@ s32 cellGcmSetPrepareFlip(PPUThread& ppu, vm::ptr<CellGcmContextData> ctxt, u32 
 
 	if (ctxt.addr() == gcm_info.context_addr)
 	{
-		vm::_ref<CellGcmControl>(gcm_info.control_addr).put += 2 * sizeof(u32);
+		vm::_ref<CellGcmControl>(gcm_info.control_addr).put += 2 * 4;
 	}
 #else
 	// internal compiler error, try to avoid it for now
@@ -524,7 +524,7 @@ s32 cellGcmSetPrepareFlip(PPUThread& ppu, vm::ptr<CellGcmContextData> ctxt, u32 
 
 	if (ctxt.addr() == gcm_info.context_addr)
 	{
-		vm::_ref<CellGcmControl>(gcm_info.control_addr).put += command_size * sizeof(u32);
+		vm::_ref<CellGcmControl>(gcm_info.control_addr).put += command_size * 4;
 	}
 #endif
 

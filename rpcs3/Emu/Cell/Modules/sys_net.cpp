@@ -4,8 +4,6 @@
 #include "sys_net.h"
 
 #ifdef _WIN32
-#undef _WIN32_WINNT
-#define _WIN32_WINNT 0x0601
 #include <winsock2.h>
 #include <WS2tcpip.h>
 #else
@@ -122,7 +120,7 @@ namespace sys_net
 	// TODO
 	thread_local vm::ptr<_tls_data_t> g_tls_net_data{};
 
-	static void initialize_tls()
+	static never_inline void initialize_tls()
 	{
 		// allocate if not initialized
 		if (!g_tls_net_data)

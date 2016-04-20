@@ -451,7 +451,7 @@ namespace rsx
 			//	method_registers[NV3089_IMAGE_IN_SIZE], in_pitch, src_offset, double(1 << 20) / (method_registers[NV3089_DS_DX]), double(1 << 20) / (method_registers[NV3089_DT_DY]),
 			//	method_registers[NV3089_CLIP_SIZE], method_registers[NV3089_IMAGE_OUT_SIZE]);
 
-			std::unique_ptr<u8[]> temp1, temp2;
+			std::unique_ptr<u8[]> temp1, temp2, sw_temp;
 
 			AVPixelFormat in_format = src_color_format == CELL_GCM_TRANSFER_SCALE_FORMAT_R5G6B5 ? AV_PIX_FMT_RGB565BE : AV_PIX_FMT_ARGB;
 			AVPixelFormat out_format = dst_color_format == CELL_GCM_TRANSFER_SURFACE_FORMAT_R5G6B5 ? AV_PIX_FMT_RGB565BE : AV_PIX_FMT_ARGB;
@@ -573,7 +573,7 @@ namespace rsx
 				// Check and pad texture out if we are given non square texture for swizzle to be correct
 				if (sw_width != out_w || sw_height != out_h)
 				{
-					std::unique_ptr<u8[]> sw_temp(new u8[out_bpp * sw_width * sw_height]);
+					sw_temp.reset(new u8[out_bpp * sw_width * sw_height]);
 
 					switch (out_bpp)
 					{

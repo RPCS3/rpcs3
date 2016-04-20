@@ -22,9 +22,6 @@ namespace _log
 	struct channel;
 	struct listener;
 
-	// Send log message to global logger instance
-	void broadcast(const channel& ch, level sev, const std::string& text);
-
 	// Log channel
 	struct channel
 	{
@@ -42,23 +39,23 @@ namespace _log
 		}
 
 		// Log without formatting
-		force_inline void log(level sev, const std::string& text) const
+		void log(level sev, const std::string& text) const
 		{
 			if (sev <= enabled)
-				broadcast(*this, sev, text);
+				broadcast(*this, sev, "%s", text.c_str());
 		}
 
 		// Log with formatting
 		template<typename... Args>
-		force_inline safe_buffers void format(level sev, const char* fmt, const Args&... args) const
+		void format(level sev, const char* fmt, const Args&... args) const
 		{
 			if (sev <= enabled)
-				broadcast(*this, sev, fmt::format(fmt, fmt::do_unveil(args)...));
+				broadcast(*this, sev, fmt, ::unveil<Args>::get(args)...);
 		}
 
 #define GEN_LOG_METHOD(_sev)\
 		template<typename... Args>\
-		force_inline void _sev(const char* fmt, const Args&... args) const\
+		void _sev(const char* fmt, const Args&... args) const\
 		{\
 			return format<Args...>(level::_sev, fmt, args...);\
 		}
@@ -72,6 +69,10 @@ namespace _log
 		GEN_LOG_METHOD(trace)
 
 #undef GEN_LOG_METHOD
+
+	private:
+		// Send log message to global logger instance
+		static void broadcast(const channel& ch, level sev, const char* fmt...);
 	};
 
 	// Log listener (destination)

@@ -1,13 +1,11 @@
 #pragma once
 
-#include <exception>
 #include <string>
 #include <memory>
 #include <thread>
-#include <mutex>
-#include <condition_variable>
 
 #include "Platform.h"
+#include "Atomic.h"
 
 // Will report exception and call std::abort() if put in catch(...)
 [[noreturn]] void catch_all_exceptions();
@@ -32,12 +30,6 @@ class task_stack
 
 	std::unique_ptr<task_base> m_stack;
 
-	never_inline void push(std::unique_ptr<task_base> task)
-	{
-		m_stack.swap(task->next);
-		m_stack.swap(task);
-	}
-
 public:
 	template<typename F>
 	void push(F&& func)
@@ -58,7 +50,16 @@ public:
 			}
 		};
 
-		return push(std::unique_ptr<task_base>{ new task_t(std::forward<F>(func)) });
+		auto _top = new task_t(std::forward<F>(func));
+		auto _next = m_stack.release();
+		m_stack.reset(_top);
+#ifndef _MSC_VER
+		_top->next.reset(_next);
+#else
+		auto& next = _top->next;
+		next.release();
+		next.reset(_next);
+#endif
 	}
 
 	void reset()
@@ -78,25 +79,33 @@ public:
 // Thread control class
 class thread_ctrl final
 {
+	struct internal;
+
 	static thread_local thread_ctrl* g_tls_this_thread;
+
+	// Thread handle
+	std::thread m_thread;
+
+	// Thread join contention counter
+	atomic_t<uint> m_joining{};
 
 	// Fixed name
 	std::string m_name;
 
-	// Thread handle (be careful)
-	std::thread m_thread;
-
-	// Thread result (exception)
-	std::exception_ptr m_exception;
-
-	// Functions scheduled at thread exit
-	task_stack m_atexit;
+	// Thread internals
+	mutable atomic_t<internal*> m_data{};
 
 	// Called at the thread start
-	static void initialize();
+	void initialize();
+
+	// Set std::current_exception
+	void set_exception() noexcept;
 
 	// Called at the thread end
-	static void finalize() noexcept;
+	void finalize() noexcept;
+
+	// Get atexit function
+	task_stack& get_atexit() const;
 
 public:
 	template<typename N>
@@ -108,13 +117,7 @@ public:
 	// Disable copy/move constructors and operators
 	thread_ctrl(const thread_ctrl&) = delete;
 
-	~thread_ctrl()
-	{
-		if (m_thread.joinable())
-		{
-			m_thread.detach();
-		}
-	}
+	~thread_ctrl();
 
 	// Get thread name
 	const std::string& get_name() const
@@ -122,19 +125,20 @@ public:
 		return m_name;
 	}
 
-	// Get thread result (may throw)
-	void join()
-	{
-		if (m_thread.joinable())
-		{
-			m_thread.join();
-		}
+	// Initialize internal data
+	void initialize_once() const;
 
-		if (auto&& e = std::move(m_exception))
-		{
-			std::rethrow_exception(e);
-		}
-	}
+	// Get thread result (may throw, simultaneous joining allowed)
+	void join();
+
+	// Lock, unlock, notify the thread (required if the condition changed locklessly)
+	void lock_notify() const;
+
+	// Notify the thread, beware the condition change
+	void notify() const;
+
+	//
+	internal* get_data() const;
 
 	// Get current thread (may be nullptr)
 	static const thread_ctrl* get_current()
@@ -146,34 +150,30 @@ public:
 	template<typename F>
 	static inline void at_exit(F&& func)
 	{
-		return g_tls_this_thread->m_atexit.push(std::forward<F>(func));
+		return g_tls_this_thread->get_atexit().push(std::forward<F>(func));
 	}
 
 	// Named thread factory
-	template<typename N, typename F>
-	static inline std::shared_ptr<thread_ctrl> spawn(N&& name, F&& func)
+	template<typename N, typename F, typename... Args>
+	static inline std::shared_ptr<thread_ctrl> spawn(N&& name, F&& func, Args&&... args)
 	{
 		auto ctrl = std::make_shared<thread_ctrl>(std::forward<N>(name));
 
-		ctrl->m_thread = std::thread([ctrl, task = std::forward<F>(func)]()
+		ctrl->m_thread = std::thread([ctrl, task = std::forward<F>(func)](Args&&... args)
 		{
-			// Initialize TLS variable
-			g_tls_this_thread = ctrl.get();
-
 			try
 			{
-				initialize();
-				task();
-				finalize();
+				ctrl->initialize();
+				task(std::forward<Args>(args)...);
 			}
 			catch (...)
 			{
-				finalize();
-
-				// Set exception
-				ctrl->m_exception = std::current_exception();
+				ctrl->set_exception();
 			}
-		});
+
+			ctrl->finalize();
+
+		}, std::forward<Args>(args)...);
 
 		return ctrl;
 	}
@@ -185,21 +185,27 @@ class named_thread : public std::enable_shared_from_this<named_thread>
 	std::shared_ptr<thread_ctrl> m_thread;
 
 public:
-	// Thread condition variable for external use (this thread waits on it, other threads may notify)
-	std::condition_variable cv;
+	named_thread();
 
-	// Thread mutex for external use (can be used with `cv`)
-	std::mutex mutex;
+	virtual ~named_thread();
 
-	// Lock mutex, notify condition variable
-	void safe_notify()
-	{
-		// Lock for reliable notification, condition is assumed to be changed externally
-		std::unique_lock<std::mutex> lock(mutex);
+	// Deleted copy/move constructors + copy/move operators
+	named_thread(const named_thread&) = delete;
 
-		cv.notify_one();
-	}
+	// Get thread name
+	virtual std::string get_name() const;
 
+protected:
+	// Start thread (cannot be called from the constructor: should throw bad_weak_ptr in such case)
+	void start();
+
+	// Thread task (called in the thread)
+	virtual void on_task() = 0;
+
+	// Thread finalization (called after on_task)
+	virtual void on_exit() {}
+
+public:
 	// ID initialization
 	virtual void on_init()
 	{
@@ -209,43 +215,25 @@ public:
 	// ID finalization
 	virtual void on_stop()
 	{
-		join();
+		m_thread->join();
 	}
 
-protected:
-	// Thread task (called in the thread)
-	virtual void on_task() = 0;
-
-	// Thread finalization (called after on_task)
-	virtual void on_exit() {}
-
-public:
-	named_thread() = default;
-
-	virtual ~named_thread() = default;
-
-	// Deleted copy/move constructors + copy/move operators
-	named_thread(const named_thread&) = delete;
-
-	// Get thread name
-	virtual std::string get_name() const;
-
-	// Start thread (cannot be called from the constructor: should throw bad_weak_ptr in such case)
-	void start();
-
-	// Join thread (get thread result)
-	void join();
-
 	// Get thread_ctrl
-	const thread_ctrl* get_thread_ctrl() const
+	const thread_ctrl* operator->() const
 	{
 		return m_thread.get();
 	}
 
-	// Compare with the current thread
-	bool is_current() const
+	// Lock mutex, notify condition variable
+	void lock_notify() const
 	{
-		return m_thread && thread_ctrl::get_current() == m_thread.get();
+		m_thread->lock_notify();
+	}
+
+	// Notify condition variable
+	void notify() const
+	{
+		m_thread->notify();
 	}
 };
 

@@ -323,7 +323,7 @@ s32 sys_spu_thread_group_start(u32 id)
 		if (thread)
 		{
 			thread->state -= cpu_state::stop;
-			thread->safe_notify();
+			thread->lock_notify();
 		}
 	}
 
@@ -421,7 +421,7 @@ s32 sys_spu_thread_group_resume(u32 id)
 		if (thread)
 		{
 			thread->state -= cpu_state::suspend;
-			thread->safe_notify();
+			thread->lock_notify();
 		}
 	}
 
@@ -504,7 +504,7 @@ s32 sys_spu_thread_group_terminate(u32 id, s32 value)
 		if (thread)
 		{
 			thread->state += cpu_state::stop;
-			thread->safe_notify();
+			thread->lock_notify();
 		}
 	}
 

@@ -180,7 +180,7 @@ public:
 			data.value |= value;
 		});
 
-		if (old.wait) spu.safe_notify();
+		if (old.wait) spu->lock_notify();
 	}
 
 	// push unconditionally (overwriting previous value), may require notification
@@ -193,7 +193,7 @@ public:
 			data.value = value;
 		});
 
-		if (old.wait) spu.safe_notify();
+		if (old.wait) spu->lock_notify();
 	}
 
 	// returns true on success
@@ -228,7 +228,7 @@ public:
 			// value is not cleared and may be read again
 		});
 
-		if (old.wait) spu.safe_notify();
+		if (old.wait) spu->lock_notify();
 
 		return old.value;
 	}
@@ -299,7 +299,7 @@ public:
 			return false;
 		}))
 		{
-			spu.safe_notify();
+			spu->lock_notify();
 		}
 	}
 
@@ -554,19 +554,13 @@ public:
 	virtual std::string dump() const override;
 	virtual void cpu_init() override;
 	virtual void cpu_task() override;
+	virtual ~SPUThread() override;
 
 protected:
-	SPUThread(const std::string& name)
-		: cpu_thread(cpu_type::spu, name)
-		, index(0)
-		, offset(0)
-	{
-	}
+	SPUThread(const std::string& name);
 
 public:
 	SPUThread(const std::string& name, u32 index);
-
-	virtual ~SPUThread() override;
 
 	std::array<v128, 128> gpr; // General-Purpose Registers
 	SPU_FPSCR fpscr;
@@ -651,29 +645,7 @@ public:
 		return *_ptr<T>(lsa);
 	}
 
-	void RegisterHleFunction(u32 addr, std::function<bool(SPUThread & SPU)> function)
-	{
-		m_addr_to_hle_function_map[addr] = function;
-		_ref<u32>(addr) = 0x00000003; // STOP 3
-	}
-
-	void UnregisterHleFunction(u32 addr)
-	{
-		m_addr_to_hle_function_map.erase(addr);
-	}
-
-	void UnregisterHleFunctions(u32 start_addr, u32 end_addr)
-	{
-		for (auto iter = m_addr_to_hle_function_map.begin(); iter != m_addr_to_hle_function_map.end();)
-		{
-			if (iter->first >= start_addr && iter->first <= end_addr)
-			{
-				m_addr_to_hle_function_map.erase(iter++);
-			}
-			else
-			{
-				iter++;
-			}
-		}
-	}
+	void RegisterHleFunction(u32 addr, std::function<bool(SPUThread & SPU)> function);
+	void UnregisterHleFunction(u32 addr);
+	void UnregisterHleFunctions(u32 start_addr, u32 end_addr);
 };

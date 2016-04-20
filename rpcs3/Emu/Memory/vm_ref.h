@@ -192,12 +192,9 @@ struct to_se<vm::_ref_base<T, AT>, Se>
 	using type = vm::_ref_base<T, typename to_se<AT, Se>::type>;
 };
 
-namespace fmt
+// Forbid formatting
+template<typename T, typename AT>
+struct unveil<vm::_ref_base<T, AT>, void>
 {
-	// Forbid formatting
-	template<typename T, typename AT>
-	struct unveil<vm::_ref_base<T, AT>, void>
-	{
-		static_assert(!sizeof(T), "vm::_ref_base<>: ambiguous format argument");
-	};
-}
+	static_assert(!sizeof(T), "vm::_ref_base<>: ambiguous format argument");
+};

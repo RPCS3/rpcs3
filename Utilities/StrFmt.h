@@ -1,21 +1,16 @@
 #pragma once
 
-#include <array>
+#include <cstdarg>
 #include <string>
 #include <vector>
 #include <functional>
-#include <memory>
 
 #include "Platform.h"
 #include "types.h"
 
-#if defined(_MSC_VER) && _MSC_VER <= 1800
-#define snprintf _snprintf
-#endif
-
 // Copy null-terminated string from std::string to char array with truncation
 template<std::size_t N>
-inline void strcpy_trunc(char(&dst)[N], const std::string& src)
+force_inline void strcpy_trunc(char(&dst)[N], const std::string& src)
 {
 	const std::size_t count = src.size() >= N ? N - 1 : src.size();
 	std::memcpy(dst, src.c_str(), count);
@@ -24,12 +19,32 @@ inline void strcpy_trunc(char(&dst)[N], const std::string& src)
 
 // Copy null-terminated string from char array to another char array with truncation
 template<std::size_t N, std::size_t N2>
-inline void strcpy_trunc(char(&dst)[N], const char(&src)[N2])
+force_inline void strcpy_trunc(char(&dst)[N], const char(&src)[N2])
 {
 	const std::size_t count = N2 >= N ? N - 1 : N2;
 	std::memcpy(dst, src, count);
 	dst[count] = '\0';
 }
+
+// Formatting helper, type-specific preprocessing for improving safety and functionality
+template<typename T, typename>
+struct unveil
+{
+	// TODO
+	static inline const T& get(const T& arg)
+	{
+		return arg;
+	}
+};
+
+template<>
+struct unveil<std::string, void>
+{
+	static inline const char* get(const std::string& arg)
+	{
+		return arg.c_str();
+	}
+};
 
 namespace fmt
 {
@@ -87,125 +102,45 @@ namespace fmt
 	std::string to_hex(u64 value, u64 count = 1);
 	std::string to_udec(u64 value);
 	std::string to_sdec(s64 value);
-
-	template<typename T, typename>
-	struct unveil
-	{
-		using result_type = T;
-
-		force_inline static result_type get_value(const T& arg)
-		{
-			return arg;
-		}
-	};
-
-	template<>
-	struct unveil<const char*, void>
-	{
-		using result_type = const char* const;
-
-		static result_type get_value(const char* const& arg)
-		{
-			return arg;
-		}
-	};
-
-	template<std::size_t N>
-	struct unveil<char[N], void>
-	{
-		using result_type = const char* const;
-
-		static result_type get_value(const char(&arg)[N])
-		{
-			return arg;
-		}
-	};
-
-	template<>
-	struct unveil<std::string, void>
-	{
-		using result_type = const char*;
-
-		static result_type get_value(const std::string& arg)
-		{
-			return arg.c_str();
-		}
-	};
-
-	template<typename T>
-	struct unveil<T, std::enable_if_t<std::is_enum<T>::value>>
-	{
-		using result_type = std::underlying_type_t<T>;
-
-		force_inline static result_type get_value(const T& arg)
-		{
-			return static_cast<result_type>(arg);
-		}
-	};
-
-	template<typename T>
-	force_inline typename unveil<T>::result_type do_unveil(const T& arg)
-	{
-		return unveil<T>::get_value(arg);
-	}
+	std::string _format(const char* fmt...) noexcept;
+	std::string _vformat(const char*, va_list) noexcept;
 
 	// Formatting function with special functionality (fmt::unveil)
 	template<typename... Args>
-	safe_buffers std::string format(const char* fmt, const Args&... args)
+	force_inline std::string format(const char* fmt, const Args&... args) noexcept
 	{
-		// fixed stack buffer for the first attempt
-		std::array<char, 4096> fixed_buf;
+		return _format(fmt, ::unveil<Args>::get(args)...);
+	}
 
-		// possibly dynamically allocated buffer for the second attempt
-		std::unique_ptr<char[]> buf;
+	// Helper class
+	class exception_base : public std::runtime_error
+	{
+		// Helper (there is no other room)
+		va_list m_args;
 
-		// pointer to the current buffer
-		char* buf_addr = fixed_buf.data();
+	protected:
+		// Internal formatting constructor
+		exception_base(const char* fmt...);
+	};
 
-		for (std::size_t buf_size = fixed_buf.size();;)
+	// Exception type derived from std::runtime_error with formatting constructor
+	class exception : public exception_base
+	{
+	public:
+		// Formatting constructor
+		template<typename... Args>
+		exception(const char* fmt, const Args&... args)
+			: exception_base(fmt, ::unveil<Args>::get(args)...)
 		{
-#ifndef _MSC_VER
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wformat-security"
-#endif
-			const std::size_t len = std::snprintf(buf_addr, buf_size, fmt, do_unveil(args)...);
-#ifndef _MSC_VER
-#pragma GCC diagnostic pop
-#endif
-			if (len > INT_MAX)
-			{
-				throw std::runtime_error("std::snprintf() failed");
-			}
-
-			if (len < buf_size)
-			{
-				return{ buf_addr, len };
-			}
-
-			buf.reset(buf_addr = new char[buf_size = len + 1]);
 		}
-	}
-
-	// Create exception of type T (std::runtime_error by default) with formatting
-	template<typename T = std::runtime_error, typename... Args>
-	never_inline safe_buffers T exception(const char* fmt, const Args&... args) noexcept(noexcept(T{ fmt }))
-	{
-		return T{ format(fmt, do_unveil(args)...).c_str() };
-	}
-
-	// Create exception of type T (std::runtime_error by default) without formatting
-	template<typename T = std::runtime_error>
-	safe_buffers T exception(const char* msg) noexcept(noexcept(T{ msg }))
-	{
-		return T{ msg };
-	}
+	};
 
 	// Narrow cast (similar to gsl::narrow) with exception message formatting
 	template<typename To, typename From, typename... Args>
 	inline auto narrow(const char* format_str, const From& value, const Args&... args) -> decltype(static_cast<To>(static_cast<From>(std::declval<To>())))
 	{
 		const auto result = static_cast<To>(value);
-		if (static_cast<From>(result) != value) throw fmt::exception(format_str, fmt::do_unveil(value), fmt::do_unveil(args)...);
+		if (static_cast<From>(result) != value) throw fmt::exception(format_str, value, args...);
 		return result;
 	}
 

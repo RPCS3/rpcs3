@@ -32,7 +32,7 @@ enum : u32
 // Structs
 struct PKGHeader
 {
-	be_t<u32> pkg_magic;    // Magic (0x7f504b47)
+	nse_t<u32> pkg_magic;   // Magic (0x7f504b47)
 	be_t<u16> pkg_type;     // Release type (Retail:0x8000, Debug:0x0000)
 	be_t<u16> pkg_platform; // Platform type (PS3:0x0001, PSP:0x0002)
 	be_t<u32> header_size;  // Header size (0xc0)
@@ -57,4 +57,4 @@ struct PKGEntry
 	be_t<u32> pad;          // Padding (zeros)
 };
 
-bool pkg_install(const class fs::file& pkg_f, const std::string& dir, volatile f64& progress);
+bool pkg_install(const class fs::file& pkg_f, const std::string& dir, atomic_t<double>&);

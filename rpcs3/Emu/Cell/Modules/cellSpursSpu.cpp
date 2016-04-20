@@ -770,7 +770,7 @@ void spursSysServiceIdleHandler(SPUThread& spu, SpursKernelContext* ctxt)
 {
 	bool shouldExit;
 
-	std::unique_lock<std::mutex> lock(spu.mutex, std::defer_lock);
+	std::unique_lock<std::mutex> lock(get_current_thread_mutex(), std::defer_lock);
 
 	while (true)
 	{
@@ -861,7 +861,7 @@ void spursSysServiceIdleHandler(SPUThread& spu, SpursKernelContext* ctxt)
 			// The system service blocks by making a reservation and waiting on the lock line reservation lost event.
 			CHECK_EMU_STATUS;
 			if (!lock) lock.lock();
-			spu.cv.wait_for(lock, std::chrono::milliseconds(1));
+			get_current_thread_cv().wait_for(lock, std::chrono::milliseconds(1));
 			continue;
 		}
 

@@ -108,15 +108,15 @@ void PPUThread::cpu_task()
 
 	while (true)
 	{
-		if (_pc == PC && !state.load())
+		if (LIKELY(_pc == PC && !state.load()))
 		{
 			func0(*this, { op0 });
-			
-			if ((_pc += 4) == (PC += 4) && !state.load())
+
+			if (LIKELY((_pc += 4) == (PC += 4) && !state.load()))
 			{
 				func1(*this, { op1 });
 
-				if ((_pc += 4) == (PC += 4))
+				if (LIKELY((_pc += 4) == (PC += 4)))
 				{
 					op0 = op2;
 					func0 = func2;
@@ -135,7 +135,7 @@ void PPUThread::cpu_task()
 		func1 = table[ppu_decode(op1 = ops[1])];
 		func2 = table[ppu_decode(op2 = ops[2])];
 
-		if (check_status()) return;
+		if (UNLIKELY(check_status())) return;
 	}
 }
 
@@ -150,6 +150,11 @@ PPUThread::~PPUThread()
 	{
 		vm::dealloc_verbose_nothrow(stack_addr, vm::stack);
 	}
+}
+
+PPUThread::PPUThread(const std::string& name)
+	: cpu_thread(cpu_type::ppu, name)
+{
 }
 
 be_t<u64>* PPUThread::get_stack_arg(s32 i, u64 align)

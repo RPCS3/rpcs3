@@ -12,13 +12,9 @@ public:
 	virtual void cpu_init() override;
 	virtual void cpu_task() override;
 	virtual bool handle_interrupt() override;
-
-	PPUThread(const std::string& name)
-		: cpu_thread(cpu_type::ppu, name)
-	{
-	}
-
 	virtual ~PPUThread() override;
+
+	PPUThread(const std::string& name);
 
 	u64 GPR[32]{}; // General-Purpose Registers
 	f64 FPR[32]{}; // Floating Point Registers
