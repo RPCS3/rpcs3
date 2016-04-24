@@ -406,6 +406,38 @@ struct ignore
 	}
 };
 
+// Contains value of any POD type with fixed size and alignment. TT<> is the type converter applied.
+// For example, `simple_t` may be used to remove endianness.
+template<template<typename> class TT, std::size_t S, std::size_t A = S>
+struct alignas(A) any_pod
+{
+	enum class byte : char {} data[S];
+
+	any_pod() = default;
+
+	template<typename T, typename T2 = TT<T>, typename = std::enable_if_t<std::is_pod<T2>::value && sizeof(T2) == S && alignof(T2) <= A>>
+	any_pod(const T& value)
+	{
+		reinterpret_cast<T2&>(data) = value;
+	}
+
+	template<typename T, typename T2 = TT<T>, typename = std::enable_if_t<std::is_pod<T2>::value && sizeof(T2) == S && alignof(T2) <= A>>
+	T2& as()
+	{
+		return reinterpret_cast<T2&>(data);
+	}
+
+	template<typename T, typename T2 = TT<T>, typename = std::enable_if_t<std::is_pod<T2>::value && sizeof(T2) == S && alignof(T2) <= A>>
+	const T2& as() const
+	{
+		return reinterpret_cast<const T2&>(data);
+	}
+};
+
+using any16 = any_pod<simple_t, sizeof(u16)>;
+using any32 = any_pod<simple_t, sizeof(u32)>;
+using any64 = any_pod<simple_t, sizeof(u64)>;
+
 // Allows to define integer convertible to multiple enum types
 template<typename T = void, typename... Ts>
 struct multicast : multicast<Ts...>
