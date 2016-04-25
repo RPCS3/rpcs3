@@ -453,7 +453,7 @@ void InterpreterDisAsmFrame::DoStep(wxCommandEvent& WXUNUSED(event))
 {
 	if (cpu)
 	{
-		if (cpu->state.atomic_op([](mset<cpu_state>& state) -> bool
+		if (cpu->state.atomic_op([](bitset_t<cpu_state>& state) -> bool
 		{
 			state += cpu_state::dbg_step;
 			return state.test_and_reset(cpu_state::dbg_pause);

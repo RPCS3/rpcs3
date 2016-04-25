@@ -10,6 +10,8 @@
 #include "OpenGL.h"
 #include "../GCM.h"
 
+#include "Utilities/geometry.h"
+
 namespace gl
 {
 #ifdef _DEBUG

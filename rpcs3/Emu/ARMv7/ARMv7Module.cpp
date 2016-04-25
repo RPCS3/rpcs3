@@ -57,6 +57,35 @@ arm_static_module::arm_static_module(const char* name)
 	arm_module_manager::register_module(this);
 }
 
+std::unordered_map<std::string, arm_static_module*>& arm_module_manager::access()
+{
+	static std::unordered_map<std::string, arm_static_module*> map;
+
+	return map;
+}
+
+void arm_module_manager::register_module(arm_static_module* module)
+{
+	access().emplace(module->name, module);
+}
+
+arm_static_function& arm_module_manager::access_static_function(const char* module, u32 fnid)
+{
+	return access().at(module)->functions[fnid];
+}
+
+arm_static_variable& arm_module_manager::access_static_variable(const char* module, u32 vnid)
+{
+	return access().at(module)->variables[vnid];
+}
+
+const arm_static_module* arm_module_manager::get_module(const std::string& name)
+{
+	const auto& map = access();
+	const auto found = map.find(name);
+	return found != map.end() ? found->second : nullptr;
+}
+
 static void arm_initialize_modules()
 {
 	const std::initializer_list<const arm_static_module*> registered

@@ -74,7 +74,7 @@ struct sys_prx_get_module_list_t
 
 struct lv2_prx_t
 {
-	const u32 id{};
+	const id_value<> id{};
 
 	bool is_started = false;
 

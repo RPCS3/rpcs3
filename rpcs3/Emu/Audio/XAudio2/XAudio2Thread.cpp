@@ -1,5 +1,6 @@
 #ifdef _WIN32
 #include "Utilities/Log.h"
+#include "Utilities/StrFmt.h"
 #include "Utilities/Config.h"
 #include "Emu/System.h"
 

@@ -74,7 +74,9 @@
     </ClCompile>
     <ClCompile Include="..\Utilities\Config.cpp" />
     <ClCompile Include="..\Utilities\rXml.cpp" />
-    <ClCompile Include="..\Utilities\Semaphore.cpp" />
+    <ClCompile Include="..\Utilities\Semaphore.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="..\Utilities\SharedMutex.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
@@ -227,6 +229,7 @@
     <ClCompile Include="Emu\Cell\SPUASMJITRecompiler.cpp" />
     <ClCompile Include="Emu\Cell\SPUDisAsm.cpp" />
     <ClCompile Include="Emu\Cell\SPUInterpreter.cpp" />
+    <ClCompile Include="Emu\IdManager.cpp" />
     <ClCompile Include="Emu\Memory\wait_engine.cpp" />
     <ClCompile Include="Emu\RSX\CgBinaryFragmentProgram.cpp" />
     <ClCompile Include="Emu\RSX\CgBinaryVertexProgram.cpp" />
@@ -357,7 +360,9 @@
     <ClInclude Include="..\Utilities\AutoPause.h" />
     <ClInclude Include="..\Utilities\BEType.h" />
     <ClInclude Include="..\Utilities\BitField.h" />
+    <ClInclude Include="..\Utilities\BitSet.h" />
     <ClInclude Include="..\Utilities\event.h" />
+    <ClInclude Include="..\Utilities\geometry.h" />
     <ClInclude Include="..\Utilities\GSL.h" />
     <ClInclude Include="..\Utilities\Platform.h" />
     <ClInclude Include="..\Utilities\Log.h" />
@@ -369,6 +374,7 @@
     <ClInclude Include="..\Utilities\SharedMutex.h" />
     <ClInclude Include="..\Utilities\SleepQueue.h" />
     <ClInclude Include="..\Utilities\StrFmt.h" />
+    <ClInclude Include="..\Utilities\StrUtil.h" />
     <ClInclude Include="..\Utilities\Thread.h" />
     <ClInclude Include="..\Utilities\Timer.h" />
     <ClInclude Include="..\Utilities\types.h" />

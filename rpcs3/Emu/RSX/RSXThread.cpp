@@ -10,6 +10,7 @@
 #include "rsx_methods.h"
 
 #include "Utilities/GSL.h"
+#include "Utilities/StrUtil.h"
 
 #define CMD_DEBUG 0
 

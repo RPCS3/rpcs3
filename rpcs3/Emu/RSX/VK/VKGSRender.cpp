@@ -376,7 +376,7 @@ VKGSRender::VKGSRender() : GSRender(frame_type::Vulkan)
 	vk::set_current_thread_ctx(m_thread_context);
 	vk::set_current_renderer(m_swap_chain->get_device());
 
-	m_swap_chain->init_swapchain(m_frame->client_size().width, m_frame->client_size().height);
+	m_swap_chain->init_swapchain(m_frame->client_width(), m_frame->client_height());
 
 	//create command buffer...
 	m_command_buffer_pool.create((*m_device));
@@ -582,8 +582,8 @@ void VKGSRender::end()
 	rp_begin.framebuffer = m_framebuffer_to_clean.back()->value;
 	rp_begin.renderArea.offset.x = 0;
 	rp_begin.renderArea.offset.y = 0;
-	rp_begin.renderArea.extent.width = m_frame->client_size().width;
-	rp_begin.renderArea.extent.height = m_frame->client_size().height;
+	rp_begin.renderArea.extent.width = m_frame->client_width();
+	rp_begin.renderArea.extent.height = m_frame->client_height();
 
 	vkCmdBeginRenderPass(m_command_buffer, &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
 
@@ -1106,7 +1106,7 @@ void VKGSRender::flip(int buffer)
 	coordi aspect_ratio;
 	if (1) //enable aspect ratio
 	{
-		sizei csize = m_frame->client_size();
+		sizei csize = { m_frame->client_width(), m_frame->client_height() };
 		sizei new_size = csize;
 
 		const double aq = (double)buffer_width / buffer_height;
@@ -1128,7 +1128,7 @@ void VKGSRender::flip(int buffer)
 	}
 	else
 	{
-		aspect_ratio.size = m_frame->client_size();
+		aspect_ratio.size = { m_frame->client_width(), m_frame->client_height() };
 	}
 
 	VkSwapchainKHR swap_chain = (VkSwapchainKHR)(*m_swap_chain);

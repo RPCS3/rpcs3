@@ -2,8 +2,6 @@
 
 #include "types.h"
 #include "Atomic.h"
-#include "File.h"
-#include "StrFmt.h"
 
 namespace _log
 {
@@ -19,10 +17,6 @@ namespace _log
 		trace, // lowest level (usually disabled)
 	};
 
-	struct channel;
-	struct listener;
-
-	// Log channel
 	struct channel
 	{
 		// Channel prefix (added to every log message)
@@ -33,23 +27,20 @@ namespace _log
 
 		// Constant initialization: name and initial log level
 		constexpr channel(const char* name, level enabled = level::trace)
-			: name{ name }
-			, enabled{ enabled }
+			: name(name)
+			, enabled(enabled)
 		{
 		}
 
-		// Log without formatting
-		void log(level sev, const std::string& text) const
-		{
-			if (sev <= enabled)
-				broadcast(*this, sev, "%s", text.c_str());
-		}
-
-		// Log with formatting
+		// Formatting function
 		template<typename... Args>
 		void format(level sev, const char* fmt, const Args&... args) const
 		{
+#ifdef _MSC_VER
 			if (sev <= enabled)
+#else
+			if (__builtin_expect(sev <= enabled, 0))
+#endif
 				broadcast(*this, sev, fmt, ::unveil<Args>::get(args)...);
 		}
 
@@ -75,49 +66,7 @@ namespace _log
 		static void broadcast(const channel& ch, level sev, const char* fmt...);
 	};
 
-	// Log listener (destination)
-	struct listener
-	{
-		listener() = default;
-		
-		virtual ~listener() = default;
-
-		virtual void log(const channel& ch, level sev, const std::string& text) = 0;
-	};
-
-	class file_writer
-	{
-		// Could be memory-mapped file
-		fs::file m_file;
-
-	public:
-		file_writer(const std::string& name);
-
-		virtual ~file_writer() = default;
-
-		// Append raw data
-		void log(const std::string& text);
-
-		// Get current file size (may be used by secondary readers)
-		std::size_t size() const;
-	};
-
-	struct file_listener : public file_writer, public listener
-	{
-		file_listener(const std::string& name)
-			: file_writer(name)
-			, listener()
-		{
-		}
-
-		// Encode level, current thread name, channel name and write log message
-		virtual void log(const channel& ch, level sev, const std::string& text) override;
-	};
-
-	// Global variable for TTY.log
-	extern file_writer g_tty_file;
-
-	// Small set of predefined channels:
+	/* Small set of predefined channels */
 
 	extern channel GENERAL;
 	extern channel LOADER;
@@ -127,14 +76,12 @@ namespace _log
 	extern channel PPU;
 	extern channel SPU;
 	extern channel ARMv7;
-
-	extern thread_local std::string(*g_tls_make_prefix)(const channel&, level, const std::string&);
 }
 
 template<>
 struct bijective<_log::level, const char*>
 {
-	static constexpr std::pair<_log::level, const char*> map[]
+	static constexpr bijective_pair<_log::level, const char*> map[]
 	{
 		{ _log::level::always, "Nothing" },
 		{ _log::level::fatal, "Fatal" },

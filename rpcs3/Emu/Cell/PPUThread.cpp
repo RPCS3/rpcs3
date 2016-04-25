@@ -76,6 +76,8 @@ void PPUThread::cpu_init()
 	GPR[1] = align(stack_addr + stack_size, 0x200) - 0x200;
 }
 
+extern thread_local std::string(*g_tls_log_prefix)();
+
 void PPUThread::cpu_task()
 {
 	//SetHostRoundingMode(FPSCR_RN_NEAR);
@@ -87,7 +89,7 @@ void PPUThread::cpu_task()
 		return custom_task(*this);
 	}
 
-	_log::g_tls_make_prefix = [](const auto&, auto, const auto&)
+	g_tls_log_prefix = []
 	{
 		const auto cpu = static_cast<PPUThread*>(get_current_cpu_thread());
 

@@ -8,6 +8,8 @@
 
 LOG_CHANNEL(sceLibc);
 
+extern fs::file g_tty;
+
 // TODO
 vm::ptr<void> g_dso;
 
@@ -95,7 +97,7 @@ std::string arm_fmt(ARMv7Thread& cpu, vm::cptr<char> fmt, u32 g_count)
 
 				if (plus_sign || minus_sign || space_sign || number_sign || zero_padding || width || prec) break;
 
-				result += fmt::to_sdec(value);
+				result += fmt::format("%lld", value);
 				continue;
 			}
 			case 'x':
@@ -111,7 +113,7 @@ std::string arm_fmt(ARMv7Thread& cpu, vm::cptr<char> fmt, u32 g_count)
 					result += cf == 'x' ? "0x" : "0X";
 				}
 
-				const std::string& hex = cf == 'x' ? fmt::to_hex(value) : fmt::to_upper(fmt::to_hex(value));
+				const std::string& hex = fmt::format(cf == 'x' ? "%llx" : "%llX", value);
 
 				if (hex.length() >= width)
 				{
@@ -211,7 +213,10 @@ namespace sce_libc_func
 		const std::string& result = arm_fmt(cpu, fmt, va_args.count);
 		sceLibc.trace("***     -> '%s'", result);
 
-		_log::g_tty_file.log(result);
+		if (g_tty)
+		{
+			g_tty.write(result);
+		}
 	}
 
 	void sprintf(ARMv7Thread& cpu, vm::ptr<char> str, vm::cptr<char> fmt, arm_va_args_t va_args)

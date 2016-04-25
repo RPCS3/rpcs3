@@ -3,6 +3,8 @@
 
 extern _log::channel sysPrxForUser;
 
+extern fs::file g_tty;
+
 // TODO
 static std::string ps3_fmt(PPUThread& context, vm::cptr<char> fmt, u32 g_count)
 {
@@ -83,7 +85,7 @@ static std::string ps3_fmt(PPUThread& context, vm::cptr<char> fmt, u32 g_count)
 
 				if (plus_sign || minus_sign || space_sign || number_sign || zero_padding || width || prec) break;
 
-				result += fmt::to_sdec(value);
+				result += fmt::format("%lld", value);
 				continue;
 			}
 			case 'x':
@@ -99,7 +101,7 @@ static std::string ps3_fmt(PPUThread& context, vm::cptr<char> fmt, u32 g_count)
 					result += cf == 'x' ? "0x" : "0X";
 				}
 
-				const std::string& hex = cf == 'x' ? fmt::to_hex(value) : fmt::to_upper(fmt::to_hex(value));
+				const std::string& hex = fmt::format(cf == 'x' ? "%llx" : "%llX", value);
 
 				if (hex.length() >= width)
 				{
@@ -132,7 +134,7 @@ static std::string ps3_fmt(PPUThread& context, vm::cptr<char> fmt, u32 g_count)
 
 				if (plus_sign || minus_sign || space_sign || number_sign || zero_padding || width || prec) break;
 
-				result += fmt::to_udec(value);
+				result += fmt::format("%llu", value);
 				continue;
 			}
 			}
@@ -336,7 +338,10 @@ s32 _sys_printf(PPUThread& ppu, vm::cptr<char> fmt, ppu_va_args_t va_args)
 {
 	sysPrxForUser.warning("_sys_printf(fmt=*0x%x, ...)", fmt);
 
-	_log::g_tty_file.log(ps3_fmt(ppu, fmt, va_args.count));
+	if (g_tty)
+	{
+		g_tty.write(ps3_fmt(ppu, fmt, va_args.count));
+	}
 
 	return CELL_OK;
 }

@@ -1,6 +1,9 @@
 #pragma once
+
 #include <string>
 #include <vector>
+
+#include "Utilities/StrUtil.h"
 
 enum class FUNCTION {
 	FUNCTION_DP2,

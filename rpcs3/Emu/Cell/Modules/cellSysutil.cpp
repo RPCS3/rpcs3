@@ -5,6 +5,8 @@
 
 #include "cellSysutil.h"
 
+#include "Utilities/StrUtil.h"
+
 LOG_CHANNEL(cellSysutil);
 
 // Temporarily

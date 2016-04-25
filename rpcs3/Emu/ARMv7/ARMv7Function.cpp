@@ -57,3 +57,23 @@ s32 arm_error_code::report(s32 error, const char* text)
 	LOG_ERROR(ARMv7, "Illegal call to ppu_report_error(0x%x, '%s')!");
 	return error;
 }
+
+std::vector<arm_function_t>& arm_function_manager::access()
+{
+	static std::vector<arm_function_t> list
+	{
+		nullptr,
+		[](ARMv7Thread& cpu) { cpu.state += cpu_state::ret; },
+	};
+
+	return list;
+}
+
+u32 arm_function_manager::add_function(arm_function_t function)
+{
+	auto& list = access();
+
+	list.push_back(function);
+
+	return ::size32(list) - 1;
+}

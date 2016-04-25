@@ -5,6 +5,7 @@
 #include "cellSaveData.h"
 
 #include "Loader/PSF.h"
+#include "Utilities/StrUtil.h"
 
 LOG_CHANNEL(cellSaveData);
 

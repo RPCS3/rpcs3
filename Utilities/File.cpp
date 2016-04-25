@@ -5,6 +5,7 @@
 
 #include <unordered_map>
 #include <algorithm>
+#include <cerrno>
 
 #ifdef _WIN32
 
@@ -90,6 +91,8 @@ static time_t to_time(const FILETIME& ft)
 
 namespace fs
 {
+	thread_local uint error = 0;
+
 	class device_manager final
 	{
 		mutable shared_mutex m_mutex;
@@ -213,8 +216,8 @@ bool fs::stat(const std::string& path, stat_t& info)
 		// TODO: convert Win32 error code to errno
 		switch (DWORD error = GetLastError())
 		{
-		case ERROR_FILE_NOT_FOUND: errno = ENOENT; break;
-		case ERROR_PATH_NOT_FOUND: errno = ENOENT; break;
+		case ERROR_FILE_NOT_FOUND: fs::error = ENOENT; break;
+		case ERROR_PATH_NOT_FOUND: fs::error = ENOENT; break;
 		default: throw fmt::exception("Unknown Win32 error: %u (%s)." HERE, error, path);
 		}
 
@@ -231,6 +234,7 @@ bool fs::stat(const std::string& path, stat_t& info)
 	struct ::stat file_info;
 	if (::stat(path.c_str(), &file_info) != 0)
 	{
+		fs::error = errno;
 		return false;
 	}
 
@@ -259,8 +263,8 @@ bool fs::exists(const std::string& path)
 		// TODO: convert Win32 error code to errno
 		switch (DWORD error = GetLastError())
 		{
-		case ERROR_FILE_NOT_FOUND: errno = ENOENT; break;
-		case ERROR_PATH_NOT_FOUND: errno = ENOENT; break;
+		case ERROR_FILE_NOT_FOUND: fs::error = ENOENT; break;
+		case ERROR_PATH_NOT_FOUND: fs::error = ENOENT; break;
 		default: throw fmt::exception("Unknown Win32 error: %u (%s)." HERE, error, path);
 		}
 
@@ -270,7 +274,13 @@ bool fs::exists(const std::string& path)
 	return true;
 #else
 	struct ::stat file_info;
-	return !::stat(path.c_str(), &file_info);
+	if (::stat(path.c_str(), &file_info) != 0)
+	{
+		fs::error = errno;
+		return false;
+	}
+
+	return true;
 #endif
 }
 
@@ -286,7 +296,7 @@ bool fs::is_file(const std::string& path)
 
 		if (info.is_directory)
 		{
-			errno = EEXIST;
+			fs::error = EEXIST;
 			return false;
 		}
 
@@ -300,8 +310,8 @@ bool fs::is_file(const std::string& path)
 		// TODO: convert Win32 error code to errno
 		switch (DWORD error = GetLastError())
 		{
-		case ERROR_FILE_NOT_FOUND: errno = ENOENT; break;
-		case ERROR_PATH_NOT_FOUND: errno = ENOENT; break;
+		case ERROR_FILE_NOT_FOUND: fs::error = ENOENT; break;
+		case ERROR_PATH_NOT_FOUND: fs::error = ENOENT; break;
 		default: throw fmt::exception("Unknown Win32 error: %u (%s)." HERE, error, path);
 		}
 
@@ -311,6 +321,7 @@ bool fs::is_file(const std::string& path)
 	struct ::stat file_info;
 	if (::stat(path.c_str(), &file_info) != 0)
 	{
+		fs::error = errno;
 		return false;
 	}
 #endif
@@ -322,7 +333,7 @@ bool fs::is_file(const std::string& path)
 	if (S_ISDIR(file_info.st_mode))
 #endif
 	{
-		errno = EEXIST;
+		fs::error = EEXIST;
 		return false;
 	}
 
@@ -341,7 +352,7 @@ bool fs::is_dir(const std::string& path)
 
 		if (info.is_directory == false)
 		{
-			errno = EEXIST;
+			fs::error = EEXIST;
 			return false;
 		}
 
@@ -355,8 +366,8 @@ bool fs::is_dir(const std::string& path)
 		// TODO: convert Win32 error code to errno
 		switch (DWORD error = GetLastError())
 		{
-		case ERROR_FILE_NOT_FOUND: errno = ENOENT; break;
-		case ERROR_PATH_NOT_FOUND: errno = ENOENT; break;
+		case ERROR_FILE_NOT_FOUND: fs::error = ENOENT; break;
+		case ERROR_PATH_NOT_FOUND: fs::error = ENOENT; break;
 		default: throw fmt::exception("Unknown Win32 error: %u (%s)." HERE, error, path);
 		}
 
@@ -366,6 +377,7 @@ bool fs::is_dir(const std::string& path)
 	struct ::stat file_info;
 	if (::stat(path.c_str(), &file_info) != 0)
 	{
+		fs::error = errno;
 		return false;
 	}
 #endif
@@ -376,7 +388,7 @@ bool fs::is_dir(const std::string& path)
 	if (!S_ISDIR(file_info.st_mode))
 #endif
 	{
-		errno = EEXIST;
+		fs::error = EEXIST;
 		return false;
 	}
 
@@ -396,8 +408,8 @@ bool fs::create_dir(const std::string& path)
 		// TODO: convert Win32 error code to errno
 		switch (DWORD error = GetLastError())
 		{
-		case ERROR_ALREADY_EXISTS: errno = EEXIST; break;
-		case ERROR_PATH_NOT_FOUND: errno = ENOENT; break;
+		case ERROR_ALREADY_EXISTS: fs::error = EEXIST; break;
+		case ERROR_PATH_NOT_FOUND: fs::error = ENOENT; break;
 		default: throw fmt::exception("Unknown Win32 error: %u (%s)." HERE, error, path);
 		}
 
@@ -406,7 +418,13 @@ bool fs::create_dir(const std::string& path)
 
 	return true;
 #else
-	return !::mkdir(path.c_str(), S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH);
+	if (::mkdir(path.c_str(), S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH) != 0)
+	{
+		fs::error = errno;
+		return false;
+	}
+
+	return true;
 #endif
 }
 
@@ -435,7 +453,7 @@ bool fs::remove_dir(const std::string& path)
 		// TODO: convert Win32 error code to errno
 		switch (DWORD error = GetLastError())
 		{
-		case ERROR_PATH_NOT_FOUND: errno = ENOENT; break;
+		case ERROR_PATH_NOT_FOUND: fs::error = ENOENT; break;
 		default: throw fmt::exception("Unknown Win32 error: %u (%s)." HERE, error, path);
 		}
 
@@ -444,7 +462,13 @@ bool fs::remove_dir(const std::string& path)
 
 	return true;
 #else
-	return !::rmdir(path.c_str());
+	if (::rmdir(path.c_str()) != 0)
+	{
+		fs::error = errno;
+		return false;
+	}
+
+	return true;
 #endif
 }
 
@@ -468,7 +492,7 @@ bool fs::rename(const std::string& from, const std::string& to)
 		// TODO: convert Win32 error code to errno
 		switch (DWORD error = GetLastError())
 		{
-		case ERROR_PATH_NOT_FOUND: errno = ENOENT; break;
+		case ERROR_PATH_NOT_FOUND: fs::error = ENOENT; break;
 		default: throw fmt::exception("Unknown Win32 error: %u.\nFrom: %s\nTo: %s" HERE, error, from, to);
 		}
 
@@ -477,7 +501,13 @@ bool fs::rename(const std::string& from, const std::string& to)
 
 	return true;
 #else
-	return !::rename(from.c_str(), to.c_str());
+	if (::rename(from.c_str(), to.c_str()) != 0)
+	{
+		fs::error = errno;
+		return false;
+	}
+
+	return true;
 #endif
 }
 
@@ -496,7 +526,7 @@ bool fs::copy_file(const std::string& from, const std::string& to, bool overwrit
 		// TODO: convert Win32 error code to errno
 		switch (DWORD error = GetLastError())
 		{
-		case ERROR_PATH_NOT_FOUND: errno = ENOENT; break;
+		case ERROR_PATH_NOT_FOUND: fs::error = ENOENT; break;
 		default: throw fmt::exception("Unknown Win32 error: %u.\nFrom: %s\nTo: %s" HERE, error, from, to);
 		}
 
@@ -510,6 +540,7 @@ bool fs::copy_file(const std::string& from, const std::string& to, bool overwrit
 	const int input = ::open(from.c_str(), O_RDONLY);
 	if (input == -1)
 	{
+		fs::error = errno;
 		return false;
 	}
 
@@ -519,7 +550,7 @@ bool fs::copy_file(const std::string& from, const std::string& to, bool overwrit
 		const int err = errno;
 
 		::close(input);
-		errno = err;
+		fs::error = err;
 		return false;
 	}
 
@@ -538,7 +569,7 @@ bool fs::copy_file(const std::string& from, const std::string& to, bool overwrit
 
 		::close(input);
 		::close(output);
-		errno = err;
+		fs::error = err;
 		return false;
 	}
 
@@ -561,8 +592,8 @@ bool fs::remove_file(const std::string& path)
 		// TODO: convert Win32 error code to errno
 		switch (DWORD error = GetLastError())
 		{
-		case ERROR_FILE_NOT_FOUND: errno = ENOENT; break;
-		case ERROR_PATH_NOT_FOUND: errno = ENOENT; break;
+		case ERROR_FILE_NOT_FOUND: fs::error = ENOENT; break;
+		case ERROR_PATH_NOT_FOUND: fs::error = ENOENT; break;
 		default: throw fmt::exception("Unknown Win32 error: %u (%s)." HERE, error, path);
 		}
 
@@ -571,7 +602,13 @@ bool fs::remove_file(const std::string& path)
 
 	return true;
 #else
-	return !::unlink(path.c_str());
+	if (::unlink(path.c_str()) != 0)
+	{
+		fs::error = errno;
+		return false;
+	}
+
+	return true;
 #endif
 }
 
@@ -590,8 +627,8 @@ bool fs::truncate_file(const std::string& path, u64 length)
 		// TODO: convert Win32 error code to errno
 		switch (DWORD error = GetLastError())
 		{
-		case ERROR_FILE_NOT_FOUND: errno = ENOENT; break;
-		case ERROR_PATH_NOT_FOUND: errno = ENOENT; break;
+		case ERROR_FILE_NOT_FOUND: fs::error = ENOENT; break;
+		case ERROR_PATH_NOT_FOUND: fs::error = ENOENT; break;
 		default: throw fmt::exception("Unknown Win32 error: %u (%s)." HERE, error, path);
 		}
 
@@ -607,7 +644,7 @@ bool fs::truncate_file(const std::string& path, u64 length)
 		// TODO: convert Win32 error code to errno
 		switch (DWORD error = GetLastError())
 		{
-		case ERROR_NEGATIVE_SEEK: errno = EINVAL; break;
+		case ERROR_NEGATIVE_SEEK: fs::error = EINVAL; break;
 		default: throw fmt::exception("Unknown Win32 error: %u (length=0x%llx)." HERE, error, length);
 		}
 
@@ -618,7 +655,13 @@ bool fs::truncate_file(const std::string& path, u64 length)
 	CloseHandle(handle);
 	return true;
 #else
-	return !::truncate(path.c_str(), length);
+	if (::truncate(path.c_str(), length) != 0)
+	{
+		fs::error = errno;
+		return false;
+	}
+
+	return true;
 #endif
 }
 
@@ -629,10 +672,10 @@ void fs::file::xnull() const
 
 void fs::file::xfail() const
 {
-	throw fmt::exception("Unexpected fs::file error %d", errno);
+	throw fmt::exception("Unexpected fs::file error %u", fs::error);
 }
 
-bool fs::file::open(const std::string& path, mset<open_mode> mode)
+bool fs::file::open(const std::string& path, bitset_t<open_mode> mode)
 {
 	if (auto device = get_virtual_device(path))
 	{
@@ -661,7 +704,7 @@ bool fs::file::open(const std::string& path, mset<open_mode> mode)
 	{
 		if (mode & fs::excl)
 		{
-			errno = EINVAL;
+			fs::error = EINVAL;
 			return false;
 		}
 
@@ -675,9 +718,9 @@ bool fs::file::open(const std::string& path, mset<open_mode> mode)
 		// TODO: convert Win32 error code to errno
 		switch (DWORD error = GetLastError())
 		{
-		case ERROR_FILE_NOT_FOUND: errno = ENOENT; break;
-		case ERROR_PATH_NOT_FOUND: errno = ENOENT; break;
-		case ERROR_FILE_EXISTS:    errno = EEXIST; break;
+		case ERROR_FILE_NOT_FOUND: fs::error = ENOENT; break;
+		case ERROR_PATH_NOT_FOUND: fs::error = ENOENT; break;
+		case ERROR_FILE_EXISTS:    fs::error = EEXIST; break;
 		default: throw fmt::exception("Unknown Win32 error: %u (%s)." HERE, error, path);
 		}
 
@@ -746,7 +789,7 @@ bool fs::file::open(const std::string& path, mset<open_mode> mode)
 				// TODO: convert Win32 error code to errno
 				switch (DWORD error = GetLastError())
 				{
-				case ERROR_NEGATIVE_SEEK: errno = EINVAL; break;
+				case ERROR_NEGATIVE_SEEK: fs::error = EINVAL; break;
 				default: throw fmt::exception("Unknown Win32 error: %u." HERE, error);
 				}
 
@@ -871,6 +914,7 @@ bool fs::file::open(const std::string& path, mset<open_mode> mode)
 	if (fd == -1)
 	{
 		// TODO: errno
+		fs::error = errno;
 		return false;
 	}
 
@@ -1086,8 +1130,8 @@ bool fs::dir::open(const std::string& path)
 		// TODO: convert Win32 error code to errno
 		switch (DWORD error = GetLastError())
 		{
-		case ERROR_FILE_NOT_FOUND: errno = ENOENT; break;
-		case ERROR_PATH_NOT_FOUND: errno = ENOENT; break;
+		case ERROR_FILE_NOT_FOUND: fs::error = ENOENT; break;
+		case ERROR_PATH_NOT_FOUND: fs::error = ENOENT; break;
 		default: throw fmt::exception("Unknown Win32 error: %u." HERE, error);
 		}
 
@@ -1162,6 +1206,7 @@ bool fs::dir::open(const std::string& path)
 	if (!ptr)
 	{
 		// TODO: errno
+		fs::error = errno;
 		return false;
 	}
 

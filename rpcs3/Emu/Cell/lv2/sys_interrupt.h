@@ -6,7 +6,7 @@ class PPUThread;
 
 struct lv2_int_tag_t
 {
-	const u32 id{};
+	const id_value<> id{};
 
 	std::shared_ptr<struct lv2_int_serv_t> handler;
 };
@@ -14,7 +14,8 @@ struct lv2_int_tag_t
 struct lv2_int_serv_t
 {
 	const std::shared_ptr<PPUThread> thread;
-	const u32 id{};
+
+	const id_value<> id{};
 
 	atomic_t<u32> signal{ 0 }; // signal count
 

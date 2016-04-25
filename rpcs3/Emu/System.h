@@ -14,7 +14,7 @@ struct EmuCallbacks
 	std::function<std::shared_ptr<class KeyboardHandlerBase>()> get_kb_handler;
 	std::function<std::shared_ptr<class MouseHandlerBase>()> get_mouse_handler;
 	std::function<std::shared_ptr<class PadHandlerBase>()> get_pad_handler;
-	std::function<std::unique_ptr<class GSFrameBase>(frame_type, size2i)> get_gs_frame;
+	std::function<std::unique_ptr<class GSFrameBase>(frame_type, int, int)> get_gs_frame;
 	std::function<std::shared_ptr<class GSRender>()> get_gs_render;
 	std::function<std::shared_ptr<class AudioThread>()> get_audio;
 	std::function<std::shared_ptr<class MsgDialogBase>()> get_msg_dialog;

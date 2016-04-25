@@ -157,7 +157,7 @@ enum class elf_error
 template<>
 struct bijective<elf_error, const char*>
 {
-	static constexpr std::pair<elf_error, const char*> map[]
+	static constexpr bijective_pair<elf_error, const char*> map[]
 	{
 		{ elf_error::ok, "" },
 

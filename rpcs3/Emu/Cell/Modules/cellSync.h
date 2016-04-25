@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Utilities/BitField.h"
+
 namespace vm { using namespace ps3; }
 
 // Return Codes
@@ -374,23 +376,6 @@ struct alignas(128) CellSyncLFQueue
 	vm::bptr<void, u64> m_eaSignal; // 0x70
 	be_t<u32> m_v2;                // 0x78
 	be_t<u32> m_eq_id;             // 0x7C
-
-	std::string dump()
-	{
-		std::string res = "CellSyncLFQueue dump:";
-
-		auto data = (be_t<u64>*)this;
-
-		for (u32 i = 0; i < sizeof(CellSyncLFQueue) / sizeof(u64); i += 2)
-		{
-			res += "\n*** 0x";
-			res += fmt::to_hex(data[i + 0], 16);
-			res += " 0x";
-			res += fmt::to_hex(data[i + 1], 16);
-		}
-
-		return res;
-	}
 };
 
 CHECK_SIZE_ALIGN(CellSyncLFQueue, 128, 128);

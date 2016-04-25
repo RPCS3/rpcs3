@@ -1,120 +1,90 @@
-#include "stdafx.h"
 #include "Utilities/Semaphore.h"
 
-bool semaphore_t::try_wait()
+#include <mutex>
+#include <condition_variable>
+
+struct benaphore::internal
 {
-	// check m_value without interlocked op
-	if (m_var.load().value == 0)
-	{
-		return false;
-	}
+	std::mutex mutex;
 
-	// try to decrement m_value atomically
-	const auto old = m_var.fetch_op([](sync_var_t& var)
-	{
-		if (var.value)
-		{
-			var.value--;
-		}
-	});
+	std::size_t acq_order{};
+	std::size_t rel_order{};
 
-	// recheck atomic result
-	if (old.value == 0)
-	{
-		return false;
-	}
+	std::condition_variable cond;
+};
 
-	return true;
-}
-
-bool semaphore_t::try_post()
+void benaphore::wait_hard()
 {
-	// check m_value without interlocked op
-	if (m_var.load().value >= max_value)
+	initialize_once();
+
+	std::unique_lock<std::mutex> lock(m_data->mutex);
+
+	// Notify non-zero waiter queue size
+	if (m_value.exchange(-1) == 1)
 	{
-		return false;
-	}
-
-	// try to increment m_value atomically
-	const auto old = m_var.fetch_op([&](sync_var_t& var)
-	{
-		if (var.value < max_value)
-		{
-			var.value++;
-		}
-	});
-
-	// recheck atomic result
-	if (old.value >= max_value)
-	{
-		return false;
-	}
-
-	if (old.waiters)
-	{
-		// notify waiting thread
-		std::lock_guard<std::mutex> lock(m_mutex);
-
-		m_cv.notify_one();
-	}
-
-	return true;
-}
-
-void semaphore_t::wait()
-{
-	if (m_var.atomic_op([](sync_var_t& var) -> bool
-	{
-		if (var.value)
-		{
-			var.value--;
-
-			return true;
-		}
-		else
-		{
-			//var.waiters++;
-
-			return false;
-		}
-	}))
-	{
+		// Return immediately (acquired)
+		m_value = 0;
 		return;
 	}
 
-	std::unique_lock<std::mutex> lock(m_mutex);
+	// Remember the order
+	const std::size_t order = ++m_data->acq_order;
 
-	m_var.atomic_op([](sync_var_t& var)
+	// Wait for the appropriate rel_order (TODO)
+	while (m_data->rel_order < order)
 	{
-		var.waiters++;
-	});
+		m_data->cond.wait(lock);
+	}
 
-	while (!m_var.atomic_op([](sync_var_t& var) -> bool
+	if (order == m_data->acq_order && m_data->acq_order == m_data->rel_order)
 	{
-		if (var.value)
-		{
-			var.value--;
-			var.waiters--;
-
-			return true;
-		}
-		else
-		{
-			return false;
-		}
-	}))
-	{
-		m_cv.wait(lock);
+		// Cleaup
+		m_data->acq_order = 0;
+		m_data->rel_order = 0;
+		m_value.compare_and_swap(-1, 0);
 	}
 }
 
-bool semaphore_t::post_and_wait()
+void benaphore::post_hard()
 {
-	// TODO: merge these functions? Probably has a race condition.
-	if (try_wait()) return false;
+	initialize_once();
 
-	try_post();
-	wait();
+	std::unique_lock<std::mutex> lock(m_data->mutex);
 
-	return true;
+	if (m_value.compare_and_swap(0, 1) != -1)
+	{
+		// Do nothing (released)
+		return;
+	}
+
+	if (m_data->acq_order == m_data->rel_order)
+	{
+		m_value = 1;
+		return;
+	}
+
+	// Awake one thread
+	m_data->rel_order += 1;
+		
+	// Unlock and notify
+	lock.unlock();
+	m_data->cond.notify_one();
+}
+
+void benaphore::initialize_once()
+{
+	if (UNLIKELY(!m_data))
+	{
+		auto ptr = new benaphore::internal;
+
+		if (!m_data.compare_and_swap_test(nullptr, ptr))
+		{
+			delete ptr;
+		}
+	}
+}
+
+benaphore::~benaphore()
+{
+	delete m_data;
 }

@@ -1,5 +1,6 @@
 #include "StrFmt.h"
 #include "BEType.h"
+#include "StrUtil.h"
 
 #include <cassert>
 #include <array>
@@ -15,70 +16,7 @@ std::string v128::to_xyzw() const
 	return fmt::format("x: %g y: %g z: %g w: %g", _f[3], _f[2], _f[1], _f[0]);
 }
 
-std::string fmt::to_hex(u64 value, u64 count)
-{
-	if (count - 1 >= 16)
-	{
-		throw exception("fmt::to_hex(): invalid count: 0x%llx", count);
-	}
-
-	count = std::max<u64>(count, 16 - cntlz64(value) / 4);
-
-	char res[16] = {};
-
-	for (size_t i = count - 1; ~i; i--, value /= 16)
-	{
-		res[i] = "0123456789abcdef"[value % 16];
-	}
-
-	return std::string(res, count);
-}
-
-std::string fmt::to_udec(u64 value)
-{
-	char res[20] = {};
-	size_t first = sizeof(res);
-
-	if (!value)
-	{
-		res[--first] = '0';
-	}
-
-	for (; value; value /= 10)
-	{
-		res[--first] = '0' + (value % 10);
-	}
-
-	return std::string(&res[first], sizeof(res) - first);
-}
-
-std::string fmt::to_sdec(s64 svalue)
-{
-	const bool sign = svalue < 0;
-	u64 value = sign ? -svalue : svalue;
-
-	char res[20] = {};
-	size_t first = sizeof(res);
-
-	if (!value)
-	{
-		res[--first] = '0';
-	}
-
-	for (; value; value /= 10)
-	{
-		res[--first] = '0' + (value % 10);
-	}
-
-	if (sign)
-	{
-		res[--first] = '-';
-	}
-
-	return std::string(&res[first], sizeof(res) - first);
-}
-
-std::string fmt::_vformat(const char* fmt, va_list _args) noexcept
+std::string fmt::unsafe_vformat(const char* fmt, va_list _args) noexcept
 {
 	// Fixed stack buffer for the first attempt
 	std::array<char, 4096> fixed_buf;
@@ -115,18 +53,18 @@ std::string fmt::_vformat(const char* fmt, va_list _args) noexcept
 	}
 }
 
-std::string fmt::_format(const char* fmt...) noexcept
+std::string fmt::unsafe_format(const char* fmt...) noexcept
 {
 	va_list args;
 	va_start(args, fmt);
-	auto result = fmt::_vformat(fmt, args);
+	auto result = unsafe_vformat(fmt, args);
 	va_end(args);
 
 	return result;
 }
 
 fmt::exception_base::exception_base(const char* fmt...)
-	: std::runtime_error((va_start(m_args, fmt), _vformat(fmt, m_args)))
+	: std::runtime_error((va_start(m_args, fmt), unsafe_vformat(fmt, m_args)))
 {
 	va_end(m_args);
 }
@@ -196,73 +134,11 @@ std::string fmt::trim(const std::string& source, const std::string& values)
 	return source.substr(begin, source.find_last_not_of(values) + 1);
 }
 
-std::string fmt::escape(const std::string& source, std::initializer_list<char> more)
-{
-	const std::pair<std::string, std::string> escape_list[] =
-	{
-		{ "\\", "\\\\" },
-		{ "\a", "\\a" },
-		{ "\b", "\\b" },
-		{ "\f", "\\f" },
-		{ "\n", "\\n" },
-		{ "\r", "\\r" },
-		{ "\t", "\\t" },
-		{ "\v", "\\v" },
-	};
-
-	std::string result = fmt::replace_all(source, escape_list);
-
-	for (char c = 0; c < 32; c++)
-	{
-		result = fmt::replace_all(result, std::string(1, c), fmt::format("\\x%02X", c));
-	}
-
-	for (char c : more)
-	{
-		result = fmt::replace_all(result, std::string(1, c), fmt::format("\\x%02X", c));
-	}
-
-	return result;
-}
-
-std::string fmt::unescape(const std::string& source)
+std::string fmt::to_upper(const std::string& string)
 {
 	std::string result;
-
-	for (auto it = source.begin(); it != source.end();)
-	{
-		const char bs = *it++;
-
-		if (bs == '\\' && it != source.end())
-		{
-			switch (const char code = *it++)
-			{
-			case 'a': result += '\a'; break;
-			case 'b': result += '\b'; break;
-			case 'f': result += '\f'; break;
-			case 'n': result += '\n'; break;
-			case 'r': result += '\r'; break;
-			case 't': result += '\t'; break;
-			case 'v': result += '\v'; break;
-			case 'x':
-			{
-				// Detect hexadecimal character code (TODO)
-				if (source.end() - it >= 2)
-				{
-					result += std::stoi(std::string{ *it++, *it++ }, 0, 16);
-				}
-				
-			}
-			// Octal/unicode not supported
-			default: result += code;
-			}
-		}
-		else
-		{
-			result += bs;
-		}
-	}
-
+	result.resize(string.size());
+	std::transform(string.begin(), string.end(), result.begin(), ::toupper);
 	return result;
 }
 

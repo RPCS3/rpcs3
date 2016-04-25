@@ -674,8 +674,6 @@ namespace rsx
 			});
 		}
 
-		rsx->sem_flip.post_and_wait();
-
 		if (double limit = g_cfg_rsx_frame_limit.get())
 		{
 			if (limit < 0) limit = rsx->fps_limit; // TODO

@@ -17,6 +17,8 @@
 #include "Loader/PSF.h"
 #include "Loader/ELF.h"
 
+#include "Utilities/StrUtil.h"
+
 #include "../Crypto/unself.h"
 
 cfg::bool_entry g_cfg_autostart(cfg::root.misc, "Always start after boot");
@@ -30,6 +32,8 @@ extern cfg::string_entry g_cfg_vfs_app_home;
 extern atomic_t<u32> g_thread_count;
 
 extern u64 get_system_time();
+
+fs::file g_tty;
 
 namespace rpcs3
 {
@@ -48,6 +52,11 @@ Emulator::Emulator()
 
 void Emulator::Init()
 {
+	if (!g_tty)
+	{
+		g_tty.open(fs::get_config_dir() + "TTY.log", fs::rewrite + fs::append);
+	}
+	
 	idm::init();
 	fxm::init();
 
@@ -424,7 +433,7 @@ DECLARE(fxm::g_map);
 DECLARE(fxm::g_mutex);
 
 #ifndef _MSC_VER
-constexpr std::pair<elf_error, const char*> bijective<elf_error, const char*>::map[];
-constexpr std::pair<_log::level, const char*> bijective<_log::level, const char*>::map[];
-constexpr std::pair<rsx::shader_language, const char*> bijective<rsx::shader_language, const char*>::map[];
+constexpr DECLARE(bijective<elf_error, const char*>::map);
+constexpr DECLARE(bijective<_log::level, const char*>::map);
+constexpr DECLARE(bijective<rsx::shader_language, const char*>::map);
 #endif

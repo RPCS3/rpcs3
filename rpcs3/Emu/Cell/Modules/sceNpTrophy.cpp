@@ -10,11 +10,13 @@
 #include "sceNp.h"
 #include "sceNpTrophy.h"
 
+#include "Utilities/StrUtil.h"
+
 LOG_CHANNEL(sceNpTrophy);
 
 struct trophy_context_t
 {
-	const u32 id{};
+	const id_value<> id{};
 
 	std::string trp_name;
 	fs::file trp_stream;
@@ -23,7 +25,7 @@ struct trophy_context_t
 
 struct trophy_handle_t
 {
-	const u32 id{};
+	const id_value<> id{};
 };
 
 // Functions

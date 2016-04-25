@@ -8,7 +8,8 @@ struct lv2_memory_t
 	const u32 align; // required alignment
 	const u64 flags;
 	const std::shared_ptr<lv2_memory_container_t> ct; // memory container the physical memory is taken from
-	const u32 id{};
+
+	const id_value<> id{};
 
 	atomic_t<u32> addr{ 0 }; // actual mapping address
 

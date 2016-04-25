@@ -5,6 +5,8 @@
 
 #include "sceLibKernel.h"
 
+#include "Utilities/StrUtil.h"
+
 LOG_CHANNEL(sceLibKernel);
 
 extern u64 get_system_time();

@@ -35,10 +35,10 @@ class shared_mutex final
 public:
 	constexpr shared_mutex() = default;
 
-	~shared_mutex();
-
 	// Initialize internal data
 	void initialize_once();
+
+	~shared_mutex();
 
 	bool try_lock_shared()
 	{

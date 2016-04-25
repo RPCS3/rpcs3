@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Utilities/Thread.h"
+#include "Utilities/BitSet.h"
 
 // CPU Thread Type
 enum class cpu_type : u32
@@ -27,7 +28,7 @@ enum struct cpu_state : u32
 };
 
 // CPU Thread State flags: pause state union
-constexpr mset<cpu_state> cpu_state_pause = to_mset(cpu_state::suspend, cpu_state::dbg_global_pause, cpu_state::dbg_pause);
+constexpr bitset_t<cpu_state> cpu_state_pause = make_bitset(cpu_state::suspend, cpu_state::dbg_global_pause, cpu_state::dbg_pause);
 
 class cpu_thread : public named_thread
 {
@@ -38,13 +39,14 @@ public:
 	virtual ~cpu_thread() override;
 
 	const std::string name;
-	const u32 id = -1;
 	const cpu_type type;
+
+	const id_value<> id{};
 
 	cpu_thread(cpu_type type, const std::string& name);
 
 	// Public thread state
-	atomic_t<mset<cpu_state>> state{ cpu_state::stop };
+	atomic_t<bitset_t<cpu_state>> state{ cpu_state::stop };
 
 	// Recursively enter sleep state
 	void sleep()
