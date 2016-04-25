@@ -4,6 +4,8 @@
 
 #include "cellSaveData.h"
 
+#include "Loader/PSF.h"
+
 LOG_CHANNEL(cellSaveData);
 
 // cellSaveData aliases (only for cellSaveData.cpp)

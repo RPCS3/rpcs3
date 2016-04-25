@@ -20,7 +20,7 @@ void lv2_rwlock_t::notify_all(lv2_lock_t)
 		writer = std::static_pointer_cast<cpu_thread>(wsq.front()->shared_from_this());
 
 		ASSERT(!writer->state.test_and_set(cpu_state::signal));
-		writer->cv.notify_one();
+		writer->notify();
 
 		return wsq.pop_front();
 	}
@@ -33,7 +33,7 @@ void lv2_rwlock_t::notify_all(lv2_lock_t)
 		for (auto& thread : rsq)
 		{
 			ASSERT(!thread->state.test_and_set(cpu_state::signal));
-			thread->cv.notify_one();
+			thread->notify();
 		}
 
 		return rsq.clear();
@@ -132,11 +132,11 @@ s32 sys_rwlock_rlock(PPUThread& ppu, u32 rw_lock_id, u64 timeout)
 				return CELL_ETIMEDOUT;
 			}
 
-			ppu.cv.wait_for(lv2_lock, std::chrono::microseconds(timeout - passed));
+			get_current_thread_cv().wait_for(lv2_lock, std::chrono::microseconds(timeout - passed));
 		}
 		else
 		{
-			ppu.cv.wait(lv2_lock);
+			get_current_thread_cv().wait(lv2_lock);
 		}
 	}
 
@@ -255,11 +255,11 @@ s32 sys_rwlock_wlock(PPUThread& ppu, u32 rw_lock_id, u64 timeout)
 				return CELL_ETIMEDOUT;
 			}
 
-			ppu.cv.wait_for(lv2_lock, std::chrono::microseconds(timeout - passed));
+			get_current_thread_cv().wait_for(lv2_lock, std::chrono::microseconds(timeout - passed));
 		}
 		else
 		{
-			ppu.cv.wait(lv2_lock);
+			get_current_thread_cv().wait(lv2_lock);
 		}
 	}
 

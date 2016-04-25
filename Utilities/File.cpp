@@ -2,13 +2,13 @@
 #include "StrFmt.h"
 #include "Macro.h"
 #include "SharedMutex.h"
+
 #include <unordered_map>
+#include <algorithm>
 
 #ifdef _WIN32
 
 #include <cwchar>
-#undef _WIN32_WINNT
-#define _WIN32_WINNT 0x0601
 #include <Windows.h>
 
 static std::unique_ptr<wchar_t[]> to_wchar(const std::string& source)
@@ -97,7 +97,7 @@ namespace fs
 		std::unordered_map<std::string, std::shared_ptr<device_base>> m_map;
 
 	public:
-		std::shared_ptr<device_base> get_device(const std::string& name);
+		std::shared_ptr<device_base> get_device(const std::string& path);
 		std::shared_ptr<device_base> set_device(const std::string& name, const std::shared_ptr<device_base>&);
 	};
 
@@ -109,11 +109,11 @@ namespace fs
 	}
 }
 
-safe_buffers std::shared_ptr<fs::device_base> fs::device_manager::get_device(const std::string& name)
+std::shared_ptr<fs::device_base> fs::device_manager::get_device(const std::string& path)
 {
 	reader_lock lock(m_mutex);
 
-	const auto found = m_map.find(name);
+	const auto found = m_map.find(path.substr(0, path.find_first_of('/', 2)));
 
 	if (found == m_map.end())
 	{
@@ -123,29 +123,27 @@ safe_buffers std::shared_ptr<fs::device_base> fs::device_manager::get_device(con
 	return found->second;
 }
 
-safe_buffers std::shared_ptr<fs::device_base> fs::device_manager::set_device(const std::string& name, const std::shared_ptr<device_base>& device)
+std::shared_ptr<fs::device_base> fs::device_manager::set_device(const std::string& name, const std::shared_ptr<device_base>& device)
 {
-	std::lock_guard<shared_mutex> lock(m_mutex);
+	writer_lock lock(m_mutex);
 
 	return m_map[name] = device;
 }
 
-safe_buffers std::shared_ptr<fs::device_base> fs::get_virtual_device(const std::string& path)
+std::shared_ptr<fs::device_base> fs::get_virtual_device(const std::string& path)
 {
 	// Every virtual device path must have "//" at the beginning
-	if (path.size() > 2 && reinterpret_cast<const u16&>(path.front()) == '//')
+	if (path.size() > 2 && reinterpret_cast<const u16&>(path.front()) == "//"_u16)
 	{
-		return get_device_manager().get_device(path.substr(0, path.find_first_of('/', 2)));
+		return get_device_manager().get_device(path);
 	}
 
 	return nullptr;
 }
 
-safe_buffers std::shared_ptr<fs::device_base> fs::set_virtual_device(const std::string& name, const std::shared_ptr<device_base>& device)
+std::shared_ptr<fs::device_base> fs::set_virtual_device(const std::string& name, const std::shared_ptr<device_base>& device)
 {
-	Expects(name.size() > 2);
-	Expects(name[0] == '/');
-	Expects(name[1] == '/');
+	Expects(name.size() > 2 && name[0] == '/' && name[1] == '/' && name.find('/', 2) == -1);
 
 	return get_device_manager().set_device(name, device);
 }
@@ -1005,17 +1003,17 @@ bool fs::file::open(const std::string& path, mset<open_mode> mode)
 
 fs::file::file(const void* ptr, std::size_t size)
 {
-	class memory_stream final : public file_base
+	class memory_stream : public file_base
 	{
-		u64 m_pos = 0;
-		u64 m_size;
+		u64 m_pos{}; // TODO: read/seek could modify m_pos atomically
+
+		const char* const m_ptr;
+		const u64 m_size;
 
 	public:
-		const char* const ptr;
-
-		memory_stream(const void* ptr, std::size_t size)
-			: m_size(size)
-			, ptr(static_cast<const char*>(ptr))
+		memory_stream(const void* ptr, u64 size)
+			: m_ptr(static_cast<const char*>(ptr))
+			, m_size(size)
 		{
 		}
 
@@ -1034,7 +1032,7 @@ fs::file::file(const void* ptr, std::size_t size)
 			const u64 start = m_pos;
 			const u64 end = seek(count, fs::seek_cur);
 			const u64 read_size = end >= start ? end - start : throw std::logic_error("memory_stream::read(): overflow");
-			std::memcpy(buffer, ptr + start, read_size);
+			std::memcpy(buffer, m_ptr + start, read_size);
 			return read_size;
 		}
 
@@ -1045,10 +1043,10 @@ fs::file::file(const void* ptr, std::size_t size)
 
 		u64 seek(s64 offset, fs::seek_mode whence) override
 		{
-			return m_pos =
-				whence == fs::seek_set ? std::min<u64>(offset, m_size) :
-				whence == fs::seek_cur ? std::min<u64>(offset + m_pos, m_size) :
-				whence == fs::seek_end ? std::min<u64>(offset + m_size, m_size) :
+			return
+				whence == fs::seek_set ? m_pos = std::min<u64>(offset, m_size) :
+				whence == fs::seek_cur ? m_pos = std::min<u64>(offset + m_pos, m_size) :
+				whence == fs::seek_end ? m_pos = std::min<u64>(offset + m_size, m_size) :
 				throw std::logic_error("memory_stream::seek(): invalid whence");
 		}
 
@@ -1060,93 +1058,6 @@ fs::file::file(const void* ptr, std::size_t size)
 
 	m_file = std::make_unique<memory_stream>(ptr, size);
 }
-
-fs::file::file(std::vector<char>& vec)
-{
-	class vector_stream final : public file_base
-	{
-		u64 m_pos = 0;
-
-	public:
-		std::vector<char>& vec;
-
-		vector_stream(std::vector<char>& vec)
-			: vec(vec)
-		{
-		}
-
-		fs::stat_t stat() override
-		{
-			throw std::logic_error("vector_stream doesn't support stat()");
-		}
-
-		bool trunc(u64 length) override
-		{
-			vec.resize(length);
-			return true;
-		}
-
-		u64 read(void* buffer, u64 count) override
-		{
-			const u64 start = m_pos;
-			const u64 end = seek(count, fs::seek_cur);
-			const u64 read_size = end >= start ? end - start : throw std::logic_error("vector_stream::read(): overflow");
-			std::memcpy(buffer, vec.data() + start, read_size);
-			return read_size;
-		}
-
-		u64 write(const void* buffer, u64 count) override
-		{
-			throw std::logic_error("TODO: vector_stream doesn't support write()");
-		}
-
-		u64 seek(s64 offset, fs::seek_mode whence) override
-		{
-			return m_pos =
-				whence == fs::seek_set ? std::min<u64>(offset, vec.size()) :
-				whence == fs::seek_cur ? std::min<u64>(offset + m_pos, vec.size()) :
-				whence == fs::seek_end ? std::min<u64>(offset + vec.size(), vec.size()) :
-				throw std::logic_error("vector_stream::seek(): invalid whence");
-		}
-
-		u64 size() override
-		{
-			return vec.size();
-		}
-	};
-
-	m_file = std::make_unique<vector_stream>(vec);
-}
-
-//void fs::file_read_map::reset(const file& f)
-//{
-//	reset();
-//
-//	if (f)
-//	{
-//#ifdef _WIN32
-//		const HANDLE handle = ::CreateFileMapping((HANDLE)f.m_fd, NULL, PAGE_READONLY, 0, 0, NULL);
-//		m_ptr = (char*)::MapViewOfFile(handle, FILE_MAP_READ, 0, 0, 0);
-//		m_size = f.size();
-//		::CloseHandle(handle);
-//#else
-//		m_ptr = (char*)::mmap(nullptr, m_size = f.size(), PROT_READ, MAP_SHARED, f.m_fd, 0);
-//		if (m_ptr == (void*)-1) m_ptr = nullptr;
-//#endif
-//	}
-//}
-//
-//void fs::file_read_map::reset()
-//{
-//	if (m_ptr)
-//	{
-//#ifdef _WIN32
-//		::UnmapViewOfFile(m_ptr);
-//#else
-//		::munmap(m_ptr, m_size);
-//#endif
-//	}
-//}
 
 void fs::dir::xnull() const
 {

@@ -23,7 +23,7 @@ void lv2_lwmutex_t::unlock(lv2_lock_t)
 	{
 		auto& thread = sq.front();
 		ASSERT(!thread->state.test_and_set(cpu_state::signal));
-		thread->cv.notify_one();
+		thread->notify();
 
 		sq.pop_front();
 	}
@@ -114,11 +114,11 @@ s32 _sys_lwmutex_lock(PPUThread& ppu, u32 lwmutex_id, u64 timeout)
 				return CELL_ETIMEDOUT;
 			}
 
-			ppu.cv.wait_for(lv2_lock, std::chrono::microseconds(timeout - passed));
+			get_current_thread_cv().wait_for(lv2_lock, std::chrono::microseconds(timeout - passed));
 		}
 		else
 		{
-			ppu.cv.wait(lv2_lock);
+			get_current_thread_cv().wait(lv2_lock);
 		}
 	}
 

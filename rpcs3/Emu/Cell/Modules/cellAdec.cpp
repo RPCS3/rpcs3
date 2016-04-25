@@ -468,7 +468,7 @@ void adecOpen(u32 adec_id) // TODO: call from the constructor
 
 	adec.adecCb->cpu_init();
 	adec.adecCb->state -= cpu_state::stop;
-	adec.adecCb->safe_notify();
+	adec.adecCb->lock_notify();
 }
 
 bool adecCheckType(s32 type)

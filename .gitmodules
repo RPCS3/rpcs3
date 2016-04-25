@@ -22,6 +22,7 @@
 [submodule "libpng"]
 	path = 3rdparty/libpng
 	url = https://github.com/RPCS3/libpng
+	ignore = dirty
 [submodule "Vulkan/glslang"]
 	path = Vulkan/glslang
 	url = https://github.com/KhronosGroup/glslang.git

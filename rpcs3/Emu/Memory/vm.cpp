@@ -22,6 +22,8 @@
 #endif
 #endif
 
+#include "wait_engine.h"
+
 namespace vm
 {
 	thread_local u64 g_tls_fault_count{};
@@ -159,221 +161,12 @@ namespace vm
 
 	reservation_mutex_t g_reservation_mutex;
 
-	std::array<waiter_t, 1024> g_waiter_list;
 
-	std::size_t g_waiter_max = 0; // min unused position
-	std::size_t g_waiter_nil = 0; // min search position
-
-	std::mutex g_waiter_list_mutex;
-
-	waiter_t* _add_waiter(named_thread& thread, u32 addr, u32 size)
-	{
-		std::lock_guard<std::mutex> lock(g_waiter_list_mutex);
-
-		const u64 align = 0x80000000ull >> cntlz32(size);
-
-		if (!size || !addr || size > 4096 || size != align || addr & (align - 1))
-		{
-			throw EXCEPTION("Invalid arguments (addr=0x%x, size=0x%x)", addr, size);
-		}
-
-		thread.mutex.lock();
-
-		// look for empty position
-		for (; g_waiter_nil < g_waiter_max; g_waiter_nil++)
-		{
-			waiter_t& waiter = g_waiter_list[g_waiter_nil];
-
-			if (!waiter.thread)
-			{
-				// store next position for further addition
-				g_waiter_nil++;
-
-				return waiter.reset(addr, size, thread);
-			}
-		}
-
-		if (g_waiter_max >= g_waiter_list.size())
-		{
-			throw EXCEPTION("Waiter list limit broken (%lld)", g_waiter_max);
-		}
-
-		waiter_t& waiter = g_waiter_list[g_waiter_max++];
-
-		g_waiter_nil = g_waiter_max;
-		
-		return waiter.reset(addr, size, thread);
-	}
-
-	void _remove_waiter(waiter_t* waiter)
-	{
-		std::lock_guard<std::mutex> lock(g_waiter_list_mutex);
-
-		// mark as deleted
-		waiter->thread = nullptr;
-
-		// amortize adding new element
-		g_waiter_nil = std::min<std::size_t>(g_waiter_nil, waiter - g_waiter_list.data());
-
-		// amortize polling
-		while (g_waiter_max && !g_waiter_list[g_waiter_max - 1].thread)
-		{
-			g_waiter_max--;
-		}
-	}
-
-	bool waiter_t::try_notify()
-	{
-		std::lock_guard<std::mutex> lock(thread->mutex);
-
-		try
-		{
-			// test predicate
-			if (!pred || !pred())
-			{
-				return false;
-			}
-
-			// clear predicate
-			pred = nullptr;
-		}
-		catch (...)
-		{
-			// capture any exception possibly thrown by predicate
-			pred = [exception = std::current_exception()]() -> bool
-			{
-				// new predicate will throw the captured exception from the original thread
-				std::rethrow_exception(exception);
-			};
-		}
-
-		// set addr and mask to invalid values to prevent further polling
-		addr = 0;
-		mask = ~0;
-
-		// signal thread
-		thread->cv.notify_one();
-
-		return true;
-	}
-
-	waiter_lock_t::waiter_lock_t(named_thread& thread, u32 addr, u32 size)
-		: m_waiter(_add_waiter(thread, addr, size))
-		, m_lock(thread.mutex, std::adopt_lock) // must be locked in _add_waiter
-	{
-	}
-
-	void waiter_lock_t::wait()
-	{
-		// if another thread successfully called pred(), it must be set to null
-		while (m_waiter->pred)
-		{
-			// if pred() called by another thread threw an exception, it'll be rethrown
-			if (m_waiter->pred())
-			{
-				return;
-			}
-
-			CHECK_EMU_STATUS;
-
-			m_waiter->thread->cv.wait(m_lock);
-		}
-	}	
-
-	waiter_lock_t::~waiter_lock_t()
-	{
-		// reset some data to avoid excessive signaling
-		m_waiter->addr = 0;
-		m_waiter->mask = ~0;
-		m_waiter->pred = nullptr;
-
-		// unlock thread's mutex to avoid deadlock with g_waiter_list_mutex
-		m_lock.unlock();
-
-		_remove_waiter(m_waiter);
-	}
-
-	void _notify_at(u32 addr, u32 size)
-	{
-		// skip notification if no waiters available
-		if (_mm_mfence(), !g_waiter_max) return;
-
-		std::lock_guard<std::mutex> lock(g_waiter_list_mutex);
-
-		const u32 mask = ~(size - 1);
-
-		for (std::size_t i = 0; i < g_waiter_max; i++)
-		{
-			waiter_t& waiter = g_waiter_list[i];
-
-			// check address range overlapping using masks generated from size (power of 2)
-			if (waiter.thread && ((waiter.addr ^ addr) & (mask & waiter.mask)) == 0)
-			{
-				waiter.try_notify();
-			}
-		}
-	}
 
 	access_violation::access_violation(u64 addr, const char* cause)
 		: std::runtime_error(fmt::exception("Access violation %s address 0x%llx", cause, addr))
 	{
 		g_tls_fault_count &= ~(1ull << 63);
-	}
-
-	void notify_at(u32 addr, u32 size)
-	{
-		const u64 align = 0x80000000ull >> cntlz32(size);
-
-		if (!size || !addr || size > 4096 || size != align || addr & (align - 1))
-		{
-			throw EXCEPTION("Invalid arguments (addr=0x%x, size=0x%x)", addr, size);
-		}
-
-		_notify_at(addr, size);
-	}
-
-	bool notify_all()
-	{
-		std::unique_lock<std::mutex> lock(g_waiter_list_mutex);
-
-		std::size_t waiters = 0;
-		std::size_t signaled = 0;
-
-		for (std::size_t i = 0; i < g_waiter_max; i++)
-		{
-			waiter_t& waiter = g_waiter_list[i];
-
-			if (waiter.thread && waiter.addr)
-			{
-				waiters++;
-
-				if (waiter.try_notify())
-				{
-					signaled++;
-				}
-			}
-		}
-
-		// return true if waiter list is empty or all available waiters were signaled
-		return waiters == signaled;
-	}
-
-	void start()
-	{
-		// start notification thread
-		thread_ctrl::spawn("vm::start thread", []()
-		{
-			while (!Emu.IsStopped())
-			{
-				// poll waiters periodically (TODO)
-				while (!notify_all() && !Emu.IsPaused())
-				{
-					std::this_thread::yield();
-				}
-
-				std::this_thread::sleep_for(std::chrono::milliseconds(1));
-			}
-		});
 	}
 
 	void _reservation_set(u32 addr, bool no_access = false)
@@ -422,7 +215,7 @@ namespace vm
 
 		if ((g_tls_did_break_reservation = _reservation_break(addr)))
 		{
-			lock.unlock(), _notify_at(raddr, rsize);
+			lock.unlock(), vm::notify_at(raddr, rsize);
 		}
 	}
 
@@ -489,7 +282,7 @@ namespace vm
 		_reservation_break(addr);
 
 		// notify waiter
-		lock.unlock(), _notify_at(addr, size);
+		lock.unlock(), vm::notify_at(addr, size);
 
 		// atomic update succeeded
 		return true;
@@ -517,7 +310,7 @@ namespace vm
 				// break the reservation if overlap
 				if ((g_tls_did_break_reservation = _reservation_break(addr)))
 				{
-					lock.unlock(), _notify_at(raddr, rsize);
+					lock.unlock(), vm::notify_at(raddr, rsize);
 				}
 			}
 			
@@ -536,11 +329,13 @@ namespace vm
 
 	void reservation_free()
 	{
-		if (reservation_test())
+		auto thread = thread_ctrl::get_current();
+
+		if (reservation_test(thread))
 		{
 			std::lock_guard<reservation_mutex_t> lock(g_reservation_mutex);
 
-			if (g_reservation_owner && g_reservation_owner == thread_ctrl::get_current())
+			if (g_reservation_owner && g_reservation_owner == thread)
 			{
 				g_tls_did_break_reservation = _reservation_break(g_reservation_addr);
 			}
@@ -589,7 +384,7 @@ namespace vm
 		_reservation_break(addr);
 
 		// notify waiter
-		lock.unlock(), _notify_at(addr, size);
+		lock.unlock(), vm::notify_at(addr, size);
 	}
 
 	void _page_map(u32 addr, u32 size, u8 flags)
@@ -1013,6 +808,8 @@ namespace vm
 
 		return nullptr;
 	}
+
+	extern void start();
 
 	namespace ps3
 	{

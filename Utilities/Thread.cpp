@@ -52,38 +52,6 @@ static void report_fatal_error(const std::string& msg)
 	std::abort();
 }
 
-void SetCurrentThreadDebugName(const char* threadName)
-{
-#if defined(_MSC_VER) // this is VS-specific way to set thread names for the debugger
-
-	#pragma pack(push,8)
-
-	struct THREADNAME_INFO
-	{
-		DWORD dwType;
-		LPCSTR szName;
-		DWORD dwThreadID;
-		DWORD dwFlags;
-	} info;
-
-	#pragma pack(pop)
-
-	info.dwType = 0x1000;
-	info.szName = threadName;
-	info.dwThreadID = -1;
-	info.dwFlags = 0;
-
-	__try
-	{
-		RaiseException(0x406D1388, 0, sizeof(info) / sizeof(ULONG_PTR), (ULONG_PTR*)&info);
-	}
-	__except (EXCEPTION_EXECUTE_HANDLER)
-	{
-	}
-
-#endif
-}
-
 enum x64_reg_t : u32
 {
 	X64R_RAX = 0,
@@ -1295,22 +1263,84 @@ const bool s_self_test = []() -> bool
 	return true;
 }();
 
+#include <mutex>
+#include <condition_variable>
+#include <exception>
+
 thread_local DECLARE(thread_ctrl::g_tls_this_thread) = nullptr;
 
+struct thread_ctrl::internal
+{
+	std::mutex mutex;
+	std::condition_variable cond;
+	std::condition_variable join; // Allows simultaneous joining
+
+	task_stack atexit;
+
+	std::exception_ptr exception; // Caught exception
+};
+
+// Temporarily until better interface is implemented
+extern std::condition_variable& get_current_thread_cv()
+{
+	return thread_ctrl::get_current()->get_data()->cond;
+}
+
+extern std::mutex& get_current_thread_mutex()
+{
+	return thread_ctrl::get_current()->get_data()->mutex;
+}
+
 // TODO
-atomic_t<u32> g_thread_count{ 0 };
+extern atomic_t<u32> g_thread_count(0);
 
 void thread_ctrl::initialize()
 {
-	SetCurrentThreadDebugName(g_tls_this_thread->m_name.c_str());
+	// Initialize TLS variable
+	g_tls_this_thread = this;
+
+#if defined(_MSC_VER)
+
+	struct THREADNAME_INFO
+	{
+		DWORD dwType;
+		LPCSTR szName;
+		DWORD dwThreadID;
+		DWORD dwFlags;
+	};
+
+	// Set thread name for VS debugger
+	if (IsDebuggerPresent())
+	{
+		THREADNAME_INFO info;
+		info.dwType = 0x1000;
+		info.szName = m_name.c_str();
+		info.dwThreadID = -1;
+		info.dwFlags = 0;
+
+		__try
+		{
+			RaiseException(0x406D1388, 0, sizeof(info) / sizeof(ULONG_PTR), (ULONG_PTR*)&info);
+		}
+		__except (EXCEPTION_EXECUTE_HANDLER)
+		{
+		}
+	}
+
+#endif
 
 	_log::g_tls_make_prefix = [](const auto&, auto, const auto&)
 	{
 		return g_tls_this_thread->m_name;
 	};
 
-	// TODO
 	++g_thread_count;
+}
+
+void thread_ctrl::set_exception() noexcept
+{
+	initialize_once();
+	m_data->exception = std::current_exception();
 }
 
 void thread_ctrl::finalize() noexcept
@@ -1318,11 +1348,119 @@ void thread_ctrl::finalize() noexcept
 	// TODO
 	vm::reservation_free();
 
-	// TODO
+	// Call atexit functions
+	if (m_data) m_data->atexit.exec();
+
 	--g_thread_count;
 
-	// Call atexit functions
-	g_tls_this_thread->m_atexit.exec();
+#ifdef _MSC_VER
+	ULONG64 time;
+	QueryThreadCycleTime(m_thread.native_handle(), &time);
+	LOG_NOTICE(GENERAL, "Thread time: %f Gc", time / 1000000000.);
+#endif
+}
+
+task_stack& thread_ctrl::get_atexit() const
+{
+	initialize_once();
+	return m_data->atexit;
+}
+
+thread_ctrl::~thread_ctrl()
+{
+	if (m_thread.joinable())
+	{
+		m_thread.detach();
+	}
+
+	delete m_data;
+}
+
+void thread_ctrl::initialize_once() const
+{
+	if (!m_data)
+	{
+		auto ptr = new thread_ctrl::internal;
+
+		if (!m_data.compare_and_swap_test(nullptr, ptr))
+		{
+			delete ptr;
+		}
+	}
+}
+
+void thread_ctrl::join()
+{
+	if (m_thread.joinable())
+	{
+		// Increase contention counter
+		if (m_joining++)
+		{
+			// Hard way
+			initialize_once();
+
+			std::unique_lock<std::mutex> lock(m_data->mutex);
+			m_data->join.wait(lock, WRAP_EXPR(!m_thread.joinable()));
+		}
+		else
+		{
+			// Winner joins the thread
+			m_thread.join();
+
+			// Notify others if necessary
+			if (m_joining > 1)
+			{
+				initialize_once();
+
+				// Serialize for reliable notification
+				m_data->mutex.lock();
+				m_data->mutex.unlock();
+				m_data->join.notify_all();
+			}
+		}
+	}
+
+	if (m_data && m_data->exception)
+	{
+		std::rethrow_exception(m_data->exception);
+	}
+}
+
+void thread_ctrl::lock_notify() const
+{
+	if (UNLIKELY(g_tls_this_thread == this))
+	{
+		return;
+	}
+
+	initialize_once();
+
+	// Serialize for reliable notification, condition is assumed to be changed externally
+	m_data->mutex.lock();
+	m_data->mutex.unlock();
+	m_data->cond.notify_one();
+}
+
+void thread_ctrl::notify() const
+{
+	initialize_once();
+	m_data->cond.notify_one();
+}
+
+thread_ctrl::internal* thread_ctrl::get_data() const
+{
+	initialize_once();
+	return m_data;
+}
+
+
+named_thread::named_thread()
+{
+}
+
+named_thread::~named_thread()
+{
+	LOG_TRACE(GENERAL, "%s", __func__);
 }
 
 std::string named_thread::get_name() const
@@ -1332,8 +1470,6 @@ std::string named_thread::get_name() const
 
 void named_thread::start()
 {
-	Expects(!m_thread);
-
 	// Get shared_ptr instance (will throw if called from the constructor or the object has been created incorrectly)
 	auto&& ptr = shared_from_this();
 
@@ -1358,20 +1494,4 @@ void named_thread::start()
 
 		thread->on_exit();
 	});
-}
-
-void named_thread::join()
-{
-	Expects(m_thread);
-
-	try
-	{
-		m_thread->join();
-		m_thread.reset();
-	}
-	catch (...)
-	{
-		m_thread.reset();
-		throw;
-	}
 }

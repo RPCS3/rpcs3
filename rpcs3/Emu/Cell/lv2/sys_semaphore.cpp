@@ -107,11 +107,11 @@ s32 sys_semaphore_wait(PPUThread& ppu, u32 sem_id, u64 timeout)
 				return CELL_ETIMEDOUT;
 			}
 
-			ppu.cv.wait_for(lv2_lock, std::chrono::microseconds(timeout - passed));
+			get_current_thread_cv().wait_for(lv2_lock, std::chrono::microseconds(timeout - passed));
 		}
 		else
 		{
-			ppu.cv.wait(lv2_lock);
+			get_current_thread_cv().wait(lv2_lock);
 		}
 	}
 
@@ -175,7 +175,7 @@ s32 sys_semaphore_post(u32 sem_id, s32 count)
 
 		auto& thread = sem->sq.front();
 		ASSERT(!thread->state.test_and_set(cpu_state::signal));
-		thread->cv.notify_one();
+		thread->notify();
 
 		sem->sq.pop_front();
 	}

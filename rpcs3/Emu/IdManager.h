@@ -225,7 +225,7 @@ class idm
 	template<typename T, typename F, typename = std::result_of_t<F()>>
 	static map_type::pointer create_id(F&& provider)
 	{
-		std::lock_guard<shared_mutex> lock(g_mutex);
+		writer_lock lock(g_mutex);
 
 		if (auto place = allocate_id(get_tag<T>(), id_manager::id_traits<T>::min, id_manager::id_traits<T>::max))
 		{
@@ -255,7 +255,7 @@ class idm
 	// Remove ID and return object
 	static std::shared_ptr<void> delete_id(u32 type, u32 tag, u32 id)
 	{
-		std::lock_guard<shared_mutex> lock(g_mutex);
+		writer_lock lock(g_mutex);
 
 		auto&& ptr = deallocate_id(tag, id);
 
@@ -471,7 +471,7 @@ class fxm
 
 	static std::shared_ptr<void> remove(u32 type)
 	{
-		std::lock_guard<shared_mutex> lock(g_mutex);
+		writer_lock lock(g_mutex);
 
 		return std::move(g_map[type]);
 	}
@@ -504,7 +504,7 @@ public:
 	{
 		std::shared_ptr<T> ptr;
 		{
-			std::lock_guard<shared_mutex> lock(g_mutex);
+			writer_lock lock(g_mutex);
 
 			if (!g_map[get_type<T>()])
 			{
@@ -529,7 +529,7 @@ public:
 		std::shared_ptr<T> ptr;
 		std::shared_ptr<void> old;
 		{
-			std::lock_guard<shared_mutex> lock(g_mutex);
+			writer_lock lock(g_mutex);
 
 			old = std::move(g_map[get_type<T>()]);
 			ptr = std::make_shared<Make>(std::forward<Args>(args)...);
@@ -552,7 +552,7 @@ public:
 	{
 		std::shared_ptr<T> ptr;
 		{
-			std::lock_guard<shared_mutex> lock(g_mutex);
+			writer_lock lock(g_mutex);
 
 			if (!g_map[get_type<T>()])
 			{
@@ -577,7 +577,7 @@ public:
 		std::shared_ptr<T> ptr;
 		std::shared_ptr<void> old;
 		{
-			std::lock_guard<shared_mutex> lock(g_mutex);
+			writer_lock lock(g_mutex);
 
 			old = std::move(g_map[get_type<T>()]);
 			ptr = provider();
@@ -600,7 +600,7 @@ public:
 	{
 		std::shared_ptr<T> ptr;
 		{
-			std::lock_guard<shared_mutex> lock(g_mutex);
+			writer_lock lock(g_mutex);
 
 			if (auto& value = g_map[get_type<T>()])
 			{

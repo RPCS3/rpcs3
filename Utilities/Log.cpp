@@ -1,4 +1,5 @@
 ﻿#include "Log.h"
+#include <cstdarg>
 
 namespace _log
 {
@@ -23,9 +24,12 @@ namespace _log
 	thread_local std::string(*g_tls_make_prefix)(const channel&, level, const std::string&) = nullptr;
 }
 
-void _log::broadcast(const _log::channel& ch, _log::level sev, const std::string& text)
+void _log::channel::broadcast(const _log::channel& ch, _log::level sev, const char* fmt...)
 {
-	get_logger().log(ch, sev, text);
+	va_list args;
+	va_start(args, fmt);
+	get_logger().log(ch, sev, fmt::_vformat(fmt, args));
+	va_end(args);
 }
 
 [[noreturn]] extern void catch_all_exceptions();

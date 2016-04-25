@@ -18,13 +18,9 @@ public:
 	virtual std::string dump() const override;
 	virtual void cpu_init() override;
 	virtual void cpu_task() override;
-
-	ARMv7Thread(const std::string& name)
-		: cpu_thread(cpu_type::arm, name)
-	{
-	}
-
 	virtual ~ARMv7Thread() override;
+
+	ARMv7Thread(const std::string& name);
 
 	union
 	{
@@ -209,7 +205,7 @@ template<typename T>
 struct arm_gpr_cast_impl<T, std::enable_if_t<std::is_integral<T>::value || std::is_enum<T>::value>>
 {
 	static_assert(sizeof(T) <= 4, "Too big integral type for arm_gpr_cast<>()");
-	static_assert(std::is_same<const T, const bool>::value == false, "bool type is deprecated in arm_gpr_cast<>(), use b8 instead");
+	static_assert(std::is_same<CV T, CV bool>::value == false, "bool type is deprecated in arm_gpr_cast<>(), use b8 instead");
 
 	static inline u32 to(const T& value)
 	{

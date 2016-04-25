@@ -178,9 +178,10 @@ void Emulator::Load()
 			}
 
 			// Load PARAM.SFO
-			m_psf = psf::load_object(fs::file(elf_dir + "/../PARAM.SFO"));
-			m_title = psf::get_string(m_psf, "TITLE", m_path);
-			m_title_id = psf::get_string(m_psf, "TITLE_ID");
+			const auto _psf = psf::load_object(fs::file(elf_dir + "/../PARAM.SFO"));
+			m_title = psf::get_string(_psf, "TITLE", m_path);
+			m_title_id = psf::get_string(_psf, "TITLE_ID");
+
 			LOG_NOTICE(LOADER, "Title: %s", GetTitle());
 			LOG_NOTICE(LOADER, "Serial: %s", GetTitleID());
 			LOG_NOTICE(LOADER, "");
@@ -287,7 +288,7 @@ void Emulator::Run()
 	for (auto& thread : get_all_cpu_threads())
 	{
 		thread->state -= cpu_state::stop;
-		thread->safe_notify();
+		thread->lock_notify();
 	}
 
 	SendDbgCommand(DID_STARTED_EMU);
@@ -350,7 +351,7 @@ void Emulator::Resume()
 	for (auto& thread : get_all_cpu_threads())
 	{
 		thread->state -= cpu_state::dbg_global_pause;
-		thread->safe_notify();
+		thread->lock_notify();
 	}
 
 	rpcs3::on_resume()();
@@ -376,7 +377,7 @@ void Emulator::Stop()
 		for (auto& thread : get_all_cpu_threads())
 		{
 			thread->state += cpu_state::dbg_global_stop;
-			thread->safe_notify();
+			thread->lock_notify();
 		}
 	}
 

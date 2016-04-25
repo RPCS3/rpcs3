@@ -80,9 +80,20 @@ static const char* get_systemparam_id_name(s32 id)
 	return tls_id_name;
 }
 
+enum class systemparam_id_name : s32 {};
+
+template<>
+struct unveil<systemparam_id_name, void>
+{
+	static inline const char* get(systemparam_id_name arg)
+	{
+		return get_systemparam_id_name((s32)arg);
+	}
+};
+
 s32 cellSysutilGetSystemParamInt(s32 id, vm::ptr<s32> value)
 {
-	cellSysutil.warning("cellSysutilGetSystemParamInt(id=%s, value=*0x%x)", get_systemparam_id_name(id), value);
+	cellSysutil.warning("cellSysutilGetSystemParamInt(id=%s, value=*0x%x)", systemparam_id_name(id), value);
 
 	// TODO: load this information from config (preferably "sys/" group)
 

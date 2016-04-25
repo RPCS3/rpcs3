@@ -1041,33 +1041,25 @@ enum Method
 
 namespace rsx
 {
-	template<typename ...T>
-	static auto make_command(u32 start_register, T... values) -> std::array<u32, sizeof...(values) + 1>
+	template<typename AT>
+	static inline u32 make_command(vm::_ptr_base<be_t<u32>, AT>& dst, u32 start_register, std::initializer_list<any32> values)
 	{
-		return{ (start_register << 2) | u32(sizeof...(values) << 18), u32(values)... };
-	}
+		*dst++ = start_register << 2 | static_cast<u32>(values.size()) << 18;
 
-	static u32 make_jump(u32 offset)
-	{
-		return CELL_GCM_METHOD_FLAG_JUMP | offset;
-	}
-
-	template<typename AT, typename ...T>
-	static size_t make_command(vm::ps3::ptr<u32, AT> &dst, u32 start_register, T... values)
-	{
-		for (u32 command : { (start_register << 2) | u32(sizeof...(values) << 18), static_cast<u32>(values)... })
+		for (const any32& cmd : values)
 		{
-			*dst++ = command;
+			*dst++ = cmd.as<u32>();
 		}
 
-		return sizeof...(values) + 1;
+		return SIZE_32(u32) * (static_cast<u32>(values.size()) + 1);
 	}
 
 	template<typename AT>
-	static size_t make_jump(vm::ps3::ptr<u32, AT> &dst, u32 offset)
+	static inline u32 make_jump(vm::_ptr_base<be_t<u32>, AT>& dst, u32 offset)
 	{
-		*dst++ = make_jump(offset);
-		return 1;
+		*dst++ = CELL_GCM_METHOD_FLAG_JUMP | offset;
+
+		return SIZE_32(u32);
 	}
 
 	std::string get_method_name(const u32 id);

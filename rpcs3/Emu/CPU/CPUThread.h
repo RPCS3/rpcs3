@@ -34,26 +34,14 @@ class cpu_thread : public named_thread
 	void on_task() override;
 
 public:
-	virtual void on_init() override
-	{
-		named_thread::on_init();
-	}
-
-	virtual void on_stop() override
-	{
-		state += cpu_state::exit;
-		safe_notify();
-	}
+	virtual void on_stop() override;
+	virtual ~cpu_thread() override;
 
 	const std::string name;
-	const u32 id{};
+	const u32 id = -1;
 	const cpu_type type;
 
-	cpu_thread(cpu_type type, const std::string& name)
-		: type(type)
-		, name(name)
-	{
-	}
+	cpu_thread(cpu_type type, const std::string& name);
 
 	// Public thread state
 	atomic_t<mset<cpu_state>> state{ cpu_state::stop };
@@ -79,14 +67,14 @@ public:
 	virtual bool handle_interrupt() { return false; }
 
 private:
-	[[noreturn]] void xsleep()
-	{
-		throw std::runtime_error("cpu_thread: sleep()/awake() inconsistency");
-	}
+	[[noreturn]] void xsleep();
 
 	// Sleep/Awake counter
 	atomic_t<u32> m_sleep{};
 };
+
+extern std::mutex& get_current_thread_mutex();
+extern std::condition_variable& get_current_thread_cv();
 
 inline cpu_thread* get_current_cpu_thread() noexcept
 {

@@ -5,59 +5,7 @@
 #include "key_vault.h"
 #include "unpkg.h"
 
-static bool CheckHeader(const fs::file& pkg_f, PKGHeader& header)
-{
-	if (header.pkg_magic != 0x7F504B47)
-	{
-		LOG_ERROR(LOADER, "PKG: Not a package file!");
-		return false;
-	}
-
-	switch (const u16 type = header.pkg_type)
-	{
-	case PKG_RELEASE_TYPE_DEBUG:   break;
-	case PKG_RELEASE_TYPE_RELEASE: break;
-	default:
-	{
-		LOG_ERROR(LOADER, "PKG: Unknown PKG type (0x%x)", type);
-		return false;
-	}
-	}
-
-	switch (const u16 platform = header.pkg_platform)
-	{
-	case PKG_PLATFORM_TYPE_PS3: break;
-	case PKG_PLATFORM_TYPE_PSP: break;
-	default:
-	{
-		LOG_ERROR(LOADER, "PKG: Unknown PKG platform (0x%x)", platform);
-		return false;
-	}
-	}
-
-	if (header.header_size != PKG_HEADER_SIZE && header.header_size != PKG_HEADER_SIZE2)
-	{
-		LOG_ERROR(LOADER, "PKG: Wrong header size (0x%x)", header.header_size);
-		return false;
-	}
-
-	if (header.pkg_size > pkg_f.size())
-	{
-		LOG_ERROR(LOADER, "PKG: File size mismatch (pkg_size=0x%llx)", header.pkg_size);
-		return false;
-	}
-
-	if (header.data_size + header.data_offset > header.pkg_size)
-	{
-		LOG_ERROR(LOADER, "PKG: Data size mismatch (data_size=0x%llx, data_offset=0x%llx, file_size=0x%llx)", header.data_size, header.data_offset, header.pkg_size);
-		return false;
-	}
-
-	return true;
-}
-
-// PKG Decryption
-bool pkg_install(const fs::file& pkg_f, const std::string& dir, volatile f64& progress)
+bool pkg_install(const fs::file& pkg_f, const std::string& dir, atomic_t<double>& sync)
 {
 	const std::size_t BUF_SIZE = 8192 * 1024; // 8 MB
 
@@ -69,12 +17,53 @@ bool pkg_install(const fs::file& pkg_f, const std::string& dir, volatile f64& pr
 
 	if (!pkg_f.read(header))
 	{
-		LOG_ERROR(LOADER, "PKG: Package file is too short!");
+		LOG_ERROR(LOADER, "PKG file is too short!");
 		return false;
 	}
 
-	if (!CheckHeader(pkg_f, header))
+	if (header.pkg_magic != "\x7FPKG"_u32)
 	{
+		LOG_ERROR(LOADER, "Not a PKG file!");
+		return false;
+	}
+
+	switch (const u16 type = header.pkg_type)
+	{
+	case PKG_RELEASE_TYPE_DEBUG:   break;
+	case PKG_RELEASE_TYPE_RELEASE: break;
+	default:
+	{
+		LOG_ERROR(LOADER, "Unknown PKG type (0x%x)", type);
+		return false;
+	}
+	}
+
+	switch (const u16 platform = header.pkg_platform)
+	{
+	case PKG_PLATFORM_TYPE_PS3: break;
+	case PKG_PLATFORM_TYPE_PSP: break;
+	default:
+	{
+		LOG_ERROR(LOADER, "Unknown PKG platform (0x%x)", platform);
+		return false;
+	}
+	}
+
+	if (header.header_size != PKG_HEADER_SIZE && header.header_size != PKG_HEADER_SIZE2)
+	{
+		LOG_ERROR(LOADER, "Wrong PKG header size (0x%x)", header.header_size);
+		return false;
+	}
+
+	if (header.pkg_size > pkg_f.size())
+	{
+		LOG_ERROR(LOADER, "PKG file size mismatch (pkg_size=0x%llx)", header.pkg_size);
+		return false;
+	}
+
+	if (header.data_size + header.data_offset > header.pkg_size)
+	{
+		LOG_ERROR(LOADER, "PKG data size mismatch (data_size=0x%llx, data_offset=0x%llx, file_size=0x%llx)", header.data_size, header.data_offset, header.pkg_size);
 		return false;
 	}
 
@@ -141,8 +130,6 @@ bool pkg_install(const fs::file& pkg_f, const std::string& dir, volatile f64& pr
 		return read;
 	};
 
-	LOG_SUCCESS(LOADER, "PKG: Installing in %s (%d entries)...", dir, header.file_count);
-
 	decrypt(0, header.file_count * sizeof(PKGEntry), header.pkg_platform == PKG_PLATFORM_TYPE_PSP);
 
 	std::vector<PKGEntry> entries(header.file_count);
@@ -155,7 +142,7 @@ bool pkg_install(const fs::file& pkg_f, const std::string& dir, volatile f64& pr
 
 		if (entry.name_size > 256)
 		{
-			LOG_ERROR(LOADER, "PKG: Name size is too big (0x%x)", entry.name_size);
+			LOG_ERROR(LOADER, "PKG name size is too big (0x%x)", entry.name_size);
 			continue;
 		}
 
@@ -183,31 +170,35 @@ bool pkg_install(const fs::file& pkg_f, const std::string& dir, volatile f64& pr
 
 					if (decrypt(entry.file_offset + pos, block_size, is_psp) != block_size)
 					{
-						LOG_ERROR(LOADER, "PKG: Failed to extract file %s", path);
+						LOG_ERROR(LOADER, "Failed to extract file %s", path);
 						break;
 					}
 
 					if (out.write(buf.get(), block_size) != block_size)
 					{
-						LOG_ERROR(LOADER, "PKG: Failed to write file %s", path);
+						LOG_ERROR(LOADER, "Failed to write file %s", path);
 						break;
 					}
 
-					progress += (block_size + 0.0) / header.data_size;
+					if (sync.fetch_add((block_size + 0.0) / header.data_size) < 0.)
+					{
+						LOG_ERROR(LOADER, "Package installation cancelled: %s", dir);
+						return false;
+					}
 				}
 
 				if (did_overwrite)
 				{
-					LOG_SUCCESS(LOADER, "PKG: %s file overwritten", name);
+					LOG_WARNING(LOADER, "Overwritten file %s", name);
 				}
 				else
 				{
-					LOG_SUCCESS(LOADER, "PKG: %s file created", name);
+					LOG_NOTICE(LOADER, "Created file %s", name);
 				}
 			}
 			else
 			{
-				LOG_ERROR(LOADER, "PKG: Could not create file %s", path);
+				LOG_ERROR(LOADER, "Failed to create file %s", path);
 			}
 
 			break;
@@ -219,15 +210,15 @@ bool pkg_install(const fs::file& pkg_f, const std::string& dir, volatile f64& pr
 
 			if (fs::create_dir(path))
 			{
-				LOG_SUCCESS(LOADER, "PKG: %s directory created", name);
+				LOG_NOTICE(LOADER, "Created directory %s", name);
 			}
 			else if (fs::is_dir(path))
 			{
-				LOG_SUCCESS(LOADER, "PKG: %s directory already exists", name);
+				LOG_WARNING(LOADER, "Reused existing directory %s", name);
 			}
 			else
 			{
-				LOG_ERROR(LOADER, "PKG: Could not create directory %s", path);
+				LOG_ERROR(LOADER, "Failed to create directory %s", path);
 			}
 
 			break;
@@ -235,10 +226,11 @@ bool pkg_install(const fs::file& pkg_f, const std::string& dir, volatile f64& pr
 
 		default:
 		{
-			LOG_ERROR(LOADER, "PKG: Unknown PKG entry type (0x%x) %s", entry.type, name);
+			LOG_ERROR(LOADER, "Unknown PKG entry type (0x%x) %s", entry.type, name);
 		}
 		}
 	}
 
+	LOG_SUCCESS(LOADER, "Package successfully installed to %s", dir);
 	return true;
 }

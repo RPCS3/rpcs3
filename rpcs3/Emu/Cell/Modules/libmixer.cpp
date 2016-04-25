@@ -447,7 +447,7 @@ s32 cellSurMixerCreate(vm::cptr<CellSurMixerConfig> config)
 
 	ppu->cpu_init();
 	ppu->state -= cpu_state::stop;
-	ppu->safe_notify();
+	ppu->lock_notify();
 
 	return CELL_OK;
 }

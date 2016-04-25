@@ -12,11 +12,13 @@ thread_local cpu_thread* g_tls_current_cpu_thread = nullptr;
 
 void cpu_thread::on_task()
 {
+	state -= cpu_state::exit;
+
 	g_tls_current_cpu_thread = this;
 
 	Emu.SendDbgCommand(DID_CREATE_THREAD, this);
 
-	std::unique_lock<std::mutex> lock(mutex);
+	std::unique_lock<std::mutex> lock(get_current_thread_mutex());
 
 	// Check thread status
 	while (!(state & cpu_state::exit))
@@ -52,13 +54,29 @@ void cpu_thread::on_task()
 			continue;
 		}
 
-		cv.wait(lock);
+		get_current_thread_cv().wait(lock);
 	}
+}
+
+void cpu_thread::on_stop()
+{
+	state += cpu_state::exit;
+	lock_notify();
+}
+
+cpu_thread::~cpu_thread()
+{
+}
+
+cpu_thread::cpu_thread(cpu_type type, const std::string& name)
+	: type(type)
+	, name(name)
+{
 }
 
 bool cpu_thread::check_status()
 {
-	std::unique_lock<std::mutex> lock(mutex, std::defer_lock);
+	std::unique_lock<std::mutex> lock(get_current_thread_mutex(), std::defer_lock);
 
 	while (true)
 	{
@@ -85,7 +103,7 @@ bool cpu_thread::check_status()
 			continue;
 		}
 
-		cv.wait(lock);
+		get_current_thread_cv().wait(lock);
 	}
 
 	const auto state_ = state.load();
@@ -102,6 +120,11 @@ bool cpu_thread::check_status()
 	}
 
 	return false;
+}
+
+[[noreturn]] void cpu_thread::xsleep()
+{
+	throw std::runtime_error("cpu_thread: sleep()/awake() inconsistency");
 }
 
 std::vector<std::shared_ptr<cpu_thread>> get_all_cpu_threads()

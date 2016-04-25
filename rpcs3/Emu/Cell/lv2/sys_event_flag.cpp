@@ -29,7 +29,7 @@ void lv2_event_flag_t::notify_all(lv2_lock_t)
 			ppu.GPR[4] = clear_pattern(bitptn, mode);
 
 			ASSERT(!thread->state.test_and_set(cpu_state::signal));
-			thread->cv.notify_one();
+			thread->notify();
 
 			return true;
 		}
@@ -160,11 +160,11 @@ s32 sys_event_flag_wait(PPUThread& ppu, u32 id, u64 bitptn, u32 mode, vm::ptr<u6
 				return CELL_ETIMEDOUT;
 			}
 
-			ppu.cv.wait_for(lv2_lock, std::chrono::microseconds(timeout - passed));
+			get_current_thread_cv().wait_for(lv2_lock, std::chrono::microseconds(timeout - passed));
 		}
 		else
 		{
-			ppu.cv.wait(lv2_lock);
+			get_current_thread_cv().wait(lv2_lock);
 		}
 	}
 	
@@ -292,7 +292,7 @@ s32 sys_event_flag_cancel(u32 id, vm::ptr<u32> num)
 		ppu.GPR[5] = 0;
 
 		ASSERT(!thread->state.test_and_set(cpu_state::signal));
-		thread->cv.notify_one();
+		thread->notify();
 	}
 
 	eflag->sq.clear();

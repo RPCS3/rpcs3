@@ -24,19 +24,9 @@ class lv2_timer_t final : public named_thread
 	void on_task() override;
 
 public:
-	std::string get_name() const override
-	{
-		return fmt::format("Timer Thread[0x%x]", id);
-	}
+	std::string get_name() const override;
 
-	void on_stop() override
-	{
-		// Signal thread using invalid state and join
-		std::lock_guard<std::mutex>{ mutex }, state = -1;
-
-		cv.notify_one();
-		join();
-	}
+	void on_stop() override;
 
 	const u32 id{}; // Timer id
 

@@ -665,7 +665,7 @@ void GLGSRender::flip(int buffer)
 
 		if (buffer_region.tile)
 		{
-			std::unique_ptr<u8> temp(new u8[buffer_height * buffer_pitch]);
+			std::unique_ptr<u8[]> temp(new u8[buffer_height * buffer_pitch]);
 			buffer_region.read(temp.get(), buffer_width, buffer_height, buffer_pitch);
 			__glcheck m_flip_tex_color.copy_from(temp.get(), gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8);
 		}

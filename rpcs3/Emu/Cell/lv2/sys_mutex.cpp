@@ -22,7 +22,7 @@ void lv2_mutex_t::unlock(lv2_lock_t)
 		owner = std::static_pointer_cast<cpu_thread>(sq.front()->shared_from_this());
 
 		ASSERT(!owner->state.test_and_set(cpu_state::signal));
-		owner->cv.notify_one();
+		owner->notify();
 	}
 }
 
@@ -149,11 +149,11 @@ s32 sys_mutex_lock(PPUThread& ppu, u32 mutex_id, u64 timeout)
 				return CELL_ETIMEDOUT;
 			}
 
-			ppu.cv.wait_for(lv2_lock, std::chrono::microseconds(timeout - passed));
+			get_current_thread_cv().wait_for(lv2_lock, std::chrono::microseconds(timeout - passed));
 		}
 		else
 		{
-			ppu.cv.wait(lv2_lock);
+			get_current_thread_cv().wait(lv2_lock);
 		}
 	}
 

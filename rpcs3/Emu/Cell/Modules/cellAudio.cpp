@@ -280,8 +280,6 @@ void audio_config::on_task()
 
 			LV2_LOCK;
 
-			std::lock_guard<std::mutex> lock(mutex);
-
 			for (u64 key : keys)
 			{
 				if (auto&& queue = lv2_event_queue_t::find(key))
@@ -699,7 +697,7 @@ s32 cellAudioSetNotifyEventQueue(u64 key)
 		return CELL_AUDIO_ERROR_NOT_INIT;
 	}
 
-	std::lock_guard<std::mutex> lock(g_audio->mutex);
+	LV2_LOCK;
 
 	for (auto k : g_audio->keys) // check for duplicates
 	{
@@ -734,7 +732,7 @@ s32 cellAudioRemoveNotifyEventQueue(u64 key)
 		return CELL_AUDIO_ERROR_NOT_INIT;
 	}
 
-	std::lock_guard<std::mutex> lock(g_audio->mutex);
+	LV2_LOCK;
 
 	for (auto i = g_audio->keys.begin(); i != g_audio->keys.end(); i++)
 	{

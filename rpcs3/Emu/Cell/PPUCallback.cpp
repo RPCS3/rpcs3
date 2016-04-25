@@ -24,7 +24,7 @@ void CallbackManager::Async(async_cb_t func)
 
 	m_async_cb.emplace(std::move(func));
 
-	m_cb_thread->cv.notify_one();
+	m_cb_thread->notify();
 }
 
 CallbackManager::check_cb_t CallbackManager::Check()
@@ -74,7 +74,7 @@ void CallbackManager::Init()
 				continue;
 			}
 
-			ppu.cv.wait(lock);
+			get_current_thread_cv().wait(lock);
 		}
 	};
 

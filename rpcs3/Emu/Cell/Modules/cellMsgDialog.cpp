@@ -6,8 +6,6 @@
 #include "cellSysutil.h"
 #include "cellMsgDialog.h"
 
-#include <future>
-
 extern _log::channel cellSysutil;
 
 s32 cellMsgDialogOpen()
@@ -103,21 +101,20 @@ s32 cellMsgDialogOpen2(u32 type, vm::cptr<char> msgString, vm::ptr<CellMsgDialog
 		}
 	};
 
-	// Make "shared" promise to workaround std::function limitation
-	auto spr = std::make_shared<std::promise<void>>();
-
-	// Get future
-	std::future<void> future = spr->get_future();
+	atomic_t<bool> result(false);
 
 	// Run asynchronously in GUI thread
-	Emu.CallAfter([&, spr = std::move(spr)]()
+	Emu.CallAfter([&]()
 	{
 		dlg->Create(msgString.get_ptr());
-		spr->set_value();
+		result = true;
 	});
 
-	// Wait for the "result"
-	future.get();
+	while (!result)
+	{
+		CHECK_EMU_STATUS;
+		std::this_thread::sleep_for(1ms);
+	}
 
 	return CELL_OK;
 }
@@ -219,7 +216,7 @@ s32 cellMsgDialogClose(f32 delay)
 
 	const u64 wait_until = get_system_time() + static_cast<s64>(std::max<float>(delay, 0.0f) * 1000);
 
-	thread_ctrl::spawn("MsgDialog Thread", [=]()
+	thread_ctrl::spawn("cellMsgDialogClose() Thread", [=]()
 	{
 		while (dlg->state == MsgDialogState::Open && get_system_time() < wait_until)
 		{

@@ -182,13 +182,13 @@ ARMv7Thread::~ARMv7Thread()
 	}
 }
 
+ARMv7Thread::ARMv7Thread(const std::string& name)
+	: cpu_thread(cpu_type::arm, name)
+{
+}
+
 void ARMv7Thread::fast_call(u32 addr)
 {
-	if (!is_current())
-	{
-		throw EXCEPTION("Called from the wrong thread");
-	}
-
 	auto old_PC = PC;
 	auto old_stack = SP;
 	auto old_LR = LR;

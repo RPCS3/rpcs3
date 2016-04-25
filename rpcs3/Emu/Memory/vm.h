@@ -1,7 +1,8 @@
 #pragma once
 
-#include "Utilities/Thread.h"
 #include <map>
+
+class thread_ctrl;
 
 namespace vm
 {
@@ -38,71 +39,6 @@ namespace vm
 
 	[[noreturn]] void throw_access_violation(u64 addr, const char* cause);
 
-	struct waiter_t
-	{
-		u32 addr = 0;
-		u32 mask = ~0;
-		named_thread* thread = nullptr;
-
-		std::function<bool()> pred;
-
-		waiter_t() = default;
-
-		waiter_t* reset(u32 addr, u32 size, named_thread& thread)
-		{
-			this->addr = addr;
-			this->mask = ~(size - 1);
-			this->thread = &thread;
-
-			// must be null at this point
-			Ensures(!pred);
-			return this;
-		}
-
-		bool try_notify();
-	};
-
-	class waiter_lock_t
-	{
-		waiter_t* m_waiter;
-		std::unique_lock<std::mutex> m_lock;
-
-	public:
-		waiter_lock_t(named_thread& thread, u32 addr, u32 size);
-
-		waiter_t* operator ->() const
-		{
-			return m_waiter;
-		}
-
-		void wait();
-
-		~waiter_lock_t();
-	};
-
-	// Wait until pred() returns true, addr must be aligned to size which must be a power of 2, pred() may be called by any thread
-	template<typename F, typename... Args>
-	auto wait_op(named_thread& thread, u32 addr, u32 size, F pred, Args&&... args) -> decltype(static_cast<void>(pred(args...)))
-	{
-		// return immediately if condition passed (optimistic case)
-		if (pred(args...)) return;
-
-		// initialize waiter and locker
-		waiter_lock_t lock(thread, addr, size);
-
-		// initialize predicate
-		lock->pred = WRAP_EXPR(pred(args...));
-
-		// start waiting
-		lock.wait();
-	}
-
-	// Notify waiters on specific addr, addr must be aligned to size which must be a power of 2
-	void notify_at(u32 addr, u32 size);
-
-	// Try to poll each waiter's condition (false if try_lock failed)
-	bool notify_all();
-
 	// This flag is changed by various reservation functions and may have different meaning.
 	// reservation_break() - true if the reservation was successfully broken.
 	// reservation_acquire() - true if another existing reservation was broken.
@@ -124,7 +60,7 @@ namespace vm
 	bool reservation_query(u32 addr, u32 size, bool is_writing, std::function<bool()> callback);
 
 	// Returns true if the current thread owns reservation
-	bool reservation_test(const thread_ctrl* current = thread_ctrl::get_current());
+	bool reservation_test(const thread_ctrl* current);
 
 	// Break all reservations created by the current thread
 	void reservation_free();
@@ -405,39 +341,6 @@ namespace vm
 
 	u32 stack_push(u32 size, u32 align_v);
 	void stack_pop_verbose(u32 addr, u32 size) noexcept;
-
-	class stack
-	{
-		u32 m_begin;
-		u32 m_size;
-		int m_page_size;
-		int m_position;
-		u8 m_align;
-
-	public:
-		void init(u32 begin, u32 size, u32 page_size = 180, u8 align = 0x10)
-		{
-			m_begin = begin;
-			m_size = size;
-			m_page_size = page_size;
-			m_position = 0;
-			m_align = align;
-		}
-
-		u32 alloc_new_page()
-		{
-			Expects(m_position + m_page_size < (int)m_size);
-			m_position += (int)m_page_size;
-			return m_begin + m_position;
-		}
-
-		u32 dealloc_new_page()
-		{
-			Expects(m_position - m_page_size > 0);
-			m_position -= (int)m_page_size;
-			return m_begin + m_position;
-		}
-	};
 
 	extern thread_local u64 g_tls_fault_count;
 }

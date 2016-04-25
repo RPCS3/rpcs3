@@ -2374,6 +2374,6 @@ s32 ppu_error_code::report(s32 error, const char* text)
 		}
 	}
 
-	LOG_ERROR(PPU, "Illegal call to ppu_report_error(0x%x, '%s')!");
+	LOG_ERROR(PPU, "Illegal call to ppu_error_code::report(0x%x, '%s')!");
 	return error;
 }

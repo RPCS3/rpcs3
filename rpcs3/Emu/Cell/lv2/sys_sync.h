@@ -1,6 +1,5 @@
 #pragma once
 
-#include "Utilities/SharedMutex.h"
 #include "Utilities/SleepQueue.h"
 
 namespace vm { using namespace ps3; }
@@ -44,49 +43,8 @@ enum
 	SYS_SYNC_NOT_ADAPTIVE = 0x2000,
 };
 
-// IPC manager collection for lv2 objects of type T
-template<typename T>
-class ipc_manager final
-{
-	mutable shared_mutex m_mutex;
-	std::unordered_map<u64, std::weak_ptr<T>> m_map;
-
-public:
-	// Add new object if specified ipc_key is not used
-	template<typename F>
-	auto add(u64 ipc_key, F&& provider) -> decltype(static_cast<std::shared_ptr<T>>(provider()))
-	{
-		std::lock_guard<shared_mutex> lock(m_mutex);
-		
-		// Get object location
-		std::weak_ptr<T>& wptr = m_map[ipc_key];
-
-		if (wptr.expired())
-		{
-			// Call a function which must return the object
-			std::shared_ptr<T>&& result = provider();
-			wptr = result;
-			return result;
-		}
-
-		return{};
-	}
-
-	// Get existing object with specified ipc_key
-	std::shared_ptr<T> get(u64 ipc_key) const
-	{
-		reader_lock lock(m_mutex);
-
-		const auto found = m_map.find(ipc_key);
-
-		if (found != m_map.end())
-		{
-			return found->second.lock();
-		}
-
-		return{};
-	}
-};
+extern std::mutex& get_current_thread_mutex();
+extern std::condition_variable& get_current_thread_cv();
 
 // Simple class for global mutex to pass unique_lock and check it
 struct lv2_lock_t

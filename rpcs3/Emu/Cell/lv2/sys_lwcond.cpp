@@ -30,7 +30,7 @@ void lv2_lwcond_t::notify(lv2_lock_t, cpu_thread* thread, const std::shared_ptr<
 	}
 
 	ASSERT(!thread->state.test_and_set(cpu_state::signal));
-	thread->cv.notify_one();
+	thread->notify();
 }
 
 s32 _sys_lwcond_create(vm::ptr<u32> lwcond_id, u32 lwmutex_id, vm::ptr<sys_lwcond_t> control, u64 name, u32 arg5)
@@ -202,11 +202,11 @@ s32 _sys_lwcond_queue_wait(PPUThread& ppu, u32 lwcond_id, u32 lwmutex_id, u64 ti
 				}
 			}
 
-			ppu.cv.wait_for(lv2_lock, std::chrono::microseconds(timeout - passed));
+			get_current_thread_cv().wait_for(lv2_lock, std::chrono::microseconds(timeout - passed));
 		}
 		else
 		{
-			ppu.cv.wait(lv2_lock);
+			get_current_thread_cv().wait(lv2_lock);
 		}
 	}
 

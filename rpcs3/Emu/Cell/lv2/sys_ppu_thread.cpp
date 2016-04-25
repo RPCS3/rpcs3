@@ -6,7 +6,6 @@
 
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/PPUThread.h"
-#include "sys_mutex.h"
 #include "sys_ppu_thread.h"
 
 LOG_CHANNEL(sys_ppu_thread);
@@ -17,23 +16,24 @@ void _sys_ppu_thread_exit(PPUThread& ppu, u64 errorcode)
 
 	LV2_LOCK;
 
-	// get all sys_mutex objects
-	for (auto& mutex : idm::get_all<lv2_mutex_t>())
-	{
-		// unlock mutex if locked by this thread
-		if (mutex->owner.get() == &ppu)
-		{
-			mutex->unlock(lv2_lock);
-		}
-	}
+	// TODO: Should we really unlock mutexes?
 
+	//// get all sys_mutex objects
+	//for (auto& mutex : idm::get_all<lv2_mutex_t>())
+	//{
+	//	// unlock mutex if locked by this thread
+	//	if (mutex->owner.get() == &ppu)
+	//	{
+	//		mutex->unlock(lv2_lock);
+	//	}
+	//}
+
+	ppu.state += cpu_state::exit;
+
+	// Delete detached thread
 	if (!ppu.is_joinable)
 	{
 		idm::remove<PPUThread>(ppu.id);
-	}
-	else
-	{
-		ppu.state += cpu_state::exit;
 	}
 
 	// Throw if this syscall was not called directly by the SC instruction (hack)
@@ -81,7 +81,7 @@ s32 sys_ppu_thread_join(PPUThread& ppu, u32 thread_id, vm::ptr<u64> vptr)
 	{
 		CHECK_EMU_STATUS;
 
-		ppu.cv.wait_for(lv2_lock, std::chrono::milliseconds(1));
+		get_current_thread_cv().wait_for(lv2_lock, std::chrono::milliseconds(1));
 	}
 
 	// get exit status from the register
@@ -236,7 +236,7 @@ u32 ppu_thread_create(u32 entry, u64 arg, s32 prio, u32 stacksize, const std::st
 
 	ppu->GPR[3] = arg;
 	ppu->state -= cpu_state::stop;
-	ppu->safe_notify();
+	ppu->lock_notify();
 
 	return ppu->id;
 }
@@ -294,7 +294,7 @@ s32 sys_ppu_thread_start(u32 thread_id)
 	}
 
 	thread->state -= cpu_state::stop;
-	thread->safe_notify();
+	thread->lock_notify();
 
 	return CELL_OK;
 }

@@ -759,7 +759,7 @@ void dmuxOpen(u32 dmux_id) // TODO: call from the constructor
 
 	dmux.dmuxCb->cpu_init();
 	dmux.dmuxCb->state -= cpu_state::stop;
-	dmux.dmuxCb->safe_notify();
+	dmux.dmuxCb->lock_notify();
 }
 
 s32 cellDmuxQueryAttr(vm::cptr<CellDmuxType> type, vm::ptr<CellDmuxAttr> attr)

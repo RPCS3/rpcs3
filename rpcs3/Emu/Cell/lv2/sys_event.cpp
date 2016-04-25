@@ -9,17 +9,13 @@
 #include "Emu/Cell/SPUThread.h"
 #include "sys_process.h"
 #include "sys_event.h"
+#include "IPC.h"
 
 LOG_CHANNEL(sys_event);
 
-extern u64 get_system_time();
+template<> DECLARE(ipc_manager<lv2_event_queue_t>::g_ipc) {};
 
-static ipc_manager<lv2_event_queue_t>& get_ipc_manager()
-{
-	// Use magic static
-	static ipc_manager<lv2_event_queue_t> instance;
-	return instance;
-}
+extern u64 get_system_time();
 
 std::shared_ptr<lv2_event_queue_t> lv2_event_queue_t::make(u32 protocol, s32 type, u64 name, u64 ipc_key, s32 size)
 {
@@ -32,7 +28,7 @@ std::shared_ptr<lv2_event_queue_t> lv2_event_queue_t::make(u32 protocol, s32 typ
 	}
 
 	// IPC queue
-	return get_ipc_manager().add(ipc_key, make_expr);
+	return ipc_manager<lv2_event_queue_t>::add(ipc_key, make_expr);
 }
 
 std::shared_ptr<lv2_event_queue_t> lv2_event_queue_t::find(u64 ipc_key)
@@ -43,7 +39,7 @@ std::shared_ptr<lv2_event_queue_t> lv2_event_queue_t::find(u64 ipc_key)
 		return{};
 	}
 
-	return get_ipc_manager().get(ipc_key);
+	return ipc_manager<lv2_event_queue_t>::get(ipc_key);
 }
 
 void lv2_event_queue_t::push(lv2_lock_t, u64 source, u64 data1, u64 data2, u64 data3)
@@ -82,7 +78,7 @@ void lv2_event_queue_t::push(lv2_lock_t, u64 source, u64 data1, u64 data2, u64 d
 	}
 
 	ASSERT(!thread->state.test_and_set(cpu_state::signal));
-	thread->cv.notify_one();
+	thread->notify();
 
 	return m_sq.pop_front();
 }
@@ -175,7 +171,7 @@ s32 sys_event_queue_destroy(u32 equeue_id, s32 mode)
 		}
 
 		thread->state += cpu_state::signal;
-		thread->cv.notify_one();
+		thread->notify();
 	}
 
 	return CELL_OK;
@@ -264,11 +260,11 @@ s32 sys_event_queue_receive(PPUThread& ppu, u32 equeue_id, vm::ptr<sys_event_t> 
 				return CELL_ETIMEDOUT;
 			}
 
-			ppu.cv.wait_for(lv2_lock, std::chrono::microseconds(timeout - passed));
+			get_current_thread_cv().wait_for(lv2_lock, std::chrono::microseconds(timeout - passed));
 		}
 		else
 		{
-			ppu.cv.wait(lv2_lock);
+			get_current_thread_cv().wait(lv2_lock);
 		}
 	}
 

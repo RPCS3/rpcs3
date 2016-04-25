@@ -3,7 +3,6 @@
 #include <stack>
 #include <deque>
 #include <set>
-#include <future>
 #include "GCM.h"
 #include "RSXTexture.h"
 #include "RSXVertexProgram.h"
@@ -320,7 +319,7 @@ namespace rsx
 		struct internal_task_entry
 		{
 			std::function<bool()> callback;
-			std::promise<void> promise;
+			//std::promise<void> promise;
 
 			internal_task_entry(std::function<bool()> callback) : callback(callback)
 			{
@@ -331,8 +330,8 @@ namespace rsx
 		void do_internal_task();
 
 	public:
-		std::future<void> add_internal_task(std::function<bool()> callback);
-		void invoke(std::function<bool()> callback);
+		//std::future<void> add_internal_task(std::function<bool()> callback);
+		//void invoke(std::function<bool()> callback);
 
 		/**
 		 * Fill buffer with 4x4 scale offset matrix.

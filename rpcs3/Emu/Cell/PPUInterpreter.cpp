@@ -56,7 +56,6 @@ public:
 }
 const g_ppu_scale_table;
 
-
 void ppu_interpreter::TDI(PPUThread& ppu, ppu_opcode_t op)
 {
 	const s64 a = ppu.GPR[op.ra], b = op.simm16;
@@ -242,79 +241,79 @@ void ppu_interpreter::VCMPBFP(PPUThread& ppu, ppu_opcode_t op)
 	const auto cmp1 = _mm_cmpnle_ps(a, b);
 	const auto cmp2 = _mm_cmpnge_ps(a, _mm_xor_ps(b, sign));
 	ppu.VR[op.vd].vf = _mm_or_ps(_mm_and_ps(cmp1, sign), _mm_and_ps(cmp2, _mm_castsi128_ps(_mm_set1_epi32(0x40000000))));
-	if (op.oe) ppu.SetCR(6, false, false, _mm_movemask_ps(_mm_or_ps(cmp1, cmp2)) == 0, false);
+	if (UNLIKELY(op.oe)) ppu.SetCR(6, false, false, _mm_movemask_ps(_mm_or_ps(cmp1, cmp2)) == 0, false);
 }
 
 void ppu_interpreter::VCMPEQFP(PPUThread& ppu, ppu_opcode_t op)
 {
 	const auto rmask = _mm_movemask_ps(ppu.VR[op.vd].vf = _mm_cmpeq_ps(ppu.VR[op.va].vf, ppu.VR[op.vb].vf));
-	if (op.oe) ppu.SetCR(6, rmask == 0xf, false, rmask == 0, false);
+	if (UNLIKELY(op.oe)) ppu.SetCR(6, rmask == 0xf, false, rmask == 0, false);
 }
 
 void ppu_interpreter::VCMPEQUB(PPUThread& ppu, ppu_opcode_t op)
 {
 	const auto rmask = _mm_movemask_epi8((ppu.VR[op.vd] = v128::eq8(ppu.VR[op.va], ppu.VR[op.vb])).vi);
-	if (op.oe) ppu.SetCR(6, rmask == 0xffff, false, rmask == 0, false);
+	if (UNLIKELY(op.oe)) ppu.SetCR(6, rmask == 0xffff, false, rmask == 0, false);
 }
 
 void ppu_interpreter::VCMPEQUH(PPUThread& ppu, ppu_opcode_t op)
 {
 	const auto rmask = _mm_movemask_epi8((ppu.VR[op.vd] = v128::eq16(ppu.VR[op.va], ppu.VR[op.vb])).vi);
-	if (op.oe) ppu.SetCR(6, rmask == 0xffff, false, rmask == 0, false);
+	if (UNLIKELY(op.oe)) ppu.SetCR(6, rmask == 0xffff, false, rmask == 0, false);
 }
 
 void ppu_interpreter::VCMPEQUW(PPUThread& ppu, ppu_opcode_t op)
 {
 	const auto rmask = _mm_movemask_epi8((ppu.VR[op.vd] = v128::eq32(ppu.VR[op.va], ppu.VR[op.vb])).vi);
-	if (op.oe) ppu.SetCR(6, rmask == 0xffff, false, rmask == 0, false);
+	if (UNLIKELY(op.oe)) ppu.SetCR(6, rmask == 0xffff, false, rmask == 0, false);
 }
 
 void ppu_interpreter::VCMPGEFP(PPUThread& ppu, ppu_opcode_t op)
 {
 	const auto rmask = _mm_movemask_ps(ppu.VR[op.vd].vf = _mm_cmpge_ps(ppu.VR[op.va].vf, ppu.VR[op.vb].vf));
-	if (op.oe) ppu.SetCR(6, rmask == 0xf, false, rmask == 0, false);
+	if (UNLIKELY(op.oe)) ppu.SetCR(6, rmask == 0xf, false, rmask == 0, false);
 }
 
 void ppu_interpreter::VCMPGTFP(PPUThread& ppu, ppu_opcode_t op)
 {
 	const auto rmask = _mm_movemask_ps(ppu.VR[op.vd].vf = _mm_cmpgt_ps(ppu.VR[op.va].vf, ppu.VR[op.vb].vf));
-	if (op.oe) ppu.SetCR(6, rmask == 0xf, false, rmask == 0, false);
+	if (UNLIKELY(op.oe)) ppu.SetCR(6, rmask == 0xf, false, rmask == 0, false);
 }
 
 void ppu_interpreter::VCMPGTSB(PPUThread& ppu, ppu_opcode_t op)
 {
 	const auto rmask = _mm_movemask_epi8(ppu.VR[op.vd].vi = _mm_cmpgt_epi8(ppu.VR[op.va].vi, ppu.VR[op.vb].vi));
-	if (op.oe) ppu.SetCR(6, rmask == 0xffff, false, rmask == 0, false);
+	if (UNLIKELY(op.oe)) ppu.SetCR(6, rmask == 0xffff, false, rmask == 0, false);
 }
 
 void ppu_interpreter::VCMPGTSH(PPUThread& ppu, ppu_opcode_t op)
 {
 	const auto rmask = _mm_movemask_epi8(ppu.VR[op.vd].vi = _mm_cmpgt_epi16(ppu.VR[op.va].vi, ppu.VR[op.vb].vi));
-	if (op.oe) ppu.SetCR(6, rmask == 0xffff, false, rmask == 0, false);
+	if (UNLIKELY(op.oe)) ppu.SetCR(6, rmask == 0xffff, false, rmask == 0, false);
 }
 
 void ppu_interpreter::VCMPGTSW(PPUThread& ppu, ppu_opcode_t op)
 {
 	const auto rmask = _mm_movemask_epi8(ppu.VR[op.vd].vi = _mm_cmpgt_epi32(ppu.VR[op.va].vi, ppu.VR[op.vb].vi));
-	if (op.oe) ppu.SetCR(6, rmask == 0xffff, false, rmask == 0, false);
+	if (UNLIKELY(op.oe)) ppu.SetCR(6, rmask == 0xffff, false, rmask == 0, false);
 }
 
 void ppu_interpreter::VCMPGTUB(PPUThread& ppu, ppu_opcode_t op)
 {
 	const auto rmask = _mm_movemask_epi8(ppu.VR[op.vd].vi = sse_cmpgt_epu8(ppu.VR[op.va].vi, ppu.VR[op.vb].vi));
-	if (op.oe) ppu.SetCR(6, rmask == 0xffff, false, rmask == 0, false);
+	if (UNLIKELY(op.oe)) ppu.SetCR(6, rmask == 0xffff, false, rmask == 0, false);
 }
 
 void ppu_interpreter::VCMPGTUH(PPUThread& ppu, ppu_opcode_t op)
 {
 	const auto rmask = _mm_movemask_epi8(ppu.VR[op.vd].vi = sse_cmpgt_epu16(ppu.VR[op.va].vi, ppu.VR[op.vb].vi));
-	if (op.oe) ppu.SetCR(6, rmask == 0xffff, false, rmask == 0, false);
+	if (UNLIKELY(op.oe)) ppu.SetCR(6, rmask == 0xffff, false, rmask == 0, false);
 }
 
 void ppu_interpreter::VCMPGTUW(PPUThread& ppu, ppu_opcode_t op)
 {
 	const auto rmask = _mm_movemask_epi8(ppu.VR[op.vd].vi = sse_cmpgt_epu32(ppu.VR[op.va].vi, ppu.VR[op.vb].vi));
-	if (op.oe) ppu.SetCR(6, rmask == 0xffff, false, rmask == 0, false);
+	if (UNLIKELY(op.oe)) ppu.SetCR(6, rmask == 0xffff, false, rmask == 0, false);
 }
 
 void ppu_interpreter::VCTSXS(PPUThread& ppu, ppu_opcode_t op)
@@ -1510,7 +1509,7 @@ void ppu_interpreter::ADDIC(PPUThread& ppu, ppu_opcode_t op)
 	const auto r = add64_flags(a, i);
 	ppu.GPR[op.rd] = r.result;
 	ppu.CA = r.carry;
-	if (op.main & 1) ppu.SetCR<s64>(0, r.result, 0);
+	if (UNLIKELY(op.main & 1)) ppu.SetCR<s64>(0, r.result, 0);
 }
 
 void ppu_interpreter::ADDI(PPUThread& ppu, ppu_opcode_t op)
@@ -1649,19 +1648,19 @@ void ppu_interpreter::RLWIMI(PPUThread& ppu, ppu_opcode_t op)
 {
 	const u64 mask = ppu_rotate_mask(32 + op.mb32, 32 + op.me32);
 	ppu.GPR[op.ra] = (ppu.GPR[op.ra] & ~mask) | (dup32(rol32(u32(ppu.GPR[op.rs]), op.sh32)) & mask);
-	if (op.rc) ppu.SetCR<s64>(0, ppu.GPR[op.ra], 0);
+	if (UNLIKELY(op.rc)) ppu.SetCR<s64>(0, ppu.GPR[op.ra], 0);
 }
 
 void ppu_interpreter::RLWINM(PPUThread& ppu, ppu_opcode_t op)
 {
 	ppu.GPR[op.ra] = dup32(rol32(u32(ppu.GPR[op.rs]), op.sh32)) & ppu_rotate_mask(32 + op.mb32, 32 + op.me32);
-	if (op.rc) ppu.SetCR<s64>(0, ppu.GPR[op.ra], 0);
+	if (UNLIKELY(op.rc)) ppu.SetCR<s64>(0, ppu.GPR[op.ra], 0);
 }
 
 void ppu_interpreter::RLWNM(PPUThread& ppu, ppu_opcode_t op)
 {
 	ppu.GPR[op.ra] = dup32(rol32(u32(ppu.GPR[op.rs]), ppu.GPR[op.rb] & 0x1f)) & ppu_rotate_mask(32 + op.mb32, 32 + op.me32);
-	if (op.rc) ppu.SetCR<s64>(0, ppu.GPR[op.ra], 0);
+	if (UNLIKELY(op.rc)) ppu.SetCR<s64>(0, ppu.GPR[op.ra], 0);
 }
 
 void ppu_interpreter::ORI(PPUThread& ppu, ppu_opcode_t op)
@@ -1698,39 +1697,39 @@ void ppu_interpreter::ANDIS(PPUThread& ppu, ppu_opcode_t op)
 
 void ppu_interpreter::RLDICL(PPUThread& ppu, ppu_opcode_t op)
 {
-	ppu.GPR[op.ra] = rol64(ppu.GPR[op.rs], op.sh64) & ppu_rotate_mask(op.mbe64, 63);
-	if (op.rc) ppu.SetCR<s64>(0, ppu.GPR[op.ra], 0);
+	ppu.GPR[op.ra] = rol64(ppu.GPR[op.rs], op.sh64) & (~0ull >> op.mbe64);
+	if (UNLIKELY(op.rc)) ppu.SetCR<s64>(0, ppu.GPR[op.ra], 0);
 }
 
 void ppu_interpreter::RLDICR(PPUThread& ppu, ppu_opcode_t op)
 {
-	ppu.GPR[op.ra] = rol64(ppu.GPR[op.rs], op.sh64) & ppu_rotate_mask(0, op.mbe64);
-	if (op.rc) ppu.SetCR<s64>(0, ppu.GPR[op.ra], 0);
+	ppu.GPR[op.ra] = rol64(ppu.GPR[op.rs], op.sh64) & (~0ull << (op.mbe64 ^ 63));
+	if (UNLIKELY(op.rc)) ppu.SetCR<s64>(0, ppu.GPR[op.ra], 0);
 }
 
 void ppu_interpreter::RLDIC(PPUThread& ppu, ppu_opcode_t op)
 {
 	ppu.GPR[op.ra] = rol64(ppu.GPR[op.rs], op.sh64) & ppu_rotate_mask(op.mbe64, op.sh64 ^ 63);
-	if (op.rc) ppu.SetCR<s64>(0, ppu.GPR[op.ra], 0);
+	if (UNLIKELY(op.rc)) ppu.SetCR<s64>(0, ppu.GPR[op.ra], 0);
 }
 
 void ppu_interpreter::RLDIMI(PPUThread& ppu, ppu_opcode_t op)
 {
 	const u64 mask = ppu_rotate_mask(op.mbe64, op.sh64 ^ 63);
 	ppu.GPR[op.ra] = (ppu.GPR[op.ra] & ~mask) | (rol64(ppu.GPR[op.rs], op.sh64) & mask);
-	if (op.rc) ppu.SetCR<s64>(0, ppu.GPR[op.ra], 0);
+	if (UNLIKELY(op.rc)) ppu.SetCR<s64>(0, ppu.GPR[op.ra], 0);
 }
 
 void ppu_interpreter::RLDCL(PPUThread& ppu, ppu_opcode_t op)
 {
-	ppu.GPR[op.ra] = rol64(ppu.GPR[op.rs], ppu.GPR[op.rb] & 0x3f) & ppu_rotate_mask(op.mbe64, 63);
-	if (op.rc) ppu.SetCR<s64>(0, ppu.GPR[op.ra], 0);
+	ppu.GPR[op.ra] = rol64(ppu.GPR[op.rs], ppu.GPR[op.rb] & 0x3f) & (~0ull >> op.mbe64);
+	if (UNLIKELY(op.rc)) ppu.SetCR<s64>(0, ppu.GPR[op.ra], 0);
 }
 
 void ppu_interpreter::RLDCR(PPUThread& ppu, ppu_opcode_t op)
 {
-	ppu.GPR[op.ra] = rol64(ppu.GPR[op.rs], ppu.GPR[op.rb] & 0x3f) & ppu_rotate_mask(0, op.mbe64);
-	if (op.rc) ppu.SetCR<s64>(0, ppu.GPR[op.ra], 0);
+	ppu.GPR[op.ra] = rol64(ppu.GPR[op.rs], ppu.GPR[op.rb] & 0x3f) & (~0ull << (op.mbe64 ^ 63));
+	if (UNLIKELY(op.rc)) ppu.SetCR<s64>(0, ppu.GPR[op.ra], 0);
 }
 
 void ppu_interpreter::CMP(PPUThread& ppu, ppu_opcode_t op)
@@ -1801,14 +1800,14 @@ void ppu_interpreter::SUBFC(PPUThread& ppu, ppu_opcode_t op)
 	const auto r = add64_flags(~RA, RB, 1);
 	ppu.GPR[op.rd] = r.result;
 	ppu.CA = r.carry;
-	if (op.oe) ppu.SetOV((~RA >> 63 == RB >> 63) && (~RA >> 63 != ppu.GPR[op.rd] >> 63));
-	if (op.rc) ppu.SetCR<s64>(0, r.result, 0);
+	if (UNLIKELY(op.oe)) ppu.SetOV((~RA >> 63 == RB >> 63) && (~RA >> 63 != ppu.GPR[op.rd] >> 63));
+	if (UNLIKELY(op.rc)) ppu.SetCR<s64>(0, r.result, 0);
 }
 
 void ppu_interpreter::MULHDU(PPUThread& ppu, ppu_opcode_t op)
 {
 	ppu.GPR[op.rd] = UMULH64(ppu.GPR[op.ra], ppu.GPR[op.rb]);
-	if (op.rc) ppu.SetCR<s64>(0, ppu.GPR[op.rd], 0);
+	if (UNLIKELY(op.rc)) ppu.SetCR<s64>(0, ppu.GPR[op.rd], 0);
 }
 
 void ppu_interpreter::ADDC(PPUThread& ppu, ppu_opcode_t op)
@@ -1818,8 +1817,8 @@ void ppu_interpreter::ADDC(PPUThread& ppu, ppu_opcode_t op)
 	const auto r = add64_flags(RA, RB);
 	ppu.GPR[op.rd] = r.result;
 	ppu.CA = r.carry;
-	if (op.oe) ppu.SetOV((RA >> 63 == RB >> 63) && (RA >> 63 != ppu.GPR[op.rd] >> 63));
-	if (op.rc) ppu.SetCR<s64>(0, r.result, 0);
+	if (UNLIKELY(op.oe)) ppu.SetOV((RA >> 63 == RB >> 63) && (RA >> 63 != ppu.GPR[op.rd] >> 63));
+	if (UNLIKELY(op.rc)) ppu.SetCR<s64>(0, r.result, 0);
 }
 
 void ppu_interpreter::MULHWU(PPUThread& ppu, ppu_opcode_t op)
@@ -1827,7 +1826,7 @@ void ppu_interpreter::MULHWU(PPUThread& ppu, ppu_opcode_t op)
 	u32 a = (u32)ppu.GPR[op.ra];
 	u32 b = (u32)ppu.GPR[op.rb];
 	ppu.GPR[op.rd] = ((u64)a * (u64)b) >> 32;
-	if (op.rc) ppu.SetCR(0, false, false, false, ppu.SO);
+	if (UNLIKELY(op.rc)) ppu.SetCR(0, false, false, false, ppu.SO);
 }
 
 void ppu_interpreter::MFOCRF(PPUThread& ppu, ppu_opcode_t op)
@@ -1877,30 +1876,26 @@ void ppu_interpreter::LWZX(PPUThread& ppu, ppu_opcode_t op)
 void ppu_interpreter::SLW(PPUThread& ppu, ppu_opcode_t op)
 {
 	ppu.GPR[op.ra] = u32(ppu.GPR[op.rs] << (ppu.GPR[op.rb] & 0x3f));
-	if (op.rc) ppu.SetCR<s64>(0, ppu.GPR[op.ra], 0);
+	if (UNLIKELY(op.rc)) ppu.SetCR<s64>(0, ppu.GPR[op.ra], 0);
 }
 
 void ppu_interpreter::CNTLZW(PPUThread& ppu, ppu_opcode_t op)
 {
 	ppu.GPR[op.ra] = cntlz32(u32(ppu.GPR[op.rs]));
-	if (op.rc) ppu.SetCR<s64>(0, ppu.GPR[op.ra], 0);
+	if (UNLIKELY(op.rc)) ppu.SetCR<s64>(0, ppu.GPR[op.ra], 0);
 }
 
 void ppu_interpreter::SLD(PPUThread& ppu, ppu_opcode_t op)
 {
-	u32 n = ppu.GPR[op.rb] & 0x3f;
-	u64 r = rol64(ppu.GPR[op.rs], n);
-	u64 m = (ppu.GPR[op.rb] & 0x40) ? 0 : ppu_rotate_mask(0, 63 - n);
-
-	ppu.GPR[op.ra] = r & m;
-
-	if (op.rc) ppu.SetCR<s64>(0, ppu.GPR[op.ra], 0);
+	const u32 n = ppu.GPR[op.rb];
+	ppu.GPR[op.ra] = UNLIKELY(n & 0x40) ? 0 : ppu.GPR[op.rs] << n;
+	if (UNLIKELY(op.rc)) ppu.SetCR<s64>(0, ppu.GPR[op.ra], 0);
 }
 
 void ppu_interpreter::AND(PPUThread& ppu, ppu_opcode_t op)
 {
 	ppu.GPR[op.ra] = ppu.GPR[op.rs] & ppu.GPR[op.rb];
-	if (op.rc) ppu.SetCR<s64>(0, ppu.GPR[op.ra], 0);
+	if (UNLIKELY(op.rc)) ppu.SetCR<s64>(0, ppu.GPR[op.ra], 0);
 }
 
 void ppu_interpreter::CMPL(PPUThread& ppu, ppu_opcode_t op)
@@ -1954,8 +1949,8 @@ void ppu_interpreter::SUBF(PPUThread& ppu, ppu_opcode_t op)
 	const u64 RA = ppu.GPR[op.ra];
 	const u64 RB = ppu.GPR[op.rb];
 	ppu.GPR[op.rd] = RB - RA;
-	if (op.oe) ppu.SetOV((~RA >> 63 == RB >> 63) && (~RA >> 63 != ppu.GPR[op.rd] >> 63));
-	if (op.rc) ppu.SetCR<s64>(0, ppu.GPR[op.rd], 0);
+	if (UNLIKELY(op.oe)) ppu.SetOV((~RA >> 63 == RB >> 63) && (~RA >> 63 != ppu.GPR[op.rd] >> 63));
+	if (UNLIKELY(op.rc)) ppu.SetCR<s64>(0, ppu.GPR[op.rd], 0);
 }
 
 void ppu_interpreter::LDUX(PPUThread& ppu, ppu_opcode_t op)
@@ -1979,13 +1974,13 @@ void ppu_interpreter::LWZUX(PPUThread& ppu, ppu_opcode_t op)
 void ppu_interpreter::CNTLZD(PPUThread& ppu, ppu_opcode_t op)
 {
 	ppu.GPR[op.ra] = cntlz64(ppu.GPR[op.rs]);
-	if (op.rc) ppu.SetCR<s64>(0, ppu.GPR[op.ra], 0);
+	if (UNLIKELY(op.rc)) ppu.SetCR<s64>(0, ppu.GPR[op.ra], 0);
 }
 
 void ppu_interpreter::ANDC(PPUThread& ppu, ppu_opcode_t op)
 {
 	ppu.GPR[op.ra] = ppu.GPR[op.rs] & ~ppu.GPR[op.rb];
-	if (op.rc) ppu.SetCR<s64>(0, ppu.GPR[op.ra], 0);
+	if (UNLIKELY(op.rc)) ppu.SetCR<s64>(0, ppu.GPR[op.ra], 0);
 }
 
 void ppu_interpreter::TD(PPUThread& ppu, ppu_opcode_t op)
@@ -2012,7 +2007,7 @@ void ppu_interpreter::LVEWX(PPUThread& ppu, ppu_opcode_t op)
 void ppu_interpreter::MULHD(PPUThread& ppu, ppu_opcode_t op)
 {
 	ppu.GPR[op.rd] = MULH64(ppu.GPR[op.ra], ppu.GPR[op.rb]);
-	if (op.rc) ppu.SetCR<s64>(0, ppu.GPR[op.rd], 0);
+	if (UNLIKELY(op.rc)) ppu.SetCR<s64>(0, ppu.GPR[op.rd], 0);
 }
 
 void ppu_interpreter::MULHW(PPUThread& ppu, ppu_opcode_t op)
@@ -2020,7 +2015,7 @@ void ppu_interpreter::MULHW(PPUThread& ppu, ppu_opcode_t op)
 	s32 a = (s32)ppu.GPR[op.ra];
 	s32 b = (s32)ppu.GPR[op.rb];
 	ppu.GPR[op.rd] = ((s64)a * (s64)b) >> 32;
-	if (op.rc) ppu.SetCR(0, false, false, false, ppu.SO);
+	if (UNLIKELY(op.rc)) ppu.SetCR(0, false, false, false, ppu.SO);
 }
 
 void ppu_interpreter::LDARX(PPUThread& ppu, ppu_opcode_t op)
@@ -2053,8 +2048,8 @@ void ppu_interpreter::NEG(PPUThread& ppu, ppu_opcode_t op)
 {
 	const u64 RA = ppu.GPR[op.ra];
 	ppu.GPR[op.rd] = 0 - RA;
-	if (op.oe) ppu.SetOV((~RA >> 63 == 0) && (~RA >> 63 != ppu.GPR[op.rd] >> 63));
-	if (op.rc) ppu.SetCR<s64>(0, ppu.GPR[op.rd], 0);
+	if (UNLIKELY(op.oe)) ppu.SetOV((~RA >> 63 == 0) && (~RA >> 63 != ppu.GPR[op.rd] >> 63));
+	if (UNLIKELY(op.rc)) ppu.SetCR<s64>(0, ppu.GPR[op.rd], 0);
 }
 
 void ppu_interpreter::LBZUX(PPUThread& ppu, ppu_opcode_t op)
@@ -2067,7 +2062,7 @@ void ppu_interpreter::LBZUX(PPUThread& ppu, ppu_opcode_t op)
 void ppu_interpreter::NOR(PPUThread& ppu, ppu_opcode_t op)
 {
 	ppu.GPR[op.ra] = ~(ppu.GPR[op.rs] | ppu.GPR[op.rb]);
-	if (op.rc) ppu.SetCR<s64>(0, ppu.GPR[op.ra], 0);
+	if (UNLIKELY(op.rc)) ppu.SetCR<s64>(0, ppu.GPR[op.ra], 0);
 }
 
 void ppu_interpreter::STVEBX(PPUThread& ppu, ppu_opcode_t op)
@@ -2084,8 +2079,8 @@ void ppu_interpreter::SUBFE(PPUThread& ppu, ppu_opcode_t op)
 	const auto r = add64_flags(~RA, RB, ppu.CA);
 	ppu.GPR[op.rd] = r.result;
 	ppu.CA = r.carry;
-	if (op.oe) ppu.SetOV((~RA >> 63 == RB >> 63) && (~RA >> 63 != ppu.GPR[op.rd] >> 63));
-	if (op.rc) ppu.SetCR<s64>(0, r.result, 0);
+	if (UNLIKELY(op.oe)) ppu.SetOV((~RA >> 63 == RB >> 63) && (~RA >> 63 != ppu.GPR[op.rd] >> 63));
+	if (UNLIKELY(op.rc)) ppu.SetCR<s64>(0, r.result, 0);
 }
 
 void ppu_interpreter::ADDE(PPUThread& ppu, ppu_opcode_t op)
@@ -2095,8 +2090,8 @@ void ppu_interpreter::ADDE(PPUThread& ppu, ppu_opcode_t op)
 	const auto r = add64_flags(RA, RB, ppu.CA);
 	ppu.GPR[op.rd] = r.result;
 	ppu.CA = r.carry;
-	if (op.oe) ppu.SetOV((RA >> 63 == RB >> 63) && (RA >> 63 != ppu.GPR[op.rd] >> 63));
-	if (op.rc) ppu.SetCR<s64>(0, r.result, 0);
+	if (UNLIKELY(op.oe)) ppu.SetOV((RA >> 63 == RB >> 63) && (RA >> 63 != ppu.GPR[op.rd] >> 63));
+	if (UNLIKELY(op.rc)) ppu.SetCR<s64>(0, r.result, 0);
 }
 
 void ppu_interpreter::MTOCRF(PPUThread& ppu, ppu_opcode_t op)
@@ -2189,8 +2184,8 @@ void ppu_interpreter::SUBFZE(PPUThread& ppu, ppu_opcode_t op)
 	const auto r = add64_flags(~RA, 0, ppu.CA);
 	ppu.GPR[op.rd] = r.result;
 	ppu.CA = r.carry;
-	if (op.oe) ppu.SetOV((~RA >> 63 == 0) && (~RA >> 63 != ppu.GPR[op.rd] >> 63));
-	if (op.rc) ppu.SetCR<s64>(0, r.result, 0);
+	if (UNLIKELY(op.oe)) ppu.SetOV((~RA >> 63 == 0) && (~RA >> 63 != ppu.GPR[op.rd] >> 63));
+	if (UNLIKELY(op.rc)) ppu.SetCR<s64>(0, r.result, 0);
 }
 
 void ppu_interpreter::ADDZE(PPUThread& ppu, ppu_opcode_t op)
@@ -2199,8 +2194,8 @@ void ppu_interpreter::ADDZE(PPUThread& ppu, ppu_opcode_t op)
 	const auto r = add64_flags(RA, 0, ppu.CA);
 	ppu.GPR[op.rd] = r.result;
 	ppu.CA = r.carry;
-	if (op.oe) ppu.SetOV((RA >> 63 == 0) && (RA >> 63 != ppu.GPR[op.rd] >> 63));
-	if (op.rc) ppu.SetCR<s64>(0, r.result, 0);
+	if (UNLIKELY(op.oe)) ppu.SetOV((RA >> 63 == 0) && (RA >> 63 != ppu.GPR[op.rd] >> 63));
+	if (UNLIKELY(op.rc)) ppu.SetCR<s64>(0, r.result, 0);
 }
 
 void ppu_interpreter::STDCX(PPUThread& ppu, ppu_opcode_t op)
@@ -2228,12 +2223,12 @@ void ppu_interpreter::MULLD(PPUThread& ppu, ppu_opcode_t op)
 	const s64 RA = ppu.GPR[op.ra];
 	const s64 RB = ppu.GPR[op.rb];
 	ppu.GPR[op.rd] = (s64)(RA * RB);
-	if (op.oe)
+	if (UNLIKELY(op.oe))
 	{
 		const s64 high = MULH64(RA, RB);
 		ppu.SetOV(high != s64(ppu.GPR[op.rd]) >> 63);
 	}
-	if (op.rc) ppu.SetCR<s64>(0, ppu.GPR[op.rd], 0);
+	if (UNLIKELY(op.rc)) ppu.SetCR<s64>(0, ppu.GPR[op.rd], 0);
 }
 
 void ppu_interpreter::SUBFME(PPUThread& ppu, ppu_opcode_t op)
@@ -2242,8 +2237,8 @@ void ppu_interpreter::SUBFME(PPUThread& ppu, ppu_opcode_t op)
 	const auto r = add64_flags(~RA, ~0ull, ppu.CA);
 	ppu.GPR[op.rd] = r.result;
 	ppu.CA = r.carry;
-	if (op.oe) ppu.SetOV((~RA >> 63 == 1) && (~RA >> 63 != ppu.GPR[op.rd] >> 63));
-	if (op.rc) ppu.SetCR<s64>(0, r.result, 0);
+	if (UNLIKELY(op.oe)) ppu.SetOV((~RA >> 63 == 1) && (~RA >> 63 != ppu.GPR[op.rd] >> 63));
+	if (UNLIKELY(op.rc)) ppu.SetCR<s64>(0, r.result, 0);
 }
 
 void ppu_interpreter::ADDME(PPUThread& ppu, ppu_opcode_t op)
@@ -2252,15 +2247,15 @@ void ppu_interpreter::ADDME(PPUThread& ppu, ppu_opcode_t op)
 	const auto r = add64_flags(RA, ~0ull, ppu.CA);
 	ppu.GPR[op.rd] = r.result;
 	ppu.CA = r.carry;
-	if (op.oe) ppu.SetOV((u64(RA) >> 63 == 1) && (u64(RA) >> 63 != ppu.GPR[op.rd] >> 63));
-	if (op.rc) ppu.SetCR<s64>(0, r.result, 0);
+	if (UNLIKELY(op.oe)) ppu.SetOV((u64(RA) >> 63 == 1) && (u64(RA) >> 63 != ppu.GPR[op.rd] >> 63));
+	if (UNLIKELY(op.rc)) ppu.SetCR<s64>(0, r.result, 0);
 }
 
 void ppu_interpreter::MULLW(PPUThread& ppu, ppu_opcode_t op)
 {
 	ppu.GPR[op.rd] = (s64)((s64)(s32)ppu.GPR[op.ra] * (s64)(s32)ppu.GPR[op.rb]);
-	if (op.oe) ppu.SetOV(s64(ppu.GPR[op.rd]) < s64(-1) << 31 || s64(ppu.GPR[op.rd]) >= s64(1) << 31);
-	if (op.rc) ppu.SetCR<s64>(0, ppu.GPR[op.ra], 0);
+	if (UNLIKELY(op.oe)) ppu.SetOV(s64(ppu.GPR[op.rd]) < s64(-1) << 31 || s64(ppu.GPR[op.rd]) >= s64(1) << 31);
+	if (UNLIKELY(op.rc)) ppu.SetCR<s64>(0, ppu.GPR[op.ra], 0);
 }
 
 void ppu_interpreter::DCBTST(PPUThread& ppu, ppu_opcode_t op)
@@ -2279,8 +2274,8 @@ void ppu_interpreter::ADD(PPUThread& ppu, ppu_opcode_t op)
 	const u64 RA = ppu.GPR[op.ra];
 	const u64 RB = ppu.GPR[op.rb];
 	ppu.GPR[op.rd] = RA + RB;
-	if (op.oe) ppu.SetOV((RA >> 63 == RB >> 63) && (RA >> 63 != ppu.GPR[op.rd] >> 63));
-	if (op.rc) ppu.SetCR<s64>(0, ppu.GPR[op.rd], 0);
+	if (UNLIKELY(op.oe)) ppu.SetOV((RA >> 63 == RB >> 63) && (RA >> 63 != ppu.GPR[op.rd] >> 63));
+	if (UNLIKELY(op.rc)) ppu.SetCR<s64>(0, ppu.GPR[op.rd], 0);
 }
 
 void ppu_interpreter::DCBT(PPUThread& ppu, ppu_opcode_t op)
@@ -2296,7 +2291,7 @@ void ppu_interpreter::LHZX(PPUThread& ppu, ppu_opcode_t op)
 void ppu_interpreter::EQV(PPUThread& ppu, ppu_opcode_t op)
 {
 	ppu.GPR[op.ra] = ~(ppu.GPR[op.rs] ^ ppu.GPR[op.rb]);
-	if (op.rc) ppu.SetCR<s64>(0, ppu.GPR[op.ra], 0);
+	if (UNLIKELY(op.rc)) ppu.SetCR<s64>(0, ppu.GPR[op.ra], 0);
 }
 
 void ppu_interpreter::ECIWX(PPUThread& ppu, ppu_opcode_t op)
@@ -2314,7 +2309,7 @@ void ppu_interpreter::LHZUX(PPUThread& ppu, ppu_opcode_t op)
 void ppu_interpreter::XOR(PPUThread& ppu, ppu_opcode_t op)
 {
 	ppu.GPR[op.ra] = ppu.GPR[op.rs] ^ ppu.GPR[op.rb];
-	if (op.rc) ppu.SetCR<s64>(0, ppu.GPR[op.ra], 0);
+	if (UNLIKELY(op.rc)) ppu.SetCR<s64>(0, ppu.GPR[op.ra], 0);
 }
 
 void ppu_interpreter::MFSPR(PPUThread& ppu, ppu_opcode_t op)
@@ -2396,7 +2391,7 @@ void ppu_interpreter::STHX(PPUThread& ppu, ppu_opcode_t op)
 void ppu_interpreter::ORC(PPUThread& ppu, ppu_opcode_t op)
 {
 	ppu.GPR[op.ra] = ppu.GPR[op.rs] | ~ppu.GPR[op.rb];
-	if (op.rc) ppu.SetCR<s64>(0, ppu.GPR[op.ra], 0);
+	if (UNLIKELY(op.rc)) ppu.SetCR<s64>(0, ppu.GPR[op.ra], 0);
 }
 
 void ppu_interpreter::ECOWX(PPUThread& ppu, ppu_opcode_t op)
@@ -2414,7 +2409,7 @@ void ppu_interpreter::STHUX(PPUThread& ppu, ppu_opcode_t op)
 void ppu_interpreter::OR(PPUThread& ppu, ppu_opcode_t op)
 {
 	ppu.GPR[op.ra] = ppu.GPR[op.rs] | ppu.GPR[op.rb];
-	if (op.rc) ppu.SetCR<s64>(0, ppu.GPR[op.ra], 0);
+	if (UNLIKELY(op.rc)) ppu.SetCR<s64>(0, ppu.GPR[op.ra], 0);
 }
 
 void ppu_interpreter::DIVDU(PPUThread& ppu, ppu_opcode_t op)
@@ -2422,8 +2417,8 @@ void ppu_interpreter::DIVDU(PPUThread& ppu, ppu_opcode_t op)
 	const u64 RA = ppu.GPR[op.ra];
 	const u64 RB = ppu.GPR[op.rb];
 	ppu.GPR[op.rd] = RB == 0 ? 0 : RA / RB;
-	if (op.oe) ppu.SetOV(RB == 0);
-	if (op.rc) ppu.SetCR<s64>(0, ppu.GPR[op.rd], 0);
+	if (UNLIKELY(op.oe)) ppu.SetOV(RB == 0);
+	if (UNLIKELY(op.rc)) ppu.SetCR<s64>(0, ppu.GPR[op.rd], 0);
 }
 
 void ppu_interpreter::DIVWU(PPUThread& ppu, ppu_opcode_t op)
@@ -2431,8 +2426,8 @@ void ppu_interpreter::DIVWU(PPUThread& ppu, ppu_opcode_t op)
 	const u32 RA = (u32)ppu.GPR[op.ra];
 	const u32 RB = (u32)ppu.GPR[op.rb];
 	ppu.GPR[op.rd] = RB == 0 ? 0 : RA / RB;
-	if (op.oe) ppu.SetOV(RB == 0);
-	if (op.rc) ppu.SetCR(0, false, false, false, ppu.SO);
+	if (UNLIKELY(op.oe)) ppu.SetOV(RB == 0);
+	if (UNLIKELY(op.rc)) ppu.SetCR(0, false, false, false, ppu.SO);
 }
 
 void ppu_interpreter::MTSPR(PPUThread& ppu, ppu_opcode_t op)
@@ -2465,7 +2460,7 @@ void ppu_interpreter::DCBI(PPUThread& ppu, ppu_opcode_t op)
 void ppu_interpreter::NAND(PPUThread& ppu, ppu_opcode_t op)
 {
 	ppu.GPR[op.ra] = ~(ppu.GPR[op.rs] & ppu.GPR[op.rb]);
-	if (op.rc) ppu.SetCR<s64>(0, ppu.GPR[op.ra], 0);
+	if (UNLIKELY(op.rc)) ppu.SetCR<s64>(0, ppu.GPR[op.ra], 0);
 }
 
 void ppu_interpreter::STVXL(PPUThread& ppu, ppu_opcode_t op)
@@ -2480,8 +2475,8 @@ void ppu_interpreter::DIVD(PPUThread& ppu, ppu_opcode_t op)
 	const s64 RB = ppu.GPR[op.rb];
 	const bool o = RB == 0 || ((u64)RA == (1ULL << 63) && RB == -1);
 	ppu.GPR[op.rd] = o ? 0 : RA / RB;
-	if (op.oe) ppu.SetOV(o);
-	if (op.rc) ppu.SetCR<s64>(0, ppu.GPR[op.rd], 0);
+	if (UNLIKELY(op.oe)) ppu.SetOV(o);
+	if (UNLIKELY(op.rc)) ppu.SetCR<s64>(0, ppu.GPR[op.rd], 0);
 }
 
 void ppu_interpreter::DIVW(PPUThread& ppu, ppu_opcode_t op)
@@ -2490,8 +2485,8 @@ void ppu_interpreter::DIVW(PPUThread& ppu, ppu_opcode_t op)
 	const s32 RB = (s32)ppu.GPR[op.rb];
 	const bool o = RB == 0 || ((u32)RA == (1 << 31) && RB == -1);
 	ppu.GPR[op.rd] = o ? 0 : u32(RA / RB);
-	if (op.oe) ppu.SetOV(o);
-	if (op.rc) ppu.SetCR(0, false, false, false, ppu.SO);
+	if (UNLIKELY(op.oe)) ppu.SetOV(o);
+	if (UNLIKELY(op.rc)) ppu.SetCR(0, false, false, false, ppu.SO);
 }
 
 void ppu_interpreter::LVLX(PPUThread& ppu, ppu_opcode_t op)
@@ -2544,17 +2539,14 @@ void ppu_interpreter::LFSX(PPUThread& ppu, ppu_opcode_t op)
 void ppu_interpreter::SRW(PPUThread& ppu, ppu_opcode_t op)
 {
 	ppu.GPR[op.ra] = (ppu.GPR[op.rs] & 0xffffffff) >> (ppu.GPR[op.rb] & 0x3f);
-	if (op.rc) ppu.SetCR<s64>(0, ppu.GPR[op.ra], 0);
+	if (UNLIKELY(op.rc)) ppu.SetCR<s64>(0, ppu.GPR[op.ra], 0);
 }
 
 void ppu_interpreter::SRD(PPUThread& ppu, ppu_opcode_t op)
 {
-	u32 n = ppu.GPR[op.rb] & 0x3f;
-	u64 r = rol64(ppu.GPR[op.rs], 64 - n);
-	u64 m = (ppu.GPR[op.rb] & 0x40) ? 0 : ppu_rotate_mask(n, 63);
-	ppu.GPR[op.ra] = r & m;
-
-	if (op.rc) ppu.SetCR<s64>(0, ppu.GPR[op.ra], 0);
+	const u32 n = ppu.GPR[op.rb];
+	ppu.GPR[op.ra] = UNLIKELY(n & 0x40) ? 0 : ppu.GPR[op.rs] >> n;
+	if (UNLIKELY(op.rc)) ppu.SetCR<s64>(0, ppu.GPR[op.ra], 0);
 }
 
 void ppu_interpreter::LVRX(PPUThread& ppu, ppu_opcode_t op)
@@ -2754,7 +2746,7 @@ void ppu_interpreter::SRAW(PPUThread& ppu, ppu_opcode_t op)
 		ppu.CA = (RS < 0) && ((ppu.GPR[op.ra] << shift) != RS);
 	}
 
-	if (op.rc) ppu.SetCR<s64>(0, ppu.GPR[op.ra], 0);
+	if (UNLIKELY(op.rc)) ppu.SetCR<s64>(0, ppu.GPR[op.ra], 0);
 }
 
 void ppu_interpreter::SRAD(PPUThread& ppu, ppu_opcode_t op)
@@ -2772,7 +2764,7 @@ void ppu_interpreter::SRAD(PPUThread& ppu, ppu_opcode_t op)
 		ppu.CA = (RS < 0) && ((ppu.GPR[op.ra] << shift) != RS);
 	}
 
-	if (op.rc) ppu.SetCR<s64>(0, ppu.GPR[op.ra], 0);
+	if (UNLIKELY(op.rc)) ppu.SetCR<s64>(0, ppu.GPR[op.ra], 0);
 }
 
 void ppu_interpreter::LVRXL(PPUThread& ppu, ppu_opcode_t op)
@@ -2794,7 +2786,7 @@ void ppu_interpreter::SRAWI(PPUThread& ppu, ppu_opcode_t op)
 	ppu.GPR[op.ra] = RS >> op.sh32;
 	ppu.CA = (RS < 0) && ((u32)(ppu.GPR[op.ra] << op.sh32) != RS);
 
-	if (op.rc) ppu.SetCR<s64>(0, ppu.GPR[op.ra], 0);
+	if (UNLIKELY(op.rc)) ppu.SetCR<s64>(0, ppu.GPR[op.ra], 0);
 }
 
 void ppu_interpreter::SRADI(PPUThread& ppu, ppu_opcode_t op)
@@ -2804,7 +2796,7 @@ void ppu_interpreter::SRADI(PPUThread& ppu, ppu_opcode_t op)
 	ppu.GPR[op.ra] = RS >> sh;
 	ppu.CA = (RS < 0) && ((ppu.GPR[op.ra] << sh) != RS);
 
-	if (op.rc) ppu.SetCR<s64>(0, ppu.GPR[op.ra], 0);
+	if (UNLIKELY(op.rc)) ppu.SetCR<s64>(0, ppu.GPR[op.ra], 0);
 }
 
 void ppu_interpreter::EIEIO(PPUThread& ppu, ppu_opcode_t op)
@@ -2829,7 +2821,7 @@ void ppu_interpreter::STHBRX(PPUThread& ppu, ppu_opcode_t op)
 void ppu_interpreter::EXTSH(PPUThread& ppu, ppu_opcode_t op)
 {
 	ppu.GPR[op.ra] = (s64)(s16)ppu.GPR[op.rs];
-	if (op.rc) ppu.SetCR<s64>(0, ppu.GPR[op.ra], 0);
+	if (UNLIKELY(op.rc)) ppu.SetCR<s64>(0, ppu.GPR[op.ra], 0);
 }
 
 void ppu_interpreter::STVRXL(PPUThread& ppu, ppu_opcode_t op)
@@ -2843,7 +2835,7 @@ void ppu_interpreter::STVRXL(PPUThread& ppu, ppu_opcode_t op)
 void ppu_interpreter::EXTSB(PPUThread& ppu, ppu_opcode_t op)
 {
 	ppu.GPR[op.ra] = (s64)(s8)ppu.GPR[op.rs];
-	if (op.rc) ppu.SetCR<s64>(0, ppu.GPR[op.ra], 0);
+	if (UNLIKELY(op.rc)) ppu.SetCR<s64>(0, ppu.GPR[op.ra], 0);
 }
 
 void ppu_interpreter::STFIWX(PPUThread& ppu, ppu_opcode_t op)
@@ -2855,7 +2847,7 @@ void ppu_interpreter::STFIWX(PPUThread& ppu, ppu_opcode_t op)
 void ppu_interpreter::EXTSW(PPUThread& ppu, ppu_opcode_t op)
 {
 	ppu.GPR[op.ra] = (s64)(s32)ppu.GPR[op.rs];
-	if (op.rc) ppu.SetCR<s64>(0, ppu.GPR[op.ra], 0);
+	if (UNLIKELY(op.rc)) ppu.SetCR<s64>(0, ppu.GPR[op.ra], 0);
 }
 
 void ppu_interpreter::ICBI(PPUThread& ppu, ppu_opcode_t op)
@@ -3049,66 +3041,6 @@ void ppu_interpreter::LWA(PPUThread& ppu, ppu_opcode_t op)
 	ppu.GPR[op.rd] = (s64)(s32)vm::read32(vm::cast(addr, HERE));
 }
 
-void ppu_interpreter::FDIVS(PPUThread& ppu, ppu_opcode_t op)
-{
-	ppu.FPR[op.frd] = f32(ppu.FPR[op.fra] / ppu.FPR[op.frb]);
-	ASSERT(!op.rc); //if (op.rc) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
-}
-
-void ppu_interpreter::FSUBS(PPUThread& ppu, ppu_opcode_t op)
-{
-	ppu.FPR[op.frd] = f32(ppu.FPR[op.fra] - ppu.FPR[op.frb]);
-	ASSERT(!op.rc); //if (op.rc) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
-}
-
-void ppu_interpreter::FADDS(PPUThread& ppu, ppu_opcode_t op)
-{
-	ppu.FPR[op.frd] = f32(ppu.FPR[op.fra] + ppu.FPR[op.frb]);
-	ASSERT(!op.rc); //if (op.rc) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
-}
-
-void ppu_interpreter::FSQRTS(PPUThread& ppu, ppu_opcode_t op)
-{
-	ppu.FPR[op.frd] = f32(sqrt(ppu.FPR[op.frb]));
-	ASSERT(!op.rc); //if (op.rc) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
-}
-
-void ppu_interpreter::FRES(PPUThread& ppu, ppu_opcode_t op)
-{
-	ppu.FPR[op.frd] = f32(1.0 / ppu.FPR[op.frb]);
-	ASSERT(!op.rc); //if (op.rc) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
-}
-
-void ppu_interpreter::FMULS(PPUThread& ppu, ppu_opcode_t op)
-{
-	ppu.FPR[op.frd] = f32(ppu.FPR[op.fra] * ppu.FPR[op.frc]);
-	ASSERT(!op.rc); //if (op.rc) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
-}
-
-void ppu_interpreter::FMADDS(PPUThread& ppu, ppu_opcode_t op)
-{
-	ppu.FPR[op.frd] = f32(ppu.FPR[op.fra] * ppu.FPR[op.frc] + ppu.FPR[op.frb]);
-	ASSERT(!op.rc); //if (op.rc) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
-}
-
-void ppu_interpreter::FMSUBS(PPUThread& ppu, ppu_opcode_t op)
-{
-	ppu.FPR[op.frd] = f32(ppu.FPR[op.fra] * ppu.FPR[op.frc] - ppu.FPR[op.frb]);
-	ASSERT(!op.rc); //if (op.rc) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
-}
-
-void ppu_interpreter::FNMSUBS(PPUThread& ppu, ppu_opcode_t op)
-{
-	ppu.FPR[op.frd] = f32(-(ppu.FPR[op.fra] * ppu.FPR[op.frc]) + ppu.FPR[op.frb]);
-	ASSERT(!op.rc); //if (op.rc) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
-}
-
-void ppu_interpreter::FNMADDS(PPUThread& ppu, ppu_opcode_t op)
-{
-	ppu.FPR[op.frd] = f32(-(ppu.FPR[op.fra] * ppu.FPR[op.frc]) - ppu.FPR[op.frb]);
-	ASSERT(!op.rc); //if (op.rc) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
-}
-
 void ppu_interpreter::STD(PPUThread& ppu, ppu_opcode_t op)
 {
 	const u64 addr = (op.simm16 & ~3) + (op.ra ? ppu.GPR[op.ra] : 0);
@@ -3122,10 +3054,70 @@ void ppu_interpreter::STDU(PPUThread& ppu, ppu_opcode_t op)
 	ppu.GPR[op.ra] = addr;
 }
 
+void ppu_interpreter::FDIVS(PPUThread& ppu, ppu_opcode_t op)
+{
+	ppu.FPR[op.frd] = f32(ppu.FPR[op.fra] / ppu.FPR[op.frb]);
+	ASSERT(!op.rc); //if (UNLIKELY(op.rc)) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
+}
+
+void ppu_interpreter::FSUBS(PPUThread& ppu, ppu_opcode_t op)
+{
+	ppu.FPR[op.frd] = f32(ppu.FPR[op.fra] - ppu.FPR[op.frb]);
+	ASSERT(!op.rc); //if (UNLIKELY(op.rc)) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
+}
+
+void ppu_interpreter::FADDS(PPUThread& ppu, ppu_opcode_t op)
+{
+	ppu.FPR[op.frd] = f32(ppu.FPR[op.fra] + ppu.FPR[op.frb]);
+	ASSERT(!op.rc); //if (UNLIKELY(op.rc)) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
+}
+
+void ppu_interpreter::FSQRTS(PPUThread& ppu, ppu_opcode_t op)
+{
+	ppu.FPR[op.frd] = f32(sqrt(ppu.FPR[op.frb]));
+	ASSERT(!op.rc); //if (UNLIKELY(op.rc)) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
+}
+
+void ppu_interpreter::FRES(PPUThread& ppu, ppu_opcode_t op)
+{
+	ppu.FPR[op.frd] = f32(1.0 / ppu.FPR[op.frb]);
+	ASSERT(!op.rc); //if (UNLIKELY(op.rc)) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
+}
+
+void ppu_interpreter::FMULS(PPUThread& ppu, ppu_opcode_t op)
+{
+	ppu.FPR[op.frd] = f32(ppu.FPR[op.fra] * ppu.FPR[op.frc]);
+	ASSERT(!op.rc); //if (UNLIKELY(op.rc)) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
+}
+
+void ppu_interpreter::FMADDS(PPUThread& ppu, ppu_opcode_t op)
+{
+	ppu.FPR[op.frd] = f32(ppu.FPR[op.fra] * ppu.FPR[op.frc] + ppu.FPR[op.frb]);
+	ASSERT(!op.rc); //if (UNLIKELY(op.rc)) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
+}
+
+void ppu_interpreter::FMSUBS(PPUThread& ppu, ppu_opcode_t op)
+{
+	ppu.FPR[op.frd] = f32(ppu.FPR[op.fra] * ppu.FPR[op.frc] - ppu.FPR[op.frb]);
+	ASSERT(!op.rc); //if (UNLIKELY(op.rc)) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
+}
+
+void ppu_interpreter::FNMSUBS(PPUThread& ppu, ppu_opcode_t op)
+{
+	ppu.FPR[op.frd] = f32(-(ppu.FPR[op.fra] * ppu.FPR[op.frc]) + ppu.FPR[op.frb]);
+	ASSERT(!op.rc); //if (UNLIKELY(op.rc)) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
+}
+
+void ppu_interpreter::FNMADDS(PPUThread& ppu, ppu_opcode_t op)
+{
+	ppu.FPR[op.frd] = f32(-(ppu.FPR[op.fra] * ppu.FPR[op.frc]) - ppu.FPR[op.frb]);
+	ASSERT(!op.rc); //if (UNLIKELY(op.rc)) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
+}
+
 void ppu_interpreter::MTFSB1(PPUThread& ppu, ppu_opcode_t op)
 {
 	LOG_WARNING(PPU, "MTFSB1");
-	if (op.rc) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
+	if (UNLIKELY(op.rc)) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
 }
 
 void ppu_interpreter::MCRFS(PPUThread& ppu, ppu_opcode_t op)
@@ -3137,26 +3129,26 @@ void ppu_interpreter::MCRFS(PPUThread& ppu, ppu_opcode_t op)
 void ppu_interpreter::MTFSB0(PPUThread& ppu, ppu_opcode_t op)
 {
 	LOG_WARNING(PPU, "MTFSB0");
-	if (op.rc) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
+	if (UNLIKELY(op.rc)) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
 }
 
 void ppu_interpreter::MTFSFI(PPUThread& ppu, ppu_opcode_t op)
 {
 	LOG_WARNING(PPU, "MTFSFI");
-	if (op.rc) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
+	if (UNLIKELY(op.rc)) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
 }
 
 void ppu_interpreter::MFFS(PPUThread& ppu, ppu_opcode_t op)
 {
 	LOG_WARNING(PPU, "MFFS");
 	ppu.FPR[op.frd] = 0.0;
-	if (op.rc) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
+	if (UNLIKELY(op.rc)) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
 }
 
 void ppu_interpreter::MTFSF(PPUThread& ppu, ppu_opcode_t op)
 {
 	LOG_WARNING(PPU, "MTFSF");
-	if (op.rc) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
+	if (UNLIKELY(op.rc)) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
 }
 
 void ppu_interpreter::FCMPU(PPUThread& ppu, ppu_opcode_t op)
@@ -3173,85 +3165,85 @@ void ppu_interpreter::FCMPU(PPUThread& ppu, ppu_opcode_t op)
 void ppu_interpreter::FRSP(PPUThread& ppu, ppu_opcode_t op)
 {
 	ppu.FPR[op.frd] = f32(ppu.FPR[op.frb]);
-	ASSERT(!op.rc); //if (op.rc) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
+	ASSERT(!op.rc); //if (UNLIKELY(op.rc)) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
 }
 
 void ppu_interpreter::FCTIW(PPUThread& ppu, ppu_opcode_t op)
 {
 	(s32&)ppu.FPR[op.frd] = lrint(ppu.FPR[op.frb]);
-	ASSERT(!op.rc); //if (op.rc) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
+	ASSERT(!op.rc); //if (UNLIKELY(op.rc)) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
 }
 
 void ppu_interpreter::FCTIWZ(PPUThread& ppu, ppu_opcode_t op)
 {
 	(s32&)ppu.FPR[op.frd] = static_cast<s32>(ppu.FPR[op.frb]);
-	ASSERT(!op.rc); //if (op.rc) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
+	ASSERT(!op.rc); //if (UNLIKELY(op.rc)) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
 }
 
 void ppu_interpreter::FDIV(PPUThread& ppu, ppu_opcode_t op)
 {
 	ppu.FPR[op.frd] = ppu.FPR[op.fra] / ppu.FPR[op.frb];
-	ASSERT(!op.rc); //if (op.rc) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
+	ASSERT(!op.rc); //if (UNLIKELY(op.rc)) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
 }
 
 void ppu_interpreter::FSUB(PPUThread& ppu, ppu_opcode_t op)
 {
 	ppu.FPR[op.frd] = ppu.FPR[op.fra] - ppu.FPR[op.frb];
-	ASSERT(!op.rc); //if (op.rc) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
+	ASSERT(!op.rc); //if (UNLIKELY(op.rc)) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
 }
 
 void ppu_interpreter::FADD(PPUThread& ppu, ppu_opcode_t op)
 {
 	ppu.FPR[op.frd] = ppu.FPR[op.fra] + ppu.FPR[op.frb];
-	ASSERT(!op.rc); //if (op.rc) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
+	ASSERT(!op.rc); //if (UNLIKELY(op.rc)) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
 }
 
 void ppu_interpreter::FSQRT(PPUThread& ppu, ppu_opcode_t op)
 {
 	ppu.FPR[op.frd] = sqrt(ppu.FPR[op.frb]);
-	ASSERT(!op.rc); //if (op.rc) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
+	ASSERT(!op.rc); //if (UNLIKELY(op.rc)) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
 }
 
 void ppu_interpreter::FSEL(PPUThread& ppu, ppu_opcode_t op)
 {
 	ppu.FPR[op.frd] = ppu.FPR[op.fra] >= 0.0 ? ppu.FPR[op.frc] : ppu.FPR[op.frb];
-	if (op.rc) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
+	if (UNLIKELY(op.rc)) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
 }
 
 void ppu_interpreter::FMUL(PPUThread& ppu, ppu_opcode_t op)
 {
 	ppu.FPR[op.frd] = ppu.FPR[op.fra] * ppu.FPR[op.frc];
-	ASSERT(!op.rc); //if (op.rc) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
+	ASSERT(!op.rc); //if (UNLIKELY(op.rc)) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
 }
 
 void ppu_interpreter::FRSQRTE(PPUThread& ppu, ppu_opcode_t op)
 {
 	ppu.FPR[op.frd] = 1.0 / sqrt(ppu.FPR[op.frb]);
-	ASSERT(!op.rc); //if (op.rc) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
+	ASSERT(!op.rc); //if (UNLIKELY(op.rc)) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
 }
 
 void ppu_interpreter::FMSUB(PPUThread& ppu, ppu_opcode_t op)
 {
 	ppu.FPR[op.frd] = ppu.FPR[op.fra] * ppu.FPR[op.frc] - ppu.FPR[op.frb];
-	ASSERT(!op.rc); //if (op.rc) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
+	ASSERT(!op.rc); //if (UNLIKELY(op.rc)) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
 }
 
 void ppu_interpreter::FMADD(PPUThread& ppu, ppu_opcode_t op)
 {
 	ppu.FPR[op.frd] = ppu.FPR[op.fra] * ppu.FPR[op.frc] + ppu.FPR[op.frb];
-	ASSERT(!op.rc); //if (op.rc) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
+	ASSERT(!op.rc); //if (UNLIKELY(op.rc)) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
 }
 
 void ppu_interpreter::FNMSUB(PPUThread& ppu, ppu_opcode_t op)
 {
 	ppu.FPR[op.frd] = -(ppu.FPR[op.fra] * ppu.FPR[op.frc]) + ppu.FPR[op.frb];
-	ASSERT(!op.rc); //if (op.rc) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
+	ASSERT(!op.rc); //if (UNLIKELY(op.rc)) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
 }
 
 void ppu_interpreter::FNMADD(PPUThread& ppu, ppu_opcode_t op)
 {
 	ppu.FPR[op.frd] = -(ppu.FPR[op.fra] * ppu.FPR[op.frc]) - ppu.FPR[op.frb];
-	ASSERT(!op.rc); //if (op.rc) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
+	ASSERT(!op.rc); //if (UNLIKELY(op.rc)) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
 }
 
 void ppu_interpreter::FCMPO(PPUThread& ppu, ppu_opcode_t op)
@@ -3262,43 +3254,43 @@ void ppu_interpreter::FCMPO(PPUThread& ppu, ppu_opcode_t op)
 void ppu_interpreter::FNEG(PPUThread& ppu, ppu_opcode_t op)
 {
 	ppu.FPR[op.frd] = -ppu.FPR[op.frb];
-	if (op.rc) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
+	if (UNLIKELY(op.rc)) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
 }
 
 void ppu_interpreter::FMR(PPUThread& ppu, ppu_opcode_t op)
 {
 	ppu.FPR[op.frd] = ppu.FPR[op.frb];
-	if (op.rc) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
+	if (UNLIKELY(op.rc)) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
 }
 
 void ppu_interpreter::FNABS(PPUThread& ppu, ppu_opcode_t op)
 {
 	ppu.FPR[op.frd] = -fabs(ppu.FPR[op.frb]);
-	if (op.rc) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
+	if (UNLIKELY(op.rc)) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
 }
 
 void ppu_interpreter::FABS(PPUThread& ppu, ppu_opcode_t op)
 {
 	ppu.FPR[op.frd] = fabs(ppu.FPR[op.frb]);
-	if (op.rc) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
+	if (UNLIKELY(op.rc)) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
 }
 
 void ppu_interpreter::FCTID(PPUThread& ppu, ppu_opcode_t op)
 {
 	(s64&)ppu.FPR[op.frd] = llrint(ppu.FPR[op.frb]);
-	ASSERT(!op.rc); //if (op.rc) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
+	ASSERT(!op.rc); //if (UNLIKELY(op.rc)) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
 }
 
 void ppu_interpreter::FCTIDZ(PPUThread& ppu, ppu_opcode_t op)
 {
 	(s64&)ppu.FPR[op.frd] = static_cast<s64>(ppu.FPR[op.frb]);
-	ASSERT(!op.rc); //if (op.rc) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
+	ASSERT(!op.rc); //if (UNLIKELY(op.rc)) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
 }
 
 void ppu_interpreter::FCFID(PPUThread& ppu, ppu_opcode_t op)
 {
 	ppu.FPR[op.frd] = static_cast<double>((s64&)ppu.FPR[op.frb]);
-	ASSERT(!op.rc); //if (op.rc) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
+	ASSERT(!op.rc); //if (UNLIKELY(op.rc)) ppu.SetCR(1, ppu.FG, ppu.FL, ppu.FE, ppu.FU);
 }
 
 

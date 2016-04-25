@@ -9,6 +9,8 @@ LOG_CHANNEL(sceLibKernel);
 
 extern u64 get_system_time();
 
+extern std::condition_variable& get_current_thread_cv();
+
 s32 sceKernelAllocMemBlock(vm::cptr<char> name, s32 type, u32 vsize, vm::ptr<SceKernelAllocMemBlockOpt> pOpt)
 {
 	throw EXCEPTION("");
@@ -71,7 +73,7 @@ arm_error_code sceKernelStartThread(s32 threadId, u32 argSize, vm::cptr<void> pA
 	thread->GPR[1] = pos;
 
 	thread->state -= cpu_state::stop;
-	thread->safe_notify();
+	thread->lock_notify();
 	return SCE_OK;
 }
 
@@ -484,11 +486,11 @@ arm_error_code sceKernelWaitEventFlag(ARMv7Thread& cpu, s32 evfId, u32 bitPatter
 				break;
 			}
 
-			cpu.cv.wait_for(lock, std::chrono::microseconds(timeout - passed));
+			get_current_thread_cv().wait_for(lock, std::chrono::microseconds(timeout - passed));
 		}
 		else
 		{
-			cpu.cv.wait(lock);
+			get_current_thread_cv().wait(lock);
 		}
 	}
 
@@ -563,7 +565,7 @@ arm_error_code sceKernelSetEventFlag(s32 evfId, u32 bitPattern)
 			cpu.GPR[1] = result;
 
 			thread->state += cpu_state::signal;
-			thread->cv.notify_one();
+			thread->notify();
 			return true;
 		}
 
@@ -612,7 +614,7 @@ arm_error_code sceKernelCancelEventFlag(s32 evfId, u32 setPattern, vm::ptr<s32> 
 		static_cast<ARMv7Thread&>(*thread).GPR[0] = SCE_KERNEL_ERROR_WAIT_CANCEL;
 		static_cast<ARMv7Thread&>(*thread).GPR[1] = setPattern;
 		thread->state += cpu_state::signal;
-		thread->cv.notify_one();
+		thread->notify();
 	}
 
 	*pNumWaitThreads = static_cast<u32>(evf->sq.size());

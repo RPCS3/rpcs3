@@ -1,4 +1,5 @@
-if (NOT APPLE)
+if(APPLE OR WIN32 AND NOT MSVC)
+else()
 add_subdirectory( glslang )
 set(BUILD_TESTS OFF CACHE BOOL "Build tests" FORCE)
 set(BUILD_DEMOS OFF CACHE BOOL "Build demos" FORCE)

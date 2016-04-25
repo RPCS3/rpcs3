@@ -19,7 +19,7 @@
 #include "Gui/CgDisasm.h"
 #include "Crypto/unpkg.h"
 
-#include <future>
+#include "Utilities/Thread.h"
 
 #ifndef _WIN32
 #include "frame_icon.xpm"
@@ -263,30 +263,39 @@ void MainFrame::InstallPkg(wxCommandEvent& WXUNUSED(event))
 		}
 	}
 
-	wxProgressDialog pdlg("PKG Decrypter / Installer", "Please wait, unpacking...", 1000, this, wxPD_AUTO_HIDE | wxPD_APP_MODAL);
+	wxProgressDialog pdlg("PKG Installer", "Please wait, unpacking...", 1000, this, wxPD_AUTO_HIDE | wxPD_APP_MODAL | wxPD_CAN_ABORT);
 
-	volatile f64 progress = 0.0;
-
-	// Run PKG unpacking asynchronously
-	auto result = std::async(std::launch::async, WRAP_EXPR(pkg_install(pkg_f, local_path + '/', progress)));
-
-	// Wait for the completion
-	while (result.wait_for(15ms) != std::future_status::ready)
+	// Synchronization variable
+	atomic_t<double> progress(0.);
 	{
-		// Update progress window
-		pdlg.Update(progress * pdlg.GetRange());
+		// Run PKG unpacking asynchronously
+		scope_thread worker("PKG Installer", [&]
+		{
+			if (pkg_install(pkg_f, local_path + '/', progress))
+			{
+				progress = 1.;
+			}
 
-		// Update main frame
-		Update();
-		wxGetApp().ProcessPendingEvents();
+			// TODO: Ask user to delete files on cancellation/failure?
+		});
+
+		// Wait for the completion
+		while (std::this_thread::sleep_for(5ms), progress < 1.)
+		{
+			// Update progress window
+			if (!pdlg.Update(static_cast<int>(progress * pdlg.GetRange())))
+			{
+				// Installation cancelled (signal with negative value)
+				progress -= 1.;
+				break;
+			}
+		}
 	}
 
 	pdlg.Close();
 
-	if (result.get())
+	if (progress >= 1.)
 	{
-		LOG_SUCCESS(LOADER, "PKG: Package successfully installed in %s", local_path);
-
 		// Refresh game list
 		m_game_viewer->Refresh();
 	}
