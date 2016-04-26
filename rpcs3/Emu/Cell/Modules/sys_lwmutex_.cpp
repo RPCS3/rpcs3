@@ -74,7 +74,7 @@ s32 sys_lwmutex_lock(PPUThread& ppu, vm::ptr<sys_lwmutex_t> lwmutex, u64 timeout
 {
 	sysPrxForUser.trace("sys_lwmutex_lock(lwmutex=*0x%x, timeout=0x%llx)", lwmutex, timeout);
 
-	const be_t<u32> tid = ppu.id;
+	const be_t<u32> tid(ppu.id);
 
 	// try to lock lightweight mutex
 	const be_t<u32> old_owner = lwmutex->vars.owner.compare_and_swap(lwmutex_free, tid);
@@ -168,7 +168,7 @@ s32 sys_lwmutex_trylock(PPUThread& ppu, vm::ptr<sys_lwmutex_t> lwmutex)
 {
 	sysPrxForUser.trace("sys_lwmutex_trylock(lwmutex=*0x%x)", lwmutex);
 
-	const be_t<u32> tid = ppu.id;
+	const be_t<u32> tid(ppu.id);
 
 	// try to lock lightweight mutex
 	const be_t<u32> old_owner = lwmutex->vars.owner.compare_and_swap(lwmutex_free, tid);
@@ -235,7 +235,7 @@ s32 sys_lwmutex_unlock(PPUThread& ppu, vm::ptr<sys_lwmutex_t> lwmutex)
 {
 	sysPrxForUser.trace("sys_lwmutex_unlock(lwmutex=*0x%x)", lwmutex);
 
-	const be_t<u32> tid = ppu.id;
+	const be_t<u32> tid(ppu.id);
 
 	// check owner
 	if (lwmutex->vars.owner.load() != tid)

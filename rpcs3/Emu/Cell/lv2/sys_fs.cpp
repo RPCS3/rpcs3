@@ -7,6 +7,9 @@
 #include "Emu/Cell/ErrorCodes.h"
 #include "sys_fs.h"
 
+#include "Utilities/StrUtil.h"
+#include <cerrno>
+
 LOG_CHANNEL(sys_fs);
 
 s32 sys_fs_test(u32 arg1, u32 arg2, vm::ptr<u32> arg3, u32 arg4, vm::ptr<char> arg5, u32 arg6)
@@ -42,7 +45,7 @@ s32 sys_fs_open(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, s32 mode, vm::c
 		return CELL_FS_EISDIR;
 	}
 
-	mset<fs::open_mode> open_mode{};
+	bitset_t<fs::open_mode> open_mode{};
 
 	switch (flags & CELL_FS_O_ACCMODE)
 	{
@@ -349,7 +352,7 @@ s32 sys_fs_rmdir(vm::cptr<char> path)
 
 	if (!fs::remove_dir(vfs::get(path.get_ptr())))
 	{
-		switch (auto error = errno)
+		switch (auto error = fs::error)
 		{
 		case ENOENT: return CELL_FS_ENOENT;
 		default: sys_fs.error("sys_fs_rmdir(): unknown error %d", error);
@@ -369,7 +372,7 @@ s32 sys_fs_unlink(vm::cptr<char> path)
 
 	if (!fs::remove_file(vfs::get(path.get_ptr())))
 	{
-		switch (auto error = errno)
+		switch (auto error = fs::error)
 		{
 		case ENOENT: return CELL_FS_ENOENT;
 		default: sys_fs.error("sys_fs_unlink(): unknown error %d", error);
@@ -448,7 +451,7 @@ s32 sys_fs_truncate(vm::cptr<char> path, u64 size)
 
 	if (!fs::truncate_file(vfs::get(path.get_ptr()), size))
 	{
-		switch (auto error = errno)
+		switch (auto error = fs::error)
 		{
 		case ENOENT: return CELL_FS_ENOENT;
 		default: sys_fs.error("sys_fs_truncate(): unknown error %d", error);
@@ -475,7 +478,7 @@ s32 sys_fs_ftruncate(u32 fd, u64 size)
 
 	if (!file->file.trunc(size))
 	{
-		switch (auto error = errno)
+		switch (auto error = fs::error)
 		{
 		case 0:
 		default: sys_fs.error("sys_fs_ftruncate(): unknown error %d", error);

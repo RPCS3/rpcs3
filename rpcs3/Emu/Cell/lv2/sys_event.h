@@ -84,7 +84,8 @@ public:
 	const u64 name;
 	const u64 ipc_key;
 	const s32 size;
-	const u32 id{};
+
+	const id_value<> id{};
 
 	lv2_event_queue_t(u32 protocol, s32 type, u64 name, u64 ipc_key, s32 size)
 		: protocol(protocol)

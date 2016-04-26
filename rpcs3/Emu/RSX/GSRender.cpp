@@ -7,7 +7,7 @@
 
 // temporarily (u8 value is really CellVideoOutResolutionId, but HLE declarations shouldn't be available for the rest of emu, even indirectly)
 extern cfg::map_entry<u8> g_cfg_video_out_resolution;
-extern const std::unordered_map<u8, size2i> g_video_out_resolution_map;
+extern const std::unordered_map<u8, std::pair<int, int>> g_video_out_resolution_map;
 
 draw_context_t GSFrameBase::new_context()
 {
@@ -20,8 +20,9 @@ draw_context_t GSFrameBase::new_context()
 }
 
 GSRender::GSRender(frame_type type)
-	: m_frame(Emu.GetCallbacks().get_gs_frame(type, g_video_out_resolution_map.at(g_cfg_video_out_resolution.get())).release())
 {
+	const auto size = g_video_out_resolution_map.at(g_cfg_video_out_resolution.get());
+	m_frame = Emu.GetCallbacks().get_gs_frame(type, size.first, size.second).release();
 }
 
 GSRender::~GSRender()

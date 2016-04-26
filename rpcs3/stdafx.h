@@ -19,16 +19,12 @@
 
 #pragma warning( disable : 4351 )
 
-#include <cstdio>
 #include <cstdlib>
-#include <cstring>
 #include <cstdint>
 #include <climits>
-#include <cmath>
-#include <cerrno>
+#include <cstring>
 #include <string>
 #include <mutex>
-#include <thread>
 #include <condition_variable>
 #include <memory>
 #include <vector>
@@ -54,6 +50,5 @@ using namespace std::chrono_literals;
 #include "Utilities/BEType.h"
 #include "Utilities/Atomic.h"
 #include "Utilities/StrFmt.h"
-#include "Utilities/BitField.h"
 #include "Utilities/File.h"
 #include "Utilities/Log.h"

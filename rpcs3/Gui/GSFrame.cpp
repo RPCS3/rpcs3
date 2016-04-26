@@ -12,12 +12,12 @@ BEGIN_EVENT_TABLE(GSFrame, wxFrame)
 	EVT_SIZE(GSFrame::OnSize)
 END_EVENT_TABLE()
 
-GSFrame::GSFrame(const wxString& title, size2i size)
+GSFrame::GSFrame(const wxString& title, int w, int h)
 	: wxFrame(nullptr, wxID_ANY, "GSFrame[" + title + "]")
 {
 	SetIcon(wxGetApp().m_MainFrame->GetIcon());
 
-	SetClientSize(size.width, size.height);
+	SetClientSize(w, h);
 	wxGetApp().Bind(wxEVT_KEY_DOWN, &GSFrame::OnKeyDown, this);
 	Bind(wxEVT_CLOSE_WINDOW, &GSFrame::OnClose, this);
 	Bind(wxEVT_LEFT_DCLICK, &GSFrame::OnLeftDclick, this);
@@ -86,10 +86,14 @@ void GSFrame::delete_context(void* ctx)
 {
 }
 
-size2i GSFrame::client_size()
+int GSFrame::client_width()
 {
-	wxSize size = GetClientSize();
-	return{ size.GetWidth(), size.GetHeight() };
+	return GetClientSize().GetWidth();
+}
+
+int GSFrame::client_height()
+{
+	return GetClientSize().GetHeight();
 }
 
 void GSFrame::flip(draw_context_t)

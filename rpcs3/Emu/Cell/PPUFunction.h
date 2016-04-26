@@ -243,25 +243,9 @@ class ppu_function_manager
 	};
 
 	// Access global function list
-	static never_inline auto& access()
-	{
-		static std::vector<ppu_function_t> list
-		{
-			nullptr,
-			[](PPUThread& ppu) { ppu.state += cpu_state::ret; },
-		};
+	static std::vector<ppu_function_t>& access();
 
-		return list;
-	}
-
-	static never_inline u32 add_function(ppu_function_t function)
-	{
-		auto& list = access();
-
-		list.push_back(function);
-
-		return ::size32(list) - 1;
-	}
+	static u32 add_function(ppu_function_t function);
 
 public:
 	// Register function (shall only be called during global initialization)

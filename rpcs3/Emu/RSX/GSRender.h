@@ -37,7 +37,8 @@ public:
 
 	virtual void set_current(draw_context_t ctx) = 0;
 	virtual void flip(draw_context_t ctx) = 0;
-	virtual size2i client_size() = 0;
+	virtual int client_width() = 0;
+	virtual int client_height() = 0;
 
 	virtual void* handle() const = 0;
 

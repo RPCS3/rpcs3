@@ -2,39 +2,47 @@
 
 #include "types.h"
 #include "Atomic.h"
+#include "Platform.h"
 
-class semaphore_t
+// Binary semaphore
+class benaphore
 {
-	// semaphore mutex
-	std::mutex m_mutex;
+	struct internal;
 
-	// semaphore condition variable
-	std::condition_variable m_cv;
+	// Reserved value (-1) enforces *_hard() calls
+	atomic_t<u32> m_value{};
 
-	struct alignas(8) sync_var_t
-	{
-		u32 value; // current semaphore value
-		u32 waiters; // current amount of waiters
-	};
+	atomic_t<internal*> m_data{};
 
-	// current semaphore value
-	atomic_t<sync_var_t> m_var;
+	void wait_hard();
+	void post_hard();
 
 public:
-	// max semaphore value
-	const u32 max_value;
+	constexpr benaphore() = default;
 
-	semaphore_t(u32 max_value = 1, u32 value = 0)
-		: m_var(sync_var_t{ value, 0 })
-		, max_value(max_value)
+	~benaphore();
+
+	// Initialize internal data
+	void initialize_once();
+
+	void wait()
 	{
+		if (UNLIKELY(!m_value.compare_and_swap_test(1, 0)))
+		{
+			wait_hard();
+		}
 	}
 
-	bool try_wait();
+	bool try_wait()
+	{
+		return LIKELY(m_value.compare_and_swap_test(1, 0));
+	}
 
-	bool try_post();
-
-	void wait();
-
-	bool post_and_wait();
+	void post()
+	{
+		if (UNLIKELY(!m_value.compare_and_swap_test(0, 1)))
+		{
+			post_hard();
+		}
+	}
 };

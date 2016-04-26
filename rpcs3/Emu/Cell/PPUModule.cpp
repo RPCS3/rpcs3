@@ -80,6 +80,35 @@ ppu_static_module::ppu_static_module(const char* name)
 	ppu_module_manager::register_module(this);
 }
 
+std::unordered_map<std::string, ppu_static_module*>& ppu_module_manager::access()
+{
+	static std::unordered_map<std::string, ppu_static_module*> map;
+
+	return map;
+}
+
+void ppu_module_manager::register_module(ppu_static_module* module)
+{
+	access().emplace(module->name, module);
+}
+
+ppu_static_function& ppu_module_manager::access_static_function(const char* module, u32 fnid)
+{
+	return access().at(module)->functions[fnid];
+}
+
+ppu_static_variable& ppu_module_manager::access_static_variable(const char* module, u32 vnid)
+{
+	return access().at(module)->variables[vnid];
+}
+
+const ppu_static_module* ppu_module_manager::get_module(const std::string& name)
+{
+	const auto& map = access();
+	const auto found = map.find(name);
+	return found != map.end() ? found->second : nullptr;
+}
+
 // Initialize static modules.
 static void ppu_initialize_modules()
 {

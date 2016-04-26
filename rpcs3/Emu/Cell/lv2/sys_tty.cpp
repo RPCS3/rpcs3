@@ -8,6 +8,8 @@
 
 LOG_CHANNEL(sys_tty);
 
+extern fs::file g_tty;
+
 s32 sys_tty_read(s32 ch, vm::ptr<char> buf, u32 len, vm::ptr<u32> preadlen)
 {
 	sys_tty.todo("sys_tty_read(ch=%d, buf=*0x%x, len=%d, preadlen=*0x%x)", ch, buf, len, preadlen);
@@ -34,7 +36,10 @@ s32 sys_tty_write(s32 ch, vm::cptr<char> buf, u32 len, vm::ptr<u32> pwritelen)
 		return CELL_OK;
 	}
 
-	_log::g_tty_file.log({ buf.get_ptr(), len });
+	if (g_tty)
+	{
+		g_tty.write(buf.get_ptr(), len);
+	}
 
 	*pwritelen = len;
 

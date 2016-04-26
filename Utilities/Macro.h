@@ -75,5 +75,6 @@ constexpr std::uint32_t size32(const T(&)[Size])
 #define Expects ASSERT
 #define Ensures ASSERT
 
-#define DECLARE(static_member) decltype(static_member) static_member
+#define DECLARE(...) decltype(__VA_ARGS__) __VA_ARGS__
+
 #define STR_CASE(value) case value: return #value

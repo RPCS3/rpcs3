@@ -28,7 +28,7 @@ public:
 
 	void on_stop() override;
 
-	const u32 id{}; // Timer id
+	const id_value<> id{};
 
 	atomic_t<u32> state{ SYS_TIMER_STATE_RUN }; // Timer state
 

@@ -1,16 +1,59 @@
 ﻿#include "Log.h"
+#include "File.h"
+#include "StrFmt.h"
+
 #include <cstdarg>
+#include <string>
+
+// Thread-specific log prefix provider
+thread_local std::string(*g_tls_log_prefix)() = nullptr;
 
 namespace _log
 {
+	struct listener
+	{
+		listener() = default;
+
+		virtual ~listener() = default;
+
+		virtual void log(const channel& ch, level sev, const std::string& text) = 0;
+	};
+
+	class file_writer
+	{
+		// Could be memory-mapped file
+		fs::file m_file;
+
+	public:
+		file_writer(const std::string& name);
+
+		virtual ~file_writer() = default;
+
+		// Append raw data
+		void log(const std::string& text);
+
+		// Get current file size (may be used by secondary readers)
+		std::size_t size() const;
+	};
+
+	struct file_listener : public file_writer, public listener
+	{
+		file_listener(const std::string& name)
+			: file_writer(name)
+			, listener()
+		{
+		}
+
+		// Encode level, current thread name, channel name and write log message
+		virtual void log(const channel& ch, level sev, const std::string& text) override;
+	};
+
 	static file_listener& get_logger()
 	{
 		// Use magic static
 		static file_listener logger("RPCS3.log");
 		return logger;
 	}
-
-	file_writer g_tty_file("TTY.log");
 
 	channel GENERAL(nullptr, level::notice);
 	channel LOADER("LDR", level::notice);
@@ -20,15 +63,13 @@ namespace _log
 	channel PPU("PPU", level::notice);
 	channel SPU("SPU", level::notice);
 	channel ARMv7("ARMv7");
-
-	thread_local std::string(*g_tls_make_prefix)(const channel&, level, const std::string&) = nullptr;
 }
 
 void _log::channel::broadcast(const _log::channel& ch, _log::level sev, const char* fmt...)
 {
 	va_list args;
 	va_start(args, fmt);
-	get_logger().log(ch, sev, fmt::_vformat(fmt, args));
+	get_logger().log(ch, sev, fmt::unsafe_vformat(fmt, args));
 	va_end(args);
 }
 
@@ -40,7 +81,7 @@ _log::file_writer::file_writer(const std::string& name)
 	{
 		if (!m_file.open(fs::get_config_dir() + name, fs::rewrite + fs::append))
 		{
-			throw fmt::exception("Can't create log file %s (error %d)", name, errno);
+			throw fmt::exception("Can't create log file %s (error %d)", name, fs::error);
 		}
 	}
 	catch (...)
@@ -78,10 +119,10 @@ void _log::file_listener::log(const _log::channel& ch, _log::level sev, const st
 
 	// TODO: print time?
 
-	if (auto func = g_tls_make_prefix)
+	if (auto prefix = g_tls_log_prefix)
 	{
 		msg += '{';
-		msg += func(ch, sev, text);
+		msg += prefix();
 		msg += "} ";
 	}
 	

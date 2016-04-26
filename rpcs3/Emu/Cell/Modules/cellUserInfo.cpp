@@ -4,6 +4,8 @@
 
 #include "cellUserInfo.h"
 
+#include "Utilities/StrUtil.h"
+
 LOG_CHANNEL(cellUserInfo);
 
 s32 cellUserInfoGetStat(u32 id, vm::ptr<CellUserInfoUserStat> stat)

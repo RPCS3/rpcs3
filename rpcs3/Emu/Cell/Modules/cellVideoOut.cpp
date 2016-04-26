@@ -24,7 +24,7 @@ cfg::map_entry<u8> g_cfg_video_out_aspect_ratio(cfg::root.video, "Aspect ratio",
 	{ "16x9", CELL_VIDEO_OUT_ASPECT_16_9 },
 });
 
-const extern std::unordered_map<u8, size2i> g_video_out_resolution_map
+const extern std::unordered_map<u8, std::pair<int, int>> g_video_out_resolution_map
 {
 	{ CELL_VIDEO_OUT_RESOLUTION_1080,      { 1920, 1080 } },
 	{ CELL_VIDEO_OUT_RESOLUTION_720,       { 1280, 720 } },
@@ -133,7 +133,7 @@ ppu_error_code cellVideoOutGetConfiguration(u32 videoOut, vm::ptr<CellVideoOutCo
 		config->resolutionId = g_cfg_video_out_resolution.get();
 		config->format = CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8R8G8B8;
 		config->aspect = g_cfg_video_out_aspect_ratio.get();
-		config->pitch = 4 * g_video_out_resolution_map.at(g_cfg_video_out_resolution.get()).width;
+		config->pitch = 4 * g_video_out_resolution_map.at(g_cfg_video_out_resolution.get()).first;
 
 		return CELL_OK;
 

@@ -1,7 +1,13 @@
 #pragma once
 
+#include "Utilities/types.h"
+#include "Utilities/Macro.h"
+#include "Utilities/Platform.h"
 #include "Utilities/SharedMutex.h"
 
+#include <memory>
+#include <vector>
+#include <unordered_map>
 #include <set>
 #include <map>
 
@@ -25,25 +31,6 @@ namespace id_manager
 
 		static constexpr u32 min = T::id_min;
 		static constexpr u32 max = T::id_max;
-	};
-
-	// Optional ID storage
-	template<typename T, typename = void>
-	struct id_storage
-	{
-		static const u32* get(T*)
-		{
-			return nullptr;
-		}
-	};
-
-	template<typename T>
-	struct id_storage<T, void_t<decltype(&T::id)>>
-	{
-		static const u32* get(T* ptr)
-		{
-			return &ptr->id;
-		}
 	};
 
 	// Optional object initialization function (called after ID registration)
@@ -82,7 +69,6 @@ namespace id_manager
 		}
 	};
 
-	template<typename>
 	class typeinfo
 	{
 		// Global variable for each registered type
@@ -93,24 +79,12 @@ namespace id_manager
 		};
 
 		// Access global type list
-		static never_inline auto& access()
-		{
-			static std::vector<typeinfo> list;
+		static std::vector<typeinfo>& access();
 
-			return list;
-		}
-
-		static never_inline u32 add_type(typeinfo info)
-		{
-			auto& list = access();
-
-			list.emplace_back(info);
-
-			return ::size32(list) - 1;
-		}
+		// Add to the global list
+		static u32 add_type(typeinfo info);
 
 	public:
-		const std::type_info* info;
 		void(*on_init)(void*);
 		void(*on_stop)(void*);
 
@@ -131,10 +105,9 @@ namespace id_manager
 		}
 	};
 
-	template<typename TAG> template<typename T>
-	const u32 typeinfo<TAG>::registered<T>::index = typeinfo<TAG>::add_type(
+	template<typename T>
+	const u32 typeinfo::registered<T>::index = typeinfo::add_type(
 	{
-		&typeid(T),
 		PURE_EXPR(id_manager::on_init<T>::func(static_cast<T*>(ptr)), void* ptr),
 		PURE_EXPR(id_manager::on_stop<T>::func(static_cast<T*>(ptr)), void* ptr),
 	});
@@ -160,23 +133,18 @@ class idm
 
 	using map_type = std::unordered_map<u32, std::shared_ptr<void>, id_hash_t>;
 
+	static shared_mutex g_mutex;
+
 	// Type Index -> ID -> Object. Use global since only one process is supported atm.
 	static std::vector<map_type> g_map;
 
 	// Next ID for each category
 	static std::vector<u32> g_id;
 
-	static shared_mutex g_mutex;
-
-	static const auto& get_types()
-	{
-		return id_manager::typeinfo<idm>::get();
-	}
-
 	template<typename T>
 	static inline u32 get_type()
 	{
-		return id_manager::typeinfo<idm>::get_index<T>();
+		return id_manager::typeinfo::get_index<T>();
 	}
 
 	template<typename T>
@@ -185,44 +153,25 @@ class idm
 		return get_type<typename id_manager::id_traits<T>::tag>();
 	}
 
-	// Prepares new ID, returns nullptr if out of resources
-	static map_type::pointer allocate_id(u32 tag, u32 min, u32 max)
+	// Update optional ID storage
+	template<typename T>
+	static auto set_id_value(T* ptr, u32 id) -> decltype(static_cast<void>(std::declval<T&>().id))
 	{
-		// Check all IDs starting from "next id"
-		for (u32 i = 0; i <= max - min; i++)
-		{
-			// Fix current ID (wrap around)
-			if (g_id[tag] < min || g_id[tag] > max) g_id[tag] = min;
-
-			// Get ID
-			const auto r = g_map[tag].emplace(g_id[tag]++, nullptr);
-
-			if (r.second)
-			{
-				return &*r.first;
-			}
-		}
-
-		// Nothing found
-		return nullptr;
+		ptr->id = id;
 	}
+
+	static void set_id_value(...)
+	{
+	}
+
+	// Prepares new ID, returns nullptr if out of resources
+	static map_type::pointer allocate_id(u32 tag, u32 min, u32 max);
 
 	// Deallocate ID, returns object
-	static std::shared_ptr<void> deallocate_id(u32 tag, u32 id)
-	{
-		const auto found = g_map[tag].find(id);
-
-		if (found == g_map[tag].end()) return nullptr;
-
-		auto ptr = std::move(found->second);
-
-		g_map[tag].erase(found);
-
-		return ptr;
-	}
+	static std::shared_ptr<void> deallocate_id(u32 tag, u32 id);
 
 	// Allocate new ID and construct it from the provider()
-	template<typename T, typename F, typename = std::result_of_t<F()>>
+	template<typename T, typename F>
 	static map_type::pointer create_id(F&& provider)
 	{
 		writer_lock lock(g_mutex);
@@ -231,14 +180,11 @@ class idm
 		{
 			try
 			{
-				// Get object, write it
+				// Get object, store it
 				place->second = provider();
 				
-				// Update ID storage if available
-				if (const u32* id = id_manager::id_storage<T>::get(static_cast<T*>(place->second.get())))
-				{
-					*const_cast<u32*>(id) = place->first;
-				}
+				// Update ID value if required
+				set_id_value(static_cast<T*>(place->second.get()), place->first);
 
 				return &*g_map[get_type<T>()].emplace(*place).first;
 			}
@@ -252,41 +198,18 @@ class idm
 		return nullptr;
 	}
 
+	// Get ID (internal)
+	static map_type::pointer find_id(u32 type, u32 id);
+
 	// Remove ID and return object
-	static std::shared_ptr<void> delete_id(u32 type, u32 tag, u32 id)
-	{
-		writer_lock lock(g_mutex);
-
-		auto&& ptr = deallocate_id(tag, id);
-
-		g_map[type].erase(id);
-
-		return ptr;
-	}
+	static std::shared_ptr<void> delete_id(u32 type, u32 tag, u32 id);
 
 public:
 	// Initialize object manager
-	static void init()
-	{
-		g_map.resize(get_types().size(), {});
-		g_id.resize(get_types().size(), 0);
-	}
+	static void init();
 
 	// Remove all objects
-	static void clear()
-	{
-		// Call recorded finalization functions for all IDs
-		for (std::size_t i = 0; i < g_map.size(); i++)
-		{
-			for (auto& id : g_map[i])
-			{
-				get_types()[i].on_stop(id.second.get());
-			}
-
-			g_map[i].clear();
-			g_id[i] = 0;
-		}
-	}
+	static void clear();
 
 	// Add a new ID of specified type with specified constructor arguments (returns object or nullptr)
 	template<typename T, typename Make = T, typename... Args>
@@ -346,7 +269,7 @@ public:
 	{
 		reader_lock lock(g_mutex);
 
-		return g_map[get_type<T>()].count(id) != 0;
+		return find_id(get_type<T>(), id) != nullptr;
 	}
 
 	// Get ID
@@ -355,9 +278,9 @@ public:
 	{
 		reader_lock lock(g_mutex);
 
-		const auto found = g_map[get_type<T>()].find(id);
+		const auto found = find_id(get_type<T>(), id);
 
-		if (found == g_map[get_type<T>()].end())
+		if (UNLIKELY(found == nullptr))
 		{
 			return nullptr;
 		}
@@ -387,7 +310,7 @@ public:
 	{
 		auto&& ptr = delete_id(get_type<T>(), get_tag<T>(), id);
 
-		if (ptr)
+		if (LIKELY(ptr))
 		{
 			id_manager::on_stop<T>::func(static_cast<T*>(ptr.get()));
 		}
@@ -401,7 +324,7 @@ public:
 	{
 		auto&& ptr = delete_id(get_type<T>(), get_tag<T>(), id);
 
-		if (ptr)
+		if (LIKELY(ptr))
 		{
 			id_manager::on_stop<T>::func(static_cast<T*>(ptr.get()));
 		}
@@ -458,45 +381,20 @@ class fxm
 
 	static shared_mutex g_mutex;
 
-	static inline const auto& get_types()
-	{
-		return id_manager::typeinfo<fxm>::get();
-	}
-
 	template<typename T>
 	static inline u32 get_type()
 	{
-		return id_manager::typeinfo<fxm>::get_index<T>();
+		return id_manager::typeinfo::get_index<T>();
 	}
 
-	static std::shared_ptr<void> remove(u32 type)
-	{
-		writer_lock lock(g_mutex);
-
-		return std::move(g_map[type]);
-	}
+	static std::shared_ptr<void> remove(u32 type);
 
 public:
 	// Initialize object manager
-	static void init()
-	{
-		g_map.resize(get_types().size(), {});
-	}
+	static void init();
 	
 	// Remove all objects
-	static void clear()
-	{
-		// Call recorded finalization functions for all IDs
-		for (std::size_t i = 0; i < g_map.size(); i++)
-		{
-			if (g_map[i])
-			{
-				get_types()[i].on_stop(g_map[i].get());
-			}
-
-			g_map[i].reset();
-		}
-	}
+	static void clear();
 
 	// Create the object (returns nullptr if it already exists)
 	template<typename T, typename Make = T, typename... Args>

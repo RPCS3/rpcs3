@@ -10,6 +10,8 @@ LOG_CHANNEL(sysPrxForUser);
 
 extern u64 get_system_time();
 
+extern fs::file g_tty;
+
 vm::gvar<s32> sys_prx_version; // ???
 
 #define TLS_SYS 0x30
@@ -163,7 +165,10 @@ s32 console_write(vm::ptr<char> data, u32 len)
 {
 	sysPrxForUser.warning("console_write(data=*0x%x, len=%d)", data, len);
 
-	_log::g_tty_file.log({ data.get_ptr(), len });
+	if (g_tty)
+	{
+		g_tty.write(data.get_ptr(), len);
+	}
 
 	return CELL_OK;
 }

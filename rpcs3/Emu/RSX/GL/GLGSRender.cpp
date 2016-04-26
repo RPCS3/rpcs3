@@ -680,7 +680,7 @@ void GLGSRender::flip(int buffer)
 	coordi aspect_ratio;
 	if (1) //enable aspect ratio
 	{
-		sizei csize = m_frame->client_size();
+		sizei csize(m_frame->client_width(), m_frame->client_height());
 		sizei new_size = csize;
 
 		const double aq = (double)buffer_width / buffer_height;
@@ -702,7 +702,7 @@ void GLGSRender::flip(int buffer)
 	}
 	else
 	{
-		aspect_ratio.size = m_frame->client_size();
+		aspect_ratio.size = { m_frame->client_width(), m_frame->client_height() };
 	}
 
 	gl::screen.clear(gl::buffers::color_depth_stencil);

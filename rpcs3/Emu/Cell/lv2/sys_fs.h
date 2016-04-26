@@ -173,7 +173,7 @@ struct lv2_fs_object_t
 	static constexpr u32 id_min = 3;
 	static constexpr u32 id_max = 255;
 
-	const u32 id{};
+	const id_value<> id{};
 };
 
 struct lv2_file_t : lv2_fs_object_t

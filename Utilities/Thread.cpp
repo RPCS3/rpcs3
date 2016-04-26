@@ -1294,10 +1294,19 @@ extern std::mutex& get_current_thread_mutex()
 // TODO
 extern atomic_t<u32> g_thread_count(0);
 
+extern thread_local std::string(*g_tls_log_prefix)();
+
 void thread_ctrl::initialize()
 {
 	// Initialize TLS variable
 	g_tls_this_thread = this;
+
+	g_tls_log_prefix = []
+	{
+		return g_tls_this_thread->m_name;
+	};
+
+	++g_thread_count;
 
 #if defined(_MSC_VER)
 
@@ -1328,13 +1337,6 @@ void thread_ctrl::initialize()
 	}
 
 #endif
-
-	_log::g_tls_make_prefix = [](const auto&, auto, const auto&)
-	{
-		return g_tls_this_thread->m_name;
-	};
-
-	++g_thread_count;
 }
 
 void thread_ctrl::set_exception() noexcept
@@ -1378,7 +1380,7 @@ thread_ctrl::~thread_ctrl()
 
 void thread_ctrl::initialize_once() const
 {
-	if (!m_data)
+	if (UNLIKELY(!m_data))
 	{
 		auto ptr = new thread_ctrl::internal;
 
@@ -1391,10 +1393,10 @@ void thread_ctrl::initialize_once() const
 
 void thread_ctrl::join()
 {
-	if (m_thread.joinable())
+	if (LIKELY(m_thread.joinable()))
 	{
 		// Increase contention counter
-		if (m_joining++)
+		if (UNLIKELY(m_joining++))
 		{
 			// Hard way
 			initialize_once();
@@ -1408,7 +1410,7 @@ void thread_ctrl::join()
 			m_thread.join();
 
 			// Notify others if necessary
-			if (m_joining > 1)
+			if (UNLIKELY(m_joining > 1))
 			{
 				initialize_once();
 
@@ -1420,7 +1422,7 @@ void thread_ctrl::join()
 		}
 	}
 
-	if (m_data && m_data->exception)
+	if (UNLIKELY(m_data && m_data->exception))
 	{
 		std::rethrow_exception(m_data->exception);
 	}

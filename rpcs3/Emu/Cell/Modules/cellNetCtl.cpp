@@ -5,6 +5,8 @@
 #include "cellSysutil.h"
 #include "cellNetCtl.h"
 
+#include "Utilities/StrUtil.h"
+
 LOG_CHANNEL(cellNetCtl);
 
 cfg::map_entry<s32> g_cfg_net_status(cfg::root.net, "Connection status",

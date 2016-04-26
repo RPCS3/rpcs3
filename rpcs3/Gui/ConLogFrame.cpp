@@ -169,7 +169,7 @@ void LogFrame::OnTimer(wxTimerEvent& event)
 	const auto start = std::chrono::high_resolution_clock::now();
 
 	// Check TTY logs
-	while (const u64 size = std::min<u64>(sizeof(buf), _log::g_tty_file.size() - m_tty_file.pos()))
+	while (const u64 size = std::min<u64>(sizeof(buf), m_tty_file.size() - m_tty_file.pos()))
 	{
 		const wxString& text = get_utf8(m_tty_file, size);
 

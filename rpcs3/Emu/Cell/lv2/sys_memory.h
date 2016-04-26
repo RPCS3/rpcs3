@@ -46,13 +46,15 @@ struct sys_page_attr_t
 
 struct lv2_memory_container_t
 {
-	const u32 size;	// amount of "physical" memory in this container
-	const u32 id{};
+	// Amount of "physical" memory in this container
+	const u32 size;
 
-	// amount of memory allocated
+	const id_value<> id{};
+
+	// Amount of memory allocated
 	atomic_t<u32> used{ 0 };
 	
-	// allocations (addr -> size)
+	// Allocations (addr -> size)
 	std::map<u32, u32> allocs;
 
 	lv2_memory_container_t(u32 size)

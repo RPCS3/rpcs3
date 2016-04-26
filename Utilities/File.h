@@ -6,9 +6,13 @@
 #include <type_traits>
 
 #include "types.h"
+#include "BitSet.h"
 
 namespace fs
 {
+	// Error code returned
+	extern thread_local uint error;
+
 	// File open mode flags
 	enum struct open_mode : u32
 	{
@@ -20,14 +24,14 @@ namespace fs
 		excl,
 	};
 
-	constexpr mset<open_mode> read    = open_mode::read; // Enable reading
-	constexpr mset<open_mode> write   = open_mode::write; // Enable writing
-	constexpr mset<open_mode> append  = open_mode::append; // Always append to the end of the file
-	constexpr mset<open_mode> create  = open_mode::create; // Create file if it doesn't exist
-	constexpr mset<open_mode> trunc   = open_mode::trunc; // Clear opened file if it's not empty
-	constexpr mset<open_mode> excl    = open_mode::excl; // Failure if the file already exists (used with `create`)
+	constexpr bitset_t<open_mode> read    = open_mode::read; // Enable reading
+	constexpr bitset_t<open_mode> write   = open_mode::write; // Enable writing
+	constexpr bitset_t<open_mode> append  = open_mode::append; // Always append to the end of the file
+	constexpr bitset_t<open_mode> create  = open_mode::create; // Create file if it doesn't exist
+	constexpr bitset_t<open_mode> trunc   = open_mode::trunc; // Clear opened file if it's not empty
+	constexpr bitset_t<open_mode> excl    = open_mode::excl; // Failure if the file already exists (used with `create`)
 
-	constexpr mset<open_mode> rewrite = write + create + trunc;
+	constexpr bitset_t<open_mode> rewrite = write + create + trunc;
 
 	// File seek mode
 	enum class seek_mode : u32
@@ -92,7 +96,7 @@ namespace fs
 		virtual bool remove(const std::string& path) = 0;
 		virtual bool trunc(const std::string& path, u64 length) = 0;
 
-		virtual std::unique_ptr<file_base> open(const std::string& path, mset<open_mode> mode) = 0;
+		virtual std::unique_ptr<file_base> open(const std::string& path, bitset_t<open_mode> mode) = 0;
 		virtual std::unique_ptr<dir_base> open_dir(const std::string& path) = 0;
 	};
 
@@ -150,13 +154,13 @@ namespace fs
 		file() = default;
 
 		// Open file with specified mode
-		explicit file(const std::string& path, mset<open_mode> mode = ::fs::read)
+		explicit file(const std::string& path, bitset_t<open_mode> mode = ::fs::read)
 		{
 			open(path, mode);
 		}
 
 		// Open file with specified mode
-		bool open(const std::string& path, mset<open_mode> mode = ::fs::read);
+		bool open(const std::string& path, bitset_t<open_mode> mode = ::fs::read);
 
 		// Open memory for read
 		explicit file(const void* ptr, std::size_t size);

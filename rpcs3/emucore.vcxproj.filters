@@ -851,6 +851,9 @@
     <ClCompile Include="Emu\Memory\wait_engine.cpp">
       <Filter>Emu\Memory</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\IdManager.cpp">
+      <Filter>Emu</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -1605,6 +1608,15 @@
     </ClInclude>
     <ClInclude Include="Emu\Cell\lv2\IPC.h">
       <Filter>Emu\Cell\lv2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utilities\StrUtil.h">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utilities\geometry.h">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utilities\BitSet.h">
+      <Filter>Utilities</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

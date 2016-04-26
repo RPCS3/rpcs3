@@ -122,6 +122,8 @@ void ARMv7Thread::cpu_init()
 	TLS = armv7_get_tls(id);
 }
 
+extern thread_local std::string(*g_tls_log_prefix)();
+
 void ARMv7Thread::cpu_task()
 {
 	if (custom_task)
@@ -131,7 +133,7 @@ void ARMv7Thread::cpu_task()
 		return custom_task(*this);
 	}
 
-	_log::g_tls_make_prefix = [](const auto&, auto, const auto&)
+	g_tls_log_prefix = []
 	{
 		const auto cpu = static_cast<ARMv7Thread*>(get_current_cpu_thread());
 

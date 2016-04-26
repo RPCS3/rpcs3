@@ -7,6 +7,26 @@
 
 #include <fenv.h>
 
+// Compare 16 packed unsigned bytes (greater than)
+inline __m128i sse_cmpgt_epu8(__m128i A, __m128i B)
+{
+	// (A xor 0x80) > (B xor 0x80)
+	const auto sign = _mm_set1_epi32(0x80808080);
+	return _mm_cmpgt_epi8(_mm_xor_si128(A, sign), _mm_xor_si128(B, sign));
+}
+
+inline __m128i sse_cmpgt_epu16(__m128i A, __m128i B)
+{
+	const auto sign = _mm_set1_epi32(0x80008000);
+	return _mm_cmpgt_epi16(_mm_xor_si128(A, sign), _mm_xor_si128(B, sign));
+}
+
+inline __m128i sse_cmpgt_epu32(__m128i A, __m128i B)
+{
+	const auto sign = _mm_set1_epi32(0x80000000);
+	return _mm_cmpgt_epi32(_mm_xor_si128(A, sign), _mm_xor_si128(B, sign));
+}
+
 void spu_interpreter::UNK(SPUThread& spu, spu_opcode_t op)
 {
 	throw EXCEPTION("Unknown/Illegal instruction (0x%08x)", op.opcode);

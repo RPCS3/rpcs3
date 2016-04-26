@@ -108,7 +108,7 @@ bool cpu_thread::check_status()
 
 	const auto state_ = state.load();
 
-	if (state_ & to_mset(cpu_state::ret, cpu_state::stop))
+	if (state_ & make_bitset(cpu_state::ret, cpu_state::stop))
 	{
 		return true;
 	}

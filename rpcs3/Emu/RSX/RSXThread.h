@@ -8,9 +8,9 @@
 #include "RSXVertexProgram.h"
 #include "RSXFragmentProgram.h"
 
-#include "Utilities/Semaphore.h"
 #include "Utilities/Thread.h"
 #include "Utilities/Timer.h"
+#include "Utilities/geometry.h"
 
 extern u64 get_system_time();
 
@@ -54,7 +54,7 @@ namespace rsx
 template<>
 struct bijective<rsx::shader_language, const char*>
 {
-	static constexpr std::pair<rsx::shader_language, const char*> map[]
+	static constexpr bijective_pair<rsx::shader_language, const char*> map[]
 	{
 		{ rsx::shader_language::glsl, "glsl" },
 		{ rsx::shader_language::hlsl, "hlsl" },
@@ -281,7 +281,6 @@ namespace rsx
 		double fps_limit = 59.94;
 
 	public:
-		semaphore_t sem_flip;
 		u64 last_flip_time;
 		vm::ps3::ptr<void(u32)> flip_handler = vm::null;
 		vm::ps3::ptr<void(u32)> user_handler = vm::null;

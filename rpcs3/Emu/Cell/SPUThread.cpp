@@ -116,6 +116,8 @@ void SPUThread::cpu_init()
 	gpr[1]._u32[3] = 0x3FFF0; // initial stack frame pointer
 }
 
+extern thread_local std::string(*g_tls_log_prefix)();
+
 void SPUThread::cpu_task()
 {
 	std::fesetround(FE_TOWARDZERO);
@@ -127,7 +129,7 @@ void SPUThread::cpu_task()
 		return custom_task(*this);
 	}
 
-	_log::g_tls_make_prefix = [](const auto&, auto, const auto&)
+	g_tls_log_prefix = []
 	{
 		const auto cpu = static_cast<SPUThread*>(get_current_cpu_thread());
 

@@ -6,6 +6,8 @@
 #include "Emu/Cell/lv2/sys_fs.h"
 #include "cellFs.h"
 
+#include "Utilities/StrUtil.h"
+
 LOG_CHANNEL(cellFs);
 
 s32 cellFsOpen(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, vm::cptr<void> arg, u64 size)

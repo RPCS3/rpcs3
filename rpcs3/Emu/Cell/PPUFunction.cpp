@@ -2377,3 +2377,23 @@ s32 ppu_error_code::report(s32 error, const char* text)
 	LOG_ERROR(PPU, "Illegal call to ppu_error_code::report(0x%x, '%s')!");
 	return error;
 }
+
+std::vector<ppu_function_t>& ppu_function_manager::access()
+{
+	static std::vector<ppu_function_t> list
+	{
+		nullptr,
+		[](PPUThread& ppu) { ppu.state += cpu_state::ret; },
+	};
+
+	return list;
+}
+
+u32 ppu_function_manager::add_function(ppu_function_t function)
+{
+	auto& list = access();
+
+	list.push_back(function);
+
+	return ::size32(list) - 1;
+}

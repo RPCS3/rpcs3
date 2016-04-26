@@ -164,14 +164,14 @@ bool Rpcs3App::OnInit()
 
 	callbacks.get_pad_handler = PURE_EXPR(g_cfg_pad_handler.get()());
 
-	callbacks.get_gs_frame = [](frame_type type, size2i size) -> std::unique_ptr<GSFrameBase>
+	callbacks.get_gs_frame = [](frame_type type, int w, int h) -> std::unique_ptr<GSFrameBase>
 	{
 		switch (type)
 		{
-		case frame_type::OpenGL: return std::make_unique<GLGSFrame>(size);
-		case frame_type::DX12: return std::make_unique<GSFrame>("DirectX 12", size);
-		case frame_type::Null: return std::make_unique<GSFrame>("Null", size);
-		case frame_type::Vulkan: return std::make_unique<GSFrame>("Vulkan", size);
+		case frame_type::OpenGL: return std::make_unique<GLGSFrame>(w, h);
+		case frame_type::DX12: return std::make_unique<GSFrame>("DirectX 12", w, h);
+		case frame_type::Null: return std::make_unique<GSFrame>("Null", w, h);
+		case frame_type::Vulkan: return std::make_unique<GSFrame>("Vulkan", w, h);
 		}
 
 		throw EXCEPTION("Invalid Frame Type (0x%x)", type);

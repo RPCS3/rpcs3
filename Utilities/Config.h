@@ -296,11 +296,11 @@ namespace cfg
 
 		std::string to_string() const override
 		{
-			for (const auto& pair : bijective<T, const char*>::map)
+			for (std::size_t i = 0; i < sizeof(bijective<T, const char*>::map) / sizeof(bijective_pair<T, const char*>); i++)
 			{
-				if (pair.first == m_value)
+				if (bijective<T, const char*>::map[i].v1 == m_value)
 				{
-					return pair.second;
+					return bijective<T, const char*>::map[i].v2;
 				}
 			}
 
@@ -309,11 +309,11 @@ namespace cfg
 
 		bool from_string(const std::string& value) override
 		{
-			for (const auto& pair : bijective<T, const char*>::map)
+			for (std::size_t i = 0; i < sizeof(bijective<T, const char*>::map) / sizeof(bijective_pair<T, const char*>); i++)
 			{
-				if (pair.second == value)
+				if (bijective<T, const char*>::map[i].v2 == value)
 				{
-					m_value = pair.first;
+					m_value = bijective<T, const char*>::map[i].v1;
 					return true;
 				}
 			}
@@ -325,9 +325,9 @@ namespace cfg
 		{
 			std::vector<std::string> result;
 
-			for (const auto& pair : bijective<T, const char*>::map)
+			for (std::size_t i = 0; i < sizeof(bijective<T, const char*>::map) / sizeof(bijective_pair<T, const char*>); i++)
 			{
-				result.emplace_back(pair.second);
+				result.emplace_back(bijective<T, const char*>::map[i].v2);
 			}
 
 			return result;

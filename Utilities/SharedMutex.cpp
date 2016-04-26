@@ -15,24 +15,6 @@ struct shared_mutex::internal
 	std::condition_variable ocv; // For current exclusive owner
 };
 
-shared_mutex::~shared_mutex()
-{
-	delete m_data;
-}
-
-void shared_mutex::initialize_once()
-{
-	if (!m_data)
-	{
-		auto ptr = new shared_mutex::internal;
-
-		if (!m_data.compare_and_swap_test(nullptr, ptr))
-		{
-			delete ptr;
-		}
-	}
-}
-
 void shared_mutex::lock_shared_hard()
 {
 	initialize_once();
@@ -81,17 +63,18 @@ void shared_mutex::unlock_shared_notify()
 {
 	initialize_once();
 
-	// Mutex is locked for reliable notification because m_ctrl has been changed outside
-	std::lock_guard<std::mutex> lock(m_data->mutex);
+	std::unique_lock<std::mutex> lock(m_data->mutex);
 
 	if ((m_ctrl & SM_READER_MASK) == 0 && m_data->wq_size)
 	{
 		// Notify exclusive owner
+		lock.unlock();
 		m_data->ocv.notify_one();
 	}
 	else if (m_data->rq_size)
 	{
 		// Notify other readers
+		lock.unlock();
 		m_data->rcv.notify_one();
 	}
 }
@@ -141,17 +124,36 @@ void shared_mutex::unlock_notify()
 {
 	initialize_once();
 
-	// Mutex is locked for reliable notification because m_ctrl has been changed outside
-	std::lock_guard<std::mutex> lock(m_data->mutex);
+	std::unique_lock<std::mutex> lock(m_data->mutex);
 
 	if (m_data->wq_size)
 	{
 		// Notify next exclusive owner
+		lock.unlock();
 		m_data->wcv.notify_one();
 	}
 	else if (m_data->rq_size)
 	{
 		// Notify all readers
+		lock.unlock();
 		m_data->rcv.notify_all();
 	}
+}
+
+void shared_mutex::initialize_once()
+{
+	if (UNLIKELY(!m_data))
+	{
+		auto ptr = new shared_mutex::internal;
+
+		if (!m_data.compare_and_swap_test(nullptr, ptr))
+		{
+			delete ptr;
+		}
+	}
+}
+
+shared_mutex::~shared_mutex()
+{
+	delete m_data;
 }

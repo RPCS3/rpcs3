@@ -8,7 +8,7 @@ class GLGSFrame : public GSFrame
 	wxGLCanvas* m_canvas;
 
 public:
-	GLGSFrame(size2i);
+	GLGSFrame(int w, int h);
 
 	void* make_context() override;
 	void set_current(draw_context_t context) override;

@@ -57,35 +57,16 @@ class arm_module_manager final
 {
 	friend class arm_static_module;
 
-	static never_inline auto& access()
-	{
-		static std::unordered_map<std::string, arm_static_module*> map;
+	static std::unordered_map<std::string, arm_static_module*>& access();
 
-		return map;
-	}
+	static void register_module(arm_static_module* module);
 
-	static never_inline void register_module(arm_static_module* module)
-	{
-		access().emplace(module->name, module);
-	}
+	static arm_static_function& access_static_function(const char* module, u32 fnid);
 
-	static never_inline auto& access_static_function(const char* module, u32 fnid)
-	{
-		return access().at(module)->functions[fnid];
-	}
-
-	static never_inline auto& access_static_variable(const char* module, u32 vnid)
-	{
-		return access().at(module)->variables[vnid];
-	}
+	static arm_static_variable& access_static_variable(const char* module, u32 vnid);
 
 public:
-	static never_inline const arm_static_module* get_module(const std::string& name)
-	{
-		const auto& map = access();
-		const auto found = map.find(name);
-		return found != map.end() ? found->second : nullptr;
-	}
+	static const arm_static_module* get_module(const std::string& name);
 
 	template<typename T, T Func>
 	static void register_static_function(const char* module, const char* name, arm_function_t func, u32 fnid, u32 flags)

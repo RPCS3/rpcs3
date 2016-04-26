@@ -210,7 +210,7 @@ s32 sys_lwcond_wait(PPUThread& ppu, vm::ptr<sys_lwcond_t> lwcond, u64 timeout)
 {
 	sysPrxForUser.trace("sys_lwcond_wait(lwcond=*0x%x, timeout=0x%llx)", lwcond, timeout);
 
-	const be_t<u32> tid = ppu.id;
+	const be_t<u32> tid(ppu.id);
 
 	const vm::ptr<sys_lwmutex_t> lwmutex = lwcond->lwmutex;
 

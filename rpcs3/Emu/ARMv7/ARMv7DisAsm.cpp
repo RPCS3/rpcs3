@@ -106,10 +106,10 @@ static std::string fmt_shift(u32 type, u32 amount)
 	{
 		switch (type)
 		{
-		case arm_code::SRType_LSL: return ",lsl #" + fmt::to_udec(amount);
-		case arm_code::SRType_LSR: return ",lsr #" + fmt::to_udec(amount);
-		case arm_code::SRType_ASR: return ",asr #" + fmt::to_udec(amount);
-		case arm_code::SRType_ROR: return ",ror #" + fmt::to_udec(amount);
+		case arm_code::SRType_LSL: return fmt::format(",lsl #%u", amount);
+		case arm_code::SRType_LSR: return fmt::format(",lsr #%u", amount);
+		case arm_code::SRType_ASR: return fmt::format(",asr #%u", amount);
+		case arm_code::SRType_ROR: return fmt::format(",ror #%u", amount);
 		case arm_code::SRType_RRX: return ",rrx";
 		default: return ",?????";
 		}

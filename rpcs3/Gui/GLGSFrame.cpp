@@ -7,8 +7,8 @@
 
 extern cfg::bool_entry g_cfg_rsx_debug_output;
 
-GLGSFrame::GLGSFrame(size2i size)
-	: GSFrame("OpenGL", size)
+GLGSFrame::GLGSFrame(int w, int h)
+	: GSFrame("OpenGL", w, h)
 {
 	const int context_attrs[] =
 	{
@@ -26,7 +26,7 @@ GLGSFrame::GLGSFrame(size2i size)
 		0
 	};
 
-	m_canvas = new wxGLCanvas(this, wxID_ANY, context_attrs, wxDefaultPosition, { size.width, size.height });
+	m_canvas = new wxGLCanvas(this, wxID_ANY, context_attrs, wxDefaultPosition, { w, h });
 	m_canvas->Bind(wxEVT_LEFT_DCLICK, &GSFrame::OnLeftDclick, this);
 }
 
