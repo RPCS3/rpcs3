@@ -26,7 +26,7 @@ __Windows__
 
 __Linux__
 * GCC 5.1+ or Clang 3.5.0+
-* Debian & Ubuntu: `sudo apt-get install cmake build-essential libopenal-dev libwxgtk3.0-dev libglew-dev zlib1g-dev libedit-dev`
+* Debian & Ubuntu: `sudo apt-get install cmake build-essential libopenal-dev libwxgtk3.0-dev libglew-dev zlib1g-dev libedit-dev libvulkan-dev`
 * Arch: `sudo pacman -S glew openal wxgtk cmake llvm`
 
 __Mac OSX__
@@ -44,9 +44,18 @@ To initialize the repository don't forget to execute `git submodule update --ini
 3) Press *BUILD* > *Build Solution* or *Rebuild Solution*.
 * __Linux & Mac OSX__:
 If you want to build with LLVM, then LLVM 3.6.2 is required.
-`cd rpcs3 && cmake CMakeLists.txt && make && cd ../` then run with `cd bin && ./rpcs3`.
 If you are on OSX and want to build with llvm don't forget to add `-DLLVM_DIR=/usr/local/opt/llvm36/lib/llvm-3.6/share/llvm/cmake` (or wherever llvm brew was installed) to cmake invocation.
 When using GDB, configure it to ignore SIGSEGV signal (`handle SIGSEGV nostop noprint`).
+````
+cd rpcs3
+git submodule update --init
+cmake CMakeLists.txt
+make
+cd ../
+```
+
+* __Running in Linux & Mac OSX__: 
+Run with `cd bin && ./rpcs3`.
 
 ### Support
 * [Donate by PayPal](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=MPJ3S9XQXCE3G)
