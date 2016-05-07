@@ -84,6 +84,7 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\Utilities\Thread.cpp" />
+    <ClCompile Include="..\Utilities\version.cpp" />
     <ClCompile Include="..\Utilities\VirtualMemory.cpp" />
     <ClCompile Include="Emu\PSP2\ARMv7Module.cpp" />
     <ClCompile Include="Emu\Cell\lv2\lv2.cpp" />
@@ -348,6 +349,7 @@
     <ClCompile Include="Loader\PSF.cpp" />
     <ClCompile Include="Loader\TROPUSR.cpp" />
     <ClCompile Include="Loader\TRP.cpp" />
+    <ClCompile Include="rpcs3_version.cpp" />
     <ClCompile Include="stb_image.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
@@ -379,6 +381,7 @@
     <ClInclude Include="..\Utilities\Thread.h" />
     <ClInclude Include="..\Utilities\Timer.h" />
     <ClInclude Include="..\Utilities\types.h" />
+    <ClInclude Include="..\Utilities\version.h" />
     <ClInclude Include="..\Utilities\VirtualMemory.h" />
     <ClInclude Include="Crypto\aes.h" />
     <ClInclude Include="Crypto\ec.h" />
@@ -609,6 +612,7 @@
     <ClInclude Include="Loader\TROPUSR.h" />
     <ClInclude Include="Loader\TRP.h" />
     <ClInclude Include="restore_new.h" />
+    <ClInclude Include="rpcs3_version.h" />
     <ClInclude Include="stdafx.h" />
   </ItemGroup>
   <ItemGroup>
