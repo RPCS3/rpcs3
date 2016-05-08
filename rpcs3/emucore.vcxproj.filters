@@ -854,6 +854,9 @@
     <ClCompile Include="Emu\PSP2\Modules\sceVoiceQoS.cpp">
       <Filter>Emu\PSP2\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="..\Utilities\dynamic_library.cpp">
+      <Filter>Utilities</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -1622,6 +1625,9 @@
       <Filter>Utilities</Filter>
     </ClInclude>
     <ClInclude Include="..\Utilities\sync.h">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utilities\dynamic_library.h">
       <Filter>Utilities</Filter>
     </ClInclude>
   </ItemGroup>

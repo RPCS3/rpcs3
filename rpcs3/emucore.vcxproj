@@ -66,6 +66,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\Utilities\AutoPause.cpp" />
+    <ClCompile Include="..\Utilities\dynamic_library.cpp" />
     <ClCompile Include="..\Utilities\Log.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
@@ -363,6 +364,7 @@
     <ClInclude Include="..\Utilities\BEType.h" />
     <ClInclude Include="..\Utilities\BitField.h" />
     <ClInclude Include="..\Utilities\BitSet.h" />
+    <ClInclude Include="..\Utilities\dynamic_library.h" />
     <ClInclude Include="..\Utilities\event.h" />
     <ClInclude Include="..\Utilities\geometry.h" />
     <ClInclude Include="..\Utilities\GSL.h" />
