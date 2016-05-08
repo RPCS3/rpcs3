@@ -857,6 +857,12 @@
     <ClCompile Include="..\Utilities\dynamic_library.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3_api.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\ps3emu_api\ps3emu_api.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -1629,6 +1635,15 @@
     </ClInclude>
     <ClInclude Include="..\Utilities\dynamic_library.h">
       <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="ps3emu_api_enums.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ps3emu_api_structs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ps3emu_api\ps3emu_api.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
