@@ -22,16 +22,18 @@ Node Load(const char* input) {
 Node Load(std::istream& input) {
   Parser parser(input);
   NodeBuilder builder;
-  if (!parser.HandleNextDocument(builder))
+  if (!parser.HandleNextDocument(builder)) {
     return Node();
+  }
 
   return builder.Root();
 }
 
 Node LoadFile(const std::string& filename) {
   std::ifstream fin(filename.c_str());
-  if (!fin)
+  if (!fin) {
     throw BadFile();
+  }
   return Load(fin);
 }
 
@@ -51,8 +53,9 @@ std::vector<Node> LoadAll(std::istream& input) {
   Parser parser(input);
   while (1) {
     NodeBuilder builder;
-    if (!parser.HandleNextDocument(builder))
+    if (!parser.HandleNextDocument(builder)) {
       break;
+    }
     docs.push_back(builder.Root());
   }
 
@@ -61,8 +64,9 @@ std::vector<Node> LoadAll(std::istream& input) {
 
 std::vector<Node> LoadAllFromFile(const std::string& filename) {
   std::ifstream fin(filename.c_str());
-  if (!fin)
+  if (!fin) {
     throw BadFile();
+  }
   return LoadAll(fin);
 }
-}
+}  // namespace YAML
