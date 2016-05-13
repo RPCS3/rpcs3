@@ -22,4 +22,4 @@ std::string Dump(const Node& node) {
   emitter << node;
   return emitter.c_str();
 }
-}
+} // namespace YAML
